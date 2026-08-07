@@ -57,8 +57,8 @@ device 使用独立 `VolkDeviceTable`，不通过 Volk 全局 instance/device �
 
 ## 资源句柄
 
-具有身份和生命周期的资源使用 64 位整数句柄，例如 renderer、buffer、texture、shader、pipeline、
-swapchain 和 fence。零值统一表示无效句柄。
+具有身份和生命周期的资源使用 64 位整数句柄，例如 renderer、surface、buffer、texture、shader、
+pipeline、swapchain 和 fence。零值统一表示无效句柄。
 
 公共 ABI 只承诺句柄为 `uint64_t` 和零值无效，不公开或保证内部位布局。使用者不得解析、修改、
 持久化或跨进程传递句柄。

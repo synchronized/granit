@@ -31,6 +31,9 @@ if (result == GRANIT_SUCCESS) {
 `struct_size` 支持描述结构向后兼容。当前至少要求 `GRANIT_RENDERER_DESC_VERSION_1_SIZE`，未来
 新增字段只能追加到结构末尾；旧库会忽略超出已知范围的尾部字段。
 
+需要创建窗口 Surface 时，通过 `surface_types` 提前声明窗口系统。当前支持
+`GRANIT_SURFACE_TYPE_WIN32_BIT`；具体创建方式见 [surface.md](surface.md)。
+
 ## C++ API
 
 ```cpp

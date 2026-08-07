@@ -26,8 +26,19 @@ static void granit_test_renderer_rejects_invalid_arguments(void) {
   TEST_ASSERT_EQUAL_INT(GRANIT_ERROR_INVALID_ARGUMENT, granit_renderer_create(0, &renderer));
   TEST_ASSERT_EQUAL_INT(GRANIT_ERROR_INVALID_ARGUMENT,
                         granit_renderer_create(&renderer_desc, &renderer));
+  TEST_ASSERT_EQUAL_INT(GRANIT_ERROR_INVALID_HANDLE, granit_renderer_destroy(GRANIT_NULL_HANDLE));
+}
+
+static void granit_test_surface_rejects_invalid_arguments(void) {
+  granit_surface surface = GRANIT_NULL_HANDLE;
+  granit_win32_surface_desc desc = GRANIT_WIN32_SURFACE_DESC_INIT;
+
+  TEST_ASSERT_EQUAL_INT(GRANIT_ERROR_INVALID_ARGUMENT,
+                        granit_surface_create_win32(GRANIT_NULL_HANDLE, &desc, &surface));
+  TEST_ASSERT_EQUAL_INT(GRANIT_ERROR_INVALID_ARGUMENT,
+                        granit_surface_create_win32(UINT64_C(1), &desc, &surface));
   TEST_ASSERT_EQUAL_INT(GRANIT_ERROR_INVALID_HANDLE,
-                        granit_renderer_destroy(GRANIT_NULL_HANDLE));
+                        granit_surface_destroy(GRANIT_NULL_HANDLE, GRANIT_NULL_HANDLE));
 }
 
 static void granit_test_header_and_runtime_versions_match(void) {
@@ -41,6 +52,7 @@ int main(void) {
   RUN_TEST(granit_test_public_types);
   RUN_TEST(granit_test_result_messages);
   RUN_TEST(granit_test_renderer_rejects_invalid_arguments);
+  RUN_TEST(granit_test_surface_rejects_invalid_arguments);
   RUN_TEST(granit_test_header_and_runtime_versions_match);
   return UNITY_END();
 }

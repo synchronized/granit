@@ -24,6 +24,7 @@ enum class resource_type : std::uint8_t {
   pipeline = 5,
   swapchain = 6,
   fence = 7,
+  surface = 8,
 };
 
 /**
@@ -42,23 +43,16 @@ public:
   handle_table& operator=(handle_table&&) = delete;
 
   /** 注册资源。失败时返回空句柄。 */
-  [[nodiscard]] granit_handle insert(
-    void* resource,
-    resource_type type,
-    std::uint32_t domain);
+  [[nodiscard]] granit_handle insert(void* resource, resource_type type, std::uint32_t domain);
 
   /** 查找并验证资源；任何校验失败均返回空指针。 */
-  [[nodiscard]] void* find(
-    granit_handle handle,
-    resource_type expected_type,
-    std::uint32_t expected_domain) const noexcept;
+  [[nodiscard]] void* find(granit_handle handle, resource_type expected_type,
+                           std::uint32_t expected_domain) const noexcept;
 
   /** 擦除资源句柄，可选择取回此前注册的非拥有地址。 */
-  [[nodiscard]] granit_result erase(
-    granit_handle handle,
-    resource_type expected_type,
-    std::uint32_t expected_domain,
-    void** resource = nullptr) noexcept;
+  [[nodiscard]] granit_result erase(granit_handle handle, resource_type expected_type,
+                                    std::uint32_t expected_domain,
+                                    void** resource = nullptr) noexcept;
 
   [[nodiscard]] std::size_t size() const noexcept { return active_count_; }
   [[nodiscard]] bool empty() const noexcept { return active_count_ == 0; }
@@ -81,16 +75,12 @@ private:
     resource_type type;
   };
 
-  [[nodiscard]] static granit_handle encode(
-    std::uint32_t slot_index,
-    std::uint32_t generation,
-    resource_type type) noexcept;
+  [[nodiscard]] static granit_handle encode(std::uint32_t slot_index, std::uint32_t generation,
+                                            resource_type type) noexcept;
   [[nodiscard]] static bool decode(granit_handle handle, decoded_handle& decoded) noexcept;
-  [[nodiscard]] const slot* validate(
-    granit_handle handle,
-    resource_type expected_type,
-    std::uint32_t expected_domain,
-    decoded_handle* decoded = nullptr) const noexcept;
+  [[nodiscard]] const slot* validate(granit_handle handle, resource_type expected_type,
+                                     std::uint32_t expected_domain,
+                                     decoded_handle* decoded = nullptr) const noexcept;
 
   std::vector<slot> slots_;
   std::uint32_t free_head_{invalid_slot};

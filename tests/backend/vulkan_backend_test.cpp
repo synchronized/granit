@@ -54,9 +54,8 @@ TEST_CASE("无窗口 Vulkan instance 支持移动和显式重置", "[vulkan][ins
   }
 
   vulkan_instance instance;
-  REQUIRE(
-    instance.initialize(vulkan_instance_desc{.application_name = "granit-tests"}) ==
-    GRANIT_SUCCESS);
+  REQUIRE(instance.initialize(vulkan_instance_desc{.application_name = "granit-tests"}) ==
+          GRANIT_SUCCESS);
   REQUIRE(instance.valid());
   REQUIRE(instance.native_handle() != VK_NULL_HANDLE);
 
@@ -78,8 +77,7 @@ TEST_CASE("Vulkan instance 拒绝无效描述和重复初始化", "[vulkan][inst
   }
 
   REQUIRE(instance.initialize({.application_name = "granit-tests"}) == GRANIT_SUCCESS);
-  CHECK(
-    instance.initialize({.application_name = "granit-tests"}) == GRANIT_ERROR_INVALID_ARGUMENT);
+  CHECK(instance.initialize({.application_name = "granit-tests"}) == GRANIT_ERROR_INVALID_ARGUMENT);
 }
 
 TEST_CASE("Vulkan instance 可选启用验证层", "[vulkan][validation]") {
@@ -90,7 +88,7 @@ TEST_CASE("Vulkan instance 可选启用验证层", "[vulkan][validation]") {
 
   vulkan_instance instance;
   const auto result = instance.initialize(
-    {.application_name = "granit-validation-tests", .enable_validation = true});
+      {.application_name = "granit-validation-tests", .enable_validation = true});
   if (result == GRANIT_ERROR_UNSUPPORTED) {
     SKIP("当前运行环境没有 Khronos validation layer 或 debug utils extension");
   }
@@ -100,12 +98,12 @@ TEST_CASE("Vulkan instance 可选启用验证层", "[vulkan][validation]") {
 
 TEST_CASE("物理设备必须满足 Vulkan 1.3 基础能力", "[vulkan][device_selection]") {
   physical_device_candidate candidate{
-    .kind = physical_device_kind::integrated_gpu,
-    .api_version = VK_API_VERSION_1_3,
-    .has_graphics_queue = true,
-    .dynamic_rendering = true,
-    .synchronization2 = true,
-    .maintenance4 = true,
+      .kind = physical_device_kind::integrated_gpu,
+      .api_version = VK_API_VERSION_1_3,
+      .has_graphics_queue = true,
+      .dynamic_rendering = true,
+      .synchronization2 = true,
+      .maintenance4 = true,
   };
   CHECK(is_suitable(candidate));
 
@@ -114,18 +112,21 @@ TEST_CASE("物理设备必须满足 Vulkan 1.3 基础能力", "[vulkan][device_s
   candidate.api_version = VK_API_VERSION_1_3;
   candidate.dynamic_rendering = false;
   CHECK_FALSE(is_suitable(candidate));
+  candidate.dynamic_rendering = true;
+  candidate.supports_requested_surfaces = false;
+  CHECK_FALSE(is_suitable(candidate));
 }
 
 TEST_CASE("设备选择优先类型、显存和枚举顺序", "[vulkan][device_selection]") {
   const physical_device_candidate integrated{
-    .kind = physical_device_kind::integrated_gpu,
-    .api_version = VK_API_VERSION_1_3,
-    .device_local_memory = UINT64_C(16) << 30,
-    .enumeration_index = 0,
-    .has_graphics_queue = true,
-    .dynamic_rendering = true,
-    .synchronization2 = true,
-    .maintenance4 = true,
+      .kind = physical_device_kind::integrated_gpu,
+      .api_version = VK_API_VERSION_1_3,
+      .device_local_memory = UINT64_C(16) << 30,
+      .enumeration_index = 0,
+      .has_graphics_queue = true,
+      .dynamic_rendering = true,
+      .synchronization2 = true,
+      .maintenance4 = true,
   };
   auto discrete = integrated;
   discrete.kind = physical_device_kind::discrete_gpu;

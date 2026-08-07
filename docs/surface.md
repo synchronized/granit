@@ -1,0 +1,60 @@
+<!-- SPDX-License-Identifier: MIT -->
+<!-- Copyright (c) 2026 Granit contributors -->
+
+# Surface
+
+## 定位
+
+Surface 表示 Renderer 与原生窗口系统之间的输出连接。公开接口只接收平台窗口句柄并返回
+Granit 64 位整数句柄，不暴露 Vulkan 类型。首版仅实现 Win32，后续平台将使用独立描述结构和
+创建函数扩展，避免一个联合结构持续膨胀。
+
+## 启用 Win32 支持
+
+Vulkan 平台扩展必须在创建 Instance 时启用，因此需要在 Renderer 描述中提前声明：
+
+```c
+granit_renderer_desc renderer_desc = GRANIT_RENDERER_DESC_INIT;
+renderer_desc.surface_types = GRANIT_SURFACE_TYPE_WIN32_BIT;
+```
+
+未声明该位时调用 `granit_surface_create_win32` 返回 `GRANIT_ERROR_UNSUPPORTED`。声明了不受当前
+平台或驱动支持的类型时，Renderer 创建返回 `GRANIT_ERROR_UNSUPPORTED`。
+
+## C API
+
+```c
+granit_win32_surface_desc desc = GRANIT_WIN32_SURFACE_DESC_INIT;
+desc.instance = hinstance;
+desc.window = hwnd;
+
+granit_surface surface = GRANIT_NULL_HANDLE;
+granit_result result = granit_surface_create_win32(renderer, &desc, &surface);
+if (result == GRANIT_SUCCESS) {
+  granit_surface_destroy(renderer, surface);
+}
+```
+
+`instance` 和 `window` 分别保存 Win32 `HINSTANCE` 与 `HWND`。Granit 只在创建调用期间借用它们，
+不会取得窗口所有权。调用者必须保证窗口至少存活到 Surface 销毁。
+
+## C++ API
+
+```cpp
+granit::surface surface;
+const auto result = surface.initialize_win32(
+  renderer.native_handle(),
+  {.instance = hinstance, .window = hwnd});
+```
+
+`granit::surface` 是无异常、move-only RAII 类型，内部同时保存所属 Renderer 句柄，析构时调用
+C API。它不拥有原生窗口。
+
+C++ 创建 Renderer 时使用 `renderer_desc::surface_types = granit::surface_type::win32`。未来同时
+启用多个窗口系统时可通过按位或组合 `surface_type`。
+
+## 生命周期与归属
+
+Surface 只能配合创建它的 Renderer 使用，跨 Renderer 销毁会返回
+`GRANIT_ERROR_INVALID_HANDLE`。推荐在销毁 Renderer 前显式销毁全部 Surface；若仍有残留，
+Renderer 会先销毁它们并使其句柄失效。不要让 Renderer 销毁与其 Surface 操作并发执行。

@@ -18,8 +18,7 @@ vulkan_device::vulkan_device(vulkan_device&& other) noexcept
       device_(std::exchange(other.device_, VK_NULL_HANDLE)),
       graphics_queue_(std::exchange(other.graphics_queue_, VK_NULL_HANDLE)),
       graphics_queue_family_(std::exchange(other.graphics_queue_family_, 0)),
-      properties_(other.properties_),
-      functions_(other.functions_) {
+      properties_(other.properties_), functions_(other.functions_) {
   other.properties_ = {};
   other.functions_ = {};
 }
@@ -40,14 +39,15 @@ vulkan_device& vulkan_device::operator=(vulkan_device&& other) noexcept {
   return *this;
 }
 
-granit_result vulkan_device::initialize(const vulkan_instance& instance) {
+granit_result vulkan_device::initialize(const vulkan_instance& instance,
+                                        std::uint32_t surface_types) {
   if (valid() || !instance.valid()) {
     return GRANIT_ERROR_INVALID_ARGUMENT;
   }
 
   selected_physical_device selected{};
-  const auto select_result =
-    select_physical_device(instance.functions(), instance.native_handle(), selected);
+  const auto select_result = select_physical_device(instance.functions(), instance.native_handle(),
+                                                    surface_types, selected);
   if (select_result != GRANIT_SUCCESS) {
     return select_result;
   }
@@ -72,7 +72,7 @@ granit_result vulkan_device::initialize(const vulkan_instance& instance) {
   create_info.pQueueCreateInfos = &queue_create_info;
 
   const auto create_result =
-    instance.functions().vkCreateDevice(selected.handle, &create_info, nullptr, &device_);
+      instance.functions().vkCreateDevice(selected.handle, &create_info, nullptr, &device_);
   if (create_result != VK_SUCCESS) {
     device_ = VK_NULL_HANDLE;
     return map_vulkan_result(create_result);

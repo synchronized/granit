@@ -14,9 +14,20 @@
 
 namespace granit {
 
+enum class surface_type : std::uint32_t {
+  none = 0,
+  win32 = GRANIT_SURFACE_TYPE_WIN32_BIT,
+};
+
+[[nodiscard]] constexpr surface_type operator|(surface_type left, surface_type right) noexcept {
+  return static_cast<surface_type>(static_cast<std::uint32_t>(left) |
+                                   static_cast<std::uint32_t>(right));
+}
+
 struct renderer_desc {
   std::string_view application_name{"Granit Application"};
   bool enable_validation{};
+  surface_type surface_types{surface_type::none};
 };
 
 /** 无异常、move-only 的 renderer RAII 包装。 */
@@ -28,8 +39,7 @@ public:
   renderer(const renderer&) = delete;
   renderer& operator=(const renderer&) = delete;
 
-  renderer(renderer&& other) noexcept
-      : handle_(std::exchange(other.handle_, GRANIT_NULL_HANDLE)) {}
+  renderer(renderer&& other) noexcept : handle_(std::exchange(other.handle_, GRANIT_NULL_HANDLE)) {}
 
   renderer& operator=(renderer&& other) noexcept {
     if (this != &other) {
@@ -45,11 +55,12 @@ public:
     }
 
     const granit_renderer_desc native_desc{
-      .struct_size = sizeof(granit_renderer_desc),
-      .api_version = GRANIT_RENDERER_API_VERSION_CURRENT,
-      .application_name = desc.application_name.data(),
-      .application_name_length = static_cast<std::uint32_t>(desc.application_name.size()),
-      .flags = desc.enable_validation ? GRANIT_RENDERER_ENABLE_VALIDATION_BIT : UINT32_C(0),
+        .struct_size = sizeof(granit_renderer_desc),
+        .api_version = GRANIT_RENDERER_API_VERSION_CURRENT,
+        .application_name = desc.application_name.data(),
+        .application_name_length = static_cast<std::uint32_t>(desc.application_name.size()),
+        .flags = desc.enable_validation ? GRANIT_RENDERER_ENABLE_VALIDATION_BIT : UINT32_C(0),
+        .surface_types = static_cast<std::uint32_t>(desc.surface_types),
     };
     return from_native(granit_renderer_create(&native_desc, &handle_));
   }

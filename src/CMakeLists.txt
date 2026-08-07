@@ -29,6 +29,8 @@ target_sources(
     backend/vulkan/physical_device.h
     backend/vulkan/result.cpp
     backend/vulkan/result.h
+    backend/vulkan/surface.cpp
+    backend/vulkan/surface.h
     backend/vulkan/version_check.cpp
     core/handle_table.cpp
     core/handle_table.h
@@ -37,6 +39,7 @@ target_sources(
     renderer/renderer_registry.h
     renderer/renderer_state.cpp
     renderer/renderer_state.h
+    renderer/surface_api.cpp
     result.cpp
     version.cpp
   PUBLIC
@@ -52,6 +55,8 @@ target_sources(
       "${PROJECT_SOURCE_DIR}/include/granit/renderer.hpp"
       "${PROJECT_SOURCE_DIR}/include/granit/result.h"
       "${PROJECT_SOURCE_DIR}/include/granit/result.hpp"
+      "${PROJECT_SOURCE_DIR}/include/granit/surface.h"
+      "${PROJECT_SOURCE_DIR}/include/granit/surface.hpp"
       "${PROJECT_SOURCE_DIR}/include/granit/types.h"
       "${PROJECT_SOURCE_DIR}/include/granit/types.hpp"
       "${GRANIT_GENERATED_VERSION_HEADER}"
@@ -80,6 +85,7 @@ target_compile_definitions(
     GRANIT_BUILDING_LIBRARY
     VK_NO_PROTOTYPES
     VOLK_NAMESPACE
+    $<$<PLATFORM_ID:Windows>:VK_USE_PLATFORM_WIN32_KHR>
   PUBLIC $<$<NOT:$<BOOL:${BUILD_SHARED_LIBS}>>:GRANIT_STATIC_DEFINE>
 )
 

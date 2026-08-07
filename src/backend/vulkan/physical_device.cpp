@@ -10,6 +10,8 @@
 #include <optional>
 #include <vector>
 
+#include <granit/renderer.h>
+
 namespace granit::detail {
 namespace {
 
@@ -44,9 +46,8 @@ physical_device_kind map_device_kind(VkPhysicalDeviceType type) noexcept {
   }
 }
 
-std::uint64_t query_device_local_memory(
-  const volk::VolkInstanceTable& functions,
-  VkPhysicalDevice device) noexcept {
+std::uint64_t query_device_local_memory(const volk::VolkInstanceTable& functions,
+                                        VkPhysicalDevice device) noexcept {
   VkPhysicalDeviceMemoryProperties memory_properties{};
   functions.vkGetPhysicalDeviceMemoryProperties(device, &memory_properties);
 
@@ -63,9 +64,8 @@ std::uint64_t query_device_local_memory(
   return total;
 }
 
-std::optional<std::uint32_t> find_graphics_queue(
-  const volk::VolkInstanceTable& functions,
-  VkPhysicalDevice device) {
+std::optional<std::uint32_t> find_graphics_queue(const volk::VolkInstanceTable& functions,
+                                                 VkPhysicalDevice device) {
   std::uint32_t queue_count = 0;
   functions.vkGetPhysicalDeviceQueueFamilyProperties(device, &queue_count, nullptr);
   std::vector<VkQueueFamilyProperties> queues(queue_count);
@@ -84,12 +84,12 @@ std::optional<std::uint32_t> find_graphics_queue(
 
 bool is_suitable(const physical_device_candidate& candidate) noexcept {
   return candidate.api_version >= VK_API_VERSION_1_3 && candidate.has_graphics_queue &&
-         candidate.dynamic_rendering && candidate.synchronization2 && candidate.maintenance4;
+         candidate.dynamic_rendering && candidate.synchronization2 && candidate.maintenance4 &&
+         candidate.supports_requested_surfaces;
 }
 
-bool is_better_candidate(
-  const physical_device_candidate& candidate,
-  const physical_device_candidate& current) noexcept {
+bool is_better_candidate(const physical_device_candidate& candidate,
+                         const physical_device_candidate& current) noexcept {
   if (!is_suitable(candidate)) {
     return false;
   }
@@ -107,10 +107,9 @@ bool is_better_candidate(
   return candidate.enumeration_index < current.enumeration_index;
 }
 
-granit_result select_physical_device(
-  const volk::VolkInstanceTable& functions,
-  VkInstance instance,
-  selected_physical_device& selected) {
+granit_result select_physical_device(const volk::VolkInstanceTable& functions, VkInstance instance,
+                                     std::uint32_t surface_types,
+                                     selected_physical_device& selected) {
   if (instance == VK_NULL_HANDLE) {
     return GRANIT_ERROR_INVALID_ARGUMENT;
   }
@@ -146,16 +145,29 @@ granit_result select_physical_device(
       functions.vkGetPhysicalDeviceFeatures2(devices[index], &features2);
 
       const auto graphics_queue = find_graphics_queue(functions, devices[index]);
+      bool supports_requested_surfaces = true;
+      if ((surface_types & GRANIT_SURFACE_TYPE_WIN32_BIT) != 0) {
+#if defined(_WIN32)
+        supports_requested_surfaces =
+            graphics_queue.has_value() &&
+            functions.vkGetPhysicalDeviceWin32PresentationSupportKHR != nullptr &&
+            functions.vkGetPhysicalDeviceWin32PresentationSupportKHR(devices[index],
+                                                                     *graphics_queue) == VK_TRUE;
+#else
+        supports_requested_surfaces = false;
+#endif
+      }
       const auto local_memory = query_device_local_memory(functions, devices[index]);
       const physical_device_candidate candidate{
-        .kind = map_device_kind(properties.deviceType),
-        .api_version = properties.apiVersion,
-        .device_local_memory = local_memory,
-        .enumeration_index = index,
-        .has_graphics_queue = graphics_queue.has_value(),
-        .dynamic_rendering = features.dynamicRendering == VK_TRUE,
-        .synchronization2 = features.synchronization2 == VK_TRUE,
-        .maintenance4 = features.maintenance4 == VK_TRUE,
+          .kind = map_device_kind(properties.deviceType),
+          .api_version = properties.apiVersion,
+          .device_local_memory = local_memory,
+          .enumeration_index = index,
+          .has_graphics_queue = graphics_queue.has_value(),
+          .dynamic_rendering = features.dynamicRendering == VK_TRUE,
+          .synchronization2 = features.synchronization2 == VK_TRUE,
+          .maintenance4 = features.maintenance4 == VK_TRUE,
+          .supports_requested_surfaces = supports_requested_surfaces,
       };
 
       if (!found || is_better_candidate(candidate, best)) {

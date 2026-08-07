@@ -4,6 +4,7 @@
 #ifndef GRANIT_BACKEND_VULKAN_INSTANCE_H_
 #define GRANIT_BACKEND_VULKAN_INSTANCE_H_
 
+#include <cstdint>
 #include <string_view>
 
 #include <granit/result.h>
@@ -15,6 +16,7 @@ namespace granit::detail {
 struct vulkan_instance_desc {
   std::string_view application_name;
   bool enable_validation{};
+  std::uint32_t surface_types{};
 };
 
 /** 拥有一个无窗口 Vulkan instance 及其独立函数表。 */

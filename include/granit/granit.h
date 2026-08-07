@@ -9,6 +9,7 @@
 #include <granit/export.h>
 #include <granit/renderer.h>
 #include <granit/result.h>
+#include <granit/surface.h>
 #include <granit/types.h>
 #include <granit/version.h>
 

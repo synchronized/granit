@@ -25,7 +25,8 @@ public:
   vulkan_device(vulkan_device&& other) noexcept;
   vulkan_device& operator=(vulkan_device&& other) noexcept;
 
-  [[nodiscard]] granit_result initialize(const vulkan_instance& instance);
+  [[nodiscard]] granit_result initialize(const vulkan_instance& instance,
+                                         std::uint32_t surface_types = 0);
   void reset() noexcept;
 
   [[nodiscard]] bool valid() const noexcept { return device_ != VK_NULL_HANDLE; }

@@ -30,6 +30,7 @@ struct physical_device_candidate {
   bool dynamic_rendering{};
   bool synchronization2{};
   bool maintenance4{};
+  bool supports_requested_surfaces{true};
 };
 
 struct selected_physical_device {
@@ -40,15 +41,13 @@ struct selected_physical_device {
 };
 
 [[nodiscard]] bool is_suitable(const physical_device_candidate& candidate) noexcept;
-[[nodiscard]] bool is_better_candidate(
-  const physical_device_candidate& candidate,
-  const physical_device_candidate& current) noexcept;
+[[nodiscard]] bool is_better_candidate(const physical_device_candidate& candidate,
+                                       const physical_device_candidate& current) noexcept;
 
 /** 从 instance 可见设备中选择满足 Granit 基础要求的最佳设备。 */
-[[nodiscard]] granit_result select_physical_device(
-  const volk::VolkInstanceTable& functions,
-  VkInstance instance,
-  selected_physical_device& selected);
+[[nodiscard]] granit_result select_physical_device(const volk::VolkInstanceTable& functions,
+                                                   VkInstance instance, std::uint32_t surface_types,
+                                                   selected_physical_device& selected);
 
 } // namespace granit::detail
 

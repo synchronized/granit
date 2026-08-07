@@ -12,6 +12,7 @@
 namespace {
 
 constexpr std::uint32_t supported_flags = GRANIT_RENDERER_ENABLE_VALIDATION_BIT;
+constexpr std::uint32_t supported_surface_types = GRANIT_SURFACE_TYPE_WIN32_BIT;
 constexpr std::uint32_t maximum_application_name_length = 4096;
 constexpr std::string_view default_application_name = "Granit Application";
 
@@ -20,6 +21,10 @@ granit_result validate_desc(const granit_renderer_desc& desc) noexcept {
       desc.api_version != GRANIT_RENDERER_API_VERSION_CURRENT ||
       (desc.flags & ~supported_flags) != 0 ||
       desc.application_name_length > maximum_application_name_length) {
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  }
+  if (desc.struct_size >= GRANIT_RENDERER_DESC_VERSION_2_SIZE &&
+      (desc.surface_types & ~supported_surface_types) != 0) {
     return GRANIT_ERROR_INVALID_ARGUMENT;
   }
   if (desc.application_name == nullptr) {
@@ -34,9 +39,8 @@ granit_result validate_desc(const granit_renderer_desc& desc) noexcept {
 
 } // namespace
 
-extern "C" granit_result granit_renderer_create(
-  const granit_renderer_desc* desc,
-  granit_renderer* renderer) {
+extern "C" granit_result granit_renderer_create(const granit_renderer_desc* desc,
+                                                granit_renderer* renderer) {
   if (desc == nullptr || renderer == nullptr) {
     return GRANIT_ERROR_INVALID_ARGUMENT;
   }
@@ -46,18 +50,16 @@ extern "C" granit_result granit_renderer_create(
     return validation_result;
   }
 
-  const auto application_name = desc->application_name == nullptr
-                                  ? default_application_name
-                                  : std::string_view{
-                                      desc->application_name,
-                                      desc->application_name_length};
-  const auto validation_enabled =
-    (desc->flags & GRANIT_RENDERER_ENABLE_VALIDATION_BIT) != 0;
+  const auto application_name =
+      desc->application_name == nullptr
+          ? default_application_name
+          : std::string_view{desc->application_name, desc->application_name_length};
+  const auto validation_enabled = (desc->flags & GRANIT_RENDERER_ENABLE_VALIDATION_BIT) != 0;
+  const auto surface_types =
+      desc->struct_size >= GRANIT_RENDERER_DESC_VERSION_2_SIZE ? desc->surface_types : UINT32_C(0);
   try {
     return granit::detail::renderer_registry::instance().create(
-      application_name,
-      validation_enabled,
-      *renderer);
+        application_name, validation_enabled, surface_types, *renderer);
   } catch (const std::bad_alloc&) {
     return GRANIT_ERROR_OUT_OF_MEMORY;
   } catch (...) {

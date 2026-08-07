@@ -9,7 +9,10 @@ set(GRANIT_VOLK_DIR "${CMAKE_CURRENT_SOURCE_DIR}/volk-1.4.350")
 add_library(granit_volk OBJECT "${GRANIT_VOLK_DIR}/volk.c")
 set_source_files_properties("${GRANIT_VOLK_DIR}/volk.c" PROPERTIES LANGUAGE CXX)
 target_compile_features(granit_volk PRIVATE cxx_std_20)
-target_compile_definitions(granit_volk PRIVATE VOLK_NAMESPACE)
+target_compile_definitions(
+  granit_volk
+  PRIVATE VOLK_NAMESPACE $<$<PLATFORM_ID:Windows>:VK_USE_PLATFORM_WIN32_KHR>
+)
 target_include_directories(
   granit_volk
   SYSTEM PRIVATE

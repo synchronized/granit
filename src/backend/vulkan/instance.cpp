@@ -13,6 +13,7 @@
 #include <utility>
 #include <vector>
 
+#include <granit/renderer.h>
 #include <granit/version.h>
 
 namespace granit::detail {
@@ -20,11 +21,9 @@ namespace {
 
 constexpr const char* validation_layer_name = "VK_LAYER_KHRONOS_validation";
 
-VKAPI_ATTR VkBool32 VKAPI_CALL debug_callback(
-  VkDebugUtilsMessageSeverityFlagBitsEXT,
-  VkDebugUtilsMessageTypeFlagsEXT,
-  const VkDebugUtilsMessengerCallbackDataEXT* callback_data,
-  void*) {
+VKAPI_ATTR VkBool32 VKAPI_CALL
+debug_callback(VkDebugUtilsMessageSeverityFlagBitsEXT, VkDebugUtilsMessageTypeFlagsEXT,
+               const VkDebugUtilsMessengerCallbackDataEXT* callback_data, void*) {
   if (callback_data != nullptr && callback_data->pMessage != nullptr) {
     std::fprintf(stderr, "[granit][vulkan] %s\n", callback_data->pMessage);
   }
@@ -54,18 +53,36 @@ bool validation_support_available() {
   }
 
   std::uint32_t extension_count = 0;
-  if (volk::vkEnumerateInstanceExtensionProperties(nullptr, &extension_count, nullptr) != VK_SUCCESS) {
+  if (volk::vkEnumerateInstanceExtensionProperties(nullptr, &extension_count, nullptr) !=
+      VK_SUCCESS) {
     return false;
   }
   std::vector<VkExtensionProperties> extensions(extension_count);
   if (extension_count != 0 && volk::vkEnumerateInstanceExtensionProperties(
-                                nullptr,
-                                &extension_count,
-                                extensions.data()) != VK_SUCCESS) {
+                                  nullptr, &extension_count, extensions.data()) != VK_SUCCESS) {
     return false;
   }
   for (const auto& extension : extensions) {
     if (std::strcmp(extension.extensionName, VK_EXT_DEBUG_UTILS_EXTENSION_NAME) == 0) {
+      return true;
+    }
+  }
+  return false;
+}
+
+bool instance_extension_available(const char* required_name) {
+  std::uint32_t extension_count = 0;
+  if (volk::vkEnumerateInstanceExtensionProperties(nullptr, &extension_count, nullptr) !=
+      VK_SUCCESS) {
+    return false;
+  }
+  std::vector<VkExtensionProperties> extensions(extension_count);
+  if (extension_count != 0 && volk::vkEnumerateInstanceExtensionProperties(
+                                  nullptr, &extension_count, extensions.data()) != VK_SUCCESS) {
+    return false;
+  }
+  for (const auto& extension : extensions) {
+    if (std::strcmp(extension.extensionName, required_name) == 0) {
       return true;
     }
   }
@@ -122,22 +139,35 @@ granit_result vulkan_instance::initialize(const vulkan_instance_desc& desc) {
       return GRANIT_ERROR_UNSUPPORTED;
     }
 
+    std::vector<const char*> extensions;
+    if (desc.enable_validation) {
+      extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+    }
+    if ((desc.surface_types & GRANIT_SURFACE_TYPE_WIN32_BIT) != 0) {
+#if defined(_WIN32)
+      if (!instance_extension_available(VK_KHR_SURFACE_EXTENSION_NAME) ||
+          !instance_extension_available(VK_KHR_WIN32_SURFACE_EXTENSION_NAME)) {
+        return GRANIT_ERROR_UNSUPPORTED;
+      }
+      extensions.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
+      extensions.push_back(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
+#else
+      return GRANIT_ERROR_UNSUPPORTED;
+#endif
+    }
+
     // Vulkan 需要以零结尾的名称，string_view 本身不保证这一点。
     const std::string application_name{desc.application_name};
     VkApplicationInfo application_info{};
     application_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
     application_info.pApplicationName = application_name.c_str();
-    application_info.applicationVersion = VK_MAKE_API_VERSION(
-      0,
-      GRANIT_VERSION_MAJOR,
-      GRANIT_VERSION_MINOR,
-      GRANIT_VERSION_PATCH);
+    application_info.applicationVersion =
+        VK_MAKE_API_VERSION(0, GRANIT_VERSION_MAJOR, GRANIT_VERSION_MINOR, GRANIT_VERSION_PATCH);
     application_info.pEngineName = "Granit";
     application_info.engineVersion = application_info.applicationVersion;
     application_info.apiVersion = VK_API_VERSION_1_3;
 
     const char* layers[] = {validation_layer_name};
-    const char* extensions[] = {VK_EXT_DEBUG_UTILS_EXTENSION_NAME};
     auto debug_create_info = make_debug_messenger_create_info();
 
     VkInstanceCreateInfo create_info{};
@@ -146,10 +176,10 @@ granit_result vulkan_instance::initialize(const vulkan_instance_desc& desc) {
     if (desc.enable_validation) {
       create_info.enabledLayerCount = 1;
       create_info.ppEnabledLayerNames = layers;
-      create_info.enabledExtensionCount = 1;
-      create_info.ppEnabledExtensionNames = extensions;
       create_info.pNext = &debug_create_info;
     }
+    create_info.enabledExtensionCount = static_cast<std::uint32_t>(extensions.size());
+    create_info.ppEnabledExtensionNames = extensions.data();
 
     const auto create_result = volk::vkCreateInstance(&create_info, nullptr, &instance_);
     if (create_result != VK_SUCCESS) {
@@ -164,10 +194,7 @@ granit_result vulkan_instance::initialize(const vulkan_instance_desc& desc) {
         return GRANIT_ERROR_INITIALIZATION_FAILED;
       }
       const auto debug_result = functions_.vkCreateDebugUtilsMessengerEXT(
-        instance_,
-        &debug_create_info,
-        nullptr,
-        &debug_messenger_);
+          instance_, &debug_create_info, nullptr, &debug_messenger_);
       if (debug_result != VK_SUCCESS) {
         const auto mapped_result = map_vulkan_result(debug_result);
         reset();

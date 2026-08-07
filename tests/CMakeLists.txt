@@ -12,6 +12,7 @@ add_library(
   OBJECT
     headers/renderer_h.c
     headers/result_h.c
+    headers/surface_h.c
     headers/types_h.c
 )
 target_link_libraries(granit_c_header_test PRIVATE granit::granit)
@@ -38,10 +39,17 @@ target_link_libraries(
 granit_target_compile_warnings(granit_handle_table_test)
 add_test(NAME granit.handle_table COMMAND granit_handle_table_test)
 
-add_executable(granit_renderer_test renderer/renderer_test.cpp)
+add_executable(
+  granit_renderer_test
+  renderer/renderer_test.cpp
+  renderer/surface_test.cpp
+)
 target_link_libraries(
   granit_renderer_test
-  PRIVATE granit::granit Catch2::Catch2WithMain
+  PRIVATE
+    granit::granit
+    Catch2::Catch2WithMain
+    $<$<PLATFORM_ID:Windows>:user32>
 )
 granit_target_compile_warnings(granit_renderer_test)
 add_test(NAME granit.renderer COMMAND granit_renderer_test)
@@ -54,6 +62,7 @@ add_executable(
   "${PROJECT_SOURCE_DIR}/src/backend/vulkan/loader.cpp"
   "${PROJECT_SOURCE_DIR}/src/backend/vulkan/physical_device.cpp"
   "${PROJECT_SOURCE_DIR}/src/backend/vulkan/result.cpp"
+  "${PROJECT_SOURCE_DIR}/src/backend/vulkan/surface.cpp"
   $<TARGET_OBJECTS:granit_volk>
 )
 target_include_directories(
@@ -68,7 +77,10 @@ target_include_directories(
 )
 target_compile_definitions(
   granit_vulkan_backend_test
-  PRIVATE VK_NO_PROTOTYPES VOLK_NAMESPACE
+  PRIVATE
+    VK_NO_PROTOTYPES
+    VOLK_NAMESPACE
+    $<$<PLATFORM_ID:Windows>:VK_USE_PLATFORM_WIN32_KHR>
 )
 target_link_libraries(
   granit_vulkan_backend_test
@@ -82,6 +94,7 @@ add_library(
   OBJECT
     headers/renderer_hpp.cpp
     headers/result_hpp.cpp
+    headers/surface_hpp.cpp
     headers/types_hpp.cpp
 )
 target_link_libraries(granit_cpp_header_test PRIVATE granit::granit)
