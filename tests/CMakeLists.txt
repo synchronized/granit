@@ -10,6 +10,7 @@ add_test(NAME granit.c_version COMMAND granit_c_version_test)
 add_library(
   granit_c_header_test
   OBJECT
+    headers/renderer_h.c
     headers/result_h.c
     headers/types_h.c
 )
@@ -36,6 +37,14 @@ target_link_libraries(
 )
 granit_target_compile_warnings(granit_handle_table_test)
 add_test(NAME granit.handle_table COMMAND granit_handle_table_test)
+
+add_executable(granit_renderer_test renderer/renderer_test.cpp)
+target_link_libraries(
+  granit_renderer_test
+  PRIVATE granit::granit Catch2::Catch2WithMain
+)
+granit_target_compile_warnings(granit_renderer_test)
+add_test(NAME granit.renderer COMMAND granit_renderer_test)
 
 add_executable(
   granit_vulkan_backend_test
@@ -71,6 +80,7 @@ add_test(NAME granit.vulkan_backend COMMAND granit_vulkan_backend_test)
 add_library(
   granit_cpp_header_test
   OBJECT
+    headers/renderer_hpp.cpp
     headers/result_hpp.cpp
     headers/types_hpp.cpp
 )
@@ -78,7 +88,7 @@ target_link_libraries(granit_cpp_header_test PRIVATE granit::granit)
 granit_target_compile_warnings(granit_cpp_header_test)
 
 set_tests_properties(
-  granit.c_version granit.cpp_version granit.handle_table granit.vulkan_backend
+  granit.c_version granit.cpp_version granit.handle_table granit.renderer granit.vulkan_backend
   PROPERTIES ENVIRONMENT_MODIFICATION
              "PATH=path_list_prepend:$<TARGET_FILE_DIR:granit>"
 )

@@ -7,6 +7,7 @@
 #include <stdint.h>
 
 #include <granit/export.h>
+#include <granit/renderer.h>
 #include <granit/result.h>
 #include <granit/types.h>
 #include <granit/version.h>

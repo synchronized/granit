@@ -30,6 +30,10 @@ enum class result : std::int32_t {
   return static_cast<granit_result>(value);
 }
 
+[[nodiscard]] constexpr result from_native(granit_result value) noexcept {
+  return static_cast<result>(value);
+}
+
 [[nodiscard]] constexpr bool succeeded(result value) noexcept {
   return to_native(value) >= GRANIT_SUCCESS;
 }

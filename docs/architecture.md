@@ -34,6 +34,10 @@ device 使用独立 `VolkDeviceTable`，不通过 Volk 全局 instance/device �
 设备类型优先级高于显存大小，枚举顺序作为最终稳定决胜条件。该策略当前属于内部默认行为，
 未来公共 renderer 描述可以增加设备 ID 或功耗偏好，而不暴露 `VkPhysicalDevice`。
 
+公开 renderer registry 使用互斥锁保护句柄表，并以共享所有权保存内部状态。销毁先从 registry
+移除句柄，再在锁外释放 Vulkan device；已取得状态的并发内部操作可以结束，新操作无法继续取得
+已销毁句柄。每个 renderer 分配非零 domain，供后续子资源校验归属。
+
 平台窗口或 surface 所需的原生信息通过独立的平台描述结构传入。未来如需支持原生 Vulkan
 互操作，应放入明确标记的不稳定高级接口，不得污染基础 API。
 

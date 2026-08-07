@@ -32,6 +32,11 @@ target_sources(
     backend/vulkan/version_check.cpp
     core/handle_table.cpp
     core/handle_table.h
+    renderer/renderer_api.cpp
+    renderer/renderer_registry.cpp
+    renderer/renderer_registry.h
+    renderer/renderer_state.cpp
+    renderer/renderer_state.h
     result.cpp
     version.cpp
   PUBLIC
@@ -43,6 +48,8 @@ target_sources(
       "${PROJECT_SOURCE_DIR}/include/granit/export.h"
       "${PROJECT_SOURCE_DIR}/include/granit/granit.h"
       "${PROJECT_SOURCE_DIR}/include/granit/granit.hpp"
+      "${PROJECT_SOURCE_DIR}/include/granit/renderer.h"
+      "${PROJECT_SOURCE_DIR}/include/granit/renderer.hpp"
       "${PROJECT_SOURCE_DIR}/include/granit/result.h"
       "${PROJECT_SOURCE_DIR}/include/granit/result.hpp"
       "${PROJECT_SOURCE_DIR}/include/granit/types.h"
