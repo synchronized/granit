@@ -40,7 +40,7 @@ Granit 不是 Vulkan API 的逐项重命名或薄包装。项目希望围绕实�
 - 线程安全的 Vulkan Loader 初始化、Vulkan 1.3 检查和无窗口 instance RAII。
 - 确定性的物理设备筛选、逻辑设备、graphics queue 和独立 device 函数表。
 - `granit_renderer` C API 与无异常、move-only 的 C++20 RAII 包装。
-- Catch2 3 测试骨架，可复用父项目目标并回退到仓库内置版本。
+- Unity 纯 C API 测试与 Catch2 3 C++ 测试，可复用父项目目标并回退到仓库内置版本。
 - CMake 配置、构建、安装和包导出入口。
 - 代码格式、静态检查和仓库忽略规则。
 

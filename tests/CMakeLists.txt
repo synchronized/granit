@@ -2,7 +2,7 @@
 # Copyright (c) 2026 Granit contributors
 
 add_executable(granit_c_version_test c_version_test.c)
-target_link_libraries(granit_c_version_test PRIVATE granit::granit)
+target_link_libraries(granit_c_version_test PRIVATE granit::granit Unity::Unity)
 set_target_properties(granit_c_version_test PROPERTIES LINKER_LANGUAGE CXX)
 granit_target_compile_warnings(granit_c_version_test)
 add_test(NAME granit.c_version COMMAND granit_c_version_test)
