@@ -70,6 +70,11 @@ granit_result vulkan_device::initialize(const vulkan_instance& instance,
   create_info.pNext = &features;
   create_info.queueCreateInfoCount = 1;
   create_info.pQueueCreateInfos = &queue_create_info;
+  const char* extensions[] = {VK_KHR_SWAPCHAIN_EXTENSION_NAME};
+  if (surface_types != 0) {
+    create_info.enabledExtensionCount = 1;
+    create_info.ppEnabledExtensionNames = extensions;
+  }
 
   const auto create_result =
       instance.functions().vkCreateDevice(selected.handle, &create_info, nullptr, &device_);
@@ -82,7 +87,10 @@ granit_result vulkan_device::initialize(const vulkan_instance& instance,
   properties_ = selected.properties;
   graphics_queue_family_ = selected.graphics_queue_family;
   volk::volkLoadDeviceTable(&functions_, device_);
-  if (functions_.vkGetDeviceQueue == nullptr || functions_.vkDestroyDevice == nullptr) {
+  if (functions_.vkGetDeviceQueue == nullptr || functions_.vkDestroyDevice == nullptr ||
+      (surface_types != 0 &&
+       (functions_.vkCreateSwapchainKHR == nullptr || functions_.vkDestroySwapchainKHR == nullptr ||
+        functions_.vkGetSwapchainImagesKHR == nullptr))) {
     reset();
     return GRANIT_ERROR_INITIALIZATION_FAILED;
   }

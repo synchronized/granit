@@ -10,6 +10,7 @@
 #include <granit/renderer.hpp>
 #include <granit/result.hpp>
 #include <granit/surface.hpp>
+#include <granit/swapchain.hpp>
 #include <granit/types.hpp>
 
 namespace granit {

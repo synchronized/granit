@@ -5,6 +5,7 @@
 
 #include "backend/vulkan/result.h"
 
+#include <cstring>
 #include <limits>
 #include <new>
 #include <optional>
@@ -80,12 +81,33 @@ std::optional<std::uint32_t> find_graphics_queue(const volk::VolkInstanceTable& 
   return std::nullopt;
 }
 
+bool device_extension_available(const volk::VolkInstanceTable& functions, VkPhysicalDevice device,
+                                const char* required_name) {
+  std::uint32_t extension_count = 0;
+  if (functions.vkEnumerateDeviceExtensionProperties(device, nullptr, &extension_count, nullptr) !=
+      VK_SUCCESS) {
+    return false;
+  }
+  std::vector<VkExtensionProperties> extensions(extension_count);
+  if (extension_count != 0 &&
+      functions.vkEnumerateDeviceExtensionProperties(device, nullptr, &extension_count,
+                                                     extensions.data()) != VK_SUCCESS) {
+    return false;
+  }
+  for (const auto& extension : extensions) {
+    if (std::strcmp(extension.extensionName, required_name) == 0) {
+      return true;
+    }
+  }
+  return false;
+}
+
 } // namespace
 
 bool is_suitable(const physical_device_candidate& candidate) noexcept {
   return candidate.api_version >= VK_API_VERSION_1_3 && candidate.has_graphics_queue &&
          candidate.dynamic_rendering && candidate.synchronization2 && candidate.maintenance4 &&
-         candidate.supports_requested_surfaces;
+         candidate.supports_requested_surfaces && candidate.supports_swapchain;
 }
 
 bool is_better_candidate(const physical_device_candidate& candidate,
@@ -158,6 +180,9 @@ granit_result select_physical_device(const volk::VolkInstanceTable& functions, V
 #endif
       }
       const auto local_memory = query_device_local_memory(functions, devices[index]);
+      const auto supports_swapchain =
+          surface_types == 0 ||
+          device_extension_available(functions, devices[index], VK_KHR_SWAPCHAIN_EXTENSION_NAME);
       const physical_device_candidate candidate{
           .kind = map_device_kind(properties.deviceType),
           .api_version = properties.apiVersion,
@@ -168,6 +193,7 @@ granit_result select_physical_device(const volk::VolkInstanceTable& functions, V
           .synchronization2 = features.synchronization2 == VK_TRUE,
           .maintenance4 = features.maintenance4 == VK_TRUE,
           .supports_requested_surfaces = supports_requested_surfaces,
+          .supports_swapchain = supports_swapchain,
       };
 
       if (!found || is_better_candidate(candidate, best)) {

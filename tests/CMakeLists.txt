@@ -13,6 +13,7 @@ add_library(
     headers/renderer_h.c
     headers/result_h.c
     headers/surface_h.c
+    headers/swapchain_h.c
     headers/types_h.c
 )
 target_link_libraries(granit_c_header_test PRIVATE granit::granit)
@@ -43,6 +44,7 @@ add_executable(
   granit_renderer_test
   renderer/renderer_test.cpp
   renderer/surface_test.cpp
+  renderer/swapchain_test.cpp
 )
 target_link_libraries(
   granit_renderer_test
@@ -63,6 +65,7 @@ add_executable(
   "${PROJECT_SOURCE_DIR}/src/backend/vulkan/physical_device.cpp"
   "${PROJECT_SOURCE_DIR}/src/backend/vulkan/result.cpp"
   "${PROJECT_SOURCE_DIR}/src/backend/vulkan/surface.cpp"
+  "${PROJECT_SOURCE_DIR}/src/backend/vulkan/swapchain.cpp"
   $<TARGET_OBJECTS:granit_volk>
 )
 target_include_directories(
@@ -95,6 +98,7 @@ add_library(
     headers/renderer_hpp.cpp
     headers/result_hpp.cpp
     headers/surface_hpp.cpp
+    headers/swapchain_hpp.cpp
     headers/types_hpp.cpp
 )
 target_link_libraries(granit_cpp_header_test PRIVATE granit::granit)

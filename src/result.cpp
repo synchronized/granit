@@ -29,6 +29,10 @@ extern "C" const char* granit_result_message(granit_result result) {
     return "initialization failed";
   case GRANIT_ERROR_NO_SUITABLE_DEVICE:
     return "no suitable graphics device";
+  case GRANIT_ERROR_SURFACE_LOST:
+    return "window surface lost";
+  case GRANIT_ERROR_OUT_OF_DATE:
+    return "swapchain out of date";
   default:
     return "unrecognized result";
   }

@@ -32,6 +32,8 @@ TEST_CASE("Vulkan 结果映射为后端无关错误", "[vulkan][result]") {
   CHECK(map_vulkan_result(VK_ERROR_EXTENSION_NOT_PRESENT) == GRANIT_ERROR_UNSUPPORTED);
   CHECK(map_vulkan_result(VK_ERROR_INCOMPATIBLE_DRIVER) == GRANIT_ERROR_INCOMPATIBLE_DRIVER);
   CHECK(map_vulkan_result(VK_ERROR_INITIALIZATION_FAILED) == GRANIT_ERROR_INITIALIZATION_FAILED);
+  CHECK(map_vulkan_result(VK_ERROR_SURFACE_LOST_KHR) == GRANIT_ERROR_SURFACE_LOST);
+  CHECK(map_vulkan_result(VK_ERROR_OUT_OF_DATE_KHR) == GRANIT_ERROR_OUT_OF_DATE);
   CHECK(map_vulkan_result(VK_ERROR_UNKNOWN) == GRANIT_ERROR_UNKNOWN);
   CHECK(map_vulkan_result(VK_TIMEOUT) == GRANIT_ERROR_INTERNAL);
 }
@@ -114,6 +116,9 @@ TEST_CASE("物理设备必须满足 Vulkan 1.3 基础能力", "[vulkan][device_s
   CHECK_FALSE(is_suitable(candidate));
   candidate.dynamic_rendering = true;
   candidate.supports_requested_surfaces = false;
+  CHECK_FALSE(is_suitable(candidate));
+  candidate.supports_requested_surfaces = true;
+  candidate.supports_swapchain = false;
   CHECK_FALSE(is_suitable(candidate));
 }
 

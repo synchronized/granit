@@ -58,3 +58,5 @@ C++ 创建 Renderer 时使用 `renderer_desc::surface_types = granit::surface_ty
 Surface 只能配合创建它的 Renderer 使用，跨 Renderer 销毁会返回
 `GRANIT_ERROR_INVALID_HANDLE`。推荐在销毁 Renderer 前显式销毁全部 Surface；若仍有残留，
 Renderer 会先销毁它们并使其句柄失效。不要让 Renderer 销毁与其 Surface 操作并发执行。
+
+Surface 可以拥有多个 Swapchain；销毁 Surface 会先销毁全部所属 Swapchain 并使其句柄失效。

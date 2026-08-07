@@ -31,6 +31,7 @@ struct physical_device_candidate {
   bool synchronization2{};
   bool maintenance4{};
   bool supports_requested_surfaces{true};
+  bool supports_swapchain{true};
 };
 
 struct selected_physical_device {

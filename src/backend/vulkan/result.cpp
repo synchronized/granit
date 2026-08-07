@@ -23,6 +23,10 @@ granit_result map_vulkan_result(VkResult result) noexcept {
     return GRANIT_ERROR_INCOMPATIBLE_DRIVER;
   case VK_ERROR_INITIALIZATION_FAILED:
     return GRANIT_ERROR_INITIALIZATION_FAILED;
+  case VK_ERROR_SURFACE_LOST_KHR:
+    return GRANIT_ERROR_SURFACE_LOST;
+  case VK_ERROR_OUT_OF_DATE_KHR:
+    return GRANIT_ERROR_OUT_OF_DATE;
   case VK_ERROR_UNKNOWN:
     return GRANIT_ERROR_UNKNOWN;
   default:

@@ -1,0 +1,118 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Granit contributors
+
+#ifndef GRANIT_SWAPCHAIN_HPP_
+#define GRANIT_SWAPCHAIN_HPP_
+
+#include <cstdint>
+#include <utility>
+
+#include <granit/result.hpp>
+#include <granit/swapchain.h>
+
+namespace granit {
+
+enum class present_mode : std::uint32_t {
+  fifo = GRANIT_PRESENT_MODE_FIFO,
+  mailbox = GRANIT_PRESENT_MODE_MAILBOX,
+  immediate = GRANIT_PRESENT_MODE_IMMEDIATE,
+};
+
+struct swapchain_desc {
+  std::uint32_t width{1};
+  std::uint32_t height{1};
+  std::uint32_t minimum_image_count{};
+  present_mode presentation{present_mode::fifo};
+};
+
+struct swapchain_info {
+  std::uint32_t width{};
+  std::uint32_t height{};
+  std::uint32_t image_count{};
+  present_mode presentation{present_mode::fifo};
+};
+
+class swapchain {
+public:
+  swapchain() = default;
+  ~swapchain() { static_cast<void>(reset()); }
+
+  swapchain(const swapchain&) = delete;
+  swapchain& operator=(const swapchain&) = delete;
+  swapchain(swapchain&& other) noexcept
+      : renderer_(std::exchange(other.renderer_, GRANIT_NULL_HANDLE)),
+        handle_(std::exchange(other.handle_, GRANIT_NULL_HANDLE)) {}
+  swapchain& operator=(swapchain&& other) noexcept {
+    if (this != &other) {
+      static_cast<void>(reset());
+      renderer_ = std::exchange(other.renderer_, GRANIT_NULL_HANDLE);
+      handle_ = std::exchange(other.handle_, GRANIT_NULL_HANDLE);
+    }
+    return *this;
+  }
+
+  [[nodiscard]] result initialize(granit_renderer renderer, granit_surface surface,
+                                  const swapchain_desc& desc) noexcept {
+    if (valid() || renderer == GRANIT_NULL_HANDLE || surface == GRANIT_NULL_HANDLE) {
+      return result::invalid_argument;
+    }
+    const auto native_desc = to_native(desc);
+    const auto native_result = granit_swapchain_create(renderer, surface, &native_desc, &handle_);
+    if (native_result == GRANIT_SUCCESS) {
+      renderer_ = renderer;
+    }
+    return from_native(native_result);
+  }
+
+  [[nodiscard]] result recreate(const swapchain_desc& desc) noexcept {
+    if (!valid()) {
+      return result::invalid_handle;
+    }
+    const auto native_desc = to_native(desc);
+    return from_native(granit_swapchain_recreate(renderer_, handle_, &native_desc));
+  }
+
+  [[nodiscard]] result query_info(swapchain_info& info) const noexcept {
+    if (!valid()) {
+      return result::invalid_handle;
+    }
+    granit_swapchain_info native_info = GRANIT_SWAPCHAIN_INFO_INIT;
+    const auto native_result = granit_swapchain_get_info(renderer_, handle_, &native_info);
+    if (native_result == GRANIT_SUCCESS) {
+      info = {.width = native_info.width,
+              .height = native_info.height,
+              .image_count = native_info.image_count,
+              .presentation = static_cast<present_mode>(native_info.present_mode)};
+    }
+    return from_native(native_result);
+  }
+
+  [[nodiscard]] result reset() noexcept {
+    if (!valid()) {
+      return result::success;
+    }
+    const auto renderer = std::exchange(renderer_, GRANIT_NULL_HANDLE);
+    const auto handle = std::exchange(handle_, GRANIT_NULL_HANDLE);
+    return from_native(granit_swapchain_destroy(renderer, handle));
+  }
+
+  [[nodiscard]] bool valid() const noexcept { return handle_ != GRANIT_NULL_HANDLE; }
+  [[nodiscard]] explicit operator bool() const noexcept { return valid(); }
+  [[nodiscard]] granit_swapchain native_handle() const noexcept { return handle_; }
+
+private:
+  [[nodiscard]] static granit_swapchain_desc to_native(const swapchain_desc& desc) noexcept {
+    return {.struct_size = sizeof(granit_swapchain_desc),
+            .width = desc.width,
+            .height = desc.height,
+            .minimum_image_count = desc.minimum_image_count,
+            .present_mode = static_cast<granit_present_mode>(desc.presentation)};
+  }
+
+  granit_renderer renderer_{GRANIT_NULL_HANDLE};
+  granit_swapchain handle_{GRANIT_NULL_HANDLE};
+};
+
+} // namespace granit
+
+#endif

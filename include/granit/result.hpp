@@ -24,6 +24,8 @@ enum class result : std::int32_t {
   incompatible_driver = GRANIT_ERROR_INCOMPATIBLE_DRIVER,
   initialization_failed = GRANIT_ERROR_INITIALIZATION_FAILED,
   no_suitable_device = GRANIT_ERROR_NO_SUITABLE_DEVICE,
+  surface_lost = GRANIT_ERROR_SURFACE_LOST,
+  out_of_date = GRANIT_ERROR_OUT_OF_DATE,
 };
 
 [[nodiscard]] constexpr granit_result to_native(result value) noexcept {

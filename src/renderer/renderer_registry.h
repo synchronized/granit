@@ -12,6 +12,7 @@
 
 #include <granit/renderer.h>
 #include <granit/surface.h>
+#include <granit/swapchain.h>
 
 #include "core/handle_table.h"
 #include "renderer/renderer_state.h"
@@ -30,6 +31,17 @@ public:
   [[nodiscard]] granit_result create_win32_surface(granit_renderer renderer, void* native_instance,
                                                    void* native_window, granit_surface& surface);
   [[nodiscard]] granit_result destroy_surface(granit_renderer renderer, granit_surface surface);
+  [[nodiscard]] granit_result create_swapchain(granit_renderer renderer, granit_surface surface,
+                                               const vulkan_swapchain_desc& desc,
+                                               granit_swapchain& swapchain);
+  [[nodiscard]] granit_result recreate_swapchain(granit_renderer renderer,
+                                                 granit_swapchain swapchain,
+                                                 const vulkan_swapchain_desc& desc);
+  [[nodiscard]] granit_result get_swapchain_info(granit_renderer renderer,
+                                                 granit_swapchain swapchain,
+                                                 vulkan_swapchain_info& info);
+  [[nodiscard]] granit_result destroy_swapchain(granit_renderer renderer,
+                                                granit_swapchain swapchain);
 
 private:
   renderer_registry() = default;
@@ -42,8 +54,16 @@ private:
   struct surface_record {
     std::shared_ptr<renderer_state> renderer;
     VkSurfaceKHR native_handle{VK_NULL_HANDLE};
+    ~surface_record();
   };
-  std::unordered_map<granit_surface, surface_record> surfaces_;
+  struct swapchain_record {
+    std::shared_ptr<renderer_state> renderer;
+    std::shared_ptr<surface_record> surface;
+    std::unique_ptr<vulkan_swapchain> native;
+    ~swapchain_record();
+  };
+  std::unordered_map<granit_surface, std::shared_ptr<surface_record>> surfaces_;
+  std::unordered_map<granit_swapchain, std::shared_ptr<swapchain_record>> swapchains_;
   std::uint32_t next_domain_{1};
 };
 

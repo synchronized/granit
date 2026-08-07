@@ -31,6 +31,8 @@ target_sources(
     backend/vulkan/result.h
     backend/vulkan/surface.cpp
     backend/vulkan/surface.h
+    backend/vulkan/swapchain.cpp
+    backend/vulkan/swapchain.h
     backend/vulkan/version_check.cpp
     core/handle_table.cpp
     core/handle_table.h
@@ -40,6 +42,7 @@ target_sources(
     renderer/renderer_state.cpp
     renderer/renderer_state.h
     renderer/surface_api.cpp
+    renderer/swapchain_api.cpp
     result.cpp
     version.cpp
   PUBLIC
@@ -57,6 +60,8 @@ target_sources(
       "${PROJECT_SOURCE_DIR}/include/granit/result.hpp"
       "${PROJECT_SOURCE_DIR}/include/granit/surface.h"
       "${PROJECT_SOURCE_DIR}/include/granit/surface.hpp"
+      "${PROJECT_SOURCE_DIR}/include/granit/swapchain.h"
+      "${PROJECT_SOURCE_DIR}/include/granit/swapchain.hpp"
       "${PROJECT_SOURCE_DIR}/include/granit/types.h"
       "${PROJECT_SOURCE_DIR}/include/granit/types.hpp"
       "${GRANIT_GENERATED_VERSION_HEADER}"
