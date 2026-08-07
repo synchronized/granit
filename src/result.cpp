@@ -27,6 +27,8 @@ extern "C" const char* granit_result_message(granit_result result) {
     return "incompatible graphics driver";
   case GRANIT_ERROR_INITIALIZATION_FAILED:
     return "initialization failed";
+  case GRANIT_ERROR_NO_SUITABLE_DEVICE:
+    return "no suitable graphics device";
   default:
     return "unrecognized result";
   }

@@ -13,8 +13,10 @@
 - 创建和销毁无窗口 `VkInstance`。
 - 为每个 instance 建立独立的 `VolkInstanceTable`。
 - 可选检查并启用 Khronos validation layer 与 debug utils messenger。
+- 枚举并筛选满足 Vulkan 1.3 基础要求的物理设备。
+- 创建逻辑设备、graphics queue 和独立 `VolkDeviceTable`。
 
-物理设备选择、逻辑设备、queue、surface 和 swapchain 尚未实现。
+surface、swapchain、命令提交和渲染资源尚未实现。
 
 ## Loader 生命周期
 
@@ -35,7 +37,20 @@ Granit 不调用全局 `volkLoadInstance` 或 `volkLoadDevice`。每个内部 in
 `VK_EXT_debug_utils` 时返回 `GRANIT_ERROR_UNSUPPORTED`。当前调试回调将 warning 和 error 输出到
 标准错误流；公共 renderer API 建立日志回调后，应改为通过用户提供的诊断通道发送。
 
+## 设备选择
+
+候选设备必须支持 Vulkan 1.3、graphics queue、dynamic rendering、synchronization2 和
+maintenance4。不满足任一要求的设备不会进入排序。
+
+默认选择顺序为独立显卡、集成显卡、虚拟显卡、CPU 实现和其他设备。同类型设备优先选择
+device-local 显存更大的设备；仍然相同时保留 Vulkan 的原始枚举顺序，保证选择结果确定。
+
+逻辑设备当前只创建一个 graphics queue，并启用上述三项 Vulkan 1.3 feature。每个设备持有独立
+`VolkDeviceTable`。销毁设备前会调用 `vkDeviceWaitIdle`；后续建立显式提交和关闭流程后再评估
+更细粒度的等待策略。
+
 ## 测试策略
 
-结果映射测试不依赖运行环境。Loader 和 instance 测试使用当前机器真实 Vulkan 环境；没有 Vulkan
-1.3 loader 时明确跳过环境相关测试。验证层缺失只跳过 validation 专项，不影响基础 instance 测试。
+结果映射和设备选择策略测试不依赖运行环境。Loader、instance 和 device 测试使用当前机器真实
+Vulkan 环境；没有 Vulkan 1.3 loader 或合适 GPU 时明确跳过对应环境测试。验证层缺失只跳过
+validation 专项，不影响其他后端测试。

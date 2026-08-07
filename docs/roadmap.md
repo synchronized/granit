@@ -14,8 +14,8 @@
 
 ## 阶段二：Vulkan 后端基础
 
-- 在已实现的 loader 和 instance 基础上建立 device 分发表。
-- 实现物理设备选择和逻辑设备初始化。
+- 在已实现的 device 分发表基础上建立 renderer 公共生命周期。
+- 扩展物理设备选择策略，支持公共设备偏好配置。
 - 建立能力查询、设备选择和队列管理。
 - 接入调试消息和错误映射。
 - 完成 buffer、texture、sampler 和 shader 资源生命周期。

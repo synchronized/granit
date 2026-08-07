@@ -38,11 +38,12 @@ Granit 不是 Vulkan API 的逐项重命名或薄包装。项目希望围绕实�
 - 内部非拥有句柄表，支持 generation、资源类型和 domain 校验。
 - 内置 Vulkan-Headers 1.4.350 与 Volk 1.4.350，作为不传播给使用者的内部依赖。
 - 线程安全的 Vulkan Loader 初始化、Vulkan 1.3 检查和无窗口 instance RAII。
+- 确定性的物理设备筛选、逻辑设备、graphics queue 和独立 device 函数表。
 - Catch2 3 测试骨架，可复用父项目目标并回退到仓库内置版本。
 - CMake 配置、构建、安装和包导出入口。
 - 代码格式、静态检查和仓库忽略规则。
 
-renderer 公共 API、物理设备选择和逻辑设备尚未实现。
+renderer 公共 API 和渲染资源尚未实现。
 
 ## 快速开始
 

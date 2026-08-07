@@ -40,8 +40,10 @@ add_test(NAME granit.handle_table COMMAND granit_handle_table_test)
 add_executable(
   granit_vulkan_backend_test
   backend/vulkan_backend_test.cpp
+  "${PROJECT_SOURCE_DIR}/src/backend/vulkan/device.cpp"
   "${PROJECT_SOURCE_DIR}/src/backend/vulkan/instance.cpp"
   "${PROJECT_SOURCE_DIR}/src/backend/vulkan/loader.cpp"
+  "${PROJECT_SOURCE_DIR}/src/backend/vulkan/physical_device.cpp"
   "${PROJECT_SOURCE_DIR}/src/backend/vulkan/result.cpp"
   $<TARGET_OBJECTS:granit_volk>
 )

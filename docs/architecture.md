@@ -30,6 +30,10 @@ Granit，启用 `VK_NO_PROTOTYPES` 和 C++ namespace，不直接链接 `vulkan-1
 Loader 初始化状态在进程内缓存。每个 Vulkan instance 使用独立 `VolkInstanceTable`，后续每个
 device 使用独立 `VolkDeviceTable`，不通过 Volk 全局 instance/device 加载函数共享可变分发表。
 
+首期设备要求为 Vulkan 1.3 graphics queue、dynamic rendering、synchronization2 和 maintenance4。
+设备类型优先级高于显存大小，枚举顺序作为最终稳定决胜条件。该策略当前属于内部默认行为，
+未来公共 renderer 描述可以增加设备 ID 或功耗偏好，而不暴露 `VkPhysicalDevice`。
+
 平台窗口或 surface 所需的原生信息通过独立的平台描述结构传入。未来如需支持原生 Vulkan
 互操作，应放入明确标记的不稳定高级接口，不得污染基础 API。
 
