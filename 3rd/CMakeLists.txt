@@ -18,7 +18,10 @@ set(GRANIT_CATCH2_DIR "${CMAKE_CURRENT_SOURCE_DIR}/catch-v3.15.0")
 
 # 某些父项目只提供 Catch2::Catch2；此时仅补充 main，不能再次编译 Catch2 实现。
 if(TARGET Catch2::Catch2)
-  add_library(granit_catch2_with_main STATIC catch_main.cpp)
+  add_library(
+    granit_catch2_with_main
+    STATIC "${PROJECT_SOURCE_DIR}/tests/support/catch_main.cpp"
+  )
   add_library(Catch2::Catch2WithMain ALIAS granit_catch2_with_main)
   target_compile_features(granit_catch2_with_main PUBLIC cxx_std_20)
   target_link_libraries(granit_catch2_with_main PUBLIC Catch2::Catch2)

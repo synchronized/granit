@@ -7,6 +7,8 @@
 #include <stdint.h>
 
 #include <granit/export.h>
+#include <granit/result.h>
+#include <granit/types.h>
 #include <granit/version.h>
 
 #ifdef __cplusplus

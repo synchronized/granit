@@ -7,6 +7,8 @@
 #include <cstdint>
 
 #include <granit/granit.h>
+#include <granit/result.hpp>
+#include <granit/types.hpp>
 
 namespace granit {
 

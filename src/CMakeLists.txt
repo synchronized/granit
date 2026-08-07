@@ -17,7 +17,9 @@ configure_file(
 
 target_sources(
   granit
-  PRIVATE version.cpp
+  PRIVATE
+    result.cpp
+    version.cpp
   PUBLIC
     FILE_SET HEADERS
     BASE_DIRS
@@ -27,6 +29,10 @@ target_sources(
       "${PROJECT_SOURCE_DIR}/include/granit/export.h"
       "${PROJECT_SOURCE_DIR}/include/granit/granit.h"
       "${PROJECT_SOURCE_DIR}/include/granit/granit.hpp"
+      "${PROJECT_SOURCE_DIR}/include/granit/result.h"
+      "${PROJECT_SOURCE_DIR}/include/granit/result.hpp"
+      "${PROJECT_SOURCE_DIR}/include/granit/types.h"
+      "${PROJECT_SOURCE_DIR}/include/granit/types.hpp"
       "${GRANIT_GENERATED_VERSION_HEADER}"
 )
 
@@ -48,7 +54,7 @@ target_compile_definitions(
 
 target_compile_options(
   granit
-  PRIVATE
+  PUBLIC
     $<$<COMPILE_LANG_AND_ID:C,MSVC>:/utf-8>
     $<$<COMPILE_LANG_AND_ID:CXX,MSVC>:/utf-8>
 )

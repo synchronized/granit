@@ -12,3 +12,16 @@ TEST_CASE("C++ 包装返回编译期版本", "[version]") {
   CHECK(version.minor == GRANIT_VERSION_MINOR);
   CHECK(version.patch == GRANIT_VERSION_PATCH);
 }
+
+TEST_CASE("结果码保持定宽 C ABI", "[result]") {
+  STATIC_CHECK(sizeof(granit::result) == sizeof(std::int32_t));
+  CHECK(granit::succeeded(granit::result::success));
+  CHECK_FALSE(granit::failed(granit::result::success));
+  CHECK(granit::failed(granit::result::invalid_argument));
+  CHECK(granit::result_message(granit::result::invalid_handle) == "invalid handle");
+}
+
+TEST_CASE("基础句柄使用 64 位整数和统一空值", "[handle]") {
+  STATIC_CHECK(sizeof(granit::handle) == sizeof(std::uint64_t));
+  STATIC_CHECK(granit::null_handle == 0);
+}
