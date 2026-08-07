@@ -28,7 +28,7 @@ Granit 不是 Vulkan API 的逐项重命名或薄包装。项目希望围绕实�
 
 ## 当前状态
 
-仓库当前提供项目骨架：
+仓库当前已建立工程、ABI、Vulkan 后端和窗口输出基础：
 
 - `granit` CMake 目标及 `granit::granit` 别名目标。
 - `.h` C API 与 `.hpp` C++20 包装的目录约定。
@@ -46,7 +46,9 @@ Granit 不是 Vulkan API 的逐项重命名或薄包装。项目希望围绕实�
 - CMake 配置、构建、安装和包导出入口。
 - 代码格式、静态检查和仓库忽略规则。
 
-buffer、texture、pipeline 等渲染资源尚未实现。
+下一阶段将确定 GPU 内存分配策略并实现 Buffer、Texture 和 Sampler。Command Recorder、帧同步、
+Swapchain acquire/present 和 Pipeline 尚未实现，具体顺序及验收标准见
+[docs/roadmap.md](docs/roadmap.md)。
 
 ## 快速开始
 
