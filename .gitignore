@@ -1,0 +1,27 @@
+build/
+out/
+
+CMakeUserPresets.json
+compile_commands.json
+
+.vs/
+.vscode/
+.idea/
+
+*.user
+*.suo
+*.obj
+*.o
+*.lib
+*.a
+*.dll
+*.so
+*.dylib
+*.exe
+*.pdb
+
+*.spv
+*.cache
+
+# Catch2 运行时可能生成的测试报告。
+test-results/
