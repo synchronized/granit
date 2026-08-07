@@ -24,6 +24,19 @@ target_link_libraries(
 granit_target_compile_warnings(granit_cpp_version_test)
 add_test(NAME granit.cpp_version COMMAND granit_cpp_version_test)
 
+add_executable(
+  granit_handle_table_test
+  core/handle_table_test.cpp
+  "${PROJECT_SOURCE_DIR}/src/core/handle_table.cpp"
+)
+target_include_directories(granit_handle_table_test PRIVATE "${PROJECT_SOURCE_DIR}/src")
+target_link_libraries(
+  granit_handle_table_test
+  PRIVATE granit::granit Catch2::Catch2WithMain
+)
+granit_target_compile_warnings(granit_handle_table_test)
+add_test(NAME granit.handle_table COMMAND granit_handle_table_test)
+
 add_library(
   granit_cpp_header_test
   OBJECT
@@ -34,7 +47,7 @@ target_link_libraries(granit_cpp_header_test PRIVATE granit::granit)
 granit_target_compile_warnings(granit_cpp_header_test)
 
 set_tests_properties(
-  granit.c_version granit.cpp_version
+  granit.c_version granit.cpp_version granit.handle_table
   PROPERTIES ENVIRONMENT_MODIFICATION
              "PATH=path_list_prepend:$<TARGET_FILE_DIR:granit>"
 )

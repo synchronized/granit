@@ -18,6 +18,8 @@ configure_file(
 target_sources(
   granit
   PRIVATE
+    core/handle_table.cpp
+    core/handle_table.h
     result.cpp
     version.cpp
   PUBLIC
@@ -40,6 +42,7 @@ target_compile_features(granit PUBLIC cxx_std_20)
 granit_target_compile_warnings(granit)
 target_include_directories(
   granit
+  PRIVATE "${PROJECT_SOURCE_DIR}/src"
   PUBLIC
     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
     $<BUILD_INTERFACE:${GRANIT_GENERATED_INCLUDE_DIR}>
