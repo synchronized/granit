@@ -1,6 +1,37 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2026 Granit contributors
 
+set(GRANIT_VULKAN_HEADERS_DIR
+    "${CMAKE_CURRENT_SOURCE_DIR}/Vulkan-Headers-1.4.350/include")
+set(GRANIT_VOLK_DIR "${CMAKE_CURRENT_SOURCE_DIR}/volk-1.4.350")
+
+# Volk 作为内部对象并入 Granit，避免静态安装包导出私有第三方 target。
+add_library(granit_volk OBJECT "${GRANIT_VOLK_DIR}/volk.c")
+set_source_files_properties("${GRANIT_VOLK_DIR}/volk.c" PROPERTIES LANGUAGE CXX)
+target_compile_features(granit_volk PRIVATE cxx_std_20)
+target_compile_definitions(granit_volk PRIVATE VOLK_NAMESPACE)
+target_include_directories(
+  granit_volk
+  SYSTEM PRIVATE
+    "${GRANIT_VOLK_DIR}"
+    "${GRANIT_VULKAN_HEADERS_DIR}"
+)
+set_target_properties(
+  granit_volk
+  PROPERTIES
+    CXX_VISIBILITY_PRESET hidden
+    POSITION_INDEPENDENT_CODE ON
+    VISIBILITY_INLINES_HIDDEN YES
+    FOLDER "ThirdParty/Volk"
+)
+
+set(GRANIT_VULKAN_HEADERS_DIR "${GRANIT_VULKAN_HEADERS_DIR}" PARENT_SCOPE)
+set(GRANIT_VOLK_DIR "${GRANIT_VOLK_DIR}" PARENT_SCOPE)
+
+if(NOT GRANIT_BUILD_TESTING OR NOT BUILD_TESTING)
+  return()
+endif()
+
 # 父项目已经提供完整 Catch2 目标时直接复用，避免重复编译测试框架。
 if(TARGET Catch2::Catch2WithMain)
   message(STATUS "Granit tests reuse the existing Catch2::Catch2WithMain target")

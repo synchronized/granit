@@ -27,11 +27,11 @@ set(
   "Granit CMake 包配置安装目录"
 )
 
+include(CTest)
+add_subdirectory(3rd)
 add_subdirectory(src)
 
-include(CTest)
 if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
-  add_subdirectory(3rd)
   add_subdirectory(tests)
 endif()
 

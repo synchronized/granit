@@ -9,7 +9,8 @@
 - 支持 C++20 的编译器：MSVC、Clang 或 GCC。
 - Ninja 或 Visual Studio 2022。
 
-Vulkan SDK 将在 Vulkan 后端接入后成为开发依赖，但不会成为公共头文件依赖。
+- 仓库内置 Vulkan-Headers 1.4.350 和 Volk 1.4.350，编译 Granit 不要求安装完整 Vulkan SDK。
+- 运行 Vulkan 后端仍需要操作系统中可用的 Vulkan loader 和显卡驱动。
 
 ## CMake 选项
 
@@ -31,6 +32,10 @@ Vulkan SDK 将在 Vulkan 后端接入后成为开发依赖，但不会成为公�
 `find_package(Catch2 3)` 找到的安装包，最后回退到仓库内置的 Catch2 3.15.0。
 Catch2 只在同时启用 `GRANIT_BUILD_TESTING` 和 CMake `BUILD_TESTING` 时引入，
 不会成为 Granit 安装包或使用者的传递依赖。
+
+Vulkan-Headers 与 Volk 始终作为 Granit 内部构建依赖。Volk 对象直接并入库目标，不出现在
+安装后的 CMake package 中；Vulkan include 目录、`VK_NO_PROTOTYPES` 和 `VOLK_NAMESPACE`
+也不会传播给使用者。
 
 ## 手动配置
 

@@ -7,3 +7,6 @@
 *.jpg binary
 *.jpeg binary
 *.spv binary
+
+# 第三方源码保持上游原貌，不使用项目自身的空白检查规则。
+3rd/** -whitespace

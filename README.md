@@ -36,6 +36,7 @@ Granit 不是 Vulkan API 的逐项重命名或薄包装。项目希望围绕实�
 - 基础版本查询 API。
 - 定宽结果码、错误文本和 64 位基础句柄类型。
 - 内部非拥有句柄表，支持 generation、资源类型和 domain 校验。
+- 内置 Vulkan-Headers 1.4.350 与 Volk 1.4.350，作为不传播给使用者的内部依赖。
 - Catch2 3 测试骨架，可复用父项目目标并回退到仓库内置版本。
 - CMake 配置、构建、安装和包导出入口。
 - 代码格式、静态检查和仓库忽略规则。
@@ -101,6 +102,7 @@ C++20 用户包含：
 - [docs/build.md](docs/build.md)：环境要求、构建选项和安装方式。
 - [docs/development.md](docs/development.md)：代码风格、命名和目录规范。
 - [docs/roadmap.md](docs/roadmap.md)：分阶段路线图。
+- [3rd/README.md](3rd/README.md)：第三方依赖版本、来源和用途。
 
 ## 许可证
 

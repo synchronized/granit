@@ -14,6 +14,7 @@
 
 ## 阶段二：Vulkan 后端基础
 
+- 基于已集成的 Volk 建立 loader、instance 和 device 分发表。
 - 初始化 Vulkan instance、物理设备和逻辑设备。
 - 建立能力查询、设备选择和队列管理。
 - 接入调试消息和错误映射。

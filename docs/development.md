@@ -35,6 +35,9 @@ tests/       自动化测试
 
 Vulkan 相关声明只能位于 `src/` 内部目录，不能通过公共头文件间接泄漏。
 
+Vulkan-Headers 与 Volk 必须锁定同一 registry 版本并成对升级，升级时同步更新
+`3rd/README.md` 和编译期版本检查。
+
 ## 提交前检查
 
 ```sh

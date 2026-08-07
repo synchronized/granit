@@ -23,6 +23,10 @@ C API。普通 C++ 用户不需要直接使用 C API。
 - 不要求使用者链接 Vulkan loader。
 - 不要求使用者了解队列族、命令池、描述符池或 Vulkan 同步细节。
 
+内部使用 Vulkan-Headers 1.4.350 与匹配的 Volk 1.4.350。Volk 以 object library 形式并入
+Granit，启用 `VK_NO_PROTOTYPES` 和 C++ namespace，不直接链接 `vulkan-1`。运行时由 Volk
+查找系统 Vulkan loader；头文件版本不改变 Granit 以 Vulkan 1.3 为最低运行能力的目标。
+
 平台窗口或 surface 所需的原生信息通过独立的平台描述结构传入。未来如需支持原生 Vulkan
 互操作，应放入明确标记的不稳定高级接口，不得污染基础 API。
 

@@ -18,6 +18,8 @@ configure_file(
 target_sources(
   granit
   PRIVATE
+    $<TARGET_OBJECTS:granit_volk>
+    backend/vulkan/version_check.cpp
     core/handle_table.cpp
     core/handle_table.h
     result.cpp
@@ -48,12 +50,23 @@ target_include_directories(
     $<BUILD_INTERFACE:${GRANIT_GENERATED_INCLUDE_DIR}>
     $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
 )
+target_include_directories(
+  granit
+  SYSTEM PRIVATE
+    "${GRANIT_VOLK_DIR}"
+    "${GRANIT_VULKAN_HEADERS_DIR}"
+)
 
 target_compile_definitions(
   granit
-  PRIVATE GRANIT_BUILDING_LIBRARY
+  PRIVATE
+    GRANIT_BUILDING_LIBRARY
+    VK_NO_PROTOTYPES
+    VOLK_NAMESPACE
   PUBLIC $<$<NOT:$<BOOL:${BUILD_SHARED_LIBS}>>:GRANIT_STATIC_DEFINE>
 )
+
+target_link_libraries(granit PRIVATE ${CMAKE_DL_LIBS})
 
 target_compile_options(
   granit
