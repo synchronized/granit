@@ -21,6 +21,12 @@ extern "C" const char* granit_result_message(granit_result result) {
     return "device lost";
   case GRANIT_ERROR_INTERNAL:
     return "internal error";
+  case GRANIT_ERROR_BACKEND_UNAVAILABLE:
+    return "rendering backend unavailable";
+  case GRANIT_ERROR_INCOMPATIBLE_DRIVER:
+    return "incompatible graphics driver";
+  case GRANIT_ERROR_INITIALIZATION_FAILED:
+    return "initialization failed";
   default:
     return "unrecognized result";
   }

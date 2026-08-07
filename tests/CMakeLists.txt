@@ -37,6 +37,35 @@ target_link_libraries(
 granit_target_compile_warnings(granit_handle_table_test)
 add_test(NAME granit.handle_table COMMAND granit_handle_table_test)
 
+add_executable(
+  granit_vulkan_backend_test
+  backend/vulkan_backend_test.cpp
+  "${PROJECT_SOURCE_DIR}/src/backend/vulkan/instance.cpp"
+  "${PROJECT_SOURCE_DIR}/src/backend/vulkan/loader.cpp"
+  "${PROJECT_SOURCE_DIR}/src/backend/vulkan/result.cpp"
+  $<TARGET_OBJECTS:granit_volk>
+)
+target_include_directories(
+  granit_vulkan_backend_test
+  PRIVATE "${PROJECT_SOURCE_DIR}/src"
+)
+target_include_directories(
+  granit_vulkan_backend_test
+  SYSTEM PRIVATE
+    "${GRANIT_VOLK_DIR}"
+    "${GRANIT_VULKAN_HEADERS_DIR}"
+)
+target_compile_definitions(
+  granit_vulkan_backend_test
+  PRIVATE VK_NO_PROTOTYPES VOLK_NAMESPACE
+)
+target_link_libraries(
+  granit_vulkan_backend_test
+  PRIVATE granit::granit Catch2::Catch2WithMain ${CMAKE_DL_LIBS}
+)
+granit_target_compile_warnings(granit_vulkan_backend_test)
+add_test(NAME granit.vulkan_backend COMMAND granit_vulkan_backend_test)
+
 add_library(
   granit_cpp_header_test
   OBJECT
@@ -47,7 +76,7 @@ target_link_libraries(granit_cpp_header_test PRIVATE granit::granit)
 granit_target_compile_warnings(granit_cpp_header_test)
 
 set_tests_properties(
-  granit.c_version granit.cpp_version granit.handle_table
+  granit.c_version granit.cpp_version granit.handle_table granit.vulkan_backend
   PROPERTIES ENVIRONMENT_MODIFICATION
              "PATH=path_list_prepend:$<TARGET_FILE_DIR:granit>"
 )

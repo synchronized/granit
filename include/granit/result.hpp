@@ -20,6 +20,9 @@ enum class result : std::int32_t {
   unsupported = GRANIT_ERROR_UNSUPPORTED,
   device_lost = GRANIT_ERROR_DEVICE_LOST,
   internal = GRANIT_ERROR_INTERNAL,
+  backend_unavailable = GRANIT_ERROR_BACKEND_UNAVAILABLE,
+  incompatible_driver = GRANIT_ERROR_INCOMPATIBLE_DRIVER,
+  initialization_failed = GRANIT_ERROR_INITIALIZATION_FAILED,
 };
 
 [[nodiscard]] constexpr granit_result to_native(result value) noexcept {

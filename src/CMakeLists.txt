@@ -19,6 +19,12 @@ target_sources(
   granit
   PRIVATE
     $<TARGET_OBJECTS:granit_volk>
+    backend/vulkan/instance.cpp
+    backend/vulkan/instance.h
+    backend/vulkan/loader.cpp
+    backend/vulkan/loader.h
+    backend/vulkan/result.cpp
+    backend/vulkan/result.h
     backend/vulkan/version_check.cpp
     core/handle_table.cpp
     core/handle_table.h

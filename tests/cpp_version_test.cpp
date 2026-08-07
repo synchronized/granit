@@ -19,6 +19,12 @@ TEST_CASE("结果码保持定宽 C ABI", "[result]") {
   CHECK_FALSE(granit::failed(granit::result::success));
   CHECK(granit::failed(granit::result::invalid_argument));
   CHECK(granit::result_message(granit::result::invalid_handle) == "invalid handle");
+  CHECK(
+    granit::result_message(granit::result::backend_unavailable) ==
+    "rendering backend unavailable");
+  CHECK(
+    granit::result_message(granit::result::incompatible_driver) ==
+    "incompatible graphics driver");
 }
 
 TEST_CASE("基础句柄使用 64 位整数和统一空值", "[handle]") {

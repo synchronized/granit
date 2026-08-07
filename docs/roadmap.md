@@ -14,8 +14,8 @@
 
 ## 阶段二：Vulkan 后端基础
 
-- 基于已集成的 Volk 建立 loader、instance 和 device 分发表。
-- 初始化 Vulkan instance、物理设备和逻辑设备。
+- 在已实现的 loader 和 instance 基础上建立 device 分发表。
+- 实现物理设备选择和逻辑设备初始化。
 - 建立能力查询、设备选择和队列管理。
 - 接入调试消息和错误映射。
 - 完成 buffer、texture、sampler 和 shader 资源生命周期。
