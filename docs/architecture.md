@@ -3,6 +3,49 @@
 
 # 架构与 ABI
 
+## 产品定位
+
+Granit 定位为基于 Vulkan 的中层、显式、可嵌入式渲染库，主要服务自研游戏引擎、实时应用和
+图形工具。它隐藏 Vulkan 的实例、设备、同步和资源管理细节，但保留现代图形 API 中明确的资源
+用途、命令记录、提交和生命周期语义。
+
+核心库采用“Bring Your Own Engine”边界，不直接拥有使用者的 Scene、Entity、Camera、Light、
+动画或资产数据库。PBR、场景渲染、后处理套件和 Render Graph 可以在核心能力稳定后作为独立
+高层模块提供，不能反向污染稳定 C ABI。
+
+当前只实现 Vulkan 后端，不承诺同时支持 Direct3D、Metal 或 OpenGL。公共概念仍保持后端中立，
+目的是避免 Vulkan 实现细节泄漏，而不是立即承担多后端的最低公共能力限制。
+
+## 渲染目标模型
+
+离屏渲染是核心能力，不是窗口渲染的附加功能。Swapchain 只是外部输出端点，不能成为资源、
+命令或帧流程的中心。预期关系为：
+
+```text
+Texture
+  └─ Texture View
+       └─ Render Target Attachment
+            ├─ 离屏 Texture
+            └─ Swapchain Backbuffer
+```
+
+渲染命令面向统一的 Render Target Attachment；调用者无需根据目标来自离屏 Texture 还是
+Swapchain 图像选择两套命令。未启用 Surface 的 Renderer 仍应支持资源上传、计算和完整离屏渲染。
+
+该模型必须覆盖阴影贴图、后处理、编辑器 Viewport、反射探针、缩略图、图像回归测试和无窗口
+资源烘焙。Swapchain 图像作为内部非拥有 Texture/View 接入，普通资源销毁接口不得释放它们。
+
+## 架构参考
+
+- 主要参考 Diligent 的资源、View、Pipeline、Device Context 和资源状态表达，但不照搬 COM
+  接口、引用计数对象和多后端工厂体系。
+- 参考 bgfx 的整数句柄、C API、可嵌入边界、批量提交和多线程 Encoder，但不继承为兼容旧图形
+  API 形成的限制，也不采用依赖全局状态的使用方式。
+- 后期参考 Filament 的 FrameGraph、临时资源生命周期、材质和 PBR 分层；Scene、Camera、Light
+  和完整 PBR 工作流不进入 Granit 核心层。
+
+参考项目用于比较职责边界和成熟设计，不要求保持 API 兼容，也不以逐项复刻为目标。
+
 ## 分层
 
 Granit 使用三层接口隔离使用者与 Vulkan：
