@@ -15,8 +15,10 @@
 - 可选检查并启用 Khronos validation layer 与 debug utils messenger。
 - 枚举并筛选满足 Vulkan 1.3 基础要求的物理设备。
 - 创建逻辑设备、graphics queue 和独立 `VolkDeviceTable`。
+- 按需启用 Win32 Surface 扩展，并检查设备与队列的呈现能力。
+- 创建、查询、重建和销毁 Win32 Surface 对应的 Swapchain。
 
-surface、swapchain、命令提交和渲染资源尚未实现。
+命令提交、GPU 内存分配和 Buffer/Texture 等渲染资源尚未实现。
 
 ## Loader 生命周期
 
@@ -25,7 +27,7 @@ Loader 状态通过函数局部静态对象初始化，依赖 C++ 的线程安�
 时返回 `GRANIT_ERROR_INCOMPATIBLE_DRIVER`。
 
 Granit 不调用全局 `volkLoadInstance` 或 `volkLoadDevice`。每个内部 instance 保存自己的
-`VolkInstanceTable`，未来每个逻辑设备保存独立的 `VolkDeviceTable`，以支持多个 renderer/device
+`VolkInstanceTable`，每个逻辑设备保存独立的 `VolkDeviceTable`，以支持多个 renderer/device
 并存，避免全局函数指针被后创建的设备覆盖。
 
 ## Instance

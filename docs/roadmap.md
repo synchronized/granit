@@ -84,7 +84,7 @@
 
 ### 目标与交付物
 
-1. **R-01 / P0**：确定内存分配策略，并决定自研分配层还是引入 Vulkan Memory Allocator。
+1. **[R-01](plans/R-01-memory-allocation.md) / P0**：采用内部 VMA 的 GPU 内存分配方案。
 2. **R-02 / P0**：定义平台无关的资源用途、内存位置、像素格式、尺寸和采样数。
 3. **R-03 / P0**：实现 Buffer 创建、销毁、映射、刷新和失效语义。
 4. **R-04 / P0**：实现批量初始数据和 device-local Buffer 上传路径。

@@ -84,6 +84,11 @@ device 使用独立 `VolkDeviceTable`，不通过 Volk 全局 instance/device �
 平台窗口或 surface 所需的原生信息通过独立的平台描述结构传入。未来如需支持原生 Vulkan
 互操作，应放入明确标记的不稳定高级接口，不得污染基础 API。
 
+GPU 资源内存计划由内部 Vulkan Memory Allocator（VMA）负责选择 Memory Type 和大块子分配。
+公共 API 只表达 automatic、device、upload 和 readback 等访问意图，不暴露 VMA 类型、Vulkan
+memory property 或 heap index。VMA 不进入安装导出，具体接入计划见
+[R-01 GPU 内存分配方案](plans/R-01-memory-allocation.md)。
+
 ## C ABI 规则
 
 - C 头文件必须能够由 C11 编译器独立包含。
