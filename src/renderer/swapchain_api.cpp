@@ -98,3 +98,21 @@ extern "C" granit_result granit_swapchain_destroy(granit_renderer renderer,
     return GRANIT_ERROR_INTERNAL;
   }
 }
+
+extern "C" granit_result granit_swapchain_get_backbuffer(granit_renderer renderer,
+                                                         granit_swapchain swapchain, uint32_t index,
+                                                         granit_texture* texture,
+                                                         granit_texture_view* view) {
+  if (texture == nullptr || view == nullptr)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  *texture = GRANIT_NULL_HANDLE;
+  *view = GRANIT_NULL_HANDLE;
+  if (renderer == GRANIT_NULL_HANDLE || swapchain == GRANIT_NULL_HANDLE)
+    return GRANIT_ERROR_INVALID_HANDLE;
+  try {
+    return granit::detail::renderer_registry::instance().get_swapchain_backbuffer(
+        renderer, swapchain, index, *texture, *view);
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}

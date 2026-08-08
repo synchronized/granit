@@ -9,6 +9,7 @@
 #include <mutex>
 #include <string_view>
 #include <unordered_map>
+#include <vector>
 
 #include <granit/buffer.h>
 #include <granit/renderer.h>
@@ -45,6 +46,10 @@ public:
                                                  vulkan_swapchain_info& info);
   [[nodiscard]] granit_result destroy_swapchain(granit_renderer renderer,
                                                 granit_swapchain swapchain);
+  [[nodiscard]] granit_result get_swapchain_backbuffer(granit_renderer renderer,
+                                                       granit_swapchain swapchain,
+                                                       std::uint32_t index, granit_texture& texture,
+                                                       granit_texture_view& view);
   [[nodiscard]] granit_result create_buffer(granit_renderer renderer,
                                             const granit_buffer_desc& desc, granit_buffer& buffer);
   [[nodiscard]] granit_result map_buffer(granit_renderer renderer, granit_buffer buffer,
@@ -71,7 +76,12 @@ public:
 private:
   renderer_registry() = default;
 
+  struct swapchain_record;
+
   [[nodiscard]] std::uint32_t allocate_domain() noexcept;
+  [[nodiscard]] granit_result
+  install_swapchain_backbuffers(granit_swapchain swapchain,
+                                const std::shared_ptr<swapchain_record>& record);
 
   std::mutex mutex_;
   handle_table handles_;
@@ -85,6 +95,8 @@ private:
     std::shared_ptr<renderer_state> renderer;
     std::shared_ptr<surface_record> surface;
     std::unique_ptr<vulkan_swapchain> native;
+    std::vector<granit_texture> textures;
+    std::vector<granit_texture_view> views;
     ~swapchain_record();
   };
   struct buffer_record {
@@ -102,12 +114,14 @@ private:
     vulkan_image_allocation native;
     granit_texture_desc desc{};
     bool owned{true};
+    bool publicly_destroyable{true};
     ~texture_record();
   };
   struct texture_view_record {
     std::shared_ptr<renderer_state> renderer;
     std::shared_ptr<texture_record> texture;
     VkImageView native{VK_NULL_HANDLE};
+    bool publicly_destroyable{true};
     ~texture_view_record();
   };
   struct sampler_record {

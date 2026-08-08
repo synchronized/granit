@@ -73,10 +73,27 @@ TEST_CASE("Swapchain 支持创建、查询、重建和销毁", "[swapchain][win3
   CHECK(info.height > 0);
   CHECK(info.image_count >= 2);
 
+  granit_texture old_texture = GRANIT_NULL_HANDLE;
+  granit_texture_view old_view = GRANIT_NULL_HANDLE;
+  REQUIRE(swapchain.backbuffer(0, old_texture, old_view) == granit::result::success);
+  REQUIRE(old_texture != GRANIT_NULL_HANDLE);
+  REQUIRE(old_view != GRANIT_NULL_HANDLE);
+  CHECK(granit_texture_destroy(renderer.native_handle(), old_texture) == GRANIT_ERROR_UNSUPPORTED);
+  CHECK(granit_texture_view_destroy(renderer.native_handle(), old_view) ==
+        GRANIT_ERROR_UNSUPPORTED);
+  granit_texture invalid_texture = GRANIT_NULL_HANDLE;
+  granit_texture_view invalid_view = GRANIT_NULL_HANDLE;
+  CHECK(swapchain.backbuffer(info.image_count, invalid_texture, invalid_view) ==
+        granit::result::invalid_argument);
+
   REQUIRE(swapchain.recreate({.width = 128, .height = 96}) == granit::result::success);
   REQUIRE(swapchain.query_info(info) == granit::result::success);
   CHECK(info.width > 0);
   CHECK(info.height > 0);
+  CHECK(granit_texture_destroy(renderer.native_handle(), old_texture) ==
+        GRANIT_ERROR_INVALID_HANDLE);
+  CHECK(granit_texture_view_destroy(renderer.native_handle(), old_view) ==
+        GRANIT_ERROR_INVALID_HANDLE);
   CHECK(swapchain.reset() == granit::result::success);
 }
 

@@ -57,3 +57,9 @@ Swapchain 属于创建它的 Renderer 和 Surface，整数句柄会同时验证�
 不要让父对象销毁与其子对象操作并发执行。
 
 当前尚未公开 acquire/present；它们将与帧同步对象和队列提交锁一起设计。
+
+## Backbuffer 资源
+
+`granit_swapchain_get_backbuffer` 可按索引取得 Swapchain 拥有的 Texture 和默认 View。返回句柄是
+借用资源，不能通过 Texture/View 销毁函数单独销毁。Swapchain 重建或失效后，所有旧句柄立即
+失效；调用者应重新查询。当前接口只提供资源身份，实际当前图像由后续 acquire 接口确定。

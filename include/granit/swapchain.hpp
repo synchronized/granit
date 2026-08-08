@@ -87,6 +87,11 @@ public:
     return from_native(native_result);
   }
 
+  [[nodiscard]] result backbuffer(std::uint32_t index, granit_texture& texture,
+                                  granit_texture_view& view) const noexcept {
+    return from_native(granit_swapchain_get_backbuffer(renderer_, handle_, index, &texture, &view));
+  }
+
   [[nodiscard]] result reset() noexcept {
     if (!valid()) {
       return result::success;

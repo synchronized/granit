@@ -98,13 +98,27 @@ granit_result vulkan_swapchain::recreate(const vulkan_instance& instance,
       return map_vulkan_result(result);
     }
     formats.resize(format_count);
-    auto selected_format = formats.front();
+    VkSurfaceFormatKHR selected_format{};
     for (const auto& format : formats) {
       if (format.format == VK_FORMAT_B8G8R8A8_SRGB &&
           format.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
         selected_format = format;
         break;
       }
+    }
+    if (selected_format.format == VK_FORMAT_UNDEFINED) {
+      for (const auto& format : formats) {
+        if ((format.format == VK_FORMAT_B8G8R8A8_UNORM ||
+             format.format == VK_FORMAT_R8G8B8A8_SRGB ||
+             format.format == VK_FORMAT_R8G8B8A8_UNORM) &&
+            format.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
+          selected_format = format;
+          break;
+        }
+      }
+    }
+    if (selected_format.format == VK_FORMAT_UNDEFINED) {
+      return GRANIT_ERROR_UNSUPPORTED;
     }
 
     std::uint32_t mode_count = 0;

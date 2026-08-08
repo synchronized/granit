@@ -49,6 +49,8 @@ public:
 
   [[nodiscard]] bool valid() const noexcept { return handle_ != VK_NULL_HANDLE; }
   [[nodiscard]] vulkan_swapchain_info info() const noexcept;
+  [[nodiscard]] const std::vector<VkImage>& images() const noexcept { return images_; }
+  [[nodiscard]] VkFormat format() const noexcept { return format_; }
 
 private:
   VkSwapchainKHR handle_{VK_NULL_HANDLE};

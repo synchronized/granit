@@ -131,6 +131,7 @@ if (granit::failed(result)) {
 - [docs/plans/R-04-buffer-upload.md](docs/plans/R-04-buffer-upload.md)：Buffer 同步上传计划。
 - [docs/plans/R-05-texture-view.md](docs/plans/R-05-texture-view.md)：Texture 与 View 计划。
 - [docs/plans/R-06-sampler.md](docs/plans/R-06-sampler.md)：Sampler 生命周期与能力计划。
+- [docs/plans/R-07-swapchain-backbuffer.md](docs/plans/R-07-swapchain-backbuffer.md)：Backbuffer 资源计划。
 - [docs/renderer.md](docs/renderer.md)：公共 renderer C/C++ API 与生命周期。
 - [docs/resource-types.md](docs/resource-types.md)：Buffer、Texture、View 和 Sampler 值类型。
 - [docs/sampler.md](docs/sampler.md)：Sampler 状态、能力限制和生命周期。
