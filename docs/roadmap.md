@@ -23,7 +23,7 @@
 | --- | --- | --- |
 | 一、工程与 ABI 基础 | 基本完成 | 构建、公共接口分层、句柄、测试体系已建立 |
 | 二、Vulkan 与窗口输出基础 | 基本完成 | Renderer、Win32 Surface、Swapchain 生命周期已实现 |
-| 三、GPU 资源基础 | 下一阶段 | 内存策略及 Buffer、Texture、Sampler 尚未实现 |
+| 三、GPU 资源基础 | 进行中 | 内存分配与资源值类型已完成，资源生命周期尚未实现 |
 | 四、命令与帧同步 | 未开始 | Command Recorder、同步和 acquire/present 尚未实现 |
 | 五、基础渲染 | 未开始 | Shader、Pipeline 和 Dynamic Rendering 尚未实现 |
 | 六、多线程与性能 | 未开始 | 在真实访问模式形成后细化 |
@@ -80,12 +80,12 @@
 
 ## 阶段三：GPU 资源基础
 
-**状态：下一阶段。前置依赖：阶段一和阶段二。**
+**状态：进行中。前置依赖：阶段一和阶段二。**
 
 ### 目标与交付物
 
 1. **[R-01](plans/R-01-memory-allocation.md) / P0 / 已完成**：采用内部 VMA 的 GPU 内存分配方案。
-2. **[R-02](plans/R-02-resource-model.md) / P0**：定义平台无关的资源用途、内存位置、像素格式、尺寸和采样数。
+2. **[R-02](plans/R-02-resource-model.md) / P0 / 已完成**：定义平台无关的资源用途、内存位置、像素格式、尺寸和采样数。
 3. **R-03 / P0**：实现 Buffer 创建、销毁、映射、刷新和失效语义。
 4. **R-04 / P0**：实现批量初始数据和 device-local Buffer 上传路径。
 5. **R-05 / P0**：实现 Texture 与 Texture View 生命周期、用途和子资源范围。
@@ -229,12 +229,11 @@
 
 ## 近期执行顺序
 
-1. `R-02`：冻结 Buffer、Texture、Sampler 等第一版公共值类型和标志。
-2. `R-03`、`R-04`：完成 Buffer、映射和上传闭环。
-3. `R-05`、`R-06`：完成 Texture、Texture View 和 Sampler。
-4. `R-07`、`R-09`：统一离屏附件与 Swapchain Backbuffer。
-5. `R-08`：在产生异步 GPU 使用前完成延迟销毁基础。
-6. `F-01` 至 `F-07`：建立命令、同步和完整窗口帧循环。
-7. `D-01` 至 `D-06`：完成 Shader、Pipeline、离屏清屏和最小三角形。
+1. `R-03`、`R-04`：完成 Buffer、映射和上传闭环。
+2. `R-05`、`R-06`：完成 Texture、Texture View 和 Sampler。
+3. `R-07`、`R-09`：统一离屏附件与 Swapchain Backbuffer。
+4. `R-08`：在产生异步 GPU 使用前完成延迟销毁基础。
+5. `F-01` 至 `F-07`：建立命令、同步和完整窗口帧循环。
+6. `D-01` 至 `D-06`：完成 Shader、Pipeline、离屏清屏和最小三角形。
 
 若实现过程中发现前置抽象不足，应先更新本路线图和对应设计文档，再扩大公共 API。

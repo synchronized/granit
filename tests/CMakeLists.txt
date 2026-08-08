@@ -11,6 +11,7 @@ add_library(
   granit_c_header_test
   OBJECT
     headers/renderer_h.c
+    headers/resource_types_h.c
     headers/result_h.c
     headers/surface_h.c
     headers/swapchain_h.c
@@ -39,6 +40,19 @@ target_link_libraries(
 )
 granit_target_compile_warnings(granit_handle_table_test)
 add_test(NAME granit.handle_table COMMAND granit_handle_table_test)
+
+add_executable(
+  granit_resource_validation_test
+  core/resource_validation_test.cpp
+  "${PROJECT_SOURCE_DIR}/src/core/resource_validation.cpp"
+)
+target_include_directories(granit_resource_validation_test PRIVATE "${PROJECT_SOURCE_DIR}/src")
+target_link_libraries(
+  granit_resource_validation_test
+  PRIVATE granit::granit Catch2::Catch2WithMain
+)
+granit_target_compile_warnings(granit_resource_validation_test)
+add_test(NAME granit.resource_validation COMMAND granit_resource_validation_test)
 
 add_executable(
   granit_renderer_test
@@ -103,6 +117,7 @@ add_library(
   granit_cpp_header_test
   OBJECT
     headers/renderer_hpp.cpp
+    headers/resource_types_hpp.cpp
     headers/result_hpp.cpp
     headers/surface_hpp.cpp
     headers/swapchain_hpp.cpp
@@ -112,7 +127,8 @@ target_link_libraries(granit_cpp_header_test PRIVATE granit::granit)
 granit_target_compile_warnings(granit_cpp_header_test)
 
 set_tests_properties(
-  granit.c_version granit.cpp_version granit.handle_table granit.renderer granit.vulkan_backend
+  granit.c_version granit.cpp_version granit.handle_table granit.resource_validation granit.renderer
+  granit.vulkan_backend
   PROPERTIES ENVIRONMENT_MODIFICATION
              "PATH=path_list_prepend:$<TARGET_FILE_DIR:granit>"
 )

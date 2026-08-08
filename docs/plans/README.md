@@ -31,7 +31,7 @@ D-03-graphics-pipeline.md
 ## 当前计划
 
 - [R-01：GPU 内存分配方案](R-01-memory-allocation.md)——已完成基础接入。
-- [R-02：第一版资源模型](R-02-resource-model.md)——设计已确认，等待实现。
+- [R-02：第一版资源模型](R-02-resource-model.md)——已完成。
 
 ## 状态
 

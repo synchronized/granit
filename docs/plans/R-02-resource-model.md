@@ -6,7 +6,7 @@
 ## 元数据
 
 - 设计状态：已确认
-- 实现状态：待开始
+- 实现状态：已完成
 - 路线图任务：R-02
 - 优先级：P0
 - 前置依赖：R-01
@@ -216,4 +216,12 @@ Sampler 使用独立句柄。内部以后可以缓存相同描述对应的 Vulka
 
 ## 实现结果
 
-尚未实现。完成后记录最终常量、结构布局、实现差异、验证矩阵和相关提交。
+- 新增独立的 `resource_types.h/.hpp`，并由聚合入口包含。
+- C ABI 已定义内存位置、Buffer/Texture 用途、Texture 维度、格式、采样数、子资源范围和
+  Sampler 状态；所有字段均使用定宽值类型。
+- `granit_buffer_desc`、`granit_texture_desc`、`granit_texture_view_desc` 和
+  `granit_sampler_desc` 均包含 `struct_size` 和固定的版本一大小。
+- C++20 层提供强类型枚举和用途/aspect 位运算，不建立额外运行时状态。
+- 后端无关验证已区分非法参数和合法但尚未支持的组合，首期范围保持为 Buffer、单 mip 单 layer
+  2D Texture、默认 2D View 和基础 Sampler。
+- 初始数据仍按计划留给 R-04；R-02 没有提前增加资源创建或销毁函数。

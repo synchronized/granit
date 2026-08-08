@@ -39,6 +39,8 @@ target_sources(
     backend/vulkan/vma_implementation.cpp
     core/handle_table.cpp
     core/handle_table.h
+    core/resource_validation.cpp
+    core/resource_validation.h
     renderer/renderer_api.cpp
     renderer/renderer_registry.cpp
     renderer/renderer_registry.h
@@ -59,6 +61,8 @@ target_sources(
       "${PROJECT_SOURCE_DIR}/include/granit/granit.hpp"
       "${PROJECT_SOURCE_DIR}/include/granit/renderer.h"
       "${PROJECT_SOURCE_DIR}/include/granit/renderer.hpp"
+      "${PROJECT_SOURCE_DIR}/include/granit/resource_types.h"
+      "${PROJECT_SOURCE_DIR}/include/granit/resource_types.hpp"
       "${PROJECT_SOURCE_DIR}/include/granit/result.h"
       "${PROJECT_SOURCE_DIR}/include/granit/result.hpp"
       "${PROJECT_SOURCE_DIR}/include/granit/surface.h"
