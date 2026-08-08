@@ -9,6 +9,7 @@
 #include <string_view>
 
 #include <granit/renderer.h>
+#include <granit/resource_types.h>
 #include <granit/result.h>
 
 #include "backend/vulkan/device.h"
@@ -42,6 +43,13 @@ public:
   [[nodiscard]] vulkan_swapchain_info
   get_swapchain_info(const vulkan_swapchain& swapchain) noexcept;
   void destroy_native_swapchain(vulkan_swapchain& swapchain) noexcept;
+  [[nodiscard]] granit_result create_native_buffer(const granit_buffer_desc& desc,
+                                                   vulkan_buffer_allocation& buffer) noexcept;
+  void destroy_native_buffer(vulkan_buffer_allocation& buffer) noexcept;
+  [[nodiscard]] granit_result flush_buffer(const vulkan_buffer_allocation& buffer,
+                                           VkDeviceSize offset, VkDeviceSize size) noexcept;
+  [[nodiscard]] granit_result invalidate_buffer(const vulkan_buffer_allocation& buffer,
+                                                VkDeviceSize offset, VkDeviceSize size) noexcept;
 
   void set_domain(std::uint32_t domain) noexcept { domain_ = domain; }
   [[nodiscard]] std::uint32_t domain() const noexcept { return domain_; }

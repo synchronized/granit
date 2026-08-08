@@ -10,6 +10,7 @@ add_test(NAME granit.c_version COMMAND granit_c_version_test)
 add_library(
   granit_c_header_test
   OBJECT
+    headers/buffer_h.c
     headers/renderer_h.c
     headers/resource_types_h.c
     headers/result_h.c
@@ -56,6 +57,7 @@ add_test(NAME granit.resource_validation COMMAND granit_resource_validation_test
 
 add_executable(
   granit_renderer_test
+  renderer/buffer_test.cpp
   renderer/renderer_test.cpp
   renderer/surface_test.cpp
   renderer/swapchain_test.cpp
@@ -116,6 +118,7 @@ add_test(NAME granit.vulkan_backend COMMAND granit_vulkan_backend_test)
 add_library(
   granit_cpp_header_test
   OBJECT
+    headers/buffer_hpp.cpp
     headers/renderer_hpp.cpp
     headers/resource_types_hpp.cpp
     headers/result_hpp.cpp

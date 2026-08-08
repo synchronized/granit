@@ -109,6 +109,13 @@ typedef struct granit_buffer_desc {
   uint64_t reserved_2;
 } granit_buffer_desc;
 #define GRANIT_BUFFER_DESC_VERSION_1_SIZE UINT32_C(32)
+#define GRANIT_BUFFER_DESC_INIT                                                                    \
+  {GRANIT_BUFFER_DESC_VERSION_1_SIZE,                                                              \
+   UINT32_C(0),                                                                                    \
+   GRANIT_MEMORY_LOCATION_AUTOMATIC,                                                               \
+   UINT32_C(0),                                                                                    \
+   UINT64_C(0),                                                                                    \
+   UINT64_C(0)}
 
 /** Texture 存储描述；不包含 View 或初始数据所有权。 */
 typedef struct granit_texture_desc {

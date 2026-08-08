@@ -42,6 +42,7 @@ target_sources(
     core/resource_validation.cpp
     core/resource_validation.h
     renderer/renderer_api.cpp
+    renderer/buffer_api.cpp
     renderer/renderer_registry.cpp
     renderer/renderer_registry.h
     renderer/renderer_state.cpp
@@ -57,6 +58,8 @@ target_sources(
       "${GRANIT_GENERATED_INCLUDE_DIR}"
     FILES
       "${PROJECT_SOURCE_DIR}/include/granit/export.h"
+      "${PROJECT_SOURCE_DIR}/include/granit/buffer.h"
+      "${PROJECT_SOURCE_DIR}/include/granit/buffer.hpp"
       "${PROJECT_SOURCE_DIR}/include/granit/granit.h"
       "${PROJECT_SOURCE_DIR}/include/granit/granit.hpp"
       "${PROJECT_SOURCE_DIR}/include/granit/renderer.h"

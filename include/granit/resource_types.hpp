@@ -116,12 +116,6 @@ enum class compare_operation : std::uint32_t {
   always = GRANIT_COMPARE_OPERATION_ALWAYS,
 };
 
-using buffer_desc = granit_buffer_desc;
-using texture_desc = granit_texture_desc;
-using subresource_range = granit_subresource_range;
-using texture_view_desc = granit_texture_view_desc;
-using sampler_desc = granit_sampler_desc;
-
 } // namespace granit
 
 #endif

@@ -49,8 +49,8 @@ Granit 不是 Vulkan API 的逐项重命名或薄包装。项目希望围绕实�
 - CMake 配置、构建、安装和包导出入口。
 - 代码格式、静态检查和仓库忽略规则。
 
-GPU 内存分配基础已采用内部 VMA 3.3.0 实现。下一阶段将实现 Buffer、Texture 和 Sampler。
-Command Recorder、帧同步、
+GPU 内存分配与 Buffer 创建、映射和销毁已经实现。下一阶段将完成 Buffer 初始数据上传，并实现
+Texture 和 Sampler。Command Recorder、帧同步、
 Swapchain acquire/present 和 Pipeline 尚未实现，具体顺序及验收标准见
 [docs/roadmap.md](docs/roadmap.md)。
 
@@ -120,12 +120,14 @@ if (granit::failed(result)) {
 ## 文档
 
 - [docs/architecture.md](docs/architecture.md)：分层、ABI、句柄和 Vulkan 封装边界。
+- [docs/buffer.md](docs/buffer.md)：Buffer 创建、映射和生命周期。
 - [docs/build.md](docs/build.md)：环境要求、构建选项和安装方式。
 - [docs/development.md](docs/development.md)：代码风格、命名和目录规范。
 - [docs/roadmap.md](docs/roadmap.md)：分阶段路线图。
 - [docs/plans/README.md](docs/plans/README.md)：开发计划的状态、命名和维护规则。
 - [docs/plans/R-01-memory-allocation.md](docs/plans/R-01-memory-allocation.md)：GPU 内存分配计划。
 - [docs/plans/R-02-resource-model.md](docs/plans/R-02-resource-model.md)：第一版资源模型计划。
+- [docs/plans/R-03-buffer.md](docs/plans/R-03-buffer.md)：Buffer 生命周期与映射计划。
 - [docs/renderer.md](docs/renderer.md)：公共 renderer C/C++ API 与生命周期。
 - [docs/resource-types.md](docs/resource-types.md)：Buffer、Texture、View 和 Sampler 值类型。
 - [docs/surface.md](docs/surface.md)：窗口 Surface、平台句柄和生命周期。

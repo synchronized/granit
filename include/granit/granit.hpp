@@ -7,6 +7,7 @@
 #include <cstdint>
 
 #include <granit/granit.h>
+#include <granit/buffer.hpp>
 #include <granit/renderer.hpp>
 #include <granit/resource_types.hpp>
 #include <granit/result.hpp>

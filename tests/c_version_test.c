@@ -57,6 +57,21 @@ static void granit_test_swapchain_rejects_invalid_arguments(void) {
                         granit_swapchain_destroy(GRANIT_NULL_HANDLE, GRANIT_NULL_HANDLE));
 }
 
+static void granit_test_buffer_rejects_invalid_arguments(void) {
+  granit_buffer buffer = GRANIT_NULL_HANDLE;
+  granit_buffer_desc desc = GRANIT_BUFFER_DESC_INIT;
+  void* mapped = 0;
+
+  TEST_ASSERT_EQUAL_INT(GRANIT_ERROR_INVALID_ARGUMENT,
+                        granit_buffer_create(GRANIT_NULL_HANDLE, &desc, &buffer));
+  TEST_ASSERT_EQUAL_INT(GRANIT_ERROR_INVALID_HANDLE,
+                        granit_buffer_map(GRANIT_NULL_HANDLE, GRANIT_NULL_HANDLE, 0, 1, &mapped));
+  TEST_ASSERT_EQUAL_INT(GRANIT_ERROR_INVALID_HANDLE,
+                        granit_buffer_unmap(GRANIT_NULL_HANDLE, GRANIT_NULL_HANDLE));
+  TEST_ASSERT_EQUAL_INT(GRANIT_ERROR_INVALID_HANDLE,
+                        granit_buffer_destroy(GRANIT_NULL_HANDLE, GRANIT_NULL_HANDLE));
+}
+
 static void granit_test_header_and_runtime_versions_match(void) {
   TEST_ASSERT_EQUAL_UINT32(GRANIT_VERSION_MAJOR, granit_version_major());
   TEST_ASSERT_EQUAL_UINT32(GRANIT_VERSION_MINOR, granit_version_minor());
@@ -70,6 +85,7 @@ int main(void) {
   RUN_TEST(granit_test_renderer_rejects_invalid_arguments);
   RUN_TEST(granit_test_surface_rejects_invalid_arguments);
   RUN_TEST(granit_test_swapchain_rejects_invalid_arguments);
+  RUN_TEST(granit_test_buffer_rejects_invalid_arguments);
   RUN_TEST(granit_test_header_and_runtime_versions_match);
   return UNITY_END();
 }

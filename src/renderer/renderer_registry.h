@@ -10,6 +10,7 @@
 #include <string_view>
 #include <unordered_map>
 
+#include <granit/buffer.h>
 #include <granit/renderer.h>
 #include <granit/surface.h>
 #include <granit/swapchain.h>
@@ -42,6 +43,12 @@ public:
                                                  vulkan_swapchain_info& info);
   [[nodiscard]] granit_result destroy_swapchain(granit_renderer renderer,
                                                 granit_swapchain swapchain);
+  [[nodiscard]] granit_result create_buffer(granit_renderer renderer,
+                                            const granit_buffer_desc& desc, granit_buffer& buffer);
+  [[nodiscard]] granit_result map_buffer(granit_renderer renderer, granit_buffer buffer,
+                                         std::uint64_t offset, std::uint64_t size, void*& data);
+  [[nodiscard]] granit_result unmap_buffer(granit_renderer renderer, granit_buffer buffer);
+  [[nodiscard]] granit_result destroy_buffer(granit_renderer renderer, granit_buffer buffer);
 
 private:
   renderer_registry() = default;
@@ -62,8 +69,19 @@ private:
     std::unique_ptr<vulkan_swapchain> native;
     ~swapchain_record();
   };
+  struct buffer_record {
+    std::shared_ptr<renderer_state> renderer;
+    vulkan_buffer_allocation native;
+    granit_buffer_desc desc{};
+    std::mutex mutex;
+    bool mapped{};
+    std::uint64_t mapped_offset{};
+    std::uint64_t mapped_size{};
+    ~buffer_record();
+  };
   std::unordered_map<granit_surface, std::shared_ptr<surface_record>> surfaces_;
   std::unordered_map<granit_swapchain, std::shared_ptr<swapchain_record>> swapchains_;
+  std::unordered_map<granit_buffer, std::shared_ptr<buffer_record>> buffers_;
   std::uint32_t next_domain_{1};
 };
 

@@ -86,7 +86,7 @@
 
 1. **[R-01](plans/R-01-memory-allocation.md) / P0 / 已完成**：采用内部 VMA 的 GPU 内存分配方案。
 2. **[R-02](plans/R-02-resource-model.md) / P0 / 已完成**：定义平台无关的资源用途、内存位置、像素格式、尺寸和采样数。
-3. **R-03 / P0**：实现 Buffer 创建、销毁、映射、刷新和失效语义。
+3. **[R-03](plans/R-03-buffer.md) / P0 / 已完成**：实现 Buffer 创建、销毁、映射、刷新和失效语义。
 4. **R-04 / P0**：实现批量初始数据和 device-local Buffer 上传路径。
 5. **R-05 / P0**：实现 Texture 与 Texture View 生命周期、用途和子资源范围。
 6. **R-06 / P0**：实现 Sampler 描述、能力限制和缓存策略。
@@ -229,7 +229,7 @@
 
 ## 近期执行顺序
 
-1. `R-03`、`R-04`：完成 Buffer、映射和上传闭环。
+1. `R-04`：完成 device-local Buffer 初始数据和上传闭环。
 2. `R-05`、`R-06`：完成 Texture、Texture View 和 Sampler。
 3. `R-07`、`R-09`：统一离屏附件与 Swapchain Backbuffer。
 4. `R-08`：在产生异步 GPU 使用前完成延迟销毁基础。
