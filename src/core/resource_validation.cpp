@@ -108,8 +108,9 @@ granit_result validate_sampler_desc(const granit_sampler_desc& desc) noexcept {
       desc.max_lod < desc.min_lod) {
     return GRANIT_ERROR_INVALID_ARGUMENT;
   }
-  if (desc.anisotropy_enabled != 0 || desc.compare_operation != GRANIT_COMPARE_OPERATION_DISABLED) {
-    return GRANIT_ERROR_UNSUPPORTED;
+  if ((desc.anisotropy_enabled == 0 && desc.max_anisotropy != 1.0F) ||
+      (desc.anisotropy_enabled != 0 && desc.max_anisotropy < 1.0F)) {
+    return GRANIT_ERROR_INVALID_ARGUMENT;
   }
   return GRANIT_SUCCESS;
 }

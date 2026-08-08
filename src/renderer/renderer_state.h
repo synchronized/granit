@@ -61,6 +61,9 @@ public:
                                                          const granit_texture_view_desc& view_desc,
                                                          VkImageView& view) noexcept;
   void destroy_native_texture_view(VkImageView view) noexcept;
+  [[nodiscard]] granit_result create_native_sampler(const granit_sampler_desc& desc,
+                                                    VkSampler& sampler) noexcept;
+  void destroy_native_sampler(VkSampler sampler) noexcept;
 
   void set_domain(std::uint32_t domain) noexcept { domain_ = domain; }
   [[nodiscard]] std::uint32_t domain() const noexcept { return domain_; }

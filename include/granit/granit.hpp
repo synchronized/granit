@@ -11,6 +11,7 @@
 #include <granit/renderer.hpp>
 #include <granit/resource_types.hpp>
 #include <granit/result.hpp>
+#include <granit/sampler.hpp>
 #include <granit/surface.hpp>
 #include <granit/texture.hpp>
 #include <granit/swapchain.hpp>

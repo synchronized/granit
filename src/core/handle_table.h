@@ -26,6 +26,7 @@ enum class resource_type : std::uint8_t {
   fence = 7,
   surface = 8,
   texture_view = 9,
+  sampler = 10,
 };
 
 /**

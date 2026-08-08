@@ -192,5 +192,20 @@ typedef struct granit_sampler_desc {
   uint32_t reserved;
 } granit_sampler_desc;
 #define GRANIT_SAMPLER_DESC_VERSION_1_SIZE UINT32_C(56)
+#define GRANIT_SAMPLER_DESC_INIT                                                                   \
+  {GRANIT_SAMPLER_DESC_VERSION_1_SIZE,                                                             \
+   GRANIT_FILTER_LINEAR,                                                                           \
+   GRANIT_FILTER_LINEAR,                                                                           \
+   GRANIT_MIPMAP_FILTER_LINEAR,                                                                    \
+   GRANIT_ADDRESS_MODE_REPEAT,                                                                     \
+   GRANIT_ADDRESS_MODE_REPEAT,                                                                     \
+   GRANIT_ADDRESS_MODE_REPEAT,                                                                     \
+   GRANIT_COMPARE_OPERATION_DISABLED,                                                              \
+   UINT32_C(0),                                                                                    \
+   1.0F,                                                                                           \
+   0.0F,                                                                                           \
+   0.0F,                                                                                           \
+   0.0F,                                                                                           \
+   UINT32_C(0)}
 
 #endif

@@ -83,5 +83,7 @@ TEST_CASE("View 和 Sampler 验证首期支持范围", "[resource][validation]")
   };
   CHECK(validate_sampler_desc(sampler) == GRANIT_SUCCESS);
   sampler.anisotropy_enabled = 1;
-  CHECK(validate_sampler_desc(sampler) == GRANIT_ERROR_UNSUPPORTED);
+  CHECK(validate_sampler_desc(sampler) == GRANIT_SUCCESS);
+  sampler.max_anisotropy = 0.5F;
+  CHECK(validate_sampler_desc(sampler) == GRANIT_ERROR_INVALID_ARGUMENT);
 }

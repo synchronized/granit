@@ -12,6 +12,7 @@
 
 #include <granit/buffer.h>
 #include <granit/renderer.h>
+#include <granit/sampler.h>
 #include <granit/surface.h>
 #include <granit/swapchain.h>
 #include <granit/texture.h>
@@ -62,6 +63,10 @@ public:
   [[nodiscard]] granit_result destroy_texture_view(granit_renderer renderer,
                                                    granit_texture_view view);
   [[nodiscard]] granit_result destroy_texture(granit_renderer renderer, granit_texture texture);
+  [[nodiscard]] granit_result create_sampler(granit_renderer renderer,
+                                             const granit_sampler_desc& desc,
+                                             granit_sampler& sampler);
+  [[nodiscard]] granit_result destroy_sampler(granit_renderer renderer, granit_sampler sampler);
 
 private:
   renderer_registry() = default;
@@ -105,11 +110,17 @@ private:
     VkImageView native{VK_NULL_HANDLE};
     ~texture_view_record();
   };
+  struct sampler_record {
+    std::shared_ptr<renderer_state> renderer;
+    VkSampler native{VK_NULL_HANDLE};
+    ~sampler_record();
+  };
   std::unordered_map<granit_surface, std::shared_ptr<surface_record>> surfaces_;
   std::unordered_map<granit_swapchain, std::shared_ptr<swapchain_record>> swapchains_;
   std::unordered_map<granit_buffer, std::shared_ptr<buffer_record>> buffers_;
   std::unordered_map<granit_texture, std::shared_ptr<texture_record>> textures_;
   std::unordered_map<granit_texture_view, std::shared_ptr<texture_view_record>> texture_views_;
+  std::unordered_map<granit_sampler, std::shared_ptr<sampler_record>> samplers_;
   std::uint32_t next_domain_{1};
 };
 

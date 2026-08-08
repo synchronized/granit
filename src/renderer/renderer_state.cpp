@@ -6,6 +6,7 @@
 #include "backend/vulkan/result.h"
 #include "backend/vulkan/surface.h"
 
+#include <cmath>
 #include <cstring>
 
 namespace granit::detail {
@@ -338,6 +339,61 @@ granit_result renderer_state::create_native_texture_view(const vulkan_image_allo
 void renderer_state::destroy_native_texture_view(VkImageView view) noexcept {
   if (view != VK_NULL_HANDLE) {
     device_.functions().vkDestroyImageView(device_.native_handle(), view, nullptr);
+  }
+}
+
+granit_result renderer_state::create_native_sampler(const granit_sampler_desc& desc,
+                                                    VkSampler& sampler) noexcept {
+  if ((desc.anisotropy_enabled != 0 && !device_.sampler_anisotropy_supported()) ||
+      desc.max_anisotropy > device_.properties().limits.maxSamplerAnisotropy ||
+      std::abs(desc.lod_bias) > device_.properties().limits.maxSamplerLodBias) {
+    return GRANIT_ERROR_UNSUPPORTED;
+  }
+  const auto map_filter = [](granit_filter value) {
+    return value == GRANIT_FILTER_LINEAR ? VK_FILTER_LINEAR : VK_FILTER_NEAREST;
+  };
+  const auto map_mipmap = [](granit_mipmap_filter value) {
+    return value == GRANIT_MIPMAP_FILTER_LINEAR ? VK_SAMPLER_MIPMAP_MODE_LINEAR
+                                                : VK_SAMPLER_MIPMAP_MODE_NEAREST;
+  };
+  const auto map_address = [](granit_address_mode value) {
+    switch (value) {
+    case GRANIT_ADDRESS_MODE_MIRRORED_REPEAT:
+      return VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT;
+    case GRANIT_ADDRESS_MODE_CLAMP_TO_EDGE:
+      return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+    default:
+      return VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    }
+  };
+  const VkCompareOp compare_ops[] = {VK_COMPARE_OP_NEVER,         VK_COMPARE_OP_NEVER,
+                                     VK_COMPARE_OP_LESS,          VK_COMPARE_OP_EQUAL,
+                                     VK_COMPARE_OP_LESS_OR_EQUAL, VK_COMPARE_OP_GREATER,
+                                     VK_COMPARE_OP_NOT_EQUAL,     VK_COMPARE_OP_GREATER_OR_EQUAL,
+                                     VK_COMPARE_OP_ALWAYS};
+  VkSamplerCreateInfo info{};
+  info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+  info.magFilter = map_filter(desc.mag_filter);
+  info.minFilter = map_filter(desc.min_filter);
+  info.mipmapMode = map_mipmap(desc.mipmap_filter);
+  info.addressModeU = map_address(desc.address_mode_u);
+  info.addressModeV = map_address(desc.address_mode_v);
+  info.addressModeW = map_address(desc.address_mode_w);
+  info.mipLodBias = desc.lod_bias;
+  info.anisotropyEnable = desc.anisotropy_enabled != 0 ? VK_TRUE : VK_FALSE;
+  info.maxAnisotropy = desc.max_anisotropy;
+  info.compareEnable =
+      desc.compare_operation != GRANIT_COMPARE_OPERATION_DISABLED ? VK_TRUE : VK_FALSE;
+  info.compareOp = compare_ops[desc.compare_operation];
+  info.minLod = desc.min_lod;
+  info.maxLod = desc.max_lod;
+  return map_vulkan_result(
+      device_.functions().vkCreateSampler(device_.native_handle(), &info, nullptr, &sampler));
+}
+
+void renderer_state::destroy_native_sampler(VkSampler sampler) noexcept {
+  if (sampler != VK_NULL_HANDLE) {
+    device_.functions().vkDestroySampler(device_.native_handle(), sampler, nullptr);
   }
 }
 

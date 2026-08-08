@@ -45,6 +45,11 @@ renderer_registry::texture_view_record::~texture_view_record() {
   }
 }
 
+renderer_registry::sampler_record::~sampler_record() {
+  if (renderer)
+    renderer->destroy_native_sampler(native);
+}
+
 granit_result renderer_registry::create(std::string_view application_name, bool enable_validation,
                                         std::uint32_t surface_types, granit_renderer& renderer) {
   try {
@@ -83,6 +88,7 @@ granit_result renderer_registry::destroy(granit_renderer renderer) {
   std::vector<std::shared_ptr<buffer_record>> native_buffers;
   std::vector<std::shared_ptr<texture_view_record>> native_texture_views;
   std::vector<std::shared_ptr<texture_record>> native_textures;
+  std::vector<std::shared_ptr<sampler_record>> native_samplers;
   {
     std::lock_guard lock{mutex_};
     if (handles_.find(renderer, resource_type::renderer, 0) == nullptr) {
@@ -94,6 +100,15 @@ granit_result renderer_registry::destroy(granit_renderer renderer) {
     }
     state = std::move(found->second);
     renderers_.erase(found);
+    for (auto sampler = samplers_.begin(); sampler != samplers_.end();) {
+      if (sampler->second->renderer == state) {
+        native_samplers.push_back(std::move(sampler->second));
+        static_cast<void>(handles_.erase(sampler->first, resource_type::sampler, state->domain()));
+        sampler = samplers_.erase(sampler);
+      } else {
+        ++sampler;
+      }
+    }
     for (auto view = texture_views_.begin(); view != texture_views_.end();) {
       if (view->second->renderer == state) {
         native_texture_views.push_back(std::move(view->second));
@@ -151,6 +166,7 @@ granit_result renderer_registry::destroy(granit_renderer renderer) {
   native_buffers.clear();
   native_texture_views.clear();
   native_textures.clear();
+  native_samplers.clear();
   // 析构可能等待 GPU 空闲，不应占用全局 registry 锁。
   state.reset();
   return GRANIT_SUCCESS;
@@ -720,6 +736,62 @@ granit_result renderer_registry::destroy_texture(granit_renderer renderer, grani
     static_cast<void>(handles_.erase(texture, resource_type::texture, state->domain()));
   }
   views.clear();
+  record.reset();
+  return GRANIT_SUCCESS;
+}
+
+granit_result renderer_registry::create_sampler(granit_renderer renderer,
+                                                const granit_sampler_desc& desc,
+                                                granit_sampler& sampler) {
+  try {
+    auto state = acquire(renderer);
+    if (!state)
+      return GRANIT_ERROR_INVALID_HANDLE;
+    auto record = std::make_shared<sampler_record>();
+    record->renderer = state;
+    const auto result = state->create_native_sampler(desc, record->native);
+    if (result != GRANIT_SUCCESS)
+      return result;
+    std::lock_guard lock{mutex_};
+    const auto found = renderers_.find(renderer);
+    if (found == renderers_.end() || found->second != state)
+      return GRANIT_ERROR_INVALID_HANDLE;
+    const auto handle = handles_.insert(record.get(), resource_type::sampler, state->domain());
+    if (handle == GRANIT_NULL_HANDLE)
+      return GRANIT_ERROR_OUT_OF_MEMORY;
+    try {
+      samplers_.emplace(handle, std::move(record));
+    } catch (...) {
+      static_cast<void>(handles_.erase(handle, resource_type::sampler, state->domain()));
+      throw;
+    }
+    sampler = handle;
+    return GRANIT_SUCCESS;
+  } catch (const std::bad_alloc&) {
+    return GRANIT_ERROR_OUT_OF_MEMORY;
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+granit_result renderer_registry::destroy_sampler(granit_renderer renderer, granit_sampler sampler) {
+  std::shared_ptr<sampler_record> record;
+  {
+    std::lock_guard lock{mutex_};
+    const auto found_renderer = renderers_.find(renderer);
+    if (found_renderer == renderers_.end() ||
+        handles_.find(renderer, resource_type::renderer, 0) == nullptr)
+      return GRANIT_ERROR_INVALID_HANDLE;
+    const auto& state = found_renderer->second;
+    if (handles_.find(sampler, resource_type::sampler, state->domain()) == nullptr)
+      return GRANIT_ERROR_INVALID_HANDLE;
+    const auto found = samplers_.find(sampler);
+    if (found == samplers_.end() || found->second->renderer != state)
+      return GRANIT_ERROR_INVALID_HANDLE;
+    record = std::move(found->second);
+    samplers_.erase(found);
+    static_cast<void>(handles_.erase(sampler, resource_type::sampler, state->domain()));
+  }
   record.reset();
   return GRANIT_SUCCESS;
 }

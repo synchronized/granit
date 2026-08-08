@@ -35,6 +35,7 @@ D-03-graphics-pipeline.md
 - [R-03：Buffer 生命周期与映射](R-03-buffer.md)——已完成。
 - [R-04：Buffer 初始数据与同步上传](R-04-buffer-upload.md)——已完成。
 - [R-05：Texture 与 Texture View 生命周期](R-05-texture-view.md)——已完成。
+- [R-06：Sampler 生命周期与能力限制](R-06-sampler.md)——已完成。
 
 ## 状态
 

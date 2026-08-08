@@ -18,9 +18,11 @@ vulkan_device::vulkan_device(vulkan_device&& other) noexcept
       device_(std::exchange(other.device_, VK_NULL_HANDLE)),
       graphics_queue_(std::exchange(other.graphics_queue_, VK_NULL_HANDLE)),
       graphics_queue_family_(std::exchange(other.graphics_queue_family_, 0)),
-      properties_(other.properties_), functions_(other.functions_) {
+      properties_(other.properties_), functions_(other.functions_),
+      sampler_anisotropy_supported_(other.sampler_anisotropy_supported_) {
   other.properties_ = {};
   other.functions_ = {};
+  other.sampler_anisotropy_supported_ = false;
 }
 
 vulkan_device& vulkan_device::operator=(vulkan_device&& other) noexcept {
@@ -34,8 +36,10 @@ vulkan_device& vulkan_device::operator=(vulkan_device&& other) noexcept {
   graphics_queue_family_ = std::exchange(other.graphics_queue_family_, 0);
   properties_ = other.properties_;
   functions_ = other.functions_;
+  sampler_anisotropy_supported_ = other.sampler_anisotropy_supported_;
   other.properties_ = {};
   other.functions_ = {};
+  other.sampler_anisotropy_supported_ = false;
   return *this;
 }
 
@@ -70,6 +74,9 @@ granit_result vulkan_device::initialize(const vulkan_instance& instance,
   create_info.pNext = &features;
   create_info.queueCreateInfoCount = 1;
   create_info.pQueueCreateInfos = &queue_create_info;
+  VkPhysicalDeviceFeatures core_features{};
+  core_features.samplerAnisotropy = selected.sampler_anisotropy ? VK_TRUE : VK_FALSE;
+  create_info.pEnabledFeatures = &core_features;
   const char* extensions[] = {VK_KHR_SWAPCHAIN_EXTENSION_NAME};
   if (surface_types != 0) {
     create_info.enabledExtensionCount = 1;
@@ -85,6 +92,7 @@ granit_result vulkan_device::initialize(const vulkan_instance& instance,
 
   physical_device_ = selected.handle;
   properties_ = selected.properties;
+  sampler_anisotropy_supported_ = selected.sampler_anisotropy;
   graphics_queue_family_ = selected.graphics_queue_family;
   volk::volkLoadDeviceTable(&functions_, device_);
   if (functions_.vkGetDeviceQueue == nullptr || functions_.vkDestroyDevice == nullptr ||
@@ -117,6 +125,7 @@ void vulkan_device::reset() noexcept {
   graphics_queue_family_ = 0;
   properties_ = {};
   functions_ = {};
+  sampler_anisotropy_supported_ = false;
 }
 
 } // namespace granit::detail

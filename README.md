@@ -49,8 +49,8 @@ Granit 不是 Vulkan API 的逐项重命名或薄包装。项目希望围绕实�
 - CMake 配置、构建、安装和包导出入口。
 - 代码格式、静态检查和仓库忽略规则。
 
-GPU 内存分配、Buffer 同步上传以及基础 Texture/Texture View 生命周期已经实现。下一阶段将
-实现 Sampler。Command Recorder、帧同步、
+GPU 内存分配、Buffer 同步上传以及基础 Texture、Texture View、Sampler 生命周期已经实现。
+下一阶段将统一 Swapchain Backbuffer 与离屏附件。Command Recorder、帧同步、
 Swapchain acquire/present 和 Pipeline 尚未实现，具体顺序及验收标准见
 [docs/roadmap.md](docs/roadmap.md)。
 
@@ -130,8 +130,10 @@ if (granit::failed(result)) {
 - [docs/plans/R-03-buffer.md](docs/plans/R-03-buffer.md)：Buffer 生命周期与映射计划。
 - [docs/plans/R-04-buffer-upload.md](docs/plans/R-04-buffer-upload.md)：Buffer 同步上传计划。
 - [docs/plans/R-05-texture-view.md](docs/plans/R-05-texture-view.md)：Texture 与 View 计划。
+- [docs/plans/R-06-sampler.md](docs/plans/R-06-sampler.md)：Sampler 生命周期与能力计划。
 - [docs/renderer.md](docs/renderer.md)：公共 renderer C/C++ API 与生命周期。
 - [docs/resource-types.md](docs/resource-types.md)：Buffer、Texture、View 和 Sampler 值类型。
+- [docs/sampler.md](docs/sampler.md)：Sampler 状态、能力限制和生命周期。
 - [docs/surface.md](docs/surface.md)：窗口 Surface、平台句柄和生命周期。
 - [docs/texture.md](docs/texture.md)：Texture、Texture View 和父子生命周期。
 - [docs/swapchain.md](docs/swapchain.md)：交换链配置、重建和生命周期。

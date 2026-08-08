@@ -40,6 +40,9 @@ public:
     return properties_;
   }
   [[nodiscard]] const volk::VolkDeviceTable& functions() const noexcept { return functions_; }
+  [[nodiscard]] bool sampler_anisotropy_supported() const noexcept {
+    return sampler_anisotropy_supported_;
+  }
 
 private:
   VkPhysicalDevice physical_device_{VK_NULL_HANDLE};
@@ -48,6 +51,7 @@ private:
   std::uint32_t graphics_queue_family_{};
   VkPhysicalDeviceProperties properties_{};
   volk::VolkDeviceTable functions_{};
+  bool sampler_anisotropy_supported_{};
 };
 
 } // namespace granit::detail
