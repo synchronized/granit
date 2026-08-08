@@ -16,6 +16,7 @@ add_library(
     headers/result_h.c
     headers/surface_h.c
     headers/swapchain_h.c
+    headers/texture_h.c
     headers/types_h.c
 )
 target_link_libraries(granit_c_header_test PRIVATE granit::granit)
@@ -61,6 +62,7 @@ add_executable(
   renderer/renderer_test.cpp
   renderer/surface_test.cpp
   renderer/swapchain_test.cpp
+  renderer/texture_test.cpp
 )
 target_link_libraries(
   granit_renderer_test
@@ -124,6 +126,7 @@ add_library(
     headers/result_hpp.cpp
     headers/surface_hpp.cpp
     headers/swapchain_hpp.cpp
+    headers/texture_hpp.cpp
     headers/types_hpp.cpp
 )
 target_link_libraries(granit_cpp_header_test PRIVATE granit::granit)

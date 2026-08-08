@@ -33,6 +33,18 @@ renderer_registry::buffer_record::~buffer_record() {
   }
 }
 
+renderer_registry::texture_record::~texture_record() {
+  if (renderer && owned) {
+    renderer->destroy_native_texture(native);
+  }
+}
+
+renderer_registry::texture_view_record::~texture_view_record() {
+  if (renderer) {
+    renderer->destroy_native_texture_view(native);
+  }
+}
+
 granit_result renderer_registry::create(std::string_view application_name, bool enable_validation,
                                         std::uint32_t surface_types, granit_renderer& renderer) {
   try {
@@ -69,6 +81,8 @@ granit_result renderer_registry::destroy(granit_renderer renderer) {
   std::vector<std::shared_ptr<swapchain_record>> native_swapchains;
   std::vector<std::shared_ptr<surface_record>> native_surfaces;
   std::vector<std::shared_ptr<buffer_record>> native_buffers;
+  std::vector<std::shared_ptr<texture_view_record>> native_texture_views;
+  std::vector<std::shared_ptr<texture_record>> native_textures;
   {
     std::lock_guard lock{mutex_};
     if (handles_.find(renderer, resource_type::renderer, 0) == nullptr) {
@@ -80,6 +94,25 @@ granit_result renderer_registry::destroy(granit_renderer renderer) {
     }
     state = std::move(found->second);
     renderers_.erase(found);
+    for (auto view = texture_views_.begin(); view != texture_views_.end();) {
+      if (view->second->renderer == state) {
+        native_texture_views.push_back(std::move(view->second));
+        static_cast<void>(
+            handles_.erase(view->first, resource_type::texture_view, state->domain()));
+        view = texture_views_.erase(view);
+      } else {
+        ++view;
+      }
+    }
+    for (auto texture = textures_.begin(); texture != textures_.end();) {
+      if (texture->second->renderer == state) {
+        native_textures.push_back(std::move(texture->second));
+        static_cast<void>(handles_.erase(texture->first, resource_type::texture, state->domain()));
+        texture = textures_.erase(texture);
+      } else {
+        ++texture;
+      }
+    }
     for (auto buffer = buffers_.begin(); buffer != buffers_.end();) {
       if (buffer->second->renderer == state) {
         native_buffers.push_back(std::move(buffer->second));
@@ -116,6 +149,8 @@ granit_result renderer_registry::destroy(granit_renderer renderer) {
   native_swapchains.clear();
   native_surfaces.clear();
   native_buffers.clear();
+  native_texture_views.clear();
+  native_textures.clear();
   // 析构可能等待 GPU 空闲，不应占用全局 registry 锁。
   state.reset();
   return GRANIT_SUCCESS;
@@ -526,6 +561,167 @@ granit_result renderer_registry::write_buffer(granit_renderer renderer, granit_b
     return record->renderer->flush_buffer(record->native, offset, size);
   }
   return record->renderer->upload_buffer(record->native, offset, data, size);
+}
+
+granit_result renderer_registry::create_texture(granit_renderer renderer,
+                                                const granit_texture_desc& desc,
+                                                granit_texture& texture) {
+  try {
+    auto state = acquire(renderer);
+    if (!state)
+      return GRANIT_ERROR_INVALID_HANDLE;
+    auto record = std::make_shared<texture_record>();
+    record->renderer = state;
+    record->desc = desc;
+    const auto result = state->create_native_texture(desc, record->native);
+    if (result != GRANIT_SUCCESS)
+      return result;
+    std::lock_guard lock{mutex_};
+    const auto found = renderers_.find(renderer);
+    if (found == renderers_.end() || found->second != state)
+      return GRANIT_ERROR_INVALID_HANDLE;
+    const auto handle = handles_.insert(record.get(), resource_type::texture, state->domain());
+    if (handle == GRANIT_NULL_HANDLE)
+      return GRANIT_ERROR_OUT_OF_MEMORY;
+    try {
+      textures_.emplace(handle, std::move(record));
+    } catch (...) {
+      static_cast<void>(handles_.erase(handle, resource_type::texture, state->domain()));
+      throw;
+    }
+    texture = handle;
+    return GRANIT_SUCCESS;
+  } catch (const std::bad_alloc&) {
+    return GRANIT_ERROR_OUT_OF_MEMORY;
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+granit_result renderer_registry::create_texture_view(granit_renderer renderer,
+                                                     granit_texture texture,
+                                                     const granit_texture_view_desc& desc,
+                                                     granit_texture_view& view) {
+  try {
+    std::shared_ptr<renderer_state> state;
+    std::shared_ptr<texture_record> parent;
+    {
+      std::lock_guard lock{mutex_};
+      const auto renderer_found = renderers_.find(renderer);
+      if (renderer_found == renderers_.end() ||
+          handles_.find(renderer, resource_type::renderer, 0) == nullptr) {
+        return GRANIT_ERROR_INVALID_HANDLE;
+      }
+      state = renderer_found->second;
+      if (handles_.find(texture, resource_type::texture, state->domain()) == nullptr) {
+        return GRANIT_ERROR_INVALID_HANDLE;
+      }
+      const auto found = textures_.find(texture);
+      if (found == textures_.end() || found->second->renderer != state) {
+        return GRANIT_ERROR_INVALID_HANDLE;
+      }
+      parent = found->second;
+    }
+    if (desc.dimension != parent->desc.dimension ||
+        (desc.format != GRANIT_TEXTURE_FORMAT_UNDEFINED && desc.format != parent->desc.format)) {
+      return GRANIT_ERROR_UNSUPPORTED;
+    }
+    const auto aspect = desc.range.aspect;
+    const auto depth = parent->desc.format >= GRANIT_TEXTURE_FORMAT_D16_UNORM;
+    const auto stencil = parent->desc.format == GRANIT_TEXTURE_FORMAT_D24_UNORM_S8_UINT ||
+                         parent->desc.format == GRANIT_TEXTURE_FORMAT_D32_FLOAT_S8_UINT;
+    if (aspect != GRANIT_TEXTURE_ASPECT_AUTOMATIC &&
+        ((!depth && aspect != GRANIT_TEXTURE_ASPECT_COLOR_BIT) ||
+         (depth && (aspect & GRANIT_TEXTURE_ASPECT_COLOR_BIT) != 0) ||
+         (depth && !stencil && aspect != GRANIT_TEXTURE_ASPECT_DEPTH_BIT) ||
+         (depth && stencil && (aspect & GRANIT_TEXTURE_ASPECT_DEPTH_BIT) == 0 &&
+          (aspect & GRANIT_TEXTURE_ASPECT_STENCIL_BIT) == 0))) {
+      return GRANIT_ERROR_INVALID_ARGUMENT;
+    }
+    auto record = std::make_shared<texture_view_record>();
+    record->renderer = state;
+    record->texture = parent;
+    const auto result =
+        state->create_native_texture_view(parent->native, parent->desc, desc, record->native);
+    if (result != GRANIT_SUCCESS)
+      return result;
+    std::lock_guard lock{mutex_};
+    const auto parent_found = textures_.find(texture);
+    if (parent_found == textures_.end() || parent_found->second != parent) {
+      return GRANIT_ERROR_INVALID_HANDLE;
+    }
+    const auto handle = handles_.insert(record.get(), resource_type::texture_view, state->domain());
+    if (handle == GRANIT_NULL_HANDLE)
+      return GRANIT_ERROR_OUT_OF_MEMORY;
+    try {
+      texture_views_.emplace(handle, std::move(record));
+    } catch (...) {
+      static_cast<void>(handles_.erase(handle, resource_type::texture_view, state->domain()));
+      throw;
+    }
+    view = handle;
+    return GRANIT_SUCCESS;
+  } catch (const std::bad_alloc&) {
+    return GRANIT_ERROR_OUT_OF_MEMORY;
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+granit_result renderer_registry::destroy_texture_view(granit_renderer renderer,
+                                                      granit_texture_view view) {
+  std::shared_ptr<texture_view_record> record;
+  {
+    std::lock_guard lock{mutex_};
+    const auto renderer_found = renderers_.find(renderer);
+    if (renderer_found == renderers_.end() ||
+        handles_.find(renderer, resource_type::renderer, 0) == nullptr)
+      return GRANIT_ERROR_INVALID_HANDLE;
+    const auto& state = renderer_found->second;
+    if (handles_.find(view, resource_type::texture_view, state->domain()) == nullptr)
+      return GRANIT_ERROR_INVALID_HANDLE;
+    const auto found = texture_views_.find(view);
+    if (found == texture_views_.end() || found->second->renderer != state)
+      return GRANIT_ERROR_INVALID_HANDLE;
+    record = std::move(found->second);
+    texture_views_.erase(found);
+    static_cast<void>(handles_.erase(view, resource_type::texture_view, state->domain()));
+  }
+  record.reset();
+  return GRANIT_SUCCESS;
+}
+
+granit_result renderer_registry::destroy_texture(granit_renderer renderer, granit_texture texture) {
+  std::shared_ptr<texture_record> record;
+  std::vector<std::shared_ptr<texture_view_record>> views;
+  {
+    std::lock_guard lock{mutex_};
+    const auto renderer_found = renderers_.find(renderer);
+    if (renderer_found == renderers_.end() ||
+        handles_.find(renderer, resource_type::renderer, 0) == nullptr)
+      return GRANIT_ERROR_INVALID_HANDLE;
+    const auto& state = renderer_found->second;
+    if (handles_.find(texture, resource_type::texture, state->domain()) == nullptr)
+      return GRANIT_ERROR_INVALID_HANDLE;
+    const auto found = textures_.find(texture);
+    if (found == textures_.end() || found->second->renderer != state)
+      return GRANIT_ERROR_INVALID_HANDLE;
+    for (auto view = texture_views_.begin(); view != texture_views_.end();) {
+      if (view->second->texture == found->second) {
+        views.push_back(std::move(view->second));
+        static_cast<void>(
+            handles_.erase(view->first, resource_type::texture_view, state->domain()));
+        view = texture_views_.erase(view);
+      } else
+        ++view;
+    }
+    record = std::move(found->second);
+    textures_.erase(found);
+    static_cast<void>(handles_.erase(texture, resource_type::texture, state->domain()));
+  }
+  views.clear();
+  record.reset();
+  return GRANIT_SUCCESS;
 }
 
 std::shared_ptr<renderer_state> renderer_registry::acquire(granit_renderer renderer) {

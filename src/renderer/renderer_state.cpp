@@ -50,6 +50,72 @@ vulkan_memory_location map_memory_location(granit_memory_location location) noex
   }
 }
 
+VkFormat map_texture_format(granit_texture_format format) noexcept {
+  switch (format) {
+  case GRANIT_TEXTURE_FORMAT_R8_UNORM:
+    return VK_FORMAT_R8_UNORM;
+  case GRANIT_TEXTURE_FORMAT_RG8_UNORM:
+    return VK_FORMAT_R8G8_UNORM;
+  case GRANIT_TEXTURE_FORMAT_RGBA8_UNORM:
+    return VK_FORMAT_R8G8B8A8_UNORM;
+  case GRANIT_TEXTURE_FORMAT_RGBA8_SRGB:
+    return VK_FORMAT_R8G8B8A8_SRGB;
+  case GRANIT_TEXTURE_FORMAT_BGRA8_UNORM:
+    return VK_FORMAT_B8G8R8A8_UNORM;
+  case GRANIT_TEXTURE_FORMAT_BGRA8_SRGB:
+    return VK_FORMAT_B8G8R8A8_SRGB;
+  case GRANIT_TEXTURE_FORMAT_RGBA16_FLOAT:
+    return VK_FORMAT_R16G16B16A16_SFLOAT;
+  case GRANIT_TEXTURE_FORMAT_D16_UNORM:
+    return VK_FORMAT_D16_UNORM;
+  case GRANIT_TEXTURE_FORMAT_D32_FLOAT:
+    return VK_FORMAT_D32_SFLOAT;
+  case GRANIT_TEXTURE_FORMAT_D24_UNORM_S8_UINT:
+    return VK_FORMAT_D24_UNORM_S8_UINT;
+  case GRANIT_TEXTURE_FORMAT_D32_FLOAT_S8_UINT:
+    return VK_FORMAT_D32_SFLOAT_S8_UINT;
+  default:
+    return VK_FORMAT_UNDEFINED;
+  }
+}
+
+VkImageAspectFlags default_aspect(granit_texture_format format) noexcept {
+  if (format == GRANIT_TEXTURE_FORMAT_D24_UNORM_S8_UINT ||
+      format == GRANIT_TEXTURE_FORMAT_D32_FLOAT_S8_UINT) {
+    return VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
+  }
+  return format >= GRANIT_TEXTURE_FORMAT_D16_UNORM ? VK_IMAGE_ASPECT_DEPTH_BIT
+                                                   : VK_IMAGE_ASPECT_COLOR_BIT;
+}
+
+VkImageAspectFlags map_texture_aspect(granit_texture_aspect aspect) noexcept {
+  VkImageAspectFlags flags{};
+  if ((aspect & GRANIT_TEXTURE_ASPECT_COLOR_BIT) != 0)
+    flags |= VK_IMAGE_ASPECT_COLOR_BIT;
+  if ((aspect & GRANIT_TEXTURE_ASPECT_DEPTH_BIT) != 0)
+    flags |= VK_IMAGE_ASPECT_DEPTH_BIT;
+  if ((aspect & GRANIT_TEXTURE_ASPECT_STENCIL_BIT) != 0)
+    flags |= VK_IMAGE_ASPECT_STENCIL_BIT;
+  return flags;
+}
+
+VkImageUsageFlags map_texture_usage(granit_texture_usage usage) noexcept {
+  VkImageUsageFlags flags{};
+  if ((usage & GRANIT_TEXTURE_USAGE_TRANSFER_SOURCE_BIT) != 0)
+    flags |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+  if ((usage & GRANIT_TEXTURE_USAGE_TRANSFER_DESTINATION_BIT) != 0)
+    flags |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+  if ((usage & GRANIT_TEXTURE_USAGE_SAMPLED_BIT) != 0)
+    flags |= VK_IMAGE_USAGE_SAMPLED_BIT;
+  if ((usage & GRANIT_TEXTURE_USAGE_STORAGE_BIT) != 0)
+    flags |= VK_IMAGE_USAGE_STORAGE_BIT;
+  if ((usage & GRANIT_TEXTURE_USAGE_COLOR_ATTACHMENT_BIT) != 0)
+    flags |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+  if ((usage & GRANIT_TEXTURE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT) != 0)
+    flags |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+  return flags;
+}
+
 } // namespace
 
 granit_result renderer_state::initialize(std::string_view application_name, bool enable_validation,
@@ -225,6 +291,54 @@ granit_result renderer_state::upload_buffer(const vulkan_buffer_allocation& buff
   }
   memory_allocator_.destroy_buffer(staging);
   return map_vulkan_result(vk_result);
+}
+
+granit_result renderer_state::create_native_texture(const granit_texture_desc& desc,
+                                                    vulkan_image_allocation& texture) noexcept {
+  VkImageCreateInfo info{};
+  info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+  info.imageType = VK_IMAGE_TYPE_2D;
+  info.format = map_texture_format(desc.format);
+  info.extent = {desc.width, desc.height, desc.depth};
+  info.mipLevels = desc.mip_levels;
+  info.arrayLayers = desc.array_layers;
+  info.samples = VK_SAMPLE_COUNT_1_BIT;
+  info.tiling = VK_IMAGE_TILING_OPTIMAL;
+  info.usage = map_texture_usage(desc.usage);
+  info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+  info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+  return memory_allocator_.create_image(info, map_memory_location(desc.memory_location), texture);
+}
+
+void renderer_state::destroy_native_texture(vulkan_image_allocation& texture) noexcept {
+  memory_allocator_.destroy_image(texture);
+}
+
+granit_result renderer_state::create_native_texture_view(const vulkan_image_allocation& texture,
+                                                         const granit_texture_desc& texture_desc,
+                                                         const granit_texture_view_desc& view_desc,
+                                                         VkImageView& view) noexcept {
+  VkImageViewCreateInfo info{};
+  info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+  info.image = texture.image;
+  info.viewType = VK_IMAGE_VIEW_TYPE_2D;
+  info.format = map_texture_format(
+      view_desc.format == GRANIT_TEXTURE_FORMAT_UNDEFINED ? texture_desc.format : view_desc.format);
+  info.subresourceRange.aspectMask = view_desc.range.aspect == GRANIT_TEXTURE_ASPECT_AUTOMATIC
+                                         ? default_aspect(texture_desc.format)
+                                         : map_texture_aspect(view_desc.range.aspect);
+  info.subresourceRange.baseMipLevel = view_desc.range.base_mip_level;
+  info.subresourceRange.levelCount = view_desc.range.mip_level_count;
+  info.subresourceRange.baseArrayLayer = view_desc.range.base_array_layer;
+  info.subresourceRange.layerCount = view_desc.range.array_layer_count;
+  return map_vulkan_result(
+      device_.functions().vkCreateImageView(device_.native_handle(), &info, nullptr, &view));
+}
+
+void renderer_state::destroy_native_texture_view(VkImageView view) noexcept {
+  if (view != VK_NULL_HANDLE) {
+    device_.functions().vkDestroyImageView(device_.native_handle(), view, nullptr);
+  }
 }
 
 } // namespace granit::detail

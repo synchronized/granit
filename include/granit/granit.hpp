@@ -12,6 +12,7 @@
 #include <granit/resource_types.hpp>
 #include <granit/result.hpp>
 #include <granit/surface.hpp>
+#include <granit/texture.hpp>
 #include <granit/swapchain.hpp>
 #include <granit/types.hpp>
 

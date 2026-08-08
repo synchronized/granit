@@ -53,6 +53,14 @@ public:
   [[nodiscard]] granit_result upload_buffer(const vulkan_buffer_allocation& buffer,
                                             VkDeviceSize offset, const void* data,
                                             VkDeviceSize size) noexcept;
+  [[nodiscard]] granit_result create_native_texture(const granit_texture_desc& desc,
+                                                    vulkan_image_allocation& texture) noexcept;
+  void destroy_native_texture(vulkan_image_allocation& texture) noexcept;
+  [[nodiscard]] granit_result create_native_texture_view(const vulkan_image_allocation& texture,
+                                                         const granit_texture_desc& texture_desc,
+                                                         const granit_texture_view_desc& view_desc,
+                                                         VkImageView& view) noexcept;
+  void destroy_native_texture_view(VkImageView view) noexcept;
 
   void set_domain(std::uint32_t domain) noexcept { domain_ = domain; }
   [[nodiscard]] std::uint32_t domain() const noexcept { return domain_; }

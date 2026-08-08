@@ -133,6 +133,19 @@ typedef struct granit_texture_desc {
   uint32_t reserved;
 } granit_texture_desc;
 #define GRANIT_TEXTURE_DESC_VERSION_1_SIZE UINT32_C(48)
+#define GRANIT_TEXTURE_DESC_INIT                                                                   \
+  {GRANIT_TEXTURE_DESC_VERSION_1_SIZE,                                                             \
+   GRANIT_TEXTURE_DIMENSION_2D,                                                                    \
+   GRANIT_TEXTURE_FORMAT_UNDEFINED,                                                                \
+   UINT32_C(0),                                                                                    \
+   GRANIT_MEMORY_LOCATION_AUTOMATIC,                                                               \
+   UINT32_C(1),                                                                                    \
+   UINT32_C(1),                                                                                    \
+   UINT32_C(1),                                                                                    \
+   UINT32_C(1),                                                                                    \
+   UINT32_C(1),                                                                                    \
+   GRANIT_SAMPLE_COUNT_1,                                                                          \
+   UINT32_C(0)}
 
 /** Texture View 使用的 mip 和数组层范围。 */
 typedef struct granit_subresource_range {
@@ -153,6 +166,13 @@ typedef struct granit_texture_view_desc {
   uint32_t reserved_2;
 } granit_texture_view_desc;
 #define GRANIT_TEXTURE_VIEW_DESC_VERSION_1_SIZE UINT32_C(40)
+#define GRANIT_TEXTURE_VIEW_DESC_INIT                                                              \
+  {GRANIT_TEXTURE_VIEW_DESC_VERSION_1_SIZE,                                                        \
+   GRANIT_TEXTURE_DIMENSION_2D,                                                                    \
+   GRANIT_TEXTURE_FORMAT_UNDEFINED,                                                                \
+   UINT32_C(0),                                                                                    \
+   {GRANIT_TEXTURE_ASPECT_AUTOMATIC, UINT32_C(0), UINT32_C(1), UINT32_C(0), UINT32_C(1)},          \
+   UINT32_C(0)}
 
 /** 独立 Sampler 状态描述。 */
 typedef struct granit_sampler_desc {

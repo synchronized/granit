@@ -14,6 +14,7 @@
 #include <granit/renderer.h>
 #include <granit/surface.h>
 #include <granit/swapchain.h>
+#include <granit/texture.h>
 
 #include "core/handle_table.h"
 #include "renderer/renderer_state.h"
@@ -52,6 +53,15 @@ public:
   [[nodiscard]] granit_result write_buffer(granit_renderer renderer, granit_buffer buffer,
                                            std::uint64_t offset, const void* data,
                                            std::uint64_t size);
+  [[nodiscard]] granit_result create_texture(granit_renderer renderer,
+                                             const granit_texture_desc& desc,
+                                             granit_texture& texture);
+  [[nodiscard]] granit_result create_texture_view(granit_renderer renderer, granit_texture texture,
+                                                  const granit_texture_view_desc& desc,
+                                                  granit_texture_view& view);
+  [[nodiscard]] granit_result destroy_texture_view(granit_renderer renderer,
+                                                   granit_texture_view view);
+  [[nodiscard]] granit_result destroy_texture(granit_renderer renderer, granit_texture texture);
 
 private:
   renderer_registry() = default;
@@ -82,9 +92,24 @@ private:
     std::uint64_t mapped_size{};
     ~buffer_record();
   };
+  struct texture_record {
+    std::shared_ptr<renderer_state> renderer;
+    vulkan_image_allocation native;
+    granit_texture_desc desc{};
+    bool owned{true};
+    ~texture_record();
+  };
+  struct texture_view_record {
+    std::shared_ptr<renderer_state> renderer;
+    std::shared_ptr<texture_record> texture;
+    VkImageView native{VK_NULL_HANDLE};
+    ~texture_view_record();
+  };
   std::unordered_map<granit_surface, std::shared_ptr<surface_record>> surfaces_;
   std::unordered_map<granit_swapchain, std::shared_ptr<swapchain_record>> swapchains_;
   std::unordered_map<granit_buffer, std::shared_ptr<buffer_record>> buffers_;
+  std::unordered_map<granit_texture, std::shared_ptr<texture_record>> textures_;
+  std::unordered_map<granit_texture_view, std::shared_ptr<texture_view_record>> texture_views_;
   std::uint32_t next_domain_{1};
 };
 
