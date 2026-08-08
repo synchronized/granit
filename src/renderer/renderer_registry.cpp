@@ -3,6 +3,7 @@
 
 #include "renderer/renderer_registry.h"
 
+#include <cstring>
 #include <new>
 #include <utility>
 #include <vector>
@@ -487,6 +488,44 @@ granit_result renderer_registry::destroy_buffer(granit_renderer renderer, granit
   }
   record.reset();
   return GRANIT_SUCCESS;
+}
+
+granit_result renderer_registry::write_buffer(granit_renderer renderer, granit_buffer buffer,
+                                              std::uint64_t offset, const void* data,
+                                              std::uint64_t size) {
+  std::shared_ptr<buffer_record> record;
+  {
+    std::lock_guard lock{mutex_};
+    const auto renderer_found = renderers_.find(renderer);
+    if (renderer_found == renderers_.end() ||
+        handles_.find(renderer, resource_type::renderer, 0) == nullptr) {
+      return GRANIT_ERROR_INVALID_HANDLE;
+    }
+    const auto& state = renderer_found->second;
+    if (handles_.find(buffer, resource_type::buffer, state->domain()) == nullptr) {
+      return GRANIT_ERROR_INVALID_HANDLE;
+    }
+    const auto found = buffers_.find(buffer);
+    if (found == buffers_.end() || found->second->renderer != state) {
+      return GRANIT_ERROR_INVALID_HANDLE;
+    }
+    record = found->second;
+  }
+
+  std::lock_guard record_lock{record->mutex};
+  if (record->mapped || size == 0 || offset >= record->desc.size ||
+      size > record->desc.size - offset) {
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  }
+  if (record->desc.memory_location == GRANIT_MEMORY_LOCATION_READBACK) {
+    return GRANIT_ERROR_UNSUPPORTED;
+  }
+  if (record->desc.memory_location == GRANIT_MEMORY_LOCATION_UPLOAD) {
+    std::memcpy(static_cast<unsigned char*>(record->native.mapped_data) + offset, data,
+                static_cast<std::size_t>(size));
+    return record->renderer->flush_buffer(record->native, offset, size);
+  }
+  return record->renderer->upload_buffer(record->native, offset, data, size);
 }
 
 std::shared_ptr<renderer_state> renderer_registry::acquire(granit_renderer renderer) {

@@ -4,7 +4,9 @@
 #ifndef GRANIT_BUFFER_HPP_
 #define GRANIT_BUFFER_HPP_
 
+#include <cstddef>
 #include <cstdint>
+#include <span>
 #include <utility>
 
 #include <granit/buffer.h>
@@ -58,6 +60,37 @@ public:
       renderer_ = renderer;
     }
     return from_native(native_result);
+  }
+
+  [[nodiscard]] result initialize(granit_renderer renderer, const buffer_desc& desc,
+                                  std::span<const std::byte> initial_data) noexcept {
+    if (valid() || renderer == GRANIT_NULL_HANDLE) {
+      return result::invalid_argument;
+    }
+    const granit_buffer_desc native_desc{
+        .struct_size = GRANIT_BUFFER_DESC_VERSION_1_SIZE,
+        .usage = static_cast<granit_buffer_usage>(desc.usage),
+        .memory_location = static_cast<granit_memory_location>(desc.location),
+        .reserved = 0,
+        .size = desc.size,
+        .reserved_2 = 0,
+    };
+    const granit_buffer_initial_data native_data{
+        .struct_size = GRANIT_BUFFER_INITIAL_DATA_VERSION_1_SIZE,
+        .reserved = 0,
+        .data = initial_data.data(),
+        .size = initial_data.size(),
+    };
+    const auto native_result =
+        granit_buffer_create_with_data(renderer, &native_desc, &native_data, &handle_);
+    if (native_result == GRANIT_SUCCESS) {
+      renderer_ = renderer;
+    }
+    return from_native(native_result);
+  }
+
+  [[nodiscard]] result write(std::uint64_t offset, std::span<const std::byte> data) noexcept {
+    return from_native(granit_buffer_write(renderer_, handle_, offset, data.data(), data.size()));
   }
 
   [[nodiscard]] result map(std::uint64_t offset, std::uint64_t size, void** data) noexcept {

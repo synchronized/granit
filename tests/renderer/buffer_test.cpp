@@ -4,6 +4,8 @@
 #include <granit/buffer.hpp>
 #include <granit/renderer.hpp>
 
+#include <array>
+#include <cstddef>
 #include <cstdint>
 #include <utility>
 
@@ -105,6 +107,48 @@ TEST_CASE("C++ Buffer 提供 move-only RAII 并由 Renderer 级联失效", "[buf
   REQUIRE(renderer.reset() == granit::result::success);
   CHECK(moved.reset() == granit::result::invalid_handle);
   CHECK_FALSE(moved.valid());
+}
+
+TEST_CASE("初始数据和同步写入支持 UPLOAD 与 DEVICE Buffer", "[buffer][upload]") {
+  granit::renderer renderer;
+  const auto renderer_result = renderer.initialize({.application_name = "granit-buffer-upload"});
+  if (environment_unavailable(renderer_result)) {
+    SKIP("当前运行环境没有满足要求的 Vulkan 设备");
+  }
+  REQUIRE(renderer_result == granit::result::success);
+
+  std::array<std::byte, 256> data{};
+  data[0] = std::byte{42};
+  granit::buffer device_buffer;
+  REQUIRE(device_buffer.initialize(renderer.native_handle(),
+                                   {.size = data.size(),
+                                    .usage = granit::buffer_usage::vertex,
+                                    .location = granit::memory_location::device},
+                                   data) == granit::result::success);
+  data[1] = std::byte{24};
+  REQUIRE(device_buffer.write(32, std::span<const std::byte>{data}.first(16)) ==
+          granit::result::success);
+
+  granit::buffer upload_buffer;
+  REQUIRE(upload_buffer.initialize(renderer.native_handle(),
+                                   {.size = data.size(),
+                                    .usage = granit::buffer_usage::uniform,
+                                    .location = granit::memory_location::upload},
+                                   data) == granit::result::success);
+  CHECK(upload_buffer.write(data.size(), std::span<const std::byte>{data}.first(1)) ==
+        granit::result::invalid_argument);
+
+  granit_buffer_desc readback_desc = GRANIT_BUFFER_DESC_INIT;
+  readback_desc.size = data.size();
+  readback_desc.usage = GRANIT_BUFFER_USAGE_TRANSFER_DESTINATION_BIT;
+  readback_desc.memory_location = GRANIT_MEMORY_LOCATION_READBACK;
+  granit_buffer_initial_data initial_data = GRANIT_BUFFER_INITIAL_DATA_INIT;
+  initial_data.data = data.data();
+  initial_data.size = data.size();
+  granit_buffer readback = GRANIT_NULL_HANDLE;
+  CHECK(granit_buffer_create_with_data(renderer.native_handle(), &readback_desc, &initial_data,
+                                       &readback) == GRANIT_ERROR_UNSUPPORTED);
+  CHECK(readback == GRANIT_NULL_HANDLE);
 }
 
 } // namespace

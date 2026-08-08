@@ -8,8 +8,11 @@ Buffer 是 Renderer 拥有的线性 GPU 资源。C API 使用 64 位整数句柄
 
 ## 创建与销毁
 
-`granit_buffer_create` 根据 `granit_buffer_desc` 创建空 Buffer。当前接口不接收初始数据，静态
-数据上传将在 R-04 中通过明确的上传路径实现。
+`granit_buffer_create` 创建空 Buffer；`granit_buffer_create_with_data` 同步创建并写入覆盖完整
+Buffer 的初始数据。`granit_buffer_write` 可同步更新非空局部范围。
+
+UPLOAD 写入直接使用映射内存；DEVICE/AUTOMATIC 写入通过内部 staging 和 Fence 完成。成功返回
+后调用者可以立即释放源数据。READBACK 不接受写入。
 
 Buffer 只能由创建它的 Renderer 操作。成功销毁后句柄立即失效；Renderer 销毁也会级联使全部
 子 Buffer 失效。重复销毁、错误资源类型和跨 Renderer 操作返回无效句柄。
@@ -36,4 +39,5 @@ const auto result = buffer.initialize(
      .location = granit::memory_location::device});
 ```
 
-当前 Buffer 尚不能提交到 GPU 命令中；相关上传、绑定和同步能力由后续路线图任务实现。
+同步写入适合初始化和低频更新，不适合逐帧大量小写入。高吞吐上传将在后续批量上传接口中实现。
+当前 Buffer 尚不能绑定到公开 GPU 命令；相关命令和同步能力由后续路线图任务实现。

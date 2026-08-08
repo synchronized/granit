@@ -70,6 +70,10 @@ static void granit_test_buffer_rejects_invalid_arguments(void) {
                         granit_buffer_unmap(GRANIT_NULL_HANDLE, GRANIT_NULL_HANDLE));
   TEST_ASSERT_EQUAL_INT(GRANIT_ERROR_INVALID_HANDLE,
                         granit_buffer_destroy(GRANIT_NULL_HANDLE, GRANIT_NULL_HANDLE));
+  TEST_ASSERT_EQUAL_INT(GRANIT_ERROR_INVALID_ARGUMENT,
+                        granit_buffer_create_with_data(GRANIT_NULL_HANDLE, &desc, 0, &buffer));
+  TEST_ASSERT_EQUAL_INT(GRANIT_ERROR_INVALID_ARGUMENT,
+                        granit_buffer_write(GRANIT_NULL_HANDLE, GRANIT_NULL_HANDLE, 0, 0, 1));
 }
 
 static void granit_test_header_and_runtime_versions_match(void) {

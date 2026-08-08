@@ -50,6 +50,9 @@ public:
                                            VkDeviceSize offset, VkDeviceSize size) noexcept;
   [[nodiscard]] granit_result invalidate_buffer(const vulkan_buffer_allocation& buffer,
                                                 VkDeviceSize offset, VkDeviceSize size) noexcept;
+  [[nodiscard]] granit_result upload_buffer(const vulkan_buffer_allocation& buffer,
+                                            VkDeviceSize offset, const void* data,
+                                            VkDeviceSize size) noexcept;
 
   void set_domain(std::uint32_t domain) noexcept { domain_ = domain; }
   [[nodiscard]] std::uint32_t domain() const noexcept { return domain_; }
@@ -60,6 +63,7 @@ private:
   std::uint32_t domain_{};
   std::uint32_t surface_types_{};
   std::mutex resource_mutex_;
+  std::mutex queue_mutex_;
   vulkan_instance instance_;
   vulkan_device device_;
   vulkan_memory_allocator memory_allocator_;

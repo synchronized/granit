@@ -49,6 +49,9 @@ public:
                                          std::uint64_t offset, std::uint64_t size, void*& data);
   [[nodiscard]] granit_result unmap_buffer(granit_renderer renderer, granit_buffer buffer);
   [[nodiscard]] granit_result destroy_buffer(granit_renderer renderer, granit_buffer buffer);
+  [[nodiscard]] granit_result write_buffer(granit_renderer renderer, granit_buffer buffer,
+                                           std::uint64_t offset, const void* data,
+                                           std::uint64_t size);
 
 private:
   renderer_registry() = default;

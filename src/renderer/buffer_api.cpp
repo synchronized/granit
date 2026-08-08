@@ -41,6 +41,57 @@ extern "C" granit_result granit_buffer_map(granit_renderer renderer, granit_buff
   }
 }
 
+extern "C" granit_result
+granit_buffer_create_with_data(granit_renderer renderer, const granit_buffer_desc* desc,
+                               const granit_buffer_initial_data* initial_data,
+                               granit_buffer* buffer) {
+  if (desc == nullptr || initial_data == nullptr || buffer == nullptr) {
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  }
+  *buffer = GRANIT_NULL_HANDLE;
+  const auto validation_result = granit::detail::validate_buffer_desc(*desc);
+  if (validation_result != GRANIT_SUCCESS) {
+    return validation_result;
+  }
+  if (initial_data->struct_size < GRANIT_BUFFER_INITIAL_DATA_VERSION_1_SIZE ||
+      initial_data->reserved != 0 || initial_data->data == nullptr ||
+      initial_data->size != desc->size || initial_data->size == 0) {
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  }
+  if (desc->memory_location == GRANIT_MEMORY_LOCATION_READBACK) {
+    return GRANIT_ERROR_UNSUPPORTED;
+  }
+  granit_buffer created = GRANIT_NULL_HANDLE;
+  const auto create_result = granit_buffer_create(renderer, desc, &created);
+  if (create_result != GRANIT_SUCCESS) {
+    return create_result;
+  }
+  const auto write_result =
+      granit_buffer_write(renderer, created, 0, initial_data->data, initial_data->size);
+  if (write_result != GRANIT_SUCCESS) {
+    static_cast<void>(granit_buffer_destroy(renderer, created));
+    return write_result;
+  }
+  *buffer = created;
+  return GRANIT_SUCCESS;
+}
+
+extern "C" granit_result granit_buffer_write(granit_renderer renderer, granit_buffer buffer,
+                                             uint64_t offset, const void* data, uint64_t size) {
+  if (data == nullptr || size == 0) {
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  }
+  if (renderer == GRANIT_NULL_HANDLE || buffer == GRANIT_NULL_HANDLE) {
+    return GRANIT_ERROR_INVALID_HANDLE;
+  }
+  try {
+    return granit::detail::renderer_registry::instance().write_buffer(renderer, buffer, offset,
+                                                                      data, size);
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
 extern "C" granit_result granit_buffer_unmap(granit_renderer renderer, granit_buffer buffer) {
   if (renderer == GRANIT_NULL_HANDLE || buffer == GRANIT_NULL_HANDLE) {
     return GRANIT_ERROR_INVALID_HANDLE;

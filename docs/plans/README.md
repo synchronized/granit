@@ -33,6 +33,7 @@ D-03-graphics-pipeline.md
 - [R-01：GPU 内存分配方案](R-01-memory-allocation.md)——已完成基础接入。
 - [R-02：第一版资源模型](R-02-resource-model.md)——已完成。
 - [R-03：Buffer 生命周期与映射](R-03-buffer.md)——已完成。
+- [R-04：Buffer 初始数据与同步上传](R-04-buffer-upload.md)——已完成。
 
 ## 状态
 
