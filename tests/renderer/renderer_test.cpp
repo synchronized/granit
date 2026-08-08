@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
+#include <granit/buffer.h>
 #include <granit/renderer.hpp>
 
 #include <utility>
@@ -81,6 +82,26 @@ TEST_CASE("C++ renderer 提供 move-only RAII", "[renderer][cpp_api]") {
   CHECK(moved.valid());
   CHECK(moved.reset() == granit::result::success);
   CHECK_FALSE(moved.valid());
+}
+
+TEST_CASE("验证模式在活动资源存在时仍完成 Renderer 级联销毁", "[renderer][lifecycle]") {
+  granit_renderer_desc renderer_desc = GRANIT_RENDERER_DESC_INIT;
+  renderer_desc.flags = GRANIT_RENDERER_ENABLE_VALIDATION_BIT;
+  granit_renderer renderer = GRANIT_NULL_HANDLE;
+  const auto create_result = granit_renderer_create(&renderer_desc, &renderer);
+  if (create_result == GRANIT_ERROR_UNSUPPORTED || environment_unavailable(create_result)) {
+    SKIP("当前运行环境不支持 Vulkan 验证层或没有满足要求的设备");
+  }
+  REQUIRE(create_result == GRANIT_SUCCESS);
+
+  granit_buffer_desc buffer_desc = GRANIT_BUFFER_DESC_INIT;
+  buffer_desc.size = 16;
+  buffer_desc.usage = GRANIT_BUFFER_USAGE_TRANSFER_DESTINATION_BIT;
+  granit_buffer buffer = GRANIT_NULL_HANDLE;
+  REQUIRE(granit_buffer_create(renderer, &buffer_desc, &buffer) == GRANIT_SUCCESS);
+
+  CHECK(granit_renderer_destroy(renderer) == GRANIT_SUCCESS);
+  CHECK(granit_buffer_destroy(renderer, buffer) == GRANIT_ERROR_INVALID_HANDLE);
 }
 
 } // namespace

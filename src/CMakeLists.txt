@@ -39,6 +39,8 @@ target_sources(
     backend/vulkan/vma_implementation.cpp
     core/handle_table.cpp
     core/handle_table.h
+    core/lifecycle_validation.cpp
+    core/lifecycle_validation.h
     core/resource_validation.cpp
     core/resource_validation.h
     renderer/renderer_api.cpp

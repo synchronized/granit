@@ -67,12 +67,14 @@ public:
 
   void set_domain(std::uint32_t domain) noexcept { domain_ = domain; }
   [[nodiscard]] std::uint32_t domain() const noexcept { return domain_; }
+  [[nodiscard]] bool validation_enabled() const noexcept { return validation_enabled_; }
   [[nodiscard]] const vulkan_instance& instance() const noexcept { return instance_; }
   [[nodiscard]] const vulkan_device& device() const noexcept { return device_; }
 
 private:
   std::uint32_t domain_{};
   std::uint32_t surface_types_{};
+  bool validation_enabled_{};
   std::mutex resource_mutex_;
   std::mutex queue_mutex_;
   vulkan_instance instance_;

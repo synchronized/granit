@@ -101,6 +101,7 @@ granit_result renderer_registry::create(std::string_view application_name, bool 
 
 granit_result renderer_registry::destroy(granit_renderer renderer) {
   std::shared_ptr<renderer_state> state;
+  lifecycle_snapshot lifecycle;
   std::vector<std::shared_ptr<swapchain_record>> native_swapchains;
   std::vector<std::shared_ptr<surface_record>> native_surfaces;
   std::vector<std::shared_ptr<buffer_record>> native_buffers;
@@ -118,6 +119,44 @@ granit_result renderer_registry::destroy(granit_renderer renderer) {
     }
     state = std::move(found->second);
     renderers_.erase(found);
+    if (state->validation_enabled()) {
+      for (const auto& [handle, record] : buffers_) {
+        if (record->renderer == state) {
+          lifecycle.add(lifecycle_resource_type::buffer, handle,
+                        record->metadata.creation_sequence);
+        }
+      }
+      for (const auto& [handle, record] : textures_) {
+        if (record->renderer == state && record->publicly_destroyable) {
+          lifecycle.add(lifecycle_resource_type::texture, handle,
+                        record->metadata.creation_sequence);
+        }
+      }
+      for (const auto& [handle, record] : texture_views_) {
+        if (record->renderer == state && record->publicly_destroyable) {
+          lifecycle.add(lifecycle_resource_type::texture_view, handle,
+                        record->metadata.creation_sequence);
+        }
+      }
+      for (const auto& [handle, record] : samplers_) {
+        if (record->renderer == state) {
+          lifecycle.add(lifecycle_resource_type::sampler, handle,
+                        record->metadata.creation_sequence);
+        }
+      }
+      for (const auto& [handle, record] : surfaces_) {
+        if (record->renderer == state) {
+          lifecycle.add(lifecycle_resource_type::surface, handle,
+                        record->metadata.creation_sequence);
+        }
+      }
+      for (const auto& [handle, record] : swapchains_) {
+        if (record->renderer == state) {
+          lifecycle.add(lifecycle_resource_type::swapchain, handle,
+                        record->metadata.creation_sequence);
+        }
+      }
+    }
     for (auto sampler = samplers_.begin(); sampler != samplers_.end();) {
       if (sampler->second->renderer == state) {
         native_samplers.push_back(std::move(sampler->second));
@@ -179,6 +218,7 @@ granit_result renderer_registry::destroy(granit_renderer renderer) {
       return erase_result;
     }
   }
+  write_lifecycle_diagnostic(renderer, state->domain(), lifecycle);
   native_swapchains.clear();
   native_surfaces.clear();
   native_buffers.clear();
@@ -212,6 +252,7 @@ granit_result renderer_registry::create_win32_surface(granit_renderer renderer,
     if (renderer_found == renderers_.end() || renderer_found->second != state) {
       return GRANIT_ERROR_INVALID_HANDLE;
     }
+    record->metadata.creation_sequence = next_creation_sequence_++;
     const auto handle = handles_.insert(record.get(), resource_type::surface, state->domain());
     if (handle == GRANIT_NULL_HANDLE) {
       return GRANIT_ERROR_OUT_OF_MEMORY;
@@ -333,6 +374,7 @@ granit_result renderer_registry::create_swapchain(granit_renderer renderer, gran
       if (surface_found == surfaces_.end() || surface_found->second != surface_state) {
         return GRANIT_ERROR_INVALID_HANDLE;
       }
+      record->metadata.creation_sequence = next_creation_sequence_++;
       handle = handles_.insert(record.get(), resource_type::swapchain, state->domain());
       if (handle == GRANIT_NULL_HANDLE)
         return GRANIT_ERROR_OUT_OF_MEMORY;
@@ -446,6 +488,8 @@ renderer_registry::install_swapchain_backbuffers(granit_swapchain swapchain,
     record->textures.reserve(textures.size());
     record->views.reserve(views.size());
     for (std::size_t index = 0; index < textures.size(); ++index) {
+      textures[index]->metadata.creation_sequence = next_creation_sequence_++;
+      views[index]->metadata.creation_sequence = next_creation_sequence_++;
       const auto texture_handle = handles_.insert(textures[index].get(), resource_type::texture,
                                                   record->renderer->domain());
       if (texture_handle == GRANIT_NULL_HANDLE)
@@ -584,6 +628,7 @@ granit_result renderer_registry::create_buffer(granit_renderer renderer,
     if (renderer_found == renderers_.end() || renderer_found->second != state) {
       return GRANIT_ERROR_INVALID_HANDLE;
     }
+    record->metadata.creation_sequence = next_creation_sequence_++;
     const auto handle = handles_.insert(record.get(), resource_type::buffer, state->domain());
     if (handle == GRANIT_NULL_HANDLE) {
       return GRANIT_ERROR_OUT_OF_MEMORY;
@@ -772,6 +817,7 @@ granit_result renderer_registry::create_texture(granit_renderer renderer,
     const auto found = renderers_.find(renderer);
     if (found == renderers_.end() || found->second != state)
       return GRANIT_ERROR_INVALID_HANDLE;
+    record->metadata.creation_sequence = next_creation_sequence_++;
     const auto handle = handles_.insert(record.get(), resource_type::texture, state->domain());
     if (handle == GRANIT_NULL_HANDLE)
       return GRANIT_ERROR_OUT_OF_MEMORY;
@@ -842,6 +888,7 @@ granit_result renderer_registry::create_texture_view(granit_renderer renderer,
     if (parent_found == textures_.end() || parent_found->second != parent) {
       return GRANIT_ERROR_INVALID_HANDLE;
     }
+    record->metadata.creation_sequence = next_creation_sequence_++;
     const auto handle = handles_.insert(record.get(), resource_type::texture_view, state->domain());
     if (handle == GRANIT_NULL_HANDLE)
       return GRANIT_ERROR_OUT_OF_MEMORY;
@@ -936,6 +983,7 @@ granit_result renderer_registry::create_sampler(granit_renderer renderer,
     const auto found = renderers_.find(renderer);
     if (found == renderers_.end() || found->second != state)
       return GRANIT_ERROR_INVALID_HANDLE;
+    record->metadata.creation_sequence = next_creation_sequence_++;
     const auto handle = handles_.insert(record.get(), resource_type::sampler, state->domain());
     if (handle == GRANIT_NULL_HANDLE)
       return GRANIT_ERROR_OUT_OF_MEMORY;

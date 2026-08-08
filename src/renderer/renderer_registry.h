@@ -19,6 +19,7 @@
 #include <granit/texture.h>
 
 #include "core/handle_table.h"
+#include "core/lifecycle_validation.h"
 #include "renderer/renderer_state.h"
 
 namespace granit::detail {
@@ -78,6 +79,10 @@ private:
 
   struct swapchain_record;
 
+  struct resource_metadata {
+    std::uint64_t creation_sequence{};
+  };
+
   [[nodiscard]] std::uint32_t allocate_domain() noexcept;
   [[nodiscard]] granit_result
   install_swapchain_backbuffers(granit_swapchain swapchain,
@@ -87,11 +92,13 @@ private:
   handle_table handles_;
   std::unordered_map<granit_renderer, std::shared_ptr<renderer_state>> renderers_;
   struct surface_record {
+    resource_metadata metadata;
     std::shared_ptr<renderer_state> renderer;
     VkSurfaceKHR native_handle{VK_NULL_HANDLE};
     ~surface_record();
   };
   struct swapchain_record {
+    resource_metadata metadata;
     std::shared_ptr<renderer_state> renderer;
     std::shared_ptr<surface_record> surface;
     std::unique_ptr<vulkan_swapchain> native;
@@ -100,6 +107,7 @@ private:
     ~swapchain_record();
   };
   struct buffer_record {
+    resource_metadata metadata;
     std::shared_ptr<renderer_state> renderer;
     vulkan_buffer_allocation native;
     granit_buffer_desc desc{};
@@ -110,6 +118,7 @@ private:
     ~buffer_record();
   };
   struct texture_record {
+    resource_metadata metadata;
     std::shared_ptr<renderer_state> renderer;
     vulkan_image_allocation native;
     granit_texture_desc desc{};
@@ -118,6 +127,7 @@ private:
     ~texture_record();
   };
   struct texture_view_record {
+    resource_metadata metadata;
     std::shared_ptr<renderer_state> renderer;
     std::shared_ptr<texture_record> texture;
     VkImageView native{VK_NULL_HANDLE};
@@ -125,6 +135,7 @@ private:
     ~texture_view_record();
   };
   struct sampler_record {
+    resource_metadata metadata;
     std::shared_ptr<renderer_state> renderer;
     VkSampler native{VK_NULL_HANDLE};
     ~sampler_record();
@@ -136,6 +147,7 @@ private:
   std::unordered_map<granit_texture_view, std::shared_ptr<texture_view_record>> texture_views_;
   std::unordered_map<granit_sampler, std::shared_ptr<sampler_record>> samplers_;
   std::uint32_t next_domain_{1};
+  std::uint64_t next_creation_sequence_{1};
 };
 
 } // namespace granit::detail

@@ -6,7 +6,7 @@
 ## 元数据
 
 - 设计状态：已确认
-- 实现状态：待开始
+- 实现状态：已完成
 - 路线图任务：V-01
 - 优先级：P0
 - 前置依赖：R-03、R-05、R-06、R-07
@@ -107,8 +107,8 @@ Device Lost 或 C++ 析构期间制造真正的泄漏。
 默认输出单条汇总，例如：
 
 ```text
-[Granit Validation] Renderer 销毁时仍有 5 个用户资源：
-Buffer=2, Texture=1, TextureView=1, Sampler=1；已级联释放。
+[granit][validation] Renderer 销毁时仍有 5 个用户资源：
+Buffer=2, Texture=1, TextureView=1, Sampler=1；将级联释放。
 ```
 
 每种类型最多列出少量句柄样本，建议默认 8 个；超过部分只报告数量。句柄仅用于本次进程内
@@ -137,8 +137,8 @@ Buffer=2, Texture=1, TextureView=1, Sampler=1；已级联释放。
 
 ## 日志通道
 
-第一版沿用当前 Vulkan debug messenger 的诊断通道：Windows 调试输出和标准错误流。输出发生
-在 Renderer 销毁的调用线程中。
+第一版沿用当前 Vulkan debug messenger 使用的标准错误流。输出发生在 Renderer 销毁的调用
+线程中。
 
 S-02 再增加统一日志回调，并明确：
 
@@ -198,4 +198,14 @@ S-02 再增加统一日志回调，并明确：
 
 ## 实现结果
 
-尚未实现。完成后记录统计结构、输出示例、验证环境和相关提交。
+已完成：
+
+- Renderer 内部保存 Granit 验证开关，公开 ABI 未发生变化。
+- Registry 为公开资源记录单调递增的创建序号。
+- Renderer 销毁时在锁内收集固定容量快照，在锁外输出诊断并继续级联清理。
+- 每类资源最多保留 8 个句柄样本；总数始终准确。
+- 普通 Texture/View 与 Swapchain 借用 Backbuffer 根据公开销毁属性区分，借用资源不产生误报。
+- 增加快照分类、创建序号和样本上限单元测试。
+
+验证环境：Windows Clang + Ninja Debug 动态库、Visual Studio 2022 Debug 静态库，严格警告
+构建和全部测试通过。

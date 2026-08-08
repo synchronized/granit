@@ -58,6 +58,25 @@ granit_target_compile_warnings(granit_resource_validation_test)
 add_test(NAME granit.resource_validation COMMAND granit_resource_validation_test)
 
 add_executable(
+  granit_lifecycle_validation_test
+  core/lifecycle_validation_test.cpp
+  "${PROJECT_SOURCE_DIR}/src/core/lifecycle_validation.cpp"
+)
+target_include_directories(
+  granit_lifecycle_validation_test
+  PRIVATE
+    "${PROJECT_SOURCE_DIR}/include"
+    "${PROJECT_SOURCE_DIR}/src"
+)
+target_link_libraries(granit_lifecycle_validation_test PRIVATE Catch2::Catch2WithMain)
+target_compile_options(
+  granit_lifecycle_validation_test
+  PRIVATE $<$<COMPILE_LANG_AND_ID:CXX,MSVC>:/utf-8>
+)
+granit_target_compile_warnings(granit_lifecycle_validation_test)
+add_test(NAME granit.lifecycle_validation COMMAND granit_lifecycle_validation_test)
+
+add_executable(
   granit_renderer_test
   renderer/buffer_test.cpp
   renderer/renderer_test.cpp
@@ -136,8 +155,8 @@ target_link_libraries(granit_cpp_header_test PRIVATE granit::granit)
 granit_target_compile_warnings(granit_cpp_header_test)
 
 set_tests_properties(
-  granit.c_version granit.cpp_version granit.handle_table granit.resource_validation granit.renderer
-  granit.vulkan_backend
+  granit.c_version granit.cpp_version granit.handle_table granit.resource_validation
+  granit.lifecycle_validation granit.renderer granit.vulkan_backend
   PROPERTIES ENVIRONMENT_MODIFICATION
              "PATH=path_list_prepend:$<TARGET_FILE_DIR:granit>"
 )
