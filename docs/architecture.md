@@ -89,6 +89,10 @@ GPU 资源内存计划由内部 Vulkan Memory Allocator（VMA）负责选择 Mem
 memory property 或 heap index。VMA 不进入安装导出，具体接入计划见
 [R-01 GPU 内存分配方案](plans/R-01-memory-allocation.md)。
 
+资源公共模型区分 Buffer、Texture、Texture View 和 Sampler，并采用“完整模型、最小实现范围”。
+第一阶段优先实现 Buffer、2D Texture、默认 View 和基础 Sampler，详细边界见
+[R-02 第一版资源模型](plans/R-02-resource-model.md)。
+
 ## C ABI 规则
 
 - C 头文件必须能够由 C11 编译器独立包含。

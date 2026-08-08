@@ -125,6 +125,7 @@ if (granit::failed(result)) {
 - [docs/roadmap.md](docs/roadmap.md)：分阶段路线图。
 - [docs/plans/README.md](docs/plans/README.md)：开发计划的状态、命名和维护规则。
 - [docs/plans/R-01-memory-allocation.md](docs/plans/R-01-memory-allocation.md)：GPU 内存分配计划。
+- [docs/plans/R-02-resource-model.md](docs/plans/R-02-resource-model.md)：第一版资源模型计划。
 - [docs/renderer.md](docs/renderer.md)：公共 renderer C/C++ API 与生命周期。
 - [docs/surface.md](docs/surface.md)：窗口 Surface、平台句柄和生命周期。
 - [docs/swapchain.md](docs/swapchain.md)：交换链配置、重建和生命周期。

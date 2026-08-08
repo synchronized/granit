@@ -22,10 +22,16 @@
 
 ```text
 R-01-memory-allocation.md
+R-02-resource-model.md
 R-03-buffer.md
 F-01-command-recorder.md
 D-03-graphics-pipeline.md
 ```
+
+## 当前计划
+
+- [R-01：GPU 内存分配方案](R-01-memory-allocation.md)——已完成基础接入。
+- [R-02：第一版资源模型](R-02-resource-model.md)——设计已确认，等待实现。
 
 ## 状态
 
