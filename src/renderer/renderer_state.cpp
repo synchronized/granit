@@ -21,6 +21,13 @@ granit_result renderer_state::initialize(std::string_view application_name, bool
     instance_.reset();
     return device_result;
   }
+
+  const auto allocator_result = memory_allocator_.initialize(instance_, device_);
+  if (allocator_result != GRANIT_SUCCESS) {
+    device_.reset();
+    instance_.reset();
+    return allocator_result;
+  }
   surface_types_ = surface_types;
   return GRANIT_SUCCESS;
 }

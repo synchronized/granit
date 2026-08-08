@@ -18,7 +18,8 @@
 - 按需启用 Win32 Surface 扩展，并检查设备与队列的呈现能力。
 - 创建、查询、重建和销毁 Win32 Surface 对应的 Swapchain。
 
-命令提交、GPU 内存分配和 Buffer/Texture 等渲染资源尚未实现。
+GPU 内存分配基础已经通过内部 VMA 3.3.0 实现，包括 Renderer 级 Allocator、Buffer/Image
+分配、持久映射以及 flush/invalidate。公共 Buffer/Texture API 和命令提交尚未实现。
 
 ## Loader 生命周期
 

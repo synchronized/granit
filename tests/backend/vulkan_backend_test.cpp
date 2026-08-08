@@ -4,6 +4,7 @@
 #include "backend/vulkan/device.h"
 #include "backend/vulkan/instance.h"
 #include "backend/vulkan/loader.h"
+#include "backend/vulkan/memory_allocator.h"
 #include "backend/vulkan/physical_device.h"
 #include "backend/vulkan/result.h"
 
@@ -22,6 +23,10 @@ using granit::detail::physical_device_kind;
 using granit::detail::vulkan_device;
 using granit::detail::vulkan_instance;
 using granit::detail::vulkan_instance_desc;
+using granit::detail::vulkan_buffer_allocation;
+using granit::detail::vulkan_image_allocation;
+using granit::detail::vulkan_memory_allocator;
+using granit::detail::vulkan_memory_location;
 
 TEST_CASE("Vulkan 结果映射为后端无关错误", "[vulkan][result]") {
   CHECK(map_vulkan_result(VK_SUCCESS) == GRANIT_SUCCESS);
@@ -174,6 +179,60 @@ TEST_CASE("创建带独立函数表的 Vulkan 逻辑设备", "[vulkan][device]")
   CHECK(moved.valid());
   moved.reset();
   CHECK_FALSE(moved.valid());
+}
+
+TEST_CASE("VMA 分配并释放内部 Buffer 和 Image", "[vulkan][memory]") {
+  const auto loader = initialize_vulkan_loader();
+  if (loader.result != GRANIT_SUCCESS) {
+    SKIP("当前运行环境没有可用的 Vulkan 1.3 loader");
+  }
+
+  vulkan_instance instance;
+  REQUIRE(instance.initialize({.application_name = "granit-memory-tests"}) == GRANIT_SUCCESS);
+  vulkan_device device;
+  const auto device_result = device.initialize(instance);
+  if (device_result == GRANIT_ERROR_NO_SUITABLE_DEVICE) {
+    SKIP("当前运行环境没有满足 Granit Vulkan 1.3 要求的图形设备");
+  }
+  REQUIRE(device_result == GRANIT_SUCCESS);
+
+  vulkan_memory_allocator allocator;
+  REQUIRE(allocator.initialize(instance, device) == GRANIT_SUCCESS);
+  REQUIRE(allocator.valid());
+
+  VkBufferCreateInfo buffer_info{};
+  buffer_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+  buffer_info.size = 4096;
+  buffer_info.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+  buffer_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+  vulkan_buffer_allocation buffer;
+  REQUIRE(allocator.create_buffer(buffer_info, vulkan_memory_location::upload, buffer) ==
+          GRANIT_SUCCESS);
+  REQUIRE(buffer.buffer != VK_NULL_HANDLE);
+  REQUIRE(buffer.mapped_data != nullptr);
+  static_cast<unsigned char*>(buffer.mapped_data)[0] = 42;
+  CHECK(allocator.flush(buffer, 0, 1) == GRANIT_SUCCESS);
+  allocator.destroy_buffer(buffer);
+  CHECK(buffer.buffer == VK_NULL_HANDLE);
+
+  VkImageCreateInfo image_info{};
+  image_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+  image_info.imageType = VK_IMAGE_TYPE_2D;
+  image_info.format = VK_FORMAT_R8G8B8A8_UNORM;
+  image_info.extent = {.width = 4, .height = 4, .depth = 1};
+  image_info.mipLevels = 1;
+  image_info.arrayLayers = 1;
+  image_info.samples = VK_SAMPLE_COUNT_1_BIT;
+  image_info.tiling = VK_IMAGE_TILING_OPTIMAL;
+  image_info.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+  image_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+  image_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+  vulkan_image_allocation image;
+  REQUIRE(allocator.create_image(image_info, vulkan_memory_location::device, image) ==
+          GRANIT_SUCCESS);
+  REQUIRE(image.image != VK_NULL_HANDLE);
+  allocator.destroy_image(image);
+  CHECK(image.image == VK_NULL_HANDLE);
 }
 
 } // namespace

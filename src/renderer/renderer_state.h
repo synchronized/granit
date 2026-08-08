@@ -13,6 +13,7 @@
 
 #include "backend/vulkan/device.h"
 #include "backend/vulkan/instance.h"
+#include "backend/vulkan/memory_allocator.h"
 #include "backend/vulkan/swapchain.h"
 
 namespace granit::detail {
@@ -53,6 +54,7 @@ private:
   std::mutex resource_mutex_;
   vulkan_instance instance_;
   vulkan_device device_;
+  vulkan_memory_allocator memory_allocator_;
 };
 
 } // namespace granit::detail

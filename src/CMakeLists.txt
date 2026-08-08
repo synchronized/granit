@@ -25,6 +25,8 @@ target_sources(
     backend/vulkan/instance.h
     backend/vulkan/loader.cpp
     backend/vulkan/loader.h
+    backend/vulkan/memory_allocator.cpp
+    backend/vulkan/memory_allocator.h
     backend/vulkan/physical_device.cpp
     backend/vulkan/physical_device.h
     backend/vulkan/result.cpp
@@ -34,6 +36,7 @@ target_sources(
     backend/vulkan/swapchain.cpp
     backend/vulkan/swapchain.h
     backend/vulkan/version_check.cpp
+    backend/vulkan/vma_implementation.cpp
     core/handle_table.cpp
     core/handle_table.h
     renderer/renderer_api.cpp
@@ -81,6 +84,7 @@ target_include_directories(
   granit
   SYSTEM PRIVATE
     "${GRANIT_VOLK_DIR}"
+    "${GRANIT_VMA_DIR}"
     "${GRANIT_VULKAN_HEADERS_DIR}"
 )
 
@@ -90,6 +94,10 @@ target_compile_definitions(
     GRANIT_BUILDING_LIBRARY
     VK_NO_PROTOTYPES
     VOLK_NAMESPACE
+    VMA_DYNAMIC_VULKAN_FUNCTIONS=0
+    VMA_STATIC_VULKAN_FUNCTIONS=0
+    VMA_VULKAN_VERSION=1003000
+    $<$<PLATFORM_ID:Windows>:NOMINMAX>
     $<$<PLATFORM_ID:Windows>:VK_USE_PLATFORM_WIN32_KHR>
   PUBLIC $<$<NOT:$<BOOL:${BUILD_SHARED_LIBS}>>:GRANIT_STATIC_DEFINE>
 )

@@ -62,10 +62,12 @@ add_executable(
   "${PROJECT_SOURCE_DIR}/src/backend/vulkan/device.cpp"
   "${PROJECT_SOURCE_DIR}/src/backend/vulkan/instance.cpp"
   "${PROJECT_SOURCE_DIR}/src/backend/vulkan/loader.cpp"
+  "${PROJECT_SOURCE_DIR}/src/backend/vulkan/memory_allocator.cpp"
   "${PROJECT_SOURCE_DIR}/src/backend/vulkan/physical_device.cpp"
   "${PROJECT_SOURCE_DIR}/src/backend/vulkan/result.cpp"
   "${PROJECT_SOURCE_DIR}/src/backend/vulkan/surface.cpp"
   "${PROJECT_SOURCE_DIR}/src/backend/vulkan/swapchain.cpp"
+  "${PROJECT_SOURCE_DIR}/src/backend/vulkan/vma_implementation.cpp"
   $<TARGET_OBJECTS:granit_volk>
 )
 target_include_directories(
@@ -76,6 +78,7 @@ target_include_directories(
   granit_vulkan_backend_test
   SYSTEM PRIVATE
     "${GRANIT_VOLK_DIR}"
+    "${GRANIT_VMA_DIR}"
     "${GRANIT_VULKAN_HEADERS_DIR}"
 )
 target_compile_definitions(
@@ -83,6 +86,10 @@ target_compile_definitions(
   PRIVATE
     VK_NO_PROTOTYPES
     VOLK_NAMESPACE
+    VMA_DYNAMIC_VULKAN_FUNCTIONS=0
+    VMA_STATIC_VULKAN_FUNCTIONS=0
+    VMA_VULKAN_VERSION=1003000
+    $<$<PLATFORM_ID:Windows>:NOMINMAX>
     $<$<PLATFORM_ID:Windows>:VK_USE_PLATFORM_WIN32_KHR>
 )
 target_link_libraries(

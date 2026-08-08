@@ -4,6 +4,7 @@
 set(GRANIT_VULKAN_HEADERS_DIR
     "${CMAKE_CURRENT_SOURCE_DIR}/Vulkan-Headers-1.4.350/include")
 set(GRANIT_VOLK_DIR "${CMAKE_CURRENT_SOURCE_DIR}/volk-1.4.350")
+set(GRANIT_VMA_DIR "${CMAKE_CURRENT_SOURCE_DIR}/vma-v3.3.0/include")
 
 # Volk 作为内部对象并入 Granit，避免静态安装包导出私有第三方 target。
 add_library(granit_volk OBJECT "${GRANIT_VOLK_DIR}/volk.c")
@@ -30,6 +31,7 @@ set_target_properties(
 
 set(GRANIT_VULKAN_HEADERS_DIR "${GRANIT_VULKAN_HEADERS_DIR}" PARENT_SCOPE)
 set(GRANIT_VOLK_DIR "${GRANIT_VOLK_DIR}" PARENT_SCOPE)
+set(GRANIT_VMA_DIR "${GRANIT_VMA_DIR}" PARENT_SCOPE)
 
 if(NOT GRANIT_BUILD_TESTING OR NOT BUILD_TESTING)
   return()

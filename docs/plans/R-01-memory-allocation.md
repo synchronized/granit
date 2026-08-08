@@ -6,7 +6,7 @@
 ## 元数据
 
 - 设计状态：已确认
-- 实现状态：待开始
+- 实现状态：已完成基础接入
 - 路线图任务：R-01
 - 优先级：P0
 - 前置依赖：已创建 Vulkan Instance、Physical Device 和 Device
@@ -123,8 +123,7 @@ Buffer 和 Texture 应将原生对象与 `VmaAllocation` 放在同一内部 RAII
 - 根据实际启用能力配置 Vulkan 版本、maintenance 和 memory budget 标志，不能假定扩展存在。
 - VMA 头文件按第三方依赖处理，不应用 Granit 自有源码的警告即错误规则。
 
-具体版本在实施开始时依据最新稳定标签、Vulkan-Headers 1.4.350 兼容性和双编译器验证后锁定。
-版本选择完成前不得引用浮动分支或在线下载作为默认构建路径。
+当前锁定 VMA 3.3.0。依赖以内置源码参与构建，不引用浮动分支或在配置阶段在线下载。
 
 ## 映射与缓存一致性
 
@@ -189,15 +188,14 @@ Granit 必须复制或记录数据所有权，不能在函数返回后继续读�
 - 动态库导出表不因引入 VMA 增加第三方符号。
 - 双编译器、动态/静态构建和相关测试全部通过。
 
-## 未决问题
+## 后续公共 API 决策
 
-- 锁定的 VMA 具体稳定版本。
-- Memory Budget 是创建 Renderer 的硬要求，还是可选诊断能力。
-- 公开 map/unmap 是否自动处理全部 flush/invalidate，或额外提供显式 range API。
-- `AUTOMATIC` 是否保留在第一版公共 API，还是只允许三种明确位置。
+- Memory Budget 是可选诊断能力，不作为创建 Renderer 的硬要求。
+- 公开 map/unmap 默认自动处理 flush/invalidate；是否增加显式 range API 由 R-03 决定。
+- 第一版保留 `AUTOMATIC`，让常规资源无需了解内存位置。
 - 大型 Buffer/Texture 触发 dedicated allocation 的诊断阈值是否需要公开查询。
 
-这些问题必须在 R-02 和 R-03 公共 API 定稿前关闭；不影响“内部采用 VMA”的总体决策。
+最后一项属于诊断接口设计，不阻塞 R-02 和 R-03。
 
 ## 参考资料
 
@@ -208,4 +206,11 @@ Granit 必须复制或记录数据所有权，不能在函数返回后继续读�
 
 ## 实现结果
 
-尚未实现。完成后在此记录最终版本、关键差异、验证环境和相关提交。
+- 已锁定并内置 VMA 3.3.0，许可证和来源记录在 `3rd/README.md`。
+- 仅 `vma_implementation.cpp` 定义 `VMA_IMPLEMENTATION`；静态和动态函数查找均关闭。
+- Allocator 显式使用现有 Volk instance/device 函数表，不新增系统 Vulkan Loader 链接依赖。
+- 每个 Renderer 在 Device 后创建 Allocator，并借助成员逆序析构保证 Allocator 先销毁。
+- 内部支持 automatic、device、upload、readback 四种分配意图，以及 Buffer/Image 创建释放、
+  持久映射、flush 和 invalidate。
+- 后端测试覆盖 upload Buffer 的映射写入与刷新、device Image 分配和成对释放。
+- Memory Budget、分配命名和更完整的泄漏诊断作为非阻塞诊断增强，在资源 API 落地后补充。

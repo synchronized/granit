@@ -84,7 +84,7 @@
 
 ### 目标与交付物
 
-1. **[R-01](plans/R-01-memory-allocation.md) / P0**：采用内部 VMA 的 GPU 内存分配方案。
+1. **[R-01](plans/R-01-memory-allocation.md) / P0 / 已完成**：采用内部 VMA 的 GPU 内存分配方案。
 2. **R-02 / P0**：定义平台无关的资源用途、内存位置、像素格式、尺寸和采样数。
 3. **R-03 / P0**：实现 Buffer 创建、销毁、映射、刷新和失效语义。
 4. **R-04 / P0**：实现批量初始数据和 device-local Buffer 上传路径。
@@ -229,13 +229,12 @@
 
 ## 近期执行顺序
 
-1. `R-01`：调研并确定 GPU 内存分配方案。
-2. `R-02`：冻结第一版资源公共值类型和标志。
-3. `R-03`、`R-04`：完成 Buffer、映射和上传闭环。
-4. `R-05`、`R-06`：完成 Texture、Texture View 和 Sampler。
-5. `R-07`、`R-09`：统一离屏附件与 Swapchain Backbuffer。
-6. `R-08`：在产生异步 GPU 使用前完成延迟销毁基础。
-7. `F-01` 至 `F-07`：建立命令、同步和完整窗口帧循环。
-8. `D-01` 至 `D-06`：完成 Shader、Pipeline、离屏清屏和最小三角形。
+1. `R-02`：冻结 Buffer、Texture、Sampler 等第一版公共值类型和标志。
+2. `R-03`、`R-04`：完成 Buffer、映射和上传闭环。
+3. `R-05`、`R-06`：完成 Texture、Texture View 和 Sampler。
+4. `R-07`、`R-09`：统一离屏附件与 Swapchain Backbuffer。
+5. `R-08`：在产生异步 GPU 使用前完成延迟销毁基础。
+6. `F-01` 至 `F-07`：建立命令、同步和完整窗口帧循环。
+7. `D-01` 至 `D-06`：完成 Shader、Pipeline、离屏清屏和最小三角形。
 
 若实现过程中发现前置抽象不足，应先更新本路线图和对应设计文档，再扩大公共 API。

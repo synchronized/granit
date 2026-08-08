@@ -49,7 +49,8 @@ Granit 不是 Vulkan API 的逐项重命名或薄包装。项目希望围绕实�
 - CMake 配置、构建、安装和包导出入口。
 - 代码格式、静态检查和仓库忽略规则。
 
-下一阶段将确定 GPU 内存分配策略并实现 Buffer、Texture 和 Sampler。Command Recorder、帧同步、
+GPU 内存分配基础已采用内部 VMA 3.3.0 实现。下一阶段将实现 Buffer、Texture 和 Sampler。
+Command Recorder、帧同步、
 Swapchain acquire/present 和 Pipeline 尚未实现，具体顺序及验收标准见
 [docs/roadmap.md](docs/roadmap.md)。
 
