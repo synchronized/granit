@@ -37,6 +37,7 @@ D-03-graphics-pipeline.md
 - [R-05：Texture 与 Texture View 生命周期](R-05-texture-view.md)——已完成。
 - [R-06：Sampler 生命周期与能力限制](R-06-sampler.md)——已完成。
 - [R-07：Swapchain Backbuffer 资源接入](R-07-swapchain-backbuffer.md)——已完成。
+- [V-01：资源生命周期验证与诊断](V-01-lifetime-validation.md)——设计已确认，等待实现。
 
 ## 状态
 

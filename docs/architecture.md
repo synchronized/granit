@@ -107,6 +107,10 @@ memory property 或 heap index。VMA 不进入安装导出，具体接入计划�
 具体错误由 `GRANIT_ERROR_*` 常量表示。`granit_result_message` 返回由库持有的静态英文文本，
 仅用于诊断，不应作为程序逻辑或本地化界面依据。
 
+Vulkan Validation Layer 与 Granit 生命周期验证职责分离：前者检查 Vulkan API、同步和 Layout，
+后者检查公开句柄、Renderer domain、资源所有权和用户遗漏销毁。发现活动子资源时仍必须完成
+Renderer 级联清理，不能通过销毁失败制造新的泄漏。
+
 ## 资源句柄
 
 具有身份和生命周期的资源使用 64 位整数句柄，例如 renderer、surface、buffer、texture、shader、

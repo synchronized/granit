@@ -91,9 +91,10 @@
 5. **[R-05](plans/R-05-texture-view.md) / P0 / 已完成**：实现 Texture 与 Texture View 生命周期、用途和子资源范围。
 6. **[R-06](plans/R-06-sampler.md) / P0 / 已完成**：实现 Sampler 描述、能力限制和缓存策略。
 7. **[R-07](plans/R-07-swapchain-backbuffer.md) / P0 / 已完成**：将 Swapchain 图像接入为非拥有 Texture/View。
-8. **R-08 / P0**：建立延迟销毁基础，避免释放仍被 GPU 使用的资源。
-9. **R-09 / P0**：定义统一 Render Target Attachment，首先覆盖颜色和深度附件。
-10. **R-10 / P1**：补充纹理上传、mipmap、复制、读取回 CPU 和截图能力。
+8. **[V-01](plans/V-01-lifetime-validation.md) / P0**：增加 Granit 资源生命周期验证与销毁诊断。
+9. **R-08 / P0**：建立延迟销毁基础，避免释放仍被 GPU 使用的资源。
+10. **R-09 / P0**：定义统一 Render Target Attachment，首先覆盖颜色和深度附件。
+11. **R-10 / P1**：补充纹理上传、mipmap、复制、读取回 CPU 和截图能力。
 
 ### 设计约束
 
@@ -229,8 +230,9 @@
 
 ## 近期执行顺序
 
-1. `R-08`、`R-09`：完成延迟销毁基础和统一附件描述。
-2. `F-01` 至 `F-07`：建立命令、同步和完整窗口帧循环。
-3. `D-01` 至 `D-06`：完成 Shader、Pipeline、离屏清屏和最小三角形。
+1. `V-01`：增加 Granit 生命周期验证和 Renderer 销毁诊断。
+2. `R-08`、`R-09`：完成延迟销毁基础和统一附件描述。
+3. `F-01` 至 `F-07`：建立命令、同步和完整窗口帧循环。
+4. `D-01` 至 `D-06`：完成 Shader、Pipeline、离屏清屏和最小三角形。
 
 若实现过程中发现前置抽象不足，应先更新本路线图和对应设计文档，再扩大公共 API。
