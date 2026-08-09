@@ -92,7 +92,8 @@
 6. **[R-06](plans/R-06-sampler.md) / P0 / 已完成**：实现 Sampler 描述、能力限制和缓存策略。
 7. **[R-07](plans/R-07-swapchain-backbuffer.md) / P0 / 已完成**：将 Swapchain 图像接入为非拥有 Texture/View。
 8. **[V-01](plans/V-01-lifetime-validation.md) / P0 / 已完成**：增加 Granit 资源生命周期验证与销毁诊断。
-9. **[R-08](plans/R-08-deferred-destruction.md) / P0 / R-08A 已完成**：建立延迟销毁基础，等待帧同步接入真实完成点。
+9. **[R-08](plans/R-08-deferred-destruction.md) / P0 / R-08A/R-08B 已完成**：普通 GPU 资源已接入
+   真实提交完成点，继续处理 Swapchain presentation 生命周期。
 10. **[R-09](plans/R-09-render-target-attachment.md) / P0 / 已完成**：定义统一
     Render Target Attachment，覆盖颜色和深度/模板附件。
 11. **R-10 / P1**：补充纹理上传、mipmap、复制、读取回 CPU 和截图能力。

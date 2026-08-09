@@ -587,7 +587,9 @@ granit_result renderer_state::complete_frame_slot(frame_slot& slot) noexcept {
   return GRANIT_SUCCESS;
 }
 
-granit_result renderer_state::submit_command_recorder(vulkan_command_recorder& recorder) {
+granit_result renderer_state::submit_command_recorder(vulkan_command_recorder& recorder,
+                                                      submission_serial& submitted_serial) {
+  submitted_serial = 0;
   if (device_lost())
     return GRANIT_ERROR_DEVICE_LOST;
   std::lock_guard lock{queue_mutex_};
@@ -670,6 +672,7 @@ granit_result renderer_state::submit_command_recorder(vulkan_command_recorder& r
   }
   static_cast<void>(recorder.mark_pending());
   static_cast<void>(submission_serials_.commit(serial));
+  submitted_serial = serial;
   for (const auto& final : recorder.final_image_accesses()) {
     const auto state =
         std::find_if(image_states_.begin(), image_states_.end(),
@@ -711,7 +714,9 @@ granit_result renderer_state::acquire_swapchain_frame(vulkan_swapchain& swapchai
 granit_result renderer_state::submit_swapchain_frame(vulkan_command_recorder& recorder,
                                                      vulkan_swapchain& swapchain,
                                                      std::uint32_t image_index,
-                                                     std::size_t slot_index) {
+                                                     std::size_t slot_index,
+                                                     submission_serial& submitted_serial) {
+  submitted_serial = 0;
   if (device_lost())
     return GRANIT_ERROR_DEVICE_LOST;
   std::lock_guard lock{queue_mutex_};
@@ -825,6 +830,7 @@ granit_result renderer_state::submit_swapchain_frame(vulkan_command_recorder& re
   }
   static_cast<void>(recorder.mark_pending());
   static_cast<void>(submission_serials_.commit(serial));
+  submitted_serial = serial;
   for (const auto& access : recorder.final_image_accesses()) {
     const auto state =
         std::find_if(image_states_.begin(), image_states_.end(),
@@ -990,6 +996,27 @@ granit_result renderer_state::wait_for_all_submissions() noexcept {
     }
   }
   return GRANIT_SUCCESS;
+}
+
+void renderer_state::retire_resource(submission_serial retire_after, retirement_order order,
+                                     std::shared_ptr<void> resource) {
+  std::lock_guard lock{retirement_mutex_};
+  retirement_queue_.retire(retire_after, order, std::move(resource));
+}
+
+std::size_t renderer_state::collect_retired() noexcept {
+  submission_serial completed{};
+  {
+    std::lock_guard lock{queue_mutex_};
+    completed = submission_serials_.completed();
+  }
+  std::lock_guard lock{retirement_mutex_};
+  return retirement_queue_.collect(completed);
+}
+
+std::size_t renderer_state::drain_retired() noexcept {
+  std::lock_guard lock{retirement_mutex_};
+  return retirement_queue_.drain();
 }
 
 void renderer_state::destroy_native_command_recorder(vulkan_command_recorder& recorder) noexcept {

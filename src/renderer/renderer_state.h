@@ -90,7 +90,8 @@ public:
                   const VkRenderingAttachmentInfo* stencil_attachment, std::uint32_t layer_count,
                   std::span<const vulkan_image_access> image_accesses);
   [[nodiscard]] granit_result end_rendering(vulkan_command_recorder& recorder) noexcept;
-  [[nodiscard]] granit_result submit_command_recorder(vulkan_command_recorder& recorder);
+  [[nodiscard]] granit_result submit_command_recorder(vulkan_command_recorder& recorder,
+                                                      submission_serial& submitted_serial);
   [[nodiscard]] granit_result acquire_swapchain_frame(vulkan_swapchain& swapchain,
                                                       std::uint32_t& image_index,
                                                       std::size_t& slot_index,
@@ -98,7 +99,8 @@ public:
   [[nodiscard]] granit_result submit_swapchain_frame(vulkan_command_recorder& recorder,
                                                      vulkan_swapchain& swapchain,
                                                      std::uint32_t image_index,
-                                                     std::size_t slot_index);
+                                                     std::size_t slot_index,
+                                                     submission_serial& submitted_serial);
   [[nodiscard]] granit_result present_swapchain_frame(vulkan_swapchain& swapchain,
                                                       std::uint32_t image_index,
                                                       std::size_t slot_index, bool& needs_recreate);
@@ -107,6 +109,10 @@ public:
                                                      std::size_t slot_index, bool& needs_recreate);
   [[nodiscard]] granit_result wait_command_recorder(vulkan_command_recorder& recorder) noexcept;
   [[nodiscard]] granit_result wait_for_all_submissions() noexcept;
+  void retire_resource(submission_serial retire_after, retirement_order order,
+                       std::shared_ptr<void> resource);
+  std::size_t collect_retired() noexcept;
+  std::size_t drain_retired() noexcept;
   void destroy_native_command_recorder(vulkan_command_recorder& recorder) noexcept;
 
   void set_domain(std::uint32_t domain) noexcept { domain_ = domain; }
@@ -144,6 +150,8 @@ private:
   std::vector<frame_slot> frame_slots_;
   std::size_t next_frame_slot_{};
   submission_serials submission_serials_;
+  std::mutex retirement_mutex_;
+  retirement_queue retirement_queue_;
   std::vector<vulkan_image_access> image_states_;
 };
 

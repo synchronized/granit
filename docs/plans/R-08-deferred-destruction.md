@@ -6,7 +6,7 @@
 ## 元数据
 
 - 设计状态：已确认
-- 实现状态：R-08A 已完成；R-08B/R-08C 等待对应帧同步阶段
+- 实现状态：R-08A/R-08B 已完成；R-08C 进行中
 - 路线图任务：R-08
 - 优先级：P0
 - 前置依赖：R-03、R-05、R-06、V-01
@@ -212,6 +212,19 @@ R-08A 已完成：
 - 支持按完成值收集、零序号立即收集、关闭时完整排空和待处理数量查询。
 - 单元测试覆盖提交失败不推进、乱序入队、依赖顺序、零序号及关闭排空。
 
-F-04 已将真实 Queue 提交和 Fence 完成点接入 `submission_serials`，Recorder 强引用会保留资源至
-完成后的 reset 或 destroy。逐资源 `last_use_serial` 和 `retirement_queue` 转移仍由 R-08B 完成；
-R-08C 随 F-06 接入 WSI 生命周期。
+R-08B 已完成：
+
+- 普通提交和 Swapchain 帧提交成功后返回真实 submission serial。
+- Recorder 保留的 Buffer 和 Texture View 会在提交成功时更新 `last_use_serial`；View 的强引用
+  同时保证父 Texture 存活。
+- Buffer、Texture、Texture View 和 Sampler 的公开销毁立即移除句柄，并按最后使用序号进入
+  Renderer 私有退役队列。
+- acquire、present、Recorder reset 和资源销毁路径会依据 Fence 已完成序号收集，不使用固定
+  帧数推测完成状态。
+- Renderer 关闭先等待全部提交、释放 Recorder 强引用并排空退役队列，避免队列与 Renderer
+  所有权形成残留环。
+- Validation Layer 测试覆盖异步提交后立即销毁 Buffer，再等待并回收的路径。
+
+R-08C 仍需单独处理 WSI：提交 Fence 只证明 signal semaphore 的提交完成，不能证明 presentation
+engine 已停止使用旧 Swapchain。重建和销毁必须建立 Queue Present 的可靠空闲边界，不能直接
+套用普通资源的 completed serial。

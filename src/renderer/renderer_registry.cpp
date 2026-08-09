@@ -27,14 +27,24 @@ granit_texture_format swapchain_format(VkFormat format) noexcept {
   }
 }
 
-void retain_resource(std::vector<std::shared_ptr<void>>& resources,
-                     const std::shared_ptr<void>& resource) {
+template <typename Resources, typename Resource, typename Metadata>
+void retain_resource(Resources& resources, const Resource& resource, Metadata& metadata) {
   for (const auto& retained : resources) {
-    if (retained.get() == resource.get()) {
+    if (retained.resource.get() == resource.get()) {
       return;
     }
   }
-  resources.push_back(resource);
+  resources.push_back({.resource = resource, .metadata = &metadata});
+}
+
+template <typename Resources>
+void mark_resources_used(Resources& resources, submission_serial serial) noexcept {
+  for (auto& retained : resources) {
+    auto current = retained.metadata->last_use_serial.load();
+    while (current < serial &&
+           !retained.metadata->last_use_serial.compare_exchange_weak(current, serial)) {
+    }
+  }
 }
 
 bool ranges_overlap(std::uint64_t left_offset, std::uint64_t left_size, std::uint64_t right_offset,
@@ -301,6 +311,7 @@ granit_result renderer_registry::destroy(granit_renderer renderer) {
   write_lifecycle_diagnostic(renderer, state->domain(), lifecycle);
   static_cast<void>(state->wait_for_all_submissions());
   native_command_recorders.clear();
+  static_cast<void>(state->drain_retired());
   native_swapchains.clear();
   native_surfaces.clear();
   native_buffers.clear();
@@ -708,6 +719,7 @@ granit_result renderer_registry::acquire_swapchain_frame(granit_renderer rendere
   }
   const auto result = record->renderer->acquire_swapchain_frame(
       *swapchain_record_state->native, record->image_index, record->slot_index, needs_recreate);
+  static_cast<void>(record->renderer->collect_retired());
   if (result != GRANIT_SUCCESS) {
     std::lock_guard lock{mutex_};
     if (result == GRANIT_ERROR_SURFACE_LOST)
@@ -738,11 +750,14 @@ granit_result renderer_registry::submit_command_recorder_frame(granit_renderer r
   std::scoped_lock locks{command->mutex, frame_state->mutex};
   if (frame_state->submitted)
     return GRANIT_ERROR_INVALID_ARGUMENT;
-  const auto result =
-      command->renderer->submit_swapchain_frame(command->native, *frame_state->swapchain->native,
-                                                frame_state->image_index, frame_state->slot_index);
-  if (result == GRANIT_SUCCESS)
+  submission_serial serial{};
+  const auto result = command->renderer->submit_swapchain_frame(
+      command->native, *frame_state->swapchain->native, frame_state->image_index,
+      frame_state->slot_index, serial);
+  if (result == GRANIT_SUCCESS) {
+    mark_resources_used(command->retained_resources, serial);
     frame_state->submitted = true;
+  }
   return result;
 }
 
@@ -768,6 +783,7 @@ granit_result renderer_registry::present_swapchain_frame(granit_renderer rendere
     return GRANIT_ERROR_INVALID_ARGUMENT;
   const auto result = record->renderer->present_swapchain_frame(
       *record->swapchain->native, record->image_index, record->slot_index, needs_recreate);
+  static_cast<void>(record->renderer->collect_retired());
   if (result == GRANIT_ERROR_SURFACE_LOST) {
     std::lock_guard lock{mutex_};
     record->swapchain->surface_lost = true;
@@ -1026,7 +1042,11 @@ granit_result renderer_registry::destroy_buffer(granit_renderer renderer, granit
       return erase_result;
     }
   }
+  auto state = record->renderer;
+  state->retire_resource(record->metadata.last_use_serial.load(), retirement_order::resource,
+                         record);
   record.reset();
+  static_cast<void>(state->collect_retired());
   return GRANIT_SUCCESS;
 }
 
@@ -1197,7 +1217,11 @@ granit_result renderer_registry::destroy_texture_view(granit_renderer renderer,
     texture_views_.erase(found);
     static_cast<void>(handles_.erase(view, resource_type::texture_view, state->domain()));
   }
+  auto state = record->renderer;
+  state->retire_resource(record->metadata.last_use_serial.load(), retirement_order::dependent,
+                         record);
   record.reset();
+  static_cast<void>(state->collect_retired());
   return GRANIT_SUCCESS;
 }
 
@@ -1239,8 +1263,16 @@ granit_result renderer_registry::destroy_texture(granit_renderer renderer, grani
   write_child_lifecycle_diagnostic(lifecycle_resource_type::texture, texture,
                                    lifecycle_resource_type::texture_view,
                                    lifecycle.summary(lifecycle_resource_type::texture_view));
+  auto state = record->renderer;
+  for (auto& view : views) {
+    state->retire_resource(view->metadata.last_use_serial.load(), retirement_order::dependent,
+                           view);
+  }
   views.clear();
+  state->retire_resource(record->metadata.last_use_serial.load(), retirement_order::resource,
+                         record);
   record.reset();
+  static_cast<void>(state->collect_retired());
   return GRANIT_SUCCESS;
 }
 
@@ -1297,7 +1329,11 @@ granit_result renderer_registry::destroy_sampler(granit_renderer renderer, grani
     samplers_.erase(found);
     static_cast<void>(handles_.erase(sampler, resource_type::sampler, state->domain()));
   }
+  auto state = record->renderer;
+  state->retire_resource(record->metadata.last_use_serial.load(), retirement_order::resource,
+                         record);
   record.reset();
+  static_cast<void>(state->collect_retired());
   return GRANIT_SUCCESS;
 }
 
@@ -1367,7 +1403,11 @@ granit_result renderer_registry::submit_command_recorder(granit_renderer rendere
     return GRANIT_ERROR_INVALID_HANDLE;
   }
   std::lock_guard record_lock{record->mutex};
-  return record->renderer->submit_command_recorder(record->native);
+  submission_serial serial{};
+  const auto result = record->renderer->submit_command_recorder(record->native, serial);
+  if (result == GRANIT_SUCCESS)
+    mark_resources_used(record->retained_resources, serial);
+  return result;
 }
 
 granit_result renderer_registry::reset_command_recorder(granit_renderer renderer,
@@ -1384,6 +1424,7 @@ granit_result renderer_registry::reset_command_recorder(granit_renderer renderer
   const auto result = record->renderer->reset_command_recorder(record->native);
   if (result == GRANIT_SUCCESS) {
     record->retained_resources.clear();
+    static_cast<void>(record->renderer->collect_retired());
   }
   return result;
 }
@@ -1446,8 +1487,9 @@ granit_result renderer_registry::copy_buffer(granit_renderer renderer,
   if (recorder_record->native.state() != command_recorder_state::recording) {
     return GRANIT_ERROR_INVALID_ARGUMENT;
   }
-  retain_resource(recorder_record->retained_resources, source_record);
-  retain_resource(recorder_record->retained_resources, destination_record);
+  retain_resource(recorder_record->retained_resources, source_record, source_record->metadata);
+  retain_resource(recorder_record->retained_resources, destination_record,
+                  destination_record->metadata);
   return recorder_record->renderer->copy_buffer(recorder_record->native,
                                                 source_record->native.buffer,
                                                 destination_record->native.buffer, native_regions);
@@ -1484,7 +1526,8 @@ granit_result renderer_registry::fill_buffer(granit_renderer renderer,
   if (recorder_record->native.state() != command_recorder_state::recording) {
     return GRANIT_ERROR_INVALID_ARGUMENT;
   }
-  retain_resource(recorder_record->retained_resources, buffer_record_state);
+  retain_resource(recorder_record->retained_resources, buffer_record_state,
+                  buffer_record_state->metadata);
   return recorder_record->renderer->fill_buffer(
       recorder_record->native, buffer_record_state->native.buffer, offset, size, value);
 }
@@ -1625,7 +1668,7 @@ granit_result renderer_registry::begin_rendering(granit_renderer renderer,
   }
   std::lock_guard command_lock{command->mutex};
   for (const auto& view : views)
-    retain_resource(command->retained_resources, view);
+    retain_resource(command->retained_resources, view, view->metadata);
   const VkRect2D area{
       {static_cast<std::int32_t>(desc.area.x), static_cast<std::int32_t>(desc.area.y)},
       {desc.area.width, desc.area.height}};
@@ -1667,7 +1710,9 @@ granit_result renderer_registry::destroy_command_recorder(granit_renderer render
     static_cast<void>(
         handles_.erase(recorder, resource_type::command_recorder, record->renderer->domain()));
   }
+  auto state = record->renderer;
   record.reset();
+  static_cast<void>(state->collect_retired());
   return GRANIT_SUCCESS;
 }
 

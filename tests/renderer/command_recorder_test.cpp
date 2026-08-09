@@ -117,7 +117,10 @@ TEST_CASE("Renderer 销毁会使所属 Command Recorder 失效", "[command][life
 
 TEST_CASE("Recorder 批量复制和填充 Buffer 并保留内部资源", "[command][copy]") {
   granit::renderer renderer;
-  const auto result = renderer.initialize({.application_name = "granit-copy-command-tests"});
+  const auto result = renderer.initialize(
+      {.application_name = "granit-copy-command-tests", .enable_validation = true});
+  if (result == granit::result::unsupported)
+    SKIP("当前运行环境没有 Khronos validation layer");
   if (environment_unavailable(result)) {
     SKIP("当前运行环境没有满足要求的 Vulkan 设备");
   }
@@ -146,10 +149,10 @@ TEST_CASE("Recorder 批量复制和填充 Buffer 并保留内部资源", "[comma
   REQUIRE(recorder.fill_buffer(destination, 0, 16, UINT32_C(0xff00ff00)) ==
           granit::result::success);
 
-  REQUIRE(granit_buffer_destroy(renderer.native_handle(), source) == GRANIT_SUCCESS);
-  REQUIRE(granit_buffer_destroy(renderer.native_handle(), destination) == GRANIT_SUCCESS);
   REQUIRE(recorder.end() == granit::result::success);
   REQUIRE(recorder.submit() == granit::result::success);
+  REQUIRE(granit_buffer_destroy(renderer.native_handle(), source) == GRANIT_SUCCESS);
+  REQUIRE(granit_buffer_destroy(renderer.native_handle(), destination) == GRANIT_SUCCESS);
   REQUIRE(recorder.reset() == granit::result::success);
   CHECK(granit_buffer_destroy(renderer.native_handle(), source) == GRANIT_ERROR_INVALID_HANDLE);
 }

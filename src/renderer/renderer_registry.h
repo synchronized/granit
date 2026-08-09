@@ -4,6 +4,7 @@
 #ifndef GRANIT_RENDERER_RENDERER_REGISTRY_H_
 #define GRANIT_RENDERER_RENDERER_REGISTRY_H_
 
+#include <atomic>
 #include <cstdint>
 #include <memory>
 #include <mutex>
@@ -123,6 +124,11 @@ private:
 
   struct resource_metadata {
     std::uint64_t creation_sequence{};
+    std::atomic<submission_serial> last_use_serial{};
+  };
+  struct retained_resource {
+    std::shared_ptr<void> resource;
+    resource_metadata* metadata{};
   };
 
   [[nodiscard]] std::uint32_t allocate_domain() noexcept;
@@ -191,7 +197,7 @@ private:
     std::shared_ptr<renderer_state> renderer;
     vulkan_command_recorder native;
     std::mutex mutex;
-    std::vector<std::shared_ptr<void>> retained_resources;
+    std::vector<retained_resource> retained_resources;
     ~command_recorder_record();
   };
   struct frame_record {
