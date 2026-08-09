@@ -43,6 +43,8 @@ target_sources(
     core/lifecycle_validation.h
     core/resource_validation.cpp
     core/resource_validation.h
+    core/retirement_queue.cpp
+    core/retirement_queue.h
     renderer/renderer_api.cpp
     renderer/buffer_api.cpp
     renderer/renderer_registry.cpp

@@ -38,6 +38,7 @@ D-03-graphics-pipeline.md
 - [R-06：Sampler 生命周期与能力限制](R-06-sampler.md)——已完成。
 - [R-07：Swapchain Backbuffer 资源接入](R-07-swapchain-backbuffer.md)——已完成。
 - [V-01：资源生命周期验证与诊断](V-01-lifetime-validation.md)——已完成。
+- [R-08：GPU 资源延迟销毁基础](R-08-deferred-destruction.md)——R-08A 已完成，等待帧同步接入。
 
 ## 状态
 
