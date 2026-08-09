@@ -2,6 +2,7 @@
 // Copyright (c) 2026 Granit contributors
 
 #include "backend/vulkan/device.h"
+#include "backend/vulkan/frame_context.h"
 #include "backend/vulkan/instance.h"
 #include "backend/vulkan/loader.h"
 #include "backend/vulkan/memory_allocator.h"
@@ -20,11 +21,12 @@ using granit::detail::is_suitable;
 using granit::detail::map_vulkan_result;
 using granit::detail::physical_device_candidate;
 using granit::detail::physical_device_kind;
+using granit::detail::vulkan_buffer_allocation;
 using granit::detail::vulkan_device;
+using granit::detail::vulkan_frame_context;
+using granit::detail::vulkan_image_allocation;
 using granit::detail::vulkan_instance;
 using granit::detail::vulkan_instance_desc;
-using granit::detail::vulkan_buffer_allocation;
-using granit::detail::vulkan_image_allocation;
 using granit::detail::vulkan_memory_allocator;
 using granit::detail::vulkan_memory_location;
 
@@ -179,6 +181,34 @@ TEST_CASE("创建带独立函数表的 Vulkan 逻辑设备", "[vulkan][device]")
   CHECK(moved.valid());
   moved.reset();
   CHECK_FALSE(moved.valid());
+}
+
+TEST_CASE("每帧上下文创建初始已触发 Fence 和两个二进制 Semaphore", "[vulkan][frame]") {
+  const auto loader = initialize_vulkan_loader();
+  if (loader.result != GRANIT_SUCCESS) {
+    SKIP("当前运行环境没有可用的 Vulkan 1.3 loader");
+  }
+
+  vulkan_instance instance;
+  REQUIRE(instance.initialize({.application_name = "granit-frame-tests"}) == GRANIT_SUCCESS);
+  vulkan_device device;
+  const auto device_result = device.initialize(instance);
+  if (device_result == GRANIT_ERROR_NO_SUITABLE_DEVICE) {
+    SKIP("当前运行环境没有满足 Granit Vulkan 1.3 要求的图形设备");
+  }
+  REQUIRE(device_result == GRANIT_SUCCESS);
+
+  vulkan_frame_context frame;
+  REQUIRE(frame.initialize(device) == GRANIT_SUCCESS);
+  CHECK(frame.valid());
+  CHECK(frame.completion_fence() != VK_NULL_HANDLE);
+  CHECK(frame.image_available() != VK_NULL_HANDLE);
+  CHECK(frame.render_finished() != VK_NULL_HANDLE);
+  CHECK(frame.wait(device, 0) == GRANIT_SUCCESS);
+  CHECK(frame.initialize(device) == GRANIT_ERROR_INVALID_ARGUMENT);
+
+  frame.destroy(device);
+  CHECK_FALSE(frame.valid());
 }
 
 TEST_CASE("VMA 分配并释放内部 Buffer 和 Image", "[vulkan][memory]") {

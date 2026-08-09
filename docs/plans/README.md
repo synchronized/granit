@@ -42,6 +42,8 @@ D-03-graphics-pipeline.md
 - [R-09：统一 Render Target Attachment](R-09-render-target-attachment.md)——已完成。
 - [F-01：Command Recorder 基础](F-01-command-recorder.md)——已完成。
 - [F-02：基础命令录制](F-02-command-recording.md)——Buffer 命令与 Dynamic Rendering 已完成。
+- [F-03：帧同步内部抽象](F-03-frame-synchronization.md)——Fence、二进制 Semaphore 和每帧上下文
+  已完成，等待 F-04 接入提交调度。
 
 ## 状态
 

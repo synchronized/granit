@@ -24,7 +24,7 @@
 | 一、工程与 ABI 基础 | 基本完成 | 构建、公共接口分层、句柄、测试体系已建立 |
 | 二、Vulkan 与窗口输出基础 | 基本完成 | Renderer、Win32 Surface、Swapchain 生命周期已实现 |
 | 三、GPU 资源基础 | 进行中 | 内存分配与资源值类型已完成，资源生命周期尚未实现 |
-| 四、命令与帧同步 | 未开始 | Command Recorder、同步和 acquire/present 尚未实现 |
+| 四、命令与帧同步 | 进行中 | Command Recorder、基础命令和内部帧同步已实现 |
 | 五、基础渲染 | 未开始 | Shader、Pipeline 和 Dynamic Rendering 尚未实现 |
 | 六、多线程与性能 | 未开始 | 在真实访问模式形成后细化 |
 | 七、可选高层渲染模块 | 暂缓 | 不阻塞核心库完成，保持独立分层 |
@@ -117,7 +117,7 @@
 
 ## 阶段四：命令与帧同步
 
-**状态：未开始。前置依赖：阶段三的 Buffer、Texture View 和延迟销毁基础。**
+**状态：进行中。前置依赖：阶段三的 Buffer、Texture View 和延迟销毁基础。**
 
 ### 目标与交付物
 
@@ -125,7 +125,8 @@
   移交的 Command Recorder。
 - **[F-02](plans/F-02-command-recording.md) / P0 / 基础命令已完成**：实现 Buffer Copy/Fill 和
   Dynamic Rendering；资源屏障随 F-05 接入。
-- **F-03 / P0**：实现 Fence、Semaphore 及每帧上下文的内部抽象。
+- **[F-03](plans/F-03-frame-synchronization.md) / P0 / 已完成**：实现 Fence、Semaphore 及每帧
+  上下文的内部抽象。
 - **F-04 / P0**：实现可配置 frames-in-flight 和 Queue 提交串行化。
 - **F-05 / P0**：建立资源状态跟踪和必要的同步信息记录。
 - **F-06 / P0**：实现 Swapchain acquire、提交、present 和 out-of-date 重建流程。

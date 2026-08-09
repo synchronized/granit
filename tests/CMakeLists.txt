@@ -116,6 +116,7 @@ add_executable(
   granit_vulkan_backend_test
   backend/vulkan_backend_test.cpp
   "${PROJECT_SOURCE_DIR}/src/backend/vulkan/device.cpp"
+  "${PROJECT_SOURCE_DIR}/src/backend/vulkan/frame_context.cpp"
   "${PROJECT_SOURCE_DIR}/src/backend/vulkan/instance.cpp"
   "${PROJECT_SOURCE_DIR}/src/backend/vulkan/loader.cpp"
   "${PROJECT_SOURCE_DIR}/src/backend/vulkan/memory_allocator.cpp"

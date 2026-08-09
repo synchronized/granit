@@ -21,6 +21,8 @@ target_sources(
     $<TARGET_OBJECTS:granit_volk>
     backend/vulkan/device.cpp
     backend/vulkan/device.h
+    backend/vulkan/frame_context.cpp
+    backend/vulkan/frame_context.h
     backend/vulkan/command_recorder.cpp
     backend/vulkan/command_recorder.h
     backend/vulkan/instance.cpp
