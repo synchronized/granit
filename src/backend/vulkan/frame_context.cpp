@@ -92,6 +92,11 @@ granit_result vulkan_frame_context::reset_fence(const vulkan_device& device) noe
   return completion_fence_.reset(device);
 }
 
+granit_result vulkan_frame_context::restore_signaled_fence(const vulkan_device& device) noexcept {
+  completion_fence_.destroy(device);
+  return completion_fence_.initialize(device, true);
+}
+
 void vulkan_frame_context::destroy(const vulkan_device& device) noexcept {
   render_finished_.destroy(device);
   image_available_.destroy(device);

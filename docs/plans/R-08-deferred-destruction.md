@@ -212,5 +212,6 @@ R-08A 已完成：
 - 支持按完成值收集、零序号立即收集、关闭时完整排空和待处理数量查询。
 - 单元测试覆盖提交失败不推进、乱序入队、依赖顺序、零序号及关闭排空。
 
-当前没有异步公开提交，因此尚未把真实 Vulkan 资源放入队列。R-08B 将随 F-03/F-04 接入真实
-完成值和资源最后使用序号；R-08C 随 F-06 接入 WSI 生命周期。
+F-04 已将真实 Queue 提交和 Fence 完成点接入 `submission_serials`，Recorder 强引用会保留资源至
+完成后的 reset 或 destroy。逐资源 `last_use_serial` 和 `retirement_queue` 转移仍由 R-08B 完成；
+R-08C 随 F-06 接入 WSI 生命周期。

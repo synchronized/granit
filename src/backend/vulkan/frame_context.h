@@ -64,6 +64,7 @@ public:
   [[nodiscard]] granit_result initialize(const vulkan_device& device) noexcept;
   [[nodiscard]] granit_result wait(const vulkan_device& device, std::uint64_t timeout) noexcept;
   [[nodiscard]] granit_result reset_fence(const vulkan_device& device) noexcept;
+  [[nodiscard]] granit_result restore_signaled_fence(const vulkan_device& device) noexcept;
   void destroy(const vulkan_device& device) noexcept;
 
   [[nodiscard]] bool valid() const noexcept {

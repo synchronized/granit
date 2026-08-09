@@ -43,6 +43,9 @@ GRANIT_API granit_result granit_command_recorder_begin(granit_renderer renderer,
                                                        granit_command_recorder recorder);
 GRANIT_API granit_result granit_command_recorder_end(granit_renderer renderer,
                                                      granit_command_recorder recorder);
+/** 异步提交 executable Recorder；同一 Recorder 完成前不能再次提交。 */
+GRANIT_API granit_result granit_command_recorder_submit(granit_renderer renderer,
+                                                        granit_command_recorder recorder);
 GRANIT_API granit_result granit_command_recorder_reset(granit_renderer renderer,
                                                        granit_command_recorder recorder);
 GRANIT_API granit_result granit_command_recorder_copy_buffer(

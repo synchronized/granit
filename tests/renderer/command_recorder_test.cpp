@@ -9,6 +9,7 @@
 #include <catch2/catch_all.hpp>
 
 #include <utility>
+#include <vector>
 
 namespace {
 
@@ -43,6 +44,32 @@ TEST_CASE("Command Recorder 强制执行空录制状态机", "[command][recorder
   CHECK_FALSE(recorder.valid());
   CHECK(moved.valid());
   CHECK(moved.destroy() == granit::result::success);
+}
+
+TEST_CASE("Recorder 异步提交并按 frames-in-flight 复用槽位", "[command][submit]") {
+  granit::renderer renderer;
+  const auto result =
+      renderer.initialize({.application_name = "granit-submit-tests", .frames_in_flight = 2});
+  if (environment_unavailable(result)) {
+    SKIP("当前运行环境没有满足要求的 Vulkan 设备");
+  }
+  REQUIRE(result == granit::result::success);
+
+  std::vector<granit::command_recorder> recorders(3);
+  for (auto& recorder : recorders) {
+    REQUIRE(recorder.initialize(renderer.native_handle()) == granit::result::success);
+    CHECK(recorder.submit() == granit::result::invalid_argument);
+    REQUIRE(recorder.begin() == granit::result::success);
+    REQUIRE(recorder.end() == granit::result::success);
+    REQUIRE(recorder.submit() == granit::result::success);
+    CHECK(recorder.submit() == granit::result::invalid_argument);
+  }
+
+  for (auto& recorder : recorders) {
+    REQUIRE(recorder.reset() == granit::result::success);
+    REQUIRE(recorder.begin() == granit::result::success);
+    REQUIRE(recorder.end() == granit::result::success);
+  }
 }
 
 TEST_CASE("Command Recorder 校验 Renderer domain 和失效句柄", "[command][handle]") {

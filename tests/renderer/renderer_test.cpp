@@ -44,6 +44,18 @@ TEST_CASE("Renderer 描述拒绝未知字段和非法字符串", "[renderer][val
   CHECK(granit_renderer_create(&desc, &renderer) == GRANIT_ERROR_INVALID_ARGUMENT);
 
   desc = GRANIT_RENDERER_DESC_INIT;
+  desc.frames_in_flight = 0;
+  CHECK(granit_renderer_create(&desc, &renderer) == GRANIT_ERROR_INVALID_ARGUMENT);
+
+  desc = GRANIT_RENDERER_DESC_INIT;
+  desc.frames_in_flight = GRANIT_MAX_FRAMES_IN_FLIGHT + 1;
+  CHECK(granit_renderer_create(&desc, &renderer) == GRANIT_ERROR_INVALID_ARGUMENT);
+
+  desc = GRANIT_RENDERER_DESC_INIT;
+  desc.reserved = 1;
+  CHECK(granit_renderer_create(&desc, &renderer) == GRANIT_ERROR_INVALID_ARGUMENT);
+
+  desc = GRANIT_RENDERER_DESC_INIT;
   desc.application_name = "invalid";
   desc.application_name_length = 0;
   CHECK(granit_renderer_create(&desc, &renderer) == GRANIT_ERROR_INVALID_ARGUMENT);
@@ -58,6 +70,21 @@ TEST_CASE("Renderer 接受不含 Surface 字段的旧描述尺寸", "[renderer][
   granit_renderer_desc desc = GRANIT_RENDERER_DESC_INIT;
   desc.struct_size = GRANIT_RENDERER_DESC_VERSION_1_SIZE;
   desc.surface_types = UINT32_C(0x80000000);
+
+  granit_renderer renderer = GRANIT_NULL_HANDLE;
+  const auto result = granit_renderer_create(&desc, &renderer);
+  if (environment_unavailable(result)) {
+    SKIP("当前运行环境没有满足要求的 Vulkan 设备");
+  }
+  REQUIRE(result == GRANIT_SUCCESS);
+  CHECK(granit_renderer_destroy(renderer) == GRANIT_SUCCESS);
+}
+
+TEST_CASE("Renderer 旧版描述不读取 frames-in-flight 扩展字段", "[renderer][compatibility]") {
+  granit_renderer_desc desc = GRANIT_RENDERER_DESC_INIT;
+  desc.struct_size = GRANIT_RENDERER_DESC_VERSION_2_SIZE;
+  desc.frames_in_flight = 0;
+  desc.reserved = UINT32_MAX;
 
   granit_renderer renderer = GRANIT_NULL_HANDLE;
   const auto result = granit_renderer_create(&desc, &renderer);

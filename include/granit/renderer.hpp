@@ -28,6 +28,7 @@ struct renderer_desc {
   std::string_view application_name{"Granit Application"};
   bool enable_validation{};
   surface_type surface_types{surface_type::none};
+  std::uint32_t frames_in_flight{GRANIT_DEFAULT_FRAMES_IN_FLIGHT};
 };
 
 /** 无异常、move-only 的 renderer RAII 包装。 */
@@ -61,6 +62,8 @@ public:
         .application_name_length = static_cast<std::uint32_t>(desc.application_name.size()),
         .flags = desc.enable_validation ? GRANIT_RENDERER_ENABLE_VALIDATION_BIT : UINT32_C(0),
         .surface_types = static_cast<std::uint32_t>(desc.surface_types),
+        .frames_in_flight = desc.frames_in_flight,
+        .reserved = 0,
     };
     return from_native(granit_renderer_create(&native_desc, &handle_));
   }

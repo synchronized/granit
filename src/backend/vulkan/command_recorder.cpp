@@ -124,6 +124,20 @@ granit_result vulkan_command_recorder::end_rendering(const vulkan_device& device
   return GRANIT_SUCCESS;
 }
 
+granit_result vulkan_command_recorder::mark_pending() noexcept {
+  if (state_ != command_recorder_state::executable) {
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  }
+  state_ = command_recorder_state::pending;
+  return GRANIT_SUCCESS;
+}
+
+void vulkan_command_recorder::mark_complete() noexcept {
+  if (state_ == command_recorder_state::pending) {
+    state_ = command_recorder_state::executable;
+  }
+}
+
 void vulkan_command_recorder::destroy(const vulkan_device& device) noexcept {
   if (pool_ != VK_NULL_HANDLE) {
     device.functions().vkDestroyCommandPool(device.native_handle(), pool_, nullptr);

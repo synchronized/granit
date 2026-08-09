@@ -112,11 +112,12 @@ renderer_registry::command_recorder_record::~command_recorder_record() {
 }
 
 granit_result renderer_registry::create(std::string_view application_name, bool enable_validation,
-                                        std::uint32_t surface_types, granit_renderer& renderer) {
+                                        std::uint32_t surface_types, std::uint32_t frames_in_flight,
+                                        granit_renderer& renderer) {
   try {
     auto state = std::make_shared<renderer_state>();
     const auto initialize_result =
-        state->initialize(application_name, enable_validation, surface_types);
+        state->initialize(application_name, enable_validation, surface_types, frames_in_flight);
     if (initialize_result != GRANIT_SUCCESS) {
       return initialize_result;
     }
@@ -279,6 +280,7 @@ granit_result renderer_registry::destroy(granit_renderer renderer) {
     }
   }
   write_lifecycle_diagnostic(renderer, state->domain(), lifecycle);
+  static_cast<void>(state->wait_for_all_submissions());
   native_command_recorders.clear();
   native_swapchains.clear();
   native_surfaces.clear();
@@ -1162,6 +1164,16 @@ granit_result renderer_registry::end_command_recorder(granit_renderer renderer,
   return record->renderer->end_command_recorder(record->native);
 }
 
+granit_result renderer_registry::submit_command_recorder(granit_renderer renderer,
+                                                         granit_command_recorder recorder) {
+  auto record = acquire_command_recorder(renderer, recorder);
+  if (!record) {
+    return GRANIT_ERROR_INVALID_HANDLE;
+  }
+  std::lock_guard record_lock{record->mutex};
+  return record->renderer->submit_command_recorder(record->native);
+}
+
 granit_result renderer_registry::reset_command_recorder(granit_renderer renderer,
                                                         granit_command_recorder recorder) {
   auto record = acquire_command_recorder(renderer, recorder);
@@ -1169,6 +1181,10 @@ granit_result renderer_registry::reset_command_recorder(granit_renderer renderer
     return GRANIT_ERROR_INVALID_HANDLE;
   }
   std::lock_guard record_lock{record->mutex};
+  const auto wait_result = record->renderer->wait_command_recorder(record->native);
+  if (wait_result != GRANIT_SUCCESS) {
+    return wait_result;
+  }
   const auto result = record->renderer->reset_command_recorder(record->native);
   if (result == GRANIT_SUCCESS) {
     record->retained_resources.clear();
@@ -1389,25 +1405,28 @@ granit_result renderer_registry::end_rendering(granit_renderer renderer,
 
 granit_result renderer_registry::destroy_command_recorder(granit_renderer renderer,
                                                           granit_command_recorder recorder) {
-  std::shared_ptr<command_recorder_record> record;
+  auto record = acquire_command_recorder(renderer, recorder);
+  if (!record) {
+    return GRANIT_ERROR_INVALID_HANDLE;
+  }
+  {
+    std::lock_guard record_lock{record->mutex};
+    const auto wait_result = record->renderer->wait_command_recorder(record->native);
+    if (wait_result != GRANIT_SUCCESS) {
+      return wait_result;
+    }
+  }
   {
     std::lock_guard lock{mutex_};
-    const auto found_renderer = renderers_.find(renderer);
-    if (found_renderer == renderers_.end() ||
-        handles_.find(renderer, resource_type::renderer, 0) == nullptr) {
-      return GRANIT_ERROR_INVALID_HANDLE;
-    }
-    const auto& state = found_renderer->second;
-    if (handles_.find(recorder, resource_type::command_recorder, state->domain()) == nullptr) {
-      return GRANIT_ERROR_INVALID_HANDLE;
-    }
     const auto found = command_recorders_.find(recorder);
-    if (found == command_recorders_.end() || found->second->renderer != state) {
+    if (found == command_recorders_.end() || found->second != record ||
+        handles_.find(recorder, resource_type::command_recorder, record->renderer->domain()) ==
+            nullptr) {
       return GRANIT_ERROR_INVALID_HANDLE;
     }
-    record = std::move(found->second);
     command_recorders_.erase(found);
-    static_cast<void>(handles_.erase(recorder, resource_type::command_recorder, state->domain()));
+    static_cast<void>(
+        handles_.erase(recorder, resource_type::command_recorder, record->renderer->domain()));
   }
   record.reset();
   return GRANIT_SUCCESS;

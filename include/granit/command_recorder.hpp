@@ -52,6 +52,9 @@ public:
   [[nodiscard]] result end() noexcept {
     return from_native(granit_command_recorder_end(renderer_, handle_));
   }
+  [[nodiscard]] result submit() noexcept {
+    return from_native(granit_command_recorder_submit(renderer_, handle_));
+  }
   [[nodiscard]] result reset() noexcept {
     return from_native(granit_command_recorder_reset(renderer_, handle_));
   }

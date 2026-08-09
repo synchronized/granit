@@ -119,8 +119,17 @@ VkImageUsageFlags map_texture_usage(granit_texture_usage usage) noexcept {
 
 } // namespace
 
+renderer_state::~renderer_state() {
+  static_cast<void>(wait_for_all_submissions());
+  for (auto& slot : frame_slots_) {
+    slot.context->destroy(device_);
+  }
+  frame_slots_.clear();
+}
+
 granit_result renderer_state::initialize(std::string_view application_name, bool enable_validation,
-                                         std::uint32_t surface_types) {
+                                         std::uint32_t surface_types,
+                                         std::uint32_t frames_in_flight) {
   validation_enabled_ = enable_validation;
   const auto instance_result = instance_.initialize({.application_name = application_name,
                                                      .enable_validation = enable_validation,
@@ -140,6 +149,33 @@ granit_result renderer_state::initialize(std::string_view application_name, bool
     device_.reset();
     instance_.reset();
     return allocator_result;
+  }
+  try {
+    frame_slots_.reserve(frames_in_flight);
+    for (std::uint32_t index = 0; index < frames_in_flight; ++index) {
+      frame_slot slot{.context = std::make_unique<vulkan_frame_context>()};
+      const auto frame_result = slot.context->initialize(device_);
+      if (frame_result != GRANIT_SUCCESS) {
+        for (auto& initialized : frame_slots_) {
+          initialized.context->destroy(device_);
+        }
+        frame_slots_.clear();
+        memory_allocator_.reset();
+        device_.reset();
+        instance_.reset();
+        return frame_result;
+      }
+      frame_slots_.push_back(std::move(slot));
+    }
+  } catch (...) {
+    for (auto& slot : frame_slots_) {
+      slot.context->destroy(device_);
+    }
+    frame_slots_.clear();
+    memory_allocator_.reset();
+    device_.reset();
+    instance_.reset();
+    throw;
   }
   surface_types_ = surface_types;
   return GRANIT_SUCCESS;
@@ -439,6 +475,84 @@ renderer_state::begin_rendering(vulkan_command_recorder& recorder, VkRect2D area
 
 granit_result renderer_state::end_rendering(vulkan_command_recorder& recorder) noexcept {
   return recorder.end_rendering(device_);
+}
+
+granit_result renderer_state::complete_frame_slot(frame_slot& slot) noexcept {
+  if (slot.recorder == nullptr) {
+    return GRANIT_SUCCESS;
+  }
+  const auto result = slot.context->wait(device_, UINT64_MAX);
+  if (result != GRANIT_SUCCESS) {
+    return result;
+  }
+  slot.recorder->mark_complete();
+  submission_serials_.mark_completed(slot.serial);
+  slot.recorder = nullptr;
+  slot.serial = 0;
+  return GRANIT_SUCCESS;
+}
+
+granit_result renderer_state::submit_command_recorder(vulkan_command_recorder& recorder) noexcept {
+  std::lock_guard lock{queue_mutex_};
+  if (recorder.state() != command_recorder_state::executable || frame_slots_.empty()) {
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  }
+  auto& slot = frame_slots_[next_frame_slot_];
+  auto result = complete_frame_slot(slot);
+  if (result != GRANIT_SUCCESS) {
+    return result;
+  }
+  const auto serial = submission_serials_.next();
+  if (serial == 0) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+  result = slot.context->reset_fence(device_);
+  if (result != GRANIT_SUCCESS) {
+    return result;
+  }
+  VkCommandBufferSubmitInfo command_info{};
+  command_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO;
+  command_info.commandBuffer = recorder.native_handle();
+  VkSubmitInfo2 submit_info{};
+  submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2;
+  submit_info.commandBufferInfoCount = 1;
+  submit_info.pCommandBufferInfos = &command_info;
+  const auto submit_result = device_.functions().vkQueueSubmit2(
+      device_.graphics_queue(), 1, &submit_info, slot.context->completion_fence());
+  if (submit_result != VK_SUCCESS) {
+    static_cast<void>(slot.context->restore_signaled_fence(device_));
+    return map_vulkan_result(submit_result);
+  }
+  static_cast<void>(recorder.mark_pending());
+  static_cast<void>(submission_serials_.commit(serial));
+  slot.recorder = &recorder;
+  slot.serial = serial;
+  next_frame_slot_ = (next_frame_slot_ + 1) % frame_slots_.size();
+  return GRANIT_SUCCESS;
+}
+
+granit_result renderer_state::wait_command_recorder(vulkan_command_recorder& recorder) noexcept {
+  std::lock_guard lock{queue_mutex_};
+  if (recorder.state() != command_recorder_state::pending) {
+    return GRANIT_SUCCESS;
+  }
+  for (auto& slot : frame_slots_) {
+    if (slot.recorder == &recorder) {
+      return complete_frame_slot(slot);
+    }
+  }
+  return GRANIT_ERROR_INTERNAL;
+}
+
+granit_result renderer_state::wait_for_all_submissions() noexcept {
+  std::lock_guard lock{queue_mutex_};
+  for (auto& slot : frame_slots_) {
+    const auto result = complete_frame_slot(slot);
+    if (result != GRANIT_SUCCESS) {
+      return result;
+    }
+  }
+  return GRANIT_SUCCESS;
 }
 
 void renderer_state::destroy_native_command_recorder(vulkan_command_recorder& recorder) noexcept {

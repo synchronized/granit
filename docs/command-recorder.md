@@ -18,12 +18,14 @@ granit_command_recorder_copy_buffer(
     renderer, recorder, source, destination, regions, region_count);
 granit_command_recorder_fill_buffer(renderer, recorder, destination, 0, 256, 0);
 granit_command_recorder_end(renderer, recorder);
+granit_command_recorder_submit(renderer, recorder);
 granit_command_recorder_reset(renderer, recorder);
 granit_command_recorder_destroy(renderer, recorder);
 ```
 
-当前尚未提供 Queue 提交，因此 executable Recorder 可以直接 reset。F-04 加入提交后，pending
-Recorder 必须等待 GPU 完成才能 reset。
+`submit` 异步提交 executable Recorder。成功后 Recorder 进入 pending；对它调用 `reset` 会等待
+GPU 完成，再重置 Command Pool。Renderer 的 `frames_in_flight` 决定最多保留多少个在途帧槽，
+默认值为 2，有效范围为 1 到 4。
 
 Buffer Copy 支持一次传入多个区域。参与命令的 Buffer 会由 Recorder 保持内部强引用，因此录制
 后销毁公开 Buffer 句柄不会造成悬空 Vulkan 对象；reset 或 destroy 会释放这些引用。
@@ -35,6 +37,7 @@ granit::command_recorder recorder;
 if (recorder.initialize(renderer.native_handle()) == granit::result::success) {
   recorder.begin();
   recorder.end();
+  recorder.submit();
   recorder.reset();
 }
 ```
@@ -46,6 +49,7 @@ if (recorder.initialize(renderer.native_handle()) == granit::result::success) {
 - create 后处于 initial。
 - begin 进入 recording。
 - end 进入 executable。
+- submit 进入 pending，GPU 完成后回到 executable。
 - reset 回到 initial。
 - 单个 Recorder 不能并发调用，但可以在无并发时移交线程。
 - 不同 Recorder 可以并行录制。

@@ -32,7 +32,8 @@ public:
   static renderer_registry& instance();
 
   [[nodiscard]] granit_result create(std::string_view application_name, bool enable_validation,
-                                     std::uint32_t surface_types, granit_renderer& renderer);
+                                     std::uint32_t surface_types, std::uint32_t frames_in_flight,
+                                     granit_renderer& renderer);
   [[nodiscard]] granit_result destroy(granit_renderer renderer);
   [[nodiscard]] std::shared_ptr<renderer_state> acquire(granit_renderer renderer);
   [[nodiscard]] granit_result create_win32_surface(granit_renderer renderer, void* native_instance,
@@ -81,6 +82,8 @@ public:
                                                      granit_command_recorder recorder);
   [[nodiscard]] granit_result end_command_recorder(granit_renderer renderer,
                                                    granit_command_recorder recorder);
+  [[nodiscard]] granit_result submit_command_recorder(granit_renderer renderer,
+                                                      granit_command_recorder recorder);
   [[nodiscard]] granit_result reset_command_recorder(granit_renderer renderer,
                                                      granit_command_recorder recorder);
   [[nodiscard]] granit_result copy_buffer(granit_renderer renderer,

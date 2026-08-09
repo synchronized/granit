@@ -36,6 +36,8 @@ public:
                   const VkRenderingAttachmentInfo* stencil_attachment,
                   std::uint32_t layer_count) noexcept;
   [[nodiscard]] granit_result end_rendering(const vulkan_device& device) noexcept;
+  [[nodiscard]] granit_result mark_pending() noexcept;
+  void mark_complete() noexcept;
   void destroy(const vulkan_device& device) noexcept;
 
   [[nodiscard]] command_recorder_state state() const noexcept { return state_; }

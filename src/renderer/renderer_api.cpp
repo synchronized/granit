@@ -27,6 +27,11 @@ granit_result validate_desc(const granit_renderer_desc& desc) noexcept {
       (desc.surface_types & ~supported_surface_types) != 0) {
     return GRANIT_ERROR_INVALID_ARGUMENT;
   }
+  if (desc.struct_size >= GRANIT_RENDERER_DESC_VERSION_3_SIZE &&
+      (desc.reserved != 0 || desc.frames_in_flight == 0 ||
+       desc.frames_in_flight > GRANIT_MAX_FRAMES_IN_FLIGHT)) {
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  }
   if (desc.application_name == nullptr) {
     return desc.application_name_length == 0 ? GRANIT_SUCCESS : GRANIT_ERROR_INVALID_ARGUMENT;
   }
@@ -57,9 +62,12 @@ extern "C" granit_result granit_renderer_create(const granit_renderer_desc* desc
   const auto validation_enabled = (desc->flags & GRANIT_RENDERER_ENABLE_VALIDATION_BIT) != 0;
   const auto surface_types =
       desc->struct_size >= GRANIT_RENDERER_DESC_VERSION_2_SIZE ? desc->surface_types : UINT32_C(0);
+  const auto frames_in_flight = desc->struct_size >= GRANIT_RENDERER_DESC_VERSION_3_SIZE
+                                    ? desc->frames_in_flight
+                                    : GRANIT_DEFAULT_FRAMES_IN_FLIGHT;
   try {
     return granit::detail::renderer_registry::instance().create(
-        application_name, validation_enabled, surface_types, *renderer);
+        application_name, validation_enabled, surface_types, frames_in_flight, *renderer);
   } catch (const std::bad_alloc&) {
     return GRANIT_ERROR_OUT_OF_MEMORY;
   } catch (...) {

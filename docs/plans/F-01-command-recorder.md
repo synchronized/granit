@@ -48,7 +48,7 @@ initial → reset → initial
 任意非 pending 状态 → destroy → invalid
 ```
 
-F-04 增加 `executable → submit → pending → GPU 完成 → reset → initial`。
+F-04 已增加 `executable → submit → pending → GPU 完成 → reset → initial`。
 
 - 只有 initial 可以 begin。
 - 只有 recording 可以 end。
@@ -68,12 +68,12 @@ F-04 增加 `executable → submit → pending → GPU 完成 → reset → init
 
 ## 资源生命周期
 
-F-02 记录资源命令时，Recorder 必须校验公开句柄并保存内部强引用。用户随后销毁公开句柄不能
-使已录制命令悬空。F-04 提交成功后更新资源 `last_use_serial`，GPU 完成后释放 Recorder 引用，
-再由 R-08B 收集退役资源。
+F-02 记录资源命令时，Recorder 校验公开句柄并保存内部强引用。用户随后销毁公开句柄不能使已
+录制或提交的命令悬空。F-04 保留引用至成功 reset 或 destroy；逐资源 `last_use_serial` 和
+`retirement_queue` 转移仍由 R-08B 完成。
 
-Renderer 销毁会首先使 Recorder 句柄失效并销毁 Command Pool，再级联销毁其他资源。验证模式
-下，遗漏 Recorder 会进入 V-01 汇总。
+Renderer 销毁会首先使 Recorder 句柄失效，等待全部在途提交，再销毁 Command Pool 并级联销毁
+其他资源。验证模式下，遗漏 Recorder 会进入 V-01 汇总。
 
 ## 动态库调用策略
 

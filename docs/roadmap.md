@@ -127,7 +127,8 @@
   Dynamic Rendering；资源屏障随 F-05 接入。
 - **[F-03](plans/F-03-frame-synchronization.md) / P0 / 已完成**：实现 Fence、Semaphore 及每帧
   上下文的内部抽象。
-- **F-04 / P0**：实现可配置 frames-in-flight 和 Queue 提交串行化。
+- **[F-04](plans/F-04-queue-submission.md) / P0 / 已完成**：实现可配置 frames-in-flight 和
+  Queue 提交串行化。
 - **F-05 / P0**：建立资源状态跟踪和必要的同步信息记录。
 - **F-06 / P0**：实现 Swapchain acquire、提交、present 和 out-of-date 重建流程。
 - **F-07 / P0**：处理窗口最小化、Surface Lost 和 Device Lost 的恢复边界。
