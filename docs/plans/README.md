@@ -48,6 +48,8 @@ D-03-graphics-pipeline.md
   串行化已完成。
 - [F-05：资源状态跟踪与屏障](F-05-resource-state-tracking.md)——Buffer 屏障和 Attachment Layout
   提交顺序解析已完成。
+- [F-06：Swapchain 帧循环](F-06-swapchain-frame-loop.md)——F-06A 后端 acquire/present 已完成，
+  等待 F-06B 公共帧令牌与帧槽接入。
 
 ## 状态
 

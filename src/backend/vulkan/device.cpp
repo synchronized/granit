@@ -108,7 +108,8 @@ granit_result vulkan_device::initialize(const vulkan_instance& instance,
       functions_.vkQueueSubmit2 == nullptr ||
       (surface_types != 0 &&
        (functions_.vkCreateSwapchainKHR == nullptr || functions_.vkDestroySwapchainKHR == nullptr ||
-        functions_.vkGetSwapchainImagesKHR == nullptr))) {
+        functions_.vkGetSwapchainImagesKHR == nullptr ||
+        functions_.vkAcquireNextImageKHR == nullptr || functions_.vkQueuePresentKHR == nullptr))) {
     reset();
     return GRANIT_ERROR_INITIALIZATION_FAILED;
   }

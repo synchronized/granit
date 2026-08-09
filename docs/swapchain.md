@@ -56,7 +56,8 @@ Swapchain 属于创建它的 Renderer 和 Surface，整数句柄会同时验证�
 局部资源锁串行化，Registry 锁只保护句柄和所有权映射，不在持锁期间创建或销毁 Vulkan 对象。
 不要让父对象销毁与其子对象操作并发执行。
 
-当前尚未公开 acquire/present；它们将与帧同步对象和队列提交锁一起设计。
+内部 Vulkan acquire/present 原语已经完成。公共入口将在 F-06B 通过短生命周期 Frame 令牌与帧槽
+Semaphore、Recorder 提交和 backbuffer Layout 转换关联，避免隐式绑定“最近一次 acquire”。
 
 ## Backbuffer 资源
 

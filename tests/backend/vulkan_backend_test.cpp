@@ -8,6 +8,7 @@
 #include "backend/vulkan/memory_allocator.h"
 #include "backend/vulkan/physical_device.h"
 #include "backend/vulkan/result.h"
+#include "backend/vulkan/swapchain.h"
 
 #include <utility>
 
@@ -43,6 +44,14 @@ TEST_CASE("Vulkan 结果映射为后端无关错误", "[vulkan][result]") {
   CHECK(map_vulkan_result(VK_ERROR_OUT_OF_DATE_KHR) == GRANIT_ERROR_OUT_OF_DATE);
   CHECK(map_vulkan_result(VK_ERROR_UNKNOWN) == GRANIT_ERROR_UNKNOWN);
   CHECK(map_vulkan_result(VK_TIMEOUT) == GRANIT_ERROR_INTERNAL);
+}
+
+TEST_CASE("Swapchain acquire 和 present 拒绝无效后端状态", "[vulkan][swapchain][frame]") {
+  granit::detail::vulkan_swapchain swapchain;
+  vulkan_device device;
+  CHECK(swapchain.acquire(device, VK_NULL_HANDLE).result == GRANIT_ERROR_INVALID_ARGUMENT);
+  CHECK(swapchain.present(device, VK_NULL_HANDLE, 0, VK_NULL_HANDLE).result ==
+        GRANIT_ERROR_INVALID_ARGUMENT);
 }
 
 TEST_CASE("Vulkan loader 至少支持 1.3", "[vulkan][loader]") {

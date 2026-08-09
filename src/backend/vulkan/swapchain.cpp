@@ -211,6 +211,46 @@ granit_result vulkan_swapchain::recreate(const vulkan_instance& instance,
   }
 }
 
+vulkan_acquire_result vulkan_swapchain::acquire(const vulkan_device& device,
+                                                VkSemaphore signal_semaphore) noexcept {
+  if (!valid() || !device.valid() || signal_semaphore == VK_NULL_HANDLE) {
+    return {.result = GRANIT_ERROR_INVALID_ARGUMENT};
+  }
+  std::uint32_t image_index{};
+  const auto result = device.functions().vkAcquireNextImageKHR(
+      device.native_handle(), handle_, UINT64_MAX, signal_semaphore, VK_NULL_HANDLE, &image_index);
+  if (result == VK_SUCCESS || result == VK_SUBOPTIMAL_KHR) {
+    if (image_index >= images_.size()) {
+      return {.result = GRANIT_ERROR_INTERNAL};
+    }
+    return {.result = GRANIT_SUCCESS,
+            .image_index = image_index,
+            .suboptimal = result == VK_SUBOPTIMAL_KHR};
+  }
+  return {.result = map_vulkan_result(result)};
+}
+
+vulkan_present_result vulkan_swapchain::present(const vulkan_device& device, VkQueue queue,
+                                                std::uint32_t image_index,
+                                                VkSemaphore wait_semaphore) noexcept {
+  if (!valid() || !device.valid() || queue == VK_NULL_HANDLE || wait_semaphore == VK_NULL_HANDLE ||
+      image_index >= images_.size()) {
+    return {.result = GRANIT_ERROR_INVALID_ARGUMENT};
+  }
+  VkPresentInfoKHR info{};
+  info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+  info.waitSemaphoreCount = 1;
+  info.pWaitSemaphores = &wait_semaphore;
+  info.swapchainCount = 1;
+  info.pSwapchains = &handle_;
+  info.pImageIndices = &image_index;
+  const auto result = device.functions().vkQueuePresentKHR(queue, &info);
+  if (result == VK_SUCCESS || result == VK_SUBOPTIMAL_KHR) {
+    return {.result = GRANIT_SUCCESS, .suboptimal = result == VK_SUBOPTIMAL_KHR};
+  }
+  return {.result = map_vulkan_result(result)};
+}
+
 void vulkan_swapchain::reset(const vulkan_device& device) noexcept {
   if (handle_ != VK_NULL_HANDLE && device.valid() &&
       device.functions().vkDestroySwapchainKHR != nullptr) {

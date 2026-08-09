@@ -30,6 +30,17 @@ struct vulkan_swapchain_info {
   std::uint32_t present_mode{};
 };
 
+struct vulkan_acquire_result {
+  granit_result result{GRANIT_ERROR_UNKNOWN};
+  std::uint32_t image_index{};
+  bool suboptimal{};
+};
+
+struct vulkan_present_result {
+  granit_result result{GRANIT_ERROR_UNKNOWN};
+  bool suboptimal{};
+};
+
 class vulkan_swapchain {
 public:
   vulkan_swapchain() = default;
@@ -45,12 +56,18 @@ public:
                                          const vulkan_swapchain_desc& desc);
   [[nodiscard]] granit_result recreate(const vulkan_instance& instance, const vulkan_device& device,
                                        VkSurfaceKHR surface, const vulkan_swapchain_desc& desc);
+  [[nodiscard]] vulkan_acquire_result acquire(const vulkan_device& device,
+                                              VkSemaphore signal_semaphore) noexcept;
+  [[nodiscard]] vulkan_present_result present(const vulkan_device& device, VkQueue queue,
+                                              std::uint32_t image_index,
+                                              VkSemaphore wait_semaphore) noexcept;
   void reset(const vulkan_device& device) noexcept;
 
   [[nodiscard]] bool valid() const noexcept { return handle_ != VK_NULL_HANDLE; }
   [[nodiscard]] vulkan_swapchain_info info() const noexcept;
   [[nodiscard]] const std::vector<VkImage>& images() const noexcept { return images_; }
   [[nodiscard]] VkFormat format() const noexcept { return format_; }
+  [[nodiscard]] VkSwapchainKHR native_handle() const noexcept { return handle_; }
 
 private:
   VkSwapchainKHR handle_{VK_NULL_HANDLE};
