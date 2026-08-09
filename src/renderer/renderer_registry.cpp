@@ -309,6 +309,7 @@ granit_result renderer_registry::destroy(granit_renderer renderer) {
     }
   }
   write_lifecycle_diagnostic(renderer, state->domain(), lifecycle);
+  static_cast<void>(state->wait_for_present_idle());
   static_cast<void>(state->wait_for_all_submissions());
   native_command_recorders.clear();
   static_cast<void>(state->drain_retired());
@@ -392,6 +393,22 @@ granit_result renderer_registry::destroy_surface(granit_renderer renderer, grani
       if (frame->swapchain->surface == found->second)
         return GRANIT_ERROR_INVALID_ARGUMENT;
     }
+    native_surface = found->second;
+  }
+  const auto idle_result = state->wait_for_present_idle();
+  if (idle_result != GRANIT_SUCCESS && idle_result != GRANIT_ERROR_DEVICE_LOST)
+    return idle_result;
+  static_cast<void>(state->collect_retired());
+  {
+    std::lock_guard lock{mutex_};
+    const auto found = surfaces_.find(surface);
+    if (found == surfaces_.end() || found->second != native_surface)
+      return GRANIT_ERROR_INVALID_HANDLE;
+    for (const auto& [frame_handle, frame] : frames_) {
+      static_cast<void>(frame_handle);
+      if (frame->swapchain->surface == native_surface)
+        return GRANIT_ERROR_INVALID_ARGUMENT;
+    }
     for (auto swapchain = swapchains_.begin(); swapchain != swapchains_.end();) {
       if (swapchain->second->surface == found->second) {
         if (state->validation_enabled()) {
@@ -422,7 +439,6 @@ granit_result renderer_registry::destroy_surface(granit_renderer renderer, grani
         ++swapchain;
       }
     }
-    native_surface = std::move(found->second);
     surfaces_.erase(found);
     const auto erase_result = handles_.erase(surface, resource_type::surface, state->domain());
     if (erase_result != GRANIT_SUCCESS) {
@@ -536,13 +552,31 @@ granit_result renderer_registry::recreate_swapchain(granit_renderer renderer,
         return GRANIT_ERROR_INVALID_ARGUMENT;
     }
     record = found->second;
+  }
+  const auto idle_result = record->renderer->wait_for_present_idle();
+  if (idle_result != GRANIT_SUCCESS)
+    return idle_result;
+  static_cast<void>(record->renderer->collect_retired());
+  {
+    std::lock_guard lock{mutex_};
+    const auto renderer_found = renderers_.find(renderer);
+    const auto found = swapchains_.find(swapchain);
+    if (renderer_found == renderers_.end() || found == swapchains_.end() ||
+        renderer_found->second != record->renderer || found->second != record)
+      return GRANIT_ERROR_INVALID_HANDLE;
+    for (const auto& [frame_handle, frame] : frames_) {
+      static_cast<void>(frame_handle);
+      if (frame->swapchain == record)
+        return GRANIT_ERROR_INVALID_ARGUMENT;
+    }
     for (const auto handle : record->views) {
       const auto view = texture_views_.find(handle);
       if (view != texture_views_.end()) {
         old_views.push_back(std::move(view->second));
         texture_views_.erase(view);
       }
-      static_cast<void>(handles_.erase(handle, resource_type::texture_view, state->domain()));
+      static_cast<void>(
+          handles_.erase(handle, resource_type::texture_view, record->renderer->domain()));
     }
     for (const auto handle : record->textures) {
       const auto texture = textures_.find(handle);
@@ -550,7 +584,7 @@ granit_result renderer_registry::recreate_swapchain(granit_renderer renderer,
         old_textures.push_back(std::move(texture->second));
         textures_.erase(texture);
       }
-      static_cast<void>(handles_.erase(handle, resource_type::texture, state->domain()));
+      static_cast<void>(handles_.erase(handle, resource_type::texture, record->renderer->domain()));
     }
     record->views.clear();
     record->textures.clear();
@@ -862,14 +896,32 @@ granit_result renderer_registry::destroy_swapchain(granit_renderer renderer,
       if (frame->swapchain == found->second)
         return GRANIT_ERROR_INVALID_ARGUMENT;
     }
-    record = std::move(found->second);
+    record = found->second;
+  }
+  const auto idle_result = record->renderer->wait_for_present_idle();
+  if (idle_result != GRANIT_SUCCESS && idle_result != GRANIT_ERROR_DEVICE_LOST)
+    return idle_result;
+  static_cast<void>(record->renderer->collect_retired());
+  {
+    std::lock_guard lock{mutex_};
+    const auto renderer_found = renderers_.find(renderer);
+    const auto found = swapchains_.find(swapchain);
+    if (renderer_found == renderers_.end() || found == swapchains_.end() ||
+        renderer_found->second != record->renderer || found->second != record)
+      return GRANIT_ERROR_INVALID_HANDLE;
+    for (const auto& [frame_handle, frame] : frames_) {
+      static_cast<void>(frame_handle);
+      if (frame->swapchain == record)
+        return GRANIT_ERROR_INVALID_ARGUMENT;
+    }
     for (const auto handle : record->views) {
       const auto item = texture_views_.find(handle);
       if (item != texture_views_.end()) {
         views.push_back(std::move(item->second));
         texture_views_.erase(item);
       }
-      static_cast<void>(handles_.erase(handle, resource_type::texture_view, state->domain()));
+      static_cast<void>(
+          handles_.erase(handle, resource_type::texture_view, record->renderer->domain()));
     }
     for (const auto handle : record->textures) {
       const auto item = textures_.find(handle);
@@ -877,10 +929,11 @@ granit_result renderer_registry::destroy_swapchain(granit_renderer renderer,
         textures.push_back(std::move(item->second));
         textures_.erase(item);
       }
-      static_cast<void>(handles_.erase(handle, resource_type::texture, state->domain()));
+      static_cast<void>(handles_.erase(handle, resource_type::texture, record->renderer->domain()));
     }
     swapchains_.erase(found);
-    const auto erase_result = handles_.erase(swapchain, resource_type::swapchain, state->domain());
+    const auto erase_result =
+        handles_.erase(swapchain, resource_type::swapchain, record->renderer->domain());
     if (erase_result != GRANIT_SUCCESS) {
       return erase_result;
     }

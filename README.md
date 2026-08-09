@@ -59,8 +59,9 @@ GPU 内存分配、Buffer 同步上传、Texture、Texture View、Sampler、统�
 Command Recorder、Buffer Copy/Fill、自动资源屏障、Dynamic Rendering、Queue 提交与可配置
 frames-in-flight、Frame 令牌以及 Swapchain acquire/submit/present 窗口帧循环已经实现。项目
 已支持未提交 Frame 回收、窗口零尺寸暂停语义，以及 Surface/Device Lost 的窗口帧终止状态。
-Renderer 全局 Device Lost 门禁和普通 GPU 资源真实提交完成点已经接入。下一步处理 Swapchain
-presentation 的安全退役；Shader 和 Pipeline 尚未实现，具体顺序及验收标准见
+Renderer 全局 Device Lost 门禁、普通 GPU 资源真实提交完成点和 Swapchain presentation 安全
+退役均已完成。下一步进入 Shader 输入与编译策略；Pipeline 尚未实现，
+具体顺序及验收标准见
 [docs/roadmap.md](docs/roadmap.md)。
 
 ## 快速开始

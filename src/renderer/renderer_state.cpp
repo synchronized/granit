@@ -998,6 +998,17 @@ granit_result renderer_state::wait_for_all_submissions() noexcept {
   return GRANIT_SUCCESS;
 }
 
+granit_result renderer_state::wait_for_present_idle() noexcept {
+  if (device_lost())
+    return GRANIT_ERROR_DEVICE_LOST;
+  std::lock_guard lock{queue_mutex_};
+  const auto result = observe_device_result(
+      map_vulkan_result(device_.functions().vkQueueWaitIdle(device_.graphics_queue())));
+  if (result == GRANIT_SUCCESS)
+    submission_serials_.mark_completed(submission_serials_.last_submitted());
+  return result;
+}
+
 void renderer_state::retire_resource(submission_serial retire_after, retirement_order order,
                                      std::shared_ptr<void> resource) {
   std::lock_guard lock{retirement_mutex_};

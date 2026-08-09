@@ -62,6 +62,10 @@ Swapchain 属于创建它的 Renderer 和 Surface，整数句柄会同时验证�
 局部资源锁串行化，Registry 锁只保护句柄和所有权映射，不在持锁期间创建或销毁 Vulkan 对象。
 不要让父对象销毁与其子对象操作并发执行。
 
+重建、显式销毁、Surface 级联销毁和 Renderer 关闭会先等待 graphics/present Queue 空闲，再
+释放旧 backbuffer View 与 Swapchain。该阻塞只发生在低频 WSI 生命周期路径；普通 Buffer、
+Texture 和 Sampler 销毁继续使用提交序号退役，不会调用 Queue/Device Wait Idle。
+
 公共帧循环使用短生命周期 Frame 令牌与帧槽 Semaphore、Recorder 提交和 backbuffer Layout
 转换关联，避免隐式绑定“最近一次 acquire”：
 

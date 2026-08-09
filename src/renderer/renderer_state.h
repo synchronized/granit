@@ -109,6 +109,7 @@ public:
                                                      std::size_t slot_index, bool& needs_recreate);
   [[nodiscard]] granit_result wait_command_recorder(vulkan_command_recorder& recorder) noexcept;
   [[nodiscard]] granit_result wait_for_all_submissions() noexcept;
+  [[nodiscard]] granit_result wait_for_present_idle() noexcept;
   void retire_resource(submission_serial retire_after, retirement_order order,
                        std::shared_ptr<void> resource);
   std::size_t collect_retired() noexcept;

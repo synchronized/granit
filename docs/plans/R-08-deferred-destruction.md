@@ -6,7 +6,7 @@
 ## 元数据
 
 - 设计状态：已确认
-- 实现状态：R-08A/R-08B 已完成；R-08C 进行中
+- 实现状态：已完成
 - 路线图任务：R-08
 - 优先级：P0
 - 前置依赖：R-03、R-05、R-06、V-01
@@ -225,6 +225,17 @@ R-08B 已完成：
   所有权形成残留环。
 - Validation Layer 测试覆盖异步提交后立即销毁 Buffer，再等待并回收的路径。
 
-R-08C 仍需单独处理 WSI：提交 Fence 只证明 signal semaphore 的提交完成，不能证明 presentation
-engine 已停止使用旧 Swapchain。重建和销毁必须建立 Queue Present 的可靠空闲边界，不能直接
-套用普通资源的 completed serial。
+R-08C 已完成：
+
+- 提交 Fence 只证明 signal semaphore 的提交完成，不被误当成 presentation engine 完成点。
+- Swapchain 重建、显式销毁、Surface 级联销毁及 Renderer 关闭会在移除旧 backbuffer View 前
+  调用 `vkQueueWaitIdle`，建立可靠的 Queue Present 空闲边界。
+- Queue 等待发生在 Registry 全局锁之外；等待结束后重新校验对象身份和活动 Frame，避免阻塞
+  其他 Renderer 的 Registry 操作。
+- Queue 空闲会把普通提交完成序号推进到最后提交值，并收集同期可回收的普通 GPU 资源。
+- Device Lost 路径跳过不可能成功的等待，仍允许销毁对象并回收 CPU 侧状态。
+- Vulkan 设备初始化要求 `vkQueueWaitIdle` 函数入口存在，避免首次重建时才发现后端不完整。
+
+第一版选择在低频 WSI 重建和销毁路径阻塞 Queue。若以后启用
+`VK_EXT_swapchain_maintenance1` 的 present fence，可在保持公共 API 不变的情况下替换为更细粒度
+的异步退役。
