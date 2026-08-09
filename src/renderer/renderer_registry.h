@@ -148,6 +148,7 @@ private:
     std::unique_ptr<vulkan_swapchain> native;
     std::vector<granit_texture> textures;
     std::vector<granit_texture_view> views;
+    bool surface_lost{};
     ~swapchain_record();
   };
   struct buffer_record {

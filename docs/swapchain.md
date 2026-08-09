@@ -48,6 +48,9 @@ granit_swapchain_get_info(renderer, swapchain, &info);
 成功重建前不应继续 acquire。创建全新 Swapchain 时传入零尺寸仍返回
 `GRANIT_ERROR_INVALID_ARGUMENT`。
 Surface 丢失返回 `GRANIT_ERROR_SURFACE_LOST`；交换链过期返回 `GRANIT_ERROR_OUT_OF_DATE`。
+SURFACE_LOST 是粘滞终止状态，不能通过对原 Swapchain 调用 recreate 恢复；应停止该窗口的帧
+循环，销毁旧 Swapchain 和 Surface，在平台窗口句柄仍有效时重新创建两者。DEVICE_LOST 表示整个
+Renderer 的设备已不可继续使用，应停止所有窗口帧路径并重建 Renderer 及其资源。
 
 ## 生命周期和线程安全
 

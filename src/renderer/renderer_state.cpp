@@ -236,13 +236,17 @@ void renderer_state::destroy_native_surface(VkSurfaceKHR surface) noexcept {
 granit_result renderer_state::create_swapchain(VkSurfaceKHR surface,
                                                const vulkan_swapchain_desc& desc,
                                                vulkan_swapchain& swapchain) {
+  if (device_lost())
+    return GRANIT_ERROR_DEVICE_LOST;
   std::lock_guard lock{resource_mutex_};
-  return swapchain.initialize(instance_, device_, surface, desc);
+  return observe_device_result(swapchain.initialize(instance_, device_, surface, desc));
 }
 
 granit_result renderer_state::recreate_swapchain(VkSurfaceKHR surface,
                                                  const vulkan_swapchain_desc& desc,
                                                  vulkan_swapchain& swapchain) {
+  if (device_lost())
+    return GRANIT_ERROR_DEVICE_LOST;
   std::lock_guard lock{resource_mutex_};
   {
     std::lock_guard queue_lock{queue_mutex_};
@@ -250,7 +254,7 @@ granit_result renderer_state::recreate_swapchain(VkSurfaceKHR surface,
       std::erase_if(image_states_, [&](const auto& state) { return state.image == image; });
     }
   }
-  return swapchain.recreate(instance_, device_, surface, desc);
+  return observe_device_result(swapchain.recreate(instance_, device_, surface, desc));
 }
 
 vulkan_swapchain_info
@@ -648,6 +652,8 @@ granit_result renderer_state::acquire_swapchain_frame(vulkan_swapchain& swapchai
                                                       std::uint32_t& image_index,
                                                       std::size_t& slot_index,
                                                       bool& needs_recreate) {
+  if (device_lost())
+    return GRANIT_ERROR_DEVICE_LOST;
   std::lock_guard lock{queue_mutex_};
   auto& slot = frame_slots_[next_frame_slot_];
   if (slot.acquired || slot.awaiting_present)
@@ -657,7 +663,7 @@ granit_result renderer_state::acquire_swapchain_frame(vulkan_swapchain& swapchai
     return complete_result;
   const auto acquired = swapchain.acquire(device_, slot.context->image_available());
   if (acquired.result != GRANIT_SUCCESS)
-    return acquired.result;
+    return observe_device_result(acquired.result);
   slot.acquired = true;
   image_index = acquired.image_index;
   slot_index = next_frame_slot_;
@@ -669,6 +675,8 @@ granit_result renderer_state::submit_swapchain_frame(vulkan_command_recorder& re
                                                      vulkan_swapchain& swapchain,
                                                      std::uint32_t image_index,
                                                      std::size_t slot_index) {
+  if (device_lost())
+    return GRANIT_ERROR_DEVICE_LOST;
   std::lock_guard lock{queue_mutex_};
   if (slot_index >= frame_slots_.size() || image_index >= swapchain.images().size() ||
       recorder.state() != command_recorder_state::executable)
@@ -776,7 +784,7 @@ granit_result renderer_state::submit_swapchain_frame(vulkan_command_recorder& re
                                                                slot.context->completion_fence());
   if (queue_result != VK_SUCCESS) {
     static_cast<void>(slot.context->restore_signaled_fence(device_));
-    return map_vulkan_result(queue_result);
+    return observe_device_result(map_vulkan_result(queue_result));
   }
   static_cast<void>(recorder.mark_pending());
   static_cast<void>(submission_serials_.commit(serial));
@@ -808,6 +816,8 @@ granit_result renderer_state::present_swapchain_frame(vulkan_swapchain& swapchai
                                                       std::uint32_t image_index,
                                                       std::size_t slot_index,
                                                       bool& needs_recreate) {
+  if (device_lost())
+    return GRANIT_ERROR_DEVICE_LOST;
   std::lock_guard lock{queue_mutex_};
   if (slot_index >= frame_slots_.size())
     return GRANIT_ERROR_INVALID_ARGUMENT;
@@ -818,12 +828,14 @@ granit_result renderer_state::present_swapchain_frame(vulkan_swapchain& swapchai
                                            slot.context->render_finished());
   slot.awaiting_present = false;
   needs_recreate = presented.suboptimal || presented.result == GRANIT_ERROR_OUT_OF_DATE;
-  return presented.result;
+  return observe_device_result(presented.result);
 }
 
 granit_result renderer_state::cancel_swapchain_frame(vulkan_swapchain& swapchain,
                                                      std::uint32_t image_index,
                                                      std::size_t slot_index, bool& needs_recreate) {
+  if (device_lost())
+    return GRANIT_ERROR_DEVICE_LOST;
   std::lock_guard lock{queue_mutex_};
   if (slot_index >= frame_slots_.size() || image_index >= swapchain.images().size())
     return GRANIT_ERROR_INVALID_ARGUMENT;
@@ -891,7 +903,7 @@ granit_result renderer_state::cancel_swapchain_frame(vulkan_swapchain& swapchain
                                                                slot.context->completion_fence());
   if (queue_result != VK_SUCCESS) {
     static_cast<void>(slot.context->restore_signaled_fence(device_));
-    return map_vulkan_result(queue_result);
+    return observe_device_result(map_vulkan_result(queue_result));
   }
   static_cast<void>(submission_serials_.commit(serial));
   slot.serial = serial;
@@ -910,7 +922,13 @@ granit_result renderer_state::cancel_swapchain_frame(vulkan_swapchain& swapchain
   else
     *previous = present_state;
   next_frame_slot_ = (next_frame_slot_ + 1) % frame_slots_.size();
-  return presented.result;
+  return observe_device_result(presented.result);
+}
+
+granit_result renderer_state::observe_device_result(granit_result result) noexcept {
+  if (result == GRANIT_ERROR_DEVICE_LOST)
+    device_lost_.store(true);
+  return device_lost() ? GRANIT_ERROR_DEVICE_LOST : result;
 }
 
 granit_result renderer_state::wait_command_recorder(vulkan_command_recorder& recorder) noexcept {

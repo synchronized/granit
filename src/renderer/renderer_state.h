@@ -4,6 +4,7 @@
 #ifndef GRANIT_RENDERER_RENDERER_STATE_H_
 #define GRANIT_RENDERER_RENDERER_STATE_H_
 
+#include <atomic>
 #include <cstdint>
 #include <memory>
 #include <mutex>
@@ -111,6 +112,7 @@ public:
   void set_domain(std::uint32_t domain) noexcept { domain_ = domain; }
   [[nodiscard]] std::uint32_t domain() const noexcept { return domain_; }
   [[nodiscard]] bool validation_enabled() const noexcept { return validation_enabled_; }
+  [[nodiscard]] bool device_lost() const noexcept { return device_lost_.load(); }
   [[nodiscard]] const vulkan_instance& instance() const noexcept { return instance_; }
   [[nodiscard]] const vulkan_device& device() const noexcept { return device_; }
 
@@ -126,10 +128,12 @@ private:
   };
 
   [[nodiscard]] granit_result complete_frame_slot(frame_slot& slot) noexcept;
+  [[nodiscard]] granit_result observe_device_result(granit_result result) noexcept;
 
   std::uint32_t domain_{};
   std::uint32_t surface_types_{};
   bool validation_enabled_{};
+  std::atomic_bool device_lost_{};
   std::mutex resource_mutex_;
   std::mutex queue_mutex_;
   vulkan_instance instance_;

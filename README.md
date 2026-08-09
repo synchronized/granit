@@ -58,8 +58,8 @@ Granit 不是 Vulkan API 的逐项重命名或薄包装。项目希望围绕实�
 GPU 内存分配、Buffer 同步上传、Texture、Texture View、Sampler、统一 Attachment 值类型、
 Command Recorder、Buffer Copy/Fill、自动资源屏障、Dynamic Rendering、Queue 提交与可配置
 frames-in-flight、Frame 令牌以及 Swapchain acquire/submit/present 窗口帧循环已经实现。下一步
-已支持未提交 Frame 回收和窗口零尺寸暂停语义。下一步将处理 Surface Lost 和 Device Lost 的
-恢复边界；Shader 和 Pipeline 尚未实现，
+已支持未提交 Frame 回收、窗口零尺寸暂停语义，以及 Surface/Device Lost 的窗口帧终止状态。
+下一步将补齐 Renderer 全局 Device Lost 门禁和诊断；Shader 和 Pipeline 尚未实现，
 具体顺序及验收标准见
 [docs/roadmap.md](docs/roadmap.md)。
 

@@ -133,8 +133,8 @@
   和必要的同步信息记录；后续用途随对应命令扩展。
 - **[F-06](plans/F-06-swapchain-frame-loop.md) / P0 / 已完成**：实现 Swapchain acquire、提交、
   present 和 out-of-date 重建流程。
-- **[F-07](plans/F-07-recovery-boundaries.md) / P0 / 进行中**：Frame 回收与窗口零尺寸重建状态
-  已完成；继续处理 Surface Lost 和 Device Lost 的恢复边界。
+- **[F-07](plans/F-07-recovery-boundaries.md) / P0 / 进行中**：Frame 回收、窗口零尺寸以及 WSI
+  Surface/Device Lost 终止状态已完成；继续补齐 Renderer 全局 Device Lost 门禁和诊断。
 - **F-08 / P1**：支持多个线程使用独立 Recorder 并合并到同一帧提交。
 - **F-09 / P1**：增加时间戳、统计查询和 GPU 调试标记。
 
