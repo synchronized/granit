@@ -7,6 +7,7 @@
 #include <granit/result.h>
 
 #include <span>
+#include <unordered_map>
 
 #include <volk.h>
 
@@ -25,10 +26,10 @@ public:
   [[nodiscard]] granit_result reset(const vulkan_device& device) noexcept;
   [[nodiscard]] granit_result copy_buffer(const vulkan_device& device, VkBuffer source,
                                           VkBuffer destination,
-                                          std::span<const VkBufferCopy> regions) noexcept;
+                                          std::span<const VkBufferCopy> regions);
   [[nodiscard]] granit_result fill_buffer(const vulkan_device& device, VkBuffer buffer,
                                           VkDeviceSize offset, VkDeviceSize size,
-                                          std::uint32_t value) noexcept;
+                                          std::uint32_t value);
   [[nodiscard]] granit_result
   begin_rendering(const vulkan_device& device, VkRect2D area,
                   std::span<const VkRenderingAttachmentInfo> color_attachments,
@@ -44,10 +45,20 @@ public:
   [[nodiscard]] VkCommandBuffer native_handle() const noexcept { return command_buffer_; }
 
 private:
+  struct buffer_access_state {
+    VkPipelineStageFlags2 stages{};
+    VkAccessFlags2 access{};
+  };
+
+  [[nodiscard]] granit_result
+  prepare_buffer_access(const vulkan_device& device,
+                        std::span<const std::pair<VkBuffer, VkAccessFlags2>> accesses);
+
   VkCommandPool pool_{VK_NULL_HANDLE};
   VkCommandBuffer command_buffer_{VK_NULL_HANDLE};
   command_recorder_state state_{command_recorder_state::invalid};
   bool inside_rendering_{};
+  std::unordered_map<VkBuffer, buffer_access_state> buffer_accesses_;
 };
 
 } // namespace granit::detail

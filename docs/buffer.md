@@ -40,4 +40,5 @@ const auto result = buffer.initialize(
 ```
 
 同步写入适合初始化和低频更新，不适合逐帧大量小写入。高吞吐上传将在后续批量上传接口中实现。
-当前 Buffer 尚不能绑定到公开 GPU 命令；相关命令和同步能力由后续路线图任务实现。
+Buffer 已支持 Recorder 中的批量 copy 和 fill。Granit 根据 transfer read/write 意图自动录制
+`vkCmdPipelineBarrier2`，普通用户不需要提供 Vulkan Stage 或 Access Mask。

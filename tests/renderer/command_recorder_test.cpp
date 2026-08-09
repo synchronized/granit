@@ -149,6 +149,7 @@ TEST_CASE("Recorder 批量复制和填充 Buffer 并保留内部资源", "[comma
   REQUIRE(granit_buffer_destroy(renderer.native_handle(), source) == GRANIT_SUCCESS);
   REQUIRE(granit_buffer_destroy(renderer.native_handle(), destination) == GRANIT_SUCCESS);
   REQUIRE(recorder.end() == granit::result::success);
+  REQUIRE(recorder.submit() == granit::result::success);
   REQUIRE(recorder.reset() == granit::result::success);
   CHECK(granit_buffer_destroy(renderer.native_handle(), source) == GRANIT_ERROR_INVALID_HANDLE);
 }
@@ -179,6 +180,10 @@ TEST_CASE("Buffer 命令拒绝 usage、范围、对齐和重叠错误", "[comman
         granit::result::invalid_argument);
   CHECK(recorder.fill_buffer(buffer, 2, 16, 0) == granit::result::invalid_argument);
   CHECK(recorder.fill_buffer(buffer, 0, 6, 0) == granit::result::invalid_argument);
+  const granit::buffer_copy_region non_overlapping{
+      .source_offset = 0, .destination_offset = 32, .size = 16};
+  CHECK(recorder.copy_buffer(buffer, buffer, std::span{&non_overlapping, 1}) ==
+        granit::result::success);
 
   REQUIRE(recorder.end() == granit::result::success);
 }

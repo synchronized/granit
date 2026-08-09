@@ -453,13 +453,13 @@ granit_result renderer_state::reset_command_recorder(vulkan_command_recorder& re
 
 granit_result renderer_state::copy_buffer(vulkan_command_recorder& recorder, VkBuffer source,
                                           VkBuffer destination,
-                                          std::span<const VkBufferCopy> regions) noexcept {
+                                          std::span<const VkBufferCopy> regions) {
   return recorder.copy_buffer(device_, source, destination, regions);
 }
 
 granit_result renderer_state::fill_buffer(vulkan_command_recorder& recorder, VkBuffer buffer,
                                           VkDeviceSize offset, VkDeviceSize size,
-                                          std::uint32_t value) noexcept {
+                                          std::uint32_t value) {
   return recorder.fill_buffer(device_, buffer, offset, size, value);
 }
 

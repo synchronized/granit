@@ -46,6 +46,8 @@ D-03-graphics-pipeline.md
   已完成，等待 F-04 接入提交调度。
 - [F-04：Queue 提交与 frames-in-flight](F-04-queue-submission.md)——异步提交、帧槽轮转和 Queue
   串行化已完成。
+- [F-05：资源状态跟踪与屏障](F-05-resource-state-tracking.md)——F-05A Buffer 屏障已完成，Texture
+  Layout 状态等待 F-05B。
 
 ## 状态
 

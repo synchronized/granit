@@ -6,7 +6,7 @@
 ## 元数据
 
 - 设计状态：已确认
-- 实现状态：F-02A/F-02B 已完成；资源状态部分随 F-05 实现
+- 实现状态：F-02A/F-02B 已完成；F-02C Buffer 状态已完成，Texture 状态等待 F-05B
 - 路线图任务：F-02
 - 优先级：P0
 - 前置依赖：F-01、R-09
@@ -30,10 +30,10 @@
 - 禁止渲染作用域嵌套，以及在作用域中录制不允许的复制命令。
 - Attachment load-clear 作为第一版颜色和深度清理方式。
 
-### F-02C：随 F-05 接入状态
+### F-02C：随 F-05 接入状态（Buffer 已完成）
 
-- Recorder 记录 transfer read/write 和 attachment read/write 访问意图。
-- F-05 将局部访问合并为实际 Vulkan barrier 和 Layout 转换。
+- Recorder 已记录 Buffer transfer read/write 并生成实际 Vulkan barrier。
+- Attachment read/write 和 Layout 转换等待 F-05B。
 - 独立 Texture Clear 等依赖状态转换的命令在此后评估。
 
 ## Buffer Copy API

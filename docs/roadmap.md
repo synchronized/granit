@@ -129,7 +129,8 @@
   上下文的内部抽象。
 - **[F-04](plans/F-04-queue-submission.md) / P0 / 已完成**：实现可配置 frames-in-flight 和
   Queue 提交串行化。
-- **F-05 / P0**：建立资源状态跟踪和必要的同步信息记录。
+- **[F-05](plans/F-05-resource-state-tracking.md) / P0 / F-05A 已完成**：建立资源状态跟踪和必要
+  的同步信息记录；Texture Layout 等待 F-05B。
 - **F-06 / P0**：实现 Swapchain acquire、提交、present 和 out-of-date 重建流程。
 - **F-07 / P0**：处理窗口最小化、Surface Lost 和 Device Lost 的恢复边界。
 - **F-08 / P1**：支持多个线程使用独立 Recorder 并合并到同一帧提交。

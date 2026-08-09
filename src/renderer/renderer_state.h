@@ -78,10 +78,10 @@ public:
   [[nodiscard]] granit_result reset_command_recorder(vulkan_command_recorder& recorder) noexcept;
   [[nodiscard]] granit_result copy_buffer(vulkan_command_recorder& recorder, VkBuffer source,
                                           VkBuffer destination,
-                                          std::span<const VkBufferCopy> regions) noexcept;
+                                          std::span<const VkBufferCopy> regions);
   [[nodiscard]] granit_result fill_buffer(vulkan_command_recorder& recorder, VkBuffer buffer,
                                           VkDeviceSize offset, VkDeviceSize size,
-                                          std::uint32_t value) noexcept;
+                                          std::uint32_t value);
   [[nodiscard]] granit_result
   begin_rendering(vulkan_command_recorder& recorder, VkRect2D area,
                   std::span<const VkRenderingAttachmentInfo> color_attachments,

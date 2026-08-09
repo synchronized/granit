@@ -107,6 +107,8 @@ granit_command_recorder_fill_buffer(granit_renderer renderer, granit_command_rec
   try {
     return granit::detail::renderer_registry::instance().fill_buffer(renderer, recorder, buffer,
                                                                      offset, size, value);
+  } catch (const std::bad_alloc&) {
+    return GRANIT_ERROR_OUT_OF_MEMORY;
   } catch (...) {
     return GRANIT_ERROR_INTERNAL;
   }

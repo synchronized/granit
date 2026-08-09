@@ -6,6 +6,10 @@
 #include "backend/vulkan/device.h"
 #include "backend/vulkan/result.h"
 
+#include <algorithm>
+#include <array>
+#include <vector>
+
 namespace granit::detail {
 
 granit_result vulkan_command_recorder::initialize(const vulkan_device& device) noexcept {
@@ -35,6 +39,7 @@ granit_result vulkan_command_recorder::initialize(const vulkan_device& device) n
     return map_vulkan_result(result);
   }
   state_ = command_recorder_state::initial;
+  buffer_accesses_.clear();
   return GRANIT_SUCCESS;
 }
 
@@ -70,14 +75,79 @@ granit_result vulkan_command_recorder::reset(const vulkan_device& device) noexce
   const auto result = device.functions().vkResetCommandPool(device.native_handle(), pool_, 0);
   state_ = result == VK_SUCCESS ? command_recorder_state::initial : command_recorder_state::invalid;
   inside_rendering_ = false;
+  buffer_accesses_.clear();
   return map_vulkan_result(result);
+}
+
+granit_result vulkan_command_recorder::prepare_buffer_access(
+    const vulkan_device& device, std::span<const std::pair<VkBuffer, VkAccessFlags2>> accesses) {
+  std::vector<std::pair<VkBuffer, VkAccessFlags2>> merged;
+  merged.reserve(accesses.size());
+  for (const auto& access : accesses) {
+    const auto found = std::find_if(merged.begin(), merged.end(), [&](const auto& candidate) {
+      return candidate.first == access.first;
+    });
+    if (found == merged.end()) {
+      merged.push_back(access);
+    } else {
+      found->second |= access.second;
+    }
+  }
+
+  std::vector<VkBufferMemoryBarrier2> barriers;
+  barriers.reserve(merged.size());
+  for (const auto& [buffer, destination_access] : merged) {
+    const auto previous = buffer_accesses_.find(buffer);
+    const buffer_access_state source =
+        previous == buffer_accesses_.end()
+            ? buffer_access_state{.stages = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT,
+                                  .access =
+                                      VK_ACCESS_2_MEMORY_READ_BIT | VK_ACCESS_2_MEMORY_WRITE_BIT}
+            : previous->second;
+    const bool read_after_read = (source.access & VK_ACCESS_2_MEMORY_WRITE_BIT) == 0 &&
+                                 (destination_access & VK_ACCESS_2_MEMORY_WRITE_BIT) == 0;
+    if (!read_after_read) {
+      VkBufferMemoryBarrier2 barrier{};
+      barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2;
+      barrier.srcStageMask = source.stages;
+      barrier.srcAccessMask = source.access;
+      barrier.dstStageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT;
+      barrier.dstAccessMask = destination_access;
+      barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+      barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+      barrier.buffer = buffer;
+      barrier.offset = 0;
+      barrier.size = VK_WHOLE_SIZE;
+      barriers.push_back(barrier);
+    }
+    buffer_accesses_[buffer] = {
+        .stages = VK_PIPELINE_STAGE_2_TRANSFER_BIT,
+        .access = destination_access,
+    };
+  }
+  if (!barriers.empty()) {
+    VkDependencyInfo dependency{};
+    dependency.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
+    dependency.bufferMemoryBarrierCount = static_cast<std::uint32_t>(barriers.size());
+    dependency.pBufferMemoryBarriers = barriers.data();
+    device.functions().vkCmdPipelineBarrier2(command_buffer_, &dependency);
+  }
+  return GRANIT_SUCCESS;
 }
 
 granit_result vulkan_command_recorder::copy_buffer(const vulkan_device& device, VkBuffer source,
                                                    VkBuffer destination,
-                                                   std::span<const VkBufferCopy> regions) noexcept {
+                                                   std::span<const VkBufferCopy> regions) {
   if (state_ != command_recorder_state::recording || inside_rendering_ || regions.empty()) {
     return GRANIT_ERROR_INVALID_ARGUMENT;
+  }
+  const std::array accesses{
+      std::pair{source, VkAccessFlags2{VK_ACCESS_2_TRANSFER_READ_BIT}},
+      std::pair{destination, VkAccessFlags2{VK_ACCESS_2_TRANSFER_WRITE_BIT}},
+  };
+  const auto barrier_result = prepare_buffer_access(device, accesses);
+  if (barrier_result != GRANIT_SUCCESS) {
+    return barrier_result;
   }
   device.functions().vkCmdCopyBuffer(command_buffer_, source, destination,
                                      static_cast<std::uint32_t>(regions.size()), regions.data());
@@ -86,9 +156,16 @@ granit_result vulkan_command_recorder::copy_buffer(const vulkan_device& device, 
 
 granit_result vulkan_command_recorder::fill_buffer(const vulkan_device& device, VkBuffer buffer,
                                                    VkDeviceSize offset, VkDeviceSize size,
-                                                   std::uint32_t value) noexcept {
+                                                   std::uint32_t value) {
   if (state_ != command_recorder_state::recording || inside_rendering_) {
     return GRANIT_ERROR_INVALID_ARGUMENT;
+  }
+  const std::array accesses{
+      std::pair{buffer, VkAccessFlags2{VK_ACCESS_2_TRANSFER_WRITE_BIT}},
+  };
+  const auto barrier_result = prepare_buffer_access(device, accesses);
+  if (barrier_result != GRANIT_SUCCESS) {
+    return barrier_result;
   }
   device.functions().vkCmdFillBuffer(command_buffer_, buffer, offset, size, value);
   return GRANIT_SUCCESS;
@@ -146,6 +223,7 @@ void vulkan_command_recorder::destroy(const vulkan_device& device) noexcept {
   command_buffer_ = VK_NULL_HANDLE;
   state_ = command_recorder_state::invalid;
   inside_rendering_ = false;
+  buffer_accesses_.clear();
 }
 
 } // namespace granit::detail
