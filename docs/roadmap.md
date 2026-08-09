@@ -131,8 +131,8 @@
   Queue 提交串行化。
 - **[F-05](plans/F-05-resource-state-tracking.md) / P0 / 当前命令范围已完成**：建立资源状态跟踪
   和必要的同步信息记录；后续用途随对应命令扩展。
-- **[F-06](plans/F-06-swapchain-frame-loop.md) / P0 / F-06A 已完成**：实现 Swapchain acquire、
-  提交、present 和 out-of-date 重建流程；公共帧循环等待 F-06B。
+- **[F-06](plans/F-06-swapchain-frame-loop.md) / P0 / 已完成**：实现 Swapchain acquire、提交、
+  present 和 out-of-date 重建流程。
 - **F-07 / P0**：处理窗口最小化、Surface Lost 和 Device Lost 的恢复边界。
 - **F-08 / P1**：支持多个线程使用独立 Recorder 并合并到同一帧提交。
 - **F-09 / P1**：增加时间戳、统计查询和 GPU 调试标记。

@@ -11,6 +11,7 @@
 #include <granit/render_target.h>
 #include <granit/renderer.h>
 #include <granit/result.h>
+#include <granit/swapchain.h>
 #include <granit/types.h>
 
 /** 一次录制、一次提交的命令录制器句柄。零值无效。 */
@@ -46,6 +47,9 @@ GRANIT_API granit_result granit_command_recorder_end(granit_renderer renderer,
 /** 异步提交 executable Recorder；同一 Recorder 完成前不能再次提交。 */
 GRANIT_API granit_result granit_command_recorder_submit(granit_renderer renderer,
                                                         granit_command_recorder recorder);
+GRANIT_API granit_result granit_command_recorder_submit_frame(granit_renderer renderer,
+                                                              granit_command_recorder recorder,
+                                                              granit_frame frame);
 GRANIT_API granit_result granit_command_recorder_reset(granit_renderer renderer,
                                                        granit_command_recorder recorder);
 GRANIT_API granit_result granit_command_recorder_copy_buffer(

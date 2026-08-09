@@ -59,9 +59,12 @@ public:
     if (!valid()) {
       return result::success;
     }
-    const auto renderer = std::exchange(renderer_, GRANIT_NULL_HANDLE);
-    const auto handle = std::exchange(handle_, GRANIT_NULL_HANDLE);
-    return from_native(granit_surface_destroy(renderer, handle));
+    const auto value = granit_surface_destroy(renderer_, handle_);
+    if (value == GRANIT_SUCCESS) {
+      renderer_ = GRANIT_NULL_HANDLE;
+      handle_ = GRANIT_NULL_HANDLE;
+    }
+    return from_native(value);
   }
 
   [[nodiscard]] bool valid() const noexcept { return handle_ != GRANIT_NULL_HANDLE; }

@@ -116,3 +116,46 @@ extern "C" granit_result granit_swapchain_get_backbuffer(granit_renderer rendere
     return GRANIT_ERROR_INTERNAL;
   }
 }
+
+extern "C" granit_result granit_swapchain_acquire(granit_renderer renderer,
+                                                  granit_swapchain swapchain, granit_frame* frame,
+                                                  uint32_t* image_index, uint32_t* needs_recreate) {
+  if (frame == nullptr || image_index == nullptr || needs_recreate == nullptr)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  *frame = GRANIT_NULL_HANDLE;
+  *image_index = 0;
+  *needs_recreate = 0;
+  if (renderer == GRANIT_NULL_HANDLE || swapchain == GRANIT_NULL_HANDLE)
+    return GRANIT_ERROR_INVALID_HANDLE;
+  try {
+    bool recreate{};
+    const auto result = granit::detail::renderer_registry::instance().acquire_swapchain_frame(
+        renderer, swapchain, *frame, *image_index, recreate);
+    *needs_recreate = recreate ? 1U : 0U;
+    return result;
+  } catch (const std::bad_alloc&) {
+    return GRANIT_ERROR_OUT_OF_MEMORY;
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+extern "C" granit_result granit_swapchain_present(granit_renderer renderer,
+                                                  granit_swapchain swapchain, granit_frame frame,
+                                                  uint32_t* needs_recreate) {
+  if (needs_recreate == nullptr)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  *needs_recreate = 0;
+  if (renderer == GRANIT_NULL_HANDLE || swapchain == GRANIT_NULL_HANDLE ||
+      frame == GRANIT_NULL_HANDLE)
+    return GRANIT_ERROR_INVALID_HANDLE;
+  try {
+    bool recreate{};
+    const auto result = granit::detail::renderer_registry::instance().present_swapchain_frame(
+        renderer, swapchain, frame, recreate);
+    *needs_recreate = recreate ? 1U : 0U;
+    return result;
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}

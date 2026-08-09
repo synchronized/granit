@@ -90,6 +90,17 @@ public:
                   std::span<const vulkan_image_access> image_accesses);
   [[nodiscard]] granit_result end_rendering(vulkan_command_recorder& recorder) noexcept;
   [[nodiscard]] granit_result submit_command_recorder(vulkan_command_recorder& recorder);
+  [[nodiscard]] granit_result acquire_swapchain_frame(vulkan_swapchain& swapchain,
+                                                      std::uint32_t& image_index,
+                                                      std::size_t& slot_index,
+                                                      bool& needs_recreate);
+  [[nodiscard]] granit_result submit_swapchain_frame(vulkan_command_recorder& recorder,
+                                                     vulkan_swapchain& swapchain,
+                                                     std::uint32_t image_index,
+                                                     std::size_t slot_index);
+  [[nodiscard]] granit_result present_swapchain_frame(vulkan_swapchain& swapchain,
+                                                      std::uint32_t image_index,
+                                                      std::size_t slot_index, bool& needs_recreate);
   [[nodiscard]] granit_result wait_command_recorder(vulkan_command_recorder& recorder) noexcept;
   [[nodiscard]] granit_result wait_for_all_submissions() noexcept;
   void destroy_native_command_recorder(vulkan_command_recorder& recorder) noexcept;
@@ -104,8 +115,11 @@ private:
   struct frame_slot {
     std::unique_ptr<vulkan_frame_context> context;
     std::unique_ptr<vulkan_command_recorder> preamble;
+    std::unique_ptr<vulkan_command_recorder> postamble;
     vulkan_command_recorder* recorder{};
     submission_serial serial{};
+    bool acquired{};
+    bool awaiting_present{};
   };
 
   [[nodiscard]] granit_result complete_frame_slot(frame_slot& slot) noexcept;

@@ -32,6 +32,22 @@ struct swapchain_info {
   present_mode presentation{present_mode::fifo};
 };
 
+struct acquired_frame {
+  acquired_frame() = default;
+  acquired_frame(const acquired_frame&) = delete;
+  acquired_frame& operator=(const acquired_frame&) = delete;
+  acquired_frame(acquired_frame&& other) noexcept
+      : handle(std::exchange(other.handle, GRANIT_NULL_HANDLE)), image_index(other.image_index),
+        needs_recreate(other.needs_recreate) {}
+  acquired_frame& operator=(acquired_frame&&) = delete;
+
+  granit_frame handle{GRANIT_NULL_HANDLE};
+  std::uint32_t image_index{};
+  bool needs_recreate{};
+
+  [[nodiscard]] bool valid() const noexcept { return handle != GRANIT_NULL_HANDLE; }
+};
+
 class swapchain {
 public:
   swapchain() = default;
@@ -92,13 +108,37 @@ public:
     return from_native(granit_swapchain_get_backbuffer(renderer_, handle_, index, &texture, &view));
   }
 
+  [[nodiscard]] result acquire(acquired_frame& frame) const noexcept {
+    if (!valid() || frame.valid())
+      return result::invalid_argument;
+    std::uint32_t recreate{};
+    const auto value =
+        granit_swapchain_acquire(renderer_, handle_, &frame.handle, &frame.image_index, &recreate);
+    frame.needs_recreate = recreate != 0;
+    return from_native(value);
+  }
+
+  [[nodiscard]] result present(acquired_frame& frame) const noexcept {
+    if (!valid() || !frame.valid())
+      return result::invalid_argument;
+    std::uint32_t recreate{};
+    const auto value = granit_swapchain_present(renderer_, handle_, frame.handle, &recreate);
+    if (value != GRANIT_ERROR_INVALID_ARGUMENT && value != GRANIT_ERROR_INVALID_HANDLE)
+      frame.handle = GRANIT_NULL_HANDLE;
+    frame.needs_recreate = recreate != 0;
+    return from_native(value);
+  }
+
   [[nodiscard]] result reset() noexcept {
     if (!valid()) {
       return result::success;
     }
-    const auto renderer = std::exchange(renderer_, GRANIT_NULL_HANDLE);
-    const auto handle = std::exchange(handle_, GRANIT_NULL_HANDLE);
-    return from_native(granit_swapchain_destroy(renderer, handle));
+    const auto value = granit_swapchain_destroy(renderer_, handle_);
+    if (value == GRANIT_SUCCESS) {
+      renderer_ = GRANIT_NULL_HANDLE;
+      handle_ = GRANIT_NULL_HANDLE;
+    }
+    return from_native(value);
   }
 
   [[nodiscard]] bool valid() const noexcept { return handle_ != GRANIT_NULL_HANDLE; }

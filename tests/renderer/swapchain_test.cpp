@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
+#include <granit/command_recorder.hpp>
+#include <granit/render_target.hpp>
 #include <granit/renderer.hpp>
 #include <granit/surface.hpp>
 #include <granit/swapchain.hpp>
@@ -49,8 +51,9 @@ TEST_CASE("Swapchain 支持创建、查询、重建和销毁", "[swapchain][win3
   REQUIRE(window.valid());
 
   granit::renderer renderer;
-  const auto renderer_result = renderer.initialize(
-      {.application_name = "granit-swapchain-tests", .surface_types = granit::surface_type::win32});
+  const auto renderer_result = renderer.initialize({.application_name = "granit-swapchain-tests",
+                                                    .enable_validation = true,
+                                                    .surface_types = granit::surface_type::win32});
   if (swapchain_environment_unavailable(renderer_result)) {
     SKIP("当前运行环境不支持 Vulkan Win32 Swapchain");
   }
@@ -72,6 +75,29 @@ TEST_CASE("Swapchain 支持创建、查询、重建和销毁", "[swapchain][win3
   CHECK(info.width > 0);
   CHECK(info.height > 0);
   CHECK(info.image_count >= 2);
+
+  granit::acquired_frame frame;
+  REQUIRE(swapchain.acquire(frame) == granit::result::success);
+  REQUIRE(frame.valid());
+  CHECK(swapchain.recreate({.width = 96, .height = 72}) == granit::result::invalid_argument);
+  granit_texture frame_texture{};
+  granit_texture_view frame_view{};
+  REQUIRE(swapchain.backbuffer(frame.image_index, frame_texture, frame_view) ==
+          granit::result::success);
+  granit::command_recorder recorder;
+  REQUIRE(recorder.initialize(renderer.native_handle()) == granit::result::success);
+  REQUIRE(recorder.begin() == granit::result::success);
+  const granit::color_attachment_desc color{.view = frame_view};
+  const granit::rendering_desc rendering{.color_attachments = std::span{&color, 1},
+                                         .area = {.width = info.width, .height = info.height}};
+  REQUIRE(recorder.begin_rendering(rendering) == granit::result::success);
+  REQUIRE(recorder.end_rendering() == granit::result::success);
+  REQUIRE(recorder.end() == granit::result::success);
+  REQUIRE(recorder.submit(frame) == granit::result::success);
+  CHECK(recorder.submit(frame) == granit::result::invalid_argument);
+  REQUIRE(swapchain.present(frame) == granit::result::success);
+  CHECK_FALSE(frame.valid());
+  REQUIRE(recorder.reset() == granit::result::success);
 
   granit_texture old_texture = GRANIT_NULL_HANDLE;
   granit_texture_view old_view = GRANIT_NULL_HANDLE;

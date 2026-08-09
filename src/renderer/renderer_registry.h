@@ -54,6 +54,12 @@ public:
                                                        granit_swapchain swapchain,
                                                        std::uint32_t index, granit_texture& texture,
                                                        granit_texture_view& view);
+  [[nodiscard]] granit_result
+  acquire_swapchain_frame(granit_renderer renderer, granit_swapchain swapchain, granit_frame& frame,
+                          std::uint32_t& image_index, bool& needs_recreate);
+  [[nodiscard]] granit_result present_swapchain_frame(granit_renderer renderer,
+                                                      granit_swapchain swapchain,
+                                                      granit_frame frame, bool& needs_recreate);
   [[nodiscard]] granit_result create_buffer(granit_renderer renderer,
                                             const granit_buffer_desc& desc, granit_buffer& buffer);
   [[nodiscard]] granit_result map_buffer(granit_renderer renderer, granit_buffer buffer,
@@ -84,6 +90,9 @@ public:
                                                    granit_command_recorder recorder);
   [[nodiscard]] granit_result submit_command_recorder(granit_renderer renderer,
                                                       granit_command_recorder recorder);
+  [[nodiscard]] granit_result submit_command_recorder_frame(granit_renderer renderer,
+                                                            granit_command_recorder recorder,
+                                                            granit_frame frame);
   [[nodiscard]] granit_result reset_command_recorder(granit_renderer renderer,
                                                      granit_command_recorder recorder);
   [[nodiscard]] granit_result copy_buffer(granit_renderer renderer,
@@ -107,6 +116,7 @@ private:
 
   struct swapchain_record;
   struct command_recorder_record;
+  struct frame_record;
 
   struct resource_metadata {
     std::uint64_t creation_sequence{};
@@ -180,6 +190,14 @@ private:
     std::vector<std::shared_ptr<void>> retained_resources;
     ~command_recorder_record();
   };
+  struct frame_record {
+    std::shared_ptr<renderer_state> renderer;
+    std::shared_ptr<swapchain_record> swapchain;
+    std::mutex mutex;
+    std::uint32_t image_index{};
+    std::size_t slot_index{};
+    bool submitted{};
+  };
   std::unordered_map<granit_surface, std::shared_ptr<surface_record>> surfaces_;
   std::unordered_map<granit_swapchain, std::shared_ptr<swapchain_record>> swapchains_;
   std::unordered_map<granit_buffer, std::shared_ptr<buffer_record>> buffers_;
@@ -188,6 +206,7 @@ private:
   std::unordered_map<granit_sampler, std::shared_ptr<sampler_record>> samplers_;
   std::unordered_map<granit_command_recorder, std::shared_ptr<command_recorder_record>>
       command_recorders_;
+  std::unordered_map<granit_frame, std::shared_ptr<frame_record>> frames_;
   std::uint32_t next_domain_{1};
   std::uint64_t next_creation_sequence_{1};
 };

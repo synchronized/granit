@@ -6,7 +6,7 @@
 ## 元数据
 
 - 设计状态：已确认
-- 实现状态：F-06A 已完成；F-06B 待开始
+- 实现状态：F-06A/F-06B 已完成
 - 路线图任务：F-06
 - 优先级：P0
 - 前置依赖：F-03、F-04、F-05、R-07
@@ -28,9 +28,9 @@ Semaphore、Fence、`VkResult` 或 Image Layout，但必须能够识别需要重
 - `VK_SUBOPTIMAL_KHR` 作为操作成功并通过内部 `suboptimal` 标志保留，不能误报为失败；
 - 设备初始化在启用 Surface 时检查 `vkAcquireNextImageKHR` 和 `vkQueuePresentKHR`。
 
-## F-06B：公共帧令牌与帧槽接入（待开始）
+## F-06B：公共帧令牌与帧槽接入（已完成）
 
-推荐使用短生命周期、不透明的 `granit_frame` 令牌，而不是让 submit 隐式绑定“最近一次 acquire”：
+使用短生命周期、不透明的 `granit_frame` 令牌，而不是让 submit 隐式绑定“最近一次 acquire”：
 
 ```text
 swapchain_acquire → frame + image_index
@@ -59,8 +59,9 @@ swapchain_present(frame) → frame 失效
 6. Queue signal `render_finished` 和槽位 Fence；
 7. present 等待 `render_finished`，随后使帧令牌失效。
 
-Fence 只在确定 Queue submit 即将发生时复位。acquire 成功但录制失败时，需要提供取消或安全回收
-路径，不能遗留已获取但永远不 present 的图像。
+Fence 只在确定 Queue submit 即将发生时复位。第一版要求成功 acquire 的 Frame 最终完成 submit
+和 present；活动 Frame 存在时拒绝重建或销毁对应 Swapchain/Surface。显式取消帧与窗口异常恢复
+统一在 F-07 接入；Renderer 关闭仍会等待 GPU 并回收全部瞬时令牌。
 
 ## 状态与重建
 
@@ -71,8 +72,8 @@ Fence 只在确定 Queue submit 即将发生时复位。acquire 成功但录制�
 - recreate 前必须处理或取消当前 Swapchain 的所有 acquired frame。
 - 重建成功后旧 backbuffer、view 和 frame 句柄全部失效。
 
-公共层需要一种不把 SUBOPTIMAL 当错误的表达。早期开发阶段可以新增正值状态码，或在 acquire/
-present 输出结构中增加 `needs_recreate`；F-06B 实现前根据 C++ 包装易用性最终确定。
+公共层通过 acquire/present 的 `needs_recreate` 输出表达 SUBOPTIMAL，不把它当成错误。C++
+`acquired_frame` 保存该布尔值。
 
 ## 线程与锁
 
@@ -87,3 +88,13 @@ present 输出结构中增加 `needs_recreate`；F-06B 实现前根据 C++ 包�
 - OUT_OF_DATE 与 SUBOPTIMAL 不混为同一种失败。
 - Vulkan 函数表缺失时设备初始化失败，而不是延迟到首帧崩溃。
 - 两种 Windows 工具链构建并运行后端边界测试。
+
+## F-06B 验收结果
+
+- acquire 返回 Frame 令牌和 backbuffer 索引。
+- `submit_frame` 校验 Frame、Recorder、Renderer 和 Swapchain 归属。
+- Queue submit 等待 image-available，按前导、用户、后导顺序执行，并触发 render-finished。
+- 后导屏障把 acquired 图像转换为 `PRESENT_SRC_KHR`。
+- present 消费 Frame 令牌，重复提交、重复 present 和旧令牌均失败。
+- 活动 Frame 会阻止 Swapchain 重建、Swapchain 销毁和 Surface 级联销毁。
+- Win32 测试在 Vulkan Validation Layer 下完成真实 acquire、clear、submit 和 present。

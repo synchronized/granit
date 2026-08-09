@@ -219,6 +219,14 @@ granit_result renderer_registry::destroy(granit_renderer renderer) {
         }
       }
     }
+    for (auto frame = frames_.begin(); frame != frames_.end();) {
+      if (frame->second->renderer == state) {
+        static_cast<void>(handles_.erase(frame->first, resource_type::frame, state->domain()));
+        frame = frames_.erase(frame);
+      } else {
+        ++frame;
+      }
+    }
     for (auto recorder = command_recorders_.begin(); recorder != command_recorders_.end();) {
       if (recorder->second->renderer == state) {
         native_command_recorders.push_back(std::move(recorder->second));
@@ -368,6 +376,11 @@ granit_result renderer_registry::destroy_surface(granit_renderer renderer, grani
     if (found == surfaces_.end() || found->second->renderer != state) {
       return GRANIT_ERROR_INVALID_HANDLE;
     }
+    for (const auto& [frame_handle, frame] : frames_) {
+      static_cast<void>(frame_handle);
+      if (frame->swapchain->surface == found->second)
+        return GRANIT_ERROR_INVALID_ARGUMENT;
+    }
     for (auto swapchain = swapchains_.begin(); swapchain != swapchains_.end();) {
       if (swapchain->second->surface == found->second) {
         if (state->validation_enabled()) {
@@ -501,6 +514,11 @@ granit_result renderer_registry::recreate_swapchain(granit_renderer renderer,
     const auto found = swapchains_.find(swapchain);
     if (found == swapchains_.end() || found->second->renderer != state) {
       return GRANIT_ERROR_INVALID_HANDLE;
+    }
+    for (const auto& [frame_handle, frame] : frames_) {
+      static_cast<void>(frame_handle);
+      if (frame->swapchain == found->second)
+        return GRANIT_ERROR_INVALID_ARGUMENT;
     }
     record = found->second;
     for (const auto handle : record->views) {
@@ -641,6 +659,112 @@ granit_result renderer_registry::get_swapchain_backbuffer(granit_renderer render
   return GRANIT_SUCCESS;
 }
 
+granit_result renderer_registry::acquire_swapchain_frame(granit_renderer renderer,
+                                                         granit_swapchain swapchain,
+                                                         granit_frame& frame,
+                                                         std::uint32_t& image_index,
+                                                         bool& needs_recreate) {
+  std::shared_ptr<swapchain_record> swapchain_record_state;
+  {
+    std::lock_guard lock{mutex_};
+    const auto renderer_found = renderers_.find(renderer);
+    if (renderer_found == renderers_.end())
+      return GRANIT_ERROR_INVALID_HANDLE;
+    const auto found = swapchains_.find(swapchain);
+    if (found == swapchains_.end() || found->second->renderer != renderer_found->second)
+      return GRANIT_ERROR_INVALID_HANDLE;
+    swapchain_record_state = found->second;
+  }
+  auto record = std::make_shared<frame_record>();
+  record->renderer = swapchain_record_state->renderer;
+  record->swapchain = swapchain_record_state;
+  granit_frame handle{};
+  {
+    std::lock_guard lock{mutex_};
+    const auto found = swapchains_.find(swapchain);
+    if (found == swapchains_.end() || found->second != swapchain_record_state)
+      return GRANIT_ERROR_INVALID_HANDLE;
+    handle = handles_.insert(record.get(), resource_type::frame, record->renderer->domain());
+    if (handle == GRANIT_NULL_HANDLE)
+      return GRANIT_ERROR_OUT_OF_MEMORY;
+    try {
+      frames_.emplace(handle, record);
+    } catch (...) {
+      static_cast<void>(handles_.erase(handle, resource_type::frame, record->renderer->domain()));
+      throw;
+    }
+  }
+  const auto result = record->renderer->acquire_swapchain_frame(
+      *swapchain_record_state->native, record->image_index, record->slot_index, needs_recreate);
+  if (result != GRANIT_SUCCESS) {
+    std::lock_guard lock{mutex_};
+    frames_.erase(handle);
+    static_cast<void>(handles_.erase(handle, resource_type::frame, record->renderer->domain()));
+    return result;
+  }
+  frame = handle;
+  image_index = record->image_index;
+  return GRANIT_SUCCESS;
+}
+
+granit_result renderer_registry::submit_command_recorder_frame(granit_renderer renderer,
+                                                               granit_command_recorder recorder,
+                                                               granit_frame frame) {
+  std::shared_ptr<frame_record> frame_state;
+  auto command = acquire_command_recorder(renderer, recorder);
+  if (!command)
+    return GRANIT_ERROR_INVALID_HANDLE;
+  {
+    std::lock_guard lock{mutex_};
+    const auto found = frames_.find(frame);
+    if (found == frames_.end() || found->second->renderer != command->renderer)
+      return GRANIT_ERROR_INVALID_HANDLE;
+    frame_state = found->second;
+  }
+  std::scoped_lock locks{command->mutex, frame_state->mutex};
+  if (frame_state->submitted)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  const auto result =
+      command->renderer->submit_swapchain_frame(command->native, *frame_state->swapchain->native,
+                                                frame_state->image_index, frame_state->slot_index);
+  if (result == GRANIT_SUCCESS)
+    frame_state->submitted = true;
+  return result;
+}
+
+granit_result renderer_registry::present_swapchain_frame(granit_renderer renderer,
+                                                         granit_swapchain swapchain,
+                                                         granit_frame frame, bool& needs_recreate) {
+  std::shared_ptr<frame_record> record;
+  {
+    std::lock_guard lock{mutex_};
+    const auto found = frames_.find(frame);
+    const auto found_swapchain = swapchains_.find(swapchain);
+    const auto found_renderer = renderers_.find(renderer);
+    if (found_renderer == renderers_.end() || found == frames_.end() ||
+        found_swapchain == swapchains_.end() ||
+        found->second->swapchain != found_swapchain->second ||
+        found->second->renderer != found_swapchain->second->renderer ||
+        found->second->renderer != found_renderer->second)
+      return GRANIT_ERROR_INVALID_HANDLE;
+    record = found->second;
+  }
+  std::lock_guard frame_lock{record->mutex};
+  if (!record->submitted)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  const auto result = record->renderer->present_swapchain_frame(
+      *record->swapchain->native, record->image_index, record->slot_index, needs_recreate);
+  {
+    std::lock_guard lock{mutex_};
+    const auto found = frames_.find(frame);
+    if (found != frames_.end() && found->second == record) {
+      frames_.erase(found);
+      static_cast<void>(handles_.erase(frame, resource_type::frame, record->renderer->domain()));
+    }
+  }
+  return result;
+}
+
 granit_result renderer_registry::destroy_swapchain(granit_renderer renderer,
                                                    granit_swapchain swapchain) {
   std::shared_ptr<swapchain_record> record;
@@ -660,6 +784,11 @@ granit_result renderer_registry::destroy_swapchain(granit_renderer renderer,
     const auto found = swapchains_.find(swapchain);
     if (found == swapchains_.end() || found->second->renderer != state) {
       return GRANIT_ERROR_INVALID_HANDLE;
+    }
+    for (const auto& [frame_handle, frame] : frames_) {
+      static_cast<void>(frame_handle);
+      if (frame->swapchain == found->second)
+        return GRANIT_ERROR_INVALID_ARGUMENT;
     }
     record = std::move(found->second);
     for (const auto handle : record->views) {

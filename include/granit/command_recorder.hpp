@@ -11,6 +11,7 @@
 #include <granit/command_recorder.h>
 #include <granit/render_target.hpp>
 #include <granit/result.hpp>
+#include <granit/swapchain.hpp>
 
 namespace granit {
 
@@ -54,6 +55,9 @@ public:
   }
   [[nodiscard]] result submit() noexcept {
     return from_native(granit_command_recorder_submit(renderer_, handle_));
+  }
+  [[nodiscard]] result submit(const acquired_frame& frame) noexcept {
+    return from_native(granit_command_recorder_submit_frame(renderer_, handle_, frame.handle));
   }
   [[nodiscard]] result reset() noexcept {
     return from_native(granit_command_recorder_reset(renderer_, handle_));

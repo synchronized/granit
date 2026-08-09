@@ -16,6 +16,8 @@
 
 /** 窗口交换链句柄。零值无效。 */
 typedef granit_handle granit_swapchain;
+/** 一次 acquire 到 present 的短生命周期帧令牌。 */
+typedef granit_handle granit_frame;
 
 typedef uint32_t granit_present_mode;
 #define GRANIT_PRESENT_MODE_FIFO UINT32_C(0)
@@ -73,6 +75,12 @@ GRANIT_API granit_result granit_swapchain_get_backbuffer(granit_renderer rendere
                                                          granit_swapchain swapchain, uint32_t index,
                                                          granit_texture* texture,
                                                          granit_texture_view* view);
+GRANIT_API granit_result granit_swapchain_acquire(granit_renderer renderer,
+                                                  granit_swapchain swapchain, granit_frame* frame,
+                                                  uint32_t* image_index, uint32_t* needs_recreate);
+GRANIT_API granit_result granit_swapchain_present(granit_renderer renderer,
+                                                  granit_swapchain swapchain, granit_frame frame,
+                                                  uint32_t* needs_recreate);
 /** 销毁属于指定 Renderer 的 Swapchain，并使句柄立即失效。 */
 GRANIT_API granit_result granit_swapchain_destroy(granit_renderer renderer,
                                                   granit_swapchain swapchain);

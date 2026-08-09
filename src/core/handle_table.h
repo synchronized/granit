@@ -28,6 +28,7 @@ enum class resource_type : std::uint8_t {
   texture_view = 9,
   sampler = 10,
   command_recorder = 11,
+  frame = 12,
 };
 
 /**

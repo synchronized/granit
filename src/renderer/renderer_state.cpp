@@ -124,6 +124,7 @@ VkImageUsageFlags map_texture_usage(granit_texture_usage usage) noexcept {
 renderer_state::~renderer_state() {
   static_cast<void>(wait_for_all_submissions());
   for (auto& slot : frame_slots_) {
+    slot.postamble->destroy(device_);
     slot.preamble->destroy(device_);
     slot.context->destroy(device_);
   }
@@ -157,11 +158,13 @@ granit_result renderer_state::initialize(std::string_view application_name, bool
     frame_slots_.reserve(frames_in_flight);
     for (std::uint32_t index = 0; index < frames_in_flight; ++index) {
       frame_slot slot{.context = std::make_unique<vulkan_frame_context>(),
-                      .preamble = std::make_unique<vulkan_command_recorder>()};
+                      .preamble = std::make_unique<vulkan_command_recorder>(),
+                      .postamble = std::make_unique<vulkan_command_recorder>()};
       const auto frame_result = slot.context->initialize(device_);
       if (frame_result != GRANIT_SUCCESS) {
         for (auto& initialized : frame_slots_) {
           initialized.preamble->destroy(device_);
+          initialized.postamble->destroy(device_);
           initialized.context->destroy(device_);
         }
         frame_slots_.clear();
@@ -183,10 +186,26 @@ granit_result renderer_state::initialize(std::string_view application_name, bool
         instance_.reset();
         return preamble_result;
       }
+      const auto postamble_result = slot.postamble->initialize(device_);
+      if (postamble_result != GRANIT_SUCCESS) {
+        slot.preamble->destroy(device_);
+        slot.context->destroy(device_);
+        for (auto& initialized : frame_slots_) {
+          initialized.postamble->destroy(device_);
+          initialized.preamble->destroy(device_);
+          initialized.context->destroy(device_);
+        }
+        frame_slots_.clear();
+        memory_allocator_.reset();
+        device_.reset();
+        instance_.reset();
+        return postamble_result;
+      }
       frame_slots_.push_back(std::move(slot));
     }
   } catch (...) {
     for (auto& slot : frame_slots_) {
+      slot.postamble->destroy(device_);
       slot.preamble->destroy(device_);
       slot.context->destroy(device_);
     }
@@ -534,6 +553,8 @@ granit_result renderer_state::submit_command_recorder(vulkan_command_recorder& r
     return GRANIT_ERROR_INVALID_ARGUMENT;
   }
   auto& slot = frame_slots_[next_frame_slot_];
+  if (slot.acquired || slot.awaiting_present)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
   auto result = complete_frame_slot(slot);
   if (result != GRANIT_SUCCESS) {
     return result;
@@ -620,6 +641,183 @@ granit_result renderer_state::submit_command_recorder(vulkan_command_recorder& r
   slot.serial = serial;
   next_frame_slot_ = (next_frame_slot_ + 1) % frame_slots_.size();
   return GRANIT_SUCCESS;
+}
+
+granit_result renderer_state::acquire_swapchain_frame(vulkan_swapchain& swapchain,
+                                                      std::uint32_t& image_index,
+                                                      std::size_t& slot_index,
+                                                      bool& needs_recreate) {
+  std::lock_guard lock{queue_mutex_};
+  auto& slot = frame_slots_[next_frame_slot_];
+  if (slot.acquired || slot.awaiting_present)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  const auto complete_result = complete_frame_slot(slot);
+  if (complete_result != GRANIT_SUCCESS)
+    return complete_result;
+  const auto acquired = swapchain.acquire(device_, slot.context->image_available());
+  if (acquired.result != GRANIT_SUCCESS)
+    return acquired.result;
+  slot.acquired = true;
+  image_index = acquired.image_index;
+  slot_index = next_frame_slot_;
+  needs_recreate = acquired.suboptimal;
+  return GRANIT_SUCCESS;
+}
+
+granit_result renderer_state::submit_swapchain_frame(vulkan_command_recorder& recorder,
+                                                     vulkan_swapchain& swapchain,
+                                                     std::uint32_t image_index,
+                                                     std::size_t slot_index) {
+  std::lock_guard lock{queue_mutex_};
+  if (slot_index >= frame_slots_.size() || image_index >= swapchain.images().size() ||
+      recorder.state() != command_recorder_state::executable)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  auto& slot = frame_slots_[slot_index];
+  if (!slot.acquired || slot.awaiting_present || slot_index != next_frame_slot_)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  const auto image = swapchain.images()[image_index];
+  const auto final =
+      std::find_if(recorder.final_image_accesses().begin(), recorder.final_image_accesses().end(),
+                   [&](const auto& access) { return access.image == image; });
+  if (final == recorder.final_image_accesses().end())
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+
+  std::vector<VkImageMemoryBarrier2> initial_barriers;
+  initial_barriers.reserve(recorder.initial_image_accesses().size());
+  image_states_.reserve(image_states_.size() + recorder.final_image_accesses().size());
+  for (const auto& destination : recorder.initial_image_accesses()) {
+    const auto previous =
+        std::find_if(image_states_.begin(), image_states_.end(),
+                     [&](const auto& state) { return state.image == destination.image; });
+    if (previous == image_states_.end() && destination.preserve_content)
+      return GRANIT_ERROR_INVALID_ARGUMENT;
+    VkImageMemoryBarrier2 barrier{};
+    barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
+    barrier.srcStageMask =
+        previous == image_states_.end() ? VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT : previous->stages;
+    barrier.srcAccessMask = previous == image_states_.end() ? 0 : previous->access;
+    barrier.dstStageMask = destination.stages;
+    barrier.dstAccessMask = destination.access;
+    barrier.oldLayout =
+        previous == image_states_.end() ? VK_IMAGE_LAYOUT_UNDEFINED : previous->layout;
+    barrier.newLayout = destination.layout;
+    barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    barrier.image = destination.image;
+    barrier.subresourceRange = destination.range;
+    initial_barriers.push_back(barrier);
+  }
+  auto result = slot.preamble->state() == command_recorder_state::executable
+                    ? slot.preamble->reset(device_)
+                    : GRANIT_SUCCESS;
+  if (result == GRANIT_SUCCESS)
+    result = slot.preamble->begin(device_);
+  if (result == GRANIT_SUCCESS)
+    result = slot.preamble->record_image_barriers(device_, initial_barriers);
+  if (result == GRANIT_SUCCESS)
+    result = slot.preamble->end(device_);
+  if (result != GRANIT_SUCCESS)
+    return result;
+
+  if (slot.postamble->state() == command_recorder_state::executable)
+    result = slot.postamble->reset(device_);
+  if (result == GRANIT_SUCCESS)
+    result = slot.postamble->begin(device_);
+  VkImageMemoryBarrier2 present_barrier{};
+  present_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
+  present_barrier.srcStageMask = final->stages;
+  present_barrier.srcAccessMask = final->access;
+  present_barrier.dstStageMask = VK_PIPELINE_STAGE_2_NONE;
+  present_barrier.dstAccessMask = 0;
+  present_barrier.oldLayout = final->layout;
+  present_barrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+  present_barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+  present_barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+  present_barrier.image = image;
+  present_barrier.subresourceRange = final->range;
+  if (result == GRANIT_SUCCESS)
+    result = slot.postamble->record_image_barriers(device_, {&present_barrier, 1});
+  if (result == GRANIT_SUCCESS)
+    result = slot.postamble->end(device_);
+  if (result != GRANIT_SUCCESS)
+    return result;
+
+  const auto serial = submission_serials_.next();
+  if (serial == 0)
+    return GRANIT_ERROR_INTERNAL;
+  result = slot.context->reset_fence(device_);
+  if (result != GRANIT_SUCCESS)
+    return result;
+  std::array<VkCommandBufferSubmitInfo, 3> commands{};
+  const VkCommandBuffer buffers[]{slot.preamble->native_handle(), recorder.native_handle(),
+                                  slot.postamble->native_handle()};
+  for (std::size_t index = 0; index < commands.size(); ++index) {
+    commands[index].sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO;
+    commands[index].commandBuffer = buffers[index];
+  }
+  VkSemaphoreSubmitInfo wait{};
+  wait.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
+  wait.semaphore = slot.context->image_available();
+  wait.stageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
+  VkSemaphoreSubmitInfo signal{};
+  signal.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
+  signal.semaphore = slot.context->render_finished();
+  signal.stageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
+  VkSubmitInfo2 submit{};
+  submit.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2;
+  submit.waitSemaphoreInfoCount = 1;
+  submit.pWaitSemaphoreInfos = &wait;
+  submit.commandBufferInfoCount = static_cast<std::uint32_t>(commands.size());
+  submit.pCommandBufferInfos = commands.data();
+  submit.signalSemaphoreInfoCount = 1;
+  submit.pSignalSemaphoreInfos = &signal;
+  const auto queue_result = device_.functions().vkQueueSubmit2(device_.graphics_queue(), 1, &submit,
+                                                               slot.context->completion_fence());
+  if (queue_result != VK_SUCCESS) {
+    static_cast<void>(slot.context->restore_signaled_fence(device_));
+    return map_vulkan_result(queue_result);
+  }
+  static_cast<void>(recorder.mark_pending());
+  static_cast<void>(submission_serials_.commit(serial));
+  for (const auto& access : recorder.final_image_accesses()) {
+    const auto state =
+        std::find_if(image_states_.begin(), image_states_.end(),
+                     [&](const auto& current) { return current.image == access.image; });
+    if (state == image_states_.end())
+      image_states_.push_back(access);
+    else
+      *state = access;
+  }
+  auto present_state = *final;
+  present_state.layout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+  present_state.stages = VK_PIPELINE_STAGE_2_NONE;
+  present_state.access = 0;
+  const auto state = std::find_if(image_states_.begin(), image_states_.end(),
+                                  [&](const auto& current) { return current.image == image; });
+  *state = present_state;
+  slot.recorder = &recorder;
+  slot.serial = serial;
+  slot.acquired = false;
+  slot.awaiting_present = true;
+  next_frame_slot_ = (next_frame_slot_ + 1) % frame_slots_.size();
+  return GRANIT_SUCCESS;
+}
+
+granit_result renderer_state::present_swapchain_frame(vulkan_swapchain& swapchain,
+                                                      std::uint32_t image_index,
+                                                      std::size_t slot_index,
+                                                      bool& needs_recreate) {
+  std::lock_guard lock{queue_mutex_};
+  if (slot_index >= frame_slots_.size())
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  auto& slot = frame_slots_[slot_index];
+  if (!slot.awaiting_present)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  const auto presented = swapchain.present(device_, device_.graphics_queue(), image_index,
+                                           slot.context->render_finished());
+  slot.awaiting_present = false;
+  needs_recreate = presented.suboptimal || presented.result == GRANIT_ERROR_OUT_OF_DATE;
+  return presented.result;
 }
 
 granit_result renderer_state::wait_command_recorder(vulkan_command_recorder& recorder) noexcept {
