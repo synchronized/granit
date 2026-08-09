@@ -12,6 +12,7 @@
 #include <vector>
 
 #include <granit/buffer.h>
+#include <granit/command_recorder.h>
 #include <granit/renderer.h>
 #include <granit/sampler.h>
 #include <granit/surface.h>
@@ -73,11 +74,22 @@ public:
                                              const granit_sampler_desc& desc,
                                              granit_sampler& sampler);
   [[nodiscard]] granit_result destroy_sampler(granit_renderer renderer, granit_sampler sampler);
+  [[nodiscard]] granit_result create_command_recorder(granit_renderer renderer,
+                                                      granit_command_recorder& recorder);
+  [[nodiscard]] granit_result begin_command_recorder(granit_renderer renderer,
+                                                     granit_command_recorder recorder);
+  [[nodiscard]] granit_result end_command_recorder(granit_renderer renderer,
+                                                   granit_command_recorder recorder);
+  [[nodiscard]] granit_result reset_command_recorder(granit_renderer renderer,
+                                                     granit_command_recorder recorder);
+  [[nodiscard]] granit_result destroy_command_recorder(granit_renderer renderer,
+                                                       granit_command_recorder recorder);
 
 private:
   renderer_registry() = default;
 
   struct swapchain_record;
+  struct command_recorder_record;
 
   struct resource_metadata {
     std::uint64_t creation_sequence{};
@@ -87,6 +99,8 @@ private:
   [[nodiscard]] granit_result
   install_swapchain_backbuffers(granit_swapchain swapchain,
                                 const std::shared_ptr<swapchain_record>& record);
+  [[nodiscard]] std::shared_ptr<command_recorder_record>
+  acquire_command_recorder(granit_renderer renderer, granit_command_recorder recorder);
 
   std::mutex mutex_;
   handle_table handles_;
@@ -140,12 +154,21 @@ private:
     VkSampler native{VK_NULL_HANDLE};
     ~sampler_record();
   };
+  struct command_recorder_record {
+    resource_metadata metadata;
+    std::shared_ptr<renderer_state> renderer;
+    vulkan_command_recorder native;
+    std::mutex mutex;
+    ~command_recorder_record();
+  };
   std::unordered_map<granit_surface, std::shared_ptr<surface_record>> surfaces_;
   std::unordered_map<granit_swapchain, std::shared_ptr<swapchain_record>> swapchains_;
   std::unordered_map<granit_buffer, std::shared_ptr<buffer_record>> buffers_;
   std::unordered_map<granit_texture, std::shared_ptr<texture_record>> textures_;
   std::unordered_map<granit_texture_view, std::shared_ptr<texture_view_record>> texture_views_;
   std::unordered_map<granit_sampler, std::shared_ptr<sampler_record>> samplers_;
+  std::unordered_map<granit_command_recorder, std::shared_ptr<command_recorder_record>>
+      command_recorders_;
   std::uint32_t next_domain_{1};
   std::uint64_t next_creation_sequence_{1};
 };

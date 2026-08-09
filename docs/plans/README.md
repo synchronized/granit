@@ -40,6 +40,7 @@ D-03-graphics-pipeline.md
 - [V-01：资源生命周期验证与诊断](V-01-lifetime-validation.md)——已完成。
 - [R-08：GPU 资源延迟销毁基础](R-08-deferred-destruction.md)——R-08A 已完成，等待帧同步接入。
 - [R-09：统一 Render Target Attachment](R-09-render-target-attachment.md)——已完成。
+- [F-01：Command Recorder 基础](F-01-command-recorder.md)——已完成。
 
 ## 状态
 

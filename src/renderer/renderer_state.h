@@ -12,6 +12,7 @@
 #include <granit/resource_types.h>
 #include <granit/result.h>
 
+#include "backend/vulkan/command_recorder.h"
 #include "backend/vulkan/device.h"
 #include "backend/vulkan/instance.h"
 #include "backend/vulkan/memory_allocator.h"
@@ -64,6 +65,12 @@ public:
   [[nodiscard]] granit_result create_native_sampler(const granit_sampler_desc& desc,
                                                     VkSampler& sampler) noexcept;
   void destroy_native_sampler(VkSampler sampler) noexcept;
+  [[nodiscard]] granit_result
+  create_native_command_recorder(vulkan_command_recorder& recorder) noexcept;
+  [[nodiscard]] granit_result begin_command_recorder(vulkan_command_recorder& recorder) noexcept;
+  [[nodiscard]] granit_result end_command_recorder(vulkan_command_recorder& recorder) noexcept;
+  [[nodiscard]] granit_result reset_command_recorder(vulkan_command_recorder& recorder) noexcept;
+  void destroy_native_command_recorder(vulkan_command_recorder& recorder) noexcept;
 
   void set_domain(std::uint32_t domain) noexcept { domain_ = domain; }
   [[nodiscard]] std::uint32_t domain() const noexcept { return domain_; }

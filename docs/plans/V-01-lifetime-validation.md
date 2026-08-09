@@ -93,6 +93,7 @@ Device Lost 或 C++ 析构期间制造真正的泄漏。
 - Sampler。
 - Surface。
 - Swapchain。
+- Command Recorder。
 
 以下对象不作为用户泄漏单独报告：
 

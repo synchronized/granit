@@ -10,6 +10,7 @@ add_test(NAME granit.c_version COMMAND granit_c_version_test)
 add_library(
   granit_c_header_test
   OBJECT
+    headers/command_recorder_h.c
     headers/buffer_h.c
     headers/renderer_h.c
     headers/render_target_h.c
@@ -93,6 +94,7 @@ add_test(NAME granit.retirement_queue COMMAND granit_retirement_queue_test)
 
 add_executable(
   granit_renderer_test
+  renderer/command_recorder_test.cpp
   renderer/buffer_test.cpp
   renderer/renderer_test.cpp
   renderer/sampler_test.cpp
@@ -156,6 +158,7 @@ add_test(NAME granit.vulkan_backend COMMAND granit_vulkan_backend_test)
 add_library(
   granit_cpp_header_test
   OBJECT
+    headers/command_recorder_hpp.cpp
     headers/buffer_hpp.cpp
     headers/renderer_hpp.cpp
     headers/render_target_hpp.cpp

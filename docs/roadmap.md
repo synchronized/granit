@@ -121,7 +121,8 @@
 
 ### 目标与交付物
 
-- **F-01 / P0**：实现 Command Pool 和线程局部 Command Recorder。
+- **[F-01](plans/F-01-command-recorder.md) / P0 / 已完成**：实现独占 Command Pool 和可跨线程
+  移交的 Command Recorder。
 - **F-02 / P0**：定义复制、资源屏障、开始/结束渲染和基础清理命令。
 - **F-03 / P0**：实现 Fence、Semaphore 及每帧上下文的内部抽象。
 - **F-04 / P0**：实现可配置 frames-in-flight 和 Queue 提交串行化。
@@ -231,7 +232,7 @@
 
 ## 近期执行顺序
 
-1. `F-01` 至 `F-07`：建立命令、同步和完整窗口帧循环。
+1. `F-02` 至 `F-07`：建立渲染命令、同步和完整窗口帧循环。
 2. `D-01` 至 `D-06`：完成 Shader、Pipeline、离屏清屏和最小三角形。
 
 若实现过程中发现前置抽象不足，应先更新本路线图和对应设计文档，再扩大公共 API。

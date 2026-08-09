@@ -398,4 +398,25 @@ void renderer_state::destroy_native_sampler(VkSampler sampler) noexcept {
   }
 }
 
+granit_result
+renderer_state::create_native_command_recorder(vulkan_command_recorder& recorder) noexcept {
+  return recorder.initialize(device_);
+}
+
+granit_result renderer_state::begin_command_recorder(vulkan_command_recorder& recorder) noexcept {
+  return recorder.begin(device_);
+}
+
+granit_result renderer_state::end_command_recorder(vulkan_command_recorder& recorder) noexcept {
+  return recorder.end(device_);
+}
+
+granit_result renderer_state::reset_command_recorder(vulkan_command_recorder& recorder) noexcept {
+  return recorder.reset(device_);
+}
+
+void renderer_state::destroy_native_command_recorder(vulkan_command_recorder& recorder) noexcept {
+  recorder.destroy(device_);
+}
+
 } // namespace granit::detail

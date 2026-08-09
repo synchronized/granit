@@ -1,0 +1,49 @@
+<!-- SPDX-License-Identifier: MIT -->
+<!-- Copyright (c) 2026 Granit contributors -->
+
+# Command Recorder
+
+Command Recorder 是 Granit 的显式命令录制上下文。它使用整数句柄隔离 Vulkan Command Pool 和
+Command Buffer，允许不同 Recorder 在不同线程并行录制。
+
+## C API
+
+```c
+granit_command_recorder_desc desc = GRANIT_COMMAND_RECORDER_DESC_INIT;
+granit_command_recorder recorder = GRANIT_NULL_HANDLE;
+
+granit_command_recorder_create(renderer, &desc, &recorder);
+granit_command_recorder_begin(renderer, recorder);
+/* F-02 将在这里加入渲染、复制和屏障命令。 */
+granit_command_recorder_end(renderer, recorder);
+granit_command_recorder_reset(renderer, recorder);
+granit_command_recorder_destroy(renderer, recorder);
+```
+
+当前尚未提供 Queue 提交，因此 executable Recorder 可以直接 reset。F-04 加入提交后，pending
+Recorder 必须等待 GPU 完成才能 reset。
+
+## C++20
+
+```cpp
+granit::command_recorder recorder;
+if (recorder.initialize(renderer.native_handle()) == granit::result::success) {
+  recorder.begin();
+  recorder.end();
+  recorder.reset();
+}
+```
+
+包装类型无异常、不可复制且可以移动。`reset()` 重置录制状态，`destroy()` 销毁 Recorder 句柄。
+
+## 状态与线程
+
+- create 后处于 initial。
+- begin 进入 recording。
+- end 进入 executable。
+- reset 回到 initial。
+- 单个 Recorder 不能并发调用，但可以在无并发时移交线程。
+- 不同 Recorder 可以并行录制。
+- 状态错误返回 `GRANIT_ERROR_INVALID_ARGUMENT`。
+
+详细约束见 [F-01 计划](plans/F-01-command-recorder.md)。

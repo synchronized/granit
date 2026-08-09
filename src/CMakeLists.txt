@@ -21,6 +21,8 @@ target_sources(
     $<TARGET_OBJECTS:granit_volk>
     backend/vulkan/device.cpp
     backend/vulkan/device.h
+    backend/vulkan/command_recorder.cpp
+    backend/vulkan/command_recorder.h
     backend/vulkan/instance.cpp
     backend/vulkan/instance.h
     backend/vulkan/loader.cpp
@@ -47,6 +49,7 @@ target_sources(
     core/retirement_queue.h
     renderer/renderer_api.cpp
     renderer/buffer_api.cpp
+    renderer/command_recorder_api.cpp
     renderer/renderer_registry.cpp
     renderer/renderer_registry.h
     renderer/renderer_state.cpp
@@ -66,6 +69,8 @@ target_sources(
       "${PROJECT_SOURCE_DIR}/include/granit/export.h"
       "${PROJECT_SOURCE_DIR}/include/granit/buffer.h"
       "${PROJECT_SOURCE_DIR}/include/granit/buffer.hpp"
+      "${PROJECT_SOURCE_DIR}/include/granit/command_recorder.h"
+      "${PROJECT_SOURCE_DIR}/include/granit/command_recorder.hpp"
       "${PROJECT_SOURCE_DIR}/include/granit/granit.h"
       "${PROJECT_SOURCE_DIR}/include/granit/granit.hpp"
       "${PROJECT_SOURCE_DIR}/include/granit/renderer.h"

@@ -19,6 +19,7 @@ enum class lifecycle_resource_type : std::uint8_t {
   sampler,
   surface,
   swapchain,
+  command_recorder,
   count,
 };
 

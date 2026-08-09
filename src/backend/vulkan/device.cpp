@@ -96,6 +96,10 @@ granit_result vulkan_device::initialize(const vulkan_instance& instance,
   graphics_queue_family_ = selected.graphics_queue_family;
   volk::volkLoadDeviceTable(&functions_, device_);
   if (functions_.vkGetDeviceQueue == nullptr || functions_.vkDestroyDevice == nullptr ||
+      functions_.vkCreateCommandPool == nullptr || functions_.vkDestroyCommandPool == nullptr ||
+      functions_.vkAllocateCommandBuffers == nullptr ||
+      functions_.vkBeginCommandBuffer == nullptr || functions_.vkEndCommandBuffer == nullptr ||
+      functions_.vkResetCommandPool == nullptr ||
       (surface_types != 0 &&
        (functions_.vkCreateSwapchainKHR == nullptr || functions_.vkDestroySwapchainKHR == nullptr ||
         functions_.vkGetSwapchainImagesKHR == nullptr))) {

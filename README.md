@@ -45,12 +45,13 @@ Granit 不是 Vulkan API 的逐项重命名或薄包装。项目希望围绕实�
 - `granit_renderer` C API 与无异常、move-only 的 C++20 RAII 包装。
 - Win32 Surface C API 与 RAII 包装，支持按需启用平台 Instance 扩展。
 - Swapchain 创建、查询、重建和级联生命周期管理。
+- Command Recorder 创建、空命令录制、重置和级联生命周期管理。
 - Unity 纯 C API 测试与 Catch2 3 C++ 测试，可复用父项目目标并回退到仓库内置版本。
 - CMake 配置、构建、安装和包导出入口。
 - 代码格式、静态检查和仓库忽略规则。
 
-GPU 内存分配、Buffer 同步上传以及基础 Texture、Texture View、Sampler 生命周期已经实现。
-下一阶段将统一 Swapchain Backbuffer 与离屏附件。Command Recorder、帧同步、
+GPU 内存分配、Buffer 同步上传、Texture、Texture View、Sampler、统一 Attachment 值类型和
+Command Recorder 基础已经实现。下一阶段将增加复制、资源屏障和开始/结束渲染命令；帧同步、
 Swapchain acquire/present 和 Pipeline 尚未实现，具体顺序及验收标准见
 [docs/roadmap.md](docs/roadmap.md)。
 
@@ -135,8 +136,10 @@ if (granit::failed(result)) {
 - [docs/plans/V-01-lifetime-validation.md](docs/plans/V-01-lifetime-validation.md)：生命周期验证计划。
 - [docs/plans/R-08-deferred-destruction.md](docs/plans/R-08-deferred-destruction.md)：延迟销毁计划。
 - [docs/plans/R-09-render-target-attachment.md](docs/plans/R-09-render-target-attachment.md)：渲染附件计划。
+- [docs/plans/F-01-command-recorder.md](docs/plans/F-01-command-recorder.md)：命令录制器计划。
 - [docs/renderer.md](docs/renderer.md)：公共 renderer C/C++ API 与生命周期。
 - [docs/render-target.md](docs/render-target.md)：颜色与深度/模板 Attachment 值类型。
+- [docs/command-recorder.md](docs/command-recorder.md)：Command Recorder 状态与线程模型。
 - [docs/resource-types.md](docs/resource-types.md)：Buffer、Texture、View 和 Sampler 值类型。
 - [docs/sampler.md](docs/sampler.md)：Sampler 状态、能力限制和生命周期。
 - [docs/surface.md](docs/surface.md)：窗口 Surface、平台句柄和生命周期。
