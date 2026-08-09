@@ -50,8 +50,8 @@ D-03-graphics-pipeline.md
   提交顺序解析已完成。
 - [F-06：Swapchain 帧循环](F-06-swapchain-frame-loop.md)——Frame 令牌、acquire、Semaphore 提交链
   与 present 已完成。
-- [F-07：窗口帧恢复边界](F-07-recovery-boundaries.md)——Frame 回收、零尺寸及 WSI 终止状态
-  已完成，Renderer 全局 Device Lost 门禁和诊断待继续实现。
+- [F-07：窗口帧恢复边界](F-07-recovery-boundaries.md)——Frame 回收、零尺寸、Surface Lost 与
+  Renderer 全局 Device Lost 门禁已完成。
 
 ## 状态
 

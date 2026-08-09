@@ -4,7 +4,6 @@
 #ifndef GRANIT_RENDERER_RENDERER_STATE_H_
 #define GRANIT_RENDERER_RENDERER_STATE_H_
 
-#include <atomic>
 #include <cstdint>
 #include <memory>
 #include <mutex>
@@ -21,6 +20,7 @@
 #include "backend/vulkan/instance.h"
 #include "backend/vulkan/memory_allocator.h"
 #include "backend/vulkan/swapchain.h"
+#include "core/device_status.h"
 #include "core/retirement_queue.h"
 
 namespace granit::detail {
@@ -112,7 +112,9 @@ public:
   void set_domain(std::uint32_t domain) noexcept { domain_ = domain; }
   [[nodiscard]] std::uint32_t domain() const noexcept { return domain_; }
   [[nodiscard]] bool validation_enabled() const noexcept { return validation_enabled_; }
-  [[nodiscard]] bool device_lost() const noexcept { return device_lost_.load(); }
+  [[nodiscard]] bool device_lost() const noexcept {
+    return device_status_.gate() == GRANIT_ERROR_DEVICE_LOST;
+  }
   [[nodiscard]] const vulkan_instance& instance() const noexcept { return instance_; }
   [[nodiscard]] const vulkan_device& device() const noexcept { return device_; }
 
@@ -133,7 +135,7 @@ private:
   std::uint32_t domain_{};
   std::uint32_t surface_types_{};
   bool validation_enabled_{};
-  std::atomic_bool device_lost_{};
+  device_status device_status_;
   std::mutex resource_mutex_;
   std::mutex queue_mutex_;
   vulkan_instance instance_;

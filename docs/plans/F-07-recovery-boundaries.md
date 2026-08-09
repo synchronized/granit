@@ -6,7 +6,7 @@
 ## 元数据
 
 - 设计状态：已确认
-- 实现状态：F-07A/F-07B/F-07C-A 已完成，F-07C-B 待开始
+- 实现状态：已完成
 - 路线图任务：F-07
 - 优先级：P0
 - 前置依赖：F-06
@@ -53,11 +53,12 @@ C++ `acquired_frame` 保存 Renderer 与 Swapchain 身份，并提供以下作�
 - present/cancel 即使返回 SURFACE_LOST 或 DEVICE_LOST 也会消费 Frame 令牌，避免终止路径遗留
   活动 Frame 阻止清理。
 
-### F-07C-B：Renderer 全局终止与诊断（待开始）
+### F-07C-B：Renderer 全局终止（已完成）
 
-- 把 DEVICE_LOST 门禁扩展到 Buffer、Texture、Sampler、Recorder 和离屏提交等全部 GPU 操作。
-- 增加统一诊断回调，区分可重建的窗口状态与必须重建 Renderer 的设备故障。
+- DEVICE_LOST 门禁覆盖 Buffer、Texture、Sampler、Recorder、离屏提交和等待等 GPU 操作。
+- 内部粘滞状态组件允许独立注入结果并验证终止语义，不依赖真实驱动故障。
 - 第一版不在原 Renderer 内重建设备；调用者销毁并重新创建 Renderer 及其全部资源。
+- 日志与诊断回调归入 S-02，不阻塞本任务完成。
 
 ## 验收标准
 
@@ -86,3 +87,11 @@ C++ `acquired_frame` 保存 Renderer 与 Swapchain 身份，并提供以下作�
 - Renderer 记录粘滞的 Device Lost 状态，并为 WSI 路径提供统一结果观察入口。
 - Swapchain Registry 记录粘滞的 Surface Lost 状态，拒绝继续获取旧 backbuffer 或尝试原地重建。
 - 销毁和基础信息查询不受终止状态阻止，调用者仍能诊断并按依赖顺序清理对象。
+
+## F-07C-B 实际结果
+
+- 新增线程安全的内部 `device_status`，首次观察到 DEVICE_LOST 后永久关闭该 Renderer 的 GPU
+  操作入口。
+- 资源创建与映射同步、Recorder 录制、离屏/窗口提交以及 Fence 等待统一经过门禁和结果观察。
+- 资源销毁不受门禁阻止，Device Lost 后仍可按所有权关系释放 CPU 记录并尽力清理 Vulkan 对象。
+- 独立测试覆盖正常结果不改变状态、DEVICE_LOST 触发终止以及后续成功结果不能恢复状态。

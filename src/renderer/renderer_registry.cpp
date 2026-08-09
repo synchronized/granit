@@ -1651,7 +1651,7 @@ granit_result renderer_registry::destroy_command_recorder(granit_renderer render
   {
     std::lock_guard record_lock{record->mutex};
     const auto wait_result = record->renderer->wait_command_recorder(record->native);
-    if (wait_result != GRANIT_SUCCESS) {
+    if (wait_result != GRANIT_SUCCESS && wait_result != GRANIT_ERROR_DEVICE_LOST) {
       return wait_result;
     }
   }

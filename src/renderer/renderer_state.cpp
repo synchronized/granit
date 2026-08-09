@@ -221,11 +221,14 @@ granit_result renderer_state::initialize(std::string_view application_name, bool
 
 granit_result renderer_state::create_win32_surface(void* native_instance, void* native_window,
                                                    VkSurfaceKHR& surface) noexcept {
+  if (device_lost())
+    return GRANIT_ERROR_DEVICE_LOST;
   std::lock_guard lock{resource_mutex_};
   if ((surface_types_ & GRANIT_SURFACE_TYPE_WIN32_BIT) == 0) {
     return GRANIT_ERROR_UNSUPPORTED;
   }
-  return detail::create_win32_surface(instance_, device_, native_instance, native_window, surface);
+  return observe_device_result(
+      detail::create_win32_surface(instance_, device_, native_instance, native_window, surface));
 }
 
 void renderer_state::destroy_native_surface(VkSurfaceKHR surface) noexcept {
@@ -276,6 +279,8 @@ void renderer_state::destroy_native_swapchain(vulkan_swapchain& swapchain) noexc
 
 granit_result renderer_state::create_native_buffer(const granit_buffer_desc& desc,
                                                    vulkan_buffer_allocation& buffer) noexcept {
+  if (device_lost())
+    return GRANIT_ERROR_DEVICE_LOST;
   VkBufferCreateInfo create_info{};
   create_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
   create_info.size = desc.size;
@@ -285,8 +290,8 @@ granit_result renderer_state::create_native_buffer(const granit_buffer_desc& des
     create_info.usage |= VK_BUFFER_USAGE_TRANSFER_DST_BIT;
   }
   create_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-  return memory_allocator_.create_buffer(create_info, map_memory_location(desc.memory_location),
-                                         buffer);
+  return observe_device_result(memory_allocator_.create_buffer(
+      create_info, map_memory_location(desc.memory_location), buffer));
 }
 
 void renderer_state::destroy_native_buffer(vulkan_buffer_allocation& buffer) noexcept {
@@ -295,17 +300,23 @@ void renderer_state::destroy_native_buffer(vulkan_buffer_allocation& buffer) noe
 
 granit_result renderer_state::flush_buffer(const vulkan_buffer_allocation& buffer,
                                            VkDeviceSize offset, VkDeviceSize size) noexcept {
-  return memory_allocator_.flush(buffer, offset, size);
+  if (device_lost())
+    return GRANIT_ERROR_DEVICE_LOST;
+  return observe_device_result(memory_allocator_.flush(buffer, offset, size));
 }
 
 granit_result renderer_state::invalidate_buffer(const vulkan_buffer_allocation& buffer,
                                                 VkDeviceSize offset, VkDeviceSize size) noexcept {
-  return memory_allocator_.invalidate(buffer, offset, size);
+  if (device_lost())
+    return GRANIT_ERROR_DEVICE_LOST;
+  return observe_device_result(memory_allocator_.invalidate(buffer, offset, size));
 }
 
 granit_result renderer_state::upload_buffer(const vulkan_buffer_allocation& buffer,
                                             VkDeviceSize offset, const void* data,
                                             VkDeviceSize size) noexcept {
+  if (device_lost())
+    return GRANIT_ERROR_DEVICE_LOST;
   vulkan_buffer_allocation staging;
   VkBufferCreateInfo staging_info{};
   staging_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
@@ -315,13 +326,13 @@ granit_result renderer_state::upload_buffer(const vulkan_buffer_allocation& buff
   auto result =
       memory_allocator_.create_buffer(staging_info, vulkan_memory_location::upload, staging);
   if (result != GRANIT_SUCCESS) {
-    return result;
+    return observe_device_result(result);
   }
   std::memcpy(staging.mapped_data, data, static_cast<std::size_t>(size));
   result = memory_allocator_.flush(staging, 0, size);
   if (result != GRANIT_SUCCESS) {
     memory_allocator_.destroy_buffer(staging);
-    return result;
+    return observe_device_result(result);
   }
 
   std::lock_guard queue_lock{queue_mutex_};
@@ -382,11 +393,13 @@ granit_result renderer_state::upload_buffer(const vulkan_buffer_allocation& buff
     functions.vkDestroyCommandPool(device_.native_handle(), pool, nullptr);
   }
   memory_allocator_.destroy_buffer(staging);
-  return map_vulkan_result(vk_result);
+  return observe_device_result(map_vulkan_result(vk_result));
 }
 
 granit_result renderer_state::create_native_texture(const granit_texture_desc& desc,
                                                     vulkan_image_allocation& texture) noexcept {
+  if (device_lost())
+    return GRANIT_ERROR_DEVICE_LOST;
   VkImageCreateInfo info{};
   info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
   info.imageType = VK_IMAGE_TYPE_2D;
@@ -399,7 +412,8 @@ granit_result renderer_state::create_native_texture(const granit_texture_desc& d
   info.usage = map_texture_usage(desc.usage);
   info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
   info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-  return memory_allocator_.create_image(info, map_memory_location(desc.memory_location), texture);
+  return observe_device_result(
+      memory_allocator_.create_image(info, map_memory_location(desc.memory_location), texture));
 }
 
 void renderer_state::destroy_native_texture(vulkan_image_allocation& texture) noexcept {
@@ -414,6 +428,8 @@ granit_result renderer_state::create_native_texture_view(const vulkan_image_allo
                                                          const granit_texture_desc& texture_desc,
                                                          const granit_texture_view_desc& view_desc,
                                                          VkImageView& view) noexcept {
+  if (device_lost())
+    return GRANIT_ERROR_DEVICE_LOST;
   VkImageViewCreateInfo info{};
   info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
   info.image = texture.image;
@@ -427,8 +443,8 @@ granit_result renderer_state::create_native_texture_view(const vulkan_image_allo
   info.subresourceRange.levelCount = view_desc.range.mip_level_count;
   info.subresourceRange.baseArrayLayer = view_desc.range.base_array_layer;
   info.subresourceRange.layerCount = view_desc.range.array_layer_count;
-  return map_vulkan_result(
-      device_.functions().vkCreateImageView(device_.native_handle(), &info, nullptr, &view));
+  return observe_device_result(map_vulkan_result(
+      device_.functions().vkCreateImageView(device_.native_handle(), &info, nullptr, &view)));
 }
 
 void renderer_state::destroy_native_texture_view(VkImageView view) noexcept {
@@ -439,6 +455,8 @@ void renderer_state::destroy_native_texture_view(VkImageView view) noexcept {
 
 granit_result renderer_state::create_native_sampler(const granit_sampler_desc& desc,
                                                     VkSampler& sampler) noexcept {
+  if (device_lost())
+    return GRANIT_ERROR_DEVICE_LOST;
   if ((desc.anisotropy_enabled != 0 && !device_.sampler_anisotropy_supported()) ||
       desc.max_anisotropy > device_.properties().limits.maxSamplerAnisotropy ||
       std::abs(desc.lod_bias) > device_.properties().limits.maxSamplerLodBias) {
@@ -482,8 +500,8 @@ granit_result renderer_state::create_native_sampler(const granit_sampler_desc& d
   info.compareOp = compare_ops[desc.compare_operation];
   info.minLod = desc.min_lod;
   info.maxLod = desc.max_lod;
-  return map_vulkan_result(
-      device_.functions().vkCreateSampler(device_.native_handle(), &info, nullptr, &sampler));
+  return observe_device_result(map_vulkan_result(
+      device_.functions().vkCreateSampler(device_.native_handle(), &info, nullptr, &sampler)));
 }
 
 void renderer_state::destroy_native_sampler(VkSampler sampler) noexcept {
@@ -494,31 +512,43 @@ void renderer_state::destroy_native_sampler(VkSampler sampler) noexcept {
 
 granit_result
 renderer_state::create_native_command_recorder(vulkan_command_recorder& recorder) noexcept {
-  return recorder.initialize(device_);
+  if (device_lost())
+    return GRANIT_ERROR_DEVICE_LOST;
+  return observe_device_result(recorder.initialize(device_));
 }
 
 granit_result renderer_state::begin_command_recorder(vulkan_command_recorder& recorder) noexcept {
-  return recorder.begin(device_);
+  if (device_lost())
+    return GRANIT_ERROR_DEVICE_LOST;
+  return observe_device_result(recorder.begin(device_));
 }
 
 granit_result renderer_state::end_command_recorder(vulkan_command_recorder& recorder) noexcept {
-  return recorder.end(device_);
+  if (device_lost())
+    return GRANIT_ERROR_DEVICE_LOST;
+  return observe_device_result(recorder.end(device_));
 }
 
 granit_result renderer_state::reset_command_recorder(vulkan_command_recorder& recorder) noexcept {
-  return recorder.reset(device_);
+  if (device_lost())
+    return GRANIT_ERROR_DEVICE_LOST;
+  return observe_device_result(recorder.reset(device_));
 }
 
 granit_result renderer_state::copy_buffer(vulkan_command_recorder& recorder, VkBuffer source,
                                           VkBuffer destination,
                                           std::span<const VkBufferCopy> regions) {
-  return recorder.copy_buffer(device_, source, destination, regions);
+  if (device_lost())
+    return GRANIT_ERROR_DEVICE_LOST;
+  return observe_device_result(recorder.copy_buffer(device_, source, destination, regions));
 }
 
 granit_result renderer_state::fill_buffer(vulkan_command_recorder& recorder, VkBuffer buffer,
                                           VkDeviceSize offset, VkDeviceSize size,
                                           std::uint32_t value) {
-  return recorder.fill_buffer(device_, buffer, offset, size, value);
+  if (device_lost())
+    return GRANIT_ERROR_DEVICE_LOST;
+  return observe_device_result(recorder.fill_buffer(device_, buffer, offset, size, value));
 }
 
 granit_result
@@ -528,12 +558,17 @@ renderer_state::begin_rendering(vulkan_command_recorder& recorder, VkRect2D area
                                 const VkRenderingAttachmentInfo* stencil_attachment,
                                 std::uint32_t layer_count,
                                 std::span<const vulkan_image_access> image_accesses) {
-  return recorder.begin_rendering(device_, area, color_attachments, depth_attachment,
-                                  stencil_attachment, layer_count, image_accesses);
+  if (device_lost())
+    return GRANIT_ERROR_DEVICE_LOST;
+  return observe_device_result(recorder.begin_rendering(device_, area, color_attachments,
+                                                        depth_attachment, stencil_attachment,
+                                                        layer_count, image_accesses));
 }
 
 granit_result renderer_state::end_rendering(vulkan_command_recorder& recorder) noexcept {
-  return recorder.end_rendering(device_);
+  if (device_lost())
+    return GRANIT_ERROR_DEVICE_LOST;
+  return observe_device_result(recorder.end_rendering(device_));
 }
 
 granit_result renderer_state::complete_frame_slot(frame_slot& slot) noexcept {
@@ -542,7 +577,7 @@ granit_result renderer_state::complete_frame_slot(frame_slot& slot) noexcept {
   }
   const auto result = slot.context->wait(device_, UINT64_MAX);
   if (result != GRANIT_SUCCESS) {
-    return result;
+    return observe_device_result(result);
   }
   if (slot.recorder != nullptr)
     slot.recorder->mark_complete();
@@ -553,6 +588,8 @@ granit_result renderer_state::complete_frame_slot(frame_slot& slot) noexcept {
 }
 
 granit_result renderer_state::submit_command_recorder(vulkan_command_recorder& recorder) {
+  if (device_lost())
+    return GRANIT_ERROR_DEVICE_LOST;
   std::lock_guard lock{queue_mutex_};
   if (recorder.state() != command_recorder_state::executable || frame_slots_.empty()) {
     return GRANIT_ERROR_INVALID_ARGUMENT;
@@ -599,7 +636,7 @@ granit_result renderer_state::submit_command_recorder(vulkan_command_recorder& r
     if (slot.preamble->state() == command_recorder_state::executable) {
       result = slot.preamble->reset(device_);
       if (result != GRANIT_SUCCESS)
-        return result;
+        return observe_device_result(result);
     }
     result = slot.preamble->begin(device_);
     if (result == GRANIT_SUCCESS)
@@ -607,11 +644,11 @@ granit_result renderer_state::submit_command_recorder(vulkan_command_recorder& r
     if (result == GRANIT_SUCCESS)
       result = slot.preamble->end(device_);
     if (result != GRANIT_SUCCESS)
-      return result;
+      return observe_device_result(result);
   }
   result = slot.context->reset_fence(device_);
   if (result != GRANIT_SUCCESS) {
-    return result;
+    return observe_device_result(result);
   }
   std::array<VkCommandBufferSubmitInfo, 2> command_infos{};
   std::uint32_t command_count{};
@@ -629,7 +666,7 @@ granit_result renderer_state::submit_command_recorder(vulkan_command_recorder& r
       device_.graphics_queue(), 1, &submit_info, slot.context->completion_fence());
   if (submit_result != VK_SUCCESS) {
     static_cast<void>(slot.context->restore_signaled_fence(device_));
-    return map_vulkan_result(submit_result);
+    return observe_device_result(map_vulkan_result(submit_result));
   }
   static_cast<void>(recorder.mark_pending());
   static_cast<void>(submission_serials_.commit(serial));
@@ -726,7 +763,7 @@ granit_result renderer_state::submit_swapchain_frame(vulkan_command_recorder& re
   if (result == GRANIT_SUCCESS)
     result = slot.preamble->end(device_);
   if (result != GRANIT_SUCCESS)
-    return result;
+    return observe_device_result(result);
 
   if (slot.postamble->state() == command_recorder_state::executable)
     result = slot.postamble->reset(device_);
@@ -749,14 +786,14 @@ granit_result renderer_state::submit_swapchain_frame(vulkan_command_recorder& re
   if (result == GRANIT_SUCCESS)
     result = slot.postamble->end(device_);
   if (result != GRANIT_SUCCESS)
-    return result;
+    return observe_device_result(result);
 
   const auto serial = submission_serials_.next();
   if (serial == 0)
     return GRANIT_ERROR_INTERNAL;
   result = slot.context->reset_fence(device_);
   if (result != GRANIT_SUCCESS)
-    return result;
+    return observe_device_result(result);
   std::array<VkCommandBufferSubmitInfo, 3> commands{};
   const VkCommandBuffer buffers[]{slot.preamble->native_handle(), recorder.native_handle(),
                                   slot.postamble->native_handle()};
@@ -873,7 +910,7 @@ granit_result renderer_state::cancel_swapchain_frame(vulkan_swapchain& swapchain
   if (result == GRANIT_SUCCESS)
     result = slot.postamble->end(device_);
   if (result != GRANIT_SUCCESS)
-    return result;
+    return observe_device_result(result);
   const auto serial = submission_serials_.next();
   if (serial == 0)
     return GRANIT_ERROR_INTERNAL;
@@ -926,12 +963,12 @@ granit_result renderer_state::cancel_swapchain_frame(vulkan_swapchain& swapchain
 }
 
 granit_result renderer_state::observe_device_result(granit_result result) noexcept {
-  if (result == GRANIT_ERROR_DEVICE_LOST)
-    device_lost_.store(true);
-  return device_lost() ? GRANIT_ERROR_DEVICE_LOST : result;
+  return device_status_.observe(result);
 }
 
 granit_result renderer_state::wait_command_recorder(vulkan_command_recorder& recorder) noexcept {
+  if (device_lost())
+    return GRANIT_ERROR_DEVICE_LOST;
   std::lock_guard lock{queue_mutex_};
   if (recorder.state() != command_recorder_state::pending) {
     return GRANIT_SUCCESS;

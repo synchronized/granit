@@ -49,6 +49,7 @@ target_sources(
     core/resource_validation.h
     core/retirement_queue.cpp
     core/retirement_queue.h
+    core/device_status.h
     renderer/renderer_api.cpp
     renderer/buffer_api.cpp
     renderer/command_recorder_api.cpp
