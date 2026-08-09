@@ -9,7 +9,7 @@
 View 与 Swapchain Backbuffer View 使用同一套描述，公共接口不暴露 Vulkan Layout 或附件类型。
 
 Command Recorder 已提供 Dynamic Rendering 的 begin/end，并直接复用这些描述。资源 Layout 和
-跨命令屏障将在 F-05 接入。
+颜色及深度/模板 Attachment 的跨命令屏障由 F-05 自动接入，并按实际 Queue 提交顺序解析 Layout。
 
 ## C API 值类型
 

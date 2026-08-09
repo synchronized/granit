@@ -86,10 +86,10 @@ public:
   begin_rendering(vulkan_command_recorder& recorder, VkRect2D area,
                   std::span<const VkRenderingAttachmentInfo> color_attachments,
                   const VkRenderingAttachmentInfo* depth_attachment,
-                  const VkRenderingAttachmentInfo* stencil_attachment,
-                  std::uint32_t layer_count) noexcept;
+                  const VkRenderingAttachmentInfo* stencil_attachment, std::uint32_t layer_count,
+                  std::span<const vulkan_image_access> image_accesses);
   [[nodiscard]] granit_result end_rendering(vulkan_command_recorder& recorder) noexcept;
-  [[nodiscard]] granit_result submit_command_recorder(vulkan_command_recorder& recorder) noexcept;
+  [[nodiscard]] granit_result submit_command_recorder(vulkan_command_recorder& recorder);
   [[nodiscard]] granit_result wait_command_recorder(vulkan_command_recorder& recorder) noexcept;
   [[nodiscard]] granit_result wait_for_all_submissions() noexcept;
   void destroy_native_command_recorder(vulkan_command_recorder& recorder) noexcept;
@@ -103,6 +103,7 @@ public:
 private:
   struct frame_slot {
     std::unique_ptr<vulkan_frame_context> context;
+    std::unique_ptr<vulkan_command_recorder> preamble;
     vulkan_command_recorder* recorder{};
     submission_serial serial{};
   };
@@ -120,6 +121,7 @@ private:
   std::vector<frame_slot> frame_slots_;
   std::size_t next_frame_slot_{};
   submission_serials submission_serials_;
+  std::vector<vulkan_image_access> image_states_;
 };
 
 } // namespace granit::detail

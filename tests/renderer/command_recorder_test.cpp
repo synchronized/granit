@@ -216,7 +216,53 @@ TEST_CASE("Recorder 录制 Dynamic Rendering 作用域", "[command][rendering]")
   CHECK(recorder.end_rendering() == granit::result::invalid_argument);
   REQUIRE(granit_texture_destroy(renderer.native_handle(), texture) == GRANIT_SUCCESS);
   REQUIRE(recorder.end() == granit::result::success);
+  REQUIRE(recorder.submit() == granit::result::success);
   REQUIRE(recorder.reset() == granit::result::success);
+}
+
+TEST_CASE("Texture Layout 按提交顺序解析而非录制顺序", "[command][rendering][layout]") {
+  granit::renderer renderer;
+  const auto result =
+      renderer.initialize({.application_name = "granit-layout-tests", .enable_validation = true});
+  if (result == granit::result::unsupported)
+    SKIP("当前运行环境没有 Khronos validation layer");
+  if (environment_unavailable(result))
+    SKIP("当前运行环境没有满足要求的 Vulkan 设备");
+  REQUIRE(result == granit::result::success);
+  granit_texture_desc texture_desc = GRANIT_TEXTURE_DESC_INIT;
+  texture_desc.format = GRANIT_TEXTURE_FORMAT_RGBA8_UNORM;
+  texture_desc.usage = GRANIT_TEXTURE_USAGE_COLOR_ATTACHMENT_BIT;
+  texture_desc.width = 16;
+  texture_desc.height = 16;
+  granit_texture texture{};
+  granit_texture_view view{};
+  REQUIRE(granit_texture_create_with_default_view(renderer.native_handle(), &texture_desc, &texture,
+                                                  &view) == GRANIT_SUCCESS);
+
+  granit::command_recorder load_recorder;
+  granit::command_recorder clear_recorder;
+  REQUIRE(load_recorder.initialize(renderer.native_handle()) == granit::result::success);
+  REQUIRE(clear_recorder.initialize(renderer.native_handle()) == granit::result::success);
+  const granit::color_attachment_desc load_color{
+      .view = view, .load_operation = granit::attachment_load_operation::load};
+  const granit::color_attachment_desc clear_color{.view = view};
+  const auto record = [&](granit::command_recorder& recorder,
+                          const granit::color_attachment_desc& color) {
+    REQUIRE(recorder.begin() == granit::result::success);
+    const granit::rendering_desc rendering{.color_attachments = std::span{&color, 1},
+                                           .area = {.width = 16, .height = 16}};
+    REQUIRE(recorder.begin_rendering(rendering) == granit::result::success);
+    REQUIRE(recorder.end_rendering() == granit::result::success);
+    REQUIRE(recorder.end() == granit::result::success);
+  };
+
+  record(load_recorder, load_color);
+  record(clear_recorder, clear_color);
+  CHECK(load_recorder.submit() == granit::result::invalid_argument);
+  REQUIRE(clear_recorder.submit() == granit::result::success);
+  REQUIRE(load_recorder.submit() == granit::result::success);
+  REQUIRE(clear_recorder.reset() == granit::result::success);
+  REQUIRE(load_recorder.reset() == granit::result::success);
 }
 
 } // namespace

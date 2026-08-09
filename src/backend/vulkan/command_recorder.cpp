@@ -40,6 +40,8 @@ granit_result vulkan_command_recorder::initialize(const vulkan_device& device) n
   }
   state_ = command_recorder_state::initial;
   buffer_accesses_.clear();
+  initial_image_accesses_.clear();
+  final_image_accesses_.clear();
   return GRANIT_SUCCESS;
 }
 
@@ -76,6 +78,8 @@ granit_result vulkan_command_recorder::reset(const vulkan_device& device) noexce
   state_ = result == VK_SUCCESS ? command_recorder_state::initial : command_recorder_state::invalid;
   inside_rendering_ = false;
   buffer_accesses_.clear();
+  initial_image_accesses_.clear();
+  final_image_accesses_.clear();
   return map_vulkan_result(result);
 }
 
@@ -171,13 +175,48 @@ granit_result vulkan_command_recorder::fill_buffer(const vulkan_device& device, 
   return GRANIT_SUCCESS;
 }
 
+void vulkan_command_recorder::prepare_image_access(const vulkan_device& device,
+                                                   const vulkan_image_access& access) {
+  const auto found = std::find_if(final_image_accesses_.begin(), final_image_accesses_.end(),
+                                  [&](const auto& state) { return state.image == access.image; });
+  if (found == final_image_accesses_.end()) {
+    initial_image_accesses_.reserve(initial_image_accesses_.size() + 1);
+    final_image_accesses_.reserve(final_image_accesses_.size() + 1);
+    initial_image_accesses_.push_back(access);
+    final_image_accesses_.push_back(access);
+    return;
+  }
+  VkImageMemoryBarrier2 barrier{};
+  barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
+  barrier.srcStageMask = found->stages;
+  barrier.srcAccessMask = found->access;
+  barrier.dstStageMask = access.stages;
+  barrier.dstAccessMask = access.access;
+  barrier.oldLayout = found->layout;
+  barrier.newLayout = access.layout;
+  barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+  barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+  barrier.image = access.image;
+  barrier.subresourceRange = access.range;
+  VkDependencyInfo dependency{};
+  dependency.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
+  dependency.imageMemoryBarrierCount = 1;
+  dependency.pImageMemoryBarriers = &barrier;
+  device.functions().vkCmdPipelineBarrier2(command_buffer_, &dependency);
+  *found = access;
+}
+
 granit_result vulkan_command_recorder::begin_rendering(
     const vulkan_device& device, VkRect2D area,
     std::span<const VkRenderingAttachmentInfo> color_attachments,
     const VkRenderingAttachmentInfo* depth_attachment,
-    const VkRenderingAttachmentInfo* stencil_attachment, std::uint32_t layer_count) noexcept {
+    const VkRenderingAttachmentInfo* stencil_attachment, std::uint32_t layer_count,
+    std::span<const vulkan_image_access> image_accesses) {
   if (state_ != command_recorder_state::recording || inside_rendering_) {
     return GRANIT_ERROR_INVALID_ARGUMENT;
+  }
+  for (const auto& access : image_accesses) {
+    prepare_image_access(device, access);
   }
   VkRenderingInfo info{};
   info.sType = VK_STRUCTURE_TYPE_RENDERING_INFO;
@@ -189,6 +228,21 @@ granit_result vulkan_command_recorder::begin_rendering(
   info.pStencilAttachment = stencil_attachment;
   device.functions().vkCmdBeginRendering(command_buffer_, &info);
   inside_rendering_ = true;
+  return GRANIT_SUCCESS;
+}
+
+granit_result vulkan_command_recorder::record_image_barriers(
+    const vulkan_device& device, std::span<const VkImageMemoryBarrier2> barriers) noexcept {
+  if (state_ != command_recorder_state::recording) {
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  }
+  if (!barriers.empty()) {
+    VkDependencyInfo dependency{};
+    dependency.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
+    dependency.imageMemoryBarrierCount = static_cast<std::uint32_t>(barriers.size());
+    dependency.pImageMemoryBarriers = barriers.data();
+    device.functions().vkCmdPipelineBarrier2(command_buffer_, &dependency);
+  }
   return GRANIT_SUCCESS;
 }
 
@@ -224,6 +278,8 @@ void vulkan_command_recorder::destroy(const vulkan_device& device) noexcept {
   state_ = command_recorder_state::invalid;
   inside_rendering_ = false;
   buffer_accesses_.clear();
+  initial_image_accesses_.clear();
+  final_image_accesses_.clear();
 }
 
 } // namespace granit::detail

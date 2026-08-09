@@ -6,7 +6,7 @@
 ## 元数据
 
 - 设计状态：已确认
-- 实现状态：F-05A 已完成；F-05B 待开始
+- 实现状态：F-05A/F-05B 已完成；后续用途随对应命令扩展
 - 路线图任务：F-05
 - 优先级：P0
 - 前置依赖：F-02、F-04、R-02、R-09
@@ -36,20 +36,34 @@ Recorder 为使用过的 Buffer 保存最近一次 Stage/Access：
 实际命令通过 Vulkan 1.3 `vkCmdPipelineBarrier2` 和 `VkBufferMemoryBarrier2` 建立依赖。第一版按完整
 Buffer 范围同步；以后获得真实热点数据后，再评估区间状态拆分。
 
-## F-05B：Texture Layout 与访问状态（待开始）
+## F-05B：Texture Attachment Layout 与访问状态（已完成）
+
+Recorder 分别保存 Texture 的首次访问和最终访问。首次访问屏障不能在并行录制时确定，因此每个
+帧槽额外持有一个内部前导 Command Buffer：
+
+1. Recorder 只记录首个 Attachment 访问意图；
+2. `submit` 在 Queue 互斥锁内按实际提交顺序查询 Renderer 的已提交状态；
+3. 前导 Command Buffer 录制从已提交 Layout 到本次首次 Layout 的 Image Barrier；
+4. Queue 按“前导命令、用户命令”的顺序一次提交；
+5. 提交成功后才更新 Renderer 的最终 Texture 状态。
+
+同一 Recorder 内的后续 Attachment 使用已知的局部状态直接生成屏障。首次使用 `LOAD` 要求之前
+存在成功提交并保留过内容；新建 Texture 的首次 `LOAD` 在 submit 时返回参数错误。CLEAR 或
+DISCARD 可以从 `UNDEFINED` 转换。
+
+当前支持颜色及深度/模板 Attachment 的整张 Texture 状态。Texture 销毁时同步移除状态记录，
+避免 Vulkan 句柄复用继承旧对象的 Layout。
+
+## 后续用途
 
 需要覆盖：
 
-- `UNDEFINED` 到首次有效用途；
-- color/depth-stencil attachment 的读写与 Layout；
-- store 后再次 load 的内容保留；
 - transfer、sampled、storage 和 present 状态；
 - 同一 Texture 不同 mip/layer/aspect 的子资源状态；
-- 多 Recorder 并行录制后按实际提交顺序解析状态；
 - Swapchain acquire 提供的初始状态和 present 目标状态。
 
-第一版可以按整张 Texture 跟踪，但数据结构必须允许以后拆分子资源。不得把所有 Image 永久固定在
-`GENERAL` Layout 来回避状态设计，也不得每次从 `UNDEFINED` 转换而丢弃需要保留的内容。
+这些状态随对应命令和 F-06 WSI 流程接入。不得把所有 Image 永久固定在 `GENERAL` Layout 来回避
+状态设计，也不得每次从 `UNDEFINED` 转换而丢弃需要保留的内容。
 
 ## 线程与生命周期
 
@@ -65,3 +79,11 @@ Buffer 范围同步；以后获得真实热点数据后，再评估区间状态�
 - reset 后旧的 Recorder 局部状态被清空。
 - 设备初始化要求 `vkCmdPipelineBarrier2`。
 - Clang 动态库与 MSVC 静态库在严格警告下构建和测试通过。
+
+## F-05B 验收结果
+
+- 新 Texture 可从 `UNDEFINED` 转换为颜色或深度/模板 Attachment Layout。
+- 不同 Recorder 即使按相反顺序录制，也以实际 Queue 提交顺序解析 Layout。
+- 首次 `LOAD` 被拒绝，CLEAR 提交后再次 `LOAD` 成功并保留内容。
+- 前导 Command Buffer 与用户 Command Buffer 共享同一个 Fence 完成点。
+- Vulkan Validation Layer 场景覆盖真实颜色 Attachment 提交。
