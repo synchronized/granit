@@ -134,7 +134,9 @@ if (granit::failed(result)) {
 - [docs/plans/R-07-swapchain-backbuffer.md](docs/plans/R-07-swapchain-backbuffer.md)：Backbuffer 资源计划。
 - [docs/plans/V-01-lifetime-validation.md](docs/plans/V-01-lifetime-validation.md)：生命周期验证计划。
 - [docs/plans/R-08-deferred-destruction.md](docs/plans/R-08-deferred-destruction.md)：延迟销毁计划。
+- [docs/plans/R-09-render-target-attachment.md](docs/plans/R-09-render-target-attachment.md)：渲染附件计划。
 - [docs/renderer.md](docs/renderer.md)：公共 renderer C/C++ API 与生命周期。
+- [docs/render-target.md](docs/render-target.md)：颜色与深度/模板 Attachment 值类型。
 - [docs/resource-types.md](docs/resource-types.md)：Buffer、Texture、View 和 Sampler 值类型。
 - [docs/sampler.md](docs/sampler.md)：Sampler 状态、能力限制和生命周期。
 - [docs/surface.md](docs/surface.md)：窗口 Surface、平台句柄和生命周期。

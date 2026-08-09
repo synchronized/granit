@@ -70,6 +70,8 @@ target_sources(
       "${PROJECT_SOURCE_DIR}/include/granit/granit.hpp"
       "${PROJECT_SOURCE_DIR}/include/granit/renderer.h"
       "${PROJECT_SOURCE_DIR}/include/granit/renderer.hpp"
+      "${PROJECT_SOURCE_DIR}/include/granit/render_target.h"
+      "${PROJECT_SOURCE_DIR}/include/granit/render_target.hpp"
       "${PROJECT_SOURCE_DIR}/include/granit/resource_types.h"
       "${PROJECT_SOURCE_DIR}/include/granit/resource_types.hpp"
       "${PROJECT_SOURCE_DIR}/include/granit/result.h"

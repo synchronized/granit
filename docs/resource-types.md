@@ -40,6 +40,11 @@ index、uniform、storage 和 indirect。大小与用途必须非零，未知用
 `granit_sampler_desc` 描述过滤、寻址、比较、各向异性和 LOD 范围。当前基础范围支持 nearest、
 linear、repeat、mirrored repeat 和 clamp to edge；比较采样和各向异性留待设备能力接入。
 
+## Render Target Attachment
+
+颜色和深度/模板附件定义在 `granit/render_target.h`，统一接收 Texture View。离屏 View 与
+Swapchain Backbuffer View 不使用两套描述。详见 [Render Target Attachment](render-target.md)。
+
 ## ABI 与扩展
 
 - 创建描述以 `struct_size` 开头，调用者应填写对应的 `*_VERSION_1_SIZE`。

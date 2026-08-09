@@ -4,6 +4,7 @@
 #ifndef GRANIT_CORE_RESOURCE_VALIDATION_H_
 #define GRANIT_CORE_RESOURCE_VALIDATION_H_
 
+#include <granit/render_target.h>
 #include <granit/resource_types.h>
 #include <granit/result.h>
 
@@ -14,6 +15,10 @@ namespace granit::detail {
 [[nodiscard]] granit_result
 validate_texture_view_desc(const granit_texture_view_desc& desc) noexcept;
 [[nodiscard]] granit_result validate_sampler_desc(const granit_sampler_desc& desc) noexcept;
+[[nodiscard]] granit_result
+validate_color_attachment_desc(const granit_color_attachment_desc& desc) noexcept;
+[[nodiscard]] granit_result
+validate_depth_stencil_attachment_desc(const granit_depth_stencil_attachment_desc& desc) noexcept;
 
 } // namespace granit::detail
 

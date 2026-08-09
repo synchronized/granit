@@ -12,6 +12,7 @@ add_library(
   OBJECT
     headers/buffer_h.c
     headers/renderer_h.c
+    headers/render_target_h.c
     headers/resource_types_h.c
     headers/sampler_h.c
     headers/result_h.c
@@ -157,6 +158,7 @@ add_library(
   OBJECT
     headers/buffer_hpp.cpp
     headers/renderer_hpp.cpp
+    headers/render_target_hpp.cpp
     headers/resource_types_hpp.cpp
     headers/sampler_hpp.cpp
     headers/result_hpp.cpp

@@ -43,6 +43,16 @@ bool depth_stencil_format(granit_texture_format format) noexcept {
   return format >= GRANIT_TEXTURE_FORMAT_D16_UNORM;
 }
 
+bool valid_load_operation(granit_attachment_load_operation operation) noexcept {
+  return operation >= GRANIT_ATTACHMENT_LOAD_OPERATION_LOAD &&
+         operation <= GRANIT_ATTACHMENT_LOAD_OPERATION_DISCARD;
+}
+
+bool valid_store_operation(granit_attachment_store_operation operation) noexcept {
+  return operation >= GRANIT_ATTACHMENT_STORE_OPERATION_STORE &&
+         operation <= GRANIT_ATTACHMENT_STORE_OPERATION_DISCARD;
+}
+
 } // namespace
 
 granit_result validate_buffer_desc(const granit_buffer_desc& desc) noexcept {
@@ -110,6 +120,33 @@ granit_result validate_sampler_desc(const granit_sampler_desc& desc) noexcept {
   }
   if ((desc.anisotropy_enabled == 0 && desc.max_anisotropy != 1.0F) ||
       (desc.anisotropy_enabled != 0 && desc.max_anisotropy < 1.0F)) {
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  }
+  return GRANIT_SUCCESS;
+}
+
+granit_result validate_color_attachment_desc(const granit_color_attachment_desc& desc) noexcept {
+  const auto& clear = desc.clear_value;
+  if (desc.struct_size < GRANIT_COLOR_ATTACHMENT_DESC_VERSION_1_SIZE || desc.reserved != 0 ||
+      desc.reserved_2 != 0 || desc.view == GRANIT_NULL_HANDLE ||
+      !valid_load_operation(desc.load_operation) || !valid_store_operation(desc.store_operation) ||
+      !std::isfinite(clear.red) || !std::isfinite(clear.green) || !std::isfinite(clear.blue) ||
+      !std::isfinite(clear.alpha)) {
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  }
+  return GRANIT_SUCCESS;
+}
+
+granit_result
+validate_depth_stencil_attachment_desc(const granit_depth_stencil_attachment_desc& desc) noexcept {
+  if (desc.struct_size < GRANIT_DEPTH_STENCIL_ATTACHMENT_DESC_VERSION_1_SIZE ||
+      desc.reserved != 0 || desc.reserved_2 != 0 || desc.view == GRANIT_NULL_HANDLE ||
+      !valid_load_operation(desc.depth_load_operation) ||
+      !valid_store_operation(desc.depth_store_operation) ||
+      !valid_load_operation(desc.stencil_load_operation) ||
+      !valid_store_operation(desc.stencil_store_operation) ||
+      !std::isfinite(desc.clear_value.depth) || desc.clear_value.depth < 0.0F ||
+      desc.clear_value.depth > 1.0F) {
     return GRANIT_ERROR_INVALID_ARGUMENT;
   }
   return GRANIT_SUCCESS;

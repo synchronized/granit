@@ -5,7 +5,11 @@
 
 #include <catch2/catch_all.hpp>
 
+#include <limits>
+
 using granit::detail::validate_buffer_desc;
+using granit::detail::validate_color_attachment_desc;
+using granit::detail::validate_depth_stencil_attachment_desc;
 using granit::detail::validate_sampler_desc;
 using granit::detail::validate_texture_desc;
 using granit::detail::validate_texture_view_desc;
@@ -86,4 +90,26 @@ TEST_CASE("View 和 Sampler 验证首期支持范围", "[resource][validation]")
   CHECK(validate_sampler_desc(sampler) == GRANIT_SUCCESS);
   sampler.max_anisotropy = 0.5F;
   CHECK(validate_sampler_desc(sampler) == GRANIT_ERROR_INVALID_ARGUMENT);
+}
+
+TEST_CASE("Render Target Attachment 拒绝未初始化操作和非法清除值", "[resource][attachment]") {
+  granit_color_attachment_desc color = GRANIT_COLOR_ATTACHMENT_DESC_INIT;
+  color.view = UINT64_C(1);
+  CHECK(validate_color_attachment_desc(color) == GRANIT_SUCCESS);
+  color.load_operation = GRANIT_ATTACHMENT_LOAD_OPERATION_UNDEFINED;
+  CHECK(validate_color_attachment_desc(color) == GRANIT_ERROR_INVALID_ARGUMENT);
+  color.load_operation = GRANIT_ATTACHMENT_LOAD_OPERATION_DISCARD;
+  color.clear_value.red = std::numeric_limits<float>::infinity();
+  CHECK(validate_color_attachment_desc(color) == GRANIT_ERROR_INVALID_ARGUMENT);
+
+  granit_depth_stencil_attachment_desc depth = GRANIT_DEPTH_STENCIL_ATTACHMENT_DESC_INIT;
+  depth.view = UINT64_C(2);
+  CHECK(validate_depth_stencil_attachment_desc(depth) == GRANIT_SUCCESS);
+  depth.clear_value.depth = -0.01F;
+  CHECK(validate_depth_stencil_attachment_desc(depth) == GRANIT_ERROR_INVALID_ARGUMENT);
+  depth.clear_value.depth = 1.01F;
+  CHECK(validate_depth_stencil_attachment_desc(depth) == GRANIT_ERROR_INVALID_ARGUMENT);
+  depth.clear_value.depth = 0.5F;
+  depth.stencil_store_operation = UINT32_C(99);
+  CHECK(validate_depth_stencil_attachment_desc(depth) == GRANIT_ERROR_INVALID_ARGUMENT);
 }
