@@ -19,6 +19,7 @@ validate_texture_view_desc(const granit_texture_view_desc& desc) noexcept;
 validate_color_attachment_desc(const granit_color_attachment_desc& desc) noexcept;
 [[nodiscard]] granit_result
 validate_depth_stencil_attachment_desc(const granit_depth_stencil_attachment_desc& desc) noexcept;
+[[nodiscard]] granit_result validate_rendering_desc(const granit_rendering_desc& desc) noexcept;
 
 } // namespace granit::detail
 

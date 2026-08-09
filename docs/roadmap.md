@@ -123,8 +123,8 @@
 
 - **[F-01](plans/F-01-command-recorder.md) / P0 / 已完成**：实现独占 Command Pool 和可跨线程
   移交的 Command Recorder。
-- **[F-02](plans/F-02-command-recording.md) / P0 / F-02A 已完成**：实现 Buffer Copy/Fill，
-  下一步接入 Dynamic Rendering。
+- **[F-02](plans/F-02-command-recording.md) / P0 / 基础命令已完成**：实现 Buffer Copy/Fill 和
+  Dynamic Rendering；资源屏障随 F-05 接入。
 - **F-03 / P0**：实现 Fence、Semaphore 及每帧上下文的内部抽象。
 - **F-04 / P0**：实现可配置 frames-in-flight 和 Queue 提交串行化。
 - **F-05 / P0**：建立资源状态跟踪和必要的同步信息记录。

@@ -5,6 +5,7 @@
 #define GRANIT_RENDER_TARGET_HPP_
 
 #include <cstdint>
+#include <span>
 
 #include <granit/render_target.h>
 
@@ -79,9 +80,24 @@ struct depth_stencil_attachment_desc {
   }
 };
 
+struct rendering_area {
+  std::uint32_t x{};
+  std::uint32_t y{};
+  std::uint32_t width{};
+  std::uint32_t height{};
+};
+
+struct rendering_desc {
+  std::span<const color_attachment_desc> color_attachments;
+  const depth_stencil_attachment_desc* depth_stencil_attachment{};
+  rendering_area area{};
+  std::uint32_t layer_count{1};
+};
+
 static_assert(sizeof(granit_color_attachment_desc) == GRANIT_COLOR_ATTACHMENT_DESC_VERSION_1_SIZE);
 static_assert(sizeof(granit_depth_stencil_attachment_desc) ==
               GRANIT_DEPTH_STENCIL_ATTACHMENT_DESC_VERSION_1_SIZE);
+static_assert(sizeof(granit_rendering_desc) == GRANIT_RENDERING_DESC_VERSION_1_SIZE);
 
 } // namespace granit
 

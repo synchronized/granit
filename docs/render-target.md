@@ -8,7 +8,8 @@
 `granit/render_target.h` 定义颜色和深度/模板 Attachment 的后端无关值类型。普通离屏 Texture
 View 与 Swapchain Backbuffer View 使用同一套描述，公共接口不暴露 Vulkan Layout 或附件类型。
 
-当前只提供值类型和纯参数验证，尚未提供开始渲染命令。F-02 将直接复用这些描述。
+Command Recorder 已提供 Dynamic Rendering 的 begin/end，并直接复用这些描述。资源 Layout 和
+跨命令屏障将在 F-05 接入。
 
 ## C API 值类型
 

@@ -4,6 +4,7 @@
 #include <granit/buffer.h>
 #include <granit/command_recorder.hpp>
 #include <granit/renderer.hpp>
+#include <granit/texture.h>
 
 #include <catch2/catch_all.hpp>
 
@@ -153,6 +154,37 @@ TEST_CASE("Buffer 命令拒绝 usage、范围、对齐和重叠错误", "[comman
   CHECK(recorder.fill_buffer(buffer, 0, 6, 0) == granit::result::invalid_argument);
 
   REQUIRE(recorder.end() == granit::result::success);
+}
+
+TEST_CASE("Recorder 录制 Dynamic Rendering 作用域", "[command][rendering]") {
+  granit::renderer renderer;
+  const auto result = renderer.initialize({.application_name = "granit-rendering-tests"});
+  if (environment_unavailable(result))
+    SKIP("当前运行环境没有满足要求的 Vulkan 设备");
+  REQUIRE(result == granit::result::success);
+  granit_texture_desc texture_desc = GRANIT_TEXTURE_DESC_INIT;
+  texture_desc.format = GRANIT_TEXTURE_FORMAT_RGBA8_UNORM;
+  texture_desc.usage = GRANIT_TEXTURE_USAGE_COLOR_ATTACHMENT_BIT;
+  texture_desc.width = 32;
+  texture_desc.height = 32;
+  granit_texture texture{};
+  granit_texture_view view{};
+  REQUIRE(granit_texture_create_with_default_view(renderer.native_handle(), &texture_desc, &texture,
+                                                  &view) == GRANIT_SUCCESS);
+  granit::command_recorder recorder;
+  REQUIRE(recorder.initialize(renderer.native_handle()) == granit::result::success);
+  REQUIRE(recorder.begin() == granit::result::success);
+  const granit::color_attachment_desc color{.view = view};
+  const granit::rendering_desc rendering{.color_attachments = std::span{&color, 1},
+                                         .area = {.width = 32, .height = 32}};
+  REQUIRE(recorder.begin_rendering(rendering) == granit::result::success);
+  CHECK(recorder.begin_rendering(rendering) == granit::result::invalid_argument);
+  CHECK(recorder.end() == granit::result::invalid_argument);
+  REQUIRE(recorder.end_rendering() == granit::result::success);
+  CHECK(recorder.end_rendering() == granit::result::invalid_argument);
+  REQUIRE(granit_texture_destroy(renderer.native_handle(), texture) == GRANIT_SUCCESS);
+  REQUIRE(recorder.end() == granit::result::success);
+  REQUIRE(recorder.reset() == granit::result::success);
 }
 
 } // namespace

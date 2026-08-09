@@ -3,6 +3,8 @@
 
 #include <granit/render_target.hpp>
 
+static_assert(sizeof(granit_rendering_desc) == GRANIT_RENDERING_DESC_VERSION_1_SIZE);
+
 constexpr granit::color_attachment_desc color{
     .view = UINT64_C(7),
     .clear_value = {.red = 0.25F, .green = 0.5F, .blue = 0.75F, .alpha = 1.0F},

@@ -41,7 +41,7 @@ D-03-graphics-pipeline.md
 - [R-08：GPU 资源延迟销毁基础](R-08-deferred-destruction.md)——R-08A 已完成，等待帧同步接入。
 - [R-09：统一 Render Target Attachment](R-09-render-target-attachment.md)——已完成。
 - [F-01：Command Recorder 基础](F-01-command-recorder.md)——已完成。
-- [F-02：基础命令录制](F-02-command-recording.md)——F-02A 已完成，等待 Dynamic Rendering。
+- [F-02：基础命令录制](F-02-command-recording.md)——Buffer 命令与 Dynamic Rendering 已完成。
 
 ## 状态
 

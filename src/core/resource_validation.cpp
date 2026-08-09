@@ -4,6 +4,7 @@
 #include "core/resource_validation.h"
 
 #include <cmath>
+#include <limits>
 
 namespace granit::detail {
 namespace {
@@ -147,6 +148,28 @@ validate_depth_stencil_attachment_desc(const granit_depth_stencil_attachment_des
       !valid_store_operation(desc.stencil_store_operation) ||
       !std::isfinite(desc.clear_value.depth) || desc.clear_value.depth < 0.0F ||
       desc.clear_value.depth > 1.0F) {
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  }
+  return GRANIT_SUCCESS;
+}
+
+granit_result validate_rendering_desc(const granit_rendering_desc& desc) noexcept {
+  if (desc.struct_size < GRANIT_RENDERING_DESC_VERSION_1_SIZE || desc.reserved != 0 ||
+      desc.reserved_2 != 0 || desc.color_attachment_count > GRANIT_MAX_COLOR_ATTACHMENTS ||
+      (desc.color_attachment_count != 0 && desc.color_attachments == nullptr) ||
+      (desc.color_attachment_count == 0 && desc.depth_stencil_attachment == nullptr) ||
+      desc.area.x > static_cast<std::uint32_t>(std::numeric_limits<std::int32_t>::max()) ||
+      desc.area.y > static_cast<std::uint32_t>(std::numeric_limits<std::int32_t>::max()) ||
+      desc.area.width == 0 || desc.area.height == 0 || desc.layer_count != 1) {
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  }
+  for (std::uint32_t index = 0; index < desc.color_attachment_count; ++index) {
+    if (validate_color_attachment_desc(desc.color_attachments[index]) != GRANIT_SUCCESS) {
+      return GRANIT_ERROR_INVALID_ARGUMENT;
+    }
+  }
+  if (desc.depth_stencil_attachment != nullptr &&
+      validate_depth_stencil_attachment_desc(*desc.depth_stencil_attachment) != GRANIT_SUCCESS) {
     return GRANIT_ERROR_INVALID_ARGUMENT;
   }
   return GRANIT_SUCCESS;

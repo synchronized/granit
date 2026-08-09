@@ -29,6 +29,13 @@ public:
   [[nodiscard]] granit_result fill_buffer(const vulkan_device& device, VkBuffer buffer,
                                           VkDeviceSize offset, VkDeviceSize size,
                                           std::uint32_t value) noexcept;
+  [[nodiscard]] granit_result
+  begin_rendering(const vulkan_device& device, VkRect2D area,
+                  std::span<const VkRenderingAttachmentInfo> color_attachments,
+                  const VkRenderingAttachmentInfo* depth_attachment,
+                  const VkRenderingAttachmentInfo* stencil_attachment,
+                  std::uint32_t layer_count) noexcept;
+  [[nodiscard]] granit_result end_rendering(const vulkan_device& device) noexcept;
   void destroy(const vulkan_device& device) noexcept;
 
   [[nodiscard]] command_recorder_state state() const noexcept { return state_; }
@@ -38,6 +45,7 @@ private:
   VkCommandPool pool_{VK_NULL_HANDLE};
   VkCommandBuffer command_buffer_{VK_NULL_HANDLE};
   command_recorder_state state_{command_recorder_state::invalid};
+  bool inside_rendering_{};
 };
 
 } // namespace granit::detail

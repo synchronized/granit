@@ -91,6 +91,11 @@ public:
                                           granit_command_recorder recorder, granit_buffer buffer,
                                           std::uint64_t offset, std::uint64_t size,
                                           std::uint32_t value);
+  [[nodiscard]] granit_result begin_rendering(granit_renderer renderer,
+                                              granit_command_recorder recorder,
+                                              const granit_rendering_desc& desc);
+  [[nodiscard]] granit_result end_rendering(granit_renderer renderer,
+                                            granit_command_recorder recorder);
   [[nodiscard]] granit_result destroy_command_recorder(granit_renderer renderer,
                                                        granit_command_recorder recorder);
 
@@ -154,6 +159,7 @@ private:
     std::shared_ptr<renderer_state> renderer;
     std::shared_ptr<texture_record> texture;
     VkImageView native{VK_NULL_HANDLE};
+    granit_texture_view_desc desc{};
     bool publicly_destroyable{true};
     ~texture_view_record();
   };

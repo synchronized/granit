@@ -4,10 +4,12 @@
 #ifndef GRANIT_COMMAND_RECORDER_HPP_
 #define GRANIT_COMMAND_RECORDER_HPP_
 
+#include <array>
 #include <span>
 #include <utility>
 
 #include <granit/command_recorder.h>
+#include <granit/render_target.hpp>
 #include <granit/result.hpp>
 
 namespace granit {
@@ -66,6 +68,35 @@ public:
                                    std::uint32_t value) noexcept {
     return from_native(
         granit_command_recorder_fill_buffer(renderer_, handle_, buffer, offset, size, value));
+  }
+  [[nodiscard]] result begin_rendering(const rendering_desc& desc) noexcept {
+    if (desc.color_attachments.size() > GRANIT_MAX_COLOR_ATTACHMENTS) {
+      return result::invalid_argument;
+    }
+    std::array<granit_color_attachment_desc, GRANIT_MAX_COLOR_ATTACHMENTS> colors{};
+    for (std::size_t index = 0; index < desc.color_attachments.size(); ++index) {
+      colors[index] = desc.color_attachments[index].native();
+    }
+    granit_depth_stencil_attachment_desc depth{};
+    const granit_depth_stencil_attachment_desc* depth_pointer = nullptr;
+    if (desc.depth_stencil_attachment != nullptr) {
+      depth = desc.depth_stencil_attachment->native();
+      depth_pointer = &depth;
+    }
+    const granit_rendering_desc native{
+        .struct_size = GRANIT_RENDERING_DESC_VERSION_1_SIZE,
+        .color_attachment_count = static_cast<std::uint32_t>(desc.color_attachments.size()),
+        .color_attachments = colors.data(),
+        .depth_stencil_attachment = depth_pointer,
+        .area = {desc.area.x, desc.area.y, desc.area.width, desc.area.height},
+        .layer_count = desc.layer_count,
+        .reserved = 0,
+        .reserved_2 = 0,
+    };
+    return from_native(granit_command_recorder_begin_rendering(renderer_, handle_, &native));
+  }
+  [[nodiscard]] result end_rendering() noexcept {
+    return from_native(granit_command_recorder_end_rendering(renderer_, handle_));
   }
   [[nodiscard]] result destroy() noexcept {
     if (!valid()) {

@@ -82,4 +82,33 @@ typedef struct granit_depth_stencil_attachment_desc {
    {1.0F, UINT32_C(0)},                                                                            \
    UINT64_C(0)}
 
+typedef struct granit_rendering_area {
+  uint32_t x;
+  uint32_t y;
+  uint32_t width;
+  uint32_t height;
+} granit_rendering_area;
+
+/** Dynamic Rendering 作用域描述；所有指针只在调用期间借用。 */
+typedef struct granit_rendering_desc {
+  uint32_t struct_size;
+  uint32_t color_attachment_count;
+  const granit_color_attachment_desc* color_attachments;
+  const granit_depth_stencil_attachment_desc* depth_stencil_attachment;
+  granit_rendering_area area;
+  uint32_t layer_count;
+  uint32_t reserved;
+  uint64_t reserved_2;
+} granit_rendering_desc;
+#define GRANIT_RENDERING_DESC_VERSION_1_SIZE UINT32_C(56)
+#define GRANIT_RENDERING_DESC_INIT                                                                 \
+  {GRANIT_RENDERING_DESC_VERSION_1_SIZE,                                                           \
+   UINT32_C(0),                                                                                    \
+   0,                                                                                              \
+   0,                                                                                              \
+   {UINT32_C(0), UINT32_C(0), UINT32_C(0), UINT32_C(0)},                                           \
+   UINT32_C(1),                                                                                    \
+   UINT32_C(0),                                                                                    \
+   UINT64_C(0)}
+
 #endif

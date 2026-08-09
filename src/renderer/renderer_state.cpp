@@ -427,6 +427,20 @@ granit_result renderer_state::fill_buffer(vulkan_command_recorder& recorder, VkB
   return recorder.fill_buffer(device_, buffer, offset, size, value);
 }
 
+granit_result
+renderer_state::begin_rendering(vulkan_command_recorder& recorder, VkRect2D area,
+                                std::span<const VkRenderingAttachmentInfo> color_attachments,
+                                const VkRenderingAttachmentInfo* depth_attachment,
+                                const VkRenderingAttachmentInfo* stencil_attachment,
+                                std::uint32_t layer_count) noexcept {
+  return recorder.begin_rendering(device_, area, color_attachments, depth_attachment,
+                                  stencil_attachment, layer_count);
+}
+
+granit_result renderer_state::end_rendering(vulkan_command_recorder& recorder) noexcept {
+  return recorder.end_rendering(device_);
+}
+
 void renderer_state::destroy_native_command_recorder(vulkan_command_recorder& recorder) noexcept {
   recorder.destroy(device_);
 }

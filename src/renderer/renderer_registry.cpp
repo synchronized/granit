@@ -3,6 +3,7 @@
 
 #include "renderer/renderer_registry.h"
 
+#include <algorithm>
 #include <cstring>
 #include <new>
 #include <utility>
@@ -39,6 +40,27 @@ void retain_resource(std::vector<std::shared_ptr<void>>& resources,
 bool ranges_overlap(std::uint64_t left_offset, std::uint64_t left_size, std::uint64_t right_offset,
                     std::uint64_t right_size) noexcept {
   return left_offset < right_offset + right_size && right_offset < left_offset + left_size;
+}
+
+VkAttachmentLoadOp map_load(granit_attachment_load_operation value) noexcept {
+  return value == GRANIT_ATTACHMENT_LOAD_OPERATION_LOAD
+             ? VK_ATTACHMENT_LOAD_OP_LOAD
+             : (value == GRANIT_ATTACHMENT_LOAD_OPERATION_CLEAR ? VK_ATTACHMENT_LOAD_OP_CLEAR
+                                                                : VK_ATTACHMENT_LOAD_OP_DONT_CARE);
+}
+
+VkAttachmentStoreOp map_store(granit_attachment_store_operation value) noexcept {
+  return value == GRANIT_ATTACHMENT_STORE_OPERATION_STORE ? VK_ATTACHMENT_STORE_OP_STORE
+                                                          : VK_ATTACHMENT_STORE_OP_DONT_CARE;
+}
+
+bool depth_format(granit_texture_format format) noexcept {
+  return format >= GRANIT_TEXTURE_FORMAT_D16_UNORM;
+}
+
+bool stencil_format(granit_texture_format format) noexcept {
+  return format == GRANIT_TEXTURE_FORMAT_D24_UNORM_S8_UINT ||
+         format == GRANIT_TEXTURE_FORMAT_D32_FLOAT_S8_UINT;
 }
 
 } // namespace
@@ -520,6 +542,7 @@ renderer_registry::install_swapchain_backbuffers(granit_swapchain swapchain,
       view->texture = texture;
       view->publicly_destroyable = false;
       granit_texture_view_desc desc = GRANIT_TEXTURE_VIEW_DESC_INIT;
+      view->desc = desc;
       const auto result = record->renderer->create_native_texture_view(
           texture->native, texture->desc, desc, view->native);
       if (result != GRANIT_SUCCESS)
@@ -926,6 +949,7 @@ granit_result renderer_registry::create_texture_view(granit_renderer renderer,
     auto record = std::make_shared<texture_view_record>();
     record->renderer = state;
     record->texture = parent;
+    record->desc = desc;
     const auto result =
         state->create_native_texture_view(parent->native, parent->desc, desc, record->native);
     if (result != GRANIT_SUCCESS)
@@ -1251,6 +1275,116 @@ granit_result renderer_registry::fill_buffer(granit_renderer renderer,
   retain_resource(recorder_record->retained_resources, buffer_record_state);
   return recorder_record->renderer->fill_buffer(
       recorder_record->native, buffer_record_state->native.buffer, offset, size, value);
+}
+
+granit_result renderer_registry::begin_rendering(granit_renderer renderer,
+                                                 granit_command_recorder recorder,
+                                                 const granit_rendering_desc& desc) {
+  auto command = acquire_command_recorder(renderer, recorder);
+  if (!command)
+    return GRANIT_ERROR_INVALID_HANDLE;
+  std::vector<std::shared_ptr<texture_view_record>> views;
+  views.reserve(desc.color_attachment_count + (desc.depth_stencil_attachment ? 1U : 0U));
+  {
+    std::lock_guard lock{mutex_};
+    const auto acquire_view = [&](granit_texture_view handle) {
+      if (handles_.find(handle, resource_type::texture_view, command->renderer->domain()) ==
+          nullptr)
+        return std::shared_ptr<texture_view_record>{};
+      const auto found = texture_views_.find(handle);
+      return found != texture_views_.end() && found->second->renderer == command->renderer
+                 ? found->second
+                 : std::shared_ptr<texture_view_record>{};
+    };
+    for (std::uint32_t index = 0; index < desc.color_attachment_count; ++index) {
+      auto view = acquire_view(desc.color_attachments[index].view);
+      if (!view)
+        return GRANIT_ERROR_INVALID_HANDLE;
+      views.push_back(std::move(view));
+    }
+    if (desc.depth_stencil_attachment) {
+      auto view = acquire_view(desc.depth_stencil_attachment->view);
+      if (!view)
+        return GRANIT_ERROR_INVALID_HANDLE;
+      views.push_back(std::move(view));
+    }
+  }
+  std::uint32_t width{}, height{};
+  granit_sample_count samples{};
+  for (std::size_t index = 0; index < views.size(); ++index) {
+    const bool depth = index >= desc.color_attachment_count;
+    const auto& texture = views[index]->texture->desc;
+    const auto usage = depth ? GRANIT_TEXTURE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT
+                             : GRANIT_TEXTURE_USAGE_COLOR_ATTACHMENT_BIT;
+    if (depth_format(texture.format) != depth || (texture.usage & usage) == 0)
+      return GRANIT_ERROR_INVALID_ARGUMENT;
+    if (width == 0) {
+      width = texture.width;
+      height = texture.height;
+      samples = texture.sample_count;
+    } else if (width != texture.width || height != texture.height ||
+               samples != texture.sample_count) {
+      return GRANIT_ERROR_INVALID_ARGUMENT;
+    }
+    if (std::find(views.begin(), views.begin() + static_cast<std::ptrdiff_t>(index),
+                  views[index]) != views.begin() + static_cast<std::ptrdiff_t>(index))
+      return GRANIT_ERROR_INVALID_ARGUMENT;
+  }
+  if (desc.area.x > width || desc.area.width > width - desc.area.x || desc.area.y > height ||
+      desc.area.height > height - desc.area.y)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+
+  std::vector<VkRenderingAttachmentInfo> colors(desc.color_attachment_count);
+  for (std::uint32_t index = 0; index < desc.color_attachment_count; ++index) {
+    const auto& source = desc.color_attachments[index];
+    auto& target = colors[index];
+    target.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
+    target.imageView = views[index]->native;
+    target.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    target.loadOp = map_load(source.load_operation);
+    target.storeOp = map_store(source.store_operation);
+    target.clearValue.color = {{source.clear_value.red, source.clear_value.green,
+                                source.clear_value.blue, source.clear_value.alpha}};
+  }
+  VkRenderingAttachmentInfo depth{}, stencil{};
+  const VkRenderingAttachmentInfo *depth_ptr = nullptr, *stencil_ptr = nullptr;
+  if (desc.depth_stencil_attachment) {
+    const auto& source = *desc.depth_stencil_attachment;
+    const auto& view = views.back();
+    depth.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
+    depth.imageView = view->native;
+    depth.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+    depth.loadOp = map_load(source.depth_load_operation);
+    depth.storeOp = map_store(source.depth_store_operation);
+    depth.clearValue.depthStencil = {source.clear_value.depth, source.clear_value.stencil};
+    depth_ptr = &depth;
+    if (stencil_format(view->texture->desc.format)) {
+      stencil = depth;
+      stencil.loadOp = map_load(source.stencil_load_operation);
+      stencil.storeOp = map_store(source.stencil_store_operation);
+      stencil_ptr = &stencil;
+    } else if (source.stencil_load_operation != GRANIT_ATTACHMENT_LOAD_OPERATION_DISCARD ||
+               source.stencil_store_operation != GRANIT_ATTACHMENT_STORE_OPERATION_DISCARD) {
+      return GRANIT_ERROR_INVALID_ARGUMENT;
+    }
+  }
+  std::lock_guard command_lock{command->mutex};
+  for (const auto& view : views)
+    retain_resource(command->retained_resources, view);
+  const VkRect2D area{
+      {static_cast<std::int32_t>(desc.area.x), static_cast<std::int32_t>(desc.area.y)},
+      {desc.area.width, desc.area.height}};
+  return command->renderer->begin_rendering(command->native, area, colors, depth_ptr, stencil_ptr,
+                                            desc.layer_count);
+}
+
+granit_result renderer_registry::end_rendering(granit_renderer renderer,
+                                               granit_command_recorder recorder) {
+  auto command = acquire_command_recorder(renderer, recorder);
+  if (!command)
+    return GRANIT_ERROR_INVALID_HANDLE;
+  std::lock_guard lock{command->mutex};
+  return command->renderer->end_rendering(command->native);
 }
 
 granit_result renderer_registry::destroy_command_recorder(granit_renderer renderer,

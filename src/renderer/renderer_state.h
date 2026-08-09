@@ -76,6 +76,13 @@ public:
   [[nodiscard]] granit_result fill_buffer(vulkan_command_recorder& recorder, VkBuffer buffer,
                                           VkDeviceSize offset, VkDeviceSize size,
                                           std::uint32_t value) noexcept;
+  [[nodiscard]] granit_result
+  begin_rendering(vulkan_command_recorder& recorder, VkRect2D area,
+                  std::span<const VkRenderingAttachmentInfo> color_attachments,
+                  const VkRenderingAttachmentInfo* depth_attachment,
+                  const VkRenderingAttachmentInfo* stencil_attachment,
+                  std::uint32_t layer_count) noexcept;
+  [[nodiscard]] granit_result end_rendering(vulkan_command_recorder& recorder) noexcept;
   void destroy_native_command_recorder(vulkan_command_recorder& recorder) noexcept;
 
   void set_domain(std::uint32_t domain) noexcept { domain_ = domain; }

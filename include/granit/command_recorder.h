@@ -8,6 +8,7 @@
 
 #include <granit/buffer.h>
 #include <granit/export.h>
+#include <granit/render_target.h>
 #include <granit/renderer.h>
 #include <granit/result.h>
 #include <granit/types.h>
@@ -51,6 +52,11 @@ GRANIT_API granit_result granit_command_recorder_fill_buffer(granit_renderer ren
                                                              granit_command_recorder recorder,
                                                              granit_buffer buffer, uint64_t offset,
                                                              uint64_t size, uint32_t value);
+GRANIT_API granit_result granit_command_recorder_begin_rendering(granit_renderer renderer,
+                                                                 granit_command_recorder recorder,
+                                                                 const granit_rendering_desc* desc);
+GRANIT_API granit_result granit_command_recorder_end_rendering(granit_renderer renderer,
+                                                               granit_command_recorder recorder);
 GRANIT_API granit_result granit_command_recorder_destroy(granit_renderer renderer,
                                                          granit_command_recorder recorder);
 

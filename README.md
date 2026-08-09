@@ -51,8 +51,8 @@ Granit 不是 Vulkan API 的逐项重命名或薄包装。项目希望围绕实�
 - 代码格式、静态检查和仓库忽略规则。
 
 GPU 内存分配、Buffer 同步上传、Texture、Texture View、Sampler、统一 Attachment 值类型、
-Command Recorder 及 Buffer Copy/Fill 命令已经实现。下一阶段将增加 Dynamic Rendering；
-资源屏障、帧同步、Swapchain acquire/present 和 Pipeline 尚未实现，具体顺序及验收标准见
+Command Recorder、Buffer Copy/Fill 和 Dynamic Rendering 已经实现。下一阶段将增加帧同步；
+资源屏障、Swapchain acquire/present 和 Pipeline 尚未实现，具体顺序及验收标准见
 [docs/roadmap.md](docs/roadmap.md)。
 
 ## 快速开始

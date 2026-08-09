@@ -6,7 +6,7 @@
 ## 元数据
 
 - 设计状态：已确认
-- 实现状态：F-02A 已完成；F-02B 等待实现
+- 实现状态：F-02A/F-02B 已完成；资源状态部分随 F-05 实现
 - 路线图任务：F-02
 - 优先级：P0
 - 前置依赖：F-01、R-09
@@ -22,7 +22,7 @@
 - Recorder 保存参与命令的资源内部强引用。
 - reset 或 destroy 时释放未提交录制的引用。
 
-### F-02B：Dynamic Rendering
+### F-02B：Dynamic Rendering（已完成）
 
 - `begin_rendering` / `end_rendering`。
 - 接入 R-09 颜色和深度/模板 Attachment。
@@ -104,7 +104,8 @@ F-02A 已覆盖：
 - 越界、非 4 字节对齐和同 Buffer 重叠被拒绝。
 - C/C++ 公共入口和两种链接方式构建。
 
-F-02B 完成后补充离屏颜色清除、深度清除、Attachment 交叉校验和渲染作用域状态测试。
+F-02B 已补充 Dynamic Rendering 作用域、颜色清除 Attachment、嵌套调用和资源提前销毁测试。
+深度 Attachment 与更多交叉组合将在 F-05 状态转换接入时继续扩展。
 
 Windows Clang + Ninja Debug 动态库和 Visual Studio 2022 Debug 静态库均在严格警告下构建，
 全部测试通过。

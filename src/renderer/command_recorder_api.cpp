@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <new>
 
+#include "core/resource_validation.h"
 #include "renderer/renderer_registry.h"
 
 extern "C" granit_result granit_command_recorder_create(granit_renderer renderer,
@@ -91,6 +92,36 @@ granit_command_recorder_fill_buffer(granit_renderer renderer, granit_command_rec
   try {
     return granit::detail::renderer_registry::instance().fill_buffer(renderer, recorder, buffer,
                                                                      offset, size, value);
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+extern "C" granit_result
+granit_command_recorder_begin_rendering(granit_renderer renderer, granit_command_recorder recorder,
+                                        const granit_rendering_desc* desc) {
+  if (renderer == GRANIT_NULL_HANDLE || recorder == GRANIT_NULL_HANDLE)
+    return GRANIT_ERROR_INVALID_HANDLE;
+  if (desc == nullptr)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  const auto validation = granit::detail::validate_rendering_desc(*desc);
+  if (validation != GRANIT_SUCCESS)
+    return validation;
+  try {
+    return granit::detail::renderer_registry::instance().begin_rendering(renderer, recorder, *desc);
+  } catch (const std::bad_alloc&) {
+    return GRANIT_ERROR_OUT_OF_MEMORY;
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+extern "C" granit_result granit_command_recorder_end_rendering(granit_renderer renderer,
+                                                               granit_command_recorder recorder) {
+  if (renderer == GRANIT_NULL_HANDLE || recorder == GRANIT_NULL_HANDLE)
+    return GRANIT_ERROR_INVALID_HANDLE;
+  try {
+    return granit::detail::renderer_registry::instance().end_rendering(renderer, recorder);
   } catch (...) {
     return GRANIT_ERROR_INTERNAL;
   }
