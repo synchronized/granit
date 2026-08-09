@@ -16,6 +16,7 @@ static void granit_test_public_types(void) {
 static void granit_test_result_messages(void) {
   TEST_ASSERT_NOT_NULL(granit_result_message(GRANIT_SUCCESS));
   TEST_ASSERT_NOT_NULL(granit_result_message(GRANIT_ERROR_INVALID_ARGUMENT));
+  TEST_ASSERT_NOT_NULL(granit_result_message(GRANIT_ERROR_NOT_READY));
 }
 
 static void granit_test_renderer_rejects_invalid_arguments(void) {

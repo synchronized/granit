@@ -26,6 +26,7 @@ enum class result : std::int32_t {
   no_suitable_device = GRANIT_ERROR_NO_SUITABLE_DEVICE,
   surface_lost = GRANIT_ERROR_SURFACE_LOST,
   out_of_date = GRANIT_ERROR_OUT_OF_DATE,
+  not_ready = GRANIT_ERROR_NOT_READY,
 };
 
 [[nodiscard]] constexpr granit_result to_native(result value) noexcept {

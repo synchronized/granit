@@ -7,12 +7,16 @@
 
 namespace {
 
-granit_result validate_desc(const granit_swapchain_desc* desc) noexcept {
+granit_result validate_desc(const granit_swapchain_desc* desc, bool allow_zero_extent) noexcept {
   if (desc == nullptr || desc->struct_size < GRANIT_SWAPCHAIN_DESC_VERSION_1_SIZE ||
-      desc->width == 0 || desc->height == 0 || desc->minimum_image_count > 16 ||
+      (!allow_zero_extent && (desc->width == 0 || desc->height == 0)) ||
       desc->present_mode > GRANIT_PRESENT_MODE_IMMEDIATE) {
     return GRANIT_ERROR_INVALID_ARGUMENT;
   }
+  if (desc->minimum_image_count > 16)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  if (desc->width == 0 || desc->height == 0)
+    return GRANIT_ERROR_NOT_READY;
   return GRANIT_SUCCESS;
 }
 
@@ -32,7 +36,7 @@ extern "C" granit_result granit_swapchain_create(granit_renderer renderer, grani
     return GRANIT_ERROR_INVALID_ARGUMENT;
   }
   *swapchain = GRANIT_NULL_HANDLE;
-  const auto validation_result = validate_desc(desc);
+  const auto validation_result = validate_desc(desc, false);
   if (validation_result != GRANIT_SUCCESS) {
     return validation_result;
   }
@@ -50,7 +54,7 @@ extern "C" granit_result granit_swapchain_recreate(granit_renderer renderer,
   if (renderer == GRANIT_NULL_HANDLE || swapchain == GRANIT_NULL_HANDLE) {
     return GRANIT_ERROR_INVALID_HANDLE;
   }
-  const auto validation_result = validate_desc(desc);
+  const auto validation_result = validate_desc(desc, true);
   if (validation_result != GRANIT_SUCCESS) {
     return validation_result;
   }

@@ -9,6 +9,9 @@ granit_result map_vulkan_result(VkResult result) noexcept {
   switch (result) {
   case VK_SUCCESS:
     return GRANIT_SUCCESS;
+  case VK_NOT_READY:
+  case VK_TIMEOUT:
+    return GRANIT_ERROR_NOT_READY;
   case VK_ERROR_OUT_OF_HOST_MEMORY:
   case VK_ERROR_OUT_OF_DEVICE_MEMORY:
     return GRANIT_ERROR_OUT_OF_MEMORY;

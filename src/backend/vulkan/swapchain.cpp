@@ -147,7 +147,7 @@ granit_result vulkan_swapchain::recreate(const vulkan_instance& instance,
                                  capabilities.maxImageExtent.height);
     }
     if (extent.width == 0 || extent.height == 0) {
-      return GRANIT_ERROR_INVALID_ARGUMENT;
+      return GRANIT_ERROR_NOT_READY;
     }
 
     auto image_count = desc.minimum_image_count == 0

@@ -76,6 +76,18 @@ TEST_CASE("Swapchain 支持创建、查询、重建和销毁", "[swapchain][win3
   CHECK(info.height > 0);
   CHECK(info.image_count >= 2);
 
+  granit_texture before_minimize_texture = GRANIT_NULL_HANDLE;
+  granit_texture_view before_minimize_view = GRANIT_NULL_HANDLE;
+  REQUIRE(swapchain.backbuffer(0, before_minimize_texture, before_minimize_view) ==
+          granit::result::success);
+  CHECK(swapchain.recreate({.width = 0, .height = 0}) == granit::result::not_ready);
+  granit_texture after_minimize_texture = GRANIT_NULL_HANDLE;
+  granit_texture_view after_minimize_view = GRANIT_NULL_HANDLE;
+  REQUIRE(swapchain.backbuffer(0, after_minimize_texture, after_minimize_view) ==
+          granit::result::success);
+  CHECK(after_minimize_texture == before_minimize_texture);
+  CHECK(after_minimize_view == before_minimize_view);
+
   granit::acquired_frame frame;
   REQUIRE(swapchain.acquire(frame) == granit::result::success);
   REQUIRE(frame.valid());

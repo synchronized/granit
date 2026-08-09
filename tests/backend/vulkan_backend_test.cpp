@@ -42,8 +42,9 @@ TEST_CASE("Vulkan 结果映射为后端无关错误", "[vulkan][result]") {
   CHECK(map_vulkan_result(VK_ERROR_INITIALIZATION_FAILED) == GRANIT_ERROR_INITIALIZATION_FAILED);
   CHECK(map_vulkan_result(VK_ERROR_SURFACE_LOST_KHR) == GRANIT_ERROR_SURFACE_LOST);
   CHECK(map_vulkan_result(VK_ERROR_OUT_OF_DATE_KHR) == GRANIT_ERROR_OUT_OF_DATE);
+  CHECK(map_vulkan_result(VK_NOT_READY) == GRANIT_ERROR_NOT_READY);
+  CHECK(map_vulkan_result(VK_TIMEOUT) == GRANIT_ERROR_NOT_READY);
   CHECK(map_vulkan_result(VK_ERROR_UNKNOWN) == GRANIT_ERROR_UNKNOWN);
-  CHECK(map_vulkan_result(VK_TIMEOUT) == GRANIT_ERROR_INTERNAL);
 }
 
 TEST_CASE("Swapchain acquire 和 present 拒绝无效后端状态", "[vulkan][swapchain][frame]") {

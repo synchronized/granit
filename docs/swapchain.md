@@ -43,7 +43,10 @@ granit_swapchain_info info = GRANIT_SWAPCHAIN_INFO_INIT;
 granit_swapchain_get_info(renderer, swapchain, &info);
 ```
 
-最小化窗口导致有效范围为零时，重建返回 `GRANIT_ERROR_INVALID_ARGUMENT`，调用者应等待窗口恢复。
+最小化窗口导致有效范围为零时，重建返回 `GRANIT_ERROR_NOT_READY`，调用者应暂停该窗口的帧循环，
+等待窗口恢复到非零尺寸后再重建，不应忙循环。此时旧 Swapchain 和 backbuffer 句柄保持有效，但在
+成功重建前不应继续 acquire。创建全新 Swapchain 时传入零尺寸仍返回
+`GRANIT_ERROR_INVALID_ARGUMENT`。
 Surface 丢失返回 `GRANIT_ERROR_SURFACE_LOST`；交换链过期返回 `GRANIT_ERROR_OUT_OF_DATE`。
 
 ## 生命周期和线程安全

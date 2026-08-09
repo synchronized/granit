@@ -33,6 +33,8 @@ extern "C" const char* granit_result_message(granit_result result) {
     return "window surface lost";
   case GRANIT_ERROR_OUT_OF_DATE:
     return "swapchain out of date";
+  case GRANIT_ERROR_NOT_READY:
+    return "operation temporarily not ready";
   default:
     return "unrecognized result";
   }

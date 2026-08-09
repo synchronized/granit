@@ -6,7 +6,7 @@
 ## 元数据
 
 - 设计状态：已确认
-- 实现状态：F-07A 已完成，F-07B/F-07C 待开始
+- 实现状态：F-07A/F-07B 已完成，F-07C 待开始
 - 路线图任务：F-07
 - 优先级：P0
 - 前置依赖：F-06
@@ -35,12 +35,12 @@ C++ `acquired_frame` 保存 Renderer 与 Swapchain 身份，并提供以下作�
 阶段出错时保留令牌，允许调用者诊断或重试。取消提交也占用 frames-in-flight 槽位，并在复用
 前等待 Fence，不能绕过正常 GPU 完成语义。
 
-## F-07B：窗口尺寸与重建状态（待开始）
+## F-07B：窗口尺寸与重建状态（已完成）
 
-- 明确零尺寸为“暂不可渲染”，而不是致命错误；调用者等待非零尺寸后再 recreate。
+- 零尺寸返回 `GRANIT_ERROR_NOT_READY`，表示“暂不可渲染”；调用者等待非零尺寸后再 recreate。
 - acquire/present 的 OUT_OF_DATE 触发重建流程，SUBOPTIMAL 只设置 `needs_recreate`。
 - 重建前必须先消费当前 Swapchain 的全部 Frame；重建成功后重新查询 backbuffer。
-- 增加 resize、最小化、恢复和连续重建测试，不在零尺寸期间忙循环。
+- 零尺寸不会进入 Vulkan 重建，也不会使旧 Swapchain 和 backbuffer 句柄失效。
 
 ## F-07C：Surface Lost 与 Device Lost（待开始）
 
@@ -63,3 +63,11 @@ C++ `acquired_frame` 保存 Renderer 与 Swapchain 身份，并提供以下作�
 - 取消通过真实 Queue submit 和 present 归还 acquired 图像。
 - 帧槽支持没有用户 Recorder 的取消提交，并在复用时等待及回收序列号。
 - Win32 Validation Layer 测试覆盖显式取消、析构自动取消及取消后的 Swapchain 重建。
+
+## F-07B 实际结果
+
+- 新增公共结果码 `GRANIT_ERROR_NOT_READY` 与 C++ `result::not_ready`。
+- 创建 Swapchain 时零尺寸仍是无效参数；已有 Swapchain 的零尺寸重建返回 NOT_READY。
+- Vulkan `VK_NOT_READY` 和 `VK_TIMEOUT` 统一映射为 NOT_READY。
+- Win32 测试验证零尺寸重建不会替换或使现有 backbuffer 句柄失效。
+- OUT_OF_DATE 继续通过结果码触发重建，SUBOPTIMAL 继续只通过 `needs_recreate` 提示重建。
