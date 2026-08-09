@@ -81,6 +81,9 @@ GRANIT_API granit_result granit_swapchain_acquire(granit_renderer renderer,
 GRANIT_API granit_result granit_swapchain_present(granit_renderer renderer,
                                                   granit_swapchain swapchain, granit_frame frame,
                                                   uint32_t* needs_recreate);
+/** 取消尚未提交的 Frame，归还已获取的图像并使令牌失效。 */
+GRANIT_API granit_result granit_frame_cancel(granit_renderer renderer, granit_swapchain swapchain,
+                                             granit_frame frame, uint32_t* needs_recreate);
 /** 销毁属于指定 Renderer 的 Swapchain，并使句柄立即失效。 */
 GRANIT_API granit_result granit_swapchain_destroy(granit_renderer renderer,
                                                   granit_swapchain swapchain);

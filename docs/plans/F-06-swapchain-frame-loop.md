@@ -59,9 +59,9 @@ swapchain_present(frame) → frame 失效
 6. Queue signal `render_finished` 和槽位 Fence；
 7. present 等待 `render_finished`，随后使帧令牌失效。
 
-Fence 只在确定 Queue submit 即将发生时复位。第一版要求成功 acquire 的 Frame 最终完成 submit
-和 present；活动 Frame 存在时拒绝重建或销毁对应 Swapchain/Surface。显式取消帧与窗口异常恢复
-统一在 F-07 接入；Renderer 关闭仍会等待 GPU 并回收全部瞬时令牌。
+Fence 只在确定 Queue submit 即将发生时复位。成功 acquire 的 Frame 最终必须完成 submit 和
+present，或者通过 F-07A 的取消路径归还图像；活动 Frame 存在时拒绝重建或销毁对应
+Swapchain/Surface。Renderer 关闭仍会等待 GPU 并回收全部瞬时令牌。
 
 ## 状态与重建
 

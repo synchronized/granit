@@ -159,3 +159,24 @@ extern "C" granit_result granit_swapchain_present(granit_renderer renderer,
     return GRANIT_ERROR_INTERNAL;
   }
 }
+
+extern "C" granit_result granit_frame_cancel(granit_renderer renderer, granit_swapchain swapchain,
+                                             granit_frame frame, uint32_t* needs_recreate) {
+  if (needs_recreate == nullptr)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  *needs_recreate = 0;
+  if (renderer == GRANIT_NULL_HANDLE || swapchain == GRANIT_NULL_HANDLE ||
+      frame == GRANIT_NULL_HANDLE)
+    return GRANIT_ERROR_INVALID_HANDLE;
+  try {
+    bool recreate{};
+    const auto result = granit::detail::renderer_registry::instance().cancel_swapchain_frame(
+        renderer, swapchain, frame, recreate);
+    *needs_recreate = recreate ? 1U : 0U;
+    return result;
+  } catch (const std::bad_alloc&) {
+    return GRANIT_ERROR_OUT_OF_MEMORY;
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}

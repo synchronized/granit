@@ -6,7 +6,7 @@
 ## 定位
 
 Swapchain 管理 Surface 对应的窗口后缓冲图像。公开 API 不暴露 Vulkan 图像、格式或交换链句柄；
-当前阶段提供创建、查询、重建和销毁，为后续帧获取与呈现接口建立稳定生命周期。
+当前阶段提供创建、查询、重建、帧获取、呈现和销毁，并隐藏 WSI 同步及图像布局细节。
 
 ## 创建
 
@@ -71,7 +71,10 @@ swapchain.present(frame);
 ```
 
 `needs_recreate` 在 acquire 或 present 遇到 SUBOPTIMAL 时为 true；OUT_OF_DATE 通过结果码返回。
-成功 acquire 后必须完成 submit 和 present，活动 Frame 存在时不能重建或销毁对应 Swapchain。
+成功 acquire 后必须完成 submit 和 present，或者调用 `granit_frame_cancel` / `swapchain.cancel`。
+取消操作会提交最小布局转换并归还已获取图像，因此不是简单丢弃令牌。C++ `acquired_frame` 离开
+作用域时会自动呈现已提交帧，或取消尚未提交的帧；析构结果无法返回，需处理错误或立即重建时
+仍应显式调用。活动 Frame 存在时不能重建或销毁对应 Swapchain。
 
 ## Backbuffer 资源
 

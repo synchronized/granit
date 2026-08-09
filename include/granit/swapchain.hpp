@@ -34,16 +34,27 @@ struct swapchain_info {
 
 struct acquired_frame {
   acquired_frame() = default;
+  ~acquired_frame() {
+    if (valid()) {
+      std::uint32_t recreate{};
+      const auto presented = granit_swapchain_present(renderer, swapchain, handle, &recreate);
+      if (presented == GRANIT_ERROR_INVALID_ARGUMENT)
+        static_cast<void>(granit_frame_cancel(renderer, swapchain, handle, &recreate));
+    }
+  }
   acquired_frame(const acquired_frame&) = delete;
   acquired_frame& operator=(const acquired_frame&) = delete;
   acquired_frame(acquired_frame&& other) noexcept
       : handle(std::exchange(other.handle, GRANIT_NULL_HANDLE)), image_index(other.image_index),
-        needs_recreate(other.needs_recreate) {}
+        needs_recreate(other.needs_recreate), renderer(other.renderer), swapchain(other.swapchain) {
+  }
   acquired_frame& operator=(acquired_frame&&) = delete;
 
   granit_frame handle{GRANIT_NULL_HANDLE};
   std::uint32_t image_index{};
   bool needs_recreate{};
+  granit_renderer renderer{GRANIT_NULL_HANDLE};
+  granit_swapchain swapchain{GRANIT_NULL_HANDLE};
 
   [[nodiscard]] bool valid() const noexcept { return handle != GRANIT_NULL_HANDLE; }
 };
@@ -115,6 +126,10 @@ public:
     const auto value =
         granit_swapchain_acquire(renderer_, handle_, &frame.handle, &frame.image_index, &recreate);
     frame.needs_recreate = recreate != 0;
+    if (value == GRANIT_SUCCESS) {
+      frame.renderer = renderer_;
+      frame.swapchain = handle_;
+    }
     return from_native(value);
   }
 
@@ -123,6 +138,17 @@ public:
       return result::invalid_argument;
     std::uint32_t recreate{};
     const auto value = granit_swapchain_present(renderer_, handle_, frame.handle, &recreate);
+    if (value != GRANIT_ERROR_INVALID_ARGUMENT && value != GRANIT_ERROR_INVALID_HANDLE)
+      frame.handle = GRANIT_NULL_HANDLE;
+    frame.needs_recreate = recreate != 0;
+    return from_native(value);
+  }
+
+  [[nodiscard]] result cancel(acquired_frame& frame) const noexcept {
+    if (!valid() || !frame.valid())
+      return result::invalid_argument;
+    std::uint32_t recreate{};
+    const auto value = granit_frame_cancel(renderer_, handle_, frame.handle, &recreate);
     if (value != GRANIT_ERROR_INVALID_ARGUMENT && value != GRANIT_ERROR_INVALID_HANDLE)
       frame.handle = GRANIT_NULL_HANDLE;
     frame.needs_recreate = recreate != 0;

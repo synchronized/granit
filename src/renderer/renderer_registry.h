@@ -60,6 +60,9 @@ public:
   [[nodiscard]] granit_result present_swapchain_frame(granit_renderer renderer,
                                                       granit_swapchain swapchain,
                                                       granit_frame frame, bool& needs_recreate);
+  [[nodiscard]] granit_result cancel_swapchain_frame(granit_renderer renderer,
+                                                     granit_swapchain swapchain, granit_frame frame,
+                                                     bool& needs_recreate);
   [[nodiscard]] granit_result create_buffer(granit_renderer renderer,
                                             const granit_buffer_desc& desc, granit_buffer& buffer);
   [[nodiscard]] granit_result map_buffer(granit_renderer renderer, granit_buffer buffer,

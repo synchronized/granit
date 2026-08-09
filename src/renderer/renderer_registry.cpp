@@ -765,6 +765,40 @@ granit_result renderer_registry::present_swapchain_frame(granit_renderer rendere
   return result;
 }
 
+granit_result renderer_registry::cancel_swapchain_frame(granit_renderer renderer,
+                                                        granit_swapchain swapchain,
+                                                        granit_frame frame, bool& needs_recreate) {
+  std::shared_ptr<frame_record> record;
+  {
+    std::lock_guard lock{mutex_};
+    const auto found_renderer = renderers_.find(renderer);
+    const auto found_swapchain = swapchains_.find(swapchain);
+    const auto found = frames_.find(frame);
+    if (found_renderer == renderers_.end() || found_swapchain == swapchains_.end() ||
+        found == frames_.end() || found->second->renderer != found_renderer->second ||
+        found->second->swapchain != found_swapchain->second)
+      return GRANIT_ERROR_INVALID_HANDLE;
+    record = found->second;
+  }
+  std::lock_guard frame_lock{record->mutex};
+  if (record->submitted)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  const auto result = record->renderer->cancel_swapchain_frame(
+      *record->swapchain->native, record->image_index, record->slot_index, needs_recreate);
+  if (result != GRANIT_SUCCESS && result != GRANIT_ERROR_OUT_OF_DATE &&
+      result != GRANIT_ERROR_SURFACE_LOST && result != GRANIT_ERROR_DEVICE_LOST)
+    return result;
+  {
+    std::lock_guard lock{mutex_};
+    const auto found = frames_.find(frame);
+    if (found != frames_.end() && found->second == record) {
+      frames_.erase(found);
+      static_cast<void>(handles_.erase(frame, resource_type::frame, record->renderer->domain()));
+    }
+  }
+  return result;
+}
+
 granit_result renderer_registry::destroy_swapchain(granit_renderer renderer,
                                                    granit_swapchain swapchain) {
   std::shared_ptr<swapchain_record> record;

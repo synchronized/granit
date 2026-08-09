@@ -101,6 +101,9 @@ public:
   [[nodiscard]] granit_result present_swapchain_frame(vulkan_swapchain& swapchain,
                                                       std::uint32_t image_index,
                                                       std::size_t slot_index, bool& needs_recreate);
+  [[nodiscard]] granit_result cancel_swapchain_frame(vulkan_swapchain& swapchain,
+                                                     std::uint32_t image_index,
+                                                     std::size_t slot_index, bool& needs_recreate);
   [[nodiscard]] granit_result wait_command_recorder(vulkan_command_recorder& recorder) noexcept;
   [[nodiscard]] granit_result wait_for_all_submissions() noexcept;
   void destroy_native_command_recorder(vulkan_command_recorder& recorder) noexcept;

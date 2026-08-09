@@ -99,6 +99,16 @@ TEST_CASE("Swapchain 支持创建、查询、重建和销毁", "[swapchain][win3
   CHECK_FALSE(frame.valid());
   REQUIRE(recorder.reset() == granit::result::success);
 
+  granit::acquired_frame cancelled;
+  REQUIRE(swapchain.acquire(cancelled) == granit::result::success);
+  REQUIRE(swapchain.cancel(cancelled) == granit::result::success);
+  CHECK_FALSE(cancelled.valid());
+  {
+    granit::acquired_frame automatic;
+    REQUIRE(swapchain.acquire(automatic) == granit::result::success);
+  }
+  REQUIRE(swapchain.recreate({.width = 96, .height = 72}) == granit::result::success);
+
   granit_texture old_texture = GRANIT_NULL_HANDLE;
   granit_texture_view old_view = GRANIT_NULL_HANDLE;
   REQUIRE(swapchain.backbuffer(0, old_texture, old_view) == granit::result::success);

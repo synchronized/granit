@@ -533,14 +533,15 @@ granit_result renderer_state::end_rendering(vulkan_command_recorder& recorder) n
 }
 
 granit_result renderer_state::complete_frame_slot(frame_slot& slot) noexcept {
-  if (slot.recorder == nullptr) {
+  if (slot.serial == 0) {
     return GRANIT_SUCCESS;
   }
   const auto result = slot.context->wait(device_, UINT64_MAX);
   if (result != GRANIT_SUCCESS) {
     return result;
   }
-  slot.recorder->mark_complete();
+  if (slot.recorder != nullptr)
+    slot.recorder->mark_complete();
   submission_serials_.mark_completed(slot.serial);
   slot.recorder = nullptr;
   slot.serial = 0;
@@ -817,6 +818,98 @@ granit_result renderer_state::present_swapchain_frame(vulkan_swapchain& swapchai
                                            slot.context->render_finished());
   slot.awaiting_present = false;
   needs_recreate = presented.suboptimal || presented.result == GRANIT_ERROR_OUT_OF_DATE;
+  return presented.result;
+}
+
+granit_result renderer_state::cancel_swapchain_frame(vulkan_swapchain& swapchain,
+                                                     std::uint32_t image_index,
+                                                     std::size_t slot_index, bool& needs_recreate) {
+  std::lock_guard lock{queue_mutex_};
+  if (slot_index >= frame_slots_.size() || image_index >= swapchain.images().size())
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  auto& slot = frame_slots_[slot_index];
+  if (!slot.acquired || slot.awaiting_present)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  const auto image = swapchain.images()[image_index];
+  image_states_.reserve(image_states_.size() + 1);
+  const auto previous = std::find_if(image_states_.begin(), image_states_.end(),
+                                     [&](const auto& state) { return state.image == image; });
+  VkImageMemoryBarrier2 barrier{};
+  barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
+  barrier.srcStageMask =
+      previous == image_states_.end() ? VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT : previous->stages;
+  barrier.srcAccessMask = previous == image_states_.end() ? 0 : previous->access;
+  barrier.dstStageMask = VK_PIPELINE_STAGE_2_NONE;
+  barrier.oldLayout =
+      previous == image_states_.end() ? VK_IMAGE_LAYOUT_UNDEFINED : previous->layout;
+  barrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+  barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+  barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+  barrier.image = image;
+  barrier.subresourceRange = {.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+                              .baseMipLevel = 0,
+                              .levelCount = 1,
+                              .baseArrayLayer = 0,
+                              .layerCount = 1};
+  auto result = slot.postamble->state() == command_recorder_state::executable
+                    ? slot.postamble->reset(device_)
+                    : GRANIT_SUCCESS;
+  if (result == GRANIT_SUCCESS)
+    result = slot.postamble->begin(device_);
+  if (result == GRANIT_SUCCESS)
+    result = slot.postamble->record_image_barriers(device_, {&barrier, 1});
+  if (result == GRANIT_SUCCESS)
+    result = slot.postamble->end(device_);
+  if (result != GRANIT_SUCCESS)
+    return result;
+  const auto serial = submission_serials_.next();
+  if (serial == 0)
+    return GRANIT_ERROR_INTERNAL;
+  result = slot.context->reset_fence(device_);
+  if (result != GRANIT_SUCCESS)
+    return result;
+  VkSemaphoreSubmitInfo wait{};
+  wait.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
+  wait.semaphore = slot.context->image_available();
+  wait.stageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
+  VkCommandBufferSubmitInfo command{};
+  command.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO;
+  command.commandBuffer = slot.postamble->native_handle();
+  VkSemaphoreSubmitInfo signal{};
+  signal.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
+  signal.semaphore = slot.context->render_finished();
+  signal.stageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
+  VkSubmitInfo2 submit{};
+  submit.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2;
+  submit.waitSemaphoreInfoCount = 1;
+  submit.pWaitSemaphoreInfos = &wait;
+  submit.commandBufferInfoCount = 1;
+  submit.pCommandBufferInfos = &command;
+  submit.signalSemaphoreInfoCount = 1;
+  submit.pSignalSemaphoreInfos = &signal;
+  const auto queue_result = device_.functions().vkQueueSubmit2(device_.graphics_queue(), 1, &submit,
+                                                               slot.context->completion_fence());
+  if (queue_result != VK_SUCCESS) {
+    static_cast<void>(slot.context->restore_signaled_fence(device_));
+    return map_vulkan_result(queue_result);
+  }
+  static_cast<void>(submission_serials_.commit(serial));
+  slot.serial = serial;
+  slot.acquired = false;
+  slot.awaiting_present = true;
+  const auto presented = swapchain.present(device_, device_.graphics_queue(), image_index,
+                                           slot.context->render_finished());
+  slot.awaiting_present = false;
+  needs_recreate = presented.suboptimal || presented.result == GRANIT_ERROR_OUT_OF_DATE;
+  vulkan_image_access present_state{};
+  present_state.image = image;
+  present_state.range = barrier.subresourceRange;
+  present_state.layout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+  if (previous == image_states_.end())
+    image_states_.push_back(present_state);
+  else
+    *previous = present_state;
+  next_frame_slot_ = (next_frame_slot_ + 1) % frame_slots_.size();
   return presented.result;
 }
 
