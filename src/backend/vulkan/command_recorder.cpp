@@ -72,6 +72,27 @@ granit_result vulkan_command_recorder::reset(const vulkan_device& device) noexce
   return map_vulkan_result(result);
 }
 
+granit_result vulkan_command_recorder::copy_buffer(const vulkan_device& device, VkBuffer source,
+                                                   VkBuffer destination,
+                                                   std::span<const VkBufferCopy> regions) noexcept {
+  if (state_ != command_recorder_state::recording || regions.empty()) {
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  }
+  device.functions().vkCmdCopyBuffer(command_buffer_, source, destination,
+                                     static_cast<std::uint32_t>(regions.size()), regions.data());
+  return GRANIT_SUCCESS;
+}
+
+granit_result vulkan_command_recorder::fill_buffer(const vulkan_device& device, VkBuffer buffer,
+                                                   VkDeviceSize offset, VkDeviceSize size,
+                                                   std::uint32_t value) noexcept {
+  if (state_ != command_recorder_state::recording) {
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  }
+  device.functions().vkCmdFillBuffer(command_buffer_, buffer, offset, size, value);
+  return GRANIT_SUCCESS;
+}
+
 void vulkan_command_recorder::destroy(const vulkan_device& device) noexcept {
   if (pool_ != VK_NULL_HANDLE) {
     device.functions().vkDestroyCommandPool(device.native_handle(), pool_, nullptr);

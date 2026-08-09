@@ -14,7 +14,9 @@ granit_command_recorder recorder = GRANIT_NULL_HANDLE;
 
 granit_command_recorder_create(renderer, &desc, &recorder);
 granit_command_recorder_begin(renderer, recorder);
-/* F-02 将在这里加入渲染、复制和屏障命令。 */
+granit_command_recorder_copy_buffer(
+    renderer, recorder, source, destination, regions, region_count);
+granit_command_recorder_fill_buffer(renderer, recorder, destination, 0, 256, 0);
 granit_command_recorder_end(renderer, recorder);
 granit_command_recorder_reset(renderer, recorder);
 granit_command_recorder_destroy(renderer, recorder);
@@ -22,6 +24,9 @@ granit_command_recorder_destroy(renderer, recorder);
 
 当前尚未提供 Queue 提交，因此 executable Recorder 可以直接 reset。F-04 加入提交后，pending
 Recorder 必须等待 GPU 完成才能 reset。
+
+Buffer Copy 支持一次传入多个区域。参与命令的 Buffer 会由 Recorder 保持内部强引用，因此录制
+后销毁公开 Buffer 句柄不会造成悬空 Vulkan 对象；reset 或 destroy 会释放这些引用。
 
 ## C++20
 

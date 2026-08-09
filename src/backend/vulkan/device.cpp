@@ -99,7 +99,8 @@ granit_result vulkan_device::initialize(const vulkan_instance& instance,
       functions_.vkCreateCommandPool == nullptr || functions_.vkDestroyCommandPool == nullptr ||
       functions_.vkAllocateCommandBuffers == nullptr ||
       functions_.vkBeginCommandBuffer == nullptr || functions_.vkEndCommandBuffer == nullptr ||
-      functions_.vkResetCommandPool == nullptr ||
+      functions_.vkResetCommandPool == nullptr || functions_.vkCmdCopyBuffer == nullptr ||
+      functions_.vkCmdFillBuffer == nullptr ||
       (surface_types != 0 &&
        (functions_.vkCreateSwapchainKHR == nullptr || functions_.vkDestroySwapchainKHR == nullptr ||
         functions_.vkGetSwapchainImagesKHR == nullptr))) {

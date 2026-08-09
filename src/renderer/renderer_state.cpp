@@ -415,6 +415,18 @@ granit_result renderer_state::reset_command_recorder(vulkan_command_recorder& re
   return recorder.reset(device_);
 }
 
+granit_result renderer_state::copy_buffer(vulkan_command_recorder& recorder, VkBuffer source,
+                                          VkBuffer destination,
+                                          std::span<const VkBufferCopy> regions) noexcept {
+  return recorder.copy_buffer(device_, source, destination, regions);
+}
+
+granit_result renderer_state::fill_buffer(vulkan_command_recorder& recorder, VkBuffer buffer,
+                                          VkDeviceSize offset, VkDeviceSize size,
+                                          std::uint32_t value) noexcept {
+  return recorder.fill_buffer(device_, buffer, offset, size, value);
+}
+
 void renderer_state::destroy_native_command_recorder(vulkan_command_recorder& recorder) noexcept {
   recorder.destroy(device_);
 }

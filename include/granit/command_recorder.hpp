@@ -4,12 +4,15 @@
 #ifndef GRANIT_COMMAND_RECORDER_HPP_
 #define GRANIT_COMMAND_RECORDER_HPP_
 
+#include <span>
 #include <utility>
 
 #include <granit/command_recorder.h>
 #include <granit/result.hpp>
 
 namespace granit {
+
+using buffer_copy_region = granit_buffer_copy_region;
 
 /** 无异常、move-only 的 Command Recorder 包装。 */
 class command_recorder {
@@ -49,6 +52,20 @@ public:
   }
   [[nodiscard]] result reset() noexcept {
     return from_native(granit_command_recorder_reset(renderer_, handle_));
+  }
+  [[nodiscard]] result copy_buffer(granit_buffer source, granit_buffer destination,
+                                   std::span<const buffer_copy_region> regions) noexcept {
+    if (regions.size() > UINT32_MAX) {
+      return result::invalid_argument;
+    }
+    return from_native(
+        granit_command_recorder_copy_buffer(renderer_, handle_, source, destination, regions.data(),
+                                            static_cast<std::uint32_t>(regions.size())));
+  }
+  [[nodiscard]] result fill_buffer(granit_buffer buffer, std::uint64_t offset, std::uint64_t size,
+                                   std::uint32_t value) noexcept {
+    return from_native(
+        granit_command_recorder_fill_buffer(renderer_, handle_, buffer, offset, size, value));
   }
   [[nodiscard]] result destroy() noexcept {
     if (!valid()) {

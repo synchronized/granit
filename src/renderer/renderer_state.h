@@ -70,6 +70,12 @@ public:
   [[nodiscard]] granit_result begin_command_recorder(vulkan_command_recorder& recorder) noexcept;
   [[nodiscard]] granit_result end_command_recorder(vulkan_command_recorder& recorder) noexcept;
   [[nodiscard]] granit_result reset_command_recorder(vulkan_command_recorder& recorder) noexcept;
+  [[nodiscard]] granit_result copy_buffer(vulkan_command_recorder& recorder, VkBuffer source,
+                                          VkBuffer destination,
+                                          std::span<const VkBufferCopy> regions) noexcept;
+  [[nodiscard]] granit_result fill_buffer(vulkan_command_recorder& recorder, VkBuffer buffer,
+                                          VkDeviceSize offset, VkDeviceSize size,
+                                          std::uint32_t value) noexcept;
   void destroy_native_command_recorder(vulkan_command_recorder& recorder) noexcept;
 
   void set_domain(std::uint32_t domain) noexcept { domain_ = domain; }

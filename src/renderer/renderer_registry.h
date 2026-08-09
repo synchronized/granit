@@ -7,6 +7,7 @@
 #include <cstdint>
 #include <memory>
 #include <mutex>
+#include <span>
 #include <string_view>
 #include <unordered_map>
 #include <vector>
@@ -82,6 +83,14 @@ public:
                                                    granit_command_recorder recorder);
   [[nodiscard]] granit_result reset_command_recorder(granit_renderer renderer,
                                                      granit_command_recorder recorder);
+  [[nodiscard]] granit_result copy_buffer(granit_renderer renderer,
+                                          granit_command_recorder recorder, granit_buffer source,
+                                          granit_buffer destination,
+                                          std::span<const granit_buffer_copy_region> regions);
+  [[nodiscard]] granit_result fill_buffer(granit_renderer renderer,
+                                          granit_command_recorder recorder, granit_buffer buffer,
+                                          std::uint64_t offset, std::uint64_t size,
+                                          std::uint32_t value);
   [[nodiscard]] granit_result destroy_command_recorder(granit_renderer renderer,
                                                        granit_command_recorder recorder);
 
@@ -159,6 +168,7 @@ private:
     std::shared_ptr<renderer_state> renderer;
     vulkan_command_recorder native;
     std::mutex mutex;
+    std::vector<std::shared_ptr<void>> retained_resources;
     ~command_recorder_record();
   };
   std::unordered_map<granit_surface, std::shared_ptr<surface_record>> surfaces_;

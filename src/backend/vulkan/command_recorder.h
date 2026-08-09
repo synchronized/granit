@@ -6,6 +6,8 @@
 
 #include <granit/result.h>
 
+#include <span>
+
 #include <volk.h>
 
 namespace granit::detail {
@@ -21,6 +23,12 @@ public:
   [[nodiscard]] granit_result begin(const vulkan_device& device) noexcept;
   [[nodiscard]] granit_result end(const vulkan_device& device) noexcept;
   [[nodiscard]] granit_result reset(const vulkan_device& device) noexcept;
+  [[nodiscard]] granit_result copy_buffer(const vulkan_device& device, VkBuffer source,
+                                          VkBuffer destination,
+                                          std::span<const VkBufferCopy> regions) noexcept;
+  [[nodiscard]] granit_result fill_buffer(const vulkan_device& device, VkBuffer buffer,
+                                          VkDeviceSize offset, VkDeviceSize size,
+                                          std::uint32_t value) noexcept;
   void destroy(const vulkan_device& device) noexcept;
 
   [[nodiscard]] command_recorder_state state() const noexcept { return state_; }

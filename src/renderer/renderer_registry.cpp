@@ -26,6 +26,21 @@ granit_texture_format swapchain_format(VkFormat format) noexcept {
   }
 }
 
+void retain_resource(std::vector<std::shared_ptr<void>>& resources,
+                     const std::shared_ptr<void>& resource) {
+  for (const auto& retained : resources) {
+    if (retained.get() == resource.get()) {
+      return;
+    }
+  }
+  resources.push_back(resource);
+}
+
+bool ranges_overlap(std::uint64_t left_offset, std::uint64_t left_size, std::uint64_t right_offset,
+                    std::uint64_t right_size) noexcept {
+  return left_offset < right_offset + right_size && right_offset < left_offset + left_size;
+}
+
 } // namespace
 
 renderer_registry& renderer_registry::instance() {
@@ -1130,7 +1145,112 @@ granit_result renderer_registry::reset_command_recorder(granit_renderer renderer
     return GRANIT_ERROR_INVALID_HANDLE;
   }
   std::lock_guard record_lock{record->mutex};
-  return record->renderer->reset_command_recorder(record->native);
+  const auto result = record->renderer->reset_command_recorder(record->native);
+  if (result == GRANIT_SUCCESS) {
+    record->retained_resources.clear();
+  }
+  return result;
+}
+
+granit_result renderer_registry::copy_buffer(granit_renderer renderer,
+                                             granit_command_recorder recorder, granit_buffer source,
+                                             granit_buffer destination,
+                                             std::span<const granit_buffer_copy_region> regions) {
+  auto recorder_record = acquire_command_recorder(renderer, recorder);
+  if (!recorder_record) {
+    return GRANIT_ERROR_INVALID_HANDLE;
+  }
+  std::shared_ptr<buffer_record> source_record;
+  std::shared_ptr<buffer_record> destination_record;
+  {
+    std::lock_guard lock{mutex_};
+    const auto& state = recorder_record->renderer;
+    if (handles_.find(source, resource_type::buffer, state->domain()) == nullptr ||
+        handles_.find(destination, resource_type::buffer, state->domain()) == nullptr) {
+      return GRANIT_ERROR_INVALID_HANDLE;
+    }
+    const auto found_source = buffers_.find(source);
+    const auto found_destination = buffers_.find(destination);
+    if (found_source == buffers_.end() || found_destination == buffers_.end() ||
+        found_source->second->renderer != state || found_destination->second->renderer != state) {
+      return GRANIT_ERROR_INVALID_HANDLE;
+    }
+    source_record = found_source->second;
+    destination_record = found_destination->second;
+  }
+  if ((source_record->desc.usage & GRANIT_BUFFER_USAGE_TRANSFER_SOURCE_BIT) == 0 ||
+      (destination_record->desc.usage & GRANIT_BUFFER_USAGE_TRANSFER_DESTINATION_BIT) == 0) {
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  }
+  std::vector<VkBufferCopy> native_regions;
+  native_regions.reserve(regions.size());
+  for (const auto& region : regions) {
+    if (region.size == 0 || region.source_offset >= source_record->desc.size ||
+        region.size > source_record->desc.size - region.source_offset ||
+        region.destination_offset >= destination_record->desc.size ||
+        region.size > destination_record->desc.size - region.destination_offset) {
+      return GRANIT_ERROR_INVALID_ARGUMENT;
+    }
+    native_regions.push_back({.srcOffset = region.source_offset,
+                              .dstOffset = region.destination_offset,
+                              .size = region.size});
+  }
+  if (source_record == destination_record) {
+    for (const auto& source_region : regions) {
+      for (const auto& destination_region : regions) {
+        if (ranges_overlap(source_region.source_offset, source_region.size,
+                           destination_region.destination_offset, destination_region.size)) {
+          return GRANIT_ERROR_INVALID_ARGUMENT;
+        }
+      }
+    }
+  }
+
+  std::lock_guard record_lock{recorder_record->mutex};
+  if (recorder_record->native.state() != command_recorder_state::recording) {
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  }
+  retain_resource(recorder_record->retained_resources, source_record);
+  retain_resource(recorder_record->retained_resources, destination_record);
+  return recorder_record->renderer->copy_buffer(recorder_record->native,
+                                                source_record->native.buffer,
+                                                destination_record->native.buffer, native_regions);
+}
+
+granit_result renderer_registry::fill_buffer(granit_renderer renderer,
+                                             granit_command_recorder recorder, granit_buffer buffer,
+                                             std::uint64_t offset, std::uint64_t size,
+                                             std::uint32_t value) {
+  auto recorder_record = acquire_command_recorder(renderer, recorder);
+  if (!recorder_record) {
+    return GRANIT_ERROR_INVALID_HANDLE;
+  }
+  std::shared_ptr<buffer_record> buffer_record_state;
+  {
+    std::lock_guard lock{mutex_};
+    const auto& state = recorder_record->renderer;
+    if (handles_.find(buffer, resource_type::buffer, state->domain()) == nullptr) {
+      return GRANIT_ERROR_INVALID_HANDLE;
+    }
+    const auto found = buffers_.find(buffer);
+    if (found == buffers_.end() || found->second->renderer != state) {
+      return GRANIT_ERROR_INVALID_HANDLE;
+    }
+    buffer_record_state = found->second;
+  }
+  if ((buffer_record_state->desc.usage & GRANIT_BUFFER_USAGE_TRANSFER_DESTINATION_BIT) == 0 ||
+      offset % 4 != 0 || size % 4 != 0 || size == 0 || offset >= buffer_record_state->desc.size ||
+      size > buffer_record_state->desc.size - offset) {
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  }
+
+  std::lock_guard record_lock{recorder_record->mutex};
+  if (recorder_record->native.state() != command_recorder_state::recording) {
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  }
+  retain_resource(recorder_record->retained_resources, buffer_record_state);
+  return recorder_record->renderer->fill_buffer(
+      recorder_record->native, buffer_record_state->native.buffer, offset, size, value);
 }
 
 granit_result renderer_registry::destroy_command_recorder(granit_renderer renderer,
