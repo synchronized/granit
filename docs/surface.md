@@ -60,3 +60,5 @@ Surface 只能配合创建它的 Renderer 使用，跨 Renderer 销毁会返回
 Renderer 会先销毁它们并使其句柄失效。不要让 Renderer 销毁与其 Surface 操作并发执行。
 
 Surface 可以拥有多个 Swapchain；销毁 Surface 会先销毁全部所属 Swapchain 并使其句柄失效。
+验证模式下，该操作会报告仍存活的 Swapchain，但不会把其借用 Backbuffer 展开成用户遗漏资源；
+诊断不会阻止级联清理。

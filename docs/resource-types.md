@@ -29,6 +29,9 @@ index、uniform、storage 和 indirect。大小与用途必须非零，未知用
 当前验证范围只接受单 mip、单 array layer、单 sample 的 2D Texture 和完整范围 2D View。
 其他有效维度和采样数已经能够表达，但在对应实现完成前返回 `GRANIT_ERROR_UNSUPPORTED`。
 
+销毁 Texture 会先级联销毁其全部 View，并立即使旧 View 句柄失效。验证模式下，如果仍存在
+用户创建的 View，该级联操作会输出生命周期警告，但仍返回成功。
+
 像素格式数值由 Granit 定义，不等于 `VkFormat`。深度/模板格式不能作为颜色附件，颜色格式也
 不能作为深度模板附件。
 

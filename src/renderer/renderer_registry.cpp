@@ -275,6 +275,7 @@ granit_result renderer_registry::create_win32_surface(granit_renderer renderer,
 granit_result renderer_registry::destroy_surface(granit_renderer renderer, granit_surface surface) {
   std::shared_ptr<renderer_state> state;
   std::shared_ptr<surface_record> native_surface;
+  lifecycle_snapshot lifecycle;
   std::vector<std::shared_ptr<swapchain_record>> native_swapchains;
   std::vector<std::shared_ptr<texture_view_record>> native_views;
   std::vector<std::shared_ptr<texture_record>> native_textures;
@@ -295,6 +296,10 @@ granit_result renderer_registry::destroy_surface(granit_renderer renderer, grani
     }
     for (auto swapchain = swapchains_.begin(); swapchain != swapchains_.end();) {
       if (swapchain->second->surface == found->second) {
+        if (state->validation_enabled()) {
+          lifecycle.add(lifecycle_resource_type::swapchain, swapchain->first,
+                        swapchain->second->metadata.creation_sequence);
+        }
         for (const auto handle : swapchain->second->views) {
           const auto view = texture_views_.find(handle);
           if (view != texture_views_.end()) {
@@ -326,6 +331,9 @@ granit_result renderer_registry::destroy_surface(granit_renderer renderer, grani
       return erase_result;
     }
   }
+  write_child_lifecycle_diagnostic(lifecycle_resource_type::surface, surface,
+                                   lifecycle_resource_type::swapchain,
+                                   lifecycle.summary(lifecycle_resource_type::swapchain));
   native_views.clear();
   native_textures.clear();
   native_swapchains.clear();
@@ -935,6 +943,7 @@ granit_result renderer_registry::destroy_texture_view(granit_renderer renderer,
 granit_result renderer_registry::destroy_texture(granit_renderer renderer, granit_texture texture) {
   std::shared_ptr<texture_record> record;
   std::vector<std::shared_ptr<texture_view_record>> views;
+  lifecycle_snapshot lifecycle;
   {
     std::lock_guard lock{mutex_};
     const auto renderer_found = renderers_.find(renderer);
@@ -951,6 +960,10 @@ granit_result renderer_registry::destroy_texture(granit_renderer renderer, grani
       return GRANIT_ERROR_UNSUPPORTED;
     for (auto view = texture_views_.begin(); view != texture_views_.end();) {
       if (view->second->texture == found->second) {
+        if (state->validation_enabled() && view->second->publicly_destroyable) {
+          lifecycle.add(lifecycle_resource_type::texture_view, view->first,
+                        view->second->metadata.creation_sequence);
+        }
         views.push_back(std::move(view->second));
         static_cast<void>(
             handles_.erase(view->first, resource_type::texture_view, state->domain()));
@@ -962,6 +975,9 @@ granit_result renderer_registry::destroy_texture(granit_renderer renderer, grani
     textures_.erase(found);
     static_cast<void>(handles_.erase(texture, resource_type::texture, state->domain()));
   }
+  write_child_lifecycle_diagnostic(lifecycle_resource_type::texture, texture,
+                                   lifecycle_resource_type::texture_view,
+                                   lifecycle.summary(lifecycle_resource_type::texture_view));
   views.clear();
   record.reset();
   return GRANIT_SUCCESS;

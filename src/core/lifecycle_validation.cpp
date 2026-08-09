@@ -69,4 +69,27 @@ void write_lifecycle_diagnostic(granit_renderer renderer, std::uint32_t domain,
   std::fputs("；将级联释放。\n", stderr);
 }
 
+void write_child_lifecycle_diagnostic(lifecycle_resource_type parent_type,
+                                      granit_handle parent_handle,
+                                      lifecycle_resource_type child_type,
+                                      const lifecycle_resource_summary& children) noexcept {
+  if (children.count == 0) {
+    return;
+  }
+
+  std::fprintf(stderr,
+               "[granit][validation] %s 0x%016" PRIx64 " 销毁时仍有 %" PRIu64 " 个用户 %s：",
+               resource_names[to_index(parent_type)], parent_handle, children.count,
+               resource_names[to_index(child_type)]);
+  for (std::size_t sample = 0; sample < children.sample_count; ++sample) {
+    const auto& item = children.samples[sample];
+    std::fprintf(stderr, "%s0x%016" PRIx64 "#%" PRIu64, sample == 0 ? "" : ",", item.handle,
+                 item.creation_sequence);
+  }
+  if (children.count > children.sample_count) {
+    std::fputs(",...", stderr);
+  }
+  std::fputs("；将级联释放。\n", stderr);
+}
+
 } // namespace granit::detail

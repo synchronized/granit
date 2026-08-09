@@ -58,6 +58,9 @@ Vulkan Validation Layer 负责 Vulkan API、同步和对象规则，但无法判
 资源，然后仍完成句柄失效和级联清理。Swapchain Backbuffer 等借用资源不作为用户泄漏报告。
 具体方案见 [V-01 生命周期验证计划](plans/V-01-lifetime-validation.md)。
 
+验证模式下，销毁仍拥有用户子资源的父对象也会输出诊断：Texture 会报告用户创建的 View，
+Surface 会报告仍存活的 Swapchain。诊断不会改变销毁结果，子资源仍按依赖顺序失效和释放。
+
 ## 生命周期与线程安全
 
 公开 renderer 由进程内 registry 管理。句柄销毁后立即对新操作失效，重复销毁返回

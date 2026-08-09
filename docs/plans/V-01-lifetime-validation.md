@@ -25,6 +25,7 @@ Renderer domain、公开所有权或借用资源。Granit 需要自己的验证�
 ## 目标
 
 - 验证模式下发现 Renderer 销毁时仍存在的用户拥有资源。
+- 验证模式下发现父资源销毁时仍存在的用户拥有子资源。
 - 按资源类型输出简洁、可定位且不会刷屏的汇总诊断。
 - 区分用户拥有资源、内部临时资源和 Swapchain 借用资源。
 - 无论是否发现遗漏，都继续使句柄失效并完成底层清理。
@@ -54,6 +55,7 @@ Renderer domain、公开所有权或借用资源。Granit 需要自己的验证�
 负责：
 
 - Renderer 销毁时仍存活的用户拥有资源。
+- Texture 销毁时仍存活的用户 View，以及 Surface 销毁时仍存活的 Swapchain。
 - 错误资源类型、旧 generation 和跨 Renderer domain 使用。
 - 用户尝试销毁 Swapchain Backbuffer 等借用资源。
 - 嵌套映射、映射期间销毁和不合法的资源状态转换。
@@ -177,6 +179,7 @@ S-02 再增加统一日志回调，并明确：
 - 遗留 Buffer、Texture、用户 View 和 Sampler 时按类型准确汇总。
 - 只剩 Swapchain Backbuffer 借用 Texture/View 时不将其报告为泄漏。
 - 遗留 Surface/Swapchain 时报告父资源，但不把其内部 Backbuffer 展开为用户泄漏。
+- Texture 级联销毁用户 View、Surface 级联销毁 Swapchain 时输出父子关系诊断。
 - 输出后 Renderer 仍销毁成功，旧句柄全部返回无效句柄。
 - 大量资源只输出有限样本，日志长度有确定上限。
 - Clang 动态库和 MSVC 静态库严格警告构建通过。
@@ -205,6 +208,7 @@ S-02 再增加统一日志回调，并明确：
 - Renderer 销毁时在锁内收集固定容量快照，在锁外输出诊断并继续级联清理。
 - 每类资源最多保留 8 个句柄样本；总数始终准确。
 - 普通 Texture/View 与 Swapchain 借用 Backbuffer 根据公开销毁属性区分，借用资源不产生误报。
+- Texture/View 和 Surface/Swapchain 父子销毁路径复用有界样本格式，只诊断用户拥有子资源。
 - 增加快照分类、创建序号和样本上限单元测试。
 
 验证环境：Windows Clang + Ninja Debug 动态库、Visual Studio 2022 Debug 静态库，严格警告

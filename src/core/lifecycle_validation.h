@@ -56,6 +56,12 @@ private:
 void write_lifecycle_diagnostic(granit_renderer renderer, std::uint32_t domain,
                                 const lifecycle_snapshot& snapshot) noexcept;
 
+/** 输出父资源销毁时仍存在的用户拥有子资源。 */
+void write_child_lifecycle_diagnostic(lifecycle_resource_type parent_type,
+                                      granit_handle parent_handle,
+                                      lifecycle_resource_type child_type,
+                                      const lifecycle_resource_summary& children) noexcept;
+
 } // namespace granit::detail
 
 #endif
