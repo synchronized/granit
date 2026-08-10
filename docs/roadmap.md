@@ -154,7 +154,7 @@
 
 ## 阶段五：基础渲染
 
-**状态：进行中。前置依赖：阶段三和阶段四。**
+**状态：已完成。前置依赖：阶段三和阶段四。**
 
 ### 目标与交付物
 
@@ -171,8 +171,8 @@
   三角形示例。
 - **[D-07](plans/D-07-compute-pipeline.md) / P1 / 已完成**：实现 Compute Pipeline、资源状态与
   Dispatch，按 D-07A 至 D-07C 分步完成。
-- **[D-08](plans/D-08-pipeline-production.md) / P1 / 进行中**：Graphics Pipeline 常用状态、
-  Pipeline Cache 和并发创建已经完成，下一步验证着色器热重载边界。
+- **[D-08](plans/D-08-pipeline-production.md) / P1 / 已完成**：完成 Graphics Pipeline 常用状态、
+  Pipeline Cache、并发创建和着色器热重载边界验证。
 
 ### 验收标准
 

@@ -297,7 +297,7 @@ TEST_CASE("Graphics Pipeline 接受 Vertex Buffer Layout", "[pipeline][vertex-in
                            .color_blends = std::span{&blend, 1}}) == granit::result::success);
 }
 
-TEST_CASE("Graphics Pipeline 持有 Shader 与 Layout 依赖", "[pipeline][lifetime]") {
+TEST_CASE("Graphics Pipeline 热替换保持已录制对象有效", "[pipeline][lifetime][hot-reload]") {
   granit::renderer renderer;
   const auto result = renderer.initialize(
       {.application_name = "granit-graphics-pipeline", .enable_validation = true});
@@ -331,6 +331,26 @@ TEST_CASE("Graphics Pipeline 持有 Shader 与 Layout 依赖", "[pipeline][lifet
                                .primitive = {},
                                .depth = {},
                                .color_blends = {}}) == granit::result::success);
+  granit::shader replacement_vertex;
+  granit::shader replacement_fragment;
+  REQUIRE(replacement_vertex.initialize(renderer.native_handle(),
+                                        {.stage = granit::shader_stage::vertex,
+                                         .code = vertex_code}) == granit::result::success);
+  REQUIRE(replacement_fragment.initialize(renderer.native_handle(),
+                                          {.stage = granit::shader_stage::fragment,
+                                           .code = fragment_code}) == granit::result::success);
+  granit::pipeline_layout replacement_layout;
+  REQUIRE(replacement_layout.initialize(renderer.native_handle()) == granit::result::success);
+  granit::graphics_pipeline replacement_pipeline;
+  REQUIRE(replacement_pipeline.initialize(renderer.native_handle(),
+                                          {.layout = replacement_layout.native_handle(),
+                                           .vertex_shader = replacement_vertex.native_handle(),
+                                           .fragment_shader = replacement_fragment.native_handle(),
+                                           .color_formats = std::span{&format, 1},
+                                           .vertex_buffers = {},
+                                           .primitive = {},
+                                           .depth = {},
+                                           .color_blends = {}}) == granit::result::success);
   granit_texture_desc texture_desc = GRANIT_TEXTURE_DESC_INIT;
   texture_desc.format = GRANIT_TEXTURE_FORMAT_RGBA8_UNORM;
   texture_desc.usage = GRANIT_TEXTURE_USAGE_COLOR_ATTACHMENT_BIT;
@@ -377,6 +397,21 @@ TEST_CASE("Graphics Pipeline 持有 Shader 与 Layout 依赖", "[pipeline][lifet
   REQUIRE(recorder.end() == granit::result::success);
   REQUIRE(recorder.submit() == granit::result::success);
   REQUIRE(recorder.reset() == granit::result::success);
+  REQUIRE(recorder.begin() == granit::result::success);
+  REQUIRE(recorder.bind_graphics_pipeline(replacement_pipeline.native_handle()) ==
+          granit::result::success);
+  REQUIRE(recorder.set_viewports(0, std::span{&viewport, 1}) == granit::result::success);
+  REQUIRE(recorder.set_scissors(0, std::span{&scissor, 1}) == granit::result::success);
+  REQUIRE(recorder.begin_rendering(rendering) == granit::result::success);
+  REQUIRE(recorder.draw(3) == granit::result::success);
+  REQUIRE(recorder.end_rendering() == granit::result::success);
+  REQUIRE(recorder.end() == granit::result::success);
+  REQUIRE(recorder.submit() == granit::result::success);
+  REQUIRE(recorder.reset() == granit::result::success);
+  REQUIRE(replacement_pipeline.reset() == granit::result::success);
+  REQUIRE(replacement_vertex.reset() == granit::result::success);
+  REQUIRE(replacement_fragment.reset() == granit::result::success);
+  REQUIRE(replacement_layout.reset() == granit::result::success);
   REQUIRE(granit_texture_destroy(renderer.native_handle(), texture) == GRANIT_SUCCESS);
 }
 

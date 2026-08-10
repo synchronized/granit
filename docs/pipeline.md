@@ -83,3 +83,14 @@ Graphics 与 Compute Pipeline 共用 Renderer 内部的 Pipeline Cache。调用
 Graphics 与 Compute Pipeline 的同步创建函数可以从多个用户线程并发调用。Registry 全局锁仅保护
 句柄查找和登记，不覆盖驱动 Pipeline 编译；共享 Pipeline Cache 使用独立互斥锁串行化 Vulkan
 访问。驱动仍可能在内部串行编译，因此该保证描述调用安全性，不承诺线性加速。
+
+## Shader 热替换边界
+
+Shader、Bind Group Layout、Pipeline Layout、Bind Group 和 Pipeline 均为不可变对象。Granit 不监视
+Shader 文件，也不管理资源路径或 Asset 数据库。上层热重载流程应创建新 Shader，并基于它创建新
+Layout、Bind Group 和 Pipeline；全部成功后再原子替换上层持有的 Pipeline 引用。任一步失败时继续
+使用旧对象。
+
+已经录制或提交的 Command Recorder 会保持旧 Pipeline 及其依赖存活，直到真实 GPU 完成点后安全
+退役。若 Shader 反射得到的绑定布局发生变化，必须重建对应 Bind Group Layout、Pipeline Layout
+和 Bind Group，不能只替换 Shader 或原地修改现有对象。
