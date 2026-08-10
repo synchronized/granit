@@ -7,11 +7,11 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include <granit/export.h>
-#include <granit/renderer.h>
-#include <granit/resource_types.h>
-#include <granit/result.h>
-#include <granit/types.h>
+#include <granit/core/export.h>
+#include <granit/renderer/renderer.h>
+#include <granit/renderer/resource_types.h>
+#include <granit/core/result.h>
+#include <granit/core/types.h>
 
 /** Buffer 资源句柄。零值无效。 */
 typedef granit_handle granit_buffer;

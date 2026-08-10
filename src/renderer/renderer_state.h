@@ -10,10 +10,10 @@
 #include <string_view>
 #include <vector>
 
-#include <granit/pipeline.h>
-#include <granit/renderer.h>
-#include <granit/resource_types.h>
-#include <granit/result.h>
+#include <granit/renderer/pipeline.h>
+#include <granit/renderer/renderer.h>
+#include <granit/renderer/resource_types.h>
+#include <granit/core/result.h>
 
 #include "backend/vulkan/command_recorder.h"
 #include "backend/vulkan/device.h"

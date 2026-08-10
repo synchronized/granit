@@ -4,7 +4,7 @@
 #ifndef GRANIT_BACKEND_VULKAN_MEMORY_ALLOCATOR_H_
 #define GRANIT_BACKEND_VULKAN_MEMORY_ALLOCATOR_H_
 
-#include <granit/result.h>
+#include <granit/core/result.h>
 
 #include <volk.h>
 #include <vk_mem_alloc.h>

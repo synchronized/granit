@@ -7,9 +7,9 @@
 #include <cstdint>
 #include <utility>
 
-#include <granit/resource_types.hpp>
-#include <granit/result.hpp>
-#include <granit/texture.h>
+#include <granit/renderer/resource_types.hpp>
+#include <granit/core/result.hpp>
+#include <granit/renderer/texture.h>
 
 namespace granit {
 

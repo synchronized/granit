@@ -9,8 +9,8 @@
 #include <string_view>
 #include <utility>
 
-#include <granit/renderer.h>
-#include <granit/result.hpp>
+#include <granit/renderer/renderer.h>
+#include <granit/core/result.hpp>
 
 namespace granit {
 

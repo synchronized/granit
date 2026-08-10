@@ -7,11 +7,11 @@ granit_target_output_directories(granit)
 
 set(GRANIT_GENERATED_INCLUDE_DIR "${CMAKE_CURRENT_BINARY_DIR}/generated/include")
 set(GRANIT_GENERATED_VERSION_HEADER
-    "${GRANIT_GENERATED_INCLUDE_DIR}/granit/version.h")
+    "${GRANIT_GENERATED_INCLUDE_DIR}/granit/core/version.h")
 
-file(MAKE_DIRECTORY "${GRANIT_GENERATED_INCLUDE_DIR}/granit")
+file(MAKE_DIRECTORY "${GRANIT_GENERATED_INCLUDE_DIR}/granit/core")
 configure_file(
-  "${PROJECT_SOURCE_DIR}/include/granit/version.h.in"
+  "${PROJECT_SOURCE_DIR}/include/granit/core/version.h.in"
   "${GRANIT_GENERATED_VERSION_HEADER}"
   @ONLY
 )
@@ -72,35 +72,35 @@ target_sources(
       "${PROJECT_SOURCE_DIR}/include"
       "${GRANIT_GENERATED_INCLUDE_DIR}"
     FILES
-      "${PROJECT_SOURCE_DIR}/include/granit/export.h"
-      "${PROJECT_SOURCE_DIR}/include/granit/buffer.h"
-      "${PROJECT_SOURCE_DIR}/include/granit/buffer.hpp"
-      "${PROJECT_SOURCE_DIR}/include/granit/command_recorder.h"
-      "${PROJECT_SOURCE_DIR}/include/granit/command_recorder.hpp"
+      "${PROJECT_SOURCE_DIR}/include/granit/core/export.h"
+      "${PROJECT_SOURCE_DIR}/include/granit/renderer/buffer.h"
+      "${PROJECT_SOURCE_DIR}/include/granit/renderer/buffer.hpp"
+      "${PROJECT_SOURCE_DIR}/include/granit/renderer/command_recorder.h"
+      "${PROJECT_SOURCE_DIR}/include/granit/renderer/command_recorder.hpp"
       "${PROJECT_SOURCE_DIR}/include/granit/granit.h"
       "${PROJECT_SOURCE_DIR}/include/granit/granit.hpp"
-      "${PROJECT_SOURCE_DIR}/include/granit/pipeline.h"
-      "${PROJECT_SOURCE_DIR}/include/granit/pipeline.hpp"
-      "${PROJECT_SOURCE_DIR}/include/granit/renderer.h"
-      "${PROJECT_SOURCE_DIR}/include/granit/renderer.hpp"
-      "${PROJECT_SOURCE_DIR}/include/granit/render_target.h"
-      "${PROJECT_SOURCE_DIR}/include/granit/render_target.hpp"
-      "${PROJECT_SOURCE_DIR}/include/granit/resource_types.h"
-      "${PROJECT_SOURCE_DIR}/include/granit/resource_types.hpp"
-      "${PROJECT_SOURCE_DIR}/include/granit/result.h"
-      "${PROJECT_SOURCE_DIR}/include/granit/result.hpp"
-      "${PROJECT_SOURCE_DIR}/include/granit/sampler.h"
-      "${PROJECT_SOURCE_DIR}/include/granit/sampler.hpp"
-      "${PROJECT_SOURCE_DIR}/include/granit/shader.h"
-      "${PROJECT_SOURCE_DIR}/include/granit/shader.hpp"
-      "${PROJECT_SOURCE_DIR}/include/granit/surface.h"
-      "${PROJECT_SOURCE_DIR}/include/granit/surface.hpp"
-      "${PROJECT_SOURCE_DIR}/include/granit/texture.h"
-      "${PROJECT_SOURCE_DIR}/include/granit/texture.hpp"
-      "${PROJECT_SOURCE_DIR}/include/granit/swapchain.h"
-      "${PROJECT_SOURCE_DIR}/include/granit/swapchain.hpp"
-      "${PROJECT_SOURCE_DIR}/include/granit/types.h"
-      "${PROJECT_SOURCE_DIR}/include/granit/types.hpp"
+      "${PROJECT_SOURCE_DIR}/include/granit/renderer/pipeline.h"
+      "${PROJECT_SOURCE_DIR}/include/granit/renderer/pipeline.hpp"
+      "${PROJECT_SOURCE_DIR}/include/granit/renderer/renderer.h"
+      "${PROJECT_SOURCE_DIR}/include/granit/renderer/renderer.hpp"
+      "${PROJECT_SOURCE_DIR}/include/granit/renderer/render_target.h"
+      "${PROJECT_SOURCE_DIR}/include/granit/renderer/render_target.hpp"
+      "${PROJECT_SOURCE_DIR}/include/granit/renderer/resource_types.h"
+      "${PROJECT_SOURCE_DIR}/include/granit/renderer/resource_types.hpp"
+      "${PROJECT_SOURCE_DIR}/include/granit/core/result.h"
+      "${PROJECT_SOURCE_DIR}/include/granit/core/result.hpp"
+      "${PROJECT_SOURCE_DIR}/include/granit/renderer/sampler.h"
+      "${PROJECT_SOURCE_DIR}/include/granit/renderer/sampler.hpp"
+      "${PROJECT_SOURCE_DIR}/include/granit/renderer/shader.h"
+      "${PROJECT_SOURCE_DIR}/include/granit/renderer/shader.hpp"
+      "${PROJECT_SOURCE_DIR}/include/granit/renderer/surface.h"
+      "${PROJECT_SOURCE_DIR}/include/granit/renderer/surface.hpp"
+      "${PROJECT_SOURCE_DIR}/include/granit/renderer/texture.h"
+      "${PROJECT_SOURCE_DIR}/include/granit/renderer/texture.hpp"
+      "${PROJECT_SOURCE_DIR}/include/granit/renderer/swapchain.h"
+      "${PROJECT_SOURCE_DIR}/include/granit/renderer/swapchain.hpp"
+      "${PROJECT_SOURCE_DIR}/include/granit/core/types.h"
+      "${PROJECT_SOURCE_DIR}/include/granit/core/types.hpp"
       "${GRANIT_GENERATED_VERSION_HEADER}"
 )
 

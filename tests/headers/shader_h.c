@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include <granit/shader.h>
+#include <granit/renderer/shader.h>
 
 typedef char granit_shader_desc_size_check
     [sizeof(granit_shader_desc) >= GRANIT_SHADER_DESC_VERSION_1_SIZE ? 1 : -1];

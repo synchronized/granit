@@ -6,20 +6,20 @@
 
 #include <cstdint>
 
-#include <granit/buffer.hpp>
-#include <granit/command_recorder.hpp>
+#include <granit/renderer/buffer.hpp>
+#include <granit/renderer/command_recorder.hpp>
 #include <granit/granit.h>
-#include <granit/pipeline.hpp>
-#include <granit/render_target.hpp>
-#include <granit/renderer.hpp>
-#include <granit/resource_types.hpp>
-#include <granit/result.hpp>
-#include <granit/sampler.hpp>
-#include <granit/shader.hpp>
-#include <granit/surface.hpp>
-#include <granit/swapchain.hpp>
-#include <granit/texture.hpp>
-#include <granit/types.hpp>
+#include <granit/renderer/pipeline.hpp>
+#include <granit/renderer/render_target.hpp>
+#include <granit/renderer/renderer.hpp>
+#include <granit/renderer/resource_types.hpp>
+#include <granit/core/result.hpp>
+#include <granit/renderer/sampler.hpp>
+#include <granit/renderer/shader.hpp>
+#include <granit/renderer/surface.hpp>
+#include <granit/renderer/swapchain.hpp>
+#include <granit/renderer/texture.hpp>
+#include <granit/core/types.hpp>
 
 namespace granit {
 

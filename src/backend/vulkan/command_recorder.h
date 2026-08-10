@@ -4,7 +4,7 @@
 #ifndef GRANIT_BACKEND_VULKAN_COMMAND_RECORDER_H_
 #define GRANIT_BACKEND_VULKAN_COMMAND_RECORDER_H_
 
-#include <granit/result.h>
+#include <granit/core/result.h>
 
 #include <span>
 #include <unordered_map>

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include <granit/command_recorder.h>
+#include <granit/renderer/command_recorder.h>
 
 typedef char granit_command_recorder_desc_size_check
     [sizeof(granit_command_recorder_desc) == GRANIT_COMMAND_RECORDER_DESC_VERSION_1_SIZE ? 1 : -1];

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include <granit/texture.hpp>
+#include <granit/renderer/texture.hpp>
 
 #include "core/resource_validation.h"
 #include "renderer/renderer_registry.h"

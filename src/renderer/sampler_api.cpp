@@ -3,7 +3,7 @@
 
 #include "core/resource_validation.h"
 #include "renderer/renderer_registry.h"
-#include <granit/sampler.h>
+#include <granit/renderer/sampler.h>
 
 extern "C" granit_result granit_sampler_create(granit_renderer renderer,
                                                const granit_sampler_desc* desc,

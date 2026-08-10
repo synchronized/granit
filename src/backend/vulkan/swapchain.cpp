@@ -12,7 +12,7 @@
 #include <new>
 #include <utility>
 
-#include <granit/swapchain.h>
+#include <granit/renderer/swapchain.h>
 
 namespace granit::detail {
 namespace {

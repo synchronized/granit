@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include <granit/render_target.hpp>
+#include <granit/renderer/render_target.hpp>
 
 static_assert(sizeof(granit_rendering_desc) == GRANIT_RENDERING_DESC_VERSION_1_SIZE);
 

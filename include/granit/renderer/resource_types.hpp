@@ -6,7 +6,7 @@
 
 #include <cstdint>
 
-#include <granit/resource_types.h>
+#include <granit/renderer/resource_types.h>
 
 namespace granit {
 

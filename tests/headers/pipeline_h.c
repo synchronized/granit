@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include <granit/pipeline.h>
+#include <granit/renderer/pipeline.h>
 
 typedef char granit_pipeline_layout_desc_size_check
     [sizeof(granit_pipeline_layout_desc) >= GRANIT_PIPELINE_LAYOUT_DESC_VERSION_1_SIZE ? 1 : -1];

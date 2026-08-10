@@ -6,7 +6,7 @@
 
 #include <stdint.h>
 
-#include <granit/texture.h>
+#include <granit/renderer/texture.h>
 
 /** 渲染开始时对附件原有内容的处理方式。 */
 typedef uint32_t granit_attachment_load_operation;

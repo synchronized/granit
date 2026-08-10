@@ -10,8 +10,8 @@
 #include <string_view>
 #include <utility>
 
-#include <granit/result.hpp>
-#include <granit/shader.h>
+#include <granit/core/result.hpp>
+#include <granit/renderer/shader.h>
 
 namespace granit {
 

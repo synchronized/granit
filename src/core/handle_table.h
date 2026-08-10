@@ -9,8 +9,8 @@
 #include <limits>
 #include <vector>
 
-#include <granit/result.h>
-#include <granit/types.h>
+#include <granit/core/result.h>
+#include <granit/core/types.h>
 
 namespace granit::detail {
 

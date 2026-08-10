@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include <granit/result.h>
+#include <granit/core/result.h>
 
 extern "C" const char* granit_result_message(granit_result result) {
   switch (result) {

@@ -13,8 +13,8 @@
 #include <utility>
 #include <vector>
 
-#include <granit/renderer.h>
-#include <granit/version.h>
+#include <granit/renderer/renderer.h>
+#include <granit/core/version.h>
 
 namespace granit::detail {
 namespace {

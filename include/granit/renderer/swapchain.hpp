@@ -7,8 +7,8 @@
 #include <cstdint>
 #include <utility>
 
-#include <granit/result.hpp>
-#include <granit/swapchain.h>
+#include <granit/core/result.hpp>
+#include <granit/renderer/swapchain.h>
 
 namespace granit {
 

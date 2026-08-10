@@ -7,9 +7,9 @@
 #include <span>
 #include <utility>
 
-#include <granit/pipeline.h>
-#include <granit/resource_types.hpp>
-#include <granit/result.hpp>
+#include <granit/renderer/pipeline.h>
+#include <granit/renderer/resource_types.hpp>
+#include <granit/core/result.hpp>
 
 namespace granit {
 

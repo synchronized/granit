@@ -3,7 +3,8 @@
 
 # 资源值类型
 
-`granit/resource_types.h` 定义 Buffer、Texture、Texture View 和 Sampler 共用的后端无关值类型。
+`granit/renderer/resource_types.h` 定义 Buffer、Texture、Texture View 和 Sampler 共用的后端
+无关值类型。
 这些结构目前用于冻结资源描述和验证规则；资源创建、销毁及映射函数将在 R-03 至 R-06 中加入。
 
 ## 内存位置
@@ -42,7 +43,7 @@ linear、repeat、mirrored repeat 和 clamp to edge；比较采样和各向异�
 
 ## Render Target Attachment
 
-颜色和深度/模板附件定义在 `granit/render_target.h`，统一接收 Texture View。离屏 View 与
+颜色和深度/模板附件定义在 `granit/renderer/render_target.h`，统一接收 Texture View。离屏 View 与
 Swapchain Backbuffer View 不使用两套描述。详见 [Render Target Attachment](render-target.md)。
 
 ## ABI 与扩展

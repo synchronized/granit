@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include <granit/resource_types.h>
+#include <granit/renderer/resource_types.h>
 
 typedef char granit_buffer_desc_size_check
     [(sizeof(granit_buffer_desc) == GRANIT_BUFFER_DESC_VERSION_1_SIZE) ? 1 : -1];

@@ -3,6 +3,15 @@
 
 # 开发规范
 
+## 公共头文件布局
+
+- `include/granit/core`：导出宏、结果码、基础类型和版本信息，不依赖 Renderer。
+- `include/granit/renderer`：Renderer、资源、Pipeline、命令录制、Surface 和 Swapchain。
+- `include/granit/granit.h` 与 `granit.hpp`：面向普通用户的聚合入口。
+- Window、Asset、Scene 等高层模块只在实际实现时增加目录，底层模块不得反向依赖高层。
+
+当前仍构建单一 `granit::granit` 目标；源码目录分层不等同于拆分动态库。
+
 ## 开发阶段兼容策略
 
 当前处于早期开发阶段，不保证 API、ABI 或行为向后兼容。为了修正抽象、所有权和生命周期设计，

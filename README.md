@@ -131,6 +131,10 @@ C++20 用户包含：
 #include <granit/granit.hpp>
 ```
 
+公共头文件按层组织：基础结果码、类型和版本位于 `granit/core`，GPU 与渲染接口位于
+`granit/renderer`。根级 `granit.h` 和 `granit.hpp` 是面向普通用户的聚合入口；需要控制编译
+依赖的高级用户可以直接包含分层头文件。
+
 创建 renderer：
 
 ```cpp

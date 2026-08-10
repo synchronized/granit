@@ -8,10 +8,10 @@
 #include <span>
 #include <utility>
 
-#include <granit/command_recorder.h>
-#include <granit/render_target.hpp>
-#include <granit/result.hpp>
-#include <granit/swapchain.hpp>
+#include <granit/renderer/command_recorder.h>
+#include <granit/renderer/render_target.hpp>
+#include <granit/core/result.hpp>
+#include <granit/renderer/swapchain.hpp>
 
 namespace granit {
 

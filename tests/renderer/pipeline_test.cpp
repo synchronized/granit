@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include <granit/buffer.hpp>
-#include <granit/command_recorder.hpp>
-#include <granit/pipeline.hpp>
-#include <granit/renderer.hpp>
-#include <granit/sampler.hpp>
-#include <granit/shader.hpp>
-#include <granit/texture.h>
+#include <granit/renderer/buffer.hpp>
+#include <granit/renderer/command_recorder.hpp>
+#include <granit/renderer/pipeline.hpp>
+#include <granit/renderer/renderer.hpp>
+#include <granit/renderer/sampler.hpp>
+#include <granit/renderer/shader.hpp>
+#include <granit/renderer/texture.h>
 
 #include <catch2/catch_all.hpp>
 

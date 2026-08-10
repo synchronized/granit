@@ -38,8 +38,8 @@ R-09 只冻结 Attachment 值类型和验证规则。真正的 `begin_rendering`
 新增独立公共头文件：
 
 ```text
-include/granit/render_target.h
-include/granit/render_target.hpp
+include/granit/renderer/render_target.h
+include/granit/renderer/render_target.hpp
 ```
 
 C API 提供：

@@ -7,7 +7,7 @@
 #include <cstdint>
 #include <span>
 
-#include <granit/render_target.h>
+#include <granit/renderer/render_target.h>
 
 namespace granit {
 

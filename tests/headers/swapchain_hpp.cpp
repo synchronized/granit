@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include <granit/swapchain.hpp>
+#include <granit/renderer/swapchain.hpp>
 
 #include <type_traits>
 

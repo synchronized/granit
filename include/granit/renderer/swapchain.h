@@ -7,12 +7,12 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include <granit/export.h>
-#include <granit/renderer.h>
-#include <granit/result.h>
-#include <granit/surface.h>
-#include <granit/texture.h>
-#include <granit/types.h>
+#include <granit/core/export.h>
+#include <granit/renderer/renderer.h>
+#include <granit/core/result.h>
+#include <granit/renderer/surface.h>
+#include <granit/renderer/texture.h>
+#include <granit/core/types.h>
 
 /** 窗口交换链句柄。零值无效。 */
 typedef granit_handle granit_swapchain;

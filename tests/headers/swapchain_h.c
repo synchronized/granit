@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include <granit/swapchain.h>
+#include <granit/renderer/swapchain.h>
 
 static granit_swapchain_desc granit_test_swapchain_desc = GRANIT_SWAPCHAIN_DESC_INIT;
 static granit_swapchain_info granit_test_swapchain_info = GRANIT_SWAPCHAIN_INFO_INIT;

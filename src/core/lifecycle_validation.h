@@ -8,7 +8,7 @@
 #include <cstddef>
 #include <cstdint>
 
-#include <granit/renderer.h>
+#include <granit/renderer/renderer.h>
 
 namespace granit::detail {
 

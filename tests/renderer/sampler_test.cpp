@@ -2,8 +2,8 @@
 // Copyright (c) 2026 Granit contributors
 
 #include <catch2/catch_all.hpp>
-#include <granit/renderer.hpp>
-#include <granit/sampler.hpp>
+#include <granit/renderer/renderer.hpp>
+#include <granit/renderer/sampler.hpp>
 
 namespace {
 bool unavailable_sampler(granit::result value) {

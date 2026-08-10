@@ -6,14 +6,14 @@
 
 #include <stdint.h>
 
-#include <granit/buffer.h>
-#include <granit/export.h>
-#include <granit/pipeline.h>
-#include <granit/render_target.h>
-#include <granit/renderer.h>
-#include <granit/result.h>
-#include <granit/swapchain.h>
-#include <granit/types.h>
+#include <granit/renderer/buffer.h>
+#include <granit/core/export.h>
+#include <granit/renderer/pipeline.h>
+#include <granit/renderer/render_target.h>
+#include <granit/renderer/renderer.h>
+#include <granit/core/result.h>
+#include <granit/renderer/swapchain.h>
+#include <granit/core/types.h>
 
 /** 一次录制、一次提交的命令录制器句柄。零值无效。 */
 typedef granit_handle granit_command_recorder;

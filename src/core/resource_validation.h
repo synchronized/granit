@@ -4,9 +4,9 @@
 #ifndef GRANIT_CORE_RESOURCE_VALIDATION_H_
 #define GRANIT_CORE_RESOURCE_VALIDATION_H_
 
-#include <granit/render_target.h>
-#include <granit/resource_types.h>
-#include <granit/result.h>
+#include <granit/renderer/render_target.h>
+#include <granit/renderer/resource_types.h>
+#include <granit/core/result.h>
 
 namespace granit::detail {
 

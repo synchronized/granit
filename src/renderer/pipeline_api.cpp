@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include <granit/pipeline.h>
+#include <granit/renderer/pipeline.h>
 
 #include "renderer/renderer_registry.h"
 

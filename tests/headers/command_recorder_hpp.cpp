@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include <granit/command_recorder.hpp>
+#include <granit/renderer/command_recorder.hpp>
 
 #include <type_traits>
 

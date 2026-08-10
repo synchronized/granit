@@ -7,12 +7,12 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include <granit/export.h>
-#include <granit/renderer.h>
-#include <granit/resource_types.h>
-#include <granit/result.h>
-#include <granit/shader.h>
-#include <granit/types.h>
+#include <granit/core/export.h>
+#include <granit/renderer/renderer.h>
+#include <granit/renderer/resource_types.h>
+#include <granit/core/result.h>
+#include <granit/renderer/shader.h>
+#include <granit/core/types.h>
 
 /** Pipeline 资源布局句柄，由零至多个 Bind Group Layout 按组序号组成。 */
 typedef granit_handle granit_pipeline_layout;

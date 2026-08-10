@@ -4,7 +4,7 @@
 #ifndef GRANIT_TYPES_HPP_
 #define GRANIT_TYPES_HPP_
 
-#include <granit/types.h>
+#include <granit/core/types.h>
 
 namespace granit {
 

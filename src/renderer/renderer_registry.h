@@ -14,15 +14,15 @@
 #include <unordered_map>
 #include <vector>
 
-#include <granit/buffer.h>
-#include <granit/command_recorder.h>
-#include <granit/pipeline.h>
-#include <granit/renderer.h>
-#include <granit/sampler.h>
-#include <granit/shader.h>
-#include <granit/surface.h>
-#include <granit/swapchain.h>
-#include <granit/texture.h>
+#include <granit/renderer/buffer.h>
+#include <granit/renderer/command_recorder.h>
+#include <granit/renderer/pipeline.h>
+#include <granit/renderer/renderer.h>
+#include <granit/renderer/sampler.h>
+#include <granit/renderer/shader.h>
+#include <granit/renderer/surface.h>
+#include <granit/renderer/swapchain.h>
+#include <granit/renderer/texture.h>
 
 #include "core/handle_table.h"
 #include "core/lifecycle_validation.h"

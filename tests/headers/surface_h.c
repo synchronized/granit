@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include <granit/surface.h>
+#include <granit/renderer/surface.h>
 
 static granit_surface granit_test_surface;
 static granit_win32_surface_desc granit_test_surface_desc = GRANIT_WIN32_SURFACE_DESC_INIT;

@@ -9,9 +9,9 @@
 #include <span>
 #include <utility>
 
-#include <granit/buffer.h>
-#include <granit/resource_types.hpp>
-#include <granit/result.hpp>
+#include <granit/renderer/buffer.h>
+#include <granit/renderer/resource_types.hpp>
+#include <granit/core/result.hpp>
 
 namespace granit {
 

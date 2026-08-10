@@ -6,7 +6,7 @@
 
 #include <stdint.h>
 
-#include <granit/export.h>
+#include <granit/core/export.h>
 
 /** Granit 操作结果的定宽 ABI 类型。零表示成功，负值表示失败。 */
 typedef int32_t granit_result;

@@ -6,8 +6,8 @@
 
 #include <utility>
 
-#include <granit/result.hpp>
-#include <granit/surface.h>
+#include <granit/core/result.hpp>
+#include <granit/renderer/surface.h>
 
 namespace granit {
 

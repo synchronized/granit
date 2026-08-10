@@ -6,21 +6,21 @@
 
 #include <stdint.h>
 
-#include <granit/buffer.h>
-#include <granit/command_recorder.h>
-#include <granit/export.h>
-#include <granit/pipeline.h>
-#include <granit/render_target.h>
-#include <granit/renderer.h>
-#include <granit/resource_types.h>
-#include <granit/result.h>
-#include <granit/sampler.h>
-#include <granit/shader.h>
-#include <granit/surface.h>
-#include <granit/swapchain.h>
-#include <granit/texture.h>
-#include <granit/types.h>
-#include <granit/version.h>
+#include <granit/renderer/buffer.h>
+#include <granit/renderer/command_recorder.h>
+#include <granit/core/export.h>
+#include <granit/renderer/pipeline.h>
+#include <granit/renderer/render_target.h>
+#include <granit/renderer/renderer.h>
+#include <granit/renderer/resource_types.h>
+#include <granit/core/result.h>
+#include <granit/renderer/sampler.h>
+#include <granit/renderer/shader.h>
+#include <granit/renderer/surface.h>
+#include <granit/renderer/swapchain.h>
+#include <granit/renderer/texture.h>
+#include <granit/core/types.h>
+#include <granit/core/version.h>
 
 #ifdef __cplusplus
 extern "C" {

@@ -2,8 +2,8 @@
 // Copyright (c) 2026 Granit contributors
 
 #include <catch2/catch_all.hpp>
-#include <granit/renderer.hpp>
-#include <granit/texture.hpp>
+#include <granit/renderer/renderer.hpp>
+#include <granit/renderer/texture.hpp>
 
 namespace {
 bool unavailable(granit::result value) {

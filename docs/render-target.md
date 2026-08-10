@@ -5,7 +5,7 @@
 
 ## 定位
 
-`granit/render_target.h` 定义颜色和深度/模板 Attachment 的后端无关值类型。普通离屏 Texture
+`granit/renderer/render_target.h` 定义颜色和深度/模板 Attachment 的后端无关值类型。普通离屏 Texture
 View 与 Swapchain Backbuffer View 使用同一套描述，公共接口不暴露 Vulkan Layout 或附件类型。
 
 Command Recorder 已提供 Dynamic Rendering 的 begin/end，并直接复用这些描述。资源 Layout 和
@@ -52,7 +52,7 @@ Store 支持：
 
 ## C++20 包装
 
-`granit/render_target.hpp` 提供：
+`granit/renderer/render_target.hpp` 提供：
 
 - `attachment_load_operation` 和 `attachment_store_operation` 强类型枚举。
 - `clear_color_value` 和 `clear_depth_stencil_value`。

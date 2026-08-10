@@ -6,7 +6,7 @@
 
 #include <cstdint>
 
-#include <granit/result.h>
+#include <granit/core/result.h>
 
 namespace granit::detail {
 

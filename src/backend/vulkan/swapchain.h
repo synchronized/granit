@@ -7,7 +7,7 @@
 #include <cstdint>
 #include <vector>
 
-#include <granit/result.h>
+#include <granit/core/result.h>
 
 #include <volk.h>
 

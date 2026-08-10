@@ -4,9 +4,9 @@
 #ifndef GRANIT_SAMPLER_HPP_
 #define GRANIT_SAMPLER_HPP_
 
-#include <granit/resource_types.hpp>
-#include <granit/result.hpp>
-#include <granit/sampler.h>
+#include <granit/renderer/resource_types.hpp>
+#include <granit/core/result.hpp>
+#include <granit/renderer/sampler.h>
 #include <utility>
 
 namespace granit {

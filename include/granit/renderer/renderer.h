@@ -7,9 +7,9 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include <granit/export.h>
-#include <granit/result.h>
-#include <granit/types.h>
+#include <granit/core/export.h>
+#include <granit/core/result.h>
+#include <granit/core/types.h>
 
 /** Renderer 对象句柄。零值无效。 */
 typedef granit_handle granit_renderer;

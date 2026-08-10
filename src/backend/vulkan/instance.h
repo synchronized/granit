@@ -7,7 +7,7 @@
 #include <cstdint>
 #include <string_view>
 
-#include <granit/result.h>
+#include <granit/core/result.h>
 
 #include <volk.h>
 
