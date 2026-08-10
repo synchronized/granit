@@ -349,4 +349,78 @@ TEST_CASE("Compute Pipeline 校验阶段并持有 Shader 与 Layout", "[pipeline
         GRANIT_ERROR_INVALID_HANDLE);
 }
 
+TEST_CASE("Compute Dispatch 写入 Storage Buffer 并自动同步 Copy", "[pipeline][compute][storage]") {
+  granit::renderer renderer;
+  const auto result = renderer.initialize(
+      {.application_name = "granit-compute-storage", .enable_validation = true});
+  if (environment_unavailable(result) || result == granit::result::unsupported)
+    SKIP("当前运行环境不支持验证层或没有满足要求的 Vulkan 设备");
+  REQUIRE(result == granit::result::success);
+
+  constexpr std::uint64_t buffer_size = 16 * sizeof(std::uint32_t);
+  granit::buffer storage;
+  REQUIRE(storage.initialize(
+              renderer.native_handle(),
+              {.size = buffer_size,
+               .usage = granit::buffer_usage::storage | granit::buffer_usage::transfer_source,
+               .location = granit::memory_location::device}) == granit::result::success);
+  granit::buffer readback;
+  REQUIRE(readback.initialize(renderer.native_handle(),
+                              {.size = buffer_size,
+                               .usage = granit::buffer_usage::transfer_destination,
+                               .location = granit::memory_location::readback}) ==
+          granit::result::success);
+
+  const granit::bind_group_layout_entry declaration{.binding = 0,
+                                                    .type = granit::binding_type::storage_buffer,
+                                                    .visibility =
+                                                        granit::shader_stage_flags::compute};
+  granit::bind_group_layout group_layout;
+  REQUIRE(group_layout.initialize(renderer.native_handle(), std::span{&declaration, 1}) ==
+          granit::result::success);
+  const auto group_layout_handle = group_layout.native_handle();
+  granit::pipeline_layout pipeline_layout;
+  REQUIRE(
+      pipeline_layout.initialize(renderer.native_handle(), std::span{&group_layout_handle, 1}) ==
+      granit::result::success);
+  const granit::bind_group_entry entry{
+      .binding = 0, .resource = storage.native_handle(), .size = buffer_size};
+  granit::bind_group group;
+  REQUIRE(group.initialize(renderer.native_handle(), group_layout.native_handle(),
+                           std::span{&entry, 1}) == granit::result::success);
+
+  const auto code = load_shader("storage_buffer.comp.spv");
+  granit::shader shader;
+  REQUIRE(shader.initialize(renderer.native_handle(), {.stage = granit::shader_stage::compute,
+                                                       .code = code}) == granit::result::success);
+  granit::compute_pipeline pipeline;
+  REQUIRE(
+      pipeline.initialize(renderer.native_handle(), {.layout = pipeline_layout.native_handle(),
+                                                     .compute_shader = shader.native_handle()}) ==
+      granit::result::success);
+
+  granit::command_recorder recorder;
+  REQUIRE(recorder.initialize(renderer.native_handle()) == granit::result::success);
+  REQUIRE(recorder.begin() == granit::result::success);
+  REQUIRE(recorder.bind_compute_pipeline(pipeline.native_handle()) == granit::result::success);
+  const auto group_handle = group.native_handle();
+  REQUIRE(recorder.bind_compute_groups(pipeline_layout.native_handle(), 0,
+                                       std::span{&group_handle, 1}) == granit::result::success);
+  REQUIRE(recorder.dispatch(16) == granit::result::success);
+  const granit::buffer_copy_region copy{
+      .source_offset = 0, .destination_offset = 0, .size = buffer_size};
+  REQUIRE(recorder.copy_buffer(storage.native_handle(), readback.native_handle(),
+                               std::span{&copy, 1}) == granit::result::success);
+  REQUIRE(recorder.end() == granit::result::success);
+  REQUIRE(recorder.submit() == granit::result::success);
+  REQUIRE(recorder.reset() == granit::result::success);
+
+  void* mapped = nullptr;
+  REQUIRE(readback.map(0, buffer_size, &mapped) == granit::result::success);
+  const auto* values = static_cast<const std::uint32_t*>(mapped);
+  for (std::uint32_t index = 0; index < 16; ++index)
+    CHECK(values[index] == index * 3 + 7);
+  REQUIRE(readback.unmap() == granit::result::success);
+}
+
 } // namespace

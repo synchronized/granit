@@ -21,6 +21,14 @@ target_compile_definitions(
 )
 granit_target_compile_warnings(granit_offscreen_triangle_example)
 
+add_executable(granit_compute_example compute.cpp)
+target_link_libraries(granit_compute_example PRIVATE granit::granit)
+target_compile_definitions(
+  granit_compute_example
+  PRIVATE GRANIT_EXAMPLE_ASSET_DIR="${CMAKE_CURRENT_SOURCE_DIR}/assets"
+)
+granit_target_compile_warnings(granit_compute_example)
+
 if(WIN32)
   add_executable(granit_window_clear_example WIN32 window_clear.cpp)
   target_link_libraries(granit_window_clear_example PRIVATE granit::granit user32)
@@ -33,6 +41,7 @@ set(
   granit_renderer_example
   granit_offscreen_clear_example
   granit_offscreen_triangle_example
+  granit_compute_example
 )
 if(WIN32)
   list(APPEND granit_example_targets granit_window_clear_example)

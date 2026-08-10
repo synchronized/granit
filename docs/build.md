@@ -76,6 +76,7 @@ cmake -S consumer -B consumer/build -DCMAKE_PREFIX_PATH=/path/to/granit/install
 build/windows-clang-debug/bin/granit_offscreen_clear_example.exe
 build/windows-clang-debug/bin/granit_offscreen_triangle_example.exe
 build/windows-clang-debug/bin/granit_window_clear_example.exe
+build/windows-clang-debug/bin/granit_compute_example.exe
 ```
 
 ## 构建产物目录

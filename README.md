@@ -61,9 +61,10 @@ frames-in-flight、Frame 令牌以及 Swapchain acquire/submit/present 窗口帧
 已支持未提交 Frame 回收、窗口零尺寸暂停语义，以及 Surface/Device Lost 的窗口帧终止状态。
 Renderer 全局 Device Lost 门禁、普通 GPU 资源真实提交完成点和 Swapchain presentation 安全
 退役均已完成。Shader Module、Graphics Pipeline、Bind Group Layout、Pipeline Layout、不可变
-Bind Group、Command Recorder 资源绑定、Viewport、Scissor、Vertex/Index Buffer 和 Draw 命令
-已经实现。仓库已提供离屏清屏、窗口清屏和最小三角形示例；下一步实现 Compute Pipeline 与
-Dispatch。具体顺序及验收标准见
+Bind Group、Command Recorder 资源绑定、Viewport、Scissor、Vertex/Index Buffer、Draw、
+Compute Pipeline 和 Dispatch 已经实现。仓库已提供离屏清屏、窗口清屏、最小三角形和 Compute
+Storage Buffer 示例；下一步补充 Pipeline Cache、异步创建与 Shader 热重载边界。具体顺序及
+验收标准见
 [docs/roadmap.md](docs/roadmap.md)。
 
 ## 快速开始
@@ -105,6 +106,7 @@ cmake --preset linux-clang-debug -DBUILD_SHARED_LIBS=OFF
 - `granit_offscreen_clear_example`：创建离屏颜色附件并清屏。
 - `granit_offscreen_triangle_example`：使用预编译 SPIR-V 绘制最小三角形。
 - `granit_window_clear_example`：Win32 窗口 acquire、清屏、submit、present 与尺寸重建循环。
+- `granit_compute_example`：Compute Shader 写入 Storage Buffer，自动同步复制并读取结果。
 
 示例只依赖 Granit 公共接口，不包含 Vulkan 头文件。窗口示例目前仅在 Windows 构建。
 单配置生成器把动态库和可执行文件统一放入构建目录的 `bin`，可直接运行；Visual Studio 等

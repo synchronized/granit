@@ -60,6 +60,8 @@ granit_result vulkan_command_recorder::begin(const vulkan_device& device) noexce
     viewport_set_ = false;
     scissor_set_ = false;
     index_buffer_bound_ = false;
+    compute_buffer_accesses_.clear();
+    compute_image_accesses_.clear();
   }
   return map_vulkan_result(result);
 }
@@ -214,10 +216,16 @@ granit_result vulkan_command_recorder::bind_compute_pipeline(const vulkan_device
 
 granit_result vulkan_command_recorder::bind_compute_groups(
     const vulkan_device& device, VkPipelineLayout layout, std::uint32_t first_group,
-    std::span<const VkDescriptorSet> bind_groups) noexcept {
+    std::span<const VkDescriptorSet> bind_groups,
+    std::span<const std::pair<VkBuffer, VkAccessFlags2>> buffer_accesses,
+    std::span<const vulkan_image_access> image_accesses) {
   if (state_ != command_recorder_state::recording || inside_rendering_ ||
       layout == VK_NULL_HANDLE || bind_groups.empty())
     return GRANIT_ERROR_INVALID_ARGUMENT;
+  compute_buffer_accesses_.insert(compute_buffer_accesses_.end(), buffer_accesses.begin(),
+                                  buffer_accesses.end());
+  compute_image_accesses_.insert(compute_image_accesses_.end(), image_accesses.begin(),
+                                 image_accesses.end());
   device.functions().vkCmdBindDescriptorSets(
       command_buffer_, VK_PIPELINE_BIND_POINT_COMPUTE, layout, first_group,
       static_cast<std::uint32_t>(bind_groups.size()), bind_groups.data(), 0, nullptr);
@@ -233,6 +241,12 @@ granit_result vulkan_command_recorder::dispatch(const vulkan_device& device,
       !compute_pipeline_bound_ || group_count_x == 0 || group_count_y == 0 || group_count_z == 0 ||
       group_count_x > limits[0] || group_count_y > limits[1] || group_count_z > limits[2])
     return GRANIT_ERROR_INVALID_ARGUMENT;
+  const auto buffer_result = prepare_buffer_access(device, compute_buffer_accesses_,
+                                                   VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT);
+  if (buffer_result != GRANIT_SUCCESS)
+    return buffer_result;
+  for (const auto& access : compute_image_accesses_)
+    prepare_image_access(device, access);
   device.functions().vkCmdDispatch(command_buffer_, group_count_x, group_count_y, group_count_z);
   return GRANIT_SUCCESS;
 }

@@ -60,7 +60,7 @@ D-03-graphics-pipeline.md
 - [D-03：Graphics Pipeline 与 Bind Group](D-03-graphics-pipeline.md)——已完成。
 - [D-05：基础绘制命令](D-05-draw-commands.md)——已完成。
 - [D-06：基础渲染示例](D-06-examples.md)——已完成。
-- [D-07：Compute Pipeline 与 Dispatch](D-07-compute-pipeline.md)——D-07A、D-07B 已完成。
+- [D-07：Compute Pipeline 与 Dispatch](D-07-compute-pipeline.md)——已完成。
 
 ## 状态
 

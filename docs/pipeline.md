@@ -61,5 +61,9 @@ Compute Shader 必须以 `GRANIT_SHADER_STAGE_COMPUTE` 创建。Pipeline 会保�
 内部生命周期；用户可以在 Pipeline 创建后释放对应公共句柄。Command Recorder 支持绑定 Compute
 Pipeline、Compute Bind Group 并直接 Dispatch；Dispatch 只能在 Dynamic Rendering 区域外执行。
 
+Compute Bind Group 的资源状态由 Granit 自动准备。Uniform Buffer 与 Sampled Texture 为只读，
+Storage Buffer 与 Storage Texture 保守按读写处理；每次 Dispatch 前生成所需访问状态，后续 Copy
+或渲染命令会自动衔接跨阶段屏障。
+
 创建函数会复制格式数组。Pipeline 和 Layout 均由创建它们的 Renderer 管理，不能跨 Renderer
 混用或销毁。

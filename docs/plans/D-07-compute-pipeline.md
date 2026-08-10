@@ -6,7 +6,7 @@
 ## 元数据
 
 - 设计状态：已确认
-- 实现状态：实现中（D-07A、D-07B 已完成）
+- 实现状态：已完成
 - 路线图任务：D-07
 - 优先级：P1
 - 前置依赖：D-01、D-02、D-03、F-04、F-05
@@ -74,7 +74,16 @@ Vulkan stage/access/layout。未来可在 Bind Group Layout 增加只读 Storage
 
 1. **D-07A / 已完成**：Compute Pipeline 句柄、创建销毁、C++ RAII 和生命周期验证。
 2. **D-07B / 已完成**：Compute Pipeline/Bind Group 命令绑定、Dispatch 状态机和 Vulkan 命令。
-3. **D-07C**：Storage Buffer/Texture 自动访问状态、真实计算测试和最小 Compute 示例。
+3. **D-07C / 已完成**：Storage Buffer/Texture 自动访问状态、真实计算测试和最小 Compute
+   示例。
+
+## 最终实现
+
+- Compute Bind Group 根据 Layout 可见阶段生成 Buffer 与 Image 的保守访问集合。
+- Recorder 在每次 Dispatch 前准备 Compute Shader 访问，后续 Copy 等命令会自动生成跨阶段屏障。
+- Storage Buffer 使用 Shader Storage Read/Write；Storage Texture 使用 GENERAL Layout。
+- Sampled Texture 和 Uniform Buffer 保持只读访问。
+- `granit_compute_example` 在 GPU 写入 16 个整数，复制至 Readback Buffer 后输出并验证结果。
 
 ## 测试与验收
 

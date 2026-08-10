@@ -50,8 +50,9 @@ public:
                                                     VkPipeline pipeline) noexcept;
   [[nodiscard]] granit_result
   bind_compute_groups(const vulkan_device& device, VkPipelineLayout layout,
-                      std::uint32_t first_group,
-                      std::span<const VkDescriptorSet> bind_groups) noexcept;
+                      std::uint32_t first_group, std::span<const VkDescriptorSet> bind_groups,
+                      std::span<const std::pair<VkBuffer, VkAccessFlags2>> buffer_accesses,
+                      std::span<const vulkan_image_access> image_accesses);
   [[nodiscard]] granit_result dispatch(const vulkan_device& device, std::uint32_t group_count_x,
                                        std::uint32_t group_count_y,
                                        std::uint32_t group_count_z) noexcept;
@@ -114,6 +115,8 @@ private:
   bool viewport_set_{};
   bool scissor_set_{};
   bool index_buffer_bound_{};
+  std::vector<std::pair<VkBuffer, VkAccessFlags2>> compute_buffer_accesses_;
+  std::vector<vulkan_image_access> compute_image_accesses_;
   std::unordered_map<VkBuffer, buffer_access_state> buffer_accesses_;
   std::vector<vulkan_image_access> initial_image_accesses_;
   std::vector<vulkan_image_access> final_image_accesses_;
