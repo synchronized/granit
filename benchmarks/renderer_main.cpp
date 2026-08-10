@@ -3,7 +3,10 @@
 
 #include <granit/renderer/buffer.h>
 #include <granit/renderer/command_recorder.h>
+#include <granit/renderer/pipeline.h>
 #include <granit/renderer/renderer.h>
+#include <granit/renderer/shader.h>
+#include <granit/renderer/texture.h>
 
 #include <algorithm>
 #include <array>
@@ -14,8 +17,10 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstdlib>
+#include <fstream>
 #include <iomanip>
 #include <iostream>
+#include <iterator>
 #include <string>
 #include <string_view>
 #include <thread>
@@ -41,13 +46,28 @@ enum class benchmark_case {
   independent_write,
   recorder_create_destroy,
   empty_record,
-  buffer_record
+  buffer_record,
+  mixed_pipeline_record
 };
 
 struct thread_context {
   granit_buffer buffer{GRANIT_NULL_HANDLE};
   granit_command_recorder recorder{GRANIT_NULL_HANDLE};
+  granit_texture texture{GRANIT_NULL_HANDLE};
+  granit_texture_view view{GRANIT_NULL_HANDLE};
+  granit_bind_group compute_group{GRANIT_NULL_HANDLE};
   std::vector<std::byte> data;
+};
+
+struct pipeline_fixture {
+  granit_shader vertex_shader{GRANIT_NULL_HANDLE};
+  granit_shader fragment_shader{GRANIT_NULL_HANDLE};
+  granit_shader compute_shader{GRANIT_NULL_HANDLE};
+  granit_bind_group_layout compute_group_layout{GRANIT_NULL_HANDLE};
+  granit_pipeline_layout graphics_layout{GRANIT_NULL_HANDLE};
+  granit_pipeline_layout compute_layout{GRANIT_NULL_HANDLE};
+  granit_graphics_pipeline graphics_pipeline{GRANIT_NULL_HANDLE};
+  granit_compute_pipeline compute_pipeline{GRANIT_NULL_HANDLE};
 };
 
 std::atomic_uint64_t checksum{};
@@ -55,13 +75,102 @@ std::atomic_uint64_t checksum{};
 void print_help() {
   std::cout << "用法：granit_renderer_benchmarks [选项]\n"
                "  --case <all|invalid_lookup|create_destroy|independent_write|\n"
-               "          recorder_create_destroy|empty_record|buffer_record>\n"
+               "          recorder_create_destroy|empty_record|buffer_record|\n"
+               "          mixed_pipeline_record>\n"
                "  --threads <数量>       工作线程数\n"
                "  --iterations <数量>    每个线程、每个样本的操作数\n"
                "  --samples <数量>       正式样本数\n"
                "  --warmup <数量>        预热样本数\n"
                "  --buffer-size <字节>   Buffer 大小\n"
-               "  --commands <数量>      每次 Buffer 录制的命令数\n";
+               "  --commands <数量>      每次录制的命令数或混合工作负载重复数\n";
+}
+
+std::vector<std::byte> load_shader(std::string_view name) {
+  std::ifstream stream{std::string{GRANIT_BENCHMARK_ASSET_DIR} + "/" + std::string{name},
+                       std::ios::binary};
+  const std::vector<char> bytes{std::istreambuf_iterator<char>{stream}, {}};
+  std::vector<std::byte> result(bytes.size());
+  std::transform(bytes.begin(), bytes.end(), result.begin(),
+                 [](char value) { return static_cast<std::byte>(value); });
+  return result;
+}
+
+void destroy_pipeline_fixture(granit_renderer renderer, pipeline_fixture& fixture) {
+  if (fixture.graphics_pipeline != GRANIT_NULL_HANDLE)
+    static_cast<void>(granit_graphics_pipeline_destroy(renderer, fixture.graphics_pipeline));
+  if (fixture.compute_pipeline != GRANIT_NULL_HANDLE)
+    static_cast<void>(granit_compute_pipeline_destroy(renderer, fixture.compute_pipeline));
+  if (fixture.graphics_layout != GRANIT_NULL_HANDLE)
+    static_cast<void>(granit_pipeline_layout_destroy(renderer, fixture.graphics_layout));
+  if (fixture.compute_layout != GRANIT_NULL_HANDLE)
+    static_cast<void>(granit_pipeline_layout_destroy(renderer, fixture.compute_layout));
+  if (fixture.compute_group_layout != GRANIT_NULL_HANDLE)
+    static_cast<void>(granit_bind_group_layout_destroy(renderer, fixture.compute_group_layout));
+  if (fixture.vertex_shader != GRANIT_NULL_HANDLE)
+    static_cast<void>(granit_shader_destroy(renderer, fixture.vertex_shader));
+  if (fixture.fragment_shader != GRANIT_NULL_HANDLE)
+    static_cast<void>(granit_shader_destroy(renderer, fixture.fragment_shader));
+  if (fixture.compute_shader != GRANIT_NULL_HANDLE)
+    static_cast<void>(granit_shader_destroy(renderer, fixture.compute_shader));
+}
+
+granit_result create_shader(granit_renderer renderer, granit_shader_stage stage,
+                            std::string_view name, granit_shader& shader) {
+  const auto code = load_shader(name);
+  if (code.empty())
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  granit_shader_desc desc = GRANIT_SHADER_DESC_INIT;
+  desc.stage = stage;
+  desc.code = code.data();
+  desc.code_size = code.size();
+  return granit_shader_create(renderer, &desc, &shader);
+}
+
+granit_result create_pipeline_fixture(granit_renderer renderer, pipeline_fixture& fixture) {
+  auto result = create_shader(renderer, GRANIT_SHADER_STAGE_VERTEX, "triangle.vert.spv",
+                              fixture.vertex_shader);
+  if (result == GRANIT_SUCCESS)
+    result = create_shader(renderer, GRANIT_SHADER_STAGE_FRAGMENT, "triangle.frag.spv",
+                           fixture.fragment_shader);
+  if (result == GRANIT_SUCCESS)
+    result = create_shader(renderer, GRANIT_SHADER_STAGE_COMPUTE, "compute.comp.spv",
+                           fixture.compute_shader);
+  granit_pipeline_layout_desc graphics_layout_desc = GRANIT_PIPELINE_LAYOUT_DESC_INIT;
+  if (result == GRANIT_SUCCESS)
+    result =
+        granit_pipeline_layout_create(renderer, &graphics_layout_desc, &fixture.graphics_layout);
+  const granit_bind_group_layout_entry declaration{0, GRANIT_BINDING_TYPE_STORAGE_BUFFER, 1,
+                                                   GRANIT_SHADER_STAGE_COMPUTE_BIT};
+  granit_bind_group_layout_desc group_layout_desc = GRANIT_BIND_GROUP_LAYOUT_DESC_INIT;
+  group_layout_desc.entry_count = 1;
+  group_layout_desc.entries = &declaration;
+  if (result == GRANIT_SUCCESS) {
+    result = granit_bind_group_layout_create(renderer, &group_layout_desc,
+                                             &fixture.compute_group_layout);
+  }
+  granit_pipeline_layout_desc compute_layout_desc = GRANIT_PIPELINE_LAYOUT_DESC_INIT;
+  compute_layout_desc.bind_group_layout_count = 1;
+  compute_layout_desc.bind_group_layouts = &fixture.compute_group_layout;
+  if (result == GRANIT_SUCCESS)
+    result = granit_pipeline_layout_create(renderer, &compute_layout_desc, &fixture.compute_layout);
+  const granit_texture_format color_format = GRANIT_TEXTURE_FORMAT_RGBA8_UNORM;
+  granit_graphics_pipeline_desc graphics_desc = GRANIT_GRAPHICS_PIPELINE_DESC_INIT;
+  graphics_desc.layout = fixture.graphics_layout;
+  graphics_desc.vertex_shader = fixture.vertex_shader;
+  graphics_desc.fragment_shader = fixture.fragment_shader;
+  graphics_desc.color_format_count = 1;
+  graphics_desc.color_formats = &color_format;
+  if (result == GRANIT_SUCCESS) {
+    result = granit_graphics_pipeline_create(renderer, &graphics_desc, &fixture.graphics_pipeline);
+  }
+  granit_compute_pipeline_desc compute_desc = GRANIT_COMPUTE_PIPELINE_DESC_INIT;
+  compute_desc.layout = fixture.compute_layout;
+  compute_desc.compute_shader = fixture.compute_shader;
+  if (result == GRANIT_SUCCESS)
+    result = granit_compute_pipeline_create(renderer, &compute_desc, &fixture.compute_pipeline);
+  if (result != GRANIT_SUCCESS)
+    destroy_pipeline_fixture(renderer, fixture);
+  return result;
 }
 
 template <typename Value> bool parse_integer(std::string_view text, Value& value) {
@@ -138,10 +247,12 @@ granit_result create_recorder(granit_renderer renderer, granit_command_recorder&
 }
 
 std::vector<thread_context> make_contexts(granit_renderer renderer, benchmark_case selected,
-                                          const options& config) {
+                                          const options& config,
+                                          const pipeline_fixture* pipelines) {
   std::vector<thread_context> contexts(config.threads);
   for (auto& context : contexts) {
-    if ((selected == benchmark_case::empty_record || selected == benchmark_case::buffer_record) &&
+    if ((selected == benchmark_case::empty_record || selected == benchmark_case::buffer_record ||
+         selected == benchmark_case::mixed_pipeline_record) &&
         create_recorder(renderer, context.recorder) != GRANIT_SUCCESS) {
       destroy_contexts(renderer, contexts);
       return {};
@@ -161,6 +272,35 @@ std::vector<thread_context> make_contexts(granit_renderer renderer, benchmark_ca
         destroy_contexts(renderer, contexts);
         return {};
       }
+    } else if (selected == benchmark_case::mixed_pipeline_record) {
+      granit_texture_desc texture_desc = GRANIT_TEXTURE_DESC_INIT;
+      texture_desc.format = GRANIT_TEXTURE_FORMAT_RGBA8_UNORM;
+      texture_desc.usage = GRANIT_TEXTURE_USAGE_COLOR_ATTACHMENT_BIT;
+      texture_desc.width = 32;
+      texture_desc.height = 32;
+      if (granit_texture_create_with_default_view(renderer, &texture_desc, &context.texture,
+                                                  &context.view) != GRANIT_SUCCESS) {
+        destroy_contexts(renderer, contexts);
+        return {};
+      }
+      granit_buffer_desc buffer_desc = GRANIT_BUFFER_DESC_INIT;
+      buffer_desc.usage = GRANIT_BUFFER_USAGE_STORAGE_BIT;
+      buffer_desc.memory_location = GRANIT_MEMORY_LOCATION_DEVICE;
+      buffer_desc.size = config.buffer_size;
+      if (granit_buffer_create(renderer, &buffer_desc, &context.buffer) != GRANIT_SUCCESS) {
+        destroy_contexts(renderer, contexts);
+        return {};
+      }
+      const granit_bind_group_entry entry{0, 0, context.buffer, 0, config.buffer_size};
+      granit_bind_group_desc group_desc = GRANIT_BIND_GROUP_DESC_INIT;
+      group_desc.layout = pipelines->compute_group_layout;
+      group_desc.entry_count = 1;
+      group_desc.entries = &entry;
+      if (granit_bind_group_create(renderer, &group_desc, &context.compute_group) !=
+          GRANIT_SUCCESS) {
+        destroy_contexts(renderer, contexts);
+        return {};
+      }
     }
   }
   return contexts;
@@ -170,6 +310,12 @@ void destroy_contexts(granit_renderer renderer, std::vector<thread_context>& con
   for (auto& context : contexts) {
     if (context.recorder != GRANIT_NULL_HANDLE)
       static_cast<void>(granit_command_recorder_destroy(renderer, context.recorder));
+    if (context.compute_group != GRANIT_NULL_HANDLE)
+      static_cast<void>(granit_bind_group_destroy(renderer, context.compute_group));
+    if (context.view != GRANIT_NULL_HANDLE)
+      static_cast<void>(granit_texture_view_destroy(renderer, context.view));
+    if (context.texture != GRANIT_NULL_HANDLE)
+      static_cast<void>(granit_texture_destroy(renderer, context.texture));
     if (context.buffer != GRANIT_NULL_HANDLE)
       static_cast<void>(granit_buffer_destroy(renderer, context.buffer));
   }
@@ -177,7 +323,7 @@ void destroy_contexts(granit_renderer renderer, std::vector<thread_context>& con
 
 std::uint64_t run_operations(granit_renderer renderer, thread_context& context,
                              benchmark_case selected, const options& config,
-                             std::atomic_bool& failed) {
+                             const pipeline_fixture* pipelines, std::atomic_bool& failed) {
   std::uint64_t local_checksum{};
   const std::array<std::byte, 4> value{};
   for (std::uint64_t index = 0; index < config.iterations; ++index) {
@@ -254,6 +400,52 @@ std::uint64_t run_operations(granit_renderer renderer, thread_context& context,
         return local_checksum;
       }
       break;
+    case benchmark_case::mixed_pipeline_record: {
+      result = granit_command_recorder_begin(renderer, context.recorder);
+      const granit_viewport viewport{0, 0, 32, 32, 0, 1};
+      const granit_scissor scissor{0, 0, 32, 32};
+      granit_color_attachment_desc color = GRANIT_COLOR_ATTACHMENT_DESC_INIT;
+      color.view = context.view;
+      granit_rendering_desc rendering = GRANIT_RENDERING_DESC_INIT;
+      rendering.color_attachment_count = 1;
+      rendering.color_attachments = &color;
+      rendering.area.width = 32;
+      rendering.area.height = 32;
+      for (std::uint32_t command = 0; result == GRANIT_SUCCESS && command < config.commands;
+           ++command) {
+        result = granit_command_recorder_bind_graphics_pipeline(renderer, context.recorder,
+                                                                pipelines->graphics_pipeline);
+        if (result == GRANIT_SUCCESS)
+          result =
+              granit_command_recorder_set_viewports(renderer, context.recorder, 0, &viewport, 1);
+        if (result == GRANIT_SUCCESS)
+          result = granit_command_recorder_set_scissors(renderer, context.recorder, 0, &scissor, 1);
+        if (result == GRANIT_SUCCESS)
+          result = granit_command_recorder_begin_rendering(renderer, context.recorder, &rendering);
+        if (result == GRANIT_SUCCESS)
+          result = granit_command_recorder_draw(renderer, context.recorder, 3, 1, 0, 0);
+        if (result == GRANIT_SUCCESS)
+          result = granit_command_recorder_end_rendering(renderer, context.recorder);
+        if (result == GRANIT_SUCCESS)
+          result = granit_command_recorder_bind_compute_pipeline(renderer, context.recorder,
+                                                                 pipelines->compute_pipeline);
+        if (result == GRANIT_SUCCESS) {
+          result = granit_command_recorder_bind_compute_groups(
+              renderer, context.recorder, pipelines->compute_layout, 0, &context.compute_group, 1);
+        }
+        if (result == GRANIT_SUCCESS)
+          result = granit_command_recorder_dispatch(renderer, context.recorder, 1, 1, 1);
+      }
+      if (result == GRANIT_SUCCESS)
+        result = granit_command_recorder_end(renderer, context.recorder);
+      if (result == GRANIT_SUCCESS)
+        result = granit_command_recorder_reset(renderer, context.recorder);
+      if (result != GRANIT_SUCCESS) {
+        failed.store(true, std::memory_order_relaxed);
+        return local_checksum;
+      }
+      break;
+    }
     }
     local_checksum += static_cast<std::uint64_t>(result);
   }
@@ -261,8 +453,8 @@ std::uint64_t run_operations(granit_renderer renderer, thread_context& context,
 }
 
 double run_sample(granit_renderer renderer, benchmark_case selected, const options& config,
-                  bool& succeeded) {
-  auto contexts = make_contexts(renderer, selected, config);
+                  const pipeline_fixture* pipelines, bool& succeeded) {
+  auto contexts = make_contexts(renderer, selected, config, pipelines);
   if (contexts.size() != config.threads) {
     succeeded = false;
     return 0;
@@ -277,7 +469,8 @@ double run_sample(granit_renderer renderer, benchmark_case selected, const optio
       ready.fetch_add(1, std::memory_order_release);
       while (!start.load(std::memory_order_acquire))
         std::this_thread::yield();
-      const auto value = run_operations(renderer, contexts[index], selected, config, failed);
+      const auto value =
+          run_operations(renderer, contexts[index], selected, config, pipelines, failed);
       checksum.fetch_xor(value, std::memory_order_relaxed);
     });
   }
@@ -300,10 +493,10 @@ double percentile(const std::vector<double>& sorted, double fraction) {
 }
 
 bool run_case(granit_renderer renderer, std::string_view name, benchmark_case selected,
-              const options& config) {
+              const options& config, const pipeline_fixture* pipelines = nullptr) {
   bool succeeded{true};
   for (std::uint32_t index = 0; index < config.warmup; ++index)
-    static_cast<void>(run_sample(renderer, selected, config, succeeded));
+    static_cast<void>(run_sample(renderer, selected, config, pipelines, succeeded));
   if (!succeeded)
     return false;
   std::vector<double> samples;
@@ -312,7 +505,7 @@ bool run_case(granit_renderer renderer, std::string_view name, benchmark_case se
   const auto operations =
       static_cast<double>(config.threads) * static_cast<double>(config.iterations);
   for (std::uint32_t index = 0; index < config.samples; ++index) {
-    const auto elapsed = run_sample(renderer, selected, config, succeeded);
+    const auto elapsed = run_sample(renderer, selected, config, pipelines, succeeded);
     if (!succeeded)
       return false;
     total_ns += elapsed;
@@ -358,9 +551,9 @@ int main(int argc, char** argv) {
     }
     return 2;
   }
-  constexpr std::string_view cases[]{"invalid_lookup",    "create_destroy",
-                                     "independent_write", "recorder_create_destroy",
-                                     "empty_record",      "buffer_record"};
+  constexpr std::string_view cases[]{
+      "invalid_lookup", "create_destroy", "independent_write",    "recorder_create_destroy",
+      "empty_record",   "buffer_record",  "mixed_pipeline_record"};
   if (config.case_name != "all" &&
       std::find(std::begin(cases), std::end(cases), config.case_name) == std::end(cases)) {
     std::cerr << "未知 benchmark 用例：" << config.case_name << '\n';
@@ -395,6 +588,16 @@ int main(int argc, char** argv) {
                "ops_per_second\n";
 
   bool succeeded{true};
+  pipeline_fixture pipelines;
+  if (selected(config.case_name, "mixed_pipeline_record")) {
+    const auto pipeline_result = create_pipeline_fixture(renderer, pipelines);
+    if (pipeline_result != GRANIT_SUCCESS) {
+      std::cerr << "无法创建混合 Pipeline 基准资源：" << granit_result_message(pipeline_result)
+                << '\n';
+      static_cast<void>(granit_renderer_destroy(renderer));
+      return 4;
+    }
+  }
   if (selected(config.case_name, "invalid_lookup"))
     succeeded &= run_case(renderer, "invalid_lookup", benchmark_case::invalid_lookup, config);
   if (selected(config.case_name, "create_destroy"))
@@ -408,6 +611,11 @@ int main(int argc, char** argv) {
     succeeded &= run_case(renderer, "empty_record", benchmark_case::empty_record, config);
   if (selected(config.case_name, "buffer_record"))
     succeeded &= run_case(renderer, "buffer_record", benchmark_case::buffer_record, config);
+  if (selected(config.case_name, "mixed_pipeline_record")) {
+    succeeded &= run_case(renderer, "mixed_pipeline_record", benchmark_case::mixed_pipeline_record,
+                          config, &pipelines);
+  }
+  destroy_pipeline_fixture(renderer, pipelines);
   const auto destroy_result = granit_renderer_destroy(renderer);
   std::cerr << "checksum=" << checksum.load(std::memory_order_relaxed) << '\n';
   if (!succeeded || destroy_result != GRANIT_SUCCESS) {

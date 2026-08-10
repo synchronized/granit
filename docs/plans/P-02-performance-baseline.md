@@ -6,7 +6,7 @@
 ## 元数据
 
 - 设计状态：已确认
-- 实现状态：进行中（P-02A、P-02B、P-02C1 已完成）
+- 实现状态：进行中（P-02A、P-02B、P-02C 已完成）
 - 路线图任务：P-02
 - 优先级：P1
 - 前置依赖：P-01
@@ -104,7 +104,9 @@ P-02 不引入 Profiler SDK，也暂不增加通用埋点宏。第一层发现�
    写入场景；不执行违反公开线程契约的同 Buffer 无序并发写入。
 3. P-02C1 / 已完成：测量独立 Recorder 创建/销毁、空 begin/end/reset 周期，以及可配置数量的
    Fill Buffer 命令录制；不包含 Queue 提交。
-4. P-02C2：测量共享只读 Pipeline 下的 Graphics/Compute 混合录制路径。
+4. P-02C2 / 已完成：测量共享只读 Pipeline 下的 Graphics/Compute 混合录制路径；每线程独占
+   Recorder、颜色附件、Storage Buffer 和 Bind Group，每次循环交替记录一次 draw 与 dispatch，
+   不包含 Queue 提交。
 5. P-02D：测量 Queue 提交串行化及不同 frames-in-flight 配置。
 6. P-02E：测量延迟销毁队列与批量回收。
 7. P-02F：测量当前 staging 上传，为 P-04 上传分配器保存对照结果。

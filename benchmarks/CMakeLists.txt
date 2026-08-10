@@ -51,6 +51,7 @@ target_compile_options(
 target_compile_definitions(
   granit_renderer_benchmarks
   PRIVATE
+    GRANIT_BENCHMARK_ASSET_DIR="${PROJECT_SOURCE_DIR}/examples/assets"
     GRANIT_BENCHMARK_COMPILER="${CMAKE_CXX_COMPILER_ID}-${CMAKE_CXX_COMPILER_VERSION}"
     GRANIT_BENCHMARK_LINK_MODE="$<IF:$<BOOL:${BUILD_SHARED_LIBS}>,shared,static>"
     GRANIT_BENCHMARK_REVISION="${granit_benchmark_revision}"
