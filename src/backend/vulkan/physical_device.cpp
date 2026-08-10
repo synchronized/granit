@@ -207,6 +207,7 @@ granit_result select_physical_device(const volk::VolkInstanceTable& functions, V
         selected.graphics_queue_family = *graphics_queue;
         selected.device_local_memory = local_memory;
         selected.sampler_anisotropy = features2.features.samplerAnisotropy == VK_TRUE;
+        selected.fill_mode_non_solid = features2.features.fillModeNonSolid == VK_TRUE;
       }
     }
     return found ? GRANIT_SUCCESS : GRANIT_ERROR_NO_SUITABLE_DEVICE;

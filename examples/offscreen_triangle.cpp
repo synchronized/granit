@@ -57,7 +57,8 @@ int main() {
                                                        .vertex_shader = vertex.native_handle(),
                                                        .fragment_shader = fragment.native_handle(),
                                                        .color_formats = std::span{&format, 1},
-                                                       .vertex_buffers = {}});
+                                                       .vertex_buffers = {},
+                                                       .primitive = {}});
   }
 
   granit_texture_desc texture_desc = GRANIT_TEXTURE_DESC_INIT;

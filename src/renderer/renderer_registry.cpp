@@ -1933,6 +1933,11 @@ granit_result renderer_registry::create_graphics_pipeline(granit_renderer render
     const auto result = state->create_native_graphics_pipeline(
         layout->native, vertex->native, vertex->entry_point.c_str(), fragment->native,
         fragment->entry_point.c_str(), vertex_buffers,
+        desc.struct_size >= GRANIT_GRAPHICS_PIPELINE_DESC_VERSION_3_SIZE
+            ? desc.primitive
+            : granit_primitive_state{GRANIT_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
+                                     GRANIT_FRONT_FACE_COUNTER_CLOCKWISE, GRANIT_CULL_MODE_NONE,
+                                     GRANIT_POLYGON_MODE_FILL},
         {desc.color_formats, static_cast<std::size_t>(desc.color_format_count)},
         desc.depth_stencil_format, desc.sample_count, record->native);
     if (result != GRANIT_SUCCESS)

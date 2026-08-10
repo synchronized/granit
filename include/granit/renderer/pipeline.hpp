@@ -167,6 +167,39 @@ struct vertex_buffer_layout {
   std::span<const vertex_attribute> attributes;
 };
 
+enum class primitive_topology : std::uint32_t {
+  point_list = GRANIT_PRIMITIVE_TOPOLOGY_POINT_LIST,
+  line_list = GRANIT_PRIMITIVE_TOPOLOGY_LINE_LIST,
+  line_strip = GRANIT_PRIMITIVE_TOPOLOGY_LINE_STRIP,
+  triangle_list = GRANIT_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
+  triangle_strip = GRANIT_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP,
+};
+
+enum class front_face : std::uint32_t {
+  counter_clockwise = GRANIT_FRONT_FACE_COUNTER_CLOCKWISE,
+  clockwise = GRANIT_FRONT_FACE_CLOCKWISE,
+};
+
+enum class cull_mode : std::uint32_t {
+  none = GRANIT_CULL_MODE_NONE,
+  front = GRANIT_CULL_MODE_FRONT,
+  back = GRANIT_CULL_MODE_BACK,
+  front_and_back = GRANIT_CULL_MODE_FRONT_AND_BACK,
+};
+
+enum class polygon_mode : std::uint32_t {
+  fill = GRANIT_POLYGON_MODE_FILL,
+  line = GRANIT_POLYGON_MODE_LINE,
+  point = GRANIT_POLYGON_MODE_POINT,
+};
+
+struct primitive_state {
+  primitive_topology topology{primitive_topology::triangle_list};
+  front_face front{front_face::counter_clockwise};
+  cull_mode cull{cull_mode::none};
+  polygon_mode polygon{polygon_mode::fill};
+};
+
 struct graphics_pipeline_desc {
   granit_pipeline_layout layout{GRANIT_NULL_HANDLE};
   granit_shader vertex_shader{GRANIT_NULL_HANDLE};
@@ -175,6 +208,7 @@ struct graphics_pipeline_desc {
   texture_format depth_stencil_format{texture_format::undefined};
   sample_count samples{sample_count::one};
   std::span<const vertex_buffer_layout> vertex_buffers;
+  primitive_state primitive;
 };
 
 class graphics_pipeline {
@@ -336,7 +370,7 @@ inline result graphics_pipeline::initialize(granit_renderer renderer,
   }
   const auto* formats = reinterpret_cast<const granit_texture_format*>(desc.color_formats.data());
   const granit_graphics_pipeline_desc native{
-      .struct_size = GRANIT_GRAPHICS_PIPELINE_DESC_VERSION_1_SIZE,
+      .struct_size = GRANIT_GRAPHICS_PIPELINE_DESC_VERSION_3_SIZE,
       .reserved = 0,
       .layout = desc.layout,
       .vertex_shader = desc.vertex_shader,
@@ -348,7 +382,11 @@ inline result graphics_pipeline::initialize(granit_renderer renderer,
       .reserved_2 = 0,
       .vertex_buffer_layout_count = static_cast<std::uint32_t>(desc.vertex_buffers.size()),
       .reserved_3 = 0,
-      .vertex_buffer_layouts = vertex_buffers.data()};
+      .vertex_buffer_layouts = vertex_buffers.data(),
+      .primitive = {.topology = static_cast<granit_primitive_topology>(desc.primitive.topology),
+                    .front_face = static_cast<granit_front_face>(desc.primitive.front),
+                    .cull_mode = static_cast<granit_cull_mode>(desc.primitive.cull),
+                    .polygon_mode = static_cast<granit_polygon_mode>(desc.primitive.polygon)}};
   const auto value = granit_graphics_pipeline_create(renderer, &native, &handle_);
   if (value == GRANIT_SUCCESS)
     renderer_ = renderer;

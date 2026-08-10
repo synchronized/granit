@@ -40,6 +40,7 @@ struct selected_physical_device {
   std::uint32_t graphics_queue_family{};
   std::uint64_t device_local_memory{};
   bool sampler_anisotropy{};
+  bool fill_mode_non_solid{};
 };
 
 [[nodiscard]] bool is_suitable(const physical_device_candidate& candidate) noexcept;

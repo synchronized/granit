@@ -709,7 +709,7 @@ void renderer_state::destroy_native_pipeline_layout(VkPipelineLayout layout) noe
 granit_result renderer_state::create_native_graphics_pipeline(
     VkPipelineLayout layout, VkShaderModule vertex_shader, const char* vertex_entry,
     VkShaderModule fragment_shader, const char* fragment_entry,
-    std::span<const granit_vertex_buffer_layout> vertex_buffers,
+    std::span<const granit_vertex_buffer_layout> vertex_buffers, granit_primitive_state primitive,
     std::span<const granit_texture_format> color_formats,
     granit_texture_format depth_stencil_format, granit_sample_count sample_count,
     VkPipeline& pipeline) noexcept {
@@ -763,16 +763,28 @@ granit_result renderer_state::create_native_graphics_pipeline(
   vertex_input.pVertexAttributeDescriptions = attributes.data();
   VkPipelineInputAssemblyStateCreateInfo input_assembly{};
   input_assembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-  input_assembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+  constexpr std::array topologies{VK_PRIMITIVE_TOPOLOGY_POINT_LIST, VK_PRIMITIVE_TOPOLOGY_LINE_LIST,
+                                  VK_PRIMITIVE_TOPOLOGY_LINE_STRIP,
+                                  VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
+                                  VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP};
+  input_assembly.topology = topologies[primitive.topology - GRANIT_PRIMITIVE_TOPOLOGY_POINT_LIST];
   VkPipelineViewportStateCreateInfo viewport{};
   viewport.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
   viewport.viewportCount = 1;
   viewport.scissorCount = 1;
   VkPipelineRasterizationStateCreateInfo rasterization{};
   rasterization.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
-  rasterization.polygonMode = VK_POLYGON_MODE_FILL;
-  rasterization.cullMode = VK_CULL_MODE_NONE;
-  rasterization.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+  constexpr std::array polygon_modes{VK_POLYGON_MODE_FILL, VK_POLYGON_MODE_LINE,
+                                     VK_POLYGON_MODE_POINT};
+  constexpr std::array cull_modes{VK_CULL_MODE_NONE, VK_CULL_MODE_FRONT_BIT, VK_CULL_MODE_BACK_BIT,
+                                  VK_CULL_MODE_FRONT_AND_BACK};
+  constexpr std::array front_faces{VK_FRONT_FACE_COUNTER_CLOCKWISE, VK_FRONT_FACE_CLOCKWISE};
+  if (primitive.polygon_mode != GRANIT_POLYGON_MODE_FILL &&
+      !device_.fill_mode_non_solid_supported())
+    return GRANIT_ERROR_UNSUPPORTED;
+  rasterization.polygonMode = polygon_modes[primitive.polygon_mode - GRANIT_POLYGON_MODE_FILL];
+  rasterization.cullMode = cull_modes[primitive.cull_mode - GRANIT_CULL_MODE_NONE];
+  rasterization.frontFace = front_faces[primitive.front_face - GRANIT_FRONT_FACE_COUNTER_CLOCKWISE];
   rasterization.lineWidth = 1.0F;
   VkPipelineMultisampleStateCreateInfo multisample{};
   multisample.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;

@@ -119,6 +119,39 @@ typedef struct granit_vertex_buffer_layout {
   const granit_vertex_attribute* attributes;
 } granit_vertex_buffer_layout;
 
+typedef uint32_t granit_primitive_topology;
+#define GRANIT_PRIMITIVE_TOPOLOGY_POINT_LIST UINT32_C(1)
+#define GRANIT_PRIMITIVE_TOPOLOGY_LINE_LIST UINT32_C(2)
+#define GRANIT_PRIMITIVE_TOPOLOGY_LINE_STRIP UINT32_C(3)
+#define GRANIT_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST UINT32_C(4)
+#define GRANIT_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP UINT32_C(5)
+
+typedef uint32_t granit_front_face;
+#define GRANIT_FRONT_FACE_COUNTER_CLOCKWISE UINT32_C(1)
+#define GRANIT_FRONT_FACE_CLOCKWISE UINT32_C(2)
+
+typedef uint32_t granit_cull_mode;
+#define GRANIT_CULL_MODE_NONE UINT32_C(1)
+#define GRANIT_CULL_MODE_FRONT UINT32_C(2)
+#define GRANIT_CULL_MODE_BACK UINT32_C(3)
+#define GRANIT_CULL_MODE_FRONT_AND_BACK UINT32_C(4)
+
+typedef uint32_t granit_polygon_mode;
+#define GRANIT_POLYGON_MODE_FILL UINT32_C(1)
+#define GRANIT_POLYGON_MODE_LINE UINT32_C(2)
+#define GRANIT_POLYGON_MODE_POINT UINT32_C(3)
+
+/** 图元装配与光栅化状态。 */
+typedef struct granit_primitive_state {
+  granit_primitive_topology topology;
+  granit_front_face front_face;
+  granit_cull_mode cull_mode;
+  granit_polygon_mode polygon_mode;
+} granit_primitive_state;
+#define GRANIT_PRIMITIVE_STATE_INIT                                                                \
+  {GRANIT_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST, GRANIT_FRONT_FACE_COUNTER_CLOCKWISE,                   \
+   GRANIT_CULL_MODE_NONE, GRANIT_POLYGON_MODE_FILL}
+
 /** Dynamic Rendering 图形 Pipeline 描述；输入数组只在调用期间有效。 */
 typedef struct granit_graphics_pipeline_desc {
   uint32_t struct_size;
@@ -134,11 +167,14 @@ typedef struct granit_graphics_pipeline_desc {
   uint32_t vertex_buffer_layout_count;
   uint32_t reserved_3;
   const granit_vertex_buffer_layout* vertex_buffer_layouts;
+  granit_primitive_state primitive;
 } granit_graphics_pipeline_desc;
 #define GRANIT_GRAPHICS_PIPELINE_DESC_VERSION_1_SIZE                                               \
   ((uint32_t)(offsetof(granit_graphics_pipeline_desc, reserved_2) + sizeof(uint32_t)))
 #define GRANIT_GRAPHICS_PIPELINE_DESC_VERSION_2_SIZE                                               \
   ((uint32_t)(offsetof(granit_graphics_pipeline_desc, vertex_buffer_layouts) + sizeof(void*)))
+#define GRANIT_GRAPHICS_PIPELINE_DESC_VERSION_3_SIZE                                               \
+  ((uint32_t)(offsetof(granit_graphics_pipeline_desc, primitive) + sizeof(granit_primitive_state)))
 #define GRANIT_GRAPHICS_PIPELINE_DESC_INIT                                                         \
   {(uint32_t)sizeof(granit_graphics_pipeline_desc),                                                \
    UINT32_C(0),                                                                                    \
@@ -152,7 +188,8 @@ typedef struct granit_graphics_pipeline_desc {
    UINT32_C(0),                                                                                    \
    UINT32_C(0),                                                                                    \
    UINT32_C(0),                                                                                    \
-   0}
+   0,                                                                                              \
+   GRANIT_PRIMITIVE_STATE_INIT}
 
 /** Compute Pipeline 描述。 */
 typedef struct granit_compute_pipeline_desc {

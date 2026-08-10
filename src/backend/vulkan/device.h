@@ -43,6 +43,9 @@ public:
   [[nodiscard]] bool sampler_anisotropy_supported() const noexcept {
     return sampler_anisotropy_supported_;
   }
+  [[nodiscard]] bool fill_mode_non_solid_supported() const noexcept {
+    return fill_mode_non_solid_supported_;
+  }
 
 private:
   VkPhysicalDevice physical_device_{VK_NULL_HANDLE};
@@ -52,6 +55,7 @@ private:
   VkPhysicalDeviceProperties properties_{};
   volk::VolkDeviceTable functions_{};
   bool sampler_anisotropy_supported_{};
+  bool fill_mode_non_solid_supported_{};
 };
 
 } // namespace granit::detail

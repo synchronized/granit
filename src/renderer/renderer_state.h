@@ -100,14 +100,13 @@ public:
   create_native_pipeline_layout(std::span<const VkDescriptorSetLayout> bind_group_layouts,
                                 VkPipelineLayout& layout) noexcept;
   void destroy_native_pipeline_layout(VkPipelineLayout layout) noexcept;
-  [[nodiscard]] granit_result
-  create_native_graphics_pipeline(VkPipelineLayout layout, VkShaderModule vertex_shader,
-                                  const char* vertex_entry, VkShaderModule fragment_shader,
-                                  const char* fragment_entry,
-                                  std::span<const granit_vertex_buffer_layout> vertex_buffers,
-                                  std::span<const granit_texture_format> color_formats,
-                                  granit_texture_format depth_stencil_format,
-                                  granit_sample_count sample_count, VkPipeline& pipeline) noexcept;
+  [[nodiscard]] granit_result create_native_graphics_pipeline(
+      VkPipelineLayout layout, VkShaderModule vertex_shader, const char* vertex_entry,
+      VkShaderModule fragment_shader, const char* fragment_entry,
+      std::span<const granit_vertex_buffer_layout> vertex_buffers, granit_primitive_state primitive,
+      std::span<const granit_texture_format> color_formats,
+      granit_texture_format depth_stencil_format, granit_sample_count sample_count,
+      VkPipeline& pipeline) noexcept;
   void destroy_native_graphics_pipeline(VkPipeline pipeline) noexcept;
   [[nodiscard]] granit_result create_native_compute_pipeline(VkPipelineLayout layout,
                                                              VkShaderModule compute_shader,

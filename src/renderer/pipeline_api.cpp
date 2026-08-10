@@ -168,6 +168,16 @@ extern "C" granit_result granit_graphics_pipeline_create(granit_renderer rendere
       }
     }
   }
+  if (desc->struct_size >= GRANIT_GRAPHICS_PIPELINE_DESC_VERSION_3_SIZE &&
+      (desc->primitive.topology < GRANIT_PRIMITIVE_TOPOLOGY_POINT_LIST ||
+       desc->primitive.topology > GRANIT_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP ||
+       desc->primitive.front_face < GRANIT_FRONT_FACE_COUNTER_CLOCKWISE ||
+       desc->primitive.front_face > GRANIT_FRONT_FACE_CLOCKWISE ||
+       desc->primitive.cull_mode < GRANIT_CULL_MODE_NONE ||
+       desc->primitive.cull_mode > GRANIT_CULL_MODE_FRONT_AND_BACK ||
+       desc->primitive.polygon_mode < GRANIT_POLYGON_MODE_FILL ||
+       desc->primitive.polygon_mode > GRANIT_POLYGON_MODE_POINT))
+    return GRANIT_ERROR_INVALID_ARGUMENT;
   return granit::detail::renderer_registry::instance().create_graphics_pipeline(renderer, *desc,
                                                                                 *pipeline);
 }
