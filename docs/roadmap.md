@@ -154,7 +154,7 @@
 
 ## 阶段五：基础渲染
 
-**状态：未开始。前置依赖：阶段三和阶段四。**
+**状态：进行中。前置依赖：阶段三和阶段四。**
 
 ### 目标与交付物
 
@@ -164,8 +164,9 @@
   生命周期和 C++ RAII；反射资产格式随 D-03 最小需求确定。
 - **[D-03](plans/D-03-graphics-pipeline.md) / P0 / 已完成**：Graphics Pipeline、Bind Group
   Layout、不可变 Bind Group，以及 Command Recorder 的 Pipeline 和资源组绑定已经实现。
-- **D-04 / P0**：基于 Vulkan 1.3 Dynamic Rendering 实现统一 Render Target 流程。
-- **D-05 / P0**：实现 Viewport、Scissor、Clear、Vertex/Index Buffer 和基础 Draw API。
+- **D-04 / P0 / 已完成**：基于 Vulkan 1.3 Dynamic Rendering 实现统一 Render Target 流程。
+- **[D-05](plans/D-05-draw-commands.md) / P0 / 已完成**：实现 Viewport、Scissor、Attachment
+  Clear、Vertex/Index Buffer 和基础 Draw API。
 - **D-06 / P0**：提供无窗口离屏清屏、窗口清屏和最小三角形示例。
 - **D-07 / P1**：实现 Compute Pipeline 与 Dispatch。
 - **D-08 / P1**：补充 Pipeline Cache、异步创建和着色器热重载边界。

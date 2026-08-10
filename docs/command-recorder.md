@@ -33,6 +33,9 @@ Buffer Copy 支持一次传入多个区域。参与命令的 Buffer 会由 Recor
 Graphics Pipeline 可以单独绑定；Bind Group 通过 Pipeline Layout 和起始组序号批量绑定。Recorder
 会保持 Pipeline、Pipeline Layout 与 Bind Group，直至提交完成并重置。
 
+Viewport 与 Scissor 支持批量设置。Vertex/Index Buffer 在 Dynamic Rendering 开始前绑定，以便
+自动屏障在渲染区域外完成；Draw 和 Draw Indexed 只能在渲染区域内录制。
+
 ## C++20
 
 ```cpp

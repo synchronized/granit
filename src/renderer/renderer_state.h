@@ -125,6 +125,23 @@ public:
   bind_graphics_groups(vulkan_command_recorder& recorder, VkPipelineLayout layout,
                        std::uint32_t first_group,
                        std::span<const VkDescriptorSet> bind_groups) noexcept;
+  [[nodiscard]] granit_result set_viewports(vulkan_command_recorder& recorder, std::uint32_t first,
+                                            std::span<const VkViewport> viewports) noexcept;
+  [[nodiscard]] granit_result set_scissors(vulkan_command_recorder& recorder, std::uint32_t first,
+                                           std::span<const VkRect2D> scissors) noexcept;
+  [[nodiscard]] granit_result bind_vertex_buffers(vulkan_command_recorder& recorder,
+                                                  std::uint32_t first,
+                                                  std::span<const VkBuffer> buffers,
+                                                  std::span<const VkDeviceSize> offsets);
+  [[nodiscard]] granit_result bind_index_buffer(vulkan_command_recorder& recorder, VkBuffer buffer,
+                                                VkDeviceSize offset, VkIndexType type);
+  [[nodiscard]] granit_result draw(vulkan_command_recorder& recorder, std::uint32_t vertex_count,
+                                   std::uint32_t instance_count, std::uint32_t first_vertex,
+                                   std::uint32_t first_instance) noexcept;
+  [[nodiscard]] granit_result draw_indexed(vulkan_command_recorder& recorder,
+                                           std::uint32_t index_count, std::uint32_t instance_count,
+                                           std::uint32_t first_index, std::int32_t vertex_offset,
+                                           std::uint32_t first_instance) noexcept;
   [[nodiscard]] granit_result
   begin_rendering(vulkan_command_recorder& recorder, VkRect2D area,
                   std::span<const VkRenderingAttachmentInfo> color_attachments,

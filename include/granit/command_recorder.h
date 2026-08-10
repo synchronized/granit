@@ -25,6 +25,31 @@ typedef struct granit_buffer_copy_region {
   uint64_t size;
 } granit_buffer_copy_region;
 
+typedef struct granit_viewport {
+  float x;
+  float y;
+  float width;
+  float height;
+  float min_depth;
+  float max_depth;
+} granit_viewport;
+
+typedef struct granit_scissor {
+  int32_t x;
+  int32_t y;
+  uint32_t width;
+  uint32_t height;
+} granit_scissor;
+
+typedef struct granit_vertex_buffer_binding {
+  granit_buffer buffer;
+  uint64_t offset;
+} granit_vertex_buffer_binding;
+
+typedef uint32_t granit_index_type;
+#define GRANIT_INDEX_TYPE_UINT16 UINT32_C(1)
+#define GRANIT_INDEX_TYPE_UINT32 UINT32_C(2)
+
 typedef struct granit_command_recorder_desc {
   uint32_t struct_size;
   uint32_t flags;
@@ -65,6 +90,30 @@ GRANIT_API granit_result granit_command_recorder_bind_graphics_pipeline(
 GRANIT_API granit_result granit_command_recorder_bind_graphics_groups(
     granit_renderer renderer, granit_command_recorder recorder, granit_pipeline_layout layout,
     uint32_t first_group, const granit_bind_group* bind_groups, uint32_t bind_group_count);
+GRANIT_API granit_result granit_command_recorder_set_viewports(granit_renderer renderer,
+                                                               granit_command_recorder recorder,
+                                                               uint32_t first_viewport,
+                                                               const granit_viewport* viewports,
+                                                               uint32_t viewport_count);
+GRANIT_API granit_result granit_command_recorder_set_scissors(granit_renderer renderer,
+                                                              granit_command_recorder recorder,
+                                                              uint32_t first_scissor,
+                                                              const granit_scissor* scissors,
+                                                              uint32_t scissor_count);
+GRANIT_API granit_result granit_command_recorder_bind_vertex_buffers(
+    granit_renderer renderer, granit_command_recorder recorder, uint32_t first_binding,
+    const granit_vertex_buffer_binding* bindings, uint32_t binding_count);
+GRANIT_API granit_result granit_command_recorder_bind_index_buffer(granit_renderer renderer,
+                                                                   granit_command_recorder recorder,
+                                                                   granit_buffer buffer,
+                                                                   uint64_t offset,
+                                                                   granit_index_type index_type);
+GRANIT_API granit_result granit_command_recorder_draw(
+    granit_renderer renderer, granit_command_recorder recorder, uint32_t vertex_count,
+    uint32_t instance_count, uint32_t first_vertex, uint32_t first_instance);
+GRANIT_API granit_result granit_command_recorder_draw_indexed(
+    granit_renderer renderer, granit_command_recorder recorder, uint32_t index_count,
+    uint32_t instance_count, uint32_t first_index, int32_t vertex_offset, uint32_t first_instance);
 GRANIT_API granit_result granit_command_recorder_begin_rendering(granit_renderer renderer,
                                                                  granit_command_recorder recorder,
                                                                  const granit_rendering_desc* desc);

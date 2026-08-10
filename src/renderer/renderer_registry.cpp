@@ -2188,6 +2188,124 @@ renderer_registry::bind_graphics_groups(granit_renderer renderer, granit_command
   return result;
 }
 
+granit_result renderer_registry::set_viewports(granit_renderer renderer,
+                                               granit_command_recorder recorder,
+                                               std::uint32_t first,
+                                               std::span<const granit_viewport> viewports) {
+  auto command = acquire_command_recorder(renderer, recorder);
+  if (!command)
+    return GRANIT_ERROR_INVALID_HANDLE;
+  std::vector<VkViewport> native;
+  native.reserve(viewports.size());
+  for (const auto& value : viewports)
+    native.push_back(
+        {value.x, value.y, value.width, value.height, value.min_depth, value.max_depth});
+  std::lock_guard lock{command->mutex};
+  return command->renderer->set_viewports(command->native, first, native);
+}
+
+granit_result renderer_registry::set_scissors(granit_renderer renderer,
+                                              granit_command_recorder recorder, std::uint32_t first,
+                                              std::span<const granit_scissor> scissors) {
+  auto command = acquire_command_recorder(renderer, recorder);
+  if (!command)
+    return GRANIT_ERROR_INVALID_HANDLE;
+  std::vector<VkRect2D> native;
+  native.reserve(scissors.size());
+  for (const auto& value : scissors)
+    native.push_back({{value.x, value.y}, {value.width, value.height}});
+  std::lock_guard lock{command->mutex};
+  return command->renderer->set_scissors(command->native, first, native);
+}
+
+granit_result
+renderer_registry::bind_vertex_buffers(granit_renderer renderer, granit_command_recorder recorder,
+                                       std::uint32_t first,
+                                       std::span<const granit_vertex_buffer_binding> bindings) {
+  auto command = acquire_command_recorder(renderer, recorder);
+  if (!command)
+    return GRANIT_ERROR_INVALID_HANDLE;
+  std::vector<std::shared_ptr<buffer_record>> records;
+  std::vector<VkBuffer> buffers;
+  std::vector<VkDeviceSize> offsets;
+  {
+    std::lock_guard lock{mutex_};
+    for (const auto& binding : bindings) {
+      const auto found = buffers_.find(binding.buffer);
+      if (found == buffers_.end() || found->second->renderer != command->renderer)
+        return GRANIT_ERROR_INVALID_HANDLE;
+      if ((found->second->desc.usage & GRANIT_BUFFER_USAGE_VERTEX_BIT) == 0 ||
+          binding.offset >= found->second->desc.size)
+        return GRANIT_ERROR_INVALID_ARGUMENT;
+      records.push_back(found->second);
+      buffers.push_back(found->second->native.buffer);
+      offsets.push_back(binding.offset);
+    }
+  }
+  std::lock_guard lock{command->mutex};
+  const auto result =
+      command->renderer->bind_vertex_buffers(command->native, first, buffers, offsets);
+  if (result == GRANIT_SUCCESS) {
+    for (const auto& record : records)
+      retain_resource(command->retained_resources, record, record->metadata);
+  }
+  return result;
+}
+
+granit_result renderer_registry::bind_index_buffer(granit_renderer renderer,
+                                                   granit_command_recorder recorder,
+                                                   granit_buffer buffer, std::uint64_t offset,
+                                                   granit_index_type type) {
+  auto command = acquire_command_recorder(renderer, recorder);
+  if (!command)
+    return GRANIT_ERROR_INVALID_HANDLE;
+  std::shared_ptr<buffer_record> record;
+  {
+    std::lock_guard lock{mutex_};
+    const auto found = buffers_.find(buffer);
+    if (found == buffers_.end() || found->second->renderer != command->renderer)
+      return GRANIT_ERROR_INVALID_HANDLE;
+    const auto alignment = type == GRANIT_INDEX_TYPE_UINT16 ? 2U : 4U;
+    if ((found->second->desc.usage & GRANIT_BUFFER_USAGE_INDEX_BIT) == 0 ||
+        offset >= found->second->desc.size || offset % alignment != 0)
+      return GRANIT_ERROR_INVALID_ARGUMENT;
+    record = found->second;
+  }
+  const auto native_type =
+      type == GRANIT_INDEX_TYPE_UINT16 ? VK_INDEX_TYPE_UINT16 : VK_INDEX_TYPE_UINT32;
+  std::lock_guard lock{command->mutex};
+  const auto result = command->renderer->bind_index_buffer(command->native, record->native.buffer,
+                                                           offset, native_type);
+  if (result == GRANIT_SUCCESS)
+    retain_resource(command->retained_resources, record, record->metadata);
+  return result;
+}
+
+granit_result renderer_registry::draw(granit_renderer renderer, granit_command_recorder recorder,
+                                      std::uint32_t vertex_count, std::uint32_t instance_count,
+                                      std::uint32_t first_vertex, std::uint32_t first_instance) {
+  auto command = acquire_command_recorder(renderer, recorder);
+  if (!command)
+    return GRANIT_ERROR_INVALID_HANDLE;
+  std::lock_guard lock{command->mutex};
+  return command->renderer->draw(command->native, vertex_count, instance_count, first_vertex,
+                                 first_instance);
+}
+
+granit_result renderer_registry::draw_indexed(granit_renderer renderer,
+                                              granit_command_recorder recorder,
+                                              std::uint32_t index_count,
+                                              std::uint32_t instance_count,
+                                              std::uint32_t first_index, std::int32_t vertex_offset,
+                                              std::uint32_t first_instance) {
+  auto command = acquire_command_recorder(renderer, recorder);
+  if (!command)
+    return GRANIT_ERROR_INVALID_HANDLE;
+  std::lock_guard lock{command->mutex};
+  return command->renderer->draw_indexed(command->native, index_count, instance_count, first_index,
+                                         vertex_offset, first_instance);
+}
+
 granit_result renderer_registry::begin_rendering(granit_renderer renderer,
                                                  granit_command_recorder recorder,
                                                  const granit_rendering_desc& desc) {

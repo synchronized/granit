@@ -16,6 +16,14 @@
 namespace granit {
 
 using buffer_copy_region = granit_buffer_copy_region;
+using viewport = granit_viewport;
+using scissor = granit_scissor;
+using vertex_buffer_binding = granit_vertex_buffer_binding;
+
+enum class index_type : std::uint32_t {
+  uint16 = GRANIT_INDEX_TYPE_UINT16,
+  uint32 = GRANIT_INDEX_TYPE_UINT32,
+};
 
 /** 无异常、move-only 的 Command Recorder 包装。 */
 class command_recorder {
@@ -88,6 +96,46 @@ public:
     return from_native(granit_command_recorder_bind_graphics_groups(
         renderer_, handle_, layout, first_group, bind_groups.data(),
         static_cast<std::uint32_t>(bind_groups.size())));
+  }
+  [[nodiscard]] result set_viewports(std::uint32_t first,
+                                     std::span<const viewport> viewports) noexcept {
+    if (viewports.empty() || viewports.size() > UINT32_MAX)
+      return result::invalid_argument;
+    return from_native(granit_command_recorder_set_viewports(
+        renderer_, handle_, first, viewports.data(), static_cast<std::uint32_t>(viewports.size())));
+  }
+  [[nodiscard]] result set_scissors(std::uint32_t first,
+                                    std::span<const scissor> scissors) noexcept {
+    if (scissors.empty() || scissors.size() > UINT32_MAX)
+      return result::invalid_argument;
+    return from_native(granit_command_recorder_set_scissors(
+        renderer_, handle_, first, scissors.data(), static_cast<std::uint32_t>(scissors.size())));
+  }
+  [[nodiscard]] result
+  bind_vertex_buffers(std::uint32_t first,
+                      std::span<const vertex_buffer_binding> bindings) noexcept {
+    if (bindings.empty() || bindings.size() > UINT32_MAX)
+      return result::invalid_argument;
+    return from_native(granit_command_recorder_bind_vertex_buffers(
+        renderer_, handle_, first, bindings.data(), static_cast<std::uint32_t>(bindings.size())));
+  }
+  [[nodiscard]] result bind_index_buffer(granit_buffer buffer, std::uint64_t offset,
+                                         index_type type) noexcept {
+    return from_native(granit_command_recorder_bind_index_buffer(
+        renderer_, handle_, buffer, offset, static_cast<granit_index_type>(type)));
+  }
+  [[nodiscard]] result draw(std::uint32_t vertex_count, std::uint32_t instance_count = 1,
+                            std::uint32_t first_vertex = 0,
+                            std::uint32_t first_instance = 0) noexcept {
+    return from_native(granit_command_recorder_draw(renderer_, handle_, vertex_count,
+                                                    instance_count, first_vertex, first_instance));
+  }
+  [[nodiscard]] result draw_indexed(std::uint32_t index_count, std::uint32_t instance_count = 1,
+                                    std::uint32_t first_index = 0, std::int32_t vertex_offset = 0,
+                                    std::uint32_t first_instance = 0) noexcept {
+    return from_native(granit_command_recorder_draw_indexed(renderer_, handle_, index_count,
+                                                            instance_count, first_index,
+                                                            vertex_offset, first_instance));
   }
   [[nodiscard]] result begin_rendering(const rendering_desc& desc) noexcept {
     if (desc.color_attachments.size() > GRANIT_MAX_COLOR_ATTACHMENTS) {

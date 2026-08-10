@@ -826,6 +826,48 @@ renderer_state::bind_graphics_groups(vulkan_command_recorder& recorder, VkPipeli
   return recorder.bind_graphics_groups(device_, layout, first_group, bind_groups);
 }
 
+granit_result renderer_state::set_viewports(vulkan_command_recorder& recorder, std::uint32_t first,
+                                            std::span<const VkViewport> viewports) noexcept {
+  return device_lost() ? GRANIT_ERROR_DEVICE_LOST
+                       : recorder.set_viewports(device_, first, viewports);
+}
+
+granit_result renderer_state::set_scissors(vulkan_command_recorder& recorder, std::uint32_t first,
+                                           std::span<const VkRect2D> scissors) noexcept {
+  return device_lost() ? GRANIT_ERROR_DEVICE_LOST : recorder.set_scissors(device_, first, scissors);
+}
+
+granit_result renderer_state::bind_vertex_buffers(vulkan_command_recorder& recorder,
+                                                  std::uint32_t first,
+                                                  std::span<const VkBuffer> buffers,
+                                                  std::span<const VkDeviceSize> offsets) {
+  return device_lost() ? GRANIT_ERROR_DEVICE_LOST
+                       : recorder.bind_vertex_buffers(device_, first, buffers, offsets);
+}
+
+granit_result renderer_state::bind_index_buffer(vulkan_command_recorder& recorder, VkBuffer buffer,
+                                                VkDeviceSize offset, VkIndexType type) {
+  return device_lost() ? GRANIT_ERROR_DEVICE_LOST
+                       : recorder.bind_index_buffer(device_, buffer, offset, type);
+}
+
+granit_result renderer_state::draw(vulkan_command_recorder& recorder, std::uint32_t vertex_count,
+                                   std::uint32_t instance_count, std::uint32_t first_vertex,
+                                   std::uint32_t first_instance) noexcept {
+  return device_lost()
+             ? GRANIT_ERROR_DEVICE_LOST
+             : recorder.draw(device_, vertex_count, instance_count, first_vertex, first_instance);
+}
+
+granit_result renderer_state::draw_indexed(vulkan_command_recorder& recorder,
+                                           std::uint32_t index_count, std::uint32_t instance_count,
+                                           std::uint32_t first_index, std::int32_t vertex_offset,
+                                           std::uint32_t first_instance) noexcept {
+  return device_lost() ? GRANIT_ERROR_DEVICE_LOST
+                       : recorder.draw_indexed(device_, index_count, instance_count, first_index,
+                                               vertex_offset, first_instance);
+}
+
 granit_result
 renderer_state::begin_rendering(vulkan_command_recorder& recorder, VkRect2D area,
                                 std::span<const VkRenderingAttachmentInfo> color_attachments,

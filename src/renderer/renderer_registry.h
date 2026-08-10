@@ -144,6 +144,27 @@ public:
                                                    granit_pipeline_layout layout,
                                                    std::uint32_t first_group,
                                                    std::span<const granit_bind_group> bind_groups);
+  [[nodiscard]] granit_result set_viewports(granit_renderer renderer,
+                                            granit_command_recorder recorder, std::uint32_t first,
+                                            std::span<const granit_viewport> viewports);
+  [[nodiscard]] granit_result set_scissors(granit_renderer renderer,
+                                           granit_command_recorder recorder, std::uint32_t first,
+                                           std::span<const granit_scissor> scissors);
+  [[nodiscard]] granit_result
+  bind_vertex_buffers(granit_renderer renderer, granit_command_recorder recorder,
+                      std::uint32_t first, std::span<const granit_vertex_buffer_binding> bindings);
+  [[nodiscard]] granit_result bind_index_buffer(granit_renderer renderer,
+                                                granit_command_recorder recorder,
+                                                granit_buffer buffer, std::uint64_t offset,
+                                                granit_index_type type);
+  [[nodiscard]] granit_result draw(granit_renderer renderer, granit_command_recorder recorder,
+                                   std::uint32_t vertex_count, std::uint32_t instance_count,
+                                   std::uint32_t first_vertex, std::uint32_t first_instance);
+  [[nodiscard]] granit_result draw_indexed(granit_renderer renderer,
+                                           granit_command_recorder recorder,
+                                           std::uint32_t index_count, std::uint32_t instance_count,
+                                           std::uint32_t first_index, std::int32_t vertex_offset,
+                                           std::uint32_t first_instance);
   [[nodiscard]] granit_result begin_rendering(granit_renderer renderer,
                                               granit_command_recorder recorder,
                                               const granit_rendering_desc& desc);

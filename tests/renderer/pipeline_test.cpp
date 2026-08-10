@@ -201,9 +201,10 @@ TEST_CASE("Graphics Pipeline 在进入后端前校验描述", "[pipeline][valida
 
 TEST_CASE("Graphics Pipeline 持有 Shader 与 Layout 依赖", "[pipeline][lifetime]") {
   granit::renderer renderer;
-  const auto result = renderer.initialize({.application_name = "granit-graphics-pipeline"});
-  if (environment_unavailable(result))
-    SKIP("当前运行环境没有满足要求的 Vulkan 设备");
+  const auto result = renderer.initialize(
+      {.application_name = "granit-graphics-pipeline", .enable_validation = true});
+  if (environment_unavailable(result) || result == granit::result::unsupported)
+    SKIP("当前运行环境不支持验证层或没有满足要求的 Vulkan 设备");
   REQUIRE(result == granit::result::success);
 
   const auto vertex_code = load_shader("minimal.vert.spv");
@@ -228,10 +229,45 @@ TEST_CASE("Graphics Pipeline 持有 Shader 与 Layout 依赖", "[pipeline][lifet
                                .vertex_shader = vertex.native_handle(),
                                .fragment_shader = fragment.native_handle(),
                                .color_formats = std::span{&format, 1}}) == granit::result::success);
+  granit_texture_desc texture_desc = GRANIT_TEXTURE_DESC_INIT;
+  texture_desc.format = GRANIT_TEXTURE_FORMAT_RGBA8_UNORM;
+  texture_desc.usage = GRANIT_TEXTURE_USAGE_COLOR_ATTACHMENT_BIT;
+  texture_desc.width = 16;
+  texture_desc.height = 16;
+  granit_texture texture = GRANIT_NULL_HANDLE;
+  granit_texture_view view = GRANIT_NULL_HANDLE;
+  REQUIRE(granit_texture_create_with_default_view(renderer.native_handle(), &texture_desc, &texture,
+                                                  &view) == GRANIT_SUCCESS);
+  granit::buffer index_buffer;
+  REQUIRE(index_buffer.initialize(renderer.native_handle(),
+                                  {.size = 16, .usage = granit::buffer_usage::index}) ==
+          granit::result::success);
+  granit::buffer vertex_buffer;
+  REQUIRE(vertex_buffer.initialize(renderer.native_handle(),
+                                   {.size = 16, .usage = granit::buffer_usage::vertex}) ==
+          granit::result::success);
   granit::command_recorder recorder;
   REQUIRE(recorder.initialize(renderer.native_handle()) == granit::result::success);
   REQUIRE(recorder.begin() == granit::result::success);
   REQUIRE(recorder.bind_graphics_pipeline(pipeline.native_handle()) == granit::result::success);
+  REQUIRE(recorder.bind_index_buffer(index_buffer.native_handle(), 0, granit::index_type::uint16) ==
+          granit::result::success);
+  const granit::vertex_buffer_binding vertex_binding{vertex_buffer.native_handle(), 0};
+  REQUIRE(recorder.bind_vertex_buffers(0, std::span{&vertex_binding, 1}) ==
+          granit::result::success);
+  const granit::viewport viewport{0, 0, 16, 16, 0, 1};
+  const granit::scissor scissor{0, 0, 16, 16};
+  REQUIRE(recorder.set_viewports(0, std::span{&viewport, 1}) == granit::result::success);
+  REQUIRE(recorder.set_scissors(0, std::span{&scissor, 1}) == granit::result::success);
+  const granit::color_attachment_desc color{.view = view};
+  const granit::rendering_desc rendering{.color_attachments = std::span{&color, 1},
+                                         .area = {0, 0, 16, 16}};
+  REQUIRE(recorder.begin_rendering(rendering) == granit::result::success);
+  REQUIRE(recorder.draw(3) == granit::result::success);
+  REQUIRE(recorder.draw_indexed(3) == granit::result::success);
+  REQUIRE(recorder.end_rendering() == granit::result::success);
+  REQUIRE(index_buffer.reset() == granit::result::success);
+  REQUIRE(vertex_buffer.reset() == granit::result::success);
   REQUIRE(pipeline.reset() == granit::result::success);
   REQUIRE(vertex.reset() == granit::result::success);
   REQUIRE(fragment.reset() == granit::result::success);
@@ -239,6 +275,7 @@ TEST_CASE("Graphics Pipeline 持有 Shader 与 Layout 依赖", "[pipeline][lifet
   REQUIRE(recorder.end() == granit::result::success);
   REQUIRE(recorder.submit() == granit::result::success);
   REQUIRE(recorder.reset() == granit::result::success);
+  REQUIRE(granit_texture_destroy(renderer.native_handle(), texture) == GRANIT_SUCCESS);
 }
 
 } // namespace

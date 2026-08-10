@@ -55,6 +55,10 @@ granit_result vulkan_command_recorder::begin(const vulkan_device& device) noexce
   const auto result = device.functions().vkBeginCommandBuffer(command_buffer_, &begin_info);
   if (result == VK_SUCCESS) {
     state_ = command_recorder_state::recording;
+    graphics_pipeline_bound_ = false;
+    viewport_set_ = false;
+    scissor_set_ = false;
+    index_buffer_bound_ = false;
   }
   return map_vulkan_result(result);
 }
@@ -84,7 +88,8 @@ granit_result vulkan_command_recorder::reset(const vulkan_device& device) noexce
 }
 
 granit_result vulkan_command_recorder::prepare_buffer_access(
-    const vulkan_device& device, std::span<const std::pair<VkBuffer, VkAccessFlags2>> accesses) {
+    const vulkan_device& device, std::span<const std::pair<VkBuffer, VkAccessFlags2>> accesses,
+    VkPipelineStageFlags2 destination_stages) {
   std::vector<std::pair<VkBuffer, VkAccessFlags2>> merged;
   merged.reserve(accesses.size());
   for (const auto& access : accesses) {
@@ -115,7 +120,7 @@ granit_result vulkan_command_recorder::prepare_buffer_access(
       barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2;
       barrier.srcStageMask = source.stages;
       barrier.srcAccessMask = source.access;
-      barrier.dstStageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT;
+      barrier.dstStageMask = destination_stages;
       barrier.dstAccessMask = destination_access;
       barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
       barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
@@ -125,7 +130,7 @@ granit_result vulkan_command_recorder::prepare_buffer_access(
       barriers.push_back(barrier);
     }
     buffer_accesses_[buffer] = {
-        .stages = VK_PIPELINE_STAGE_2_TRANSFER_BIT,
+        .stages = destination_stages,
         .access = destination_access,
     };
   }
@@ -180,6 +185,7 @@ granit_result vulkan_command_recorder::bind_graphics_pipeline(const vulkan_devic
   if (state_ != command_recorder_state::recording || pipeline == VK_NULL_HANDLE)
     return GRANIT_ERROR_INVALID_ARGUMENT;
   device.functions().vkCmdBindPipeline(command_buffer_, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
+  graphics_pipeline_bound_ = true;
   return GRANIT_SUCCESS;
 }
 
@@ -192,6 +198,89 @@ granit_result vulkan_command_recorder::bind_graphics_groups(
   device.functions().vkCmdBindDescriptorSets(
       command_buffer_, VK_PIPELINE_BIND_POINT_GRAPHICS, layout, first_group,
       static_cast<std::uint32_t>(bind_groups.size()), bind_groups.data(), 0, nullptr);
+  return GRANIT_SUCCESS;
+}
+
+granit_result
+vulkan_command_recorder::set_viewports(const vulkan_device& device, std::uint32_t first,
+                                       std::span<const VkViewport> viewports) noexcept {
+  if (state_ != command_recorder_state::recording || viewports.empty())
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  device.functions().vkCmdSetViewport(
+      command_buffer_, first, static_cast<std::uint32_t>(viewports.size()), viewports.data());
+  viewport_set_ = true;
+  return GRANIT_SUCCESS;
+}
+
+granit_result vulkan_command_recorder::set_scissors(const vulkan_device& device,
+                                                    std::uint32_t first,
+                                                    std::span<const VkRect2D> scissors) noexcept {
+  if (state_ != command_recorder_state::recording || scissors.empty())
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  device.functions().vkCmdSetScissor(command_buffer_, first,
+                                     static_cast<std::uint32_t>(scissors.size()), scissors.data());
+  scissor_set_ = true;
+  return GRANIT_SUCCESS;
+}
+
+granit_result vulkan_command_recorder::bind_vertex_buffers(const vulkan_device& device,
+                                                           std::uint32_t first,
+                                                           std::span<const VkBuffer> buffers,
+                                                           std::span<const VkDeviceSize> offsets) {
+  if (state_ != command_recorder_state::recording || inside_rendering_ || buffers.empty() ||
+      buffers.size() != offsets.size())
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  std::vector<std::pair<VkBuffer, VkAccessFlags2>> accesses;
+  accesses.reserve(buffers.size());
+  for (const auto buffer : buffers)
+    accesses.emplace_back(buffer, VK_ACCESS_2_VERTEX_ATTRIBUTE_READ_BIT);
+  const auto result = prepare_buffer_access(device, accesses, VK_PIPELINE_STAGE_2_VERTEX_INPUT_BIT);
+  if (result != GRANIT_SUCCESS)
+    return result;
+  device.functions().vkCmdBindVertexBuffers(command_buffer_, first,
+                                            static_cast<std::uint32_t>(buffers.size()),
+                                            buffers.data(), offsets.data());
+  return GRANIT_SUCCESS;
+}
+
+granit_result vulkan_command_recorder::bind_index_buffer(const vulkan_device& device,
+                                                         VkBuffer buffer, VkDeviceSize offset,
+                                                         VkIndexType type) {
+  if (state_ != command_recorder_state::recording || inside_rendering_ || buffer == VK_NULL_HANDLE)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  const std::array accesses{
+      std::pair{buffer, VkAccessFlags2{VK_ACCESS_2_INDEX_READ_BIT}},
+  };
+  const auto result = prepare_buffer_access(device, accesses, VK_PIPELINE_STAGE_2_INDEX_INPUT_BIT);
+  if (result != GRANIT_SUCCESS)
+    return result;
+  device.functions().vkCmdBindIndexBuffer(command_buffer_, buffer, offset, type);
+  index_buffer_bound_ = true;
+  return GRANIT_SUCCESS;
+}
+
+granit_result vulkan_command_recorder::draw(const vulkan_device& device, std::uint32_t vertex_count,
+                                            std::uint32_t instance_count,
+                                            std::uint32_t first_vertex,
+                                            std::uint32_t first_instance) noexcept {
+  if (state_ != command_recorder_state::recording || !inside_rendering_ ||
+      !graphics_pipeline_bound_ || !viewport_set_ || !scissor_set_ || vertex_count == 0 ||
+      instance_count == 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  device.functions().vkCmdDraw(command_buffer_, vertex_count, instance_count, first_vertex,
+                               first_instance);
+  return GRANIT_SUCCESS;
+}
+
+granit_result vulkan_command_recorder::draw_indexed(
+    const vulkan_device& device, std::uint32_t index_count, std::uint32_t instance_count,
+    std::uint32_t first_index, std::int32_t vertex_offset, std::uint32_t first_instance) noexcept {
+  if (state_ != command_recorder_state::recording || !inside_rendering_ ||
+      !graphics_pipeline_bound_ || !viewport_set_ || !scissor_set_ || !index_buffer_bound_ ||
+      index_count == 0 || instance_count == 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  device.functions().vkCmdDrawIndexed(command_buffer_, index_count, instance_count, first_index,
+                                      vertex_offset, first_instance);
   return GRANIT_SUCCESS;
 }
 

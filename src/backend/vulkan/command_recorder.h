@@ -46,6 +46,22 @@ public:
   bind_graphics_groups(const vulkan_device& device, VkPipelineLayout layout,
                        std::uint32_t first_group,
                        std::span<const VkDescriptorSet> bind_groups) noexcept;
+  [[nodiscard]] granit_result set_viewports(const vulkan_device& device, std::uint32_t first,
+                                            std::span<const VkViewport> viewports) noexcept;
+  [[nodiscard]] granit_result set_scissors(const vulkan_device& device, std::uint32_t first,
+                                           std::span<const VkRect2D> scissors) noexcept;
+  [[nodiscard]] granit_result bind_vertex_buffers(const vulkan_device& device, std::uint32_t first,
+                                                  std::span<const VkBuffer> buffers,
+                                                  std::span<const VkDeviceSize> offsets);
+  [[nodiscard]] granit_result bind_index_buffer(const vulkan_device& device, VkBuffer buffer,
+                                                VkDeviceSize offset, VkIndexType type);
+  [[nodiscard]] granit_result draw(const vulkan_device& device, std::uint32_t vertex_count,
+                                   std::uint32_t instance_count, std::uint32_t first_vertex,
+                                   std::uint32_t first_instance) noexcept;
+  [[nodiscard]] granit_result draw_indexed(const vulkan_device& device, std::uint32_t index_count,
+                                           std::uint32_t instance_count, std::uint32_t first_index,
+                                           std::int32_t vertex_offset,
+                                           std::uint32_t first_instance) noexcept;
   [[nodiscard]] granit_result
   begin_rendering(const vulkan_device& device, VkRect2D area,
                   std::span<const VkRenderingAttachmentInfo> color_attachments,
@@ -75,15 +91,19 @@ private:
     VkAccessFlags2 access{};
   };
 
-  [[nodiscard]] granit_result
-  prepare_buffer_access(const vulkan_device& device,
-                        std::span<const std::pair<VkBuffer, VkAccessFlags2>> accesses);
+  [[nodiscard]] granit_result prepare_buffer_access(
+      const vulkan_device& device, std::span<const std::pair<VkBuffer, VkAccessFlags2>> accesses,
+      VkPipelineStageFlags2 destination_stages = VK_PIPELINE_STAGE_2_TRANSFER_BIT);
   void prepare_image_access(const vulkan_device& device, const vulkan_image_access& access);
 
   VkCommandPool pool_{VK_NULL_HANDLE};
   VkCommandBuffer command_buffer_{VK_NULL_HANDLE};
   command_recorder_state state_{command_recorder_state::invalid};
   bool inside_rendering_{};
+  bool graphics_pipeline_bound_{};
+  bool viewport_set_{};
+  bool scissor_set_{};
+  bool index_buffer_bound_{};
   std::unordered_map<VkBuffer, buffer_access_state> buffer_accesses_;
   std::vector<vulkan_image_access> initial_image_accesses_;
   std::vector<vulkan_image_access> final_image_accesses_;

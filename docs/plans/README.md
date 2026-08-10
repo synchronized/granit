@@ -58,6 +58,7 @@ D-03-graphics-pipeline.md
 - [D-02：Shader Module 生命周期](D-02-shader-module.md)——SPIR-V 校验、Shader 句柄、Vulkan
   Module 和 RAII 已完成。
 - [D-03：Graphics Pipeline 与 Bind Group](D-03-graphics-pipeline.md)——已完成。
+- [D-05：基础绘制命令](D-05-draw-commands.md)——已完成。
 
 ## 状态
 
