@@ -5,11 +5,36 @@
 
 #include "renderer/renderer_registry.h"
 
+#include <array>
+
 namespace {
 
 bool valid_format(granit_texture_format format) noexcept {
   return format >= GRANIT_TEXTURE_FORMAT_R8_UNORM &&
          format <= GRANIT_TEXTURE_FORMAT_D32_FLOAT_S8_UINT;
+}
+
+uint32_t vertex_format_size(granit_vertex_format format) noexcept {
+  switch (format) {
+  case GRANIT_VERTEX_FORMAT_FLOAT32:
+  case GRANIT_VERTEX_FORMAT_UINT32:
+  case GRANIT_VERTEX_FORMAT_SINT32:
+    return 4;
+  case GRANIT_VERTEX_FORMAT_FLOAT32X2:
+  case GRANIT_VERTEX_FORMAT_UINT32X2:
+  case GRANIT_VERTEX_FORMAT_SINT32X2:
+    return 8;
+  case GRANIT_VERTEX_FORMAT_FLOAT32X3:
+  case GRANIT_VERTEX_FORMAT_UINT32X3:
+  case GRANIT_VERTEX_FORMAT_SINT32X3:
+    return 12;
+  case GRANIT_VERTEX_FORMAT_FLOAT32X4:
+  case GRANIT_VERTEX_FORMAT_UINT32X4:
+  case GRANIT_VERTEX_FORMAT_SINT32X4:
+    return 16;
+  default:
+    return 0;
+  }
 }
 
 } // namespace
@@ -120,6 +145,28 @@ extern "C" granit_result granit_graphics_pipeline_create(granit_renderer rendere
     if (!valid_format(desc->color_formats[index]) ||
         desc->color_formats[index] >= GRANIT_TEXTURE_FORMAT_D16_UNORM)
       return GRANIT_ERROR_INVALID_ARGUMENT;
+  }
+  if (desc->struct_size >= GRANIT_GRAPHICS_PIPELINE_DESC_VERSION_2_SIZE) {
+    if (desc->reserved_3 != 0 || desc->vertex_buffer_layout_count > 16 ||
+        (desc->vertex_buffer_layout_count != 0 && !desc->vertex_buffer_layouts))
+      return GRANIT_ERROR_INVALID_ARGUMENT;
+    std::array<bool, 32> locations{};
+    for (uint32_t binding = 0; binding < desc->vertex_buffer_layout_count; ++binding) {
+      const auto& layout = desc->vertex_buffer_layouts[binding];
+      if (layout.stride == 0 || layout.step_mode < GRANIT_VERTEX_STEP_MODE_VERTEX ||
+          layout.step_mode > GRANIT_VERTEX_STEP_MODE_INSTANCE || layout.attribute_count == 0 ||
+          layout.attribute_count > locations.size() || layout.reserved != 0 || !layout.attributes)
+        return GRANIT_ERROR_INVALID_ARGUMENT;
+      for (uint32_t index = 0; index < layout.attribute_count; ++index) {
+        const auto& attribute = layout.attributes[index];
+        const auto size = vertex_format_size(attribute.format);
+        if (attribute.location >= locations.size() || locations[attribute.location] || size == 0 ||
+            attribute.reserved != 0 || attribute.offset >= layout.stride ||
+            size > layout.stride - attribute.offset)
+          return GRANIT_ERROR_INVALID_ARGUMENT;
+        locations[attribute.location] = true;
+      }
+    }
   }
   return granit::detail::renderer_registry::instance().create_graphics_pipeline(renderer, *desc,
                                                                                 *pipeline);

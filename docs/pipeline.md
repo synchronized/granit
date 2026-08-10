@@ -24,8 +24,9 @@ Bind Group 创建时必须完整提供 Layout 声明的每个 binding 数组元�
 Command Recorder 可以绑定 Graphics Pipeline，并按连续组范围批量绑定 Bind Group。绑定时要求
 Bind Group 的 Layout 与 Pipeline Layout 对应组使用同一个布局对象；仅字段相同不视为兼容。
 
-Viewport、Scissor、Vertex/Index Buffer、Draw 和 Draw Indexed 已经实现。第一版尚未开放
-Vertex Attribute Layout，最小三角形使用 Shader 内的顶点序号生成位置。
+Viewport、Scissor、Vertex/Index Buffer、Draw 和 Draw Indexed 已经实现。Graphics Pipeline
+支持为每个 Vertex Buffer binding 指定 stride、per-vertex/per-instance 步进，以及 location、
+format 和 offset。未提供 Vertex Buffer Layout 时仍可使用 Shader 内的顶点序号生成位置。
 
 ## C API 示例
 

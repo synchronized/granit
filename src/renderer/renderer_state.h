@@ -104,6 +104,7 @@ public:
   create_native_graphics_pipeline(VkPipelineLayout layout, VkShaderModule vertex_shader,
                                   const char* vertex_entry, VkShaderModule fragment_shader,
                                   const char* fragment_entry,
+                                  std::span<const granit_vertex_buffer_layout> vertex_buffers,
                                   std::span<const granit_texture_format> color_formats,
                                   granit_texture_format depth_stencil_format,
                                   granit_sample_count sample_count, VkPipeline& pipeline) noexcept;

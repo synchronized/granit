@@ -82,6 +82,37 @@ VkFormat map_texture_format(granit_texture_format format) noexcept {
   }
 }
 
+VkFormat map_vertex_format(granit_vertex_format format) noexcept {
+  switch (format) {
+  case GRANIT_VERTEX_FORMAT_FLOAT32:
+    return VK_FORMAT_R32_SFLOAT;
+  case GRANIT_VERTEX_FORMAT_FLOAT32X2:
+    return VK_FORMAT_R32G32_SFLOAT;
+  case GRANIT_VERTEX_FORMAT_FLOAT32X3:
+    return VK_FORMAT_R32G32B32_SFLOAT;
+  case GRANIT_VERTEX_FORMAT_FLOAT32X4:
+    return VK_FORMAT_R32G32B32A32_SFLOAT;
+  case GRANIT_VERTEX_FORMAT_UINT32:
+    return VK_FORMAT_R32_UINT;
+  case GRANIT_VERTEX_FORMAT_UINT32X2:
+    return VK_FORMAT_R32G32_UINT;
+  case GRANIT_VERTEX_FORMAT_UINT32X3:
+    return VK_FORMAT_R32G32B32_UINT;
+  case GRANIT_VERTEX_FORMAT_UINT32X4:
+    return VK_FORMAT_R32G32B32A32_UINT;
+  case GRANIT_VERTEX_FORMAT_SINT32:
+    return VK_FORMAT_R32_SINT;
+  case GRANIT_VERTEX_FORMAT_SINT32X2:
+    return VK_FORMAT_R32G32_SINT;
+  case GRANIT_VERTEX_FORMAT_SINT32X3:
+    return VK_FORMAT_R32G32B32_SINT;
+  case GRANIT_VERTEX_FORMAT_SINT32X4:
+    return VK_FORMAT_R32G32B32A32_SINT;
+  default:
+    return VK_FORMAT_UNDEFINED;
+  }
+}
+
 VkImageAspectFlags default_aspect(granit_texture_format format) noexcept {
   if (format == GRANIT_TEXTURE_FORMAT_D24_UNORM_S8_UINT ||
       format == GRANIT_TEXTURE_FORMAT_D32_FLOAT_S8_UINT) {
@@ -678,6 +709,7 @@ void renderer_state::destroy_native_pipeline_layout(VkPipelineLayout layout) noe
 granit_result renderer_state::create_native_graphics_pipeline(
     VkPipelineLayout layout, VkShaderModule vertex_shader, const char* vertex_entry,
     VkShaderModule fragment_shader, const char* fragment_entry,
+    std::span<const granit_vertex_buffer_layout> vertex_buffers,
     std::span<const granit_texture_format> color_formats,
     granit_texture_format depth_stencil_format, granit_sample_count sample_count,
     VkPipeline& pipeline) noexcept {
@@ -693,8 +725,42 @@ granit_result renderer_state::create_native_graphics_pipeline(
   stages[1].module = fragment_shader;
   stages[1].pName = fragment_entry;
 
+  const auto& limits = device_.properties().limits;
+  std::size_t attribute_count{};
+  for (const auto& buffer : vertex_buffers)
+    attribute_count += buffer.attribute_count;
+  if (vertex_buffers.size() > limits.maxVertexInputBindings ||
+      attribute_count > limits.maxVertexInputAttributes)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  std::vector<VkVertexInputBindingDescription> bindings;
+  std::vector<VkVertexInputAttributeDescription> attributes;
+  bindings.reserve(vertex_buffers.size());
+  attributes.reserve(attribute_count);
+  for (std::uint32_t binding = 0; binding < vertex_buffers.size(); ++binding) {
+    const auto& source = vertex_buffers[binding];
+    if (source.stride > limits.maxVertexInputBindingStride)
+      return GRANIT_ERROR_INVALID_ARGUMENT;
+    bindings.push_back({.binding = binding,
+                        .stride = source.stride,
+                        .inputRate = source.step_mode == GRANIT_VERTEX_STEP_MODE_INSTANCE
+                                         ? VK_VERTEX_INPUT_RATE_INSTANCE
+                                         : VK_VERTEX_INPUT_RATE_VERTEX});
+    for (std::uint32_t index = 0; index < source.attribute_count; ++index) {
+      const auto& attribute = source.attributes[index];
+      if (attribute.offset > limits.maxVertexInputAttributeOffset)
+        return GRANIT_ERROR_INVALID_ARGUMENT;
+      attributes.push_back({.location = attribute.location,
+                            .binding = binding,
+                            .format = map_vertex_format(attribute.format),
+                            .offset = attribute.offset});
+    }
+  }
   VkPipelineVertexInputStateCreateInfo vertex_input{};
   vertex_input.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+  vertex_input.vertexBindingDescriptionCount = static_cast<std::uint32_t>(bindings.size());
+  vertex_input.pVertexBindingDescriptions = bindings.data();
+  vertex_input.vertexAttributeDescriptionCount = static_cast<std::uint32_t>(attributes.size());
+  vertex_input.pVertexAttributeDescriptions = attributes.data();
   VkPipelineInputAssemblyStateCreateInfo input_assembly{};
   input_assembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
   input_assembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;

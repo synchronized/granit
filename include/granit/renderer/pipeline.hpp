@@ -4,12 +4,13 @@
 #ifndef GRANIT_PIPELINE_HPP_
 #define GRANIT_PIPELINE_HPP_
 
+#include <array>
 #include <span>
 #include <utility>
 
+#include <granit/core/result.hpp>
 #include <granit/renderer/pipeline.h>
 #include <granit/renderer/resource_types.hpp>
-#include <granit/core/result.hpp>
 
 namespace granit {
 
@@ -133,6 +134,39 @@ private:
   granit_pipeline_layout handle_{GRANIT_NULL_HANDLE};
 };
 
+enum class vertex_format : std::uint32_t {
+  float32 = GRANIT_VERTEX_FORMAT_FLOAT32,
+  float32x2 = GRANIT_VERTEX_FORMAT_FLOAT32X2,
+  float32x3 = GRANIT_VERTEX_FORMAT_FLOAT32X3,
+  float32x4 = GRANIT_VERTEX_FORMAT_FLOAT32X4,
+  uint32 = GRANIT_VERTEX_FORMAT_UINT32,
+  uint32x2 = GRANIT_VERTEX_FORMAT_UINT32X2,
+  uint32x3 = GRANIT_VERTEX_FORMAT_UINT32X3,
+  uint32x4 = GRANIT_VERTEX_FORMAT_UINT32X4,
+  sint32 = GRANIT_VERTEX_FORMAT_SINT32,
+  sint32x2 = GRANIT_VERTEX_FORMAT_SINT32X2,
+  sint32x3 = GRANIT_VERTEX_FORMAT_SINT32X3,
+  sint32x4 = GRANIT_VERTEX_FORMAT_SINT32X4,
+};
+
+enum class vertex_step_mode : std::uint32_t {
+  vertex = GRANIT_VERTEX_STEP_MODE_VERTEX,
+  instance = GRANIT_VERTEX_STEP_MODE_INSTANCE,
+};
+
+struct vertex_attribute {
+  std::uint32_t location{};
+  vertex_format format{vertex_format::float32};
+  std::uint32_t offset{};
+  std::uint32_t reserved{};
+};
+
+struct vertex_buffer_layout {
+  std::uint32_t stride{};
+  vertex_step_mode step_mode{vertex_step_mode::vertex};
+  std::span<const vertex_attribute> attributes;
+};
+
 struct graphics_pipeline_desc {
   granit_pipeline_layout layout{GRANIT_NULL_HANDLE};
   granit_shader vertex_shader{GRANIT_NULL_HANDLE};
@@ -140,6 +174,7 @@ struct graphics_pipeline_desc {
   std::span<const texture_format> color_formats;
   texture_format depth_stencil_format{texture_format::undefined};
   sample_count samples{sample_count::one};
+  std::span<const vertex_buffer_layout> vertex_buffers;
 };
 
 class graphics_pipeline {
@@ -281,8 +316,24 @@ inline result pipeline_layout::reset() noexcept {
 
 inline result graphics_pipeline::initialize(granit_renderer renderer,
                                             const graphics_pipeline_desc& desc) noexcept {
-  if (valid() || renderer == GRANIT_NULL_HANDLE || desc.color_formats.size() > UINT32_MAX)
+  if (valid() || renderer == GRANIT_NULL_HANDLE || desc.color_formats.size() > UINT32_MAX ||
+      desc.vertex_buffers.size() > UINT32_MAX)
     return result::invalid_argument;
+  static_assert(sizeof(vertex_attribute) == sizeof(granit_vertex_attribute));
+  if (desc.vertex_buffers.size() > 16)
+    return result::invalid_argument;
+  std::array<granit_vertex_buffer_layout, 16> vertex_buffers{};
+  for (std::size_t index = 0; index < desc.vertex_buffers.size(); ++index) {
+    const auto& source = desc.vertex_buffers[index];
+    if (source.attributes.size() > UINT32_MAX)
+      return result::invalid_argument;
+    vertex_buffers[index] = {
+        .stride = source.stride,
+        .step_mode = static_cast<granit_vertex_step_mode>(source.step_mode),
+        .attribute_count = static_cast<std::uint32_t>(source.attributes.size()),
+        .reserved = 0,
+        .attributes = reinterpret_cast<const granit_vertex_attribute*>(source.attributes.data())};
+  }
   const auto* formats = reinterpret_cast<const granit_texture_format*>(desc.color_formats.data());
   const granit_graphics_pipeline_desc native{
       .struct_size = GRANIT_GRAPHICS_PIPELINE_DESC_VERSION_1_SIZE,
@@ -294,7 +345,10 @@ inline result graphics_pipeline::initialize(granit_renderer renderer,
       .color_formats = formats,
       .depth_stencil_format = static_cast<granit_texture_format>(desc.depth_stencil_format),
       .sample_count = static_cast<granit_sample_count>(desc.samples),
-      .reserved_2 = 0};
+      .reserved_2 = 0,
+      .vertex_buffer_layout_count = static_cast<std::uint32_t>(desc.vertex_buffers.size()),
+      .reserved_3 = 0,
+      .vertex_buffer_layouts = vertex_buffers.data()};
   const auto value = granit_graphics_pipeline_create(renderer, &native, &handle_);
   if (value == GRANIT_SUCCESS)
     renderer_ = renderer;

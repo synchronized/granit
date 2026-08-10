@@ -8,11 +8,11 @@
 #include <stdint.h>
 
 #include <granit/core/export.h>
+#include <granit/core/result.h>
+#include <granit/core/types.h>
 #include <granit/renderer/renderer.h>
 #include <granit/renderer/resource_types.h>
-#include <granit/core/result.h>
 #include <granit/renderer/shader.h>
-#include <granit/core/types.h>
 
 /** Pipeline 资源布局句柄，由零至多个 Bind Group Layout 按组序号组成。 */
 typedef granit_handle granit_pipeline_layout;
@@ -85,6 +85,40 @@ typedef struct granit_pipeline_layout_desc {
 #define GRANIT_PIPELINE_LAYOUT_DESC_INIT                                                           \
   {GRANIT_PIPELINE_LAYOUT_DESC_VERSION_1_SIZE, UINT32_C(0), 0, UINT64_C(0)}
 
+typedef uint32_t granit_vertex_format;
+#define GRANIT_VERTEX_FORMAT_FLOAT32 UINT32_C(1)
+#define GRANIT_VERTEX_FORMAT_FLOAT32X2 UINT32_C(2)
+#define GRANIT_VERTEX_FORMAT_FLOAT32X3 UINT32_C(3)
+#define GRANIT_VERTEX_FORMAT_FLOAT32X4 UINT32_C(4)
+#define GRANIT_VERTEX_FORMAT_UINT32 UINT32_C(5)
+#define GRANIT_VERTEX_FORMAT_UINT32X2 UINT32_C(6)
+#define GRANIT_VERTEX_FORMAT_UINT32X3 UINT32_C(7)
+#define GRANIT_VERTEX_FORMAT_UINT32X4 UINT32_C(8)
+#define GRANIT_VERTEX_FORMAT_SINT32 UINT32_C(9)
+#define GRANIT_VERTEX_FORMAT_SINT32X2 UINT32_C(10)
+#define GRANIT_VERTEX_FORMAT_SINT32X3 UINT32_C(11)
+#define GRANIT_VERTEX_FORMAT_SINT32X4 UINT32_C(12)
+
+typedef uint32_t granit_vertex_step_mode;
+#define GRANIT_VERTEX_STEP_MODE_VERTEX UINT32_C(1)
+#define GRANIT_VERTEX_STEP_MODE_INSTANCE UINT32_C(2)
+
+typedef struct granit_vertex_attribute {
+  uint32_t location;
+  granit_vertex_format format;
+  uint32_t offset;
+  uint32_t reserved;
+} granit_vertex_attribute;
+
+/** 单个 Vertex Buffer binding 的步长、步进方式和 Attribute 列表。 */
+typedef struct granit_vertex_buffer_layout {
+  uint32_t stride;
+  granit_vertex_step_mode step_mode;
+  uint32_t attribute_count;
+  uint32_t reserved;
+  const granit_vertex_attribute* attributes;
+} granit_vertex_buffer_layout;
+
 /** Dynamic Rendering 图形 Pipeline 描述；输入数组只在调用期间有效。 */
 typedef struct granit_graphics_pipeline_desc {
   uint32_t struct_size;
@@ -97,9 +131,14 @@ typedef struct granit_graphics_pipeline_desc {
   granit_texture_format depth_stencil_format;
   granit_sample_count sample_count;
   uint32_t reserved_2;
+  uint32_t vertex_buffer_layout_count;
+  uint32_t reserved_3;
+  const granit_vertex_buffer_layout* vertex_buffer_layouts;
 } granit_graphics_pipeline_desc;
 #define GRANIT_GRAPHICS_PIPELINE_DESC_VERSION_1_SIZE                                               \
   ((uint32_t)(offsetof(granit_graphics_pipeline_desc, reserved_2) + sizeof(uint32_t)))
+#define GRANIT_GRAPHICS_PIPELINE_DESC_VERSION_2_SIZE                                               \
+  ((uint32_t)(offsetof(granit_graphics_pipeline_desc, vertex_buffer_layouts) + sizeof(void*)))
 #define GRANIT_GRAPHICS_PIPELINE_DESC_INIT                                                         \
   {(uint32_t)sizeof(granit_graphics_pipeline_desc),                                                \
    UINT32_C(0),                                                                                    \
@@ -110,7 +149,10 @@ typedef struct granit_graphics_pipeline_desc {
    0,                                                                                              \
    GRANIT_TEXTURE_FORMAT_UNDEFINED,                                                                \
    GRANIT_SAMPLE_COUNT_1,                                                                          \
-   UINT32_C(0)}
+   UINT32_C(0),                                                                                    \
+   UINT32_C(0),                                                                                    \
+   UINT32_C(0),                                                                                    \
+   0}
 
 /** Compute Pipeline 描述。 */
 typedef struct granit_compute_pipeline_desc {

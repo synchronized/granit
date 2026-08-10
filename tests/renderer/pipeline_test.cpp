@@ -197,6 +197,59 @@ TEST_CASE("Graphics Pipeline 在进入后端前校验描述", "[pipeline][valida
   desc.sample_count = UINT32_C(3);
   CHECK(granit_graphics_pipeline_create(UINT64_C(1), &desc, &pipeline) ==
         GRANIT_ERROR_INVALID_ARGUMENT);
+
+  const granit_vertex_attribute duplicate_locations[] = {{0, GRANIT_VERTEX_FORMAT_FLOAT32X2, 0, 0},
+                                                         {0, GRANIT_VERTEX_FORMAT_FLOAT32X3, 8, 0}};
+  const granit_vertex_buffer_layout vertex_layout{20, GRANIT_VERTEX_STEP_MODE_VERTEX, 2, 0,
+                                                  duplicate_locations};
+  desc.sample_count = GRANIT_SAMPLE_COUNT_1;
+  desc.vertex_buffer_layout_count = 1;
+  desc.vertex_buffer_layouts = &vertex_layout;
+  CHECK(granit_graphics_pipeline_create(UINT64_C(1), &desc, &pipeline) ==
+        GRANIT_ERROR_INVALID_ARGUMENT);
+}
+
+TEST_CASE("Graphics Pipeline 接受 Vertex Buffer Layout", "[pipeline][vertex-input]") {
+  granit::renderer renderer;
+  const auto result =
+      renderer.initialize({.application_name = "granit-vertex-input", .enable_validation = true});
+  if (environment_unavailable(result) || result == granit::result::unsupported)
+    SKIP("当前运行环境不支持验证层或没有满足要求的 Vulkan 设备");
+  REQUIRE(result == granit::result::success);
+
+  const auto vertex_code = load_shader("vertex_input.vert.spv");
+  const auto fragment_code = load_shader("vertex_input.frag.spv");
+  granit::shader vertex;
+  granit::shader fragment;
+  REQUIRE(vertex.initialize(renderer.native_handle(),
+                            {.stage = granit::shader_stage::vertex, .code = vertex_code}) ==
+          granit::result::success);
+  REQUIRE(fragment.initialize(renderer.native_handle(),
+                              {.stage = granit::shader_stage::fragment, .code = fragment_code}) ==
+          granit::result::success);
+  granit::pipeline_layout layout;
+  REQUIRE(layout.initialize(renderer.native_handle()) == granit::result::success);
+  const std::array attributes{
+      granit::vertex_attribute{
+          .location = 0, .format = granit::vertex_format::float32x2, .offset = 0, .reserved = 0},
+      granit::vertex_attribute{
+          .location = 1, .format = granit::vertex_format::float32x3, .offset = 8, .reserved = 0}};
+  const granit::vertex_attribute instance_attribute{
+      .location = 2, .format = granit::vertex_format::float32x2, .offset = 0, .reserved = 0};
+  const std::array vertex_buffers{
+      granit::vertex_buffer_layout{
+          .stride = 20, .step_mode = granit::vertex_step_mode::vertex, .attributes = attributes},
+      granit::vertex_buffer_layout{.stride = 8,
+                                   .step_mode = granit::vertex_step_mode::instance,
+                                   .attributes = std::span{&instance_attribute, 1}}};
+  const granit::texture_format format = granit::texture_format::rgba8_unorm;
+  granit::graphics_pipeline pipeline;
+  REQUIRE(pipeline.initialize(renderer.native_handle(),
+                              {.layout = layout.native_handle(),
+                               .vertex_shader = vertex.native_handle(),
+                               .fragment_shader = fragment.native_handle(),
+                               .color_formats = std::span{&format, 1},
+                               .vertex_buffers = vertex_buffers}) == granit::result::success);
 }
 
 TEST_CASE("Graphics Pipeline 持有 Shader 与 Layout 依赖", "[pipeline][lifetime]") {
@@ -228,7 +281,8 @@ TEST_CASE("Graphics Pipeline 持有 Shader 与 Layout 依赖", "[pipeline][lifet
                               {.layout = layout.native_handle(),
                                .vertex_shader = vertex.native_handle(),
                                .fragment_shader = fragment.native_handle(),
-                               .color_formats = std::span{&format, 1}}) == granit::result::success);
+                               .color_formats = std::span{&format, 1},
+                               .vertex_buffers = {}}) == granit::result::success);
   granit_texture_desc texture_desc = GRANIT_TEXTURE_DESC_INIT;
   texture_desc.format = GRANIT_TEXTURE_FORMAT_RGBA8_UNORM;
   texture_desc.usage = GRANIT_TEXTURE_USAGE_COLOR_ATTACHMENT_BIT;

@@ -1925,9 +1925,14 @@ granit_result renderer_registry::create_graphics_pipeline(granit_renderer render
     record->layout = layout;
     record->vertex_shader = vertex;
     record->fragment_shader = fragment;
+    const auto vertex_buffers =
+        desc.struct_size >= GRANIT_GRAPHICS_PIPELINE_DESC_VERSION_2_SIZE
+            ? std::span<const granit_vertex_buffer_layout>{desc.vertex_buffer_layouts,
+                                                           desc.vertex_buffer_layout_count}
+            : std::span<const granit_vertex_buffer_layout>{};
     const auto result = state->create_native_graphics_pipeline(
         layout->native, vertex->native, vertex->entry_point.c_str(), fragment->native,
-        fragment->entry_point.c_str(),
+        fragment->entry_point.c_str(), vertex_buffers,
         {desc.color_formats, static_cast<std::size_t>(desc.color_format_count)},
         desc.depth_stencil_format, desc.sample_count, record->native);
     if (result != GRANIT_SUCCESS)

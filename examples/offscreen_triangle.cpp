@@ -56,7 +56,8 @@ int main() {
         pipeline.initialize(renderer.native_handle(), {.layout = layout.native_handle(),
                                                        .vertex_shader = vertex.native_handle(),
                                                        .fragment_shader = fragment.native_handle(),
-                                                       .color_formats = std::span{&format, 1}});
+                                                       .color_formats = std::span{&format, 1},
+                                                       .vertex_buffers = {}});
   }
 
   granit_texture_desc texture_desc = GRANIT_TEXTURE_DESC_INIT;
