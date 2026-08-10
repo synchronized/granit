@@ -171,7 +171,8 @@
   三角形示例。
 - **[D-07](plans/D-07-compute-pipeline.md) / P1 / 已完成**：实现 Compute Pipeline、资源状态与
   Dispatch，按 D-07A 至 D-07C 分步完成。
-- **D-08 / P1**：补充 Pipeline Cache、异步创建和着色器热重载边界。
+- **[D-08](plans/D-08-pipeline-production.md) / P1 / 已确认**：先完善 Graphics Pipeline 常用
+  状态，再实现 Pipeline Cache、并发创建和着色器热重载边界。
 
 ### 验收标准
 
