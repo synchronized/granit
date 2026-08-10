@@ -569,6 +569,92 @@ void renderer_state::destroy_native_bind_group_layout(VkDescriptorSetLayout layo
   }
 }
 
+granit_result
+renderer_state::create_native_bind_group(VkDescriptorSetLayout layout,
+                                         std::span<const vulkan_bind_group_write> writes,
+                                         VkDescriptorPool& pool, VkDescriptorSet& set) noexcept {
+  if (device_lost())
+    return GRANIT_ERROR_DEVICE_LOST;
+  std::array<std::uint32_t, 5> counts{};
+  for (const auto& write : writes) {
+    std::size_t index{};
+    if (write.type == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER)
+      index = 1;
+    else if (write.type == VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE)
+      index = 2;
+    else if (write.type == VK_DESCRIPTOR_TYPE_STORAGE_IMAGE)
+      index = 3;
+    else if (write.type == VK_DESCRIPTOR_TYPE_SAMPLER)
+      index = 4;
+    ++counts[index];
+  }
+  constexpr std::array types{VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+                             VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+                             VK_DESCRIPTOR_TYPE_SAMPLER};
+  std::vector<VkDescriptorPoolSize> sizes;
+  for (std::size_t index = 0; index < counts.size(); ++index) {
+    if (counts[index] != 0)
+      sizes.push_back({types[index], counts[index]});
+  }
+  VkDescriptorPoolCreateInfo pool_info{};
+  pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+  pool_info.maxSets = 1;
+  pool_info.poolSizeCount = static_cast<std::uint32_t>(sizes.size());
+  pool_info.pPoolSizes = sizes.data();
+  std::lock_guard lock{resource_mutex_};
+  auto result = observe_device_result(map_vulkan_result(device_.functions().vkCreateDescriptorPool(
+      device_.native_handle(), &pool_info, nullptr, &pool)));
+  if (result != GRANIT_SUCCESS)
+    return result;
+  VkDescriptorSetAllocateInfo allocate{};
+  allocate.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+  allocate.descriptorPool = pool;
+  allocate.descriptorSetCount = 1;
+  allocate.pSetLayouts = &layout;
+  result = observe_device_result(map_vulkan_result(
+      device_.functions().vkAllocateDescriptorSets(device_.native_handle(), &allocate, &set)));
+  if (result != GRANIT_SUCCESS) {
+    device_.functions().vkDestroyDescriptorPool(device_.native_handle(), pool, nullptr);
+    pool = VK_NULL_HANDLE;
+    return result;
+  }
+  std::vector<VkDescriptorBufferInfo> buffers(writes.size());
+  std::vector<VkDescriptorImageInfo> images(writes.size());
+  std::vector<VkWriteDescriptorSet> native_writes(writes.size());
+  for (std::size_t index = 0; index < writes.size(); ++index) {
+    const auto& source = writes[index];
+    auto& destination = native_writes[index];
+    destination.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    destination.dstSet = set;
+    destination.dstBinding = source.binding;
+    destination.dstArrayElement = source.array_element;
+    destination.descriptorCount = 1;
+    destination.descriptorType = source.type;
+    if (source.buffer != VK_NULL_HANDLE) {
+      buffers[index] = {source.buffer, source.offset, source.range};
+      destination.pBufferInfo = &buffers[index];
+    } else {
+      images[index].imageView = source.image_view;
+      images[index].sampler = source.sampler;
+      images[index].imageLayout = source.type == VK_DESCRIPTOR_TYPE_STORAGE_IMAGE
+                                      ? VK_IMAGE_LAYOUT_GENERAL
+                                      : VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+      destination.pImageInfo = &images[index];
+    }
+  }
+  device_.functions().vkUpdateDescriptorSets(device_.native_handle(),
+                                             static_cast<std::uint32_t>(native_writes.size()),
+                                             native_writes.data(), 0, nullptr);
+  return GRANIT_SUCCESS;
+}
+
+void renderer_state::destroy_native_bind_group(VkDescriptorPool pool) noexcept {
+  if (pool != VK_NULL_HANDLE) {
+    std::lock_guard lock{resource_mutex_};
+    device_.functions().vkDestroyDescriptorPool(device_.native_handle(), pool, nullptr);
+  }
+}
+
 granit_result renderer_state::create_native_pipeline_layout(
     std::span<const VkDescriptorSetLayout> bind_group_layouts, VkPipelineLayout& layout) noexcept {
   if (device_lost())

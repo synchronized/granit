@@ -60,8 +60,8 @@ Command Recorder、Buffer Copy/Fill、自动资源屏障、Dynamic Rendering、Q
 frames-in-flight、Frame 令牌以及 Swapchain acquire/submit/present 窗口帧循环已经实现。项目
 已支持未提交 Frame 回收、窗口零尺寸暂停语义，以及 Surface/Device Lost 的窗口帧终止状态。
 Renderer 全局 Device Lost 门禁、普通 GPU 资源真实提交完成点和 Swapchain presentation 安全
-退役均已完成。Shader Module、Graphics Pipeline、Bind Group Layout 和非空 Pipeline Layout
-已经实现；下一步实现不可变 Bind Group 与资源绑定。具体顺序及验收标准见
+退役均已完成。Shader Module、Graphics Pipeline、Bind Group Layout、Pipeline Layout 和不可变
+Bind Group 已经实现；下一步接入 Command Recorder 资源绑定。具体顺序及验收标准见
 [docs/roadmap.md](docs/roadmap.md)。
 
 ## 快速开始

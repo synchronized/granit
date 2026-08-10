@@ -1,9 +1,12 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
+#include <granit/buffer.hpp>
 #include <granit/pipeline.hpp>
 #include <granit/renderer.hpp>
+#include <granit/sampler.hpp>
 #include <granit/shader.hpp>
+#include <granit/texture.h>
 
 #include <catch2/catch_all.hpp>
 
@@ -94,6 +97,64 @@ TEST_CASE("Bind Group Layout 拒绝重复 binding 和非法可见阶段", "[pipe
   desc.entries = &invalid;
   CHECK(granit_bind_group_layout_create(UINT64_C(1), &desc, &layout) ==
         GRANIT_ERROR_INVALID_ARGUMENT);
+}
+
+TEST_CASE("不可变 Bind Group 保持 Buffer 与 Sampler 生命周期", "[pipeline][bind-group]") {
+  granit::renderer renderer;
+  const auto result =
+      renderer.initialize({.application_name = "granit-bind-group", .enable_validation = true});
+  if (environment_unavailable(result) || result == granit::result::unsupported)
+    SKIP("当前运行环境不支持验证层或没有满足要求的 Vulkan 设备");
+  REQUIRE(result == granit::result::success);
+
+  const std::array declarations{
+      granit::bind_group_layout_entry{.binding = 0,
+                                      .type = granit::binding_type::uniform_buffer,
+                                      .visibility = granit::shader_stage_flags::vertex},
+      granit::bind_group_layout_entry{.binding = 1,
+                                      .type = granit::binding_type::sampler,
+                                      .visibility = granit::shader_stage_flags::fragment},
+      granit::bind_group_layout_entry{.binding = 2,
+                                      .type = granit::binding_type::sampled_texture,
+                                      .visibility = granit::shader_stage_flags::fragment}};
+  granit::bind_group_layout layout;
+  REQUIRE(layout.initialize(renderer.native_handle(), declarations) == granit::result::success);
+  granit::buffer buffer;
+  REQUIRE(buffer.initialize(renderer.native_handle(),
+                            {.size = 256, .usage = granit::buffer_usage::uniform}) ==
+          granit::result::success);
+  granit::sampler sampler;
+  REQUIRE(sampler.initialize(renderer.native_handle(), {}) == granit::result::success);
+  granit_texture_desc texture_desc = GRANIT_TEXTURE_DESC_INIT;
+  texture_desc.format = GRANIT_TEXTURE_FORMAT_RGBA8_UNORM;
+  texture_desc.usage = GRANIT_TEXTURE_USAGE_SAMPLED_BIT;
+  granit_texture texture = GRANIT_NULL_HANDLE;
+  granit_texture_view view = GRANIT_NULL_HANDLE;
+  REQUIRE(granit_texture_create_with_default_view(renderer.native_handle(), &texture_desc, &texture,
+                                                  &view) == GRANIT_SUCCESS);
+  const std::array entries{
+      granit::bind_group_entry{.binding = 0, .resource = buffer.native_handle(), .size = 128},
+      granit::bind_group_entry{.binding = 1, .resource = sampler.native_handle()},
+      granit::bind_group_entry{.binding = 2, .resource = view}};
+  granit::bind_group group;
+  REQUIRE(group.initialize(renderer.native_handle(), layout.native_handle(), entries) ==
+          granit::result::success);
+  REQUIRE(buffer.reset() == granit::result::success);
+  REQUIRE(sampler.reset() == granit::result::success);
+  REQUIRE(granit_texture_destroy(renderer.native_handle(), texture) == GRANIT_SUCCESS);
+  REQUIRE(layout.reset() == granit::result::success);
+  REQUIRE(group.reset() == granit::result::success);
+}
+
+TEST_CASE("Bind Group 校验完整性和资源类型", "[pipeline][bind-group][validation]") {
+  granit_bind_group group = GRANIT_NULL_HANDLE;
+  granit_bind_group_desc desc = GRANIT_BIND_GROUP_DESC_INIT;
+  CHECK(granit_bind_group_create(UINT64_C(1), &desc, &group) == GRANIT_ERROR_INVALID_ARGUMENT);
+  desc.layout = UINT64_C(1);
+  granit_bind_group_entry entry{0, 0, GRANIT_NULL_HANDLE, 0, GRANIT_WHOLE_SIZE};
+  desc.entry_count = 1;
+  desc.entries = &entry;
+  CHECK(granit_bind_group_create(UINT64_C(1), &desc, &group) == GRANIT_ERROR_INVALID_ARGUMENT);
 }
 
 TEST_CASE("Graphics Pipeline 在进入后端前校验描述", "[pipeline][validation]") {

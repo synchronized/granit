@@ -57,8 +57,8 @@ D-03-graphics-pipeline.md
   反射边界和错误语义已确认。
 - [D-02：Shader Module 生命周期](D-02-shader-module.md)——SPIR-V 校验、Shader 句柄、Vulkan
   Module 和 RAII 已完成。
-- [D-03：Graphics Pipeline 与 Bind Group](D-03-graphics-pipeline.md)——D-03A 与 D-03B1 布局
-  基础已完成，下一步实现不可变 Bind Group。
+- [D-03：Graphics Pipeline 与 Bind Group](D-03-graphics-pipeline.md)——D-03A、D-03B1 和
+  D-03B2 已完成，下一步实现 Command Recorder 资源绑定。
 
 ## 状态
 

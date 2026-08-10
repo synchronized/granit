@@ -18,6 +18,8 @@
 typedef granit_handle granit_pipeline_layout;
 /** 单组资源绑定布局句柄。 */
 typedef granit_handle granit_bind_group_layout;
+/** 符合单个 Bind Group Layout 的不可变资源组。 */
+typedef granit_handle granit_bind_group;
 /** 图形 Pipeline 句柄。 */
 typedef granit_handle granit_graphics_pipeline;
 
@@ -49,6 +51,27 @@ typedef struct granit_bind_group_layout_desc {
 #define GRANIT_BIND_GROUP_LAYOUT_DESC_VERSION_1_SIZE UINT32_C(24)
 #define GRANIT_BIND_GROUP_LAYOUT_DESC_INIT                                                         \
   {GRANIT_BIND_GROUP_LAYOUT_DESC_VERSION_1_SIZE, UINT32_C(0), 0, UINT64_C(0)}
+
+/** 单个数组元素的资源绑定；资源类型由 Layout 中同 binding 的声明决定。 */
+typedef struct granit_bind_group_entry {
+  uint32_t binding;
+  uint32_t array_element;
+  granit_handle resource;
+  uint64_t offset;
+  uint64_t size;
+} granit_bind_group_entry;
+
+typedef struct granit_bind_group_desc {
+  uint32_t struct_size;
+  uint32_t entry_count;
+  granit_bind_group_layout layout;
+  const granit_bind_group_entry* entries;
+  uint64_t reserved;
+} granit_bind_group_desc;
+#define GRANIT_BIND_GROUP_DESC_VERSION_1_SIZE UINT32_C(32)
+#define GRANIT_BIND_GROUP_DESC_INIT                                                                \
+  {GRANIT_BIND_GROUP_DESC_VERSION_1_SIZE, UINT32_C(0), GRANIT_NULL_HANDLE, 0, UINT64_C(0)}
+#define GRANIT_WHOLE_SIZE UINT64_MAX
 
 typedef struct granit_pipeline_layout_desc {
   uint32_t struct_size;
@@ -96,6 +119,11 @@ GRANIT_API granit_result granit_bind_group_layout_create(granit_renderer rendere
                                                          granit_bind_group_layout* layout);
 GRANIT_API granit_result granit_bind_group_layout_destroy(granit_renderer renderer,
                                                           granit_bind_group_layout layout);
+GRANIT_API granit_result granit_bind_group_create(granit_renderer renderer,
+                                                  const granit_bind_group_desc* desc,
+                                                  granit_bind_group* bind_group);
+GRANIT_API granit_result granit_bind_group_destroy(granit_renderer renderer,
+                                                   granit_bind_group bind_group);
 GRANIT_API granit_result granit_pipeline_layout_create(granit_renderer renderer,
                                                        const granit_pipeline_layout_desc* desc,
                                                        granit_pipeline_layout* layout);

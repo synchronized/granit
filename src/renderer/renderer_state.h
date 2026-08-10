@@ -26,6 +26,17 @@
 
 namespace granit::detail {
 
+struct vulkan_bind_group_write {
+  std::uint32_t binding{};
+  std::uint32_t array_element{};
+  VkDescriptorType type{};
+  VkBuffer buffer{VK_NULL_HANDLE};
+  VkDeviceSize offset{};
+  VkDeviceSize range{};
+  VkImageView image_view{VK_NULL_HANDLE};
+  VkSampler sampler{VK_NULL_HANDLE};
+};
+
 class renderer_state {
 public:
   renderer_state() = default;
@@ -80,6 +91,11 @@ public:
   create_native_bind_group_layout(std::span<const granit_bind_group_layout_entry> entries,
                                   VkDescriptorSetLayout& layout) noexcept;
   void destroy_native_bind_group_layout(VkDescriptorSetLayout layout) noexcept;
+  [[nodiscard]] granit_result
+  create_native_bind_group(VkDescriptorSetLayout layout,
+                           std::span<const vulkan_bind_group_write> writes, VkDescriptorPool& pool,
+                           VkDescriptorSet& set) noexcept;
+  void destroy_native_bind_group(VkDescriptorPool pool) noexcept;
   [[nodiscard]] granit_result
   create_native_pipeline_layout(std::span<const VkDescriptorSetLayout> bind_group_layouts,
                                 VkPipelineLayout& layout) noexcept;

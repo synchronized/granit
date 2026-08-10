@@ -99,6 +99,11 @@ public:
                            granit_bind_group_layout& layout);
   [[nodiscard]] granit_result destroy_bind_group_layout(granit_renderer renderer,
                                                         granit_bind_group_layout layout);
+  [[nodiscard]] granit_result create_bind_group(granit_renderer renderer,
+                                                const granit_bind_group_desc& desc,
+                                                granit_bind_group& bind_group);
+  [[nodiscard]] granit_result destroy_bind_group(granit_renderer renderer,
+                                                 granit_bind_group bind_group);
   [[nodiscard]] granit_result
   create_pipeline_layout(granit_renderer renderer,
                          std::span<const granit_bind_group_layout> bind_group_layouts,
@@ -238,6 +243,15 @@ private:
     std::vector<std::shared_ptr<bind_group_layout_record>> bind_group_layouts;
     ~pipeline_layout_record();
   };
+  struct bind_group_record {
+    resource_metadata metadata;
+    std::shared_ptr<renderer_state> renderer;
+    std::shared_ptr<bind_group_layout_record> layout;
+    std::vector<std::shared_ptr<void>> resources;
+    VkDescriptorPool pool{VK_NULL_HANDLE};
+    VkDescriptorSet set{VK_NULL_HANDLE};
+    ~bind_group_record();
+  };
   struct graphics_pipeline_record {
     resource_metadata metadata;
     std::shared_ptr<renderer_state> renderer;
@@ -274,6 +288,7 @@ private:
       pipeline_layouts_;
   std::unordered_map<granit_bind_group_layout, std::shared_ptr<bind_group_layout_record>>
       bind_group_layouts_;
+  std::unordered_map<granit_bind_group, std::shared_ptr<bind_group_record>> bind_groups_;
   std::unordered_map<granit_graphics_pipeline, std::shared_ptr<graphics_pipeline_record>>
       graphics_pipelines_;
   std::unordered_map<granit_command_recorder, std::shared_ptr<command_recorder_record>>

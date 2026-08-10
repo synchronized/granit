@@ -47,6 +47,36 @@ extern "C" granit_result granit_bind_group_layout_destroy(granit_renderer render
   return granit::detail::renderer_registry::instance().destroy_bind_group_layout(renderer, layout);
 }
 
+extern "C" granit_result granit_bind_group_create(granit_renderer renderer,
+                                                  const granit_bind_group_desc* desc,
+                                                  granit_bind_group* bind_group) {
+  if (!bind_group)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  *bind_group = GRANIT_NULL_HANDLE;
+  if (!desc || desc->struct_size < GRANIT_BIND_GROUP_DESC_VERSION_1_SIZE || desc->reserved != 0 ||
+      desc->layout == GRANIT_NULL_HANDLE || desc->entry_count > 1024 ||
+      (desc->entry_count != 0 && !desc->entries))
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  for (uint32_t index = 0; index < desc->entry_count; ++index) {
+    if (desc->entries[index].resource == GRANIT_NULL_HANDLE)
+      return GRANIT_ERROR_INVALID_ARGUMENT;
+    for (uint32_t previous = 0; previous < index; ++previous) {
+      if (desc->entries[previous].binding == desc->entries[index].binding &&
+          desc->entries[previous].array_element == desc->entries[index].array_element)
+        return GRANIT_ERROR_INVALID_ARGUMENT;
+    }
+  }
+  return granit::detail::renderer_registry::instance().create_bind_group(renderer, *desc,
+                                                                         *bind_group);
+}
+
+extern "C" granit_result granit_bind_group_destroy(granit_renderer renderer,
+                                                   granit_bind_group bind_group) {
+  if (renderer == GRANIT_NULL_HANDLE || bind_group == GRANIT_NULL_HANDLE)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  return granit::detail::renderer_registry::instance().destroy_bind_group(renderer, bind_group);
+}
+
 extern "C" granit_result granit_pipeline_layout_create(granit_renderer renderer,
                                                        const granit_pipeline_layout_desc* desc,
                                                        granit_pipeline_layout* layout) {

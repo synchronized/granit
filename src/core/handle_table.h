@@ -31,6 +31,7 @@ enum class resource_type : std::uint8_t {
   frame = 12,
   pipeline_layout = 13,
   bind_group_layout = 14,
+  bind_group = 15,
 };
 
 /**

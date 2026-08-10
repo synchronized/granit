@@ -136,6 +136,11 @@ renderer_registry::bind_group_layout_record::~bind_group_layout_record() {
     renderer->destroy_native_bind_group_layout(native);
 }
 
+renderer_registry::bind_group_record::~bind_group_record() {
+  if (renderer)
+    renderer->destroy_native_bind_group(pool);
+}
+
 renderer_registry::pipeline_layout_record::~pipeline_layout_record() {
   if (renderer)
     renderer->destroy_native_pipeline_layout(native);
@@ -197,6 +202,7 @@ granit_result renderer_registry::destroy(granit_renderer renderer) {
   std::vector<std::shared_ptr<shader_record>> native_shaders;
   std::vector<std::shared_ptr<pipeline_layout_record>> native_pipeline_layouts;
   std::vector<std::shared_ptr<bind_group_layout_record>> native_bind_group_layouts;
+  std::vector<std::shared_ptr<bind_group_record>> native_bind_groups;
   std::vector<std::shared_ptr<graphics_pipeline_record>> native_graphics_pipelines;
   {
     std::lock_guard lock{mutex_};
@@ -248,6 +254,11 @@ granit_result renderer_registry::destroy(granit_renderer renderer) {
       for (const auto& [handle, record] : bind_group_layouts_) {
         if (record->renderer == state)
           lifecycle.add(lifecycle_resource_type::bind_group_layout, handle,
+                        record->metadata.creation_sequence);
+      }
+      for (const auto& [handle, record] : bind_groups_) {
+        if (record->renderer == state)
+          lifecycle.add(lifecycle_resource_type::bind_group, handle,
                         record->metadata.creation_sequence);
       }
       for (const auto& [handle, record] : graphics_pipelines_) {
@@ -309,6 +320,16 @@ granit_result renderer_registry::destroy(granit_renderer renderer) {
         pipeline = graphics_pipelines_.erase(pipeline);
       } else {
         ++pipeline;
+      }
+    }
+    for (auto bind_group = bind_groups_.begin(); bind_group != bind_groups_.end();) {
+      if (bind_group->second->renderer == state) {
+        native_bind_groups.push_back(std::move(bind_group->second));
+        static_cast<void>(
+            handles_.erase(bind_group->first, resource_type::bind_group, state->domain()));
+        bind_group = bind_groups_.erase(bind_group);
+      } else {
+        ++bind_group;
       }
     }
     for (auto layout = pipeline_layouts_.begin(); layout != pipeline_layouts_.end();) {
@@ -404,6 +425,7 @@ granit_result renderer_registry::destroy(granit_renderer renderer) {
   native_textures.clear();
   native_samplers.clear();
   native_graphics_pipelines.clear();
+  native_bind_groups.clear();
   native_pipeline_layouts.clear();
   native_bind_group_layouts.clear();
   native_shaders.clear();
@@ -1595,6 +1617,150 @@ granit_result renderer_registry::destroy_bind_group_layout(granit_renderer rende
     bind_group_layouts_.erase(found);
     static_cast<void>(
         handles_.erase(layout, resource_type::bind_group_layout, state->second->domain()));
+  }
+  const auto state = record->renderer;
+  const auto serial = record->metadata.last_use_serial.load();
+  state->retire_resource(serial, retirement_order::dependent, std::move(record));
+  static_cast<void>(state->collect_retired());
+  return GRANIT_SUCCESS;
+}
+
+granit_result renderer_registry::create_bind_group(granit_renderer renderer,
+                                                   const granit_bind_group_desc& desc,
+                                                   granit_bind_group& bind_group) {
+  try {
+    std::shared_ptr<renderer_state> state;
+    std::shared_ptr<bind_group_layout_record> layout;
+    auto record = std::make_shared<bind_group_record>();
+    std::vector<vulkan_bind_group_write> writes;
+    {
+      std::lock_guard lock{mutex_};
+      const auto renderer_found = renderers_.find(renderer);
+      const auto layout_found = bind_group_layouts_.find(desc.layout);
+      if (renderer_found == renderers_.end() || layout_found == bind_group_layouts_.end() ||
+          layout_found->second->renderer != renderer_found->second)
+        return GRANIT_ERROR_INVALID_HANDLE;
+      state = renderer_found->second;
+      layout = layout_found->second;
+      std::uint64_t required_count{};
+      for (const auto& declaration : layout->entries)
+        required_count += declaration.array_count;
+      if (required_count != desc.entry_count)
+        return GRANIT_ERROR_INVALID_ARGUMENT;
+      writes.reserve(desc.entry_count);
+      record->resources.reserve(desc.entry_count);
+      for (std::uint32_t index = 0; index < desc.entry_count; ++index) {
+        const auto& entry = desc.entries[index];
+        const auto declaration =
+            std::find_if(layout->entries.begin(), layout->entries.end(),
+                         [&](const auto& value) { return value.binding == entry.binding; });
+        if (declaration == layout->entries.end() || entry.array_element >= declaration->array_count)
+          return GRANIT_ERROR_INVALID_ARGUMENT;
+        vulkan_bind_group_write write{.binding = entry.binding,
+                                      .array_element = entry.array_element};
+        if (declaration->type == GRANIT_BINDING_TYPE_UNIFORM_BUFFER ||
+            declaration->type == GRANIT_BINDING_TYPE_STORAGE_BUFFER) {
+          const auto found = buffers_.find(entry.resource);
+          if (found == buffers_.end() || found->second->renderer != state ||
+              entry.offset >= found->second->desc.size || entry.size == 0 ||
+              (entry.size != GRANIT_WHOLE_SIZE &&
+               entry.size > found->second->desc.size - entry.offset))
+            return GRANIT_ERROR_INVALID_ARGUMENT;
+          const auto required_usage = declaration->type == GRANIT_BINDING_TYPE_UNIFORM_BUFFER
+                                          ? GRANIT_BUFFER_USAGE_UNIFORM_BIT
+                                          : GRANIT_BUFFER_USAGE_STORAGE_BIT;
+          if ((found->second->desc.usage & required_usage) == 0)
+            return GRANIT_ERROR_INVALID_ARGUMENT;
+          const auto range = entry.size == GRANIT_WHOLE_SIZE
+                                 ? found->second->desc.size - entry.offset
+                                 : entry.size;
+          const auto& limits = state->device().properties().limits;
+          const auto alignment = declaration->type == GRANIT_BINDING_TYPE_UNIFORM_BUFFER
+                                     ? limits.minUniformBufferOffsetAlignment
+                                     : limits.minStorageBufferOffsetAlignment;
+          const auto maximum_range = declaration->type == GRANIT_BINDING_TYPE_UNIFORM_BUFFER
+                                         ? limits.maxUniformBufferRange
+                                         : limits.maxStorageBufferRange;
+          if ((alignment != 0 && entry.offset % alignment != 0) || range > maximum_range)
+            return GRANIT_ERROR_INVALID_ARGUMENT;
+          write.type = declaration->type == GRANIT_BINDING_TYPE_UNIFORM_BUFFER
+                           ? VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER
+                           : VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+          write.buffer = found->second->native.buffer;
+          write.offset = entry.offset;
+          write.range = range;
+          record->resources.push_back(found->second);
+        } else if (declaration->type == GRANIT_BINDING_TYPE_SAMPLER) {
+          const auto found = samplers_.find(entry.resource);
+          if (found == samplers_.end() || found->second->renderer != state || entry.offset != 0 ||
+              entry.size != GRANIT_WHOLE_SIZE)
+            return GRANIT_ERROR_INVALID_ARGUMENT;
+          write.type = VK_DESCRIPTOR_TYPE_SAMPLER;
+          write.sampler = found->second->native;
+          record->resources.push_back(found->second);
+        } else {
+          const auto found = texture_views_.find(entry.resource);
+          if (found == texture_views_.end() || found->second->renderer != state ||
+              entry.offset != 0 || entry.size != GRANIT_WHOLE_SIZE)
+            return GRANIT_ERROR_INVALID_ARGUMENT;
+          const auto required_usage = declaration->type == GRANIT_BINDING_TYPE_SAMPLED_TEXTURE
+                                          ? GRANIT_TEXTURE_USAGE_SAMPLED_BIT
+                                          : GRANIT_TEXTURE_USAGE_STORAGE_BIT;
+          if ((found->second->texture->desc.usage & required_usage) == 0)
+            return GRANIT_ERROR_INVALID_ARGUMENT;
+          write.type = declaration->type == GRANIT_BINDING_TYPE_SAMPLED_TEXTURE
+                           ? VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE
+                           : VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+          write.image_view = found->second->native;
+          record->resources.push_back(found->second);
+        }
+        writes.push_back(write);
+      }
+    }
+    record->renderer = state;
+    record->layout = layout;
+    const auto result =
+        state->create_native_bind_group(layout->native, writes, record->pool, record->set);
+    if (result != GRANIT_SUCCESS)
+      return result;
+    std::lock_guard lock{mutex_};
+    if (bind_group_layouts_.find(desc.layout) == bind_group_layouts_.end())
+      return GRANIT_ERROR_INVALID_HANDLE;
+    record->metadata.creation_sequence = next_creation_sequence_++;
+    const auto handle = handles_.insert(record.get(), resource_type::bind_group, state->domain());
+    if (handle == GRANIT_NULL_HANDLE)
+      return GRANIT_ERROR_OUT_OF_MEMORY;
+    try {
+      bind_groups_.emplace(handle, std::move(record));
+    } catch (...) {
+      static_cast<void>(handles_.erase(handle, resource_type::bind_group, state->domain()));
+      throw;
+    }
+    bind_group = handle;
+    return GRANIT_SUCCESS;
+  } catch (const std::bad_alloc&) {
+    return GRANIT_ERROR_OUT_OF_MEMORY;
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+granit_result renderer_registry::destroy_bind_group(granit_renderer renderer,
+                                                    granit_bind_group bind_group) {
+  std::shared_ptr<bind_group_record> record;
+  {
+    std::lock_guard lock{mutex_};
+    const auto state = renderers_.find(renderer);
+    if (state == renderers_.end() ||
+        handles_.find(bind_group, resource_type::bind_group, state->second->domain()) == nullptr)
+      return GRANIT_ERROR_INVALID_HANDLE;
+    const auto found = bind_groups_.find(bind_group);
+    if (found == bind_groups_.end() || found->second->renderer != state->second)
+      return GRANIT_ERROR_INVALID_HANDLE;
+    record = std::move(found->second);
+    bind_groups_.erase(found);
+    static_cast<void>(
+        handles_.erase(bind_group, resource_type::bind_group, state->second->domain()));
   }
   const auto state = record->renderer;
   const auto serial = record->metadata.last_use_serial.load();
