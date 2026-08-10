@@ -108,6 +108,11 @@ public:
                                   granit_texture_format depth_stencil_format,
                                   granit_sample_count sample_count, VkPipeline& pipeline) noexcept;
   void destroy_native_graphics_pipeline(VkPipeline pipeline) noexcept;
+  [[nodiscard]] granit_result create_native_compute_pipeline(VkPipelineLayout layout,
+                                                             VkShaderModule compute_shader,
+                                                             const char* compute_entry,
+                                                             VkPipeline& pipeline) noexcept;
+  void destroy_native_compute_pipeline(VkPipeline pipeline) noexcept;
   [[nodiscard]] granit_result
   create_native_command_recorder(vulkan_command_recorder& recorder) noexcept;
   [[nodiscard]] granit_result begin_command_recorder(vulkan_command_recorder& recorder) noexcept;

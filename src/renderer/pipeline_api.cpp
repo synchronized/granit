@@ -132,3 +132,24 @@ extern "C" granit_result granit_graphics_pipeline_destroy(granit_renderer render
   return granit::detail::renderer_registry::instance().destroy_graphics_pipeline(renderer,
                                                                                  pipeline);
 }
+
+extern "C" granit_result granit_compute_pipeline_create(granit_renderer renderer,
+                                                        const granit_compute_pipeline_desc* desc,
+                                                        granit_compute_pipeline* pipeline) {
+  if (!pipeline)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  *pipeline = GRANIT_NULL_HANDLE;
+  if (!desc || desc->struct_size < GRANIT_COMPUTE_PIPELINE_DESC_VERSION_1_SIZE ||
+      desc->reserved != 0 || desc->reserved_2 != 0 || desc->layout == GRANIT_NULL_HANDLE ||
+      desc->compute_shader == GRANIT_NULL_HANDLE)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  return granit::detail::renderer_registry::instance().create_compute_pipeline(renderer, *desc,
+                                                                               *pipeline);
+}
+
+extern "C" granit_result granit_compute_pipeline_destroy(granit_renderer renderer,
+                                                         granit_compute_pipeline pipeline) {
+  if (renderer == GRANIT_NULL_HANDLE || pipeline == GRANIT_NULL_HANDLE)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  return granit::detail::renderer_registry::instance().destroy_compute_pipeline(renderer, pipeline);
+}

@@ -22,6 +22,8 @@ typedef granit_handle granit_bind_group_layout;
 typedef granit_handle granit_bind_group;
 /** 图形 Pipeline 句柄。 */
 typedef granit_handle granit_graphics_pipeline;
+/** 计算 Pipeline 句柄。 */
+typedef granit_handle granit_compute_pipeline;
 
 typedef uint32_t granit_binding_type;
 #define GRANIT_BINDING_TYPE_UNIFORM_BUFFER UINT32_C(1)
@@ -110,6 +112,20 @@ typedef struct granit_graphics_pipeline_desc {
    GRANIT_SAMPLE_COUNT_1,                                                                          \
    UINT32_C(0)}
 
+/** Compute Pipeline 描述。 */
+typedef struct granit_compute_pipeline_desc {
+  uint32_t struct_size;
+  uint32_t reserved;
+  granit_pipeline_layout layout;
+  granit_shader compute_shader;
+  uint64_t reserved_2;
+} granit_compute_pipeline_desc;
+#define GRANIT_COMPUTE_PIPELINE_DESC_VERSION_1_SIZE                                                \
+  ((uint32_t)(offsetof(granit_compute_pipeline_desc, reserved_2) + sizeof(uint64_t)))
+#define GRANIT_COMPUTE_PIPELINE_DESC_INIT                                                          \
+  {GRANIT_COMPUTE_PIPELINE_DESC_VERSION_1_SIZE, UINT32_C(0), GRANIT_NULL_HANDLE,                   \
+   GRANIT_NULL_HANDLE, UINT64_C(0)}
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -134,6 +150,11 @@ GRANIT_API granit_result granit_graphics_pipeline_create(granit_renderer rendere
                                                          granit_graphics_pipeline* pipeline);
 GRANIT_API granit_result granit_graphics_pipeline_destroy(granit_renderer renderer,
                                                           granit_graphics_pipeline pipeline);
+GRANIT_API granit_result granit_compute_pipeline_create(granit_renderer renderer,
+                                                        const granit_compute_pipeline_desc* desc,
+                                                        granit_compute_pipeline* pipeline);
+GRANIT_API granit_result granit_compute_pipeline_destroy(granit_renderer renderer,
+                                                         granit_compute_pipeline pipeline);
 
 #ifdef __cplusplus
 }

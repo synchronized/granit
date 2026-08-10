@@ -22,6 +22,7 @@ enum class lifecycle_resource_type : std::uint8_t {
   bind_group_layout,
   bind_group,
   graphics_pipeline,
+  compute_pipeline,
   surface,
   swapchain,
   command_recorder,

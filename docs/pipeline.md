@@ -46,5 +46,19 @@ granit_graphics_pipeline pipeline = GRANIT_NULL_HANDLE;
 granit_graphics_pipeline_create(renderer, &pipeline_desc, &pipeline);
 ```
 
+Compute Pipeline 使用独立句柄，但复用 Pipeline Layout：
+
+```c
+granit_compute_pipeline_desc compute_desc = GRANIT_COMPUTE_PIPELINE_DESC_INIT;
+compute_desc.layout = pipeline_layout;
+compute_desc.compute_shader = compute_shader;
+
+granit_compute_pipeline compute_pipeline = GRANIT_NULL_HANDLE;
+granit_compute_pipeline_create(renderer, &compute_desc, &compute_pipeline);
+```
+
+Compute Shader 必须以 `GRANIT_SHADER_STAGE_COMPUTE` 创建。Pipeline 会保持 Layout 和 Shader 的
+内部生命周期；用户可以在 Pipeline 创建后释放对应公共句柄。Dispatch 命令将在 D-07B 接入。
+
 创建函数会复制格式数组。Pipeline 和 Layout 均由创建它们的 Renderer 管理，不能跨 Renderer
 混用或销毁。

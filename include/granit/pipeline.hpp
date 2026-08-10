@@ -170,6 +170,40 @@ private:
   granit_graphics_pipeline handle_{GRANIT_NULL_HANDLE};
 };
 
+struct compute_pipeline_desc {
+  granit_pipeline_layout layout{GRANIT_NULL_HANDLE};
+  granit_shader compute_shader{GRANIT_NULL_HANDLE};
+};
+
+/** 无异常、move-only 的 Compute Pipeline RAII 包装。 */
+class compute_pipeline {
+public:
+  compute_pipeline() = default;
+  ~compute_pipeline() { static_cast<void>(reset()); }
+  compute_pipeline(const compute_pipeline&) = delete;
+  compute_pipeline& operator=(const compute_pipeline&) = delete;
+  compute_pipeline(compute_pipeline&& other) noexcept
+      : renderer_(std::exchange(other.renderer_, GRANIT_NULL_HANDLE)),
+        handle_(std::exchange(other.handle_, GRANIT_NULL_HANDLE)) {}
+  compute_pipeline& operator=(compute_pipeline&& other) noexcept {
+    if (this != &other) {
+      static_cast<void>(reset());
+      renderer_ = std::exchange(other.renderer_, GRANIT_NULL_HANDLE);
+      handle_ = std::exchange(other.handle_, GRANIT_NULL_HANDLE);
+    }
+    return *this;
+  }
+  [[nodiscard]] result initialize(granit_renderer renderer,
+                                  const compute_pipeline_desc& desc) noexcept;
+  [[nodiscard]] result reset() noexcept;
+  [[nodiscard]] bool valid() const noexcept { return handle_ != GRANIT_NULL_HANDLE; }
+  [[nodiscard]] granit_compute_pipeline native_handle() const noexcept { return handle_; }
+
+private:
+  granit_renderer renderer_{GRANIT_NULL_HANDLE};
+  granit_compute_pipeline handle_{GRANIT_NULL_HANDLE};
+};
+
 inline result
 bind_group_layout::initialize(granit_renderer renderer,
                               std::span<const bind_group_layout_entry> entries) noexcept {
@@ -273,6 +307,30 @@ inline result graphics_pipeline::reset() noexcept {
   const auto renderer = std::exchange(renderer_, GRANIT_NULL_HANDLE);
   const auto handle = std::exchange(handle_, GRANIT_NULL_HANDLE);
   return from_native(granit_graphics_pipeline_destroy(renderer, handle));
+}
+
+inline result compute_pipeline::initialize(granit_renderer renderer,
+                                           const compute_pipeline_desc& desc) noexcept {
+  if (valid() || renderer == GRANIT_NULL_HANDLE)
+    return result::invalid_argument;
+  const granit_compute_pipeline_desc native{.struct_size =
+                                                GRANIT_COMPUTE_PIPELINE_DESC_VERSION_1_SIZE,
+                                            .reserved = 0,
+                                            .layout = desc.layout,
+                                            .compute_shader = desc.compute_shader,
+                                            .reserved_2 = 0};
+  const auto value = granit_compute_pipeline_create(renderer, &native, &handle_);
+  if (value == GRANIT_SUCCESS)
+    renderer_ = renderer;
+  return from_native(value);
+}
+
+inline result compute_pipeline::reset() noexcept {
+  if (!valid())
+    return result::success;
+  const auto renderer = std::exchange(renderer_, GRANIT_NULL_HANDLE);
+  const auto handle = std::exchange(handle_, GRANIT_NULL_HANDLE);
+  return from_native(granit_compute_pipeline_destroy(renderer, handle));
 }
 
 } // namespace granit

@@ -8,6 +8,8 @@ typedef char granit_pipeline_layout_desc_size_check
 typedef char granit_graphics_pipeline_desc_size_check
     [sizeof(granit_graphics_pipeline_desc) >= GRANIT_GRAPHICS_PIPELINE_DESC_VERSION_1_SIZE ? 1
                                                                                            : -1];
+typedef char granit_compute_pipeline_desc_size_check
+    [sizeof(granit_compute_pipeline_desc) >= GRANIT_COMPUTE_PIPELINE_DESC_VERSION_1_SIZE ? 1 : -1];
 typedef char granit_bind_group_layout_desc_size_check
     [sizeof(granit_bind_group_layout_desc) >= GRANIT_BIND_GROUP_LAYOUT_DESC_VERSION_1_SIZE ? 1
                                                                                            : -1];

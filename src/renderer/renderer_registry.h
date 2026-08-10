@@ -115,6 +115,11 @@ public:
                                                        granit_graphics_pipeline& pipeline);
   [[nodiscard]] granit_result destroy_graphics_pipeline(granit_renderer renderer,
                                                         granit_graphics_pipeline pipeline);
+  [[nodiscard]] granit_result create_compute_pipeline(granit_renderer renderer,
+                                                      const granit_compute_pipeline_desc& desc,
+                                                      granit_compute_pipeline& pipeline);
+  [[nodiscard]] granit_result destroy_compute_pipeline(granit_renderer renderer,
+                                                       granit_compute_pipeline pipeline);
   [[nodiscard]] granit_result create_command_recorder(granit_renderer renderer,
                                                       granit_command_recorder& recorder);
   [[nodiscard]] granit_result begin_command_recorder(granit_renderer renderer,
@@ -290,6 +295,14 @@ private:
     VkPipeline native{VK_NULL_HANDLE};
     ~graphics_pipeline_record();
   };
+  struct compute_pipeline_record {
+    resource_metadata metadata;
+    std::shared_ptr<renderer_state> renderer;
+    std::shared_ptr<pipeline_layout_record> layout;
+    std::shared_ptr<shader_record> compute_shader;
+    VkPipeline native{VK_NULL_HANDLE};
+    ~compute_pipeline_record();
+  };
   struct command_recorder_record {
     resource_metadata metadata;
     std::shared_ptr<renderer_state> renderer;
@@ -320,6 +333,8 @@ private:
   std::unordered_map<granit_bind_group, std::shared_ptr<bind_group_record>> bind_groups_;
   std::unordered_map<granit_graphics_pipeline, std::shared_ptr<graphics_pipeline_record>>
       graphics_pipelines_;
+  std::unordered_map<granit_compute_pipeline, std::shared_ptr<compute_pipeline_record>>
+      compute_pipelines_;
   std::unordered_map<granit_command_recorder, std::shared_ptr<command_recorder_record>>
       command_recorders_;
   std::unordered_map<granit_frame, std::shared_ptr<frame_record>> frames_;

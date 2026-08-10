@@ -278,4 +278,44 @@ TEST_CASE("Graphics Pipeline 持有 Shader 与 Layout 依赖", "[pipeline][lifet
   REQUIRE(granit_texture_destroy(renderer.native_handle(), texture) == GRANIT_SUCCESS);
 }
 
+TEST_CASE("Compute Pipeline 校验阶段并持有 Shader 与 Layout", "[pipeline][compute][lifetime]") {
+  granit::renderer renderer;
+  const auto result = renderer.initialize(
+      {.application_name = "granit-compute-pipeline", .enable_validation = true});
+  if (environment_unavailable(result) || result == granit::result::unsupported)
+    SKIP("当前运行环境不支持验证层或没有满足要求的 Vulkan 设备");
+  REQUIRE(result == granit::result::success);
+
+  const auto compute_code = load_shader("minimal.comp.spv");
+  const auto vertex_code = load_shader("minimal.vert.spv");
+  REQUIRE_FALSE(compute_code.empty());
+  granit::shader compute;
+  granit::shader vertex;
+  REQUIRE(compute.initialize(renderer.native_handle(),
+                             {.stage = granit::shader_stage::compute, .code = compute_code}) ==
+          granit::result::success);
+  REQUIRE(vertex.initialize(renderer.native_handle(),
+                            {.stage = granit::shader_stage::vertex, .code = vertex_code}) ==
+          granit::result::success);
+  granit::pipeline_layout layout;
+  REQUIRE(layout.initialize(renderer.native_handle()) == granit::result::success);
+
+  granit::compute_pipeline wrong_stage;
+  CHECK(wrong_stage.initialize(
+            renderer.native_handle(),
+            {.layout = layout.native_handle(), .compute_shader = vertex.native_handle()}) ==
+        granit::result::invalid_handle);
+  granit::compute_pipeline pipeline;
+  REQUIRE(
+      pipeline.initialize(renderer.native_handle(), {.layout = layout.native_handle(),
+                                                     .compute_shader = compute.native_handle()}) ==
+      granit::result::success);
+  const auto handle = pipeline.native_handle();
+  REQUIRE(compute.reset() == granit::result::success);
+  REQUIRE(layout.reset() == granit::result::success);
+  REQUIRE(pipeline.reset() == granit::result::success);
+  CHECK(granit_compute_pipeline_destroy(renderer.native_handle(), handle) ==
+        GRANIT_ERROR_INVALID_HANDLE);
+}
+
 } // namespace

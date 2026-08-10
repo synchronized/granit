@@ -151,6 +151,11 @@ renderer_registry::graphics_pipeline_record::~graphics_pipeline_record() {
     renderer->destroy_native_graphics_pipeline(native);
 }
 
+renderer_registry::compute_pipeline_record::~compute_pipeline_record() {
+  if (renderer)
+    renderer->destroy_native_compute_pipeline(native);
+}
+
 renderer_registry::command_recorder_record::~command_recorder_record() {
   if (renderer) {
     renderer->destroy_native_command_recorder(native);
@@ -204,6 +209,7 @@ granit_result renderer_registry::destroy(granit_renderer renderer) {
   std::vector<std::shared_ptr<bind_group_layout_record>> native_bind_group_layouts;
   std::vector<std::shared_ptr<bind_group_record>> native_bind_groups;
   std::vector<std::shared_ptr<graphics_pipeline_record>> native_graphics_pipelines;
+  std::vector<std::shared_ptr<compute_pipeline_record>> native_compute_pipelines;
   {
     std::lock_guard lock{mutex_};
     if (handles_.find(renderer, resource_type::renderer, 0) == nullptr) {
@@ -266,6 +272,11 @@ granit_result renderer_registry::destroy(granit_renderer renderer) {
           lifecycle.add(lifecycle_resource_type::graphics_pipeline, handle,
                         record->metadata.creation_sequence);
       }
+      for (const auto& [handle, record] : compute_pipelines_) {
+        if (record->renderer == state)
+          lifecycle.add(lifecycle_resource_type::compute_pipeline, handle,
+                        record->metadata.creation_sequence);
+      }
       for (const auto& [handle, record] : surfaces_) {
         if (record->renderer == state) {
           lifecycle.add(lifecycle_resource_type::surface, handle,
@@ -318,6 +329,16 @@ granit_result renderer_registry::destroy(granit_renderer renderer) {
         static_cast<void>(
             handles_.erase(pipeline->first, resource_type::pipeline, state->domain()));
         pipeline = graphics_pipelines_.erase(pipeline);
+      } else {
+        ++pipeline;
+      }
+    }
+    for (auto pipeline = compute_pipelines_.begin(); pipeline != compute_pipelines_.end();) {
+      if (pipeline->second->renderer == state) {
+        native_compute_pipelines.push_back(std::move(pipeline->second));
+        static_cast<void>(
+            handles_.erase(pipeline->first, resource_type::compute_pipeline, state->domain()));
+        pipeline = compute_pipelines_.erase(pipeline);
       } else {
         ++pipeline;
       }
@@ -425,6 +446,7 @@ granit_result renderer_registry::destroy(granit_renderer renderer) {
   native_textures.clear();
   native_samplers.clear();
   native_graphics_pipelines.clear();
+  native_compute_pipelines.clear();
   native_bind_groups.clear();
   native_pipeline_layouts.clear();
   native_bind_group_layouts.clear();
@@ -1917,6 +1939,84 @@ granit_result renderer_registry::destroy_graphics_pipeline(granit_renderer rende
     record = std::move(found->second);
     graphics_pipelines_.erase(found);
     static_cast<void>(handles_.erase(pipeline, resource_type::pipeline, state->second->domain()));
+  }
+  const auto state = record->renderer;
+  const auto serial = record->metadata.last_use_serial.load();
+  state->retire_resource(serial, retirement_order::dependent, std::move(record));
+  static_cast<void>(state->collect_retired());
+  return GRANIT_SUCCESS;
+}
+
+granit_result renderer_registry::create_compute_pipeline(granit_renderer renderer,
+                                                         const granit_compute_pipeline_desc& desc,
+                                                         granit_compute_pipeline& pipeline) {
+  try {
+    std::shared_ptr<renderer_state> state;
+    std::shared_ptr<pipeline_layout_record> layout;
+    std::shared_ptr<shader_record> compute;
+    {
+      std::lock_guard lock{mutex_};
+      const auto found = renderers_.find(renderer);
+      if (found == renderers_.end())
+        return GRANIT_ERROR_INVALID_HANDLE;
+      state = found->second;
+      const auto layout_found = pipeline_layouts_.find(desc.layout);
+      const auto compute_found = shaders_.find(desc.compute_shader);
+      if (layout_found == pipeline_layouts_.end() || compute_found == shaders_.end() ||
+          layout_found->second->renderer != state || compute_found->second->renderer != state ||
+          compute_found->second->stage != GRANIT_SHADER_STAGE_COMPUTE)
+        return GRANIT_ERROR_INVALID_HANDLE;
+      layout = layout_found->second;
+      compute = compute_found->second;
+    }
+    auto record = std::make_shared<compute_pipeline_record>();
+    record->renderer = state;
+    record->layout = layout;
+    record->compute_shader = compute;
+    const auto result = state->create_native_compute_pipeline(
+        layout->native, compute->native, compute->entry_point.c_str(), record->native);
+    if (result != GRANIT_SUCCESS)
+      return result;
+    std::lock_guard lock{mutex_};
+    if (pipeline_layouts_.find(desc.layout) == pipeline_layouts_.end() ||
+        shaders_.find(desc.compute_shader) == shaders_.end())
+      return GRANIT_ERROR_INVALID_HANDLE;
+    record->metadata.creation_sequence = next_creation_sequence_++;
+    const auto handle =
+        handles_.insert(record.get(), resource_type::compute_pipeline, state->domain());
+    if (handle == GRANIT_NULL_HANDLE)
+      return GRANIT_ERROR_OUT_OF_MEMORY;
+    try {
+      compute_pipelines_.emplace(handle, std::move(record));
+    } catch (...) {
+      static_cast<void>(handles_.erase(handle, resource_type::compute_pipeline, state->domain()));
+      throw;
+    }
+    pipeline = handle;
+    return GRANIT_SUCCESS;
+  } catch (const std::bad_alloc&) {
+    return GRANIT_ERROR_OUT_OF_MEMORY;
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+granit_result renderer_registry::destroy_compute_pipeline(granit_renderer renderer,
+                                                          granit_compute_pipeline pipeline) {
+  std::shared_ptr<compute_pipeline_record> record;
+  {
+    std::lock_guard lock{mutex_};
+    const auto state = renderers_.find(renderer);
+    if (state == renderers_.end() || handles_.find(pipeline, resource_type::compute_pipeline,
+                                                   state->second->domain()) == nullptr)
+      return GRANIT_ERROR_INVALID_HANDLE;
+    const auto found = compute_pipelines_.find(pipeline);
+    if (found == compute_pipelines_.end() || found->second->renderer != state->second)
+      return GRANIT_ERROR_INVALID_HANDLE;
+    record = std::move(found->second);
+    compute_pipelines_.erase(found);
+    static_cast<void>(
+        handles_.erase(pipeline, resource_type::compute_pipeline, state->second->domain()));
   }
   const auto state = record->renderer;
   const auto serial = record->metadata.last_use_serial.load();

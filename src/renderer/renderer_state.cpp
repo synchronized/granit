@@ -769,6 +769,31 @@ void renderer_state::destroy_native_graphics_pipeline(VkPipeline pipeline) noexc
   }
 }
 
+granit_result renderer_state::create_native_compute_pipeline(VkPipelineLayout layout,
+                                                             VkShaderModule compute_shader,
+                                                             const char* compute_entry,
+                                                             VkPipeline& pipeline) noexcept {
+  if (device_lost())
+    return GRANIT_ERROR_DEVICE_LOST;
+  VkComputePipelineCreateInfo info{};
+  info.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
+  info.stage.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+  info.stage.stage = VK_SHADER_STAGE_COMPUTE_BIT;
+  info.stage.module = compute_shader;
+  info.stage.pName = compute_entry;
+  info.layout = layout;
+  std::lock_guard lock{resource_mutex_};
+  return observe_device_result(map_vulkan_result(device_.functions().vkCreateComputePipelines(
+      device_.native_handle(), VK_NULL_HANDLE, 1, &info, nullptr, &pipeline)));
+}
+
+void renderer_state::destroy_native_compute_pipeline(VkPipeline pipeline) noexcept {
+  if (pipeline != VK_NULL_HANDLE) {
+    std::lock_guard lock{resource_mutex_};
+    device_.functions().vkDestroyPipeline(device_.native_handle(), pipeline, nullptr);
+  }
+}
+
 granit_result
 renderer_state::create_native_command_recorder(vulkan_command_recorder& recorder) noexcept {
   if (device_lost())
