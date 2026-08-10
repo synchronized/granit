@@ -28,4 +28,13 @@ cmake --build --preset windows-clang-release --target granit_benchmarks
 当前 P-02A 用例包括命中查询、错误类型、错误 domain、旧 generation 句柄，以及插入/删除槽位
 复用。多线程模式为每个线程创建独立句柄表，不把当前非线程安全的内部 `handle_table` 当作共享表。
 
+`granit_renderer_benchmarks` 用于需要 Vulkan Renderer 的基准，当前 P-02B 包含：
+
+- `invalid_lookup`：并发执行会经过 Registry 全局锁的无效 Buffer 句柄查询。
+- `create_destroy`：在同一 Renderer 上并发创建和销毁独立 upload Buffer。
+- `independent_write`：每个线程写入自己的 upload Buffer，覆盖 Registry 查找和资源级锁路径。
+
+这些场景不对同一个 Buffer 进行无序并发写入，因为那不属于公开 API 支持的工作流。Renderer 环境
+不可用时程序返回非零状态并在标准错误中说明原因。
+
 已提交的基线摘要见 [results/README.md](results/README.md)。

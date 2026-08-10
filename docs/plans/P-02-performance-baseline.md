@@ -6,7 +6,7 @@
 ## 元数据
 
 - 设计状态：已确认
-- 实现状态：进行中（P-02A 已完成）
+- 实现状态：进行中（P-02A、P-02B 已完成）
 - 路线图任务：P-02
 - 优先级：P1
 - 前置依赖：P-01
@@ -100,7 +100,8 @@ P-02 不引入 Profiler SDK，也暂不增加通用埋点宏。第一层发现�
 
 1. P-02A / 已完成：建立 `benchmarks/`、CMake 开关、CLI、CSV 输出和纯 CPU 句柄表基准；覆盖
    命中、错误类型/domain、旧 generation 和槽位复用。
-2. P-02B：接入 Registry 与资源锁场景，区分独立对象和同对象竞争。
+2. P-02B / 已完成：接入 Registry 无效句柄查询、独立 upload Buffer 创建/销毁与独立 Buffer
+   写入场景；不执行违反公开线程契约的同 Buffer 无序并发写入。
 3. P-02C：测量独立 Recorder 的创建与录制路径。
 4. P-02D：测量 Queue 提交串行化及不同 frames-in-flight 配置。
 5. P-02E：测量延迟销毁队列与批量回收。

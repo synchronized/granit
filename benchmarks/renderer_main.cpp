@@ -1,0 +1,327 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Granit contributors
+
+#include <granit/renderer/buffer.h>
+#include <granit/renderer/renderer.h>
+
+#include <algorithm>
+#include <array>
+#include <atomic>
+#include <charconv>
+#include <chrono>
+#include <cmath>
+#include <cstddef>
+#include <cstdint>
+#include <cstdlib>
+#include <iomanip>
+#include <iostream>
+#include <string>
+#include <string_view>
+#include <thread>
+#include <vector>
+
+namespace {
+
+using clock_type = std::chrono::steady_clock;
+
+struct options {
+  std::string_view case_name{"all"};
+  std::uint32_t threads{1};
+  std::uint64_t iterations{10'000};
+  std::uint32_t samples{10};
+  std::uint32_t warmup{2};
+  std::uint64_t buffer_size{4'096};
+};
+
+enum class benchmark_case { invalid_lookup, create_destroy, independent_write };
+
+struct thread_context {
+  granit_buffer buffer{GRANIT_NULL_HANDLE};
+  std::vector<std::byte> data;
+};
+
+std::atomic_uint64_t checksum{};
+
+void print_help() {
+  std::cout << "用法：granit_renderer_benchmarks [选项]\n"
+               "  --case <all|invalid_lookup|create_destroy|independent_write>\n"
+               "  --threads <数量>       工作线程数\n"
+               "  --iterations <数量>    每个线程、每个样本的操作数\n"
+               "  --samples <数量>       正式样本数\n"
+               "  --warmup <数量>        预热样本数\n"
+               "  --buffer-size <字节>   Buffer 大小\n";
+}
+
+template <typename Value> bool parse_integer(std::string_view text, Value& value) {
+  Value parsed{};
+  const auto result = std::from_chars(text.data(), text.data() + text.size(), parsed);
+  if (result.ec != std::errc{} || result.ptr != text.data() + text.size() || parsed == 0)
+    return false;
+  value = parsed;
+  return true;
+}
+
+bool parse_options(int argc, char** argv, options& result) {
+  for (int index = 1; index < argc; ++index) {
+    const std::string_view argument{argv[index]};
+    if (argument == "--help") {
+      print_help();
+      return false;
+    }
+    if (index + 1 >= argc) {
+      std::cerr << "缺少选项值：" << argument << '\n';
+      return false;
+    }
+    const std::string_view value{argv[++index]};
+    if (argument == "--case")
+      result.case_name = value;
+    else if (argument == "--threads") {
+      if (!parse_integer(value, result.threads))
+        return false;
+    } else if (argument == "--iterations") {
+      if (!parse_integer(value, result.iterations))
+        return false;
+    } else if (argument == "--samples") {
+      if (!parse_integer(value, result.samples))
+        return false;
+    } else if (argument == "--warmup") {
+      if (!parse_integer(value, result.warmup))
+        return false;
+    } else if (argument == "--buffer-size") {
+      if (!parse_integer(value, result.buffer_size))
+        return false;
+    } else {
+      std::cerr << "未知选项：" << argument << '\n';
+      return false;
+    }
+  }
+  if (result.threads > std::max(1U, std::thread::hardware_concurrency())) {
+    std::cerr << "线程数超过当前机器逻辑处理器数量\n";
+    return false;
+  }
+  return true;
+}
+
+granit_result create_upload_buffer(granit_renderer renderer, std::uint64_t size,
+                                   granit_buffer& buffer) {
+  granit_buffer_desc desc = GRANIT_BUFFER_DESC_INIT;
+  desc.usage = GRANIT_BUFFER_USAGE_TRANSFER_SOURCE_BIT;
+  desc.memory_location = GRANIT_MEMORY_LOCATION_UPLOAD;
+  desc.size = size;
+  return granit_buffer_create(renderer, &desc, &buffer);
+}
+
+void destroy_contexts(granit_renderer renderer, std::vector<thread_context>& contexts);
+
+std::vector<thread_context> make_contexts(granit_renderer renderer, benchmark_case selected,
+                                          const options& config) {
+  std::vector<thread_context> contexts(config.threads);
+  if (selected != benchmark_case::independent_write)
+    return contexts;
+  for (auto& context : contexts) {
+    context.data.resize(static_cast<std::size_t>(config.buffer_size), std::byte{0x5a});
+    if (create_upload_buffer(renderer, config.buffer_size, context.buffer) != GRANIT_SUCCESS) {
+      destroy_contexts(renderer, contexts);
+      return {};
+    }
+  }
+  return contexts;
+}
+
+void destroy_contexts(granit_renderer renderer, std::vector<thread_context>& contexts) {
+  for (auto& context : contexts) {
+    if (context.buffer != GRANIT_NULL_HANDLE)
+      static_cast<void>(granit_buffer_destroy(renderer, context.buffer));
+  }
+}
+
+std::uint64_t run_operations(granit_renderer renderer, thread_context& context,
+                             benchmark_case selected, const options& config,
+                             std::atomic_bool& failed) {
+  std::uint64_t local_checksum{};
+  const std::array<std::byte, 4> value{};
+  for (std::uint64_t index = 0; index < config.iterations; ++index) {
+    granit_result result{};
+    switch (selected) {
+    case benchmark_case::invalid_lookup:
+      result = granit_buffer_write(renderer, UINT64_C(0x0200000100000001), 0, value.data(),
+                                   value.size());
+      if (result != GRANIT_ERROR_INVALID_HANDLE) {
+        failed.store(true, std::memory_order_relaxed);
+        return local_checksum;
+      }
+      break;
+    case benchmark_case::create_destroy: {
+      granit_buffer buffer{GRANIT_NULL_HANDLE};
+      result = create_upload_buffer(renderer, config.buffer_size, buffer);
+      if (result != GRANIT_SUCCESS) {
+        failed.store(true, std::memory_order_relaxed);
+        return local_checksum;
+      }
+      local_checksum ^= buffer;
+      if (granit_buffer_destroy(renderer, buffer) != GRANIT_SUCCESS) {
+        failed.store(true, std::memory_order_relaxed);
+        return local_checksum;
+      }
+      break;
+    }
+    case benchmark_case::independent_write:
+      result = granit_buffer_write(renderer, context.buffer, 0, context.data.data(),
+                                   context.data.size());
+      if (result != GRANIT_SUCCESS) {
+        failed.store(true, std::memory_order_relaxed);
+        return local_checksum;
+      }
+      break;
+    }
+    local_checksum += static_cast<std::uint64_t>(result);
+  }
+  return local_checksum;
+}
+
+double run_sample(granit_renderer renderer, benchmark_case selected, const options& config,
+                  bool& succeeded) {
+  auto contexts = make_contexts(renderer, selected, config);
+  if (contexts.size() != config.threads) {
+    succeeded = false;
+    return 0;
+  }
+  std::atomic_uint32_t ready{};
+  std::atomic_bool start{};
+  std::atomic_bool failed{};
+  std::vector<std::thread> workers;
+  workers.reserve(config.threads);
+  for (std::uint32_t index = 0; index < config.threads; ++index) {
+    workers.emplace_back([&, index] {
+      ready.fetch_add(1, std::memory_order_release);
+      while (!start.load(std::memory_order_acquire))
+        std::this_thread::yield();
+      const auto value = run_operations(renderer, contexts[index], selected, config, failed);
+      checksum.fetch_xor(value, std::memory_order_relaxed);
+    });
+  }
+  while (ready.load(std::memory_order_acquire) != config.threads)
+    std::this_thread::yield();
+  const auto begin = clock_type::now();
+  start.store(true, std::memory_order_release);
+  for (auto& worker : workers)
+    worker.join();
+  const auto end = clock_type::now();
+  destroy_contexts(renderer, contexts);
+  succeeded = !failed.load(std::memory_order_relaxed);
+  return std::chrono::duration<double, std::nano>{end - begin}.count();
+}
+
+double percentile(const std::vector<double>& sorted, double fraction) {
+  const auto rank = std::ceil(fraction * static_cast<double>(sorted.size()));
+  const auto index = static_cast<std::size_t>(std::max(1.0, rank)) - 1;
+  return sorted[index];
+}
+
+bool run_case(granit_renderer renderer, std::string_view name, benchmark_case selected,
+              const options& config) {
+  bool succeeded{true};
+  for (std::uint32_t index = 0; index < config.warmup; ++index)
+    static_cast<void>(run_sample(renderer, selected, config, succeeded));
+  if (!succeeded)
+    return false;
+  std::vector<double> samples;
+  samples.reserve(config.samples);
+  double total_ns{};
+  const auto operations =
+      static_cast<double>(config.threads) * static_cast<double>(config.iterations);
+  for (std::uint32_t index = 0; index < config.samples; ++index) {
+    const auto elapsed = run_sample(renderer, selected, config, succeeded);
+    if (!succeeded)
+      return false;
+    total_ns += elapsed;
+    samples.push_back(elapsed / operations);
+  }
+  std::sort(samples.begin(), samples.end());
+  const auto total_operations = operations * static_cast<double>(config.samples);
+  std::cout << "1," << name << ',' << config.threads << ',' << config.iterations << ','
+            << config.samples << ',' << static_cast<std::uint64_t>(total_ns) << ','
+            << total_ns / total_operations << ',' << percentile(samples, 0.50) << ','
+            << percentile(samples, 0.95) << ',' << percentile(samples, 0.99) << ','
+            << total_operations * 1'000'000'000.0 / total_ns << '\n';
+  return true;
+}
+
+bool selected(std::string_view requested, std::string_view name) {
+  return requested == "all" || requested == name;
+}
+
+std::string cpu_name() {
+#ifdef _WIN32
+  char* value{};
+  std::size_t size{};
+  if (_dupenv_s(&value, &size, "PROCESSOR_IDENTIFIER") != 0 || value == nullptr)
+    return "unknown";
+  std::string result{value};
+  std::free(value);
+  return result;
+#else
+  const auto* value = std::getenv("PROCESSOR_IDENTIFIER");
+  return value == nullptr ? "unknown" : value;
+#endif
+}
+
+} // namespace
+
+int main(int argc, char** argv) {
+  options config;
+  if (!parse_options(argc, argv, config)) {
+    for (int index = 1; index < argc; ++index) {
+      if (std::string_view{argv[index]} == "--help")
+        return 0;
+    }
+    return 2;
+  }
+  constexpr std::string_view cases[]{"invalid_lookup", "create_destroy", "independent_write"};
+  if (config.case_name != "all" &&
+      std::find(std::begin(cases), std::end(cases), config.case_name) == std::end(cases)) {
+    std::cerr << "未知 benchmark 用例：" << config.case_name << '\n';
+    return 2;
+  }
+
+  granit_renderer_desc desc = GRANIT_RENDERER_DESC_INIT;
+  desc.application_name = "Granit Renderer Benchmarks";
+  desc.application_name_length = 26;
+  granit_renderer renderer{GRANIT_NULL_HANDLE};
+  const auto create_result = granit_renderer_create(&desc, &renderer);
+  if (create_result != GRANIT_SUCCESS) {
+    std::cerr << "无法创建 Renderer：" << granit_result_message(create_result) << '\n';
+    return 3;
+  }
+
+  std::cout << std::setprecision(10) << "# clock=steady_clock\n"
+#ifdef NDEBUG
+            << "# build_type=Release\n"
+#else
+            << "# build_type=Debug\n"
+#endif
+            << "# hardware_concurrency=" << std::thread::hardware_concurrency() << '\n'
+            << "# compiler=" << GRANIT_BENCHMARK_COMPILER << '\n'
+            << "# revision=" << GRANIT_BENCHMARK_REVISION << '\n'
+            << "# link_mode=" << GRANIT_BENCHMARK_LINK_MODE << '\n'
+            << "# system=" << GRANIT_BENCHMARK_SYSTEM << '\n'
+            << "# cpu=" << cpu_name() << '\n'
+            << "# buffer_size=" << config.buffer_size << '\n'
+            << "schema,name,threads,iterations,samples,total_ns,ns_per_op,p50_ns,p95_ns,p99_ns,"
+               "ops_per_second\n";
+
+  bool succeeded{true};
+  if (selected(config.case_name, "invalid_lookup"))
+    succeeded &= run_case(renderer, "invalid_lookup", benchmark_case::invalid_lookup, config);
+  if (selected(config.case_name, "create_destroy"))
+    succeeded &= run_case(renderer, "create_destroy", benchmark_case::create_destroy, config);
+  if (selected(config.case_name, "independent_write"))
+    succeeded &= run_case(renderer, "independent_write", benchmark_case::independent_write, config);
+  const auto destroy_result = granit_renderer_destroy(renderer);
+  std::cerr << "checksum=" << checksum.load(std::memory_order_relaxed) << '\n';
+  if (!succeeded || destroy_result != GRANIT_SUCCESS) {
+    std::cerr << "Renderer benchmark 执行失败\n";
+    return 1;
+  }
+  return 0;
+}
