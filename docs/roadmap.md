@@ -169,7 +169,8 @@
   Clear、Vertex/Index Buffer 和基础 Draw API。
 - **[D-06](plans/D-06-examples.md) / P0 / 已完成**：提供无窗口离屏清屏、窗口清屏和最小
   三角形示例。
-- **D-07 / P1**：实现 Compute Pipeline 与 Dispatch。
+- **[D-07](plans/D-07-compute-pipeline.md) / P1 / 已确认**：实现 Compute Pipeline、资源状态与
+  Dispatch，按 D-07A 至 D-07C 分步完成。
 - **D-08 / P1**：补充 Pipeline Cache、异步创建和着色器热重载边界。
 
 ### 验收标准

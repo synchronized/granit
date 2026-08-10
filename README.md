@@ -162,6 +162,8 @@ if (granit::failed(result)) {
 - [docs/plans/F-01-command-recorder.md](docs/plans/F-01-command-recorder.md)：命令录制器计划。
 - [docs/plans/F-02-command-recording.md](docs/plans/F-02-command-recording.md)：基础命令录制计划。
 - [docs/plans/D-01-shader-input.md](docs/plans/D-01-shader-input.md)：Shader 输入与离线编译策略。
+- [docs/plans/D-07-compute-pipeline.md](docs/plans/D-07-compute-pipeline.md)：Compute Pipeline、
+  Dispatch 与资源状态计划。
 - [docs/plans/F-07-recovery-boundaries.md](docs/plans/F-07-recovery-boundaries.md)：窗口帧恢复边界计划。
 - [docs/renderer.md](docs/renderer.md)：公共 renderer C/C++ API 与生命周期。
 - [docs/render-target.md](docs/render-target.md)：颜色与深度/模板 Attachment 值类型。
