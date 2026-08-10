@@ -64,6 +64,8 @@ D-03-graphics-pipeline.md
 - [D-08：Graphics Pipeline 完整状态、缓存与重载边界](D-08-pipeline-production.md)——设计已确认。
 - [P-01：并行录制、资源创建与上传压力测试](P-01-parallel-recording.md)——已完成。
 - [P-02：CPU 并发与资源管理性能基线](P-02-performance-baseline.md)——已完成。
+- [P-03：锁竞争归因与批量 API 优化](P-03-contention-and-batching.md)——进行中，等待 P-03A
+  profiler 归因。
 
 ## 状态
 

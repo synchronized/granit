@@ -192,7 +192,8 @@
 - **[P-02](plans/P-02-performance-baseline.md) / P1 / 已完成**：已保存句柄表、Registry/资源锁、
   基础及 Graphics/Compute 混合 Recorder、Queue 提交、延迟销毁队列和 staging 上传首份基线，
   并形成 P-03/P-04 的数据依据。
-- **P-03 / P1**：依据数据调整锁粒度、缓存、暂存内存和批量 API。
+- **[P-03](plans/P-03-contention-and-batching.md) / P1 / 进行中**：先用 profiler 归因 Registry、
+  Recorder 和 Queue 等待，再根据证据调整锁粒度或增加批量提交 API；staging 分配器归入 P-04。
 - **P-04 / P1**：建立瞬态资源与每帧上传分配器。
 - **P-05 / P2**：评估内部线程池；默认不要求使用者采用 Granit 的任务系统。
 - **P-06 / P2**：评估 Render Graph，并优先作为建立在命令和资源层之上的独立模块。
