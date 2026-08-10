@@ -28,6 +28,11 @@ static void granit_test_renderer_rejects_invalid_arguments(void) {
   TEST_ASSERT_EQUAL_INT(GRANIT_ERROR_INVALID_ARGUMENT,
                         granit_renderer_create(&renderer_desc, &renderer));
   TEST_ASSERT_EQUAL_INT(GRANIT_ERROR_INVALID_HANDLE, granit_renderer_destroy(GRANIT_NULL_HANDLE));
+  uint64_t cache_size = 0;
+  TEST_ASSERT_EQUAL_INT(GRANIT_ERROR_INVALID_ARGUMENT,
+                        granit_renderer_pipeline_cache_import(GRANIT_NULL_HANDLE, 0, 0));
+  TEST_ASSERT_EQUAL_INT(GRANIT_ERROR_INVALID_ARGUMENT,
+                        granit_renderer_pipeline_cache_export(GRANIT_NULL_HANDLE, 0, &cache_size));
 }
 
 static void granit_test_surface_rejects_invalid_arguments(void) {

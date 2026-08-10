@@ -4,7 +4,9 @@
 #include <granit/renderer/buffer.h>
 #include <granit/renderer/renderer.hpp>
 
+#include <array>
 #include <utility>
+#include <vector>
 
 #include <catch2/catch_all.hpp>
 
@@ -102,6 +104,7 @@ TEST_CASE("C++ renderer 提供 move-only RAII", "[renderer][cpp_api]") {
     SKIP("当前运行环境没有满足要求的 Vulkan 设备");
   }
   REQUIRE(result == granit::result::success);
+  CHECK(renderer.import_pipeline_cache({}) == granit::result::success);
   REQUIRE(renderer.valid());
 
   granit::renderer moved{std::move(renderer)};
@@ -109,6 +112,26 @@ TEST_CASE("C++ renderer 提供 move-only RAII", "[renderer][cpp_api]") {
   CHECK(moved.valid());
   CHECK(moved.reset() == granit::result::success);
   CHECK_FALSE(moved.valid());
+}
+
+TEST_CASE("Renderer Pipeline Cache 支持导出和重新导入", "[renderer][pipeline-cache]") {
+  granit::renderer renderer;
+  const auto result = renderer.initialize({.application_name = "granit-pipeline-cache-tests"});
+  if (environment_unavailable(granit::to_native(result)))
+    SKIP("当前运行环境没有满足要求的 Vulkan 设备");
+  REQUIRE(result == granit::result::success);
+
+  std::uint64_t size{};
+  REQUIRE(renderer.query_pipeline_cache_size(size) == granit::result::success);
+  REQUIRE(size > 0);
+  std::vector<std::byte> cache(static_cast<std::size_t>(size));
+  REQUIRE(renderer.export_pipeline_cache(cache, size) == granit::result::success);
+  REQUIRE(size > 0);
+  cache.resize(static_cast<std::size_t>(size));
+  REQUIRE(renderer.import_pipeline_cache(cache) == granit::result::success);
+
+  const std::array invalid_cache{std::byte{0}, std::byte{1}, std::byte{2}, std::byte{3}};
+  CHECK(renderer.import_pipeline_cache(invalid_cache) == granit::result::invalid_argument);
 }
 
 TEST_CASE("验证模式在活动资源存在时仍完成 Renderer 级联销毁", "[renderer][lifecycle]") {

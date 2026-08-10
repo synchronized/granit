@@ -160,6 +160,8 @@ renderer_state::~renderer_state() {
     slot.context->destroy(device_);
   }
   frame_slots_.clear();
+  if (pipeline_cache_ != VK_NULL_HANDLE)
+    device_.functions().vkDestroyPipelineCache(device_.native_handle(), pipeline_cache_, nullptr);
 }
 
 granit_result renderer_state::initialize(std::string_view application_name, bool enable_validation,
@@ -246,8 +248,88 @@ granit_result renderer_state::initialize(std::string_view application_name, bool
     instance_.reset();
     throw;
   }
+  VkPipelineCacheCreateInfo cache_info{};
+  cache_info.sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO;
+  const auto cache_result = device_.functions().vkCreatePipelineCache(
+      device_.native_handle(), &cache_info, nullptr, &pipeline_cache_);
+  if (cache_result != VK_SUCCESS) {
+    for (auto& slot : frame_slots_) {
+      slot.postamble->destroy(device_);
+      slot.preamble->destroy(device_);
+      slot.context->destroy(device_);
+    }
+    frame_slots_.clear();
+    memory_allocator_.reset();
+    device_.reset();
+    instance_.reset();
+    return map_vulkan_result(cache_result);
+  }
   surface_types_ = surface_types;
   return GRANIT_SUCCESS;
+}
+
+granit_result renderer_state::import_pipeline_cache(const void* data, std::uint64_t size) noexcept {
+  if (device_lost())
+    return GRANIT_ERROR_DEVICE_LOST;
+  if (size == 0)
+    return GRANIT_SUCCESS;
+  if (!data || size > SIZE_MAX)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  struct cache_header {
+    std::uint32_t length;
+    std::uint32_t version;
+    std::uint32_t vendor;
+    std::uint32_t device;
+    std::array<std::uint8_t, VK_UUID_SIZE> uuid;
+  };
+  if (size < sizeof(cache_header))
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  cache_header header{};
+  std::memcpy(&header, data, sizeof(header));
+  const auto& properties = device_.properties();
+  if (header.length < sizeof(cache_header) || header.length > size ||
+      header.version != VK_PIPELINE_CACHE_HEADER_VERSION_ONE ||
+      header.vendor != properties.vendorID || header.device != properties.deviceID ||
+      std::memcmp(header.uuid.data(), properties.pipelineCacheUUID, VK_UUID_SIZE) != 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  std::lock_guard lock{resource_mutex_};
+  VkPipelineCacheCreateInfo info{};
+  info.sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO;
+  info.initialDataSize = static_cast<std::size_t>(size);
+  info.pInitialData = data;
+  VkPipelineCache imported = VK_NULL_HANDLE;
+  const auto created =
+      device_.functions().vkCreatePipelineCache(device_.native_handle(), &info, nullptr, &imported);
+  if (created != VK_SUCCESS)
+    return observe_device_result(map_vulkan_result(created));
+  const auto merged = device_.functions().vkMergePipelineCaches(device_.native_handle(),
+                                                                pipeline_cache_, 1, &imported);
+  device_.functions().vkDestroyPipelineCache(device_.native_handle(), imported, nullptr);
+  return observe_device_result(map_vulkan_result(merged));
+}
+
+granit_result renderer_state::export_pipeline_cache(void* data, std::uint64_t& size) noexcept {
+  if (device_lost())
+    return GRANIT_ERROR_DEVICE_LOST;
+  std::lock_guard lock{resource_mutex_};
+  std::size_t required{};
+  auto result = device_.functions().vkGetPipelineCacheData(device_.native_handle(), pipeline_cache_,
+                                                           &required, nullptr);
+  if (result != VK_SUCCESS)
+    return observe_device_result(map_vulkan_result(result));
+  if (!data) {
+    size = required;
+    return GRANIT_SUCCESS;
+  }
+  if (size < required) {
+    size = required;
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  }
+  auto capacity = static_cast<std::size_t>(size);
+  result = device_.functions().vkGetPipelineCacheData(device_.native_handle(), pipeline_cache_,
+                                                      &capacity, data);
+  size = capacity;
+  return observe_device_result(map_vulkan_result(result));
 }
 
 granit_result renderer_state::create_win32_surface(void* native_instance, void* native_window,
@@ -876,7 +958,7 @@ granit_result renderer_state::create_native_graphics_pipeline(
   info.layout = layout;
   std::lock_guard lock{resource_mutex_};
   return observe_device_result(map_vulkan_result(device_.functions().vkCreateGraphicsPipelines(
-      device_.native_handle(), VK_NULL_HANDLE, 1, &info, nullptr, &pipeline)));
+      device_.native_handle(), pipeline_cache_, 1, &info, nullptr, &pipeline)));
 }
 
 void renderer_state::destroy_native_graphics_pipeline(VkPipeline pipeline) noexcept {
@@ -901,7 +983,7 @@ granit_result renderer_state::create_native_compute_pipeline(VkPipelineLayout la
   info.layout = layout;
   std::lock_guard lock{resource_mutex_};
   return observe_device_result(map_vulkan_result(device_.functions().vkCreateComputePipelines(
-      device_.native_handle(), VK_NULL_HANDLE, 1, &info, nullptr, &pipeline)));
+      device_.native_handle(), pipeline_cache_, 1, &info, nullptr, &pipeline)));
 }
 
 void renderer_state::destroy_native_compute_pipeline(VkPipeline pipeline) noexcept {

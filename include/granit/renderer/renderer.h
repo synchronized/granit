@@ -64,6 +64,14 @@ GRANIT_API granit_result granit_renderer_create(const granit_renderer_desc* desc
 /** 销毁 renderer，并使句柄立即失效。 */
 GRANIT_API granit_result granit_renderer_destroy(granit_renderer renderer);
 
+/** 将驱动相关的临时 Pipeline Cache 数据合并到 Renderer；调用返回后不保留 data。 */
+GRANIT_API granit_result granit_renderer_pipeline_cache_import(granit_renderer renderer,
+                                                               const void* data, uint64_t size);
+
+/** 导出 Pipeline Cache；data 为空时查询所需大小，size 同时作为容量输入和实际大小输出。 */
+GRANIT_API granit_result granit_renderer_pipeline_cache_export(granit_renderer renderer, void* data,
+                                                               uint64_t* size);
+
 #ifdef __cplusplus
 }
 #endif

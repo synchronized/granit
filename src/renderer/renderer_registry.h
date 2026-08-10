@@ -39,6 +39,10 @@ public:
                                      std::uint32_t surface_types, std::uint32_t frames_in_flight,
                                      granit_renderer& renderer);
   [[nodiscard]] granit_result destroy(granit_renderer renderer);
+  [[nodiscard]] granit_result import_pipeline_cache(granit_renderer renderer, const void* data,
+                                                    std::uint64_t size);
+  [[nodiscard]] granit_result export_pipeline_cache(granit_renderer renderer, void* data,
+                                                    std::uint64_t& size);
   [[nodiscard]] std::shared_ptr<renderer_state> acquire(granit_renderer renderer);
   [[nodiscard]] granit_result create_win32_surface(granit_renderer renderer, void* native_instance,
                                                    void* native_window, granit_surface& surface);

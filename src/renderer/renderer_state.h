@@ -50,6 +50,8 @@ public:
   [[nodiscard]] granit_result initialize(std::string_view application_name, bool enable_validation,
                                          std::uint32_t surface_types,
                                          std::uint32_t frames_in_flight);
+  [[nodiscard]] granit_result import_pipeline_cache(const void* data, std::uint64_t size) noexcept;
+  [[nodiscard]] granit_result export_pipeline_cache(void* data, std::uint64_t& size) noexcept;
 
   [[nodiscard]] granit_result create_win32_surface(void* native_instance, void* native_window,
                                                    VkSurfaceKHR& surface) noexcept;
@@ -223,6 +225,7 @@ private:
   vulkan_instance instance_;
   vulkan_device device_;
   vulkan_memory_allocator memory_allocator_;
+  VkPipelineCache pipeline_cache_{VK_NULL_HANDLE};
   std::vector<frame_slot> frame_slots_;
   std::size_t next_frame_slot_{};
   submission_serials submission_serials_;

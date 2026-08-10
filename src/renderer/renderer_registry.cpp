@@ -194,6 +194,18 @@ granit_result renderer_registry::create(std::string_view application_name, bool 
   }
 }
 
+granit_result renderer_registry::import_pipeline_cache(granit_renderer renderer, const void* data,
+                                                       std::uint64_t size) {
+  const auto state = acquire(renderer);
+  return state ? state->import_pipeline_cache(data, size) : GRANIT_ERROR_INVALID_HANDLE;
+}
+
+granit_result renderer_registry::export_pipeline_cache(granit_renderer renderer, void* data,
+                                                       std::uint64_t& size) {
+  const auto state = acquire(renderer);
+  return state ? state->export_pipeline_cache(data, size) : GRANIT_ERROR_INVALID_HANDLE;
+}
+
 granit_result renderer_registry::destroy(granit_renderer renderer) {
   std::shared_ptr<renderer_state> state;
   lifecycle_snapshot lifecycle;

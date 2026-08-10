@@ -125,6 +125,8 @@ granit_result vulkan_device::initialize(const vulkan_instance& instance,
       functions_.vkAllocateDescriptorSets == nullptr ||
       functions_.vkUpdateDescriptorSets == nullptr ||
       functions_.vkCreateGraphicsPipelines == nullptr || functions_.vkDestroyPipeline == nullptr ||
+      functions_.vkCreatePipelineCache == nullptr || functions_.vkDestroyPipelineCache == nullptr ||
+      functions_.vkGetPipelineCacheData == nullptr || functions_.vkMergePipelineCaches == nullptr ||
       functions_.vkQueueSubmit2 == nullptr || functions_.vkQueueWaitIdle == nullptr ||
       (surface_types != 0 &&
        (functions_.vkCreateSwapchainKHR == nullptr || functions_.vkDestroySwapchainKHR == nullptr ||

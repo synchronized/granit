@@ -4,13 +4,15 @@
 #ifndef GRANIT_RENDERER_HPP_
 #define GRANIT_RENDERER_HPP_
 
+#include <cstddef>
 #include <cstdint>
 #include <limits>
+#include <span>
 #include <string_view>
 #include <utility>
 
-#include <granit/renderer/renderer.h>
 #include <granit/core/result.hpp>
+#include <granit/renderer/renderer.h>
 
 namespace granit {
 
@@ -74,6 +76,21 @@ public:
     }
     const auto handle = std::exchange(handle_, GRANIT_NULL_HANDLE);
     return from_native(granit_renderer_destroy(handle));
+  }
+
+  [[nodiscard]] result import_pipeline_cache(std::span<const std::byte> data) noexcept {
+    return from_native(granit_renderer_pipeline_cache_import(handle_, data.data(), data.size()));
+  }
+
+  [[nodiscard]] result query_pipeline_cache_size(std::uint64_t& size) const noexcept {
+    size = 0;
+    return from_native(granit_renderer_pipeline_cache_export(handle_, nullptr, &size));
+  }
+
+  [[nodiscard]] result export_pipeline_cache(std::span<std::byte> data,
+                                             std::uint64_t& size) const noexcept {
+    size = data.size();
+    return from_native(granit_renderer_pipeline_cache_export(handle_, data.data(), &size));
   }
 
   [[nodiscard]] bool valid() const noexcept { return handle_ != GRANIT_NULL_HANDLE; }

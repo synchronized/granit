@@ -85,3 +85,27 @@ extern "C" granit_result granit_renderer_destroy(granit_renderer renderer) {
     return GRANIT_ERROR_INTERNAL;
   }
 }
+
+extern "C" granit_result granit_renderer_pipeline_cache_import(granit_renderer renderer,
+                                                               const void* data, uint64_t size) {
+  if (renderer == GRANIT_NULL_HANDLE || (data == nullptr && size != 0))
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  try {
+    return granit::detail::renderer_registry::instance().import_pipeline_cache(renderer, data,
+                                                                               size);
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+extern "C" granit_result granit_renderer_pipeline_cache_export(granit_renderer renderer, void* data,
+                                                               uint64_t* size) {
+  if (renderer == GRANIT_NULL_HANDLE || size == nullptr || (data != nullptr && *size == 0))
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  try {
+    return granit::detail::renderer_registry::instance().export_pipeline_cache(renderer, data,
+                                                                               *size);
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
