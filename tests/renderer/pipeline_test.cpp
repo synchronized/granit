@@ -2,6 +2,7 @@
 // Copyright (c) 2026 Granit contributors
 
 #include <granit/buffer.hpp>
+#include <granit/command_recorder.hpp>
 #include <granit/pipeline.hpp>
 #include <granit/renderer.hpp>
 #include <granit/sampler.hpp>
@@ -119,6 +120,10 @@ TEST_CASE("不可变 Bind Group 保持 Buffer 与 Sampler 生命周期", "[pipel
                                       .visibility = granit::shader_stage_flags::fragment}};
   granit::bind_group_layout layout;
   REQUIRE(layout.initialize(renderer.native_handle(), declarations) == granit::result::success);
+  const auto layout_handle = layout.native_handle();
+  granit::pipeline_layout binding_pipeline_layout;
+  REQUIRE(binding_pipeline_layout.initialize(
+              renderer.native_handle(), std::span{&layout_handle, 1}) == granit::result::success);
   granit::buffer buffer;
   REQUIRE(buffer.initialize(renderer.native_handle(),
                             {.size = 256, .usage = granit::buffer_usage::uniform}) ==
@@ -139,11 +144,34 @@ TEST_CASE("不可变 Bind Group 保持 Buffer 与 Sampler 生命周期", "[pipel
   granit::bind_group group;
   REQUIRE(group.initialize(renderer.native_handle(), layout.native_handle(), entries) ==
           granit::result::success);
+  granit::command_recorder recorder;
+  REQUIRE(recorder.initialize(renderer.native_handle()) == granit::result::success);
+  REQUIRE(recorder.begin() == granit::result::success);
+  const granit_bind_group group_handle = group.native_handle();
+  granit::bind_group_layout incompatible_group_layout;
+  REQUIRE(incompatible_group_layout.initialize(renderer.native_handle(), declarations) ==
+          granit::result::success);
+  const auto incompatible_group_layout_handle = incompatible_group_layout.native_handle();
+  granit::pipeline_layout incompatible_pipeline_layout;
+  REQUIRE(incompatible_pipeline_layout.initialize(
+              renderer.native_handle(), std::span{&incompatible_group_layout_handle, 1}) ==
+          granit::result::success);
+  CHECK(recorder.bind_graphics_groups(incompatible_pipeline_layout.native_handle(), 0,
+                                      std::span{&group_handle, 1}) ==
+        granit::result::invalid_argument);
+  REQUIRE(recorder.bind_graphics_groups(binding_pipeline_layout.native_handle(), 0,
+                                        std::span{&group_handle, 1}) == granit::result::success);
   REQUIRE(buffer.reset() == granit::result::success);
   REQUIRE(sampler.reset() == granit::result::success);
   REQUIRE(granit_texture_destroy(renderer.native_handle(), texture) == GRANIT_SUCCESS);
   REQUIRE(layout.reset() == granit::result::success);
+  REQUIRE(binding_pipeline_layout.reset() == granit::result::success);
   REQUIRE(group.reset() == granit::result::success);
+  REQUIRE(incompatible_pipeline_layout.reset() == granit::result::success);
+  REQUIRE(incompatible_group_layout.reset() == granit::result::success);
+  REQUIRE(recorder.end() == granit::result::success);
+  REQUIRE(recorder.submit() == granit::result::success);
+  REQUIRE(recorder.reset() == granit::result::success);
 }
 
 TEST_CASE("Bind Group 校验完整性和资源类型", "[pipeline][bind-group][validation]") {
@@ -200,10 +228,17 @@ TEST_CASE("Graphics Pipeline 持有 Shader 与 Layout 依赖", "[pipeline][lifet
                                .vertex_shader = vertex.native_handle(),
                                .fragment_shader = fragment.native_handle(),
                                .color_formats = std::span{&format, 1}}) == granit::result::success);
+  granit::command_recorder recorder;
+  REQUIRE(recorder.initialize(renderer.native_handle()) == granit::result::success);
+  REQUIRE(recorder.begin() == granit::result::success);
+  REQUIRE(recorder.bind_graphics_pipeline(pipeline.native_handle()) == granit::result::success);
+  REQUIRE(pipeline.reset() == granit::result::success);
   REQUIRE(vertex.reset() == granit::result::success);
   REQUIRE(fragment.reset() == granit::result::success);
   REQUIRE(layout.reset() == granit::result::success);
-  REQUIRE(pipeline.reset() == granit::result::success);
+  REQUIRE(recorder.end() == granit::result::success);
+  REQUIRE(recorder.submit() == granit::result::success);
+  REQUIRE(recorder.reset() == granit::result::success);
 }
 
 } // namespace

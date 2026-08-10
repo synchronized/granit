@@ -810,6 +810,22 @@ granit_result renderer_state::fill_buffer(vulkan_command_recorder& recorder, VkB
   return observe_device_result(recorder.fill_buffer(device_, buffer, offset, size, value));
 }
 
+granit_result renderer_state::bind_graphics_pipeline(vulkan_command_recorder& recorder,
+                                                     VkPipeline pipeline) noexcept {
+  if (device_lost())
+    return GRANIT_ERROR_DEVICE_LOST;
+  return recorder.bind_graphics_pipeline(device_, pipeline);
+}
+
+granit_result
+renderer_state::bind_graphics_groups(vulkan_command_recorder& recorder, VkPipelineLayout layout,
+                                     std::uint32_t first_group,
+                                     std::span<const VkDescriptorSet> bind_groups) noexcept {
+  if (device_lost())
+    return GRANIT_ERROR_DEVICE_LOST;
+  return recorder.bind_graphics_groups(device_, layout, first_group, bind_groups);
+}
+
 granit_result
 renderer_state::begin_rendering(vulkan_command_recorder& recorder, VkRect2D area,
                                 std::span<const VkRenderingAttachmentInfo> color_attachments,

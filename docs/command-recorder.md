@@ -30,6 +30,9 @@ GPU 完成，再重置 Command Pool。Renderer 的 `frames_in_flight` 决定最�
 Buffer Copy 支持一次传入多个区域。参与命令的 Buffer 会由 Recorder 保持内部强引用，因此录制
 后销毁公开 Buffer 句柄不会造成悬空 Vulkan 对象；reset 或 destroy 会释放这些引用。
 
+Graphics Pipeline 可以单独绑定；Bind Group 通过 Pipeline Layout 和起始组序号批量绑定。Recorder
+会保持 Pipeline、Pipeline Layout 与 Bind Group，直至提交完成并重置。
+
 ## C++20
 
 ```cpp

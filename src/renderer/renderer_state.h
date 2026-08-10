@@ -119,6 +119,12 @@ public:
   [[nodiscard]] granit_result fill_buffer(vulkan_command_recorder& recorder, VkBuffer buffer,
                                           VkDeviceSize offset, VkDeviceSize size,
                                           std::uint32_t value);
+  [[nodiscard]] granit_result bind_graphics_pipeline(vulkan_command_recorder& recorder,
+                                                     VkPipeline pipeline) noexcept;
+  [[nodiscard]] granit_result
+  bind_graphics_groups(vulkan_command_recorder& recorder, VkPipelineLayout layout,
+                       std::uint32_t first_group,
+                       std::span<const VkDescriptorSet> bind_groups) noexcept;
   [[nodiscard]] granit_result
   begin_rendering(vulkan_command_recorder& recorder, VkRect2D area,
                   std::span<const VkRenderingAttachmentInfo> color_attachments,

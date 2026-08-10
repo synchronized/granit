@@ -2120,6 +2120,74 @@ granit_result renderer_registry::fill_buffer(granit_renderer renderer,
       recorder_record->native, buffer_record_state->native.buffer, offset, size, value);
 }
 
+granit_result renderer_registry::bind_graphics_pipeline(granit_renderer renderer,
+                                                        granit_command_recorder recorder,
+                                                        granit_graphics_pipeline pipeline) {
+  auto command = acquire_command_recorder(renderer, recorder);
+  if (!command)
+    return GRANIT_ERROR_INVALID_HANDLE;
+  std::shared_ptr<graphics_pipeline_record> pipeline_record;
+  {
+    std::lock_guard lock{mutex_};
+    const auto found = graphics_pipelines_.find(pipeline);
+    if (found == graphics_pipelines_.end() || found->second->renderer != command->renderer)
+      return GRANIT_ERROR_INVALID_HANDLE;
+    pipeline_record = found->second;
+  }
+  std::lock_guard command_lock{command->mutex};
+  if (command->native.state() != command_recorder_state::recording)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  const auto result =
+      command->renderer->bind_graphics_pipeline(command->native, pipeline_record->native);
+  if (result == GRANIT_SUCCESS)
+    retain_resource(command->retained_resources, pipeline_record, pipeline_record->metadata);
+  return result;
+}
+
+granit_result
+renderer_registry::bind_graphics_groups(granit_renderer renderer, granit_command_recorder recorder,
+                                        granit_pipeline_layout layout, std::uint32_t first_group,
+                                        std::span<const granit_bind_group> bind_groups) {
+  auto command = acquire_command_recorder(renderer, recorder);
+  if (!command)
+    return GRANIT_ERROR_INVALID_HANDLE;
+  std::shared_ptr<pipeline_layout_record> layout_record;
+  std::vector<std::shared_ptr<bind_group_record>> group_records;
+  std::vector<VkDescriptorSet> native_groups;
+  {
+    std::lock_guard lock{mutex_};
+    const auto layout_found = pipeline_layouts_.find(layout);
+    if (layout_found == pipeline_layouts_.end() ||
+        layout_found->second->renderer != command->renderer)
+      return GRANIT_ERROR_INVALID_HANDLE;
+    layout_record = layout_found->second;
+    if (first_group + bind_groups.size() > layout_record->bind_group_layouts.size())
+      return GRANIT_ERROR_INVALID_ARGUMENT;
+    group_records.reserve(bind_groups.size());
+    native_groups.reserve(bind_groups.size());
+    for (std::size_t index = 0; index < bind_groups.size(); ++index) {
+      const auto found = bind_groups_.find(bind_groups[index]);
+      if (found == bind_groups_.end() || found->second->renderer != command->renderer)
+        return GRANIT_ERROR_INVALID_HANDLE;
+      if (found->second->layout != layout_record->bind_group_layouts[first_group + index])
+        return GRANIT_ERROR_INVALID_ARGUMENT;
+      group_records.push_back(found->second);
+      native_groups.push_back(found->second->set);
+    }
+  }
+  std::lock_guard command_lock{command->mutex};
+  if (command->native.state() != command_recorder_state::recording)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  const auto result = command->renderer->bind_graphics_groups(
+      command->native, layout_record->native, first_group, native_groups);
+  if (result == GRANIT_SUCCESS) {
+    retain_resource(command->retained_resources, layout_record, layout_record->metadata);
+    for (const auto& group : group_records)
+      retain_resource(command->retained_resources, group, group->metadata);
+  }
+  return result;
+}
+
 granit_result renderer_registry::begin_rendering(granit_renderer renderer,
                                                  granit_command_recorder recorder,
                                                  const granit_rendering_desc& desc) {

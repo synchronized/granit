@@ -21,8 +21,10 @@ Bind Group 创建时必须完整提供 Layout 声明的每个 binding 数组元�
 当前每个 Bind Group 使用独立的内部 Descriptor Pool，以优先保证回收和并发语义清晰；后续可以在
 不改变公共 API 的前提下改为分块池。
 
-第一版尚不能录制资源绑定，也不能录制 Pipeline 绑定或 Draw。Command Recorder 的 Bind Group
-命令属于 D-03B3；绘制与固定功能状态将在 D-05 补充。
+Command Recorder 可以绑定 Graphics Pipeline，并按连续组范围批量绑定 Bind Group。绑定时要求
+Bind Group 的 Layout 与 Pipeline Layout 对应组使用同一个布局对象；仅字段相同不视为兼容。
+
+第一版尚不能录制 Draw。Viewport、Scissor、Vertex/Index Buffer 和绘制命令将在 D-05 补充。
 
 ## C API 示例
 

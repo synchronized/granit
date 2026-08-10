@@ -76,6 +76,19 @@ public:
     return from_native(
         granit_command_recorder_fill_buffer(renderer_, handle_, buffer, offset, size, value));
   }
+  [[nodiscard]] result bind_graphics_pipeline(granit_graphics_pipeline pipeline) noexcept {
+    return from_native(
+        granit_command_recorder_bind_graphics_pipeline(renderer_, handle_, pipeline));
+  }
+  [[nodiscard]] result
+  bind_graphics_groups(granit_pipeline_layout layout, std::uint32_t first_group,
+                       std::span<const granit_bind_group> bind_groups) noexcept {
+    if (bind_groups.empty() || bind_groups.size() > UINT32_MAX)
+      return result::invalid_argument;
+    return from_native(granit_command_recorder_bind_graphics_groups(
+        renderer_, handle_, layout, first_group, bind_groups.data(),
+        static_cast<std::uint32_t>(bind_groups.size())));
+  }
   [[nodiscard]] result begin_rendering(const rendering_desc& desc) noexcept {
     if (desc.color_attachments.size() > GRANIT_MAX_COLOR_ATTACHMENTS) {
       return result::invalid_argument;

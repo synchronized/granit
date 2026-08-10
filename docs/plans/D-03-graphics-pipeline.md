@@ -6,7 +6,7 @@
 ## 元数据
 
 - 设计状态：已确认
-- 实现状态：D-03A、D-03B1、D-03B2 已完成，D-03B3 未开始
+- 实现状态：已完成
 - 路线图任务：D-03
 - 优先级：P0
 - 前置依赖：D-01、D-02、R-05、R-06、R-09、F-02
@@ -110,8 +110,8 @@ Shader ────────────┘
 1. [已完成，D-03B1] 定义 Bind Group Layout、Binding 类型和 Pipeline Layout 组合接口。
 2. [已完成，D-03B2] 实现内部 Descriptor Set Layout 与 Descriptor Pool 管理。
 3. [已完成，D-03B2] 实现不可变 Bind Group 创建、资源强引用和 Descriptor 写入。
-4. 为 Command Recorder 增加批量 Bind Group 绑定命令。
-5. 增加布局不兼容、缺失 binding、类型错误、跨 Renderer 和在途销毁测试。
+4. [已完成，D-03B3] 为 Command Recorder 增加 Pipeline 和批量 Bind Group 绑定命令。
+5. [已完成] 增加布局不兼容、缺失 binding、类型错误、跨 Renderer 和在途销毁测试。
 
 ## 验收标准
 

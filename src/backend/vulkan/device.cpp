@@ -101,6 +101,7 @@ granit_result vulkan_device::initialize(const vulkan_instance& instance,
       functions_.vkBeginCommandBuffer == nullptr || functions_.vkEndCommandBuffer == nullptr ||
       functions_.vkResetCommandPool == nullptr || functions_.vkCmdCopyBuffer == nullptr ||
       functions_.vkCmdFillBuffer == nullptr || functions_.vkCmdBeginRendering == nullptr ||
+      functions_.vkCmdBindPipeline == nullptr || functions_.vkCmdBindDescriptorSets == nullptr ||
       functions_.vkCmdEndRendering == nullptr || functions_.vkCreateFence == nullptr ||
       functions_.vkCmdPipelineBarrier2 == nullptr || functions_.vkDestroyFence == nullptr ||
       functions_.vkWaitForFences == nullptr || functions_.vkResetFences == nullptr ||

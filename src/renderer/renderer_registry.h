@@ -136,6 +136,14 @@ public:
                                           granit_command_recorder recorder, granit_buffer buffer,
                                           std::uint64_t offset, std::uint64_t size,
                                           std::uint32_t value);
+  [[nodiscard]] granit_result bind_graphics_pipeline(granit_renderer renderer,
+                                                     granit_command_recorder recorder,
+                                                     granit_graphics_pipeline pipeline);
+  [[nodiscard]] granit_result bind_graphics_groups(granit_renderer renderer,
+                                                   granit_command_recorder recorder,
+                                                   granit_pipeline_layout layout,
+                                                   std::uint32_t first_group,
+                                                   std::span<const granit_bind_group> bind_groups);
   [[nodiscard]] granit_result begin_rendering(granit_renderer renderer,
                                               granit_command_recorder recorder,
                                               const granit_rendering_desc& desc);

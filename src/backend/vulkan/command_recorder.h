@@ -40,6 +40,12 @@ public:
   [[nodiscard]] granit_result fill_buffer(const vulkan_device& device, VkBuffer buffer,
                                           VkDeviceSize offset, VkDeviceSize size,
                                           std::uint32_t value);
+  [[nodiscard]] granit_result bind_graphics_pipeline(const vulkan_device& device,
+                                                     VkPipeline pipeline) noexcept;
+  [[nodiscard]] granit_result
+  bind_graphics_groups(const vulkan_device& device, VkPipelineLayout layout,
+                       std::uint32_t first_group,
+                       std::span<const VkDescriptorSet> bind_groups) noexcept;
   [[nodiscard]] granit_result
   begin_rendering(const vulkan_device& device, VkRect2D area,
                   std::span<const VkRenderingAttachmentInfo> color_attachments,

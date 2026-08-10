@@ -8,6 +8,7 @@
 
 #include <granit/buffer.h>
 #include <granit/export.h>
+#include <granit/pipeline.h>
 #include <granit/render_target.h>
 #include <granit/renderer.h>
 #include <granit/result.h>
@@ -59,6 +60,11 @@ GRANIT_API granit_result granit_command_recorder_fill_buffer(granit_renderer ren
                                                              granit_command_recorder recorder,
                                                              granit_buffer buffer, uint64_t offset,
                                                              uint64_t size, uint32_t value);
+GRANIT_API granit_result granit_command_recorder_bind_graphics_pipeline(
+    granit_renderer renderer, granit_command_recorder recorder, granit_graphics_pipeline pipeline);
+GRANIT_API granit_result granit_command_recorder_bind_graphics_groups(
+    granit_renderer renderer, granit_command_recorder recorder, granit_pipeline_layout layout,
+    uint32_t first_group, const granit_bind_group* bind_groups, uint32_t bind_group_count);
 GRANIT_API granit_result granit_command_recorder_begin_rendering(granit_renderer renderer,
                                                                  granit_command_recorder recorder,
                                                                  const granit_rendering_desc* desc);
