@@ -167,7 +167,8 @@
 - **D-04 / P0 / 已完成**：基于 Vulkan 1.3 Dynamic Rendering 实现统一 Render Target 流程。
 - **[D-05](plans/D-05-draw-commands.md) / P0 / 已完成**：实现 Viewport、Scissor、Attachment
   Clear、Vertex/Index Buffer 和基础 Draw API。
-- **D-06 / P0**：提供无窗口离屏清屏、窗口清屏和最小三角形示例。
+- **[D-06](plans/D-06-examples.md) / P0 / 已完成**：提供无窗口离屏清屏、窗口清屏和最小
+  三角形示例。
 - **D-07 / P1**：实现 Compute Pipeline 与 Dispatch。
 - **D-08 / P1**：补充 Pipeline Cache、异步创建和着色器热重载边界。
 

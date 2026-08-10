@@ -65,3 +65,17 @@ cmake -S consumer -B consumer/build -DCMAKE_PREFIX_PATH=/path/to/granit/install
 ```
 
 共享库使用者还需要按照目标平台的部署规则，让运行进程能够找到 DLL、SO 或 dylib。
+
+## 运行示例
+
+顶层项目默认启用 `GRANIT_BUILD_EXAMPLES`。构建后可运行离屏清屏和离屏三角形程序；Windows
+还会生成窗口清屏程序。三角形示例使用仓库内预编译的 SPIR-V，构建示例不要求安装 Shader
+编译器：
+
+```powershell
+build/windows-clang-debug/examples/granit_offscreen_clear_example.exe
+build/windows-clang-debug/examples/granit_offscreen_triangle_example.exe
+build/windows-clang-debug/examples/granit_window_clear_example.exe
+```
+
+共享库构建下应先确保运行时能够从 `build/<preset>/src` 或安装目录找到 Granit 动态库。
