@@ -60,8 +60,8 @@ Command Recorder、Buffer Copy/Fill、自动资源屏障、Dynamic Rendering、Q
 frames-in-flight、Frame 令牌以及 Swapchain acquire/submit/present 窗口帧循环已经实现。项目
 已支持未提交 Frame 回收、窗口零尺寸暂停语义，以及 Surface/Device Lost 的窗口帧终止状态。
 Renderer 全局 Device Lost 门禁、普通 GPU 资源真实提交完成点和 Swapchain presentation 安全
-退役均已完成。下一步进入 Shader 输入与编译策略；Pipeline 尚未实现，
-具体顺序及验收标准见
+退役均已完成。Shader 的 SPIR-V 输入、离线编译、反射与错误边界已经确定；下一步实现 Shader
+模块生命周期。Pipeline 尚未实现，具体顺序及验收标准见
 [docs/roadmap.md](docs/roadmap.md)。
 
 ## 快速开始
@@ -147,6 +147,7 @@ if (granit::failed(result)) {
 - [docs/plans/R-09-render-target-attachment.md](docs/plans/R-09-render-target-attachment.md)：渲染附件计划。
 - [docs/plans/F-01-command-recorder.md](docs/plans/F-01-command-recorder.md)：命令录制器计划。
 - [docs/plans/F-02-command-recording.md](docs/plans/F-02-command-recording.md)：基础命令录制计划。
+- [docs/plans/D-01-shader-input.md](docs/plans/D-01-shader-input.md)：Shader 输入与离线编译策略。
 - [docs/plans/F-07-recovery-boundaries.md](docs/plans/F-07-recovery-boundaries.md)：窗口帧恢复边界计划。
 - [docs/renderer.md](docs/renderer.md)：公共 renderer C/C++ API 与生命周期。
 - [docs/render-target.md](docs/render-target.md)：颜色与深度/模板 Attachment 值类型。

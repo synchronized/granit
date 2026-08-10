@@ -53,6 +53,8 @@ D-03-graphics-pipeline.md
   与 present 已完成。
 - [F-07：窗口帧恢复边界](F-07-recovery-boundaries.md)——Frame 回收、零尺寸、Surface Lost 与
   Renderer 全局 Device Lost 门禁已完成。
+- [D-01：Shader 输入与离线编译策略](D-01-shader-input.md)——运行时 SPIR-V 输入、离线工具、
+  反射边界和错误语义已确认。
 
 ## 状态
 

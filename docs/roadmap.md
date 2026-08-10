@@ -158,7 +158,8 @@
 
 ### 目标与交付物
 
-- **D-01 / P0**：确定 SPIR-V 输入、离线编译和运行时错误报告策略。
+- **[D-01](plans/D-01-shader-input.md) / P0 / 已完成**：确定 SPIR-V 运行时输入、离线编译、
+  反射边界和错误报告策略。
 - **D-02 / P0**：实现 Shader 模块、反射元数据边界和生命周期。
 - **D-03 / P0**：实现资源绑定、Pipeline Layout 和 Graphics Pipeline。
 - **D-04 / P0**：基于 Vulkan 1.3 Dynamic Rendering 实现统一 Render Target 流程。
@@ -239,6 +240,6 @@
 
 ## 近期执行顺序
 
-1. `D-01` 至 `D-06`：完成 Shader、Pipeline、离屏清屏和最小三角形。
+1. `D-02` 至 `D-06`：完成 Shader、Pipeline、离屏清屏和最小三角形。
 
 若实现过程中发现前置抽象不足，应先更新本路线图和对应设计文档，再扩大公共 API。
