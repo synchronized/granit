@@ -130,6 +130,15 @@ public:
   bind_graphics_groups(vulkan_command_recorder& recorder, VkPipelineLayout layout,
                        std::uint32_t first_group,
                        std::span<const VkDescriptorSet> bind_groups) noexcept;
+  [[nodiscard]] granit_result bind_compute_pipeline(vulkan_command_recorder& recorder,
+                                                    VkPipeline pipeline) noexcept;
+  [[nodiscard]] granit_result
+  bind_compute_groups(vulkan_command_recorder& recorder, VkPipelineLayout layout,
+                      std::uint32_t first_group,
+                      std::span<const VkDescriptorSet> bind_groups) noexcept;
+  [[nodiscard]] granit_result dispatch(vulkan_command_recorder& recorder,
+                                       std::uint32_t group_count_x, std::uint32_t group_count_y,
+                                       std::uint32_t group_count_z) noexcept;
   [[nodiscard]] granit_result set_viewports(vulkan_command_recorder& recorder, std::uint32_t first,
                                             std::span<const VkViewport> viewports) noexcept;
   [[nodiscard]] granit_result set_scissors(vulkan_command_recorder& recorder, std::uint32_t first,

@@ -6,7 +6,7 @@
 ## 元数据
 
 - 设计状态：已确认
-- 实现状态：实现中（D-07A 已完成）
+- 实现状态：实现中（D-07A、D-07B 已完成）
 - 路线图任务：D-07
 - 优先级：P1
 - 前置依赖：D-01、D-02、D-03、F-04、F-05
@@ -73,7 +73,7 @@ Vulkan stage/access/layout。未来可在 Bind Group Layout 增加只读 Storage
 ## 分步实施
 
 1. **D-07A / 已完成**：Compute Pipeline 句柄、创建销毁、C++ RAII 和生命周期验证。
-2. **D-07B**：Compute Pipeline/Bind Group 命令绑定、Dispatch 状态机和 Vulkan 命令。
+2. **D-07B / 已完成**：Compute Pipeline/Bind Group 命令绑定、Dispatch 状态机和 Vulkan 命令。
 3. **D-07C**：Storage Buffer/Texture 自动访问状态、真实计算测试和最小 Compute 示例。
 
 ## 测试与验收

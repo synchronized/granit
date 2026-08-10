@@ -311,9 +311,40 @@ TEST_CASE("Compute Pipeline 校验阶段并持有 Shader 与 Layout", "[pipeline
                                                      .compute_shader = compute.native_handle()}) ==
       granit::result::success);
   const auto handle = pipeline.native_handle();
+  granit::command_recorder recorder;
+  REQUIRE(recorder.initialize(renderer.native_handle()) == granit::result::success);
+  REQUIRE(recorder.begin() == granit::result::success);
+  CHECK(recorder.dispatch(1) == granit::result::invalid_argument);
+  REQUIRE(recorder.bind_compute_pipeline(pipeline.native_handle()) == granit::result::success);
+  CHECK(recorder.dispatch(0) == granit::result::invalid_argument);
+
+  granit_texture_desc texture_desc = GRANIT_TEXTURE_DESC_INIT;
+  texture_desc.format = GRANIT_TEXTURE_FORMAT_RGBA8_UNORM;
+  texture_desc.usage = GRANIT_TEXTURE_USAGE_COLOR_ATTACHMENT_BIT;
+  granit_texture texture = GRANIT_NULL_HANDLE;
+  granit_texture_view view = GRANIT_NULL_HANDLE;
+  REQUIRE(granit_texture_create_with_default_view(renderer.native_handle(), &texture_desc, &texture,
+                                                  &view) == GRANIT_SUCCESS);
+  const granit::color_attachment_desc color{.view = view};
+  const granit::rendering_desc rendering{.color_attachments = std::span{&color, 1},
+                                         .area = {0, 0, 1, 1}};
+  REQUIRE(recorder.begin_rendering(rendering) == granit::result::success);
+  CHECK(recorder.dispatch(1) == granit::result::invalid_argument);
+  REQUIRE(recorder.end_rendering() == granit::result::success);
+  REQUIRE(recorder.dispatch(1) == granit::result::success);
   REQUIRE(compute.reset() == granit::result::success);
   REQUIRE(layout.reset() == granit::result::success);
   REQUIRE(pipeline.reset() == granit::result::success);
+  REQUIRE(recorder.end() == granit::result::success);
+  REQUIRE(recorder.submit() == granit::result::success);
+  REQUIRE(recorder.reset() == granit::result::success);
+  REQUIRE(recorder.begin() == granit::result::success);
+  CHECK(recorder.dispatch(1) == granit::result::invalid_argument);
+  REQUIRE(recorder.end() == granit::result::success);
+  REQUIRE(recorder.submit() == granit::result::success);
+  REQUIRE(recorder.reset() == granit::result::success);
+  REQUIRE(granit_texture_view_destroy(renderer.native_handle(), view) == GRANIT_SUCCESS);
+  REQUIRE(granit_texture_destroy(renderer.native_handle(), texture) == GRANIT_SUCCESS);
   CHECK(granit_compute_pipeline_destroy(renderer.native_handle(), handle) ==
         GRANIT_ERROR_INVALID_HANDLE);
 }

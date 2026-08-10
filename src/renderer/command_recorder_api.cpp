@@ -165,6 +165,57 @@ extern "C" granit_result granit_command_recorder_bind_graphics_groups(
   }
 }
 
+extern "C" granit_result granit_command_recorder_bind_compute_pipeline(
+    granit_renderer renderer, granit_command_recorder recorder, granit_compute_pipeline pipeline) {
+  if (renderer == GRANIT_NULL_HANDLE || recorder == GRANIT_NULL_HANDLE ||
+      pipeline == GRANIT_NULL_HANDLE)
+    return GRANIT_ERROR_INVALID_HANDLE;
+  try {
+    return granit::detail::renderer_registry::instance().bind_compute_pipeline(renderer, recorder,
+                                                                               pipeline);
+  } catch (const std::bad_alloc&) {
+    return GRANIT_ERROR_OUT_OF_MEMORY;
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+extern "C" granit_result granit_command_recorder_bind_compute_groups(
+    granit_renderer renderer, granit_command_recorder recorder, granit_pipeline_layout layout,
+    uint32_t first_group, const granit_bind_group* bind_groups, uint32_t bind_group_count) {
+  if (renderer == GRANIT_NULL_HANDLE || recorder == GRANIT_NULL_HANDLE ||
+      layout == GRANIT_NULL_HANDLE)
+    return GRANIT_ERROR_INVALID_HANDLE;
+  if (!bind_groups || bind_group_count == 0 || first_group > 8 || bind_group_count > 8 ||
+      first_group + bind_group_count > 8)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  try {
+    return granit::detail::renderer_registry::instance().bind_compute_groups(
+        renderer, recorder, layout, first_group, {bind_groups, bind_group_count});
+  } catch (const std::bad_alloc&) {
+    return GRANIT_ERROR_OUT_OF_MEMORY;
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+extern "C" granit_result granit_command_recorder_dispatch(granit_renderer renderer,
+                                                          granit_command_recorder recorder,
+                                                          uint32_t group_count_x,
+                                                          uint32_t group_count_y,
+                                                          uint32_t group_count_z) {
+  if (renderer == GRANIT_NULL_HANDLE || recorder == GRANIT_NULL_HANDLE)
+    return GRANIT_ERROR_INVALID_HANDLE;
+  if (group_count_x == 0 || group_count_y == 0 || group_count_z == 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  try {
+    return granit::detail::renderer_registry::instance().dispatch(renderer, recorder, group_count_x,
+                                                                  group_count_y, group_count_z);
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
 extern "C" granit_result granit_command_recorder_set_viewports(granit_renderer renderer,
                                                                granit_command_recorder recorder,
                                                                uint32_t first_viewport,

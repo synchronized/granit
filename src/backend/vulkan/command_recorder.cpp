@@ -56,6 +56,7 @@ granit_result vulkan_command_recorder::begin(const vulkan_device& device) noexce
   if (result == VK_SUCCESS) {
     state_ = command_recorder_state::recording;
     graphics_pipeline_bound_ = false;
+    compute_pipeline_bound_ = false;
     viewport_set_ = false;
     scissor_set_ = false;
     index_buffer_bound_ = false;
@@ -198,6 +199,41 @@ granit_result vulkan_command_recorder::bind_graphics_groups(
   device.functions().vkCmdBindDescriptorSets(
       command_buffer_, VK_PIPELINE_BIND_POINT_GRAPHICS, layout, first_group,
       static_cast<std::uint32_t>(bind_groups.size()), bind_groups.data(), 0, nullptr);
+  return GRANIT_SUCCESS;
+}
+
+granit_result vulkan_command_recorder::bind_compute_pipeline(const vulkan_device& device,
+                                                             VkPipeline pipeline) noexcept {
+  if (state_ != command_recorder_state::recording || inside_rendering_ ||
+      pipeline == VK_NULL_HANDLE)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  device.functions().vkCmdBindPipeline(command_buffer_, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline);
+  compute_pipeline_bound_ = true;
+  return GRANIT_SUCCESS;
+}
+
+granit_result vulkan_command_recorder::bind_compute_groups(
+    const vulkan_device& device, VkPipelineLayout layout, std::uint32_t first_group,
+    std::span<const VkDescriptorSet> bind_groups) noexcept {
+  if (state_ != command_recorder_state::recording || inside_rendering_ ||
+      layout == VK_NULL_HANDLE || bind_groups.empty())
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  device.functions().vkCmdBindDescriptorSets(
+      command_buffer_, VK_PIPELINE_BIND_POINT_COMPUTE, layout, first_group,
+      static_cast<std::uint32_t>(bind_groups.size()), bind_groups.data(), 0, nullptr);
+  return GRANIT_SUCCESS;
+}
+
+granit_result vulkan_command_recorder::dispatch(const vulkan_device& device,
+                                                std::uint32_t group_count_x,
+                                                std::uint32_t group_count_y,
+                                                std::uint32_t group_count_z) noexcept {
+  const auto& limits = device.properties().limits.maxComputeWorkGroupCount;
+  if (state_ != command_recorder_state::recording || inside_rendering_ ||
+      !compute_pipeline_bound_ || group_count_x == 0 || group_count_y == 0 || group_count_z == 0 ||
+      group_count_x > limits[0] || group_count_y > limits[1] || group_count_z > limits[2])
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  device.functions().vkCmdDispatch(command_buffer_, group_count_x, group_count_y, group_count_z);
   return GRANIT_SUCCESS;
 }
 

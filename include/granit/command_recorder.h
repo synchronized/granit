@@ -90,6 +90,16 @@ GRANIT_API granit_result granit_command_recorder_bind_graphics_pipeline(
 GRANIT_API granit_result granit_command_recorder_bind_graphics_groups(
     granit_renderer renderer, granit_command_recorder recorder, granit_pipeline_layout layout,
     uint32_t first_group, const granit_bind_group* bind_groups, uint32_t bind_group_count);
+GRANIT_API granit_result granit_command_recorder_bind_compute_pipeline(
+    granit_renderer renderer, granit_command_recorder recorder, granit_compute_pipeline pipeline);
+GRANIT_API granit_result granit_command_recorder_bind_compute_groups(
+    granit_renderer renderer, granit_command_recorder recorder, granit_pipeline_layout layout,
+    uint32_t first_group, const granit_bind_group* bind_groups, uint32_t bind_group_count);
+GRANIT_API granit_result granit_command_recorder_dispatch(granit_renderer renderer,
+                                                          granit_command_recorder recorder,
+                                                          uint32_t group_count_x,
+                                                          uint32_t group_count_y,
+                                                          uint32_t group_count_z);
 GRANIT_API granit_result granit_command_recorder_set_viewports(granit_renderer renderer,
                                                                granit_command_recorder recorder,
                                                                uint32_t first_viewport,

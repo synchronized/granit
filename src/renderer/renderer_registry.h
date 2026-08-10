@@ -149,6 +149,17 @@ public:
                                                    granit_pipeline_layout layout,
                                                    std::uint32_t first_group,
                                                    std::span<const granit_bind_group> bind_groups);
+  [[nodiscard]] granit_result bind_compute_pipeline(granit_renderer renderer,
+                                                    granit_command_recorder recorder,
+                                                    granit_compute_pipeline pipeline);
+  [[nodiscard]] granit_result bind_compute_groups(granit_renderer renderer,
+                                                  granit_command_recorder recorder,
+                                                  granit_pipeline_layout layout,
+                                                  std::uint32_t first_group,
+                                                  std::span<const granit_bind_group> bind_groups);
+  [[nodiscard]] granit_result dispatch(granit_renderer renderer, granit_command_recorder recorder,
+                                       std::uint32_t group_count_x, std::uint32_t group_count_y,
+                                       std::uint32_t group_count_z);
   [[nodiscard]] granit_result set_viewports(granit_renderer renderer,
                                             granit_command_recorder recorder, std::uint32_t first,
                                             std::span<const granit_viewport> viewports);

@@ -97,6 +97,23 @@ public:
         renderer_, handle_, layout, first_group, bind_groups.data(),
         static_cast<std::uint32_t>(bind_groups.size())));
   }
+  [[nodiscard]] result bind_compute_pipeline(granit_compute_pipeline pipeline) noexcept {
+    return from_native(granit_command_recorder_bind_compute_pipeline(renderer_, handle_, pipeline));
+  }
+  [[nodiscard]] result
+  bind_compute_groups(granit_pipeline_layout layout, std::uint32_t first_group,
+                      std::span<const granit_bind_group> bind_groups) noexcept {
+    if (bind_groups.empty() || bind_groups.size() > UINT32_MAX)
+      return result::invalid_argument;
+    return from_native(granit_command_recorder_bind_compute_groups(
+        renderer_, handle_, layout, first_group, bind_groups.data(),
+        static_cast<std::uint32_t>(bind_groups.size())));
+  }
+  [[nodiscard]] result dispatch(std::uint32_t group_count_x, std::uint32_t group_count_y = 1,
+                                std::uint32_t group_count_z = 1) noexcept {
+    return from_native(granit_command_recorder_dispatch(renderer_, handle_, group_count_x,
+                                                        group_count_y, group_count_z));
+  }
   [[nodiscard]] result set_viewports(std::uint32_t first,
                                      std::span<const viewport> viewports) noexcept {
     if (viewports.empty() || viewports.size() > UINT32_MAX)

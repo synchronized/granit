@@ -46,6 +46,15 @@ public:
   bind_graphics_groups(const vulkan_device& device, VkPipelineLayout layout,
                        std::uint32_t first_group,
                        std::span<const VkDescriptorSet> bind_groups) noexcept;
+  [[nodiscard]] granit_result bind_compute_pipeline(const vulkan_device& device,
+                                                    VkPipeline pipeline) noexcept;
+  [[nodiscard]] granit_result
+  bind_compute_groups(const vulkan_device& device, VkPipelineLayout layout,
+                      std::uint32_t first_group,
+                      std::span<const VkDescriptorSet> bind_groups) noexcept;
+  [[nodiscard]] granit_result dispatch(const vulkan_device& device, std::uint32_t group_count_x,
+                                       std::uint32_t group_count_y,
+                                       std::uint32_t group_count_z) noexcept;
   [[nodiscard]] granit_result set_viewports(const vulkan_device& device, std::uint32_t first,
                                             std::span<const VkViewport> viewports) noexcept;
   [[nodiscard]] granit_result set_scissors(const vulkan_device& device, std::uint32_t first,
@@ -101,6 +110,7 @@ private:
   command_recorder_state state_{command_recorder_state::invalid};
   bool inside_rendering_{};
   bool graphics_pipeline_bound_{};
+  bool compute_pipeline_bound_{};
   bool viewport_set_{};
   bool scissor_set_{};
   bool index_buffer_bound_{};

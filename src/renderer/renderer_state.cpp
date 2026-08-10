@@ -851,6 +851,27 @@ renderer_state::bind_graphics_groups(vulkan_command_recorder& recorder, VkPipeli
   return recorder.bind_graphics_groups(device_, layout, first_group, bind_groups);
 }
 
+granit_result renderer_state::bind_compute_pipeline(vulkan_command_recorder& recorder,
+                                                    VkPipeline pipeline) noexcept {
+  return device_lost() ? GRANIT_ERROR_DEVICE_LOST
+                       : recorder.bind_compute_pipeline(device_, pipeline);
+}
+
+granit_result
+renderer_state::bind_compute_groups(vulkan_command_recorder& recorder, VkPipelineLayout layout,
+                                    std::uint32_t first_group,
+                                    std::span<const VkDescriptorSet> bind_groups) noexcept {
+  return device_lost() ? GRANIT_ERROR_DEVICE_LOST
+                       : recorder.bind_compute_groups(device_, layout, first_group, bind_groups);
+}
+
+granit_result renderer_state::dispatch(vulkan_command_recorder& recorder,
+                                       std::uint32_t group_count_x, std::uint32_t group_count_y,
+                                       std::uint32_t group_count_z) noexcept {
+  return device_lost() ? GRANIT_ERROR_DEVICE_LOST
+                       : recorder.dispatch(device_, group_count_x, group_count_y, group_count_z);
+}
+
 granit_result renderer_state::set_viewports(vulkan_command_recorder& recorder, std::uint32_t first,
                                             std::span<const VkViewport> viewports) noexcept {
   return device_lost() ? GRANIT_ERROR_DEVICE_LOST

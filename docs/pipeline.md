@@ -58,7 +58,8 @@ granit_compute_pipeline_create(renderer, &compute_desc, &compute_pipeline);
 ```
 
 Compute Shader 必须以 `GRANIT_SHADER_STAGE_COMPUTE` 创建。Pipeline 会保持 Layout 和 Shader 的
-内部生命周期；用户可以在 Pipeline 创建后释放对应公共句柄。Dispatch 命令将在 D-07B 接入。
+内部生命周期；用户可以在 Pipeline 创建后释放对应公共句柄。Command Recorder 支持绑定 Compute
+Pipeline、Compute Bind Group 并直接 Dispatch；Dispatch 只能在 Dynamic Rendering 区域外执行。
 
 创建函数会复制格式数组。Pipeline 和 Layout 均由创建它们的 Renderer 管理，不能跨 Renderer
 混用或销毁。
