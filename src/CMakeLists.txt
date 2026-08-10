@@ -58,6 +58,7 @@ target_sources(
     renderer/renderer_state.cpp
     renderer/renderer_state.h
     renderer/sampler_api.cpp
+    renderer/shader_api.cpp
     renderer/surface_api.cpp
     renderer/swapchain_api.cpp
     renderer/texture_api.cpp
@@ -86,6 +87,8 @@ target_sources(
       "${PROJECT_SOURCE_DIR}/include/granit/result.hpp"
       "${PROJECT_SOURCE_DIR}/include/granit/sampler.h"
       "${PROJECT_SOURCE_DIR}/include/granit/sampler.hpp"
+      "${PROJECT_SOURCE_DIR}/include/granit/shader.h"
+      "${PROJECT_SOURCE_DIR}/include/granit/shader.hpp"
       "${PROJECT_SOURCE_DIR}/include/granit/surface.h"
       "${PROJECT_SOURCE_DIR}/include/granit/surface.hpp"
       "${PROJECT_SOURCE_DIR}/include/granit/texture.h"

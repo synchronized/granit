@@ -9,6 +9,7 @@
 #include <memory>
 #include <mutex>
 #include <span>
+#include <string>
 #include <string_view>
 #include <unordered_map>
 #include <vector>
@@ -17,6 +18,7 @@
 #include <granit/command_recorder.h>
 #include <granit/renderer.h>
 #include <granit/sampler.h>
+#include <granit/shader.h>
 #include <granit/surface.h>
 #include <granit/swapchain.h>
 #include <granit/texture.h>
@@ -86,6 +88,10 @@ public:
                                              const granit_sampler_desc& desc,
                                              granit_sampler& sampler);
   [[nodiscard]] granit_result destroy_sampler(granit_renderer renderer, granit_sampler sampler);
+  [[nodiscard]] granit_result create_shader(granit_renderer renderer, granit_shader_stage stage,
+                                            std::span<const std::uint32_t> code,
+                                            std::string_view entry_point, granit_shader& shader);
+  [[nodiscard]] granit_result destroy_shader(granit_renderer renderer, granit_shader shader);
   [[nodiscard]] granit_result create_command_recorder(granit_renderer renderer,
                                                       granit_command_recorder& recorder);
   [[nodiscard]] granit_result begin_command_recorder(granit_renderer renderer,
@@ -192,6 +198,14 @@ private:
     VkSampler native{VK_NULL_HANDLE};
     ~sampler_record();
   };
+  struct shader_record {
+    resource_metadata metadata;
+    std::shared_ptr<renderer_state> renderer;
+    VkShaderModule native{VK_NULL_HANDLE};
+    granit_shader_stage stage{};
+    std::string entry_point;
+    ~shader_record();
+  };
   struct command_recorder_record {
     resource_metadata metadata;
     std::shared_ptr<renderer_state> renderer;
@@ -214,6 +228,7 @@ private:
   std::unordered_map<granit_texture, std::shared_ptr<texture_record>> textures_;
   std::unordered_map<granit_texture_view, std::shared_ptr<texture_view_record>> texture_views_;
   std::unordered_map<granit_sampler, std::shared_ptr<sampler_record>> samplers_;
+  std::unordered_map<granit_shader, std::shared_ptr<shader_record>> shaders_;
   std::unordered_map<granit_command_recorder, std::shared_ptr<command_recorder_record>>
       command_recorders_;
   std::unordered_map<granit_frame, std::shared_ptr<frame_record>> frames_;

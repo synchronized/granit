@@ -11,8 +11,8 @@ namespace granit::detail {
 namespace {
 
 constexpr std::array<const char*, static_cast<std::size_t>(lifecycle_resource_type::count)>
-    resource_names{"Buffer",  "Texture",   "TextureView",    "Sampler",
-                   "Surface", "Swapchain", "CommandRecorder"};
+    resource_names{"Buffer", "Texture", "TextureView", "Sampler",
+                   "Shader", "Surface", "Swapchain",   "CommandRecorder"};
 
 constexpr std::size_t to_index(lifecycle_resource_type type) noexcept {
   return static_cast<std::size_t>(type);

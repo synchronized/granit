@@ -60,8 +60,8 @@ Command Recorder、Buffer Copy/Fill、自动资源屏障、Dynamic Rendering、Q
 frames-in-flight、Frame 令牌以及 Swapchain acquire/submit/present 窗口帧循环已经实现。项目
 已支持未提交 Frame 回收、窗口零尺寸暂停语义，以及 Surface/Device Lost 的窗口帧终止状态。
 Renderer 全局 Device Lost 门禁、普通 GPU 资源真实提交完成点和 Swapchain presentation 安全
-退役均已完成。Shader 的 SPIR-V 输入、离线编译、反射与错误边界已经确定；下一步实现 Shader
-模块生命周期。Pipeline 尚未实现，具体顺序及验收标准见
+退役均已完成。Shader 的 SPIR-V 输入、Vulkan Module、句柄生命周期和 C++ RAII 已经实现；
+下一步确定资源绑定、Pipeline Layout 与 Graphics Pipeline。具体顺序及验收标准见
 [docs/roadmap.md](docs/roadmap.md)。
 
 ## 快速开始
@@ -154,6 +154,7 @@ if (granit::failed(result)) {
 - [docs/command-recorder.md](docs/command-recorder.md)：Command Recorder 状态与线程模型。
 - [docs/resource-types.md](docs/resource-types.md)：Buffer、Texture、View 和 Sampler 值类型。
 - [docs/sampler.md](docs/sampler.md)：Sampler 状态、能力限制和生命周期。
+- [docs/shader.md](docs/shader.md)：SPIR-V Shader 创建、校验和生命周期。
 - [docs/surface.md](docs/surface.md)：窗口 Surface、平台句柄和生命周期。
 - [docs/texture.md](docs/texture.md)：Texture、Texture View 和父子生命周期。
 - [docs/swapchain.md](docs/swapchain.md)：交换链配置、重建和生命周期。

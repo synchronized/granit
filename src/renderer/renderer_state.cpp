@@ -510,6 +510,23 @@ void renderer_state::destroy_native_sampler(VkSampler sampler) noexcept {
   }
 }
 
+granit_result renderer_state::create_native_shader(std::span<const std::uint32_t> code,
+                                                   VkShaderModule& shader) noexcept {
+  if (device_lost())
+    return GRANIT_ERROR_DEVICE_LOST;
+  VkShaderModuleCreateInfo info{};
+  info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+  info.codeSize = code.size_bytes();
+  info.pCode = code.data();
+  return observe_device_result(map_vulkan_result(
+      device_.functions().vkCreateShaderModule(device_.native_handle(), &info, nullptr, &shader)));
+}
+
+void renderer_state::destroy_native_shader(VkShaderModule shader) noexcept {
+  if (shader != VK_NULL_HANDLE)
+    device_.functions().vkDestroyShaderModule(device_.native_handle(), shader, nullptr);
+}
+
 granit_result
 renderer_state::create_native_command_recorder(vulkan_command_recorder& recorder) noexcept {
   if (device_lost())

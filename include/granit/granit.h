@@ -6,17 +6,18 @@
 
 #include <stdint.h>
 
-#include <granit/export.h>
 #include <granit/buffer.h>
 #include <granit/command_recorder.h>
+#include <granit/export.h>
 #include <granit/render_target.h>
 #include <granit/renderer.h>
 #include <granit/resource_types.h>
 #include <granit/result.h>
 #include <granit/sampler.h>
+#include <granit/shader.h>
 #include <granit/surface.h>
-#include <granit/texture.h>
 #include <granit/swapchain.h>
+#include <granit/texture.h>
 #include <granit/types.h>
 #include <granit/version.h>
 

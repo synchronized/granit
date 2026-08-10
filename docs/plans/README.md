@@ -55,6 +55,8 @@ D-03-graphics-pipeline.md
   Renderer 全局 Device Lost 门禁已完成。
 - [D-01：Shader 输入与离线编译策略](D-01-shader-input.md)——运行时 SPIR-V 输入、离线工具、
   反射边界和错误语义已确认。
+- [D-02：Shader Module 生命周期](D-02-shader-module.md)——SPIR-V 校验、Shader 句柄、Vulkan
+  Module 和 RAII 已完成。
 
 ## 状态
 

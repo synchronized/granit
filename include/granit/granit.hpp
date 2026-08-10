@@ -6,17 +6,18 @@
 
 #include <cstdint>
 
-#include <granit/granit.h>
 #include <granit/buffer.hpp>
 #include <granit/command_recorder.hpp>
+#include <granit/granit.h>
 #include <granit/render_target.hpp>
 #include <granit/renderer.hpp>
 #include <granit/resource_types.hpp>
 #include <granit/result.hpp>
 #include <granit/sampler.hpp>
+#include <granit/shader.hpp>
 #include <granit/surface.hpp>
-#include <granit/texture.hpp>
 #include <granit/swapchain.hpp>
+#include <granit/texture.hpp>
 #include <granit/types.hpp>
 
 namespace granit {

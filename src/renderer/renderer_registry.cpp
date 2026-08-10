@@ -126,6 +126,11 @@ renderer_registry::sampler_record::~sampler_record() {
     renderer->destroy_native_sampler(native);
 }
 
+renderer_registry::shader_record::~shader_record() {
+  if (renderer)
+    renderer->destroy_native_shader(native);
+}
+
 renderer_registry::command_recorder_record::~command_recorder_record() {
   if (renderer) {
     renderer->destroy_native_command_recorder(native);
@@ -174,6 +179,7 @@ granit_result renderer_registry::destroy(granit_renderer renderer) {
   std::vector<std::shared_ptr<texture_view_record>> native_texture_views;
   std::vector<std::shared_ptr<texture_record>> native_textures;
   std::vector<std::shared_ptr<sampler_record>> native_samplers;
+  std::vector<std::shared_ptr<shader_record>> native_shaders;
   {
     std::lock_guard lock{mutex_};
     if (handles_.find(renderer, resource_type::renderer, 0) == nullptr) {
@@ -207,6 +213,12 @@ granit_result renderer_registry::destroy(granit_renderer renderer) {
       for (const auto& [handle, record] : samplers_) {
         if (record->renderer == state) {
           lifecycle.add(lifecycle_resource_type::sampler, handle,
+                        record->metadata.creation_sequence);
+        }
+      }
+      for (const auto& [handle, record] : shaders_) {
+        if (record->renderer == state) {
+          lifecycle.add(lifecycle_resource_type::shader, handle,
                         record->metadata.creation_sequence);
         }
       }
@@ -254,6 +266,15 @@ granit_result renderer_registry::destroy(granit_renderer renderer) {
         sampler = samplers_.erase(sampler);
       } else {
         ++sampler;
+      }
+    }
+    for (auto shader = shaders_.begin(); shader != shaders_.end();) {
+      if (shader->second->renderer == state) {
+        native_shaders.push_back(std::move(shader->second));
+        static_cast<void>(handles_.erase(shader->first, resource_type::shader, state->domain()));
+        shader = shaders_.erase(shader);
+      } else {
+        ++shader;
       }
     }
     for (auto view = texture_views_.begin(); view != texture_views_.end();) {
@@ -319,6 +340,7 @@ granit_result renderer_registry::destroy(granit_renderer renderer) {
   native_texture_views.clear();
   native_textures.clear();
   native_samplers.clear();
+  native_shaders.clear();
   // 析构可能等待 GPU 空闲，不应占用全局 registry 锁。
   state.reset();
   return GRANIT_SUCCESS;
@@ -1381,6 +1403,70 @@ granit_result renderer_registry::destroy_sampler(granit_renderer renderer, grani
     record = std::move(found->second);
     samplers_.erase(found);
     static_cast<void>(handles_.erase(sampler, resource_type::sampler, state->domain()));
+  }
+  auto state = record->renderer;
+  state->retire_resource(record->metadata.last_use_serial.load(), retirement_order::resource,
+                         record);
+  record.reset();
+  static_cast<void>(state->collect_retired());
+  return GRANIT_SUCCESS;
+}
+
+granit_result renderer_registry::create_shader(granit_renderer renderer, granit_shader_stage stage,
+                                               std::span<const std::uint32_t> code,
+                                               std::string_view entry_point,
+                                               granit_shader& shader) {
+  try {
+    auto state = acquire(renderer);
+    if (!state)
+      return GRANIT_ERROR_INVALID_HANDLE;
+    auto record = std::make_shared<shader_record>();
+    record->renderer = state;
+    record->stage = stage;
+    record->entry_point.assign(entry_point);
+    const auto result = state->create_native_shader(code, record->native);
+    if (result != GRANIT_SUCCESS)
+      return result;
+    std::lock_guard lock{mutex_};
+    const auto found = renderers_.find(renderer);
+    if (found == renderers_.end() || found->second != state)
+      return GRANIT_ERROR_INVALID_HANDLE;
+    record->metadata.creation_sequence = next_creation_sequence_++;
+    const auto handle = handles_.insert(record.get(), resource_type::shader, state->domain());
+    if (handle == GRANIT_NULL_HANDLE)
+      return GRANIT_ERROR_OUT_OF_MEMORY;
+    try {
+      shaders_.emplace(handle, std::move(record));
+    } catch (...) {
+      static_cast<void>(handles_.erase(handle, resource_type::shader, state->domain()));
+      throw;
+    }
+    shader = handle;
+    return GRANIT_SUCCESS;
+  } catch (const std::bad_alloc&) {
+    return GRANIT_ERROR_OUT_OF_MEMORY;
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+granit_result renderer_registry::destroy_shader(granit_renderer renderer, granit_shader shader) {
+  std::shared_ptr<shader_record> record;
+  {
+    std::lock_guard lock{mutex_};
+    const auto found_renderer = renderers_.find(renderer);
+    if (found_renderer == renderers_.end() ||
+        handles_.find(renderer, resource_type::renderer, 0) == nullptr)
+      return GRANIT_ERROR_INVALID_HANDLE;
+    const auto& state = found_renderer->second;
+    if (handles_.find(shader, resource_type::shader, state->domain()) == nullptr)
+      return GRANIT_ERROR_INVALID_HANDLE;
+    const auto found = shaders_.find(shader);
+    if (found == shaders_.end() || found->second->renderer != state)
+      return GRANIT_ERROR_INVALID_HANDLE;
+    record = std::move(found->second);
+    shaders_.erase(found);
+    static_cast<void>(handles_.erase(shader, resource_type::shader, state->domain()));
   }
   auto state = record->renderer;
   state->retire_resource(record->metadata.last_use_serial.load(), retirement_order::resource,

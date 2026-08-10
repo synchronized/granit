@@ -72,6 +72,9 @@ public:
   [[nodiscard]] granit_result create_native_sampler(const granit_sampler_desc& desc,
                                                     VkSampler& sampler) noexcept;
   void destroy_native_sampler(VkSampler sampler) noexcept;
+  [[nodiscard]] granit_result create_native_shader(std::span<const std::uint32_t> code,
+                                                   VkShaderModule& shader) noexcept;
+  void destroy_native_shader(VkShaderModule shader) noexcept;
   [[nodiscard]] granit_result
   create_native_command_recorder(vulkan_command_recorder& recorder) noexcept;
   [[nodiscard]] granit_result begin_command_recorder(vulkan_command_recorder& recorder) noexcept;

@@ -25,7 +25,7 @@
 | 二、Vulkan 与窗口输出基础 | 基本完成 | Renderer、Win32 Surface、Swapchain 生命周期已实现 |
 | 三、GPU 资源基础 | 进行中 | 内存分配与资源值类型已完成，资源生命周期尚未实现 |
 | 四、命令与帧同步 | 进行中 | Command Recorder、基础命令和内部帧同步已实现 |
-| 五、基础渲染 | 未开始 | Shader、Pipeline 和 Dynamic Rendering 尚未实现 |
+| 五、基础渲染 | 进行中 | Shader Module 已实现，Pipeline 与绘制接口尚未实现 |
 | 六、多线程与性能 | 未开始 | 在真实访问模式形成后细化 |
 | 七、可选高层渲染模块 | 暂缓 | 不阻塞核心库完成，保持独立分层 |
 | 八、稳定化与跨平台 | 持续进行 | Linux 窗口系统和 ABI 稳定策略留待后续 |
@@ -160,7 +160,8 @@
 
 - **[D-01](plans/D-01-shader-input.md) / P0 / 已完成**：确定 SPIR-V 运行时输入、离线编译、
   反射边界和错误报告策略。
-- **D-02 / P0**：实现 Shader 模块、反射元数据边界和生命周期。
+- **[D-02](plans/D-02-shader-module.md) / P0 / 已完成**：实现 Shader Module、输入校验、句柄
+  生命周期和 C++ RAII；反射资产格式随 D-03 最小需求确定。
 - **D-03 / P0**：实现资源绑定、Pipeline Layout 和 Graphics Pipeline。
 - **D-04 / P0**：基于 Vulkan 1.3 Dynamic Rendering 实现统一 Render Target 流程。
 - **D-05 / P0**：实现 Viewport、Scissor、Clear、Vertex/Index Buffer 和基础 Draw API。
@@ -240,6 +241,6 @@
 
 ## 近期执行顺序
 
-1. `D-02` 至 `D-06`：完成 Shader、Pipeline、离屏清屏和最小三角形。
+1. `D-03` 至 `D-06`：完成 Pipeline、离屏清屏和最小三角形。
 
 若实现过程中发现前置抽象不足，应先更新本路线图和对应设计文档，再扩大公共 API。
