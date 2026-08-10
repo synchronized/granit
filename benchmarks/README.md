@@ -33,6 +33,9 @@ cmake --build --preset windows-clang-release --target granit_benchmarks
 - `invalid_lookup`：并发执行会经过 Registry 全局锁的无效 Buffer 句柄查询。
 - `create_destroy`：在同一 Renderer 上并发创建和销毁独立 upload Buffer。
 - `independent_write`：每个线程写入自己的 upload Buffer，覆盖 Registry 查找和资源级锁路径。
+- `recorder_create_destroy`：并发创建和销毁独立 Command Recorder。
+- `empty_record`：复用独立 Recorder 执行 begin/end/reset 空录制周期。
+- `buffer_record`：每个录制周期记录可配置数量的 Fill Buffer 命令，再 end/reset。
 
 这些场景不对同一个 Buffer 进行无序并发写入，因为那不属于公开 API 支持的工作流。Renderer 环境
 不可用时程序返回非零状态并在标准错误中说明原因。

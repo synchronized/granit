@@ -2,6 +2,7 @@
 // Copyright (c) 2026 Granit contributors
 
 #include <granit/renderer/buffer.h>
+#include <granit/renderer/command_recorder.h>
 #include <granit/renderer/renderer.h>
 
 #include <algorithm>
@@ -31,12 +32,21 @@ struct options {
   std::uint32_t samples{10};
   std::uint32_t warmup{2};
   std::uint64_t buffer_size{4'096};
+  std::uint32_t commands{10};
 };
 
-enum class benchmark_case { invalid_lookup, create_destroy, independent_write };
+enum class benchmark_case {
+  invalid_lookup,
+  create_destroy,
+  independent_write,
+  recorder_create_destroy,
+  empty_record,
+  buffer_record
+};
 
 struct thread_context {
   granit_buffer buffer{GRANIT_NULL_HANDLE};
+  granit_command_recorder recorder{GRANIT_NULL_HANDLE};
   std::vector<std::byte> data;
 };
 
@@ -44,12 +54,14 @@ std::atomic_uint64_t checksum{};
 
 void print_help() {
   std::cout << "用法：granit_renderer_benchmarks [选项]\n"
-               "  --case <all|invalid_lookup|create_destroy|independent_write>\n"
+               "  --case <all|invalid_lookup|create_destroy|independent_write|\n"
+               "          recorder_create_destroy|empty_record|buffer_record>\n"
                "  --threads <数量>       工作线程数\n"
                "  --iterations <数量>    每个线程、每个样本的操作数\n"
                "  --samples <数量>       正式样本数\n"
                "  --warmup <数量>        预热样本数\n"
-               "  --buffer-size <字节>   Buffer 大小\n";
+               "  --buffer-size <字节>   Buffer 大小\n"
+               "  --commands <数量>      每次 Buffer 录制的命令数\n";
 }
 
 template <typename Value> bool parse_integer(std::string_view text, Value& value) {
@@ -90,6 +102,9 @@ bool parse_options(int argc, char** argv, options& result) {
     } else if (argument == "--buffer-size") {
       if (!parse_integer(value, result.buffer_size))
         return false;
+    } else if (argument == "--commands") {
+      if (!parse_integer(value, result.commands))
+        return false;
     } else {
       std::cerr << "未知选项：" << argument << '\n';
       return false;
@@ -97,6 +112,10 @@ bool parse_options(int argc, char** argv, options& result) {
   }
   if (result.threads > std::max(1U, std::thread::hardware_concurrency())) {
     std::cerr << "线程数超过当前机器逻辑处理器数量\n";
+    return false;
+  }
+  if (result.buffer_size % 4 != 0) {
+    std::cerr << "Buffer 大小必须是 4 的倍数\n";
     return false;
   }
   return true;
@@ -113,16 +132,35 @@ granit_result create_upload_buffer(granit_renderer renderer, std::uint64_t size,
 
 void destroy_contexts(granit_renderer renderer, std::vector<thread_context>& contexts);
 
+granit_result create_recorder(granit_renderer renderer, granit_command_recorder& recorder) {
+  const granit_command_recorder_desc desc = GRANIT_COMMAND_RECORDER_DESC_INIT;
+  return granit_command_recorder_create(renderer, &desc, &recorder);
+}
+
 std::vector<thread_context> make_contexts(granit_renderer renderer, benchmark_case selected,
                                           const options& config) {
   std::vector<thread_context> contexts(config.threads);
-  if (selected != benchmark_case::independent_write)
-    return contexts;
   for (auto& context : contexts) {
-    context.data.resize(static_cast<std::size_t>(config.buffer_size), std::byte{0x5a});
-    if (create_upload_buffer(renderer, config.buffer_size, context.buffer) != GRANIT_SUCCESS) {
+    if ((selected == benchmark_case::empty_record || selected == benchmark_case::buffer_record) &&
+        create_recorder(renderer, context.recorder) != GRANIT_SUCCESS) {
       destroy_contexts(renderer, contexts);
       return {};
+    }
+    if (selected == benchmark_case::independent_write) {
+      context.data.resize(static_cast<std::size_t>(config.buffer_size), std::byte{0x5a});
+      if (create_upload_buffer(renderer, config.buffer_size, context.buffer) != GRANIT_SUCCESS) {
+        destroy_contexts(renderer, contexts);
+        return {};
+      }
+    } else if (selected == benchmark_case::buffer_record) {
+      granit_buffer_desc desc = GRANIT_BUFFER_DESC_INIT;
+      desc.usage = GRANIT_BUFFER_USAGE_TRANSFER_DESTINATION_BIT;
+      desc.memory_location = GRANIT_MEMORY_LOCATION_DEVICE;
+      desc.size = config.buffer_size;
+      if (granit_buffer_create(renderer, &desc, &context.buffer) != GRANIT_SUCCESS) {
+        destroy_contexts(renderer, contexts);
+        return {};
+      }
     }
   }
   return contexts;
@@ -130,6 +168,8 @@ std::vector<thread_context> make_contexts(granit_renderer renderer, benchmark_ca
 
 void destroy_contexts(granit_renderer renderer, std::vector<thread_context>& contexts) {
   for (auto& context : contexts) {
+    if (context.recorder != GRANIT_NULL_HANDLE)
+      static_cast<void>(granit_command_recorder_destroy(renderer, context.recorder));
     if (context.buffer != GRANIT_NULL_HANDLE)
       static_cast<void>(granit_buffer_destroy(renderer, context.buffer));
   }
@@ -168,6 +208,47 @@ std::uint64_t run_operations(granit_renderer renderer, thread_context& context,
     case benchmark_case::independent_write:
       result = granit_buffer_write(renderer, context.buffer, 0, context.data.data(),
                                    context.data.size());
+      if (result != GRANIT_SUCCESS) {
+        failed.store(true, std::memory_order_relaxed);
+        return local_checksum;
+      }
+      break;
+    case benchmark_case::recorder_create_destroy: {
+      granit_command_recorder recorder{GRANIT_NULL_HANDLE};
+      result = create_recorder(renderer, recorder);
+      if (result != GRANIT_SUCCESS) {
+        failed.store(true, std::memory_order_relaxed);
+        return local_checksum;
+      }
+      local_checksum ^= recorder;
+      if (granit_command_recorder_destroy(renderer, recorder) != GRANIT_SUCCESS) {
+        failed.store(true, std::memory_order_relaxed);
+        return local_checksum;
+      }
+      break;
+    }
+    case benchmark_case::empty_record:
+      result = granit_command_recorder_begin(renderer, context.recorder);
+      if (result == GRANIT_SUCCESS)
+        result = granit_command_recorder_end(renderer, context.recorder);
+      if (result == GRANIT_SUCCESS)
+        result = granit_command_recorder_reset(renderer, context.recorder);
+      if (result != GRANIT_SUCCESS) {
+        failed.store(true, std::memory_order_relaxed);
+        return local_checksum;
+      }
+      break;
+    case benchmark_case::buffer_record:
+      result = granit_command_recorder_begin(renderer, context.recorder);
+      for (std::uint32_t command = 0; result == GRANIT_SUCCESS && command < config.commands;
+           ++command) {
+        result = granit_command_recorder_fill_buffer(renderer, context.recorder, context.buffer, 0,
+                                                     config.buffer_size, command);
+      }
+      if (result == GRANIT_SUCCESS)
+        result = granit_command_recorder_end(renderer, context.recorder);
+      if (result == GRANIT_SUCCESS)
+        result = granit_command_recorder_reset(renderer, context.recorder);
       if (result != GRANIT_SUCCESS) {
         failed.store(true, std::memory_order_relaxed);
         return local_checksum;
@@ -277,7 +358,9 @@ int main(int argc, char** argv) {
     }
     return 2;
   }
-  constexpr std::string_view cases[]{"invalid_lookup", "create_destroy", "independent_write"};
+  constexpr std::string_view cases[]{"invalid_lookup",    "create_destroy",
+                                     "independent_write", "recorder_create_destroy",
+                                     "empty_record",      "buffer_record"};
   if (config.case_name != "all" &&
       std::find(std::begin(cases), std::end(cases), config.case_name) == std::end(cases)) {
     std::cerr << "未知 benchmark 用例：" << config.case_name << '\n';
@@ -307,6 +390,7 @@ int main(int argc, char** argv) {
             << "# system=" << GRANIT_BENCHMARK_SYSTEM << '\n'
             << "# cpu=" << cpu_name() << '\n'
             << "# buffer_size=" << config.buffer_size << '\n'
+            << "# commands=" << config.commands << '\n'
             << "schema,name,threads,iterations,samples,total_ns,ns_per_op,p50_ns,p95_ns,p99_ns,"
                "ops_per_second\n";
 
@@ -317,6 +401,13 @@ int main(int argc, char** argv) {
     succeeded &= run_case(renderer, "create_destroy", benchmark_case::create_destroy, config);
   if (selected(config.case_name, "independent_write"))
     succeeded &= run_case(renderer, "independent_write", benchmark_case::independent_write, config);
+  if (selected(config.case_name, "recorder_create_destroy"))
+    succeeded &= run_case(renderer, "recorder_create_destroy",
+                          benchmark_case::recorder_create_destroy, config);
+  if (selected(config.case_name, "empty_record"))
+    succeeded &= run_case(renderer, "empty_record", benchmark_case::empty_record, config);
+  if (selected(config.case_name, "buffer_record"))
+    succeeded &= run_case(renderer, "buffer_record", benchmark_case::buffer_record, config);
   const auto destroy_result = granit_renderer_destroy(renderer);
   std::cerr << "checksum=" << checksum.load(std::memory_order_relaxed) << '\n';
   if (!succeeded || destroy_result != GRANIT_SUCCESS) {
