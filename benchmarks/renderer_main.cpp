@@ -60,6 +60,7 @@ struct thread_context {
   granit_texture_view view{GRANIT_NULL_HANDLE};
   granit_bind_group compute_group{GRANIT_NULL_HANDLE};
   std::vector<granit_command_recorder> submit_recorders;
+  std::vector<double> submit_latencies;
   std::vector<std::byte> data;
 };
 
@@ -320,6 +321,7 @@ std::vector<thread_context> make_contexts(granit_renderer renderer, benchmark_ca
     } else if (selected == benchmark_case::queue_submit) {
       context.submit_recorders.resize(static_cast<std::size_t>(config.iterations),
                                       GRANIT_NULL_HANDLE);
+      context.submit_latencies.reserve(static_cast<std::size_t>(config.iterations));
       for (auto& recorder : context.submit_recorders) {
         if (create_recorder(renderer, recorder) != GRANIT_SUCCESS ||
             granit_command_recorder_begin(renderer, recorder) != GRANIT_SUCCESS ||
@@ -477,14 +479,19 @@ std::uint64_t run_operations(granit_renderer renderer, thread_context& context,
       }
       break;
     }
-    case benchmark_case::queue_submit:
+    case benchmark_case::queue_submit: {
+      const auto submit_begin = clock_type::now();
       result = granit_command_recorder_submit(
           renderer, context.submit_recorders[static_cast<std::size_t>(index)]);
+      const auto submit_end = clock_type::now();
+      context.submit_latencies.push_back(
+          std::chrono::duration<double, std::nano>{submit_end - submit_begin}.count());
       if (result != GRANIT_SUCCESS) {
         failed.store(true, std::memory_order_relaxed);
         return local_checksum;
       }
       break;
+    }
     }
     local_checksum += static_cast<std::uint64_t>(result);
   }
@@ -492,7 +499,8 @@ std::uint64_t run_operations(granit_renderer renderer, thread_context& context,
 }
 
 double run_sample(granit_renderer renderer, benchmark_case selected, const options& config,
-                  const pipeline_fixture* pipelines, bool& succeeded) {
+                  const pipeline_fixture* pipelines, std::vector<double>* operation_latencies,
+                  bool& succeeded) {
   auto contexts = make_contexts(renderer, selected, config, pipelines);
   if (contexts.size() != config.threads) {
     succeeded = false;
@@ -520,6 +528,12 @@ double run_sample(granit_renderer renderer, benchmark_case selected, const optio
   for (auto& worker : workers)
     worker.join();
   const auto end = clock_type::now();
+  if (operation_latencies != nullptr) {
+    for (const auto& context : contexts) {
+      operation_latencies->insert(operation_latencies->end(), context.submit_latencies.begin(),
+                                  context.submit_latencies.end());
+    }
+  }
   destroy_contexts(renderer, contexts);
   succeeded = !failed.load(std::memory_order_relaxed);
   return std::chrono::duration<double, std::nano>{end - begin}.count();
@@ -535,27 +549,36 @@ bool run_case(granit_renderer renderer, std::string_view name, benchmark_case se
               const options& config, const pipeline_fixture* pipelines = nullptr) {
   bool succeeded{true};
   for (std::uint32_t index = 0; index < config.warmup; ++index)
-    static_cast<void>(run_sample(renderer, selected, config, pipelines, succeeded));
+    static_cast<void>(run_sample(renderer, selected, config, pipelines, nullptr, succeeded));
   if (!succeeded)
     return false;
   std::vector<double> samples;
   samples.reserve(config.samples);
+  std::vector<double> operation_latencies;
+  if (selected == benchmark_case::queue_submit) {
+    operation_latencies.reserve(static_cast<std::size_t>(config.threads) *
+                                static_cast<std::size_t>(config.iterations) * config.samples);
+  }
   double total_ns{};
   const auto operations =
       static_cast<double>(config.threads) * static_cast<double>(config.iterations);
   for (std::uint32_t index = 0; index < config.samples; ++index) {
-    const auto elapsed = run_sample(renderer, selected, config, pipelines, succeeded);
+    const auto elapsed = run_sample(
+        renderer, selected, config, pipelines,
+        selected == benchmark_case::queue_submit ? &operation_latencies : nullptr, succeeded);
     if (!succeeded)
       return false;
     total_ns += elapsed;
     samples.push_back(elapsed / operations);
   }
   std::sort(samples.begin(), samples.end());
+  std::sort(operation_latencies.begin(), operation_latencies.end());
+  const auto& distribution = operation_latencies.empty() ? samples : operation_latencies;
   const auto total_operations = operations * static_cast<double>(config.samples);
   std::cout << "1," << name << ',' << config.threads << ',' << config.iterations << ','
             << config.samples << ',' << static_cast<std::uint64_t>(total_ns) << ','
-            << total_ns / total_operations << ',' << percentile(samples, 0.50) << ','
-            << percentile(samples, 0.95) << ',' << percentile(samples, 0.99) << ','
+            << total_ns / total_operations << ',' << percentile(distribution, 0.50) << ','
+            << percentile(distribution, 0.95) << ',' << percentile(distribution, 0.99) << ','
             << total_operations * 1'000'000'000.0 / total_ns << '\n';
   return true;
 }
