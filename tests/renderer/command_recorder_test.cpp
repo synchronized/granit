@@ -321,4 +321,67 @@ TEST_CASE("独立 Recorder 支持并行资源上传与命令录制", "[command][
   }
 }
 
+TEST_CASE("独立 Texture 支持并行创建与颜色附件录制", "[command][concurrency][texture]") {
+  granit::renderer renderer;
+  const auto result = renderer.initialize(
+      {.application_name = "granit-parallel-textures", .enable_validation = true});
+  if (result == granit::result::unsupported)
+    SKIP("当前运行环境没有 Khronos validation layer");
+  if (environment_unavailable(result))
+    SKIP("当前运行环境没有满足要求的 Vulkan 设备");
+  REQUIRE(result == granit::result::success);
+
+  constexpr std::size_t worker_count = 8;
+  std::array<granit_texture, worker_count> textures{};
+  std::array<granit_texture_view, worker_count> views{};
+  std::array<granit::command_recorder, worker_count> recorders;
+  std::barrier start{worker_count};
+  std::atomic_uint32_t failures{};
+  std::vector<std::thread> workers;
+  workers.reserve(worker_count);
+  for (std::size_t index = 0; index < worker_count; ++index) {
+    workers.emplace_back([&, index] {
+      start.arrive_and_wait();
+      granit_texture_desc desc = GRANIT_TEXTURE_DESC_INIT;
+      desc.format = GRANIT_TEXTURE_FORMAT_RGBA8_UNORM;
+      desc.usage = GRANIT_TEXTURE_USAGE_COLOR_ATTACHMENT_BIT;
+      desc.width = 32;
+      desc.height = 32;
+      auto worker_result = granit::from_native(granit_texture_create_with_default_view(
+          renderer.native_handle(), &desc, &textures[index], &views[index]));
+      if (granit::succeeded(worker_result))
+        worker_result = recorders[index].initialize(renderer.native_handle());
+      if (granit::succeeded(worker_result))
+        worker_result = recorders[index].begin();
+      const granit::color_attachment_desc color{
+          .view = views[index],
+          .clear_value = {.red = static_cast<float>(index) / static_cast<float>(worker_count),
+                          .green = 0.2F,
+                          .blue = 0.4F,
+                          .alpha = 1.0F}};
+      const granit::rendering_desc rendering{.color_attachments = std::span{&color, 1},
+                                             .area = {.width = 32, .height = 32}};
+      if (granit::succeeded(worker_result))
+        worker_result = recorders[index].begin_rendering(rendering);
+      if (granit::succeeded(worker_result))
+        worker_result = recorders[index].end_rendering();
+      if (granit::succeeded(worker_result))
+        worker_result = recorders[index].end();
+      if (granit::failed(worker_result))
+        ++failures;
+    });
+  }
+  for (auto& worker : workers)
+    worker.join();
+  REQUIRE(failures.load() == 0);
+  for (auto& recorder : recorders) {
+    REQUIRE(recorder.submit() == granit::result::success);
+    REQUIRE(recorder.reset() == granit::result::success);
+  }
+  for (std::size_t index = 0; index < worker_count; ++index) {
+    REQUIRE(granit_texture_view_destroy(renderer.native_handle(), views[index]) == GRANIT_SUCCESS);
+    REQUIRE(granit_texture_destroy(renderer.native_handle(), textures[index]) == GRANIT_SUCCESS);
+  }
+}
+
 } // namespace
