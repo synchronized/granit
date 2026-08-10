@@ -38,6 +38,8 @@ struct options {
   std::uint32_t warmup{2};
   std::uint64_t buffer_size{4'096};
   std::uint32_t commands{10};
+  std::uint32_t submissions{100};
+  std::uint32_t frames_in_flight{2};
 };
 
 enum class benchmark_case {
@@ -47,7 +49,8 @@ enum class benchmark_case {
   recorder_create_destroy,
   empty_record,
   buffer_record,
-  mixed_pipeline_record
+  mixed_pipeline_record,
+  queue_submit
 };
 
 struct thread_context {
@@ -56,6 +59,7 @@ struct thread_context {
   granit_texture texture{GRANIT_NULL_HANDLE};
   granit_texture_view view{GRANIT_NULL_HANDLE};
   granit_bind_group compute_group{GRANIT_NULL_HANDLE};
+  std::vector<granit_command_recorder> submit_recorders;
   std::vector<std::byte> data;
 };
 
@@ -76,13 +80,15 @@ void print_help() {
   std::cout << "用法：granit_renderer_benchmarks [选项]\n"
                "  --case <all|invalid_lookup|create_destroy|independent_write|\n"
                "          recorder_create_destroy|empty_record|buffer_record|\n"
-               "          mixed_pipeline_record>\n"
+               "          mixed_pipeline_record|queue_submit>\n"
                "  --threads <数量>       工作线程数\n"
                "  --iterations <数量>    每个线程、每个样本的操作数\n"
                "  --samples <数量>       正式样本数\n"
                "  --warmup <数量>        预热样本数\n"
                "  --buffer-size <字节>   Buffer 大小\n"
-               "  --commands <数量>      每次录制的命令数或混合工作负载重复数\n";
+               "  --commands <数量>      每次录制的命令数或混合工作负载重复数\n"
+               "  --submissions <数量>   每线程、每样本预录制并提交的 Recorder 数\n"
+               "  --frames-in-flight <数量> Renderer 帧槽数量（1～4）\n";
 }
 
 std::vector<std::byte> load_shader(std::string_view name) {
@@ -214,6 +220,12 @@ bool parse_options(int argc, char** argv, options& result) {
     } else if (argument == "--commands") {
       if (!parse_integer(value, result.commands))
         return false;
+    } else if (argument == "--submissions") {
+      if (!parse_integer(value, result.submissions))
+        return false;
+    } else if (argument == "--frames-in-flight") {
+      if (!parse_integer(value, result.frames_in_flight))
+        return false;
     } else {
       std::cerr << "未知选项：" << argument << '\n';
       return false;
@@ -225,6 +237,10 @@ bool parse_options(int argc, char** argv, options& result) {
   }
   if (result.buffer_size % 4 != 0) {
     std::cerr << "Buffer 大小必须是 4 的倍数\n";
+    return false;
+  }
+  if (result.frames_in_flight > GRANIT_MAX_FRAMES_IN_FLIGHT) {
+    std::cerr << "frames-in-flight 必须在 1～4 之间\n";
     return false;
   }
   return true;
@@ -301,6 +317,17 @@ std::vector<thread_context> make_contexts(granit_renderer renderer, benchmark_ca
         destroy_contexts(renderer, contexts);
         return {};
       }
+    } else if (selected == benchmark_case::queue_submit) {
+      context.submit_recorders.resize(static_cast<std::size_t>(config.iterations),
+                                      GRANIT_NULL_HANDLE);
+      for (auto& recorder : context.submit_recorders) {
+        if (create_recorder(renderer, recorder) != GRANIT_SUCCESS ||
+            granit_command_recorder_begin(renderer, recorder) != GRANIT_SUCCESS ||
+            granit_command_recorder_end(renderer, recorder) != GRANIT_SUCCESS) {
+          destroy_contexts(renderer, contexts);
+          return {};
+        }
+      }
     }
   }
   return contexts;
@@ -308,6 +335,10 @@ std::vector<thread_context> make_contexts(granit_renderer renderer, benchmark_ca
 
 void destroy_contexts(granit_renderer renderer, std::vector<thread_context>& contexts) {
   for (auto& context : contexts) {
+    for (const auto recorder : context.submit_recorders) {
+      if (recorder != GRANIT_NULL_HANDLE)
+        static_cast<void>(granit_command_recorder_destroy(renderer, recorder));
+    }
     if (context.recorder != GRANIT_NULL_HANDLE)
       static_cast<void>(granit_command_recorder_destroy(renderer, context.recorder));
     if (context.compute_group != GRANIT_NULL_HANDLE)
@@ -446,6 +477,14 @@ std::uint64_t run_operations(granit_renderer renderer, thread_context& context,
       }
       break;
     }
+    case benchmark_case::queue_submit:
+      result = granit_command_recorder_submit(
+          renderer, context.submit_recorders[static_cast<std::size_t>(index)]);
+      if (result != GRANIT_SUCCESS) {
+        failed.store(true, std::memory_order_relaxed);
+        return local_checksum;
+      }
+      break;
     }
     local_checksum += static_cast<std::uint64_t>(result);
   }
@@ -552,8 +591,8 @@ int main(int argc, char** argv) {
     return 2;
   }
   constexpr std::string_view cases[]{
-      "invalid_lookup", "create_destroy", "independent_write",    "recorder_create_destroy",
-      "empty_record",   "buffer_record",  "mixed_pipeline_record"};
+      "invalid_lookup", "create_destroy", "independent_write",     "recorder_create_destroy",
+      "empty_record",   "buffer_record",  "mixed_pipeline_record", "queue_submit"};
   if (config.case_name != "all" &&
       std::find(std::begin(cases), std::end(cases), config.case_name) == std::end(cases)) {
     std::cerr << "未知 benchmark 用例：" << config.case_name << '\n';
@@ -563,6 +602,7 @@ int main(int argc, char** argv) {
   granit_renderer_desc desc = GRANIT_RENDERER_DESC_INIT;
   desc.application_name = "Granit Renderer Benchmarks";
   desc.application_name_length = 26;
+  desc.frames_in_flight = config.frames_in_flight;
   granit_renderer renderer{GRANIT_NULL_HANDLE};
   const auto create_result = granit_renderer_create(&desc, &renderer);
   if (create_result != GRANIT_SUCCESS) {
@@ -584,6 +624,8 @@ int main(int argc, char** argv) {
             << "# cpu=" << cpu_name() << '\n'
             << "# buffer_size=" << config.buffer_size << '\n'
             << "# commands=" << config.commands << '\n'
+            << "# submissions=" << config.submissions << '\n'
+            << "# frames_in_flight=" << config.frames_in_flight << '\n'
             << "schema,name,threads,iterations,samples,total_ns,ns_per_op,p50_ns,p95_ns,p99_ns,"
                "ops_per_second\n";
 
@@ -614,6 +656,11 @@ int main(int argc, char** argv) {
   if (selected(config.case_name, "mixed_pipeline_record")) {
     succeeded &= run_case(renderer, "mixed_pipeline_record", benchmark_case::mixed_pipeline_record,
                           config, &pipelines);
+  }
+  if (selected(config.case_name, "queue_submit")) {
+    auto submit_config = config;
+    submit_config.iterations = config.submissions;
+    succeeded &= run_case(renderer, "queue_submit", benchmark_case::queue_submit, submit_config);
   }
   destroy_pipeline_fixture(renderer, pipelines);
   const auto destroy_result = granit_renderer_destroy(renderer);
