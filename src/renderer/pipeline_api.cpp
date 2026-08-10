@@ -178,6 +178,36 @@ extern "C" granit_result granit_graphics_pipeline_create(granit_renderer rendere
        desc->primitive.polygon_mode < GRANIT_POLYGON_MODE_FILL ||
        desc->primitive.polygon_mode > GRANIT_POLYGON_MODE_POINT))
     return GRANIT_ERROR_INVALID_ARGUMENT;
+  if (desc->struct_size >= GRANIT_GRAPHICS_PIPELINE_DESC_VERSION_4_SIZE) {
+    if (desc->reserved_4 != 0 ||
+        (desc->color_blend_count != 0 &&
+         (desc->color_blend_count != desc->color_format_count || !desc->color_blends)))
+      return GRANIT_ERROR_INVALID_ARGUMENT;
+    if (desc->depth &&
+        (desc->depth->test_enabled > 1 || desc->depth->write_enabled > 1 ||
+         desc->depth->compare < GRANIT_COMPARE_OPERATION_NEVER ||
+         desc->depth->compare > GRANIT_COMPARE_OPERATION_ALWAYS || desc->depth->reserved != 0 ||
+         (desc->depth_stencil_format == GRANIT_TEXTURE_FORMAT_UNDEFINED &&
+          (desc->depth->test_enabled != 0 || desc->depth->write_enabled != 0))))
+      return GRANIT_ERROR_INVALID_ARGUMENT;
+    for (uint32_t index = 0; index < desc->color_blend_count; ++index) {
+      const auto& state = desc->color_blends[index];
+      if (state.enabled > 1 || state.source_color_factor < GRANIT_BLEND_FACTOR_ZERO ||
+          state.source_color_factor > GRANIT_BLEND_FACTOR_ONE_MINUS_DESTINATION_ALPHA ||
+          state.destination_color_factor < GRANIT_BLEND_FACTOR_ZERO ||
+          state.destination_color_factor > GRANIT_BLEND_FACTOR_ONE_MINUS_DESTINATION_ALPHA ||
+          state.source_alpha_factor < GRANIT_BLEND_FACTOR_ZERO ||
+          state.source_alpha_factor > GRANIT_BLEND_FACTOR_ONE_MINUS_DESTINATION_ALPHA ||
+          state.destination_alpha_factor < GRANIT_BLEND_FACTOR_ZERO ||
+          state.destination_alpha_factor > GRANIT_BLEND_FACTOR_ONE_MINUS_DESTINATION_ALPHA ||
+          state.color_operation < GRANIT_BLEND_OPERATION_ADD ||
+          state.color_operation > GRANIT_BLEND_OPERATION_MAX ||
+          state.alpha_operation < GRANIT_BLEND_OPERATION_ADD ||
+          state.alpha_operation > GRANIT_BLEND_OPERATION_MAX ||
+          (state.write_mask & ~GRANIT_COLOR_WRITE_ALL_BITS) != 0)
+        return GRANIT_ERROR_INVALID_ARGUMENT;
+    }
+  }
   return granit::detail::renderer_registry::instance().create_graphics_pipeline(renderer, *desc,
                                                                                 *pipeline);
 }

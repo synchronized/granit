@@ -5,6 +5,7 @@
 #define GRANIT_PIPELINE_HPP_
 
 #include <array>
+#include <optional>
 #include <span>
 #include <utility>
 
@@ -200,6 +201,59 @@ struct primitive_state {
   polygon_mode polygon{polygon_mode::fill};
 };
 
+struct depth_state {
+  bool test_enabled{};
+  bool write_enabled{};
+  compare_operation compare{compare_operation::less_equal};
+};
+
+enum class blend_factor : std::uint32_t {
+  zero = GRANIT_BLEND_FACTOR_ZERO,
+  one = GRANIT_BLEND_FACTOR_ONE,
+  source_color = GRANIT_BLEND_FACTOR_SOURCE_COLOR,
+  one_minus_source_color = GRANIT_BLEND_FACTOR_ONE_MINUS_SOURCE_COLOR,
+  source_alpha = GRANIT_BLEND_FACTOR_SOURCE_ALPHA,
+  one_minus_source_alpha = GRANIT_BLEND_FACTOR_ONE_MINUS_SOURCE_ALPHA,
+  destination_color = GRANIT_BLEND_FACTOR_DESTINATION_COLOR,
+  one_minus_destination_color = GRANIT_BLEND_FACTOR_ONE_MINUS_DESTINATION_COLOR,
+  destination_alpha = GRANIT_BLEND_FACTOR_DESTINATION_ALPHA,
+  one_minus_destination_alpha = GRANIT_BLEND_FACTOR_ONE_MINUS_DESTINATION_ALPHA,
+};
+
+enum class blend_operation : std::uint32_t {
+  add = GRANIT_BLEND_OPERATION_ADD,
+  subtract = GRANIT_BLEND_OPERATION_SUBTRACT,
+  reverse_subtract = GRANIT_BLEND_OPERATION_REVERSE_SUBTRACT,
+  min = GRANIT_BLEND_OPERATION_MIN,
+  max = GRANIT_BLEND_OPERATION_MAX,
+};
+
+enum class color_write_mask : std::uint32_t {
+  none = 0,
+  red = GRANIT_COLOR_WRITE_RED_BIT,
+  green = GRANIT_COLOR_WRITE_GREEN_BIT,
+  blue = GRANIT_COLOR_WRITE_BLUE_BIT,
+  alpha = GRANIT_COLOR_WRITE_ALPHA_BIT,
+  all = GRANIT_COLOR_WRITE_ALL_BITS,
+};
+
+[[nodiscard]] constexpr color_write_mask operator|(color_write_mask left,
+                                                   color_write_mask right) noexcept {
+  return static_cast<color_write_mask>(static_cast<std::uint32_t>(left) |
+                                       static_cast<std::uint32_t>(right));
+}
+
+struct color_blend_state {
+  bool enabled{};
+  blend_factor source_color_factor{blend_factor::one};
+  blend_factor destination_color_factor{blend_factor::zero};
+  blend_operation color_operation{blend_operation::add};
+  blend_factor source_alpha_factor{blend_factor::one};
+  blend_factor destination_alpha_factor{blend_factor::zero};
+  blend_operation alpha_operation{blend_operation::add};
+  color_write_mask write_mask{color_write_mask::all};
+};
+
 struct graphics_pipeline_desc {
   granit_pipeline_layout layout{GRANIT_NULL_HANDLE};
   granit_shader vertex_shader{GRANIT_NULL_HANDLE};
@@ -209,6 +263,8 @@ struct graphics_pipeline_desc {
   sample_count samples{sample_count::one};
   std::span<const vertex_buffer_layout> vertex_buffers;
   primitive_state primitive;
+  std::optional<depth_state> depth;
+  std::span<const color_blend_state> color_blends;
 };
 
 class graphics_pipeline {
@@ -351,7 +407,7 @@ inline result pipeline_layout::reset() noexcept {
 inline result graphics_pipeline::initialize(granit_renderer renderer,
                                             const graphics_pipeline_desc& desc) noexcept {
   if (valid() || renderer == GRANIT_NULL_HANDLE || desc.color_formats.size() > UINT32_MAX ||
-      desc.vertex_buffers.size() > UINT32_MAX)
+      desc.vertex_buffers.size() > UINT32_MAX || desc.color_blends.size() > UINT32_MAX)
     return result::invalid_argument;
   static_assert(sizeof(vertex_attribute) == sizeof(granit_vertex_attribute));
   if (desc.vertex_buffers.size() > 16)
@@ -368,9 +424,35 @@ inline result graphics_pipeline::initialize(granit_renderer renderer,
         .reserved = 0,
         .attributes = reinterpret_cast<const granit_vertex_attribute*>(source.attributes.data())};
   }
+  if (desc.color_blends.size() > 8)
+    return result::invalid_argument;
+  std::array<granit_color_blend_state, 8> color_blends{};
+  for (std::size_t index = 0; index < desc.color_blends.size(); ++index) {
+    const auto& source = desc.color_blends[index];
+    color_blends[index] = {
+        .enabled = source.enabled ? UINT32_C(1) : UINT32_C(0),
+        .source_color_factor = static_cast<granit_blend_factor>(source.source_color_factor),
+        .destination_color_factor =
+            static_cast<granit_blend_factor>(source.destination_color_factor),
+        .color_operation = static_cast<granit_blend_operation>(source.color_operation),
+        .source_alpha_factor = static_cast<granit_blend_factor>(source.source_alpha_factor),
+        .destination_alpha_factor =
+            static_cast<granit_blend_factor>(source.destination_alpha_factor),
+        .alpha_operation = static_cast<granit_blend_operation>(source.alpha_operation),
+        .write_mask = static_cast<granit_color_write_mask>(source.write_mask)};
+  }
+  granit_depth_state depth{};
+  const granit_depth_state* depth_pointer = nullptr;
+  if (desc.depth) {
+    depth = {.test_enabled = desc.depth->test_enabled ? UINT32_C(1) : UINT32_C(0),
+             .write_enabled = desc.depth->write_enabled ? UINT32_C(1) : UINT32_C(0),
+             .compare = static_cast<granit_compare_operation>(desc.depth->compare),
+             .reserved = 0};
+    depth_pointer = &depth;
+  }
   const auto* formats = reinterpret_cast<const granit_texture_format*>(desc.color_formats.data());
   const granit_graphics_pipeline_desc native{
-      .struct_size = GRANIT_GRAPHICS_PIPELINE_DESC_VERSION_3_SIZE,
+      .struct_size = GRANIT_GRAPHICS_PIPELINE_DESC_VERSION_4_SIZE,
       .reserved = 0,
       .layout = desc.layout,
       .vertex_shader = desc.vertex_shader,
@@ -386,7 +468,11 @@ inline result graphics_pipeline::initialize(granit_renderer renderer,
       .primitive = {.topology = static_cast<granit_primitive_topology>(desc.primitive.topology),
                     .front_face = static_cast<granit_front_face>(desc.primitive.front),
                     .cull_mode = static_cast<granit_cull_mode>(desc.primitive.cull),
-                    .polygon_mode = static_cast<granit_polygon_mode>(desc.primitive.polygon)}};
+                    .polygon_mode = static_cast<granit_polygon_mode>(desc.primitive.polygon)},
+      .depth = depth_pointer,
+      .color_blend_count = static_cast<std::uint32_t>(desc.color_blends.size()),
+      .reserved_4 = 0,
+      .color_blends = color_blends.data()};
   const auto value = granit_graphics_pipeline_create(renderer, &native, &handle_);
   if (value == GRANIT_SUCCESS)
     renderer_ = renderer;

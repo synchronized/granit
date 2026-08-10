@@ -710,6 +710,7 @@ granit_result renderer_state::create_native_graphics_pipeline(
     VkPipelineLayout layout, VkShaderModule vertex_shader, const char* vertex_entry,
     VkShaderModule fragment_shader, const char* fragment_entry,
     std::span<const granit_vertex_buffer_layout> vertex_buffers, granit_primitive_state primitive,
+    granit_depth_state depth_state, std::span<const granit_color_blend_state> color_blends,
     std::span<const granit_texture_format> color_formats,
     granit_texture_format depth_stencil_format, granit_sample_count sample_count,
     VkPipeline& pipeline) noexcept {
@@ -791,13 +792,51 @@ granit_result renderer_state::create_native_graphics_pipeline(
   multisample.rasterizationSamples = static_cast<VkSampleCountFlagBits>(sample_count);
   VkPipelineDepthStencilStateCreateInfo depth{};
   depth.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
-  depth.depthTestEnable = depth_stencil_format != GRANIT_TEXTURE_FORMAT_UNDEFINED;
-  depth.depthWriteEnable = depth.depthTestEnable;
-  depth.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
+  constexpr std::array compare_operations{VK_COMPARE_OP_NEVER,
+                                          VK_COMPARE_OP_LESS,
+                                          VK_COMPARE_OP_EQUAL,
+                                          VK_COMPARE_OP_LESS_OR_EQUAL,
+                                          VK_COMPARE_OP_GREATER,
+                                          VK_COMPARE_OP_NOT_EQUAL,
+                                          VK_COMPARE_OP_GREATER_OR_EQUAL,
+                                          VK_COMPARE_OP_ALWAYS};
+  depth.depthTestEnable = depth_state.test_enabled != 0;
+  depth.depthWriteEnable = depth_state.write_enabled != 0;
+  depth.depthCompareOp = compare_operations[depth_state.compare - GRANIT_COMPARE_OPERATION_NEVER];
   std::vector<VkPipelineColorBlendAttachmentState> blend_attachments(color_formats.size());
-  for (auto& attachment : blend_attachments)
-    attachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
-                                VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+  constexpr std::array blend_factors{
+      VK_BLEND_FACTOR_ZERO,      VK_BLEND_FACTOR_ONE,
+      VK_BLEND_FACTOR_SRC_COLOR, VK_BLEND_FACTOR_ONE_MINUS_SRC_COLOR,
+      VK_BLEND_FACTOR_SRC_ALPHA, VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,
+      VK_BLEND_FACTOR_DST_COLOR, VK_BLEND_FACTOR_ONE_MINUS_DST_COLOR,
+      VK_BLEND_FACTOR_DST_ALPHA, VK_BLEND_FACTOR_ONE_MINUS_DST_ALPHA};
+  constexpr std::array blend_operations{VK_BLEND_OP_ADD, VK_BLEND_OP_SUBTRACT,
+                                        VK_BLEND_OP_REVERSE_SUBTRACT, VK_BLEND_OP_MIN,
+                                        VK_BLEND_OP_MAX};
+  for (std::size_t index = 0; index < blend_attachments.size(); ++index) {
+    auto& target = blend_attachments[index];
+    const auto& source = color_blends[index];
+    target.blendEnable = source.enabled != 0;
+    target.srcColorBlendFactor =
+        blend_factors[source.source_color_factor - GRANIT_BLEND_FACTOR_ZERO];
+    target.dstColorBlendFactor =
+        blend_factors[source.destination_color_factor - GRANIT_BLEND_FACTOR_ZERO];
+    target.colorBlendOp = blend_operations[source.color_operation - GRANIT_BLEND_OPERATION_ADD];
+    target.srcAlphaBlendFactor =
+        blend_factors[source.source_alpha_factor - GRANIT_BLEND_FACTOR_ZERO];
+    target.dstAlphaBlendFactor =
+        blend_factors[source.destination_alpha_factor - GRANIT_BLEND_FACTOR_ZERO];
+    target.alphaBlendOp = blend_operations[source.alpha_operation - GRANIT_BLEND_OPERATION_ADD];
+    target.colorWriteMask = 0;
+    if ((source.write_mask & GRANIT_COLOR_WRITE_RED_BIT) != 0)
+      target.colorWriteMask |= VK_COLOR_COMPONENT_R_BIT;
+    if ((source.write_mask & GRANIT_COLOR_WRITE_GREEN_BIT) != 0)
+      target.colorWriteMask |= VK_COLOR_COMPONENT_G_BIT;
+    if ((source.write_mask & GRANIT_COLOR_WRITE_BLUE_BIT) != 0)
+      target.colorWriteMask |= VK_COLOR_COMPONENT_B_BIT;
+    if ((source.write_mask & GRANIT_COLOR_WRITE_ALPHA_BIT) != 0)
+      target.colorWriteMask |= VK_COLOR_COMPONENT_A_BIT;
+  }
   VkPipelineColorBlendStateCreateInfo blend{};
   blend.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
   blend.attachmentCount = static_cast<std::uint32_t>(blend_attachments.size());

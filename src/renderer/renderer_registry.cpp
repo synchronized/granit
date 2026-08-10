@@ -1930,6 +1930,27 @@ granit_result renderer_registry::create_graphics_pipeline(granit_renderer render
             ? std::span<const granit_vertex_buffer_layout>{desc.vertex_buffer_layouts,
                                                            desc.vertex_buffer_layout_count}
             : std::span<const granit_vertex_buffer_layout>{};
+    granit_depth_state depth{desc.depth_stencil_format != GRANIT_TEXTURE_FORMAT_UNDEFINED,
+                             desc.depth_stencil_format != GRANIT_TEXTURE_FORMAT_UNDEFINED,
+                             GRANIT_COMPARE_OPERATION_LESS_EQUAL, 0};
+    std::array<granit_color_blend_state, 8> default_blends{};
+    for (std::size_t index = 0; index < desc.color_format_count; ++index)
+      default_blends[index] = {0,
+                               GRANIT_BLEND_FACTOR_ONE,
+                               GRANIT_BLEND_FACTOR_ZERO,
+                               GRANIT_BLEND_OPERATION_ADD,
+                               GRANIT_BLEND_FACTOR_ONE,
+                               GRANIT_BLEND_FACTOR_ZERO,
+                               GRANIT_BLEND_OPERATION_ADD,
+                               GRANIT_COLOR_WRITE_ALL_BITS};
+    std::span<const granit_color_blend_state> color_blends{default_blends.data(),
+                                                           desc.color_format_count};
+    if (desc.struct_size >= GRANIT_GRAPHICS_PIPELINE_DESC_VERSION_4_SIZE) {
+      if (desc.depth)
+        depth = *desc.depth;
+      if (desc.color_blend_count != 0)
+        color_blends = {desc.color_blends, desc.color_blend_count};
+    }
     const auto result = state->create_native_graphics_pipeline(
         layout->native, vertex->native, vertex->entry_point.c_str(), fragment->native,
         fragment->entry_point.c_str(), vertex_buffers,
@@ -1938,6 +1959,7 @@ granit_result renderer_registry::create_graphics_pipeline(granit_renderer render
             : granit_primitive_state{GRANIT_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
                                      GRANIT_FRONT_FACE_COUNTER_CLOCKWISE, GRANIT_CULL_MODE_NONE,
                                      GRANIT_POLYGON_MODE_FILL},
+        depth, color_blends,
         {desc.color_formats, static_cast<std::size_t>(desc.color_format_count)},
         desc.depth_stencil_format, desc.sample_count, record->native);
     if (result != GRANIT_SUCCESS)

@@ -152,6 +152,63 @@ typedef struct granit_primitive_state {
   {GRANIT_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST, GRANIT_FRONT_FACE_COUNTER_CLOCKWISE,                   \
    GRANIT_CULL_MODE_NONE, GRANIT_POLYGON_MODE_FILL}
 
+typedef struct granit_depth_state {
+  uint32_t test_enabled;
+  uint32_t write_enabled;
+  granit_compare_operation compare;
+  uint32_t reserved;
+} granit_depth_state;
+#define GRANIT_DEPTH_STATE_INIT                                                                    \
+  {UINT32_C(0), UINT32_C(0), GRANIT_COMPARE_OPERATION_LESS_EQUAL, UINT32_C(0)}
+
+typedef uint32_t granit_blend_factor;
+#define GRANIT_BLEND_FACTOR_ZERO UINT32_C(1)
+#define GRANIT_BLEND_FACTOR_ONE UINT32_C(2)
+#define GRANIT_BLEND_FACTOR_SOURCE_COLOR UINT32_C(3)
+#define GRANIT_BLEND_FACTOR_ONE_MINUS_SOURCE_COLOR UINT32_C(4)
+#define GRANIT_BLEND_FACTOR_SOURCE_ALPHA UINT32_C(5)
+#define GRANIT_BLEND_FACTOR_ONE_MINUS_SOURCE_ALPHA UINT32_C(6)
+#define GRANIT_BLEND_FACTOR_DESTINATION_COLOR UINT32_C(7)
+#define GRANIT_BLEND_FACTOR_ONE_MINUS_DESTINATION_COLOR UINT32_C(8)
+#define GRANIT_BLEND_FACTOR_DESTINATION_ALPHA UINT32_C(9)
+#define GRANIT_BLEND_FACTOR_ONE_MINUS_DESTINATION_ALPHA UINT32_C(10)
+
+typedef uint32_t granit_blend_operation;
+#define GRANIT_BLEND_OPERATION_ADD UINT32_C(1)
+#define GRANIT_BLEND_OPERATION_SUBTRACT UINT32_C(2)
+#define GRANIT_BLEND_OPERATION_REVERSE_SUBTRACT UINT32_C(3)
+#define GRANIT_BLEND_OPERATION_MIN UINT32_C(4)
+#define GRANIT_BLEND_OPERATION_MAX UINT32_C(5)
+
+typedef uint32_t granit_color_write_mask;
+#define GRANIT_COLOR_WRITE_RED_BIT (UINT32_C(1) << 0)
+#define GRANIT_COLOR_WRITE_GREEN_BIT (UINT32_C(1) << 1)
+#define GRANIT_COLOR_WRITE_BLUE_BIT (UINT32_C(1) << 2)
+#define GRANIT_COLOR_WRITE_ALPHA_BIT (UINT32_C(1) << 3)
+#define GRANIT_COLOR_WRITE_ALL_BITS                                                                \
+  (GRANIT_COLOR_WRITE_RED_BIT | GRANIT_COLOR_WRITE_GREEN_BIT | GRANIT_COLOR_WRITE_BLUE_BIT |       \
+   GRANIT_COLOR_WRITE_ALPHA_BIT)
+
+typedef struct granit_color_blend_state {
+  uint32_t enabled;
+  granit_blend_factor source_color_factor;
+  granit_blend_factor destination_color_factor;
+  granit_blend_operation color_operation;
+  granit_blend_factor source_alpha_factor;
+  granit_blend_factor destination_alpha_factor;
+  granit_blend_operation alpha_operation;
+  granit_color_write_mask write_mask;
+} granit_color_blend_state;
+#define GRANIT_COLOR_BLEND_STATE_INIT                                                              \
+  {UINT32_C(0),                                                                                    \
+   GRANIT_BLEND_FACTOR_ONE,                                                                        \
+   GRANIT_BLEND_FACTOR_ZERO,                                                                       \
+   GRANIT_BLEND_OPERATION_ADD,                                                                     \
+   GRANIT_BLEND_FACTOR_ONE,                                                                        \
+   GRANIT_BLEND_FACTOR_ZERO,                                                                       \
+   GRANIT_BLEND_OPERATION_ADD,                                                                     \
+   GRANIT_COLOR_WRITE_ALL_BITS}
+
 /** Dynamic Rendering 图形 Pipeline 描述；输入数组只在调用期间有效。 */
 typedef struct granit_graphics_pipeline_desc {
   uint32_t struct_size;
@@ -168,6 +225,10 @@ typedef struct granit_graphics_pipeline_desc {
   uint32_t reserved_3;
   const granit_vertex_buffer_layout* vertex_buffer_layouts;
   granit_primitive_state primitive;
+  const granit_depth_state* depth;
+  uint32_t color_blend_count;
+  uint32_t reserved_4;
+  const granit_color_blend_state* color_blends;
 } granit_graphics_pipeline_desc;
 #define GRANIT_GRAPHICS_PIPELINE_DESC_VERSION_1_SIZE                                               \
   ((uint32_t)(offsetof(granit_graphics_pipeline_desc, reserved_2) + sizeof(uint32_t)))
@@ -175,6 +236,8 @@ typedef struct granit_graphics_pipeline_desc {
   ((uint32_t)(offsetof(granit_graphics_pipeline_desc, vertex_buffer_layouts) + sizeof(void*)))
 #define GRANIT_GRAPHICS_PIPELINE_DESC_VERSION_3_SIZE                                               \
   ((uint32_t)(offsetof(granit_graphics_pipeline_desc, primitive) + sizeof(granit_primitive_state)))
+#define GRANIT_GRAPHICS_PIPELINE_DESC_VERSION_4_SIZE                                               \
+  ((uint32_t)(offsetof(granit_graphics_pipeline_desc, color_blends) + sizeof(void*)))
 #define GRANIT_GRAPHICS_PIPELINE_DESC_INIT                                                         \
   {(uint32_t)sizeof(granit_graphics_pipeline_desc),                                                \
    UINT32_C(0),                                                                                    \
@@ -189,7 +252,11 @@ typedef struct granit_graphics_pipeline_desc {
    UINT32_C(0),                                                                                    \
    UINT32_C(0),                                                                                    \
    0,                                                                                              \
-   GRANIT_PRIMITIVE_STATE_INIT}
+   GRANIT_PRIMITIVE_STATE_INIT,                                                                    \
+   0,                                                                                              \
+   UINT32_C(0),                                                                                    \
+   UINT32_C(0),                                                                                    \
+   0}
 
 /** Compute Pipeline 描述。 */
 typedef struct granit_compute_pipeline_desc {

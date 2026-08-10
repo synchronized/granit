@@ -205,6 +205,23 @@ TEST_CASE("Graphics Pipeline 在进入后端前校验描述", "[pipeline][valida
         GRANIT_ERROR_INVALID_ARGUMENT);
   desc.primitive.topology = GRANIT_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 
+  granit_depth_state depth = GRANIT_DEPTH_STATE_INIT;
+  depth.test_enabled = 1;
+  desc.depth_stencil_format = GRANIT_TEXTURE_FORMAT_UNDEFINED;
+  desc.depth = &depth;
+  CHECK(granit_graphics_pipeline_create(UINT64_C(1), &desc, &pipeline) ==
+        GRANIT_ERROR_INVALID_ARGUMENT);
+  desc.depth = nullptr;
+  desc.depth_stencil_format = GRANIT_TEXTURE_FORMAT_D32_FLOAT;
+
+  granit_color_blend_state blend = GRANIT_COLOR_BLEND_STATE_INIT;
+  desc.color_blend_count = 1;
+  desc.color_blends = &blend;
+  CHECK(granit_graphics_pipeline_create(UINT64_C(1), &desc, &pipeline) ==
+        GRANIT_ERROR_INVALID_ARGUMENT);
+  desc.color_blend_count = 0;
+  desc.color_blends = nullptr;
+
   const granit_vertex_attribute duplicate_locations[] = {{0, GRANIT_VERTEX_FORMAT_FLOAT32X2, 0, 0},
                                                          {0, GRANIT_VERTEX_FORMAT_FLOAT32X3, 8, 0}};
   const granit_vertex_buffer_layout vertex_layout{20, GRANIT_VERTEX_STEP_MODE_VERTEX, 2, 0,
@@ -249,18 +266,32 @@ TEST_CASE("Graphics Pipeline 接受 Vertex Buffer Layout", "[pipeline][vertex-in
                                    .step_mode = granit::vertex_step_mode::instance,
                                    .attributes = std::span{&instance_attribute, 1}}};
   const granit::texture_format format = granit::texture_format::rgba8_unorm;
+  const granit::color_blend_state blend{.enabled = true,
+                                        .source_color_factor = granit::blend_factor::source_alpha,
+                                        .destination_color_factor =
+                                            granit::blend_factor::one_minus_source_alpha,
+                                        .color_operation = granit::blend_operation::add,
+                                        .source_alpha_factor = granit::blend_factor::one,
+                                        .destination_alpha_factor = granit::blend_factor::zero,
+                                        .alpha_operation = granit::blend_operation::add,
+                                        .write_mask = granit::color_write_mask::all};
   granit::graphics_pipeline pipeline;
-  REQUIRE(pipeline.initialize(renderer.native_handle(),
-                              {.layout = layout.native_handle(),
-                               .vertex_shader = vertex.native_handle(),
-                               .fragment_shader = fragment.native_handle(),
-                               .color_formats = std::span{&format, 1},
-                               .vertex_buffers = vertex_buffers,
-                               .primitive = {.topology = granit::primitive_topology::triangle_strip,
-                                             .front = granit::front_face::clockwise,
-                                             .cull = granit::cull_mode::back,
-                                             .polygon = granit::polygon_mode::fill}}) ==
-          granit::result::success);
+  REQUIRE(
+      pipeline.initialize(renderer.native_handle(),
+                          {.layout = layout.native_handle(),
+                           .vertex_shader = vertex.native_handle(),
+                           .fragment_shader = fragment.native_handle(),
+                           .color_formats = std::span{&format, 1},
+                           .depth_stencil_format = granit::texture_format::d16_unorm,
+                           .vertex_buffers = vertex_buffers,
+                           .primitive = {.topology = granit::primitive_topology::triangle_strip,
+                                         .front = granit::front_face::clockwise,
+                                         .cull = granit::cull_mode::back,
+                                         .polygon = granit::polygon_mode::fill},
+                           .depth = granit::depth_state{.test_enabled = true,
+                                                        .write_enabled = true,
+                                                        .compare = granit::compare_operation::less},
+                           .color_blends = std::span{&blend, 1}}) == granit::result::success);
 }
 
 TEST_CASE("Graphics Pipeline 持有 Shader 与 Layout 依赖", "[pipeline][lifetime]") {
@@ -288,13 +319,15 @@ TEST_CASE("Graphics Pipeline 持有 Shader 与 Layout 依赖", "[pipeline][lifet
 
   const granit::texture_format format = granit::texture_format::rgba8_unorm;
   granit::graphics_pipeline pipeline;
-  REQUIRE(
-      pipeline.initialize(renderer.native_handle(), {.layout = layout.native_handle(),
-                                                     .vertex_shader = vertex.native_handle(),
-                                                     .fragment_shader = fragment.native_handle(),
-                                                     .color_formats = std::span{&format, 1},
-                                                     .vertex_buffers = {},
-                                                     .primitive = {}}) == granit::result::success);
+  REQUIRE(pipeline.initialize(renderer.native_handle(),
+                              {.layout = layout.native_handle(),
+                               .vertex_shader = vertex.native_handle(),
+                               .fragment_shader = fragment.native_handle(),
+                               .color_formats = std::span{&format, 1},
+                               .vertex_buffers = {},
+                               .primitive = {},
+                               .depth = {},
+                               .color_blends = {}}) == granit::result::success);
   granit_texture_desc texture_desc = GRANIT_TEXTURE_DESC_INIT;
   texture_desc.format = GRANIT_TEXTURE_FORMAT_RGBA8_UNORM;
   texture_desc.usage = GRANIT_TEXTURE_USAGE_COLOR_ATTACHMENT_BIT;

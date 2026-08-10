@@ -12,6 +12,7 @@ Vulkan Pipeline、Pipeline Layout 或 Dynamic Rendering 结构。
 - 使用 Buffer、Texture View 和 Sampler 创建不可变 Bind Group。
 - 使用 Vertex Shader、Fragment Shader、颜色格式、可选深度模板格式和样本数创建 Pipeline。
 - 支持点、线和三角形拓扑，以及正面绕序、剔除模式和 Fill/Line/Point 多边形模式。
+- 支持深度测试、深度写入和比较操作，以及每个颜色附件独立的混合与写入掩码。
 - Viewport 与 Scissor 是动态状态，将由 D-05 的命令接口设置。
 - Pipeline 内部保持 Shader 与 Layout 存活；对应公开句柄可以先销毁。
 - 所有对象支持 Renderer domain、generation、Device Lost、级联诊断和延迟销毁。
@@ -28,6 +29,8 @@ Viewport、Scissor、Vertex/Index Buffer、Draw 和 Draw Indexed 已经实现。
 支持为每个 Vertex Buffer binding 指定 stride、per-vertex/per-instance 步进，以及 location、
 format 和 offset。未提供 Vertex Buffer Layout 时仍可使用 Shader 内的顶点序号生成位置。
 非实心 Line/Point 模式依赖设备能力；设备不支持时，Pipeline 创建返回“不支持”。
+未显式提供深度状态时，有深度格式的 Pipeline 默认启用测试和写入并使用 Less Or Equal；未提供
+颜色混合状态时默认关闭混合并写入 RGBA。
 
 ## C API 示例
 
