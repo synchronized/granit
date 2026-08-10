@@ -63,7 +63,7 @@ D-03-graphics-pipeline.md
 - [D-07：Compute Pipeline 与 Dispatch](D-07-compute-pipeline.md)——已完成。
 - [D-08：Graphics Pipeline 完整状态、缓存与重载边界](D-08-pipeline-production.md)——设计已确认。
 - [P-01：并行录制、资源创建与上传压力测试](P-01-parallel-recording.md)——已完成。
-- [P-02：CPU 并发与资源管理性能基线](P-02-performance-baseline.md)——进行中，P-02A 至 P-02D
+- [P-02：CPU 并发与资源管理性能基线](P-02-performance-baseline.md)——进行中，P-02A 至 P-02E
   已完成。
 
 ## 状态

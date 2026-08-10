@@ -5,6 +5,7 @@ add_executable(
   granit_benchmarks
   main.cpp
   "${PROJECT_SOURCE_DIR}/src/core/handle_table.cpp"
+  "${PROJECT_SOURCE_DIR}/src/core/retirement_queue.cpp"
 )
 set(granit_benchmark_revision "unknown")
 find_package(Git QUIET)

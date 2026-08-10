@@ -2,6 +2,7 @@
 // Copyright (c) 2026 Granit contributors
 
 #include "core/handle_table.h"
+#include "core/retirement_queue.h"
 
 #include <algorithm>
 #include <atomic>
@@ -25,6 +26,9 @@ namespace {
 using clock_type = std::chrono::steady_clock;
 using granit::detail::handle_table;
 using granit::detail::resource_type;
+using granit::detail::retirement_order;
+using granit::detail::retirement_queue;
+using granit::detail::submission_serials;
 
 struct options {
   std::string_view case_name{"all"};
@@ -33,6 +37,7 @@ struct options {
   std::uint32_t samples{30};
   std::uint32_t warmup{5};
   std::uint32_t table_size{10'000};
+  std::uint32_t batch_size{100};
 };
 
 struct context {
@@ -40,6 +45,9 @@ struct context {
   std::vector<std::uint64_t> resources;
   std::vector<granit_handle> handles;
   granit_handle stale_handle{};
+  retirement_queue retired;
+  submission_serials serials;
+  std::vector<std::shared_ptr<std::uint64_t>> retired_resources;
 };
 
 enum class benchmark_case {
@@ -47,7 +55,10 @@ enum class benchmark_case {
   find_wrong_type,
   find_wrong_domain,
   find_stale,
-  insert_erase
+  insert_erase,
+  retire_insert,
+  serial_advance,
+  retire_collect
 };
 
 constexpr std::uint32_t domain = 7;
@@ -55,12 +66,14 @@ std::atomic_uint64_t checksum{};
 
 void print_help() {
   std::cout << "用法：granit_benchmarks [选项]\n"
-               "  --case <all|find_hit|find_wrong_type|find_wrong_domain|find_stale|insert_erase>\n"
+               "  --case <all|find_hit|find_wrong_type|find_wrong_domain|find_stale|insert_erase|\n"
+               "          retire_insert|serial_advance|retire_collect>\n"
                "  --threads <数量>       独立句柄表工作线程数\n"
                "  --iterations <数量>    每个线程、每个样本的操作数\n"
                "  --samples <数量>       正式样本数\n"
                "  --warmup <数量>        预热样本数\n"
-               "  --table-size <数量>    查询场景的句柄表大小\n";
+               "  --table-size <数量>    查询场景的句柄表大小\n"
+               "  --batch-size <数量>    退役队列中每个完成序号的资源数\n";
 }
 
 template <typename Value> bool parse_integer(std::string_view text, Value& value) {
@@ -101,6 +114,9 @@ bool parse_options(int argc, char** argv, options& result) {
     } else if (argument == "--table-size") {
       if (!parse_integer(value, result.table_size))
         return false;
+    } else if (argument == "--batch-size") {
+      if (!parse_integer(value, result.batch_size))
+        return false;
     } else {
       std::cerr << "未知选项：" << argument << '\n';
       return false;
@@ -113,11 +129,28 @@ bool parse_options(int argc, char** argv, options& result) {
   return true;
 }
 
-std::unique_ptr<context> make_context(std::uint32_t table_size, benchmark_case selected) {
+std::unique_ptr<context> make_context(const options& config, benchmark_case selected) {
   auto result = std::make_unique<context>();
-  result->resources.resize(table_size);
-  result->handles.reserve(table_size);
-  for (std::uint32_t index = 0; index < table_size; ++index) {
+  if (selected == benchmark_case::retire_insert) {
+    result->retired_resources.reserve(static_cast<std::size_t>(config.iterations));
+    for (std::uint64_t index = 0; index < config.iterations; ++index)
+      result->retired_resources.push_back(std::make_shared<std::uint64_t>(index));
+    return result;
+  }
+  if (selected == benchmark_case::retire_collect) {
+    for (std::uint64_t index = 0; index < config.iterations; ++index) {
+      const auto serial = index / config.batch_size + 1;
+      result->retired.retire(serial, retirement_order::resource,
+                             std::make_shared<std::uint64_t>(index));
+    }
+    return result;
+  }
+  if (selected == benchmark_case::serial_advance)
+    return result;
+
+  result->resources.resize(config.table_size);
+  result->handles.reserve(config.table_size);
+  for (std::uint32_t index = 0; index < config.table_size; ++index) {
     result->resources[index] = index + 1;
     result->handles.push_back(
         result->table.insert(&result->resources[index], resource_type::buffer, domain));
@@ -130,8 +163,27 @@ std::unique_ptr<context> make_context(std::uint32_t table_size, benchmark_case s
   return result;
 }
 
-std::uint64_t run_operations(context& state, benchmark_case selected, std::uint64_t iterations) {
+std::uint64_t run_operations(context& state, benchmark_case selected, std::uint64_t iterations,
+                             std::uint32_t batch_size) {
   std::uint64_t local_checksum{};
+  if (selected == benchmark_case::retire_insert) {
+    for (std::uint64_t index = 0; index < iterations; ++index) {
+      state.retired.retire(index / batch_size + 1, retirement_order::resource,
+                           std::move(state.retired_resources[static_cast<std::size_t>(index)]));
+    }
+    return state.retired.size();
+  }
+  if (selected == benchmark_case::serial_advance) {
+    for (std::uint64_t index = 0; index < iterations; ++index) {
+      const auto serial = state.serials.next();
+      if (!state.serials.commit(serial))
+        return 0;
+      state.serials.mark_completed(serial);
+    }
+    return state.serials.completed();
+  }
+  if (selected == benchmark_case::retire_collect)
+    return state.retired.collect(std::numeric_limits<std::uint64_t>::max());
   if (selected == benchmark_case::insert_erase) {
     std::uint64_t resource{1};
     for (std::uint64_t index = 0; index < iterations; ++index) {
@@ -163,6 +215,9 @@ std::uint64_t run_operations(context& state, benchmark_case selected, std::uint6
       found = state.table.find(handle, resource_type::buffer, domain);
       break;
     case benchmark_case::insert_erase:
+    case benchmark_case::retire_insert:
+    case benchmark_case::serial_advance:
+    case benchmark_case::retire_collect:
       break;
     }
     local_checksum ^= static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(found));
@@ -174,7 +229,7 @@ double run_sample(benchmark_case selected, const options& config) {
   std::vector<std::unique_ptr<context>> contexts;
   contexts.reserve(config.threads);
   for (std::uint32_t index = 0; index < config.threads; ++index)
-    contexts.push_back(make_context(config.table_size, selected));
+    contexts.push_back(make_context(config, selected));
 
   std::atomic_uint32_t ready{};
   std::atomic_bool start{};
@@ -185,7 +240,8 @@ double run_sample(benchmark_case selected, const options& config) {
       ready.fetch_add(1, std::memory_order_release);
       while (!start.load(std::memory_order_acquire))
         std::this_thread::yield();
-      const auto value = run_operations(*contexts[index], selected, config.iterations);
+      const auto value =
+          run_operations(*contexts[index], selected, config.iterations, config.batch_size);
       checksum.fetch_xor(value, std::memory_order_relaxed);
     });
   }
@@ -259,8 +315,9 @@ int main(int argc, char** argv) {
     }
     return 2;
   }
-  constexpr std::string_view cases[]{"find_hit", "find_wrong_type", "find_wrong_domain",
-                                     "find_stale", "insert_erase"};
+  constexpr std::string_view cases[]{"find_hit",       "find_wrong_type", "find_wrong_domain",
+                                     "find_stale",     "insert_erase",    "retire_insert",
+                                     "serial_advance", "retire_collect"};
   if (config.case_name != "all" &&
       std::find(std::begin(cases), std::end(cases), config.case_name) == std::end(cases)) {
     std::cerr << "未知 benchmark 用例：" << config.case_name << '\n';
@@ -283,6 +340,7 @@ int main(int argc, char** argv) {
             << "# link_mode=" << GRANIT_BENCHMARK_LINK_MODE << '\n'
             << "# system=" << GRANIT_BENCHMARK_SYSTEM << '\n'
             << "# cpu=" << cpu << '\n'
+            << "# batch_size=" << config.batch_size << '\n'
             << "schema,name,threads,iterations,samples,total_ns,ns_per_op,p50_ns,p95_ns,p99_ns,"
                "ops_per_second\n";
   if (selected(config.case_name, "find_hit"))
@@ -295,6 +353,12 @@ int main(int argc, char** argv) {
     run_case("find_stale", benchmark_case::find_stale, config);
   if (selected(config.case_name, "insert_erase"))
     run_case("insert_erase", benchmark_case::insert_erase, config);
+  if (selected(config.case_name, "retire_insert"))
+    run_case("retire_insert", benchmark_case::retire_insert, config);
+  if (selected(config.case_name, "serial_advance"))
+    run_case("serial_advance", benchmark_case::serial_advance, config);
+  if (selected(config.case_name, "retire_collect"))
+    run_case("retire_collect", benchmark_case::retire_collect, config);
   std::cerr << "checksum=" << checksum.load(std::memory_order_relaxed) << '\n';
   return 0;
 }

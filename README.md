@@ -66,8 +66,8 @@ Compute Pipeline 和 Dispatch 已经实现。仓库已提供离屏清屏、窗�
 窗口三角形和 Compute Storage Buffer 示例；Pipeline Cache、并发创建和 Shader 热替换边界已经
 完成。阶段六已验证独立 Buffer/Texture 上传、资源创建，以及共享只读对象的 Graphics/Compute
 并行录制，并形成公开对象线程安全矩阵。下一步进入句柄表、资源锁、Queue 锁和延迟销毁队列的
-性能测量；P-02A 句柄表、P-02B Registry/资源锁、P-02C Recorder 和 P-02D Queue 提交基准
-已经完成，下一步测量延迟销毁队列与批量回收。具体顺序及验收标准见
+性能测量；P-02A 句柄表、P-02B Registry/资源锁、P-02C Recorder、P-02D Queue 提交和 P-02E
+延迟销毁队列基准已经完成，下一步测量 Buffer/Texture staging 上传。具体顺序及验收标准见
 [docs/roadmap.md](docs/roadmap.md)。
 
 ## 快速开始
