@@ -75,6 +75,16 @@ public:
   [[nodiscard]] granit_result create_native_shader(std::span<const std::uint32_t> code,
                                                    VkShaderModule& shader) noexcept;
   void destroy_native_shader(VkShaderModule shader) noexcept;
+  [[nodiscard]] granit_result create_native_pipeline_layout(VkPipelineLayout& layout) noexcept;
+  void destroy_native_pipeline_layout(VkPipelineLayout layout) noexcept;
+  [[nodiscard]] granit_result
+  create_native_graphics_pipeline(VkPipelineLayout layout, VkShaderModule vertex_shader,
+                                  const char* vertex_entry, VkShaderModule fragment_shader,
+                                  const char* fragment_entry,
+                                  std::span<const granit_texture_format> color_formats,
+                                  granit_texture_format depth_stencil_format,
+                                  granit_sample_count sample_count, VkPipeline& pipeline) noexcept;
+  void destroy_native_graphics_pipeline(VkPipeline pipeline) noexcept;
   [[nodiscard]] granit_result
   create_native_command_recorder(vulkan_command_recorder& recorder) noexcept;
   [[nodiscard]] granit_result begin_command_recorder(vulkan_command_recorder& recorder) noexcept;

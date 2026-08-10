@@ -18,6 +18,8 @@ enum class lifecycle_resource_type : std::uint8_t {
   texture_view,
   sampler,
   shader,
+  pipeline_layout,
+  graphics_pipeline,
   surface,
   swapchain,
   command_recorder,

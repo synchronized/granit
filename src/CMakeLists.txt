@@ -51,6 +51,7 @@ target_sources(
     core/retirement_queue.h
     core/device_status.h
     renderer/renderer_api.cpp
+    renderer/pipeline_api.cpp
     renderer/buffer_api.cpp
     renderer/command_recorder_api.cpp
     renderer/renderer_registry.cpp
@@ -77,6 +78,8 @@ target_sources(
       "${PROJECT_SOURCE_DIR}/include/granit/command_recorder.hpp"
       "${PROJECT_SOURCE_DIR}/include/granit/granit.h"
       "${PROJECT_SOURCE_DIR}/include/granit/granit.hpp"
+      "${PROJECT_SOURCE_DIR}/include/granit/pipeline.h"
+      "${PROJECT_SOURCE_DIR}/include/granit/pipeline.hpp"
       "${PROJECT_SOURCE_DIR}/include/granit/renderer.h"
       "${PROJECT_SOURCE_DIR}/include/granit/renderer.hpp"
       "${PROJECT_SOURCE_DIR}/include/granit/render_target.h"

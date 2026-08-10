@@ -527,6 +527,117 @@ void renderer_state::destroy_native_shader(VkShaderModule shader) noexcept {
     device_.functions().vkDestroyShaderModule(device_.native_handle(), shader, nullptr);
 }
 
+granit_result renderer_state::create_native_pipeline_layout(VkPipelineLayout& layout) noexcept {
+  if (device_lost())
+    return GRANIT_ERROR_DEVICE_LOST;
+  VkPipelineLayoutCreateInfo info{};
+  info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+  std::lock_guard lock{resource_mutex_};
+  return observe_device_result(map_vulkan_result(device_.functions().vkCreatePipelineLayout(
+      device_.native_handle(), &info, nullptr, &layout)));
+}
+
+void renderer_state::destroy_native_pipeline_layout(VkPipelineLayout layout) noexcept {
+  if (layout != VK_NULL_HANDLE) {
+    std::lock_guard lock{resource_mutex_};
+    device_.functions().vkDestroyPipelineLayout(device_.native_handle(), layout, nullptr);
+  }
+}
+
+granit_result renderer_state::create_native_graphics_pipeline(
+    VkPipelineLayout layout, VkShaderModule vertex_shader, const char* vertex_entry,
+    VkShaderModule fragment_shader, const char* fragment_entry,
+    std::span<const granit_texture_format> color_formats,
+    granit_texture_format depth_stencil_format, granit_sample_count sample_count,
+    VkPipeline& pipeline) noexcept {
+  if (device_lost())
+    return GRANIT_ERROR_DEVICE_LOST;
+  std::array<VkPipelineShaderStageCreateInfo, 2> stages{};
+  stages[0].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+  stages[0].stage = VK_SHADER_STAGE_VERTEX_BIT;
+  stages[0].module = vertex_shader;
+  stages[0].pName = vertex_entry;
+  stages[1].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+  stages[1].stage = VK_SHADER_STAGE_FRAGMENT_BIT;
+  stages[1].module = fragment_shader;
+  stages[1].pName = fragment_entry;
+
+  VkPipelineVertexInputStateCreateInfo vertex_input{};
+  vertex_input.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+  VkPipelineInputAssemblyStateCreateInfo input_assembly{};
+  input_assembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+  input_assembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+  VkPipelineViewportStateCreateInfo viewport{};
+  viewport.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
+  viewport.viewportCount = 1;
+  viewport.scissorCount = 1;
+  VkPipelineRasterizationStateCreateInfo rasterization{};
+  rasterization.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+  rasterization.polygonMode = VK_POLYGON_MODE_FILL;
+  rasterization.cullMode = VK_CULL_MODE_NONE;
+  rasterization.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+  rasterization.lineWidth = 1.0F;
+  VkPipelineMultisampleStateCreateInfo multisample{};
+  multisample.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+  multisample.rasterizationSamples = static_cast<VkSampleCountFlagBits>(sample_count);
+  VkPipelineDepthStencilStateCreateInfo depth{};
+  depth.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+  depth.depthTestEnable = depth_stencil_format != GRANIT_TEXTURE_FORMAT_UNDEFINED;
+  depth.depthWriteEnable = depth.depthTestEnable;
+  depth.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
+  std::vector<VkPipelineColorBlendAttachmentState> blend_attachments(color_formats.size());
+  for (auto& attachment : blend_attachments)
+    attachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
+                                VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+  VkPipelineColorBlendStateCreateInfo blend{};
+  blend.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+  blend.attachmentCount = static_cast<std::uint32_t>(blend_attachments.size());
+  blend.pAttachments = blend_attachments.data();
+  const std::array dynamic_states{VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR};
+  VkPipelineDynamicStateCreateInfo dynamic{};
+  dynamic.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+  dynamic.dynamicStateCount = static_cast<std::uint32_t>(dynamic_states.size());
+  dynamic.pDynamicStates = dynamic_states.data();
+  std::vector<VkFormat> native_formats;
+  native_formats.reserve(color_formats.size());
+  for (const auto format : color_formats)
+    native_formats.push_back(map_texture_format(format));
+  VkPipelineRenderingCreateInfo rendering{};
+  rendering.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO;
+  rendering.colorAttachmentCount = static_cast<std::uint32_t>(native_formats.size());
+  rendering.pColorAttachmentFormats = native_formats.data();
+  const auto depth_format = map_texture_format(depth_stencil_format);
+  rendering.depthAttachmentFormat = depth_format;
+  if (depth_stencil_format == GRANIT_TEXTURE_FORMAT_D24_UNORM_S8_UINT ||
+      depth_stencil_format == GRANIT_TEXTURE_FORMAT_D32_FLOAT_S8_UINT)
+    rendering.stencilAttachmentFormat = depth_format;
+
+  VkGraphicsPipelineCreateInfo info{};
+  info.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+  info.pNext = &rendering;
+  info.stageCount = static_cast<std::uint32_t>(stages.size());
+  info.pStages = stages.data();
+  info.pVertexInputState = &vertex_input;
+  info.pInputAssemblyState = &input_assembly;
+  info.pViewportState = &viewport;
+  info.pRasterizationState = &rasterization;
+  info.pMultisampleState = &multisample;
+  info.pDepthStencilState = &depth;
+  info.pColorBlendState = &blend;
+  info.pDynamicState = &dynamic;
+  info.layout = layout;
+  std::lock_guard lock{resource_mutex_};
+  return observe_device_result(map_vulkan_result(device_.functions().vkCreateGraphicsPipelines(
+      device_.native_handle(), VK_NULL_HANDLE, 1, &info, nullptr, &pipeline)));
+}
+
+void renderer_state::destroy_native_graphics_pipeline(VkPipeline pipeline) noexcept {
+  if (pipeline != VK_NULL_HANDLE) {
+    std::lock_guard lock{resource_mutex_};
+    device_.functions().vkDestroyPipeline(device_.native_handle(), pipeline, nullptr);
+  }
+}
+
 granit_result
 renderer_state::create_native_command_recorder(vulkan_command_recorder& recorder) noexcept {
   if (device_lost())

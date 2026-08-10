@@ -16,6 +16,7 @@
 
 #include <granit/buffer.h>
 #include <granit/command_recorder.h>
+#include <granit/pipeline.h>
 #include <granit/renderer.h>
 #include <granit/sampler.h>
 #include <granit/shader.h>
@@ -92,6 +93,15 @@ public:
                                             std::span<const std::uint32_t> code,
                                             std::string_view entry_point, granit_shader& shader);
   [[nodiscard]] granit_result destroy_shader(granit_renderer renderer, granit_shader shader);
+  [[nodiscard]] granit_result create_pipeline_layout(granit_renderer renderer,
+                                                     granit_pipeline_layout& layout);
+  [[nodiscard]] granit_result destroy_pipeline_layout(granit_renderer renderer,
+                                                      granit_pipeline_layout layout);
+  [[nodiscard]] granit_result create_graphics_pipeline(granit_renderer renderer,
+                                                       const granit_graphics_pipeline_desc& desc,
+                                                       granit_graphics_pipeline& pipeline);
+  [[nodiscard]] granit_result destroy_graphics_pipeline(granit_renderer renderer,
+                                                        granit_graphics_pipeline pipeline);
   [[nodiscard]] granit_result create_command_recorder(granit_renderer renderer,
                                                       granit_command_recorder& recorder);
   [[nodiscard]] granit_result begin_command_recorder(granit_renderer renderer,
@@ -206,6 +216,21 @@ private:
     std::string entry_point;
     ~shader_record();
   };
+  struct pipeline_layout_record {
+    resource_metadata metadata;
+    std::shared_ptr<renderer_state> renderer;
+    VkPipelineLayout native{VK_NULL_HANDLE};
+    ~pipeline_layout_record();
+  };
+  struct graphics_pipeline_record {
+    resource_metadata metadata;
+    std::shared_ptr<renderer_state> renderer;
+    std::shared_ptr<pipeline_layout_record> layout;
+    std::shared_ptr<shader_record> vertex_shader;
+    std::shared_ptr<shader_record> fragment_shader;
+    VkPipeline native{VK_NULL_HANDLE};
+    ~graphics_pipeline_record();
+  };
   struct command_recorder_record {
     resource_metadata metadata;
     std::shared_ptr<renderer_state> renderer;
@@ -229,6 +254,10 @@ private:
   std::unordered_map<granit_texture_view, std::shared_ptr<texture_view_record>> texture_views_;
   std::unordered_map<granit_sampler, std::shared_ptr<sampler_record>> samplers_;
   std::unordered_map<granit_shader, std::shared_ptr<shader_record>> shaders_;
+  std::unordered_map<granit_pipeline_layout, std::shared_ptr<pipeline_layout_record>>
+      pipeline_layouts_;
+  std::unordered_map<granit_graphics_pipeline, std::shared_ptr<graphics_pipeline_record>>
+      graphics_pipelines_;
   std::unordered_map<granit_command_recorder, std::shared_ptr<command_recorder_record>>
       command_recorders_;
   std::unordered_map<granit_frame, std::shared_ptr<frame_record>> frames_;

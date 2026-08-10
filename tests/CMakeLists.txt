@@ -11,6 +11,7 @@ add_library(
   granit_c_header_test
   OBJECT
     headers/command_recorder_h.c
+    headers/pipeline_h.c
     headers/buffer_h.c
     headers/renderer_h.c
     headers/render_target_h.c
@@ -109,6 +110,7 @@ add_test(NAME granit.device_status COMMAND granit_device_status_test)
 add_executable(
   granit_renderer_test
   renderer/command_recorder_test.cpp
+  renderer/pipeline_test.cpp
   renderer/buffer_test.cpp
   renderer/renderer_test.cpp
   renderer/sampler_test.cpp
@@ -123,6 +125,10 @@ target_link_libraries(
     granit::granit
     Catch2::Catch2WithMain
     $<$<PLATFORM_ID:Windows>:user32>
+)
+target_compile_definitions(
+  granit_renderer_test
+  PRIVATE GRANIT_TEST_ASSET_DIR="${PROJECT_SOURCE_DIR}/tests/assets"
 )
 granit_target_compile_warnings(granit_renderer_test)
 add_test(NAME granit.renderer COMMAND granit_renderer_test)
@@ -175,6 +181,7 @@ add_library(
   granit_cpp_header_test
   OBJECT
     headers/command_recorder_hpp.cpp
+    headers/pipeline_hpp.cpp
     headers/buffer_hpp.cpp
     headers/renderer_hpp.cpp
     headers/render_target_hpp.cpp

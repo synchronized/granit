@@ -9,6 +9,7 @@
 #include <granit/buffer.h>
 #include <granit/command_recorder.h>
 #include <granit/export.h>
+#include <granit/pipeline.h>
 #include <granit/render_target.h>
 #include <granit/renderer.h>
 #include <granit/resource_types.h>

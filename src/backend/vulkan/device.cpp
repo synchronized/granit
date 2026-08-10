@@ -106,6 +106,9 @@ granit_result vulkan_device::initialize(const vulkan_instance& instance,
       functions_.vkWaitForFences == nullptr || functions_.vkResetFences == nullptr ||
       functions_.vkCreateSemaphore == nullptr || functions_.vkDestroySemaphore == nullptr ||
       functions_.vkCreateShaderModule == nullptr || functions_.vkDestroyShaderModule == nullptr ||
+      functions_.vkCreatePipelineLayout == nullptr ||
+      functions_.vkDestroyPipelineLayout == nullptr ||
+      functions_.vkCreateGraphicsPipelines == nullptr || functions_.vkDestroyPipeline == nullptr ||
       functions_.vkQueueSubmit2 == nullptr || functions_.vkQueueWaitIdle == nullptr ||
       (surface_types != 0 &&
        (functions_.vkCreateSwapchainKHR == nullptr || functions_.vkDestroySwapchainKHR == nullptr ||

@@ -6,7 +6,7 @@
 ## 元数据
 
 - 设计状态：已确认
-- 实现状态：未开始
+- 实现状态：D-03A 已完成，D-03B 未开始
 - 路线图任务：D-03
 - 优先级：P0
 - 前置依赖：D-01、D-02、R-05、R-06、R-09、F-02
@@ -99,11 +99,11 @@ Shader ────────────┘
 
 ### D-03A：最小 Graphics Pipeline
 
-1. 定义空 Pipeline Layout 和 Graphics Pipeline 的 C API、C++ RAII 与句柄类型。
-2. 实现内部 Pipeline Layout、Graphics Pipeline Registry 和 Vulkan 创建路径。
-3. 接入 Dynamic Rendering 的颜色及可选深度格式。
-4. 接入 R-08 延迟销毁、Device Lost 门禁和生命周期诊断。
-5. 覆盖描述校验、跨 Renderer、错误 Shader 阶段和 generation 失效测试。
+1. [已完成] 定义空 Pipeline Layout 和 Graphics Pipeline 的 C API、C++ RAII 与句柄类型。
+2. [已完成] 实现内部 Pipeline Layout、Graphics Pipeline Registry 和 Vulkan 创建路径。
+3. [已完成] 接入 Dynamic Rendering 的颜色及可选深度格式。
+4. [已完成] 接入 R-08 延迟销毁、Device Lost 门禁和生命周期诊断。
+5. [已完成] 覆盖描述校验、Renderer domain、generation 和依赖提前销毁测试。
 
 ### D-03B：Bind Group
 

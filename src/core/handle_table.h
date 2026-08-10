@@ -29,6 +29,7 @@ enum class resource_type : std::uint8_t {
   sampler = 10,
   command_recorder = 11,
   frame = 12,
+  pipeline_layout = 13,
 };
 
 /**
