@@ -66,7 +66,7 @@ Compute Pipeline 和 Dispatch 已经实现。仓库已提供离屏清屏、窗�
 窗口三角形和 Compute Storage Buffer 示例；Pipeline Cache、并发创建和 Shader 热替换边界已经
 完成。阶段六已验证独立 Buffer/Texture 上传、资源创建，以及共享只读对象的 Graphics/Compute
 并行录制，并形成公开对象线程安全矩阵。下一步进入句柄表、资源锁、Queue 锁和延迟销毁队列的
-性能测量。具体顺序及验收标准见
+性能测量；测量方案已经确认，首先建立纯 CPU 句柄表基准。具体顺序及验收标准见
 [docs/roadmap.md](docs/roadmap.md)。
 
 ## 快速开始
@@ -177,6 +177,8 @@ if (granit::failed(result)) {
   完整状态、缓存、并发创建与热重载边界。
 - [docs/plans/P-01-parallel-recording.md](docs/plans/P-01-parallel-recording.md)：并行录制、资源上传
   压力测试与线程安全基线。
+- [docs/plans/P-02-performance-baseline.md](docs/plans/P-02-performance-baseline.md)：CPU 并发、资源
+  管理与 staging 上传性能基线方案。
 - [docs/plans/F-07-recovery-boundaries.md](docs/plans/F-07-recovery-boundaries.md)：窗口帧恢复边界计划。
 - [docs/renderer.md](docs/renderer.md)：公共 renderer C/C++ API 与生命周期。
 - [docs/render-target.md](docs/render-target.md)：颜色与深度/模板 Attachment 值类型。
