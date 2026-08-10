@@ -13,6 +13,7 @@ project(
 option(BUILD_SHARED_LIBS "构建共享库" ON)
 option(GRANIT_BUILD_TESTING "构建 Granit 测试" ON)
 option(GRANIT_BUILD_EXAMPLES "构建 Granit 示例" ${PROJECT_IS_TOP_LEVEL})
+option(GRANIT_BUILD_BENCHMARKS "构建 Granit benchmark 程序" OFF)
 
 include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
@@ -37,6 +38,10 @@ endif()
 
 if(GRANIT_BUILD_EXAMPLES)
   add_subdirectory(examples)
+endif()
+
+if(GRANIT_BUILD_BENCHMARKS)
+  add_subdirectory(benchmarks)
 endif()
 
 configure_package_config_file(

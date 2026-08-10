@@ -6,7 +6,7 @@
 ## 元数据
 
 - 设计状态：已确认
-- 实现状态：未开始
+- 实现状态：进行中（P-02A 已完成）
 - 路线图任务：P-02
 - 优先级：P1
 - 前置依赖：P-01
@@ -61,6 +61,10 @@ P-02 不引入 Profiler SDK，也暂不增加通用埋点宏。第一层发现�
 只有确认需要长期、跨平台保留的观测区间后，才评估内部空实现宏和 Tracy 可选后端；任何 Profiler
 依赖都不得传播到 Granit 使用者或进入公共 ABI。
 
+已检查 `caors-core` 的 benchmark 实现：其独立目录和 CMake 开关适合复用，但核心依赖 CTrack，
+定位包含运行期追踪与通用统计。Granit 当前只借鉴工程组织、结果归档和可选构建方式，不复制业务
+用例，也不引入 `ctrack::ctrack`；后续仅在轻量 runner 无法满足已确认需求时重新评估。
+
 ## 基准用例
 
 | 子任务 | 场景 | 参数 | 主要指标 |
@@ -94,7 +98,8 @@ P-02 不引入 Profiler SDK，也暂不增加通用埋点宏。第一层发现�
 
 ## 分步实施
 
-1. P-02A：建立 `benchmarks/`、CMake 开关、CLI、CSV 输出和纯 CPU 句柄表基准。
+1. P-02A / 已完成：建立 `benchmarks/`、CMake 开关、CLI、CSV 输出和纯 CPU 句柄表基准；覆盖
+   命中、错误类型/domain、旧 generation 和槽位复用。
 2. P-02B：接入 Registry 与资源锁场景，区分独立对象和同对象竞争。
 3. P-02C：测量独立 Recorder 的创建与录制路径。
 4. P-02D：测量 Queue 提交串行化及不同 frames-in-flight 配置。
