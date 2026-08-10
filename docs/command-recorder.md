@@ -59,6 +59,8 @@ if (recorder.initialize(renderer.native_handle()) == granit::result::success) {
 - reset 回到 initial。
 - 单个 Recorder 不能并发调用，但可以在无并发时移交线程。
 - 不同 Recorder 可以并行录制。
+- 不同线程可以并行创建独立 Buffer 并上传初始数据；Queue 提交由 Renderer 内部串行化，提交顺序
+  决定跨 Recorder 的资源状态顺序。
 - 状态错误返回 `GRANIT_ERROR_INVALID_ARGUMENT`。
 
 详细约束见 [F-01 计划](plans/F-01-command-recorder.md)。

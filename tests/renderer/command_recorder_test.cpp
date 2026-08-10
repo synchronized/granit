@@ -1,13 +1,18 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include <granit/renderer/buffer.h>
+#include <granit/renderer/buffer.hpp>
 #include <granit/renderer/command_recorder.hpp>
 #include <granit/renderer/renderer.hpp>
 #include <granit/renderer/texture.h>
 
 #include <catch2/catch_all.hpp>
 
+#include <array>
+#include <atomic>
+#include <barrier>
+#include <cstddef>
+#include <thread>
 #include <utility>
 #include <vector>
 
@@ -266,6 +271,54 @@ TEST_CASE("Texture Layout 按提交顺序解析而非录制顺序", "[command][r
   REQUIRE(load_recorder.submit() == granit::result::success);
   REQUIRE(clear_recorder.reset() == granit::result::success);
   REQUIRE(load_recorder.reset() == granit::result::success);
+}
+
+TEST_CASE("独立 Recorder 支持并行资源上传与命令录制", "[command][concurrency][upload]") {
+  granit::renderer renderer;
+  const auto result = renderer.initialize({.application_name = "granit-parallel-recording"});
+  if (environment_unavailable(result))
+    SKIP("当前运行环境没有满足要求的 Vulkan 设备");
+  REQUIRE(result == granit::result::success);
+
+  constexpr std::size_t worker_count = 8;
+  constexpr std::uint64_t buffer_size = 256;
+  const std::array<std::byte, buffer_size> initial_data{};
+  std::array<granit::buffer, worker_count> buffers;
+  std::array<granit::command_recorder, worker_count> recorders;
+  std::barrier start{worker_count};
+  std::atomic_uint32_t failures{};
+  std::vector<std::thread> workers;
+  workers.reserve(worker_count);
+  for (std::size_t index = 0; index < worker_count; ++index) {
+    workers.emplace_back([&, index] {
+      start.arrive_and_wait();
+      auto worker_result =
+          buffers[index].initialize(renderer.native_handle(),
+                                    {.size = buffer_size,
+                                     .usage = granit::buffer_usage::transfer_source |
+                                              granit::buffer_usage::transfer_destination,
+                                     .location = granit::memory_location::device},
+                                    initial_data);
+      if (granit::succeeded(worker_result))
+        worker_result = recorders[index].initialize(renderer.native_handle());
+      if (granit::succeeded(worker_result))
+        worker_result = recorders[index].begin();
+      if (granit::succeeded(worker_result))
+        worker_result = recorders[index].fill_buffer(buffers[index].native_handle(), 0, buffer_size,
+                                                     static_cast<std::uint32_t>(index));
+      if (granit::succeeded(worker_result))
+        worker_result = recorders[index].end();
+      if (granit::failed(worker_result))
+        ++failures;
+    });
+  }
+  for (auto& worker : workers)
+    worker.join();
+  REQUIRE(failures.load() == 0);
+  for (auto& recorder : recorders) {
+    REQUIRE(recorder.submit() == granit::result::success);
+    REQUIRE(recorder.reset() == granit::result::success);
+  }
 }
 
 } // namespace
