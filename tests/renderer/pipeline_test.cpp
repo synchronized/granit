@@ -11,11 +11,14 @@
 
 #include <catch2/catch_all.hpp>
 
+#include <atomic>
+#include <barrier>
 #include <cstddef>
 #include <fstream>
 #include <iterator>
 #include <span>
 #include <string>
+#include <thread>
 #include <vector>
 
 namespace {
@@ -446,6 +449,76 @@ TEST_CASE("Compute Pipeline 校验阶段并持有 Shader 与 Layout", "[pipeline
   REQUIRE(granit_texture_destroy(renderer.native_handle(), texture) == GRANIT_SUCCESS);
   CHECK(granit_compute_pipeline_destroy(renderer.native_handle(), handle) ==
         GRANIT_ERROR_INVALID_HANDLE);
+}
+
+TEST_CASE("Graphics 与 Compute Pipeline 支持多线程并发创建", "[pipeline][concurrency]") {
+  granit::renderer renderer;
+  const auto result = renderer.initialize({.application_name = "granit-concurrent-pipelines"});
+  if (environment_unavailable(result))
+    SKIP("当前运行环境没有满足要求的 Vulkan 设备");
+  REQUIRE(result == granit::result::success);
+
+  const auto vertex_code = load_shader("minimal.vert.spv");
+  const auto fragment_code = load_shader("minimal.frag.spv");
+  const auto compute_code = load_shader("minimal.comp.spv");
+  granit::shader vertex;
+  granit::shader fragment;
+  granit::shader compute;
+  REQUIRE(vertex.initialize(renderer.native_handle(),
+                            {.stage = granit::shader_stage::vertex, .code = vertex_code}) ==
+          granit::result::success);
+  REQUIRE(fragment.initialize(renderer.native_handle(),
+                              {.stage = granit::shader_stage::fragment, .code = fragment_code}) ==
+          granit::result::success);
+  REQUIRE(compute.initialize(renderer.native_handle(),
+                             {.stage = granit::shader_stage::compute, .code = compute_code}) ==
+          granit::result::success);
+  granit::pipeline_layout layout;
+  REQUIRE(layout.initialize(renderer.native_handle()) == granit::result::success);
+
+  const granit_texture_format format = GRANIT_TEXTURE_FORMAT_RGBA8_UNORM;
+  granit_graphics_pipeline_desc graphics_desc = GRANIT_GRAPHICS_PIPELINE_DESC_INIT;
+  graphics_desc.layout = layout.native_handle();
+  graphics_desc.vertex_shader = vertex.native_handle();
+  graphics_desc.fragment_shader = fragment.native_handle();
+  graphics_desc.color_format_count = 1;
+  graphics_desc.color_formats = &format;
+  granit_compute_pipeline_desc compute_desc = GRANIT_COMPUTE_PIPELINE_DESC_INIT;
+  compute_desc.layout = layout.native_handle();
+  compute_desc.compute_shader = compute.native_handle();
+
+  constexpr std::size_t thread_count = 6;
+  constexpr std::size_t iterations = 4;
+  std::barrier start{thread_count};
+  std::atomic_uint32_t failures{};
+  std::vector<std::thread> threads;
+  threads.reserve(thread_count);
+  for (std::size_t thread_index = 0; thread_index < thread_count; ++thread_index) {
+    threads.emplace_back([&] {
+      start.arrive_and_wait();
+      for (std::size_t iteration = 0; iteration < iterations; ++iteration) {
+        granit_graphics_pipeline graphics = GRANIT_NULL_HANDLE;
+        granit_compute_pipeline compute_pipeline = GRANIT_NULL_HANDLE;
+        if (granit_graphics_pipeline_create(renderer.native_handle(), &graphics_desc, &graphics) !=
+            GRANIT_SUCCESS) {
+          ++failures;
+          continue;
+        }
+        if (granit_compute_pipeline_create(renderer.native_handle(), &compute_desc,
+                                           &compute_pipeline) != GRANIT_SUCCESS)
+          ++failures;
+        if (compute_pipeline != GRANIT_NULL_HANDLE &&
+            granit_compute_pipeline_destroy(renderer.native_handle(), compute_pipeline) !=
+                GRANIT_SUCCESS)
+          ++failures;
+        if (granit_graphics_pipeline_destroy(renderer.native_handle(), graphics) != GRANIT_SUCCESS)
+          ++failures;
+      }
+    });
+  }
+  for (auto& thread : threads)
+    thread.join();
+  CHECK(failures.load() == 0);
 }
 
 TEST_CASE("Compute Dispatch 写入 Storage Buffer 并自动同步 Copy", "[pipeline][compute][storage]") {

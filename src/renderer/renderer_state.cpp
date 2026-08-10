@@ -292,7 +292,7 @@ granit_result renderer_state::import_pipeline_cache(const void* data, std::uint6
       header.vendor != properties.vendorID || header.device != properties.deviceID ||
       std::memcmp(header.uuid.data(), properties.pipelineCacheUUID, VK_UUID_SIZE) != 0)
     return GRANIT_ERROR_INVALID_ARGUMENT;
-  std::lock_guard lock{resource_mutex_};
+  std::lock_guard lock{pipeline_cache_mutex_};
   VkPipelineCacheCreateInfo info{};
   info.sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO;
   info.initialDataSize = static_cast<std::size_t>(size);
@@ -311,7 +311,7 @@ granit_result renderer_state::import_pipeline_cache(const void* data, std::uint6
 granit_result renderer_state::export_pipeline_cache(void* data, std::uint64_t& size) noexcept {
   if (device_lost())
     return GRANIT_ERROR_DEVICE_LOST;
-  std::lock_guard lock{resource_mutex_};
+  std::lock_guard lock{pipeline_cache_mutex_};
   std::size_t required{};
   auto result = device_.functions().vkGetPipelineCacheData(device_.native_handle(), pipeline_cache_,
                                                            &required, nullptr);
@@ -956,7 +956,7 @@ granit_result renderer_state::create_native_graphics_pipeline(
   info.pColorBlendState = &blend;
   info.pDynamicState = &dynamic;
   info.layout = layout;
-  std::lock_guard lock{resource_mutex_};
+  std::lock_guard lock{pipeline_cache_mutex_};
   return observe_device_result(map_vulkan_result(device_.functions().vkCreateGraphicsPipelines(
       device_.native_handle(), pipeline_cache_, 1, &info, nullptr, &pipeline)));
 }
@@ -981,7 +981,7 @@ granit_result renderer_state::create_native_compute_pipeline(VkPipelineLayout la
   info.stage.module = compute_shader;
   info.stage.pName = compute_entry;
   info.layout = layout;
-  std::lock_guard lock{resource_mutex_};
+  std::lock_guard lock{pipeline_cache_mutex_};
   return observe_device_result(map_vulkan_result(device_.functions().vkCreateComputePipelines(
       device_.native_handle(), pipeline_cache_, 1, &info, nullptr, &pipeline)));
 }

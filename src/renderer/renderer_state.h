@@ -221,6 +221,7 @@ private:
   bool validation_enabled_{};
   device_status device_status_;
   std::mutex resource_mutex_;
+  std::mutex pipeline_cache_mutex_;
   std::mutex queue_mutex_;
   vulkan_instance instance_;
   vulkan_device device_;

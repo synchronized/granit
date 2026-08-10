@@ -79,3 +79,7 @@ Graphics 与 Compute Pipeline 共用 Renderer 内部的 Pipeline Cache。调用
 `granit_renderer_pipeline_cache_export` 时先传入空数据查询大小，再由调用者分配缓冲区并导出；
 `granit_renderer_pipeline_cache_import` 会在调用期间读取并合并兼容数据。缓存与设备及驱动相关，
 不应作为稳定资产格式；头信息不兼容时返回无效参数，Renderer 原有缓存和 Pipeline 创建能力不受影响。
+
+Graphics 与 Compute Pipeline 的同步创建函数可以从多个用户线程并发调用。Registry 全局锁仅保护
+句柄查找和登记，不覆盖驱动 Pipeline 编译；共享 Pipeline Cache 使用独立互斥锁串行化 Vulkan
+访问。驱动仍可能在内部串行编译，因此该保证描述调用安全性，不承诺线性加速。

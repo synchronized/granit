@@ -63,8 +63,8 @@ Renderer 全局 Device Lost 门禁、普通 GPU 资源真实提交完成点和 S
 退役均已完成。Shader Module、Graphics Pipeline、Bind Group Layout、Pipeline Layout、不可变
 Bind Group、Command Recorder 资源绑定、Viewport、Scissor、Vertex/Index Buffer、Draw、
 Compute Pipeline 和 Dispatch 已经实现。仓库已提供离屏清屏、窗口清屏、真实 Vertex Buffer
-窗口三角形和 Compute Storage Buffer 示例；Pipeline Cache 导入导出已经完成，下一步验证并发创建
-与 Shader 热重载边界。具体顺序及
+窗口三角形和 Compute Storage Buffer 示例；Pipeline Cache 与并发创建验证已经完成，下一步明确
+Shader 热重载边界。具体顺序及
 验收标准见
 [docs/roadmap.md](docs/roadmap.md)。
 
