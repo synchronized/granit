@@ -64,9 +64,9 @@ Renderer 全局 Device Lost 门禁、普通 GPU 资源真实提交完成点和 S
 Bind Group、Command Recorder 资源绑定、Viewport、Scissor、Vertex/Index Buffer、Draw、
 Compute Pipeline 和 Dispatch 已经实现。仓库已提供离屏清屏、窗口清屏、真实 Vertex Buffer
 窗口三角形和 Compute Storage Buffer 示例；Pipeline Cache、并发创建和 Shader 热替换边界已经
-完成。阶段六已验证独立 Buffer 上传、Texture/View 创建与 Command Recorder 并行录制，下一步
-设计通用 Texture 初始数据上传并扩展 Graphics/Compute 工作负载压力测试。具体顺序及
-验收标准见
+完成。阶段六已验证独立 Buffer/Texture 上传、资源创建，以及共享只读对象的 Graphics/Compute
+并行录制，并形成公开对象线程安全矩阵。下一步进入句柄表、资源锁、Queue 锁和延迟销毁队列的
+性能测量。具体顺序及验收标准见
 [docs/roadmap.md](docs/roadmap.md)。
 
 ## 快速开始
@@ -175,6 +175,8 @@ if (granit::failed(result)) {
   Dispatch 与资源状态计划。
 - [docs/plans/D-08-pipeline-production.md](docs/plans/D-08-pipeline-production.md)：Graphics Pipeline
   完整状态、缓存、并发创建与热重载边界。
+- [docs/plans/P-01-parallel-recording.md](docs/plans/P-01-parallel-recording.md)：并行录制、资源上传
+  压力测试与线程安全基线。
 - [docs/plans/F-07-recovery-boundaries.md](docs/plans/F-07-recovery-boundaries.md)：窗口帧恢复边界计划。
 - [docs/renderer.md](docs/renderer.md)：公共 renderer C/C++ API 与生命周期。
 - [docs/render-target.md](docs/render-target.md)：颜色与深度/模板 Attachment 值类型。
@@ -184,6 +186,7 @@ if (granit::failed(result)) {
 - [docs/shader.md](docs/shader.md)：SPIR-V Shader 创建、校验和生命周期。
 - [docs/surface.md](docs/surface.md)：窗口 Surface、平台句柄和生命周期。
 - [docs/texture.md](docs/texture.md)：Texture、Texture View 和父子生命周期。
+- [docs/thread-safety.md](docs/thread-safety.md)：公开对象线程安全矩阵、提交和资源依赖约定。
 - [docs/swapchain.md](docs/swapchain.md)：交换链配置、重建和生命周期。
 - [docs/vulkan.md](docs/vulkan.md)：Vulkan loader、instance 和后端边界。
 - [3rd/README.md](3rd/README.md)：第三方依赖版本、来源和用途。
