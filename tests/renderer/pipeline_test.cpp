@@ -11,6 +11,7 @@
 
 #include <catch2/catch_all.hpp>
 
+#include <array>
 #include <atomic>
 #include <barrier>
 #include <cstddef>
@@ -628,6 +629,159 @@ TEST_CASE("Compute Dispatch 写入 Storage Buffer 并自动同步 Copy", "[pipel
   for (std::uint32_t index = 0; index < 16; ++index)
     CHECK(values[index] == index * 3 + 7);
   REQUIRE(readback.unmap() == granit::result::success);
+}
+
+TEST_CASE("Graphics 与 Compute 工作负载支持并行录制", "[pipeline][command][concurrency]") {
+  granit::renderer renderer;
+  const auto result = renderer.initialize(
+      {.application_name = "granit-parallel-workloads", .enable_validation = true});
+  if (result == granit::result::unsupported)
+    SKIP("当前运行环境没有 Khronos validation layer");
+  if (environment_unavailable(result))
+    SKIP("当前运行环境没有满足要求的 Vulkan 设备");
+  REQUIRE(result == granit::result::success);
+
+  const auto vertex_code = load_shader("minimal.vert.spv");
+  const auto fragment_code = load_shader("minimal.frag.spv");
+  const auto compute_code = load_shader("storage_buffer.comp.spv");
+  granit::shader vertex;
+  granit::shader fragment;
+  granit::shader compute;
+  REQUIRE(vertex.initialize(renderer.native_handle(),
+                            {.stage = granit::shader_stage::vertex, .code = vertex_code}) ==
+          granit::result::success);
+  REQUIRE(fragment.initialize(renderer.native_handle(),
+                              {.stage = granit::shader_stage::fragment, .code = fragment_code}) ==
+          granit::result::success);
+  REQUIRE(compute.initialize(renderer.native_handle(),
+                             {.stage = granit::shader_stage::compute, .code = compute_code}) ==
+          granit::result::success);
+
+  granit::pipeline_layout graphics_layout;
+  REQUIRE(graphics_layout.initialize(renderer.native_handle()) == granit::result::success);
+  const auto color_format = granit::texture_format::rgba8_unorm;
+  granit::graphics_pipeline graphics_pipeline;
+  REQUIRE(graphics_pipeline.initialize(renderer.native_handle(),
+                                       {.layout = graphics_layout.native_handle(),
+                                        .vertex_shader = vertex.native_handle(),
+                                        .fragment_shader = fragment.native_handle(),
+                                        .color_formats = std::span{&color_format, 1},
+                                        .depth_stencil_format = granit::texture_format::undefined,
+                                        .samples = granit::sample_count::one,
+                                        .vertex_buffers = {},
+                                        .primitive = {},
+                                        .depth = {},
+                                        .color_blends = {}}) == granit::result::success);
+
+  constexpr std::uint64_t storage_size = 16 * sizeof(std::uint32_t);
+  const granit::bind_group_layout_entry declaration{.binding = 0,
+                                                    .type = granit::binding_type::storage_buffer,
+                                                    .visibility =
+                                                        granit::shader_stage_flags::compute};
+  granit::bind_group_layout compute_group_layout;
+  REQUIRE(compute_group_layout.initialize(renderer.native_handle(), std::span{&declaration, 1}) ==
+          granit::result::success);
+  const auto compute_group_layout_handle = compute_group_layout.native_handle();
+  granit::pipeline_layout compute_layout;
+  REQUIRE(compute_layout.initialize(renderer.native_handle(),
+                                    std::span{&compute_group_layout_handle, 1}) ==
+          granit::result::success);
+  granit::compute_pipeline compute_pipeline;
+  REQUIRE(compute_pipeline.initialize(renderer.native_handle(),
+                                      {.layout = compute_layout.native_handle(),
+                                       .compute_shader = compute.native_handle()}) ==
+          granit::result::success);
+
+  constexpr std::size_t graphics_count = 4;
+  constexpr std::size_t compute_count = 4;
+  constexpr std::size_t worker_count = graphics_count + compute_count;
+  std::array<granit_texture, graphics_count> textures{};
+  std::array<granit_texture_view, graphics_count> views{};
+  for (std::size_t index = 0; index < graphics_count; ++index) {
+    granit_texture_desc desc = GRANIT_TEXTURE_DESC_INIT;
+    desc.format = GRANIT_TEXTURE_FORMAT_RGBA8_UNORM;
+    desc.usage = GRANIT_TEXTURE_USAGE_COLOR_ATTACHMENT_BIT;
+    desc.width = 32;
+    desc.height = 32;
+    REQUIRE(granit_texture_create_with_default_view(renderer.native_handle(), &desc,
+                                                    &textures[index],
+                                                    &views[index]) == GRANIT_SUCCESS);
+  }
+  std::array<granit::buffer, compute_count> storage_buffers;
+  std::array<granit::bind_group, compute_count> compute_groups;
+  for (std::size_t index = 0; index < compute_count; ++index) {
+    REQUIRE(storage_buffers[index].initialize(renderer.native_handle(),
+                                              {.size = storage_size,
+                                               .usage = granit::buffer_usage::storage,
+                                               .location = granit::memory_location::device}) ==
+            granit::result::success);
+    const granit::bind_group_entry entry{
+        .binding = 0, .resource = storage_buffers[index].native_handle(), .size = storage_size};
+    REQUIRE(compute_groups[index].initialize(renderer.native_handle(),
+                                             compute_group_layout.native_handle(),
+                                             std::span{&entry, 1}) == granit::result::success);
+  }
+
+  std::array<granit::command_recorder, worker_count> recorders;
+  std::barrier start{worker_count};
+  std::atomic_uint32_t failures{};
+  std::vector<std::thread> workers;
+  workers.reserve(worker_count);
+  for (std::size_t index = 0; index < worker_count; ++index) {
+    workers.emplace_back([&, index] {
+      start.arrive_and_wait();
+      auto worker_result = recorders[index].initialize(renderer.native_handle());
+      if (granit::succeeded(worker_result))
+        worker_result = recorders[index].begin();
+      if (index < graphics_count) {
+        if (granit::succeeded(worker_result))
+          worker_result =
+              recorders[index].bind_graphics_pipeline(graphics_pipeline.native_handle());
+        const granit::viewport viewport{0, 0, 32, 32, 0, 1};
+        const granit::scissor scissor{0, 0, 32, 32};
+        if (granit::succeeded(worker_result))
+          worker_result = recorders[index].set_viewports(0, std::span{&viewport, 1});
+        if (granit::succeeded(worker_result))
+          worker_result = recorders[index].set_scissors(0, std::span{&scissor, 1});
+        const granit::color_attachment_desc color{
+            .view = views[index],
+            .clear_value = {.red = 0.1F, .green = 0.2F, .blue = 0.3F, .alpha = 1.0F}};
+        const granit::rendering_desc rendering{.color_attachments = std::span{&color, 1},
+                                               .area = {.width = 32, .height = 32}};
+        if (granit::succeeded(worker_result))
+          worker_result = recorders[index].begin_rendering(rendering);
+        if (granit::succeeded(worker_result))
+          worker_result = recorders[index].draw(3);
+        if (granit::succeeded(worker_result))
+          worker_result = recorders[index].end_rendering();
+      } else {
+        const auto compute_index = index - graphics_count;
+        if (granit::succeeded(worker_result))
+          worker_result = recorders[index].bind_compute_pipeline(compute_pipeline.native_handle());
+        const auto group = compute_groups[compute_index].native_handle();
+        if (granit::succeeded(worker_result))
+          worker_result = recorders[index].bind_compute_groups(compute_layout.native_handle(), 0,
+                                                               std::span{&group, 1});
+        if (granit::succeeded(worker_result))
+          worker_result = recorders[index].dispatch(16);
+      }
+      if (granit::succeeded(worker_result))
+        worker_result = recorders[index].end();
+      if (granit::failed(worker_result))
+        ++failures;
+    });
+  }
+  for (auto& worker : workers)
+    worker.join();
+  REQUIRE(failures.load() == 0);
+  for (auto& recorder : recorders) {
+    REQUIRE(recorder.submit() == granit::result::success);
+    REQUIRE(recorder.reset() == granit::result::success);
+  }
+  for (std::size_t index = 0; index < graphics_count; ++index) {
+    REQUIRE(granit_texture_view_destroy(renderer.native_handle(), views[index]) == GRANIT_SUCCESS);
+    REQUIRE(granit_texture_destroy(renderer.native_handle(), textures[index]) == GRANIT_SUCCESS);
+  }
 }
 
 } // namespace

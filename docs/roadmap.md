@@ -187,7 +187,8 @@
 ### 目标与交付物
 
 - **[P-01](plans/P-01-parallel-recording.md) / P1 / 进行中**：建立并行命令记录、资源创建和上传
-  压力测试；独立 Buffer/Texture 上传、Texture/View 创建与 Recorder 并行录制已完成。
+  压力测试；独立 Buffer/Texture 上传、资源创建，以及共享只读对象的 Graphics/Compute 并行录制
+  已完成。
 - **P-02 / P1**：测量句柄表、资源锁、Queue 锁和延迟销毁队列。
 - **P-03 / P1**：依据数据调整锁粒度、缓存、暂存内存和批量 API。
 - **P-04 / P1**：建立瞬态资源与每帧上传分配器。
