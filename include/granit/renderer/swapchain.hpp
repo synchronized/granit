@@ -8,6 +8,7 @@
 #include <utility>
 
 #include <granit/core/result.hpp>
+#include <granit/renderer/resource_types.hpp>
 #include <granit/renderer/swapchain.h>
 
 namespace granit {
@@ -30,6 +31,7 @@ struct swapchain_info {
   std::uint32_t height{};
   std::uint32_t image_count{};
   present_mode presentation{present_mode::fifo};
+  texture_format format{texture_format::undefined};
 };
 
 struct acquired_frame {
@@ -109,7 +111,8 @@ public:
       info = {.width = native_info.width,
               .height = native_info.height,
               .image_count = native_info.image_count,
-              .presentation = static_cast<present_mode>(native_info.present_mode)};
+              .presentation = static_cast<present_mode>(native_info.present_mode),
+              .format = static_cast<texture_format>(native_info.format)};
     }
     return from_native(native_result);
   }

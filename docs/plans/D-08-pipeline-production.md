@@ -6,7 +6,7 @@
 ## 元数据
 
 - 设计状态：已确认
-- 实现状态：实现中（D-08A1、D-08A2、D-08A3 已完成）
+- 实现状态：实现中（D-08A 与窗口 Vertex Buffer 示例已完成）
 - 路线图任务：D-08
 - 优先级：P1
 - 前置依赖：D-03、D-05、D-06、D-07
@@ -87,7 +87,7 @@ Graphics Pipeline 描述继续包含 `struct_size`。新增字段追加在现有
 1. D-08A1 / 已完成：Vertex Format、Attribute 和 Buffer Layout。
 2. D-08A2 / 已完成：Primitive 与 Rasterization 状态。
 3. D-08A3 / 已完成：Depth/Stencil 基础状态和 Color Blend。
-4. 增加可见的窗口 Vertex Buffer 三角形示例。
+4. 已完成：增加可见的窗口 Vertex Buffer 三角形示例。
 5. D-08B：Pipeline Cache 导入导出。
 6. D-08C：并发创建测试与锁粒度调整。
 7. D-08D：记录并验证不可变对象热替换边界。

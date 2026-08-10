@@ -194,7 +194,26 @@ granit_result vulkan_swapchain::recreate(const vulkan_instance& instance,
     }
     new_images.resize(actual_image_count);
 
+    std::vector<VkSemaphore> new_render_finished(actual_image_count);
+    VkSemaphoreCreateInfo semaphore_info{};
+    semaphore_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+    for (auto& semaphore : new_render_finished) {
+      result = device.functions().vkCreateSemaphore(device.native_handle(), &semaphore_info,
+                                                    nullptr, &semaphore);
+      if (result != VK_SUCCESS) {
+        for (const auto created : new_render_finished) {
+          if (created != VK_NULL_HANDLE)
+            device.functions().vkDestroySemaphore(device.native_handle(), created, nullptr);
+        }
+        device.functions().vkDestroySwapchainKHR(device.native_handle(), pending_handle, nullptr);
+        pending_handle = VK_NULL_HANDLE;
+        return map_vulkan_result(result);
+      }
+    }
+
     if (handle_ != VK_NULL_HANDLE) {
+      for (const auto semaphore : render_finished_)
+        device.functions().vkDestroySemaphore(device.native_handle(), semaphore, nullptr);
       device.functions().vkDestroySwapchainKHR(device.native_handle(), handle_, nullptr);
     }
     handle_ = std::exchange(pending_handle, VK_NULL_HANDLE);
@@ -202,6 +221,7 @@ granit_result vulkan_swapchain::recreate(const vulkan_instance& instance,
     extent_ = extent;
     present_mode_ = selected_mode;
     images_ = std::move(new_images);
+    render_finished_ = std::move(new_render_finished);
     return GRANIT_SUCCESS;
   } catch (const std::bad_alloc&) {
     if (pending_handle != VK_NULL_HANDLE) {
@@ -252,6 +272,11 @@ vulkan_present_result vulkan_swapchain::present(const vulkan_device& device, VkQ
 }
 
 void vulkan_swapchain::reset(const vulkan_device& device) noexcept {
+  if (device.valid() && device.functions().vkDestroySemaphore != nullptr) {
+    for (const auto semaphore : render_finished_)
+      device.functions().vkDestroySemaphore(device.native_handle(), semaphore, nullptr);
+  }
+  render_finished_.clear();
   if (handle_ != VK_NULL_HANDLE && device.valid() &&
       device.functions().vkDestroySwapchainKHR != nullptr) {
     device.functions().vkDestroySwapchainKHR(device.native_handle(), handle_, nullptr);
@@ -267,7 +292,8 @@ vulkan_swapchain_info vulkan_swapchain::info() const noexcept {
   return {.width = extent_.width,
           .height = extent_.height,
           .image_count = static_cast<std::uint32_t>(images_.size()),
-          .present_mode = public_present_mode(present_mode_)};
+          .present_mode = public_present_mode(present_mode_),
+          .format = format_};
 }
 
 } // namespace granit::detail

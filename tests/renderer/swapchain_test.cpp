@@ -75,6 +75,7 @@ TEST_CASE("Swapchain 支持创建、查询、重建和销毁", "[swapchain][win3
   CHECK(info.width > 0);
   CHECK(info.height > 0);
   CHECK(info.image_count >= 2);
+  CHECK(info.format != granit::texture_format::undefined);
 
   granit_texture before_minimize_texture = GRANIT_NULL_HANDLE;
   granit_texture_view before_minimize_view = GRANIT_NULL_HANDLE;

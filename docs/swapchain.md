@@ -5,8 +5,10 @@
 
 ## 定位
 
-Swapchain 管理 Surface 对应的窗口后缓冲图像。公开 API 不暴露 Vulkan 图像、格式或交换链句柄；
+Swapchain 管理 Surface 对应的窗口后缓冲图像。公开 API 不暴露 Vulkan 图像或交换链句柄；
 当前阶段提供创建、查询、重建、帧获取、呈现和销毁，并隐藏 WSI 同步及图像布局细节。
+呈现完成信号量按 Swapchain 图像管理，图像重新获取前不会复用，避免与呈现引擎仍在等待的
+二进制信号量发生冲突。
 
 ## 创建
 
@@ -30,8 +32,8 @@ granit_result result = granit_swapchain_create(renderer, surface, &desc, &swapch
 - `GRANIT_PRESENT_MODE_MAILBOX`：低延迟三缓冲倾向；不可用时回退 FIFO。
 - `GRANIT_PRESENT_MODE_IMMEDIATE`：允许撕裂；不可用时回退 FIFO。
 
-实际采用的模式会写入 `granit_swapchain_info.present_mode`。颜色格式暂由 Granit 选择，优先使用
-BGRA8 sRGB；在渲染目标抽象完成前不进入公共 API。
+实际采用的模式会写入 `granit_swapchain_info.present_mode`。Granit 选择的后端无关颜色格式写入
+`granit_swapchain_info.format`；创建对应 Graphics Pipeline 时应使用该格式。
 
 ## 重建与查询
 

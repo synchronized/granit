@@ -1294,7 +1294,7 @@ granit_result renderer_state::submit_swapchain_frame(vulkan_command_recorder& re
   wait.stageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
   VkSemaphoreSubmitInfo signal{};
   signal.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
-  signal.semaphore = slot.context->render_finished();
+  signal.semaphore = swapchain.render_finished(image_index);
   signal.stageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
   VkSubmitInfo2 submit{};
   submit.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2;
@@ -1350,7 +1350,7 @@ granit_result renderer_state::present_swapchain_frame(vulkan_swapchain& swapchai
   if (!slot.awaiting_present)
     return GRANIT_ERROR_INVALID_ARGUMENT;
   const auto presented = swapchain.present(device_, device_.graphics_queue(), image_index,
-                                           slot.context->render_finished());
+                                           swapchain.render_finished(image_index));
   slot.awaiting_present = false;
   needs_recreate = presented.suboptimal || presented.result == GRANIT_ERROR_OUT_OF_DATE;
   return observe_device_result(presented.result);
@@ -1414,7 +1414,7 @@ granit_result renderer_state::cancel_swapchain_frame(vulkan_swapchain& swapchain
   command.commandBuffer = slot.postamble->native_handle();
   VkSemaphoreSubmitInfo signal{};
   signal.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
-  signal.semaphore = slot.context->render_finished();
+  signal.semaphore = swapchain.render_finished(image_index);
   signal.stageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
   VkSubmitInfo2 submit{};
   submit.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2;
@@ -1435,7 +1435,7 @@ granit_result renderer_state::cancel_swapchain_frame(vulkan_swapchain& swapchain
   slot.acquired = false;
   slot.awaiting_present = true;
   const auto presented = swapchain.present(device_, device_.graphics_queue(), image_index,
-                                           slot.context->render_finished());
+                                           swapchain.render_finished(image_index));
   slot.awaiting_present = false;
   needs_recreate = presented.suboptimal || presented.result == GRANIT_ERROR_OUT_OF_DATE;
   vulkan_image_access present_state{};

@@ -8,11 +8,11 @@
 #include <stdint.h>
 
 #include <granit/core/export.h>
-#include <granit/renderer/renderer.h>
 #include <granit/core/result.h>
+#include <granit/core/types.h>
+#include <granit/renderer/renderer.h>
 #include <granit/renderer/surface.h>
 #include <granit/renderer/texture.h>
-#include <granit/core/types.h>
 
 /** 窗口交换链句柄。零值无效。 */
 typedef granit_handle granit_swapchain;
@@ -45,14 +45,21 @@ typedef struct granit_swapchain_info {
   uint32_t height;
   uint32_t image_count;
   granit_present_mode present_mode;
+  granit_texture_format format;
 } granit_swapchain_info;
 
 #define GRANIT_SWAPCHAIN_INFO_VERSION_1_SIZE                                                       \
   ((uint32_t)(offsetof(granit_swapchain_info, present_mode) + sizeof(granit_present_mode)))
+#define GRANIT_SWAPCHAIN_INFO_VERSION_2_SIZE                                                       \
+  ((uint32_t)(offsetof(granit_swapchain_info, format) + sizeof(granit_texture_format)))
 
 #define GRANIT_SWAPCHAIN_INFO_INIT                                                                 \
-  {(uint32_t)sizeof(granit_swapchain_info), UINT32_C(0), UINT32_C(0), UINT32_C(0),                 \
-   GRANIT_PRESENT_MODE_FIFO}
+  {(uint32_t)sizeof(granit_swapchain_info),                                                        \
+   UINT32_C(0),                                                                                    \
+   UINT32_C(0),                                                                                    \
+   UINT32_C(0),                                                                                    \
+   GRANIT_PRESENT_MODE_FIFO,                                                                       \
+   GRANIT_TEXTURE_FORMAT_UNDEFINED}
 
 #ifdef __cplusplus
 extern "C" {

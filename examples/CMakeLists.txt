@@ -33,6 +33,14 @@ if(WIN32)
   add_executable(granit_window_clear_example WIN32 window_clear.cpp)
   target_link_libraries(granit_window_clear_example PRIVATE granit::granit user32)
   granit_target_compile_warnings(granit_window_clear_example)
+
+  add_executable(granit_window_triangle_example window_triangle.cpp)
+  target_link_libraries(granit_window_triangle_example PRIVATE granit::granit user32)
+  target_compile_definitions(
+    granit_window_triangle_example
+    PRIVATE GRANIT_EXAMPLE_ASSET_DIR="${CMAKE_CURRENT_SOURCE_DIR}/assets"
+  )
+  granit_target_compile_warnings(granit_window_triangle_example)
 endif()
 
 set(
@@ -44,7 +52,7 @@ set(
   granit_compute_example
 )
 if(WIN32)
-  list(APPEND granit_example_targets granit_window_clear_example)
+  list(APPEND granit_example_targets granit_window_clear_example granit_window_triangle_example)
 endif()
 foreach(target IN LISTS granit_example_targets)
   granit_target_output_directories(${target})

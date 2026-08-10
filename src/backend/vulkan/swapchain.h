@@ -28,6 +28,7 @@ struct vulkan_swapchain_info {
   std::uint32_t height{};
   std::uint32_t image_count{};
   std::uint32_t present_mode{};
+  VkFormat format{VK_FORMAT_UNDEFINED};
 };
 
 struct vulkan_acquire_result {
@@ -66,6 +67,9 @@ public:
   [[nodiscard]] bool valid() const noexcept { return handle_ != VK_NULL_HANDLE; }
   [[nodiscard]] vulkan_swapchain_info info() const noexcept;
   [[nodiscard]] const std::vector<VkImage>& images() const noexcept { return images_; }
+  [[nodiscard]] VkSemaphore render_finished(std::uint32_t image_index) const noexcept {
+    return image_index < render_finished_.size() ? render_finished_[image_index] : VK_NULL_HANDLE;
+  }
   [[nodiscard]] VkFormat format() const noexcept { return format_; }
   [[nodiscard]] VkSwapchainKHR native_handle() const noexcept { return handle_; }
 
@@ -75,6 +79,7 @@ private:
   VkExtent2D extent_{};
   VkPresentModeKHR present_mode_{VK_PRESENT_MODE_FIFO_KHR};
   std::vector<VkImage> images_;
+  std::vector<VkSemaphore> render_finished_;
 };
 
 } // namespace granit::detail
