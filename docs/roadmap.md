@@ -189,9 +189,9 @@
 - **[P-01](plans/P-01-parallel-recording.md) / P1 / 已完成**：建立并行命令记录、资源创建和上传
   压力测试；独立 Buffer/Texture 上传、资源创建，以及共享只读对象的 Graphics/Compute 并行录制
   已完成。
-- **[P-02](plans/P-02-performance-baseline.md) / P1 / 进行中**：测量句柄表、资源锁、Queue 锁、
-  延迟销毁队列和当前 staging 上传路径；P-02A 句柄表、P-02B Registry/资源锁和 P-02C 基础及
-  Graphics/Compute 混合 Recorder、P-02D Queue 提交和 P-02E 延迟销毁队列基准已完成。
+- **[P-02](plans/P-02-performance-baseline.md) / P1 / 已完成**：已保存句柄表、Registry/资源锁、
+  基础及 Graphics/Compute 混合 Recorder、Queue 提交、延迟销毁队列和 staging 上传首份基线，
+  并形成 P-03/P-04 的数据依据。
 - **P-03 / P1**：依据数据调整锁粒度、缓存、暂存内存和批量 API。
 - **P-04 / P1**：建立瞬态资源与每帧上传分配器。
 - **P-05 / P2**：评估内部线程池；默认不要求使用者采用 Granit 的任务系统。

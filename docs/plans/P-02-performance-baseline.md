@@ -6,7 +6,7 @@
 ## 元数据
 
 - 设计状态：已确认
-- 实现状态：进行中（P-02A 至 P-02E 已完成）
+- 实现状态：已完成
 - 路线图任务：P-02
 - 优先级：P1
 - 前置依赖：P-01
@@ -117,8 +117,21 @@ P-02 不引入 Profiler SDK，也暂不增加通用埋点宏。第一层发现�
 6. P-02E / 已完成：在纯 CPU benchmark 中分别测量预先准备强引用后的退役入队、提交与完成
    序号推进、按完成序号批量收集；通过批量大小控制同一完成点的资源数量，不包含 Renderer
    外层互斥和具体 Vulkan 资源析构成本。
-7. P-02F：测量当前 staging 上传，为 P-04 上传分配器保存对照结果。
-8. 汇总结果和已确认热点，只把有数据依据的调整交给 P-03/P-04。
+7. P-02F / 已完成：测量 DEVICE Buffer 与 RGBA8 Texture 当前同步 staging 上传路径，覆盖
+   4 KiB、64 KiB、1 MiB 和 1/2/4 线程，为 P-04 保存优化前对照。
+8. 已完成结果汇总：Registry 和 Queue 并发路径表现出扩展上限与尾延迟；小型 staging 上传由
+   每次临时资源和同步提交的固定成本主导；退役队列在共享完成序号批量达到约 100 个资源后
+   收集成本趋稳。这些假设交由 P-03/P-04 结合 profiler 继续验证。
+
+## 首份基线索引
+
+- [句柄表](../../benchmarks/results/2026-08-10-windows-clang-handle-table-384aa4e.md)
+- [Registry 与资源锁](../../benchmarks/results/2026-08-10-windows-clang-registry-locking-7b85a85.md)
+- [基础命令记录](../../benchmarks/results/2026-08-10-windows-clang-command-recording-878264b.md)
+- [Graphics/Compute 混合记录](../../benchmarks/results/2026-08-10-windows-clang-mixed-pipeline-recording-30877dc.md)
+- [Queue 提交](../../benchmarks/results/2026-08-10-windows-clang-queue-submission-f222bb8.md)
+- [延迟销毁队列](../../benchmarks/results/2026-08-10-windows-clang-retirement-queue-2c12645.md)
+- [Staging 上传](../../benchmarks/results/2026-08-10-windows-clang-staging-upload-466a588.md)
 
 ## 验收标准
 
