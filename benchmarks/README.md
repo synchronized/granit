@@ -27,3 +27,5 @@ cmake --build --preset windows-clang-release --target granit_benchmarks
 
 当前 P-02A 用例包括命中查询、错误类型、错误 domain、旧 generation 句柄，以及插入/删除槽位
 复用。多线程模式为每个线程创建独立句柄表，不把当前非线程安全的内部 `handle_table` 当作共享表。
+
+已提交的基线摘要见 [results/README.md](results/README.md)。
