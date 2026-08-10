@@ -14,17 +14,51 @@
 #include <granit/shader.h>
 #include <granit/types.h>
 
-/** Pipeline 资源布局句柄。D-03A 只支持空布局。 */
+/** Pipeline 资源布局句柄，由零至多个 Bind Group Layout 按组序号组成。 */
 typedef granit_handle granit_pipeline_layout;
+/** 单组资源绑定布局句柄。 */
+typedef granit_handle granit_bind_group_layout;
 /** 图形 Pipeline 句柄。 */
 typedef granit_handle granit_graphics_pipeline;
 
+typedef uint32_t granit_binding_type;
+#define GRANIT_BINDING_TYPE_UNIFORM_BUFFER UINT32_C(1)
+#define GRANIT_BINDING_TYPE_STORAGE_BUFFER UINT32_C(2)
+#define GRANIT_BINDING_TYPE_SAMPLED_TEXTURE UINT32_C(3)
+#define GRANIT_BINDING_TYPE_STORAGE_TEXTURE UINT32_C(4)
+#define GRANIT_BINDING_TYPE_SAMPLER UINT32_C(5)
+
+typedef uint32_t granit_shader_stage_flags;
+#define GRANIT_SHADER_STAGE_VERTEX_BIT (UINT32_C(1) << 0)
+#define GRANIT_SHADER_STAGE_FRAGMENT_BIT (UINT32_C(1) << 1)
+#define GRANIT_SHADER_STAGE_COMPUTE_BIT (UINT32_C(1) << 2)
+
+typedef struct granit_bind_group_layout_entry {
+  uint32_t binding;
+  granit_binding_type type;
+  uint32_t array_count;
+  granit_shader_stage_flags visibility;
+} granit_bind_group_layout_entry;
+
+typedef struct granit_bind_group_layout_desc {
+  uint32_t struct_size;
+  uint32_t entry_count;
+  const granit_bind_group_layout_entry* entries;
+  uint64_t reserved;
+} granit_bind_group_layout_desc;
+#define GRANIT_BIND_GROUP_LAYOUT_DESC_VERSION_1_SIZE UINT32_C(24)
+#define GRANIT_BIND_GROUP_LAYOUT_DESC_INIT                                                         \
+  {GRANIT_BIND_GROUP_LAYOUT_DESC_VERSION_1_SIZE, UINT32_C(0), 0, UINT64_C(0)}
+
 typedef struct granit_pipeline_layout_desc {
   uint32_t struct_size;
-  uint32_t reserved;
+  uint32_t bind_group_layout_count;
+  const granit_bind_group_layout* bind_group_layouts;
+  uint64_t reserved;
 } granit_pipeline_layout_desc;
-#define GRANIT_PIPELINE_LAYOUT_DESC_VERSION_1_SIZE UINT32_C(8)
-#define GRANIT_PIPELINE_LAYOUT_DESC_INIT {GRANIT_PIPELINE_LAYOUT_DESC_VERSION_1_SIZE, UINT32_C(0)}
+#define GRANIT_PIPELINE_LAYOUT_DESC_VERSION_1_SIZE UINT32_C(24)
+#define GRANIT_PIPELINE_LAYOUT_DESC_INIT                                                           \
+  {GRANIT_PIPELINE_LAYOUT_DESC_VERSION_1_SIZE, UINT32_C(0), 0, UINT64_C(0)}
 
 /** Dynamic Rendering 图形 Pipeline 描述；输入数组只在调用期间有效。 */
 typedef struct granit_graphics_pipeline_desc {
@@ -57,6 +91,11 @@ typedef struct granit_graphics_pipeline_desc {
 extern "C" {
 #endif
 
+GRANIT_API granit_result granit_bind_group_layout_create(granit_renderer renderer,
+                                                         const granit_bind_group_layout_desc* desc,
+                                                         granit_bind_group_layout* layout);
+GRANIT_API granit_result granit_bind_group_layout_destroy(granit_renderer renderer,
+                                                          granit_bind_group_layout layout);
 GRANIT_API granit_result granit_pipeline_layout_create(granit_renderer renderer,
                                                        const granit_pipeline_layout_desc* desc,
                                                        granit_pipeline_layout* layout);

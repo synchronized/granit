@@ -108,6 +108,8 @@ granit_result vulkan_device::initialize(const vulkan_instance& instance,
       functions_.vkCreateShaderModule == nullptr || functions_.vkDestroyShaderModule == nullptr ||
       functions_.vkCreatePipelineLayout == nullptr ||
       functions_.vkDestroyPipelineLayout == nullptr ||
+      functions_.vkCreateDescriptorSetLayout == nullptr ||
+      functions_.vkDestroyDescriptorSetLayout == nullptr ||
       functions_.vkCreateGraphicsPipelines == nullptr || functions_.vkDestroyPipeline == nullptr ||
       functions_.vkQueueSubmit2 == nullptr || functions_.vkQueueWaitIdle == nullptr ||
       (surface_types != 0 &&

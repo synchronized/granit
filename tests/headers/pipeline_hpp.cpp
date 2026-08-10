@@ -7,5 +7,7 @@
 
 static_assert(!std::is_copy_constructible_v<granit::pipeline_layout>);
 static_assert(std::is_move_constructible_v<granit::pipeline_layout>);
+static_assert(!std::is_copy_constructible_v<granit::bind_group_layout>);
+static_assert(std::is_move_constructible_v<granit::bind_group_layout>);
 static_assert(!std::is_copy_constructible_v<granit::graphics_pipeline>);
 static_assert(std::is_move_constructible_v<granit::graphics_pipeline>);

@@ -10,6 +10,7 @@
 #include <string_view>
 #include <vector>
 
+#include <granit/pipeline.h>
 #include <granit/renderer.h>
 #include <granit/resource_types.h>
 #include <granit/result.h>
@@ -75,7 +76,13 @@ public:
   [[nodiscard]] granit_result create_native_shader(std::span<const std::uint32_t> code,
                                                    VkShaderModule& shader) noexcept;
   void destroy_native_shader(VkShaderModule shader) noexcept;
-  [[nodiscard]] granit_result create_native_pipeline_layout(VkPipelineLayout& layout) noexcept;
+  [[nodiscard]] granit_result
+  create_native_bind_group_layout(std::span<const granit_bind_group_layout_entry> entries,
+                                  VkDescriptorSetLayout& layout) noexcept;
+  void destroy_native_bind_group_layout(VkDescriptorSetLayout layout) noexcept;
+  [[nodiscard]] granit_result
+  create_native_pipeline_layout(std::span<const VkDescriptorSetLayout> bind_group_layouts,
+                                VkPipelineLayout& layout) noexcept;
   void destroy_native_pipeline_layout(VkPipelineLayout layout) noexcept;
   [[nodiscard]] granit_result
   create_native_graphics_pipeline(VkPipelineLayout layout, VkShaderModule vertex_shader,

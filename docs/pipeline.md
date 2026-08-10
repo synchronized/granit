@@ -3,20 +3,20 @@
 
 # Graphics Pipeline
 
-Granit 当前提供空资源布局的 Graphics Pipeline，作为 D-03A 最小渲染路径。公共接口不暴露
+Granit 当前提供 Graphics Pipeline 和 Bind Group Layout，作为 D-03 的基础渲染路径。公共接口不暴露
 Vulkan Pipeline、Pipeline Layout 或 Dynamic Rendering 结构。
 
 ## 当前能力
 
-- 创建和销毁空 `Pipeline Layout`。
+- 创建 Bind Group Layout，并由 Pipeline Layout 按组序号组合零至八个布局。
 - 使用 Vertex Shader、Fragment Shader、颜色格式、可选深度模板格式和样本数创建 Pipeline。
 - 固定采用三角形列表、填充模式、关闭剔除和逆时针正面。
 - Viewport 与 Scissor 是动态状态，将由 D-05 的命令接口设置。
 - Pipeline 内部保持 Shader 与 Layout 存活；对应公开句柄可以先销毁。
 - 所有对象支持 Renderer domain、generation、Device Lost、级联诊断和延迟销毁。
 
-第一版尚不能录制 Pipeline 绑定或 Draw，也不支持 Vertex Layout、Blend、Cull 等可配置状态。
-这些能力将在 D-05 根据最小三角形路径补充。Bind Group 和非空 Pipeline Layout 属于 D-03B。
+第一版尚不能创建 Bind Group 或录制资源绑定，也不能录制 Pipeline 绑定或 Draw。不可变 Bind Group
+与内部 Descriptor Pool 属于 D-03B 的下一步；绘制与固定功能状态将在 D-05 补充。
 
 ## C API 示例
 

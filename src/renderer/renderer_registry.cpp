@@ -131,6 +131,11 @@ renderer_registry::shader_record::~shader_record() {
     renderer->destroy_native_shader(native);
 }
 
+renderer_registry::bind_group_layout_record::~bind_group_layout_record() {
+  if (renderer)
+    renderer->destroy_native_bind_group_layout(native);
+}
+
 renderer_registry::pipeline_layout_record::~pipeline_layout_record() {
   if (renderer)
     renderer->destroy_native_pipeline_layout(native);
@@ -191,6 +196,7 @@ granit_result renderer_registry::destroy(granit_renderer renderer) {
   std::vector<std::shared_ptr<sampler_record>> native_samplers;
   std::vector<std::shared_ptr<shader_record>> native_shaders;
   std::vector<std::shared_ptr<pipeline_layout_record>> native_pipeline_layouts;
+  std::vector<std::shared_ptr<bind_group_layout_record>> native_bind_group_layouts;
   std::vector<std::shared_ptr<graphics_pipeline_record>> native_graphics_pipelines;
   {
     std::lock_guard lock{mutex_};
@@ -237,6 +243,11 @@ granit_result renderer_registry::destroy(granit_renderer renderer) {
       for (const auto& [handle, record] : pipeline_layouts_) {
         if (record->renderer == state)
           lifecycle.add(lifecycle_resource_type::pipeline_layout, handle,
+                        record->metadata.creation_sequence);
+      }
+      for (const auto& [handle, record] : bind_group_layouts_) {
+        if (record->renderer == state)
+          lifecycle.add(lifecycle_resource_type::bind_group_layout, handle,
                         record->metadata.creation_sequence);
       }
       for (const auto& [handle, record] : graphics_pipelines_) {
@@ -306,6 +317,16 @@ granit_result renderer_registry::destroy(granit_renderer renderer) {
         static_cast<void>(
             handles_.erase(layout->first, resource_type::pipeline_layout, state->domain()));
         layout = pipeline_layouts_.erase(layout);
+      } else {
+        ++layout;
+      }
+    }
+    for (auto layout = bind_group_layouts_.begin(); layout != bind_group_layouts_.end();) {
+      if (layout->second->renderer == state) {
+        native_bind_group_layouts.push_back(std::move(layout->second));
+        static_cast<void>(
+            handles_.erase(layout->first, resource_type::bind_group_layout, state->domain()));
+        layout = bind_group_layouts_.erase(layout);
       } else {
         ++layout;
       }
@@ -384,6 +405,7 @@ granit_result renderer_registry::destroy(granit_renderer renderer) {
   native_samplers.clear();
   native_graphics_pipelines.clear();
   native_pipeline_layouts.clear();
+  native_bind_group_layouts.clear();
   native_shaders.clear();
   // 析构可能等待 GPU 空闲，不应占用全局 registry 锁。
   state.reset();
@@ -1520,15 +1542,88 @@ granit_result renderer_registry::destroy_shader(granit_renderer renderer, granit
   return GRANIT_SUCCESS;
 }
 
-granit_result renderer_registry::create_pipeline_layout(granit_renderer renderer,
-                                                        granit_pipeline_layout& layout) {
+granit_result
+renderer_registry::create_bind_group_layout(granit_renderer renderer,
+                                            std::span<const granit_bind_group_layout_entry> entries,
+                                            granit_bind_group_layout& layout) {
+  try {
+    auto state = acquire(renderer);
+    if (!state)
+      return GRANIT_ERROR_INVALID_HANDLE;
+    auto record = std::make_shared<bind_group_layout_record>();
+    record->renderer = state;
+    record->entries.assign(entries.begin(), entries.end());
+    const auto result = state->create_native_bind_group_layout(entries, record->native);
+    if (result != GRANIT_SUCCESS)
+      return result;
+    std::lock_guard lock{mutex_};
+    if (renderers_.find(renderer) == renderers_.end())
+      return GRANIT_ERROR_INVALID_HANDLE;
+    record->metadata.creation_sequence = next_creation_sequence_++;
+    const auto handle =
+        handles_.insert(record.get(), resource_type::bind_group_layout, state->domain());
+    if (handle == GRANIT_NULL_HANDLE)
+      return GRANIT_ERROR_OUT_OF_MEMORY;
+    try {
+      bind_group_layouts_.emplace(handle, std::move(record));
+    } catch (...) {
+      static_cast<void>(handles_.erase(handle, resource_type::bind_group_layout, state->domain()));
+      throw;
+    }
+    layout = handle;
+    return GRANIT_SUCCESS;
+  } catch (const std::bad_alloc&) {
+    return GRANIT_ERROR_OUT_OF_MEMORY;
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+granit_result renderer_registry::destroy_bind_group_layout(granit_renderer renderer,
+                                                           granit_bind_group_layout layout) {
+  std::shared_ptr<bind_group_layout_record> record;
+  {
+    std::lock_guard lock{mutex_};
+    const auto state = renderers_.find(renderer);
+    if (state == renderers_.end() ||
+        handles_.find(layout, resource_type::bind_group_layout, state->second->domain()) == nullptr)
+      return GRANIT_ERROR_INVALID_HANDLE;
+    const auto found = bind_group_layouts_.find(layout);
+    if (found == bind_group_layouts_.end() || found->second->renderer != state->second)
+      return GRANIT_ERROR_INVALID_HANDLE;
+    record = std::move(found->second);
+    bind_group_layouts_.erase(found);
+    static_cast<void>(
+        handles_.erase(layout, resource_type::bind_group_layout, state->second->domain()));
+  }
+  const auto state = record->renderer;
+  const auto serial = record->metadata.last_use_serial.load();
+  state->retire_resource(serial, retirement_order::dependent, std::move(record));
+  static_cast<void>(state->collect_retired());
+  return GRANIT_SUCCESS;
+}
+
+granit_result renderer_registry::create_pipeline_layout(
+    granit_renderer renderer, std::span<const granit_bind_group_layout> bind_group_layouts,
+    granit_pipeline_layout& layout) {
   try {
     auto state = acquire(renderer);
     if (!state)
       return GRANIT_ERROR_INVALID_HANDLE;
     auto record = std::make_shared<pipeline_layout_record>();
     record->renderer = state;
-    const auto result = state->create_native_pipeline_layout(record->native);
+    std::vector<VkDescriptorSetLayout> native_layouts;
+    {
+      std::lock_guard lock{mutex_};
+      for (const auto handle : bind_group_layouts) {
+        const auto found = bind_group_layouts_.find(handle);
+        if (found == bind_group_layouts_.end() || found->second->renderer != state)
+          return GRANIT_ERROR_INVALID_HANDLE;
+        record->bind_group_layouts.push_back(found->second);
+        native_layouts.push_back(found->second->native);
+      }
+    }
+    const auto result = state->create_native_pipeline_layout(native_layouts, record->native);
     if (result != GRANIT_SUCCESS)
       return result;
     std::lock_guard lock{mutex_};

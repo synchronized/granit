@@ -93,8 +93,16 @@ public:
                                             std::span<const std::uint32_t> code,
                                             std::string_view entry_point, granit_shader& shader);
   [[nodiscard]] granit_result destroy_shader(granit_renderer renderer, granit_shader shader);
-  [[nodiscard]] granit_result create_pipeline_layout(granit_renderer renderer,
-                                                     granit_pipeline_layout& layout);
+  [[nodiscard]] granit_result
+  create_bind_group_layout(granit_renderer renderer,
+                           std::span<const granit_bind_group_layout_entry> entries,
+                           granit_bind_group_layout& layout);
+  [[nodiscard]] granit_result destroy_bind_group_layout(granit_renderer renderer,
+                                                        granit_bind_group_layout layout);
+  [[nodiscard]] granit_result
+  create_pipeline_layout(granit_renderer renderer,
+                         std::span<const granit_bind_group_layout> bind_group_layouts,
+                         granit_pipeline_layout& layout);
   [[nodiscard]] granit_result destroy_pipeline_layout(granit_renderer renderer,
                                                       granit_pipeline_layout layout);
   [[nodiscard]] granit_result create_graphics_pipeline(granit_renderer renderer,
@@ -216,10 +224,18 @@ private:
     std::string entry_point;
     ~shader_record();
   };
+  struct bind_group_layout_record {
+    resource_metadata metadata;
+    std::shared_ptr<renderer_state> renderer;
+    VkDescriptorSetLayout native{VK_NULL_HANDLE};
+    std::vector<granit_bind_group_layout_entry> entries;
+    ~bind_group_layout_record();
+  };
   struct pipeline_layout_record {
     resource_metadata metadata;
     std::shared_ptr<renderer_state> renderer;
     VkPipelineLayout native{VK_NULL_HANDLE};
+    std::vector<std::shared_ptr<bind_group_layout_record>> bind_group_layouts;
     ~pipeline_layout_record();
   };
   struct graphics_pipeline_record {
@@ -256,6 +272,8 @@ private:
   std::unordered_map<granit_shader, std::shared_ptr<shader_record>> shaders_;
   std::unordered_map<granit_pipeline_layout, std::shared_ptr<pipeline_layout_record>>
       pipeline_layouts_;
+  std::unordered_map<granit_bind_group_layout, std::shared_ptr<bind_group_layout_record>>
+      bind_group_layouts_;
   std::unordered_map<granit_graphics_pipeline, std::shared_ptr<graphics_pipeline_record>>
       graphics_pipelines_;
   std::unordered_map<granit_command_recorder, std::shared_ptr<command_recorder_record>>

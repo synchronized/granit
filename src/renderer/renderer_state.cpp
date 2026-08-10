@@ -527,11 +527,56 @@ void renderer_state::destroy_native_shader(VkShaderModule shader) noexcept {
     device_.functions().vkDestroyShaderModule(device_.native_handle(), shader, nullptr);
 }
 
-granit_result renderer_state::create_native_pipeline_layout(VkPipelineLayout& layout) noexcept {
+granit_result renderer_state::create_native_bind_group_layout(
+    std::span<const granit_bind_group_layout_entry> entries,
+    VkDescriptorSetLayout& layout) noexcept {
+  if (device_lost())
+    return GRANIT_ERROR_DEVICE_LOST;
+  std::vector<VkDescriptorSetLayoutBinding> bindings;
+  bindings.reserve(entries.size());
+  for (const auto& entry : entries) {
+    VkDescriptorType type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    if (entry.type == GRANIT_BINDING_TYPE_STORAGE_BUFFER)
+      type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    else if (entry.type == GRANIT_BINDING_TYPE_SAMPLED_TEXTURE)
+      type = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+    else if (entry.type == GRANIT_BINDING_TYPE_STORAGE_TEXTURE)
+      type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+    else if (entry.type == GRANIT_BINDING_TYPE_SAMPLER)
+      type = VK_DESCRIPTOR_TYPE_SAMPLER;
+    VkShaderStageFlags stages{};
+    if ((entry.visibility & GRANIT_SHADER_STAGE_VERTEX_BIT) != 0)
+      stages |= VK_SHADER_STAGE_VERTEX_BIT;
+    if ((entry.visibility & GRANIT_SHADER_STAGE_FRAGMENT_BIT) != 0)
+      stages |= VK_SHADER_STAGE_FRAGMENT_BIT;
+    if ((entry.visibility & GRANIT_SHADER_STAGE_COMPUTE_BIT) != 0)
+      stages |= VK_SHADER_STAGE_COMPUTE_BIT;
+    bindings.push_back({entry.binding, type, entry.array_count, stages, nullptr});
+  }
+  VkDescriptorSetLayoutCreateInfo info{};
+  info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+  info.bindingCount = static_cast<std::uint32_t>(bindings.size());
+  info.pBindings = bindings.data();
+  std::lock_guard lock{resource_mutex_};
+  return observe_device_result(map_vulkan_result(device_.functions().vkCreateDescriptorSetLayout(
+      device_.native_handle(), &info, nullptr, &layout)));
+}
+
+void renderer_state::destroy_native_bind_group_layout(VkDescriptorSetLayout layout) noexcept {
+  if (layout != VK_NULL_HANDLE) {
+    std::lock_guard lock{resource_mutex_};
+    device_.functions().vkDestroyDescriptorSetLayout(device_.native_handle(), layout, nullptr);
+  }
+}
+
+granit_result renderer_state::create_native_pipeline_layout(
+    std::span<const VkDescriptorSetLayout> bind_group_layouts, VkPipelineLayout& layout) noexcept {
   if (device_lost())
     return GRANIT_ERROR_DEVICE_LOST;
   VkPipelineLayoutCreateInfo info{};
   info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+  info.setLayoutCount = static_cast<std::uint32_t>(bind_group_layouts.size());
+  info.pSetLayouts = bind_group_layouts.data();
   std::lock_guard lock{resource_mutex_};
   return observe_device_result(map_vulkan_result(device_.functions().vkCreatePipelineLayout(
       device_.native_handle(), &info, nullptr, &layout)));

@@ -51,6 +51,51 @@ TEST_CASE("空 Pipeline Layout 具有独立生命周期和 Renderer domain", "[p
         GRANIT_ERROR_INVALID_HANDLE);
 }
 
+TEST_CASE("Pipeline Layout 保持 Bind Group Layout 依赖", "[pipeline][bind-group-layout]") {
+  granit::renderer renderer;
+  const auto result = renderer.initialize({.application_name = "granit-bind-group-layout"});
+  if (environment_unavailable(result))
+    SKIP("当前运行环境没有满足要求的 Vulkan 设备");
+  REQUIRE(result == granit::result::success);
+
+  const std::array entries{
+      granit::bind_group_layout_entry{.binding = 0,
+                                      .type = granit::binding_type::uniform_buffer,
+                                      .visibility = granit::shader_stage_flags::vertex},
+      granit::bind_group_layout_entry{.binding = 1,
+                                      .type = granit::binding_type::sampled_texture,
+                                      .visibility = granit::shader_stage_flags::fragment},
+      granit::bind_group_layout_entry{.binding = 2,
+                                      .type = granit::binding_type::sampler,
+                                      .visibility = granit::shader_stage_flags::fragment}};
+  granit::bind_group_layout group_layout;
+  REQUIRE(group_layout.initialize(renderer.native_handle(), entries) == granit::result::success);
+  const granit_bind_group_layout handle = group_layout.native_handle();
+  granit::pipeline_layout pipeline_layout;
+  REQUIRE(pipeline_layout.initialize(renderer.native_handle(), std::span{&handle, 1}) ==
+          granit::result::success);
+  REQUIRE(group_layout.reset() == granit::result::success);
+  REQUIRE(pipeline_layout.reset() == granit::result::success);
+}
+
+TEST_CASE("Bind Group Layout 拒绝重复 binding 和非法可见阶段", "[pipeline][validation]") {
+  granit_bind_group_layout layout = GRANIT_NULL_HANDLE;
+  const granit_bind_group_layout_entry duplicate[] = {
+      {0, GRANIT_BINDING_TYPE_UNIFORM_BUFFER, 1, GRANIT_SHADER_STAGE_VERTEX_BIT},
+      {0, GRANIT_BINDING_TYPE_SAMPLER, 1, GRANIT_SHADER_STAGE_FRAGMENT_BIT}};
+  granit_bind_group_layout_desc desc = GRANIT_BIND_GROUP_LAYOUT_DESC_INIT;
+  desc.entry_count = 2;
+  desc.entries = duplicate;
+  CHECK(granit_bind_group_layout_create(UINT64_C(1), &desc, &layout) ==
+        GRANIT_ERROR_INVALID_ARGUMENT);
+  granit_bind_group_layout_entry invalid = duplicate[0];
+  invalid.visibility = 0;
+  desc.entry_count = 1;
+  desc.entries = &invalid;
+  CHECK(granit_bind_group_layout_create(UINT64_C(1), &desc, &layout) ==
+        GRANIT_ERROR_INVALID_ARGUMENT);
+}
+
 TEST_CASE("Graphics Pipeline 在进入后端前校验描述", "[pipeline][validation]") {
   granit_graphics_pipeline pipeline = GRANIT_NULL_HANDLE;
   granit_graphics_pipeline_desc desc = GRANIT_GRAPHICS_PIPELINE_DESC_INIT;
