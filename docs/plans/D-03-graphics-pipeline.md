@@ -129,4 +129,3 @@ Shader ────────────┘
 - D-07 复用 Pipeline Layout 与 Bind Group 实现 Compute Pipeline。
 - 根据性能数据评估动态 Buffer offset、瞬态 Bind Group、bindless 和 Push Constant。
 - D-08 处理 Pipeline Cache、异步创建和热重载，不进入第一版同步创建接口。
-
