@@ -197,6 +197,22 @@ add_library(
 target_link_libraries(granit_cpp_header_test PRIVATE granit::granit)
 granit_target_compile_warnings(granit_cpp_header_test)
 
+set(
+  granit_test_executable_targets
+  granit_c_version_test
+  granit_cpp_version_test
+  granit_handle_table_test
+  granit_resource_validation_test
+  granit_lifecycle_validation_test
+  granit_retirement_queue_test
+  granit_device_status_test
+  granit_renderer_test
+  granit_vulkan_backend_test
+)
+foreach(target IN LISTS granit_test_executable_targets)
+  granit_target_output_directories(${target})
+endforeach()
+
 set_tests_properties(
   granit.c_version granit.cpp_version granit.handle_table granit.resource_validation
   granit.lifecycle_validation granit.retirement_queue granit.device_status granit.renderer

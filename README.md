@@ -107,6 +107,8 @@ cmake --preset linux-clang-debug -DBUILD_SHARED_LIBS=OFF
 - `granit_window_clear_example`：Win32 窗口 acquire、清屏、submit、present 与尺寸重建循环。
 
 示例只依赖 Granit 公共接口，不包含 Vulkan 头文件。窗口示例目前仅在 Windows 构建。
+单配置生成器把动态库和可执行文件统一放入构建目录的 `bin`，可直接运行；Visual Studio 等
+多配置生成器使用 `bin/Debug`、`bin/Release` 等配置子目录。
 
 ## CMake 集成
 

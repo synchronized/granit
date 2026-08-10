@@ -26,3 +26,17 @@ if(WIN32)
   target_link_libraries(granit_window_clear_example PRIVATE granit::granit user32)
   granit_target_compile_warnings(granit_window_clear_example)
 endif()
+
+set(
+  granit_example_targets
+  granit_version_example
+  granit_renderer_example
+  granit_offscreen_clear_example
+  granit_offscreen_triangle_example
+)
+if(WIN32)
+  list(APPEND granit_example_targets granit_window_clear_example)
+endif()
+foreach(target IN LISTS granit_example_targets)
+  granit_target_output_directories(${target})
+endforeach()

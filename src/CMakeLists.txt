@@ -3,6 +3,7 @@
 
 add_library(granit)
 add_library(granit::granit ALIAS granit)
+granit_target_output_directories(granit)
 
 set(GRANIT_GENERATED_INCLUDE_DIR "${CMAKE_CURRENT_BINARY_DIR}/generated/include")
 set(GRANIT_GENERATED_VERSION_HEADER
