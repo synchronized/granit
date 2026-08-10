@@ -77,6 +77,9 @@ public:
                                             VkDeviceSize size) noexcept;
   [[nodiscard]] granit_result create_native_texture(const granit_texture_desc& desc,
                                                     vulkan_image_allocation& texture) noexcept;
+  [[nodiscard]] granit_result upload_texture(const vulkan_image_allocation& texture,
+                                             const void* data, VkDeviceSize size,
+                                             const VkBufferImageCopy& copy) noexcept;
   void destroy_native_texture(vulkan_image_allocation& texture) noexcept;
   [[nodiscard]] granit_result create_native_texture_view(const vulkan_image_allocation& texture,
                                                          const granit_texture_desc& texture_desc,

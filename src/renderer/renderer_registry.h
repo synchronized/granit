@@ -83,6 +83,10 @@ public:
   [[nodiscard]] granit_result create_texture(granit_renderer renderer,
                                              const granit_texture_desc& desc,
                                              granit_texture& texture);
+  [[nodiscard]] granit_result write_texture(granit_renderer renderer, granit_texture texture,
+                                            const void* data, std::uint64_t size,
+                                            const granit_texture_data_layout& layout,
+                                            const granit_texture_write_region& region);
   [[nodiscard]] granit_result create_texture_view(granit_renderer renderer, granit_texture texture,
                                                   const granit_texture_view_desc& desc,
                                                   granit_texture_view& view);
@@ -253,6 +257,7 @@ private:
     granit_texture_desc desc{};
     bool owned{true};
     bool publicly_destroyable{true};
+    std::mutex mutex;
     ~texture_record();
   };
   struct texture_view_record {

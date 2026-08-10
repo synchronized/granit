@@ -5,10 +5,10 @@
 #define GRANIT_TEXTURE_H_
 
 #include <granit/core/export.h>
-#include <granit/renderer/renderer.h>
-#include <granit/renderer/resource_types.h>
 #include <granit/core/result.h>
 #include <granit/core/types.h>
+#include <granit/renderer/renderer.h>
+#include <granit/renderer/resource_types.h>
 
 /** Texture 存储句柄。零值无效。 */
 typedef granit_handle granit_texture;
@@ -33,6 +33,14 @@ GRANIT_API granit_result granit_texture_create_with_default_view(granit_renderer
                                                                  const granit_texture_desc* desc,
                                                                  granit_texture* texture,
                                                                  granit_texture_view* view);
+/**
+ * 同步复制 CPU 数据到 Texture。函数返回后不再访问 data；GPU 上传可能在内部异步实现。
+ * 当前支持非压缩颜色格式和单采样 Texture，同一 Texture 的并发写入由调用方排序。
+ */
+GRANIT_API granit_result granit_texture_write(granit_renderer renderer, granit_texture texture,
+                                              const void* data, uint64_t size,
+                                              const granit_texture_data_layout* layout,
+                                              const granit_texture_write_region* region);
 /** 销毁 View，不影响父 Texture。 */
 GRANIT_API granit_result granit_texture_view_destroy(granit_renderer renderer,
                                                      granit_texture_view view);

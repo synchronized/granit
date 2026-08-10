@@ -4,11 +4,13 @@
 #ifndef GRANIT_TEXTURE_HPP_
 #define GRANIT_TEXTURE_HPP_
 
+#include <cstddef>
 #include <cstdint>
+#include <span>
 #include <utility>
 
-#include <granit/renderer/resource_types.hpp>
 #include <granit/core/result.hpp>
+#include <granit/renderer/resource_types.hpp>
 #include <granit/renderer/texture.h>
 
 namespace granit {
@@ -34,6 +36,25 @@ struct texture_view_desc {
   std::uint32_t mip_level_count{1};
   std::uint32_t base_array_layer{};
   std::uint32_t array_layer_count{1};
+};
+
+struct texture_data_layout {
+  std::uint64_t offset{};
+  std::uint32_t bytes_per_row{};
+  std::uint32_t rows_per_image{};
+};
+
+struct texture_write_region {
+  std::uint32_t mip_level{};
+  std::uint32_t base_array_layer{};
+  std::uint32_t array_layer_count{1};
+  texture_aspect aspect{texture_aspect::color};
+  std::uint32_t x{};
+  std::uint32_t y{};
+  std::uint32_t z{};
+  std::uint32_t width{1};
+  std::uint32_t height{1};
+  std::uint32_t depth{1};
 };
 
 /** 无异常、move-only 的 Texture RAII 包装。 */
@@ -81,6 +102,27 @@ public:
     const auto renderer = std::exchange(renderer_, GRANIT_NULL_HANDLE);
     const auto handle = std::exchange(handle_, GRANIT_NULL_HANDLE);
     return from_native(granit_texture_destroy(renderer, handle));
+  }
+  [[nodiscard]] result write(std::span<const std::byte> data, const texture_data_layout& layout,
+                             const texture_write_region& region) noexcept {
+    if (!valid() || data.empty())
+      return result::invalid_argument;
+    const granit_texture_data_layout native_layout{.offset = layout.offset,
+                                                   .bytes_per_row = layout.bytes_per_row,
+                                                   .rows_per_image = layout.rows_per_image};
+    const granit_texture_write_region native_region{.mip_level = region.mip_level,
+                                                    .base_array_layer = region.base_array_layer,
+                                                    .array_layer_count = region.array_layer_count,
+                                                    .aspect =
+                                                        static_cast<std::uint32_t>(region.aspect),
+                                                    .x = region.x,
+                                                    .y = region.y,
+                                                    .z = region.z,
+                                                    .width = region.width,
+                                                    .height = region.height,
+                                                    .depth = region.depth};
+    return from_native(granit_texture_write(renderer_, handle_, data.data(), data.size(),
+                                            &native_layout, &native_region));
   }
   [[nodiscard]] bool valid() const noexcept { return handle_ != GRANIT_NULL_HANDLE; }
   [[nodiscard]] explicit operator bool() const noexcept { return valid(); }

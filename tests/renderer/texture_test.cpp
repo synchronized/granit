@@ -5,6 +5,10 @@
 #include <granit/renderer/renderer.hpp>
 #include <granit/renderer/texture.hpp>
 
+#include <array>
+#include <future>
+#include <vector>
+
 namespace {
 bool unavailable(granit::result value) {
   return value == granit::result::backend_unavailable ||
@@ -81,5 +85,63 @@ TEST_CASE("验证模式允许 Texture 级联销毁用户 View", "[texture][lifec
 
   CHECK(granit_texture_destroy(renderer.native_handle(), texture) == GRANIT_SUCCESS);
   CHECK(granit_texture_view_destroy(renderer.native_handle(), view) == GRANIT_ERROR_INVALID_HANDLE);
+}
+
+TEST_CASE("Texture 写入校验用途、布局和区域", "[texture][write][validation]") {
+  granit::renderer renderer;
+  const auto result = renderer.initialize(
+      {.application_name = "granit-texture-write-validation", .enable_validation = true});
+  if (unavailable(result))
+    SKIP("当前运行环境没有满足要求的 Vulkan 设备");
+  REQUIRE(result == granit::result::success);
+
+  granit::texture texture;
+  REQUIRE(texture.initialize(renderer.native_handle(),
+                             {.format = granit::texture_format::rgba8_unorm,
+                              .usage = granit::texture_usage::transfer_destination,
+                              .width = 4,
+                              .height = 4}) == granit::result::success);
+  std::array<std::byte, 64> pixels{};
+  CHECK(texture.write(pixels, {}, {.width = 4, .height = 4}) == granit::result::success);
+  CHECK(texture.write(pixels, {.bytes_per_row = 15}, {.width = 4, .height = 4}) ==
+        granit::result::invalid_argument);
+  CHECK(texture.write(pixels, {}, {.x = 1, .width = 4, .height = 4}) ==
+        granit::result::invalid_argument);
+
+  granit::texture sampled;
+  REQUIRE(
+      sampled.initialize(renderer.native_handle(), {.format = granit::texture_format::rgba8_unorm,
+                                                    .usage = granit::texture_usage::sampled,
+                                                    .width = 4,
+                                                    .height = 4}) == granit::result::success);
+  CHECK(sampled.write(pixels, {}, {.width = 4, .height = 4}) == granit::result::unsupported);
+}
+
+TEST_CASE("不同 Texture 可以并发写入", "[texture][write][concurrency]") {
+  granit::renderer renderer;
+  const auto result = renderer.initialize({.application_name = "granit-texture-write-concurrency"});
+  if (unavailable(result))
+    SKIP("当前运行环境没有满足要求的 Vulkan 设备");
+  REQUIRE(result == granit::result::success);
+
+  constexpr std::size_t count = 8;
+  std::array<granit::texture, count> textures;
+  for (auto& texture : textures) {
+    REQUIRE(texture.initialize(renderer.native_handle(),
+                               {.format = granit::texture_format::rgba8_unorm,
+                                .usage = granit::texture_usage::transfer_destination,
+                                .width = 16,
+                                .height = 16}) == granit::result::success);
+  }
+  std::array<std::byte, 16 * 16 * 4> pixels{};
+  std::vector<std::future<granit::result>> workers;
+  workers.reserve(count);
+  for (auto& texture : textures) {
+    workers.push_back(std::async(std::launch::async, [&texture, &pixels] {
+      return texture.write(pixels, {}, {.width = 16, .height = 16});
+    }));
+  }
+  for (auto& worker : workers)
+    CHECK(worker.get() == granit::result::success);
 }
 } // namespace

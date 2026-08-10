@@ -7,6 +7,10 @@ typedef char granit_buffer_desc_size_check
     [(sizeof(granit_buffer_desc) == GRANIT_BUFFER_DESC_VERSION_1_SIZE) ? 1 : -1];
 typedef char granit_texture_desc_size_check
     [(sizeof(granit_texture_desc) == GRANIT_TEXTURE_DESC_VERSION_1_SIZE) ? 1 : -1];
+typedef char
+    granit_texture_data_layout_size_check[(sizeof(granit_texture_data_layout) == 16) ? 1 : -1];
+typedef char
+    granit_texture_write_region_size_check[(sizeof(granit_texture_write_region) == 40) ? 1 : -1];
 typedef char granit_texture_view_desc_size_check
     [(sizeof(granit_texture_view_desc) == GRANIT_TEXTURE_VIEW_DESC_VERSION_1_SIZE) ? 1 : -1];
 typedef char granit_sampler_desc_size_check

@@ -147,6 +147,27 @@ typedef struct granit_texture_desc {
    GRANIT_SAMPLE_COUNT_1,                                                                          \
    UINT32_C(0)}
 
+/** Texture 写入源数据布局；0 行跨度表示按写入宽度或高度紧密排列。 */
+typedef struct granit_texture_data_layout {
+  uint64_t offset;
+  uint32_t bytes_per_row;
+  uint32_t rows_per_image;
+} granit_texture_data_layout;
+
+/** Texture 写入目标子资源和区域。 */
+typedef struct granit_texture_write_region {
+  uint32_t mip_level;
+  uint32_t base_array_layer;
+  uint32_t array_layer_count;
+  granit_texture_aspect aspect;
+  uint32_t x;
+  uint32_t y;
+  uint32_t z;
+  uint32_t width;
+  uint32_t height;
+  uint32_t depth;
+} granit_texture_write_region;
+
 /** Texture View 使用的 mip 和数组层范围。 */
 typedef struct granit_subresource_range {
   granit_texture_aspect aspect;

@@ -529,6 +529,125 @@ granit_result renderer_state::create_native_texture(const granit_texture_desc& d
       memory_allocator_.create_image(info, map_memory_location(desc.memory_location), texture));
 }
 
+granit_result renderer_state::upload_texture(const vulkan_image_allocation& texture,
+                                             const void* data, VkDeviceSize size,
+                                             const VkBufferImageCopy& copy) noexcept {
+  if (device_lost())
+    return GRANIT_ERROR_DEVICE_LOST;
+  vulkan_buffer_allocation staging;
+  VkBufferCreateInfo staging_info{};
+  staging_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+  staging_info.size = size;
+  staging_info.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+  staging_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+  auto result =
+      memory_allocator_.create_buffer(staging_info, vulkan_memory_location::upload, staging);
+  if (result != GRANIT_SUCCESS)
+    return observe_device_result(result);
+  std::memcpy(staging.mapped_data, data, static_cast<std::size_t>(size));
+  result = memory_allocator_.flush(staging, 0, size);
+  if (result != GRANIT_SUCCESS) {
+    memory_allocator_.destroy_buffer(staging);
+    return observe_device_result(result);
+  }
+
+  std::lock_guard queue_lock{queue_mutex_};
+  const auto& functions = device_.functions();
+  VkCommandPool pool{VK_NULL_HANDLE};
+  VkCommandBuffer command_buffer{VK_NULL_HANDLE};
+  VkFence fence{VK_NULL_HANDLE};
+  VkCommandPoolCreateInfo pool_info{};
+  pool_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+  pool_info.flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT;
+  pool_info.queueFamilyIndex = device_.graphics_queue_family();
+  auto vk_result =
+      functions.vkCreateCommandPool(device_.native_handle(), &pool_info, nullptr, &pool);
+  if (vk_result == VK_SUCCESS) {
+    VkCommandBufferAllocateInfo allocate_info{};
+    allocate_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    allocate_info.commandPool = pool;
+    allocate_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    allocate_info.commandBufferCount = 1;
+    vk_result = functions.vkAllocateCommandBuffers(device_.native_handle(), &allocate_info,
+                                                   &command_buffer);
+  }
+  if (vk_result == VK_SUCCESS) {
+    VkCommandBufferBeginInfo begin_info{};
+    begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+    vk_result = functions.vkBeginCommandBuffer(command_buffer, &begin_info);
+  }
+  if (vk_result == VK_SUCCESS) {
+    const auto previous =
+        std::find_if(image_states_.begin(), image_states_.end(),
+                     [&](const auto& state) { return state.image == texture.image; });
+    VkImageMemoryBarrier2 barrier{};
+    barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
+    barrier.srcStageMask =
+        previous == image_states_.end() ? VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT : previous->stages;
+    barrier.srcAccessMask = previous == image_states_.end() ? 0 : previous->access;
+    barrier.dstStageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT;
+    barrier.dstAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT;
+    barrier.oldLayout =
+        previous == image_states_.end() ? VK_IMAGE_LAYOUT_UNDEFINED : previous->layout;
+    barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+    barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    barrier.image = texture.image;
+    barrier.subresourceRange = {copy.imageSubresource.aspectMask, copy.imageSubresource.mipLevel, 1,
+                                copy.imageSubresource.baseArrayLayer,
+                                copy.imageSubresource.layerCount};
+    VkDependencyInfo dependency{};
+    dependency.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
+    dependency.imageMemoryBarrierCount = 1;
+    dependency.pImageMemoryBarriers = &barrier;
+    functions.vkCmdPipelineBarrier2(command_buffer, &dependency);
+    functions.vkCmdCopyBufferToImage(command_buffer, staging.buffer, texture.image,
+                                     VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copy);
+    vk_result = functions.vkEndCommandBuffer(command_buffer);
+  }
+  if (vk_result == VK_SUCCESS) {
+    VkFenceCreateInfo fence_info{};
+    fence_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+    vk_result = functions.vkCreateFence(device_.native_handle(), &fence_info, nullptr, &fence);
+  }
+  if (vk_result == VK_SUCCESS) {
+    VkCommandBufferSubmitInfo command_info{};
+    command_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO;
+    command_info.commandBuffer = command_buffer;
+    VkSubmitInfo2 submit_info{};
+    submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2;
+    submit_info.commandBufferInfoCount = 1;
+    submit_info.pCommandBufferInfos = &command_info;
+    vk_result = functions.vkQueueSubmit2(device_.graphics_queue(), 1, &submit_info, fence);
+  }
+  if (vk_result == VK_SUCCESS)
+    vk_result = functions.vkWaitForFences(device_.native_handle(), 1, &fence, VK_TRUE, UINT64_MAX);
+
+  if (vk_result == VK_SUCCESS) {
+    vulkan_image_access state{.image = texture.image,
+                              .range = {copy.imageSubresource.aspectMask, 0,
+                                        VK_REMAINING_MIP_LEVELS, 0, VK_REMAINING_ARRAY_LAYERS},
+                              .layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                              .stages = VK_PIPELINE_STAGE_2_TRANSFER_BIT,
+                              .access = VK_ACCESS_2_TRANSFER_WRITE_BIT,
+                              .preserve_content = true};
+    const auto found =
+        std::find_if(image_states_.begin(), image_states_.end(),
+                     [&](const auto& current) { return current.image == texture.image; });
+    if (found == image_states_.end())
+      image_states_.push_back(state);
+    else
+      *found = state;
+  }
+  if (fence != VK_NULL_HANDLE)
+    functions.vkDestroyFence(device_.native_handle(), fence, nullptr);
+  if (pool != VK_NULL_HANDLE)
+    functions.vkDestroyCommandPool(device_.native_handle(), pool, nullptr);
+  memory_allocator_.destroy_buffer(staging);
+  return observe_device_result(map_vulkan_result(vk_result));
+}
+
 void renderer_state::destroy_native_texture(vulkan_image_allocation& texture) noexcept {
   {
     std::lock_guard lock{queue_mutex_};

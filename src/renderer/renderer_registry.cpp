@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <cstring>
+#include <limits>
 #include <new>
 #include <utility>
 #include <vector>
@@ -82,6 +83,24 @@ VkImageAspectFlags map_aspect(granit_texture_aspect aspect) noexcept {
   if ((aspect & GRANIT_TEXTURE_ASPECT_STENCIL_BIT) != 0)
     result |= VK_IMAGE_ASPECT_STENCIL_BIT;
   return result;
+}
+
+std::uint32_t texture_bytes_per_pixel(granit_texture_format format) noexcept {
+  switch (format) {
+  case GRANIT_TEXTURE_FORMAT_R8_UNORM:
+    return 1;
+  case GRANIT_TEXTURE_FORMAT_RG8_UNORM:
+    return 2;
+  case GRANIT_TEXTURE_FORMAT_RGBA8_UNORM:
+  case GRANIT_TEXTURE_FORMAT_RGBA8_SRGB:
+  case GRANIT_TEXTURE_FORMAT_BGRA8_UNORM:
+  case GRANIT_TEXTURE_FORMAT_BGRA8_SRGB:
+    return 4;
+  case GRANIT_TEXTURE_FORMAT_RGBA16_FLOAT:
+    return 8;
+  default:
+    return 0;
+  }
 }
 
 } // namespace
@@ -1319,6 +1338,82 @@ granit_result renderer_registry::create_texture(granit_renderer renderer,
   } catch (...) {
     return GRANIT_ERROR_INTERNAL;
   }
+}
+
+granit_result renderer_registry::write_texture(granit_renderer renderer, granit_texture texture,
+                                               const void* data, std::uint64_t size,
+                                               const granit_texture_data_layout& layout,
+                                               const granit_texture_write_region& region) {
+  std::shared_ptr<texture_record> record;
+  {
+    std::lock_guard lock{mutex_};
+    const auto renderer_found = renderers_.find(renderer);
+    if (renderer_found == renderers_.end() ||
+        handles_.find(renderer, resource_type::renderer, 0) == nullptr)
+      return GRANIT_ERROR_INVALID_HANDLE;
+    const auto& state = renderer_found->second;
+    if (handles_.find(texture, resource_type::texture, state->domain()) == nullptr)
+      return GRANIT_ERROR_INVALID_HANDLE;
+    const auto found = textures_.find(texture);
+    if (found == textures_.end() || found->second->renderer != state)
+      return GRANIT_ERROR_INVALID_HANDLE;
+    record = found->second;
+  }
+
+  std::lock_guard record_lock{record->mutex};
+  const auto& desc = record->desc;
+  const auto bytes_per_pixel = texture_bytes_per_pixel(desc.format);
+  if ((desc.usage & GRANIT_TEXTURE_USAGE_TRANSFER_DESTINATION_BIT) == 0 ||
+      desc.sample_count != GRANIT_SAMPLE_COUNT_1 || bytes_per_pixel == 0) {
+    return GRANIT_ERROR_UNSUPPORTED;
+  }
+  if (region.aspect != GRANIT_TEXTURE_ASPECT_COLOR_BIT || region.width == 0 || region.height == 0 ||
+      region.depth == 0 || region.array_layer_count == 0 || region.mip_level >= desc.mip_levels ||
+      region.base_array_layer >= desc.array_layers ||
+      region.array_layer_count > desc.array_layers - region.base_array_layer) {
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  }
+  const auto mip_width = std::max(UINT32_C(1), desc.width >> region.mip_level);
+  const auto mip_height = std::max(UINT32_C(1), desc.height >> region.mip_level);
+  const auto mip_depth = std::max(UINT32_C(1), desc.depth >> region.mip_level);
+  if (region.x >= mip_width || region.width > mip_width - region.x || region.y >= mip_height ||
+      region.height > mip_height - region.y || region.z >= mip_depth ||
+      region.depth > mip_depth - region.z) {
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  }
+
+  const std::uint64_t tight_row = std::uint64_t{region.width} * bytes_per_pixel;
+  const std::uint64_t row_pitch = layout.bytes_per_row == 0 ? tight_row : layout.bytes_per_row;
+  const std::uint64_t image_rows =
+      layout.rows_per_image == 0 ? region.height : layout.rows_per_image;
+  if (row_pitch < tight_row || row_pitch % bytes_per_pixel != 0 || image_rows < region.height) {
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  }
+  const std::uint64_t image_count =
+      desc.dimension == GRANIT_TEXTURE_DIMENSION_3D ? region.depth : region.array_layer_count;
+  const auto max = std::numeric_limits<std::uint64_t>::max();
+  if (image_rows > max / row_pitch || image_count - 1 > max / (image_rows * row_pitch) ||
+      region.height - 1 > max / row_pitch) {
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  }
+  const std::uint64_t required =
+      (image_count - 1) * image_rows * row_pitch + (region.height - 1) * row_pitch + tight_row;
+  if (layout.offset > size || required > size - layout.offset) {
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  }
+
+  VkBufferImageCopy copy{};
+  copy.bufferRowLength = layout.bytes_per_row == 0 ? 0 : layout.bytes_per_row / bytes_per_pixel;
+  copy.bufferImageHeight = layout.rows_per_image;
+  copy.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+  copy.imageSubresource.mipLevel = region.mip_level;
+  copy.imageSubresource.baseArrayLayer = region.base_array_layer;
+  copy.imageSubresource.layerCount = region.array_layer_count;
+  copy.imageOffset = {static_cast<std::int32_t>(region.x), static_cast<std::int32_t>(region.y),
+                      static_cast<std::int32_t>(region.z)};
+  copy.imageExtent = {region.width, region.height, region.depth};
+  return record->renderer->upload_texture(
+      record->native, static_cast<const unsigned char*>(data) + layout.offset, required, copy);
 }
 
 granit_result renderer_registry::create_texture_view(granit_renderer renderer,

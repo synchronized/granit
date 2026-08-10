@@ -61,6 +61,18 @@ extern "C" granit_result granit_texture_create_with_default_view(granit_renderer
   return GRANIT_SUCCESS;
 }
 
+extern "C" granit_result granit_texture_write(granit_renderer renderer, granit_texture texture,
+                                              const void* data, uint64_t size,
+                                              const granit_texture_data_layout* layout,
+                                              const granit_texture_write_region* region) {
+  if (renderer == GRANIT_NULL_HANDLE || texture == GRANIT_NULL_HANDLE || data == nullptr ||
+      size == 0 || layout == nullptr || region == nullptr) {
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  }
+  return granit::detail::renderer_registry::instance().write_texture(renderer, texture, data, size,
+                                                                     *layout, *region);
+}
+
 extern "C" granit_result granit_texture_view_destroy(granit_renderer renderer,
                                                      granit_texture_view view) {
   if (renderer == GRANIT_NULL_HANDLE || view == GRANIT_NULL_HANDLE) {
