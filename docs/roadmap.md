@@ -162,7 +162,8 @@
   反射边界和错误报告策略。
 - **[D-02](plans/D-02-shader-module.md) / P0 / 已完成**：实现 Shader Module、输入校验、句柄
   生命周期和 C++ RAII；反射资产格式随 D-03 最小需求确定。
-- **D-03 / P0**：实现资源绑定、Pipeline Layout 和 Graphics Pipeline。
+- **[D-03](plans/D-03-graphics-pipeline.md) / P0 / 已确认**：先以 D-03A 实现空资源布局的最小
+  Graphics Pipeline，再以 D-03B 实现 Bind Group、Pipeline Layout 和资源绑定。
 - **D-04 / P0**：基于 Vulkan 1.3 Dynamic Rendering 实现统一 Render Target 流程。
 - **D-05 / P0**：实现 Viewport、Scissor、Clear、Vertex/Index Buffer 和基础 Draw API。
 - **D-06 / P0**：提供无窗口离屏清屏、窗口清屏和最小三角形示例。
