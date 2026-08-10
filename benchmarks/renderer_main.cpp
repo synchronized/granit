@@ -24,6 +24,7 @@
 #include <string>
 #include <string_view>
 #include <thread>
+#include <utility>
 #include <vector>
 
 namespace {
@@ -40,6 +41,7 @@ struct options {
   std::uint32_t commands{10};
   std::uint32_t submissions{100};
   std::uint32_t frames_in_flight{2};
+  std::uint32_t uploads{10};
 };
 
 enum class benchmark_case {
@@ -50,7 +52,9 @@ enum class benchmark_case {
   empty_record,
   buffer_record,
   mixed_pipeline_record,
-  queue_submit
+  queue_submit,
+  staging_buffer_upload,
+  staging_texture_upload
 };
 
 struct thread_context {
@@ -59,6 +63,8 @@ struct thread_context {
   granit_texture texture{GRANIT_NULL_HANDLE};
   granit_texture_view view{GRANIT_NULL_HANDLE};
   granit_bind_group compute_group{GRANIT_NULL_HANDLE};
+  std::uint32_t texture_width{};
+  std::uint32_t texture_height{};
   std::vector<granit_command_recorder> submit_recorders;
   std::vector<double> submit_latencies;
   std::vector<std::byte> data;
@@ -81,7 +87,8 @@ void print_help() {
   std::cout << "用法：granit_renderer_benchmarks [选项]\n"
                "  --case <all|invalid_lookup|create_destroy|independent_write|\n"
                "          recorder_create_destroy|empty_record|buffer_record|\n"
-               "          mixed_pipeline_record|queue_submit>\n"
+               "          mixed_pipeline_record|queue_submit|staging_buffer_upload|\n"
+               "          staging_texture_upload>\n"
                "  --threads <数量>       工作线程数\n"
                "  --iterations <数量>    每个线程、每个样本的操作数\n"
                "  --samples <数量>       正式样本数\n"
@@ -89,7 +96,8 @@ void print_help() {
                "  --buffer-size <字节>   Buffer 大小\n"
                "  --commands <数量>      每次录制的命令数或混合工作负载重复数\n"
                "  --submissions <数量>   每线程、每样本预录制并提交的 Recorder 数\n"
-               "  --frames-in-flight <数量> Renderer 帧槽数量（1～4）\n";
+               "  --frames-in-flight <数量> Renderer 帧槽数量（1～4）\n"
+               "  --uploads <数量>       每线程、每样本的同步 staging 上传数\n";
 }
 
 std::vector<std::byte> load_shader(std::string_view name) {
@@ -227,6 +235,9 @@ bool parse_options(int argc, char** argv, options& result) {
     } else if (argument == "--frames-in-flight") {
       if (!parse_integer(value, result.frames_in_flight))
         return false;
+    } else if (argument == "--uploads") {
+      if (!parse_integer(value, result.uploads))
+        return false;
     } else {
       std::cerr << "未知选项：" << argument << '\n';
       return false;
@@ -256,6 +267,14 @@ granit_result create_upload_buffer(granit_renderer renderer, std::uint64_t size,
   return granit_buffer_create(renderer, &desc, &buffer);
 }
 
+std::pair<std::uint32_t, std::uint32_t> texture_extent(std::uint64_t size) {
+  const auto pixels = size / 4;
+  auto width = static_cast<std::uint32_t>(std::min<std::uint64_t>(pixels, 1'024));
+  while (pixels % width != 0)
+    --width;
+  return {width, static_cast<std::uint32_t>(pixels / width)};
+}
+
 void destroy_contexts(granit_renderer renderer, std::vector<thread_context>& contexts);
 
 granit_result create_recorder(granit_renderer renderer, granit_command_recorder& recorder) {
@@ -274,9 +293,18 @@ std::vector<thread_context> make_contexts(granit_renderer renderer, benchmark_ca
       destroy_contexts(renderer, contexts);
       return {};
     }
-    if (selected == benchmark_case::independent_write) {
+    if (selected == benchmark_case::independent_write ||
+        selected == benchmark_case::staging_buffer_upload) {
       context.data.resize(static_cast<std::size_t>(config.buffer_size), std::byte{0x5a});
-      if (create_upload_buffer(renderer, config.buffer_size, context.buffer) != GRANIT_SUCCESS) {
+      granit_buffer_desc desc = GRANIT_BUFFER_DESC_INIT;
+      desc.usage = selected == benchmark_case::independent_write
+                       ? GRANIT_BUFFER_USAGE_TRANSFER_SOURCE_BIT
+                       : GRANIT_BUFFER_USAGE_TRANSFER_DESTINATION_BIT;
+      desc.memory_location = selected == benchmark_case::independent_write
+                                 ? GRANIT_MEMORY_LOCATION_UPLOAD
+                                 : GRANIT_MEMORY_LOCATION_DEVICE;
+      desc.size = config.buffer_size;
+      if (granit_buffer_create(renderer, &desc, &context.buffer) != GRANIT_SUCCESS) {
         destroy_contexts(renderer, contexts);
         return {};
       }
@@ -329,6 +357,21 @@ std::vector<thread_context> make_contexts(granit_renderer renderer, benchmark_ca
           destroy_contexts(renderer, contexts);
           return {};
         }
+      }
+    } else if (selected == benchmark_case::staging_texture_upload) {
+      context.data.resize(static_cast<std::size_t>(config.buffer_size), std::byte{0x5a});
+      const auto [width, height] = texture_extent(config.buffer_size);
+      context.texture_width = width;
+      context.texture_height = height;
+      granit_texture_desc desc = GRANIT_TEXTURE_DESC_INIT;
+      desc.format = GRANIT_TEXTURE_FORMAT_RGBA8_UNORM;
+      desc.usage = GRANIT_TEXTURE_USAGE_TRANSFER_DESTINATION_BIT;
+      desc.memory_location = GRANIT_MEMORY_LOCATION_DEVICE;
+      desc.width = width;
+      desc.height = height;
+      if (granit_texture_create(renderer, &desc, &context.texture) != GRANIT_SUCCESS) {
+        destroy_contexts(renderer, contexts);
+        return {};
       }
     }
   }
@@ -392,6 +435,34 @@ std::uint64_t run_operations(granit_renderer renderer, thread_context& context,
         return local_checksum;
       }
       break;
+    case benchmark_case::staging_buffer_upload:
+      result = granit_buffer_write(renderer, context.buffer, 0, context.data.data(),
+                                   context.data.size());
+      if (result != GRANIT_SUCCESS) {
+        failed.store(true, std::memory_order_relaxed);
+        return local_checksum;
+      }
+      break;
+    case benchmark_case::staging_texture_upload: {
+      const granit_texture_data_layout layout{0, context.texture_width * 4, context.texture_height};
+      const granit_texture_write_region region{0,
+                                               0,
+                                               1,
+                                               GRANIT_TEXTURE_ASPECT_COLOR_BIT,
+                                               0,
+                                               0,
+                                               0,
+                                               context.texture_width,
+                                               context.texture_height,
+                                               1};
+      result = granit_texture_write(renderer, context.texture, context.data.data(),
+                                    context.data.size(), &layout, &region);
+      if (result != GRANIT_SUCCESS) {
+        failed.store(true, std::memory_order_relaxed);
+        return local_checksum;
+      }
+      break;
+    }
     case benchmark_case::recorder_create_destroy: {
       granit_command_recorder recorder{GRANIT_NULL_HANDLE};
       result = create_recorder(renderer, recorder);
@@ -613,9 +684,11 @@ int main(int argc, char** argv) {
     }
     return 2;
   }
-  constexpr std::string_view cases[]{
-      "invalid_lookup", "create_destroy", "independent_write",     "recorder_create_destroy",
-      "empty_record",   "buffer_record",  "mixed_pipeline_record", "queue_submit"};
+  constexpr std::string_view cases[]{"invalid_lookup",        "create_destroy",
+                                     "independent_write",     "recorder_create_destroy",
+                                     "empty_record",          "buffer_record",
+                                     "mixed_pipeline_record", "queue_submit",
+                                     "staging_buffer_upload", "staging_texture_upload"};
   if (config.case_name != "all" &&
       std::find(std::begin(cases), std::end(cases), config.case_name) == std::end(cases)) {
     std::cerr << "未知 benchmark 用例：" << config.case_name << '\n';
@@ -649,6 +722,7 @@ int main(int argc, char** argv) {
             << "# commands=" << config.commands << '\n'
             << "# submissions=" << config.submissions << '\n'
             << "# frames_in_flight=" << config.frames_in_flight << '\n'
+            << "# uploads=" << config.uploads << '\n'
             << "schema,name,threads,iterations,samples,total_ns,ns_per_op,p50_ns,p95_ns,p99_ns,"
                "ops_per_second\n";
 
@@ -684,6 +758,18 @@ int main(int argc, char** argv) {
     auto submit_config = config;
     submit_config.iterations = config.submissions;
     succeeded &= run_case(renderer, "queue_submit", benchmark_case::queue_submit, submit_config);
+  }
+  if (selected(config.case_name, "staging_buffer_upload")) {
+    auto upload_config = config;
+    upload_config.iterations = config.uploads;
+    succeeded &= run_case(renderer, "staging_buffer_upload", benchmark_case::staging_buffer_upload,
+                          upload_config);
+  }
+  if (selected(config.case_name, "staging_texture_upload")) {
+    auto upload_config = config;
+    upload_config.iterations = config.uploads;
+    succeeded &= run_case(renderer, "staging_texture_upload",
+                          benchmark_case::staging_texture_upload, upload_config);
   }
   destroy_pipeline_fixture(renderer, pipelines);
   const auto destroy_result = granit_renderer_destroy(renderer);
