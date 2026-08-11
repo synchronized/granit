@@ -73,8 +73,8 @@ Buffer/Texture View 导入、单 Recorder 串行执行，以及瞬态资源按�
 留待真实重复帧验证。H-02A～H-02D 已完成材质系统边界、CPU shadow buffer、dirty 区间上传、
 Texture/Sampler Bind Group 事务式替换，以及 DXC/SPIR-V 反射工具原型。H-02E1 已完成内存版本化
 材质包、稳定变体查找与 Shader/Pipeline 缓存。H-02E3 已完成持久化包、源 JSON 构建、语义往返、
-调试 JSON 导出和损坏输入防护；H-02F1～H-02F2 已实现事务式参数、资源与 GPU 实例迁移，
-下一步实现错误材质回退。
+调试 JSON 导出和损坏输入防护；H-02F1～H-02F3 已实现事务式迁移、热替换槽和错误材质 Pipeline
+回退，下一步建立可选材质模块目标与端到端示例。
 具体顺序见 [docs/roadmap.md](docs/roadmap.md)。
 
 ## 快速开始

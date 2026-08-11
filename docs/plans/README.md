@@ -73,7 +73,7 @@ D-03-graphics-pipeline.md
 - [P-06：Render Graph 职责与模块边界](P-06-render-graph-boundary.md)——已完成；功能实现转入
   H-01。
 - [H-02：材质参数、Shader 变体与离线构建](H-02-material-system.md)——进行中；H-02A～H-02E
-  已完成，H-02F1～H-02F2 已实现事务式参数、资源与 GPU 实例迁移。
+  已完成，H-02F1～H-02F3 已实现事务式迁移、热替换槽和错误材质 Pipeline 回退。
 - [H-02E3：持久化材质包格式](H-02-material-package-format.md)——已完成；包含确定性容器、
   SHA-256、材质语义往返、源 JSON 构建、调试导出和损坏输入防护。
 

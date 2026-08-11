@@ -152,8 +152,8 @@ SPIRV-Reflect 与 SPIRV-Headers `vulkan-sdk-1.4.350.0`。版本升级必须重�
    Pipeline Layout 和 Graphics Pipeline 缓存；H-02E3 的持久化包格式与调试导出见
    [独立计划](H-02-material-package-format.md)。按 D-09A 显式记录绑定模型和 Renderer 能力要求，
    但首版只接受传统 Bind Group。
-6. **H-02F（进行中）**：H-02F1～H-02F2 已实现事务式 CPU 参数、资源句柄和 GPU 实例迁移；
-   下一步实现错误材质和端到端示例。
+6. **H-02F（进行中）**：H-02F1～H-02F3 已实现事务式参数/GPU 实例迁移、热替换槽和错误材质
+   Pipeline 回退；下一步建立可选材质模块目标并增加端到端示例。
 7. **H-02G**：建立参数更新、变体查找和 Pipeline 命中率性能基线。
 
 ## 首版不做
@@ -250,6 +250,17 @@ Renderer 校验、替代 Bind Group 创建和 GPU 对象切换属于 H-02F2。
 候选实例调用 `flush` 时重新创建 Bind Group，因此复用的句柄仍会经过现有 Renderer/domain 和
 资源类型校验。成功后调用无失败的 `swap` 发布候选；旧 Buffer 与 Bind Group 被转移到替代壳中，
 由现有延迟销毁路径释放。准备、分配或 Bind Group 创建失败均不修改正在使用的旧实例。
+
+## H-02F3 实现记录
+
+`material_runtime_template` 共同拥有不可变材质包和借用它的 GPU 模板，析构顺序保证 Pipeline、
+Shader 与 Layout 先于包释放。`material_hot_reload_slot` 在锁外构建候选，成功后才在短临界区内替换
+活动模板；快照使用 `shared_ptr`，因此旧模板和在途 Recorder 可以自然延长生命周期。
+
+首次加载失败且没有活动模板时返回调用方提供的 fallback；后续重载失败保留上一代活动模板且不
+增加 generation。Pipeline 获取先尝试活动材质，缺少变体或底层创建失败时再尝试 fallback，并在
+结果中同时返回原始错误、是否回退以及模板 keepalive。Renderer 不内置 Shader 或规定错误材质的
+外观，上层应提供并预先验证一个醒目的错误材质包。
 
 ## 验收标准
 

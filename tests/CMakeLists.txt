@@ -130,6 +130,7 @@ add_test(NAME granit.render_graph COMMAND granit_render_graph_test)
 add_executable(
   granit_material_test
   material/material_gpu_instance_test.cpp
+  material/material_hot_reload_test.cpp
   material/material_archive_test.cpp
   material/material_metadata_test.cpp
   material/material_migration_test.cpp
@@ -138,6 +139,7 @@ add_executable(
   material/material_source_json_test.cpp
   material/material_template_gpu_test.cpp
   "${PROJECT_SOURCE_DIR}/src/material/material_gpu_instance.cpp"
+  "${PROJECT_SOURCE_DIR}/src/material/material_hot_reload.cpp"
   "${PROJECT_SOURCE_DIR}/src/material/material_archive.cpp"
   "${PROJECT_SOURCE_DIR}/src/material/material_debug_json.cpp"
   "${PROJECT_SOURCE_DIR}/src/material/material_metadata.cpp"
