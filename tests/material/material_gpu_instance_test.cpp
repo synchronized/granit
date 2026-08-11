@@ -110,6 +110,21 @@ TEST_CASE("材质 GPU 实例批量上传参数并事务式替换 Bind Group") {
   CHECK(granit_bind_group_destroy(renderer.native_handle(), first_group) ==
         GRANIT_ERROR_INVALID_HANDLE);
 
+  granit::material::material_gpu_instance replacement;
+  granit::material::migration_report migration;
+  REQUIRE(instance.prepare_migration(layout, metadata, replacement, migration) == GRANIT_SUCCESS);
+  CHECK(migration.copied_constant_parameters == 1);
+  CHECK(migration.copied_resource_parameters == 2);
+  CHECK(migration.pending_resource_parameters == 0);
+  REQUIRE(replacement.flush() == GRANIT_SUCCESS);
+  const auto replacement_group = replacement.bind_group();
+  REQUIRE(replacement_group != GRANIT_NULL_HANDLE);
+  CHECK(replacement_group != instance.bind_group());
+
+  instance.swap(replacement);
+  CHECK(instance.bind_group() == replacement_group);
+  REQUIRE(replacement.reset() == GRANIT_SUCCESS);
+
   REQUIRE(instance.reset() == GRANIT_SUCCESS);
   CHECK(granit_sampler_destroy(renderer.native_handle(), replacement_sampler) == GRANIT_SUCCESS);
   CHECK(granit_sampler_destroy(renderer.native_handle(), sampler) == GRANIT_SUCCESS);

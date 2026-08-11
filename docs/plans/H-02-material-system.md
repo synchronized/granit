@@ -152,8 +152,8 @@ SPIRV-Reflect 与 SPIRV-Headers `vulkan-sdk-1.4.350.0`。版本升级必须重�
    Pipeline Layout 和 Graphics Pipeline 缓存；H-02E3 的持久化包格式与调试导出见
    [独立计划](H-02-material-package-format.md)。按 D-09A 显式记录绑定模型和 Renderer 能力要求，
    但首版只接受传统 Bind Group。
-6. **H-02F（进行中）**：H-02F1 已实现事务式 CPU 参数迁移；下一步接入资源句柄迁移、GPU
-   替换、错误材质和端到端示例。
+6. **H-02F（进行中）**：H-02F1～H-02F2 已实现事务式 CPU 参数、资源句柄和 GPU 实例迁移；
+   下一步实现错误材质和端到端示例。
 7. **H-02G**：建立参数更新、变体查找和 Pipeline 命中率性能基线。
 
 ## 首版不做
@@ -240,6 +240,16 @@ Shader、Pipeline Layout、Bind Group Layout 顺序释放。
 类型和数组数量必须匹配，数组 stride 可以变化并按元素重新布局。新参数、类型变化或数组数量变化
 保留新模板默认值，并在报告中给出参数 ID 和原因。资源参数暂记为待处理，不复制裸句柄；资源所属
 Renderer 校验、替代 Bind Group 创建和 GPU 对象切换属于 H-02F2。
+
+## H-02F2 实现记录
+
+`material_gpu_instance::prepare_migration` 在独立候选实例中创建新 Uniform Buffer，复用 H-02F1
+结果，并仅复制稳定 ID 与资源类型均匹配且已经设置的 Texture View/Sampler 句柄。缺失、类型变化
+或旧实例尚未设置的资源保持为空并写入迁移报告，调用方可在候选实例上补齐。
+
+候选实例调用 `flush` 时重新创建 Bind Group，因此复用的句柄仍会经过现有 Renderer/domain 和
+资源类型校验。成功后调用无失败的 `swap` 发布候选；旧 Buffer 与 Bind Group 被转移到替代壳中，
+由现有延迟销毁路径释放。准备、分配或 Bind Group 创建失败均不修改正在使用的旧实例。
 
 ## 验收标准
 

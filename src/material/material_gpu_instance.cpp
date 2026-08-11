@@ -168,4 +168,77 @@ granit_result material_gpu_instance::flush() {
   return GRANIT_SUCCESS;
 }
 
+granit_result material_gpu_instance::prepare_migration(granit_bind_group_layout target_layout,
+                                                       const material_metadata& target_metadata,
+                                                       material_gpu_instance& target,
+                                                       migration_report& report) const {
+  if (!initialized() || data_ == nullptr || target.initialized() ||
+      target_layout == GRANIT_NULL_HANDLE) {
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  }
+
+  std::unique_ptr<material_instance_data> migrated_data;
+  migration_report migrated_report;
+  const auto migration = migrate_material_instance_data(data_->metadata(), *data_, target_metadata,
+                                                        migrated_data, migrated_report);
+  if (migration == migration_error::out_of_memory) {
+    return GRANIT_ERROR_OUT_OF_MEMORY;
+  }
+  if (migration != migration_error::none) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+
+  material_gpu_instance candidate;
+  auto result = candidate.initialize(renderer_, target_layout, target_metadata);
+  if (result != GRANIT_SUCCESS) {
+    return result;
+  }
+  candidate.data_ = std::move(migrated_data);
+  try {
+    for (auto& target_resource : candidate.resources_) {
+      const auto source = std::ranges::find(resources_, target_resource.id, &resource_binding::id);
+      if (source == resources_.end()) {
+        ++migrated_report.defaulted_resource_parameters;
+        migrated_report.issues.push_back(
+            {target_resource.id, migration_issue_reason::missing_source_parameter});
+        continue;
+      }
+      if (source->type != target_resource.type) {
+        ++migrated_report.defaulted_resource_parameters;
+        migrated_report.issues.push_back(
+            {target_resource.id, migration_issue_reason::type_mismatch});
+        continue;
+      }
+      if (source->resource == GRANIT_NULL_HANDLE) {
+        ++migrated_report.defaulted_resource_parameters;
+        migrated_report.issues.push_back(
+            {target_resource.id, migration_issue_reason::source_resource_unset});
+        continue;
+      }
+      target_resource.resource = source->resource;
+      ++migrated_report.copied_resource_parameters;
+      --migrated_report.pending_resource_parameters;
+    }
+  } catch (const std::bad_alloc&) {
+    return GRANIT_ERROR_OUT_OF_MEMORY;
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+
+  target.swap(candidate);
+  report = std::move(migrated_report);
+  return GRANIT_SUCCESS;
+}
+
+void material_gpu_instance::swap(material_gpu_instance& other) noexcept {
+  using std::swap;
+  swap(renderer_, other.renderer_);
+  swap(layout_, other.layout_);
+  swap(uniform_buffer_, other.uniform_buffer_);
+  swap(bind_group_, other.bind_group_);
+  swap(data_, other.data_);
+  swap(resources_, other.resources_);
+  swap(resources_dirty_, other.resources_dirty_);
+}
+
 } // namespace granit::material

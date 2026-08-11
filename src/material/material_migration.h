@@ -16,6 +16,7 @@ enum class migration_issue_reason : std::uint8_t {
   missing_source_parameter,
   type_mismatch,
   array_mismatch,
+  source_resource_unset,
 };
 
 struct migration_issue {
@@ -27,6 +28,8 @@ struct migration_report {
   std::uint32_t copied_constant_parameters = 0;
   std::uint32_t defaulted_constant_parameters = 0;
   std::uint32_t pending_resource_parameters = 0;
+  std::uint32_t copied_resource_parameters = 0;
+  std::uint32_t defaulted_resource_parameters = 0;
   std::vector<migration_issue> issues;
 };
 

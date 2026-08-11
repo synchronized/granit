@@ -12,6 +12,7 @@
 #include <vector>
 
 #include "material/material_metadata.h"
+#include "material/material_migration.h"
 
 namespace granit::material {
 
@@ -30,10 +31,16 @@ public:
   [[nodiscard]] metadata_error set_resource(parameter_id id, parameter_type type,
                                             granit_handle resource);
   [[nodiscard]] granit_result flush();
+  [[nodiscard]] granit_result prepare_migration(granit_bind_group_layout target_layout,
+                                                const material_metadata& target_metadata,
+                                                material_gpu_instance& target,
+                                                migration_report& report) const;
+  void swap(material_gpu_instance& other) noexcept;
 
   [[nodiscard]] granit_bind_group bind_group() const noexcept { return bind_group_; }
   [[nodiscard]] granit_buffer uniform_buffer() const noexcept { return uniform_buffer_; }
   [[nodiscard]] const material_instance_data* data() const noexcept { return data_.get(); }
+  [[nodiscard]] bool initialized() const noexcept { return renderer_ != GRANIT_NULL_HANDLE; }
 
 private:
   struct resource_binding {
