@@ -198,6 +198,7 @@ if (granit::failed(result)) {
 - [P-06 Render Graph 职责与模块边界](docs/plans/P-06-render-graph-boundary.md)。
 - [H-02 材质参数、Shader 变体与离线构建](docs/plans/H-02-material-system.md)。
 - [H-02E3 持久化材质包格式](docs/plans/H-02-material-package-format.md)。
+- [H-03 金属度/粗糙度 PBR 渲染模块](docs/plans/H-03-pbr-renderer.md)。
 - [docs/plans/F-07-recovery-boundaries.md](docs/plans/F-07-recovery-boundaries.md)：窗口帧恢复边界计划。
 - [docs/renderer.md](docs/renderer.md)：公共 renderer C/C++ API 与生命周期。
 - [docs/render-target.md](docs/render-target.md)：颜色与深度/模板 Attachment 值类型。
