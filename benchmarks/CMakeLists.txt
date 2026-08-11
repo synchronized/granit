@@ -66,8 +66,6 @@ set_target_properties(granit_renderer_benchmarks PROPERTIES FOLDER "Benchmarks")
 add_executable(
   granit_render_graph_benchmarks
   render_graph_main.cpp
-  "${PROJECT_SOURCE_DIR}/src/render_graph/graph_compiler.cpp"
-  "${PROJECT_SOURCE_DIR}/src/render_graph/serial_graph.cpp"
 )
 target_compile_features(granit_render_graph_benchmarks PRIVATE cxx_std_20)
 target_compile_options(
@@ -83,7 +81,7 @@ target_compile_definitions(
     GRANIT_BENCHMARK_SYSTEM="${CMAKE_SYSTEM_NAME}-${CMAKE_SYSTEM_PROCESSOR}"
 )
 target_include_directories(granit_render_graph_benchmarks PRIVATE "${PROJECT_SOURCE_DIR}/src")
-target_link_libraries(granit_render_graph_benchmarks PRIVATE granit::granit)
+target_link_libraries(granit_render_graph_benchmarks PRIVATE granit::render_graph)
 granit_target_compile_warnings(granit_render_graph_benchmarks)
 granit_target_output_directories(granit_render_graph_benchmarks)
 set_target_properties(granit_render_graph_benchmarks PROPERTIES FOLDER "Benchmarks")

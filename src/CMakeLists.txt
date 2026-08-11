@@ -172,6 +172,30 @@ install(
   DESTINATION "${GRANIT_INSTALL_CMAKEDIR}"
 )
 
+add_library(granit_render_graph STATIC)
+add_library(granit::render_graph ALIAS granit_render_graph)
+target_sources(
+  granit_render_graph
+  PRIVATE
+    render_graph/graph_compiler.cpp
+    render_graph/serial_graph.cpp
+  PUBLIC
+    FILE_SET HEADERS
+    BASE_DIRS "${PROJECT_SOURCE_DIR}/src"
+    FILES
+      render_graph/graph_compiler.h
+      render_graph/serial_graph.h
+)
+target_compile_features(granit_render_graph PUBLIC cxx_std_20)
+target_include_directories(granit_render_graph PUBLIC "${PROJECT_SOURCE_DIR}/src")
+target_link_libraries(granit_render_graph PUBLIC granit::granit)
+granit_target_compile_warnings(granit_render_graph)
+granit_target_output_directories(granit_render_graph)
+set_target_properties(
+  granit_render_graph
+  PROPERTIES FOLDER "Modules" POSITION_INDEPENDENT_CODE ON
+)
+
 add_library(granit_material STATIC)
 add_library(granit::material ALIAS granit_material)
 target_sources(
@@ -217,3 +241,20 @@ set_target_properties(
     FOLDER "Modules"
     POSITION_INDEPENDENT_CODE ON
 )
+
+add_library(granit_pbr STATIC)
+add_library(granit::pbr ALIAS granit_pbr)
+target_sources(
+  granit_pbr
+  PRIVATE material/pbr_render_graph_adapter.cpp
+  PUBLIC
+    FILE_SET HEADERS
+    BASE_DIRS "${PROJECT_SOURCE_DIR}/src"
+    FILES material/pbr_render_graph_adapter.h
+)
+target_compile_features(granit_pbr PUBLIC cxx_std_20)
+target_include_directories(granit_pbr PUBLIC "${PROJECT_SOURCE_DIR}/src")
+target_link_libraries(granit_pbr PUBLIC granit::material granit::render_graph)
+granit_target_compile_warnings(granit_pbr)
+granit_target_output_directories(granit_pbr)
+set_target_properties(granit_pbr PROPERTIES FOLDER "Modules" POSITION_INDEPENDENT_CODE ON)

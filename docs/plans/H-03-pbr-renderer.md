@@ -6,7 +6,7 @@
 ## 元数据
 
 - 设计状态：已确认首版边界
-- 实现状态：进行中（H-03A～H-03D、H-03E1 已完成）
+- 实现状态：进行中（H-03A～H-03E 已完成）
 - 路线图任务：H-03
 - 优先级：P2
 - 前置依赖：H-01、H-02
@@ -94,8 +94,8 @@ CPU 参考函数与 Shader 必须共享公式说明和固定测试向量。允�
 3. **H-03C（已完成）**：加入无纹理 HLSL PBR Shader、离线构建包和单三角离屏直接光照闭环。
 4. **H-03D（已完成）**：材质常量、五类纹理、默认资源、顶点契约与按纹理掩码编译期裁剪已经
    贯通，并验证 sRGB/线性格式语义。
-5. **H-03E（进行中）**：H-03E1 已封装显式 View/Object/Directional Light 输入；H-03E2 将建立
-   独立 Render Graph Pass 适配目标，不创建 Scene 或 Light 管理器。
+5. **H-03E（已完成）**：已封装显式 View/Object/Directional Light 输入，并建立独立 Render
+   Graph Pass 适配目标，不创建 Scene 或 Light 管理器。
 6. **H-03F**：增加端到端图像/数值回归、资源生命周期测试和性能基线，整理 H-04/H-05 输入契约。
 
 ## 验收标准
@@ -218,3 +218,15 @@ Light 对象或场景集合。矩阵采用与 HLSL `column-major float4x4` 一�
 独立的 16 字节槽，避免 C++/HLSL 常量布局差异。纯 CPU 测试覆盖正常打包、方向规范化、负光照、
 零方向和非有限值。H-03E2 将先把 Render Graph 原型整理为独立 CMake 目标，再由单独的 PBR Pass
 适配层依赖它，避免 `granit_material` 直接绑定某个图执行器。
+
+## H-03E2 实现记录
+
+串行 Render Graph 已从测试和 benchmark 各自重复编译源码，整理为内部静态目标
+`granit::render_graph`。测试和 benchmark 统一链接该目标，后续图实现演进不再产生多份构建定义。
+它仍不是核心 `granit` 动态库的传递组成，也尚未安装导出。
+
+新增独立 `granit::pbr` 目标，依赖 `granit::material` 与 `granit::render_graph`。其
+`add_pbr_graph_pass` 会验证并复制显式输入、打包 Frame/Object 常量、声明颜色与可选深度附件写访问，
+再将常量交给调用方提供的录制回调。适配器不保存 Scene、Camera、Light 集合，不决定 Mesh 来源，
+也不隐藏实际 Draw。测试覆盖附件解析、方向规范化、对象常量传递和不完整描述拒绝。H-03E 至此
+完成，下一步进入 H-03F 的端到端回归、生命周期与性能基线。
