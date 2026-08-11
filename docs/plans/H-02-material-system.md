@@ -6,7 +6,7 @@
 ## 元数据
 
 - 设计状态：已确认
-- 实现状态：进行中（H-02A～H-02D、H-02E1～H-02E2 已完成）
+- 实现状态：已完成（内部原型，尚未安装导出）
 - 路线图任务：H-02
 - 优先级：P2
 - 前置依赖：D-01～D-08、H-01
@@ -154,7 +154,8 @@ SPIRV-Reflect 与 SPIRV-Headers `vulkan-sdk-1.4.350.0`。版本升级必须重�
    但首版只接受传统 Bind Group。
 6. **H-02F（已完成）**：已实现事务式参数/GPU 实例迁移、热替换槽、错误材质 Pipeline 回退、
    可选材质模块目标和端到端示例。
-7. **H-02G**：建立参数更新、变体查找和 Pipeline 命中率性能基线。
+7. **H-02G（已完成）**：已建立参数更新、64 变体查找、实例迁移和预热 Pipeline 缓存命中的
+   Release 性能基线。
 
 ## 首版不做
 
@@ -273,6 +274,15 @@ Shader 与 Layout 先于包释放。`material_hot_reload_slot` 在锁外构建�
 `opaque` 变体时取得 fallback Pipeline，再发布包含该变体的新包并验证 generation 增加且不再
 回退。示例只使用 Granit 类型，不包含 Vulkan 头文件。
 
+## H-02G 实现记录
+
+`granit_material_benchmarks` 复用项目现有 CSV、预热和百分位约定，分别测量常量参数写入、变体键
+计算与查询、事务式实例迁移，以及排除首次创建后的 Pipeline 缓存命中。首份 Windows Clang
+Release 基线见[结果文档][material-benchmark]。
+
+当前 P50 分别为 11.272 ns、43.015 ns、178.253 ns 和 21.120 ns，没有证明需要无锁缓存、变体
+哈希表或迁移对象池。真实帧中的缓存命中率和材质切换分布留给 H-03～H-05 集成场景测量。
+
 ## 验收标准
 
 - 通用材质层不包含 Vulkan 类型，也不改变底层显式 API。
@@ -281,3 +291,5 @@ Shader 与 Layout 先于包释放。`material_hot_reload_slot` 在锁外构建�
 - 相同 Pipeline 键并发请求只创建一个底层 Pipeline。
 - 热替换失败保留旧模板，成功替换不破坏在途 Recorder。
 - C++ 原型稳定并完成端到端验证后，再单独决定是否提供 C ABI 或仅作为可选 C++ 高层模块。
+
+[material-benchmark]: ../../benchmarks/results/2026-08-11-windows-clang-material-8ef28fa.md
