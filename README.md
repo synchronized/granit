@@ -64,11 +64,9 @@ Renderer 全局 Device Lost 门禁、普通 GPU 资源真实提交完成点和 S
 Bind Group、Command Recorder 资源绑定、Viewport、Scissor、Vertex/Index Buffer、Draw、
 Compute Pipeline 和 Dispatch 已经实现。仓库已提供离屏清屏、窗口清屏、真实 Vertex Buffer
 窗口三角形和 Compute Storage Buffer 示例；Pipeline Cache、并发创建和 Shader 热替换边界已经
-完成。阶段六已验证独立 Buffer/Texture 上传、资源创建，以及共享只读对象的 Graphics/Compute
-并行录制，并形成公开对象线程安全矩阵。下一步进入句柄表、资源锁、Queue 锁和延迟销毁队列的
-性能测量；P-02A 至 P-02F 的句柄、锁、Recorder、Queue、延迟销毁和 staging 上传基线已经完成。
-P-03 已完成 profiler 归因和批量 Recorder 提交优化；P-04 已完成持久化同步上传上下文和
-Buffer/Texture Upload Batch。批量 10/100 次上传的单位成本显著下降，现阶段不增加异步上传环。
+完成。阶段六已完成公开对象线程安全矩阵、CPU/Queue/上传性能基线、批量 Recorder 提交和
+Buffer/Texture Upload Batch。P-05 已确认当前不引入内部线程池或公开执行器 API，并为未来
+Render Graph 记录了外部执行器扩展点和量化重评条件。
 具体顺序见 [docs/roadmap.md](docs/roadmap.md)。
 
 ## 快速开始
@@ -167,7 +165,7 @@ if (granit::failed(result)) {
 - [docs/plans/R-04-buffer-upload.md](docs/plans/R-04-buffer-upload.md)：Buffer 同步上传计划。
 - [docs/plans/R-05-texture-view.md](docs/plans/R-05-texture-view.md)：Texture 与 View 计划。
 - [docs/plans/R-06-sampler.md](docs/plans/R-06-sampler.md)：Sampler 生命周期与能力计划。
-- [docs/plans/R-07-swapchain-backbuffer.md](docs/plans/R-07-swapchain-backbuffer.md)：Backbuffer 资源计划。
+- [R-07 Swapchain Backbuffer 计划](docs/plans/R-07-swapchain-backbuffer.md)。
 - [V-01 生命周期验证计划](docs/plans/V-01-lifetime-validation.md)。
 - [docs/plans/R-08-deferred-destruction.md](docs/plans/R-08-deferred-destruction.md)：延迟销毁计划。
 - [docs/plans/R-09-render-target-attachment.md](docs/plans/R-09-render-target-attachment.md)：渲染附件计划。
@@ -182,6 +180,9 @@ if (granit::failed(result)) {
   压力测试与线程安全基线。
 - [docs/plans/P-02-performance-baseline.md](docs/plans/P-02-performance-baseline.md)：CPU 并发、资源
   管理与 staging 上传性能基线方案。
+- [P-03 锁竞争归因与批量优化](docs/plans/P-03-contention-and-batching.md)。
+- [P-04 持久化上传与 Upload Batch](docs/plans/P-04-upload-allocator.md)。
+- [P-05 线程池与外部执行器边界](docs/plans/P-05-executor-boundary.md)。
 - [docs/plans/F-07-recovery-boundaries.md](docs/plans/F-07-recovery-boundaries.md)：窗口帧恢复边界计划。
 - [docs/renderer.md](docs/renderer.md)：公共 renderer C/C++ API 与生命周期。
 - [docs/render-target.md](docs/render-target.md)：颜色与深度/模板 Attachment 值类型。
