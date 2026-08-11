@@ -194,8 +194,8 @@
   并形成 P-03/P-04 的数据依据。
 - **[P-03](plans/P-03-contention-and-batching.md) / P1 / 已完成**：profiler 证明无需立即调整
   Registry 锁结构；已增加原子批量 Recorder 提交，4 线程吞吐提升约 31.9% 并显著收敛 P99。
-- **[P-04](plans/P-04-upload-allocator.md) / P1 / 进行中**：同步 staging 上传对象复用已完成；
-  P-04B 先实现同步 Upload Batch，再依据基准决定是否增加异步上传环。
+- **[P-04](plans/P-04-upload-allocator.md) / P1 / 已完成**：已完成持久化同步上传上下文和
+  Buffer/Texture Upload Batch；批量 10/100 次的单位成本显著下降，异步上传环暂缓。
 - **P-05 / P2**：评估内部线程池；默认不要求使用者采用 Granit 的任务系统。
 - **P-06 / P2**：评估 Render Graph，并优先作为建立在命令和资源层之上的独立模块。
 

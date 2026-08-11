@@ -6,7 +6,7 @@
 ## 元数据
 
 - 设计状态：已确认
-- 实现状态：进行中（P-04A 已完成，下一步 P-04B）
+- 实现状态：已完成（异步上传环按停止条件暂缓）
 - 路线图任务：P-04
 - 优先级：P1
 - 前置依赖：P-02、P-03、R-04、R-06、R-08
@@ -69,7 +69,7 @@ P-04A 已由 `c7f7b63` 完成。Windows Clang Release 复测见
 
 ## P-04B：显式同步批量上传
 
-状态：进行中（Buffer/Texture 路径已实现，基准待完成）。
+状态：已完成（Buffer/Texture 路径与基准均已完成）。
 
 P-04A 已证明对象复用有效。P-04B 首先提供同步 Upload Batch：写入调用立即把源数据复制到
 Batch 持有的 staging 内存，`submit` 将整批命令合并为一次 Queue 提交并等待完成。成功返回后
@@ -116,8 +116,9 @@ granit_result granit_upload_batch_destroy(granit_renderer renderer,
 
 ### staging 分配
 
-- 首版使用每个 Batch 独占的持久映射线性 staging arena，而不是 Renderer 全局共享环。每轮
-  `submit/reset` 只把游标归零；容量不足时按 2 的幂增长。
+- 当前 Batch 以独立 payload 块持有每条写入的 CPU 副本，提交时合并复制到 Renderer 的持久映射
+  staging 上下文。若 profiler 证明 CPU 记录分配成为热点，可在不改变公共 API 的前提下改成
+  Batch 线性 CPU arena。
 - Buffer 数据按 Vulkan copy offset 要求对齐；Texture 数据同时满足格式块、
   `optimalBufferCopyOffsetAlignment` 和 non-coherent atom 相关约束。
 - 默认初始容量由内部策略决定，不在首版公共描述结构中暴露调优旋钮。超过常驻阈值的大上传
@@ -153,6 +154,11 @@ C++20 包装提供 move-only `upload_batch` 和 `std::span<const std::byte>`，�
 P-04A 的目标是 4 KiB/64 KiB 同步上传固定成本有可复现下降，并且 1 MiB 路径没有超过 10% 的
 稳定回归。P-04B 的目标是批量大小增加时单位上传成本明显下降；若收益不足以抵消公共 API 和
 生命周期复杂度，则保留内部复用上下文，不发布批量接口。
+
+P-04B 基准见
+[Upload Batch 基准](../../benchmarks/results/2026-08-11-windows-clang-upload-batch-0ab84b5.md)。
+每批 10 次时单位成本下降 86.6%～87.6%，每批 100 次时下降 96.4%～96.7%；单条 Batch 有
+8.0%～19.3% 额外开销。因此保留同步单条 API 和显式 Batch 两条路径，并按停止条件暂缓异步环。
 
 ## 非目标与停止条件
 
