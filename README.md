@@ -75,7 +75,8 @@ Texture/Sampler Bind Group 事务式替换，以及 DXC/SPIR-V 反射工具原�
 材质包、稳定变体查找与 Shader/Pipeline 缓存。H-02E3 已完成持久化包、源 JSON 构建、语义往返、
 调试 JSON 导出和损坏输入防护；H-02F 已完成事务式迁移、热替换槽、错误材质 Pipeline 回退和
 端到端示例，H-02G 已建立首份性能基线。H-03A～H-03C 已完成完整 Pipeline 状态、CPU PBR BRDF
-参考实现和无纹理 HLSL 离屏绘制。材质模块仍是尚未安装导出的内部原型。
+参考实现和无纹理 HLSL 离屏绘制；PBR 材质常量已通过 GPU 实例上传并绑定。材质模块仍是尚未
+安装导出的内部原型。
 具体顺序见 [docs/roadmap.md](docs/roadmap.md)。
 
 ## 快速开始

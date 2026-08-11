@@ -6,7 +6,7 @@
 ## 元数据
 
 - 设计状态：已确认首版边界
-- 实现状态：进行中（H-03A～H-03C 已完成）
+- 实现状态：进行中（H-03A～H-03C、H-03D1 已完成）
 - 路线图任务：H-03
 - 优先级：P2
 - 前置依赖：H-01、H-02
@@ -92,8 +92,9 @@ CPU 参考函数与 Shader 必须共享公式说明和固定测试向量。允�
    调试 JSON，并覆盖往返、无效枚举与损坏输入检查。
 2. **H-03B（已完成）**：实现独立 CPU BRDF 参考函数、PBR 参数规范、边界值和固定测试向量。
 3. **H-03C（已完成）**：加入无纹理 HLSL PBR Shader、离线构建包和单三角离屏直接光照闭环。
-4. **H-03D**：接入 Base Color、Metallic/Roughness、Normal、Occlusion、Emissive 纹理与变体，
-   验证 sRGB/线性语义和缺失顶点属性诊断。
+4. **H-03D（进行中）**：H-03D1 已接入 PBR 材质常量；H-03D2 将接入 Base Color、
+   Metallic/Roughness、Normal、Occlusion、Emissive 纹理与变体，验证 sRGB/线性语义和缺失
+   顶点属性诊断。
 5. **H-03E**：封装显式 View/Object/Directional Light 输入和 Render Graph Pass 适配器，不创建
    Scene 或 Light 管理器。
 6. **H-03F**：增加端到端图像/数值回归、资源生命周期测试和性能基线，整理 H-04/H-05 输入契约。
@@ -157,3 +158,15 @@ correlated GGX 可见性和单方向光直接光照。输入方向会归一化�
 `material_template_gpu` 创建真实 Pipeline，在 RGBA8 颜色与 D32 深度附件上完成 Draw、提交和安全
 回收；示例已注册为 CTest。当前 Renderer 尚无 Texture 到 Readback Buffer 的公开复制接口，因此
 本阶段验证真实执行成功，像素级 CPU/GPU 数值回归保留到 H-03F。
+
+## H-03D1 实现记录
+
+无纹理 PBR Shader 不再硬编码材质值。Group 1、Binding 0 的 48 字节常量块现包含线性
+`base_color`、`metallic`、`perceptual_roughness`、`normal_scale`、`occlusion_strength` 和线性
+`emissive`；字段偏移同时记录在 `.grmat.json` 元数据中。示例使用 `material_gpu_instance` 按稳定
+参数 ID 更新 CPU shadow buffer、批量上传 Uniform Buffer、创建 Bind Group，并在 Draw 前绑定到
+`material_template_gpu` 的 Pipeline Layout。
+
+本阶段先固定无纹理路径，但已经保留 Normal Scale 与 Occlusion Strength 的统一常量布局，避免
+H-03D2 接入纹理时再次改变常量 ABI。H-03D2 需要加入纹理存在性 feature、默认纹理以及 UV/切线
+顶点属性检查。

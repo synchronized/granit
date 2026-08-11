@@ -1,11 +1,14 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
+#include "material/material_gpu_instance.h"
 #include "material/material_package.h"
 #include "material/material_template_gpu.h"
 
 #include <granit/granit.hpp>
 
+#include <array>
+#include <bit>
 #include <cstring>
 #include <fstream>
 #include <iostream>
@@ -43,8 +46,30 @@ bool make_package(granit::material::material_package& package) {
   variant.pipeline.depth.write_enabled = 1;
   variant.pipeline.depth.compare = GRANIT_COMPARE_OPERATION_LESS_EQUAL;
   material_package_desc desc;
+  desc.metadata.constant_buffer_size = 48;
+  desc.metadata.parameters = {
+      {.name = "base_color", .type = parameter_type::float4, .offset = 0, .default_value = {}},
+      {.name = "metallic", .type = parameter_type::float32, .offset = 16, .default_value = {}},
+      {.name = "perceptual_roughness",
+       .type = parameter_type::float32,
+       .offset = 20,
+       .default_value = {}},
+      {.name = "normal_scale", .type = parameter_type::float32, .offset = 24, .default_value = {}},
+      {.name = "occlusion_strength",
+       .type = parameter_type::float32,
+       .offset = 28,
+       .default_value = {}},
+      {.name = "emissive", .type = parameter_type::float3, .offset = 32, .default_value = {}}};
   desc.variants.push_back(std::move(variant));
   return material_package::build(std::move(desc), package) == package_error::none;
+}
+
+template <std::size_t Size>
+bool set_parameter(granit::material::material_gpu_instance& instance, std::string_view name,
+                   granit::material::parameter_type type, const std::array<float, Size>& value) {
+  const auto bytes = std::bit_cast<std::array<std::byte, sizeof(value)>>(value);
+  return instance.set(granit::material::make_parameter_id(name), type, bytes) ==
+         granit::material::metadata_error::none;
 }
 
 } // namespace
@@ -70,6 +95,29 @@ int main() {
                                    .depth_stencil_format = GRANIT_TEXTURE_FORMAT_D32_FLOAT},
                                   pipeline));
   }
+
+  granit::material::material_gpu_instance instance;
+  if (granit::succeeded(result)) {
+    result = granit::from_native(instance.initialize(
+        renderer.native_handle(), material.material_layout(), package.metadata()));
+  }
+  if (granit::succeeded(result) &&
+      (!set_parameter(instance, "base_color", granit::material::parameter_type::float4,
+                      std::array{0.8F, 0.2F, 0.1F, 1.0F}) ||
+       !set_parameter(instance, "metallic", granit::material::parameter_type::float32,
+                      std::array{0.5F}) ||
+       !set_parameter(instance, "perceptual_roughness", granit::material::parameter_type::float32,
+                      std::array{0.5F}) ||
+       !set_parameter(instance, "normal_scale", granit::material::parameter_type::float32,
+                      std::array{1.0F}) ||
+       !set_parameter(instance, "occlusion_strength", granit::material::parameter_type::float32,
+                      std::array{1.0F}) ||
+       !set_parameter(instance, "emissive", granit::material::parameter_type::float3,
+                      std::array{0.0F, 0.0F, 0.0F}))) {
+    result = granit::result::invalid_argument;
+  }
+  if (granit::succeeded(result))
+    result = granit::from_native(instance.flush());
 
   granit_texture color_texture = GRANIT_NULL_HANDLE;
   granit_texture_view color_view = GRANIT_NULL_HANDLE;
@@ -101,6 +149,10 @@ int main() {
     result = recorder.begin();
   if (granit::succeeded(result))
     result = recorder.bind_graphics_pipeline(pipeline);
+  const auto material_group = instance.bind_group();
+  if (granit::succeeded(result))
+    result =
+        recorder.bind_graphics_groups(material.pipeline_layout(), 1, std::span{&material_group, 1});
   const granit::viewport viewport{0, 0, 256, 256, 0, 1};
   const granit::scissor scissor{0, 0, 256, 256};
   if (granit::succeeded(result))

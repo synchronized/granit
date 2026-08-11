@@ -9,6 +9,16 @@ struct vertex_output {
   float3 normal : TEXCOORD0;
 };
 
+[[vk::binding(0, 1)]] cbuffer MaterialConstants {
+  float4 base_color;
+  float metallic;
+  float perceptual_roughness;
+  float normal_scale;
+  float occlusion_strength;
+  float3 emissive;
+  float reserved_value;
+};
+
 vertex_output vertex_main(uint vertex_id : SV_VertexID) {
   const float2 positions[3] = {float2(0.0, -0.65), float2(0.65, 0.65),
                                float2(-0.65, 0.65)};
@@ -47,24 +57,21 @@ float visibility_smith_correlated(float normal_dot_view, float normal_dot_light,
 }
 
 float4 fragment_main(vertex_output input) : SV_Target0 {
-  // H-03C 先使用固定无纹理参数，H-03D 再接入材质常量与纹理。
-  const float3 base_color = float3(0.8, 0.2, 0.1);
-  const float metallic = 0.5;
-  const float perceptual_roughness = 0.5;
   const float3 normal = normalize(input.normal);
   const float3 view = float3(0.0, 0.0, 1.0);
   const float3 light = float3(0.0, 0.0, 1.0);
   const float3 half_vector = normalize(view + light);
   const float normal_dot_view = saturate(dot(normal, view));
   const float normal_dot_light = saturate(dot(normal, light));
-  const float3 reflectance = lerp(0.04.xxx, base_color, metallic);
+  const float clamped_metallic = saturate(metallic);
+  const float3 reflectance = lerp(0.04.xxx, base_color.rgb, clamped_metallic);
   const float3 fresnel = fresnel_schlick(saturate(dot(view, half_vector)), reflectance);
   const float distribution =
       distribution_ggx(saturate(dot(normal, half_vector)), perceptual_roughness);
   const float visibility = visibility_smith_correlated(
       normal_dot_view, normal_dot_light, perceptual_roughness);
   const float3 diffuse =
-      base_color * (1.0 - fresnel) * (1.0 - metallic) / PI;
-  const float3 color = (diffuse + fresnel * distribution * visibility) * normal_dot_light;
-  return float4(color, 1.0);
+      base_color.rgb * (1.0 - fresnel) * (1.0 - clamped_metallic) / PI;
+  const float3 direct = (diffuse + fresnel * distribution * visibility) * normal_dot_light;
+  return float4(direct + max(emissive, 0.0.xxx), base_color.a);
 }

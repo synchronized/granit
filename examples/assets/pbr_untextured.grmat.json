@@ -2,7 +2,17 @@
   "format_version": 2,
   "target_environment": "vulkan1.3",
   "binding_model": "bind_group",
-  "material": {"constant_buffer_size": 0, "parameters": []},
+  "material": {
+    "constant_buffer_size": 48,
+    "parameters": [
+      {"name": "base_color", "type": "float4", "offset": 0},
+      {"name": "metallic", "type": "float32", "offset": 16},
+      {"name": "perceptual_roughness", "type": "float32", "offset": 20},
+      {"name": "normal_scale", "type": "float32", "offset": 24},
+      {"name": "occlusion_strength", "type": "float32", "offset": 28},
+      {"name": "emissive", "type": "float3", "offset": 32}
+    ]
+  },
   "variants": [
     {
       "pass": "opaque",
