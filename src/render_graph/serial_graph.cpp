@@ -54,7 +54,7 @@ resource_id serial_graph::import_buffer(granit_buffer buffer, bool exported) {
   if (buffer == GRANIT_NULL_HANDLE) {
     return invalid_resource_id;
   }
-  resources_.push_back({imported_resource_type::buffer, buffer});
+  resources_.push_back({.type = imported_resource_type::buffer, .handle = buffer});
   return compiler_.add_resource({.imported = true, .exported = exported});
 }
 
@@ -62,8 +62,20 @@ resource_id serial_graph::import_texture_view(granit_texture_view view, bool exp
   if (view == GRANIT_NULL_HANDLE) {
     return invalid_resource_id;
   }
-  resources_.push_back({imported_resource_type::texture_view, view});
+  resources_.push_back({.type = imported_resource_type::texture_view, .handle = view});
   return compiler_.add_resource({.imported = true, .exported = exported});
+}
+
+resource_id serial_graph::create_transient_buffer(const granit_buffer_desc& desc) {
+  resources_.push_back(
+      {.type = imported_resource_type::buffer, .transient = true, .buffer_desc = desc});
+  return compiler_.add_resource();
+}
+
+resource_id serial_graph::create_transient_texture(const granit_texture_desc& desc) {
+  resources_.push_back(
+      {.type = imported_resource_type::texture_view, .transient = true, .texture_desc = desc});
+  return compiler_.add_resource();
 }
 
 pass_id serial_graph::add_pass(pass_desc desc, pass_callback callback) {
@@ -93,24 +105,80 @@ execution_result serial_graph::execute(granit_renderer renderer) const {
     return {};
   }
 
+  auto resources = resources_;
+  std::vector<granit_texture> transient_textures(resources.size(), GRANIT_NULL_HANDLE);
+  granit_result result = GRANIT_SUCCESS;
+  const auto destroy_resource = [&](std::size_t index) noexcept {
+    auto& resource = resources[index];
+    if (!resource.transient || resource.handle == GRANIT_NULL_HANDLE) {
+      return GRANIT_SUCCESS;
+    }
+    granit_result destroy_result = GRANIT_SUCCESS;
+    if (resource.type == imported_resource_type::buffer) {
+      destroy_result = granit_buffer_destroy(renderer, resource.handle);
+    } else {
+      destroy_result = granit_texture_view_destroy(renderer, resource.handle);
+      const auto texture_result = granit_texture_destroy(renderer, transient_textures[index]);
+      if (destroy_result == GRANIT_SUCCESS) {
+        destroy_result = texture_result;
+      }
+    }
+    resource.handle = GRANIT_NULL_HANDLE;
+    transient_textures[index] = GRANIT_NULL_HANDLE;
+    return destroy_result;
+  };
+  const auto destroy_resources = [&]() noexcept {
+    granit_result first_error = GRANIT_SUCCESS;
+    for (std::size_t index = resources.size(); index > 0; --index) {
+      const auto destroy_result = destroy_resource(index - 1);
+      if (first_error == GRANIT_SUCCESS && destroy_result != GRANIT_SUCCESS) {
+        first_error = destroy_result;
+      }
+    }
+    return first_error;
+  };
+
   granit_command_recorder recorder = GRANIT_NULL_HANDLE;
   const granit_command_recorder_desc recorder_desc = GRANIT_COMMAND_RECORDER_DESC_INIT;
-  auto result = granit_command_recorder_create(renderer, &recorder_desc, &recorder);
+  result = granit_command_recorder_create(renderer, &recorder_desc, &recorder);
   if (result != GRANIT_SUCCESS) {
+    static_cast<void>(destroy_resources());
     return fail(result, execution_phase::create_recorder);
   }
   result = granit_command_recorder_begin(renderer, recorder);
   if (result != GRANIT_SUCCESS) {
     destroy_recorder(renderer, recorder);
+    static_cast<void>(destroy_resources());
     return fail(result, execution_phase::begin_recorder);
   }
 
-  for (const auto pass : compiled.execution_order) {
+  for (std::size_t order_index = 0; order_index < compiled.execution_order.size(); ++order_index) {
+    const auto pass = compiled.execution_order[order_index];
+    for (std::size_t resource_index = 0; resource_index < resources.size(); ++resource_index) {
+      auto& resource = resources[resource_index];
+      const auto& lifetime = compiled.resource_lifetimes[resource_index];
+      if (!resource.transient || !lifetime.used || lifetime.first_use != order_index) {
+        continue;
+      }
+      if (resource.type == imported_resource_type::buffer) {
+        result = granit_buffer_create(renderer, &resource.buffer_desc, &resource.handle);
+      } else {
+        result = granit_texture_create_with_default_view(renderer, &resource.texture_desc,
+                                                         &transient_textures[resource_index],
+                                                         &resource.handle);
+      }
+      if (result != GRANIT_SUCCESS) {
+        destroy_recorder(renderer, recorder);
+        static_cast<void>(destroy_resources());
+        return fail(result, execution_phase::create_resources, pass);
+      }
+    }
     if (!callbacks_[pass]) {
       destroy_recorder(renderer, recorder);
+      static_cast<void>(destroy_resources());
       return fail(GRANIT_ERROR_INVALID_ARGUMENT, execution_phase::record_pass, pass);
     }
-    pass_context context(renderer, recorder, passes_[pass].accesses, resources_);
+    pass_context context(renderer, recorder, passes_[pass].accesses, resources);
     try {
       result = callbacks_[pass](context);
     } catch (const std::bad_alloc&) {
@@ -120,18 +188,34 @@ execution_result serial_graph::execute(granit_renderer renderer) const {
     }
     if (result != GRANIT_SUCCESS) {
       destroy_recorder(renderer, recorder);
+      static_cast<void>(destroy_resources());
       return fail(result, execution_phase::record_pass, pass);
+    }
+    for (std::size_t resource_index = resources.size(); resource_index > 0; --resource_index) {
+      const auto index = resource_index - 1;
+      const auto& lifetime = compiled.resource_lifetimes[index];
+      if (!resources[index].transient || !lifetime.used || lifetime.last_use != order_index) {
+        continue;
+      }
+      result = destroy_resource(index);
+      if (result != GRANIT_SUCCESS) {
+        destroy_recorder(renderer, recorder);
+        static_cast<void>(destroy_resources());
+        return fail(result, execution_phase::destroy_resources, pass);
+      }
     }
   }
 
   result = granit_command_recorder_end(renderer, recorder);
   if (result != GRANIT_SUCCESS) {
     destroy_recorder(renderer, recorder);
+    static_cast<void>(destroy_resources());
     return fail(result, execution_phase::end_recorder);
   }
   result = granit_command_recorder_submit(renderer, recorder);
   if (result != GRANIT_SUCCESS) {
     destroy_recorder(renderer, recorder);
+    static_cast<void>(destroy_resources());
     return fail(result, execution_phase::submit);
   }
   return {.recorder = recorder};

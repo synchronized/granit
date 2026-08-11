@@ -25,6 +25,9 @@ enum class imported_resource_type : std::uint8_t {
 struct imported_resource {
   imported_resource_type type = imported_resource_type::buffer;
   granit_handle handle = GRANIT_NULL_HANDLE;
+  bool transient = false;
+  granit_buffer_desc buffer_desc = GRANIT_BUFFER_DESC_INIT;
+  granit_texture_desc texture_desc = GRANIT_TEXTURE_DESC_INIT;
 };
 
 class pass_context {
@@ -59,6 +62,8 @@ enum class execution_phase : std::uint8_t {
   record_pass,
   end_recorder,
   submit,
+  create_resources,
+  destroy_resources,
 };
 
 struct execution_result {
@@ -75,6 +80,8 @@ class serial_graph {
 public:
   [[nodiscard]] resource_id import_buffer(granit_buffer buffer, bool exported = false);
   [[nodiscard]] resource_id import_texture_view(granit_texture_view view, bool exported = false);
+  [[nodiscard]] resource_id create_transient_buffer(const granit_buffer_desc& desc);
+  [[nodiscard]] resource_id create_transient_texture(const granit_texture_desc& desc);
   [[nodiscard]] pass_id add_pass(pass_desc desc, pass_callback callback);
   [[nodiscard]] bool add_dependency(pass_id before, pass_id after);
   [[nodiscard]] execution_result execute(granit_renderer renderer) const;
