@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
+#include "material/material_debug_json.h"
 #include "material/material_package_archive.h"
 
 #include <catch2/catch_all.hpp>
@@ -127,4 +128,19 @@ TEST_CASE("材质包解码拒绝哈希正确但变体键被篡改的归档") {
 
   material_package decoded;
   CHECK(decode_material_package_archive(bytes, decoded) == archive_error::invalid_semantic_data);
+}
+
+TEST_CASE("材质包调试 JSON 使用稳定字段与固定宽度标识") {
+  const auto source = make_package(false);
+  std::vector<std::byte> bytes;
+  REQUIRE(encode_material_package_archive(source, bytes) == archive_error::none);
+  std::string json;
+  REQUIRE(export_material_archive_debug_json(bytes, json) == archive_error::none);
+  CHECK(json.starts_with("{\n  \"format\""));
+  CHECK(json.find("\"magic\": \"GRMAT\"") != std::string::npos);
+  CHECK(json.find("\"binding_model\": \"bind_group\"") != std::string::npos);
+  CHECK(json.find("\"name\": \"base_color\"") != std::string::npos);
+  CHECK(json.find("\"type\": \"texture_view\"") != std::string::npos);
+  CHECK(json.find("\"stage\": \"vertex\"") != std::string::npos);
+  CHECK(json.ends_with("\n}\n"));
 }

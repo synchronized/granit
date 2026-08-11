@@ -6,7 +6,7 @@
 ## 元数据
 
 - 设计状态：已确认
-- 实现状态：进行中（H-02E3A～H-02E3C 已完成）
+- 实现状态：进行中（H-02E3A～H-02E3C、H-02E3D1 已完成）
 - 路线图任务：H-02E3
 - 优先级：P2
 - 前置依赖：H-02E1、H-02E2
@@ -169,7 +169,8 @@ ID 和哈希输出为固定宽度小写十六进制字符串。默认只输出 S
    结构校验；相同区段输入顺序不同仍生成相同规范化文件。
 3. **H-02E3C（已完成）**：已将现有 `material_package` 确定性编码为 String、参数、Feature、Pass、
    Variant、Shader 和 SPIR-V 七个核心区段，并实现有界语义解码、变体键重算及逐字节往返验证。
-4. **H-02E3D**：实现 `granit_material_tool build/inspect` 和稳定调试 JSON。
+4. **H-02E3D（进行中）**：H-02E3D1 已实现 `granit_material_tool inspect <包> --json`、可选
+   `--output` 和稳定调试 JSON；下一步实现源描述构建、`--emit-debug-json` 与原子文件替换。
 5. **H-02E3E**：增加截断、溢出、重叠、未知区段、哈希错误和随机字节损坏测试。
 
 ## 验收标准

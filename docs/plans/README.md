@@ -75,8 +75,8 @@ D-03-graphics-pipeline.md
 - [H-02：材质参数、Shader 变体与离线构建](H-02-material-system.md)——进行中；H-02A～H-02D、
   H-02E1～H-02E2 已完成，持久化材质包进入 H-02E3。
 - [H-02E3：持久化材质包格式](H-02-material-package-format.md)——进行中；H-02E3A～H-02E3B 已
-  完成容器解析、确定性编码和 SHA-256 校验，H-02E3C 已完成材质语义往返；下一步实现工具命令和
-  调试 JSON。
+  完成容器解析、确定性编码和 SHA-256 校验，H-02E3C 已完成材质语义往返，H-02E3D1 已实现
+  `inspect --json`；下一步实现源描述构建和伴随调试 JSON。
 
 ## 状态
 

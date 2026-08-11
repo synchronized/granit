@@ -137,6 +137,7 @@ add_executable(
   material/material_template_gpu_test.cpp
   "${PROJECT_SOURCE_DIR}/src/material/material_gpu_instance.cpp"
   "${PROJECT_SOURCE_DIR}/src/material/material_archive.cpp"
+  "${PROJECT_SOURCE_DIR}/src/material/material_debug_json.cpp"
   "${PROJECT_SOURCE_DIR}/src/material/material_metadata.cpp"
   "${PROJECT_SOURCE_DIR}/src/material/material_package.cpp"
   "${PROJECT_SOURCE_DIR}/src/material/material_package_archive.cpp"
