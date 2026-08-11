@@ -6,7 +6,7 @@
 ## 元数据
 
 - 设计状态：已确认
-- 实现状态：进行中（进入 P-04A）
+- 实现状态：进行中（P-04A 已完成，下一步 P-04B）
 - 路线图任务：P-04
 - 优先级：P1
 - 前置依赖：P-02、P-03、R-04、R-06、R-08
@@ -63,6 +63,10 @@ P-04 先在不改变现有 API 完成语义的前提下复用上传对象，再�
 P-04A 不引入公共 API，也不声称减少每次写入的一次 Queue submit 和一次 Fence wait；它只消除
 重复对象创建，并缩短 Queue 锁范围。
 
+P-04A 已由 `c7f7b63` 完成。Windows Clang Release 复测见
+[`2026-08-11-windows-clang-upload-context-c7f7b63.md`](../../benchmarks/results/2026-08-11-windows-clang-upload-context-c7f7b63.md)：
+4 KiB/64 KiB 同步上传平均延迟下降 51.5%～70.7%，1 MiB 延迟下降 30.4%～34.0%。
+
 ## P-04B：上传环与显式批量接口
 
 P-04A 复测证明对象复用有效后，再设计 Upload Context。候选 C API 形态为：
@@ -112,4 +116,3 @@ P-04A 的目标是 4 KiB/64 KiB 同步上传固定成本有可复现下降，并
 - 若驱动 Fence 等待完全主导同步 API，P-04A 在记录结果后停止继续复杂化同步路径，把主要收益
   留给 P-04B 的显式批量边界。
 - 若无法可靠处理 Device Lost 或提交失败后的环回收，优先返回错误并停止复用，不猜测 GPU 状态。
-
