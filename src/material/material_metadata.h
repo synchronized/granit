@@ -94,6 +94,7 @@ public:
   [[nodiscard]] metadata_error set(parameter_id id, parameter_type type,
                                    std::span<const std::byte> value);
   [[nodiscard]] std::span<const std::byte> bytes() const noexcept { return bytes_; }
+  [[nodiscard]] const material_metadata& metadata() const noexcept { return *metadata_; }
   [[nodiscard]] dirty_range dirty() const noexcept { return dirty_; }
   void clear_dirty() noexcept { dirty_ = {}; }
 

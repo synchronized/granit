@@ -132,6 +132,7 @@ add_executable(
   material/material_gpu_instance_test.cpp
   material/material_archive_test.cpp
   material/material_metadata_test.cpp
+  material/material_migration_test.cpp
   material/material_package_test.cpp
   material/material_package_archive_test.cpp
   material/material_source_json_test.cpp
@@ -140,6 +141,7 @@ add_executable(
   "${PROJECT_SOURCE_DIR}/src/material/material_archive.cpp"
   "${PROJECT_SOURCE_DIR}/src/material/material_debug_json.cpp"
   "${PROJECT_SOURCE_DIR}/src/material/material_metadata.cpp"
+  "${PROJECT_SOURCE_DIR}/src/material/material_migration.cpp"
   "${PROJECT_SOURCE_DIR}/src/material/material_package.cpp"
   "${PROJECT_SOURCE_DIR}/src/material/material_package_archive.cpp"
   "${PROJECT_SOURCE_DIR}/src/material/material_source_json.cpp"

@@ -152,7 +152,8 @@ SPIRV-Reflect 与 SPIRV-Headers `vulkan-sdk-1.4.350.0`。版本升级必须重�
    Pipeline Layout 和 Graphics Pipeline 缓存；H-02E3 的持久化包格式与调试导出见
    [独立计划](H-02-material-package-format.md)。按 D-09A 显式记录绑定模型和 Renderer 能力要求，
    但首版只接受传统 Bind Group。
-6. **H-02F**：增加热替换、实例迁移、错误材质和端到端示例。
+6. **H-02F（进行中）**：H-02F1 已实现事务式 CPU 参数迁移；下一步接入资源句柄迁移、GPU
+   替换、错误材质和端到端示例。
 7. **H-02G**：建立参数更新、变体查找和 Pipeline 命中率性能基线。
 
 ## 首版不做
@@ -230,6 +231,15 @@ Shader、Pipeline Layout、Bind Group Layout 顺序释放。
 
 当前只支持单颜色 Attachment 和默认图元、深度及混合状态。顶点布局、多个颜色 Attachment 和
 固定 Pipeline 状态必须成为包内显式数据后才能扩展缓存键，不能通过隐藏默认值冒充完整材质格式。
+
+## H-02F1 实现记录
+
+热替换不原地修改旧模板或实例。`migrate_material_instance_data` 先依据新元数据创建独立实例，再按
+稳定参数 ID 迁移常量值；只有全部处理成功才发布新实例和迁移报告，失败时调用方原有输出保持不变。
+
+类型和数组数量必须匹配，数组 stride 可以变化并按元素重新布局。新参数、类型变化或数组数量变化
+保留新模板默认值，并在报告中给出参数 ID 和原因。资源参数暂记为待处理，不复制裸句柄；资源所属
+Renderer 校验、替代 Bind Group 创建和 GPU 对象切换属于 H-02F2。
 
 ## 验收标准
 
