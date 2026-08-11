@@ -6,7 +6,7 @@
 ## 元数据
 
 - 设计状态：已确认
-- 实现状态：进行中（H-02A～H-02C 已完成）
+- 实现状态：进行中（H-02A～H-02D 已完成）
 - 路线图任务：H-02
 - 优先级：P2
 - 前置依赖：D-01～D-08、H-01
@@ -124,17 +124,20 @@ Job System 调度，不在材质模块创建线程池。
 - 自动迁移只能复制稳定 ID 与类型均匹配的参数；不匹配项恢复新模板默认值并产生诊断。
 - 文件监视、重新编译和替换时机由 Asset/工具层负责，核心 Renderer 不读取材质文件。
 
-## 离线编译器选择边界
+## 离线编译与反射工具链
 
-H-02A 不立即锁定 DXC、glslang 或 shaderc。选择前必须用同一组 Shader 验证：
+H-02D 已确定首版以 HLSL 为源语言，使用外部 DXC 命令行生成 Vulkan 1.3 SPIR-V，再用
+`spirv-val`（可用时）校验，并通过 SPIRV-Reflect 转换成 Granit 自有元数据。验证范围包括：
 
 - 目标语言与 Vulkan 1.3 SPIR-V 支持。
 - include、宏、优化、调试信息和可复现构建能力。
 - 反射输出能否稳定转换成 Granit 自有元数据。
 - 库体积、命令行部署、许可证、版本锁定和跨平台维护成本。
 
-优先采用独立命令行进程而不是把编译器库链接进运行时或核心构建。具体选择在 H-02D 原型数据后
-单独记录。
+DXC 不链接进运行时或核心构建；SPIRV-Reflect 和 SPIRV-Headers 也只进入离线工具目标。运行库
+只消费编译后的 SPIR-V 和 Granit 元数据。工具链参考版本为 DXC `v1.8.2505.1`；仓库内锁定
+SPIRV-Reflect 与 SPIRV-Headers `vulkan-sdk-1.4.350.0`。版本升级必须重新运行固定 Shader 的编译、
+校验和反射测试；DXC 版本及编译参数写入产物属于 H-02E。
 
 ## 实施顺序
 
@@ -143,7 +146,8 @@ H-02A 不立即锁定 DXC、glslang 或 shaderc。选择前必须用同一组 Sh
    buffer。
 3. **H-02C（已完成）**：已接入材质 Uniform Buffer、Texture/Sampler Bind Group 和 dirty 区间
    批量上传。
-4. **H-02D**：原型验证离线 Shader 编译与反射工具，确定编译器、版本和许可证。
+4. **H-02D（已完成）**：已用 DXC、spirv-val 和 SPIRV-Reflect 完成固定 HLSL 的端到端原型，
+   并确定参考版本、内置依赖版本和许可证。
 5. **H-02E**：定义版本化材质包，接入变体查找和 Pipeline 缓存。
 6. **H-02F**：增加热替换、实例迁移、错误材质和端到端示例。
 7. **H-02G**：建立参数更新、变体查找和 Pipeline 命中率性能基线。
@@ -185,6 +189,16 @@ Texture View 或 Sampler 变化后，实例使用现有不可变 Bind Group API 
 
 该实现仍只由独立测试目标构建，不进入核心动态库或安装导出。材质实例借用资源句柄，不拥有
 Texture View、Sampler、Bind Group Layout 或元数据；调用方必须保证它们覆盖实例生命周期。
+
+## H-02D 实现记录
+
+可选目标 `granit_shader_tool` 由 `GRANIT_BUILD_TOOLS=ON` 启用，读取 SPIR-V 并以稳定顺序输出入口、
+Shader 阶段及描述符组、binding、类型、名称和尺寸。原型 fixture 使用 HLSL 显式指定 Group 1 的
+Uniform Buffer、Texture 和 Sampler，避免依赖编译器的隐式寄存器分配。
+
+端到端测试通过外部 DXC 编译 fixture，以 `spirv-val --target-env vulkan1.3` 校验产物，并检查反射
+结果与材质绑定约定一致。工具当前只覆盖 vertex、fragment、compute 以及材质原型需要的描述符
+类型；尚未定义持久化包格式、include 图、变体枚举或完整诊断协议，这些属于 H-02E。
 
 ## 验收标准
 

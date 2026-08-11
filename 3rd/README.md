@@ -13,6 +13,8 @@
 | Vulkan-Headers | 1.4.350 | <https://github.com/KhronosGroup/Vulkan-Headers/tree/v1.4.350> | Apache-2.0 | 内部 Vulkan 声明 |
 | Volk | 1.4.350 | <https://github.com/zeux/volk/releases/tag/1.4.350> | MIT | Vulkan 函数加载 |
 | Vulkan Memory Allocator | 3.3.0 | <https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator/releases/tag/v3.3.0> | MIT | 内部 GPU 内存分配 |
+| SPIRV-Reflect | Vulkan SDK 1.4.350.0 | <https://github.com/KhronosGroup/SPIRV-Reflect/tree/vulkan-sdk-1.4.350.0> | Apache-2.0 | 离线 Shader 反射工具 |
+| SPIRV-Headers | Vulkan SDK 1.4.350.0 | <https://github.com/KhronosGroup/SPIRV-Headers/tree/vulkan-sdk-1.4.350.0> | MIT | SPIRV-Reflect 所需语法声明 |
 
 Vulkan-Headers 和 Volk 必须使用匹配的 Vulkan registry 版本成对升级。Granit 当前编译使用
 1.4.350 头文件，但运行时最低目标仍为 Vulkan 1.3。
@@ -22,3 +24,6 @@ Unity 只测试公开 C API；Catch2 用于 C++20 包装层和内部实现。两
 
 Vulkan Memory Allocator 仅编译进 Granit 内部，由 Volk 提供函数指针，不进入公共头文件或安装
 导出。
+
+SPIRV-Reflect 和 SPIRV-Headers 只在启用 `GRANIT_BUILD_TOOLS` 时构建，不链接进核心 Granit 库。
+两者与 Vulkan-Headers 使用同一 1.4.350 registry 系列。

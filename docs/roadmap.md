@@ -216,8 +216,8 @@
 - **[H-01](plans/P-06-render-graph-boundary.md#h-01-最小实现顺序) / P2 / 已完成**：H-01A～H-01E
   已完成；暂不缓存或并行化，瞬态资源池作为真实重复帧验证后的优先优化候选。
 - **[H-02](plans/H-02-material-system.md) / P2 / 进行中**：H-02A 已确认材质模板、实例、参数布局、
-  变体和离线工具边界，H-02B～H-02C 已完成 CPU shadow buffer、GPU 参数上传和材质 Bind Group；
-  下一步原型验证离线 Shader 编译与反射工具。
+  变体和离线工具边界，H-02B～H-02D 已完成 CPU shadow buffer、GPU 参数上传、材质 Bind Group
+  及 DXC/SPIR-V 反射工具原型；下一步定义版本化材质包并接入变体查找和 Pipeline 缓存。
 - **H-03 / P2**：提供可选的金属度/粗糙度 PBR 渲染模块。
 - **H-04 / P2**：提供场景提交、Camera、Light 和可见性输入适配层。
 - **H-05 / P2**：实现阴影、环境光照、后处理和色调映射的参考管线。
