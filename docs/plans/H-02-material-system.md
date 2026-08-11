@@ -152,8 +152,8 @@ SPIRV-Reflect 与 SPIRV-Headers `vulkan-sdk-1.4.350.0`。版本升级必须重�
    Pipeline Layout 和 Graphics Pipeline 缓存；H-02E3 的持久化包格式与调试导出见
    [独立计划](H-02-material-package-format.md)。按 D-09A 显式记录绑定模型和 Renderer 能力要求，
    但首版只接受传统 Bind Group。
-6. **H-02F（进行中）**：H-02F1～H-02F3 已实现事务式参数/GPU 实例迁移、热替换槽和错误材质
-   Pipeline 回退；下一步建立可选材质模块目标并增加端到端示例。
+6. **H-02F（已完成）**：已实现事务式参数/GPU 实例迁移、热替换槽、错误材质 Pipeline 回退、
+   可选材质模块目标和端到端示例。
 7. **H-02G**：建立参数更新、变体查找和 Pipeline 命中率性能基线。
 
 ## 首版不做
@@ -175,8 +175,8 @@ SPIRV-Reflect 与 SPIRV-Headers `vulkan-sdk-1.4.350.0`。版本升级必须重�
 dirty。类型安全的参数写入通过 ID 查找，拒绝不存在、资源类型、类型不匹配和尺寸不匹配；相同
 字节不重复标脏，多次修改合并为一个覆盖范围，供 H-02C 单次批量上传。
 
-该原型只由独立 Catch2 测试目标构建，不进入核心动态库或安装导出。Texture View 和 Sampler
-作为元数据资源类型，由 H-02C 的 GPU 实例完成实际绑定。
+该实现现由开发中的 `granit::material` 静态模块构建，不进入核心动态库或安装导出。Texture View
+和 Sampler 作为元数据资源类型，由 H-02C 的 GPU 实例完成实际绑定。
 
 ## H-02C 实现记录
 
@@ -192,8 +192,9 @@ Texture View 或 Sampler 变化后，实例使用现有不可变 Bind Group API 
 对象创建成功才替换并销毁旧 Bind Group。创建失败时旧对象保持有效，资源 dirty 状态保留以便
 重试。测试覆盖真实 Vulkan Buffer、Texture、Sampler、Bind Group 创建、替换和逆序销毁。
 
-该实现仍只由独立测试目标构建，不进入核心动态库或安装导出。材质实例借用资源句柄，不拥有
-Texture View、Sampler、Bind Group Layout 或元数据；调用方必须保证它们覆盖实例生命周期。
+该实现位于开发中的 `granit::material` 静态模块，不进入核心动态库或安装导出。材质实例借用资源
+句柄，不拥有 Texture View、Sampler、Bind Group Layout 或元数据；调用方必须保证它们覆盖实例
+生命周期。
 
 ## H-02D 实现记录
 
@@ -261,6 +262,16 @@ Shader 与 Layout 先于包释放。`material_hot_reload_slot` 在锁外构建�
 增加 generation。Pipeline 获取先尝试活动材质，缺少变体或底层创建失败时再尝试 fallback，并在
 结果中同时返回原始错误、是否回退以及模板 keepalive。Renderer 不内置 Shader 或规定错误材质的
 外观，上层应提供并预先验证一个醒目的错误材质包。
+
+## H-02F4 实现记录
+
+运行时材质源码统一编译为 `granit_material` 静态目标，并提供仓库内别名 `granit::material`；测试、
+材质工具和示例不再各自重复编译实现。模块公开依赖 `granit::granit`，但当前 API/ABI 尚未稳定，
+因此暂不加入安装导出。源 JSON 解析和调试 JSON 导出仍只编译进离线工具。
+
+`granit_material_hot_reload_example` 使用预编译 SPIR-V 创建调用方错误材质，先验证活动包缺少
+`opaque` 变体时取得 fallback Pipeline，再发布包含该变体的新包并验证 generation 增加且不再
+回退。示例只使用 Granit 类型，不包含 Vulkan 头文件。
 
 ## 验收标准
 

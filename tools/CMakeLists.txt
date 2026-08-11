@@ -26,15 +26,12 @@ set_target_properties(granit_shader_tool PROPERTIES FOLDER "Tools")
 add_executable(
   granit_material_tool
   material_tool_main.cpp
-  "${PROJECT_SOURCE_DIR}/src/material/material_archive.cpp"
   "${PROJECT_SOURCE_DIR}/src/material/material_debug_json.cpp"
-  "${PROJECT_SOURCE_DIR}/src/material/material_metadata.cpp"
-  "${PROJECT_SOURCE_DIR}/src/material/material_package.cpp"
-  "${PROJECT_SOURCE_DIR}/src/material/material_package_archive.cpp"
   "${PROJECT_SOURCE_DIR}/src/material/material_source_json.cpp"
 )
 target_compile_features(granit_material_tool PRIVATE cxx_std_20)
 target_include_directories(granit_material_tool PRIVATE "${PROJECT_SOURCE_DIR}/src")
+target_link_libraries(granit_material_tool PRIVATE granit::material)
 target_compile_options(
   granit_material_tool
   PRIVATE $<$<COMPILE_LANG_AND_ID:CXX,MSVC>:/utf-8>

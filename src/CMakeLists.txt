@@ -171,3 +171,41 @@ install(
   NAMESPACE granit::
   DESTINATION "${GRANIT_INSTALL_CMAKEDIR}"
 )
+
+add_library(granit_material STATIC)
+add_library(granit::material ALIAS granit_material)
+target_sources(
+  granit_material
+  PRIVATE
+    material/material_archive.cpp
+    material/material_gpu_instance.cpp
+    material/material_hot_reload.cpp
+    material/material_metadata.cpp
+    material/material_migration.cpp
+    material/material_package.cpp
+    material/material_package_archive.cpp
+    material/material_template_gpu.cpp
+  PUBLIC
+    FILE_SET HEADERS
+    BASE_DIRS "${PROJECT_SOURCE_DIR}/src"
+    FILES
+      material/material_archive.h
+      material/material_gpu_instance.h
+      material/material_hot_reload.h
+      material/material_metadata.h
+      material/material_migration.h
+      material/material_package.h
+      material/material_package_archive.h
+      material/material_template_gpu.h
+)
+target_compile_features(granit_material PUBLIC cxx_std_20)
+target_include_directories(granit_material PUBLIC "${PROJECT_SOURCE_DIR}/src")
+target_link_libraries(granit_material PUBLIC granit::granit)
+granit_target_compile_warnings(granit_material)
+granit_target_output_directories(granit_material)
+set_target_properties(
+  granit_material
+  PROPERTIES
+    FOLDER "Modules"
+    POSITION_INDEPENDENT_CODE ON
+)

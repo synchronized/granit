@@ -73,8 +73,8 @@ Buffer/Texture View 导入、单 Recorder 串行执行，以及瞬态资源按�
 留待真实重复帧验证。H-02A～H-02D 已完成材质系统边界、CPU shadow buffer、dirty 区间上传、
 Texture/Sampler Bind Group 事务式替换，以及 DXC/SPIR-V 反射工具原型。H-02E1 已完成内存版本化
 材质包、稳定变体查找与 Shader/Pipeline 缓存。H-02E3 已完成持久化包、源 JSON 构建、语义往返、
-调试 JSON 导出和损坏输入防护；H-02F1～H-02F3 已实现事务式迁移、热替换槽和错误材质 Pipeline
-回退，下一步建立可选材质模块目标与端到端示例。
+调试 JSON 导出和损坏输入防护；H-02F 已完成事务式迁移、热替换槽、错误材质 Pipeline 回退、
+可选模块目标和端到端示例，下一步建立性能基线。
 具体顺序见 [docs/roadmap.md](docs/roadmap.md)。
 
 ## 快速开始
@@ -118,8 +118,10 @@ cmake --preset linux-clang-debug -DBUILD_SHARED_LIBS=OFF
 - `granit_window_clear_example`：Win32 窗口 acquire、清屏、submit、present 与尺寸重建循环。
 - `granit_window_triangle_example`：上传位置和颜色顶点数据，在 Win32 窗口持续绘制彩色三角形。
 - `granit_compute_example`：Compute Shader 写入 Storage Buffer，自动同步复制并读取结果。
+- `granit_material_hot_reload_example`：演示缺失变体时的错误材质回退和成功热替换。
 
-示例只依赖 Granit 公共接口，不包含 Vulkan 头文件。窗口示例目前仅在 Windows 构建。
+示例不包含 Vulkan 头文件；材质热替换示例使用尚未安装的开发中 `granit::material` 模块，其余示例
+只依赖稳定分层中的 Granit 公共接口。窗口示例目前仅在 Windows 构建。
 单配置生成器把动态库和可执行文件统一放入构建目录的 `bin`，可直接运行；Visual Studio 等
 多配置生成器使用 `bin/Debug`、`bin/Release` 等配置子目录。
 

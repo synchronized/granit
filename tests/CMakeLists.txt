@@ -138,19 +138,11 @@ add_executable(
   material/material_package_archive_test.cpp
   material/material_source_json_test.cpp
   material/material_template_gpu_test.cpp
-  "${PROJECT_SOURCE_DIR}/src/material/material_gpu_instance.cpp"
-  "${PROJECT_SOURCE_DIR}/src/material/material_hot_reload.cpp"
-  "${PROJECT_SOURCE_DIR}/src/material/material_archive.cpp"
   "${PROJECT_SOURCE_DIR}/src/material/material_debug_json.cpp"
-  "${PROJECT_SOURCE_DIR}/src/material/material_metadata.cpp"
-  "${PROJECT_SOURCE_DIR}/src/material/material_migration.cpp"
-  "${PROJECT_SOURCE_DIR}/src/material/material_package.cpp"
-  "${PROJECT_SOURCE_DIR}/src/material/material_package_archive.cpp"
   "${PROJECT_SOURCE_DIR}/src/material/material_source_json.cpp"
-  "${PROJECT_SOURCE_DIR}/src/material/material_template_gpu.cpp"
 )
 target_include_directories(granit_material_test PRIVATE "${PROJECT_SOURCE_DIR}/src")
-target_link_libraries(granit_material_test PRIVATE granit::granit Catch2::Catch2WithMain)
+target_link_libraries(granit_material_test PRIVATE granit::material Catch2::Catch2WithMain)
 target_compile_options(
   granit_material_test
   PRIVATE $<$<COMPILE_LANG_AND_ID:CXX,MSVC>:/utf-8>
