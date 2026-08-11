@@ -81,6 +81,8 @@ Texture/Sampler Bind Group 事务式替换，以及 DXC/SPIR-V 反射工具原�
 适配层可声明 PBR 附件访问并向录制回调传递打包后的常量。
 H-03 已完成：适配器生命周期测试、PBR Pass CPU 性能基线、Texture Readback 和离屏像素回归均已
 接入。像素回归会将 Shader 中心像素与 CPU BRDF 量化结果比较，并验证覆盖外清屏值。
+H-04 已确定为可选的逐帧场景提交适配层，首版只负责显式 View、可渲染项、光源输入、CPU Frustum
+筛选和稳定可见列表，不建立 ECS、Scene Graph 或 GPU 资源所有权。
 具体顺序见 [docs/roadmap.md](docs/roadmap.md)。
 
 ## 快速开始
@@ -207,6 +209,7 @@ if (granit::failed(result)) {
 - [H-02 材质参数、Shader 变体与离线构建](docs/plans/H-02-material-system.md)。
 - [H-02E3 持久化材质包格式](docs/plans/H-02-material-package-format.md)。
 - [H-03 金属度/粗糙度 PBR 渲染模块](docs/plans/H-03-pbr-renderer.md)。
+- [H-04 场景提交与可见性输入适配层](docs/plans/H-04-scene-submission.md)。
 - [docs/plans/F-07-recovery-boundaries.md](docs/plans/F-07-recovery-boundaries.md)：窗口帧恢复边界计划。
 - [docs/renderer.md](docs/renderer.md)：公共 renderer C/C++ API 与生命周期。
 - [docs/render-target.md](docs/render-target.md)：颜色与深度/模板 Attachment 值类型。
