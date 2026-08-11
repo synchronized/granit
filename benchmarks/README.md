@@ -46,4 +46,8 @@ cmake --build --preset windows-clang-release --target granit_benchmarks
 这些场景不对同一个 Buffer 进行无序并发写入，因为那不属于公开 API 支持的工作流。Renderer 环境
 不可用时程序返回非零状态并在标准错误中说明原因。
 
+`granit_render_graph_benchmarks` 用于 H-01E，包括纯 CPU `graph_compile`、直接空 Recorder
+`direct_execute`、导入资源图 `graph_execute` 和瞬态 Buffer 图 `transient_execute`。使用
+`--passes` 控制图规模，执行类结果表示每张图的成本，编译结果表示每次编译的成本。
+
 已提交的基线摘要见 [results/README.md](results/README.md)。
