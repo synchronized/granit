@@ -213,8 +213,8 @@
 
 ### 目标与交付物
 
-- **[H-01](plans/P-06-render-graph-boundary.md#h-01-最小实现顺序) / P2**：分阶段实现独立
-  Render Graph，负责 Pass 依赖、裁剪和瞬态资源生命周期。
+- **[H-01](plans/P-06-render-graph-boundary.md#h-01-最小实现顺序) / P2 / 进行中**：H-01A 纯 CPU
+  图编译器已完成；后续接入导入资源和串行 Command Recorder 执行。
 - **H-02 / P2**：建立材质参数、着色器变体和离线材质构建流程。
 - **H-03 / P2**：提供可选的金属度/粗糙度 PBR 渲染模块。
 - **H-04 / P2**：提供场景提交、Camera、Light 和可见性输入适配层。

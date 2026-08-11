@@ -109,6 +109,20 @@ granit_target_compile_warnings(granit_device_status_test)
 add_test(NAME granit.device_status COMMAND granit_device_status_test)
 
 add_executable(
+  granit_render_graph_test
+  render_graph/graph_compiler_test.cpp
+  "${PROJECT_SOURCE_DIR}/src/render_graph/graph_compiler.cpp"
+)
+target_include_directories(granit_render_graph_test PRIVATE "${PROJECT_SOURCE_DIR}/src")
+target_link_libraries(granit_render_graph_test PRIVATE Catch2::Catch2WithMain)
+target_compile_options(
+  granit_render_graph_test
+  PRIVATE $<$<COMPILE_LANG_AND_ID:CXX,MSVC>:/utf-8>
+)
+granit_target_compile_warnings(granit_render_graph_test)
+add_test(NAME granit.render_graph COMMAND granit_render_graph_test)
+
+add_executable(
   granit_renderer_test
   renderer/command_recorder_test.cpp
   renderer/pipeline_test.cpp
@@ -209,6 +223,7 @@ set(
   granit_lifecycle_validation_test
   granit_retirement_queue_test
   granit_device_status_test
+  granit_render_graph_test
   granit_renderer_test
   granit_vulkan_backend_test
 )
