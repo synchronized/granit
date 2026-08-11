@@ -74,7 +74,8 @@ Buffer/Texture View 导入、单 Recorder 串行执行，以及瞬态资源按�
 Texture/Sampler Bind Group 事务式替换，以及 DXC/SPIR-V 反射工具原型。H-02E1 已完成内存版本化
 材质包、稳定变体查找与 Shader/Pipeline 缓存。H-02E3 已完成持久化包、源 JSON 构建、语义往返、
 调试 JSON 导出和损坏输入防护；H-02F 已完成事务式迁移、热替换槽、错误材质 Pipeline 回退和
-端到端示例，H-02G 已建立首份性能基线。材质模块仍是尚未安装导出的内部原型。
+端到端示例，H-02G 已建立首份性能基线。H-03A 已打通完整 Pipeline 状态，H-03B 已加入与后续
+Shader 对照的 CPU PBR BRDF 参考实现和固定测试向量。材质模块仍是尚未安装导出的内部原型。
 具体顺序见 [docs/roadmap.md](docs/roadmap.md)。
 
 ## 快速开始

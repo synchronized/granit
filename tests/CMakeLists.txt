@@ -136,6 +136,7 @@ add_executable(
   material/material_migration_test.cpp
   material/material_package_test.cpp
   material/material_package_archive_test.cpp
+  material/pbr_reference_test.cpp
   material/material_source_json_test.cpp
   material/material_template_gpu_test.cpp
   "${PROJECT_SOURCE_DIR}/src/material/material_debug_json.cpp"
