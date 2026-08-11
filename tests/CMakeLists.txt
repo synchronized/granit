@@ -132,15 +132,21 @@ add_executable(
   material/material_gpu_instance_test.cpp
   material/material_metadata_test.cpp
   material/material_package_test.cpp
+  material/material_template_gpu_test.cpp
   "${PROJECT_SOURCE_DIR}/src/material/material_gpu_instance.cpp"
   "${PROJECT_SOURCE_DIR}/src/material/material_metadata.cpp"
   "${PROJECT_SOURCE_DIR}/src/material/material_package.cpp"
+  "${PROJECT_SOURCE_DIR}/src/material/material_template_gpu.cpp"
 )
 target_include_directories(granit_material_test PRIVATE "${PROJECT_SOURCE_DIR}/src")
 target_link_libraries(granit_material_test PRIVATE granit::granit Catch2::Catch2WithMain)
 target_compile_options(
   granit_material_test
   PRIVATE $<$<COMPILE_LANG_AND_ID:CXX,MSVC>:/utf-8>
+)
+target_compile_definitions(
+  granit_material_test
+  PRIVATE GRANIT_TEST_ASSET_DIR="${PROJECT_SOURCE_DIR}/tests/assets"
 )
 granit_target_compile_warnings(granit_material_test)
 add_test(NAME granit.material COMMAND granit_material_test)

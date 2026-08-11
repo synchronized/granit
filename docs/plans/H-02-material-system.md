@@ -6,7 +6,7 @@
 ## 元数据
 
 - 设计状态：已确认
-- 实现状态：进行中（H-02A～H-02D、H-02E1 已完成）
+- 实现状态：进行中（H-02A～H-02D、H-02E1～H-02E2 已完成）
 - 路线图任务：H-02
 - 优先级：P2
 - 前置依赖：D-01～D-08、H-01
@@ -148,9 +148,9 @@ SPIRV-Reflect 与 SPIRV-Headers `vulkan-sdk-1.4.350.0`。版本升级必须重�
    批量上传。
 4. **H-02D（已完成）**：已用 DXC、spirv-val 和 SPIRV-Reflect 完成固定 HLSL 的端到端原型，
    并确定参考版本、内置依赖版本和许可证。
-5. **H-02E（进行中）**：H-02E1 已完成内存版本化材质包和稳定变体查找；下一步接入 Shader、
-   Pipeline Layout 和 Graphics Pipeline 缓存。按 D-09A 显式记录绑定模型和 Renderer 能力要求，
-   但首版只接受传统 Bind Group。
+5. **H-02E（进行中）**：H-02E1 已完成内存版本化材质包和稳定变体查找，H-02E2 已接入 Shader、
+   Pipeline Layout 和 Graphics Pipeline 缓存；下一步定义可验证的持久化包格式。按 D-09A 显式
+   记录绑定模型和 Renderer 能力要求，但首版只接受传统 Bind Group。
 6. **H-02F**：增加热替换、实例迁移、错误材质和端到端示例。
 7. **H-02G**：建立参数更新、变体查找和 Pipeline 命中率性能基线。
 
@@ -214,7 +214,21 @@ Shader 阶段及无效 SPIR-V magic。变体键使用固定 FNV-1a 64、显式�
 不依赖 `std::hash` 或输入排列。包按“Pass ID + 变体键”排序并进行无分配查找。
 
 该原型仍是内存结构，不是磁盘格式，也不进入公共 ABI 或安装导出。magic、区段表、长度校验、
-内容哈希、编译器身份和编译参数将在持久化格式落地时补充；GPU 对象缓存属于 H-02E2。
+内容哈希、编译器身份和编译参数将在 H-02E3 持久化格式落地时补充。
+
+## H-02E2 实现记录
+
+内部 `material_template_gpu` 从包的参数元数据创建材质 Bind Group Layout，并创建空的 Group 0 与
+材质 Group 1 组成的 Pipeline Layout。这样 Shader 可以遵循既定的 Group 1 材质约定，同时不要求
+H-02 提前实现 frame/view 资源。
+
+首次请求“Pass ID + 变体键 + 颜色格式 + 深度格式 + 采样数”时创建包内 Vertex/Fragment Shader
+与 Graphics Pipeline，后续相同请求复用同一句柄。缓存互斥覆盖查找和首次创建，因此同一键的并发
+请求只产生一个缓存项。失败路径会逆序销毁已创建对象，不发布半初始化条目；模板销毁时按 Pipeline、
+Shader、Pipeline Layout、Bind Group Layout 顺序释放。
+
+当前只支持单颜色 Attachment 和默认图元、深度及混合状态。顶点布局、多个颜色 Attachment 和
+固定 Pipeline 状态必须成为包内显式数据后才能扩展缓存键，不能通过隐藏默认值冒充完整材质格式。
 
 ## 验收标准
 
