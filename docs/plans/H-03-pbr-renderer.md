@@ -6,7 +6,7 @@
 ## 元数据
 
 - 设计状态：已确认首版边界
-- 实现状态：进行中（H-03A）
+- 实现状态：进行中（H-03A1 已完成）
 - 路线图任务：H-03
 - 优先级：P2
 - 前置依赖：H-01、H-02
@@ -88,8 +88,8 @@ CPU 参考函数与 Shader 必须共享公式说明和固定测试向量。允�
 
 ## 分阶段实施
 
-1. **H-03A（进行中）**：扩展材质包的顶点布局和固定 Pipeline 状态，覆盖源 JSON、二进制往返、
-   调试导出、缓存键及损坏输入测试。
+1. **H-03A（进行中）**：H-03A1 已完成内存模型、语义校验和真实 Pipeline 创建；H-03A2 将提升
+   包格式版本并覆盖源 JSON、二进制往返、调试导出及损坏输入测试。
 2. **H-03B**：实现独立 CPU BRDF 参考函数、PBR 参数规范、边界值和固定测试向量。
 3. **H-03C**：加入无纹理 HLSL PBR Shader、离线构建包和单三角/球体离屏直接光照闭环。
 4. **H-03D**：接入 Base Color、Metallic/Roughness、Normal、Occlusion、Emissive 纹理与变体，
@@ -107,3 +107,14 @@ CPU 参考函数与 Shader 必须共享公式说明和固定测试向量。允�
 - 缺失变体、顶点属性、资源或 Pipeline 创建失败时返回明确诊断，并可使用 H-02 错误材质。
 - H-03 不创建 Scene、Camera 或 Light 对象；调用方可以逐 Draw 显式提供输入。
 - 阴影、IBL 和后处理不以临时隐藏实现混入 H-03。
+
+## H-03A1 实现记录
+
+`material_variant` 现拥有顶点 Buffer/Attribute 布局、Primitive、Depth 和单颜色 Attachment Blend
+状态。包构建阶段限制 Buffer/Attribute 数量，验证格式、stride、offset、location 唯一性以及所有
+固定状态枚举和保留字段。`material_template_gpu` 将拥有数据转换为调用期间有效的 C API 描述，
+实际创建的 Graphics Pipeline 不再依赖隐藏默认状态。
+
+现有 `.grmat` v1 尚未编码这些字段。编码器遇到任何非默认 Pipeline 状态会返回明确错误，不能生成
+丢失信息的包；默认状态包仍保持原有逐字节结果。H-03A2 将直接提升开发期格式版本并加入持久化
+记录，不提供尚未承诺的 v1 自动迁移。

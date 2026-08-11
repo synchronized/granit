@@ -18,10 +18,10 @@ material_shader_code shader(package_shader_stage stage) {
 }
 
 material_variant_desc variant(std::initializer_list<material_feature_value> features) {
-  return {
-      .pass = make_feature_id("opaque"),
-      .features = features,
-      .shaders = {shader(package_shader_stage::vertex), shader(package_shader_stage::fragment)}};
+  return {.pass = make_feature_id("opaque"),
+          .features = features,
+          .shaders = {shader(package_shader_stage::vertex), shader(package_shader_stage::fragment)},
+          .pipeline = {}};
 }
 
 } // namespace
@@ -86,4 +86,27 @@ TEST_CASE("材质包拒绝没有任何变体") {
   material_package package;
   material_package_desc desc;
   CHECK(material_package::build(std::move(desc), package) == package_error::missing_variant);
+}
+
+TEST_CASE("材质包保存并验证顶点布局和固定 Pipeline 状态") {
+  auto source = variant({});
+  source.pipeline.vertex_buffers = {{.stride = 24,
+                                     .step_mode = GRANIT_VERTEX_STEP_MODE_VERTEX,
+                                     .attributes = {{0, GRANIT_VERTEX_FORMAT_FLOAT32X3, 0},
+                                                    {1, GRANIT_VERTEX_FORMAT_FLOAT32X3, 12}}}};
+  source.pipeline.primitive.cull_mode = GRANIT_CULL_MODE_BACK;
+  source.pipeline.depth.test_enabled = 1;
+  source.pipeline.depth.write_enabled = 1;
+  source.pipeline.depth.compare = GRANIT_COMPARE_OPERATION_LESS_EQUAL;
+  material_package_desc desc;
+  desc.variants.push_back(source);
+  material_package package;
+  REQUIRE(material_package::build(std::move(desc), package) == package_error::none);
+  REQUIRE(package.variants().size() == 1);
+  CHECK(package.variants().front().pipeline == source.pipeline);
+
+  source.pipeline.vertex_buffers.front().attributes[1].location = 0;
+  desc = {};
+  desc.variants.push_back(std::move(source));
+  CHECK(material_package::build(std::move(desc), package) == package_error::invalid_pipeline_state);
 }

@@ -30,7 +30,99 @@ bool is_spirv(const std::vector<std::uint32_t>& code) noexcept {
   return code.size() >= 5 && code.front() == spirv_magic;
 }
 
+std::uint32_t vertex_format_size(granit_vertex_format format) noexcept {
+  switch (format) {
+  case GRANIT_VERTEX_FORMAT_FLOAT32:
+  case GRANIT_VERTEX_FORMAT_UINT32:
+  case GRANIT_VERTEX_FORMAT_SINT32:
+    return 4;
+  case GRANIT_VERTEX_FORMAT_FLOAT32X2:
+  case GRANIT_VERTEX_FORMAT_UINT32X2:
+  case GRANIT_VERTEX_FORMAT_SINT32X2:
+    return 8;
+  case GRANIT_VERTEX_FORMAT_FLOAT32X3:
+  case GRANIT_VERTEX_FORMAT_UINT32X3:
+  case GRANIT_VERTEX_FORMAT_SINT32X3:
+    return 12;
+  case GRANIT_VERTEX_FORMAT_FLOAT32X4:
+  case GRANIT_VERTEX_FORMAT_UINT32X4:
+  case GRANIT_VERTEX_FORMAT_SINT32X4:
+    return 16;
+  default:
+    return 0;
+  }
+}
+
+bool pipeline_state_valid(const material_pipeline_state& state) noexcept {
+  if (state.vertex_buffers.size() > 16 ||
+      state.primitive.topology < GRANIT_PRIMITIVE_TOPOLOGY_POINT_LIST ||
+      state.primitive.topology > GRANIT_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP ||
+      state.primitive.front_face < GRANIT_FRONT_FACE_COUNTER_CLOCKWISE ||
+      state.primitive.front_face > GRANIT_FRONT_FACE_CLOCKWISE ||
+      state.primitive.cull_mode < GRANIT_CULL_MODE_NONE ||
+      state.primitive.cull_mode > GRANIT_CULL_MODE_FRONT_AND_BACK ||
+      state.primitive.polygon_mode < GRANIT_POLYGON_MODE_FILL ||
+      state.primitive.polygon_mode > GRANIT_POLYGON_MODE_POINT || state.depth.test_enabled > 1 ||
+      state.depth.write_enabled > 1 || state.depth.compare < GRANIT_COMPARE_OPERATION_NEVER ||
+      state.depth.compare > GRANIT_COMPARE_OPERATION_ALWAYS || state.depth.reserved != 0 ||
+      state.color_blend.enabled > 1 ||
+      state.color_blend.source_color_factor < GRANIT_BLEND_FACTOR_ZERO ||
+      state.color_blend.source_color_factor > GRANIT_BLEND_FACTOR_ONE_MINUS_DESTINATION_ALPHA ||
+      state.color_blend.destination_color_factor < GRANIT_BLEND_FACTOR_ZERO ||
+      state.color_blend.destination_color_factor >
+          GRANIT_BLEND_FACTOR_ONE_MINUS_DESTINATION_ALPHA ||
+      state.color_blend.source_alpha_factor < GRANIT_BLEND_FACTOR_ZERO ||
+      state.color_blend.source_alpha_factor > GRANIT_BLEND_FACTOR_ONE_MINUS_DESTINATION_ALPHA ||
+      state.color_blend.destination_alpha_factor < GRANIT_BLEND_FACTOR_ZERO ||
+      state.color_blend.destination_alpha_factor >
+          GRANIT_BLEND_FACTOR_ONE_MINUS_DESTINATION_ALPHA ||
+      state.color_blend.color_operation < GRANIT_BLEND_OPERATION_ADD ||
+      state.color_blend.color_operation > GRANIT_BLEND_OPERATION_MAX ||
+      state.color_blend.alpha_operation < GRANIT_BLEND_OPERATION_ADD ||
+      state.color_blend.alpha_operation > GRANIT_BLEND_OPERATION_MAX ||
+      (state.color_blend.write_mask & ~GRANIT_COLOR_WRITE_ALL_BITS) != 0) {
+    return false;
+  }
+  std::array<bool, 32> locations{};
+  for (const auto& buffer : state.vertex_buffers) {
+    if (buffer.stride == 0 || buffer.step_mode < GRANIT_VERTEX_STEP_MODE_VERTEX ||
+        buffer.step_mode > GRANIT_VERTEX_STEP_MODE_INSTANCE || buffer.attributes.empty() ||
+        buffer.attributes.size() > locations.size()) {
+      return false;
+    }
+    for (const auto& attribute : buffer.attributes) {
+      const auto size = vertex_format_size(attribute.format);
+      if (attribute.location >= locations.size() || locations[attribute.location] || size == 0 ||
+          attribute.offset >= buffer.stride || size > buffer.stride - attribute.offset) {
+        return false;
+      }
+      locations[attribute.location] = true;
+    }
+  }
+  return true;
+}
+
 } // namespace
+
+bool operator==(const material_pipeline_state& left,
+                const material_pipeline_state& right) noexcept {
+  return left.vertex_buffers == right.vertex_buffers &&
+         left.primitive.topology == right.primitive.topology &&
+         left.primitive.front_face == right.primitive.front_face &&
+         left.primitive.cull_mode == right.primitive.cull_mode &&
+         left.primitive.polygon_mode == right.primitive.polygon_mode &&
+         left.depth.test_enabled == right.depth.test_enabled &&
+         left.depth.write_enabled == right.depth.write_enabled &&
+         left.depth.compare == right.depth.compare &&
+         left.color_blend.enabled == right.color_blend.enabled &&
+         left.color_blend.source_color_factor == right.color_blend.source_color_factor &&
+         left.color_blend.destination_color_factor == right.color_blend.destination_color_factor &&
+         left.color_blend.color_operation == right.color_blend.color_operation &&
+         left.color_blend.source_alpha_factor == right.color_blend.source_alpha_factor &&
+         left.color_blend.destination_alpha_factor == right.color_blend.destination_alpha_factor &&
+         left.color_blend.alpha_operation == right.color_blend.alpha_operation &&
+         left.color_blend.write_mask == right.color_blend.write_mask;
+}
 
 material_feature_id make_feature_id(std::string_view name) noexcept {
   return make_parameter_id(name);
@@ -100,11 +192,15 @@ package_error material_package::build(material_package_desc desc, material_packa
         !stages[static_cast<std::size_t>(package_shader_stage::fragment)]) {
       return package_error::missing_shader_stage;
     }
+    if (!pipeline_state_valid(source.pipeline)) {
+      return package_error::invalid_pipeline_state;
+    }
 
     material_variant variant{.pass = source.pass,
                              .key = make_variant_key(source.features),
                              .features = std::move(source.features),
-                             .shaders = std::move(source.shaders)};
+                             .shaders = std::move(source.shaders),
+                             .pipeline = std::move(source.pipeline)};
     const auto same_key = std::ranges::find_if(variants, [&](const auto& existing) {
       return existing.pass == variant.pass && existing.key == variant.key;
     });

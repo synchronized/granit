@@ -48,7 +48,8 @@ granit::material::material_package build_package(std::string parameter_name,
                                         .spirv = load_shader("minimal.vert.spv")},
                                        {.stage = package_shader_stage::fragment,
                                         .entry_point = "main",
-                                        .spirv = load_shader("minimal.frag.spv")}}});
+                                        .spirv = load_shader("minimal.frag.spv")}},
+                           .pipeline = {}});
   material_package package;
   REQUIRE(material_package::build(std::move(desc), package) == package_error::none);
   return package;

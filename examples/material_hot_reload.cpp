@@ -38,7 +38,8 @@ bool make_package(std::string_view pass_name, granit::material::material_package
                                         .spirv = load_shader("triangle.vert.spv")},
                                        {.stage = package_shader_stage::fragment,
                                         .entry_point = "main",
-                                        .spirv = load_shader("triangle.frag.spv")}}});
+                                        .spirv = load_shader("triangle.frag.spv")}},
+                           .pipeline = {}});
   return material_package::build(std::move(desc), package) == package_error::none;
 }
 

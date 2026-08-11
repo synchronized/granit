@@ -153,9 +153,10 @@ bool make_package(std::uint32_t variant_count, granit::material::material_packag
     desc.variants.push_back(
         {.pass = make_feature_id("opaque"),
          .features = {{make_feature_id("mode"), value}},
-         .shaders = {
-             {.stage = package_shader_stage::vertex, .entry_point = "main", .spirv = vertex},
-             {.stage = package_shader_stage::fragment, .entry_point = "main", .spirv = fragment}}});
+         .shaders =
+             {{.stage = package_shader_stage::vertex, .entry_point = "main", .spirv = vertex},
+              {.stage = package_shader_stage::fragment, .entry_point = "main", .spirv = fragment}},
+         .pipeline = {}});
   }
   return material_package::build(std::move(desc), package) == package_error::none;
 }

@@ -46,7 +46,13 @@ granit::material::material_package build_package() {
                                         .spirv = load_shader("minimal.vert.spv")},
                                        {.stage = package_shader_stage::fragment,
                                         .entry_point = "main",
-                                        .spirv = load_shader("minimal.frag.spv")}}});
+                                        .spirv = load_shader("minimal.frag.spv")}},
+                           .pipeline = {}});
+  desc.variants.back().pipeline.vertex_buffers = {
+      {.stride = 12,
+       .step_mode = GRANIT_VERTEX_STEP_MODE_VERTEX,
+       .attributes = {{0, GRANIT_VERTEX_FORMAT_FLOAT32X3, 0}}}};
+  desc.variants.back().pipeline.primitive.cull_mode = GRANIT_CULL_MODE_BACK;
   material_package package;
   REQUIRE(material_package::build(std::move(desc), package) == package_error::none);
   return package;

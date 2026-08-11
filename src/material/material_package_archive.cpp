@@ -124,6 +124,13 @@ std::string read_string(std::span<const std::byte> table, std::uint32_t offset,
 archive_error encode_material_package_archive(const material_package& package,
                                               std::vector<std::byte>& bytes) noexcept {
   try {
+    const material_pipeline_state default_pipeline;
+    if (std::ranges::any_of(package.variants(), [&](const material_variant& variant) {
+          return variant.pipeline != default_pipeline;
+        })) {
+      // H-03A1 只完成内存模型；在格式版本升级前禁止静默丢失新增状态。
+      return archive_error::invalid_semantic_data;
+    }
     std::set<std::string> strings;
     for (const auto& parameter : package.metadata().parameters()) {
       strings.insert(parameter.name);
@@ -434,7 +441,7 @@ archive_error decode_material_package_archive(std::span<const std::byte> bytes,
         return archive_error::invalid_semantic_data;
       }
       material_variant_desc variant{
-          .pass = read_u64(variant_records, record), .features = {}, .shaders = {}};
+          .pass = read_u64(variant_records, record), .features = {}, .shaders = {}, .pipeline = {}};
       variant.features.reserve(count);
       for (std::uint32_t feature_index = 0; feature_index < count; ++feature_index) {
         const auto feature_record =

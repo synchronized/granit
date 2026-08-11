@@ -6,6 +6,8 @@
 
 #include "material/material_metadata.h"
 
+#include <granit/renderer/pipeline.h>
+
 #include <cstdint>
 #include <span>
 #include <string>
@@ -53,6 +55,35 @@ enum class package_error : std::uint8_t {
   missing_shader_stage,
   duplicate_variant,
   variant_key_collision,
+  invalid_pipeline_state,
+};
+
+struct material_vertex_attribute {
+  std::uint32_t location = 0;
+  granit_vertex_format format = GRANIT_VERTEX_FORMAT_FLOAT32;
+  std::uint32_t offset = 0;
+
+  friend bool operator==(const material_vertex_attribute&,
+                         const material_vertex_attribute&) = default;
+};
+
+struct material_vertex_buffer_layout {
+  std::uint32_t stride = 0;
+  granit_vertex_step_mode step_mode = GRANIT_VERTEX_STEP_MODE_VERTEX;
+  std::vector<material_vertex_attribute> attributes;
+
+  friend bool operator==(const material_vertex_buffer_layout&,
+                         const material_vertex_buffer_layout&) = default;
+};
+
+struct material_pipeline_state {
+  std::vector<material_vertex_buffer_layout> vertex_buffers;
+  granit_primitive_state primitive = GRANIT_PRIMITIVE_STATE_INIT;
+  granit_depth_state depth = GRANIT_DEPTH_STATE_INIT;
+  granit_color_blend_state color_blend = GRANIT_COLOR_BLEND_STATE_INIT;
+
+  friend bool operator==(const material_pipeline_state& left,
+                         const material_pipeline_state& right) noexcept;
 };
 
 struct material_feature_value {
@@ -72,6 +103,7 @@ struct material_variant_desc {
   material_pass_id pass = 0;
   std::vector<material_feature_value> features;
   std::vector<material_shader_code> shaders;
+  material_pipeline_state pipeline;
 };
 
 struct material_package_desc {
@@ -88,6 +120,7 @@ struct material_variant {
   material_variant_key key = 0;
   std::vector<material_feature_value> features;
   std::vector<material_shader_code> shaders;
+  material_pipeline_state pipeline;
 };
 
 [[nodiscard]] material_feature_id make_feature_id(std::string_view name) noexcept;

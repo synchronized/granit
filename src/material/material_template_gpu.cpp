@@ -169,6 +169,27 @@ granit_result material_template_gpu::acquire_pipeline(const material_pipeline_re
     return result;
   }
   granit_graphics_pipeline_desc desc = GRANIT_GRAPHICS_PIPELINE_DESC_INIT;
+  std::vector<std::vector<granit_vertex_attribute>> native_attributes;
+  std::vector<granit_vertex_buffer_layout> native_buffers;
+  try {
+    native_attributes.reserve(variant->pipeline.vertex_buffers.size());
+    native_buffers.reserve(variant->pipeline.vertex_buffers.size());
+    for (const auto& source_buffer : variant->pipeline.vertex_buffers) {
+      auto& attributes = native_attributes.emplace_back();
+      attributes.reserve(source_buffer.attributes.size());
+      for (const auto& source_attribute : source_buffer.attributes) {
+        attributes.push_back(
+            {source_attribute.location, source_attribute.format, source_attribute.offset, 0});
+      }
+      native_buffers.push_back({source_buffer.stride, source_buffer.step_mode,
+                                static_cast<std::uint32_t>(attributes.size()), 0,
+                                attributes.data()});
+    }
+  } catch (const std::bad_alloc&) {
+    static_cast<void>(granit_shader_destroy(renderer_, replacement.fragment_shader));
+    static_cast<void>(granit_shader_destroy(renderer_, replacement.vertex_shader));
+    return GRANIT_ERROR_OUT_OF_MEMORY;
+  }
   desc.layout = pipeline_layout_;
   desc.vertex_shader = replacement.vertex_shader;
   desc.fragment_shader = replacement.fragment_shader;
@@ -176,6 +197,12 @@ granit_result material_template_gpu::acquire_pipeline(const material_pipeline_re
   desc.color_formats = &request.color_format;
   desc.depth_stencil_format = request.depth_stencil_format;
   desc.sample_count = request.sample_count;
+  desc.vertex_buffer_layout_count = static_cast<std::uint32_t>(native_buffers.size());
+  desc.vertex_buffer_layouts = native_buffers.data();
+  desc.primitive = variant->pipeline.primitive;
+  desc.depth = &variant->pipeline.depth;
+  desc.color_blend_count = 1;
+  desc.color_blends = &variant->pipeline.color_blend;
   result = granit_graphics_pipeline_create(renderer_, &desc, &replacement.pipeline);
   if (result != GRANIT_SUCCESS) {
     static_cast<void>(granit_shader_destroy(renderer_, replacement.fragment_shader));

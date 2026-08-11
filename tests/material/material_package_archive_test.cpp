@@ -37,7 +37,8 @@ material_package make_package(bool reverse_parameters) {
                                         .spirv = {spirv_magic, UINT32_C(0x00010600), 0, 1, 0}},
                                        {.stage = package_shader_stage::vertex,
                                         .entry_point = "vertex_main",
-                                        .spirv = {spirv_magic, UINT32_C(0x00010600), 0, 1, 0}}}});
+                                        .spirv = {spirv_magic, UINT32_C(0x00010600), 0, 1, 0}}},
+                           .pipeline = {}});
   material_package package;
   REQUIRE(material_package::build(std::move(desc), package) == package_error::none);
   return package;
@@ -93,6 +94,25 @@ TEST_CASE("材质包编码不依赖参数和 Shader 输入顺序") {
   REQUIRE(encode_material_package_archive(first_package, first) == archive_error::none);
   REQUIRE(encode_material_package_archive(second_package, second) == archive_error::none);
   CHECK(first == second);
+}
+
+TEST_CASE("旧材质归档格式拒绝静默丢失 Pipeline 状态") {
+  auto package = make_package(false);
+  material_package_desc desc;
+  desc.metadata.constant_buffer_size = package.metadata().constant_buffer_size();
+  for (const auto& parameter : package.metadata().parameters()) {
+    desc.metadata.parameters.push_back(parameter);
+  }
+  for (const auto& variant : package.variants()) {
+    desc.variants.push_back({.pass = variant.pass,
+                             .features = variant.features,
+                             .shaders = variant.shaders,
+                             .pipeline = variant.pipeline});
+  }
+  desc.variants.front().pipeline.primitive.cull_mode = GRANIT_CULL_MODE_BACK;
+  REQUIRE(material_package::build(std::move(desc), package) == package_error::none);
+  std::vector<std::byte> bytes;
+  CHECK(encode_material_package_archive(package, bytes) == archive_error::invalid_semantic_data);
 }
 
 TEST_CASE("材质包编码解码再编码保持逐字节一致") {
