@@ -2258,7 +2258,15 @@ granit_result renderer_registry::end_command_recorder(granit_renderer renderer,
 
 granit_result renderer_registry::submit_command_recorder(granit_renderer renderer,
                                                          granit_command_recorder recorder) {
-  return submit_command_recorders(renderer, {&recorder, 1});
+  auto record = acquire_command_recorder(renderer, recorder);
+  if (!record)
+    return GRANIT_ERROR_INVALID_HANDLE;
+  std::lock_guard record_lock{record->mutex};
+  submission_serial serial{};
+  const auto result = record->renderer->submit_command_recorder(record->native, serial);
+  if (result == GRANIT_SUCCESS)
+    mark_resources_used(record->retained_resources, serial);
+  return result;
 }
 
 granit_result

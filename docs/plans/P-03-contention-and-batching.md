@@ -95,7 +95,7 @@ pending 状态、frames-in-flight 槽位分配、部分 `vkQueueSubmit2` 失败�
 
 实现采用一次 Registry 原子校验、固定顺序的 Recorder 锁和一次 `vkQueueSubmit2`。每个 Recorder
 保持独立 submit 段及布局转换 preamble，整批共享帧槽、Fence 和 submission serial。单提交
-接口复用批量内部路径，避免形成两套状态机。
+保留无临时批量容器分配的快速路径，但与批量路径共享帧槽、完成和资源保活语义。
 
 ### P-03D：复测与收尾
 
