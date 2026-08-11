@@ -39,6 +39,24 @@ extern "C" granit_result granit_upload_batch_write_buffer(granit_renderer render
   }
 }
 
+extern "C" granit_result
+granit_upload_batch_write_texture(granit_renderer renderer, granit_upload_batch batch,
+                                  granit_texture texture, const void* data, uint64_t size,
+                                  const granit_texture_data_layout* layout,
+                                  const granit_texture_write_region* region) {
+  if (data == nullptr || size == 0 || layout == nullptr || region == nullptr)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  if (renderer == GRANIT_NULL_HANDLE || batch == GRANIT_NULL_HANDLE ||
+      texture == GRANIT_NULL_HANDLE)
+    return GRANIT_ERROR_INVALID_HANDLE;
+  try {
+    return granit::detail::renderer_registry::instance().upload_batch_write_texture(
+        renderer, batch, texture, data, size, *layout, *region);
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
 extern "C" granit_result granit_upload_batch_submit(granit_renderer renderer,
                                                     granit_upload_batch batch) {
   try {

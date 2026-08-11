@@ -1389,10 +1389,105 @@ granit_result renderer_registry::upload_batch_write_buffer(granit_renderer rende
       buffer_record->desc.memory_location != GRANIT_MEMORY_LOCATION_AUTOMATIC)
     return GRANIT_ERROR_UNSUPPORTED;
   try {
-    buffer_upload_entry entry{.buffer = buffer_record, .offset = offset, .data = {}};
+    upload_entry entry{.type = vulkan_upload_type::buffer,
+                       .buffer = buffer_record,
+                       .texture = {},
+                       .offset = offset,
+                       .data = {},
+                       .texture_copy = {}};
     entry.data.resize(static_cast<std::size_t>(size));
     std::memcpy(entry.data.data(), data, static_cast<std::size_t>(size));
-    batch_record->buffer_uploads.push_back(std::move(entry));
+    batch_record->uploads.push_back(std::move(entry));
+    return GRANIT_SUCCESS;
+  } catch (const std::bad_alloc&) {
+    return GRANIT_ERROR_OUT_OF_MEMORY;
+  }
+}
+
+granit_result renderer_registry::upload_batch_write_texture(
+    granit_renderer renderer, granit_upload_batch batch, granit_texture texture, const void* data,
+    std::uint64_t size, const granit_texture_data_layout& layout,
+    const granit_texture_write_region& region) {
+  std::shared_ptr<upload_batch_record> batch_record;
+  std::shared_ptr<texture_record> texture_record;
+  {
+    std::lock_guard lock{mutex_};
+    const auto found_renderer = renderers_.find(renderer);
+    if (found_renderer == renderers_.end() ||
+        handles_.find(renderer, resource_type::renderer, 0) == nullptr)
+      return GRANIT_ERROR_INVALID_HANDLE;
+    const auto& state = found_renderer->second;
+    if (handles_.find(batch, resource_type::upload_batch, state->domain()) == nullptr ||
+        handles_.find(texture, resource_type::texture, state->domain()) == nullptr)
+      return GRANIT_ERROR_INVALID_HANDLE;
+    const auto found_batch = upload_batches_.find(batch);
+    const auto found_texture = textures_.find(texture);
+    if (found_batch == upload_batches_.end() || found_texture == textures_.end() ||
+        found_batch->second->renderer != state || found_texture->second->renderer != state)
+      return GRANIT_ERROR_INVALID_HANDLE;
+    batch_record = found_batch->second;
+    texture_record = found_texture->second;
+  }
+
+  std::scoped_lock record_locks{batch_record->mutex, texture_record->mutex};
+  if (batch_record->failed || size > SIZE_MAX)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  const auto& desc = texture_record->desc;
+  const auto bytes_per_pixel = texture_bytes_per_pixel(desc.format);
+  if ((desc.usage & GRANIT_TEXTURE_USAGE_TRANSFER_DESTINATION_BIT) == 0 ||
+      desc.sample_count != GRANIT_SAMPLE_COUNT_1 || bytes_per_pixel == 0)
+    return GRANIT_ERROR_UNSUPPORTED;
+  if (region.aspect != GRANIT_TEXTURE_ASPECT_COLOR_BIT || region.width == 0 || region.height == 0 ||
+      region.depth == 0 || region.array_layer_count == 0 || region.mip_level >= desc.mip_levels ||
+      region.base_array_layer >= desc.array_layers ||
+      region.array_layer_count > desc.array_layers - region.base_array_layer)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  const auto mip_width = std::max(UINT32_C(1), desc.width >> region.mip_level);
+  const auto mip_height = std::max(UINT32_C(1), desc.height >> region.mip_level);
+  const auto mip_depth = std::max(UINT32_C(1), desc.depth >> region.mip_level);
+  if (region.x >= mip_width || region.width > mip_width - region.x || region.y >= mip_height ||
+      region.height > mip_height - region.y || region.z >= mip_depth ||
+      region.depth > mip_depth - region.z)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+
+  const std::uint64_t tight_row = std::uint64_t{region.width} * bytes_per_pixel;
+  const std::uint64_t row_pitch = layout.bytes_per_row == 0 ? tight_row : layout.bytes_per_row;
+  const std::uint64_t image_rows =
+      layout.rows_per_image == 0 ? region.height : layout.rows_per_image;
+  if (row_pitch < tight_row || row_pitch % bytes_per_pixel != 0 || image_rows < region.height)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  const std::uint64_t image_count =
+      desc.dimension == GRANIT_TEXTURE_DIMENSION_3D ? region.depth : region.array_layer_count;
+  const auto max = std::numeric_limits<std::uint64_t>::max();
+  if (image_rows > max / row_pitch || image_count - 1 > max / (image_rows * row_pitch) ||
+      region.height - 1 > max / row_pitch)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  const std::uint64_t required =
+      (image_count - 1) * image_rows * row_pitch + (region.height - 1) * row_pitch + tight_row;
+  if (layout.offset > size || required > size - layout.offset || required > SIZE_MAX)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+
+  VkBufferImageCopy copy{};
+  copy.bufferRowLength = layout.bytes_per_row == 0 ? 0 : layout.bytes_per_row / bytes_per_pixel;
+  copy.bufferImageHeight = layout.rows_per_image;
+  copy.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+  copy.imageSubresource.mipLevel = region.mip_level;
+  copy.imageSubresource.baseArrayLayer = region.base_array_layer;
+  copy.imageSubresource.layerCount = region.array_layer_count;
+  copy.imageOffset = {static_cast<std::int32_t>(region.x), static_cast<std::int32_t>(region.y),
+                      static_cast<std::int32_t>(region.z)};
+  copy.imageExtent = {region.width, region.height, region.depth};
+  try {
+    upload_entry entry{.type = vulkan_upload_type::texture,
+                       .buffer = {},
+                       .texture = texture_record,
+                       .offset = 0,
+                       .data = {},
+                       .texture_copy = copy};
+    entry.data.resize(static_cast<std::size_t>(required));
+    std::memcpy(entry.data.data(), static_cast<const std::byte*>(data) + layout.offset,
+                static_cast<std::size_t>(required));
+    batch_record->uploads.push_back(std::move(entry));
     return GRANIT_SUCCESS;
   } catch (const std::bad_alloc&) {
     return GRANIT_ERROR_OUT_OF_MEMORY;
@@ -1418,20 +1513,23 @@ granit_result renderer_registry::submit_upload_batch(granit_renderer renderer,
   std::lock_guard batch_lock{record->mutex};
   if (record->failed)
     return GRANIT_ERROR_INVALID_ARGUMENT;
-  if (record->buffer_uploads.empty())
+  if (record->uploads.empty())
     return GRANIT_ERROR_INVALID_ARGUMENT;
 
-  std::vector<vulkan_buffer_upload> uploads;
-  uploads.reserve(record->buffer_uploads.size());
-  for (const auto& upload : record->buffer_uploads) {
-    uploads.push_back({.destination = &upload.buffer->native,
+  std::vector<vulkan_upload_operation> uploads;
+  uploads.reserve(record->uploads.size());
+  for (const auto& upload : record->uploads) {
+    uploads.push_back({.type = upload.type,
+                       .buffer = upload.buffer ? &upload.buffer->native : nullptr,
+                       .texture = upload.texture ? &upload.texture->native : nullptr,
                        .destination_offset = upload.offset,
                        .data = upload.data.data(),
-                       .size = upload.data.size()});
+                       .size = upload.data.size(),
+                       .texture_copy = upload.texture_copy});
   }
-  const auto result = record->renderer->upload_buffers(uploads);
+  const auto result = record->renderer->upload_batch(uploads);
   if (result == GRANIT_SUCCESS)
-    record->buffer_uploads.clear();
+    record->uploads.clear();
   else
     record->failed = true;
   return result;
@@ -1454,7 +1552,7 @@ granit_result renderer_registry::reset_upload_batch(granit_renderer renderer,
     record = found->second;
   }
   std::lock_guard lock{record->mutex};
-  record->buffer_uploads.clear();
+  record->uploads.clear();
   record->failed = false;
   return GRANIT_SUCCESS;
 }

@@ -11,6 +11,7 @@
 #include <granit/core/types.h>
 #include <granit/renderer/buffer.h>
 #include <granit/renderer/renderer.h>
+#include <granit/renderer/texture.h>
 
 /** 一组同步批量上传操作。零值表示无效句柄。 */
 typedef granit_handle granit_upload_batch;
@@ -36,6 +37,10 @@ GRANIT_API granit_result granit_upload_batch_write_buffer(granit_renderer render
                                                           granit_upload_batch batch,
                                                           granit_buffer buffer, uint64_t offset,
                                                           const void* data, uint64_t size);
+GRANIT_API granit_result granit_upload_batch_write_texture(
+    granit_renderer renderer, granit_upload_batch batch, granit_texture texture, const void* data,
+    uint64_t size, const granit_texture_data_layout* layout,
+    const granit_texture_write_region* region);
 /** 同步提交全部写入；成功返回时 GPU 复制已经完成，Batch 可立即复用。 */
 GRANIT_API granit_result granit_upload_batch_submit(granit_renderer renderer,
                                                     granit_upload_batch batch);

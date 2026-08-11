@@ -207,6 +207,12 @@ public:
                                                         granit_upload_batch batch,
                                                         granit_buffer buffer, std::uint64_t offset,
                                                         const void* data, std::uint64_t size);
+  [[nodiscard]] granit_result upload_batch_write_texture(granit_renderer renderer,
+                                                         granit_upload_batch batch,
+                                                         granit_texture texture, const void* data,
+                                                         std::uint64_t size,
+                                                         const granit_texture_data_layout& layout,
+                                                         const granit_texture_write_region& region);
   [[nodiscard]] granit_result submit_upload_batch(granit_renderer renderer,
                                                   granit_upload_batch batch);
   [[nodiscard]] granit_result reset_upload_batch(granit_renderer renderer,
@@ -359,16 +365,19 @@ private:
     std::size_t slot_index{};
     bool submitted{};
   };
-  struct buffer_upload_entry {
+  struct upload_entry {
+    vulkan_upload_type type{vulkan_upload_type::buffer};
     std::shared_ptr<buffer_record> buffer;
+    std::shared_ptr<texture_record> texture;
     std::uint64_t offset{};
     std::vector<std::byte> data;
+    VkBufferImageCopy texture_copy{};
   };
   struct upload_batch_record {
     resource_metadata metadata;
     std::shared_ptr<renderer_state> renderer;
     std::mutex mutex;
-    std::vector<buffer_upload_entry> buffer_uploads;
+    std::vector<upload_entry> uploads;
     bool failed{};
   };
   std::unordered_map<granit_surface, std::shared_ptr<surface_record>> surfaces_;

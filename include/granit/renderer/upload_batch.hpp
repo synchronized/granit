@@ -9,6 +9,7 @@
 #include <utility>
 
 #include <granit/core/result.hpp>
+#include <granit/renderer/texture.hpp>
 #include <granit/renderer/upload_batch.h>
 
 namespace granit {
@@ -45,6 +46,26 @@ public:
                                     std::span<const std::byte> data) noexcept {
     return from_native(granit_upload_batch_write_buffer(renderer_, handle_, buffer, offset,
                                                         data.data(), data.size()));
+  }
+  [[nodiscard]] result write_texture(granit_texture texture, std::span<const std::byte> data,
+                                     texture_data_layout layout,
+                                     texture_write_region region) noexcept {
+    const granit_texture_data_layout native_layout{.offset = layout.offset,
+                                                   .bytes_per_row = layout.bytes_per_row,
+                                                   .rows_per_image = layout.rows_per_image};
+    const granit_texture_write_region native_region{.mip_level = region.mip_level,
+                                                    .base_array_layer = region.base_array_layer,
+                                                    .array_layer_count = region.array_layer_count,
+                                                    .aspect =
+                                                        static_cast<std::uint32_t>(region.aspect),
+                                                    .x = region.x,
+                                                    .y = region.y,
+                                                    .z = region.z,
+                                                    .width = region.width,
+                                                    .height = region.height,
+                                                    .depth = region.depth};
+    return from_native(granit_upload_batch_write_texture(
+        renderer_, handle_, texture, data.data(), data.size(), &native_layout, &native_region));
   }
   [[nodiscard]] result submit() noexcept {
     return from_native(granit_upload_batch_submit(renderer_, handle_));

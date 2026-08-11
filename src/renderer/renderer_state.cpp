@@ -547,14 +547,16 @@ granit_result renderer_state::upload_buffer(const vulkan_buffer_allocation& buff
 }
 
 granit_result
-renderer_state::upload_buffers(std::span<const vulkan_buffer_upload> uploads) noexcept {
+renderer_state::upload_batch(std::span<const vulkan_upload_operation> uploads) noexcept {
   if (device_lost())
     return GRANIT_ERROR_DEVICE_LOST;
   if (uploads.empty())
     return GRANIT_ERROR_INVALID_ARGUMENT;
   VkDeviceSize required{};
+  const auto alignment =
+      std::max<VkDeviceSize>(4, device_.properties().limits.optimalBufferCopyOffsetAlignment);
   for (const auto& upload : uploads) {
-    const auto aligned = (required + 3) & ~VkDeviceSize{3};
+    const auto aligned = (required + alignment - 1) & ~(alignment - 1);
     if (aligned < required || upload.size > UINT64_MAX - aligned)
       return GRANIT_ERROR_OUT_OF_MEMORY;
     required = aligned + upload.size;
@@ -572,7 +574,7 @@ renderer_state::upload_buffers(std::span<const vulkan_buffer_upload> uploads) no
 
   VkDeviceSize source_offset{};
   for (const auto& upload : uploads) {
-    source_offset = (source_offset + 3) & ~VkDeviceSize{3};
+    source_offset = (source_offset + alignment - 1) & ~(alignment - 1);
     std::memcpy(static_cast<std::byte*>(context.staging().mapped_data) + source_offset, upload.data,
                 static_cast<std::size_t>(upload.size));
     source_offset += upload.size;
@@ -584,21 +586,86 @@ renderer_state::upload_buffers(std::span<const vulkan_buffer_upload> uploads) no
   if (result != GRANIT_SUCCESS)
     return finish(result);
 
-  source_offset = 0;
   const auto& functions = device_.functions();
-  for (const auto& upload : uploads) {
-    source_offset = (source_offset + 3) & ~VkDeviceSize{3};
-    const VkBufferCopy copy{
-        .srcOffset = source_offset, .dstOffset = upload.destination_offset, .size = upload.size};
-    functions.vkCmdCopyBuffer(context.command_buffer(), context.staging().buffer,
-                              upload.destination->buffer, 1, &copy);
-    source_offset += upload.size;
+  std::vector<vulkan_image_access> pending_states;
+  try {
+    pending_states.reserve(uploads.size());
+  } catch (const std::bad_alloc&) {
+    return finish(GRANIT_ERROR_OUT_OF_MEMORY);
   }
-  result = context.end(device_);
-  if (result == GRANIT_SUCCESS)
-    result = context.reset_fence(device_);
-  if (result == GRANIT_SUCCESS) {
+  {
     std::lock_guard queue_lock{queue_mutex_};
+    try {
+      image_states_.reserve(image_states_.size() + uploads.size());
+    } catch (const std::bad_alloc&) {
+      return finish(GRANIT_ERROR_OUT_OF_MEMORY);
+    }
+    source_offset = 0;
+    for (const auto& upload : uploads) {
+      source_offset = (source_offset + alignment - 1) & ~(alignment - 1);
+      if (upload.type == vulkan_upload_type::buffer) {
+        const VkBufferCopy copy{.srcOffset = source_offset,
+                                .dstOffset = upload.destination_offset,
+                                .size = upload.size};
+        functions.vkCmdCopyBuffer(context.command_buffer(), context.staging().buffer,
+                                  upload.buffer->buffer, 1, &copy);
+      } else {
+        const auto pending =
+            std::find_if(pending_states.begin(), pending_states.end(),
+                         [&](const auto& state) { return state.image == upload.texture->image; });
+        const auto previous =
+            pending != pending_states.end()
+                ? pending
+                : std::find_if(image_states_.begin(), image_states_.end(), [&](const auto& state) {
+                    return state.image == upload.texture->image;
+                  });
+        const bool previous_is_pending = pending != pending_states.end();
+        const bool has_previous = previous_is_pending || previous != image_states_.end();
+        VkImageMemoryBarrier2 barrier{};
+        barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
+        barrier.srcStageMask =
+            has_previous ? previous->stages : VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT;
+        barrier.srcAccessMask = has_previous ? previous->access : 0;
+        barrier.dstStageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT;
+        barrier.dstAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT;
+        barrier.oldLayout = has_previous ? previous->layout : VK_IMAGE_LAYOUT_UNDEFINED;
+        barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+        barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        barrier.image = upload.texture->image;
+        barrier.subresourceRange = {upload.texture_copy.imageSubresource.aspectMask,
+                                    upload.texture_copy.imageSubresource.mipLevel, 1,
+                                    upload.texture_copy.imageSubresource.baseArrayLayer,
+                                    upload.texture_copy.imageSubresource.layerCount};
+        VkDependencyInfo dependency{};
+        dependency.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
+        dependency.imageMemoryBarrierCount = 1;
+        dependency.pImageMemoryBarriers = &barrier;
+        functions.vkCmdPipelineBarrier2(context.command_buffer(), &dependency);
+        auto copy = upload.texture_copy;
+        copy.bufferOffset = source_offset;
+        functions.vkCmdCopyBufferToImage(context.command_buffer(), context.staging().buffer,
+                                         upload.texture->image,
+                                         VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copy);
+        vulkan_image_access state{.image = upload.texture->image,
+                                  .range = {upload.texture_copy.imageSubresource.aspectMask, 0,
+                                            VK_REMAINING_MIP_LEVELS, 0, VK_REMAINING_ARRAY_LAYERS},
+                                  .layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                                  .stages = VK_PIPELINE_STAGE_2_TRANSFER_BIT,
+                                  .access = VK_ACCESS_2_TRANSFER_WRITE_BIT,
+                                  .preserve_content = true};
+        if (pending == pending_states.end())
+          pending_states.push_back(state);
+        else
+          *pending = state;
+      }
+      source_offset += upload.size;
+    }
+    result = context.end(device_);
+    if (result == GRANIT_SUCCESS)
+      result = context.reset_fence(device_);
+    if (result != GRANIT_SUCCESS)
+      return finish(result);
     VkCommandBufferSubmitInfo command_info{};
     command_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO;
     command_info.commandBuffer = context.command_buffer();
@@ -608,6 +675,17 @@ renderer_state::upload_buffers(std::span<const vulkan_buffer_upload> uploads) no
     submit_info.pCommandBufferInfos = &command_info;
     result = map_vulkan_result(
         functions.vkQueueSubmit2(device_.graphics_queue(), 1, &submit_info, context.fence()));
+    if (result == GRANIT_SUCCESS) {
+      for (const auto& state : pending_states) {
+        const auto found =
+            std::find_if(image_states_.begin(), image_states_.end(),
+                         [&](const auto& current) { return current.image == state.image; });
+        if (found == image_states_.end())
+          image_states_.push_back(state);
+        else
+          *found = state;
+      }
+    }
   }
   if (result != GRANIT_SUCCESS) {
     static_cast<void>(context.restore_signaled_fence(device_));

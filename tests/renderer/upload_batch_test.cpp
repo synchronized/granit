@@ -34,7 +34,16 @@ TEST_CASE("Upload Batch 合并 Buffer 写入并支持复用", "[upload_batch][bu
 
   std::array<std::byte, 16> first{};
   std::array<std::byte, 32> second{};
+  std::array<std::byte, 4 * 4 * 4> pixels{};
+  granit::texture texture;
+  REQUIRE(texture.initialize(renderer.native_handle(),
+                             {.format = granit::texture_format::rgba8_unorm,
+                              .usage = granit::texture_usage::transfer_destination,
+                              .width = 4,
+                              .height = 4}) == granit::result::success);
   REQUIRE(batch.write_buffer(buffer.native_handle(), 0, first) == granit::result::success);
+  REQUIRE(batch.write_texture(texture.native_handle(), pixels, {}, {.width = 4, .height = 4}) ==
+          granit::result::success);
   REQUIRE(batch.write_buffer(buffer.native_handle(), 64, second) == granit::result::success);
   REQUIRE(batch.submit() == granit::result::success);
 
@@ -61,6 +70,28 @@ TEST_CASE("Upload Batch 在公开 Buffer 句柄销毁后仍保活资源", "[uplo
   std::array<std::byte, 16> data{};
   REQUIRE(batch.write_buffer(buffer.native_handle(), 0, data) == granit::result::success);
   REQUIRE(buffer.reset() == granit::result::success);
+  CHECK(batch.submit() == granit::result::success);
+}
+
+TEST_CASE("Upload Batch 在公开 Texture 句柄销毁后仍保活资源", "[upload_batch][texture][lifetime]") {
+  granit::renderer renderer;
+  const auto initialized = renderer.initialize({.application_name = "granit-upload-texture"});
+  if (unavailable(initialized))
+    SKIP("当前运行环境没有满足要求的 Vulkan 设备");
+  REQUIRE(initialized == granit::result::success);
+
+  granit::texture texture;
+  REQUIRE(texture.initialize(renderer.native_handle(),
+                             {.format = granit::texture_format::rgba8_unorm,
+                              .usage = granit::texture_usage::transfer_destination,
+                              .width = 4,
+                              .height = 4}) == granit::result::success);
+  granit::upload_batch batch;
+  REQUIRE(batch.initialize(renderer.native_handle()) == granit::result::success);
+  std::array<std::byte, 4 * 4 * 4> pixels{};
+  REQUIRE(batch.write_texture(texture.native_handle(), pixels, {}, {.width = 4, .height = 4}) ==
+          granit::result::success);
+  REQUIRE(texture.reset() == granit::result::success);
   CHECK(batch.submit() == granit::result::success);
 }
 

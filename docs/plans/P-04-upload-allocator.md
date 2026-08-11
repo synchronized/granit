@@ -69,7 +69,7 @@ P-04A 已由 `c7f7b63` 完成。Windows Clang Release 复测见
 
 ## P-04B：显式同步批量上传
 
-状态：进行中（Buffer 路径已实现，Texture 路径和基准待完成）。
+状态：进行中（Buffer/Texture 路径已实现，基准待完成）。
 
 P-04A 已证明对象复用有效。P-04B 首先提供同步 Upload Batch：写入调用立即把源数据复制到
 Batch 持有的 staging 内存，`submit` 将整批命令合并为一次 Queue 提交并等待完成。成功返回后
