@@ -6,7 +6,7 @@
 ## 元数据
 
 - 设计状态：已确认
-- 实现状态：进行中（P-03C 已实现，进入 P-03D）
+- 实现状态：已完成
 - 路线图任务：P-03
 - 优先级：P1
 - 前置依赖：P-02
@@ -99,6 +99,10 @@ pending 状态、frames-in-flight 槽位分配、部分 `vkQueueSubmit2` 失败�
 
 ### P-03D：复测与收尾
 
+状态：已完成。三轮 Release 复测见[批量提交结果][p03d-result]。4 线程批量提交相对逐个提交
+平均吞吐提升约 31.9%，单位 Recorder 的归一化 P99 从 155～169 微秒降至约 8.7～13.4 微秒；
+单提交 1 线程相对 P-02 平均值约回归 4.9%，处于验收波动范围内。
+
 - 使用 P-02B、P-02C2 和 P-02D 的相同环境及参数复测。
 - 至少完整重复 3 次，记录平均值、范围和 Queue 单次提交 P50/P95/P99。
 - 比较吞吐、尾延迟和单线程回归；任何优化不得只改善诊断型无效查询而恶化混合工作负载。
@@ -122,3 +126,4 @@ pending 状态、frames-in-flight 槽位分配、部分 `vkQueueSubmit2` 失败�
 - 若优化收益落在重复波动范围内，应回退复杂化改动并保留测量结论。
 
 [p03a-result]: ../../benchmarks/results/2026-08-11-windows-xperf-contention-attribution-7bfa2ee.md
+[p03d-result]: ../../benchmarks/results/2026-08-11-windows-clang-batch-submission-e7cce95.md
