@@ -6,7 +6,7 @@
 ## 元数据
 
 - 设计状态：已确认首版边界
-- 实现状态：进行中（H-03A～H-03E、H-03F1、H-03F2a 已完成）
+- 实现状态：已完成（H-03A～H-03F）
 - 路线图任务：H-03
 - 优先级：P2
 - 前置依赖：H-01、H-02
@@ -96,8 +96,8 @@ CPU 参考函数与 Shader 必须共享公式说明和固定测试向量。允�
    贯通，并验证 sRGB/线性格式语义。
 5. **H-03E（已完成）**：已封装显式 View/Object/Directional Light 输入，并建立独立 Render
    Graph Pass 适配目标，不创建 Scene 或 Light 管理器。
-6. **H-03F（进行中）**：H-03F1 已完成数值回归、适配器生命周期测试、CPU 性能基线以及
-   H-04/H-05 输入契约；H-03F2a 已补 Texture Readback，H-03F2b 接入 PBR GPU 像素回归。
+6. **H-03F（已完成）**：已完成数值与 GPU 像素回归、适配器生命周期测试、CPU 性能基线以及
+   H-04/H-05 输入契约。
 
 ## 验收标准
 
@@ -267,3 +267,14 @@ Buffer 容量和 offset 对齐；Vulkan 后端通过统一状态跟踪将源 Ima
 集成测试将固定 2x2 RGBA8 数据写入 Texture，经命令复制到 readback Buffer，等待 Recorder 完成后
 映射并逐字节比较。该测试闭合了通用读回基础设施；H-03F2b 仍需把相同步骤接入 PBR 离屏颜色目标，
 并定义线性输出量化和像素误差范围。
+
+## H-03F2b 实现记录
+
+PBR 离屏示例的 RGBA8 颜色目标现带 `TRANSFER_SOURCE` usage。绘制结束后，同一 Recorder 将完整颜色
+目标复制到 readback Buffer；提交完成后检查三角形中心像素与覆盖外的清屏像素。中心参考值由 CPU
+BRDF 使用相同材质参数和默认法线纹理值计算，再量化到 UNORM8；RGB 与 Alpha 允许最多 2 个整数级
+误差，清屏色允许 1 个整数级误差。
+
+首次启用读回时，回归发现原示例的 `counter_clockwise + back cull` 会在当前正高度 Vulkan viewport
+下剔除整个三角形。PBR Pipeline 与源材质描述已改为 clockwise front face，像素测试因此同时覆盖
+实际图元覆盖、默认纹理采样、PBR Shader 数值和颜色附件存储。H-03 首版至此完成。

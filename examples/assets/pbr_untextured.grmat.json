@@ -27,7 +27,7 @@
         "vertex_buffers": [],
         "primitive": {
           "topology": "triangle_list",
-          "front_face": "counter_clockwise",
+          "front_face": "clockwise",
           "cull_mode": "back",
           "polygon_mode": "fill"
         },
@@ -46,7 +46,7 @@
         "vertex_buffers": [],
         "primitive": {
           "topology": "triangle_list",
-          "front_face": "counter_clockwise",
+          "front_face": "clockwise",
           "cull_mode": "back",
           "polygon_mode": "fill"
         },

@@ -6,11 +6,15 @@
 #include "material/material_template_gpu.h"
 #include "material/pbr_default_resources.h"
 #include "material/pbr_material_schema.h"
+#include "material/pbr_reference.h"
 
 #include <granit/granit.hpp>
 
+#include <algorithm>
 #include <array>
 #include <bit>
+#include <cmath>
+#include <cstdint>
 #include <cstring>
 #include <fstream>
 #include <iostream>
@@ -45,6 +49,7 @@ bool make_package(granit::material::material_package& package) {
                    .spirv = load_shader("pbr_textured.frag.spv")}},
       .pipeline = {}};
   variant.pipeline.primitive.cull_mode = GRANIT_CULL_MODE_BACK;
+  variant.pipeline.primitive.front_face = GRANIT_FRONT_FACE_CLOCKWISE;
   variant.pipeline.depth.test_enabled = 1;
   variant.pipeline.depth.write_enabled = 1;
   variant.pipeline.depth.compare = GRANIT_COMPARE_OPERATION_LESS_EQUAL;
@@ -102,6 +107,20 @@ bool set_parameter(granit::material::material_gpu_instance& instance, std::strin
   const auto bytes = std::bit_cast<std::array<std::byte, sizeof(value)>>(value);
   return instance.set(granit::material::make_parameter_id(name), type, bytes) ==
          granit::material::metadata_error::none;
+}
+
+std::uint8_t quantize_unorm(float value) {
+  return static_cast<std::uint8_t>(std::lround(std::clamp(value, 0.0F, 1.0F) * 255.0F));
+}
+
+bool near_pixel(const std::uint8_t* actual, const std::array<std::uint8_t, 4>& expected,
+                std::uint8_t tolerance) {
+  for (std::size_t channel = 0; channel < expected.size(); ++channel) {
+    const auto difference = std::abs(static_cast<int>(actual[channel]) - expected[channel]);
+    if (difference > tolerance)
+      return false;
+  }
+  return true;
 }
 
 } // namespace
@@ -174,15 +193,25 @@ int main() {
         granit_texture_create_with_default_view(renderer.native_handle(), &desc, &texture, &view));
   };
   if (granit::succeeded(result))
-    result =
-        create_attachment(GRANIT_TEXTURE_FORMAT_RGBA8_UNORM,
-                          GRANIT_TEXTURE_USAGE_COLOR_ATTACHMENT_BIT, color_texture, color_view);
+    result = create_attachment(GRANIT_TEXTURE_FORMAT_RGBA8_UNORM,
+                               GRANIT_TEXTURE_USAGE_COLOR_ATTACHMENT_BIT |
+                                   GRANIT_TEXTURE_USAGE_TRANSFER_SOURCE_BIT,
+                               color_texture, color_view);
   if (granit::succeeded(result))
     result = create_attachment(GRANIT_TEXTURE_FORMAT_D32_FLOAT,
                                GRANIT_TEXTURE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, depth_texture,
                                depth_view);
 
   granit::command_recorder recorder;
+  constexpr std::uint32_t render_size = 256;
+  constexpr std::uint64_t readback_size = render_size * render_size * 4;
+  granit::buffer readback;
+  if (granit::succeeded(result)) {
+    result = readback.initialize(renderer.native_handle(),
+                                 {.size = readback_size,
+                                  .usage = granit::buffer_usage::transfer_destination,
+                                  .location = granit::memory_location::readback});
+  }
   if (granit::succeeded(result))
     result = recorder.initialize(renderer.native_handle());
   if (granit::succeeded(result))
@@ -212,12 +241,52 @@ int main() {
     result = recorder.draw(3);
   if (granit::succeeded(result))
     result = recorder.end_rendering();
+  const granit_texture_data_layout readback_layout{};
+  const granit_texture_write_region readback_region{.mip_level = 0,
+                                                    .base_array_layer = 0,
+                                                    .array_layer_count = 1,
+                                                    .aspect = GRANIT_TEXTURE_ASPECT_COLOR_BIT,
+                                                    .x = 0,
+                                                    .y = 0,
+                                                    .z = 0,
+                                                    .width = render_size,
+                                                    .height = render_size,
+                                                    .depth = 1};
+  if (granit::succeeded(result)) {
+    result = recorder.copy_texture_to_buffer(color_texture, readback.native_handle(),
+                                             readback_layout, readback_region);
+  }
   if (granit::succeeded(result))
     result = recorder.end();
   if (granit::succeeded(result))
     result = recorder.submit();
   if (granit::succeeded(result))
     result = recorder.reset();
+
+  if (granit::succeeded(result)) {
+    void* mapped = nullptr;
+    result = readback.map(0, readback_size, &mapped);
+    if (granit::succeeded(result)) {
+      const auto* pixels = static_cast<const std::uint8_t*>(mapped);
+      const auto reference = granit::material::evaluate_pbr_direct_light(
+          {.base_color = {0.8F, 0.2F, 0.1F}, .metallic = 0.5F, .perceptual_roughness = 0.5F},
+          {.normal = {1.0F / 255.0F, 1.0F / 255.0F, 1.0F}});
+      const std::array expected_center{quantize_unorm(reference.x), quantize_unorm(reference.y),
+                                       quantize_unorm(reference.z), std::uint8_t{255}};
+      constexpr std::array<std::uint8_t, 4> expected_clear{8, 8, 13, 255};
+      const auto* center = pixels + (128 * render_size + 128) * 4;
+      const auto* corner = pixels;
+      if (!near_pixel(center, expected_center, 2) || !near_pixel(corner, expected_clear, 1)) {
+        std::cerr << "PBR 像素回归失败：中心像素=" << static_cast<unsigned>(center[0]) << ','
+                  << static_cast<unsigned>(center[1]) << ',' << static_cast<unsigned>(center[2])
+                  << ',' << static_cast<unsigned>(center[3]) << '\n';
+        result = granit::result::internal;
+      }
+      const auto unmap_result = readback.unmap();
+      if (granit::succeeded(result))
+        result = unmap_result;
+    }
+  }
 
   if (depth_view != GRANIT_NULL_HANDLE)
     static_cast<void>(granit_texture_view_destroy(renderer.native_handle(), depth_view));
@@ -231,6 +300,6 @@ int main() {
     std::cerr << "离屏 PBR 绘制失败：" << granit::result_message(result) << '\n';
     return 1;
   }
-  std::cout << "默认纹理 PBR 离屏绘制完成\n";
+  std::cout << "默认纹理 PBR 离屏绘制及像素回归完成\n";
   return 0;
 }
