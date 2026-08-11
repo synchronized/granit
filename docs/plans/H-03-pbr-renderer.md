@@ -6,7 +6,7 @@
 ## 元数据
 
 - 设计状态：已确认首版边界
-- 实现状态：进行中（H-03A～H-03E 已完成）
+- 实现状态：进行中（H-03A～H-03E、H-03F1 已完成）
 - 路线图任务：H-03
 - 优先级：P2
 - 前置依赖：H-01、H-02
@@ -96,7 +96,8 @@ CPU 参考函数与 Shader 必须共享公式说明和固定测试向量。允�
    贯通，并验证 sRGB/线性格式语义。
 5. **H-03E（已完成）**：已封装显式 View/Object/Directional Light 输入，并建立独立 Render
    Graph Pass 适配目标，不创建 Scene 或 Light 管理器。
-6. **H-03F**：增加端到端图像/数值回归、资源生命周期测试和性能基线，整理 H-04/H-05 输入契约。
+6. **H-03F（进行中）**：H-03F1 已完成数值回归、适配器生命周期测试、CPU 性能基线以及
+   H-04/H-05 输入契约；H-03F2 等待 Texture Readback 后补 GPU 像素回归。
 
 ## 验收标准
 
@@ -230,3 +231,28 @@ Light 对象或场景集合。矩阵采用与 HLSL `column-major float4x4` 一�
 再将常量交给调用方提供的录制回调。适配器不保存 Scene、Camera、Light 集合，不决定 Mesh 来源，
 也不隐藏实际 Draw。测试覆盖附件解析、方向规范化、对象常量传递和不完整描述拒绝。H-03E 至此
 完成，下一步进入 H-03F 的端到端回归、生命周期与性能基线。
+
+## H-03F1 实现记录
+
+固定 CPU BRDF 向量继续作为材质语义的数值回归基准。PBR Render Graph 测试新增所有权边界：
+`add_pbr_graph_pass` 在加入图时复制并打包 View、Light 和 Object 输入，调用方随后修改原始描述不会
+改变已记录 Pass；录制回调及其捕获由 Graph 持有，并随 Graph 销毁释放。导入的 Texture View 仍由
+调用方持有，适配器不销毁外部资源。
+
+`granit_pbr_benchmarks` 建立纯 CPU 基线，覆盖 100 个 Object 的输入复制、常量打包、Pass 加入与
+图编译。首份 Windows Clang Release 基线 P50 为 7.402 us/Pass、P95 为 7.573 us/Pass。该结果不
+包含 GPU 录制、提交或 Draw，只用于同环境回归；对象布局、批量打包或 Graph 存储方式变化，以及
+P50/P95 稳定退化超过 10% 时应复测。
+
+H-04/H-05 必须沿用以下输入契约：
+
+- View 与 Object 继续由调用方逐 Pass 显式提供，不引入 Scene、Camera 或 Transform 所有权。
+- H-04 可将单方向光扩展为显式光源数组或光源 Buffer，但不得改变 H-03 常量及 Group 0/2 的含义；
+  光源筛选和分块/聚簇结果应作为独立 Pass 资源。
+- H-05 的阴影、IBL、探针和 Pass 数据使用 Group 3 或独立 Render Graph 资源，不向 PBR 材质 Group 1
+  塞入场景级状态。
+- 新增高层模块持有自己的资源和缓存；`granit::pbr` 只消费句柄与值数据，核心 Renderer 不反向依赖
+  PBR、Scene 或 Render Graph。
+
+H-03F2 仍需先补齐 Texture 到 Readback Buffer 的公开复制能力，再用固定离屏场景比较 Shader
+像素与 CPU 参考值。当前端到端测试只证明真实 Draw、提交和资源回收成功，不宣称已有 GPU 像素回归。

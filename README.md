@@ -79,6 +79,8 @@ Texture/Sampler Bind Group 事务式替换，以及 DXC/SPIR-V 反射工具原�
 已经贯通，显式 View/Object/Directional Light 数据已有固定 GPU 布局。材质模块仍是尚未安装导出
 的内部原型。串行 Render Graph 已整理为 `granit::render_graph` 内部模块，独立 `granit::pbr`
 适配层可声明 PBR 附件访问并向录制回调传递打包后的常量。
+H-03F1 已补充适配器输入/回调生命周期测试与 PBR Pass CPU 性能基线；GPU 像素回归仍等待公开的
+Texture Readback 能力，不能将当前真实 Draw 测试视为图像一致性验证。
 具体顺序见 [docs/roadmap.md](docs/roadmap.md)。
 
 ## 快速开始

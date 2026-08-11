@@ -105,3 +105,22 @@ target_link_libraries(granit_material_benchmarks PRIVATE granit::material)
 granit_target_compile_warnings(granit_material_benchmarks)
 granit_target_output_directories(granit_material_benchmarks)
 set_target_properties(granit_material_benchmarks PROPERTIES FOLDER "Benchmarks")
+
+add_executable(granit_pbr_benchmarks pbr_main.cpp)
+target_compile_features(granit_pbr_benchmarks PRIVATE cxx_std_20)
+target_compile_options(
+  granit_pbr_benchmarks
+  PRIVATE $<$<COMPILE_LANG_AND_ID:CXX,MSVC>:/utf-8>
+)
+target_compile_definitions(
+  granit_pbr_benchmarks
+  PRIVATE
+    GRANIT_BENCHMARK_COMPILER="${CMAKE_CXX_COMPILER_ID}-${CMAKE_CXX_COMPILER_VERSION}"
+    GRANIT_BENCHMARK_LINK_MODE="$<IF:$<BOOL:${BUILD_SHARED_LIBS}>,shared,static>"
+    GRANIT_BENCHMARK_REVISION="${granit_benchmark_revision}"
+    GRANIT_BENCHMARK_SYSTEM="${CMAKE_SYSTEM_NAME}-${CMAKE_SYSTEM_PROCESSOR}"
+)
+target_link_libraries(granit_pbr_benchmarks PRIVATE granit::pbr)
+granit_target_compile_warnings(granit_pbr_benchmarks)
+granit_target_output_directories(granit_pbr_benchmarks)
+set_target_properties(granit_pbr_benchmarks PROPERTIES FOLDER "Benchmarks")

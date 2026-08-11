@@ -50,4 +50,8 @@ cmake --build --preset windows-clang-release --target granit_benchmarks
 `direct_execute`、导入资源图 `graph_execute` 和瞬态 Buffer 图 `transient_execute`。使用
 `--passes` 控制图规模，执行类结果表示每张图的成本，编译结果表示每次编译的成本。
 
+`granit_pbr_benchmarks` 用于 H-03F，测量把显式 View、方向光和指定数量 Object 打包为 PBR 常量、
+加入 Render Graph 并完成图编译的 CPU 成本。使用 `--objects` 控制每个 Pass 的对象数量；该用例
+不包含 GPU 录制、提交和实际 Draw。
+
 已提交的基线摘要见 [results/README.md](results/README.md)。

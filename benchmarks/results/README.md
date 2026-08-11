@@ -11,3 +11,4 @@
 
 - [Render Graph 首份性能基线](2026-08-11-windows-clang-render-graph-6bac5a5.md)
 - [材质系统首份性能基线](2026-08-11-windows-clang-material-8ef28fa.md)
+- [PBR Pass 首份 CPU 性能基线](2026-08-12-windows-clang-pbr-pass-6f9bf01.md)
