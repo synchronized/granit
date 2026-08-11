@@ -70,7 +70,8 @@ Render Graph 记录了外部执行器扩展点和量化重评条件。P-06 已�
 模块，首版采用串行、单队列执行且不做瞬态内存别名。H-01A～H-01D 已完成纯 CPU 图编译、
 Buffer/Texture View 导入、单 Recorder 串行执行，以及瞬态资源按首末使用点创建回收；这些原型
 当前不进入核心动态库。窗口输出、诊断和性能复核已经完成；现阶段不缓存或并行化，瞬态资源池
-留待真实重复帧验证。
+留待真实重复帧验证。H-02A 已确认材质模板、实例、参数布局、Shader 变体和离线构建边界，下一步
+实现纯 CPU 材质元数据与实例 shadow buffer。
 具体顺序见 [docs/roadmap.md](docs/roadmap.md)。
 
 ## 快速开始
@@ -188,6 +189,7 @@ if (granit::failed(result)) {
 - [P-04 持久化上传与 Upload Batch](docs/plans/P-04-upload-allocator.md)。
 - [P-05 线程池与外部执行器边界](docs/plans/P-05-executor-boundary.md)。
 - [P-06 Render Graph 职责与模块边界](docs/plans/P-06-render-graph-boundary.md)。
+- [H-02 材质参数、Shader 变体与离线构建](docs/plans/H-02-material-system.md)。
 - [docs/plans/F-07-recovery-boundaries.md](docs/plans/F-07-recovery-boundaries.md)：窗口帧恢复边界计划。
 - [docs/renderer.md](docs/renderer.md)：公共 renderer C/C++ API 与生命周期。
 - [docs/render-target.md](docs/render-target.md)：颜色与深度/模板 Attachment 值类型。
