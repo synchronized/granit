@@ -11,6 +11,7 @@
 
 #include <functional>
 #include <span>
+#include <string>
 #include <vector>
 
 #include "render_graph/graph_compiler.h"
@@ -71,26 +72,46 @@ struct execution_result {
   execution_phase phase = execution_phase::none;
   compile_error graph_error = compile_error::none;
   pass_id error_pass = invalid_pass_id;
+  resource_id error_resource = invalid_resource_id;
+  std::string error_pass_name;
+  std::string error_resource_name;
   granit_command_recorder recorder = GRANIT_NULL_HANDLE;
 
   [[nodiscard]] bool succeeded() const noexcept { return result == GRANIT_SUCCESS; }
 };
 
+struct diagnostic_graph {
+  compile_result compilation;
+  std::vector<std::string> pass_names;
+  std::vector<std::string> resource_names;
+};
+
 class serial_graph {
 public:
-  [[nodiscard]] resource_id import_buffer(granit_buffer buffer, bool exported = false);
-  [[nodiscard]] resource_id import_texture_view(granit_texture_view view, bool exported = false);
-  [[nodiscard]] resource_id create_transient_buffer(const granit_buffer_desc& desc);
-  [[nodiscard]] resource_id create_transient_texture(const granit_texture_desc& desc);
-  [[nodiscard]] pass_id add_pass(pass_desc desc, pass_callback callback);
+  [[nodiscard]] resource_id import_buffer(granit_buffer buffer, bool exported = false,
+                                          std::string name = {});
+  [[nodiscard]] resource_id import_texture_view(granit_texture_view view, bool exported = false,
+                                                std::string name = {});
+  [[nodiscard]] resource_id create_transient_buffer(const granit_buffer_desc& desc,
+                                                    std::string name = {});
+  [[nodiscard]] resource_id create_transient_texture(const granit_texture_desc& desc,
+                                                     std::string name = {});
+  [[nodiscard]] pass_id add_pass(pass_desc desc, pass_callback callback, std::string name = {});
   [[nodiscard]] bool add_dependency(pass_id before, pass_id after);
   [[nodiscard]] execution_result execute(granit_renderer renderer) const;
+  [[nodiscard]] execution_result execute_frame(granit_renderer renderer, granit_frame frame) const;
+  [[nodiscard]] diagnostic_graph diagnostics() const;
 
 private:
+  [[nodiscard]] execution_result execute_internal(granit_renderer renderer,
+                                                  granit_frame frame) const;
+
   graph_compiler compiler_;
   std::vector<imported_resource> resources_;
   std::vector<pass_desc> passes_;
   std::vector<pass_callback> callbacks_;
+  std::vector<std::string> resource_names_;
+  std::vector<std::string> pass_names_;
 };
 
 } // namespace granit::render_graph

@@ -11,7 +11,11 @@ namespace granit::render_graph {
 namespace {
 
 execution_result fail(granit_result result, execution_phase phase, pass_id pass = invalid_pass_id) {
-  return {.result = result, .phase = phase, .error_pass = pass};
+  execution_result failure;
+  failure.result = result;
+  failure.phase = phase;
+  failure.error_pass = pass;
+  return failure;
 }
 
 void destroy_recorder(granit_renderer renderer, granit_command_recorder recorder) noexcept {
@@ -50,38 +54,46 @@ granit_texture_view pass_context::texture_view(resource_id resource) const noexc
   return imported == nullptr ? GRANIT_NULL_HANDLE : imported->handle;
 }
 
-resource_id serial_graph::import_buffer(granit_buffer buffer, bool exported) {
+resource_id serial_graph::import_buffer(granit_buffer buffer, bool exported, std::string name) {
   if (buffer == GRANIT_NULL_HANDLE) {
     return invalid_resource_id;
   }
   resources_.push_back({.type = imported_resource_type::buffer, .handle = buffer});
+  resource_names_.push_back(std::move(name));
   return compiler_.add_resource({.imported = true, .exported = exported});
 }
 
-resource_id serial_graph::import_texture_view(granit_texture_view view, bool exported) {
+resource_id serial_graph::import_texture_view(granit_texture_view view, bool exported,
+                                              std::string name) {
   if (view == GRANIT_NULL_HANDLE) {
     return invalid_resource_id;
   }
   resources_.push_back({.type = imported_resource_type::texture_view, .handle = view});
+  resource_names_.push_back(std::move(name));
   return compiler_.add_resource({.imported = true, .exported = exported});
 }
 
-resource_id serial_graph::create_transient_buffer(const granit_buffer_desc& desc) {
+resource_id serial_graph::create_transient_buffer(const granit_buffer_desc& desc,
+                                                  std::string name) {
   resources_.push_back(
       {.type = imported_resource_type::buffer, .transient = true, .buffer_desc = desc});
+  resource_names_.push_back(std::move(name));
   return compiler_.add_resource();
 }
 
-resource_id serial_graph::create_transient_texture(const granit_texture_desc& desc) {
+resource_id serial_graph::create_transient_texture(const granit_texture_desc& desc,
+                                                   std::string name) {
   resources_.push_back(
       {.type = imported_resource_type::texture_view, .transient = true, .texture_desc = desc});
+  resource_names_.push_back(std::move(name));
   return compiler_.add_resource();
 }
 
-pass_id serial_graph::add_pass(pass_desc desc, pass_callback callback) {
+pass_id serial_graph::add_pass(pass_desc desc, pass_callback callback, std::string name) {
   const auto pass = compiler_.add_pass(desc);
   passes_.push_back(std::move(desc));
   callbacks_.push_back(std::move(callback));
+  pass_names_.push_back(std::move(name));
   return pass;
 }
 
@@ -90,6 +102,24 @@ bool serial_graph::add_dependency(pass_id before, pass_id after) {
 }
 
 execution_result serial_graph::execute(granit_renderer renderer) const {
+  return execute_internal(renderer, GRANIT_NULL_HANDLE);
+}
+
+execution_result serial_graph::execute_frame(granit_renderer renderer, granit_frame frame) const {
+  if (frame == GRANIT_NULL_HANDLE) {
+    return fail(GRANIT_ERROR_INVALID_HANDLE, execution_phase::submit);
+  }
+  return execute_internal(renderer, frame);
+}
+
+diagnostic_graph serial_graph::diagnostics() const {
+  return {.compilation = compiler_.compile(),
+          .pass_names = pass_names_,
+          .resource_names = resource_names_};
+}
+
+execution_result serial_graph::execute_internal(granit_renderer renderer,
+                                                granit_frame frame) const {
   if (renderer == GRANIT_NULL_HANDLE) {
     return fail(GRANIT_ERROR_INVALID_HANDLE, execution_phase::create_recorder);
   }
@@ -99,11 +129,30 @@ execution_result serial_graph::execute(granit_renderer renderer) const {
     auto result =
         fail(GRANIT_ERROR_INVALID_ARGUMENT, execution_phase::compile, compiled.error_pass);
     result.graph_error = compiled.error;
+    result.error_resource = compiled.error_resource;
+    if (compiled.error_pass < pass_names_.size()) {
+      result.error_pass_name = pass_names_[compiled.error_pass];
+    }
+    if (compiled.error_resource < resource_names_.size()) {
+      result.error_resource_name = resource_names_[compiled.error_resource];
+    }
     return result;
   }
   if (compiled.execution_order.empty()) {
     return {};
   }
+  const auto fail_at = [&](granit_result value, execution_phase phase, pass_id pass,
+                           resource_id resource = invalid_resource_id) {
+    auto failure = fail(value, phase, pass);
+    failure.error_resource = resource;
+    if (pass < pass_names_.size()) {
+      failure.error_pass_name = pass_names_[pass];
+    }
+    if (resource < resource_names_.size()) {
+      failure.error_resource_name = resource_names_[resource];
+    }
+    return failure;
+  };
 
   auto resources = resources_;
   std::vector<granit_texture> transient_textures(resources.size(), GRANIT_NULL_HANDLE);
@@ -170,13 +219,14 @@ execution_result serial_graph::execute(granit_renderer renderer) const {
       if (result != GRANIT_SUCCESS) {
         destroy_recorder(renderer, recorder);
         static_cast<void>(destroy_resources());
-        return fail(result, execution_phase::create_resources, pass);
+        return fail_at(result, execution_phase::create_resources, pass,
+                       static_cast<resource_id>(resource_index));
       }
     }
     if (!callbacks_[pass]) {
       destroy_recorder(renderer, recorder);
       static_cast<void>(destroy_resources());
-      return fail(GRANIT_ERROR_INVALID_ARGUMENT, execution_phase::record_pass, pass);
+      return fail_at(GRANIT_ERROR_INVALID_ARGUMENT, execution_phase::record_pass, pass);
     }
     pass_context context(renderer, recorder, passes_[pass].accesses, resources);
     try {
@@ -189,7 +239,7 @@ execution_result serial_graph::execute(granit_renderer renderer) const {
     if (result != GRANIT_SUCCESS) {
       destroy_recorder(renderer, recorder);
       static_cast<void>(destroy_resources());
-      return fail(result, execution_phase::record_pass, pass);
+      return fail_at(result, execution_phase::record_pass, pass);
     }
     for (std::size_t resource_index = resources.size(); resource_index > 0; --resource_index) {
       const auto index = resource_index - 1;
@@ -201,7 +251,8 @@ execution_result serial_graph::execute(granit_renderer renderer) const {
       if (result != GRANIT_SUCCESS) {
         destroy_recorder(renderer, recorder);
         static_cast<void>(destroy_resources());
-        return fail(result, execution_phase::destroy_resources, pass);
+        return fail_at(result, execution_phase::destroy_resources, pass,
+                       static_cast<resource_id>(index));
       }
     }
   }
@@ -212,13 +263,17 @@ execution_result serial_graph::execute(granit_renderer renderer) const {
     static_cast<void>(destroy_resources());
     return fail(result, execution_phase::end_recorder);
   }
-  result = granit_command_recorder_submit(renderer, recorder);
+  result = frame == GRANIT_NULL_HANDLE
+               ? granit_command_recorder_submit(renderer, recorder)
+               : granit_command_recorder_submit_frame(renderer, recorder, frame);
   if (result != GRANIT_SUCCESS) {
     destroy_recorder(renderer, recorder);
     static_cast<void>(destroy_resources());
     return fail(result, execution_phase::submit);
   }
-  return {.recorder = recorder};
+  execution_result success;
+  success.recorder = recorder;
+  return success;
 }
 
 } // namespace granit::render_graph

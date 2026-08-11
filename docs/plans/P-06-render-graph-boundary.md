@@ -90,7 +90,7 @@ Render Graph 只声明“需要怎样使用资源”，不建立第二套 Vulkan
 2. **H-01B：导入资源与串行执行（已完成）**——已接入 Buffer、Texture View 和单个
    Command Recorder 的串行执行原型。
 3. **H-01C：瞬态资源生命周期（已完成）**——按首末使用创建和回收独立资源，不做内存别名。
-4. **H-01D：窗口输出与诊断**——接入 Backbuffer、错误上下文和可导出的图结构。
+4. **H-01D：窗口输出与诊断（已完成）**——已接入 Backbuffer、错误上下文和可导出的图结构。
 5. **H-01E：性能复核**——测量编译、录制、提交及资源创建成本，再决定缓存、池化或并行化。
 
 ## 后续重新评估项
@@ -145,6 +145,19 @@ H-01C 支持用现有 `granit_buffer_desc` 和 `granit_texture_desc` 声明瞬�
 部分创建失败、Pass 失败或 Recorder 失败时，图层会先终止未提交 Recorder，再逆序回收所有已经
 创建的瞬态资源。被裁剪且从未使用的瞬态资源不会被创建。当前每个逻辑资源仍对应独立 GPU
 分配，不进行资源池复用或内存别名。
+
+## H-01D 实现记录
+
+H-01D 复用 Swapchain Backbuffer 已有的非拥有 Texture View 句柄。调用者仍负责 acquire、查询对应
+Backbuffer 和最终 present；图只导入 View，并通过 `execute_frame` 把同一个 Frame 令牌交给现有
+`granit_command_recorder_submit_frame`。窗口事件、最小化、重建和取消策略继续由调用者处理。
+
+图资源和 Pass 可携带不参与正确性判断的诊断名称。诊断快照包含编译结果、保留 Pass 的稳定执行
+顺序、依赖边、资源首末使用区间及名称；执行错误额外记录阶段、Pass ID、资源 ID 和已有名称。
+名称与诊断对象仍属于内部 C++ 原型，不构成公共 ABI。
+
+Win32 集成测试覆盖 acquire、导入 Backbuffer、图内 Dynamic Rendering、Frame 提交和 present，
+从而确认窗口输出没有建立第二套资源或提交路径。
 
 ## P-06 完成条件
 

@@ -179,6 +179,16 @@ compile_result graph_compiler::compile() const {
 
   compile_result result;
   result.resource_lifetimes.resize(resources_.size());
+  for (std::size_t pass_index = 0; pass_index < incoming.size(); ++pass_index) {
+    if (!required[pass_index]) {
+      continue;
+    }
+    for (const auto dependency : incoming[pass_index]) {
+      if (required[dependency]) {
+        result.dependencies.push_back({dependency, static_cast<pass_id>(pass_index)});
+      }
+    }
+  }
   while (!ready.empty()) {
     const auto pass = ready.top();
     ready.pop();

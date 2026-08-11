@@ -4,10 +4,41 @@
 #include "render_graph/serial_graph.h"
 
 #include <granit/renderer/renderer.hpp>
+#include <granit/renderer/surface.hpp>
+#include <granit/renderer/swapchain.hpp>
 
 #include <catch2/catch_all.hpp>
 
+#if defined(_WIN32)
+#include <windows.h>
+#endif
+
 namespace {
+
+#if defined(_WIN32)
+class graph_test_window {
+public:
+  graph_test_window()
+      : instance_(GetModuleHandleW(nullptr)),
+        window_(CreateWindowExW(0, L"STATIC", L"Granit Graph Test", WS_OVERLAPPEDWINDOW,
+                                CW_USEDEFAULT, CW_USEDEFAULT, 96, 72, nullptr, nullptr, instance_,
+                                nullptr)) {}
+  ~graph_test_window() {
+    if (window_ != nullptr) {
+      DestroyWindow(window_);
+    }
+  }
+  graph_test_window(const graph_test_window&) = delete;
+  graph_test_window& operator=(const graph_test_window&) = delete;
+  [[nodiscard]] bool valid() const noexcept { return window_ != nullptr; }
+  [[nodiscard]] void* instance() const noexcept { return instance_; }
+  [[nodiscard]] void* window() const noexcept { return window_; }
+
+private:
+  HINSTANCE instance_{};
+  HWND window_{};
+};
+#endif
 
 bool environment_unavailable(granit::result value) {
   return value == granit::result::backend_unavailable ||
@@ -53,11 +84,13 @@ TEST_CASE("串行 Render Graph 限制 Pass 解析未声明资源") {
 TEST_CASE("串行 Render Graph 在 Pass 失败后停止且不返回 Recorder") {
   granit::render_graph::serial_graph graph;
   int calls = 0;
-  const auto failed = graph.add_pass({.side_effect = true, .accesses = {}},
-                                     [&](granit::render_graph::pass_context&) {
-                                       ++calls;
-                                       return GRANIT_ERROR_UNSUPPORTED;
-                                     });
+  const auto failed = graph.add_pass(
+      {.side_effect = true, .accesses = {}},
+      [&](granit::render_graph::pass_context&) {
+        ++calls;
+        return GRANIT_ERROR_UNSUPPORTED;
+      },
+      "失败 Pass");
   static_cast<void>(graph.add_pass({.side_effect = true, .accesses = {}},
                                    [&](granit::render_graph::pass_context&) {
                                      ++calls;
@@ -75,6 +108,7 @@ TEST_CASE("串行 Render Graph 在 Pass 失败后停止且不返回 Recorder") {
   CHECK(result.result == GRANIT_ERROR_UNSUPPORTED);
   CHECK(result.phase == granit::render_graph::execution_phase::record_pass);
   CHECK(result.error_pass == failed);
+  CHECK(result.error_pass_name == "失败 Pass");
   CHECK(result.recorder == GRANIT_NULL_HANDLE);
   CHECK(calls == 1);
 }
@@ -153,3 +187,88 @@ TEST_CASE("串行 Render Graph 在瞬态资源创建失败时不执行 Pass") {
   CHECK_FALSE(called);
   CHECK(result.recorder == GRANIT_NULL_HANDLE);
 }
+
+TEST_CASE("Render Graph 诊断保留名称、依赖和生命周期") {
+  granit::render_graph::serial_graph graph;
+  const auto input = graph.import_buffer(101, false, "输入 Buffer");
+  const auto output = graph.import_buffer(202, true, "输出 Buffer");
+  const auto producer = graph.add_pass(
+      {.accesses = {{input, granit::render_graph::access_type::read},
+                    {output, granit::render_graph::access_type::write}}},
+      [](granit::render_graph::pass_context&) { return GRANIT_SUCCESS; }, "复制 Pass");
+  const auto consumer = graph.add_pass(
+      {.side_effect = true, .accesses = {{output, granit::render_graph::access_type::read}}},
+      [](granit::render_graph::pass_context&) { return GRANIT_SUCCESS; }, "读取 Pass");
+
+  const auto diagnostics = graph.diagnostics();
+  REQUIRE(diagnostics.compilation.succeeded());
+  CHECK(diagnostics.pass_names[producer] == "复制 Pass");
+  CHECK(diagnostics.pass_names[consumer] == "读取 Pass");
+  CHECK(diagnostics.resource_names[input] == "输入 Buffer");
+  CHECK(diagnostics.resource_names[output] == "输出 Buffer");
+  CHECK(diagnostics.compilation.resource_lifetimes[input].used);
+  REQUIRE(diagnostics.compilation.dependencies.size() == 1);
+  CHECK(diagnostics.compilation.dependencies[0].before == producer);
+  CHECK(diagnostics.compilation.dependencies[0].after == consumer);
+}
+
+#if defined(_WIN32)
+TEST_CASE("串行 Render Graph 提交 Swapchain Frame", "[render_graph][swapchain]") {
+  graph_test_window window;
+  REQUIRE(window.valid());
+  granit::renderer renderer;
+  const auto initialize = renderer.initialize(
+      {.application_name = "granit-graph-window", .surface_types = granit::surface_type::win32});
+  if (environment_unavailable(initialize) || initialize == granit::result::unsupported) {
+    SKIP("当前运行环境不支持 Vulkan Win32 Swapchain");
+  }
+  REQUIRE(initialize == granit::result::success);
+
+  granit::surface surface;
+  REQUIRE(surface.initialize_win32(renderer.native_handle(),
+                                   {.instance = window.instance(), .window = window.window()}) ==
+          granit::result::success);
+  granit::swapchain swapchain;
+  REQUIRE(swapchain.initialize(renderer.native_handle(), surface.native_handle(),
+                               {.width = 96, .height = 72}) == granit::result::success);
+  granit::swapchain_info info;
+  REQUIRE(swapchain.query_info(info) == granit::result::success);
+  granit::acquired_frame frame;
+  REQUIRE(swapchain.acquire(frame) == granit::result::success);
+  granit_texture texture = GRANIT_NULL_HANDLE;
+  granit_texture_view view = GRANIT_NULL_HANDLE;
+  REQUIRE(swapchain.backbuffer(frame.image_index, texture, view) == granit::result::success);
+
+  granit::render_graph::serial_graph graph;
+  const auto backbuffer = graph.import_texture_view(view, true, "Backbuffer");
+  granit_result record_result = GRANIT_SUCCESS;
+  static_cast<void>(graph.add_pass(
+      {.side_effect = true, .accesses = {{backbuffer, granit::render_graph::access_type::write}}},
+      [&, backbuffer](granit::render_graph::pass_context& context) {
+        granit_color_attachment_desc color = GRANIT_COLOR_ATTACHMENT_DESC_INIT;
+        color.view = context.texture_view(backbuffer);
+        granit_rendering_desc rendering = GRANIT_RENDERING_DESC_INIT;
+        rendering.color_attachments = &color;
+        rendering.color_attachment_count = 1;
+        rendering.area.width = info.width;
+        rendering.area.height = info.height;
+        record_result = granit_command_recorder_begin_rendering(context.renderer(),
+                                                                context.recorder(), &rendering);
+        if (record_result == GRANIT_SUCCESS) {
+          record_result =
+              granit_command_recorder_end_rendering(context.renderer(), context.recorder());
+        }
+        return record_result;
+      },
+      "窗口清屏"));
+
+  const auto result = graph.execute_frame(renderer.native_handle(), frame.handle);
+  INFO("result=" << result.result << ", phase=" << static_cast<int>(result.phase)
+                 << ", record=" << record_result);
+  REQUIRE(result.succeeded());
+  REQUIRE(result.recorder != GRANIT_NULL_HANDLE);
+  REQUIRE(swapchain.present(frame) == granit::result::success);
+  CHECK(granit_command_recorder_destroy(renderer.native_handle(), result.recorder) ==
+        GRANIT_SUCCESS);
+}
+#endif

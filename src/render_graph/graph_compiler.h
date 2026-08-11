@@ -52,11 +52,17 @@ struct resource_lifetime {
   std::uint32_t last_use = 0;
 };
 
+struct dependency_edge {
+  pass_id before = invalid_pass_id;
+  pass_id after = invalid_pass_id;
+};
+
 struct compile_result {
   compile_error error = compile_error::none;
   pass_id error_pass = invalid_pass_id;
   resource_id error_resource = invalid_resource_id;
   std::vector<pass_id> execution_order;
+  std::vector<dependency_edge> dependencies;
   std::vector<resource_lifetime> resource_lifetimes;
 
   [[nodiscard]] bool succeeded() const noexcept { return error == compile_error::none; }
