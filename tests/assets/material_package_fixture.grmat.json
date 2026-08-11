@@ -1,0 +1,27 @@
+{
+  "format_version": 1,
+  "target_environment": "vulkan1.3",
+  "binding_model": "bind_group",
+  "material": {
+    "constant_buffer_size": 16,
+    "parameters": [
+      {
+        "name": "base_color",
+        "type": "float4",
+        "offset": 0,
+        "default_bytes": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 128, 63]
+      },
+      {"name": "albedo", "type": "texture_view", "binding": 1}
+    ]
+  },
+  "variants": [
+    {
+      "pass": "opaque",
+      "features": [{"name": "normal_map", "value": 1}],
+      "shaders": [
+        {"stage": "vertex", "entry_point": "main", "spirv": "minimal.vert.spv"},
+        {"stage": "fragment", "entry_point": "main", "spirv": "minimal.frag.spv"}
+      ]
+    }
+  ]
+}

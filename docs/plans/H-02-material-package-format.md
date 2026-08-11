@@ -6,7 +6,7 @@
 ## 元数据
 
 - 设计状态：已确认
-- 实现状态：进行中（H-02E3A～H-02E3C、H-02E3D1 已完成）
+- 实现状态：进行中（H-02E3A～H-02E3D 已完成）
 - 路线图任务：H-02E3
 - 优先级：P2
 - 前置依赖：H-02E1、H-02E2
@@ -130,6 +130,44 @@ Shader 记录保存阶段、入口名称引用、SPIR-V offset、长度和内容
 
 ## 调试 JSON
 
+源描述首版使用以下结构。参数、Pass 和 feature 的稳定 ID 均由名称生成，不允许手工写入；Shader
+输入是相对源描述文件所在目录解析的预编译 SPIR-V，不在此步骤调用 DXC：
+
+```json
+{
+  "format_version": 1,
+  "target_environment": "vulkan1.3",
+  "binding_model": "bind_group",
+  "material": {
+    "constant_buffer_size": 16,
+    "parameters": [
+      {
+        "name": "base_color",
+        "type": "float4",
+        "offset": 0,
+        "default_bytes": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 128, 63]
+      },
+      {"name": "albedo", "type": "texture_view", "binding": 1}
+    ]
+  },
+  "variants": [
+    {
+      "pass": "opaque",
+      "features": [{"name": "normal_map", "value": 1}],
+      "shaders": [
+        {"stage": "vertex", "entry_point": "main", "spirv": "standard.vert.spv"},
+        {"stage": "fragment", "entry_point": "main", "spirv": "standard.frag.spv"}
+      ]
+    }
+  ]
+}
+```
+
+`default_bytes` 直接描述常量块中的小端字节，可省略；资源参数使用 `binding`，不使用 `offset`。
+数组参数可增加 `array_count` 和 `array_stride`。首版只接受非负整数、Vulkan 1.3、传统 Bind Group
+以及 Vertex/Fragment Shader；固定 Pipeline 状态与更友好的带类型默认值语法留待包模型具备对应
+字段后扩展。解析器有界读取源文件和 SPIR-V，并在写出前复用运行时包的全部语义校验。
+
 构建时可显式生成伴随文件：
 
 ```powershell
@@ -169,8 +207,8 @@ ID 和哈希输出为固定宽度小写十六进制字符串。默认只输出 S
    结构校验；相同区段输入顺序不同仍生成相同规范化文件。
 3. **H-02E3C（已完成）**：已将现有 `material_package` 确定性编码为 String、参数、Feature、Pass、
    Variant、Shader 和 SPIR-V 七个核心区段，并实现有界语义解码、变体键重算及逐字节往返验证。
-4. **H-02E3D（进行中）**：H-02E3D1 已实现 `granit_material_tool inspect <包> --json`、可选
-   `--output` 和稳定调试 JSON；下一步实现源描述构建、`--emit-debug-json` 与原子文件替换。
+4. **H-02E3D（已完成）**：已实现 `granit_material_tool build` 源描述构建、可选
+   `--emit-debug-json`、`inspect --json`、稳定调试 JSON 与同目录临时文件原子替换。
 5. **H-02E3E**：增加截断、溢出、重叠、未知区段、哈希错误和随机字节损坏测试。
 
 ## 验收标准

@@ -31,6 +31,7 @@ add_executable(
   "${PROJECT_SOURCE_DIR}/src/material/material_metadata.cpp"
   "${PROJECT_SOURCE_DIR}/src/material/material_package.cpp"
   "${PROJECT_SOURCE_DIR}/src/material/material_package_archive.cpp"
+  "${PROJECT_SOURCE_DIR}/src/material/material_source_json.cpp"
 )
 target_compile_features(granit_material_tool PRIVATE cxx_std_20)
 target_include_directories(granit_material_tool PRIVATE "${PROJECT_SOURCE_DIR}/src")
@@ -41,6 +42,29 @@ target_compile_options(
 granit_target_compile_warnings(granit_material_tool)
 granit_target_output_directories(granit_material_tool)
 set_target_properties(granit_material_tool PROPERTIES FOLDER "Tools")
+
+if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
+  set(GRANIT_MATERIAL_PACKAGE_FIXTURE "${CMAKE_CURRENT_BINARY_DIR}/material_package_fixture.grmat")
+  set(GRANIT_MATERIAL_DEBUG_FIXTURE "${GRANIT_MATERIAL_PACKAGE_FIXTURE}.debug.json")
+  add_test(
+    NAME granit.material_tool.build
+    COMMAND
+      granit_material_tool build
+      "${PROJECT_SOURCE_DIR}/tests/assets/material_package_fixture.grmat.json"
+      --output "${GRANIT_MATERIAL_PACKAGE_FIXTURE}" --emit-debug-json
+  )
+  set_tests_properties(granit.material_tool.build PROPERTIES FIXTURES_SETUP granit_material_package)
+  add_test(
+    NAME granit.material_tool.inspect
+    COMMAND granit_material_tool inspect "${GRANIT_MATERIAL_PACKAGE_FIXTURE}" --json
+  )
+  set_tests_properties(
+    granit.material_tool.inspect
+    PROPERTIES
+      FIXTURES_REQUIRED granit_material_package
+      PASS_REGULAR_EXPRESSION "\"magic\": \"GRMAT\""
+  )
+endif()
 
 find_program(
   GRANIT_DXC_EXECUTABLE
