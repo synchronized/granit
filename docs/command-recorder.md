@@ -27,6 +27,16 @@ granit_command_recorder_destroy(renderer, recorder);
 GPU 完成，再重置 Command Pool。Renderer 的 `frames_in_flight` 决定最多保留多少个在途帧槽，
 默认值为 2，有效范围为 1 到 4。
 
+多个独立 Recorder 可以原子校验后批量提交：
+
+```c
+granit_command_recorder recorders[] = {first, second, third};
+granit_command_recorder_submit_batch(renderer, recorders, 3);
+```
+
+数组不能为空，Recorder 必须互不重复且属于同一 Renderer。成功时按数组顺序执行，整批共享
+一次 Queue 提交、一个 Fence 和一个 submission serial；失败时不会提交其中任何 Recorder。
+
 Buffer Copy 支持一次传入多个区域。参与命令的 Buffer 会由 Recorder 保持内部强引用，因此录制
 后销毁公开 Buffer 句柄不会造成悬空 Vulkan 对象；reset 或 destroy 会释放这些引用。
 
@@ -46,6 +56,9 @@ if (recorder.initialize(renderer.native_handle()) == granit::result::success) {
   recorder.submit();
   recorder.reset();
 }
+
+std::array<granit::command_recorder, 3> recorders;
+granit::command_recorder::submit_batch(recorders);
 ```
 
 包装类型无异常、不可复制且可以移动。`reset()` 重置录制状态，`destroy()` 销毁 Recorder 句柄。
@@ -56,6 +69,7 @@ if (recorder.initialize(renderer.native_handle()) == granit::result::success) {
 - begin 进入 recording。
 - end 进入 executable。
 - submit 进入 pending，GPU 完成后回到 executable。
+- submit_batch 成功时整批进入 pending；任一 Recorder 的 reset 都会等待共享 Fence 并完成整批。
 - reset 回到 initial。
 - 单个 Recorder 不能并发调用，但可以在无并发时移交线程。
 - 不同 Recorder 可以并行录制。

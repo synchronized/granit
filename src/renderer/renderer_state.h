@@ -172,6 +172,9 @@ public:
   [[nodiscard]] granit_result end_rendering(vulkan_command_recorder& recorder) noexcept;
   [[nodiscard]] granit_result submit_command_recorder(vulkan_command_recorder& recorder,
                                                       submission_serial& submitted_serial);
+  [[nodiscard]] granit_result
+  submit_command_recorders(std::span<vulkan_command_recorder* const> recorders,
+                           submission_serial& submitted_serial);
   [[nodiscard]] granit_result acquire_swapchain_frame(vulkan_swapchain& swapchain,
                                                       std::uint32_t& image_index,
                                                       std::size_t& slot_index,
@@ -210,7 +213,8 @@ private:
     std::unique_ptr<vulkan_frame_context> context;
     std::unique_ptr<vulkan_command_recorder> preamble;
     std::unique_ptr<vulkan_command_recorder> postamble;
-    vulkan_command_recorder* recorder{};
+    std::vector<std::unique_ptr<vulkan_command_recorder>> batch_preambles;
+    std::vector<vulkan_command_recorder*> recorders;
     submission_serial serial{};
     bool acquired{};
     bool awaiting_present{};

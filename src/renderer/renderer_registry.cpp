@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <cstring>
+#include <functional>
 #include <limits>
 #include <new>
 #include <utility>
@@ -2257,15 +2258,57 @@ granit_result renderer_registry::end_command_recorder(granit_renderer renderer,
 
 granit_result renderer_registry::submit_command_recorder(granit_renderer renderer,
                                                          granit_command_recorder recorder) {
-  auto record = acquire_command_recorder(renderer, recorder);
-  if (!record) {
-    return GRANIT_ERROR_INVALID_HANDLE;
+  return submit_command_recorders(renderer, {&recorder, 1});
+}
+
+granit_result
+renderer_registry::submit_command_recorders(granit_renderer renderer,
+                                            std::span<const granit_command_recorder> recorders) {
+  if (recorders.empty())
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  std::vector<std::shared_ptr<command_recorder_record>> records;
+  records.reserve(recorders.size());
+  std::shared_ptr<renderer_state> state;
+  {
+    std::lock_guard lock{mutex_};
+    const auto found_renderer = renderers_.find(renderer);
+    if (found_renderer == renderers_.end() ||
+        handles_.find(renderer, resource_type::renderer, 0) == nullptr) {
+      return GRANIT_ERROR_INVALID_HANDLE;
+    }
+    state = found_renderer->second;
+    for (const auto handle : recorders) {
+      if (handle == GRANIT_NULL_HANDLE ||
+          handles_.find(handle, resource_type::command_recorder, state->domain()) == nullptr) {
+        return GRANIT_ERROR_INVALID_HANDLE;
+      }
+      const auto found = command_recorders_.find(handle);
+      if (found == command_recorders_.end() || found->second->renderer != state)
+        return GRANIT_ERROR_INVALID_HANDLE;
+      if (std::find(records.begin(), records.end(), found->second) != records.end())
+        return GRANIT_ERROR_INVALID_ARGUMENT;
+      records.push_back(found->second);
+    }
   }
-  std::lock_guard record_lock{record->mutex};
+  std::vector<command_recorder_record*> lock_order;
+  lock_order.reserve(records.size());
+  for (const auto& record : records)
+    lock_order.push_back(record.get());
+  std::sort(lock_order.begin(), lock_order.end(), std::less<>{});
+  std::vector<std::unique_lock<std::mutex>> record_locks;
+  record_locks.reserve(lock_order.size());
+  for (auto* record : lock_order)
+    record_locks.emplace_back(record->mutex);
+  std::vector<vulkan_command_recorder*> native_recorders;
+  native_recorders.reserve(records.size());
+  for (const auto& record : records)
+    native_recorders.push_back(&record->native);
   submission_serial serial{};
-  const auto result = record->renderer->submit_command_recorder(record->native, serial);
-  if (result == GRANIT_SUCCESS)
-    mark_resources_used(record->retained_resources, serial);
+  const auto result = state->submit_command_recorders(native_recorders, serial);
+  if (result == GRANIT_SUCCESS) {
+    for (const auto& record : records)
+      mark_resources_used(record->retained_resources, serial);
+  }
   return result;
 }
 

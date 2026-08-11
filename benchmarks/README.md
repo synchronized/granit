@@ -36,6 +36,10 @@ cmake --build --preset windows-clang-release --target granit_benchmarks
 - `recorder_create_destroy`：并发创建和销毁独立 Command Recorder。
 - `empty_record`：复用独立 Recorder 执行 begin/end/reset 空录制周期。
 - `buffer_record`：每个录制周期记录可配置数量的 Fill Buffer 命令，再 end/reset。
+- `mixed_pipeline_record`：混合记录 Graphics、Dynamic Rendering 和 Compute 命令。
+- `queue_submit`：逐个提交预录制的 Recorder，记录单次调用延迟分布。
+- `queue_submit_batch`：一次批量提交同组 Recorder，延迟按 Recorder 数归一化。
+- `staging_buffer_upload`、`staging_texture_upload`：同步 staging 上传固定成本。
 
 这些场景不对同一个 Buffer 进行无序并发写入，因为那不属于公开 API 支持的工作流。Renderer 环境
 不可用时程序返回非零状态并在标准错误中说明原因。

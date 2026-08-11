@@ -63,6 +63,21 @@ extern "C" granit_result granit_command_recorder_submit(granit_renderer renderer
   }
 }
 
+extern "C" granit_result granit_command_recorder_submit_batch(
+    granit_renderer renderer, const granit_command_recorder* recorders, uint32_t recorder_count) {
+  if (renderer == GRANIT_NULL_HANDLE || recorders == nullptr || recorder_count == 0) {
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  }
+  try {
+    return granit::detail::renderer_registry::instance().submit_command_recorders(
+        renderer, std::span{recorders, recorder_count});
+  } catch (const std::bad_alloc&) {
+    return GRANIT_ERROR_OUT_OF_MEMORY;
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
 extern "C" granit_result granit_command_recorder_submit_frame(granit_renderer renderer,
                                                               granit_command_recorder recorder,
                                                               granit_frame frame) {

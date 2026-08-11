@@ -8,3 +8,6 @@
 static_assert(!std::is_copy_constructible_v<granit::command_recorder>);
 static_assert(std::is_move_constructible_v<granit::command_recorder>);
 static_assert(sizeof(granit::buffer_copy_region) == 24);
+static_assert(requires(std::span<granit::command_recorder> recorders) {
+  granit::command_recorder::submit_batch(recorders);
+});

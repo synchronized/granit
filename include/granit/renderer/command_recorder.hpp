@@ -5,12 +5,14 @@
 #define GRANIT_COMMAND_RECORDER_HPP_
 
 #include <array>
+#include <new>
 #include <span>
 #include <utility>
+#include <vector>
 
+#include <granit/core/result.hpp>
 #include <granit/renderer/command_recorder.h>
 #include <granit/renderer/render_target.hpp>
-#include <granit/core/result.hpp>
 #include <granit/renderer/swapchain.hpp>
 
 namespace granit {
@@ -63,6 +65,28 @@ public:
   }
   [[nodiscard]] result submit() noexcept {
     return from_native(granit_command_recorder_submit(renderer_, handle_));
+  }
+  [[nodiscard]] static result submit_batch(std::span<command_recorder> recorders) noexcept {
+    if (recorders.empty() || recorders.size() > UINT32_MAX) {
+      return result::invalid_argument;
+    }
+    try {
+      std::vector<granit_command_recorder> handles;
+      handles.reserve(recorders.size());
+      const auto renderer = recorders.front().renderer_;
+      for (const auto& recorder : recorders) {
+        if (renderer == GRANIT_NULL_HANDLE || recorder.renderer_ != renderer || !recorder.valid()) {
+          return result::invalid_argument;
+        }
+        handles.push_back(recorder.handle_);
+      }
+      return from_native(granit_command_recorder_submit_batch(
+          renderer, handles.data(), static_cast<std::uint32_t>(handles.size())));
+    } catch (const std::bad_alloc&) {
+      return result::out_of_memory;
+    } catch (...) {
+      return result::internal;
+    }
   }
   [[nodiscard]] result submit(const acquired_frame& frame) noexcept {
     return from_native(granit_command_recorder_submit_frame(renderer_, handle_, frame.handle));

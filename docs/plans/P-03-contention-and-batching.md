@@ -6,7 +6,7 @@
 ## 元数据
 
 - 设计状态：已确认
-- 实现状态：进行中（P-03A 已完成，进入 P-03C）
+- 实现状态：进行中（P-03C 已实现，进入 P-03D）
 - 路线图任务：P-03
 - 优先级：P1
 - 前置依赖：P-02
@@ -76,7 +76,7 @@ Studio CPU Usage 或采样 profiler；不得为了得到结论把长期 profiler
 
 ### P-03C：Queue 提交批量化
 
-状态：待实施。
+状态：已实现，等待 P-03D 复测。
 
 P-03A 若确认多线程尾延迟主要来自多个细粒度 submit 在 Queue 互斥上排队，则先设计批量 C API：
 
@@ -92,6 +92,10 @@ pending 状态、frames-in-flight 槽位分配、部分 `vkQueueSubmit2` 失败�
 `std::span` 接口。不能简单循环调用现有公开函数后宣称完成批量优化。
 
 若驱动提交本身完全主导且批量接口不能减少 Queue/Fence 操作，则保留现有 API，只记录结论。
+
+实现采用一次 Registry 原子校验、固定顺序的 Recorder 锁和一次 `vkQueueSubmit2`。每个 Recorder
+保持独立 submit 段及布局转换 preamble，整批共享帧槽、Fence 和 submission serial。单提交
+接口复用批量内部路径，避免形成两套状态机。
 
 ### P-03D：复测与收尾
 

@@ -20,12 +20,17 @@ Renderer 描述在末尾追加 `frames_in_flight` 和保留字段。有效范围
 ```c
 granit_command_recorder_end(renderer, recorder);
 granit_command_recorder_submit(renderer, recorder);
+granit_command_recorder_submit_batch(renderer, recorders, recorder_count);
 granit_command_recorder_reset(renderer, recorder);
 ```
 
 `submit` 只接受 executable Recorder。成功后 Recorder 进入 pending，不能再次 begin、end 或
 submit。`reset` 遇到 pending Recorder 时会等待对应 Fence，随后重置 Command Pool 并回到
 initial，因此第一版不需要向普通用户公开 Fence。
+
+P-03C 在此模型上增加批量提交：整批先完成句柄、所属 Renderer、重复值和 executable 状态
+校验，再按数组顺序通过一次 `vkQueueSubmit2` 提交，共享帧槽、Fence 和提交序号。单 Recorder
+接口复用相同内部路径。
 
 ## 提交模型
 

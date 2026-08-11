@@ -53,6 +53,7 @@ enum class benchmark_case {
   buffer_record,
   mixed_pipeline_record,
   queue_submit,
+  queue_submit_batch,
   staging_buffer_upload,
   staging_texture_upload
 };
@@ -87,7 +88,8 @@ void print_help() {
   std::cout << "用法：granit_renderer_benchmarks [选项]\n"
                "  --case <all|invalid_lookup|create_destroy|independent_write|\n"
                "          recorder_create_destroy|empty_record|buffer_record|\n"
-               "          mixed_pipeline_record|queue_submit|staging_buffer_upload|\n"
+               "          mixed_pipeline_record|queue_submit|queue_submit_batch|\n"
+               "          staging_buffer_upload|\n"
                "          staging_texture_upload>\n"
                "  --threads <数量>       工作线程数\n"
                "  --iterations <数量>    每个线程、每个样本的操作数\n"
@@ -346,7 +348,8 @@ std::vector<thread_context> make_contexts(granit_renderer renderer, benchmark_ca
         destroy_contexts(renderer, contexts);
         return {};
       }
-    } else if (selected == benchmark_case::queue_submit) {
+    } else if (selected == benchmark_case::queue_submit ||
+               selected == benchmark_case::queue_submit_batch) {
       context.submit_recorders.resize(static_cast<std::size_t>(config.iterations),
                                       GRANIT_NULL_HANDLE);
       context.submit_latencies.reserve(static_cast<std::size_t>(config.iterations));
@@ -402,6 +405,19 @@ std::uint64_t run_operations(granit_renderer renderer, thread_context& context,
                              const pipeline_fixture* pipelines, std::atomic_bool& failed) {
   std::uint64_t local_checksum{};
   const std::array<std::byte, 4> value{};
+  if (selected == benchmark_case::queue_submit_batch) {
+    const auto submit_begin = clock_type::now();
+    const auto result = granit_command_recorder_submit_batch(
+        renderer, context.submit_recorders.data(),
+        static_cast<std::uint32_t>(context.submit_recorders.size()));
+    const auto submit_end = clock_type::now();
+    context.submit_latencies.push_back(
+        std::chrono::duration<double, std::nano>{submit_end - submit_begin}.count() /
+        static_cast<double>(config.iterations));
+    if (result != GRANIT_SUCCESS)
+      failed.store(true, std::memory_order_relaxed);
+    return static_cast<std::uint64_t>(result);
+  }
   for (std::uint64_t index = 0; index < config.iterations; ++index) {
     granit_result result{};
     switch (selected) {
@@ -563,6 +579,8 @@ std::uint64_t run_operations(granit_renderer renderer, thread_context& context,
       }
       break;
     }
+    case benchmark_case::queue_submit_batch:
+      break;
     }
     local_checksum += static_cast<std::uint64_t>(result);
   }
@@ -626,7 +644,7 @@ bool run_case(granit_renderer renderer, std::string_view name, benchmark_case se
   std::vector<double> samples;
   samples.reserve(config.samples);
   std::vector<double> operation_latencies;
-  if (selected == benchmark_case::queue_submit) {
+  if (selected == benchmark_case::queue_submit || selected == benchmark_case::queue_submit_batch) {
     operation_latencies.reserve(static_cast<std::size_t>(config.threads) *
                                 static_cast<std::size_t>(config.iterations) * config.samples);
   }
@@ -634,9 +652,12 @@ bool run_case(granit_renderer renderer, std::string_view name, benchmark_case se
   const auto operations =
       static_cast<double>(config.threads) * static_cast<double>(config.iterations);
   for (std::uint32_t index = 0; index < config.samples; ++index) {
-    const auto elapsed = run_sample(
-        renderer, selected, config, pipelines,
-        selected == benchmark_case::queue_submit ? &operation_latencies : nullptr, succeeded);
+    const auto elapsed = run_sample(renderer, selected, config, pipelines,
+                                    selected == benchmark_case::queue_submit ||
+                                            selected == benchmark_case::queue_submit_batch
+                                        ? &operation_latencies
+                                        : nullptr,
+                                    succeeded);
     if (!succeeded)
       return false;
     total_ns += elapsed;
@@ -684,11 +705,11 @@ int main(int argc, char** argv) {
     }
     return 2;
   }
-  constexpr std::string_view cases[]{"invalid_lookup",        "create_destroy",
-                                     "independent_write",     "recorder_create_destroy",
-                                     "empty_record",          "buffer_record",
-                                     "mixed_pipeline_record", "queue_submit",
-                                     "staging_buffer_upload", "staging_texture_upload"};
+  constexpr std::string_view cases[]{
+      "invalid_lookup",          "create_destroy",        "independent_write",
+      "recorder_create_destroy", "empty_record",          "buffer_record",
+      "mixed_pipeline_record",   "queue_submit",          "queue_submit_batch",
+      "staging_buffer_upload",   "staging_texture_upload"};
   if (config.case_name != "all" &&
       std::find(std::begin(cases), std::end(cases), config.case_name) == std::end(cases)) {
     std::cerr << "未知 benchmark 用例：" << config.case_name << '\n';
@@ -758,6 +779,12 @@ int main(int argc, char** argv) {
     auto submit_config = config;
     submit_config.iterations = config.submissions;
     succeeded &= run_case(renderer, "queue_submit", benchmark_case::queue_submit, submit_config);
+  }
+  if (selected(config.case_name, "queue_submit_batch")) {
+    auto submit_config = config;
+    submit_config.iterations = config.submissions;
+    succeeded &=
+        run_case(renderer, "queue_submit_batch", benchmark_case::queue_submit_batch, submit_config);
   }
   if (selected(config.case_name, "staging_buffer_upload")) {
     auto upload_config = config;

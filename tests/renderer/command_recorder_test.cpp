@@ -77,6 +77,56 @@ TEST_CASE("Recorder 异步提交并按 frames-in-flight 复用槽位", "[command
   }
 }
 
+TEST_CASE("Recorder 批量提交共享一次完成边界", "[command][submit][batch]") {
+  granit::renderer renderer;
+  const auto result =
+      renderer.initialize({.application_name = "granit-batch-submit-tests", .frames_in_flight = 2});
+  if (environment_unavailable(result))
+    SKIP("当前运行环境没有满足要求的 Vulkan 设备");
+  REQUIRE(result == granit::result::success);
+
+  std::array<granit::command_recorder, 3> recorders;
+  for (auto& recorder : recorders) {
+    REQUIRE(recorder.initialize(renderer.native_handle()) == granit::result::success);
+    REQUIRE(recorder.begin() == granit::result::success);
+    REQUIRE(recorder.end() == granit::result::success);
+  }
+  REQUIRE(granit::command_recorder::submit_batch(recorders) == granit::result::success);
+  for (auto& recorder : recorders)
+    CHECK(recorder.submit() == granit::result::invalid_argument);
+  for (auto& recorder : recorders)
+    REQUIRE(recorder.reset() == granit::result::success);
+}
+
+TEST_CASE("Recorder 批量提交失败时不产生部分提交", "[command][submit][batch][validation]") {
+  granit::renderer renderer;
+  const auto result = renderer.initialize({.application_name = "granit-batch-validation-tests"});
+  if (environment_unavailable(result))
+    SKIP("当前运行环境没有满足要求的 Vulkan 设备");
+  REQUIRE(result == granit::result::success);
+
+  std::array<granit::command_recorder, 2> recorders;
+  for (auto& recorder : recorders) {
+    REQUIRE(recorder.initialize(renderer.native_handle()) == granit::result::success);
+    REQUIRE(recorder.begin() == granit::result::success);
+    REQUIRE(recorder.end() == granit::result::success);
+  }
+  const granit_command_recorder duplicate[]{recorders[0].native_handle(),
+                                            recorders[0].native_handle()};
+  CHECK(granit_command_recorder_submit_batch(renderer.native_handle(), duplicate, 2) ==
+        GRANIT_ERROR_INVALID_ARGUMENT);
+  const granit_command_recorder invalid[]{recorders[0].native_handle(), UINT64_C(1)};
+  CHECK(granit_command_recorder_submit_batch(renderer.native_handle(), invalid, 2) ==
+        GRANIT_ERROR_INVALID_HANDLE);
+  CHECK(granit_command_recorder_submit_batch(renderer.native_handle(), nullptr, 2) ==
+        GRANIT_ERROR_INVALID_ARGUMENT);
+  CHECK(granit_command_recorder_submit_batch(renderer.native_handle(), invalid, 0) ==
+        GRANIT_ERROR_INVALID_ARGUMENT);
+
+  REQUIRE(recorders[0].submit() == granit::result::success);
+  REQUIRE(recorders[1].submit() == granit::result::success);
+}
+
 TEST_CASE("Command Recorder 校验 Renderer domain 和失效句柄", "[command][handle]") {
   granit::renderer first;
   const auto result = first.initialize({.application_name = "granit-command-first"});
@@ -247,8 +297,9 @@ TEST_CASE("Texture Layout 按提交顺序解析而非录制顺序", "[command][r
   REQUIRE(granit_texture_create_with_default_view(renderer.native_handle(), &texture_desc, &texture,
                                                   &view) == GRANIT_SUCCESS);
 
-  granit::command_recorder load_recorder;
-  granit::command_recorder clear_recorder;
+  std::array<granit::command_recorder, 2> recorders;
+  auto& load_recorder = recorders[0];
+  auto& clear_recorder = recorders[1];
   REQUIRE(load_recorder.initialize(renderer.native_handle()) == granit::result::success);
   REQUIRE(clear_recorder.initialize(renderer.native_handle()) == granit::result::success);
   const granit::color_attachment_desc load_color{
@@ -266,9 +317,11 @@ TEST_CASE("Texture Layout 按提交顺序解析而非录制顺序", "[command][r
 
   record(load_recorder, load_color);
   record(clear_recorder, clear_color);
-  CHECK(load_recorder.submit() == granit::result::invalid_argument);
-  REQUIRE(clear_recorder.submit() == granit::result::success);
-  REQUIRE(load_recorder.submit() == granit::result::success);
+  CHECK(granit::command_recorder::submit_batch(recorders) == granit::result::invalid_argument);
+  const granit_command_recorder clear_then_load[]{clear_recorder.native_handle(),
+                                                  load_recorder.native_handle()};
+  REQUIRE(granit_command_recorder_submit_batch(renderer.native_handle(), clear_then_load, 2) ==
+          GRANIT_SUCCESS);
   REQUIRE(clear_recorder.reset() == granit::result::success);
   REQUIRE(load_recorder.reset() == granit::result::success);
 }

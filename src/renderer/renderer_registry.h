@@ -136,6 +136,9 @@ public:
                                                    granit_command_recorder recorder);
   [[nodiscard]] granit_result submit_command_recorder(granit_renderer renderer,
                                                       granit_command_recorder recorder);
+  [[nodiscard]] granit_result
+  submit_command_recorders(granit_renderer renderer,
+                           std::span<const granit_command_recorder> recorders);
   [[nodiscard]] granit_result submit_command_recorder_frame(granit_renderer renderer,
                                                             granit_command_recorder recorder,
                                                             granit_frame frame);

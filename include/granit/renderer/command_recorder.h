@@ -6,14 +6,14 @@
 
 #include <stdint.h>
 
-#include <granit/renderer/buffer.h>
 #include <granit/core/export.h>
+#include <granit/core/result.h>
+#include <granit/core/types.h>
+#include <granit/renderer/buffer.h>
 #include <granit/renderer/pipeline.h>
 #include <granit/renderer/render_target.h>
 #include <granit/renderer/renderer.h>
-#include <granit/core/result.h>
 #include <granit/renderer/swapchain.h>
-#include <granit/core/types.h>
 
 /** 一次录制、一次提交的命令录制器句柄。零值无效。 */
 typedef granit_handle granit_command_recorder;
@@ -73,6 +73,14 @@ GRANIT_API granit_result granit_command_recorder_end(granit_renderer renderer,
 /** 异步提交 executable Recorder；同一 Recorder 完成前不能再次提交。 */
 GRANIT_API granit_result granit_command_recorder_submit(granit_renderer renderer,
                                                         granit_command_recorder recorder);
+/**
+ * 按数组顺序原子校验并批量提交 executable Recorder。
+ *
+ * 整批 Recorder 必须非零、互不重复并属于同一 renderer。成功时共享一次 Queue 提交、Fence
+ * 和 submission serial；失败时不会提交其中任何 Recorder。
+ */
+GRANIT_API granit_result granit_command_recorder_submit_batch(
+    granit_renderer renderer, const granit_command_recorder* recorders, uint32_t recorder_count);
 GRANIT_API granit_result granit_command_recorder_submit_frame(granit_renderer renderer,
                                                               granit_command_recorder recorder,
                                                               granit_frame frame);
