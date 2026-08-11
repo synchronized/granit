@@ -1314,13 +1314,15 @@ granit_result renderer_state::bind_graphics_pipeline(vulkan_command_recorder& re
   return recorder.bind_graphics_pipeline(device_, pipeline);
 }
 
-granit_result
-renderer_state::bind_graphics_groups(vulkan_command_recorder& recorder, VkPipelineLayout layout,
-                                     std::uint32_t first_group,
-                                     std::span<const VkDescriptorSet> bind_groups) noexcept {
+granit_result renderer_state::bind_graphics_groups(
+    vulkan_command_recorder& recorder, VkPipelineLayout layout, std::uint32_t first_group,
+    std::span<const VkDescriptorSet> bind_groups,
+    std::span<const std::pair<VkBuffer, VkAccessFlags2>> buffer_accesses,
+    std::span<const vulkan_image_access> image_accesses) {
   if (device_lost())
     return GRANIT_ERROR_DEVICE_LOST;
-  return recorder.bind_graphics_groups(device_, layout, first_group, bind_groups);
+  return recorder.bind_graphics_groups(device_, layout, first_group, bind_groups, buffer_accesses,
+                                       image_accesses);
 }
 
 granit_result renderer_state::bind_compute_pipeline(vulkan_command_recorder& recorder,

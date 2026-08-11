@@ -6,6 +6,7 @@
 
 #include "material/material_package.h"
 
+#include <array>
 #include <cstdint>
 #include <span>
 #include <string_view>
@@ -30,6 +31,10 @@ inline constexpr std::uint32_t pbr_binding_normal = 3;
 inline constexpr std::uint32_t pbr_binding_occlusion = 4;
 inline constexpr std::uint32_t pbr_binding_emissive = 5;
 inline constexpr std::uint32_t pbr_binding_sampler = 6;
+inline constexpr std::array<std::string_view, 5> pbr_texture_parameter_names{
+    "base_color_texture", "metallic_roughness_texture", "normal_texture", "occlusion_texture",
+    "emissive_texture"};
+inline constexpr std::string_view pbr_sampler_parameter_name = "pbr_sampler";
 
 inline constexpr std::uint32_t pbr_vertex_location_position = 0;
 inline constexpr std::uint32_t pbr_vertex_location_normal = 1;

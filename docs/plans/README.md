@@ -76,8 +76,8 @@ D-03-graphics-pipeline.md
   离线包、参数/资源实例、Pipeline 缓存、热替换、错误材质回退和性能基线，尚未安装导出。
 - [H-02E3：持久化材质包格式](H-02-material-package-format.md)——已完成；包含确定性容器、
   SHA-256、材质语义往返、源 JSON 构建、调试导出和损坏输入防护。
-- [H-03：金属度/粗糙度 PBR 渲染模块](H-03-pbr-renderer.md)——进行中；H-03D2a 已固定五类纹理
-  feature、Binding 和顶点输入契约，下一步接入默认纹理与真实 Shader 采样。
+- [H-03：金属度/粗糙度 PBR 渲染模块](H-03-pbr-renderer.md)——进行中；H-03D2b 已接入五类默认
+  纹理、真实 Shader 采样和图形描述符同步，下一步生成按纹理组合裁剪的变体。
 
 ## 状态
 

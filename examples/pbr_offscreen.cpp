@@ -4,6 +4,8 @@
 #include "material/material_gpu_instance.h"
 #include "material/material_package.h"
 #include "material/material_template_gpu.h"
+#include "material/pbr_default_resources.h"
+#include "material/pbr_material_schema.h"
 
 #include <granit/granit.hpp>
 
@@ -32,15 +34,16 @@ std::vector<std::uint32_t> load_shader(std::string_view name) {
 
 bool make_package(granit::material::material_package& package) {
   using namespace granit::material;
-  material_variant_desc variant{.pass = make_feature_id("opaque"),
-                                .features = {},
-                                .shaders = {{.stage = package_shader_stage::vertex,
-                                             .entry_point = "vertex_main",
-                                             .spirv = load_shader("pbr_untextured.vert.spv")},
-                                            {.stage = package_shader_stage::fragment,
-                                             .entry_point = "fragment_main",
-                                             .spirv = load_shader("pbr_untextured.frag.spv")}},
-                                .pipeline = {}};
+  material_variant_desc variant{
+      .pass = make_feature_id("opaque"),
+      .features = {{make_feature_id(pbr_texture_feature_name), pbr_texture_all}},
+      .shaders = {{.stage = package_shader_stage::vertex,
+                   .entry_point = "vertex_main",
+                   .spirv = load_shader("pbr_untextured.vert.spv")},
+                  {.stage = package_shader_stage::fragment,
+                   .entry_point = "fragment_main",
+                   .spirv = load_shader("pbr_untextured.frag.spv")}},
+      .pipeline = {}};
   variant.pipeline.primitive.cull_mode = GRANIT_CULL_MODE_BACK;
   variant.pipeline.depth.test_enabled = 1;
   variant.pipeline.depth.write_enabled = 1;
@@ -60,6 +63,31 @@ bool make_package(granit::material::material_package& package) {
        .offset = 28,
        .default_value = {}},
       {.name = "emissive", .type = parameter_type::float3, .offset = 32, .default_value = {}}};
+  desc.metadata.parameters.insert(desc.metadata.parameters.end(),
+                                  {{.name = "base_color_texture",
+                                    .type = parameter_type::texture_view,
+                                    .binding = pbr_binding_base_color,
+                                    .default_value = {}},
+                                   {.name = "metallic_roughness_texture",
+                                    .type = parameter_type::texture_view,
+                                    .binding = pbr_binding_metallic_roughness,
+                                    .default_value = {}},
+                                   {.name = "normal_texture",
+                                    .type = parameter_type::texture_view,
+                                    .binding = pbr_binding_normal,
+                                    .default_value = {}},
+                                   {.name = "occlusion_texture",
+                                    .type = parameter_type::texture_view,
+                                    .binding = pbr_binding_occlusion,
+                                    .default_value = {}},
+                                   {.name = "emissive_texture",
+                                    .type = parameter_type::texture_view,
+                                    .binding = pbr_binding_emissive,
+                                    .default_value = {}},
+                                   {.name = "pbr_sampler",
+                                    .type = parameter_type::sampler,
+                                    .binding = pbr_binding_sampler,
+                                    .default_value = {}}});
   desc.variants.push_back(std::move(variant));
   return material_package::build(std::move(desc), package) == package_error::none;
 }
@@ -77,7 +105,7 @@ bool set_parameter(granit::material::material_gpu_instance& instance, std::strin
 int main() {
   granit::renderer renderer;
   auto result =
-      renderer.initialize({.application_name = "Granit Untextured PBR", .enable_validation = true});
+      renderer.initialize({.application_name = "Granit Textured PBR", .enable_validation = true});
   granit::material::material_package package;
   if (granit::failed(result) || !make_package(package)) {
     std::cerr << "无法初始化 Renderer 或构建 PBR 材质包\n";
@@ -88,19 +116,27 @@ int main() {
   result = granit::from_native(material.initialize(renderer.native_handle(), package));
   granit_graphics_pipeline pipeline = GRANIT_NULL_HANDLE;
   if (granit::succeeded(result)) {
+    const std::array features{granit::material::material_feature_value{
+        granit::material::make_feature_id(granit::material::pbr_texture_feature_name),
+        granit::material::pbr_texture_all}};
     result = granit::from_native(
         material.acquire_pipeline({.pass = granit::material::make_feature_id("opaque"),
-                                   .variant = granit::material::make_variant_key({}),
+                                   .variant = granit::material::make_variant_key(features),
                                    .color_format = GRANIT_TEXTURE_FORMAT_RGBA8_UNORM,
                                    .depth_stencil_format = GRANIT_TEXTURE_FORMAT_D32_FLOAT},
                                   pipeline));
   }
 
+  granit::material::pbr_default_resources defaults;
   granit::material::material_gpu_instance instance;
+  if (granit::succeeded(result))
+    result = granit::from_native(defaults.initialize(renderer.native_handle()));
   if (granit::succeeded(result)) {
     result = granit::from_native(instance.initialize(
         renderer.native_handle(), material.material_layout(), package.metadata()));
   }
+  if (granit::succeeded(result))
+    result = granit::from_native(defaults.bind(instance));
   if (granit::succeeded(result) &&
       (!set_parameter(instance, "base_color", granit::material::parameter_type::float4,
                       std::array{0.8F, 0.2F, 0.1F, 1.0F}) ||
@@ -191,6 +227,6 @@ int main() {
     std::cerr << "离屏 PBR 绘制失败：" << granit::result_message(result) << '\n';
     return 1;
   }
-  std::cout << "无纹理 PBR 离屏绘制完成\n";
+  std::cout << "默认纹理 PBR 离屏绘制完成\n";
   return 0;
 }

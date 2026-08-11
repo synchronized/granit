@@ -326,6 +326,8 @@ private:
     std::shared_ptr<renderer_state> renderer;
     std::shared_ptr<bind_group_layout_record> layout;
     std::vector<std::shared_ptr<void>> resources;
+    std::vector<std::pair<VkBuffer, VkAccessFlags2>> graphics_buffer_accesses;
+    std::vector<vulkan_image_access> graphics_image_accesses;
     std::vector<std::pair<VkBuffer, VkAccessFlags2>> compute_buffer_accesses;
     std::vector<vulkan_image_access> compute_image_accesses;
     VkDescriptorPool pool{VK_NULL_HANDLE};

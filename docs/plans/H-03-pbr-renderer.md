@@ -6,7 +6,7 @@
 ## 元数据
 
 - 设计状态：已确认首版边界
-- 实现状态：进行中（H-03A～H-03C、H-03D1～H-03D2a 已完成）
+- 实现状态：进行中（H-03A～H-03C、H-03D1～H-03D2b 已完成）
 - 路线图任务：H-03
 - 优先级：P2
 - 前置依赖：H-01、H-02
@@ -92,8 +92,8 @@ CPU 参考函数与 Shader 必须共享公式说明和固定测试向量。允�
    调试 JSON，并覆盖往返、无效枚举与损坏输入检查。
 2. **H-03B（已完成）**：实现独立 CPU BRDF 参考函数、PBR 参数规范、边界值和固定测试向量。
 3. **H-03C（已完成）**：加入无纹理 HLSL PBR Shader、离线构建包和单三角离屏直接光照闭环。
-4. **H-03D（进行中）**：H-03D1 已接入 PBR 材质常量；H-03D2a 已固定纹理 feature、Binding 和
-   顶点输入契约；H-03D2b 将接入默认纹理与 Shader 采样，验证 sRGB/线性语义。
+4. **H-03D（进行中）**：H-03D1 已接入 PBR 材质常量；H-03D2a～H-03D2b 已固定纹理契约并接入
+   默认资源与真实采样；H-03D2c 将生成按纹理组合裁剪的 Shader 变体。
 5. **H-03E**：封装显式 View/Object/Directional Light 输入和 Render Graph Pass 适配器，不创建
    Scene 或 Light 管理器。
 6. **H-03F**：增加端到端图像/数值回归、资源生命周期测试和性能基线，整理 H-04/H-05 输入契约。
@@ -178,4 +178,21 @@ Metallic/Roughness、Normal、Occlusion 和 Emissive。Group 1 固定为 Binding
 标准网格 location 固定为 0 Position、1 Normal、2 Tangent、3 UV0。无纹理路径只要求 Position 和
 Normal；任意纹理要求 UV0，Normal Texture 额外要求带 handedness 的 Tangent。新增纯 CPU 校验会
 返回具体缺失项，并拒绝未知 feature 位。该检查不从 location 猜测更高层语义，而是把 location
-映射正式定义为 H-03 模块契约。下一步 H-03D2b 将创建 1×1 默认资源并接入真实 Shader 采样。
+映射正式定义为 H-03 模块契约。
+
+## H-03D2b 实现记录
+
+`pbr_default_resources` 创建五张 1×1 纹理和一个线性采样器：Base Color 与 Emissive 使用 sRGB
+格式，其余数据纹理使用线性 UNORM；白色保持 Base Color、Metallic/Roughness、Occlusion 和
+Emissive 乘数，法线纹理使用近似 `(0.5, 0.5, 1.0)`。默认资源可一次性写入
+`material_gpu_instance`，保证没有用户资产时 Bind Group 仍完整有效。
+
+PBR Shader 现在真实采样五类纹理：Base Color 和 Emissive 按颜色纹理处理，Metallic/Roughness
+使用 B/G 通道，Normal 通过 TBN 与 Normal Scale 转换，Occlusion 按 Strength 混合。当前示例使用
+`pbr_texture_mask = 31` 的全纹理变体和默认资源完成离屏 Draw；H-03D2c 再生成按纹理组合裁剪的
+Shader 变体，避免未启用槽位的无效采样。
+
+实现过程中补齐了 Renderer 的 Graphics Bind Group 资源状态跟踪。图形描述符中的 Uniform、
+Storage Buffer、Sampled/Storage Texture 现在会传入 Recorder，在提交前生成访问屏障与 Image
+Layout 转换；因此刚完成上传的默认纹理能从 `TRANSFER_DST` 正确进入
+`SHADER_READ_ONLY_OPTIMAL`，无需调用方接触 Vulkan 同步。

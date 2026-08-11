@@ -44,8 +44,9 @@ public:
                                                      VkPipeline pipeline) noexcept;
   [[nodiscard]] granit_result
   bind_graphics_groups(const vulkan_device& device, VkPipelineLayout layout,
-                       std::uint32_t first_group,
-                       std::span<const VkDescriptorSet> bind_groups) noexcept;
+                       std::uint32_t first_group, std::span<const VkDescriptorSet> bind_groups,
+                       std::span<const std::pair<VkBuffer, VkAccessFlags2>> buffer_accesses,
+                       std::span<const vulkan_image_access> image_accesses);
   [[nodiscard]] granit_result bind_compute_pipeline(const vulkan_device& device,
                                                     VkPipeline pipeline) noexcept;
   [[nodiscard]] granit_result

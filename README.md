@@ -121,7 +121,8 @@ cmake --preset linux-clang-debug -DBUILD_SHARED_LIBS=OFF
 - `granit_window_triangle_example`：上传位置和颜色顶点数据，在 Win32 窗口持续绘制彩色三角形。
 - `granit_compute_example`：Compute Shader 写入 Storage Buffer，自动同步复制并读取结果。
 - `granit_material_hot_reload_example`：演示缺失变体时的错误材质回退和成功热替换。
-- `granit_pbr_offscreen_example`：使用无纹理金属度/粗糙度 Shader 完成带深度的离屏 PBR Draw。
+- `granit_pbr_offscreen_example`：使用五类默认纹理和金属度/粗糙度 Shader 完成带深度的离屏 PBR
+  Draw。
 
 示例不包含 Vulkan 头文件；材质热替换示例使用尚未安装的开发中 `granit::material` 模块，其余示例
 只依赖稳定分层中的 Granit 公共接口。窗口示例目前仅在 Windows 构建。

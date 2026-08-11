@@ -194,10 +194,19 @@ granit_result vulkan_command_recorder::bind_graphics_pipeline(const vulkan_devic
 
 granit_result vulkan_command_recorder::bind_graphics_groups(
     const vulkan_device& device, VkPipelineLayout layout, std::uint32_t first_group,
-    std::span<const VkDescriptorSet> bind_groups) noexcept {
+    std::span<const VkDescriptorSet> bind_groups,
+    std::span<const std::pair<VkBuffer, VkAccessFlags2>> buffer_accesses,
+    std::span<const vulkan_image_access> image_accesses) {
   if (state_ != command_recorder_state::recording || layout == VK_NULL_HANDLE ||
       bind_groups.empty())
     return GRANIT_ERROR_INVALID_ARGUMENT;
+  const auto buffer_result = prepare_buffer_access(device, buffer_accesses,
+                                                   VK_PIPELINE_STAGE_2_VERTEX_SHADER_BIT |
+                                                       VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT);
+  if (buffer_result != GRANIT_SUCCESS)
+    return buffer_result;
+  for (const auto& access : image_accesses)
+    prepare_image_access(device, access);
   device.functions().vkCmdBindDescriptorSets(
       command_buffer_, VK_PIPELINE_BIND_POINT_GRAPHICS, layout, first_group,
       static_cast<std::uint32_t>(bind_groups.size()), bind_groups.data(), 0, nullptr);
