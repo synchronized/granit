@@ -154,6 +154,9 @@ VkImageUsageFlags map_texture_usage(granit_texture_usage usage) noexcept {
 
 renderer_state::~renderer_state() {
   static_cast<void>(wait_for_all_submissions());
+  for (auto& slot : upload_slots_)
+    slot.context->destroy(device_, memory_allocator_);
+  upload_slots_.clear();
   for (auto& slot : frame_slots_) {
     for (auto& preamble : slot.batch_preambles)
       preamble->destroy(device_);
@@ -256,11 +259,51 @@ granit_result renderer_state::initialize(std::string_view application_name, bool
     instance_.reset();
     throw;
   }
+  try {
+    upload_slots_.reserve(frames_in_flight);
+    for (std::uint32_t index = 0; index < frames_in_flight; ++index) {
+      upload_slot slot{.context = std::make_unique<vulkan_upload_context>(), .acquired = false};
+      const auto upload_result = slot.context->initialize(device_);
+      if (upload_result != GRANIT_SUCCESS) {
+        for (auto& initialized : upload_slots_)
+          initialized.context->destroy(device_, memory_allocator_);
+        upload_slots_.clear();
+        for (auto& initialized : frame_slots_) {
+          initialized.postamble->destroy(device_);
+          initialized.preamble->destroy(device_);
+          initialized.context->destroy(device_);
+        }
+        frame_slots_.clear();
+        memory_allocator_.reset();
+        device_.reset();
+        instance_.reset();
+        return upload_result;
+      }
+      upload_slots_.push_back(std::move(slot));
+    }
+  } catch (...) {
+    for (auto& slot : upload_slots_)
+      slot.context->destroy(device_, memory_allocator_);
+    upload_slots_.clear();
+    for (auto& slot : frame_slots_) {
+      slot.postamble->destroy(device_);
+      slot.preamble->destroy(device_);
+      slot.context->destroy(device_);
+    }
+    frame_slots_.clear();
+    memory_allocator_.reset();
+    device_.reset();
+    instance_.reset();
+    throw;
+  }
   VkPipelineCacheCreateInfo cache_info{};
   cache_info.sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO;
   const auto cache_result = device_.functions().vkCreatePipelineCache(
       device_.native_handle(), &cache_info, nullptr, &pipeline_cache_);
   if (cache_result != VK_SUCCESS) {
+    for (auto& slot : upload_slots_)
+      slot.context->destroy(device_, memory_allocator_);
+    upload_slots_.clear();
     for (auto& slot : frame_slots_) {
       slot.postamble->destroy(device_);
       slot.preamble->destroy(device_);
@@ -274,6 +317,25 @@ granit_result renderer_state::initialize(std::string_view application_name, bool
   }
   surface_types_ = surface_types;
   return GRANIT_SUCCESS;
+}
+
+std::size_t renderer_state::acquire_upload_slot() {
+  std::unique_lock lock{upload_mutex_};
+  upload_available_.wait(lock, [this] {
+    return std::ranges::any_of(upload_slots_, [](const auto& slot) { return !slot.acquired; });
+  });
+  const auto found =
+      std::ranges::find_if(upload_slots_, [](const auto& slot) { return !slot.acquired; });
+  found->acquired = true;
+  return static_cast<std::size_t>(std::distance(upload_slots_.begin(), found));
+}
+
+void renderer_state::release_upload_slot(std::size_t index) noexcept {
+  {
+    std::lock_guard lock{upload_mutex_};
+    upload_slots_[index].acquired = false;
+  }
+  upload_available_.notify_one();
 }
 
 granit_result renderer_state::import_pipeline_cache(const void* data, std::uint64_t size) noexcept {
@@ -438,83 +500,50 @@ granit_result renderer_state::upload_buffer(const vulkan_buffer_allocation& buff
                                             VkDeviceSize size) noexcept {
   if (device_lost())
     return GRANIT_ERROR_DEVICE_LOST;
-  vulkan_buffer_allocation staging;
-  VkBufferCreateInfo staging_info{};
-  staging_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-  staging_info.size = size;
-  staging_info.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
-  staging_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-  auto result =
-      memory_allocator_.create_buffer(staging_info, vulkan_memory_location::upload, staging);
-  if (result != GRANIT_SUCCESS) {
+  const auto slot_index = acquire_upload_slot();
+  auto& context = *upload_slots_[slot_index].context;
+  auto finish = [&](granit_result result) {
+    release_upload_slot(slot_index);
     return observe_device_result(result);
-  }
-  std::memcpy(staging.mapped_data, data, static_cast<std::size_t>(size));
-  result = memory_allocator_.flush(staging, 0, size);
-  if (result != GRANIT_SUCCESS) {
-    memory_allocator_.destroy_buffer(staging);
-    return observe_device_result(result);
-  }
+  };
+  auto result = context.ensure_capacity(memory_allocator_, size);
+  if (result != GRANIT_SUCCESS)
+    return finish(result);
+  std::memcpy(context.staging().mapped_data, data, static_cast<std::size_t>(size));
+  result = memory_allocator_.flush(context.staging(), 0, size);
+  if (result != GRANIT_SUCCESS)
+    return finish(result);
+  result = context.begin(device_);
+  if (result != GRANIT_SUCCESS)
+    return finish(result);
 
-  std::lock_guard queue_lock{queue_mutex_};
   const auto& functions = device_.functions();
-  VkCommandPool pool{VK_NULL_HANDLE};
-  VkCommandBuffer command_buffer{VK_NULL_HANDLE};
-  VkFence fence{VK_NULL_HANDLE};
-
-  VkCommandPoolCreateInfo pool_info{};
-  pool_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-  pool_info.flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT;
-  pool_info.queueFamilyIndex = device_.graphics_queue_family();
-  auto vk_result =
-      functions.vkCreateCommandPool(device_.native_handle(), &pool_info, nullptr, &pool);
-  if (vk_result == VK_SUCCESS) {
-    VkCommandBufferAllocateInfo allocate_info{};
-    allocate_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-    allocate_info.commandPool = pool;
-    allocate_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    allocate_info.commandBufferCount = 1;
-    vk_result = functions.vkAllocateCommandBuffers(device_.native_handle(), &allocate_info,
-                                                   &command_buffer);
-  }
-  if (vk_result == VK_SUCCESS) {
-    VkCommandBufferBeginInfo begin_info{};
-    begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-    begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-    vk_result = functions.vkBeginCommandBuffer(command_buffer, &begin_info);
-  }
-  if (vk_result == VK_SUCCESS) {
-    const VkBufferCopy copy{.srcOffset = 0, .dstOffset = offset, .size = size};
-    functions.vkCmdCopyBuffer(command_buffer, staging.buffer, buffer.buffer, 1, &copy);
-    vk_result = functions.vkEndCommandBuffer(command_buffer);
-  }
-  if (vk_result == VK_SUCCESS) {
-    VkFenceCreateInfo fence_info{};
-    fence_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-    vk_result = functions.vkCreateFence(device_.native_handle(), &fence_info, nullptr, &fence);
-  }
-  if (vk_result == VK_SUCCESS) {
+  const VkBufferCopy copy{.srcOffset = 0, .dstOffset = offset, .size = size};
+  functions.vkCmdCopyBuffer(context.command_buffer(), context.staging().buffer, buffer.buffer, 1,
+                            &copy);
+  result = context.end(device_);
+  if (result != GRANIT_SUCCESS)
+    return finish(result);
+  result = context.reset_fence(device_);
+  if (result != GRANIT_SUCCESS)
+    return finish(result);
+  {
+    std::lock_guard queue_lock{queue_mutex_};
     VkCommandBufferSubmitInfo command_info{};
     command_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO;
-    command_info.commandBuffer = command_buffer;
+    command_info.commandBuffer = context.command_buffer();
     VkSubmitInfo2 submit_info{};
     submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2;
     submit_info.commandBufferInfoCount = 1;
     submit_info.pCommandBufferInfos = &command_info;
-    vk_result = functions.vkQueueSubmit2(device_.graphics_queue(), 1, &submit_info, fence);
+    result = map_vulkan_result(
+        functions.vkQueueSubmit2(device_.graphics_queue(), 1, &submit_info, context.fence()));
   }
-  if (vk_result == VK_SUCCESS) {
-    vk_result = functions.vkWaitForFences(device_.native_handle(), 1, &fence, VK_TRUE, UINT64_MAX);
+  if (result != GRANIT_SUCCESS) {
+    static_cast<void>(context.restore_signaled_fence(device_));
+    return finish(result);
   }
-
-  if (fence != VK_NULL_HANDLE) {
-    functions.vkDestroyFence(device_.native_handle(), fence, nullptr);
-  }
-  if (pool != VK_NULL_HANDLE) {
-    functions.vkDestroyCommandPool(device_.native_handle(), pool, nullptr);
-  }
-  memory_allocator_.destroy_buffer(staging);
-  return observe_device_result(map_vulkan_result(vk_result));
+  return finish(context.wait(device_));
 }
 
 granit_result renderer_state::create_native_texture(const granit_texture_desc& desc,
@@ -542,97 +571,66 @@ granit_result renderer_state::upload_texture(const vulkan_image_allocation& text
                                              const VkBufferImageCopy& copy) noexcept {
   if (device_lost())
     return GRANIT_ERROR_DEVICE_LOST;
-  vulkan_buffer_allocation staging;
-  VkBufferCreateInfo staging_info{};
-  staging_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-  staging_info.size = size;
-  staging_info.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
-  staging_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-  auto result =
-      memory_allocator_.create_buffer(staging_info, vulkan_memory_location::upload, staging);
+  const auto slot_index = acquire_upload_slot();
+  auto& context = *upload_slots_[slot_index].context;
+  auto finish = [&](granit_result result) {
+    release_upload_slot(slot_index);
+    return observe_device_result(result);
+  };
+  auto result = context.ensure_capacity(memory_allocator_, size);
   if (result != GRANIT_SUCCESS)
-    return observe_device_result(result);
-  std::memcpy(staging.mapped_data, data, static_cast<std::size_t>(size));
-  result = memory_allocator_.flush(staging, 0, size);
-  if (result != GRANIT_SUCCESS) {
-    memory_allocator_.destroy_buffer(staging);
-    return observe_device_result(result);
-  }
+    return finish(result);
+  std::memcpy(context.staging().mapped_data, data, static_cast<std::size_t>(size));
+  result = memory_allocator_.flush(context.staging(), 0, size);
+  if (result != GRANIT_SUCCESS)
+    return finish(result);
+  result = context.begin(device_);
+  if (result != GRANIT_SUCCESS)
+    return finish(result);
 
-  std::lock_guard queue_lock{queue_mutex_};
+  std::unique_lock queue_lock{queue_mutex_};
   const auto& functions = device_.functions();
-  VkCommandPool pool{VK_NULL_HANDLE};
-  VkCommandBuffer command_buffer{VK_NULL_HANDLE};
-  VkFence fence{VK_NULL_HANDLE};
-  VkCommandPoolCreateInfo pool_info{};
-  pool_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-  pool_info.flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT;
-  pool_info.queueFamilyIndex = device_.graphics_queue_family();
-  auto vk_result =
-      functions.vkCreateCommandPool(device_.native_handle(), &pool_info, nullptr, &pool);
-  if (vk_result == VK_SUCCESS) {
-    VkCommandBufferAllocateInfo allocate_info{};
-    allocate_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-    allocate_info.commandPool = pool;
-    allocate_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    allocate_info.commandBufferCount = 1;
-    vk_result = functions.vkAllocateCommandBuffers(device_.native_handle(), &allocate_info,
-                                                   &command_buffer);
-  }
-  if (vk_result == VK_SUCCESS) {
-    VkCommandBufferBeginInfo begin_info{};
-    begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-    begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-    vk_result = functions.vkBeginCommandBuffer(command_buffer, &begin_info);
-  }
-  if (vk_result == VK_SUCCESS) {
-    const auto previous =
-        std::find_if(image_states_.begin(), image_states_.end(),
-                     [&](const auto& state) { return state.image == texture.image; });
-    VkImageMemoryBarrier2 barrier{};
-    barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
-    barrier.srcStageMask =
-        previous == image_states_.end() ? VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT : previous->stages;
-    barrier.srcAccessMask = previous == image_states_.end() ? 0 : previous->access;
-    barrier.dstStageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT;
-    barrier.dstAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT;
-    barrier.oldLayout =
-        previous == image_states_.end() ? VK_IMAGE_LAYOUT_UNDEFINED : previous->layout;
-    barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-    barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    barrier.image = texture.image;
-    barrier.subresourceRange = {copy.imageSubresource.aspectMask, copy.imageSubresource.mipLevel, 1,
-                                copy.imageSubresource.baseArrayLayer,
-                                copy.imageSubresource.layerCount};
-    VkDependencyInfo dependency{};
-    dependency.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
-    dependency.imageMemoryBarrierCount = 1;
-    dependency.pImageMemoryBarriers = &barrier;
-    functions.vkCmdPipelineBarrier2(command_buffer, &dependency);
-    functions.vkCmdCopyBufferToImage(command_buffer, staging.buffer, texture.image,
-                                     VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copy);
-    vk_result = functions.vkEndCommandBuffer(command_buffer);
-  }
-  if (vk_result == VK_SUCCESS) {
-    VkFenceCreateInfo fence_info{};
-    fence_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-    vk_result = functions.vkCreateFence(device_.native_handle(), &fence_info, nullptr, &fence);
-  }
-  if (vk_result == VK_SUCCESS) {
+  const auto previous =
+      std::find_if(image_states_.begin(), image_states_.end(),
+                   [&](const auto& state) { return state.image == texture.image; });
+  VkImageMemoryBarrier2 barrier{};
+  barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
+  barrier.srcStageMask =
+      previous == image_states_.end() ? VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT : previous->stages;
+  barrier.srcAccessMask = previous == image_states_.end() ? 0 : previous->access;
+  barrier.dstStageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT;
+  barrier.dstAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT;
+  barrier.oldLayout =
+      previous == image_states_.end() ? VK_IMAGE_LAYOUT_UNDEFINED : previous->layout;
+  barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+  barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+  barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+  barrier.image = texture.image;
+  barrier.subresourceRange = {copy.imageSubresource.aspectMask, copy.imageSubresource.mipLevel, 1,
+                              copy.imageSubresource.baseArrayLayer,
+                              copy.imageSubresource.layerCount};
+  VkDependencyInfo dependency{};
+  dependency.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
+  dependency.imageMemoryBarrierCount = 1;
+  dependency.pImageMemoryBarriers = &barrier;
+  functions.vkCmdPipelineBarrier2(context.command_buffer(), &dependency);
+  functions.vkCmdCopyBufferToImage(context.command_buffer(), context.staging().buffer,
+                                   texture.image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copy);
+  result = context.end(device_);
+  if (result == GRANIT_SUCCESS)
+    result = context.reset_fence(device_);
+  if (result == GRANIT_SUCCESS) {
     VkCommandBufferSubmitInfo command_info{};
     command_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO;
-    command_info.commandBuffer = command_buffer;
+    command_info.commandBuffer = context.command_buffer();
     VkSubmitInfo2 submit_info{};
     submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2;
     submit_info.commandBufferInfoCount = 1;
     submit_info.pCommandBufferInfos = &command_info;
-    vk_result = functions.vkQueueSubmit2(device_.graphics_queue(), 1, &submit_info, fence);
+    result = map_vulkan_result(
+        functions.vkQueueSubmit2(device_.graphics_queue(), 1, &submit_info, context.fence()));
   }
-  if (vk_result == VK_SUCCESS)
-    vk_result = functions.vkWaitForFences(device_.native_handle(), 1, &fence, VK_TRUE, UINT64_MAX);
-
-  if (vk_result == VK_SUCCESS) {
+  if (result == GRANIT_SUCCESS) {
     vulkan_image_access state{.image = texture.image,
                               .range = {copy.imageSubresource.aspectMask, 0,
                                         VK_REMAINING_MIP_LEVELS, 0, VK_REMAINING_ARRAY_LAYERS},
@@ -648,12 +646,12 @@ granit_result renderer_state::upload_texture(const vulkan_image_allocation& text
     else
       *found = state;
   }
-  if (fence != VK_NULL_HANDLE)
-    functions.vkDestroyFence(device_.native_handle(), fence, nullptr);
-  if (pool != VK_NULL_HANDLE)
-    functions.vkDestroyCommandPool(device_.native_handle(), pool, nullptr);
-  memory_allocator_.destroy_buffer(staging);
-  return observe_device_result(map_vulkan_result(vk_result));
+  queue_lock.unlock();
+  if (result != GRANIT_SUCCESS) {
+    static_cast<void>(context.restore_signaled_fence(device_));
+    return finish(result);
+  }
+  return finish(context.wait(device_));
 }
 
 void renderer_state::destroy_native_texture(vulkan_image_allocation& texture) noexcept {

@@ -40,6 +40,8 @@ target_sources(
     backend/vulkan/surface.h
     backend/vulkan/swapchain.cpp
     backend/vulkan/swapchain.h
+    backend/vulkan/upload_context.cpp
+    backend/vulkan/upload_context.h
     backend/vulkan/version_check.cpp
     backend/vulkan/vma_implementation.cpp
     core/handle_table.cpp

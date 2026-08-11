@@ -4,6 +4,7 @@
 #ifndef GRANIT_RENDERER_RENDERER_STATE_H_
 #define GRANIT_RENDERER_RENDERER_STATE_H_
 
+#include <condition_variable>
 #include <cstdint>
 #include <memory>
 #include <mutex>
@@ -21,6 +22,7 @@
 #include "backend/vulkan/instance.h"
 #include "backend/vulkan/memory_allocator.h"
 #include "backend/vulkan/swapchain.h"
+#include "backend/vulkan/upload_context.h"
 #include "core/device_status.h"
 #include "core/retirement_queue.h"
 
@@ -220,6 +222,14 @@ private:
     bool awaiting_present{};
   };
 
+  struct upload_slot {
+    std::unique_ptr<vulkan_upload_context> context;
+    bool acquired{};
+  };
+
+  [[nodiscard]] std::size_t acquire_upload_slot();
+  void release_upload_slot(std::size_t index) noexcept;
+
   [[nodiscard]] granit_result complete_frame_slot(frame_slot& slot) noexcept;
   [[nodiscard]] granit_result observe_device_result(granit_result result) noexcept;
 
@@ -230,11 +240,14 @@ private:
   std::mutex resource_mutex_;
   std::mutex pipeline_cache_mutex_;
   std::mutex queue_mutex_;
+  std::mutex upload_mutex_;
+  std::condition_variable upload_available_;
   vulkan_instance instance_;
   vulkan_device device_;
   vulkan_memory_allocator memory_allocator_;
   VkPipelineCache pipeline_cache_{VK_NULL_HANDLE};
   std::vector<frame_slot> frame_slots_;
+  std::vector<upload_slot> upload_slots_;
   std::size_t next_frame_slot_{};
   submission_serials submission_serials_;
   std::mutex retirement_mutex_;
