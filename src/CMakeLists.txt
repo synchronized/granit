@@ -184,6 +184,7 @@ target_sources(
     material/material_migration.cpp
     material/material_package.cpp
     material/material_package_archive.cpp
+    material/pbr_material_schema.cpp
     material/pbr_reference.cpp
     material/material_template_gpu.cpp
   PUBLIC
@@ -197,6 +198,7 @@ target_sources(
       material/material_migration.h
       material/material_package.h
       material/material_package_archive.h
+      material/pbr_material_schema.h
       material/pbr_reference.h
       material/material_template_gpu.h
 )

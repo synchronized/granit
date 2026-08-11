@@ -6,7 +6,7 @@
 ## 元数据
 
 - 设计状态：已确认首版边界
-- 实现状态：进行中（H-03A～H-03C、H-03D1 已完成）
+- 实现状态：进行中（H-03A～H-03C、H-03D1～H-03D2a 已完成）
 - 路线图任务：H-03
 - 优先级：P2
 - 前置依赖：H-01、H-02
@@ -92,9 +92,8 @@ CPU 参考函数与 Shader 必须共享公式说明和固定测试向量。允�
    调试 JSON，并覆盖往返、无效枚举与损坏输入检查。
 2. **H-03B（已完成）**：实现独立 CPU BRDF 参考函数、PBR 参数规范、边界值和固定测试向量。
 3. **H-03C（已完成）**：加入无纹理 HLSL PBR Shader、离线构建包和单三角离屏直接光照闭环。
-4. **H-03D（进行中）**：H-03D1 已接入 PBR 材质常量；H-03D2 将接入 Base Color、
-   Metallic/Roughness、Normal、Occlusion、Emissive 纹理与变体，验证 sRGB/线性语义和缺失
-   顶点属性诊断。
+4. **H-03D（进行中）**：H-03D1 已接入 PBR 材质常量；H-03D2a 已固定纹理 feature、Binding 和
+   顶点输入契约；H-03D2b 将接入默认纹理与 Shader 采样，验证 sRGB/线性语义。
 5. **H-03E**：封装显式 View/Object/Directional Light 输入和 Render Graph Pass 适配器，不创建
    Scene 或 Light 管理器。
 6. **H-03F**：增加端到端图像/数值回归、资源生命周期测试和性能基线，整理 H-04/H-05 输入契约。
@@ -168,5 +167,15 @@ correlated GGX 可见性和单方向光直接光照。输入方向会归一化�
 `material_template_gpu` 的 Pipeline Layout。
 
 本阶段先固定无纹理路径，但已经保留 Normal Scale 与 Occlusion Strength 的统一常量布局，避免
-H-03D2 接入纹理时再次改变常量 ABI。H-03D2 需要加入纹理存在性 feature、默认纹理以及 UV/切线
-顶点属性检查。
+H-03D2 接入纹理时再次改变常量 ABI。
+
+## H-03D2a 实现记录
+
+PBR 纹理变体统一使用 `pbr_texture_mask` 位掩码，五个位依次表示 Base Color、
+Metallic/Roughness、Normal、Occlusion 和 Emissive。Group 1 固定为 Binding 0 常量块、Binding
+1～5 五类纹理和 Binding 6 共享采样器；后续增加变体不会改变 Pipeline Layout。
+
+标准网格 location 固定为 0 Position、1 Normal、2 Tangent、3 UV0。无纹理路径只要求 Position 和
+Normal；任意纹理要求 UV0，Normal Texture 额外要求带 handedness 的 Tangent。新增纯 CPU 校验会
+返回具体缺失项，并拒绝未知 feature 位。该检查不从 location 猜测更高层语义，而是把 location
+映射正式定义为 H-03 模块契约。下一步 H-03D2b 将创建 1×1 默认资源并接入真实 Shader 采样。
