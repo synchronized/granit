@@ -5,6 +5,7 @@
 #define GRANIT_RENDERER_RENDERER_REGISTRY_H_
 
 #include <atomic>
+#include <cstddef>
 #include <cstdint>
 #include <memory>
 #include <mutex>
@@ -23,6 +24,7 @@
 #include <granit/renderer/surface.h>
 #include <granit/renderer/swapchain.h>
 #include <granit/renderer/texture.h>
+#include <granit/renderer/upload_batch.h>
 
 #include "core/handle_table.h"
 #include "core/lifecycle_validation.h"
@@ -199,6 +201,18 @@ public:
                                             granit_command_recorder recorder);
   [[nodiscard]] granit_result destroy_command_recorder(granit_renderer renderer,
                                                        granit_command_recorder recorder);
+  [[nodiscard]] granit_result create_upload_batch(granit_renderer renderer,
+                                                  granit_upload_batch& batch);
+  [[nodiscard]] granit_result upload_batch_write_buffer(granit_renderer renderer,
+                                                        granit_upload_batch batch,
+                                                        granit_buffer buffer, std::uint64_t offset,
+                                                        const void* data, std::uint64_t size);
+  [[nodiscard]] granit_result submit_upload_batch(granit_renderer renderer,
+                                                  granit_upload_batch batch);
+  [[nodiscard]] granit_result reset_upload_batch(granit_renderer renderer,
+                                                 granit_upload_batch batch);
+  [[nodiscard]] granit_result destroy_upload_batch(granit_renderer renderer,
+                                                   granit_upload_batch batch);
 
 private:
   renderer_registry() = default;
@@ -206,6 +220,7 @@ private:
   struct swapchain_record;
   struct command_recorder_record;
   struct frame_record;
+  struct upload_batch_record;
 
   struct resource_metadata {
     std::uint64_t creation_sequence{};
@@ -344,6 +359,18 @@ private:
     std::size_t slot_index{};
     bool submitted{};
   };
+  struct buffer_upload_entry {
+    std::shared_ptr<buffer_record> buffer;
+    std::uint64_t offset{};
+    std::vector<std::byte> data;
+  };
+  struct upload_batch_record {
+    resource_metadata metadata;
+    std::shared_ptr<renderer_state> renderer;
+    std::mutex mutex;
+    std::vector<buffer_upload_entry> buffer_uploads;
+    bool failed{};
+  };
   std::unordered_map<granit_surface, std::shared_ptr<surface_record>> surfaces_;
   std::unordered_map<granit_swapchain, std::shared_ptr<swapchain_record>> swapchains_;
   std::unordered_map<granit_buffer, std::shared_ptr<buffer_record>> buffers_;
@@ -363,6 +390,7 @@ private:
   std::unordered_map<granit_command_recorder, std::shared_ptr<command_recorder_record>>
       command_recorders_;
   std::unordered_map<granit_frame, std::shared_ptr<frame_record>> frames_;
+  std::unordered_map<granit_upload_batch, std::shared_ptr<upload_batch_record>> upload_batches_;
   std::uint32_t next_domain_{1};
   std::uint64_t next_creation_sequence_{1};
 };

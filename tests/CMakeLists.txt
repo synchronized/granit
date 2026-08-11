@@ -23,6 +23,7 @@ add_library(
     headers/swapchain_h.c
     headers/texture_h.c
     headers/types_h.c
+    headers/upload_batch_h.c
 )
 target_link_libraries(granit_c_header_test PRIVATE granit::granit)
 granit_target_compile_warnings(granit_c_header_test)
@@ -118,6 +119,7 @@ add_executable(
   renderer/surface_test.cpp
   renderer/swapchain_test.cpp
   renderer/texture_test.cpp
+  renderer/upload_batch_test.cpp
 )
 target_link_libraries(
   granit_renderer_test
@@ -193,6 +195,7 @@ add_library(
     headers/swapchain_hpp.cpp
     headers/texture_hpp.cpp
     headers/types_hpp.cpp
+    headers/upload_batch_hpp.cpp
 )
 target_link_libraries(granit_cpp_header_test PRIVATE granit::granit)
 granit_target_compile_warnings(granit_cpp_header_test)

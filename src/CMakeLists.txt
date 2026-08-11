@@ -66,6 +66,7 @@ target_sources(
     renderer/surface_api.cpp
     renderer/swapchain_api.cpp
     renderer/texture_api.cpp
+    renderer/upload_batch_api.cpp
     result.cpp
     version.cpp
   PUBLIC
@@ -99,6 +100,8 @@ target_sources(
       "${PROJECT_SOURCE_DIR}/include/granit/renderer/surface.hpp"
       "${PROJECT_SOURCE_DIR}/include/granit/renderer/texture.h"
       "${PROJECT_SOURCE_DIR}/include/granit/renderer/texture.hpp"
+      "${PROJECT_SOURCE_DIR}/include/granit/renderer/upload_batch.h"
+      "${PROJECT_SOURCE_DIR}/include/granit/renderer/upload_batch.hpp"
       "${PROJECT_SOURCE_DIR}/include/granit/renderer/swapchain.h"
       "${PROJECT_SOURCE_DIR}/include/granit/renderer/swapchain.hpp"
       "${PROJECT_SOURCE_DIR}/include/granit/core/types.h"

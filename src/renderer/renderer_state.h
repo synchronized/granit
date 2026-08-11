@@ -39,6 +39,13 @@ struct vulkan_bind_group_write {
   VkSampler sampler{VK_NULL_HANDLE};
 };
 
+struct vulkan_buffer_upload {
+  const vulkan_buffer_allocation* destination{};
+  VkDeviceSize destination_offset{};
+  const void* data{};
+  VkDeviceSize size{};
+};
+
 class renderer_state {
 public:
   renderer_state() = default;
@@ -77,6 +84,8 @@ public:
   [[nodiscard]] granit_result upload_buffer(const vulkan_buffer_allocation& buffer,
                                             VkDeviceSize offset, const void* data,
                                             VkDeviceSize size) noexcept;
+  [[nodiscard]] granit_result
+  upload_buffers(std::span<const vulkan_buffer_upload> uploads) noexcept;
   [[nodiscard]] granit_result create_native_texture(const granit_texture_desc& desc,
                                                     vulkan_image_allocation& texture) noexcept;
   [[nodiscard]] granit_result upload_texture(const vulkan_image_allocation& texture,

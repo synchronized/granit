@@ -546,6 +546,76 @@ granit_result renderer_state::upload_buffer(const vulkan_buffer_allocation& buff
   return finish(context.wait(device_));
 }
 
+granit_result
+renderer_state::upload_buffers(std::span<const vulkan_buffer_upload> uploads) noexcept {
+  if (device_lost())
+    return GRANIT_ERROR_DEVICE_LOST;
+  if (uploads.empty())
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  VkDeviceSize required{};
+  for (const auto& upload : uploads) {
+    const auto aligned = (required + 3) & ~VkDeviceSize{3};
+    if (aligned < required || upload.size > UINT64_MAX - aligned)
+      return GRANIT_ERROR_OUT_OF_MEMORY;
+    required = aligned + upload.size;
+  }
+
+  const auto slot_index = acquire_upload_slot();
+  auto& context = *upload_slots_[slot_index].context;
+  auto finish = [&](granit_result result) {
+    release_upload_slot(slot_index);
+    return observe_device_result(result);
+  };
+  auto result = context.ensure_capacity(memory_allocator_, required);
+  if (result != GRANIT_SUCCESS)
+    return finish(result);
+
+  VkDeviceSize source_offset{};
+  for (const auto& upload : uploads) {
+    source_offset = (source_offset + 3) & ~VkDeviceSize{3};
+    std::memcpy(static_cast<std::byte*>(context.staging().mapped_data) + source_offset, upload.data,
+                static_cast<std::size_t>(upload.size));
+    source_offset += upload.size;
+  }
+  result = memory_allocator_.flush(context.staging(), 0, required);
+  if (result != GRANIT_SUCCESS)
+    return finish(result);
+  result = context.begin(device_);
+  if (result != GRANIT_SUCCESS)
+    return finish(result);
+
+  source_offset = 0;
+  const auto& functions = device_.functions();
+  for (const auto& upload : uploads) {
+    source_offset = (source_offset + 3) & ~VkDeviceSize{3};
+    const VkBufferCopy copy{
+        .srcOffset = source_offset, .dstOffset = upload.destination_offset, .size = upload.size};
+    functions.vkCmdCopyBuffer(context.command_buffer(), context.staging().buffer,
+                              upload.destination->buffer, 1, &copy);
+    source_offset += upload.size;
+  }
+  result = context.end(device_);
+  if (result == GRANIT_SUCCESS)
+    result = context.reset_fence(device_);
+  if (result == GRANIT_SUCCESS) {
+    std::lock_guard queue_lock{queue_mutex_};
+    VkCommandBufferSubmitInfo command_info{};
+    command_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO;
+    command_info.commandBuffer = context.command_buffer();
+    VkSubmitInfo2 submit_info{};
+    submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2;
+    submit_info.commandBufferInfoCount = 1;
+    submit_info.pCommandBufferInfos = &command_info;
+    result = map_vulkan_result(
+        functions.vkQueueSubmit2(device_.graphics_queue(), 1, &submit_info, context.fence()));
+  }
+  if (result != GRANIT_SUCCESS) {
+    static_cast<void>(context.restore_signaled_fence(device_));
+    return finish(result);
+  }
+  return finish(context.wait(device_));
+}
+
 granit_result renderer_state::create_native_texture(const granit_texture_desc& desc,
                                                     vulkan_image_allocation& texture) noexcept {
   if (device_lost())

@@ -242,6 +242,7 @@ granit_result renderer_registry::destroy(granit_renderer renderer) {
   std::vector<std::shared_ptr<bind_group_record>> native_bind_groups;
   std::vector<std::shared_ptr<graphics_pipeline_record>> native_graphics_pipelines;
   std::vector<std::shared_ptr<compute_pipeline_record>> native_compute_pipelines;
+  std::vector<std::shared_ptr<upload_batch_record>> native_upload_batches;
   {
     std::lock_guard lock{mutex_};
     if (handles_.find(renderer, resource_type::renderer, 0) == nullptr) {
@@ -327,6 +328,12 @@ granit_result renderer_registry::destroy(granit_renderer renderer) {
                         record->metadata.creation_sequence);
         }
       }
+      for (const auto& [handle, record] : upload_batches_) {
+        if (record->renderer == state) {
+          lifecycle.add(lifecycle_resource_type::upload_batch, handle,
+                        record->metadata.creation_sequence);
+        }
+      }
     }
     for (auto frame = frames_.begin(); frame != frames_.end();) {
       if (frame->second->renderer == state) {
@@ -344,6 +351,16 @@ granit_result renderer_registry::destroy(granit_renderer renderer) {
         recorder = command_recorders_.erase(recorder);
       } else {
         ++recorder;
+      }
+    }
+    for (auto batch = upload_batches_.begin(); batch != upload_batches_.end();) {
+      if (batch->second->renderer == state) {
+        native_upload_batches.push_back(std::move(batch->second));
+        static_cast<void>(
+            handles_.erase(batch->first, resource_type::upload_batch, state->domain()));
+        batch = upload_batches_.erase(batch);
+      } else {
+        ++batch;
       }
     }
     for (auto sampler = samplers_.begin(); sampler != samplers_.end();) {
@@ -470,6 +487,7 @@ granit_result renderer_registry::destroy(granit_renderer renderer) {
   static_cast<void>(state->wait_for_present_idle());
   static_cast<void>(state->wait_for_all_submissions());
   native_command_recorders.clear();
+  native_upload_batches.clear();
   static_cast<void>(state->drain_retired());
   native_swapchains.clear();
   native_surfaces.clear();
@@ -1303,6 +1321,162 @@ granit_result renderer_registry::write_buffer(granit_renderer renderer, granit_b
     return record->renderer->flush_buffer(record->native, offset, size);
   }
   return record->renderer->upload_buffer(record->native, offset, data, size);
+}
+
+granit_result renderer_registry::create_upload_batch(granit_renderer renderer,
+                                                     granit_upload_batch& batch) {
+  try {
+    auto state = acquire(renderer);
+    if (!state)
+      return GRANIT_ERROR_INVALID_HANDLE;
+    auto record = std::make_shared<upload_batch_record>();
+    record->renderer = state;
+    std::lock_guard lock{mutex_};
+    const auto found = renderers_.find(renderer);
+    if (found == renderers_.end() || found->second != state)
+      return GRANIT_ERROR_INVALID_HANDLE;
+    record->metadata.creation_sequence = next_creation_sequence_++;
+    const auto handle = handles_.insert(record.get(), resource_type::upload_batch, state->domain());
+    if (handle == GRANIT_NULL_HANDLE)
+      return GRANIT_ERROR_OUT_OF_MEMORY;
+    try {
+      upload_batches_.emplace(handle, std::move(record));
+    } catch (...) {
+      static_cast<void>(handles_.erase(handle, resource_type::upload_batch, state->domain()));
+      throw;
+    }
+    batch = handle;
+    return GRANIT_SUCCESS;
+  } catch (const std::bad_alloc&) {
+    return GRANIT_ERROR_OUT_OF_MEMORY;
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+granit_result renderer_registry::upload_batch_write_buffer(granit_renderer renderer,
+                                                           granit_upload_batch batch,
+                                                           granit_buffer buffer,
+                                                           std::uint64_t offset, const void* data,
+                                                           std::uint64_t size) {
+  std::shared_ptr<upload_batch_record> batch_record;
+  std::shared_ptr<buffer_record> buffer_record;
+  {
+    std::lock_guard lock{mutex_};
+    const auto found_renderer = renderers_.find(renderer);
+    if (found_renderer == renderers_.end() ||
+        handles_.find(renderer, resource_type::renderer, 0) == nullptr)
+      return GRANIT_ERROR_INVALID_HANDLE;
+    const auto& state = found_renderer->second;
+    if (handles_.find(batch, resource_type::upload_batch, state->domain()) == nullptr ||
+        handles_.find(buffer, resource_type::buffer, state->domain()) == nullptr)
+      return GRANIT_ERROR_INVALID_HANDLE;
+    const auto found_batch = upload_batches_.find(batch);
+    const auto found_buffer = buffers_.find(buffer);
+    if (found_batch == upload_batches_.end() || found_buffer == buffers_.end() ||
+        found_batch->second->renderer != state || found_buffer->second->renderer != state)
+      return GRANIT_ERROR_INVALID_HANDLE;
+    batch_record = found_batch->second;
+    buffer_record = found_buffer->second;
+  }
+
+  std::scoped_lock record_locks{batch_record->mutex, buffer_record->mutex};
+  if (batch_record->failed || size > SIZE_MAX || buffer_record->mapped ||
+      offset >= buffer_record->desc.size || size > buffer_record->desc.size - offset ||
+      (offset & 3) != 0 || (size & 3) != 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  if (buffer_record->desc.memory_location != GRANIT_MEMORY_LOCATION_DEVICE &&
+      buffer_record->desc.memory_location != GRANIT_MEMORY_LOCATION_AUTOMATIC)
+    return GRANIT_ERROR_UNSUPPORTED;
+  try {
+    buffer_upload_entry entry{.buffer = buffer_record, .offset = offset, .data = {}};
+    entry.data.resize(static_cast<std::size_t>(size));
+    std::memcpy(entry.data.data(), data, static_cast<std::size_t>(size));
+    batch_record->buffer_uploads.push_back(std::move(entry));
+    return GRANIT_SUCCESS;
+  } catch (const std::bad_alloc&) {
+    return GRANIT_ERROR_OUT_OF_MEMORY;
+  }
+}
+
+granit_result renderer_registry::submit_upload_batch(granit_renderer renderer,
+                                                     granit_upload_batch batch) {
+  std::shared_ptr<upload_batch_record> record;
+  {
+    std::lock_guard lock{mutex_};
+    const auto found_renderer = renderers_.find(renderer);
+    if (found_renderer == renderers_.end() ||
+        handles_.find(renderer, resource_type::renderer, 0) == nullptr ||
+        handles_.find(batch, resource_type::upload_batch, found_renderer->second->domain()) ==
+            nullptr)
+      return GRANIT_ERROR_INVALID_HANDLE;
+    const auto found = upload_batches_.find(batch);
+    if (found == upload_batches_.end() || found->second->renderer != found_renderer->second)
+      return GRANIT_ERROR_INVALID_HANDLE;
+    record = found->second;
+  }
+  std::lock_guard batch_lock{record->mutex};
+  if (record->failed)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  if (record->buffer_uploads.empty())
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+
+  std::vector<vulkan_buffer_upload> uploads;
+  uploads.reserve(record->buffer_uploads.size());
+  for (const auto& upload : record->buffer_uploads) {
+    uploads.push_back({.destination = &upload.buffer->native,
+                       .destination_offset = upload.offset,
+                       .data = upload.data.data(),
+                       .size = upload.data.size()});
+  }
+  const auto result = record->renderer->upload_buffers(uploads);
+  if (result == GRANIT_SUCCESS)
+    record->buffer_uploads.clear();
+  else
+    record->failed = true;
+  return result;
+}
+
+granit_result renderer_registry::reset_upload_batch(granit_renderer renderer,
+                                                    granit_upload_batch batch) {
+  std::shared_ptr<upload_batch_record> record;
+  {
+    std::lock_guard lock{mutex_};
+    const auto found_renderer = renderers_.find(renderer);
+    if (found_renderer == renderers_.end() ||
+        handles_.find(renderer, resource_type::renderer, 0) == nullptr ||
+        handles_.find(batch, resource_type::upload_batch, found_renderer->second->domain()) ==
+            nullptr)
+      return GRANIT_ERROR_INVALID_HANDLE;
+    const auto found = upload_batches_.find(batch);
+    if (found == upload_batches_.end() || found->second->renderer != found_renderer->second)
+      return GRANIT_ERROR_INVALID_HANDLE;
+    record = found->second;
+  }
+  std::lock_guard lock{record->mutex};
+  record->buffer_uploads.clear();
+  record->failed = false;
+  return GRANIT_SUCCESS;
+}
+
+granit_result renderer_registry::destroy_upload_batch(granit_renderer renderer,
+                                                      granit_upload_batch batch) {
+  std::lock_guard lock{mutex_};
+  const auto found_renderer = renderers_.find(renderer);
+  if (found_renderer == renderers_.end() ||
+      handles_.find(renderer, resource_type::renderer, 0) == nullptr ||
+      handles_.find(batch, resource_type::upload_batch, found_renderer->second->domain()) ==
+          nullptr)
+    return GRANIT_ERROR_INVALID_HANDLE;
+  const auto found = upload_batches_.find(batch);
+  if (found == upload_batches_.end() || found->second->renderer != found_renderer->second)
+    return GRANIT_ERROR_INVALID_HANDLE;
+  const auto result =
+      handles_.erase(batch, resource_type::upload_batch, found_renderer->second->domain());
+  if (result != GRANIT_SUCCESS)
+    return result;
+  upload_batches_.erase(found);
+  return GRANIT_SUCCESS;
 }
 
 granit_result renderer_registry::create_texture(granit_renderer renderer,

@@ -68,7 +68,7 @@ Compute Pipeline 和 Dispatch 已经实现。仓库已提供离屏清屏、窗�
 并行录制，并形成公开对象线程安全矩阵。下一步进入句柄表、资源锁、Queue 锁和延迟销毁队列的
 性能测量；P-02A 至 P-02F 的句柄、锁、Recorder、Queue、延迟销毁和 staging 上传基线已经完成。
 P-03 已完成 profiler 归因和批量 Recorder 提交优化；P-04A 已完成同步上传上下文复用，
-P-04B 将先提供同步 Upload Batch，再根据基准决定是否增加异步上传环。
+P-04B 已加入 Buffer 同步 Upload Batch，下一步补齐 Texture 批量写入并建立批量大小基准。
 具体顺序见 [docs/roadmap.md](docs/roadmap.md)。
 
 ## 快速开始
@@ -156,6 +156,7 @@ if (granit::failed(result)) {
 
 - [docs/architecture.md](docs/architecture.md)：分层、ABI、句柄和 Vulkan 封装边界。
 - [docs/buffer.md](docs/buffer.md)：Buffer 创建、映射和生命周期。
+- [docs/upload-batch.md](docs/upload-batch.md)：Buffer 同步批量上传和资源保活语义。
 - [docs/build.md](docs/build.md)：环境要求、构建选项和安装方式。
 - [docs/development.md](docs/development.md)：代码风格、命名和目录规范。
 - [docs/roadmap.md](docs/roadmap.md)：分阶段路线图。
