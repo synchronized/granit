@@ -70,8 +70,8 @@ Render Graph 记录了外部执行器扩展点和量化重评条件。P-06 已�
 模块，首版采用串行、单队列执行且不做瞬态内存别名。H-01A～H-01D 已完成纯 CPU 图编译、
 Buffer/Texture View 导入、单 Recorder 串行执行，以及瞬态资源按首末使用点创建回收；这些原型
 当前不进入核心动态库。窗口输出、诊断和性能复核已经完成；现阶段不缓存或并行化，瞬态资源池
-留待真实重复帧验证。H-02A 已确认材质模板、实例、参数布局、Shader 变体和离线构建边界，下一步
-实现纯 CPU 材质元数据与实例 shadow buffer。
+留待真实重复帧验证。H-02A～H-02B 已完成材质系统边界、纯 CPU 元数据、布局校验和实例 shadow
+buffer；下一步接入 GPU 参数与材质 Bind Group。
 具体顺序见 [docs/roadmap.md](docs/roadmap.md)。
 
 ## 快速开始

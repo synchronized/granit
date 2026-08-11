@@ -6,7 +6,7 @@
 ## 元数据
 
 - 设计状态：已确认
-- 实现状态：进行中（H-02A 架构设计已完成）
+- 实现状态：进行中（H-02A～H-02B 已完成）
 - 路线图任务：H-02
 - 优先级：P2
 - 前置依赖：D-01～D-08、H-01
@@ -139,7 +139,8 @@ H-02A 不立即锁定 DXC、glslang 或 shaderc。选择前必须用同一组 Sh
 ## 实施顺序
 
 1. **H-02A（已完成）**：确认模板、实例、参数、绑定频率、变体和离线边界。
-2. **H-02B**：实现纯 CPU 材质元数据、稳定参数 ID、布局校验和实例 shadow buffer。
+2. **H-02B（已完成）**：已实现纯 CPU 材质元数据、稳定参数 ID、布局校验和实例 shadow
+   buffer。
 3. **H-02C**：接入材质 Uniform Buffer、Texture/Sampler Bind Group 和 dirty 区间批量上传。
 4. **H-02D**：原型验证离线 Shader 编译与反射工具，确定编译器、版本和许可证。
 5. **H-02E**：定义版本化材质包，接入变体查找和 Pipeline 缓存。
@@ -153,6 +154,19 @@ H-02A 不立即锁定 DXC、glslang 或 shaderc。选择前必须用同一组 Sh
 - 不自动推导 PBR 参数、渲染队列或透明排序。
 - 不实现 Bindless、Descriptor Buffer、Ray Tracing 或 Mesh Shader 材质路径。
 - 不把材质、Scene 或资产文件类型加入核心 Renderer C ABI。
+
+## H-02B 实现记录
+
+内部 `material_metadata` 原型使用固定 FNV-1a 64 对参数名称的 UTF-8 字节生成稳定 ID，加载时校验
+已有 ID 并拒绝名称重复或哈希碰撞。常量参数元数据显式保存类型、offset、数组长度、stride 和
+可选默认值；构建阶段拒绝未对齐、越界、范围重叠及默认值尺寸不匹配。
+
+`material_instance_data` 根据模板创建 CPU shadow buffer，应用默认值并把初始常量块整体标记为
+dirty。类型安全的参数写入通过 ID 查找，拒绝不存在、资源类型、类型不匹配和尺寸不匹配；相同
+字节不重复标脏，多次修改合并为一个覆盖范围，供 H-02C 单次批量上传。
+
+该原型只由独立 Catch2 测试目标构建，不进入核心动态库或安装导出。Texture View 和 Sampler 已
+作为元数据类型保留，但资源句柄、GPU Buffer 和 Bind Group 生命周期留给 H-02C。
 
 ## 验收标准
 

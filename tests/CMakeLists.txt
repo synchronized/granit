@@ -128,6 +128,20 @@ granit_target_compile_warnings(granit_render_graph_test)
 add_test(NAME granit.render_graph COMMAND granit_render_graph_test)
 
 add_executable(
+  granit_material_test
+  material/material_metadata_test.cpp
+  "${PROJECT_SOURCE_DIR}/src/material/material_metadata.cpp"
+)
+target_include_directories(granit_material_test PRIVATE "${PROJECT_SOURCE_DIR}/src")
+target_link_libraries(granit_material_test PRIVATE Catch2::Catch2WithMain)
+target_compile_options(
+  granit_material_test
+  PRIVATE $<$<COMPILE_LANG_AND_ID:CXX,MSVC>:/utf-8>
+)
+granit_target_compile_warnings(granit_material_test)
+add_test(NAME granit.material COMMAND granit_material_test)
+
+add_executable(
   granit_renderer_test
   renderer/command_recorder_test.cpp
   renderer/pipeline_test.cpp
@@ -229,6 +243,7 @@ set(
   granit_retirement_queue_test
   granit_device_status_test
   granit_render_graph_test
+  granit_material_test
   granit_renderer_test
   granit_vulkan_backend_test
 )
