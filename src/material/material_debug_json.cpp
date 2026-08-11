@@ -68,6 +68,149 @@ const char* shader_stage_name(package_shader_stage stage) noexcept {
   return stage == package_shader_stage::vertex ? "vertex" : "fragment";
 }
 
+const char* vertex_format_name(granit_vertex_format format) noexcept {
+  switch (format) {
+  case GRANIT_VERTEX_FORMAT_FLOAT32:
+    return "float32";
+  case GRANIT_VERTEX_FORMAT_FLOAT32X2:
+    return "float32x2";
+  case GRANIT_VERTEX_FORMAT_FLOAT32X3:
+    return "float32x3";
+  case GRANIT_VERTEX_FORMAT_FLOAT32X4:
+    return "float32x4";
+  case GRANIT_VERTEX_FORMAT_UINT32:
+    return "uint32";
+  case GRANIT_VERTEX_FORMAT_UINT32X2:
+    return "uint32x2";
+  case GRANIT_VERTEX_FORMAT_UINT32X3:
+    return "uint32x3";
+  case GRANIT_VERTEX_FORMAT_UINT32X4:
+    return "uint32x4";
+  case GRANIT_VERTEX_FORMAT_SINT32:
+    return "sint32";
+  case GRANIT_VERTEX_FORMAT_SINT32X2:
+    return "sint32x2";
+  case GRANIT_VERTEX_FORMAT_SINT32X3:
+    return "sint32x3";
+  case GRANIT_VERTEX_FORMAT_SINT32X4:
+    return "sint32x4";
+  default:
+    return "unknown";
+  }
+}
+
+const char* topology_name(granit_primitive_topology value) noexcept {
+  switch (value) {
+  case GRANIT_PRIMITIVE_TOPOLOGY_POINT_LIST:
+    return "point_list";
+  case GRANIT_PRIMITIVE_TOPOLOGY_LINE_LIST:
+    return "line_list";
+  case GRANIT_PRIMITIVE_TOPOLOGY_LINE_STRIP:
+    return "line_strip";
+  case GRANIT_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST:
+    return "triangle_list";
+  case GRANIT_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP:
+    return "triangle_strip";
+  default:
+    return "unknown";
+  }
+}
+
+const char* compare_name(granit_compare_operation value) noexcept {
+  switch (value) {
+  case GRANIT_COMPARE_OPERATION_NEVER:
+    return "never";
+  case GRANIT_COMPARE_OPERATION_LESS:
+    return "less";
+  case GRANIT_COMPARE_OPERATION_EQUAL:
+    return "equal";
+  case GRANIT_COMPARE_OPERATION_LESS_EQUAL:
+    return "less_equal";
+  case GRANIT_COMPARE_OPERATION_GREATER:
+    return "greater";
+  case GRANIT_COMPARE_OPERATION_NOT_EQUAL:
+    return "not_equal";
+  case GRANIT_COMPARE_OPERATION_GREATER_EQUAL:
+    return "greater_equal";
+  case GRANIT_COMPARE_OPERATION_ALWAYS:
+    return "always";
+  default:
+    return "unknown";
+  }
+}
+
+const char* cull_mode_name(granit_cull_mode value) noexcept {
+  switch (value) {
+  case GRANIT_CULL_MODE_NONE:
+    return "none";
+  case GRANIT_CULL_MODE_FRONT:
+    return "front";
+  case GRANIT_CULL_MODE_BACK:
+    return "back";
+  case GRANIT_CULL_MODE_FRONT_AND_BACK:
+    return "front_and_back";
+  default:
+    return "unknown";
+  }
+}
+
+const char* polygon_mode_name(granit_polygon_mode value) noexcept {
+  switch (value) {
+  case GRANIT_POLYGON_MODE_FILL:
+    return "fill";
+  case GRANIT_POLYGON_MODE_LINE:
+    return "line";
+  case GRANIT_POLYGON_MODE_POINT:
+    return "point";
+  default:
+    return "unknown";
+  }
+}
+
+const char* blend_factor_name(granit_blend_factor value) noexcept {
+  switch (value) {
+  case GRANIT_BLEND_FACTOR_ZERO:
+    return "zero";
+  case GRANIT_BLEND_FACTOR_ONE:
+    return "one";
+  case GRANIT_BLEND_FACTOR_SOURCE_COLOR:
+    return "source_color";
+  case GRANIT_BLEND_FACTOR_ONE_MINUS_SOURCE_COLOR:
+    return "one_minus_source_color";
+  case GRANIT_BLEND_FACTOR_SOURCE_ALPHA:
+    return "source_alpha";
+  case GRANIT_BLEND_FACTOR_ONE_MINUS_SOURCE_ALPHA:
+    return "one_minus_source_alpha";
+  case GRANIT_BLEND_FACTOR_DESTINATION_COLOR:
+    return "destination_color";
+  case GRANIT_BLEND_FACTOR_ONE_MINUS_DESTINATION_COLOR:
+    return "one_minus_destination_color";
+  case GRANIT_BLEND_FACTOR_DESTINATION_ALPHA:
+    return "destination_alpha";
+  case GRANIT_BLEND_FACTOR_ONE_MINUS_DESTINATION_ALPHA:
+    return "one_minus_destination_alpha";
+  default:
+    return "unknown";
+  }
+}
+
+const char* blend_operation_name(granit_blend_operation value) noexcept {
+  switch (value) {
+  case GRANIT_BLEND_OPERATION_ADD:
+    return "add";
+  case GRANIT_BLEND_OPERATION_SUBTRACT:
+    return "subtract";
+  case GRANIT_BLEND_OPERATION_REVERSE_SUBTRACT:
+    return "reverse_subtract";
+  case GRANIT_BLEND_OPERATION_MIN:
+    return "min";
+  case GRANIT_BLEND_OPERATION_MAX:
+    return "max";
+  default:
+    return "unknown";
+  }
+}
+
 void write_json_string(std::ostream& stream, std::string_view value) {
   stream << '"';
   for (const auto character : value) {
@@ -194,7 +337,51 @@ archive_error export_material_archive_debug_json(std::span<const std::byte> byte
         write_json_string(stream, shader.entry_point);
         stream << ", \"spirv_size\": " << shader.spirv.size() * sizeof(std::uint32_t) << '}';
       }
-      stream << "]}";
+      stream << "], \"pipeline\": {\"vertex_buffers\": [";
+      for (std::size_t buffer_index = 0; buffer_index < variant.pipeline.vertex_buffers.size();
+           ++buffer_index) {
+        const auto& buffer = variant.pipeline.vertex_buffers[buffer_index];
+        stream << (buffer_index == 0 ? "" : ", ") << "{\"stride\": " << buffer.stride
+               << ", \"step_mode\": \""
+               << (buffer.step_mode == GRANIT_VERTEX_STEP_MODE_VERTEX ? "vertex" : "instance")
+               << "\", \"attributes\": [";
+        for (std::size_t attribute_index = 0; attribute_index < buffer.attributes.size();
+             ++attribute_index) {
+          const auto& attribute = buffer.attributes[attribute_index];
+          stream << (attribute_index == 0 ? "" : ", ") << "{\"location\": " << attribute.location
+                 << ", \"format\": \"" << vertex_format_name(attribute.format)
+                 << "\", \"offset\": " << attribute.offset << '}';
+        }
+        stream << "]}";
+      }
+      stream << "], \"primitive\": {\"topology\": \""
+             << topology_name(variant.pipeline.primitive.topology) << "\", \"front_face\": \""
+             << (variant.pipeline.primitive.front_face == GRANIT_FRONT_FACE_COUNTER_CLOCKWISE
+                     ? "counter_clockwise"
+                     : "clockwise")
+             << "\", \"cull_mode\": \"" << cull_mode_name(variant.pipeline.primitive.cull_mode)
+             << "\", \"polygon_mode\": \""
+             << polygon_mode_name(variant.pipeline.primitive.polygon_mode) << "\""
+             << "}, \"depth\": {\"test_enabled\": "
+             << (variant.pipeline.depth.test_enabled != 0 ? "true" : "false")
+             << ", \"write_enabled\": "
+             << (variant.pipeline.depth.write_enabled != 0 ? "true" : "false")
+             << ", \"compare\": \"" << compare_name(variant.pipeline.depth.compare)
+             << "\"}, \"color_blend\": {\"enabled\": "
+             << (variant.pipeline.color_blend.enabled != 0 ? "true" : "false")
+             << ", \"source_color_factor\": \""
+             << blend_factor_name(variant.pipeline.color_blend.source_color_factor)
+             << "\", \"destination_color_factor\": \""
+             << blend_factor_name(variant.pipeline.color_blend.destination_color_factor)
+             << "\", \"color_operation\": \""
+             << blend_operation_name(variant.pipeline.color_blend.color_operation)
+             << "\", \"source_alpha_factor\": \""
+             << blend_factor_name(variant.pipeline.color_blend.source_alpha_factor)
+             << "\", \"destination_alpha_factor\": \""
+             << blend_factor_name(variant.pipeline.color_blend.destination_alpha_factor)
+             << "\", \"alpha_operation\": \""
+             << blend_operation_name(variant.pipeline.color_blend.alpha_operation) << "\""
+             << ", \"write_mask\": " << variant.pipeline.color_blend.write_mask << "}}}";
     }
     stream << "\n    ]\n  }\n}\n";
     json = std::move(stream).str();

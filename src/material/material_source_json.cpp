@@ -3,6 +3,8 @@
 
 #include "material/material_source_json.h"
 
+#include <algorithm>
+#include <array>
 #include <charconv>
 #include <cstddef>
 #include <fstream>
@@ -320,6 +322,168 @@ bool parse_parameter(const json_value& value, parameter_desc& parameter) {
   return true;
 }
 
+template <typename Value, std::size_t Size>
+bool parse_named_value(const json_value::object& object, std::string_view field,
+                       const std::array<std::pair<std::string_view, Value>, Size>& values,
+                       Value& result) {
+  const auto* name = as<std::string>(member(object, field));
+  if (name == nullptr) {
+    return false;
+  }
+  const auto found = std::ranges::find_if(
+      values, [&](const auto& entry) { return entry.first == std::string_view{*name}; });
+  if (found == values.end()) {
+    return false;
+  }
+  result = found->second;
+  return true;
+}
+
+template <typename Value, std::size_t Size>
+bool parse_optional_named_value(const json_value::object& object, std::string_view field,
+                                const std::array<std::pair<std::string_view, Value>, Size>& values,
+                                Value& result) {
+  return member(object, field) == nullptr || parse_named_value(object, field, values, result);
+}
+
+bool parse_pipeline(const json_value& value, material_pipeline_state& pipeline) {
+  const auto* object = as<json_value::object>(&value);
+  if (object == nullptr) {
+    return false;
+  }
+  if (const auto* buffers_value = member(*object, "vertex_buffers"); buffers_value != nullptr) {
+    const auto* buffers = as<json_value::array>(buffers_value);
+    if (buffers == nullptr)
+      return false;
+    constexpr std::array<std::pair<std::string_view, granit_vertex_step_mode>, 2> step_modes{
+        {{"vertex", GRANIT_VERTEX_STEP_MODE_VERTEX},
+         {"instance", GRANIT_VERTEX_STEP_MODE_INSTANCE}}};
+    constexpr std::array<std::pair<std::string_view, granit_vertex_format>, 12> formats{
+        {{"float32", GRANIT_VERTEX_FORMAT_FLOAT32},
+         {"float32x2", GRANIT_VERTEX_FORMAT_FLOAT32X2},
+         {"float32x3", GRANIT_VERTEX_FORMAT_FLOAT32X3},
+         {"float32x4", GRANIT_VERTEX_FORMAT_FLOAT32X4},
+         {"uint32", GRANIT_VERTEX_FORMAT_UINT32},
+         {"uint32x2", GRANIT_VERTEX_FORMAT_UINT32X2},
+         {"uint32x3", GRANIT_VERTEX_FORMAT_UINT32X3},
+         {"uint32x4", GRANIT_VERTEX_FORMAT_UINT32X4},
+         {"sint32", GRANIT_VERTEX_FORMAT_SINT32},
+         {"sint32x2", GRANIT_VERTEX_FORMAT_SINT32X2},
+         {"sint32x3", GRANIT_VERTEX_FORMAT_SINT32X3},
+         {"sint32x4", GRANIT_VERTEX_FORMAT_SINT32X4}}};
+    for (const auto& buffer_value : *buffers) {
+      const auto* buffer_object = as<json_value::object>(&buffer_value);
+      material_vertex_buffer_layout buffer;
+      const auto* attributes = buffer_object == nullptr
+                                   ? nullptr
+                                   : as<json_value::array>(member(*buffer_object, "attributes"));
+      if (buffer_object == nullptr || !u32(member(*buffer_object, "stride"), buffer.stride) ||
+          !parse_named_value(*buffer_object, "step_mode", step_modes, buffer.step_mode) ||
+          attributes == nullptr)
+        return false;
+      for (const auto& attribute_value : *attributes) {
+        const auto* attribute_object = as<json_value::object>(&attribute_value);
+        material_vertex_attribute attribute;
+        if (attribute_object == nullptr ||
+            !u32(member(*attribute_object, "location"), attribute.location) ||
+            !parse_named_value(*attribute_object, "format", formats, attribute.format) ||
+            !u32(member(*attribute_object, "offset"), attribute.offset))
+          return false;
+        buffer.attributes.push_back(attribute);
+      }
+      pipeline.vertex_buffers.push_back(std::move(buffer));
+    }
+  }
+  constexpr std::array<std::pair<std::string_view, granit_primitive_topology>, 5> topologies{
+      {{"point_list", GRANIT_PRIMITIVE_TOPOLOGY_POINT_LIST},
+       {"line_list", GRANIT_PRIMITIVE_TOPOLOGY_LINE_LIST},
+       {"line_strip", GRANIT_PRIMITIVE_TOPOLOGY_LINE_STRIP},
+       {"triangle_list", GRANIT_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST},
+       {"triangle_strip", GRANIT_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP}}};
+  constexpr std::array<std::pair<std::string_view, granit_front_face>, 2> front_faces{
+      {{"counter_clockwise", GRANIT_FRONT_FACE_COUNTER_CLOCKWISE},
+       {"clockwise", GRANIT_FRONT_FACE_CLOCKWISE}}};
+  constexpr std::array<std::pair<std::string_view, granit_cull_mode>, 4> cull_modes{
+      {{"none", GRANIT_CULL_MODE_NONE},
+       {"front", GRANIT_CULL_MODE_FRONT},
+       {"back", GRANIT_CULL_MODE_BACK},
+       {"front_and_back", GRANIT_CULL_MODE_FRONT_AND_BACK}}};
+  constexpr std::array<std::pair<std::string_view, granit_polygon_mode>, 3> polygon_modes{
+      {{"fill", GRANIT_POLYGON_MODE_FILL},
+       {"line", GRANIT_POLYGON_MODE_LINE},
+       {"point", GRANIT_POLYGON_MODE_POINT}}};
+  if (const auto* primitive_value = member(*object, "primitive"); primitive_value != nullptr) {
+    const auto* primitive = as<json_value::object>(primitive_value);
+    if (primitive == nullptr ||
+        !parse_named_value(*primitive, "topology", topologies, pipeline.primitive.topology) ||
+        !parse_named_value(*primitive, "front_face", front_faces, pipeline.primitive.front_face) ||
+        !parse_named_value(*primitive, "cull_mode", cull_modes, pipeline.primitive.cull_mode) ||
+        !parse_named_value(*primitive, "polygon_mode", polygon_modes,
+                           pipeline.primitive.polygon_mode))
+      return false;
+  }
+  constexpr std::array<std::pair<std::string_view, granit_compare_operation>, 8> comparisons{
+      {{"never", GRANIT_COMPARE_OPERATION_NEVER},
+       {"less", GRANIT_COMPARE_OPERATION_LESS},
+       {"equal", GRANIT_COMPARE_OPERATION_EQUAL},
+       {"less_equal", GRANIT_COMPARE_OPERATION_LESS_EQUAL},
+       {"greater", GRANIT_COMPARE_OPERATION_GREATER},
+       {"not_equal", GRANIT_COMPARE_OPERATION_NOT_EQUAL},
+       {"greater_equal", GRANIT_COMPARE_OPERATION_GREATER_EQUAL},
+       {"always", GRANIT_COMPARE_OPERATION_ALWAYS}}};
+  if (const auto* depth_value = member(*object, "depth"); depth_value != nullptr) {
+    const auto* depth = as<json_value::object>(depth_value);
+    const auto* test = depth == nullptr ? nullptr : as<bool>(member(*depth, "test_enabled"));
+    const auto* write = depth == nullptr ? nullptr : as<bool>(member(*depth, "write_enabled"));
+    if (depth == nullptr || test == nullptr || write == nullptr ||
+        !parse_named_value(*depth, "compare", comparisons, pipeline.depth.compare))
+      return false;
+    pipeline.depth.test_enabled = *test ? 1U : 0U;
+    pipeline.depth.write_enabled = *write ? 1U : 0U;
+  }
+  if (const auto* blend_value = member(*object, "color_blend"); blend_value != nullptr) {
+    const auto* blend = as<json_value::object>(blend_value);
+    const auto* enabled = blend == nullptr ? nullptr : as<bool>(member(*blend, "enabled"));
+    constexpr std::array<std::pair<std::string_view, granit_blend_factor>, 10> factors{
+        {{"zero", GRANIT_BLEND_FACTOR_ZERO},
+         {"one", GRANIT_BLEND_FACTOR_ONE},
+         {"source_color", GRANIT_BLEND_FACTOR_SOURCE_COLOR},
+         {"one_minus_source_color", GRANIT_BLEND_FACTOR_ONE_MINUS_SOURCE_COLOR},
+         {"source_alpha", GRANIT_BLEND_FACTOR_SOURCE_ALPHA},
+         {"one_minus_source_alpha", GRANIT_BLEND_FACTOR_ONE_MINUS_SOURCE_ALPHA},
+         {"destination_color", GRANIT_BLEND_FACTOR_DESTINATION_COLOR},
+         {"one_minus_destination_color", GRANIT_BLEND_FACTOR_ONE_MINUS_DESTINATION_COLOR},
+         {"destination_alpha", GRANIT_BLEND_FACTOR_DESTINATION_ALPHA},
+         {"one_minus_destination_alpha", GRANIT_BLEND_FACTOR_ONE_MINUS_DESTINATION_ALPHA}}};
+    constexpr std::array<std::pair<std::string_view, granit_blend_operation>, 5> operations{
+        {{"add", GRANIT_BLEND_OPERATION_ADD},
+         {"subtract", GRANIT_BLEND_OPERATION_SUBTRACT},
+         {"reverse_subtract", GRANIT_BLEND_OPERATION_REVERSE_SUBTRACT},
+         {"min", GRANIT_BLEND_OPERATION_MIN},
+         {"max", GRANIT_BLEND_OPERATION_MAX}}};
+    if (enabled == nullptr ||
+        !parse_optional_named_value(*blend, "source_color_factor", factors,
+                                    pipeline.color_blend.source_color_factor) ||
+        !parse_optional_named_value(*blend, "destination_color_factor", factors,
+                                    pipeline.color_blend.destination_color_factor) ||
+        !parse_optional_named_value(*blend, "color_operation", operations,
+                                    pipeline.color_blend.color_operation) ||
+        !parse_optional_named_value(*blend, "source_alpha_factor", factors,
+                                    pipeline.color_blend.source_alpha_factor) ||
+        !parse_optional_named_value(*blend, "destination_alpha_factor", factors,
+                                    pipeline.color_blend.destination_alpha_factor) ||
+        !parse_optional_named_value(*blend, "alpha_operation", operations,
+                                    pipeline.color_blend.alpha_operation))
+      return false;
+    pipeline.color_blend.enabled = *enabled ? 1U : 0U;
+    if (const auto* write_mask = member(*blend, "write_mask");
+        write_mask != nullptr && !u32(write_mask, pipeline.color_blend.write_mask)) {
+      return false;
+    }
+  }
+  return true;
+}
+
 source_json_error parse_variant(const json_value& value, const std::filesystem::path& directory,
                                 material_variant_desc& variant) {
   const auto* object = as<json_value::object>(&value);
@@ -330,6 +494,10 @@ source_json_error parse_variant(const json_value& value, const std::filesystem::
     return source_json_error::invalid_schema;
   }
   variant.pass = make_feature_id(*pass);
+  if (const auto* pipeline = member(*object, "pipeline");
+      pipeline != nullptr && !parse_pipeline(*pipeline, variant.pipeline)) {
+    return source_json_error::invalid_schema;
+  }
   if (const auto* features_value = member(*object, "features"); features_value != nullptr) {
     const auto* features = as<json_value::array>(features_value);
     if (features == nullptr) {

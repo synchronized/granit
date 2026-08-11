@@ -25,6 +25,17 @@ constexpr std::string_view source = R"({
   "variants": [{
     "pass": "opaque",
     "features": [{"name": "normal_map", "value": 1}],
+    "pipeline": {
+      "vertex_buffers": [{"stride": 12, "step_mode": "vertex",
+        "attributes": [{"location": 0, "format": "float32x3", "offset": 0}]}],
+      "primitive": {"topology": "triangle_list", "front_face": "counter_clockwise",
+        "cull_mode": "back", "polygon_mode": "fill"},
+      "depth": {"test_enabled": true, "write_enabled": true, "compare": "less_equal"},
+      "color_blend": {"enabled": true, "source_color_factor": "source_alpha",
+        "destination_color_factor": "one_minus_source_alpha", "color_operation": "add",
+        "source_alpha_factor": "one", "destination_alpha_factor": "zero",
+        "alpha_operation": "add", "write_mask": 7}
+    },
     "shaders": [
       {"stage": "vertex", "entry_point": "main", "spirv": "minimal.vert.spv"},
       {"stage": "fragment", "entry_point": "main", "spirv": "minimal.frag.spv"}
@@ -43,6 +54,23 @@ TEST_CASE("材质源 JSON 构建内存包并解析相对 SPIR-V 路径") {
   CHECK(package.metadata().parameters().size() == 2);
   REQUIRE(package.variants().size() == 1);
   CHECK(package.variants().front().shaders.size() == 2);
+  CHECK(package.variants().front().pipeline.vertex_buffers.size() == 1);
+  CHECK(package.variants().front().pipeline.primitive.cull_mode == GRANIT_CULL_MODE_BACK);
+  CHECK(package.variants().front().pipeline.depth.write_enabled == 1);
+  CHECK(package.variants().front().pipeline.color_blend.enabled == 1);
+  CHECK(package.variants().front().pipeline.color_blend.source_color_factor ==
+        GRANIT_BLEND_FACTOR_SOURCE_ALPHA);
+  CHECK(package.variants().front().pipeline.color_blend.write_mask == 7);
+}
+
+TEST_CASE("材质源 JSON 拒绝未知的 Pipeline 枚举") {
+  std::string invalid{source};
+  invalid.replace(invalid.find("triangle_list"), std::string_view{"triangle_list"}.size(),
+                  "triangles");
+  granit::material::material_package package;
+  CHECK(granit::material::parse_material_source_json(
+            invalid, std::filesystem::path{GRANIT_TEST_ASSET_DIR}, package) ==
+        granit::material::source_json_error::invalid_schema);
 }
 
 TEST_CASE("材质源 JSON 拒绝不支持的绑定模型") {

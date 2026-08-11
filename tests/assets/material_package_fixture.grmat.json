@@ -18,6 +18,26 @@
     {
       "pass": "opaque",
       "features": [{"name": "normal_map", "value": 1}],
+      "pipeline": {
+        "vertex_buffers": [
+          {
+            "stride": 24,
+            "step_mode": "vertex",
+            "attributes": [
+              {"location": 0, "format": "float32x3", "offset": 0},
+              {"location": 1, "format": "float32x3", "offset": 12}
+            ]
+          }
+        ],
+        "primitive": {
+          "topology": "triangle_list",
+          "front_face": "counter_clockwise",
+          "cull_mode": "back",
+          "polygon_mode": "fill"
+        },
+        "depth": {"test_enabled": true, "write_enabled": true, "compare": "less_equal"},
+        "color_blend": {"enabled": false}
+      },
       "shaders": [
         {"stage": "vertex", "entry_point": "main", "spirv": "minimal.vert.spv"},
         {"stage": "fragment", "entry_point": "main", "spirv": "minimal.frag.spv"}

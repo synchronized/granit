@@ -229,5 +229,7 @@ TEST_CASE("材质包调试 JSON 使用稳定字段与固定宽度标识") {
   CHECK(json.find("\"name\": \"base_color\"") != std::string::npos);
   CHECK(json.find("\"type\": \"texture_view\"") != std::string::npos);
   CHECK(json.find("\"stage\": \"vertex\"") != std::string::npos);
+  CHECK(json.find("\"pipeline\": {\"vertex_buffers\"") != std::string::npos);
+  CHECK(json.find("\"format\": \"float32x3\"") != std::string::npos);
   CHECK(json.ends_with("\n}\n"));
 }

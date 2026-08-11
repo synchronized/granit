@@ -143,7 +143,7 @@ Shader 记录保存阶段、入口名称引用、SPIR-V offset、长度和内容
 
 ```json
 {
-  "format_version": 1,
+  "format_version": 2,
   "target_environment": "vulkan1.3",
   "binding_model": "bind_group",
   "material": {
@@ -162,6 +162,26 @@ Shader 记录保存阶段、入口名称引用、SPIR-V offset、长度和内容
     {
       "pass": "opaque",
       "features": [{"name": "normal_map", "value": 1}],
+      "pipeline": {
+        "vertex_buffers": [
+          {
+            "stride": 24,
+            "step_mode": "vertex",
+            "attributes": [
+              {"location": 0, "format": "float32x3", "offset": 0},
+              {"location": 1, "format": "float32x3", "offset": 12}
+            ]
+          }
+        ],
+        "primitive": {
+          "topology": "triangle_list",
+          "front_face": "counter_clockwise",
+          "cull_mode": "back",
+          "polygon_mode": "fill"
+        },
+        "depth": {"test_enabled": true, "write_enabled": true, "compare": "less_equal"},
+        "color_blend": {"enabled": false}
+      },
       "shaders": [
         {"stage": "vertex", "entry_point": "main", "spirv": "standard.vert.spv"},
         {"stage": "fragment", "entry_point": "main", "spirv": "standard.frag.spv"}
@@ -173,9 +193,10 @@ Shader 记录保存阶段、入口名称引用、SPIR-V offset、长度和内容
 
 `default_bytes` 直接描述常量块中的小端字节，可省略；资源参数使用 `binding`，不使用 `offset`。
 数组参数可增加 `array_count` 和 `array_stride`。首版只接受非负整数、Vulkan 1.3、传统 Bind Group
-以及 Vertex/Fragment Shader；固定 Pipeline 状态与更友好的带类型默认值语法留待包模型具备对应
-字段后扩展。源 JSON 最大 16 MiB、嵌套深度最大 64 层，单个 SPIR-V 最大 16 MiB；解析器在写出
-前复用运行时包的全部语义校验。
+以及 Vertex/Fragment Shader。`pipeline` 可省略并使用 Renderer 默认值；出现子对象时，其必需字段
+必须完整。颜色混合因子与操作使用可读名称，除 `enabled` 外的字段可省略并保留默认值，`write_mask`
+使用 RGBA 位掩码。更友好的带类型默认值语法留待后续扩展。源 JSON 最大 16 MiB、嵌套深度最大
+64 层，单个 SPIR-V 最大 16 MiB；解析器在写出前复用运行时包的全部语义校验。
 
 构建时可显式生成伴随文件：
 
