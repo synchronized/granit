@@ -182,6 +182,8 @@ if (granit::failed(result)) {
   Dispatch 与资源状态计划。
 - [docs/plans/D-08-pipeline-production.md](docs/plans/D-08-pipeline-production.md)：Graphics Pipeline
   完整状态、缓存、并发创建与热重载边界。
+- [docs/plans/D-09-bindless-resource-table.md](docs/plans/D-09-bindless-resource-table.md)：可选
+  Bindless Resource Table 的分层、回退和实施条件。
 - [docs/plans/P-01-parallel-recording.md](docs/plans/P-01-parallel-recording.md)：并行录制、资源上传
   压力测试与线程安全基线。
 - [docs/plans/P-02-performance-baseline.md](docs/plans/P-02-performance-baseline.md)：CPU 并发、资源

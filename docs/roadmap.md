@@ -173,6 +173,8 @@
   Dispatch，按 D-07A 至 D-07C 分步完成。
 - **[D-08](plans/D-08-pipeline-production.md) / P1 / 已完成**：完成 Graphics Pipeline 常用状态、
   Pipeline Cache、并发创建和着色器热重载边界验证。
+- **[D-09](plans/D-09-bindless-resource-table.md) / P2 / 草案**：将 Bindless 定位为可选 Renderer
+  Resource Table；H-02E 只预留绑定模型，待材质包完成并取得真实瓶颈数据后实现。
 
 ### 验收标准
 

@@ -148,7 +148,8 @@ SPIRV-Reflect 与 SPIRV-Headers `vulkan-sdk-1.4.350.0`。版本升级必须重�
    批量上传。
 4. **H-02D（已完成）**：已用 DXC、spirv-val 和 SPIRV-Reflect 完成固定 HLSL 的端到端原型，
    并确定参考版本、内置依赖版本和许可证。
-5. **H-02E**：定义版本化材质包，接入变体查找和 Pipeline 缓存。
+5. **H-02E**：定义版本化材质包，接入变体查找和 Pipeline 缓存；按 D-09A 预留显式绑定模型和
+   Renderer 能力要求，但首版只实现传统 Bind Group。
 6. **H-02F**：增加热替换、实例迁移、错误材质和端到端示例。
 7. **H-02G**：建立参数更新、变体查找和 Pipeline 命中率性能基线。
 
@@ -157,7 +158,8 @@ SPIRV-Reflect 与 SPIRV-Headers `vulkan-sdk-1.4.350.0`。版本升级必须重�
 - 不在运行时解析或编译 GLSL/HLSL。
 - 不提供可编程材质节点图或 Shader Graph。
 - 不自动推导 PBR 参数、渲染队列或透明排序。
-- 不实现 Bindless、Descriptor Buffer、Ray Tracing 或 Mesh Shader 材质路径。
+- H-02 首版不实现 Bindless；其 Renderer 能力边界和后续材质接入由 D-09 负责。
+- 不实现 Descriptor Buffer、Ray Tracing 或 Mesh Shader 材质路径。
 - 不把材质、Scene 或资产文件类型加入核心 Renderer C ABI。
 
 ## H-02B 实现记录
