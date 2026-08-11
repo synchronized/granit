@@ -6,7 +6,7 @@
 ## 元数据
 
 - 设计状态：已确认
-- 实现状态：进行中（等待 P-03A 归因）
+- 实现状态：进行中（P-03A 已完成，进入 P-03C）
 - 路线图任务：P-03
 - 优先级：P1
 - 前置依赖：P-02
@@ -40,6 +40,12 @@ P-02 已建立句柄表、Registry、Recorder、Queue、延迟销毁和 staging 
 
 ### P-03A：热点归因
 
+状态：已完成。Windows xperf 归因结果见[结果摘要][p03a-result]。
+
+结论是无效查询的多线程退化来自 Registry 全局互斥，但代表性的混合录制没有证明 Registry
+锁结构是首要热点，因此跳过 P-03B 的锁改造。Queue 的真实串行点是 `queue_mutex_` 内的 Fence
+槽位复用与 Vulkan Queue 提交，下一步进入 P-03C 的真正批量提交设计。
+
 在 Windows Clang Release 共享库上使用 WPR/WPA 或等价 CPU profiler，复测以下场景：
 
 1. `invalid_lookup`：1 与 4 线程，定位 Registry 和句柄表的竞争上界。
@@ -54,6 +60,9 @@ Studio CPU Usage 或采样 profiler；不得为了得到结论把长期 profiler
 
 ### P-03B：Registry 读路径
 
+状态：不实施。P-03A 只在诊断型无效查询中确认明显竞争；混合录制 4 线程没有吞吐退化，直接
+引入 `shared_mutex` 或分片的收益证据不足。
+
 仅当 P-03A 证明 Registry 互斥是代表性录制路径热点时实施。按以下顺序评估：
 
 1. 缩短持锁区间，确保只获取稳定 `shared_ptr` 和校验身份，不在锁内格式化、分配或调用驱动。
@@ -66,6 +75,8 @@ Studio CPU Usage 或采样 profiler；不得为了得到结论把长期 profiler
 内部复用，但 reset、destroy 和 Renderer 级联失效后必须释放。
 
 ### P-03C：Queue 提交批量化
+
+状态：待实施。
 
 P-03A 若确认多线程尾延迟主要来自多个细粒度 submit 在 Queue 互斥上排队，则先设计批量 C API：
 
@@ -105,3 +116,5 @@ pending 状态、frames-in-flight 槽位分配、部分 `vkQueueSubmit2` 失败�
 - Vulkan Queue 的外部同步要求不会因减少 Granit 锁而消失；错误地并行调用 Queue 属于功能缺陷。
 - 若等待主要来自驱动或 GPU Fence，P-03 停止拆锁，把批量/异步上传交给 P-04。
 - 若优化收益落在重复波动范围内，应回退复杂化改动并保留测量结论。
+
+[p03a-result]: ../../benchmarks/results/2026-08-11-windows-xperf-contention-attribution-7bfa2ee.md
