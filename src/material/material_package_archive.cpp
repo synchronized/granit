@@ -62,9 +62,55 @@ std::span<const std::byte> find_section(std::span<const std::byte> bytes,
                              static_cast<std::size_t>(found->stored_size));
 }
 
+bool utf8_valid(std::span<const std::byte> bytes) noexcept {
+  std::size_t index = 0;
+  while (index < bytes.size()) {
+    const auto first = std::to_integer<std::uint8_t>(bytes[index]);
+    if (first <= 0x7fU) {
+      ++index;
+      continue;
+    }
+    std::size_t continuation_count = 0;
+    std::uint32_t code_point = 0;
+    std::uint32_t minimum = 0;
+    if (first >= 0xc2U && first <= 0xdfU) {
+      continuation_count = 1;
+      code_point = first & 0x1fU;
+      minimum = 0x80U;
+    } else if (first >= 0xe0U && first <= 0xefU) {
+      continuation_count = 2;
+      code_point = first & 0x0fU;
+      minimum = 0x800U;
+    } else if (first >= 0xf0U && first <= 0xf4U) {
+      continuation_count = 3;
+      code_point = first & 0x07U;
+      minimum = 0x10000U;
+    } else {
+      return false;
+    }
+    if (continuation_count > bytes.size() - index - 1) {
+      return false;
+    }
+    for (std::size_t continuation = 0; continuation < continuation_count; ++continuation) {
+      const auto value = std::to_integer<std::uint8_t>(bytes[index + continuation + 1]);
+      if ((value & 0xc0U) != 0x80U) {
+        return false;
+      }
+      code_point = (code_point << 6U) | (value & 0x3fU);
+    }
+    if (code_point < minimum || code_point > 0x10ffffU ||
+        (code_point >= 0xd800U && code_point <= 0xdfffU)) {
+      return false;
+    }
+    index += continuation_count + 1;
+  }
+  return true;
+}
+
 bool string_valid(std::span<const std::byte> table, std::uint32_t offset,
                   std::uint32_t length) noexcept {
-  return length != 0 && offset <= table.size() && length <= table.size() - offset;
+  return length != 0 && offset <= table.size() && length <= table.size() - offset &&
+         utf8_valid(table.subspan(offset, length));
 }
 
 std::string read_string(std::span<const std::byte> table, std::uint32_t offset,
@@ -269,8 +315,8 @@ archive_error decode_material_package_archive(std::span<const std::byte> bytes,
     const auto shader_records = find_section(bytes, layout, archive_section_type::shader_records);
     const auto spirv_data = find_section(bytes, layout, archive_section_type::spirv_data);
 
-    if (metadata.size() < 16 || feature_definitions.size() < 8 || pass_definitions.size() < 8 ||
-        variant_records.size() < 16 || shader_records.size() < 8) {
+    if (!utf8_valid(strings) || metadata.size() < 16 || feature_definitions.size() < 8 ||
+        pass_definitions.size() < 8 || variant_records.size() < 16 || shader_records.size() < 8) {
       return archive_error::invalid_semantic_data;
     }
 

@@ -323,7 +323,7 @@ archive_error parse_material_archive_layout(std::span<const std::byte> bytes,
   }
   const auto directory_size =
       static_cast<std::uint64_t>(section_count) * material_archive_section_record_size;
-  if (directory_offset < material_archive_header_size || directory_offset % 8U != 0 ||
+  if (directory_offset != material_archive_header_size ||
       !range_valid(directory_offset, directory_size, parsed.header.file_size)) {
     return archive_error::invalid_directory;
   }
@@ -397,6 +397,11 @@ archive_error parse_material_archive_layout(std::span<const std::byte> bytes,
       if (parsed.sections[index].offset < previous.offset + previous.stored_size) {
         return archive_error::overlapping_sections;
       }
+    }
+    if (parsed.sections.empty() ||
+        parsed.sections.back().offset + parsed.sections.back().stored_size !=
+            parsed.header.file_size) {
+      return archive_error::invalid_section;
     }
   } catch (const std::bad_alloc&) {
     return archive_error::out_of_memory;

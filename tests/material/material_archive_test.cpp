@@ -142,6 +142,49 @@ TEST_CASE("材质归档检测内容篡改") {
   CHECK(parse_material_archive_layout(bytes, layout) == archive_error::content_hash_mismatch);
 }
 
+TEST_CASE("材质归档拒绝非法头部、目录与区段范围") {
+  material_archive_layout layout;
+  auto bytes = make_archive();
+  bytes[0] = std::byte{'X'};
+  CHECK(parse_material_archive_layout(bytes, layout) == archive_error::invalid_magic);
+
+  bytes = make_archive();
+  write_u32(bytes, 28, material_archive_max_sections + 1);
+  CHECK(parse_material_archive_layout(bytes, layout) == archive_error::too_many_sections);
+
+  bytes = make_archive();
+  write_u64(bytes, 32, material_archive_header_size + 8);
+  CHECK(parse_material_archive_layout(bytes, layout) == archive_error::invalid_directory);
+
+  bytes = make_archive();
+  write_u32(bytes, material_archive_header_size + 32, 3);
+  CHECK(parse_material_archive_layout(bytes, layout) == archive_error::invalid_section);
+
+  bytes = make_archive();
+  write_u64(bytes, material_archive_header_size + 16, UINT64_MAX);
+  CHECK(parse_material_archive_layout(bytes, layout) == archive_error::invalid_section);
+}
+
+TEST_CASE("材质归档拒绝未声明的尾随数据") {
+  auto bytes = make_archive();
+  bytes.push_back(std::byte{0});
+  write_u64(bytes, 40, bytes.size());
+  refresh_hash(bytes);
+  material_archive_layout layout;
+  CHECK(parse_material_archive_layout(bytes, layout) == archive_error::invalid_section);
+}
+
+TEST_CASE("材质归档任意单字节损坏均不会被接受") {
+  const auto source = make_archive();
+  for (std::size_t index = 0; index < source.size(); ++index) {
+    auto bytes = source;
+    bytes[index] ^= std::byte{0x5a};
+    material_archive_layout layout;
+    CAPTURE(index);
+    CHECK(parse_material_archive_layout(bytes, layout) != archive_error::none);
+  }
+}
+
 TEST_CASE("材质归档 SHA-256 符合标准测试向量") {
   constexpr std::string_view input = "abc";
   constexpr std::array<std::uint8_t, 32> expected{0xba, 0x78, 0x16, 0xbf, 0x8f, 0x01, 0xcf, 0xea,

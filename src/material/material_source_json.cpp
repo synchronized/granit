@@ -28,7 +28,7 @@ public:
 
   bool parse(json_value& value) {
     skip_space();
-    if (!parse_value(value)) {
+    if (!parse_value(value, 0)) {
       return false;
     }
     skip_space();
@@ -52,14 +52,14 @@ private:
     return true;
   }
 
-  bool parse_value(json_value& value) {
+  bool parse_value(json_value& value, std::size_t depth) {
     skip_space();
-    if (position_ >= text_.size()) {
+    if (position_ >= text_.size() || depth > material_source_json_max_depth) {
       return false;
     }
     if (text_[position_] == '{') {
       json_value::object object;
-      if (!parse_object(object)) {
+      if (!parse_object(object, depth + 1)) {
         return false;
       }
       value.data = std::move(object);
@@ -67,7 +67,7 @@ private:
     }
     if (text_[position_] == '[') {
       json_value::array array;
-      if (!parse_array(array)) {
+      if (!parse_array(array, depth + 1)) {
         return false;
       }
       value.data = std::move(array);
@@ -97,7 +97,7 @@ private:
     return false;
   }
 
-  bool parse_object(json_value::object& object) {
+  bool parse_object(json_value::object& object, std::size_t depth) {
     if (!consume('{')) {
       return false;
     }
@@ -112,7 +112,7 @@ private:
         return false;
       }
       json_value value;
-      if (!parse_value(value) || !object.emplace(std::move(key), std::move(value)).second) {
+      if (!parse_value(value, depth) || !object.emplace(std::move(key), std::move(value)).second) {
         return false;
       }
       skip_space();
@@ -126,7 +126,7 @@ private:
     }
   }
 
-  bool parse_array(json_value::array& array) {
+  bool parse_array(json_value::array& array, std::size_t depth) {
     if (!consume('[')) {
       return false;
     }
@@ -137,7 +137,7 @@ private:
     }
     while (true) {
       json_value value;
-      if (!parse_value(value)) {
+      if (!parse_value(value, depth)) {
         return false;
       }
       array.push_back(std::move(value));
@@ -378,6 +378,9 @@ source_json_error parse_material_source_json(std::string_view json,
                                              const std::filesystem::path& source_directory,
                                              material_package& package) noexcept {
   try {
+    if (json.empty() || json.size() > material_source_json_max_size) {
+      return source_json_error::invalid_json;
+    }
     json_value root;
     if (!json_parser{json}.parse(root)) {
       return source_json_error::invalid_json;

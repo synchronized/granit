@@ -50,6 +50,12 @@ std::uint32_t read_u32(std::span<const std::byte> bytes, std::size_t offset) {
          (std::to_integer<std::uint32_t>(bytes[offset + 3]) << 24U);
 }
 
+void write_u32(std::span<std::byte> bytes, std::size_t offset, std::uint32_t value) {
+  for (std::uint32_t index = 0; index < 4; ++index) {
+    bytes[offset + index] = static_cast<std::byte>(value >> (index * 8U));
+  }
+}
+
 void refresh_hash(std::span<std::byte> bytes) {
   const auto hash = calculate_material_archive_content_hash(bytes);
   std::ranges::copy(hash, bytes.begin() + 64);
@@ -124,6 +130,40 @@ TEST_CASE("材质包解码拒绝哈希正确但变体键被篡改的归档") {
       &material_archive_section::type);
   REQUIRE(variant != layout.sections.end());
   bytes[variant->offset + 24] ^= std::byte{1};
+  refresh_hash(bytes);
+
+  material_package decoded;
+  CHECK(decode_material_package_archive(bytes, decoded) == archive_error::invalid_semantic_data);
+}
+
+TEST_CASE("材质包解码拒绝非法 UTF-8 字符串") {
+  const auto source = make_package(false);
+  std::vector<std::byte> bytes;
+  REQUIRE(encode_material_package_archive(source, bytes) == archive_error::none);
+  material_archive_layout layout;
+  REQUIRE(parse_material_archive_layout(bytes, layout) == archive_error::none);
+  const auto strings = std::ranges::find(
+      layout.sections, static_cast<std::uint32_t>(archive_section_type::string_table),
+      &material_archive_section::type);
+  REQUIRE(strings != layout.sections.end());
+  bytes[strings->offset] = std::byte{0xc0};
+  refresh_hash(bytes);
+
+  material_package decoded;
+  CHECK(decode_material_package_archive(bytes, decoded) == archive_error::invalid_semantic_data);
+}
+
+TEST_CASE("材质包解码在分配前拒绝超限记录数量") {
+  const auto source = make_package(false);
+  std::vector<std::byte> bytes;
+  REQUIRE(encode_material_package_archive(source, bytes) == archive_error::none);
+  material_archive_layout layout;
+  REQUIRE(parse_material_archive_layout(bytes, layout) == archive_error::none);
+  const auto metadata = std::ranges::find(
+      layout.sections, static_cast<std::uint32_t>(archive_section_type::material_metadata),
+      &material_archive_section::type);
+  REQUIRE(metadata != layout.sections.end());
+  write_u32(bytes, metadata->offset + 4, UINT32_MAX);
   refresh_hash(bytes);
 
   material_package decoded;

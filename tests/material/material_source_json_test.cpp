@@ -63,3 +63,12 @@ TEST_CASE("材质源 JSON 拒绝缺失的 SPIR-V") {
             invalid, std::filesystem::path{GRANIT_TEST_ASSET_DIR}, package) ==
         granit::material::source_json_error::referenced_file_error);
 }
+
+TEST_CASE("材质源 JSON 拒绝超过限制的嵌套深度") {
+  std::string deeply_nested(granit::material::material_source_json_max_depth + 2, '[');
+  deeply_nested += "null";
+  deeply_nested.append(granit::material::material_source_json_max_depth + 2, ']');
+  granit::material::material_package package;
+  CHECK(granit::material::parse_material_source_json(deeply_nested, {}, package) ==
+        granit::material::source_json_error::invalid_json);
+}

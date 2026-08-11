@@ -6,10 +6,14 @@
 
 #include "material/material_package.h"
 
+#include <cstddef>
 #include <filesystem>
 #include <string_view>
 
 namespace granit::material {
+
+inline constexpr std::size_t material_source_json_max_size = 16U * 1024U * 1024U;
+inline constexpr std::size_t material_source_json_max_depth = 64;
 
 enum class source_json_error : std::uint8_t {
   none,
