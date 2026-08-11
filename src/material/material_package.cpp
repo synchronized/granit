@@ -163,6 +163,7 @@ package_error material_package::build(material_package_desc desc, material_packa
 
   std::vector<material_variant> variants;
   variants.reserve(desc.variants.size());
+  std::vector<std::pair<material_pass_id, material_pipeline_state>> pass_states;
   for (auto& source : desc.variants) {
     if (source.pass == 0) {
       return package_error::invalid_pass;
@@ -193,6 +194,13 @@ package_error material_package::build(material_package_desc desc, material_packa
       return package_error::missing_shader_stage;
     }
     if (!pipeline_state_valid(source.pipeline)) {
+      return package_error::invalid_pipeline_state;
+    }
+    const auto pass_state = std::ranges::find_if(
+        pass_states, [&](const auto& entry) { return entry.first == source.pass; });
+    if (pass_state == pass_states.end()) {
+      pass_states.emplace_back(source.pass, source.pipeline);
+    } else if (pass_state->second != source.pipeline) {
       return package_error::invalid_pipeline_state;
     }
 

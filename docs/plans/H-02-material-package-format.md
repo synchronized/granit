@@ -44,6 +44,7 @@ Pass Definitions
 Variant Records
 Shader Records
 SPIR-V Data
+Pipeline States
 Build Metadata（可选）
 Dependency Metadata（可选）
 ```
@@ -105,6 +106,13 @@ STL 容器。记录之间只使用定宽索引和相对文件起点的 64 位 of
 
 Shader 记录保存阶段、入口名称引用、SPIR-V offset、长度和内容哈希。SPIR-V 数据保持 4 字节对齐，
 长度必须是 4 的倍数，并在创建 Shader 前执行与公开 Shader API 一致的基础校验。
+
+### Pipeline States
+
+格式 v2 新增必需的 Pipeline States 区段。它按规范化 Variant 顺序保存顶点 Buffer/Attribute
+记录、Primitive、Depth 和单颜色 Attachment Blend 状态。所有记录使用定宽整数和索引，不保存
+`granit_vertex_buffer_layout` 中的临时指针。同一 Pass 的 Variant 必须共享状态，解码后仍通过
+材质包语义校验。
 
 ## 可选构建信息
 

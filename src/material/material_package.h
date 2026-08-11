@@ -16,7 +16,7 @@
 
 namespace granit::material {
 
-inline constexpr std::uint32_t material_package_format_version = 1;
+inline constexpr std::uint32_t material_package_format_version = 2;
 
 using material_pass_id = std::uint64_t;
 using material_feature_id = std::uint64_t;

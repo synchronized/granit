@@ -32,6 +32,8 @@ const char* section_name(std::uint32_t type) noexcept {
     return "build_metadata";
   case archive_section_type::dependency_metadata:
     return "dependency_metadata";
+  case archive_section_type::pipeline_states:
+    return "pipeline_states";
   }
   return "unknown";
 }

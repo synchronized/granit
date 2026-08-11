@@ -34,7 +34,7 @@ void refresh_hash(std::span<std::byte> bytes) {
 }
 
 std::vector<std::byte> make_archive() {
-  constexpr std::uint32_t section_count = 8;
+  constexpr std::uint32_t section_count = 9;
   constexpr std::uint64_t directory_offset = material_archive_header_size;
   constexpr std::uint64_t data_offset =
       directory_offset + section_count * material_archive_section_record_size;
@@ -56,8 +56,8 @@ std::vector<std::byte> make_archive() {
   write_u32(bytes, 52, material_archive_binding_model_bind_group);
   for (std::uint32_t index = 0; index < section_count; ++index) {
     const auto record = directory_offset + index * material_archive_section_record_size;
-    write_u32(bytes, record, index + 1);
-    write_u32(bytes, record + 4, index < 7 ? archive_section_required : 0);
+    write_u32(bytes, record, index < 7 ? index + 1 : (index == 7 ? 10 : 8));
+    write_u32(bytes, record + 4, index < 8 ? archive_section_required : 0);
     write_u64(bytes, record + 8, data_offset + index);
     write_u64(bytes, record + 16, 1);
     write_u64(bytes, record + 24, 1);
@@ -75,7 +75,7 @@ TEST_CASE("材质归档解析定宽文件头和区段目录") {
   REQUIRE(parse_material_archive_layout(bytes, layout) == archive_error::none);
   CHECK(layout.header.version_major == material_archive_version_major);
   CHECK(layout.header.file_size == bytes.size());
-  REQUIRE(layout.sections.size() == 8);
+  REQUIRE(layout.sections.size() == 9);
   CHECK(layout.sections.front().type ==
         static_cast<std::uint32_t>(archive_section_type::string_table));
 }
@@ -92,7 +92,7 @@ TEST_CASE("材质归档拒绝截断、错误字节序和区段重叠") {
 
   bytes = make_archive();
   const auto first_offset =
-      material_archive_header_size + UINT64_C(8) * material_archive_section_record_size;
+      material_archive_header_size + UINT64_C(9) * material_archive_section_record_size;
   write_u64(bytes, material_archive_header_size + material_archive_section_record_size + 8,
             first_offset);
   CHECK(parse_material_archive_layout(bytes, layout) == archive_error::overlapping_sections);
@@ -102,7 +102,7 @@ TEST_CASE("材质归档跳过未知可选区段并拒绝未知必需区段") {
   material_archive_layout layout;
   auto bytes = make_archive();
   const auto optional_record =
-      material_archive_header_size + UINT64_C(7) * material_archive_section_record_size;
+      material_archive_header_size + UINT64_C(8) * material_archive_section_record_size;
   write_u32(bytes, optional_record, 100);
   refresh_hash(bytes);
   REQUIRE(parse_material_archive_layout(bytes, layout) == archive_error::none);
@@ -113,9 +113,11 @@ TEST_CASE("材质归档跳过未知可选区段并拒绝未知必需区段") {
 
 TEST_CASE("材质归档编码结果确定且能够重新解析") {
   const std::array<std::byte, 1> value{std::byte{0x2a}};
-  std::array<material_archive_section_source, 7> sections{};
+  std::array<material_archive_section_source, 8> sections{};
   for (std::size_t index = 0; index < sections.size(); ++index) {
-    sections[index] = {.type = static_cast<archive_section_type>(sections.size() - index),
+    const auto type = index == 0 ? archive_section_type::pipeline_states
+                                 : static_cast<archive_section_type>(8 - index);
+    sections[index] = {.type = type,
                        .flags = archive_section_required,
                        .alignment = index == 0 ? 16U : 1U,
                        .bytes = value};
@@ -132,7 +134,7 @@ TEST_CASE("材质归档编码结果确定且能够重新解析") {
   REQUIRE(parse_material_archive_layout(first, layout) == archive_error::none);
   REQUIRE(layout.sections.size() == sections.size());
   CHECK(layout.sections.front().type == 1);
-  CHECK(layout.sections.back().type == 7);
+  CHECK(layout.sections.back().type == 10);
 }
 
 TEST_CASE("材质归档检测内容篡改") {

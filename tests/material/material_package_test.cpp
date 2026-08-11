@@ -110,3 +110,12 @@ TEST_CASE("材质包保存并验证顶点布局和固定 Pipeline 状态") {
   desc.variants.push_back(std::move(source));
   CHECK(material_package::build(std::move(desc), package) == package_error::invalid_pipeline_state);
 }
+
+TEST_CASE("同一 Pass 的所有变体必须共享 Pipeline 状态") {
+  material_package_desc desc;
+  desc.variants.push_back(variant({{make_feature_id("mode"), 0}}));
+  desc.variants.push_back(variant({{make_feature_id("mode"), 1}}));
+  desc.variants.back().pipeline.primitive.cull_mode = GRANIT_CULL_MODE_BACK;
+  material_package package;
+  CHECK(material_package::build(std::move(desc), package) == package_error::invalid_pipeline_state);
+}

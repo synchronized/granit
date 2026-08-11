@@ -18,7 +18,11 @@ constexpr std::array<std::byte, 8> archive_magic{std::byte{'G'}, std::byte{'R'},
                                                  std::byte{0},   std::byte{0}};
 constexpr std::uint32_t first_required_section = 1;
 constexpr std::uint32_t last_required_section = 7;
-constexpr std::uint32_t last_known_section = 9;
+constexpr std::uint32_t last_known_section = 10;
+
+bool required_section(std::uint32_t type) noexcept {
+  return (type >= first_required_section && type <= last_required_section) || type == 10;
+}
 
 std::uint32_t read_u32(std::span<const std::byte> bytes, std::size_t offset) noexcept {
   return std::to_integer<std::uint32_t>(bytes[offset]) |
@@ -214,7 +218,7 @@ archive_error encode_material_archive(const material_archive_encode_desc& desc,
                                          : archive_error::duplicate_section;
       }
       seen[type] = true;
-      if (type <= last_required_section && (source.flags & archive_section_required) == 0) {
+      if (required_section(type) && (source.flags & archive_section_required) == 0) {
         return archive_error::invalid_section;
       }
       if ((source.flags & ~archive_section_required) != 0 || !power_of_two(source.alignment) ||
@@ -226,6 +230,9 @@ archive_error encode_material_archive(const material_archive_encode_desc& desc,
       if (!seen[type]) {
         return archive_error::missing_required_section;
       }
+    }
+    if (!seen[static_cast<std::uint32_t>(archive_section_type::pipeline_states)]) {
+      return archive_error::missing_required_section;
     }
 
     const auto directory_size = sources.size() * material_archive_section_record_size;
@@ -366,8 +373,7 @@ archive_error parse_material_archive_layout(std::span<const std::byte> bytes,
       } else {
         seen[section.type] = true;
       }
-      if (section.type >= first_required_section && section.type <= last_required_section &&
-          (section.flags & archive_section_required) == 0) {
+      if (required_section(section.type) && (section.flags & archive_section_required) == 0) {
         return archive_error::invalid_section;
       }
       if ((section.flags & archive_section_compressed) != 0) {
@@ -390,6 +396,9 @@ archive_error parse_material_archive_layout(std::span<const std::byte> bytes,
       if (!seen[type]) {
         return archive_error::missing_required_section;
       }
+    }
+    if (!seen[static_cast<std::uint32_t>(archive_section_type::pipeline_states)]) {
+      return archive_error::missing_required_section;
     }
     std::ranges::sort(parsed.sections, {}, &material_archive_section::offset);
     for (std::size_t index = 1; index < parsed.sections.size(); ++index) {

@@ -124,13 +124,6 @@ std::string read_string(std::span<const std::byte> table, std::uint32_t offset,
 archive_error encode_material_package_archive(const material_package& package,
                                               std::vector<std::byte>& bytes) noexcept {
   try {
-    const material_pipeline_state default_pipeline;
-    if (std::ranges::any_of(package.variants(), [&](const material_variant& variant) {
-          return variant.pipeline != default_pipeline;
-        })) {
-      // H-03A1 只完成内存模型；在格式版本升级前禁止静默丢失新增状态。
-      return archive_error::invalid_semantic_data;
-    }
     std::set<std::string> strings;
     for (const auto& parameter : package.metadata().parameters()) {
       strings.insert(parameter.name);
@@ -270,6 +263,65 @@ archive_error encode_material_package_archive(const material_package& package,
       shader_records[index] = static_cast<std::byte>(shader_count >> (index * 8U));
     }
 
+    constexpr std::uint32_t pipeline_header_size = 24;
+    constexpr std::uint32_t pipeline_state_record_size = 80;
+    constexpr std::uint32_t vertex_buffer_record_size = 16;
+    constexpr std::uint32_t vertex_attribute_record_size = 16;
+    std::vector<std::byte> pipeline_state_records;
+    std::vector<std::byte> vertex_buffer_records;
+    std::vector<std::byte> vertex_attribute_records;
+    std::uint32_t buffer_cursor = 0;
+    std::uint32_t attribute_cursor = 0;
+    for (const auto& variant : package.variants()) {
+      const auto& state = variant.pipeline;
+      append_u32(pipeline_state_records, buffer_cursor);
+      append_u32(pipeline_state_records, static_cast<std::uint32_t>(state.vertex_buffers.size()));
+      append_u32(pipeline_state_records, state.primitive.topology);
+      append_u32(pipeline_state_records, state.primitive.front_face);
+      append_u32(pipeline_state_records, state.primitive.cull_mode);
+      append_u32(pipeline_state_records, state.primitive.polygon_mode);
+      append_u32(pipeline_state_records, state.depth.test_enabled);
+      append_u32(pipeline_state_records, state.depth.write_enabled);
+      append_u32(pipeline_state_records, state.depth.compare);
+      append_u32(pipeline_state_records, 0);
+      append_u32(pipeline_state_records, state.color_blend.enabled);
+      append_u32(pipeline_state_records, state.color_blend.source_color_factor);
+      append_u32(pipeline_state_records, state.color_blend.destination_color_factor);
+      append_u32(pipeline_state_records, state.color_blend.color_operation);
+      append_u32(pipeline_state_records, state.color_blend.source_alpha_factor);
+      append_u32(pipeline_state_records, state.color_blend.destination_alpha_factor);
+      append_u32(pipeline_state_records, state.color_blend.alpha_operation);
+      append_u32(pipeline_state_records, state.color_blend.write_mask);
+      append_u32(pipeline_state_records, 0);
+      append_u32(pipeline_state_records, 0);
+      for (const auto& buffer : state.vertex_buffers) {
+        append_u32(vertex_buffer_records, buffer.stride);
+        append_u32(vertex_buffer_records, buffer.step_mode);
+        append_u32(vertex_buffer_records, attribute_cursor);
+        append_u32(vertex_buffer_records, static_cast<std::uint32_t>(buffer.attributes.size()));
+        for (const auto& attribute : buffer.attributes) {
+          append_u32(vertex_attribute_records, attribute.location);
+          append_u32(vertex_attribute_records, attribute.format);
+          append_u32(vertex_attribute_records, attribute.offset);
+          append_u32(vertex_attribute_records, 0);
+        }
+        attribute_cursor += static_cast<std::uint32_t>(buffer.attributes.size());
+      }
+      buffer_cursor += static_cast<std::uint32_t>(state.vertex_buffers.size());
+    }
+    std::vector<std::byte> pipeline_states;
+    pipeline_states.reserve(pipeline_header_size + pipeline_state_records.size() +
+                            vertex_buffer_records.size() + vertex_attribute_records.size());
+    append_u32(pipeline_states, static_cast<std::uint32_t>(package.variants().size()));
+    append_u32(pipeline_states, pipeline_state_record_size);
+    append_u32(pipeline_states, buffer_cursor);
+    append_u32(pipeline_states, vertex_buffer_record_size);
+    append_u32(pipeline_states, attribute_cursor);
+    append_u32(pipeline_states, vertex_attribute_record_size);
+    append_bytes(pipeline_states, pipeline_state_records);
+    append_bytes(pipeline_states, vertex_buffer_records);
+    append_bytes(pipeline_states, vertex_attribute_records);
+
     const std::array sections{
         material_archive_section_source{archive_section_type::string_table,
                                         archive_section_required, 1, string_table},
@@ -284,7 +336,9 @@ archive_error encode_material_package_archive(const material_package& package,
         material_archive_section_source{archive_section_type::shader_records,
                                         archive_section_required, 8, shader_records},
         material_archive_section_source{archive_section_type::spirv_data, archive_section_required,
-                                        4, spirv_data}};
+                                        4, spirv_data},
+        material_archive_section_source{archive_section_type::pipeline_states,
+                                        archive_section_required, 8, pipeline_states}};
     return encode_material_archive({.target_environment = material_archive_target_vulkan_1_3,
                                     .binding_model = material_archive_binding_model_bind_group,
                                     .required_renderer_features = 0,
@@ -321,9 +375,11 @@ archive_error decode_material_package_archive(std::span<const std::byte> bytes,
     const auto variant_records = find_section(bytes, layout, archive_section_type::variant_records);
     const auto shader_records = find_section(bytes, layout, archive_section_type::shader_records);
     const auto spirv_data = find_section(bytes, layout, archive_section_type::spirv_data);
+    const auto pipeline_states = find_section(bytes, layout, archive_section_type::pipeline_states);
 
     if (!utf8_valid(strings) || metadata.size() < 16 || feature_definitions.size() < 8 ||
-        pass_definitions.size() < 8 || variant_records.size() < 16 || shader_records.size() < 8) {
+        pass_definitions.size() < 8 || variant_records.size() < 16 || shader_records.size() < 8 ||
+        pipeline_states.size() < 24) {
       return archive_error::invalid_semantic_data;
     }
 
@@ -458,6 +514,83 @@ archive_error decode_material_package_archive(std::span<const std::byte> bytes,
       variant.shaders.insert(variant.shaders.end(), shaders.begin() + shader_start,
                              shaders.begin() + shader_start + count_shaders);
       desc.variants.push_back(std::move(variant));
+    }
+
+    const auto pipeline_count = read_u32(pipeline_states, 0);
+    const auto pipeline_record_size = read_u32(pipeline_states, 4);
+    const auto vertex_buffer_count = read_u32(pipeline_states, 8);
+    const auto vertex_buffer_record_size = read_u32(pipeline_states, 12);
+    const auto vertex_attribute_count = read_u32(pipeline_states, 16);
+    const auto vertex_attribute_record_size = read_u32(pipeline_states, 20);
+    if (pipeline_count != variant_count || pipeline_record_size != 80 ||
+        vertex_buffer_record_size != 16 || vertex_attribute_record_size != 16 ||
+        vertex_buffer_count > variant_count * 16U ||
+        vertex_attribute_count > vertex_buffer_count * 32U ||
+        !record_range_valid(pipeline_count, pipeline_record_size, 24, pipeline_states.size())) {
+      return archive_error::invalid_semantic_data;
+    }
+    const auto buffer_records_offset = 24U + pipeline_count * pipeline_record_size;
+    if (!record_range_valid(vertex_buffer_count, vertex_buffer_record_size, buffer_records_offset,
+                            pipeline_states.size())) {
+      return archive_error::invalid_semantic_data;
+    }
+    const auto attribute_records_offset =
+        buffer_records_offset + vertex_buffer_count * vertex_buffer_record_size;
+    if (!record_range_valid(vertex_attribute_count, vertex_attribute_record_size,
+                            attribute_records_offset, pipeline_states.size()) ||
+        attribute_records_offset + vertex_attribute_count * vertex_attribute_record_size !=
+            pipeline_states.size()) {
+      return archive_error::invalid_semantic_data;
+    }
+    for (std::uint32_t index = 0; index < pipeline_count; ++index) {
+      const auto record = 24U + index * pipeline_record_size;
+      auto& state = desc.variants[index].pipeline;
+      const auto buffer_start = read_u32(pipeline_states, record);
+      const auto buffer_count = read_u32(pipeline_states, record + 4);
+      if (buffer_start > vertex_buffer_count || buffer_count > vertex_buffer_count - buffer_start ||
+          read_u32(pipeline_states, record + 72) != 0 ||
+          read_u32(pipeline_states, record + 76) != 0) {
+        return archive_error::invalid_semantic_data;
+      }
+      state.primitive = {
+          read_u32(pipeline_states, record + 8), read_u32(pipeline_states, record + 12),
+          read_u32(pipeline_states, record + 16), read_u32(pipeline_states, record + 20)};
+      state.depth = {read_u32(pipeline_states, record + 24), read_u32(pipeline_states, record + 28),
+                     read_u32(pipeline_states, record + 32),
+                     read_u32(pipeline_states, record + 36)};
+      state.color_blend = {
+          read_u32(pipeline_states, record + 40), read_u32(pipeline_states, record + 44),
+          read_u32(pipeline_states, record + 48), read_u32(pipeline_states, record + 52),
+          read_u32(pipeline_states, record + 56), read_u32(pipeline_states, record + 60),
+          read_u32(pipeline_states, record + 64), read_u32(pipeline_states, record + 68)};
+      state.vertex_buffers.reserve(buffer_count);
+      for (std::uint32_t buffer_index = 0; buffer_index < buffer_count; ++buffer_index) {
+        const auto buffer_record =
+            buffer_records_offset + (buffer_start + buffer_index) * vertex_buffer_record_size;
+        material_vertex_buffer_layout buffer;
+        buffer.stride = read_u32(pipeline_states, buffer_record);
+        buffer.step_mode = read_u32(pipeline_states, buffer_record + 4);
+        const auto attribute_start = read_u32(pipeline_states, buffer_record + 8);
+        const auto attribute_count = read_u32(pipeline_states, buffer_record + 12);
+        if (attribute_start > vertex_attribute_count ||
+            attribute_count > vertex_attribute_count - attribute_start) {
+          return archive_error::invalid_semantic_data;
+        }
+        buffer.attributes.reserve(attribute_count);
+        for (std::uint32_t attribute_index = 0; attribute_index < attribute_count;
+             ++attribute_index) {
+          const auto attribute_record =
+              attribute_records_offset +
+              (attribute_start + attribute_index) * vertex_attribute_record_size;
+          if (read_u32(pipeline_states, attribute_record + 12) != 0) {
+            return archive_error::invalid_semantic_data;
+          }
+          buffer.attributes.push_back({read_u32(pipeline_states, attribute_record),
+                                       read_u32(pipeline_states, attribute_record + 4),
+                                       read_u32(pipeline_states, attribute_record + 8)});
+        }
+        state.vertex_buffers.push_back(std::move(buffer));
+      }
     }
 
     const auto pass_count = read_u32(pass_definitions, 0);

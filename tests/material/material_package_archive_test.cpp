@@ -39,6 +39,12 @@ material_package make_package(bool reverse_parameters) {
                                         .entry_point = "vertex_main",
                                         .spirv = {spirv_magic, UINT32_C(0x00010600), 0, 1, 0}}},
                            .pipeline = {}});
+  desc.variants.back().pipeline.vertex_buffers = {
+      {.stride = 24,
+       .step_mode = GRANIT_VERTEX_STEP_MODE_VERTEX,
+       .attributes = {{0, GRANIT_VERTEX_FORMAT_FLOAT32X3, 0},
+                      {1, GRANIT_VERTEX_FORMAT_FLOAT32X3, 12}}}};
+  desc.variants.back().pipeline.primitive.cull_mode = GRANIT_CULL_MODE_BACK;
   material_package package;
   REQUIRE(material_package::build(std::move(desc), package) == package_error::none);
   return package;
@@ -71,7 +77,7 @@ TEST_CASE("材质包语义数据编码到独立归档区段") {
 
   material_archive_layout layout;
   REQUIRE(parse_material_archive_layout(bytes, layout) == archive_error::none);
-  REQUIRE(layout.sections.size() == 7);
+  REQUIRE(layout.sections.size() == 8);
   const auto section = [&](archive_section_type type) -> std::span<const std::byte> {
     const auto found = std::ranges::find(layout.sections, static_cast<std::uint32_t>(type),
                                          &material_archive_section::type);
@@ -84,6 +90,7 @@ TEST_CASE("材质包语义数据编码到独立归档区段") {
   CHECK(read_u32(section(archive_section_type::variant_records), 0) == 1);
   CHECK(read_u32(section(archive_section_type::shader_records), 0) == 2);
   CHECK(section(archive_section_type::spirv_data).size() == 40);
+  CHECK(read_u32(section(archive_section_type::pipeline_states), 0) == 1);
 }
 
 TEST_CASE("材质包编码不依赖参数和 Shader 输入顺序") {
@@ -96,7 +103,7 @@ TEST_CASE("材质包编码不依赖参数和 Shader 输入顺序") {
   CHECK(first == second);
 }
 
-TEST_CASE("旧材质归档格式拒绝静默丢失 Pipeline 状态") {
+TEST_CASE("材质归档往返保留 Pipeline 状态") {
   auto package = make_package(false);
   material_package_desc desc;
   desc.metadata.constant_buffer_size = package.metadata().constant_buffer_size();
@@ -109,10 +116,13 @@ TEST_CASE("旧材质归档格式拒绝静默丢失 Pipeline 状态") {
                              .shaders = variant.shaders,
                              .pipeline = variant.pipeline});
   }
-  desc.variants.front().pipeline.primitive.cull_mode = GRANIT_CULL_MODE_BACK;
   REQUIRE(material_package::build(std::move(desc), package) == package_error::none);
   std::vector<std::byte> bytes;
-  CHECK(encode_material_package_archive(package, bytes) == archive_error::invalid_semantic_data);
+  REQUIRE(encode_material_package_archive(package, bytes) == archive_error::none);
+  material_package decoded;
+  REQUIRE(decode_material_package_archive(bytes, decoded) == archive_error::none);
+  REQUIRE(decoded.variants().size() == 1);
+  CHECK(decoded.variants().front().pipeline == package.variants().front().pipeline);
 }
 
 TEST_CASE("材质包编码解码再编码保持逐字节一致") {
@@ -184,6 +194,23 @@ TEST_CASE("材质包解码在分配前拒绝超限记录数量") {
       &material_archive_section::type);
   REQUIRE(metadata != layout.sections.end());
   write_u32(bytes, metadata->offset + 4, UINT32_MAX);
+  refresh_hash(bytes);
+
+  material_package decoded;
+  CHECK(decode_material_package_archive(bytes, decoded) == archive_error::invalid_semantic_data);
+}
+
+TEST_CASE("材质包解码拒绝 Pipeline 状态保留字段被篡改") {
+  const auto source = make_package(false);
+  std::vector<std::byte> bytes;
+  REQUIRE(encode_material_package_archive(source, bytes) == archive_error::none);
+  material_archive_layout layout;
+  REQUIRE(parse_material_archive_layout(bytes, layout) == archive_error::none);
+  const auto pipeline = std::ranges::find(
+      layout.sections, static_cast<std::uint32_t>(archive_section_type::pipeline_states),
+      &material_archive_section::type);
+  REQUIRE(pipeline != layout.sections.end());
+  write_u32(bytes, pipeline->offset + 24 + 72, 1);
   refresh_hash(bytes);
 
   material_package decoded;
