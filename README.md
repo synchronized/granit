@@ -66,7 +66,8 @@ Compute Pipeline 和 Dispatch 已经实现。仓库已提供离屏清屏、窗�
 窗口三角形和 Compute Storage Buffer 示例；Pipeline Cache、并发创建和 Shader 热替换边界已经
 完成。阶段六已完成公开对象线程安全矩阵、CPU/Queue/上传性能基线、批量 Recorder 提交和
 Buffer/Texture Upload Batch。P-05 已确认当前不引入内部线程池或公开执行器 API，并为未来
-Render Graph 记录了外部执行器扩展点和量化重评条件。
+Render Graph 记录了外部执行器扩展点和量化重评条件。P-06 已确认 Render Graph 是可选高层
+模块，首版采用串行、单队列执行且不做瞬态内存别名，后续按 H-01 分阶段实现。
 具体顺序见 [docs/roadmap.md](docs/roadmap.md)。
 
 ## 快速开始
@@ -183,6 +184,7 @@ if (granit::failed(result)) {
 - [P-03 锁竞争归因与批量优化](docs/plans/P-03-contention-and-batching.md)。
 - [P-04 持久化上传与 Upload Batch](docs/plans/P-04-upload-allocator.md)。
 - [P-05 线程池与外部执行器边界](docs/plans/P-05-executor-boundary.md)。
+- [P-06 Render Graph 职责与模块边界](docs/plans/P-06-render-graph-boundary.md)。
 - [docs/plans/F-07-recovery-boundaries.md](docs/plans/F-07-recovery-boundaries.md)：窗口帧恢复边界计划。
 - [docs/renderer.md](docs/renderer.md)：公共 renderer C/C++ API 与生命周期。
 - [docs/render-target.md](docs/render-target.md)：颜色与深度/模板 Attachment 值类型。

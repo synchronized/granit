@@ -68,6 +68,8 @@ D-03-graphics-pipeline.md
 - [P-04：持久化上传分配器与批量上传](P-04-upload-allocator.md)——已完成。
 - [P-05：线程池与外部执行器边界](P-05-executor-boundary.md)——已完成；当前不引入线程池或
   公开执行器 API。
+- [P-06：Render Graph 职责与模块边界](P-06-render-graph-boundary.md)——已完成；功能实现转入
+  H-01。
 
 ## 状态
 
