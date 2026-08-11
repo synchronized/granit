@@ -7,6 +7,7 @@
 #include <granit/renderer/renderer.h>
 #include <granit/renderer/shader.h>
 #include <granit/renderer/texture.h>
+#include <granit/renderer/upload_batch.h>
 
 #include <algorithm>
 #include <array>
@@ -55,7 +56,9 @@ enum class benchmark_case {
   queue_submit,
   queue_submit_batch,
   staging_buffer_upload,
-  staging_texture_upload
+  staging_texture_upload,
+  batch_buffer_upload,
+  batch_texture_upload
 };
 
 struct thread_context {
@@ -63,6 +66,7 @@ struct thread_context {
   granit_command_recorder recorder{GRANIT_NULL_HANDLE};
   granit_texture texture{GRANIT_NULL_HANDLE};
   granit_texture_view view{GRANIT_NULL_HANDLE};
+  granit_upload_batch upload_batch{GRANIT_NULL_HANDLE};
   granit_bind_group compute_group{GRANIT_NULL_HANDLE};
   std::uint32_t texture_width{};
   std::uint32_t texture_height{};
@@ -90,7 +94,8 @@ void print_help() {
                "          recorder_create_destroy|empty_record|buffer_record|\n"
                "          mixed_pipeline_record|queue_submit|queue_submit_batch|\n"
                "          staging_buffer_upload|\n"
-               "          staging_texture_upload>\n"
+               "          staging_texture_upload|batch_buffer_upload|\n"
+               "          batch_texture_upload>\n"
                "  --threads <数量>       工作线程数\n"
                "  --iterations <数量>    每个线程、每个样本的操作数\n"
                "  --samples <数量>       正式样本数\n"
@@ -296,7 +301,8 @@ std::vector<thread_context> make_contexts(granit_renderer renderer, benchmark_ca
       return {};
     }
     if (selected == benchmark_case::independent_write ||
-        selected == benchmark_case::staging_buffer_upload) {
+        selected == benchmark_case::staging_buffer_upload ||
+        selected == benchmark_case::batch_buffer_upload) {
       context.data.resize(static_cast<std::size_t>(config.buffer_size), std::byte{0x5a});
       granit_buffer_desc desc = GRANIT_BUFFER_DESC_INIT;
       desc.usage = selected == benchmark_case::independent_write
@@ -361,7 +367,8 @@ std::vector<thread_context> make_contexts(granit_renderer renderer, benchmark_ca
           return {};
         }
       }
-    } else if (selected == benchmark_case::staging_texture_upload) {
+    } else if (selected == benchmark_case::staging_texture_upload ||
+               selected == benchmark_case::batch_texture_upload) {
       context.data.resize(static_cast<std::size_t>(config.buffer_size), std::byte{0x5a});
       const auto [width, height] = texture_extent(config.buffer_size);
       context.texture_width = width;
@@ -377,12 +384,22 @@ std::vector<thread_context> make_contexts(granit_renderer renderer, benchmark_ca
         return {};
       }
     }
+    if (selected == benchmark_case::batch_buffer_upload ||
+        selected == benchmark_case::batch_texture_upload) {
+      const granit_upload_batch_desc desc = GRANIT_UPLOAD_BATCH_DESC_INIT;
+      if (granit_upload_batch_create(renderer, &desc, &context.upload_batch) != GRANIT_SUCCESS) {
+        destroy_contexts(renderer, contexts);
+        return {};
+      }
+    }
   }
   return contexts;
 }
 
 void destroy_contexts(granit_renderer renderer, std::vector<thread_context>& contexts) {
   for (auto& context : contexts) {
+    if (context.upload_batch != GRANIT_NULL_HANDLE)
+      static_cast<void>(granit_upload_batch_destroy(renderer, context.upload_batch));
     for (const auto recorder : context.submit_recorders) {
       if (recorder != GRANIT_NULL_HANDLE)
         static_cast<void>(granit_command_recorder_destroy(renderer, recorder));
@@ -414,6 +431,39 @@ std::uint64_t run_operations(granit_renderer renderer, thread_context& context,
     context.submit_latencies.push_back(
         std::chrono::duration<double, std::nano>{submit_end - submit_begin}.count() /
         static_cast<double>(config.iterations));
+    if (result != GRANIT_SUCCESS)
+      failed.store(true, std::memory_order_relaxed);
+    return static_cast<std::uint64_t>(result);
+  }
+  if (selected == benchmark_case::batch_buffer_upload ||
+      selected == benchmark_case::batch_texture_upload) {
+    granit_result result = GRANIT_SUCCESS;
+    for (std::uint64_t index = 0; index < config.iterations; ++index) {
+      if (selected == benchmark_case::batch_buffer_upload) {
+        result = granit_upload_batch_write_buffer(renderer, context.upload_batch, context.buffer, 0,
+                                                  context.data.data(), context.data.size());
+      } else {
+        const granit_texture_data_layout layout{0, context.texture_width * 4,
+                                                context.texture_height};
+        const granit_texture_write_region region{0,
+                                                 0,
+                                                 1,
+                                                 GRANIT_TEXTURE_ASPECT_COLOR_BIT,
+                                                 0,
+                                                 0,
+                                                 0,
+                                                 context.texture_width,
+                                                 context.texture_height,
+                                                 1};
+        result = granit_upload_batch_write_texture(renderer, context.upload_batch, context.texture,
+                                                   context.data.data(), context.data.size(),
+                                                   &layout, &region);
+      }
+      if (result != GRANIT_SUCCESS)
+        break;
+    }
+    if (result == GRANIT_SUCCESS)
+      result = granit_upload_batch_submit(renderer, context.upload_batch);
     if (result != GRANIT_SUCCESS)
       failed.store(true, std::memory_order_relaxed);
     return static_cast<std::uint64_t>(result);
@@ -580,6 +630,8 @@ std::uint64_t run_operations(granit_renderer renderer, thread_context& context,
       break;
     }
     case benchmark_case::queue_submit_batch:
+    case benchmark_case::batch_buffer_upload:
+    case benchmark_case::batch_texture_upload:
       break;
     }
     local_checksum += static_cast<std::uint64_t>(result);
@@ -706,10 +758,11 @@ int main(int argc, char** argv) {
     return 2;
   }
   constexpr std::string_view cases[]{
-      "invalid_lookup",          "create_destroy",        "independent_write",
-      "recorder_create_destroy", "empty_record",          "buffer_record",
-      "mixed_pipeline_record",   "queue_submit",          "queue_submit_batch",
-      "staging_buffer_upload",   "staging_texture_upload"};
+      "invalid_lookup",          "create_destroy",         "independent_write",
+      "recorder_create_destroy", "empty_record",           "buffer_record",
+      "mixed_pipeline_record",   "queue_submit",           "queue_submit_batch",
+      "staging_buffer_upload",   "staging_texture_upload", "batch_buffer_upload",
+      "batch_texture_upload"};
   if (config.case_name != "all" &&
       std::find(std::begin(cases), std::end(cases), config.case_name) == std::end(cases)) {
     std::cerr << "未知 benchmark 用例：" << config.case_name << '\n';
@@ -797,6 +850,18 @@ int main(int argc, char** argv) {
     upload_config.iterations = config.uploads;
     succeeded &= run_case(renderer, "staging_texture_upload",
                           benchmark_case::staging_texture_upload, upload_config);
+  }
+  if (selected(config.case_name, "batch_buffer_upload")) {
+    auto upload_config = config;
+    upload_config.iterations = config.uploads;
+    succeeded &= run_case(renderer, "batch_buffer_upload", benchmark_case::batch_buffer_upload,
+                          upload_config);
+  }
+  if (selected(config.case_name, "batch_texture_upload")) {
+    auto upload_config = config;
+    upload_config.iterations = config.uploads;
+    succeeded &= run_case(renderer, "batch_texture_upload", benchmark_case::batch_texture_upload,
+                          upload_config);
   }
   destroy_pipeline_fixture(renderer, pipelines);
   const auto destroy_result = granit_renderer_destroy(renderer);

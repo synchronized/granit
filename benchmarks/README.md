@@ -40,6 +40,8 @@ cmake --build --preset windows-clang-release --target granit_benchmarks
 - `queue_submit`：逐个提交预录制的 Recorder，记录单次调用延迟分布。
 - `queue_submit_batch`：一次批量提交同组 Recorder，延迟按 Recorder 数归一化。
 - `staging_buffer_upload`、`staging_texture_upload`：同步 staging 上传固定成本。
+- `batch_buffer_upload`、`batch_texture_upload`：将 `--uploads` 次写入合并到一个 Upload Batch，
+  结果按单次写入归一化。
 
 这些场景不对同一个 Buffer 进行无序并发写入，因为那不属于公开 API 支持的工作流。Renderer 环境
 不可用时程序返回非零状态并在标准错误中说明原因。
