@@ -73,9 +73,9 @@ D-03-graphics-pipeline.md
 - [P-06：Render Graph 职责与模块边界](P-06-render-graph-boundary.md)——已完成；功能实现转入
   H-01。
 - [H-02：材质参数、Shader 变体与离线构建](H-02-material-system.md)——进行中；H-02A～H-02D、
-  H-02E1～H-02E2 已完成，下一步定义持久化材质包。
-- [H-02E3：持久化材质包格式](H-02-material-package-format.md)——设计已确认；待实现文件头、区段
-  编码、损坏输入校验和稳定调试 JSON。
+  H-02E1～H-02E2 已完成，持久化材质包进入 H-02E3。
+- [H-02E3：持久化材质包格式](H-02-material-package-format.md)——进行中；H-02E3A 文件头和区段
+  目录解析已完成，下一步实现编码、SHA-256 与完整结构校验。
 
 ## 状态
 

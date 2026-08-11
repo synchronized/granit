@@ -130,10 +130,12 @@ add_test(NAME granit.render_graph COMMAND granit_render_graph_test)
 add_executable(
   granit_material_test
   material/material_gpu_instance_test.cpp
+  material/material_archive_test.cpp
   material/material_metadata_test.cpp
   material/material_package_test.cpp
   material/material_template_gpu_test.cpp
   "${PROJECT_SOURCE_DIR}/src/material/material_gpu_instance.cpp"
+  "${PROJECT_SOURCE_DIR}/src/material/material_archive.cpp"
   "${PROJECT_SOURCE_DIR}/src/material/material_metadata.cpp"
   "${PROJECT_SOURCE_DIR}/src/material/material_package.cpp"
   "${PROJECT_SOURCE_DIR}/src/material/material_template_gpu.cpp"
