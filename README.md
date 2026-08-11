@@ -68,7 +68,7 @@ Compute Pipeline 和 Dispatch 已经实现。仓库已提供离屏清屏、窗�
 并行录制，并形成公开对象线程安全矩阵。下一步进入句柄表、资源锁、Queue 锁和延迟销毁队列的
 性能测量；P-02A 至 P-02F 的句柄、锁、Recorder、Queue、延迟销毁和 staging 上传基线已经完成。
 P-03 已完成 profiler 归因和批量 Recorder 提交优化；P-04A 已完成同步上传上下文复用，
-下一步设计 P-04B 显式批量上传接口。
+P-04B 将先提供同步 Upload Batch，再根据基准决定是否增加异步上传环。
 具体顺序见 [docs/roadmap.md](docs/roadmap.md)。
 
 ## 快速开始
@@ -167,7 +167,7 @@ if (granit::failed(result)) {
 - [docs/plans/R-05-texture-view.md](docs/plans/R-05-texture-view.md)：Texture 与 View 计划。
 - [docs/plans/R-06-sampler.md](docs/plans/R-06-sampler.md)：Sampler 生命周期与能力计划。
 - [docs/plans/R-07-swapchain-backbuffer.md](docs/plans/R-07-swapchain-backbuffer.md)：Backbuffer 资源计划。
-- [docs/plans/V-01-lifetime-validation.md](docs/plans/V-01-lifetime-validation.md)：生命周期验证计划。
+- [V-01 生命周期验证计划](docs/plans/V-01-lifetime-validation.md)。
 - [docs/plans/R-08-deferred-destruction.md](docs/plans/R-08-deferred-destruction.md)：延迟销毁计划。
 - [docs/plans/R-09-render-target-attachment.md](docs/plans/R-09-render-target-attachment.md)：渲染附件计划。
 - [docs/plans/F-01-command-recorder.md](docs/plans/F-01-command-recorder.md)：命令录制器计划。
