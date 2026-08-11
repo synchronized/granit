@@ -150,6 +150,12 @@ public:
                                           granit_command_recorder recorder, granit_buffer source,
                                           granit_buffer destination,
                                           std::span<const granit_buffer_copy_region> regions);
+  [[nodiscard]] granit_result copy_texture_to_buffer(granit_renderer renderer,
+                                                     granit_command_recorder recorder,
+                                                     granit_texture source,
+                                                     granit_buffer destination,
+                                                     const granit_texture_data_layout& layout,
+                                                     const granit_texture_write_region& region);
   [[nodiscard]] granit_result fill_buffer(granit_renderer renderer,
                                           granit_command_recorder recorder, granit_buffer buffer,
                                           std::uint64_t offset, std::uint64_t size,

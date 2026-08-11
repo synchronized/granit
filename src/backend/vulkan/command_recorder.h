@@ -37,6 +37,9 @@ public:
   [[nodiscard]] granit_result copy_buffer(const vulkan_device& device, VkBuffer source,
                                           VkBuffer destination,
                                           std::span<const VkBufferCopy> regions);
+  [[nodiscard]] granit_result copy_texture_to_buffer(const vulkan_device& device, VkImage source,
+                                                     VkBuffer destination,
+                                                     const VkBufferImageCopy& region);
   [[nodiscard]] granit_result fill_buffer(const vulkan_device& device, VkBuffer buffer,
                                           VkDeviceSize offset, VkDeviceSize size,
                                           std::uint32_t value);

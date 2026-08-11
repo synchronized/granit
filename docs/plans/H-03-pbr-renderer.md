@@ -6,7 +6,7 @@
 ## 元数据
 
 - 设计状态：已确认首版边界
-- 实现状态：进行中（H-03A～H-03E、H-03F1 已完成）
+- 实现状态：进行中（H-03A～H-03E、H-03F1、H-03F2a 已完成）
 - 路线图任务：H-03
 - 优先级：P2
 - 前置依赖：H-01、H-02
@@ -97,7 +97,7 @@ CPU 参考函数与 Shader 必须共享公式说明和固定测试向量。允�
 5. **H-03E（已完成）**：已封装显式 View/Object/Directional Light 输入，并建立独立 Render
    Graph Pass 适配目标，不创建 Scene 或 Light 管理器。
 6. **H-03F（进行中）**：H-03F1 已完成数值回归、适配器生命周期测试、CPU 性能基线以及
-   H-04/H-05 输入契约；H-03F2 等待 Texture Readback 后补 GPU 像素回归。
+   H-04/H-05 输入契约；H-03F2a 已补 Texture Readback，H-03F2b 接入 PBR GPU 像素回归。
 
 ## 验收标准
 
@@ -254,5 +254,16 @@ H-04/H-05 必须沿用以下输入契约：
 - 新增高层模块持有自己的资源和缓存；`granit::pbr` 只消费句柄与值数据，核心 Renderer 不反向依赖
   PBR、Scene 或 Render Graph。
 
-H-03F2 仍需先补齐 Texture 到 Readback Buffer 的公开复制能力，再用固定离屏场景比较 Shader
-像素与 CPU 参考值。当前端到端测试只证明真实 Draw、提交和资源回收成功，不宣称已有 GPU 像素回归。
+H-03F2a 先补齐 Texture 到 Readback Buffer 的公开复制能力；H-03F2b 再用固定离屏场景比较 Shader
+像素与 CPU 参考值。在 H-03F2b 完成前，当前端到端测试只证明真实 Draw、提交和资源回收成功。
+
+## H-03F2a 实现记录
+
+Command Recorder 新增 Texture 到 Buffer 的显式复制命令，复用 Texture 写入已有的数据布局与区域
+结构。公共层校验资源所属 Renderer、usage、格式、单采样限制、mip/array/三维范围、行跨度、目标
+Buffer 容量和 offset 对齐；Vulkan 后端通过统一状态跟踪将源 Image 转为
+`TRANSFER_SRC_OPTIMAL`，并跟踪目标 Buffer 的传输写入。
+
+集成测试将固定 2x2 RGBA8 数据写入 Texture，经命令复制到 readback Buffer，等待 Recorder 完成后
+映射并逐字节比较。该测试闭合了通用读回基础设施；H-03F2b 仍需把相同步骤接入 PBR 离屏颜色目标，
+并定义线性输出量化和像素误差范围。

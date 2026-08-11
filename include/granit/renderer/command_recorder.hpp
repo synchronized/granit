@@ -103,6 +103,12 @@ public:
         granit_command_recorder_copy_buffer(renderer_, handle_, source, destination, regions.data(),
                                             static_cast<std::uint32_t>(regions.size())));
   }
+  [[nodiscard]] result copy_texture_to_buffer(granit_texture source, granit_buffer destination,
+                                              const granit_texture_data_layout& layout,
+                                              const granit_texture_write_region& region) noexcept {
+    return from_native(granit_command_recorder_copy_texture_to_buffer(
+        renderer_, handle_, source, destination, &layout, &region));
+  }
   [[nodiscard]] result fill_buffer(granit_buffer buffer, std::uint64_t offset, std::uint64_t size,
                                    std::uint32_t value) noexcept {
     return from_native(

@@ -14,6 +14,7 @@
 #include <granit/renderer/render_target.h>
 #include <granit/renderer/renderer.h>
 #include <granit/renderer/swapchain.h>
+#include <granit/renderer/texture.h>
 
 /** 一次录制、一次提交的命令录制器句柄。零值无效。 */
 typedef granit_handle granit_command_recorder;
@@ -89,6 +90,16 @@ GRANIT_API granit_result granit_command_recorder_reset(granit_renderer renderer,
 GRANIT_API granit_result granit_command_recorder_copy_buffer(
     granit_renderer renderer, granit_command_recorder recorder, granit_buffer source,
     granit_buffer destination, const granit_buffer_copy_region* regions, uint32_t region_count);
+/**
+ * 将一个 Texture 区域复制到 Buffer，布局中的 offset 指向目标 Buffer。
+ *
+ * 当前只支持带 TRANSFER_SOURCE usage 的单采样非压缩颜色 Texture；目标 Buffer 必须带
+ * TRANSFER_DESTINATION usage。提交后须等待 Recorder 完成，再映射 readback Buffer。
+ */
+GRANIT_API granit_result granit_command_recorder_copy_texture_to_buffer(
+    granit_renderer renderer, granit_command_recorder recorder, granit_texture source,
+    granit_buffer destination, const granit_texture_data_layout* layout,
+    const granit_texture_write_region* region);
 GRANIT_API granit_result granit_command_recorder_fill_buffer(granit_renderer renderer,
                                                              granit_command_recorder recorder,
                                                              granit_buffer buffer, uint64_t offset,

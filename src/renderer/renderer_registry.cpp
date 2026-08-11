@@ -2696,6 +2696,97 @@ granit_result renderer_registry::copy_buffer(granit_renderer renderer,
                                                 destination_record->native.buffer, native_regions);
 }
 
+granit_result renderer_registry::copy_texture_to_buffer(granit_renderer renderer,
+                                                        granit_command_recorder recorder,
+                                                        granit_texture source,
+                                                        granit_buffer destination,
+                                                        const granit_texture_data_layout& layout,
+                                                        const granit_texture_write_region& region) {
+  auto recorder_record = acquire_command_recorder(renderer, recorder);
+  if (!recorder_record)
+    return GRANIT_ERROR_INVALID_HANDLE;
+  std::shared_ptr<texture_record> source_record;
+  std::shared_ptr<buffer_record> destination_record;
+  {
+    std::lock_guard lock{mutex_};
+    const auto& state = recorder_record->renderer;
+    if (handles_.find(source, resource_type::texture, state->domain()) == nullptr ||
+        handles_.find(destination, resource_type::buffer, state->domain()) == nullptr) {
+      return GRANIT_ERROR_INVALID_HANDLE;
+    }
+    const auto found_source = textures_.find(source);
+    const auto found_destination = buffers_.find(destination);
+    if (found_source == textures_.end() || found_destination == buffers_.end() ||
+        found_source->second->renderer != state || found_destination->second->renderer != state) {
+      return GRANIT_ERROR_INVALID_HANDLE;
+    }
+    source_record = found_source->second;
+    destination_record = found_destination->second;
+  }
+
+  const auto& desc = source_record->desc;
+  const auto bytes_per_pixel = texture_bytes_per_pixel(desc.format);
+  if ((desc.usage & GRANIT_TEXTURE_USAGE_TRANSFER_SOURCE_BIT) == 0 ||
+      (destination_record->desc.usage & GRANIT_BUFFER_USAGE_TRANSFER_DESTINATION_BIT) == 0 ||
+      desc.sample_count != GRANIT_SAMPLE_COUNT_1 || bytes_per_pixel == 0) {
+    return GRANIT_ERROR_UNSUPPORTED;
+  }
+  if (region.aspect != GRANIT_TEXTURE_ASPECT_COLOR_BIT || region.width == 0 || region.height == 0 ||
+      region.depth == 0 || region.array_layer_count == 0 || region.mip_level >= desc.mip_levels ||
+      region.base_array_layer >= desc.array_layers ||
+      region.array_layer_count > desc.array_layers - region.base_array_layer ||
+      layout.offset % 4 != 0) {
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  }
+  const auto mip_width = std::max(UINT32_C(1), desc.width >> region.mip_level);
+  const auto mip_height = std::max(UINT32_C(1), desc.height >> region.mip_level);
+  const auto mip_depth = std::max(UINT32_C(1), desc.depth >> region.mip_level);
+  if (region.x >= mip_width || region.width > mip_width - region.x || region.y >= mip_height ||
+      region.height > mip_height - region.y || region.z >= mip_depth ||
+      region.depth > mip_depth - region.z) {
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  }
+  const std::uint64_t tight_row = std::uint64_t{region.width} * bytes_per_pixel;
+  const std::uint64_t row_pitch = layout.bytes_per_row == 0 ? tight_row : layout.bytes_per_row;
+  const std::uint64_t image_rows =
+      layout.rows_per_image == 0 ? region.height : layout.rows_per_image;
+  if (row_pitch < tight_row || row_pitch % bytes_per_pixel != 0 || image_rows < region.height)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  const std::uint64_t image_count =
+      desc.dimension == GRANIT_TEXTURE_DIMENSION_3D ? region.depth : region.array_layer_count;
+  const auto max = std::numeric_limits<std::uint64_t>::max();
+  if (image_rows > max / row_pitch || image_count - 1 > max / (image_rows * row_pitch) ||
+      region.height - 1 > max / row_pitch) {
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  }
+  const std::uint64_t required =
+      (image_count - 1) * image_rows * row_pitch + (region.height - 1) * row_pitch + tight_row;
+  if (layout.offset > destination_record->desc.size ||
+      required > destination_record->desc.size - layout.offset) {
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  }
+
+  VkBufferImageCopy copy{};
+  copy.bufferOffset = layout.offset;
+  copy.bufferRowLength = layout.bytes_per_row == 0 ? 0 : layout.bytes_per_row / bytes_per_pixel;
+  copy.bufferImageHeight = layout.rows_per_image;
+  copy.imageSubresource = {VK_IMAGE_ASPECT_COLOR_BIT, region.mip_level, region.base_array_layer,
+                           region.array_layer_count};
+  copy.imageOffset = {static_cast<std::int32_t>(region.x), static_cast<std::int32_t>(region.y),
+                      static_cast<std::int32_t>(region.z)};
+  copy.imageExtent = {region.width, region.height, region.depth};
+
+  std::lock_guard record_lock{recorder_record->mutex};
+  if (recorder_record->native.state() != command_recorder_state::recording)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  retain_resource(recorder_record->retained_resources, source_record, source_record->metadata);
+  retain_resource(recorder_record->retained_resources, destination_record,
+                  destination_record->metadata);
+  return recorder_record->renderer->copy_texture_to_buffer(recorder_record->native,
+                                                           source_record->native.image,
+                                                           destination_record->native.buffer, copy);
+}
+
 granit_result renderer_registry::fill_buffer(granit_renderer renderer,
                                              granit_command_recorder recorder, granit_buffer buffer,
                                              std::uint64_t offset, std::uint64_t size,

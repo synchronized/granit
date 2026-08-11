@@ -43,6 +43,12 @@ granit_command_recorder_copy_buffer(
     renderer, recorder, source, destination, regions, region_count);
 ```
 
+Texture 读回使用 `granit_command_recorder_copy_texture_to_buffer`。它复用
+`granit_texture_data_layout` 与 `granit_texture_write_region` 描述目标 Buffer 布局和源 Texture
+区域；首版支持单采样、非压缩颜色格式。源 Texture 必须含 `TRANSFER_SOURCE`，目标 Buffer 必须含
+`TRANSFER_DESTINATION`。命令提交是异步的，调用方必须等待 Recorder 完成后才能映射 readback
+Buffer；当前可通过 `granit_command_recorder_reset` 完成等待与回收。
+
 一次调用接受多个 `granit_buffer_copy_region`。区域结构只包含 64 位 source offset、destination
 offset 和 size，ABI 大小为 24 字节。数组只在调用期间读取。
 
