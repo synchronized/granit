@@ -13,6 +13,8 @@ namespace granit::material {
 
 [[nodiscard]] archive_error encode_material_package_archive(const material_package& package,
                                                             std::vector<std::byte>& bytes) noexcept;
+[[nodiscard]] archive_error decode_material_package_archive(std::span<const std::byte> bytes,
+                                                            material_package& package) noexcept;
 
 } // namespace granit::material
 

@@ -4,6 +4,7 @@
 #include "material/material_package_archive.h"
 
 #include <algorithm>
+#include <array>
 #include <map>
 #include <new>
 #include <set>
@@ -31,6 +32,46 @@ struct string_reference {
   std::uint32_t offset = 0;
   std::uint32_t length = 0;
 };
+
+std::uint32_t read_u32(std::span<const std::byte> bytes, std::size_t offset) noexcept {
+  return std::to_integer<std::uint32_t>(bytes[offset]) |
+         (std::to_integer<std::uint32_t>(bytes[offset + 1]) << 8U) |
+         (std::to_integer<std::uint32_t>(bytes[offset + 2]) << 16U) |
+         (std::to_integer<std::uint32_t>(bytes[offset + 3]) << 24U);
+}
+
+std::uint64_t read_u64(std::span<const std::byte> bytes, std::size_t offset) noexcept {
+  return read_u32(bytes, offset) | (static_cast<std::uint64_t>(read_u32(bytes, offset + 4)) << 32U);
+}
+
+bool record_range_valid(std::uint32_t count, std::uint32_t record_size, std::size_t header_size,
+                        std::size_t section_size) noexcept {
+  return record_size != 0 &&
+         count <= (section_size - std::min(header_size, section_size)) / record_size &&
+         header_size <= section_size;
+}
+
+std::span<const std::byte> find_section(std::span<const std::byte> bytes,
+                                        const material_archive_layout& layout,
+                                        archive_section_type type) noexcept {
+  const auto found = std::ranges::find(layout.sections, static_cast<std::uint32_t>(type),
+                                       &material_archive_section::type);
+  return found == layout.sections.end()
+             ? std::span<const std::byte>{}
+             : bytes.subspan(static_cast<std::size_t>(found->offset),
+                             static_cast<std::size_t>(found->stored_size));
+}
+
+bool string_valid(std::span<const std::byte> table, std::uint32_t offset,
+                  std::uint32_t length) noexcept {
+  return length != 0 && offset <= table.size() && length <= table.size() - offset;
+}
+
+std::string read_string(std::span<const std::byte> table, std::uint32_t offset,
+                        std::uint32_t length) {
+  const auto* first = reinterpret_cast<const char*>(table.data() + offset);
+  return {first, first + length};
+}
 
 } // namespace
 
@@ -200,6 +241,208 @@ archive_error encode_material_package_archive(const material_package& package,
     return archive_error::out_of_memory;
   } catch (...) {
     return archive_error::invalid_section;
+  }
+}
+
+archive_error decode_material_package_archive(std::span<const std::byte> bytes,
+                                              material_package& package) noexcept {
+  material_archive_layout layout;
+  const auto archive_result = parse_material_archive_layout(bytes, layout);
+  if (archive_result != archive_error::none) {
+    return archive_result;
+  }
+  try {
+    constexpr std::uint32_t max_parameters = 4096;
+    constexpr std::uint32_t max_features = 4096;
+    constexpr std::uint32_t max_passes = 256;
+    constexpr std::uint32_t max_variants = 65536;
+    constexpr std::uint32_t max_shaders = 131072;
+    constexpr std::uint64_t max_spirv_size = UINT64_C(16) * 1024 * 1024;
+
+    const auto strings = find_section(bytes, layout, archive_section_type::string_table);
+    const auto metadata = find_section(bytes, layout, archive_section_type::material_metadata);
+    const auto feature_definitions =
+        find_section(bytes, layout, archive_section_type::feature_definitions);
+    const auto pass_definitions =
+        find_section(bytes, layout, archive_section_type::pass_definitions);
+    const auto variant_records = find_section(bytes, layout, archive_section_type::variant_records);
+    const auto shader_records = find_section(bytes, layout, archive_section_type::shader_records);
+    const auto spirv_data = find_section(bytes, layout, archive_section_type::spirv_data);
+
+    if (metadata.size() < 16 || feature_definitions.size() < 8 || pass_definitions.size() < 8 ||
+        variant_records.size() < 16 || shader_records.size() < 8) {
+      return archive_error::invalid_semantic_data;
+    }
+
+    material_package_desc desc;
+    desc.format_version = material_package_format_version;
+    desc.target = package_target::vulkan_1_3;
+    desc.binding_model = package_binding_model::bind_group;
+    desc.required_renderer_features = 0;
+
+    desc.metadata.constant_buffer_size = read_u32(metadata, 0);
+    const auto parameter_count = read_u32(metadata, 4);
+    const auto parameter_record_size = read_u32(metadata, 8);
+    if (parameter_count > max_parameters || parameter_record_size != 48 ||
+        !record_range_valid(parameter_count, parameter_record_size, 16, metadata.size())) {
+      return archive_error::invalid_semantic_data;
+    }
+    const auto default_values_offset = 16U + parameter_count * parameter_record_size;
+    desc.metadata.parameters.reserve(parameter_count);
+    for (std::uint32_t index = 0; index < parameter_count; ++index) {
+      const auto record = 16U + index * parameter_record_size;
+      const auto name_offset = read_u32(metadata, record + 8);
+      const auto name_length = read_u32(metadata, record + 12);
+      const auto default_offset = read_u32(metadata, record + 36);
+      const auto default_size = read_u32(metadata, record + 40);
+      if (!string_valid(strings, name_offset, name_length) ||
+          default_offset > metadata.size() - default_values_offset ||
+          default_size > metadata.size() - default_values_offset - default_offset ||
+          read_u32(metadata, record + 44) != 0) {
+        return archive_error::invalid_semantic_data;
+      }
+      parameter_desc parameter{.name = read_string(strings, name_offset, name_length),
+                               .id = read_u64(metadata, record),
+                               .type = static_cast<parameter_type>(read_u32(metadata, record + 16)),
+                               .offset = read_u32(metadata, record + 20),
+                               .array_count = read_u32(metadata, record + 24),
+                               .array_stride = read_u32(metadata, record + 28),
+                               .binding = read_u32(metadata, record + 32),
+                               .default_value = {}};
+      const auto defaults = metadata.subspan(default_values_offset + default_offset, default_size);
+      parameter.default_value.assign(defaults.begin(), defaults.end());
+      desc.metadata.parameters.push_back(std::move(parameter));
+    }
+
+    const auto feature_count = read_u32(feature_definitions, 0);
+    const auto feature_record_size = read_u32(feature_definitions, 4);
+    if (feature_count > max_features || feature_record_size != 16 ||
+        !record_range_valid(feature_count, feature_record_size, 8, feature_definitions.size())) {
+      return archive_error::invalid_semantic_data;
+    }
+    std::set<material_feature_id> feature_ids;
+    for (std::uint32_t index = 0; index < feature_count; ++index) {
+      const auto record = 8U + index * feature_record_size;
+      const auto id = read_u64(feature_definitions, record);
+      if (id == 0 || read_u32(feature_definitions, record + 12) != 0 ||
+          !feature_ids.insert(id).second) {
+        return archive_error::invalid_semantic_data;
+      }
+    }
+
+    const auto shader_count = read_u32(shader_records, 0);
+    const auto shader_record_size = read_u32(shader_records, 4);
+    if (shader_count > max_shaders || shader_record_size != 32 ||
+        !record_range_valid(shader_count, shader_record_size, 8, shader_records.size())) {
+      return archive_error::invalid_semantic_data;
+    }
+    std::vector<material_shader_code> shaders;
+    shaders.reserve(shader_count);
+    for (std::uint32_t index = 0; index < shader_count; ++index) {
+      const auto record = 8U + index * shader_record_size;
+      const auto stage = read_u32(shader_records, record);
+      const auto name_offset = read_u32(shader_records, record + 4);
+      const auto name_length = read_u32(shader_records, record + 8);
+      const auto spirv_offset = read_u64(shader_records, record + 16);
+      const auto spirv_size = read_u64(shader_records, record + 24);
+      if (stage > static_cast<std::uint32_t>(package_shader_stage::fragment) ||
+          !string_valid(strings, name_offset, name_length) ||
+          read_u32(shader_records, record + 12) != 0 || spirv_size == 0 ||
+          spirv_size > max_spirv_size || spirv_size % sizeof(std::uint32_t) != 0 ||
+          spirv_offset % sizeof(std::uint32_t) != 0 || spirv_offset > spirv_data.size() ||
+          spirv_size > spirv_data.size() - spirv_offset) {
+        return archive_error::invalid_semantic_data;
+      }
+      material_shader_code shader{.stage = static_cast<package_shader_stage>(stage),
+                                  .entry_point = read_string(strings, name_offset, name_length),
+                                  .spirv = {}};
+      shader.spirv.reserve(static_cast<std::size_t>(spirv_size / sizeof(std::uint32_t)));
+      for (std::uint64_t offset = 0; offset < spirv_size; offset += sizeof(std::uint32_t)) {
+        shader.spirv.push_back(
+            read_u32(spirv_data, static_cast<std::size_t>(spirv_offset + offset)));
+      }
+      shaders.push_back(std::move(shader));
+    }
+
+    const auto variant_count = read_u32(variant_records, 0);
+    const auto variant_record_size = read_u32(variant_records, 4);
+    const auto feature_value_size = read_u32(variant_records, 8);
+    if (variant_count == 0 || variant_count > max_variants || variant_record_size != 40 ||
+        feature_value_size != 16 || read_u32(variant_records, 12) != 0 ||
+        !record_range_valid(variant_count, variant_record_size, 16, variant_records.size())) {
+      return archive_error::invalid_semantic_data;
+    }
+    const auto feature_values_offset = 16U + variant_count * variant_record_size;
+    desc.variants.reserve(variant_count);
+    for (std::uint32_t index = 0; index < variant_count; ++index) {
+      const auto record = 16U + index * variant_record_size;
+      const auto feature_start = read_u32(variant_records, record + 16);
+      const auto count = read_u32(variant_records, record + 20);
+      const auto shader_start = read_u32(variant_records, record + 24);
+      const auto count_shaders = read_u32(variant_records, record + 28);
+      if (feature_start > (variant_records.size() - feature_values_offset) / feature_value_size ||
+          count > (variant_records.size() - feature_values_offset) / feature_value_size -
+                      feature_start ||
+          shader_start > shaders.size() || count_shaders > shaders.size() - shader_start ||
+          read_u64(variant_records, record + 32) != 0) {
+        return archive_error::invalid_semantic_data;
+      }
+      material_variant_desc variant{
+          .pass = read_u64(variant_records, record), .features = {}, .shaders = {}};
+      variant.features.reserve(count);
+      for (std::uint32_t feature_index = 0; feature_index < count; ++feature_index) {
+        const auto feature_record =
+            feature_values_offset + (feature_start + feature_index) * feature_value_size;
+        const auto id = read_u64(variant_records, feature_record);
+        if (!feature_ids.contains(id) || read_u32(variant_records, feature_record + 12) != 0) {
+          return archive_error::invalid_semantic_data;
+        }
+        variant.features.push_back({id, read_u32(variant_records, feature_record + 8)});
+      }
+      if (make_variant_key(variant.features) != read_u64(variant_records, record + 8)) {
+        return archive_error::invalid_semantic_data;
+      }
+      variant.shaders.insert(variant.shaders.end(), shaders.begin() + shader_start,
+                             shaders.begin() + shader_start + count_shaders);
+      desc.variants.push_back(std::move(variant));
+    }
+
+    const auto pass_count = read_u32(pass_definitions, 0);
+    const auto pass_record_size = read_u32(pass_definitions, 4);
+    if (pass_count == 0 || pass_count > max_passes || pass_record_size != 16 ||
+        !record_range_valid(pass_count, pass_record_size, 8, pass_definitions.size())) {
+      return archive_error::invalid_semantic_data;
+    }
+    std::vector<bool> covered(variant_count);
+    for (std::uint32_t index = 0; index < pass_count; ++index) {
+      const auto record = 8U + index * pass_record_size;
+      const auto pass = read_u64(pass_definitions, record);
+      const auto first = read_u32(pass_definitions, record + 8);
+      const auto count = read_u32(pass_definitions, record + 12);
+      if (pass == 0 || count == 0 || first > variant_count || count > variant_count - first) {
+        return archive_error::invalid_semantic_data;
+      }
+      for (std::uint32_t variant_index = first; variant_index < first + count; ++variant_index) {
+        if (covered[variant_index] || desc.variants[variant_index].pass != pass) {
+          return archive_error::invalid_semantic_data;
+        }
+        covered[variant_index] = true;
+      }
+    }
+    if (!std::ranges::all_of(covered, [](bool value) { return value; })) {
+      return archive_error::invalid_semantic_data;
+    }
+
+    material_package decoded;
+    if (material_package::build(std::move(desc), decoded) != package_error::none) {
+      return archive_error::invalid_semantic_data;
+    }
+    package = std::move(decoded);
+    return archive_error::none;
+  } catch (const std::bad_alloc&) {
+    return archive_error::out_of_memory;
+  } catch (...) {
+    return archive_error::invalid_semantic_data;
   }
 }
 

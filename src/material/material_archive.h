@@ -59,6 +59,7 @@ enum class archive_error : std::uint8_t {
   missing_required_section,
   overlapping_sections,
   content_hash_mismatch,
+  invalid_semantic_data,
   out_of_memory,
 };
 

@@ -18,8 +18,12 @@ material_package make_package(bool reverse_parameters) {
   material_package_desc desc;
   desc.metadata.constant_buffer_size = 32;
   desc.metadata.parameters = {
-      {.name = "base_color", .type = parameter_type::float4, .offset = 0, .default_value = {}},
+      {.name = "base_color",
+       .type = parameter_type::float4,
+       .offset = 0,
+       .default_value = std::vector<std::byte>(16, std::byte{0x01})},
       {.name = "roughness", .type = parameter_type::float32, .offset = 16, .default_value = {}},
+      {.name = "albedo", .type = parameter_type::texture_view, .binding = 1, .default_value = {}},
   };
   if (reverse_parameters) {
     std::ranges::reverse(desc.metadata.parameters);
@@ -45,6 +49,11 @@ std::uint32_t read_u32(std::span<const std::byte> bytes, std::size_t offset) {
          (std::to_integer<std::uint32_t>(bytes[offset + 3]) << 24U);
 }
 
+void refresh_hash(std::span<std::byte> bytes) {
+  const auto hash = calculate_material_archive_content_hash(bytes);
+  std::ranges::copy(hash, bytes.begin() + 64);
+}
+
 } // namespace
 
 TEST_CASE("材质包语义数据编码到独立归档区段") {
@@ -61,7 +70,7 @@ TEST_CASE("材质包语义数据编码到独立归档区段") {
     REQUIRE(found != layout.sections.end());
     return std::span{bytes}.subspan(found->offset, found->stored_size);
   };
-  CHECK(read_u32(section(archive_section_type::material_metadata), 4) == 2);
+  CHECK(read_u32(section(archive_section_type::material_metadata), 4) == 3);
   CHECK(read_u32(section(archive_section_type::feature_definitions), 0) == 1);
   CHECK(read_u32(section(archive_section_type::pass_definitions), 0) == 1);
   CHECK(read_u32(section(archive_section_type::variant_records), 0) == 1);
@@ -77,4 +86,45 @@ TEST_CASE("材质包编码不依赖参数和 Shader 输入顺序") {
   REQUIRE(encode_material_package_archive(first_package, first) == archive_error::none);
   REQUIRE(encode_material_package_archive(second_package, second) == archive_error::none);
   CHECK(first == second);
+}
+
+TEST_CASE("材质包编码解码再编码保持逐字节一致") {
+  const auto source = make_package(false);
+  std::vector<std::byte> encoded;
+  REQUIRE(encode_material_package_archive(source, encoded) == archive_error::none);
+
+  material_package decoded;
+  REQUIRE(decode_material_package_archive(encoded, decoded) == archive_error::none);
+  REQUIRE(decoded.metadata().parameters().size() == 3);
+  const auto* base_color = decoded.metadata().find(make_parameter_id("base_color"));
+  REQUIRE(base_color != nullptr);
+  CHECK(base_color->default_value == std::vector<std::byte>(16, std::byte{0x01}));
+  const auto* albedo = decoded.metadata().find(make_parameter_id("albedo"));
+  REQUIRE(albedo != nullptr);
+  CHECK(albedo->type == parameter_type::texture_view);
+  CHECK(albedo->binding == 1);
+  REQUIRE(decoded.variants().size() == 1);
+  CHECK(decoded.variants().front().features.size() == 1);
+  CHECK(decoded.variants().front().shaders.size() == 2);
+
+  std::vector<std::byte> reencoded;
+  REQUIRE(encode_material_package_archive(decoded, reencoded) == archive_error::none);
+  CHECK(reencoded == encoded);
+}
+
+TEST_CASE("材质包解码拒绝哈希正确但变体键被篡改的归档") {
+  const auto source = make_package(false);
+  std::vector<std::byte> bytes;
+  REQUIRE(encode_material_package_archive(source, bytes) == archive_error::none);
+  material_archive_layout layout;
+  REQUIRE(parse_material_archive_layout(bytes, layout) == archive_error::none);
+  const auto variant = std::ranges::find(
+      layout.sections, static_cast<std::uint32_t>(archive_section_type::variant_records),
+      &material_archive_section::type);
+  REQUIRE(variant != layout.sections.end());
+  bytes[variant->offset + 24] ^= std::byte{1};
+  refresh_hash(bytes);
+
+  material_package decoded;
+  CHECK(decode_material_package_archive(bytes, decoded) == archive_error::invalid_semantic_data);
 }
