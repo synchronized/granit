@@ -22,7 +22,7 @@
   "variants": [
     {
       "pass": "opaque",
-      "features": [{"name": "pbr_texture_mask", "value": 31}],
+      "features": [{"name": "pbr_texture_mask", "value": 0}],
       "pipeline": {
         "vertex_buffers": [],
         "primitive": {
@@ -37,6 +37,25 @@
       "shaders": [
         {"stage": "vertex", "entry_point": "vertex_main", "spirv": "pbr_untextured.vert.spv"},
         {"stage": "fragment", "entry_point": "fragment_main", "spirv": "pbr_untextured.frag.spv"}
+      ]
+    },
+    {
+      "pass": "opaque",
+      "features": [{"name": "pbr_texture_mask", "value": 31}],
+      "pipeline": {
+        "vertex_buffers": [],
+        "primitive": {
+          "topology": "triangle_list",
+          "front_face": "counter_clockwise",
+          "cull_mode": "back",
+          "polygon_mode": "fill"
+        },
+        "depth": {"test_enabled": true, "write_enabled": true, "compare": "less_equal"},
+        "color_blend": {"enabled": false}
+      },
+      "shaders": [
+        {"stage": "vertex", "entry_point": "vertex_main", "spirv": "pbr_untextured.vert.spv"},
+        {"stage": "fragment", "entry_point": "fragment_main", "spirv": "pbr_textured.frag.spv"}
       ]
     }
   ]

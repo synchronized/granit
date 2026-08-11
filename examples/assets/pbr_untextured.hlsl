@@ -4,6 +4,10 @@
 static const float PI = 3.14159265358979323846;
 static const float MINIMUM_PERCEPTUAL_ROUGHNESS = 0.045;
 
+#ifndef GRANIT_PBR_TEXTURE_MASK
+#define GRANIT_PBR_TEXTURE_MASK 0
+#endif
+
 struct vertex_output {
   float4 position : SV_Position;
   float3 normal : TEXCOORD0;
@@ -21,12 +25,24 @@ struct vertex_output {
   float reserved_value;
 };
 
+#if (GRANIT_PBR_TEXTURE_MASK & 1)
 [[vk::binding(1, 1)]] Texture2D<float4> base_color_texture;
+#endif
+#if (GRANIT_PBR_TEXTURE_MASK & 2)
 [[vk::binding(2, 1)]] Texture2D<float4> metallic_roughness_texture;
+#endif
+#if (GRANIT_PBR_TEXTURE_MASK & 4)
 [[vk::binding(3, 1)]] Texture2D<float4> normal_texture;
+#endif
+#if (GRANIT_PBR_TEXTURE_MASK & 8)
 [[vk::binding(4, 1)]] Texture2D<float4> occlusion_texture;
+#endif
+#if (GRANIT_PBR_TEXTURE_MASK & 16)
 [[vk::binding(5, 1)]] Texture2D<float4> emissive_texture;
+#endif
+#if GRANIT_PBR_TEXTURE_MASK
 [[vk::binding(6, 1)]] SamplerState pbr_sampler;
+#endif
 
 vertex_output vertex_main(uint vertex_id : SV_VertexID) {
   const float2 positions[3] = {float2(0.0, -0.65), float2(0.65, 0.65),
@@ -68,21 +84,37 @@ float visibility_smith_correlated(float normal_dot_view, float normal_dot_light,
 }
 
 float4 fragment_main(vertex_output input) : SV_Target0 {
-  const float4 sampled_base_color = base_color_texture.Sample(pbr_sampler, input.uv);
+  float4 resolved_base_color = base_color;
+  float resolved_metallic = metallic;
+  float resolved_roughness = perceptual_roughness;
+  float sampled_occlusion = 1.0;
+  float3 sampled_emissive = 1.0.xxx;
+#if (GRANIT_PBR_TEXTURE_MASK & 1)
+  resolved_base_color *= base_color_texture.Sample(pbr_sampler, input.uv);
+#endif
+#if (GRANIT_PBR_TEXTURE_MASK & 2)
   const float4 sampled_metallic_roughness =
       metallic_roughness_texture.Sample(pbr_sampler, input.uv);
-  const float3 sampled_normal = normal_texture.Sample(pbr_sampler, input.uv).xyz * 2.0 - 1.0;
-  const float sampled_occlusion = occlusion_texture.Sample(pbr_sampler, input.uv).r;
-  const float3 sampled_emissive = emissive_texture.Sample(pbr_sampler, input.uv).rgb;
+  resolved_metallic *= sampled_metallic_roughness.b;
+  resolved_roughness *= sampled_metallic_roughness.g;
+#endif
+#if (GRANIT_PBR_TEXTURE_MASK & 8)
+  sampled_occlusion = occlusion_texture.Sample(pbr_sampler, input.uv).r;
+#endif
+#if (GRANIT_PBR_TEXTURE_MASK & 16)
+  sampled_emissive = emissive_texture.Sample(pbr_sampler, input.uv).rgb;
+#endif
   const float3 geometric_normal = normalize(input.normal);
+#if (GRANIT_PBR_TEXTURE_MASK & 4)
+  const float3 sampled_normal = normal_texture.Sample(pbr_sampler, input.uv).xyz * 2.0 - 1.0;
   const float3 tangent = normalize(input.tangent.xyz);
   const float3 bitangent = normalize(cross(geometric_normal, tangent)) * input.tangent.w;
   const float3 normal = normalize(tangent * sampled_normal.x * normal_scale +
                                   bitangent * sampled_normal.y * normal_scale +
                                   geometric_normal * sampled_normal.z);
-  const float4 resolved_base_color = base_color * sampled_base_color;
-  const float resolved_metallic = metallic * sampled_metallic_roughness.b;
-  const float resolved_roughness = perceptual_roughness * sampled_metallic_roughness.g;
+#else
+  const float3 normal = geometric_normal;
+#endif
   const float3 view = float3(0.0, 0.0, 1.0);
   const float3 light = float3(0.0, 0.0, 1.0);
   const float3 half_vector = normalize(view + light);

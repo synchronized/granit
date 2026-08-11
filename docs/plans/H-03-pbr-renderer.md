@@ -6,7 +6,7 @@
 ## 元数据
 
 - 设计状态：已确认首版边界
-- 实现状态：进行中（H-03A～H-03C、H-03D1～H-03D2b 已完成）
+- 实现状态：进行中（H-03A～H-03D 已完成）
 - 路线图任务：H-03
 - 优先级：P2
 - 前置依赖：H-01、H-02
@@ -92,8 +92,8 @@ CPU 参考函数与 Shader 必须共享公式说明和固定测试向量。允�
    调试 JSON，并覆盖往返、无效枚举与损坏输入检查。
 2. **H-03B（已完成）**：实现独立 CPU BRDF 参考函数、PBR 参数规范、边界值和固定测试向量。
 3. **H-03C（已完成）**：加入无纹理 HLSL PBR Shader、离线构建包和单三角离屏直接光照闭环。
-4. **H-03D（进行中）**：H-03D1 已接入 PBR 材质常量；H-03D2a～H-03D2b 已固定纹理契约并接入
-   默认资源与真实采样；H-03D2c 将生成按纹理组合裁剪的 Shader 变体。
+4. **H-03D（已完成）**：材质常量、五类纹理、默认资源、顶点契约与按纹理掩码编译期裁剪已经
+   贯通，并验证 sRGB/线性格式语义。
 5. **H-03E**：封装显式 View/Object/Directional Light 输入和 Render Graph Pass 适配器，不创建
    Scene 或 Light 管理器。
 6. **H-03F**：增加端到端图像/数值回归、资源生命周期测试和性能基线，整理 H-04/H-05 输入契约。
@@ -196,3 +196,14 @@ Shader 变体，避免未启用槽位的无效采样。
 Storage Buffer、Sampled/Storage Texture 现在会传入 Recorder，在提交前生成访问屏障与 Image
 Layout 转换；因此刚完成上传的默认纹理能从 `TRANSFER_DST` 正确进入
 `SHADER_READ_ONLY_OPTIMAL`，无需调用方接触 Vulkan 同步。
+
+## H-03D2c 实现记录
+
+HLSL 使用编译期 `GRANIT_PBR_TEXTURE_MASK` 控制纹理声明、采样和 TBN 分支，未启用的槽位不会进入
+最终 SPIR-V。仓库固定携带 mask 0 与 mask 31 两个边界变体：前者反射结果只有 48 字节常量块，
+后者包含五张纹理和共享采样器；离线 `.grmat` 包同时记录两个稳定变体键。
+
+中间组合使用同一 HLSL 源按实际资产需求传入 `-D GRANIT_PBR_TEXTURE_MASK=<mask>` 编译，不默认
+生成全部 32 份 SPIR-V，避免材质包无条件膨胀。所有组合仍共享相同的 Group 1 Pipeline Layout，
+默认资源保证使用者切换变体时不需要临时构造占位资源。H-03D 至此完成，下一步进入 H-03E 的
+View/Object/Directional Light 显式输入与 Render Graph Pass 适配。

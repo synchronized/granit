@@ -42,7 +42,7 @@ bool make_package(granit::material::material_package& package) {
                    .spirv = load_shader("pbr_untextured.vert.spv")},
                   {.stage = package_shader_stage::fragment,
                    .entry_point = "fragment_main",
-                   .spirv = load_shader("pbr_untextured.frag.spv")}},
+                   .spirv = load_shader("pbr_textured.frag.spv")}},
       .pipeline = {}};
   variant.pipeline.primitive.cull_mode = GRANIT_CULL_MODE_BACK;
   variant.pipeline.depth.test_enabled = 1;
@@ -88,6 +88,10 @@ bool make_package(granit::material::material_package& package) {
                                     .type = parameter_type::sampler,
                                     .binding = pbr_binding_sampler,
                                     .default_value = {}}});
+  auto untextured = variant;
+  untextured.features.front().value = 0;
+  untextured.shaders.back().spirv = load_shader("pbr_untextured.frag.spv");
+  desc.variants.push_back(std::move(untextured));
   desc.variants.push_back(std::move(variant));
   return material_package::build(std::move(desc), package) == package_error::none;
 }
