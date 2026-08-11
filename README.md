@@ -67,7 +67,7 @@ Compute Pipeline 和 Dispatch 已经实现。仓库已提供离屏清屏、窗�
 完成。阶段六已验证独立 Buffer/Texture 上传、资源创建，以及共享只读对象的 Graphics/Compute
 并行录制，并形成公开对象线程安全矩阵。下一步进入句柄表、资源锁、Queue 锁和延迟销毁队列的
 性能测量；P-02A 至 P-02F 的句柄、锁、Recorder、Queue、延迟销毁和 staging 上传基线已经完成。
-P-03 已完成 profiler 归因和批量 Recorder 提交优化；下一步进入 P-04 每帧上传分配器设计。
+P-03 已完成 profiler 归因和批量 Recorder 提交优化；P-04 已进入持久化上传分配器实现。
 具体顺序见 [docs/roadmap.md](docs/roadmap.md)。
 
 ## 快速开始
