@@ -6,7 +6,7 @@
 ## 元数据
 
 - 设计状态：已确认首版边界
-- 实现状态：进行中（H-03A、H-03B 已完成）
+- 实现状态：进行中（H-03A～H-03C 已完成）
 - 路线图任务：H-03
 - 优先级：P2
 - 前置依赖：H-01、H-02
@@ -91,7 +91,7 @@ CPU 参考函数与 Shader 必须共享公式说明和固定测试向量。允�
 1. **H-03A（已完成）**：Pipeline 状态已进入内存模型、真实创建、二进制 v2、源 JSON 和可读
    调试 JSON，并覆盖往返、无效枚举与损坏输入检查。
 2. **H-03B（已完成）**：实现独立 CPU BRDF 参考函数、PBR 参数规范、边界值和固定测试向量。
-3. **H-03C**：加入无纹理 HLSL PBR Shader、离线构建包和单三角/球体离屏直接光照闭环。
+3. **H-03C（已完成）**：加入无纹理 HLSL PBR Shader、离线构建包和单三角离屏直接光照闭环。
 4. **H-03D**：接入 Base Color、Metallic/Roughness、Normal、Occlusion、Emissive 纹理与变体，
    验证 sRGB/线性语义和缺失顶点属性诊断。
 5. **H-03E**：封装显式 View/Object/Directional Light 输入和 Render Graph Pass 适配器，不创建
@@ -145,3 +145,15 @@ correlated GGX 可见性和单方向光直接光照。输入方向会归一化�
 测试记录了正入射介电材质、正入射金属材质和彩色半金属三组固定数值，并覆盖背光和非法参数边界。
 该实现只承担规范与测试基准，不进入实时逐像素路径；H-03C 的 HLSL 实现必须复用同一公式语义，
 并与这些向量或离屏输出对照。
+
+## H-03C 实现记录
+
+`pbr_untextured.hlsl` 已按 H-03B 的公式实现 Schlick、GGX 和 Smith correlated GGX，并使用固定的
+线性 Base Color、Metallic、Perceptual Roughness 与正入射方向光。顶点阶段通过 `SV_VertexID`
+生成三角形，首版不要求 Vertex Buffer；材质常量与纹理绑定留到 H-03D。
+
+示例资产同时提供源 HLSL、DXC 生成的 Vulkan 1.3 SPIR-V 和 `.grmat.json` 离线包描述。源描述可由
+`granit_material_tool` 确定性构建为 v2 二进制包。`granit_pbr_offscreen_example` 通过
+`material_template_gpu` 创建真实 Pipeline，在 RGBA8 颜色与 D32 深度附件上完成 Draw、提交和安全
+回收；示例已注册为 CTest。当前 Renderer 尚无 Texture 到 Readback Buffer 的公开复制接口，因此
+本阶段验证真实执行成功，像素级 CPU/GPU 数值回归保留到 H-03F。

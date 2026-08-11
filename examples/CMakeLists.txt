@@ -37,6 +37,17 @@ target_compile_definitions(
 )
 granit_target_compile_warnings(granit_material_hot_reload_example)
 
+add_executable(granit_pbr_offscreen_example pbr_offscreen.cpp)
+target_link_libraries(granit_pbr_offscreen_example PRIVATE granit::material)
+target_compile_definitions(
+  granit_pbr_offscreen_example
+  PRIVATE GRANIT_EXAMPLE_ASSET_DIR="${CMAKE_CURRENT_SOURCE_DIR}/assets"
+)
+granit_target_compile_warnings(granit_pbr_offscreen_example)
+if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
+  add_test(NAME granit.example.pbr_offscreen COMMAND granit_pbr_offscreen_example)
+endif()
+
 if(WIN32)
   add_executable(granit_window_clear_example WIN32 window_clear.cpp)
   target_link_libraries(granit_window_clear_example PRIVATE granit::granit user32)
@@ -59,6 +70,7 @@ set(
   granit_offscreen_triangle_example
   granit_compute_example
   granit_material_hot_reload_example
+  granit_pbr_offscreen_example
 )
 if(WIN32)
   list(APPEND granit_example_targets granit_window_clear_example granit_window_triangle_example)

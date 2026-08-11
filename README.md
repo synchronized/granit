@@ -74,8 +74,8 @@ Buffer/Texture View 导入、单 Recorder 串行执行，以及瞬态资源按�
 Texture/Sampler Bind Group 事务式替换，以及 DXC/SPIR-V 反射工具原型。H-02E1 已完成内存版本化
 材质包、稳定变体查找与 Shader/Pipeline 缓存。H-02E3 已完成持久化包、源 JSON 构建、语义往返、
 调试 JSON 导出和损坏输入防护；H-02F 已完成事务式迁移、热替换槽、错误材质 Pipeline 回退和
-端到端示例，H-02G 已建立首份性能基线。H-03A 已打通完整 Pipeline 状态，H-03B 已加入与后续
-Shader 对照的 CPU PBR BRDF 参考实现和固定测试向量。材质模块仍是尚未安装导出的内部原型。
+端到端示例，H-02G 已建立首份性能基线。H-03A～H-03C 已完成完整 Pipeline 状态、CPU PBR BRDF
+参考实现和无纹理 HLSL 离屏绘制。材质模块仍是尚未安装导出的内部原型。
 具体顺序见 [docs/roadmap.md](docs/roadmap.md)。
 
 ## 快速开始
@@ -120,6 +120,7 @@ cmake --preset linux-clang-debug -DBUILD_SHARED_LIBS=OFF
 - `granit_window_triangle_example`：上传位置和颜色顶点数据，在 Win32 窗口持续绘制彩色三角形。
 - `granit_compute_example`：Compute Shader 写入 Storage Buffer，自动同步复制并读取结果。
 - `granit_material_hot_reload_example`：演示缺失变体时的错误材质回退和成功热替换。
+- `granit_pbr_offscreen_example`：使用无纹理金属度/粗糙度 Shader 完成带深度的离屏 PBR Draw。
 
 示例不包含 Vulkan 头文件；材质热替换示例使用尚未安装的开发中 `granit::material` 模块，其余示例
 只依赖稳定分层中的 Granit 公共接口。窗口示例目前仅在 Windows 构建。
