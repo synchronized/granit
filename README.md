@@ -68,7 +68,8 @@ Compute Pipeline 和 Dispatch 已经实现。仓库已提供离屏清屏、窗�
 Buffer/Texture Upload Batch。P-05 已确认当前不引入内部线程池或公开执行器 API，并为未来
 Render Graph 记录了外部执行器扩展点和量化重评条件。P-06 已确认 Render Graph 是可选高层
 模块，首版采用串行、单队列执行且不做瞬态内存别名。H-01A 纯 CPU 图编译器已经完成，当前
-不进入核心动态库；下一步接入导入资源和串行 Command Recorder 执行。
+不进入核心动态库；H-01B 已完成 Buffer/Texture View 导入及单 Recorder 串行执行原型。下一步
+实现瞬态资源生命周期。
 具体顺序见 [docs/roadmap.md](docs/roadmap.md)。
 
 ## 快速开始

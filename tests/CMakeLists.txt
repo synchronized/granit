@@ -111,10 +111,12 @@ add_test(NAME granit.device_status COMMAND granit_device_status_test)
 add_executable(
   granit_render_graph_test
   render_graph/graph_compiler_test.cpp
+  render_graph/serial_graph_test.cpp
   "${PROJECT_SOURCE_DIR}/src/render_graph/graph_compiler.cpp"
+  "${PROJECT_SOURCE_DIR}/src/render_graph/serial_graph.cpp"
 )
 target_include_directories(granit_render_graph_test PRIVATE "${PROJECT_SOURCE_DIR}/src")
-target_link_libraries(granit_render_graph_test PRIVATE Catch2::Catch2WithMain)
+target_link_libraries(granit_render_graph_test PRIVATE granit::granit Catch2::Catch2WithMain)
 target_compile_options(
   granit_render_graph_test
   PRIVATE $<$<COMPILE_LANG_AND_ID:CXX,MSVC>:/utf-8>
