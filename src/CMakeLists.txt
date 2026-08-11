@@ -185,6 +185,7 @@ target_sources(
     material/material_package.cpp
     material/material_package_archive.cpp
     material/pbr_default_resources.cpp
+    material/pbr_draw_inputs.cpp
     material/pbr_material_schema.cpp
     material/pbr_reference.cpp
     material/material_template_gpu.cpp
@@ -200,6 +201,7 @@ target_sources(
       material/material_package.h
       material/material_package_archive.h
       material/pbr_default_resources.h
+      material/pbr_draw_inputs.h
       material/pbr_material_schema.h
       material/pbr_reference.h
       material/material_template_gpu.h
