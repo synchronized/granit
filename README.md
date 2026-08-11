@@ -71,8 +71,8 @@ Render Graph 记录了外部执行器扩展点和量化重评条件。P-06 已�
 Buffer/Texture View 导入、单 Recorder 串行执行，以及瞬态资源按首末使用点创建回收；这些原型
 当前不进入核心动态库。窗口输出、诊断和性能复核已经完成；现阶段不缓存或并行化，瞬态资源池
 留待真实重复帧验证。H-02A～H-02D 已完成材质系统边界、CPU shadow buffer、dirty 区间上传、
-Texture/Sampler Bind Group 事务式替换，以及 DXC/SPIR-V 反射工具原型；下一步定义版本化材质包
-并接入变体查找和 Pipeline 缓存。
+Texture/Sampler Bind Group 事务式替换，以及 DXC/SPIR-V 反射工具原型。H-02E1 已完成内存版本化
+材质包和稳定变体查找；下一步接入 Shader 与 Pipeline 缓存。
 具体顺序见 [docs/roadmap.md](docs/roadmap.md)。
 
 ## 快速开始

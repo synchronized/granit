@@ -6,7 +6,7 @@
 ## 元数据
 
 - 设计状态：已确认
-- 实现状态：进行中（H-02A～H-02D 已完成）
+- 实现状态：进行中（H-02A～H-02D、H-02E1 已完成）
 - 路线图任务：H-02
 - 优先级：P2
 - 前置依赖：D-01～D-08、H-01
@@ -148,8 +148,9 @@ SPIRV-Reflect 与 SPIRV-Headers `vulkan-sdk-1.4.350.0`。版本升级必须重�
    批量上传。
 4. **H-02D（已完成）**：已用 DXC、spirv-val 和 SPIRV-Reflect 完成固定 HLSL 的端到端原型，
    并确定参考版本、内置依赖版本和许可证。
-5. **H-02E**：定义版本化材质包，接入变体查找和 Pipeline 缓存；按 D-09A 预留显式绑定模型和
-   Renderer 能力要求，但首版只实现传统 Bind Group。
+5. **H-02E（进行中）**：H-02E1 已完成内存版本化材质包和稳定变体查找；下一步接入 Shader、
+   Pipeline Layout 和 Graphics Pipeline 缓存。按 D-09A 显式记录绑定模型和 Renderer 能力要求，
+   但首版只接受传统 Bind Group。
 6. **H-02F**：增加热替换、实例迁移、错误材质和端到端示例。
 7. **H-02G**：建立参数更新、变体查找和 Pipeline 命中率性能基线。
 
@@ -201,6 +202,19 @@ Uniform Buffer、Texture 和 Sampler，避免依赖编译器的隐式寄存器�
 端到端测试通过外部 DXC 编译 fixture，以 `spirv-val --target-env vulkan1.3` 校验产物，并检查反射
 结果与材质绑定约定一致。工具当前只覆盖 vertex、fragment、compute 以及材质原型需要的描述符
 类型；尚未定义持久化包格式、include 图、变体枚举或完整诊断协议，这些属于 H-02E。
+
+## H-02E1 实现记录
+
+内部 `material_package` 原型保存格式版本、目标环境、绑定模型、参数元数据和按 Pass 组织的 Shader
+变体。当前只接受格式版本 1、Vulkan 1.3 与传统 Bind Group；Bindless 枚举值用于让不支持的包被
+明确拒绝，不代表已经实现 D-09。
+
+构建阶段按 feature ID 排序并拒绝零 ID、重复特性、重复变体、缺少 Vertex/Fragment 阶段、重复
+Shader 阶段及无效 SPIR-V magic。变体键使用固定 FNV-1a 64、显式小端字节顺序及特性数量计算，
+不依赖 `std::hash` 或输入排列。包按“Pass ID + 变体键”排序并进行无分配查找。
+
+该原型仍是内存结构，不是磁盘格式，也不进入公共 ABI 或安装导出。magic、区段表、长度校验、
+内容哈希、编译器身份和编译参数将在持久化格式落地时补充；GPU 对象缓存属于 H-02E2。
 
 ## 验收标准
 

@@ -72,8 +72,8 @@ D-03-graphics-pipeline.md
   公开执行器 API。
 - [P-06：Render Graph 职责与模块边界](P-06-render-graph-boundary.md)——已完成；功能实现转入
   H-01。
-- [H-02：材质参数、Shader 变体与离线构建](H-02-material-system.md)——进行中；H-02A～H-02D
-  已完成，下一步定义版本化材质包。
+- [H-02：材质参数、Shader 变体与离线构建](H-02-material-system.md)——进行中；H-02A～H-02D、
+  H-02E1 已完成，下一步接入 Shader 与 Pipeline 缓存。
 
 ## 状态
 

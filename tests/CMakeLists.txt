@@ -131,8 +131,10 @@ add_executable(
   granit_material_test
   material/material_gpu_instance_test.cpp
   material/material_metadata_test.cpp
+  material/material_package_test.cpp
   "${PROJECT_SOURCE_DIR}/src/material/material_gpu_instance.cpp"
   "${PROJECT_SOURCE_DIR}/src/material/material_metadata.cpp"
+  "${PROJECT_SOURCE_DIR}/src/material/material_package.cpp"
 )
 target_include_directories(granit_material_test PRIVATE "${PROJECT_SOURCE_DIR}/src")
 target_link_libraries(granit_material_test PRIVATE granit::granit Catch2::Catch2WithMain)
