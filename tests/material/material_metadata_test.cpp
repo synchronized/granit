@@ -32,8 +32,11 @@ TEST_CASE("材质元数据验证布局并补全参数 ID") {
   desc.parameters = {
       {.name = "color", .type = parameter_type::float4, .offset = 0, .default_value = {}},
       {.name = "roughness", .type = parameter_type::float32, .offset = 16, .default_value = {}},
-      {.name = "albedo", .type = parameter_type::texture_view, .default_value = {}},
-      {.name = "linear_sampler", .type = parameter_type::sampler, .default_value = {}},
+      {.name = "albedo", .type = parameter_type::texture_view, .binding = 1, .default_value = {}},
+      {.name = "linear_sampler",
+       .type = parameter_type::sampler,
+       .binding = 2,
+       .default_value = {}},
   };
 
   REQUIRE(material_metadata::build(std::move(desc), metadata) == metadata_error::none);

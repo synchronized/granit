@@ -129,11 +129,13 @@ add_test(NAME granit.render_graph COMMAND granit_render_graph_test)
 
 add_executable(
   granit_material_test
+  material/material_gpu_instance_test.cpp
   material/material_metadata_test.cpp
+  "${PROJECT_SOURCE_DIR}/src/material/material_gpu_instance.cpp"
   "${PROJECT_SOURCE_DIR}/src/material/material_metadata.cpp"
 )
 target_include_directories(granit_material_test PRIVATE "${PROJECT_SOURCE_DIR}/src")
-target_link_libraries(granit_material_test PRIVATE Catch2::Catch2WithMain)
+target_link_libraries(granit_material_test PRIVATE granit::granit Catch2::Catch2WithMain)
 target_compile_options(
   granit_material_test
   PRIVATE $<$<COMPILE_LANG_AND_ID:CXX,MSVC>:/utf-8>

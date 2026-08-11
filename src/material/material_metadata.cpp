@@ -72,6 +72,7 @@ metadata_error material_metadata::build(metadata_desc desc, material_metadata& m
 
   std::unordered_map<std::string, parameter_id> names;
   std::unordered_map<parameter_id, std::string> ids;
+  std::unordered_map<std::uint32_t, parameter_id> resource_bindings;
   std::vector<std::pair<std::uint64_t, std::uint64_t>> occupied_ranges;
   occupied_ranges.reserve(desc.parameters.size());
 
@@ -95,10 +96,17 @@ metadata_error material_metadata::build(metadata_desc desc, material_metadata& m
 
     if (is_resource_type(parameter.type)) {
       if (parameter.array_count != 1 || parameter.offset != 0 || parameter.array_stride != 0 ||
-          !parameter.default_value.empty()) {
+          parameter.binding == 0 || !parameter.default_value.empty()) {
         return metadata_error::invalid_layout;
       }
+      if (!resource_bindings.emplace(parameter.binding, parameter.id).second) {
+        return metadata_error::overlapping_parameters;
+      }
       continue;
+    }
+
+    if (parameter.binding != 0) {
+      return metadata_error::invalid_layout;
     }
 
     const auto element_size = parameter_element_size(parameter.type);

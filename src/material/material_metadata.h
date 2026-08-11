@@ -39,6 +39,7 @@ enum class metadata_error : std::uint8_t {
   invalid_layout,
   overlapping_parameters,
   invalid_default_value,
+  invalid_resource,
   parameter_not_found,
   type_mismatch,
   size_mismatch,
@@ -51,6 +52,7 @@ struct parameter_desc {
   std::uint32_t offset = 0;
   std::uint32_t array_count = 1;
   std::uint32_t array_stride = 0;
+  std::uint32_t binding = 0;
   std::vector<std::byte> default_value;
 };
 

@@ -6,7 +6,7 @@
 ## 元数据
 
 - 设计状态：已确认
-- 实现状态：进行中（H-02A～H-02B 已完成）
+- 实现状态：进行中（H-02A～H-02C 已完成）
 - 路线图任务：H-02
 - 优先级：P2
 - 前置依赖：D-01～D-08、H-01
@@ -141,7 +141,8 @@ H-02A 不立即锁定 DXC、glslang 或 shaderc。选择前必须用同一组 Sh
 1. **H-02A（已完成）**：确认模板、实例、参数、绑定频率、变体和离线边界。
 2. **H-02B（已完成）**：已实现纯 CPU 材质元数据、稳定参数 ID、布局校验和实例 shadow
    buffer。
-3. **H-02C**：接入材质 Uniform Buffer、Texture/Sampler Bind Group 和 dirty 区间批量上传。
+3. **H-02C（已完成）**：已接入材质 Uniform Buffer、Texture/Sampler Bind Group 和 dirty 区间
+   批量上传。
 4. **H-02D**：原型验证离线 Shader 编译与反射工具，确定编译器、版本和许可证。
 5. **H-02E**：定义版本化材质包，接入变体查找和 Pipeline 缓存。
 6. **H-02F**：增加热替换、实例迁移、错误材质和端到端示例。
@@ -165,8 +166,25 @@ H-02A 不立即锁定 DXC、glslang 或 shaderc。选择前必须用同一组 Sh
 dirty。类型安全的参数写入通过 ID 查找，拒绝不存在、资源类型、类型不匹配和尺寸不匹配；相同
 字节不重复标脏，多次修改合并为一个覆盖范围，供 H-02C 单次批量上传。
 
-该原型只由独立 Catch2 测试目标构建，不进入核心动态库或安装导出。Texture View 和 Sampler 已
-作为元数据类型保留，但资源句柄、GPU Buffer 和 Bind Group 生命周期留给 H-02C。
+该原型只由独立 Catch2 测试目标构建，不进入核心动态库或安装导出。Texture View 和 Sampler
+作为元数据资源类型，由 H-02C 的 GPU 实例完成实际绑定。
+
+## H-02C 实现记录
+
+内部 `material_gpu_instance` 引用仍须比实例长寿的元数据，并拥有一个 UPLOAD Uniform Buffer 和
+当前材质 Bind Group。binding 0 固定为存在常量块时的 Uniform Buffer；Texture View 与 Sampler
+参数必须使用唯一且非零的显式 binding。元数据构建阶段会拒绝资源 binding 冲突。
+
+`flush` 先把合并后的 dirty 区间通过一次 `granit_buffer_write` 上传；资源尚未全部绑定时返回
+`GRANIT_ERROR_NOT_READY`，但已经成功的常量上传不会重复执行。资源未变化时后续数值更新不会重建
+Bind Group。
+
+Texture View 或 Sampler 变化后，实例使用现有不可变 Bind Group API 创建完整替代对象；只有新
+对象创建成功才替换并销毁旧 Bind Group。创建失败时旧对象保持有效，资源 dirty 状态保留以便
+重试。测试覆盖真实 Vulkan Buffer、Texture、Sampler、Bind Group 创建、替换和逆序销毁。
+
+该实现仍只由独立测试目标构建，不进入核心动态库或安装导出。材质实例借用资源句柄，不拥有
+Texture View、Sampler、Bind Group Layout 或元数据；调用方必须保证它们覆盖实例生命周期。
 
 ## 验收标准
 
