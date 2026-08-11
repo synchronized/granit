@@ -8,3 +8,5 @@
 
 结果文件使用 `YYYY-MM-DD-平台-主题-提交.md` 命名。任何优化结论必须与相同环境和参数下的既有
 基线比较，并说明波动范围。
+
+- [Render Graph 首份性能基线](2026-08-11-windows-clang-render-graph-6bac5a5.md)

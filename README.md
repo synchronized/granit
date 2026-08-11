@@ -69,7 +69,8 @@ Buffer/Texture Upload Batch。P-05 已确认当前不引入内部线程池或公
 Render Graph 记录了外部执行器扩展点和量化重评条件。P-06 已确认 Render Graph 是可选高层
 模块，首版采用串行、单队列执行且不做瞬态内存别名。H-01A～H-01D 已完成纯 CPU 图编译、
 Buffer/Texture View 导入、单 Recorder 串行执行，以及瞬态资源按首末使用点创建回收；这些原型
-当前不进入核心动态库。窗口 Backbuffer Frame 提交和图诊断也已接入；下一步进行性能复核。
+当前不进入核心动态库。窗口输出、诊断和性能复核已经完成；现阶段不缓存或并行化，瞬态资源池
+留待真实重复帧验证。
 具体顺序见 [docs/roadmap.md](docs/roadmap.md)。
 
 ## 快速开始
