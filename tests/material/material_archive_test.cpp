@@ -5,9 +5,12 @@
 
 #include <catch2/catch_all.hpp>
 
+#include <algorithm>
+#include <array>
 #include <cstddef>
 #include <cstdint>
 #include <span>
+#include <string_view>
 #include <vector>
 
 namespace {
@@ -23,6 +26,11 @@ void write_u32(std::span<std::byte> bytes, std::size_t offset, std::uint32_t val
 void write_u64(std::span<std::byte> bytes, std::size_t offset, std::uint64_t value) {
   write_u32(bytes, offset, static_cast<std::uint32_t>(value));
   write_u32(bytes, offset + 4, static_cast<std::uint32_t>(value >> 32U));
+}
+
+void refresh_hash(std::span<std::byte> bytes) {
+  const auto hash = calculate_material_archive_content_hash(bytes);
+  std::ranges::copy(hash, bytes.begin() + 64);
 }
 
 std::vector<std::byte> make_archive() {
@@ -55,6 +63,7 @@ std::vector<std::byte> make_archive() {
     write_u64(bytes, record + 24, 1);
     write_u32(bytes, record + 32, 1);
   }
+  refresh_hash(bytes);
   return bytes;
 }
 
@@ -95,8 +104,53 @@ TEST_CASE("材质归档跳过未知可选区段并拒绝未知必需区段") {
   const auto optional_record =
       material_archive_header_size + UINT64_C(7) * material_archive_section_record_size;
   write_u32(bytes, optional_record, 100);
+  refresh_hash(bytes);
   REQUIRE(parse_material_archive_layout(bytes, layout) == archive_error::none);
 
   write_u32(bytes, optional_record + 4, archive_section_required);
   CHECK(parse_material_archive_layout(bytes, layout) == archive_error::unknown_required_section);
+}
+
+TEST_CASE("材质归档编码结果确定且能够重新解析") {
+  const std::array<std::byte, 1> value{std::byte{0x2a}};
+  std::array<material_archive_section_source, 7> sections{};
+  for (std::size_t index = 0; index < sections.size(); ++index) {
+    sections[index] = {.type = static_cast<archive_section_type>(sections.size() - index),
+                       .flags = archive_section_required,
+                       .alignment = index == 0 ? 16U : 1U,
+                       .bytes = value};
+  }
+  std::vector<std::byte> first;
+  std::vector<std::byte> second;
+  REQUIRE(encode_material_archive({.sections = sections}, first) == archive_error::none);
+  auto reordered = sections;
+  std::ranges::reverse(reordered);
+  REQUIRE(encode_material_archive({.sections = reordered}, second) == archive_error::none);
+  CHECK(first == second);
+
+  material_archive_layout layout;
+  REQUIRE(parse_material_archive_layout(first, layout) == archive_error::none);
+  REQUIRE(layout.sections.size() == sections.size());
+  CHECK(layout.sections.front().type == 1);
+  CHECK(layout.sections.back().type == 7);
+}
+
+TEST_CASE("材质归档检测内容篡改") {
+  auto bytes = make_archive();
+  bytes.back() ^= std::byte{1};
+  material_archive_layout layout;
+  CHECK(parse_material_archive_layout(bytes, layout) == archive_error::content_hash_mismatch);
+}
+
+TEST_CASE("材质归档 SHA-256 符合标准测试向量") {
+  constexpr std::string_view input = "abc";
+  constexpr std::array<std::uint8_t, 32> expected{0xba, 0x78, 0x16, 0xbf, 0x8f, 0x01, 0xcf, 0xea,
+                                                  0x41, 0x41, 0x40, 0xde, 0x5d, 0xae, 0x22, 0x23,
+                                                  0xb0, 0x03, 0x61, 0xa3, 0x96, 0x17, 0x7a, 0x9c,
+                                                  0xb4, 0x10, 0xff, 0x61, 0xf2, 0x00, 0x15, 0xad};
+  const auto bytes = std::as_bytes(std::span{input.data(), input.size()});
+  const auto hash = calculate_material_archive_content_hash(bytes);
+  for (std::size_t index = 0; index < hash.size(); ++index) {
+    CHECK(std::to_integer<std::uint8_t>(hash[index]) == expected[index]);
+  }
 }

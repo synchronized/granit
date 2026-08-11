@@ -72,8 +72,8 @@ Buffer/Texture View 导入、单 Recorder 串行执行，以及瞬态资源按�
 当前不进入核心动态库。窗口输出、诊断和性能复核已经完成；现阶段不缓存或并行化，瞬态资源池
 留待真实重复帧验证。H-02A～H-02D 已完成材质系统边界、CPU shadow buffer、dirty 区间上传、
 Texture/Sampler Bind Group 事务式替换，以及 DXC/SPIR-V 反射工具原型。H-02E1 已完成内存版本化
-材质包、稳定变体查找与 Shader/Pipeline 缓存。H-02E3A 已完成持久化包文件头和区段目录解析；
-下一步实现编码、SHA-256 与完整结构校验。
+材质包、稳定变体查找与 Shader/Pipeline 缓存。H-02E3A～H-02E3B 已完成持久化包容器解析、
+确定性编码和 SHA-256 校验；下一步编码/解码材质语义数据。
 具体顺序见 [docs/roadmap.md](docs/roadmap.md)。
 
 ## 快速开始

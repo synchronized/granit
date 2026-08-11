@@ -74,8 +74,8 @@ D-03-graphics-pipeline.md
   H-01。
 - [H-02：材质参数、Shader 变体与离线构建](H-02-material-system.md)——进行中；H-02A～H-02D、
   H-02E1～H-02E2 已完成，持久化材质包进入 H-02E3。
-- [H-02E3：持久化材质包格式](H-02-material-package-format.md)——进行中；H-02E3A 文件头和区段
-  目录解析已完成，下一步实现编码、SHA-256 与完整结构校验。
+- [H-02E3：持久化材质包格式](H-02-material-package-format.md)——进行中；H-02E3A～H-02E3B 已
+  完成容器解析、确定性编码和 SHA-256 校验，下一步编码/解码材质语义数据。
 
 ## 状态
 
