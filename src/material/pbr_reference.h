@@ -4,15 +4,11 @@
 #ifndef GRANIT_MATERIAL_PBR_REFERENCE_H
 #define GRANIT_MATERIAL_PBR_REFERENCE_H
 
+#include "math/math.h"
+
 namespace granit::material {
 
-struct pbr_float3 {
-  float x = 0.0F;
-  float y = 0.0F;
-  float z = 0.0F;
-
-  friend bool operator==(const pbr_float3&, const pbr_float3&) = default;
-};
+using pbr_float3 = math::float3;
 
 struct pbr_material_parameters {
   pbr_float3 base_color{1.0F, 1.0F, 1.0F};

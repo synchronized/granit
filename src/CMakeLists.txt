@@ -196,6 +196,22 @@ set_target_properties(
   PROPERTIES FOLDER "Modules" POSITION_INDEPENDENT_CODE ON
 )
 
+add_library(granit_math STATIC)
+add_library(granit::math ALIAS granit_math)
+target_sources(
+  granit_math
+  PRIVATE math/math.cpp
+  PUBLIC
+    FILE_SET HEADERS
+    BASE_DIRS "${PROJECT_SOURCE_DIR}/src"
+    FILES math/math.h
+)
+target_compile_features(granit_math PUBLIC cxx_std_20)
+target_include_directories(granit_math PUBLIC "${PROJECT_SOURCE_DIR}/src")
+granit_target_compile_warnings(granit_math)
+granit_target_output_directories(granit_math)
+set_target_properties(granit_math PROPERTIES FOLDER "Modules" POSITION_INDEPENDENT_CODE ON)
+
 add_library(granit_material STATIC)
 add_library(granit::material ALIAS granit_material)
 target_sources(
@@ -232,7 +248,7 @@ target_sources(
 )
 target_compile_features(granit_material PUBLIC cxx_std_20)
 target_include_directories(granit_material PUBLIC "${PROJECT_SOURCE_DIR}/src")
-target_link_libraries(granit_material PUBLIC granit::granit)
+target_link_libraries(granit_material PUBLIC granit::granit granit::math)
 granit_target_compile_warnings(granit_material)
 granit_target_output_directories(granit_material)
 set_target_properties(

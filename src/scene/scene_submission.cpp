@@ -24,12 +24,11 @@ bool nonnegative(float3 value) noexcept {
   return value.x >= 0.0F && value.y >= 0.0F && value.z >= 0.0F;
 }
 
-bool normalize(float3& value) noexcept {
-  const auto length_squared = value.x * value.x + value.y * value.y + value.z * value.z;
-  if (!std::isfinite(length_squared) || length_squared <= 0.0F)
+bool normalize_in_place(float3& value) noexcept {
+  const auto normalized = math::normalize(value);
+  if (normalized == float3{})
     return false;
-  const auto inverse_length = 1.0F / std::sqrt(length_squared);
-  value = {value.x * inverse_length, value.y * inverse_length, value.z * inverse_length};
+  value = normalized;
   return true;
 }
 
@@ -57,7 +56,7 @@ submission_error validate_renderable(const renderable_input& value) noexcept {
 submission_error validate_directional(directional_light_input& value) noexcept {
   if (!finite(value.direction_to_light) || !finite(value.radiance))
     return submission_error::non_finite_value;
-  if (!normalize(value.direction_to_light))
+  if (!normalize_in_place(value.direction_to_light))
     return submission_error::invalid_direction;
   if (!nonnegative(value.radiance))
     return submission_error::negative_light_value;
@@ -80,7 +79,7 @@ submission_error validate_spot(spot_light_input& value) noexcept {
       !std::isfinite(value.outer_angle)) {
     return submission_error::non_finite_value;
   }
-  if (!normalize(value.direction))
+  if (!normalize_in_place(value.direction))
     return submission_error::invalid_direction;
   if (!nonnegative(value.intensity))
     return submission_error::negative_light_value;

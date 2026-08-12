@@ -12,32 +12,12 @@ namespace {
 
 float saturate(float value) noexcept { return std::clamp(value, 0.0F, 1.0F); }
 
-float dot(pbr_float3 left, pbr_float3 right) noexcept {
-  return left.x * right.x + left.y * right.y + left.z * right.z;
-}
-
-pbr_float3 normalize(pbr_float3 value) noexcept {
-  const auto length_squared = dot(value, value);
-  if (length_squared <= 0.0F)
-    return {};
-  const auto inverse_length = 1.0F / std::sqrt(length_squared);
-  return {value.x * inverse_length, value.y * inverse_length, value.z * inverse_length};
-}
-
-pbr_float3 add(pbr_float3 left, pbr_float3 right) noexcept {
-  return {left.x + right.x, left.y + right.y, left.z + right.z};
-}
-
-pbr_float3 multiply(pbr_float3 left, pbr_float3 right) noexcept {
+pbr_float3 multiply_components(pbr_float3 left, pbr_float3 right) noexcept {
   return {left.x * right.x, left.y * right.y, left.z * right.z};
 }
 
-pbr_float3 multiply(pbr_float3 value, float scalar) noexcept {
-  return {value.x * scalar, value.y * scalar, value.z * scalar};
-}
-
 pbr_float3 mix(pbr_float3 left, pbr_float3 right, float amount) noexcept {
-  return add(multiply(left, 1.0F - amount), multiply(right, amount));
+  return math::add(math::multiply(left, 1.0F - amount), math::multiply(right, amount));
 }
 
 } // namespace
@@ -74,12 +54,12 @@ float pbr_visibility_smith_correlated(float normal_dot_view, float normal_dot_li
 
 pbr_float3 evaluate_pbr_direct_light(const pbr_material_parameters& material,
                                      const pbr_direct_light_input& input) noexcept {
-  const auto normal = normalize(input.normal);
-  const auto view = normalize(input.view_direction);
-  const auto light = normalize(input.light_direction);
-  const auto half_vector = normalize(add(view, light));
-  const auto normal_dot_view = saturate(dot(normal, view));
-  const auto normal_dot_light = saturate(dot(normal, light));
+  const auto normal = math::normalize(input.normal);
+  const auto view = math::normalize(input.view_direction);
+  const auto light = math::normalize(input.light_direction);
+  const auto half_vector = math::normalize(math::add(view, light));
+  const auto normal_dot_view = saturate(math::dot(normal, view));
+  const auto normal_dot_light = saturate(math::dot(normal, light));
   if (normal_dot_view <= 0.0F || normal_dot_light <= 0.0F)
     return {};
 
@@ -89,17 +69,18 @@ pbr_float3 evaluate_pbr_direct_light(const pbr_material_parameters& material,
                  std::max(material.base_color.z, 0.0F)};
   const auto reflectance =
       mix({pbr_dielectric_f0, pbr_dielectric_f0, pbr_dielectric_f0}, base_color, metallic);
-  const auto fresnel = pbr_fresnel_schlick(saturate(dot(view, half_vector)), reflectance);
+  const auto fresnel = pbr_fresnel_schlick(saturate(math::dot(view, half_vector)), reflectance);
   const auto distribution =
-      pbr_distribution_ggx(saturate(dot(normal, half_vector)), material.perceptual_roughness);
+      pbr_distribution_ggx(saturate(math::dot(normal, half_vector)), material.perceptual_roughness);
   const auto visibility = pbr_visibility_smith_correlated(normal_dot_view, normal_dot_light,
                                                           material.perceptual_roughness);
   const auto diffuse_scale = (1.0F - metallic) / std::numbers::pi_v<float>;
   const auto diffuse = pbr_float3{base_color.x * (1.0F - fresnel.x) * diffuse_scale,
                                   base_color.y * (1.0F - fresnel.y) * diffuse_scale,
                                   base_color.z * (1.0F - fresnel.z) * diffuse_scale};
-  const auto specular = multiply(fresnel, distribution * visibility);
-  return multiply(multiply(add(diffuse, specular), input.radiance), normal_dot_light);
+  const auto specular = math::multiply(fresnel, distribution * visibility);
+  return math::multiply(multiply_components(math::add(diffuse, specular), input.radiance),
+                        normal_dot_light);
 }
 
 } // namespace granit::material

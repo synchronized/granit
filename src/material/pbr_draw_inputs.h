@@ -6,13 +6,12 @@
 
 #include "material/pbr_reference.h"
 
-#include <array>
 #include <cstdint>
 
 namespace granit::material {
 
 /** 与 HLSL column-major float4x4 一致的列主序矩阵。 */
-using pbr_matrix4 = std::array<float, 16>;
+using pbr_matrix4 = math::matrix4;
 
 struct pbr_view_input {
   pbr_matrix4 view_projection{};

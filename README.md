@@ -95,6 +95,8 @@ IBL、HDR/ACES Tone Mapping 和完整参考管线测量。环境、阴影与 Pas
 保持不变；分块/聚簇光照、自动曝光和高级阴影在真实数据证明必要后另立任务。
 H-05A 已新增内部 `granit::lighting` 模块，完成三类光源的对齐 GPU 布局、逐 View 事务式打包、
 容量诊断，以及点光距离衰减和聚光锥响应的 CPU 数值参考。
+H-05B 开始前已增加最小内部 `granit::math`，统一 Scene/PBR/Lighting 的向量与列主序矩阵，并明确
+右手坐标系和 Vulkan `[0,1]` 深度约定；它目前不是稳定 C ABI 或强制用户采用的公共数学库。
 具体顺序见 [docs/roadmap.md](docs/roadmap.md)。
 
 ## 快速开始

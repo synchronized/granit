@@ -4,22 +4,16 @@
 #ifndef GRANIT_SCENE_SCENE_SUBMISSION_H
 #define GRANIT_SCENE_SCENE_SUBMISSION_H
 
-#include <array>
+#include "math/math.h"
+
 #include <cstdint>
 #include <span>
 #include <vector>
 
 namespace granit::scene {
 
-struct float3 {
-  float x = 0.0F;
-  float y = 0.0F;
-  float z = 0.0F;
-
-  friend bool operator==(const float3&, const float3&) = default;
-};
-
-using matrix4 = std::array<float, 16>;
+using float3 = math::float3;
+using matrix4 = math::matrix4;
 
 struct viewport {
   float x = 0.0F;

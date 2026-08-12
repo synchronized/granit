@@ -11,26 +11,6 @@ namespace {
 
 using material::pbr_float3;
 
-float dot(pbr_float3 left, pbr_float3 right) noexcept {
-  return left.x * right.x + left.y * right.y + left.z * right.z;
-}
-
-pbr_float3 subtract(pbr_float3 left, pbr_float3 right) noexcept {
-  return {left.x - right.x, left.y - right.y, left.z - right.z};
-}
-
-pbr_float3 normalize(pbr_float3 value) noexcept {
-  const auto length_squared = dot(value, value);
-  if (length_squared <= 0.0F)
-    return {};
-  const auto scale = 1.0F / std::sqrt(length_squared);
-  return {value.x * scale, value.y * scale, value.z * scale};
-}
-
-pbr_float3 scale(pbr_float3 value, float factor) noexcept {
-  return {value.x * factor, value.y * factor, value.z * factor};
-}
-
 pbr_float3 to_pbr(scene::float3 value) noexcept { return {value.x, value.y, value.z}; }
 
 pbr_float3 evaluate(const lighting_surface& surface, pbr_float3 direction,
@@ -54,7 +34,8 @@ float distance_attenuation(float distance_squared, float radius) noexcept {
 
 float spot_angle_attenuation(pbr_float3 light_to_surface_direction, pbr_float3 spot_direction,
                              float inner_angle, float outer_angle) noexcept {
-  const auto cosine = dot(normalize(light_to_surface_direction), normalize(spot_direction));
+  const auto cosine =
+      math::dot(math::normalize(light_to_surface_direction), math::normalize(spot_direction));
   const auto inner_cosine = std::cos(inner_angle);
   const auto outer_cosine = std::cos(outer_angle);
   const auto width = inner_cosine - outer_cosine;
@@ -71,28 +52,29 @@ pbr_float3 evaluate_directional_light(const lighting_surface& surface,
 
 pbr_float3 evaluate_point_light(const lighting_surface& surface,
                                 const scene::point_light_input& light) noexcept {
-  const auto to_light = subtract(to_pbr(light.position), surface.position);
-  const auto distance_squared = dot(to_light, to_light);
+  const auto to_light = math::subtract(to_pbr(light.position), surface.position);
+  const auto distance_squared = math::dot(to_light, to_light);
   const auto attenuation = distance_attenuation(distance_squared, light.radius);
   if (attenuation <= 0.0F)
     return {};
-  return evaluate(surface, normalize(to_light), scale(to_pbr(light.intensity), attenuation));
+  return evaluate(surface, math::normalize(to_light),
+                  math::multiply(to_pbr(light.intensity), attenuation));
 }
 
 pbr_float3 evaluate_spot_light(const lighting_surface& surface,
                                const scene::spot_light_input& light) noexcept {
-  const auto to_light = subtract(to_pbr(light.position), surface.position);
-  const auto distance_squared = dot(to_light, to_light);
+  const auto to_light = math::subtract(to_pbr(light.position), surface.position);
+  const auto distance_squared = math::dot(to_light, to_light);
   const auto distance_factor = distance_attenuation(distance_squared, light.radius);
   if (distance_factor <= 0.0F)
     return {};
-  const auto light_to_surface = normalize(scale(to_light, -1.0F));
+  const auto light_to_surface = math::normalize(math::multiply(to_light, -1.0F));
   const auto angle_factor = spot_angle_attenuation(light_to_surface, to_pbr(light.direction),
                                                    light.inner_angle, light.outer_angle);
   if (angle_factor <= 0.0F)
     return {};
-  return evaluate(surface, normalize(to_light),
-                  scale(to_pbr(light.intensity), distance_factor * angle_factor));
+  return evaluate(surface, math::normalize(to_light),
+                  math::multiply(to_pbr(light.intensity), distance_factor * angle_factor));
 }
 
 } // namespace granit::lighting
