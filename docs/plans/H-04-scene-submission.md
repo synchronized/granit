@@ -6,7 +6,7 @@
 ## 元数据
 
 - 设计状态：已确认首版边界
-- 实现状态：待实现
+- 实现状态：进行中（H-04A 已完成）
 - 路线图任务：H-04
 - 优先级：P2
 - 前置依赖：H-01、H-02、H-03
@@ -96,8 +96,8 @@ granit::scene
 
 ## 分阶段实施
 
-1. **H-04A**：定义无 Vulkan 类型的 View、包围球、Renderable、Light 和帧快照值模型，完成有限
-   值、范围、标识与层掩码校验。
+1. **H-04A（已完成）**：定义无 Vulkan 类型的 View、包围球、Renderable、Light 和帧快照值模型，
+   完成有限值、范围与层掩码校验。
 2. **H-04B**：实现 Vulkan `[0, 1]` clip-space Frustum 提取、包围球测试、层掩码筛选和稳定排序。
 3. **H-04C**：支持多 View 帧快照和方向光/点光/聚光的逐 View 筛选，不建立 Scene 全局单例。
 4. **H-04D**：将单方向光可见结果适配为 H-03 PBR Render Graph Pass；实际 Mesh/Material Draw 仍由
@@ -120,3 +120,16 @@ granit::scene
 H-04A 先只实现纯 CPU 值模型与单 View 快照构建器。Renderable 的 `payload` 保持不透明，避免在 Mesh
 和资产模块尚未设计时绑定临时资源结构。此切片完成后再实现 Frustum 数学，不同时引入 Scene Graph、
 空间索引或线程抽象。
+
+## H-04A 实现记录
+
+新增内部静态目标 `granit::scene`。`frame_submission` 通过 span 接收单个 View、Renderable、方向光、
+点光和聚光数组；`build_frame_snapshot` 事务式校验并复制为拥有数据的 `frame_snapshot`。失败不会
+覆盖调用方已有快照，成功后原输入容器可立即修改或释放。
+
+View 同时保存 view、projection 与 view-projection，避免模块猜测矩阵乘法来源。Renderable 保存
+世界空间包围球、层掩码、稳定排序键、对象标识和 64 位不透明 payload。方向光与聚光方向在构建时
+规范化；所有矩阵、向量、viewport、半径、radiance/intensity 与锥角均进行有限值和范围校验。
+
+模块目前仅依赖核心 `granit` 目标，不包含 Vulkan、Material、PBR 或 Render Graph 头文件。H-04B
+将在该只读快照上增加 Frustum 提取、层掩码筛选与稳定可见列表，不改变 H-04A 的所有权规则。

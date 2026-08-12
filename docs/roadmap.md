@@ -225,8 +225,8 @@
   示例；H-02G 已建立参数更新、变体查询、实例迁移和 Pipeline 缓存命中的性能基线。
 - **[H-03](plans/H-03-pbr-renderer.md) / P2 / 已完成**：已实现离屏、前向、不透明、单方向光
   PBR 闭环，并完成 CPU/GPU 数值回归、生命周期测试和性能基线。
-- **[H-04](plans/H-04-scene-submission.md) / P2 / 已规划**：提供逐帧场景提交、显式 View、Light 和
-  CPU 可见性输入适配层，不建立 ECS 或 Scene Graph。
+- **[H-04](plans/H-04-scene-submission.md) / P2 / 进行中**：H-04A 已完成逐帧输入值模型和拥有数据的
+  单 View 快照；下一步实现 CPU Frustum、层掩码筛选与稳定可见列表。
 - **H-05 / P2**：实现阴影、环境光照、后处理和色调映射的参考管线。
 - **H-06 / P2**：评估 2D、UI、调试绘制和文字渲染辅助模块。
 

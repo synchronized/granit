@@ -258,3 +258,20 @@ target_link_libraries(granit_pbr PUBLIC granit::material granit::render_graph)
 granit_target_compile_warnings(granit_pbr)
 granit_target_output_directories(granit_pbr)
 set_target_properties(granit_pbr PROPERTIES FOLDER "Modules" POSITION_INDEPENDENT_CODE ON)
+
+add_library(granit_scene STATIC)
+add_library(granit::scene ALIAS granit_scene)
+target_sources(
+  granit_scene
+  PRIVATE scene/scene_submission.cpp
+  PUBLIC
+    FILE_SET HEADERS
+    BASE_DIRS "${PROJECT_SOURCE_DIR}/src"
+    FILES scene/scene_submission.h
+)
+target_compile_features(granit_scene PUBLIC cxx_std_20)
+target_include_directories(granit_scene PUBLIC "${PROJECT_SOURCE_DIR}/src")
+target_link_libraries(granit_scene PUBLIC granit::granit)
+granit_target_compile_warnings(granit_scene)
+granit_target_output_directories(granit_scene)
+set_target_properties(granit_scene PROPERTIES FOLDER "Modules" POSITION_INDEPENDENT_CODE ON)

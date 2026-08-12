@@ -132,6 +132,13 @@ target_compile_options(granit_pbr_test PRIVATE $<$<COMPILE_LANG_AND_ID:CXX,MSVC>
 granit_target_compile_warnings(granit_pbr_test)
 add_test(NAME granit.pbr COMMAND granit_pbr_test)
 
+add_executable(granit_scene_test scene/scene_submission_test.cpp)
+target_include_directories(granit_scene_test PRIVATE "${PROJECT_SOURCE_DIR}/src")
+target_link_libraries(granit_scene_test PRIVATE granit::scene Catch2::Catch2WithMain)
+target_compile_options(granit_scene_test PRIVATE $<$<COMPILE_LANG_AND_ID:CXX,MSVC>:/utf-8>)
+granit_target_compile_warnings(granit_scene_test)
+add_test(NAME granit.scene COMMAND granit_scene_test)
+
 add_executable(
   granit_material_test
   material/material_gpu_instance_test.cpp
@@ -265,6 +272,7 @@ set(
   granit_device_status_test
   granit_render_graph_test
   granit_pbr_test
+  granit_scene_test
   granit_material_test
   granit_renderer_test
   granit_vulkan_backend_test
