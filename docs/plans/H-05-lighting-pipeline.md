@@ -209,6 +209,16 @@ Shader 计算与 CPU 参考保持一致：漫反射 irradiance 除以 pi，镜�
 本阶段以 SPIR-V 反射固定 IBL-only 和阴影加 IBL 的资源契约。下一步用固定生成纹理建立统一 Group 3
 Bind Group 和离屏像素回归。
 
+## H-05C4 实现记录
+
+已增加阴影与 IBL 共用的 Group 3 资源对象，统一持有两个常量 Buffer、比较 Sampler、环境线性
+Sampler、完整 binding 0～7 布局及一个 Bind Group；四个 Texture View 继续由调用方持有。阴影和
+环境常量可独立更新，不需要重建 Bind Group。
+
+离屏 PBR 回归现使用程序生成的六面 `RGBA16_FLOAT` irradiance/prefiltered Cube 和二维 BRDF LUT，
+不依赖图片解码或离线资源。遮挡用例验证直接光归零但 IBL 保留，受光用例验证直接光与 IBL 相加，
+两者均与 CPU BRDF/IBL 参考值比较。H-05C 首版至此完成，下一步进入 H-05D HDR 与 Tone Mapping。
+
 ### H-05D：HDR 与 Tone Mapping
 
 - 建立 HDR Attachment 和 ACES fitted CPU 参考。

@@ -227,9 +227,9 @@
   PBR 闭环，并完成 CPU/GPU 数值回归、生命周期测试和性能基线。
 - **[H-04](plans/H-04-scene-submission.md) / P2 / 已完成**：已完成快照、可见性、多 View、光源
   筛选、PBR Render Graph 适配、生命周期验证和 100～10,000 对象性能基线。
-- **[H-05](plans/H-05-lighting-pipeline.md) / P2 / 实现中**：H-05A 已完成多光源 GPU 布局、逐 View
-  打包、容量诊断及 CPU 直接光数值参考；H-05B 已完成单方向光阴影描述、投影者筛选、固定 bias、
-  Group 3 资源、Shader 比较采样和遮挡/受光像素回归，下一步进入 IBL。分块/聚簇光照由真实基准
+- **[H-05](plans/H-05-lighting-pipeline.md) / P2 / 实现中**：H-05A 已完成多光源数据与数值参考，
+  H-05B 已完成单方向光阴影，H-05C 已完成 split-sum IBL、Cube/LUT 资源、统一 Group 3、Shader
+  组合变体及离屏像素回归；下一步进入 HDR 与 Tone Mapping。分块/聚簇光照由真实基准
   触发。
 - **H-06 / P2**：评估 2D、UI、调试绘制和文字渲染辅助模块。
 - **[H-07](plans/H-07-reference-render-pipeline.md) / P2 / 已确认**：H-05 完成后，将 Scene、Material、

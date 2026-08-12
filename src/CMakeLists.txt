@@ -311,6 +311,7 @@ target_sources(
     lighting/light_data.cpp
     lighting/lighting_reference.cpp
     lighting/shadow_resources.cpp
+    lighting/shadow_ibl_resources.cpp
     lighting/shadow_reference.cpp
   PUBLIC
     FILE_SET HEADERS
@@ -322,6 +323,7 @@ target_sources(
       lighting/light_data.h
       lighting/lighting_reference.h
       lighting/shadow_resources.h
+      lighting/shadow_ibl_resources.h
       lighting/shadow_reference.h
 )
 target_compile_features(granit_lighting PUBLIC cxx_std_20)

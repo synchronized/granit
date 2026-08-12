@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include "lighting/shadow_resources.h"
+#include "lighting/ibl_reference.h"
+#include "lighting/shadow_ibl_resources.h"
 #include "material/material_gpu_instance.h"
 #include "material/material_package.h"
 #include "material/material_template_gpu.h"
@@ -47,7 +48,7 @@ bool make_package(granit::material::material_package& package) {
                    .spirv = load_shader("pbr_shadow.vert.spv")},
                   {.stage = package_shader_stage::fragment,
                    .entry_point = "fragment_main",
-                   .spirv = load_shader("pbr_shadow_textured.frag.spv")}},
+                   .spirv = load_shader("pbr_shadow_ibl_untextured.frag.spv")}},
       .pipeline = {}};
   variant.pipeline.primitive.cull_mode = GRANIT_CULL_MODE_BACK;
   variant.pipeline.primitive.front_face = GRANIT_FRONT_FACE_CLOCKWISE;
@@ -96,7 +97,7 @@ bool make_package(granit::material::material_package& package) {
                                     .default_value = {}}});
   auto untextured = variant;
   untextured.features.front().value = 0;
-  untextured.shaders.back().spirv = load_shader("pbr_shadow_untextured.frag.spv");
+  untextured.shaders.back().spirv = load_shader("pbr_shadow_ibl_untextured.frag.spv");
   desc.variants.push_back(std::move(untextured));
   desc.variants.push_back(std::move(variant));
   return material_package::build(std::move(desc), package) == package_error::none;
@@ -124,6 +125,10 @@ bool near_pixel(const std::uint8_t* actual, const std::array<std::uint8_t, 4>& e
   return true;
 }
 
+template <typename T> std::span<const std::byte> bytes(const T& value) {
+  return {reinterpret_cast<const std::byte*>(value.data()), sizeof(value)};
+}
+
 } // namespace
 
 int main() {
@@ -138,6 +143,12 @@ int main() {
 
   granit::texture shadow_texture;
   granit::texture_view shadow_view;
+  granit::texture irradiance_texture;
+  granit::texture prefiltered_texture;
+  granit::texture brdf_lut_texture;
+  granit::texture_view irradiance_view;
+  granit::texture_view prefiltered_view;
+  granit::texture_view brdf_lut_view;
   if (granit::succeeded(result)) {
     result = shadow_texture.initialize(
         renderer.native_handle(),
@@ -148,14 +159,67 @@ int main() {
   }
   if (granit::succeeded(result))
     result = shadow_view.initialize(renderer.native_handle(), shadow_texture.native_handle());
-  granit::lighting::shadow_resources shadow;
+  const auto cube_desc = granit::texture_desc{
+      .dimension = granit::texture_dimension::cube,
+      .format = granit::texture_format::rgba16_float,
+      .usage = granit::texture_usage::sampled | granit::texture_usage::transfer_destination,
+      .width = 1,
+      .height = 1,
+      .array_layers = 6};
+  if (granit::succeeded(result))
+    result = irradiance_texture.initialize(renderer.native_handle(), cube_desc);
+  if (granit::succeeded(result))
+    result = prefiltered_texture.initialize(renderer.native_handle(), cube_desc);
+  if (granit::succeeded(result)) {
+    result = brdf_lut_texture.initialize(
+        renderer.native_handle(),
+        {.format = granit::texture_format::rgba16_float,
+         .usage = granit::texture_usage::sampled | granit::texture_usage::transfer_destination});
+  }
+  // RGBA16_FLOAT：Cube 每面为 (1,1,1,1)，LUT 为 (0.5,0.1,0,1)。
+  constexpr std::array<std::uint16_t, 24> cube_pixels{
+      0x3c00, 0x3c00, 0x3c00, 0x3c00, 0x3c00, 0x3c00, 0x3c00, 0x3c00,
+      0x3c00, 0x3c00, 0x3c00, 0x3c00, 0x3c00, 0x3c00, 0x3c00, 0x3c00,
+      0x3c00, 0x3c00, 0x3c00, 0x3c00, 0x3c00, 0x3c00, 0x3c00, 0x3c00};
+  constexpr std::array<std::uint16_t, 4> lut_pixel{0x3800, 0x2e66, 0x0000, 0x3c00};
+  if (granit::succeeded(result)) {
+    result = irradiance_texture.write(bytes(cube_pixels), {.bytes_per_row = 8, .rows_per_image = 1},
+                                      {.array_layer_count = 6});
+  }
+  if (granit::succeeded(result)) {
+    result = prefiltered_texture.write(bytes(cube_pixels),
+                                       {.bytes_per_row = 8, .rows_per_image = 1},
+                                       {.array_layer_count = 6});
+  }
+  if (granit::succeeded(result))
+    result = brdf_lut_texture.write(bytes(lut_pixel), {.bytes_per_row = 8}, {});
+  const granit::texture_view_desc cube_view_desc{.dimension = granit::texture_dimension::cube,
+                                                 .array_layer_count = 6};
+  if (granit::succeeded(result)) {
+    result = irradiance_view.initialize(renderer.native_handle(), irradiance_texture.native_handle(),
+                                        cube_view_desc);
+  }
+  if (granit::succeeded(result)) {
+    result = prefiltered_view.initialize(renderer.native_handle(),
+                                         prefiltered_texture.native_handle(), cube_view_desc);
+  }
+  if (granit::succeeded(result)) {
+    result = brdf_lut_view.initialize(renderer.native_handle(), brdf_lut_texture.native_handle());
+  }
+  granit::lighting::shadow_ibl_resources lighting_resources;
   if (granit::succeeded(result)) {
     result = granit::from_native(
-        shadow.initialize(renderer.native_handle(), shadow_view.native_handle(),
-                          {.light_view_projection = granit::math::identity_matrix4,
-                           .depth_bias = 0.0F,
-                           .normal_bias = 0.0F,
-                           .texel_size = {1.0F, 1.0F}}));
+        lighting_resources.initialize(
+            renderer.native_handle(),
+            {.shadow = shadow_view.native_handle(),
+             .ibl = {.irradiance = irradiance_view.native_handle(),
+                     .prefiltered_environment = prefiltered_view.native_handle(),
+                     .brdf_lut = brdf_lut_view.native_handle()}},
+            {.light_view_projection = granit::math::identity_matrix4,
+             .depth_bias = 0.0F,
+             .normal_bias = 0.0F,
+             .texel_size = {1.0F, 1.0F}},
+            {.intensity = 0.25F, .prefiltered_max_mip = 0.0F}));
   }
   granit::bind_group_layout object_layout;
   if (granit::succeeded(result))
@@ -163,7 +227,8 @@ int main() {
 
   granit::material::material_template_gpu material;
   if (granit::succeeded(result)) {
-    const std::array additional_layouts{object_layout.native_handle(), shadow.layout()};
+    const std::array additional_layouts{object_layout.native_handle(),
+                                        lighting_resources.layout()};
     result = granit::from_native(
         material.initialize(renderer.native_handle(), package, additional_layouts));
   }
@@ -245,7 +310,7 @@ int main() {
   if (granit::succeeded(result))
     result = recorder.initialize(renderer.native_handle());
   const auto material_group = instance.bind_group();
-  const auto shadow_group = shadow.group();
+  const auto lighting_group = lighting_resources.group();
   const granit::viewport viewport{0, 0, 256, 256, 0, 1};
   const granit::scissor scissor{0, 0, 256, 256};
   const granit::color_attachment_desc color{
@@ -269,6 +334,13 @@ int main() {
   const auto reference = granit::material::evaluate_pbr_direct_light(
       {.base_color = {0.8F, 0.2F, 0.1F}, .metallic = 0.5F, .perceptual_roughness = 0.5F},
       {.normal = {1.0F / 255.0F, 1.0F / 255.0F, 1.0F}});
+  const auto ibl_reference = granit::lighting::evaluate_pbr_ibl(
+      {.base_color = {0.8F, 0.2F, 0.1F}, .metallic = 0.5F, .perceptual_roughness = 0.5F},
+      {.normal = {1.0F / 255.0F, 1.0F / 255.0F, 1.0F},
+       .irradiance = {1.0F, 1.0F, 1.0F},
+       .prefiltered_radiance = {1.0F, 1.0F, 1.0F},
+       .brdf_lut = {0.5F, 0.0999755859F},
+       .environment_intensity = 0.25F});
   const auto render_case = [&](float stored_shadow_depth, bool expected_lit) {
     auto case_result = recorder.begin();
     const granit::depth_stencil_attachment_desc shadow_depth{
@@ -287,7 +359,8 @@ int main() {
     }
     if (granit::succeeded(case_result)) {
       case_result =
-          recorder.bind_graphics_groups(material.pipeline_layout(), 3, std::span{&shadow_group, 1});
+          recorder.bind_graphics_groups(material.pipeline_layout(), 3,
+                                        std::span{&lighting_group, 1});
     }
     if (granit::succeeded(case_result))
       case_result = recorder.set_viewports(0, std::span{&viewport, 1});
@@ -316,9 +389,12 @@ int main() {
     case_result = readback.map(0, readback_size, &mapped);
     if (granit::succeeded(case_result)) {
       const auto* pixels = static_cast<const std::uint8_t*>(mapped);
-      const std::array expected_center{expected_lit ? quantize_unorm(reference.x) : std::uint8_t{0},
-                                       expected_lit ? quantize_unorm(reference.y) : std::uint8_t{0},
-                                       expected_lit ? quantize_unorm(reference.z) : std::uint8_t{0},
+      const auto expected_linear = expected_lit
+                                       ? granit::math::add(reference, ibl_reference)
+                                       : ibl_reference;
+      const std::array expected_center{quantize_unorm(expected_linear.x),
+                                       quantize_unorm(expected_linear.y),
+                                       quantize_unorm(expected_linear.z),
                                        std::uint8_t{255}};
       constexpr std::array<std::uint8_t, 4> expected_clear{8, 8, 13, 255};
       const auto* center = pixels + (128 * render_size + 128) * 4;
@@ -353,6 +429,6 @@ int main() {
     std::cerr << "离屏 PBR 绘制失败：" << granit::result_message(result) << '\n';
     return 1;
   }
-  std::cout << "默认纹理 PBR 阴影与受光像素回归完成\n";
+  std::cout << "默认纹理 PBR 阴影、IBL 与受光像素回归完成\n";
   return 0;
 }
