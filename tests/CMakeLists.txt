@@ -156,6 +156,7 @@ add_executable(
   granit_lighting_test
   lighting/directional_shadow_test.cpp
   lighting/ibl_reference_test.cpp
+  lighting/ibl_resources_test.cpp
   lighting/light_data_test.cpp
   lighting/lighting_reference_test.cpp
   lighting/shadow_resources_test.cpp

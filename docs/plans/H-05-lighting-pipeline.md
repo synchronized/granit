@@ -187,6 +187,17 @@ pi，镜面反射使用预过滤环境与 LUT 的缩放/偏移组合；金属度
 覆盖 mip 边界、九十度旋转、金属/非金属差异、缺省零环境和完全遮蔽。下一步建立 Group 3 环境资源
 布局并让 Shader 与该 CPU 参考对照。
 
+## H-05C2 实现记录
+
+已建立 IBL 的 Group 3 资源对象。为与现有阴影资源共存，阴影固定占用 binding 0～2，IBL 固定占用
+binding 3～7，依次为环境常量、irradiance Cube、prefiltered environment Cube、BRDF LUT 和共享
+线性 Sampler。环境常量保存旋转的正弦/余弦、非负强度和预过滤环境最大 mip 索引。
+
+资源对象拥有常量 Buffer、Sampler、布局和 Bind Group，但只借用调用方持有的三个 Texture View。
+真实 Vulkan 测试覆盖两个四级 mip Cube、二维浮点 LUT、常量更新和不完整输入拒绝。当前提供
+IBL-only 布局；阴影与 IBL 组合 Shader 将使用同一编号契约建立包含 binding 0～7 的统一 Group 3，
+不会尝试在同一 Pipeline 组号同时绑定两个 Bind Group。
+
 ### H-05D：HDR 与 Tone Mapping
 
 - 建立 HDR Attachment 和 ACES fitted CPU 参考。
