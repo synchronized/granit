@@ -263,11 +263,15 @@ add_library(granit_scene STATIC)
 add_library(granit::scene ALIAS granit_scene)
 target_sources(
   granit_scene
-  PRIVATE scene/scene_submission.cpp
+  PRIVATE
+    scene/scene_submission.cpp
+    scene/scene_visibility.cpp
   PUBLIC
     FILE_SET HEADERS
     BASE_DIRS "${PROJECT_SOURCE_DIR}/src"
-    FILES scene/scene_submission.h
+    FILES
+      scene/scene_submission.h
+      scene/scene_visibility.h
 )
 target_compile_features(granit_scene PUBLIC cxx_std_20)
 target_include_directories(granit_scene PUBLIC "${PROJECT_SOURCE_DIR}/src")

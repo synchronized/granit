@@ -6,7 +6,7 @@
 ## 元数据
 
 - 设计状态：已确认首版边界
-- 实现状态：进行中（H-04A 已完成）
+- 实现状态：进行中（H-04A～H-04B 已完成）
 - 路线图任务：H-04
 - 优先级：P2
 - 前置依赖：H-01、H-02、H-03
@@ -98,7 +98,8 @@ granit::scene
 
 1. **H-04A（已完成）**：定义无 Vulkan 类型的 View、包围球、Renderable、Light 和帧快照值模型，
    完成有限值、范围与层掩码校验。
-2. **H-04B**：实现 Vulkan `[0, 1]` clip-space Frustum 提取、包围球测试、层掩码筛选和稳定排序。
+2. **H-04B（已完成）**：实现 Vulkan `[0, 1]` clip-space Frustum 提取、包围球测试、层掩码筛选
+   和稳定排序。
 3. **H-04C**：支持多 View 帧快照和方向光/点光/聚光的逐 View 筛选，不建立 Scene 全局单例。
 4. **H-04D**：将单方向光可见结果适配为 H-03 PBR Render Graph Pass；实际 Mesh/Material Draw 仍由
    调用方回调录制。
@@ -132,4 +133,18 @@ View 同时保存 view、projection 与 view-projection，避免模块猜测矩�
 规范化；所有矩阵、向量、viewport、半径、radiance/intensity 与锥角均进行有限值和范围校验。
 
 模块目前仅依赖核心 `granit` 目标，不包含 Vulkan、Material、PBR 或 Render Graph 头文件。H-04B
-将在该只读快照上增加 Frustum 提取、层掩码筛选与稳定可见列表，不改变 H-04A 的所有权规则。
+继续在该只读快照上增加 Frustum 与稳定可见列表，没有改变 H-04A 的所有权规则。
+
+## H-04B 实现记录
+
+`extract_frustum` 从列主序 view-projection 的四个行向量提取左右、上下、近远六个平面。近裁剪面
+直接使用 row 2，远裁剪面使用 row 3 - row 2，明确匹配 Vulkan clip-space 的 `0 <= z <= w`；
+平面统一规范化，退化矩阵返回 `invalid_frustum`。
+
+`build_visible_list` 先按 View 与 Renderable 的 64 位层掩码相交结果过滤，再以世界空间包围球测试
+六个平面。与平面相交的球体视为可见。输出保存原快照的 32 位 Renderable 索引，并按 `sort_key`、
+`object_id` 排序；两者均相同时依靠稳定排序保留原提交顺序。构建采用事务语义，非法 Frustum 或
+分配失败不会覆盖已有列表。
+
+测试覆盖 Vulkan Z 范围、平面边界相交、左右/近远裁剪、层过滤、确定性排序和失败保留旧结果。
+H-04C 下一步在同一值模型上支持多 View 帧快照和逐 View 光源筛选。
