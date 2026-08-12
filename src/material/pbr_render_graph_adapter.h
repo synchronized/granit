@@ -16,6 +16,7 @@ namespace granit::material {
 struct pbr_graph_pass_desc {
   render_graph::resource_id color = render_graph::invalid_resource_id;
   render_graph::resource_id depth = render_graph::invalid_resource_id;
+  render_graph::resource_id shadow = render_graph::invalid_resource_id;
   pbr_view_input view;
   pbr_directional_light_input light;
   std::vector<pbr_object_input> objects;

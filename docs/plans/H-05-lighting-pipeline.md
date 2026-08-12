@@ -223,6 +223,21 @@ C API 通过尾部字段与 V5 `struct_size` 扩展，旧描述保持关闭 bias
 Pipeline 组合成为问题时再引入动态状态。H-05B2 下一步继续建立 Shadow Group 3 布局、比较 Sampler
 和主 PBR Pass 的阴影采样常量。
 
+## H-05B2b 实现记录
+
+新增 `shadow_resources`，拥有 Group 3 的 80 字节采样常量 Buffer、`less_equal` 比较 Sampler、
+Bind Group Layout 和不可变 Bind Group；阴影 D32 Texture View 由调用方持有。常量包含光源
+view-projection、接收端 depth/normal bias 和 texel size，更新会拒绝非有限值、负 bias 或非正
+texel size。销毁顺序先释放 Bind Group，再释放布局、Sampler 和 Buffer。
+
+Material GPU 模板允许在既有 Group 0/1 后追加最多六个高层布局。H-05 使用一个占位或真实 Object
+Group 2 后追加 Shadow Group 3；Material 只组合调用方提供的布局，不理解阴影语义。PBR Render
+Graph Pass 新增可选阴影资源读访问，使 Shadow 写入与主光照采样产生明确依赖。
+
+真实 Renderer 测试覆盖 D32 sampled/depth Texture、比较 Sampler、Group 创建、常量更新和资源回收；
+Material 测试覆盖 Group 2/3 追加及空句柄拒绝。下一步修改 PBR Shader 变体实际读取 Group 3，并
+增加有遮挡/无遮挡的离屏像素回归。
+
 ## 测试与验收
 
 - C++ 单元测试覆盖所有光源公式、容量、格式和失败事务语义。

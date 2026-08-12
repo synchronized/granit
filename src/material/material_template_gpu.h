@@ -10,6 +10,7 @@
 #include <granit/renderer/pipeline.h>
 
 #include <mutex>
+#include <span>
 #include <vector>
 
 namespace granit::material {
@@ -29,7 +30,10 @@ public:
   material_template_gpu(const material_template_gpu&) = delete;
   material_template_gpu& operator=(const material_template_gpu&) = delete;
 
-  [[nodiscard]] granit_result initialize(granit_renderer renderer, const material_package& package);
+  /** additional_layouts 从 Group 2 起追加，调用期间借用。 */
+  [[nodiscard]] granit_result
+  initialize(granit_renderer renderer, const material_package& package,
+             std::span<const granit_bind_group_layout> additional_layouts = {});
   [[nodiscard]] granit_result reset() noexcept;
   [[nodiscard]] granit_result acquire_pipeline(const material_pipeline_request& request,
                                                granit_graphics_pipeline& pipeline);

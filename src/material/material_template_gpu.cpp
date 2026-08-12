@@ -40,12 +40,14 @@ granit_result create_shader(granit_renderer renderer, const material_shader_code
 
 material_template_gpu::~material_template_gpu() { static_cast<void>(reset()); }
 
-granit_result material_template_gpu::initialize(granit_renderer renderer,
-                                                const material_package& package) {
+granit_result
+material_template_gpu::initialize(granit_renderer renderer, const material_package& package,
+                                  std::span<const granit_bind_group_layout> additional_layouts) {
   std::lock_guard lock{mutex_};
   if (renderer_ != GRANIT_NULL_HANDLE || renderer == GRANIT_NULL_HANDLE ||
       package.binding_model() != package_binding_model::bind_group ||
-      package.required_renderer_features() != 0) {
+      package.required_renderer_features() != 0 || additional_layouts.size() > 6 ||
+      std::ranges::find(additional_layouts, GRANIT_NULL_HANDLE) != additional_layouts.end()) {
     return GRANIT_ERROR_INVALID_ARGUMENT;
   }
 
@@ -84,7 +86,17 @@ granit_result material_template_gpu::initialize(granit_renderer renderer,
     static_cast<void>(granit_bind_group_layout_destroy(renderer, frame_layout));
     return result;
   }
-  const std::array layouts{frame_layout, material_layout};
+  std::vector<granit_bind_group_layout> layouts;
+  try {
+    layouts.reserve(2 + additional_layouts.size());
+    layouts.push_back(frame_layout);
+    layouts.push_back(material_layout);
+    layouts.insert(layouts.end(), additional_layouts.begin(), additional_layouts.end());
+  } catch (const std::bad_alloc&) {
+    static_cast<void>(granit_bind_group_layout_destroy(renderer, material_layout));
+    static_cast<void>(granit_bind_group_layout_destroy(renderer, frame_layout));
+    return GRANIT_ERROR_OUT_OF_MEMORY;
+  }
   granit_pipeline_layout_desc pipeline_desc = GRANIT_PIPELINE_LAYOUT_DESC_INIT;
   pipeline_desc.bind_group_layout_count = static_cast<std::uint32_t>(layouts.size());
   pipeline_desc.bind_group_layouts = layouts.data();

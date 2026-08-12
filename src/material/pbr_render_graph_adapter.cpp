@@ -34,6 +34,8 @@ render_graph::pass_id add_pbr_graph_pass(render_graph::serial_graph& graph,
                                .accesses = {{desc.color, render_graph::access_type::write}}};
   if (desc.depth != render_graph::invalid_resource_id)
     pass.accesses.push_back({desc.depth, render_graph::access_type::write});
+  if (desc.shadow != render_graph::invalid_resource_id)
+    pass.accesses.push_back({desc.shadow, render_graph::access_type::read});
   return graph.add_pass(
       std::move(pass),
       [frame, objects = std::move(objects), callback = std::move(callback)](

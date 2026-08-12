@@ -25,10 +25,12 @@ TEST_CASE("PBR Render Graph Pass 声明附件并传递显式常量") {
   granit::render_graph::serial_graph graph;
   const auto color = graph.import_texture_view(101, true, "PBR Color");
   const auto depth = graph.import_texture_view(102, false, "PBR Depth");
+  const auto shadow = graph.import_texture_view(103, false, "PBR Shadow");
   bool called = false;
   granit::material::pbr_graph_pass_desc desc{
       .color = color,
       .depth = depth,
+      .shadow = shadow,
       .view = {.view_projection = identity, .camera_position = {0, 0, 2}},
       .light = {.direction_to_light = {0, 0, 2}, .radiance = {3, 2, 1}},
       .objects = {{.model = identity, .normal_matrix = identity, .object_id = 7}}};
@@ -40,6 +42,7 @@ TEST_CASE("PBR Render Graph Pass 声明附件并传递显式常量") {
         called = true;
         CHECK(context.texture_view(color) == 101);
         CHECK(context.texture_view(depth) == 102);
+        CHECK(context.texture_view(shadow) == 103);
         CHECK(frame.direction_to_light[2] == 1.0F);
         REQUIRE(objects.size() == 1);
         CHECK(objects.front().object_id[0] == 7);

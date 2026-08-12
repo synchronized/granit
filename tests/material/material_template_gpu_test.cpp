@@ -3,6 +3,7 @@
 
 #include "material/material_template_gpu.h"
 
+#include <granit/renderer/pipeline.hpp>
 #include <granit/renderer/renderer.hpp>
 
 #include <catch2/catch_all.hpp>
@@ -111,4 +112,34 @@ TEST_CASE("材质模板延迟创建并复用 Graphics Pipeline") {
   CHECK(material.acquire_pipeline(missing, reused) == GRANIT_ERROR_NOT_READY);
   CHECK(reused == GRANIT_NULL_HANDLE);
   CHECK(material.reset() == GRANIT_SUCCESS);
+}
+
+TEST_CASE("材质模板在Group0和1后追加高层布局") {
+  granit::renderer renderer;
+  const auto initialized = renderer.initialize({.application_name = "granit-material-layouts"});
+  if (environment_unavailable(initialized))
+    SKIP("当前运行环境没有满足要求的 Vulkan 设备");
+  REQUIRE(initialized == granit::result::success);
+
+  granit::bind_group_layout object_layout;
+  granit::bind_group_layout shadow_layout;
+  REQUIRE(object_layout.initialize(renderer.native_handle(), {}) == granit::result::success);
+  const granit::bind_group_layout_entry shadow_entry{.binding = 0,
+                                                     .type = granit::binding_type::uniform_buffer,
+                                                     .array_count = 1,
+                                                     .visibility =
+                                                         granit::shader_stage_flags::fragment};
+  REQUIRE(shadow_layout.initialize(renderer.native_handle(), std::span{&shadow_entry, 1}) ==
+          granit::result::success);
+  const std::array additional{object_layout.native_handle(), shadow_layout.native_handle()};
+
+  const auto package = build_package();
+  granit::material::material_template_gpu material;
+  REQUIRE(material.initialize(renderer.native_handle(), package, additional) == GRANIT_SUCCESS);
+  CHECK(material.pipeline_layout() != GRANIT_NULL_HANDLE);
+
+  granit::material::material_template_gpu invalid;
+  const std::array<granit_bind_group_layout, 1> null_layout{GRANIT_NULL_HANDLE};
+  CHECK(invalid.initialize(renderer.native_handle(), package, null_layout) ==
+        GRANIT_ERROR_INVALID_ARGUMENT);
 }

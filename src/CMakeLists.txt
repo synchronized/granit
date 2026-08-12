@@ -308,6 +308,7 @@ target_sources(
     lighting/directional_shadow.cpp
     lighting/light_data.cpp
     lighting/lighting_reference.cpp
+    lighting/shadow_resources.cpp
   PUBLIC
     FILE_SET HEADERS
     BASE_DIRS "${PROJECT_SOURCE_DIR}/src"
@@ -315,6 +316,7 @@ target_sources(
       lighting/directional_shadow.h
       lighting/light_data.h
       lighting/lighting_reference.h
+      lighting/shadow_resources.h
 )
 target_compile_features(granit_lighting PUBLIC cxx_std_20)
 target_include_directories(granit_lighting PUBLIC "${PROJECT_SOURCE_DIR}/src")
