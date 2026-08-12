@@ -283,3 +283,24 @@ target_link_libraries(granit_scene PUBLIC granit::pbr)
 granit_target_compile_warnings(granit_scene)
 granit_target_output_directories(granit_scene)
 set_target_properties(granit_scene PROPERTIES FOLDER "Modules" POSITION_INDEPENDENT_CODE ON)
+
+add_library(granit_lighting STATIC)
+add_library(granit::lighting ALIAS granit_lighting)
+target_sources(
+  granit_lighting
+  PRIVATE
+    lighting/light_data.cpp
+    lighting/lighting_reference.cpp
+  PUBLIC
+    FILE_SET HEADERS
+    BASE_DIRS "${PROJECT_SOURCE_DIR}/src"
+    FILES
+      lighting/light_data.h
+      lighting/lighting_reference.h
+)
+target_compile_features(granit_lighting PUBLIC cxx_std_20)
+target_include_directories(granit_lighting PUBLIC "${PROJECT_SOURCE_DIR}/src")
+target_link_libraries(granit_lighting PUBLIC granit::scene)
+granit_target_compile_warnings(granit_lighting)
+granit_target_output_directories(granit_lighting)
+set_target_properties(granit_lighting PROPERTIES FOLDER "Modules" POSITION_INDEPENDENT_CODE ON)
