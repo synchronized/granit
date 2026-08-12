@@ -83,6 +83,8 @@ D-03-graphics-pipeline.md
 - [H-05：光照与后处理参考管线](H-05-lighting-pipeline.md)——实现中；H-05A 已完成多光源 GPU
   布局、逐 View 打包、容量诊断及 CPU 直接光数值参考；H-05B1 已完成单方向光阴影描述、投影者
   筛选和 Render Graph 深度写适配，下一步接入真实阴影绘制与采样。
+- [H-07：高级参考渲染套件](H-07-reference-render-pipeline.md)——已确认，等待 H-05 完成；规划类似
+  DiligentFX 的可选统一门面，同时保留直接 Renderer 和选择部分高层模块的使用方式。
 
 ## 状态
 

@@ -55,6 +55,29 @@ Swapchain 图像选择两套命令。未启用 Surface 的 Renderer 仍应支持
 
 参考项目用于比较职责边界和成熟设计，不要求保持 API 兼容，也不以逐项复刻为目标。
 
+## Renderer 与高级渲染套件
+
+Granit Renderer 的长期职责止于 GPU 资源、Pipeline、Bind Group、命令、同步、提交、Swapchain 和
+GPU 生命周期。它不负责选择 PBR 模型、筛选 Scene、生成阴影、管理环境光照或执行 Tone Mapping。
+
+Material、Scene、PBR、Lighting、Post Process 和 Render Graph 作为可选高层模块存在。等这些模块
+完成独立验证后，可以由 `granit::render_pipeline` 组合成类似 DiligentFX 的高级参考渲染套件。
+统一门面提供默认可运行路径，但不是核心 Renderer 的唯一入口。
+
+使用者必须能够选择三种层级：
+
+1. 只使用核心 Renderer，自行管理全部资源和命令。
+2. 选择部分高层模块，自行组织 Pass 和资源所有权。
+3. 使用完整参考管线，获得阴影、PBR、IBL 和后处理的默认组合。
+
+依赖始终从高级层指向核心层。核心动态库不能链接高层目标，也不能为 `render(view)` 接管 ECS、
+Scene Graph、Camera、Light、Mesh、Material 或资产数据库。高级套件可以拥有自身 GPU 缓存和中间
+资源，但只借用调用方快照、payload、外部目标与环境资源。
+
+PBR 质量体系主要参考 Filament；底层资源组织和高层组件分离主要参考 Diligent/DiligentFX。项目
+不兼容它们的 API、对象模型、Shader、材质包或资产格式，也不复制 COM 引用计数或整体 Engine
+所有权。具体实施条件见 [H-07 计划](plans/H-07-reference-render-pipeline.md)。
+
 ## 分层
 
 Granit 使用三层接口隔离使用者与 Vulkan：

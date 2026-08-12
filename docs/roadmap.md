@@ -231,6 +231,9 @@
   打包、容量诊断及 CPU 直接光数值参考；H-05B1 已完成单方向光阴影描述、投影者筛选和 Graph
   深度写适配，下一步接入真实阴影绘制与采样。分块/聚簇光照由真实基准触发。
 - **H-06 / P2**：评估 2D、UI、调试绘制和文字渲染辅助模块。
+- **[H-07](plans/H-07-reference-render-pipeline.md) / P2 / 已确认**：H-05 完成后，将 Scene、Material、
+  PBR、Lighting、Post Process 和 Render Graph 组合为可选 `granit::render_pipeline` 高级参考套件；
+  H-06 结果可选接入，不阻塞首版 3D 管线整合。
 
 ### 分层约束
 
@@ -238,6 +241,8 @@
 - 使用者可以完全绕过高层模块，直接使用资源、命令和 Pipeline API。
 - 高层模块优先使用 C++20 接口，不要求立即进入稳定 C ABI。
 - 不以复刻 Filament 为目标；只吸收经过 Granit 使用场景验证的设计。
+- 使用者可以只用 Renderer、选择部分高层模块或使用完整参考管线；三种模式必须并存。
+- 高级参考套件定位类似 DiligentFX，但不兼容其 API、COM 对象模型或资源格式。
 
 ### 验收标准
 
