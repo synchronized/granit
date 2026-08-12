@@ -238,6 +238,18 @@ Graph Pass 新增可选阴影资源读访问，使 Shadow 写入与主光照采�
 Material 测试覆盖 Group 2/3 追加及空句柄拒绝。下一步修改 PBR Shader 变体实际读取 Group 3，并
 增加有遮挡/无遮挡的离屏像素回归。
 
+## H-05B2c 实现记录
+
+PBR HLSL 新增编译期开关 `GRANIT_PBR_SHADOWS`。关闭时不声明阴影输入，保持现有无阴影材质布局；
+开启时 Vertex Shader 向 Fragment Shader 传递世界位置，Group 3 声明 80 字节 Shadow 常量、D32
+采样纹理和 `SamplerComparisonState`。Fragment Shader 应用 normal bias，转换到 Vulkan `[0,1]`
+深度与纹理 Y 方向，范围外按完全受光处理，再用 depth bias 执行 `SampleCmpLevelZero`。
+
+仓库新增无纹理、全纹理 Fragment 以及配套 Vertex 的阴影 SPIR-V。反射工具确认资源位于 set 3 的
+binding 0/1/2，常量大小为 80 字节。CPU 参考实现与 Shader 使用相同投影、范围和 `less_equal`
+比较语义，测试覆盖受光、遮挡、Y 翻转、范围外和非法输入。下一步将该变体接入真实离屏场景，
+比较有遮挡与无遮挡像素后完成 H-05B。
+
 ## 测试与验收
 
 - C++ 单元测试覆盖所有光源公式、容量、格式和失败事务语义。

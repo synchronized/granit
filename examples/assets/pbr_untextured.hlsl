@@ -8,12 +8,30 @@ static const float MINIMUM_PERCEPTUAL_ROUGHNESS = 0.045;
 #define GRANIT_PBR_TEXTURE_MASK 0
 #endif
 
+#ifndef GRANIT_PBR_SHADOWS
+#define GRANIT_PBR_SHADOWS 0
+#endif
+
 struct vertex_output {
   float4 position : SV_Position;
   float3 normal : TEXCOORD0;
   float4 tangent : TEXCOORD1;
   float2 uv : TEXCOORD2;
+#if GRANIT_PBR_SHADOWS
+  float3 world_position : TEXCOORD3;
+#endif
 };
+
+#if GRANIT_PBR_SHADOWS
+[[vk::binding(0, 3)]] cbuffer ShadowConstants {
+  column_major float4x4 light_view_projection;
+  float shadow_depth_bias;
+  float shadow_normal_bias;
+  float2 shadow_texel_size;
+};
+[[vk::binding(1, 3)]] Texture2D<float> shadow_texture;
+[[vk::binding(2, 3)]] SamplerComparisonState shadow_sampler;
+#endif
 
 [[vk::binding(0, 1)]] cbuffer MaterialConstants {
   float4 base_color;
@@ -52,8 +70,26 @@ vertex_output vertex_main(uint vertex_id : SV_VertexID) {
   output.normal = float3(0.0, 0.0, 1.0);
   output.tangent = float4(1.0, 0.0, 0.0, 1.0);
   output.uv = positions[vertex_id] * 0.5 + 0.5;
+#if GRANIT_PBR_SHADOWS
+  output.world_position = float3(positions[vertex_id], 0.5);
+#endif
   return output;
 }
+
+#if GRANIT_PBR_SHADOWS
+float evaluate_directional_shadow(vertex_output input, float3 normal) {
+  const float3 biased_world_position = input.world_position + normal * shadow_normal_bias;
+  const float4 biased_shadow_position =
+      mul(light_view_projection, float4(biased_world_position, 1.0));
+  if (biased_shadow_position.w <= 0.0)
+    return 1.0;
+  const float3 projected = biased_shadow_position.xyz / biased_shadow_position.w;
+  const float2 uv = projected.xy * float2(0.5, -0.5) + 0.5;
+  if (any(uv < 0.0) || any(uv > 1.0) || projected.z < 0.0 || projected.z > 1.0)
+    return 1.0;
+  return shadow_texture.SampleCmpLevelZero(shadow_sampler, uv, projected.z - shadow_depth_bias);
+}
+#endif
 
 float3 fresnel_schlick(float view_dot_half, float3 reflectance_at_normal) {
   const float factor = pow(1.0 - saturate(view_dot_half), 5.0);
@@ -131,8 +167,13 @@ float4 fragment_main(vertex_output input) : SV_Target0 {
       resolved_base_color.rgb * (1.0 - fresnel) * (1.0 - clamped_metallic) / PI;
   // 首版尚无 IBL，遮蔽值暂时调制总光照；H-05 接入间接光后只作用于间接项。
   const float occlusion = lerp(1.0, sampled_occlusion, saturate(occlusion_strength));
+#if GRANIT_PBR_SHADOWS
+  const float shadow = evaluate_directional_shadow(input, normal);
+#else
+  const float shadow = 1.0;
+#endif
   const float3 direct =
-      (diffuse + fresnel * distribution * visibility) * normal_dot_light * occlusion;
+      (diffuse + fresnel * distribution * visibility) * normal_dot_light * occlusion * shadow;
   return float4(direct + max(emissive, 0.0.xxx) * sampled_emissive,
                 resolved_base_color.a);
 }

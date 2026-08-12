@@ -158,6 +158,7 @@ add_executable(
   lighting/light_data_test.cpp
   lighting/lighting_reference_test.cpp
   lighting/shadow_resources_test.cpp
+  lighting/shadow_reference_test.cpp
 )
 target_include_directories(granit_lighting_test PRIVATE "${PROJECT_SOURCE_DIR}/src")
 target_link_libraries(granit_lighting_test PRIVATE granit::lighting Catch2::Catch2WithMain)

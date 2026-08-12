@@ -230,7 +230,7 @@
 - **[H-05](plans/H-05-lighting-pipeline.md) / P2 / 实现中**：H-05A 已完成多光源 GPU 布局、逐 View
   打包、容量诊断及 CPU 直接光数值参考；H-05B1 已完成单方向光阴影描述、投影者筛选和 Graph
   深度写适配，H-05B2 已接入固定 Pipeline bias、Group 3 阴影资源和 PBR Graph 读依赖；下一步
-  完成 Shader 采样与像素回归。分块/聚簇光照由真实基准触发。
+  已完成阴影 Shader 变体和 CPU 比较参考，下一步完成离屏像素回归。分块/聚簇光照由真实基准触发。
 - **H-06 / P2**：评估 2D、UI、调试绘制和文字渲染辅助模块。
 - **[H-07](plans/H-07-reference-render-pipeline.md) / P2 / 已确认**：H-05 完成后，将 Scene、Material、
   PBR、Lighting、Post Process 和 Render Graph 组合为可选 `granit::render_pipeline` 高级参考套件；
