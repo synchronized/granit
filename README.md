@@ -86,6 +86,8 @@ H-04 已确定为可选的逐帧场景提交适配层，首版只负责显式 Vi
 `granit::scene` 模块、事务式单 View 帧快照及输入校验。
 H-04B 已实现 Vulkan `[0,1]` 深度约定的 Frustum、世界空间包围球筛选、层掩码过滤和稳定可见列表。
 H-04C 已实现共享一份场景数据的多 View 快照，以及方向光、点光和聚光的逐 View 可见索引。
+H-04D 已将单方向光 View 的可见结果接入 PBR Render Graph Pass，并向调用方录制回调保留原
+Renderable 索引；Scene 不解释 payload 或接管 Mesh/Material。
 具体顺序见 [docs/roadmap.md](docs/roadmap.md)。
 
 ## 快速开始

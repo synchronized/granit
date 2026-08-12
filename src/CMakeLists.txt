@@ -265,6 +265,7 @@ target_sources(
   granit_scene
   PRIVATE
     scene/multi_view_submission.cpp
+    scene/scene_pbr_adapter.cpp
     scene/scene_submission.cpp
     scene/scene_visibility.cpp
   PUBLIC
@@ -272,12 +273,13 @@ target_sources(
     BASE_DIRS "${PROJECT_SOURCE_DIR}/src"
     FILES
       scene/multi_view_submission.h
+      scene/scene_pbr_adapter.h
       scene/scene_submission.h
       scene/scene_visibility.h
 )
 target_compile_features(granit_scene PUBLIC cxx_std_20)
 target_include_directories(granit_scene PUBLIC "${PROJECT_SOURCE_DIR}/src")
-target_link_libraries(granit_scene PUBLIC granit::granit)
+target_link_libraries(granit_scene PUBLIC granit::pbr)
 granit_target_compile_warnings(granit_scene)
 granit_target_output_directories(granit_scene)
 set_target_properties(granit_scene PROPERTIES FOLDER "Modules" POSITION_INDEPENDENT_CODE ON)

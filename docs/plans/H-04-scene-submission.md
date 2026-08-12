@@ -6,7 +6,7 @@
 ## 元数据
 
 - 设计状态：已确认首版边界
-- 实现状态：进行中（H-04A～H-04C 已完成）
+- 实现状态：进行中（H-04A～H-04D 已完成）
 - 路线图任务：H-04
 - 优先级：P2
 - 前置依赖：H-01、H-02、H-03
@@ -102,8 +102,8 @@ granit::scene
    和稳定排序。
 3. **H-04C（已完成）**：支持多 View 帧快照和方向光/点光/聚光的逐 View 筛选，不建立 Scene
    全局单例。
-4. **H-04D**：将单方向光可见结果适配为 H-03 PBR Render Graph Pass；实际 Mesh/Material Draw 仍由
-   调用方回调录制。
+4. **H-04D（已完成）**：将单方向光可见结果适配为 H-03 PBR Render Graph Pass；实际
+   Mesh/Material Draw 仍由调用方回调录制。
 5. **H-04E**：增加多 View 端到端测试、生命周期测试和 100/1,000/10,000 对象 CPU 性能基线，
    整理 H-05 的光源、阴影和环境输入契约。
 
@@ -165,3 +165,18 @@ H-04C 下一步在同一值模型上支持多 View 帧快照和逐 View 光源�
 都不会覆盖已有多 View 快照。测试覆盖两个 View 的独立层掩码、Frustum 外光源、共享数据所有权、
 方向规范化以及后续 View 失败时的事务语义。H-04D 下一步将单方向光 View 结果转换为 H-03 PBR
 Render Graph Pass 输入。
+
+## H-04D 实现记录
+
+`scene_pbr_adapter` 将指定 `view_visibility` 转换为现有 `pbr_graph_pass_desc`。View 的
+view-projection 和相机位置、唯一可见方向光，以及稳定排序后的可见 Renderable Model、Normal
+Matrix 和 Object ID 均按 H-03 契约复制。颜色附件必需，深度附件保持可选。
+
+适配器要求目标 View 至少有一个可见 Renderable 且恰好有一个可见方向光；零个或多个方向光均明确
+失败，不能静默选择第一盏灯。它同时把排序后的原 Renderable 索引交给录制回调，使调用方能从快照
+读取不透明 payload，并据此绑定 Mesh、Material 和录制 Draw。Scene 模块不解释 payload，也不持有
+任何 GPU 资源。
+
+`granit::scene` 现在按计划依赖 `granit::pbr`，依赖仍保持单向；PBR、Material、Render Graph 和核心
+Renderer 均不包含 Scene 头文件。测试覆盖输入映射、可见顺序、附件声明、方向光数量、View 范围和
+Render Graph 编译。H-04E 下一步补多 View 端到端生命周期测试与 100/1,000/10,000 对象性能基线。
