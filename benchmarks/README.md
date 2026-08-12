@@ -54,4 +54,8 @@ cmake --build --preset windows-clang-release --target granit_benchmarks
 加入 Render Graph 并完成图编译的 CPU 成本。使用 `--objects` 控制每个 Pass 的对象数量；该用例
 不包含 GPU 录制、提交和实际 Draw。
 
+`granit_scene_benchmarks` 用于 H-04E，测量两个 View 共享场景数据时的快照复制、Frustum、层掩码、
+稳定排序和方向光筛选总成本。使用 `--objects` 选择 100、1,000 或 10,000 对象；数据固定为约四分
+之一位于 Frustum 外，并在两个层之间交错分布。
+
 已提交的基线摘要见 [results/README.md](results/README.md)。

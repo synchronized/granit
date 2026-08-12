@@ -78,8 +78,8 @@ D-03-graphics-pipeline.md
   SHA-256、材质语义往返、源 JSON 构建、调试导出和损坏输入防护。
 - [H-03：金属度/粗糙度 PBR 渲染模块](H-03-pbr-renderer.md)——已完成；包含 Pipeline 状态、
   CPU BRDF、默认纹理、显式 Draw 输入、Render Graph 适配、生命周期/性能基线和 GPU 像素回归。
-- [H-04：场景提交与可见性输入适配层](H-04-scene-submission.md)——进行中；H-04A～H-04D 已完成
-  快照、可见性、多 View、光源筛选和 PBR Render Graph 适配，下一步进入 H-04E 验收与性能基线。
+- [H-04：场景提交与可见性输入适配层](H-04-scene-submission.md)——已完成；包含快照、Frustum、
+  多 View、光源筛选、PBR Render Graph 适配、生命周期验证和性能基线。
 
 ## 状态
 

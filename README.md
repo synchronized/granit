@@ -88,6 +88,8 @@ H-04B 已实现 Vulkan `[0,1]` 深度约定的 Frustum、世界空间包围球�
 H-04C 已实现共享一份场景数据的多 View 快照，以及方向光、点光和聚光的逐 View 可见索引。
 H-04D 已将单方向光 View 的可见结果接入 PBR Render Graph Pass，并向调用方录制回调保留原
 Renderable 索引；Scene 不解释 payload 或接管 Mesh/Material。
+H-04 已完成，两个 View 下 100/1,000/10,000 对象的 P50 分别约为 5.11 us、48.05 us 和 0.951 ms；
+当前没有依据引入空间树、内部任务系统或 GPU culling。
 具体顺序见 [docs/roadmap.md](docs/roadmap.md)。
 
 ## 快速开始
