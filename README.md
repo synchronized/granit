@@ -103,7 +103,8 @@ H-05B 开始前已增加最小内部 `granit::math`，统一 Scene/PBR/Lighting 
 右手坐标系和 Vulkan `[0,1]` 深度约定；它目前不是稳定 C ABI 或强制用户采用的公共数学库。
 H-05B1 已实现显式单方向光的正交阴影矩阵、从全场景独立筛选投影者，以及 Render Graph 深度写
 Pass。H-05B2 已补充 Graphics Pipeline 固定 depth bias，并建立 Group 3 阴影常量、比较 Sampler、
-Bind Group 和 PBR Graph 读依赖；阴影 Shader 变体及 CPU 比较参考已完成，离屏像素回归仍待完成。
+Bind Group 和 PBR Graph 读依赖。单方向光阴影首版已经通过 Shader 比较采样以及遮挡/受光离屏
+像素回归，下一步进入 IBL。
 具体顺序见 [docs/roadmap.md](docs/roadmap.md)。
 
 ## 快速开始

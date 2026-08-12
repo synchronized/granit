@@ -38,7 +38,7 @@ target_compile_definitions(
 granit_target_compile_warnings(granit_material_hot_reload_example)
 
 add_executable(granit_pbr_offscreen_example pbr_offscreen.cpp)
-target_link_libraries(granit_pbr_offscreen_example PRIVATE granit::material)
+target_link_libraries(granit_pbr_offscreen_example PRIVATE granit::lighting)
 target_compile_definitions(
   granit_pbr_offscreen_example
   PRIVATE GRANIT_EXAMPLE_ASSET_DIR="${CMAKE_CURRENT_SOURCE_DIR}/assets"

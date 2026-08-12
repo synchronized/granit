@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
+#include "lighting/shadow_resources.h"
 #include "material/material_gpu_instance.h"
 #include "material/material_package.h"
 #include "material/material_template_gpu.h"
@@ -43,10 +44,10 @@ bool make_package(granit::material::material_package& package) {
       .features = {{make_feature_id(pbr_texture_feature_name), pbr_texture_all}},
       .shaders = {{.stage = package_shader_stage::vertex,
                    .entry_point = "vertex_main",
-                   .spirv = load_shader("pbr_untextured.vert.spv")},
+                   .spirv = load_shader("pbr_shadow.vert.spv")},
                   {.stage = package_shader_stage::fragment,
                    .entry_point = "fragment_main",
-                   .spirv = load_shader("pbr_textured.frag.spv")}},
+                   .spirv = load_shader("pbr_shadow_textured.frag.spv")}},
       .pipeline = {}};
   variant.pipeline.primitive.cull_mode = GRANIT_CULL_MODE_BACK;
   variant.pipeline.primitive.front_face = GRANIT_FRONT_FACE_CLOCKWISE;
@@ -95,7 +96,7 @@ bool make_package(granit::material::material_package& package) {
                                     .default_value = {}}});
   auto untextured = variant;
   untextured.features.front().value = 0;
-  untextured.shaders.back().spirv = load_shader("pbr_untextured.frag.spv");
+  untextured.shaders.back().spirv = load_shader("pbr_shadow_untextured.frag.spv");
   desc.variants.push_back(std::move(untextured));
   desc.variants.push_back(std::move(variant));
   return material_package::build(std::move(desc), package) == package_error::none;
@@ -135,8 +136,37 @@ int main() {
     return 1;
   }
 
+  granit::texture shadow_texture;
+  granit::texture_view shadow_view;
+  if (granit::succeeded(result)) {
+    result = shadow_texture.initialize(
+        renderer.native_handle(),
+        {.format = granit::texture_format::d32_float,
+         .usage = granit::texture_usage::depth_stencil_attachment | granit::texture_usage::sampled,
+         .width = 1,
+         .height = 1});
+  }
+  if (granit::succeeded(result))
+    result = shadow_view.initialize(renderer.native_handle(), shadow_texture.native_handle());
+  granit::lighting::shadow_resources shadow;
+  if (granit::succeeded(result)) {
+    result = granit::from_native(
+        shadow.initialize(renderer.native_handle(), shadow_view.native_handle(),
+                          {.light_view_projection = granit::math::identity_matrix4,
+                           .depth_bias = 0.0F,
+                           .normal_bias = 0.0F,
+                           .texel_size = {1.0F, 1.0F}}));
+  }
+  granit::bind_group_layout object_layout;
+  if (granit::succeeded(result))
+    result = object_layout.initialize(renderer.native_handle(), {});
+
   granit::material::material_template_gpu material;
-  result = granit::from_native(material.initialize(renderer.native_handle(), package));
+  if (granit::succeeded(result)) {
+    const std::array additional_layouts{object_layout.native_handle(), shadow.layout()};
+    result = granit::from_native(
+        material.initialize(renderer.native_handle(), package, additional_layouts));
+  }
   granit_graphics_pipeline pipeline = GRANIT_NULL_HANDLE;
   if (granit::succeeded(result)) {
     const std::array features{granit::material::material_feature_value{
@@ -214,20 +244,10 @@ int main() {
   }
   if (granit::succeeded(result))
     result = recorder.initialize(renderer.native_handle());
-  if (granit::succeeded(result))
-    result = recorder.begin();
-  if (granit::succeeded(result))
-    result = recorder.bind_graphics_pipeline(pipeline);
   const auto material_group = instance.bind_group();
-  if (granit::succeeded(result))
-    result =
-        recorder.bind_graphics_groups(material.pipeline_layout(), 1, std::span{&material_group, 1});
+  const auto shadow_group = shadow.group();
   const granit::viewport viewport{0, 0, 256, 256, 0, 1};
   const granit::scissor scissor{0, 0, 256, 256};
-  if (granit::succeeded(result))
-    result = recorder.set_viewports(0, std::span{&viewport, 1});
-  if (granit::succeeded(result))
-    result = recorder.set_scissors(0, std::span{&scissor, 1});
   const granit::color_attachment_desc color{
       .view = color_view,
       .clear_value = {.red = 0.03F, .green = 0.03F, .blue = 0.05F, .alpha = 1.0F}};
@@ -235,12 +255,6 @@ int main() {
   const granit::rendering_desc rendering{.color_attachments = std::span{&color, 1},
                                          .depth_stencil_attachment = &depth,
                                          .area = {0, 0, 256, 256}};
-  if (granit::succeeded(result))
-    result = recorder.begin_rendering(rendering);
-  if (granit::succeeded(result))
-    result = recorder.draw(3);
-  if (granit::succeeded(result))
-    result = recorder.end_rendering();
   const granit_texture_data_layout readback_layout{};
   const granit_texture_write_region readback_region{.mip_level = 0,
                                                     .base_array_layer = 0,
@@ -252,41 +266,80 @@ int main() {
                                                     .width = render_size,
                                                     .height = render_size,
                                                     .depth = 1};
-  if (granit::succeeded(result)) {
-    result = recorder.copy_texture_to_buffer(color_texture, readback.native_handle(),
-                                             readback_layout, readback_region);
-  }
-  if (granit::succeeded(result))
-    result = recorder.end();
-  if (granit::succeeded(result))
-    result = recorder.submit();
-  if (granit::succeeded(result))
-    result = recorder.reset();
+  const auto reference = granit::material::evaluate_pbr_direct_light(
+      {.base_color = {0.8F, 0.2F, 0.1F}, .metallic = 0.5F, .perceptual_roughness = 0.5F},
+      {.normal = {1.0F / 255.0F, 1.0F / 255.0F, 1.0F}});
+  const auto render_case = [&](float stored_shadow_depth, bool expected_lit) {
+    auto case_result = recorder.begin();
+    const granit::depth_stencil_attachment_desc shadow_depth{
+        .view = shadow_view.native_handle(), .clear_value = {.depth = stored_shadow_depth}};
+    const granit::rendering_desc shadow_rendering{
+        .color_attachments = {}, .depth_stencil_attachment = &shadow_depth, .area = {0, 0, 1, 1}};
+    if (granit::succeeded(case_result))
+      case_result = recorder.begin_rendering(shadow_rendering);
+    if (granit::succeeded(case_result))
+      case_result = recorder.end_rendering();
+    if (granit::succeeded(case_result))
+      case_result = recorder.bind_graphics_pipeline(pipeline);
+    if (granit::succeeded(case_result)) {
+      case_result = recorder.bind_graphics_groups(material.pipeline_layout(), 1,
+                                                  std::span{&material_group, 1});
+    }
+    if (granit::succeeded(case_result)) {
+      case_result =
+          recorder.bind_graphics_groups(material.pipeline_layout(), 3, std::span{&shadow_group, 1});
+    }
+    if (granit::succeeded(case_result))
+      case_result = recorder.set_viewports(0, std::span{&viewport, 1});
+    if (granit::succeeded(case_result))
+      case_result = recorder.set_scissors(0, std::span{&scissor, 1});
+    if (granit::succeeded(case_result))
+      case_result = recorder.begin_rendering(rendering);
+    if (granit::succeeded(case_result))
+      case_result = recorder.draw(3);
+    if (granit::succeeded(case_result))
+      case_result = recorder.end_rendering();
+    if (granit::succeeded(case_result)) {
+      case_result = recorder.copy_texture_to_buffer(color_texture, readback.native_handle(),
+                                                    readback_layout, readback_region);
+    }
+    if (granit::succeeded(case_result))
+      case_result = recorder.end();
+    if (granit::succeeded(case_result))
+      case_result = recorder.submit();
+    if (granit::succeeded(case_result))
+      case_result = recorder.reset();
+    if (granit::failed(case_result))
+      return case_result;
 
-  if (granit::succeeded(result)) {
     void* mapped = nullptr;
-    result = readback.map(0, readback_size, &mapped);
-    if (granit::succeeded(result)) {
+    case_result = readback.map(0, readback_size, &mapped);
+    if (granit::succeeded(case_result)) {
       const auto* pixels = static_cast<const std::uint8_t*>(mapped);
-      const auto reference = granit::material::evaluate_pbr_direct_light(
-          {.base_color = {0.8F, 0.2F, 0.1F}, .metallic = 0.5F, .perceptual_roughness = 0.5F},
-          {.normal = {1.0F / 255.0F, 1.0F / 255.0F, 1.0F}});
-      const std::array expected_center{quantize_unorm(reference.x), quantize_unorm(reference.y),
-                                       quantize_unorm(reference.z), std::uint8_t{255}};
+      const std::array expected_center{expected_lit ? quantize_unorm(reference.x) : std::uint8_t{0},
+                                       expected_lit ? quantize_unorm(reference.y) : std::uint8_t{0},
+                                       expected_lit ? quantize_unorm(reference.z) : std::uint8_t{0},
+                                       std::uint8_t{255}};
       constexpr std::array<std::uint8_t, 4> expected_clear{8, 8, 13, 255};
       const auto* center = pixels + (128 * render_size + 128) * 4;
       const auto* corner = pixels;
       if (!near_pixel(center, expected_center, 2) || !near_pixel(corner, expected_clear, 1)) {
-        std::cerr << "PBR 像素回归失败：中心像素=" << static_cast<unsigned>(center[0]) << ','
+        std::cerr << "PBR 阴影像素回归失败：中心像素=" << static_cast<unsigned>(center[0]) << ','
                   << static_cast<unsigned>(center[1]) << ',' << static_cast<unsigned>(center[2])
                   << ',' << static_cast<unsigned>(center[3]) << '\n';
-        result = granit::result::internal;
+        case_result = granit::result::internal;
       }
       const auto unmap_result = readback.unmap();
-      if (granit::succeeded(result))
-        result = unmap_result;
+      if (granit::succeeded(case_result))
+        case_result = unmap_result;
     }
-  }
+    return case_result;
+  };
+
+  if (granit::succeeded(result))
+    result = render_case(0.25F, false);
+  if (granit::succeeded(result))
+    result = render_case(1.0F, true);
 
   if (depth_view != GRANIT_NULL_HANDLE)
     static_cast<void>(granit_texture_view_destroy(renderer.native_handle(), depth_view));
@@ -300,6 +353,6 @@ int main() {
     std::cerr << "离屏 PBR 绘制失败：" << granit::result_message(result) << '\n';
     return 1;
   }
-  std::cout << "默认纹理 PBR 离屏绘制及像素回归完成\n";
+  std::cout << "默认纹理 PBR 阴影与受光像素回归完成\n";
   return 0;
 }
