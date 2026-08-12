@@ -1717,6 +1717,12 @@ granit_result renderer_registry::create_texture_view(granit_renderer renderer,
         (desc.format != GRANIT_TEXTURE_FORMAT_UNDEFINED && desc.format != parent->desc.format)) {
       return GRANIT_ERROR_UNSUPPORTED;
     }
+    if (desc.range.base_mip_level >= parent->desc.mip_levels ||
+        desc.range.mip_level_count > parent->desc.mip_levels - desc.range.base_mip_level ||
+        desc.range.base_array_layer >= parent->desc.array_layers ||
+        desc.range.array_layer_count > parent->desc.array_layers - desc.range.base_array_layer) {
+      return GRANIT_ERROR_INVALID_ARGUMENT;
+    }
     const auto aspect = desc.range.aspect;
     const auto depth = parent->desc.format >= GRANIT_TEXTURE_FORMAT_D16_UNORM;
     const auto stencil = parent->desc.format == GRANIT_TEXTURE_FORMAT_D24_UNORM_S8_UINT ||

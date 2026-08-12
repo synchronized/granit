@@ -15,7 +15,8 @@
 ## 已确认语义
 
 - Texture 拥有图像存储，Texture View 是引用子资源的独立句柄。
-- 首期实现单 mip、单 layer、单 sample 的 2D Texture 和完整范围 2D View。
+- 首期实现单 mip、单 layer、单 sample 的 2D Texture 和完整范围 2D View；H-05C 前置扩展已增加
+  单个六面 Cube、完整 mip 链和连续 mip View，Cube Array、1D/3D 与多采样仍未开放。
 - View 格式为 `UNDEFINED` 时继承父格式；首期只允许继承或完全相同格式。
 - automatic aspect 根据颜色、深度或深度模板格式解析。
 - 销毁 View 不影响 Texture；销毁 Texture 级联使全部子 View 句柄失效。

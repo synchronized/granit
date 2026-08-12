@@ -3,6 +3,8 @@
 
 #include "core/resource_validation.h"
 
+#include <algorithm>
+#include <bit>
 #include <cmath>
 #include <limits>
 
@@ -80,8 +82,14 @@ granit_result validate_texture_desc(const granit_texture_desc& desc) noexcept {
        (desc.usage & GRANIT_TEXTURE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT) != 0)) {
     return GRANIT_ERROR_INVALID_ARGUMENT;
   }
-  if (desc.dimension != GRANIT_TEXTURE_DIMENSION_2D || desc.depth != 1 || desc.mip_levels != 1 ||
-      desc.array_layers != 1 || desc.sample_count != GRANIT_SAMPLE_COUNT_1 ||
+  const auto maximum_mips =
+      static_cast<std::uint32_t>(std::bit_width(std::max(desc.width, desc.height)));
+  const auto supported_2d = desc.dimension == GRANIT_TEXTURE_DIMENSION_2D && desc.depth == 1 &&
+                            desc.array_layers == 1 && desc.mip_levels <= maximum_mips;
+  const auto supported_cube = desc.dimension == GRANIT_TEXTURE_DIMENSION_CUBE && desc.depth == 1 &&
+                              desc.width == desc.height && desc.array_layers == 6 &&
+                              desc.mip_levels <= maximum_mips;
+  if ((!supported_2d && !supported_cube) || desc.sample_count != GRANIT_SAMPLE_COUNT_1 ||
       desc.memory_location == GRANIT_MEMORY_LOCATION_UPLOAD ||
       desc.memory_location == GRANIT_MEMORY_LOCATION_READBACK) {
     return GRANIT_ERROR_UNSUPPORTED;
@@ -99,8 +107,11 @@ granit_result validate_texture_view_desc(const granit_texture_view_desc& desc) n
       range.array_layer_count == 0) {
     return GRANIT_ERROR_INVALID_ARGUMENT;
   }
-  if (desc.dimension != GRANIT_TEXTURE_DIMENSION_2D || range.base_mip_level != 0 ||
-      range.mip_level_count != 1 || range.base_array_layer != 0 || range.array_layer_count != 1) {
+  const auto supported_2d = desc.dimension == GRANIT_TEXTURE_DIMENSION_2D &&
+                            range.base_array_layer == 0 && range.array_layer_count == 1;
+  const auto supported_cube = desc.dimension == GRANIT_TEXTURE_DIMENSION_CUBE &&
+                              range.base_array_layer == 0 && range.array_layer_count == 6;
+  if (!supported_2d && !supported_cube) {
     return GRANIT_ERROR_UNSUPPORTED;
   }
   return GRANIT_SUCCESS;

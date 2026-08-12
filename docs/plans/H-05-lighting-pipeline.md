@@ -165,6 +165,17 @@ H-05 首版必须能在普通 Bind Group 路径运行。
 - 增加缺省零环境、粗糙度 mip 选择和金属/非金属回归。
 - 使用固定生成数据测试，不把图片解码库引入 H-05。
 
+## H-05C0 实现记录
+
+IBL 开始前确认 Renderer 原先虽有 Cube 枚举，但验证和 Vulkan View 仍固定为 2D 单 mip。现已补齐
+单个六面 Cube Texture/View、连续 mip View、默认完整范围 View 和指定 face/mip 写入。Vulkan Image
+使用 cube-compatible 标志，View 使用 cube 类型；校验要求正方形、六层、单采样且 mip 不超过完整
+链，并验证 View 子资源不越过父 Texture。
+
+真实 Renderer 测试已创建 `RGBA16_FLOAT`、8x8、四级 mip 的 Cube，建立覆盖六面的 Cube View，
+并写入第六面第二级 mip。该能力只解决 H-05C 的资源基础，环境卷积和 mip 生成仍属于调用方或后续
+离线 Asset 工具。
+
 ### H-05D：HDR 与 Tone Mapping
 
 - 建立 HDR Attachment 和 ACES fitted CPU 参考。

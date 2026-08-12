@@ -27,8 +27,14 @@ index、uniform、storage 和 indirect。大小与用途必须非零，未知用
 `granit_texture_view_desc` 描述访问同一存储的子资源范围。View 是独立资源，父 Texture 由未来
 创建函数单独传入。
 
-当前验证范围只接受单 mip、单 array layer、单 sample 的 2D Texture 和完整范围 2D View。
-其他有效维度和采样数已经能够表达，但在对应实现完成前返回 `GRANIT_ERROR_UNSUPPORTED`。
+当前支持单 sample 的单层 2D Texture，以及单个六面 Cube Texture。两者均可包含不超过完整链的
+mip；View 可以选择连续 mip 范围，2D View 固定单层，Cube View 固定六层。Cube 的宽高必须相等、
+depth 必须为 1、array layer 必须为 6。Cube Array、1D、3D 和多采样仍返回
+`GRANIT_ERROR_UNSUPPORTED`。
+
+Cube 存储使用六个数组层，层顺序遵循正 X、负 X、正 Y、负 Y、正 Z、负 Z。调用方可以通过
+Texture 写入接口指定单个面和 mip；创建完整 Cube View 后由 Shader 使用方向向量采样。Granit
+当前不自动生成 mip，也不负责从经纬度环境图卷积为 IBL 资源。
 
 销毁 Texture 会先级联销毁其全部 View，并立即使旧 View 句柄失效。验证模式下，如果仍存在
 用户创建的 View，该级联操作会输出生命周期警告，但仍返回成功。

@@ -52,6 +52,9 @@ extern "C" granit_result granit_texture_create_with_default_view(granit_renderer
     return result;
   }
   granit_texture_view_desc view_desc = GRANIT_TEXTURE_VIEW_DESC_INIT;
+  view_desc.dimension = desc->dimension;
+  view_desc.range.mip_level_count = desc->mip_levels;
+  view_desc.range.array_layer_count = desc->array_layers;
   result = granit_texture_view_create(renderer, created, &view_desc, view);
   if (result != GRANIT_SUCCESS) {
     static_cast<void>(granit_texture_destroy(renderer, created));

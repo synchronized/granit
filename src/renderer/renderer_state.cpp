@@ -701,6 +701,8 @@ granit_result renderer_state::create_native_texture(const granit_texture_desc& d
   VkImageCreateInfo info{};
   info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
   info.imageType = VK_IMAGE_TYPE_2D;
+  if (desc.dimension == GRANIT_TEXTURE_DIMENSION_CUBE)
+    info.flags = VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
   info.format = map_texture_format(desc.format);
   info.extent = {desc.width, desc.height, desc.depth};
   info.mipLevels = desc.mip_levels;
@@ -819,7 +821,8 @@ granit_result renderer_state::create_native_texture_view(const vulkan_image_allo
   VkImageViewCreateInfo info{};
   info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
   info.image = texture.image;
-  info.viewType = VK_IMAGE_VIEW_TYPE_2D;
+  info.viewType = view_desc.dimension == GRANIT_TEXTURE_DIMENSION_CUBE ? VK_IMAGE_VIEW_TYPE_CUBE
+                                                                       : VK_IMAGE_VIEW_TYPE_2D;
   info.format = map_texture_format(
       view_desc.format == GRANIT_TEXTURE_FORMAT_UNDEFINED ? texture_desc.format : view_desc.format);
   info.subresourceRange.aspectMask = view_desc.range.aspect == GRANIT_TEXTURE_ASPECT_AUTOMATIC

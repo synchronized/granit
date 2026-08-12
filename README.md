@@ -105,6 +105,8 @@ H-05B1 已实现显式单方向光的正交阴影矩阵、从全场景独立筛�
 Pass。H-05B2 已补充 Graphics Pipeline 固定 depth bias，并建立 Group 3 阴影常量、比较 Sampler、
 Bind Group 和 PBR Graph 读依赖。单方向光阴影首版已经通过 Shader 比较采样以及遮挡/受光离屏
 像素回归，下一步进入 IBL。
+H-05C 的资源前置能力已支持单个六面 Cube Texture/View、完整 mip 链和指定 face/mip 写入；环境
+卷积与 mip 生成仍由调用方或后续离线 Asset 工具负责。
 具体顺序见 [docs/roadmap.md](docs/roadmap.md)。
 
 ## 快速开始

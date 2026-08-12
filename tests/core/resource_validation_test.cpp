@@ -51,6 +51,17 @@ TEST_CASE("Texture 描述区分非法组合和未实现能力", "[resource][vali
   CHECK(validate_texture_desc(desc) == GRANIT_ERROR_INVALID_ARGUMENT);
   desc.usage = GRANIT_TEXTURE_USAGE_SAMPLED_BIT;
   desc.mip_levels = 2;
+  CHECK(validate_texture_desc(desc) == GRANIT_SUCCESS);
+  desc.mip_levels = 7;
+  CHECK(validate_texture_desc(desc) == GRANIT_SUCCESS);
+  desc.mip_levels = 8;
+  CHECK(validate_texture_desc(desc) == GRANIT_ERROR_UNSUPPORTED);
+
+  desc.dimension = GRANIT_TEXTURE_DIMENSION_CUBE;
+  desc.mip_levels = 7;
+  desc.array_layers = 6;
+  CHECK(validate_texture_desc(desc) == GRANIT_SUCCESS);
+  desc.height = 32;
   CHECK(validate_texture_desc(desc) == GRANIT_ERROR_UNSUPPORTED);
 }
 
@@ -68,6 +79,11 @@ TEST_CASE("View 和 Sampler 验证首期支持范围", "[resource][validation]")
       .reserved_2 = 0,
   };
   CHECK(validate_texture_view_desc(view) == GRANIT_SUCCESS);
+  auto cube_view = view;
+  cube_view.dimension = GRANIT_TEXTURE_DIMENSION_CUBE;
+  cube_view.range.mip_level_count = 4;
+  cube_view.range.array_layer_count = 6;
+  CHECK(validate_texture_view_desc(cube_view) == GRANIT_SUCCESS);
 
   granit_sampler_desc sampler{
       .struct_size = GRANIT_SAMPLER_DESC_VERSION_1_SIZE,

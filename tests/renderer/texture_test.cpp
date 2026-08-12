@@ -67,6 +67,42 @@ TEST_CASE("Texture View 校验格式和 Renderer 归属", "[texture][validation]
   REQUIRE(cpp_view.reset() == granit::result::success);
 }
 
+TEST_CASE("Cube Texture支持六面和Mip链", "[texture][cube][mip]") {
+  granit::renderer renderer;
+  const auto result = renderer.initialize({.application_name = "granit-cube-texture"});
+  if (unavailable(result))
+    SKIP("当前运行环境没有满足要求的 Vulkan 设备");
+  REQUIRE(result == granit::result::success);
+
+  granit::texture cube;
+  REQUIRE(cube.initialize(renderer.native_handle(),
+                          {.dimension = granit::texture_dimension::cube,
+                           .format = granit::texture_format::rgba16_float,
+                           .usage = granit::texture_usage::sampled |
+                                    granit::texture_usage::transfer_destination,
+                           .width = 8,
+                           .height = 8,
+                           .mip_levels = 4,
+                           .array_layers = 6}) == granit::result::success);
+  granit::texture_view view;
+  REQUIRE(view.initialize(renderer.native_handle(), cube.native_handle(),
+                          {.dimension = granit::texture_dimension::cube,
+                           .format = granit::texture_format::rgba16_float,
+                           .aspect = granit::texture_aspect::color,
+                           .base_mip_level = 0,
+                           .mip_level_count = 4,
+                           .base_array_layer = 0,
+                           .array_layer_count = 6}) == granit::result::success);
+
+  std::array<std::byte, 2 * 2 * 8> pixels{};
+  CHECK(cube.write(pixels, {},
+                   {.mip_level = 2,
+                    .base_array_layer = 5,
+                    .array_layer_count = 1,
+                    .width = 2,
+                    .height = 2}) == granit::result::success);
+}
+
 TEST_CASE("验证模式允许 Texture 级联销毁用户 View", "[texture][lifecycle]") {
   granit::renderer renderer;
   const auto result = renderer.initialize(
