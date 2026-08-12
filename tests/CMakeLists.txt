@@ -134,6 +134,7 @@ add_test(NAME granit.pbr COMMAND granit_pbr_test)
 
 add_executable(
   granit_scene_test
+  scene/multi_view_submission_test.cpp
   scene/scene_submission_test.cpp
   scene/scene_visibility_test.cpp
 )

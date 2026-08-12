@@ -85,6 +85,7 @@ H-04 已确定为可选的逐帧场景提交适配层，首版只负责显式 Vi
 筛选和稳定可见列表，不建立 ECS、Scene Graph 或 GPU 资源所有权。H-04A 已建立内部
 `granit::scene` 模块、事务式单 View 帧快照及输入校验。
 H-04B 已实现 Vulkan `[0,1]` 深度约定的 Frustum、世界空间包围球筛选、层掩码过滤和稳定可见列表。
+H-04C 已实现共享一份场景数据的多 View 快照，以及方向光、点光和聚光的逐 View 可见索引。
 具体顺序见 [docs/roadmap.md](docs/roadmap.md)。
 
 ## 快速开始

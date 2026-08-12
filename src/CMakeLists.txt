@@ -264,12 +264,14 @@ add_library(granit::scene ALIAS granit_scene)
 target_sources(
   granit_scene
   PRIVATE
+    scene/multi_view_submission.cpp
     scene/scene_submission.cpp
     scene/scene_visibility.cpp
   PUBLIC
     FILE_SET HEADERS
     BASE_DIRS "${PROJECT_SOURCE_DIR}/src"
     FILES
+      scene/multi_view_submission.h
       scene/scene_submission.h
       scene/scene_visibility.h
 )

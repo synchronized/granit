@@ -65,11 +65,16 @@ bool intersects(const frustum& value, const bounding_sphere& bounds) noexcept {
 }
 
 visibility_error build_visible_list(const frame_snapshot& snapshot, visible_list& output) noexcept {
-  const auto renderables = snapshot.renderables();
+  return build_visible_list(snapshot.view(), snapshot.renderables(), output);
+}
+
+visibility_error build_visible_list(const view_input& view,
+                                    std::span<const renderable_input> renderables,
+                                    visible_list& output) noexcept {
   if (renderables.size() > std::numeric_limits<std::uint32_t>::max())
     return visibility_error::too_many_renderables;
   frustum view_frustum{};
-  const auto frustum_error = extract_frustum(snapshot.view().view_projection, view_frustum);
+  const auto frustum_error = extract_frustum(view.view_projection, view_frustum);
   if (frustum_error != visibility_error::none)
     return frustum_error;
   try {
@@ -77,7 +82,7 @@ visibility_error build_visible_list(const frame_snapshot& snapshot, visible_list
     candidate.indices_.reserve(renderables.size());
     for (std::size_t index = 0; index < renderables.size(); ++index) {
       const auto& renderable = renderables[index];
-      if ((snapshot.view().layer_mask & renderable.layer_mask) != 0 &&
+      if ((view.layer_mask & renderable.layer_mask) != 0 &&
           intersects(view_frustum, renderable.bounds)) {
         candidate.indices_.push_back(static_cast<std::uint32_t>(index));
       }

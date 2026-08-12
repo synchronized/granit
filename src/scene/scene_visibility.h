@@ -35,6 +35,8 @@ public:
 
 private:
   friend visibility_error build_visible_list(const frame_snapshot&, visible_list&) noexcept;
+  friend visibility_error build_visible_list(const view_input&, std::span<const renderable_input>,
+                                             visible_list&) noexcept;
 
   std::vector<std::uint32_t> indices_;
 };
@@ -48,6 +50,11 @@ private:
 
 /** 为单 View 快照构建按稳定键排序的可见 Renderable 索引。失败时不修改 output。 */
 [[nodiscard]] visibility_error build_visible_list(const frame_snapshot& snapshot,
+                                                  visible_list& output) noexcept;
+
+/** 为显式 View 与 Renderable 数组构建可见列表。 */
+[[nodiscard]] visibility_error build_visible_list(const view_input& view,
+                                                  std::span<const renderable_input> renderables,
                                                   visible_list& output) noexcept;
 
 } // namespace granit::scene
