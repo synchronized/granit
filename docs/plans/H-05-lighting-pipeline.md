@@ -176,6 +176,17 @@ IBL 开始前确认 Renderer 原先虽有 Cube 枚举，但验证和 Vulkan View
 并写入第六面第二级 mip。该能力只解决 H-05C 的资源基础，环境卷积和 mip 生成仍属于调用方或后续
 离线 Asset 工具。
 
+## H-05C1 实现记录
+
+已增加 split-sum IBL 的 CPU 数值参考，明确首版输入是调用方预先生成并采样的 irradiance、
+prefiltered environment 和 BRDF LUT，而不是在运行时解析或卷积环境图片。漫反射按 Lambert 项除以
+pi，镜面反射使用预过滤环境与 LUT 的缩放/偏移组合；金属度决定漫反射占比，AO 只调制间接光，
+环境强度小于零时按零处理。
+
+粗糙度在 `[0, 1]` 内线性映射到最大 mip 索引，并增加绕世界 Y 轴的环境查询方向旋转。固定数值测试
+覆盖 mip 边界、九十度旋转、金属/非金属差异、缺省零环境和完全遮蔽。下一步建立 Group 3 环境资源
+布局并让 Shader 与该 CPU 参考对照。
+
 ### H-05D：HDR 与 Tone Mapping
 
 - 建立 HDR Attachment 和 ACES fitted CPU 参考。

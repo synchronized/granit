@@ -34,6 +34,14 @@ function(granit_target_compile_warnings target)
     message(FATAL_ERROR "目标不存在: ${target}")
   endif()
 
+  # 项目源码和注释统一使用 UTF-8；该选项只作用于 Granit 自有目标。
+  target_compile_options(
+    ${target}
+    PRIVATE
+      $<$<COMPILE_LANG_AND_ID:C,MSVC>:/utf-8>
+      $<$<COMPILE_LANG_AND_ID:CXX,MSVC>:/utf-8>
+  )
+
   if(NOT GRANIT_ENABLE_WARNINGS)
     return()
   endif()

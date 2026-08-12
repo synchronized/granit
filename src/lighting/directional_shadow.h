@@ -37,10 +37,11 @@ struct shadow_caster {
   std::uint32_t source_index = 0;
 };
 
-struct directional_shadow_pass_desc {
-  render_graph::resource_id depth = render_graph::invalid_resource_id;
+struct alignas(16) directional_shadow_pass_desc {
   shadow_frame_constants frame;
   std::vector<shadow_caster> casters;
+  render_graph::resource_id depth = render_graph::invalid_resource_id;
+  std::uint32_t reserved = 0;
 };
 
 enum class directional_shadow_error : std::uint8_t {

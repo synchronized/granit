@@ -306,6 +306,7 @@ target_sources(
   granit_lighting
   PRIVATE
     lighting/directional_shadow.cpp
+    lighting/ibl_reference.cpp
     lighting/light_data.cpp
     lighting/lighting_reference.cpp
     lighting/shadow_resources.cpp
@@ -315,6 +316,7 @@ target_sources(
     BASE_DIRS "${PROJECT_SOURCE_DIR}/src"
     FILES
       lighting/directional_shadow.h
+      lighting/ibl_reference.h
       lighting/light_data.h
       lighting/lighting_reference.h
       lighting/shadow_resources.h
