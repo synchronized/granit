@@ -226,6 +226,17 @@ TEST_CASE("Graphics Pipeline 在进入后端前校验描述", "[pipeline][valida
   desc.color_blend_count = 0;
   desc.color_blends = nullptr;
 
+  granit_depth_bias_state depth_bias = GRANIT_DEPTH_BIAS_STATE_INIT;
+  depth_bias.clamp = -1.0F;
+  desc.depth_bias = &depth_bias;
+  CHECK(granit_graphics_pipeline_create(UINT64_C(1), &desc, &pipeline) ==
+        GRANIT_ERROR_INVALID_ARGUMENT);
+  depth_bias.clamp = 0.0F;
+  depth_bias.reserved = 1;
+  CHECK(granit_graphics_pipeline_create(UINT64_C(1), &desc, &pipeline) ==
+        GRANIT_ERROR_INVALID_ARGUMENT);
+  desc.depth_bias = nullptr;
+
   const granit_vertex_attribute duplicate_locations[] = {{0, GRANIT_VERTEX_FORMAT_FLOAT32X2, 0, 0},
                                                          {0, GRANIT_VERTEX_FORMAT_FLOAT32X3, 8, 0}};
   const granit_vertex_buffer_layout vertex_layout{20, GRANIT_VERTEX_STEP_MODE_VERTEX, 2, 0,
@@ -280,22 +291,25 @@ TEST_CASE("Graphics Pipeline 接受 Vertex Buffer Layout", "[pipeline][vertex-in
                                         .alpha_operation = granit::blend_operation::add,
                                         .write_mask = granit::color_write_mask::all};
   granit::graphics_pipeline pipeline;
-  REQUIRE(
-      pipeline.initialize(renderer.native_handle(),
-                          {.layout = layout.native_handle(),
-                           .vertex_shader = vertex.native_handle(),
-                           .fragment_shader = fragment.native_handle(),
-                           .color_formats = std::span{&format, 1},
-                           .depth_stencil_format = granit::texture_format::d16_unorm,
-                           .vertex_buffers = vertex_buffers,
-                           .primitive = {.topology = granit::primitive_topology::triangle_strip,
-                                         .front = granit::front_face::clockwise,
-                                         .cull = granit::cull_mode::back,
-                                         .polygon = granit::polygon_mode::fill},
-                           .depth = granit::depth_state{.test_enabled = true,
-                                                        .write_enabled = true,
-                                                        .compare = granit::compare_operation::less},
-                           .color_blends = std::span{&blend, 1}}) == granit::result::success);
+  REQUIRE(pipeline.initialize(
+              renderer.native_handle(),
+              {.layout = layout.native_handle(),
+               .vertex_shader = vertex.native_handle(),
+               .fragment_shader = fragment.native_handle(),
+               .color_formats = std::span{&format, 1},
+               .depth_stencil_format = granit::texture_format::d16_unorm,
+               .vertex_buffers = vertex_buffers,
+               .primitive = {.topology = granit::primitive_topology::triangle_strip,
+                             .front = granit::front_face::clockwise,
+                             .cull = granit::cull_mode::back,
+                             .polygon = granit::polygon_mode::fill},
+               .depth = granit::depth_state{.test_enabled = true,
+                                            .write_enabled = true,
+                                            .compare = granit::compare_operation::less},
+               .color_blends = std::span{&blend, 1},
+               .depth_bias = granit::depth_bias_state{.constant_factor = 1.25F,
+                                                      .slope_factor = 1.75F,
+                                                      .clamp = 0.0F}}) == granit::result::success);
 }
 
 TEST_CASE("Graphics Pipeline 热替换保持已录制对象有效", "[pipeline][lifetime][hot-reload]") {
@@ -331,7 +345,8 @@ TEST_CASE("Graphics Pipeline 热替换保持已录制对象有效", "[pipeline][
                                .vertex_buffers = {},
                                .primitive = {},
                                .depth = {},
-                               .color_blends = {}}) == granit::result::success);
+                               .color_blends = {},
+                               .depth_bias = std::nullopt}) == granit::result::success);
   granit::shader replacement_vertex;
   granit::shader replacement_fragment;
   REQUIRE(replacement_vertex.initialize(renderer.native_handle(),
@@ -351,7 +366,8 @@ TEST_CASE("Graphics Pipeline 热替换保持已录制对象有效", "[pipeline][
                                            .vertex_buffers = {},
                                            .primitive = {},
                                            .depth = {},
-                                           .color_blends = {}}) == granit::result::success);
+                                           .color_blends = {},
+                                           .depth_bias = std::nullopt}) == granit::result::success);
   granit_texture_desc texture_desc = GRANIT_TEXTURE_DESC_INIT;
   texture_desc.format = GRANIT_TEXTURE_FORMAT_RGBA8_UNORM;
   texture_desc.usage = GRANIT_TEXTURE_USAGE_COLOR_ATTACHMENT_BIT;
@@ -671,7 +687,8 @@ TEST_CASE("Graphics 与 Compute 工作负载支持并行录制", "[pipeline][com
                                         .vertex_buffers = {},
                                         .primitive = {},
                                         .depth = {},
-                                        .color_blends = {}}) == granit::result::success);
+                                        .color_blends = {},
+                                        .depth_bias = std::nullopt}) == granit::result::success);
 
   constexpr std::uint64_t storage_size = 16 * sizeof(std::uint32_t);
   const granit::bind_group_layout_entry declaration{.binding = 0,

@@ -1065,7 +1065,8 @@ granit_result renderer_state::create_native_graphics_pipeline(
     VkPipelineLayout layout, VkShaderModule vertex_shader, const char* vertex_entry,
     VkShaderModule fragment_shader, const char* fragment_entry,
     std::span<const granit_vertex_buffer_layout> vertex_buffers, granit_primitive_state primitive,
-    granit_depth_state depth_state, std::span<const granit_color_blend_state> color_blends,
+    granit_depth_state depth_state, const granit_depth_bias_state* depth_bias,
+    std::span<const granit_color_blend_state> color_blends,
     std::span<const granit_texture_format> color_formats,
     granit_texture_format depth_stencil_format, granit_sample_count sample_count,
     VkPipeline& pipeline) noexcept {
@@ -1142,6 +1143,12 @@ granit_result renderer_state::create_native_graphics_pipeline(
   rasterization.cullMode = cull_modes[primitive.cull_mode - GRANIT_CULL_MODE_NONE];
   rasterization.frontFace = front_faces[primitive.front_face - GRANIT_FRONT_FACE_COUNTER_CLOCKWISE];
   rasterization.lineWidth = 1.0F;
+  if (depth_bias) {
+    rasterization.depthBiasEnable = VK_TRUE;
+    rasterization.depthBiasConstantFactor = depth_bias->constant_factor;
+    rasterization.depthBiasSlopeFactor = depth_bias->slope_factor;
+    rasterization.depthBiasClamp = depth_bias->clamp;
+  }
   VkPipelineMultisampleStateCreateInfo multisample{};
   multisample.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
   multisample.rasterizationSamples = static_cast<VkSampleCountFlagBits>(sample_count);

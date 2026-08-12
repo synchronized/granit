@@ -60,7 +60,8 @@ int main() {
                                                        .vertex_buffers = {},
                                                        .primitive = {},
                                                        .depth = {},
-                                                       .color_blends = {}});
+                                                       .color_blends = {},
+                                                       .depth_bias = std::nullopt});
   }
 
   granit_texture_desc texture_desc = GRANIT_TEXTURE_DESC_INIT;

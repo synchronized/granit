@@ -207,6 +207,12 @@ struct depth_state {
   compare_operation compare{compare_operation::less_equal};
 };
 
+struct depth_bias_state {
+  float constant_factor{};
+  float slope_factor{};
+  float clamp{};
+};
+
 enum class blend_factor : std::uint32_t {
   zero = GRANIT_BLEND_FACTOR_ZERO,
   one = GRANIT_BLEND_FACTOR_ONE,
@@ -265,6 +271,7 @@ struct graphics_pipeline_desc {
   primitive_state primitive;
   std::optional<depth_state> depth;
   std::span<const color_blend_state> color_blends;
+  std::optional<depth_bias_state> depth_bias;
 };
 
 class graphics_pipeline {
@@ -450,9 +457,18 @@ inline result graphics_pipeline::initialize(granit_renderer renderer,
              .reserved = 0};
     depth_pointer = &depth;
   }
+  granit_depth_bias_state depth_bias{};
+  const granit_depth_bias_state* depth_bias_pointer = nullptr;
+  if (desc.depth_bias) {
+    depth_bias = {.constant_factor = desc.depth_bias->constant_factor,
+                  .slope_factor = desc.depth_bias->slope_factor,
+                  .clamp = desc.depth_bias->clamp,
+                  .reserved = 0};
+    depth_bias_pointer = &depth_bias;
+  }
   const auto* formats = reinterpret_cast<const granit_texture_format*>(desc.color_formats.data());
   const granit_graphics_pipeline_desc native{
-      .struct_size = GRANIT_GRAPHICS_PIPELINE_DESC_VERSION_4_SIZE,
+      .struct_size = GRANIT_GRAPHICS_PIPELINE_DESC_VERSION_5_SIZE,
       .reserved = 0,
       .layout = desc.layout,
       .vertex_shader = desc.vertex_shader,
@@ -472,7 +488,8 @@ inline result graphics_pipeline::initialize(granit_renderer renderer,
       .depth = depth_pointer,
       .color_blend_count = static_cast<std::uint32_t>(desc.color_blends.size()),
       .reserved_4 = 0,
-      .color_blends = color_blends.data()};
+      .color_blends = color_blends.data(),
+      .depth_bias = depth_bias_pointer};
   const auto value = granit_graphics_pipeline_create(renderer, &native, &handle_);
   if (value == GRANIT_SUCCESS)
     renderer_ = renderer;

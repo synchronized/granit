@@ -125,7 +125,8 @@ public:
       VkPipelineLayout layout, VkShaderModule vertex_shader, const char* vertex_entry,
       VkShaderModule fragment_shader, const char* fragment_entry,
       std::span<const granit_vertex_buffer_layout> vertex_buffers, granit_primitive_state primitive,
-      granit_depth_state depth, std::span<const granit_color_blend_state> color_blends,
+      granit_depth_state depth, const granit_depth_bias_state* depth_bias,
+      std::span<const granit_color_blend_state> color_blends,
       std::span<const granit_texture_format> color_formats,
       granit_texture_format depth_stencil_format, granit_sample_count sample_count,
       VkPipeline& pipeline) noexcept;

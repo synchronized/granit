@@ -212,6 +212,17 @@ CPU 参考实现沿用 H-03 的金属度/粗糙度 BRDF。点光采用带平滑�
 Graph 深度写生命周期及真实 Recorder 执行。H-05B 尚未完成；下一步接入固定深度 Pipeline、深度
 bias、比较采样和主 PBR Pass 的 Group 3 阴影输入。
 
+## H-05B2a 实现记录
+
+Graphics Pipeline 描述新增可选固定 depth bias，包含 constant factor、slope factor 和非负 clamp。
+C API 通过尾部字段与 V5 `struct_size` 扩展，旧描述保持关闭 bias；C++20 包装使用 `optional`。
+后端直接写入 Vulkan Rasterization State，拒绝非有限值、负 clamp 和非零保留字段。
+
+比较 Sampler 已由现有 API 支持，不需要新增 Vulkan 暴露。当前选择固定 Pipeline bias，而不是立即
+增加 Recorder 动态命令；阴影路径可先用少量缓存 Pipeline 验证参数，只有真实材质/级联数量证明
+Pipeline 组合成为问题时再引入动态状态。H-05B2 下一步继续建立 Shadow Group 3 布局、比较 Sampler
+和主 PBR Pass 的阴影采样常量。
+
 ## 测试与验收
 
 - C++ 单元测试覆盖所有光源公式、容量、格式和失败事务语义。

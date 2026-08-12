@@ -161,6 +161,15 @@ typedef struct granit_depth_state {
 #define GRANIT_DEPTH_STATE_INIT                                                                    \
   {UINT32_C(0), UINT32_C(0), GRANIT_COMPARE_OPERATION_LESS_EQUAL, UINT32_C(0)}
 
+/** 固定光栅化深度偏移；指针为空表示禁用。 */
+typedef struct granit_depth_bias_state {
+  float constant_factor;
+  float slope_factor;
+  float clamp;
+  uint32_t reserved;
+} granit_depth_bias_state;
+#define GRANIT_DEPTH_BIAS_STATE_INIT {0.0F, 0.0F, 0.0F, UINT32_C(0)}
+
 typedef uint32_t granit_blend_factor;
 #define GRANIT_BLEND_FACTOR_ZERO UINT32_C(1)
 #define GRANIT_BLEND_FACTOR_ONE UINT32_C(2)
@@ -229,6 +238,7 @@ typedef struct granit_graphics_pipeline_desc {
   uint32_t color_blend_count;
   uint32_t reserved_4;
   const granit_color_blend_state* color_blends;
+  const granit_depth_bias_state* depth_bias;
 } granit_graphics_pipeline_desc;
 #define GRANIT_GRAPHICS_PIPELINE_DESC_VERSION_1_SIZE                                               \
   ((uint32_t)(offsetof(granit_graphics_pipeline_desc, reserved_2) + sizeof(uint32_t)))
@@ -238,6 +248,8 @@ typedef struct granit_graphics_pipeline_desc {
   ((uint32_t)(offsetof(granit_graphics_pipeline_desc, primitive) + sizeof(granit_primitive_state)))
 #define GRANIT_GRAPHICS_PIPELINE_DESC_VERSION_4_SIZE                                               \
   ((uint32_t)(offsetof(granit_graphics_pipeline_desc, color_blends) + sizeof(void*)))
+#define GRANIT_GRAPHICS_PIPELINE_DESC_VERSION_5_SIZE                                               \
+  ((uint32_t)(offsetof(granit_graphics_pipeline_desc, depth_bias) + sizeof(void*)))
 #define GRANIT_GRAPHICS_PIPELINE_DESC_INIT                                                         \
   {(uint32_t)sizeof(granit_graphics_pipeline_desc),                                                \
    UINT32_C(0),                                                                                    \
@@ -256,6 +268,7 @@ typedef struct granit_graphics_pipeline_desc {
    0,                                                                                              \
    UINT32_C(0),                                                                                    \
    UINT32_C(0),                                                                                    \
+   0,                                                                                              \
    0}
 
 /** Compute Pipeline 描述。 */

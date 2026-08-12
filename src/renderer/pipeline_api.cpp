@@ -6,6 +6,7 @@
 #include "renderer/renderer_registry.h"
 
 #include <array>
+#include <cmath>
 
 namespace {
 
@@ -208,6 +209,11 @@ extern "C" granit_result granit_graphics_pipeline_create(granit_renderer rendere
         return GRANIT_ERROR_INVALID_ARGUMENT;
     }
   }
+  if (desc->struct_size >= GRANIT_GRAPHICS_PIPELINE_DESC_VERSION_5_SIZE && desc->depth_bias &&
+      (!std::isfinite(desc->depth_bias->constant_factor) ||
+       !std::isfinite(desc->depth_bias->slope_factor) || !std::isfinite(desc->depth_bias->clamp) ||
+       desc->depth_bias->clamp < 0.0F || desc->depth_bias->reserved != 0))
+    return GRANIT_ERROR_INVALID_ARGUMENT;
   return granit::detail::renderer_registry::instance().create_graphics_pipeline(renderer, *desc,
                                                                                 *pipeline);
 }

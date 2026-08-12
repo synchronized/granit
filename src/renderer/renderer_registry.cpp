@@ -2358,8 +2358,10 @@ granit_result renderer_registry::create_graphics_pipeline(granit_renderer render
             : granit_primitive_state{GRANIT_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
                                      GRANIT_FRONT_FACE_COUNTER_CLOCKWISE, GRANIT_CULL_MODE_NONE,
                                      GRANIT_POLYGON_MODE_FILL},
-        depth, color_blends,
-        {desc.color_formats, static_cast<std::size_t>(desc.color_format_count)},
+        depth,
+        desc.struct_size >= GRANIT_GRAPHICS_PIPELINE_DESC_VERSION_5_SIZE ? desc.depth_bias
+                                                                         : nullptr,
+        color_blends, {desc.color_formats, static_cast<std::size_t>(desc.color_format_count)},
         desc.depth_stencil_format, desc.sample_count, record->native);
     if (result != GRANIT_SUCCESS)
       return result;

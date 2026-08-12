@@ -63,7 +63,8 @@ granit::result initialize_pipeline(granit_renderer renderer, granit::pipeline_la
                                         .vertex_buffers = std::span{&vertex_layout, 1},
                                         .primitive = {},
                                         .depth = {},
-                                        .color_blends = {}});
+                                        .color_blends = {},
+                                        .depth_bias = std::nullopt});
 }
 
 granit::result render_frame(granit::swapchain& swapchain, granit::command_recorder& recorder,
