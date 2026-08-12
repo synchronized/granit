@@ -198,6 +198,17 @@ binding 3～7，依次为环境常量、irradiance Cube、prefiltered environmen
 IBL-only 布局；阴影与 IBL 组合 Shader 将使用同一编号契约建立包含 binding 0～7 的统一 Group 3，
 不会尝试在同一 Pipeline 组号同时绑定两个 Bind Group。
 
+## H-05C3 实现记录
+
+PBR HLSL 已增加 `GRANIT_PBR_IBL` 编译变体，并保留与 `GRANIT_PBR_SHADOWS` 任意组合的能力。
+IBL Shader 使用 Group 3 binding 3～7，与阴影 binding 0～2 组成统一且无冲突的 Pipeline 布局；组合
+变体不会在同一组号绑定两个 Bind Group。
+
+Shader 计算与 CPU 参考保持一致：漫反射 irradiance 除以 pi，镜面反射按粗糙度选择预过滤 Cube mip
+并结合 BRDF LUT；环境旋转同时作用于法线和反射查询方向，AO 只调制间接光，不再错误影响直接光。
+本阶段以 SPIR-V 反射固定 IBL-only 和阴影加 IBL 的资源契约。下一步用固定生成纹理建立统一 Group 3
+Bind Group 和离屏像素回归。
+
 ### H-05D：HDR 与 Tone Mapping
 
 - 建立 HDR Attachment 和 ACES fitted CPU 参考。

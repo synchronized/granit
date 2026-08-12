@@ -12,6 +12,10 @@ static const float MINIMUM_PERCEPTUAL_ROUGHNESS = 0.045;
 #define GRANIT_PBR_SHADOWS 0
 #endif
 
+#ifndef GRANIT_PBR_IBL
+#define GRANIT_PBR_IBL 0
+#endif
+
 struct vertex_output {
   float4 position : SV_Position;
   float3 normal : TEXCOORD0;
@@ -21,6 +25,19 @@ struct vertex_output {
   float3 world_position : TEXCOORD3;
 #endif
 };
+
+#if GRANIT_PBR_IBL
+[[vk::binding(3, 3)]] cbuffer IblConstants {
+  float environment_rotation_cos;
+  float environment_rotation_sin;
+  float environment_intensity;
+  float prefiltered_environment_max_mip;
+};
+[[vk::binding(4, 3)]] TextureCube<float4> irradiance_texture;
+[[vk::binding(5, 3)]] TextureCube<float4> prefiltered_environment_texture;
+[[vk::binding(6, 3)]] Texture2D<float4> brdf_lut_texture;
+[[vk::binding(7, 3)]] SamplerState environment_sampler;
+#endif
 
 #if GRANIT_PBR_SHADOWS
 [[vk::binding(0, 3)]] cbuffer ShadowConstants {
@@ -96,6 +113,21 @@ float3 fresnel_schlick(float view_dot_half, float3 reflectance_at_normal) {
   return reflectance_at_normal + (1.0 - reflectance_at_normal) * factor;
 }
 
+float3 fresnel_schlick_roughness(float normal_dot_view, float3 reflectance_at_normal,
+                                 float roughness) {
+  const float3 grazing = max((1.0 - roughness).xxx, reflectance_at_normal);
+  return reflectance_at_normal + (grazing - reflectance_at_normal) *
+                                     pow(1.0 - saturate(normal_dot_view), 5.0);
+}
+
+#if GRANIT_PBR_IBL
+float3 rotate_environment_direction(float3 direction) {
+  return float3(environment_rotation_cos * direction.x + environment_rotation_sin * direction.z,
+                direction.y,
+                -environment_rotation_sin * direction.x + environment_rotation_cos * direction.z);
+}
+#endif
+
 float distribution_ggx(float normal_dot_half, float perceptual_roughness) {
   const float roughness = max(saturate(perceptual_roughness), MINIMUM_PERCEPTUAL_ROUGHNESS);
   const float alpha = roughness * roughness;
@@ -165,7 +197,6 @@ float4 fragment_main(vertex_output input) : SV_Target0 {
       normal_dot_view, normal_dot_light, resolved_roughness);
   const float3 diffuse =
       resolved_base_color.rgb * (1.0 - fresnel) * (1.0 - clamped_metallic) / PI;
-  // 首版尚无 IBL，遮蔽值暂时调制总光照；H-05 接入间接光后只作用于间接项。
   const float occlusion = lerp(1.0, sampled_occlusion, saturate(occlusion_strength));
 #if GRANIT_PBR_SHADOWS
   const float shadow = evaluate_directional_shadow(input, normal);
@@ -173,7 +204,26 @@ float4 fragment_main(vertex_output input) : SV_Target0 {
   const float shadow = 1.0;
 #endif
   const float3 direct =
-      (diffuse + fresnel * distribution * visibility) * normal_dot_light * occlusion * shadow;
-  return float4(direct + max(emissive, 0.0.xxx) * sampled_emissive,
+      (diffuse + fresnel * distribution * visibility) * normal_dot_light * shadow;
+#if GRANIT_PBR_IBL
+  const float3 ibl_fresnel =
+      fresnel_schlick_roughness(normal_dot_view, reflectance, saturate(resolved_roughness));
+  const float3 diffuse_weight = (1.0 - ibl_fresnel) * (1.0 - clamped_metallic);
+  const float3 irradiance = irradiance_texture.Sample(
+      environment_sampler, rotate_environment_direction(normal)).rgb;
+  const float3 reflection = reflect(-view, normal);
+  const float3 prefiltered = prefiltered_environment_texture.SampleLevel(
+      environment_sampler, rotate_environment_direction(reflection),
+      saturate(resolved_roughness) * prefiltered_environment_max_mip).rgb;
+  const float2 brdf = brdf_lut_texture.Sample(
+      environment_sampler, float2(normal_dot_view, saturate(resolved_roughness))).rg;
+  const float3 indirect =
+      (diffuse_weight * resolved_base_color.rgb * irradiance / PI +
+       prefiltered * (ibl_fresnel * brdf.x + brdf.y)) *
+      max(environment_intensity, 0.0) * occlusion;
+#else
+  const float3 indirect = 0.0.xxx;
+#endif
+  return float4(direct + indirect + max(emissive, 0.0.xxx) * sampled_emissive,
                 resolved_base_color.a);
 }
