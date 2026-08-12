@@ -90,6 +90,9 @@ H-04D 已将单方向光 View 的可见结果接入 PBR Render Graph Pass，并�
 Renderable 索引；Scene 不解释 payload 或接管 Mesh/Material。
 H-04 已完成，两个 View 下 100/1,000/10,000 对象的 P50 分别约为 5.11 us、48.05 us 和 0.951 ms；
 当前没有依据引入空间树、内部任务系统或 GPU culling。
+H-05 已确认分阶段方案：先建立有界前向多光源数据和 CPU 数值参考，再依次实现单方向光阴影、
+IBL、HDR/ACES Tone Mapping 和完整参考管线测量。环境、阴影与 Pass 数据使用 Group 3，材质 Group 1
+保持不变；分块/聚簇光照、自动曝光和高级阴影在真实数据证明必要后另立任务。
 具体顺序见 [docs/roadmap.md](docs/roadmap.md)。
 
 ## 快速开始
@@ -217,6 +220,7 @@ if (granit::failed(result)) {
 - [H-02E3 持久化材质包格式](docs/plans/H-02-material-package-format.md)。
 - [H-03 金属度/粗糙度 PBR 渲染模块](docs/plans/H-03-pbr-renderer.md)。
 - [H-04 场景提交与可见性输入适配层](docs/plans/H-04-scene-submission.md)。
+- [H-05 光照与后处理参考管线](docs/plans/H-05-lighting-pipeline.md)。
 - [docs/plans/F-07-recovery-boundaries.md](docs/plans/F-07-recovery-boundaries.md)：窗口帧恢复边界计划。
 - [docs/renderer.md](docs/renderer.md)：公共 renderer C/C++ API 与生命周期。
 - [docs/render-target.md](docs/render-target.md)：颜色与深度/模板 Attachment 值类型。
