@@ -154,6 +154,7 @@ add_test(NAME granit.scene COMMAND granit_scene_test)
 
 add_executable(
   granit_lighting_test
+  lighting/directional_shadow_test.cpp
   lighting/light_data_test.cpp
   lighting/lighting_reference_test.cpp
 )
@@ -161,6 +162,7 @@ target_include_directories(granit_lighting_test PRIVATE "${PROJECT_SOURCE_DIR}/s
 target_link_libraries(granit_lighting_test PRIVATE granit::lighting Catch2::Catch2WithMain)
 target_compile_options(granit_lighting_test PRIVATE $<$<COMPILE_LANG_AND_ID:CXX,MSVC>:/utf-8>)
 granit_target_compile_warnings(granit_lighting_test)
+granit_target_output_directories(granit_lighting_test)
 add_test(NAME granit.lighting COMMAND granit_lighting_test)
 
 add_executable(

@@ -81,7 +81,8 @@ D-03-graphics-pipeline.md
 - [H-04：场景提交与可见性输入适配层](H-04-scene-submission.md)——已完成；包含快照、Frustum、
   多 View、光源筛选、PBR Render Graph 适配、生命周期验证和性能基线。
 - [H-05：光照与后处理参考管线](H-05-lighting-pipeline.md)——实现中；H-05A 已完成多光源 GPU
-  布局、逐 View 打包、容量诊断及 CPU 直接光数值参考，下一步实现方向光阴影。
+  布局、逐 View 打包、容量诊断及 CPU 直接光数值参考；H-05B1 已完成单方向光阴影描述、投影者
+  筛选和 Render Graph 深度写适配，下一步接入真实阴影绘制与采样。
 
 ## 状态
 
