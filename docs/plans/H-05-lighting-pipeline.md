@@ -370,6 +370,19 @@ Vulkan 设备初始化现同时验证 Query Pool、命令重置/写入及结果�
 基础层接入 Renderer 句柄表与 Command Recorder，定义后端无关 Stage 和异步结果可用性语义，再做
 真实命令提交后的时间区间回归。
 
+## H-05E5b 实现记录
+
+Renderer 公共层现提供后端无关的 `granit_timestamp_query_pool` 64 位整数句柄及 C ABI，C++20 层
+提供 move-only RAII 包装。Command Recorder 可重置查询范围，并在 Top、全部 Graphics 或 Bottom
+三个稳定阶段写入时间戳；查询结果统一返回纳秒，GPU 尚未完成时返回 `NOT_READY`，调用方也可先
+通过 Recorder `reset()` 等待提交完成后读取。
+
+查询池进入 generation/type/domain 句柄校验、Renderer 生命周期诊断和 submission serial 延迟销毁；
+Recorder 录制期间会保留查询池，用户提前销毁句柄不会释放 GPU 在途对象。真实 Vulkan 回归已完成
+重置、首尾写入、异步提交、等待、纳秒读取及显式销毁。测试期间还定位并修复了销毁函数参数求值
+顺序问题：先保存 serial 再移动资源，避免先 `std::move` 后解引用空记录。下一步将时间戳插入 PBR
+离屏链并建立分 Pass GPU 基线。
+
 ## H-05A 实现记录
 
 新增可选内部目标 `granit::lighting`，首版依赖 `granit::scene`，不进入核心动态库或安装导出。

@@ -19,6 +19,7 @@
 #include <granit/renderer/surface.h>
 #include <granit/renderer/swapchain.h>
 #include <granit/renderer/texture.h>
+#include <granit/renderer/timestamp_query.h>
 #include <granit/renderer/upload_batch.h>
 #include <granit/core/types.h>
 #include <granit/core/version.h>

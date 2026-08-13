@@ -14,6 +14,7 @@
 #include <granit/renderer/command_recorder.h>
 #include <granit/renderer/render_target.hpp>
 #include <granit/renderer/swapchain.hpp>
+#include <granit/renderer/timestamp_query.h>
 
 namespace granit {
 
@@ -212,6 +213,16 @@ public:
   }
   [[nodiscard]] result end_rendering() noexcept {
     return from_native(granit_command_recorder_end_rendering(renderer_, handle_));
+  }
+  [[nodiscard]] result reset_timestamp_queries(granit_timestamp_query_pool pool,
+                                               std::uint32_t first, std::uint32_t count) noexcept {
+    return from_native(
+        granit_command_recorder_reset_timestamp_queries(renderer_, handle_, pool, first, count));
+  }
+  [[nodiscard]] result write_timestamp(granit_timestamp_query_pool pool,
+                                       granit_timestamp_stage stage, std::uint32_t index) noexcept {
+    return from_native(
+        granit_command_recorder_write_timestamp(renderer_, handle_, pool, stage, index));
   }
   [[nodiscard]] result destroy() noexcept {
     if (!valid()) {

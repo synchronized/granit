@@ -182,6 +182,11 @@ renderer_registry::command_recorder_record::~command_recorder_record() {
   }
 }
 
+renderer_registry::timestamp_query_pool_record::~timestamp_query_pool_record() {
+  if (renderer)
+    native.destroy(renderer->device());
+}
+
 granit_result renderer_registry::create(std::string_view application_name, bool enable_validation,
                                         std::uint32_t surface_types, std::uint32_t frames_in_flight,
                                         granit_renderer& renderer) {
@@ -243,6 +248,7 @@ granit_result renderer_registry::destroy(granit_renderer renderer) {
   std::vector<std::shared_ptr<graphics_pipeline_record>> native_graphics_pipelines;
   std::vector<std::shared_ptr<compute_pipeline_record>> native_compute_pipelines;
   std::vector<std::shared_ptr<upload_batch_record>> native_upload_batches;
+  std::vector<std::shared_ptr<timestamp_query_pool_record>> native_timestamp_query_pools;
   {
     std::lock_guard lock{mutex_};
     if (handles_.find(renderer, resource_type::renderer, 0) == nullptr) {
@@ -334,6 +340,11 @@ granit_result renderer_registry::destroy(granit_renderer renderer) {
                         record->metadata.creation_sequence);
         }
       }
+      for (const auto& [handle, record] : timestamp_query_pools_) {
+        if (record->renderer == state)
+          lifecycle.add(lifecycle_resource_type::timestamp_query_pool, handle,
+                        record->metadata.creation_sequence);
+      }
     }
     for (auto frame = frames_.begin(); frame != frames_.end();) {
       if (frame->second->renderer == state) {
@@ -351,6 +362,16 @@ granit_result renderer_registry::destroy(granit_renderer renderer) {
         recorder = command_recorders_.erase(recorder);
       } else {
         ++recorder;
+      }
+    }
+    for (auto query = timestamp_query_pools_.begin(); query != timestamp_query_pools_.end();) {
+      if (query->second->renderer == state) {
+        native_timestamp_query_pools.push_back(std::move(query->second));
+        static_cast<void>(
+            handles_.erase(query->first, resource_type::timestamp_query_pool, state->domain()));
+        query = timestamp_query_pools_.erase(query);
+      } else {
+        ++query;
       }
     }
     for (auto batch = upload_batches_.begin(); batch != upload_batches_.end();) {
@@ -487,6 +508,7 @@ granit_result renderer_registry::destroy(granit_renderer renderer) {
   static_cast<void>(state->wait_for_present_idle());
   static_cast<void>(state->wait_for_all_submissions());
   native_command_recorders.clear();
+  native_timestamp_query_pools.clear();
   native_upload_batches.clear();
   static_cast<void>(state->drain_retired());
   native_swapchains.clear();
@@ -3293,6 +3315,153 @@ granit_result renderer_registry::destroy_command_recorder(granit_renderer render
   record.reset();
   static_cast<void>(state->collect_retired());
   return GRANIT_SUCCESS;
+}
+
+granit_result renderer_registry::create_timestamp_query_pool(granit_renderer renderer,
+                                                             std::uint32_t query_count,
+                                                             granit_timestamp_query_pool& pool) {
+  try {
+    auto state = acquire(renderer);
+    if (!state)
+      return GRANIT_ERROR_INVALID_HANDLE;
+    auto record = std::make_shared<timestamp_query_pool_record>();
+    record->renderer = state;
+    const auto result = record->native.initialize(state->device(), query_count);
+    if (result != GRANIT_SUCCESS)
+      return result;
+    std::lock_guard lock{mutex_};
+    const auto found = renderers_.find(renderer);
+    if (found == renderers_.end() || found->second != state)
+      return GRANIT_ERROR_INVALID_HANDLE;
+    record->metadata.creation_sequence = next_creation_sequence_++;
+    const auto handle =
+        handles_.insert(record.get(), resource_type::timestamp_query_pool, state->domain());
+    if (handle == GRANIT_NULL_HANDLE)
+      return GRANIT_ERROR_OUT_OF_MEMORY;
+    try {
+      timestamp_query_pools_.emplace(handle, std::move(record));
+    } catch (...) {
+      static_cast<void>(
+          handles_.erase(handle, resource_type::timestamp_query_pool, state->domain()));
+      throw;
+    }
+    pool = handle;
+    return GRANIT_SUCCESS;
+  } catch (const std::bad_alloc&) {
+    return GRANIT_ERROR_OUT_OF_MEMORY;
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+granit_result renderer_registry::get_timestamp_query_results(granit_renderer renderer,
+                                                             granit_timestamp_query_pool pool,
+                                                             std::uint32_t first,
+                                                             std::span<std::uint64_t> nanoseconds) {
+  std::shared_ptr<timestamp_query_pool_record> record;
+  {
+    std::lock_guard lock{mutex_};
+    const auto found_renderer = renderers_.find(renderer);
+    if (found_renderer == renderers_.end() ||
+        handles_.find(pool, resource_type::timestamp_query_pool,
+                      found_renderer->second->domain()) == nullptr)
+      return GRANIT_ERROR_INVALID_HANDLE;
+    const auto found = timestamp_query_pools_.find(pool);
+    if (found == timestamp_query_pools_.end() || found->second->renderer != found_renderer->second)
+      return GRANIT_ERROR_INVALID_HANDLE;
+    record = found->second;
+  }
+  std::lock_guard lock{record->mutex};
+  return record->native.read_nanoseconds(record->renderer->device(), first, nanoseconds, false);
+}
+
+granit_result renderer_registry::destroy_timestamp_query_pool(granit_renderer renderer,
+                                                              granit_timestamp_query_pool pool) {
+  std::shared_ptr<timestamp_query_pool_record> record;
+  {
+    std::lock_guard lock{mutex_};
+    const auto found_renderer = renderers_.find(renderer);
+    if (found_renderer == renderers_.end() ||
+        handles_.find(pool, resource_type::timestamp_query_pool,
+                      found_renderer->second->domain()) == nullptr)
+      return GRANIT_ERROR_INVALID_HANDLE;
+    const auto found = timestamp_query_pools_.find(pool);
+    if (found == timestamp_query_pools_.end() || found->second->renderer != found_renderer->second)
+      return GRANIT_ERROR_INVALID_HANDLE;
+    record = std::move(found->second);
+    timestamp_query_pools_.erase(found);
+    static_cast<void>(handles_.erase(pool, resource_type::timestamp_query_pool,
+                                     found_renderer->second->domain()));
+  }
+  const auto state = record->renderer;
+  const auto serial = record->metadata.last_use_serial.load();
+  state->retire_resource(serial, retirement_order::dependent, std::move(record));
+  static_cast<void>(state->collect_retired());
+  return GRANIT_SUCCESS;
+}
+
+granit_result renderer_registry::reset_timestamp_queries(granit_renderer renderer,
+                                                         granit_command_recorder recorder,
+                                                         granit_timestamp_query_pool pool,
+                                                         std::uint32_t first, std::uint32_t count) {
+  auto command = acquire_command_recorder(renderer, recorder);
+  if (!command)
+    return GRANIT_ERROR_INVALID_HANDLE;
+  std::shared_ptr<timestamp_query_pool_record> query;
+  {
+    std::lock_guard lock{mutex_};
+    const auto found = timestamp_query_pools_.find(pool);
+    if (found == timestamp_query_pools_.end() || found->second->renderer != command->renderer ||
+        handles_.find(pool, resource_type::timestamp_query_pool, command->renderer->domain()) ==
+            nullptr)
+      return GRANIT_ERROR_INVALID_HANDLE;
+    query = found->second;
+  }
+  std::lock_guard command_lock{command->mutex};
+  if (command->native.state() != command_recorder_state::recording)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  std::lock_guard query_lock{query->mutex};
+  const auto result = query->native.reset(command->renderer->device(),
+                                          command->native.native_handle(), first, count);
+  if (result == GRANIT_SUCCESS)
+    retain_resource(command->retained_resources, query, query->metadata);
+  return result;
+}
+
+granit_result renderer_registry::write_timestamp(granit_renderer renderer,
+                                                 granit_command_recorder recorder,
+                                                 granit_timestamp_query_pool pool,
+                                                 granit_timestamp_stage stage,
+                                                 std::uint32_t index) {
+  auto command = acquire_command_recorder(renderer, recorder);
+  if (!command)
+    return GRANIT_ERROR_INVALID_HANDLE;
+  std::shared_ptr<timestamp_query_pool_record> query;
+  {
+    std::lock_guard lock{mutex_};
+    const auto found = timestamp_query_pools_.find(pool);
+    if (found == timestamp_query_pools_.end() || found->second->renderer != command->renderer ||
+        handles_.find(pool, resource_type::timestamp_query_pool, command->renderer->domain()) ==
+            nullptr)
+      return GRANIT_ERROR_INVALID_HANDLE;
+    query = found->second;
+  }
+  const auto native_stage =
+      stage == GRANIT_TIMESTAMP_STAGE_TOP      ? VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT
+      : stage == GRANIT_TIMESTAMP_STAGE_DRAW   ? VK_PIPELINE_STAGE_2_ALL_GRAPHICS_BIT
+      : stage == GRANIT_TIMESTAMP_STAGE_BOTTOM ? VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT
+                                               : VkPipelineStageFlags2{};
+  if (native_stage == 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  std::lock_guard command_lock{command->mutex};
+  if (command->native.state() != command_recorder_state::recording)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  std::lock_guard query_lock{query->mutex};
+  const auto result = query->native.write(command->renderer->device(),
+                                          command->native.native_handle(), native_stage, index);
+  if (result == GRANIT_SUCCESS)
+    retain_resource(command->retained_resources, query, query->metadata);
+  return result;
 }
 
 std::shared_ptr<renderer_registry::command_recorder_record>

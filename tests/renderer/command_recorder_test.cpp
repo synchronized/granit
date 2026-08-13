@@ -5,6 +5,7 @@
 #include <granit/renderer/command_recorder.hpp>
 #include <granit/renderer/renderer.hpp>
 #include <granit/renderer/texture.h>
+#include <granit/renderer/timestamp_query.hpp>
 
 #include <catch2/catch_all.hpp>
 
@@ -492,6 +493,35 @@ TEST_CASE("独立 Texture 支持并行创建与颜色附件录制", "[command][c
     REQUIRE(granit_texture_view_destroy(renderer.native_handle(), views[index]) == GRANIT_SUCCESS);
     REQUIRE(granit_texture_destroy(renderer.native_handle(), textures[index]) == GRANIT_SUCCESS);
   }
+}
+
+TEST_CASE("Command Recorder 写入并读取GPU纳秒时间戳", "[command][timestamp]") {
+  granit::renderer renderer;
+  const auto initialized = renderer.initialize({.application_name = "granit-timestamp-command"});
+  if (environment_unavailable(initialized))
+    SKIP("当前运行环境没有满足要求的 Vulkan 设备");
+  REQUIRE(initialized == granit::result::success);
+
+  granit::timestamp_query_pool queries;
+  granit::command_recorder recorder;
+  REQUIRE(queries.initialize(renderer.native_handle(), 2) == granit::result::success);
+  REQUIRE(recorder.initialize(renderer.native_handle()) == granit::result::success);
+  REQUIRE(recorder.begin() == granit::result::success);
+  REQUIRE(recorder.reset_timestamp_queries(queries.native_handle(), 0, 2) ==
+          granit::result::success);
+  REQUIRE(recorder.write_timestamp(queries.native_handle(), GRANIT_TIMESTAMP_STAGE_TOP, 0) ==
+          granit::result::success);
+  REQUIRE(recorder.write_timestamp(queries.native_handle(), GRANIT_TIMESTAMP_STAGE_BOTTOM, 1) ==
+          granit::result::success);
+  REQUIRE(recorder.end() == granit::result::success);
+  REQUIRE(recorder.submit() == granit::result::success);
+  REQUIRE(recorder.reset() == granit::result::success);
+
+  std::array<std::uint64_t, 2> nanoseconds{};
+  REQUIRE(queries.get_results(0, nanoseconds) == granit::result::success);
+  CHECK(nanoseconds[1] >= nanoseconds[0]);
+  REQUIRE(recorder.destroy() == granit::result::success);
+  REQUIRE(queries.reset() == granit::result::success);
 }
 
 } // namespace

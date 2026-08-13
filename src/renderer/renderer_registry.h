@@ -24,8 +24,10 @@
 #include <granit/renderer/surface.h>
 #include <granit/renderer/swapchain.h>
 #include <granit/renderer/texture.h>
+#include <granit/renderer/timestamp_query.h>
 #include <granit/renderer/upload_batch.h>
 
+#include "backend/vulkan/timestamp_query.h"
 #include "core/handle_table.h"
 #include "core/lifecycle_validation.h"
 #include "renderer/renderer_state.h"
@@ -207,6 +209,23 @@ public:
                                             granit_command_recorder recorder);
   [[nodiscard]] granit_result destroy_command_recorder(granit_renderer renderer,
                                                        granit_command_recorder recorder);
+  [[nodiscard]] granit_result create_timestamp_query_pool(granit_renderer renderer,
+                                                          std::uint32_t query_count,
+                                                          granit_timestamp_query_pool& pool);
+  [[nodiscard]] granit_result get_timestamp_query_results(granit_renderer renderer,
+                                                          granit_timestamp_query_pool pool,
+                                                          std::uint32_t first,
+                                                          std::span<std::uint64_t> nanoseconds);
+  [[nodiscard]] granit_result destroy_timestamp_query_pool(granit_renderer renderer,
+                                                           granit_timestamp_query_pool pool);
+  [[nodiscard]] granit_result reset_timestamp_queries(granit_renderer renderer,
+                                                      granit_command_recorder recorder,
+                                                      granit_timestamp_query_pool pool,
+                                                      std::uint32_t first, std::uint32_t count);
+  [[nodiscard]] granit_result write_timestamp(granit_renderer renderer,
+                                              granit_command_recorder recorder,
+                                              granit_timestamp_query_pool pool,
+                                              granit_timestamp_stage stage, std::uint32_t index);
   [[nodiscard]] granit_result create_upload_batch(granit_renderer renderer,
                                                   granit_upload_batch& batch);
   [[nodiscard]] granit_result upload_batch_write_buffer(granit_renderer renderer,
@@ -231,6 +250,7 @@ private:
 
   struct swapchain_record;
   struct command_recorder_record;
+  struct timestamp_query_pool_record;
   struct frame_record;
   struct upload_batch_record;
 
@@ -365,6 +385,13 @@ private:
     std::vector<retained_resource> retained_resources;
     ~command_recorder_record();
   };
+  struct timestamp_query_pool_record {
+    resource_metadata metadata;
+    std::shared_ptr<renderer_state> renderer;
+    vulkan_timestamp_query_pool native;
+    std::mutex mutex;
+    ~timestamp_query_pool_record();
+  };
   struct frame_record {
     std::shared_ptr<renderer_state> renderer;
     std::shared_ptr<swapchain_record> swapchain;
@@ -406,6 +433,8 @@ private:
       compute_pipelines_;
   std::unordered_map<granit_command_recorder, std::shared_ptr<command_recorder_record>>
       command_recorders_;
+  std::unordered_map<granit_timestamp_query_pool, std::shared_ptr<timestamp_query_pool_record>>
+      timestamp_query_pools_;
   std::unordered_map<granit_frame, std::shared_ptr<frame_record>> frames_;
   std::unordered_map<granit_upload_batch, std::shared_ptr<upload_batch_record>> upload_batches_;
   std::uint32_t next_domain_{1};
