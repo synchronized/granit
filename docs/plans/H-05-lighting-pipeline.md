@@ -246,6 +246,17 @@ HDR 纹理只读、最终颜色目标只写，并复制曝光缩放与输出编�
 ACES fitted 和可选 Shader sRGB 编码。SPIR-V 已通过 Vulkan 1.3 校验并增加资源反射测试。下一步建立
 GPU 资源对象和真实 HDR 到 UNORM/sRGB 输出的离屏像素回归。
 
+## H-05D3 实现记录
+
+已增加 Tone Mapping GPU 资源对象，拥有 16 字节常量 Buffer、线性 Sampler、Group 0 Bind Group、
+Pipeline Layout、顶点/片元 Shader 和目标格式专用 Graphics Pipeline。资源对象借用 HDR Texture View，
+支持更新曝光缩放与 sRGB 编码开关，并按依赖逆序销毁全部 GPU 对象。
+
+真实 Vulkan 测试已覆盖 `RGBA16_FLOAT` HDR View 到 `RGBA8_UNORM` Pipeline 的完整创建、常量更新和
+非法输入拒绝。独立回读试验发现当前新录制路径提交成功但目标 Attachment 的清屏/绘制未进入回读，
+因此未将其误记为 Tone Mapping 像素通过。下一步在现有已通过的 PBR 离屏例子中接入 HDR 和 Tone
+Mapping，同时定位该 Recorder/Attachment 差异后再完成最终像素回归。
+
 ### H-05E：完整参考管线与测量
 
 - 串联 Shadow、Forward PBR 和 Tone Mapping Pass。

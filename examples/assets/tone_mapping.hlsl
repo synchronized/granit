@@ -17,7 +17,7 @@ struct vertex_output {
 vertex_output vertex_main(uint vertex_id : SV_VertexID) {
   const float2 positions[3] = {float2(-1.0, -1.0), float2(3.0, -1.0), float2(-1.0, 3.0)};
   vertex_output output;
-  output.position = float4(positions[vertex_id], 0.0, 1.0);
+  output.position = float4(positions[vertex_id], 0.5, 1.0);
   output.uv = positions[vertex_id] * float2(0.5, -0.5) + 0.5;
   return output;
 }

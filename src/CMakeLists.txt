@@ -315,6 +315,7 @@ target_sources(
     lighting/shadow_reference.cpp
     lighting/tone_mapping_reference.cpp
     lighting/tone_mapping_pass.cpp
+    lighting/tone_mapping_resources.cpp
   PUBLIC
     FILE_SET HEADERS
     BASE_DIRS "${PROJECT_SOURCE_DIR}/src"
@@ -329,6 +330,7 @@ target_sources(
       lighting/shadow_reference.h
       lighting/tone_mapping_reference.h
       lighting/tone_mapping_pass.h
+      lighting/tone_mapping_resources.h
 )
 target_compile_features(granit_lighting PUBLIC cxx_std_20)
 target_include_directories(granit_lighting PUBLIC "${PROJECT_SOURCE_DIR}/src")

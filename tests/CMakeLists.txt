@@ -164,10 +164,15 @@ add_executable(
   lighting/shadow_reference_test.cpp
   lighting/tone_mapping_reference_test.cpp
   lighting/tone_mapping_pass_test.cpp
+  lighting/tone_mapping_resources_test.cpp
 )
 target_include_directories(granit_lighting_test PRIVATE "${PROJECT_SOURCE_DIR}/src")
 target_link_libraries(granit_lighting_test PRIVATE granit::lighting Catch2::Catch2WithMain)
 target_compile_options(granit_lighting_test PRIVATE $<$<COMPILE_LANG_AND_ID:CXX,MSVC>:/utf-8>)
+target_compile_definitions(
+  granit_lighting_test
+  PRIVATE GRANIT_LIGHTING_ASSET_DIR="${PROJECT_SOURCE_DIR}/examples/assets"
+)
 granit_target_compile_warnings(granit_lighting_test)
 granit_target_output_directories(granit_lighting_test)
 add_test(NAME granit.lighting COMMAND granit_lighting_test)
