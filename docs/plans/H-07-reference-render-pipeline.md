@@ -306,6 +306,10 @@ Renderable、payload 和关联项数组。回调不得保存数组地址，不�
    Dynamic Rendering 和 Mesh Draw。创建 Pipeline 时录制回调现为可选：提供回调时覆盖
    默认 Shadow/Opaque 阶段，未提供时走内置路径。当前内置 Opaque 仍要求 View 产生有效
    方向光阴影；无阴影占位资源和真实 Shadow Caster Draw 尚待后续增量。
+   真实 Shadow Caster 路径不要求每个材质包重复携带深度 Shader。Render Pipeline 已内置
+   标准 Shadow Depth Vertex/Fragment SPIR-V：Vertex 读取 location 0 的 `float3` position，并使用
+   Group 2 Model 和 Group 3 Light View-Projection 输出深度。Shader 作为构建输入嵌入库，
+   运行时不读取外部文件。下一增量将它与 Mesh Vertex Layout 和 Shadow Pipeline 缓存串联。
 3. **H-07G 完整示例**：提供安装 API 下的离屏和窗口完整路径，并保留直接 Renderer 用法作为对照。
 4. **H-07H 验收**：补齐生命周期压力、Resize、多 View、Validation Layer、输出一致性和性能对比。
 

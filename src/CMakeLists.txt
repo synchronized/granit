@@ -362,6 +362,14 @@ set(
   granit_pipeline_tone_fragment
   "${granit_pipeline_generated_dir}/granit_pipeline_tone_mapping.frag.inc"
 )
+set(
+  granit_pipeline_shadow_vertex
+  "${granit_pipeline_generated_dir}/granit_pipeline_shadow_depth.vert.inc"
+)
+set(
+  granit_pipeline_shadow_fragment
+  "${granit_pipeline_generated_dir}/granit_pipeline_shadow_depth.frag.inc"
+)
 add_custom_command(
   OUTPUT "${granit_pipeline_tone_vertex}"
   COMMAND "${CMAKE_COMMAND}" -E make_directory "${granit_pipeline_generated_dir}"
@@ -388,11 +396,39 @@ add_custom_command(
     "${PROJECT_SOURCE_DIR}/cmake/embed_binary.cmake"
   VERBATIM
 )
+add_custom_command(
+  OUTPUT "${granit_pipeline_shadow_vertex}"
+  COMMAND "${CMAKE_COMMAND}" -E make_directory "${granit_pipeline_generated_dir}"
+  COMMAND
+    "${CMAKE_COMMAND}"
+    "-DINPUT=${PROJECT_SOURCE_DIR}/src/pipeline/shadow_depth.vert.spv"
+    "-DOUTPUT=${granit_pipeline_shadow_vertex}"
+    -P "${PROJECT_SOURCE_DIR}/cmake/embed_binary.cmake"
+  DEPENDS
+    "${PROJECT_SOURCE_DIR}/src/pipeline/shadow_depth.vert.spv"
+    "${PROJECT_SOURCE_DIR}/cmake/embed_binary.cmake"
+  VERBATIM
+)
+add_custom_command(
+  OUTPUT "${granit_pipeline_shadow_fragment}"
+  COMMAND "${CMAKE_COMMAND}" -E make_directory "${granit_pipeline_generated_dir}"
+  COMMAND
+    "${CMAKE_COMMAND}"
+    "-DINPUT=${PROJECT_SOURCE_DIR}/src/pipeline/shadow_depth.frag.spv"
+    "-DOUTPUT=${granit_pipeline_shadow_fragment}"
+    -P "${PROJECT_SOURCE_DIR}/cmake/embed_binary.cmake"
+  DEPENDS
+    "${PROJECT_SOURCE_DIR}/src/pipeline/shadow_depth.frag.spv"
+    "${PROJECT_SOURCE_DIR}/cmake/embed_binary.cmake"
+  VERBATIM
+)
 target_sources(
   granit_render_pipeline
   PRIVATE
     "${granit_pipeline_tone_vertex}"
     "${granit_pipeline_tone_fragment}"
+    "${granit_pipeline_shadow_vertex}"
+    "${granit_pipeline_shadow_fragment}"
     pipeline/embedded_shaders.cpp
     pipeline/embedded_shaders.h
     pipeline/default_ibl_resources.cpp
