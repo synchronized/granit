@@ -294,8 +294,8 @@ H-05E 从当前状态按以下顺序收敛，不在完成这些验证前继续�
    目标，验证连续录制与提交，同时不复制整份 Scene 数据。
 5. **Render Graph 统一组合**：由 Graph 串联可选 Shadow、PBR HDR 和 Tone Mapping，验证瞬态资源、
    屏障、失败回滚及多帧重复执行，不再由示例长期手工维护整条命令链。
-6. **多帧生命周期稳定性**：连续运行至少数千帧，覆盖帧间 View/光源/材质更新、Resize、GPU 在途
-   资源延迟销毁、Renderer 销毁诊断和 Device Lost 错误传播。
+6. **多帧生命周期稳定性（已完成）**：连续运行至少数千帧，覆盖帧间 View/光源/材质更新、
+   Resize、GPU 在途资源延迟销毁、Renderer 销毁诊断和 Device Lost 错误传播。
 7. **Shader 契约与跨平台收尾**：自动校验 HLSL/SPIR-V、C++ 布局和 Pipeline Layout；验证 Linux
    Clang/GCC、共享/静态构建、安装及独立 Consumer。
 
@@ -538,6 +538,19 @@ Tone Mapping。适配器只组合资源 ID、Pass 描述和录制回调，不拥
 不修改输出 Pass 句柄。测试覆盖依赖编译顺序、不一致资源拒绝，以及同一 Graph 连续两帧创建瞬态
 Shadow/HDR/Depth/LDR 资源并按 Shadow→PBR→Tone Mapping 顺序执行。H-05E9 完成，下一步进入
 H-05E10 数千帧生命周期压力测试。
+
+## H-05E10 实现记录
+
+默认 Lighting 测试新增 2,000 帧参考管线生命周期压力回归，并开启 Renderer 验证。每帧重新构建
+无阴影 PBR→Tone Mapping Graph，创建独立瞬态 HDR、Depth 和 LDR 资源，执行后销毁已提交的
+Recorder；累计覆盖 6,000 个瞬态 Texture/View 和 2,000 个 Recorder 的创建、提交、延迟保活与
+回收。
+
+测试每 250 帧切换目标尺寸以模拟 Resize 重建，并逐帧改变方向光辐射和曝光值，确认 Graph 描述、
+回调捕获和常量不会意外固化上一帧状态。2,000 帧全部执行后 PBR 与 Tone Mapping 回调计数必须精确
+匹配，Renderer 最终销毁时不得遗留活动资源。Device Lost 的全局门禁和错误传播继续由 Renderer
+专项回归覆盖，不在测试中人为制造驱动故障。H-05E10 完成，下一步进入 H-05E11 构建、安装与
+Consumer 收尾。
 
 ## H-05A 实现记录
 
