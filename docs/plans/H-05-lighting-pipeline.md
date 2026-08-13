@@ -291,6 +291,17 @@ Release + Clang 首份基线已按每组 5 次预热、30 个样本和每样本 
 没有证据需要引入并行打包、缓存或新的全局任务系统；下一步建立 GPU 上传与帧时间测量路径，再决定
 是否需要分块/聚簇光照。
 
+## H-05E2 实现记录
+
+GPU 帧时间测量前确认现有 PBR Shader 仍只消费单方向光，不能用 CPU 已打包但 Shader 未读取的
+1/16/64/128 光源生成有效 GPU 基线。因此先增加逐 View `light_buffers`：拥有 16 字节光源计数
+Uniform Buffer 和方向光、点光、聚光三个 Storage Buffer，容量在初始化时固定，支持空光源集合，
+并在数组写入成功后最后更新计数。
+
+`light_buffers` 不单独创建 Bind Group，避免与阴影和 IBL 各自建立互斥的 Group 3。后续组合资源将
+binding 8～11 与可选阴影、IBL binding 合并到一个 Group 3，再接入 PBR Shader 有界循环和 GPU
+时间戳查询。测试覆盖空集合、容量内更新、非法上限、未初始化调用和更新溢出。
+
 ## H-05A 实现记录
 
 新增可选内部目标 `granit::lighting`，首版依赖 `granit::scene`，不进入核心动态库或安装导出。

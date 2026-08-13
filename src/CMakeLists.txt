@@ -308,6 +308,7 @@ target_sources(
     lighting/directional_shadow.cpp
     lighting/ibl_reference.cpp
     lighting/ibl_resources.cpp
+    lighting/light_buffers.cpp
     lighting/light_data.cpp
     lighting/lighting_reference.cpp
     lighting/shadow_resources.cpp
@@ -323,6 +324,7 @@ target_sources(
       lighting/directional_shadow.h
       lighting/ibl_reference.h
       lighting/ibl_resources.h
+      lighting/light_buffers.h
       lighting/light_data.h
       lighting/lighting_reference.h
       lighting/shadow_resources.h
