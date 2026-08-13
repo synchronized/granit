@@ -299,6 +299,9 @@ Renderable、payload 和关联项数组。回调不得保存数组地址，不�
    Render Pipeline 可通过不导出的 Material Access 一次获取指定 Pass/变体/附件格式
    对应的 Graphics Pipeline、Pipeline Layout、Group 0～3 Layout 和 Group 1 Material Bind
    Group。这些只是 Material 存活期内的内部借用句柄，不进入 C ABI。
+   内部 `pbr_draw_bindings` 已能将 H-03 的 112 字节 Frame 常量与 144 字节 Object
+   常量上传为 Uniform Buffer，并使用 Material 的原始 Layout 创建 Group 0/2 Bind Group。
+   首版按 Draw 持有这两组资源；只在测量证明创建成本显著后再增加环形 Buffer 或缓存。
 3. **H-07G 完整示例**：提供安装 API 下的离屏和窗口完整路径，并保留直接 Renderer 用法作为对照。
 4. **H-07H 验收**：补齐生命周期压力、Resize、多 View、Validation Layer、输出一致性和性能对比。
 

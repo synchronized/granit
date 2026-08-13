@@ -401,6 +401,8 @@ target_sources(
     pipeline/material_access.h
     pipeline/mesh_api.cpp
     pipeline/mesh_access.h
+    pipeline/pbr_draw_bindings.cpp
+    pipeline/pbr_draw_bindings.h
     pipeline/render_pipeline_api.cpp
     pipeline/scene_access.h
     pipeline/scene_api.cpp
