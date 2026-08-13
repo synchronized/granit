@@ -250,9 +250,10 @@ Renderable、payload 和关联项数组。回调不得保存数组地址，不�
   由内置 Tone Mapping 输出 RGBA8，再使用公共 Texture-to-Buffer Readback 校验中心像素。该测试不再
   只以回调次数或内部 Graph 状态作为成功依据。
 
-该目标目前只在构建树中提供。安装 component 与外部 consumer 在统一 Pipeline 的依赖边界完成后
-一起落地，避免过早把内部 `scene`、`material`、`lighting` 静态目标写入安装导出。下一块将已验证
-的 IBL 默认 GPU 资源接入统一入口。
+`RenderPipeline` CMake component 已安装导出公开头文件和 `granit::render_pipeline`。共享构建安装
+独立动态库；静态构建同时导出不带公共头文件的 `granit::detail_*` 依赖闭包，使用者不应直接链接
+这些实现目标。安装后的纯 C 与 C++20 consumer 已在共享和静态配置下完成编译、链接与运行验证。
+外部环境资产接口、实际 Mesh Draw 门面、级联阴影和 Clustered Forward 仍属于后续增量。
 
 ## 分步实施
 

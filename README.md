@@ -165,6 +165,16 @@ find_package(granit CONFIG REQUIRED)
 target_link_libraries(your_target PRIVATE granit::granit)
 ```
 
+使用可选参考渲染管线：
+
+```cmake
+find_package(granit CONFIG REQUIRED COMPONENTS RenderPipeline)
+target_link_libraries(your_target PRIVATE granit::render_pipeline)
+```
+
+`RenderPipeline` component 同时安装 C API 与 C++20 包装，支持共享库和静态库。其静态内部依赖由
+CMake 导出自动闭包，使用者不应直接依赖 `granit::detail_*` 目标。
+
 C 用户包含：
 
 ```c
@@ -178,7 +188,8 @@ C++20 用户包含：
 ```
 
 公共头文件按层组织：基础结果码、类型和版本位于 `granit/core`，跨 ABI 数学值类型位于
-`granit/math`，GPU 与渲染接口位于 `granit/renderer`。`math` 只提供小型值类型，不要求使用
+`granit/math`，GPU 与渲染接口位于 `granit/renderer`，可选参考管线位于 `granit/pipeline`。
+`math` 只提供小型值类型，不要求使用
 Granit 自有数学库。根级 `granit.h` 和 `granit.hpp` 是面向普通用户的聚合入口；需要控制编译依赖
 的高级用户可以直接包含分层头文件。
 

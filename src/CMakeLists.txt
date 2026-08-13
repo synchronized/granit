@@ -186,7 +186,7 @@ target_sources(
   PRIVATE
     render_graph/graph_compiler.cpp
     render_graph/serial_graph.cpp
-  PUBLIC
+  PRIVATE
     FILE_SET HEADERS
     BASE_DIRS "${PROJECT_SOURCE_DIR}/src"
     FILES
@@ -194,7 +194,7 @@ target_sources(
       render_graph/serial_graph.h
 )
 target_compile_features(granit_render_graph PUBLIC cxx_std_20)
-target_include_directories(granit_render_graph PUBLIC "${PROJECT_SOURCE_DIR}/src")
+target_include_directories(granit_render_graph PUBLIC "$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/src>")
 target_link_libraries(granit_render_graph PUBLIC granit::granit)
 granit_target_compile_warnings(granit_render_graph)
 granit_target_output_directories(granit_render_graph)
@@ -208,13 +208,13 @@ add_library(granit::math ALIAS granit_math)
 target_sources(
   granit_math
   PRIVATE math/math.cpp
-  PUBLIC
+  PRIVATE
     FILE_SET HEADERS
     BASE_DIRS "${PROJECT_SOURCE_DIR}/src"
     FILES math/math.h
 )
 target_compile_features(granit_math PUBLIC cxx_std_20)
-target_include_directories(granit_math PUBLIC "${PROJECT_SOURCE_DIR}/src")
+target_include_directories(granit_math PUBLIC "$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/src>")
 target_link_libraries(granit_math PUBLIC granit::granit)
 granit_target_compile_warnings(granit_math)
 granit_target_output_directories(granit_math)
@@ -237,7 +237,7 @@ target_sources(
     material/pbr_material_schema.cpp
     material/pbr_reference.cpp
     material/material_template_gpu.cpp
-  PUBLIC
+  PRIVATE
     FILE_SET HEADERS
     BASE_DIRS "${PROJECT_SOURCE_DIR}/src"
     FILES
@@ -255,7 +255,7 @@ target_sources(
       material/material_template_gpu.h
 )
 target_compile_features(granit_material PUBLIC cxx_std_20)
-target_include_directories(granit_material PUBLIC "${PROJECT_SOURCE_DIR}/src")
+target_include_directories(granit_material PUBLIC "$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/src>")
 target_link_libraries(granit_material PUBLIC granit::granit granit::math)
 granit_target_compile_warnings(granit_material)
 granit_target_output_directories(granit_material)
@@ -271,13 +271,13 @@ add_library(granit::pbr ALIAS granit_pbr)
 target_sources(
   granit_pbr
   PRIVATE material/pbr_render_graph_adapter.cpp
-  PUBLIC
+  PRIVATE
     FILE_SET HEADERS
     BASE_DIRS "${PROJECT_SOURCE_DIR}/src"
     FILES material/pbr_render_graph_adapter.h
 )
 target_compile_features(granit_pbr PUBLIC cxx_std_20)
-target_include_directories(granit_pbr PUBLIC "${PROJECT_SOURCE_DIR}/src")
+target_include_directories(granit_pbr PUBLIC "$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/src>")
 target_link_libraries(granit_pbr PUBLIC granit::material granit::render_graph)
 granit_target_compile_warnings(granit_pbr)
 granit_target_output_directories(granit_pbr)
@@ -292,7 +292,7 @@ target_sources(
     scene/scene_pbr_adapter.cpp
     scene/scene_submission.cpp
     scene/scene_visibility.cpp
-  PUBLIC
+  PRIVATE
     FILE_SET HEADERS
     BASE_DIRS "${PROJECT_SOURCE_DIR}/src"
     FILES
@@ -302,7 +302,7 @@ target_sources(
       scene/scene_visibility.h
 )
 target_compile_features(granit_scene PUBLIC cxx_std_20)
-target_include_directories(granit_scene PUBLIC "${PROJECT_SOURCE_DIR}/src")
+target_include_directories(granit_scene PUBLIC "$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/src>")
 target_link_libraries(granit_scene PUBLIC granit::pbr)
 granit_target_compile_warnings(granit_scene)
 granit_target_output_directories(granit_scene)
@@ -326,7 +326,7 @@ target_sources(
     lighting/tone_mapping_reference.cpp
     lighting/tone_mapping_pass.cpp
     lighting/tone_mapping_resources.cpp
-  PUBLIC
+  PRIVATE
     FILE_SET HEADERS
     BASE_DIRS "${PROJECT_SOURCE_DIR}/src"
     FILES
@@ -345,7 +345,7 @@ target_sources(
       lighting/tone_mapping_resources.h
 )
 target_compile_features(granit_lighting PUBLIC cxx_std_20)
-target_include_directories(granit_lighting PUBLIC "${PROJECT_SOURCE_DIR}/src")
+target_include_directories(granit_lighting PUBLIC "$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/src>")
 target_link_libraries(granit_lighting PUBLIC granit::scene)
 granit_target_compile_warnings(granit_lighting)
 granit_target_output_directories(granit_lighting)
@@ -433,7 +433,43 @@ granit_target_output_directories(granit_render_pipeline)
 set_target_properties(
   granit_render_pipeline
   PROPERTIES
+    EXPORT_NAME render_pipeline
     FOLDER "Modules"
     CXX_VISIBILITY_PRESET hidden
     VISIBILITY_INLINES_HIDDEN YES
+)
+
+set_target_properties(granit_render_graph PROPERTIES EXPORT_NAME detail_render_graph)
+set_target_properties(granit_math PROPERTIES EXPORT_NAME detail_math)
+set_target_properties(granit_material PROPERTIES EXPORT_NAME detail_material)
+set_target_properties(granit_pbr PROPERTIES EXPORT_NAME detail_pbr)
+set_target_properties(granit_scene PROPERTIES EXPORT_NAME detail_scene)
+set_target_properties(granit_lighting PROPERTIES EXPORT_NAME detail_lighting)
+
+install(
+  TARGETS
+    granit_render_graph
+    granit_math
+    granit_material
+    granit_pbr
+    granit_scene
+    granit_lighting
+  EXPORT granitRenderPipelineTargets
+  ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}"
+  COMPONENT RenderPipeline
+)
+install(
+  TARGETS granit_render_pipeline
+  EXPORT granitRenderPipelineTargets
+  ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}"
+  LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}"
+  RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
+  FILE_SET HEADERS DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
+  COMPONENT RenderPipeline
+)
+install(
+  EXPORT granitRenderPipelineTargets
+  NAMESPACE granit::
+  DESTINATION "${GRANIT_INSTALL_CMAKEDIR}"
+  COMPONENT RenderPipeline
 )
