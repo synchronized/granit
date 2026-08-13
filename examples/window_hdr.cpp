@@ -2,11 +2,14 @@
 // Copyright (c) 2026 Granit contributors
 
 #include "lighting/tone_mapping_resources.h"
+#include "material/pbr_material_schema.h"
+#include "pbr_example_support.h"
 
 #include <granit/granit.hpp>
 
 #include <windows.h>
 
+#include <array>
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
@@ -47,6 +50,8 @@ bool shader_encodes_srgb(granit::texture_format format) {
 struct window_hdr_resources {
   granit::texture texture;
   granit::texture_view view;
+  granit::texture depth_texture;
+  granit::texture_view depth_view;
   granit::lighting::tone_mapping_resources tone_mapping;
 
   granit::result initialize(granit_renderer renderer, std::uint32_t width, std::uint32_t height,
@@ -60,6 +65,15 @@ struct window_hdr_resources {
                                                 .height = height});
     if (granit::succeeded(result))
       result = view.initialize(renderer, texture.native_handle());
+    if (granit::succeeded(result)) {
+      result = depth_texture.initialize(renderer,
+                                        {.format = granit::texture_format::d32_float,
+                                         .usage = granit::texture_usage::depth_stencil_attachment,
+                                         .width = width,
+                                         .height = height});
+    }
+    if (granit::succeeded(result))
+      result = depth_view.initialize(renderer, depth_texture.native_handle());
     if (granit::succeeded(result)) {
       result = granit::from_native(tone_mapping.initialize(
           renderer, view.native_handle(), output_format,
@@ -79,13 +93,21 @@ struct window_hdr_resources {
     const auto texture_result = texture.reset();
     if (granit::succeeded(result))
       result = texture_result;
+    const auto depth_view_result = depth_view.reset();
+    if (granit::succeeded(result))
+      result = depth_view_result;
+    const auto depth_texture_result = depth_texture.reset();
+    if (granit::succeeded(result))
+      result = depth_texture_result;
     return result;
   }
 };
 
 granit::result render_frame(granit::swapchain& swapchain, granit::command_recorder& recorder,
-                            const window_hdr_resources& resources, std::uint32_t width,
-                            std::uint32_t height, bool& needs_recreate) {
+                            const window_hdr_resources& resources,
+                            granit::material::material_template_gpu& pbr_material,
+                            granit_graphics_pipeline pbr_pipeline, granit_bind_group material_group,
+                            std::uint32_t width, std::uint32_t height, bool& needs_recreate) {
   granit::acquired_frame frame;
   auto result = swapchain.acquire(frame);
   if (granit::failed(result))
@@ -101,11 +123,29 @@ granit::result render_frame(granit::swapchain& swapchain, granit::command_record
 
   const granit::color_attachment_desc hdr_color{
       .view = resources.view.native_handle(),
-      .clear_value = {.red = 3.0F, .green = 0.4F, .blue = 0.08F, .alpha = 1.0F}};
+      .clear_value = {.red = 0.03F, .green = 0.03F, .blue = 0.05F, .alpha = 1.0F}};
+  const granit::depth_stencil_attachment_desc depth{.view = resources.depth_view.native_handle(),
+                                                    .clear_value = {.depth = 1.0F}};
   const granit::rendering_desc hdr_rendering{.color_attachments = std::span{&hdr_color, 1},
+                                             .depth_stencil_attachment = &depth,
                                              .area = {0, 0, width, height}};
   if (granit::succeeded(result))
+    result = recorder.bind_graphics_pipeline(pbr_pipeline);
+  if (granit::succeeded(result)) {
+    result = recorder.bind_graphics_groups(pbr_material.pipeline_layout(), 1,
+                                           std::span{&material_group, 1});
+  }
+  const granit::viewport viewport{0, 0, static_cast<float>(width), static_cast<float>(height),
+                                  0, 1};
+  const granit::scissor scissor{0, 0, width, height};
+  if (granit::succeeded(result))
+    result = recorder.set_viewports(0, std::span{&viewport, 1});
+  if (granit::succeeded(result))
+    result = recorder.set_scissors(0, std::span{&scissor, 1});
+  if (granit::succeeded(result))
     result = recorder.begin_rendering(hdr_rendering);
+  if (granit::succeeded(result))
+    result = recorder.draw(3);
   if (granit::succeeded(result))
     result = recorder.end_rendering();
 
@@ -116,9 +156,6 @@ granit::result render_frame(granit::swapchain& swapchain, granit::command_record
     result = recorder.bind_graphics_groups(resources.tone_mapping.pipeline_layout(), 0,
                                            std::span{&tone_group, 1});
   }
-  const granit::viewport viewport{0, 0, static_cast<float>(width), static_cast<float>(height),
-                                  0, 1};
-  const granit::scissor scissor{0, 0, width, height};
   if (granit::succeeded(result))
     result = recorder.set_viewports(0, std::span{&viewport, 1});
   if (granit::succeeded(result))
@@ -184,8 +221,46 @@ int main(int argument_count, char** arguments) {
     result = swapchain.query_info(info);
   const auto tone_vertex = load_shader("tone_mapping.vert.spv");
   const auto tone_fragment = load_shader("tone_mapping.frag.spv");
-  if (granit::succeeded(result) && (tone_vertex.empty() || tone_fragment.empty()))
+  const auto pbr_vertex = load_shader("pbr_untextured.vert.spv");
+  const auto pbr_fragment = load_shader("pbr_untextured.frag.spv");
+  if (granit::succeeded(result) && (tone_vertex.empty() || tone_fragment.empty() ||
+                                    pbr_vertex.empty() || pbr_fragment.empty())) {
     result = granit::result::initialization_failed;
+  }
+
+  granit::material::material_package pbr_package;
+  if (granit::succeeded(result) &&
+      !granit::examples::build_pbr_package(pbr_package, pbr_vertex, pbr_fragment)) {
+    result = granit::result::initialization_failed;
+  }
+  granit::bind_group_layout object_layout;
+  if (granit::succeeded(result))
+    result = object_layout.initialize(renderer.native_handle(), {});
+  granit::material::material_template_gpu pbr_material;
+  if (granit::succeeded(result)) {
+    const std::array additional_layouts{object_layout.native_handle()};
+    result = granit::from_native(
+        pbr_material.initialize(renderer.native_handle(), pbr_package, additional_layouts));
+  }
+  granit_graphics_pipeline pbr_pipeline = GRANIT_NULL_HANDLE;
+  if (granit::succeeded(result)) {
+    const std::array features{granit::material::material_feature_value{
+        granit::material::make_feature_id(granit::material::pbr_texture_feature_name), 0}};
+    result = granit::from_native(
+        pbr_material.acquire_pipeline({.pass = granit::material::make_feature_id("opaque"),
+                                       .variant = granit::material::make_variant_key(features),
+                                       .color_format = GRANIT_TEXTURE_FORMAT_RGBA16_FLOAT,
+                                       .depth_stencil_format = GRANIT_TEXTURE_FORMAT_D32_FLOAT},
+                                      pbr_pipeline));
+  }
+  granit::material::pbr_default_resources pbr_defaults;
+  granit::material::material_gpu_instance pbr_instance;
+  if (granit::succeeded(result))
+    result = granit::from_native(pbr_defaults.initialize(renderer.native_handle()));
+  if (granit::succeeded(result)) {
+    result = granit::examples::initialize_pbr_instance(renderer.native_handle(), pbr_material,
+                                                       pbr_package, pbr_defaults, pbr_instance);
+  }
   window_hdr_resources resources;
   if (granit::succeeded(result)) {
     result = resources.initialize(renderer.native_handle(), info.width, info.height, info.format,
@@ -239,7 +314,8 @@ int main(int argument_count, char** arguments) {
       info = next_info;
       recreate = false;
     }
-    result = render_frame(swapchain, recorder, resources, info.width, info.height, recreate);
+    result = render_frame(swapchain, recorder, resources, pbr_material, pbr_pipeline,
+                          pbr_instance.bind_group(), info.width, info.height, recreate);
     if (result == granit::result::out_of_date) {
       recreate = true;
       continue;

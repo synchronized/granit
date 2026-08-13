@@ -457,6 +457,18 @@ Texture、View、Tone Mapping Pipeline 与 Bind Group；窗口客户区为零时
 保持有效以及恢复后的重建语义继续由真实 Swapchain 测试覆盖。下一步把完整 PBR/Lighting Pass 接到
 同一 HDR 目标，完成离屏与窗口共用渲染链验证。
 
+## H-05E7b 实现记录
+
+窗口 HDR 示例现使用真实 PBR Draw 替代固定颜色清屏：从与离屏路径相同的 PBR HLSL/SPIR-V 构建
+Material Package、Material Template、Pipeline、缺省纹理和 Material Instance，先输出到带 D32
+Depth Attachment 的线性 HDR 目标，再执行同一个 Tone Mapping Pass 到 Swapchain。Resize 会同时
+重建 HDR Color、Depth、Tone Mapping 资源，尺寸无关的 PBR 材质和 Pipeline 保持复用。
+
+离屏与窗口示例已抽取共用的 PBR 材质包描述及材质实例初始化辅助代码，材质参数、缺省纹理和
+Pipeline 状态不再维护两份。窗口路径当前使用基础单方向光 PBR Shader，用于先固定 PBR→HDR→
+Tone Mapping→Present 的帧结构；离屏多光源像素回归和 GPU Benchmark 继续通过。下一步把统一
+Group 3、多光源、阴影与 IBL 资源接入窗口路径，完成完整参考管线闭环。
+
 ## H-05A 实现记录
 
 新增可选内部目标 `granit::lighting`，首版依赖 `granit::scene`，不进入核心动态库或安装导出。

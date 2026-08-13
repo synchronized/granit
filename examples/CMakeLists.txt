@@ -37,7 +37,7 @@ target_compile_definitions(
 )
 granit_target_compile_warnings(granit_material_hot_reload_example)
 
-add_executable(granit_pbr_offscreen_example pbr_offscreen.cpp)
+add_executable(granit_pbr_offscreen_example pbr_offscreen.cpp pbr_example_support.cpp)
 target_link_libraries(granit_pbr_offscreen_example PRIVATE granit::lighting)
 target_compile_definitions(
   granit_pbr_offscreen_example
@@ -61,7 +61,7 @@ if(WIN32)
   )
   granit_target_compile_warnings(granit_window_triangle_example)
 
-  add_executable(granit_window_hdr_example window_hdr.cpp)
+  add_executable(granit_window_hdr_example window_hdr.cpp pbr_example_support.cpp)
   target_link_libraries(granit_window_hdr_example PRIVATE granit::lighting user32)
   target_compile_definitions(
     granit_window_hdr_example

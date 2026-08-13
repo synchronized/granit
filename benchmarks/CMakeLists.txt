@@ -163,7 +163,11 @@ granit_target_compile_warnings(granit_lighting_benchmarks)
 granit_target_output_directories(granit_lighting_benchmarks)
 set_target_properties(granit_lighting_benchmarks PROPERTIES FOLDER "Benchmarks")
 
-add_executable(granit_lighting_gpu_benchmarks "${PROJECT_SOURCE_DIR}/examples/pbr_offscreen.cpp")
+add_executable(
+  granit_lighting_gpu_benchmarks
+  "${PROJECT_SOURCE_DIR}/examples/pbr_offscreen.cpp"
+  "${PROJECT_SOURCE_DIR}/examples/pbr_example_support.cpp"
+)
 target_compile_features(granit_lighting_gpu_benchmarks PRIVATE cxx_std_20)
 target_compile_options(
   granit_lighting_gpu_benchmarks

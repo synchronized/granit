@@ -12,12 +12,12 @@
 #include "material/pbr_default_resources.h"
 #include "material/pbr_material_schema.h"
 #include "material/pbr_reference.h"
+#include "pbr_example_support.h"
 
 #include <granit/granit.hpp>
 
 #include <algorithm>
 #include <array>
-#include <bit>
 #include <charconv>
 #include <cmath>
 #include <cstdint>
@@ -123,80 +123,6 @@ std::vector<std::uint32_t> load_shader(std::string_view name) {
   return words;
 }
 
-bool make_package(granit::material::material_package& package, std::string_view vertex_name,
-                  std::string_view fragment_name) {
-  using namespace granit::material;
-  material_variant_desc variant{
-      .pass = make_feature_id("opaque"),
-      .features = {{make_feature_id(pbr_texture_feature_name), pbr_texture_all}},
-      .shaders = {{.stage = package_shader_stage::vertex,
-                   .entry_point = "vertex_main",
-                   .spirv = load_shader(vertex_name)},
-                  {.stage = package_shader_stage::fragment,
-                   .entry_point = "fragment_main",
-                   .spirv = load_shader(fragment_name)}},
-      .pipeline = {}};
-  variant.pipeline.primitive.cull_mode = GRANIT_CULL_MODE_BACK;
-  variant.pipeline.primitive.front_face = GRANIT_FRONT_FACE_CLOCKWISE;
-  variant.pipeline.depth.test_enabled = 1;
-  variant.pipeline.depth.write_enabled = 1;
-  variant.pipeline.depth.compare = GRANIT_COMPARE_OPERATION_LESS_EQUAL;
-  material_package_desc desc;
-  desc.metadata.constant_buffer_size = 48;
-  desc.metadata.parameters = {
-      {.name = "base_color", .type = parameter_type::float4, .offset = 0, .default_value = {}},
-      {.name = "metallic", .type = parameter_type::float32, .offset = 16, .default_value = {}},
-      {.name = "perceptual_roughness",
-       .type = parameter_type::float32,
-       .offset = 20,
-       .default_value = {}},
-      {.name = "normal_scale", .type = parameter_type::float32, .offset = 24, .default_value = {}},
-      {.name = "occlusion_strength",
-       .type = parameter_type::float32,
-       .offset = 28,
-       .default_value = {}},
-      {.name = "emissive", .type = parameter_type::float3, .offset = 32, .default_value = {}}};
-  desc.metadata.parameters.insert(desc.metadata.parameters.end(),
-                                  {{.name = "base_color_texture",
-                                    .type = parameter_type::texture_view,
-                                    .binding = pbr_binding_base_color,
-                                    .default_value = {}},
-                                   {.name = "metallic_roughness_texture",
-                                    .type = parameter_type::texture_view,
-                                    .binding = pbr_binding_metallic_roughness,
-                                    .default_value = {}},
-                                   {.name = "normal_texture",
-                                    .type = parameter_type::texture_view,
-                                    .binding = pbr_binding_normal,
-                                    .default_value = {}},
-                                   {.name = "occlusion_texture",
-                                    .type = parameter_type::texture_view,
-                                    .binding = pbr_binding_occlusion,
-                                    .default_value = {}},
-                                   {.name = "emissive_texture",
-                                    .type = parameter_type::texture_view,
-                                    .binding = pbr_binding_emissive,
-                                    .default_value = {}},
-                                   {.name = "pbr_sampler",
-                                    .type = parameter_type::sampler,
-                                    .binding = pbr_binding_sampler,
-                                    .default_value = {}}});
-  auto untextured = variant;
-  untextured.features.front().value = 0;
-  untextured.shaders.back().spirv = load_shader(fragment_name);
-  desc.variants.push_back(std::move(untextured));
-  desc.variants.push_back(std::move(variant));
-  return material_package::build(std::move(desc), package) == package_error::none;
-}
-
-template <std::size_t Size>
-bool set_parameter(granit::material::material_gpu_instance& instance, std::string_view name,
-                   granit::material::parameter_type type, const std::array<float, Size>& value) {
-  const auto bytes = std::bit_cast<std::array<std::byte, sizeof(value)>>(value);
-  return instance.set(granit::material::make_parameter_id(name), type, bytes) ==
-         granit::material::metadata_error::none;
-}
-
 std::uint8_t quantize_unorm(float value) {
   return static_cast<std::uint8_t>(std::lround(std::clamp(value, 0.0F, 1.0F) * 255.0F));
 }
@@ -229,12 +155,16 @@ int main(int argc, char** argv) {
   granit::material::material_package shadow_package;
   granit::material::material_package full_package;
   const auto packages_ready =
-      make_package(direct_package, "pbr_lights.vert.spv", "pbr_lights_untextured.frag.spv") &&
-      make_package(ibl_package, "pbr_lights.vert.spv", "pbr_ibl_lights_untextured.frag.spv") &&
-      make_package(shadow_package, "pbr_shadow_ibl_lights.vert.spv",
-                   "pbr_shadow_lights_untextured.frag.spv") &&
-      make_package(full_package, "pbr_shadow_ibl_lights.vert.spv",
-                   "pbr_shadow_ibl_lights_untextured.frag.spv");
+      granit::examples::build_pbr_package(direct_package, load_shader("pbr_lights.vert.spv"),
+                                          load_shader("pbr_lights_untextured.frag.spv")) &&
+      granit::examples::build_pbr_package(ibl_package, load_shader("pbr_lights.vert.spv"),
+                                          load_shader("pbr_ibl_lights_untextured.frag.spv")) &&
+      granit::examples::build_pbr_package(shadow_package,
+                                          load_shader("pbr_shadow_ibl_lights.vert.spv"),
+                                          load_shader("pbr_shadow_lights_untextured.frag.spv")) &&
+      granit::examples::build_pbr_package(full_package,
+                                          load_shader("pbr_shadow_ibl_lights.vert.spv"),
+                                          load_shader("pbr_shadow_ibl_lights_untextured.frag.spv"));
   if (granit::failed(result) || !packages_ready) {
     std::cerr << "无法初始化 Renderer 或构建 PBR 材质包\n";
     return 1;
@@ -394,8 +324,7 @@ int main(int argc, char** argv) {
     auto initialize_result = granit::from_native(
         target.initialize(renderer.native_handle(), source, additional_layouts));
     const std::array features{granit::material::material_feature_value{
-        granit::material::make_feature_id(granit::material::pbr_texture_feature_name),
-        granit::material::pbr_texture_all}};
+        granit::material::make_feature_id(granit::material::pbr_texture_feature_name), 0}};
     if (granit::succeeded(initialize_result)) {
       initialize_result = granit::from_native(
           target.acquire_pipeline({.pass = granit::material::make_feature_id("opaque"),
@@ -430,44 +359,22 @@ int main(int argc, char** argv) {
   granit::material::material_gpu_instance instance;
   if (granit::succeeded(result))
     result = granit::from_native(defaults.initialize(renderer.native_handle()));
-  const auto initialize_instance = [&](granit::material::material_gpu_instance& target,
-                                       granit_bind_group_layout layout,
-                                       const granit::material::material_package& source) {
-    auto instance_result =
-        granit::from_native(target.initialize(renderer.native_handle(), layout, source.metadata()));
-    if (granit::succeeded(instance_result))
-      instance_result = granit::from_native(defaults.bind(target));
-    if (granit::succeeded(instance_result) &&
-        (!set_parameter(target, "base_color", granit::material::parameter_type::float4,
-                        std::array{0.8F, 0.2F, 0.1F, 1.0F}) ||
-         !set_parameter(target, "metallic", granit::material::parameter_type::float32,
-                        std::array{0.5F}) ||
-         !set_parameter(target, "perceptual_roughness", granit::material::parameter_type::float32,
-                        std::array{0.5F}) ||
-         !set_parameter(target, "normal_scale", granit::material::parameter_type::float32,
-                        std::array{1.0F}) ||
-         !set_parameter(target, "occlusion_strength", granit::material::parameter_type::float32,
-                        std::array{1.0F}) ||
-         !set_parameter(target, "emissive", granit::material::parameter_type::float3,
-                        std::array{0.0F, 0.0F, 0.0F}))) {
-      instance_result = granit::result::invalid_argument;
-    }
-    if (granit::succeeded(instance_result))
-      instance_result = granit::from_native(target.flush());
-    return instance_result;
-  };
   if (granit::succeeded(result)) {
-    result =
-        initialize_instance(direct_instance, direct_material.material_layout(), direct_package);
+    result = granit::examples::initialize_pbr_instance(renderer.native_handle(), direct_material,
+                                                       direct_package, defaults, direct_instance);
   }
-  if (granit::succeeded(result))
-    result = initialize_instance(ibl_instance, ibl_material.material_layout(), ibl_package);
   if (granit::succeeded(result)) {
-    result =
-        initialize_instance(shadow_instance, shadow_material.material_layout(), shadow_package);
+    result = granit::examples::initialize_pbr_instance(renderer.native_handle(), ibl_material,
+                                                       ibl_package, defaults, ibl_instance);
   }
-  if (granit::succeeded(result))
-    result = initialize_instance(instance, material.material_layout(), full_package);
+  if (granit::succeeded(result)) {
+    result = granit::examples::initialize_pbr_instance(renderer.native_handle(), shadow_material,
+                                                       shadow_package, defaults, shadow_instance);
+  }
+  if (granit::succeeded(result)) {
+    result = granit::examples::initialize_pbr_instance(renderer.native_handle(), material,
+                                                       full_package, defaults, instance);
+  }
 
   granit_texture hdr_texture = GRANIT_NULL_HANDLE;
   granit_texture_view hdr_view = GRANIT_NULL_HANDLE;
