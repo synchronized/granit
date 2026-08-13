@@ -78,6 +78,37 @@ if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
       granit_shader_tool
       "${PROJECT_SOURCE_DIR}/examples/assets/pbr_shadow_ibl_lights_untextured.frag.spv"
   )
+
+  add_test(
+    NAME granit.shader_tool.pbr_lights_reflect
+    COMMAND granit_shader_tool
+            "${PROJECT_SOURCE_DIR}/examples/assets/pbr_lights_untextured.frag.spv"
+  )
+  set_tests_properties(
+    granit.shader_tool.pbr_lights_reflect
+    PROPERTIES PASS_REGULAR_EXPRESSION
+               "binding,3,8,uniform_buffer,LightCounts,16.*binding,3,9,storage_buffer,directional_lights,1.*binding,3,10,storage_buffer,point_lights,1.*binding,3,11,storage_buffer,spot_lights,1"
+  )
+  add_test(
+    NAME granit.shader_tool.pbr_ibl_lights_reflect
+    COMMAND granit_shader_tool
+            "${PROJECT_SOURCE_DIR}/examples/assets/pbr_ibl_lights_untextured.frag.spv"
+  )
+  set_tests_properties(
+    granit.shader_tool.pbr_ibl_lights_reflect
+    PROPERTIES PASS_REGULAR_EXPRESSION
+               "binding,3,3,uniform_buffer,IblConstants,16.*binding,3,4,sampled_texture,irradiance_texture,1.*binding,3,5,sampled_texture,prefiltered_environment_texture,1.*binding,3,6,sampled_texture,brdf_lut_texture,1.*binding,3,7,sampler,environment_sampler,1.*binding,3,8,uniform_buffer,LightCounts,16"
+  )
+  add_test(
+    NAME granit.shader_tool.pbr_shadow_lights_reflect
+    COMMAND granit_shader_tool
+            "${PROJECT_SOURCE_DIR}/examples/assets/pbr_shadow_lights_untextured.frag.spv"
+  )
+  set_tests_properties(
+    granit.shader_tool.pbr_shadow_lights_reflect
+    PROPERTIES PASS_REGULAR_EXPRESSION
+               "binding,3,0,uniform_buffer,ShadowConstants,80.*binding,3,1,sampled_texture,shadow_texture,1.*binding,3,2,sampler,shadow_sampler,1.*binding,3,8,uniform_buffer,LightCounts,16"
+  )
   set_tests_properties(
     granit.shader_tool.pbr_shadow_ibl_lights_reflect
     PROPERTIES PASS_REGULAR_EXPRESSION

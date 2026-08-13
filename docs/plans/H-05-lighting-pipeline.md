@@ -419,6 +419,17 @@ Sampler 或 binding 3～7。光源计数及三类光源 Buffer 的 binding 8～1
 IBL 加直接光、阴影加直接光、空光源更新、部分 IBL 资源拒绝和多余视图拒绝。下一步编译匹配这些
 布局的 LIGHTS、IBL+LIGHTS、SHADOW+LIGHTS Shader 变体，并完成各组合的 GPU 像素回归。
 
+## H-05E6b 实现记录
+
+已从同一份 PBR HLSL 固定 `LIGHTS`、`IBL+LIGHTS` 和 `SHADOW+LIGHTS` 三种额外 SPIR-V 变体，并
+保留既有 `SHADOW+IBL+LIGHTS` 完整变体。无阴影路径使用只输出 world position 的 LIGHTS Vertex
+Shader；阴影路径继续使用相同接口的完整 Vertex Shader。所有新增二进制均通过 Vulkan 1.3
+`spirv-val`。
+
+Shader 反射回归分别固定三类稀疏 Group 3 契约：LIGHTS 只包含 binding 8～11，IBL+LIGHTS 包含
+binding 3～11 中对应资源，SHADOW+LIGHTS 包含 binding 0～2 和 8～11。这些契约与 H-05E6a 的
+可选资源布局逐项对应。下一步将四种变体分别创建真实 Pipeline，并完成六种功能组合的像素回归。
+
 ## H-05A 实现记录
 
 新增可选内部目标 `granit::lighting`，首版依赖 `granit::scene`，不进入核心动态库或安装导出。
