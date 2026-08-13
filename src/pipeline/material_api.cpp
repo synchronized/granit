@@ -178,6 +178,53 @@ granit::pipeline::detail::validate_material_handle(granit_renderer renderer,
                                                       : GRANIT_SUCCESS;
 }
 
+granit_result granit::pipeline::detail::acquire_material_draw_state(
+    granit_renderer renderer, granit_material material, const material_draw_request& request,
+    material_draw_state& output) noexcept {
+  output = {};
+  auto state = find_material(renderer, material);
+  if (state == nullptr)
+    return GRANIT_ERROR_INVALID_HANDLE;
+  if (request.pass == 0 || request.color_format == GRANIT_TEXTURE_FORMAT_UNDEFINED)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  try {
+    std::scoped_lock lock{state->mutex};
+    if (!state->alive || !state->instance.initialized())
+      return GRANIT_ERROR_INVALID_HANDLE;
+    granit_graphics_pipeline pipeline = GRANIT_NULL_HANDLE;
+    const auto result = state->material_template.acquire_pipeline(
+        {.pass = request.pass,
+         .variant = request.variant,
+         .color_format = request.color_format,
+         .depth_stencil_format = request.depth_stencil_format,
+         .sample_count = request.sample_count},
+        pipeline);
+    if (result != GRANIT_SUCCESS)
+      return result;
+    output = {.pipeline = pipeline,
+              .pipeline_layout = state->material_template.pipeline_layout(),
+              .frame_layout = state->material_template.frame_layout(),
+              .material_layout = state->material_template.material_layout(),
+              .object_layout = state->object_layout.native_handle(),
+              .lighting_layout = state->lighting_layout.native_handle(),
+              .material_group = state->instance.bind_group()};
+    if (output.pipeline_layout == GRANIT_NULL_HANDLE ||
+        output.frame_layout == GRANIT_NULL_HANDLE ||
+        output.material_layout == GRANIT_NULL_HANDLE ||
+        output.object_layout == GRANIT_NULL_HANDLE ||
+        output.lighting_layout == GRANIT_NULL_HANDLE ||
+        output.material_group == GRANIT_NULL_HANDLE) {
+      output = {};
+      return GRANIT_ERROR_INTERNAL;
+    }
+    return GRANIT_SUCCESS;
+  } catch (const std::bad_alloc&) {
+    return GRANIT_ERROR_OUT_OF_MEMORY;
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
 extern "C" uint64_t granit_material_parameter_id(const char* name, uint32_t name_length) {
   if (name == nullptr || name_length == 0)
     return 0;

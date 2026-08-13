@@ -296,6 +296,9 @@ Renderable、payload 和关联项数组。回调不得保存数组地址，不�
 
    Group 3 资源可借用 Material 持有的外部 Layout 创建 Bind Group，并且不在重置时销毁
    该 Layout。这保证 Pipeline Layout 与 Bind Group 使用同一布局对象，而不只是字段相同。
+   Render Pipeline 可通过不导出的 Material Access 一次获取指定 Pass/变体/附件格式
+   对应的 Graphics Pipeline、Pipeline Layout、Group 0～3 Layout 和 Group 1 Material Bind
+   Group。这些只是 Material 存活期内的内部借用句柄，不进入 C ABI。
 3. **H-07G 完整示例**：提供安装 API 下的离屏和窗口完整路径，并保留直接 Renderer 用法作为对照。
 4. **H-07H 验收**：补齐生命周期压力、Resize、多 View、Validation Layer、输出一致性和性能对比。
 
