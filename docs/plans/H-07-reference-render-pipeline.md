@@ -246,6 +246,9 @@ Renderable、payload 和关联项数组。回调不得保存数组地址，不�
 - Pipeline 创建时生成并缓存默认黑色 Irradiance/Prefiltered Environment Cubemap 与中性 BRDF LUT，
   Opaque 回调获得完整 IBL View、Layout 和 Bind Group。默认环境强度为零，不会意外改变直接光结果；
   外部环境资产和运行时切换接口仍属于后续增量。
+- 公共 `granit_render_pipeline_*` C ABI 已覆盖真实离屏像素回归：通过阶段回调清屏 HDR Attachment，
+  由内置 Tone Mapping 输出 RGBA8，再使用公共 Texture-to-Buffer Readback 校验中心像素。该测试不再
+  只以回调次数或内部 Graph 状态作为成功依据。
 
 该目标目前只在构建树中提供。安装 component 与外部 consumer 在统一 Pipeline 的依赖边界完成后
 一起落地，避免过早把内部 `scene`、`material`、`lighting` 静态目标写入安装导出。下一块将已验证
