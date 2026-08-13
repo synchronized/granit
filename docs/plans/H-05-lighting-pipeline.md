@@ -292,12 +292,12 @@ H-05E 从当前状态按以下顺序收敛，不在完成这些验证前继续�
    Swapchain 重建和离屏/窗口共用 Pass 模型。
 4. **多 View 完整渲染（已完成）**：每个 View 使用独立可见光源、光源 Buffer、HDR/Depth/输出
    目标，验证连续录制与提交，同时不复制整份 Scene 数据。
-5. **Render Graph 统一组合**：由 Graph 串联可选 Shadow、PBR HDR 和 Tone Mapping，验证瞬态资源、
+5. **Render Graph 统一组合（已完成）**：由 Graph 串联可选 Shadow、PBR HDR 和 Tone Mapping，验证瞬态资源、
    屏障、失败回滚及多帧重复执行，不再由示例长期手工维护整条命令链。
 6. **多帧生命周期稳定性（已完成）**：连续运行至少数千帧，覆盖帧间 View/光源/材质更新、
    Resize、GPU 在途资源延迟销毁、Renderer 销毁诊断和 Device Lost 错误传播。
-7. **Shader 契约与跨平台收尾**：自动校验 HLSL/SPIR-V、C++ 布局和 Pipeline Layout；验证 Linux
-   Clang/GCC、共享/静态构建、安装及独立 Consumer。
+7. **Shader 契约与跨平台收尾（CI 验证中）**：自动校验 HLSL/SPIR-V、C++ 布局和 Pipeline
+   Layout；验证 Linux Clang/GCC、共享/静态构建、安装及独立 Consumer。
 
 ## H-05 退出条件与后续阶段
 
@@ -551,6 +551,19 @@ Recorder；累计覆盖 6,000 个瞬态 Texture/View 和 2,000 个 Recorder 的�
 匹配，Renderer 最终销毁时不得遗留活动资源。Device Lost 的全局门禁和错误传播继续由 Renderer
 专项回归覆盖，不在测试中人为制造驱动故障。H-05E10 完成，下一步进入 H-05E11 构建、安装与
 Consumer 收尾。
+
+## H-05E11 实现记录
+
+新增完全独立于源码目标的 `tests/consumer` 工程，通过安装后的 `find_package(granit CONFIG)` 分别
+构建 C11 与 C++20 程序，并运行版本函数验证链接结果。Windows Clang Release 的共享库和静态库
+安装、Consumer 配置、构建与运行均已通过；Clang 静态库完整测试为 16/16，现有 Clang 共享库与
+MSVC 共享库矩阵继续通过。
+
+新增 Linux CI，覆盖 Clang/GCC × shared/static 四种 Release 组合，统一运行配置、构建、完整测试、
+安装以及两个 Consumer；GPU 测试使用 Mesa Vulkan 软件驱动作为无独立显卡环境的后端。当前 Windows
+主机未安装 WSL 发行版，因此 Linux 结果由 CI 执行，不能记作本机已运行。HLSL/SPIR-V 反射契约已由
+现有七项 Shader Tool CTest 持续校验。Linux 首轮 CI 通过后 H-05E11 才视为完成，随后进入公共
+C ABI 收敛检查点。
 
 ## H-05A 实现记录
 

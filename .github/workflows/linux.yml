@@ -1,0 +1,45 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Granit contributors
+
+name: Linux
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build-test-consumer:
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        compiler: [clang, gcc]
+        linkage: [shared, static]
+    steps:
+      - uses: actions/checkout@v4
+      - name: 安装构建与软件 Vulkan 依赖
+        run: sudo apt-get update && sudo apt-get install -y ninja-build libvulkan1 mesa-vulkan-drivers
+      - name: 选择 preset
+        id: preset
+        shell: bash
+        run: |
+          suffix=""
+          if [[ "${{ matrix.linkage }}" == "static" ]]; then suffix="-static"; fi
+          echo "name=linux-${{ matrix.compiler }}${suffix}-release" >> "$GITHUB_OUTPUT"
+      - name: 配置、构建与测试
+        run: |
+          cmake --preset "${{ steps.preset.outputs.name }}"
+          cmake --build --preset "${{ steps.preset.outputs.name }}"
+          ctest --preset "${{ steps.preset.outputs.name }}"
+      - name: 安装并验证独立 C 和 C++ Consumer
+        shell: bash
+        run: |
+          prefix="$PWD/build/install/${{ steps.preset.outputs.name }}"
+          cmake --install "build/${{ steps.preset.outputs.name }}" --prefix "$prefix"
+          cmake -S tests/consumer -B "build/consumer/${{ steps.preset.outputs.name }}" \
+            -G Ninja -DCMAKE_PREFIX_PATH="$prefix"
+          cmake --build "build/consumer/${{ steps.preset.outputs.name }}"
+          LD_LIBRARY_PATH="$prefix/lib" \
+            "build/consumer/${{ steps.preset.outputs.name }}/granit_c_consumer"
+          LD_LIBRARY_PATH="$prefix/lib" \
+            "build/consumer/${{ steps.preset.outputs.name }}/granit_cpp_consumer"

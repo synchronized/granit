@@ -65,6 +65,13 @@ target_link_libraries(your_target PRIVATE granit::granit)
 cmake -S consumer -B consumer/build -DCMAKE_PREFIX_PATH=/path/to/granit/install
 ```
 
+仓库提供独立的 C11/C++20 Consumer 验证工程，可用于检查安装包而不访问源码目标：
+
+```sh
+cmake -S tests/consumer -B build/consumer -DCMAKE_PREFIX_PATH=/path/to/granit/install
+cmake --build build/consumer
+```
+
 共享库使用者还需要按照目标平台的部署规则，让运行进程能够找到 DLL、SO 或 dylib。
 
 ## 运行示例
