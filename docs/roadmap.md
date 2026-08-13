@@ -21,13 +21,13 @@
 
 | 阶段 | 状态 | 说明 |
 | --- | --- | --- |
-| 一、工程与 ABI 基础 | 基本完成 | 构建、公共接口分层、句柄、测试体系已建立 |
-| 二、Vulkan 与窗口输出基础 | 基本完成 | Renderer、Win32 Surface、Swapchain 生命周期已实现 |
-| 三、GPU 资源基础 | 进行中 | 内存分配与资源值类型已完成，资源生命周期尚未实现 |
-| 四、命令与帧同步 | 进行中 | Command Recorder、基础命令和内部帧同步已实现 |
-| 五、基础渲染 | 进行中 | Shader Module 已实现，Pipeline 与绘制接口尚未实现 |
-| 六、多线程与性能 | 进行中 | P-01 并行录制、上传压力测试与线程安全矩阵已完成 |
-| 七、可选高层渲染模块 | 暂缓 | 不阻塞核心库完成，保持独立分层 |
+| 一、工程与 ABI 基础 | 基本完成 | C/C++ 接口、句柄、测试、共享/静态安装 consumer 已建立 |
+| 二、Vulkan 与窗口输出基础 | 基本完成 | Renderer、Win32 Surface、Swapchain 和窗口帧循环已实现 |
+| 三、GPU 资源基础 | 基本完成 | Buffer、Texture/View、Sampler、上传、回读和安全退役已实现 |
+| 四、命令与帧同步 | 基本完成 | Recorder、资源状态、提交、Frame、查询和恢复边界已实现 |
+| 五、基础渲染 | 已完成 | Graphics/Compute Pipeline、绑定、Draw/Dispatch 和示例已完成 |
+| 六、多线程与性能 | 已完成 | 压力测试、基线、批量提交和上传批处理已完成 |
+| 七、可选高层渲染模块 | 进行中 | H-01～H-05 已完成，H-07 已进入可用门面收尾 |
 | 八、稳定化与跨平台 | 持续进行 | Linux 窗口系统和 ABI 稳定策略留待后续 |
 
 ## 阶段一：工程与 ABI 基础
@@ -80,7 +80,7 @@
 
 ## 阶段三：GPU 资源基础
 
-**状态：进行中。前置依赖：阶段一和阶段二。**
+**状态：基本完成。前置依赖：阶段一和阶段二。**
 
 ### 目标与交付物
 
@@ -96,7 +96,8 @@
    Swapchain 重建和销毁具备可靠的 Queue Present 空闲边界。
 10. **[R-09](plans/R-09-render-target-attachment.md) / P0 / 已完成**：定义统一
     Render Target Attachment，覆盖颜色和深度/模板附件。
-11. **R-10 / P1**：补充纹理上传、mipmap、复制、读取回 CPU 和截图能力。
+11. **R-10 / P1 / 部分完成**：Texture 上传、复制和 Buffer 回读路径已完成；通用 mipmap 生成与
+    截图便利接口留待资产和工具链产生明确需求后补充。
 
 ### 设计约束
 
@@ -118,7 +119,7 @@
 
 ## 阶段四：命令与帧同步
 
-**状态：进行中。前置依赖：阶段三的 Buffer、Texture View 和延迟销毁基础。**
+**状态：基本完成。前置依赖：阶段三的 Buffer、Texture View 和延迟销毁基础。**
 
 ### 目标与交付物
 
@@ -136,8 +137,8 @@
   present 和 out-of-date 重建流程。
 - **[F-07](plans/F-07-recovery-boundaries.md) / P0 / 已完成**：实现 Frame 回收、窗口零尺寸、
   Surface Lost 与 Renderer 全局 Device Lost 终止状态。
-- **F-08 / P1**：支持多个线程使用独立 Recorder 并合并到同一帧提交。
-- **F-09 / P1**：增加时间戳、统计查询和 GPU 调试标记。
+- **F-08 / P1 / 已完成**：支持多线程独立 Recorder，并通过原子批量提交合并 Queue 操作。
+- **F-09 / P1 / 部分完成**：Timestamp Query 已实现；通用 Pipeline 统计与 GPU 调试标记归入 S-02。
 
 ### 线程模型
 
@@ -211,7 +212,7 @@
 
 ## 阶段七：可选高层渲染模块
 
-**状态：进行中。H-01～H-05 已完成，下一步进入公共 ABI 收敛检查点。**
+**状态：进行中。H-01～H-05 已完成，H-07 公共门面与发布边界已建立。**
 
 ### 目标与交付物
 
@@ -233,9 +234,9 @@
   分块/聚簇光照。下一步依次完成 Render Graph 统一组合、多帧生命周期压力测试和跨平台/安装
   Consumer 收尾均已通过；当前转入公共 C ABI 收敛检查点与 H-07。
 - **H-06 / P2**：评估 2D、UI、调试绘制和文字渲染辅助模块。
-- **[H-07](plans/H-07-reference-render-pipeline.md) / P2 / 已确认**：H-05 完成后，将 Scene、Material、
-  PBR、Lighting、Post Process 和 Render Graph 组合为可选 `granit::render_pipeline` 高级参考套件；
-  H-06 结果可选接入，不阻塞首版 3D 管线整合。
+- **[H-07](plans/H-07-reference-render-pipeline.md) / P2 / 进行中**：公共 Scene、Material 与 Pipeline
+  C ABI、Forward PBR 图、单方向光阴影、默认 IBL、Tone Mapping 缓存、像素回归和独立安装 component
+  已完成；下一增量是公共 Mesh ABI 与内置 Opaque/Shadow Draw。
 
 H-05 与 H-07 之间增加公共 API 收敛检查点：先确定 Scene、Material、Lighting 和统一渲染入口的
 首版 C ABI、C++20 RAII 包装及粗粒度帧提交模型，再由 H-07 实现普通用户可直接采用的高级门面。
@@ -277,6 +278,15 @@ H-05 与 H-07 之间增加公共 API 收敛检查点：先确定 Scene、Materia
 
 ## 近期执行顺序
 
-1. `D-03` 至 `D-06`：完成 Pipeline、离屏清屏和最小三角形。
+1. **H-07E / 公共 Mesh ABI**：定义 `granit_mesh`、顶点/索引输入、Draw Range、所有权、线程安全和
+   Renderer domain 校验；Mesh 只描述 GPU 绘制资源，不接管资产文件或 CPU 模型数据。
+2. **H-07F / 内置 Draw**：将 payload 关联表中的外部整数 Mesh 标识替换为受校验 Mesh 句柄，由
+   Pipeline 自动录制 Opaque 与 Shadow Draw；固定阶段回调降为可选高级扩展点。
+3. **H-07G / 完整用户路径**：增加只使用公共安装 API 的离屏与窗口示例，覆盖
+   Renderer -> Mesh/Material -> Scene Snapshot -> `render` -> 最终输出。
+4. **H-07H / 收尾验收**：完成多帧生命周期压力、窗口 Resize、多 View、Validation Layer、共享/静态
+   consumer 和相对手工 H-05 组合的输出及性能对比，并据此判断 H-07 首版完成。
+5. **后续画质增量**：H-07 首版完成后，再按测量和使用需求依次评估外部环境切换、透明物体、CSM、
+   Clustered Forward、Bindless 与 H-06 调试绘制；Deferred 保持为可选高级管线研究项。
 
 若实现过程中发现前置抽象不足，应先更新本路线图和对应设计文档，再扩大公共 API。

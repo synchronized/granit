@@ -7,7 +7,7 @@
 
 - 路线图任务：H-07
 - 优先级：P2
-- 状态：进行中，公共 Scene Snapshot 与 Material ABI 已进入实现验证
+- 状态：进行中，公共门面、固定 Forward PBR 图与安装发布已完成，下一步实现公共 Mesh 与内置 Draw
 - 必需依赖：H-01 Render Graph、H-02 Material、H-03 PBR、H-04 Scene、H-05 Lighting/Post Process
 - 可选依赖：H-06 2D/UI/调试绘制评估结果
 
@@ -259,27 +259,38 @@ Renderable、payload 和关联项数组。回调不得保存数组地址，不�
 
 ### H-07A：组合边界
 
-- 盘点 H-05 示例中的重复资源、Pass 和错误处理。
-- 确定 `render_pipeline` 创建、重建、Resize 和销毁语义。
-- 明确外部目标、环境资源、Mesh/Material 回调和多 View 输入。
+- **已完成**：盘点 H-05 示例中的重复资源、Pass 和错误处理。
+- **已完成**：确定 `render_pipeline` 创建、并发、销毁和错误语义。
+- **已完成**：明确外部目标、默认环境、Mesh/Material 关联和多 View 输入。
 
 ### H-07B：单 View 门面
 
-- 组合方向光阴影、前向 PBR、IBL 和 Tone Mapping。
-- 支持离屏与 Swapchain Backbuffer 的统一输出。
-- 保留明确的 Pass 插入和录制回调。
+- **已完成**：组合方向光阴影、Forward PBR、默认 IBL 和 Tone Mapping。
+- **已完成**：使用统一 Texture View 输出模型，公共 ABI 离屏像素回归通过。
+- **已完成**：保留 Shadow 与 Opaque 受控录制回调；内置 Mesh Draw 尚待 H-07F。
 
 ### H-07C：多 View 与缓存
 
-- 消费 H-04 多 View 快照，避免复制共享场景数据。
-- 复用兼容的 Pipeline、默认资源和环境输入。
-- 只有测量证明收益后才共享阴影或中间资源。
+- **已完成**：消费 H-04 多 View 快照，并按 View 生成稳定可见批次。
+- **已完成**：跨帧复用 Tone Mapping Pipeline 与默认 IBL 资源。
+- **已确认**：暂不跨 View 共享阴影或中间资源，等待真实帧测量。
 
 ### H-07D：发布与示例
 
-- 提供直接 Renderer、部分模块、完整参考管线三个并列示例。
-- 增加独立构建、安装 component、consumer 和生命周期回归。
-- 记录能力范围，避免把参考管线宣传为必须采用的引擎框架。
+- **进行中**：直接 Renderer 与部分模块示例已存在；完整自动 Draw 参考管线示例等待 H-07G。
+- **已完成**：独立 `RenderPipeline` component，以及共享/静态 C 与 C++20 consumer。
+- **已完成**：记录 Forward PBR 能力范围和可绕过边界。
+
+### H-07E～H：可用门面收尾
+
+1. **H-07E 公共 Mesh ABI**：建立受 Renderer domain 校验的 `granit_mesh`，显式描述 Vertex/Index
+   Buffer、顶点布局、索引类型和 Draw Range，不接管资产或 CPU 数据。
+2. **H-07F 内置 Draw**：让 Pipeline 使用 Mesh 与 Material 自动录制 Opaque/Shadow Draw，回调改为
+   可选高级扩展点，普通用户不再必须理解 Command Recorder。
+3. **H-07G 完整示例**：提供安装 API 下的离屏和窗口完整路径，并保留直接 Renderer 用法作为对照。
+4. **H-07H 验收**：补齐生命周期压力、Resize、多 View、Validation Layer、输出一致性和性能对比。
+
+外部环境切换、透明物体、CSM 和 Clustered Forward 在 H-07H 后单独立项，不阻塞首版完成。
 
 ## 验收标准
 
