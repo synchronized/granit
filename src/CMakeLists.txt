@@ -395,6 +395,8 @@ target_sources(
     "${granit_pipeline_tone_fragment}"
     pipeline/embedded_shaders.cpp
     pipeline/embedded_shaders.h
+    pipeline/default_ibl_resources.cpp
+    pipeline/default_ibl_resources.h
     pipeline/material_api.cpp
     pipeline/material_access.h
     pipeline/render_pipeline_api.cpp

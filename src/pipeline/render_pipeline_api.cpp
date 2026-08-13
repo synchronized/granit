@@ -5,6 +5,7 @@
 
 #include "lighting/reference_pipeline_graph.h"
 #include "lighting/tone_mapping_resources.h"
+#include "pipeline/default_ibl_resources.h"
 #include "pipeline/embedded_shaders.h"
 #include "pipeline/material_access.h"
 #include "pipeline/scene_access.h"
@@ -32,6 +33,7 @@ struct pipeline_state {
   void* user_data = nullptr;
   granit::lighting::tone_mapping_pipeline_resources tone_mapping_unorm;
   granit::lighting::tone_mapping_pipeline_resources tone_mapping_srgb;
+  granit::pipeline::detail::default_ibl_resources default_ibl;
   bool alive = true;
 };
 
@@ -252,6 +254,11 @@ render_view(pipeline_state& state, const granit_render_pipeline_render_desc& des
         .color_output = context.texture_view(hdr),
         .depth_output = context.texture_view(depth),
         .shadow_input = shadow ? context.texture_view(*shadow) : GRANIT_NULL_HANDLE,
+        .ibl_irradiance = state.default_ibl.irradiance(),
+        .ibl_prefiltered_environment = state.default_ibl.prefiltered_environment(),
+        .ibl_brdf_lut = state.default_ibl.brdf_lut(),
+        .ibl_layout = state.default_ibl.layout(),
+        .ibl_group = state.default_ibl.group(),
         .view_index = view_index,
         .payload_count = static_cast<uint32_t>(payloads.size()),
         .payloads = payloads.data(),
@@ -297,6 +304,11 @@ render_view(pipeline_state& state, const granit_render_pipeline_render_desc& des
           .color_output = GRANIT_NULL_HANDLE,
           .depth_output = context.texture_view(*shadow),
           .shadow_input = GRANIT_NULL_HANDLE,
+          .ibl_irradiance = GRANIT_NULL_HANDLE,
+          .ibl_prefiltered_environment = GRANIT_NULL_HANDLE,
+          .ibl_brdf_lut = GRANIT_NULL_HANDLE,
+          .ibl_layout = GRANIT_NULL_HANDLE,
+          .ibl_group = GRANIT_NULL_HANDLE,
           .view_index = view_index,
           .payload_count = static_cast<uint32_t>(shadow_payloads.size()),
           .payloads = shadow_payloads.data(),
@@ -350,6 +362,9 @@ extern "C" granit_result granit_render_pipeline_create(granit_renderer renderer,
     state->renderer = renderer;
     state->record = desc->record;
     state->user_data = desc->user_data;
+    const auto ibl_result = state->default_ibl.initialize(renderer);
+    if (ibl_result != GRANIT_SUCCESS)
+      return ibl_result;
     std::scoped_lock lock{registry_mutex};
     size_t index = 0;
     while (index < registry.size() && registry[index].state != nullptr)
@@ -442,5 +457,8 @@ extern "C" granit_result granit_render_pipeline_destroy(granit_renderer renderer
   const auto srgb_result = removed->tone_mapping_srgb.reset();
   if (result == GRANIT_SUCCESS)
     result = srgb_result;
+  const auto ibl_result = removed->default_ibl.reset();
+  if (result == GRANIT_SUCCESS)
+    result = ibl_result;
   return result;
 }

@@ -12,6 +12,7 @@
 #include <granit/pipeline/material.h>
 #include <granit/pipeline/scene.h>
 #include <granit/renderer/command_recorder.h>
+#include <granit/renderer/pipeline.h>
 #include <granit/renderer/resource_types.h>
 #include <granit/renderer/texture.h>
 
@@ -39,6 +40,11 @@ typedef struct granit_render_pipeline_record_info {
   granit_texture_view color_output;
   granit_texture_view depth_output;
   granit_texture_view shadow_input;
+  granit_texture_view ibl_irradiance;
+  granit_texture_view ibl_prefiltered_environment;
+  granit_texture_view ibl_brdf_lut;
+  granit_bind_group_layout ibl_layout;
+  granit_bind_group ibl_group;
   uint32_t view_index;
   uint32_t payload_count;
   const uint64_t* payloads;

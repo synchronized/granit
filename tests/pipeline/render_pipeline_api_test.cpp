@@ -51,6 +51,7 @@ struct callback_state {
   std::vector<uint64_t> meshes;
   std::vector<granit_material> materials;
   bool opaque_has_shadow = false;
+  std::vector<granit_bind_group> ibl_groups;
   granit_renderer renderer = GRANIT_NULL_HANDLE;
   granit_result result = GRANIT_SUCCESS;
 };
@@ -71,8 +72,16 @@ granit_result record(const granit_render_pipeline_record_info* info, void* user_
     return GRANIT_ERROR_INVALID_ARGUMENT;
   }
   state.stages.push_back(info->stage);
-  if (info->stage == GRANIT_RENDER_PIPELINE_STAGE_OPAQUE)
+  if (info->stage == GRANIT_RENDER_PIPELINE_STAGE_OPAQUE) {
     state.opaque_has_shadow = info->shadow_input != GRANIT_NULL_HANDLE;
+    if (info->ibl_irradiance == GRANIT_NULL_HANDLE ||
+        info->ibl_prefiltered_environment == GRANIT_NULL_HANDLE ||
+        info->ibl_brdf_lut == GRANIT_NULL_HANDLE || info->ibl_layout == GRANIT_NULL_HANDLE ||
+        info->ibl_group == GRANIT_NULL_HANDLE) {
+      return GRANIT_ERROR_INVALID_ARGUMENT;
+    }
+    state.ibl_groups.push_back(info->ibl_group);
+  }
   if (info->payload_count != 0) {
     state.payloads.insert(state.payloads.end(), info->payloads,
                           info->payloads + info->payload_count);
@@ -183,11 +192,14 @@ TEST_CASE("统一Render Pipeline按固定阶段消费Scene Snapshot") {
   CHECK(callback.materials ==
         std::vector<granit_material>{material.native_handle(), material.native_handle()});
   CHECK(callback.opaque_has_shadow);
+  REQUIRE(callback.ibl_groups.size() == 1);
 
   REQUIRE(pipeline.render(render_desc) == granit::result::success);
   CHECK(callback.stages.size() == 4);
   CHECK(callback.payloads == std::vector<uint64_t>{77, 77, 77, 77});
   CHECK(callback.meshes == std::vector<uint64_t>{1001, 1001, 1001, 1001});
+  REQUIRE(callback.ibl_groups.size() == 2);
+  CHECK(callback.ibl_groups[0] == callback.ibl_groups[1]);
 
   const std::array duplicate_bindings{draw_binding, draw_binding};
   render_desc.draw_binding_count = static_cast<uint32_t>(duplicate_bindings.size());

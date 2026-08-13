@@ -243,7 +243,9 @@ Renderable、payload 和关联项数组。回调不得保存数组地址，不�
 - 首个可见方向光已生成 1024×1024 单级正交阴影 Pass。Shadow 回调获得投影者批次与光源
   View-Projection，Opaque 回调获得只在回调期间有效的阴影 Texture View；级联阴影和阴影图缓存
   尚未实现。
-- IBL 默认资源仍属于下一实现增量，当前统一入口不能被描述为最终完整 PBR 画质管线。
+- Pipeline 创建时生成并缓存默认黑色 Irradiance/Prefiltered Environment Cubemap 与中性 BRDF LUT，
+  Opaque 回调获得完整 IBL View、Layout 和 Bind Group。默认环境强度为零，不会意外改变直接光结果；
+  外部环境资产和运行时切换接口仍属于后续增量。
 
 该目标目前只在构建树中提供。安装 component 与外部 consumer 在统一 Pipeline 的依赖边界完成后
 一起落地，避免过早把内部 `scene`、`material`、`lighting` 静态目标写入安装导出。下一块将已验证
