@@ -203,6 +203,10 @@ target_link_libraries(
   PRIVATE granit::render_pipeline granit::material granit::granit Catch2::Catch2WithMain
 )
 target_compile_options(granit_pipeline_test PRIVATE $<$<COMPILE_LANG_AND_ID:CXX,MSVC>:/utf-8>)
+target_compile_definitions(
+  granit_pipeline_test
+  PRIVATE GRANIT_PIPELINE_ASSET_DIR="${PROJECT_SOURCE_DIR}/examples/assets"
+)
 granit_target_compile_warnings(granit_pipeline_test)
 granit_target_output_directories(granit_pipeline_test)
 add_test(NAME granit.pipeline COMMAND granit_pipeline_test)

@@ -7,7 +7,7 @@
 
 - 路线图任务：H-07
 - 优先级：P2
-- 状态：进行中，公共 Mesh 和 Mesh Draw 录制已完成，正在收敛内置 PBR 绑定
+- 状态：进行中，公共 Mesh、自动 Shadow/Opaque Draw 与真实像素回归已完成
 - 必需依赖：H-01 Render Graph、H-02 Material、H-03 PBR、H-04 Scene、H-05 Lighting/Post Process
 - 可选依赖：H-06 2D/UI/调试绘制评估结果
 
@@ -246,14 +246,15 @@ Renderable、payload 和关联项数组。回调不得保存数组地址，不�
 - Pipeline 创建时生成并缓存默认黑色 Irradiance/Prefiltered Environment Cubemap 与中性 BRDF LUT，
   Opaque 回调获得完整 IBL View、Layout 和 Bind Group。默认环境强度为零，不会意外改变直接光结果；
   外部环境资产和运行时切换接口仍属于后续增量。
-- 公共 `granit_render_pipeline_*` C ABI 已覆盖真实离屏像素回归：通过阶段回调清屏 HDR Attachment，
-  由内置 Tone Mapping 输出 RGBA8，再使用公共 Texture-to-Buffer Readback 校验中心像素。该测试不再
-  只以回调次数或内部 Graph 状态作为成功依据。
+- 公共 `granit_render_pipeline_*` C ABI 已覆盖两条真实离屏像素回归：一条通过阶段回调产生已知 HDR
+  颜色，另一条加载真实 PBR Shader 包并走无回调的 Shadow/Opaque 自动 Draw。两者均由内置 Tone
+  Mapping 输出 RGBA8，再使用公共 Texture-to-Buffer Readback 校验中心像素，不再只以回调次数或
+  内部 Graph 状态作为成功依据。
 
 `RenderPipeline` CMake component 已安装导出公开头文件和 `granit::render_pipeline`。共享构建安装
 独立动态库；静态构建同时导出不带公共头文件的 `granit::detail_*` 依赖闭包，使用者不应直接链接
 这些实现目标。安装后的纯 C 与 C++20 consumer 已在共享和静态配置下完成编译、链接与运行验证。
-外部环境资产接口、实际 Mesh Draw 门面、级联阴影和 Clustered Forward 仍属于后续增量。
+外部环境资产接口、级联阴影和 Clustered Forward 仍属于后续增量。
 
 ## 分步实施
 
@@ -267,7 +268,7 @@ Renderable、payload 和关联项数组。回调不得保存数组地址，不�
 
 - **已完成**：组合方向光阴影、Forward PBR、默认 IBL 和 Tone Mapping。
 - **已完成**：使用统一 Texture View 输出模型，公共 ABI 离屏像素回归通过。
-- **已完成**：保留 Shadow 与 Opaque 受控录制回调；内置 Mesh Draw 尚待 H-07F。
+- **已完成**：保留 Shadow 与 Opaque 受控录制回调，并提供内置 Mesh Draw 默认路径。
 
 ### H-07C：多 View 与缓存
 
@@ -287,12 +288,10 @@ Renderable、payload 和关联项数组。回调不得保存数组地址，不�
    Vertex/Index Buffer、顶点布局、索引类型和 Draw Range，不接管资产或 CPU 数据。一个 Mesh
    对应一次不可变 Draw，不含 Submesh 数组。Mesh 借用 Buffer；独立动态库不穿透核心库持有内部
    引用，创建时查询用途与范围，后续录制时再次校验，调用者必须保证 Buffer 生命周期覆盖 Mesh。
-2. **H-07F 内置 Draw**：让 Pipeline 使用 Mesh 与 Material 自动录制 Opaque/Shadow Draw，回调改为
-   可选高级扩展点，普通用户不再必须理解 Command Recorder。Mesh 内部已能
-   在录制时重新校验借用 Buffer，并绑定 Vertex/Index Buffer 后发出对应 Draw；剩余工作是
-   Group 0/2 帧与对象 Uniform Layout，以及 Group 3 Shadow/IBL/Light Superset Layout 已纳入
-   公共 Material 的 Pipeline Layout；剩余工作是创建对应 Buffer/Bind Group，并由 Shadow/Opaque
-   阶段绑定 Group 0～3 后调用 Mesh 录制器。
+2. **H-07F 内置 Draw（已完成）**：Pipeline 使用 Mesh 与 Material 自动录制 Opaque/Shadow Draw，
+   回调是可选高级扩展点，普通用户不再必须理解 Command Recorder。Mesh 在录制时重新校验借用
+   Buffer；Group 0/2 帧与对象 Uniform、Group 1 Material，以及 Group 3 Shadow/IBL/Light 已由
+   Shadow/Opaque 阶段完成创建与绑定。
 
    Group 3 资源可借用 Material 持有的外部 Layout 创建 Bind Group，并且不在重置时销毁
    该 Layout。这保证 Pipeline Layout 与 Bind Group 使用同一布局对象，而不只是字段相同。
@@ -305,7 +304,7 @@ Renderable、payload 和关联项数组。回调不得保存数组地址，不�
    Opaque 自动录制已串联 Material Pipeline、Group 0～3、Viewport/Scissor、HDR/Depth
    Dynamic Rendering 和 Mesh Draw。创建 Pipeline 时录制回调现为可选：提供回调时覆盖
    默认 Shadow/Opaque 阶段，未提供时走内置路径。当前内置 Opaque 仍要求 View 产生有效
-   方向光阴影；无阴影占位资源和真实 Shadow Caster Draw 尚待后续增量。
+   方向光阴影；无阴影占位资源尚待后续增量。
    真实 Shadow Caster 路径不要求每个材质包重复携带深度 Shader。Render Pipeline 已内置
    标准 Shadow Depth Vertex/Fragment SPIR-V：Vertex 读取 location 0 的 `float3` position，并使用
    Group 2 Model 和 Group 3 Light View-Projection 输出深度。Shader 作为构建输入嵌入库，
@@ -314,6 +313,9 @@ Renderable、payload 和关联项数组。回调不得保存数组地址，不�
    Mesh 句柄缓存；每个投影者绑定 Group 2 Object 和 Group 3 Shadow 常量后录制真实
    Mesh Draw。Group 3 使用独立占位深度纹理，避免把正在写入的 Shadow Attachment 同时作为
    Sampled Texture 绑定。
+   当前 Renderer 会在绑定 Vertex/Index Buffer 时准备资源状态，因此绑定必须发生在 Dynamic
+   Rendering 区域外。首版自动路径为每个 Draw 建立一个区域：首个 Draw 清除附件，后续 Draw 使用
+   LOAD 保留内容。后续在性能测量证明必要时，再增加批次预绑定或后端区域内绑定能力。
 3. **H-07G 完整示例**：提供安装 API 下的离屏和窗口完整路径，并保留直接 Renderer 用法作为对照。
 4. **H-07H 验收**：补齐生命周期压力、Resize、多 View、Validation Layer、输出一致性和性能对比。
 

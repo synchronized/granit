@@ -3,8 +3,8 @@
 
 #include <granit/pipeline/render_pipeline.h>
 
-#include "lighting/reference_pipeline_graph.h"
 #include "lighting/light_data.h"
+#include "lighting/reference_pipeline_graph.h"
 #include "lighting/shadow_ibl_resources.h"
 #include "lighting/tone_mapping_resources.h"
 #include "material/material_package.h"
@@ -170,27 +170,27 @@ granit_result record_tone_mapping(granit::lighting::tone_mapping_pipeline_resour
   return result == GRANIT_SUCCESS ? reset_result : result;
 }
 
-granit_result record_opaque_draws(
-    pipeline_state& state, granit_command_recorder recorder, granit_texture_view color,
-    granit_texture_view depth, granit_texture_view shadow, uint32_t width, uint32_t height,
-    const granit::material::pbr_frame_constants& frame,
-    std::span<const granit::material::pbr_object_constants> objects,
-    std::span<const granit_render_pipeline_draw_binding> draws,
-    const granit::lighting::packed_view_lights& lights,
-    const granit::lighting::shadow_sampling_constants& shadow_constants) {
+granit_result
+record_opaque_draws(pipeline_state& state, granit_command_recorder recorder,
+                    granit_texture_view color, granit_texture_view depth,
+                    granit_texture_view shadow, uint32_t width, uint32_t height,
+                    const granit::material::pbr_frame_constants& frame,
+                    std::span<const granit::material::pbr_object_constants> objects,
+                    std::span<const granit_render_pipeline_draw_binding> draws,
+                    const granit::lighting::packed_view_lights& lights,
+                    const granit::lighting::shadow_sampling_constants& shadow_constants) {
   if (shadow == GRANIT_NULL_HANDLE || objects.size() != draws.size())
     return GRANIT_ERROR_NOT_READY;
   granit_color_attachment_desc color_attachment = GRANIT_COLOR_ATTACHMENT_DESC_INIT;
   color_attachment.view = color;
-  granit_depth_stencil_attachment_desc depth_attachment =
-      GRANIT_DEPTH_STENCIL_ATTACHMENT_DESC_INIT;
+  granit_depth_stencil_attachment_desc depth_attachment = GRANIT_DEPTH_STENCIL_ATTACHMENT_DESC_INIT;
   depth_attachment.view = depth;
   granit_rendering_desc rendering = GRANIT_RENDERING_DESC_INIT;
   rendering.color_attachment_count = 1;
   rendering.color_attachments = &color_attachment;
   rendering.depth_stencil_attachment = &depth_attachment;
   rendering.area = {0, 0, width, height};
-  auto result = granit_command_recorder_begin_rendering(state.renderer, recorder, &rendering);
+  auto result = GRANIT_SUCCESS;
   const granit_viewport viewport{0, 0, static_cast<float>(width), static_cast<float>(height), 0, 1};
   const granit_scissor scissor{0, 0, width, height};
   for (size_t index = 0; result == GRANIT_SUCCESS && index < draws.size(); ++index) {
@@ -219,7 +219,7 @@ granit_result record_opaque_draws(
       result = lighting.update_lights(lights);
     if (result == GRANIT_SUCCESS)
       result = granit_command_recorder_bind_graphics_pipeline(state.renderer, recorder,
-                                                               material.pipeline);
+                                                              material.pipeline);
     const std::array groups{bindings.frame_group(), material.material_group,
                             bindings.object_group(), lighting.group()};
     if (result == GRANIT_SUCCESS) {
@@ -231,13 +231,24 @@ granit_result record_opaque_draws(
       result = granit_command_recorder_set_viewports(state.renderer, recorder, 0, &viewport, 1);
     if (result == GRANIT_SUCCESS)
       result = granit_command_recorder_set_scissors(state.renderer, recorder, 0, &scissor, 1);
+    if (result == GRANIT_SUCCESS)
+      result =
+          granit::pipeline::detail::bind_mesh_buffers(state.renderer, recorder, draws[index].mesh);
     if (result == GRANIT_SUCCESS) {
-      result = granit::pipeline::detail::record_mesh_draw(state.renderer, recorder,
-                                                          draws[index].mesh);
+      if (index != 0) {
+        color_attachment.load_operation = GRANIT_ATTACHMENT_LOAD_OPERATION_LOAD;
+        depth_attachment.depth_load_operation = GRANIT_ATTACHMENT_LOAD_OPERATION_LOAD;
+      }
+      result = granit_command_recorder_begin_rendering(state.renderer, recorder, &rendering);
+      if (result == GRANIT_SUCCESS) {
+        const auto draw_result =
+            granit::pipeline::detail::draw_mesh(state.renderer, recorder, draws[index].mesh);
+        const auto end_result = granit_command_recorder_end_rendering(state.renderer, recorder);
+        result = draw_result == GRANIT_SUCCESS ? end_result : draw_result;
+      }
     }
   }
-  const auto end_result = granit_command_recorder_end_rendering(state.renderer, recorder);
-  return result == GRANIT_SUCCESS ? end_result : result;
+  return result;
 }
 
 granit_result acquire_shadow_pipeline(pipeline_state& state,
@@ -251,7 +262,8 @@ granit_result acquire_shadow_pipeline(pipeline_state& state,
     return GRANIT_SUCCESS;
   }
   granit::pipeline::detail::mesh_pipeline_state mesh_state;
-  auto result = granit::pipeline::detail::copy_mesh_pipeline_state(state.renderer, mesh, mesh_state);
+  auto result =
+      granit::pipeline::detail::copy_mesh_pipeline_state(state.renderer, mesh, mesh_state);
   if (result != GRANIT_SUCCESS)
     return result;
   std::vector<granit_vertex_buffer_layout> layouts;
@@ -289,20 +301,19 @@ granit_result acquire_shadow_pipeline(pipeline_state& state,
   return GRANIT_SUCCESS;
 }
 
-granit_result record_shadow_draws(
-    pipeline_state& state, granit_command_recorder recorder, granit_texture_view depth,
-    const granit::lighting::shadow_frame_constants& frame,
-    std::span<const granit::lighting::shadow_caster> casters,
-    std::span<const granit_render_pipeline_draw_binding> draws) {
+granit_result record_shadow_draws(pipeline_state& state, granit_command_recorder recorder,
+                                  granit_texture_view depth,
+                                  const granit::lighting::shadow_frame_constants& frame,
+                                  std::span<const granit::lighting::shadow_caster> casters,
+                                  std::span<const granit_render_pipeline_draw_binding> draws) {
   if (casters.size() != draws.size())
     return GRANIT_ERROR_INVALID_ARGUMENT;
-  granit_depth_stencil_attachment_desc depth_attachment =
-      GRANIT_DEPTH_STENCIL_ATTACHMENT_DESC_INIT;
+  granit_depth_stencil_attachment_desc depth_attachment = GRANIT_DEPTH_STENCIL_ATTACHMENT_DESC_INIT;
   depth_attachment.view = depth;
   granit_rendering_desc rendering = GRANIT_RENDERING_DESC_INIT;
   rendering.depth_stencil_attachment = &depth_attachment;
   rendering.area = {0, 0, 1024, 1024};
-  auto result = granit_command_recorder_begin_rendering(state.renderer, recorder, &rendering);
+  auto result = GRANIT_SUCCESS;
   const granit_viewport viewport{0, 0, 1024, 1024, 0, 1};
   const granit_scissor scissor{0, 0, 1024, 1024};
   const granit::material::pbr_frame_constants unused_frame{};
@@ -315,6 +326,8 @@ granit_result record_shadow_draws(
          .color_format = GRANIT_TEXTURE_FORMAT_RGBA16_FLOAT,
          .depth_stencil_format = GRANIT_TEXTURE_FORMAT_D32_FLOAT},
         material);
+    if (result != GRANIT_SUCCESS)
+      break;
     const granit::material::pbr_object_constants object{
         .model = casters[index].model,
         .normal_matrix = granit::math::identity_matrix4,
@@ -322,6 +335,8 @@ granit_result record_shadow_draws(
     granit::pipeline::detail::pbr_draw_bindings bindings;
     if (result == GRANIT_SUCCESS)
       result = bindings.initialize(state.renderer, material, unused_frame, object);
+    if (result != GRANIT_SUCCESS)
+      break;
     granit::lighting::shadow_ibl_resources lighting;
     if (result == GRANIT_SUCCESS) {
       result = lighting.initialize(
@@ -334,27 +349,49 @@ granit_result record_shadow_draws(
            .texel_size = {1.0F / 1024.0F, 1.0F / 1024.0F}},
           {.intensity = 0.0F}, {}, {}, material.lighting_layout);
     }
+    if (result != GRANIT_SUCCESS)
+      break;
     granit_graphics_pipeline pipeline = GRANIT_NULL_HANDLE;
     if (result == GRANIT_SUCCESS)
       result = acquire_shadow_pipeline(state, material, draws[index].mesh, pipeline);
+    if (result != GRANIT_SUCCESS)
+      break;
     if (result == GRANIT_SUCCESS)
       result = granit_command_recorder_bind_graphics_pipeline(state.renderer, recorder, pipeline);
+    if (result != GRANIT_SUCCESS)
+      break;
     const std::array groups{bindings.object_group(), lighting.group()};
     if (result == GRANIT_SUCCESS) {
       result = granit_command_recorder_bind_graphics_groups(
           state.renderer, recorder, material.pipeline_layout, 2, groups.data(),
           static_cast<uint32_t>(groups.size()));
     }
+    if (result != GRANIT_SUCCESS)
+      break;
     if (result == GRANIT_SUCCESS)
       result = granit_command_recorder_set_viewports(state.renderer, recorder, 0, &viewport, 1);
+    if (result != GRANIT_SUCCESS)
+      break;
     if (result == GRANIT_SUCCESS)
       result = granit_command_recorder_set_scissors(state.renderer, recorder, 0, &scissor, 1);
+    if (result != GRANIT_SUCCESS)
+      break;
     if (result == GRANIT_SUCCESS)
-      result = granit::pipeline::detail::record_mesh_draw(state.renderer, recorder,
-                                                          draws[index].mesh);
+      result =
+          granit::pipeline::detail::bind_mesh_buffers(state.renderer, recorder, draws[index].mesh);
+    if (result == GRANIT_SUCCESS) {
+      if (index != 0)
+        depth_attachment.depth_load_operation = GRANIT_ATTACHMENT_LOAD_OPERATION_LOAD;
+      result = granit_command_recorder_begin_rendering(state.renderer, recorder, &rendering);
+      if (result == GRANIT_SUCCESS) {
+        const auto draw_result =
+            granit::pipeline::detail::draw_mesh(state.renderer, recorder, draws[index].mesh);
+        const auto end_result = granit_command_recorder_end_rendering(state.renderer, recorder);
+        result = draw_result == GRANIT_SUCCESS ? end_result : draw_result;
+      }
+    }
   }
-  const auto end_result = granit_command_recorder_end_rendering(state.renderer, recorder);
-  return result == GRANIT_SUCCESS ? end_result : result;
+  return result;
 }
 
 granit_result
@@ -465,11 +502,10 @@ render_view(pipeline_state& state, const granit_render_pipeline_render_desc& des
           granit::lighting::light_pack_error::none) {
         return GRANIT_ERROR_INVALID_ARGUMENT;
       }
-      return record_opaque_draws(state, context.recorder(), context.texture_view(hdr),
-                                 context.texture_view(depth),
-                                 shadow ? context.texture_view(*shadow) : GRANIT_NULL_HANDLE,
-                                 desc.width, desc.height, frame, objects, draw_bindings, lights,
-                                 shadow_constants);
+      return record_opaque_draws(
+          state, context.recorder(), context.texture_view(hdr), context.texture_view(depth),
+          shadow ? context.texture_view(*shadow) : GRANIT_NULL_HANDLE, desc.width, desc.height,
+          frame, objects, draw_bindings, lights, shadow_constants);
     }
     const granit_render_pipeline_record_info info{
         .struct_size = sizeof(granit_render_pipeline_record_info),
@@ -716,8 +752,7 @@ extern "C" granit_result granit_render_pipeline_destroy(granit_renderer renderer
   if (result == GRANIT_SUCCESS)
     result = ibl_result;
   for (const auto& entry : removed->shadow_pipelines) {
-    const auto pipeline_result =
-        granit_graphics_pipeline_destroy(renderer, entry.pipeline);
+    const auto pipeline_result = granit_graphics_pipeline_destroy(renderer, entry.pipeline);
     if (result == GRANIT_SUCCESS)
       result = pipeline_result;
   }

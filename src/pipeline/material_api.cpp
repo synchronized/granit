@@ -3,14 +3,15 @@
 
 #include <granit/pipeline/material.h>
 
+#include "lighting/shadow_ibl_resources.h"
 #include "material/material_gpu_instance.h"
 #include "material/material_package_archive.h"
 #include "material/material_template_gpu.h"
-#include "lighting/shadow_ibl_resources.h"
 #include "pipeline/material_access.h"
 
 #include <granit/renderer/pipeline.hpp>
 
+#include <algorithm>
 #include <array>
 #include <limits>
 #include <memory>
@@ -192,9 +193,17 @@ granit_result granit::pipeline::detail::acquire_material_draw_state(
     if (!state->alive || !state->instance.initialized())
       return GRANIT_ERROR_INVALID_HANDLE;
     granit_graphics_pipeline pipeline = GRANIT_NULL_HANDLE;
+    auto variant = request.variant;
+    if (variant == 0 && state->package.find(request.pass, variant) == nullptr) {
+      const auto found = std::ranges::find_if(
+          state->package.variants(), [&](const auto& value) { return value.pass == request.pass; });
+      if (found == state->package.variants().end())
+        return GRANIT_ERROR_NOT_READY;
+      variant = found->key;
+    }
     const auto result = state->material_template.acquire_pipeline(
         {.pass = request.pass,
-         .variant = request.variant,
+         .variant = variant,
          .color_format = request.color_format,
          .depth_stencil_format = request.depth_stencil_format,
          .sample_count = request.sample_count},
@@ -208,8 +217,7 @@ granit_result granit::pipeline::detail::acquire_material_draw_state(
               .object_layout = state->object_layout.native_handle(),
               .lighting_layout = state->lighting_layout.native_handle(),
               .material_group = state->instance.bind_group()};
-    if (output.pipeline_layout == GRANIT_NULL_HANDLE ||
-        output.frame_layout == GRANIT_NULL_HANDLE ||
+    if (output.pipeline_layout == GRANIT_NULL_HANDLE || output.frame_layout == GRANIT_NULL_HANDLE ||
         output.material_layout == GRANIT_NULL_HANDLE ||
         output.object_layout == GRANIT_NULL_HANDLE ||
         output.lighting_layout == GRANIT_NULL_HANDLE ||
@@ -249,11 +257,11 @@ extern "C" granit_result granit_material_create(granit_renderer renderer,
     auto result = decode_archive(*desc, state->package);
     if (result != GRANIT_SUCCESS)
       return result;
-    const std::array object_entries{granit::bind_group_layout_entry{
-        .binding = 0,
-        .type = granit::binding_type::uniform_buffer,
-        .array_count = 1,
-        .visibility = granit::shader_stage_flags::vertex}};
+    const std::array object_entries{
+        granit::bind_group_layout_entry{.binding = 0,
+                                        .type = granit::binding_type::uniform_buffer,
+                                        .array_count = 1,
+                                        .visibility = granit::shader_stage_flags::vertex}};
     const auto object_result = state->object_layout.initialize(renderer, object_entries);
     if (granit::failed(object_result))
       return static_cast<granit_result>(object_result);
@@ -352,8 +360,7 @@ extern "C" granit_result granit_material_destroy(granit_renderer renderer,
   const auto layout_result = static_cast<granit_result>(removed->object_layout.reset());
   if (result == GRANIT_SUCCESS)
     result = layout_result;
-  const auto lighting_layout_result =
-      static_cast<granit_result>(removed->lighting_layout.reset());
+  const auto lighting_layout_result = static_cast<granit_result>(removed->lighting_layout.reset());
   if (result == GRANIT_SUCCESS)
     result = lighting_layout_result;
   return result;

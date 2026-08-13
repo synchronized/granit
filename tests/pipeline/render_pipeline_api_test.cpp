@@ -17,6 +17,10 @@
 #include <array>
 #include <cmath>
 #include <cstddef>
+#include <cstring>
+#include <fstream>
+#include <iterator>
+#include <string>
 #include <vector>
 
 namespace {
@@ -42,6 +46,53 @@ std::vector<std::byte> build_material_archive() {
                                         .entry_point = "main",
                                         .spirv = {spirv.begin(), spirv.end()}}},
                            .pipeline = {}});
+  material_package package;
+  REQUIRE(material_package::build(std::move(desc), package) == package_error::none);
+  std::vector<std::byte> archive;
+  REQUIRE(encode_material_package_archive(package, archive) == archive_error::none);
+  return archive;
+}
+
+std::vector<std::uint32_t> load_pipeline_shader(const char* name) {
+  std::ifstream stream{std::string{GRANIT_PIPELINE_ASSET_DIR} + "/" + name, std::ios::binary};
+  const std::vector<char> bytes{std::istreambuf_iterator<char>{stream}, {}};
+  if (bytes.empty() || bytes.size() % sizeof(std::uint32_t) != 0)
+    return {};
+  std::vector<std::uint32_t> words(bytes.size() / sizeof(std::uint32_t));
+  std::memcpy(words.data(), bytes.data(), bytes.size());
+  return words;
+}
+
+std::vector<std::byte> build_automatic_material_archive() {
+  using namespace granit::material;
+  const auto vertex = load_pipeline_shader("pbr_shadow_ibl_lights.vert.spv");
+  const auto fragment = load_pipeline_shader("pbr_shadow_ibl_lights_untextured.frag.spv");
+  REQUIRE_FALSE(vertex.empty());
+  REQUIRE_FALSE(fragment.empty());
+  material_package_desc desc;
+  desc.metadata.constant_buffer_size = 48;
+  desc.metadata.parameters = {
+      {.name = "base_color", .type = parameter_type::float4, .offset = 0},
+      {.name = "metallic", .type = parameter_type::float32, .offset = 16},
+      {.name = "perceptual_roughness", .type = parameter_type::float32, .offset = 20},
+      {.name = "normal_scale", .type = parameter_type::float32, .offset = 24},
+      {.name = "occlusion_strength", .type = parameter_type::float32, .offset = 28},
+      {.name = "emissive", .type = parameter_type::float3, .offset = 32}};
+  material_variant_desc variant{.pass = make_feature_id("opaque"),
+                                .features = {{make_feature_id("pbr_texture_mask"), 0}},
+                                .shaders = {{.stage = package_shader_stage::vertex,
+                                             .entry_point = "vertex_main",
+                                             .spirv = vertex},
+                                            {.stage = package_shader_stage::fragment,
+                                             .entry_point = "fragment_main",
+                                             .spirv = fragment}},
+                                .pipeline = {}};
+  variant.pipeline.primitive.front_face = GRANIT_FRONT_FACE_CLOCKWISE;
+  variant.pipeline.primitive.cull_mode = GRANIT_CULL_MODE_BACK;
+  variant.pipeline.depth.test_enabled = 1;
+  variant.pipeline.depth.write_enabled = 1;
+  variant.pipeline.depth.compare = GRANIT_COMPARE_OPERATION_LESS_EQUAL;
+  desc.variants.push_back(std::move(variant));
   material_package package;
   REQUIRE(material_package::build(std::move(desc), package) == package_error::none);
   std::vector<std::byte> archive;
@@ -204,8 +255,8 @@ TEST_CASE("统一Render Pipeline按固定阶段消费Scene Snapshot") {
   render_desc.width = 16;
   render_desc.height = 16;
   CHECK(pipeline.render(render_desc) == granit::result::invalid_argument);
-  const granit_render_pipeline_draw_binding draw_binding{
-      77, mesh.native_handle(), material.native_handle(), 0};
+  const granit_render_pipeline_draw_binding draw_binding{77, mesh.native_handle(),
+                                                         material.native_handle(), 0};
   render_desc.draw_binding_count = 1;
   render_desc.draw_bindings = &draw_binding;
   REQUIRE(pipeline.render(render_desc) == granit::result::success);
@@ -223,7 +274,7 @@ TEST_CASE("统一Render Pipeline按固定阶段消费Scene Snapshot") {
   CHECK(callback.stages.size() == 4);
   CHECK(callback.payloads == std::vector<uint64_t>{77, 77, 77, 77});
   CHECK(callback.meshes == std::vector<granit_mesh>{mesh.native_handle(), mesh.native_handle(),
-                                                   mesh.native_handle(), mesh.native_handle()});
+                                                    mesh.native_handle(), mesh.native_handle()});
   REQUIRE(callback.ibl_groups.size() == 2);
   CHECK(callback.ibl_groups[0] == callback.ibl_groups[1]);
 
@@ -308,6 +359,11 @@ TEST_CASE("公共Render Pipeline ABI输出可回读的Tone Mapping像素") {
   scene_desc.view_count = 1;
   scene_desc.renderables = &renderable;
   scene_desc.renderable_count = 1;
+  const granit_scene_directional_light directional_light{.direction_to_light = {0.0F, 0.0F, 1.0F},
+                                                         .radiance = {1.0F, 1.0F, 1.0F},
+                                                         .layer_mask = UINT64_MAX};
+  scene_desc.directional_lights = &directional_light;
+  scene_desc.directional_light_count = 1;
   granit_scene_snapshot scene = GRANIT_NULL_HANDLE;
   REQUIRE(granit_scene_snapshot_create(renderer.native_handle(), &scene_desc, &scene) ==
           GRANIT_SUCCESS);
@@ -327,10 +383,13 @@ TEST_CASE("公共Render Pipeline ABI输出可回读的Tone Mapping像素") {
   vertex_buffer_desc.memory_location = GRANIT_MEMORY_LOCATION_DEVICE;
   REQUIRE(granit_buffer_create(renderer.native_handle(), &vertex_buffer_desc, &vertex_buffer) ==
           GRANIT_SUCCESS);
+  constexpr std::array<float, 9> positions{-0.65F, -0.65F, 0.5F,  0.65F, -0.65F,
+                                           0.5F,   0.0F,   0.65F, 0.5F};
+  REQUIRE(granit_buffer_write(renderer.native_handle(), vertex_buffer, 0, positions.data(),
+                              sizeof(positions)) == GRANIT_SUCCESS);
   const granit_vertex_attribute attribute{0, GRANIT_VERTEX_FORMAT_FLOAT32X3, 0, 0};
-  const granit_mesh_vertex_buffer vertex{vertex_buffer,
-                                         0,
-                                         {12, GRANIT_VERTEX_STEP_MODE_VERTEX, 1, 0, &attribute}};
+  const granit_mesh_vertex_buffer vertex{
+      vertex_buffer, 0, {12, GRANIT_VERTEX_STEP_MODE_VERTEX, 1, 0, &attribute}};
   granit_mesh_desc mesh_desc = GRANIT_MESH_DESC_INIT;
   mesh_desc.vertex_buffers = &vertex;
   mesh_desc.vertex_buffer_count = 1;
@@ -399,6 +458,45 @@ TEST_CASE("公共Render Pipeline ABI输出可回读的Tone Mapping像素") {
   CHECK(pixel[0] == Catch::Approx(quantize(expected[0])).margin(1));
   CHECK(pixel[1] == Catch::Approx(quantize(expected[1])).margin(1));
   CHECK(pixel[2] == Catch::Approx(quantize(expected[2])).margin(1));
+  CHECK(pixel[3] == 255);
+  REQUIRE(readback.unmap() == granit::result::success);
+
+  REQUIRE(granit_render_pipeline_destroy(renderer.native_handle(), pipeline) == GRANIT_SUCCESS);
+  REQUIRE(granit_material_destroy(renderer.native_handle(), material) == GRANIT_SUCCESS);
+
+  const auto automatic_archive = build_automatic_material_archive();
+  const std::array<float, 4> base_color{0.8F, 0.2F, 0.1F, 1.0F};
+  const granit_material_parameter_update base_color_update{
+      granit_material_parameter_id("base_color", 10),
+      GRANIT_MATERIAL_PARAMETER_FLOAT4,
+      0,
+      base_color.data(),
+      sizeof(base_color),
+      GRANIT_NULL_HANDLE};
+  material_desc.archive_data = automatic_archive.data();
+  material_desc.archive_size = automatic_archive.size();
+  material_desc.initial_updates = &base_color_update;
+  material_desc.initial_update_count = 1;
+  REQUIRE(granit_material_create(renderer.native_handle(), &material_desc, &material) ==
+          GRANIT_SUCCESS);
+  granit_render_pipeline_desc automatic_pipeline_desc = GRANIT_RENDER_PIPELINE_DESC_INIT;
+  REQUIRE(granit_render_pipeline_create(renderer.native_handle(), &automatic_pipeline_desc,
+                                        &pipeline) == GRANIT_SUCCESS);
+  const granit_render_pipeline_draw_binding automatic_binding{91, mesh, material, 0};
+  render_desc.draw_bindings = &automatic_binding;
+  REQUIRE(granit_render_pipeline_render(renderer.native_handle(), pipeline, &render_desc) ==
+          GRANIT_SUCCESS);
+
+  REQUIRE(recorder.begin() == granit::result::success);
+  REQUIRE(recorder.copy_texture_to_buffer(output_texture, readback.native_handle(), layout,
+                                          region) == granit::result::success);
+  REQUIRE(recorder.end() == granit::result::success);
+  REQUIRE(recorder.submit() == granit::result::success);
+  REQUIRE(recorder.reset() == granit::result::success);
+  REQUIRE(readback.map(0, size * size * 4, &mapped) == granit::result::success);
+  pixel = static_cast<const uint8_t*>(mapped) + (size / 2 * size + size / 2) * 4;
+  // 颜色精度由 PBR 基准测试负责；这里确认无回调路径确实覆盖了黑色背景。
+  CHECK((pixel[0] != 0 || pixel[1] != 0 || pixel[2] != 0));
   CHECK(pixel[3] == 255);
   REQUIRE(readback.unmap() == granit::result::success);
 

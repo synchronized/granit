@@ -12,6 +12,7 @@ namespace granit::pipeline::detail {
 
 struct material_draw_request {
   uint64_t pass = 0;
+  /** 零值选择该 Pass 的首个默认变体；非零值要求精确匹配。 */
   uint64_t variant = 0;
   granit_texture_format color_format = GRANIT_TEXTURE_FORMAT_UNDEFINED;
   granit_texture_format depth_stencil_format = GRANIT_TEXTURE_FORMAT_UNDEFINED;
@@ -32,9 +33,10 @@ struct material_draw_state {
 [[nodiscard]] granit_result validate_material_handle(granit_renderer renderer,
                                                      granit_material material) noexcept;
 
-[[nodiscard]] granit_result acquire_material_draw_state(
-    granit_renderer renderer, granit_material material, const material_draw_request& request,
-    material_draw_state& state) noexcept;
+[[nodiscard]] granit_result acquire_material_draw_state(granit_renderer renderer,
+                                                        granit_material material,
+                                                        const material_draw_request& request,
+                                                        material_draw_state& state) noexcept;
 
 } // namespace granit::pipeline::detail
 

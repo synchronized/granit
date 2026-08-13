@@ -26,15 +26,14 @@ struct mesh_pipeline_state {
 [[nodiscard]] granit_result copy_mesh_pipeline_state(granit_renderer renderer, granit_mesh mesh,
                                                      mesh_pipeline_state& state) noexcept;
 
-/**
- * 将 Mesh 的 Buffer 绑定与一次 Draw 录制到已开始的 Recorder。
- *
- * 调用时会重新校验 Mesh 借用的 Buffer；Pipeline、Viewport、Scissor 和渲染区域
- * 仍由上层阶段负责准备。
- */
-[[nodiscard]] granit_result record_mesh_draw(granit_renderer renderer,
-                                             granit_command_recorder recorder,
-                                             granit_mesh mesh) noexcept;
+/** 在进入渲染区域前校验并绑定 Mesh 借用的 Buffer。 */
+[[nodiscard]] granit_result bind_mesh_buffers(granit_renderer renderer,
+                                              granit_command_recorder recorder,
+                                              granit_mesh mesh) noexcept;
+
+/** 在已开始的渲染区域内录制 Mesh 的一次 Draw。 */
+[[nodiscard]] granit_result draw_mesh(granit_renderer renderer, granit_command_recorder recorder,
+                                      granit_mesh mesh) noexcept;
 
 } // namespace granit::pipeline::detail
 
