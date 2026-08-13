@@ -407,6 +407,18 @@ Windows Clang Release 共享库首份基线使用 5 个预热样本、20 个正�
 触发条件，因此当前不引入分块或聚簇光照，但线性 Forward 循环已作为后续目标硬件复测的重点。
 完整环境与百分位数见 Benchmark 结果目录。H-05E 下一步进入功能降级组合验证。
 
+## H-05E6a 实现记录
+
+统一 Group 3 资源现通过显式 `lighting_resource_features` 区分阴影和 IBL 能力。关闭阴影时不会创建
+Shadow 常量 Buffer、比较 Sampler 或 binding 0～2；关闭 IBL 时不会创建 IBL 常量 Buffer、线性
+Sampler 或 binding 3～7。光源计数及三类光源 Buffer 的 binding 8～11 始终存在，因此空光源集合、
+仅直接光、无阴影和无 IBL 都能使用真实匹配的稀疏布局，不需要伪造 Texture View。
+
+初始化严格要求 Texture View 与启用能力一致：启用 IBL 必须完整提供三张视图，禁用能力时必须保持
+对应视图为空；对未启用能力执行更新会返回 `INVALID_ARGUMENT`。Vulkan 回归覆盖完整组合、仅直接光、
+IBL 加直接光、阴影加直接光、空光源更新、部分 IBL 资源拒绝和多余视图拒绝。下一步编译匹配这些
+布局的 LIGHTS、IBL+LIGHTS、SHADOW+LIGHTS Shader 变体，并完成各组合的 GPU 像素回归。
+
 ## H-05A 实现记录
 
 新增可选内部目标 `granit::lighting`，首版依赖 `granit::scene`，不进入核心动态库或安装导出。

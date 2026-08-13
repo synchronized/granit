@@ -15,13 +15,19 @@ struct shadow_ibl_texture_views {
   ibl_texture_views ibl{};
 };
 
-/** 拥有阴影与 IBL 共用的完整 Group 3；只借用调用方持有的四个 Texture View。 */
+struct lighting_resource_features {
+  bool shadows = true;
+  bool ibl = true;
+};
+
+/** 拥有光照 Group 3；只借用调用方持有且由 features 启用的 Texture View。 */
 class shadow_ibl_resources {
 public:
   [[nodiscard]] granit_result initialize(granit_renderer renderer, shadow_ibl_texture_views views,
                                          const shadow_sampling_constants& shadow_constants,
                                          const ibl_sampling_constants& ibl_constants,
-                                         const light_limits& light_capacities = {}) noexcept;
+                                         const light_limits& light_capacities = {},
+                                         lighting_resource_features features = {}) noexcept;
   [[nodiscard]] granit_result update_shadow(const shadow_sampling_constants& constants) noexcept;
   [[nodiscard]] granit_result update_ibl(const ibl_sampling_constants& constants) noexcept;
   [[nodiscard]] granit_result update_lights(const packed_view_lights& lights) noexcept;
@@ -38,6 +44,7 @@ private:
   light_buffers lights_;
   granit::bind_group_layout layout_;
   granit::bind_group group_;
+  lighting_resource_features features_{};
 };
 
 } // namespace granit::lighting

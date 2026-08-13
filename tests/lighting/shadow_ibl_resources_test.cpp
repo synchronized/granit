@@ -82,6 +82,40 @@ TEST_CASE("阴影和IBL共享完整Group3") {
   lights.point.resize(2);
   CHECK(resources.update_lights(lights) == GRANIT_SUCCESS);
   CHECK(resources.update_ibl({.intensity = 2.0F, .prefiltered_max_mip = 2.0F}) == GRANIT_SUCCESS);
+
+  SECTION("仅直接光不创建阴影或IBL绑定") {
+    granit::lighting::shadow_ibl_resources direct_only;
+    REQUIRE(direct_only.initialize(renderer.native_handle(), {}, {}, {}, {},
+                                   {.shadows = false, .ibl = false}) == GRANIT_SUCCESS);
+    CHECK(direct_only.update_lights({}) == GRANIT_SUCCESS);
+    CHECK(direct_only.update_shadow({}) == GRANIT_ERROR_INVALID_ARGUMENT);
+    CHECK(direct_only.update_ibl({}) == GRANIT_ERROR_INVALID_ARGUMENT);
+  }
+
+  SECTION("无阴影组合只借用IBL纹理") {
+    granit::lighting::shadow_ibl_resources ibl_only;
+    REQUIRE(
+        ibl_only.initialize(renderer.native_handle(),
+                            {.ibl = {.irradiance = irradiance_view.native_handle(),
+                                     .prefiltered_environment = prefiltered_view.native_handle(),
+                                     .brdf_lut = lut_view.native_handle()}},
+                            {}, {.prefiltered_max_mip = 2.0F}, {},
+                            {.shadows = false, .ibl = true}) == GRANIT_SUCCESS);
+    CHECK(ibl_only.update_shadow({}) == GRANIT_ERROR_INVALID_ARGUMENT);
+    CHECK(ibl_only.update_ibl({.prefiltered_max_mip = 2.0F}) == GRANIT_SUCCESS);
+  }
+
+  SECTION("无IBL组合只借用阴影纹理") {
+    granit::lighting::shadow_ibl_resources shadow_only;
+    REQUIRE(shadow_only.initialize(renderer.native_handle(),
+                                   {.shadow = shadow_view.native_handle()},
+                                   {.light_view_projection = granit::math::identity_matrix4,
+                                    .texel_size = {1.0F, 1.0F}},
+                                   {}, {}, {.shadows = true, .ibl = false}) == GRANIT_SUCCESS);
+    CHECK(shadow_only.update_shadow({.light_view_projection = granit::math::identity_matrix4,
+                                     .texel_size = {1.0F, 1.0F}}) == GRANIT_SUCCESS);
+    CHECK(shadow_only.update_ibl({}) == GRANIT_ERROR_INVALID_ARGUMENT);
+  }
 }
 
 TEST_CASE("统一Group3拒绝不完整资源") {
@@ -90,4 +124,12 @@ TEST_CASE("统一Group3拒绝不完整资源") {
   CHECK(resources.update_shadow({}) == GRANIT_ERROR_INVALID_ARGUMENT);
   CHECK(resources.update_ibl({}) == GRANIT_ERROR_INVALID_ARGUMENT);
   CHECK(resources.update_lights({}) == GRANIT_ERROR_INVALID_ARGUMENT);
+}
+
+TEST_CASE("统一Group3拒绝与能力不一致的纹理") {
+  granit::lighting::shadow_ibl_resources resources;
+  CHECK(resources.initialize(1, {.shadow = 2}, {}, {}, {}, {.shadows = false, .ibl = false}) ==
+        GRANIT_ERROR_INVALID_ARGUMENT);
+  CHECK(resources.initialize(1, {.ibl = {.irradiance = 2}}, {}, {}, {},
+                             {.shadows = false, .ibl = true}) == GRANIT_ERROR_INVALID_ARGUMENT);
 }
