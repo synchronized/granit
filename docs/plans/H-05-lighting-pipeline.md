@@ -253,9 +253,9 @@ Pipeline Layout、顶点/片元 Shader 和目标格式专用 Graphics Pipeline�
 支持更新曝光缩放与 sRGB 编码开关，并按依赖逆序销毁全部 GPU 对象。
 
 真实 Vulkan 测试已覆盖 `RGBA16_FLOAT` HDR View 到 `RGBA8_UNORM` Pipeline 的完整创建、常量更新和
-非法输入拒绝。独立回读试验发现当前新录制路径提交成功但目标 Attachment 的清屏/绘制未进入回读，
-因此未将其误记为 Tone Mapping 像素通过。下一步在现有已通过的 PBR 离屏例子中接入 HDR 和 Tone
-Mapping，同时定位该 Recorder/Attachment 差异后再完成最终像素回归。
+非法输入拒绝。最初回读全零的原因已定位为在异步 `submit()` 后、GPU 完成前直接映射 Readback
+Buffer；改为在映射前通过 `reset()` 等待该 Recorder 完成后，固定 HDR 高亮值经 `+1 EV`、ACES 和
+Shader sRGB 编码得到的 GPU 像素与 CPU 参考逐通道一致。H-05D 首版 Tone Mapping 像素闭环完成。
 
 ### H-05E：完整参考管线与测量
 
