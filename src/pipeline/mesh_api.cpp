@@ -116,6 +116,65 @@ granit_result granit::pipeline::detail::validate_mesh_handle(granit_renderer ren
              : GRANIT_ERROR_INVALID_HANDLE;
 }
 
+granit_result granit::pipeline::detail::record_mesh_draw(granit_renderer renderer,
+                                                         granit_command_recorder recorder,
+                                                         granit_mesh mesh) noexcept {
+  size_t index = 0;
+  uint32_t generation = 0;
+  if (recorder == GRANIT_NULL_HANDLE || !decode(mesh, index, generation))
+    return GRANIT_ERROR_INVALID_HANDLE;
+  std::shared_ptr<mesh_state> state;
+  {
+    std::scoped_lock lock{registry_mutex};
+    if (index >= registry.size() || registry[index].generation != generation ||
+        registry[index].state == nullptr || registry[index].state->renderer != renderer) {
+      return GRANIT_ERROR_INVALID_HANDLE;
+    }
+    state = registry[index].state;
+  }
+  try {
+    std::vector<granit_vertex_buffer_binding> bindings;
+    bindings.reserve(state->vertex_buffers.size());
+    for (const auto& vertex : state->vertex_buffers) {
+      granit_buffer_desc desc{};
+      const auto result = granit_buffer_get_desc(renderer, vertex.buffer, &desc);
+      if (result != GRANIT_SUCCESS)
+        return result;
+      if ((desc.usage & GRANIT_BUFFER_USAGE_VERTEX_BIT) == 0 || vertex.offset >= desc.size)
+        return GRANIT_ERROR_INVALID_ARGUMENT;
+      bindings.push_back({vertex.buffer, vertex.offset});
+    }
+    auto result = granit_command_recorder_bind_vertex_buffers(
+        renderer, recorder, 0, bindings.data(), static_cast<uint32_t>(bindings.size()));
+    if (result != GRANIT_SUCCESS)
+      return result;
+    if (state->index_buffer != GRANIT_NULL_HANDLE) {
+      granit_buffer_desc desc{};
+      result = granit_buffer_get_desc(renderer, state->index_buffer, &desc);
+      if (result != GRANIT_SUCCESS)
+        return result;
+      if ((desc.usage & GRANIT_BUFFER_USAGE_INDEX_BIT) == 0 ||
+          state->index_buffer_offset >= desc.size) {
+        return GRANIT_ERROR_INVALID_ARGUMENT;
+      }
+      result = granit_command_recorder_bind_index_buffer(
+          renderer, recorder, state->index_buffer, state->index_buffer_offset, state->index_type);
+      if (result != GRANIT_SUCCESS)
+        return result;
+      return granit_command_recorder_draw_indexed(
+          renderer, recorder, state->index_count, state->instance_count, state->first_index,
+          state->vertex_offset, state->first_instance);
+    }
+    return granit_command_recorder_draw(renderer, recorder, state->vertex_count,
+                                        state->instance_count, state->first_vertex,
+                                        state->first_instance);
+  } catch (const std::bad_alloc&) {
+    return GRANIT_ERROR_OUT_OF_MEMORY;
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
 extern "C" granit_result granit_mesh_create(granit_renderer renderer, const granit_mesh_desc* desc,
                                             granit_mesh* mesh) {
   if (mesh == nullptr)

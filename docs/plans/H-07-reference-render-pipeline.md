@@ -7,7 +7,7 @@
 
 - 路线图任务：H-07
 - 优先级：P2
-- 状态：进行中，公共门面、固定 Forward PBR 图与安装发布已完成，下一步实现公共 Mesh 与内置 Draw
+- 状态：进行中，公共 Mesh 和 Mesh Draw 录制已完成，正在收敛内置 PBR 绑定
 - 必需依赖：H-01 Render Graph、H-02 Material、H-03 PBR、H-04 Scene、H-05 Lighting/Post Process
 - 可选依赖：H-06 2D/UI/调试绘制评估结果
 
@@ -190,7 +190,7 @@ ABI、描述结构、整数句柄、所有权与线程语义，并在其上提�
 
 `render` 一次处理一个或多个 View，并在库内完成可见性、光源打包、Shadow、PBR HDR、Tone Mapping
 和批量提交。ABI 不公开逐 Pass 函数，不为每个对象跨 DLL 调用一次函数。Renderable 使用稳定的
-`uint64_t payload` 通过单次渲染的只读关联表映射到调用方 Mesh 标识和 `granit_material`。管线完成
+`uint64_t payload` 通过单次渲染的只读关联表映射到 `granit_mesh` 和 `granit_material`。管线完成
 可见性后按可见顺序生成批次，并调用录制回调；回调参数包含核心 `granit_command_recorder`、只读
 Renderable、payload 和关联项数组。回调不得保存数组地址，不得结束、提交或销毁 Recorder，也不得
 递归调用同一个 Pipeline。
@@ -232,9 +232,9 @@ Renderable、payload 和关联项数组。回调不得保存数组地址，不�
   GPU 更新由各实例独立串行化。
 - `granit/pipeline/render_pipeline.h` 已提供统一 Pipeline 句柄与单次多 View `render` 入口。首版实现
   从 Scene Snapshot 复制稳定输入，逐 View 执行可见性结果，并组合 PBR HDR、Depth 与 Tone Mapping。
-- 固定阶段回调目前只覆盖 Opaque。回调获得 Recorder、HDR/Depth 输出 View、当前 View、可见
+- 固定阶段回调目前覆盖 Shadow 与 Opaque。回调获得 Recorder、HDR/Depth 输出 View、当前 View、可见
   Renderable，以及已按 payload 关联的 Mesh/Material 批次；不得提交 Recorder 或递归调用同一
-  Pipeline。重复、缺失、空 Mesh 标识、无效 Material 或跨 Renderer Material 均在录制前失败。
+  Pipeline。重复、缺失、无效或跨 Renderer 的 Mesh/Material 均在录制前失败。
 - 回调失败时本 View 不提交未完成 Recorder；同一 Pipeline 并发或递归调用返回 `NOT_READY`。
 - Tone Mapping Shader 作为构建输入嵌入 `granit_render_pipeline`，运行时不读取示例或测试资产。
   Granit 在固定 Pass 内创建绑定、录制全屏 Draw，并根据 UNORM/sRGB 输出选择唯一颜色编码路径。
@@ -288,7 +288,10 @@ Renderable、payload 和关联项数组。回调不得保存数组地址，不�
    对应一次不可变 Draw，不含 Submesh 数组。Mesh 借用 Buffer；独立动态库不穿透核心库持有内部
    引用，创建时查询用途与范围，后续录制时再次校验，调用者必须保证 Buffer 生命周期覆盖 Mesh。
 2. **H-07F 内置 Draw**：让 Pipeline 使用 Mesh 与 Material 自动录制 Opaque/Shadow Draw，回调改为
-   可选高级扩展点，普通用户不再必须理解 Command Recorder。
+   可选高级扩展点，普通用户不再必须理解 Command Recorder。Mesh 内部已能
+   在录制时重新校验借用 Buffer，并绑定 Vertex/Index Buffer 后发出对应 Draw；剩余工作是
+   建立 Group 0/2 帧与对象资源、将 Group 1 Material 和 Group 3 Lighting 纳入同一 Pipeline
+   Layout，再由 Shadow/Opaque 阶段调用 Mesh 录制器。
 3. **H-07G 完整示例**：提供安装 API 下的离屏和窗口完整路径，并保留直接 Renderer 用法作为对照。
 4. **H-07H 验收**：补齐生命周期压力、Resize、多 View、Validation Layer、输出一致性和性能对比。
 
