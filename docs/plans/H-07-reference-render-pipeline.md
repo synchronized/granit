@@ -55,8 +55,12 @@ Command Recorder、同步和提交，不构建任何 Granit 高层目标。
 - `granit::granit` 不得包含、链接或了解任何高层模块。
 - 每个高层模块及统一门面必须能够独立选择是否构建。
 - 高层目标不能成为核心安装包的传递依赖；后期可作为单独 CMake component 安装导出。
-- 高级层首先使用 C++20 接口，在行为成熟前不扩展稳定 C ABI。
+- 高级层以 C ABI 作为动态库边界，并在其上提供轻量 C++20 包装；当前开发阶段暂不承诺 ABI 稳定。
 - 高级层只能使用 Granit 公共 Renderer API，不得绕过封装直接调用 Vulkan。
+
+公共 ABI 收敛检查点确认后，上述发布边界进一步固定为：高层功能由独立
+`granit_render_pipeline` 动态库或静态库导出，使用单独的 `GRANIT_RENDER_PIPELINE_API` 符号宏；
+它依赖 `granit::granit`，但核心库不反向链接或安装高层头文件。使用者可以只安装核心 component。
 
 ## 所有权
 
@@ -146,6 +150,56 @@ H-06 的 UI/调试绘制结果可以作为最终合成扩展，但不作为 H-07
 H-05 完成后先执行公共 API 收敛检查点：确定 Scene、Material、Lighting 和统一渲染入口的首版 C
 ABI、描述结构、整数句柄、所有权与线程语义，并在其上提供轻量 C++20 RAII 包装。H-07 使用该检查
 点确认的粗粒度接口实现门面，不把当前内部类、Group 3 binding 或 Render Graph 实现类型直接导出。
+
+## 公共 ABI 收敛检查点
+
+首版高层 ABI 只发布三个 64 位整数句柄，零值无效：
+
+- `granit_material`：拥有不可变模板版本和可更新实例参数；Shader 变体与 Pipeline 缓存在库内。
+- `granit_scene_snapshot`：拥有一次事务式复制后的 Renderable、光源和 View 值数据，不拥有 ECS、
+  Mesh、Material 或 payload 指向的外部对象。
+- `granit_render_pipeline`：拥有默认资源、阴影/HDR 中间目标、Pass 组合和跨帧缓存，借用 Renderer。
+
+不为 Camera、Light、View、颜色、矩阵或单个 Renderable 创建句柄。它们使用包含 `struct_size` 的 C
+值结构；数组统一使用“只读指针 + `uint32_t` 数量”，成功返回前完成复制。所有矩阵明确为 16 个
+`float` 的列主序布局，公共头不依赖内部 `granit::math`。
+
+### 粗粒度调用顺序
+
+```text
+创建 Renderer
+  -> 创建/更新 Material
+  -> 从借用数组创建 Scene Snapshot
+  -> 创建 Render Pipeline
+  -> render(pipeline, snapshot, view range, output, environment)
+  -> 销毁 Pipeline / Snapshot / Material
+  -> 销毁 Renderer
+```
+
+`render` 一次处理一个或多个 View，并在库内完成可见性、光源打包、Shadow、PBR HDR、Tone Mapping
+和批量提交。ABI 不公开逐 Pass 函数，不为每个对象跨 DLL 调用一次函数。Renderable 使用稳定的
+`uint64_t payload` 关联调用方 Mesh；管线按批次调用录制回调，回调参数包含核心
+`granit_command_recorder`、只读 payload 数组和用户数据。回调不得保存数组地址，不得结束、提交或
+销毁 Recorder，也不得递归调用同一个 Pipeline。
+
+### 所有权、线程与失败语义
+
+- 三类高层句柄均校验 generation、类型及所属 Renderer；销毁后旧句柄立即失效。
+- Material 更新和 Snapshot 创建采用事务语义；失败时旧状态保持不变。
+- Pipeline、Material 和 Snapshot 的同一句柄操作串行化；不同句柄可并行。单个 Pipeline 的
+  `render` 首版不可并发，但可以在外部线程调用。
+- Pipeline 强引用录制和在途提交所需的内部资源；外部输出、环境 Texture View 和 Renderer 只借用，
+  必须覆盖调用期间及 GPU 完成期，或由核心 Recorder 的既有保活机制接管。
+- 回调返回 `granit_result`；首个错误终止本帧且不提交未完成 Recorder。异常不得跨越 C ABI。
+- C++20 包装仅提供 move-only RAII、`std::span` 和强类型枚举，不保存第二套 Scene、Material 或
+  Pipeline 状态。
+
+### 明确不进入首版 ABI
+
+- 内部 Render Graph ID、Pass ID、Group 编号、binding、Shader 变体键和 Vulkan 类型。
+- ECS、Scene Graph、Camera 层级、资产加载、Mesh 所有权和通用插件系统。
+- 每个 Draw 一次的公开动态库调用、任意 Command Buffer 注入或跨 ABI C++ 回调对象。
+- ABI 稳定承诺；项目仍处于开发状态，首版实现验证期间允许调整尾部字段和函数集合。
 
 ## 分步实施
 
