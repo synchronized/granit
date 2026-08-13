@@ -319,6 +319,7 @@ int main() {
                                depth_view);
 
   granit::command_recorder recorder;
+  granit::timestamp_query_pool timestamps;
   constexpr std::uint32_t render_size = 256;
   constexpr std::uint64_t readback_size = render_size * render_size * 4;
   granit::buffer readback;
@@ -330,6 +331,8 @@ int main() {
   }
   if (granit::succeeded(result))
     result = recorder.initialize(renderer.native_handle());
+  if (granit::succeeded(result))
+    result = timestamps.initialize(renderer.native_handle(), 4);
   const auto tone_vertex = load_shader("tone_mapping.vert.spv");
   const auto tone_fragment = load_shader("tone_mapping.frag.spv");
   granit::lighting::tone_mapping_resources tone_mapping;
@@ -389,8 +392,15 @@ int main() {
                                                       .radius = 3.0F,
                                                       .inner_angle = 0.2F,
                                                       .outer_angle = 0.6F});
+  std::array<std::uint64_t, 4> gpu_timestamps{};
   const auto render_case = [&](float stored_shadow_depth, bool expected_lit) {
     auto case_result = recorder.begin();
+    if (granit::succeeded(case_result))
+      case_result = recorder.reset_timestamp_queries(timestamps.native_handle(), 0, 4);
+    if (granit::succeeded(case_result)) {
+      case_result =
+          recorder.write_timestamp(timestamps.native_handle(), GRANIT_TIMESTAMP_STAGE_TOP, 0);
+    }
     const granit::depth_stencil_attachment_desc shadow_depth{
         .view = shadow_view.native_handle(), .clear_value = {.depth = stored_shadow_depth}};
     const granit::rendering_desc shadow_rendering{
@@ -399,6 +409,10 @@ int main() {
       case_result = recorder.begin_rendering(shadow_rendering);
     if (granit::succeeded(case_result))
       case_result = recorder.end_rendering();
+    if (granit::succeeded(case_result)) {
+      case_result =
+          recorder.write_timestamp(timestamps.native_handle(), GRANIT_TIMESTAMP_STAGE_DRAW, 1);
+    }
     if (granit::succeeded(case_result))
       case_result = recorder.bind_graphics_pipeline(pipeline);
     if (granit::succeeded(case_result)) {
@@ -420,6 +434,10 @@ int main() {
     if (granit::succeeded(case_result))
       case_result = recorder.end_rendering();
     if (granit::succeeded(case_result)) {
+      case_result =
+          recorder.write_timestamp(timestamps.native_handle(), GRANIT_TIMESTAMP_STAGE_DRAW, 2);
+    }
+    if (granit::succeeded(case_result)) {
       case_result = recorder.bind_graphics_pipeline(tone_mapping.pipeline());
     }
     const auto tone_group = tone_mapping.group();
@@ -434,6 +452,10 @@ int main() {
     if (granit::succeeded(case_result))
       case_result = recorder.end_rendering();
     if (granit::succeeded(case_result)) {
+      case_result =
+          recorder.write_timestamp(timestamps.native_handle(), GRANIT_TIMESTAMP_STAGE_BOTTOM, 3);
+    }
+    if (granit::succeeded(case_result)) {
       case_result = recorder.copy_texture_to_buffer(output_texture, readback.native_handle(),
                                                     readback_layout, readback_region);
     }
@@ -443,8 +465,13 @@ int main() {
       case_result = recorder.submit();
     if (granit::succeeded(case_result))
       case_result = recorder.reset();
+    if (granit::succeeded(case_result))
+      case_result = timestamps.get_results(0, gpu_timestamps);
     if (granit::failed(case_result))
       return case_result;
+    if (!(gpu_timestamps[0] <= gpu_timestamps[1] && gpu_timestamps[1] <= gpu_timestamps[2] &&
+          gpu_timestamps[2] <= gpu_timestamps[3]))
+      return granit::result::internal;
 
     void* mapped = nullptr;
     case_result = readback.map(0, readback_size, &mapped);
@@ -510,6 +537,10 @@ int main() {
     std::cerr << "离屏 PBR 绘制失败：" << granit::result_message(result) << '\n';
     return 1;
   }
-  std::cout << "PBR 多光源、阴影、IBL、HDR 与 Tone Mapping 像素回归完成\n";
+  std::cout << "PBR 多光源、阴影、IBL、HDR 与 Tone Mapping 像素回归完成\n"
+            << "GPU 时间（ns）：Shadow=" << gpu_timestamps[1] - gpu_timestamps[0]
+            << ", PBR HDR=" << gpu_timestamps[2] - gpu_timestamps[1]
+            << ", Tone Mapping=" << gpu_timestamps[3] - gpu_timestamps[2]
+            << ", 渲染链总计=" << gpu_timestamps[3] - gpu_timestamps[0] << '\n';
   return 0;
 }

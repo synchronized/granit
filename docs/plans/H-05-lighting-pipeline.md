@@ -383,6 +383,17 @@ Recorder 录制期间会保留查询池，用户提前销毁句柄不会释放 G
 顺序问题：先保存 serial 再移动资源，避免先 `std::move` 后解引用空记录。下一步将时间戳插入 PBR
 离屏链并建立分 Pass GPU 基线。
 
+## H-05E5c 实现记录
+
+多光源离屏整链路现使用四个时间戳，在同一次 GPU 提交中分别标记 Shadow 开始、Shadow 结束、PBR
+HDR 结束和 Tone Mapping 结束。程序在 Recorder `reset()` 等待完成后读取纳秒结果，检查时间单调性，
+并分别输出 Shadow、PBR HDR、Tone Mapping 和渲染链总时间；Texture 到 Readback Buffer 的复制发生
+在最后一个时间戳之后，不计入渲染链。
+
+当前示例数据仅证明分段测量正确接入，不作为性能基线。下一步将相同录制路径迁入 Release Benchmark，
+按 1/16/64/128 光源执行预热、多样本采集和百分位数统计，再根据 PBR Shader GPU 时间决定是否触发
+分块/聚簇光照评估。
+
 ## H-05A 实现记录
 
 新增可选内部目标 `granit::lighting`，首版依赖 `granit::scene`，不进入核心动态库或安装导出。
