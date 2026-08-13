@@ -7,7 +7,7 @@
 
 - 路线图任务：H-07
 - 优先级：P2
-- 状态：进行中，公共 Scene Snapshot ABI 已进入实现验证
+- 状态：进行中，公共 Scene Snapshot 与 Material ABI 已进入实现验证
 - 必需依赖：H-01 Render Graph、H-02 Material、H-03 PBR、H-04 Scene、H-05 Lighting/Post Process
 - 可选依赖：H-06 2D/UI/调试绘制评估结果
 
@@ -210,10 +210,17 @@ ABI、描述结构、整数句柄、所有权与线程语义，并在其上提�
 - 创建时复制全部 View、Renderable 与光源值数据，并在验证完成后一次性发布新句柄。
 - Snapshot 句柄校验类型、generation 和所属 Renderer；失败创建统一清空输出句柄。
 - 生命周期测试覆盖成功创建、重复销毁、槽位复用后的旧句柄、跨 Renderer 和非法数组。
+- `granit/pipeline/material.h` 从材质归档创建 `granit_material`，并以一批参数作为事务更新单位。
+- Material 更新先迁移到候选 GPU 实例，参数校验、Buffer 和 Bind Group 刷新全部成功后才替换原实例；
+  失败不会留下 CPU 参数与 GPU 绑定不一致的半完成状态。
+- Material C++20 包装命名为 `granit::material_instance`，避免与现有内部 `granit::material`
+  模块命名空间冲突；包装只保存 Renderer 和 C 句柄。
+- Material 句柄同样校验类型、generation 和所属 Renderer；不同材质只在短暂句柄查询时共享锁，
+  GPU 更新由各实例独立串行化。
 
-该目标目前只在构建树中提供。安装 component 与外部 consumer 在 Material 和统一 Pipeline 的依赖
-边界完成后一起落地，避免过早把内部 `scene` 静态目标写入安装导出。下一块按顺序实现 Material
-公共 ABI，再由统一 Pipeline 消费 Material 和 Scene Snapshot。
+该目标目前只在构建树中提供。安装 component 与外部 consumer 在统一 Pipeline 的依赖边界完成后
+一起落地，避免过早把内部 `scene`、`material` 静态目标写入安装导出。下一块实现统一 Pipeline
+句柄与粗粒度 Render 输入，由它消费 Material 和 Scene Snapshot。
 
 ## 分步实施
 

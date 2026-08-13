@@ -352,12 +352,16 @@ add_library(granit_render_pipeline)
 add_library(granit::render_pipeline ALIAS granit_render_pipeline)
 target_sources(
   granit_render_pipeline
-  PRIVATE pipeline/scene_api.cpp
+  PRIVATE
+    pipeline/material_api.cpp
+    pipeline/scene_api.cpp
   PUBLIC
     FILE_SET HEADERS
     BASE_DIRS "${PROJECT_SOURCE_DIR}/include"
     FILES
       "${PROJECT_SOURCE_DIR}/include/granit/pipeline/export.h"
+      "${PROJECT_SOURCE_DIR}/include/granit/pipeline/material.h"
+      "${PROJECT_SOURCE_DIR}/include/granit/pipeline/material.hpp"
       "${PROJECT_SOURCE_DIR}/include/granit/pipeline/scene.h"
       "${PROJECT_SOURCE_DIR}/include/granit/pipeline/scene.hpp"
 )
