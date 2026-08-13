@@ -42,6 +42,16 @@ set_target_properties(granit_material_tool PROPERTIES FOLDER "Tools")
 
 if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
   add_test(
+    NAME granit.shader_tool.tone_mapping_reflect
+    COMMAND granit_shader_tool "${PROJECT_SOURCE_DIR}/examples/assets/tone_mapping.frag.spv"
+  )
+  set_tests_properties(
+    granit.shader_tool.tone_mapping_reflect
+    PROPERTIES PASS_REGULAR_EXPRESSION
+               "binding,0,0,uniform_buffer,ToneMappingConstants,16.*binding,0,1,sampled_texture,hdr_color,1.*binding,0,2,sampler,hdr_sampler,1"
+  )
+
+  add_test(
     NAME granit.shader_tool.pbr_ibl_reflect
     COMMAND granit_shader_tool "${PROJECT_SOURCE_DIR}/examples/assets/pbr_ibl_untextured.frag.spv"
   )

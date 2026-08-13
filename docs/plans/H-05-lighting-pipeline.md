@@ -235,6 +235,17 @@ Sampler、完整 binding 0～7 布局及一个 Bind Group；四个 Texture View 
 格式与模式不匹配时拒绝创建后处理路径，防止重复编码或漏编码。数值测试覆盖黑色、负值、标准亮度、
 高亮、曝光、sRGB 分段边界及失败不修改。下一步建立 HDR Attachment 和 Tone Mapping Shader Pass。
 
+## H-05D2 实现记录
+
+已增加 `RGBA16_FLOAT` 瞬态 HDR Attachment 描述及 Tone Mapping Render Graph 适配器。Pass 明确声明
+HDR 纹理只读、最终颜色目标只写，并复制曝光缩放与输出编码常量；资源缺失、输入输出别名、曝光越界
+或格式/传递模式误配时拒绝加入 Graph。物理 HDR Texture 由现有 Render Graph 在首次使用时创建、
+末次使用后释放，不需要 H-05 绕过 Graph 管理 Vulkan 资源。
+
+全屏三角形 Tone Mapping Shader 使用 Group 0 的 16 字节常量、HDR Texture 与线性 Sampler，支持
+ACES fitted 和可选 Shader sRGB 编码。SPIR-V 已通过 Vulkan 1.3 校验并增加资源反射测试。下一步建立
+GPU 资源对象和真实 HDR 到 UNORM/sRGB 输出的离屏像素回归。
+
 ### H-05E：完整参考管线与测量
 
 - 串联 Shadow、Forward PBR 和 Tone Mapping Pass。
