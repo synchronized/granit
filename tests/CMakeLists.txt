@@ -161,6 +161,7 @@ add_executable(
   lighting/light_buffers_test.cpp
   lighting/light_data_test.cpp
   lighting/lighting_reference_test.cpp
+  lighting/multi_view_gpu_test.cpp
   lighting/shadow_resources_test.cpp
   lighting/shadow_ibl_resources_test.cpp
   lighting/shadow_reference_test.cpp

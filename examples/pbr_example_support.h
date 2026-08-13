@@ -19,6 +19,9 @@ namespace granit::examples {
 class pbr_lighting_resources {
 public:
   [[nodiscard]] result initialize(granit_renderer renderer);
+  [[nodiscard]] result update_lights(const lighting::packed_view_lights& lights) {
+    return from_native(resources_.update_lights(lights));
+  }
   [[nodiscard]] result reset();
   [[nodiscard]] granit_bind_group_layout layout() const noexcept { return resources_.layout(); }
   [[nodiscard]] granit_bind_group group() const noexcept { return resources_.group(); }

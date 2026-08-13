@@ -481,6 +481,19 @@ Resize 只重建尺寸相关 HDR Color/Depth 和后处理资源，光源、IBL�
 均通过主动 Resize 的三帧 Validation smoke test，离屏六组合像素回归和 GPU Benchmark 未发生退化。
 窗口与 Swapchain 闭环至此完成，下一步进入多 View 完整渲染。
 
+## H-05E8a 实现记录
+
+多 View GPU 集成首先固定逐 View 隔离边界：两个 View 共享同一份 `multi_view_snapshot` 场景光源，
+但使用不同 layer mask 得到各自可见索引，再分别通过 `pack_view_lights` 生成独立 GPU 布局并上传到
+两个不同的 Group 3。测试明确校验两个 View 分别只获得红色和绿色点光，且 Bind Group Layout、
+Bind Group 和底层光源 Buffer 不共享可变状态。
+
+两个 View 同时拥有独立 `RGBA16_FLOAT` HDR 与 D32 Depth 目标；同一个 Command Recorder 连续录制
+两组 Dynamic Rendering 后一次提交并等待完成，验证资源状态转换、强引用和批量提交边界。共享
+Snapshot 在 GPU 资源初始化后不再参与录制，避免为每个 View 复制整份 Scene 数据。下一步在这两个
+目标上绑定各自匹配的 Material Template/Group 3，执行真实 PBR Draw、Tone Mapping 和像素区分回归，
+再将多 View 阶段标记完成。
+
 ## H-05A 实现记录
 
 新增可选内部目标 `granit::lighting`，首版依赖 `granit::scene`，不进入核心动态库或安装导出。
