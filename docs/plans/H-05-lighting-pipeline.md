@@ -264,6 +264,15 @@ Tone Mapping GPU 资源层现强制校验目标格式与编码开关：`RGBA8_UN
 漏编码及其他首版不支持的最终格式都会在创建 Buffer、Shader 或 Pipeline 前返回参数错误。真实 Vulkan
 测试覆盖两种误配拒绝及 sRGB Attachment Pipeline 成功创建，确保 D1 的传递模式契约落实到 GPU 层。
 
+## H-05D5 实现记录
+
+离屏 PBR 示例现使用 `RGBA16_FLOAT` 作为主光照目标，方向光阴影、直接光和 split-sum IBL 先在线性
+HDR 空间合成，再由 Tone Mapping 全屏 Pass 输出到 `RGBA8_UNORM`。最终像素回读同时与 CPU PBR、
+IBL、曝光、ACES fitted 和 sRGB 参考结果比较，覆盖受光与遮挡区域，不再只分别验证 PBR 和后处理。
+
+示例在读取 Readback Buffer 前显式等待 Recorder 完成，并在销毁借用的 HDR Texture View 前释放
+Tone Mapping 资源。H-05D 至此完成，下一步进入 H-05E 的完整参考管线组合、降级路径与性能测量。
+
 ### H-05E：完整参考管线与测量
 
 - 串联 Shadow、Forward PBR 和 Tone Mapping Pass。

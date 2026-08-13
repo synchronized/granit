@@ -229,8 +229,9 @@
   筛选、PBR Render Graph 适配、生命周期验证和 100～10,000 对象性能基线。
 - **[H-05](plans/H-05-lighting-pipeline.md) / P2 / 实现中**：H-05A 已完成多光源数据与数值参考，
   H-05B 已完成单方向光阴影，H-05C 已完成 split-sum IBL、Cube/LUT 资源、统一 Group 3、Shader
-  组合变体及离屏像素回归；下一步进入 HDR 与 Tone Mapping。分块/聚簇光照由真实基准
-  触发。
+  组合变体及离屏像素回归，H-05D 已完成 HDR Attachment、ACES Tone Mapping、输出传递校验及
+  阴影/直接光/IBL/HDR/后处理整链路像素回归；下一步进入 H-05E 完整参考管线与测量。分块/聚簇
+  光照由真实基准触发。
 - **H-06 / P2**：评估 2D、UI、调试绘制和文字渲染辅助模块。
 - **[H-07](plans/H-07-reference-render-pipeline.md) / P2 / 已确认**：H-05 完成后，将 Scene、Material、
   PBR、Lighting、Post Process 和 Render Graph 组合为可选 `granit::render_pipeline` 高级参考套件；

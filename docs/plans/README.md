@@ -81,8 +81,8 @@ D-03-graphics-pipeline.md
 - [H-04：场景提交与可见性输入适配层](H-04-scene-submission.md)——已完成；包含快照、Frustum、
   多 View、光源筛选、PBR Render Graph 适配、生命周期验证和性能基线。
 - [H-05：光照与后处理参考管线](H-05-lighting-pipeline.md)——实现中；H-05A 多光源、H-05B 单方向
-  光阴影及 H-05C split-sum IBL 已完成，包含统一 Group 3、Shader 组合变体和离屏像素回归；下一步
-  进入 HDR 与 Tone Mapping。
+  光阴影、H-05C split-sum IBL 和 H-05D HDR/Tone Mapping 已完成，包含统一 Group 3、输出传递校验
+  及阴影、直接光、IBL、HDR、后处理整链路像素回归；下一步进入 H-05E 完整参考管线与测量。
 - [H-07：高级参考渲染套件](H-07-reference-render-pipeline.md)——已确认，等待 H-05 完成；规划类似
   DiligentFX 的可选统一门面，同时保留直接 Renderer 和选择部分高层模块的使用方式。
 
