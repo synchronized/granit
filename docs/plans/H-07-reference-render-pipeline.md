@@ -229,11 +229,14 @@ Renderable、payload 和关联项数组。回调不得保存数组地址，不�
   Granit 在固定 Pass 内创建绑定、录制全屏 Draw，并根据 UNORM/sRGB 输出选择唯一颜色编码路径。
 - Tone Mapping 的 Shader、Sampler、Bind Group Layout、Pipeline Layout 和 Graphics Pipeline 已按输出
   编码缓存并跨 View、跨帧复用；依赖瞬态 HDR View 的常量 Buffer 与 Bind Group 仍按 View 创建。
-- 方向光阴影与 IBL 默认资源仍属于下一实现增量，当前统一入口不能被描述为最终完整 PBR 画质管线。
+- 首个可见方向光已生成 1024×1024 单级正交阴影 Pass。Shadow 回调获得投影者批次与光源
+  View-Projection，Opaque 回调获得只在回调期间有效的阴影 Texture View；级联阴影和阴影图缓存
+  尚未实现。
+- IBL 默认资源仍属于下一实现增量，当前统一入口不能被描述为最终完整 PBR 画质管线。
 
 该目标目前只在构建树中提供。安装 component 与外部 consumer 在统一 Pipeline 的依赖边界完成后
 一起落地，避免过早把内部 `scene`、`material`、`lighting` 静态目标写入安装导出。下一块将已验证
-的 Shadow 和 IBL GPU 资源接入统一入口。
+的 IBL 默认 GPU 资源接入统一入口。
 
 ## 分步实施
 

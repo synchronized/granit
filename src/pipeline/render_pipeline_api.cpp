@@ -15,6 +15,7 @@
 #include <cmath>
 #include <memory>
 #include <mutex>
+#include <optional>
 #include <unordered_map>
 #include <vector>
 
@@ -80,6 +81,15 @@ granit_texture_desc make_depth_desc(uint32_t width, uint32_t height) {
   desc.usage = GRANIT_TEXTURE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
   desc.width = width;
   desc.height = height;
+  return desc;
+}
+
+granit_texture_desc make_shadow_desc() {
+  granit_texture_desc desc = GRANIT_TEXTURE_DESC_INIT;
+  desc.format = GRANIT_TEXTURE_FORMAT_D32_FLOAT;
+  desc.usage = GRANIT_TEXTURE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | GRANIT_TEXTURE_USAGE_SAMPLED_BIT;
+  desc.width = 1024;
+  desc.height = 1024;
   return desc;
 }
 
@@ -154,6 +164,10 @@ render_view(pipeline_state& state, const granit_render_pipeline_render_desc& des
       graph.create_transient_texture(make_depth_desc(desc.width, desc.height), "Reference Depth");
   const auto output = graph.import_texture_view(desc.output, true, "Reference Output");
 
+  std::optional<granit::render_graph::resource_id> shadow;
+  if (!visible.directional_lights.empty())
+    shadow = graph.create_transient_texture(make_shadow_desc(), "Reference Directional Shadow");
+
   granit::lighting::reference_pipeline_graph_desc graph_desc;
   graph_desc.pbr.color = hdr;
   graph_desc.pbr.depth = depth;
@@ -163,6 +177,25 @@ render_view(pipeline_state& state, const granit_render_pipeline_render_desc& des
     const auto& light = snapshot.directional_lights()[visible.directional_lights.front()];
     graph_desc.pbr.light.direction_to_light = light.direction_to_light;
     graph_desc.pbr.light.radiance = light.radiance;
+    granit::lighting::directional_shadow_pass_desc shadow_pass;
+    const granit::lighting::directional_shadow_volume volume{.focus = visible.view.camera_position,
+                                                             .half_width = 20.0F,
+                                                             .half_height = 20.0F,
+                                                             .near_plane = 0.1F,
+                                                             .far_plane = 100.0F,
+                                                             .light_distance = 50.0F};
+    const auto shadow_result = granit::lighting::build_directional_shadow_pass_desc(
+        snapshot, view_index, visible.directional_lights.front(), volume, *shadow, shadow_pass);
+    if (shadow_result != granit::lighting::directional_shadow_error::none &&
+        shadow_result != granit::lighting::directional_shadow_error::no_casters) {
+      return GRANIT_ERROR_INVALID_ARGUMENT;
+    }
+    if (shadow_result == granit::lighting::directional_shadow_error::none) {
+      graph_desc.pbr.shadow = *shadow;
+      graph_desc.shadow = std::move(shadow_pass);
+    } else {
+      shadow.reset();
+    }
   }
   std::vector<uint64_t> payloads;
   std::vector<granit_render_pipeline_draw_binding> draw_bindings;
@@ -218,17 +251,65 @@ render_view(pipeline_state& state, const granit_render_pipeline_render_desc& des
         .color_input = GRANIT_NULL_HANDLE,
         .color_output = context.texture_view(hdr),
         .depth_output = context.texture_view(depth),
+        .shadow_input = shadow ? context.texture_view(*shadow) : GRANIT_NULL_HANDLE,
         .view_index = view_index,
         .payload_count = static_cast<uint32_t>(payloads.size()),
         .payloads = payloads.data(),
         .draw_bindings = draw_bindings.data(),
         .view = &public_view,
         .renderables = renderables.data(),
+        .light_view_projection = {},
         .exposure_scale = 1.0F,
         .encode_srgb = 0,
         .reserved = {0, 0}};
     return state.record(&info, state.user_data);
   };
+  if (graph_desc.shadow) {
+    callbacks.shadow = [&](auto& context, const auto& frame, auto casters) {
+      std::vector<uint64_t> shadow_payloads;
+      std::vector<granit_render_pipeline_draw_binding> shadow_bindings;
+      std::vector<granit_scene_renderable> shadow_renderables;
+      shadow_payloads.reserve(casters.size());
+      shadow_bindings.reserve(casters.size());
+      shadow_renderables.reserve(casters.size());
+      for (const auto& caster : casters) {
+        const auto binding = bindings.find(caster.payload);
+        if (binding == bindings.end())
+          return GRANIT_ERROR_INVALID_ARGUMENT;
+        const auto& source = snapshot.renderables()[caster.source_index];
+        shadow_payloads.push_back(caster.payload);
+        shadow_bindings.push_back(binding->second);
+        shadow_renderables.push_back({.model = convert(source.model),
+                                      .normal_matrix = convert(source.normal_matrix),
+                                      .bounds_center = convert(source.bounds.center),
+                                      .bounds_radius = source.bounds.radius,
+                                      .layer_mask = source.layer_mask,
+                                      .sort_key = source.sort_key,
+                                      .payload = source.payload,
+                                      .object_id = source.object_id,
+                                      .reserved = 0});
+      }
+      const granit_render_pipeline_record_info info{
+          .struct_size = sizeof(granit_render_pipeline_record_info),
+          .stage = GRANIT_RENDER_PIPELINE_STAGE_SHADOW,
+          .recorder = context.recorder(),
+          .color_input = GRANIT_NULL_HANDLE,
+          .color_output = GRANIT_NULL_HANDLE,
+          .depth_output = context.texture_view(*shadow),
+          .shadow_input = GRANIT_NULL_HANDLE,
+          .view_index = view_index,
+          .payload_count = static_cast<uint32_t>(shadow_payloads.size()),
+          .payloads = shadow_payloads.data(),
+          .draw_bindings = shadow_bindings.data(),
+          .view = &public_view,
+          .renderables = shadow_renderables.data(),
+          .light_view_projection = convert(frame.light_view_projection),
+          .exposure_scale = 1.0F,
+          .encode_srgb = 0,
+          .reserved = {0, 0}};
+      return state.record(&info, state.user_data);
+    };
+  }
   callbacks.tone_mapping = [&](auto& context, const auto& constants) {
     auto& pipeline = desc.output_format == GRANIT_TEXTURE_FORMAT_RGBA8_SRGB
                          ? state.tone_mapping_srgb

@@ -50,6 +50,7 @@ struct callback_state {
   std::vector<uint64_t> payloads;
   std::vector<uint64_t> meshes;
   std::vector<granit_material> materials;
+  bool opaque_has_shadow = false;
   granit_renderer renderer = GRANIT_NULL_HANDLE;
   granit_result result = GRANIT_SUCCESS;
 };
@@ -57,7 +58,11 @@ struct callback_state {
 granit_result record(const granit_render_pipeline_record_info* info, void* user_data) {
   auto& state = *static_cast<callback_state*>(user_data);
   if (info == nullptr || info->struct_size < sizeof(granit_render_pipeline_record_info) ||
-      info->recorder == GRANIT_NULL_HANDLE || info->color_output == GRANIT_NULL_HANDLE) {
+      info->recorder == GRANIT_NULL_HANDLE ||
+      (info->stage == GRANIT_RENDER_PIPELINE_STAGE_OPAQUE &&
+       info->color_output == GRANIT_NULL_HANDLE) ||
+      (info->stage == GRANIT_RENDER_PIPELINE_STAGE_SHADOW &&
+       info->depth_output == GRANIT_NULL_HANDLE)) {
     return GRANIT_ERROR_INVALID_ARGUMENT;
   }
   if (info->view == nullptr ||
@@ -66,6 +71,8 @@ granit_result record(const granit_render_pipeline_record_info* info, void* user_
     return GRANIT_ERROR_INVALID_ARGUMENT;
   }
   state.stages.push_back(info->stage);
+  if (info->stage == GRANIT_RENDER_PIPELINE_STAGE_OPAQUE)
+    state.opaque_has_shadow = info->shadow_input != GRANIT_NULL_HANDLE;
   if (info->payload_count != 0) {
     state.payloads.insert(state.payloads.end(), info->payloads,
                           info->payloads + info->payload_count);
@@ -76,17 +83,21 @@ granit_result record(const granit_render_pipeline_record_info* info, void* user_
   }
   if (state.result != GRANIT_SUCCESS)
     return state.result;
-  granit_color_attachment_desc color = GRANIT_COLOR_ATTACHMENT_DESC_INIT;
-  color.view = info->color_output;
-  color.clear_value = {0.25F, 0.5F, 1.0F, 1.0F};
   granit_depth_stencil_attachment_desc depth = GRANIT_DEPTH_STENCIL_ATTACHMENT_DESC_INIT;
   depth.view = info->depth_output;
   granit_rendering_desc rendering = GRANIT_RENDERING_DESC_INIT;
-  rendering.color_attachment_count = 1;
-  rendering.color_attachments = &color;
   rendering.depth_stencil_attachment = &depth;
-  rendering.area = {0, 0, static_cast<std::uint32_t>(info->view->viewport_width),
-                    static_cast<std::uint32_t>(info->view->viewport_height)};
+  granit_color_attachment_desc color = GRANIT_COLOR_ATTACHMENT_DESC_INIT;
+  if (info->stage == GRANIT_RENDER_PIPELINE_STAGE_OPAQUE) {
+    color.view = info->color_output;
+    color.clear_value = {0.25F, 0.5F, 1.0F, 1.0F};
+    rendering.color_attachment_count = 1;
+    rendering.color_attachments = &color;
+    rendering.area = {0, 0, static_cast<std::uint32_t>(info->view->viewport_width),
+                      static_cast<std::uint32_t>(info->view->viewport_height)};
+  } else {
+    rendering.area = {0, 0, 1024, 1024};
+  }
   auto result = granit_command_recorder_begin_rendering(state.renderer, info->recorder, &rendering);
   if (result == GRANIT_SUCCESS)
     result = granit_command_recorder_end_rendering(state.renderer, info->recorder);
@@ -125,11 +136,17 @@ TEST_CASE("统一Render Pipeline按固定阶段消费Scene Snapshot") {
   renderables[0].bounds_radius = 0.25F;
   renderables[0].layer_mask = UINT64_MAX;
   renderables[0].payload = 77;
+  std::array<granit_scene_directional_light, 1> directional_lights{};
+  directional_lights[0].direction_to_light = {0.0F, 0.0F, 1.0F};
+  directional_lights[0].radiance = {1.0F, 1.0F, 1.0F};
+  directional_lights[0].layer_mask = UINT64_MAX;
   granit_scene_snapshot_desc scene_desc = GRANIT_SCENE_SNAPSHOT_DESC_INIT;
   scene_desc.views = views.data();
   scene_desc.view_count = static_cast<std::uint32_t>(views.size());
   scene_desc.renderables = renderables.data();
   scene_desc.renderable_count = static_cast<std::uint32_t>(renderables.size());
+  scene_desc.directional_lights = directional_lights.data();
+  scene_desc.directional_light_count = static_cast<std::uint32_t>(directional_lights.size());
   granit::scene_snapshot scene;
   REQUIRE(scene.initialize(renderer.native_handle(), scene_desc) == granit::result::success);
 
@@ -159,15 +176,18 @@ TEST_CASE("统一Render Pipeline按固定阶段消费Scene Snapshot") {
   render_desc.draw_bindings = &draw_binding;
   REQUIRE(pipeline.render(render_desc) == granit::result::success);
   CHECK(callback.stages ==
-        std::vector<granit_render_pipeline_stage>{GRANIT_RENDER_PIPELINE_STAGE_OPAQUE});
-  CHECK(callback.payloads == std::vector<uint64_t>{77});
-  CHECK(callback.meshes == std::vector<uint64_t>{1001});
-  CHECK(callback.materials == std::vector<granit_material>{material.native_handle()});
-
-  REQUIRE(pipeline.render(render_desc) == granit::result::success);
-  CHECK(callback.stages.size() == 2);
+        std::vector<granit_render_pipeline_stage>{GRANIT_RENDER_PIPELINE_STAGE_SHADOW,
+                                                  GRANIT_RENDER_PIPELINE_STAGE_OPAQUE});
   CHECK(callback.payloads == std::vector<uint64_t>{77, 77});
   CHECK(callback.meshes == std::vector<uint64_t>{1001, 1001});
+  CHECK(callback.materials ==
+        std::vector<granit_material>{material.native_handle(), material.native_handle()});
+  CHECK(callback.opaque_has_shadow);
+
+  REQUIRE(pipeline.render(render_desc) == granit::result::success);
+  CHECK(callback.stages.size() == 4);
+  CHECK(callback.payloads == std::vector<uint64_t>{77, 77, 77, 77});
+  CHECK(callback.meshes == std::vector<uint64_t>{1001, 1001, 1001, 1001});
 
   const std::array duplicate_bindings{draw_binding, draw_binding};
   render_desc.draw_binding_count = static_cast<uint32_t>(duplicate_bindings.size());

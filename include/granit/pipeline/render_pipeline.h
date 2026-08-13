@@ -20,6 +20,7 @@ typedef granit_handle granit_render_pipeline;
 
 typedef uint32_t granit_render_pipeline_stage;
 #define GRANIT_RENDER_PIPELINE_STAGE_OPAQUE UINT32_C(0)
+#define GRANIT_RENDER_PIPELINE_STAGE_SHADOW UINT32_C(1)
 
 /** Scene payload 对应的一项外部 Mesh 与 Granit Material 关联。 */
 typedef struct granit_render_pipeline_draw_binding {
@@ -29,7 +30,7 @@ typedef struct granit_render_pipeline_draw_binding {
   uint64_t reserved;
 } granit_render_pipeline_draw_binding;
 
-/** 固定阶段录制回调的只读上下文；所有指针只在回调期间有效。 */
+/** 固定阶段录制回调的只读上下文；所有指针和 Texture View 只在回调期间有效。 */
 typedef struct granit_render_pipeline_record_info {
   uint32_t struct_size;
   granit_render_pipeline_stage stage;
@@ -37,12 +38,14 @@ typedef struct granit_render_pipeline_record_info {
   granit_texture_view color_input;
   granit_texture_view color_output;
   granit_texture_view depth_output;
+  granit_texture_view shadow_input;
   uint32_t view_index;
   uint32_t payload_count;
   const uint64_t* payloads;
   const granit_render_pipeline_draw_binding* draw_bindings;
   const granit_scene_view* view;
   const granit_scene_renderable* renderables;
+  granit_matrix4 light_view_projection;
   float exposure_scale;
   uint32_t encode_srgb;
   uint32_t reserved[2];
