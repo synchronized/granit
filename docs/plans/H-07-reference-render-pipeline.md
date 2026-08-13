@@ -293,6 +293,9 @@ Renderable、payload 和关联项数组。回调不得保存数组地址，不�
    Group 0/2 帧与对象 Uniform Layout，以及 Group 3 Shadow/IBL/Light Superset Layout 已纳入
    公共 Material 的 Pipeline Layout；剩余工作是创建对应 Buffer/Bind Group，并由 Shadow/Opaque
    阶段绑定 Group 0～3 后调用 Mesh 录制器。
+
+   Group 3 资源可借用 Material 持有的外部 Layout 创建 Bind Group，并且不在重置时销毁
+   该 Layout。这保证 Pipeline Layout 与 Bind Group 使用同一布局对象，而不只是字段相同。
 3. **H-07G 完整示例**：提供安装 API 下的离屏和窗口完整路径，并保留直接 Renderer 用法作为对照。
 4. **H-07H 验收**：补齐生命周期压力、Resize、多 View、Validation Layer、输出一致性和性能对比。
 

@@ -51,10 +51,12 @@ granit_result shadow_ibl_resources::initialize(granit_renderer renderer,
                                                const shadow_sampling_constants& shadow_values,
                                                const ibl_sampling_constants& ibl_values,
                                                const light_limits& light_capacities,
-                                               lighting_resource_features features) noexcept {
+                                               lighting_resource_features features,
+                                               granit_bind_group_layout external_layout) noexcept {
   if (renderer == GRANIT_NULL_HANDLE || initialized() || !complete(views, features) ||
       (features.shadows && !valid_shadow(shadow_values)) ||
-      (features.ibl && !valid_ibl(ibl_values)))
+      (features.ibl && !valid_ibl(ibl_values)) ||
+      (external_layout != GRANIT_NULL_HANDLE && (!features.shadows || !features.ibl)))
     return GRANIT_ERROR_INVALID_ARGUMENT;
 
   features_ = features;
@@ -129,10 +131,15 @@ granit_result shadow_ibl_resources::initialize(granit_renderer renderer,
   layout_entries.push_back(
       {light_binding_spot, granit::binding_type::storage_buffer, 1, fragment});
   }
-  result = layout_.initialize(renderer, layout_entries);
-  if (granit::failed(result)) {
-    static_cast<void>(reset());
-    return static_cast<granit_result>(result);
+  if (external_layout == GRANIT_NULL_HANDLE) {
+    result = layout_.initialize(renderer, layout_entries);
+    if (granit::failed(result)) {
+      static_cast<void>(reset());
+      return static_cast<granit_result>(result);
+    }
+    layout_handle_ = layout_.native_handle();
+  } else {
+    layout_handle_ = external_layout;
   }
 
   std::vector<granit::bind_group_entry> group_entries;
@@ -182,7 +189,7 @@ granit_result shadow_ibl_resources::initialize(granit_renderer renderer,
                                    .size =
                                        light_buffer_size<gpu_spot_light>(light_capacities.spot)},
       });
-  result = group_.initialize(renderer, layout_.native_handle(), group_entries);
+  result = group_.initialize(renderer, layout_handle_, group_entries);
   if (granit::failed(result)) {
     static_cast<void>(reset());
     return static_cast<granit_result>(result);
@@ -217,6 +224,7 @@ granit_result shadow_ibl_resources::reset() noexcept {
   };
   capture(group_.reset());
   capture(layout_.reset());
+  layout_handle_ = GRANIT_NULL_HANDLE;
   capture(granit::from_native(lights_.reset()));
   capture(ibl_sampler_.reset());
   capture(shadow_sampler_.reset());

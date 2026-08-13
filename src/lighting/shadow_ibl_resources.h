@@ -67,13 +67,15 @@ public:
                                          const shadow_sampling_constants& shadow_constants,
                                          const ibl_sampling_constants& ibl_constants,
                                          const light_limits& light_capacities = {},
-                                         lighting_resource_features features = {}) noexcept;
+                                         lighting_resource_features features = {},
+                                         granit_bind_group_layout external_layout =
+                                             GRANIT_NULL_HANDLE) noexcept;
   [[nodiscard]] granit_result update_shadow(const shadow_sampling_constants& constants) noexcept;
   [[nodiscard]] granit_result update_ibl(const ibl_sampling_constants& constants) noexcept;
   [[nodiscard]] granit_result update_lights(const packed_view_lights& lights) noexcept;
   [[nodiscard]] granit_result reset() noexcept;
   [[nodiscard]] bool initialized() const noexcept { return group_.valid(); }
-  [[nodiscard]] granit_bind_group_layout layout() const noexcept { return layout_.native_handle(); }
+  [[nodiscard]] granit_bind_group_layout layout() const noexcept { return layout_handle_; }
   [[nodiscard]] granit_bind_group group() const noexcept { return group_.native_handle(); }
 
 private:
@@ -83,6 +85,7 @@ private:
   granit::sampler ibl_sampler_;
   light_buffers lights_;
   granit::bind_group_layout layout_;
+  granit_bind_group_layout layout_handle_ = GRANIT_NULL_HANDLE;
   granit::bind_group group_;
   lighting_resource_features features_{};
 };

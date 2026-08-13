@@ -83,6 +83,27 @@ TEST_CASE("阴影和IBL共享完整Group3") {
   CHECK(resources.update_lights(lights) == GRANIT_SUCCESS);
   CHECK(resources.update_ibl({.intensity = 2.0F, .prefiltered_max_mip = 2.0F}) == GRANIT_SUCCESS);
 
+  SECTION("可复用外部Group3 Layout对象") {
+    granit::bind_group_layout external_layout;
+    REQUIRE(external_layout.initialize(
+                renderer.native_handle(), granit::lighting::standard_lighting_layout_entries) ==
+            granit::result::success);
+    granit::lighting::shadow_ibl_resources external_resources;
+    REQUIRE(external_resources.initialize(
+                renderer.native_handle(),
+                {.shadow = shadow_view.native_handle(),
+                 .ibl = {.irradiance = irradiance_view.native_handle(),
+                         .prefiltered_environment = prefiltered_view.native_handle(),
+                         .brdf_lut = lut_view.native_handle()}},
+                {.light_view_projection = granit::math::identity_matrix4,
+                 .texel_size = {1.0F, 1.0F}},
+                {.prefiltered_max_mip = 2.0F}, {}, {}, external_layout.native_handle()) ==
+            GRANIT_SUCCESS);
+    CHECK(external_resources.layout() == external_layout.native_handle());
+    REQUIRE(external_resources.reset() == GRANIT_SUCCESS);
+    CHECK(external_layout.valid());
+  }
+
   SECTION("仅直接光不创建阴影或IBL绑定") {
     granit::lighting::shadow_ibl_resources direct_only;
     REQUIRE(direct_only.initialize(renderer.native_handle(), {}, {}, {}, {},
