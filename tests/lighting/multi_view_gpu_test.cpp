@@ -3,12 +3,20 @@
 
 #include "lighting/light_data.h"
 #include "lighting/shadow_ibl_resources.h"
+#include "material/material_template_gpu.h"
+#include "material/pbr_material_schema.h"
+#include "pbr_example_support.h"
 
 #include <granit/granit.hpp>
 
 #include <catch2/catch_all.hpp>
 
+#include <algorithm>
 #include <array>
+#include <cstring>
+#include <fstream>
+#include <iterator>
+#include <vector>
 
 namespace {
 
@@ -27,15 +35,26 @@ granit::scene::view_input make_view(std::uint64_t layer_mask) {
   return view;
 }
 
+std::vector<std::uint32_t> load_shader(std::string_view name) {
+  std::ifstream stream{std::string{GRANIT_LIGHTING_ASSET_DIR} + "/" + std::string{name},
+                       std::ios::binary};
+  const std::vector<char> bytes{std::istreambuf_iterator<char>{stream}, {}};
+  if (bytes.empty() || bytes.size() % sizeof(std::uint32_t) != 0)
+    return {};
+  std::vector<std::uint32_t> words(bytes.size() / sizeof(std::uint32_t));
+  std::memcpy(words.data(), bytes.data(), bytes.size());
+  return words;
+}
+
 } // namespace
 
-TEST_CASE("两个View使用独立光源Buffer和渲染目标") {
+TEST_CASE("两个View执行独立光源PBR绘制") {
   const std::array views{make_view(1), make_view(2)};
   const std::array points{
       granit::scene::point_light_input{
-          .position = {0, 0, 0.5F}, .intensity = {1, 0, 0}, .radius = 2, .layer_mask = 1},
+          .position = {0, 0, 1.5F}, .intensity = {1, 0, 0}, .radius = 3, .layer_mask = 1},
       granit::scene::point_light_input{
-          .position = {0, 0, 0.5F}, .intensity = {0, 1, 0}, .radius = 2, .layer_mask = 2}};
+          .position = {0, 0, 1.5F}, .intensity = {0, 1, 0}, .radius = 3, .layer_mask = 2}};
   granit::scene::multi_view_snapshot snapshot;
   REQUIRE(granit::scene::build_multi_view_snapshot({.views = views,
                                                     .renderables = {},
@@ -62,24 +81,56 @@ TEST_CASE("两个View使用独立光源Buffer和渲染目标") {
     SKIP("当前运行环境没有满足要求的 Vulkan 设备");
   REQUIRE(initialized == granit::result::success);
 
-  std::array<granit::lighting::shadow_ibl_resources, 2> light_resources;
-  for (std::size_t index = 0; index < light_resources.size(); ++index) {
-    REQUIRE(light_resources[index].initialize(renderer.native_handle(), {}, {}, {},
-                                              {.directional = 1, .point = 2, .spot = 1},
-                                              {.shadows = false, .ibl = false}) == GRANIT_SUCCESS);
-    REQUIRE(light_resources[index].update_lights(packed[index]) == GRANIT_SUCCESS);
+  std::array<granit::lighting::shadow_ibl_resources, 2> lights;
+  for (std::size_t index = 0; index < lights.size(); ++index) {
+    REQUIRE(lights[index].initialize(renderer.native_handle(), {}, {}, {},
+                                     {.directional = 1, .point = 2, .spot = 1},
+                                     {.shadows = false, .ibl = false}) == GRANIT_SUCCESS);
+    REQUIRE(lights[index].update_lights(packed[index]) == GRANIT_SUCCESS);
   }
-  CHECK(light_resources[0].layout() != light_resources[1].layout());
-  CHECK(light_resources[0].group() != light_resources[1].group());
+  CHECK(lights[0].group() != lights[1].group());
+
+  const auto vertex = load_shader("pbr_lights.vert.spv");
+  const auto fragment = load_shader("pbr_lights_untextured.frag.spv");
+  REQUIRE_FALSE(vertex.empty());
+  REQUIRE_FALSE(fragment.empty());
+  std::array<granit::material::material_package, 2> packages;
+  std::array<granit::material::material_template_gpu, 2> materials;
+  std::array<granit::material::material_gpu_instance, 2> instances;
+  std::array<granit_graphics_pipeline, 2> pipelines{};
+  granit::material::pbr_default_resources defaults;
+  REQUIRE(defaults.initialize(renderer.native_handle()) == GRANIT_SUCCESS);
+  granit::bind_group_layout object_layout;
+  REQUIRE(object_layout.initialize(renderer.native_handle(), {}) == granit::result::success);
+  for (std::size_t index = 0; index < materials.size(); ++index) {
+    REQUIRE(granit::examples::build_pbr_package(packages[index], vertex, fragment));
+    const std::array layouts{object_layout.native_handle(), lights[index].layout()};
+    REQUIRE(materials[index].initialize(renderer.native_handle(), packages[index], layouts) ==
+            GRANIT_SUCCESS);
+    const std::array features{granit::material::material_feature_value{
+        granit::material::make_feature_id(granit::material::pbr_texture_feature_name), 0}};
+    REQUIRE(
+        materials[index].acquire_pipeline({.pass = granit::material::make_feature_id("opaque"),
+                                           .variant = granit::material::make_variant_key(features),
+                                           .color_format = GRANIT_TEXTURE_FORMAT_RGBA16_FLOAT,
+                                           .depth_stencil_format = GRANIT_TEXTURE_FORMAT_D32_FLOAT},
+                                          pipelines[index]) == GRANIT_SUCCESS);
+    REQUIRE(granit::examples::initialize_pbr_instance(renderer.native_handle(), materials[index],
+                                                      packages[index], defaults,
+                                                      instances[index]) == granit::result::success);
+  }
 
   std::array<granit::texture, 2> colors;
   std::array<granit::texture_view, 2> color_views;
   std::array<granit::texture, 2> depths;
   std::array<granit::texture_view, 2> depth_views;
+  std::array<granit::buffer, 2> readbacks;
+  constexpr std::uint64_t readback_size = 32 * 32 * 8;
   for (std::size_t index = 0; index < colors.size(); ++index) {
     REQUIRE(colors[index].initialize(renderer.native_handle(),
                                      {.format = granit::texture_format::rgba16_float,
-                                      .usage = granit::texture_usage::color_attachment,
+                                      .usage = granit::texture_usage::color_attachment |
+                                               granit::texture_usage::transfer_source,
                                       .width = 32,
                                       .height = 32}) == granit::result::success);
     REQUIRE(
@@ -93,24 +144,65 @@ TEST_CASE("两个View使用独立光源Buffer和渲染目标") {
     REQUIRE(
         depth_views[index].initialize(renderer.native_handle(), depths[index].native_handle()) ==
         granit::result::success);
+    REQUIRE(readbacks[index].initialize(renderer.native_handle(),
+                                        {.size = readback_size,
+                                         .usage = granit::buffer_usage::transfer_destination,
+                                         .location = granit::memory_location::readback}) ==
+            granit::result::success);
   }
 
   granit::command_recorder recorder;
   REQUIRE(recorder.initialize(renderer.native_handle()) == granit::result::success);
   REQUIRE(recorder.begin() == granit::result::success);
+  const granit::viewport viewport{0, 0, 32, 32, 0, 1};
+  const granit::scissor scissor{0, 0, 32, 32};
   for (std::size_t index = 0; index < colors.size(); ++index) {
-    const granit::color_attachment_desc color{
-        .view = color_views[index].native_handle(),
-        .clear_value = {.red = static_cast<float>(index), .alpha = 1.0F}};
+    REQUIRE(recorder.bind_graphics_pipeline(pipelines[index]) == granit::result::success);
+    const auto material_group = instances[index].bind_group();
+    REQUIRE(recorder.bind_graphics_groups(materials[index].pipeline_layout(), 1,
+                                          std::span{&material_group, 1}) ==
+            granit::result::success);
+    const auto light_group = lights[index].group();
+    REQUIRE(recorder.bind_graphics_groups(materials[index].pipeline_layout(), 3,
+                                          std::span{&light_group, 1}) == granit::result::success);
+    REQUIRE(recorder.set_viewports(0, std::span{&viewport, 1}) == granit::result::success);
+    REQUIRE(recorder.set_scissors(0, std::span{&scissor, 1}) == granit::result::success);
+    const granit::color_attachment_desc color{.view = color_views[index].native_handle()};
     const granit::depth_stencil_attachment_desc depth{.view = depth_views[index].native_handle(),
                                                       .clear_value = {.depth = 1.0F}};
     const granit::rendering_desc rendering{.color_attachments = std::span{&color, 1},
                                            .depth_stencil_attachment = &depth,
                                            .area = {0, 0, 32, 32}};
     REQUIRE(recorder.begin_rendering(rendering) == granit::result::success);
+    REQUIRE(recorder.draw(3) == granit::result::success);
     REQUIRE(recorder.end_rendering() == granit::result::success);
+    const granit_texture_data_layout layout{};
+    const granit_texture_write_region region{.mip_level = 0,
+                                             .base_array_layer = 0,
+                                             .array_layer_count = 1,
+                                             .aspect = GRANIT_TEXTURE_ASPECT_COLOR_BIT,
+                                             .x = 0,
+                                             .y = 0,
+                                             .z = 0,
+                                             .width = 32,
+                                             .height = 32,
+                                             .depth = 1};
+    REQUIRE(recorder.copy_texture_to_buffer(colors[index].native_handle(),
+                                            readbacks[index].native_handle(), layout,
+                                            region) == granit::result::success);
   }
   REQUIRE(recorder.end() == granit::result::success);
   REQUIRE(recorder.submit() == granit::result::success);
   REQUIRE(recorder.reset() == granit::result::success);
+
+  std::array<std::array<std::uint16_t, 4>, 2> centers{};
+  for (std::size_t index = 0; index < readbacks.size(); ++index) {
+    void* mapped = nullptr;
+    REQUIRE(readbacks[index].map(0, readback_size, &mapped) == granit::result::success);
+    const auto* pixels = static_cast<const std::uint16_t*>(mapped);
+    std::copy_n(pixels + (16 * 32 + 16) * 4, 4, centers[index].begin());
+    REQUIRE(readbacks[index].unmap() == granit::result::success);
+  }
+  CHECK(centers[0][0] > centers[0][1]);
+  CHECK(centers[1][1] > centers[1][0]);
 }

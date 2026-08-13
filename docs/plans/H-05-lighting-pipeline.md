@@ -494,6 +494,18 @@ Snapshot 在 GPU 资源初始化后不再参与录制，避免为每个 View 复
 目标上绑定各自匹配的 Material Template/Group 3，执行真实 PBR Draw、Tone Mapping 和像素区分回归，
 再将多 View 阶段标记完成。
 
+## H-05E8b 实现记录
+
+两个 View 现分别创建与自身 Group 3 布局句柄匹配的 Material Package、Material Template、PBR
+Pipeline 和 Material Instance，并使用同一 `LIGHTS` Shader 执行真实 Draw。View 0 只上传红色点光，
+View 1 只上传绿色点光；两套 PBR Pass 连续写入各自 `RGBA16_FLOAT` HDR/D32 目标后复制到独立
+Readback Buffer，仍由同一个 Recorder 一次提交。
+
+中心 HDR 半精度像素回归确认 View 0 红色分量高于绿色、View 1 绿色分量高于红色，证明 Scene
+可见索引、逐 View 打包、GPU Buffer、Bind Group、Pipeline Layout 和 Attachment 没有跨 View 串用。
+材质缺省资源可共享，但可变的光源和目标保持隔离。下一步为两个 HDR 目标分别创建 Tone Mapping
+输出并验证显示像素，然后完成多 View 阶段。
+
 ## H-05A 实现记录
 
 新增可选内部目标 `granit::lighting`，首版依赖 `granit::scene`，不进入核心动态库或安装导出。
