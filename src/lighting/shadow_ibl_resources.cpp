@@ -97,35 +97,33 @@ granit_result shadow_ibl_resources::initialize(granit_renderer renderer,
 
   constexpr auto fragment = granit::shader_stage_flags::fragment;
   std::vector<granit::bind_group_layout_entry> layout_entries;
+  layout_entries.reserve(12);
   if (features.shadows) {
-    layout_entries.insert(
-        layout_entries.end(),
-        {{shadow_binding_constants, granit::binding_type::uniform_buffer, 1,
-          granit::shader_stage_flags::vertex | fragment},
-         {shadow_binding_texture, granit::binding_type::sampled_texture, 1, fragment},
-         {shadow_binding_sampler, granit::binding_type::sampler, 1, fragment}});
+    layout_entries.push_back({shadow_binding_constants, granit::binding_type::uniform_buffer, 1,
+                              granit::shader_stage_flags::vertex | fragment});
+    layout_entries.push_back(
+        {shadow_binding_texture, granit::binding_type::sampled_texture, 1, fragment});
+    layout_entries.push_back({shadow_binding_sampler, granit::binding_type::sampler, 1, fragment});
   }
   if (features.ibl) {
-    layout_entries.insert(
-        layout_entries.end(),
-        {{ibl_binding_constants, granit::binding_type::uniform_buffer, 1, fragment},
-         {ibl_binding_irradiance, granit::binding_type::sampled_texture, 1, fragment},
-         {ibl_binding_prefiltered_environment, granit::binding_type::sampled_texture, 1, fragment},
-         {ibl_binding_brdf_lut, granit::binding_type::sampled_texture, 1, fragment},
-         {ibl_binding_sampler, granit::binding_type::sampler, 1, fragment}});
+    layout_entries.push_back(
+        {ibl_binding_constants, granit::binding_type::uniform_buffer, 1, fragment});
+    layout_entries.push_back(
+        {ibl_binding_irradiance, granit::binding_type::sampled_texture, 1, fragment});
+    layout_entries.push_back({ibl_binding_prefiltered_environment,
+                              granit::binding_type::sampled_texture, 1, fragment});
+    layout_entries.push_back(
+        {ibl_binding_brdf_lut, granit::binding_type::sampled_texture, 1, fragment});
+    layout_entries.push_back({ibl_binding_sampler, granit::binding_type::sampler, 1, fragment});
   }
-  layout_entries.insert(
-      layout_entries.end(),
-      {
-          granit::bind_group_layout_entry{light_binding_counts,
-                                          granit::binding_type::uniform_buffer, 1, fragment},
-          granit::bind_group_layout_entry{light_binding_directional,
-                                          granit::binding_type::storage_buffer, 1, fragment},
-          granit::bind_group_layout_entry{light_binding_point, granit::binding_type::storage_buffer,
-                                          1, fragment},
-          granit::bind_group_layout_entry{light_binding_spot, granit::binding_type::storage_buffer,
-                                          1, fragment},
-      });
+  layout_entries.push_back(
+      {light_binding_counts, granit::binding_type::uniform_buffer, 1, fragment});
+  layout_entries.push_back(
+      {light_binding_directional, granit::binding_type::storage_buffer, 1, fragment});
+  layout_entries.push_back(
+      {light_binding_point, granit::binding_type::storage_buffer, 1, fragment});
+  layout_entries.push_back(
+      {light_binding_spot, granit::binding_type::storage_buffer, 1, fragment});
   result = layout_.initialize(renderer, layout_entries);
   if (granit::failed(result)) {
     static_cast<void>(reset());

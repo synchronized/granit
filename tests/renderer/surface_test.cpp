@@ -14,13 +14,13 @@
 
 namespace {
 
+#if defined(_WIN32)
 bool environment_unavailable(granit::result result) {
   return result == granit::result::backend_unavailable ||
          result == granit::result::incompatible_driver ||
          result == granit::result::no_suitable_device || result == granit::result::unsupported;
 }
 
-#if defined(_WIN32)
 class test_window {
 public:
   test_window()
