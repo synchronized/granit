@@ -7,7 +7,7 @@
 
 - 路线图任务：H-07
 - 优先级：P2
-- 状态：已确认，等待 H-05 完成
+- 状态：已确认，等待公共 ABI 收敛检查点完成
 - 必需依赖：H-01 Render Graph、H-02 Material、H-03 PBR、H-04 Scene、H-05 Lighting/Post Process
 - 可选依赖：H-06 2D/UI/调试绘制评估结果
 

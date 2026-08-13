@@ -7,7 +7,7 @@
 
 - 路线图任务：H-05
 - 优先级：P2
-- 状态：实现中，H-05A～H-05D、H-05E1～H-05E8 已完成
+- 状态：已完成
 - 依赖：H-01 Render Graph、H-02 Material、H-03 PBR、H-04 Scene Submission
 
 ## 背景
@@ -296,7 +296,7 @@ H-05E 从当前状态按以下顺序收敛，不在完成这些验证前继续�
    屏障、失败回滚及多帧重复执行，不再由示例长期手工维护整条命令链。
 6. **多帧生命周期稳定性（已完成）**：连续运行至少数千帧，覆盖帧间 View/光源/材质更新、
    Resize、GPU 在途资源延迟销毁、Renderer 销毁诊断和 Device Lost 错误传播。
-7. **Shader 契约与跨平台收尾（CI 验证中）**：自动校验 HLSL/SPIR-V、C++ 布局和 Pipeline
+7. **Shader 契约与跨平台收尾（已完成）**：自动校验 HLSL/SPIR-V、C++ 布局和 Pipeline
    Layout；验证 Linux Clang/GCC、共享/静态构建、安装及独立 Consumer。
 
 ## H-05 退出条件与后续阶段
@@ -523,10 +523,8 @@ Readback Buffer，仍由同一个 Recorder 一次提交。
 功能降级组合、窗口 Swapchain/Resize 和双 View 完整像素链路均已通过实现验证。CPU 与分 Pass GPU
 基线已经建立；1/16/64/128 点光测量尚未触发分块或聚簇光照的重新评估条件。
 
-H-05 当前仍保持“实现中”，因为统一 Render Graph 组合、数千帧生命周期压力测试，以及 Linux、
-静态库、安装和独立 Consumer 验证尚未完成。下一项固定为 H-05E9：将 Shadow、PBR HDR 和 Tone
-Mapping 从示例中的手工命令链收敛为可重复执行的 Graph 组合；完成 E9～E11 后再进入公共 C ABI
-收敛检查点与 H-07。
+H-05E9～H-05E11 已完成统一 Render Graph 组合、数千帧生命周期压力测试，以及 Linux、静态库、
+安装和独立 Consumer 验证。H-05 技术路线已经闭环，下一步进入公共 C ABI 收敛检查点与 H-07。
 
 ## H-05E9 实现记录
 
@@ -562,8 +560,8 @@ MSVC 共享库矩阵继续通过。
 新增 Linux CI，覆盖 Clang/GCC × shared/static 四种 Release 组合，统一运行配置、构建、完整测试、
 安装以及两个 Consumer；GPU 测试使用 Mesa Vulkan 软件驱动作为无独立显卡环境的后端。当前 Windows
 主机未安装 WSL 发行版，因此 Linux 结果由 CI 执行，不能记作本机已运行。HLSL/SPIR-V 反射契约已由
-现有七项 Shader Tool CTest 持续校验。Linux 首轮 CI 通过后 H-05E11 才视为完成，随后进入公共
-C ABI 收敛检查点。
+现有七项 Shader Tool CTest 持续校验。Linux Clang/GCC 的共享与静态四种组合均已通过完整测试、
+安装和独立 C11/C++20 Consumer。H-05E11 至此完成，随后进入公共 C ABI 收敛检查点。
 
 ## H-05A 实现记录
 
