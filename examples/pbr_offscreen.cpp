@@ -2,6 +2,7 @@
 // Copyright (c) 2026 Granit contributors
 
 #include "lighting/ibl_reference.h"
+#include "lighting/lighting_reference.h"
 #include "lighting/shadow_ibl_resources.h"
 #include "lighting/tone_mapping_reference.h"
 #include "lighting/tone_mapping_resources.h"
@@ -225,6 +226,14 @@ int main() {
     granit::lighting::packed_view_lights lights;
     lights.directional.push_back(
         {.direction_to_light = {0.0F, 0.0F, 1.0F}, .radiance = {1.0F, 1.0F, 1.0F}});
+    lights.point.push_back(
+        {.position = {0.0F, 0.0F, 1.5F}, .radius = 3.0F, .intensity = {0.3F, 0.2F, 0.1F}});
+    lights.spot.push_back({.position = {0.0F, 0.0F, 1.5F},
+                           .radius = 3.0F,
+                           .direction = {0.0F, 0.0F, -1.0F},
+                           .outer_angle_cosine = std::cos(0.6F),
+                           .intensity = {0.1F, 0.2F, 0.3F},
+                           .inner_angle_cosine = std::cos(0.2F)});
     result = granit::from_native(lighting_resources.update_lights(lights));
   }
   granit::bind_group_layout object_layout;
@@ -365,6 +374,21 @@ int main() {
        .prefiltered_radiance = {1.0F, 1.0F, 1.0F},
        .brdf_lut = {0.5F, 0.0999755859F},
        .environment_intensity = 0.25F});
+  const granit::lighting::lighting_surface surface{
+      .material = {.base_color = {0.8F, 0.2F, 0.1F},
+                   .metallic = 0.5F,
+                   .perceptual_roughness = 0.5F},
+      .position = {1.0F / 256.0F, -1.0F / 256.0F, 0.5F},
+      .normal = {1.0F / 255.0F, 1.0F / 255.0F, 1.0F}};
+  const auto point_reference = granit::lighting::evaluate_point_light(
+      surface, {.position = {0.0F, 0.0F, 1.5F}, .intensity = {0.3F, 0.2F, 0.1F}, .radius = 3.0F});
+  const auto spot_reference =
+      granit::lighting::evaluate_spot_light(surface, {.position = {0.0F, 0.0F, 1.5F},
+                                                      .direction = {0.0F, 0.0F, -1.0F},
+                                                      .intensity = {0.1F, 0.2F, 0.3F},
+                                                      .radius = 3.0F,
+                                                      .inner_angle = 0.2F,
+                                                      .outer_angle = 0.6F});
   const auto render_case = [&](float stored_shadow_depth, bool expected_lit) {
     auto case_result = recorder.begin();
     const granit::depth_stencil_attachment_desc shadow_depth{
@@ -426,8 +450,10 @@ int main() {
     case_result = readback.map(0, readback_size, &mapped);
     if (granit::succeeded(case_result)) {
       const auto* pixels = static_cast<const std::uint8_t*>(mapped);
+      const auto local_lights = granit::math::add(point_reference, spot_reference);
       const auto expected_linear =
-          expected_lit ? granit::math::add(reference, ibl_reference) : ibl_reference;
+          granit::math::add(granit::math::add(local_lights, ibl_reference),
+                            expected_lit ? reference : decltype(reference){});
       granit::math::float3 expected_display{};
       const auto tone_error = granit::lighting::evaluate_tone_mapping(
           expected_linear,
@@ -449,9 +475,10 @@ int main() {
       if (tone_error != granit::lighting::tone_mapping_error::none ||
           clear_tone_error != granit::lighting::tone_mapping_error::none ||
           !near_pixel(center, expected_center, 2) || !near_pixel(corner, expected_clear, 2)) {
-        std::cerr << "PBR 阴影像素回归失败：中心像素=" << static_cast<unsigned>(center[0]) << ','
-                  << static_cast<unsigned>(center[1]) << ',' << static_cast<unsigned>(center[2])
-                  << ',' << static_cast<unsigned>(center[3]) << '\n';
+        std::cerr << "PBR 多光源阴影像素回归失败：中心像素=" << static_cast<unsigned>(center[0])
+                  << ',' << static_cast<unsigned>(center[1]) << ','
+                  << static_cast<unsigned>(center[2]) << ',' << static_cast<unsigned>(center[3])
+                  << '\n';
         case_result = granit::result::internal;
       }
       const auto unmap_result = readback.unmap();
@@ -483,6 +510,6 @@ int main() {
     std::cerr << "离屏 PBR 绘制失败：" << granit::result_message(result) << '\n';
     return 1;
   }
-  std::cout << "PBR 阴影、IBL、HDR 与 Tone Mapping 像素回归完成\n";
+  std::cout << "PBR 多光源、阴影、IBL、HDR 与 Tone Mapping 像素回归完成\n";
   return 0;
 }
