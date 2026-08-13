@@ -225,6 +225,16 @@ Sampler、完整 binding 0～7 布局及一个 Bind Group；四个 Texture View 
 - 实现曝光、输出传递模式与格式组合校验。
 - 覆盖黑色、负值防护、过曝、高亮和 sRGB 编码像素回归。
 
+## H-05D1 实现记录
+
+已建立曝光与 Tone Mapping 的 CPU 数值参考。曝光使用 `2^EV` 在曲线前缩放 HDR，首版显式接受
+`[-24, +24] EV`；非有限颜色或越界曝光返回错误且不修改输出。负 HDR 分量在 ACES fitted 近似前
+归零，曲线结果限制到 `[0, 1]`。
+
+输出传递模式明确区分 sRGB Attachment 自动编码和 UNORM Attachment 下的 Shader 显式 sRGB 编码，
+格式与模式不匹配时拒绝创建后处理路径，防止重复编码或漏编码。数值测试覆盖黑色、负值、标准亮度、
+高亮、曝光、sRGB 分段边界及失败不修改。下一步建立 HDR Attachment 和 Tone Mapping Shader Pass。
+
 ### H-05E：完整参考管线与测量
 
 - 串联 Shadow、Forward PBR 和 Tone Mapping Pass。
