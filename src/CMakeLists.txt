@@ -399,6 +399,7 @@ target_sources(
     pipeline/default_ibl_resources.h
     pipeline/material_api.cpp
     pipeline/material_access.h
+    pipeline/mesh_api.cpp
     pipeline/render_pipeline_api.cpp
     pipeline/scene_access.h
     pipeline/scene_api.cpp
@@ -409,6 +410,8 @@ target_sources(
       "${PROJECT_SOURCE_DIR}/include/granit/pipeline/export.h"
       "${PROJECT_SOURCE_DIR}/include/granit/pipeline/material.h"
       "${PROJECT_SOURCE_DIR}/include/granit/pipeline/material.hpp"
+      "${PROJECT_SOURCE_DIR}/include/granit/pipeline/mesh.h"
+      "${PROJECT_SOURCE_DIR}/include/granit/pipeline/mesh.hpp"
       "${PROJECT_SOURCE_DIR}/include/granit/pipeline/render_pipeline.h"
       "${PROJECT_SOURCE_DIR}/include/granit/pipeline/render_pipeline.hpp"
       "${PROJECT_SOURCE_DIR}/include/granit/pipeline/scene.h"

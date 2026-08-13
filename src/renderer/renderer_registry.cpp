@@ -1234,6 +1234,24 @@ granit_result renderer_registry::map_buffer(granit_renderer renderer, granit_buf
   return GRANIT_SUCCESS;
 }
 
+granit_result renderer_registry::get_buffer_desc(granit_renderer renderer, granit_buffer buffer,
+                                                 granit_buffer_desc& desc) {
+  std::lock_guard lock{mutex_};
+  const auto renderer_found = renderers_.find(renderer);
+  if (renderer_found == renderers_.end() ||
+      handles_.find(renderer, resource_type::renderer, 0) == nullptr) {
+    return GRANIT_ERROR_INVALID_HANDLE;
+  }
+  const auto& state = renderer_found->second;
+  if (handles_.find(buffer, resource_type::buffer, state->domain()) == nullptr)
+    return GRANIT_ERROR_INVALID_HANDLE;
+  const auto found = buffers_.find(buffer);
+  if (found == buffers_.end() || found->second->renderer != state)
+    return GRANIT_ERROR_INVALID_HANDLE;
+  desc = found->second->desc;
+  return GRANIT_SUCCESS;
+}
+
 granit_result renderer_registry::unmap_buffer(granit_renderer renderer, granit_buffer buffer) {
   std::shared_ptr<buffer_record> record;
   {

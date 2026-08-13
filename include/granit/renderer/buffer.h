@@ -8,10 +8,10 @@
 #include <stdint.h>
 
 #include <granit/core/export.h>
-#include <granit/renderer/renderer.h>
-#include <granit/renderer/resource_types.h>
 #include <granit/core/result.h>
 #include <granit/core/types.h>
+#include <granit/renderer/renderer.h>
+#include <granit/renderer/resource_types.h>
 
 /** Buffer 资源句柄。零值无效。 */
 typedef granit_handle granit_buffer;
@@ -53,6 +53,10 @@ GRANIT_API granit_result granit_buffer_map(granit_renderer renderer, granit_buff
 
 /** 结束当前映射；UPLOAD Buffer 会自动刷新写入范围。 */
 GRANIT_API granit_result granit_buffer_unmap(granit_renderer renderer, granit_buffer buffer);
+
+/** 查询 Buffer 创建描述；用于跨模块校验用途和范围。 */
+GRANIT_API granit_result granit_buffer_get_desc(granit_renderer renderer, granit_buffer buffer,
+                                                granit_buffer_desc* desc);
 
 /** 销毁 Buffer，并使句柄立即失效。 */
 GRANIT_API granit_result granit_buffer_destroy(granit_renderer renderer, granit_buffer buffer);

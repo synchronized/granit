@@ -27,6 +27,7 @@ add_library(
     headers/types_h.c
     headers/upload_batch_h.c
     headers/pipeline_material_h.c
+    headers/pipeline_mesh_h.c
     headers/pipeline_render_pipeline_h.c
     headers/pipeline_scene_h.c
 )
@@ -192,6 +193,7 @@ add_test(NAME granit.lighting COMMAND granit_lighting_test)
 add_executable(
   granit_pipeline_test
   pipeline/material_api_test.cpp
+  pipeline/mesh_api_test.cpp
   pipeline/render_pipeline_api_test.cpp
   pipeline/scene_api_test.cpp
 )
@@ -327,6 +329,7 @@ add_library(
     headers/types_hpp.cpp
     headers/upload_batch_hpp.cpp
     headers/pipeline_material_hpp.cpp
+    headers/pipeline_mesh_hpp.cpp
     headers/pipeline_render_pipeline_hpp.cpp
     headers/pipeline_scene_hpp.cpp
 )

@@ -278,9 +278,9 @@ H-05 与 H-07 之间增加公共 API 收敛检查点：先确定 Scene、Materia
 
 ## 近期执行顺序
 
-1. **H-07E / 公共 Mesh ABI**：定义 `granit_mesh`、顶点/索引输入、Draw Range、所有权、线程安全和
-   Renderer domain 校验；Mesh 只描述 GPU 绘制资源，不接管资产文件或 CPU 模型数据。
-2. **H-07F / 内置 Draw**：将 payload 关联表中的外部整数 Mesh 标识替换为受校验 Mesh 句柄，由
+1. **H-07E / 公共 Mesh ABI / 已完成**：`granit_mesh` 已采用一次 Draw 的不可变描述，覆盖
+   Vertex/Index Buffer、布局、范围、用途、边界和 Renderer domain 校验；不接管资产或 CPU 数据。
+2. **H-07F / 内置 Draw / 下一步**：将 payload 关联表中的外部整数 Mesh 标识替换为受校验 Mesh 句柄，由
    Pipeline 自动录制 Opaque 与 Shadow Draw；固定阶段回调降为可选高级扩展点。
 3. **H-07G / 完整用户路径**：增加只使用公共安装 API 的离屏与窗口示例，覆盖
    Renderer -> Mesh/Material -> Scene Snapshot -> `render` -> 最终输出。

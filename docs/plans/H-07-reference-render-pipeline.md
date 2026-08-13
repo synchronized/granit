@@ -283,8 +283,10 @@ Renderable、payload 和关联项数组。回调不得保存数组地址，不�
 
 ### H-07E～H：可用门面收尾
 
-1. **H-07E 公共 Mesh ABI**：建立受 Renderer domain 校验的 `granit_mesh`，显式描述 Vertex/Index
-   Buffer、顶点布局、索引类型和 Draw Range，不接管资产或 CPU 数据。
+1. **H-07E 公共 Mesh ABI（已完成）**：建立受 Renderer domain 校验的 `granit_mesh`，显式描述
+   Vertex/Index Buffer、顶点布局、索引类型和 Draw Range，不接管资产或 CPU 数据。一个 Mesh
+   对应一次不可变 Draw，不含 Submesh 数组。Mesh 借用 Buffer；独立动态库不穿透核心库持有内部
+   引用，创建时查询用途与范围，后续录制时再次校验，调用者必须保证 Buffer 生命周期覆盖 Mesh。
 2. **H-07F 内置 Draw**：让 Pipeline 使用 Mesh 与 Material 自动录制 Opaque/Shadow Draw，回调改为
    可选高级扩展点，普通用户不再必须理解 Command Recorder。
 3. **H-07G 完整示例**：提供安装 API 下的离屏和窗口完整路径，并保留直接 Renderer 用法作为对照。

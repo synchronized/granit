@@ -103,6 +103,20 @@ extern "C" granit_result granit_buffer_unmap(granit_renderer renderer, granit_bu
   }
 }
 
+extern "C" granit_result granit_buffer_get_desc(granit_renderer renderer, granit_buffer buffer,
+                                                granit_buffer_desc* desc) {
+  if (desc == nullptr)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  *desc = {};
+  if (renderer == GRANIT_NULL_HANDLE || buffer == GRANIT_NULL_HANDLE)
+    return GRANIT_ERROR_INVALID_HANDLE;
+  try {
+    return granit::detail::renderer_registry::instance().get_buffer_desc(renderer, buffer, *desc);
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
 extern "C" granit_result granit_buffer_destroy(granit_renderer renderer, granit_buffer buffer) {
   if (renderer == GRANIT_NULL_HANDLE || buffer == GRANIT_NULL_HANDLE) {
     return GRANIT_ERROR_INVALID_HANDLE;
