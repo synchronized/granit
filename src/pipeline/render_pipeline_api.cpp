@@ -16,6 +16,8 @@
 #include "pipeline/scene_access.h"
 
 #include <granit/renderer/render_target.h>
+#include <granit/renderer/shader.hpp>
+#include <granit/renderer/texture.hpp>
 
 #include <algorithm>
 #include <array>
@@ -34,6 +36,12 @@ constexpr uint64_t generation_mask = UINT64_C(0x00ffffff);
 constexpr uint64_t type_value = UINT64_C(0x42);
 
 struct pipeline_state {
+  struct shadow_pipeline_entry {
+    granit_pipeline_layout layout = GRANIT_NULL_HANDLE;
+    granit_mesh mesh = GRANIT_NULL_HANDLE;
+    granit_graphics_pipeline pipeline = GRANIT_NULL_HANDLE;
+  };
+
   std::mutex mutex;
   granit_renderer renderer = GRANIT_NULL_HANDLE;
   granit_render_pipeline_record_callback record = nullptr;
@@ -41,6 +49,11 @@ struct pipeline_state {
   granit::lighting::tone_mapping_pipeline_resources tone_mapping_unorm;
   granit::lighting::tone_mapping_pipeline_resources tone_mapping_srgb;
   granit::pipeline::detail::default_ibl_resources default_ibl;
+  granit::shader shadow_vertex_shader;
+  granit::shader shadow_fragment_shader;
+  granit::texture shadow_placeholder_texture;
+  granit::texture_view shadow_placeholder_view;
+  std::vector<shadow_pipeline_entry> shadow_pipelines;
   bool alive = true;
 };
 
@@ -227,6 +240,123 @@ granit_result record_opaque_draws(
   return result == GRANIT_SUCCESS ? end_result : result;
 }
 
+granit_result acquire_shadow_pipeline(pipeline_state& state,
+                                      const granit::pipeline::detail::material_draw_state& material,
+                                      granit_mesh mesh, granit_graphics_pipeline& pipeline) {
+  const auto cached = std::ranges::find_if(state.shadow_pipelines, [&](const auto& entry) {
+    return entry.layout == material.pipeline_layout && entry.mesh == mesh;
+  });
+  if (cached != state.shadow_pipelines.end()) {
+    pipeline = cached->pipeline;
+    return GRANIT_SUCCESS;
+  }
+  granit::pipeline::detail::mesh_pipeline_state mesh_state;
+  auto result = granit::pipeline::detail::copy_mesh_pipeline_state(state.renderer, mesh, mesh_state);
+  if (result != GRANIT_SUCCESS)
+    return result;
+  std::vector<granit_vertex_buffer_layout> layouts;
+  layouts.reserve(mesh_state.vertex_buffers.size());
+  for (const auto& source : mesh_state.vertex_buffers) {
+    layouts.push_back({source.stride, source.step_mode,
+                       static_cast<uint32_t>(source.attributes.size()), 0,
+                       source.attributes.data()});
+  }
+  const granit_depth_state depth_state{1, 1, GRANIT_COMPARE_OPERATION_LESS_EQUAL, 0};
+  const granit_depth_bias_state depth_bias{1.25F, 1.75F, 0.0F, 0};
+  granit_graphics_pipeline_desc desc = GRANIT_GRAPHICS_PIPELINE_DESC_INIT;
+  desc.layout = material.pipeline_layout;
+  desc.vertex_shader = state.shadow_vertex_shader.native_handle();
+  desc.fragment_shader = state.shadow_fragment_shader.native_handle();
+  desc.depth_stencil_format = GRANIT_TEXTURE_FORMAT_D32_FLOAT;
+  desc.vertex_buffer_layout_count = static_cast<uint32_t>(layouts.size());
+  desc.vertex_buffer_layouts = layouts.data();
+  desc.primitive.topology = mesh_state.topology;
+  desc.primitive.front_face = GRANIT_FRONT_FACE_CLOCKWISE;
+  desc.primitive.cull_mode = GRANIT_CULL_MODE_BACK;
+  desc.depth = &depth_state;
+  desc.depth_bias = &depth_bias;
+  granit_graphics_pipeline created = GRANIT_NULL_HANDLE;
+  result = granit_graphics_pipeline_create(state.renderer, &desc, &created);
+  if (result != GRANIT_SUCCESS)
+    return result;
+  try {
+    state.shadow_pipelines.push_back({material.pipeline_layout, mesh, created});
+  } catch (const std::bad_alloc&) {
+    static_cast<void>(granit_graphics_pipeline_destroy(state.renderer, created));
+    return GRANIT_ERROR_OUT_OF_MEMORY;
+  }
+  pipeline = created;
+  return GRANIT_SUCCESS;
+}
+
+granit_result record_shadow_draws(
+    pipeline_state& state, granit_command_recorder recorder, granit_texture_view depth,
+    const granit::lighting::shadow_frame_constants& frame,
+    std::span<const granit::lighting::shadow_caster> casters,
+    std::span<const granit_render_pipeline_draw_binding> draws) {
+  if (casters.size() != draws.size())
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  granit_depth_stencil_attachment_desc depth_attachment =
+      GRANIT_DEPTH_STENCIL_ATTACHMENT_DESC_INIT;
+  depth_attachment.view = depth;
+  granit_rendering_desc rendering = GRANIT_RENDERING_DESC_INIT;
+  rendering.depth_stencil_attachment = &depth_attachment;
+  rendering.area = {0, 0, 1024, 1024};
+  auto result = granit_command_recorder_begin_rendering(state.renderer, recorder, &rendering);
+  const granit_viewport viewport{0, 0, 1024, 1024, 0, 1};
+  const granit_scissor scissor{0, 0, 1024, 1024};
+  const granit::material::pbr_frame_constants unused_frame{};
+  for (size_t index = 0; result == GRANIT_SUCCESS && index < draws.size(); ++index) {
+    granit::pipeline::detail::material_draw_state material;
+    result = granit::pipeline::detail::acquire_material_draw_state(
+        state.renderer, draws[index].material,
+        {.pass = granit::material::make_feature_id("opaque"),
+         .variant = 0,
+         .color_format = GRANIT_TEXTURE_FORMAT_RGBA16_FLOAT,
+         .depth_stencil_format = GRANIT_TEXTURE_FORMAT_D32_FLOAT},
+        material);
+    const granit::material::pbr_object_constants object{
+        .model = casters[index].model,
+        .normal_matrix = granit::math::identity_matrix4,
+        .object_id = {casters[index].object_id, 0, 0, 0}};
+    granit::pipeline::detail::pbr_draw_bindings bindings;
+    if (result == GRANIT_SUCCESS)
+      result = bindings.initialize(state.renderer, material, unused_frame, object);
+    granit::lighting::shadow_ibl_resources lighting;
+    if (result == GRANIT_SUCCESS) {
+      result = lighting.initialize(
+          state.renderer,
+          {.shadow = state.shadow_placeholder_view.native_handle(),
+           .ibl = {.irradiance = state.default_ibl.irradiance(),
+                   .prefiltered_environment = state.default_ibl.prefiltered_environment(),
+                   .brdf_lut = state.default_ibl.brdf_lut()}},
+          {.light_view_projection = frame.light_view_projection,
+           .texel_size = {1.0F / 1024.0F, 1.0F / 1024.0F}},
+          {.intensity = 0.0F}, {}, {}, material.lighting_layout);
+    }
+    granit_graphics_pipeline pipeline = GRANIT_NULL_HANDLE;
+    if (result == GRANIT_SUCCESS)
+      result = acquire_shadow_pipeline(state, material, draws[index].mesh, pipeline);
+    if (result == GRANIT_SUCCESS)
+      result = granit_command_recorder_bind_graphics_pipeline(state.renderer, recorder, pipeline);
+    const std::array groups{bindings.object_group(), lighting.group()};
+    if (result == GRANIT_SUCCESS) {
+      result = granit_command_recorder_bind_graphics_groups(
+          state.renderer, recorder, material.pipeline_layout, 2, groups.data(),
+          static_cast<uint32_t>(groups.size()));
+    }
+    if (result == GRANIT_SUCCESS)
+      result = granit_command_recorder_set_viewports(state.renderer, recorder, 0, &viewport, 1);
+    if (result == GRANIT_SUCCESS)
+      result = granit_command_recorder_set_scissors(state.renderer, recorder, 0, &scissor, 1);
+    if (result == GRANIT_SUCCESS)
+      result = granit::pipeline::detail::record_mesh_draw(state.renderer, recorder,
+                                                          draws[index].mesh);
+  }
+  const auto end_result = granit_command_recorder_end_rendering(state.renderer, recorder);
+  return result == GRANIT_SUCCESS ? end_result : result;
+}
+
 granit_result
 render_view(pipeline_state& state, const granit_render_pipeline_render_desc& desc,
             const granit::scene::multi_view_snapshot& snapshot,
@@ -392,17 +522,8 @@ render_view(pipeline_state& state, const granit_render_pipeline_render_desc& des
                                       .reserved = 0});
       }
       if (state.record == nullptr) {
-        granit_depth_stencil_attachment_desc depth_attachment =
-            GRANIT_DEPTH_STENCIL_ATTACHMENT_DESC_INIT;
-        depth_attachment.view = context.texture_view(*shadow);
-        granit_rendering_desc rendering = GRANIT_RENDERING_DESC_INIT;
-        rendering.depth_stencil_attachment = &depth_attachment;
-        rendering.area = {0, 0, 1024, 1024};
-        auto result = granit_command_recorder_begin_rendering(state.renderer, context.recorder(),
-                                                               &rendering);
-        if (result == GRANIT_SUCCESS)
-          result = granit_command_recorder_end_rendering(state.renderer, context.recorder());
-        return result;
+        return record_shadow_draws(state, context.recorder(), context.texture_view(*shadow), frame,
+                                   casters, shadow_bindings);
       }
       const granit_render_pipeline_record_info info{
           .struct_size = sizeof(granit_render_pipeline_record_info),
@@ -473,6 +594,28 @@ extern "C" granit_result granit_render_pipeline_create(granit_renderer renderer,
     const auto ibl_result = state->default_ibl.initialize(renderer);
     if (ibl_result != GRANIT_SUCCESS)
       return ibl_result;
+    auto resource_result = state->shadow_vertex_shader.initialize(
+        renderer, {.stage = granit::shader_stage::vertex,
+                   .code = granit::pipeline::detail::shadow_depth_vertex_shader(),
+                   .entry_point = "vertex_main"});
+    if (granit::failed(resource_result))
+      return static_cast<granit_result>(resource_result);
+    resource_result = state->shadow_fragment_shader.initialize(
+        renderer, {.stage = granit::shader_stage::fragment,
+                   .code = granit::pipeline::detail::shadow_depth_fragment_shader(),
+                   .entry_point = "fragment_main"});
+    if (granit::failed(resource_result))
+      return static_cast<granit_result>(resource_result);
+    resource_result = state->shadow_placeholder_texture.initialize(
+        renderer, {.format = granit::texture_format::d32_float,
+                   .usage = granit::texture_usage::sampled |
+                            granit::texture_usage::depth_stencil_attachment});
+    if (granit::failed(resource_result))
+      return static_cast<granit_result>(resource_result);
+    resource_result = state->shadow_placeholder_view.initialize(
+        renderer, state->shadow_placeholder_texture.native_handle());
+    if (granit::failed(resource_result))
+      return static_cast<granit_result>(resource_result);
     std::scoped_lock lock{registry_mutex};
     size_t index = 0;
     while (index < registry.size() && registry[index].state != nullptr)
@@ -572,5 +715,24 @@ extern "C" granit_result granit_render_pipeline_destroy(granit_renderer renderer
   const auto ibl_result = removed->default_ibl.reset();
   if (result == GRANIT_SUCCESS)
     result = ibl_result;
+  for (const auto& entry : removed->shadow_pipelines) {
+    const auto pipeline_result =
+        granit_graphics_pipeline_destroy(renderer, entry.pipeline);
+    if (result == GRANIT_SUCCESS)
+      result = pipeline_result;
+  }
+  removed->shadow_pipelines.clear();
+  const auto placeholder_view_result = removed->shadow_placeholder_view.reset();
+  if (result == GRANIT_SUCCESS)
+    result = static_cast<granit_result>(placeholder_view_result);
+  const auto placeholder_texture_result = removed->shadow_placeholder_texture.reset();
+  if (result == GRANIT_SUCCESS)
+    result = static_cast<granit_result>(placeholder_texture_result);
+  const auto fragment_result = removed->shadow_fragment_shader.reset();
+  if (result == GRANIT_SUCCESS)
+    result = static_cast<granit_result>(fragment_result);
+  const auto vertex_result = removed->shadow_vertex_shader.reset();
+  if (result == GRANIT_SUCCESS)
+    result = static_cast<granit_result>(vertex_result);
   return result;
 }

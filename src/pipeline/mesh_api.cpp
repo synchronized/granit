@@ -116,6 +116,49 @@ granit_result granit::pipeline::detail::validate_mesh_handle(granit_renderer ren
              : GRANIT_ERROR_INVALID_HANDLE;
 }
 
+granit_result granit::pipeline::detail::copy_mesh_pipeline_state(
+    granit_renderer renderer, granit_mesh mesh, mesh_pipeline_state& output) noexcept {
+  output = {};
+  size_t index = 0;
+  uint32_t generation = 0;
+  if (!decode(mesh, index, generation))
+    return GRANIT_ERROR_INVALID_HANDLE;
+  std::shared_ptr<mesh_state> state;
+  {
+    std::scoped_lock lock{registry_mutex};
+    if (index >= registry.size() || registry[index].generation != generation ||
+        registry[index].state == nullptr || registry[index].state->renderer != renderer) {
+      return GRANIT_ERROR_INVALID_HANDLE;
+    }
+    state = registry[index].state;
+  }
+  try {
+    mesh_pipeline_state replacement{.topology = state->topology};
+    replacement.vertex_buffers.reserve(state->vertex_buffers.size());
+    bool has_position = false;
+    for (const auto& source : state->vertex_buffers) {
+      replacement.vertex_buffers.push_back(
+          {.stride = source.stride,
+           .step_mode = source.step_mode,
+           .attributes = source.attributes});
+      for (const auto& attribute : source.attributes) {
+        if (attribute.location == 0 && attribute.format == GRANIT_VERTEX_FORMAT_FLOAT32X3 &&
+            source.step_mode == GRANIT_VERTEX_STEP_MODE_VERTEX) {
+          has_position = true;
+        }
+      }
+    }
+    if (!has_position)
+      return GRANIT_ERROR_INVALID_ARGUMENT;
+    output = std::move(replacement);
+    return GRANIT_SUCCESS;
+  } catch (const std::bad_alloc&) {
+    return GRANIT_ERROR_OUT_OF_MEMORY;
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
 granit_result granit::pipeline::detail::record_mesh_draw(granit_renderer renderer,
                                                          granit_command_recorder recorder,
                                                          granit_mesh mesh) noexcept {

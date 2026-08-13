@@ -309,7 +309,11 @@ Renderable、payload 和关联项数组。回调不得保存数组地址，不�
    真实 Shadow Caster 路径不要求每个材质包重复携带深度 Shader。Render Pipeline 已内置
    标准 Shadow Depth Vertex/Fragment SPIR-V：Vertex 读取 location 0 的 `float3` position，并使用
    Group 2 Model 和 Group 3 Light View-Projection 输出深度。Shader 作为构建输入嵌入库，
-   运行时不读取外部文件。下一增量将它与 Mesh Vertex Layout 和 Shadow Pipeline 缓存串联。
+   运行时不读取外部文件。Mesh 内部快照会复制 Vertex Layout，并在阴影录制前确认
+   location 0 是逐顶点 `float3` position。Shadow Pipeline 按 Material Pipeline Layout 与不可变
+   Mesh 句柄缓存；每个投影者绑定 Group 2 Object 和 Group 3 Shadow 常量后录制真实
+   Mesh Draw。Group 3 使用独立占位深度纹理，避免把正在写入的 Shadow Attachment 同时作为
+   Sampled Texture 绑定。
 3. **H-07G 完整示例**：提供安装 API 下的离屏和窗口完整路径，并保留直接 Renderer 用法作为对照。
 4. **H-07H 验收**：补齐生命周期压力、Resize、多 View、Validation Layer、输出一致性和性能对比。
 

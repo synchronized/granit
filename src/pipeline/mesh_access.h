@@ -6,10 +6,25 @@
 
 #include <granit/pipeline/mesh.h>
 
+#include <vector>
+
 namespace granit::pipeline::detail {
+
+struct mesh_vertex_layout {
+  uint32_t stride = 0;
+  granit_vertex_step_mode step_mode = GRANIT_VERTEX_STEP_MODE_VERTEX;
+  std::vector<granit_vertex_attribute> attributes;
+};
+
+struct mesh_pipeline_state {
+  granit_primitive_topology topology = GRANIT_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+  std::vector<mesh_vertex_layout> vertex_buffers;
+};
 
 [[nodiscard]] granit_result validate_mesh_handle(granit_renderer renderer,
                                                  granit_mesh mesh) noexcept;
+[[nodiscard]] granit_result copy_mesh_pipeline_state(granit_renderer renderer, granit_mesh mesh,
+                                                     mesh_pipeline_state& state) noexcept;
 
 /**
  * 将 Mesh 的 Buffer 绑定与一次 Draw 录制到已开始的 Recorder。
