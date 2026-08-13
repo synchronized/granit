@@ -8,6 +8,9 @@
 #include "material/material_template_gpu.h"
 #include "pipeline/material_access.h"
 
+#include <granit/renderer/pipeline.hpp>
+
+#include <array>
 #include <limits>
 #include <memory>
 #include <mutex>
@@ -25,6 +28,7 @@ struct material_state {
   std::mutex mutex;
   granit_renderer renderer = GRANIT_NULL_HANDLE;
   granit::material::material_package package;
+  granit::bind_group_layout object_layout;
   granit::material::material_template_gpu material_template;
   granit::material::material_gpu_instance instance;
   bool alive = true;
@@ -196,7 +200,16 @@ extern "C" granit_result granit_material_create(granit_renderer renderer,
     auto result = decode_archive(*desc, state->package);
     if (result != GRANIT_SUCCESS)
       return result;
-    result = state->material_template.initialize(renderer, state->package);
+    const std::array object_entries{granit::bind_group_layout_entry{
+        .binding = 0,
+        .type = granit::binding_type::uniform_buffer,
+        .array_count = 1,
+        .visibility = granit::shader_stage_flags::vertex}};
+    const auto object_result = state->object_layout.initialize(renderer, object_entries);
+    if (granit::failed(object_result))
+      return static_cast<granit_result>(object_result);
+    const std::array additional_layouts{state->object_layout.native_handle()};
+    result = state->material_template.initialize(renderer, state->package, additional_layouts);
     if (result != GRANIT_SUCCESS)
       return result;
     result = state->instance.initialize(renderer, state->material_template.material_layout(),
@@ -282,5 +295,8 @@ extern "C" granit_result granit_material_destroy(granit_renderer renderer,
   const auto template_result = removed->material_template.reset();
   if (result == GRANIT_SUCCESS)
     result = template_result;
+  const auto layout_result = static_cast<granit_result>(removed->object_layout.reset());
+  if (result == GRANIT_SUCCESS)
+    result = layout_result;
   return result;
 }

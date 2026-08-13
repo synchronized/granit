@@ -41,6 +41,7 @@ public:
   [[nodiscard]] granit_bind_group_layout material_layout() const noexcept {
     return material_layout_;
   }
+  [[nodiscard]] granit_bind_group_layout frame_layout() const noexcept { return frame_layout_; }
   [[nodiscard]] granit_pipeline_layout pipeline_layout() const noexcept { return pipeline_layout_; }
   [[nodiscard]] std::size_t cached_pipeline_count() const noexcept;
 
