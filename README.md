@@ -23,6 +23,10 @@ Granit 不是 Vulkan API 的逐项重命名或薄包装。项目希望围绕实�
 部分高层模块，或使用计划中的 `granit::render_pipeline` 完整参考管线。该高级套件定位类似
 DiligentFX，PBR 质量体系主要参考 Filament，但不会让核心 Renderer 拥有 Scene 或强制统一工作流。
 
+当前参考管线是 Forward PBR：Scene 可见性与方向光阴影之后，在 PBR HDR Pass 中直接完成材质和
+光照，再执行 Tone Mapping。它目前不是 Deferred Renderer，也尚未实现 Tile/Cluster 光源筛选，
+因此不称为 Forward+；后续优先演进为 Clustered Forward，Deferred 保留为可选高级管线。
+
 当前项目处于初始设计阶段。开发决策优先保证封装边界、所有权和长期架构清晰，不因维护尚未
 发布的旧接口而阻碍必要调整。
 

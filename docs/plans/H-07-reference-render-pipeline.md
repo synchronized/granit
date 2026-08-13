@@ -19,6 +19,17 @@ H-07 将已经验证的高层模块组合为类似 DiligentFX 的可选参考渲
 这套能力吸收 DiligentFX 的模块组合与工程分层经验，并参考 Filament 的 PBR、光照、色彩管理和
 最终画面质量；不要求兼容两者的 API、对象模型、Shader、材质包或资产格式。
 
+## 渲染路径
+
+H-07 当前采用 Forward PBR，而不是 Deferred Rendering：Shadow 之后，每个可见对象在 PBR HDR
+Pass 中直接完成材质与光照计算，再进入 Tone Mapping。当前没有 G-Buffer 或独立 Deferred
+Lighting Pass。
+
+当前也尚未达到 Forward+/Clustered Forward：逐 View 光源筛选与批量打包已经存在，但没有
+Tile/Cluster 划分和 Clustered Light Culling。后续优先沿现有路径增加 Clustered Forward；Deferred
+保留为可选高级管线，不替换参考管线，也不进入核心 Renderer 职责。详细边界见
+[架构文档](../architecture.md#渲染路径定位)。
+
 ## 三种使用模式
 
 ### 只使用 Renderer

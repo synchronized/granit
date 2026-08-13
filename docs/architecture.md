@@ -55,6 +55,33 @@ Swapchain 图像选择两套命令。未启用 Surface 的 Renderer 仍应支持
 
 参考项目用于比较职责边界和成熟设计，不要求保持 API 兼容，也不以逐项复刻为目标。
 
+## 渲染路径定位
+
+Granit 核心 `Renderer` 是后端中立的显式 GPU 接口，本身不限定 Forward 或 Deferred。当前 H-07
+参考渲染套件采用 **Forward PBR** 路径：先执行 Scene 可见性筛选和方向光 Shadow Pass，再在一个
+PBR HDR Pass 中直接完成材质着色与光照，最后执行 Tone Mapping 输出显示空间图像。
+
+```text
+Scene 可见性筛选
+  -> Directional Shadow Pass
+  -> Forward PBR HDR Pass
+  -> Tone Mapping
+  -> 最终输出
+```
+
+当前实现不是 Deferred Renderer：没有 G-Buffer，也没有独立的屏幕空间 Deferred Lighting Pass。
+当前实现也不称为 Forward+ 或 Clustered Forward：虽然已有逐 View 光源可见性和有界批量打包，
+但尚未实现屏幕 Tile/Cluster 划分、GPU 光源分配或按 Cluster 查询光源列表。
+
+后续优先在现有 Forward PBR 基础上演进为 Clustered Forward，以继续复用材质、透明物体、多 View
+和 MSAA 路径。Deferred Rendering 可以作为使用 Render Graph 组合的可选高级管线，但不替代核心
+Renderer，也不要求现有参考管线改用 G-Buffer。只有完成 Clustered Light Culling 并通过多光源
+性能与像素验证后，文档和产品名称才使用 Forward+ 或 Clustered Forward。
+
+类比主流项目时，核心 Renderer 的职责边界更接近 Diligent、WebGPU 或 bgfx 一类显式资源与命令
+封装；H-07 高层参考管线则接近精简的 Filament/DiligentFX 风格画质套件。该类比只描述分层和
+渲染路径，不表示 API、Shader、材质或资产格式兼容。
+
 ## Renderer 与高级渲染套件
 
 Granit Renderer 的长期职责止于 GPU 资源、Pipeline、Bind Group、命令、同步、提交、Swapchain 和
