@@ -13,3 +13,4 @@
 - [材质系统首份性能基线](2026-08-11-windows-clang-material-8ef28fa.md)
 - [PBR Pass 首份 CPU 性能基线](2026-08-12-windows-clang-pbr-pass-6f9bf01.md)
 - [Scene 多 View 首份 CPU 性能基线](2026-08-12-windows-clang-scene-fb38f6f.md)
+- [Lighting 可见光源打包首份 CPU 性能基线](2026-08-13-windows-clang-lighting-cc2ef53.md)

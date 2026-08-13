@@ -73,8 +73,12 @@ bool make_snapshot(std::uint32_t light_count, granit::scene::multi_view_snapshot
                       .radius = 2.0F,
                       .layer_mask = 1});
   }
-  return granit::scene::build_multi_view_snapshot(
-             {.views = std::span{&view, 1}, .point_lights = lights}, snapshot) ==
+  return granit::scene::build_multi_view_snapshot({.views = std::span{&view, 1},
+                                                   .renderables = {},
+                                                   .directional_lights = {},
+                                                   .point_lights = lights,
+                                                   .spot_lights = {}},
+                                                  snapshot) ==
          granit::scene::multi_view_error::none;
 }
 

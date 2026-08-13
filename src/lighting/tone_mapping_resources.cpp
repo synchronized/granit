@@ -93,9 +93,15 @@ granit_result tone_mapping_resources::initialize(
                    .vertex_shader = vertex_shader_.native_handle(),
                    .fragment_shader = fragment_shader_.native_handle(),
                    .color_formats = std::span{&output_format, 1},
+                   .depth_stencil_format = granit::texture_format::undefined,
+                   .samples = granit::sample_count::one,
+                   .vertex_buffers = {},
                    .primitive = {.topology = granit::primitive_topology::triangle_list,
                                  .front = granit::front_face::clockwise,
-                                 .cull = granit::cull_mode::back}});
+                                 .cull = granit::cull_mode::back},
+                   .depth = std::nullopt,
+                   .color_blends = {},
+                   .depth_bias = std::nullopt});
   }
   if (granit::failed(result)) {
     static_cast<void>(reset());
