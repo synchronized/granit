@@ -7,7 +7,7 @@
 
 - 路线图任务：H-07
 - 优先级：P2
-- 状态：已确认，等待公共 ABI 收敛检查点完成
+- 状态：进行中，公共 Scene Snapshot ABI 已进入实现验证
 - 必需依赖：H-01 Render Graph、H-02 Material、H-03 PBR、H-04 Scene、H-05 Lighting/Post Process
 - 可选依赖：H-06 2D/UI/调试绘制评估结果
 
@@ -200,6 +200,20 @@ ABI、描述结构、整数句柄、所有权与线程语义，并在其上提�
 - ECS、Scene Graph、Camera 层级、资产加载、Mesh 所有权和通用插件系统。
 - 每个 Draw 一次的公开动态库调用、任意 Command Buffer 注入或跨 ABI C++ 回调对象。
 - ABI 稳定承诺；项目仍处于开发状态，首版实现验证期间允许调整尾部字段和函数集合。
+
+### 当前实现进度
+
+公共 ABI 的第一块已经落地为独立 `granit::render_pipeline` 构建目标：
+
+- `granit/pipeline/scene.h` 提供 C11 可包含的 Scene Snapshot 值描述、创建和销毁接口。
+- `granit/pipeline/scene.hpp` 提供不保存平行状态的 move-only C++20 RAII 包装。
+- 创建时复制全部 View、Renderable 与光源值数据，并在验证完成后一次性发布新句柄。
+- Snapshot 句柄校验类型、generation 和所属 Renderer；失败创建统一清空输出句柄。
+- 生命周期测试覆盖成功创建、重复销毁、槽位复用后的旧句柄、跨 Renderer 和非法数组。
+
+该目标目前只在构建树中提供。安装 component 与外部 consumer 在 Material 和统一 Pipeline 的依赖
+边界完成后一起落地，避免过早把内部 `scene` 静态目标写入安装导出。下一块按顺序实现 Material
+公共 ABI，再由统一 Pipeline 消费 Material 和 Scene Snapshot。
 
 ## 分步实施
 

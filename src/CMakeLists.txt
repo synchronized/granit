@@ -347,3 +347,38 @@ target_link_libraries(granit_lighting PUBLIC granit::scene)
 granit_target_compile_warnings(granit_lighting)
 granit_target_output_directories(granit_lighting)
 set_target_properties(granit_lighting PROPERTIES FOLDER "Modules" POSITION_INDEPENDENT_CODE ON)
+
+add_library(granit_render_pipeline)
+add_library(granit::render_pipeline ALIAS granit_render_pipeline)
+target_sources(
+  granit_render_pipeline
+  PRIVATE pipeline/scene_api.cpp
+  PUBLIC
+    FILE_SET HEADERS
+    BASE_DIRS "${PROJECT_SOURCE_DIR}/include"
+    FILES
+      "${PROJECT_SOURCE_DIR}/include/granit/pipeline/export.h"
+      "${PROJECT_SOURCE_DIR}/include/granit/pipeline/scene.h"
+      "${PROJECT_SOURCE_DIR}/include/granit/pipeline/scene.hpp"
+)
+target_compile_features(granit_render_pipeline PUBLIC cxx_std_20)
+target_include_directories(
+  granit_render_pipeline
+  PUBLIC "$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>"
+  PRIVATE "${PROJECT_SOURCE_DIR}/src"
+)
+target_link_libraries(granit_render_pipeline PRIVATE granit::scene)
+target_compile_definitions(
+  granit_render_pipeline
+  PRIVATE GRANIT_RENDER_PIPELINE_BUILDING_LIBRARY
+  PUBLIC $<$<NOT:$<BOOL:${BUILD_SHARED_LIBS}>>:GRANIT_RENDER_PIPELINE_STATIC_DEFINE>
+)
+granit_target_compile_warnings(granit_render_pipeline)
+granit_target_output_directories(granit_render_pipeline)
+set_target_properties(
+  granit_render_pipeline
+  PROPERTIES
+    FOLDER "Modules"
+    CXX_VISIBILITY_PRESET hidden
+    VISIBILITY_INLINES_HIDDEN YES
+)
