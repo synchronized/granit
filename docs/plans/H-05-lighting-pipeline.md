@@ -280,6 +280,15 @@ Tone Mapping 资源。H-05D 至此完成，下一步进入 H-05E 的完整参考
 - 建立 1/16/64/128 个可见光源的 CPU 打包和 GPU 帧时间基线。
 - 仅依据测量结果决定是否建立后续分块/聚簇光照任务。
 
+## H-05E1 实现记录
+
+已增加独立 `granit_lighting_benchmarks` 目标和 `pack_view_point_lights` 用例，支持通过 `--lights`
+选择 1、16、64 或 128 个可见点光。基准在计时区间外构建单 View Snapshot，计时内容只包含输出
+容器分配、索引遍历和 GPU 光源布局打包，不混入可见性筛选、GPU 上传或 Draw。
+
+Debug 构建的快速验证表明耗时随光源数量近似线性增长；该数据只用于验证基准工作流，不作为性能
+基线或优化依据。下一步使用 Release preset 保存可复现 CPU 基线，并建立 GPU 帧时间测量路径。
+
 ## H-05A 实现记录
 
 新增可选内部目标 `granit::lighting`，首版依赖 `granit::scene`，不进入核心动态库或安装导出。
