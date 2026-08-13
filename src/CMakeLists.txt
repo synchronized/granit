@@ -316,6 +316,7 @@ target_sources(
     lighting/light_buffers.cpp
     lighting/light_data.cpp
     lighting/lighting_reference.cpp
+    lighting/reference_pipeline_graph.cpp
     lighting/shadow_resources.cpp
     lighting/shadow_ibl_resources.cpp
     lighting/shadow_reference.cpp
@@ -332,6 +333,7 @@ target_sources(
       lighting/light_buffers.h
       lighting/light_data.h
       lighting/lighting_reference.h
+      lighting/reference_pipeline_graph.h
       lighting/shadow_resources.h
       lighting/shadow_ibl_resources.h
       lighting/shadow_reference.h

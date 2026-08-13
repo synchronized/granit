@@ -528,6 +528,17 @@ H-05 当前仍保持“实现中”，因为统一 Render Graph 组合、数千�
 Mapping 从示例中的手工命令链收敛为可重复执行的 Graph 组合；完成 E9～E11 后再进入公共 C ABI
 收敛检查点与 H-07。
 
+## H-05E9 实现记录
+
+新增内部 `reference_pipeline_graph` 适配器，统一验证并串联可选 Directional Shadow、PBR HDR 和
+Tone Mapping。适配器只组合资源 ID、Pass 描述和录制回调，不拥有 Texture、材质、Mesh 或 Scene，
+也不绕过 Command Recorder；无阴影路径必须显式使用无阴影 PBR 描述，不创建伪造阴影资源。
+
+组合前会校验 HDR 写入与 Tone Mapping 输入、Shadow 写入与 PBR 读取是同一 Graph 资源，并保证失败
+不修改输出 Pass 句柄。测试覆盖依赖编译顺序、不一致资源拒绝，以及同一 Graph 连续两帧创建瞬态
+Shadow/HDR/Depth/LDR 资源并按 Shadow→PBR→Tone Mapping 顺序执行。H-05E9 完成，下一步进入
+H-05E10 数千帧生命周期压力测试。
+
 ## H-05A 实现记录
 
 新增可选内部目标 `granit::lighting`，首版依赖 `granit::scene`，不进入核心动态库或安装导出。
