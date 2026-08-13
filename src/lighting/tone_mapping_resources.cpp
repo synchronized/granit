@@ -18,6 +18,13 @@ bool valid(const tone_mapping_constants& value) noexcept {
          value.encode_srgb <= 1;
 }
 
+bool compatible_output(granit::texture_format format,
+                       const tone_mapping_constants& value) noexcept {
+  const auto transfer = value.encode_srgb != 0 ? tone_mapping_output_transfer::shader_srgb
+                                               : tone_mapping_output_transfer::attachment_srgb;
+  return validate_tone_mapping_output(format, transfer) == tone_mapping_error::none;
+}
+
 } // namespace
 
 granit_result tone_mapping_resources::initialize(
@@ -26,7 +33,7 @@ granit_result tone_mapping_resources::initialize(
     std::span<const std::byte> fragment_code) noexcept {
   if (renderer == GRANIT_NULL_HANDLE || hdr_view == GRANIT_NULL_HANDLE || initialized() ||
       output_format == granit::texture_format::undefined || !valid(values) || vertex_code.empty() ||
-      fragment_code.empty())
+      fragment_code.empty() || !compatible_output(output_format, values))
     return GRANIT_ERROR_INVALID_ARGUMENT;
 
   auto result = constants_.initialize(
@@ -76,10 +83,9 @@ granit_result tone_mapping_resources::initialize(
         {.stage = granit::shader_stage::vertex, .code = vertex_code, .entry_point = "vertex_main"});
   }
   if (granit::succeeded(result)) {
-    result = fragment_shader_.initialize(
-        renderer, {.stage = granit::shader_stage::fragment,
-                   .code = fragment_code,
-                   .entry_point = "fragment_main"});
+    result = fragment_shader_.initialize(renderer, {.stage = granit::shader_stage::fragment,
+                                                    .code = fragment_code,
+                                                    .entry_point = "fragment_main"});
   }
   if (granit::succeeded(result)) {
     result = pipeline_.initialize(

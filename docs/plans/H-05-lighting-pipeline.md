@@ -257,6 +257,13 @@ Pipeline Layout、顶点/片元 Shader 和目标格式专用 Graphics Pipeline�
 Buffer；改为在映射前通过 `reset()` 等待该 Recorder 完成后，固定 HDR 高亮值经 `+1 EV`、ACES 和
 Shader sRGB 编码得到的 GPU 像素与 CPU 参考逐通道一致。H-05D 首版 Tone Mapping 像素闭环完成。
 
+## H-05D4 实现记录
+
+Tone Mapping GPU 资源层现强制校验目标格式与编码开关：`RGBA8_UNORM/BGRA8_UNORM` 只接受 Shader
+显式 sRGB 编码，`RGBA8_SRGB/BGRA8_SRGB` 只接受线性 Shader 输出并由 Attachment 编码。重复编码、
+漏编码及其他首版不支持的最终格式都会在创建 Buffer、Shader 或 Pipeline 前返回参数错误。真实 Vulkan
+测试覆盖两种误配拒绝及 sRGB Attachment Pipeline 成功创建，确保 D1 的传递模式契约落实到 GPU 层。
+
 ### H-05E：完整参考管线与测量
 
 - 串联 Shadow、Forward PBR 和 Tone Mapping Pass。

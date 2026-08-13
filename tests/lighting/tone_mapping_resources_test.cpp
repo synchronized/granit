@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include "lighting/tone_mapping_resources.h"
 #include "lighting/tone_mapping_reference.h"
+#include "lighting/tone_mapping_resources.h"
 
 #include <granit/granit.hpp>
 
 #include <catch2/catch_all.hpp>
 
 #include <array>
-#include <cstring>
 #include <cmath>
+#include <cstring>
 #include <fstream>
 #include <iterator>
 #include <string>
@@ -58,8 +58,8 @@ TEST_CASE("Tone Mapping GPU资源建立完整全屏Pipeline") {
   granit::lighting::tone_mapping_resources resources;
   REQUIRE(resources.initialize(renderer.native_handle(), hdr_view.native_handle(),
                                granit::texture_format::rgba8_unorm,
-                               {.exposure_scale = 2.0F, .encode_srgb = 1}, vertex, fragment) ==
-          GRANIT_SUCCESS);
+                               {.exposure_scale = 2.0F, .encode_srgb = 1}, vertex,
+                               fragment) == GRANIT_SUCCESS);
   CHECK(resources.pipeline() != GRANIT_NULL_HANDLE);
   CHECK(resources.pipeline_layout() != GRANIT_NULL_HANDLE);
   CHECK(resources.group() != GRANIT_NULL_HANDLE);
@@ -70,9 +70,43 @@ TEST_CASE("Tone Mapping GPU资源建立完整全屏Pipeline") {
 TEST_CASE("Tone Mapping GPU资源拒绝不完整输入") {
   granit::lighting::tone_mapping_resources resources;
   CHECK(resources.initialize(GRANIT_NULL_HANDLE, GRANIT_NULL_HANDLE,
-                             granit::texture_format::undefined, {}, {}, {}) ==
-        GRANIT_ERROR_INVALID_ARGUMENT);
+                             granit::texture_format::undefined, {}, {},
+                             {}) == GRANIT_ERROR_INVALID_ARGUMENT);
   CHECK(resources.update({}) == GRANIT_ERROR_INVALID_ARGUMENT);
+}
+
+TEST_CASE("Tone Mapping GPU资源拒绝重复或缺失sRGB编码") {
+  granit::renderer renderer;
+  const auto initialized = renderer.initialize({.application_name = "granit-tone-transfer"});
+  if (environment_unavailable(initialized))
+    SKIP("当前运行环境没有满足要求的 Vulkan 设备");
+  REQUIRE(initialized == granit::result::success);
+  granit::texture hdr_texture;
+  granit::texture_view hdr_view;
+  REQUIRE(hdr_texture.initialize(renderer.native_handle(),
+                                 {.format = granit::texture_format::rgba16_float,
+                                  .usage = granit::texture_usage::sampled}) ==
+          granit::result::success);
+  REQUIRE(hdr_view.initialize(renderer.native_handle(), hdr_texture.native_handle()) ==
+          granit::result::success);
+  const auto vertex = load_shader("tone_mapping.vert.spv");
+  const auto fragment = load_shader("tone_mapping.frag.spv");
+
+  granit::lighting::tone_mapping_resources missing_encoding;
+  CHECK(missing_encoding.initialize(renderer.native_handle(), hdr_view.native_handle(),
+                                    granit::texture_format::rgba8_unorm,
+                                    {.exposure_scale = 1.0F, .encode_srgb = 0}, vertex,
+                                    fragment) == GRANIT_ERROR_INVALID_ARGUMENT);
+  granit::lighting::tone_mapping_resources duplicate_encoding;
+  CHECK(duplicate_encoding.initialize(renderer.native_handle(), hdr_view.native_handle(),
+                                      granit::texture_format::rgba8_srgb,
+                                      {.exposure_scale = 1.0F, .encode_srgb = 1}, vertex,
+                                      fragment) == GRANIT_ERROR_INVALID_ARGUMENT);
+  granit::lighting::tone_mapping_resources attachment_encoding;
+  REQUIRE(attachment_encoding.initialize(renderer.native_handle(), hdr_view.native_handle(),
+                                         granit::texture_format::rgba8_srgb,
+                                         {.exposure_scale = 1.0F, .encode_srgb = 0}, vertex,
+                                         fragment) == GRANIT_SUCCESS);
 }
 
 TEST_CASE("Tone Mapping GPU输出与CPU参考一致") {
@@ -84,15 +118,15 @@ TEST_CASE("Tone Mapping GPU输出与CPU参考一致") {
 
   granit::texture hdr_texture;
   granit::texture_view hdr_view;
-  REQUIRE(hdr_texture.initialize(
-              renderer.native_handle(),
-              {.format = granit::texture_format::rgba16_float,
-               .usage = granit::texture_usage::sampled |
-                        granit::texture_usage::transfer_destination}) == granit::result::success);
+  REQUIRE(hdr_texture.initialize(renderer.native_handle(),
+                                 {.format = granit::texture_format::rgba16_float,
+                                  .usage = granit::texture_usage::sampled |
+                                           granit::texture_usage::transfer_destination}) ==
+          granit::result::success);
   constexpr std::array<std::uint16_t, 4> hdr_pixel{0x4400, 0x3c00, 0x3400, 0x3c00};
-  REQUIRE(hdr_texture.write(
-              {reinterpret_cast<const std::byte*>(hdr_pixel.data()), sizeof(hdr_pixel)},
-              {.bytes_per_row = 8}, {}) == granit::result::success);
+  REQUIRE(
+      hdr_texture.write({reinterpret_cast<const std::byte*>(hdr_pixel.data()), sizeof(hdr_pixel)},
+                        {.bytes_per_row = 8}, {}) == granit::result::success);
   REQUIRE(hdr_view.initialize(renderer.native_handle(), hdr_texture.native_handle()) ==
           granit::result::success);
 
@@ -106,8 +140,8 @@ TEST_CASE("Tone Mapping GPU输出与CPU参考一致") {
   granit_texture_view output_view = GRANIT_NULL_HANDLE;
   granit_texture_desc output_desc = GRANIT_TEXTURE_DESC_INIT;
   output_desc.format = GRANIT_TEXTURE_FORMAT_RGBA8_UNORM;
-  output_desc.usage = GRANIT_TEXTURE_USAGE_COLOR_ATTACHMENT_BIT |
-                      GRANIT_TEXTURE_USAGE_TRANSFER_SOURCE_BIT;
+  output_desc.usage =
+      GRANIT_TEXTURE_USAGE_COLOR_ATTACHMENT_BIT | GRANIT_TEXTURE_USAGE_TRANSFER_SOURCE_BIT;
   output_desc.width = 16;
   output_desc.height = 16;
   REQUIRE(granit_texture_create_with_default_view(renderer.native_handle(), &output_desc,
