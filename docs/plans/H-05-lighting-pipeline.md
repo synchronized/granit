@@ -443,6 +443,20 @@ Material Template、Pipeline 及匹配布局的 Material Instance。Granit 当�
 编码与 GPU 中心像素比较，同时验证背景清屏像素。功能降级组合至此完成，下一步进入窗口与
 Swapchain 闭环。
 
+## H-05E7a 实现记录
+
+新增 Win32 `granit_window_hdr_example`，在同一个 Frame 中先把线性 HDR 颜色写入尺寸匹配的
+`RGBA16_FLOAT` 中间 Attachment，再复用 H-05D Tone Mapping Pass 输出到当前 Swapchain Backbuffer。
+如果 Swapchain 为 sRGB 格式，Shader 保持线性输出并由 Attachment 编码；如果为 UNORM 格式，Shader
+显式执行 sRGB 编码，继续拒绝双重编码和缺失编码。
+
+窗口循环沿用 F-06 的 acquire、backbuffer、submit-frame、present 和瞬时 Frame 令牌模型。
+Resize 或 SUBOPTIMAL/OUT_OF_DATE 会先完成当前 Frame，再重建 Swapchain，并按新尺寸和格式重建 HDR
+Texture、View、Tone Mapping Pipeline 与 Bind Group；窗口客户区为零时不创建零尺寸资源，等待恢复。
+`--smoke-test` 会渲染三帧并主动改变一次窗口尺寸，已通过 Validation Layer。最小化时旧 Backbuffer
+保持有效以及恢复后的重建语义继续由真实 Swapchain 测试覆盖。下一步把完整 PBR/Lighting Pass 接到
+同一 HDR 目标，完成离屏与窗口共用渲染链验证。
+
 ## H-05A 实现记录
 
 新增可选内部目标 `granit::lighting`，首版依赖 `granit::scene`，不进入核心动态库或安装导出。

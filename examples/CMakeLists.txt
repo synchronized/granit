@@ -60,6 +60,14 @@ if(WIN32)
     PRIVATE GRANIT_EXAMPLE_ASSET_DIR="${CMAKE_CURRENT_SOURCE_DIR}/assets"
   )
   granit_target_compile_warnings(granit_window_triangle_example)
+
+  add_executable(granit_window_hdr_example window_hdr.cpp)
+  target_link_libraries(granit_window_hdr_example PRIVATE granit::lighting user32)
+  target_compile_definitions(
+    granit_window_hdr_example
+    PRIVATE GRANIT_EXAMPLE_ASSET_DIR="${CMAKE_CURRENT_SOURCE_DIR}/assets"
+  )
+  granit_target_compile_warnings(granit_window_hdr_example)
 endif()
 
 set(
@@ -73,7 +81,12 @@ set(
   granit_pbr_offscreen_example
 )
 if(WIN32)
-  list(APPEND granit_example_targets granit_window_clear_example granit_window_triangle_example)
+  list(
+    APPEND granit_example_targets
+    granit_window_clear_example
+    granit_window_triangle_example
+    granit_window_hdr_example
+  )
 endif()
 foreach(target IN LISTS granit_example_targets)
   granit_target_output_directories(${target})
