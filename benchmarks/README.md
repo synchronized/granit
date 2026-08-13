@@ -62,4 +62,16 @@ cmake --build --preset windows-clang-release --target granit_benchmarks
 成本。使用 `--lights` 选择 1、16、64 或 128 个光源；Snapshot 在计时区间外构建，结果包含输出
 容器分配和逐光打包，不包含可见性筛选、GPU 上传或 Draw。
 
+`granit_lighting_gpu_benchmarks` 复用离屏 PBR 渲染链，以 Vulkan timestamp query 分别测量 Shadow、
+PBR HDR、Tone Mapping 和整条 GPU 渲染链。使用 `--lights` 选择点光数量，并通过 `--iterations`、
+`--samples`、`--warmup` 控制每个样本的帧数、正式样本数和预热样本数。例如：
+
+```powershell
+./build/windows-clang-release/bin/granit_lighting_gpu_benchmarks.exe `
+  --lights 64 --iterations 20 --samples 20 --warmup 5
+```
+
+输出为 CSV；每个样本先取指定帧数的 GPU 时间均值，再由这些样本计算 mean、P50、P95 和 P99。
+该基准不执行像素回读，常规 `granit_pbr_offscreen` 示例仍保留完整像素回归。
+
 已提交的基线摘要见 [results/README.md](results/README.md)。

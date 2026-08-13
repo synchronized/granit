@@ -18,17 +18,99 @@
 #include <algorithm>
 #include <array>
 #include <bit>
+#include <charconv>
 #include <cmath>
 #include <cstdint>
 #include <cstring>
 #include <fstream>
+#include <iomanip>
 #include <iostream>
 #include <iterator>
+#include <numeric>
 #include <string>
 #include <string_view>
 #include <vector>
 
+#ifndef GRANIT_BENCHMARK_REVISION
+#define GRANIT_BENCHMARK_REVISION "unknown"
+#define GRANIT_BENCHMARK_COMPILER "unknown"
+#define GRANIT_BENCHMARK_SYSTEM "unknown"
+#define GRANIT_BENCHMARK_LINK_MODE "unknown"
+#endif
+
 namespace {
+
+struct run_options {
+  std::uint32_t point_lights = 1;
+  std::uint32_t iterations = 1;
+  std::uint32_t samples = 1;
+  std::uint32_t warmup = 0;
+  bool benchmark = false;
+};
+
+bool parse_u32(std::string_view text, std::uint32_t& value) {
+  std::uint32_t parsed = 0;
+  const auto result = std::from_chars(text.data(), text.data() + text.size(), parsed);
+  if (result.ec != std::errc{} || result.ptr != text.data() + text.size())
+    return false;
+  value = parsed;
+  return true;
+}
+
+struct gpu_sample {
+  double shadow = 0.0;
+  double pbr_hdr = 0.0;
+  double tone_mapping = 0.0;
+  double total = 0.0;
+};
+
+struct sample_summary {
+  double mean = 0.0;
+  double p50 = 0.0;
+  double p95 = 0.0;
+  double p99 = 0.0;
+};
+
+sample_summary summarize(std::vector<double> values) {
+  std::ranges::sort(values);
+  const auto percentile = [&](double fraction) {
+    const auto index =
+        static_cast<std::size_t>(std::ceil(fraction * static_cast<double>(values.size())) - 1.0);
+    return values[std::min(index, values.size() - 1)];
+  };
+  return {.mean = std::accumulate(values.begin(), values.end(), 0.0) /
+                  static_cast<double>(values.size()),
+          .p50 = percentile(0.50),
+          .p95 = percentile(0.95),
+          .p99 = percentile(0.99)};
+}
+
+bool parse_options(int argc, char** argv, run_options& options) {
+#ifdef GRANIT_PBR_GPU_BENCHMARK
+  options = {.point_lights = 64, .iterations = 20, .samples = 20, .warmup = 5, .benchmark = true};
+#endif
+  for (int index = 1; index < argc; ++index) {
+    const std::string_view argument{argv[index]};
+    if (argument == "--help") {
+      std::cout << "用法：granit_lighting_gpu_benchmarks [--lights N] [--iterations N] "
+                   "[--samples N] [--warmup N]\n";
+      return false;
+    }
+    if (index + 1 >= argc)
+      return false;
+    const std::string_view value{argv[++index]};
+    auto* target = argument == "--lights"       ? &options.point_lights
+                   : argument == "--iterations" ? &options.iterations
+                   : argument == "--samples"    ? &options.samples
+                   : argument == "--warmup"     ? &options.warmup
+                                                : nullptr;
+    if (target == nullptr || !parse_u32(value, *target))
+      return false;
+  }
+  return options.point_lights > 0 && options.point_lights <= 128 && options.iterations > 0 &&
+         options.iterations <= 10'000 && options.samples > 0 && options.samples <= 1'000 &&
+         options.warmup <= 1'000;
+}
 
 std::vector<std::uint32_t> load_shader(std::string_view name) {
   const auto path = std::string{GRANIT_EXAMPLE_ASSET_DIR} + "/" + std::string{name};
@@ -134,7 +216,10 @@ template <typename T> std::span<const std::byte> bytes(const T& value) {
 
 } // namespace
 
-int main() {
+int main(int argc, char** argv) {
+  run_options options;
+  if (!parse_options(argc, argv, options))
+    return argc > 1 && std::string_view{argv[1]} == "--help" ? 0 : 2;
   granit::renderer renderer;
   auto result =
       renderer.initialize({.application_name = "Granit Textured PBR", .enable_validation = true});
@@ -220,20 +305,31 @@ int main() {
          .depth_bias = 0.0F,
          .normal_bias = 0.0F,
          .texel_size = {1.0F, 1.0F}},
-        {.intensity = 0.25F, .prefiltered_max_mip = 0.0F}));
+        {.intensity = 0.25F, .prefiltered_max_mip = 0.0F},
+        {.directional = 1, .point = 128, .spot = 1}));
   }
   if (granit::succeeded(result)) {
     granit::lighting::packed_view_lights lights;
     lights.directional.push_back(
         {.direction_to_light = {0.0F, 0.0F, 1.0F}, .radiance = {1.0F, 1.0F, 1.0F}});
-    lights.point.push_back(
-        {.position = {0.0F, 0.0F, 1.5F}, .radius = 3.0F, .intensity = {0.3F, 0.2F, 0.1F}});
-    lights.spot.push_back({.position = {0.0F, 0.0F, 1.5F},
-                           .radius = 3.0F,
-                           .direction = {0.0F, 0.0F, -1.0F},
-                           .outer_angle_cosine = std::cos(0.6F),
-                           .intensity = {0.1F, 0.2F, 0.3F},
-                           .inner_angle_cosine = std::cos(0.2F)});
+    if (options.benchmark) {
+      for (std::uint32_t index = 0; index < options.point_lights; ++index) {
+        const auto column = static_cast<float>(index % 16) - 7.5F;
+        const auto row = static_cast<float>(index / 16) - 3.5F;
+        lights.point.push_back({.position = {column * 0.12F, row * 0.12F, 1.5F},
+                                .radius = 3.0F,
+                                .intensity = {0.01F, 0.008F, 0.006F}});
+      }
+    } else {
+      lights.point.push_back(
+          {.position = {0.0F, 0.0F, 1.5F}, .radius = 3.0F, .intensity = {0.3F, 0.2F, 0.1F}});
+      lights.spot.push_back({.position = {0.0F, 0.0F, 1.5F},
+                             .radius = 3.0F,
+                             .direction = {0.0F, 0.0F, -1.0F},
+                             .outer_angle_cosine = std::cos(0.6F),
+                             .intensity = {0.1F, 0.2F, 0.3F},
+                             .inner_angle_cosine = std::cos(0.2F)});
+    }
     result = granit::from_native(lighting_resources.update_lights(lights));
   }
   granit::bind_group_layout object_layout;
@@ -455,7 +551,7 @@ int main() {
       case_result =
           recorder.write_timestamp(timestamps.native_handle(), GRANIT_TIMESTAMP_STAGE_BOTTOM, 3);
     }
-    if (granit::succeeded(case_result)) {
+    if (granit::succeeded(case_result) && !options.benchmark) {
       case_result = recorder.copy_texture_to_buffer(output_texture, readback.native_handle(),
                                                     readback_layout, readback_region);
     }
@@ -472,6 +568,9 @@ int main() {
     if (!(gpu_timestamps[0] <= gpu_timestamps[1] && gpu_timestamps[1] <= gpu_timestamps[2] &&
           gpu_timestamps[2] <= gpu_timestamps[3]))
       return granit::result::internal;
+
+    if (options.benchmark)
+      return case_result;
 
     void* mapped = nullptr;
     case_result = readback.map(0, readback_size, &mapped);
@@ -515,10 +614,39 @@ int main() {
     return case_result;
   };
 
-  if (granit::succeeded(result))
-    result = render_case(0.25F, false);
-  if (granit::succeeded(result))
-    result = render_case(1.0F, true);
+  std::vector<gpu_sample> benchmark_samples;
+  if (options.benchmark) {
+    for (std::uint32_t sample = 0; sample < options.warmup && granit::succeeded(result); ++sample) {
+      for (std::uint32_t iteration = 0; iteration < options.iterations && granit::succeeded(result);
+           ++iteration) {
+        result = render_case(1.0F, true);
+      }
+    }
+    benchmark_samples.reserve(options.samples);
+    for (std::uint32_t sample = 0; sample < options.samples && granit::succeeded(result);
+         ++sample) {
+      gpu_sample current{};
+      for (std::uint32_t iteration = 0; iteration < options.iterations && granit::succeeded(result);
+           ++iteration) {
+        result = render_case(1.0F, true);
+        current.shadow += static_cast<double>(gpu_timestamps[1] - gpu_timestamps[0]);
+        current.pbr_hdr += static_cast<double>(gpu_timestamps[2] - gpu_timestamps[1]);
+        current.tone_mapping += static_cast<double>(gpu_timestamps[3] - gpu_timestamps[2]);
+        current.total += static_cast<double>(gpu_timestamps[3] - gpu_timestamps[0]);
+      }
+      const auto divisor = static_cast<double>(options.iterations);
+      current.shadow /= divisor;
+      current.pbr_hdr /= divisor;
+      current.tone_mapping /= divisor;
+      current.total /= divisor;
+      benchmark_samples.push_back(current);
+    }
+  } else {
+    if (granit::succeeded(result))
+      result = render_case(0.25F, false);
+    if (granit::succeeded(result))
+      result = render_case(1.0F, true);
+  }
 
   static_cast<void>(tone_mapping.reset());
   if (depth_view != GRANIT_NULL_HANDLE)
@@ -536,6 +664,27 @@ int main() {
   if (granit::failed(result)) {
     std::cerr << "离屏 PBR 绘制失败：" << granit::result_message(result) << '\n';
     return 1;
+  }
+  if (options.benchmark) {
+    const auto print_result = [&](std::string_view name, auto member) {
+      std::vector<double> values;
+      values.reserve(benchmark_samples.size());
+      for (const auto& sample : benchmark_samples)
+        values.push_back(sample.*member);
+      const auto summary = summarize(std::move(values));
+      std::cout << "1," << name << ',' << options.point_lights << ',' << options.iterations << ','
+                << options.samples << ',' << summary.mean << ',' << summary.p50 << ','
+                << summary.p95 << ',' << summary.p99 << '\n';
+    };
+    std::cout << std::fixed << std::setprecision(2) << "# revision=" << GRANIT_BENCHMARK_REVISION
+              << ",compiler=" << GRANIT_BENCHMARK_COMPILER << ",system=" << GRANIT_BENCHMARK_SYSTEM
+              << ",link=" << GRANIT_BENCHMARK_LINK_MODE << '\n'
+              << "schema,name,lights,iterations,samples,mean_ns,p50_ns,p95_ns,p99_ns\n";
+    print_result("shadow", &gpu_sample::shadow);
+    print_result("pbr_hdr", &gpu_sample::pbr_hdr);
+    print_result("tone_mapping", &gpu_sample::tone_mapping);
+    print_result("render_chain", &gpu_sample::total);
+    return 0;
   }
   std::cout << "PBR 多光源、阴影、IBL、HDR 与 Tone Mapping 像素回归完成\n"
             << "GPU 时间（ns）：Shadow=" << gpu_timestamps[1] - gpu_timestamps[0]

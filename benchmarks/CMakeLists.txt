@@ -162,3 +162,24 @@ target_link_libraries(granit_lighting_benchmarks PRIVATE granit::lighting)
 granit_target_compile_warnings(granit_lighting_benchmarks)
 granit_target_output_directories(granit_lighting_benchmarks)
 set_target_properties(granit_lighting_benchmarks PROPERTIES FOLDER "Benchmarks")
+
+add_executable(granit_lighting_gpu_benchmarks "${PROJECT_SOURCE_DIR}/examples/pbr_offscreen.cpp")
+target_compile_features(granit_lighting_gpu_benchmarks PRIVATE cxx_std_20)
+target_compile_options(
+  granit_lighting_gpu_benchmarks
+  PRIVATE $<$<COMPILE_LANG_AND_ID:CXX,MSVC>:/utf-8>
+)
+target_compile_definitions(
+  granit_lighting_gpu_benchmarks
+  PRIVATE
+    GRANIT_BENCHMARK_COMPILER="${CMAKE_CXX_COMPILER_ID}-${CMAKE_CXX_COMPILER_VERSION}"
+    GRANIT_BENCHMARK_LINK_MODE="$<IF:$<BOOL:${BUILD_SHARED_LIBS}>,shared,static>"
+    GRANIT_BENCHMARK_REVISION="${granit_benchmark_revision}"
+    GRANIT_BENCHMARK_SYSTEM="${CMAKE_SYSTEM_NAME}-${CMAKE_SYSTEM_PROCESSOR}"
+    GRANIT_EXAMPLE_ASSET_DIR="${PROJECT_SOURCE_DIR}/examples/assets"
+    GRANIT_PBR_GPU_BENCHMARK
+)
+target_link_libraries(granit_lighting_gpu_benchmarks PRIVATE granit::lighting)
+granit_target_compile_warnings(granit_lighting_gpu_benchmarks)
+granit_target_output_directories(granit_lighting_gpu_benchmarks)
+set_target_properties(granit_lighting_gpu_benchmarks PROPERTIES FOLDER "Benchmarks")
