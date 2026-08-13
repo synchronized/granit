@@ -26,6 +26,7 @@ add_library(
     headers/types_h.c
     headers/upload_batch_h.c
     headers/pipeline_material_h.c
+    headers/pipeline_render_pipeline_h.c
     headers/pipeline_scene_h.c
 )
 target_link_libraries(granit_c_header_test PRIVATE granit::granit granit::render_pipeline)
@@ -190,6 +191,7 @@ add_test(NAME granit.lighting COMMAND granit_lighting_test)
 add_executable(
   granit_pipeline_test
   pipeline/material_api_test.cpp
+  pipeline/render_pipeline_api_test.cpp
   pipeline/scene_api_test.cpp
 )
 target_include_directories(granit_pipeline_test PRIVATE "${PROJECT_SOURCE_DIR}/src")
@@ -323,6 +325,7 @@ add_library(
     headers/types_hpp.cpp
     headers/upload_batch_hpp.cpp
     headers/pipeline_material_hpp.cpp
+    headers/pipeline_render_pipeline_hpp.cpp
     headers/pipeline_scene_hpp.cpp
 )
 target_link_libraries(granit_cpp_header_test PRIVATE granit::granit granit::render_pipeline)

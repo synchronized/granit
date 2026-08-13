@@ -3,6 +3,7 @@
 
 #include <granit/pipeline/scene.h>
 
+#include "pipeline/scene_access.h"
 #include "scene/multi_view_submission.h"
 
 #include <algorithm>
@@ -66,6 +67,29 @@ granit_result map_error(granit::scene::multi_view_error error) {
 }
 
 } // namespace
+
+granit_result
+granit::pipeline::detail::copy_scene_snapshot(granit_renderer renderer,
+                                              granit_scene_snapshot snapshot,
+                                              scene::multi_view_snapshot& output) noexcept {
+  size_t index = 0;
+  uint32_t generation = 0;
+  if (!decode(snapshot, index, generation))
+    return GRANIT_ERROR_INVALID_HANDLE;
+  try {
+    std::scoped_lock lock{registry_mutex};
+    if (index >= registry.size() || registry[index].state == nullptr ||
+        registry[index].generation != generation || registry[index].state->renderer != renderer) {
+      return GRANIT_ERROR_INVALID_HANDLE;
+    }
+    output = registry[index].state->snapshot;
+    return GRANIT_SUCCESS;
+  } catch (const std::bad_alloc&) {
+    return GRANIT_ERROR_OUT_OF_MEMORY;
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
 
 extern "C" granit_result granit_scene_snapshot_create(granit_renderer renderer,
                                                       const granit_scene_snapshot_desc* desc,

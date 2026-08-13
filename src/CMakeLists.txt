@@ -354,6 +354,8 @@ target_sources(
   granit_render_pipeline
   PRIVATE
     pipeline/material_api.cpp
+    pipeline/render_pipeline_api.cpp
+    pipeline/scene_access.h
     pipeline/scene_api.cpp
   PUBLIC
     FILE_SET HEADERS
@@ -362,6 +364,8 @@ target_sources(
       "${PROJECT_SOURCE_DIR}/include/granit/pipeline/export.h"
       "${PROJECT_SOURCE_DIR}/include/granit/pipeline/material.h"
       "${PROJECT_SOURCE_DIR}/include/granit/pipeline/material.hpp"
+      "${PROJECT_SOURCE_DIR}/include/granit/pipeline/render_pipeline.h"
+      "${PROJECT_SOURCE_DIR}/include/granit/pipeline/render_pipeline.hpp"
       "${PROJECT_SOURCE_DIR}/include/granit/pipeline/scene.h"
       "${PROJECT_SOURCE_DIR}/include/granit/pipeline/scene.hpp"
 )
@@ -371,7 +375,7 @@ target_include_directories(
   PUBLIC "$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>"
   PRIVATE "${PROJECT_SOURCE_DIR}/src"
 )
-target_link_libraries(granit_render_pipeline PRIVATE granit::scene)
+target_link_libraries(granit_render_pipeline PRIVATE granit::lighting)
 target_compile_definitions(
   granit_render_pipeline
   PRIVATE GRANIT_RENDER_PIPELINE_BUILDING_LIBRARY

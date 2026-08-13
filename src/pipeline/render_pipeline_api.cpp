@@ -1,0 +1,293 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Granit contributors
+
+#include <granit/pipeline/render_pipeline.h>
+
+#include "lighting/reference_pipeline_graph.h"
+#include "pipeline/scene_access.h"
+
+#include <algorithm>
+#include <cmath>
+#include <memory>
+#include <mutex>
+#include <vector>
+
+namespace {
+
+constexpr uint64_t index_mask = UINT64_C(0xffffffff);
+constexpr uint64_t generation_mask = UINT64_C(0x00ffffff);
+constexpr uint64_t type_value = UINT64_C(0x42);
+
+struct pipeline_state {
+  std::mutex mutex;
+  granit_renderer renderer = GRANIT_NULL_HANDLE;
+  granit_render_pipeline_record_callback record = nullptr;
+  void* user_data = nullptr;
+  bool alive = true;
+};
+
+struct pipeline_slot {
+  std::shared_ptr<pipeline_state> state;
+  uint32_t generation = 1;
+};
+
+std::mutex registry_mutex;
+std::vector<pipeline_slot> registry;
+
+granit_handle encode(size_t index, uint32_t generation) {
+  return (type_value << 56) | (static_cast<uint64_t>(generation) << 32) |
+         (static_cast<uint64_t>(index) + 1);
+}
+
+bool decode(granit_handle handle, size_t& index, uint32_t& generation) {
+  if ((handle >> 56) != type_value || (handle & index_mask) == 0)
+    return false;
+  index = static_cast<size_t>((handle & index_mask) - 1);
+  generation = static_cast<uint32_t>((handle >> 32) & generation_mask);
+  return generation != 0;
+}
+
+std::shared_ptr<pipeline_state> find_pipeline(granit_renderer renderer,
+                                              granit_render_pipeline pipeline) {
+  size_t index = 0;
+  uint32_t generation = 0;
+  if (!decode(pipeline, index, generation))
+    return {};
+  std::scoped_lock lock{registry_mutex};
+  if (index >= registry.size() || registry[index].generation != generation ||
+      registry[index].state == nullptr || registry[index].state->renderer != renderer) {
+    return {};
+  }
+  return registry[index].state;
+}
+
+granit_result validate_renderer(granit_renderer renderer) {
+  uint64_t size = 0;
+  return granit_renderer_pipeline_cache_export(renderer, nullptr, &size);
+}
+
+granit_texture_desc make_depth_desc(uint32_t width, uint32_t height) {
+  granit_texture_desc desc = GRANIT_TEXTURE_DESC_INIT;
+  desc.format = GRANIT_TEXTURE_FORMAT_D32_FLOAT;
+  desc.usage = GRANIT_TEXTURE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+  desc.width = width;
+  desc.height = height;
+  return desc;
+}
+
+granit_scene_matrix4 convert(const granit::math::matrix4& value) {
+  granit_scene_matrix4 result{};
+  std::ranges::copy(value, result.elements);
+  return result;
+}
+
+granit_scene_float3 convert(granit::math::float3 value) { return {value.x, value.y, value.z}; }
+
+granit_result render_view(const pipeline_state& state,
+                          const granit_render_pipeline_render_desc& desc,
+                          const granit::scene::multi_view_snapshot& snapshot, uint32_t view_index) {
+  const auto& visible = snapshot.views()[view_index];
+  if (visible.renderables.indices().empty())
+    return GRANIT_ERROR_NOT_READY;
+
+  granit::render_graph::serial_graph graph;
+  const auto hdr = graph.create_transient_texture(
+      granit::lighting::make_hdr_attachment_desc(desc.width, desc.height), "Reference HDR");
+  const auto depth =
+      graph.create_transient_texture(make_depth_desc(desc.width, desc.height), "Reference Depth");
+  const auto output = graph.import_texture_view(desc.output, true, "Reference Output");
+
+  granit::lighting::reference_pipeline_graph_desc graph_desc;
+  graph_desc.pbr.color = hdr;
+  graph_desc.pbr.depth = depth;
+  graph_desc.pbr.view.view_projection = visible.view.view_projection;
+  graph_desc.pbr.view.camera_position = visible.view.camera_position;
+  if (!visible.directional_lights.empty()) {
+    const auto& light = snapshot.directional_lights()[visible.directional_lights.front()];
+    graph_desc.pbr.light.direction_to_light = light.direction_to_light;
+    graph_desc.pbr.light.radiance = light.radiance;
+  }
+  std::vector<uint64_t> payloads;
+  std::vector<granit_scene_renderable> renderables;
+  payloads.reserve(visible.renderables.indices().size());
+  renderables.reserve(visible.renderables.indices().size());
+  graph_desc.pbr.objects.reserve(visible.renderables.indices().size());
+  for (const auto index : visible.renderables.indices()) {
+    const auto& source = snapshot.renderables()[index];
+    graph_desc.pbr.objects.push_back({.model = source.model,
+                                      .normal_matrix = source.normal_matrix,
+                                      .object_id = source.object_id});
+    payloads.push_back(source.payload);
+    renderables.push_back({.model = convert(source.model),
+                           .normal_matrix = convert(source.normal_matrix),
+                           .bounds_center = convert(source.bounds.center),
+                           .bounds_radius = source.bounds.radius,
+                           .layer_mask = source.layer_mask,
+                           .sort_key = source.sort_key,
+                           .payload = source.payload,
+                           .object_id = source.object_id,
+                           .reserved = 0});
+  }
+  const granit_scene_view public_view{.view = convert(visible.view.view),
+                                      .projection = convert(visible.view.projection),
+                                      .view_projection = convert(visible.view.view_projection),
+                                      .camera_position = convert(visible.view.camera_position),
+                                      .viewport_x = visible.view.area.x,
+                                      .viewport_y = visible.view.area.y,
+                                      .viewport_width = visible.view.area.width,
+                                      .viewport_height = visible.view.area.height,
+                                      .layer_mask = visible.view.layer_mask};
+  graph_desc.tone_mapping.hdr_color = hdr;
+  graph_desc.tone_mapping.output = output;
+  graph_desc.tone_mapping.output_format = static_cast<granit::texture_format>(desc.output_format);
+  graph_desc.tone_mapping.tone_mapping.exposure_ev = desc.exposure_ev;
+  graph_desc.tone_mapping.tone_mapping.output_transfer =
+      desc.output_format == GRANIT_TEXTURE_FORMAT_RGBA8_SRGB
+          ? granit::lighting::tone_mapping_output_transfer::attachment_srgb
+          : granit::lighting::tone_mapping_output_transfer::shader_srgb;
+
+  granit::lighting::reference_pipeline_graph_callbacks callbacks;
+  callbacks.pbr = [&](auto& context, const auto&, auto) {
+    const granit_render_pipeline_record_info info{
+        .struct_size = sizeof(granit_render_pipeline_record_info),
+        .stage = GRANIT_RENDER_PIPELINE_STAGE_OPAQUE,
+        .recorder = context.recorder(),
+        .color_input = GRANIT_NULL_HANDLE,
+        .color_output = context.texture_view(hdr),
+        .depth_output = context.texture_view(depth),
+        .view_index = view_index,
+        .payload_count = static_cast<uint32_t>(payloads.size()),
+        .payloads = payloads.data(),
+        .view = &public_view,
+        .renderables = renderables.data(),
+        .exposure_scale = 1.0F,
+        .encode_srgb = 0,
+        .reserved = {0, 0}};
+    return state.record(&info, state.user_data);
+  };
+  callbacks.tone_mapping = [&](auto& context, const auto& constants) {
+    const granit_render_pipeline_record_info info{
+        .struct_size = sizeof(granit_render_pipeline_record_info),
+        .stage = GRANIT_RENDER_PIPELINE_STAGE_TONE_MAPPING,
+        .recorder = context.recorder(),
+        .color_input = context.texture_view(hdr),
+        .color_output = context.texture_view(output),
+        .depth_output = GRANIT_NULL_HANDLE,
+        .view_index = view_index,
+        .payload_count = 0,
+        .payloads = nullptr,
+        .view = &public_view,
+        .renderables = nullptr,
+        .exposure_scale = constants.exposure_scale,
+        .encode_srgb = constants.encode_srgb,
+        .reserved = {0, 0}};
+    return state.record(&info, state.user_data);
+  };
+  granit::lighting::reference_pipeline_graph_passes passes;
+  if (granit::lighting::add_reference_pipeline_graph(graph, std::move(graph_desc),
+                                                     std::move(callbacks), passes) !=
+      granit::lighting::reference_pipeline_graph_error::none) {
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  }
+  const auto execution = graph.execute(state.renderer);
+  if (!execution.succeeded())
+    return execution.result;
+  return granit_command_recorder_destroy(state.renderer, execution.recorder);
+}
+
+} // namespace
+
+extern "C" granit_result granit_render_pipeline_create(granit_renderer renderer,
+                                                       const granit_render_pipeline_desc* desc,
+                                                       granit_render_pipeline* pipeline) {
+  if (pipeline == nullptr)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  *pipeline = GRANIT_NULL_HANDLE;
+  if (desc == nullptr || desc->struct_size < sizeof(granit_render_pipeline_desc) ||
+      desc->reserved != 0 || desc->record == nullptr) {
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  }
+  const auto renderer_result = validate_renderer(renderer);
+  if (renderer_result != GRANIT_SUCCESS)
+    return renderer_result;
+  try {
+    auto state = std::make_shared<pipeline_state>();
+    state->renderer = renderer;
+    state->record = desc->record;
+    state->user_data = desc->user_data;
+    std::scoped_lock lock{registry_mutex};
+    size_t index = 0;
+    while (index < registry.size() && registry[index].state != nullptr)
+      ++index;
+    if (index == registry.size())
+      registry.emplace_back();
+    registry[index].state = std::move(state);
+    *pipeline = encode(index, registry[index].generation);
+    return GRANIT_SUCCESS;
+  } catch (const std::bad_alloc&) {
+    return GRANIT_ERROR_OUT_OF_MEMORY;
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+extern "C" granit_result
+granit_render_pipeline_render(granit_renderer renderer, granit_render_pipeline pipeline,
+                              const granit_render_pipeline_render_desc* desc) {
+  if (desc == nullptr || desc->struct_size < sizeof(granit_render_pipeline_render_desc) ||
+      desc->reserved != 0 || desc->reserved_tail != 0 || desc->scene == GRANIT_NULL_HANDLE ||
+      desc->output == GRANIT_NULL_HANDLE || desc->width == 0 || desc->height == 0 ||
+      desc->view_count == 0 || !std::isfinite(desc->exposure_ev)) {
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  }
+  auto state = find_pipeline(renderer, pipeline);
+  if (state == nullptr)
+    return GRANIT_ERROR_INVALID_HANDLE;
+  try {
+    std::unique_lock lock{state->mutex, std::try_to_lock};
+    if (!lock.owns_lock())
+      return GRANIT_ERROR_NOT_READY;
+    if (!state->alive)
+      return GRANIT_ERROR_INVALID_HANDLE;
+    granit::scene::multi_view_snapshot snapshot;
+    auto result = granit::pipeline::detail::copy_scene_snapshot(renderer, desc->scene, snapshot);
+    if (result != GRANIT_SUCCESS)
+      return result;
+    if (desc->first_view >= snapshot.views().size() ||
+        desc->view_count > snapshot.views().size() - desc->first_view) {
+      return GRANIT_ERROR_INVALID_ARGUMENT;
+    }
+    for (uint32_t offset = 0; offset < desc->view_count; ++offset) {
+      result = render_view(*state, *desc, snapshot, desc->first_view + offset);
+      if (result != GRANIT_SUCCESS)
+        return result;
+    }
+    return GRANIT_SUCCESS;
+  } catch (const std::bad_alloc&) {
+    return GRANIT_ERROR_OUT_OF_MEMORY;
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+extern "C" granit_result granit_render_pipeline_destroy(granit_renderer renderer,
+                                                        granit_render_pipeline pipeline) {
+  size_t index = 0;
+  uint32_t generation = 0;
+  if (!decode(pipeline, index, generation))
+    return GRANIT_ERROR_INVALID_HANDLE;
+  std::shared_ptr<pipeline_state> removed;
+  {
+    std::scoped_lock lock{registry_mutex};
+    if (index >= registry.size() || registry[index].generation != generation ||
+        registry[index].state == nullptr || registry[index].state->renderer != renderer) {
+      return GRANIT_ERROR_INVALID_HANDLE;
+    }
+    removed = std::move(registry[index].state);
+    registry[index].generation =
+        registry[index].generation == generation_mask ? 1 : registry[index].generation + 1;
+  }
+  std::scoped_lock lock{removed->mutex};
+  removed->alive = false;
+  return GRANIT_SUCCESS;
+}

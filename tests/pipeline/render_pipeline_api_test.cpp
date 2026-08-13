@@ -1,0 +1,130 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Granit contributors
+
+#include <granit/pipeline/render_pipeline.hpp>
+#include <granit/pipeline/scene.hpp>
+#include <granit/renderer/renderer.hpp>
+#include <granit/renderer/texture.hpp>
+
+#include <catch2/catch_all.hpp>
+
+#include <array>
+#include <vector>
+
+namespace {
+
+bool environment_unavailable(granit::result value) {
+  return value == granit::result::backend_unavailable ||
+         value == granit::result::incompatible_driver ||
+         value == granit::result::no_suitable_device;
+}
+
+granit_scene_matrix4 identity() { return {{1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1}}; }
+
+struct callback_state {
+  std::vector<granit_render_pipeline_stage> stages;
+  std::vector<uint64_t> payloads;
+  granit_result result = GRANIT_SUCCESS;
+};
+
+granit_result record(const granit_render_pipeline_record_info* info, void* user_data) {
+  auto& state = *static_cast<callback_state*>(user_data);
+  if (info == nullptr || info->struct_size < sizeof(granit_render_pipeline_record_info) ||
+      info->recorder == GRANIT_NULL_HANDLE || info->color_output == GRANIT_NULL_HANDLE) {
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  }
+  if (info->view == nullptr ||
+      (info->payload_count != 0 && (info->payloads == nullptr || info->renderables == nullptr))) {
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  }
+  state.stages.push_back(info->stage);
+  if (info->payload_count != 0) {
+    state.payloads.insert(state.payloads.end(), info->payloads,
+                          info->payloads + info->payload_count);
+  }
+  return state.result;
+}
+
+} // namespace
+
+TEST_CASE("统一Render Pipeline按固定阶段消费Scene Snapshot") {
+  granit::renderer renderer;
+  const auto initialized = renderer.initialize({.application_name = "granit-public-pipeline"});
+  if (environment_unavailable(initialized))
+    SKIP("当前运行环境没有满足要求的 Vulkan 设备");
+  REQUIRE(initialized == granit::result::success);
+
+  granit::texture output_texture;
+  granit::texture_view output_view;
+  REQUIRE(output_texture.initialize(renderer.native_handle(),
+                                    {.format = granit::texture_format::rgba8_unorm,
+                                     .usage = granit::texture_usage::color_attachment,
+                                     .width = 16,
+                                     .height = 16}) == granit::result::success);
+  REQUIRE(output_view.initialize(renderer.native_handle(), output_texture.native_handle()) ==
+          granit::result::success);
+
+  std::array<granit_scene_view, 1> views{};
+  views[0].view = identity();
+  views[0].projection = identity();
+  views[0].view_projection = identity();
+  views[0].viewport_width = 16;
+  views[0].viewport_height = 16;
+  views[0].layer_mask = UINT64_MAX;
+  std::array<granit_scene_renderable, 1> renderables{};
+  renderables[0].model = identity();
+  renderables[0].normal_matrix = identity();
+  renderables[0].bounds_radius = 0.25F;
+  renderables[0].layer_mask = UINT64_MAX;
+  renderables[0].payload = 77;
+  granit_scene_snapshot_desc scene_desc = GRANIT_SCENE_SNAPSHOT_DESC_INIT;
+  scene_desc.views = views.data();
+  scene_desc.view_count = static_cast<std::uint32_t>(views.size());
+  scene_desc.renderables = renderables.data();
+  scene_desc.renderable_count = static_cast<std::uint32_t>(renderables.size());
+  granit::scene_snapshot scene;
+  REQUIRE(scene.initialize(renderer.native_handle(), scene_desc) == granit::result::success);
+
+  callback_state callback;
+  granit_render_pipeline_desc pipeline_desc = GRANIT_RENDER_PIPELINE_DESC_INIT;
+  pipeline_desc.record = record;
+  pipeline_desc.user_data = &callback;
+  granit::render_pipeline pipeline;
+  REQUIRE(pipeline.initialize(renderer.native_handle(), pipeline_desc) == granit::result::success);
+  granit_render_pipeline_render_desc render_desc = GRANIT_RENDER_PIPELINE_RENDER_DESC_INIT;
+  render_desc.scene = scene.native_handle();
+  render_desc.output = output_view.native_handle();
+  render_desc.output_format = GRANIT_TEXTURE_FORMAT_RGBA8_UNORM;
+  render_desc.width = 16;
+  render_desc.height = 16;
+  REQUIRE(pipeline.render(render_desc) == granit::result::success);
+  CHECK(callback.stages ==
+        std::vector<granit_render_pipeline_stage>{GRANIT_RENDER_PIPELINE_STAGE_OPAQUE,
+                                                  GRANIT_RENDER_PIPELINE_STAGE_TONE_MAPPING});
+  CHECK(callback.payloads == std::vector<uint64_t>{77});
+
+  callback.result = GRANIT_ERROR_NOT_READY;
+  CHECK(pipeline.render(render_desc) == granit::result::not_ready);
+}
+
+TEST_CASE("统一Render Pipeline拒绝跨Renderer与越界View") {
+  granit::renderer first;
+  granit::renderer second;
+  const auto first_result = first.initialize({.application_name = "granit-pipeline-first"});
+  const auto second_result = second.initialize({.application_name = "granit-pipeline-second"});
+  if (environment_unavailable(first_result) || environment_unavailable(second_result))
+    SKIP("当前运行环境没有满足要求的 Vulkan 设备");
+  REQUIRE(first_result == granit::result::success);
+  REQUIRE(second_result == granit::result::success);
+  callback_state callback;
+  granit_render_pipeline_desc desc = GRANIT_RENDER_PIPELINE_DESC_INIT;
+  desc.record = record;
+  desc.user_data = &callback;
+  granit_render_pipeline pipeline = GRANIT_NULL_HANDLE;
+  REQUIRE(granit_render_pipeline_create(first.native_handle(), &desc, &pipeline) == GRANIT_SUCCESS);
+  CHECK(granit_render_pipeline_destroy(second.native_handle(), pipeline) ==
+        GRANIT_ERROR_INVALID_HANDLE);
+  REQUIRE(granit_render_pipeline_destroy(first.native_handle(), pipeline) == GRANIT_SUCCESS);
+  CHECK(granit_render_pipeline_destroy(first.native_handle(), pipeline) ==
+        GRANIT_ERROR_INVALID_HANDLE);
+}
