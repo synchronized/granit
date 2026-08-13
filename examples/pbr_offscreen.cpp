@@ -123,17 +123,18 @@ std::vector<std::uint32_t> load_shader(std::string_view name) {
   return words;
 }
 
-bool make_package(granit::material::material_package& package) {
+bool make_package(granit::material::material_package& package, std::string_view vertex_name,
+                  std::string_view fragment_name) {
   using namespace granit::material;
   material_variant_desc variant{
       .pass = make_feature_id("opaque"),
       .features = {{make_feature_id(pbr_texture_feature_name), pbr_texture_all}},
       .shaders = {{.stage = package_shader_stage::vertex,
                    .entry_point = "vertex_main",
-                   .spirv = load_shader("pbr_shadow_ibl_lights.vert.spv")},
+                   .spirv = load_shader(vertex_name)},
                   {.stage = package_shader_stage::fragment,
                    .entry_point = "fragment_main",
-                   .spirv = load_shader("pbr_shadow_ibl_lights_untextured.frag.spv")}},
+                   .spirv = load_shader(fragment_name)}},
       .pipeline = {}};
   variant.pipeline.primitive.cull_mode = GRANIT_CULL_MODE_BACK;
   variant.pipeline.primitive.front_face = GRANIT_FRONT_FACE_CLOCKWISE;
@@ -182,7 +183,7 @@ bool make_package(granit::material::material_package& package) {
                                     .default_value = {}}});
   auto untextured = variant;
   untextured.features.front().value = 0;
-  untextured.shaders.back().spirv = load_shader("pbr_shadow_ibl_lights_untextured.frag.spv");
+  untextured.shaders.back().spirv = load_shader(fragment_name);
   desc.variants.push_back(std::move(untextured));
   desc.variants.push_back(std::move(variant));
   return material_package::build(std::move(desc), package) == package_error::none;
@@ -223,8 +224,18 @@ int main(int argc, char** argv) {
   granit::renderer renderer;
   auto result =
       renderer.initialize({.application_name = "Granit Textured PBR", .enable_validation = true});
-  granit::material::material_package package;
-  if (granit::failed(result) || !make_package(package)) {
+  granit::material::material_package direct_package;
+  granit::material::material_package ibl_package;
+  granit::material::material_package shadow_package;
+  granit::material::material_package full_package;
+  const auto packages_ready =
+      make_package(direct_package, "pbr_lights.vert.spv", "pbr_lights_untextured.frag.spv") &&
+      make_package(ibl_package, "pbr_lights.vert.spv", "pbr_ibl_lights_untextured.frag.spv") &&
+      make_package(shadow_package, "pbr_shadow_ibl_lights.vert.spv",
+                   "pbr_shadow_lights_untextured.frag.spv") &&
+      make_package(full_package, "pbr_shadow_ibl_lights.vert.spv",
+                   "pbr_shadow_ibl_lights_untextured.frag.spv");
+  if (granit::failed(result) || !packages_ready) {
     std::cerr << "无法初始化 Renderer 或构建 PBR 材质包\n";
     return 1;
   }
@@ -293,7 +304,33 @@ int main(int argc, char** argv) {
   if (granit::succeeded(result)) {
     result = brdf_lut_view.initialize(renderer.native_handle(), brdf_lut_texture.native_handle());
   }
+  granit::lighting::shadow_ibl_resources direct_resources;
+  granit::lighting::shadow_ibl_resources ibl_resources;
+  granit::lighting::shadow_ibl_resources shadow_resources;
   granit::lighting::shadow_ibl_resources lighting_resources;
+  const granit::lighting::light_limits light_capacities{.directional = 1, .point = 128, .spot = 1};
+  if (granit::succeeded(result)) {
+    result = granit::from_native(direct_resources.initialize(
+        renderer.native_handle(), {}, {}, {}, light_capacities, {.shadows = false, .ibl = false}));
+  }
+  if (granit::succeeded(result)) {
+    result = granit::from_native(ibl_resources.initialize(
+        renderer.native_handle(),
+        {.ibl = {.irradiance = irradiance_view.native_handle(),
+                 .prefiltered_environment = prefiltered_view.native_handle(),
+                 .brdf_lut = brdf_lut_view.native_handle()}},
+        {}, {.intensity = 0.25F, .prefiltered_max_mip = 0.0F}, light_capacities,
+        {.shadows = false, .ibl = true}));
+  }
+  if (granit::succeeded(result)) {
+    result = granit::from_native(shadow_resources.initialize(
+        renderer.native_handle(), {.shadow = shadow_view.native_handle()},
+        {.light_view_projection = granit::math::identity_matrix4,
+         .depth_bias = 0.0F,
+         .normal_bias = 0.0F,
+         .texel_size = {1.0F, 1.0F}},
+        {}, light_capacities, {.shadows = true, .ibl = false}));
+  }
   if (granit::succeeded(result)) {
     result = granit::from_native(lighting_resources.initialize(
         renderer.native_handle(),
@@ -305,83 +342,132 @@ int main(int argc, char** argv) {
          .depth_bias = 0.0F,
          .normal_bias = 0.0F,
          .texel_size = {1.0F, 1.0F}},
-        {.intensity = 0.25F, .prefiltered_max_mip = 0.0F},
-        {.directional = 1, .point = 128, .spot = 1}));
+        {.intensity = 0.25F, .prefiltered_max_mip = 0.0F}, light_capacities));
   }
+  granit::lighting::packed_view_lights visible_lights;
   if (granit::succeeded(result)) {
-    granit::lighting::packed_view_lights lights;
-    lights.directional.push_back(
+    visible_lights.directional.push_back(
         {.direction_to_light = {0.0F, 0.0F, 1.0F}, .radiance = {1.0F, 1.0F, 1.0F}});
     if (options.benchmark) {
       for (std::uint32_t index = 0; index < options.point_lights; ++index) {
         const auto column = static_cast<float>(index % 16) - 7.5F;
         const auto row = static_cast<float>(index / 16) - 3.5F;
-        lights.point.push_back({.position = {column * 0.12F, row * 0.12F, 1.5F},
-                                .radius = 3.0F,
-                                .intensity = {0.01F, 0.008F, 0.006F}});
+        visible_lights.point.push_back({.position = {column * 0.12F, row * 0.12F, 1.5F},
+                                        .radius = 3.0F,
+                                        .intensity = {0.01F, 0.008F, 0.006F}});
       }
     } else {
-      lights.point.push_back(
+      visible_lights.point.push_back(
           {.position = {0.0F, 0.0F, 1.5F}, .radius = 3.0F, .intensity = {0.3F, 0.2F, 0.1F}});
-      lights.spot.push_back({.position = {0.0F, 0.0F, 1.5F},
-                             .radius = 3.0F,
-                             .direction = {0.0F, 0.0F, -1.0F},
-                             .outer_angle_cosine = std::cos(0.6F),
-                             .intensity = {0.1F, 0.2F, 0.3F},
-                             .inner_angle_cosine = std::cos(0.2F)});
+      visible_lights.spot.push_back({.position = {0.0F, 0.0F, 1.5F},
+                                     .radius = 3.0F,
+                                     .direction = {0.0F, 0.0F, -1.0F},
+                                     .outer_angle_cosine = std::cos(0.6F),
+                                     .intensity = {0.1F, 0.2F, 0.3F},
+                                     .inner_angle_cosine = std::cos(0.2F)});
     }
-    result = granit::from_native(lighting_resources.update_lights(lights));
+    result = granit::from_native(direct_resources.update_lights(visible_lights));
+    if (granit::succeeded(result))
+      result = granit::from_native(ibl_resources.update_lights(visible_lights));
+    if (granit::succeeded(result))
+      result = granit::from_native(shadow_resources.update_lights(visible_lights));
+    if (granit::succeeded(result))
+      result = granit::from_native(lighting_resources.update_lights(visible_lights));
   }
   granit::bind_group_layout object_layout;
   if (granit::succeeded(result))
     result = object_layout.initialize(renderer.native_handle(), {});
 
+  granit::material::material_template_gpu direct_material;
+  granit::material::material_template_gpu ibl_material;
+  granit::material::material_template_gpu shadow_material;
   granit::material::material_template_gpu material;
-  if (granit::succeeded(result)) {
-    const std::array additional_layouts{object_layout.native_handle(), lighting_resources.layout()};
-    result = granit::from_native(
-        material.initialize(renderer.native_handle(), package, additional_layouts));
-  }
+  granit_graphics_pipeline direct_pipeline = GRANIT_NULL_HANDLE;
+  granit_graphics_pipeline ibl_pipeline = GRANIT_NULL_HANDLE;
+  granit_graphics_pipeline shadow_pipeline = GRANIT_NULL_HANDLE;
   granit_graphics_pipeline pipeline = GRANIT_NULL_HANDLE;
-  if (granit::succeeded(result)) {
+  const auto initialize_material = [&](granit::material::material_template_gpu& target,
+                                       const granit::material::material_package& source,
+                                       granit_bind_group_layout lighting_layout,
+                                       granit_graphics_pipeline& target_pipeline) {
+    const std::array additional_layouts{object_layout.native_handle(), lighting_layout};
+    auto initialize_result = granit::from_native(
+        target.initialize(renderer.native_handle(), source, additional_layouts));
     const std::array features{granit::material::material_feature_value{
         granit::material::make_feature_id(granit::material::pbr_texture_feature_name),
         granit::material::pbr_texture_all}};
-    result = granit::from_native(
-        material.acquire_pipeline({.pass = granit::material::make_feature_id("opaque"),
+    if (granit::succeeded(initialize_result)) {
+      initialize_result = granit::from_native(
+          target.acquire_pipeline({.pass = granit::material::make_feature_id("opaque"),
                                    .variant = granit::material::make_variant_key(features),
                                    .color_format = GRANIT_TEXTURE_FORMAT_RGBA16_FLOAT,
                                    .depth_stencil_format = GRANIT_TEXTURE_FORMAT_D32_FLOAT},
-                                  pipeline));
+                                  target_pipeline));
+    }
+    return initialize_result;
+  };
+  if (granit::succeeded(result))
+    result = initialize_material(direct_material, direct_package, direct_resources.layout(),
+                                 direct_pipeline);
+  if (granit::succeeded(result))
+    result = initialize_material(ibl_material, ibl_package, ibl_resources.layout(), ibl_pipeline);
+  if (granit::succeeded(result)) {
+    result = initialize_material(shadow_material, shadow_package, shadow_resources.layout(),
+                                 shadow_pipeline);
+  }
+  if (granit::succeeded(result))
+    result = initialize_material(material, full_package, lighting_resources.layout(), pipeline);
+  if (granit::succeeded(result) &&
+      (direct_pipeline == GRANIT_NULL_HANDLE || ibl_pipeline == GRANIT_NULL_HANDLE ||
+       shadow_pipeline == GRANIT_NULL_HANDLE || pipeline == GRANIT_NULL_HANDLE)) {
+    result = granit::result::internal;
   }
 
   granit::material::pbr_default_resources defaults;
+  granit::material::material_gpu_instance direct_instance;
+  granit::material::material_gpu_instance ibl_instance;
+  granit::material::material_gpu_instance shadow_instance;
   granit::material::material_gpu_instance instance;
   if (granit::succeeded(result))
     result = granit::from_native(defaults.initialize(renderer.native_handle()));
+  const auto initialize_instance = [&](granit::material::material_gpu_instance& target,
+                                       granit_bind_group_layout layout,
+                                       const granit::material::material_package& source) {
+    auto instance_result =
+        granit::from_native(target.initialize(renderer.native_handle(), layout, source.metadata()));
+    if (granit::succeeded(instance_result))
+      instance_result = granit::from_native(defaults.bind(target));
+    if (granit::succeeded(instance_result) &&
+        (!set_parameter(target, "base_color", granit::material::parameter_type::float4,
+                        std::array{0.8F, 0.2F, 0.1F, 1.0F}) ||
+         !set_parameter(target, "metallic", granit::material::parameter_type::float32,
+                        std::array{0.5F}) ||
+         !set_parameter(target, "perceptual_roughness", granit::material::parameter_type::float32,
+                        std::array{0.5F}) ||
+         !set_parameter(target, "normal_scale", granit::material::parameter_type::float32,
+                        std::array{1.0F}) ||
+         !set_parameter(target, "occlusion_strength", granit::material::parameter_type::float32,
+                        std::array{1.0F}) ||
+         !set_parameter(target, "emissive", granit::material::parameter_type::float3,
+                        std::array{0.0F, 0.0F, 0.0F}))) {
+      instance_result = granit::result::invalid_argument;
+    }
+    if (granit::succeeded(instance_result))
+      instance_result = granit::from_native(target.flush());
+    return instance_result;
+  };
   if (granit::succeeded(result)) {
-    result = granit::from_native(instance.initialize(
-        renderer.native_handle(), material.material_layout(), package.metadata()));
+    result =
+        initialize_instance(direct_instance, direct_material.material_layout(), direct_package);
   }
   if (granit::succeeded(result))
-    result = granit::from_native(defaults.bind(instance));
-  if (granit::succeeded(result) &&
-      (!set_parameter(instance, "base_color", granit::material::parameter_type::float4,
-                      std::array{0.8F, 0.2F, 0.1F, 1.0F}) ||
-       !set_parameter(instance, "metallic", granit::material::parameter_type::float32,
-                      std::array{0.5F}) ||
-       !set_parameter(instance, "perceptual_roughness", granit::material::parameter_type::float32,
-                      std::array{0.5F}) ||
-       !set_parameter(instance, "normal_scale", granit::material::parameter_type::float32,
-                      std::array{1.0F}) ||
-       !set_parameter(instance, "occlusion_strength", granit::material::parameter_type::float32,
-                      std::array{1.0F}) ||
-       !set_parameter(instance, "emissive", granit::material::parameter_type::float3,
-                      std::array{0.0F, 0.0F, 0.0F}))) {
-    result = granit::result::invalid_argument;
+    result = initialize_instance(ibl_instance, ibl_material.material_layout(), ibl_package);
+  if (granit::succeeded(result)) {
+    result =
+        initialize_instance(shadow_instance, shadow_material.material_layout(), shadow_package);
   }
   if (granit::succeeded(result))
-    result = granit::from_native(instance.flush());
+    result = initialize_instance(instance, material.material_layout(), full_package);
 
   granit_texture hdr_texture = GRANIT_NULL_HANDLE;
   granit_texture_view hdr_view = GRANIT_NULL_HANDLE;
@@ -438,8 +524,6 @@ int main(int argc, char** argv) {
         {.exposure_scale = 1.0F, .encode_srgb = 1}, std::as_bytes(std::span{tone_vertex}),
         std::as_bytes(std::span{tone_fragment})));
   }
-  const auto material_group = instance.bind_group();
-  const auto lighting_group = lighting_resources.group();
   const granit::viewport viewport{0, 0, 256, 256, 0, 1};
   const granit::scissor scissor{0, 0, 256, 256};
   const granit::color_attachment_desc color{
@@ -489,7 +573,12 @@ int main(int argc, char** argv) {
                                                       .inner_angle = 0.2F,
                                                       .outer_angle = 0.6F});
   std::array<std::uint64_t, 4> gpu_timestamps{};
-  const auto render_case = [&](float stored_shadow_depth, bool expected_lit) {
+  const auto render_case = [&](float stored_shadow_depth, bool expected_lit,
+                               granit::material::material_template_gpu& selected_material,
+                               granit_graphics_pipeline selected_pipeline,
+                               granit_bind_group selected_material_group,
+                               granit_bind_group selected_lighting_group, bool shadows,
+                               bool direct_lighting, bool ibl_lighting) {
     auto case_result = recorder.begin();
     if (granit::succeeded(case_result))
       case_result = recorder.reset_timestamp_queries(timestamps.native_handle(), 0, 4);
@@ -501,23 +590,23 @@ int main(int argc, char** argv) {
         .view = shadow_view.native_handle(), .clear_value = {.depth = stored_shadow_depth}};
     const granit::rendering_desc shadow_rendering{
         .color_attachments = {}, .depth_stencil_attachment = &shadow_depth, .area = {0, 0, 1, 1}};
-    if (granit::succeeded(case_result))
+    if (granit::succeeded(case_result) && shadows)
       case_result = recorder.begin_rendering(shadow_rendering);
-    if (granit::succeeded(case_result))
+    if (granit::succeeded(case_result) && shadows)
       case_result = recorder.end_rendering();
     if (granit::succeeded(case_result)) {
       case_result =
           recorder.write_timestamp(timestamps.native_handle(), GRANIT_TIMESTAMP_STAGE_DRAW, 1);
     }
     if (granit::succeeded(case_result))
-      case_result = recorder.bind_graphics_pipeline(pipeline);
+      case_result = recorder.bind_graphics_pipeline(selected_pipeline);
     if (granit::succeeded(case_result)) {
-      case_result = recorder.bind_graphics_groups(material.pipeline_layout(), 1,
-                                                  std::span{&material_group, 1});
+      case_result = recorder.bind_graphics_groups(selected_material.pipeline_layout(), 1,
+                                                  std::span{&selected_material_group, 1});
     }
     if (granit::succeeded(case_result)) {
-      case_result = recorder.bind_graphics_groups(material.pipeline_layout(), 3,
-                                                  std::span{&lighting_group, 1});
+      case_result = recorder.bind_graphics_groups(selected_material.pipeline_layout(), 3,
+                                                  std::span{&selected_lighting_group, 1});
     }
     if (granit::succeeded(case_result))
       case_result = recorder.set_viewports(0, std::span{&viewport, 1});
@@ -576,10 +665,13 @@ int main(int argc, char** argv) {
     case_result = readback.map(0, readback_size, &mapped);
     if (granit::succeeded(case_result)) {
       const auto* pixels = static_cast<const std::uint8_t*>(mapped);
-      const auto local_lights = granit::math::add(point_reference, spot_reference);
+      const auto local_lights = direct_lighting ? granit::math::add(point_reference, spot_reference)
+                                                : decltype(point_reference){};
+      const auto environment = ibl_lighting ? ibl_reference : decltype(ibl_reference){};
+      const auto directional =
+          direct_lighting && (!shadows || expected_lit) ? reference : decltype(reference){};
       const auto expected_linear =
-          granit::math::add(granit::math::add(local_lights, ibl_reference),
-                            expected_lit ? reference : decltype(reference){});
+          granit::math::add(granit::math::add(local_lights, environment), directional);
       granit::math::float3 expected_display{};
       const auto tone_error = granit::lighting::evaluate_tone_mapping(
           expected_linear,
@@ -619,7 +711,8 @@ int main(int argc, char** argv) {
     for (std::uint32_t sample = 0; sample < options.warmup && granit::succeeded(result); ++sample) {
       for (std::uint32_t iteration = 0; iteration < options.iterations && granit::succeeded(result);
            ++iteration) {
-        result = render_case(1.0F, true);
+        result = render_case(1.0F, true, material, pipeline, instance.bind_group(),
+                             lighting_resources.group(), true, true, true);
       }
     }
     benchmark_samples.reserve(options.samples);
@@ -628,7 +721,8 @@ int main(int argc, char** argv) {
       gpu_sample current{};
       for (std::uint32_t iteration = 0; iteration < options.iterations && granit::succeeded(result);
            ++iteration) {
-        result = render_case(1.0F, true);
+        result = render_case(1.0F, true, material, pipeline, instance.bind_group(),
+                             lighting_resources.group(), true, true, true);
         current.shadow += static_cast<double>(gpu_timestamps[1] - gpu_timestamps[0]);
         current.pbr_hdr += static_cast<double>(gpu_timestamps[2] - gpu_timestamps[1]);
         current.tone_mapping += static_cast<double>(gpu_timestamps[3] - gpu_timestamps[2]);
@@ -642,10 +736,46 @@ int main(int argc, char** argv) {
       benchmark_samples.push_back(current);
     }
   } else {
+    const granit::lighting::packed_view_lights no_lights;
     if (granit::succeeded(result))
-      result = render_case(0.25F, false);
+      result = granit::from_native(direct_resources.update_lights(no_lights));
+    if (granit::succeeded(result)) {
+      result =
+          render_case(1.0F, true, direct_material, direct_pipeline, direct_instance.bind_group(),
+                      direct_resources.group(), false, false, false);
+    }
     if (granit::succeeded(result))
-      result = render_case(1.0F, true);
+      result = granit::from_native(direct_resources.update_lights(visible_lights));
+    if (granit::succeeded(result)) {
+      result =
+          render_case(1.0F, true, direct_material, direct_pipeline, direct_instance.bind_group(),
+                      direct_resources.group(), false, true, false);
+    }
+    if (granit::succeeded(result))
+      result = granit::from_native(ibl_resources.update_lights(no_lights));
+    if (granit::succeeded(result)) {
+      result = render_case(1.0F, true, ibl_material, ibl_pipeline, ibl_instance.bind_group(),
+                           ibl_resources.group(), false, false, true);
+    }
+    if (granit::succeeded(result))
+      result = granit::from_native(ibl_resources.update_lights(visible_lights));
+    if (granit::succeeded(result)) {
+      result = render_case(1.0F, true, ibl_material, ibl_pipeline, ibl_instance.bind_group(),
+                           ibl_resources.group(), false, true, true);
+    }
+    if (granit::succeeded(result)) {
+      result =
+          render_case(1.0F, true, shadow_material, shadow_pipeline, shadow_instance.bind_group(),
+                      shadow_resources.group(), true, true, false);
+    }
+    if (granit::succeeded(result)) {
+      result = render_case(0.25F, false, material, pipeline, instance.bind_group(),
+                           lighting_resources.group(), true, true, true);
+    }
+    if (granit::succeeded(result)) {
+      result = render_case(1.0F, true, material, pipeline, instance.bind_group(),
+                           lighting_resources.group(), true, true, true);
+    }
   }
 
   static_cast<void>(tone_mapping.reset());

@@ -286,7 +286,7 @@ H-05E 从当前状态按以下顺序收敛，不在完成这些验证前继续�
 
 1. **GPU 时间戳与性能基线（已完成）**：在 Renderer 增加不暴露 Vulkan 类型的时间戳查询能力，分别测量
    Shadow、1/16/64/128 光源 PBR 和 Tone Mapping；严格区分 CPU 录制/提交等待与 GPU 执行时间。
-2. **功能降级组合**：验证零光源、仅直接光、仅 IBL、无阴影、无 IBL 和完整组合；不通过伪造
+2. **功能降级组合（已完成）**：验证零光源、仅直接光、仅 IBL、无阴影、无 IBL 和完整组合；不通过伪造
    Texture 或无意义占位资源掩盖缺失能力。
 3. **窗口与 Swapchain 闭环**：将 HDR 中间目标输出到窗口，验证 sRGB 传递、Resize、最小化、
    Swapchain 重建和离屏/窗口共用 Pass 模型。
@@ -429,6 +429,19 @@ Shader；阴影路径继续使用相同接口的完整 Vertex Shader。所有新
 Shader 反射回归分别固定三类稀疏 Group 3 契约：LIGHTS 只包含 binding 8～11，IBL+LIGHTS 包含
 binding 3～11 中对应资源，SHADOW+LIGHTS 包含 binding 0～2 和 8～11。这些契约与 H-05E6a 的
 可选资源布局逐项对应。下一步将四种变体分别创建真实 Pipeline，并完成六种功能组合的像素回归。
+
+## H-05E6c 实现记录
+
+离屏 PBR 回归现为 LIGHTS、IBL+LIGHTS、SHADOW+LIGHTS 和完整变体分别构建 Material Package、
+Material Template、Pipeline 及匹配布局的 Material Instance。Granit 当前按 Bind Group Layout 句柄
+身份校验绑定关系，因此结构相同的 Material Group 也不跨 Template 复用，避免依赖 Vulkan 的隐式
+布局兼容推断。
+
+同一回归连续验证零光源、仅直接光、仅 IBL、无阴影、无 IBL、完整遮挡和完整受光路径。零光源与
+仅 IBL 会把真实光源计数更新为零；无阴影路径完全跳过 Shadow Pass；无 IBL 路径不创建或绑定任何
+环境纹理。每种结果都由对应 CPU 参考贡献在线性 HDR 空间组合，再经过相同 ACES fitted 和 sRGB
+编码与 GPU 中心像素比较，同时验证背景清屏像素。功能降级组合至此完成，下一步进入窗口与
+Swapchain 闭环。
 
 ## H-05A 实现记录
 
