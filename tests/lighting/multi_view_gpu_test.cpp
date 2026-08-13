@@ -3,6 +3,7 @@
 
 #include "lighting/light_data.h"
 #include "lighting/shadow_ibl_resources.h"
+#include "lighting/tone_mapping_resources.h"
 #include "material/material_template_gpu.h"
 #include "material/pbr_material_schema.h"
 #include "pbr_example_support.h"
@@ -48,7 +49,7 @@ std::vector<std::uint32_t> load_shader(std::string_view name) {
 
 } // namespace
 
-TEST_CASE("两个View执行独立光源PBR绘制") {
+TEST_CASE("两个View执行独立PBR与Tone Mapping") {
   const std::array views{make_view(1), make_view(2)};
   const std::array points{
       granit::scene::point_light_input{
@@ -124,12 +125,20 @@ TEST_CASE("两个View执行独立光源PBR绘制") {
   std::array<granit::texture_view, 2> color_views;
   std::array<granit::texture, 2> depths;
   std::array<granit::texture_view, 2> depth_views;
+  std::array<granit::texture, 2> outputs;
+  std::array<granit::texture_view, 2> output_views;
   std::array<granit::buffer, 2> readbacks;
-  constexpr std::uint64_t readback_size = 32 * 32 * 8;
+  std::array<granit::lighting::tone_mapping_resources, 2> tone_mapping;
+  constexpr std::uint64_t readback_size = 32 * 32 * 4;
+  const auto tone_vertex = load_shader("tone_mapping.vert.spv");
+  const auto tone_fragment = load_shader("tone_mapping.frag.spv");
+  REQUIRE_FALSE(tone_vertex.empty());
+  REQUIRE_FALSE(tone_fragment.empty());
   for (std::size_t index = 0; index < colors.size(); ++index) {
     REQUIRE(colors[index].initialize(renderer.native_handle(),
                                      {.format = granit::texture_format::rgba16_float,
                                       .usage = granit::texture_usage::color_attachment |
+                                               granit::texture_usage::sampled |
                                                granit::texture_usage::transfer_source,
                                       .width = 32,
                                       .height = 32}) == granit::result::success);
@@ -144,12 +153,28 @@ TEST_CASE("两个View执行独立光源PBR绘制") {
     REQUIRE(
         depth_views[index].initialize(renderer.native_handle(), depths[index].native_handle()) ==
         granit::result::success);
+    REQUIRE(outputs[index].initialize(renderer.native_handle(),
+                                      {.format = granit::texture_format::rgba8_unorm,
+                                       .usage = granit::texture_usage::color_attachment |
+                                                granit::texture_usage::transfer_source,
+                                       .width = 32,
+                                       .height = 32}) == granit::result::success);
+    REQUIRE(output_views[index].initialize(renderer.native_handle(),
+                                           outputs[index].native_handle()) ==
+            granit::result::success);
     REQUIRE(readbacks[index].initialize(renderer.native_handle(),
                                         {.size = readback_size,
                                          .usage = granit::buffer_usage::transfer_destination,
                                          .location = granit::memory_location::readback}) ==
             granit::result::success);
+    REQUIRE(tone_mapping[index].initialize(
+                renderer.native_handle(), color_views[index].native_handle(),
+                granit::texture_format::rgba8_unorm,
+                {.exposure_scale = 1.0F, .encode_srgb = 1}, std::as_bytes(std::span{tone_vertex}),
+                std::as_bytes(std::span{tone_fragment})) == GRANIT_SUCCESS);
+    CHECK(tone_mapping[index].group() != GRANIT_NULL_HANDLE);
   }
+  CHECK(tone_mapping[0].group() != tone_mapping[1].group());
 
   granit::command_recorder recorder;
   REQUIRE(recorder.initialize(renderer.native_handle()) == granit::result::success);
@@ -176,6 +201,18 @@ TEST_CASE("两个View执行独立光源PBR绘制") {
     REQUIRE(recorder.begin_rendering(rendering) == granit::result::success);
     REQUIRE(recorder.draw(3) == granit::result::success);
     REQUIRE(recorder.end_rendering() == granit::result::success);
+    REQUIRE(recorder.bind_graphics_pipeline(tone_mapping[index].pipeline()) ==
+            granit::result::success);
+    const auto tone_group = tone_mapping[index].group();
+    REQUIRE(recorder.bind_graphics_groups(tone_mapping[index].pipeline_layout(), 0,
+                                          std::span{&tone_group, 1}) ==
+            granit::result::success);
+    const granit::color_attachment_desc output{.view = output_views[index].native_handle()};
+    const granit::rendering_desc tone_rendering{.color_attachments = std::span{&output, 1},
+                                                .area = {0, 0, 32, 32}};
+    REQUIRE(recorder.begin_rendering(tone_rendering) == granit::result::success);
+    REQUIRE(recorder.draw(3) == granit::result::success);
+    REQUIRE(recorder.end_rendering() == granit::result::success);
     const granit_texture_data_layout layout{};
     const granit_texture_write_region region{.mip_level = 0,
                                              .base_array_layer = 0,
@@ -187,19 +224,19 @@ TEST_CASE("两个View执行独立光源PBR绘制") {
                                              .width = 32,
                                              .height = 32,
                                              .depth = 1};
-    REQUIRE(recorder.copy_texture_to_buffer(colors[index].native_handle(),
-                                            readbacks[index].native_handle(), layout,
-                                            region) == granit::result::success);
+    REQUIRE(recorder.copy_texture_to_buffer(outputs[index].native_handle(),
+                                            readbacks[index].native_handle(), layout, region) ==
+            granit::result::success);
   }
   REQUIRE(recorder.end() == granit::result::success);
   REQUIRE(recorder.submit() == granit::result::success);
   REQUIRE(recorder.reset() == granit::result::success);
 
-  std::array<std::array<std::uint16_t, 4>, 2> centers{};
+  std::array<std::array<std::uint8_t, 4>, 2> centers{};
   for (std::size_t index = 0; index < readbacks.size(); ++index) {
     void* mapped = nullptr;
     REQUIRE(readbacks[index].map(0, readback_size, &mapped) == granit::result::success);
-    const auto* pixels = static_cast<const std::uint16_t*>(mapped);
+    const auto* pixels = static_cast<const std::uint8_t*>(mapped);
     std::copy_n(pixels + (16 * 32 + 16) * 4, 4, centers[index].begin());
     REQUIRE(readbacks[index].unmap() == granit::result::success);
   }

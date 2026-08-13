@@ -506,6 +506,17 @@ Readback Buffer，仍由同一个 Recorder 一次提交。
 材质缺省资源可共享，但可变的光源和目标保持隔离。下一步为两个 HDR 目标分别创建 Tone Mapping
 输出并验证显示像素，然后完成多 View 阶段。
 
+## H-05E8c 实现记录
+
+两个 View 的 HDR 目标现分别作为独立 Tone Mapping Group 0 的输入，并各自输出到
+`RGBA8_UNORM` LDR Attachment。PBR 与 Tone Mapping 全部由同一个 Command Recorder 按 View 连续
+录制并一次提交；每路最终 LDR 结果复制到独立 Readback Buffer，中心像素继续验证 View 0 以红色
+分量为主、View 1 以绿色分量为主。
+
+该回归覆盖 Scene 可见性、逐 View 光源打包、PBR HDR 写入、采样状态转换、Tone Mapping 和最终显示
+编码的完整链路，并确认两套 Group 0、Group 3、HDR/LDR Attachment 均无交叉引用。H-05E 多 View
+首版至此完成；后续多 View 优化应基于实测瓶颈决定是否引入并行录制或外部执行器。
+
 ## H-05A 实现记录
 
 新增可选内部目标 `granit::lighting`，首版依赖 `granit::scene`，不进入核心动态库或安装导出。
