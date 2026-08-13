@@ -19,7 +19,6 @@ typedef granit_handle granit_render_pipeline;
 
 typedef uint32_t granit_render_pipeline_stage;
 #define GRANIT_RENDER_PIPELINE_STAGE_OPAQUE UINT32_C(0)
-#define GRANIT_RENDER_PIPELINE_STAGE_TONE_MAPPING UINT32_C(1)
 
 /** 固定阶段录制回调的只读上下文；所有指针只在回调期间有效。 */
 typedef struct granit_render_pipeline_record_info {

@@ -219,15 +219,18 @@ ABI、描述结构、整数句柄、所有权与线程语义，并在其上提�
   GPU 更新由各实例独立串行化。
 - `granit/pipeline/render_pipeline.h` 已提供统一 Pipeline 句柄与单次多 View `render` 入口。首版实现
   从 Scene Snapshot 复制稳定输入，逐 View 执行可见性结果，并组合 PBR HDR、Depth 与 Tone Mapping。
-- 固定阶段回调目前覆盖 Opaque 与 Tone Mapping。回调获得 Recorder、阶段输入/输出 View、当前 View、
-  可见 Renderable 和 payload 批次；不得提交 Recorder 或递归调用同一 Pipeline。
+- 固定阶段回调目前只覆盖 Opaque。回调获得 Recorder、HDR/Depth 输出 View、当前 View、可见
+  Renderable 和 payload 批次；不得提交 Recorder 或递归调用同一 Pipeline。
 - 回调失败时本 View 不提交未完成 Recorder；同一 Pipeline 并发或递归调用返回 `NOT_READY`。
-- 方向光阴影、IBL 默认资源和真正由库内录制的 Tone Mapping 仍属于下一实现增量，当前统一入口不能
-  被描述为最终完整 PBR 画质管线。
+- Tone Mapping Shader 作为构建输入嵌入 `granit_render_pipeline`，运行时不读取示例或测试资产。
+  Granit 在固定 Pass 内创建绑定、录制全屏 Draw，并根据 UNORM/sRGB 输出选择唯一颜色编码路径。
+- 方向光阴影、IBL 默认资源以及 Tone Mapping Pipeline/Shader 的跨帧缓存仍属于下一实现增量，当前
+  统一入口不能被描述为最终完整 PBR 画质管线。
 
 该目标目前只在构建树中提供。安装 component 与外部 consumer 在统一 Pipeline 的依赖边界完成后
 一起落地，避免过早把内部 `scene`、`material`、`lighting` 静态目标写入安装导出。下一块将已验证
-的 Shadow、IBL 与 Tone Mapping GPU 资源接入统一入口，并确定公共 Material 与 payload 的批次关联。
+的 Shadow、IBL GPU 资源接入统一入口，缓存 Tone Mapping 的不变资源，并确定公共 Material 与
+payload 的批次关联。
 
 ## 分步实施
 

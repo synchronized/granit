@@ -24,6 +24,7 @@ granit_scene_matrix4 identity() { return {{1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0
 struct callback_state {
   std::vector<granit_render_pipeline_stage> stages;
   std::vector<uint64_t> payloads;
+  granit_renderer renderer = GRANIT_NULL_HANDLE;
   granit_result result = GRANIT_SUCCESS;
 };
 
@@ -42,7 +43,23 @@ granit_result record(const granit_render_pipeline_record_info* info, void* user_
     state.payloads.insert(state.payloads.end(), info->payloads,
                           info->payloads + info->payload_count);
   }
-  return state.result;
+  if (state.result != GRANIT_SUCCESS)
+    return state.result;
+  granit_color_attachment_desc color = GRANIT_COLOR_ATTACHMENT_DESC_INIT;
+  color.view = info->color_output;
+  color.clear_value = {0.25F, 0.5F, 1.0F, 1.0F};
+  granit_depth_stencil_attachment_desc depth = GRANIT_DEPTH_STENCIL_ATTACHMENT_DESC_INIT;
+  depth.view = info->depth_output;
+  granit_rendering_desc rendering = GRANIT_RENDERING_DESC_INIT;
+  rendering.color_attachment_count = 1;
+  rendering.color_attachments = &color;
+  rendering.depth_stencil_attachment = &depth;
+  rendering.area = {0, 0, static_cast<std::uint32_t>(info->view->viewport_width),
+                    static_cast<std::uint32_t>(info->view->viewport_height)};
+  auto result = granit_command_recorder_begin_rendering(state.renderer, info->recorder, &rendering);
+  if (result == GRANIT_SUCCESS)
+    result = granit_command_recorder_end_rendering(state.renderer, info->recorder);
+  return result;
 }
 
 } // namespace
@@ -86,6 +103,7 @@ TEST_CASE("统一Render Pipeline按固定阶段消费Scene Snapshot") {
   REQUIRE(scene.initialize(renderer.native_handle(), scene_desc) == granit::result::success);
 
   callback_state callback;
+  callback.renderer = renderer.native_handle();
   granit_render_pipeline_desc pipeline_desc = GRANIT_RENDER_PIPELINE_DESC_INIT;
   pipeline_desc.record = record;
   pipeline_desc.user_data = &callback;
@@ -99,8 +117,7 @@ TEST_CASE("统一Render Pipeline按固定阶段消费Scene Snapshot") {
   render_desc.height = 16;
   REQUIRE(pipeline.render(render_desc) == granit::result::success);
   CHECK(callback.stages ==
-        std::vector<granit_render_pipeline_stage>{GRANIT_RENDER_PIPELINE_STAGE_OPAQUE,
-                                                  GRANIT_RENDER_PIPELINE_STAGE_TONE_MAPPING});
+        std::vector<granit_render_pipeline_stage>{GRANIT_RENDER_PIPELINE_STAGE_OPAQUE});
   CHECK(callback.payloads == std::vector<uint64_t>{77});
 
   callback.result = GRANIT_ERROR_NOT_READY;

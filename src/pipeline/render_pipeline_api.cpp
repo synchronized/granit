@@ -4,7 +4,11 @@
 #include <granit/pipeline/render_pipeline.h>
 
 #include "lighting/reference_pipeline_graph.h"
+#include "lighting/tone_mapping_resources.h"
+#include "pipeline/embedded_shaders.h"
 #include "pipeline/scene_access.h"
+
+#include <granit/renderer/render_target.h>
 
 #include <algorithm>
 #include <cmath>
@@ -82,6 +86,47 @@ granit_scene_matrix4 convert(const granit::math::matrix4& value) {
 }
 
 granit_scene_float3 convert(granit::math::float3 value) { return {value.x, value.y, value.z}; }
+
+granit_result record_tone_mapping(granit_renderer renderer, granit_command_recorder recorder,
+                                  granit_texture_view hdr_view, granit_texture_view output_view,
+                                  granit_texture_format output_format, uint32_t width,
+                                  uint32_t height,
+                                  const granit::lighting::tone_mapping_constants& constants) {
+  granit::lighting::tone_mapping_resources resources;
+  auto result =
+      resources.initialize(renderer, hdr_view, static_cast<granit::texture_format>(output_format),
+                           constants, granit::pipeline::detail::tone_mapping_vertex_shader(),
+                           granit::pipeline::detail::tone_mapping_fragment_shader());
+  if (result == GRANIT_SUCCESS) {
+    result =
+        granit_command_recorder_bind_graphics_pipeline(renderer, recorder, resources.pipeline());
+  }
+  const auto group = resources.group();
+  if (result == GRANIT_SUCCESS) {
+    result = granit_command_recorder_bind_graphics_groups(
+        renderer, recorder, resources.pipeline_layout(), 0, &group, 1);
+  }
+  const granit_viewport viewport{0, 0, static_cast<float>(width), static_cast<float>(height), 0, 1};
+  const granit_scissor scissor{0, 0, width, height};
+  if (result == GRANIT_SUCCESS)
+    result = granit_command_recorder_set_viewports(renderer, recorder, 0, &viewport, 1);
+  if (result == GRANIT_SUCCESS)
+    result = granit_command_recorder_set_scissors(renderer, recorder, 0, &scissor, 1);
+  granit_color_attachment_desc color = GRANIT_COLOR_ATTACHMENT_DESC_INIT;
+  color.view = output_view;
+  granit_rendering_desc rendering = GRANIT_RENDERING_DESC_INIT;
+  rendering.color_attachment_count = 1;
+  rendering.color_attachments = &color;
+  rendering.area = {0, 0, width, height};
+  if (result == GRANIT_SUCCESS)
+    result = granit_command_recorder_begin_rendering(renderer, recorder, &rendering);
+  if (result == GRANIT_SUCCESS)
+    result = granit_command_recorder_draw(renderer, recorder, 3, 1, 0, 0);
+  if (result == GRANIT_SUCCESS)
+    result = granit_command_recorder_end_rendering(renderer, recorder);
+  const auto reset_result = resources.reset();
+  return result == GRANIT_SUCCESS ? reset_result : result;
+}
 
 granit_result render_view(const pipeline_state& state,
                           const granit_render_pipeline_render_desc& desc,
@@ -166,22 +211,9 @@ granit_result render_view(const pipeline_state& state,
     return state.record(&info, state.user_data);
   };
   callbacks.tone_mapping = [&](auto& context, const auto& constants) {
-    const granit_render_pipeline_record_info info{
-        .struct_size = sizeof(granit_render_pipeline_record_info),
-        .stage = GRANIT_RENDER_PIPELINE_STAGE_TONE_MAPPING,
-        .recorder = context.recorder(),
-        .color_input = context.texture_view(hdr),
-        .color_output = context.texture_view(output),
-        .depth_output = GRANIT_NULL_HANDLE,
-        .view_index = view_index,
-        .payload_count = 0,
-        .payloads = nullptr,
-        .view = &public_view,
-        .renderables = nullptr,
-        .exposure_scale = constants.exposure_scale,
-        .encode_srgb = constants.encode_srgb,
-        .reserved = {0, 0}};
-    return state.record(&info, state.user_data);
+    return record_tone_mapping(state.renderer, context.recorder(), context.texture_view(hdr),
+                               context.texture_view(output), desc.output_format, desc.width,
+                               desc.height, constants);
   };
   granit::lighting::reference_pipeline_graph_passes passes;
   if (granit::lighting::add_reference_pipeline_graph(graph, std::move(graph_desc),

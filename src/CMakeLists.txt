@@ -350,9 +350,48 @@ set_target_properties(granit_lighting PROPERTIES FOLDER "Modules" POSITION_INDEP
 
 add_library(granit_render_pipeline)
 add_library(granit::render_pipeline ALIAS granit_render_pipeline)
+set(granit_pipeline_generated_dir "${CMAKE_CURRENT_BINARY_DIR}/generated/pipeline")
+set(
+  granit_pipeline_tone_vertex
+  "${granit_pipeline_generated_dir}/granit_pipeline_tone_mapping.vert.inc"
+)
+set(
+  granit_pipeline_tone_fragment
+  "${granit_pipeline_generated_dir}/granit_pipeline_tone_mapping.frag.inc"
+)
+add_custom_command(
+  OUTPUT "${granit_pipeline_tone_vertex}"
+  COMMAND "${CMAKE_COMMAND}" -E make_directory "${granit_pipeline_generated_dir}"
+  COMMAND
+    "${CMAKE_COMMAND}"
+    "-DINPUT=${PROJECT_SOURCE_DIR}/examples/assets/tone_mapping.vert.spv"
+    "-DOUTPUT=${granit_pipeline_tone_vertex}"
+    -P "${PROJECT_SOURCE_DIR}/cmake/embed_binary.cmake"
+  DEPENDS
+    "${PROJECT_SOURCE_DIR}/examples/assets/tone_mapping.vert.spv"
+    "${PROJECT_SOURCE_DIR}/cmake/embed_binary.cmake"
+  VERBATIM
+)
+add_custom_command(
+  OUTPUT "${granit_pipeline_tone_fragment}"
+  COMMAND "${CMAKE_COMMAND}" -E make_directory "${granit_pipeline_generated_dir}"
+  COMMAND
+    "${CMAKE_COMMAND}"
+    "-DINPUT=${PROJECT_SOURCE_DIR}/examples/assets/tone_mapping.frag.spv"
+    "-DOUTPUT=${granit_pipeline_tone_fragment}"
+    -P "${PROJECT_SOURCE_DIR}/cmake/embed_binary.cmake"
+  DEPENDS
+    "${PROJECT_SOURCE_DIR}/examples/assets/tone_mapping.frag.spv"
+    "${PROJECT_SOURCE_DIR}/cmake/embed_binary.cmake"
+  VERBATIM
+)
 target_sources(
   granit_render_pipeline
   PRIVATE
+    "${granit_pipeline_tone_vertex}"
+    "${granit_pipeline_tone_fragment}"
+    pipeline/embedded_shaders.cpp
+    pipeline/embedded_shaders.h
     pipeline/material_api.cpp
     pipeline/render_pipeline_api.cpp
     pipeline/scene_access.h
@@ -373,7 +412,9 @@ target_compile_features(granit_render_pipeline PUBLIC cxx_std_20)
 target_include_directories(
   granit_render_pipeline
   PUBLIC "$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>"
-  PRIVATE "${PROJECT_SOURCE_DIR}/src"
+  PRIVATE
+    "${PROJECT_SOURCE_DIR}/src"
+    "${granit_pipeline_generated_dir}"
 )
 target_link_libraries(granit_render_pipeline PRIVATE granit::lighting)
 target_compile_definitions(
