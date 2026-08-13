@@ -27,6 +27,8 @@ struct pipeline_state {
   granit_renderer renderer = GRANIT_NULL_HANDLE;
   granit_render_pipeline_record_callback record = nullptr;
   void* user_data = nullptr;
+  granit::lighting::tone_mapping_pipeline_resources tone_mapping_unorm;
+  granit::lighting::tone_mapping_pipeline_resources tone_mapping_srgb;
   bool alive = true;
 };
 
@@ -87,24 +89,30 @@ granit_matrix4 convert(const granit::math::matrix4& value) {
 
 granit_float3 convert(granit::math::float3 value) { return {value.x, value.y, value.z}; }
 
-granit_result record_tone_mapping(granit_renderer renderer, granit_command_recorder recorder,
+granit_result record_tone_mapping(granit::lighting::tone_mapping_pipeline_resources& pipeline,
+                                  granit_renderer renderer, granit_command_recorder recorder,
                                   granit_texture_view hdr_view, granit_texture_view output_view,
                                   granit_texture_format output_format, uint32_t width,
                                   uint32_t height,
                                   const granit::lighting::tone_mapping_constants& constants) {
-  granit::lighting::tone_mapping_resources resources;
-  auto result =
-      resources.initialize(renderer, hdr_view, static_cast<granit::texture_format>(output_format),
-                           constants, granit::pipeline::detail::tone_mapping_vertex_shader(),
-                           granit::pipeline::detail::tone_mapping_fragment_shader());
+  if (!pipeline.initialized()) {
+    const auto initialize =
+        pipeline.initialize(renderer, static_cast<granit::texture_format>(output_format),
+                            granit::pipeline::detail::tone_mapping_vertex_shader(),
+                            granit::pipeline::detail::tone_mapping_fragment_shader());
+    if (initialize != GRANIT_SUCCESS)
+      return initialize;
+  }
+  granit::lighting::tone_mapping_binding_resources binding;
+  auto result = binding.initialize(pipeline, hdr_view, constants);
   if (result == GRANIT_SUCCESS) {
     result =
-        granit_command_recorder_bind_graphics_pipeline(renderer, recorder, resources.pipeline());
+        granit_command_recorder_bind_graphics_pipeline(renderer, recorder, pipeline.pipeline());
   }
-  const auto group = resources.group();
+  const auto group = binding.group();
   if (result == GRANIT_SUCCESS) {
-    result = granit_command_recorder_bind_graphics_groups(
-        renderer, recorder, resources.pipeline_layout(), 0, &group, 1);
+    result = granit_command_recorder_bind_graphics_groups(renderer, recorder,
+                                                          pipeline.pipeline_layout(), 0, &group, 1);
   }
   const granit_viewport viewport{0, 0, static_cast<float>(width), static_cast<float>(height), 0, 1};
   const granit_scissor scissor{0, 0, width, height};
@@ -124,12 +132,11 @@ granit_result record_tone_mapping(granit_renderer renderer, granit_command_recor
     result = granit_command_recorder_draw(renderer, recorder, 3, 1, 0, 0);
   if (result == GRANIT_SUCCESS)
     result = granit_command_recorder_end_rendering(renderer, recorder);
-  const auto reset_result = resources.reset();
+  const auto reset_result = binding.reset();
   return result == GRANIT_SUCCESS ? reset_result : result;
 }
 
-granit_result render_view(const pipeline_state& state,
-                          const granit_render_pipeline_render_desc& desc,
+granit_result render_view(pipeline_state& state, const granit_render_pipeline_render_desc& desc,
                           const granit::scene::multi_view_snapshot& snapshot, uint32_t view_index) {
   const auto& visible = snapshot.views()[view_index];
   if (visible.renderables.indices().empty())
@@ -211,9 +218,12 @@ granit_result render_view(const pipeline_state& state,
     return state.record(&info, state.user_data);
   };
   callbacks.tone_mapping = [&](auto& context, const auto& constants) {
-    return record_tone_mapping(state.renderer, context.recorder(), context.texture_view(hdr),
-                               context.texture_view(output), desc.output_format, desc.width,
-                               desc.height, constants);
+    auto& pipeline = desc.output_format == GRANIT_TEXTURE_FORMAT_RGBA8_SRGB
+                         ? state.tone_mapping_srgb
+                         : state.tone_mapping_unorm;
+    return record_tone_mapping(pipeline, state.renderer, context.recorder(),
+                               context.texture_view(hdr), context.texture_view(output),
+                               desc.output_format, desc.width, desc.height, constants);
   };
   granit::lighting::reference_pipeline_graph_passes passes;
   if (granit::lighting::add_reference_pipeline_graph(graph, std::move(graph_desc),
@@ -321,5 +331,9 @@ extern "C" granit_result granit_render_pipeline_destroy(granit_renderer renderer
   }
   std::scoped_lock lock{removed->mutex};
   removed->alive = false;
-  return GRANIT_SUCCESS;
+  auto result = removed->tone_mapping_unorm.reset();
+  const auto srgb_result = removed->tone_mapping_srgb.reset();
+  if (result == GRANIT_SUCCESS)
+    result = srgb_result;
+  return result;
 }

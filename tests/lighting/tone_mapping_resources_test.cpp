@@ -67,6 +67,37 @@ TEST_CASE("Tone Mapping GPU资源建立完整全屏Pipeline") {
   CHECK(resources.update({.exposure_scale = 0.0F}) == GRANIT_ERROR_INVALID_ARGUMENT);
 }
 
+TEST_CASE("Tone Mapping跨HDR View复用不变Pipeline资源") {
+  granit::renderer renderer;
+  const auto initialized = renderer.initialize({.application_name = "granit-tone-cache"});
+  if (environment_unavailable(initialized))
+    SKIP("当前运行环境没有满足要求的 Vulkan 设备");
+  REQUIRE(initialized == granit::result::success);
+  std::array<granit::texture, 2> textures;
+  std::array<granit::texture_view, 2> views;
+  for (std::size_t index = 0; index < views.size(); ++index) {
+    REQUIRE(textures[index].initialize(renderer.native_handle(),
+                                       {.format = granit::texture_format::rgba16_float,
+                                        .usage = granit::texture_usage::sampled}) ==
+            granit::result::success);
+    REQUIRE(views[index].initialize(renderer.native_handle(), textures[index].native_handle()) ==
+            granit::result::success);
+  }
+  granit::lighting::tone_mapping_pipeline_resources pipeline;
+  REQUIRE(pipeline.initialize(renderer.native_handle(), granit::texture_format::rgba8_unorm,
+                              load_shader("tone_mapping.vert.spv"),
+                              load_shader("tone_mapping.frag.spv")) == GRANIT_SUCCESS);
+  const auto pipeline_handle = pipeline.pipeline();
+  REQUIRE(pipeline_handle != GRANIT_NULL_HANDLE);
+  for (auto& view : views) {
+    granit::lighting::tone_mapping_binding_resources binding;
+    REQUIRE(binding.initialize(pipeline, view.native_handle(),
+                               {.exposure_scale = 1.0F, .encode_srgb = 1}) == GRANIT_SUCCESS);
+    CHECK(binding.group() != GRANIT_NULL_HANDLE);
+    CHECK(pipeline.pipeline() == pipeline_handle);
+  }
+}
+
 TEST_CASE("Tone Mapping GPU资源拒绝不完整输入") {
   granit::lighting::tone_mapping_resources resources;
   CHECK(resources.initialize(GRANIT_NULL_HANDLE, GRANIT_NULL_HANDLE,

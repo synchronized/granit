@@ -225,13 +225,13 @@ ABI、描述结构、整数句柄、所有权与线程语义，并在其上提�
 - 回调失败时本 View 不提交未完成 Recorder；同一 Pipeline 并发或递归调用返回 `NOT_READY`。
 - Tone Mapping Shader 作为构建输入嵌入 `granit_render_pipeline`，运行时不读取示例或测试资产。
   Granit 在固定 Pass 内创建绑定、录制全屏 Draw，并根据 UNORM/sRGB 输出选择唯一颜色编码路径。
-- 方向光阴影、IBL 默认资源以及 Tone Mapping Pipeline/Shader 的跨帧缓存仍属于下一实现增量，当前
-  统一入口不能被描述为最终完整 PBR 画质管线。
+- Tone Mapping 的 Shader、Sampler、Bind Group Layout、Pipeline Layout 和 Graphics Pipeline 已按输出
+  编码缓存并跨 View、跨帧复用；依赖瞬态 HDR View 的常量 Buffer 与 Bind Group 仍按 View 创建。
+- 方向光阴影与 IBL 默认资源仍属于下一实现增量，当前统一入口不能被描述为最终完整 PBR 画质管线。
 
 该目标目前只在构建树中提供。安装 component 与外部 consumer 在统一 Pipeline 的依赖边界完成后
 一起落地，避免过早把内部 `scene`、`material`、`lighting` 静态目标写入安装导出。下一块将已验证
-的 Shadow、IBL GPU 资源接入统一入口，缓存 Tone Mapping 的不变资源，并确定公共 Material 与
-payload 的批次关联。
+的公共 Material、Mesh 与 payload 批次关联落地，再将 Shadow、IBL GPU 资源接入统一入口。
 
 ## 分步实施
 

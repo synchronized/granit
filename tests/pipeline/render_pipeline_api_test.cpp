@@ -120,6 +120,10 @@ TEST_CASE("统一Render Pipeline按固定阶段消费Scene Snapshot") {
         std::vector<granit_render_pipeline_stage>{GRANIT_RENDER_PIPELINE_STAGE_OPAQUE});
   CHECK(callback.payloads == std::vector<uint64_t>{77});
 
+  REQUIRE(pipeline.render(render_desc) == granit::result::success);
+  CHECK(callback.stages.size() == 2);
+  CHECK(callback.payloads == std::vector<uint64_t>{77, 77});
+
   callback.result = GRANIT_ERROR_NOT_READY;
   CHECK(pipeline.render(render_desc) == granit::result::not_ready);
 }
