@@ -6,6 +6,7 @@
 #include "material/material_gpu_instance.h"
 #include "material/material_package_archive.h"
 #include "material/material_template_gpu.h"
+#include "pipeline/material_access.h"
 
 #include <limits>
 #include <memory>
@@ -163,6 +164,13 @@ granit_result decode_archive(const granit_material_desc& desc,
 }
 
 } // namespace
+
+granit_result
+granit::pipeline::detail::validate_material_handle(granit_renderer renderer,
+                                                   granit_material material) noexcept {
+  return find_material(renderer, material) == nullptr ? GRANIT_ERROR_INVALID_HANDLE
+                                                      : GRANIT_SUCCESS;
+}
 
 extern "C" uint64_t granit_material_parameter_id(const char* name, uint32_t name_length) {
   if (name == nullptr || name_length == 0)

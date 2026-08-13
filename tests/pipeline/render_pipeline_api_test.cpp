@@ -1,14 +1,18 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
+#include <granit/pipeline/material.hpp>
 #include <granit/pipeline/render_pipeline.hpp>
 #include <granit/pipeline/scene.hpp>
 #include <granit/renderer/renderer.hpp>
 #include <granit/renderer/texture.hpp>
 
+#include "material/material_package_archive.h"
+
 #include <catch2/catch_all.hpp>
 
 #include <array>
+#include <cstddef>
 #include <vector>
 
 namespace {
@@ -21,9 +25,31 @@ bool environment_unavailable(granit::result value) {
 
 granit_matrix4 identity() { return {{1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1}}; }
 
+std::vector<std::byte> build_material_archive() {
+  using namespace granit::material;
+  material_package_desc desc;
+  constexpr std::array spirv{UINT32_C(0x07230203), UINT32_C(0x00010600), 0U, 1U, 0U};
+  desc.variants.push_back({.pass = make_feature_id("opaque"),
+                           .features = {},
+                           .shaders = {{.stage = package_shader_stage::vertex,
+                                        .entry_point = "main",
+                                        .spirv = {spirv.begin(), spirv.end()}},
+                                       {.stage = package_shader_stage::fragment,
+                                        .entry_point = "main",
+                                        .spirv = {spirv.begin(), spirv.end()}}},
+                           .pipeline = {}});
+  material_package package;
+  REQUIRE(material_package::build(std::move(desc), package) == package_error::none);
+  std::vector<std::byte> archive;
+  REQUIRE(encode_material_package_archive(package, archive) == archive_error::none);
+  return archive;
+}
+
 struct callback_state {
   std::vector<granit_render_pipeline_stage> stages;
   std::vector<uint64_t> payloads;
+  std::vector<uint64_t> meshes;
+  std::vector<granit_material> materials;
   granit_renderer renderer = GRANIT_NULL_HANDLE;
   granit_result result = GRANIT_SUCCESS;
 };
@@ -35,13 +61,18 @@ granit_result record(const granit_render_pipeline_record_info* info, void* user_
     return GRANIT_ERROR_INVALID_ARGUMENT;
   }
   if (info->view == nullptr ||
-      (info->payload_count != 0 && (info->payloads == nullptr || info->renderables == nullptr))) {
+      (info->payload_count != 0 && (info->payloads == nullptr || info->draw_bindings == nullptr ||
+                                    info->renderables == nullptr))) {
     return GRANIT_ERROR_INVALID_ARGUMENT;
   }
   state.stages.push_back(info->stage);
   if (info->payload_count != 0) {
     state.payloads.insert(state.payloads.end(), info->payloads,
                           info->payloads + info->payload_count);
+    for (uint32_t index = 0; index < info->payload_count; ++index) {
+      state.meshes.push_back(info->draw_bindings[index].mesh);
+      state.materials.push_back(info->draw_bindings[index].material);
+    }
   }
   if (state.result != GRANIT_SUCCESS)
     return state.result;
@@ -102,6 +133,13 @@ TEST_CASE("统一Render Pipeline按固定阶段消费Scene Snapshot") {
   granit::scene_snapshot scene;
   REQUIRE(scene.initialize(renderer.native_handle(), scene_desc) == granit::result::success);
 
+  const auto archive = build_material_archive();
+  granit_material_desc material_desc = GRANIT_MATERIAL_DESC_INIT;
+  material_desc.archive_data = archive.data();
+  material_desc.archive_size = archive.size();
+  granit::material_instance material;
+  REQUIRE(material.initialize(renderer.native_handle(), material_desc) == granit::result::success);
+
   callback_state callback;
   callback.renderer = renderer.native_handle();
   granit_render_pipeline_desc pipeline_desc = GRANIT_RENDER_PIPELINE_DESC_INIT;
@@ -115,14 +153,28 @@ TEST_CASE("统一Render Pipeline按固定阶段消费Scene Snapshot") {
   render_desc.output_format = GRANIT_TEXTURE_FORMAT_RGBA8_UNORM;
   render_desc.width = 16;
   render_desc.height = 16;
+  CHECK(pipeline.render(render_desc) == granit::result::invalid_argument);
+  const granit_render_pipeline_draw_binding draw_binding{77, 1001, material.native_handle(), 0};
+  render_desc.draw_binding_count = 1;
+  render_desc.draw_bindings = &draw_binding;
   REQUIRE(pipeline.render(render_desc) == granit::result::success);
   CHECK(callback.stages ==
         std::vector<granit_render_pipeline_stage>{GRANIT_RENDER_PIPELINE_STAGE_OPAQUE});
   CHECK(callback.payloads == std::vector<uint64_t>{77});
+  CHECK(callback.meshes == std::vector<uint64_t>{1001});
+  CHECK(callback.materials == std::vector<granit_material>{material.native_handle()});
 
   REQUIRE(pipeline.render(render_desc) == granit::result::success);
   CHECK(callback.stages.size() == 2);
   CHECK(callback.payloads == std::vector<uint64_t>{77, 77});
+  CHECK(callback.meshes == std::vector<uint64_t>{1001, 1001});
+
+  const std::array duplicate_bindings{draw_binding, draw_binding};
+  render_desc.draw_binding_count = static_cast<uint32_t>(duplicate_bindings.size());
+  render_desc.draw_bindings = duplicate_bindings.data();
+  CHECK(pipeline.render(render_desc) == granit::result::invalid_argument);
+  render_desc.draw_binding_count = 1;
+  render_desc.draw_bindings = &draw_binding;
 
   callback.result = GRANIT_ERROR_NOT_READY;
   CHECK(pipeline.render(render_desc) == granit::result::not_ready);

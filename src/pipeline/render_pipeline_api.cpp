@@ -6,6 +6,7 @@
 #include "lighting/reference_pipeline_graph.h"
 #include "lighting/tone_mapping_resources.h"
 #include "pipeline/embedded_shaders.h"
+#include "pipeline/material_access.h"
 #include "pipeline/scene_access.h"
 
 #include <granit/renderer/render_target.h>
@@ -14,6 +15,7 @@
 #include <cmath>
 #include <memory>
 #include <mutex>
+#include <unordered_map>
 #include <vector>
 
 namespace {
@@ -136,8 +138,11 @@ granit_result record_tone_mapping(granit::lighting::tone_mapping_pipeline_resour
   return result == GRANIT_SUCCESS ? reset_result : result;
 }
 
-granit_result render_view(pipeline_state& state, const granit_render_pipeline_render_desc& desc,
-                          const granit::scene::multi_view_snapshot& snapshot, uint32_t view_index) {
+granit_result
+render_view(pipeline_state& state, const granit_render_pipeline_render_desc& desc,
+            const granit::scene::multi_view_snapshot& snapshot,
+            const std::unordered_map<uint64_t, granit_render_pipeline_draw_binding>& bindings,
+            uint32_t view_index) {
   const auto& visible = snapshot.views()[view_index];
   if (visible.renderables.indices().empty())
     return GRANIT_ERROR_NOT_READY;
@@ -160,8 +165,10 @@ granit_result render_view(pipeline_state& state, const granit_render_pipeline_re
     graph_desc.pbr.light.radiance = light.radiance;
   }
   std::vector<uint64_t> payloads;
+  std::vector<granit_render_pipeline_draw_binding> draw_bindings;
   std::vector<granit_scene_renderable> renderables;
   payloads.reserve(visible.renderables.indices().size());
+  draw_bindings.reserve(visible.renderables.indices().size());
   renderables.reserve(visible.renderables.indices().size());
   graph_desc.pbr.objects.reserve(visible.renderables.indices().size());
   for (const auto index : visible.renderables.indices()) {
@@ -170,6 +177,10 @@ granit_result render_view(pipeline_state& state, const granit_render_pipeline_re
                                       .normal_matrix = source.normal_matrix,
                                       .object_id = source.object_id});
     payloads.push_back(source.payload);
+    const auto binding = bindings.find(source.payload);
+    if (binding == bindings.end())
+      return GRANIT_ERROR_INVALID_ARGUMENT;
+    draw_bindings.push_back(binding->second);
     renderables.push_back({.model = convert(source.model),
                            .normal_matrix = convert(source.normal_matrix),
                            .bounds_center = convert(source.bounds.center),
@@ -210,6 +221,7 @@ granit_result render_view(pipeline_state& state, const granit_render_pipeline_re
         .view_index = view_index,
         .payload_count = static_cast<uint32_t>(payloads.size()),
         .payloads = payloads.data(),
+        .draw_bindings = draw_bindings.data(),
         .view = &public_view,
         .renderables = renderables.data(),
         .exposure_scale = 1.0F,
@@ -279,7 +291,8 @@ granit_render_pipeline_render(granit_renderer renderer, granit_render_pipeline p
   if (desc == nullptr || desc->struct_size < sizeof(granit_render_pipeline_render_desc) ||
       desc->reserved != 0 || desc->reserved_tail != 0 || desc->scene == GRANIT_NULL_HANDLE ||
       desc->output == GRANIT_NULL_HANDLE || desc->width == 0 || desc->height == 0 ||
-      desc->view_count == 0 || !std::isfinite(desc->exposure_ev)) {
+      desc->view_count == 0 || !std::isfinite(desc->exposure_ev) ||
+      (desc->draw_binding_count != 0 && desc->draw_bindings == nullptr)) {
     return GRANIT_ERROR_INVALID_ARGUMENT;
   }
   auto state = find_pipeline(renderer, pipeline);
@@ -291,6 +304,19 @@ granit_render_pipeline_render(granit_renderer renderer, granit_render_pipeline p
       return GRANIT_ERROR_NOT_READY;
     if (!state->alive)
       return GRANIT_ERROR_INVALID_HANDLE;
+    std::unordered_map<uint64_t, granit_render_pipeline_draw_binding> bindings;
+    bindings.reserve(desc->draw_binding_count);
+    for (uint32_t index = 0; index < desc->draw_binding_count; ++index) {
+      const auto& binding = desc->draw_bindings[index];
+      if (binding.mesh == 0 || binding.material == GRANIT_NULL_HANDLE || binding.reserved != 0 ||
+          !bindings.emplace(binding.payload, binding).second) {
+        return GRANIT_ERROR_INVALID_ARGUMENT;
+      }
+      const auto material_result =
+          granit::pipeline::detail::validate_material_handle(renderer, binding.material);
+      if (material_result != GRANIT_SUCCESS)
+        return material_result;
+    }
     granit::scene::multi_view_snapshot snapshot;
     auto result = granit::pipeline::detail::copy_scene_snapshot(renderer, desc->scene, snapshot);
     if (result != GRANIT_SUCCESS)
@@ -300,7 +326,7 @@ granit_render_pipeline_render(granit_renderer renderer, granit_render_pipeline p
       return GRANIT_ERROR_INVALID_ARGUMENT;
     }
     for (uint32_t offset = 0; offset < desc->view_count; ++offset) {
-      result = render_view(*state, *desc, snapshot, desc->first_view + offset);
+      result = render_view(*state, *desc, snapshot, bindings, desc->first_view + offset);
       if (result != GRANIT_SUCCESS)
         return result;
     }

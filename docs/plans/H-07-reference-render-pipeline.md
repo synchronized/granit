@@ -179,9 +179,10 @@ ABI、描述结构、整数句柄、所有权与线程语义，并在其上提�
 
 `render` 一次处理一个或多个 View，并在库内完成可见性、光源打包、Shadow、PBR HDR、Tone Mapping
 和批量提交。ABI 不公开逐 Pass 函数，不为每个对象跨 DLL 调用一次函数。Renderable 使用稳定的
-`uint64_t payload` 关联调用方 Mesh；管线按批次调用录制回调，回调参数包含核心
-`granit_command_recorder`、只读 payload 数组和用户数据。回调不得保存数组地址，不得结束、提交或
-销毁 Recorder，也不得递归调用同一个 Pipeline。
+`uint64_t payload` 通过单次渲染的只读关联表映射到调用方 Mesh 标识和 `granit_material`。管线完成
+可见性后按可见顺序生成批次，并调用录制回调；回调参数包含核心 `granit_command_recorder`、只读
+Renderable、payload 和关联项数组。回调不得保存数组地址，不得结束、提交或销毁 Recorder，也不得
+递归调用同一个 Pipeline。
 
 ### 所有权、线程与失败语义
 
@@ -221,7 +222,8 @@ ABI、描述结构、整数句柄、所有权与线程语义，并在其上提�
 - `granit/pipeline/render_pipeline.h` 已提供统一 Pipeline 句柄与单次多 View `render` 入口。首版实现
   从 Scene Snapshot 复制稳定输入，逐 View 执行可见性结果，并组合 PBR HDR、Depth 与 Tone Mapping。
 - 固定阶段回调目前只覆盖 Opaque。回调获得 Recorder、HDR/Depth 输出 View、当前 View、可见
-  Renderable 和 payload 批次；不得提交 Recorder 或递归调用同一 Pipeline。
+  Renderable，以及已按 payload 关联的 Mesh/Material 批次；不得提交 Recorder 或递归调用同一
+  Pipeline。重复、缺失、空 Mesh 标识、无效 Material 或跨 Renderer Material 均在录制前失败。
 - 回调失败时本 View 不提交未完成 Recorder；同一 Pipeline 并发或递归调用返回 `NOT_READY`。
 - Tone Mapping Shader 作为构建输入嵌入 `granit_render_pipeline`，运行时不读取示例或测试资产。
   Granit 在固定 Pass 内创建绑定、录制全屏 Draw，并根据 UNORM/sRGB 输出选择唯一颜色编码路径。
@@ -231,7 +233,7 @@ ABI、描述结构、整数句柄、所有权与线程语义，并在其上提�
 
 该目标目前只在构建树中提供。安装 component 与外部 consumer 在统一 Pipeline 的依赖边界完成后
 一起落地，避免过早把内部 `scene`、`material`、`lighting` 静态目标写入安装导出。下一块将已验证
-的公共 Material、Mesh 与 payload 批次关联落地，再将 Shadow、IBL GPU 资源接入统一入口。
+的 Shadow 和 IBL GPU 资源接入统一入口。
 
 ## 分步实施
 

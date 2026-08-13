@@ -9,6 +9,7 @@
 #include <granit/core/result.h>
 #include <granit/core/types.h>
 #include <granit/pipeline/export.h>
+#include <granit/pipeline/material.h>
 #include <granit/pipeline/scene.h>
 #include <granit/renderer/command_recorder.h>
 #include <granit/renderer/resource_types.h>
@@ -19,6 +20,14 @@ typedef granit_handle granit_render_pipeline;
 
 typedef uint32_t granit_render_pipeline_stage;
 #define GRANIT_RENDER_PIPELINE_STAGE_OPAQUE UINT32_C(0)
+
+/** Scene payload 对应的一项外部 Mesh 与 Granit Material 关联。 */
+typedef struct granit_render_pipeline_draw_binding {
+  uint64_t payload;
+  uint64_t mesh;
+  granit_material material;
+  uint64_t reserved;
+} granit_render_pipeline_draw_binding;
 
 /** 固定阶段录制回调的只读上下文；所有指针只在回调期间有效。 */
 typedef struct granit_render_pipeline_record_info {
@@ -31,6 +40,7 @@ typedef struct granit_render_pipeline_record_info {
   uint32_t view_index;
   uint32_t payload_count;
   const uint64_t* payloads;
+  const granit_render_pipeline_draw_binding* draw_bindings;
   const granit_scene_view* view;
   const granit_scene_renderable* renderables;
   float exposure_scale;
@@ -62,6 +72,8 @@ typedef struct granit_render_pipeline_render_desc {
   uint32_t first_view;
   uint32_t view_count;
   float exposure_ev;
+  uint32_t draw_binding_count;
+  const granit_render_pipeline_draw_binding* draw_bindings;
   uint32_t reserved_tail;
 } granit_render_pipeline_render_desc;
 
@@ -76,6 +88,8 @@ typedef struct granit_render_pipeline_render_desc {
    UINT32_C(0),                                                                                    \
    UINT32_C(1),                                                                                    \
    0.0F,                                                                                           \
+   UINT32_C(0),                                                                                    \
+   0,                                                                                              \
    UINT32_C(0)}
 
 #ifdef __cplusplus
@@ -90,6 +104,8 @@ granit_render_pipeline_create(granit_renderer renderer, const granit_render_pipe
 /**
  * 为指定 View 范围构建并提交固定的 PBR HDR 与 Tone Mapping 图。
  *
+ * 每个可见 Renderable 的 payload 必须在 draw_bindings 中唯一对应一项。mesh 是由调用者解释的
+ * 非零标识；Material 必须属于当前 Renderer，且在调用期间不得更新或销毁。
  * 同一管线不可并发调用。回调不得结束、提交或销毁传入的 Recorder，也不得递归调用本管线。
  */
 GRANIT_RENDER_PIPELINE_API granit_result
