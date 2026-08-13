@@ -3,6 +3,8 @@
 
 #include <granit/pipeline/mesh.h>
 
+#include "pipeline/mesh_access.h"
+
 #include <algorithm>
 #include <memory>
 #include <mutex>
@@ -100,6 +102,19 @@ granit_result validate_buffer(granit_renderer renderer, granit_buffer buffer, ui
 }
 
 } // namespace
+
+granit_result granit::pipeline::detail::validate_mesh_handle(granit_renderer renderer,
+                                                             granit_mesh mesh) noexcept {
+  size_t index = 0;
+  uint32_t generation = 0;
+  if (!decode(mesh, index, generation))
+    return GRANIT_ERROR_INVALID_HANDLE;
+  std::scoped_lock lock{registry_mutex};
+  return index < registry.size() && registry[index].generation == generation &&
+                 registry[index].state != nullptr && registry[index].state->renderer == renderer
+             ? GRANIT_SUCCESS
+             : GRANIT_ERROR_INVALID_HANDLE;
+}
 
 extern "C" granit_result granit_mesh_create(granit_renderer renderer, const granit_mesh_desc* desc,
                                             granit_mesh* mesh) {

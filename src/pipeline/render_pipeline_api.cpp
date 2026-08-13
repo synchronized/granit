@@ -8,6 +8,7 @@
 #include "pipeline/default_ibl_resources.h"
 #include "pipeline/embedded_shaders.h"
 #include "pipeline/material_access.h"
+#include "pipeline/mesh_access.h"
 #include "pipeline/scene_access.h"
 
 #include <granit/renderer/render_target.h>
@@ -412,6 +413,10 @@ granit_render_pipeline_render(granit_renderer renderer, granit_render_pipeline p
           granit::pipeline::detail::validate_material_handle(renderer, binding.material);
       if (material_result != GRANIT_SUCCESS)
         return material_result;
+      const auto mesh_result =
+          granit::pipeline::detail::validate_mesh_handle(renderer, binding.mesh);
+      if (mesh_result != GRANIT_SUCCESS)
+        return mesh_result;
     }
     granit::scene::multi_view_snapshot snapshot;
     auto result = granit::pipeline::detail::copy_scene_snapshot(renderer, desc->scene, snapshot);

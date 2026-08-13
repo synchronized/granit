@@ -2,6 +2,7 @@
 // Copyright (c) 2026 Granit contributors
 
 #include <granit/pipeline/material.hpp>
+#include <granit/pipeline/mesh.hpp>
 #include <granit/pipeline/render_pipeline.hpp>
 #include <granit/pipeline/scene.hpp>
 #include <granit/renderer/buffer.hpp>
@@ -51,7 +52,7 @@ std::vector<std::byte> build_material_archive() {
 struct callback_state {
   std::vector<granit_render_pipeline_stage> stages;
   std::vector<uint64_t> payloads;
-  std::vector<uint64_t> meshes;
+  std::vector<granit_mesh> meshes;
   std::vector<granit_material> materials;
   bool opaque_has_shadow = false;
   std::vector<granit_bind_group> ibl_groups;
@@ -116,6 +117,22 @@ granit_result record(const granit_render_pipeline_record_info* info, void* user_
   return result;
 }
 
+void initialize_test_mesh(granit_renderer renderer, granit::buffer& vertex_buffer,
+                          granit::mesh& mesh) {
+  REQUIRE(vertex_buffer.initialize(renderer, {.size = 36,
+                                              .usage = granit::buffer_usage::vertex,
+                                              .location = granit::memory_location::device}) ==
+          granit::result::success);
+  const granit_vertex_attribute attribute{0, GRANIT_VERTEX_FORMAT_FLOAT32X3, 0, 0};
+  const granit_mesh_vertex_buffer vertex{
+      vertex_buffer.native_handle(), 0, {12, GRANIT_VERTEX_STEP_MODE_VERTEX, 1, 0, &attribute}};
+  granit_mesh_desc desc = GRANIT_MESH_DESC_INIT;
+  desc.vertex_buffers = &vertex;
+  desc.vertex_buffer_count = 1;
+  desc.vertex_count = 3;
+  REQUIRE(mesh.initialize(renderer, desc) == granit::result::success);
+}
+
 } // namespace
 
 TEST_CASE("统一Render Pipeline按固定阶段消费Scene Snapshot") {
@@ -169,6 +186,10 @@ TEST_CASE("统一Render Pipeline按固定阶段消费Scene Snapshot") {
   granit::material_instance material;
   REQUIRE(material.initialize(renderer.native_handle(), material_desc) == granit::result::success);
 
+  granit::buffer vertex_buffer;
+  granit::mesh mesh;
+  initialize_test_mesh(renderer.native_handle(), vertex_buffer, mesh);
+
   callback_state callback;
   callback.renderer = renderer.native_handle();
   granit_render_pipeline_desc pipeline_desc = GRANIT_RENDER_PIPELINE_DESC_INIT;
@@ -183,7 +204,8 @@ TEST_CASE("统一Render Pipeline按固定阶段消费Scene Snapshot") {
   render_desc.width = 16;
   render_desc.height = 16;
   CHECK(pipeline.render(render_desc) == granit::result::invalid_argument);
-  const granit_render_pipeline_draw_binding draw_binding{77, 1001, material.native_handle(), 0};
+  const granit_render_pipeline_draw_binding draw_binding{
+      77, mesh.native_handle(), material.native_handle(), 0};
   render_desc.draw_binding_count = 1;
   render_desc.draw_bindings = &draw_binding;
   REQUIRE(pipeline.render(render_desc) == granit::result::success);
@@ -191,7 +213,7 @@ TEST_CASE("统一Render Pipeline按固定阶段消费Scene Snapshot") {
         std::vector<granit_render_pipeline_stage>{GRANIT_RENDER_PIPELINE_STAGE_SHADOW,
                                                   GRANIT_RENDER_PIPELINE_STAGE_OPAQUE});
   CHECK(callback.payloads == std::vector<uint64_t>{77, 77});
-  CHECK(callback.meshes == std::vector<uint64_t>{1001, 1001});
+  CHECK(callback.meshes == std::vector<granit_mesh>{mesh.native_handle(), mesh.native_handle()});
   CHECK(callback.materials ==
         std::vector<granit_material>{material.native_handle(), material.native_handle()});
   CHECK(callback.opaque_has_shadow);
@@ -200,7 +222,8 @@ TEST_CASE("统一Render Pipeline按固定阶段消费Scene Snapshot") {
   REQUIRE(pipeline.render(render_desc) == granit::result::success);
   CHECK(callback.stages.size() == 4);
   CHECK(callback.payloads == std::vector<uint64_t>{77, 77, 77, 77});
-  CHECK(callback.meshes == std::vector<uint64_t>{1001, 1001, 1001, 1001});
+  CHECK(callback.meshes == std::vector<granit_mesh>{mesh.native_handle(), mesh.native_handle(),
+                                                   mesh.native_handle(), mesh.native_handle()});
   REQUIRE(callback.ibl_groups.size() == 2);
   CHECK(callback.ibl_groups[0] == callback.ibl_groups[1]);
 
@@ -209,6 +232,12 @@ TEST_CASE("统一Render Pipeline按固定阶段消费Scene Snapshot") {
   render_desc.draw_bindings = duplicate_bindings.data();
   CHECK(pipeline.render(render_desc) == granit::result::invalid_argument);
   render_desc.draw_binding_count = 1;
+  render_desc.draw_bindings = &draw_binding;
+
+  auto invalid_mesh_binding = draw_binding;
+  invalid_mesh_binding.mesh = 1001;
+  render_desc.draw_bindings = &invalid_mesh_binding;
+  CHECK(pipeline.render(render_desc) == granit::result::invalid_handle);
   render_desc.draw_bindings = &draw_binding;
 
   callback.result = GRANIT_ERROR_NOT_READY;
@@ -286,6 +315,24 @@ TEST_CASE("公共Render Pipeline ABI输出可回读的Tone Mapping像素") {
   REQUIRE(granit_material_create(renderer.native_handle(), &material_desc, &material) ==
           GRANIT_SUCCESS);
 
+  granit_buffer vertex_buffer = GRANIT_NULL_HANDLE;
+  granit_buffer_desc vertex_buffer_desc = GRANIT_BUFFER_DESC_INIT;
+  vertex_buffer_desc.size = 36;
+  vertex_buffer_desc.usage = GRANIT_BUFFER_USAGE_VERTEX_BIT;
+  vertex_buffer_desc.memory_location = GRANIT_MEMORY_LOCATION_DEVICE;
+  REQUIRE(granit_buffer_create(renderer.native_handle(), &vertex_buffer_desc, &vertex_buffer) ==
+          GRANIT_SUCCESS);
+  const granit_vertex_attribute attribute{0, GRANIT_VERTEX_FORMAT_FLOAT32X3, 0, 0};
+  const granit_mesh_vertex_buffer vertex{vertex_buffer,
+                                         0,
+                                         {12, GRANIT_VERTEX_STEP_MODE_VERTEX, 1, 0, &attribute}};
+  granit_mesh_desc mesh_desc = GRANIT_MESH_DESC_INIT;
+  mesh_desc.vertex_buffers = &vertex;
+  mesh_desc.vertex_buffer_count = 1;
+  mesh_desc.vertex_count = 3;
+  granit_mesh mesh = GRANIT_NULL_HANDLE;
+  REQUIRE(granit_mesh_create(renderer.native_handle(), &mesh_desc, &mesh) == GRANIT_SUCCESS);
+
   callback_state callback;
   callback.renderer = renderer.native_handle();
   granit_render_pipeline_desc pipeline_desc = GRANIT_RENDER_PIPELINE_DESC_INIT;
@@ -294,7 +341,7 @@ TEST_CASE("公共Render Pipeline ABI输出可回读的Tone Mapping像素") {
   granit_render_pipeline pipeline = GRANIT_NULL_HANDLE;
   REQUIRE(granit_render_pipeline_create(renderer.native_handle(), &pipeline_desc, &pipeline) ==
           GRANIT_SUCCESS);
-  const granit_render_pipeline_draw_binding binding{91, 2001, material, 0};
+  const granit_render_pipeline_draw_binding binding{91, mesh, material, 0};
   granit_render_pipeline_render_desc render_desc = GRANIT_RENDER_PIPELINE_RENDER_DESC_INIT;
   render_desc.scene = scene;
   render_desc.output = output_view;
@@ -352,6 +399,8 @@ TEST_CASE("公共Render Pipeline ABI输出可回读的Tone Mapping像素") {
 
   REQUIRE(granit_render_pipeline_destroy(renderer.native_handle(), pipeline) == GRANIT_SUCCESS);
   REQUIRE(granit_material_destroy(renderer.native_handle(), material) == GRANIT_SUCCESS);
+  REQUIRE(granit_mesh_destroy(renderer.native_handle(), mesh) == GRANIT_SUCCESS);
+  REQUIRE(granit_buffer_destroy(renderer.native_handle(), vertex_buffer) == GRANIT_SUCCESS);
   REQUIRE(granit_scene_snapshot_destroy(renderer.native_handle(), scene) == GRANIT_SUCCESS);
   REQUIRE(granit_texture_view_destroy(renderer.native_handle(), output_view) == GRANIT_SUCCESS);
   REQUIRE(granit_texture_destroy(renderer.native_handle(), output_texture) == GRANIT_SUCCESS);
