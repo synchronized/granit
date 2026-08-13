@@ -280,6 +280,40 @@ Tone Mapping 资源。H-05D 至此完成，下一步进入 H-05E 的完整参考
 - 建立 1/16/64/128 个可见光源的 CPU 打包和 GPU 帧时间基线。
 - 仅依据测量结果决定是否建立后续分块/聚簇光照任务。
 
+## 剩余技术验证顺序
+
+H-05E 从当前状态按以下顺序收敛，不在完成这些验证前继续增加新的光照模型或后处理效果：
+
+1. **GPU 时间戳与性能基线**：在 Renderer 增加不暴露 Vulkan 类型的时间戳查询能力，分别测量
+   Shadow、1/16/64/128 光源 PBR 和 Tone Mapping；严格区分 CPU 录制/提交等待与 GPU 执行时间。
+2. **功能降级组合**：验证零光源、仅直接光、仅 IBL、无阴影、无 IBL 和完整组合；不通过伪造
+   Texture 或无意义占位资源掩盖缺失能力。
+3. **窗口与 Swapchain 闭环**：将 HDR 中间目标输出到窗口，验证 sRGB 传递、Resize、最小化、
+   Swapchain 重建和离屏/窗口共用 Pass 模型。
+4. **多 View 完整渲染**：每个 View 使用独立可见光源、光源 Buffer、HDR/Depth/输出目标，验证
+   连续录制与提交，同时不复制整份 Scene 数据。
+5. **Render Graph 统一组合**：由 Graph 串联可选 Shadow、PBR HDR 和 Tone Mapping，验证瞬态资源、
+   屏障、失败回滚及多帧重复执行，不再由示例长期手工维护整条命令链。
+6. **多帧生命周期稳定性**：连续运行至少数千帧，覆盖帧间 View/光源/材质更新、Resize、GPU 在途
+   资源延迟销毁、Renderer 销毁诊断和 Device Lost 错误传播。
+7. **Shader 契约与跨平台收尾**：自动校验 HLSL/SPIR-V、C++ 布局和 Pipeline Layout；验证 Linux
+   Clang/GCC、共享/静态构建、安装及独立 Consumer。
+
+## H-05 退出条件与后续阶段
+
+完成上述验证后，H-05 技术路线即视为闭环。届时暂停扩展级联阴影、自动曝光、Bloom、反射探针、
+分块/聚簇和 Bindless 等新能力，除非已有性能基线明确触发对应重新评估条件。
+
+后续工作按以下顺序推进：
+
+1. 设计 Scene、Material、Lighting 和统一渲染入口的首版公共 C ABI，并补充轻量 C++20 RAII 包装。
+2. 实现 H-07 `granit::render_pipeline`，为普通用户组合 Scene、Material、PBR、Lighting、Post Process
+   和 Render Graph，同时保留直接 Renderer 与部分模块两种使用方式。
+3. 完成公共 API 文档、安装导出、C/C++ Consumer 和版本/ABI 回归后，再继续新的高级渲染功能。
+
+当前仍处于开发阶段，公共 API/ABI 可以根据验证结果调整；但一旦首版公共接口进入发布流程，内部
+binding、Vulkan 对象和高频细粒度操作不得泄漏到动态库边界。
+
 ## H-05E1 实现记录
 
 已增加独立 `granit_lighting_benchmarks` 目标和 `pack_view_point_lights` 用例，支持通过 `--lights`
