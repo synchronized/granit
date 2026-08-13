@@ -211,7 +211,7 @@
 
 ## 阶段七：可选高层渲染模块
 
-**状态：进行中。H-01～H-04 已完成，下一步进入 H-05 光照与后处理参考管线。**
+**状态：进行中。H-01～H-04 已完成，H-05 已完成至多 View 闭环。**
 
 ### 目标与交付物
 
@@ -227,15 +227,11 @@
   PBR 闭环，并完成 CPU/GPU 数值回归、生命周期测试和性能基线。
 - **[H-04](plans/H-04-scene-submission.md) / P2 / 已完成**：已完成快照、可见性、多 View、光源
   筛选、PBR Render Graph 适配、生命周期验证和 100～10,000 对象性能基线。
-- **[H-05](plans/H-05-lighting-pipeline.md) / P2 / 实现中**：H-05A 已完成多光源数据与数值参考，
-  H-05B 已完成单方向光阴影，H-05C 已完成 split-sum IBL、Cube/LUT 资源、统一 Group 3、Shader
-  组合变体及离屏像素回归，H-05D 已完成 HDR Attachment、ACES Tone Mapping、输出传递校验及
-  阴影/直接光/IBL/HDR/后处理整链路像素回归；H-05E 已完成 CPU 基线、GPU 多光源资源和像素
-  回归及 1/16/64/128 点光分 Pass GPU 基线，当前测量尚未触发分块/聚簇光照；下一步依次完成
-  功能降级组合及完整窗口 Swapchain 闭环也已完成，下一步依次完成多 View、Render Graph 组合、
-  多帧稳定性和
-  跨平台收尾。完成后转入公共 C ABI 与 H-07，不继续无测量依据地扩展内部效果。分块/聚簇光照
-  仅由真实基准触发。
+- **[H-05](plans/H-05-lighting-pipeline.md) / P2 / 实现中**：H-05A～H-05D 已完成多光源、单方向光
+  阴影、split-sum IBL、HDR/ACES Tone Mapping 及完整离屏像素闭环；H-05E1～H-05E8 已完成 CPU/GPU
+  基线、功能降级组合、窗口 Swapchain/Resize 和多 View 完整 LDR 像素链路。当前测量尚未触发
+  分块/聚簇光照。下一步依次完成 Render Graph 统一组合、多帧生命周期压力测试和跨平台/安装
+  Consumer 收尾；通过后转入公共 C ABI 收敛检查点与 H-07。
 - **H-06 / P2**：评估 2D、UI、调试绘制和文字渲染辅助模块。
 - **[H-07](plans/H-07-reference-render-pipeline.md) / P2 / 已确认**：H-05 完成后，将 Scene、Material、
   PBR、Lighting、Post Process 和 Render Graph 组合为可选 `granit::render_pipeline` 高级参考套件；

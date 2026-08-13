@@ -7,7 +7,7 @@
 
 - 路线图任务：H-05
 - 优先级：P2
-- 状态：实现中，H-05A 已完成
+- 状态：实现中，H-05A～H-05D、H-05E1～H-05E8 已完成
 - 依赖：H-01 Render Graph、H-02 Material、H-03 PBR、H-04 Scene Submission
 
 ## 背景
@@ -290,8 +290,8 @@ H-05E 从当前状态按以下顺序收敛，不在完成这些验证前继续�
    Texture 或无意义占位资源掩盖缺失能力。
 3. **窗口与 Swapchain 闭环（已完成）**：将 HDR 中间目标输出到窗口，验证 sRGB 传递、Resize、最小化、
    Swapchain 重建和离屏/窗口共用 Pass 模型。
-4. **多 View 完整渲染**：每个 View 使用独立可见光源、光源 Buffer、HDR/Depth/输出目标，验证
-   连续录制与提交，同时不复制整份 Scene 数据。
+4. **多 View 完整渲染（已完成）**：每个 View 使用独立可见光源、光源 Buffer、HDR/Depth/输出
+   目标，验证连续录制与提交，同时不复制整份 Scene 数据。
 5. **Render Graph 统一组合**：由 Graph 串联可选 Shadow、PBR HDR 和 Tone Mapping，验证瞬态资源、
    屏障、失败回滚及多帧重复执行，不再由示例长期手工维护整条命令链。
 6. **多帧生命周期稳定性**：连续运行至少数千帧，覆盖帧间 View/光源/材质更新、Resize、GPU 在途
@@ -516,6 +516,17 @@ Readback Buffer，仍由同一个 Recorder 一次提交。
 该回归覆盖 Scene 可见性、逐 View 光源打包、PBR HDR 写入、采样状态转换、Tone Mapping 和最终显示
 编码的完整链路，并确认两套 Group 0、Group 3、HDR/LDR Attachment 均无交叉引用。H-05E 多 View
 首版至此完成；后续多 View 优化应基于实测瓶颈决定是否引入并行录制或外部执行器。
+
+## H-05 阶段验收记录
+
+截至 H-05E8，多光源数据与 Shader、单方向光阴影、split-sum IBL、HDR/ACES Tone Mapping、六种
+功能降级组合、窗口 Swapchain/Resize 和双 View 完整像素链路均已通过实现验证。CPU 与分 Pass GPU
+基线已经建立；1/16/64/128 点光测量尚未触发分块或聚簇光照的重新评估条件。
+
+H-05 当前仍保持“实现中”，因为统一 Render Graph 组合、数千帧生命周期压力测试，以及 Linux、
+静态库、安装和独立 Consumer 验证尚未完成。下一项固定为 H-05E9：将 Shadow、PBR HDR 和 Tone
+Mapping 从示例中的手工命令链收敛为可重复执行的 Graph 组合；完成 E9～E11 后再进入公共 C ABI
+收敛检查点与 H-07。
 
 ## H-05A 实现记录
 

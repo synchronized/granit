@@ -94,19 +94,12 @@ H-04D 已将单方向光 View 的可见结果接入 PBR Render Graph Pass，并�
 Renderable 索引；Scene 不解释 payload 或接管 Mesh/Material。
 H-04 已完成，两个 View 下 100/1,000/10,000 对象的 P50 分别约为 5.11 us、48.05 us 和 0.951 ms；
 当前没有依据引入空间树、内部任务系统或 GPU culling。
-H-05 已确认分阶段方案：先建立有界前向多光源数据和 CPU 数值参考，再依次实现单方向光阴影、
-IBL、HDR/ACES Tone Mapping 和完整参考管线测量。环境、阴影与 Pass 数据使用 Group 3，材质 Group 1
-保持不变；分块/聚簇光照、自动曝光和高级阴影在真实数据证明必要后另立任务。
-H-05A 已新增内部 `granit::lighting` 模块，完成三类光源的对齐 GPU 布局、逐 View 事务式打包、
-容量诊断，以及点光距离衰减和聚光锥响应的 CPU 数值参考。
-H-05B 开始前已增加最小内部 `granit::math`，统一 Scene/PBR/Lighting 的向量与列主序矩阵，并明确
-右手坐标系和 Vulkan `[0,1]` 深度约定；它目前不是稳定 C ABI 或强制用户采用的公共数学库。
-H-05B1 已实现显式单方向光的正交阴影矩阵、从全场景独立筛选投影者，以及 Render Graph 深度写
-Pass。H-05B2 已补充 Graphics Pipeline 固定 depth bias，并建立 Group 3 阴影常量、比较 Sampler、
-Bind Group 和 PBR Graph 读依赖。单方向光阴影首版已经通过 Shader 比较采样以及遮挡/受光离屏
-像素回归，下一步进入 IBL。
-H-05C 的资源前置能力已支持单个六面 Cube Texture/View、完整 mip 链和指定 face/mip 写入；环境
-卷积与 mip 生成仍由调用方或后续离线 Asset 工具负责。
+H-05 已完成至多 View 闭环：内部 `granit::lighting` 提供有界多光源打包、单方向光阴影、split-sum
+IBL、HDR/ACES Tone Mapping 和统一 Group 3；离屏、功能降级、窗口 Swapchain/Resize 及双 View
+PBR→HDR→Tone Mapping→LDR 像素链路均已验证。CPU 与 1/16/64/128 点光分 Pass GPU 基线尚未触发
+分块/聚簇光照；自动曝光和高级阴影也不进入当前范围。环境卷积与 mip 生成仍由调用方或后续离线
+Asset 工具负责。H-05 剩余 Render Graph 统一组合、多帧生命周期压力测试和跨平台/安装 Consumer
+收尾，完成后进入公共 C ABI 收敛检查点与 H-07。
 具体顺序见 [docs/roadmap.md](docs/roadmap.md)。
 
 ## 快速开始

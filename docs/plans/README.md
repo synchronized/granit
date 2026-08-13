@@ -80,10 +80,10 @@ D-03-graphics-pipeline.md
   CPU BRDF、默认纹理、显式 Draw 输入、Render Graph 适配、生命周期/性能基线和 GPU 像素回归。
 - [H-04：场景提交与可见性输入适配层](H-04-scene-submission.md)——已完成；包含快照、Frustum、
   多 View、光源筛选、PBR Render Graph 适配、生命周期验证和性能基线。
-- [H-05：光照与后处理参考管线](H-05-lighting-pipeline.md)——实现中；H-05A 多光源、H-05B 单方向
-  光阴影、H-05C split-sum IBL 和 H-05D HDR/Tone Mapping 已完成，包含统一 Group 3、输出传递校验
-  及阴影、直接光、IBL、HDR、后处理整链路像素回归；H-05E 已完成 CPU 与分 Pass GPU 首份基线，
-  下一步验证功能降级组合。
+- [H-05：光照与后处理参考管线](H-05-lighting-pipeline.md)——实现中；H-05A～H-05D 及
+  H-05E1～H-05E8 已完成，包含多光源、阴影、IBL、HDR/Tone Mapping、性能基线、降级组合、窗口
+  和多 View 完整像素链路。下一步完成 Render Graph 统一组合、多帧生命周期与跨平台/Consumer
+  收尾。
 - [H-07：高级参考渲染套件](H-07-reference-render-pipeline.md)——已确认，等待 H-05 完成；规划类似
   DiligentFX 的可选统一门面，同时保留直接 Renderer 和选择部分高层模块的使用方式。
 
