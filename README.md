@@ -173,9 +173,10 @@ C++20 用户包含：
 #include <granit/granit.hpp>
 ```
 
-公共头文件按层组织：基础结果码、类型和版本位于 `granit/core`，GPU 与渲染接口位于
-`granit/renderer`。根级 `granit.h` 和 `granit.hpp` 是面向普通用户的聚合入口；需要控制编译
-依赖的高级用户可以直接包含分层头文件。
+公共头文件按层组织：基础结果码、类型和版本位于 `granit/core`，跨 ABI 数学值类型位于
+`granit/math`，GPU 与渲染接口位于 `granit/renderer`。`math` 只提供小型值类型，不要求使用
+Granit 自有数学库。根级 `granit.h` 和 `granit.hpp` 是面向普通用户的聚合入口；需要控制编译依赖
+的高级用户可以直接包含分层头文件。
 
 创建 renderer：
 
@@ -190,6 +191,7 @@ if (granit::failed(result)) {
 ## 文档
 
 - [docs/architecture.md](docs/architecture.md)：分层、ABI、句柄和 Vulkan 封装边界。
+- [docs/math-types.md](docs/math-types.md)：公共数学值类型、布局和非目标。
 - [docs/buffer.md](docs/buffer.md)：Buffer 创建、映射和生命周期。
 - [docs/upload-batch.md](docs/upload-batch.md)：Buffer/Texture 同步批量上传和资源保活语义。
 - [docs/build.md](docs/build.md)：环境要求、构建选项和安装方式。

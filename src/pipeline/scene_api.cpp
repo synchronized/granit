@@ -43,9 +43,9 @@ bool decode(granit_handle handle, size_t& index, uint32_t& generation) {
   return generation != 0;
 }
 
-granit::math::float3 convert(granit_scene_float3 value) { return {value.x, value.y, value.z}; }
+granit::math::float3 convert(granit_float3 value) { return {value.x, value.y, value.z}; }
 
-granit::math::matrix4 convert(const granit_scene_matrix4& value) {
+granit::math::matrix4 convert(const granit_matrix4& value) {
   granit::math::matrix4 result{};
   std::copy_n(value.elements, result.size(), result.begin());
   return result;

@@ -31,7 +31,8 @@ Granit 是一个基于 Vulkan 的 C++20 渲染库，面向游戏引擎、实时�
 
 - `.h` 文件提供 C API 和动态库 ABI，必须能由 C11 编译器独立包含。
 - `.hpp` 文件提供 C++20 包装，内部调用 C API，面向普通 C++ 用户提供强类型、移动语义和 RAII。
-- `include/granit/core` 保存基础类型、结果码和版本；`include/granit/renderer` 保存 GPU 与渲染接口。
+- `include/granit/core` 保存基础句柄、结果码和版本；`include/granit/math` 保存跨 ABI 数学值类型；
+  `include/granit/renderer` 保存 GPU 与渲染接口。
 - 根级 `include/granit/granit.h` 和 `granit.hpp` 只作为聚合入口，不继续堆放功能头文件。
 - C++ 包装层保持轻量，不建立与 C API 平行的第二套运行时状态。
 - C API 使用 `granit_` 前缀，宏使用 `GRANIT_` 前缀；C++ API 位于 `granit` 命名空间。

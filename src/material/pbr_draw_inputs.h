@@ -6,6 +6,7 @@
 
 #include "material/pbr_reference.h"
 
+#include <array>
 #include <cstdint>
 
 namespace granit::material {

@@ -10,7 +10,7 @@
 
 namespace {
 
-granit_scene_matrix4 identity() { return {{1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1}}; }
+granit_matrix4 identity() { return {{1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1}}; }
 
 granit_scene_snapshot_desc valid_desc(std::array<granit_scene_view, 1>& views) {
   views[0].view = identity();

@@ -11,6 +11,7 @@ add_library(
   granit_c_header_test
   OBJECT
     headers/command_recorder_h.c
+    headers/math_types_h.c
     headers/timestamp_query_h.c
     headers/pipeline_h.c
     headers/buffer_h.c
@@ -310,6 +311,7 @@ add_library(
   granit_cpp_header_test
   OBJECT
     headers/command_recorder_hpp.cpp
+    headers/math_types_hpp.cpp
     headers/timestamp_query_hpp.cpp
     headers/pipeline_hpp.cpp
     headers/buffer_hpp.cpp

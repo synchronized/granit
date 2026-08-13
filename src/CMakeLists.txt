@@ -85,6 +85,8 @@ target_sources(
       "${PROJECT_SOURCE_DIR}/include/granit/renderer/command_recorder.hpp"
       "${PROJECT_SOURCE_DIR}/include/granit/granit.h"
       "${PROJECT_SOURCE_DIR}/include/granit/granit.hpp"
+      "${PROJECT_SOURCE_DIR}/include/granit/math/types.h"
+      "${PROJECT_SOURCE_DIR}/include/granit/math/types.hpp"
       "${PROJECT_SOURCE_DIR}/include/granit/renderer/pipeline.h"
       "${PROJECT_SOURCE_DIR}/include/granit/renderer/pipeline.hpp"
       "${PROJECT_SOURCE_DIR}/include/granit/renderer/renderer.h"
@@ -213,6 +215,7 @@ target_sources(
 )
 target_compile_features(granit_math PUBLIC cxx_std_20)
 target_include_directories(granit_math PUBLIC "${PROJECT_SOURCE_DIR}/src")
+target_link_libraries(granit_math PUBLIC granit::granit)
 granit_target_compile_warnings(granit_math)
 granit_target_output_directories(granit_math)
 set_target_properties(granit_math PROPERTIES FOLDER "Modules" POSITION_INDEPENDENT_CODE ON)

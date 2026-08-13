@@ -4,38 +4,9 @@
 #ifndef GRANIT_MATH_MATH_H
 #define GRANIT_MATH_MATH_H
 
-#include <array>
+#include <granit/math/types.hpp>
 
 namespace granit::math {
-
-struct float2 {
-  float x = 0.0F;
-  float y = 0.0F;
-
-  friend bool operator==(const float2&, const float2&) = default;
-};
-
-struct float3 {
-  float x = 0.0F;
-  float y = 0.0F;
-  float z = 0.0F;
-
-  friend bool operator==(const float3&, const float3&) = default;
-};
-
-struct float4 {
-  float x = 0.0F;
-  float y = 0.0F;
-  float z = 0.0F;
-  float w = 0.0F;
-
-  friend bool operator==(const float4&, const float4&) = default;
-};
-
-/** 与 HLSL column-major float4x4 一致的列主序矩阵。 */
-using matrix4 = std::array<float, 16>;
-
-inline constexpr matrix4 identity_matrix4{1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1};
 
 [[nodiscard]] float3 add(float3 left, float3 right) noexcept;
 [[nodiscard]] float3 subtract(float3 left, float3 right) noexcept;

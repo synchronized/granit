@@ -161,8 +161,9 @@ ABI、描述结构、整数句柄、所有权与线程语义，并在其上提�
 - `granit_render_pipeline`：拥有默认资源、阴影/HDR 中间目标、Pass 组合和跨帧缓存，借用 Renderer。
 
 不为 Camera、Light、View、颜色、矩阵或单个 Renderable 创建句柄。它们使用包含 `struct_size` 的 C
-值结构；数组统一使用“只读指针 + `uint32_t` 数量”，成功返回前完成复制。所有矩阵明确为 16 个
-`float` 的列主序布局，公共头不依赖内部 `granit::math`。
+值结构；数组统一使用“只读指针 + `uint32_t` 数量”，成功返回前完成复制。向量和矩阵复用
+`granit/math/types.h` 的 ABI 值类型；矩阵明确为 16 个 `float` 的列主序布局。该目录不代表完整
+数学库，内部计算函数仍不属于公共 ABI。
 
 ### 粗粒度调用顺序
 

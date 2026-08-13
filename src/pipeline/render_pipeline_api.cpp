@@ -79,13 +79,13 @@ granit_texture_desc make_depth_desc(uint32_t width, uint32_t height) {
   return desc;
 }
 
-granit_scene_matrix4 convert(const granit::math::matrix4& value) {
-  granit_scene_matrix4 result{};
+granit_matrix4 convert(const granit::math::matrix4& value) {
+  granit_matrix4 result{};
   std::ranges::copy(value, result.elements);
   return result;
 }
 
-granit_scene_float3 convert(granit::math::float3 value) { return {value.x, value.y, value.z}; }
+granit_float3 convert(granit::math::float3 value) { return {value.x, value.y, value.z}; }
 
 granit_result record_tone_mapping(granit_renderer renderer, granit_command_recorder recorder,
                                   granit_texture_view hdr_view, granit_texture_view output_view,

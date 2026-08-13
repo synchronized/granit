@@ -89,19 +89,22 @@ Granit 使用三层接口隔离使用者与 Vulkan：
 C++ 包装层保持轻量，不维护一套独立的渲染状态。它拥有或引用 C 句柄，并将所有实际操作转发给
 C API。普通 C++ 用户不需要直接使用 C API。
 
-## 内部数学约定
+## 数学值类型与内部运算
 
-可选高层模块共享小型内部目标 `granit::math`。它提供普通值类型 `float2/3/4`、列主序
-`matrix4`、基础向量/矩阵运算，以及构建阴影和相机矩阵所需的最小函数。Scene、Material、PBR
-和 Lighting 不应各自维护含义相同但类型不同的数学实现。
+公共目录 `granit/math` 提供 C ABI 普通值类型 `granit_float2/3/4` 和列主序
+`granit_matrix4`；C++20 通过 `granit::math::float2/3/4` 与 `granit::math::matrix4` 使用同一布局。
+Scene、Material、PBR 和 Lighting 不应各自维护含义相同但类型不同的数学值。
+
+这些公共类型只用于跨 API/ABI 搬运数据，不建立大型数学库，不要求使用者放弃 GLM 或自有数学
+类型。可选高层模块共享的小型内部目标 `granit::math` 在相同值类型上提供基础运算，以及构建阴影
+和相机矩阵所需的最小函数；运算函数当前不是公共 ABI。
 
 数学层统一使用右手坐标系，矩阵与 HLSL `column-major float4x4` 一致，投影深度范围为 Vulkan 的
 `[0,1]`。`look_at_rh`、`perspective_rh_zo` 和 `orthographic_rh_zo` 会拒绝退化或非有限参数，
 失败时不修改输出。
 
-该目标当前属于内部实现，不进入稳定 C ABI，也不要求使用者放弃自己的数学库。公共 C API 如需
-矩阵仍使用显式浮点数组；高层适配层负责边界转换。现阶段不加入四元数、Transform 层级、SIMD、
-双精度或通用几何容器，只有实际模块产生需求后才扩展。
+现阶段不加入四元数、Transform 层级、SIMD、双精度或通用几何容器，只有实际模块产生需求后才
+扩展。项目仍处于开发阶段，公共数学值类型尚不承诺稳定 ABI。
 
 ## Vulkan 封装边界
 

@@ -9,28 +9,18 @@
 
 #include <granit/core/result.h>
 #include <granit/core/types.h>
+#include <granit/math/types.h>
 #include <granit/pipeline/export.h>
 #include <granit/renderer/renderer.h>
 
 /** 事务式复制后的多 View 场景快照句柄。零值无效。 */
 typedef granit_handle granit_scene_snapshot;
 
-typedef struct granit_scene_float3 {
-  float x;
-  float y;
-  float z;
-} granit_scene_float3;
-
-/** 列主序 4x4 矩阵。 */
-typedef struct granit_scene_matrix4 {
-  float elements[16];
-} granit_scene_matrix4;
-
 typedef struct granit_scene_view {
-  granit_scene_matrix4 view;
-  granit_scene_matrix4 projection;
-  granit_scene_matrix4 view_projection;
-  granit_scene_float3 camera_position;
+  granit_matrix4 view;
+  granit_matrix4 projection;
+  granit_matrix4 view_projection;
+  granit_float3 camera_position;
   float viewport_x;
   float viewport_y;
   float viewport_width;
@@ -39,9 +29,9 @@ typedef struct granit_scene_view {
 } granit_scene_view;
 
 typedef struct granit_scene_renderable {
-  granit_scene_matrix4 model;
-  granit_scene_matrix4 normal_matrix;
-  granit_scene_float3 bounds_center;
+  granit_matrix4 model;
+  granit_matrix4 normal_matrix;
+  granit_float3 bounds_center;
   float bounds_radius;
   uint64_t layer_mask;
   uint64_t sort_key;
@@ -51,22 +41,22 @@ typedef struct granit_scene_renderable {
 } granit_scene_renderable;
 
 typedef struct granit_scene_directional_light {
-  granit_scene_float3 direction_to_light;
-  granit_scene_float3 radiance;
+  granit_float3 direction_to_light;
+  granit_float3 radiance;
   uint64_t layer_mask;
 } granit_scene_directional_light;
 
 typedef struct granit_scene_point_light {
-  granit_scene_float3 position;
-  granit_scene_float3 intensity;
+  granit_float3 position;
+  granit_float3 intensity;
   float radius;
   uint64_t layer_mask;
 } granit_scene_point_light;
 
 typedef struct granit_scene_spot_light {
-  granit_scene_float3 position;
-  granit_scene_float3 direction;
-  granit_scene_float3 intensity;
+  granit_float3 position;
+  granit_float3 direction;
+  granit_float3 intensity;
   float radius;
   float inner_angle;
   float outer_angle;

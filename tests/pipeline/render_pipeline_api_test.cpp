@@ -19,7 +19,7 @@ bool environment_unavailable(granit::result value) {
          value == granit::result::no_suitable_device;
 }
 
-granit_scene_matrix4 identity() { return {{1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1}}; }
+granit_matrix4 identity() { return {{1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1}}; }
 
 struct callback_state {
   std::vector<granit_render_pipeline_stage> stages;
