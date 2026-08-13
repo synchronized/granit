@@ -6,6 +6,7 @@
 #include "material/material_gpu_instance.h"
 #include "material/material_package_archive.h"
 #include "material/material_template_gpu.h"
+#include "lighting/shadow_ibl_resources.h"
 #include "pipeline/material_access.h"
 
 #include <granit/renderer/pipeline.hpp>
@@ -29,6 +30,7 @@ struct material_state {
   granit_renderer renderer = GRANIT_NULL_HANDLE;
   granit::material::material_package package;
   granit::bind_group_layout object_layout;
+  granit::bind_group_layout lighting_layout;
   granit::material::material_template_gpu material_template;
   granit::material::material_gpu_instance instance;
   bool alive = true;
@@ -208,7 +210,12 @@ extern "C" granit_result granit_material_create(granit_renderer renderer,
     const auto object_result = state->object_layout.initialize(renderer, object_entries);
     if (granit::failed(object_result))
       return static_cast<granit_result>(object_result);
-    const std::array additional_layouts{state->object_layout.native_handle()};
+    const auto lighting_result = state->lighting_layout.initialize(
+        renderer, granit::lighting::standard_lighting_layout_entries);
+    if (granit::failed(lighting_result))
+      return static_cast<granit_result>(lighting_result);
+    const std::array additional_layouts{state->object_layout.native_handle(),
+                                        state->lighting_layout.native_handle()};
     result = state->material_template.initialize(renderer, state->package, additional_layouts);
     if (result != GRANIT_SUCCESS)
       return result;
@@ -298,5 +305,9 @@ extern "C" granit_result granit_material_destroy(granit_renderer renderer,
   const auto layout_result = static_cast<granit_result>(removed->object_layout.reset());
   if (result == GRANIT_SUCCESS)
     result = layout_result;
+  const auto lighting_layout_result =
+      static_cast<granit_result>(removed->lighting_layout.reset());
+  if (result == GRANIT_SUCCESS)
+    result = lighting_layout_result;
   return result;
 }

@@ -98,6 +98,10 @@ granit_result shadow_ibl_resources::initialize(granit_renderer renderer,
   constexpr auto fragment = granit::shader_stage_flags::fragment;
   std::vector<granit::bind_group_layout_entry> layout_entries;
   layout_entries.reserve(12);
+  if (features.shadows && features.ibl) {
+    layout_entries.assign(standard_lighting_layout_entries.begin(),
+                          standard_lighting_layout_entries.end());
+  } else {
   if (features.shadows) {
     layout_entries.push_back({shadow_binding_constants, granit::binding_type::uniform_buffer, 1,
                               granit::shader_stage_flags::vertex | fragment});
@@ -124,6 +128,7 @@ granit_result shadow_ibl_resources::initialize(granit_renderer renderer,
       {light_binding_point, granit::binding_type::storage_buffer, 1, fragment});
   layout_entries.push_back(
       {light_binding_spot, granit::binding_type::storage_buffer, 1, fragment});
+  }
   result = layout_.initialize(renderer, layout_entries);
   if (granit::failed(result)) {
     static_cast<void>(reset());

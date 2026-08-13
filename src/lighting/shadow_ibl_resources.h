@@ -8,7 +8,47 @@
 #include "lighting/light_buffers.h"
 #include "lighting/shadow_resources.h"
 
+#include <array>
+
 namespace granit::lighting {
+
+/** Forward PBR Group 3 的完整绑定契约；Shader 变体可只使用其中一部分。 */
+inline constexpr std::array standard_lighting_layout_entries{
+    granit::bind_group_layout_entry{shadow_binding_constants,
+                                    granit::binding_type::uniform_buffer, 1,
+                                    granit::shader_stage_flags::vertex |
+                                        granit::shader_stage_flags::fragment},
+    granit::bind_group_layout_entry{shadow_binding_texture,
+                                    granit::binding_type::sampled_texture, 1,
+                                    granit::shader_stage_flags::fragment},
+    granit::bind_group_layout_entry{shadow_binding_sampler, granit::binding_type::sampler, 1,
+                                    granit::shader_stage_flags::fragment},
+    granit::bind_group_layout_entry{ibl_binding_constants,
+                                    granit::binding_type::uniform_buffer, 1,
+                                    granit::shader_stage_flags::fragment},
+    granit::bind_group_layout_entry{ibl_binding_irradiance,
+                                    granit::binding_type::sampled_texture, 1,
+                                    granit::shader_stage_flags::fragment},
+    granit::bind_group_layout_entry{ibl_binding_prefiltered_environment,
+                                    granit::binding_type::sampled_texture, 1,
+                                    granit::shader_stage_flags::fragment},
+    granit::bind_group_layout_entry{ibl_binding_brdf_lut,
+                                    granit::binding_type::sampled_texture, 1,
+                                    granit::shader_stage_flags::fragment},
+    granit::bind_group_layout_entry{ibl_binding_sampler, granit::binding_type::sampler, 1,
+                                    granit::shader_stage_flags::fragment},
+    granit::bind_group_layout_entry{light_binding_counts,
+                                    granit::binding_type::uniform_buffer, 1,
+                                    granit::shader_stage_flags::fragment},
+    granit::bind_group_layout_entry{light_binding_directional,
+                                    granit::binding_type::storage_buffer, 1,
+                                    granit::shader_stage_flags::fragment},
+    granit::bind_group_layout_entry{light_binding_point,
+                                    granit::binding_type::storage_buffer, 1,
+                                    granit::shader_stage_flags::fragment},
+    granit::bind_group_layout_entry{light_binding_spot,
+                                    granit::binding_type::storage_buffer, 1,
+                                    granit::shader_stage_flags::fragment}};
 
 struct shadow_ibl_texture_views {
   granit_texture_view shadow = GRANIT_NULL_HANDLE;

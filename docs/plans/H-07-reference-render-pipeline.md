@@ -290,9 +290,9 @@ Renderable、payload 和关联项数组。回调不得保存数组地址，不�
 2. **H-07F 内置 Draw**：让 Pipeline 使用 Mesh 与 Material 自动录制 Opaque/Shadow Draw，回调改为
    可选高级扩展点，普通用户不再必须理解 Command Recorder。Mesh 内部已能
    在录制时重新校验借用 Buffer，并绑定 Vertex/Index Buffer 后发出对应 Draw；剩余工作是
-   Group 0/2 帧与对象 Uniform Layout 已纳入公共 Material 的 Pipeline Layout；剩余工作是
-   创建对应 Buffer/Bind Group，将 Group 3 Lighting 纳入同一 Layout，再由 Shadow/Opaque 阶段
-   调用 Mesh 录制器。
+   Group 0/2 帧与对象 Uniform Layout，以及 Group 3 Shadow/IBL/Light Superset Layout 已纳入
+   公共 Material 的 Pipeline Layout；剩余工作是创建对应 Buffer/Bind Group，并由 Shadow/Opaque
+   阶段绑定 Group 0～3 后调用 Mesh 录制器。
 3. **H-07G 完整示例**：提供安装 API 下的离屏和窗口完整路径，并保留直接 Renderer 用法作为对照。
 4. **H-07H 验收**：补齐生命周期压力、Resize、多 View、Validation Layer、输出一致性和性能对比。
 
