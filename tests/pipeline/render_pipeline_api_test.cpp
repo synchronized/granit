@@ -264,6 +264,11 @@ TEST_CASE("统一Render Pipeline拒绝跨Renderer与越界View") {
   REQUIRE(granit_render_pipeline_destroy(first.native_handle(), pipeline) == GRANIT_SUCCESS);
   CHECK(granit_render_pipeline_destroy(first.native_handle(), pipeline) ==
         GRANIT_ERROR_INVALID_HANDLE);
+
+  granit_render_pipeline_desc automatic_desc = GRANIT_RENDER_PIPELINE_DESC_INIT;
+  REQUIRE(granit_render_pipeline_create(first.native_handle(), &automatic_desc, &pipeline) ==
+          GRANIT_SUCCESS);
+  REQUIRE(granit_render_pipeline_destroy(first.native_handle(), pipeline) == GRANIT_SUCCESS);
 }
 
 TEST_CASE("公共Render Pipeline ABI输出可回读的Tone Mapping像素") {

@@ -302,6 +302,10 @@ Renderable、payload 和关联项数组。回调不得保存数组地址，不�
    内部 `pbr_draw_bindings` 已能将 H-03 的 112 字节 Frame 常量与 144 字节 Object
    常量上传为 Uniform Buffer，并使用 Material 的原始 Layout 创建 Group 0/2 Bind Group。
    首版按 Draw 持有这两组资源；只在测量证明创建成本显著后再增加环形 Buffer 或缓存。
+   Opaque 自动录制已串联 Material Pipeline、Group 0～3、Viewport/Scissor、HDR/Depth
+   Dynamic Rendering 和 Mesh Draw。创建 Pipeline 时录制回调现为可选：提供回调时覆盖
+   默认 Shadow/Opaque 阶段，未提供时走内置路径。当前内置 Opaque 仍要求 View 产生有效
+   方向光阴影；无阴影占位资源和真实 Shadow Caster Draw 尚待后续增量。
 3. **H-07G 完整示例**：提供安装 API 下的离屏和窗口完整路径，并保留直接 Renderer 用法作为对照。
 4. **H-07H 验收**：补齐生命周期压力、Resize、多 View、Validation Layer、输出一致性和性能对比。
 

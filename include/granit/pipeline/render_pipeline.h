@@ -106,7 +106,7 @@ typedef struct granit_render_pipeline_render_desc {
 extern "C" {
 #endif
 
-/** 创建借用 Renderer 的参考渲染管线；回调及 user_data 必须保持有效直至销毁。 */
+/** 创建借用 Renderer 的参考渲染管线；可选回调及 user_data 必须保持有效直至销毁。 */
 GRANIT_RENDER_PIPELINE_API granit_result
 granit_render_pipeline_create(granit_renderer renderer, const granit_render_pipeline_desc* desc,
                               granit_render_pipeline* pipeline);
