@@ -47,10 +47,10 @@ bool make_package(granit::material::material_package& package) {
       .features = {{make_feature_id(pbr_texture_feature_name), pbr_texture_all}},
       .shaders = {{.stage = package_shader_stage::vertex,
                    .entry_point = "vertex_main",
-                   .spirv = load_shader("pbr_shadow.vert.spv")},
+                   .spirv = load_shader("pbr_shadow_ibl_lights.vert.spv")},
                   {.stage = package_shader_stage::fragment,
                    .entry_point = "fragment_main",
-                   .spirv = load_shader("pbr_shadow_ibl_untextured.frag.spv")}},
+                   .spirv = load_shader("pbr_shadow_ibl_lights_untextured.frag.spv")}},
       .pipeline = {}};
   variant.pipeline.primitive.cull_mode = GRANIT_CULL_MODE_BACK;
   variant.pipeline.primitive.front_face = GRANIT_FRONT_FACE_CLOCKWISE;
@@ -99,7 +99,7 @@ bool make_package(granit::material::material_package& package) {
                                     .default_value = {}}});
   auto untextured = variant;
   untextured.features.front().value = 0;
-  untextured.shaders.back().spirv = load_shader("pbr_shadow_ibl_untextured.frag.spv");
+  untextured.shaders.back().spirv = load_shader("pbr_shadow_ibl_lights_untextured.frag.spv");
   desc.variants.push_back(std::move(untextured));
   desc.variants.push_back(std::move(variant));
   return material_package::build(std::move(desc), package) == package_error::none;
@@ -220,6 +220,12 @@ int main() {
          .normal_bias = 0.0F,
          .texel_size = {1.0F, 1.0F}},
         {.intensity = 0.25F, .prefiltered_max_mip = 0.0F}));
+  }
+  if (granit::succeeded(result)) {
+    granit::lighting::packed_view_lights lights;
+    lights.directional.push_back(
+        {.direction_to_light = {0.0F, 0.0F, 1.0F}, .radiance = {1.0F, 1.0F, 1.0F}});
+    result = granit::from_native(lighting_resources.update_lights(lights));
   }
   granit::bind_group_layout object_layout;
   if (granit::succeeded(result))

@@ -16,15 +16,54 @@ static const float MINIMUM_PERCEPTUAL_ROUGHNESS = 0.045;
 #define GRANIT_PBR_IBL 0
 #endif
 
+#ifndef GRANIT_PBR_LIGHTS
+#define GRANIT_PBR_LIGHTS 0
+#endif
+
 struct vertex_output {
   float4 position : SV_Position;
   float3 normal : TEXCOORD0;
   float4 tangent : TEXCOORD1;
   float2 uv : TEXCOORD2;
-#if GRANIT_PBR_SHADOWS
+#if GRANIT_PBR_SHADOWS || GRANIT_PBR_LIGHTS
   float3 world_position : TEXCOORD3;
 #endif
 };
+
+#if GRANIT_PBR_LIGHTS
+struct directional_light_data {
+  float3 direction_to_light;
+  float padding0;
+  float3 radiance;
+  float padding1;
+};
+
+struct point_light_data {
+  float3 position;
+  float radius;
+  float3 intensity;
+  float padding;
+};
+
+struct spot_light_data {
+  float3 position;
+  float radius;
+  float3 direction;
+  float outer_angle_cosine;
+  float3 intensity;
+  float inner_angle_cosine;
+};
+
+[[vk::binding(8, 3)]] cbuffer LightCounts {
+  uint directional_light_count;
+  uint point_light_count;
+  uint spot_light_count;
+  uint light_count_padding;
+};
+[[vk::binding(9, 3)]] StructuredBuffer<directional_light_data> directional_lights;
+[[vk::binding(10, 3)]] StructuredBuffer<point_light_data> point_lights;
+[[vk::binding(11, 3)]] StructuredBuffer<spot_light_data> spot_lights;
+#endif
 
 #if GRANIT_PBR_IBL
 [[vk::binding(3, 3)]] cbuffer IblConstants {
@@ -87,7 +126,7 @@ vertex_output vertex_main(uint vertex_id : SV_VertexID) {
   output.normal = float3(0.0, 0.0, 1.0);
   output.tangent = float4(1.0, 0.0, 0.0, 1.0);
   output.uv = positions[vertex_id] * 0.5 + 0.5;
-#if GRANIT_PBR_SHADOWS
+#if GRANIT_PBR_SHADOWS || GRANIT_PBR_LIGHTS
   output.world_position = float3(positions[vertex_id], 0.5);
 #endif
   return output;
@@ -151,6 +190,45 @@ float visibility_smith_correlated(float normal_dot_view, float normal_dot_light,
   return 0.5 / (lambda_view + lambda_light);
 }
 
+float3 evaluate_direct_light(float3 normal, float3 view, float3 light, float3 radiance,
+                             float3 resolved_base_color, float resolved_metallic,
+                             float resolved_roughness, float shadow) {
+  const float normal_dot_view = saturate(dot(normal, view));
+  const float normal_dot_light = saturate(dot(normal, light));
+  if (normal_dot_light <= 0.0)
+    return 0.0.xxx;
+  const float3 half_vector = normalize(view + light);
+  const float3 reflectance = lerp(0.04.xxx, resolved_base_color, resolved_metallic);
+  const float3 fresnel = fresnel_schlick(saturate(dot(view, half_vector)), reflectance);
+  const float distribution =
+      distribution_ggx(saturate(dot(normal, half_vector)), resolved_roughness);
+  const float visibility =
+      visibility_smith_correlated(normal_dot_view, normal_dot_light, resolved_roughness);
+  const float3 diffuse =
+      resolved_base_color * (1.0 - fresnel) * (1.0 - resolved_metallic) / PI;
+  return (diffuse + fresnel * distribution * visibility) * normal_dot_light * radiance * shadow;
+}
+
+#if GRANIT_PBR_LIGHTS
+float distance_attenuation(float distance_squared, float radius) {
+  if (radius <= 0.0 || distance_squared >= radius * radius)
+    return 0.0;
+  const float normalized_squared = distance_squared / (radius * radius);
+  const float smooth_factor = max(1.0 - normalized_squared * normalized_squared, 0.0);
+  return smooth_factor * smooth_factor / max(distance_squared, 0.0001);
+}
+
+float spot_attenuation(float3 light_to_surface, float3 direction, float inner_cosine,
+                       float outer_cosine) {
+  const float cosine = dot(normalize(light_to_surface), normalize(direction));
+  const float width = inner_cosine - outer_cosine;
+  if (width <= 0.0)
+    return cosine >= outer_cosine ? 1.0 : 0.0;
+  const float value = saturate((cosine - outer_cosine) / width);
+  return value * value * (3.0 - 2.0 * value);
+}
+#endif
+
 float4 fragment_main(vertex_output input) : SV_Target0 {
   float4 resolved_base_color = base_color;
   float resolved_metallic = metallic;
@@ -184,27 +262,63 @@ float4 fragment_main(vertex_output input) : SV_Target0 {
   const float3 normal = geometric_normal;
 #endif
   const float3 view = float3(0.0, 0.0, 1.0);
-  const float3 light = float3(0.0, 0.0, 1.0);
-  const float3 half_vector = normalize(view + light);
   const float normal_dot_view = saturate(dot(normal, view));
-  const float normal_dot_light = saturate(dot(normal, light));
   const float clamped_metallic = saturate(resolved_metallic);
   const float3 reflectance = lerp(0.04.xxx, resolved_base_color.rgb, clamped_metallic);
-  const float3 fresnel = fresnel_schlick(saturate(dot(view, half_vector)), reflectance);
-  const float distribution =
-      distribution_ggx(saturate(dot(normal, half_vector)), resolved_roughness);
-  const float visibility = visibility_smith_correlated(
-      normal_dot_view, normal_dot_light, resolved_roughness);
-  const float3 diffuse =
-      resolved_base_color.rgb * (1.0 - fresnel) * (1.0 - clamped_metallic) / PI;
   const float occlusion = lerp(1.0, sampled_occlusion, saturate(occlusion_strength));
+#if GRANIT_PBR_LIGHTS
+  float3 direct = 0.0.xxx;
+  [loop]
+  for (uint index = 0; index < min(directional_light_count, 16U); ++index) {
+#if GRANIT_PBR_SHADOWS
+    const float directional_shadow = index == 0 ? evaluate_directional_shadow(input, normal) : 1.0;
+#else
+    const float directional_shadow = 1.0;
+#endif
+    direct += evaluate_direct_light(normal, view,
+                                    normalize(directional_lights[index].direction_to_light),
+                                    max(directional_lights[index].radiance, 0.0.xxx),
+                                    resolved_base_color.rgb, clamped_metallic,
+                                    resolved_roughness, directional_shadow);
+  }
+  [loop]
+  for (uint index = 0; index < min(point_light_count, 256U); ++index) {
+    const float3 to_light = point_lights[index].position - input.world_position;
+    const float distance_squared = dot(to_light, to_light);
+    const float attenuation = distance_attenuation(distance_squared, point_lights[index].radius);
+    if (attenuation > 0.0) {
+      direct += evaluate_direct_light(normal, view, normalize(to_light),
+                                      max(point_lights[index].intensity, 0.0.xxx) * attenuation,
+                                      resolved_base_color.rgb, clamped_metallic,
+                                      resolved_roughness, 1.0);
+    }
+  }
+  [loop]
+  for (uint index = 0; index < min(spot_light_count, 256U); ++index) {
+    const float3 to_light = spot_lights[index].position - input.world_position;
+    const float distance_squared = dot(to_light, to_light);
+    const float attenuation = distance_attenuation(distance_squared, spot_lights[index].radius) *
+                              spot_attenuation(-to_light, spot_lights[index].direction,
+                                               spot_lights[index].inner_angle_cosine,
+                                               spot_lights[index].outer_angle_cosine);
+    if (attenuation > 0.0) {
+      direct += evaluate_direct_light(normal, view, normalize(to_light),
+                                      max(spot_lights[index].intensity, 0.0.xxx) * attenuation,
+                                      resolved_base_color.rgb, clamped_metallic,
+                                      resolved_roughness, 1.0);
+    }
+  }
+#else
+  const float3 light = float3(0.0, 0.0, 1.0);
 #if GRANIT_PBR_SHADOWS
   const float shadow = evaluate_directional_shadow(input, normal);
 #else
   const float shadow = 1.0;
 #endif
-  const float3 direct =
-      (diffuse + fresnel * distribution * visibility) * normal_dot_light * shadow;
+  const float3 direct = evaluate_direct_light(normal, view, light, 1.0.xxx,
+                                              resolved_base_color.rgb, clamped_metallic,
+                                              resolved_roughness, shadow);
+#endif
 #if GRANIT_PBR_IBL
   const float3 ibl_fresnel =
       fresnel_schlick_roughness(normal_dot_view, reflectance, saturate(resolved_roughness));

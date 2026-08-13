@@ -302,6 +302,19 @@ Uniform Buffer 和方向光、点光、聚光三个 Storage Buffer，容量在�
 binding 8～11 与可选阴影、IBL binding 合并到一个 Group 3，再接入 PBR Shader 有界循环和 GPU
 时间戳查询。测试覆盖空集合、容量内更新、非法上限、未初始化调用和更新溢出。
 
+## H-05E3 实现记录
+
+阴影与 IBL 组合资源现同时拥有 `light_buffers`，并将计数 Uniform Buffer 及三类 Storage Buffer 的
+binding 8～11 合并到原有 binding 0～7 的同一个 Group 3。调用方可以更新逐 View 打包结果，不需要
+绑定第二个互斥资源组；资源仍按 Bind Group、布局、光源 Buffer、Sampler 和常量 Buffer 的依赖逆序
+销毁。
+
+PBR HLSL 新增 `GRANIT_PBR_LIGHTS` 变体，按计数对方向光、点光和聚光执行有界循环，并复用 CPU
+参考实现的平方反比平滑截止与聚光内外锥响应。首版约定仅第一盏方向光接收当前单级阴影，其余光源
+不投射阴影。SPIR-V 反射测试固定 binding 8～11 契约；离屏整链路已改用该变体，一盏方向光的 GPU
+像素继续与 CPU PBR、IBL、ACES 和 sRGB 参考一致。下一步扩展像素回归到多点光和聚光，再加入 GPU
+时间戳测量。
+
 ## H-05A 实现记录
 
 新增可选内部目标 `granit::lighting`，首版依赖 `granit::scene`，不进入核心动态库或安装导出。

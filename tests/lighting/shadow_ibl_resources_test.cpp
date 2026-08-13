@@ -39,12 +39,12 @@ TEST_CASE("阴影和IBL共享完整Group3") {
                                               granit::texture_usage::depth_stencil_attachment}) ==
           granit::result::success);
   const auto cube_desc = granit::texture_desc{.dimension = granit::texture_dimension::cube,
-                                               .format = granit::texture_format::rgba16_float,
-                                               .usage = granit::texture_usage::sampled,
-                                               .width = 4,
-                                               .height = 4,
-                                               .mip_levels = 3,
-                                               .array_layers = 6};
+                                              .format = granit::texture_format::rgba16_float,
+                                              .usage = granit::texture_usage::sampled,
+                                              .width = 4,
+                                              .height = 4,
+                                              .mip_levels = 3,
+                                              .array_layers = 6};
   REQUIRE(irradiance_texture.initialize(renderer.native_handle(), cube_desc) ==
           granit::result::success);
   REQUIRE(prefiltered_texture.initialize(renderer.native_handle(), cube_desc) ==
@@ -55,33 +55,33 @@ TEST_CASE("阴影和IBL共享完整Group3") {
           granit::result::success);
   REQUIRE(shadow_view.initialize(renderer.native_handle(), shadow_texture.native_handle()) ==
           granit::result::success);
-  const granit::texture_view_desc cube_view{.dimension = granit::texture_dimension::cube,
-                                            .mip_level_count = 3,
-                                            .array_layer_count = 6};
+  const granit::texture_view_desc cube_view{
+      .dimension = granit::texture_dimension::cube, .mip_level_count = 3, .array_layer_count = 6};
   REQUIRE(irradiance_view.initialize(renderer.native_handle(), irradiance_texture.native_handle(),
                                      cube_view) == granit::result::success);
-  REQUIRE(prefiltered_view.initialize(renderer.native_handle(),
-                                      prefiltered_texture.native_handle(), cube_view) ==
-          granit::result::success);
+  REQUIRE(prefiltered_view.initialize(renderer.native_handle(), prefiltered_texture.native_handle(),
+                                      cube_view) == granit::result::success);
   REQUIRE(lut_view.initialize(renderer.native_handle(), lut_texture.native_handle()) ==
           granit::result::success);
 
   granit::lighting::shadow_ibl_resources resources;
-  REQUIRE(resources.initialize(
-              renderer.native_handle(),
-              {.shadow = shadow_view.native_handle(),
-               .ibl = {.irradiance = irradiance_view.native_handle(),
-                       .prefiltered_environment = prefiltered_view.native_handle(),
-                       .brdf_lut = lut_view.native_handle()}},
-              {.light_view_projection = granit::math::identity_matrix4,
-               .depth_bias = 0.0F,
-               .normal_bias = 0.0F,
-               .texel_size = {1.0F, 1.0F}},
-              {.prefiltered_max_mip = 2.0F}) == GRANIT_SUCCESS);
+  REQUIRE(resources.initialize(renderer.native_handle(),
+                               {.shadow = shadow_view.native_handle(),
+                                .ibl = {.irradiance = irradiance_view.native_handle(),
+                                        .prefiltered_environment = prefiltered_view.native_handle(),
+                                        .brdf_lut = lut_view.native_handle()}},
+                               {.light_view_projection = granit::math::identity_matrix4,
+                                .depth_bias = 0.0F,
+                                .normal_bias = 0.0F,
+                                .texel_size = {1.0F, 1.0F}},
+                               {.prefiltered_max_mip = 2.0F}) == GRANIT_SUCCESS);
   CHECK(resources.layout() != GRANIT_NULL_HANDLE);
   CHECK(resources.group() != GRANIT_NULL_HANDLE);
-  CHECK(resources.update_ibl({.intensity = 2.0F, .prefiltered_max_mip = 2.0F}) ==
-        GRANIT_SUCCESS);
+  granit::lighting::packed_view_lights lights;
+  lights.directional.push_back({});
+  lights.point.resize(2);
+  CHECK(resources.update_lights(lights) == GRANIT_SUCCESS);
+  CHECK(resources.update_ibl({.intensity = 2.0F, .prefiltered_max_mip = 2.0F}) == GRANIT_SUCCESS);
 }
 
 TEST_CASE("统一Group3拒绝不完整资源") {
@@ -89,4 +89,5 @@ TEST_CASE("统一Group3拒绝不完整资源") {
   CHECK(resources.initialize(GRANIT_NULL_HANDLE, {}, {}, {}) == GRANIT_ERROR_INVALID_ARGUMENT);
   CHECK(resources.update_shadow({}) == GRANIT_ERROR_INVALID_ARGUMENT);
   CHECK(resources.update_ibl({}) == GRANIT_ERROR_INVALID_ARGUMENT);
+  CHECK(resources.update_lights({}) == GRANIT_ERROR_INVALID_ARGUMENT);
 }

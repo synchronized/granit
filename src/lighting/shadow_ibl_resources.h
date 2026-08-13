@@ -5,6 +5,7 @@
 #define GRANIT_LIGHTING_SHADOW_IBL_RESOURCES_H
 
 #include "lighting/ibl_resources.h"
+#include "lighting/light_buffers.h"
 #include "lighting/shadow_resources.h"
 
 namespace granit::lighting {
@@ -19,10 +20,11 @@ class shadow_ibl_resources {
 public:
   [[nodiscard]] granit_result initialize(granit_renderer renderer, shadow_ibl_texture_views views,
                                          const shadow_sampling_constants& shadow_constants,
-                                         const ibl_sampling_constants& ibl_constants) noexcept;
-  [[nodiscard]] granit_result update_shadow(
-      const shadow_sampling_constants& constants) noexcept;
+                                         const ibl_sampling_constants& ibl_constants,
+                                         const light_limits& light_capacities = {}) noexcept;
+  [[nodiscard]] granit_result update_shadow(const shadow_sampling_constants& constants) noexcept;
   [[nodiscard]] granit_result update_ibl(const ibl_sampling_constants& constants) noexcept;
+  [[nodiscard]] granit_result update_lights(const packed_view_lights& lights) noexcept;
   [[nodiscard]] granit_result reset() noexcept;
   [[nodiscard]] bool initialized() const noexcept { return group_.valid(); }
   [[nodiscard]] granit_bind_group_layout layout() const noexcept { return layout_.native_handle(); }
@@ -33,6 +35,7 @@ private:
   granit::buffer ibl_constants_;
   granit::sampler shadow_sampler_;
   granit::sampler ibl_sampler_;
+  light_buffers lights_;
   granit::bind_group_layout layout_;
   granit::bind_group group_;
 };
