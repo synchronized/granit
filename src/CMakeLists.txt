@@ -40,6 +40,8 @@ target_sources(
     backend/vulkan/surface.h
     backend/vulkan/swapchain.cpp
     backend/vulkan/swapchain.h
+    backend/vulkan/timestamp_query.cpp
+    backend/vulkan/timestamp_query.h
     backend/vulkan/upload_context.cpp
     backend/vulkan/upload_context.h
     backend/vulkan/version_check.cpp

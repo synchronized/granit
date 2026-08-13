@@ -359,6 +359,17 @@ HDR 空间相加，再经过 ACES fitted 与 Shader sRGB 编码，与最终 `RGB
 两条路径均通过逐通道像素比较，确认多光源循环、单方向光阴影边界及后处理组合正确。下一步实现
 Renderer 时间戳查询能力，并分别测量多光源 PBR Pass 与完整后处理链的 GPU 时间。
 
+## H-05E5a 实现记录
+
+已建立内部 Vulkan 时间戳查询池基础层，负责创建固定容量的 Timestamp Query Pool、在命令流中
+重置和写入查询、读取 64 位结果并按设备 `timestampPeriod` 统一换算为纳秒。接口校验设备、命令
+句柄、查询范围和 Pipeline Stage，不向公共头文件传播 `VkQueryPool`、Vulkan Stage 或 tick 单位。
+
+Vulkan 设备初始化现同时验证 Query Pool、命令重置/写入及结果读取函数，避免在运行到性能测量时才
+发现驱动函数缺失。后端测试覆盖最小容量、重复初始化、查询越界、空命令和销毁状态。下一步将该
+基础层接入 Renderer 句柄表与 Command Recorder，定义后端无关 Stage 和异步结果可用性语义，再做
+真实命令提交后的时间区间回归。
+
 ## H-05A 实现记录
 
 新增可选内部目标 `granit::lighting`，首版依赖 `granit::scene`，不进入核心动态库或安装导出。

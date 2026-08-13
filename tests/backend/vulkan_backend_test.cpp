@@ -9,7 +9,9 @@
 #include "backend/vulkan/physical_device.h"
 #include "backend/vulkan/result.h"
 #include "backend/vulkan/swapchain.h"
+#include "backend/vulkan/timestamp_query.h"
 
+#include <array>
 #include <utility>
 
 #include <catch2/catch_all.hpp>
@@ -30,6 +32,7 @@ using granit::detail::vulkan_instance;
 using granit::detail::vulkan_instance_desc;
 using granit::detail::vulkan_memory_allocator;
 using granit::detail::vulkan_memory_location;
+using granit::detail::vulkan_timestamp_query_pool;
 
 TEST_CASE("Vulkan 结果映射为后端无关错误", "[vulkan][result]") {
   CHECK(map_vulkan_result(VK_SUCCESS) == GRANIT_SUCCESS);
@@ -191,6 +194,34 @@ TEST_CASE("创建带独立函数表的 Vulkan 逻辑设备", "[vulkan][device]")
   CHECK(moved.valid());
   moved.reset();
   CHECK_FALSE(moved.valid());
+}
+
+TEST_CASE("Vulkan 时间戳查询池保存设备时间单位并校验范围", "[vulkan][timestamp]") {
+  const auto loader = initialize_vulkan_loader();
+  if (loader.result != GRANIT_SUCCESS)
+    SKIP("当前运行环境没有可用的 Vulkan 1.3 loader");
+
+  vulkan_instance instance;
+  REQUIRE(instance.initialize({.application_name = "granit-timestamp-tests"}) == GRANIT_SUCCESS);
+  vulkan_device device;
+  const auto device_result = device.initialize(instance);
+  if (device_result == GRANIT_ERROR_NO_SUITABLE_DEVICE)
+    SKIP("当前运行环境没有满足 Granit Vulkan 1.3 要求的图形设备");
+  REQUIRE(device_result == GRANIT_SUCCESS);
+
+  vulkan_timestamp_query_pool queries;
+  CHECK(queries.initialize(device, 1) == GRANIT_ERROR_INVALID_ARGUMENT);
+  REQUIRE(queries.initialize(device, 4) == GRANIT_SUCCESS);
+  CHECK(queries.valid());
+  CHECK(queries.query_count() == 4);
+  CHECK(queries.initialize(device, 4) == GRANIT_ERROR_INVALID_ARGUMENT);
+  CHECK(queries.reset(device, VK_NULL_HANDLE, 0, 4) == GRANIT_ERROR_INVALID_ARGUMENT);
+  CHECK(queries.write(device, VK_NULL_HANDLE, VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT, 0) ==
+        GRANIT_ERROR_INVALID_ARGUMENT);
+  std::array<std::uint64_t, 5> too_many{};
+  CHECK(queries.read_nanoseconds(device, 0, too_many, false) == GRANIT_ERROR_INVALID_ARGUMENT);
+  queries.destroy(device);
+  CHECK_FALSE(queries.valid());
 }
 
 TEST_CASE("每帧上下文创建初始已触发 Fence 和两个二进制 Semaphore", "[vulkan][frame]") {
