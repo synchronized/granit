@@ -6,6 +6,7 @@
 
 #include <granit/core/result.h>
 
+#include <cstdint>
 #include <span>
 #include <unordered_map>
 #include <vector>
