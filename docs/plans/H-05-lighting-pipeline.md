@@ -288,7 +288,7 @@ H-05E 从当前状态按以下顺序收敛，不在完成这些验证前继续�
    Shadow、1/16/64/128 光源 PBR 和 Tone Mapping；严格区分 CPU 录制/提交等待与 GPU 执行时间。
 2. **功能降级组合（已完成）**：验证零光源、仅直接光、仅 IBL、无阴影、无 IBL 和完整组合；不通过伪造
    Texture 或无意义占位资源掩盖缺失能力。
-3. **窗口与 Swapchain 闭环**：将 HDR 中间目标输出到窗口，验证 sRGB 传递、Resize、最小化、
+3. **窗口与 Swapchain 闭环（已完成）**：将 HDR 中间目标输出到窗口，验证 sRGB 传递、Resize、最小化、
    Swapchain 重建和离屏/窗口共用 Pass 模型。
 4. **多 View 完整渲染**：每个 View 使用独立可见光源、光源 Buffer、HDR/Depth/输出目标，验证
    连续录制与提交，同时不复制整份 Scene 数据。
@@ -468,6 +468,18 @@ Depth Attachment 的线性 HDR 目标，再执行同一个 Tone Mapping Pass 到
 Pipeline 状态不再维护两份。窗口路径当前使用基础单方向光 PBR Shader，用于先固定 PBR→HDR→
 Tone Mapping→Present 的帧结构；离屏多光源像素回归和 GPU Benchmark 继续通过。下一步把统一
 Group 3、多光源、阴影与 IBL 资源接入窗口路径，完成完整参考管线闭环。
+
+## H-05E7c 实现记录
+
+窗口示例现使用与离屏回归相同的 `SHADOW+IBL+LIGHTS` PBR Shader 和 Group 3 契约。示例辅助资源
+创建一张真实 Shadow Depth Texture、Irradiance Cube、Prefiltered Environment Cube、BRDF LUT、
+方向光/点光/聚光 Buffer 及统一 Bind Group；固定生成纹理与离屏数值回归一致，不依赖外部资产加载。
+
+每帧按 Shadow 清屏、完整多光源 PBR Draw、HDR Tone Mapping、Swapchain Present 顺序录制。窗口
+Resize 只重建尺寸相关 HDR Color/Depth 和后处理资源，光源、IBL、材质及 PBR Pipeline 保持复用；
+最小化、OUT_OF_DATE、SUBOPTIMAL 和 sRGB/UNORM 传递沿用 H-05E7a 的处理。Clang Release 与 VS Debug
+均通过主动 Resize 的三帧 Validation smoke test，离屏六组合像素回归和 GPU Benchmark 未发生退化。
+窗口与 Swapchain 闭环至此完成，下一步进入多 View 完整渲染。
 
 ## H-05A 实现记录
 

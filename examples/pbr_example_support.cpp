@@ -7,6 +7,7 @@
 
 #include <array>
 #include <bit>
+#include <cmath>
 
 namespace granit::examples {
 namespace {
@@ -20,6 +21,104 @@ bool set_parameter(material::material_gpu_instance& instance, std::string_view n
 }
 
 } // namespace
+
+result pbr_lighting_resources::initialize(granit_renderer renderer) {
+  auto value = shadow_texture_.initialize(
+      renderer, {.format = texture_format::d32_float,
+                 .usage = texture_usage::depth_stencil_attachment | texture_usage::sampled,
+                 .width = 1,
+                 .height = 1});
+  if (succeeded(value))
+    value = shadow_view_.initialize(renderer, shadow_texture_.native_handle());
+  const auto cube_desc =
+      texture_desc{.dimension = texture_dimension::cube,
+                   .format = texture_format::rgba16_float,
+                   .usage = texture_usage::sampled | texture_usage::transfer_destination,
+                   .width = 1,
+                   .height = 1,
+                   .array_layers = 6};
+  if (succeeded(value))
+    value = irradiance_texture_.initialize(renderer, cube_desc);
+  if (succeeded(value))
+    value = prefiltered_texture_.initialize(renderer, cube_desc);
+  if (succeeded(value)) {
+    value = brdf_lut_texture_.initialize(
+        renderer, {.format = texture_format::rgba16_float,
+                   .usage = texture_usage::sampled | texture_usage::transfer_destination});
+  }
+  constexpr std::array<std::uint16_t, 24> cube_pixels{
+      0x3c00, 0x3c00, 0x3c00, 0x3c00, 0x3c00, 0x3c00, 0x3c00, 0x3c00,
+      0x3c00, 0x3c00, 0x3c00, 0x3c00, 0x3c00, 0x3c00, 0x3c00, 0x3c00,
+      0x3c00, 0x3c00, 0x3c00, 0x3c00, 0x3c00, 0x3c00, 0x3c00, 0x3c00};
+  constexpr std::array<std::uint16_t, 4> lut_pixel{0x3800, 0x2e66, 0x0000, 0x3c00};
+  const auto cube_bytes = std::as_bytes(std::span{cube_pixels});
+  if (succeeded(value)) {
+    value = irradiance_texture_.write(cube_bytes, {.bytes_per_row = 8, .rows_per_image = 1},
+                                      {.array_layer_count = 6});
+  }
+  if (succeeded(value)) {
+    value = prefiltered_texture_.write(cube_bytes, {.bytes_per_row = 8, .rows_per_image = 1},
+                                       {.array_layer_count = 6});
+  }
+  if (succeeded(value))
+    value = brdf_lut_texture_.write(std::as_bytes(std::span{lut_pixel}), {.bytes_per_row = 8}, {});
+  const texture_view_desc cube_view_desc{.dimension = texture_dimension::cube,
+                                         .array_layer_count = 6};
+  if (succeeded(value)) {
+    value =
+        irradiance_view_.initialize(renderer, irradiance_texture_.native_handle(), cube_view_desc);
+  }
+  if (succeeded(value)) {
+    value = prefiltered_view_.initialize(renderer, prefiltered_texture_.native_handle(),
+                                         cube_view_desc);
+  }
+  if (succeeded(value))
+    value = brdf_lut_view_.initialize(renderer, brdf_lut_texture_.native_handle());
+  if (succeeded(value)) {
+    value = from_native(resources_.initialize(
+        renderer,
+        {.shadow = shadow_view_.native_handle(),
+         .ibl = {.irradiance = irradiance_view_.native_handle(),
+                 .prefiltered_environment = prefiltered_view_.native_handle(),
+                 .brdf_lut = brdf_lut_view_.native_handle()}},
+        {.light_view_projection = math::identity_matrix4, .texel_size = {1.0F, 1.0F}},
+        {.intensity = 0.25F}, {.directional = 1, .point = 1, .spot = 1}));
+  }
+  if (succeeded(value)) {
+    lighting::packed_view_lights lights;
+    lights.directional.push_back(
+        {.direction_to_light = {0.0F, 0.0F, 1.0F}, .radiance = {1.0F, 1.0F, 1.0F}});
+    lights.point.push_back(
+        {.position = {0.0F, 0.0F, 1.5F}, .radius = 3.0F, .intensity = {0.3F, 0.2F, 0.1F}});
+    lights.spot.push_back({.position = {0.0F, 0.0F, 1.5F},
+                           .radius = 3.0F,
+                           .direction = {0.0F, 0.0F, -1.0F},
+                           .outer_angle_cosine = std::cos(0.6F),
+                           .intensity = {0.1F, 0.2F, 0.3F},
+                           .inner_angle_cosine = std::cos(0.2F)});
+    value = from_native(resources_.update_lights(lights));
+  }
+  if (failed(value))
+    static_cast<void>(reset());
+  return value;
+}
+
+result pbr_lighting_resources::reset() {
+  auto value = from_native(resources_.reset());
+  const auto capture = [&](result next) {
+    if (succeeded(value))
+      value = next;
+  };
+  capture(brdf_lut_view_.reset());
+  capture(prefiltered_view_.reset());
+  capture(irradiance_view_.reset());
+  capture(brdf_lut_texture_.reset());
+  capture(prefiltered_texture_.reset());
+  capture(irradiance_texture_.reset());
+  capture(shadow_view_.reset());
+  capture(shadow_texture_.reset());
+  return value;
+}
 
 bool build_pbr_package(material::material_package& package,
                        std::span<const std::uint32_t> vertex_shader,
