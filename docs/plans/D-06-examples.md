@@ -22,8 +22,10 @@
   present 和窗口尺寸变化后的重建。
 
 所有示例只包含 `granit/granit.hpp` 和必要的标准库或平台窗口头，不包含 Vulkan 头文件，也不
-访问 Granit 内部目标。着色器源码与预编译 SPIR-V 放在 `examples/assets`；普通构建不依赖
-Vulkan SDK 或运行时 Shader 编译器。
+访问 Granit 内部目标。仅供基础示例使用的着色器源码与预编译 SPIR-V 放在
+`examples/assets`；普通构建不依赖 Vulkan SDK 或运行时 Shader 编译器。正式 Pipeline 内置
+Shader 和跨示例共享的 PBR 参考 Shader 分别归入 `src/pipeline/shaders` 与
+`assets/shaders/pbr`。
 
 ## 恢复边界
 

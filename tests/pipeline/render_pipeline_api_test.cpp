@@ -72,12 +72,21 @@ std::vector<std::byte> build_automatic_material_archive() {
   material_package_desc desc;
   desc.metadata.constant_buffer_size = 48;
   desc.metadata.parameters = {
-      {.name = "base_color", .type = parameter_type::float4, .offset = 0},
-      {.name = "metallic", .type = parameter_type::float32, .offset = 16},
-      {.name = "perceptual_roughness", .type = parameter_type::float32, .offset = 20},
-      {.name = "normal_scale", .type = parameter_type::float32, .offset = 24},
-      {.name = "occlusion_strength", .type = parameter_type::float32, .offset = 28},
-      {.name = "emissive", .type = parameter_type::float3, .offset = 32}};
+      {.name = "base_color", .type = parameter_type::float4, .offset = 0, .default_value = {}},
+      {.name = "metallic", .type = parameter_type::float32, .offset = 16, .default_value = {}},
+      {.name = "perceptual_roughness",
+       .type = parameter_type::float32,
+       .offset = 20,
+       .default_value = {}},
+      {.name = "normal_scale",
+       .type = parameter_type::float32,
+       .offset = 24,
+       .default_value = {}},
+      {.name = "occlusion_strength",
+       .type = parameter_type::float32,
+       .offset = 28,
+       .default_value = {}},
+      {.name = "emissive", .type = parameter_type::float3, .offset = 32, .default_value = {}}};
   material_variant_desc variant{.pass = make_feature_id("opaque"),
                                 .features = {{make_feature_id("pbr_texture_mask"), 0}},
                                 .shaders = {{.stage = package_shader_stage::vertex,
@@ -344,7 +353,8 @@ TEST_CASE("统一Render Pipeline按固定阶段消费Scene Snapshot") {
                                                       .height = 16,
                                                       .depth = 1};
   const granit_texture_data_layout first_layout{};
-  const granit_texture_data_layout second_layout{.offset = 16 * 16 * 4};
+  const granit_texture_data_layout second_layout{
+      .offset = 16 * 16 * 4, .bytes_per_row = 0, .rows_per_image = 0};
   REQUIRE(multi_view_recorder.copy_texture_to_buffer(
               output_texture.native_handle(), multi_view_readback.native_handle(), first_layout,
               multi_view_region) == granit::result::success);

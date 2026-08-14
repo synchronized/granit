@@ -37,8 +37,9 @@ granit::scene::view_input make_view(std::uint64_t layer_mask) {
 }
 
 std::vector<std::uint32_t> load_shader(std::string_view name) {
-  std::ifstream stream{std::string{GRANIT_LIGHTING_ASSET_DIR} + "/" + std::string{name},
-                       std::ios::binary};
+  const auto directory = name.starts_with("tone_mapping") ? GRANIT_PIPELINE_SHADER_DIR
+                                                           : GRANIT_PBR_SHADER_DIR;
+  std::ifstream stream{std::string{directory} + "/" + std::string{name}, std::ios::binary};
   const std::vector<char> bytes{std::istreambuf_iterator<char>{stream}, {}};
   if (bytes.empty() || bytes.size() % sizeof(std::uint32_t) != 0)
     return {};

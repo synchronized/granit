@@ -184,7 +184,9 @@ target_link_libraries(granit_lighting_test PRIVATE granit::lighting Catch2::Catc
 target_compile_options(granit_lighting_test PRIVATE $<$<COMPILE_LANG_AND_ID:CXX,MSVC>:/utf-8>)
 target_compile_definitions(
   granit_lighting_test
-  PRIVATE GRANIT_LIGHTING_ASSET_DIR="${PROJECT_SOURCE_DIR}/examples/assets"
+  PRIVATE
+    GRANIT_PBR_SHADER_DIR="${PROJECT_SOURCE_DIR}/assets/shaders/pbr"
+    GRANIT_PIPELINE_SHADER_DIR="${PROJECT_SOURCE_DIR}/src/pipeline/shaders"
 )
 granit_target_compile_warnings(granit_lighting_test)
 granit_target_output_directories(granit_lighting_test)
@@ -205,7 +207,7 @@ target_link_libraries(
 target_compile_options(granit_pipeline_test PRIVATE $<$<COMPILE_LANG_AND_ID:CXX,MSVC>:/utf-8>)
 target_compile_definitions(
   granit_pipeline_test
-  PRIVATE GRANIT_PIPELINE_ASSET_DIR="${PROJECT_SOURCE_DIR}/examples/assets"
+  PRIVATE GRANIT_PIPELINE_ASSET_DIR="${PROJECT_SOURCE_DIR}/assets/shaders/pbr"
 )
 granit_target_compile_warnings(granit_pipeline_test)
 granit_target_output_directories(granit_pipeline_test)

@@ -149,9 +149,9 @@ correlated GGX 可见性和单方向光直接光照。输入方向会归一化�
 
 ## H-03C 实现记录
 
-`pbr_untextured.hlsl` 已按 H-03B 的公式实现 Schlick、GGX 和 Smith correlated GGX，并使用固定的
-线性 Base Color、Metallic、Perceptual Roughness 与正入射方向光。顶点阶段通过 `SV_VertexID`
-生成三角形，首版不要求 Vertex Buffer；材质常量与纹理绑定留到 H-03D。
+`assets/shaders/pbr/pbr_untextured.hlsl` 已按 H-03B 的公式实现 Schlick、GGX 和 Smith correlated
+GGX，并使用固定的线性 Base Color、Metallic、Perceptual Roughness 与正入射方向光。顶点阶段
+通过 `SV_VertexID` 生成三角形，首版不要求 Vertex Buffer；材质常量与纹理绑定留到 H-03D。
 
 示例资产同时提供源 HLSL、DXC 生成的 Vulkan 1.3 SPIR-V 和 `.grmat.json` 离线包描述。源描述可由
 `granit_material_tool` 确定性构建为 v2 二进制包。`granit_pbr_offscreen_example` 通过

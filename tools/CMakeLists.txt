@@ -43,7 +43,8 @@ set_target_properties(granit_material_tool PROPERTIES FOLDER "Tools")
 if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
   add_test(
     NAME granit.shader_tool.tone_mapping_reflect
-    COMMAND granit_shader_tool "${PROJECT_SOURCE_DIR}/examples/assets/tone_mapping.frag.spv"
+    COMMAND granit_shader_tool
+            "${PROJECT_SOURCE_DIR}/src/pipeline/shaders/tone_mapping.frag.spv"
   )
   set_tests_properties(
     granit.shader_tool.tone_mapping_reflect
@@ -53,7 +54,8 @@ if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
 
   add_test(
     NAME granit.shader_tool.pbr_ibl_reflect
-    COMMAND granit_shader_tool "${PROJECT_SOURCE_DIR}/examples/assets/pbr_ibl_untextured.frag.spv"
+    COMMAND granit_shader_tool
+            "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/pbr_ibl_untextured.frag.spv"
   )
   set_tests_properties(
     granit.shader_tool.pbr_ibl_reflect
@@ -64,7 +66,7 @@ if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
     NAME granit.shader_tool.pbr_shadow_ibl_reflect
     COMMAND
       granit_shader_tool
-      "${PROJECT_SOURCE_DIR}/examples/assets/pbr_shadow_ibl_untextured.frag.spv"
+      "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/pbr_shadow_ibl_untextured.frag.spv"
   )
   set_tests_properties(
     granit.shader_tool.pbr_shadow_ibl_reflect
@@ -76,13 +78,13 @@ if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
     NAME granit.shader_tool.pbr_shadow_ibl_lights_reflect
     COMMAND
       granit_shader_tool
-      "${PROJECT_SOURCE_DIR}/examples/assets/pbr_shadow_ibl_lights_untextured.frag.spv"
+      "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/pbr_shadow_ibl_lights_untextured.frag.spv"
   )
 
   add_test(
     NAME granit.shader_tool.pbr_lights_reflect
     COMMAND granit_shader_tool
-            "${PROJECT_SOURCE_DIR}/examples/assets/pbr_lights_untextured.frag.spv"
+            "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/pbr_lights_untextured.frag.spv"
   )
   set_tests_properties(
     granit.shader_tool.pbr_lights_reflect
@@ -92,7 +94,7 @@ if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
   add_test(
     NAME granit.shader_tool.pbr_ibl_lights_reflect
     COMMAND granit_shader_tool
-            "${PROJECT_SOURCE_DIR}/examples/assets/pbr_ibl_lights_untextured.frag.spv"
+            "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/pbr_ibl_lights_untextured.frag.spv"
   )
   set_tests_properties(
     granit.shader_tool.pbr_ibl_lights_reflect
@@ -102,7 +104,7 @@ if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
   add_test(
     NAME granit.shader_tool.pbr_shadow_lights_reflect
     COMMAND granit_shader_tool
-            "${PROJECT_SOURCE_DIR}/examples/assets/pbr_shadow_lights_untextured.frag.spv"
+            "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/pbr_shadow_lights_untextured.frag.spv"
   )
   set_tests_properties(
     granit.shader_tool.pbr_shadow_lights_reflect

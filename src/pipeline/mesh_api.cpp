@@ -134,7 +134,7 @@ granit::pipeline::detail::copy_mesh_pipeline_state(granit_renderer renderer, gra
     state = registry[index].state;
   }
   try {
-    mesh_pipeline_state replacement{.topology = state->topology};
+    mesh_pipeline_state replacement{.topology = state->topology, .vertex_buffers = {}};
     replacement.vertex_buffers.reserve(state->vertex_buffers.size());
     bool has_position = false;
     for (const auto& source : state->vertex_buffers) {

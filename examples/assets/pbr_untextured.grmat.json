@@ -35,8 +35,8 @@
         "color_blend": {"enabled": false}
       },
       "shaders": [
-        {"stage": "vertex", "entry_point": "vertex_main", "spirv": "pbr_untextured.vert.spv"},
-        {"stage": "fragment", "entry_point": "fragment_main", "spirv": "pbr_untextured.frag.spv"}
+        {"stage": "vertex", "entry_point": "vertex_main", "spirv": "../../assets/shaders/pbr/pbr_untextured.vert.spv"},
+        {"stage": "fragment", "entry_point": "fragment_main", "spirv": "../../assets/shaders/pbr/pbr_untextured.frag.spv"}
       ]
     },
     {
@@ -54,8 +54,8 @@
         "color_blend": {"enabled": false}
       },
       "shaders": [
-        {"stage": "vertex", "entry_point": "vertex_main", "spirv": "pbr_untextured.vert.spv"},
-        {"stage": "fragment", "entry_point": "fragment_main", "spirv": "pbr_textured.frag.spv"}
+        {"stage": "vertex", "entry_point": "vertex_main", "spirv": "../../assets/shaders/pbr/pbr_untextured.vert.spv"},
+        {"stage": "fragment", "entry_point": "fragment_main", "spirv": "../../assets/shaders/pbr/pbr_textured.frag.spv"}
       ]
     }
   ]

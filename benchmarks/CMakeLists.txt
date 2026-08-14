@@ -180,7 +180,8 @@ target_compile_definitions(
     GRANIT_BENCHMARK_LINK_MODE="$<IF:$<BOOL:${BUILD_SHARED_LIBS}>,shared,static>"
     GRANIT_BENCHMARK_REVISION="${granit_benchmark_revision}"
     GRANIT_BENCHMARK_SYSTEM="${CMAKE_SYSTEM_NAME}-${CMAKE_SYSTEM_PROCESSOR}"
-    GRANIT_EXAMPLE_ASSET_DIR="${PROJECT_SOURCE_DIR}/examples/assets"
+    GRANIT_PBR_SHADER_DIR="${PROJECT_SOURCE_DIR}/assets/shaders/pbr"
+    GRANIT_PIPELINE_SHADER_DIR="${PROJECT_SOURCE_DIR}/src/pipeline/shaders"
     GRANIT_PBR_GPU_BENCHMARK
 )
 target_link_libraries(granit_lighting_gpu_benchmarks PRIVATE granit::lighting)

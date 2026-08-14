@@ -375,11 +375,11 @@ add_custom_command(
   COMMAND "${CMAKE_COMMAND}" -E make_directory "${granit_pipeline_generated_dir}"
   COMMAND
     "${CMAKE_COMMAND}"
-    "-DINPUT=${PROJECT_SOURCE_DIR}/examples/assets/tone_mapping.vert.spv"
+    "-DINPUT=${PROJECT_SOURCE_DIR}/src/pipeline/shaders/tone_mapping.vert.spv"
     "-DOUTPUT=${granit_pipeline_tone_vertex}"
     -P "${PROJECT_SOURCE_DIR}/cmake/embed_binary.cmake"
   DEPENDS
-    "${PROJECT_SOURCE_DIR}/examples/assets/tone_mapping.vert.spv"
+    "${PROJECT_SOURCE_DIR}/src/pipeline/shaders/tone_mapping.vert.spv"
     "${PROJECT_SOURCE_DIR}/cmake/embed_binary.cmake"
   VERBATIM
 )
@@ -388,11 +388,11 @@ add_custom_command(
   COMMAND "${CMAKE_COMMAND}" -E make_directory "${granit_pipeline_generated_dir}"
   COMMAND
     "${CMAKE_COMMAND}"
-    "-DINPUT=${PROJECT_SOURCE_DIR}/examples/assets/tone_mapping.frag.spv"
+    "-DINPUT=${PROJECT_SOURCE_DIR}/src/pipeline/shaders/tone_mapping.frag.spv"
     "-DOUTPUT=${granit_pipeline_tone_fragment}"
     -P "${PROJECT_SOURCE_DIR}/cmake/embed_binary.cmake"
   DEPENDS
-    "${PROJECT_SOURCE_DIR}/examples/assets/tone_mapping.frag.spv"
+    "${PROJECT_SOURCE_DIR}/src/pipeline/shaders/tone_mapping.frag.spv"
     "${PROJECT_SOURCE_DIR}/cmake/embed_binary.cmake"
   VERBATIM
 )
@@ -401,11 +401,11 @@ add_custom_command(
   COMMAND "${CMAKE_COMMAND}" -E make_directory "${granit_pipeline_generated_dir}"
   COMMAND
     "${CMAKE_COMMAND}"
-    "-DINPUT=${PROJECT_SOURCE_DIR}/src/pipeline/shadow_depth.vert.spv"
+    "-DINPUT=${PROJECT_SOURCE_DIR}/src/pipeline/shaders/shadow_depth.vert.spv"
     "-DOUTPUT=${granit_pipeline_shadow_vertex}"
     -P "${PROJECT_SOURCE_DIR}/cmake/embed_binary.cmake"
   DEPENDS
-    "${PROJECT_SOURCE_DIR}/src/pipeline/shadow_depth.vert.spv"
+    "${PROJECT_SOURCE_DIR}/src/pipeline/shaders/shadow_depth.vert.spv"
     "${PROJECT_SOURCE_DIR}/cmake/embed_binary.cmake"
   VERBATIM
 )
@@ -414,11 +414,11 @@ add_custom_command(
   COMMAND "${CMAKE_COMMAND}" -E make_directory "${granit_pipeline_generated_dir}"
   COMMAND
     "${CMAKE_COMMAND}"
-    "-DINPUT=${PROJECT_SOURCE_DIR}/src/pipeline/shadow_depth.frag.spv"
+    "-DINPUT=${PROJECT_SOURCE_DIR}/src/pipeline/shaders/shadow_depth.frag.spv"
     "-DOUTPUT=${granit_pipeline_shadow_fragment}"
     -P "${PROJECT_SOURCE_DIR}/cmake/embed_binary.cmake"
   DEPENDS
-    "${PROJECT_SOURCE_DIR}/src/pipeline/shadow_depth.frag.spv"
+    "${PROJECT_SOURCE_DIR}/src/pipeline/shaders/shadow_depth.frag.spv"
     "${PROJECT_SOURCE_DIR}/cmake/embed_binary.cmake"
   VERBATIM
 )

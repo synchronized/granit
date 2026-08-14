@@ -41,7 +41,9 @@ add_executable(granit_pbr_offscreen_example pbr_offscreen.cpp pbr_example_suppor
 target_link_libraries(granit_pbr_offscreen_example PRIVATE granit::lighting)
 target_compile_definitions(
   granit_pbr_offscreen_example
-  PRIVATE GRANIT_EXAMPLE_ASSET_DIR="${CMAKE_CURRENT_SOURCE_DIR}/assets"
+  PRIVATE
+    GRANIT_PBR_SHADER_DIR="${PROJECT_SOURCE_DIR}/assets/shaders/pbr"
+    GRANIT_PIPELINE_SHADER_DIR="${PROJECT_SOURCE_DIR}/src/pipeline/shaders"
 )
 granit_target_compile_warnings(granit_pbr_offscreen_example)
 if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
@@ -60,8 +62,8 @@ add_custom_command(
   DEPENDS
     granit_material_tool
     "${CMAKE_CURRENT_SOURCE_DIR}/assets/render_pipeline_untextured.grmat.json"
-    "${CMAKE_CURRENT_SOURCE_DIR}/assets/pbr_shadow_ibl_lights.vert.spv"
-    "${CMAKE_CURRENT_SOURCE_DIR}/assets/pbr_shadow_ibl_lights_untextured.frag.spv"
+    "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/pbr_shadow_ibl_lights.vert.spv"
+    "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/pbr_shadow_ibl_lights_untextured.frag.spv"
   VERBATIM
 )
 add_executable(granit_render_pipeline_offscreen_example render_pipeline_offscreen.cpp)
@@ -124,7 +126,9 @@ if(WIN32)
   target_link_libraries(granit_window_hdr_example PRIVATE granit::lighting user32)
   target_compile_definitions(
     granit_window_hdr_example
-    PRIVATE GRANIT_EXAMPLE_ASSET_DIR="${CMAKE_CURRENT_SOURCE_DIR}/assets"
+    PRIVATE
+      GRANIT_PBR_SHADER_DIR="${PROJECT_SOURCE_DIR}/assets/shaders/pbr"
+      GRANIT_PIPELINE_SHADER_DIR="${PROJECT_SOURCE_DIR}/src/pipeline/shaders"
   )
   granit_target_compile_warnings(granit_window_hdr_example)
 endif()

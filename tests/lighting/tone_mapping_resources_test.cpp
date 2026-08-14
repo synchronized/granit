@@ -19,7 +19,7 @@
 namespace {
 
 std::vector<std::byte> load_shader(const char* name) {
-  std::ifstream stream{std::string{GRANIT_LIGHTING_ASSET_DIR} + "/" + name, std::ios::binary};
+  std::ifstream stream{std::string{GRANIT_PIPELINE_SHADER_DIR} + "/" + name, std::ios::binary};
   const std::vector<char> source{std::istreambuf_iterator<char>{stream}, {}};
   std::vector<std::byte> result(source.size());
   if (!source.empty())

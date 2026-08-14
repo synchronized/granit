@@ -161,8 +161,13 @@ Vulkan 生命周期或同步警告。
   Pipeline，使用帧同步提交自动渲染结果，并处理窗口尺寸重建；`--smoke-test` 会自动完成两次重建
   后退出。
 
-示例不包含 Vulkan 头文件；材质热替换示例使用尚未安装的开发中 `granit::material` 模块，其余示例
-只依赖稳定分层中的 Granit 公共接口。窗口示例目前仅在 Windows 构建。
+示例不包含 Vulkan 头文件。`version`、`renderer`、离屏清屏/三角形、Compute 和 Render Pipeline
+示例用于演示公共接口；材质热替换、PBR 离屏与 HDR 窗口示例用于内部功能联调，会直接使用当前
+尚未安装的 `granit::material` 或 `granit::lighting` 开发模块。窗口示例目前仅在 Windows 构建。
+
+Shader 按所有权存放：正式 Pipeline 内置 Shader 位于 `src/pipeline/shaders`，由示例、测试和工具
+共享的 PBR 参考 Shader 位于 `assets/shaders/pbr`，仅属于单个示例的资源保留在
+`examples/assets`。正式库源码不得反向依赖 `examples` 或 `tests` 目录。
 单配置生成器把动态库和可执行文件统一放入构建目录的 `bin`，可直接运行；Visual Studio 等
 多配置生成器使用 `bin/Debug`、`bin/Release` 等配置子目录。
 

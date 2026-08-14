@@ -113,7 +113,9 @@ bool parse_options(int argc, char** argv, run_options& options) {
 }
 
 std::vector<std::uint32_t> load_shader(std::string_view name) {
-  const auto path = std::string{GRANIT_EXAMPLE_ASSET_DIR} + "/" + std::string{name};
+  const auto directory = name.starts_with("tone_mapping") ? GRANIT_PIPELINE_SHADER_DIR
+                                                           : GRANIT_PBR_SHADER_DIR;
+  const auto path = std::string{directory} + "/" + std::string{name};
   std::ifstream stream{path, std::ios::binary};
   const std::vector<char> bytes{std::istreambuf_iterator<char>{stream}, {}};
   if (bytes.empty() || bytes.size() % sizeof(std::uint32_t) != 0)
