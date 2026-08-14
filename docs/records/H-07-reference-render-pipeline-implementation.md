@@ -356,7 +356,8 @@ Renderable、payload 和关联项数组。回调不得保存数组地址，不�
    拆为约 0.345 ms Opaque 路径和约 0.410 ms 方向光/Shadow 路径。随后仅为每次提交后等待完成的
    Render Pipeline 缓存选择 Upload 内存，通用 Lighting 默认策略保持不变；两次 50 样本复测的
    方向光自动路径稳定在 0.799～0.800 ms，最小回调为 0.614～0.638 ms，已达到暂定 CPU 目标。
-   后续增加阶段级 GPU timestamp 完成 H-07H 验收。完整数据见
+   阶段级 GPU timestamp 进一步测得 Shadow 0.044 ms、Opaque 0.033 ms、Tone Mapping 0.016 ms，
+   合计约 0.093 ms，未发现 Upload 优化引入额外 GPU 等待，H-07H 性能验收通过。完整数据见
    [性能对比](../../benchmarks/results/2026-08-14-windows-clang-render-pipeline-5c0613a.md)。
 
 外部环境切换、透明物体、CSM 和 Clustered Forward 在 H-07H 后单独立项，不阻塞首版完成。

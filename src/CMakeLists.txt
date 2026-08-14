@@ -440,6 +440,7 @@ target_sources(
     pipeline/pbr_draw_bindings.cpp
     pipeline/pbr_draw_bindings.h
     pipeline/render_pipeline_api.cpp
+    pipeline/render_pipeline_metrics.h
     pipeline/scene_access.h
     pipeline/scene_api.cpp
   PUBLIC

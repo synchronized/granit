@@ -225,6 +225,7 @@ target_compile_definitions(
     GRANIT_RENDER_PIPELINE_EXAMPLE_PACKAGE="${granit_render_pipeline_benchmark_package}"
 )
 target_link_libraries(granit_render_pipeline_benchmarks PRIVATE granit::render_pipeline)
+target_include_directories(granit_render_pipeline_benchmarks PRIVATE "${PROJECT_SOURCE_DIR}/src")
 add_dependencies(granit_render_pipeline_benchmarks granit_material_tool)
 target_sources(
   granit_render_pipeline_benchmarks PRIVATE "${granit_render_pipeline_benchmark_package}"

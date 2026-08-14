@@ -86,7 +86,7 @@ PBR HDR、Tone Mapping 和整条 GPU 渲染链。使用 `--lights` 选择点光�
   --iterations 20 --samples 20 --warmup 5
 ```
 
-完整链路 GPU timestamp 目前只能由 H-05 手工基准获取。统一门面内部拥有 Recorder 和提交边界，
-在没有受控内部测量钩子时不把队列外部时间差冒充 GPU 忙碌时间。
+基准通过不安装的内部测量接口，在统一门面自己的 Recorder 内写入 Vulkan timestamp，输出
+`gpu_shadow`、`gpu_opaque` 和 `gpu_tone_mapping`。该接口仅用于仓库基准，不属于公共 API 或 ABI。
 
 已提交的基线摘要见 [results/README.md](results/README.md)。

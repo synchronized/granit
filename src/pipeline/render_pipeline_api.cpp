@@ -13,11 +13,13 @@
 #include "pipeline/material_access.h"
 #include "pipeline/mesh_access.h"
 #include "pipeline/pbr_draw_bindings.h"
+#include "pipeline/render_pipeline_metrics.h"
 #include "pipeline/scene_access.h"
 
 #include <granit/renderer/render_target.h>
 #include <granit/renderer/shader.hpp>
 #include <granit/renderer/texture.hpp>
+#include <granit/renderer/timestamp_query.h>
 
 #include <algorithm>
 #include <array>
@@ -63,6 +65,8 @@ struct pipeline_state {
   std::vector<shadow_pipeline_entry> shadow_pipelines;
   std::vector<draw_binding_entry> opaque_draw_bindings;
   std::vector<draw_binding_entry> shadow_draw_bindings;
+  granit_timestamp_query_pool metrics_pool = GRANIT_NULL_HANDLE;
+  granit_render_pipeline_gpu_metrics metrics{};
   bool alive = true;
 };
 
@@ -539,107 +543,133 @@ render_view(pipeline_state& state, const granit_render_pipeline_render_desc& des
           ? granit::lighting::tone_mapping_output_transfer::attachment_srgb
           : granit::lighting::tone_mapping_output_transfer::shader_srgb;
 
+  bool metrics_reset = false;
+  const auto measure = [&](granit_command_recorder recorder, uint32_t first, auto&& operation) {
+    if (state.metrics_pool == GRANIT_NULL_HANDLE)
+      return operation();
+    auto result = GRANIT_SUCCESS;
+    if (!metrics_reset) {
+      result = granit_command_recorder_reset_timestamp_queries(state.renderer, recorder,
+                                                               state.metrics_pool, 0, 6);
+      metrics_reset = result == GRANIT_SUCCESS;
+    }
+    if (result == GRANIT_SUCCESS)
+      result = granit_command_recorder_write_timestamp(state.renderer, recorder, state.metrics_pool,
+                                                       GRANIT_TIMESTAMP_STAGE_TOP, first);
+    if (result == GRANIT_SUCCESS)
+      result = operation();
+    if (result == GRANIT_SUCCESS)
+      result = granit_command_recorder_write_timestamp(state.renderer, recorder, state.metrics_pool,
+                                                       GRANIT_TIMESTAMP_STAGE_BOTTOM, first + 1);
+    return result;
+  };
   granit::lighting::reference_pipeline_graph_callbacks callbacks;
   callbacks.pbr = [&](auto& context, const auto& frame, auto objects) {
-    if (state.record == nullptr) {
-      granit::lighting::packed_view_lights lights;
-      granit::lighting::light_requirements requirements;
-      if (granit::lighting::pack_view_lights(snapshot, view_index, {}, lights, requirements) !=
-          granit::lighting::light_pack_error::none) {
-        return GRANIT_ERROR_INVALID_ARGUMENT;
-      }
-      return record_opaque_draws(
-          state, context.recorder(), context.texture_view(hdr), context.texture_view(depth),
-          shadow ? context.texture_view(*shadow) : GRANIT_NULL_HANDLE, render_output.width,
-          render_output.height, frame, objects, draw_bindings, lights, shadow_constants);
-    }
-    const granit_render_pipeline_record_info info{
-        .struct_size = sizeof(granit_render_pipeline_record_info),
-        .stage = GRANIT_RENDER_PIPELINE_STAGE_OPAQUE,
-        .recorder = context.recorder(),
-        .color_input = GRANIT_NULL_HANDLE,
-        .color_output = context.texture_view(hdr),
-        .depth_output = context.texture_view(depth),
-        .shadow_input = shadow ? context.texture_view(*shadow) : GRANIT_NULL_HANDLE,
-        .ibl_irradiance = state.default_ibl.irradiance(),
-        .ibl_prefiltered_environment = state.default_ibl.prefiltered_environment(),
-        .ibl_brdf_lut = state.default_ibl.brdf_lut(),
-        .ibl_layout = state.default_ibl.layout(),
-        .ibl_group = state.default_ibl.group(),
-        .view_index = view_index,
-        .payload_count = static_cast<uint32_t>(payloads.size()),
-        .payloads = payloads.data(),
-        .draw_bindings = draw_bindings.data(),
-        .view = &public_view,
-        .renderables = renderables.data(),
-        .light_view_projection = {},
-        .exposure_scale = 1.0F,
-        .encode_srgb = 0,
-        .reserved = {0, 0}};
-    return state.record(&info, state.user_data);
-  };
-  if (graph_desc.shadow) {
-    callbacks.shadow = [&](auto& context, const auto& frame, auto casters) {
-      std::vector<uint64_t> shadow_payloads;
-      std::vector<granit_render_pipeline_draw_binding> shadow_bindings;
-      std::vector<granit_scene_renderable> shadow_renderables;
-      shadow_payloads.reserve(casters.size());
-      shadow_bindings.reserve(casters.size());
-      shadow_renderables.reserve(casters.size());
-      for (const auto& caster : casters) {
-        const auto binding = bindings.find(caster.payload);
-        if (binding == bindings.end())
-          return GRANIT_ERROR_INVALID_ARGUMENT;
-        const auto& source = snapshot.renderables()[caster.source_index];
-        shadow_payloads.push_back(caster.payload);
-        shadow_bindings.push_back(binding->second);
-        shadow_renderables.push_back({.model = convert(source.model),
-                                      .normal_matrix = convert(source.normal_matrix),
-                                      .bounds_center = convert(source.bounds.center),
-                                      .bounds_radius = source.bounds.radius,
-                                      .layer_mask = source.layer_mask,
-                                      .sort_key = source.sort_key,
-                                      .payload = source.payload,
-                                      .object_id = source.object_id,
-                                      .reserved = 0});
-      }
+    return measure(context.recorder(), 2, [&]() {
       if (state.record == nullptr) {
-        return record_shadow_draws(state, context.recorder(), context.texture_view(*shadow), frame,
-                                   casters, shadow_bindings);
+        granit::lighting::packed_view_lights lights;
+        granit::lighting::light_requirements requirements;
+        if (granit::lighting::pack_view_lights(snapshot, view_index, {}, lights, requirements) !=
+            granit::lighting::light_pack_error::none) {
+          return GRANIT_ERROR_INVALID_ARGUMENT;
+        }
+        return record_opaque_draws(
+            state, context.recorder(), context.texture_view(hdr), context.texture_view(depth),
+            shadow ? context.texture_view(*shadow) : GRANIT_NULL_HANDLE, render_output.width,
+            render_output.height, frame, objects, draw_bindings, lights, shadow_constants);
       }
       const granit_render_pipeline_record_info info{
           .struct_size = sizeof(granit_render_pipeline_record_info),
-          .stage = GRANIT_RENDER_PIPELINE_STAGE_SHADOW,
+          .stage = GRANIT_RENDER_PIPELINE_STAGE_OPAQUE,
           .recorder = context.recorder(),
           .color_input = GRANIT_NULL_HANDLE,
-          .color_output = GRANIT_NULL_HANDLE,
-          .depth_output = context.texture_view(*shadow),
-          .shadow_input = GRANIT_NULL_HANDLE,
-          .ibl_irradiance = GRANIT_NULL_HANDLE,
-          .ibl_prefiltered_environment = GRANIT_NULL_HANDLE,
-          .ibl_brdf_lut = GRANIT_NULL_HANDLE,
-          .ibl_layout = GRANIT_NULL_HANDLE,
-          .ibl_group = GRANIT_NULL_HANDLE,
+          .color_output = context.texture_view(hdr),
+          .depth_output = context.texture_view(depth),
+          .shadow_input = shadow ? context.texture_view(*shadow) : GRANIT_NULL_HANDLE,
+          .ibl_irradiance = state.default_ibl.irradiance(),
+          .ibl_prefiltered_environment = state.default_ibl.prefiltered_environment(),
+          .ibl_brdf_lut = state.default_ibl.brdf_lut(),
+          .ibl_layout = state.default_ibl.layout(),
+          .ibl_group = state.default_ibl.group(),
           .view_index = view_index,
-          .payload_count = static_cast<uint32_t>(shadow_payloads.size()),
-          .payloads = shadow_payloads.data(),
-          .draw_bindings = shadow_bindings.data(),
+          .payload_count = static_cast<uint32_t>(payloads.size()),
+          .payloads = payloads.data(),
+          .draw_bindings = draw_bindings.data(),
           .view = &public_view,
-          .renderables = shadow_renderables.data(),
-          .light_view_projection = convert(frame.light_view_projection),
+          .renderables = renderables.data(),
+          .light_view_projection = {},
           .exposure_scale = 1.0F,
           .encode_srgb = 0,
           .reserved = {0, 0}};
       return state.record(&info, state.user_data);
+    });
+  };
+  if (graph_desc.shadow) {
+    callbacks.shadow = [&](auto& context, const auto& frame, auto casters) {
+      return measure(context.recorder(), 0, [&]() {
+        std::vector<uint64_t> shadow_payloads;
+        std::vector<granit_render_pipeline_draw_binding> shadow_bindings;
+        std::vector<granit_scene_renderable> shadow_renderables;
+        shadow_payloads.reserve(casters.size());
+        shadow_bindings.reserve(casters.size());
+        shadow_renderables.reserve(casters.size());
+        for (const auto& caster : casters) {
+          const auto binding = bindings.find(caster.payload);
+          if (binding == bindings.end())
+            return GRANIT_ERROR_INVALID_ARGUMENT;
+          const auto& source = snapshot.renderables()[caster.source_index];
+          shadow_payloads.push_back(caster.payload);
+          shadow_bindings.push_back(binding->second);
+          shadow_renderables.push_back({.model = convert(source.model),
+                                        .normal_matrix = convert(source.normal_matrix),
+                                        .bounds_center = convert(source.bounds.center),
+                                        .bounds_radius = source.bounds.radius,
+                                        .layer_mask = source.layer_mask,
+                                        .sort_key = source.sort_key,
+                                        .payload = source.payload,
+                                        .object_id = source.object_id,
+                                        .reserved = 0});
+        }
+        if (state.record == nullptr) {
+          return record_shadow_draws(state, context.recorder(), context.texture_view(*shadow),
+                                     frame, casters, shadow_bindings);
+        }
+        const granit_render_pipeline_record_info info{
+            .struct_size = sizeof(granit_render_pipeline_record_info),
+            .stage = GRANIT_RENDER_PIPELINE_STAGE_SHADOW,
+            .recorder = context.recorder(),
+            .color_input = GRANIT_NULL_HANDLE,
+            .color_output = GRANIT_NULL_HANDLE,
+            .depth_output = context.texture_view(*shadow),
+            .shadow_input = GRANIT_NULL_HANDLE,
+            .ibl_irradiance = GRANIT_NULL_HANDLE,
+            .ibl_prefiltered_environment = GRANIT_NULL_HANDLE,
+            .ibl_brdf_lut = GRANIT_NULL_HANDLE,
+            .ibl_layout = GRANIT_NULL_HANDLE,
+            .ibl_group = GRANIT_NULL_HANDLE,
+            .view_index = view_index,
+            .payload_count = static_cast<uint32_t>(shadow_payloads.size()),
+            .payloads = shadow_payloads.data(),
+            .draw_bindings = shadow_bindings.data(),
+            .view = &public_view,
+            .renderables = shadow_renderables.data(),
+            .light_view_projection = convert(frame.light_view_projection),
+            .exposure_scale = 1.0F,
+            .encode_srgb = 0,
+            .reserved = {0, 0}};
+        return state.record(&info, state.user_data);
+      });
     };
   }
   callbacks.tone_mapping = [&](auto& context, const auto& constants) {
-    auto& pipeline =
-        state.tone_mapping_pipelines[tone_mapping_pipeline_index(render_output.format)];
-    return record_tone_mapping(pipeline, state.renderer, context.recorder(),
-                               context.texture_view(hdr), context.texture_view(output),
-                               render_output.format, render_output.width, render_output.height,
-                               constants);
+    return measure(context.recorder(), 4, [&]() {
+      auto& pipeline =
+          state.tone_mapping_pipelines[tone_mapping_pipeline_index(render_output.format)];
+      return record_tone_mapping(pipeline, state.renderer, context.recorder(),
+                                 context.texture_view(hdr), context.texture_view(output),
+                                 render_output.format, render_output.width, render_output.height,
+                                 constants);
+    });
   };
   granit::lighting::reference_pipeline_graph_passes passes;
   if (granit::lighting::add_reference_pipeline_graph(graph, std::move(graph_desc),
@@ -651,7 +681,18 @@ render_view(pipeline_state& state, const granit_render_pipeline_render_desc& des
                                                      : graph.execute_frame(state.renderer, frame);
   if (!execution.succeeded())
     return execution.result;
-  return granit_command_recorder_destroy(state.renderer, execution.recorder);
+  const auto destroy_result = granit_command_recorder_destroy(state.renderer, execution.recorder);
+  if (destroy_result != GRANIT_SUCCESS || state.metrics_pool == GRANIT_NULL_HANDLE)
+    return destroy_result;
+  std::array<uint64_t, 6> values{};
+  const auto metrics_result = granit_timestamp_query_pool_get_results(
+      state.renderer, state.metrics_pool, 0, static_cast<uint32_t>(values.size()), values.data());
+  if (metrics_result == GRANIT_SUCCESS) {
+    state.metrics = {.shadow_ns = values[1] - values[0],
+                     .opaque_ns = values[3] - values[2],
+                     .tone_mapping_ns = values[5] - values[4]};
+  }
+  return metrics_result;
 }
 
 } // namespace
@@ -835,6 +876,13 @@ extern "C" granit_result granit_render_pipeline_destroy(granit_renderer renderer
   };
   reset_draw_bindings(removed->opaque_draw_bindings);
   reset_draw_bindings(removed->shadow_draw_bindings);
+  if (removed->metrics_pool != GRANIT_NULL_HANDLE) {
+    const auto metrics_result =
+        granit_timestamp_query_pool_destroy(renderer, removed->metrics_pool);
+    if (result == GRANIT_SUCCESS)
+      result = metrics_result;
+    removed->metrics_pool = GRANIT_NULL_HANDLE;
+  }
   const auto shadow_view_result = removed->shadow_view.reset();
   if (result == GRANIT_SUCCESS)
     result = static_cast<granit_result>(shadow_view_result);
@@ -868,4 +916,32 @@ extern "C" granit_result granit_render_pipeline_destroy(granit_renderer renderer
   if (result == GRANIT_SUCCESS)
     result = static_cast<granit_result>(vertex_result);
   return result;
+}
+
+extern "C" granit_result
+granit_render_pipeline_gpu_metrics_enable(granit_renderer renderer,
+                                          granit_render_pipeline pipeline) {
+  const auto state = find_pipeline(renderer, pipeline);
+  if (!state)
+    return GRANIT_ERROR_INVALID_HANDLE;
+  std::scoped_lock lock{state->mutex};
+  if (state->metrics_pool != GRANIT_NULL_HANDLE)
+    return GRANIT_SUCCESS;
+  const granit_timestamp_query_pool_desc desc{sizeof(desc), 6, 0};
+  return granit_timestamp_query_pool_create(renderer, &desc, &state->metrics_pool);
+}
+
+extern "C" granit_result
+granit_render_pipeline_gpu_metrics_get(granit_renderer renderer, granit_render_pipeline pipeline,
+                                       granit_render_pipeline_gpu_metrics* metrics) {
+  if (metrics == nullptr)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  const auto state = find_pipeline(renderer, pipeline);
+  if (!state)
+    return GRANIT_ERROR_INVALID_HANDLE;
+  std::scoped_lock lock{state->mutex};
+  if (state->metrics_pool == GRANIT_NULL_HANDLE)
+    return GRANIT_ERROR_NOT_READY;
+  *metrics = state->metrics;
+  return GRANIT_SUCCESS;
 }

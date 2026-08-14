@@ -3,6 +3,9 @@
 
 #include <granit/granit.hpp>
 #include <granit/pipeline/render_pipeline.h>
+#ifdef GRANIT_RENDER_PIPELINE_CPU_BENCHMARK
+#include "pipeline/render_pipeline_metrics.h"
+#endif
 
 #include <algorithm>
 #include <array>
@@ -307,6 +310,35 @@ int main(int argc, char** argv) {
       !run_benchmark("automatic_no_light_end_to_end", pipeline, no_light_scene) ||
       !run_benchmark("minimal_no_light_end_to_end", callback_pipeline, no_light_scene)) {
     return 1;
+  }
+  if (!check(granit_render_pipeline_gpu_metrics_enable(native_renderer, pipeline),
+             "启用 GPU 阶段测量"))
+    return 1;
+  std::array<std::vector<double>, 3> gpu_samples;
+  for (auto& values : gpu_samples)
+    values.reserve(benchmark.samples);
+  for (std::uint32_t sample = 0; sample < benchmark.samples; ++sample) {
+    std::array<double, 3> totals{};
+    for (std::uint32_t iteration = 0; iteration < benchmark.iterations; ++iteration) {
+      if (!check(render_once(pipeline, scene), "GPU 基准渲染"))
+        return 1;
+      granit_render_pipeline_gpu_metrics metrics{};
+      if (!check(granit_render_pipeline_gpu_metrics_get(native_renderer, pipeline, &metrics),
+                 "读取 GPU 阶段测量"))
+        return 1;
+      totals[0] += static_cast<double>(metrics.shadow_ns);
+      totals[1] += static_cast<double>(metrics.opaque_ns);
+      totals[2] += static_cast<double>(metrics.tone_mapping_ns);
+    }
+    for (std::size_t index = 0; index < totals.size(); ++index)
+      gpu_samples[index].push_back(totals[index] / benchmark.iterations);
+  }
+  constexpr std::array names{"gpu_shadow", "gpu_opaque", "gpu_tone_mapping"};
+  for (std::size_t index = 0; index < names.size(); ++index) {
+    const auto summary = summarize(std::move(gpu_samples[index]));
+    std::cout << "1," << names[index] << ',' << benchmark.iterations << ',' << benchmark.samples
+              << ',' << summary.mean << ',' << summary.p50 << ',' << summary.p95 << ','
+              << summary.p99 << '\n';
   }
 #else
   if (!check(render_once(pipeline), "渲染"))
