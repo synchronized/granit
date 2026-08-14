@@ -106,7 +106,11 @@ Pipeline、纹理绑定和 Scissor 兼容时才进行安全合批。后续 Bindl
 - 已覆盖索引修正、稳定顺序、相邻合批、状态切换、无效几何、空列表和列表复用测试。
 - 已建立逐帧 GPU 几何上传对象，使用可增长并复用容量的 Upload Vertex/Index Buffer；空列表不会
   反复释放容量，移动和析构负责句柄生命周期。首版先采用直接可写内存，是否改为暂存复制由基线决定。
-- 下一步实现实际批量录制，再补纹理、顶点色像素回归和性能基线。
+- 已加入 `unlit_ui` 材质 Pass 与 UI 顶点入口：以 `uint32` 输入 RGBA8 顶点色并在 Shader 中解包，
+  因而无需为首版扩展公共 Vertex Format ABI。
+- UI Pass 在单个 Rendering 区域中绑定一次共享 Vertex/Index Buffer，再按 Batch 更新 Scissor 并录制
+  Indexed Draw；离屏像素回归已覆盖稳定透明叠加、顶点色和裁剪边界。
+- 当前实际录制仅接受无纹理顶点色项；下一步接入 Texture/Sampler Bind Group，再补性能基线。
 
 ## 验收标准
 
