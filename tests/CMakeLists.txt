@@ -207,6 +207,7 @@ add_executable(
   pipeline/render_pipeline_api_test.cpp
   pipeline/scene_api_test.cpp
   pipeline/unlit_pass_test.cpp
+  pipeline/ui_draw_list_test.cpp
 )
 set(granit_unlit_test_package "${CMAKE_CURRENT_BINARY_DIR}/assets/unlit.grmat")
 add_custom_command(
