@@ -5,9 +5,9 @@
 
 ## 结论
 
-当前统一 Render Pipeline 尚未通过 H-07H 性能验收。自动路径 CPU P50 为 2.907 ms，而保留相同
-Graph、瞬态附件和 Tone Mapping 的最小回调路径为 0.624 ms，与手工 H-05 的 0.662 ms 处于同一
-量级。约 2.283 ms、占自动路径 P50 约 78.5% 的增量已定位到自动 Shadow/Opaque Draw 路径。
+当前统一 Render Pipeline 尚未通过 H-07H 性能验收。完成第一轮资源复用后，自动路径 CPU P50
+由 2.907 ms 降至 1.518 ms，下降约 47.8%；最小回调路径保持在 0.629 ms。剩余约 0.890 ms
+增量位于每帧灯光与阴影常量更新、Shadow Draw 和 Opaque Draw，仍需等工作量 CPU/GPU 复测。
 
 ## 环境与方法
 
@@ -33,6 +33,8 @@ Graph、瞬态附件和 Tone Mapping 的最小回调路径为 0.624 ms，与手�
 | --- | --- | ---: | ---: | ---: | ---: |
 | 自动 Render Pipeline | CPU 端到端 | 3.005 | 2.907 | 3.263 | 4.435 |
 | 最小回调 Render Pipeline | CPU 端到端 | 0.639 | 0.624 | 0.728 | 0.757 |
+| 优化后自动 Render Pipeline | CPU 端到端 | 1.521 | 1.518 | 1.602 | 2.160 |
+| 优化后最小回调 Render Pipeline | CPU 端到端 | 0.646 | 0.629 | 0.806 | 0.843 |
 | 手工 H-05 | CPU 端到端 | 0.671 | 0.662 | 0.769 | 0.791 |
 | 手工 H-05 | GPU Shadow | 0.004 | 0.004 | 0.004 | 0.004 |
 | 手工 H-05 | GPU PBR HDR | 0.138 | 0.138 | 0.141 | 0.142 |
@@ -43,11 +45,15 @@ Graph、瞬态附件和 Tone Mapping 的最小回调路径为 0.624 ms，与手�
 
 - 最小回调路径与手工 H-05 的 CPU P50 相差约 6%，说明 Graph、瞬态附件、Tone Mapping 和统一
   提交外壳不是 4 倍级差异的主要来源。
-- 自动路径相对最小回调增加约 2.283 ms。自动 Shadow/Opaque 阶段当前为每个 Draw 创建
-  Frame/Object Uniform Buffer、Bind Group 和光照资源，并执行真实阴影，是首要优化对象。
+- 第一轮优化复用每个 Draw 的 Frame/Object Uniform Buffer、Bind Group 和 Shadow/IBL 光照资源，
+  Uniform Buffer 使用可直接更新的 Upload 内存，并复用固定 1024×1024 阴影附件。
+- 自动路径 P50 下降约 1.389 ms，说明每帧创建和销毁绑定资源是主要可消除开销。
+- 优化后自动路径相对最小回调仍增加约 0.890 ms。下一轮应分别测量灯光与阴影常量更新、真实
+  Shadow Draw 和 Opaque Draw，避免继续凭总时间猜测。
 - H-05 的 Shadow 仅清除 1×1 深度目标，而自动路径执行真实 1024×1024 Shadow Draw；下一轮应
   建立严格等工作量用例。
 - 统一门面完整 GPU 时间需要内部测试专用测量钩子或外部 GPU profiler。不得为基准扩张公共 ABI。
-- 下一步把 Frame/Object 常量改为可复用或环形分配，并缓存与 Material、Mesh 组合稳定相关的绑定。
+- 下一步建立严格等工作量用例并补充阶段级 GPU timestamp；若常量更新仍明显，再设计按 Frame
+  生命周期管理的 Upload 环形分配，避免在尚未完成的 GPU 帧上原地覆写。
 - 优化目标先定为同条件 CPU P50 不高于最小回调路径 1.5 倍加真实 Draw/GPU 等待成本；若无法达到，
   应记录不可消除成本和原因。

@@ -350,9 +350,10 @@ Renderable、payload 和关联项数组。回调不得保存数组地址，不�
    对比保留白色方向光时出现预期的灰色镜面反射，说明输入条件不等价，因此没有通过放宽容差处理。
    首轮 Release 性能对比已经补齐可复现 CPU 数据，并复测 H-05 GPU timestamp 基线。自动路径
    CPU P50 为 2.907 ms；保留相同 Graph、瞬态附件和 Tone Mapping 的最小回调路径为 0.624 ms，
-   与手工 H-05 的 0.662 ms 处于同一量级。约 78.5% 的自动路径时间已归因到 Shadow/Opaque Draw，
-   而不是门面外壳。H-07H 暂不通过，后续先缓存每 Draw 重复创建的常量 Buffer、Bind Group 和
-   光照资源，再建立等工作量复测。完整数据见
+   与手工 H-05 的 0.662 ms 处于同一量级。第一轮优化复用了每 Draw 常量 Buffer、Bind Group、
+   光照资源和固定阴影附件，并将动态常量放入 Upload 内存；自动路径 P50 降至 1.518 ms，下降约
+   47.8%，最小回调路径为 0.629 ms。剩余成本需要通过严格等工作量 CPU/GPU 测试拆分常量更新、
+   Shadow Draw 和 Opaque Draw，H-07H 仍待验收。完整数据见
    [性能对比](../../benchmarks/results/2026-08-14-windows-clang-render-pipeline-5c0613a.md)。
 
 外部环境切换、透明物体、CSM 和 Clustered Forward 在 H-07H 后单独立项，不阻塞首版完成。

@@ -15,10 +15,12 @@ namespace granit::pipeline::detail {
 /** 拥有一次 PBR Draw 的 Group 0 Frame 和 Group 2 Object GPU 绑定。 */
 class pbr_draw_bindings {
 public:
-  [[nodiscard]] granit_result initialize(granit_renderer renderer,
-                                         const material_draw_state& material,
-                                         const granit::material::pbr_frame_constants& frame,
-                                         const granit::material::pbr_object_constants& object) noexcept;
+  [[nodiscard]] granit_result
+  initialize(granit_renderer renderer, const material_draw_state& material,
+             const granit::material::pbr_frame_constants& frame,
+             const granit::material::pbr_object_constants& object) noexcept;
+  [[nodiscard]] granit_result update(const granit::material::pbr_frame_constants& frame,
+                                     const granit::material::pbr_object_constants& object) noexcept;
   [[nodiscard]] granit_result reset() noexcept;
   [[nodiscard]] bool initialized() const noexcept {
     return frame_group_.valid() && object_group_.valid();
