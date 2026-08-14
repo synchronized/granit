@@ -58,6 +58,13 @@
 - [Shader Module](reference/shader.md)
 - [Graphics 与 Compute Pipeline](reference/pipeline.md)
 
+### 高级 Render Pipeline component
+
+- [Mesh](reference/mesh.md)
+- [Material](reference/material.md)
+- [Scene Snapshot](reference/scene-snapshot.md)
+- [Render Pipeline](reference/render-pipeline.md)
+
 ### 窗口输出
 
 - [Surface](reference/surface.md)

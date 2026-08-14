@@ -102,6 +102,10 @@ H-07A～H-07G 已完成：
 - 共享/静态构建下的纯 C 与 C++20 安装 Consumer。
 - 多 View 独立输出、资源提前失效和 Validation 诊断测试。
 
+当前公共行为以 [Mesh](../reference/mesh.md)、[Material](../reference/material.md)、
+[Scene Snapshot](../reference/scene-snapshot.md) 和
+[Render Pipeline](../reference/render-pipeline.md) 为准。本计划只保留实施状态和剩余任务。
+
 逐阶段接口演化、内部绑定和验证细节见
 [H-07 实施记录](../records/H-07-reference-render-pipeline-implementation.md)。
 
