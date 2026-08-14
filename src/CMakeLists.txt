@@ -464,7 +464,7 @@ target_include_directories(
     "${PROJECT_SOURCE_DIR}/src"
     "${granit_pipeline_generated_dir}"
 )
-target_link_libraries(granit_render_pipeline PRIVATE granit::lighting)
+target_link_libraries(granit_render_pipeline PUBLIC granit::granit PRIVATE granit::lighting)
 target_compile_definitions(
   granit_render_pipeline
   PRIVATE GRANIT_RENDER_PIPELINE_BUILDING_LIBRARY

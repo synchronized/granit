@@ -1,0 +1,37 @@
+{
+  "format_version": 2,
+  "target_environment": "vulkan1.3",
+  "binding_model": "bind_group",
+  "material": {
+    "constant_buffer_size": 48,
+    "parameters": [
+      {"name": "base_color", "type": "float4", "offset": 0},
+      {"name": "metallic", "type": "float32", "offset": 16},
+      {"name": "perceptual_roughness", "type": "float32", "offset": 20},
+      {"name": "normal_scale", "type": "float32", "offset": 24},
+      {"name": "occlusion_strength", "type": "float32", "offset": 28},
+      {"name": "emissive", "type": "float3", "offset": 32}
+    ]
+  },
+  "variants": [
+    {
+      "pass": "opaque",
+      "features": [{"name": "pbr_texture_mask", "value": 0}],
+      "pipeline": {
+        "vertex_buffers": [],
+        "primitive": {
+          "topology": "triangle_list",
+          "front_face": "clockwise",
+          "cull_mode": "back",
+          "polygon_mode": "fill"
+        },
+        "depth": {"test_enabled": true, "write_enabled": true, "compare": "less_equal"},
+        "color_blend": {"enabled": false}
+      },
+      "shaders": [
+        {"stage": "vertex", "entry_point": "vertex_main", "spirv": "pbr_shadow_ibl_lights.vert.spv"},
+        {"stage": "fragment", "entry_point": "fragment_main", "spirv": "pbr_shadow_ibl_lights_untextured.frag.spv"}
+      ]
+    }
+  ]
+}

@@ -150,6 +150,8 @@ cmake --preset linux-clang-debug -DBUILD_SHARED_LIBS=OFF
 - `granit_material_hot_reload_example`：演示缺失变体时的错误材质回退和成功热替换。
 - `granit_pbr_offscreen_example`：使用五类默认纹理和金属度/粗糙度 Shader 完成带深度的离屏 PBR
   Draw。
+- `granit_render_pipeline_offscreen_example`：构建材质包，通过公共 Mesh、Material、Scene 和
+  Render Pipeline API 自动录制 Shadow/Opaque Draw，并回读输出像素；不使用阶段回调或内部模块。
 
 示例不包含 Vulkan 头文件；材质热替换示例使用尚未安装的开发中 `granit::material` 模块，其余示例
 只依赖稳定分层中的 Granit 公共接口。窗口示例目前仅在 Windows 构建。
@@ -173,7 +175,8 @@ target_link_libraries(your_target PRIVATE granit::render_pipeline)
 ```
 
 `RenderPipeline` component 同时安装 C API 与 C++20 包装，支持共享库和静态库。其静态内部依赖由
-CMake 导出自动闭包，使用者不应直接依赖 `granit::detail_*` 目标。
+CMake 导出自动闭包，使用者不应直接依赖 `granit::detail_*` 目标；链接
+`granit::render_pipeline` 时会自动获得核心 `granit::granit` 依赖。
 
 C 用户包含：
 

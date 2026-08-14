@@ -48,6 +48,40 @@ if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
   add_test(NAME granit.example.pbr_offscreen COMMAND granit_pbr_offscreen_example)
 endif()
 
+set(granit_render_pipeline_example_package
+    "${CMAKE_CURRENT_BINARY_DIR}/assets/render_pipeline_untextured.grmat")
+add_custom_command(
+  OUTPUT "${granit_render_pipeline_example_package}"
+  COMMAND "${CMAKE_COMMAND}" -E make_directory "${CMAKE_CURRENT_BINARY_DIR}/assets"
+  COMMAND
+    granit_material_tool build
+    "${CMAKE_CURRENT_SOURCE_DIR}/assets/render_pipeline_untextured.grmat.json"
+    --output "${granit_render_pipeline_example_package}"
+  DEPENDS
+    granit_material_tool
+    "${CMAKE_CURRENT_SOURCE_DIR}/assets/render_pipeline_untextured.grmat.json"
+    "${CMAKE_CURRENT_SOURCE_DIR}/assets/pbr_shadow_ibl_lights.vert.spv"
+    "${CMAKE_CURRENT_SOURCE_DIR}/assets/pbr_shadow_ibl_lights_untextured.frag.spv"
+  VERBATIM
+)
+add_executable(granit_render_pipeline_offscreen_example render_pipeline_offscreen.cpp)
+target_link_libraries(granit_render_pipeline_offscreen_example PRIVATE granit::render_pipeline)
+target_compile_definitions(
+  granit_render_pipeline_offscreen_example
+  PRIVATE GRANIT_RENDER_PIPELINE_EXAMPLE_PACKAGE="${granit_render_pipeline_example_package}"
+)
+add_dependencies(granit_render_pipeline_offscreen_example granit_material_tool)
+target_sources(
+  granit_render_pipeline_offscreen_example PRIVATE "${granit_render_pipeline_example_package}"
+)
+granit_target_compile_warnings(granit_render_pipeline_offscreen_example)
+if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
+  add_test(
+    NAME granit.example.render_pipeline_offscreen
+    COMMAND granit_render_pipeline_offscreen_example
+  )
+endif()
+
 if(WIN32)
   add_executable(granit_window_clear_example WIN32 window_clear.cpp)
   target_link_libraries(granit_window_clear_example PRIVATE granit::granit user32)
@@ -79,6 +113,7 @@ set(
   granit_compute_example
   granit_material_hot_reload_example
   granit_pbr_offscreen_example
+  granit_render_pipeline_offscreen_example
 )
 if(WIN32)
   list(
