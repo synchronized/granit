@@ -19,9 +19,10 @@ Granit 不是 Vulkan API 的逐项重命名或薄包装。项目希望围绕实�
 核心定位是面向自研引擎和图形工具的中层“Bring Your Own Engine”渲染库：当前只实现 Vulkan，
 目标同时覆盖窗口与离屏渲染，但不在核心层接管 Scene、Camera、Light 或完整 PBR 工作流。
 
-长期提供三种并列用法：直接使用核心 Renderer、选择 Material/Scene/PBR/Lighting/Render Graph 等
-部分高层模块，或使用计划中的 `granit::render_pipeline` 完整参考管线。该高级套件定位类似
-DiligentFX，PBR 质量体系主要参考 Filament，但不会让核心 Renderer 拥有 Scene 或强制统一工作流。
+长期提供四级用法：初级用户采用完整 `granit::render_pipeline`，进阶用户扩展默认 Pipeline 和
+Material，中高级用户自行组合 Render Graph 与高层模块，高级用户直接使用核心 Renderer。该高级
+套件定位类似 DiligentFX，PBR 质量体系主要参考 Filament，但不会让核心 Renderer 拥有 Scene 或
+强制统一工作流。
 
 当前参考管线是 Forward PBR：Scene 可见性与方向光阴影之后，在 PBR HDR Pass 中直接完成材质和
 光照，再执行 Tone Mapping。它目前不是 Deferred Renderer，也尚未实现 Tile/Cluster 光源筛选，
@@ -265,6 +266,7 @@ if (granit::failed(result)) {
 - [H-03 金属度/粗糙度 PBR 渲染模块](docs/plans/H-03-pbr-renderer.md)。
 - [H-04 场景提交与可见性输入适配层](docs/plans/H-04-scene-submission.md)。
 - [H-05 光照与后处理参考管线](docs/plans/H-05-lighting-pipeline.md)。
+- [H-06 Unlit、2D 与 UI 渲染路径](docs/plans/H-06-unlit-2d-ui.md)。
 - [H-07 高级参考渲染套件](docs/plans/H-07-reference-render-pipeline.md)。
 - [docs/plans/F-07-recovery-boundaries.md](docs/plans/F-07-recovery-boundaries.md)：窗口帧恢复边界计划。
 - [docs/renderer.md](docs/renderer.md)：公共 renderer C/C++ API 与生命周期。

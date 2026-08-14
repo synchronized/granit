@@ -233,7 +233,9 @@
   基线、功能降级组合、窗口 Swapchain/Resize 和多 View 完整 LDR 像素链路。当前测量尚未触发
   分块/聚簇光照。下一步依次完成 Render Graph 统一组合、多帧生命周期压力测试和跨平台/安装
   Consumer 收尾均已通过；当前转入公共 C ABI 收敛检查点与 H-07。
-- **H-06 / P2**：评估 2D、UI、调试绘制和文字渲染辅助模块。
+- **[H-06](plans/H-06-unlit-2d-ui.md) / P2 / 已确认**：在 H-07 首版稳定后实现独立 Unlit
+  渲染路径，优先覆盖简单 3D、Sprite、UI 图片、Alpha Blend、Scissor 与批处理；UI 默认在
+  Tone Mapping 后合成，文字排版和完整 UI 布局系统不进入首版。
 - **[H-07](plans/H-07-reference-render-pipeline.md) / P2 / 进行中**：公共 Scene、Material 与 Pipeline
   C ABI、Forward PBR 图、单方向光阴影、默认 IBL、Tone Mapping 缓存、像素回归和独立安装 component
   已完成；下一增量是公共 Mesh ABI 与内置 Opaque/Shadow Draw。
@@ -286,7 +288,9 @@ H-05 与 H-07 之间增加公共 API 收敛检查点：先确定 Scene、Materia
    Renderer -> Mesh/Material -> Scene Snapshot -> `render` -> 最终输出。
 4. **H-07H / 收尾验收**：完成多帧生命周期压力、窗口 Resize、多 View、Validation Layer、共享/静态
    consumer 和相对手工 H-05 组合的输出及性能对比，并据此判断 H-07 首版完成。
-5. **后续画质增量**：H-07 首版完成后，再按测量和使用需求依次评估外部环境切换、透明物体、CSM、
-   Clustered Forward、Bindless 与 H-06 调试绘制；Deferred 保持为可选高级管线研究项。
+5. **H-06A～H-06B / Unlit 基础路径**：H-07 首版完成后，实现无光照材质、透明混合、Scissor
+   和离屏像素回归，为简单 3D、Sprite 与 UI 图片建立共同基础。
+6. **后续增量**：按测量和使用需求继续 H-06 批处理及 Pipeline UI 合成，并评估外部环境切换、
+   透明 PBR、CSM、Clustered Forward 与 Bindless；Deferred 保持为可选高级管线研究项。
 
 若实现过程中发现前置抽象不足，应先更新本路线图和对应设计文档，再扩大公共 API。

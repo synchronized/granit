@@ -83,6 +83,8 @@ D-03-graphics-pipeline.md
 - [H-05：光照与后处理参考管线](H-05-lighting-pipeline.md)——已完成；包含多光源、阴影、IBL、
   HDR/Tone Mapping、性能基线、降级组合、窗口、多 View、统一 Render Graph、2,000 帧生命周期和
   跨平台安装 Consumer 验证。
+- [H-06：Unlit、2D 与 UI 渲染路径](H-06-unlit-2d-ui.md)——已确认；规划无光照材质、透明混合、
+  Scissor、Sprite/UI 批处理，以及 Tone Mapping 后的 UI 合成扩展点。
 - [H-07：高级参考渲染套件](H-07-reference-render-pipeline.md)——已确认，等待公共 ABI 收敛；规划类似
   DiligentFX 的可选统一门面，同时保留直接 Renderer 和选择部分高层模块的使用方式。
 

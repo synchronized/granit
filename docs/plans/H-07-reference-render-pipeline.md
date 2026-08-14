@@ -30,22 +30,32 @@ Tile/Cluster 划分和 Clustered Light Culling。后续优先沿现有路径增�
 保留为可选高级管线，不替换参考管线，也不进入核心 Renderer 职责。详细边界见
 [架构文档](../architecture.md#渲染路径定位)。
 
-## 三种使用模式
+## 四种使用层级
+
+### 使用完整参考管线
+
+面向初级用户。使用者提交 Scene、View、输出目标和质量配置，由 `granit::render_pipeline` 组合
+阴影、PBR、环境光照和后处理，不需要直接构建 Render Graph。
+
+### 扩展参考管线
+
+面向需要自定义材质或局部效果的用户。使用者继续复用默认管线，但可以配置功能，并在稳定扩展点
+插入后处理、调试绘制或 UI Pass。扩展点必须声明输入、输出和发生在 Tone Mapping 前后的颜色空间。
+
+### 自行构建 Render Graph
+
+面向中高级用户。使用者按需组合 `granit::render_graph`、`granit::material`、`granit::scene`、
+`granit::pbr`、`granit::lighting` 或 `granit::post_process`，自行决定 Pass 顺序、资源依赖和资源
+所有权；也可以完全替换默认 Forward PBR 图。
 
 ### 只使用 Renderer
 
 面向自研引擎、特殊渲染器和高级用户。使用者直接管理 Buffer、Texture、Pipeline、Bind Group、
 Command Recorder、同步和提交，不构建任何 Granit 高层目标。
 
-### 选择部分高层模块
-
-使用者按需组合 `granit::render_graph`、`granit::material`、`granit::scene`、`granit::pbr`、
-`granit::lighting` 或 `granit::post_process`，并自行决定 Pass 顺序与资源所有权。
-
-### 使用完整参考管线
-
-使用者创建独立的 `granit::render_pipeline` 对象，提交 Scene 快照、输出目标和显式环境输入，由它
-组合阴影、PBR、环境光照和后处理。统一门面是便利层，不隐藏底层资源句柄，也不成为唯一入口。
+四种层级可以混合使用，但依赖只能由高层指向低层。PBR 负责着色模型，Render Pipeline 负责整帧
+策略，Render Graph 负责 Pass 与资源依赖，Renderer 负责实际 GPU 命令；任何一层都不应复制相邻
+层的运行时状态。
 
 ## 依赖与发布边界
 

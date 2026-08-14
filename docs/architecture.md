@@ -91,11 +91,25 @@ Material、Scene、PBR、Lighting、Post Process 和 Render Graph 作为可选�
 完成独立验证后，可以由 `granit::render_pipeline` 组合成类似 DiligentFX 的高级参考渲染套件。
 统一门面提供默认可运行路径，但不是核心 Renderer 的唯一入口。
 
-使用者必须能够选择三种层级：
+使用者必须能够选择四种逐级开放的层级：
 
-1. 只使用核心 Renderer，自行管理全部资源和命令。
-2. 选择部分高层模块，自行组织 Pass 和资源所有权。
-3. 使用完整参考管线，获得阴影、PBR、IBL 和后处理的默认组合。
+1. 使用完整参考管线，只提交 Scene、View、目标和质量配置，获得阴影、PBR、IBL 和后处理的
+   默认组合。
+2. 配置或扩展参考管线，使用自定义 Material，并在稳定扩展点插入后处理、UI 等 Pass。
+3. 选择部分高层模块并自行构建 Render Graph，决定 Pass、资源依赖和执行顺序。
+4. 直接使用核心 Renderer，自行管理 GPU 资源、命令、同步和提交。
+
+各层职责保持正交：PBR 决定材质与光照如何着色；Render Pipeline 决定一帧包含哪些渲染阶段；
+Render Graph 根据 Pass 的资源读写声明组织依赖、顺序和资源状态；Renderer 负责执行后端中立的
+GPU 命令。Render Graph 不内置 PBR、阴影或 UI 业务语义，Renderer 也不接管整帧策略。
+
+```text
+Scene / View / Material
+          -> Render Pipeline（整帧策略）
+          -> Render Graph（Pass 与资源依赖）
+          -> Renderer / Command Recorder（GPU 执行）
+          -> Vulkan（内部后端）
+```
 
 依赖始终从高级层指向核心层。核心动态库不能链接高层目标，也不能为 `render(view)` 接管 ECS、
 Scene Graph、Camera、Light、Mesh、Material 或资产数据库。高级套件可以拥有自身 GPU 缓存和中间
@@ -103,7 +117,8 @@ Scene Graph、Camera、Light、Mesh、Material 或资产数据库。高级套件
 
 PBR 质量体系主要参考 Filament；底层资源组织和高层组件分离主要参考 Diligent/DiligentFX。项目
 不兼容它们的 API、对象模型、Shader、材质包或资产格式，也不复制 COM 引用计数或整体 Engine
-所有权。具体实施条件见 [H-07 计划](plans/H-07-reference-render-pipeline.md)。
+所有权。具体实施条件见 [H-07 计划](plans/H-07-reference-render-pipeline.md)；无光照、2D 与 UI
+路径见 [H-06 计划](plans/H-06-unlit-2d-ui.md)。
 
 ## 分层
 
