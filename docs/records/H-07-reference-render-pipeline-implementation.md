@@ -342,7 +342,13 @@ Renderable、payload 和关联项数组。回调不得保存数组地址，不�
    独立 HDR/Depth/Tone Mapping 链路及最终像素方向，不共享或覆盖输出。自动路径还验证了 Mesh 或
    Material 提前销毁后返回 `INVALID_HANDLE`，不会继续录制悬空依赖。Windows Frame/Resize 测试在
    Validation 模式下运行，任何 `[granit][vulkan]` warning/error 都会使 CTest 失败；Renderer 活动
-   资源级联销毁诊断也有独立正向匹配测试。更完整的输出一致性和性能对比仍待补齐。
+   资源级联销毁诊断也有独立正向匹配测试。
+
+   输出一致性比较使用可精确表示为 FP16 的 Emissive HDR 值，并把方向光辐射设为零，以隔离阴影、
+   直接光和设备相关浮点差异。自动 PBR + Tone Mapping 路径与手工 H-05 HDR Texture + Tone
+   Mapping GPU 路径分别输出 RGBA8，再逐通道比较中心像素；固定容差为 1 LSB，测试通过。初次
+   对比保留白色方向光时出现预期的灰色镜面反射，说明输入条件不等价，因此没有通过放宽容差处理。
+   性能对比仍待补齐。
 
 外部环境切换、透明物体、CSM 和 Clustered Forward 在 H-07H 后单独立项，不阻塞首版完成。
 

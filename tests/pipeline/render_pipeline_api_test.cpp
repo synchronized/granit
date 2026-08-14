@@ -10,6 +10,7 @@
 #include <granit/renderer/renderer.hpp>
 #include <granit/renderer/texture.hpp>
 
+#include "lighting/tone_mapping_resources.h"
 #include "material/material_package_archive.h"
 
 #include <catch2/catch_all.hpp>
@@ -63,6 +64,16 @@ std::vector<std::uint32_t> load_pipeline_shader(const char* name) {
   return words;
 }
 
+std::vector<std::uint32_t> load_tone_mapping_shader(const char* name) {
+  std::ifstream stream{std::string{GRANIT_PIPELINE_SHADER_DIR} + "/" + name, std::ios::binary};
+  const std::vector<char> bytes{std::istreambuf_iterator<char>{stream}, {}};
+  if (bytes.empty() || bytes.size() % sizeof(std::uint32_t) != 0)
+    return {};
+  std::vector<std::uint32_t> words(bytes.size() / sizeof(std::uint32_t));
+  std::memcpy(words.data(), bytes.data(), bytes.size());
+  return words;
+}
+
 std::vector<std::byte> build_automatic_material_archive() {
   using namespace granit::material;
   const auto vertex = load_pipeline_shader("pbr_shadow_ibl_lights.vert.spv");
@@ -78,10 +89,7 @@ std::vector<std::byte> build_automatic_material_archive() {
        .type = parameter_type::float32,
        .offset = 20,
        .default_value = {}},
-      {.name = "normal_scale",
-       .type = parameter_type::float32,
-       .offset = 24,
-       .default_value = {}},
+      {.name = "normal_scale", .type = parameter_type::float32, .offset = 24, .default_value = {}},
       {.name = "occlusion_strength",
        .type = parameter_type::float32,
        .offset = 28,
@@ -453,7 +461,7 @@ TEST_CASE("公共Render Pipeline ABI输出可回读的Tone Mapping像素") {
   scene_desc.renderables = &renderable;
   scene_desc.renderable_count = 1;
   const granit_scene_directional_light directional_light{.direction_to_light = {0.0F, 0.0F, 1.0F},
-                                                         .radiance = {1.0F, 1.0F, 1.0F},
+                                                         .radiance = {0.0F, 0.0F, 0.0F},
                                                          .layer_mask = UINT64_MAX};
   scene_desc.directional_lights = &directional_light;
   scene_desc.directional_light_count = 1;
@@ -558,18 +566,19 @@ TEST_CASE("公共Render Pipeline ABI输出可回读的Tone Mapping像素") {
   REQUIRE(granit_material_destroy(renderer.native_handle(), material) == GRANIT_SUCCESS);
 
   const auto automatic_archive = build_automatic_material_archive();
-  const std::array<float, 4> base_color{0.8F, 0.2F, 0.1F, 1.0F};
-  const granit_material_parameter_update base_color_update{
-      granit_material_parameter_id("base_color", 10),
-      GRANIT_MATERIAL_PARAMETER_FLOAT4,
-      0,
-      base_color.data(),
-      sizeof(base_color),
-      GRANIT_NULL_HANDLE};
+  const std::array<float, 4> base_color{0.0F, 0.0F, 0.0F, 1.0F};
+  const std::array<float, 3> emissive{0.25F, 0.5F, 1.0F};
+  const std::array automatic_updates{
+      granit_material_parameter_update{granit_material_parameter_id("base_color", 10),
+                                       GRANIT_MATERIAL_PARAMETER_FLOAT4, 0, base_color.data(),
+                                       sizeof(base_color), GRANIT_NULL_HANDLE},
+      granit_material_parameter_update{granit_material_parameter_id("emissive", 8),
+                                       GRANIT_MATERIAL_PARAMETER_FLOAT3, 0, emissive.data(),
+                                       sizeof(emissive), GRANIT_NULL_HANDLE}};
   material_desc.archive_data = automatic_archive.data();
   material_desc.archive_size = automatic_archive.size();
-  material_desc.initial_updates = &base_color_update;
-  material_desc.initial_update_count = 1;
+  material_desc.initial_updates = automatic_updates.data();
+  material_desc.initial_update_count = static_cast<uint32_t>(automatic_updates.size());
   REQUIRE(granit_material_create(renderer.native_handle(), &material_desc, &material) ==
           GRANIT_SUCCESS);
   granit_render_pipeline_desc automatic_pipeline_desc = GRANIT_RENDER_PIPELINE_DESC_INIT;
@@ -588,10 +597,82 @@ TEST_CASE("公共Render Pipeline ABI输出可回读的Tone Mapping像素") {
   REQUIRE(recorder.reset() == granit::result::success);
   REQUIRE(readback.map(0, size * size * 4, &mapped) == granit::result::success);
   pixel = static_cast<const uint8_t*>(mapped) + (size / 2 * size + size / 2) * 4;
-  // 颜色精度由 PBR 基准测试负责；这里确认无回调路径确实覆盖了黑色背景。
-  CHECK((pixel[0] != 0 || pixel[1] != 0 || pixel[2] != 0));
-  CHECK(pixel[3] == 255);
+  const std::array<uint8_t, 4> automatic_pixel{pixel[0], pixel[1], pixel[2], pixel[3]};
   REQUIRE(readback.unmap() == granit::result::success);
+
+  // 用 H-05 资源手工执行相同的 HDR -> Tone Mapping，验证统一门面没有改变输出。
+  granit::texture manual_hdr;
+  granit::texture_view manual_hdr_view;
+  REQUIRE(manual_hdr.initialize(renderer.native_handle(),
+                                {.format = granit::texture_format::rgba16_float,
+                                 .usage = granit::texture_usage::sampled |
+                                          granit::texture_usage::transfer_destination}) ==
+          granit::result::success);
+  constexpr std::array<uint16_t, 4> manual_hdr_pixel{0x3400, 0x3800, 0x3c00, 0x3c00};
+  REQUIRE(manual_hdr.write({reinterpret_cast<const std::byte*>(manual_hdr_pixel.data()),
+                            sizeof(manual_hdr_pixel)},
+                           {.bytes_per_row = 8}, {}) == granit::result::success);
+  REQUIRE(manual_hdr_view.initialize(renderer.native_handle(), manual_hdr.native_handle()) ==
+          granit::result::success);
+  const auto tone_vertex = load_tone_mapping_shader("tone_mapping.vert.spv");
+  const auto tone_fragment = load_tone_mapping_shader("tone_mapping.frag.spv");
+  REQUIRE_FALSE(tone_vertex.empty());
+  REQUIRE_FALSE(tone_fragment.empty());
+  granit::lighting::tone_mapping_resources manual_tone_mapping;
+  REQUIRE(manual_tone_mapping.initialize(
+              renderer.native_handle(), manual_hdr_view.native_handle(),
+              granit::texture_format::rgba8_unorm, {.exposure_scale = 1.0F, .encode_srgb = 1},
+              std::as_bytes(std::span{tone_vertex}),
+              std::as_bytes(std::span{tone_fragment})) == GRANIT_SUCCESS);
+  granit::texture manual_output;
+  granit::texture_view manual_output_view;
+  REQUIRE(manual_output.initialize(renderer.native_handle(),
+                                   {.format = granit::texture_format::rgba8_unorm,
+                                    .usage = granit::texture_usage::color_attachment |
+                                             granit::texture_usage::transfer_source,
+                                    .width = size,
+                                    .height = size}) == granit::result::success);
+  REQUIRE(manual_output_view.initialize(renderer.native_handle(), manual_output.native_handle()) ==
+          granit::result::success);
+  granit::buffer manual_readback;
+  REQUIRE(manual_readback.initialize(renderer.native_handle(),
+                                     {.size = size * size * 4,
+                                      .usage = granit::buffer_usage::transfer_destination,
+                                      .location = granit::memory_location::readback}) ==
+          granit::result::success);
+  granit::command_recorder manual_recorder;
+  REQUIRE(manual_recorder.initialize(renderer.native_handle()) == granit::result::success);
+  REQUIRE(manual_recorder.begin() == granit::result::success);
+  REQUIRE(manual_recorder.bind_graphics_pipeline(manual_tone_mapping.pipeline()) ==
+          granit::result::success);
+  const auto manual_group = manual_tone_mapping.group();
+  REQUIRE(manual_recorder.bind_graphics_groups(manual_tone_mapping.pipeline_layout(), 0,
+                                               std::span{&manual_group, 1}) ==
+          granit::result::success);
+  const granit::viewport manual_viewport{0, 0, size, size, 0, 1};
+  const granit::scissor manual_scissor{0, 0, size, size};
+  REQUIRE(manual_recorder.set_viewports(0, std::span{&manual_viewport, 1}) ==
+          granit::result::success);
+  REQUIRE(manual_recorder.set_scissors(0, std::span{&manual_scissor, 1}) ==
+          granit::result::success);
+  const granit::color_attachment_desc manual_color{.view = manual_output_view.native_handle()};
+  const granit::rendering_desc manual_rendering{.color_attachments = std::span{&manual_color, 1},
+                                                .area = {0, 0, size, size}};
+  REQUIRE(manual_recorder.begin_rendering(manual_rendering) == granit::result::success);
+  REQUIRE(manual_recorder.draw(3) == granit::result::success);
+  REQUIRE(manual_recorder.end_rendering() == granit::result::success);
+  REQUIRE(manual_recorder.copy_texture_to_buffer(manual_output.native_handle(),
+                                                 manual_readback.native_handle(), layout,
+                                                 region) == granit::result::success);
+  REQUIRE(manual_recorder.end() == granit::result::success);
+  REQUIRE(manual_recorder.submit() == granit::result::success);
+  REQUIRE(manual_recorder.reset() == granit::result::success);
+  REQUIRE(manual_readback.map(0, size * size * 4, &mapped) == granit::result::success);
+  pixel = static_cast<const uint8_t*>(mapped) + (size / 2 * size + size / 2) * 4;
+  for (size_t channel = 0; channel < automatic_pixel.size(); ++channel) {
+    CHECK(automatic_pixel[channel] == Catch::Approx(pixel[channel]).margin(1));
+  }
+  REQUIRE(manual_readback.unmap() == granit::result::success);
 
   REQUIRE(granit_render_pipeline_destroy(renderer.native_handle(), pipeline) == GRANIT_SUCCESS);
   constexpr std::uint32_t pipeline_lifecycle_iterations = 8;

@@ -113,7 +113,8 @@ H-07A～H-07G 已完成：
 
 ### H-07H：收尾验收
 
-- 补齐自动路径与手工 H-05 组合的输出一致性比较。
+- **已完成**：自动 PBR Emissive 路径与手工 H-05 HDR Tone Mapping GPU 输出逐通道一致，
+  RGBA8 容差为 1 LSB。
 - 补齐统一门面的 CPU/GPU 性能对比，确认没有不可解释的显著退化。
 - 汇总离屏、窗口、多 View、Resize、Validation、生命周期和安装 Consumer 结果。
 - 验收通过后将 H-07 标记为完成，并把长期行为同步到对应 Reference。

@@ -210,12 +210,19 @@ add_executable(
 target_include_directories(granit_pipeline_test PRIVATE "${PROJECT_SOURCE_DIR}/src")
 target_link_libraries(
   granit_pipeline_test
-  PRIVATE granit::render_pipeline granit::material granit::granit Catch2::Catch2WithMain
+  PRIVATE
+    granit::render_pipeline
+    granit::lighting
+    granit::material
+    granit::granit
+    Catch2::Catch2WithMain
 )
 target_compile_options(granit_pipeline_test PRIVATE $<$<COMPILE_LANG_AND_ID:CXX,MSVC>:/utf-8>)
 target_compile_definitions(
   granit_pipeline_test
-  PRIVATE GRANIT_PIPELINE_ASSET_DIR="${PROJECT_SOURCE_DIR}/assets/shaders/pbr"
+  PRIVATE
+    GRANIT_PIPELINE_ASSET_DIR="${PROJECT_SOURCE_DIR}/assets/shaders/pbr"
+    GRANIT_PIPELINE_SHADER_DIR="${PROJECT_SOURCE_DIR}/src/pipeline/shaders"
 )
 granit_target_compile_warnings(granit_pipeline_test)
 granit_target_output_directories(granit_pipeline_test)
