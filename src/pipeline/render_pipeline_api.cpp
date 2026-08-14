@@ -130,6 +130,13 @@ size_t tone_mapping_pipeline_index(granit_texture_format format) {
   return static_cast<size_t>(format - GRANIT_TEXTURE_FORMAT_RGBA8_UNORM);
 }
 
+bool valid_output(const granit_render_pipeline_output& output) {
+  return output.struct_size >= sizeof(granit_render_pipeline_output) && output.reserved == 0 &&
+         output.reserved_tail == 0 && output.view != GRANIT_NULL_HANDLE && output.width != 0 &&
+         output.height != 0 && output.format >= GRANIT_TEXTURE_FORMAT_RGBA8_UNORM &&
+         output.format <= GRANIT_TEXTURE_FORMAT_BGRA8_SRGB;
+}
+
 granit_result record_tone_mapping(granit::lighting::tone_mapping_pipeline_resources& pipeline,
                                   granit_renderer renderer, granit_command_recorder recorder,
                                   granit_texture_view hdr_view, granit_texture_view output_view,
@@ -405,17 +412,19 @@ granit_result
 render_view(pipeline_state& state, const granit_render_pipeline_render_desc& desc,
             const granit::scene::multi_view_snapshot& snapshot,
             const std::unordered_map<uint64_t, granit_render_pipeline_draw_binding>& bindings,
-            uint32_t view_index, granit_frame frame) {
+            uint32_t view_index, const granit_render_pipeline_output& render_output,
+            granit_frame frame) {
   const auto& visible = snapshot.views()[view_index];
   if (visible.renderables.indices().empty())
     return GRANIT_ERROR_NOT_READY;
 
   granit::render_graph::serial_graph graph;
   const auto hdr = graph.create_transient_texture(
-      granit::lighting::make_hdr_attachment_desc(desc.width, desc.height), "Reference HDR");
-  const auto depth =
-      graph.create_transient_texture(make_depth_desc(desc.width, desc.height), "Reference Depth");
-  const auto output = graph.import_texture_view(desc.output, true, "Reference Output");
+      granit::lighting::make_hdr_attachment_desc(render_output.width, render_output.height),
+      "Reference HDR");
+  const auto depth = graph.create_transient_texture(
+      make_depth_desc(render_output.width, render_output.height), "Reference Depth");
+  const auto output = graph.import_texture_view(render_output.view, true, "Reference Output");
 
   std::optional<granit::render_graph::resource_id> shadow;
   if (!visible.directional_lights.empty())
@@ -493,10 +502,10 @@ render_view(pipeline_state& state, const granit_render_pipeline_render_desc& des
                                       .layer_mask = visible.view.layer_mask};
   graph_desc.tone_mapping.hdr_color = hdr;
   graph_desc.tone_mapping.output = output;
-  graph_desc.tone_mapping.output_format = static_cast<granit::texture_format>(desc.output_format);
+  graph_desc.tone_mapping.output_format = static_cast<granit::texture_format>(render_output.format);
   graph_desc.tone_mapping.tone_mapping.exposure_ev = desc.exposure_ev;
   graph_desc.tone_mapping.tone_mapping.output_transfer =
-      is_srgb_output(desc.output_format)
+      is_srgb_output(render_output.format)
           ? granit::lighting::tone_mapping_output_transfer::attachment_srgb
           : granit::lighting::tone_mapping_output_transfer::shader_srgb;
 
@@ -511,8 +520,8 @@ render_view(pipeline_state& state, const granit_render_pipeline_render_desc& des
       }
       return record_opaque_draws(
           state, context.recorder(), context.texture_view(hdr), context.texture_view(depth),
-          shadow ? context.texture_view(*shadow) : GRANIT_NULL_HANDLE, desc.width, desc.height,
-          frame, objects, draw_bindings, lights, shadow_constants);
+          shadow ? context.texture_view(*shadow) : GRANIT_NULL_HANDLE, render_output.width,
+          render_output.height, frame, objects, draw_bindings, lights, shadow_constants);
     }
     const granit_render_pipeline_record_info info{
         .struct_size = sizeof(granit_render_pipeline_record_info),
@@ -595,10 +604,12 @@ render_view(pipeline_state& state, const granit_render_pipeline_render_desc& des
     };
   }
   callbacks.tone_mapping = [&](auto& context, const auto& constants) {
-    auto& pipeline = state.tone_mapping_pipelines[tone_mapping_pipeline_index(desc.output_format)];
+    auto& pipeline =
+        state.tone_mapping_pipelines[tone_mapping_pipeline_index(render_output.format)];
     return record_tone_mapping(pipeline, state.renderer, context.recorder(),
                                context.texture_view(hdr), context.texture_view(output),
-                               desc.output_format, desc.width, desc.height, constants);
+                               render_output.format, render_output.width, render_output.height,
+                               constants);
   };
   granit::lighting::reference_pipeline_graph_passes passes;
   if (granit::lighting::add_reference_pipeline_graph(graph, std::move(graph_desc),
@@ -679,15 +690,26 @@ granit_render_pipeline_render(granit_renderer renderer, granit_render_pipeline p
                               const granit_render_pipeline_render_desc* desc) {
   if (desc == nullptr || desc->struct_size < sizeof(granit_render_pipeline_render_desc) ||
       desc->reserved != 0 || desc->reserved_tail != 0 || desc->scene == GRANIT_NULL_HANDLE ||
-      desc->output == GRANIT_NULL_HANDLE || desc->width == 0 || desc->height == 0 ||
       desc->view_count == 0 || !std::isfinite(desc->exposure_ev) ||
       (desc->frame != GRANIT_NULL_HANDLE && desc->view_count != 1) ||
+      (desc->output_count == 0 && desc->view_count != 1) ||
+      (desc->output_count != 0 &&
+       (desc->output_count != desc->view_count || desc->outputs == nullptr)) ||
       (desc->draw_binding_count != 0 && desc->draw_bindings == nullptr)) {
     return GRANIT_ERROR_INVALID_ARGUMENT;
   }
-  if (desc->output_format < GRANIT_TEXTURE_FORMAT_RGBA8_UNORM ||
-      desc->output_format > GRANIT_TEXTURE_FORMAT_BGRA8_SRGB) {
+  const granit_render_pipeline_output legacy_output{sizeof(granit_render_pipeline_output),
+                                                    0,
+                                                    desc->output,
+                                                    desc->output_format,
+                                                    desc->width,
+                                                    desc->height,
+                                                    0};
+  if (desc->output_count == 0 && !valid_output(legacy_output))
     return GRANIT_ERROR_INVALID_ARGUMENT;
+  for (uint32_t index = 0; index < desc->output_count; ++index) {
+    if (!valid_output(desc->outputs[index]))
+      return GRANIT_ERROR_INVALID_ARGUMENT;
   }
   auto state = find_pipeline(renderer, pipeline);
   if (state == nullptr)
@@ -724,8 +746,9 @@ granit_render_pipeline_render(granit_renderer renderer, granit_render_pipeline p
       return GRANIT_ERROR_INVALID_ARGUMENT;
     }
     for (uint32_t offset = 0; offset < desc->view_count; ++offset) {
-      result =
-          render_view(*state, *desc, snapshot, bindings, desc->first_view + offset, desc->frame);
+      const auto& render_output = desc->output_count == 0 ? legacy_output : desc->outputs[offset];
+      result = render_view(*state, *desc, snapshot, bindings, desc->first_view + offset,
+                           render_output, desc->frame);
       if (result != GRANIT_SUCCESS)
         return result;
     }

@@ -232,6 +232,8 @@ Renderable、payload 和关联项数组。回调不得保存数组地址，不�
   GPU 更新由各实例独立串行化。
 - `granit/pipeline/render_pipeline.h` 已提供统一 Pipeline 句柄与单次多 View `render` 入口。首版实现
   从 Scene Snapshot 复制稳定输入，逐 View 执行可见性结果，并组合 PBR HDR、Depth 与 Tone Mapping。
+  单 View 保留紧凑输出字段；多 View 必须提供等长 `granit_render_pipeline_output` 数组，每项独立指定
+  Texture View、格式和尺寸，避免多个 View 顺序覆盖同一目标。
 - 固定阶段回调目前覆盖 Shadow 与 Opaque。回调获得 Recorder、HDR/Depth 输出 View、当前 View、可见
   Renderable，以及已按 payload 关联的 Mesh/Material 批次；不得提交 Recorder 或递归调用同一
   Pipeline。重复、缺失、无效或跨 Renderer 的 Mesh/Material 均在录制前失败。
@@ -323,8 +325,9 @@ Renderable、payload 和关联项数组。回调不得保存数组地址，不�
    并在 Resize 后重建 Swapchain 与 Scene View。直接 Renderer 用法继续作为对照保留。
 4. **H-07H 验收（进行中）**：自动离屏路径已覆盖 8 轮 Pipeline 创建、真实渲染和销毁，确认默认
    IBL、Shadow/Tone Mapping Pipeline 与内部缓存可重复重建；Windows 烟雾测试会自动改变两次窗口
-   尺寸，分别重建 Swapchain 和 Scene View，并在 Frame 同步路径成功呈现后退出。多 View、
-   Validation Layer 输出收敛、输出一致性和性能对比仍待补齐。
+   尺寸，分别重建 Swapchain 和 Scene View，并在 Frame 同步路径成功呈现后退出。多 View 已验证两套
+   独立 HDR/Depth/Tone Mapping 链路及最终像素方向，不共享或覆盖输出。Validation Layer 输出收敛、
+   更完整的输出一致性和性能对比仍待补齐。
 
 外部环境切换、透明物体、CSM 和 Clustered Forward 在 H-07H 后单独立项，不阻塞首版完成。
 

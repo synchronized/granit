@@ -181,6 +181,10 @@ target_link_libraries(your_target PRIVATE granit::render_pipeline)
 CMake 导出自动闭包，使用者不应直接依赖 `granit::detail_*` 目标；链接
 `granit::render_pipeline` 时会自动获得核心 `granit::granit` 依赖。
 
+单 View 可以直接填写 `granit_render_pipeline_render_desc` 的 `output/format/width/height`。一次渲染
+多个 View 时必须提供与 `view_count` 等长的 `granit_render_pipeline_output` 数组，使每个 View 拥有
+独立目标、格式和尺寸；不会隐式覆盖同一输出。
+
 C 用户包含：
 
 ```c

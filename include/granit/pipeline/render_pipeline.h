@@ -71,6 +71,26 @@ typedef struct granit_render_pipeline_desc {
 #define GRANIT_RENDER_PIPELINE_DESC_INIT                                                           \
   {(uint32_t)sizeof(granit_render_pipeline_desc), UINT32_C(0), 0, 0}
 
+/** 多 View 渲染中单个 View 的独立输出。 */
+typedef struct granit_render_pipeline_output {
+  uint32_t struct_size;
+  uint32_t reserved;
+  granit_texture_view view;
+  granit_texture_format format;
+  uint32_t width;
+  uint32_t height;
+  uint32_t reserved_tail;
+} granit_render_pipeline_output;
+
+#define GRANIT_RENDER_PIPELINE_OUTPUT_INIT                                                         \
+  {(uint32_t)sizeof(granit_render_pipeline_output),                                                \
+   UINT32_C(0),                                                                                    \
+   GRANIT_NULL_HANDLE,                                                                             \
+   GRANIT_TEXTURE_FORMAT_UNDEFINED,                                                                \
+   UINT32_C(0),                                                                                    \
+   UINT32_C(0),                                                                                    \
+   UINT32_C(0)}
+
 typedef struct granit_render_pipeline_render_desc {
   uint32_t struct_size;
   uint32_t reserved;
@@ -84,6 +104,9 @@ typedef struct granit_render_pipeline_render_desc {
   float exposure_ev;
   uint32_t draw_binding_count;
   const granit_render_pipeline_draw_binding* draw_bindings;
+  /** 多 View 独立输出数组；单 View 可保持为空并使用上方 output/format/width/height。 */
+  uint32_t output_count;
+  const granit_render_pipeline_output* outputs;
   /** 可选 Swapchain Frame；非零时本次只允许渲染一个 View，并使用帧同步提交。 */
   granit_frame frame;
   uint32_t reserved_tail;
@@ -100,6 +123,8 @@ typedef struct granit_render_pipeline_render_desc {
    UINT32_C(0),                                                                                    \
    UINT32_C(1),                                                                                    \
    0.0F,                                                                                           \
+   UINT32_C(0),                                                                                    \
+   0,                                                                                              \
    UINT32_C(0),                                                                                    \
    0,                                                                                              \
    GRANIT_NULL_HANDLE,                                                                             \
@@ -119,6 +144,7 @@ granit_render_pipeline_create(granit_renderer renderer, const granit_render_pipe
  *
  * 每个可见 Renderable 的 payload 必须在 draw_bindings 中唯一对应一项。Mesh 和 Material
  * 必须属于当前 Renderer，且在调用期间不得更新或销毁。
+ * 单 View 可使用 output/format/width/height；多 View 必须提供与 view_count 等长的 outputs 数组。
  * frame 为零时执行普通离屏提交；frame 非零时使用 Swapchain 帧提交，并要求 view_count 为 1。
  * 同一管线不可并发调用。回调不得结束、提交或销毁传入的 Recorder，也不得递归调用本管线。
  */
