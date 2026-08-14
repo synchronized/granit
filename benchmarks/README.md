@@ -77,7 +77,8 @@ PBR HDR、Tone Mapping 和整条 GPU 渲染链。使用 `--lights` 选择点光�
 
 `granit_render_pipeline_benchmarks` 测量公共 Render Pipeline 自动路径的端到端 CPU 调用成本，
 包含 Scene 复制、Graph 构建、资源准备、命令录制、提交和当前实现中的完成等待，不包含初始化、
-材质归档构建或像素回读：
+材质归档构建或像素回读。基准同时运行最小阶段回调路径；它保留相同的 Graph、瞬态附件和 Tone
+Mapping，但跳过自动 Shadow/Opaque Draw，用于隔离门面外壳与自动 Draw 资源准备：
 
 ```powershell
 ./build/windows-clang-release/bin/granit_render_pipeline_benchmarks.exe `

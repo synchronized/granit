@@ -103,6 +103,30 @@ benchmark_summary summarize(std::vector<double> values) {
           .p95 = percentile(0.95),
           .p99 = percentile(0.99)};
 }
+
+granit_result record_minimal_stage(const granit_render_pipeline_record_info* info,
+                                   void* user_data) {
+  if (info == nullptr || user_data == nullptr)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  if (info->stage == GRANIT_RENDER_PIPELINE_STAGE_SHADOW)
+    return GRANIT_SUCCESS;
+  const auto renderer = *static_cast<const granit_renderer*>(user_data);
+  granit_color_attachment_desc color = GRANIT_COLOR_ATTACHMENT_DESC_INIT;
+  color.view = info->color_output;
+  color.clear_value = {.red = 0.25F, .green = 0.5F, .blue = 1.0F, .alpha = 1.0F};
+  granit_depth_stencil_attachment_desc depth = GRANIT_DEPTH_STENCIL_ATTACHMENT_DESC_INIT;
+  depth.view = info->depth_output;
+  granit_rendering_desc rendering = GRANIT_RENDERING_DESC_INIT;
+  rendering.color_attachment_count = 1;
+  rendering.color_attachments = &color;
+  rendering.depth_stencil_attachment = &depth;
+  rendering.area = {0, 0, static_cast<std::uint32_t>(info->view->viewport_width),
+                    static_cast<std::uint32_t>(info->view->viewport_height)};
+  auto result = granit_command_recorder_begin_rendering(renderer, info->recorder, &rendering);
+  if (result == GRANIT_SUCCESS)
+    result = granit_command_recorder_end_rendering(renderer, info->recorder);
+  return result;
+}
 #endif
 
 } // namespace
@@ -121,7 +145,7 @@ int main(int argc, char** argv) {
     std::cerr << "当前环境无法创建 Vulkan Renderer\n";
     return 1;
   }
-  const auto native_renderer = renderer.native_handle();
+  auto native_renderer = renderer.native_handle();
   constexpr std::uint32_t size = 64;
 
   granit_texture output = GRANIT_NULL_HANDLE;
@@ -212,6 +236,17 @@ int main(int argc, char** argv) {
              "创建 Render Pipeline")) {
     return 1;
   }
+#ifdef GRANIT_RENDER_PIPELINE_CPU_BENCHMARK
+  granit_render_pipeline callback_pipeline = GRANIT_NULL_HANDLE;
+  granit_render_pipeline_desc callback_pipeline_desc = GRANIT_RENDER_PIPELINE_DESC_INIT;
+  callback_pipeline_desc.record = record_minimal_stage;
+  callback_pipeline_desc.user_data = &native_renderer;
+  if (!check(granit_render_pipeline_create(native_renderer, &callback_pipeline_desc,
+                                           &callback_pipeline),
+             "创建最小回调 Render Pipeline")) {
+    return 1;
+  }
+#endif
   const granit_render_pipeline_draw_binding binding{1, mesh, material, 0};
   granit_render_pipeline_render_desc render_desc = GRANIT_RENDER_PIPELINE_RENDER_DESC_INIT;
   render_desc.scene = scene;
@@ -221,39 +256,46 @@ int main(int argc, char** argv) {
   render_desc.height = size;
   render_desc.draw_binding_count = 1;
   render_desc.draw_bindings = &binding;
-  const auto render_once = [&] {
-    return granit_render_pipeline_render(native_renderer, pipeline, &render_desc);
+  const auto render_once = [&](granit_render_pipeline selected) {
+    return granit_render_pipeline_render(native_renderer, selected, &render_desc);
   };
 
 #ifdef GRANIT_RENDER_PIPELINE_CPU_BENCHMARK
-  for (std::uint32_t sample = 0; sample < benchmark.warmup; ++sample) {
-    for (std::uint32_t iteration = 0; iteration < benchmark.iterations; ++iteration) {
-      if (!check(render_once(), "预热渲染"))
-        return 1;
+  const auto run_benchmark = [&](std::string_view name, granit_render_pipeline selected) {
+    for (std::uint32_t sample = 0; sample < benchmark.warmup; ++sample) {
+      for (std::uint32_t iteration = 0; iteration < benchmark.iterations; ++iteration) {
+        if (!check(render_once(selected), "预热渲染"))
+          return false;
+      }
     }
-  }
-  std::vector<double> samples;
-  samples.reserve(benchmark.samples);
-  for (std::uint32_t sample = 0; sample < benchmark.samples; ++sample) {
-    const auto begin = std::chrono::steady_clock::now();
-    for (std::uint32_t iteration = 0; iteration < benchmark.iterations; ++iteration) {
-      if (!check(render_once(), "基准渲染"))
-        return 1;
+    std::vector<double> samples;
+    samples.reserve(benchmark.samples);
+    for (std::uint32_t sample = 0; sample < benchmark.samples; ++sample) {
+      const auto begin = std::chrono::steady_clock::now();
+      for (std::uint32_t iteration = 0; iteration < benchmark.iterations; ++iteration) {
+        if (!check(render_once(selected), "基准渲染"))
+          return false;
+      }
+      const auto elapsed =
+          std::chrono::duration<double, std::nano>(std::chrono::steady_clock::now() - begin);
+      samples.push_back(elapsed.count() / static_cast<double>(benchmark.iterations));
     }
-    const auto elapsed =
-        std::chrono::duration<double, std::nano>(std::chrono::steady_clock::now() - begin);
-    samples.push_back(elapsed.count() / static_cast<double>(benchmark.iterations));
-  }
-  const auto summary = summarize(std::move(samples));
+    const auto summary = summarize(std::move(samples));
+    std::cout << "1," << name << ',' << benchmark.iterations << ',' << benchmark.samples << ','
+              << summary.mean << ',' << summary.p50 << ',' << summary.p95 << ',' << summary.p99
+              << '\n';
+    return true;
+  };
   std::cout << std::fixed << std::setprecision(2) << "# revision=" << GRANIT_BENCHMARK_REVISION
             << ",compiler=" << GRANIT_BENCHMARK_COMPILER << ",system=" << GRANIT_BENCHMARK_SYSTEM
             << ",link=" << GRANIT_BENCHMARK_LINK_MODE << '\n'
-            << "schema,name,iterations,samples,mean_ns,p50_ns,p95_ns,p99_ns\n"
-            << "1,render_pipeline_end_to_end," << benchmark.iterations << ',' << benchmark.samples
-            << ',' << summary.mean << ',' << summary.p50 << ',' << summary.p95 << ',' << summary.p99
-            << '\n';
+            << "schema,name,iterations,samples,mean_ns,p50_ns,p95_ns,p99_ns\n";
+  if (!run_benchmark("automatic_end_to_end", pipeline) ||
+      !run_benchmark("minimal_callback_end_to_end", callback_pipeline)) {
+    return 1;
+  }
 #else
-  if (!check(render_once(), "渲染"))
+  if (!check(render_once(pipeline), "渲染"))
     return 1;
 #endif
 
@@ -313,6 +355,9 @@ int main(int argc, char** argv) {
   if (granit::succeeded(result))
     result = readback.unmap();
 
+#ifdef GRANIT_RENDER_PIPELINE_CPU_BENCHMARK
+  static_cast<void>(granit_render_pipeline_destroy(native_renderer, callback_pipeline));
+#endif
   static_cast<void>(granit_render_pipeline_destroy(native_renderer, pipeline));
   static_cast<void>(granit_scene_snapshot_destroy(native_renderer, scene));
   static_cast<void>(granit_material_destroy(native_renderer, material));
