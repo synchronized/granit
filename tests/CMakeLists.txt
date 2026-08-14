@@ -1,6 +1,14 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2026 Granit contributors
 
+add_test(
+  NAME granit.documentation
+  COMMAND
+    "${CMAKE_COMMAND}"
+    "-DGRANIT_SOURCE_DIR=${PROJECT_SOURCE_DIR}"
+    -P "${PROJECT_SOURCE_DIR}/cmake/check_documentation.cmake"
+)
+
 add_executable(granit_c_version_test c_version_test.c)
 target_link_libraries(granit_c_version_test PRIVATE granit::granit Unity::Unity)
 set_target_properties(granit_c_version_test PROPERTIES LINKER_LANGUAGE CXX)

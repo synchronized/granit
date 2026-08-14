@@ -258,5 +258,9 @@ Granit 当前采用渐进整理方式：
 - `docs/plans/*.md` 保存设计和实施计划；大段实现日志后续迁移到 `docs/records/`。
 - `benchmarks/results/` 继续保存可复现性能结果，不复制到计划正文。
 
+Granit 已通过 `cmake/check_documentation.cmake` 和 `granit.documentation` CTest 检查自有
+Markdown 相对文件链接、根 README 篇幅及分类索引完整性。未来措辞和文档类型判断暂不作为硬错误，
+避免误伤合理的限制与兼容性说明。
+
 当前入口、Guide、Reference、Concept、Plan 和 Record 已按职责分层；后续继续拆分 H-07、H-02
 和 H-03 中混合的实现记录。
