@@ -61,7 +61,6 @@ public:
     const auto first_index = static_cast<std::uint32_t>(indices_.size());
     try {
       vertices_.insert(vertices_.end(), vertices.begin(), vertices.end());
-      indices_.reserve(indices_.size() + indices.size());
       for (const auto index : indices)
         indices_.push_back(vertex_base + index);
       items_.push_back({first_index, static_cast<std::uint32_t>(indices.size()), state});

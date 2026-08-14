@@ -144,6 +144,26 @@ granit_target_compile_warnings(granit_scene_benchmarks)
 granit_target_output_directories(granit_scene_benchmarks)
 set_target_properties(granit_scene_benchmarks PROPERTIES FOLDER "Benchmarks")
 
+add_executable(granit_ui_benchmarks ui_main.cpp)
+target_compile_features(granit_ui_benchmarks PRIVATE cxx_std_20)
+target_compile_options(
+  granit_ui_benchmarks
+  PRIVATE $<$<COMPILE_LANG_AND_ID:CXX,MSVC>:/utf-8>
+)
+target_compile_definitions(
+  granit_ui_benchmarks
+  PRIVATE
+    GRANIT_BENCHMARK_COMPILER="${CMAKE_CXX_COMPILER_ID}-${CMAKE_CXX_COMPILER_VERSION}"
+    GRANIT_BENCHMARK_LINK_MODE="$<IF:$<BOOL:${BUILD_SHARED_LIBS}>,shared,static>"
+    GRANIT_BENCHMARK_REVISION="${granit_benchmark_revision}"
+    GRANIT_BENCHMARK_SYSTEM="${CMAKE_SYSTEM_NAME}-${CMAKE_SYSTEM_PROCESSOR}"
+)
+target_include_directories(granit_ui_benchmarks PRIVATE "${PROJECT_SOURCE_DIR}/src")
+target_link_libraries(granit_ui_benchmarks PRIVATE granit::render_pipeline)
+granit_target_compile_warnings(granit_ui_benchmarks)
+granit_target_output_directories(granit_ui_benchmarks)
+set_target_properties(granit_ui_benchmarks PROPERTIES FOLDER "Benchmarks")
+
 add_executable(granit_lighting_benchmarks lighting_main.cpp)
 target_compile_features(granit_lighting_benchmarks PRIVATE cxx_std_20)
 target_compile_options(
