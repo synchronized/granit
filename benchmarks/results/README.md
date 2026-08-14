@@ -15,3 +15,4 @@
 - [Scene 多 View 首份 CPU 性能基线](2026-08-12-windows-clang-scene-fb38f6f.md)
 - [Lighting 可见光源打包首份 CPU 性能基线](2026-08-13-windows-clang-lighting-cc2ef53.md)
 - [Lighting 分 Pass 首份 GPU 性能基线](2026-08-13-windows-clang-lighting-gpu-eefb0d8.md)
+- [Render Pipeline 与 H-05 性能对比](2026-08-14-windows-clang-render-pipeline-5c0613a.md)

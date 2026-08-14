@@ -4,13 +4,27 @@
 #include <granit/granit.hpp>
 #include <granit/pipeline/render_pipeline.h>
 
+#include <algorithm>
 #include <array>
+#include <charconv>
+#include <chrono>
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <fstream>
+#include <iomanip>
 #include <iostream>
 #include <iterator>
+#include <numeric>
+#include <string_view>
 #include <vector>
+
+#ifndef GRANIT_BENCHMARK_REVISION
+#define GRANIT_BENCHMARK_REVISION "unknown"
+#define GRANIT_BENCHMARK_COMPILER "unknown"
+#define GRANIT_BENCHMARK_SYSTEM "unknown"
+#define GRANIT_BENCHMARK_LINK_MODE "unknown"
+#endif
 
 namespace {
 
@@ -35,9 +49,73 @@ bool check(granit_result result, const char* operation) {
   return false;
 }
 
+#ifdef GRANIT_RENDER_PIPELINE_CPU_BENCHMARK
+struct benchmark_options {
+  std::uint32_t iterations = 20;
+  std::uint32_t samples = 20;
+  std::uint32_t warmup = 5;
+};
+
+bool parse_u32(std::string_view text, std::uint32_t& value) {
+  const auto result = std::from_chars(text.data(), text.data() + text.size(), value);
+  return result.ec == std::errc{} && result.ptr == text.data() + text.size();
+}
+
+bool parse_options(int argc, char** argv, benchmark_options& options) {
+  for (int index = 1; index < argc; ++index) {
+    const std::string_view argument{argv[index]};
+    if (argument == "--help") {
+      std::cout << "用法：granit_render_pipeline_benchmarks [--iterations N] [--samples N] "
+                   "[--warmup N]\n";
+      return false;
+    }
+    if (index + 1 >= argc)
+      return false;
+    const std::string_view value{argv[++index]};
+    auto* target = argument == "--iterations" ? &options.iterations
+                   : argument == "--samples"  ? &options.samples
+                   : argument == "--warmup"   ? &options.warmup
+                                              : nullptr;
+    if (target == nullptr || !parse_u32(value, *target))
+      return false;
+  }
+  return options.iterations != 0 && options.iterations <= 10'000 && options.samples != 0 &&
+         options.samples <= 1'000 && options.warmup <= 1'000;
+}
+
+struct benchmark_summary {
+  double mean = 0.0;
+  double p50 = 0.0;
+  double p95 = 0.0;
+  double p99 = 0.0;
+};
+
+benchmark_summary summarize(std::vector<double> values) {
+  std::ranges::sort(values);
+  const auto percentile = [&](double fraction) {
+    const auto rank =
+        static_cast<std::size_t>(std::ceil(fraction * static_cast<double>(values.size())) - 1.0);
+    return values[std::min(rank, values.size() - 1)];
+  };
+  return {.mean = std::accumulate(values.begin(), values.end(), 0.0) /
+                  static_cast<double>(values.size()),
+          .p50 = percentile(0.50),
+          .p95 = percentile(0.95),
+          .p99 = percentile(0.99)};
+}
+#endif
+
 } // namespace
 
-int main() {
+int main(int argc, char** argv) {
+#ifdef GRANIT_RENDER_PIPELINE_CPU_BENCHMARK
+  benchmark_options benchmark;
+  if (!parse_options(argc, argv, benchmark))
+    return argc > 1 && std::string_view{argv[1]} == "--help" ? 0 : 2;
+#else
+  static_cast<void>(argc);
+  static_cast<void>(argv);
+#endif
   granit::renderer renderer;
   if (granit::failed(renderer.initialize({.application_name = "Granit Render Pipeline"}))) {
     std::cerr << "当前环境无法创建 Vulkan Renderer\n";
@@ -143,8 +221,41 @@ int main() {
   render_desc.height = size;
   render_desc.draw_binding_count = 1;
   render_desc.draw_bindings = &binding;
-  if (!check(granit_render_pipeline_render(native_renderer, pipeline, &render_desc), "渲染"))
+  const auto render_once = [&] {
+    return granit_render_pipeline_render(native_renderer, pipeline, &render_desc);
+  };
+
+#ifdef GRANIT_RENDER_PIPELINE_CPU_BENCHMARK
+  for (std::uint32_t sample = 0; sample < benchmark.warmup; ++sample) {
+    for (std::uint32_t iteration = 0; iteration < benchmark.iterations; ++iteration) {
+      if (!check(render_once(), "预热渲染"))
+        return 1;
+    }
+  }
+  std::vector<double> samples;
+  samples.reserve(benchmark.samples);
+  for (std::uint32_t sample = 0; sample < benchmark.samples; ++sample) {
+    const auto begin = std::chrono::steady_clock::now();
+    for (std::uint32_t iteration = 0; iteration < benchmark.iterations; ++iteration) {
+      if (!check(render_once(), "基准渲染"))
+        return 1;
+    }
+    const auto elapsed =
+        std::chrono::duration<double, std::nano>(std::chrono::steady_clock::now() - begin);
+    samples.push_back(elapsed.count() / static_cast<double>(benchmark.iterations));
+  }
+  const auto summary = summarize(std::move(samples));
+  std::cout << std::fixed << std::setprecision(2) << "# revision=" << GRANIT_BENCHMARK_REVISION
+            << ",compiler=" << GRANIT_BENCHMARK_COMPILER << ",system=" << GRANIT_BENCHMARK_SYSTEM
+            << ",link=" << GRANIT_BENCHMARK_LINK_MODE << '\n'
+            << "schema,name,iterations,samples,mean_ns,p50_ns,p95_ns,p99_ns\n"
+            << "1,render_pipeline_end_to_end," << benchmark.iterations << ',' << benchmark.samples
+            << ',' << summary.mean << ',' << summary.p50 << ',' << summary.p95 << ',' << summary.p99
+            << '\n';
+#else
+  if (!check(render_once(), "渲染"))
     return 1;
+#endif
 
   granit::buffer readback;
   granit::command_recorder recorder;
@@ -212,7 +323,9 @@ int main() {
     std::cerr << "中心像素未被自动渲染路径覆盖\n";
     return 1;
   }
+#ifndef GRANIT_RENDER_PIPELINE_CPU_BENCHMARK
   std::cout << "Render Pipeline 离屏渲染成功，中心像素：" << static_cast<int>(center[0]) << ", "
             << static_cast<int>(center[1]) << ", " << static_cast<int>(center[2]) << '\n';
+#endif
   return 0;
 }

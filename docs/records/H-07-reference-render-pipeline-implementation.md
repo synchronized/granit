@@ -348,7 +348,11 @@ Renderable、payload 和关联项数组。回调不得保存数组地址，不�
    直接光和设备相关浮点差异。自动 PBR + Tone Mapping 路径与手工 H-05 HDR Texture + Tone
    Mapping GPU 路径分别输出 RGBA8，再逐通道比较中心像素；固定容差为 1 LSB，测试通过。初次
    对比保留白色方向光时出现预期的灰色镜面反射，说明输入条件不等价，因此没有通过放宽容差处理。
-   性能对比仍待补齐。
+   首轮 Release 性能对比已经补齐可复现 CPU 数据，并复测 H-05 GPU timestamp 基线。统一门面
+   CPU P50 为 3.025 ms，手工 H-05 为 0.662 ms，约相差 4.57 倍；两者 Shadow 工作量尚不严格
+   相同，因此该结果用于暴露风险，不作为最终归因。H-07H 暂不通过，后续先缓存每帧重复创建的
+   Graph、瞬态附件和绑定资源，再建立等工作量复测。完整数据见
+   [性能对比](../../benchmarks/results/2026-08-14-windows-clang-render-pipeline-5c0613a.md)。
 
 外部环境切换、透明物体、CSM 和 Clustered Forward 在 H-07H 后单独立项，不阻塞首版完成。
 

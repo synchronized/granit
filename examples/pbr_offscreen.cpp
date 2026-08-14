@@ -19,6 +19,7 @@
 #include <algorithm>
 #include <array>
 #include <charconv>
+#include <chrono>
 #include <cmath>
 #include <cstdint>
 #include <cstring>
@@ -58,6 +59,7 @@ bool parse_u32(std::string_view text, std::uint32_t& value) {
 }
 
 struct gpu_sample {
+  double cpu_end_to_end = 0.0;
   double shadow = 0.0;
   double pbr_hdr = 0.0;
   double tone_mapping = 0.0;
@@ -113,8 +115,8 @@ bool parse_options(int argc, char** argv, run_options& options) {
 }
 
 std::vector<std::uint32_t> load_shader(std::string_view name) {
-  const auto directory = name.starts_with("tone_mapping") ? GRANIT_PIPELINE_SHADER_DIR
-                                                           : GRANIT_PBR_SHADER_DIR;
+  const auto directory =
+      name.starts_with("tone_mapping") ? GRANIT_PIPELINE_SHADER_DIR : GRANIT_PBR_SHADER_DIR;
   const auto path = std::string{directory} + "/" + std::string{name};
   std::ifstream stream{path, std::ios::binary};
   const std::vector<char> bytes{std::istreambuf_iterator<char>{stream}, {}};
@@ -628,6 +630,7 @@ int main(int argc, char** argv) {
     for (std::uint32_t sample = 0; sample < options.samples && granit::succeeded(result);
          ++sample) {
       gpu_sample current{};
+      const auto cpu_begin = std::chrono::steady_clock::now();
       for (std::uint32_t iteration = 0; iteration < options.iterations && granit::succeeded(result);
            ++iteration) {
         result = render_case(1.0F, true, material, pipeline, instance.bind_group(),
@@ -638,6 +641,10 @@ int main(int argc, char** argv) {
         current.total += static_cast<double>(gpu_timestamps[3] - gpu_timestamps[0]);
       }
       const auto divisor = static_cast<double>(options.iterations);
+      current.cpu_end_to_end =
+          std::chrono::duration<double, std::nano>(std::chrono::steady_clock::now() - cpu_begin)
+              .count() /
+          divisor;
       current.shadow /= divisor;
       current.pbr_hdr /= divisor;
       current.tone_mapping /= divisor;
@@ -723,6 +730,7 @@ int main(int argc, char** argv) {
     print_result("pbr_hdr", &gpu_sample::pbr_hdr);
     print_result("tone_mapping", &gpu_sample::tone_mapping);
     print_result("render_chain", &gpu_sample::total);
+    print_result("cpu_end_to_end", &gpu_sample::cpu_end_to_end);
     return 0;
   }
   std::cout << "PBR 多光源、阴影、IBL、HDR 与 Tone Mapping 像素回归完成\n"

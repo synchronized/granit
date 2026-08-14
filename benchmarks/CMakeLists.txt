@@ -188,3 +188,47 @@ target_link_libraries(granit_lighting_gpu_benchmarks PRIVATE granit::lighting)
 granit_target_compile_warnings(granit_lighting_gpu_benchmarks)
 granit_target_output_directories(granit_lighting_gpu_benchmarks)
 set_target_properties(granit_lighting_gpu_benchmarks PROPERTIES FOLDER "Benchmarks")
+
+set(granit_render_pipeline_benchmark_package
+    "${CMAKE_CURRENT_BINARY_DIR}/assets/render_pipeline_untextured.grmat")
+add_custom_command(
+  OUTPUT "${granit_render_pipeline_benchmark_package}"
+  COMMAND "${CMAKE_COMMAND}" -E make_directory "${CMAKE_CURRENT_BINARY_DIR}/assets"
+  COMMAND
+    granit_material_tool build
+    "${PROJECT_SOURCE_DIR}/examples/assets/render_pipeline_untextured.grmat.json"
+    --output "${granit_render_pipeline_benchmark_package}"
+  DEPENDS
+    granit_material_tool
+    "${PROJECT_SOURCE_DIR}/examples/assets/render_pipeline_untextured.grmat.json"
+    "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/pbr_shadow_ibl_lights.vert.spv"
+    "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/pbr_shadow_ibl_lights_untextured.frag.spv"
+  VERBATIM
+)
+add_executable(
+  granit_render_pipeline_benchmarks
+  "${PROJECT_SOURCE_DIR}/examples/render_pipeline_offscreen.cpp"
+)
+target_compile_features(granit_render_pipeline_benchmarks PRIVATE cxx_std_20)
+target_compile_options(
+  granit_render_pipeline_benchmarks
+  PRIVATE $<$<COMPILE_LANG_AND_ID:CXX,MSVC>:/utf-8>
+)
+target_compile_definitions(
+  granit_render_pipeline_benchmarks
+  PRIVATE
+    GRANIT_BENCHMARK_COMPILER="${CMAKE_CXX_COMPILER_ID}-${CMAKE_CXX_COMPILER_VERSION}"
+    GRANIT_BENCHMARK_LINK_MODE="$<IF:$<BOOL:${BUILD_SHARED_LIBS}>,shared,static>"
+    GRANIT_BENCHMARK_REVISION="${granit_benchmark_revision}"
+    GRANIT_BENCHMARK_SYSTEM="${CMAKE_SYSTEM_NAME}-${CMAKE_SYSTEM_PROCESSOR}"
+    GRANIT_RENDER_PIPELINE_CPU_BENCHMARK
+    GRANIT_RENDER_PIPELINE_EXAMPLE_PACKAGE="${granit_render_pipeline_benchmark_package}"
+)
+target_link_libraries(granit_render_pipeline_benchmarks PRIVATE granit::render_pipeline)
+add_dependencies(granit_render_pipeline_benchmarks granit_material_tool)
+target_sources(
+  granit_render_pipeline_benchmarks PRIVATE "${granit_render_pipeline_benchmark_package}"
+)
+granit_target_compile_warnings(granit_render_pipeline_benchmarks)
+granit_target_output_directories(granit_render_pipeline_benchmarks)
+set_target_properties(granit_render_pipeline_benchmarks PROPERTIES FOLDER "Benchmarks")

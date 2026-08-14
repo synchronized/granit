@@ -72,6 +72,19 @@ PBR HDR、Tone Mapping 和整条 GPU 渲染链。使用 `--lights` 选择点光�
 ```
 
 输出为 CSV；每个样本先取指定帧数的 GPU 时间均值，再由这些样本计算 mean、P50、P95 和 P99。
-该基准不执行像素回读，常规 `granit_pbr_offscreen` 示例仍保留完整像素回归。
+同时输出包含录制、提交、等待和 timestamp 查询的 `cpu_end_to_end`。该基准不执行像素回读，
+常规 `granit_pbr_offscreen` 示例仍保留完整像素回归。
+
+`granit_render_pipeline_benchmarks` 测量公共 Render Pipeline 自动路径的端到端 CPU 调用成本，
+包含 Scene 复制、Graph 构建、资源准备、命令录制、提交和当前实现中的完成等待，不包含初始化、
+材质归档构建或像素回读：
+
+```powershell
+./build/windows-clang-release/bin/granit_render_pipeline_benchmarks.exe `
+  --iterations 20 --samples 20 --warmup 5
+```
+
+完整链路 GPU timestamp 目前只能由 H-05 手工基准获取。统一门面内部拥有 Recorder 和提交边界，
+在没有受控内部测量钩子时不把队列外部时间差冒充 GPU 忙碌时间。
 
 已提交的基线摘要见 [results/README.md](results/README.md)。

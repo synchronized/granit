@@ -115,7 +115,9 @@ H-07A～H-07G 已完成：
 
 - **已完成**：自动 PBR Emissive 路径与手工 H-05 HDR Tone Mapping GPU 输出逐通道一致，
   RGBA8 容差为 1 LSB。
-- 补齐统一门面的 CPU/GPU 性能对比，确认没有不可解释的显著退化。
+- **已测量，未通过**：首轮 CPU P50 为手工 H-05 路径的 4.57 倍；先归因并缓存每帧重复创建的
+  Graph、附件和绑定资源，再做严格等工作量 CPU/GPU 复测。结果见
+  [性能对比](../../benchmarks/results/2026-08-14-windows-clang-render-pipeline-5c0613a.md)。
 - 汇总离屏、窗口、多 View、Resize、Validation、生命周期和安装 Consumer 结果。
 - 验收通过后将 H-07 标记为完成，并把长期行为同步到对应 Reference。
 

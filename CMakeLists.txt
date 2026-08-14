@@ -33,7 +33,7 @@ include(CTest)
 add_subdirectory(3rd)
 add_subdirectory(src)
 
-if(GRANIT_BUILD_TOOLS)
+if(GRANIT_BUILD_TOOLS OR GRANIT_BUILD_EXAMPLES OR GRANIT_BUILD_BENCHMARKS)
   add_subdirectory(tools)
 endif()
 
