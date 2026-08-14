@@ -138,6 +138,11 @@ cmake --preset linux-clang-debug -DBUILD_SHARED_LIBS=OFF
 
 完整说明见 [docs/build.md](docs/build.md)。
 
+开发构建可通过 Renderer 描述启用 Validation。Granit 会在 Renderer 销毁时报告仍未释放的公共 GPU
+资源及有限句柄样本，随后安全级联释放；Vulkan Validation Layer 的 warning/error 使用
+`[granit][vulkan]` 前缀。Render Pipeline 窗口烟雾测试会把该前缀视为失败，防止自动路径引入新的
+Vulkan 生命周期或同步警告。
+
 ## 示例
 
 启用 `GRANIT_BUILD_EXAMPLES` 后会构建以下程序：

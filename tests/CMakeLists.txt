@@ -267,6 +267,14 @@ target_compile_definitions(
 )
 granit_target_compile_warnings(granit_renderer_test)
 add_test(NAME granit.renderer COMMAND granit_renderer_test)
+add_test(
+  NAME granit.renderer.lifecycle_diagnostic
+  COMMAND granit_renderer_test "[renderer][lifecycle]"
+)
+set_tests_properties(
+  granit.renderer.lifecycle_diagnostic
+  PROPERTIES PASS_REGULAR_EXPRESSION "\\[granit\\]\\[validation\\].*Buffer=1"
+)
 
 add_executable(
   granit_vulkan_backend_test

@@ -326,8 +326,10 @@ Renderable、payload 和关联项数组。回调不得保存数组地址，不�
 4. **H-07H 验收（进行中）**：自动离屏路径已覆盖 8 轮 Pipeline 创建、真实渲染和销毁，确认默认
    IBL、Shadow/Tone Mapping Pipeline 与内部缓存可重复重建；Windows 烟雾测试会自动改变两次窗口
    尺寸，分别重建 Swapchain 和 Scene View，并在 Frame 同步路径成功呈现后退出。多 View 已验证两套
-   独立 HDR/Depth/Tone Mapping 链路及最终像素方向，不共享或覆盖输出。Validation Layer 输出收敛、
-   更完整的输出一致性和性能对比仍待补齐。
+   独立 HDR/Depth/Tone Mapping 链路及最终像素方向，不共享或覆盖输出。自动路径还验证了 Mesh 或
+   Material 提前销毁后返回 `INVALID_HANDLE`，不会继续录制悬空依赖。Windows Frame/Resize 测试在
+   Validation 模式下运行，任何 `[granit][vulkan]` warning/error 都会使 CTest 失败；Renderer 活动
+   资源级联销毁诊断也有独立正向匹配测试。更完整的输出一致性和性能对比仍待补齐。
 
 外部环境切换、透明物体、CSM 和 Clustered Forward 在 H-07H 后单独立项，不阻塞首版完成。
 

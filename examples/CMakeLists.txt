@@ -102,6 +102,10 @@ if(WIN32)
       COMMAND granit_render_pipeline_window_example --smoke-test
     )
     set_tests_properties(granit.example.render_pipeline_window PROPERTIES TIMEOUT 30)
+    set_tests_properties(
+      granit.example.render_pipeline_window
+      PROPERTIES FAIL_REGULAR_EXPRESSION "\\[granit\\]\\[vulkan\\]"
+    )
   endif()
 
   add_executable(granit_window_clear_example WIN32 window_clear.cpp)

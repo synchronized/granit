@@ -565,7 +565,7 @@ TEST_CASE("公共Render Pipeline ABI输出可回读的Tone Mapping像素") {
   granit_render_pipeline_desc automatic_pipeline_desc = GRANIT_RENDER_PIPELINE_DESC_INIT;
   REQUIRE(granit_render_pipeline_create(renderer.native_handle(), &automatic_pipeline_desc,
                                         &pipeline) == GRANIT_SUCCESS);
-  const granit_render_pipeline_draw_binding automatic_binding{91, mesh, material, 0};
+  granit_render_pipeline_draw_binding automatic_binding{91, mesh, material, 0};
   render_desc.draw_bindings = &automatic_binding;
   REQUIRE(granit_render_pipeline_render(renderer.native_handle(), pipeline, &render_desc) ==
           GRANIT_SUCCESS);
@@ -593,7 +593,18 @@ TEST_CASE("公共Render Pipeline ABI输出可回读的Tone Mapping像素") {
             GRANIT_SUCCESS);
     REQUIRE(granit_render_pipeline_destroy(renderer.native_handle(), pipeline) == GRANIT_SUCCESS);
   }
+  REQUIRE(granit_render_pipeline_create(renderer.native_handle(), &automatic_pipeline_desc,
+                                        &pipeline) == GRANIT_SUCCESS);
+  REQUIRE(granit_mesh_destroy(renderer.native_handle(), mesh) == GRANIT_SUCCESS);
+  CHECK(granit_render_pipeline_render(renderer.native_handle(), pipeline, &render_desc) ==
+        GRANIT_ERROR_INVALID_HANDLE);
+  mesh = GRANIT_NULL_HANDLE;
+  REQUIRE(granit_mesh_create(renderer.native_handle(), &mesh_desc, &mesh) == GRANIT_SUCCESS);
+  automatic_binding.mesh = mesh;
   REQUIRE(granit_material_destroy(renderer.native_handle(), material) == GRANIT_SUCCESS);
+  CHECK(granit_render_pipeline_render(renderer.native_handle(), pipeline, &render_desc) ==
+        GRANIT_ERROR_INVALID_HANDLE);
+  REQUIRE(granit_render_pipeline_destroy(renderer.native_handle(), pipeline) == GRANIT_SUCCESS);
   REQUIRE(granit_mesh_destroy(renderer.native_handle(), mesh) == GRANIT_SUCCESS);
   REQUIRE(granit_buffer_destroy(renderer.native_handle(), vertex_buffer) == GRANIT_SUCCESS);
   REQUIRE(granit_scene_snapshot_destroy(renderer.native_handle(), scene) == GRANIT_SUCCESS);
