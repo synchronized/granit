@@ -8,7 +8,9 @@
 
 ## 高层渲染
 
+- [P-06/H-01 Render Graph 实施记录](P-06-render-graph-implementation.md)
 - [H-02 材质系统实施记录](H-02-material-system-implementation.md)
 - [H-03 PBR 渲染模块实施记录](H-03-pbr-renderer-implementation.md)
+- [H-04 场景提交与可见性实施记录](H-04-scene-submission-implementation.md)
 - [H-05 光照与后处理实施记录](H-05-lighting-pipeline-implementation.md)
 - [H-07 高级参考渲染套件实施记录](H-07-reference-render-pipeline-implementation.md)
