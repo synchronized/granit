@@ -26,7 +26,8 @@ build/windows-clang-debug/bin/granit_offscreen_clear_example.exe
 - `granit_window_clear_example`：执行 Win32 acquire、清屏、submit、present 与尺寸重建循环。
 - `granit_window_triangle_example`：上传顶点数据并持续绘制窗口三角形。
 - `granit_render_pipeline_offscreen_example`：通过公共 Mesh、Material、Scene 与 Render Pipeline API
-  自动录制 Shadow/Opaque Draw，并回读输出像素。
+  自动录制 Shadow/Opaque Draw，并回读输出像素。完整流程见
+  [Render Pipeline 离屏渲染教程](../tutorials/render-pipeline-offscreen.md)。
 - `granit_render_pipeline_window_example`：把 Swapchain Frame 和 Backbuffer 交给公共 Render
   Pipeline，并处理帧同步与窗口重建。
 

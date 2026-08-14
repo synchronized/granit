@@ -8,6 +8,12 @@
 
 ## 推荐阅读顺序
 
+### 第一次使用参考渲染管线
+
+1. [Render Pipeline 离屏渲染教程](tutorials/render-pipeline-offscreen.md)
+2. [示例程序及运行方式](guides/examples.md)
+3. [Render Pipeline](reference/render-pipeline.md)
+
 ### 使用核心 Renderer
 
 1. [构建与安装](guides/build.md)
@@ -35,6 +41,10 @@
 - [构建、测试、安装与 CMake 集成](guides/build.md)
 - [示例程序及运行方式](guides/examples.md)
 - [同步批量上传](guides/upload-batch.md)
+
+## 教程
+
+- [使用 Render Pipeline 完成第一次离屏渲染](tutorials/render-pipeline-offscreen.md)
 
 ## API 与行为参考
 
