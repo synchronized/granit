@@ -121,7 +121,7 @@
 | [H-03 PBR](plans/H-03-pbr-renderer.md) | P2 | 已完成 |
 | [H-04 Scene 提交](plans/H-04-scene-submission.md) | P2 | 已完成 |
 | [H-05 Lighting 与后处理](plans/H-05-lighting-pipeline.md) | P2 | 已完成 |
-| [H-06 Unlit、2D 与 UI](plans/H-06-unlit-2d-ui.md) | P2 | 进行中；H-06C 待 GPU 基线收尾 |
+| [H-06 Unlit、2D 与 UI](plans/H-06-unlit-2d-ui.md) | P2 | 进行中；H-06A～H-06C 已完成 |
 | [H-07 参考 Render Pipeline](plans/H-07-reference-render-pipeline.md) | P2 | 已完成 |
 
 高层模块只能依赖核心 Renderer，不能形成反向依赖。使用者始终可以绕过高层模块，直接使用资源、

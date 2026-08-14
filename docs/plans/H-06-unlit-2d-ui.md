@@ -7,7 +7,7 @@
 
 - 路线图任务：H-06
 - 优先级：P2
-- 状态：进行中；H-06A～H-06B 已完成，H-06C 第一阶段进行中
+- 状态：进行中；H-06A～H-06C 已完成，下一步 H-06D
 - 必需依赖：H-01 Render Graph、H-02 Material、H-07 首版参考管线
 - 后续依赖：文字渲染、编辑器覆盖层和调试绘制
 
@@ -117,8 +117,9 @@ Pipeline、纹理绑定和 Scissor 兼容时才进行安全合批。后续 Bindl
 - 已建立 100、1,000、10,000 个矩形的 CPU 基线和 Draw/绑定统计；基准发现并修复索引容器
   O(N²) 增长，10,000 矩形构建 P50 从约 35.5 ms 降至 1.303～1.386 ms。完整结果见
   [UI CPU 基线](../../benchmarks/results/2026-08-14-windows-clang-ui-056a0c8.md)。
-- H-06C 剩余 GPU timestamp 基线；应分别测量单 Batch 与逐项交替状态，完成后再决定容量预留、
-  批量追加和 Bind Group 缓存的优先级。
+- 已完成 GPU timestamp 基线：10,000 矩形单 Batch P50 为 1.864～1.897 ms，逐项交替状态为
+  81.309～82.837 ms。结果证明保持相邻兼容性是首要优化，但没有证明应立即引入 Bindless；详见
+  [UI GPU 基线](../../benchmarks/results/2026-08-14-windows-clang-ui-gpu-f77b112.md)。H-06C 完成。
 
 ## 验收标准
 

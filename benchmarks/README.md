@@ -62,6 +62,10 @@ cmake --build --preset windows-clang-release --target granit_benchmarks
 合批扫描、逐项交替状态扫描和复用 Buffer 的动态几何上传。输出后的计数行同时给出 Item、Batch
 和预期 Draw 数；该程序当前只提供 CPU 墙钟基线，不代表 UI Pass 的 GPU 时间。
 
+`granit_ui_gpu_benchmarks` 使用 Vulkan timestamp 测量实际 UI Pass。相邻兼容路径合为一个 Draw；
+交替路径逐项切换 Texture 与 Scissor，用于建立有意保留透明顺序时的最坏情况。目标固定为 64×64，
+时间不包含 CPU 录制、提交和等待，不应当外推为其他 GPU 或分辨率的绝对预算。
+
 `granit_lighting_benchmarks` 用于 H-05E，首个用例隔离测量单 View 可见点光转换为 GPU 布局的 CPU
 成本。使用 `--lights` 选择 1、16、64 或 128 个光源；Snapshot 在计时区间外构建，结果包含输出
 容器分配和逐光打包，不包含可见性筛选、GPU 上传或 Draw。
