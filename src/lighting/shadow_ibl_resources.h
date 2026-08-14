@@ -14,40 +14,31 @@ namespace granit::lighting {
 
 /** Forward PBR Group 3 的完整绑定契约；Shader 变体可只使用其中一部分。 */
 inline constexpr std::array standard_lighting_layout_entries{
-    granit::bind_group_layout_entry{shadow_binding_constants,
-                                    granit::binding_type::uniform_buffer, 1,
-                                    granit::shader_stage_flags::vertex |
-                                        granit::shader_stage_flags::fragment},
-    granit::bind_group_layout_entry{shadow_binding_texture,
-                                    granit::binding_type::sampled_texture, 1,
-                                    granit::shader_stage_flags::fragment},
+    granit::bind_group_layout_entry{
+        shadow_binding_constants, granit::binding_type::uniform_buffer, 1,
+        granit::shader_stage_flags::vertex | granit::shader_stage_flags::fragment},
+    granit::bind_group_layout_entry{shadow_binding_texture, granit::binding_type::sampled_texture,
+                                    1, granit::shader_stage_flags::fragment},
     granit::bind_group_layout_entry{shadow_binding_sampler, granit::binding_type::sampler, 1,
                                     granit::shader_stage_flags::fragment},
-    granit::bind_group_layout_entry{ibl_binding_constants,
-                                    granit::binding_type::uniform_buffer, 1,
+    granit::bind_group_layout_entry{ibl_binding_constants, granit::binding_type::uniform_buffer, 1,
                                     granit::shader_stage_flags::fragment},
-    granit::bind_group_layout_entry{ibl_binding_irradiance,
-                                    granit::binding_type::sampled_texture, 1,
-                                    granit::shader_stage_flags::fragment},
+    granit::bind_group_layout_entry{ibl_binding_irradiance, granit::binding_type::sampled_texture,
+                                    1, granit::shader_stage_flags::fragment},
     granit::bind_group_layout_entry{ibl_binding_prefiltered_environment,
                                     granit::binding_type::sampled_texture, 1,
                                     granit::shader_stage_flags::fragment},
-    granit::bind_group_layout_entry{ibl_binding_brdf_lut,
-                                    granit::binding_type::sampled_texture, 1,
+    granit::bind_group_layout_entry{ibl_binding_brdf_lut, granit::binding_type::sampled_texture, 1,
                                     granit::shader_stage_flags::fragment},
     granit::bind_group_layout_entry{ibl_binding_sampler, granit::binding_type::sampler, 1,
                                     granit::shader_stage_flags::fragment},
-    granit::bind_group_layout_entry{light_binding_counts,
-                                    granit::binding_type::uniform_buffer, 1,
+    granit::bind_group_layout_entry{light_binding_counts, granit::binding_type::uniform_buffer, 1,
                                     granit::shader_stage_flags::fragment},
-    granit::bind_group_layout_entry{light_binding_directional,
-                                    granit::binding_type::storage_buffer, 1,
+    granit::bind_group_layout_entry{light_binding_directional, granit::binding_type::storage_buffer,
+                                    1, granit::shader_stage_flags::fragment},
+    granit::bind_group_layout_entry{light_binding_point, granit::binding_type::storage_buffer, 1,
                                     granit::shader_stage_flags::fragment},
-    granit::bind_group_layout_entry{light_binding_point,
-                                    granit::binding_type::storage_buffer, 1,
-                                    granit::shader_stage_flags::fragment},
-    granit::bind_group_layout_entry{light_binding_spot,
-                                    granit::binding_type::storage_buffer, 1,
+    granit::bind_group_layout_entry{light_binding_spot, granit::binding_type::storage_buffer, 1,
                                     granit::shader_stage_flags::fragment}};
 
 struct shadow_ibl_texture_views {
@@ -63,13 +54,13 @@ struct lighting_resource_features {
 /** 拥有光照 Group 3；只借用调用方持有且由 features 启用的 Texture View。 */
 class shadow_ibl_resources {
 public:
-  [[nodiscard]] granit_result initialize(granit_renderer renderer, shadow_ibl_texture_views views,
-                                         const shadow_sampling_constants& shadow_constants,
-                                         const ibl_sampling_constants& ibl_constants,
-                                         const light_limits& light_capacities = {},
-                                         lighting_resource_features features = {},
-                                         granit_bind_group_layout external_layout =
-                                             GRANIT_NULL_HANDLE) noexcept;
+  [[nodiscard]] granit_result
+  initialize(granit_renderer renderer, shadow_ibl_texture_views views,
+             const shadow_sampling_constants& shadow_constants,
+             const ibl_sampling_constants& ibl_constants, const light_limits& light_capacities = {},
+             lighting_resource_features features = {},
+             granit_bind_group_layout external_layout = GRANIT_NULL_HANDLE,
+             granit::memory_location memory_location = granit::memory_location::automatic) noexcept;
   [[nodiscard]] granit_result update_shadow(const shadow_sampling_constants& constants) noexcept;
   [[nodiscard]] granit_result update_ibl(const ibl_sampling_constants& constants) noexcept;
   [[nodiscard]] granit_result update_lights(const packed_view_lights& lights) noexcept;

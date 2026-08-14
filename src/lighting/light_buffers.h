@@ -31,8 +31,9 @@ static_assert(sizeof(gpu_light_counts) == 16);
  */
 class light_buffers {
 public:
-  [[nodiscard]] granit_result initialize(granit_renderer renderer,
-                                         const light_limits& capacities) noexcept;
+  [[nodiscard]] granit_result
+  initialize(granit_renderer renderer, const light_limits& capacities,
+             granit::memory_location memory_location = granit::memory_location::automatic) noexcept;
   [[nodiscard]] granit_result update(const packed_view_lights& lights) noexcept;
   [[nodiscard]] granit_result reset() noexcept;
   [[nodiscard]] bool initialized() const noexcept { return counts_.valid(); }

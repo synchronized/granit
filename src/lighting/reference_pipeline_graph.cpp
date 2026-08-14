@@ -7,10 +7,10 @@
 
 namespace granit::lighting {
 
-reference_pipeline_graph_error add_reference_pipeline_graph(
-    render_graph::serial_graph& graph, reference_pipeline_graph_desc desc,
-    reference_pipeline_graph_callbacks callbacks, reference_pipeline_graph_passes& output,
-    std::string name_prefix) {
+reference_pipeline_graph_error
+add_reference_pipeline_graph(render_graph::serial_graph& graph, reference_pipeline_graph_desc desc,
+                             reference_pipeline_graph_callbacks callbacks,
+                             reference_pipeline_graph_passes& output, std::string name_prefix) {
   const auto invalid_resource = render_graph::invalid_resource_id;
   if (desc.pbr.color == invalid_resource || desc.pbr.depth == invalid_resource ||
       desc.tone_mapping.hdr_color == invalid_resource ||
@@ -25,9 +25,6 @@ reference_pipeline_graph_error add_reference_pipeline_graph(
       (desc.shadow->depth == invalid_resource || desc.pbr.shadow != desc.shadow->depth)) {
     return reference_pipeline_graph_error::inconsistent_resource;
   }
-  if (!desc.shadow && desc.pbr.shadow != invalid_resource)
-    return reference_pipeline_graph_error::inconsistent_resource;
-
   reference_pipeline_graph_passes passes;
   if (desc.shadow) {
     passes.shadow = add_directional_shadow_graph_pass(
@@ -35,13 +32,13 @@ reference_pipeline_graph_error add_reference_pipeline_graph(
     if (passes.shadow == render_graph::invalid_pass_id)
       return reference_pipeline_graph_error::pass_rejected;
   }
-  passes.pbr = material::add_pbr_graph_pass(graph, std::move(desc.pbr),
-                                            std::move(callbacks.pbr), name_prefix + " / PBR HDR");
+  passes.pbr = material::add_pbr_graph_pass(graph, std::move(desc.pbr), std::move(callbacks.pbr),
+                                            name_prefix + " / PBR HDR");
   if (passes.pbr == render_graph::invalid_pass_id)
     return reference_pipeline_graph_error::pass_rejected;
-  passes.tone_mapping = add_tone_mapping_graph_pass(
-      graph, std::move(desc.tone_mapping), std::move(callbacks.tone_mapping),
-      name_prefix + " / Tone Mapping");
+  passes.tone_mapping = add_tone_mapping_graph_pass(graph, std::move(desc.tone_mapping),
+                                                    std::move(callbacks.tone_mapping),
+                                                    name_prefix + " / Tone Mapping");
   if (passes.tone_mapping == render_graph::invalid_pass_id)
     return reference_pipeline_graph_error::pass_rejected;
 

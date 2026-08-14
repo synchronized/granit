@@ -234,7 +234,8 @@ record_opaque_draws(pipeline_state& state, granit_command_recorder recorder,
              .ibl = {.irradiance = state.default_ibl.irradiance(),
                      .prefiltered_environment = state.default_ibl.prefiltered_environment(),
                      .brdf_lut = state.default_ibl.brdf_lut()}},
-            shadow_constants, {.intensity = 0.0F}, {}, {}, material.lighting_layout);
+            shadow_constants, {.intensity = 0.0F}, {}, {}, material.lighting_layout,
+            granit::memory_location::upload);
       }
       if (result == GRANIT_SUCCESS)
         cached.material = draws[index].material;
@@ -379,7 +380,7 @@ granit_result record_shadow_draws(pipeline_state& state, granit_command_recorder
                      .brdf_lut = state.default_ibl.brdf_lut()}},
             {.light_view_projection = frame.light_view_projection,
              .texel_size = {1.0F / 1024.0F, 1.0F / 1024.0F}},
-            {.intensity = 0.0F}, {}, {}, material.lighting_layout);
+            {.intensity = 0.0F}, {}, {}, material.lighting_layout, granit::memory_location::upload);
       }
       if (result == GRANIT_SUCCESS)
         cached.material = draws[index].material;
@@ -454,17 +455,17 @@ render_view(pipeline_state& state, const granit_render_pipeline_render_desc& des
       make_depth_desc(render_output.width, render_output.height), "Reference Depth");
   const auto output = graph.import_texture_view(render_output.view, true, "Reference Output");
 
-  std::optional<granit::render_graph::resource_id> shadow;
-  if (!visible.directional_lights.empty())
-    shadow = graph.import_texture_view(state.shadow_view.native_handle(), false,
-                                       "Reference Directional Shadow");
+  std::optional<granit::render_graph::resource_id> shadow = graph.import_texture_view(
+      state.shadow_view.native_handle(), false, "Reference Directional Shadow");
 
   granit::lighting::reference_pipeline_graph_desc graph_desc;
   graph_desc.pbr.color = hdr;
   graph_desc.pbr.depth = depth;
+  graph_desc.pbr.shadow = *shadow;
   graph_desc.pbr.view.view_projection = visible.view.view_projection;
   graph_desc.pbr.view.camera_position = visible.view.camera_position;
-  granit::lighting::shadow_sampling_constants shadow_constants{};
+  granit::lighting::shadow_sampling_constants shadow_constants{
+      .light_view_projection = granit::math::identity_matrix4, .texel_size = {1.0F, 1.0F}};
   if (!visible.directional_lights.empty()) {
     const auto& light = snapshot.directional_lights()[visible.directional_lights.front()];
     graph_desc.pbr.light.direction_to_light = light.direction_to_light;

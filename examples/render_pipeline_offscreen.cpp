@@ -229,6 +229,15 @@ int main(int argc, char** argv) {
   granit_scene_snapshot scene = GRANIT_NULL_HANDLE;
   if (!check(granit_scene_snapshot_create(native_renderer, &scene_desc, &scene), "创建 Scene"))
     return 1;
+#ifdef GRANIT_RENDER_PIPELINE_CPU_BENCHMARK
+  granit_scene_snapshot no_light_scene = GRANIT_NULL_HANDLE;
+  scene_desc.directional_lights = nullptr;
+  scene_desc.directional_light_count = 0;
+  if (!check(granit_scene_snapshot_create(native_renderer, &scene_desc, &no_light_scene),
+             "创建无光照 Scene")) {
+    return 1;
+  }
+#endif
 
   granit_render_pipeline pipeline = GRANIT_NULL_HANDLE;
   const granit_render_pipeline_desc pipeline_desc = GRANIT_RENDER_PIPELINE_DESC_INIT;
@@ -256,15 +265,18 @@ int main(int argc, char** argv) {
   render_desc.height = size;
   render_desc.draw_binding_count = 1;
   render_desc.draw_bindings = &binding;
-  const auto render_once = [&](granit_render_pipeline selected) {
+  const auto render_once = [&](granit_render_pipeline selected,
+                               granit_scene_snapshot selected_scene = GRANIT_NULL_HANDLE) {
+    render_desc.scene = selected_scene == GRANIT_NULL_HANDLE ? scene : selected_scene;
     return granit_render_pipeline_render(native_renderer, selected, &render_desc);
   };
 
 #ifdef GRANIT_RENDER_PIPELINE_CPU_BENCHMARK
-  const auto run_benchmark = [&](std::string_view name, granit_render_pipeline selected) {
+  const auto run_benchmark = [&](std::string_view name, granit_render_pipeline selected,
+                                 granit_scene_snapshot selected_scene) {
     for (std::uint32_t sample = 0; sample < benchmark.warmup; ++sample) {
       for (std::uint32_t iteration = 0; iteration < benchmark.iterations; ++iteration) {
-        if (!check(render_once(selected), "预热渲染"))
+        if (!check(render_once(selected, selected_scene), "预热渲染"))
           return false;
       }
     }
@@ -273,7 +285,7 @@ int main(int argc, char** argv) {
     for (std::uint32_t sample = 0; sample < benchmark.samples; ++sample) {
       const auto begin = std::chrono::steady_clock::now();
       for (std::uint32_t iteration = 0; iteration < benchmark.iterations; ++iteration) {
-        if (!check(render_once(selected), "基准渲染"))
+        if (!check(render_once(selected, selected_scene), "基准渲染"))
           return false;
       }
       const auto elapsed =
@@ -290,8 +302,10 @@ int main(int argc, char** argv) {
             << ",compiler=" << GRANIT_BENCHMARK_COMPILER << ",system=" << GRANIT_BENCHMARK_SYSTEM
             << ",link=" << GRANIT_BENCHMARK_LINK_MODE << '\n'
             << "schema,name,iterations,samples,mean_ns,p50_ns,p95_ns,p99_ns\n";
-  if (!run_benchmark("automatic_end_to_end", pipeline) ||
-      !run_benchmark("minimal_callback_end_to_end", callback_pipeline)) {
+  if (!run_benchmark("automatic_directional_end_to_end", pipeline, scene) ||
+      !run_benchmark("minimal_directional_end_to_end", callback_pipeline, scene) ||
+      !run_benchmark("automatic_no_light_end_to_end", pipeline, no_light_scene) ||
+      !run_benchmark("minimal_no_light_end_to_end", callback_pipeline, no_light_scene)) {
     return 1;
   }
 #else
@@ -357,6 +371,7 @@ int main(int argc, char** argv) {
 
 #ifdef GRANIT_RENDER_PIPELINE_CPU_BENCHMARK
   static_cast<void>(granit_render_pipeline_destroy(native_renderer, callback_pipeline));
+  static_cast<void>(granit_scene_snapshot_destroy(native_renderer, no_light_scene));
 #endif
   static_cast<void>(granit_render_pipeline_destroy(native_renderer, pipeline));
   static_cast<void>(granit_scene_snapshot_destroy(native_renderer, scene));

@@ -115,9 +115,9 @@ H-07A～H-07G 已完成：
 
 - **已完成**：自动 PBR Emissive 路径与手工 H-05 HDR Tone Mapping GPU 输出逐通道一致，
   RGBA8 容差为 1 LSB。
-- **已优化，待复测验收**：复用每 Draw 常量 Buffer、Bind Group、光照资源和固定阴影附件后，
-  自动路径 P50 由 2.907 ms 降至 1.518 ms，最小回调路径为 0.629 ms。下一步建立严格等工作量
-  CPU/GPU 测试，拆分剩余常量更新、Shadow Draw 和 Opaque Draw 成本。结果见
+- **CPU 性能已达暂定目标，待 GPU 验收**：复用每 Draw 资源并为同步门面选择 Upload 内存后，
+  方向光自动路径 P50 由 2.907 ms 降至 0.799～0.800 ms，最小回调路径为 0.614～0.638 ms。
+  下一步补充阶段级 GPU timestamp，确认没有以额外 GPU 等待换取 CPU 数字。结果见
   [性能对比](../../benchmarks/results/2026-08-14-windows-clang-render-pipeline-5c0613a.md)。
 - 汇总离屏、窗口、多 View、Resize、Validation、生命周期和安装 Consumer 结果。
 - 验收通过后将 H-07 标记为完成，并把长期行为同步到对应 Reference。

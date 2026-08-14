@@ -29,8 +29,8 @@ template <typename T> std::uint64_t allocation_size(std::uint32_t capacity) noex
 
 } // namespace
 
-granit_result light_buffers::initialize(granit_renderer renderer,
-                                        const light_limits& capacities) noexcept {
+granit_result light_buffers::initialize(granit_renderer renderer, const light_limits& capacities,
+                                        granit::memory_location memory_location) noexcept {
   if (renderer == GRANIT_NULL_HANDLE || initialized() || !valid(capacities))
     return GRANIT_ERROR_INVALID_ARGUMENT;
 
@@ -40,24 +40,24 @@ granit_result light_buffers::initialize(granit_renderer renderer,
       renderer,
       {.size = sizeof(zero_counts),
        .usage = granit::buffer_usage::uniform | granit::buffer_usage::transfer_destination,
-       .location = granit::memory_location::automatic},
+       .location = memory_location},
       bytes(zero_counts));
   if (granit::succeeded(result)) {
     result = directional_.initialize(
         renderer, {.size = allocation_size<gpu_directional_light>(capacities.directional),
                    .usage = usage,
-                   .location = granit::memory_location::automatic});
+                   .location = memory_location});
   }
   if (granit::succeeded(result)) {
     result =
         point_.initialize(renderer, {.size = allocation_size<gpu_point_light>(capacities.point),
                                      .usage = usage,
-                                     .location = granit::memory_location::automatic});
+                                     .location = memory_location});
   }
   if (granit::succeeded(result)) {
     result = spot_.initialize(renderer, {.size = allocation_size<gpu_spot_light>(capacities.spot),
                                          .usage = usage,
-                                         .location = granit::memory_location::automatic});
+                                         .location = memory_location});
   }
   if (granit::failed(result)) {
     static_cast<void>(reset());

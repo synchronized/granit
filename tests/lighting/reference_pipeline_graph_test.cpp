@@ -39,16 +39,14 @@ TEST_CASE("参考管线Graph按Shadow PBR Tone Mapping排序") {
       "Shadow");
   const auto hdr = graph.create_transient_texture(
       texture_desc(GRANIT_TEXTURE_FORMAT_RGBA16_FLOAT,
-                   GRANIT_TEXTURE_USAGE_COLOR_ATTACHMENT_BIT |
-                       GRANIT_TEXTURE_USAGE_SAMPLED_BIT),
+                   GRANIT_TEXTURE_USAGE_COLOR_ATTACHMENT_BIT | GRANIT_TEXTURE_USAGE_SAMPLED_BIT),
       "HDR");
   const auto depth = graph.create_transient_texture(
       texture_desc(GRANIT_TEXTURE_FORMAT_D32_FLOAT,
                    GRANIT_TEXTURE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT),
       "Depth");
   const auto output = graph.create_transient_texture(
-      texture_desc(GRANIT_TEXTURE_FORMAT_RGBA8_UNORM,
-                   GRANIT_TEXTURE_USAGE_COLOR_ATTACHMENT_BIT),
+      texture_desc(GRANIT_TEXTURE_FORMAT_RGBA8_UNORM, GRANIT_TEXTURE_USAGE_COLOR_ATTACHMENT_BIT),
       "Output");
 
   granit::lighting::reference_pipeline_graph_desc desc;
@@ -61,29 +59,32 @@ TEST_CASE("参考管线Graph按Shadow PBR Tone Mapping排序") {
   desc.pbr.shadow = shadow;
   desc.pbr.view.view_projection = {1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1};
   desc.pbr.light.direction_to_light = {0, 0, 1};
-  desc.pbr.objects.push_back({
-      .model = {1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1},
-      .normal_matrix = {1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1}});
+  desc.pbr.light.direction_to_light = {0, 0, 1};
+  desc.pbr.objects.push_back({.model = {1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1},
+                              .normal_matrix = {1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1}});
   desc.tone_mapping = {
       .hdr_color = hdr,
       .output = output,
       .output_format = granit::texture_format::rgba8_unorm,
-      .tone_mapping = {
-          .output_transfer = granit::lighting::tone_mapping_output_transfer::shader_srgb}};
+      .tone_mapping = {.output_transfer =
+                           granit::lighting::tone_mapping_output_transfer::shader_srgb}};
   std::vector<std::string> recorded;
   granit::lighting::reference_pipeline_graph_callbacks callbacks{
-      .shadow = [&](auto&, const auto&, auto) {
-        recorded.emplace_back("shadow");
-        return GRANIT_SUCCESS;
-      },
-      .pbr = [&](auto&, const auto&, auto) {
-        recorded.emplace_back("pbr");
-        return GRANIT_SUCCESS;
-      },
-      .tone_mapping = [&](auto&, const auto&) {
-        recorded.emplace_back("tone");
-        return GRANIT_SUCCESS;
-      }};
+      .shadow =
+          [&](auto&, const auto&, auto) {
+            recorded.emplace_back("shadow");
+            return GRANIT_SUCCESS;
+          },
+      .pbr =
+          [&](auto&, const auto&, auto) {
+            recorded.emplace_back("pbr");
+            return GRANIT_SUCCESS;
+          },
+      .tone_mapping =
+          [&](auto&, const auto&) {
+            recorded.emplace_back("tone");
+            return GRANIT_SUCCESS;
+          }};
   granit::lighting::reference_pipeline_graph_passes passes;
   REQUIRE(granit::lighting::add_reference_pipeline_graph(graph, std::move(desc),
                                                          std::move(callbacks), passes) ==
@@ -115,22 +116,56 @@ TEST_CASE("参考管线Graph按Shadow PBR Tone Mapping排序") {
   CHECK(recorded == std::vector<std::string>{expected.begin(), expected.end()});
 }
 
-TEST_CASE("参考管线Graph拒绝不一致资源且不修改输出") {
+TEST_CASE("参考管线Graph允许PBR读取外部Shadow而不创建Shadow Pass") {
   granit::render_graph::serial_graph graph;
-  const auto first = graph.create_transient_texture(
+  const auto shadow = graph.import_texture_view(1, false, "External Shadow");
+  const auto hdr = graph.create_transient_texture(
       texture_desc(GRANIT_TEXTURE_FORMAT_RGBA16_FLOAT,
-                   GRANIT_TEXTURE_USAGE_COLOR_ATTACHMENT_BIT),
-      "First");
-  const auto second = graph.create_transient_texture(
-      texture_desc(GRANIT_TEXTURE_FORMAT_RGBA16_FLOAT, GRANIT_TEXTURE_USAGE_SAMPLED_BIT),
-      "Second");
+                   GRANIT_TEXTURE_USAGE_COLOR_ATTACHMENT_BIT | GRANIT_TEXTURE_USAGE_SAMPLED_BIT),
+      "HDR");
   const auto depth = graph.create_transient_texture(
       texture_desc(GRANIT_TEXTURE_FORMAT_D32_FLOAT,
                    GRANIT_TEXTURE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT),
       "Depth");
   const auto output = graph.create_transient_texture(
-      texture_desc(GRANIT_TEXTURE_FORMAT_RGBA8_UNORM,
-                   GRANIT_TEXTURE_USAGE_COLOR_ATTACHMENT_BIT),
+      texture_desc(GRANIT_TEXTURE_FORMAT_RGBA8_UNORM, GRANIT_TEXTURE_USAGE_COLOR_ATTACHMENT_BIT),
+      "Output");
+  granit::lighting::reference_pipeline_graph_desc desc;
+  desc.pbr.color = hdr;
+  desc.pbr.depth = depth;
+  desc.pbr.shadow = shadow;
+  desc.pbr.view.view_projection = {1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1};
+  desc.pbr.objects.push_back({.model = {1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1},
+                              .normal_matrix = {1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1}});
+  desc.tone_mapping.hdr_color = hdr;
+  desc.tone_mapping.output = output;
+  desc.tone_mapping.output_format = granit::texture_format::rgba8_unorm;
+  desc.tone_mapping.tone_mapping.output_transfer =
+      granit::lighting::tone_mapping_output_transfer::shader_srgb;
+  granit::lighting::reference_pipeline_graph_callbacks callbacks;
+  callbacks.pbr = [](auto&, const auto&, auto) { return GRANIT_SUCCESS; };
+  callbacks.tone_mapping = [](auto&, const auto&) { return GRANIT_SUCCESS; };
+  granit::lighting::reference_pipeline_graph_passes passes;
+  REQUIRE(granit::lighting::add_reference_pipeline_graph(graph, std::move(desc),
+                                                         std::move(callbacks), passes) ==
+          granit::lighting::reference_pipeline_graph_error::none);
+  CHECK(passes.shadow == granit::render_graph::invalid_pass_id);
+  CHECK(graph.diagnostics().compilation.succeeded());
+}
+
+TEST_CASE("参考管线Graph拒绝不一致资源且不修改输出") {
+  granit::render_graph::serial_graph graph;
+  const auto first = graph.create_transient_texture(
+      texture_desc(GRANIT_TEXTURE_FORMAT_RGBA16_FLOAT, GRANIT_TEXTURE_USAGE_COLOR_ATTACHMENT_BIT),
+      "First");
+  const auto second = graph.create_transient_texture(
+      texture_desc(GRANIT_TEXTURE_FORMAT_RGBA16_FLOAT, GRANIT_TEXTURE_USAGE_SAMPLED_BIT), "Second");
+  const auto depth = graph.create_transient_texture(
+      texture_desc(GRANIT_TEXTURE_FORMAT_D32_FLOAT,
+                   GRANIT_TEXTURE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT),
+      "Depth");
+  const auto output = graph.create_transient_texture(
+      texture_desc(GRANIT_TEXTURE_FORMAT_RGBA8_UNORM, GRANIT_TEXTURE_USAGE_COLOR_ATTACHMENT_BIT),
       "Output");
   granit::lighting::reference_pipeline_graph_passes passes{.pbr = 42};
   granit::lighting::reference_pipeline_graph_callbacks callbacks;
@@ -144,8 +179,8 @@ TEST_CASE("参考管线Graph拒绝不一致资源且不修改输出") {
   desc.tone_mapping.output_format = granit::texture_format::rgba8_unorm;
   desc.tone_mapping.tone_mapping.output_transfer =
       granit::lighting::tone_mapping_output_transfer::shader_srgb;
-  CHECK(granit::lighting::add_reference_pipeline_graph(
-            graph, std::move(desc), std::move(callbacks), passes) ==
+  CHECK(granit::lighting::add_reference_pipeline_graph(graph, std::move(desc), std::move(callbacks),
+                                                       passes) ==
         granit::lighting::reference_pipeline_graph_error::inconsistent_resource);
   CHECK(passes.pbr == 42);
   CHECK(graph.diagnostics().compilation.execution_order.empty());
@@ -166,17 +201,17 @@ TEST_CASE("参考管线Graph连续两千帧回收瞬态资源") {
   for (std::uint32_t frame = 0; frame < frame_count; ++frame) {
     granit::render_graph::serial_graph graph;
     const auto extent = 8U + (frame / rebuild_interval) % 2U;
-    auto hdr_desc = texture_desc(GRANIT_TEXTURE_FORMAT_RGBA16_FLOAT,
-                                 GRANIT_TEXTURE_USAGE_COLOR_ATTACHMENT_BIT |
-                                     GRANIT_TEXTURE_USAGE_SAMPLED_BIT);
+    auto hdr_desc =
+        texture_desc(GRANIT_TEXTURE_FORMAT_RGBA16_FLOAT,
+                     GRANIT_TEXTURE_USAGE_COLOR_ATTACHMENT_BIT | GRANIT_TEXTURE_USAGE_SAMPLED_BIT);
     hdr_desc.width = extent;
     hdr_desc.height = extent;
     auto depth_desc = texture_desc(GRANIT_TEXTURE_FORMAT_D32_FLOAT,
                                    GRANIT_TEXTURE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT);
     depth_desc.width = extent;
     depth_desc.height = extent;
-    auto output_desc = texture_desc(GRANIT_TEXTURE_FORMAT_RGBA8_UNORM,
-                                    GRANIT_TEXTURE_USAGE_COLOR_ATTACHMENT_BIT);
+    auto output_desc =
+        texture_desc(GRANIT_TEXTURE_FORMAT_RGBA8_UNORM, GRANIT_TEXTURE_USAGE_COLOR_ATTACHMENT_BIT);
     output_desc.width = extent;
     output_desc.height = extent;
     const auto hdr = graph.create_transient_texture(hdr_desc, "HDR");
@@ -189,9 +224,8 @@ TEST_CASE("参考管线Graph连续两千帧回收瞬态资源") {
     desc.pbr.view.view_projection = {1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1};
     desc.pbr.light.direction_to_light = {0, 0, 1};
     desc.pbr.light.radiance = {1.0F + static_cast<float>(frame % 3), 1, 1};
-    desc.pbr.objects.push_back({
-        .model = {1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1},
-        .normal_matrix = {1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1}});
+    desc.pbr.objects.push_back({.model = {1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1},
+                                .normal_matrix = {1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1}});
     desc.tone_mapping.hdr_color = hdr;
     desc.tone_mapping.output = output;
     desc.tone_mapping.output_format = granit::texture_format::rgba8_unorm;
@@ -208,8 +242,8 @@ TEST_CASE("参考管线Graph连续两千帧回收瞬态资源") {
       return GRANIT_SUCCESS;
     };
     granit::lighting::reference_pipeline_graph_passes passes;
-    REQUIRE(granit::lighting::add_reference_pipeline_graph(
-                graph, std::move(desc), std::move(callbacks), passes) ==
+    REQUIRE(granit::lighting::add_reference_pipeline_graph(graph, std::move(desc),
+                                                           std::move(callbacks), passes) ==
             granit::lighting::reference_pipeline_graph_error::none);
     const auto result = graph.execute(renderer.native_handle());
     REQUIRE(result.succeeded());
