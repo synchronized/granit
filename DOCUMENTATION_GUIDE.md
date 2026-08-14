@@ -251,11 +251,12 @@ README.md
 Granit 当前采用渐进整理方式：
 
 - 根 `README.md` 后续精简为项目入口，并统一指向 `docs/README.md`。
-- `docs/architecture.md` 是架构 Concept 的当前权威来源。
+- `docs/concepts/architecture.md` 是架构 Concept 的当前权威来源。
 - `docs/roadmap.md` 只保留阶段、优先级、状态摘要和近期顺序。
-- `docs/*.md` 当前主要承担 Guide 与 Reference，后续按需要分类，不强制一次性移动。
+- `docs/guides/` 保存操作指南，`docs/reference/` 保存当前 API 与行为参考，
+  `docs/concepts/` 保存架构和原理说明。
 - `docs/plans/*.md` 保存设计和实施计划；大段实现日志后续迁移到 `docs/records/`。
 - `benchmarks/results/` 继续保存可复现性能结果，不复制到计划正文。
 
-当前优先整理顺序为：建立 `docs/README.md`、精简根 README、压缩 Roadmap 重复内容，再拆分
-H-05、H-07、H-02 和 H-03 中混合的实现记录。
+当前入口、Guide、Reference、Concept、Plan 和 Record 已按职责分层；后续继续拆分 H-07、H-02
+和 H-03 中混合的实现记录。

@@ -77,4 +77,4 @@ granit::command_recorder::submit_batch(recorders);
   决定跨 Recorder 的资源状态顺序。
 - 状态错误返回 `GRANIT_ERROR_INVALID_ARGUMENT`。
 
-详细约束见 [F-01 计划](plans/F-01-command-recorder.md)。
+详细约束见 [F-01 计划](../plans/F-01-command-recorder.md)。

@@ -31,7 +31,8 @@
 4. P-01C / 已完成：并行录制 Graphics/Compute 工作负载；多个 Recorder 共享只读 Shader、Pipeline
    和 Pipeline Layout，Graphics 使用独立颜色附件，Compute 使用独立 Bind Group 与 Storage
    Buffer，录制完成后按确定顺序提交。
-5. P-01D / 已完成：在 `docs/thread-safety.md` 整理公开对象线程安全矩阵，区分共享只读、独立对象
+5. P-01D / 已完成：在 `docs/reference/thread-safety.md` 整理公开对象线程安全矩阵，区分共享只读、
+   独立对象
    并行和外部独占操作，作为 P-02 测量的基线。
 
 ## 验收标准

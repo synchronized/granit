@@ -117,8 +117,8 @@ Scene Graph、Camera、Light、Mesh、Material 或资产数据库。高级套件
 
 PBR 质量体系主要参考 Filament；底层资源组织和高层组件分离主要参考 Diligent/DiligentFX。项目
 不兼容它们的 API、对象模型、Shader、材质包或资产格式，也不复制 COM 引用计数或整体 Engine
-所有权。具体实施条件见 [H-07 计划](plans/H-07-reference-render-pipeline.md)；无光照、2D 与 UI
-路径见 [H-06 计划](plans/H-06-unlit-2d-ui.md)。
+所有权。具体实施条件见 [H-07 计划](../plans/H-07-reference-render-pipeline.md)；无光照、2D 与 UI
+路径见 [H-06 计划](../plans/H-06-unlit-2d-ui.md)。
 
 ## 分层
 
@@ -178,11 +178,11 @@ device 使用独立 `VolkDeviceTable`，不通过 Volk 全局 instance/device �
 GPU 资源内存计划由内部 Vulkan Memory Allocator（VMA）负责选择 Memory Type 和大块子分配。
 公共 API 只表达 automatic、device、upload 和 readback 等访问意图，不暴露 VMA 类型、Vulkan
 memory property 或 heap index。VMA 不进入安装导出，具体接入计划见
-[R-01 GPU 内存分配方案](plans/R-01-memory-allocation.md)。
+[R-01 GPU 内存分配方案](../plans/R-01-memory-allocation.md)。
 
 资源公共模型区分 Buffer、Texture、Texture View 和 Sampler，并采用“完整模型、最小实现范围”。
 第一阶段优先实现 Buffer、2D Texture、默认 View 和基础 Sampler，详细边界见
-[R-02 第一版资源模型](plans/R-02-resource-model.md)。
+[R-02 第一版资源模型](../plans/R-02-resource-model.md)。
 
 ## C ABI 规则
 

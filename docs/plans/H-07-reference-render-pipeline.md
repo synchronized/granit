@@ -28,7 +28,7 @@ Lighting Pass。
 当前也尚未达到 Forward+/Clustered Forward：逐 View 光源筛选与批量打包已经存在，但没有
 Tile/Cluster 划分和 Clustered Light Culling。后续优先沿现有路径增加 Clustered Forward；Deferred
 保留为可选高级管线，不替换参考管线，也不进入核心 Renderer 职责。详细边界见
-[架构文档](../architecture.md#渲染路径定位)。
+[架构文档](../concepts/architecture.md#渲染路径定位)。
 
 ## 四种使用层级
 

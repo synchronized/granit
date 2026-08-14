@@ -72,4 +72,4 @@ Store 支持：
 View 的 Renderer domain、格式、Texture usage、尺寸、样本数和附件间一致性需要访问 Registry，
 将在 F-02 的命令入口校验。
 
-详细设计见 [R-09 计划](plans/R-09-render-target-attachment.md)。
+详细设计见 [R-09 计划](../plans/R-09-render-target-attachment.md)。

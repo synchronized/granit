@@ -68,7 +68,7 @@ cmake --build --preset linux-clang-debug
 ctest --preset linux-clang-debug
 ```
 
-完整的环境要求、构建选项、静态库和安装说明见[构建与安装](docs/build.md)。
+完整的环境要求、构建选项、静态库和安装说明见[构建与安装](docs/guides/build.md)。
 
 ## CMake 集成
 

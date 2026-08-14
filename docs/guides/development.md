@@ -4,7 +4,7 @@
 # 开发规范
 
 项目文档的职责、分类、模板和维护流程统一遵循
-[项目文档规范](../DOCUMENTATION_GUIDE.md)。完整文档入口见[文档中心](README.md)。
+[项目文档规范](../../DOCUMENTATION_GUIDE.md)。完整文档入口见[文档中心](../README.md)。
 
 ## 公共头文件布局
 

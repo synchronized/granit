@@ -10,7 +10,7 @@
 
 - 根目录 `README.md`：项目定位、快速开始和文档入口。
 - `docs/README.md`：完整文档分类和推荐阅读顺序。
-- `docs/architecture.md`：长期有效的架构边界和已经确认的决策。
+- `docs/concepts/architecture.md`：长期有效的架构边界和已经确认的决策。
 - `docs/roadmap.md`：阶段、优先级、依赖关系和状态摘要。
 - `docs/plans/*.md`：单项任务的 API 草案、内部设计、步骤、测试和未决问题。
 - 根目录 `DOCUMENTATION_GUIDE.md`：所有文档类型、模板和生命周期的统一规范。

@@ -56,7 +56,7 @@ utils extension 时，创建返回 `GRANIT_ERROR_UNSUPPORTED`，不会静默关�
 Vulkan Validation Layer 负责 Vulkan API、同步和对象规则，但无法判断 Granit 用户是否遗漏显式
 销毁公开资源。Granit 提供独立生命周期验证：验证模式下 Renderer 销毁会汇总尚存的用户拥有
 资源，然后仍完成句柄失效和级联清理。Swapchain Backbuffer 等借用资源不作为用户泄漏报告。
-具体方案见 [V-01 生命周期验证计划](plans/V-01-lifetime-validation.md)。
+具体方案见 [V-01 生命周期验证计划](../plans/V-01-lifetime-validation.md)。
 
 验证模式下，销毁仍拥有用户子资源的父对象也会输出诊断：Texture 会报告用户创建的 View，
 Surface 会报告仍存活的 Swapchain。诊断不会改变销毁结果，子资源仍按依赖顺序失效和释放。
