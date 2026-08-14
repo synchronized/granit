@@ -83,6 +83,20 @@ if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
 endif()
 
 if(WIN32)
+  add_executable(granit_render_pipeline_window_example render_pipeline_window.cpp)
+  target_link_libraries(
+    granit_render_pipeline_window_example PRIVATE granit::render_pipeline user32
+  )
+  target_compile_definitions(
+    granit_render_pipeline_window_example
+    PRIVATE GRANIT_RENDER_PIPELINE_EXAMPLE_PACKAGE="${granit_render_pipeline_example_package}"
+  )
+  add_dependencies(granit_render_pipeline_window_example granit_material_tool)
+  target_sources(
+    granit_render_pipeline_window_example PRIVATE "${granit_render_pipeline_example_package}"
+  )
+  granit_target_compile_warnings(granit_render_pipeline_window_example)
+
   add_executable(granit_window_clear_example WIN32 window_clear.cpp)
   target_link_libraries(granit_window_clear_example PRIVATE granit::granit user32)
   granit_target_compile_warnings(granit_window_clear_example)
@@ -121,6 +135,7 @@ if(WIN32)
     granit_window_clear_example
     granit_window_triangle_example
     granit_window_hdr_example
+    granit_render_pipeline_window_example
   )
 endif()
 foreach(target IN LISTS granit_example_targets)

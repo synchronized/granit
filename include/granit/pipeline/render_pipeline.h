@@ -84,6 +84,8 @@ typedef struct granit_render_pipeline_render_desc {
   float exposure_ev;
   uint32_t draw_binding_count;
   const granit_render_pipeline_draw_binding* draw_bindings;
+  /** 可选 Swapchain Frame；非零时本次只允许渲染一个 View，并使用帧同步提交。 */
+  granit_frame frame;
   uint32_t reserved_tail;
 } granit_render_pipeline_render_desc;
 
@@ -100,6 +102,7 @@ typedef struct granit_render_pipeline_render_desc {
    0.0F,                                                                                           \
    UINT32_C(0),                                                                                    \
    0,                                                                                              \
+   GRANIT_NULL_HANDLE,                                                                             \
    UINT32_C(0)}
 
 #ifdef __cplusplus
@@ -116,6 +119,7 @@ granit_render_pipeline_create(granit_renderer renderer, const granit_render_pipe
  *
  * 每个可见 Renderable 的 payload 必须在 draw_bindings 中唯一对应一项。Mesh 和 Material
  * 必须属于当前 Renderer，且在调用期间不得更新或销毁。
+ * frame 为零时执行普通离屏提交；frame 非零时使用 Swapchain 帧提交，并要求 view_count 为 1。
  * 同一管线不可并发调用。回调不得结束、提交或销毁传入的 Recorder，也不得递归调用本管线。
  */
 GRANIT_RENDER_PIPELINE_API granit_result

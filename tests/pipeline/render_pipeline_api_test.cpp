@@ -260,6 +260,11 @@ TEST_CASE("统一Render Pipeline按固定阶段消费Scene Snapshot") {
   render_desc.draw_binding_count = 1;
   render_desc.draw_bindings = &draw_binding;
   REQUIRE(pipeline.render(render_desc) == granit::result::success);
+  render_desc.frame = 1;
+  render_desc.view_count = 2;
+  CHECK(pipeline.render(render_desc) == granit::result::invalid_argument);
+  render_desc.frame = GRANIT_NULL_HANDLE;
+  render_desc.view_count = 1;
   CHECK(callback.stages ==
         std::vector<granit_render_pipeline_stage>{GRANIT_RENDER_PIPELINE_STAGE_SHADOW,
                                                   GRANIT_RENDER_PIPELINE_STAGE_OPAQUE});

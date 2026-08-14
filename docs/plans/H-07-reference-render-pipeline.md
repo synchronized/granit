@@ -278,7 +278,8 @@ Renderable、payload 和关联项数组。回调不得保存数组地址，不�
 
 ### H-07D：发布与示例
 
-- **已完成**：保留直接 Renderer 与部分模块示例，并提供仅使用公共 API 的完整自动 Draw 离屏示例。
+- **已完成**：保留直接 Renderer 与部分模块示例，并提供仅使用公共 API 的自动 Draw 离屏与窗口
+  示例。
 - **已完成**：独立 `RenderPipeline` component，以及共享/静态 C 与 C++20 consumer。
 - **已完成**：记录 Forward PBR 能力范围和可绕过边界。
 
@@ -316,9 +317,10 @@ Renderable、payload 和关联项数组。回调不得保存数组地址，不�
    当前 Renderer 会在绑定 Vertex/Index Buffer 时准备资源状态，因此绑定必须发生在 Dynamic
    Rendering 区域外。首版自动路径为每个 Draw 建立一个区域：首个 Draw 清除附件，后续 Draw 使用
    LOAD 保留内容。后续在性能测量证明必要时，再增加批次预绑定或后端区域内绑定能力。
-3. **H-07G 完整示例（进行中）**：公共 API 离屏路径已完成，构建期由 Material Tool 将源 JSON 与
-   SPIR-V 编译为 `.grmat`，运行时自动录制并回读中心像素；窗口路径仍待实现。直接 Renderer 用法
-   继续作为对照保留。
+3. **H-07G 完整示例（已完成）**：公共 API 离屏与窗口路径均已完成。构建期由 Material Tool 将源
+   JSON 与 SPIR-V 编译为 `.grmat`；离屏路径自动录制并回读中心像素，窗口路径把取得的 Backbuffer
+   和可选 `granit_frame` 交给 Render Pipeline，通过 Render Graph 的帧提交串联 acquire/present，
+   并在 Resize 后重建 Swapchain 与 Scene View。直接 Renderer 用法继续作为对照保留。
 4. **H-07H 验收**：补齐生命周期压力、Resize、多 View、Validation Layer、输出一致性和性能对比。
 
 外部环境切换、透明物体、CSM 和 Clustered Forward 在 H-07H 后单独立项，不阻塞首版完成。
