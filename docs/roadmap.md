@@ -140,7 +140,7 @@
 
 ## 近期执行顺序
 
-1. 完成 H-07 内置 Draw、完整公共用户路径和收尾验收。
+1. 完成 H-07H 输出一致性、性能对比和收尾验收。
 2. 实现 H-06A～H-06B：Unlit 基础材质、透明混合、Scissor 和像素回归。
 3. 实现 H-06C～H-06D：Sprite/UI Draw List、批处理和 Tone Mapping 后合成。
 4. 根据测量评估透明 PBR、CSM、Clustered Forward 与 Bindless。

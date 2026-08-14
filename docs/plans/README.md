@@ -87,8 +87,8 @@ D-03-graphics-pipeline.md
   跨平台安装 Consumer 验证。
 - [H-06：Unlit、2D 与 UI 渲染路径](H-06-unlit-2d-ui.md)——已确认；规划无光照材质、透明混合、
   Scissor、Sprite/UI 批处理，以及 Tone Mapping 后的 UI 合成扩展点。
-- [H-07：高级参考渲染套件](H-07-reference-render-pipeline.md)——已确认，等待公共 ABI 收敛；规划类似
-  DiligentFX 的可选统一门面，同时保留直接 Renderer 和选择部分高层模块的使用方式。
+- [H-07：高级参考渲染套件](H-07-reference-render-pipeline.md)——进行中；公共 ABI、自动 Draw、
+  离屏/窗口用户路径和安装 component 已完成，当前执行 H-07H 输出与性能收尾验收。
 
 ## 状态
 
