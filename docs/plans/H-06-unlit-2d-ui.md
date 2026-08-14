@@ -7,7 +7,7 @@
 
 - 路线图任务：H-06
 - 优先级：P2
-- 状态：进行中；H-06A～H-06C 已完成，下一步 H-06D
+- 状态：进行中；H-06A～H-06D 已完成，下一步 H-06E
 - 必需依赖：H-01 Render Graph、H-02 Material、H-07 首版参考管线
 - 后续依赖：文字渲染、编辑器覆盖层和调试绘制
 
@@ -120,6 +120,19 @@ Pipeline、纹理绑定和 Scissor 兼容时才进行安全合批。后续 Bindl
 - 已完成 GPU timestamp 基线：10,000 矩形单 Batch P50 为 1.864～1.897 ms，逐项交替状态为
   81.309～82.837 ms。结果证明保持相邻兼容性是首要优化，但没有证明应立即引入 Bindless；详见
   [UI GPU 基线](../../benchmarks/results/2026-08-14-windows-clang-ui-gpu-f77b112.md)。H-06C 完成。
+
+## H-06D 当前进度
+
+- 参考 Render Pipeline 在 Tone Mapping 后提供 `GRANIT_RENDER_PIPELINE_STAGE_UI` 回调阶段，同时保留
+  独立 UI Pass 的 Render Graph 使用方式。
+- UI 阶段对同一显示空间输出执行读写，要求调用方使用 Attachment `LOAD`，不会再次应用曝光或
+  Tone Mapping。
+- UI 阶段不携带 Scene Renderable、Draw Binding、深度、阴影或 IBL；调用方可在回调中录制自己的
+  Draw List，参考管线不建立第二份 UI 所有权状态。
+- `encode_srgb` 明确区分 RGBA8 UNORM 的 Shader 编码与 RGBA8 SRGB 的 Attachment 编码，测试覆盖
+  两种格式以及多 View 的逐 View 回调顺序。
+- 离屏与 Swapchain Frame 共用同一 Render Graph 构建路径；输出尺寸和 Viewport 每次渲染重新读取，
+  可随窗口 Resize 更新。H-06D 完成。
 
 ## 验收标准
 

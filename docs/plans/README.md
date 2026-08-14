@@ -86,7 +86,7 @@ D-03-graphics-pipeline.md
   HDR/Tone Mapping、性能基线、降级组合、窗口、多 View、统一 Render Graph、2,000 帧生命周期和
   跨平台安装 Consumer 验证。
 - [H-06：Unlit、2D 与 UI 渲染路径](H-06-unlit-2d-ui.md)——进行中；基础材质、透明混合和 Scissor
-  已完成，H-06C Draw List、动态上传、纹理/顶点色批量录制及 CPU/GPU 基线已闭合，下一步 H-06D。
+  已完成，Draw List、批处理、CPU/GPU 基线和 Tone Mapping 后 UI 扩展点已闭合，下一步 H-06E。
 - [H-07：高级参考渲染套件](H-07-reference-render-pipeline.md)——已完成；公共 ABI、自动 Draw、
   离屏/窗口用户路径、安装 component、输出与性能验收均已闭合。
 

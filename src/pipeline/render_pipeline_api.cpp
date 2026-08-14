@@ -677,6 +677,42 @@ render_view(pipeline_state& state, const granit_render_pipeline_render_desc& des
       granit::lighting::reference_pipeline_graph_error::none) {
     return GRANIT_ERROR_INVALID_ARGUMENT;
   }
+  if (state.record != nullptr) {
+    const auto ui_pass = graph.add_pass(
+        {.side_effect = true,
+         .accesses = {{output, granit::render_graph::access_type::read_write}}},
+        [&](granit::render_graph::pass_context& context) {
+          const granit_render_pipeline_record_info info{
+              .struct_size = sizeof(granit_render_pipeline_record_info),
+              .stage = GRANIT_RENDER_PIPELINE_STAGE_UI,
+              .recorder = context.recorder(),
+              .color_input = context.texture_view(output),
+              .color_output = context.texture_view(output),
+              .depth_output = GRANIT_NULL_HANDLE,
+              .shadow_input = GRANIT_NULL_HANDLE,
+              .ibl_irradiance = GRANIT_NULL_HANDLE,
+              .ibl_prefiltered_environment = GRANIT_NULL_HANDLE,
+              .ibl_brdf_lut = GRANIT_NULL_HANDLE,
+              .ibl_layout = GRANIT_NULL_HANDLE,
+              .ibl_group = GRANIT_NULL_HANDLE,
+              .view_index = view_index,
+              .payload_count = 0,
+              .payloads = nullptr,
+              .draw_bindings = nullptr,
+              .view = &public_view,
+              .renderables = nullptr,
+              .light_view_projection = {},
+              .exposure_scale = 1.0F,
+              .encode_srgb = is_srgb_output(render_output.format) ? 0U : 1U,
+              .reserved = {0, 0}};
+          return state.record(&info, state.user_data);
+        },
+        "Reference / UI");
+    if (ui_pass == granit::render_graph::invalid_pass_id ||
+        !graph.add_dependency(passes.tone_mapping, ui_pass)) {
+      return GRANIT_ERROR_INTERNAL;
+    }
+  }
   const auto execution = frame == GRANIT_NULL_HANDLE ? graph.execute(state.renderer)
                                                      : graph.execute_frame(state.renderer, frame);
   if (!execution.succeeded())
