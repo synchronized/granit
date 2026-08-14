@@ -153,7 +153,8 @@ cmake --preset linux-clang-debug -DBUILD_SHARED_LIBS=OFF
 - `granit_render_pipeline_offscreen_example`：构建材质包，通过公共 Mesh、Material、Scene 和
   Render Pipeline API 自动录制 Shadow/Opaque Draw，并回读输出像素；不使用阶段回调或内部模块。
 - `granit_render_pipeline_window_example`：将取得的 Swapchain Frame 和 Backbuffer 交给公共 Render
-  Pipeline，使用帧同步提交自动渲染结果，并处理窗口尺寸重建。
+  Pipeline，使用帧同步提交自动渲染结果，并处理窗口尺寸重建；`--smoke-test` 会自动完成两次重建
+  后退出。
 
 示例不包含 Vulkan 头文件；材质热替换示例使用尚未安装的开发中 `granit::material` 模块，其余示例
 只依赖稳定分层中的 Granit 公共接口。窗口示例目前仅在 Windows 构建。

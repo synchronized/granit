@@ -96,6 +96,13 @@ if(WIN32)
     granit_render_pipeline_window_example PRIVATE "${granit_render_pipeline_example_package}"
   )
   granit_target_compile_warnings(granit_render_pipeline_window_example)
+  if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
+    add_test(
+      NAME granit.example.render_pipeline_window
+      COMMAND granit_render_pipeline_window_example --smoke-test
+    )
+    set_tests_properties(granit.example.render_pipeline_window PROPERTIES TIMEOUT 30)
+  endif()
 
   add_executable(granit_window_clear_example WIN32 window_clear.cpp)
   target_link_libraries(granit_window_clear_example PRIVATE granit::granit user32)

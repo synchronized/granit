@@ -321,7 +321,10 @@ Renderable、payload 和关联项数组。回调不得保存数组地址，不�
    JSON 与 SPIR-V 编译为 `.grmat`；离屏路径自动录制并回读中心像素，窗口路径把取得的 Backbuffer
    和可选 `granit_frame` 交给 Render Pipeline，通过 Render Graph 的帧提交串联 acquire/present，
    并在 Resize 后重建 Swapchain 与 Scene View。直接 Renderer 用法继续作为对照保留。
-4. **H-07H 验收**：补齐生命周期压力、Resize、多 View、Validation Layer、输出一致性和性能对比。
+4. **H-07H 验收（进行中）**：自动离屏路径已覆盖 8 轮 Pipeline 创建、真实渲染和销毁，确认默认
+   IBL、Shadow/Tone Mapping Pipeline 与内部缓存可重复重建；Windows 烟雾测试会自动改变两次窗口
+   尺寸，分别重建 Swapchain 和 Scene View，并在 Frame 同步路径成功呈现后退出。多 View、
+   Validation Layer 输出收敛、输出一致性和性能对比仍待补齐。
 
 外部环境切换、透明物体、CSM 和 Clustered Forward 在 H-07H 后单独立项，不阻塞首版完成。
 

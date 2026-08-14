@@ -506,6 +506,15 @@ TEST_CASE("公共Render Pipeline ABI输出可回读的Tone Mapping像素") {
   REQUIRE(readback.unmap() == granit::result::success);
 
   REQUIRE(granit_render_pipeline_destroy(renderer.native_handle(), pipeline) == GRANIT_SUCCESS);
+  constexpr std::uint32_t pipeline_lifecycle_iterations = 8;
+  for (std::uint32_t iteration = 0; iteration < pipeline_lifecycle_iterations; ++iteration) {
+    pipeline = GRANIT_NULL_HANDLE;
+    REQUIRE(granit_render_pipeline_create(renderer.native_handle(), &automatic_pipeline_desc,
+                                          &pipeline) == GRANIT_SUCCESS);
+    REQUIRE(granit_render_pipeline_render(renderer.native_handle(), pipeline, &render_desc) ==
+            GRANIT_SUCCESS);
+    REQUIRE(granit_render_pipeline_destroy(renderer.native_handle(), pipeline) == GRANIT_SUCCESS);
+  }
   REQUIRE(granit_material_destroy(renderer.native_handle(), material) == GRANIT_SUCCESS);
   REQUIRE(granit_mesh_destroy(renderer.native_handle(), mesh) == GRANIT_SUCCESS);
   REQUIRE(granit_buffer_destroy(renderer.native_handle(), vertex_buffer) == GRANIT_SUCCESS);

@@ -169,6 +169,7 @@ int main(int argument_count, char** arguments) {
   bool running = true;
   bool recreate = false;
   std::uint32_t rendered_frames = 0;
+  std::uint32_t completed_recreates = 0;
   while (running) {
     MSG message{};
     while (PeekMessageW(&message, nullptr, 0, 0, PM_REMOVE) != 0) {
@@ -200,6 +201,7 @@ int main(int argument_count, char** arguments) {
       result = granit::from_native(
           create_scene(renderer.native_handle(), info.width, info.height, &scene));
       recreate = false;
+      ++completed_recreates;
       if (granit::failed(result))
         break;
     }
@@ -235,8 +237,13 @@ int main(int argument_count, char** arguments) {
     if (granit::failed(result))
       break;
     ++rendered_frames;
-    if (smoke_test && rendered_frames == 3)
+    if (smoke_test && rendered_frames == 1) {
+      SetWindowPos(window, nullptr, 0, 0, 700, 520, SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE);
+    } else if (smoke_test && rendered_frames == 3) {
+      SetWindowPos(window, nullptr, 0, 0, 860, 640, SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE);
+    } else if (smoke_test && rendered_frames >= 5 && completed_recreates >= 2) {
       running = false;
+    }
   }
 
   static_cast<void>(granit_render_pipeline_destroy(renderer.native_handle(), pipeline));
@@ -247,5 +254,9 @@ int main(int argument_count, char** arguments) {
     DestroyWindow(window);
   if (granit::failed(result))
     std::cerr << "渲染失败：" << granit::result_message(result) << '\n';
+  if (smoke_test && completed_recreates < 2) {
+    std::cerr << "窗口烟雾测试未完成两次尺寸重建\n";
+    return 1;
+  }
   return granit::failed(result) ? 1 : 0;
 }
