@@ -13,4 +13,5 @@
 - [H-03 PBR 渲染模块实施记录](H-03-pbr-renderer-implementation.md)
 - [H-04 场景提交与可见性实施记录](H-04-scene-submission-implementation.md)
 - [H-05 光照与后处理实施记录](H-05-lighting-pipeline-implementation.md)
+- [H-06 Unlit、2D 与 UI 实施记录](H-06-unlit-ui-implementation.md)
 - [H-07 高级参考渲染套件实施记录](H-07-reference-render-pipeline-implementation.md)

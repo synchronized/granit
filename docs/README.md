@@ -89,6 +89,7 @@
 ## 计划与历史
 
 - [开发计划索引](plans/README.md)
+- [架构决策索引](decisions/README.md)
 - [实施记录索引](records/README.md)
 - 性能结果位于 [`benchmarks/results`](../benchmarks/results/README.md)。
 

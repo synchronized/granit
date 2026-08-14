@@ -7,7 +7,7 @@
 
 - 路线图任务：H-06
 - 优先级：P2
-- 状态：进行中；H-06A～H-06D 已完成，下一步 H-06E
+- 状态：已完成内部技术路线验证；公共 UI、Debug Draw 与 Text ABI 后续单独设计
 - 必需依赖：H-01 Render Graph、H-02 Material、H-07 首版参考管线
 - 后续依赖：文字渲染、编辑器覆盖层和调试绘制
 
@@ -82,57 +82,12 @@ Pipeline、纹理绑定和 Scissor 兼容时才进行安全合批。后续 Bindl
 5. **H-06E：调试绘制与文字渲染评估**——在基础批处理稳定后评估线框、Gizmo、字形 Atlas 和
    外部文字整形库；未经单独设计，不把完整 UI 或字体系统并入本任务。
 
-## H-06A～H-06B 当前进度
+## 完成结果
 
-- 已建立共享 Unlit HLSL，基础公式为材质颜色乘以可选纹理和可选顶点色。
-- 已建立 `unlit_opaque` 与 `unlit_alpha_cutoff` 材质 Pass；两者均关闭混合，Cutoff 使用
-  `clip(alpha - alpha_cutoff)`，不改变不透明像素颜色。
-- 基础材质常量布局固定为 32 字节，包含 `base_color` 和 `alpha_cutoff`。HLSL 已预留纹理与顶点色
-  编译开关，但基础包暂不声明资源参数，避免当前包级必填语义把无纹理材质变成 `NOT_READY`。
-- 已加入独立 Unlit Pass 录制接口，复用 Mesh、Material、Frame/Object 绑定和 Renderer Recorder。
-- SPIR-V 反射、材质包构建以及 Opaque/Alpha Cutoff 离屏像素回归均已通过，H-06A 完成。
-- 已加入 `unlit_transparent` Pass，使用预乘 Alpha、关闭深度写入并保留深度测试；透明黑清屏使
-  输出 Alpha 可继续参与后续合成。
-- Unlit Pass 支持显式 Load/Clear 与 Scissor；连续提交按录制顺序合成，不进行破坏透明语义的
-  隐式重排。
-- RGBA8 UNORM 像素回归覆盖两层透明混合、Scissor 边界及线性字节输出，确认该独立显示空间路径
-  不额外执行 Tone Mapping 或 sRGB 编码，H-06B 完成。
-
-## H-06C 当前进度
-
-- 已建立内部 `ui_vertex`，固定为位置、UV 与 RGBA8 UNORM 顶点色，不进入公共 ABI。
-- 已建立拥有逐帧顶点、索引和 Draw Item 的 UI Draw List；追加局部索引时统一转换为列表全局索引。
-- 合批只发生在相邻且 Texture、Sampler、Scissor、层级完全一致的 Item 之间，不跨项重排透明内容。
-- 已覆盖索引修正、稳定顺序、相邻合批、状态切换、无效几何、空列表和列表复用测试。
-- 已建立逐帧 GPU 几何上传对象，使用可增长并复用容量的 Upload Vertex/Index Buffer；空列表不会
-  反复释放容量，移动和析构负责句柄生命周期。首版先采用直接可写内存，是否改为暂存复制由基线决定。
-- 已加入 `unlit_ui` 材质 Pass 与 UI 顶点入口：以 `uint32` 输入 RGBA8 顶点色并在 Shader 中解包，
-  因而无需为首版扩展公共 Vertex Format ABI。
-- UI Pass 在单个 Rendering 区域中绑定一次共享 Vertex/Index Buffer，再按 Batch 更新 Scissor 并录制
-  Indexed Draw；离屏像素回归已覆盖稳定透明叠加、顶点色和裁剪边界。
-- 已拆出独立 `unlit_ui` 材质包，声明 Base Color Texture 与 Sampler，不让纯色 Unlit 材质被迫提供
-  UI 资源；UI Shader 计算“材质颜色 × 纹理 × 顶点色”。
-- 每个 Batch 显式更新 Texture/Sampler Bind Group，并通过两张纹理的透明叠加像素回归验证绑定切换。
-  当前实现优先闭合语义，后续基线将决定是否引入按资源组合缓存的 Bind Group，避免凭经验复杂化。
-- 已建立 100、1,000、10,000 个矩形的 CPU 基线和 Draw/绑定统计；基准发现并修复索引容器
-  O(N²) 增长，10,000 矩形构建 P50 从约 35.5 ms 降至 1.303～1.386 ms。完整结果见
-  [UI CPU 基线](../../benchmarks/results/2026-08-14-windows-clang-ui-056a0c8.md)。
-- 已完成 GPU timestamp 基线：10,000 矩形单 Batch P50 为 1.864～1.897 ms，逐项交替状态为
-  81.309～82.837 ms。结果证明保持相邻兼容性是首要优化，但没有证明应立即引入 Bindless；详见
-  [UI GPU 基线](../../benchmarks/results/2026-08-14-windows-clang-ui-gpu-f77b112.md)。H-06C 完成。
-
-## H-06D 当前进度
-
-- 参考 Render Pipeline 在 Tone Mapping 后提供 `GRANIT_RENDER_PIPELINE_STAGE_UI` 回调阶段，同时保留
-  独立 UI Pass 的 Render Graph 使用方式。
-- UI 阶段对同一显示空间输出执行读写，要求调用方使用 Attachment `LOAD`，不会再次应用曝光或
-  Tone Mapping。
-- UI 阶段不携带 Scene Renderable、Draw Binding、深度、阴影或 IBL；调用方可在回调中录制自己的
-  Draw List，参考管线不建立第二份 UI 所有权状态。
-- `encode_srgb` 明确区分 RGBA8 UNORM 的 Shader 编码与 RGBA8 SRGB 的 Attachment 编码，测试覆盖
-  两种格式以及多 View 的逐 View 回调顺序。
-- 离屏与 Swapchain Frame 共用同一 Render Graph 构建路径；输出尺寸和 Viewport 每次渲染重新读取，
-  可随窗口 Resize 更新。H-06D 完成。
+- H-06A～H-06D 已完成 Unlit、透明、UI Draw List、批处理、测量和参考管线集成。
+- H-06E 已确认 Debug Draw、Text 与第三方 UI 适配层的职责，不向 Renderer 加入字体或 UI 状态。
+- 详细过程与测量见 [H-06 实施记录](../records/H-06-unlit-ui-implementation.md)。
+- 长期模块边界见 [ADR-001](../decisions/ADR-001-debug-text-boundary.md)。
 
 ## 验收标准
 

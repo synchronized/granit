@@ -24,7 +24,7 @@
 | 四、命令与帧同步 | 基本完成 | Recorder、提交、Frame、查询和恢复边界已实现 |
 | 五、基础渲染 | 已完成 | Graphics/Compute Pipeline、绑定与 Draw/Dispatch 已完成 |
 | 六、多线程与性能 | 已完成 | 压力测试、基线、批量提交与上传批处理已完成 |
-| 七、可选高层渲染 | 进行中 | H-07 参考管线收尾，随后进入 H-06 Unlit 路径 |
+| 七、可选高层渲染 | 已完成内部验证 | H-02～H-07 路线闭合，公共高层 ABI 后续分别设计 |
 | 八、稳定化与跨平台 | 持续进行 | ABI 策略、诊断和更多平台 Surface 待后续推进 |
 
 ## 一、工程与 ABI 基础
@@ -121,7 +121,7 @@
 | [H-03 PBR](plans/H-03-pbr-renderer.md) | P2 | 已完成 |
 | [H-04 Scene 提交](plans/H-04-scene-submission.md) | P2 | 已完成 |
 | [H-05 Lighting 与后处理](plans/H-05-lighting-pipeline.md) | P2 | 已完成 |
-| [H-06 Unlit、2D 与 UI](plans/H-06-unlit-2d-ui.md) | P2 | 进行中；H-06A～H-06D 已完成 |
+| [H-06 Unlit、2D 与 UI](plans/H-06-unlit-2d-ui.md) | P2 | 已完成内部技术路线验证 |
 | [H-07 参考 Render Pipeline](plans/H-07-reference-render-pipeline.md) | P2 | 已完成 |
 
 高层模块只能依赖核心 Renderer，不能形成反向依赖。使用者始终可以绕过高层模块，直接使用资源、
@@ -140,7 +140,7 @@
 
 ## 近期执行顺序
 
-1. 实现 H-06E：评估调试绘制、字形 Atlas 与外部文字整形库的边界。
+1. 分别设计公共 UI Draw List、Debug Draw 与 Text component，不直接暴露内部原型。
 2. 根据测量评估透明 PBR、CSM、Clustered Forward 与 Bindless。
 3. Deferred 保持为使用 Render Graph 组合的可选高级管线研究项。
 
