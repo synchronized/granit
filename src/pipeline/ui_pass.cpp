@@ -29,17 +29,28 @@ granit_result record_ui_pass(granit_renderer renderer, granit_command_recorder r
   }
   const auto batches = list.batches();
   for (const auto& batch : batches) {
-    if (batch.state.texture != GRANIT_NULL_HANDLE || batch.state.sampler != GRANIT_NULL_HANDLE)
-      return GRANIT_ERROR_UNSUPPORTED;
+    if (batch.state.texture == GRANIT_NULL_HANDLE || batch.state.sampler == GRANIT_NULL_HANDLE)
+      return GRANIT_ERROR_INVALID_ARGUMENT;
   }
 
+  const auto update_material = [&](const ui_draw_batch& batch) {
+    const std::array updates{
+        granit_material_parameter_update{granit_material_parameter_id("base_color_texture", 18),
+                                         GRANIT_MATERIAL_PARAMETER_TEXTURE_VIEW, 0, nullptr, 0,
+                                         batch.state.texture},
+        granit_material_parameter_update{granit_material_parameter_id("unlit_sampler", 13),
+                                         GRANIT_MATERIAL_PARAMETER_SAMPLER, 0, nullptr, 0,
+                                         batch.state.sampler}};
+    return granit_material_update(renderer, desc.material, updates.data(),
+                                  static_cast<std::uint32_t>(updates.size()));
+  };
+  auto result = update_material(batches.front());
   material_draw_state material;
-  auto result =
-      acquire_material_draw_state(renderer, desc.material,
-                                  {.pass = granit::material::make_feature_id("unlit_ui"),
-                                   .color_format = desc.color_format,
-                                   .depth_stencil_format = GRANIT_TEXTURE_FORMAT_UNDEFINED},
-                                  material);
+  const material_draw_request request{.pass = granit::material::make_feature_id("unlit_ui"),
+                                      .color_format = desc.color_format,
+                                      .depth_stencil_format = GRANIT_TEXTURE_FORMAT_UNDEFINED};
+  if (result == GRANIT_SUCCESS)
+    result = acquire_material_draw_state(renderer, desc.material, request, material);
   pbr_draw_bindings bindings;
   if (result == GRANIT_SUCCESS)
     result = bindings.initialize(renderer, material, desc.frame, desc.object);
@@ -76,10 +87,20 @@ granit_result record_ui_pass(granit_renderer renderer, granit_command_recorder r
     result = granit_command_recorder_begin_rendering(renderer, recorder, &rendering);
   if (result == GRANIT_SUCCESS) {
     for (const auto& batch : batches) {
+      result = update_material(batch);
+      material_draw_state batch_material;
+      if (result == GRANIT_SUCCESS)
+        result = acquire_material_draw_state(renderer, desc.material, request, batch_material);
+      if (result == GRANIT_SUCCESS) {
+        result = granit_command_recorder_bind_graphics_groups(renderer, recorder,
+                                                              batch_material.pipeline_layout, 1,
+                                                              &batch_material.material_group, 1);
+      }
       const auto scissor = batch.state.scissor.width == 0 || batch.state.scissor.height == 0
                                ? granit_scissor{0, 0, desc.width, desc.height}
                                : batch.state.scissor;
-      result = granit_command_recorder_set_scissors(renderer, recorder, 0, &scissor, 1);
+      if (result == GRANIT_SUCCESS)
+        result = granit_command_recorder_set_scissors(renderer, recorder, 0, &scissor, 1);
       if (result == GRANIT_SUCCESS) {
         result = granit_command_recorder_draw_indexed(renderer, recorder, batch.index_count, 1,
                                                       batch.first_index, 0, 0);

@@ -25,7 +25,7 @@ struct ui_pass_desc {
   granit_attachment_load_operation load_operation = GRANIT_ATTACHMENT_LOAD_OPERATION_LOAD;
 };
 
-/** 在一个 Rendering 区域内按稳定顺序录制 UI Batch；首版仅接受无纹理顶点色项。 */
+/** 在一个 Rendering 区域内按稳定顺序录制带 Texture/Sampler 的 UI Batch。 */
 [[nodiscard]] GRANIT_RENDER_PIPELINE_API granit_result
 record_ui_pass(granit_renderer renderer, granit_command_recorder recorder, const ui_pass_desc& desc,
                const ui_draw_list& list, const ui_geometry_upload& geometry) noexcept;

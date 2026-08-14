@@ -110,7 +110,11 @@ Pipeline、纹理绑定和 Scissor 兼容时才进行安全合批。后续 Bindl
   因而无需为首版扩展公共 Vertex Format ABI。
 - UI Pass 在单个 Rendering 区域中绑定一次共享 Vertex/Index Buffer，再按 Batch 更新 Scissor 并录制
   Indexed Draw；离屏像素回归已覆盖稳定透明叠加、顶点色和裁剪边界。
-- 当前实际录制仅接受无纹理顶点色项；下一步接入 Texture/Sampler Bind Group，再补性能基线。
+- 已拆出独立 `unlit_ui` 材质包，声明 Base Color Texture 与 Sampler，不让纯色 Unlit 材质被迫提供
+  UI 资源；UI Shader 计算“材质颜色 × 纹理 × 顶点色”。
+- 每个 Batch 显式更新 Texture/Sampler Bind Group，并通过两张纹理的透明叠加像素回归验证绑定切换。
+  当前实现优先闭合语义，后续基线将决定是否引入按资源组合缓存的 Bind Group，避免凭经验复杂化。
+- 下一步补充 100、1,000、10,000 个矩形的 CPU/GPU 基线和 Draw/绑定统计，完成 H-06C 验收。
 
 ## 验收标准
 
