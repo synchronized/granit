@@ -7,7 +7,7 @@
 
 - 路线图任务：H-07
 - 优先级：P2
-- 状态：进行中；H-07A～H-07G 已完成，H-07H 收尾验收进行中
+- 状态：已完成；H-07A～H-07H 均已验收
 - 必需依赖：H-01～H-05
 - 可选后续：H-06 Unlit、2D 与 UI
 - 历史记录：[H-07 实施记录](../records/H-07-reference-render-pipeline-implementation.md)
@@ -109,9 +109,9 @@ H-07A～H-07G 已完成：
 逐阶段接口演化、内部绑定和验证细节见
 [H-07 实施记录](../records/H-07-reference-render-pipeline-implementation.md)。
 
-## 剩余任务
+## 收尾验收
 
-### H-07H：收尾验收
+### H-07H：已完成
 
 - **已完成**：自动 PBR Emissive 路径与手工 H-05 HDR Tone Mapping GPU 输出逐通道一致，
   RGBA8 容差为 1 LSB。
@@ -120,8 +120,10 @@ H-07A～H-07G 已完成：
   GPU timestamp 为 Shadow 0.044 ms、Opaque 0.033 ms、Tone Mapping 0.016 ms，未发现额外 GPU
   等待。结果见
   [性能对比](../../benchmarks/results/2026-08-14-windows-clang-render-pipeline-5c0613a.md)。
-- 汇总离屏、窗口、多 View、Resize、Validation、生命周期和安装 Consumer 结果。
-- 验收通过后将 H-07 标记为完成，并把长期行为同步到对应 Reference。
+- **运行与生命周期已通过**：离屏、窗口、多 View、Resize、Validation、资源提前失效和重复
+  创建/销毁均有自动测试覆盖。
+- **发布已通过**：Windows Clang Release 的共享与静态安装包均通过纯 C、C++20、Pipeline C 和
+  Pipeline C++ 外部 Consumer 的编译、链接与运行。
 
 外部环境切换、透明 PBR、CSM 和 Clustered Forward 后续单独立项，不阻塞 H-07 首版完成。
 

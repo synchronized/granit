@@ -336,7 +336,7 @@ Renderable、payload 和关联项数组。回调不得保存数组地址，不�
    JSON 与 SPIR-V 编译为 `.grmat`；离屏路径自动录制并回读中心像素，窗口路径把取得的 Backbuffer
    和可选 `granit_frame` 交给 Render Pipeline，通过 Render Graph 的帧提交串联 acquire/present，
    并在 Resize 后重建 Swapchain 与 Scene View。直接 Renderer 用法继续作为对照保留。
-4. **H-07H 验收（进行中）**：自动离屏路径已覆盖 8 轮 Pipeline 创建、真实渲染和销毁，确认默认
+4. **H-07H 验收（已完成）**：自动离屏路径已覆盖 8 轮 Pipeline 创建、真实渲染和销毁，确认默认
    IBL、Shadow/Tone Mapping Pipeline 与内部缓存可重复重建；Windows 烟雾测试会自动改变两次窗口
    尺寸，分别重建 Swapchain 和 Scene View，并在 Frame 同步路径成功呈现后退出。多 View 已验证两套
    独立 HDR/Depth/Tone Mapping 链路及最终像素方向，不共享或覆盖输出。自动路径还验证了 Mesh 或
@@ -359,6 +359,10 @@ Renderable、payload 和关联项数组。回调不得保存数组地址，不�
    阶段级 GPU timestamp 进一步测得 Shadow 0.044 ms、Opaque 0.033 ms、Tone Mapping 0.016 ms，
    合计约 0.093 ms，未发现 Upload 优化引入额外 GPU 等待，H-07H 性能验收通过。完整数据见
    [性能对比](../../benchmarks/results/2026-08-14-windows-clang-render-pipeline-5c0613a.md)。
+
+   最终发布复测使用 Windows Clang Release 共享与静态安装包；纯 C、C++20、Pipeline C 和
+   Pipeline C++ 四类外部 Consumer 均完成编译、链接与运行。结合离屏、窗口、多 View、Resize、
+   Validation 和生命周期测试，H-07A～H-07H 全部关闭。
 
 外部环境切换、透明物体、CSM 和 Clustered Forward 在 H-07H 后单独立项，不阻塞首版完成。
 

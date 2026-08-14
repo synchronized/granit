@@ -122,7 +122,7 @@
 | [H-04 Scene 提交](plans/H-04-scene-submission.md) | P2 | 已完成 |
 | [H-05 Lighting 与后处理](plans/H-05-lighting-pipeline.md) | P2 | 已完成 |
 | [H-06 Unlit、2D 与 UI](plans/H-06-unlit-2d-ui.md) | P2 | 已确认；等待 H-07 首版 |
-| [H-07 参考 Render Pipeline](plans/H-07-reference-render-pipeline.md) | P2 | 进行中 |
+| [H-07 参考 Render Pipeline](plans/H-07-reference-render-pipeline.md) | P2 | 已完成 |
 
 高层模块只能依赖核心 Renderer，不能形成反向依赖。使用者始终可以绕过高层模块，直接使用资源、
 命令和 Pipeline API。
@@ -140,10 +140,9 @@
 
 ## 近期执行顺序
 
-1. 完成 H-07H 输出一致性、性能对比和收尾验收。
-2. 实现 H-06A～H-06B：Unlit 基础材质、透明混合、Scissor 和像素回归。
-3. 实现 H-06C～H-06D：Sprite/UI Draw List、批处理和 Tone Mapping 后合成。
-4. 根据测量评估透明 PBR、CSM、Clustered Forward 与 Bindless。
-5. Deferred 保持为使用 Render Graph 组合的可选高级管线研究项。
+1. 实现 H-06A～H-06B：Unlit 基础材质、透明混合、Scissor 和像素回归。
+2. 实现 H-06C～H-06D：Sprite/UI Draw List、批处理和 Tone Mapping 后合成。
+3. 根据测量评估透明 PBR、CSM、Clustered Forward 与 Bindless。
+4. Deferred 保持为使用 Render Graph 组合的可选高级管线研究项。
 
 若前置抽象不足，应先更新对应 Plan 和本路线图状态，再扩大公共 API。

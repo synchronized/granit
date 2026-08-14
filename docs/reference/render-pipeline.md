@@ -51,6 +51,17 @@ Scene Snapshot 和输出资源必须属于同一 Renderer，并在调用期间�
 - 不要让 Pipeline、Scene、Mesh、Material 或相关资源的销毁与 `render` 并发。
 - 创建时提供的回调和 `user_data` 必须保持有效，直到 Pipeline 被销毁。
 
+当前离屏 `render` 在返回前等待本次 Recorder 完成，因此内部缓存可以安全原地更新。该行为适合
+首版同步门面，但不代表未来多帧在途接口的同步承诺；引入异步提交时需要按 Frame 生命周期管理
+Upload 环形分配。
+
+## 当前范围与限制
+
+- 渲染路径固定为 Opaque Forward PBR、可选单方向光阴影和 ACES Tone Mapping。
+- 阴影目标固定为 1024×1024；尚不支持 CSM、多阴影光源或可配置阴影质量。
+- 不包含透明 PBR、Unlit、Sprite、UI、Bindless、Clustered Forward 或 Deferred。
+- 默认 IBL 由 Pipeline 内部持有；外部环境切换尚未进入公共接口。
+- 同一 Pipeline 不支持并发渲染，多 View 仍按独立输出顺序执行。
+
 更底层的自定义渲染流程可直接使用 [Command Recorder](command-recorder.md) 和
 [Graphics Pipeline](pipeline.md)，无需经过本参考管线。
-
