@@ -7,7 +7,7 @@
 
 - 路线图任务：H-06
 - 优先级：P2
-- 状态：已确认，尚未实现
+- 状态：进行中；H-06A Shader 与材质契约已建立
 - 必需依赖：H-01 Render Graph、H-02 Material、H-07 首版参考管线
 - 后续依赖：文字渲染、编辑器覆盖层和调试绘制
 
@@ -81,6 +81,16 @@ Pipeline、纹理绑定和 Scissor 兼容时才进行安全合批。后续 Bindl
    Render Graph 使用方式；覆盖窗口 Resize、多 View 和离屏目标。
 5. **H-06E：调试绘制与文字渲染评估**——在基础批处理稳定后评估线框、Gizmo、字形 Atlas 和
    外部文字整形库；未经单独设计，不把完整 UI 或字体系统并入本任务。
+
+## H-06A 当前进度
+
+- 已建立共享 Unlit HLSL，基础公式为材质颜色乘以可选纹理和可选顶点色。
+- 已建立 `unlit_opaque` 与 `unlit_alpha_cutoff` 材质 Pass；两者均关闭混合，Cutoff 使用
+  `clip(alpha - alpha_cutoff)`，不改变不透明像素颜色。
+- 材质常量布局固定为 32 字节，包含 `base_color` 和 `alpha_cutoff`；纹理与 Sampler 使用 Material
+  Group 的 binding 1 和 2。
+- 已加入 SPIR-V 反射及材质包构建检查。
+- 待完成独立 Unlit Pass 录制接口，以及 Opaque/Cutoff 离屏像素回归后关闭 H-06A。
 
 ## 验收标准
 

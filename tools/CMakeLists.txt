@@ -117,6 +117,17 @@ if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
                "binding,3,8,uniform_buffer,LightCounts,16.*binding,3,9,storage_buffer,directional_lights,1.*binding,3,10,storage_buffer,point_lights,1.*binding,3,11,storage_buffer,spot_lights,1"
   )
 
+  add_test(
+    NAME granit.shader_tool.unlit_reflect
+    COMMAND granit_shader_tool
+            "${PROJECT_SOURCE_DIR}/assets/shaders/unlit/unlit_alpha_cutoff.frag.spv"
+  )
+  set_tests_properties(
+    granit.shader_tool.unlit_reflect
+    PROPERTIES PASS_REGULAR_EXPRESSION
+               "binding,1,0,uniform_buffer,MaterialConstants,32"
+  )
+
   set(GRANIT_MATERIAL_PACKAGE_FIXTURE "${CMAKE_CURRENT_BINARY_DIR}/material_package_fixture.grmat")
   set(GRANIT_MATERIAL_DEBUG_FIXTURE "${GRANIT_MATERIAL_PACKAGE_FIXTURE}.debug.json")
   add_test(
@@ -136,6 +147,25 @@ if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
     PROPERTIES
       FIXTURES_REQUIRED granit_material_package
       PASS_REGULAR_EXPRESSION "\"magic\": \"GRMAT\""
+  )
+
+  set(GRANIT_UNLIT_PACKAGE_FIXTURE "${CMAKE_CURRENT_BINARY_DIR}/unlit.grmat")
+  add_test(
+    NAME granit.material_tool.unlit_build
+    COMMAND
+      granit_material_tool build "${PROJECT_SOURCE_DIR}/examples/assets/unlit.grmat.json"
+      --output "${GRANIT_UNLIT_PACKAGE_FIXTURE}"
+  )
+  set_tests_properties(granit.material_tool.unlit_build PROPERTIES FIXTURES_SETUP granit_unlit)
+  add_test(
+    NAME granit.material_tool.unlit_inspect
+    COMMAND granit_material_tool inspect "${GRANIT_UNLIT_PACKAGE_FIXTURE}" --json
+  )
+  set_tests_properties(
+    granit.material_tool.unlit_inspect
+    PROPERTIES
+      FIXTURES_REQUIRED granit_unlit
+      PASS_REGULAR_EXPRESSION "\"constant_buffer_size\": 32"
   )
 endif()
 

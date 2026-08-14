@@ -1,0 +1,43 @@
+{
+  "format_version": 2,
+  "target_environment": "vulkan1.3",
+  "binding_model": "bind_group",
+  "material": {
+    "constant_buffer_size": 32,
+    "parameters": [
+      {"name": "base_color", "type": "float4", "offset": 0},
+      {"name": "alpha_cutoff", "type": "float32", "offset": 16},
+      {"name": "base_color_texture", "type": "texture_view", "binding": 1},
+      {"name": "unlit_sampler", "type": "sampler", "binding": 2}
+    ]
+  },
+  "variants": [
+    {
+      "pass": "unlit_opaque",
+      "pipeline": {
+        "vertex_buffers": [],
+        "primitive": {"topology": "triangle_list", "front_face": "clockwise", "cull_mode": "none", "polygon_mode": "fill"},
+        "depth": {"test_enabled": true, "write_enabled": true, "compare": "less_equal"},
+        "color_blend": {"enabled": false}
+      },
+      "shaders": [
+        {"stage": "vertex", "entry_point": "vertex_main", "spirv": "../../assets/shaders/unlit/unlit.vert.spv"},
+        {"stage": "fragment", "entry_point": "fragment_main", "spirv": "../../assets/shaders/unlit/unlit.frag.spv"}
+      ]
+    },
+    {
+      "pass": "unlit_alpha_cutoff",
+      "features": [{"name": "unlit_alpha_cutoff", "value": 1}],
+      "pipeline": {
+        "vertex_buffers": [],
+        "primitive": {"topology": "triangle_list", "front_face": "clockwise", "cull_mode": "none", "polygon_mode": "fill"},
+        "depth": {"test_enabled": true, "write_enabled": true, "compare": "less_equal"},
+        "color_blend": {"enabled": false}
+      },
+      "shaders": [
+        {"stage": "vertex", "entry_point": "vertex_main", "spirv": "../../assets/shaders/unlit/unlit.vert.spv"},
+        {"stage": "fragment", "entry_point": "fragment_main", "spirv": "../../assets/shaders/unlit/unlit_alpha_cutoff.frag.spv"}
+      ]
+    }
+  ]
+}
