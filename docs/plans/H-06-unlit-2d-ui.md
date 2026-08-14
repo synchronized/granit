@@ -114,7 +114,11 @@ Pipeline、纹理绑定和 Scissor 兼容时才进行安全合批。后续 Bindl
   UI 资源；UI Shader 计算“材质颜色 × 纹理 × 顶点色”。
 - 每个 Batch 显式更新 Texture/Sampler Bind Group，并通过两张纹理的透明叠加像素回归验证绑定切换。
   当前实现优先闭合语义，后续基线将决定是否引入按资源组合缓存的 Bind Group，避免凭经验复杂化。
-- 下一步补充 100、1,000、10,000 个矩形的 CPU/GPU 基线和 Draw/绑定统计，完成 H-06C 验收。
+- 已建立 100、1,000、10,000 个矩形的 CPU 基线和 Draw/绑定统计；基准发现并修复索引容器
+  O(N²) 增长，10,000 矩形构建 P50 从约 35.5 ms 降至 1.303～1.386 ms。完整结果见
+  [UI CPU 基线](../../benchmarks/results/2026-08-14-windows-clang-ui-056a0c8.md)。
+- H-06C 剩余 GPU timestamp 基线；应分别测量单 Batch 与逐项交替状态，完成后再决定容量预留、
+  批量追加和 Bind Group 缓存的优先级。
 
 ## 验收标准
 

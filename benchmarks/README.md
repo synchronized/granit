@@ -58,6 +58,10 @@ cmake --build --preset windows-clang-release --target granit_benchmarks
 稳定排序和方向光筛选总成本。使用 `--objects` 选择 100、1,000 或 10,000 对象；数据固定为约四分
 之一位于 Frustum 外，并在两个层之间交错分布。
 
+`granit_ui_benchmarks` 用于 H-06C，固定测量 100、1,000、10,000 个矩形的 Draw List 构建、全兼容
+合批扫描、逐项交替状态扫描和复用 Buffer 的动态几何上传。输出后的计数行同时给出 Item、Batch
+和预期 Draw 数；该程序当前只提供 CPU 墙钟基线，不代表 UI Pass 的 GPU 时间。
+
 `granit_lighting_benchmarks` 用于 H-05E，首个用例隔离测量单 View 可见点光转换为 GPU 布局的 CPU
 成本。使用 `--lights` 选择 1、16、64 或 128 个光源；Snapshot 在计时区间外构建，结果包含输出
 容器分配和逐光打包，不包含可见性筛选、GPU 上传或 Draw。
