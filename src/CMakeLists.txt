@@ -446,6 +446,7 @@ target_sources(
     pipeline/unlit_pass.cpp
     pipeline/unlit_pass.h
     pipeline/ui_draw_list.h
+    pipeline/ui_geometry_upload.h
   PUBLIC
     FILE_SET HEADERS
     BASE_DIRS "${PROJECT_SOURCE_DIR}/include"
