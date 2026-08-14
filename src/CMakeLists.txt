@@ -443,6 +443,8 @@ target_sources(
     pipeline/render_pipeline_metrics.h
     pipeline/scene_access.h
     pipeline/scene_api.cpp
+    pipeline/unlit_pass.cpp
+    pipeline/unlit_pass.h
   PUBLIC
     FILE_SET HEADERS
     BASE_DIRS "${PROJECT_SOURCE_DIR}/include"

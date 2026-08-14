@@ -6,16 +6,14 @@
     "constant_buffer_size": 32,
     "parameters": [
       {"name": "base_color", "type": "float4", "offset": 0},
-      {"name": "alpha_cutoff", "type": "float32", "offset": 16},
-      {"name": "base_color_texture", "type": "texture_view", "binding": 1},
-      {"name": "unlit_sampler", "type": "sampler", "binding": 2}
+      {"name": "alpha_cutoff", "type": "float32", "offset": 16}
     ]
   },
   "variants": [
     {
       "pass": "unlit_opaque",
       "pipeline": {
-        "vertex_buffers": [],
+        "vertex_buffers": [{"stride": 12, "step_mode": "vertex", "attributes": [{"location": 0, "format": "float32x3", "offset": 0}]}],
         "primitive": {"topology": "triangle_list", "front_face": "clockwise", "cull_mode": "none", "polygon_mode": "fill"},
         "depth": {"test_enabled": true, "write_enabled": true, "compare": "less_equal"},
         "color_blend": {"enabled": false}
@@ -29,7 +27,7 @@
       "pass": "unlit_alpha_cutoff",
       "features": [{"name": "unlit_alpha_cutoff", "value": 1}],
       "pipeline": {
-        "vertex_buffers": [],
+        "vertex_buffers": [{"stride": 12, "step_mode": "vertex", "attributes": [{"location": 0, "format": "float32x3", "offset": 0}]}],
         "primitive": {"topology": "triangle_list", "front_face": "clockwise", "cull_mode": "none", "polygon_mode": "fill"},
         "depth": {"test_enabled": true, "write_enabled": true, "compare": "less_equal"},
         "color_blend": {"enabled": false}

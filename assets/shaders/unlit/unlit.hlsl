@@ -19,6 +19,13 @@ struct vertex_output {
   float4 color : COLOR0;
 };
 
+[[vk::binding(0, 0)]] cbuffer FrameConstants {
+  column_major float4x4 view_projection;
+  float4 camera_position;
+  float4 direction_to_light;
+  float4 light_radiance;
+};
+
 [[vk::binding(0, 1)]] cbuffer MaterialConstants {
   float4 base_color;
   float alpha_cutoff;
@@ -30,12 +37,21 @@ struct vertex_output {
 [[vk::binding(2, 1)]] SamplerState unlit_sampler;
 #endif
 
-vertex_output vertex_main(uint vertex_id : SV_VertexID) {
-  const float2 positions[3] = {float2(0.0, -0.65), float2(0.65, 0.65),
-                               float2(-0.65, 0.65)};
+[[vk::binding(0, 2)]] cbuffer ObjectConstants {
+  column_major float4x4 model;
+  column_major float4x4 normal_matrix;
+  uint4 object_id;
+};
+
+struct vertex_input {
+  float3 position : POSITION;
+};
+
+vertex_output vertex_main(vertex_input input) {
   vertex_output output;
-  output.position = float4(positions[vertex_id], 0.5, 1.0);
-  output.uv = positions[vertex_id] * 0.5 + 0.5;
+  const float4 world_position = mul(model, float4(input.position, 1.0));
+  output.position = mul(view_projection, world_position);
+  output.uv = input.position.xy * 0.5 + 0.5;
   output.color = 1.0.xxxx;
   return output;
 }
