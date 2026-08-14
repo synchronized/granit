@@ -74,7 +74,7 @@ TEST_CASE("Unlit Opaque与Alpha Cutoff产生预期像素") {
                                        .usage = granit::buffer_usage::transfer_destination,
                                        .location = granit::memory_location::readback}) ==
           granit::result::success);
-  const auto read_center = [&]() {
+  const auto read_pixel = [&](uint32_t x, uint32_t y) {
     granit::command_recorder recorder;
     REQUIRE(recorder.initialize(native) == granit::result::success);
     REQUIRE(recorder.begin() == granit::result::success);
@@ -95,62 +95,72 @@ TEST_CASE("Unlit Opaque与Alpha Cutoff产生预期像素") {
     REQUIRE(recorder.reset() == granit::result::success);
     void* mapped = nullptr;
     REQUIRE(readback.map(0, size * size * 4, &mapped) == granit::result::success);
-    const auto* pixel = static_cast<const uint8_t*>(mapped) + (size / 2 * size + size / 2) * 4;
+    const auto* pixel = static_cast<const uint8_t*>(mapped) + (y * size + x) * 4;
     const std::array result{pixel[0], pixel[1], pixel[2], pixel[3]};
     REQUIRE(readback.unmap() == granit::result::success);
     return result;
   };
-  const auto render = [&](float alpha, bool cutoff) {
-    const std::array<float, 4> base_color{0.25F, 0.5F, 1.0F, alpha};
-    const float alpha_cutoff = 0.5F;
-    const std::array updates{
-        granit_material_parameter_update{granit_material_parameter_id("base_color", 10),
-                                         GRANIT_MATERIAL_PARAMETER_FLOAT4, 0, base_color.data(),
-                                         sizeof(base_color), GRANIT_NULL_HANDLE},
-        granit_material_parameter_update{granit_material_parameter_id("alpha_cutoff", 12),
-                                         GRANIT_MATERIAL_PARAMETER_FLOAT32, 0, &alpha_cutoff,
-                                         sizeof(alpha_cutoff), GRANIT_NULL_HANDLE}};
-    granit_material_desc material_desc = GRANIT_MATERIAL_DESC_INIT;
-    material_desc.archive_data = archive.data();
-    material_desc.archive_size = archive.size();
-    material_desc.initial_updates = updates.data();
-    material_desc.initial_update_count = static_cast<uint32_t>(updates.size());
-    granit_material material = GRANIT_NULL_HANDLE;
-    REQUIRE(granit_material_create(native, &material_desc, &material) == GRANIT_SUCCESS);
-    granit::command_recorder recorder;
-    REQUIRE(recorder.initialize(native) == granit::result::success);
-    REQUIRE(recorder.begin() == granit::result::success);
-    granit::material::pbr_frame_constants frame{.view_projection = identity(),
-                                                .camera_position = {},
-                                                .direction_to_light = {},
-                                                .light_radiance = {}};
-    granit::material::pbr_object_constants object{
-        .model = identity(), .normal_matrix = identity(), .object_id = {}};
-    REQUIRE(granit::pipeline::detail::record_unlit_pass(
-                native, recorder.native_handle(),
-                {.color = color_view.native_handle(),
-                 .depth = depth_view.native_handle(),
-                 .color_format = GRANIT_TEXTURE_FORMAT_RGBA8_UNORM,
-                 .depth_format = GRANIT_TEXTURE_FORMAT_D32_FLOAT,
-                 .width = size,
-                 .height = size,
-                 .mesh = mesh,
-                 .material = material,
-                 .frame = frame,
-                 .object = object,
-                 .alpha_cutoff = cutoff}) == GRANIT_SUCCESS);
-    REQUIRE(recorder.end() == granit::result::success);
-    REQUIRE(recorder.submit() == granit::result::success);
-    REQUIRE(recorder.reset() == granit::result::success);
-    REQUIRE(granit_material_destroy(native, material) == GRANIT_SUCCESS);
-  };
+  const auto render =
+      [&](std::array<float, 4> base_color, granit::pipeline::detail::unlit_mode mode,
+          granit_attachment_load_operation load_operation = GRANIT_ATTACHMENT_LOAD_OPERATION_CLEAR,
+          granit_scissor scissor = {}) {
+        const float alpha_cutoff = 0.5F;
+        const std::array updates{
+            granit_material_parameter_update{granit_material_parameter_id("base_color", 10),
+                                             GRANIT_MATERIAL_PARAMETER_FLOAT4, 0, base_color.data(),
+                                             sizeof(base_color), GRANIT_NULL_HANDLE},
+            granit_material_parameter_update{granit_material_parameter_id("alpha_cutoff", 12),
+                                             GRANIT_MATERIAL_PARAMETER_FLOAT32, 0, &alpha_cutoff,
+                                             sizeof(alpha_cutoff), GRANIT_NULL_HANDLE}};
+        granit_material_desc material_desc = GRANIT_MATERIAL_DESC_INIT;
+        material_desc.archive_data = archive.data();
+        material_desc.archive_size = archive.size();
+        material_desc.initial_updates = updates.data();
+        material_desc.initial_update_count = static_cast<uint32_t>(updates.size());
+        granit_material material = GRANIT_NULL_HANDLE;
+        REQUIRE(granit_material_create(native, &material_desc, &material) == GRANIT_SUCCESS);
+        granit::command_recorder recorder;
+        REQUIRE(recorder.initialize(native) == granit::result::success);
+        REQUIRE(recorder.begin() == granit::result::success);
+        granit::material::pbr_frame_constants frame{.view_projection = identity(),
+                                                    .camera_position = {},
+                                                    .direction_to_light = {},
+                                                    .light_radiance = {}};
+        granit::material::pbr_object_constants object{
+            .model = identity(), .normal_matrix = identity(), .object_id = {}};
+        REQUIRE(granit::pipeline::detail::record_unlit_pass(
+                    native, recorder.native_handle(),
+                    {.color = color_view.native_handle(),
+                     .depth = depth_view.native_handle(),
+                     .color_format = GRANIT_TEXTURE_FORMAT_RGBA8_UNORM,
+                     .depth_format = GRANIT_TEXTURE_FORMAT_D32_FLOAT,
+                     .width = size,
+                     .height = size,
+                     .mesh = mesh,
+                     .material = material,
+                     .frame = frame,
+                     .object = object,
+                     .mode = mode,
+                     .color_load_operation = load_operation,
+                     .scissor = scissor}) == GRANIT_SUCCESS);
+        REQUIRE(recorder.end() == granit::result::success);
+        REQUIRE(recorder.submit() == granit::result::success);
+        REQUIRE(recorder.reset() == granit::result::success);
+        REQUIRE(granit_material_destroy(native, material) == GRANIT_SUCCESS);
+      };
 
-  render(1.0F, false);
-  CHECK(read_center() == std::array<uint8_t, 4>{64, 128, 255, 255});
-  render(0.25F, true);
-  const auto cutoff_pixel = read_center();
+  render({0.25F, 0.5F, 1.0F, 1.0F}, granit::pipeline::detail::unlit_mode::opaque);
+  CHECK(read_pixel(size / 2, size / 2) == std::array<uint8_t, 4>{64, 128, 255, 255});
+  render({0.25F, 0.5F, 1.0F, 0.25F}, granit::pipeline::detail::unlit_mode::alpha_cutoff);
+  const auto cutoff_pixel = read_pixel(size / 2, size / 2);
   CHECK(cutoff_pixel[0] == 0);
   CHECK(cutoff_pixel[1] == 0);
   CHECK(cutoff_pixel[2] == 0);
+
+  render({0.0F, 0.0F, 0.5F, 0.5F}, granit::pipeline::detail::unlit_mode::transparent);
+  render({0.5F, 0.0F, 0.0F, 0.5F}, granit::pipeline::detail::unlit_mode::transparent,
+         GRANIT_ATTACHMENT_LOAD_OPERATION_LOAD, {0, 0, 18, size});
+  CHECK(read_pixel(14, size / 2) == std::array<uint8_t, 4>{128, 0, 64, 191});
+  CHECK(read_pixel(20, size / 2) == std::array<uint8_t, 4>{0, 0, 128, 128});
   REQUIRE(granit_mesh_destroy(native, mesh) == GRANIT_SUCCESS);
 }

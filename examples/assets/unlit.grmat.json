@@ -36,6 +36,25 @@
         {"stage": "vertex", "entry_point": "vertex_main", "spirv": "../../assets/shaders/unlit/unlit.vert.spv"},
         {"stage": "fragment", "entry_point": "fragment_main", "spirv": "../../assets/shaders/unlit/unlit_alpha_cutoff.frag.spv"}
       ]
+    },
+    {
+      "pass": "unlit_transparent",
+      "pipeline": {
+        "vertex_buffers": [{"stride": 12, "step_mode": "vertex", "attributes": [{"location": 0, "format": "float32x3", "offset": 0}]}],
+        "primitive": {"topology": "triangle_list", "front_face": "clockwise", "cull_mode": "none", "polygon_mode": "fill"},
+        "depth": {"test_enabled": true, "write_enabled": false, "compare": "less_equal"},
+        "color_blend": {
+          "enabled": true,
+          "source_color_factor": "one",
+          "destination_color_factor": "one_minus_source_alpha",
+          "source_alpha_factor": "one",
+          "destination_alpha_factor": "one_minus_source_alpha"
+        }
+      },
+      "shaders": [
+        {"stage": "vertex", "entry_point": "vertex_main", "spirv": "../../assets/shaders/unlit/unlit.vert.spv"},
+        {"stage": "fragment", "entry_point": "fragment_main", "spirv": "../../assets/shaders/unlit/unlit.frag.spv"}
+      ]
     }
   ]
 }

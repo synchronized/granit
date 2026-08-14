@@ -13,6 +13,8 @@
 
 namespace granit::pipeline::detail {
 
+enum class unlit_mode : uint8_t { opaque, alpha_cutoff, transparent };
+
 struct unlit_pass_desc {
   granit_texture_view color = GRANIT_NULL_HANDLE;
   granit_texture_view depth = GRANIT_NULL_HANDLE;
@@ -24,7 +26,9 @@ struct unlit_pass_desc {
   granit_material material = GRANIT_NULL_HANDLE;
   granit::material::pbr_frame_constants frame{};
   granit::material::pbr_object_constants object{};
-  bool alpha_cutoff = false;
+  unlit_mode mode = unlit_mode::opaque;
+  granit_attachment_load_operation color_load_operation = GRANIT_ATTACHMENT_LOAD_OPERATION_CLEAR;
+  granit_scissor scissor{};
 };
 
 /** 在现有 Recorder 中录制一次 Unlit Draw；资源均由调用方持有。 */

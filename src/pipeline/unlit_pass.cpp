@@ -21,13 +21,14 @@ granit_result record_unlit_pass(granit_renderer renderer, granit_command_recorde
     return GRANIT_ERROR_INVALID_ARGUMENT;
   }
   material_draw_state material;
-  auto result =
-      acquire_material_draw_state(renderer, desc.material,
-                                  {.pass = granit::material::make_feature_id(
-                                       desc.alpha_cutoff ? "unlit_alpha_cutoff" : "unlit_opaque"),
-                                   .color_format = desc.color_format,
-                                   .depth_stencil_format = desc.depth_format},
-                                  material);
+  const auto pass_name = desc.mode == unlit_mode::alpha_cutoff  ? "unlit_alpha_cutoff"
+                         : desc.mode == unlit_mode::transparent ? "unlit_transparent"
+                                                                : "unlit_opaque";
+  auto result = acquire_material_draw_state(renderer, desc.material,
+                                            {.pass = granit::material::make_feature_id(pass_name),
+                                             .color_format = desc.color_format,
+                                             .depth_stencil_format = desc.depth_format},
+                                            material);
   pbr_draw_bindings bindings;
   if (result == GRANIT_SUCCESS)
     result = bindings.initialize(renderer, material, desc.frame, desc.object);
@@ -43,13 +44,18 @@ granit_result record_unlit_pass(granit_renderer renderer, granit_command_recorde
     result = bind_mesh_buffers(renderer, recorder, desc.mesh);
   const granit_viewport viewport{
       0, 0, static_cast<float>(desc.width), static_cast<float>(desc.height), 0, 1};
-  const granit_scissor scissor{0, 0, desc.width, desc.height};
+  const auto scissor = desc.scissor.width == 0 || desc.scissor.height == 0
+                           ? granit_scissor{0, 0, desc.width, desc.height}
+                           : desc.scissor;
   if (result == GRANIT_SUCCESS)
     result = granit_command_recorder_set_viewports(renderer, recorder, 0, &viewport, 1);
   if (result == GRANIT_SUCCESS)
     result = granit_command_recorder_set_scissors(renderer, recorder, 0, &scissor, 1);
   granit_color_attachment_desc color = GRANIT_COLOR_ATTACHMENT_DESC_INIT;
   color.view = desc.color;
+  color.load_operation = desc.color_load_operation;
+  // 透明合成使用预乘 Alpha；首次清屏必须从透明黑开始，才能保留可继续合成的 Alpha。
+  color.clear_value.alpha = 0.0F;
   granit_depth_stencil_attachment_desc depth = GRANIT_DEPTH_STENCIL_ATTACHMENT_DESC_INIT;
   depth.view = desc.depth;
   granit_rendering_desc rendering = GRANIT_RENDERING_DESC_INIT;

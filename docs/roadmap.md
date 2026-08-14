@@ -121,7 +121,7 @@
 | [H-03 PBR](plans/H-03-pbr-renderer.md) | P2 | 已完成 |
 | [H-04 Scene 提交](plans/H-04-scene-submission.md) | P2 | 已完成 |
 | [H-05 Lighting 与后处理](plans/H-05-lighting-pipeline.md) | P2 | 已完成 |
-| [H-06 Unlit、2D 与 UI](plans/H-06-unlit-2d-ui.md) | P2 | 进行中；H-06A 已完成 |
+| [H-06 Unlit、2D 与 UI](plans/H-06-unlit-2d-ui.md) | P2 | 进行中；H-06A～H-06B 已完成 |
 | [H-07 参考 Render Pipeline](plans/H-07-reference-render-pipeline.md) | P2 | 已完成 |
 
 高层模块只能依赖核心 Renderer，不能形成反向依赖。使用者始终可以绕过高层模块，直接使用资源、
@@ -140,8 +140,8 @@
 
 ## 近期执行顺序
 
-1. 实现 H-06A～H-06B：Unlit 基础材质、透明混合、Scissor 和像素回归。
-2. 实现 H-06C～H-06D：Sprite/UI Draw List、批处理和 Tone Mapping 后合成。
+1. 实现 H-06C：Sprite/UI Draw List、动态几何上传、相邻兼容项批处理和性能基线。
+2. 实现 H-06D：将 UI Pass 接入 Tone Mapping 后扩展点，并验证窗口、多 View 和离屏目标。
 3. 根据测量评估透明 PBR、CSM、Clustered Forward 与 Bindless。
 4. Deferred 保持为使用 Render Graph 组合的可选高级管线研究项。
 

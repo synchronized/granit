@@ -7,7 +7,7 @@
 
 - 路线图任务：H-06
 - 优先级：P2
-- 状态：进行中；H-06A 已完成，下一步 H-06B
+- 状态：进行中；H-06A～H-06B 已完成，下一步 H-06C
 - 必需依赖：H-01 Render Graph、H-02 Material、H-07 首版参考管线
 - 后续依赖：文字渲染、编辑器覆盖层和调试绘制
 
@@ -82,7 +82,7 @@ Pipeline、纹理绑定和 Scissor 兼容时才进行安全合批。后续 Bindl
 5. **H-06E：调试绘制与文字渲染评估**——在基础批处理稳定后评估线框、Gizmo、字形 Atlas 和
    外部文字整形库；未经单独设计，不把完整 UI 或字体系统并入本任务。
 
-## H-06A 当前进度
+## H-06A～H-06B 当前进度
 
 - 已建立共享 Unlit HLSL，基础公式为材质颜色乘以可选纹理和可选顶点色。
 - 已建立 `unlit_opaque` 与 `unlit_alpha_cutoff` 材质 Pass；两者均关闭混合，Cutoff 使用
@@ -91,6 +91,12 @@ Pipeline、纹理绑定和 Scissor 兼容时才进行安全合批。后续 Bindl
   编译开关，但基础包暂不声明资源参数，避免当前包级必填语义把无纹理材质变成 `NOT_READY`。
 - 已加入独立 Unlit Pass 录制接口，复用 Mesh、Material、Frame/Object 绑定和 Renderer Recorder。
 - SPIR-V 反射、材质包构建以及 Opaque/Alpha Cutoff 离屏像素回归均已通过，H-06A 完成。
+- 已加入 `unlit_transparent` Pass，使用预乘 Alpha、关闭深度写入并保留深度测试；透明黑清屏使
+  输出 Alpha 可继续参与后续合成。
+- Unlit Pass 支持显式 Load/Clear 与 Scissor；连续提交按录制顺序合成，不进行破坏透明语义的
+  隐式重排。
+- RGBA8 UNORM 像素回归覆盖两层透明混合、Scissor 边界及线性字节输出，确认该独立显示空间路径
+  不额外执行 Tone Mapping 或 sRGB 编码，H-06B 完成。
 
 ## 验收标准
 
