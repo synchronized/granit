@@ -164,6 +164,36 @@ granit_target_compile_warnings(granit_ui_benchmarks)
 granit_target_output_directories(granit_ui_benchmarks)
 set_target_properties(granit_ui_benchmarks PROPERTIES FOLDER "Benchmarks")
 
+set(granit_ui_benchmark_package "${CMAKE_CURRENT_BINARY_DIR}/assets/unlit_ui.grmat")
+add_custom_command(
+  OUTPUT "${granit_ui_benchmark_package}"
+  COMMAND "${CMAKE_COMMAND}" -E make_directory "${CMAKE_CURRENT_BINARY_DIR}/assets"
+  COMMAND granit_material_tool build "${PROJECT_SOURCE_DIR}/examples/assets/unlit_ui.grmat.json"
+          --output "${granit_ui_benchmark_package}"
+  DEPENDS granit_material_tool "${PROJECT_SOURCE_DIR}/examples/assets/unlit_ui.grmat.json"
+  VERBATIM
+)
+add_executable(granit_ui_gpu_benchmarks ui_gpu_main.cpp "${granit_ui_benchmark_package}")
+target_compile_features(granit_ui_gpu_benchmarks PRIVATE cxx_std_20)
+target_compile_options(
+  granit_ui_gpu_benchmarks
+  PRIVATE $<$<COMPILE_LANG_AND_ID:CXX,MSVC>:/utf-8>
+)
+target_compile_definitions(
+  granit_ui_gpu_benchmarks
+  PRIVATE
+    GRANIT_BENCHMARK_COMPILER="${CMAKE_CXX_COMPILER_ID}-${CMAKE_CXX_COMPILER_VERSION}"
+    GRANIT_BENCHMARK_LINK_MODE="$<IF:$<BOOL:${BUILD_SHARED_LIBS}>,shared,static>"
+    GRANIT_BENCHMARK_REVISION="${granit_benchmark_revision}"
+    GRANIT_BENCHMARK_SYSTEM="${CMAKE_SYSTEM_NAME}-${CMAKE_SYSTEM_PROCESSOR}"
+    GRANIT_UI_BENCHMARK_PACKAGE="${granit_ui_benchmark_package}"
+)
+target_include_directories(granit_ui_gpu_benchmarks PRIVATE "${PROJECT_SOURCE_DIR}/src")
+target_link_libraries(granit_ui_gpu_benchmarks PRIVATE granit::render_pipeline)
+granit_target_compile_warnings(granit_ui_gpu_benchmarks)
+granit_target_output_directories(granit_ui_gpu_benchmarks)
+set_target_properties(granit_ui_gpu_benchmarks PROPERTIES FOLDER "Benchmarks")
+
 add_executable(granit_lighting_benchmarks lighting_main.cpp)
 target_compile_features(granit_lighting_benchmarks PRIVATE cxx_std_20)
 target_compile_options(
