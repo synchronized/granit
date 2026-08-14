@@ -3,6 +3,9 @@
 
 # 开发规范
 
+项目文档的职责、分类、模板和维护流程统一遵循
+[项目文档规范](../DOCUMENTATION_GUIDE.md)。完整文档入口见[文档中心](README.md)。
+
 ## 公共头文件布局
 
 - `include/granit/core`：导出宏、结果码、基础类型和版本信息，不依赖 Renderer。

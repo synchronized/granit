@@ -59,6 +59,16 @@ find_package(granit CONFIG REQUIRED)
 target_link_libraries(your_target PRIVATE granit::granit)
 ```
 
+使用可选参考渲染管线：
+
+```cmake
+find_package(granit CONFIG REQUIRED COMPONENTS RenderPipeline)
+target_link_libraries(your_target PRIVATE granit::render_pipeline)
+```
+
+`RenderPipeline` component 同时安装 C API 与 C++20 包装，支持共享库和静态库。静态内部依赖由
+CMake 导出自动闭包；使用者不应直接依赖 `granit::detail_*` 目标。
+
 外部配置时将安装前缀加入 `CMAKE_PREFIX_PATH`：
 
 ```sh
@@ -76,16 +86,7 @@ cmake --build build/consumer
 
 ## 运行示例
 
-顶层项目默认启用 `GRANIT_BUILD_EXAMPLES`。构建后可运行离屏清屏和离屏三角形程序；Windows
-还会生成窗口清屏程序。三角形示例使用仓库内预编译的 SPIR-V，构建示例不要求安装 Shader
-编译器：
-
-```powershell
-build/windows-clang-debug/bin/granit_offscreen_clear_example.exe
-build/windows-clang-debug/bin/granit_offscreen_triangle_example.exe
-build/windows-clang-debug/bin/granit_window_clear_example.exe
-build/windows-clang-debug/bin/granit_compute_example.exe
-```
+示例的用途、稳定层级和运行命令见[示例程序](examples.md)。
 
 ## 构建产物目录
 
