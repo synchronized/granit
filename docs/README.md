@@ -72,6 +72,7 @@
 ## 计划与历史
 
 - [开发计划索引](plans/README.md)
+- [实施记录索引](records/README.md)
 - 性能结果位于 [`benchmarks/results`](../benchmarks/results/README.md)。
 
 计划描述未来或实施中的方案，不是当前公共能力的使用参考。已经验证的行为应以对应 API 文档和
