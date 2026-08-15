@@ -25,10 +25,10 @@ Canvas Draw List 是 Render Pipeline component 中面向 UI 后端、Sprite、�
 
 ## 状态与合批
 
-每项借用一个 Texture View、Sampler、Scissor 和逻辑 Layer。Texture View 与 Sampler 必须保持有效，
-直到列表完成录制；列表销毁时不会销毁它们。
+每项借用一个 Texture View、Sampler 和 Scissor。Texture View 与 Sampler 必须保持有效，直到列表完成
+录制；列表销毁时不会销毁它们。
 
-实现只合并相邻且四项状态完全相同的 Item，不跨项重排透明内容。`get_stats` 返回顶点、索引、Item
+实现只合并相邻且三项状态完全相同的 Item，不跨项重排透明内容。`get_stats` 返回顶点、索引、Item
 以及合批后的 Batch 数，可用于适配层诊断和性能回归。
 
 ## 生命周期与线程安全
