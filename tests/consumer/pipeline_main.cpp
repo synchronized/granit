@@ -6,6 +6,8 @@
 #include <granit/pipeline/render_pipeline.hpp>
 #include <granit/pipeline/scene.hpp>
 
+#include "linkage_check.h"
+
 int main() {
   granit::render_pipeline pipeline;
   granit::scene_snapshot scene;

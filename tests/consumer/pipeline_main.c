@@ -6,6 +6,8 @@
 #include <granit/pipeline/render_pipeline.h>
 #include <granit/pipeline/scene.h>
 
+#include "linkage_check.h"
+
 int main(void) {
   const granit_render_pipeline_desc pipeline = GRANIT_RENDER_PIPELINE_DESC_INIT;
   const granit_scene_snapshot_desc scene = GRANIT_SCENE_SNAPSHOT_DESC_INIT;

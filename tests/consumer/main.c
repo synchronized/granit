@@ -3,6 +3,6 @@
 
 #include <granit/granit.h>
 
-int main(void) {
-  return granit_version_major() == GRANIT_VERSION_MAJOR ? 0 : 1;
-}
+#include "linkage_check.h"
+
+int main(void) { return granit_version_major() == GRANIT_VERSION_MAJOR ? 0 : 1; }
