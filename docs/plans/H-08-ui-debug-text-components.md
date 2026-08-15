@@ -6,7 +6,7 @@
 ## 状态
 
 - 优先级：P2
-- 状态：进行中；H-08A、H-08B 与 H-08C1 数据 ABI 已完成
+- 状态：进行中；H-08A、H-08B 与 H-08C1～H-08C2 已完成
 - 必需依赖：H-06 Unlit、2D 与 UI 内部技术验证
 
 ## 目标
@@ -55,7 +55,8 @@
 - H-08C1 提供独立 `debug_draw_list` C ABI 与 C++ RAII 包装，批量保存线段和三角形命令。
 - 命令明确区分世界空间与屏幕空间、深度测试模式、像素线宽和逐顶点颜色。
 - 列表使用 Renderer domain、generation 句柄、容量复用及调用方外部同步，不进入底层 Renderer 状态。
-- 下一步 H-08C2 实现屏幕空间命令到 Canvas Draw List 的转换，再处理世界空间 Unlit 录制。
+- H-08C2 已按稳定命令顺序将屏幕线段展开为四边形、复制屏幕三角形，并一次追加到 Canvas。
+- 内部白纹理与 Sampler 由 Debug Draw List 懒创建；下一步 H-08C3 处理世界空间 Unlit 录制。
 
 ## 验收标准
 

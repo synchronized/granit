@@ -8,6 +8,7 @@
 
 #include <granit/core/result.h>
 #include <granit/core/types.h>
+#include <granit/pipeline/canvas_draw_list.h>
 #include <granit/pipeline/export.h>
 #include <granit/renderer/renderer.h>
 
@@ -81,9 +82,9 @@ extern "C" {
 #endif
 
 GRANIT_RENDER_PIPELINE_API
-    granit_result granit_debug_draw_list_create(granit_renderer renderer,
-                                                const granit_debug_draw_list_desc* desc,
-                                                granit_debug_draw_list* list);
+granit_result granit_debug_draw_list_create(granit_renderer renderer,
+                                            const granit_debug_draw_list_desc* desc,
+                                            granit_debug_draw_list* list);
 GRANIT_RENDER_PIPELINE_API granit_result granit_debug_draw_list_clear(granit_renderer renderer,
                                                                       granit_debug_draw_list list);
 /** 批量复制线段命令；输入数组只在调用期间借用。 */
@@ -96,6 +97,12 @@ GRANIT_RENDER_PIPELINE_API granit_result granit_debug_draw_list_append_triangles
     const granit_debug_draw_triangle* triangles, uint32_t triangle_count);
 GRANIT_RENDER_PIPELINE_API granit_result granit_debug_draw_list_get_stats(
     granit_renderer renderer, granit_debug_draw_list list, granit_debug_draw_list_stats* stats);
+/**
+ * 把所有屏幕空间命令展开并追加到 Canvas；世界空间命令被忽略。
+ * 目标 Canvas 完成录制前不得销毁本列表，因为 Canvas 会借用列表内部的白纹理与 Sampler。
+ */
+GRANIT_RENDER_PIPELINE_API granit_result granit_debug_draw_list_append_screen_to_canvas(
+    granit_renderer renderer, granit_debug_draw_list list, granit_canvas_draw_list canvas);
 GRANIT_RENDER_PIPELINE_API granit_result
 granit_debug_draw_list_destroy(granit_renderer renderer, granit_debug_draw_list list);
 

@@ -56,6 +56,9 @@ public:
   [[nodiscard]] result get_stats(granit_debug_draw_list_stats& stats) const noexcept {
     return from_native(granit_debug_draw_list_get_stats(renderer_, handle_, &stats));
   }
+  [[nodiscard]] result append_screen_to_canvas(granit_canvas_draw_list canvas) noexcept {
+    return from_native(granit_debug_draw_list_append_screen_to_canvas(renderer_, handle_, canvas));
+  }
   [[nodiscard]] result destroy() noexcept {
     if (!valid())
       return result::success;

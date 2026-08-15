@@ -12,8 +12,8 @@ Debug Draw List 是 Render Pipeline component 中可复用的逐帧调试命令�
 - C++20：`<granit/pipeline/debug_draw_list.hpp>`，使用 move-only 的 `granit::debug_draw_list`。
 - 所属 CMake component：`RenderPipeline`，目标为 `granit::render_pipeline`。
 
-H-08C1 当前只提供命令构建、复用和统计。世界空间 Unlit 录制、屏幕空间 Canvas 转换以及参考管线
-提交将在 H-08C 后续步骤中完成。
+H-08C1 提供命令构建、复用和统计；H-08C2 已支持把屏幕空间命令追加到 Canvas Draw List。世界空间
+Unlit 录制与参考管线提交将在后续步骤中完成。
 
 ## 命令语义
 
@@ -22,6 +22,13 @@ H-08C1 当前只提供命令构建、复用和统计。世界空间 Unlit 录制
 - `WORLD` 命令允许关闭或启用深度测试；`SCREEN` 命令固定关闭深度测试。
 - append 接口批量复制调用方数组，返回后不再借用输入内存。
 - 列表保持追加顺序，不自动跨命令重排。
+
+## 屏幕空间转换
+
+- `append_screen_to_canvas` 把屏幕空间线段展开为四顶点、六索引的矩形，把三角形直接复制到 Canvas。
+- 一次转换只追加一个 Canvas Item，并保留原始屏幕命令顺序；世界空间命令不会进入该 Item。
+- Debug Draw List 内部懒创建白纹理和 Sampler，Canvas 完成录制前必须保持该列表有效。
+- 转换只追加而不清空目标 Canvas，允许调用方组合 UI、文字和多份调试列表。
 
 ## 生命周期与线程安全
 
@@ -34,4 +41,4 @@ H-08C1 当前只提供命令构建、复用和统计。世界空间 Unlit 录制
 
 - 尚未提供 Box、Sphere、Axes、Frustum 等便捷 Gizmo 生成函数。
 - 尚未定义世界空间线段在近裁剪面后的展开方式。
-- 当前没有录制或参考管线提交接口，命令列表还不能直接产生 GPU Draw。
+- 屏幕空间命令可沿 Canvas 路径录制；世界空间命令仍不能直接产生 GPU Draw。

@@ -3,6 +3,9 @@
 
 #include <granit/pipeline/debug_draw_list.h>
 
+#include <granit/renderer/sampler.h>
+#include <granit/renderer/texture.h>
+
 #include <algorithm>
 #include <cmath>
 #include <memory>
@@ -16,10 +19,25 @@ constexpr uint64_t generation_mask = UINT64_C(0x00ffffff);
 constexpr uint64_t type_value = UINT64_C(0x45);
 
 struct list_state {
+  ~list_state() {
+    if (sampler != GRANIT_NULL_HANDLE)
+      static_cast<void>(granit_sampler_destroy(renderer, sampler));
+    if (white_view != GRANIT_NULL_HANDLE)
+      static_cast<void>(granit_texture_view_destroy(renderer, white_view));
+    if (white_texture != GRANIT_NULL_HANDLE)
+      static_cast<void>(granit_texture_destroy(renderer, white_texture));
+  }
+  struct command {
+    bool is_line = false;
+    granit_debug_draw_line line{};
+    granit_debug_draw_triangle triangle{};
+  };
   std::mutex mutex;
   granit_renderer renderer = GRANIT_NULL_HANDLE;
-  std::vector<granit_debug_draw_line> lines;
-  std::vector<granit_debug_draw_triangle> triangles;
+  std::vector<command> commands;
+  granit_texture white_texture = GRANIT_NULL_HANDLE;
+  granit_texture_view white_view = GRANIT_NULL_HANDLE;
+  granit_sampler sampler = GRANIT_NULL_HANDLE;
 };
 struct slot {
   std::shared_ptr<list_state> state;
@@ -73,6 +91,44 @@ bool valid_state(uint32_t space, uint32_t depth) {
           depth == GRANIT_DEBUG_DRAW_DEPTH_MODE_DISABLED);
 }
 
+granit_result ensure_white_resources(list_state& state) {
+  if (state.sampler != GRANIT_NULL_HANDLE)
+    return GRANIT_SUCCESS;
+  auto result = GRANIT_SUCCESS;
+  if (state.white_texture == GRANIT_NULL_HANDLE) {
+    granit_texture_desc texture_desc = GRANIT_TEXTURE_DESC_INIT;
+    texture_desc.format = GRANIT_TEXTURE_FORMAT_RGBA8_UNORM;
+    texture_desc.usage =
+        GRANIT_TEXTURE_USAGE_SAMPLED_BIT | GRANIT_TEXTURE_USAGE_TRANSFER_DESTINATION_BIT;
+    result = granit_texture_create_with_default_view(state.renderer, &texture_desc,
+                                                     &state.white_texture, &state.white_view);
+    constexpr uint32_t white = UINT32_C(0xffffffff);
+    const granit_texture_data_layout layout{};
+    const granit_texture_write_region region{0, 0, 1, GRANIT_TEXTURE_ASPECT_COLOR_BIT, 0, 0, 0,
+                                             1, 1, 1};
+    if (result == GRANIT_SUCCESS)
+      result = granit_texture_write(state.renderer, state.white_texture, &white, sizeof(white),
+                                    &layout, &region);
+  }
+  granit_sampler_desc sampler_desc = GRANIT_SAMPLER_DESC_INIT;
+  sampler_desc.mag_filter = GRANIT_FILTER_NEAREST;
+  sampler_desc.min_filter = GRANIT_FILTER_NEAREST;
+  if (result == GRANIT_SUCCESS)
+    result = granit_sampler_create(state.renderer, &sampler_desc, &state.sampler);
+  if (result != GRANIT_SUCCESS) {
+    if (state.sampler != GRANIT_NULL_HANDLE)
+      static_cast<void>(granit_sampler_destroy(state.renderer, state.sampler));
+    if (state.white_view != GRANIT_NULL_HANDLE)
+      static_cast<void>(granit_texture_view_destroy(state.renderer, state.white_view));
+    if (state.white_texture != GRANIT_NULL_HANDLE)
+      static_cast<void>(granit_texture_destroy(state.renderer, state.white_texture));
+    state.sampler = GRANIT_NULL_HANDLE;
+    state.white_view = GRANIT_NULL_HANDLE;
+    state.white_texture = GRANIT_NULL_HANDLE;
+  }
+  return result;
+}
+
 } // namespace
 
 extern "C" granit_result granit_debug_draw_list_create(granit_renderer renderer,
@@ -93,8 +149,8 @@ extern "C" granit_result granit_debug_draw_list_create(granit_renderer renderer,
   try {
     auto state = std::make_shared<list_state>();
     state->renderer = renderer;
-    state->lines.reserve(desc->initial_line_capacity);
-    state->triangles.reserve(desc->initial_triangle_capacity);
+    state->commands.reserve(static_cast<size_t>(desc->initial_line_capacity) +
+                            desc->initial_triangle_capacity);
     std::scoped_lock lock{registry_mutex};
     size_t index = 0;
     while (index < registry.size() && registry[index].state != nullptr)
@@ -117,8 +173,7 @@ extern "C" granit_result granit_debug_draw_list_clear(granit_renderer renderer,
   if (!state)
     return GRANIT_ERROR_INVALID_HANDLE;
   std::scoped_lock lock{state->mutex};
-  state->lines.clear();
-  state->triangles.clear();
+  state->commands.clear();
   return GRANIT_SUCCESS;
 }
 
@@ -133,13 +188,21 @@ extern "C" granit_result granit_debug_draw_list_append_lines(granit_renderer ren
     return GRANIT_ERROR_INVALID_ARGUMENT;
   for (uint32_t index = 0; index < line_count; ++index) {
     const auto& line = lines[index];
+    const auto dx = line.end.x - line.start.x;
+    const auto dy = line.end.y - line.start.y;
+    const auto dz = line.end.z - line.start.z;
     if (!valid_vertex(line.start) || !valid_vertex(line.end) || !std::isfinite(line.width) ||
         line.width <= 0 || !valid_state(line.space, line.depth_mode) || line.reserved != 0)
+      return GRANIT_ERROR_INVALID_ARGUMENT;
+    if ((line.space == GRANIT_DEBUG_DRAW_SPACE_SCREEN && dx == 0 && dy == 0) ||
+        (line.space == GRANIT_DEBUG_DRAW_SPACE_WORLD && dx == 0 && dy == 0 && dz == 0))
       return GRANIT_ERROR_INVALID_ARGUMENT;
   }
   try {
     std::scoped_lock lock{state->mutex};
-    state->lines.insert(state->lines.end(), lines, lines + line_count);
+    state->commands.reserve(state->commands.size() + line_count);
+    for (uint32_t index = 0; index < line_count; ++index)
+      state->commands.push_back({.is_line = true, .line = lines[index], .triangle = {}});
     return GRANIT_SUCCESS;
   } catch (const std::bad_alloc&) {
     return GRANIT_ERROR_OUT_OF_MEMORY;
@@ -166,7 +229,9 @@ granit_debug_draw_list_append_triangles(granit_renderer renderer, granit_debug_d
   }
   try {
     std::scoped_lock lock{state->mutex};
-    state->triangles.insert(state->triangles.end(), triangles, triangles + triangle_count);
+    state->commands.reserve(state->commands.size() + triangle_count);
+    for (uint32_t index = 0; index < triangle_count; ++index)
+      state->commands.push_back({.is_line = false, .line = {}, .triangle = triangles[index]});
     return GRANIT_SUCCESS;
   } catch (const std::bad_alloc&) {
     return GRANIT_ERROR_OUT_OF_MEMORY;
@@ -184,10 +249,68 @@ extern "C" granit_result granit_debug_draw_list_get_stats(granit_renderer render
   if (!state)
     return GRANIT_ERROR_INVALID_HANDLE;
   std::scoped_lock lock{state->mutex};
-  stats->line_count = static_cast<uint32_t>(state->lines.size());
-  stats->triangle_count = static_cast<uint32_t>(state->triangles.size());
+  stats->line_count = 0;
+  stats->triangle_count = 0;
+  for (const auto& command : state->commands) {
+    if (command.is_line)
+      ++stats->line_count;
+    else
+      ++stats->triangle_count;
+  }
   std::fill(std::begin(stats->reserved), std::end(stats->reserved), 0);
   return GRANIT_SUCCESS;
+}
+
+extern "C" granit_result granit_debug_draw_list_append_screen_to_canvas(
+    granit_renderer renderer, granit_debug_draw_list list, granit_canvas_draw_list canvas) {
+  const auto state = find(renderer, list);
+  if (!state)
+    return GRANIT_ERROR_INVALID_HANDLE;
+  granit_canvas_draw_list_stats canvas_stats = GRANIT_CANVAS_DRAW_LIST_STATS_INIT;
+  const auto canvas_result = granit_canvas_draw_list_get_stats(renderer, canvas, &canvas_stats);
+  if (canvas_result != GRANIT_SUCCESS)
+    return canvas_result;
+  try {
+    std::scoped_lock lock{state->mutex};
+    std::vector<granit_canvas_vertex> vertices;
+    std::vector<uint32_t> indices;
+    for (const auto& command : state->commands) {
+      if (command.is_line && command.line.space == GRANIT_DEBUG_DRAW_SPACE_SCREEN) {
+        const auto& line = command.line;
+        const auto dx = line.end.x - line.start.x;
+        const auto dy = line.end.y - line.start.y;
+        const auto scale = line.width * 0.5F / std::sqrt(dx * dx + dy * dy);
+        const auto px = -dy * scale;
+        const auto py = dx * scale;
+        const auto first = static_cast<uint32_t>(vertices.size());
+        vertices.insert(vertices.end(),
+                        {{line.start.x + px, line.start.y + py, 0, 0, line.start.color},
+                         {line.start.x - px, line.start.y - py, 0, 0, line.start.color},
+                         {line.end.x + px, line.end.y + py, 0, 0, line.end.color},
+                         {line.end.x - px, line.end.y - py, 0, 0, line.end.color}});
+        indices.insert(indices.end(),
+                       {first, first + 1, first + 2, first + 2, first + 1, first + 3});
+      } else if (!command.is_line && command.triangle.space == GRANIT_DEBUG_DRAW_SPACE_SCREEN) {
+        const auto first = static_cast<uint32_t>(vertices.size());
+        for (const auto& vertex : command.triangle.vertices)
+          vertices.push_back({vertex.x, vertex.y, 0, 0, vertex.color});
+        indices.insert(indices.end(), {first, first + 1, first + 2});
+      }
+    }
+    if (vertices.empty())
+      return GRANIT_SUCCESS;
+    auto result = ensure_white_resources(*state);
+    if (result != GRANIT_SUCCESS)
+      return result;
+    const granit_canvas_draw_state draw_state{state->white_view, state->sampler, {0, 0, 0, 0}};
+    return granit_canvas_draw_list_append(renderer, canvas, vertices.data(),
+                                          static_cast<uint32_t>(vertices.size()), indices.data(),
+                                          static_cast<uint32_t>(indices.size()), &draw_state);
+  } catch (const std::bad_alloc&) {
+    return GRANIT_ERROR_OUT_OF_MEMORY;
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
 }
 
 extern "C" granit_result granit_debug_draw_list_destroy(granit_renderer renderer,

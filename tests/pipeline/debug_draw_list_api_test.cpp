@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
+#include <granit/pipeline/canvas_draw_list.hpp>
 #include <granit/pipeline/debug_draw_list.hpp>
 #include <granit/renderer/renderer.hpp>
 
@@ -40,17 +41,33 @@ TEST_CASE("公共Debug Draw List支持批量命令、复用和句柄失效") {
                                                 GRANIT_DEBUG_DRAW_SPACE_SCREEN,
                                                 GRANIT_DEBUG_DRAW_DEPTH_MODE_DISABLED,
                                                 0}};
-  const std::array triangles{granit_debug_draw_triangle{
-      {{0, 0, 0, UINT32_MAX}, {1, 0, 0, UINT32_MAX}, {0, 1, 0, UINT32_MAX}},
-      GRANIT_DEBUG_DRAW_SPACE_WORLD,
-      GRANIT_DEBUG_DRAW_DEPTH_MODE_TEST,
-      {0, 0}}};
+  const std::array triangles{
+      granit_debug_draw_triangle{
+          {{0, 0, 0, UINT32_MAX}, {1, 0, 0, UINT32_MAX}, {0, 1, 0, UINT32_MAX}},
+          GRANIT_DEBUG_DRAW_SPACE_WORLD,
+          GRANIT_DEBUG_DRAW_DEPTH_MODE_TEST,
+          {0, 0}},
+      granit_debug_draw_triangle{
+          {{4, 4, 0, UINT32_MAX}, {8, 4, 0, UINT32_MAX}, {4, 8, 0, UINT32_MAX}},
+          GRANIT_DEBUG_DRAW_SPACE_SCREEN,
+          GRANIT_DEBUG_DRAW_DEPTH_MODE_DISABLED,
+          {0, 0}}};
   REQUIRE(list.append_lines(lines) == granit::result::success);
   REQUIRE(list.append_triangles(triangles) == granit::result::success);
   granit_debug_draw_list_stats stats = GRANIT_DEBUG_DRAW_LIST_STATS_INIT;
   REQUIRE(list.get_stats(stats) == granit::result::success);
   CHECK(stats.line_count == 2);
-  CHECK(stats.triangle_count == 1);
+  CHECK(stats.triangle_count == 2);
+
+  granit_canvas_draw_list_desc canvas_desc = GRANIT_CANVAS_DRAW_LIST_DESC_INIT;
+  granit::canvas_draw_list canvas;
+  REQUIRE(canvas.initialize(renderer.native_handle(), canvas_desc) == granit::result::success);
+  REQUIRE(list.append_screen_to_canvas(canvas.native_handle()) == granit::result::success);
+  granit_canvas_draw_list_stats canvas_stats = GRANIT_CANVAS_DRAW_LIST_STATS_INIT;
+  REQUIRE(canvas.get_stats(canvas_stats) == granit::result::success);
+  CHECK(canvas_stats.vertex_count == 7);
+  CHECK(canvas_stats.index_count == 9);
+  CHECK(canvas_stats.item_count == 1);
   REQUIRE(list.clear() == granit::result::success);
   REQUIRE(list.get_stats(stats) == granit::result::success);
   CHECK(stats.line_count == 0);
@@ -61,6 +78,9 @@ TEST_CASE("公共Debug Draw List支持批量命令、复用和句柄失效") {
   CHECK(list.append_lines(std::span{&invalid, 1}) == granit::result::invalid_argument);
   invalid = lines[0];
   invalid.start.x = std::numeric_limits<float>::infinity();
+  CHECK(list.append_lines(std::span{&invalid, 1}) == granit::result::invalid_argument);
+  invalid = lines[0];
+  invalid.end = invalid.start;
   CHECK(list.append_lines(std::span{&invalid, 1}) == granit::result::invalid_argument);
   invalid = lines[0];
   invalid.space = GRANIT_DEBUG_DRAW_SPACE_SCREEN;
