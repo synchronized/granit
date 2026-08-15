@@ -425,33 +425,53 @@ granit_result vulkan_command_recorder::draw_indexed(
 
 void vulkan_command_recorder::prepare_image_access(const vulkan_device& device,
                                                    const vulkan_image_access& access) {
-  const auto found = std::find_if(final_image_accesses_.begin(), final_image_accesses_.end(),
-                                  [&](const auto& state) { return state.image == access.image; });
-  if (found == final_image_accesses_.end()) {
-    initial_image_accesses_.reserve(initial_image_accesses_.size() + 1);
-    final_image_accesses_.reserve(final_image_accesses_.size() + 1);
-    initial_image_accesses_.push_back(access);
-    final_image_accesses_.push_back(access);
-    return;
+  constexpr std::array aspects{VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_ASPECT_DEPTH_BIT,
+                               VK_IMAGE_ASPECT_STENCIL_BIT};
+  std::vector<VkImageMemoryBarrier2> barriers;
+  for (const auto aspect : aspects) {
+    if ((access.range.aspectMask & aspect) == 0)
+      continue;
+    for (std::uint32_t mip_offset = 0; mip_offset < access.range.levelCount; ++mip_offset) {
+      for (std::uint32_t layer_offset = 0; layer_offset < access.range.layerCount; ++layer_offset) {
+        auto unit = access;
+        unit.range = {static_cast<VkImageAspectFlags>(aspect),
+                      access.range.baseMipLevel + mip_offset, 1,
+                      access.range.baseArrayLayer + layer_offset, 1};
+        const auto found = std::find_if(
+            final_image_accesses_.begin(), final_image_accesses_.end(), [&](const auto& state) {
+              return state.image == unit.image && state.range.aspectMask == unit.range.aspectMask &&
+                     state.range.baseMipLevel == unit.range.baseMipLevel &&
+                     state.range.baseArrayLayer == unit.range.baseArrayLayer;
+            });
+        if (found == final_image_accesses_.end()) {
+          initial_image_accesses_.push_back(unit);
+          final_image_accesses_.push_back(unit);
+          continue;
+        }
+        VkImageMemoryBarrier2 barrier{};
+        barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
+        barrier.srcStageMask = found->stages;
+        barrier.srcAccessMask = found->access;
+        barrier.dstStageMask = unit.stages;
+        barrier.dstAccessMask = unit.access;
+        barrier.oldLayout = found->layout;
+        barrier.newLayout = unit.layout;
+        barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        barrier.image = unit.image;
+        barrier.subresourceRange = unit.range;
+        barriers.push_back(barrier);
+        *found = unit;
+      }
+    }
   }
-  VkImageMemoryBarrier2 barrier{};
-  barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
-  barrier.srcStageMask = found->stages;
-  barrier.srcAccessMask = found->access;
-  barrier.dstStageMask = access.stages;
-  barrier.dstAccessMask = access.access;
-  barrier.oldLayout = found->layout;
-  barrier.newLayout = access.layout;
-  barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-  barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-  barrier.image = access.image;
-  barrier.subresourceRange = access.range;
-  VkDependencyInfo dependency{};
-  dependency.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
-  dependency.imageMemoryBarrierCount = 1;
-  dependency.pImageMemoryBarriers = &barrier;
-  device.functions().vkCmdPipelineBarrier2(command_buffer_, &dependency);
-  *found = access;
+  if (!barriers.empty()) {
+    VkDependencyInfo dependency{};
+    dependency.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
+    dependency.imageMemoryBarrierCount = static_cast<std::uint32_t>(barriers.size());
+    dependency.pImageMemoryBarriers = barriers.data();
+    device.functions().vkCmdPipelineBarrier2(command_buffer_, &dependency);
+  }
 }
 
 granit_result vulkan_command_recorder::begin_rendering(

@@ -404,6 +404,67 @@ TEST_CASE("Recorder 将 Upload Buffer 复制到 Texture", "[command][copy][textu
   CHECK(std::memcmp(copied.data(), pixels.data(), pixels.size()) == 0);
 }
 
+TEST_CASE("Recorder 独立跟踪同一 Texture 的不同 mip", "[command][state][texture]") {
+  granit::renderer renderer;
+  const auto result = renderer.initialize(
+      {.application_name = "granit-mip-state-tests", .enable_validation = true});
+  if (environment_unavailable(result))
+    SKIP("当前运行环境没有满足要求的 Vulkan 设备");
+  REQUIRE(result == granit::result::success);
+
+  granit::texture texture;
+  REQUIRE(texture.initialize(renderer.native_handle(),
+                             {.format = granit::texture_format::rgba8_unorm,
+                              .usage = granit::texture_usage::transfer_source |
+                                       granit::texture_usage::transfer_destination,
+                              .width = 2,
+                              .height = 2,
+                              .mip_levels = 2}) == granit::result::success);
+  constexpr std::array<std::uint8_t, 16> mip_zero{1, 2, 3, 4, 1, 2, 3, 4, 1, 2, 3, 4, 1, 2, 3, 4};
+  constexpr std::array<std::uint8_t, 4> mip_one{9, 10, 11, 12};
+  REQUIRE(texture.write(std::as_bytes(std::span{mip_zero}), {}, {.width = 2, .height = 2}) ==
+          granit::result::success);
+  REQUIRE(texture.write(std::as_bytes(std::span{mip_one}), {},
+                        {.mip_level = 1, .width = 1, .height = 1}) == granit::result::success);
+
+  granit::buffer readback;
+  REQUIRE(readback.initialize(renderer.native_handle(),
+                              {.size = mip_zero.size() + mip_one.size(),
+                               .usage = granit::buffer_usage::transfer_destination,
+                               .location = granit::memory_location::readback}) ==
+          granit::result::success);
+  granit::command_recorder recorder;
+  REQUIRE(recorder.initialize(renderer.native_handle()) == granit::result::success);
+  REQUIRE(recorder.begin() == granit::result::success);
+  const granit_texture_write_region mip_zero_region{.array_layer_count = 1,
+                                                    .aspect = GRANIT_TEXTURE_ASPECT_COLOR_BIT,
+                                                    .width = 2,
+                                                    .height = 2,
+                                                    .depth = 1};
+  const granit_texture_data_layout mip_one_layout{.offset = mip_zero.size()};
+  const granit_texture_write_region mip_one_region{.mip_level = 1,
+                                                   .array_layer_count = 1,
+                                                   .aspect = GRANIT_TEXTURE_ASPECT_COLOR_BIT,
+                                                   .width = 1,
+                                                   .height = 1,
+                                                   .depth = 1};
+  REQUIRE(recorder.copy_texture_to_buffer(texture.native_handle(), readback.native_handle(), {},
+                                          mip_zero_region) == granit::result::success);
+  REQUIRE(recorder.copy_texture_to_buffer(texture.native_handle(), readback.native_handle(),
+                                          mip_one_layout,
+                                          mip_one_region) == granit::result::success);
+  REQUIRE(recorder.end() == granit::result::success);
+  REQUIRE(recorder.submit() == granit::result::success);
+  REQUIRE(recorder.reset() == granit::result::success);
+
+  void* mapped = nullptr;
+  REQUIRE(readback.map(0, mip_zero.size() + mip_one.size(), &mapped) == granit::result::success);
+  CHECK(std::memcmp(mapped, mip_zero.data(), mip_zero.size()) == 0);
+  CHECK(std::memcmp(static_cast<std::byte*>(mapped) + mip_zero.size(), mip_one.data(),
+                    mip_one.size()) == 0);
+  REQUIRE(readback.unmap() == granit::result::success);
+}
+
 TEST_CASE("Recorder 录制 Dynamic Rendering 作用域", "[command][rendering]") {
   granit::renderer renderer;
   const auto result = renderer.initialize({.application_name = "granit-rendering-tests"});

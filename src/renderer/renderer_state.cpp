@@ -14,6 +14,44 @@
 namespace granit::detail {
 namespace {
 
+bool same_image_subresource(const vulkan_image_access& left,
+                            const vulkan_image_access& right) noexcept {
+  return left.image == right.image && left.range.aspectMask == right.range.aspectMask &&
+         left.range.baseMipLevel == right.range.baseMipLevel &&
+         left.range.levelCount == right.range.levelCount &&
+         left.range.baseArrayLayer == right.range.baseArrayLayer &&
+         left.range.layerCount == right.range.layerCount;
+}
+
+template <typename States>
+auto find_image_subresource(States& states, const vulkan_image_access& access) {
+  return std::find_if(states.begin(), states.end(),
+                      [&](const auto& state) { return same_image_subresource(state, access); });
+}
+
+void store_unit_image_accesses(std::vector<vulkan_image_access>& states,
+                               const vulkan_image_access& access) {
+  constexpr std::array aspects{VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_ASPECT_DEPTH_BIT,
+                               VK_IMAGE_ASPECT_STENCIL_BIT};
+  for (const auto aspect : aspects) {
+    if ((access.range.aspectMask & aspect) == 0)
+      continue;
+    for (std::uint32_t mip_offset = 0; mip_offset < access.range.levelCount; ++mip_offset) {
+      for (std::uint32_t layer_offset = 0; layer_offset < access.range.layerCount; ++layer_offset) {
+        auto unit = access;
+        unit.range = {static_cast<VkImageAspectFlags>(aspect),
+                      access.range.baseMipLevel + mip_offset, 1,
+                      access.range.baseArrayLayer + layer_offset, 1};
+        const auto found = find_image_subresource(states, unit);
+        if (found == states.end())
+          states.push_back(unit);
+        else
+          *found = unit;
+      }
+    }
+  }
+}
+
 VkBufferUsageFlags map_buffer_usage(granit_buffer_usage usage) noexcept {
   VkBufferUsageFlags flags{};
   if ((usage & GRANIT_BUFFER_USAGE_TRANSFER_SOURCE_BIT) != 0) {
@@ -618,15 +656,15 @@ renderer_state::upload_batch(std::span<const vulkan_upload_operation> uploads) n
         functions.vkCmdCopyBuffer(context.command_buffer(), context.staging().buffer,
                                   upload.buffer->buffer, 1, &copy);
       } else {
-        const auto pending =
-            std::find_if(pending_states.begin(), pending_states.end(),
-                         [&](const auto& state) { return state.image == upload.texture->image; });
-        const auto previous =
-            pending != pending_states.end()
-                ? pending
-                : std::find_if(image_states_.begin(), image_states_.end(), [&](const auto& state) {
-                    return state.image == upload.texture->image;
-                  });
+        const vulkan_image_access destination{
+            .image = upload.texture->image,
+            .range = {upload.texture_copy.imageSubresource.aspectMask,
+                      upload.texture_copy.imageSubresource.mipLevel, 1,
+                      upload.texture_copy.imageSubresource.baseArrayLayer, 1}};
+        const auto pending = find_image_subresource(pending_states, destination);
+        const auto previous = pending != pending_states.end()
+                                  ? pending
+                                  : find_image_subresource(image_states_, destination);
         const bool previous_is_pending = pending != pending_states.end();
         const bool has_previous = previous_is_pending || previous != image_states_.end();
         VkImageMemoryBarrier2 barrier{};
@@ -656,16 +694,15 @@ renderer_state::upload_batch(std::span<const vulkan_upload_operation> uploads) n
                                          upload.texture->image,
                                          VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copy);
         vulkan_image_access state{.image = upload.texture->image,
-                                  .range = {upload.texture_copy.imageSubresource.aspectMask, 0,
-                                            VK_REMAINING_MIP_LEVELS, 0, VK_REMAINING_ARRAY_LAYERS},
+                                  .range = {upload.texture_copy.imageSubresource.aspectMask,
+                                            upload.texture_copy.imageSubresource.mipLevel, 1,
+                                            upload.texture_copy.imageSubresource.baseArrayLayer,
+                                            upload.texture_copy.imageSubresource.layerCount},
                                   .layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                                   .stages = VK_PIPELINE_STAGE_2_TRANSFER_BIT,
                                   .access = VK_ACCESS_2_TRANSFER_WRITE_BIT,
                                   .preserve_content = true};
-        if (pending == pending_states.end())
-          pending_states.push_back(state);
-        else
-          *pending = state;
+        store_unit_image_accesses(pending_states, state);
       }
       source_offset += upload.size;
     }
@@ -684,15 +721,8 @@ renderer_state::upload_batch(std::span<const vulkan_upload_operation> uploads) n
     result = map_vulkan_result(
         functions.vkQueueSubmit2(device_.graphics_queue(), 1, &submit_info, context.fence()));
     if (result == GRANIT_SUCCESS) {
-      for (const auto& state : pending_states) {
-        const auto found =
-            std::find_if(image_states_.begin(), image_states_.end(),
-                         [&](const auto& current) { return current.image == state.image; });
-        if (found == image_states_.end())
-          image_states_.push_back(state);
-        else
-          *found = state;
-      }
+      for (const auto& state : pending_states)
+        store_unit_image_accesses(image_states_, state);
     }
   }
   if (result != GRANIT_SUCCESS) {
@@ -748,9 +778,11 @@ granit_result renderer_state::upload_texture(const vulkan_image_allocation& text
 
   std::unique_lock queue_lock{queue_mutex_};
   const auto& functions = device_.functions();
-  const auto previous =
-      std::find_if(image_states_.begin(), image_states_.end(),
-                   [&](const auto& state) { return state.image == texture.image; });
+  const vulkan_image_access destination{.image = texture.image,
+                                        .range = {copy.imageSubresource.aspectMask,
+                                                  copy.imageSubresource.mipLevel, 1,
+                                                  copy.imageSubresource.baseArrayLayer, 1}};
+  const auto previous = find_image_subresource(image_states_, destination);
   VkImageMemoryBarrier2 barrier{};
   barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
   barrier.srcStageMask =
@@ -789,20 +821,15 @@ granit_result renderer_state::upload_texture(const vulkan_image_allocation& text
         functions.vkQueueSubmit2(device_.graphics_queue(), 1, &submit_info, context.fence()));
   }
   if (result == GRANIT_SUCCESS) {
-    vulkan_image_access state{.image = texture.image,
-                              .range = {copy.imageSubresource.aspectMask, 0,
-                                        VK_REMAINING_MIP_LEVELS, 0, VK_REMAINING_ARRAY_LAYERS},
-                              .layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                              .stages = VK_PIPELINE_STAGE_2_TRANSFER_BIT,
-                              .access = VK_ACCESS_2_TRANSFER_WRITE_BIT,
-                              .preserve_content = true};
-    const auto found =
-        std::find_if(image_states_.begin(), image_states_.end(),
-                     [&](const auto& current) { return current.image == texture.image; });
-    if (found == image_states_.end())
-      image_states_.push_back(state);
-    else
-      *found = state;
+    vulkan_image_access state{
+        .image = texture.image,
+        .range = {copy.imageSubresource.aspectMask, copy.imageSubresource.mipLevel, 1,
+                  copy.imageSubresource.baseArrayLayer, copy.imageSubresource.layerCount},
+        .layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+        .stages = VK_PIPELINE_STAGE_2_TRANSFER_BIT,
+        .access = VK_ACCESS_2_TRANSFER_WRITE_BIT,
+        .preserve_content = true};
+    store_unit_image_accesses(image_states_, state);
   }
   queue_lock.unlock();
   if (result != GRANIT_SUCCESS) {
@@ -1496,7 +1523,7 @@ granit_result renderer_state::submit_command_recorder(vulkan_command_recorder& r
   for (const auto& destination : recorder.initial_image_accesses()) {
     const auto previous =
         std::find_if(image_states_.begin(), image_states_.end(),
-                     [&](const auto& state) { return state.image == destination.image; });
+                     [&](const auto& state) { return same_image_subresource(state, destination); });
     if (previous == image_states_.end() && destination.preserve_content)
       return GRANIT_ERROR_INVALID_ARGUMENT;
     VkImageMemoryBarrier2 barrier{};
@@ -1562,7 +1589,7 @@ granit_result renderer_state::submit_command_recorder(vulkan_command_recorder& r
   for (const auto& final : recorder.final_image_accesses()) {
     const auto state =
         std::find_if(image_states_.begin(), image_states_.end(),
-                     [&](const auto& current) { return current.image == final.image; });
+                     [&](const auto& current) { return same_image_subresource(current, final); });
     if (state == image_states_.end())
       image_states_.push_back(final);
     else
@@ -1620,8 +1647,9 @@ renderer_state::submit_command_recorders(std::span<vulkan_command_recorder* cons
     image_barriers.reserve(recorder.initial_image_accesses().size());
     for (const auto& destination : recorder.initial_image_accesses()) {
       const auto previous =
-          std::find_if(next_image_states.begin(), next_image_states.end(),
-                       [&](const auto& state) { return state.image == destination.image; });
+          std::find_if(next_image_states.begin(), next_image_states.end(), [&](const auto& state) {
+            return same_image_subresource(state, destination);
+          });
       if (previous == next_image_states.end() && destination.preserve_content)
         return GRANIT_ERROR_INVALID_ARGUMENT;
       VkImageMemoryBarrier2 barrier{};
@@ -1674,7 +1702,7 @@ renderer_state::submit_command_recorders(std::span<vulkan_command_recorder* cons
     for (const auto& final : recorder.final_image_accesses()) {
       const auto state =
           std::find_if(next_image_states.begin(), next_image_states.end(),
-                       [&](const auto& current) { return current.image == final.image; });
+                       [&](const auto& current) { return same_image_subresource(current, final); });
       if (state == next_image_states.end())
         next_image_states.push_back(final);
       else
@@ -1756,7 +1784,7 @@ granit_result renderer_state::submit_swapchain_frame(vulkan_command_recorder& re
   for (const auto& destination : recorder.initial_image_accesses()) {
     const auto previous =
         std::find_if(image_states_.begin(), image_states_.end(),
-                     [&](const auto& state) { return state.image == destination.image; });
+                     [&](const auto& state) { return same_image_subresource(state, destination); });
     if (previous == image_states_.end() && destination.preserve_content)
       return GRANIT_ERROR_INVALID_ARGUMENT;
     VkImageMemoryBarrier2 barrier{};
@@ -1851,7 +1879,7 @@ granit_result renderer_state::submit_swapchain_frame(vulkan_command_recorder& re
   for (const auto& access : recorder.final_image_accesses()) {
     const auto state =
         std::find_if(image_states_.begin(), image_states_.end(),
-                     [&](const auto& current) { return current.image == access.image; });
+                     [&](const auto& current) { return same_image_subresource(current, access); });
     if (state == image_states_.end())
       image_states_.push_back(access);
     else
@@ -1861,8 +1889,10 @@ granit_result renderer_state::submit_swapchain_frame(vulkan_command_recorder& re
   present_state.layout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
   present_state.stages = VK_PIPELINE_STAGE_2_NONE;
   present_state.access = 0;
-  const auto state = std::find_if(image_states_.begin(), image_states_.end(),
-                                  [&](const auto& current) { return current.image == image; });
+  const auto state =
+      std::find_if(image_states_.begin(), image_states_.end(), [&](const auto& current) {
+        return same_image_subresource(current, present_state);
+      });
   *state = present_state;
   slot.recorders.clear();
   slot.recorders.push_back(&recorder);
