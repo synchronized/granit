@@ -93,6 +93,7 @@ public:
   upload_batch(std::span<const vulkan_upload_operation> uploads) noexcept;
   [[nodiscard]] granit_result create_native_texture(const granit_texture_desc& desc,
                                                     vulkan_image_allocation& texture) noexcept;
+  [[nodiscard]] bool texture_supports_linear_blit(granit_texture_format format) const noexcept;
   [[nodiscard]] granit_result upload_texture(const vulkan_image_allocation& texture,
                                              const void* data, VkDeviceSize size,
                                              const VkBufferImageCopy& copy) noexcept;

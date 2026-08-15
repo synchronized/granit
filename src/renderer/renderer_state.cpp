@@ -754,6 +754,10 @@ granit_result renderer_state::create_native_texture(const granit_texture_desc& d
       memory_allocator_.create_image(info, map_memory_location(desc.memory_location), texture));
 }
 
+bool renderer_state::texture_supports_linear_blit(granit_texture_format format) const noexcept {
+  return physical_device_supports_linear_blit(instance_, device_, map_texture_format(format));
+}
+
 granit_result renderer_state::upload_texture(const vulkan_image_allocation& texture,
                                              const void* data, VkDeviceSize size,
                                              const VkBufferImageCopy& copy) noexcept {

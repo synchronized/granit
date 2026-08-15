@@ -18,12 +18,14 @@
 
 namespace {
 
+using granit::detail::format_supports_linear_blit;
 using granit::detail::initialize_vulkan_loader;
 using granit::detail::is_better_candidate;
 using granit::detail::is_suitable;
 using granit::detail::map_vulkan_result;
 using granit::detail::physical_device_candidate;
 using granit::detail::physical_device_kind;
+using granit::detail::physical_device_supports_linear_blit;
 using granit::detail::vulkan_buffer_allocation;
 using granit::detail::vulkan_device;
 using granit::detail::vulkan_frame_context;
@@ -48,6 +50,19 @@ TEST_CASE("Vulkan 结果映射为后端无关错误", "[vulkan][result]") {
   CHECK(map_vulkan_result(VK_NOT_READY) == GRANIT_ERROR_NOT_READY);
   CHECK(map_vulkan_result(VK_TIMEOUT) == GRANIT_ERROR_NOT_READY);
   CHECK(map_vulkan_result(VK_ERROR_UNKNOWN) == GRANIT_ERROR_UNKNOWN);
+}
+
+TEST_CASE("线性 Blit 要求完整的格式能力组合", "[vulkan][format]") {
+  constexpr VkFormatFeatureFlags2 required = VK_FORMAT_FEATURE_2_BLIT_SRC_BIT |
+                                             VK_FORMAT_FEATURE_2_BLIT_DST_BIT |
+                                             VK_FORMAT_FEATURE_2_SAMPLED_IMAGE_FILTER_LINEAR_BIT;
+  CHECK(format_supports_linear_blit(required));
+  CHECK(format_supports_linear_blit(required | VK_FORMAT_FEATURE_2_SAMPLED_IMAGE_BIT));
+  CHECK_FALSE(format_supports_linear_blit(required & ~VK_FORMAT_FEATURE_2_BLIT_SRC_BIT));
+  CHECK_FALSE(format_supports_linear_blit(required & ~VK_FORMAT_FEATURE_2_BLIT_DST_BIT));
+  CHECK_FALSE(
+      format_supports_linear_blit(required & ~VK_FORMAT_FEATURE_2_SAMPLED_IMAGE_FILTER_LINEAR_BIT));
+  CHECK_FALSE(format_supports_linear_blit(0));
 }
 
 TEST_CASE("Swapchain acquire 和 present 拒绝无效后端状态", "[vulkan][swapchain][frame]") {
@@ -188,6 +203,8 @@ TEST_CASE("创建带独立函数表的 Vulkan 逻辑设备", "[vulkan][device]")
   CHECK(device.physical_device() != VK_NULL_HANDLE);
   CHECK(device.graphics_queue() != VK_NULL_HANDLE);
   CHECK(device.functions().vkQueueSubmit2 != nullptr);
+  CHECK_FALSE(physical_device_supports_linear_blit(instance, device, VK_FORMAT_UNDEFINED));
+  CHECK(physical_device_supports_linear_blit(instance, device, VK_FORMAT_R8G8B8A8_UNORM));
 
   vulkan_device moved{std::move(device)};
   CHECK_FALSE(device.valid());

@@ -6,7 +6,7 @@
 ## 状态
 
 - 设计状态：已确认实现顺序
-- 实现状态：R-10C0 已完成
+- 实现状态：R-10C0～R-10C1 已完成
 - 父计划：[R-10 通用资源传输](R-10-resource-transfer.md)
 
 ## 目标
@@ -49,6 +49,9 @@
 - 查询最优平铺格式是否同时支持 Blit Source、Blit Destination 和线性过滤。
 - 压缩、深度/模板、整数及不支持线性过滤的格式返回 `UNSUPPORTED`。
 - 能力查询保留在内部，不向公共 API 暴露 Vulkan 标志。
+
+已实现基于 `VkFormatProperties3::optimalTilingFeatures` 的内部查询，并要求 Blit Source、Blit
+Destination 与线性过滤三项能力同时存在。公共命令将在 R-10C2 使用该门禁。
 
 ### R-10C2：公共命令
 

@@ -14,6 +14,9 @@ namespace granit::detail {
 
 class vulkan_instance;
 
+/** 判断最优平铺格式能力是否满足线性 Blit 的源、目标和过滤要求。 */
+[[nodiscard]] bool format_supports_linear_blit(VkFormatFeatureFlags2 features) noexcept;
+
 /** 拥有逻辑设备、graphics queue 和独立 device 函数表。 */
 class vulkan_device {
 public:
@@ -57,6 +60,10 @@ private:
   bool sampler_anisotropy_supported_{};
   bool fill_mode_non_solid_supported_{};
 };
+
+[[nodiscard]] bool physical_device_supports_linear_blit(const vulkan_instance& instance,
+                                                        const vulkan_device& device,
+                                                        VkFormat format) noexcept;
 
 } // namespace granit::detail
 

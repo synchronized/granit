@@ -11,6 +11,27 @@
 
 namespace granit::detail {
 
+bool format_supports_linear_blit(VkFormatFeatureFlags2 features) noexcept {
+  constexpr VkFormatFeatureFlags2 required = VK_FORMAT_FEATURE_2_BLIT_SRC_BIT |
+                                             VK_FORMAT_FEATURE_2_BLIT_DST_BIT |
+                                             VK_FORMAT_FEATURE_2_SAMPLED_IMAGE_FILTER_LINEAR_BIT;
+  return (features & required) == required;
+}
+
+bool physical_device_supports_linear_blit(const vulkan_instance& instance,
+                                          const vulkan_device& device, VkFormat format) noexcept {
+  if (!instance.valid() || !device.valid() || format == VK_FORMAT_UNDEFINED)
+    return false;
+  VkFormatProperties3 properties{};
+  properties.sType = VK_STRUCTURE_TYPE_FORMAT_PROPERTIES_3;
+  VkFormatProperties2 properties_2{};
+  properties_2.sType = VK_STRUCTURE_TYPE_FORMAT_PROPERTIES_2;
+  properties_2.pNext = &properties;
+  instance.functions().vkGetPhysicalDeviceFormatProperties2(device.physical_device(), format,
+                                                            &properties_2);
+  return format_supports_linear_blit(properties.optimalTilingFeatures);
+}
+
 vulkan_device::~vulkan_device() { reset(); }
 
 vulkan_device::vulkan_device(vulkan_device&& other) noexcept
