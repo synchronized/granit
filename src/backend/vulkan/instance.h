@@ -13,10 +13,13 @@
 
 namespace granit::detail {
 
+class diagnostic_sink;
+
 struct vulkan_instance_desc {
   std::string_view application_name;
   bool enable_validation{};
   std::uint32_t surface_types{};
+  const diagnostic_sink* diagnostics{};
 };
 
 /** 拥有一个无窗口 Vulkan instance 及其独立函数表。 */

@@ -65,7 +65,8 @@ S-02 建立一个不暴露 Vulkan、适合动态库边界的统一诊断通道�
 
 ## 实施顺序
 
-1. S-02A：增加内部统一 diagnostic sink、等级/类别映射和无回调时的标准错误流回退。
+1. S-02A（已完成）：增加内部统一 diagnostic sink、等级/类别映射和无回调时的标准错误流回退；
+   Vulkan Validation 与生命周期诊断已经接入。
 2. S-02B：扩展 Renderer 描述的日志回调字段，将 Vulkan Validation 与生命周期诊断接入 sink。
 3. S-02C：增加通用公开句柄调试名称入口，并接入 Vulkan Debug Utils。
 4. S-02D：让 Device Lost 状态记录首个触发操作并通过 `device` 类别输出一次性报告。

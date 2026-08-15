@@ -3,6 +3,9 @@
 
 #include "core/lifecycle_validation.h"
 
+#include "core/diagnostic_sink.h"
+
+#include <algorithm>
 #include <array>
 #include <cinttypes>
 #include <cstdio>
@@ -11,10 +14,10 @@ namespace granit::detail {
 namespace {
 
 constexpr std::array<const char*, static_cast<std::size_t>(lifecycle_resource_type::count)>
-    resource_names{"Buffer",           "Texture",         "TextureView",     "Sampler",
-                   "Shader",           "PipelineLayout",  "BindGroupLayout", "BindGroup",
-                   "GraphicsPipeline", "ComputePipeline", "Surface",         "Swapchain",
-                   "CommandRecorder",  "UploadBatch",      "TimestampQueryPool"};
+    resource_names{"Buffer",           "Texture",         "TextureView",       "Sampler",
+                   "Shader",           "PipelineLayout",  "BindGroupLayout",   "BindGroup",
+                   "GraphicsPipeline", "ComputePipeline", "Surface",           "Swapchain",
+                   "CommandRecorder",  "UploadBatch",     "TimestampQueryPool"};
 
 constexpr std::size_t to_index(lifecycle_resource_type type) noexcept {
   return static_cast<std::size_t>(type);
@@ -37,16 +40,26 @@ lifecycle_snapshot::summary(lifecycle_resource_type type) const noexcept {
   return summaries_[to_index(type)];
 }
 
-void write_lifecycle_diagnostic(granit_renderer renderer, std::uint32_t domain,
-                                const lifecycle_snapshot& snapshot) noexcept {
+void write_lifecycle_diagnostic(const diagnostic_sink& diagnostics, granit_renderer renderer,
+                                std::uint32_t domain, const lifecycle_snapshot& snapshot) noexcept {
   if (snapshot.empty()) {
     return;
   }
 
-  std::fprintf(stderr,
-               "[granit][validation] Renderer 0x%016" PRIx64 " (domain=%" PRIu32
-               ") 销毁时仍有 %" PRIu64 " 个用户资源：",
-               renderer, domain, snapshot.total_count());
+  std::array<char, 8192> message{};
+  std::size_t used{};
+  const auto append = [&]<typename... Arguments>(const char* format, Arguments... arguments) {
+    if (used >= message.size() - 1) {
+      return;
+    }
+    const auto written =
+        std::snprintf(message.data() + used, message.size() - used, format, arguments...);
+    if (written > 0) {
+      used += std::min(static_cast<std::size_t>(written), message.size() - used - 1);
+    }
+  };
+  append("Renderer 0x%016" PRIx64 " (domain=%" PRIu32 ") 销毁时仍有 %" PRIu64 " 个用户资源：",
+         renderer, domain, snapshot.total_count());
   bool first = true;
   for (std::size_t index = 0; index < resource_names.size(); ++index) {
     const auto type = static_cast<lifecycle_resource_type>(index);
@@ -54,25 +67,28 @@ void write_lifecycle_diagnostic(granit_renderer renderer, std::uint32_t domain,
     if (resource.count == 0) {
       continue;
     }
-    std::fprintf(stderr, "%s%s=%" PRIu64, first ? "" : ", ", resource_names[index], resource.count);
+    append("%s%s=%" PRIu64, first ? "" : ", ", resource_names[index], resource.count);
     first = false;
     if (resource.sample_count != 0) {
-      std::fputs(" [", stderr);
+      append(" [");
       for (std::size_t sample = 0; sample < resource.sample_count; ++sample) {
         const auto& item = resource.samples[sample];
-        std::fprintf(stderr, "%s0x%016" PRIx64 "#%" PRIu64, sample == 0 ? "" : ",", item.handle,
-                     item.creation_sequence);
+        append("%s0x%016" PRIx64 "#%" PRIu64, sample == 0 ? "" : ",", item.handle,
+               item.creation_sequence);
       }
       if (resource.count > resource.sample_count) {
-        std::fputs(",...", stderr);
+        append(",...");
       }
-      std::fputc(']', stderr);
+      append("]");
     }
   }
-  std::fputs("；将级联释放。\n", stderr);
+  append("；将级联释放。");
+  diagnostics.emit(diagnostic_severity::warning, diagnostic_category::lifecycle,
+                   {message.data(), used});
 }
 
-void write_child_lifecycle_diagnostic(lifecycle_resource_type parent_type,
+void write_child_lifecycle_diagnostic(const diagnostic_sink& diagnostics,
+                                      lifecycle_resource_type parent_type,
                                       granit_handle parent_handle,
                                       lifecycle_resource_type child_type,
                                       const lifecycle_resource_summary& children) noexcept {
@@ -80,19 +96,32 @@ void write_child_lifecycle_diagnostic(lifecycle_resource_type parent_type,
     return;
   }
 
-  std::fprintf(stderr,
-               "[granit][validation] %s 0x%016" PRIx64 " 销毁时仍有 %" PRIu64 " 个用户 %s：",
-               resource_names[to_index(parent_type)], parent_handle, children.count,
-               resource_names[to_index(child_type)]);
+  std::array<char, 1024> message{};
+  std::size_t used{};
+  const auto append = [&]<typename... Arguments>(const char* format, Arguments... arguments) {
+    if (used >= message.size() - 1) {
+      return;
+    }
+    const auto written =
+        std::snprintf(message.data() + used, message.size() - used, format, arguments...);
+    if (written > 0) {
+      used += std::min(static_cast<std::size_t>(written), message.size() - used - 1);
+    }
+  };
+  append("%s 0x%016" PRIx64 " 销毁时仍有 %" PRIu64 " 个用户 %s：",
+         resource_names[to_index(parent_type)], parent_handle, children.count,
+         resource_names[to_index(child_type)]);
   for (std::size_t sample = 0; sample < children.sample_count; ++sample) {
     const auto& item = children.samples[sample];
-    std::fprintf(stderr, "%s0x%016" PRIx64 "#%" PRIu64, sample == 0 ? "" : ",", item.handle,
-                 item.creation_sequence);
+    append("%s0x%016" PRIx64 "#%" PRIu64, sample == 0 ? "" : ",", item.handle,
+           item.creation_sequence);
   }
   if (children.count > children.sample_count) {
-    std::fputs(",...", stderr);
+    append(",...");
   }
-  std::fputs("；将级联释放。\n", stderr);
+  append("；将级联释放。");
+  diagnostics.emit(diagnostic_severity::warning, diagnostic_category::lifecycle,
+                   {message.data(), used});
 }
 
 } // namespace granit::detail

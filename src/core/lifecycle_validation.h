@@ -12,6 +12,8 @@
 
 namespace granit::detail {
 
+class diagnostic_sink;
+
 enum class lifecycle_resource_type : std::uint8_t {
   buffer,
   texture,
@@ -62,11 +64,12 @@ private:
 };
 
 /** 在 Registry 锁外输出有界的生命周期诊断。 */
-void write_lifecycle_diagnostic(granit_renderer renderer, std::uint32_t domain,
-                                const lifecycle_snapshot& snapshot) noexcept;
+void write_lifecycle_diagnostic(const diagnostic_sink& diagnostics, granit_renderer renderer,
+                                std::uint32_t domain, const lifecycle_snapshot& snapshot) noexcept;
 
 /** 输出父资源销毁时仍存在的用户拥有子资源。 */
-void write_child_lifecycle_diagnostic(lifecycle_resource_type parent_type,
+void write_child_lifecycle_diagnostic(const diagnostic_sink& diagnostics,
+                                      lifecycle_resource_type parent_type,
                                       granit_handle parent_handle,
                                       lifecycle_resource_type child_type,
                                       const lifecycle_resource_summary& children) noexcept;

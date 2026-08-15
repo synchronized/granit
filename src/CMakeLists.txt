@@ -48,6 +48,8 @@ target_sources(
     backend/vulkan/vma_implementation.cpp
     core/handle_table.cpp
     core/handle_table.h
+    core/diagnostic_sink.cpp
+    core/diagnostic_sink.h
     core/lifecycle_validation.cpp
     core/lifecycle_validation.h
     core/resource_validation.cpp

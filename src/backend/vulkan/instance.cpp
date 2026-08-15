@@ -5,27 +5,35 @@
 
 #include "backend/vulkan/loader.h"
 #include "backend/vulkan/result.h"
+#include "core/diagnostic_sink.h"
 
-#include <cstdio>
 #include <cstring>
 #include <new>
 #include <string>
 #include <utility>
 #include <vector>
 
-#include <granit/renderer/renderer.h>
 #include <granit/core/version.h>
+#include <granit/renderer/renderer.h>
 
 namespace granit::detail {
 namespace {
 
 constexpr const char* validation_layer_name = "VK_LAYER_KHRONOS_validation";
 
-VKAPI_ATTR VkBool32 VKAPI_CALL
-debug_callback(VkDebugUtilsMessageSeverityFlagBitsEXT, VkDebugUtilsMessageTypeFlagsEXT,
-               const VkDebugUtilsMessengerCallbackDataEXT* callback_data, void*) {
+VKAPI_ATTR VkBool32 VKAPI_CALL debug_callback(
+    VkDebugUtilsMessageSeverityFlagBitsEXT severity, VkDebugUtilsMessageTypeFlagsEXT type,
+    const VkDebugUtilsMessengerCallbackDataEXT* callback_data, void* user_data) {
   if (callback_data != nullptr && callback_data->pMessage != nullptr) {
-    std::fprintf(stderr, "[granit][vulkan] %s\n", callback_data->pMessage);
+    const auto* configured_sink = static_cast<const diagnostic_sink*>(user_data);
+    const auto& sink = configured_sink != nullptr ? *configured_sink : default_diagnostic_sink();
+    const auto mapped_severity = (severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT) != 0
+                                     ? diagnostic_severity::error
+                                     : diagnostic_severity::warning;
+    const auto mapped_category = (type & VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT) != 0
+                                     ? diagnostic_category::performance
+                                     : diagnostic_category::validation;
+    sink.emit(mapped_severity, mapped_category, callback_data->pMessage);
   }
   return VK_FALSE;
 }
@@ -91,7 +99,8 @@ bool instance_extension_available(const char* required_name) {
 }
 #endif
 
-VkDebugUtilsMessengerCreateInfoEXT make_debug_messenger_create_info() noexcept {
+VkDebugUtilsMessengerCreateInfoEXT
+make_debug_messenger_create_info(const diagnostic_sink* diagnostics) noexcept {
   VkDebugUtilsMessengerCreateInfoEXT create_info{};
   create_info.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
   create_info.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT |
@@ -100,6 +109,7 @@ VkDebugUtilsMessengerCreateInfoEXT make_debug_messenger_create_info() noexcept {
                             VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
                             VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
   create_info.pfnUserCallback = debug_callback;
+  create_info.pUserData = const_cast<diagnostic_sink*>(diagnostics);
   return create_info;
 }
 
@@ -170,7 +180,7 @@ granit_result vulkan_instance::initialize(const vulkan_instance_desc& desc) {
     application_info.apiVersion = VK_API_VERSION_1_3;
 
     const char* layers[] = {validation_layer_name};
-    auto debug_create_info = make_debug_messenger_create_info();
+    auto debug_create_info = make_debug_messenger_create_info(desc.diagnostics);
 
     VkInstanceCreateInfo create_info{};
     create_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;

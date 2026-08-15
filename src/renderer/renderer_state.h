@@ -24,6 +24,7 @@
 #include "backend/vulkan/swapchain.h"
 #include "backend/vulkan/upload_context.h"
 #include "core/device_status.h"
+#include "core/diagnostic_sink.h"
 #include "core/retirement_queue.h"
 
 namespace granit::detail {
@@ -237,6 +238,7 @@ public:
   [[nodiscard]] bool device_lost() const noexcept {
     return device_status_.gate() == GRANIT_ERROR_DEVICE_LOST;
   }
+  [[nodiscard]] const diagnostic_sink& diagnostics() const noexcept { return diagnostics_; }
   [[nodiscard]] const vulkan_instance& instance() const noexcept { return instance_; }
   [[nodiscard]] const vulkan_device& device() const noexcept { return device_; }
 
@@ -266,6 +268,7 @@ private:
   std::uint32_t domain_{};
   std::uint32_t surface_types_{};
   bool validation_enabled_{};
+  diagnostic_sink diagnostics_;
   device_status device_status_;
   std::mutex resource_mutex_;
   std::mutex pipeline_cache_mutex_;

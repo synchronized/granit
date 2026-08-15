@@ -37,8 +37,8 @@ Granit 不调用全局 `volkLoadInstance` 或 `volkLoadDevice`。每个内部 in
 复制并转换为零结尾字符串，不依赖调用者额外提供终止符。
 
 验证层是可选能力。请求验证但缺少 `VK_LAYER_KHRONOS_validation` 或
-`VK_EXT_debug_utils` 时返回 `GRANIT_ERROR_UNSUPPORTED`。当前调试回调将 warning 和 error 输出到
-标准错误流；公共 renderer API 建立日志回调后，应改为通过用户提供的诊断通道发送。
+`VK_EXT_debug_utils` 时返回 `GRANIT_ERROR_UNSUPPORTED`。当前调试回调将 warning 和 error 路由到
+Renderer diagnostic sink；尚未设置公共回调时由 sink 输出到标准错误流。
 
 ## 设备选择
 

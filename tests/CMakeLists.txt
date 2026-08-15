@@ -100,7 +100,9 @@ add_test(NAME granit.resource_validation COMMAND granit_resource_validation_test
 
 add_executable(
   granit_lifecycle_validation_test
+  core/diagnostic_sink_test.cpp
   core/lifecycle_validation_test.cpp
+  "${PROJECT_SOURCE_DIR}/src/core/diagnostic_sink.cpp"
   "${PROJECT_SOURCE_DIR}/src/core/lifecycle_validation.cpp"
 )
 target_include_directories(
@@ -333,7 +335,7 @@ add_test(
 )
 set_tests_properties(
   granit.renderer.lifecycle_diagnostic
-  PROPERTIES PASS_REGULAR_EXPRESSION "\\[granit\\]\\[validation\\].*Buffer=1"
+  PROPERTIES PASS_REGULAR_EXPRESSION "\\[granit\\]\\[lifecycle\\].*Buffer=1"
 )
 
 add_executable(
@@ -350,6 +352,7 @@ add_executable(
   "${PROJECT_SOURCE_DIR}/src/backend/vulkan/swapchain.cpp"
   "${PROJECT_SOURCE_DIR}/src/backend/vulkan/timestamp_query.cpp"
   "${PROJECT_SOURCE_DIR}/src/backend/vulkan/vma_implementation.cpp"
+  "${PROJECT_SOURCE_DIR}/src/core/diagnostic_sink.cpp"
   $<TARGET_OBJECTS:granit_volk>
 )
 target_include_directories(

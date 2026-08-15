@@ -110,7 +110,7 @@ Device Lost 或 C++ 析构期间制造真正的泄漏。
 默认输出单条汇总，例如：
 
 ```text
-[granit][validation] Renderer 销毁时仍有 5 个用户资源：
+[granit][lifecycle] Renderer 销毁时仍有 5 个用户资源：
 Buffer=2, Texture=1, TextureView=1, Sampler=1；将级联释放。
 ```
 

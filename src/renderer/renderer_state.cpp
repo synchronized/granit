@@ -221,7 +221,8 @@ granit_result renderer_state::initialize(std::string_view application_name, bool
   validation_enabled_ = enable_validation;
   const auto instance_result = instance_.initialize({.application_name = application_name,
                                                      .enable_validation = enable_validation,
-                                                     .surface_types = surface_types});
+                                                     .surface_types = surface_types,
+                                                     .diagnostics = &diagnostics_});
   if (instance_result != GRANIT_SUCCESS) {
     return instance_result;
   }

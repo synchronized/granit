@@ -488,7 +488,7 @@ granit_result renderer_registry::destroy(granit_renderer renderer) {
       return erase_result;
     }
   }
-  write_lifecycle_diagnostic(renderer, state->domain(), lifecycle);
+  write_lifecycle_diagnostic(state->diagnostics(), renderer, state->domain(), lifecycle);
   static_cast<void>(state->wait_for_present_idle());
   static_cast<void>(state->wait_for_all_submissions());
   native_command_recorders.clear();
@@ -633,7 +633,7 @@ granit_result renderer_registry::destroy_surface(granit_renderer renderer, grani
       return erase_result;
     }
   }
-  write_child_lifecycle_diagnostic(lifecycle_resource_type::surface, surface,
+  write_child_lifecycle_diagnostic(state->diagnostics(), lifecycle_resource_type::surface, surface,
                                    lifecycle_resource_type::swapchain,
                                    lifecycle.summary(lifecycle_resource_type::swapchain));
   native_views.clear();
@@ -1911,10 +1911,10 @@ granit_result renderer_registry::destroy_texture(granit_renderer renderer, grani
     textures_.erase(found);
     static_cast<void>(handles_.erase(texture, resource_type::texture, state->domain()));
   }
-  write_child_lifecycle_diagnostic(lifecycle_resource_type::texture, texture,
+  auto state = record->renderer;
+  write_child_lifecycle_diagnostic(state->diagnostics(), lifecycle_resource_type::texture, texture,
                                    lifecycle_resource_type::texture_view,
                                    lifecycle.summary(lifecycle_resource_type::texture_view));
-  auto state = record->renderer;
   for (auto& view : views) {
     state->retire_resource(view->metadata.last_use_serial.load(), retirement_order::dependent,
                            view);
