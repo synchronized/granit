@@ -6,7 +6,7 @@
 ## 状态
 
 - 优先级：P2
-- 状态：进行中；H-08A、H-08B 与 H-08C1～H-08C3a 已完成
+- 状态：进行中；H-08A、H-08B 与 H-08C1～H-08C3b1 已完成
 - 必需依赖：H-06 Unlit、2D 与 UI 内部技术验证
 
 ## 目标
@@ -59,6 +59,8 @@
 - 内部白纹理与 Sampler 由 Debug Draw List 懒创建；下一步 H-08C3 处理世界空间 Unlit 录制。
 - H-08C3a 已验证 Vulkan 齐次裁剪体内的线段裁剪、近面交点颜色插值和按视口像素展开。
 - 下一步 H-08C3b 建立专用世界调试 Shader、深度分组和公共录制接口。
+- H-08C3b1 已固定零 Bind Group 的 clip-space 顶点 Shader，以及线性输出和 Shader sRGB 编码
+  Fragment 变体；下一步建立 Pipeline 缓存、上传和公共录制接口。
 
 ## 验收标准
 
