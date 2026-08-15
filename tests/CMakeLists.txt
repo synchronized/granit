@@ -18,6 +18,7 @@ add_test(NAME granit.c_version COMMAND granit_c_version_test)
 add_library(
   granit_c_header_test
   OBJECT
+    abi/layout_h.c
     headers/command_recorder_h.c
     headers/math_types_h.c
     headers/timestamp_query_h.c
