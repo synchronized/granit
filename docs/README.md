@@ -41,6 +41,7 @@
 - [构建、测试、安装与 CMake 集成](guides/build.md)
 - [示例程序及运行方式](guides/examples.md)
 - [同步批量上传](guides/upload-batch.md)
+- [第三方 UI 与字体适配](guides/third-party-ui-adapters.md)
 
 ## 教程
 

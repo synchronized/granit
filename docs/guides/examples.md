@@ -30,6 +30,8 @@ build/windows-clang-debug/bin/granit_offscreen_clear_example.exe
   [Render Pipeline 离屏渲染教程](../tutorials/render-pipeline-offscreen.md)。
 - `granit_render_pipeline_window_example`：把 Swapchain Frame 和 Backbuffer 交给公共 Render
   Pipeline，并处理帧同步与窗口重建。
+- `granit_immediate_ui_adapter_example`：把仿第三方立即式 UI Draw Data 转换为公共 Canvas
+  顶点、索引、借用状态和 Scissor；不依赖具体 UI 库。
 
 ## 内部联调示例
 

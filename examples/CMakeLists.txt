@@ -84,6 +84,13 @@ if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
   )
 endif()
 
+add_executable(granit_immediate_ui_adapter_example immediate_ui_adapter.cpp)
+target_link_libraries(granit_immediate_ui_adapter_example PRIVATE granit::render_pipeline)
+granit_target_compile_warnings(granit_immediate_ui_adapter_example)
+if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
+  add_test(NAME granit.example.immediate_ui_adapter COMMAND granit_immediate_ui_adapter_example)
+endif()
+
 if(WIN32)
   add_executable(granit_render_pipeline_window_example render_pipeline_window.cpp)
   target_link_libraries(
@@ -143,6 +150,7 @@ set(
   granit_material_hot_reload_example
   granit_pbr_offscreen_example
   granit_render_pipeline_offscreen_example
+  granit_immediate_ui_adapter_example
 )
 if(WIN32)
   list(

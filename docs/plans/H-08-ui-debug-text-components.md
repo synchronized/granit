@@ -6,7 +6,7 @@
 ## 状态
 
 - 优先级：P2
-- 状态：进行中；H-08A、H-08B 与 H-08C 已完成
+- 状态：已完成；H-08A 至 H-08E 均已闭合
 - 必需依赖：H-06 Unlit、2D 与 UI 内部技术验证
 
 ## 目标
@@ -84,6 +84,15 @@
 - H-08D3 已验证 Text Draw List 转换后的 Canvas 可直接绑定单 View 或多 View Pipeline 输出，并由
   Render Pipeline 自动在 Tone Mapping 后录制；像素回读确认文字覆盖 Overlay 之前的颜色。
 - H-08D 至此闭合；下一步进入 H-08E，整理第三方 UI/字体适配边界与最小 Adapter 示例。
+
+## H-08E 完成结果
+
+- 立即式 UI Adapter 按原顺序逐字段转换顶点、索引范围、Texture View、Sampler 与 Scissor，公共
+  ABI 不出现任何第三方类型。
+- 最小示例以仿 Draw Data 验证通用三角形入口和 Canvas 统计，不把具体 UI 库设为构建依赖。
+- 字体适配固定为“外部整形与栅格化、Granit Text Atlas 与 Canvas 提交”，HarfBuzz、FreeType 和
+  平台字体 API 均保持可选应用层依赖。
+- H-08 验收标准已满足，后续具体第三方 Adapter 独立排期，不再扩张核心 Renderer 职责。
 
 ## 验收标准
 
