@@ -105,6 +105,12 @@ static void granit_test_texture_copy_rejects_invalid_arguments(void) {
                               GRANIT_NULL_HANDLE, GRANIT_NULL_HANDLE, GRANIT_NULL_HANDLE,
                               GRANIT_NULL_HANDLE, &layout, &write_region));
   }
+  {
+    granit_texture_mipmap_range mipmaps = {0, 2, 0, 1};
+    TEST_ASSERT_EQUAL_INT(GRANIT_ERROR_INVALID_HANDLE, granit_command_recorder_generate_mipmaps(
+                                                           GRANIT_NULL_HANDLE, GRANIT_NULL_HANDLE,
+                                                           GRANIT_NULL_HANDLE, &mipmaps));
+  }
 }
 
 static int granit_test_environment_unavailable(granit_result result) {

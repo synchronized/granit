@@ -20,6 +20,7 @@ namespace granit {
 
 using buffer_copy_region = granit_buffer_copy_region;
 using texture_copy_region = granit_texture_copy_region;
+using texture_mipmap_range = granit_texture_mipmap_range;
 using viewport = granit_viewport;
 using scissor = granit_scissor;
 using vertex_buffer_binding = granit_vertex_buffer_binding;
@@ -121,6 +122,11 @@ public:
                                     const texture_copy_region& region) noexcept {
     return from_native(
         granit_command_recorder_copy_texture(renderer_, handle_, source, destination, &region));
+  }
+  [[nodiscard]] result generate_mipmaps(granit_texture texture,
+                                        const texture_mipmap_range& range) noexcept {
+    return from_native(
+        granit_command_recorder_generate_mipmaps(renderer_, handle_, texture, &range));
   }
   [[nodiscard]] result fill_buffer(granit_buffer buffer, std::uint64_t offset, std::uint64_t size,
                                    std::uint32_t value) noexcept {

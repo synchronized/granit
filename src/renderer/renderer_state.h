@@ -153,6 +153,11 @@ public:
                                                      const VkBufferImageCopy& region);
   [[nodiscard]] granit_result copy_texture(vulkan_command_recorder& recorder, VkImage source,
                                            VkImage destination, const VkImageCopy& region);
+  [[nodiscard]] granit_result generate_mipmaps(vulkan_command_recorder& recorder, VkImage image,
+                                               VkExtent3D base_extent, std::uint32_t base_mip_level,
+                                               std::uint32_t level_count,
+                                               std::uint32_t base_array_layer,
+                                               std::uint32_t array_layer_count);
   [[nodiscard]] granit_result fill_buffer(vulkan_command_recorder& recorder, VkBuffer buffer,
                                           VkDeviceSize offset, VkDeviceSize size,
                                           std::uint32_t value);

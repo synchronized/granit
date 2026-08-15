@@ -32,6 +32,11 @@ granit_command_recorder_destroy(renderer, recorder);
 和 Texture 同步写入一致。该接口适合调用方管理上传内存和批量 Recorder 的高级路径；普通上传
 仍优先使用 `texture.write` 或 Upload Batch。
 
+`granit_command_recorder_generate_mipmaps` 使用线性 Blit 逐级生成指定 mip 与数组层范围。
+`base_mip_level` 是首个源级，`level_count` 包含该源级且至少为 2。Texture 必须预先创建完整
+mip 存储、为单采样颜色格式，并同时声明 `TRANSFER_SOURCE` 与 `TRANSFER_DESTINATION`；设备
+不支持该格式的线性 Blit 时返回 `UNSUPPORTED`。
+
 `submit` 异步提交 executable Recorder。成功后 Recorder 进入 pending；对它调用 `reset` 会等待
 GPU 完成，再重置 Command Pool。Renderer 的 `frames_in_flight` 决定最多保留多少个在途帧槽，
 默认值为 2，有效范围为 1 到 4。

@@ -46,6 +46,14 @@ typedef struct granit_texture_copy_region {
   uint32_t reserved;
 } granit_texture_copy_region;
 
+/** Mipmap 生成范围；base mip 作为首个源级，level_count 包含该源级。 */
+typedef struct granit_texture_mipmap_range {
+  uint32_t base_mip_level;
+  uint32_t level_count;
+  uint32_t base_array_layer;
+  uint32_t array_layer_count;
+} granit_texture_mipmap_range;
+
 typedef struct granit_viewport {
   float x;
   float y;
@@ -129,6 +137,10 @@ GRANIT_API granit_result granit_command_recorder_copy_buffer_to_texture(
 GRANIT_API granit_result granit_command_recorder_copy_texture(
     granit_renderer renderer, granit_command_recorder recorder, granit_texture source,
     granit_texture destination, const granit_texture_copy_region* region);
+/** 使用线性 Blit 逐级生成 Mipmap；Texture 必须支持相应格式能力和传输用途。 */
+GRANIT_API granit_result granit_command_recorder_generate_mipmaps(
+    granit_renderer renderer, granit_command_recorder recorder, granit_texture texture,
+    const granit_texture_mipmap_range* range);
 GRANIT_API granit_result granit_command_recorder_fill_buffer(granit_renderer renderer,
                                                              granit_command_recorder recorder,
                                                              granit_buffer buffer, uint64_t offset,

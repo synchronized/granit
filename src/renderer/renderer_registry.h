@@ -174,6 +174,10 @@ public:
                                            granit_command_recorder recorder, granit_texture source,
                                            granit_texture destination,
                                            const granit_texture_copy_region& region);
+  [[nodiscard]] granit_result generate_mipmaps(granit_renderer renderer,
+                                               granit_command_recorder recorder,
+                                               granit_texture texture,
+                                               const granit_texture_mipmap_range& range);
   [[nodiscard]] granit_result fill_buffer(granit_renderer renderer,
                                           granit_command_recorder recorder, granit_buffer buffer,
                                           std::uint64_t offset, std::uint64_t size,

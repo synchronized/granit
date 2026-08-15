@@ -246,6 +246,57 @@ granit_result vulkan_command_recorder::copy_texture(const vulkan_device& device,
   return GRANIT_SUCCESS;
 }
 
+granit_result vulkan_command_recorder::generate_mipmaps(const vulkan_device& device, VkImage image,
+                                                        VkExtent3D base_extent,
+                                                        std::uint32_t base_mip_level,
+                                                        std::uint32_t level_count,
+                                                        std::uint32_t base_array_layer,
+                                                        std::uint32_t array_layer_count) {
+  if (state_ != command_recorder_state::recording || inside_rendering_ || image == VK_NULL_HANDLE ||
+      level_count < 2 || array_layer_count == 0) {
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  }
+  auto source_extent = base_extent;
+  for (std::uint32_t offset = 1; offset < level_count; ++offset) {
+    const auto source_mip = base_mip_level + offset - 1;
+    const auto destination_mip = base_mip_level + offset;
+    const VkExtent3D destination_extent{std::max(UINT32_C(1), source_extent.width / 2),
+                                        std::max(UINT32_C(1), source_extent.height / 2),
+                                        std::max(UINT32_C(1), source_extent.depth / 2)};
+    prepare_image_access(device, {.image = image,
+                                  .range = {VK_IMAGE_ASPECT_COLOR_BIT, source_mip, 1,
+                                            base_array_layer, array_layer_count},
+                                  .layout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                                  .stages = VK_PIPELINE_STAGE_2_BLIT_BIT,
+                                  .access = VK_ACCESS_2_TRANSFER_READ_BIT,
+                                  .preserve_content = true});
+    prepare_image_access(device, {.image = image,
+                                  .range = {VK_IMAGE_ASPECT_COLOR_BIT, destination_mip, 1,
+                                            base_array_layer, array_layer_count},
+                                  .layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                                  .stages = VK_PIPELINE_STAGE_2_BLIT_BIT,
+                                  .access = VK_ACCESS_2_TRANSFER_WRITE_BIT,
+                                  .preserve_content = false});
+    const VkImageBlit blit{.srcSubresource = {VK_IMAGE_ASPECT_COLOR_BIT, source_mip,
+                                              base_array_layer, array_layer_count},
+                           .srcOffsets = {{0, 0, 0},
+                                          {static_cast<std::int32_t>(source_extent.width),
+                                           static_cast<std::int32_t>(source_extent.height),
+                                           static_cast<std::int32_t>(source_extent.depth)}},
+                           .dstSubresource = {VK_IMAGE_ASPECT_COLOR_BIT, destination_mip,
+                                              base_array_layer, array_layer_count},
+                           .dstOffsets = {{0, 0, 0},
+                                          {static_cast<std::int32_t>(destination_extent.width),
+                                           static_cast<std::int32_t>(destination_extent.height),
+                                           static_cast<std::int32_t>(destination_extent.depth)}}};
+    device.functions().vkCmdBlitImage(command_buffer_, image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                                      image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &blit,
+                                      VK_FILTER_LINEAR);
+    source_extent = destination_extent;
+  }
+  return GRANIT_SUCCESS;
+}
+
 granit_result vulkan_command_recorder::fill_buffer(const vulkan_device& device, VkBuffer buffer,
                                                    VkDeviceSize offset, VkDeviceSize size,
                                                    std::uint32_t value) {

@@ -3053,6 +3053,51 @@ granit_result renderer_registry::copy_texture(granit_renderer renderer,
       recorder_record->native, source_record->native.image, destination_record->native.image, copy);
 }
 
+granit_result renderer_registry::generate_mipmaps(granit_renderer renderer,
+                                                  granit_command_recorder recorder,
+                                                  granit_texture texture,
+                                                  const granit_texture_mipmap_range& range) {
+  auto recorder_record = acquire_command_recorder(renderer, recorder);
+  if (!recorder_record)
+    return GRANIT_ERROR_INVALID_HANDLE;
+  std::shared_ptr<texture_record> texture_record_state;
+  {
+    std::lock_guard lock{mutex_};
+    const auto& state = recorder_record->renderer;
+    if (handles_.find(texture, resource_type::texture, state->domain()) == nullptr)
+      return GRANIT_ERROR_INVALID_HANDLE;
+    const auto found = textures_.find(texture);
+    if (found == textures_.end() || found->second->renderer != state)
+      return GRANIT_ERROR_INVALID_HANDLE;
+    texture_record_state = found->second;
+  }
+  const auto& desc = texture_record_state->desc;
+  if (depth_format(desc.format) || desc.sample_count != GRANIT_SAMPLE_COUNT_1 ||
+      (desc.usage & GRANIT_TEXTURE_USAGE_TRANSFER_SOURCE_BIT) == 0 ||
+      (desc.usage & GRANIT_TEXTURE_USAGE_TRANSFER_DESTINATION_BIT) == 0 ||
+      !texture_record_state->renderer->texture_supports_linear_blit(desc.format)) {
+    return GRANIT_ERROR_UNSUPPORTED;
+  }
+  if (range.level_count < 2 || range.array_layer_count == 0 ||
+      range.base_mip_level >= desc.mip_levels ||
+      range.level_count > desc.mip_levels - range.base_mip_level ||
+      range.base_array_layer >= desc.array_layers ||
+      range.array_layer_count > desc.array_layers - range.base_array_layer) {
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  }
+  const VkExtent3D base_extent{std::max(UINT32_C(1), desc.width >> range.base_mip_level),
+                               std::max(UINT32_C(1), desc.height >> range.base_mip_level),
+                               std::max(UINT32_C(1), desc.depth >> range.base_mip_level)};
+  std::lock_guard record_lock{recorder_record->mutex};
+  if (recorder_record->native.state() != command_recorder_state::recording)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  retain_resource(recorder_record->retained_resources, texture_record_state,
+                  texture_record_state->metadata);
+  return recorder_record->renderer->generate_mipmaps(
+      recorder_record->native, texture_record_state->native.image, base_extent,
+      range.base_mip_level, range.level_count, range.base_array_layer, range.array_layer_count);
+}
+
 granit_result renderer_registry::fill_buffer(granit_renderer renderer,
                                              granit_command_recorder recorder, granit_buffer buffer,
                                              std::uint64_t offset, std::uint64_t size,

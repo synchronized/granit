@@ -189,6 +189,26 @@ granit_command_recorder_copy_texture(granit_renderer renderer, granit_command_re
 }
 
 extern "C" granit_result
+granit_command_recorder_generate_mipmaps(granit_renderer renderer, granit_command_recorder recorder,
+                                         granit_texture texture,
+                                         const granit_texture_mipmap_range* range) {
+  if (renderer == GRANIT_NULL_HANDLE || recorder == GRANIT_NULL_HANDLE ||
+      texture == GRANIT_NULL_HANDLE) {
+    return GRANIT_ERROR_INVALID_HANDLE;
+  }
+  if (range == nullptr)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  try {
+    return granit::detail::renderer_registry::instance().generate_mipmaps(renderer, recorder,
+                                                                          texture, *range);
+  } catch (const std::bad_alloc&) {
+    return GRANIT_ERROR_OUT_OF_MEMORY;
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+extern "C" granit_result
 granit_command_recorder_fill_buffer(granit_renderer renderer, granit_command_recorder recorder,
                                     granit_buffer buffer, std::uint64_t offset, std::uint64_t size,
                                     std::uint32_t value) {
