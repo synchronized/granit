@@ -96,7 +96,7 @@ D-03-graphics-pipeline.md
 - [H-08：公共 UI、Debug Draw 与 Text components](H-08-ui-debug-text-components.md)——已完成；公共
   Canvas、Debug Draw、R8 Text Atlas、Pipeline 自动录制和第三方 Adapter 边界均已验收。
 - [S-01：C ABI 回归验证](S-01-abi-regression.md)——实现中；共享库公共导出符号和核心布局
-  第一批检查已完成，其余描述结构基线待补齐。
+  回归已完成，下一步验证 `struct_size` 扩展语义。
 
 ## 状态
 
