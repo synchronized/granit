@@ -1,31 +1,15 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include "pipeline/canvas_pass.h"
-
 #include <granit/granit.hpp>
+#include <granit/pipeline/canvas_draw_list.hpp>
 
 #include <catch2/catch_all.hpp>
 
 #include <array>
 #include <cstring>
-#include <fstream>
-#include <iterator>
-#include <vector>
-
-namespace {
-
-granit::math::matrix4 identity() { return {1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1}; }
-
-std::vector<char> load_package() {
-  std::ifstream stream{GRANIT_UNLIT_CANVAS_TEST_PACKAGE, std::ios::binary};
-  return {std::istreambuf_iterator<char>{stream}, {}};
-}
-
-} // namespace
 
 TEST_CASE("Canvas Pass按Batch录制顶点色与Scissor") {
-  using namespace granit::pipeline::detail;
   granit::renderer renderer;
   const auto initialized = renderer.initialize({.application_name = "granit-ui-pass"});
   if (initialized == granit::result::backend_unavailable ||
@@ -46,9 +30,9 @@ TEST_CASE("Canvas Pass按Batch录制顶点色与Scissor") {
   REQUIRE(color_view.initialize(native, color.native_handle()) == granit::result::success);
 
   constexpr std::array<std::uint32_t, 3> indices{0, 1, 2};
-  constexpr std::array blue{canvas_vertex{-0.8F, -0.8F, 0, 0, UINT32_MAX},
-                            canvas_vertex{0.8F, -0.8F, 1, 0, UINT32_MAX},
-                            canvas_vertex{0.0F, 0.8F, 0.5F, 1, UINT32_MAX}};
+  constexpr std::array blue{granit_canvas_vertex{3, 29, 0, 0, UINT32_MAX},
+                            granit_canvas_vertex{29, 29, 1, 0, UINT32_MAX},
+                            granit_canvas_vertex{16, 3, 0.5F, 1, UINT32_MAX}};
   constexpr auto red = blue;
   granit::texture blue_texture;
   granit::texture red_texture;
@@ -74,58 +58,28 @@ TEST_CASE("Canvas Pass按Batch录制顶点色与Scissor") {
   REQUIRE(sampler.initialize(native, {.mag_filter = granit::filter::nearest,
                                       .min_filter = granit::filter::nearest}) ==
           granit::result::success);
-  canvas_draw_list list;
+  granit_canvas_draw_list_desc list_desc = GRANIT_CANVAS_DRAW_LIST_DESC_INIT;
+  granit::canvas_draw_list list;
+  REQUIRE(list.initialize(native, list_desc) == granit::result::success);
   REQUIRE(list.append(blue, indices,
                       {.texture = blue_view.native_handle(),
                        .sampler = sampler.native_handle(),
-                       .scissor = {0, 0, size, size}}) == GRANIT_SUCCESS);
+                       .scissor = {0, 0, size, size}}) == granit::result::success);
   REQUIRE(list.append(red, indices,
                       {.texture = red_view.native_handle(),
                        .sampler = sampler.native_handle(),
-                       .scissor = {0, 0, 18, size}}) == GRANIT_SUCCESS);
-  canvas_geometry_upload geometry;
-  REQUIRE(geometry.upload(native, list) == GRANIT_SUCCESS);
-
-  const auto archive = load_package();
-  REQUIRE_FALSE(archive.empty());
-  const std::array<float, 4> white{1, 1, 1, 1};
-  const std::array updates{
-      granit_material_parameter_update{granit_material_parameter_id("base_color", 10),
-                                       GRANIT_MATERIAL_PARAMETER_FLOAT4, 0, white.data(),
-                                       sizeof(white), GRANIT_NULL_HANDLE},
-      granit_material_parameter_update{granit_material_parameter_id("base_color_texture", 18),
-                                       GRANIT_MATERIAL_PARAMETER_TEXTURE_VIEW, 0, nullptr, 0,
-                                       blue_view.native_handle()},
-      granit_material_parameter_update{granit_material_parameter_id("unlit_sampler", 13),
-                                       GRANIT_MATERIAL_PARAMETER_SAMPLER, 0, nullptr, 0,
-                                       sampler.native_handle()}};
-  granit_material_desc material_desc = GRANIT_MATERIAL_DESC_INIT;
-  material_desc.archive_data = archive.data();
-  material_desc.archive_size = archive.size();
-  material_desc.initial_updates = updates.data();
-  material_desc.initial_update_count = static_cast<std::uint32_t>(updates.size());
-  granit_material material = GRANIT_NULL_HANDLE;
-  REQUIRE(granit_material_create(native, &material_desc, &material) == GRANIT_SUCCESS);
+                       .scissor = {0, 0, 18, size}}) == granit::result::success);
 
   granit::command_recorder recorder;
   REQUIRE(recorder.initialize(native) == granit::result::success);
   REQUIRE(recorder.begin() == granit::result::success);
-  const granit::material::pbr_frame_constants frame{.view_projection = identity(),
-                                                    .camera_position = {},
-                                                    .direction_to_light = {},
-                                                    .light_radiance = {}};
-  const granit::material::pbr_object_constants object{
-      .model = identity(), .normal_matrix = identity(), .object_id = {}};
-  REQUIRE(record_canvas_pass(native, recorder.native_handle(),
-                             {.color = color_view.native_handle(),
-                              .color_format = GRANIT_TEXTURE_FORMAT_RGBA8_UNORM,
-                              .width = size,
-                              .height = size,
-                              .material = material,
-                              .frame = frame,
-                              .object = object,
-                              .load_operation = GRANIT_ATTACHMENT_LOAD_OPERATION_CLEAR},
-                             list, geometry) == GRANIT_SUCCESS);
+  granit_canvas_record_desc record_desc = GRANIT_CANVAS_RECORD_DESC_INIT;
+  record_desc.color = color_view.native_handle();
+  record_desc.color_format = GRANIT_TEXTURE_FORMAT_RGBA8_UNORM;
+  record_desc.width = size;
+  record_desc.height = size;
+  record_desc.load_operation = GRANIT_ATTACHMENT_LOAD_OPERATION_CLEAR;
+  REQUIRE(list.record(recorder.native_handle(), record_desc) == granit::result::success);
   REQUIRE(recorder.end() == granit::result::success);
   REQUIRE(recorder.submit() == granit::result::success);
   REQUIRE(recorder.reset() == granit::result::success);
@@ -161,5 +115,4 @@ TEST_CASE("Canvas Pass按Batch录制顶点色与Scissor") {
   CHECK(pixel(14) == std::array<std::uint8_t, 4>{128, 0, 64, 192});
   CHECK(pixel(20) == std::array<std::uint8_t, 4>{0, 0, 128, 128});
   REQUIRE(readback.unmap() == granit::result::success);
-  REQUIRE(granit_material_destroy(native, material) == GRANIT_SUCCESS);
 }

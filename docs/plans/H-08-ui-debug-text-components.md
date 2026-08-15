@@ -6,7 +6,7 @@
 ## 状态
 
 - 优先级：P2
-- 状态：进行中；H-08A Canvas Draw List 数据 ABI 已完成，下一步 H-08B
+- 状态：进行中；H-08A 与 H-08B1 独立录制接口已完成，下一步 H-08B2 参考管线提交
 - 必需依赖：H-06 Unlit、2D 与 UI 内部技术验证
 
 ## 目标
@@ -40,6 +40,13 @@
 - 通用接口复制顶点和相对索引，矩形接口覆盖常见 Sprite/UI 图片输入。
 - Texture View 与 Sampler 只被借用，状态相同的相邻 Item 合并为一个 Batch。
 - 测试覆盖 C/C++ 独立包含、合批、复用、无效数据、跨 Renderer、重复销毁和旧句柄。
+
+## H-08B 当前结果
+
+- H-08B1 提供公共 `granit_canvas_draw_list_record`，一次调用把完整列表录制到已有 Recorder。
+- 默认坐标为左上原点、Y 轴向下的像素单位，内部持有 Material 与动态几何上传资源。
+- 调用方仍负责 Recorder 的 begin、end、提交以及颜色目标生命周期；接口不泄漏内部 Material。
+- H-08B2 将把 Draw List 作为每个 View 的可选 Overlay 输入接入参考管线，并补颜色空间组合验证。
 
 ## 验收标准
 

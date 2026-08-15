@@ -4,6 +4,11 @@
 #include <granit/pipeline/canvas_draw_list.h>
 
 #include "pipeline/canvas_draw_list.h"
+#include "pipeline/canvas_geometry_upload.h"
+#include "pipeline/canvas_pass.h"
+#include "pipeline/embedded_shaders.h"
+
+#include <granit/pipeline/material.h>
 
 #include <array>
 #include <cmath>
@@ -19,9 +24,16 @@ constexpr uint64_t generation_mask = UINT64_C(0x00ffffff);
 constexpr uint64_t type_value = UINT64_C(0x44);
 
 struct canvas_draw_list_state {
+  ~canvas_draw_list_state() {
+    if (material != GRANIT_NULL_HANDLE)
+      static_cast<void>(granit_material_destroy(renderer, material));
+  }
+
   std::mutex mutex;
   granit_renderer renderer = GRANIT_NULL_HANDLE;
   granit::pipeline::detail::canvas_draw_list list;
+  granit::pipeline::detail::canvas_geometry_upload geometry;
+  granit_material material = GRANIT_NULL_HANDLE;
 };
 
 struct canvas_draw_list_slot {
@@ -73,6 +85,55 @@ bool valid_state(const granit_canvas_draw_state& state) {
 
 granit::pipeline::detail::canvas_draw_state convert_state(const granit_canvas_draw_state& state) {
   return {.texture = state.texture, .sampler = state.sampler, .scissor = state.scissor};
+}
+
+granit_result ensure_material(canvas_draw_list_state& state) {
+  if (state.material != GRANIT_NULL_HANDLE)
+    return GRANIT_SUCCESS;
+  const auto items = state.list.items();
+  if (items.empty())
+    return GRANIT_SUCCESS;
+  const std::array<float, 4> white{1, 1, 1, 1};
+  const std::array updates{
+      granit_material_parameter_update{granit_material_parameter_id("base_color", 10),
+                                       GRANIT_MATERIAL_PARAMETER_FLOAT4, 0, white.data(),
+                                       sizeof(white), GRANIT_NULL_HANDLE},
+      granit_material_parameter_update{granit_material_parameter_id("base_color_texture", 18),
+                                       GRANIT_MATERIAL_PARAMETER_TEXTURE_VIEW, 0, nullptr, 0,
+                                       items.front().state.texture},
+      granit_material_parameter_update{granit_material_parameter_id("unlit_sampler", 13),
+                                       GRANIT_MATERIAL_PARAMETER_SAMPLER, 0, nullptr, 0,
+                                       items.front().state.sampler}};
+  const auto archive = granit::pipeline::detail::canvas_material_package();
+  granit_material_desc desc = GRANIT_MATERIAL_DESC_INIT;
+  desc.archive_data = archive.data();
+  desc.archive_size = archive.size();
+  desc.initial_updates = updates.data();
+  desc.initial_update_count = static_cast<uint32_t>(updates.size());
+  return granit_material_create(state.renderer, &desc, &state.material);
+}
+
+granit::material::pbr_matrix4 pixel_projection(uint32_t width, uint32_t height) {
+  return {2.0F / static_cast<float>(width),
+          0,
+          0,
+          0,
+          0,
+          -2.0F / static_cast<float>(height),
+          0,
+          0,
+          0,
+          0,
+          1,
+          0,
+          -1,
+          1,
+          0,
+          1};
+}
+
+constexpr granit::material::pbr_matrix4 identity_matrix() {
+  return {1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1};
 }
 
 } // namespace
@@ -190,6 +251,51 @@ extern "C" granit_result granit_canvas_draw_list_get_stats(granit_renderer rende
   stats->reserved[1] = 0;
   stats->reserved[2] = 0;
   return GRANIT_SUCCESS;
+}
+
+extern "C" granit_result granit_canvas_draw_list_record(granit_renderer renderer,
+                                                        granit_command_recorder recorder,
+                                                        granit_canvas_draw_list list,
+                                                        const granit_canvas_record_desc* desc) {
+  if (recorder == GRANIT_NULL_HANDLE || desc == nullptr ||
+      desc->struct_size < sizeof(granit_canvas_record_desc) ||
+      !reserved_is_zero(desc->reserved, std::size(desc->reserved)) ||
+      desc->color == GRANIT_NULL_HANDLE || desc->color_format == GRANIT_TEXTURE_FORMAT_UNDEFINED ||
+      desc->width == 0 || desc->height == 0 ||
+      (desc->load_operation != GRANIT_ATTACHMENT_LOAD_OPERATION_LOAD &&
+       desc->load_operation != GRANIT_ATTACHMENT_LOAD_OPERATION_CLEAR &&
+       desc->load_operation != GRANIT_ATTACHMENT_LOAD_OPERATION_DISCARD)) {
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  }
+  const auto state = find_list(renderer, list);
+  if (state == nullptr)
+    return GRANIT_ERROR_INVALID_HANDLE;
+  std::scoped_lock lock{state->mutex};
+  if (state->list.items().empty())
+    return GRANIT_SUCCESS;
+  auto result = ensure_material(*state);
+  if (result == GRANIT_SUCCESS)
+    result = state->geometry.upload(renderer, state->list);
+  const granit::material::pbr_frame_constants frame{.view_projection =
+                                                        pixel_projection(desc->width, desc->height),
+                                                    .camera_position = {},
+                                                    .direction_to_light = {},
+                                                    .light_radiance = {}};
+  const granit::material::pbr_object_constants object{
+      .model = identity_matrix(), .normal_matrix = identity_matrix(), .object_id = {}};
+  if (result == GRANIT_SUCCESS) {
+    result = granit::pipeline::detail::record_canvas_pass(renderer, recorder,
+                                                          {.color = desc->color,
+                                                           .color_format = desc->color_format,
+                                                           .width = desc->width,
+                                                           .height = desc->height,
+                                                           .material = state->material,
+                                                           .frame = frame,
+                                                           .object = object,
+                                                           .load_operation = desc->load_operation},
+                                                          state->list, state->geometry);
+  }
+  return result;
 }
 
 extern "C" granit_result granit_canvas_draw_list_destroy(granit_renderer renderer,

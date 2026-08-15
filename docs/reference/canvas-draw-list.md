@@ -12,13 +12,13 @@ Canvas Draw List 是 Render Pipeline component 中面向 UI 后端、Sprite、�
 - C++20：`<granit/pipeline/canvas_draw_list.hpp>`，使用 move-only 的 `granit::canvas_draw_list`。
 - 所属 CMake component：`RenderPipeline`，目标为 `granit::render_pipeline`。
 
-当前公开范围是 Draw List 构建、复用和统计。把列表录制到 Canvas Pass 的公共接口仍在 H-08B 设计中；
-内部 Canvas Pass 不是兼容承诺，也不应由使用者直接包含。
+当前公开范围包括 Draw List 构建、复用、统计以及录制到已有 Command Recorder。内部 Canvas
+Material、动态几何上传和 Canvas Pass 均不是兼容承诺，也不应由使用者直接包含。
 
 ## 坐标与顶点
 
 - `granit_canvas_vertex` 包含二维位置、UV 和打包 RGBA8 UNORM 顶点色。
-- Draw List 本身不解释位置的坐标空间；H-08B 默认录制接口将定义左上原点、Y 向下的像素坐标。
+- Draw List 本身不解释位置的坐标空间；公共录制接口使用左上原点、Y 向下的像素坐标。
 - 通用追加接口接收三角形列表，索引必须相对本次传入的顶点数组。
 - 矩形便捷接口生成四个顶点和六个索引，宽高必须大于零。
 - 位置和 UV 必须是有限浮点数；列表在函数返回前复制全部数组。
@@ -56,6 +56,18 @@ rect.state.sampler = sampler;
 if (result == GRANIT_SUCCESS)
   result = granit_canvas_draw_list_append_rect(renderer, list, &rect);
 
-/* H-08B 将提供公共录制/提交接口。 */
+granit_canvas_record_desc record = GRANIT_CANVAS_RECORD_DESC_INIT;
+record.color = output_view;
+record.color_format = GRANIT_TEXTURE_FORMAT_RGBA8_SRGB;
+record.width = 1280;
+record.height = 720;
+result = granit_canvas_draw_list_record(renderer, recorder, list, &record);
 granit_canvas_draw_list_destroy(renderer, list);
 ```
+
+## 录制语义
+
+- Recorder 必须已经 begin；函数只录制命令，不结束或提交 Recorder。
+- `LOAD` 保留目标原有内容，适合覆盖层；`CLEAR` 和 `DISCARD` 用于独立 Canvas Pass。
+- sRGB Attachment 由硬件完成线性到 sRGB 转换；UNORM Attachment 保留 Shader 的线性输出。
+- 当前列表持有并复用内部 Material 与上传 Buffer；同一列表的录制仍需调用方外部同步。

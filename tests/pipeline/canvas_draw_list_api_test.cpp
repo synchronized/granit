@@ -96,6 +96,16 @@ TEST_CASE("公共Canvas Draw List拒绝无效输入、跨Renderer与旧句柄") 
   CHECK(granit_canvas_draw_list_append_rect(first.native_handle(), list, &rect) ==
         GRANIT_ERROR_INVALID_ARGUMENT);
 
+  granit_canvas_record_desc record = GRANIT_CANVAS_RECORD_DESC_INIT;
+  CHECK(granit_canvas_draw_list_record(first.native_handle(), GRANIT_NULL_HANDLE, list, &record) ==
+        GRANIT_ERROR_INVALID_ARGUMENT);
+  record.color = 1;
+  record.color_format = GRANIT_TEXTURE_FORMAT_RGBA8_UNORM;
+  record.width = 32;
+  record.height = 32;
+  CHECK(granit_canvas_draw_list_record(first.native_handle(), 1, GRANIT_NULL_HANDLE, &record) ==
+        GRANIT_ERROR_INVALID_HANDLE);
+
   REQUIRE(granit_canvas_draw_list_destroy(first.native_handle(), list) == GRANIT_SUCCESS);
   CHECK(granit_canvas_draw_list_destroy(first.native_handle(), list) ==
         GRANIT_ERROR_INVALID_HANDLE);

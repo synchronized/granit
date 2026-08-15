@@ -13,6 +13,7 @@ namespace granit::pipeline::detail {
 [[nodiscard]] std::span<const std::byte> tone_mapping_fragment_shader() noexcept;
 [[nodiscard]] std::span<const std::byte> shadow_depth_vertex_shader() noexcept;
 [[nodiscard]] std::span<const std::byte> shadow_depth_fragment_shader() noexcept;
+[[nodiscard]] std::span<const std::byte> canvas_material_package() noexcept;
 
 } // namespace granit::pipeline::detail
 

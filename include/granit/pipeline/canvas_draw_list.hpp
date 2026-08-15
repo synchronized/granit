@@ -61,6 +61,10 @@ public:
   [[nodiscard]] result get_stats(granit_canvas_draw_list_stats& stats) const noexcept {
     return from_native(granit_canvas_draw_list_get_stats(renderer_, handle_, &stats));
   }
+  [[nodiscard]] result record(granit_command_recorder recorder,
+                              const granit_canvas_record_desc& desc) noexcept {
+    return from_native(granit_canvas_draw_list_record(renderer_, recorder, handle_, &desc));
+  }
   [[nodiscard]] result destroy() noexcept {
     if (!valid())
       return result::success;

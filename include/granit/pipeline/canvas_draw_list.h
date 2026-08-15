@@ -10,6 +10,7 @@
 #include <granit/core/types.h>
 #include <granit/pipeline/export.h>
 #include <granit/renderer/command_recorder.h>
+#include <granit/renderer/render_target.h>
 #include <granit/renderer/renderer.h>
 #include <granit/renderer/sampler.h>
 #include <granit/renderer/texture.h>
@@ -83,6 +84,26 @@ typedef struct granit_canvas_draw_list_stats {
   uint32_t reserved[3];
 } granit_canvas_draw_list_stats;
 
+/** 把 Canvas Draw List 录制到颜色目标所需的参数。坐标使用左上原点、Y 轴向下的像素单位。 */
+typedef struct granit_canvas_record_desc {
+  uint32_t struct_size;
+  granit_texture_view color;
+  granit_texture_format color_format;
+  uint32_t width;
+  uint32_t height;
+  granit_attachment_load_operation load_operation;
+  uint32_t reserved[4];
+} granit_canvas_record_desc;
+
+#define GRANIT_CANVAS_RECORD_DESC_INIT                                                             \
+  {                                                                                                \
+    (uint32_t)sizeof(granit_canvas_record_desc), GRANIT_NULL_HANDLE,                               \
+        GRANIT_TEXTURE_FORMAT_UNDEFINED, UINT32_C(0), UINT32_C(0),                                 \
+        GRANIT_ATTACHMENT_LOAD_OPERATION_LOAD, {                                                   \
+      UINT32_C(0), UINT32_C(0), UINT32_C(0), UINT32_C(0)                                           \
+    }                                                                                              \
+  }
+
 #define GRANIT_CANVAS_DRAW_LIST_STATS_INIT                                                         \
   {                                                                                                \
     (uint32_t)sizeof(granit_canvas_draw_list_stats), UINT32_C(0), UINT32_C(0), UINT32_C(0),        \
@@ -120,6 +141,14 @@ GRANIT_RENDER_PIPELINE_API granit_result granit_canvas_draw_list_append_rect(
 /** 查询列表内容与合批后的 Draw 数量。 */
 GRANIT_RENDER_PIPELINE_API granit_result granit_canvas_draw_list_get_stats(
     granit_renderer renderer, granit_canvas_draw_list list, granit_canvas_draw_list_stats* stats);
+
+/**
+ * 将整个列表录制到已经 begin 的 Command Recorder。函数不结束或提交 Recorder。
+ * 列表、目标及其借用资源必须属于同一 Renderer，并保持有效至 Recorder 完成。
+ */
+GRANIT_RENDER_PIPELINE_API granit_result
+granit_canvas_draw_list_record(granit_renderer renderer, granit_command_recorder recorder,
+                               granit_canvas_draw_list list, const granit_canvas_record_desc* desc);
 
 /** 销毁 Draw List，不销毁其借用的 Texture View 或 Sampler。 */
 GRANIT_RENDER_PIPELINE_API granit_result

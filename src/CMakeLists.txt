@@ -370,6 +370,23 @@ set(
   granit_pipeline_shadow_fragment
   "${granit_pipeline_generated_dir}/granit_pipeline_shadow_depth.frag.inc"
 )
+set(
+  granit_pipeline_canvas_material
+  "${granit_pipeline_generated_dir}/granit_pipeline_canvas.grmat.inc"
+)
+add_custom_command(
+  OUTPUT "${granit_pipeline_canvas_material}"
+  COMMAND "${CMAKE_COMMAND}" -E make_directory "${granit_pipeline_generated_dir}"
+  COMMAND
+    "${CMAKE_COMMAND}"
+    "-DINPUT=${PROJECT_SOURCE_DIR}/src/pipeline/assets/unlit_canvas.grmat"
+    "-DOUTPUT=${granit_pipeline_canvas_material}"
+    -P "${PROJECT_SOURCE_DIR}/cmake/embed_binary.cmake"
+  DEPENDS
+    "${PROJECT_SOURCE_DIR}/src/pipeline/assets/unlit_canvas.grmat"
+    "${PROJECT_SOURCE_DIR}/cmake/embed_binary.cmake"
+  VERBATIM
+)
 add_custom_command(
   OUTPUT "${granit_pipeline_tone_vertex}"
   COMMAND "${CMAKE_COMMAND}" -E make_directory "${granit_pipeline_generated_dir}"
@@ -429,6 +446,7 @@ target_sources(
     "${granit_pipeline_tone_fragment}"
     "${granit_pipeline_shadow_vertex}"
     "${granit_pipeline_shadow_fragment}"
+    "${granit_pipeline_canvas_material}"
     pipeline/embedded_shaders.cpp
     pipeline/embedded_shaders.h
     pipeline/default_ibl_resources.cpp
