@@ -47,6 +47,8 @@ Unicode 解码、字体回退、换行、文字整形或字形栅格化。
 - 相邻且 Atlas 页面、Sampler 和 Scissor 相同的字形由 Canvas 自动合为一个 Draw。
 - 已登记的零尺寸字形会跳过；未上传的 `font_key + glyph_id` 返回 `GRANIT_ERROR_NOT_READY`。
 - Atlas 的 View 和 Sampler 被 Canvas 借用，因此 Atlas 必须至少存活到 Canvas 完成录制。
+- 离屏回读测试覆盖 50% R8 Coverage 的 Alpha 输出，以及跨页 `第一页 → 第二页 → 第一页` 的
+  三段 Draw 顺序，转换不会为减少 Draw 而重排字形。
 
 ## 当前限制
 

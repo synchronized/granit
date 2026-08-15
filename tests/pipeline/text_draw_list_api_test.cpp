@@ -4,11 +4,13 @@
 #include <granit/pipeline/text_draw_list.hpp>
 #include <granit/pipeline/canvas_draw_list.hpp>
 #include <granit/pipeline/text_atlas.hpp>
+#include <granit/granit.hpp>
 #include <granit/renderer/renderer.hpp>
 
 #include <catch2/catch_all.hpp>
 
 #include <array>
+#include <cstring>
 #include <limits>
 
 namespace {
@@ -65,6 +67,113 @@ TEST_CASE("Text Draw List通过R8 Atlas批量生成Canvas四边形") {
   REQUIRE(text.append_glyph_run(std::span{&missing, 1}) == granit::result::success);
   CHECK(text.append_to_canvas(atlas.native_handle(), canvas.native_handle()) ==
         granit::result::not_ready);
+}
+
+TEST_CASE("Text Atlas覆盖率进入像素且跨页保持Draw顺序") {
+  granit::renderer renderer;
+  const auto initialized = renderer.initialize({.application_name = "granit-text-pixel"});
+  if (unavailable(initialized))
+    SKIP("当前运行环境没有满足要求的 Vulkan 设备");
+  REQUIRE(initialized == granit::result::success);
+  const auto native = renderer.native_handle();
+
+  granit_text_atlas_desc atlas_desc = GRANIT_TEXT_ATLAS_DESC_INIT;
+  atlas_desc.page_width = 8;
+  atlas_desc.page_height = 8;
+  atlas_desc.max_pages = 2;
+  granit::text_atlas atlas;
+  REQUIRE(atlas.initialize(native, atlas_desc) == granit::result::success);
+  constexpr std::array<uint8_t, 8> coverage{128, 128, 128, 128, 128, 128, 128, 128};
+  for (const uint32_t glyph_id : {1U, 2U, 3U}) {
+    granit_text_glyph_bitmap_desc glyph = GRANIT_TEXT_GLYPH_BITMAP_DESC_INIT;
+    glyph.font_key = 9;
+    glyph.glyph_id = glyph_id;
+    glyph.width = 4;
+    glyph.height = 2;
+    glyph.bearing_y = 2;
+    glyph.bitmap = coverage.data();
+    glyph.bitmap_size = coverage.size();
+    REQUIRE(atlas.upload_glyph(glyph) == granit::result::success);
+  }
+  granit_text_atlas_stats atlas_stats = GRANIT_TEXT_ATLAS_STATS_INIT;
+  REQUIRE(atlas.get_stats(atlas_stats) == granit::result::success);
+  REQUIRE(atlas_stats.page_count == 2);
+
+  granit_text_draw_list_desc text_desc = GRANIT_TEXT_DRAW_LIST_DESC_INIT;
+  granit::text_draw_list text;
+  REQUIRE(text.initialize(native, text_desc) == granit::result::success);
+  // 第 1、2 个元素来自不同页面，第 3 个回到第一页，不能跨中间 Draw 重排合批。
+  const std::array glyphs{
+      granit_text_glyph_instance{9, 1, UINT32_C(0xff0000ff), 4, 6, {0, 0}},
+      granit_text_glyph_instance{9, 3, UINT32_C(0xff00ff00), 12, 6, {0, 0}},
+      granit_text_glyph_instance{9, 2, UINT32_C(0xffff0000), 20, 6, {0, 0}}};
+  REQUIRE(text.append_glyph_run(glyphs, {0, 0, 32, 32}) == granit::result::success);
+  granit_canvas_draw_list_desc canvas_desc = GRANIT_CANVAS_DRAW_LIST_DESC_INIT;
+  granit::canvas_draw_list canvas;
+  REQUIRE(canvas.initialize(native, canvas_desc) == granit::result::success);
+  REQUIRE(text.append_to_canvas(atlas.native_handle(), canvas.native_handle()) ==
+          granit::result::success);
+  granit_canvas_draw_list_stats canvas_stats = GRANIT_CANVAS_DRAW_LIST_STATS_INIT;
+  REQUIRE(canvas.get_stats(canvas_stats) == granit::result::success);
+  CHECK(canvas_stats.item_count == 3);
+  CHECK(canvas_stats.batch_count == 3);
+
+  constexpr uint32_t size = 32;
+  granit::texture color;
+  granit::texture_view color_view;
+  REQUIRE(color.initialize(native, {.format = granit::texture_format::rgba8_unorm,
+                                    .usage = granit::texture_usage::color_attachment |
+                                             granit::texture_usage::transfer_source,
+                                    .width = size,
+                                    .height = size}) == granit::result::success);
+  REQUIRE(color_view.initialize(native, color.native_handle()) == granit::result::success);
+  granit::command_recorder recorder;
+  REQUIRE(recorder.initialize(native) == granit::result::success);
+  REQUIRE(recorder.begin() == granit::result::success);
+  granit_canvas_record_desc record = GRANIT_CANVAS_RECORD_DESC_INIT;
+  record.color = color_view.native_handle();
+  record.color_format = GRANIT_TEXTURE_FORMAT_RGBA8_UNORM;
+  record.width = size;
+  record.height = size;
+  record.load_operation = GRANIT_ATTACHMENT_LOAD_OPERATION_CLEAR;
+  REQUIRE(canvas.record(recorder.native_handle(), record) == granit::result::success);
+  REQUIRE(recorder.end() == granit::result::success);
+  REQUIRE(recorder.submit() == granit::result::success);
+  REQUIRE(recorder.reset() == granit::result::success);
+
+  granit::buffer readback;
+  REQUIRE(readback.initialize(native, {.size = size * size * 4,
+                                       .usage = granit::buffer_usage::transfer_destination,
+                                       .location = granit::memory_location::readback}) ==
+          granit::result::success);
+  REQUIRE(recorder.begin() == granit::result::success);
+  const granit_texture_write_region readback_region{.mip_level = 0,
+                                                     .base_array_layer = 0,
+                                                     .array_layer_count = 1,
+                                                     .aspect = GRANIT_TEXTURE_ASPECT_COLOR_BIT,
+                                                     .x = 0,
+                                                     .y = 0,
+                                                     .z = 0,
+                                                     .width = size,
+                                                     .height = size,
+                                                     .depth = 1};
+  REQUIRE(recorder.copy_texture_to_buffer(
+              color.native_handle(), readback.native_handle(), {}, readback_region) ==
+          granit::result::success);
+  REQUIRE(recorder.end() == granit::result::success);
+  REQUIRE(recorder.submit() == granit::result::success);
+  REQUIRE(recorder.reset() == granit::result::success);
+  void* mapped = nullptr;
+  REQUIRE(readback.map(0, size * size * 4, &mapped) == granit::result::success);
+  std::array<uint8_t, 4> pixel{};
+  // Vulkan 颜色附件回读行序与 Canvas 的左上原点坐标相反，Canvas y=4 对应回读 y=27。
+  std::memcpy(pixel.data(), static_cast<const uint8_t*>(mapped) + (27 * size + 5) * 4,
+              pixel.size());
+  CHECK(pixel[0] == 255);
+  CHECK(pixel[1] == 0);
+  CHECK(pixel[2] == 0);
+  CHECK(pixel[3] == Catch::Approx(128).margin(1));
+  REQUIRE(readback.unmap() == granit::result::success);
 }
 } // namespace
 

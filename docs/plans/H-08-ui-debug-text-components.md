@@ -79,7 +79,9 @@
   分配、懒创建分页、重复键原位更新和显式页数上限；空白字形不占用页面。
 - H-08D2b 通过 Texture View `(1, 1, 1, R)` 分量映射复用 Canvas Shader，不增加平行文字
   Pipeline；批量转换接口查询 Atlas 字形并生成按页面与 Scissor 合批的四边形。
-- 下一步 H-08D2c 增加覆盖率像素回读，并验证 Atlas 跨页时保持字形顺序与 Draw 边界。
+- H-08D2c 已通过离屏像素回读验证 R8 覆盖率进入最终 Alpha，并验证 Atlas 跨页时保持字形顺序
+  与 Draw 边界；H-08D2 至此闭合。
+- 下一步 H-08D3 验证 Text Draw List 作为 Render Pipeline Canvas 输入的自动录制路径。
 
 ## 验收标准
 
