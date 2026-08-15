@@ -54,6 +54,23 @@ target_link_libraries(
 granit_target_compile_warnings(granit_cpp_version_test)
 add_test(NAME granit.cpp_version COMMAND granit_cpp_version_test)
 
+if(BUILD_SHARED_LIBS)
+  add_executable(granit_abi_exports_test abi/export_symbols_test.cpp)
+  target_compile_features(granit_abi_exports_test PRIVATE cxx_std_20)
+  target_compile_definitions(
+    granit_abi_exports_test
+    PRIVATE GRANIT_ABI_LIBRARY_PATH="$<TARGET_FILE:granit>"
+  )
+  target_link_libraries(
+    granit_abi_exports_test
+    PRIVATE Catch2::Catch2WithMain ${CMAKE_DL_LIBS}
+  )
+  add_dependencies(granit_abi_exports_test granit)
+  granit_target_compile_warnings(granit_abi_exports_test)
+  granit_target_output_directories(granit_abi_exports_test)
+  add_test(NAME granit.abi.exports COMMAND granit_abi_exports_test)
+endif()
+
 add_executable(
   granit_handle_table_test
   core/handle_table_test.cpp
