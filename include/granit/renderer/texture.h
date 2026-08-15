@@ -15,6 +15,26 @@ typedef granit_handle granit_texture;
 /** Texture 子资源访问视图句柄。零值无效。 */
 typedef granit_handle granit_texture_view;
 
+/** 同步原始像素读取返回的紧密布局。 */
+typedef struct granit_texture_readback_info {
+  uint32_t struct_size;
+  granit_texture_format format;
+  uint32_t width;
+  uint32_t height;
+  uint32_t depth;
+  uint32_t array_layer_count;
+  uint32_t bytes_per_row;
+  uint32_t rows_per_image;
+  uint64_t required_size;
+  uint32_t reserved[2];
+} granit_texture_readback_info;
+#define GRANIT_TEXTURE_READBACK_INFO_VERSION_1_SIZE UINT32_C(48)
+#define GRANIT_TEXTURE_READBACK_INFO_INIT                                                       \
+  {GRANIT_TEXTURE_READBACK_INFO_VERSION_1_SIZE, GRANIT_TEXTURE_FORMAT_UNDEFINED, UINT32_C(0),  \
+   UINT32_C(0), UINT32_C(0), UINT32_C(0), UINT32_C(0), UINT32_C(0), UINT64_C(0), {             \
+     UINT32_C(0), UINT32_C(0)                                                                  \
+   }}
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -45,6 +65,14 @@ GRANIT_API granit_result granit_texture_write(granit_renderer renderer, granit_t
                                               const void* data, uint64_t size,
                                               const granit_texture_data_layout* layout,
                                               const granit_texture_write_region* region);
+/**
+ * 阻塞读取一个非压缩颜色区域。data 为 NULL 时只查询布局和所需容量；data_size 始终返回所需容量。
+ * 函数不翻转 Y、不转换颜色空间或通道顺序。
+ */
+GRANIT_API granit_result granit_texture_read(granit_renderer renderer, granit_texture texture,
+                                             const granit_texture_write_region* region, void* data,
+                                             uint64_t* data_size,
+                                             granit_texture_readback_info* info);
 /** 销毁 View，不影响父 Texture。 */
 GRANIT_API granit_result granit_texture_view_destroy(granit_renderer renderer,
                                                      granit_texture_view view);

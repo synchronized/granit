@@ -78,6 +78,17 @@ struct texture_write_region {
   std::uint32_t depth{1};
 };
 
+struct texture_readback_info {
+  texture_format format{texture_format::undefined};
+  std::uint32_t width{};
+  std::uint32_t height{};
+  std::uint32_t depth{};
+  std::uint32_t array_layer_count{};
+  std::uint32_t bytes_per_row{};
+  std::uint32_t rows_per_image{};
+  std::uint64_t required_size{};
+};
+
 /** 无异常、move-only 的 Texture RAII 包装。 */
 class texture {
 public:
@@ -145,11 +156,48 @@ public:
     return from_native(granit_texture_write(renderer_, handle_, data.data(), data.size(),
                                             &native_layout, &native_region));
   }
+  [[nodiscard]] result query_readback(const texture_write_region& region,
+                                      texture_readback_info& info) const noexcept {
+    return read_impl({}, region, info);
+  }
+  [[nodiscard]] result read(std::span<std::byte> data, const texture_write_region& region,
+                            texture_readback_info& info) const noexcept {
+    if (data.empty())
+      return result::invalid_argument;
+    return read_impl(data, region, info);
+  }
   [[nodiscard]] bool valid() const noexcept { return handle_ != GRANIT_NULL_HANDLE; }
   [[nodiscard]] explicit operator bool() const noexcept { return valid(); }
   [[nodiscard]] granit_texture native_handle() const noexcept { return handle_; }
 
 private:
+  [[nodiscard]] result read_impl(std::span<std::byte> data, const texture_write_region& region,
+                                 texture_readback_info& info) const noexcept {
+    const granit_texture_write_region native_region{.mip_level = region.mip_level,
+                                                    .base_array_layer = region.base_array_layer,
+                                                    .array_layer_count = region.array_layer_count,
+                                                    .aspect = static_cast<uint32_t>(region.aspect),
+                                                    .x = region.x,
+                                                    .y = region.y,
+                                                    .z = region.z,
+                                                    .width = region.width,
+                                                    .height = region.height,
+                                                    .depth = region.depth};
+    granit_texture_readback_info native = GRANIT_TEXTURE_READBACK_INFO_INIT;
+    auto size = static_cast<uint64_t>(data.size());
+    const auto value = granit_texture_read(renderer_, handle_, &native_region, data.data(), &size,
+                                           &native);
+    info = {.format = static_cast<texture_format>(native.format),
+            .width = native.width,
+            .height = native.height,
+            .depth = native.depth,
+            .array_layer_count = native.array_layer_count,
+            .bytes_per_row = native.bytes_per_row,
+            .rows_per_image = native.rows_per_image,
+            .required_size = native.required_size};
+    return from_native(value);
+  }
+
   granit_renderer renderer_{GRANIT_NULL_HANDLE};
   granit_texture handle_{GRANIT_NULL_HANDLE};
 };

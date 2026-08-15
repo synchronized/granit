@@ -36,3 +36,13 @@ Texture 必须带有 `TRANSFER_DESTINATION` 用途。首版只支持非压缩颜
 
 不同 Texture 可以由不同线程同时写入；Queue 提交和全局图像状态由 Renderer 内部排序。同一
 Texture 的多个写入、销毁或其他写操作必须由调用方提供顺序。
+
+## 同步原始像素读取
+
+`granit_texture_read` 读取带 `TRANSFER_SOURCE` 用途的非压缩单采样颜色 Texture。第一次以
+`data=NULL`、`data_size=0` 调用可获得格式、尺寸、紧密行跨度和所需容量；第二次由调用方提供内存。
+容量不足时函数返回 `GRANIT_ERROR_INVALID_ARGUMENT`，更新所需容量且不写入部分数据。
+
+实际读取会内部录制 Texture-to-Buffer、提交并等待 GPU，适合截图、测试和低频工具操作，不适合
+每帧视频采集。结果不翻转 Y、不转换颜色空间、不交换 RGBA/BGRA 通道，也不进行图片编码。高级
+异步路径继续使用 Command Recorder 与可复用 Readback Buffer。

@@ -6,6 +6,7 @@
 #include <granit/renderer/texture.hpp>
 
 #include <array>
+#include <cstring>
 #include <future>
 #include <vector>
 
@@ -38,6 +39,47 @@ TEST_CASE("Texture Format Footprint返回后端无关的紧密块信息", "[text
   CHECK(granit::get_texture_format_footprint(granit::texture_format::bgra8_srgb, cpp) ==
         granit::result::success);
   CHECK(cpp.bytes_per_block == 4);
+}
+
+TEST_CASE("Texture同步读取先查询容量再返回紧密原始像素", "[texture][readback]") {
+  granit::renderer renderer;
+  const auto initialized = renderer.initialize({.application_name = "granit-texture-read"});
+  if (unavailable(initialized))
+    SKIP("当前运行环境没有满足要求的 Vulkan 设备");
+  REQUIRE(initialized == granit::result::success);
+  granit::texture texture;
+  REQUIRE(texture.initialize(renderer.native_handle(),
+                             {.format = granit::texture_format::rgba8_unorm,
+                              .usage = granit::texture_usage::transfer_source |
+                                       granit::texture_usage::transfer_destination,
+                              .width = 2,
+                              .height = 2}) == granit::result::success);
+  constexpr std::array<uint8_t, 16> expected{1,  2,  3,  4,  5,  6,  7,  8,
+                                              9, 10, 11, 12, 13, 14, 15, 16};
+  REQUIRE(texture.write(std::as_bytes(std::span{expected}), {}, {.width = 2, .height = 2}) ==
+          granit::result::success);
+  granit::texture_readback_info info;
+  REQUIRE(texture.query_readback({.width = 2, .height = 2}, info) == granit::result::success);
+  CHECK(info.format == granit::texture_format::rgba8_unorm);
+  CHECK(info.bytes_per_row == 8);
+  CHECK(info.rows_per_image == 2);
+  CHECK(info.required_size == expected.size());
+  std::array<std::byte, 15> insufficient{};
+  CHECK(texture.read(insufficient, {.width = 2, .height = 2}, info) ==
+        granit::result::invalid_argument);
+  std::array<std::byte, 16> actual{};
+  REQUIRE(texture.read(actual, {.width = 2, .height = 2}, info) == granit::result::success);
+  CHECK(std::memcmp(actual.data(), expected.data(), expected.size()) == 0);
+
+  granit::renderer second;
+  REQUIRE(second.initialize({.application_name = "granit-texture-read-second"}) ==
+          granit::result::success);
+  granit_texture_readback_info native_info = GRANIT_TEXTURE_READBACK_INFO_INIT;
+  const granit_texture_write_region region{0, 0, 1, GRANIT_TEXTURE_ASPECT_COLOR_BIT,
+                                           0, 0, 0, 2, 2, 1};
+  uint64_t size = 0;
+  CHECK(granit_texture_read(second.native_handle(), texture.native_handle(), &region, nullptr,
+                            &size, &native_info) == GRANIT_ERROR_INVALID_HANDLE);
 }
 
 TEST_CASE("Texture 与默认 View 支持独立和级联销毁", "[texture]") {
