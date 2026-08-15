@@ -83,6 +83,14 @@ public:
     return from_native(granit_renderer_destroy(handle));
   }
 
+  [[nodiscard]] result set_object_name(granit_handle object, std::string_view name) const noexcept {
+    if (name.size() > std::numeric_limits<std::uint32_t>::max()) {
+      return result::invalid_argument;
+    }
+    return from_native(granit_renderer_set_object_name(handle_, object, name.data(),
+                                                       static_cast<std::uint32_t>(name.size())));
+  }
+
   [[nodiscard]] result import_pipeline_cache(std::span<const std::byte> data) noexcept {
     return from_native(granit_renderer_pipeline_cache_import(handle_, data.data(), data.size()));
   }

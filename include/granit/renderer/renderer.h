@@ -71,6 +71,11 @@ GRANIT_API granit_result granit_renderer_create(const granit_renderer_desc* desc
 /** 销毁 renderer，并使句柄立即失效。 */
 GRANIT_API granit_result granit_renderer_destroy(granit_renderer renderer);
 
+/** 为公开 GPU 对象设置 UTF-8 调试名称；名称仅在调用期间借用。 */
+GRANIT_API granit_result granit_renderer_set_object_name(granit_renderer renderer,
+                                                         granit_handle object, const char* name,
+                                                         uint32_t name_length);
+
 /** 将驱动相关的临时 Pipeline Cache 数据合并到 Renderer；调用返回后不保留 data。 */
 GRANIT_API granit_result granit_renderer_pipeline_cache_import(granit_renderer renderer,
                                                                const void* data, uint64_t size);

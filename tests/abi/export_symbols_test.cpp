@@ -66,6 +66,7 @@ constexpr std::array expected_symbols{
     "granit_renderer_destroy",
     "granit_renderer_pipeline_cache_export",
     "granit_renderer_pipeline_cache_import",
+    "granit_renderer_set_object_name",
     "granit_result_message",
     "granit_sampler_create",
     "granit_sampler_destroy",

@@ -35,6 +35,7 @@ public:
   void destroy(const vulkan_device& device) noexcept;
 
   [[nodiscard]] bool valid() const noexcept { return pool_ != VK_NULL_HANDLE; }
+  [[nodiscard]] VkQueryPool native_handle() const noexcept { return pool_; }
   [[nodiscard]] std::uint32_t query_count() const noexcept { return query_count_; }
 
 private:

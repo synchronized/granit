@@ -69,7 +69,8 @@ S-02 建立一个不暴露 Vulkan、适合动态库边界的统一诊断通道�
    Vulkan Validation 与生命周期诊断已经接入。
 2. S-02B（已完成）：Renderer V4 描述已增加日志回调与 `user_data`，C++20 包装和真实生命周期
    消息回归已经覆盖。
-3. S-02C：增加通用公开句柄调试名称入口，并接入 Vulkan Debug Utils。
+3. S-02C（已完成）：增加通用公开句柄调试名称入口，并接入 Vulkan Debug Utils；纯 CPU
+   管理句柄明确返回不支持，失效和跨 Renderer 句柄返回无效句柄。
 4. S-02D：让 Device Lost 状态记录首个触发操作并通过 `device` 类别输出一次性报告。
 5. S-02E：补齐 C11/C++20、并发回调、重入约束、资源失效和无扩展降级测试及参考文档。
 

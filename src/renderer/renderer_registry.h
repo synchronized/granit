@@ -48,6 +48,8 @@ public:
                                                     std::uint64_t size);
   [[nodiscard]] granit_result export_pipeline_cache(granit_renderer renderer, void* data,
                                                     std::uint64_t& size);
+  [[nodiscard]] granit_result set_object_name(granit_renderer renderer, granit_handle object,
+                                              std::string_view name);
   [[nodiscard]] std::shared_ptr<renderer_state> acquire(granit_renderer renderer);
   [[nodiscard]] granit_result create_win32_surface(granit_renderer renderer, void* native_instance,
                                                    void* native_window, granit_surface& surface);

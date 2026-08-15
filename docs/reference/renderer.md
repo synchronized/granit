@@ -74,6 +74,12 @@ Renderer，`user_data` 的有效期必须覆盖 Renderer 创建、使用与销�
 未设置回调时，Granit 将消息写入标准错误流。回调为空而 `diagnostic_user_data` 非空属于无效描述。
 当前类别包括 general、validation、performance、lifecycle 和 device；它们不复用 Vulkan 数值。
 
+启用验证后，可通过 `granit_renderer_set_object_name` 为公开 GPU 资源句柄设置 UTF-8 调试名称，
+C++ 包装对应 `renderer::set_object_name`。Registry 会在内部识别对象类型并提交给 Vulkan Debug
+Utils，公共接口不暴露 Vulkan 类型或原生句柄。名称只在调用期间借用，长度范围为 1 到 4096
+字节且不能包含内嵌零字符；失效或跨 Renderer 句柄返回 `GRANIT_ERROR_INVALID_HANDLE`。
+未启用验证或对象是 Frame、Upload Batch 等纯管理对象时返回 `GRANIT_ERROR_UNSUPPORTED`。
+
 ## 生命周期与线程安全
 
 公开 renderer 由进程内 registry 管理。句柄销毁后立即对新操作失效，重复销毁返回

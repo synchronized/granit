@@ -86,6 +86,32 @@ TEST_CASE("Renderer 描述拒绝未知字段和非法字符串", "[renderer][val
   desc = GRANIT_RENDERER_DESC_INIT;
   desc.diagnostic_user_data = &renderer;
   CHECK(granit_renderer_create(&desc, &renderer) == GRANIT_ERROR_INVALID_ARGUMENT);
+
+  CHECK(granit_renderer_set_object_name(GRANIT_NULL_HANDLE, UINT64_C(1), "buffer", 6) ==
+        GRANIT_ERROR_INVALID_HANDLE);
+  CHECK(granit_renderer_set_object_name(UINT64_C(1), UINT64_C(2), nullptr, 0) ==
+        GRANIT_ERROR_INVALID_ARGUMENT);
+}
+
+TEST_CASE("Renderer 为 GPU 资源设置调试名称", "[renderer][diagnostic][object-name]") {
+  granit_renderer_desc renderer_desc = GRANIT_RENDERER_DESC_INIT;
+  renderer_desc.flags = GRANIT_RENDERER_ENABLE_VALIDATION_BIT;
+  granit_renderer renderer = GRANIT_NULL_HANDLE;
+  const auto create_result = granit_renderer_create(&renderer_desc, &renderer);
+  if (create_result == GRANIT_ERROR_UNSUPPORTED || environment_unavailable(create_result))
+    SKIP("当前运行环境不支持 Vulkan 验证层或没有满足要求的设备");
+  REQUIRE(create_result == GRANIT_SUCCESS);
+
+  granit_buffer_desc buffer_desc = GRANIT_BUFFER_DESC_INIT;
+  buffer_desc.size = 16;
+  buffer_desc.usage = GRANIT_BUFFER_USAGE_TRANSFER_DESTINATION_BIT;
+  granit_buffer buffer = GRANIT_NULL_HANDLE;
+  REQUIRE(granit_buffer_create(renderer, &buffer_desc, &buffer) == GRANIT_SUCCESS);
+  CHECK(granit_renderer_set_object_name(renderer, buffer, "upload-buffer", 13) == GRANIT_SUCCESS);
+  REQUIRE(granit_buffer_destroy(renderer, buffer) == GRANIT_SUCCESS);
+  CHECK(granit_renderer_set_object_name(renderer, buffer, "stale", 5) ==
+        GRANIT_ERROR_INVALID_HANDLE);
+  CHECK(granit_renderer_destroy(renderer) == GRANIT_SUCCESS);
 }
 
 TEST_CASE("Renderer 接受不含 Surface 字段的旧描述尺寸", "[renderer][compatibility]") {

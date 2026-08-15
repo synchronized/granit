@@ -10,6 +10,7 @@
 #include <array>
 #include <cmath>
 #include <cstring>
+#include <string>
 
 namespace granit::detail {
 namespace {
@@ -450,6 +451,23 @@ granit_result renderer_state::export_pipeline_cache(void* data, std::uint64_t& s
                                                       &capacity, data);
   size = capacity;
   return observe_device_result(map_vulkan_result(result));
+}
+
+granit_result renderer_state::set_object_name(VkObjectType type, std::uint64_t object,
+                                              std::string_view name) {
+  if (device_lost())
+    return GRANIT_ERROR_DEVICE_LOST;
+  if (!validation_enabled_ || instance_.functions().vkSetDebugUtilsObjectNameEXT == nullptr)
+    return GRANIT_ERROR_UNSUPPORTED;
+
+  const std::string terminated{name};
+  VkDebugUtilsObjectNameInfoEXT info{};
+  info.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT;
+  info.objectType = type;
+  info.objectHandle = object;
+  info.pObjectName = terminated.c_str();
+  return observe_device_result(map_vulkan_result(
+      instance_.functions().vkSetDebugUtilsObjectNameEXT(device_.native_handle(), &info)));
 }
 
 granit_result renderer_state::create_win32_surface(void* native_instance, void* native_window,

@@ -14,6 +14,7 @@ namespace {
 constexpr std::uint32_t supported_flags = GRANIT_RENDERER_ENABLE_VALIDATION_BIT;
 constexpr std::uint32_t supported_surface_types = GRANIT_SURFACE_TYPE_WIN32_BIT;
 constexpr std::uint32_t maximum_application_name_length = 4096;
+constexpr std::uint32_t maximum_object_name_length = 4096;
 constexpr std::string_view default_application_name = "Granit Application";
 
 granit_result validate_desc(const granit_renderer_desc& desc) noexcept {
@@ -92,6 +93,25 @@ extern "C" granit_result granit_renderer_destroy(granit_renderer renderer) {
   }
   try {
     return granit::detail::renderer_registry::instance().destroy(renderer);
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+extern "C" granit_result granit_renderer_set_object_name(granit_renderer renderer,
+                                                         granit_handle object, const char* name,
+                                                         uint32_t name_length) {
+  if (renderer == GRANIT_NULL_HANDLE || object == GRANIT_NULL_HANDLE)
+    return GRANIT_ERROR_INVALID_HANDLE;
+  if (name == nullptr || name_length == 0 || name_length > maximum_object_name_length ||
+      std::memchr(name, '\0', name_length) != nullptr) {
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  }
+  try {
+    return granit::detail::renderer_registry::instance().set_object_name(
+        renderer, object, std::string_view{name, name_length});
+  } catch (const std::bad_alloc&) {
+    return GRANIT_ERROR_OUT_OF_MEMORY;
   } catch (...) {
     return GRANIT_ERROR_INTERNAL;
   }

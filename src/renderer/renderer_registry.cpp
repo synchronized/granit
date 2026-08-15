@@ -10,11 +10,20 @@
 #include <functional>
 #include <limits>
 #include <new>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
 namespace granit::detail {
 namespace {
+
+template <typename Handle> std::uint64_t object_handle_value(Handle handle) noexcept {
+  if constexpr (std::is_pointer_v<Handle>) {
+    return static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(handle));
+  } else {
+    return static_cast<std::uint64_t>(handle);
+  }
+}
 
 granit_texture_format swapchain_format(VkFormat format) noexcept {
   switch (format) {
@@ -215,6 +224,45 @@ granit_result renderer_registry::export_pipeline_cache(granit_renderer renderer,
                                                        std::uint64_t& size) {
   const auto state = acquire(renderer);
   return state ? state->export_pipeline_cache(data, size) : GRANIT_ERROR_INVALID_HANDLE;
+}
+
+granit_result renderer_registry::set_object_name(granit_renderer renderer, granit_handle object,
+                                                 std::string_view name) {
+  std::unique_lock lock{mutex_};
+  const auto renderer_it = renderers_.find(renderer);
+  if (renderer_it == renderers_.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  const auto& state = renderer_it->second;
+
+#define GRANIT_NAME_OBJECT(map, type, expression)                                                  \
+  if (const auto it = map.find(object); it != map.end()) {                                         \
+    if (it->second->renderer != state)                                                             \
+      return GRANIT_ERROR_INVALID_HANDLE;                                                          \
+    const auto native = object_handle_value(expression);                                           \
+    lock.unlock();                                                                                 \
+    return state->set_object_name(type, native, name);                                             \
+  }
+  GRANIT_NAME_OBJECT(surfaces_, VK_OBJECT_TYPE_SURFACE_KHR, it->second->native_handle)
+  GRANIT_NAME_OBJECT(swapchains_, VK_OBJECT_TYPE_SWAPCHAIN_KHR, it->second->native->native_handle())
+  GRANIT_NAME_OBJECT(buffers_, VK_OBJECT_TYPE_BUFFER, it->second->native.buffer)
+  GRANIT_NAME_OBJECT(textures_, VK_OBJECT_TYPE_IMAGE, it->second->native.image)
+  GRANIT_NAME_OBJECT(texture_views_, VK_OBJECT_TYPE_IMAGE_VIEW, it->second->native)
+  GRANIT_NAME_OBJECT(samplers_, VK_OBJECT_TYPE_SAMPLER, it->second->native)
+  GRANIT_NAME_OBJECT(shaders_, VK_OBJECT_TYPE_SHADER_MODULE, it->second->native)
+  GRANIT_NAME_OBJECT(bind_group_layouts_, VK_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT, it->second->native)
+  GRANIT_NAME_OBJECT(pipeline_layouts_, VK_OBJECT_TYPE_PIPELINE_LAYOUT, it->second->native)
+  GRANIT_NAME_OBJECT(bind_groups_, VK_OBJECT_TYPE_DESCRIPTOR_SET, it->second->set)
+  GRANIT_NAME_OBJECT(graphics_pipelines_, VK_OBJECT_TYPE_PIPELINE, it->second->native)
+  GRANIT_NAME_OBJECT(compute_pipelines_, VK_OBJECT_TYPE_PIPELINE, it->second->native)
+  GRANIT_NAME_OBJECT(command_recorders_, VK_OBJECT_TYPE_COMMAND_BUFFER,
+                     it->second->native.native_handle())
+  GRANIT_NAME_OBJECT(timestamp_query_pools_, VK_OBJECT_TYPE_QUERY_POOL,
+                     it->second->native.native_handle())
+#undef GRANIT_NAME_OBJECT
+
+  if (frames_.contains(object) || upload_batches_.contains(object))
+    return GRANIT_ERROR_UNSUPPORTED;
+  return GRANIT_ERROR_INVALID_HANDLE;
 }
 
 granit_result renderer_registry::destroy(granit_renderer renderer) {
