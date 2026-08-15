@@ -4,7 +4,7 @@
 #include <granit/renderer/buffer.hpp>
 #include <granit/renderer/command_recorder.hpp>
 #include <granit/renderer/renderer.hpp>
-#include <granit/renderer/texture.h>
+#include <granit/renderer/texture.hpp>
 #include <granit/renderer/timestamp_query.hpp>
 
 #include <catch2/catch_all.hpp>
@@ -302,6 +302,58 @@ TEST_CASE("Recorder 将 Texture 复制到 Readback Buffer", "[command][copy][tex
   CHECK(std::memcmp(mapped, pixels.data(), pixels.size()) == 0);
   REQUIRE(readback.unmap() == granit::result::success);
   REQUIRE(granit_texture_destroy(renderer.native_handle(), texture) == GRANIT_SUCCESS);
+}
+
+TEST_CASE("Recorder 在 Texture 之间复制区域", "[command][copy][texture]") {
+  granit::renderer renderer;
+  const auto result = renderer.initialize({.application_name = "granit-texture-copy-tests"});
+  if (environment_unavailable(result))
+    SKIP("当前运行环境没有满足要求的 Vulkan 设备");
+  REQUIRE(result == granit::result::success);
+
+  granit::texture source;
+  granit::texture destination;
+  const granit::texture_desc source_desc{.format = granit::texture_format::rgba8_unorm,
+                                         .usage = granit::texture_usage::transfer_source |
+                                                  granit::texture_usage::transfer_destination,
+                                         .width = 2,
+                                         .height = 2};
+  const granit::texture_desc destination_desc{.format = granit::texture_format::rgba8_unorm,
+                                              .usage = granit::texture_usage::transfer_source |
+                                                       granit::texture_usage::transfer_destination,
+                                              .width = 2,
+                                              .height = 2};
+  REQUIRE(source.initialize(renderer.native_handle(), source_desc) == granit::result::success);
+  REQUIRE(destination.initialize(renderer.native_handle(), destination_desc) ==
+          granit::result::success);
+  constexpr std::array<std::uint8_t, 16> pixels{1, 2,  3,  4,  5,  6,  7,  8,
+                                                9, 10, 11, 12, 13, 14, 15, 16};
+  const granit::texture_data_layout layout{};
+  const granit::texture_write_region write_region{.width = 2, .height = 2};
+  REQUIRE(source.write(std::as_bytes(std::span{pixels}), layout, write_region) ==
+          granit::result::success);
+
+  granit::command_recorder recorder;
+  REQUIRE(recorder.initialize(renderer.native_handle()) == granit::result::success);
+  const granit::texture_copy_region copy_region{.array_layer_count = 1,
+                                                .aspect = GRANIT_TEXTURE_ASPECT_COLOR_BIT,
+                                                .width = 2,
+                                                .height = 2,
+                                                .depth = 1};
+  CHECK(recorder.copy_texture(source.native_handle(), destination.native_handle(), copy_region) ==
+        granit::result::invalid_argument);
+  REQUIRE(recorder.begin() == granit::result::success);
+  REQUIRE(recorder.copy_texture(source.native_handle(), destination.native_handle(), copy_region) ==
+          granit::result::success);
+  REQUIRE(recorder.end() == granit::result::success);
+  REQUIRE(recorder.submit() == granit::result::success);
+  REQUIRE(recorder.reset() == granit::result::success);
+
+  granit::texture_readback_info info;
+  REQUIRE(destination.query_readback(write_region, info) == granit::result::success);
+  std::vector<std::byte> copied(static_cast<std::size_t>(info.required_size));
+  REQUIRE(destination.read(copied, write_region, info) == granit::result::success);
+  CHECK(std::memcmp(copied.data(), pixels.data(), pixels.size()) == 0);
 }
 
 TEST_CASE("Recorder 录制 Dynamic Rendering 作用域", "[command][rendering]") {

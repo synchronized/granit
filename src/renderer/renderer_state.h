@@ -147,6 +147,8 @@ public:
   [[nodiscard]] granit_result copy_texture_to_buffer(vulkan_command_recorder& recorder,
                                                      VkImage source, VkBuffer destination,
                                                      const VkBufferImageCopy& region);
+  [[nodiscard]] granit_result copy_texture(vulkan_command_recorder& recorder, VkImage source,
+                                           VkImage destination, const VkImageCopy& region);
   [[nodiscard]] granit_result fill_buffer(vulkan_command_recorder& recorder, VkBuffer buffer,
                                           VkDeviceSize offset, VkDeviceSize size,
                                           std::uint32_t value);

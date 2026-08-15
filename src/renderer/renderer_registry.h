@@ -93,9 +93,10 @@ public:
                                             const void* data, std::uint64_t size,
                                             const granit_texture_data_layout& layout,
                                             const granit_texture_write_region& region);
-  [[nodiscard]] granit_result get_texture_readback_info(
-      granit_renderer renderer, granit_texture texture, const granit_texture_write_region& region,
-      granit_texture_readback_info& info);
+  [[nodiscard]] granit_result get_texture_readback_info(granit_renderer renderer,
+                                                        granit_texture texture,
+                                                        const granit_texture_write_region& region,
+                                                        granit_texture_readback_info& info);
   [[nodiscard]] granit_result create_texture_view(granit_renderer renderer, granit_texture texture,
                                                   const granit_texture_view_desc& desc,
                                                   granit_texture_view& view);
@@ -163,6 +164,10 @@ public:
                                                      granit_buffer destination,
                                                      const granit_texture_data_layout& layout,
                                                      const granit_texture_write_region& region);
+  [[nodiscard]] granit_result copy_texture(granit_renderer renderer,
+                                           granit_command_recorder recorder, granit_texture source,
+                                           granit_texture destination,
+                                           const granit_texture_copy_region& region);
   [[nodiscard]] granit_result fill_buffer(granit_renderer renderer,
                                           granit_command_recorder recorder, granit_buffer buffer,
                                           std::uint64_t offset, std::uint64_t size,

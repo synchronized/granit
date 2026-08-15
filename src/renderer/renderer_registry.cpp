@@ -1715,9 +1715,10 @@ granit_result renderer_registry::write_texture(granit_renderer renderer, granit_
       record->native, static_cast<const unsigned char*>(data) + layout.offset, required, copy);
 }
 
-granit_result renderer_registry::get_texture_readback_info(
-    granit_renderer renderer, granit_texture texture, const granit_texture_write_region& region,
-    granit_texture_readback_info& info) {
+granit_result
+renderer_registry::get_texture_readback_info(granit_renderer renderer, granit_texture texture,
+                                             const granit_texture_write_region& region,
+                                             granit_texture_readback_info& info) {
   std::shared_ptr<texture_record> record;
   {
     std::lock_guard lock{mutex_};
@@ -1750,8 +1751,8 @@ granit_result renderer_registry::get_texture_readback_info(
       region.depth > mip_depth - region.z)
     return GRANIT_ERROR_INVALID_ARGUMENT;
   const auto row = uint64_t{region.width} * bytes;
-  const auto images = desc.dimension == GRANIT_TEXTURE_DIMENSION_3D ? region.depth
-                                                                    : region.array_layer_count;
+  const auto images =
+      desc.dimension == GRANIT_TEXTURE_DIMENSION_3D ? region.depth : region.array_layer_count;
   if (row > UINT32_MAX || region.height > UINT32_MAX || images > UINT64_MAX / region.height ||
       images * region.height > UINT64_MAX / row)
     return GRANIT_ERROR_INVALID_ARGUMENT;
@@ -2873,6 +2874,91 @@ granit_result renderer_registry::copy_texture_to_buffer(granit_renderer renderer
   return recorder_record->renderer->copy_texture_to_buffer(recorder_record->native,
                                                            source_record->native.image,
                                                            destination_record->native.buffer, copy);
+}
+
+granit_result renderer_registry::copy_texture(granit_renderer renderer,
+                                              granit_command_recorder recorder,
+                                              granit_texture source, granit_texture destination,
+                                              const granit_texture_copy_region& region) {
+  auto recorder_record = acquire_command_recorder(renderer, recorder);
+  if (!recorder_record)
+    return GRANIT_ERROR_INVALID_HANDLE;
+  std::shared_ptr<texture_record> source_record;
+  std::shared_ptr<texture_record> destination_record;
+  {
+    std::lock_guard lock{mutex_};
+    const auto& state = recorder_record->renderer;
+    if (handles_.find(source, resource_type::texture, state->domain()) == nullptr ||
+        handles_.find(destination, resource_type::texture, state->domain()) == nullptr) {
+      return GRANIT_ERROR_INVALID_HANDLE;
+    }
+    const auto found_source = textures_.find(source);
+    const auto found_destination = textures_.find(destination);
+    if (found_source == textures_.end() || found_destination == textures_.end() ||
+        found_source->second->renderer != state || found_destination->second->renderer != state) {
+      return GRANIT_ERROR_INVALID_HANDLE;
+    }
+    source_record = found_source->second;
+    destination_record = found_destination->second;
+  }
+
+  const auto& source_desc = source_record->desc;
+  const auto& destination_desc = destination_record->desc;
+  if (source == destination || source_desc.format != destination_desc.format ||
+      source_desc.sample_count != GRANIT_SAMPLE_COUNT_1 ||
+      destination_desc.sample_count != GRANIT_SAMPLE_COUNT_1 || depth_format(source_desc.format) ||
+      (source_desc.usage & GRANIT_TEXTURE_USAGE_TRANSFER_SOURCE_BIT) == 0 ||
+      (destination_desc.usage & GRANIT_TEXTURE_USAGE_TRANSFER_DESTINATION_BIT) == 0) {
+    return GRANIT_ERROR_UNSUPPORTED;
+  }
+  if (region.aspect != GRANIT_TEXTURE_ASPECT_COLOR_BIT || region.reserved != 0 ||
+      region.width == 0 || region.height == 0 || region.depth == 0 ||
+      region.array_layer_count == 0 || region.source_mip_level >= source_desc.mip_levels ||
+      region.destination_mip_level >= destination_desc.mip_levels ||
+      region.source_base_array_layer >= source_desc.array_layers ||
+      region.destination_base_array_layer >= destination_desc.array_layers ||
+      region.array_layer_count > source_desc.array_layers - region.source_base_array_layer ||
+      region.array_layer_count >
+          destination_desc.array_layers - region.destination_base_array_layer) {
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  }
+  const auto region_fits = [](const granit_texture_desc& desc, std::uint32_t mip, std::uint32_t x,
+                              std::uint32_t y, std::uint32_t z, std::uint32_t width,
+                              std::uint32_t height, std::uint32_t depth) {
+    const auto mip_width = std::max(UINT32_C(1), desc.width >> mip);
+    const auto mip_height = std::max(UINT32_C(1), desc.height >> mip);
+    const auto mip_depth = std::max(UINT32_C(1), desc.depth >> mip);
+    return x < mip_width && width <= mip_width - x && y < mip_height && height <= mip_height - y &&
+           z < mip_depth && depth <= mip_depth - z;
+  };
+  if (!region_fits(source_desc, region.source_mip_level, region.source_x, region.source_y,
+                   region.source_z, region.width, region.height, region.depth) ||
+      !region_fits(destination_desc, region.destination_mip_level, region.destination_x,
+                   region.destination_y, region.destination_z, region.width, region.height,
+                   region.depth)) {
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  }
+
+  const VkImageCopy copy{
+      .srcSubresource = {VK_IMAGE_ASPECT_COLOR_BIT, region.source_mip_level,
+                         region.source_base_array_layer, region.array_layer_count},
+      .srcOffset = {static_cast<std::int32_t>(region.source_x),
+                    static_cast<std::int32_t>(region.source_y),
+                    static_cast<std::int32_t>(region.source_z)},
+      .dstSubresource = {VK_IMAGE_ASPECT_COLOR_BIT, region.destination_mip_level,
+                         region.destination_base_array_layer, region.array_layer_count},
+      .dstOffset = {static_cast<std::int32_t>(region.destination_x),
+                    static_cast<std::int32_t>(region.destination_y),
+                    static_cast<std::int32_t>(region.destination_z)},
+      .extent = {region.width, region.height, region.depth}};
+  std::lock_guard record_lock{recorder_record->mutex};
+  if (recorder_record->native.state() != command_recorder_state::recording)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  retain_resource(recorder_record->retained_resources, source_record, source_record->metadata);
+  retain_resource(recorder_record->retained_resources, destination_record,
+                  destination_record->metadata);
+  return recorder_record->renderer->copy_texture(
+      recorder_record->native, source_record->native.image, destination_record->native.image, copy);
 }
 
 granit_result renderer_registry::fill_buffer(granit_renderer renderer,

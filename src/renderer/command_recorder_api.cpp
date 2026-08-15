@@ -149,6 +149,26 @@ extern "C" granit_result granit_command_recorder_copy_texture_to_buffer(
 }
 
 extern "C" granit_result
+granit_command_recorder_copy_texture(granit_renderer renderer, granit_command_recorder recorder,
+                                     granit_texture source, granit_texture destination,
+                                     const granit_texture_copy_region* region) {
+  if (renderer == GRANIT_NULL_HANDLE || recorder == GRANIT_NULL_HANDLE ||
+      source == GRANIT_NULL_HANDLE || destination == GRANIT_NULL_HANDLE) {
+    return GRANIT_ERROR_INVALID_HANDLE;
+  }
+  if (region == nullptr)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  try {
+    return granit::detail::renderer_registry::instance().copy_texture(renderer, recorder, source,
+                                                                      destination, *region);
+  } catch (const std::bad_alloc&) {
+    return GRANIT_ERROR_OUT_OF_MEMORY;
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+extern "C" granit_result
 granit_command_recorder_fill_buffer(granit_renderer renderer, granit_command_recorder recorder,
                                     granit_buffer buffer, std::uint64_t offset, std::uint64_t size,
                                     std::uint32_t value) {

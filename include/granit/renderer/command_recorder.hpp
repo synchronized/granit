@@ -19,6 +19,7 @@
 namespace granit {
 
 using buffer_copy_region = granit_buffer_copy_region;
+using texture_copy_region = granit_texture_copy_region;
 using viewport = granit_viewport;
 using scissor = granit_scissor;
 using vertex_buffer_binding = granit_vertex_buffer_binding;
@@ -109,6 +110,11 @@ public:
                                               const granit_texture_write_region& region) noexcept {
     return from_native(granit_command_recorder_copy_texture_to_buffer(
         renderer_, handle_, source, destination, &layout, &region));
+  }
+  [[nodiscard]] result copy_texture(granit_texture source, granit_texture destination,
+                                    const texture_copy_region& region) noexcept {
+    return from_native(
+        granit_command_recorder_copy_texture(renderer_, handle_, source, destination, &region));
   }
   [[nodiscard]] result fill_buffer(granit_buffer buffer, std::uint64_t offset, std::uint64_t size,
                                    std::uint32_t value) noexcept {

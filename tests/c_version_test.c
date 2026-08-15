@@ -82,6 +82,23 @@ static void granit_test_buffer_rejects_invalid_arguments(void) {
                         granit_buffer_write(GRANIT_NULL_HANDLE, GRANIT_NULL_HANDLE, 0, 0, 1));
 }
 
+static void granit_test_texture_copy_rejects_invalid_arguments(void) {
+  granit_texture_copy_region region = {0};
+  region.array_layer_count = 1;
+  region.aspect = GRANIT_TEXTURE_ASPECT_COLOR_BIT;
+  region.width = 1;
+  region.height = 1;
+  region.depth = 1;
+
+  TEST_ASSERT_EQUAL_INT(GRANIT_ERROR_INVALID_HANDLE,
+                        granit_command_recorder_copy_texture(GRANIT_NULL_HANDLE, GRANIT_NULL_HANDLE,
+                                                             GRANIT_NULL_HANDLE, GRANIT_NULL_HANDLE,
+                                                             &region));
+  TEST_ASSERT_EQUAL_INT(GRANIT_ERROR_INVALID_HANDLE,
+                        granit_command_recorder_copy_texture(
+                            UINT64_C(1), UINT64_C(2), GRANIT_NULL_HANDLE, UINT64_C(4), &region));
+}
+
 static int granit_test_environment_unavailable(granit_result result) {
   return result == GRANIT_ERROR_BACKEND_UNAVAILABLE || result == GRANIT_ERROR_INCOMPATIBLE_DRIVER ||
          result == GRANIT_ERROR_NO_SUITABLE_DEVICE;
@@ -133,6 +150,7 @@ int main(void) {
   RUN_TEST(granit_test_surface_rejects_invalid_arguments);
   RUN_TEST(granit_test_swapchain_rejects_invalid_arguments);
   RUN_TEST(granit_test_buffer_rejects_invalid_arguments);
+  RUN_TEST(granit_test_texture_copy_rejects_invalid_arguments);
   RUN_TEST(granit_test_command_recorder_batch_submit);
   RUN_TEST(granit_test_header_and_runtime_versions_match);
   return UNITY_END();

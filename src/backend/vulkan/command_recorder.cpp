@@ -192,6 +192,34 @@ granit_result vulkan_command_recorder::copy_texture_to_buffer(const vulkan_devic
   return GRANIT_SUCCESS;
 }
 
+granit_result vulkan_command_recorder::copy_texture(const vulkan_device& device, VkImage source,
+                                                    VkImage destination,
+                                                    const VkImageCopy& region) {
+  if (state_ != command_recorder_state::recording || inside_rendering_ ||
+      source == VK_NULL_HANDLE || destination == VK_NULL_HANDLE || source == destination) {
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  }
+  prepare_image_access(
+      device, {.image = source,
+               .range = {region.srcSubresource.aspectMask, region.srcSubresource.mipLevel, 1,
+                         region.srcSubresource.baseArrayLayer, region.srcSubresource.layerCount},
+               .layout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+               .stages = VK_PIPELINE_STAGE_2_COPY_BIT,
+               .access = VK_ACCESS_2_TRANSFER_READ_BIT,
+               .preserve_content = true});
+  prepare_image_access(
+      device, {.image = destination,
+               .range = {region.dstSubresource.aspectMask, region.dstSubresource.mipLevel, 1,
+                         region.dstSubresource.baseArrayLayer, region.dstSubresource.layerCount},
+               .layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+               .stages = VK_PIPELINE_STAGE_2_COPY_BIT,
+               .access = VK_ACCESS_2_TRANSFER_WRITE_BIT,
+               .preserve_content = false});
+  device.functions().vkCmdCopyImage(command_buffer_, source, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                                    destination, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+  return GRANIT_SUCCESS;
+}
+
 granit_result vulkan_command_recorder::fill_buffer(const vulkan_device& device, VkBuffer buffer,
                                                    VkDeviceSize offset, VkDeviceSize size,
                                                    std::uint32_t value) {

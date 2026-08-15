@@ -1330,6 +1330,13 @@ granit_result renderer_state::copy_texture_to_buffer(vulkan_command_recorder& re
       recorder.copy_texture_to_buffer(device_, source, destination, region));
 }
 
+granit_result renderer_state::copy_texture(vulkan_command_recorder& recorder, VkImage source,
+                                           VkImage destination, const VkImageCopy& region) {
+  if (device_lost())
+    return GRANIT_ERROR_DEVICE_LOST;
+  return observe_device_result(recorder.copy_texture(device_, source, destination, region));
+}
+
 granit_result renderer_state::fill_buffer(vulkan_command_recorder& recorder, VkBuffer buffer,
                                           VkDeviceSize offset, VkDeviceSize size,
                                           std::uint32_t value) {

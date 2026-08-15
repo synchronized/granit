@@ -26,6 +26,26 @@ typedef struct granit_buffer_copy_region {
   uint64_t size;
 } granit_buffer_copy_region;
 
+/** 单个 Texture 复制区域；源和目标使用相同的尺寸及数组层数量。 */
+typedef struct granit_texture_copy_region {
+  uint32_t source_mip_level;
+  uint32_t source_base_array_layer;
+  uint32_t destination_mip_level;
+  uint32_t destination_base_array_layer;
+  uint32_t array_layer_count;
+  uint32_t aspect;
+  uint32_t source_x;
+  uint32_t source_y;
+  uint32_t source_z;
+  uint32_t destination_x;
+  uint32_t destination_y;
+  uint32_t destination_z;
+  uint32_t width;
+  uint32_t height;
+  uint32_t depth;
+  uint32_t reserved;
+} granit_texture_copy_region;
+
 typedef struct granit_viewport {
   float x;
   float y;
@@ -100,6 +120,10 @@ GRANIT_API granit_result granit_command_recorder_copy_texture_to_buffer(
     granit_renderer renderer, granit_command_recorder recorder, granit_texture source,
     granit_buffer destination, const granit_texture_data_layout* layout,
     const granit_texture_write_region* region);
+/** 将一个 Texture 区域复制到另一个 Texture；首版要求同格式、单采样颜色纹理。 */
+GRANIT_API granit_result granit_command_recorder_copy_texture(
+    granit_renderer renderer, granit_command_recorder recorder, granit_texture source,
+    granit_texture destination, const granit_texture_copy_region* region);
 GRANIT_API granit_result granit_command_recorder_fill_buffer(granit_renderer renderer,
                                                              granit_command_recorder recorder,
                                                              granit_buffer buffer, uint64_t offset,

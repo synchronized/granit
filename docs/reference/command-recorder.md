@@ -23,6 +23,10 @@ granit_command_recorder_reset(renderer, recorder);
 granit_command_recorder_destroy(renderer, recorder);
 ```
 
+`granit_command_recorder_copy_texture` 在两个 Texture 间复制显式区域。首版要求源和目标格式
+相同、均为单采样非深度颜色纹理，并分别声明 `TRANSFER_SOURCE` 与 `TRANSFER_DESTINATION`
+用途；同一纹理内复制暂不支持。
+
 `submit` 异步提交 executable Recorder。成功后 Recorder 进入 pending；对它调用 `reset` 会等待
 GPU 完成，再重置 Command Pool。Renderer 的 `frames_in_flight` 决定最多保留多少个在途帧槽，
 默认值为 2，有效范围为 1 到 4。
