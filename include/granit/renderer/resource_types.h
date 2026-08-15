@@ -68,6 +68,16 @@ typedef uint32_t granit_texture_aspect;
 #define GRANIT_TEXTURE_ASPECT_DEPTH_BIT (UINT32_C(1) << 1)
 #define GRANIT_TEXTURE_ASPECT_STENCIL_BIT (UINT32_C(1) << 2)
 
+/** Texture View 采样结果的分量来源；数值不对应 Vulkan 枚举。 */
+typedef uint32_t granit_component_swizzle;
+#define GRANIT_COMPONENT_SWIZZLE_IDENTITY UINT32_C(0)
+#define GRANIT_COMPONENT_SWIZZLE_ZERO UINT32_C(1)
+#define GRANIT_COMPONENT_SWIZZLE_ONE UINT32_C(2)
+#define GRANIT_COMPONENT_SWIZZLE_RED UINT32_C(3)
+#define GRANIT_COMPONENT_SWIZZLE_GREEN UINT32_C(4)
+#define GRANIT_COMPONENT_SWIZZLE_BLUE UINT32_C(5)
+#define GRANIT_COMPONENT_SWIZZLE_ALPHA UINT32_C(6)
+
 #define GRANIT_REMAINING_MIP_LEVELS UINT32_MAX
 #define GRANIT_REMAINING_ARRAY_LAYERS UINT32_MAX
 
@@ -177,6 +187,14 @@ typedef struct granit_subresource_range {
   uint32_t array_layer_count;
 } granit_subresource_range;
 
+/** Texture View 的 RGBA 输出分量映射。 */
+typedef struct granit_component_mapping {
+  granit_component_swizzle red;
+  granit_component_swizzle green;
+  granit_component_swizzle blue;
+  granit_component_swizzle alpha;
+} granit_component_mapping;
+
 /** Texture View 描述；父 Texture 由未来创建函数单独传入。 */
 typedef struct granit_texture_view_desc {
   uint32_t struct_size;
@@ -184,16 +202,17 @@ typedef struct granit_texture_view_desc {
   granit_texture_format format;
   uint32_t reserved;
   granit_subresource_range range;
-  uint32_t reserved_2;
+  granit_component_mapping components;
 } granit_texture_view_desc;
-#define GRANIT_TEXTURE_VIEW_DESC_VERSION_1_SIZE UINT32_C(40)
+#define GRANIT_TEXTURE_VIEW_DESC_VERSION_1_SIZE UINT32_C(52)
 #define GRANIT_TEXTURE_VIEW_DESC_INIT                                                              \
   {GRANIT_TEXTURE_VIEW_DESC_VERSION_1_SIZE,                                                        \
    GRANIT_TEXTURE_DIMENSION_2D,                                                                    \
    GRANIT_TEXTURE_FORMAT_UNDEFINED,                                                                \
    UINT32_C(0),                                                                                    \
    {GRANIT_TEXTURE_ASPECT_AUTOMATIC, UINT32_C(0), UINT32_C(1), UINT32_C(0), UINT32_C(1)},          \
-   UINT32_C(0)}
+   {GRANIT_COMPONENT_SWIZZLE_IDENTITY, GRANIT_COMPONENT_SWIZZLE_IDENTITY,                          \
+    GRANIT_COMPONENT_SWIZZLE_IDENTITY, GRANIT_COMPONENT_SWIZZLE_IDENTITY}}
 
 /** 独立 Sampler 状态描述。 */
 typedef struct granit_sampler_desc {

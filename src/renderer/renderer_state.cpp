@@ -133,6 +133,14 @@ VkImageAspectFlags map_texture_aspect(granit_texture_aspect aspect) noexcept {
   return flags;
 }
 
+VkComponentSwizzle map_component_swizzle(granit_component_swizzle swizzle) noexcept {
+  constexpr std::array values{VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_ZERO,
+                              VK_COMPONENT_SWIZZLE_ONE,      VK_COMPONENT_SWIZZLE_R,
+                              VK_COMPONENT_SWIZZLE_G,        VK_COMPONENT_SWIZZLE_B,
+                              VK_COMPONENT_SWIZZLE_A};
+  return values[swizzle];
+}
+
 VkImageUsageFlags map_texture_usage(granit_texture_usage usage) noexcept {
   VkImageUsageFlags flags{};
   if ((usage & GRANIT_TEXTURE_USAGE_TRANSFER_SOURCE_BIT) != 0)
@@ -825,6 +833,10 @@ granit_result renderer_state::create_native_texture_view(const vulkan_image_allo
                                                                        : VK_IMAGE_VIEW_TYPE_2D;
   info.format = map_texture_format(
       view_desc.format == GRANIT_TEXTURE_FORMAT_UNDEFINED ? texture_desc.format : view_desc.format);
+  info.components = {.r = map_component_swizzle(view_desc.components.red),
+                     .g = map_component_swizzle(view_desc.components.green),
+                     .b = map_component_swizzle(view_desc.components.blue),
+                     .a = map_component_swizzle(view_desc.components.alpha)};
   info.subresourceRange.aspectMask = view_desc.range.aspect == GRANIT_TEXTURE_ASPECT_AUTOMATIC
                                          ? default_aspect(texture_desc.format)
                                          : map_texture_aspect(view_desc.range.aspect);

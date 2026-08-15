@@ -36,6 +36,10 @@ struct texture_view_desc {
   std::uint32_t mip_level_count{1};
   std::uint32_t base_array_layer{};
   std::uint32_t array_layer_count{1};
+  component_swizzle red{component_swizzle::identity};
+  component_swizzle green{component_swizzle::identity};
+  component_swizzle blue{component_swizzle::identity};
+  component_swizzle alpha{component_swizzle::identity};
 };
 
 struct texture_data_layout {
@@ -165,7 +169,10 @@ public:
                   .mip_level_count = desc.mip_level_count,
                   .base_array_layer = desc.base_array_layer,
                   .array_layer_count = desc.array_layer_count},
-        .reserved_2 = 0};
+        .components = {.red = static_cast<std::uint32_t>(desc.red),
+                       .green = static_cast<std::uint32_t>(desc.green),
+                       .blue = static_cast<std::uint32_t>(desc.blue),
+                       .alpha = static_cast<std::uint32_t>(desc.alpha)}};
     const auto value = granit_texture_view_create(renderer, texture, &native, &handle_);
     if (value == GRANIT_SUCCESS)
       renderer_ = renderer;

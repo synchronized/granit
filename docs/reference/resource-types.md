@@ -27,6 +27,10 @@ index、uniform、storage 和 indirect。大小与用途必须非零，未知用
 `granit_texture_view_desc` 描述访问同一存储的子资源范围。View 是独立资源，父 Texture 由未来
 创建函数单独传入。
 
+View 还可独立映射 RGBA 输出分量，支持保持原分量、常量零/一以及读取任一源分量。例如文字
+图集可将 R8 覆盖率映射为 `(1, 1, 1, R)`，继续复用通用 Canvas Shader，并由顶点颜色提供文字
+颜色。分量映射只改变采样结果，不复制或修改 Texture 存储。
+
 当前支持单 sample 的单层 2D Texture，以及单个六面 Cube Texture。两者均可包含不超过完整链的
 mip；View 可以选择连续 mip 范围，2D View 固定单层，Cube View 固定六层。Cube 的宽高必须相等、
 depth 必须为 1、array layer 必须为 6。Cube Array、1D、3D 和多采样仍返回

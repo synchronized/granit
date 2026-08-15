@@ -101,7 +101,11 @@ granit_result validate_texture_desc(const granit_texture_desc& desc) noexcept {
 granit_result validate_texture_view_desc(const granit_texture_view_desc& desc) noexcept {
   const auto& range = desc.range;
   if (desc.struct_size < GRANIT_TEXTURE_VIEW_DESC_VERSION_1_SIZE || desc.reserved != 0 ||
-      desc.reserved_2 != 0 || desc.dimension < GRANIT_TEXTURE_DIMENSION_1D ||
+      desc.components.red > GRANIT_COMPONENT_SWIZZLE_ALPHA ||
+      desc.components.green > GRANIT_COMPONENT_SWIZZLE_ALPHA ||
+      desc.components.blue > GRANIT_COMPONENT_SWIZZLE_ALPHA ||
+      desc.components.alpha > GRANIT_COMPONENT_SWIZZLE_ALPHA ||
+      desc.dimension < GRANIT_TEXTURE_DIMENSION_1D ||
       desc.dimension > GRANIT_TEXTURE_DIMENSION_CUBE ||
       (desc.format != GRANIT_TEXTURE_FORMAT_UNDEFINED && !valid_texture_format(desc.format)) ||
       (range.aspect & ~texture_aspect_mask) != 0 || range.mip_level_count == 0 ||

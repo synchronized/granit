@@ -82,6 +82,16 @@ enum class texture_aspect : std::uint32_t {
   stencil = GRANIT_TEXTURE_ASPECT_STENCIL_BIT,
 };
 
+enum class component_swizzle : std::uint32_t {
+  identity = GRANIT_COMPONENT_SWIZZLE_IDENTITY,
+  zero = GRANIT_COMPONENT_SWIZZLE_ZERO,
+  one = GRANIT_COMPONENT_SWIZZLE_ONE,
+  red = GRANIT_COMPONENT_SWIZZLE_RED,
+  green = GRANIT_COMPONENT_SWIZZLE_GREEN,
+  blue = GRANIT_COMPONENT_SWIZZLE_BLUE,
+  alpha = GRANIT_COMPONENT_SWIZZLE_ALPHA,
+};
+
 [[nodiscard]] constexpr texture_aspect operator|(texture_aspect left,
                                                  texture_aspect right) noexcept {
   return static_cast<texture_aspect>(static_cast<std::uint32_t>(left) |

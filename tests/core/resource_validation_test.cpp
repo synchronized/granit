@@ -76,7 +76,10 @@ TEST_CASE("View 和 Sampler 验证首期支持范围", "[resource][validation]")
                 .mip_level_count = 1,
                 .base_array_layer = 0,
                 .array_layer_count = 1},
-      .reserved_2 = 0,
+      .components = {.red = GRANIT_COMPONENT_SWIZZLE_IDENTITY,
+                     .green = GRANIT_COMPONENT_SWIZZLE_IDENTITY,
+                     .blue = GRANIT_COMPONENT_SWIZZLE_IDENTITY,
+                     .alpha = GRANIT_COMPONENT_SWIZZLE_IDENTITY},
   };
   CHECK(validate_texture_view_desc(view) == GRANIT_SUCCESS);
   auto cube_view = view;
@@ -84,6 +87,8 @@ TEST_CASE("View 和 Sampler 验证首期支持范围", "[resource][validation]")
   cube_view.range.mip_level_count = 4;
   cube_view.range.array_layer_count = 6;
   CHECK(validate_texture_view_desc(cube_view) == GRANIT_SUCCESS);
+  cube_view.components.alpha = UINT32_C(99);
+  CHECK(validate_texture_view_desc(cube_view) == GRANIT_ERROR_INVALID_ARGUMENT);
 
   granit_sampler_desc sampler{
       .struct_size = GRANIT_SAMPLER_DESC_VERSION_1_SIZE,

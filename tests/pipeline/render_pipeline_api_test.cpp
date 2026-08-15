@@ -386,7 +386,7 @@ TEST_CASE("统一Render Pipeline按固定阶段消费Scene Snapshot") {
   const std::array multi_view_outputs{
       granit_render_pipeline_output{sizeof(granit_render_pipeline_output), 0,
                                     output_view.native_handle(), GRANIT_TEXTURE_FORMAT_RGBA8_UNORM,
-                                    16, 16, 0, canvas.native_handle()},
+                                    16, 16, 0, canvas.native_handle(), GRANIT_NULL_HANDLE},
       granit_render_pipeline_output{sizeof(granit_render_pipeline_output), 0,
                                     second_output_view.native_handle(),
                                     GRANIT_TEXTURE_FORMAT_RGBA8_SRGB, 16, 16, 0, GRANIT_NULL_HANDLE,
