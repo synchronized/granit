@@ -469,6 +469,8 @@ target_sources(
     pipeline/canvas_pass.cpp
     pipeline/canvas_pass.h
     pipeline/debug_draw_list_api.cpp
+    pipeline/debug_draw_geometry.cpp
+    pipeline/debug_draw_geometry.h
   PUBLIC
     FILE_SET HEADERS
     BASE_DIRS "${PROJECT_SOURCE_DIR}/include"

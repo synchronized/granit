@@ -214,6 +214,7 @@ add_executable(
   pipeline/canvas_geometry_upload_test.cpp
   pipeline/canvas_pass_test.cpp
   pipeline/debug_draw_list_api_test.cpp
+  pipeline/debug_draw_geometry_test.cpp
 )
 set(granit_unlit_test_package "${CMAKE_CURRENT_BINARY_DIR}/assets/unlit.grmat")
 add_custom_command(
