@@ -33,8 +33,9 @@ Scene Snapshot 和输出资源必须属于同一 Renderer，并在调用期间�
 与 `view_count` 等长的 `outputs` 数组。非零 Frame 表示录制并提交窗口帧，此时只允许一个 View；
 零 Frame 表示离屏执行。
 
-非零 Canvas Draw List 会在 Tone Mapping 后自动录制，并先于用户 Overlay 回调执行。UNORM 输出自动
-启用 Canvas Shader sRGB 编码；sRGB Attachment 由硬件完成编码。不同 View 可以使用不同列表。
+非零世界 Debug Draw List 会在 Tone Mapping 后复用当前 View 的深度附件录制；随后录制可选 Canvas
+Draw List，最后调用用户 Overlay 回调。UNORM 输出自动启用 Shader sRGB 编码；sRGB Attachment 由
+硬件完成编码。不同 View 可以使用不同 Debug Draw 和 Canvas 列表。
 
 ## 录制回调
 
@@ -72,7 +73,7 @@ Upload 环形分配。
 - 渲染路径固定为 Opaque Forward PBR、可选单方向光阴影和 ACES Tone Mapping。
 - 阴影目标固定为 1024×1024；尚不支持 CSM、多阴影光源或可配置阴影质量。
 - 不包含透明 PBR、Bindless、Clustered Forward 或 Deferred。
-- Overlay 阶段支持自动 Canvas Draw List，并保留用户回调作为最终自定义扩展点。
+- Overlay 路径依次支持世界 Debug Draw、Canvas Draw List，并保留用户回调作为最终自定义扩展点。
 - 默认 IBL 由 Pipeline 内部持有；外部环境切换尚未进入公共接口。
 - 同一 Pipeline 不支持并发渲染，多 View 仍按独立输出顺序执行。
 

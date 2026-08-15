@@ -9,6 +9,7 @@
 #include <granit/core/result.h>
 #include <granit/core/types.h>
 #include <granit/pipeline/canvas_draw_list.h>
+#include <granit/pipeline/debug_draw_list.h>
 #include <granit/pipeline/export.h>
 #include <granit/pipeline/material.h>
 #include <granit/pipeline/mesh.h>
@@ -83,6 +84,8 @@ typedef struct granit_render_pipeline_output {
   uint32_t height;
   uint32_t reserved_tail;
   granit_canvas_draw_list canvas;
+  /** Tone Mapping 后、Canvas 前录制的可选世界 Debug Draw List。 */
+  granit_debug_draw_list debug_draw;
 } granit_render_pipeline_output;
 
 #define GRANIT_RENDER_PIPELINE_OUTPUT_INIT                                                         \
@@ -93,6 +96,7 @@ typedef struct granit_render_pipeline_output {
    UINT32_C(0),                                                                                    \
    UINT32_C(0),                                                                                    \
    UINT32_C(0),                                                                                    \
+   GRANIT_NULL_HANDLE,                                                                             \
    GRANIT_NULL_HANDLE}
 
 typedef struct granit_render_pipeline_render_desc {
@@ -116,6 +120,8 @@ typedef struct granit_render_pipeline_render_desc {
   uint32_t reserved_tail;
   /** 单 View 简写路径的可选 Canvas；多 View 使用各 output 的 canvas。 */
   granit_canvas_draw_list canvas;
+  /** 单 View 简写路径的可选世界 Debug Draw List；多 View 使用各 output 的 debug_draw。 */
+  granit_debug_draw_list debug_draw;
 } granit_render_pipeline_render_desc;
 
 #define GRANIT_RENDER_PIPELINE_RENDER_DESC_INIT                                                    \
@@ -135,6 +141,7 @@ typedef struct granit_render_pipeline_render_desc {
    0,                                                                                              \
    GRANIT_NULL_HANDLE,                                                                             \
    UINT32_C(0),                                                                                    \
+   GRANIT_NULL_HANDLE,                                                                             \
    GRANIT_NULL_HANDLE}
 
 #ifdef __cplusplus
@@ -153,9 +160,10 @@ granit_render_pipeline_create(granit_renderer renderer, const granit_render_pipe
  * 必须属于当前 Renderer，且在调用期间不得更新或销毁。
  * 单 View 可使用 output/format/width/height；多 View 必须提供与 view_count 等长的 outputs 数组。
  * frame 为零时执行普通离屏提交；frame 非零时使用 Swapchain 帧提交，并要求 view_count 为 1。
- * Overlay 阶段在 Tone Mapping 后执行，color_input 与 color_output 指向同一显示空间目标；回调必须
- * 使用 LOAD 保留已有内容。该阶段 payload_count 为零，encode_srgb 表示 UNORM 输出是否需要 Shader
- * 编码。同一管线不可并发调用。回调不得结束、提交或销毁传入的 Recorder，也不得递归调用本管线。
+ * 世界 Debug Draw 在 Tone Mapping 后、Canvas 与 Overlay 回调前执行，并复用当前 View 的深度附件。
+ * Overlay 阶段的 color_input 与 color_output 指向同一显示空间目标；回调必须使用 LOAD 保留已有内容。
+ * 该阶段 payload_count 为零，encode_srgb 表示 UNORM 输出是否需要 Shader 编码。同一管线不可并发
+ * 调用。回调不得结束、提交或销毁传入的 Recorder，也不得递归调用本管线。
  */
 GRANIT_RENDER_PIPELINE_API granit_result
 granit_render_pipeline_render(granit_renderer renderer, granit_render_pipeline pipeline,

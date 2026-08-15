@@ -677,6 +677,32 @@ render_view(pipeline_state& state, const granit_render_pipeline_render_desc& des
       granit::lighting::reference_pipeline_graph_error::none) {
     return GRANIT_ERROR_INVALID_ARGUMENT;
   }
+  auto overlay_dependency = passes.tone_mapping;
+  if (render_output.debug_draw != GRANIT_NULL_HANDLE) {
+    const auto debug_pass = graph.add_pass(
+        {.side_effect = true,
+         .accesses = {{output, granit::render_graph::access_type::read_write},
+                      {depth, granit::render_graph::access_type::read}}},
+        [&](granit::render_graph::pass_context& context) {
+          granit_debug_draw_record_desc debug_desc = GRANIT_DEBUG_DRAW_RECORD_DESC_INIT;
+          debug_desc.color = context.texture_view(output);
+          debug_desc.color_format = render_output.format;
+          debug_desc.depth = context.texture_view(depth);
+          debug_desc.depth_format = GRANIT_TEXTURE_FORMAT_D32_FLOAT;
+          debug_desc.width = render_output.width;
+          debug_desc.height = render_output.height;
+          debug_desc.view_projection = public_view.view_projection;
+          debug_desc.encode_srgb = is_srgb_output(render_output.format) ? 0U : 1U;
+          return granit_debug_draw_list_record_world(state.renderer, context.recorder(),
+                                                     render_output.debug_draw, &debug_desc);
+        },
+        "Reference / World Debug Draw");
+    if (debug_pass == granit::render_graph::invalid_pass_id ||
+        !graph.add_dependency(passes.tone_mapping, debug_pass)) {
+      return GRANIT_ERROR_INTERNAL;
+    }
+    overlay_dependency = debug_pass;
+  }
   if (state.record != nullptr || render_output.canvas != GRANIT_NULL_HANDLE) {
     const auto canvas_pass = graph.add_pass(
         {.side_effect = true,
@@ -723,7 +749,7 @@ render_view(pipeline_state& state, const granit_render_pipeline_render_desc& des
         },
         "Reference / Overlay");
     if (canvas_pass == granit::render_graph::invalid_pass_id ||
-        !graph.add_dependency(passes.tone_mapping, canvas_pass)) {
+        !graph.add_dependency(overlay_dependency, canvas_pass)) {
       return GRANIT_ERROR_INTERNAL;
     }
   }
@@ -838,7 +864,8 @@ granit_render_pipeline_render(granit_renderer renderer, granit_render_pipeline p
                                                     desc->width,
                                                     desc->height,
                                                     0,
-                                                    desc->canvas};
+                                                    desc->canvas,
+                                                    desc->debug_draw};
   if (desc->output_count == 0 && !valid_output(legacy_output))
     return GRANIT_ERROR_INVALID_ARGUMENT;
   for (uint32_t index = 0; index < desc->output_count; ++index) {

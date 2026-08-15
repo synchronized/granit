@@ -6,7 +6,7 @@
 ## 状态
 
 - 优先级：P2
-- 状态：进行中；H-08A、H-08B 与 H-08C1～H-08C3b2 已完成
+- 状态：进行中；H-08A、H-08B 与 H-08C 已完成
 - 必需依赖：H-06 Unlit、2D 与 UI 内部技术验证
 
 ## 目标
@@ -63,8 +63,10 @@
   Fragment 变体。
 - H-08C3b2 已提供世界命令批量录制接口，并按颜色格式、深度格式、深度模式和 sRGB 编码懒缓存
   Pipeline；动态顶点 Buffer 按需扩容并复用，稳定命令顺序只在深度模式切换处形成 Draw Batch。
-- 像素回读覆盖世界三角形颜色输出，深度测试覆盖遮挡行为；下一步把世界 Debug Draw 接入参考
-  Render Pipeline 的逐 View 提交路径。
+- 像素回读覆盖世界三角形颜色输出，深度测试覆盖遮挡行为。
+- H-08C3c 已允许单 View 简写和多 View 独立输出绑定世界 Debug Draw List；自动路径在 Tone Mapping
+  后复用当前 View 深度录制世界命令，再依次录制 Canvas 和用户 Overlay 回调。
+- 多 View 回读验证未绑定列表的输出不受影响，H-08C 至此闭合；下一步进入 H-08D Text component。
 
 ## 验收标准
 

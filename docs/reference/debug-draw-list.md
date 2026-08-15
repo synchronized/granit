@@ -12,8 +12,8 @@ Debug Draw List 是 Render Pipeline component 中可复用的逐帧调试命令�
 - C++20：`<granit/pipeline/debug_draw_list.hpp>`，使用 move-only 的 `granit::debug_draw_list`。
 - 所属 CMake component：`RenderPipeline`，目标为 `granit::render_pipeline`。
 
-H-08C1 提供命令构建、复用和统计；H-08C2 支持把屏幕空间命令追加到 Canvas Draw List；H-08C3b
-提供世界空间直接录制。参考 Render Pipeline 的逐 View 自动提交仍在后续步骤中完成。
+H-08C1 提供命令构建、复用和统计；H-08C2 支持把屏幕空间命令追加到 Canvas Draw List；H-08C3
+提供世界空间直接录制以及参考 Render Pipeline 的逐 View 自动提交。
 
 ## 命令语义
 
@@ -52,7 +52,7 @@ H-08C1 提供命令构建、复用和统计；H-08C2 支持把屏幕空间命令
 
 - 尚未提供 Box、Sphere、Axes、Frustum 等便捷 Gizmo 生成函数。
 - 世界空间暂不提供多重采样、深度写入或自定义混合状态。
-- 世界命令尚未进入参考 Render Pipeline 的逐 View 自动提交。
+- 自动提交只处理世界命令；屏幕命令仍需先追加到对应 View 的 Canvas Draw List。
 
 ## 世界空间线段算法状态
 

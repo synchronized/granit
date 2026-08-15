@@ -2,6 +2,7 @@
 // Copyright (c) 2026 Granit contributors
 
 #include <granit/pipeline/canvas_draw_list.hpp>
+#include <granit/pipeline/debug_draw_list.hpp>
 #include <granit/pipeline/material.hpp>
 #include <granit/pipeline/mesh.hpp>
 #include <granit/pipeline/render_pipeline.hpp>
@@ -369,13 +370,27 @@ TEST_CASE("统一Render Pipeline按固定阶段消费Scene Snapshot") {
   canvas_rect.state.sampler = canvas_sampler.native_handle();
   REQUIRE(canvas.append_rect(canvas_rect) == granit::result::success);
 
+  granit_debug_draw_list_desc debug_list_desc = GRANIT_DEBUG_DRAW_LIST_DESC_INIT;
+  granit::debug_draw_list debug_draw;
+  REQUIRE(debug_draw.initialize(renderer.native_handle(), debug_list_desc) ==
+          granit::result::success);
+  const std::array debug_triangles{
+      granit_debug_draw_triangle{{{-0.8F, -0.8F, 0.5F, UINT32_C(0xff00ff00)},
+                                  {0.8F, -0.8F, 0.5F, UINT32_C(0xff00ff00)},
+                                  {0, 0.8F, 0.5F, UINT32_C(0xff00ff00)}},
+                                 GRANIT_DEBUG_DRAW_SPACE_WORLD,
+                                 GRANIT_DEBUG_DRAW_DEPTH_MODE_DISABLED,
+                                 {0, 0}}};
+  REQUIRE(debug_draw.append_triangles(debug_triangles) == granit::result::success);
+
   const std::array multi_view_outputs{
       granit_render_pipeline_output{sizeof(granit_render_pipeline_output), 0,
                                     output_view.native_handle(), GRANIT_TEXTURE_FORMAT_RGBA8_UNORM,
                                     16, 16, 0, canvas.native_handle()},
-      granit_render_pipeline_output{
-          sizeof(granit_render_pipeline_output), 0, second_output_view.native_handle(),
-          GRANIT_TEXTURE_FORMAT_RGBA8_SRGB, 16, 16, 0, GRANIT_NULL_HANDLE}};
+      granit_render_pipeline_output{sizeof(granit_render_pipeline_output), 0,
+                                    second_output_view.native_handle(),
+                                    GRANIT_TEXTURE_FORMAT_RGBA8_SRGB, 16, 16, 0, GRANIT_NULL_HANDLE,
+                                    debug_draw.native_handle()}};
   render_desc.view_count = 2;
   render_desc.output_count = static_cast<uint32_t>(multi_view_outputs.size());
   render_desc.outputs = multi_view_outputs.data();
@@ -427,7 +442,8 @@ TEST_CASE("统一Render Pipeline按固定阶段消费Scene Snapshot") {
   const auto* second_pixel =
       static_cast<const uint8_t*>(multi_view_pixels) + 16 * 16 * 4 + (8 * 16 + 8) * 4;
   CHECK(first_pixel[2] > first_pixel[0]);
-  CHECK(second_pixel[0] > second_pixel[2]);
+  CHECK(second_pixel[1] > second_pixel[0]);
+  CHECK(second_pixel[1] > second_pixel[2]);
   CHECK(first_pixel[0] != second_pixel[0]);
   REQUIRE(multi_view_readback.unmap() == granit::result::success);
   render_desc.view_count = 1;
