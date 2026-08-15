@@ -41,6 +41,7 @@ add_library(
       headers/pipeline_canvas_draw_list_h.c
       headers/pipeline_debug_draw_list_h.c
       headers/pipeline_text_draw_list_h.c
+      headers/pipeline_text_atlas_h.c
 )
 target_link_libraries(granit_c_header_test PRIVATE granit::granit granit::render_pipeline)
 granit_target_compile_warnings(granit_c_header_test)
@@ -217,6 +218,7 @@ add_executable(
   pipeline/debug_draw_list_api_test.cpp
   pipeline/debug_draw_geometry_test.cpp
   pipeline/text_draw_list_api_test.cpp
+  pipeline/text_atlas_api_test.cpp
 )
 set(granit_unlit_test_package "${CMAKE_CURRENT_BINARY_DIR}/assets/unlit.grmat")
 add_custom_command(
@@ -387,6 +389,7 @@ add_library(
       headers/pipeline_canvas_draw_list_hpp.cpp
       headers/pipeline_debug_draw_list_hpp.cpp
       headers/pipeline_text_draw_list_hpp.cpp
+      headers/pipeline_text_atlas_hpp.cpp
 )
 target_link_libraries(granit_cpp_header_test PRIVATE granit::granit granit::render_pipeline)
 granit_target_compile_warnings(granit_cpp_header_test)

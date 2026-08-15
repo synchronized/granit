@@ -11,6 +11,7 @@ Unicode 解码、字体回退、换行、文字整形或字形栅格化。
 - C：`<granit/pipeline/text_draw_list.h>`。
 - C++20：`<granit/pipeline/text_draw_list.hpp>`，使用 move-only 的 `granit::text_draw_list`。
 - 所属 CMake component：`RenderPipeline`，目标为 `granit::render_pipeline`。
+- R8 Atlas：`<granit/pipeline/text_atlas.h>` 或 C++20 的 `<granit/pipeline/text_atlas.hpp>`。
 
 ## 字形语义
 
@@ -27,8 +28,19 @@ Unicode 解码、字体回退、换行、文字整形或字形栅格化。
 - 不同列表可以由不同线程构建；同一列表由调用方进行外部同步。
 - 销毁后旧句柄通过 generation 失效。
 
+## R8 字形 Atlas
+
+- Atlas 使用固定尺寸 R8 UNORM 页面，默认 `512×512`、最多 8 页、字形间保留 1 像素 Padding。
+- 页面在首次需要时懒创建并清零，采用稳定的逐行 Shelf 分配；已经分配的字形不会因新增字形移动。
+- `font_key + glyph_id` 是缓存键。重复上传只允许宽高和 bearing 完全一致，并原位更新覆盖率。
+- 位图使用逐行 R8 数据；`bytes_per_row=0` 表示紧密排列。零宽且零高可登记空白字形，不分配页面。
+- Atlas 达到 `max_pages` 后返回 `GRANIT_ERROR_OUT_OF_MEMORY`，当前不做隐式驱逐或重排。
+- Atlas 拥有内部 Texture 和 View；上传与销毁由调用方进行外部同步。
+
 ## 当前限制
 
-- 当前只保存已整形字形及 Run，尚未公开 Atlas 上传或 Canvas 转换接口。
+- 当前已支持 R8 Atlas 上传，但尚未公开 Text Draw List 到 Canvas 的转换接口。
 - `font_key` 不可持久化为 Granit 资源身份，其含义和稳定期由调用方定义。
 - 首版不会直接引入 FreeType、HarfBuzz 或平台字体 API。
+- 通用 Canvas Shader 不能正确解释 R8 覆盖率；下一步将增加专用文字遮罩采样路径，而不是把 Atlas
+  膨胀为 RGBA8。
