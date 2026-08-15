@@ -6,8 +6,8 @@
 Texture 拥有图像存储，Texture View 描述如何访问其子资源。两者都是属于 Renderer 的独立 64 位
 句柄。
 
-当前支持单 mip、单数组层、单采样的 2D Texture。3D、Cube、数组、多 mip、多采样和格式重解释
-已经能由资源值类型表达，但在实现完成前返回不支持。
+当前支持单采样 2D Texture 和六面 Cube Texture，以及不超过完整链的多个 mip。Cube Array、普通
+2D Array、1D、3D、多采样和格式重解释仍返回 `GRANIT_ERROR_UNSUPPORTED`。
 
 `granit_texture_create_with_default_view` 可以原子创建 Texture 和完整范围 View。默认 View 继承
 Texture 格式，并根据颜色、深度或深度模板格式自动选择 aspect。
@@ -24,9 +24,9 @@ Texture 格式，并根据颜色、深度或深度模板格式自动选择 aspec
 - 目标区域显式选择 mip、数组层、aspect、三维偏移和范围，不能越过对应子资源。
 
 函数返回后不再访问调用方的 CPU 数据，当前 Vulkan 后端通过内部 staging buffer 完成同步上传。
-Texture 必须带有 `TRANSFER_DESTINATION` 用途。首版只支持非压缩颜色格式与单采样 Texture；受当前
-Texture 能力限制，实际可创建并上传的是单 mip、单数组层的 2D Texture。深度模板、压缩格式、
-mipmap 生成以及持久化上传分配器仍属于后续任务。
+Texture 必须带有 `TRANSFER_DESTINATION` 用途。首版只支持非压缩颜色格式与单采样 Texture；写入
+可以选择单个 mip 和 Cube 面。深度模板写入、压缩格式和 mipmap 自动生成仍属于后续任务，高频
+批量上传使用 [Upload Batch](../guides/upload-batch.md)。
 
 不同 Texture 可以由不同线程同时写入；Queue 提交和全局图像状态由 Renderer 内部排序。同一
 Texture 的多个写入、销毁或其他写操作必须由调用方提供顺序。

@@ -61,7 +61,7 @@
 | [V-01 生命周期验证](plans/V-01-lifetime-validation.md) | P0 | 已完成 |
 | [R-08 延迟销毁](plans/R-08-deferred-destruction.md) | P0 | 已完成 |
 | [R-09 Render Target Attachment](plans/R-09-render-target-attachment.md) | P0 | 已完成 |
-| R-10 通用资源传输 | P1 | 部分完成；mipmap 与截图便利接口按需求补充 |
+| [R-10 通用资源传输](plans/R-10-resource-transfer.md) | P1 | 已确认首期边界；先实现同步原始像素读取 |
 
 ## 四、命令与帧同步
 
