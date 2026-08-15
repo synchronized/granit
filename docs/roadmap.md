@@ -24,7 +24,7 @@
 | 四、命令与帧同步 | 基本完成 | Recorder、提交、Frame、查询和恢复边界已实现 |
 | 五、基础渲染 | 已完成 | Graphics/Compute Pipeline、绑定与 Draw/Dispatch 已完成 |
 | 六、多线程与性能 | 已完成 | 压力测试、基线、批量提交与上传批处理已完成 |
-| 七、可选高层渲染 | 已完成内部验证 | H-02～H-07 路线闭合，公共高层 ABI 后续分别设计 |
+| 七、可选高层渲染 | 已完成 | H-02～H-08 路线闭合，参考管线与公共 UI/Text 已验证 |
 | 八、稳定化与跨平台 | 持续进行 | ABI 策略、诊断和更多平台 Surface 待后续推进 |
 
 ## 一、工程与 ABI 基础
@@ -112,7 +112,7 @@
 
 ## 七、可选高层渲染
 
-**状态：进行中。**
+**状态：已完成。**
 
 | 任务 | 优先级 | 状态 |
 |---|---:|---|
@@ -123,7 +123,7 @@
 | [H-05 Lighting 与后处理](plans/H-05-lighting-pipeline.md) | P2 | 已完成 |
 | [H-06 Unlit、2D 与 UI](plans/H-06-unlit-2d-ui.md) | P2 | 已完成内部技术路线验证 |
 | [H-07 参考 Render Pipeline](plans/H-07-reference-render-pipeline.md) | P2 | 已完成 |
-| [H-08 公共 UI、Debug Draw 与 Text](plans/H-08-ui-debug-text-components.md) | P2 | 进行中；H-08A～H-08C、H-08D1～H-08D2a 已完成 |
+| [H-08 公共 UI、Debug Draw 与 Text](plans/H-08-ui-debug-text-components.md) | P2 | 已完成 |
 
 高层模块只能依赖核心 Renderer，不能形成反向依赖。使用者始终可以绕过高层模块，直接使用资源、
 命令和 Pipeline API。
@@ -141,8 +141,9 @@
 
 ## 近期执行顺序
 
-1. 完成 H-08D2b：增加文字遮罩采样路径，并把已缓存字形转换为 Canvas 四边形。
-2. 根据测量评估透明 PBR、CSM、Clustered Forward 与 Bindless。
-3. Deferred 保持为使用 Render Graph 组合的可选高级管线研究项。
+1. 建立 R-10 通用资源传输计划，优先明确截图/回读便利路径，再评估 mipmap 生成范围。
+2. 以真实材质与光源负载测量透明 PBR、CSM、Clustered Forward 与 Bindless 的收益和成本。
+3. API/ABI 稳定化在开发阶段功能边界收敛后推进；Deferred 保持为使用 Render Graph 组合的可选
+   高级管线研究项。
 
 若前置抽象不足，应先更新对应 Plan 和本路线图状态，再扩大公共 API。

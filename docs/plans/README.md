@@ -89,8 +89,8 @@ D-03-graphics-pipeline.md
   Debug Draw 与 Text ABI 后续分别设计。
 - [H-07：高级参考渲染套件](H-07-reference-render-pipeline.md)——已完成；公共 ABI、自动 Draw、
   离屏/窗口用户路径、安装 component、输出与性能验收均已闭合。
-- [H-08：公共 UI、Debug Draw 与 Text components](H-08-ui-debug-text-components.md)——进行中；
-  公共 Canvas、Debug Draw、已整形 Text Draw List 与 R8 Atlas 已完成，下一步实现文字遮罩绘制。
+- [H-08：公共 UI、Debug Draw 与 Text components](H-08-ui-debug-text-components.md)——已完成；公共
+  Canvas、Debug Draw、R8 Text Atlas、Pipeline 自动录制和第三方 Adapter 边界均已验收。
 
 ## 状态
 
