@@ -133,7 +133,8 @@
 **状态：持续进行。**
 
 - **[S-01](plans/S-01-abi-regression.md) / P1**：实现中；共享库导出符号和核心布局回归已完成，
-  下一步验证 `struct_size` 扩展语义。开发阶段仍不承诺 API/ABI 稳定。
+  `struct_size` 版本扩展语义已验证，下一步闭合共享与静态构建矩阵。开发阶段仍不承诺 API/ABI
+  稳定。
 - **S-02 / P1**：日志、诊断回调、GPU 调试名称和 Device Lost 报告。
 - **S-03 / P1**：安装包、真实外部 C/C++ Consumer 和版本验证。
 - **S-04 / P2**：Wayland、XCB 或其他确认的平台 Surface。

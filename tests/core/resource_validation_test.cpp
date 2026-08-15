@@ -10,9 +10,58 @@
 using granit::detail::validate_buffer_desc;
 using granit::detail::validate_color_attachment_desc;
 using granit::detail::validate_depth_stencil_attachment_desc;
+using granit::detail::validate_rendering_desc;
 using granit::detail::validate_sampler_desc;
 using granit::detail::validate_texture_desc;
 using granit::detail::validate_texture_view_desc;
+
+TEST_CASE("资源描述遵守 struct_size 扩展规则", "[resource][abi]") {
+  granit_buffer_desc buffer = GRANIT_BUFFER_DESC_INIT;
+  buffer.usage = GRANIT_BUFFER_USAGE_VERTEX_BIT;
+  buffer.memory_location = GRANIT_MEMORY_LOCATION_DEVICE;
+  buffer.size = 256;
+  buffer.struct_size = GRANIT_BUFFER_DESC_VERSION_1_SIZE - 1;
+  CHECK(validate_buffer_desc(buffer) == GRANIT_ERROR_INVALID_ARGUMENT);
+  buffer.struct_size = GRANIT_BUFFER_DESC_VERSION_1_SIZE + 64;
+  CHECK(validate_buffer_desc(buffer) == GRANIT_SUCCESS);
+
+  granit_texture_desc texture = GRANIT_TEXTURE_DESC_INIT;
+  texture.format = GRANIT_TEXTURE_FORMAT_RGBA8_UNORM;
+  texture.usage = GRANIT_TEXTURE_USAGE_SAMPLED_BIT;
+  texture.struct_size = GRANIT_TEXTURE_DESC_VERSION_1_SIZE - 1;
+  CHECK(validate_texture_desc(texture) == GRANIT_ERROR_INVALID_ARGUMENT);
+  texture.struct_size = GRANIT_TEXTURE_DESC_VERSION_1_SIZE + 64;
+  CHECK(validate_texture_desc(texture) == GRANIT_SUCCESS);
+
+  granit_texture_view_desc view = GRANIT_TEXTURE_VIEW_DESC_INIT;
+  view.struct_size = GRANIT_TEXTURE_VIEW_DESC_VERSION_1_SIZE - 1;
+  CHECK(validate_texture_view_desc(view) == GRANIT_ERROR_INVALID_ARGUMENT);
+  view.struct_size = GRANIT_TEXTURE_VIEW_DESC_VERSION_1_SIZE + 64;
+  CHECK(validate_texture_view_desc(view) == GRANIT_SUCCESS);
+
+  granit_sampler_desc sampler = GRANIT_SAMPLER_DESC_INIT;
+  sampler.struct_size = GRANIT_SAMPLER_DESC_VERSION_1_SIZE - 1;
+  CHECK(validate_sampler_desc(sampler) == GRANIT_ERROR_INVALID_ARGUMENT);
+  sampler.struct_size = GRANIT_SAMPLER_DESC_VERSION_1_SIZE + 64;
+  CHECK(validate_sampler_desc(sampler) == GRANIT_SUCCESS);
+
+  granit_color_attachment_desc color = GRANIT_COLOR_ATTACHMENT_DESC_INIT;
+  color.view = UINT64_C(1);
+  color.struct_size = GRANIT_COLOR_ATTACHMENT_DESC_VERSION_1_SIZE - 1;
+  CHECK(validate_color_attachment_desc(color) == GRANIT_ERROR_INVALID_ARGUMENT);
+  color.struct_size = GRANIT_COLOR_ATTACHMENT_DESC_VERSION_1_SIZE + 64;
+  CHECK(validate_color_attachment_desc(color) == GRANIT_SUCCESS);
+
+  granit_rendering_desc rendering = GRANIT_RENDERING_DESC_INIT;
+  rendering.color_attachment_count = 1;
+  rendering.color_attachments = &color;
+  rendering.area.width = 1;
+  rendering.area.height = 1;
+  rendering.struct_size = GRANIT_RENDERING_DESC_VERSION_1_SIZE - 1;
+  CHECK(validate_rendering_desc(rendering) == GRANIT_ERROR_INVALID_ARGUMENT);
+  rendering.struct_size = GRANIT_RENDERING_DESC_VERSION_1_SIZE + 64;
+  CHECK(validate_rendering_desc(rendering) == GRANIT_SUCCESS);
+}
 
 TEST_CASE("Buffer 描述拒绝空大小和未知用途", "[resource][validation]") {
   granit_buffer_desc desc{
