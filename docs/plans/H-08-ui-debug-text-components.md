@@ -68,6 +68,15 @@
   后复用当前 View 深度录制世界命令，再依次录制 Canvas 和用户 Overlay 回调。
 - 多 View 回读验证未绑定列表的输出不受影响，H-08C 至此闭合；下一步进入 H-08D Text component。
 
+## H-08D 当前结果
+
+- [ADR-002](../decisions/ADR-002-text-input-boundary.md) 已固定“调用方整形和栅格化、Granit 管理 Atlas
+  与 Canvas 几何”的边界，首版不引入强制字体第三方库。
+- H-08D1 提供独立 `text_draw_list` C ABI 与 C++ RAII 包装，批量复制已定位字形和 Run Scissor。
+- 字形以调用方 `font_key`、字体内 `glyph_id`、基线坐标和 RGBA8 颜色表达；列表支持容量复用、
+  Renderer domain 与 generation 失效检查。
+- 下一步 H-08D2 设计调用方位图上传、R8 Atlas 分页和字形缓存接口，再生成 Canvas 四边形。
+
 ## 验收标准
 
 - 普通使用者不接触 Vulkan、内部 Material 包或 Render Graph 实现类型。

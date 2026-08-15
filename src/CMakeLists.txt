@@ -498,6 +498,7 @@ target_sources(
     pipeline/debug_draw_list_api.cpp
     pipeline/debug_draw_geometry.cpp
     pipeline/debug_draw_geometry.h
+    pipeline/text_draw_list_api.cpp
   PUBLIC
     FILE_SET HEADERS
     BASE_DIRS "${PROJECT_SOURCE_DIR}/include"
@@ -515,6 +516,8 @@ target_sources(
         "${PROJECT_SOURCE_DIR}/include/granit/pipeline/canvas_draw_list.hpp"
         "${PROJECT_SOURCE_DIR}/include/granit/pipeline/debug_draw_list.h"
         "${PROJECT_SOURCE_DIR}/include/granit/pipeline/debug_draw_list.hpp"
+        "${PROJECT_SOURCE_DIR}/include/granit/pipeline/text_draw_list.h"
+        "${PROJECT_SOURCE_DIR}/include/granit/pipeline/text_draw_list.hpp"
 )
 target_compile_features(granit_render_pipeline PUBLIC cxx_std_20)
 target_include_directories(

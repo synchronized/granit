@@ -76,6 +76,7 @@
 - [Render Pipeline](reference/render-pipeline.md)
 - [Canvas Draw List](reference/canvas-draw-list.md)
 - [Debug Draw List](reference/debug-draw-list.md)
+- [Text Draw List](reference/text-draw-list.md)
 
 ### 窗口输出
 
