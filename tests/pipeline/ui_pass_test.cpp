@@ -46,8 +46,9 @@ TEST_CASE("UI Pass按Batch录制顶点色与Scissor") {
   REQUIRE(color_view.initialize(native, color.native_handle()) == granit::result::success);
 
   constexpr std::array<std::uint32_t, 3> indices{0, 1, 2};
-  constexpr std::array blue{ui_vertex{-0.8F, -0.8F, 0, 0}, ui_vertex{0.8F, -0.8F, 1, 0},
-                            ui_vertex{0.0F, 0.8F, 0.5F, 1}};
+  constexpr std::array blue{ui_vertex{-0.8F, -0.8F, 0, 0, UINT32_MAX},
+                            ui_vertex{0.8F, -0.8F, 1, 0, UINT32_MAX},
+                            ui_vertex{0.0F, 0.8F, 0.5F, 1, UINT32_MAX}};
   constexpr auto red = blue;
   granit::texture blue_texture;
   granit::texture red_texture;

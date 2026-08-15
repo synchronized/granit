@@ -446,6 +446,7 @@ target_sources(
     pipeline/unlit_pass.cpp
     pipeline/unlit_pass.h
     pipeline/ui_draw_list.h
+    pipeline/ui_draw_list_api.cpp
     pipeline/ui_geometry_upload.h
     pipeline/ui_pass.cpp
     pipeline/ui_pass.h
@@ -462,6 +463,8 @@ target_sources(
       "${PROJECT_SOURCE_DIR}/include/granit/pipeline/render_pipeline.hpp"
       "${PROJECT_SOURCE_DIR}/include/granit/pipeline/scene.h"
       "${PROJECT_SOURCE_DIR}/include/granit/pipeline/scene.hpp"
+      "${PROJECT_SOURCE_DIR}/include/granit/pipeline/ui_draw_list.h"
+      "${PROJECT_SOURCE_DIR}/include/granit/pipeline/ui_draw_list.hpp"
 )
 target_compile_features(granit_render_pipeline PUBLIC cxx_std_20)
 target_include_directories(

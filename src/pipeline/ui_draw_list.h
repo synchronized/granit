@@ -1,12 +1,11 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#ifndef GRANIT_PIPELINE_UI_DRAW_LIST_H_
-#define GRANIT_PIPELINE_UI_DRAW_LIST_H_
+#ifndef GRANIT_PIPELINE_DETAIL_UI_DRAW_LIST_H_
+#define GRANIT_PIPELINE_DETAIL_UI_DRAW_LIST_H_
 
 #include <granit/core/result.h>
-#include <granit/renderer/command_recorder.h>
-#include <granit/renderer/sampler.h>
+#include <granit/pipeline/ui_draw_list.h>
 
 #include <cstdint>
 #include <limits>
@@ -15,14 +14,8 @@
 
 namespace granit::pipeline::detail {
 
-/** H-06C 内部 UI 顶点；颜色使用 RGBA8 UNORM，避免为每个顶点保存四个 float。 */
-struct ui_vertex {
-  float x = 0.0F;
-  float y = 0.0F;
-  float u = 0.0F;
-  float v = 0.0F;
-  std::uint32_t color = UINT32_C(0xFFFFFFFF);
-};
+/** H-06C 内部实现直接复用公共固定布局顶点。 */
+using ui_vertex = granit_ui_vertex;
 static_assert(sizeof(ui_vertex) == 20);
 
 struct ui_draw_state {
@@ -43,6 +36,18 @@ using ui_draw_batch = ui_draw_item;
 
 class ui_draw_list {
 public:
+  [[nodiscard]] granit_result reserve(std::size_t vertex_capacity, std::size_t index_capacity,
+                                      std::size_t item_capacity) noexcept {
+    try {
+      vertices_.reserve(vertex_capacity);
+      indices_.reserve(index_capacity);
+      items_.reserve(item_capacity);
+      return GRANIT_SUCCESS;
+    } catch (...) {
+      return GRANIT_ERROR_OUT_OF_MEMORY;
+    }
+  }
+
   [[nodiscard]] granit_result append(std::span<const ui_vertex> vertices,
                                      std::span<const std::uint32_t> indices,
                                      const ui_draw_state& state) noexcept {

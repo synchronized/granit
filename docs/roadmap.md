@@ -123,6 +123,7 @@
 | [H-05 Lighting 与后处理](plans/H-05-lighting-pipeline.md) | P2 | 已完成 |
 | [H-06 Unlit、2D 与 UI](plans/H-06-unlit-2d-ui.md) | P2 | 已完成内部技术路线验证 |
 | [H-07 参考 Render Pipeline](plans/H-07-reference-render-pipeline.md) | P2 | 已完成 |
+| [H-08 公共 UI、Debug Draw 与 Text](plans/H-08-ui-debug-text-components.md) | P2 | 进行中；H-08A 已完成 |
 
 高层模块只能依赖核心 Renderer，不能形成反向依赖。使用者始终可以绕过高层模块，直接使用资源、
 命令和 Pipeline API。
@@ -140,7 +141,7 @@
 
 ## 近期执行顺序
 
-1. 分别设计公共 UI Draw List、Debug Draw 与 Text component，不直接暴露内部原型。
+1. 实现 H-08B：公共 UI Draw List 录制与参考管线提交，不泄漏内部 Material。
 2. 根据测量评估透明 PBR、CSM、Clustered Forward 与 Bindless。
 3. Deferred 保持为使用 Render Graph 组合的可选高级管线研究项。
 

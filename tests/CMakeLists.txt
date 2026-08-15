@@ -38,6 +38,7 @@ add_library(
     headers/pipeline_mesh_h.c
     headers/pipeline_render_pipeline_h.c
     headers/pipeline_scene_h.c
+    headers/pipeline_ui_draw_list_h.c
 )
 target_link_libraries(granit_c_header_test PRIVATE granit::granit granit::render_pipeline)
 granit_target_compile_warnings(granit_c_header_test)
@@ -208,6 +209,7 @@ add_executable(
   pipeline/scene_api_test.cpp
   pipeline/unlit_pass_test.cpp
   pipeline/ui_draw_list_test.cpp
+  pipeline/ui_draw_list_api_test.cpp
   pipeline/ui_geometry_upload_test.cpp
   pipeline/ui_pass_test.cpp
 )
@@ -388,6 +390,7 @@ add_library(
     headers/pipeline_mesh_hpp.cpp
     headers/pipeline_render_pipeline_hpp.cpp
     headers/pipeline_scene_hpp.cpp
+    headers/pipeline_ui_draw_list_hpp.cpp
 )
 target_link_libraries(granit_cpp_header_test PRIVATE granit::granit granit::render_pipeline)
 granit_target_compile_warnings(granit_cpp_header_test)

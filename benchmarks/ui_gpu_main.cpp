@@ -41,8 +41,9 @@ std::vector<char> load_package() {
 
 ui_draw_list make_list(std::uint32_t rectangles, granit_texture_view first,
                        granit_texture_view second, granit_sampler sampler, bool alternating) {
-  constexpr std::array vertices{ui_vertex{-0.06F, -0.06F, 0, 0}, ui_vertex{0.06F, -0.06F, 1, 0},
-                                ui_vertex{0.06F, 0.06F, 1, 1}, ui_vertex{-0.06F, 0.06F, 0, 1}};
+  constexpr std::array vertices{
+      ui_vertex{-0.06F, -0.06F, 0, 0, UINT32_MAX}, ui_vertex{0.06F, -0.06F, 1, 0, UINT32_MAX},
+      ui_vertex{0.06F, 0.06F, 1, 1, UINT32_MAX}, ui_vertex{-0.06F, 0.06F, 0, 1, UINT32_MAX}};
   constexpr std::array<std::uint32_t, 6> indices{0, 1, 2, 0, 2, 3};
   ui_draw_list list;
   for (std::uint32_t index = 0; index < rectangles; ++index) {

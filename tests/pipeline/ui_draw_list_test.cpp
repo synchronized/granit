@@ -9,9 +9,9 @@
 
 namespace {
 
-constexpr std::array vertices{granit::pipeline::detail::ui_vertex{0, 0, 0, 0},
-                              granit::pipeline::detail::ui_vertex{1, 0, 1, 0},
-                              granit::pipeline::detail::ui_vertex{0, 1, 0, 1}};
+constexpr std::array vertices{granit::pipeline::detail::ui_vertex{0, 0, 0, 0, UINT32_MAX},
+                              granit::pipeline::detail::ui_vertex{1, 0, 1, 0, UINT32_MAX},
+                              granit::pipeline::detail::ui_vertex{0, 1, 0, 1, UINT32_MAX}};
 constexpr std::array<std::uint32_t, 3> indices{0, 1, 2};
 
 } // namespace

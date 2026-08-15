@@ -23,8 +23,9 @@ using granit::pipeline::detail::ui_draw_state;
 using granit::pipeline::detail::ui_geometry_upload;
 using granit::pipeline::detail::ui_vertex;
 
-constexpr std::array quad_vertices{ui_vertex{0, 0, 0, 0}, ui_vertex{1, 0, 1, 0},
-                                   ui_vertex{1, 1, 1, 1}, ui_vertex{0, 1, 0, 1}};
+constexpr std::array quad_vertices{
+    ui_vertex{0, 0, 0, 0, UINT32_MAX}, ui_vertex{1, 0, 1, 0, UINT32_MAX},
+    ui_vertex{1, 1, 1, 1, UINT32_MAX}, ui_vertex{0, 1, 0, 1, UINT32_MAX}};
 constexpr std::array<std::uint32_t, 6> quad_indices{0, 1, 2, 0, 2, 3};
 
 double percentile(std::vector<double> values, double fraction) {
