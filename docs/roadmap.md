@@ -134,7 +134,8 @@
 
 - **[S-01](plans/S-01-abi-regression.md) / P1**：当前开发阶段范围已完成；导出、布局、版本扩展、
   共享/静态安装 Consumer 均有回归。正式 ABI 快照等待功能边界收敛，当前仍不承诺稳定。
-- **S-02 / P1**：日志、诊断回调、GPU 调试名称和 Device Lost 报告。
+- **[S-02](plans/S-02-diagnostics.md) / P1**：实现中；日志、诊断回调、GPU 调试名称和 Device Lost
+  报告。
 - **S-03 / P1**：安装包、真实外部 C/C++ Consumer 和版本验证。
 - **S-04 / P2**：Wayland、XCB 或其他确认的平台 Surface。
 - **S-05 / P2**：明确标记为不稳定的 Vulkan 原生互操作。
