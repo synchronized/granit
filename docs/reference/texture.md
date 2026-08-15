@@ -31,7 +31,7 @@ Texture 格式，并根据颜色、深度或深度模板格式自动选择 aspec
 
 函数返回后不再访问调用方的 CPU 数据，当前 Vulkan 后端通过内部 staging buffer 完成同步上传。
 Texture 必须带有 `TRANSFER_DESTINATION` 用途。首版只支持非压缩颜色格式与单采样 Texture；写入
-可以选择单个 mip 和 Cube 面。深度模板写入、压缩格式和 mipmap 自动生成仍属于后续任务，高频
+可以选择单个 mip 和 Cube 面。深度模板写入和压缩格式仍属于后续任务，高频
 批量上传使用 [Upload Batch](../guides/upload-batch.md)。
 
 不同 Texture 可以由不同线程同时写入；Queue 提交和全局图像状态由 Renderer 内部排序。同一
@@ -46,3 +46,14 @@ Texture 的多个写入、销毁或其他写操作必须由调用方提供顺序
 实际读取会内部录制 Texture-to-Buffer、提交并等待 GPU，适合截图、测试和低频工具操作，不适合
 每帧视频采集。结果不翻转 Y、不转换颜色空间、不交换 RGBA/BGRA 通道，也不进行图片编码。高级
 异步路径继续使用 Command Recorder 与可复用 Readback Buffer。
+
+## Mipmap 生成
+
+`granit_command_recorder_generate_mipmaps` 使用线性 Blit 从指定起始 mip 逐级生成后续 mip。
+Texture 必须预先创建完整 mip 存储、为单采样颜色格式，并同时声明 `TRANSFER_SOURCE` 与
+`TRANSFER_DESTINATION`。设备格式必须支持 Blit Source、Blit Destination 和线性过滤，否则返回
+`GRANIT_ERROR_UNSUPPORTED`。
+
+生成范围可选择起始 mip、级数和 Cube 数组层；级数包含作为源的起始 mip 且至少为 2。接口支持
+非二次幂尺寸。运行时生成适合普通颜色纹理；法线重归一化、Alpha Coverage、Gamma 处理和离线
+高质量滤波不属于该命令，应由资产管线处理。

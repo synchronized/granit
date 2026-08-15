@@ -43,8 +43,8 @@ D-03-graphics-pipeline.md
 - [R-08：GPU 资源延迟销毁基础](R-08-deferred-destruction.md)——普通资源真实完成点与 Swapchain
   presentation 安全退役均已完成。
 - [R-09：统一 Render Target Attachment](R-09-render-target-attachment.md)——已完成。
-- [R-10：通用资源传输](R-10-resource-transfer.md)——已确认首期边界；先实现格式 Footprint 与同步
-  Texture 原始像素读取，再按需求补齐显式复制和 mipmap 生成。
+- [R-10：通用资源传输](R-10-resource-transfer.md)——已完成同步回读、显式复制、子资源状态跟踪和
+  mipmap 生成；异步 Readback 与多区域批量入口等待真实需求。
 - [R-10C：Mipmap 生成](R-10C-mipmap-generation.md)——已完成子资源跟踪、能力门禁、公共命令及
   非二次幂、Cube 数组层和失败路径验证。
 - [F-01：Command Recorder 基础](F-01-command-recorder.md)——已完成。

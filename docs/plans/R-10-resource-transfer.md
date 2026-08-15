@@ -5,17 +5,17 @@
 
 ## 状态
 
-- 设计状态：已确认首期边界
-- 实现状态：R-10A、R-10B1～R-10B2、R-10C0～R-10C3 已完成
+- 设计状态：已完成
+- 实现状态：已完成；批量多区域复制与异步 Readback 按重新评估条件延期
 - 路线图任务：R-10
 - 优先级：P1
 - 前置依赖：R-03～R-05、F-01～F-05、P-04
 
 ## 背景
 
-当前已经具备 Buffer 区域复制、Texture 到 Buffer 复制、同步 Texture 写入和 Upload Batch，但读取
-Texture 仍要求调用方手工创建 Readback Buffer、录制、提交、等待、映射并计算行布局。Texture
-之间复制、通用 Buffer 到 Texture 命令和 mipmap 生成也没有公共入口。
+计划启动时已经具备 Buffer 区域复制、Texture 到 Buffer 复制、同步 Texture 写入和 Upload Batch，
+但读取 Texture 仍要求调用方手工创建 Readback Buffer、录制、提交、等待、映射并计算行布局。
+Texture 之间复制、通用 Buffer 到 Texture 命令和 mipmap 生成也没有公共入口。
 
 R-10 补齐常用传输能力，但不把图片编码、资产导入或磁盘 I/O 放入 Renderer。
 
@@ -72,6 +72,16 @@ R-10 补齐常用传输能力，但不把图片编码、资产导入或磁盘 I/
 - 编辑器拾取、GPU 调试或流式系统需要多个在途读取。
 - 现有 Recorder + Readback Buffer 的样板代码在多个外部 Consumer 中重复出现。
 
+### 评估结论
+
+当前没有连续帧截图或视频采集需求，没有编辑器拾取等多个在途读取场景，也没有多个外部
+Consumer 重复实现显式回读流程。同步 `granit_texture_read` 已覆盖截图、测试和低频工具；高级
+用户可以使用 Command Recorder、Texture-to-Buffer 与可复用 Readback Buffer 组合异步路径。
+
+因此 R-10D 结论为暂不增加独立 Readback Batch、Future、回调或后台线程。该结论减少公共句柄、
+完成回调线程语义和动态库跨边界生命周期负担。满足上述任一条件并取得 Queue 等待或样板代码
+数据后，作为新的独立计划重新开启，不回写已完成的 R-10 范围。
+
 ## 实施顺序
 
 1. R-10A1（已完成）：格式 Footprint 与纯 CPU 验证。
@@ -79,12 +89,20 @@ R-10 补齐常用传输能力，但不把图片编码、资产导入或磁盘 I/
 3. R-10A3（已完成）：新增原始截图示例与使用指南。
 4. R-10B1（已完成）：补齐 Texture-to-Texture 显式 GPU 复制。
 5. R-10B2（已完成）：补齐 Buffer-to-Texture 显式 GPU 复制。
-6. R-10B3：出现真实批量需求后再增加多区域入口。
+6. R-10B3（延期）：出现真实批量需求后作为独立任务增加多区域入口。
 7. R-10C0（已完成）：将图像状态跟踪细化到 mip 与数组层范围。
 8. R-10C1（已完成）：实现线性 Blit 格式能力门禁。
 9. R-10C2（已完成）：实现 mipmap 生成命令。
 10. R-10C3（已完成）：补齐非二次幂、数组层和失败路径验证。
-11. R-10D：基于测量决定是否增加异步读取抽象。
+11. R-10D（已完成）：当前证据不足，暂不增加异步读取抽象。
+
+## 最终结果
+
+- 普通用户可同步查询与读取原始 Texture 像素，并获得明确格式、尺寸和行跨度。
+- 高级用户可显式录制 Buffer、Texture 和 Buffer-to-Texture 复制。
+- 图像状态跟踪已细化到 aspect、mip 和数组层。
+- 支持受设备格式能力门禁的线性 Blit mipmap 生成。
+- 图片编码、资源包、异步采集和多区域批量入口没有进入核心 Renderer。
 
 ## 验收标准
 

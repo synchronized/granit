@@ -61,7 +61,7 @@
 | [V-01 生命周期验证](plans/V-01-lifetime-validation.md) | P0 | 已完成 |
 | [R-08 延迟销毁](plans/R-08-deferred-destruction.md) | P0 | 已完成 |
 | [R-09 Render Target Attachment](plans/R-09-render-target-attachment.md) | P0 | 已完成 |
-| [R-10 通用资源传输](plans/R-10-resource-transfer.md) | P1 | 已确认首期边界；先实现同步原始像素读取 |
+| [R-10 通用资源传输](plans/R-10-resource-transfer.md) | P1 | 已完成；异步回读等待真实需求 |
 
 ## 四、命令与帧同步
 
@@ -141,9 +141,8 @@
 
 ## 近期执行顺序
 
-1. 建立 R-10 通用资源传输计划，优先明确截图/回读便利路径，再评估 mipmap 生成范围。
-2. 以真实材质与光源负载测量透明 PBR、CSM、Clustered Forward 与 Bindless 的收益和成本。
-3. API/ABI 稳定化在开发阶段功能边界收敛后推进；Deferred 保持为使用 Render Graph 组合的可选
+1. 以真实材质与光源负载测量透明 PBR、CSM、Clustered Forward 与 Bindless 的收益和成本。
+2. API/ABI 稳定化在开发阶段功能边界收敛后推进；Deferred 保持为使用 Render Graph 组合的可选
    高级管线研究项。
 
 若前置抽象不足，应先更新对应 Plan 和本路线图状态，再扩大公共 API。
