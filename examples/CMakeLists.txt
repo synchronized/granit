@@ -13,6 +13,13 @@ add_executable(granit_offscreen_clear_example offscreen_clear.cpp)
 target_link_libraries(granit_offscreen_clear_example PRIVATE granit::granit)
 granit_target_compile_warnings(granit_offscreen_clear_example)
 
+add_executable(granit_texture_readback_example texture_readback.cpp)
+target_link_libraries(granit_texture_readback_example PRIVATE granit::granit)
+granit_target_compile_warnings(granit_texture_readback_example)
+if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
+  add_test(NAME granit.example.texture_readback COMMAND granit_texture_readback_example)
+endif()
+
 add_executable(granit_offscreen_triangle_example offscreen_triangle.cpp)
 target_link_libraries(granit_offscreen_triangle_example PRIVATE granit::granit)
 target_compile_definitions(
@@ -145,6 +152,7 @@ set(
   granit_version_example
   granit_renderer_example
   granit_offscreen_clear_example
+  granit_texture_readback_example
   granit_offscreen_triangle_example
   granit_compute_example
   granit_material_hot_reload_example

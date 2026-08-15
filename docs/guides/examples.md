@@ -21,6 +21,8 @@ build/windows-clang-debug/bin/granit_offscreen_clear_example.exe
 - `granit_version_example`：查询版本。
 - `granit_renderer_example`：创建和销毁 Renderer。
 - `granit_offscreen_clear_example`：创建离屏颜色附件并清屏。
+- `granit_texture_readback_example`：离屏清屏、同步回读并校验原始 RGBA8 像素；传入路径时
+  额外写出 `.rgba` 文件。接口语义见[纹理同步回读](texture-readback.md)。
 - `granit_offscreen_triangle_example`：使用预编译 SPIR-V 绘制最小三角形。
 - `granit_compute_example`：Compute Shader 写入 Storage Buffer，并复制回读结果。
 - `granit_window_clear_example`：执行 Win32 acquire、清屏、submit、present 与尺寸重建循环。
