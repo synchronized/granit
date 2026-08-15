@@ -7,6 +7,8 @@
 #include <granit/pipeline/mesh.hpp>
 #include <granit/pipeline/render_pipeline.hpp>
 #include <granit/pipeline/scene.hpp>
+#include <granit/pipeline/text_atlas.hpp>
+#include <granit/pipeline/text_draw_list.hpp>
 #include <granit/renderer/buffer.hpp>
 #include <granit/renderer/command_recorder.hpp>
 #include <granit/renderer/renderer.hpp>
@@ -370,6 +372,34 @@ TEST_CASE("统一Render Pipeline按固定阶段消费Scene Snapshot") {
   canvas_rect.state.sampler = canvas_sampler.native_handle();
   REQUIRE(canvas.append_rect(canvas_rect) == granit::result::success);
 
+  granit_text_atlas_desc text_atlas_desc = GRANIT_TEXT_ATLAS_DESC_INIT;
+  text_atlas_desc.page_width = 16;
+  text_atlas_desc.page_height = 16;
+  granit::text_atlas text_atlas;
+  REQUIRE(text_atlas.initialize(renderer.native_handle(), text_atlas_desc) ==
+          granit::result::success);
+  constexpr std::array<uint8_t, 64> glyph_coverage = [] {
+    std::array<uint8_t, 64> values{};
+    values.fill(255);
+    return values;
+  }();
+  granit_text_glyph_bitmap_desc glyph_bitmap = GRANIT_TEXT_GLYPH_BITMAP_DESC_INIT;
+  glyph_bitmap.font_key = 1;
+  glyph_bitmap.glyph_id = 1;
+  glyph_bitmap.width = 8;
+  glyph_bitmap.height = 8;
+  glyph_bitmap.bearing_y = 8;
+  glyph_bitmap.bitmap = glyph_coverage.data();
+  glyph_bitmap.bitmap_size = glyph_coverage.size();
+  REQUIRE(text_atlas.upload_glyph(glyph_bitmap) == granit::result::success);
+  granit_text_draw_list_desc text_list_desc = GRANIT_TEXT_DRAW_LIST_DESC_INIT;
+  granit::text_draw_list text;
+  REQUIRE(text.initialize(renderer.native_handle(), text_list_desc) == granit::result::success);
+  const granit_text_glyph_instance glyph{1, 1, UINT32_C(0xff00ff00), 0, 8, {0, 0}};
+  REQUIRE(text.append_glyph_run(std::span{&glyph, 1}) == granit::result::success);
+  REQUIRE(text.append_to_canvas(text_atlas.native_handle(), canvas.native_handle()) ==
+          granit::result::success);
+
   granit_debug_draw_list_desc debug_list_desc = GRANIT_DEBUG_DRAW_LIST_DESC_INIT;
   granit::debug_draw_list debug_draw;
   REQUIRE(debug_draw.initialize(renderer.native_handle(), debug_list_desc) ==
@@ -439,9 +469,12 @@ TEST_CASE("统一Render Pipeline按固定阶段消费Scene Snapshot") {
   REQUIRE(multi_view_readback.map(0, 16 * 16 * 4 * 2, &multi_view_pixels) ==
           granit::result::success);
   const auto* first_pixel = static_cast<const uint8_t*>(multi_view_pixels) + (8 * 16 + 8) * 4;
+  const auto* text_pixel = static_cast<const uint8_t*>(multi_view_pixels) + (12 * 16 + 4) * 4;
   const auto* second_pixel =
       static_cast<const uint8_t*>(multi_view_pixels) + 16 * 16 * 4 + (8 * 16 + 8) * 4;
   CHECK(first_pixel[2] > first_pixel[0]);
+  CHECK(text_pixel[1] > text_pixel[0]);
+  CHECK(text_pixel[1] > text_pixel[2]);
   CHECK(second_pixel[1] > second_pixel[0]);
   CHECK(second_pixel[1] > second_pixel[2]);
   CHECK(first_pixel[0] != second_pixel[0]);

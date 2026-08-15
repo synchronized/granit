@@ -49,6 +49,8 @@ Unicode 解码、字体回退、换行、文字整形或字形栅格化。
 - Atlas 的 View 和 Sampler 被 Canvas 借用，因此 Atlas 必须至少存活到 Canvas 完成录制。
 - 离屏回读测试覆盖 50% R8 Coverage 的 Alpha 输出，以及跨页 `第一页 → 第二页 → 第一页` 的
   三段 Draw 顺序，转换不会为减少 Draw 而重排字形。
+- 转换后的 Canvas 无需专用 Text Pipeline 入口，可直接绑定 `granit_render_pipeline_output.canvas`；
+  Render Pipeline 会在 Tone Mapping 和世界 Debug Draw 后、用户 Overlay 回调前自动录制它。
 
 ## 当前限制
 

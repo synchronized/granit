@@ -81,7 +81,9 @@
   Pipeline；批量转换接口查询 Atlas 字形并生成按页面与 Scissor 合批的四边形。
 - H-08D2c 已通过离屏像素回读验证 R8 覆盖率进入最终 Alpha，并验证 Atlas 跨页时保持字形顺序
   与 Draw 边界；H-08D2 至此闭合。
-- 下一步 H-08D3 验证 Text Draw List 作为 Render Pipeline Canvas 输入的自动录制路径。
+- H-08D3 已验证 Text Draw List 转换后的 Canvas 可直接绑定单 View 或多 View Pipeline 输出，并由
+  Render Pipeline 自动在 Tone Mapping 后录制；像素回读确认文字覆盖 Overlay 之前的颜色。
+- H-08D 至此闭合；下一步进入 H-08E，整理第三方 UI/字体适配边界与最小 Adapter 示例。
 
 ## 验收标准
 
