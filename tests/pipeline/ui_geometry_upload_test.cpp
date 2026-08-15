@@ -21,11 +21,11 @@ TEST_CASE("UI几何上传复用容量并保留顶点索引内容") {
   }
   REQUIRE(initialized == granit::result::success);
 
-  constexpr std::array vertices{ui_vertex{0, 0, 0, 0, 0x01020304},
-                                ui_vertex{1, 0, 1, 0, 0x11121314},
-                                ui_vertex{0, 1, 0, 1, 0x21222324}};
+  constexpr std::array vertices{canvas_vertex{0, 0, 0, 0, 0x01020304},
+                                canvas_vertex{1, 0, 1, 0, 0x11121314},
+                                canvas_vertex{0, 1, 0, 1, 0x21222324}};
   constexpr std::array<std::uint32_t, 3> indices{0, 1, 2};
-  ui_draw_list list;
+  canvas_draw_list list;
   REQUIRE(list.append(vertices, indices, {}) == GRANIT_SUCCESS);
 
   ui_geometry_upload upload;
@@ -53,7 +53,7 @@ TEST_CASE("UI几何上传复用容量并保留顶点索引内容") {
   CHECK(upload.vertex_buffer() == vertex_buffer);
   CHECK(upload.index_buffer() == index_buffer);
 
-  ui_draw_list empty;
+  canvas_draw_list empty;
   REQUIRE(upload.upload(renderer.native_handle(), empty) == GRANIT_SUCCESS);
   CHECK(upload.vertex_count() == 0);
   CHECK(upload.index_count() == 0);

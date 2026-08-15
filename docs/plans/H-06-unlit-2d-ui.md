@@ -75,7 +75,7 @@ Pipeline、纹理绑定和 Scissor 兼容时才进行安全合批。后续 Bindl
    与 Alpha Cutoff 离屏像素回归。
 2. **H-06B：透明与裁剪**——实现预乘 Alpha、稳定透明顺序、Scissor 和边界测试，验证显示空间
    颜色不会重复进行 Tone Mapping 或 sRGB 编码。
-3. **H-06C：Sprite/UI Draw List 与批处理**——建立粗粒度逐帧提交接口、动态几何上传和相邻兼容
+3. **H-06C：Sprite/Canvas Draw List 与批处理**——建立粗粒度逐帧提交接口、动态几何上传和相邻兼容
    Draw 合批，并记录 100、1,000、10,000 个矩形的 CPU/GPU 基线。
 4. **H-06D：参考管线集成**——在 H-07 增加 Tone Mapping 后 UI Pass 扩展点，同时保留独立
    Render Graph 使用方式；覆盖窗口 Resize、多 View 和离屏目标。
@@ -84,7 +84,7 @@ Pipeline、纹理绑定和 Scissor 兼容时才进行安全合批。后续 Bindl
 
 ## 完成结果
 
-- H-06A～H-06D 已完成 Unlit、透明、UI Draw List、批处理、测量和参考管线集成。
+- H-06A～H-06D 已完成 Unlit、透明、Canvas Draw List、批处理、测量和参考管线集成。
 - H-06E 已确认 Debug Draw、Text 与第三方 UI 适配层的职责，不向 Renderer 加入字体或 UI 状态。
 - 详细过程与测量见 [H-06 实施记录](../records/H-06-unlit-ui-implementation.md)。
 - 长期模块边界见 [ADR-001](../decisions/ADR-001-debug-text-boundary.md)。

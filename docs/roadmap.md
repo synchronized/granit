@@ -141,7 +141,7 @@
 
 ## 近期执行顺序
 
-1. 实现 H-08B：公共 UI Draw List 录制与参考管线提交，不泄漏内部 Material。
+1. 实现 H-08B：公共 Canvas Draw List 录制与参考管线提交，不泄漏内部 Material。
 2. 根据测量评估透明 PBR、CSM、Clustered Forward 与 Bindless。
 3. Deferred 保持为使用 Render Graph 组合的可选高级管线研究项。
 

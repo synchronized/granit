@@ -1,7 +1,7 @@
 <!-- SPDX-License-Identifier: MIT -->
 <!-- Copyright (c) 2026 Granit contributors -->
 
-# UI Draw List 与动态几何首份 CPU 性能基线
+# Canvas Draw List 与动态几何首份 CPU 性能基线
 
 ## 环境
 

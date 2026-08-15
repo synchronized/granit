@@ -12,7 +12,7 @@
 namespace granit::pipeline::detail {
 
 granit_result record_ui_pass(granit_renderer renderer, granit_command_recorder recorder,
-                             const ui_pass_desc& desc, const ui_draw_list& list,
+                             const ui_pass_desc& desc, const canvas_draw_list& list,
                              const ui_geometry_upload& geometry) noexcept {
   if (renderer == GRANIT_NULL_HANDLE || recorder == GRANIT_NULL_HANDLE ||
       desc.color == GRANIT_NULL_HANDLE || desc.color_format == GRANIT_TEXTURE_FORMAT_UNDEFINED ||
@@ -33,7 +33,7 @@ granit_result record_ui_pass(granit_renderer renderer, granit_command_recorder r
       return GRANIT_ERROR_INVALID_ARGUMENT;
   }
 
-  const auto update_material = [&](const ui_draw_batch& batch) {
+  const auto update_material = [&](const canvas_draw_batch& batch) {
     const std::array updates{
         granit_material_parameter_update{granit_material_parameter_id("base_color_texture", 18),
                                          GRANIT_MATERIAL_PARAMETER_TEXTURE_VIEW, 0, nullptr, 0,

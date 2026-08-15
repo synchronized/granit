@@ -4,7 +4,7 @@
 #ifndef GRANIT_PIPELINE_UI_GEOMETRY_UPLOAD_H_
 #define GRANIT_PIPELINE_UI_GEOMETRY_UPLOAD_H_
 
-#include "pipeline/ui_draw_list.h"
+#include "pipeline/canvas_draw_list.h"
 
 #include <granit/renderer/buffer.h>
 
@@ -36,7 +36,8 @@ public:
     return *this;
   }
 
-  [[nodiscard]] granit_result upload(granit_renderer renderer, const ui_draw_list& list) noexcept {
+  [[nodiscard]] granit_result upload(granit_renderer renderer,
+                                     const canvas_draw_list& list) noexcept {
     if (renderer == GRANIT_NULL_HANDLE)
       return GRANIT_ERROR_INVALID_ARGUMENT;
     if (renderer_ != GRANIT_NULL_HANDLE && renderer_ != renderer)

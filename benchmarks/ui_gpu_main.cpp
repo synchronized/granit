@@ -2,7 +2,7 @@
 // Copyright (c) 2026 Granit contributors
 
 #include "material/pbr_draw_inputs.h"
-#include "pipeline/ui_draw_list.h"
+#include "pipeline/canvas_draw_list.h"
 #include "pipeline/ui_geometry_upload.h"
 #include "pipeline/ui_pass.h"
 
@@ -23,9 +23,9 @@
 
 namespace {
 
-using granit::pipeline::detail::ui_draw_list;
+using granit::pipeline::detail::canvas_draw_list;
+using granit::pipeline::detail::canvas_vertex;
 using granit::pipeline::detail::ui_geometry_upload;
-using granit::pipeline::detail::ui_vertex;
 
 granit::math::matrix4 identity() { return {1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1}; }
 
@@ -39,13 +39,14 @@ std::vector<char> load_package() {
   return {std::istreambuf_iterator<char>{stream}, {}};
 }
 
-ui_draw_list make_list(std::uint32_t rectangles, granit_texture_view first,
-                       granit_texture_view second, granit_sampler sampler, bool alternating) {
-  constexpr std::array vertices{
-      ui_vertex{-0.06F, -0.06F, 0, 0, UINT32_MAX}, ui_vertex{0.06F, -0.06F, 1, 0, UINT32_MAX},
-      ui_vertex{0.06F, 0.06F, 1, 1, UINT32_MAX}, ui_vertex{-0.06F, 0.06F, 0, 1, UINT32_MAX}};
+canvas_draw_list make_list(std::uint32_t rectangles, granit_texture_view first,
+                           granit_texture_view second, granit_sampler sampler, bool alternating) {
+  constexpr std::array vertices{canvas_vertex{-0.06F, -0.06F, 0, 0, UINT32_MAX},
+                                canvas_vertex{0.06F, -0.06F, 1, 0, UINT32_MAX},
+                                canvas_vertex{0.06F, 0.06F, 1, 1, UINT32_MAX},
+                                canvas_vertex{-0.06F, 0.06F, 0, 1, UINT32_MAX}};
   constexpr std::array<std::uint32_t, 6> indices{0, 1, 2, 0, 2, 3};
-  ui_draw_list list;
+  canvas_draw_list list;
   for (std::uint32_t index = 0; index < rectangles; ++index) {
     const bool alternate = alternating && index % 2 != 0;
     const auto result = list.append(

@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#ifndef GRANIT_PIPELINE_DETAIL_UI_DRAW_LIST_H_
-#define GRANIT_PIPELINE_DETAIL_UI_DRAW_LIST_H_
+#ifndef GRANIT_PIPELINE_DETAIL_CANVAS_DRAW_LIST_H_
+#define GRANIT_PIPELINE_DETAIL_CANVAS_DRAW_LIST_H_
 
 #include <granit/core/result.h>
-#include <granit/pipeline/ui_draw_list.h>
+#include <granit/pipeline/canvas_draw_list.h>
 
 #include <cstdint>
 #include <limits>
@@ -15,26 +15,26 @@
 namespace granit::pipeline::detail {
 
 /** H-06C 内部实现直接复用公共固定布局顶点。 */
-using ui_vertex = granit_ui_vertex;
-static_assert(sizeof(ui_vertex) == 20);
+using canvas_vertex = granit_canvas_vertex;
+static_assert(sizeof(canvas_vertex) == 20);
 
-struct ui_draw_state {
+struct canvas_draw_state {
   granit_texture_view texture = GRANIT_NULL_HANDLE;
   granit_sampler sampler = GRANIT_NULL_HANDLE;
   granit_scissor scissor{};
   std::uint32_t layer = 0;
 };
 
-struct ui_draw_item {
+struct canvas_draw_item {
   std::uint32_t first_index = 0;
   std::uint32_t index_count = 0;
-  ui_draw_state state{};
+  canvas_draw_state state{};
 };
 
 /** 相邻且状态兼容的 Item 合并后形成一次实际 Draw。 */
-using ui_draw_batch = ui_draw_item;
+using canvas_draw_batch = canvas_draw_item;
 
-class ui_draw_list {
+class canvas_draw_list {
 public:
   [[nodiscard]] granit_result reserve(std::size_t vertex_capacity, std::size_t index_capacity,
                                       std::size_t item_capacity) noexcept {
@@ -48,9 +48,9 @@ public:
     }
   }
 
-  [[nodiscard]] granit_result append(std::span<const ui_vertex> vertices,
+  [[nodiscard]] granit_result append(std::span<const canvas_vertex> vertices,
                                      std::span<const std::uint32_t> indices,
-                                     const ui_draw_state& state) noexcept {
+                                     const canvas_draw_state& state) noexcept {
     if (vertices.empty() || indices.empty())
       return GRANIT_ERROR_INVALID_ARGUMENT;
     if (vertices_.size() > std::numeric_limits<std::uint32_t>::max() - vertices.size() ||
@@ -83,11 +83,11 @@ public:
     items_.clear();
   }
 
-  [[nodiscard]] std::span<const ui_vertex> vertices() const noexcept { return vertices_; }
+  [[nodiscard]] std::span<const canvas_vertex> vertices() const noexcept { return vertices_; }
   [[nodiscard]] std::span<const std::uint32_t> indices() const noexcept { return indices_; }
-  [[nodiscard]] std::span<const ui_draw_item> items() const noexcept { return items_; }
-  [[nodiscard]] std::vector<ui_draw_batch> batches() const {
-    std::vector<ui_draw_batch> result;
+  [[nodiscard]] std::span<const canvas_draw_item> items() const noexcept { return items_; }
+  [[nodiscard]] std::vector<canvas_draw_batch> batches() const {
+    std::vector<canvas_draw_batch> result;
     result.reserve(items_.size());
     for (const auto& item : items_) {
       if (!result.empty()) {
@@ -111,9 +111,9 @@ public:
   }
 
 private:
-  std::vector<ui_vertex> vertices_;
+  std::vector<canvas_vertex> vertices_;
   std::vector<std::uint32_t> indices_;
-  std::vector<ui_draw_item> items_;
+  std::vector<canvas_draw_item> items_;
 };
 
 } // namespace granit::pipeline::detail

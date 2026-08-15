@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include "pipeline/ui_draw_list.h"
+#include "pipeline/canvas_draw_list.h"
 #include "pipeline/ui_geometry_upload.h"
 
 #include <granit/renderer/renderer.hpp>
@@ -18,14 +18,14 @@
 namespace {
 
 using clock_type = std::chrono::steady_clock;
-using granit::pipeline::detail::ui_draw_list;
-using granit::pipeline::detail::ui_draw_state;
+using granit::pipeline::detail::canvas_draw_list;
+using granit::pipeline::detail::canvas_draw_state;
+using granit::pipeline::detail::canvas_vertex;
 using granit::pipeline::detail::ui_geometry_upload;
-using granit::pipeline::detail::ui_vertex;
 
 constexpr std::array quad_vertices{
-    ui_vertex{0, 0, 0, 0, UINT32_MAX}, ui_vertex{1, 0, 1, 0, UINT32_MAX},
-    ui_vertex{1, 1, 1, 1, UINT32_MAX}, ui_vertex{0, 1, 0, 1, UINT32_MAX}};
+    canvas_vertex{0, 0, 0, 0, UINT32_MAX}, canvas_vertex{1, 0, 1, 0, UINT32_MAX},
+    canvas_vertex{1, 1, 1, 1, UINT32_MAX}, canvas_vertex{0, 1, 0, 1, UINT32_MAX}};
 constexpr std::array<std::uint32_t, 6> quad_indices{0, 1, 2, 0, 2, 3};
 
 double percentile(std::vector<double> values, double fraction) {
@@ -33,14 +33,14 @@ double percentile(std::vector<double> values, double fraction) {
   return values[static_cast<std::size_t>(fraction * static_cast<double>(values.size() - 1))];
 }
 
-ui_draw_list make_list(std::uint32_t rectangle_count, bool alternating) {
-  ui_draw_list list;
+canvas_draw_list make_list(std::uint32_t rectangle_count, bool alternating) {
+  canvas_draw_list list;
   for (std::uint32_t index = 0; index < rectangle_count; ++index) {
-    const auto state =
-        ui_draw_state{.texture = alternating && index % 2 != 0 ? 2U : 1U,
-                      .sampler = 3,
-                      .scissor = alternating && index % 2 != 0 ? granit_scissor{1, 0, 1023, 1024}
-                                                               : granit_scissor{0, 0, 1024, 1024}};
+    const auto state = canvas_draw_state{.texture = alternating && index % 2 != 0 ? 2U : 1U,
+                                         .sampler = 3,
+                                         .scissor = alternating && index % 2 != 0
+                                                        ? granit_scissor{1, 0, 1023, 1024}
+                                                        : granit_scissor{0, 0, 1024, 1024}};
     if (list.append(quad_vertices, quad_indices, state) != GRANIT_SUCCESS)
       return {};
   }

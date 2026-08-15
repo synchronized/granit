@@ -5,7 +5,7 @@
 #define GRANIT_PIPELINE_UI_PASS_H_
 
 #include "material/pbr_draw_inputs.h"
-#include "pipeline/ui_draw_list.h"
+#include "pipeline/canvas_draw_list.h"
 #include "pipeline/ui_geometry_upload.h"
 
 #include <granit/pipeline/export.h>
@@ -28,7 +28,7 @@ struct ui_pass_desc {
 /** 在一个 Rendering 区域内按稳定顺序录制带 Texture/Sampler 的 UI Batch。 */
 [[nodiscard]] GRANIT_RENDER_PIPELINE_API granit_result
 record_ui_pass(granit_renderer renderer, granit_command_recorder recorder, const ui_pass_desc& desc,
-               const ui_draw_list& list, const ui_geometry_upload& geometry) noexcept;
+               const canvas_draw_list& list, const ui_geometry_upload& geometry) noexcept;
 
 } // namespace granit::pipeline::detail
 

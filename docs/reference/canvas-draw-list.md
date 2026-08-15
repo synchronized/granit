@@ -1,15 +1,15 @@
 <!-- SPDX-License-Identifier: MIT -->
 <!-- Copyright (c) 2026 Granit contributors -->
 
-# UI Draw List
+# Canvas Draw List
 
-UI Draw List 是 Render Pipeline component 中面向 UI 后端、Sprite、文字和调试覆盖层的逐帧几何容器。
+Canvas Draw List 是 Render Pipeline component 中面向 UI 后端、Sprite、文字和调试覆盖层的逐帧几何容器。
 它只保存已经布局完成的三角形，不提供控件树、布局、输入或字体处理。
 
 ## 公共入口
 
-- C：`<granit/pipeline/ui_draw_list.h>`。
-- C++20：`<granit/pipeline/ui_draw_list.hpp>`，使用 move-only 的 `granit::ui_draw_list`。
+- C：`<granit/pipeline/canvas_draw_list.h>`。
+- C++20：`<granit/pipeline/canvas_draw_list.hpp>`，使用 move-only 的 `granit::canvas_draw_list`。
 - 所属 CMake component：`RenderPipeline`，目标为 `granit::render_pipeline`。
 
 当前公开范围是 Draw List 构建、复用和统计。把列表录制到 UI Pass 的公共接口仍在 H-08B 设计中；
@@ -17,7 +17,7 @@ UI Draw List 是 Render Pipeline component 中面向 UI 后端、Sprite、文字
 
 ## 坐标与顶点
 
-- `granit_ui_vertex` 包含二维像素位置、UV 和打包 RGBA8 UNORM 顶点色。
+- `granit_canvas_vertex` 包含二维像素位置、UV 和打包 RGBA8 UNORM 顶点色。
 - 屏幕坐标原点位于输出左上角，X 向右、Y 向下。
 - 通用追加接口接收三角形列表，索引必须相对本次传入的顶点数组。
 - 矩形便捷接口生成四个顶点和六个索引，宽高必须大于零。
@@ -42,11 +42,11 @@ UI Draw List 是 Render Pipeline component 中面向 UI 后端、Sprite、文字
 ## 最小 C 示例
 
 ```c
-granit_ui_draw_list_desc list_desc = GRANIT_UI_DRAW_LIST_DESC_INIT;
-granit_ui_draw_list list = GRANIT_NULL_HANDLE;
-granit_result result = granit_ui_draw_list_create(renderer, &list_desc, &list);
+granit_canvas_draw_list_desc list_desc = GRANIT_CANVAS_DRAW_LIST_DESC_INIT;
+granit_canvas_draw_list list = GRANIT_NULL_HANDLE;
+granit_result result = granit_canvas_draw_list_create(renderer, &list_desc, &list);
 
-granit_ui_rect_desc rect = GRANIT_UI_RECT_DESC_INIT;
+granit_canvas_rect_desc rect = GRANIT_CANVAS_RECT_DESC_INIT;
 rect.x = 10.0f;
 rect.y = 20.0f;
 rect.width = 100.0f;
@@ -54,8 +54,8 @@ rect.height = 40.0f;
 rect.state.texture = texture_view;
 rect.state.sampler = sampler;
 if (result == GRANIT_SUCCESS)
-  result = granit_ui_draw_list_append_rect(renderer, list, &rect);
+  result = granit_canvas_draw_list_append_rect(renderer, list, &rect);
 
 /* H-08B 将提供公共录制/提交接口。 */
-granit_ui_draw_list_destroy(renderer, list);
+granit_canvas_draw_list_destroy(renderer, list);
 ```

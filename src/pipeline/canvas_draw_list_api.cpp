@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include <granit/pipeline/ui_draw_list.h>
+#include <granit/pipeline/canvas_draw_list.h>
 
-#include "pipeline/ui_draw_list.h"
+#include "pipeline/canvas_draw_list.h"
 
 #include <array>
 #include <cmath>
@@ -18,19 +18,19 @@ constexpr uint64_t index_mask = UINT64_C(0xffffffff);
 constexpr uint64_t generation_mask = UINT64_C(0x00ffffff);
 constexpr uint64_t type_value = UINT64_C(0x44);
 
-struct ui_draw_list_state {
+struct canvas_draw_list_state {
   std::mutex mutex;
   granit_renderer renderer = GRANIT_NULL_HANDLE;
-  granit::pipeline::detail::ui_draw_list list;
+  granit::pipeline::detail::canvas_draw_list list;
 };
 
-struct ui_draw_list_slot {
-  std::shared_ptr<ui_draw_list_state> state;
+struct canvas_draw_list_slot {
+  std::shared_ptr<canvas_draw_list_state> state;
   uint32_t generation = 1;
 };
 
 std::mutex registry_mutex;
-std::vector<ui_draw_list_slot> registry;
+std::vector<canvas_draw_list_slot> registry;
 
 granit_handle encode(size_t index, uint32_t generation) {
   return (type_value << 56) | (static_cast<uint64_t>(generation) << 32) |
@@ -45,7 +45,8 @@ bool decode(granit_handle handle, size_t& index, uint32_t& generation) {
   return generation != 0;
 }
 
-std::shared_ptr<ui_draw_list_state> find_list(granit_renderer renderer, granit_ui_draw_list list) {
+std::shared_ptr<canvas_draw_list_state> find_list(granit_renderer renderer,
+                                                  granit_canvas_draw_list list) {
   size_t index = 0;
   uint32_t generation = 0;
   if (!decode(list, index, generation))
@@ -66,11 +67,11 @@ bool reserved_is_zero(const uint32_t* values, size_t count) {
   return true;
 }
 
-bool valid_state(const granit_ui_draw_state& state) {
+bool valid_state(const granit_canvas_draw_state& state) {
   return state.texture != GRANIT_NULL_HANDLE && state.sampler != GRANIT_NULL_HANDLE;
 }
 
-granit::pipeline::detail::ui_draw_state convert_state(const granit_ui_draw_state& state) {
+granit::pipeline::detail::canvas_draw_state convert_state(const granit_canvas_draw_state& state) {
   return {.texture = state.texture,
           .sampler = state.sampler,
           .scissor = state.scissor,
@@ -79,14 +80,14 @@ granit::pipeline::detail::ui_draw_state convert_state(const granit_ui_draw_state
 
 } // namespace
 
-extern "C" granit_result granit_ui_draw_list_create(granit_renderer renderer,
-                                                    const granit_ui_draw_list_desc* desc,
-                                                    granit_ui_draw_list* list) {
+extern "C" granit_result granit_canvas_draw_list_create(granit_renderer renderer,
+                                                        const granit_canvas_draw_list_desc* desc,
+                                                        granit_canvas_draw_list* list) {
   if (list == nullptr)
     return GRANIT_ERROR_INVALID_ARGUMENT;
   *list = GRANIT_NULL_HANDLE;
   if (renderer == GRANIT_NULL_HANDLE || desc == nullptr ||
-      desc->struct_size < sizeof(granit_ui_draw_list_desc) ||
+      desc->struct_size < sizeof(granit_canvas_draw_list_desc) ||
       !reserved_is_zero(desc->reserved, std::size(desc->reserved))) {
     return GRANIT_ERROR_INVALID_ARGUMENT;
   }
@@ -96,7 +97,7 @@ extern "C" granit_result granit_ui_draw_list_create(granit_renderer renderer,
   if (renderer_result != GRANIT_SUCCESS)
     return renderer_result;
   try {
-    auto state = std::make_shared<ui_draw_list_state>();
+    auto state = std::make_shared<canvas_draw_list_state>();
     state->renderer = renderer;
     const auto reserve_result = state->list.reserve(
         desc->initial_vertex_capacity, desc->initial_index_capacity, desc->initial_item_capacity);
@@ -118,8 +119,8 @@ extern "C" granit_result granit_ui_draw_list_create(granit_renderer renderer,
   }
 }
 
-extern "C" granit_result granit_ui_draw_list_reset(granit_renderer renderer,
-                                                   granit_ui_draw_list list) {
+extern "C" granit_result granit_canvas_draw_list_reset(granit_renderer renderer,
+                                                       granit_canvas_draw_list list) {
   const auto state = find_list(renderer, list);
   if (state == nullptr)
     return GRANIT_ERROR_INVALID_HANDLE;
@@ -128,12 +129,11 @@ extern "C" granit_result granit_ui_draw_list_reset(granit_renderer renderer,
   return GRANIT_SUCCESS;
 }
 
-extern "C" granit_result granit_ui_draw_list_append(granit_renderer renderer,
-                                                    granit_ui_draw_list list,
-                                                    const granit_ui_vertex* vertices,
-                                                    uint32_t vertex_count, const uint32_t* indices,
-                                                    uint32_t index_count,
-                                                    const granit_ui_draw_state* draw_state) {
+extern "C" granit_result
+granit_canvas_draw_list_append(granit_renderer renderer, granit_canvas_draw_list list,
+                               const granit_canvas_vertex* vertices, uint32_t vertex_count,
+                               const uint32_t* indices, uint32_t index_count,
+                               const granit_canvas_draw_state* draw_state) {
   const auto state = find_list(renderer, list);
   if (state == nullptr)
     return GRANIT_ERROR_INVALID_HANDLE;
@@ -153,10 +153,10 @@ extern "C" granit_result granit_ui_draw_list_append(granit_renderer renderer,
                             convert_state(*draw_state));
 }
 
-extern "C" granit_result granit_ui_draw_list_append_rect(granit_renderer renderer,
-                                                         granit_ui_draw_list list,
-                                                         const granit_ui_rect_desc* desc) {
-  if (desc == nullptr || desc->struct_size < sizeof(granit_ui_rect_desc) ||
+extern "C" granit_result granit_canvas_draw_list_append_rect(granit_renderer renderer,
+                                                             granit_canvas_draw_list list,
+                                                             const granit_canvas_rect_desc* desc) {
+  if (desc == nullptr || desc->struct_size < sizeof(granit_canvas_rect_desc) ||
       !reserved_is_zero(desc->reserved, std::size(desc->reserved)) || !std::isfinite(desc->x) ||
       !std::isfinite(desc->y) || !std::isfinite(desc->width) || !std::isfinite(desc->height) ||
       !std::isfinite(desc->u0) || !std::isfinite(desc->v0) || !std::isfinite(desc->u1) ||
@@ -164,21 +164,21 @@ extern "C" granit_result granit_ui_draw_list_append_rect(granit_renderer rendere
     return GRANIT_ERROR_INVALID_ARGUMENT;
   }
   const std::array vertices{
-      granit_ui_vertex{desc->x, desc->y, desc->u0, desc->v0, desc->color},
-      granit_ui_vertex{desc->x + desc->width, desc->y, desc->u1, desc->v0, desc->color},
-      granit_ui_vertex{desc->x + desc->width, desc->y + desc->height, desc->u1, desc->v1,
-                       desc->color},
-      granit_ui_vertex{desc->x, desc->y + desc->height, desc->u0, desc->v1, desc->color}};
+      granit_canvas_vertex{desc->x, desc->y, desc->u0, desc->v0, desc->color},
+      granit_canvas_vertex{desc->x + desc->width, desc->y, desc->u1, desc->v0, desc->color},
+      granit_canvas_vertex{desc->x + desc->width, desc->y + desc->height, desc->u1, desc->v1,
+                           desc->color},
+      granit_canvas_vertex{desc->x, desc->y + desc->height, desc->u0, desc->v1, desc->color}};
   constexpr std::array<uint32_t, 6> indices{0, 1, 2, 2, 3, 0};
-  return granit_ui_draw_list_append(renderer, list, vertices.data(),
-                                    static_cast<uint32_t>(vertices.size()), indices.data(),
-                                    static_cast<uint32_t>(indices.size()), &desc->state);
+  return granit_canvas_draw_list_append(renderer, list, vertices.data(),
+                                        static_cast<uint32_t>(vertices.size()), indices.data(),
+                                        static_cast<uint32_t>(indices.size()), &desc->state);
 }
 
-extern "C" granit_result granit_ui_draw_list_get_stats(granit_renderer renderer,
-                                                       granit_ui_draw_list list,
-                                                       granit_ui_draw_list_stats* stats) {
-  if (stats == nullptr || stats->struct_size < sizeof(granit_ui_draw_list_stats))
+extern "C" granit_result granit_canvas_draw_list_get_stats(granit_renderer renderer,
+                                                           granit_canvas_draw_list list,
+                                                           granit_canvas_draw_list_stats* stats) {
+  if (stats == nullptr || stats->struct_size < sizeof(granit_canvas_draw_list_stats))
     return GRANIT_ERROR_INVALID_ARGUMENT;
   const auto state = find_list(renderer, list);
   if (state == nullptr)
@@ -195,8 +195,8 @@ extern "C" granit_result granit_ui_draw_list_get_stats(granit_renderer renderer,
   return GRANIT_SUCCESS;
 }
 
-extern "C" granit_result granit_ui_draw_list_destroy(granit_renderer renderer,
-                                                     granit_ui_draw_list list) {
+extern "C" granit_result granit_canvas_draw_list_destroy(granit_renderer renderer,
+                                                         granit_canvas_draw_list list) {
   size_t index = 0;
   uint32_t generation = 0;
   if (!decode(list, index, generation))

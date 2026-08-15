@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include "pipeline/ui_draw_list.h"
+#include "pipeline/canvas_draw_list.h"
 
 #include <catch2/catch_all.hpp>
 
@@ -9,18 +9,20 @@
 
 namespace {
 
-constexpr std::array vertices{granit::pipeline::detail::ui_vertex{0, 0, 0, 0, UINT32_MAX},
-                              granit::pipeline::detail::ui_vertex{1, 0, 1, 0, UINT32_MAX},
-                              granit::pipeline::detail::ui_vertex{0, 1, 0, 1, UINT32_MAX}};
+constexpr std::array vertices{granit::pipeline::detail::canvas_vertex{0, 0, 0, 0, UINT32_MAX},
+                              granit::pipeline::detail::canvas_vertex{1, 0, 1, 0, UINT32_MAX},
+                              granit::pipeline::detail::canvas_vertex{0, 1, 0, 1, UINT32_MAX}};
 constexpr std::array<std::uint32_t, 3> indices{0, 1, 2};
 
 } // namespace
 
-TEST_CASE("UI Draw List保持顺序并只合并相邻兼容项") {
+TEST_CASE("Canvas Draw List保持顺序并只合并相邻兼容项") {
   using namespace granit::pipeline::detail;
-  ui_draw_list list;
-  const ui_draw_state first{.texture = 11, .sampler = 21, .scissor = {0, 0, 100, 100}, .layer = 2};
-  const ui_draw_state second{.texture = 12, .sampler = 21, .scissor = {0, 0, 100, 100}, .layer = 2};
+  canvas_draw_list list;
+  const canvas_draw_state first{
+      .texture = 11, .sampler = 21, .scissor = {0, 0, 100, 100}, .layer = 2};
+  const canvas_draw_state second{
+      .texture = 12, .sampler = 21, .scissor = {0, 0, 100, 100}, .layer = 2};
 
   REQUIRE(list.append(vertices, indices, first) == GRANIT_SUCCESS);
   REQUIRE(list.append(vertices, indices, first) == GRANIT_SUCCESS);
@@ -41,9 +43,9 @@ TEST_CASE("UI Draw List保持顺序并只合并相邻兼容项") {
   CHECK(batches[2].state.texture == 11);
 }
 
-TEST_CASE("UI Draw List拒绝无效几何且可以复用") {
+TEST_CASE("Canvas Draw List拒绝无效几何且可以复用") {
   using namespace granit::pipeline::detail;
-  ui_draw_list list;
+  canvas_draw_list list;
   constexpr std::array<std::uint32_t, 3> invalid_indices{0, 1, 3};
   CHECK(list.append({}, indices, {}) == GRANIT_ERROR_INVALID_ARGUMENT);
   CHECK(list.append(vertices, {}, {}) == GRANIT_ERROR_INVALID_ARGUMENT);

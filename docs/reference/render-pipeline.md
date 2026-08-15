@@ -68,7 +68,7 @@ Upload 环形分配。
 - 渲染路径固定为 Opaque Forward PBR、可选单方向光阴影和 ACES Tone Mapping。
 - 阴影目标固定为 1024×1024；尚不支持 CSM、多阴影光源或可配置阴影质量。
 - 不包含透明 PBR、Bindless、Clustered Forward 或 Deferred。
-- UI 阶段只是 Tone Mapping 后的扩展点，不自动持有或提交 UI Draw List；调用方负责录制内容。
+- UI 阶段只是 Tone Mapping 后的扩展点，不自动持有或提交 Canvas Draw List；调用方负责录制内容。
 - 默认 IBL 由 Pipeline 内部持有；外部环境切换尚未进入公共接口。
 - 同一 Pipeline 不支持并发渲染，多 View 仍按独立输出顺序执行。
 
