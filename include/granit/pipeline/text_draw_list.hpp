@@ -54,6 +54,10 @@ public:
   [[nodiscard]] result get_stats(granit_text_draw_list_stats& stats) const noexcept {
     return from_native(granit_text_draw_list_get_stats(renderer_, handle_, &stats));
   }
+  [[nodiscard]] result append_to_canvas(granit_text_atlas atlas,
+                                        granit_canvas_draw_list canvas) const noexcept {
+    return from_native(granit_text_draw_list_append_to_canvas(renderer_, handle_, atlas, canvas));
+  }
   [[nodiscard]] result destroy() noexcept {
     if (!valid())
       return result::success;

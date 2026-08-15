@@ -3,6 +3,9 @@
 
 #include <granit/pipeline/text_atlas.h>
 
+#include "pipeline/text_atlas_access.h"
+
+#include <granit/renderer/sampler.h>
 #include <granit/renderer/texture.h>
 
 #include <algorithm>
@@ -57,6 +60,8 @@ struct atlas_state {
       if (page.texture != GRANIT_NULL_HANDLE)
         static_cast<void>(granit_texture_destroy(renderer, page.texture));
     }
+    if (sampler != GRANIT_NULL_HANDLE)
+      static_cast<void>(granit_sampler_destroy(renderer, sampler));
   }
 
   std::mutex mutex;
@@ -65,6 +70,7 @@ struct atlas_state {
   uint32_t page_height = 0;
   uint32_t max_pages = 0;
   uint32_t padding = 0;
+  granit_sampler sampler = GRANIT_NULL_HANDLE;
   std::vector<atlas_page> pages;
   std::unordered_map<glyph_key, glyph_entry, glyph_key_hash> glyphs;
 };
@@ -113,10 +119,21 @@ granit_result create_page(atlas_state& state, atlas_page& page) {
   desc.usage = GRANIT_TEXTURE_USAGE_SAMPLED_BIT | GRANIT_TEXTURE_USAGE_TRANSFER_DESTINATION_BIT;
   desc.width = state.page_width;
   desc.height = state.page_height;
-  auto result =
-      granit_texture_create_with_default_view(state.renderer, &desc, &page.texture, &page.view);
+  auto result = granit_texture_create(state.renderer, &desc, &page.texture);
   if (result != GRANIT_SUCCESS)
     return result;
+  granit_texture_view_desc view_desc = GRANIT_TEXTURE_VIEW_DESC_INIT;
+  view_desc.components.red = GRANIT_COMPONENT_SWIZZLE_ONE;
+  view_desc.components.green = GRANIT_COMPONENT_SWIZZLE_ONE;
+  view_desc.components.blue = GRANIT_COMPONENT_SWIZZLE_ONE;
+  view_desc.components.alpha = GRANIT_COMPONENT_SWIZZLE_RED;
+  result = granit_texture_view_create(state.renderer, page.texture, &view_desc, &page.view);
+  if (result != GRANIT_SUCCESS)
+    static_cast<void>(granit_texture_destroy(state.renderer, page.texture));
+  if (result != GRANIT_SUCCESS) {
+    page.texture = GRANIT_NULL_HANDLE;
+    return result;
+  }
   try {
     std::vector<uint8_t> empty(static_cast<size_t>(state.page_width) * state.page_height, 0);
     const granit_texture_data_layout layout{0, state.page_width, state.page_height};
@@ -196,6 +213,14 @@ extern "C" granit_result granit_text_atlas_create(granit_renderer renderer,
     state->max_pages = desc->max_pages;
     state->padding = desc->padding;
     state->pages.reserve(desc->max_pages);
+    granit_sampler_desc sampler_desc = GRANIT_SAMPLER_DESC_INIT;
+    sampler_desc.address_mode_u = GRANIT_ADDRESS_MODE_CLAMP_TO_EDGE;
+    sampler_desc.address_mode_v = GRANIT_ADDRESS_MODE_CLAMP_TO_EDGE;
+    sampler_desc.address_mode_w = GRANIT_ADDRESS_MODE_CLAMP_TO_EDGE;
+    const auto sampler_result =
+        granit_sampler_create(renderer, &sampler_desc, &state->sampler);
+    if (sampler_result != GRANIT_SUCCESS)
+      return sampler_result;
     std::scoped_lock lock{registry_mutex};
     size_t index = 0;
     while (index < registry.size() && registry[index].state != nullptr)
@@ -210,6 +235,33 @@ extern "C" granit_result granit_text_atlas_create(granit_renderer renderer,
   } catch (...) {
     return GRANIT_ERROR_INTERNAL;
   }
+}
+
+granit_result granit::pipeline::detail::text_atlas_resolve_glyph(
+    granit_renderer renderer, granit_text_atlas atlas, uint64_t font_key, uint32_t glyph_id,
+    text_atlas_glyph& glyph) noexcept {
+  const auto state = find(renderer, atlas);
+  if (!state)
+    return GRANIT_ERROR_INVALID_HANDLE;
+  std::scoped_lock lock{state->mutex};
+  const auto found = state->glyphs.find({font_key, glyph_id});
+  if (found == state->glyphs.end())
+    return GRANIT_ERROR_NOT_READY;
+  const auto& entry = found->second;
+  glyph = {.sampler = state->sampler,
+           .width = static_cast<float>(entry.width),
+           .height = static_cast<float>(entry.height),
+           .bearing_x = entry.bearing_x,
+           .bearing_y = entry.bearing_y};
+  if (entry.page == UINT32_MAX)
+    return GRANIT_SUCCESS;
+  const auto& page = state->pages[entry.page];
+  glyph.view = page.view;
+  glyph.u0 = static_cast<float>(entry.x) / static_cast<float>(state->page_width);
+  glyph.v0 = static_cast<float>(entry.y) / static_cast<float>(state->page_height);
+  glyph.u1 = static_cast<float>(entry.x + entry.width) / static_cast<float>(state->page_width);
+  glyph.v1 = static_cast<float>(entry.y + entry.height) / static_cast<float>(state->page_height);
+  return GRANIT_SUCCESS;
 }
 
 extern "C" granit_result

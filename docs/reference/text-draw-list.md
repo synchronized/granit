@@ -36,11 +36,19 @@ Unicode 解码、字体回退、换行、文字整形或字形栅格化。
 - 位图使用逐行 R8 数据；`bytes_per_row=0` 表示紧密排列。零宽且零高可登记空白字形，不分配页面。
 - Atlas 达到 `max_pages` 后返回 `GRANIT_ERROR_OUT_OF_MEMORY`，当前不做隐式驱逐或重排。
 - Atlas 拥有内部 Texture 和 View；上传与销毁由调用方进行外部同步。
+- Atlas 为每页建立 `(1, 1, 1, R)` 分量映射的 View，并持有线性、边缘钳制 Sampler；R8 数值仅
+  作为透明度覆盖率，文字颜色来自字形实例。
+
+## 转换到 Canvas
+
+- `granit_text_draw_list_append_to_canvas` 在一次公共调用中查询 Atlas，并把可见字形追加为 Canvas
+  四边形；C++ 包装为 `text_draw_list::append_to_canvas`。
+- 字形矩形左上角为 `(baseline_x + bearing_x, baseline_y - bearing_y)`，宽高取上传位图尺寸。
+- 相邻且 Atlas 页面、Sampler 和 Scissor 相同的字形由 Canvas 自动合为一个 Draw。
+- 已登记的零尺寸字形会跳过；未上传的 `font_key + glyph_id` 返回 `GRANIT_ERROR_NOT_READY`。
+- Atlas 的 View 和 Sampler 被 Canvas 借用，因此 Atlas 必须至少存活到 Canvas 完成录制。
 
 ## 当前限制
 
-- 当前已支持 R8 Atlas 上传，但尚未公开 Text Draw List 到 Canvas 的转换接口。
 - `font_key` 不可持久化为 Granit 资源身份，其含义和稳定期由调用方定义。
 - 首版不会直接引入 FreeType、HarfBuzz 或平台字体 API。
-- 通用 Canvas Shader 不能正确解释 R8 覆盖率；下一步将增加专用文字遮罩采样路径，而不是把 Atlas
-  膨胀为 RGBA8。

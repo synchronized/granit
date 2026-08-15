@@ -9,6 +9,8 @@
 #include <granit/core/result.h>
 #include <granit/core/types.h>
 #include <granit/pipeline/export.h>
+#include <granit/pipeline/canvas_draw_list.h>
+#include <granit/pipeline/text_atlas.h>
 #include <granit/renderer/command_recorder.h>
 #include <granit/renderer/renderer.h>
 
@@ -86,6 +88,13 @@ GRANIT_RENDER_PIPELINE_API granit_result granit_text_draw_list_append_glyph_run(
     granit_renderer renderer, granit_text_draw_list list, const granit_text_glyph_run_desc* run);
 GRANIT_RENDER_PIPELINE_API granit_result granit_text_draw_list_get_stats(
     granit_renderer renderer, granit_text_draw_list list, granit_text_draw_list_stats* stats);
+/**
+ * 将已上传字形转换并追加到 Canvas；基线坐标使用 Canvas 的左上原点、Y 轴向下空间。
+ * 字形缺失时返回 NOT_READY，且调用方不应依赖失败前已经追加的部分内容。
+ */
+GRANIT_RENDER_PIPELINE_API granit_result granit_text_draw_list_append_to_canvas(
+    granit_renderer renderer, granit_text_draw_list list, granit_text_atlas atlas,
+    granit_canvas_draw_list canvas);
 GRANIT_RENDER_PIPELINE_API granit_result granit_text_draw_list_destroy(granit_renderer renderer,
                                                                        granit_text_draw_list list);
 

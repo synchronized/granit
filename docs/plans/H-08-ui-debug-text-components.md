@@ -77,9 +77,9 @@
   Renderer domain 与 generation 失效检查。
 - H-08D2a 提供独立 `text_atlas` C ABI 与 C++ RAII 包装，支持调用方 R8 位图上传、稳定 Shelf
   分配、懒创建分页、重复键原位更新和显式页数上限；空白字形不占用页面。
-- 现有 Canvas Shader 对 R8 的采样结果不能直接作为 Alpha Coverage，因此不采用临时 RGBA8 Atlas。
-- 下一步 H-08D2b 增加文字遮罩 Shader/Canvas 状态，查询 Atlas 字形并生成按页面与 Scissor 合批的
-  四边形。
+- H-08D2b 通过 Texture View `(1, 1, 1, R)` 分量映射复用 Canvas Shader，不增加平行文字
+  Pipeline；批量转换接口查询 Atlas 字形并生成按页面与 Scissor 合批的四边形。
+- 下一步 H-08D2c 增加覆盖率像素回读，并验证 Atlas 跨页时保持字形顺序与 Draw 边界。
 
 ## 验收标准
 

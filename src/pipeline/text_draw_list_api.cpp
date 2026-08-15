@@ -3,6 +3,8 @@
 
 #include <granit/pipeline/text_draw_list.h>
 
+#include "pipeline/text_atlas_access.h"
+
 #include <algorithm>
 #include <cmath>
 #include <iterator>
@@ -174,6 +176,46 @@ extern "C" granit_result granit_text_draw_list_get_stats(granit_renderer rendere
   stats->glyph_count = static_cast<uint32_t>(state->glyphs.size());
   stats->run_count = static_cast<uint32_t>(state->runs.size());
   std::fill(std::begin(stats->reserved), std::end(stats->reserved), 0);
+  return GRANIT_SUCCESS;
+}
+
+extern "C" granit_result granit_text_draw_list_append_to_canvas(
+    granit_renderer renderer, granit_text_draw_list list, granit_text_atlas atlas,
+    granit_canvas_draw_list canvas) {
+  const auto state = find(renderer, list);
+  if (!state)
+    return GRANIT_ERROR_INVALID_HANDLE;
+  if (atlas == GRANIT_NULL_HANDLE || canvas == GRANIT_NULL_HANDLE)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  std::scoped_lock lock{state->mutex};
+  for (const auto& run : state->runs) {
+    for (uint32_t offset = 0; offset < run.glyph_count; ++offset) {
+      const auto& instance = state->glyphs[run.first_glyph + offset];
+      granit::pipeline::detail::text_atlas_glyph glyph;
+      const auto resolved = granit::pipeline::detail::text_atlas_resolve_glyph(
+          renderer, atlas, instance.font_key, instance.glyph_id, glyph);
+      if (resolved != GRANIT_SUCCESS)
+        return resolved;
+      if (glyph.view == GRANIT_NULL_HANDLE)
+        continue;
+      granit_canvas_rect_desc rect = GRANIT_CANVAS_RECT_DESC_INIT;
+      rect.x = instance.x + glyph.bearing_x;
+      rect.y = instance.y - glyph.bearing_y;
+      rect.width = glyph.width;
+      rect.height = glyph.height;
+      rect.u0 = glyph.u0;
+      rect.v0 = glyph.v0;
+      rect.u1 = glyph.u1;
+      rect.v1 = glyph.v1;
+      rect.color = instance.color;
+      rect.state.texture = glyph.view;
+      rect.state.sampler = glyph.sampler;
+      rect.state.scissor = run.scissor;
+      const auto appended = granit_canvas_draw_list_append_rect(renderer, canvas, &rect);
+      if (appended != GRANIT_SUCCESS)
+        return appended;
+    }
+  }
   return GRANIT_SUCCESS;
 }
 
