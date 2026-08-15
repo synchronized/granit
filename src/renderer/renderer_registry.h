@@ -41,7 +41,8 @@ public:
 
   [[nodiscard]] granit_result create(std::string_view application_name, bool enable_validation,
                                      std::uint32_t surface_types, std::uint32_t frames_in_flight,
-                                     granit_renderer& renderer);
+                                     granit_diagnostic_callback diagnostic_callback,
+                                     void* diagnostic_user_data, granit_renderer& renderer);
   [[nodiscard]] granit_result destroy(granit_renderer renderer);
   [[nodiscard]] granit_result import_pipeline_cache(granit_renderer renderer, const void* data,
                                                     std::uint64_t size);

@@ -7,6 +7,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include <granit/core/diagnostic.h>
 #include <granit/core/export.h>
 #include <granit/core/result.h>
 #include <granit/core/types.h>
@@ -34,6 +35,8 @@ typedef struct granit_renderer_desc {
   uint32_t surface_types;
   uint32_t frames_in_flight;
   uint32_t reserved;
+  granit_diagnostic_callback diagnostic_callback;
+  void* diagnostic_user_data;
 } granit_renderer_desc;
 
 #define GRANIT_RENDERER_DESC_VERSION_1_SIZE                                                        \
@@ -42,6 +45,8 @@ typedef struct granit_renderer_desc {
   ((uint32_t)(offsetof(granit_renderer_desc, surface_types) + sizeof(uint32_t)))
 #define GRANIT_RENDERER_DESC_VERSION_3_SIZE                                                        \
   ((uint32_t)(offsetof(granit_renderer_desc, reserved) + sizeof(uint32_t)))
+#define GRANIT_RENDERER_DESC_VERSION_4_SIZE                                                        \
+  ((uint32_t)(offsetof(granit_renderer_desc, diagnostic_user_data) + sizeof(void*)))
 
 #define GRANIT_RENDERER_DESC_INIT                                                                  \
   {(uint32_t)sizeof(granit_renderer_desc),                                                         \
@@ -51,7 +56,9 @@ typedef struct granit_renderer_desc {
    UINT32_C(0),                                                                                    \
    UINT32_C(0),                                                                                    \
    GRANIT_DEFAULT_FRAMES_IN_FLIGHT,                                                                \
-   UINT32_C(0)}
+   UINT32_C(0),                                                                                    \
+   0,                                                                                              \
+   0}
 
 #ifdef __cplusplus
 extern "C" {

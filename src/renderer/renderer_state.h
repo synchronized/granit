@@ -64,7 +64,9 @@ public:
 
   [[nodiscard]] granit_result initialize(std::string_view application_name, bool enable_validation,
                                          std::uint32_t surface_types,
-                                         std::uint32_t frames_in_flight);
+                                         std::uint32_t frames_in_flight,
+                                         granit_diagnostic_callback diagnostic_callback,
+                                         void* diagnostic_user_data);
   [[nodiscard]] granit_result import_pipeline_cache(const void* data, std::uint64_t size) noexcept;
   [[nodiscard]] granit_result export_pipeline_cache(void* data, std::uint64_t& size) noexcept;
 

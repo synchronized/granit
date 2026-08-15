@@ -5,6 +5,8 @@
 #include <granit/renderer/renderer.hpp>
 
 #include <array>
+#include <mutex>
+#include <string>
 #include <utility>
 #include <vector>
 
@@ -15,6 +17,20 @@ namespace {
 bool environment_unavailable(granit_result result) {
   return result == GRANIT_ERROR_BACKEND_UNAVAILABLE || result == GRANIT_ERROR_INCOMPATIBLE_DRIVER ||
          result == GRANIT_ERROR_NO_SUITABLE_DEVICE;
+}
+
+struct diagnostic_messages {
+  std::mutex mutex;
+  std::vector<granit_diagnostic_category> categories;
+  std::vector<std::string> messages;
+};
+
+void capture_diagnostic(granit_diagnostic_severity, granit_diagnostic_category category,
+                        const char* message, std::uint32_t message_length, void* user_data) {
+  auto& captured = *static_cast<diagnostic_messages*>(user_data);
+  std::lock_guard lock{captured.mutex};
+  captured.categories.push_back(category);
+  captured.messages.emplace_back(message, message_length);
 }
 
 TEST_CASE("C API 创建并销毁真实 renderer", "[renderer][c_api]") {
@@ -65,6 +81,10 @@ TEST_CASE("Renderer 描述拒绝未知字段和非法字符串", "[renderer][val
   constexpr char embedded_zero[] = {'a', '\0', 'b'};
   desc.application_name = embedded_zero;
   desc.application_name_length = static_cast<std::uint32_t>(sizeof(embedded_zero));
+  CHECK(granit_renderer_create(&desc, &renderer) == GRANIT_ERROR_INVALID_ARGUMENT);
+
+  desc = GRANIT_RENDERER_DESC_INIT;
+  desc.diagnostic_user_data = &renderer;
   CHECK(granit_renderer_create(&desc, &renderer) == GRANIT_ERROR_INVALID_ARGUMENT);
 }
 
@@ -152,6 +172,38 @@ TEST_CASE("验证模式在活动资源存在时仍完成 Renderer 级联销毁",
 
   CHECK(granit_renderer_destroy(renderer) == GRANIT_SUCCESS);
   CHECK(granit_buffer_destroy(renderer, buffer) == GRANIT_ERROR_INVALID_HANDLE);
+}
+
+TEST_CASE("Renderer 诊断回调接收生命周期消息", "[renderer][diagnostic]") {
+  diagnostic_messages captured;
+  granit_renderer_desc renderer_desc = GRANIT_RENDERER_DESC_INIT;
+  renderer_desc.flags = GRANIT_RENDERER_ENABLE_VALIDATION_BIT;
+  renderer_desc.diagnostic_callback = capture_diagnostic;
+  renderer_desc.diagnostic_user_data = &captured;
+  granit_renderer renderer = GRANIT_NULL_HANDLE;
+  const auto create_result = granit_renderer_create(&renderer_desc, &renderer);
+  if (create_result == GRANIT_ERROR_UNSUPPORTED || environment_unavailable(create_result)) {
+    SKIP("当前运行环境不支持 Vulkan 验证层或没有满足要求的设备");
+  }
+  REQUIRE(create_result == GRANIT_SUCCESS);
+
+  granit_buffer_desc buffer_desc = GRANIT_BUFFER_DESC_INIT;
+  buffer_desc.size = 16;
+  buffer_desc.usage = GRANIT_BUFFER_USAGE_TRANSFER_DESTINATION_BIT;
+  granit_buffer buffer = GRANIT_NULL_HANDLE;
+  REQUIRE(granit_buffer_create(renderer, &buffer_desc, &buffer) == GRANIT_SUCCESS);
+  REQUIRE(granit_renderer_destroy(renderer) == GRANIT_SUCCESS);
+
+  std::lock_guard lock{captured.mutex};
+  bool found_lifecycle_message = false;
+  for (std::size_t index = 0; index < captured.messages.size(); ++index) {
+    if (captured.categories[index] == GRANIT_DIAGNOSTIC_CATEGORY_LIFECYCLE &&
+        captured.messages[index].find("Buffer=1") != std::string::npos) {
+      found_lifecycle_message = true;
+      break;
+    }
+  }
+  CHECK(found_lifecycle_message);
 }
 
 } // namespace

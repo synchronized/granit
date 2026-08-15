@@ -217,8 +217,11 @@ renderer_state::~renderer_state() {
 
 granit_result renderer_state::initialize(std::string_view application_name, bool enable_validation,
                                          std::uint32_t surface_types,
-                                         std::uint32_t frames_in_flight) {
+                                         std::uint32_t frames_in_flight,
+                                         granit_diagnostic_callback diagnostic_callback,
+                                         void* diagnostic_user_data) {
   validation_enabled_ = enable_validation;
+  diagnostics_.configure(diagnostic_callback, diagnostic_user_data);
   const auto instance_result = instance_.initialize({.application_name = application_name,
                                                      .enable_validation = enable_validation,
                                                      .surface_types = surface_types,

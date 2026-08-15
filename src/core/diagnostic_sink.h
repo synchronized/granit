@@ -8,6 +8,8 @@
 #include <mutex>
 #include <string_view>
 
+#include <granit/core/diagnostic.h>
+
 namespace granit::detail {
 
 enum class diagnostic_severity : std::uint32_t { info = 1, warning = 2, error = 3 };
@@ -20,25 +22,26 @@ enum class diagnostic_category : std::uint32_t {
   device = 5,
 };
 
-using diagnostic_callback = void (*)(diagnostic_severity severity, diagnostic_category category,
-                                     const char* message, std::uint32_t message_length,
-                                     void* user_data);
-
 /** Renderer 拥有的同步诊断出口；未配置回调时写入标准错误流。 */
 class diagnostic_sink {
 public:
   diagnostic_sink() = default;
-  diagnostic_sink(diagnostic_callback callback, void* user_data) noexcept
+  diagnostic_sink(granit_diagnostic_callback callback, void* user_data) noexcept
       : callback_(callback), user_data_(user_data) {}
 
   diagnostic_sink(const diagnostic_sink&) = delete;
   diagnostic_sink& operator=(const diagnostic_sink&) = delete;
 
+  void configure(granit_diagnostic_callback callback, void* user_data) noexcept {
+    callback_ = callback;
+    user_data_ = user_data;
+  }
+
   void emit(diagnostic_severity severity, diagnostic_category category,
             std::string_view message) const noexcept;
 
 private:
-  diagnostic_callback callback_{};
+  granit_diagnostic_callback callback_{};
   void* user_data_{};
   mutable std::mutex fallback_mutex_;
 };

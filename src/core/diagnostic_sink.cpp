@@ -31,8 +31,9 @@ void diagnostic_sink::emit(diagnostic_severity severity, diagnostic_category cat
                            std::string_view message) const noexcept {
   if (callback_ != nullptr && message.size() <= std::numeric_limits<std::uint32_t>::max()) {
     try {
-      callback_(severity, category, message.data(), static_cast<std::uint32_t>(message.size()),
-                user_data_);
+      callback_(static_cast<granit_diagnostic_severity>(severity),
+                static_cast<granit_diagnostic_category>(category), message.data(),
+                static_cast<std::uint32_t>(message.size()), user_data_);
     } catch (...) {
       // 用户代码的异常不得越过 C ABI 或 Vulkan 回调边界。
     }

@@ -61,6 +61,19 @@ Vulkan Validation Layer 负责 Vulkan API、同步和对象规则，但无法判
 验证模式下，销毁仍拥有用户子资源的父对象也会输出诊断：Texture 会报告用户创建的 View，
 Surface 会报告仍存活的 Swapchain。诊断不会改变销毁结果，子资源仍按依赖顺序失效和释放。
 
+## 诊断回调
+
+`granit_renderer_desc` V4 可以设置 `diagnostic_callback` 和 `diagnostic_user_data`。回调接收稳定的
+严重级别、消息类别以及不保证零结尾的 UTF-8 文本；文本只在回调期间有效。C++ 的
+`granit::renderer_desc` 对应字段为 `diagnostics` 和 `diagnostic_user_data`。
+
+回调在产生诊断的线程同步执行，Vulkan Validation 消息可能从多个线程并发进入，因此接收器必须
+线程安全，并且只应进行有界复制或投递到调用方自己的日志队列。回调不得重入产生消息的同一
+Renderer，`user_data` 的有效期必须覆盖 Renderer 创建、使用与销毁全过程。
+
+未设置回调时，Granit 将消息写入标准错误流。回调为空而 `diagnostic_user_data` 非空属于无效描述。
+当前类别包括 general、validation、performance、lifecycle 和 device；它们不复用 Vulkan 数值。
+
 ## 生命周期与线程安全
 
 公开 renderer 由进程内 registry 管理。句柄销毁后立即对新操作失效，重复销毁返回

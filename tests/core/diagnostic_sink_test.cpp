@@ -10,15 +10,14 @@
 namespace {
 
 struct callback_state {
-  granit::detail::diagnostic_severity severity{};
-  granit::detail::diagnostic_category category{};
+  granit_diagnostic_severity severity{};
+  granit_diagnostic_category category{};
   std::string message;
   void* received_user_data{};
 };
 
-void capture_diagnostic(granit::detail::diagnostic_severity severity,
-                        granit::detail::diagnostic_category category, const char* message,
-                        std::uint32_t message_length, void* user_data) {
+void capture_diagnostic(granit_diagnostic_severity severity, granit_diagnostic_category category,
+                        const char* message, std::uint32_t message_length, void* user_data) {
   auto& state = *static_cast<callback_state*>(user_data);
   state.severity = severity;
   state.category = category;
@@ -26,8 +25,8 @@ void capture_diagnostic(granit::detail::diagnostic_severity severity,
   state.received_user_data = user_data;
 }
 
-void throwing_diagnostic(granit::detail::diagnostic_severity, granit::detail::diagnostic_category,
-                         const char*, std::uint32_t, void*) {
+void throwing_diagnostic(granit_diagnostic_severity, granit_diagnostic_category, const char*,
+                         std::uint32_t, void*) {
   throw 1;
 }
 
@@ -40,8 +39,8 @@ TEST_CASE("Diagnostic Sink 保留消息边界与用户数据", "[diagnostic]") {
   sink.emit(granit::detail::diagnostic_severity::warning,
             granit::detail::diagnostic_category::lifecycle, "含零尾部之外的 UTF-8 消息");
 
-  CHECK(state.severity == granit::detail::diagnostic_severity::warning);
-  CHECK(state.category == granit::detail::diagnostic_category::lifecycle);
+  CHECK(state.severity == GRANIT_DIAGNOSTIC_SEVERITY_WARNING);
+  CHECK(state.category == GRANIT_DIAGNOSTIC_CATEGORY_LIFECYCLE);
   CHECK(state.message == "含零尾部之外的 UTF-8 消息");
   CHECK(state.received_user_data == &state);
 }

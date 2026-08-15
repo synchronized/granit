@@ -82,6 +82,8 @@ target_sources(
       "${GRANIT_GENERATED_INCLUDE_DIR}"
     FILES
       "${PROJECT_SOURCE_DIR}/include/granit/core/export.h"
+      "${PROJECT_SOURCE_DIR}/include/granit/core/diagnostic.h"
+      "${PROJECT_SOURCE_DIR}/include/granit/core/diagnostic.hpp"
       "${PROJECT_SOURCE_DIR}/include/granit/renderer/buffer.h"
       "${PROJECT_SOURCE_DIR}/include/granit/renderer/buffer.hpp"
       "${PROJECT_SOURCE_DIR}/include/granit/renderer/command_recorder.h"

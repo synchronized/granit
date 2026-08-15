@@ -11,6 +11,7 @@
 #include <string_view>
 #include <utility>
 
+#include <granit/core/diagnostic.hpp>
 #include <granit/core/result.hpp>
 #include <granit/renderer/renderer.h>
 
@@ -31,6 +32,8 @@ struct renderer_desc {
   bool enable_validation{};
   surface_type surface_types{surface_type::none};
   std::uint32_t frames_in_flight{GRANIT_DEFAULT_FRAMES_IN_FLIGHT};
+  diagnostic_callback diagnostics{};
+  void* diagnostic_user_data{};
 };
 
 /** 无异常、move-only 的 renderer RAII 包装。 */
@@ -66,6 +69,8 @@ public:
         .surface_types = static_cast<std::uint32_t>(desc.surface_types),
         .frames_in_flight = desc.frames_in_flight,
         .reserved = 0,
+        .diagnostic_callback = desc.diagnostics,
+        .diagnostic_user_data = desc.diagnostic_user_data,
     };
     return from_native(granit_renderer_create(&native_desc, &handle_));
   }
