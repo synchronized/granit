@@ -19,6 +19,10 @@ typedef granit_handle granit_texture_view;
 extern "C" {
 #endif
 
+/** 查询格式的紧密排列块信息；结果不包含设备相关的行或 Buffer 对齐。 */
+GRANIT_API granit_result granit_texture_format_get_footprint(
+    granit_texture_format format, granit_texture_format_footprint* footprint);
+
 /** 创建未初始化的 Texture 存储。 */
 GRANIT_API granit_result granit_texture_create(granit_renderer renderer,
                                                const granit_texture_desc* desc,

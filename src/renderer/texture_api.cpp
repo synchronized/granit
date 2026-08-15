@@ -4,7 +4,26 @@
 #include <granit/renderer/texture.hpp>
 
 #include "core/resource_validation.h"
+#include "core/texture_format.h"
 #include "renderer/renderer_registry.h"
+
+#include <algorithm>
+
+extern "C" granit_result granit_texture_format_get_footprint(
+    granit_texture_format format, granit_texture_format_footprint* footprint) {
+  if (footprint == nullptr ||
+      footprint->struct_size < GRANIT_TEXTURE_FORMAT_FOOTPRINT_VERSION_1_SIZE) {
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  }
+  const auto bytes = granit::detail::texture_format_bytes_per_block(format);
+  if (bytes == 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  footprint->block_width = 1;
+  footprint->block_height = 1;
+  footprint->bytes_per_block = bytes;
+  std::fill(std::begin(footprint->reserved), std::end(footprint->reserved), 0);
+  return GRANIT_SUCCESS;
+}
 
 extern "C" granit_result granit_texture_create(granit_renderer renderer,
                                                const granit_texture_desc* desc,

@@ -14,6 +14,12 @@ Texture 格式，并根据颜色、深度或深度模板格式自动选择 aspec
 
 销毁 View 不影响父 Texture；销毁 Texture 会使其全部 View 句柄立即失效。
 
+## 格式 Footprint
+
+`granit_texture_format_get_footprint` 返回格式块宽高和每块字节数。结果描述 CPU 内存中的紧密排列，
+不包含 Vulkan 或具体设备要求的 Buffer Offset、Row Pitch 对齐。当前格式均为非压缩格式，因此
+块宽高为 `1×1`；保留块语义是为了后续增加压缩格式时不改变查询模型。
+
 ## CPU 数据写入
 
 `granit_texture_write` 使用“源数据布局 + 目标区域”描述一次写入：

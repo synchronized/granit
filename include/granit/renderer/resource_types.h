@@ -54,6 +54,20 @@ typedef uint32_t granit_texture_format;
 #define GRANIT_TEXTURE_FORMAT_D24_UNORM_S8_UINT UINT32_C(10)
 #define GRANIT_TEXTURE_FORMAT_D32_FLOAT_S8_UINT UINT32_C(11)
 
+/** 一个格式块的紧密排列信息；当前非压缩格式的块宽高均为 1。 */
+typedef struct granit_texture_format_footprint {
+  uint32_t struct_size;
+  uint32_t block_width;
+  uint32_t block_height;
+  uint32_t bytes_per_block;
+  uint32_t reserved[4];
+} granit_texture_format_footprint;
+#define GRANIT_TEXTURE_FORMAT_FOOTPRINT_VERSION_1_SIZE UINT32_C(32)
+#define GRANIT_TEXTURE_FORMAT_FOOTPRINT_INIT                                                   \
+  {GRANIT_TEXTURE_FORMAT_FOOTPRINT_VERSION_1_SIZE, UINT32_C(0), UINT32_C(0), UINT32_C(0), {   \
+    UINT32_C(0), UINT32_C(0), UINT32_C(0), UINT32_C(0)                                        \
+  }}
+
 /** 每个像素的样本数。 */
 typedef uint32_t granit_sample_count;
 #define GRANIT_SAMPLE_COUNT_1 UINT32_C(1)

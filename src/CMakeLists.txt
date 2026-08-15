@@ -52,6 +52,7 @@ target_sources(
     core/lifecycle_validation.h
     core/resource_validation.cpp
     core/resource_validation.h
+    core/texture_format.h
     core/retirement_queue.cpp
     core/retirement_queue.h
     core/device_status.h

@@ -16,6 +16,30 @@ bool unavailable(granit::result value) {
          value == granit::result::no_suitable_device || value == granit::result::unsupported;
 }
 
+TEST_CASE("Texture Format Footprint返回后端无关的紧密块信息", "[texture][format]") {
+  granit_texture_format_footprint native = GRANIT_TEXTURE_FORMAT_FOOTPRINT_INIT;
+  CHECK(granit_texture_format_get_footprint(GRANIT_TEXTURE_FORMAT_R8_UNORM, &native) ==
+        GRANIT_SUCCESS);
+  CHECK(native.block_width == 1);
+  CHECK(native.block_height == 1);
+  CHECK(native.bytes_per_block == 1);
+  CHECK(granit_texture_format_get_footprint(GRANIT_TEXTURE_FORMAT_RGBA16_FLOAT, &native) ==
+        GRANIT_SUCCESS);
+  CHECK(native.bytes_per_block == 8);
+  CHECK(granit_texture_format_get_footprint(GRANIT_TEXTURE_FORMAT_D32_FLOAT_S8_UINT, &native) ==
+        GRANIT_SUCCESS);
+  CHECK(native.bytes_per_block == 8);
+  CHECK(granit_texture_format_get_footprint(GRANIT_TEXTURE_FORMAT_UNDEFINED, &native) ==
+        GRANIT_ERROR_INVALID_ARGUMENT);
+  CHECK(granit_texture_format_get_footprint(GRANIT_TEXTURE_FORMAT_R8_UNORM, nullptr) ==
+        GRANIT_ERROR_INVALID_ARGUMENT);
+
+  granit::texture_format_footprint cpp{};
+  CHECK(granit::get_texture_format_footprint(granit::texture_format::bgra8_srgb, cpp) ==
+        granit::result::success);
+  CHECK(cpp.bytes_per_block == 4);
+}
+
 TEST_CASE("Texture 与默认 View 支持独立和级联销毁", "[texture]") {
   granit::renderer renderer;
   const auto result = renderer.initialize({.application_name = "granit-texture-tests"});

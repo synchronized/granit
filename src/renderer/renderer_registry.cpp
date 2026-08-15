@@ -3,6 +3,8 @@
 
 #include "renderer/renderer_registry.h"
 
+#include "core/texture_format.h"
+
 #include <algorithm>
 #include <cstring>
 #include <functional>
@@ -84,24 +86,6 @@ VkImageAspectFlags map_aspect(granit_texture_aspect aspect) noexcept {
   if ((aspect & GRANIT_TEXTURE_ASPECT_STENCIL_BIT) != 0)
     result |= VK_IMAGE_ASPECT_STENCIL_BIT;
   return result;
-}
-
-std::uint32_t texture_bytes_per_pixel(granit_texture_format format) noexcept {
-  switch (format) {
-  case GRANIT_TEXTURE_FORMAT_R8_UNORM:
-    return 1;
-  case GRANIT_TEXTURE_FORMAT_RG8_UNORM:
-    return 2;
-  case GRANIT_TEXTURE_FORMAT_RGBA8_UNORM:
-  case GRANIT_TEXTURE_FORMAT_RGBA8_SRGB:
-  case GRANIT_TEXTURE_FORMAT_BGRA8_UNORM:
-  case GRANIT_TEXTURE_FORMAT_BGRA8_SRGB:
-    return 4;
-  case GRANIT_TEXTURE_FORMAT_RGBA16_FLOAT:
-    return 8;
-  default:
-    return 0;
-  }
 }
 
 } // namespace
@@ -1473,7 +1457,8 @@ granit_result renderer_registry::upload_batch_write_texture(
   if (batch_record->failed || size > SIZE_MAX)
     return GRANIT_ERROR_INVALID_ARGUMENT;
   const auto& desc = texture_record->desc;
-  const auto bytes_per_pixel = texture_bytes_per_pixel(desc.format);
+  const auto bytes_per_pixel =
+      depth_format(desc.format) ? 0 : texture_format_bytes_per_block(desc.format);
   if ((desc.usage & GRANIT_TEXTURE_USAGE_TRANSFER_DESTINATION_BIT) == 0 ||
       desc.sample_count != GRANIT_SAMPLE_COUNT_1 || bytes_per_pixel == 0)
     return GRANIT_ERROR_UNSUPPORTED;
@@ -1675,7 +1660,8 @@ granit_result renderer_registry::write_texture(granit_renderer renderer, granit_
 
   std::lock_guard record_lock{record->mutex};
   const auto& desc = record->desc;
-  const auto bytes_per_pixel = texture_bytes_per_pixel(desc.format);
+  const auto bytes_per_pixel =
+      depth_format(desc.format) ? 0 : texture_format_bytes_per_block(desc.format);
   if ((desc.usage & GRANIT_TEXTURE_USAGE_TRANSFER_DESTINATION_BIT) == 0 ||
       desc.sample_count != GRANIT_SAMPLE_COUNT_1 || bytes_per_pixel == 0) {
     return GRANIT_ERROR_UNSUPPORTED;
@@ -2773,7 +2759,8 @@ granit_result renderer_registry::copy_texture_to_buffer(granit_renderer renderer
   }
 
   const auto& desc = source_record->desc;
-  const auto bytes_per_pixel = texture_bytes_per_pixel(desc.format);
+  const auto bytes_per_pixel =
+      depth_format(desc.format) ? 0 : texture_format_bytes_per_block(desc.format);
   if ((desc.usage & GRANIT_TEXTURE_USAGE_TRANSFER_SOURCE_BIT) == 0 ||
       (destination_record->desc.usage & GRANIT_BUFFER_USAGE_TRANSFER_DESTINATION_BIT) == 0 ||
       desc.sample_count != GRANIT_SAMPLE_COUNT_1 || bytes_per_pixel == 0) {

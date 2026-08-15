@@ -15,6 +15,23 @@
 
 namespace granit {
 
+struct texture_format_footprint {
+  std::uint32_t block_width{};
+  std::uint32_t block_height{};
+  std::uint32_t bytes_per_block{};
+};
+
+[[nodiscard]] inline result get_texture_format_footprint(
+    texture_format format, texture_format_footprint& footprint) noexcept {
+  granit_texture_format_footprint native = GRANIT_TEXTURE_FORMAT_FOOTPRINT_INIT;
+  const auto value = granit_texture_format_get_footprint(static_cast<std::uint32_t>(format),
+                                                         &native);
+  if (value == GRANIT_SUCCESS) {
+    footprint = {native.block_width, native.block_height, native.bytes_per_block};
+  }
+  return from_native(value);
+}
+
 struct texture_desc {
   texture_dimension dimension{texture_dimension::two_dimensional};
   texture_format format{texture_format::undefined};
