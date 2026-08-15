@@ -90,7 +90,7 @@ D-03-graphics-pipeline.md
 - [H-07：高级参考渲染套件](H-07-reference-render-pipeline.md)——已完成；公共 ABI、自动 Draw、
   离屏/窗口用户路径、安装 component、输出与性能验收均已闭合。
 - [H-08：公共 UI、Debug Draw 与 Text components](H-08-ui-debug-text-components.md)——进行中；
-  H-08A 数据 ABI 与 H-08B 公共录制及参考管线提交已完成，下一步进入 Debug Draw component。
+  H-08A、H-08B 与 H-08C1 Debug Draw 数据 ABI 已完成，下一步转换屏幕空间调试几何。
 
 ## 状态
 

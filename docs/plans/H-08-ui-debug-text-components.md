@@ -6,7 +6,7 @@
 ## 状态
 
 - 优先级：P2
-- 状态：进行中；H-08A 与 H-08B 已完成，下一步 H-08C Debug Draw component
+- 状态：进行中；H-08A、H-08B 与 H-08C1 数据 ABI 已完成
 - 必需依赖：H-06 Unlit、2D 与 UI 内部技术验证
 
 ## 目标
@@ -49,6 +49,13 @@
 - H-08B2 已把 Draw List 作为单 View 或每个多 View 输出的可选 Canvas 输入接入参考管线。
 - 自动路径先录制 Canvas，再调用用户 Overlay 回调；UNORM 输出自动使用 Shader sRGB 编码，sRGB
   Attachment 则交由硬件编码。
+
+## H-08C 当前结果
+
+- H-08C1 提供独立 `debug_draw_list` C ABI 与 C++ RAII 包装，批量保存线段和三角形命令。
+- 命令明确区分世界空间与屏幕空间、深度测试模式、像素线宽和逐顶点颜色。
+- 列表使用 Renderer domain、generation 句柄、容量复用及调用方外部同步，不进入底层 Renderer 状态。
+- 下一步 H-08C2 实现屏幕空间命令到 Canvas Draw List 的转换，再处理世界空间 Unlit 录制。
 
 ## 验收标准
 

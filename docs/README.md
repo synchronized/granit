@@ -75,6 +75,7 @@
 - [Scene Snapshot](reference/scene-snapshot.md)
 - [Render Pipeline](reference/render-pipeline.md)
 - [Canvas Draw List](reference/canvas-draw-list.md)
+- [Debug Draw List](reference/debug-draw-list.md)
 
 ### 窗口输出
 
