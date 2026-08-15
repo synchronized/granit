@@ -478,17 +478,17 @@ TEST_CASE("Recorder 使用线性 Blit 生成 Mipmap", "[command][mipmap][texture
                              {.format = granit::texture_format::rgba8_unorm,
                               .usage = granit::texture_usage::transfer_source |
                                        granit::texture_usage::transfer_destination,
-                              .width = 4,
-                              .height = 4,
+                              .width = 7,
+                              .height = 5,
                               .mip_levels = 3}) == granit::result::success);
-  std::array<std::uint8_t, 64> pixels{};
+  std::array<std::uint8_t, 140> pixels{};
   for (std::size_t index = 0; index < pixels.size(); index += 4) {
     pixels[index] = 40;
     pixels[index + 1] = 80;
     pixels[index + 2] = 120;
     pixels[index + 3] = 255;
   }
-  REQUIRE(texture.write(std::as_bytes(std::span{pixels}), {}, {.width = 4, .height = 4}) ==
+  REQUIRE(texture.write(std::as_bytes(std::span{pixels}), {}, {.width = 7, .height = 5}) ==
           granit::result::success);
   granit::command_recorder recorder;
   REQUIRE(recorder.initialize(renderer.native_handle()) == granit::result::success);
@@ -511,6 +511,183 @@ TEST_CASE("Recorder 使用线性 Blit 生成 Mipmap", "[command][mipmap][texture
   CHECK(std::to_integer<std::uint8_t>(copied[1]) == 80);
   CHECK(std::to_integer<std::uint8_t>(copied[2]) == 120);
   CHECK(std::to_integer<std::uint8_t>(copied[3]) == 255);
+}
+
+TEST_CASE("Mipmap 支持 Cube 数组层范围", "[command][mipmap][array]") {
+  granit::renderer renderer;
+  const auto result = renderer.initialize(
+      {.application_name = "granit-mipmap-array-tests", .enable_validation = true});
+  if (environment_unavailable(result))
+    SKIP("当前运行环境没有满足要求的 Vulkan 设备");
+  REQUIRE(result == granit::result::success);
+
+  granit::texture texture;
+  REQUIRE(texture.initialize(renderer.native_handle(),
+                             {.dimension = granit::texture_dimension::cube,
+                              .format = granit::texture_format::rgba8_unorm,
+                              .usage = granit::texture_usage::transfer_source |
+                                       granit::texture_usage::transfer_destination,
+                              .width = 4,
+                              .height = 4,
+                              .mip_levels = 3,
+                              .array_layers = 6}) == granit::result::success);
+  std::array<std::uint8_t, 64> red{};
+  std::array<std::uint8_t, 64> green{};
+  for (std::size_t index = 0; index < red.size(); index += 4) {
+    red[index] = 255;
+    red[index + 3] = 255;
+    green[index + 1] = 255;
+    green[index + 3] = 255;
+  }
+  REQUIRE(texture.write(std::as_bytes(std::span{red}), {},
+                        {.base_array_layer = 0, .width = 4, .height = 4}) ==
+          granit::result::success);
+  REQUIRE(texture.write(std::as_bytes(std::span{green}), {},
+                        {.base_array_layer = 1, .width = 4, .height = 4}) ==
+          granit::result::success);
+
+  granit::command_recorder recorder;
+  REQUIRE(recorder.initialize(renderer.native_handle()) == granit::result::success);
+  REQUIRE(recorder.begin() == granit::result::success);
+  REQUIRE(
+      recorder.generate_mipmaps(
+          texture.native_handle(),
+          {.base_mip_level = 0, .level_count = 3, .base_array_layer = 1, .array_layer_count = 1}) ==
+      granit::result::success);
+  REQUIRE(recorder.end() == granit::result::success);
+  REQUIRE(recorder.submit() == granit::result::success);
+  REQUIRE(recorder.reset() == granit::result::success);
+
+  const granit::texture_write_region last_green{
+      .mip_level = 2, .base_array_layer = 1, .width = 1, .height = 1};
+  granit::texture_readback_info info;
+  REQUIRE(texture.query_readback(last_green, info) == granit::result::success);
+  CHECK(info.width == 1);
+  CHECK(info.height == 1);
+  std::vector<std::byte> copied(static_cast<std::size_t>(info.required_size));
+  REQUIRE(texture.read(copied, last_green, info) == granit::result::success);
+  CHECK(std::to_integer<std::uint8_t>(copied[0]) == 0);
+  CHECK(std::to_integer<std::uint8_t>(copied[1]) == 255);
+  CHECK(std::to_integer<std::uint8_t>(copied[2]) == 0);
+  CHECK(std::to_integer<std::uint8_t>(copied[3]) == 255);
+
+  REQUIRE(recorder.begin() == granit::result::success);
+  REQUIRE(
+      recorder.generate_mipmaps(
+          texture.native_handle(),
+          {.base_mip_level = 0, .level_count = 3, .base_array_layer = 0, .array_layer_count = 1}) ==
+      granit::result::success);
+  REQUIRE(recorder.end() == granit::result::success);
+  REQUIRE(recorder.submit() == granit::result::success);
+  REQUIRE(recorder.reset() == granit::result::success);
+  const granit::texture_write_region last_red{
+      .mip_level = 2, .base_array_layer = 0, .width = 1, .height = 1};
+  REQUIRE(texture.query_readback(last_red, info) == granit::result::success);
+  copied.resize(static_cast<std::size_t>(info.required_size));
+  REQUIRE(texture.read(copied, last_red, info) == granit::result::success);
+  CHECK(std::to_integer<std::uint8_t>(copied[0]) == 255);
+  CHECK(std::to_integer<std::uint8_t>(copied[1]) == 0);
+}
+
+TEST_CASE("Mipmap 支持非零起始级并拒绝无效范围", "[command][mipmap][validation]") {
+  granit::renderer renderer;
+  const auto result = renderer.initialize({.application_name = "granit-mipmap-range-tests"});
+  if (environment_unavailable(result))
+    SKIP("当前运行环境没有满足要求的 Vulkan 设备");
+  REQUIRE(result == granit::result::success);
+  granit::texture texture;
+  REQUIRE(texture.initialize(renderer.native_handle(),
+                             {.format = granit::texture_format::rgba8_unorm,
+                              .usage = granit::texture_usage::transfer_source |
+                                       granit::texture_usage::transfer_destination,
+                              .width = 8,
+                              .height = 8,
+                              .mip_levels = 4}) == granit::result::success);
+  std::array<std::uint8_t, 64> blue{};
+  for (std::size_t index = 0; index < blue.size(); index += 4) {
+    blue[index + 2] = 255;
+    blue[index + 3] = 255;
+  }
+  REQUIRE(texture.write(std::as_bytes(std::span{blue}), {},
+                        {.mip_level = 1, .width = 4, .height = 4}) == granit::result::success);
+  granit::command_recorder recorder;
+  REQUIRE(recorder.initialize(renderer.native_handle()) == granit::result::success);
+  REQUIRE(recorder.begin() == granit::result::success);
+  CHECK(recorder.generate_mipmaps(texture.native_handle(),
+                                  {.level_count = 1, .array_layer_count = 1}) ==
+        granit::result::invalid_argument);
+  CHECK(
+      recorder.generate_mipmaps(texture.native_handle(),
+                                {.base_mip_level = 3, .level_count = 2, .array_layer_count = 1}) ==
+      granit::result::invalid_argument);
+  CHECK(recorder.generate_mipmaps(
+            texture.native_handle(),
+            {.level_count = 2, .base_array_layer = 1, .array_layer_count = 1}) ==
+        granit::result::invalid_argument);
+  REQUIRE(
+      recorder.generate_mipmaps(texture.native_handle(),
+                                {.base_mip_level = 1, .level_count = 3, .array_layer_count = 1}) ==
+      granit::result::success);
+  REQUIRE(recorder.end() == granit::result::success);
+  REQUIRE(recorder.submit() == granit::result::success);
+  REQUIRE(recorder.reset() == granit::result::success);
+  const granit::texture_write_region last_mip{.mip_level = 3, .width = 1, .height = 1};
+  granit::texture_readback_info info;
+  REQUIRE(texture.query_readback(last_mip, info) == granit::result::success);
+  std::vector<std::byte> copied(static_cast<std::size_t>(info.required_size));
+  REQUIRE(texture.read(copied, last_mip, info) == granit::result::success);
+  CHECK(std::to_integer<std::uint8_t>(copied[2]) == 255);
+
+  granit::texture missing_source;
+  REQUIRE(missing_source.initialize(renderer.native_handle(),
+                                    {.format = granit::texture_format::rgba8_unorm,
+                                     .usage = granit::texture_usage::transfer_destination,
+                                     .width = 2,
+                                     .height = 2,
+                                     .mip_levels = 2}) == granit::result::success);
+  REQUIRE(recorder.begin() == granit::result::success);
+  CHECK(recorder.generate_mipmaps(missing_source.native_handle(),
+                                  {.level_count = 2, .array_layer_count = 1}) ==
+        granit::result::unsupported);
+  REQUIRE(recorder.end() == granit::result::success);
+  REQUIRE(recorder.reset() == granit::result::success);
+
+  granit::texture missing_destination;
+  REQUIRE(missing_destination.initialize(renderer.native_handle(),
+                                         {.format = granit::texture_format::rgba8_unorm,
+                                          .usage = granit::texture_usage::transfer_source,
+                                          .width = 2,
+                                          .height = 2,
+                                          .mip_levels = 2}) == granit::result::success);
+  granit::texture one_mip;
+  REQUIRE(one_mip.initialize(renderer.native_handle(),
+                             {.format = granit::texture_format::rgba8_unorm,
+                              .usage = granit::texture_usage::transfer_source |
+                                       granit::texture_usage::transfer_destination,
+                              .width = 2,
+                              .height = 2}) == granit::result::success);
+  granit::renderer other_renderer;
+  REQUIRE(other_renderer.initialize({.application_name = "granit-mipmap-other-renderer"}) ==
+          granit::result::success);
+  granit::texture foreign;
+  REQUIRE(foreign.initialize(other_renderer.native_handle(),
+                             {.format = granit::texture_format::rgba8_unorm,
+                              .usage = granit::texture_usage::transfer_source |
+                                       granit::texture_usage::transfer_destination,
+                              .width = 2,
+                              .height = 2,
+                              .mip_levels = 2}) == granit::result::success);
+  REQUIRE(recorder.begin() == granit::result::success);
+  CHECK(recorder.generate_mipmaps(missing_destination.native_handle(),
+                                  {.level_count = 2, .array_layer_count = 1}) ==
+        granit::result::unsupported);
+  CHECK(recorder.generate_mipmaps(one_mip.native_handle(),
+                                  {.level_count = 2, .array_layer_count = 1}) ==
+        granit::result::invalid_argument);
+  CHECK(recorder.generate_mipmaps(foreign.native_handle(),
+                                  {.level_count = 2, .array_layer_count = 1}) ==
+        granit::result::invalid_handle);
+  REQUIRE(recorder.end() == granit::result::success);
 }
 
 TEST_CASE("Recorder 录制 Dynamic Rendering 作用域", "[command][rendering]") {

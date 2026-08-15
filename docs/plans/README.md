@@ -45,8 +45,8 @@ D-03-graphics-pipeline.md
 - [R-09：统一 Render Target Attachment](R-09-render-target-attachment.md)——已完成。
 - [R-10：通用资源传输](R-10-resource-transfer.md)——已确认首期边界；先实现格式 Footprint 与同步
   Texture 原始像素读取，再按需求补齐显式复制和 mipmap 生成。
-- [R-10C：Mipmap 生成](R-10C-mipmap-generation.md)——公共生成命令已完成，下一步补齐
-  非二次幂、数组层和失败路径验证。
+- [R-10C：Mipmap 生成](R-10C-mipmap-generation.md)——已完成子资源跟踪、能力门禁、公共命令及
+  非二次幂、Cube 数组层和失败路径验证。
 - [F-01：Command Recorder 基础](F-01-command-recorder.md)——已完成。
 - [F-02：基础命令录制](F-02-command-recording.md)——Buffer 命令与 Dynamic Rendering 已完成。
 - [F-03：帧同步内部抽象](F-03-frame-synchronization.md)——Fence、二进制 Semaphore 和每帧上下文
