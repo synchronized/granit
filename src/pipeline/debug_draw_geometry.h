@@ -29,6 +29,10 @@ expand_world_debug_line(const granit_debug_draw_line& line, const granit_matrix4
                         std::uint32_t viewport_width, std::uint32_t viewport_height,
                         std::array<debug_clip_vertex, 4>& output) noexcept;
 
+/** 将单个世界空间顶点变换为供调试 Pipeline 直接消费的 clip-space 顶点。 */
+[[nodiscard]] GRANIT_RENDER_PIPELINE_API debug_clip_vertex transform_world_debug_vertex(
+    const granit_debug_draw_vertex& vertex, const granit_matrix4& view_projection) noexcept;
+
 } // namespace granit::pipeline::detail
 
 #endif

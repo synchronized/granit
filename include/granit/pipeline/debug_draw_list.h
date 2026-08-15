@@ -8,8 +8,11 @@
 
 #include <granit/core/result.h>
 #include <granit/core/types.h>
+#include <granit/math/types.h>
 #include <granit/pipeline/canvas_draw_list.h>
 #include <granit/pipeline/export.h>
+#include <granit/renderer/command_recorder.h>
+#include <granit/renderer/render_target.h>
 #include <granit/renderer/renderer.h>
 
 /** 可复用的逐帧调试绘制命令列表句柄。零值无效。 */
@@ -70,6 +73,32 @@ typedef struct granit_debug_draw_list_stats {
   uint32_t reserved[5];
 } granit_debug_draw_list_stats;
 
+/** 把世界空间调试图元录制到颜色目标所需的参数。 */
+typedef struct granit_debug_draw_record_desc {
+  uint32_t struct_size;
+  granit_texture_view color;
+  granit_texture_format color_format;
+  granit_texture_view depth;
+  granit_texture_format depth_format;
+  uint32_t width;
+  uint32_t height;
+  granit_matrix4 view_projection;
+  granit_attachment_load_operation color_load_operation;
+  granit_attachment_load_operation depth_load_operation;
+  uint32_t encode_srgb;
+  uint32_t reserved[3];
+} granit_debug_draw_record_desc;
+
+#define GRANIT_DEBUG_DRAW_RECORD_DESC_INIT                                                         \
+  {                                                                                                \
+    (uint32_t)sizeof(granit_debug_draw_record_desc), GRANIT_NULL_HANDLE,                           \
+        GRANIT_TEXTURE_FORMAT_UNDEFINED, GRANIT_NULL_HANDLE, GRANIT_TEXTURE_FORMAT_UNDEFINED,      \
+        UINT32_C(0), UINT32_C(0), {{0}}, GRANIT_ATTACHMENT_LOAD_OPERATION_LOAD,                    \
+        GRANIT_ATTACHMENT_LOAD_OPERATION_LOAD, UINT32_C(0), {                                      \
+      UINT32_C(0), UINT32_C(0), UINT32_C(0)                                                        \
+    }                                                                                              \
+  }
+
 #define GRANIT_DEBUG_DRAW_LIST_STATS_INIT                                                          \
   {                                                                                                \
     (uint32_t)sizeof(granit_debug_draw_list_stats), UINT32_C(0), UINT32_C(0), {                    \
@@ -103,6 +132,13 @@ GRANIT_RENDER_PIPELINE_API granit_result granit_debug_draw_list_get_stats(
  */
 GRANIT_RENDER_PIPELINE_API granit_result granit_debug_draw_list_append_screen_to_canvas(
     granit_renderer renderer, granit_debug_draw_list list, granit_canvas_draw_list canvas);
+/**
+ * 把所有世界空间命令一次录制到已有 Recorder；屏幕空间命令被忽略。
+ * 请求深度测试的命令要求同时提供 depth 与 depth_format。列表和附件须保持有效至录制完成。
+ */
+GRANIT_RENDER_PIPELINE_API granit_result granit_debug_draw_list_record_world(
+    granit_renderer renderer, granit_command_recorder recorder, granit_debug_draw_list list,
+    const granit_debug_draw_record_desc* desc);
 GRANIT_RENDER_PIPELINE_API granit_result
 granit_debug_draw_list_destroy(granit_renderer renderer, granit_debug_draw_list list);
 

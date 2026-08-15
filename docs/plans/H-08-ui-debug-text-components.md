@@ -6,7 +6,7 @@
 ## 状态
 
 - 优先级：P2
-- 状态：进行中；H-08A、H-08B 与 H-08C1～H-08C3b1 已完成
+- 状态：进行中；H-08A、H-08B 与 H-08C1～H-08C3b2 已完成
 - 必需依赖：H-06 Unlit、2D 与 UI 内部技术验证
 
 ## 目标
@@ -60,7 +60,11 @@
 - H-08C3a 已验证 Vulkan 齐次裁剪体内的线段裁剪、近面交点颜色插值和按视口像素展开。
 - 下一步 H-08C3b 建立专用世界调试 Shader、深度分组和公共录制接口。
 - H-08C3b1 已固定零 Bind Group 的 clip-space 顶点 Shader，以及线性输出和 Shader sRGB 编码
-  Fragment 变体；下一步建立 Pipeline 缓存、上传和公共录制接口。
+  Fragment 变体。
+- H-08C3b2 已提供世界命令批量录制接口，并按颜色格式、深度格式、深度模式和 sRGB 编码懒缓存
+  Pipeline；动态顶点 Buffer 按需扩容并复用，稳定命令顺序只在深度模式切换处形成 Draw Batch。
+- 像素回读覆盖世界三角形颜色输出，深度测试覆盖遮挡行为；下一步把世界 Debug Draw 接入参考
+  Render Pipeline 的逐 View 提交路径。
 
 ## 验收标准
 

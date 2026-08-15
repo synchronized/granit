@@ -374,6 +374,12 @@ set(
   granit_pipeline_canvas_material
   "${granit_pipeline_generated_dir}/granit_pipeline_canvas.grmat.inc"
 )
+set(granit_pipeline_debug_world_vertex
+    "${granit_pipeline_generated_dir}/granit_pipeline_debug_world.vert.inc")
+set(granit_pipeline_debug_world_fragment
+    "${granit_pipeline_generated_dir}/granit_pipeline_debug_world.frag.inc")
+set(granit_pipeline_debug_world_srgb_fragment
+    "${granit_pipeline_generated_dir}/granit_pipeline_debug_world_srgb.frag.inc")
 add_custom_command(
   OUTPUT "${granit_pipeline_canvas_material}"
   COMMAND "${CMAKE_COMMAND}" -E make_directory "${granit_pipeline_generated_dir}"
@@ -400,6 +406,24 @@ add_custom_command(
     "${PROJECT_SOURCE_DIR}/cmake/embed_binary.cmake"
   VERBATIM
 )
+foreach(granit_debug_output granit_pipeline_debug_world_vertex
+                            granit_pipeline_debug_world_fragment
+                            granit_pipeline_debug_world_srgb_fragment)
+  if(granit_debug_output STREQUAL "granit_pipeline_debug_world_vertex")
+    set(granit_debug_input "${PROJECT_SOURCE_DIR}/assets/shaders/debug/world.vert.spv")
+  elseif(granit_debug_output STREQUAL "granit_pipeline_debug_world_fragment")
+    set(granit_debug_input "${PROJECT_SOURCE_DIR}/assets/shaders/debug/world.frag.spv")
+  else()
+    set(granit_debug_input "${PROJECT_SOURCE_DIR}/assets/shaders/debug/world_encode_srgb.frag.spv")
+  endif()
+  add_custom_command(
+    OUTPUT "${${granit_debug_output}}"
+    COMMAND "${CMAKE_COMMAND}" -E make_directory "${granit_pipeline_generated_dir}"
+    COMMAND "${CMAKE_COMMAND}" "-DINPUT=${granit_debug_input}"
+            "-DOUTPUT=${${granit_debug_output}}" -P "${PROJECT_SOURCE_DIR}/cmake/embed_binary.cmake"
+    DEPENDS "${granit_debug_input}" "${PROJECT_SOURCE_DIR}/cmake/embed_binary.cmake"
+    VERBATIM)
+endforeach()
 add_custom_command(
   OUTPUT "${granit_pipeline_tone_fragment}"
   COMMAND "${CMAKE_COMMAND}" -E make_directory "${granit_pipeline_generated_dir}"
@@ -447,6 +471,9 @@ target_sources(
     "${granit_pipeline_shadow_vertex}"
     "${granit_pipeline_shadow_fragment}"
     "${granit_pipeline_canvas_material}"
+    "${granit_pipeline_debug_world_vertex}"
+    "${granit_pipeline_debug_world_fragment}"
+    "${granit_pipeline_debug_world_srgb_fragment}"
     pipeline/embedded_shaders.cpp
     pipeline/embedded_shaders.h
     pipeline/default_ibl_resources.cpp

@@ -118,4 +118,9 @@ expand_world_debug_line(const granit_debug_draw_line& line, const granit_matrix4
   return debug_line_expand_result::success;
 }
 
+debug_clip_vertex transform_world_debug_vertex(const granit_debug_draw_vertex& vertex,
+                                               const granit_matrix4& view_projection) noexcept {
+  return {.position = transform(view_projection, vertex), .color = vertex.color};
+}
+
 } // namespace granit::pipeline::detail

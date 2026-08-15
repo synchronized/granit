@@ -28,6 +28,18 @@ alignas(std::uint32_t) constexpr std::uint8_t canvas_material_bytes[]{
 #include "granit_pipeline_canvas.grmat.inc"
 };
 
+alignas(std::uint32_t) constexpr std::uint8_t debug_world_vertex_bytes[]{
+#include "granit_pipeline_debug_world.vert.inc"
+};
+
+alignas(std::uint32_t) constexpr std::uint8_t debug_world_fragment_bytes[]{
+#include "granit_pipeline_debug_world.frag.inc"
+};
+
+alignas(std::uint32_t) constexpr std::uint8_t debug_world_srgb_fragment_bytes[]{
+#include "granit_pipeline_debug_world_srgb.frag.inc"
+};
+
 } // namespace
 
 std::span<const std::byte> tone_mapping_vertex_shader() noexcept {
@@ -52,6 +64,20 @@ std::span<const std::byte> shadow_depth_fragment_shader() noexcept {
 
 std::span<const std::byte> canvas_material_package() noexcept {
   return {reinterpret_cast<const std::byte*>(canvas_material_bytes), sizeof(canvas_material_bytes)};
+}
+
+std::span<const std::byte> debug_world_vertex_shader() noexcept {
+  return {reinterpret_cast<const std::byte*>(debug_world_vertex_bytes),
+          sizeof(debug_world_vertex_bytes)};
+}
+
+std::span<const std::byte> debug_world_fragment_shader(bool encode_srgb) noexcept {
+  if (encode_srgb) {
+    return {reinterpret_cast<const std::byte*>(debug_world_srgb_fragment_bytes),
+            sizeof(debug_world_srgb_fragment_bytes)};
+  }
+  return {reinterpret_cast<const std::byte*>(debug_world_fragment_bytes),
+          sizeof(debug_world_fragment_bytes)};
 }
 
 } // namespace granit::pipeline::detail
