@@ -43,7 +43,7 @@ Texture、Sampler、Scissor 和 Layer 的内容相邻，但不能为减少 Draw 
   无锁容器、永久映射或额外暂存复制。
 - 10,000 矩形 Draw List 构建已超过 1 ms。H-06C 后续应先评估调用方容量预留和批量追加接口，
   再考虑线程化；当前内部接口仍未进入公共 ABI。
-- 本基线未测量 UI Pass GPU timestamp。GPU 成本会强烈受到实际 Batch 数、覆盖像素、混合和纹理
+- 本基线未测量 Canvas Pass GPU timestamp。GPU 成本会强烈受到实际 Batch 数、覆盖像素、混合和纹理
   采样影响，应在 H-06D 接入参考管线后以兼容与交替两组状态分别测量。
 
 ## 复测条件

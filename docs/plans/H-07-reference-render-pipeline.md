@@ -32,7 +32,7 @@ Deferred 或 Forward+。详细渲染路径见[架构说明](../concepts/architec
 ## 四种使用层级
 
 1. **完整参考管线**：提交 Scene、View、输出和质量配置，由 Pipeline 组织完整帧。
-2. **扩展参考管线**：配置 Material，并在稳定位置插入后处理、调试或 UI Pass。
+2. **扩展参考管线**：配置 Material，并在稳定位置插入后处理、调试或 Canvas Pass。
 3. **自建 Render Graph**：选择部分高层模块，自行决定 Pass、资源依赖和所有权。
 4. **直接使用 Renderer**：自行管理 GPU 资源、命令、同步和提交。
 
@@ -87,7 +87,7 @@ Camera、Light、View、矩阵和单个 Renderable 使用包含 `struct_size` �
 - 不得递归调用同一 Pipeline。
 - 返回首个错误时终止本帧，并且不提交未完成 Recorder。
 
-后续扩展位置包括天空背景、Tone Mapping 前 HDR Pass 和 Tone Mapping 后 UI Pass。首版不提供任意
+后续扩展位置包括天空背景、Tone Mapping 前 HDR Pass 和 Tone Mapping 后 Canvas Pass。首版不提供任意
 插件系统，也不暴露 Vulkan Command Buffer、Image Layout 或 Pipeline Stage。
 
 ## 已完成范围

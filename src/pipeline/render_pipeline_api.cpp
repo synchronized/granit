@@ -678,13 +678,13 @@ render_view(pipeline_state& state, const granit_render_pipeline_render_desc& des
     return GRANIT_ERROR_INVALID_ARGUMENT;
   }
   if (state.record != nullptr) {
-    const auto ui_pass = graph.add_pass(
+    const auto canvas_pass = graph.add_pass(
         {.side_effect = true,
          .accesses = {{output, granit::render_graph::access_type::read_write}}},
         [&](granit::render_graph::pass_context& context) {
           const granit_render_pipeline_record_info info{
               .struct_size = sizeof(granit_render_pipeline_record_info),
-              .stage = GRANIT_RENDER_PIPELINE_STAGE_UI,
+              .stage = GRANIT_RENDER_PIPELINE_STAGE_OVERLAY,
               .recorder = context.recorder(),
               .color_input = context.texture_view(output),
               .color_output = context.texture_view(output),
@@ -707,9 +707,9 @@ render_view(pipeline_state& state, const granit_render_pipeline_render_desc& des
               .reserved = {0, 0}};
           return state.record(&info, state.user_data);
         },
-        "Reference / UI");
-    if (ui_pass == granit::render_graph::invalid_pass_id ||
-        !graph.add_dependency(passes.tone_mapping, ui_pass)) {
+        "Reference / Overlay");
+    if (canvas_pass == granit::render_graph::invalid_pass_id ||
+        !graph.add_dependency(passes.tone_mapping, canvas_pass)) {
       return GRANIT_ERROR_INTERNAL;
     }
   }

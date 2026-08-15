@@ -3,8 +3,8 @@
 
 #include "material/pbr_draw_inputs.h"
 #include "pipeline/canvas_draw_list.h"
-#include "pipeline/ui_geometry_upload.h"
-#include "pipeline/ui_pass.h"
+#include "pipeline/canvas_geometry_upload.h"
+#include "pipeline/canvas_pass.h"
 
 #include <granit/granit.hpp>
 #include <granit/pipeline/material.h>
@@ -24,8 +24,8 @@
 namespace {
 
 using granit::pipeline::detail::canvas_draw_list;
+using granit::pipeline::detail::canvas_geometry_upload;
 using granit::pipeline::detail::canvas_vertex;
-using granit::pipeline::detail::ui_geometry_upload;
 
 granit::math::matrix4 identity() { return {1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1}; }
 
@@ -35,7 +35,7 @@ double percentile(std::vector<double> values, double fraction) {
 }
 
 std::vector<char> load_package() {
-  std::ifstream stream{GRANIT_UI_BENCHMARK_PACKAGE, std::ios::binary};
+  std::ifstream stream{GRANIT_CANVAS_BENCHMARK_PACKAGE, std::ios::binary};
   return {std::istreambuf_iterator<char>{stream}, {}};
 }
 
@@ -153,7 +153,7 @@ int main() {
     for (const bool alternating : {false, true}) {
       auto list = make_list(rectangles, first_view.native_handle(), second_view.native_handle(),
                             sampler.native_handle(), alternating);
-      ui_geometry_upload geometry;
+      canvas_geometry_upload geometry;
       if (geometry.upload(native, list) != GRANIT_SUCCESS)
         return 1;
       const auto iterations = rectangles == 10'000 ? 2U : 10U;
@@ -171,7 +171,7 @@ int main() {
                 recorder.write_timestamp(timestamps.native_handle(), GRANIT_TIMESTAMP_STAGE_TOP, 0);
           }
           if (granit::succeeded(result)) {
-            result = granit::from_native(granit::pipeline::detail::record_ui_pass(
+            result = granit::from_native(granit::pipeline::detail::record_canvas_pass(
                 native, recorder.native_handle(),
                 {.color = output_view.native_handle(),
                  .color_format = GRANIT_TEXTURE_FORMAT_RGBA8_UNORM,
@@ -209,7 +209,7 @@ int main() {
       }
       if (!succeeded)
         break;
-      print_result(alternating ? "ui_alternating" : "ui_compatible", rectangles, samples);
+      print_result(alternating ? "canvas_alternating" : "canvas_compatible", rectangles, samples);
     }
   }
   static_cast<void>(granit_material_destroy(native, material));

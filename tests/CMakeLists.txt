@@ -210,11 +210,11 @@ add_executable(
   pipeline/unlit_pass_test.cpp
   pipeline/canvas_draw_list_test.cpp
   pipeline/canvas_draw_list_api_test.cpp
-  pipeline/ui_geometry_upload_test.cpp
-  pipeline/ui_pass_test.cpp
+  pipeline/canvas_geometry_upload_test.cpp
+  pipeline/canvas_pass_test.cpp
 )
 set(granit_unlit_test_package "${CMAKE_CURRENT_BINARY_DIR}/assets/unlit.grmat")
-set(granit_unlit_ui_test_package "${CMAKE_CURRENT_BINARY_DIR}/assets/unlit_ui.grmat")
+set(granit_unlit_canvas_test_package "${CMAKE_CURRENT_BINARY_DIR}/assets/unlit_canvas.grmat")
 add_custom_command(
   OUTPUT "${granit_unlit_test_package}"
   COMMAND "${CMAKE_COMMAND}" -E make_directory "${CMAKE_CURRENT_BINARY_DIR}/assets"
@@ -225,15 +225,15 @@ add_custom_command(
 )
 add_custom_target(granit_unlit_test_package DEPENDS "${granit_unlit_test_package}")
 add_custom_command(
-  OUTPUT "${granit_unlit_ui_test_package}"
+  OUTPUT "${granit_unlit_canvas_test_package}"
   COMMAND "${CMAKE_COMMAND}" -E make_directory "${CMAKE_CURRENT_BINARY_DIR}/assets"
-  COMMAND granit_material_tool build "${PROJECT_SOURCE_DIR}/examples/assets/unlit_ui.grmat.json"
-          --output "${granit_unlit_ui_test_package}"
-  DEPENDS granit_material_tool "${PROJECT_SOURCE_DIR}/examples/assets/unlit_ui.grmat.json"
+  COMMAND granit_material_tool build "${PROJECT_SOURCE_DIR}/examples/assets/unlit_canvas.grmat.json"
+          --output "${granit_unlit_canvas_test_package}"
+  DEPENDS granit_material_tool "${PROJECT_SOURCE_DIR}/examples/assets/unlit_canvas.grmat.json"
   VERBATIM
 )
-add_custom_target(granit_unlit_ui_test_package DEPENDS "${granit_unlit_ui_test_package}")
-add_dependencies(granit_pipeline_test granit_unlit_test_package granit_unlit_ui_test_package)
+add_custom_target(granit_unlit_canvas_test_package DEPENDS "${granit_unlit_canvas_test_package}")
+add_dependencies(granit_pipeline_test granit_unlit_test_package granit_unlit_canvas_test_package)
 target_include_directories(granit_pipeline_test PRIVATE "${PROJECT_SOURCE_DIR}/src")
 target_link_libraries(
   granit_pipeline_test
@@ -251,7 +251,7 @@ target_compile_definitions(
     GRANIT_PIPELINE_ASSET_DIR="${PROJECT_SOURCE_DIR}/assets/shaders/pbr"
     GRANIT_PIPELINE_SHADER_DIR="${PROJECT_SOURCE_DIR}/src/pipeline/shaders"
     GRANIT_UNLIT_TEST_PACKAGE="${granit_unlit_test_package}"
-    GRANIT_UNLIT_UI_TEST_PACKAGE="${granit_unlit_ui_test_package}"
+    GRANIT_UNLIT_CANVAS_TEST_PACKAGE="${granit_unlit_canvas_test_package}"
 )
 granit_target_compile_warnings(granit_pipeline_test)
 granit_target_output_directories(granit_pipeline_test)

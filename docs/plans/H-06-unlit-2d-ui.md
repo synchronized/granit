@@ -36,7 +36,7 @@ Shadow / PBR / Unlit 3D
 - Unlit 3D 默认写入 HDR 场景目标，可使用深度测试，并随场景一起进入 Tone Mapping。
 - UI、普通 Sprite 和调试覆盖层默认在 Tone Mapping 后写入显示空间目标，避免受到曝光影响。
 - 发光 HUD 或需要融入 HDR 的覆盖层必须显式选择 Tone Mapping 前扩展点，不能由系统猜测。
-- UI Pass 默认关闭深度写入，使用预乘 Alpha 混合，并支持 Scissor 裁剪。
+- Canvas Pass 默认关闭深度写入，使用预乘 Alpha 混合，并支持 Scissor 裁剪。
 
 ## 模块边界
 
@@ -77,7 +77,7 @@ Pipeline、纹理绑定和 Scissor 兼容时才进行安全合批。后续 Bindl
    颜色不会重复进行 Tone Mapping 或 sRGB 编码。
 3. **H-06C：Sprite/Canvas Draw List 与批处理**——建立粗粒度逐帧提交接口、动态几何上传和相邻兼容
    Draw 合批，并记录 100、1,000、10,000 个矩形的 CPU/GPU 基线。
-4. **H-06D：参考管线集成**——在 H-07 增加 Tone Mapping 后 UI Pass 扩展点，同时保留独立
+4. **H-06D：参考管线集成**——在 H-07 增加 Tone Mapping 后 Canvas Pass 扩展点，同时保留独立
    Render Graph 使用方式；覆盖窗口 Resize、多 View 和离屏目标。
 5. **H-06E：调试绘制与文字渲染评估**——在基础批处理稳定后评估线框、Gizmo、字形 Atlas 和
    外部文字整形库；未经单独设计，不把完整 UI 或字体系统并入本任务。

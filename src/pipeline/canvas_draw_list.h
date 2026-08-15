@@ -22,7 +22,6 @@ struct canvas_draw_state {
   granit_texture_view texture = GRANIT_NULL_HANDLE;
   granit_sampler sampler = GRANIT_NULL_HANDLE;
   granit_scissor scissor{};
-  std::uint32_t layer = 0;
 };
 
 struct canvas_draw_item {
@@ -98,8 +97,8 @@ public:
                                   left.scissor.y == right.scissor.y &&
                                   left.scissor.width == right.scissor.width &&
                                   left.scissor.height == right.scissor.height;
-        const bool same_state = left.texture == right.texture && left.sampler == right.sampler &&
-                                left.layer == right.layer && same_scissor;
+        const bool same_state =
+            left.texture == right.texture && left.sampler == right.sampler && same_scissor;
         if (previous.first_index + previous.index_count == item.first_index && same_state) {
           previous.index_count += item.index_count;
           continue;

@@ -23,7 +23,7 @@ typedef granit_handle granit_render_pipeline;
 typedef uint32_t granit_render_pipeline_stage;
 #define GRANIT_RENDER_PIPELINE_STAGE_OPAQUE UINT32_C(0)
 #define GRANIT_RENDER_PIPELINE_STAGE_SHADOW UINT32_C(1)
-#define GRANIT_RENDER_PIPELINE_STAGE_UI UINT32_C(2)
+#define GRANIT_RENDER_PIPELINE_STAGE_OVERLAY UINT32_C(2)
 
 /** Scene payload 对应的一项 Granit Mesh 与 Material 关联。 */
 typedef struct granit_render_pipeline_draw_binding {
@@ -147,9 +147,9 @@ granit_render_pipeline_create(granit_renderer renderer, const granit_render_pipe
  * 必须属于当前 Renderer，且在调用期间不得更新或销毁。
  * 单 View 可使用 output/format/width/height；多 View 必须提供与 view_count 等长的 outputs 数组。
  * frame 为零时执行普通离屏提交；frame 非零时使用 Swapchain 帧提交，并要求 view_count 为 1。
- * UI 阶段在 Tone Mapping 后执行，color_input 与 color_output 指向同一显示空间目标；回调必须使用
- * LOAD 保留已有内容。该阶段 payload_count 为零，encode_srgb 表示 UNORM 输出是否需要 Shader 编码。
- * 同一管线不可并发调用。回调不得结束、提交或销毁传入的 Recorder，也不得递归调用本管线。
+ * Overlay 阶段在 Tone Mapping 后执行，color_input 与 color_output 指向同一显示空间目标；回调必须
+ * 使用 LOAD 保留已有内容。该阶段 payload_count 为零，encode_srgb 表示 UNORM 输出是否需要 Shader
+ * 编码。同一管线不可并发调用。回调不得结束、提交或销毁传入的 Recorder，也不得递归调用本管线。
  */
 GRANIT_RENDER_PIPELINE_API granit_result
 granit_render_pipeline_render(granit_renderer renderer, granit_render_pipeline pipeline,

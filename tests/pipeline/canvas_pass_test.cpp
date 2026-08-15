@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include "pipeline/ui_pass.h"
+#include "pipeline/canvas_pass.h"
 
 #include <granit/granit.hpp>
 
@@ -18,13 +18,13 @@ namespace {
 granit::math::matrix4 identity() { return {1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1}; }
 
 std::vector<char> load_package() {
-  std::ifstream stream{GRANIT_UNLIT_UI_TEST_PACKAGE, std::ios::binary};
+  std::ifstream stream{GRANIT_UNLIT_CANVAS_TEST_PACKAGE, std::ios::binary};
   return {std::istreambuf_iterator<char>{stream}, {}};
 }
 
 } // namespace
 
-TEST_CASE("UI Pass按Batch录制顶点色与Scissor") {
+TEST_CASE("Canvas Pass按Batch录制顶点色与Scissor") {
   using namespace granit::pipeline::detail;
   granit::renderer renderer;
   const auto initialized = renderer.initialize({.application_name = "granit-ui-pass"});
@@ -83,7 +83,7 @@ TEST_CASE("UI Pass按Batch录制顶点色与Scissor") {
                       {.texture = red_view.native_handle(),
                        .sampler = sampler.native_handle(),
                        .scissor = {0, 0, 18, size}}) == GRANIT_SUCCESS);
-  ui_geometry_upload geometry;
+  canvas_geometry_upload geometry;
   REQUIRE(geometry.upload(native, list) == GRANIT_SUCCESS);
 
   const auto archive = load_package();
@@ -116,16 +116,16 @@ TEST_CASE("UI Pass按Batch录制顶点色与Scissor") {
                                                     .light_radiance = {}};
   const granit::material::pbr_object_constants object{
       .model = identity(), .normal_matrix = identity(), .object_id = {}};
-  REQUIRE(record_ui_pass(native, recorder.native_handle(),
-                         {.color = color_view.native_handle(),
-                          .color_format = GRANIT_TEXTURE_FORMAT_RGBA8_UNORM,
-                          .width = size,
-                          .height = size,
-                          .material = material,
-                          .frame = frame,
-                          .object = object,
-                          .load_operation = GRANIT_ATTACHMENT_LOAD_OPERATION_CLEAR},
-                         list, geometry) == GRANIT_SUCCESS);
+  REQUIRE(record_canvas_pass(native, recorder.native_handle(),
+                             {.color = color_view.native_handle(),
+                              .color_format = GRANIT_TEXTURE_FORMAT_RGBA8_UNORM,
+                              .width = size,
+                              .height = size,
+                              .material = material,
+                              .frame = frame,
+                              .object = object,
+                              .load_operation = GRANIT_ATTACHMENT_LOAD_OPERATION_CLEAR},
+                             list, geometry) == GRANIT_SUCCESS);
   REQUIRE(recorder.end() == granit::result::success);
   REQUIRE(recorder.submit() == granit::result::success);
   REQUIRE(recorder.reset() == granit::result::success);

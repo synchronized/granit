@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include "pipeline/ui_pass.h"
+#include "pipeline/canvas_pass.h"
 
 #include "material/material_package.h"
 #include "pipeline/material_access.h"
@@ -11,9 +11,9 @@
 
 namespace granit::pipeline::detail {
 
-granit_result record_ui_pass(granit_renderer renderer, granit_command_recorder recorder,
-                             const ui_pass_desc& desc, const canvas_draw_list& list,
-                             const ui_geometry_upload& geometry) noexcept {
+granit_result record_canvas_pass(granit_renderer renderer, granit_command_recorder recorder,
+                                 const canvas_pass_desc& desc, const canvas_draw_list& list,
+                                 const canvas_geometry_upload& geometry) noexcept {
   if (renderer == GRANIT_NULL_HANDLE || recorder == GRANIT_NULL_HANDLE ||
       desc.color == GRANIT_NULL_HANDLE || desc.color_format == GRANIT_TEXTURE_FORMAT_UNDEFINED ||
       desc.width == 0 || desc.height == 0 || desc.material == GRANIT_NULL_HANDLE) {
@@ -46,7 +46,7 @@ granit_result record_ui_pass(granit_renderer renderer, granit_command_recorder r
   };
   auto result = update_material(batches.front());
   material_draw_state material;
-  const material_draw_request request{.pass = granit::material::make_feature_id("unlit_ui"),
+  const material_draw_request request{.pass = granit::material::make_feature_id("unlit_canvas"),
                                       .color_format = desc.color_format,
                                       .depth_stencil_format = GRANIT_TEXTURE_FORMAT_UNDEFINED};
   if (result == GRANIT_SUCCESS)

@@ -13,7 +13,7 @@
   },
   "variants": [
     {
-      "pass": "unlit_ui",
+      "pass": "unlit_canvas",
       "features": [
         {"name": "unlit_textured", "value": 1},
         {"name": "unlit_vertex_color", "value": 1}
@@ -35,8 +35,8 @@
         }
       },
       "shaders": [
-        {"stage": "vertex", "entry_point": "ui_vertex_main", "spirv": "../../assets/shaders/unlit/unlit_ui.vert.spv"},
-        {"stage": "fragment", "entry_point": "fragment_main", "spirv": "../../assets/shaders/unlit/unlit_ui.frag.spv"}
+        {"stage": "vertex", "entry_point": "canvas_vertex_main", "spirv": "../../assets/shaders/unlit/unlit_canvas.vert.spv"},
+        {"stage": "fragment", "entry_point": "fragment_main", "spirv": "../../assets/shaders/unlit/unlit_canvas.frag.spv"}
       ]
     }
   ]

@@ -1,7 +1,7 @@
 <!-- SPDX-License-Identifier: MIT -->
 <!-- Copyright (c) 2026 Granit contributors -->
 
-# UI Pass 首份 GPU 性能基线
+# Canvas Pass 首份 GPU 性能基线
 
 ## 环境
 
@@ -24,7 +24,7 @@
 
 两条路径使用相同顶点数、索引数、目标尺寸和小面积重叠矩形。兼容路径将 N 个 Item 合为一个
 Indexed Draw；交替路径由于 Texture 与 Scissor 每项改变，必须保留 N 个 Batch、绑定更新和 Draw。
-时间来自 UI Pass 前后的 Vulkan timestamp，不包含 Draw List 构建、几何上传、CPU 录制、提交或等待。
+时间来自 Canvas Pass 前后的 Vulkan timestamp，不包含 Draw List 构建、几何上传、CPU 录制、提交或等待。
 
 ## 判断
 

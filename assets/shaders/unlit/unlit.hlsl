@@ -47,7 +47,7 @@ struct vertex_input {
   float3 position : POSITION;
 };
 
-struct ui_vertex_input {
+struct canvas_vertex_input {
   float2 position : POSITION;
   float2 uv : TEXCOORD0;
   uint color : COLOR0;
@@ -62,7 +62,7 @@ vertex_output vertex_main(vertex_input input) {
   return output;
 }
 
-vertex_output ui_vertex_main(ui_vertex_input input) {
+vertex_output canvas_vertex_main(canvas_vertex_input input) {
   vertex_output output;
   const float4 world_position = mul(model, float4(input.position, 0.0, 1.0));
   output.position = mul(view_projection, world_position);

@@ -2,7 +2,7 @@
 // Copyright (c) 2026 Granit contributors
 
 #include "pipeline/canvas_draw_list.h"
-#include "pipeline/ui_geometry_upload.h"
+#include "pipeline/canvas_geometry_upload.h"
 
 #include <granit/renderer/renderer.hpp>
 
@@ -20,8 +20,8 @@ namespace {
 using clock_type = std::chrono::steady_clock;
 using granit::pipeline::detail::canvas_draw_list;
 using granit::pipeline::detail::canvas_draw_state;
+using granit::pipeline::detail::canvas_geometry_upload;
 using granit::pipeline::detail::canvas_vertex;
-using granit::pipeline::detail::ui_geometry_upload;
 
 constexpr std::array quad_vertices{
     canvas_vertex{0, 0, 0, 0, UINT32_MAX}, canvas_vertex{1, 0, 1, 0, UINT32_MAX},
@@ -112,7 +112,7 @@ int main() {
           checksum += batches.size();
           return batches.size() == rectangles;
         });
-    ui_geometry_upload upload;
+    canvas_geometry_upload upload;
     succeeded &= run_case("geometry_upload", rectangles, iterations, [&](std::uint64_t& checksum) {
       const auto result = upload.upload(renderer.native_handle(), compatible);
       checksum += upload.index_count();

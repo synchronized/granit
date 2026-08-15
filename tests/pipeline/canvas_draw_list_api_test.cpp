@@ -36,8 +36,8 @@ TEST_CASE("公共Canvas Draw List支持通用几何、矩形、合批与复用")
   granit::canvas_draw_list list;
   REQUIRE(list.initialize(renderer.native_handle(), desc) == granit::result::success);
 
-  const granit_canvas_draw_state first{11, 21, {0, 0, 128, 128}, 0};
-  const granit_canvas_draw_state second{12, 21, {0, 0, 128, 128}, 0};
+  const granit_canvas_draw_state first{11, 21, {0, 0, 128, 128}};
+  const granit_canvas_draw_state second{12, 21, {0, 0, 128, 128}};
   REQUIRE(list.append(vertices, indices, first) == granit::result::success);
   REQUIRE(list.append(vertices, indices, first) == granit::result::success);
 
@@ -56,7 +56,7 @@ TEST_CASE("公共Canvas Draw List支持通用几何、矩形、合批与复用")
   CHECK(stats.item_count == 3);
   CHECK(stats.batch_count == 2);
 
-  REQUIRE(list.reset() == granit::result::success);
+  REQUIRE(list.clear() == granit::result::success);
   stats = GRANIT_CANVAS_DRAW_LIST_STATS_INIT;
   REQUIRE(list.get_stats(stats) == granit::result::success);
   CHECK(stats.vertex_count == 0);
@@ -78,7 +78,7 @@ TEST_CASE("公共Canvas Draw List拒绝无效输入、跨Renderer与旧句柄") 
   granit_canvas_draw_list list = GRANIT_NULL_HANDLE;
   granit_canvas_draw_list_desc desc = GRANIT_CANVAS_DRAW_LIST_DESC_INIT;
   REQUIRE(granit_canvas_draw_list_create(first.native_handle(), &desc, &list) == GRANIT_SUCCESS);
-  const granit_canvas_draw_state state{11, 21, {}, 0};
+  const granit_canvas_draw_state state{11, 21, {}};
   CHECK(granit_canvas_draw_list_append(second.native_handle(), list, vertices.data(), 3,
                                        indices.data(), 3, &state) == GRANIT_ERROR_INVALID_HANDLE);
   CHECK(granit_canvas_draw_list_append(first.native_handle(), list, nullptr, 3, indices.data(), 3,

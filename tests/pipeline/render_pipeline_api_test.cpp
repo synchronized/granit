@@ -124,8 +124,8 @@ struct callback_state {
   std::vector<granit_material> materials;
   std::vector<uint32_t> view_indices;
   bool opaque_has_shadow = false;
-  bool ui_uses_same_output = true;
-  std::vector<uint32_t> ui_encode_srgb;
+  bool overlay_uses_same_output = true;
+  std::vector<uint32_t> overlay_encode_srgb;
   std::vector<granit_bind_group> ibl_groups;
   granit_renderer renderer = GRANIT_NULL_HANDLE;
   granit_result result = GRANIT_SUCCESS;
@@ -139,7 +139,7 @@ granit_result record(const granit_render_pipeline_record_info* info, void* user_
        info->color_output == GRANIT_NULL_HANDLE) ||
       (info->stage == GRANIT_RENDER_PIPELINE_STAGE_SHADOW &&
        info->depth_output == GRANIT_NULL_HANDLE) ||
-      (info->stage == GRANIT_RENDER_PIPELINE_STAGE_UI &&
+      (info->stage == GRANIT_RENDER_PIPELINE_STAGE_OVERLAY &&
        (info->color_input == GRANIT_NULL_HANDLE || info->color_output == GRANIT_NULL_HANDLE ||
         info->depth_output != GRANIT_NULL_HANDLE || info->payload_count != 0))) {
     return GRANIT_ERROR_INVALID_ARGUMENT;
@@ -160,9 +160,9 @@ granit_result record(const granit_render_pipeline_record_info* info, void* user_
       return GRANIT_ERROR_INVALID_ARGUMENT;
     }
     state.ibl_groups.push_back(info->ibl_group);
-  } else if (info->stage == GRANIT_RENDER_PIPELINE_STAGE_UI) {
-    state.ui_uses_same_output &= info->color_input == info->color_output;
-    state.ui_encode_srgb.push_back(info->encode_srgb);
+  } else if (info->stage == GRANIT_RENDER_PIPELINE_STAGE_OVERLAY) {
+    state.overlay_uses_same_output &= info->color_input == info->color_output;
+    state.overlay_encode_srgb.push_back(info->encode_srgb);
   }
   if (info->payload_count != 0) {
     state.payloads.insert(state.payloads.end(), info->payloads,
@@ -317,14 +317,14 @@ TEST_CASE("统一Render Pipeline按固定阶段消费Scene Snapshot") {
   CHECK(callback.stages ==
         std::vector<granit_render_pipeline_stage>{GRANIT_RENDER_PIPELINE_STAGE_SHADOW,
                                                   GRANIT_RENDER_PIPELINE_STAGE_OPAQUE,
-                                                  GRANIT_RENDER_PIPELINE_STAGE_UI});
+                                                  GRANIT_RENDER_PIPELINE_STAGE_OVERLAY});
   CHECK(callback.payloads == std::vector<uint64_t>{77, 77});
   CHECK(callback.meshes == std::vector<granit_mesh>{mesh.native_handle(), mesh.native_handle()});
   CHECK(callback.materials ==
         std::vector<granit_material>{material.native_handle(), material.native_handle()});
   CHECK(callback.opaque_has_shadow);
-  CHECK(callback.ui_uses_same_output);
-  CHECK(callback.ui_encode_srgb == std::vector<uint32_t>{1});
+  CHECK(callback.overlay_uses_same_output);
+  CHECK(callback.overlay_encode_srgb == std::vector<uint32_t>{1});
   REQUIRE(callback.ibl_groups.size() == 1);
 
   REQUIRE(pipeline.render(render_desc) == granit::result::success);
@@ -357,11 +357,11 @@ TEST_CASE("统一Render Pipeline按固定阶段消费Scene Snapshot") {
   CHECK(std::vector(callback.stages.end() - 6, callback.stages.end()) ==
         std::vector<granit_render_pipeline_stage>{
             GRANIT_RENDER_PIPELINE_STAGE_SHADOW, GRANIT_RENDER_PIPELINE_STAGE_OPAQUE,
-            GRANIT_RENDER_PIPELINE_STAGE_UI, GRANIT_RENDER_PIPELINE_STAGE_SHADOW,
-            GRANIT_RENDER_PIPELINE_STAGE_OPAQUE, GRANIT_RENDER_PIPELINE_STAGE_UI});
+            GRANIT_RENDER_PIPELINE_STAGE_OVERLAY, GRANIT_RENDER_PIPELINE_STAGE_SHADOW,
+            GRANIT_RENDER_PIPELINE_STAGE_OPAQUE, GRANIT_RENDER_PIPELINE_STAGE_OVERLAY});
   CHECK(std::vector(callback.view_indices.end() - 6, callback.view_indices.end()) ==
         std::vector<uint32_t>{0, 0, 0, 1, 1, 1});
-  CHECK(callback.ui_encode_srgb == std::vector<uint32_t>{1, 1, 1, 0});
+  CHECK(callback.overlay_encode_srgb == std::vector<uint32_t>{1, 1, 1, 0});
   granit::buffer multi_view_readback;
   REQUIRE(multi_view_readback.initialize(renderer.native_handle(),
                                          {.size = 16 * 16 * 4 * 2,

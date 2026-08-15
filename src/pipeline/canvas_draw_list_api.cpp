@@ -72,10 +72,7 @@ bool valid_state(const granit_canvas_draw_state& state) {
 }
 
 granit::pipeline::detail::canvas_draw_state convert_state(const granit_canvas_draw_state& state) {
-  return {.texture = state.texture,
-          .sampler = state.sampler,
-          .scissor = state.scissor,
-          .layer = state.layer};
+  return {.texture = state.texture, .sampler = state.sampler, .scissor = state.scissor};
 }
 
 } // namespace
@@ -119,7 +116,7 @@ extern "C" granit_result granit_canvas_draw_list_create(granit_renderer renderer
   }
 }
 
-extern "C" granit_result granit_canvas_draw_list_reset(granit_renderer renderer,
+extern "C" granit_result granit_canvas_draw_list_clear(granit_renderer renderer,
                                                        granit_canvas_draw_list list) {
   const auto state = find_list(renderer, list);
   if (state == nullptr)

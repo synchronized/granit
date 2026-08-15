@@ -41,8 +41,8 @@ public:
       renderer_ = renderer;
     return value;
   }
-  [[nodiscard]] result reset() noexcept {
-    return from_native(granit_canvas_draw_list_reset(renderer_, handle_));
+  [[nodiscard]] result clear() noexcept {
+    return from_native(granit_canvas_draw_list_clear(renderer_, handle_));
   }
   [[nodiscard]] result append(std::span<const granit_canvas_vertex> vertices,
                               std::span<const std::uint32_t> indices,

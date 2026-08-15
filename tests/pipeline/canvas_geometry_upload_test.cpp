@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include "pipeline/ui_geometry_upload.h"
+#include "pipeline/canvas_geometry_upload.h"
 
 #include <granit/granit.hpp>
 
@@ -28,7 +28,7 @@ TEST_CASE("UI几何上传复用容量并保留顶点索引内容") {
   canvas_draw_list list;
   REQUIRE(list.append(vertices, indices, {}) == GRANIT_SUCCESS);
 
-  ui_geometry_upload upload;
+  canvas_geometry_upload upload;
   REQUIRE(upload.upload(renderer.native_handle(), list) == GRANIT_SUCCESS);
   REQUIRE(upload.vertex_buffer() != GRANIT_NULL_HANDLE);
   REQUIRE(upload.index_buffer() != GRANIT_NULL_HANDLE);

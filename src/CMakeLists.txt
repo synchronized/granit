@@ -447,9 +447,9 @@ target_sources(
     pipeline/unlit_pass.h
     pipeline/canvas_draw_list.h
     pipeline/canvas_draw_list_api.cpp
-    pipeline/ui_geometry_upload.h
-    pipeline/ui_pass.cpp
-    pipeline/ui_pass.h
+    pipeline/canvas_geometry_upload.h
+    pipeline/canvas_pass.cpp
+    pipeline/canvas_pass.h
   PUBLIC
     FILE_SET HEADERS
     BASE_DIRS "${PROJECT_SOURCE_DIR}/include"

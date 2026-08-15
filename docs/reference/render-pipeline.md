@@ -14,7 +14,7 @@ Render Pipeline 是可选的高级参考渲染入口。当前实现组织 Direct
 - 所属 CMake component：`RenderPipeline`，目标为 `granit::render_pipeline`。
 
 创建描述使用 `GRANIT_RENDER_PIPELINE_DESC_INIT` 初始化。未提供录制回调时使用完整自动路径；
-提供回调时可以覆盖 Shadow 和 Opaque 阶段的 Draw 录制，并在 Tone Mapping 后接收 UI 阶段。
+提供回调时可以覆盖 Shadow 和 Opaque 阶段的 Draw 录制，并在 Tone Mapping 后接收 Overlay 阶段。
 
 ## 每帧输入
 
@@ -43,7 +43,7 @@ Scene Snapshot 和输出资源必须属于同一 Renderer，并在调用期间�
 
 回调返回的首个错误会终止当前渲染调用，未完成的 Recorder 不会被提交。
 
-UI 阶段具有以下固定语义：
+Overlay 阶段具有以下固定语义：
 
 - `color_input` 与 `color_output` 是同一个显示空间目标，回调必须使用 `LOAD` 保留场景颜色。
 - 不提供深度、阴影、IBL、Renderable 或 Draw Binding；`payload_count` 固定为零。
@@ -68,7 +68,7 @@ Upload 环形分配。
 - 渲染路径固定为 Opaque Forward PBR、可选单方向光阴影和 ACES Tone Mapping。
 - 阴影目标固定为 1024×1024；尚不支持 CSM、多阴影光源或可配置阴影质量。
 - 不包含透明 PBR、Bindless、Clustered Forward 或 Deferred。
-- UI 阶段只是 Tone Mapping 后的扩展点，不自动持有或提交 Canvas Draw List；调用方负责录制内容。
+- Overlay 阶段只是 Tone Mapping 后的扩展点，不自动持有或提交 Canvas Draw List；调用方负责录制内容。
 - 默认 IBL 由 Pipeline 内部持有；外部环境切换尚未进入公共接口。
 - 同一 Pipeline 不支持并发渲染，多 View 仍按独立输出顺序执行。
 

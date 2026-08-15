@@ -17,7 +17,7 @@
 /** 可复用的逐帧二维 Canvas 绘制列表句柄。零值无效。 */
 typedef granit_handle granit_canvas_draw_list;
 
-/** Canvas 顶点使用像素坐标、UV 和打包 RGBA8 UNORM 颜色。 */
+/** Canvas 顶点包含二维位置、UV 和打包 RGBA8 UNORM 颜色；坐标空间由录制接口定义。 */
 typedef struct granit_canvas_vertex {
   float x;
   float y;
@@ -31,10 +31,9 @@ typedef struct granit_canvas_draw_state {
   granit_texture_view texture;
   granit_sampler sampler;
   granit_scissor scissor;
-  uint32_t layer;
 } granit_canvas_draw_state;
 
-/** 创建时预留容量；reset 清空内容但保留这些动态容量。 */
+/** 创建时预留容量；clear 清空内容但保留这些动态容量。 */
 typedef struct granit_canvas_draw_list_desc {
   uint32_t struct_size;
   uint32_t initial_vertex_capacity;
@@ -50,7 +49,7 @@ typedef struct granit_canvas_draw_list_desc {
     }                                                                                              \
   }
 
-/** 轴对齐矩形便捷输入；坐标原点位于输出左上角，Y 轴向下。 */
+/** 在当前坐标空间中追加轴对齐矩形的便捷输入。 */
 typedef struct granit_canvas_rect_desc {
   uint32_t struct_size;
   float x;
@@ -69,8 +68,7 @@ typedef struct granit_canvas_rect_desc {
 #define GRANIT_CANVAS_RECT_DESC_INIT                                                               \
   {                                                                                                \
     (uint32_t)sizeof(granit_canvas_rect_desc), 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 1.0F, 1.0F,     \
-        UINT32_C(0xffffffff), {GRANIT_NULL_HANDLE, GRANIT_NULL_HANDLE, {0, 0, 0, 0}, UINT32_C(0)}, \
-    {                                                                                              \
+        UINT32_C(0xffffffff), {GRANIT_NULL_HANDLE, GRANIT_NULL_HANDLE, {0, 0, 0, 0}}, {            \
       UINT32_C(0), UINT32_C(0), UINT32_C(0), UINT32_C(0)                                           \
     }                                                                                              \
   }
@@ -104,7 +102,7 @@ granit_canvas_draw_list_create(granit_renderer renderer, const granit_canvas_dra
 
 /** 清空当帧内容但保留已分配容量。调用方必须与 append 和读取操作进行外部同步。 */
 GRANIT_RENDER_PIPELINE_API granit_result
-granit_canvas_draw_list_reset(granit_renderer renderer, granit_canvas_draw_list list);
+granit_canvas_draw_list_clear(granit_renderer renderer, granit_canvas_draw_list list);
 
 /**
  * 追加通用三角形几何。输入数组只在调用期间借用，索引相对本次 vertices 起点。

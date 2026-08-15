@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#ifndef GRANIT_PIPELINE_UI_GEOMETRY_UPLOAD_H_
-#define GRANIT_PIPELINE_UI_GEOMETRY_UPLOAD_H_
+#ifndef GRANIT_PIPELINE_CANVAS_GEOMETRY_UPLOAD_H_
+#define GRANIT_PIPELINE_CANVAS_GEOMETRY_UPLOAD_H_
 
 #include "pipeline/canvas_draw_list.h"
 
@@ -17,18 +17,18 @@
 namespace granit::pipeline::detail {
 
 /**
- * 保存一帧 UI 几何的可写 GPU Buffer。首版使用 Upload 内存，后续基线证明必要时再改为暂存复制。
+ * 保存一帧 Canvas 几何的可写 GPU Buffer。首版使用 Upload 内存，后续基线证明必要时再改为暂存复制。
  */
-class ui_geometry_upload {
+class canvas_geometry_upload {
 public:
-  ui_geometry_upload() = default;
-  ~ui_geometry_upload() { reset(); }
+  canvas_geometry_upload() = default;
+  ~canvas_geometry_upload() { reset(); }
 
-  ui_geometry_upload(const ui_geometry_upload&) = delete;
-  ui_geometry_upload& operator=(const ui_geometry_upload&) = delete;
+  canvas_geometry_upload(const canvas_geometry_upload&) = delete;
+  canvas_geometry_upload& operator=(const canvas_geometry_upload&) = delete;
 
-  ui_geometry_upload(ui_geometry_upload&& other) noexcept { move_from(other); }
-  ui_geometry_upload& operator=(ui_geometry_upload&& other) noexcept {
+  canvas_geometry_upload(canvas_geometry_upload&& other) noexcept { move_from(other); }
+  canvas_geometry_upload& operator=(canvas_geometry_upload&& other) noexcept {
     if (this != &other) {
       reset();
       move_from(other);
@@ -128,7 +128,7 @@ private:
     return GRANIT_SUCCESS;
   }
 
-  void move_from(ui_geometry_upload& other) noexcept {
+  void move_from(canvas_geometry_upload& other) noexcept {
     renderer_ = std::exchange(other.renderer_, GRANIT_NULL_HANDLE);
     vertex_ = std::exchange(other.vertex_, GRANIT_NULL_HANDLE);
     index_ = std::exchange(other.index_, GRANIT_NULL_HANDLE);

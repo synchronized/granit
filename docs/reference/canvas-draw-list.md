@@ -12,13 +12,13 @@ Canvas Draw List 是 Render Pipeline component 中面向 UI 后端、Sprite、�
 - C++20：`<granit/pipeline/canvas_draw_list.hpp>`，使用 move-only 的 `granit::canvas_draw_list`。
 - 所属 CMake component：`RenderPipeline`，目标为 `granit::render_pipeline`。
 
-当前公开范围是 Draw List 构建、复用和统计。把列表录制到 UI Pass 的公共接口仍在 H-08B 设计中；
-内部 UI Pass 不是兼容承诺，也不应由使用者直接包含。
+当前公开范围是 Draw List 构建、复用和统计。把列表录制到 Canvas Pass 的公共接口仍在 H-08B 设计中；
+内部 Canvas Pass 不是兼容承诺，也不应由使用者直接包含。
 
 ## 坐标与顶点
 
-- `granit_canvas_vertex` 包含二维像素位置、UV 和打包 RGBA8 UNORM 顶点色。
-- 屏幕坐标原点位于输出左上角，X 向右、Y 向下。
+- `granit_canvas_vertex` 包含二维位置、UV 和打包 RGBA8 UNORM 顶点色。
+- Draw List 本身不解释位置的坐标空间；H-08B 默认录制接口将定义左上原点、Y 向下的像素坐标。
 - 通用追加接口接收三角形列表，索引必须相对本次传入的顶点数组。
 - 矩形便捷接口生成四个顶点和六个索引，宽高必须大于零。
 - 位置和 UV 必须是有限浮点数；列表在函数返回前复制全部数组。
@@ -34,9 +34,9 @@ Canvas Draw List 是 Render Pipeline component 中面向 UI 后端、Sprite、�
 ## 生命周期与线程安全
 
 - Draw List 创建时关联一个 Renderer，跨 Renderer 调用返回 `GRANIT_ERROR_INVALID_HANDLE`。
-- `reset` 清空当帧内容但保留动态容量，推荐每帧复用同一个列表。
+- `clear` 清空当帧内容但保留动态容量，推荐每帧复用同一个列表。
 - 不同 Draw List 可以由不同线程并行构建。
-- 同一个 Draw List 的 append、reset、统计和后续录制操作需要调用方进行外部同步。
+- 同一个 Draw List 的 append、clear、统计和后续录制操作需要调用方进行外部同步。
 - 销毁后旧句柄通过 generation 失效；重复销毁返回无效句柄。
 
 ## 最小 C 示例

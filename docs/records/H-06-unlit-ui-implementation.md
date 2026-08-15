@@ -21,7 +21,7 @@ H-06A～H-06E 已完成内部技术路线验证：共享 Unlit 着色、透明�
 - 内部 `canvas_vertex` 使用位置、UV 和 RGBA8 UNORM 顶点色；局部索引在追加时转换为全局索引。
 - 仅合并相邻且 Texture、Sampler、Scissor 和层级一致的 Item，不跨透明项重排。
 - 动态上传对象复用可增长的 Upload Vertex/Index Buffer，移动和析构负责句柄生命周期。
-- `unlit_ui` 材质包和 UI Pass 支持纹理、Sampler、顶点色、Scissor 与 Indexed Draw。
+- `unlit_canvas` 材质包和 Canvas Pass 支持纹理、Sampler、顶点色、Scissor 与 Indexed Draw。
 - 测试覆盖索引修正、顺序、合批、资源切换、空列表、无效输入、复用和像素结果。
 
 ## 测量结果
@@ -34,7 +34,7 @@ H-06A～H-06E 已完成内部技术路线验证：共享 Unlit 着色、透明�
 
 ## 参考管线集成
 
-- `GRANIT_RENDER_PIPELINE_STAGE_UI` 在 Tone Mapping 后操作同一显示空间输出，并要求 Attachment
+- `GRANIT_RENDER_PIPELINE_STAGE_OVERLAY` 在 Tone Mapping 后操作同一显示空间输出，并要求 Attachment
   `LOAD` 保留场景颜色。
 - 阶段不携带 Scene Draw、深度、阴影或 IBL，且不再次应用曝光或 Tone Mapping。
 - `encode_srgb` 区分 UNORM Shader 编码与 sRGB Attachment 编码；测试覆盖两种格式和多 View。

@@ -19,10 +19,8 @@ constexpr std::array<std::uint32_t, 3> indices{0, 1, 2};
 TEST_CASE("Canvas Draw List保持顺序并只合并相邻兼容项") {
   using namespace granit::pipeline::detail;
   canvas_draw_list list;
-  const canvas_draw_state first{
-      .texture = 11, .sampler = 21, .scissor = {0, 0, 100, 100}, .layer = 2};
-  const canvas_draw_state second{
-      .texture = 12, .sampler = 21, .scissor = {0, 0, 100, 100}, .layer = 2};
+  const canvas_draw_state first{.texture = 11, .sampler = 21, .scissor = {0, 0, 100, 100}};
+  const canvas_draw_state second{.texture = 12, .sampler = 21, .scissor = {0, 0, 100, 100}};
 
   REQUIRE(list.append(vertices, indices, first) == GRANIT_SUCCESS);
   REQUIRE(list.append(vertices, indices, first) == GRANIT_SUCCESS);

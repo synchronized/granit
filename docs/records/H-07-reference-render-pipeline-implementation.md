@@ -43,7 +43,7 @@ Tile/Cluster 划分和 Clustered Light Culling。后续优先沿现有路径增�
 ### 扩展参考管线
 
 面向需要自定义材质或局部效果的用户。使用者继续复用默认管线，但可以配置功能，并在稳定扩展点
-插入后处理、调试绘制或 UI Pass。扩展点必须声明输入、输出和发生在 Tone Mapping 前后的颜色空间。
+插入后处理、调试绘制或 Canvas Pass。扩展点必须声明输入、输出和发生在 Tone Mapping 前后的颜色空间。
 
 ### 自行构建 Render Graph
 
