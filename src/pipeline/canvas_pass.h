@@ -23,6 +23,7 @@ struct canvas_pass_desc {
   granit::material::pbr_frame_constants frame{};
   granit::material::pbr_object_constants object{};
   granit_attachment_load_operation load_operation = GRANIT_ATTACHMENT_LOAD_OPERATION_LOAD;
+  bool encode_srgb = false;
 };
 
 /** 在一个 Rendering 区域内按稳定顺序录制带 Texture/Sampler 的 Canvas Batch。 */

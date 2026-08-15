@@ -23,6 +23,7 @@ Render Pipeline 是可选的高级参考渲染入口。当前实现组织 Direct
 - Scene Snapshot 和要渲染的连续 View 范围。
 - `payload` 到 Mesh、Material 的 Draw Binding。
 - 每个 View 的输出 Texture View、格式和尺寸。
+- 单 View 的可选 `canvas`，或多 View 中每个输出各自的 `canvas`。
 - 曝光值，以及可选的 Swapchain Frame。
 
 每个可见 Renderable 的 `payload` 必须唯一映射到一个 Draw Binding。绑定中的 Mesh、Material、
@@ -31,6 +32,9 @@ Scene Snapshot 和输出资源必须属于同一 Renderer，并在调用期间�
 单 View 可以使用紧凑的 `output`、`output_format`、`width` 和 `height` 字段。多 View 必须提供
 与 `view_count` 等长的 `outputs` 数组。非零 Frame 表示录制并提交窗口帧，此时只允许一个 View；
 零 Frame 表示离屏执行。
+
+非零 Canvas Draw List 会在 Tone Mapping 后自动录制，并先于用户 Overlay 回调执行。UNORM 输出自动
+启用 Canvas Shader sRGB 编码；sRGB Attachment 由硬件完成编码。不同 View 可以使用不同列表。
 
 ## 录制回调
 
@@ -68,7 +72,7 @@ Upload 环形分配。
 - 渲染路径固定为 Opaque Forward PBR、可选单方向光阴影和 ACES Tone Mapping。
 - 阴影目标固定为 1024×1024；尚不支持 CSM、多阴影光源或可配置阴影质量。
 - 不包含透明 PBR、Bindless、Clustered Forward 或 Deferred。
-- Overlay 阶段只是 Tone Mapping 后的扩展点，不自动持有或提交 Canvas Draw List；调用方负责录制内容。
+- Overlay 阶段支持自动 Canvas Draw List，并保留用户回调作为最终自定义扩展点。
 - 默认 IBL 由 Pipeline 内部持有；外部环境切换尚未进入公共接口。
 - 同一 Pipeline 不支持并发渲染，多 View 仍按独立输出顺序执行。
 

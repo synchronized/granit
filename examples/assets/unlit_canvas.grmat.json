@@ -38,6 +38,34 @@
         {"stage": "vertex", "entry_point": "canvas_vertex_main", "spirv": "../../assets/shaders/unlit/unlit_canvas.vert.spv"},
         {"stage": "fragment", "entry_point": "fragment_main", "spirv": "../../assets/shaders/unlit/unlit_canvas.frag.spv"}
       ]
+    },
+    {
+      "pass": "unlit_canvas_encode_srgb",
+      "features": [
+        {"name": "unlit_textured", "value": 1},
+        {"name": "unlit_vertex_color", "value": 1},
+        {"name": "unlit_encode_srgb", "value": 1}
+      ],
+      "pipeline": {
+        "vertex_buffers": [{"stride": 20, "step_mode": "vertex", "attributes": [
+          {"location": 0, "format": "float32x2", "offset": 0},
+          {"location": 1, "format": "float32x2", "offset": 8},
+          {"location": 2, "format": "uint32", "offset": 16}
+        ]}],
+        "primitive": {"topology": "triangle_list", "front_face": "clockwise", "cull_mode": "none", "polygon_mode": "fill"},
+        "depth": {"test_enabled": false, "write_enabled": false, "compare": "always"},
+        "color_blend": {
+          "enabled": true,
+          "source_color_factor": "one",
+          "destination_color_factor": "one_minus_source_alpha",
+          "source_alpha_factor": "one",
+          "destination_alpha_factor": "one_minus_source_alpha"
+        }
+      },
+      "shaders": [
+        {"stage": "vertex", "entry_point": "canvas_vertex_main", "spirv": "../../assets/shaders/unlit/unlit_canvas.vert.spv"},
+        {"stage": "fragment", "entry_point": "fragment_main", "spirv": "../../assets/shaders/unlit/unlit_canvas_encode_srgb.frag.spv"}
+      ]
     }
   ]
 }

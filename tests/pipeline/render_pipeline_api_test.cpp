@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
+#include <granit/pipeline/canvas_draw_list.hpp>
 #include <granit/pipeline/material.hpp>
 #include <granit/pipeline/mesh.hpp>
 #include <granit/pipeline/render_pipeline.hpp>
@@ -8,6 +9,7 @@
 #include <granit/renderer/buffer.hpp>
 #include <granit/renderer/command_recorder.hpp>
 #include <granit/renderer/renderer.hpp>
+#include <granit/renderer/sampler.hpp>
 #include <granit/renderer/texture.hpp>
 
 #include "lighting/tone_mapping_resources.h"
@@ -342,13 +344,38 @@ TEST_CASE("统一Render Pipeline按固定阶段消费Scene Snapshot") {
   render_desc.draw_binding_count = 1;
   render_desc.draw_bindings = &draw_binding;
 
+  granit::texture canvas_texture;
+  granit::texture_view canvas_texture_view;
+  granit::sampler canvas_sampler;
+  REQUIRE(canvas_texture.initialize(renderer.native_handle(),
+                                    {.format = granit::texture_format::rgba8_unorm,
+                                     .usage = granit::texture_usage::sampled |
+                                              granit::texture_usage::transfer_destination,
+                                     .width = 1,
+                                     .height = 1}) == granit::result::success);
+  constexpr std::array<std::uint8_t, 4> canvas_pixel{128, 0, 0, 128};
+  REQUIRE(canvas_texture.write(std::as_bytes(std::span{canvas_pixel}), {}, {}) ==
+          granit::result::success);
+  REQUIRE(canvas_texture_view.initialize(
+              renderer.native_handle(), canvas_texture.native_handle()) == granit::result::success);
+  REQUIRE(canvas_sampler.initialize(renderer.native_handle(), {}) == granit::result::success);
+  granit_canvas_draw_list_desc canvas_list_desc = GRANIT_CANVAS_DRAW_LIST_DESC_INIT;
+  granit::canvas_draw_list canvas;
+  REQUIRE(canvas.initialize(renderer.native_handle(), canvas_list_desc) == granit::result::success);
+  granit_canvas_rect_desc canvas_rect = GRANIT_CANVAS_RECT_DESC_INIT;
+  canvas_rect.width = 8;
+  canvas_rect.height = 8;
+  canvas_rect.state.texture = canvas_texture_view.native_handle();
+  canvas_rect.state.sampler = canvas_sampler.native_handle();
+  REQUIRE(canvas.append_rect(canvas_rect) == granit::result::success);
+
   const std::array multi_view_outputs{
       granit_render_pipeline_output{sizeof(granit_render_pipeline_output), 0,
                                     output_view.native_handle(), GRANIT_TEXTURE_FORMAT_RGBA8_UNORM,
-                                    16, 16, 0},
-      granit_render_pipeline_output{sizeof(granit_render_pipeline_output), 0,
-                                    second_output_view.native_handle(),
-                                    GRANIT_TEXTURE_FORMAT_RGBA8_SRGB, 16, 16, 0}};
+                                    16, 16, 0, canvas.native_handle()},
+      granit_render_pipeline_output{
+          sizeof(granit_render_pipeline_output), 0, second_output_view.native_handle(),
+          GRANIT_TEXTURE_FORMAT_RGBA8_SRGB, 16, 16, 0, GRANIT_NULL_HANDLE}};
   render_desc.view_count = 2;
   render_desc.output_count = static_cast<uint32_t>(multi_view_outputs.size());
   render_desc.outputs = multi_view_outputs.data();

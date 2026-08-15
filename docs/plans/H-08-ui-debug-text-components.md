@@ -6,7 +6,7 @@
 ## 状态
 
 - 优先级：P2
-- 状态：进行中；H-08A 与 H-08B1 独立录制接口已完成，下一步 H-08B2 参考管线提交
+- 状态：进行中；H-08A 与 H-08B 已完成，下一步 H-08C Debug Draw component
 - 必需依赖：H-06 Unlit、2D 与 UI 内部技术验证
 
 ## 目标
@@ -46,7 +46,9 @@
 - H-08B1 提供公共 `granit_canvas_draw_list_record`，一次调用把完整列表录制到已有 Recorder。
 - 默认坐标为左上原点、Y 轴向下的像素单位，内部持有 Material 与动态几何上传资源。
 - 调用方仍负责 Recorder 的 begin、end、提交以及颜色目标生命周期；接口不泄漏内部 Material。
-- H-08B2 将把 Draw List 作为每个 View 的可选 Overlay 输入接入参考管线，并补颜色空间组合验证。
+- H-08B2 已把 Draw List 作为单 View 或每个多 View 输出的可选 Canvas 输入接入参考管线。
+- 自动路径先录制 Canvas，再调用用户 Overlay 回调；UNORM 输出自动使用 Shader sRGB 编码，sRGB
+  Attachment 则交由硬件编码。
 
 ## 验收标准
 

@@ -46,9 +46,11 @@ granit_result record_canvas_pass(granit_renderer renderer, granit_command_record
   };
   auto result = update_material(batches.front());
   material_draw_state material;
-  const material_draw_request request{.pass = granit::material::make_feature_id("unlit_canvas"),
-                                      .color_format = desc.color_format,
-                                      .depth_stencil_format = GRANIT_TEXTURE_FORMAT_UNDEFINED};
+  const material_draw_request request{
+      .pass = granit::material::make_feature_id(desc.encode_srgb ? "unlit_canvas_encode_srgb"
+                                                                 : "unlit_canvas"),
+      .color_format = desc.color_format,
+      .depth_stencil_format = GRANIT_TEXTURE_FORMAT_UNDEFINED};
   if (result == GRANIT_SUCCESS)
     result = acquire_material_draw_state(renderer, desc.material, request, material);
   pbr_draw_bindings bindings;

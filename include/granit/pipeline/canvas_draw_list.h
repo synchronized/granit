@@ -92,15 +92,16 @@ typedef struct granit_canvas_record_desc {
   uint32_t width;
   uint32_t height;
   granit_attachment_load_operation load_operation;
-  uint32_t reserved[4];
+  uint32_t encode_srgb;
+  uint32_t reserved[3];
 } granit_canvas_record_desc;
 
 #define GRANIT_CANVAS_RECORD_DESC_INIT                                                             \
   {                                                                                                \
     (uint32_t)sizeof(granit_canvas_record_desc), GRANIT_NULL_HANDLE,                               \
         GRANIT_TEXTURE_FORMAT_UNDEFINED, UINT32_C(0), UINT32_C(0),                                 \
-        GRANIT_ATTACHMENT_LOAD_OPERATION_LOAD, {                                                   \
-      UINT32_C(0), UINT32_C(0), UINT32_C(0), UINT32_C(0)                                           \
+        GRANIT_ATTACHMENT_LOAD_OPERATION_LOAD, UINT32_C(0), {                                      \
+      UINT32_C(0), UINT32_C(0), UINT32_C(0)                                                        \
     }                                                                                              \
   }
 

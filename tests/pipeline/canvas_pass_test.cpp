@@ -115,4 +115,20 @@ TEST_CASE("Canvas Pass按Batch录制顶点色与Scissor") {
   CHECK(pixel(14) == std::array<std::uint8_t, 4>{128, 0, 64, 192});
   CHECK(pixel(20) == std::array<std::uint8_t, 4>{0, 0, 128, 128});
   REQUIRE(readback.unmap() == granit::result::success);
+
+  record_desc.encode_srgb = 1;
+  REQUIRE(recorder.begin() == granit::result::success);
+  REQUIRE(list.record(recorder.native_handle(), record_desc) == granit::result::success);
+  REQUIRE(recorder.end() == granit::result::success);
+  REQUIRE(recorder.submit() == granit::result::success);
+  REQUIRE(recorder.reset() == granit::result::success);
+  REQUIRE(recorder.begin() == granit::result::success);
+  REQUIRE(recorder.copy_texture_to_buffer(color.native_handle(), readback.native_handle(), {},
+                                          region) == granit::result::success);
+  REQUIRE(recorder.end() == granit::result::success);
+  REQUIRE(recorder.submit() == granit::result::success);
+  REQUIRE(recorder.reset() == granit::result::success);
+  REQUIRE(readback.map(0, size * size * 4, &mapped) == granit::result::success);
+  CHECK(pixel(20) == std::array<std::uint8_t, 4>{0, 0, 188, 128});
+  REQUIRE(readback.unmap() == granit::result::success);
 }

@@ -13,6 +13,10 @@
 #define GRANIT_UNLIT_ALPHA_CUTOFF 0
 #endif
 
+#ifndef GRANIT_UNLIT_ENCODE_SRGB
+#define GRANIT_UNLIT_ENCODE_SRGB 0
+#endif
+
 struct vertex_output {
   float4 position : SV_Position;
   float2 uv : TEXCOORD0;
@@ -83,6 +87,11 @@ float4 fragment_main(vertex_output input) : SV_Target0 {
 #endif
 #if GRANIT_UNLIT_ALPHA_CUTOFF
   clip(color.a - alpha_cutoff);
+#endif
+#if GRANIT_UNLIT_ENCODE_SRGB
+  const float3 low = color.rgb * 12.92;
+  const float3 high = 1.055 * pow(max(color.rgb, 0.0), 1.0 / 2.4) - 0.055;
+  color.rgb = lerp(high, low, color.rgb <= 0.0031308);
 #endif
   return color;
 }

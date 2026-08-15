@@ -261,7 +261,7 @@ extern "C" granit_result granit_canvas_draw_list_record(granit_renderer renderer
       desc->struct_size < sizeof(granit_canvas_record_desc) ||
       !reserved_is_zero(desc->reserved, std::size(desc->reserved)) ||
       desc->color == GRANIT_NULL_HANDLE || desc->color_format == GRANIT_TEXTURE_FORMAT_UNDEFINED ||
-      desc->width == 0 || desc->height == 0 ||
+      desc->width == 0 || desc->height == 0 || desc->encode_srgb > 1 ||
       (desc->load_operation != GRANIT_ATTACHMENT_LOAD_OPERATION_LOAD &&
        desc->load_operation != GRANIT_ATTACHMENT_LOAD_OPERATION_CLEAR &&
        desc->load_operation != GRANIT_ATTACHMENT_LOAD_OPERATION_DISCARD)) {
@@ -292,7 +292,8 @@ extern "C" granit_result granit_canvas_draw_list_record(granit_renderer renderer
                                                            .material = state->material,
                                                            .frame = frame,
                                                            .object = object,
-                                                           .load_operation = desc->load_operation},
+                                                           .load_operation = desc->load_operation,
+                                                           .encode_srgb = desc->encode_srgb != 0},
                                                           state->list, state->geometry);
   }
   return result;

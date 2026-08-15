@@ -61,6 +61,7 @@ record.color = output_view;
 record.color_format = GRANIT_TEXTURE_FORMAT_RGBA8_SRGB;
 record.width = 1280;
 record.height = 720;
+record.encode_srgb = 0; /* sRGB Attachment 由硬件编码；UNORM 显示目标通常设为 1。 */
 result = granit_canvas_draw_list_record(renderer, recorder, list, &record);
 granit_canvas_draw_list_destroy(renderer, list);
 ```
@@ -69,5 +70,6 @@ granit_canvas_draw_list_destroy(renderer, list);
 
 - Recorder 必须已经 begin；函数只录制命令，不结束或提交 Recorder。
 - `LOAD` 保留目标原有内容，适合覆盖层；`CLEAR` 和 `DISCARD` 用于独立 Canvas Pass。
-- sRGB Attachment 由硬件完成线性到 sRGB 转换；UNORM Attachment 保留 Shader 的线性输出。
+- `encode_srgb=1` 在 Shader 中编码 RGB，适合已经保存 sRGB 显示值的 UNORM 目标；sRGB Attachment
+  应保持为零并交由硬件编码。
 - 当前列表持有并复用内部 Material 与上传 Buffer；同一列表的录制仍需调用方外部同步。

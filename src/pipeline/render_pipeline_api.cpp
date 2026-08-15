@@ -677,11 +677,25 @@ render_view(pipeline_state& state, const granit_render_pipeline_render_desc& des
       granit::lighting::reference_pipeline_graph_error::none) {
     return GRANIT_ERROR_INVALID_ARGUMENT;
   }
-  if (state.record != nullptr) {
+  if (state.record != nullptr || render_output.canvas != GRANIT_NULL_HANDLE) {
     const auto canvas_pass = graph.add_pass(
         {.side_effect = true,
          .accesses = {{output, granit::render_graph::access_type::read_write}}},
         [&](granit::render_graph::pass_context& context) {
+          if (render_output.canvas != GRANIT_NULL_HANDLE) {
+            granit_canvas_record_desc canvas_desc = GRANIT_CANVAS_RECORD_DESC_INIT;
+            canvas_desc.color = context.texture_view(output);
+            canvas_desc.color_format = render_output.format;
+            canvas_desc.width = render_output.width;
+            canvas_desc.height = render_output.height;
+            canvas_desc.encode_srgb = is_srgb_output(render_output.format) ? 0U : 1U;
+            const auto canvas_result = granit_canvas_draw_list_record(
+                state.renderer, context.recorder(), render_output.canvas, &canvas_desc);
+            if (canvas_result != GRANIT_SUCCESS)
+              return canvas_result;
+          }
+          if (state.record == nullptr)
+            return GRANIT_SUCCESS;
           const granit_render_pipeline_record_info info{
               .struct_size = sizeof(granit_render_pipeline_record_info),
               .stage = GRANIT_RENDER_PIPELINE_STAGE_OVERLAY,
@@ -823,7 +837,8 @@ granit_render_pipeline_render(granit_renderer renderer, granit_render_pipeline p
                                                     desc->output_format,
                                                     desc->width,
                                                     desc->height,
-                                                    0};
+                                                    0,
+                                                    desc->canvas};
   if (desc->output_count == 0 && !valid_output(legacy_output))
     return GRANIT_ERROR_INVALID_ARGUMENT;
   for (uint32_t index = 0; index < desc->output_count; ++index) {

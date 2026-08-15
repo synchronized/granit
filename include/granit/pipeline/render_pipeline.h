@@ -8,6 +8,7 @@
 
 #include <granit/core/result.h>
 #include <granit/core/types.h>
+#include <granit/pipeline/canvas_draw_list.h>
 #include <granit/pipeline/export.h>
 #include <granit/pipeline/material.h>
 #include <granit/pipeline/mesh.h>
@@ -81,6 +82,7 @@ typedef struct granit_render_pipeline_output {
   uint32_t width;
   uint32_t height;
   uint32_t reserved_tail;
+  granit_canvas_draw_list canvas;
 } granit_render_pipeline_output;
 
 #define GRANIT_RENDER_PIPELINE_OUTPUT_INIT                                                         \
@@ -90,7 +92,8 @@ typedef struct granit_render_pipeline_output {
    GRANIT_TEXTURE_FORMAT_UNDEFINED,                                                                \
    UINT32_C(0),                                                                                    \
    UINT32_C(0),                                                                                    \
-   UINT32_C(0)}
+   UINT32_C(0),                                                                                    \
+   GRANIT_NULL_HANDLE}
 
 typedef struct granit_render_pipeline_render_desc {
   uint32_t struct_size;
@@ -111,6 +114,8 @@ typedef struct granit_render_pipeline_render_desc {
   /** 可选 Swapchain Frame；非零时本次只允许渲染一个 View，并使用帧同步提交。 */
   granit_frame frame;
   uint32_t reserved_tail;
+  /** 单 View 简写路径的可选 Canvas；多 View 使用各 output 的 canvas。 */
+  granit_canvas_draw_list canvas;
 } granit_render_pipeline_render_desc;
 
 #define GRANIT_RENDER_PIPELINE_RENDER_DESC_INIT                                                    \
@@ -129,7 +134,8 @@ typedef struct granit_render_pipeline_render_desc {
    UINT32_C(0),                                                                                    \
    0,                                                                                              \
    GRANIT_NULL_HANDLE,                                                                             \
-   UINT32_C(0)}
+   UINT32_C(0),                                                                                    \
+   GRANIT_NULL_HANDLE}
 
 #ifdef __cplusplus
 extern "C" {
