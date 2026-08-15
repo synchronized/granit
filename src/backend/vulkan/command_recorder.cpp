@@ -192,6 +192,32 @@ granit_result vulkan_command_recorder::copy_texture_to_buffer(const vulkan_devic
   return GRANIT_SUCCESS;
 }
 
+granit_result vulkan_command_recorder::copy_buffer_to_texture(const vulkan_device& device,
+                                                              VkBuffer source, VkImage destination,
+                                                              const VkBufferImageCopy& region) {
+  if (state_ != command_recorder_state::recording || inside_rendering_ ||
+      source == VK_NULL_HANDLE || destination == VK_NULL_HANDLE) {
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  }
+  const std::array buffer_accesses{
+      std::pair{source, VkAccessFlags2{VK_ACCESS_2_TRANSFER_READ_BIT}}};
+  const auto barrier_result = prepare_buffer_access(device, buffer_accesses);
+  if (barrier_result != GRANIT_SUCCESS)
+    return barrier_result;
+  prepare_image_access(
+      device,
+      {.image = destination,
+       .range = {region.imageSubresource.aspectMask, region.imageSubresource.mipLevel, 1,
+                 region.imageSubresource.baseArrayLayer, region.imageSubresource.layerCount},
+       .layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+       .stages = VK_PIPELINE_STAGE_2_COPY_BIT,
+       .access = VK_ACCESS_2_TRANSFER_WRITE_BIT,
+       .preserve_content = false});
+  device.functions().vkCmdCopyBufferToImage(command_buffer_, source, destination,
+                                            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+  return GRANIT_SUCCESS;
+}
+
 granit_result vulkan_command_recorder::copy_texture(const vulkan_device& device, VkImage source,
                                                     VkImage destination,
                                                     const VkImageCopy& region) {

@@ -356,6 +356,54 @@ TEST_CASE("Recorder 在 Texture 之间复制区域", "[command][copy][texture]")
   CHECK(std::memcmp(copied.data(), pixels.data(), pixels.size()) == 0);
 }
 
+TEST_CASE("Recorder 将 Upload Buffer 复制到 Texture", "[command][copy][texture]") {
+  granit::renderer renderer;
+  const auto result = renderer.initialize({.application_name = "granit-buffer-texture-tests"});
+  if (environment_unavailable(result))
+    SKIP("当前运行环境没有满足要求的 Vulkan 设备");
+  REQUIRE(result == granit::result::success);
+
+  constexpr std::array<std::uint8_t, 16> pixels{21, 22, 23, 24, 25, 26, 27, 28,
+                                                29, 30, 31, 32, 33, 34, 35, 36};
+  granit::buffer upload;
+  REQUIRE(upload.initialize(renderer.native_handle(),
+                            {.size = pixels.size(),
+                             .usage = granit::buffer_usage::transfer_source,
+                             .location = granit::memory_location::upload},
+                            std::as_bytes(std::span{pixels})) == granit::result::success);
+  granit::texture destination;
+  REQUIRE(destination.initialize(renderer.native_handle(),
+                                 {.format = granit::texture_format::rgba8_unorm,
+                                  .usage = granit::texture_usage::transfer_source |
+                                           granit::texture_usage::transfer_destination,
+                                  .width = 2,
+                                  .height = 2}) == granit::result::success);
+  const granit_texture_data_layout layout{};
+  const granit_texture_write_region region{.array_layer_count = 1,
+                                           .aspect = GRANIT_TEXTURE_ASPECT_COLOR_BIT,
+                                           .width = 2,
+                                           .height = 2,
+                                           .depth = 1};
+
+  granit::command_recorder recorder;
+  REQUIRE(recorder.initialize(renderer.native_handle()) == granit::result::success);
+  CHECK(recorder.copy_buffer_to_texture(upload.native_handle(), destination.native_handle(), layout,
+                                        region) == granit::result::invalid_argument);
+  REQUIRE(recorder.begin() == granit::result::success);
+  REQUIRE(recorder.copy_buffer_to_texture(upload.native_handle(), destination.native_handle(),
+                                          layout, region) == granit::result::success);
+  REQUIRE(recorder.end() == granit::result::success);
+  REQUIRE(recorder.submit() == granit::result::success);
+  REQUIRE(recorder.reset() == granit::result::success);
+
+  const granit::texture_write_region read_region{.width = 2, .height = 2};
+  granit::texture_readback_info info;
+  REQUIRE(destination.query_readback(read_region, info) == granit::result::success);
+  std::vector<std::byte> copied(static_cast<std::size_t>(info.required_size));
+  REQUIRE(destination.read(copied, read_region, info) == granit::result::success);
+  CHECK(std::memcmp(copied.data(), pixels.data(), pixels.size()) == 0);
+}
+
 TEST_CASE("Recorder 录制 Dynamic Rendering 作用域", "[command][rendering]") {
   granit::renderer renderer;
   const auto result = renderer.initialize({.application_name = "granit-rendering-tests"});

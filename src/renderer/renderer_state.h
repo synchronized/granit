@@ -147,6 +147,9 @@ public:
   [[nodiscard]] granit_result copy_texture_to_buffer(vulkan_command_recorder& recorder,
                                                      VkImage source, VkBuffer destination,
                                                      const VkBufferImageCopy& region);
+  [[nodiscard]] granit_result copy_buffer_to_texture(vulkan_command_recorder& recorder,
+                                                     VkBuffer source, VkImage destination,
+                                                     const VkBufferImageCopy& region);
   [[nodiscard]] granit_result copy_texture(vulkan_command_recorder& recorder, VkImage source,
                                            VkImage destination, const VkImageCopy& region);
   [[nodiscard]] granit_result fill_buffer(vulkan_command_recorder& recorder, VkBuffer buffer,

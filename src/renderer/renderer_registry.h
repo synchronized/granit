@@ -164,6 +164,12 @@ public:
                                                      granit_buffer destination,
                                                      const granit_texture_data_layout& layout,
                                                      const granit_texture_write_region& region);
+  [[nodiscard]] granit_result copy_buffer_to_texture(granit_renderer renderer,
+                                                     granit_command_recorder recorder,
+                                                     granit_buffer source,
+                                                     granit_texture destination,
+                                                     const granit_texture_data_layout& layout,
+                                                     const granit_texture_write_region& region);
   [[nodiscard]] granit_result copy_texture(granit_renderer renderer,
                                            granit_command_recorder recorder, granit_texture source,
                                            granit_texture destination,

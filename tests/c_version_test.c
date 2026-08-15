@@ -97,6 +97,14 @@ static void granit_test_texture_copy_rejects_invalid_arguments(void) {
   TEST_ASSERT_EQUAL_INT(GRANIT_ERROR_INVALID_HANDLE,
                         granit_command_recorder_copy_texture(
                             UINT64_C(1), UINT64_C(2), GRANIT_NULL_HANDLE, UINT64_C(4), &region));
+  {
+    granit_texture_data_layout layout = {0};
+    granit_texture_write_region write_region = {0};
+    TEST_ASSERT_EQUAL_INT(GRANIT_ERROR_INVALID_HANDLE,
+                          granit_command_recorder_copy_buffer_to_texture(
+                              GRANIT_NULL_HANDLE, GRANIT_NULL_HANDLE, GRANIT_NULL_HANDLE,
+                              GRANIT_NULL_HANDLE, &layout, &write_region));
+  }
 }
 
 static int granit_test_environment_unavailable(granit_result result) {

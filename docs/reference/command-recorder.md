@@ -27,6 +27,11 @@ granit_command_recorder_destroy(renderer, recorder);
 相同、均为单采样非深度颜色纹理，并分别声明 `TRANSFER_SOURCE` 与 `TRANSFER_DESTINATION`
 用途；同一纹理内复制暂不支持。
 
+`granit_command_recorder_copy_buffer_to_texture` 从带 `TRANSFER_SOURCE` 用途的 Buffer 复制到
+带 `TRANSFER_DESTINATION` 用途的 Texture。`layout.offset` 是源 Buffer 偏移，行跨度与区域约束
+和 Texture 同步写入一致。该接口适合调用方管理上传内存和批量 Recorder 的高级路径；普通上传
+仍优先使用 `texture.write` 或 Upload Batch。
+
 `submit` 异步提交 executable Recorder。成功后 Recorder 进入 pending；对它调用 `reset` 会等待
 GPU 完成，再重置 Command Pool。Renderer 的 `frames_in_flight` 决定最多保留多少个在途帧槽，
 默认值为 2，有效范围为 1 到 4。

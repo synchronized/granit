@@ -120,6 +120,11 @@ GRANIT_API granit_result granit_command_recorder_copy_texture_to_buffer(
     granit_renderer renderer, granit_command_recorder recorder, granit_texture source,
     granit_buffer destination, const granit_texture_data_layout* layout,
     const granit_texture_write_region* region);
+/** 将 Buffer 数据复制到 Texture 区域；布局中的 offset 指向源 Buffer。 */
+GRANIT_API granit_result granit_command_recorder_copy_buffer_to_texture(
+    granit_renderer renderer, granit_command_recorder recorder, granit_buffer source,
+    granit_texture destination, const granit_texture_data_layout* layout,
+    const granit_texture_write_region* region);
 /** 将一个 Texture 区域复制到另一个 Texture；首版要求同格式、单采样颜色纹理。 */
 GRANIT_API granit_result granit_command_recorder_copy_texture(
     granit_renderer renderer, granit_command_recorder recorder, granit_texture source,

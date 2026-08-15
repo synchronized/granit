@@ -111,6 +111,12 @@ public:
     return from_native(granit_command_recorder_copy_texture_to_buffer(
         renderer_, handle_, source, destination, &layout, &region));
   }
+  [[nodiscard]] result copy_buffer_to_texture(granit_buffer source, granit_texture destination,
+                                              const granit_texture_data_layout& layout,
+                                              const granit_texture_write_region& region) noexcept {
+    return from_native(granit_command_recorder_copy_buffer_to_texture(
+        renderer_, handle_, source, destination, &layout, &region));
+  }
   [[nodiscard]] result copy_texture(granit_texture source, granit_texture destination,
                                     const texture_copy_region& region) noexcept {
     return from_native(

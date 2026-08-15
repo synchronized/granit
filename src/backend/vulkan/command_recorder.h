@@ -41,6 +41,9 @@ public:
   [[nodiscard]] granit_result copy_texture_to_buffer(const vulkan_device& device, VkImage source,
                                                      VkBuffer destination,
                                                      const VkBufferImageCopy& region);
+  [[nodiscard]] granit_result copy_buffer_to_texture(const vulkan_device& device, VkBuffer source,
+                                                     VkImage destination,
+                                                     const VkBufferImageCopy& region);
   [[nodiscard]] granit_result copy_texture(const vulkan_device& device, VkImage source,
                                            VkImage destination, const VkImageCopy& region);
   [[nodiscard]] granit_result fill_buffer(const vulkan_device& device, VkBuffer buffer,
