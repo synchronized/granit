@@ -317,6 +317,11 @@ add_executable(
   renderer/texture_test.cpp
   renderer/upload_batch_test.cpp
 )
+if(GRANIT_HAS_XCB)
+  target_sources(granit_renderer_test PRIVATE renderer/xcb_swapchain_test.cpp)
+  target_include_directories(granit_renderer_test SYSTEM PRIVATE "${GRANIT_XCB_INCLUDE_DIR}")
+  target_link_libraries(granit_renderer_test PRIVATE "${GRANIT_XCB_LIBRARY}")
+endif()
 target_link_libraries(
   granit_renderer_test
   PRIVATE

@@ -21,7 +21,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y ninja-build libvulkan1 libxcb1-dev mesa-vulkan-drivers \
-            vulkan-validationlayers
+            vulkan-validationlayers xvfb xauth
       - name: 选择 preset
         id: preset
         shell: bash
@@ -33,7 +33,7 @@ jobs:
         run: |
           cmake --preset "${{ steps.preset.outputs.name }}"
           cmake --build --preset "${{ steps.preset.outputs.name }}"
-          ctest --preset "${{ steps.preset.outputs.name }}"
+          xvfb-run -a ctest --preset "${{ steps.preset.outputs.name }}"
       - name: 安装并验证独立 C 和 C++ Consumer
         shell: bash
         run: |
