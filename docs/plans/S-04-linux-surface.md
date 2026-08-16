@@ -86,7 +86,8 @@ Renderer/Surface 句柄与 RAII 销毁路径，不创建平台专用运行时对
    真实 Wayland Surface 创建、呈现队列校验和 Registry 生命周期接入；Linux 条件编译与运行等待
    账户额度恢复后执行远端验收。
 5. S-04E（实现中）：已配置 Weston Headless 和私有 `xdg-shell` 协议生成，并增加真实 Wayland
-   顶层窗口、Swapchain、附件清屏和 Present 集成测试；Resize、窗口示例及 SDL/GLFW 指南待完成。
+   顶层窗口、Swapchain、附件清屏、Present 与 compositor configure 后的 Resize 重建测试；窗口
+   示例及 SDL/GLFW 指南待完成。
 
 ## 测试与验收
 

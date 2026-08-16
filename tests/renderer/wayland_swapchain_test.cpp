@@ -70,6 +70,13 @@ public:
   [[nodiscard]] bool valid() const noexcept { return configured_; }
   [[nodiscard]] void* display() const noexcept { return display_; }
   [[nodiscard]] void* surface() const noexcept { return wl_surface_; }
+  [[nodiscard]] bool request_size(std::int32_t width, std::int32_t height) noexcept {
+    configured_ = false;
+    xdg_toplevel_set_min_size(toplevel_, width, height);
+    xdg_toplevel_set_max_size(toplevel_, width, height);
+    wl_surface_commit(wl_surface_);
+    return wl_display_roundtrip(display_) >= 0 && configured_;
+  }
 
 private:
   static void registry_global(void* data, wl_registry* registry, std::uint32_t name,
@@ -167,6 +174,27 @@ TEST_CASE("Wayland Surface 可以完成 Swapchain 清屏和 Present", "[swapchai
   REQUIRE(recorder.end() == granit::result::success);
   REQUIRE(recorder.submit(frame) == granit::result::success);
   REQUIRE(swapchain.present(frame) == granit::result::success);
+  REQUIRE(wl_display_roundtrip(static_cast<wl_display*>(window.display())) >= 0);
+  REQUIRE(recorder.reset() == granit::result::success);
+
+  REQUIRE(window.request_size(128, 96));
+  REQUIRE(swapchain.recreate({.width = 128, .height = 96}) == granit::result::success);
+  REQUIRE(swapchain.query_info(info) == granit::result::success);
+  granit::acquired_frame resized_frame;
+  REQUIRE(swapchain.acquire(resized_frame) == granit::result::success);
+  REQUIRE(swapchain.backbuffer(resized_frame.image_index, texture, view) ==
+          granit::result::success);
+  REQUIRE(recorder.begin() == granit::result::success);
+  const granit::color_attachment_desc resized_color{
+      .view = view, .clear_value = {.red = 0.16F, .green = 0.06F, .blue = 0.03F, .alpha = 1.0F}};
+  const granit::rendering_desc resized_rendering{
+      .color_attachments = std::span{&resized_color, 1},
+      .area = {.width = info.width, .height = info.height}};
+  REQUIRE(recorder.begin_rendering(resized_rendering) == granit::result::success);
+  REQUIRE(recorder.end_rendering() == granit::result::success);
+  REQUIRE(recorder.end() == granit::result::success);
+  REQUIRE(recorder.submit(resized_frame) == granit::result::success);
+  REQUIRE(swapchain.present(resized_frame) == granit::result::success);
   REQUIRE(wl_display_roundtrip(static_cast<wl_display*>(window.display())) >= 0);
 }
 
