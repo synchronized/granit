@@ -40,6 +40,11 @@ jobs:
           cmake --install "build/${{ steps.preset.outputs.name }}" --prefix "$prefix"
           cmake \
             -DGRANIT_SOURCE_DIR="$PWD" \
+            -DGRANIT_BUILD_DIR="$PWD/build/${{ steps.preset.outputs.name }}" \
+            -DGRANIT_INSTALL_PREFIX="$prefix" \
+            -P cmake/check_install_exports.cmake
+          cmake \
+            -DGRANIT_SOURCE_DIR="$PWD" \
             -DGRANIT_INSTALL_PREFIX="$prefix" \
             -DGRANIT_TEST_BINARY_DIR="$PWD/build/package/${{ steps.preset.outputs.name }}" \
             -P cmake/check_installed_package.cmake

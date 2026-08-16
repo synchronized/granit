@@ -93,6 +93,15 @@ cmake -DGRANIT_SOURCE_DIR=/path/to/granit \
   -P /path/to/granit/cmake/check_installed_package.cmake
 ```
 
+安装导出审计用于检查必要文件，并防止源码路径、构建路径、测试库和 Vulkan 私有依赖泄漏：
+
+```sh
+cmake -DGRANIT_SOURCE_DIR=/path/to/granit \
+  -DGRANIT_BUILD_DIR=/path/to/granit/build \
+  -DGRANIT_INSTALL_PREFIX=/path/to/granit/install \
+  -P /path/to/granit/cmake/check_install_exports.cmake
+```
+
 共享库使用者还需要按照目标平台的部署规则，让运行进程能够找到 DLL、SO 或 dylib。
 
 ## 运行示例
