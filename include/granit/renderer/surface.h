@@ -8,9 +8,9 @@
 #include <stdint.h>
 
 #include <granit/core/export.h>
-#include <granit/renderer/renderer.h>
 #include <granit/core/result.h>
 #include <granit/core/types.h>
+#include <granit/renderer/renderer.h>
 
 /** 窗口输出 Surface 句柄。零值无效。 */
 typedef granit_handle granit_surface;
@@ -27,6 +27,28 @@ typedef struct granit_win32_surface_desc {
 
 #define GRANIT_WIN32_SURFACE_DESC_INIT {(uint32_t)sizeof(granit_win32_surface_desc), 0, 0}
 
+/** XCB Surface 创建描述。原生值只在函数调用期间借用。 */
+typedef struct granit_xcb_surface_desc {
+  uint32_t struct_size;
+  void* connection;
+  uint32_t window;
+} granit_xcb_surface_desc;
+
+#define GRANIT_XCB_SURFACE_DESC_VERSION_1_SIZE                                                     \
+  ((uint32_t)(offsetof(granit_xcb_surface_desc, window) + sizeof(uint32_t)))
+#define GRANIT_XCB_SURFACE_DESC_INIT {(uint32_t)sizeof(granit_xcb_surface_desc), 0, UINT32_C(0)}
+
+/** Wayland Surface 创建描述。原生对象只在函数调用期间借用。 */
+typedef struct granit_wayland_surface_desc {
+  uint32_t struct_size;
+  void* display;
+  void* surface;
+} granit_wayland_surface_desc;
+
+#define GRANIT_WAYLAND_SURFACE_DESC_VERSION_1_SIZE                                                 \
+  ((uint32_t)(offsetof(granit_wayland_surface_desc, surface) + sizeof(void*)))
+#define GRANIT_WAYLAND_SURFACE_DESC_INIT {(uint32_t)sizeof(granit_wayland_surface_desc), 0, 0}
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -35,6 +57,16 @@ extern "C" {
 GRANIT_API granit_result granit_surface_create_win32(granit_renderer renderer,
                                                      const granit_win32_surface_desc* desc,
                                                      granit_surface* surface);
+
+/** 从 XCB connection 与 window 创建 Surface。Renderer 必须预先启用对应支持。 */
+GRANIT_API granit_result granit_surface_create_xcb(granit_renderer renderer,
+                                                   const granit_xcb_surface_desc* desc,
+                                                   granit_surface* surface);
+
+/** 从 Wayland display 与 wl_surface 创建 Surface。Renderer 必须预先启用对应支持。 */
+GRANIT_API granit_result granit_surface_create_wayland(granit_renderer renderer,
+                                                       const granit_wayland_surface_desc* desc,
+                                                       granit_surface* surface);
 
 /** 销毁属于指定 Renderer 的 Surface，并使句柄立即失效。 */
 GRANIT_API granit_result granit_surface_destroy(granit_renderer renderer, granit_surface surface);

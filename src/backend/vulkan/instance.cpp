@@ -167,6 +167,8 @@ granit_result vulkan_instance::initialize(const vulkan_instance_desc& desc) {
       return GRANIT_ERROR_UNSUPPORTED;
 #endif
     }
+    if ((desc.surface_types & (GRANIT_SURFACE_TYPE_XCB_BIT | GRANIT_SURFACE_TYPE_WAYLAND_BIT)) != 0)
+      return GRANIT_ERROR_UNSUPPORTED;
 
     // Vulkan 需要以零结尾的名称，string_view 本身不保证这一点。
     const std::string application_name{desc.application_name};

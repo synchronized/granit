@@ -17,6 +17,8 @@ GRANIT_ABI_ASSERT(granit_abi_first_error, GRANIT_ERROR_UNKNOWN == INT32_C(-1));
 GRANIT_ABI_ASSERT(granit_abi_last_error, GRANIT_ERROR_NOT_READY == INT32_C(-14));
 GRANIT_ABI_ASSERT(granit_abi_renderer_api_version, GRANIT_RENDERER_API_VERSION_CURRENT == 1);
 GRANIT_ABI_ASSERT(granit_abi_validation_bit, GRANIT_RENDERER_ENABLE_VALIDATION_BIT == (1U << 0));
+GRANIT_ABI_ASSERT(granit_abi_xcb_surface_bit, GRANIT_SURFACE_TYPE_XCB_BIT == (1U << 1));
+GRANIT_ABI_ASSERT(granit_abi_wayland_surface_bit, GRANIT_SURFACE_TYPE_WAYLAND_BIT == (1U << 2));
 GRANIT_ABI_ASSERT(granit_abi_vertex_usage_bit, GRANIT_BUFFER_USAGE_VERTEX_BIT == (1U << 2));
 GRANIT_ABI_ASSERT(granit_abi_color_usage_bit,
                   GRANIT_TEXTURE_USAGE_COLOR_ATTACHMENT_BIT == (1U << 4));
@@ -147,6 +149,19 @@ GRANIT_ABI_ASSERT(granit_abi_win32_surface_desc_instance,
 GRANIT_ABI_ASSERT(granit_abi_win32_surface_desc_window,
                   offsetof(granit_win32_surface_desc, window) == 16);
 GRANIT_ABI_ASSERT(granit_abi_win32_surface_desc_v1, GRANIT_WIN32_SURFACE_DESC_VERSION_1_SIZE == 24);
+GRANIT_ABI_ASSERT(granit_abi_xcb_surface_desc_size, sizeof(granit_xcb_surface_desc) == 24);
+GRANIT_ABI_ASSERT(granit_abi_xcb_surface_desc_connection,
+                  offsetof(granit_xcb_surface_desc, connection) == 8);
+GRANIT_ABI_ASSERT(granit_abi_xcb_surface_desc_window,
+                  offsetof(granit_xcb_surface_desc, window) == 16);
+GRANIT_ABI_ASSERT(granit_abi_xcb_surface_desc_v1, GRANIT_XCB_SURFACE_DESC_VERSION_1_SIZE == 20);
+GRANIT_ABI_ASSERT(granit_abi_wayland_surface_desc_size, sizeof(granit_wayland_surface_desc) == 24);
+GRANIT_ABI_ASSERT(granit_abi_wayland_surface_desc_display,
+                  offsetof(granit_wayland_surface_desc, display) == 8);
+GRANIT_ABI_ASSERT(granit_abi_wayland_surface_desc_surface,
+                  offsetof(granit_wayland_surface_desc, surface) == 16);
+GRANIT_ABI_ASSERT(granit_abi_wayland_surface_desc_v1,
+                  GRANIT_WAYLAND_SURFACE_DESC_VERSION_1_SIZE == 24);
 GRANIT_ABI_ASSERT(granit_abi_swapchain_desc_size, sizeof(granit_swapchain_desc) == 20);
 GRANIT_ABI_ASSERT(granit_abi_swapchain_desc_present_mode,
                   offsetof(granit_swapchain_desc, present_mode) == 16);

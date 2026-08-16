@@ -73,6 +73,8 @@ constexpr std::array expected_symbols{
     "granit_shader_create",
     "granit_shader_destroy",
     "granit_surface_create_win32",
+    "granit_surface_create_xcb",
+    "granit_surface_create_wayland",
     "granit_surface_destroy",
     "granit_swapchain_acquire",
     "granit_swapchain_create",

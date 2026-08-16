@@ -6,8 +6,8 @@
 ## 定位
 
 Surface 表示 Renderer 与原生窗口系统之间的输出连接。公开接口只接收平台窗口句柄并返回
-Granit 64 位整数句柄，不暴露 Vulkan 类型。首版仅实现 Win32，后续平台将使用独立描述结构和
-创建函数扩展，避免一个联合结构持续膨胀。
+Granit 64 位整数句柄，不暴露 Vulkan 类型。Win32 后端已经实现；XCB 与 Wayland 已建立独立
+描述结构和公共入口，后端仍在开发中，当前有效请求返回 `GRANIT_ERROR_UNSUPPORTED`。
 
 ## 启用 Win32 支持
 
@@ -52,6 +52,16 @@ C API。它不拥有原生窗口。
 
 C++ 创建 Renderer 时使用 `renderer_desc::surface_types = granit::surface_type::win32`。未来同时
 启用多个窗口系统时可通过按位或组合 `surface_type`。
+
+## Linux 公共边界
+
+XCB 使用 `granit_xcb_surface_desc`，其中 `connection` 对应借用的 `xcb_connection_t*`，`window`
+使用定宽 `uint32_t` 保存 `xcb_window_t`。Wayland 使用 `granit_wayland_surface_desc`，其中
+`display` 和 `surface` 分别对应借用的 `wl_display*` 与 `wl_surface*`。公共头不包含平台头文件。
+
+C++ 包装对应 `xcb_surface_desc`、`wayland_surface_desc`、`surface::initialize_xcb` 和
+`surface::initialize_wayland`。调用方仍负责窗口创建、事件循环和原生对象生命周期。完整后端
+进度见 [S-04 Linux Surface 计划](../plans/S-04-linux-surface.md)。
 
 ## 生命周期与归属
 

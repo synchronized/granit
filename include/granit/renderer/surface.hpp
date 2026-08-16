@@ -4,6 +4,7 @@
 #ifndef GRANIT_SURFACE_HPP_
 #define GRANIT_SURFACE_HPP_
 
+#include <cstdint>
 #include <utility>
 
 #include <granit/core/result.hpp>
@@ -14,6 +15,16 @@ namespace granit {
 struct win32_surface_desc {
   void* instance{};
   void* window{};
+};
+
+struct xcb_surface_desc {
+  void* connection{};
+  std::uint32_t window{};
+};
+
+struct wayland_surface_desc {
+  void* display{};
+  void* surface{};
 };
 
 /** 无异常、move-only 的 Surface RAII 包装。 */
@@ -52,6 +63,36 @@ public:
     if (native_result == GRANIT_SUCCESS) {
       renderer_ = renderer;
     }
+    return from_native(native_result);
+  }
+
+  [[nodiscard]] result initialize_xcb(granit_renderer renderer,
+                                      const xcb_surface_desc& desc) noexcept {
+    if (valid() || renderer == GRANIT_NULL_HANDLE)
+      return result::invalid_argument;
+    const granit_xcb_surface_desc native_desc{
+        .struct_size = sizeof(granit_xcb_surface_desc),
+        .connection = desc.connection,
+        .window = desc.window,
+    };
+    const auto native_result = granit_surface_create_xcb(renderer, &native_desc, &handle_);
+    if (native_result == GRANIT_SUCCESS)
+      renderer_ = renderer;
+    return from_native(native_result);
+  }
+
+  [[nodiscard]] result initialize_wayland(granit_renderer renderer,
+                                          const wayland_surface_desc& desc) noexcept {
+    if (valid() || renderer == GRANIT_NULL_HANDLE)
+      return result::invalid_argument;
+    const granit_wayland_surface_desc native_desc{
+        .struct_size = sizeof(granit_wayland_surface_desc),
+        .display = desc.display,
+        .surface = desc.surface,
+    };
+    const auto native_result = granit_surface_create_wayland(renderer, &native_desc, &handle_);
+    if (native_result == GRANIT_SUCCESS)
+      renderer_ = renderer;
     return from_native(native_result);
   }
 

@@ -45,6 +45,16 @@ static void granit_test_surface_rejects_invalid_arguments(void) {
                         granit_surface_create_win32(UINT64_C(1), &desc, &surface));
   TEST_ASSERT_EQUAL_INT(GRANIT_ERROR_INVALID_HANDLE,
                         granit_surface_destroy(GRANIT_NULL_HANDLE, GRANIT_NULL_HANDLE));
+  {
+    granit_xcb_surface_desc xcb = GRANIT_XCB_SURFACE_DESC_INIT;
+    TEST_ASSERT_EQUAL_INT(GRANIT_ERROR_INVALID_ARGUMENT,
+                          granit_surface_create_xcb(UINT64_C(1), &xcb, &surface));
+  }
+  {
+    granit_wayland_surface_desc wayland = GRANIT_WAYLAND_SURFACE_DESC_INIT;
+    TEST_ASSERT_EQUAL_INT(GRANIT_ERROR_INVALID_ARGUMENT,
+                          granit_surface_create_wayland(UINT64_C(1), &wayland, &surface));
+  }
 }
 
 static void granit_test_swapchain_rejects_invalid_arguments(void) {

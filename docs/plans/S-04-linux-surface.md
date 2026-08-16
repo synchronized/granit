@@ -6,7 +6,7 @@
 ## 状态
 
 - 设计状态：已确认
-- 实现状态：待实现
+- 实现状态：实现中
 - 路线图任务：S-04
 - 优先级：P2
 - 前置依赖：现有 Win32 Surface、Swapchain、S-03
@@ -74,7 +74,8 @@ Renderer/Surface 句柄与 RAII 销毁路径，不创建平台专用运行时对
 
 ## 实施顺序
 
-1. S-04A：增加 XCB/Wayland 能力位、C/C++ 描述和入口，建立 ABI 布局与参数验证测试。
+1. S-04A（已完成）：已增加 XCB/Wayland 能力位、C/C++ 描述和入口，并建立 ABI 布局、
+   公共导出和参数验证测试；后端接入前有效请求明确返回不支持。
 2. S-04B：增加私有 XCB 构建探测、Instance 扩展启用和 XCB Surface 创建实现。
 3. S-04C：增加基于 Xvfb 的 XCB 窗口、Swapchain、Present 集成测试和示例。
 4. S-04D：增加私有 Wayland 构建探测、Instance 扩展启用和 Wayland Surface 创建实现。

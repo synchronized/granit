@@ -14,6 +14,24 @@
 
 namespace {
 
+TEST_CASE("Linux Surface 公共入口验证原生描述", "[surface][xcb][wayland]") {
+  granit_surface output = UINT64_C(42);
+  granit_xcb_surface_desc xcb = GRANIT_XCB_SURFACE_DESC_INIT;
+  CHECK(granit_surface_create_xcb(UINT64_C(1), &xcb, &output) == GRANIT_ERROR_INVALID_ARGUMENT);
+  CHECK(output == GRANIT_NULL_HANDLE);
+  xcb.connection = &output;
+  xcb.window = UINT32_C(1);
+  CHECK(granit_surface_create_xcb(UINT64_C(1), &xcb, &output) == GRANIT_ERROR_INVALID_HANDLE);
+
+  granit_wayland_surface_desc wayland = GRANIT_WAYLAND_SURFACE_DESC_INIT;
+  CHECK(granit_surface_create_wayland(UINT64_C(1), &wayland, &output) ==
+        GRANIT_ERROR_INVALID_ARGUMENT);
+  wayland.display = &xcb;
+  wayland.surface = &wayland;
+  CHECK(granit_surface_create_wayland(UINT64_C(1), &wayland, &output) ==
+        GRANIT_ERROR_INVALID_HANDLE);
+}
+
 #if defined(_WIN32)
 bool environment_unavailable(granit::result result) {
   return result == granit::result::backend_unavailable ||

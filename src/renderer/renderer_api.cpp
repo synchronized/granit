@@ -12,7 +12,8 @@
 namespace {
 
 constexpr std::uint32_t supported_flags = GRANIT_RENDERER_ENABLE_VALIDATION_BIT;
-constexpr std::uint32_t supported_surface_types = GRANIT_SURFACE_TYPE_WIN32_BIT;
+constexpr std::uint32_t supported_surface_types =
+    GRANIT_SURFACE_TYPE_WIN32_BIT | GRANIT_SURFACE_TYPE_XCB_BIT | GRANIT_SURFACE_TYPE_WAYLAND_BIT;
 constexpr std::uint32_t maximum_application_name_length = 4096;
 constexpr std::uint32_t maximum_object_name_length = 4096;
 constexpr std::string_view default_application_name = "Granit Application";
