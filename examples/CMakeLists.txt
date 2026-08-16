@@ -147,6 +147,24 @@ if(WIN32)
   granit_target_compile_warnings(granit_window_hdr_example)
 endif()
 
+if(GRANIT_HAS_XCB)
+  add_executable(granit_xcb_window_clear_example xcb_window_clear.cpp)
+  target_include_directories(
+    granit_xcb_window_clear_example SYSTEM PRIVATE "${GRANIT_XCB_INCLUDE_DIR}"
+  )
+  target_link_libraries(
+    granit_xcb_window_clear_example PRIVATE granit::granit "${GRANIT_XCB_LIBRARY}"
+  )
+  granit_target_compile_warnings(granit_xcb_window_clear_example)
+  if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
+    add_test(
+      NAME granit.example.xcb_window_clear
+      COMMAND granit_xcb_window_clear_example --smoke-test
+    )
+    set_tests_properties(granit.example.xcb_window_clear PROPERTIES TIMEOUT 30)
+  endif()
+endif()
+
 set(
   granit_example_targets
   granit_version_example
@@ -168,6 +186,9 @@ if(WIN32)
     granit_window_hdr_example
     granit_render_pipeline_window_example
   )
+endif()
+if(GRANIT_HAS_XCB)
+  list(APPEND granit_example_targets granit_xcb_window_clear_example)
 endif()
 foreach(target IN LISTS granit_example_targets)
   granit_target_output_directories(${target})

@@ -14,7 +14,8 @@ cmake --build --preset windows-clang-debug
 build/windows-clang-debug/bin/granit_offscreen_clear_example.exe
 ```
 
-窗口示例目前仅在 Windows 构建。更多构建选项见[构建与安装](build.md)。
+Win32 窗口示例在 Windows 构建；检测到 XCB 开发包时，Linux 额外构建 XCB 清屏示例。更多构建
+选项见[构建与安装](build.md)。
 
 ## 公共接口示例
 
@@ -27,6 +28,8 @@ build/windows-clang-debug/bin/granit_offscreen_clear_example.exe
 - `granit_compute_example`：Compute Shader 写入 Storage Buffer，并复制回读结果。
 - `granit_window_clear_example`：执行 Win32 acquire、清屏、submit、present 与尺寸重建循环。
 - `granit_window_triangle_example`：上传顶点数据并持续绘制窗口三角形。
+- `granit_xcb_window_clear_example`：在 Linux XCB 窗口中完成清屏、Present 和 Resize 重建；使用
+  `--smoke-test` 时渲染三帧后自动退出。
 - `granit_render_pipeline_offscreen_example`：通过公共 Mesh、Material、Scene 与 Render Pipeline API
   自动录制 Shadow/Opaque Draw，并回读输出像素。完整流程见
   [Render Pipeline 离屏渲染教程](../tutorials/render-pipeline-offscreen.md)。
