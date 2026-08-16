@@ -36,6 +36,7 @@ add_library(
     headers/texture_h.c
     headers/types_h.c
     headers/upload_batch_h.c
+    headers/window_h.c
     headers/pipeline_material_h.c
     headers/pipeline_mesh_h.c
     headers/pipeline_render_pipeline_h.c
@@ -45,7 +46,9 @@ add_library(
       headers/pipeline_text_draw_list_h.c
       headers/pipeline_text_atlas_h.c
 )
-target_link_libraries(granit_c_header_test PRIVATE granit::granit granit::render_pipeline)
+target_link_libraries(
+  granit_c_header_test PRIVATE granit::granit granit::render_pipeline granit::window
+)
 granit_target_compile_warnings(granit_c_header_test)
 
 add_executable(granit_cpp_version_test cpp_version_test.cpp)
@@ -453,9 +456,18 @@ add_library(
       headers/pipeline_debug_draw_list_hpp.cpp
       headers/pipeline_text_draw_list_hpp.cpp
       headers/pipeline_text_atlas_hpp.cpp
+    headers/window_hpp.cpp
 )
-target_link_libraries(granit_cpp_header_test PRIVATE granit::granit granit::render_pipeline)
+target_link_libraries(
+  granit_cpp_header_test PRIVATE granit::granit granit::render_pipeline granit::window
+)
 granit_target_compile_warnings(granit_cpp_header_test)
+
+add_executable(granit_window_test window/window_api_test.cpp)
+target_link_libraries(granit_window_test PRIVATE granit::window Catch2::Catch2WithMain)
+granit_target_compile_warnings(granit_window_test)
+granit_target_output_directories(granit_window_test)
+add_test(NAME granit.window COMMAND granit_window_test)
 
 set(
   granit_test_executable_targets
