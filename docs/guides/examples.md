@@ -30,6 +30,8 @@ Win32 窗口示例在 Windows 构建；检测到 XCB 开发包时，Linux 额外
 - `granit_window_triangle_example`：上传顶点数据并持续绘制窗口三角形。
 - `granit_xcb_window_clear_example`：在 Linux XCB 窗口中完成清屏、Present 和 Resize 重建；使用
   `--smoke-test` 时渲染三帧后自动退出。
+- `granit_wayland_window_clear_example`：使用 `xdg-shell` 创建 Wayland 顶层窗口，处理 configure、
+  清屏、Present 和 Resize 重建；使用 `--smoke-test` 时渲染三帧后自动退出。
 - `granit_render_pipeline_offscreen_example`：通过公共 Mesh、Material、Scene 与 Render Pipeline API
   自动录制 Shadow/Opaque Draw，并回读输出像素。完整流程见
   [Render Pipeline 离屏渲染教程](../tutorials/render-pipeline-offscreen.md)。

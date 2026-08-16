@@ -165,6 +165,64 @@ if(GRANIT_HAS_XCB)
   endif()
 endif()
 
+if(GRANIT_HAS_WAYLAND_SHELL)
+  set(granit_example_wayland_protocol_dir "${CMAKE_CURRENT_BINARY_DIR}/generated/wayland")
+  set(
+    granit_example_xdg_shell_header
+    "${granit_example_wayland_protocol_dir}/xdg-shell-client-protocol.h"
+  )
+  set(
+    granit_example_xdg_shell_source
+    "${granit_example_wayland_protocol_dir}/xdg-shell-protocol.c"
+  )
+  add_custom_command(
+    OUTPUT "${granit_example_xdg_shell_header}" "${granit_example_xdg_shell_source}"
+    COMMAND "${CMAKE_COMMAND}" -E make_directory "${granit_example_wayland_protocol_dir}"
+    COMMAND
+      "${GRANIT_WAYLAND_SCANNER}" client-header "${GRANIT_XDG_SHELL_PROTOCOL}"
+      "${granit_example_xdg_shell_header}"
+    COMMAND
+      "${GRANIT_WAYLAND_SCANNER}" private-code "${GRANIT_XDG_SHELL_PROTOCOL}"
+      "${granit_example_xdg_shell_source}"
+    DEPENDS "${GRANIT_XDG_SHELL_PROTOCOL}"
+    VERBATIM
+  )
+  add_library(
+    granit_example_xdg_shell_protocol OBJECT
+    "${granit_example_xdg_shell_header}"
+    "${granit_example_xdg_shell_source}"
+  )
+  set_target_properties(
+    granit_example_xdg_shell_protocol PROPERTIES C_STANDARD 11 C_STANDARD_REQUIRED YES
+  )
+  target_include_directories(
+    granit_example_xdg_shell_protocol
+    SYSTEM PRIVATE "${GRANIT_WAYLAND_INCLUDE_DIR}" "${granit_example_wayland_protocol_dir}"
+  )
+
+  add_executable(
+    granit_wayland_window_clear_example
+    wayland_window_clear.cpp
+    $<TARGET_OBJECTS:granit_example_xdg_shell_protocol>
+  )
+  add_dependencies(granit_wayland_window_clear_example granit_example_xdg_shell_protocol)
+  target_include_directories(
+    granit_wayland_window_clear_example
+    SYSTEM PRIVATE "${GRANIT_WAYLAND_INCLUDE_DIR}" "${granit_example_wayland_protocol_dir}"
+  )
+  target_link_libraries(
+    granit_wayland_window_clear_example PRIVATE granit::granit "${GRANIT_WAYLAND_LIBRARY}"
+  )
+  granit_target_compile_warnings(granit_wayland_window_clear_example)
+  if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
+    add_test(
+      NAME granit.example.wayland_window_clear
+      COMMAND granit_wayland_window_clear_example --smoke-test
+    )
+    set_tests_properties(granit.example.wayland_window_clear PROPERTIES TIMEOUT 30)
+  endif()
+endif()
+
 set(
   granit_example_targets
   granit_version_example
@@ -189,6 +247,9 @@ if(WIN32)
 endif()
 if(GRANIT_HAS_XCB)
   list(APPEND granit_example_targets granit_xcb_window_clear_example)
+endif()
+if(GRANIT_HAS_WAYLAND_SHELL)
+  list(APPEND granit_example_targets granit_wayland_window_clear_example)
 endif()
 foreach(target IN LISTS granit_example_targets)
   granit_target_output_directories(${target})
