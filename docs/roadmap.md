@@ -138,8 +138,8 @@
   报告。
 - **[S-03](plans/S-03-package-consumers.md) / P1**：实现已完成；安装包、真实外部 C/C++
   Consumer 和版本验证已落地，远端 CI 因账户额度限制等待重跑。
-- **[S-04](plans/S-04-linux-surface.md) / P2**：设计已确认；按 XCB、Wayland 顺序增加 Linux
-  平台 Surface，保持窗口和事件循环由上层管理。
+- **[S-04](plans/S-04-linux-surface.md) / P2**：实现已完成；XCB、Wayland Surface、窗口示例和
+  无头集成测试均已落地，远端 Linux 运行矩阵等待 Actions 账户额度恢复后复测。
 - **S-05 / P2**：明确标记为不稳定的 Vulkan 原生互操作。
 - **S-06 / P2**：核心、高层模块和互操作接口的兼容承诺。
 - **[S-07](plans/S-07-window-events.md) / P2**：规划可选 Window、轮询式 Event 和后续 Input
@@ -149,7 +149,7 @@
 
 ## 近期执行顺序
 
-1. 完成 S-04 的 XCB 示例、Wayland 后端与无头合成器验证，再启动 S-07 Window/Event 原型。
+1. 启动 S-07 Window/Event 原型；S-04 的远端 Linux 矩阵在 Actions 账户额度恢复后补跑。
 2. S-07 的原生窗口描述稳定后实现 S-08 SDL3 Surface 集成；ImGui 集成在公共 Canvas 路径上验证。
 3. 以真实材质与光源负载测量透明 PBR、CSM、Clustered Forward 与 Bindless 的收益和成本。
 4. API/ABI 稳定化在开发阶段功能边界收敛后推进；Deferred 保持为使用 Render Graph 组合的可选

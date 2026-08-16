@@ -101,8 +101,8 @@ D-03-graphics-pipeline.md
   sink、公共回调、GPU 调试名称、首次 Device Lost 报告及边界回归均已落地。
 - [S-03：安装包与外部 Consumer 验证](S-03-package-consumers.md)——实现已完成；本地 Windows
   共享/静态验收通过，远端 Windows/Linux 矩阵因 Actions 账户额度限制等待重跑。
-- [S-04：Linux XCB 与 Wayland Surface](S-04-linux-surface.md)——设计已确认；先实现 XCB，
-  再增加 Wayland，窗口创建与事件循环保持为上层职责。
+- [S-04：Linux XCB 与 Wayland Surface](S-04-linux-surface.md)——实现已完成；XCB、Wayland、窗口
+  示例和无头集成测试已落地，远端 Linux 运行矩阵等待 Actions 账户额度恢复后复测。
 - [S-07：Window、Event 与 Input 边界](S-07-window-events.md)——设计已确认；在 S-04 后增加可选
   Window 组件，Renderer Surface 仍允许 SDL、GLFW、Qt 和引擎直接接入。
 - [S-08：SDL3 与 ImGui 第三方集成](S-08-third-party-integrations.md)——设计已确认；使用独立

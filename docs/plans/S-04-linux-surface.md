@@ -6,7 +6,7 @@
 ## 状态
 
 - 设计状态：已确认
-- 实现状态：实现中
+- 实现状态：实现完成，等待远端复测
 - 路线图任务：S-04
 - 优先级：P2
 - 前置依赖：现有 Win32 Surface、Swapchain、S-03
@@ -85,9 +85,10 @@ Renderer/Surface 句柄与 RAII 销毁路径，不创建平台专用运行时对
 4. S-04D（实现完成，等待远端复测）：已增加私有 Wayland Client 探测、Instance 扩展启用、
    真实 Wayland Surface 创建、呈现队列校验和 Registry 生命周期接入；Linux 条件编译与运行等待
    账户额度恢复后执行远端验收。
-5. S-04E（实现中）：已配置 Weston Headless 和私有 `xdg-shell` 协议生成，并增加真实 Wayland
+5. S-04E（实现完成，等待远端复测）：已配置 Weston Headless 和私有 `xdg-shell` 协议生成，并增加
+   [SDL3/GLFW 接入指南](../guides/window-library-integration.md)、真实 Wayland
    顶层窗口、Swapchain、附件清屏、Present 与 compositor configure 后的 Resize 重建测试；已增加
-   处理 configure、关闭和 Resize 的 Wayland 清屏示例，SDL/GLFW 指南待完成。
+   处理 configure、关闭和 Resize 的 Wayland 清屏示例。
 
 ## 测试与验收
 
@@ -104,4 +105,5 @@ Renderer/Surface 句柄与 RAII 销毁路径，不创建平台专用运行时对
   `vkGetPhysicalDeviceSurfaceSupportKHR` 为最终判定，不把 visual ID 放入公共 ABI。
 - Wayland Surface 的窗口角色由调用方和 `xdg-shell` 管理；角色尚未建立时创建或呈现可能失败。
 - CI 的 Xvfb、Weston 等运行环境需要与 Vulkan 软件驱动同时验证，不能只测试窗口连接成功。
-- SDL2、SDL3 与 GLFW 暴露原生窗口信息的接口不同，适配文档必须按版本分别说明。
+- 当前直连指南只覆盖 SDL3 与 GLFW；SDL2 不属于 S-04 范围，若产生真实需求应单独维护版本明确的
+  Integration。
