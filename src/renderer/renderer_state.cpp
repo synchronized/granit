@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <cstdio>
 #include <cstring>
 #include <string>
 
@@ -2054,8 +2055,24 @@ granit_result renderer_state::cancel_swapchain_frame(vulkan_swapchain& swapchain
   return observe_device_result(presented.result);
 }
 
-granit_result renderer_state::observe_device_result(granit_result result) noexcept {
-  return device_status_.observe(result);
+granit_result renderer_state::observe_device_result(granit_result result,
+                                                    const std::source_location& location) noexcept {
+  bool first_loss = false;
+  const auto observed = device_status_.observe(result, &first_loss);
+  if (first_loss) {
+    std::array<char, 768> message{};
+    const auto written = std::snprintf(
+        message.data(), message.size(),
+        "首次检测到 Device Lost：operation=%s, result=GRANIT_ERROR_DEVICE_LOST, "
+        "backend=Vulkan/VK_ERROR_DEVICE_LOST, validation=%s, renderer_domain=%u",
+        location.function_name(), validation_enabled_ ? "enabled" : "disabled", domain_);
+    const auto length = written <= 0
+                            ? std::size_t{0}
+                            : std::min(static_cast<std::size_t>(written), message.size() - 1);
+    diagnostics_.emit(diagnostic_severity::error, diagnostic_category::device,
+                      std::string_view{message.data(), length});
+  }
+  return observed;
 }
 
 granit_result renderer_state::wait_command_recorder(vulkan_command_recorder& recorder) noexcept {

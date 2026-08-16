@@ -10,7 +10,12 @@ TEST_CASE("Device Lost 状态一旦发生便保持终止", "[renderer][device-lo
   CHECK(status.gate() == GRANIT_SUCCESS);
   CHECK(status.observe(GRANIT_ERROR_OUT_OF_MEMORY) == GRANIT_ERROR_OUT_OF_MEMORY);
   CHECK(status.gate() == GRANIT_SUCCESS);
-  CHECK(status.observe(GRANIT_ERROR_DEVICE_LOST) == GRANIT_ERROR_DEVICE_LOST);
+  bool first_loss = false;
+  CHECK(status.observe(GRANIT_ERROR_DEVICE_LOST, &first_loss) == GRANIT_ERROR_DEVICE_LOST);
+  CHECK(first_loss);
   CHECK(status.gate() == GRANIT_ERROR_DEVICE_LOST);
-  CHECK(status.observe(GRANIT_SUCCESS) == GRANIT_ERROR_DEVICE_LOST);
+  CHECK(status.observe(GRANIT_SUCCESS, &first_loss) == GRANIT_ERROR_DEVICE_LOST);
+  CHECK_FALSE(first_loss);
+  CHECK(status.observe(GRANIT_ERROR_DEVICE_LOST, &first_loss) == GRANIT_ERROR_DEVICE_LOST);
+  CHECK_FALSE(first_loss);
 }

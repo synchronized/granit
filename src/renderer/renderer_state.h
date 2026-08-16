@@ -8,6 +8,7 @@
 #include <cstdint>
 #include <memory>
 #include <mutex>
+#include <source_location>
 #include <string_view>
 #include <vector>
 
@@ -267,7 +268,9 @@ private:
   void release_upload_slot(std::size_t index) noexcept;
 
   [[nodiscard]] granit_result complete_frame_slot(frame_slot& slot) noexcept;
-  [[nodiscard]] granit_result observe_device_result(granit_result result) noexcept;
+  [[nodiscard]] granit_result observe_device_result(
+      granit_result result,
+      const std::source_location& location = std::source_location::current()) noexcept;
 
   std::uint32_t domain_{};
   std::uint32_t surface_types_{};

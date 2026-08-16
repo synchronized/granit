@@ -80,6 +80,10 @@ Utils，公共接口不暴露 Vulkan 类型或原生句柄。名称只在调用�
 字节且不能包含内嵌零字符；失效或跨 Renderer 句柄返回 `GRANIT_ERROR_INVALID_HANDLE`。
 未启用验证或对象是 Frame、Upload Batch 等纯管理对象时返回 `GRANIT_ERROR_UNSUPPORTED`。
 
+Renderer 首次观察到 `VK_ERROR_DEVICE_LOST` 时，会通过 `device` 类别发出一条 error 诊断，内容
+包含触发操作、稳定的 Granit 结果、Vulkan 后端结果、验证状态和 Renderer domain。Device Lost
+保持为 Renderer 级粘滞状态；后续操作继续返回 `GRANIT_ERROR_DEVICE_LOST`，但不会重复输出报告。
+
 ## 生命周期与线程安全
 
 公开 renderer 由进程内 registry 管理。句柄销毁后立即对新操作失效，重复销毁返回

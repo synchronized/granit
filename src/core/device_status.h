@@ -17,9 +17,12 @@ public:
     return lost_.load() ? GRANIT_ERROR_DEVICE_LOST : GRANIT_SUCCESS;
   }
 
-  [[nodiscard]] granit_result observe(granit_result result) noexcept {
+  [[nodiscard]] granit_result observe(granit_result result, bool* first_loss = nullptr) noexcept {
+    bool first = false;
     if (result == GRANIT_ERROR_DEVICE_LOST)
-      lost_.store(true);
+      first = !lost_.exchange(true);
+    if (first_loss != nullptr)
+      *first_loss = first;
     return gate() == GRANIT_ERROR_DEVICE_LOST ? GRANIT_ERROR_DEVICE_LOST : result;
   }
 
