@@ -75,7 +75,8 @@ Window Event；键盘、指针、触摸、手柄和文本输入在规模扩大�
 2. S-07B：实现 Win32 Window 与轮询事件队列，迁移一个现有窗口示例验证边界。
 3. S-07C：实现 XCB Window，并与 S-04 的 Surface、Swapchain 和 Present 测试组合。
 4. S-07D：实现 Wayland Window；窗口角色和 configure 流程由 Window 后端管理。
-5. S-07E：评估是否独立导出 Input component，并补充 SDL、GLFW 和 Qt 接入指南。
+5. S-07E：评估是否独立导出 Input component；SDL3 与其他第三方接入由
+   [S-08 Integration 计划](S-08-third-party-integrations.md)承接。
 
 ## 测试与验收
 

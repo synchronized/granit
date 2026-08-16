@@ -144,12 +144,15 @@
 - **S-06 / P2**：核心、高层模块和互操作接口的兼容承诺。
 - **[S-07](plans/S-07-window-events.md) / P2**：规划可选 Window、轮询式 Event 和后续 Input
   组件；Renderer 继续只借用原生窗口创建 Surface，不接管窗口与事件循环。
+- **[S-08](plans/S-08-third-party-integrations.md) / P2**：规划独立的 SDL3 与 ImGui 可选集成目标；
+  第三方依赖不进入 Renderer、Window 或基础安装 component。
 
 ## 近期执行顺序
 
 1. 完成 S-04 的 XCB 示例、Wayland 后端与无头合成器验证，再启动 S-07 Window/Event 原型。
-2. 以真实材质与光源负载测量透明 PBR、CSM、Clustered Forward 与 Bindless 的收益和成本。
-3. API/ABI 稳定化在开发阶段功能边界收敛后推进；Deferred 保持为使用 Render Graph 组合的可选
+2. S-07 的原生窗口描述稳定后实现 S-08 SDL3 Surface 集成；ImGui 集成在公共 Canvas 路径上验证。
+3. 以真实材质与光源负载测量透明 PBR、CSM、Clustered Forward 与 Bindless 的收益和成本。
+4. API/ABI 稳定化在开发阶段功能边界收敛后推进；Deferred 保持为使用 Render Graph 组合的可选
    高级管线研究项。
 
 若前置抽象不足，应先更新对应 Plan 和本路线图状态，再扩大公共 API。

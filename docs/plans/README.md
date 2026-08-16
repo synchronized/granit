@@ -105,6 +105,8 @@ D-03-graphics-pipeline.md
   再增加 Wayland，窗口创建与事件循环保持为上层职责。
 - [S-07：Window、Event 与 Input 边界](S-07-window-events.md)——设计已确认；在 S-04 后增加可选
   Window 组件，Renderer Surface 仍允许 SDL、GLFW、Qt 和引擎直接接入。
+- [S-08：SDL3 与 ImGui 第三方集成](S-08-third-party-integrations.md)——设计已确认；使用独立
+  `integration_*` 目标连接第三方生态，不让 SDL3 或 ImGui 成为核心依赖。
 
 ## 状态
 
