@@ -3,6 +3,7 @@
 
 #include <granit/renderer/buffer.h>
 #include <granit/renderer/renderer.hpp>
+#include <granit/renderer/upload_batch.h>
 
 #include <array>
 #include <mutex>
@@ -111,6 +112,53 @@ TEST_CASE("Renderer 为 GPU 资源设置调试名称", "[renderer][diagnostic][o
   REQUIRE(granit_buffer_destroy(renderer, buffer) == GRANIT_SUCCESS);
   CHECK(granit_renderer_set_object_name(renderer, buffer, "stale", 5) ==
         GRANIT_ERROR_INVALID_HANDLE);
+  CHECK(granit_renderer_destroy(renderer) == GRANIT_SUCCESS);
+}
+
+TEST_CASE("对象调试名称拒绝跨 Renderer 和纯管理句柄", "[renderer][diagnostic][object-name]") {
+  granit_renderer_desc desc = GRANIT_RENDERER_DESC_INIT;
+  desc.flags = GRANIT_RENDERER_ENABLE_VALIDATION_BIT;
+  granit_renderer first = GRANIT_NULL_HANDLE;
+  granit_renderer second = GRANIT_NULL_HANDLE;
+  const auto first_result = granit_renderer_create(&desc, &first);
+  if (first_result == GRANIT_ERROR_UNSUPPORTED || environment_unavailable(first_result))
+    SKIP("当前运行环境不支持 Vulkan 验证层或没有满足要求的设备");
+  REQUIRE(first_result == GRANIT_SUCCESS);
+  REQUIRE(granit_renderer_create(&desc, &second) == GRANIT_SUCCESS);
+
+  granit_buffer_desc buffer_desc = GRANIT_BUFFER_DESC_INIT;
+  buffer_desc.size = 16;
+  buffer_desc.usage = GRANIT_BUFFER_USAGE_TRANSFER_DESTINATION_BIT;
+  granit_buffer buffer = GRANIT_NULL_HANDLE;
+  REQUIRE(granit_buffer_create(first, &buffer_desc, &buffer) == GRANIT_SUCCESS);
+  CHECK(granit_renderer_set_object_name(second, buffer, "foreign", 7) ==
+        GRANIT_ERROR_INVALID_HANDLE);
+
+  granit_upload_batch batch = GRANIT_NULL_HANDLE;
+  const granit_upload_batch_desc batch_desc = GRANIT_UPLOAD_BATCH_DESC_INIT;
+  REQUIRE(granit_upload_batch_create(first, &batch_desc, &batch) == GRANIT_SUCCESS);
+  CHECK(granit_renderer_set_object_name(first, batch, "batch", 5) == GRANIT_ERROR_UNSUPPORTED);
+  REQUIRE(granit_upload_batch_destroy(first, batch) == GRANIT_SUCCESS);
+  REQUIRE(granit_buffer_destroy(first, buffer) == GRANIT_SUCCESS);
+  CHECK(granit_renderer_destroy(second) == GRANIT_SUCCESS);
+  CHECK(granit_renderer_destroy(first) == GRANIT_SUCCESS);
+}
+
+TEST_CASE("未启用验证时对象调试名称明确降级", "[renderer][diagnostic][object-name]") {
+  granit_renderer_desc desc = GRANIT_RENDERER_DESC_INIT;
+  granit_renderer renderer = GRANIT_NULL_HANDLE;
+  const auto create_result = granit_renderer_create(&desc, &renderer);
+  if (environment_unavailable(create_result))
+    SKIP("当前运行环境没有满足要求的 Vulkan 设备");
+  REQUIRE(create_result == GRANIT_SUCCESS);
+
+  granit_buffer_desc buffer_desc = GRANIT_BUFFER_DESC_INIT;
+  buffer_desc.size = 16;
+  buffer_desc.usage = GRANIT_BUFFER_USAGE_TRANSFER_DESTINATION_BIT;
+  granit_buffer buffer = GRANIT_NULL_HANDLE;
+  REQUIRE(granit_buffer_create(renderer, &buffer_desc, &buffer) == GRANIT_SUCCESS);
+  CHECK(granit_renderer_set_object_name(renderer, buffer, "buffer", 6) == GRANIT_ERROR_UNSUPPORTED);
+  REQUIRE(granit_buffer_destroy(renderer, buffer) == GRANIT_SUCCESS);
   CHECK(granit_renderer_destroy(renderer) == GRANIT_SUCCESS);
 }
 

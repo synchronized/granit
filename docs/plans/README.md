@@ -97,9 +97,8 @@ D-03-graphics-pipeline.md
   Canvas、Debug Draw、R8 Text Atlas、Pipeline 自动录制和第三方 Adapter 边界均已验收。
 - [S-01：C ABI 回归验证](S-01-abi-regression.md)——当前开发阶段范围已完成；正式 ABI 快照等待
   功能边界收敛。
-- [S-02：统一诊断、GPU 调试名称与 Device Lost 报告](S-02-diagnostics.md)——实现中；内部
-  diagnostic sink、公共回调、GPU 调试名称和首次 Device Lost 报告已完成，下一步补齐降级、
-  并发和重入约束回归。
+- [S-02：统一诊断、GPU 调试名称与 Device Lost 报告](S-02-diagnostics.md)——已完成；统一诊断
+  sink、公共回调、GPU 调试名称、首次 Device Lost 报告及边界回归均已落地。
 
 ## 状态
 

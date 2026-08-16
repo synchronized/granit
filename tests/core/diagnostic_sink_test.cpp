@@ -5,7 +5,10 @@
 
 #include <catch2/catch_all.hpp>
 
+#include <atomic>
 #include <string>
+#include <thread>
+#include <vector>
 
 namespace {
 
@@ -30,6 +33,11 @@ void throwing_diagnostic(granit_diagnostic_severity, granit_diagnostic_category,
   throw 1;
 }
 
+void count_diagnostic(granit_diagnostic_severity, granit_diagnostic_category, const char*,
+                      std::uint32_t, void* user_data) {
+  static_cast<std::atomic_uint32_t*>(user_data)->fetch_add(1, std::memory_order_relaxed);
+}
+
 } // namespace
 
 TEST_CASE("Diagnostic Sink 保留消息边界与用户数据", "[diagnostic]") {
@@ -49,4 +57,24 @@ TEST_CASE("Diagnostic Sink 吞掉用户回调异常", "[diagnostic]") {
   const granit::detail::diagnostic_sink sink{throwing_diagnostic, nullptr};
   CHECK_NOTHROW(sink.emit(granit::detail::diagnostic_severity::error,
                           granit::detail::diagnostic_category::validation, "callback failure"));
+}
+
+TEST_CASE("Diagnostic Sink 允许多个产生线程并发进入回调", "[diagnostic][concurrency]") {
+  std::atomic_uint32_t calls{};
+  const granit::detail::diagnostic_sink sink{count_diagnostic, &calls};
+  constexpr std::uint32_t thread_count = 8;
+  constexpr std::uint32_t messages_per_thread = 128;
+  std::vector<std::thread> threads;
+  threads.reserve(thread_count);
+  for (std::uint32_t thread = 0; thread < thread_count; ++thread) {
+    threads.emplace_back([&sink] {
+      for (std::uint32_t message = 0; message < messages_per_thread; ++message) {
+        sink.emit(granit::detail::diagnostic_severity::info,
+                  granit::detail::diagnostic_category::general, "concurrent message");
+      }
+    });
+  }
+  for (auto& thread : threads)
+    thread.join();
+  CHECK(calls.load(std::memory_order_relaxed) == thread_count * messages_per_thread);
 }
