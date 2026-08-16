@@ -29,6 +29,7 @@ struct window_record {
 #if defined(_WIN32)
   HINSTANCE instance{};
   HWND window{};
+  bool high_dpi{};
 #endif
 };
 
@@ -111,6 +112,26 @@ LRESULT CALLBACK window_proc(HWND hwnd, UINT message, WPARAM word, LPARAM value)
     event.window = record->handle;
     event.timestamp_ns = timestamp_ns();
     event.data.focus.focused = message == WM_SETFOCUS ? UINT32_C(1) : UINT32_C(0);
+    system->events.push_back(event);
+    return 0;
+  }
+  case WM_DPICHANGED: {
+    if (record->high_dpi) {
+      const auto* rectangle = reinterpret_cast<const RECT*>(value);
+      SetWindowPos(hwnd, nullptr, rectangle->left, rectangle->top,
+                   rectangle->right - rectangle->left, rectangle->bottom - rectangle->top,
+                   SWP_NOACTIVATE | SWP_NOZORDER);
+    }
+    RECT client{};
+    GetClientRect(hwnd, &client);
+    granit_window_event event = GRANIT_WINDOW_EVENT_INIT;
+    event.type = GRANIT_WINDOW_EVENT_SCALE_CHANGED;
+    event.window = record->handle;
+    event.timestamp_ns = timestamp_ns();
+    event.data.scale.horizontal = static_cast<float>(LOWORD(word)) / 96.0F;
+    event.data.scale.vertical = static_cast<float>(HIWORD(word)) / 96.0F;
+    event.data.scale.width = static_cast<std::uint32_t>(client.right - client.left);
+    event.data.scale.height = static_cast<std::uint32_t>(client.bottom - client.top);
     system->events.push_back(event);
     return 0;
   }
@@ -259,15 +280,21 @@ extern "C" granit_result granit_window_create(granit_window_system system_handle
     record->handle = allocate_handle();
     record->system = system;
     record->instance = GetModuleHandleW(nullptr);
+    record->high_dpi = (desc->flags & GRANIT_WINDOW_HIGH_DPI_BIT) != 0;
     DWORD style = WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX;
     if ((desc->flags & GRANIT_WINDOW_RESIZABLE_BIT) != 0)
       style |= WS_THICKFRAME | WS_MAXIMIZEBOX;
     RECT rectangle{0, 0, static_cast<LONG>(desc->width), static_cast<LONG>(desc->height)};
     AdjustWindowRect(&rectangle, style, FALSE);
+    const auto previous_dpi_context =
+        record->high_dpi ? SetThreadDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2)
+                         : nullptr;
     record->window =
         CreateWindowExW(0, window_class_name, title.c_str(), style, CW_USEDEFAULT, CW_USEDEFAULT,
                         rectangle.right - rectangle.left, rectangle.bottom - rectangle.top, nullptr,
                         nullptr, record->instance, record.get());
+    if (previous_dpi_context != nullptr)
+      SetThreadDpiAwarenessContext(previous_dpi_context);
     if (record->window == nullptr)
       return GRANIT_ERROR_BACKEND_UNAVAILABLE;
     system->windows.emplace(record->handle, record);

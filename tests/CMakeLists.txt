@@ -469,6 +469,14 @@ granit_target_compile_warnings(granit_window_test)
 granit_target_output_directories(granit_window_test)
 add_test(NAME granit.window COMMAND granit_window_test)
 
+add_executable(granit_window_renderer_test window/window_renderer_test.cpp)
+target_link_libraries(
+  granit_window_renderer_test PRIVATE granit::window granit::granit Catch2::Catch2WithMain
+)
+granit_target_compile_warnings(granit_window_renderer_test)
+granit_target_output_directories(granit_window_renderer_test)
+add_test(NAME granit.window_renderer COMMAND granit_window_renderer_test)
+
 set(
   granit_test_executable_targets
   granit_c_version_test

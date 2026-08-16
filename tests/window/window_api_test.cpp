@@ -25,7 +25,7 @@ TEST_CASE("Window 组件骨架保持确定的失败与输出语义", "[window]")
   window_desc.title_length = 18;
   window_desc.width = 96;
   window_desc.height = 72;
-  window_desc.flags = 0;
+  window_desc.flags = GRANIT_WINDOW_HIGH_DPI_BIT;
   REQUIRE(granit_window_create(system, &window_desc, &window) == GRANIT_SUCCESS);
   REQUIRE(window != GRANIT_NULL_HANDLE);
 
@@ -48,6 +48,23 @@ TEST_CASE("Window 组件骨架保持确定的失败与输出语义", "[window]")
       saw_resize = event.type == GRANIT_WINDOW_EVENT_RESIZED;
   }
   CHECK(saw_resize);
+
+  while (granit_window_poll_event(system, &event) == GRANIT_SUCCESS)
+    event = GRANIT_WINDOW_EVENT_INIT;
+  RECT suggested{0, 0, 144, 108};
+  SendMessageW(static_cast<HWND>(second), WM_DPICHANGED, MAKELONG(144, 144),
+               reinterpret_cast<LPARAM>(&suggested));
+  bool saw_scale = false;
+  for (int attempt = 0; attempt < 8 && !saw_scale; ++attempt) {
+    event = GRANIT_WINDOW_EVENT_INIT;
+    if (granit_window_poll_event(system, &event) == GRANIT_SUCCESS &&
+        event.type == GRANIT_WINDOW_EVENT_SCALE_CHANGED) {
+      saw_scale = true;
+      CHECK(event.data.scale.horizontal == Catch::Approx(1.5F));
+      CHECK(event.data.scale.vertical == Catch::Approx(1.5F));
+    }
+  }
+  CHECK(saw_scale);
 
   SendMessageW(static_cast<HWND>(second), WM_CLOSE, 0, 0);
   event = GRANIT_WINDOW_EVENT_INIT;

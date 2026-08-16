@@ -33,8 +33,8 @@ granit_window_destroy(system, window);
 granit_window_system_destroy(system);
 ```
 
-宽高必须非零，标题是调用期间借用的 UTF-8 字节序列。当前标志支持初始可见和可调整尺寸；高 DPI
-标志已保留，完整缩放事件将在后续 Win32 阶段接入。
+宽高必须非零，标题是调用期间借用的 UTF-8 字节序列。当前标志支持初始可见、可调整尺寸和高 DPI；
+高 DPI 窗口创建期间临时使用 Per-Monitor V2 线程上下文，不永久改变应用线程的 DPI 设置。
 
 C++20 提供 move-only `granit::window_system` 和 `granit::window` RAII 包装，析构时调用对应 C API。
 
@@ -53,9 +53,10 @@ while (granit_window_poll_event(system, &event) == GRANIT_SUCCESS) {
 - `GRANIT_WINDOW_EVENT_CLOSE_REQUESTED`
 - `GRANIT_WINDOW_EVENT_RESIZED`
 - `GRANIT_WINDOW_EVENT_FOCUS_CHANGED`
+- `GRANIT_WINDOW_EVENT_SCALE_CHANGED`
 
-关闭请求不会隐式销毁窗口。Scale 与原生对象变化事件已经占用稳定枚举值，但当前 Win32 后端尚不
-产生它们。
+关闭请求不会隐式销毁窗口。Scale 事件携带相对于 96 DPI 的水平/垂直比例及新的 framebuffer
+像素尺寸。原生对象变化事件已经占用稳定枚举值，但当前 Win32 后端不产生该事件。
 
 ## Renderer 接入
 
