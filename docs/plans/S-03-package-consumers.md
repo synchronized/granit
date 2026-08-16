@@ -48,7 +48,8 @@ C11/C++20 Consumer。S-03 将这些已有能力整理成明确的安装包契约
    component 配置失败，并已接入 Linux CI 四组合。
 3. S-03C（已完成）：安装清单与 CMake 导出审计已接入 Linux CI，能够拒绝测试/内置第三方
    路径、源码或构建目录绝对路径，以及 Catch2、Unity、Volk 和 Vulkan 私有依赖泄漏。
-4. S-03D：在 Windows CI 增加 MSVC 共享/静态安装 Consumer，验证 DLL 从安装 `bin` 部署运行。
+4. S-03D（已完成）：Windows Server 2022 CI 已增加 MSVC Release 共享/静态矩阵；共享 Consumer
+   目录不复制 DLL，并把运行时搜索路径限制到安装 `bin` 与 Windows 系统目录。
 5. S-03E：补齐安装指南、支持矩阵和故障排查，完成共享/静态跨平台验收。
 
 ## 测试与验收

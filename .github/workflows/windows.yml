@@ -1,0 +1,78 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Granit contributors
+
+name: Windows
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  msvc-install-consumer:
+    runs-on: windows-2022
+    strategy:
+      fail-fast: false
+      matrix:
+        linkage: [shared, static]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+      - name: 选择 preset
+        id: preset
+        shell: pwsh
+        run: |
+          $suffix = if ('${{ matrix.linkage }}' -eq 'static') { '-static' } else { '' }
+          "name=windows-msvc${suffix}-release" >> $env:GITHUB_OUTPUT
+      - name: 配置、构建与测试
+        shell: pwsh
+        run: |
+          cmake --preset '${{ steps.preset.outputs.name }}'
+          cmake --build --preset '${{ steps.preset.outputs.name }}'
+          ctest --preset '${{ steps.preset.outputs.name }}'
+      - name: 安装并审计包
+        shell: pwsh
+        run: |
+          $preset = '${{ steps.preset.outputs.name }}'
+          $prefix = "$PWD/build/install/$preset"
+          cmake --install "build/$preset" --prefix $prefix
+          cmake `
+            -DGRANIT_SOURCE_DIR="$PWD" `
+            -DGRANIT_BUILD_DIR="$PWD/build/$preset" `
+            -DGRANIT_INSTALL_PREFIX="$prefix" `
+            -P cmake/check_install_exports.cmake
+          cmake `
+            -DGRANIT_SOURCE_DIR="$PWD" `
+            -DGRANIT_INSTALL_PREFIX="$prefix" `
+            -DGRANIT_TEST_BINARY_DIR="$PWD/build/package/$preset" `
+            -P cmake/check_installed_package.cmake
+      - name: 构建并运行独立 C 和 C++ Consumer
+        shell: pwsh
+        run: |
+          $preset = '${{ steps.preset.outputs.name }}'
+          $prefix = "$PWD/build/install/$preset"
+          $consumer = "$PWD/build/consumer/$preset"
+          cmake -S tests/consumer -B $consumer -G Ninja -DCMAKE_PREFIX_PATH="$prefix"
+          cmake --build $consumer
+          if ((Test-Path "$consumer/granit.dll") -or
+              (Test-Path "$consumer/granit_render_pipeline.dll")) {
+            throw 'Consumer 目录不应复制 Granit DLL'
+          }
+          if ('${{ matrix.linkage }}' -eq 'shared') {
+            if ((-not (Test-Path "$prefix/bin/granit.dll")) -or
+                (-not (Test-Path "$prefix/bin/granit_render_pipeline.dll"))) {
+              throw '安装目录缺少共享库 DLL'
+            }
+            $env:PATH = "$prefix/bin;$env:SystemRoot/System32;$env:SystemRoot"
+          }
+          $apps = @(
+            'granit_c_consumer',
+            'granit_cpp_consumer',
+            'granit_pipeline_c_consumer',
+            'granit_pipeline_cpp_consumer'
+          )
+          foreach ($app in $apps) {
+            & "$consumer/$app.exe"
+            if ($LASTEXITCODE -ne 0) { throw "$app 返回 $LASTEXITCODE" }
+          }

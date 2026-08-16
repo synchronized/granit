@@ -103,6 +103,8 @@ cmake -DGRANIT_SOURCE_DIR=/path/to/granit \
 ```
 
 共享库使用者还需要按照目标平台的部署规则，让运行进程能够找到 DLL、SO 或 dylib。
+仓库 CI 当前覆盖 Linux Clang/GCC × 共享/静态，以及 Windows MSVC × 共享/静态安装 Consumer。
+Windows 共享验证不会把 DLL 复制到 Consumer 目录，而是从安装前缀的 `bin` 目录加载。
 
 ## 运行示例
 
