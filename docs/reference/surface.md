@@ -6,8 +6,8 @@
 ## 定位
 
 Surface 表示 Renderer 与原生窗口系统之间的输出连接。公开接口只接收平台窗口句柄并返回
-Granit 64 位整数句柄，不暴露 Vulkan 类型。Win32 与 Linux XCB 后端已经实现；Wayland 已建立
-独立描述结构和公共入口，后端仍在开发中，当前有效请求返回 `GRANIT_ERROR_UNSUPPORTED`。
+Granit 64 位整数句柄，不暴露 Vulkan 类型。Win32、Linux XCB 与 Wayland 后端已经实现；实际
+可用性取决于构建时平台开发包和运行时 Vulkan 扩展支持。
 
 ## 启用 Win32 支持
 
@@ -63,8 +63,9 @@ C++ 包装对应 `xcb_surface_desc`、`wayland_surface_desc`、`surface::initial
 `surface::initialize_wayland`。调用方仍负责窗口创建、事件循环和原生对象生命周期。完整后端
 进度见 [S-04 Linux Surface 计划](../plans/S-04-linux-surface.md)。
 
-Linux 构建默认探测 `xcb/xcb.h`；找到时启用 XCB 后端，找不到时保留公共入口并返回不支持。
-可通过 `GRANIT_ENABLE_XCB=OFF` 显式关闭。XCB 头文件与 Vulkan 平台定义不会传播给使用者。
+Linux 构建默认探测 XCB 和 Wayland Client 开发包；找到时启用对应后端，找不到时保留公共入口并
+返回不支持。可分别通过 `GRANIT_ENABLE_XCB=OFF`、`GRANIT_ENABLE_WAYLAND=OFF` 显式关闭。
+平台头文件、链接库与 Vulkan 平台定义不会传播给使用者。
 
 ## 生命周期与归属
 

@@ -50,9 +50,12 @@ extern "C" granit_result granit_surface_create_wayland(granit_renderer renderer,
   if (desc->struct_size < GRANIT_WAYLAND_SURFACE_DESC_VERSION_1_SIZE || desc->display == nullptr ||
       desc->surface == nullptr)
     return GRANIT_ERROR_INVALID_ARGUMENT;
-  return granit::detail::renderer_registry::instance().acquire(renderer)
-             ? GRANIT_ERROR_UNSUPPORTED
-             : GRANIT_ERROR_INVALID_HANDLE;
+  try {
+    return granit::detail::renderer_registry::instance().create_wayland_surface(
+        renderer, desc->display, desc->surface, *surface);
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
 }
 
 extern "C" granit_result granit_surface_destroy(granit_renderer renderer, granit_surface surface) {

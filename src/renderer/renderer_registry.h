@@ -55,6 +55,8 @@ public:
                                                    void* native_window, granit_surface& surface);
   [[nodiscard]] granit_result create_xcb_surface(granit_renderer renderer, void* connection,
                                                  std::uint32_t window, granit_surface& surface);
+  [[nodiscard]] granit_result create_wayland_surface(granit_renderer renderer, void* display,
+                                                     void* native_surface, granit_surface& surface);
   [[nodiscard]] granit_result destroy_surface(granit_renderer renderer, granit_surface surface);
   [[nodiscard]] granit_result create_swapchain(granit_renderer renderer, granit_surface surface,
                                                const vulkan_swapchain_desc& desc,

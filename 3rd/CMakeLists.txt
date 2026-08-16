@@ -16,6 +16,7 @@ target_compile_definitions(
     VOLK_NAMESPACE
     $<$<PLATFORM_ID:Windows>:VK_USE_PLATFORM_WIN32_KHR>
     $<$<BOOL:${GRANIT_HAS_XCB}>:VK_USE_PLATFORM_XCB_KHR>
+    $<$<BOOL:${GRANIT_HAS_WAYLAND}>:VK_USE_PLATFORM_WAYLAND_KHR>
 )
 target_include_directories(
   granit_volk
@@ -23,6 +24,7 @@ target_include_directories(
     "${GRANIT_VOLK_DIR}"
     "${GRANIT_VULKAN_HEADERS_DIR}"
     $<$<BOOL:${GRANIT_HAS_XCB}>:${GRANIT_XCB_INCLUDE_DIR}>
+    $<$<BOOL:${GRANIT_HAS_WAYLAND}>:${GRANIT_WAYLAND_INCLUDE_DIR}>
 )
 set_target_properties(
   granit_volk

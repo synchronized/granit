@@ -25,6 +25,11 @@ class vulkan_instance;
                                                std::uint32_t window,
                                                VkSurfaceKHR& surface) noexcept;
 
+[[nodiscard]] granit_result create_wayland_surface(const vulkan_instance& instance,
+                                                   const vulkan_device& device, void* display,
+                                                   void* native_surface,
+                                                   VkSurfaceKHR& surface) noexcept;
+
 void destroy_surface(const vulkan_instance& instance, VkSurfaceKHR surface) noexcept;
 
 } // namespace granit::detail

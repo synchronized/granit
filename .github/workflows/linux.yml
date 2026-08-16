@@ -20,8 +20,8 @@ jobs:
       - name: 安装构建与软件 Vulkan 依赖
         run: |
           sudo apt-get update
-          sudo apt-get install -y ninja-build libvulkan1 libxcb1-dev mesa-vulkan-drivers \
-            vulkan-validationlayers xvfb xauth
+          sudo apt-get install -y ninja-build libvulkan1 libxcb1-dev libwayland-dev \
+            mesa-vulkan-drivers vulkan-validationlayers xvfb xauth
       - name: 选择 preset
         id: preset
         shell: bash

@@ -155,13 +155,16 @@ granit_result vulkan_instance::initialize(const vulkan_instance_desc& desc) {
     if (desc.enable_validation) {
       extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
     }
+    if (desc.surface_types != 0 &&
+        !instance_extension_available(VK_KHR_SURFACE_EXTENSION_NAME))
+      return GRANIT_ERROR_UNSUPPORTED;
+    if (desc.surface_types != 0)
+      extensions.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
     if ((desc.surface_types & GRANIT_SURFACE_TYPE_WIN32_BIT) != 0) {
 #if defined(_WIN32)
-      if (!instance_extension_available(VK_KHR_SURFACE_EXTENSION_NAME) ||
-          !instance_extension_available(VK_KHR_WIN32_SURFACE_EXTENSION_NAME)) {
+      if (!instance_extension_available(VK_KHR_WIN32_SURFACE_EXTENSION_NAME)) {
         return GRANIT_ERROR_UNSUPPORTED;
       }
-      extensions.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
       extensions.push_back(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
 #else
       return GRANIT_ERROR_UNSUPPORTED;
@@ -169,17 +172,22 @@ granit_result vulkan_instance::initialize(const vulkan_instance_desc& desc) {
     }
     if ((desc.surface_types & GRANIT_SURFACE_TYPE_XCB_BIT) != 0) {
 #if defined(GRANIT_HAS_XCB)
-      if (!instance_extension_available(VK_KHR_SURFACE_EXTENSION_NAME) ||
-          !instance_extension_available(VK_KHR_XCB_SURFACE_EXTENSION_NAME))
+      if (!instance_extension_available(VK_KHR_XCB_SURFACE_EXTENSION_NAME))
         return GRANIT_ERROR_UNSUPPORTED;
-      extensions.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
       extensions.push_back(VK_KHR_XCB_SURFACE_EXTENSION_NAME);
 #else
       return GRANIT_ERROR_UNSUPPORTED;
 #endif
     }
-    if ((desc.surface_types & GRANIT_SURFACE_TYPE_WAYLAND_BIT) != 0)
+    if ((desc.surface_types & GRANIT_SURFACE_TYPE_WAYLAND_BIT) != 0) {
+#if defined(GRANIT_HAS_WAYLAND)
+      if (!instance_extension_available(VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME))
+        return GRANIT_ERROR_UNSUPPORTED;
+      extensions.push_back(VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME);
+#else
       return GRANIT_ERROR_UNSUPPORTED;
+#endif
+    }
 
     // Vulkan 需要以零结尾的名称，string_view 本身不保证这一点。
     const std::string application_name{desc.application_name};
