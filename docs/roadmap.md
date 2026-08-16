@@ -143,7 +143,7 @@
 - **S-05 / P2**：明确标记为不稳定的 Vulkan 原生互操作。
 - **S-06 / P2**：核心、高层模块和互操作接口的兼容承诺。
 - **[S-07](plans/S-07-window-events.md) / P2**：规划可选 Window、轮询式 Event 和后续 Input
-  组件；Renderer 继续只借用原生窗口创建 Surface，不接管窗口与事件循环。
+  组件；S-07A 公共契约已确认，下一步建立独立 Window 目标并实现 Win32 原型。
 - **[S-08](plans/S-08-third-party-integrations.md) / P2**：规划独立的 SDL3 与 ImGui 可选集成目标；
   第三方依赖不进入 Renderer、Window 或基础安装 component。
 

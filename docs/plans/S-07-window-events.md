@@ -6,7 +6,7 @@
 ## 状态
 
 - 设计状态：已确认
-- 实现状态：待开始
+- 实现状态：S-07A 契约完成，S-07B 待开始
 - 路线图任务：S-07
 - 优先级：P2
 - 前置依赖：S-04 Linux Surface
@@ -45,6 +45,56 @@ S-07 计划增加可选 Window 组件，为简单应用和示例提供统一窗�
 - 内部平台差异放入 `src/platform/win32`、`src/platform/xcb` 和 `src/platform/wayland` 等目录；
   `platform` 是实现组织方式，不形成面向普通用户的大型 `granit::os` API。
 
+### 组件与导出边界
+
+- Window 构建为独立可选动态库 `granit_window`，使用者目标为 `granit::window`。
+- Window 使用独立 `GRANIT_WINDOW_API` 与 `GRANIT_WINDOW_STATIC_DEFINE`，不复用核心 DLL 的
+  `GRANIT_API` 导入导出状态。
+- Window 只共享 `granit_handle`、`granit_result` 等基础 ABI 头，不链接 Renderer，也不包含 Vulkan。
+- 安装包使用独立 `Window` component；未请求该 component 的 Consumer 不加载窗口系统依赖。
+
+### 句柄与所有权
+
+第一版包含两个 64 位句柄：
+
+- `granit_window_system`：平台连接、系统事件抽取和事件队列的所有者。
+- `granit_window`：由指定 Window System 创建并拥有的单个顶层窗口。
+
+零值无效。Window 句柄校验 generation、类型和所属 Window System，不能跨 System 操作。销毁
+Window System 前应先销毁全部 Window；若仍有残留，验证模式报告遗漏后执行级联清理。
+
+创建描述使用以下稳定字段：
+
+```c
+typedef struct granit_window_desc {
+  uint32_t struct_size;
+  const char* title;
+  uint32_t title_length;
+  uint32_t width;
+  uint32_t height;
+  uint32_t flags;
+  uint32_t reserved;
+} granit_window_desc;
+```
+
+标题是调用期间借用的 UTF-8 字节序列；宽高使用客户区逻辑尺寸。首版标志覆盖初始可见、可调整尺寸
+和高 DPI，未知标志返回 `GRANIT_ERROR_INVALID_ARGUMENT`。
+
+### 原生窗口值
+
+Window 不返回 Renderer 的 Surface 描述，避免建立 `Window -> Renderer` 依赖。它提供三个明确的
+平台查询入口：
+
+```c
+granit_window_get_win32(window_system, window, &instance, &hwnd);
+granit_window_get_xcb(window_system, window, &connection, &xcb_window);
+granit_window_get_wayland(window_system, window, &display, &wl_surface);
+```
+
+查询只借出原生值，不转移所有权；平台不匹配时返回 `GRANIT_ERROR_UNSUPPORTED`。调用方把查询结果
+传给现有 `granit_surface_create_*`。原生值只保证在 Window 存活且未发生平台对象重建时有效；
+Wayland 隐藏/重显等变化通过专用原生对象变化事件通知调用方重建 Surface。
+
 ### Event 模型
 
 第一版采用调用方主动轮询的值类型事件队列，不使用默认回调：
@@ -56,11 +106,32 @@ while (granit_window_poll_event(window_system, &event) == GRANIT_SUCCESS) {
 }
 ```
 
-事件至少携带类型、所属窗口、单调时钟时间戳和对应负载。窗口关闭请求、尺寸、焦点和 DPI 属于
-Window Event；键盘、指针、触摸、手柄和文本输入在规模扩大后可迁移到独立 Input 组件。
+事件固定头包含 `struct_size`、类型、所属 Window 和纳秒单调时间戳。S-07 第一版只定义：
+
+- `close_requested`：应用决定是否真正销毁，不在回调中隐式销毁。
+- `resized`：携带 framebuffer 像素宽高，用于 Swapchain 重建。
+- `focus_changed`：携带获得或失去焦点状态。
+- `scale_changed`：携带内容缩放比例和新的 framebuffer 像素尺寸。
+- `native_handle_changed`：原生窗口对象变化，旧 Surface 不得继续使用。
+
+负载采用固定大小、显式字段的联合体；结构预留空间并以 `struct_size` 协商，不保存平台指针。键盘、
+指针、触摸、手柄与文本输入不进入首版 Window Event，待 S-07E 依据真实需求设计 Input component。
+
+`granit_window_poll_event` 每次弹出一个事件；队列为空返回 `GRANIT_ERROR_NOT_READY`，不是错误日志。
+第一版不提供阻塞等待，应用可以结合自身主循环控制节奏。队列属于 Window System，统一承载其所有
+窗口事件；同一时刻只能由创建 Window System 的线程抽取。
 
 轮询模型的主要收益是 C ABI 生命周期明确、无回调重入、容易接入主循环，并便于测试、录制和回放。
-代价是应用必须及时抽取队列，且高频指针事件需要合并策略和明确的队列容量上限。
+代价是应用必须及时抽取队列，且连续 Resize、焦点和缩放事件需要明确的合并策略与容量上限。
+
+### 线程与错误语义
+
+- Window System、Window 创建销毁、属性修改和事件轮询均限制在创建 System 的线程。
+- 线程错误返回 `GRANIT_ERROR_INVALID_ARGUMENT`，不尝试跨线程转发平台消息。
+- 队列为空返回 `GRANIT_ERROR_NOT_READY`；平台连接断开返回 `GRANIT_ERROR_BACKEND_UNAVAILABLE`。
+- 不支持的 Window 后端或原生值查询返回 `GRANIT_ERROR_UNSUPPORTED`。
+- 输出参数在失败时清零，异常不得穿过 C ABI。
+- Resize、焦点和缩放等可覆盖状态事件允许在入队前合并；关闭和原生对象变化事件不得丢弃。
 
 ### 第三方接入
 
@@ -71,7 +142,8 @@ Window Event；键盘、指针、触摸、手柄和文本输入在规模扩大�
 
 ## 实施顺序
 
-1. S-07A：确认 C11 句柄、窗口描述、原生值查询、事件布局和错误语义。
+1. S-07A（已完成）：已确认独立组件导出边界、C11 句柄、窗口描述、平台专用原生值查询、
+   Window Event 范围、队列与线程错误语义。
 2. S-07B：实现 Win32 Window 与轮询事件队列，迁移一个现有窗口示例验证边界。
 3. S-07C：实现 XCB Window，并与 S-04 的 Surface、Swapchain 和 Present 测试组合。
 4. S-07D：实现 Wayland Window；窗口角色和 configure 流程由 Window 后端管理。
@@ -91,6 +163,6 @@ Window Event；键盘、指针、触摸、手柄和文本输入在规模扩大�
 
 - Wayland 的异步 configure、窗口角色和缩放语义不能机械套用 Win32/XCB 模型。
 - 文本输入与按键不是同一概念；IME 与组合文本进入范围前需要单独设计。
-- 多窗口事件应采用全局 Window System 队列还是每窗口队列，需由原型和主循环用例验证。
-- 事件 ABI 的联合体布局、未知事件跳过方式和队列溢出行为需要在实现前固定。
+- 固定大小事件负载的具体字节数和保留字段布局在公共头落地时由 C11/C++20 ABI 测试锁定。
+- 队列容量和可覆盖状态事件的合并阈值需由 Win32 原型与多窗口压力测试确定。
 - Input 是否成为独立安装 component，等待键鼠之外的真实需求再决定。
