@@ -604,6 +604,42 @@ granit_result renderer_registry::create_win32_surface(granit_renderer renderer,
   }
 }
 
+granit_result renderer_registry::create_xcb_surface(granit_renderer renderer, void* connection,
+                                                    std::uint32_t window, granit_surface& surface) {
+  try {
+    auto state = acquire(renderer);
+    if (!state)
+      return GRANIT_ERROR_INVALID_HANDLE;
+
+    auto record = std::make_shared<surface_record>();
+    record->renderer = state;
+    const auto create_result = state->create_xcb_surface(connection, window, record->native_handle);
+    if (create_result != GRANIT_SUCCESS)
+      return create_result;
+
+    std::lock_guard lock{mutex_};
+    const auto renderer_found = renderers_.find(renderer);
+    if (renderer_found == renderers_.end() || renderer_found->second != state)
+      return GRANIT_ERROR_INVALID_HANDLE;
+    record->metadata.creation_sequence = next_creation_sequence_++;
+    const auto handle = handles_.insert(record.get(), resource_type::surface, state->domain());
+    if (handle == GRANIT_NULL_HANDLE)
+      return GRANIT_ERROR_OUT_OF_MEMORY;
+    try {
+      surfaces_.emplace(handle, std::move(record));
+    } catch (...) {
+      static_cast<void>(handles_.erase(handle, resource_type::surface, state->domain()));
+      throw;
+    }
+    surface = handle;
+    return GRANIT_SUCCESS;
+  } catch (const std::bad_alloc&) {
+    return GRANIT_ERROR_OUT_OF_MEMORY;
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
 granit_result renderer_registry::destroy_surface(granit_renderer renderer, granit_surface surface) {
   std::shared_ptr<renderer_state> state;
   std::shared_ptr<surface_record> native_surface;

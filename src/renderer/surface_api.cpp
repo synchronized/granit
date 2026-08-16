@@ -33,9 +33,12 @@ extern "C" granit_result granit_surface_create_xcb(granit_renderer renderer,
   if (desc->struct_size < GRANIT_XCB_SURFACE_DESC_VERSION_1_SIZE || desc->connection == nullptr ||
       desc->window == 0)
     return GRANIT_ERROR_INVALID_ARGUMENT;
-  return granit::detail::renderer_registry::instance().acquire(renderer)
-             ? GRANIT_ERROR_UNSUPPORTED
-             : GRANIT_ERROR_INVALID_HANDLE;
+  try {
+    return granit::detail::renderer_registry::instance().create_xcb_surface(
+        renderer, desc->connection, desc->window, *surface);
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
 }
 
 extern "C" granit_result granit_surface_create_wayland(granit_renderer renderer,

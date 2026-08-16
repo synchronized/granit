@@ -483,6 +483,17 @@ granit_result renderer_state::create_win32_surface(void* native_instance, void* 
       detail::create_win32_surface(instance_, device_, native_instance, native_window, surface));
 }
 
+granit_result renderer_state::create_xcb_surface(void* connection, std::uint32_t window,
+                                                 VkSurfaceKHR& surface) noexcept {
+  if (device_lost())
+    return GRANIT_ERROR_DEVICE_LOST;
+  std::lock_guard lock{resource_mutex_};
+  if ((surface_types_ & GRANIT_SURFACE_TYPE_XCB_BIT) == 0)
+    return GRANIT_ERROR_UNSUPPORTED;
+  return observe_device_result(
+      detail::create_xcb_surface(instance_, device_, connection, window, surface));
+}
+
 void renderer_state::destroy_native_surface(VkSurfaceKHR surface) noexcept {
   std::lock_guard lock{resource_mutex_};
   detail::destroy_surface(instance_, surface);

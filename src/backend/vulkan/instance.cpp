@@ -167,7 +167,18 @@ granit_result vulkan_instance::initialize(const vulkan_instance_desc& desc) {
       return GRANIT_ERROR_UNSUPPORTED;
 #endif
     }
-    if ((desc.surface_types & (GRANIT_SURFACE_TYPE_XCB_BIT | GRANIT_SURFACE_TYPE_WAYLAND_BIT)) != 0)
+    if ((desc.surface_types & GRANIT_SURFACE_TYPE_XCB_BIT) != 0) {
+#if defined(GRANIT_HAS_XCB)
+      if (!instance_extension_available(VK_KHR_SURFACE_EXTENSION_NAME) ||
+          !instance_extension_available(VK_KHR_XCB_SURFACE_EXTENSION_NAME))
+        return GRANIT_ERROR_UNSUPPORTED;
+      extensions.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
+      extensions.push_back(VK_KHR_XCB_SURFACE_EXTENSION_NAME);
+#else
+      return GRANIT_ERROR_UNSUPPORTED;
+#endif
+    }
+    if ((desc.surface_types & GRANIT_SURFACE_TYPE_WAYLAND_BIT) != 0)
       return GRANIT_ERROR_UNSUPPORTED;
 
     // Vulkan 需要以零结尾的名称，string_view 本身不保证这一点。

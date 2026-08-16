@@ -12,13 +12,17 @@ set_source_files_properties("${GRANIT_VOLK_DIR}/volk.c" PROPERTIES LANGUAGE CXX)
 target_compile_features(granit_volk PRIVATE cxx_std_20)
 target_compile_definitions(
   granit_volk
-  PRIVATE VOLK_NAMESPACE $<$<PLATFORM_ID:Windows>:VK_USE_PLATFORM_WIN32_KHR>
+  PRIVATE
+    VOLK_NAMESPACE
+    $<$<PLATFORM_ID:Windows>:VK_USE_PLATFORM_WIN32_KHR>
+    $<$<BOOL:${GRANIT_HAS_XCB}>:VK_USE_PLATFORM_XCB_KHR>
 )
 target_include_directories(
   granit_volk
   SYSTEM PRIVATE
     "${GRANIT_VOLK_DIR}"
     "${GRANIT_VULKAN_HEADERS_DIR}"
+    $<$<BOOL:${GRANIT_HAS_XCB}>:${GRANIT_XCB_INCLUDE_DIR}>
 )
 set_target_properties(
   granit_volk

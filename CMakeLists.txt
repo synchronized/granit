@@ -15,12 +15,24 @@ option(GRANIT_BUILD_TESTING "构建 Granit 测试" ON)
 option(GRANIT_BUILD_EXAMPLES "构建 Granit 示例" ${PROJECT_IS_TOP_LEVEL})
 option(GRANIT_BUILD_BENCHMARKS "构建 Granit benchmark 程序" OFF)
 option(GRANIT_BUILD_TOOLS "构建 Granit 离线工具" OFF)
+option(GRANIT_ENABLE_XCB "在 Linux 上启用 XCB Surface 后端" ON)
 
 include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 include(utility)
+
+set(GRANIT_HAS_XCB OFF)
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND GRANIT_ENABLE_XCB)
+  find_path(GRANIT_XCB_INCLUDE_DIR xcb/xcb.h)
+  if(GRANIT_XCB_INCLUDE_DIR)
+    set(GRANIT_HAS_XCB ON)
+    message(STATUS "Granit XCB Surface backend enabled")
+  else()
+    message(STATUS "Granit XCB Surface backend disabled: xcb/xcb.h not found")
+  endif()
+endif()
 
 set(
   GRANIT_INSTALL_CMAKEDIR

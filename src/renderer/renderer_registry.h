@@ -53,6 +53,8 @@ public:
   [[nodiscard]] std::shared_ptr<renderer_state> acquire(granit_renderer renderer);
   [[nodiscard]] granit_result create_win32_surface(granit_renderer renderer, void* native_instance,
                                                    void* native_window, granit_surface& surface);
+  [[nodiscard]] granit_result create_xcb_surface(granit_renderer renderer, void* connection,
+                                                 std::uint32_t window, granit_surface& surface);
   [[nodiscard]] granit_result destroy_surface(granit_renderer renderer, granit_surface surface);
   [[nodiscard]] granit_result create_swapchain(granit_renderer renderer, granit_surface surface,
                                                const vulkan_swapchain_desc& desc,

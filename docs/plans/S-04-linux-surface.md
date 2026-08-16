@@ -76,7 +76,9 @@ Renderer/Surface 句柄与 RAII 销毁路径，不创建平台专用运行时对
 
 1. S-04A（已完成）：已增加 XCB/Wayland 能力位、C/C++ 描述和入口，并建立 ABI 布局、
    公共导出和参数验证测试；后端接入前有效请求明确返回不支持。
-2. S-04B：增加私有 XCB 构建探测、Instance 扩展启用和 XCB Surface 创建实现。
+2. S-04B（已完成）：Linux 构建私有探测 XCB 头文件，Instance 按请求启用 XCB 扩展，并已
+   实现真实 XCB Surface 创建、呈现队列校验和 Registry 生命周期接入；本机 Windows 条件关闭
+   路径已验证，Linux 条件编译等待受账户额度限制的远端 CI 恢复后重跑。
 3. S-04C：增加基于 Xvfb 的 XCB 窗口、Swapchain、Present 集成测试和示例。
 4. S-04D：增加私有 Wayland 构建探测、Instance 扩展启用和 Wayland Surface 创建实现。
 5. S-04E：使用无头 Wayland 合成器完成集成测试，并补充 SDL/GLFW 适配指南。

@@ -150,10 +150,15 @@ target_compile_definitions(
     VMA_VULKAN_VERSION=1003000
     $<$<PLATFORM_ID:Windows>:NOMINMAX>
     $<$<PLATFORM_ID:Windows>:VK_USE_PLATFORM_WIN32_KHR>
+    $<$<BOOL:${GRANIT_HAS_XCB}>:GRANIT_HAS_XCB>
+    $<$<BOOL:${GRANIT_HAS_XCB}>:VK_USE_PLATFORM_XCB_KHR>
   PUBLIC $<$<NOT:$<BOOL:${BUILD_SHARED_LIBS}>>:GRANIT_STATIC_DEFINE>
 )
 
 target_link_libraries(granit PRIVATE ${CMAKE_DL_LIBS})
+target_include_directories(
+  granit SYSTEM PRIVATE $<$<BOOL:${GRANIT_HAS_XCB}>:${GRANIT_XCB_INCLUDE_DIR}>
+)
 
 target_compile_options(
   granit

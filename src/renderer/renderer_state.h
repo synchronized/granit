@@ -75,6 +75,8 @@ public:
 
   [[nodiscard]] granit_result create_win32_surface(void* native_instance, void* native_window,
                                                    VkSurfaceKHR& surface) noexcept;
+  [[nodiscard]] granit_result create_xcb_surface(void* connection, std::uint32_t window,
+                                                 VkSurfaceKHR& surface) noexcept;
   void destroy_native_surface(VkSurfaceKHR surface) noexcept;
   [[nodiscard]] granit_result create_swapchain(VkSurfaceKHR surface,
                                                const vulkan_swapchain_desc& desc,
