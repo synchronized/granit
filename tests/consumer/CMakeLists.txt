@@ -4,7 +4,11 @@
 cmake_minimum_required(VERSION 3.23)
 project(granit_consumer LANGUAGES C CXX)
 
-find_package(granit CONFIG REQUIRED COMPONENTS RenderPipeline)
+find_package(granit 0.1 CONFIG REQUIRED COMPONENTS RenderPipeline)
+
+if(NOT granit_VERSION VERSION_EQUAL "0.1.0")
+  message(FATAL_ERROR "Granit 包版本不符合预期: ${granit_VERSION}")
+endif()
 
 get_target_property(granit_core_linkage granit::granit TYPE)
 get_target_property(granit_pipeline_linkage granit::render_pipeline TYPE)
@@ -23,11 +27,17 @@ add_executable(granit_c_consumer main.c)
 target_link_libraries(granit_c_consumer PRIVATE granit::granit)
 set_target_properties(granit_c_consumer PROPERTIES C_STANDARD 11 C_STANDARD_REQUIRED YES)
 target_compile_definitions(granit_c_consumer PRIVATE ${granit_consumer_linkage_definition})
+target_compile_definitions(
+  granit_c_consumer PRIVATE GRANIT_CONSUMER_PACKAGE_VERSION="${granit_VERSION}"
+)
 
 add_executable(granit_cpp_consumer main.cpp)
 target_link_libraries(granit_cpp_consumer PRIVATE granit::granit)
 target_compile_features(granit_cpp_consumer PRIVATE cxx_std_20)
 target_compile_definitions(granit_cpp_consumer PRIVATE ${granit_consumer_linkage_definition})
+target_compile_definitions(
+  granit_cpp_consumer PRIVATE GRANIT_CONSUMER_PACKAGE_VERSION="${granit_VERSION}"
+)
 
 add_executable(granit_pipeline_c_consumer pipeline_main.c)
 target_link_libraries(granit_pipeline_c_consumer PRIVATE granit::render_pipeline)
