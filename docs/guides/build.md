@@ -83,6 +83,16 @@ cmake -S tests/consumer -B build/consumer -DCMAKE_PREFIX_PATH=/path/to/granit/in
 cmake --build build/consumer
 ```
 
+维护安装规则时还可运行包选择测试，确认兼容与精确版本能够找到包，而错误主版本和未知必需
+component 会被拒绝：
+
+```sh
+cmake -DGRANIT_SOURCE_DIR=/path/to/granit \
+  -DGRANIT_INSTALL_PREFIX=/path/to/granit/install \
+  -DGRANIT_TEST_BINARY_DIR=/path/to/granit/build/package-check \
+  -P /path/to/granit/cmake/check_installed_package.cmake
+```
+
 共享库使用者还需要按照目标平台的部署规则，让运行进程能够找到 DLL、SO 或 dylib。
 
 ## 运行示例
