@@ -142,11 +142,14 @@
   平台 Surface，保持窗口和事件循环由上层管理。
 - **S-05 / P2**：明确标记为不稳定的 Vulkan 原生互操作。
 - **S-06 / P2**：核心、高层模块和互操作接口的兼容承诺。
+- **[S-07](plans/S-07-window-events.md) / P2**：规划可选 Window、轮询式 Event 和后续 Input
+  组件；Renderer 继续只借用原生窗口创建 Surface，不接管窗口与事件循环。
 
 ## 近期执行顺序
 
-1. 以真实材质与光源负载测量透明 PBR、CSM、Clustered Forward 与 Bindless 的收益和成本。
-2. API/ABI 稳定化在开发阶段功能边界收敛后推进；Deferred 保持为使用 Render Graph 组合的可选
+1. 完成 S-04 的 XCB 示例、Wayland 后端与无头合成器验证，再启动 S-07 Window/Event 原型。
+2. 以真实材质与光源负载测量透明 PBR、CSM、Clustered Forward 与 Bindless 的收益和成本。
+3. API/ABI 稳定化在开发阶段功能边界收敛后推进；Deferred 保持为使用 Render Graph 组合的可选
    高级管线研究项。
 
 若前置抽象不足，应先更新对应 Plan 和本路线图状态，再扩大公共 API。

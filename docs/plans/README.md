@@ -103,6 +103,8 @@ D-03-graphics-pipeline.md
   共享/静态验收通过，远端 Windows/Linux 矩阵因 Actions 账户额度限制等待重跑。
 - [S-04：Linux XCB 与 Wayland Surface](S-04-linux-surface.md)——设计已确认；先实现 XCB，
   再增加 Wayland，窗口创建与事件循环保持为上层职责。
+- [S-07：Window、Event 与 Input 边界](S-07-window-events.md)——设计已确认；在 S-04 后增加可选
+  Window 组件，Renderer Surface 仍允许 SDL、GLFW、Qt 和引擎直接接入。
 
 ## 状态
 
