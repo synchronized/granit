@@ -21,7 +21,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y ninja-build libvulkan1 libxcb1-dev libwayland-dev \
-            mesa-vulkan-drivers vulkan-validationlayers xvfb xauth
+            mesa-vulkan-drivers vulkan-validationlayers wayland-protocols weston xvfb xauth
       - name: 选择 preset
         id: preset
         shell: bash
@@ -30,9 +30,25 @@ jobs:
           if [[ "${{ matrix.linkage }}" == "static" ]]; then suffix="-static"; fi
           echo "name=linux-${{ matrix.compiler }}${suffix}-release" >> "$GITHUB_OUTPUT"
       - name: 配置、构建与测试
+        shell: bash
         run: |
           cmake --preset "${{ steps.preset.outputs.name }}"
           cmake --build --preset "${{ steps.preset.outputs.name }}"
+          export XDG_RUNTIME_DIR="$RUNNER_TEMP/granit-wayland"
+          install -d -m 700 "$XDG_RUNTIME_DIR"
+          export WAYLAND_DISPLAY=granit-wayland
+          weston --backend=headless-backend.so --socket="$WAYLAND_DISPLAY" --idle-time=0 \
+            >"$RUNNER_TEMP/granit-weston.log" 2>&1 &
+          weston_pid=$!
+          trap 'kill "$weston_pid" 2>/dev/null || true' EXIT
+          for attempt in {1..50}; do
+            [[ -S "$XDG_RUNTIME_DIR/$WAYLAND_DISPLAY" ]] && break
+            sleep 0.1
+          done
+          [[ -S "$XDG_RUNTIME_DIR/$WAYLAND_DISPLAY" ]] || {
+            cat "$RUNNER_TEMP/granit-weston.log"
+            exit 1
+          }
           xvfb-run -a ctest --preset "${{ steps.preset.outputs.name }}"
       - name: 安装并验证独立 C 和 C++ Consumer
         shell: bash

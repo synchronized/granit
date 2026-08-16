@@ -37,12 +37,26 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND GRANIT_ENABLE_XCB)
 endif()
 
 set(GRANIT_HAS_WAYLAND OFF)
+set(GRANIT_HAS_WAYLAND_SHELL OFF)
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND GRANIT_ENABLE_WAYLAND)
   find_path(GRANIT_WAYLAND_INCLUDE_DIR wayland-client.h)
   find_library(GRANIT_WAYLAND_LIBRARY NAMES wayland-client)
   if(GRANIT_WAYLAND_INCLUDE_DIR AND GRANIT_WAYLAND_LIBRARY)
     set(GRANIT_HAS_WAYLAND ON)
     message(STATUS "Granit Wayland Surface backend enabled")
+    find_program(GRANIT_WAYLAND_SCANNER wayland-scanner)
+    find_file(
+      GRANIT_XDG_SHELL_PROTOCOL
+      xdg-shell.xml
+      PATHS /usr/share /usr/local/share
+      PATH_SUFFIXES wayland-protocols/stable/xdg-shell
+    )
+    if(GRANIT_WAYLAND_SCANNER AND GRANIT_XDG_SHELL_PROTOCOL)
+      set(GRANIT_HAS_WAYLAND_SHELL ON)
+      message(STATUS "Granit Wayland xdg-shell tests enabled")
+    else()
+      message(STATUS "Granit Wayland xdg-shell tests disabled: protocol tools not found")
+    endif()
   else()
     message(STATUS "Granit Wayland Surface backend disabled: Wayland development package not found")
   endif()
