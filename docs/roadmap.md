@@ -136,8 +136,8 @@
   共享/静态安装 Consumer 均有回归。正式 ABI 快照等待功能边界收敛，当前仍不承诺稳定。
 - **[S-02](plans/S-02-diagnostics.md) / P1**：已完成；日志、诊断回调、GPU 调试名称和 Device Lost
   报告。
-- **[S-03](plans/S-03-package-consumers.md) / P1**：实现中；安装包、真实外部 C/C++ Consumer
-  和版本验证。
+- **[S-03](plans/S-03-package-consumers.md) / P1**：实现已完成；安装包、真实外部 C/C++
+  Consumer 和版本验证已落地，远端 CI 因账户额度限制等待重跑。
 - **S-04 / P2**：Wayland、XCB 或其他确认的平台 Surface。
 - **S-05 / P2**：明确标记为不稳定的 Vulkan 原生互操作。
 - **S-06 / P2**：核心、高层模块和互操作接口的兼容承诺。

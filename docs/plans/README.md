@@ -99,8 +99,8 @@ D-03-graphics-pipeline.md
   功能边界收敛。
 - [S-02：统一诊断、GPU 调试名称与 Device Lost 报告](S-02-diagnostics.md)——已完成；统一诊断
   sink、公共回调、GPU 调试名称、首次 Device Lost 报告及边界回归均已落地。
-- [S-03：安装包与外部 Consumer 验证](S-03-package-consumers.md)——实现中；先闭环验证 CMake
-  包版本、公共头文件版本和运行库版本，再补负向选包与 Windows 安装测试。
+- [S-03：安装包与外部 Consumer 验证](S-03-package-consumers.md)——实现已完成；本地 Windows
+  共享/静态验收通过，远端 Windows/Linux 矩阵因 Actions 账户额度限制等待重跑。
 
 ## 状态
 

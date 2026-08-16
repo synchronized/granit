@@ -106,6 +106,29 @@ cmake -DGRANIT_SOURCE_DIR=/path/to/granit \
 仓库 CI 当前覆盖 Linux Clang/GCC × 共享/静态，以及 Windows MSVC × 共享/静态安装 Consumer。
 Windows 共享验证不会把 DLL 复制到 Consumer 目录，而是从安装前缀的 `bin` 目录加载。
 
+## 安装支持与验证矩阵
+
+| 平台 | 编译器 | 链接模式 | 安装 Consumer | 当前验证状态 |
+| --- | --- | --- | --- | --- |
+| Windows x64 | MSVC | 共享、静态 | C11、C++20、RenderPipeline | 本地通过；Release CI 已配置 |
+| Linux x64 | Clang | 共享、静态 | C11、C++20、RenderPipeline | Release CI 已配置 |
+| Linux x64 | GCC | 共享、静态 | C11、C++20、RenderPipeline | Release CI 已配置 |
+
+该矩阵描述当前持续验证范围，不等同于 API 或 ABI 稳定承诺。Windows Clang/clang-cl preset 可用于
+开发，但尚未进入安装 Consumer 的必过矩阵。当前远端 Actions 因账户付款或额度限制无法启动 Job；
+恢复额度后需要重新运行 Windows 与 Linux 工作流，才能完成远端验收。
+
+## 安装故障排查
+
+- `find_package` 找不到 Granit：将具体安装前缀加入 `CMAKE_PREFIX_PATH`，不要指向源码或构建目录。
+- 找不到 `RenderPipeline`：确认执行了完整安装，并使用大小写准确的 `COMPONENTS RenderPipeline`。
+- Windows 报 DLL 缺失：将安装前缀的 `bin` 加入进程 `PATH`，或把所需 DLL 随应用一起部署。
+- 静态链接出现未解析符号：确认 Consumer 没有混用共享与静态安装前缀；静态宏由导入目标传播，
+  不应由使用者手工猜测定义。
+- 包版本或运行库版本不一致：删除 Consumer 的 CMake 缓存，重新安装并配置，避免命中旧前缀。
+- 多配置生成器安装了错误配置：使用 `cmake --install <build> --config Debug|Release` 明确选择。
+- Renderer 返回后端不可用：检查 Vulkan loader 和驱动；这与 CMake 包能否被找到是两个独立问题。
+
 ## 运行示例
 
 示例的用途、稳定层级和运行命令见[示例程序](examples.md)。
