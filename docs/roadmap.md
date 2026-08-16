@@ -138,7 +138,8 @@
   报告。
 - **[S-03](plans/S-03-package-consumers.md) / P1**：实现已完成；安装包、真实外部 C/C++
   Consumer 和版本验证已落地，远端 CI 因账户额度限制等待重跑。
-- **S-04 / P2**：Wayland、XCB 或其他确认的平台 Surface。
+- **[S-04](plans/S-04-linux-surface.md) / P2**：设计已确认；按 XCB、Wayland 顺序增加 Linux
+  平台 Surface，保持窗口和事件循环由上层管理。
 - **S-05 / P2**：明确标记为不稳定的 Vulkan 原生互操作。
 - **S-06 / P2**：核心、高层模块和互操作接口的兼容承诺。
 
