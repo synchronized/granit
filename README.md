@@ -68,7 +68,14 @@ cmake --build --preset linux-clang-debug
 ctest --preset linux-clang-debug
 ```
 
-完整的环境要求、构建选项、静态库和安装说明见[构建与安装](docs/guides/build.md)。
+顶层构建默认同时生成示例。Windows Clang 配置完成后可运行最小离屏清屏示例：
+
+```powershell
+build/windows-clang-debug/bin/granit_offscreen_clear_example.exe
+```
+
+完整的环境要求、构建选项、静态库和安装说明见[构建与安装](docs/guides/build.md)；其他可运行
+程序及平台差异见[示例程序](docs/guides/examples.md)。
 
 ## CMake 集成
 
@@ -85,6 +92,17 @@ target_link_libraries(your_target PRIVATE granit::granit)
 find_package(granit CONFIG REQUIRED COMPONENTS RenderPipeline)
 target_link_libraries(your_target PRIVATE granit::render_pipeline)
 ```
+
+使用可选 Window component：
+
+```cmake
+find_package(granit CONFIG REQUIRED COMPONENTS Window)
+target_link_libraries(your_target PRIVATE granit::granit granit::window)
+```
+
+`granit::window` 是 Granit 自带的可选窗口组件，不是核心 Renderer 的强制依赖。应用也可以自行
+接入 SDL3 或 GLFW，具体边界和接入方式见
+[SDL3 与 GLFW 窗口接入](docs/guides/window-library-integration.md)。
 
 C 用户包含 `<granit/granit.h>`，C++20 用户包含 `<granit/granit.hpp>`。
 
