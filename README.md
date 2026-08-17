@@ -48,6 +48,10 @@ Granit 采用“Bring Your Own Engine”边界，不接管使用者的 ECS、Sce
 
 ## 快速开始
 
+构建需要 CMake 3.23+、支持 C++20 的 MSVC/Clang/GCC，以及 Ninja 或 Visual Studio 2022。
+仓库已内置匹配版本的 Vulkan-Headers 与 Volk；编译不要求完整 Vulkan SDK，运行时仍需可用的
+Vulkan loader 和显卡驱动。
+
 查看当前平台可用的 CMake preset：
 
 ```sh
@@ -68,6 +72,12 @@ Linux Clang 动态库构建：
 cmake --preset linux-clang-debug
 cmake --build --preset linux-clang-debug
 ctest --preset linux-clang-debug
+```
+
+构建完成后可按需安装库、公共头文件和 CMake package：
+
+```sh
+cmake --install build/<preset-name> --prefix build/install
 ```
 
 顶层构建默认同时生成示例。Windows Clang 配置完成后可运行最小离屏清屏示例：
@@ -127,6 +137,9 @@ cmake -S . -B build/integrations \
   -DGRANIT_BUILD_INTEGRATION_IMGUI=ON \
   -DGRANIT_FETCH_INTEGRATION_DEPENDENCIES=ON
 ```
+
+锁定依赖模式仅用于源码树构建与验证，不安装 Integration component。安装这两个 component 时，
+应由父项目提供依赖目标，或提供可由 `find_package` 找到的依赖包。
 
 SDL3 Integration 只负责从 `SDL_Window` 创建 Granit Surface；SDL3 继续拥有窗口、事件循环和输入。
 ImGui Integration 只负责把 Draw Data 追加到 Canvas，不管理 ImGui Context、字体 Atlas、输入注入或
