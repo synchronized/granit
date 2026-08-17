@@ -5,8 +5,9 @@
 
 ## 适用场景
 
-本指南说明在 `granit::integration_sdl3` 尚未实现前，如何将 SDL3 或 GLFW 创建的窗口直接连接到
-Granit Surface。第三方库继续拥有窗口、事件循环与输入；Granit 只借用创建 Surface 所需的原生值。
+本指南说明如何将 SDL3 或 GLFW 创建的窗口直接连接到 Granit Surface。SDL3 使用者可以选择
+`granit::integration_sdl3` 自动查询原生值；本文保留平台直连方法，供 GLFW、定制集成和排错使用。
+第三方库继续拥有窗口、事件循环与输入；Granit 只借用创建 Surface 所需的原生值。
 
 当前直接映射关系为：
 
@@ -16,7 +17,8 @@ Granit Surface。第三方库继续拥有窗口、事件循环与输入；Granit
 | X11 | `Display*`、X11 `Window` | `xcb_surface_desc` | 使用 Xlib-xcb 取得 XCB connection |
 | Wayland | `wl_display*`、`wl_surface*` | `wayland_surface_desc` | 无 |
 
-这些代码是平台直连示意，不属于稳定的第三方 Integration API。正式 SDL3/ImGui 可选组件见
+这些代码是平台直连示意，不属于稳定的第三方 Integration API。可选组件的当前接口见
+[SDL3 与 ImGui Integration](../reference/third-party-integrations.md)，后续阶段见
 [S-08 计划](../plans/S-08-third-party-integrations.md)。
 
 ## 通用顺序

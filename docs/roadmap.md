@@ -145,15 +145,14 @@
 - **[S-07](plans/S-07-window-events.md) / P2**：可选 Window 组件及 Win32/XCB/Wayland Window、
   统一事件、原生值查询和 Renderer 集成已实现；Linux 后端等待 CI 复测。
 - **[S-07E](plans/S-07E-input-component.md) / P2**：Input 独立组件边界已确认；先锁定键盘、
-  指针和已提交文本的 C ABI，再实现 Window 内部分发桥与 Win32 原型。
-- **[S-08](plans/S-08-third-party-integrations.md) / P2**：规划独立的 SDL3 与 ImGui 可选集成目标；
-  第三方依赖不进入 Renderer、Window 或基础安装 component。
+  指针和已提交文本的 C ABI；实现顺序排在 S-08 集成验证之后。
+- **[S-08](plans/S-08-third-party-integrations.md) / P2**：独立 SDL3/ImGui 目标、安装边界、SDL3
+  Surface 与 ImGui Draw Data 基础转换已实现；下一步完成依赖环境测试和组合示例。
 
 ## 近期执行顺序
 
-1. 实施 S-07E1 Input C ABI 与 S-07E2 Window 内部分发桥；S-07C/S-07D Linux Window 后端在
-   Actions 账户额度恢复后补跑。
-2. S-07 的原生窗口描述稳定后实现 S-08 SDL3 Surface 集成；ImGui 集成在公共 Canvas 路径上验证。
+1. 完成 S-08 SDL3/ImGui 依赖环境测试、字体纹理和组合示例；随后再实施 S-07E Input。
+2. S-07C/S-07D Linux Window 后端在 Actions 账户额度恢复后补跑。
 3. 以真实材质与光源负载测量透明 PBR、CSM、Clustered Forward 与 Bindless 的收益和成本。
 4. API/ABI 稳定化在开发阶段功能边界收敛后推进；Deferred 保持为使用 Render Graph 组合的可选
    高级管线研究项。

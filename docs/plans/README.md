@@ -108,8 +108,8 @@ D-03-graphics-pipeline.md
   GLFW、Qt 和引擎直接接入。
 - [S-07E：Input component 边界](S-07E-input-component.md)——设计已确认；采用独立可选组件、
   Window 内部事件分发桥、输入事件与状态快照双模型，第一阶段覆盖键盘、指针和已提交文本。
-- [S-08：SDL3 与 ImGui 第三方集成](S-08-third-party-integrations.md)——设计已确认；使用独立
-  `integration_*` 目标连接第三方生态，不让 SDL3 或 ImGui 成为核心依赖。
+- [S-08：SDL3 与 ImGui 第三方集成](S-08-third-party-integrations.md)——S-08A 目标与安装边界已
+  完成，SDL3 Surface 和 ImGui Draw Data 基础转换已实现并等待依赖环境测试；第三方依赖不进入核心。
 
 ## 状态
 

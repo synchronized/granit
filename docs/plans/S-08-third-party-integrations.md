@@ -6,7 +6,7 @@
 ## 状态
 
 - 设计状态：已确认
-- 实现状态：待开始
+- 实现状态：S-08A 已完成，S-08B/S-08D 基础转换已实现，等待依赖环境测试
 - 路线图任务：S-08
 - 优先级：P2
 - 前置依赖：S-04 Linux Surface、S-07 Window/Event 边界、H-08 公共 Canvas
@@ -97,10 +97,13 @@ granit::integration_imgui
 
 ## 实施顺序
 
-1. S-08A：建立 `integrations` 目录、可选构建开关、目标命名和安装 component 骨架。
-2. S-08B：实现 SDL3 Window 到 Granit Surface 的适配，覆盖 Win32、XCB 和 Wayland 能力选择。
+1. S-08A（已完成）：已建立 `integrations` 目录、可选构建开关、目标命名、依赖复用和安装
+   component。
+2. S-08B（基础实现完成，等待依赖环境测试）：已实现 SDL3 Window 到 Granit Surface 的适配；
+   Win32 与 Wayland 直接借用原生值，X11 在 X11-xcb 可用时转换到 XCB connection。
 3. S-08C：增加 SDL3 窗口、事件循环、Swapchain、Resize 和 Present 示例与集成测试。
-4. S-08D：实现 ImGui Draw Data 到 Granit Canvas/命令的 Renderer 集成。
+4. S-08D（基础实现完成，等待依赖环境测试）：已实现 ImGui Draw Data 到 Granit Canvas 的转换，
+   覆盖顶点/索引偏移、FramebufferScale、剪裁和调用方 Texture resolver。
 5. S-08E：增加 SDL3 + ImGui 组合示例，验证输入、剪裁、纹理、Resize 和颜色空间。
 6. S-08F：测量动态上传、Draw 合批和字体纹理更新；再决定多 Viewport 与事件转换范围。
 

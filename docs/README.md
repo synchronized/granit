@@ -86,6 +86,7 @@
 - [Surface](reference/surface.md)
 - [Swapchain](reference/swapchain.md)
 - [SDL3 与 GLFW 窗口接入](guides/window-library-integration.md)
+- [SDL3 与 ImGui Integration](reference/third-party-integrations.md)
 
 ## 架构与原理
 
