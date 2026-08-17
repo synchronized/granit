@@ -7,10 +7,24 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include <granit/core/result.h>
 #include <granit/core/types.h>
+#include <granit/input/export.h>
 #include <granit/window/window.h>
 
 typedef granit_handle granit_input_system;
+
+typedef struct granit_input_system_desc {
+  uint32_t struct_size;
+  granit_window_system window_system;
+  uint32_t flags;
+  uint32_t reserved;
+} granit_input_system_desc;
+
+#define GRANIT_INPUT_SYSTEM_DESC_VERSION_1_SIZE                                                    \
+  ((uint32_t)(offsetof(granit_input_system_desc, reserved) + sizeof(uint32_t)))
+#define GRANIT_INPUT_SYSTEM_DESC_INIT                                                              \
+  {(uint32_t)sizeof(granit_input_system_desc), GRANIT_NULL_HANDLE, UINT32_C(0), UINT32_C(0)}
 
 typedef enum granit_input_event_type {
   GRANIT_INPUT_EVENT_KEY = 1,
@@ -206,11 +220,7 @@ typedef struct granit_input_event {
   ((uint32_t)(offsetof(granit_input_event, data) + sizeof(granit_input_event_data)))
 #define GRANIT_INPUT_EVENT_INIT                                                                    \
   {                                                                                                \
-    (uint32_t)sizeof(granit_input_event),                                                          \
-        UINT32_C(0),                                                                               \
-        GRANIT_NULL_HANDLE,                                                                        \
-        UINT64_C(0),                                                                               \
-        {{0}}                                                                                      \
+    (uint32_t)sizeof(granit_input_event), UINT32_C(0), GRANIT_NULL_HANDLE, UINT64_C(0), {{0}}      \
   }
 
 /** 物理键 usage 0～255 的按下状态位图。 */
@@ -237,5 +247,25 @@ typedef struct granit_pointer_state {
 #define GRANIT_POINTER_STATE_VERSION_1_SIZE ((uint32_t)(offsetof(granit_pointer_state, reserved)))
 #define GRANIT_POINTER_STATE_INIT                                                                  \
   {(uint32_t)sizeof(granit_pointer_state), UINT32_C(0), 0.0F, 0.0F, UINT32_C(0), {0, 0, 0, 0, 0}}
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+GRANIT_INPUT_API granit_result granit_input_system_create(const granit_input_system_desc* desc,
+                                                          granit_input_system* input_system);
+GRANIT_INPUT_API granit_result granit_input_system_destroy(granit_input_system input_system);
+GRANIT_INPUT_API granit_result granit_input_poll_event(granit_input_system input_system,
+                                                       granit_input_event* event);
+GRANIT_INPUT_API granit_result granit_input_get_keyboard_state(granit_input_system input_system,
+                                                               granit_window window,
+                                                               granit_keyboard_state* state);
+GRANIT_INPUT_API granit_result granit_input_get_pointer_state(granit_input_system input_system,
+                                                              granit_window window,
+                                                              granit_pointer_state* state);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

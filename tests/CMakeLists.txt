@@ -48,7 +48,7 @@ add_library(
       headers/pipeline_text_atlas_h.c
 )
 target_link_libraries(
-  granit_c_header_test PRIVATE granit::granit granit::render_pipeline granit::window
+  granit_c_header_test PRIVATE granit::granit granit::render_pipeline granit::window granit::input
 )
 granit_target_compile_warnings(granit_c_header_test)
 
@@ -441,7 +441,7 @@ add_library(
     headers/window_hpp.cpp
 )
 target_link_libraries(
-  granit_cpp_header_test PRIVATE granit::granit granit::render_pipeline granit::window
+  granit_cpp_header_test PRIVATE granit::granit granit::render_pipeline granit::window granit::input
 )
 granit_target_compile_warnings(granit_cpp_header_test)
 
@@ -455,6 +455,12 @@ endif()
 granit_target_compile_warnings(granit_window_test)
 granit_target_output_directories(granit_window_test)
 add_test(NAME granit.window COMMAND granit_window_test)
+
+add_executable(granit_input_test input/input_api_test.cpp)
+target_link_libraries(granit_input_test PRIVATE granit::input Catch2::Catch2WithMain)
+granit_target_compile_warnings(granit_input_test)
+granit_target_output_directories(granit_input_test)
+add_test(NAME granit.input COMMAND granit_input_test)
 
 add_executable(granit_window_renderer_test window/window_renderer_test.cpp)
 target_link_libraries(

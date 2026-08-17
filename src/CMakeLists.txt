@@ -260,6 +260,51 @@ install(
   COMPONENT Window
 )
 
+add_library(granit_input)
+add_library(granit::input ALIAS granit_input)
+target_sources(
+  granit_input
+  PRIVATE input/input_api.cpp
+  PUBLIC
+    FILE_SET HEADERS
+    BASE_DIRS "${PROJECT_SOURCE_DIR}/include"
+    FILES
+      "${PROJECT_SOURCE_DIR}/include/granit/input.h"
+      "${PROJECT_SOURCE_DIR}/include/granit/input.hpp"
+      "${PROJECT_SOURCE_DIR}/include/granit/input/export.h"
+      "${PROJECT_SOURCE_DIR}/include/granit/input/input.h"
+      "${PROJECT_SOURCE_DIR}/include/granit/input/input.hpp"
+)
+target_compile_features(granit_input PUBLIC cxx_std_20)
+target_include_directories(granit_input PUBLIC "$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>")
+target_compile_definitions(
+  granit_input
+  PRIVATE GRANIT_INPUT_BUILDING_LIBRARY
+  PUBLIC $<$<NOT:$<BOOL:${BUILD_SHARED_LIBS}>>:GRANIT_INPUT_STATIC_DEFINE>
+)
+target_link_libraries(granit_input PUBLIC granit::window)
+granit_target_compile_warnings(granit_input)
+granit_target_output_directories(granit_input)
+set_target_properties(
+  granit_input
+  PROPERTIES EXPORT_NAME input FOLDER "Modules" CXX_VISIBILITY_PRESET hidden
+             VISIBILITY_INLINES_HIDDEN YES
+)
+install(
+  TARGETS granit_input
+  EXPORT granitInputTargets
+  ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}" COMPONENT Input
+  LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}" COMPONENT Input
+  RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}" COMPONENT Input
+  FILE_SET HEADERS DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}" COMPONENT Input
+)
+install(
+  EXPORT granitInputTargets
+  NAMESPACE granit::
+  DESTINATION "${GRANIT_INSTALL_CMAKEDIR}"
+  COMPONENT Input
+)
+
 if(GRANIT_BUILD_INTEGRATION_SDL3)
   add_library(granit_integration_sdl3)
   add_library(granit::integration_sdl3 ALIAS granit_integration_sdl3)

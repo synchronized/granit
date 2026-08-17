@@ -5,10 +5,15 @@
 
 ## 当前状态
 
-S-07E1 已锁定 Input component 第一版的 C11 值类型 ABI。当前只提供事件与状态的数据结构；Input
-System 的创建、轮询、平台事件桥和安装 component 将在 S-07E2 及后续阶段实现。
+S-07E1 已锁定 Input component 第一版的 C11 值类型 ABI。S-07E2 已提供独立 `Input` 安装
+component、`granit::input` 目标、Input System 生命周期、空事件轮询、状态查询和 Window 私有桥。
+键盘与指针的平台消息映射将在 S-07E3～S-07E5 实现。
 
 公共入口为 `<granit/input.h>` 和 `<granit/input.hpp>`。头文件不包含平台或 Vulkan 类型。
+
+Input System 附着到一个 Window System；同一 Window System 只允许一个 Input System。必须先销毁
+Input System，再销毁 Window System。Input 轮询可触发一次非阻塞平台泵，但不会消费 Window
+事件队列。
 
 ## 事件模型
 
