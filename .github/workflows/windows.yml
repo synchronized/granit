@@ -57,13 +57,15 @@ jobs:
           cmake --build $consumer
           if ((Test-Path "$consumer/granit.dll") -or
               (Test-Path "$consumer/granit_render_pipeline.dll") -or
-              (Test-Path "$consumer/granit_window.dll")) {
+              (Test-Path "$consumer/granit_window.dll") -or
+              (Test-Path "$consumer/granit_input.dll")) {
             throw 'Consumer 目录不应复制 Granit DLL'
           }
           if ('${{ matrix.linkage }}' -eq 'shared') {
             if ((-not (Test-Path "$prefix/bin/granit.dll")) -or
                 (-not (Test-Path "$prefix/bin/granit_render_pipeline.dll")) -or
-                (-not (Test-Path "$prefix/bin/granit_window.dll"))) {
+                (-not (Test-Path "$prefix/bin/granit_window.dll")) -or
+                (-not (Test-Path "$prefix/bin/granit_input.dll"))) {
               throw '安装目录缺少共享库 DLL'
             }
             $env:PATH = "$prefix/bin;$env:SystemRoot/System32;$env:SystemRoot"
@@ -73,7 +75,9 @@ jobs:
             'granit_cpp_consumer',
             'granit_pipeline_c_consumer',
             'granit_pipeline_cpp_consumer',
-            'granit_window_c_consumer'
+            'granit_window_c_consumer',
+            'granit_input_c_consumer',
+            'granit_input_cpp_consumer'
           )
           foreach ($app in $apps) {
             & "$consumer/$app.exe"

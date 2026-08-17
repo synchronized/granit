@@ -6,7 +6,7 @@
 ## 状态
 
 - 设计状态：已确认
-- 实现状态：S-07E1～S-07E4 已完成，等待 Wayland 输入适配与安装验证
+- 实现状态：S-07E1～S-07E4 及安装 Consumer 已完成，等待 Wayland 输入适配
 - 路线图任务：S-07E
 - 优先级：P2
 - 前置依赖：S-07 Window component
@@ -129,7 +129,8 @@ granit_input_get_pointer_state(input_system, window, &pointer);
    移动、按钮、滚轮和焦点丢失清理。当前不引入 XKB，布局文本与更完整重复语义留待 S-07E5
    统一评审。
 5. S-07E5：实现 Wayland `wl_seat`、keyboard 和 pointer；键盘映射依赖在引入前单独确认。
-6. S-07E6：增加安装 Consumer、跨平台事件回归和焦点丢失状态清理测试。
+6. S-07E6（部分完成）：安装后的 C11/C++20 Consumer 已覆盖 Input component 发现、动态/静态
+   链接类型一致性、创建销毁和无图形会话降级；跨平台事件回归随 S-07E5 补齐。
 
 ## 测试与验收
 
