@@ -7,6 +7,7 @@
 
 #if defined(_WIN32)
 #include <windows.h>
+#include <windowsx.h>
 #else
 #if defined(GRANIT_WINDOW_HAS_XCB)
 #include <xcb/xcb.h>
@@ -44,6 +45,7 @@ struct window_record {
   HINSTANCE instance{};
   HWND window{};
   bool high_dpi{};
+  bool pointer_tracking{};
 #endif
 #if defined(GRANIT_WINDOW_HAS_XCB)
   xcb_window_t window{XCB_WINDOW_NONE};
@@ -67,6 +69,7 @@ struct window_system_record {
   void* input_user_data{};
   granit_window_input_window_callback input_window_destroyed{};
   granit_window_input_window_callback input_focus_lost{};
+  granit_window_input_native_event_callback input_native_event{};
 #if defined(GRANIT_WINDOW_HAS_XCB)
   xcb_connection_t* connection{};
   xcb_screen_t* screen{};
@@ -135,6 +138,24 @@ LRESULT CALLBACK window_proc(HWND hwnd, UINT message, WPARAM word, LPARAM value)
   if (!system)
     return DefWindowProcW(hwnd, message, word, value);
 
+  if (message == WM_MOUSEMOVE && !record->pointer_tracking) {
+    TRACKMOUSEEVENT tracking{sizeof(TRACKMOUSEEVENT), TME_LEAVE, hwnd, 0};
+    record->pointer_tracking = TrackMouseEvent(&tracking) != FALSE;
+  } else if (message == WM_MOUSELEAVE) {
+    record->pointer_tracking = false;
+  }
+  if (system->input_native_event != nullptr) {
+    auto input_value = value;
+    if (message == WM_MOUSEWHEEL || message == WM_MOUSEHWHEEL) {
+      POINT point{GET_X_LPARAM(value), GET_Y_LPARAM(value)};
+      if (ScreenToClient(hwnd, &point) != FALSE)
+        input_value = MAKELPARAM(point.x, point.y);
+    }
+    system->input_native_event(system->input_user_data, record->handle, message,
+                               static_cast<std::uintptr_t>(word),
+                               static_cast<std::intptr_t>(input_value));
+  }
+
   switch (message) {
   case WM_CLOSE:
     enqueue_event(system, record->handle, GRANIT_WINDOW_EVENT_CLOSE_REQUESTED);
@@ -181,6 +202,10 @@ LRESULT CALLBACK window_proc(HWND hwnd, UINT message, WPARAM word, LPARAM value)
     system->events.push_back(event);
     return 0;
   }
+  case WM_UNICHAR:
+    if (word == UNICODE_NOCHAR)
+      return TRUE;
+    return 0;
   default:
     return DefWindowProcW(hwnd, message, word, value);
   }
@@ -815,18 +840,20 @@ extern "C" granit_result granit_window_destroy(granit_window_system system_handl
 extern "C" granit_result
 granit_window_internal_attach_input(granit_window_system handle, void* user_data,
                                     granit_window_input_window_callback window_destroyed,
-                                    granit_window_input_window_callback focus_lost) {
+                                    granit_window_input_window_callback focus_lost,
+                                    granit_window_input_native_event_callback native_event) {
   auto system = acquire_system(handle);
   if (!system)
     return GRANIT_ERROR_INVALID_HANDLE;
   if (!on_owner_thread(*system) || user_data == nullptr || window_destroyed == nullptr ||
-      focus_lost == nullptr)
+      focus_lost == nullptr || native_event == nullptr)
     return GRANIT_ERROR_INVALID_ARGUMENT;
   if (system->input_user_data != nullptr)
     return GRANIT_ERROR_INVALID_ARGUMENT;
   system->input_user_data = user_data;
   system->input_window_destroyed = window_destroyed;
   system->input_focus_lost = focus_lost;
+  system->input_native_event = native_event;
   return GRANIT_SUCCESS;
 }
 
@@ -840,6 +867,7 @@ extern "C" granit_result granit_window_internal_detach_input(granit_window_syste
   system->input_user_data = nullptr;
   system->input_window_destroyed = nullptr;
   system->input_focus_lost = nullptr;
+  system->input_native_event = nullptr;
   return GRANIT_SUCCESS;
 }
 

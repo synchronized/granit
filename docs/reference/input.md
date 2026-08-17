@@ -1,42 +1,66 @@
 <!-- SPDX-License-Identifier: MIT -->
 <!-- Copyright (c) 2026 Granit contributors -->
 
-# Input 值类型
+# Input component
 
-## 当前状态
+## 当前能力
 
-S-07E1 已锁定 Input component 第一版的 C11 值类型 ABI。S-07E2 已提供独立 `Input` 安装
-component、`granit::input` 目标、Input System 生命周期、空事件轮询、状态查询和 Window 私有桥。
-键盘与指针的平台消息映射将在 S-07E3～S-07E5 实现。
+`granit::input` 是依附于 `granit::window` 的可选组件，提供键盘、已提交文本和指针的事件与状态。
+当前 Win32 后端已实现；XCB 与 Wayland 输入仍在计划中。SDL3、GLFW、Qt 和完整引擎应继续使用
+自身输入系统，不要求经过 Granit Input。
 
-公共入口为 `<granit/input.h>` 和 `<granit/input.hpp>`。头文件不包含平台或 Vulkan 类型。
+```cmake
+find_package(granit CONFIG REQUIRED COMPONENTS Window Input)
+target_link_libraries(app PRIVATE granit::window granit::input)
+```
 
-Input System 附着到一个 Window System；同一 Window System 只允许一个 Input System。必须先销毁
-Input System，再销毁 Window System。Input 轮询可触发一次非阻塞平台泵，但不会消费 Window
-事件队列。
+## 生命周期与线程
 
-## 事件模型
+一个 Input System 附着到一个 Window System：
 
-`granit_input_event` 包含结构大小、事件类型、所属 Window、单调纳秒时间戳和 64 字节固定负载。
-事件类型覆盖：
+```cpp
+granit::window_system windows;
+windows.initialize();
 
-- 物理键、逻辑键、修饰键及按下、抬起、重复动作。
-- 固定容量 UTF-8 已提交文本；不包含预编辑文本和候选区。
-- 指针移动、按钮、滚轮、进入和离开。
+granit::input_system input;
+input.initialize(windows.native_handle());
+```
 
-文本负载容量为 `GRANIT_INPUT_TEXT_CAPACITY`（48 字节），`length` 指明有效字节数。平台提交超过
-容量时应在 UTF-8 码点边界拆分为多个事件。
+- Input System 必须在 Window System 的创建线程创建、轮询和销毁。
+- 一个 Window System 只能附着一个 Input System。
+- 必须先销毁 Input System，再销毁 Window System。
+- Window 销毁后会移除对应状态和待处理输入事件。
+- `poll` 会非阻塞泵送平台消息，但不会消费 Window 事件队列。
 
-物理键枚举采用 USB HID Keyboard/Keypad usage 值，表达与布局无关的键盘位置。逻辑键只表达
-Enter、方向键、功能键等非打印语义；可打印内容必须读取文本事件。
+## 事件与状态
 
-## 状态模型
+`granit_input_poll_event` 返回一次性输入变化；队列为空时返回 `GRANIT_ERROR_NOT_READY`。事件包括：
 
-`granit_keyboard_state` 使用四个 64 位整数记录 usage 0～255 的当前按下状态，并单独记录修饰键。
-C++ 可使用 `granit::key_is_pressed` 查询物理键位。
+- 物理键、逻辑键、修饰键和按下、重复、抬起动作。
+- 固定容量 UTF-8 已提交文本。
+- 指针进入、离开、移动、按钮和水平/垂直滚轮。
 
-`granit_pointer_state` 保存相对 Window 客户区的逻辑坐标、按钮位图和指针是否位于客户区。坐标不是
-framebuffer 像素，应用应结合 Window Scale 事件换算渲染尺寸。
+`granit_input_get_keyboard_state` 查询 0～255 USB HID usage 位图与当前修饰键；
+`granit_input_get_pointer_state` 查询相对窗口客户区的逻辑坐标、按钮位图和指针是否在窗口内。
+指针坐标不是 framebuffer 像素，渲染代码应结合 Window Scale 事件换算。
 
-所有结构均带 `struct_size` 和初始化宏；保留字段必须保持为零。运行时 API 落地后，失败路径会清零
-输出数据并恢复正确的 `struct_size`。
+焦点丢失时，所有按键和指针按钮状态会被清除，避免产生卡键。状态清理不伪造逐键抬起事件。
+
+## Win32 语义
+
+首版以窗口消息作为唯一权威输入源，不同时消费 Raw Input，避免重复事件：
+
+- `WM_KEYDOWN/UP` 与 `WM_SYSKEYDOWN/UP` 提供扫描码、逻辑键和重复位。
+- `WM_CHAR` 与 `WM_UNICHAR` 转换为 UTF-8；UTF-16 代理对会合并后提交。
+- Mouse Move、Button、Wheel 和 Leave 消息更新指针事件与状态。
+- 滚轮消息的屏幕坐标在 Window 层转换为客户区坐标。
+
+物理键优先映射常用 USB HID Keyboard/Keypad usage。当前枚举未覆盖的扫描码返回
+`GRANIT_PHYSICAL_KEY_UNKNOWN`；可打印字符只通过文本事件提交，不塞入逻辑键枚举。
+
+## 当前限制
+
+- 不支持手柄、触摸、手写笔、相对鼠标、捕获、指针约束、剪贴板和拖放。
+- 不提供 IME 预编辑、候选窗或组合文本协议，只提供已经提交的文本。
+- 不提供 Action Mapping、快捷键系统或外部事件注入。
+- XCB 键盘布局与 Wayland Seat 的依赖和映射仍需单独实现、验证。

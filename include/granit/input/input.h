@@ -220,7 +220,8 @@ typedef struct granit_input_event {
   ((uint32_t)(offsetof(granit_input_event, data) + sizeof(granit_input_event_data)))
 #define GRANIT_INPUT_EVENT_INIT                                                                    \
   {                                                                                                \
-    (uint32_t)sizeof(granit_input_event), UINT32_C(0), GRANIT_NULL_HANDLE, UINT64_C(0), {{0}}      \
+    (uint32_t)sizeof(granit_input_event), UINT32_C(0), GRANIT_NULL_HANDLE, UINT64_C(0),            \
+        {{UINT32_C(0), UINT32_C(0), UINT32_C(0), UINT32_C(0)}}                                    \
   }
 
 /** 物理键 usage 0～255 的按下状态位图。 */

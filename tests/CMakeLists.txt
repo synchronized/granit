@@ -47,6 +47,7 @@ add_library(
       headers/pipeline_text_draw_list_h.c
       headers/pipeline_text_atlas_h.c
 )
+target_compile_features(granit_c_header_test PRIVATE c_std_11)
 target_link_libraries(
   granit_c_header_test PRIVATE granit::granit granit::render_pipeline granit::window granit::input
 )

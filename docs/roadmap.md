@@ -144,8 +144,8 @@
 - **S-06 / P2**：核心、高层模块和互操作接口的兼容承诺。
 - **[S-07](plans/S-07-window-events.md) / P2**：可选 Window 组件及 Win32/XCB/Wayland Window、
   统一事件、原生值查询和 Renderer 集成已实现；Linux 后端等待 CI 复测。
-- **[S-07E](plans/S-07E-input-component.md) / P2**：Input 独立组件边界与键盘、指针、已提交文本
-  的 C11 ABI、运行时 component、RAII 和 Window 私有桥已完成；下一步实现 Win32 输入适配。
+- **[S-07E](plans/S-07E-input-component.md) / P2**：Input 独立组件、C ABI 和 Win32 键盘、文本、
+  指针适配已实现；等待 XCB/Wayland 输入适配和安装 Consumer 验证。
 - **[S-08](plans/S-08-third-party-integrations.md) / P2**：独立 SDL3/ImGui 目标、安装边界、SDL3
   Surface、ImGui Draw Data 转换、字体上传、组合示例与 S-08F 测量已完成，Win32 smoke test
   已通过；下一步完成 Linux 运行验证。

@@ -125,16 +125,17 @@ find_package(granit CONFIG REQUIRED COMPONENTS RenderPipeline)
 target_link_libraries(your_target PRIVATE granit::render_pipeline)
 ```
 
-使用可选 Window component：
+使用可选 Window 和 Input component：
 
 ```cmake
-find_package(granit CONFIG REQUIRED COMPONENTS Window)
-target_link_libraries(your_target PRIVATE granit::granit granit::window)
+find_package(granit CONFIG REQUIRED COMPONENTS Window Input)
+target_link_libraries(your_target PRIVATE granit::granit granit::window granit::input)
 ```
 
 `granit::window` 是 Granit 自带的可选窗口组件，不是核心 Renderer 的强制依赖。应用也可以自行
-接入 SDL3 或 GLFW，具体边界和接入方式见
-[SDL3 与 GLFW 窗口接入](docs/guides/window-library-integration.md)。
+接入 SDL3 或 GLFW，具体边界见[窗口库接入](docs/guides/window-library-integration.md)。
+`granit::input` 提供原生 Window 的键盘、文本和指针输入；当前 Win32 后端已实现，详见
+[Input component](docs/reference/input.md)。
 
 使用可选 SDL3 和 ImGui Integration：
 
@@ -161,8 +162,8 @@ cmake -S . -B build/integrations \
 SDL3 Integration 只负责从 `SDL_Window` 创建 Granit Surface；SDL3 继续拥有窗口、事件循环和输入。
 ImGui Integration 只负责把 Draw Data 追加到 Canvas，不管理 ImGui Context、字体 Atlas、输入注入或
 平台窗口。完整接口与当前限制见
-[SDL3 与 ImGui Integration](docs/reference/third-party-integrations.md)。Granit 原生 Input component
-尚未实现，当前设计边界见[路线图](docs/roadmap.md)。
+[SDL3 与 ImGui Integration](docs/reference/third-party-integrations.md)。第三方窗口继续使用自身输入
+系统，不要求转换为 Granit Input。
 
 C 用户包含 `<granit/granit.h>`，C++20 用户包含 `<granit/granit.hpp>`。
 
