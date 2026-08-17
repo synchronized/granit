@@ -277,7 +277,7 @@ if(GRANIT_BUILD_INTEGRATION_SDL3)
   target_include_directories(
     granit_integration_sdl3 PUBLIC "$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>"
   )
-  target_link_libraries(granit_integration_sdl3 PUBLIC granit::granit SDL3::SDL3)
+  target_link_libraries(granit_integration_sdl3 PUBLIC granit::granit "${GRANIT_SDL3_TARGET}")
   target_compile_definitions(
     granit_integration_sdl3
     PRIVATE GRANIT_INTEGRATION_SDL3_BUILDING_LIBRARY
@@ -306,24 +306,26 @@ if(GRANIT_BUILD_INTEGRATION_SDL3)
       CXX_VISIBILITY_PRESET hidden
       VISIBILITY_INLINES_HIDDEN YES
   )
-  install(
-    TARGETS granit_integration_sdl3
-    EXPORT granitIntegrationSDL3Targets
-    ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}"
-    COMPONENT IntegrationSDL3
-    LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}"
-    COMPONENT IntegrationSDL3
-    RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
-    COMPONENT IntegrationSDL3
-    FILE_SET HEADERS DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
-    COMPONENT IntegrationSDL3
-  )
-  install(
-    EXPORT granitIntegrationSDL3Targets
-    NAMESPACE granit::
-    DESTINATION "${GRANIT_INSTALL_CMAKEDIR}"
-    COMPONENT IntegrationSDL3
-  )
+  if(NOT GRANIT_SDL3_FETCHED)
+    install(
+      TARGETS granit_integration_sdl3
+      EXPORT granitIntegrationSDL3Targets
+      ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}"
+      COMPONENT IntegrationSDL3
+      LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}"
+      COMPONENT IntegrationSDL3
+      RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
+      COMPONENT IntegrationSDL3
+      FILE_SET HEADERS DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
+      COMPONENT IntegrationSDL3
+    )
+    install(
+      EXPORT granitIntegrationSDL3Targets
+      NAMESPACE granit::
+      DESTINATION "${GRANIT_INSTALL_CMAKEDIR}"
+      COMPONENT IntegrationSDL3
+    )
+  endif()
 endif()
 
 if(GRANIT_BUILD_INTEGRATION_IMGUI)
@@ -361,24 +363,26 @@ if(GRANIT_BUILD_INTEGRATION_IMGUI)
       CXX_VISIBILITY_PRESET hidden
       VISIBILITY_INLINES_HIDDEN YES
   )
-  install(
-    TARGETS granit_integration_imgui
-    EXPORT granitIntegrationImGuiTargets
-    ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}"
-    COMPONENT IntegrationImGui
-    LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}"
-    COMPONENT IntegrationImGui
-    RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
-    COMPONENT IntegrationImGui
-    FILE_SET HEADERS DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
-    COMPONENT IntegrationImGui
-  )
-  install(
-    EXPORT granitIntegrationImGuiTargets
-    NAMESPACE granit::
-    DESTINATION "${GRANIT_INSTALL_CMAKEDIR}"
-    COMPONENT IntegrationImGui
-  )
+  if(NOT GRANIT_IMGUI_FETCHED)
+    install(
+      TARGETS granit_integration_imgui
+      EXPORT granitIntegrationImGuiTargets
+      ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}"
+      COMPONENT IntegrationImGui
+      LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}"
+      COMPONENT IntegrationImGui
+      RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
+      COMPONENT IntegrationImGui
+      FILE_SET HEADERS DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
+      COMPONENT IntegrationImGui
+    )
+    install(
+      EXPORT granitIntegrationImGuiTargets
+      NAMESPACE granit::
+      DESTINATION "${GRANIT_INSTALL_CMAKEDIR}"
+      COMPONENT IntegrationImGui
+    )
+  endif()
 endif()
 
 add_library(granit_render_graph STATIC)
