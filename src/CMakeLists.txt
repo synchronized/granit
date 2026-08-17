@@ -275,6 +275,9 @@ target_sources(
       "${PROJECT_SOURCE_DIR}/include/granit/input/input.h"
       "${PROJECT_SOURCE_DIR}/include/granit/input/input.hpp"
 )
+if(WIN32)
+  target_sources(granit_input PRIVATE input/win32_input_adapter.cpp)
+endif()
 target_compile_features(granit_input PUBLIC cxx_std_20)
 target_include_directories(granit_input PUBLIC "$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>")
 target_compile_definitions(

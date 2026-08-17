@@ -58,6 +58,9 @@ input.initialize(windows.native_handle());
 平台文本会先经过严格 UTF-8 校验，再按完整码点边界拆入 48 字节事件负载；不依赖第三方 Unicode
 库。Input 不执行规范化、字素切分或文字整形，这些能力属于上层文本系统。
 
+Win32 扫描码、UTF-16 和 Mouse 消息解码位于 Input DLL 的私有平台 adapter；通用运行时只接收
+归一化事件并维护队列和状态。该 adapter 不是公共 API，也不会把 Win32 类型暴露到安装头文件。
+
 这些消息的解码属于内部 Win32 adapter；通用 Input 运行时只维护标准化事件、状态和生命周期。
 
 物理键优先映射常用 USB HID Keyboard/Keypad usage。当前枚举未覆盖的扫描码返回
