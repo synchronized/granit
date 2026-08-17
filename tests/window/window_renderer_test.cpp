@@ -49,6 +49,56 @@ TEST_CASE("Window component 可以连接 Renderer Surface 和 Swapchain", "[wind
 } // namespace
 #endif
 
+#if defined(GRANIT_TEST_HAS_WAYLAND)
+namespace {
+
+bool wayland_environment_unavailable(granit::result result) {
+  return result == granit::result::backend_unavailable ||
+         result == granit::result::incompatible_driver ||
+         result == granit::result::no_suitable_device || result == granit::result::unsupported;
+}
+
+TEST_CASE("Wayland Window component 可以连接 Renderer Surface 和 Swapchain",
+          "[window][renderer][wayland]") {
+  granit::window_system window_system;
+  const auto system_result = window_system.initialize(granit::window_backend::wayland);
+  if (system_result == granit::result::backend_unavailable)
+    SKIP("当前环境没有可用且支持 xdg-shell 的 Wayland compositor");
+  REQUIRE(system_result == granit::result::success);
+  granit::window window;
+  REQUIRE(window.initialize(window_system.native_handle(),
+                            {.title = "Granit Wayland Window Renderer Test",
+                             .width = 96,
+                             .height = 72,
+                             .flags = 0}) == granit::result::success);
+  void* display = nullptr;
+  void* native_surface = nullptr;
+  REQUIRE(window.native_wayland(display, native_surface) == granit::result::success);
+
+  granit::renderer renderer;
+  const auto renderer_result =
+      renderer.initialize({.application_name = "granit-wayland-window-renderer",
+                           .surface_types = granit::surface_type::wayland});
+  if (wayland_environment_unavailable(renderer_result))
+    SKIP("当前环境不支持 Vulkan Wayland Swapchain");
+  REQUIRE(renderer_result == granit::result::success);
+  granit::surface surface;
+  REQUIRE(surface.initialize_wayland(renderer.native_handle(), {display, native_surface}) ==
+          granit::result::success);
+  granit::swapchain swapchain;
+  const auto swapchain_result = swapchain.initialize(
+      renderer.native_handle(), surface.native_handle(), {.width = 96, .height = 72});
+  if (wayland_environment_unavailable(swapchain_result))
+    SKIP("当前环境不支持 Vulkan Wayland Swapchain");
+  REQUIRE(swapchain_result == granit::result::success);
+  granit::acquired_frame frame;
+  REQUIRE(swapchain.acquire(frame) == granit::result::success);
+  REQUIRE(swapchain.cancel(frame) == granit::result::success);
+}
+
+} // namespace
+#endif
+
 #if defined(GRANIT_TEST_HAS_XCB)
 namespace {
 

@@ -85,6 +85,7 @@ TEST_CASE("Window 组件骨架保持确定的失败与输出语义", "[window]")
   REQUIRE(granit_window_system_destroy(system) == GRANIT_SUCCESS);
   CHECK(granit_window_system_destroy(system) == GRANIT_ERROR_INVALID_HANDLE);
 #elif defined(GRANIT_TEST_HAS_XCB)
+  system_desc.backend = GRANIT_WINDOW_BACKEND_XCB;
   const auto create_result = granit_window_system_create(&system_desc, &system);
   if (create_result == GRANIT_ERROR_BACKEND_UNAVAILABLE)
     SKIP("当前环境没有可用的 XCB display");
@@ -126,3 +127,37 @@ TEST_CASE("Window 组件骨架保持确定的失败与输出语义", "[window]")
   CHECK(system == GRANIT_NULL_HANDLE);
 #endif
 }
+
+#if defined(GRANIT_TEST_HAS_WAYLAND)
+TEST_CASE("Wayland Window 提供配置后的原生 Surface", "[window][wayland]") {
+  granit_window_system_desc system_desc = GRANIT_WINDOW_SYSTEM_DESC_INIT;
+  system_desc.backend = GRANIT_WINDOW_BACKEND_WAYLAND;
+  granit_window_system system = GRANIT_NULL_HANDLE;
+  const auto system_result = granit_window_system_create(&system_desc, &system);
+  if (system_result == GRANIT_ERROR_BACKEND_UNAVAILABLE)
+    SKIP("当前环境没有可用且支持 xdg-shell 的 Wayland compositor");
+  REQUIRE(system_result == GRANIT_SUCCESS);
+
+  granit_window_desc window_desc = GRANIT_WINDOW_DESC_INIT;
+  window_desc.title = "Granit Wayland Window Test";
+  window_desc.title_length = 26;
+  window_desc.width = 96;
+  window_desc.height = 72;
+  window_desc.flags = GRANIT_WINDOW_VISIBLE_BIT;
+  granit_window window = GRANIT_NULL_HANDLE;
+  REQUIRE(granit_window_create(system, &window_desc, &window) == GRANIT_SUCCESS);
+
+  void* display = nullptr;
+  void* surface = nullptr;
+  REQUIRE(granit_window_get_wayland(system, window, &display, &surface) == GRANIT_SUCCESS);
+  REQUIRE(display != nullptr);
+  REQUIRE(surface != nullptr);
+  uint32_t xcb_window = UINT32_C(42);
+  REQUIRE(granit_window_get_xcb(system, window, &display, &xcb_window) == GRANIT_ERROR_UNSUPPORTED);
+  CHECK(display == nullptr);
+  CHECK(xcb_window == 0);
+
+  REQUIRE(granit_window_destroy(system, window) == GRANIT_SUCCESS);
+  REQUIRE(granit_window_system_destroy(system) == GRANIT_SUCCESS);
+}
+#endif

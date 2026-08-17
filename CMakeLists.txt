@@ -16,7 +16,7 @@ option(GRANIT_BUILD_EXAMPLES "构建 Granit 示例" ${PROJECT_IS_TOP_LEVEL})
 option(GRANIT_BUILD_BENCHMARKS "构建 Granit benchmark 程序" OFF)
 option(GRANIT_BUILD_TOOLS "构建 Granit 离线工具" OFF)
 option(GRANIT_ENABLE_XCB "在 Linux 上启用 XCB Surface 与 Window 后端" ON)
-option(GRANIT_ENABLE_WAYLAND "在 Linux 上启用 Wayland Surface 后端" ON)
+option(GRANIT_ENABLE_WAYLAND "在 Linux 上启用 Wayland Surface 与 Window 后端" ON)
 
 include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
@@ -53,9 +53,9 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND GRANIT_ENABLE_WAYLAND)
     )
     if(GRANIT_WAYLAND_SCANNER AND GRANIT_XDG_SHELL_PROTOCOL)
       set(GRANIT_HAS_WAYLAND_SHELL ON)
-      message(STATUS "Granit Wayland xdg-shell tests enabled")
+      message(STATUS "Granit Wayland xdg-shell Window backend enabled")
     else()
-      message(STATUS "Granit Wayland xdg-shell tests disabled: protocol tools not found")
+      message(STATUS "Granit Wayland Window backend disabled: protocol tools not found")
     endif()
   else()
     message(STATUS "Granit Wayland Surface backend disabled: Wayland development package not found")
@@ -71,6 +71,40 @@ set(
 
 include(CTest)
 add_subdirectory(3rd)
+
+if(GRANIT_HAS_WAYLAND_SHELL)
+  set(granit_wayland_protocol_dir "${CMAKE_CURRENT_BINARY_DIR}/generated/wayland")
+  set(granit_xdg_shell_header "${granit_wayland_protocol_dir}/xdg-shell-client-protocol.h")
+  set(granit_xdg_shell_source "${granit_wayland_protocol_dir}/xdg-shell-protocol.c")
+  add_custom_command(
+    OUTPUT "${granit_xdg_shell_header}" "${granit_xdg_shell_source}"
+    COMMAND "${CMAKE_COMMAND}" -E make_directory "${granit_wayland_protocol_dir}"
+    COMMAND
+      "${GRANIT_WAYLAND_SCANNER}" client-header "${GRANIT_XDG_SHELL_PROTOCOL}"
+      "${granit_xdg_shell_header}"
+    COMMAND
+      "${GRANIT_WAYLAND_SCANNER}" private-code "${GRANIT_XDG_SHELL_PROTOCOL}"
+      "${granit_xdg_shell_source}"
+    DEPENDS "${GRANIT_XDG_SHELL_PROTOCOL}"
+    VERBATIM
+  )
+  add_library(
+    granit_xdg_shell_protocol OBJECT "${granit_xdg_shell_header}" "${granit_xdg_shell_source}"
+  )
+  set_target_properties(
+    granit_xdg_shell_protocol
+    PROPERTIES
+      C_STANDARD 11
+      C_STANDARD_REQUIRED YES
+      C_VISIBILITY_PRESET hidden
+      POSITION_INDEPENDENT_CODE YES
+  )
+  target_include_directories(
+    granit_xdg_shell_protocol SYSTEM PRIVATE "${GRANIT_WAYLAND_INCLUDE_DIR}"
+                                           "${granit_wayland_protocol_dir}"
+  )
+endif()
+
 add_subdirectory(src)
 
 if(GRANIT_BUILD_TOOLS OR GRANIT_BUILD_EXAMPLES OR GRANIT_BUILD_BENCHMARKS)

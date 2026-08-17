@@ -5,10 +5,18 @@
 
 #if defined(_WIN32)
 #include <windows.h>
-#elif defined(GRANIT_WINDOW_HAS_XCB)
+#else
+#if defined(GRANIT_WINDOW_HAS_XCB)
 #include <xcb/xcb.h>
 #endif
+#if defined(GRANIT_WINDOW_HAS_WAYLAND)
+#include <poll.h>
+#include <wayland-client.h>
+#include <xdg-shell-client-protocol.h>
+#endif
+#endif
 
+#include <algorithm>
 #include <atomic>
 #include <chrono>
 #include <cstdint>
@@ -34,8 +42,18 @@ struct window_record {
   HINSTANCE instance{};
   HWND window{};
   bool high_dpi{};
-#elif defined(GRANIT_WINDOW_HAS_XCB)
+#endif
+#if defined(GRANIT_WINDOW_HAS_XCB)
   xcb_window_t window{XCB_WINDOW_NONE};
+#endif
+#if defined(GRANIT_WINDOW_HAS_WAYLAND)
+  wl_surface* wayland_surface{};
+  xdg_surface* wayland_xdg_surface{};
+  xdg_toplevel* wayland_toplevel{};
+  std::uint32_t configured_width{};
+  std::uint32_t configured_height{};
+  bool configured{};
+  bool focused{};
 #endif
 };
 
@@ -52,6 +70,12 @@ struct window_system_record {
   xcb_atom_t wm_size_hints{XCB_ATOM_NONE};
   xcb_atom_t net_wm_name{XCB_ATOM_NONE};
   xcb_atom_t utf8_string{XCB_ATOM_NONE};
+#endif
+#if defined(GRANIT_WINDOW_HAS_WAYLAND)
+  wl_display* display{};
+  wl_registry* registry{};
+  wl_compositor* compositor{};
+  xdg_wm_base* wm_base{};
 #endif
 };
 
@@ -227,6 +251,140 @@ void pump_xcb_events(const std::shared_ptr<window_system_record>& system) {
 }
 #endif
 
+#if defined(GRANIT_WINDOW_HAS_WAYLAND)
+void wayland_registry_global(void* data, wl_registry* registry, std::uint32_t name,
+                             const char* interface, std::uint32_t version) {
+  auto& system = *static_cast<window_system_record*>(data);
+  if (std::strcmp(interface, wl_compositor_interface.name) == 0) {
+    system.compositor = static_cast<wl_compositor*>(
+        wl_registry_bind(registry, name, &wl_compositor_interface, std::min(version, UINT32_C(4))));
+  } else if (std::strcmp(interface, xdg_wm_base_interface.name) == 0) {
+    system.wm_base = static_cast<xdg_wm_base*>(
+        wl_registry_bind(registry, name, &xdg_wm_base_interface, UINT32_C(1)));
+  }
+}
+
+void wayland_registry_remove(void*, wl_registry*, std::uint32_t) {}
+
+void wayland_wm_base_ping(void*, xdg_wm_base* wm_base, std::uint32_t serial) {
+  xdg_wm_base_pong(wm_base, serial);
+}
+
+void wayland_surface_configure(void* data, xdg_surface* surface, std::uint32_t serial) {
+  auto& window = *static_cast<window_record*>(data);
+  xdg_surface_ack_configure(surface, serial);
+  window.configured = true;
+}
+
+void wayland_toplevel_configure(void* data, xdg_toplevel*, std::int32_t width, std::int32_t height,
+                                wl_array* states) {
+  auto& window = *static_cast<window_record*>(data);
+  const auto system = window.system.lock();
+  if (!system)
+    return;
+  if (width > 0 && height > 0 &&
+      (window.configured_width != static_cast<std::uint32_t>(width) ||
+       window.configured_height != static_cast<std::uint32_t>(height))) {
+    window.configured_width = static_cast<std::uint32_t>(width);
+    window.configured_height = static_cast<std::uint32_t>(height);
+    granit_window_event event = GRANIT_WINDOW_EVENT_INIT;
+    event.type = GRANIT_WINDOW_EVENT_RESIZED;
+    event.window = window.handle;
+    event.timestamp_ns = timestamp_ns();
+    event.data.resized.width = window.configured_width;
+    event.data.resized.height = window.configured_height;
+    system->events.push_back(event);
+  }
+  bool focused = false;
+  const auto* state = static_cast<const std::uint32_t*>(states->data);
+  const auto state_count = states->size / sizeof(std::uint32_t);
+  for (std::size_t index = 0; index < state_count; ++index)
+    focused = focused || state[index] == XDG_TOPLEVEL_STATE_ACTIVATED;
+  if (focused != window.focused) {
+    window.focused = focused;
+    granit_window_event event = GRANIT_WINDOW_EVENT_INIT;
+    event.type = GRANIT_WINDOW_EVENT_FOCUS_CHANGED;
+    event.window = window.handle;
+    event.timestamp_ns = timestamp_ns();
+    event.data.focus.focused = focused ? UINT32_C(1) : UINT32_C(0);
+    system->events.push_back(event);
+  }
+}
+
+void wayland_toplevel_close(void* data, xdg_toplevel*) {
+  auto& window = *static_cast<window_record*>(data);
+  if (const auto system = window.system.lock())
+    enqueue_event(system, window.handle, GRANIT_WINDOW_EVENT_CLOSE_REQUESTED);
+}
+
+constexpr wl_registry_listener wayland_registry_listener{.global = wayland_registry_global,
+                                                         .global_remove = wayland_registry_remove};
+constexpr xdg_wm_base_listener wayland_wm_base_listener{.ping = wayland_wm_base_ping};
+constexpr xdg_surface_listener wayland_surface_listener{.configure = wayland_surface_configure};
+const xdg_toplevel_listener wayland_toplevel_listener = [] {
+  xdg_toplevel_listener listener{};
+  listener.configure = wayland_toplevel_configure;
+  listener.close = wayland_toplevel_close;
+  return listener;
+}();
+
+void destroy_wayland_window(window_record& window) {
+  if (window.wayland_toplevel != nullptr)
+    xdg_toplevel_destroy(window.wayland_toplevel);
+  if (window.wayland_xdg_surface != nullptr)
+    xdg_surface_destroy(window.wayland_xdg_surface);
+  if (window.wayland_surface != nullptr)
+    wl_surface_destroy(window.wayland_surface);
+}
+
+void destroy_wayland_system(window_system_record& system) {
+  if (system.wm_base != nullptr)
+    xdg_wm_base_destroy(system.wm_base);
+  if (system.compositor != nullptr)
+    wl_compositor_destroy(system.compositor);
+  if (system.registry != nullptr)
+    wl_registry_destroy(system.registry);
+  if (system.display != nullptr)
+    wl_display_disconnect(system.display);
+}
+
+granit_result initialize_wayland_system(window_system_record& system) {
+  system.display = wl_display_connect(nullptr);
+  if (system.display == nullptr)
+    return GRANIT_ERROR_BACKEND_UNAVAILABLE;
+  system.registry = wl_display_get_registry(system.display);
+  if (system.registry == nullptr) {
+    destroy_wayland_system(system);
+    return GRANIT_ERROR_BACKEND_UNAVAILABLE;
+  }
+  wl_registry_add_listener(system.registry, &wayland_registry_listener, &system);
+  if (wl_display_roundtrip(system.display) < 0 || system.compositor == nullptr ||
+      system.wm_base == nullptr) {
+    destroy_wayland_system(system);
+    return GRANIT_ERROR_BACKEND_UNAVAILABLE;
+  }
+  xdg_wm_base_add_listener(system.wm_base, &wayland_wm_base_listener, &system);
+  return GRANIT_SUCCESS;
+}
+
+granit_result pump_wayland_events(window_system_record& system) {
+  while (wl_display_prepare_read(system.display) != 0)
+    if (wl_display_dispatch_pending(system.display) < 0)
+      return GRANIT_ERROR_BACKEND_UNAVAILABLE;
+  static_cast<void>(wl_display_flush(system.display));
+  pollfd descriptor{.fd = wl_display_get_fd(system.display), .events = POLLIN, .revents = 0};
+  const auto poll_result = poll(&descriptor, 1, 0);
+  if (poll_result > 0 && (descriptor.revents & POLLIN) != 0) {
+    if (wl_display_read_events(system.display) < 0)
+      return GRANIT_ERROR_BACKEND_UNAVAILABLE;
+  } else {
+    wl_display_cancel_read(system.display);
+  }
+  return wl_display_dispatch_pending(system.display) < 0 ? GRANIT_ERROR_BACKEND_UNAVAILABLE
+                                                         : GRANIT_SUCCESS;
+}
+#endif
+
 } // namespace
 
 extern "C" granit_result granit_window_system_create(const granit_window_system_desc* desc,
@@ -254,7 +412,37 @@ extern "C" granit_result granit_window_system_create(const granit_window_system_
   } catch (...) {
     return GRANIT_ERROR_INTERNAL;
   }
-#elif defined(GRANIT_WINDOW_HAS_XCB)
+#elif defined(GRANIT_WINDOW_HAS_XCB) || defined(GRANIT_WINDOW_HAS_WAYLAND)
+#if defined(GRANIT_WINDOW_HAS_WAYLAND)
+  if (desc->backend == GRANIT_WINDOW_BACKEND_WAYLAND ||
+      (desc->backend == GRANIT_WINDOW_BACKEND_AUTO && std::getenv("WAYLAND_DISPLAY") != nullptr)) {
+    try {
+      auto system = std::make_shared<window_system_record>();
+      const auto result = initialize_wayland_system(*system);
+      if (result != GRANIT_SUCCESS && desc->backend == GRANIT_WINDOW_BACKEND_WAYLAND)
+        return result;
+      if (result == GRANIT_SUCCESS) {
+        system->owner_thread = std::this_thread::get_id();
+        system->backend = GRANIT_WINDOW_BACKEND_WAYLAND;
+        const auto handle = allocate_handle();
+        try {
+          std::lock_guard lock{registry_mutex};
+          systems.emplace(handle, system);
+        } catch (...) {
+          destroy_wayland_system(*system);
+          throw;
+        }
+        *output = handle;
+        return GRANIT_SUCCESS;
+      }
+    } catch (const std::bad_alloc&) {
+      return GRANIT_ERROR_OUT_OF_MEMORY;
+    } catch (...) {
+      return GRANIT_ERROR_INTERNAL;
+    }
+  }
+#endif
+#if defined(GRANIT_WINDOW_HAS_XCB)
   if (desc->backend != GRANIT_WINDOW_BACKEND_AUTO && desc->backend != GRANIT_WINDOW_BACKEND_XCB)
     return GRANIT_ERROR_UNSUPPORTED;
   try {
@@ -290,6 +478,9 @@ extern "C" granit_result granit_window_system_create(const granit_window_system_
     return GRANIT_ERROR_INTERNAL;
   }
 #else
+  return GRANIT_ERROR_BACKEND_UNAVAILABLE;
+#endif
+#else
   return GRANIT_ERROR_UNSUPPORTED;
 #endif
 }
@@ -316,7 +507,24 @@ extern "C" granit_result granit_window_system_destroy(granit_window_system handl
     if (window->window != nullptr)
       DestroyWindow(window->window);
   return GRANIT_SUCCESS;
-#elif defined(GRANIT_WINDOW_HAS_XCB)
+#elif defined(GRANIT_WINDOW_HAS_XCB) || defined(GRANIT_WINDOW_HAS_WAYLAND)
+#if defined(GRANIT_WINDOW_HAS_WAYLAND)
+  if (system->backend == GRANIT_WINDOW_BACKEND_WAYLAND) {
+    for (const auto& [unused, window] : system->windows) {
+      static_cast<void>(unused);
+      destroy_wayland_window(*window);
+    }
+    system->windows.clear();
+    {
+      std::lock_guard lock{registry_mutex};
+      systems.erase(handle);
+    }
+    static_cast<void>(wl_display_flush(system->display));
+    destroy_wayland_system(*system);
+    return GRANIT_SUCCESS;
+  }
+#endif
+#if defined(GRANIT_WINDOW_HAS_XCB)
   for (const auto& [unused, window] : system->windows) {
     static_cast<void>(unused);
     if (window->window != XCB_WINDOW_NONE)
@@ -330,6 +538,9 @@ extern "C" granit_result granit_window_system_destroy(granit_window_system handl
   xcb_flush(system->connection);
   xcb_disconnect(system->connection);
   return GRANIT_SUCCESS;
+#else
+  return GRANIT_ERROR_UNSUPPORTED;
+#endif
 #else
   return GRANIT_ERROR_UNSUPPORTED;
 #endif
@@ -355,10 +566,21 @@ extern "C" granit_result granit_window_poll_event(granit_window_system handle,
   *event = system->events.front();
   system->events.pop_front();
   return GRANIT_SUCCESS;
-#elif defined(GRANIT_WINDOW_HAS_XCB)
-  pump_xcb_events(system);
-  if (xcb_connection_has_error(system->connection) != 0)
-    return GRANIT_ERROR_BACKEND_UNAVAILABLE;
+#elif defined(GRANIT_WINDOW_HAS_XCB) || defined(GRANIT_WINDOW_HAS_WAYLAND)
+#if defined(GRANIT_WINDOW_HAS_WAYLAND)
+  if (system->backend == GRANIT_WINDOW_BACKEND_WAYLAND) {
+    const auto result = pump_wayland_events(*system);
+    if (result != GRANIT_SUCCESS)
+      return result;
+  }
+#endif
+#if defined(GRANIT_WINDOW_HAS_XCB)
+  if (system->backend == GRANIT_WINDOW_BACKEND_XCB) {
+    pump_xcb_events(system);
+    if (xcb_connection_has_error(system->connection) != 0)
+      return GRANIT_ERROR_BACKEND_UNAVAILABLE;
+  }
+#endif
   if (system->events.empty())
     return GRANIT_ERROR_NOT_READY;
   *event = system->events.front();
@@ -424,7 +646,67 @@ extern "C" granit_result granit_window_create(granit_window_system system_handle
   } catch (...) {
     return GRANIT_ERROR_INTERNAL;
   }
-#elif defined(GRANIT_WINDOW_HAS_XCB)
+#elif defined(GRANIT_WINDOW_HAS_XCB) || defined(GRANIT_WINDOW_HAS_WAYLAND)
+#if defined(GRANIT_WINDOW_HAS_WAYLAND)
+  if (system->backend == GRANIT_WINDOW_BACKEND_WAYLAND) {
+    try {
+      if (desc->width > INT32_MAX || desc->height > INT32_MAX)
+        return GRANIT_ERROR_INVALID_ARGUMENT;
+      if (desc->title_length != 0 && desc->title == nullptr)
+        return GRANIT_ERROR_INVALID_ARGUMENT;
+      auto record = std::make_shared<window_record>();
+      record->handle = allocate_handle();
+      record->system = system;
+      record->configured_width = desc->width;
+      record->configured_height = desc->height;
+      record->wayland_surface = wl_compositor_create_surface(system->compositor);
+      if (record->wayland_surface == nullptr)
+        return GRANIT_ERROR_BACKEND_UNAVAILABLE;
+      record->wayland_xdg_surface =
+          xdg_wm_base_get_xdg_surface(system->wm_base, record->wayland_surface);
+      if (record->wayland_xdg_surface == nullptr) {
+        destroy_wayland_window(*record);
+        return GRANIT_ERROR_BACKEND_UNAVAILABLE;
+      }
+      xdg_surface_add_listener(record->wayland_xdg_surface, &wayland_surface_listener,
+                               record.get());
+      record->wayland_toplevel = xdg_surface_get_toplevel(record->wayland_xdg_surface);
+      if (record->wayland_toplevel == nullptr) {
+        destroy_wayland_window(*record);
+        return GRANIT_ERROR_BACKEND_UNAVAILABLE;
+      }
+      xdg_toplevel_add_listener(record->wayland_toplevel, &wayland_toplevel_listener, record.get());
+      const std::string title = desc->title_length == 0
+                                    ? std::string{"Granit"}
+                                    : std::string{desc->title, desc->title_length};
+      xdg_toplevel_set_title(record->wayland_toplevel, title.c_str());
+      if ((desc->flags & GRANIT_WINDOW_RESIZABLE_BIT) == 0) {
+        xdg_toplevel_set_min_size(record->wayland_toplevel, static_cast<std::int32_t>(desc->width),
+                                  static_cast<std::int32_t>(desc->height));
+        xdg_toplevel_set_max_size(record->wayland_toplevel, static_cast<std::int32_t>(desc->width),
+                                  static_cast<std::int32_t>(desc->height));
+      }
+      wl_surface_commit(record->wayland_surface);
+      if (wl_display_roundtrip(system->display) < 0 || !record->configured) {
+        destroy_wayland_window(*record);
+        return GRANIT_ERROR_BACKEND_UNAVAILABLE;
+      }
+      try {
+        system->windows.emplace(record->handle, record);
+      } catch (...) {
+        destroy_wayland_window(*record);
+        throw;
+      }
+      *output = record->handle;
+      return GRANIT_SUCCESS;
+    } catch (const std::bad_alloc&) {
+      return GRANIT_ERROR_OUT_OF_MEMORY;
+    } catch (...) {
+      return GRANIT_ERROR_INTERNAL;
+    }
+  }
+#endif
+#if defined(GRANIT_WINDOW_HAS_XCB)
   try {
     if (desc->width > UINT16_MAX || desc->height > UINT16_MAX)
       return GRANIT_ERROR_INVALID_ARGUMENT;
@@ -479,6 +761,9 @@ extern "C" granit_result granit_window_create(granit_window_system system_handle
 #else
   return GRANIT_ERROR_UNSUPPORTED;
 #endif
+#else
+  return GRANIT_ERROR_UNSUPPORTED;
+#endif
 }
 
 extern "C" granit_result granit_window_destroy(granit_window_system system_handle,
@@ -495,11 +780,22 @@ extern "C" granit_result granit_window_destroy(granit_window_system system_handl
   auto window = std::move(found->second);
   system->windows.erase(found);
   return DestroyWindow(window->window) != FALSE ? GRANIT_SUCCESS : GRANIT_ERROR_BACKEND_UNAVAILABLE;
-#elif defined(GRANIT_WINDOW_HAS_XCB)
+#elif defined(GRANIT_WINDOW_HAS_XCB) || defined(GRANIT_WINDOW_HAS_WAYLAND)
   const auto window = std::move(found->second);
   system->windows.erase(found);
+#if defined(GRANIT_WINDOW_HAS_WAYLAND)
+  if (system->backend == GRANIT_WINDOW_BACKEND_WAYLAND) {
+    destroy_wayland_window(*window);
+    return wl_display_flush(system->display) >= 0 ? GRANIT_SUCCESS
+                                                  : GRANIT_ERROR_BACKEND_UNAVAILABLE;
+  }
+#endif
+#if defined(GRANIT_WINDOW_HAS_XCB)
   xcb_destroy_window(system->connection, window->window);
   return xcb_flush(system->connection) > 0 ? GRANIT_SUCCESS : GRANIT_ERROR_BACKEND_UNAVAILABLE;
+#else
+  return GRANIT_ERROR_UNSUPPORTED;
+#endif
 #else
   return GRANIT_ERROR_UNSUPPORTED;
 #endif
@@ -562,7 +858,19 @@ extern "C" granit_result granit_window_get_wayland(granit_window_system system_h
   *display = nullptr;
   *native_surface = nullptr;
   auto system = acquire_system(system_handle);
-  if (!system || system->windows.find(window_handle) == system->windows.end())
+  if (!system)
     return GRANIT_ERROR_INVALID_HANDLE;
-  return on_owner_thread(*system) ? GRANIT_ERROR_UNSUPPORTED : GRANIT_ERROR_INVALID_ARGUMENT;
+  if (!on_owner_thread(*system))
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  const auto found = system->windows.find(window_handle);
+  if (found == system->windows.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+#if defined(GRANIT_WINDOW_HAS_WAYLAND)
+  if (system->backend == GRANIT_WINDOW_BACKEND_WAYLAND) {
+    *display = system->display;
+    *native_surface = found->second->wayland_surface;
+    return GRANIT_SUCCESS;
+  }
+#endif
+  return GRANIT_ERROR_UNSUPPORTED;
 }

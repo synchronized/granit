@@ -326,29 +326,9 @@ if(GRANIT_HAS_XCB)
   target_link_libraries(granit_renderer_test PRIVATE "${GRANIT_XCB_LIBRARY}")
 endif()
 if(GRANIT_HAS_WAYLAND_SHELL)
-  set(granit_wayland_protocol_dir "${CMAKE_CURRENT_BINARY_DIR}/generated/wayland")
-  set(granit_xdg_shell_header "${granit_wayland_protocol_dir}/xdg-shell-client-protocol.h")
-  set(granit_xdg_shell_source "${granit_wayland_protocol_dir}/xdg-shell-protocol.c")
-  add_custom_command(
-    OUTPUT "${granit_xdg_shell_header}" "${granit_xdg_shell_source}"
-    COMMAND "${CMAKE_COMMAND}" -E make_directory "${granit_wayland_protocol_dir}"
-    COMMAND
-      "${GRANIT_WAYLAND_SCANNER}" client-header "${GRANIT_XDG_SHELL_PROTOCOL}"
-      "${granit_xdg_shell_header}"
-    COMMAND
-      "${GRANIT_WAYLAND_SCANNER}" private-code "${GRANIT_XDG_SHELL_PROTOCOL}"
-      "${granit_xdg_shell_source}"
-    DEPENDS "${GRANIT_XDG_SHELL_PROTOCOL}"
-    VERBATIM
-  )
-  add_library(
-    granit_xdg_shell_protocol OBJECT "${granit_xdg_shell_header}" "${granit_xdg_shell_source}"
-  )
-  set_target_properties(granit_xdg_shell_protocol PROPERTIES C_STANDARD 11 C_STANDARD_REQUIRED YES)
-  target_include_directories(
-    granit_xdg_shell_protocol SYSTEM PRIVATE "${GRANIT_WAYLAND_INCLUDE_DIR}"
-                                           "${granit_wayland_protocol_dir}"
-  )
+  target_compile_definitions(granit_window_test PRIVATE GRANIT_TEST_HAS_WAYLAND)
+endif()
+if(GRANIT_HAS_WAYLAND_SHELL)
   target_sources(
     granit_renderer_test
     PRIVATE renderer/wayland_swapchain_test.cpp $<TARGET_OBJECTS:granit_xdg_shell_protocol>
@@ -480,6 +460,9 @@ target_link_libraries(
 )
 if(GRANIT_HAS_XCB)
   target_compile_definitions(granit_window_renderer_test PRIVATE GRANIT_TEST_HAS_XCB)
+endif()
+if(GRANIT_HAS_WAYLAND_SHELL)
+  target_compile_definitions(granit_window_renderer_test PRIVATE GRANIT_TEST_HAS_WAYLAND)
 endif()
 granit_target_compile_warnings(granit_window_renderer_test)
 granit_target_output_directories(granit_window_renderer_test)

@@ -198,6 +198,7 @@ add_library(granit::window ALIAS granit_window)
 target_sources(
   granit_window
   PRIVATE window/window_api.cpp
+          $<$<BOOL:${GRANIT_HAS_WAYLAND_SHELL}>:$<TARGET_OBJECTS:granit_xdg_shell_protocol>>
   PUBLIC
     FILE_SET HEADERS
     BASE_DIRS "${PROJECT_SOURCE_DIR}/include"
@@ -216,12 +217,19 @@ target_compile_definitions(
   granit_window
   PRIVATE GRANIT_WINDOW_BUILDING_LIBRARY
           $<$<BOOL:${GRANIT_HAS_XCB}>:GRANIT_WINDOW_HAS_XCB>
+          $<$<BOOL:${GRANIT_HAS_WAYLAND_SHELL}>:GRANIT_WINDOW_HAS_WAYLAND>
   PUBLIC $<$<NOT:$<BOOL:${BUILD_SHARED_LIBS}>>:GRANIT_WINDOW_STATIC_DEFINE>
 )
 target_include_directories(
   granit_window SYSTEM PRIVATE $<$<BOOL:${GRANIT_HAS_XCB}>:${GRANIT_XCB_INCLUDE_DIR}>
+                               $<$<BOOL:${GRANIT_HAS_WAYLAND_SHELL}>:${GRANIT_WAYLAND_INCLUDE_DIR}>
+                               $<$<BOOL:${GRANIT_HAS_WAYLAND_SHELL}>:${granit_wayland_protocol_dir}>
 )
-target_link_libraries(granit_window PRIVATE $<$<BOOL:${GRANIT_HAS_XCB}>:${GRANIT_XCB_LIBRARY}>)
+target_link_libraries(
+  granit_window
+  PRIVATE $<$<BOOL:${GRANIT_HAS_XCB}>:${GRANIT_XCB_LIBRARY}>
+          $<$<BOOL:${GRANIT_HAS_WAYLAND_SHELL}>:${GRANIT_WAYLAND_LIBRARY}>
+)
 granit_target_compile_warnings(granit_window)
 granit_target_output_directories(granit_window)
 set_target_properties(

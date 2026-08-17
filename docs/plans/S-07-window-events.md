@@ -6,7 +6,7 @@
 ## 状态
 
 - 设计状态：已确认
-- 实现状态：S-07C XCB 后端实现完成，等待 Linux CI 复测
+- 实现状态：S-07D Wayland 后端实现完成，等待 Linux CI 复测
 - 路线图任务：S-07
 - 优先级：P2
 - 前置依赖：S-04 Linux Surface
@@ -152,7 +152,9 @@ while (granit_window_poll_event(window_system, &event) == GRANIT_SUCCESS) {
 3. S-07C（实现完成，等待远端复测）：已实现 XCB Window System、顶层窗口、关闭/Resize/焦点
    事件、原生 connection/window 查询，并接入 Surface 与 Swapchain 组合测试。XCB 缺少统一的
    每窗口 DPI 协议，当前不产生 Scale 事件。
-4. S-07D：实现 Wayland Window；窗口角色和 configure 流程由 Window 后端管理。
+4. S-07D（实现完成，等待远端复测）：已实现 Wayland display/registry、xdg-shell 顶层角色、
+   configure/close/focus 事件、原生 display/surface 查询，并接入 Surface 与 Swapchain 组合测试。
+   fractional-scale 等可选协议留待真实需求出现后扩展。
 5. S-07E：评估是否独立导出 Input component；SDL3 与其他第三方接入由
    [S-08 Integration 计划](S-08-third-party-integrations.md)承接。
 
@@ -167,7 +169,8 @@ while (granit_window_poll_event(window_system, &event) == GRANIT_SUCCESS) {
 
 ## 风险与未决问题
 
-- Wayland 的异步 configure、窗口角色和缩放语义不能机械套用 Win32/XCB 模型。
+- Wayland 的基础 configure 与窗口角色已实现；fractional-scale、输出迁移和装饰等可选协议仍需
+  分别设计，不能机械套用 Win32/XCB 模型。
 - 文本输入与按键不是同一概念；IME 与组合文本进入范围前需要单独设计。
 - 固定大小事件负载的具体字节数和保留字段布局在公共头落地时由 C11/C++20 ABI 测试锁定。
 - 队列容量和可覆盖状态事件的合并阈值需由 Win32 原型与多窗口压力测试确定。
