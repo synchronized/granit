@@ -264,7 +264,7 @@ add_library(granit_input)
 add_library(granit::input ALIAS granit_input)
 target_sources(
   granit_input
-  PRIVATE input/input_api.cpp input/utf8.cpp
+  PRIVATE input/input_api.cpp input/utf8.cpp input/xcb_input_adapter.cpp
   PUBLIC
     FILE_SET HEADERS
     BASE_DIRS "${PROJECT_SOURCE_DIR}/include"

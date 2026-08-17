@@ -461,7 +461,9 @@ add_executable(
   granit_input_test
   input/input_api_test.cpp
   input/utf8_test.cpp
+  input/xcb_input_adapter_test.cpp
   "${PROJECT_SOURCE_DIR}/src/input/utf8.cpp"
+  "${PROJECT_SOURCE_DIR}/src/input/xcb_input_adapter.cpp"
 )
 target_include_directories(granit_input_test PRIVATE "${PROJECT_SOURCE_DIR}/src")
 target_link_libraries(granit_input_test PRIVATE granit::input Catch2::Catch2WithMain)

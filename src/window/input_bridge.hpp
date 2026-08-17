@@ -12,9 +12,23 @@
 extern "C" {
 
 typedef void (*granit_window_input_window_callback)(void* user_data, granit_window window);
-typedef void (*granit_window_input_native_event_callback)(void* user_data, granit_window window,
-                                                          uint32_t message, uintptr_t word,
-                                                          intptr_t value);
+
+#define GRANIT_WINDOW_INPUT_BACKEND_WIN32 UINT32_C(1)
+#define GRANIT_WINDOW_INPUT_BACKEND_XCB UINT32_C(2)
+
+typedef struct granit_window_input_native_event {
+  uint32_t backend;
+  uint32_t type;
+  uintptr_t word;
+  intptr_t value;
+  int32_t x;
+  int32_t y;
+  uint32_t state;
+  uint32_t detail;
+} granit_window_input_native_event;
+
+typedef void (*granit_window_input_native_event_callback)(
+    void* user_data, granit_window window, const granit_window_input_native_event* event);
 
 GRANIT_WINDOW_API granit_result
 granit_window_internal_attach_input(granit_window_system system, void* user_data,

@@ -6,8 +6,8 @@
 ## 当前能力
 
 `granit::input` 是依附于 `granit::window` 的可选组件，提供键盘、已提交文本和指针的事件与状态。
-当前 Win32 后端已实现；XCB 与 Wayland 输入仍在计划中。SDL3、GLFW、Qt 和完整引擎应继续使用
-自身输入系统，不要求经过 Granit Input。
+Win32 键盘、文本和指针后端及 XCB 键鼠后端已实现；Wayland 输入仍在计划中。SDL3、GLFW、Qt
+和完整引擎应继续使用自身输入系统，不要求经过 Granit Input。
 
 ```cmake
 find_package(granit CONFIG REQUIRED COMPONENTS Window Input)
@@ -61,14 +61,23 @@ input.initialize(windows.native_handle());
 Win32 扫描码、UTF-16 和 Mouse 消息解码位于 Input DLL 的私有平台 adapter；通用运行时只接收
 归一化事件并维护队列和状态。该 adapter 不是公共 API，也不会把 Win32 类型暴露到安装头文件。
 
-这些消息的解码属于内部 Win32 adapter；通用 Input 运行时只维护标准化事件、状态和生命周期。
-
 物理键优先映射常用 USB HID Keyboard/Keypad usage。当前枚举未覆盖的扫描码返回
 `GRANIT_PHYSICAL_KEY_UNKNOWN`；可打印字符只通过文本事件提交，不塞入逻辑键枚举。
+
+## XCB 语义
+
+XCB Window 订阅核心键盘和指针事件，并在同一事件泵中转交 Input：
+
+- Xorg 常用 evdev keycode 映射为 USB HID 物理键；导航键和功能键同时提供逻辑键。
+- 指针支持进入、离开、移动、主键、次键、中键、扩展键及水平、垂直滚轮。
+- XCB FocusOut 清理键盘与指针按钮状态。
+
+当前实现不引入 `xkbcommon`。因此 XCB 暂不提供布局相关文本提交，非标准 keycode 映射为
+`GRANIT_PHYSICAL_KEY_UNKNOWN`；布局、文本和自动重复细节将在 Wayland 键盘依赖评审时统一处理。
 
 ## 当前限制
 
 - 不支持手柄、触摸、手写笔、相对鼠标、捕获、指针约束、剪贴板和拖放。
 - 不提供 IME 预编辑、候选窗或组合文本协议，只提供已经提交的文本。
 - 不提供 Action Mapping、快捷键系统或外部事件注入。
-- XCB 键盘布局与 Wayland Seat 的依赖和映射仍需单独实现、验证。
+- XCB 布局文本与 Wayland Seat 的依赖和映射仍需单独实现、验证。

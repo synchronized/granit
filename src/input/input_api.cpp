@@ -5,6 +5,7 @@
 
 #include "../window/input_bridge.hpp"
 #include "utf8.h"
+#include "xcb_input_adapter.h"
 #if defined(_WIN32)
 #include "win32_input_adapter.h"
 #endif
@@ -115,7 +116,6 @@ void clear_focus(void* user_data, granit_window window) {
 #endif
 }
 
-#if defined(_WIN32)
 granit_keyboard_state& adapter_keyboard(void* user_data, granit_window window) {
   return keyboard_for(*static_cast<input_record*>(user_data), window);
 }
@@ -129,24 +129,39 @@ void adapter_event(void* user_data, granit_window window, std::uint32_t type,
   enqueue(*static_cast<input_record*>(user_data), window, type, data);
 }
 
+#if defined(_WIN32)
 void adapter_text(void* user_data, granit_window window, std::string_view text) {
   enqueue_text(*static_cast<input_record*>(user_data), window, text);
 }
 
-void native_event(void* user_data, granit_window window, std::uint32_t message, std::uintptr_t word,
-                  std::intptr_t value) {
-  auto& input = *static_cast<input_record*>(user_data);
+void handle_win32_event(input_record& input, granit_window window,
+                        const granit_window_input_native_event& event) {
   const granit::input::detail::win32_input_sink sink{&input, adapter_keyboard, adapter_pointer,
                                                      adapter_event, adapter_text};
+  input.platform.handle(window, event.type, event.word, event.value, sink);
+}
+#endif
+
+void native_event(void* user_data, granit_window window,
+                  const granit_window_input_native_event* event) {
+  if (event == nullptr)
+    return;
+  auto& input = *static_cast<input_record*>(user_data);
   try {
-    input.platform.handle(window, message, word, value, sink);
+#if defined(_WIN32)
+    if (event->backend == GRANIT_WINDOW_INPUT_BACKEND_WIN32)
+      handle_win32_event(input, window, *event);
+#endif
+    if (event->backend == GRANIT_WINDOW_INPUT_BACKEND_XCB) {
+      const granit::input::detail::xcb_input_sink sink{&input, adapter_keyboard, adapter_pointer,
+                                                       adapter_event};
+      granit::input::detail::handle_xcb_input(
+          window, {event->type, event->x, event->y, event->state, event->detail}, sink);
+    }
   } catch (...) {
-    // 平台回调不能让分配异常穿过 DLL 或 Win32 消息边界。
+    // 平台回调不能让分配异常穿过 DLL 或原生事件边界。
   }
 }
-#else
-void native_event(void*, granit_window, std::uint32_t, std::uintptr_t, std::intptr_t) {}
-#endif
 
 } // namespace
 

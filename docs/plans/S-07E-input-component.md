@@ -6,7 +6,7 @@
 ## 状态
 
 - 设计状态：已确认
-- 实现状态：S-07E1～S-07E3 已完成，等待 XCB/Wayland 输入适配
+- 实现状态：S-07E1～S-07E4 已完成，等待 Wayland 输入适配与安装验证
 - 路线图任务：S-07E
 - 优先级：P2
 - 前置依赖：S-07 Window component
@@ -125,7 +125,9 @@ granit_input_get_pointer_state(input_system, window, &pointer);
 3. S-07E3（已完成）：以 Win32 窗口消息作为唯一权威输入源，覆盖物理/逻辑键、重复、UTF-8
    文本提交、指针进入/离开/移动、按钮、滚轮和焦点丢失状态清理；不同时消费 Raw Input，避免
    重复事件。Win32 解码位于内部平台 adapter，通用运行时只管理归一化事件、状态和生命周期。
-4. S-07E4：实现 XCB 键鼠输入；评估是否引入 XKB 处理布局与逻辑键。
+4. S-07E4（已完成）：XCB 核心事件已覆盖常用物理键、导航逻辑键、重复状态、指针边界、
+   移动、按钮、滚轮和焦点丢失清理。当前不引入 XKB，布局文本与更完整重复语义留待 S-07E5
+   统一评审。
 5. S-07E5：实现 Wayland `wl_seat`、keyboard 和 pointer；键盘映射依赖在引入前单独确认。
 6. S-07E6：增加安装 Consumer、跨平台事件回归和焦点丢失状态清理测试。
 
@@ -142,7 +144,7 @@ granit_input_get_pointer_state(input_system, window, &pointer);
 
 ## 风险与未决问题
 
-- XCB 的布局映射是否直接依赖 xkbcommon，需根据逻辑键和文本输入原型决定。
+- XCB 基础键鼠不依赖 xkbcommon；布局文本是否与 Wayland 共用 xkbcommon，留待 S-07E5 决定。
 - Wayland 键盘映射通常需要 xkbcommon；版本、许可证和静态链接传播需要单独确认。
 - Win32 传统消息与 Raw Input 的组合可能产生重复事件，必须选定唯一权威来源。
 - UTF-8 固定分片容量、事件队列容量和高频指针移动合并策略需要原型测量。

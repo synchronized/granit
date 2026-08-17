@@ -151,9 +151,15 @@ LRESULT CALLBACK window_proc(HWND hwnd, UINT message, WPARAM word, LPARAM value)
       if (ScreenToClient(hwnd, &point) != FALSE)
         input_value = MAKELPARAM(point.x, point.y);
     }
-    system->input_native_event(system->input_user_data, record->handle, message,
-                               static_cast<std::uintptr_t>(word),
-                               static_cast<std::intptr_t>(input_value));
+    const granit_window_input_native_event input_event{GRANIT_WINDOW_INPUT_BACKEND_WIN32,
+                                                       message,
+                                                       static_cast<std::uintptr_t>(word),
+                                                       static_cast<std::intptr_t>(input_value),
+                                                       0,
+                                                       0,
+                                                       0,
+                                                       0};
+    system->input_native_event(system->input_user_data, record->handle, &input_event);
   }
 
   switch (message) {
@@ -256,6 +262,31 @@ void pump_xcb_events(const std::shared_ptr<window_system_record>& system) {
   while (auto* native_event = xcb_poll_for_event(system->connection)) {
     std::unique_ptr<xcb_generic_event_t, decltype(&std::free)> event{native_event, &std::free};
     const auto type = static_cast<std::uint8_t>(event->response_type & UINT8_C(0x7f));
+    const auto dispatch_input = [&](granit_window window, std::int16_t x, std::int16_t y,
+                                    std::uint16_t state, std::uint8_t detail) {
+      if (system->input_native_event == nullptr || window == GRANIT_NULL_HANDLE)
+        return;
+      const granit_window_input_native_event input_event{
+          GRANIT_WINDOW_INPUT_BACKEND_XCB, type, 0, 0, x, y, state, detail};
+      system->input_native_event(system->input_user_data, window, &input_event);
+    };
+    if (type == XCB_KEY_PRESS || type == XCB_KEY_RELEASE) {
+      const auto* key = reinterpret_cast<const xcb_key_press_event_t*>(event.get());
+      dispatch_input(public_handle(key->event), key->event_x, key->event_y, key->state,
+                     key->detail);
+    } else if (type == XCB_BUTTON_PRESS || type == XCB_BUTTON_RELEASE) {
+      const auto* button = reinterpret_cast<const xcb_button_press_event_t*>(event.get());
+      dispatch_input(public_handle(button->event), button->event_x, button->event_y, button->state,
+                     button->detail);
+    } else if (type == XCB_MOTION_NOTIFY) {
+      const auto* motion = reinterpret_cast<const xcb_motion_notify_event_t*>(event.get());
+      dispatch_input(public_handle(motion->event), motion->event_x, motion->event_y, motion->state,
+                     motion->detail);
+    } else if (type == XCB_ENTER_NOTIFY || type == XCB_LEAVE_NOTIFY) {
+      const auto* crossing = reinterpret_cast<const xcb_enter_notify_event_t*>(event.get());
+      dispatch_input(public_handle(crossing->event), crossing->event_x, crossing->event_y,
+                     crossing->state, crossing->detail);
+    }
     if (type == XCB_CONFIGURE_NOTIFY) {
       const auto* configured = reinterpret_cast<const xcb_configure_notify_event_t*>(event.get());
       granit_window_event output = GRANIT_WINDOW_EVENT_INIT;
@@ -273,6 +304,8 @@ void pump_xcb_events(const std::shared_ptr<window_system_record>& system) {
       output.timestamp_ns = timestamp_ns();
       output.data.focus.focused = type == XCB_FOCUS_IN ? UINT32_C(1) : UINT32_C(0);
       system->events.push_back(output);
+      if (type == XCB_FOCUS_OUT && system->input_focus_lost != nullptr)
+        system->input_focus_lost(system->input_user_data, output.window);
     } else if (type == XCB_CLIENT_MESSAGE) {
       const auto* message = reinterpret_cast<const xcb_client_message_event_t*>(event.get());
       if (message->type == system->wm_protocols &&
@@ -750,8 +783,12 @@ extern "C" granit_result granit_window_create(granit_window_system system_handle
     record->handle = allocate_handle();
     record->system = system;
     record->window = xcb_generate_id(system->connection);
-    const std::uint32_t values[] = {system->screen->black_pixel,
-                                    XCB_EVENT_MASK_STRUCTURE_NOTIFY | XCB_EVENT_MASK_FOCUS_CHANGE};
+    const std::uint32_t values[] = {
+        system->screen->black_pixel,
+        XCB_EVENT_MASK_STRUCTURE_NOTIFY | XCB_EVENT_MASK_FOCUS_CHANGE | XCB_EVENT_MASK_KEY_PRESS |
+            XCB_EVENT_MASK_KEY_RELEASE | XCB_EVENT_MASK_BUTTON_PRESS |
+            XCB_EVENT_MASK_BUTTON_RELEASE | XCB_EVENT_MASK_POINTER_MOTION |
+            XCB_EVENT_MASK_ENTER_WINDOW | XCB_EVENT_MASK_LEAVE_WINDOW};
     xcb_create_window(system->connection, XCB_COPY_FROM_PARENT, record->window,
                       system->screen->root, 0, 0, static_cast<std::uint16_t>(desc->width),
                       static_cast<std::uint16_t>(desc->height), 0, XCB_WINDOW_CLASS_INPUT_OUTPUT,
