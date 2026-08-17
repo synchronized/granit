@@ -44,11 +44,11 @@ Granit 采用“Bring Your Own Engine”边界，不接管使用者的 ECS、Sce
 
 | 模块 | CMake 目标 | 当前范围 |
 |---|---|---|
-| 核心 Renderer | `granit::granit` | GPU 资源、命令录制、Graphics/Compute Pipeline、同步与提交 |
-| 参考渲染管线 | `granit::render_pipeline` | Mesh、Material、Scene、Forward PBR、Lighting、Canvas、Debug Draw 与 Text |
-| Window | `granit::window` | Win32、XCB 与 Wayland 窗口、事件及 Surface 接入 |
-| Input | `granit::input` | 独立输入状态与事件；当前实现 Win32 键盘、文本和指针后端 |
-| 第三方集成 | `granit::integration_sdl3`、`granit::integration_imgui` | SDL3 Surface 与 ImGui Draw Data 转换 |
+| [核心 Renderer](docs/reference/renderer.md) | `granit::granit` | GPU 资源、命令录制、Graphics/Compute Pipeline、同步与提交 |
+| [参考渲染管线](docs/reference/render-pipeline.md) | `granit::render_pipeline` | Mesh、Material、Scene、Forward PBR、Lighting、Canvas、Debug Draw 与 Text |
+| [Window](docs/reference/window.md) | `granit::window` | Win32、XCB 与 Wayland 窗口、事件及 Surface 接入 |
+| [Input](docs/reference/input.md) | `granit::input` | 独立输入状态与事件；当前实现 Win32 键盘、文本和指针后端 |
+| [第三方集成](docs/reference/third-party-integrations.md) | `granit::integration_sdl3`、`granit::integration_imgui` | SDL3 Surface 与 ImGui Draw Data 转换 |
 
 ## 快速开始
 
