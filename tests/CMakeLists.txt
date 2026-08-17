@@ -468,6 +468,17 @@ granit_target_compile_warnings(granit_window_renderer_test)
 granit_target_output_directories(granit_window_renderer_test)
 add_test(NAME granit.window_renderer COMMAND granit_window_renderer_test)
 
+if(GRANIT_BUILD_INTEGRATION_IMGUI)
+  add_executable(granit_integration_imgui_test integrations/imgui/renderer_test.cpp)
+  target_link_libraries(
+    granit_integration_imgui_test
+    PRIVATE granit::integration_imgui Catch2::Catch2WithMain
+  )
+  granit_target_compile_warnings(granit_integration_imgui_test)
+  granit_target_output_directories(granit_integration_imgui_test)
+  add_test(NAME granit.integration.imgui COMMAND granit_integration_imgui_test)
+endif()
+
 set(
   granit_test_executable_targets
   granit_c_version_test

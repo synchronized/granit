@@ -147,8 +147,8 @@
 - **[S-07E](plans/S-07E-input-component.md) / P2**：Input 独立组件边界已确认；先锁定键盘、
   指针和已提交文本的 C ABI；实现顺序排在 S-08 集成验证之后。
 - **[S-08](plans/S-08-third-party-integrations.md) / P2**：独立 SDL3/ImGui 目标、安装边界、SDL3
-  Surface、SDL3 窗口清屏示例与 ImGui Draw Data 基础转换已实现，SDL3 示例已通过 Win32
-  smoke test；下一步完成 Linux 运行验证和 SDL3 + ImGui 组合示例。
+  Surface、SDL3 窗口清屏示例与 ImGui Draw Data 转换已实现，Win32 SDL3 示例及 ImGui 转换
+  测试已通过；下一步完成 Linux 运行验证、字体纹理和 SDL3 + ImGui 组合示例。
 
 ## 近期执行顺序
 
