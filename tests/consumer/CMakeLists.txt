@@ -4,7 +4,7 @@
 cmake_minimum_required(VERSION 3.23)
 project(granit_consumer LANGUAGES C CXX)
 
-find_package(granit 0.1 CONFIG REQUIRED COMPONENTS RenderPipeline)
+find_package(granit 0.1 CONFIG REQUIRED COMPONENTS RenderPipeline Window)
 
 if(NOT granit_VERSION VERSION_EQUAL "0.1.0")
   message(FATAL_ERROR "Granit 包版本不符合预期: ${granit_VERSION}")
@@ -12,8 +12,10 @@ endif()
 
 get_target_property(granit_core_linkage granit::granit TYPE)
 get_target_property(granit_pipeline_linkage granit::render_pipeline TYPE)
-if(NOT granit_core_linkage STREQUAL granit_pipeline_linkage)
-  message(FATAL_ERROR "核心库与 RenderPipeline component 的链接类型不一致")
+get_target_property(granit_window_linkage granit::window TYPE)
+if(NOT granit_core_linkage STREQUAL granit_pipeline_linkage OR
+   NOT granit_core_linkage STREQUAL granit_window_linkage)
+  message(FATAL_ERROR "核心库、RenderPipeline 与 Window component 的链接类型不一致")
 endif()
 if(granit_core_linkage STREQUAL "STATIC_LIBRARY")
   set(granit_consumer_linkage_definition GRANIT_CONSUMER_EXPECT_STATIC)
@@ -56,3 +58,7 @@ target_compile_definitions(
   granit_pipeline_cpp_consumer
   PRIVATE ${granit_consumer_linkage_definition} GRANIT_CONSUMER_CHECK_RENDER_PIPELINE
 )
+
+add_executable(granit_window_c_consumer window_main.c)
+target_link_libraries(granit_window_c_consumer PRIVATE granit::window)
+set_target_properties(granit_window_c_consumer PROPERTIES C_STANDARD 11 C_STANDARD_REQUIRED YES)

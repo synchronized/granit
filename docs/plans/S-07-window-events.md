@@ -144,10 +144,11 @@ while (granit_window_poll_event(window_system, &event) == GRANIT_SUCCESS) {
 
 1. S-07A（已完成）：已确认独立组件导出边界、C11 句柄、窗口描述、平台专用原生值查询、
    Window Event 范围、队列与线程错误语义。
-2. S-07B（实现中）：已建立独立共享/静态 Window 目标、安装 component、C11 ABI、C++20 值类型、
+2. S-07B（实现完成，等待远端复测）：已建立独立共享/静态 Window 目标、安装 component、C11 ABI、
+   C++20 值类型、
    公共头测试、Win32 Window System、顶层窗口、关闭/Resize/焦点事件、原生 HWND 查询和 RAII
-   包装；DPI/Scale 和 Renderer Surface/Swapchain 组合测试已接入，下一步迁移现有窗口示例验证
-   边界并完成安装 Consumer。
+   包装；DPI/Scale、Renderer Surface/Swapchain 组合测试、公共 Window 清屏示例和独立安装
+   Consumer 已接入。
 3. S-07C：实现 XCB Window，并与 S-04 的 Surface、Swapchain 和 Present 测试组合。
 4. S-07D：实现 Wayland Window；窗口角色和 configure 流程由 Window 后端管理。
 5. S-07E：评估是否独立导出 Input component；SDL3 与其他第三方接入由

@@ -124,9 +124,16 @@ if(WIN32)
     )
   endif()
 
-  add_executable(granit_window_clear_example WIN32 window_clear.cpp)
-  target_link_libraries(granit_window_clear_example PRIVATE granit::granit user32)
+  add_executable(granit_window_clear_example window_clear.cpp)
+  target_link_libraries(granit_window_clear_example PRIVATE granit::granit granit::window)
   granit_target_compile_warnings(granit_window_clear_example)
+  if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
+    add_test(
+      NAME granit.example.window_clear
+      COMMAND granit_window_clear_example --smoke-test
+    )
+    set_tests_properties(granit.example.window_clear PROPERTIES TIMEOUT 30)
+  endif()
 
   add_executable(granit_window_triangle_example window_triangle.cpp)
   target_link_libraries(granit_window_triangle_example PRIVATE granit::granit user32)

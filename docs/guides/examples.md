@@ -26,7 +26,8 @@ Win32 窗口示例在 Windows 构建；检测到 XCB 开发包时，Linux 额外
   额外写出 `.rgba` 文件。接口语义见[纹理同步回读](texture-readback.md)。
 - `granit_offscreen_triangle_example`：使用预编译 SPIR-V 绘制最小三角形。
 - `granit_compute_example`：Compute Shader 写入 Storage Buffer，并复制回读结果。
-- `granit_window_clear_example`：执行 Win32 acquire、清屏、submit、present 与尺寸重建循环。
+- `granit_window_clear_example`：使用 `granit::window` 执行 Win32 事件、acquire、清屏、submit、
+  present 与尺寸重建循环；`--smoke-test` 渲染三帧后自动退出。
 - `granit_window_triangle_example`：上传顶点数据并持续绘制窗口三角形。
 - `granit_xcb_window_clear_example`：在 Linux XCB 窗口中完成清屏、Present 和 Resize 重建；使用
   `--smoke-test` 时渲染三帧后自动退出。

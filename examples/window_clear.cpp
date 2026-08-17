@@ -2,21 +2,13 @@
 // Copyright (c) 2026 Granit contributors
 
 #include <granit/granit.hpp>
-
-#include <windows.h>
+#include <granit/window.hpp>
 
 #include <cstdint>
+#include <cstring>
 #include <span>
 
 namespace {
-
-LRESULT CALLBACK window_proc(HWND window, UINT message, WPARAM word, LPARAM value) {
-  if (message == WM_DESTROY) {
-    PostQuitMessage(0);
-    return 0;
-  }
-  return DefWindowProcW(window, message, word, value);
-}
 
 granit::result render_frame(granit::swapchain& swapchain, granit::command_recorder& recorder,
                             std::uint32_t width, std::uint32_t height, bool& needs_recreate) {
@@ -52,90 +44,97 @@ granit::result render_frame(granit::swapchain& swapchain, granit::command_record
 
 } // namespace
 
-int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int show_command) {
-  constexpr wchar_t class_name[] = L"GranitWindowClearExample";
-  WNDCLASSW window_class{};
-  window_class.lpfnWndProc = window_proc;
-  window_class.hInstance = instance;
-  window_class.lpszClassName = class_name;
-  if (RegisterClassW(&window_class) == 0)
-    return 1;
+int main(int argc, char** argv) {
+  const bool smoke_test = argc > 1 && std::strcmp(argv[1], "--smoke-test") == 0;
+  granit::window_system window_system;
+  auto result = window_system.initialize({.backend = granit::window_backend::win32});
+  granit::window app_window;
+  if (granit::succeeded(result)) {
+    result =
+        app_window.initialize(window_system.native_handle(),
+                              {.title = "Granit 窗口清屏",
+                               .width = 800,
+                               .height = 600,
+                               .flags = GRANIT_WINDOW_VISIBLE_BIT | GRANIT_WINDOW_RESIZABLE_BIT |
+                                        GRANIT_WINDOW_HIGH_DPI_BIT});
+  }
 
-  HWND window =
-      CreateWindowExW(0, class_name, L"Granit 窗口清屏", WS_OVERLAPPEDWINDOW, CW_USEDEFAULT,
-                      CW_USEDEFAULT, 800, 600, nullptr, nullptr, instance, nullptr);
-  if (window == nullptr)
-    return 1;
-  ShowWindow(window, show_command);
+  void* instance = nullptr;
+  void* native_window = nullptr;
+  if (granit::succeeded(result))
+    result = app_window.native_win32(instance, native_window);
 
   granit::renderer renderer;
-  auto result = renderer.initialize({.application_name = "Granit Window Clear",
-                                     .enable_validation = true,
-                                     .surface_types = granit::surface_type::win32});
+  if (granit::succeeded(result)) {
+    result = renderer.initialize({.application_name = "Granit Window Clear",
+                                  .enable_validation = true,
+                                  .surface_types = granit::surface_type::win32});
+  }
   granit::surface surface;
   if (granit::succeeded(result))
-    result = surface.initialize_win32(renderer.native_handle(),
-                                      {.instance = instance, .window = window});
+    result = surface.initialize_win32(renderer.native_handle(), {instance, native_window});
 
-  RECT client{};
-  GetClientRect(window, &client);
+  std::uint32_t width = 800;
+  std::uint32_t height = 600;
   granit::swapchain swapchain;
   if (granit::succeeded(result)) {
     result = swapchain.initialize(renderer.native_handle(), surface.native_handle(),
-                                  {.width = static_cast<std::uint32_t>(client.right),
-                                   .height = static_cast<std::uint32_t>(client.bottom)});
+                                  {.width = width, .height = height});
   }
   granit::command_recorder recorder;
   if (granit::succeeded(result))
     result = recorder.initialize(renderer.native_handle());
-  if (granit::failed(result)) {
-    DestroyWindow(window);
-    return 1;
-  }
 
-  std::uint32_t width = static_cast<std::uint32_t>(client.right);
-  std::uint32_t height = static_cast<std::uint32_t>(client.bottom);
-  bool running = true;
+  bool running = granit::succeeded(result);
   bool recreate = false;
+  std::uint32_t rendered_frames = 0;
   while (running) {
-    MSG message{};
-    while (PeekMessageW(&message, nullptr, 0, 0, PM_REMOVE) != 0) {
-      if (message.message == WM_QUIT)
+    granit::window_event event = GRANIT_WINDOW_EVENT_INIT;
+    auto event_result = window_system.poll(event);
+    while (event_result == granit::result::success) {
+      if (event.type == GRANIT_WINDOW_EVENT_CLOSE_REQUESTED) {
         running = false;
-      TranslateMessage(&message);
-      DispatchMessageW(&message);
+      } else if (event.type == GRANIT_WINDOW_EVENT_RESIZED) {
+        width = event.data.resized.width;
+        height = event.data.resized.height;
+        recreate = true;
+      } else if (event.type == GRANIT_WINDOW_EVENT_SCALE_CHANGED) {
+        width = event.data.scale.width;
+        height = event.data.scale.height;
+        recreate = true;
+      }
+      event = GRANIT_WINDOW_EVENT_INIT;
+      event_result = window_system.poll(event);
+    }
+    if (event_result != granit::result::not_ready) {
+      result = event_result;
+      break;
     }
     if (!running)
       break;
-
-    GetClientRect(window, &client);
-    const auto next_width = static_cast<std::uint32_t>(client.right - client.left);
-    const auto next_height = static_cast<std::uint32_t>(client.bottom - client.top);
-    if (next_width == 0 || next_height == 0) {
-      WaitMessage();
+    if (width == 0 || height == 0)
       continue;
-    }
-    if (recreate || next_width != width || next_height != height) {
-      result = swapchain.recreate({.width = next_width, .height = next_height});
+    if (recreate) {
+      result = swapchain.recreate({.width = width, .height = height});
       if (result == granit::result::not_ready)
         continue;
       if (granit::failed(result))
         break;
-      width = next_width;
-      height = next_height;
       recreate = false;
     }
 
     result = render_frame(swapchain, recorder, width, height, recreate);
     if (result == granit::result::out_of_date) {
+      result = granit::result::success;
       recreate = true;
       continue;
     }
     if (granit::failed(result))
       break;
+    ++rendered_frames;
+    if (smoke_test && rendered_frames >= 3)
+      break;
   }
 
-  if (IsWindow(window) != FALSE)
-    DestroyWindow(window);
   return granit::failed(result) ? 1 : 0;
 }

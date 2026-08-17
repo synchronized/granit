@@ -142,14 +142,14 @@
   无头集成测试均已落地，远端 Linux 运行矩阵等待 Actions 账户额度恢复后复测。
 - **S-05 / P2**：明确标记为不稳定的 Vulkan 原生互操作。
 - **S-06 / P2**：核心、高层模块和互操作接口的兼容承诺。
-- **[S-07](plans/S-07-window-events.md) / P2**：规划可选 Window、轮询式 Event 和后续 Input
-  组件；S-07A 公共契约已确认，下一步建立独立 Window 目标并实现 Win32 原型。
+- **[S-07](plans/S-07-window-events.md) / P2**：可选 Window 组件及 Win32 Window、统一事件、
+  DPI 和 Renderer 集成已完成；下一步实现 XCB 后端，再推进 Wayland 与 Input。
 - **[S-08](plans/S-08-third-party-integrations.md) / P2**：规划独立的 SDL3 与 ImGui 可选集成目标；
   第三方依赖不进入 Renderer、Window 或基础安装 component。
 
 ## 近期执行顺序
 
-1. 启动 S-07 Window/Event 原型；S-04 的远端 Linux 矩阵在 Actions 账户额度恢复后补跑。
+1. 推进 S-07C XCB Window/Event 后端；S-04 的远端 Linux 矩阵在 Actions 账户额度恢复后补跑。
 2. S-07 的原生窗口描述稳定后实现 S-08 SDL3 Surface 集成；ImGui 集成在公共 Canvas 路径上验证。
 3. 以真实材质与光源负载测量透明 PBR、CSM、Clustered Forward 与 Bindless 的收益和成本。
 4. API/ABI 稳定化在开发阶段功能边界收敛后推进；Deferred 保持为使用 Render Graph 组合的可选

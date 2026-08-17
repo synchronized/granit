@@ -76,3 +76,5 @@ jobs:
             "build/consumer/${{ steps.preset.outputs.name }}/granit_pipeline_c_consumer"
           LD_LIBRARY_PATH="$prefix/lib" \
             "build/consumer/${{ steps.preset.outputs.name }}/granit_pipeline_cpp_consumer"
+          LD_LIBRARY_PATH="$prefix/lib" \
+            "build/consumer/${{ steps.preset.outputs.name }}/granit_window_c_consumer"
