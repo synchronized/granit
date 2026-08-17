@@ -6,7 +6,7 @@
 ## 状态
 
 - 设计状态：已确认
-- 实现状态：尚未开始
+- 实现状态：S-07E1 已完成，等待 S-07E2 运行时 component 与 Window 内部分发桥
 - 路线图任务：S-07E
 - 优先级：P2
 - 前置依赖：S-07 Window component
@@ -116,7 +116,8 @@ granit_input_get_pointer_state(input_system, window, &pointer);
 
 ## 实施顺序
 
-1. S-07E1：锁定 C11 句柄、事件头、物理键、逻辑键、修饰键和状态结构布局。
+1. S-07E1（已完成）：已锁定 C11 句柄、事件头、物理键、逻辑键、修饰键、固定容量 UTF-8
+   文本负载和键盘/指针状态结构布局，并增加 C11/C++20 公共头编译测试。
 2. S-07E2：增加独立 Input 目标、安装 component、C++20 RAII 包装和 Window 内部分发桥。
 3. S-07E3：实现 Win32 Raw Input/消息适配，覆盖键盘、指针、滚轮和 UTF-8 文本提交。
 4. S-07E4：实现 XCB 键鼠输入；评估是否引入 XKB 处理布局与逻辑键。

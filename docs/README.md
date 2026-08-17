@@ -88,6 +88,10 @@
 - [SDL3 与 GLFW 窗口接入](guides/window-library-integration.md)
 - [SDL3 与 ImGui Integration](reference/third-party-integrations.md)
 
+### 输入
+
+- [Input 事件与状态值类型](reference/input.md)
+
 ## 架构与原理
 
 - [总体架构、ABI 与渲染分层](concepts/architecture.md)
