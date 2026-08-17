@@ -72,4 +72,8 @@ granit::integration::imgui::append_draw_data(ImGui::GetDrawData(), canvas, resol
 忽略，其他用户 Draw Callback 当前返回 `unsupported`。
 
 Integration 只承担 ImGui Renderer Backend 的 Draw Data 转换，不管理 ImGui Context、帧开始、
-字体 Atlas、输入注入或平台窗口。SDL3 + ImGui 完整示例和字体纹理上传仍在 S-08 后续阶段。
+字体 Atlas、输入注入或平台窗口。调用方负责上传字体 Atlas 并通过 resolver 映射 Texture ID。
+
+源码树的 `granit_sdl3_imgui_example` 展示完整组合：ImGui 官方 SDL3 Platform Backend 处理输入，
+应用把字体 Atlas 上传为 Granit Texture，Integration 转换 Draw Data，Canvas 录制到 Swapchain。
+该示例需要锁定依赖模式，因为外部 ImGui 包不保证安装官方 backend 源文件。

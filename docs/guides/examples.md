@@ -42,6 +42,9 @@ Win32 窗口示例在 Windows 构建；检测到 XCB 开发包时，Linux 额外
   顶点、索引、借用状态和 Scissor；不依赖具体 UI 库。
 - `granit_sdl3_window_clear_example`：启用 SDL3 Integration 时构建；由 SDL3 创建窗口和处理事件，
   通过适配组件创建 Granit Surface，并完成 Swapchain 清屏、Present 和像素尺寸变化重建。
+- `granit_sdl3_imgui_example`：同时启用 SDL3、ImGui Integration 和锁定依赖时构建；复用 ImGui
+  官方 SDL3 Platform Backend，并验证字体 Atlas 上传、输入、Draw Data 转换、Canvas、Resize 与
+  Present。`--smoke-test` 渲染三帧后自动退出。
 
 ## 内部联调示例
 

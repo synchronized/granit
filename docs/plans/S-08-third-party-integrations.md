@@ -6,8 +6,7 @@
 ## 状态
 
 - 设计状态：已确认
-- 实现状态：S-08A/S-08B 已完成，S-08C 的 SDL3 窗口清屏示例已通过 Win32 运行验证；S-08D
-  Draw Data 转换测试已通过
+- 实现状态：S-08A～S-08E 的 Win32 路径已完成；等待 Linux 运行验证和 S-08F 测量
 - 路线图任务：S-08
 - 优先级：P2
 - 前置依赖：S-04 Linux Surface、S-07 Window/Event 边界、H-08 公共 Canvas
@@ -107,7 +106,8 @@ granit::integration_imgui
    像素尺寸变化重建和 Present 示例，并通过三帧 smoke test。
 4. S-08D（转换测试已完成）：已实现 ImGui Draw Data 到 Granit Canvas 的转换，并以锁定的
    ImGui 1.92.9 覆盖顶点/索引偏移、FramebufferScale、剪裁、多纹理、空数据和回调限制。
-5. S-08E：增加 SDL3 + ImGui 组合示例，验证输入、剪裁、纹理、Resize 和颜色空间。
+5. S-08E（Win32 已验证）：已增加 SDL3 + ImGui 组合示例，复用官方 SDL3 Platform Backend，
+   验证字体 Atlas 上传、输入、空首帧、剪裁、Resize、颜色空间和三帧 Present。
 6. S-08F：测量动态上传、Draw 合批和字体纹理更新；再决定多 Viewport 与事件转换范围。
 
 ## 测试与验收
