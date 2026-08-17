@@ -6,7 +6,7 @@
 ## 状态
 
 - 设计状态：已确认
-- 实现状态：S-07E1～S-07E3 已完成，等待 XCB/Wayland 输入适配
+- 实现状态：S-07E1/S-07E2 已完成，S-07E3 行为完成并等待内部平台 adapter 拆分
 - 路线图任务：S-07E
 - 优先级：P2
 - 前置依赖：S-07 Window component
@@ -47,6 +47,8 @@ Input 服务使用 Granit 原生 Window 的轻量应用和示例。SDL3、GLFW�
 - 公共 C ABI 使用 `granit_input_system` 64 位句柄；零值无效。
 - Input System 附着到一个 `granit_window_system`，不能跨 Window System 使用窗口句柄。
 - Window 仍是唯一的平台事件读取者；内部桥接把输入分发给 Input，不向普通用户暴露平台结构体。
+- 平台消息解码分别位于 `src/platform/win32`、`src/platform/xcb` 和
+  `src/platform/wayland`；`src/input/input_api.cpp` 只管理句柄、事件队列、状态和生命周期。
 
 内部桥接可以使用 Window 与 Input 两个组件之间的私有 sink，但必须满足：
 
@@ -120,9 +122,9 @@ granit_input_get_pointer_state(input_system, window, &pointer);
    文本负载和键盘/指针状态结构布局，并增加 C11/C++20 公共头编译测试。
 2. S-07E2（已完成）：已增加独立 Input 目标、安装 component、C++20 RAII 包装和 Window
    内部分发桥；轮询会非阻塞泵送平台消息但不消费 Window 事件队列。
-3. S-07E3（已完成）：以 Win32 窗口消息作为唯一权威输入源，覆盖物理/逻辑键、重复、
-   UTF-8 文本提交、指针进入/离开/移动、按钮、滚轮和焦点丢失状态清理；不同时消费 Raw Input，
-   避免重复事件。
+3. S-07E3（行为完成，平台拆分待收尾）：以 Win32 窗口消息作为唯一权威输入源，覆盖物理/逻辑键、
+   重复、UTF-8 文本提交、指针进入/离开/移动、按钮、滚轮和焦点丢失状态清理；不同时消费 Raw
+   Input，避免重复事件。Win32 解码从通用 Input 运行时迁入内部平台 adapter 后完成本阶段。
 4. S-07E4：实现 XCB 键鼠输入；评估是否引入 XKB 处理布局与逻辑键。
 5. S-07E5：实现 Wayland `wl_seat`、keyboard 和 pointer；键盘映射依赖在引入前单独确认。
 6. S-07E6：增加安装 Consumer、跨平台事件回归和焦点丢失状态清理测试。

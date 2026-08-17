@@ -55,6 +55,8 @@ input.initialize(windows.native_handle());
 - Mouse Move、Button、Wheel 和 Leave 消息更新指针事件与状态。
 - 滚轮消息的屏幕坐标在 Window 层转换为客户区坐标。
 
+这些消息的解码属于内部 Win32 adapter；通用 Input 运行时只维护标准化事件、状态和生命周期。
+
 物理键优先映射常用 USB HID Keyboard/Keypad usage。当前枚举未覆盖的扫描码返回
 `GRANIT_PHYSICAL_KEY_UNKNOWN`；可打印字符只通过文本事件提交，不塞入逻辑键枚举。
 

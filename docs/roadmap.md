@@ -145,7 +145,8 @@
 - **[S-07](plans/S-07-window-events.md) / P2**：可选 Window 组件及 Win32/XCB/Wayland Window、
   统一事件、原生值查询和 Renderer 集成已实现；Linux 后端等待 CI 复测。
 - **[S-07E](plans/S-07E-input-component.md) / P2**：Input 独立组件、C ABI 和 Win32 键盘、文本、
-  指针适配已实现；等待 XCB/Wayland 输入适配和安装 Consumer 验证。
+  指针行为已实现；先将 Win32 解码迁入内部平台 adapter，再进行 XCB/Wayland 适配和安装
+  Consumer 验证。
 - **[S-08](plans/S-08-third-party-integrations.md) / P2**：独立 SDL3/ImGui 目标、安装边界、SDL3
   Surface、ImGui Draw Data 转换、字体上传、组合示例与 S-08F 测量已完成，Win32 smoke test
   已通过；下一步完成 Linux 运行验证。
