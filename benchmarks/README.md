@@ -67,6 +67,10 @@ cmake --build --preset windows-clang-release --target granit_benchmarks
 交替路径逐项切换 Texture 与 Scissor，用于建立有意保留透明顺序时的最坏情况。目标固定为 64×64，
 时间不包含 CPU 录制、提交和等待，不应当外推为其他 GPU 或分辨率的绝对预算。
 
+启用 `GRANIT_BUILD_INTEGRATION_IMGUI` 时，`granit_imgui_benchmarks` 测量 ImGui Draw Data 转换并
+追加到公共 Canvas 的 CPU 成本，固定覆盖 10、100 和 1,000 个 Draw Command。字体 Atlas 上传不在
+该目标内；它由应用负责，底层动态几何上传与 Canvas 合批分别由上述 Canvas 基准覆盖。
+
 `granit_lighting_benchmarks` 用于 H-05E，首个用例隔离测量单 View 可见点光转换为 GPU 布局的 CPU
 成本。使用 `--lights` 选择 1、16、64 或 128 个光源；Snapshot 在计时区间外构建，结果包含输出
 容器分配和逐光打包，不包含可见性筛选、GPU 上传或 Draw。

@@ -147,12 +147,12 @@
 - **[S-07E](plans/S-07E-input-component.md) / P2**：Input 独立组件边界已确认；先锁定键盘、
   指针和已提交文本的 C ABI；实现顺序排在 S-08 集成验证之后。
 - **[S-08](plans/S-08-third-party-integrations.md) / P2**：独立 SDL3/ImGui 目标、安装边界、SDL3
-  Surface、ImGui Draw Data 转换、字体上传与组合示例已实现，Win32 smoke test 已通过；下一步
-  完成 Linux 运行验证和 S-08F 测量。
+  Surface、ImGui Draw Data 转换、字体上传、组合示例与 S-08F 测量已完成，Win32 smoke test
+  已通过；下一步完成 Linux 运行验证。
 
 ## 近期执行顺序
 
-1. 完成 S-08 Linux 依赖环境验证和 S-08F 测量；随后再实施 S-07E Input。
+1. 完成 S-08 Linux 依赖环境验证；随后再实施 S-07E Input。
 2. S-07C/S-07D Linux Window 后端在 Actions 账户额度恢复后补跑。
 3. 以真实材质与光源负载测量透明 PBR、CSM、Clustered Forward 与 Bindless 的收益和成本。
 4. API/ABI 稳定化在开发阶段功能边界收敛后推进；Deferred 保持为使用 Render Graph 组合的可选

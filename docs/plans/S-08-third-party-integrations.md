@@ -6,7 +6,7 @@
 ## 状态
 
 - 设计状态：已确认
-- 实现状态：S-08A～S-08E 的 Win32 路径已完成；等待 Linux 运行验证和 S-08F 测量
+- 实现状态：S-08A～S-08F 的 Win32 路径已完成；等待 Linux 运行验证
 - 路线图任务：S-08
 - 优先级：P2
 - 前置依赖：S-04 Linux Surface、S-07 Window/Event 边界、H-08 公共 Canvas
@@ -91,7 +91,8 @@ granit::integration_imgui
 ### ImGui 集成职责
 
 - 消费调用方提供的 ImGui Draw Data，并转换成 Granit 公共 Canvas/Renderer 录制路径。
-- 管理适配器自身需要的动态 Vertex/Index 数据、字体 Texture 和 Pipeline 缓存。
+- Draw Data 转换使用调用期间的临时 Vertex/Index 数据；Canvas 负责持久逐帧列表和 GPU 上传。
+- 字体 Texture、Texture ID 映射和 Pipeline 资源由应用与 Canvas 现有路径管理。
 - ImGui Context、帧开始/结束、输入注入和平台窗口仍由应用或现有 ImGui Platform Backend 管理。
 - 首版只实现 Renderer Backend 角色，不重复实现 SDL3/Win32 等 ImGui Platform Backend。
 - 多 Viewport 支持作为后续子阶段，需要先明确额外平台窗口的所有权和 Surface 生命周期。
@@ -108,7 +109,10 @@ granit::integration_imgui
    ImGui 1.92.9 覆盖顶点/索引偏移、FramebufferScale、剪裁、多纹理、空数据和回调限制。
 5. S-08E（Win32 已验证）：已增加 SDL3 + ImGui 组合示例，复用官方 SDL3 Platform Backend，
    验证字体 Atlas 上传、输入、空首帧、剪裁、Resize、颜色空间和三帧 Present。
-6. S-08F：测量动态上传、Draw 合批和字体纹理更新；再决定多 Viewport 与事件转换范围。
+6. S-08F（已完成）：已测量 Draw Data 转换，并复用 Canvas 基线评估动态上传和 Draw 合批；
+   1,000 命令转换 P50 为 124.280～125.070 微秒。字体纹理由应用上传，当前没有证据扩展专用
+   上传器、多 Viewport 或事件转换。结果见
+   [性能记录](../../benchmarks/results/2026-08-17-windows-msvc-imgui-integration-d0890b6.md)。
 
 ## 测试与验收
 

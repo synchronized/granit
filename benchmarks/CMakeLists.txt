@@ -164,6 +164,27 @@ granit_target_compile_warnings(granit_canvas_benchmarks)
 granit_target_output_directories(granit_canvas_benchmarks)
 set_target_properties(granit_canvas_benchmarks PROPERTIES FOLDER "Benchmarks")
 
+if(GRANIT_BUILD_INTEGRATION_IMGUI)
+  add_executable(granit_imgui_benchmarks imgui_main.cpp)
+  target_compile_features(granit_imgui_benchmarks PRIVATE cxx_std_20)
+  target_compile_options(
+    granit_imgui_benchmarks
+    PRIVATE $<$<COMPILE_LANG_AND_ID:CXX,MSVC>:/utf-8>
+  )
+  target_compile_definitions(
+    granit_imgui_benchmarks
+    PRIVATE
+      GRANIT_BENCHMARK_COMPILER="${CMAKE_CXX_COMPILER_ID}-${CMAKE_CXX_COMPILER_VERSION}"
+      GRANIT_BENCHMARK_LINK_MODE="$<IF:$<BOOL:${BUILD_SHARED_LIBS}>,shared,static>"
+      GRANIT_BENCHMARK_REVISION="${granit_benchmark_revision}"
+      GRANIT_BENCHMARK_SYSTEM="${CMAKE_SYSTEM_NAME}-${CMAKE_SYSTEM_PROCESSOR}"
+  )
+  target_link_libraries(granit_imgui_benchmarks PRIVATE granit::integration_imgui)
+  granit_target_compile_warnings(granit_imgui_benchmarks)
+  granit_target_output_directories(granit_imgui_benchmarks)
+  set_target_properties(granit_imgui_benchmarks PROPERTIES FOLDER "Benchmarks")
+endif()
+
 set(granit_canvas_benchmark_package "${CMAKE_CURRENT_BINARY_DIR}/assets/unlit_canvas.grmat")
 add_custom_command(
   OUTPUT "${granit_canvas_benchmark_package}"

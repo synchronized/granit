@@ -18,3 +18,4 @@
 - [Render Pipeline 与 H-05 性能对比](2026-08-14-windows-clang-render-pipeline-5c0613a.md)
 - [Canvas Draw List 与动态几何首份 CPU 性能基线](2026-08-14-windows-clang-ui-056a0c8.md)
 - [Canvas Pass 首份 GPU 性能基线](2026-08-14-windows-clang-ui-gpu-f77b112.md)
+- [ImGui Draw Data 转换首份 CPU 性能基线](2026-08-17-windows-msvc-imgui-integration-d0890b6.md)
