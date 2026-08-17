@@ -215,8 +215,13 @@ target_include_directories(
 target_compile_definitions(
   granit_window
   PRIVATE GRANIT_WINDOW_BUILDING_LIBRARY
+          $<$<BOOL:${GRANIT_HAS_XCB}>:GRANIT_WINDOW_HAS_XCB>
   PUBLIC $<$<NOT:$<BOOL:${BUILD_SHARED_LIBS}>>:GRANIT_WINDOW_STATIC_DEFINE>
 )
+target_include_directories(
+  granit_window SYSTEM PRIVATE $<$<BOOL:${GRANIT_HAS_XCB}>:${GRANIT_XCB_INCLUDE_DIR}>
+)
+target_link_libraries(granit_window PRIVATE $<$<BOOL:${GRANIT_HAS_XCB}>:${GRANIT_XCB_LIBRARY}>)
 granit_target_compile_warnings(granit_window)
 granit_target_output_directories(granit_window)
 set_target_properties(

@@ -5,8 +5,12 @@
 
 #include <catch2/catch_all.hpp>
 
+#include <cstdlib>
+
 #if defined(_WIN32)
 #include <windows.h>
+#elif defined(GRANIT_TEST_HAS_XCB)
+#include <xcb/xcb.h>
 #endif
 
 TEST_CASE("Window 组件骨架保持确定的失败与输出语义", "[window]") {
@@ -80,6 +84,43 @@ TEST_CASE("Window 组件骨架保持确定的失败与输出语义", "[window]")
   CHECK(granit_window_destroy(system, window) == GRANIT_ERROR_INVALID_HANDLE);
   REQUIRE(granit_window_system_destroy(system) == GRANIT_SUCCESS);
   CHECK(granit_window_system_destroy(system) == GRANIT_ERROR_INVALID_HANDLE);
+#elif defined(GRANIT_TEST_HAS_XCB)
+  const auto create_result = granit_window_system_create(&system_desc, &system);
+  if (create_result == GRANIT_ERROR_BACKEND_UNAVAILABLE)
+    SKIP("当前环境没有可用的 XCB display");
+  REQUIRE(create_result == GRANIT_SUCCESS);
+
+  granit_window_desc window_desc = GRANIT_WINDOW_DESC_INIT;
+  window_desc.title = "Granit XCB Window Test";
+  window_desc.title_length = 22;
+  window_desc.width = 96;
+  window_desc.height = 72;
+  window_desc.flags = GRANIT_WINDOW_VISIBLE_BIT | GRANIT_WINDOW_RESIZABLE_BIT;
+  granit_window window = GRANIT_NULL_HANDLE;
+  REQUIRE(granit_window_create(system, &window_desc, &window) == GRANIT_SUCCESS);
+
+  void* connection = nullptr;
+  uint32_t native_window = 0;
+  REQUIRE(granit_window_get_xcb(system, window, &connection, &native_window) == GRANIT_SUCCESS);
+  REQUIRE(connection != nullptr);
+  REQUIRE(native_window != 0);
+
+  const uint32_t size[] = {128, 96};
+  xcb_configure_window(static_cast<xcb_connection_t*>(connection), native_window,
+                       XCB_CONFIG_WINDOW_WIDTH | XCB_CONFIG_WINDOW_HEIGHT, size);
+  xcb_flush(static_cast<xcb_connection_t*>(connection));
+  std::free(xcb_get_input_focus_reply(
+      static_cast<xcb_connection_t*>(connection),
+      xcb_get_input_focus(static_cast<xcb_connection_t*>(connection)), nullptr));
+  bool saw_resize = false;
+  for (int attempt = 0; attempt < 32 && !saw_resize; ++attempt) {
+    granit_window_event event = GRANIT_WINDOW_EVENT_INIT;
+    if (granit_window_poll_event(system, &event) == GRANIT_SUCCESS)
+      saw_resize = event.type == GRANIT_WINDOW_EVENT_RESIZED && event.window == window;
+  }
+  CHECK(saw_resize);
+  REQUIRE(granit_window_destroy(system, window) == GRANIT_SUCCESS);
+  REQUIRE(granit_window_system_destroy(system) == GRANIT_SUCCESS);
 #else
   CHECK(granit_window_system_create(&system_desc, &system) == GRANIT_ERROR_UNSUPPORTED);
   CHECK(system == GRANIT_NULL_HANDLE);

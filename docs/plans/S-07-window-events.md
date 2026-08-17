@@ -6,7 +6,7 @@
 ## 状态
 
 - 设计状态：已确认
-- 实现状态：S-07A 契约完成，S-07B 待开始
+- 实现状态：S-07C XCB 后端实现完成，等待 Linux CI 复测
 - 路线图任务：S-07
 - 优先级：P2
 - 前置依赖：S-04 Linux Surface
@@ -149,7 +149,9 @@ while (granit_window_poll_event(window_system, &event) == GRANIT_SUCCESS) {
    公共头测试、Win32 Window System、顶层窗口、关闭/Resize/焦点事件、原生 HWND 查询和 RAII
    包装；DPI/Scale、Renderer Surface/Swapchain 组合测试、公共 Window 清屏示例和独立安装
    Consumer 已接入。
-3. S-07C：实现 XCB Window，并与 S-04 的 Surface、Swapchain 和 Present 测试组合。
+3. S-07C（实现完成，等待远端复测）：已实现 XCB Window System、顶层窗口、关闭/Resize/焦点
+   事件、原生 connection/window 查询，并接入 Surface 与 Swapchain 组合测试。XCB 缺少统一的
+   每窗口 DPI 协议，当前不产生 Scale 事件。
 4. S-07D：实现 Wayland Window；窗口角色和 configure 流程由 Window 后端管理。
 5. S-07E：评估是否独立导出 Input component；SDL3 与其他第三方接入由
    [S-08 Integration 计划](S-08-third-party-integrations.md)承接。

@@ -122,6 +122,10 @@ public:
   [[nodiscard]] result native_win32(void*& instance, void*& native_window) const noexcept {
     return from_native(granit_window_get_win32(system_, handle_, &instance, &native_window));
   }
+
+  [[nodiscard]] result native_xcb(void*& connection, std::uint32_t& native_window) const noexcept {
+    return from_native(granit_window_get_xcb(system_, handle_, &connection, &native_window));
+  }
   [[nodiscard]] bool valid() const noexcept { return handle_ != GRANIT_NULL_HANDLE; }
   [[nodiscard]] granit_window native_handle() const noexcept { return handle_; }
 

@@ -12,6 +12,9 @@ int main(void) {
     return 1;
   return granit_window_system_destroy(system) == GRANIT_SUCCESS ? 0 : 2;
 #else
-  return result == GRANIT_ERROR_UNSUPPORTED && system == GRANIT_NULL_HANDLE ? 0 : 1;
+  return (result == GRANIT_ERROR_UNSUPPORTED || result == GRANIT_ERROR_BACKEND_UNAVAILABLE) &&
+                 system == GRANIT_NULL_HANDLE
+             ? 0
+             : 1;
 #endif
 }
