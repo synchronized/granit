@@ -98,6 +98,31 @@ if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
   add_test(NAME granit.example.immediate_ui_adapter COMMAND granit_immediate_ui_adapter_example)
 endif()
 
+if(GRANIT_BUILD_INTEGRATION_SDL3)
+  add_executable(granit_sdl3_window_clear_example sdl3_window_clear.cpp)
+  target_link_libraries(
+    granit_sdl3_window_clear_example PRIVATE granit::granit granit::integration_sdl3
+  )
+  if(WIN32)
+    add_custom_command(
+      TARGET granit_sdl3_window_clear_example
+      POST_BUILD
+      COMMAND
+        "${CMAKE_COMMAND}" -E copy_if_different "$<TARGET_FILE:${GRANIT_SDL3_TARGET}>"
+        "$<TARGET_FILE_DIR:granit_sdl3_window_clear_example>"
+      VERBATIM
+    )
+  endif()
+  granit_target_compile_warnings(granit_sdl3_window_clear_example)
+  if(WIN32 AND GRANIT_BUILD_TESTING AND BUILD_TESTING)
+    add_test(
+      NAME granit.example.sdl3_window_clear
+      COMMAND granit_sdl3_window_clear_example --smoke-test
+    )
+    set_tests_properties(granit.example.sdl3_window_clear PROPERTIES TIMEOUT 30)
+  endif()
+endif()
+
 if(WIN32)
   add_executable(granit_render_pipeline_window_example render_pipeline_window.cpp)
   target_link_libraries(
@@ -243,6 +268,9 @@ set(
   granit_render_pipeline_offscreen_example
   granit_immediate_ui_adapter_example
 )
+if(GRANIT_BUILD_INTEGRATION_SDL3)
+  list(APPEND granit_example_targets granit_sdl3_window_clear_example)
+endif()
 if(WIN32)
   list(
     APPEND granit_example_targets
