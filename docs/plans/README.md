@@ -104,8 +104,10 @@ D-03-graphics-pipeline.md
 - [S-04：Linux XCB 与 Wayland Surface](S-04-linux-surface.md)——实现已完成；XCB、Wayland、窗口
   示例和无头集成测试已落地，远端 Linux 运行矩阵等待 Actions 账户额度恢复后复测。
 - [S-07：Window、Event 与 Input 边界](S-07-window-events.md)——Win32、XCB 与 Wayland Window、
-  统一事件及 Renderer 集成均已实现，Linux 后端等待 CI 复测；下一步评估 Input 边界。Renderer
-  Surface 仍允许 SDL、GLFW、Qt 和引擎直接接入。
+  统一事件及 Renderer 集成均已实现，Linux 后端等待 CI 复测。Renderer Surface 仍允许 SDL、
+  GLFW、Qt 和引擎直接接入。
+- [S-07E：Input component 边界](S-07E-input-component.md)——设计已确认；采用独立可选组件、
+  Window 内部事件分发桥、输入事件与状态快照双模型，第一阶段覆盖键盘、指针和已提交文本。
 - [S-08：SDL3 与 ImGui 第三方集成](S-08-third-party-integrations.md)——设计已确认；使用独立
   `integration_*` 目标连接第三方生态，不让 SDL3 或 ImGui 成为核心依赖。
 

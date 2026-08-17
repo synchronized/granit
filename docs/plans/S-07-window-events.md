@@ -102,7 +102,7 @@ Wayland 隐藏/重显等变化通过专用原生对象变化事件通知调用�
 ```c
 granit_window_event event;
 while (granit_window_poll_event(window_system, &event) == GRANIT_SUCCESS) {
-  /* 根据 event.type 处理关闭、尺寸、焦点或输入。 */
+  /* 根据 event.type 处理关闭、尺寸、焦点或缩放。 */
 }
 ```
 
@@ -155,7 +155,9 @@ while (granit_window_poll_event(window_system, &event) == GRANIT_SUCCESS) {
 4. S-07D（实现完成，等待远端复测）：已实现 Wayland display/registry、xdg-shell 顶层角色、
    configure/close/focus 事件、原生 display/surface 查询，并接入 Surface 与 Swapchain 组合测试。
    fractional-scale 等可选协议留待真实需求出现后扩展。
-5. S-07E：评估是否独立导出 Input component；SDL3 与其他第三方接入由
+5. S-07E（设计已确认）：以独立可选 component 提供键盘、指针、文本事件与状态快照，复用
+   Window 的平台事件泵且不与 Window 队列互相消费。详细边界见
+   [S-07E Input 计划](S-07E-input-component.md)；SDL3 与其他第三方接入由
    [S-08 Integration 计划](S-08-third-party-integrations.md)承接。
 
 ## 测试与验收
@@ -174,4 +176,4 @@ while (granit_window_poll_event(window_system, &event) == GRANIT_SUCCESS) {
 - 文本输入与按键不是同一概念；IME 与组合文本进入范围前需要单独设计。
 - 固定大小事件负载的具体字节数和保留字段布局在公共头落地时由 C11/C++20 ABI 测试锁定。
 - 队列容量和可覆盖状态事件的合并阈值需由 Win32 原型与多窗口压力测试确定。
-- Input 是否成为独立安装 component，等待键鼠之外的真实需求再决定。
+- Input 已确定为独立安装 component；手柄、触摸、完整 IME 和外部事件注入仍等待真实需求。

@@ -143,14 +143,16 @@
 - **S-05 / P2**：明确标记为不稳定的 Vulkan 原生互操作。
 - **S-06 / P2**：核心、高层模块和互操作接口的兼容承诺。
 - **[S-07](plans/S-07-window-events.md) / P2**：可选 Window 组件及 Win32/XCB/Wayland Window、
-  统一事件、原生值查询和 Renderer 集成已实现；Linux 后端等待 CI 复测，下一步评估 Input。
+  统一事件、原生值查询和 Renderer 集成已实现；Linux 后端等待 CI 复测。
+- **[S-07E](plans/S-07E-input-component.md) / P2**：Input 独立组件边界已确认；先锁定键盘、
+  指针和已提交文本的 C ABI，再实现 Window 内部分发桥与 Win32 原型。
 - **[S-08](plans/S-08-third-party-integrations.md) / P2**：规划独立的 SDL3 与 ImGui 可选集成目标；
   第三方依赖不进入 Renderer、Window 或基础安装 component。
 
 ## 近期执行顺序
 
-1. 复测 S-07C/S-07D Linux Window 后端并评估 S-07E Input 边界；远端 Linux 矩阵在 Actions
-   账户额度恢复后补跑。
+1. 实施 S-07E1 Input C ABI 与 S-07E2 Window 内部分发桥；S-07C/S-07D Linux Window 后端在
+   Actions 账户额度恢复后补跑。
 2. S-07 的原生窗口描述稳定后实现 S-08 SDL3 Surface 集成；ImGui 集成在公共 Canvas 路径上验证。
 3. 以真实材质与光源负载测量透明 PBR、CSM、Clustered Forward 与 Bindless 的收益和成本。
 4. API/ABI 稳定化在开发阶段功能边界收敛后推进；Deferred 保持为使用 Render Graph 组合的可选
