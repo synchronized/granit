@@ -89,6 +89,26 @@ build/windows-clang-debug/bin/granit_offscreen_clear_example.exe
 完整的环境要求、构建选项、静态库和安装说明见[构建与安装](docs/guides/build.md)；其他可运行
 程序及平台差异见[示例程序](docs/guides/examples.md)。
 
+最小 C++20 程序只需包含聚合头并初始化 Renderer：
+
+```cpp
+#include <granit/granit.hpp>
+
+#include <iostream>
+
+int main() {
+  granit::renderer renderer;
+  const auto result = renderer.initialize({.application_name = "My Granit App"});
+  if (granit::failed(result)) {
+    std::cerr << "创建 Renderer 失败: " << granit::result_message(result) << '\n';
+    return 1;
+  }
+
+  // renderer 离开作用域时自动释放。
+  return 0;
+}
+```
+
 ## CMake 集成
 
 安装后通过 Config 模式链接核心 Renderer：
@@ -121,10 +141,7 @@ target_link_libraries(your_target PRIVATE granit::granit granit::window)
 ```cmake
 find_package(granit CONFIG REQUIRED COMPONENTS IntegrationSDL3 IntegrationImGui)
 target_link_libraries(
-  your_target
-  PRIVATE
-    granit::integration_sdl3
-    granit::integration_imgui
+  your_target PRIVATE granit::integration_sdl3 granit::integration_imgui
 )
 ```
 
