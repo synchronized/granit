@@ -39,6 +39,8 @@ Granit 采用“Bring Your Own Engine”边界，不接管使用者的 ECS、Sce
 - **安全资源句柄**：64 位整数句柄带有类型、所属 Renderer 和 generation 校验。
 - **窗口与离屏统一**：Texture View 和 Swapchain Backbuffer 使用同一 Attachment 模型。
 - **共享库优先**：默认构建动态库，也支持静态库配置。
+- **第三方集成可选**：SDL3 Window 可转换为 Granit Surface，ImGui Draw Data 可转换为 Canvas；
+  两者均不成为核心 Renderer 的依赖。
 - **可选高层能力**：Material、Scene、PBR、Lighting、Render Graph 和 Render Pipeline 不反向污染
   核心 Renderer。
 
@@ -103,6 +105,34 @@ target_link_libraries(your_target PRIVATE granit::granit granit::window)
 `granit::window` 是 Granit 自带的可选窗口组件，不是核心 Renderer 的强制依赖。应用也可以自行
 接入 SDL3 或 GLFW，具体边界和接入方式见
 [SDL3 与 GLFW 窗口接入](docs/guides/window-library-integration.md)。
+
+使用可选 SDL3 和 ImGui Integration：
+
+```cmake
+find_package(granit CONFIG REQUIRED COMPONENTS IntegrationSDL3 IntegrationImGui)
+target_link_libraries(
+  your_target
+  PRIVATE
+    granit::integration_sdl3
+    granit::integration_imgui
+)
+```
+
+源码树构建时，这两个组件默认关闭。父项目可提供 SDL3 3.2+ 与 ImGui 目标；本仓库开发和验证也可
+显式启用锁定依赖：
+
+```sh
+cmake -S . -B build/integrations \
+  -DGRANIT_BUILD_INTEGRATION_SDL3=ON \
+  -DGRANIT_BUILD_INTEGRATION_IMGUI=ON \
+  -DGRANIT_FETCH_INTEGRATION_DEPENDENCIES=ON
+```
+
+SDL3 Integration 只负责从 `SDL_Window` 创建 Granit Surface；SDL3 继续拥有窗口、事件循环和输入。
+ImGui Integration 只负责把 Draw Data 追加到 Canvas，不管理 ImGui Context、字体 Atlas、输入注入或
+平台窗口。完整接口与当前限制见
+[SDL3 与 ImGui Integration](docs/reference/third-party-integrations.md)。Granit 原生 Input component
+尚未实现，当前设计边界见[路线图](docs/roadmap.md)。
 
 C 用户包含 `<granit/granit.h>`，C++20 用户包含 `<granit/granit.hpp>`。
 
