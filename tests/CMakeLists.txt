@@ -457,7 +457,13 @@ granit_target_compile_warnings(granit_window_test)
 granit_target_output_directories(granit_window_test)
 add_test(NAME granit.window COMMAND granit_window_test)
 
-add_executable(granit_input_test input/input_api_test.cpp)
+add_executable(
+  granit_input_test
+  input/input_api_test.cpp
+  input/utf8_test.cpp
+  "${PROJECT_SOURCE_DIR}/src/input/utf8.cpp"
+)
+target_include_directories(granit_input_test PRIVATE "${PROJECT_SOURCE_DIR}/src")
 target_link_libraries(granit_input_test PRIVATE granit::input Catch2::Catch2WithMain)
 granit_target_compile_warnings(granit_input_test)
 granit_target_output_directories(granit_input_test)

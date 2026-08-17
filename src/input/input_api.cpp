@@ -4,6 +4,7 @@
 #include <granit/input/input.h>
 
 #include "../window/input_bridge.hpp"
+#include "utf8.h"
 
 #if defined(_WIN32)
 #include <windows.h>
@@ -17,6 +18,7 @@
 #include <deque>
 #include <memory>
 #include <mutex>
+#include <string_view>
 #include <thread>
 #include <unordered_map>
 
@@ -89,6 +91,27 @@ void enqueue(input_record& input, granit_window window, std::uint32_t type,
   event.timestamp_ns = timestamp_ns();
   event.data = data;
   input.events.push_back(event);
+}
+
+void enqueue_text(input_record& input, granit_window window, std::string_view text) {
+  std::size_t validated_length = 0;
+  if (granit::input::detail::next_utf8_chunk(text, text.size(), validated_length) !=
+          granit::input::detail::utf8_chunk_result::success ||
+      validated_length != text.size()) {
+    return;
+  }
+  while (!text.empty()) {
+    std::size_t length = 0;
+    const auto result =
+        granit::input::detail::next_utf8_chunk(text, GRANIT_INPUT_TEXT_CAPACITY, length);
+    if (result != granit::input::detail::utf8_chunk_result::success || length == 0)
+      return;
+    granit_input_event_data data{};
+    data.text.length = static_cast<std::uint32_t>(length);
+    std::memcpy(data.text.utf8, text.data(), length);
+    enqueue(input, window, GRANIT_INPUT_EVENT_TEXT, data);
+    text.remove_prefix(length);
+  }
 }
 
 #if defined(_WIN32)
@@ -305,10 +328,7 @@ void emit_text(input_record& input, granit_window window, const wchar_t* text, i
                                          static_cast<int>(sizeof(utf8)), nullptr, nullptr);
   if (count <= 0)
     return;
-  granit_input_event_data data{};
-  data.text.length = static_cast<std::uint32_t>(count);
-  std::memcpy(data.text.utf8, utf8, static_cast<std::size_t>(count));
-  enqueue(input, window, GRANIT_INPUT_EVENT_TEXT, data);
+  enqueue_text(input, window, {utf8, static_cast<std::size_t>(count)});
 }
 
 void native_event(void* user_data, granit_window window, std::uint32_t message, std::uintptr_t word,
