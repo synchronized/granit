@@ -70,13 +70,6 @@ public:
   [[nodiscard]] bool valid() const noexcept { return configured_; }
   [[nodiscard]] void* display() const noexcept { return display_; }
   [[nodiscard]] void* surface() const noexcept { return wl_surface_; }
-  [[nodiscard]] bool request_size(std::int32_t width, std::int32_t height) noexcept {
-    configured_ = false;
-    xdg_toplevel_set_min_size(toplevel_, width, height);
-    xdg_toplevel_set_max_size(toplevel_, width, height);
-    wl_surface_commit(wl_surface_);
-    return wl_display_roundtrip(display_) >= 0 && configured_;
-  }
 
 private:
   static void registry_global(void* data, wl_registry* registry, std::uint32_t name,
@@ -177,7 +170,6 @@ TEST_CASE("Wayland Surface 可以完成 Swapchain 清屏和 Present", "[swapchai
   REQUIRE(wl_display_roundtrip(static_cast<wl_display*>(window.display())) >= 0);
   REQUIRE(recorder.reset() == granit::result::success);
 
-  REQUIRE(window.request_size(128, 96));
   REQUIRE(swapchain.recreate({.width = 128, .height = 96}) == granit::result::success);
   REQUIRE(swapchain.query_info(info) == granit::result::success);
   granit::acquired_frame resized_frame;

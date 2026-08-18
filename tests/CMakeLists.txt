@@ -466,7 +466,11 @@ add_executable(
   "${PROJECT_SOURCE_DIR}/src/input/xcb_input_adapter.cpp"
 )
 if(GRANIT_HAS_WAYLAND_INPUT)
-  target_sources(granit_input_test PRIVATE input/wayland_input_adapter_test.cpp)
+  target_sources(
+    granit_input_test
+    PRIVATE input/wayland_input_adapter_test.cpp
+            "${PROJECT_SOURCE_DIR}/src/input/wayland_input_adapter.cpp"
+  )
   target_include_directories(granit_input_test SYSTEM PRIVATE "${GRANIT_XKBCOMMON_INCLUDE_DIR}")
   target_link_libraries(granit_input_test PRIVATE "${GRANIT_XKBCOMMON_LIBRARY}")
 endif()

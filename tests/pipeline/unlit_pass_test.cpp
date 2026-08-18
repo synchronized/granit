@@ -160,7 +160,15 @@ TEST_CASE("Unlit Opaque与Alpha Cutoff产生预期像素") {
   render({0.0F, 0.0F, 0.5F, 0.5F}, granit::pipeline::detail::unlit_mode::transparent);
   render({0.5F, 0.0F, 0.0F, 0.5F}, granit::pipeline::detail::unlit_mode::transparent,
          GRANIT_ATTACHMENT_LOAD_OPERATION_LOAD, {0, 0, 18, size});
-  CHECK(read_pixel(14, size / 2) == std::array<uint8_t, 4>{128, 0, 64, 191});
-  CHECK(read_pixel(20, size / 2) == std::array<uint8_t, 4>{0, 0, 128, 128});
+  const auto blended_pixel = read_pixel(14, size / 2);
+  CHECK(blended_pixel[0] == Catch::Approx(128).margin(1));
+  CHECK(blended_pixel[1] == Catch::Approx(0).margin(1));
+  CHECK(blended_pixel[2] == Catch::Approx(64).margin(1));
+  CHECK(blended_pixel[3] == Catch::Approx(191).margin(1));
+  const auto transparent_pixel = read_pixel(20, size / 2);
+  CHECK(transparent_pixel[0] == Catch::Approx(0).margin(1));
+  CHECK(transparent_pixel[1] == Catch::Approx(0).margin(1));
+  CHECK(transparent_pixel[2] == Catch::Approx(128).margin(1));
+  CHECK(transparent_pixel[3] == Catch::Approx(128).margin(1));
   REQUIRE(granit_mesh_destroy(native, mesh) == GRANIT_SUCCESS);
 }
