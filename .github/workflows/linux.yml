@@ -83,3 +83,70 @@ jobs:
             "build/consumer/${{ steps.preset.outputs.name }}/granit_input_c_consumer"
           LD_LIBRARY_PATH="$prefix/lib" \
             "build/consumer/${{ steps.preset.outputs.name }}/granit_input_cpp_consumer"
+
+  integration-runtime:
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        linkage: [shared, static]
+    steps:
+      - uses: actions/checkout@v4
+      - name: 安装集成与软件 Vulkan 依赖
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build libvulkan1 mesa-vulkan-drivers \
+            vulkan-validationlayers xvfb xauth weston wayland-protocols libwayland-dev \
+            libxkbcommon-dev libx11-dev libx11-xcb-dev libxext-dev libxrandr-dev \
+            libxcursor-dev libxfixes-dev libxi-dev
+      - name: 选择 preset
+        id: preset
+        shell: bash
+        run: |
+          suffix=""
+          if [[ "${{ matrix.linkage }}" == "static" ]]; then suffix="-static"; fi
+          echo "name=linux-clang${suffix}-release" >> "$GITHUB_OUTPUT"
+      - name: 配置并构建 SDL3 与 ImGui Integration
+        shell: bash
+        run: |
+          cmake --preset "${{ steps.preset.outputs.name }}" \
+            -DGRANIT_BUILD_INTEGRATION_SDL3=ON \
+            -DGRANIT_BUILD_INTEGRATION_IMGUI=ON \
+            -DGRANIT_FETCH_INTEGRATION_DEPENDENCIES=ON
+          cmake --build --preset "${{ steps.preset.outputs.name }}"
+      - name: 运行 ImGui 转换测试
+        shell: bash
+        run: |
+          ctest --test-dir "build/${{ steps.preset.outputs.name }}" \
+            --output-on-failure -R '^granit\.integration\.imgui$'
+      - name: 运行 X11 SDL3 与 ImGui smoke test
+        shell: bash
+        run: |
+          xvfb-run -a env SDL_VIDEODRIVER=x11 \
+            "build/${{ steps.preset.outputs.name }}/bin/granit_sdl3_window_clear_example" \
+            --smoke-test
+          xvfb-run -a env SDL_VIDEODRIVER=x11 \
+            "build/${{ steps.preset.outputs.name }}/bin/granit_sdl3_imgui_example" --smoke-test
+      - name: 运行 Wayland SDL3 与 ImGui smoke test
+        shell: bash
+        run: |
+          export XDG_RUNTIME_DIR="$RUNNER_TEMP/granit-integration-wayland"
+          install -d -m 700 "$XDG_RUNTIME_DIR"
+          export WAYLAND_DISPLAY=granit-integration-wayland
+          weston --backend=headless-backend.so --socket="$WAYLAND_DISPLAY" --idle-time=0 \
+            >"$RUNNER_TEMP/granit-integration-weston.log" 2>&1 &
+          weston_pid=$!
+          trap 'kill "$weston_pid" 2>/dev/null || true' EXIT
+          for attempt in {1..50}; do
+            [[ -S "$XDG_RUNTIME_DIR/$WAYLAND_DISPLAY" ]] && break
+            sleep 0.1
+          done
+          [[ -S "$XDG_RUNTIME_DIR/$WAYLAND_DISPLAY" ]] || {
+            cat "$RUNNER_TEMP/granit-integration-weston.log"
+            exit 1
+          }
+          SDL_VIDEODRIVER=wayland \
+            "build/${{ steps.preset.outputs.name }}/bin/granit_sdl3_window_clear_example" \
+            --smoke-test
+          SDL_VIDEODRIVER=wayland \
+            "build/${{ steps.preset.outputs.name }}/bin/granit_sdl3_imgui_example" --smoke-test
