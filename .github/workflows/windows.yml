@@ -30,7 +30,9 @@ jobs:
         run: |
           cmake --preset '${{ steps.preset.outputs.name }}'
           cmake --build --preset '${{ steps.preset.outputs.name }}'
-          ctest --preset '${{ steps.preset.outputs.name }}'
+          # 托管 Windows Runner 没有 Vulkan ICD；GPU 运行测试由 Linux Lavapipe 矩阵覆盖。
+          ctest --preset '${{ steps.preset.outputs.name }}' `
+            -E 'granit\.renderer\.lifecycle_diagnostic|granit\.window_renderer|granit\.example\.'
       - name: 安装并审计包
         shell: pwsh
         run: |
