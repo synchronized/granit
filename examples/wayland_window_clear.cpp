@@ -221,9 +221,14 @@ int main(int argc, char** argv) {
       break;
   }
 
-  recorder.reset();
-  swapchain.reset();
-  surface.reset();
-  renderer.reset();
+  const auto reset_resource = [&result](auto& resource) {
+    const auto reset_result = resource.reset();
+    if (granit::succeeded(result) && granit::failed(reset_result))
+      result = reset_result;
+  };
+  reset_resource(recorder);
+  reset_resource(swapchain);
+  reset_resource(surface);
+  reset_resource(renderer);
   return granit::failed(result) ? 1 : 0;
 }

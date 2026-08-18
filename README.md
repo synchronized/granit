@@ -3,6 +3,7 @@
 
 # Granit
 
+[![Windows](https://github.com/synchronized/granit/actions/workflows/windows.yml/badge.svg)](https://github.com/synchronized/granit/actions/workflows/windows.yml) [![Linux](https://github.com/synchronized/granit/actions/workflows/linux.yml/badge.svg)](https://github.com/synchronized/granit/actions/workflows/linux.yml) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)<br>
 Granit 是一个基于 Vulkan 的 C++20 渲染库，面向游戏引擎、实时应用和图形工具开发。项目通过
 C ABI 隔离动态库边界，并在其上提供现代 C++20 RAII 包装；普通用户无需接触 Vulkan 类型、
 句柄和生命周期管理。
