@@ -52,8 +52,12 @@ void write_lifecycle_diagnostic(const diagnostic_sink& diagnostics, granit_rende
     if (used >= message.size() - 1) {
       return;
     }
-    const auto written =
-        std::snprintf(message.data() + used, message.size() - used, format, arguments...);
+    const auto written = [&] {
+      if constexpr (sizeof...(Arguments) == 0)
+        return std::snprintf(message.data() + used, message.size() - used, "%s", format);
+      else
+        return std::snprintf(message.data() + used, message.size() - used, format, arguments...);
+    }();
     if (written > 0) {
       used += std::min(static_cast<std::size_t>(written), message.size() - used - 1);
     }
@@ -102,8 +106,12 @@ void write_child_lifecycle_diagnostic(const diagnostic_sink& diagnostics,
     if (used >= message.size() - 1) {
       return;
     }
-    const auto written =
-        std::snprintf(message.data() + used, message.size() - used, format, arguments...);
+    const auto written = [&] {
+      if constexpr (sizeof...(Arguments) == 0)
+        return std::snprintf(message.data() + used, message.size() - used, "%s", format);
+      else
+        return std::snprintf(message.data() + used, message.size() - used, format, arguments...);
+    }();
     if (written > 0) {
       used += std::min(static_cast<std::size_t>(written), message.size() - used - 1);
     }
