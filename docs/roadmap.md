@@ -152,7 +152,8 @@
 
 ## 近期执行顺序
 
-1. 以真实材质与光源负载测量透明 PBR、CSM、Clustered Forward 与 Bindless 的收益和成本。
+1. 按 [H-09 高级渲染评估](plans/H-09-advanced-rendering-evaluation.md)建立真实材质与光源负载，
+   测量透明 PBR、CSM、Clustered Forward 与 Bindless 的收益和成本。
 2. API/ABI 稳定化在开发阶段功能边界收敛后推进；Deferred 保持为使用 Render Graph 组合的可选
    高级管线研究项。
 
