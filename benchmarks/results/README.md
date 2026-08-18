@@ -19,3 +19,4 @@
 - [Canvas Draw List 与动态几何首份 CPU 性能基线](2026-08-14-windows-clang-ui-056a0c8.md)
 - [Canvas Pass 首份 GPU 性能基线](2026-08-14-windows-clang-ui-gpu-f77b112.md)
 - [ImGui Draw Data 转换首份 CPU 性能基线](2026-08-17-windows-msvc-imgui-integration-d0890b6.md)
+- [H-09B 透明覆盖层首份 GPU 性能基线](2026-08-18-windows-clang-transparent-b4b0396.md)
