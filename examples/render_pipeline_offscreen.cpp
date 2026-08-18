@@ -59,6 +59,7 @@ struct benchmark_options {
   std::uint32_t warmup = 5;
   std::uint32_t draws = 100;
   std::uint32_t materials = 8;
+  std::uint32_t texture_groups = 8;
   std::uint32_t point_lights = 16;
 };
 
@@ -72,26 +73,29 @@ bool parse_options(int argc, char** argv, benchmark_options& options) {
     const std::string_view argument{argv[index]};
     if (argument == "--help") {
       std::cout << "用法：granit_render_pipeline_benchmarks [--iterations N] [--samples N] "
-                   "[--warmup N] [--draws N] [--materials N] [--lights N]\n";
+                   "[--warmup N] [--draws N] [--materials N] [--texture-groups N] "
+                   "[--lights N]\n";
       return false;
     }
     if (index + 1 >= argc)
       return false;
     const std::string_view value{argv[++index]};
-    auto* target = argument == "--iterations"  ? &options.iterations
-                   : argument == "--samples"   ? &options.samples
-                   : argument == "--warmup"    ? &options.warmup
-                   : argument == "--draws"     ? &options.draws
-                   : argument == "--materials" ? &options.materials
-                   : argument == "--lights"    ? &options.point_lights
-                                               : nullptr;
+    auto* target = argument == "--iterations"       ? &options.iterations
+                   : argument == "--samples"        ? &options.samples
+                   : argument == "--warmup"         ? &options.warmup
+                   : argument == "--draws"          ? &options.draws
+                   : argument == "--materials"      ? &options.materials
+                   : argument == "--texture-groups" ? &options.texture_groups
+                   : argument == "--lights"         ? &options.point_lights
+                                                    : nullptr;
     if (target == nullptr || !parse_u32(value, *target))
       return false;
   }
   return options.iterations != 0 && options.iterations <= 10'000 && options.samples != 0 &&
          options.samples <= 1'000 && options.warmup <= 1'000 && options.draws != 0 &&
          options.draws <= 10'000 && options.materials != 0 && options.materials <= 512 &&
-         options.materials <= options.draws && options.point_lights <= 128;
+         options.materials <= options.draws && options.texture_groups != 0 &&
+         options.texture_groups <= options.materials && options.point_lights <= 128;
 }
 
 struct benchmark_summary {
@@ -201,13 +205,46 @@ int main(int argc, char** argv) {
   const auto archive = load_package();
 #ifdef GRANIT_RENDER_PIPELINE_CPU_BENCHMARK
   const auto material_count = benchmark.materials;
+  const auto texture_group_count = benchmark.texture_groups;
 #else
   constexpr std::uint32_t material_count = 1;
+#endif
+#ifdef GRANIT_RENDER_PIPELINE_CPU_BENCHMARK
+  std::vector<granit::texture> workload_textures(texture_group_count);
+  std::vector<granit::texture_view> workload_texture_views(texture_group_count);
+  for (std::uint32_t index = 0; index < texture_group_count; ++index) {
+    const granit::texture_desc texture_desc{.format = granit::texture_format::rgba8_unorm,
+                                            .usage = granit::texture_usage::sampled |
+                                                     granit::texture_usage::transfer_destination};
+    if (granit::failed(workload_textures[index].initialize(native_renderer, texture_desc)) ||
+        granit::failed(workload_texture_views[index].initialize(
+            native_renderer, workload_textures[index].native_handle()))) {
+      std::cerr << "创建纹理组失败\n";
+      return 1;
+    }
+    const std::array<std::byte, 4> pixel{std::byte{static_cast<std::uint8_t>((index * 37U) % 256U)},
+                                         std::byte{static_cast<std::uint8_t>((index * 53U) % 256U)},
+                                         std::byte{static_cast<std::uint8_t>((index * 71U) % 256U)},
+                                         std::byte{255}};
+    if (granit::failed(workload_textures[index].write(pixel, {}, {}))) {
+      std::cerr << "写入纹理组失败\n";
+      return 1;
+    }
+  }
+  granit::sampler workload_sampler;
+  if (granit::failed(workload_sampler.initialize(native_renderer))) {
+    std::cerr << "创建纹理组采样器失败\n";
+    return 1;
+  }
 #endif
   granit_material_desc material_desc = GRANIT_MATERIAL_DESC_INIT;
   material_desc.archive_data = archive.data();
   material_desc.archive_size = archive.size();
+#ifdef GRANIT_RENDER_PIPELINE_CPU_BENCHMARK
+  material_desc.initial_update_count = 3;
+#else
   material_desc.initial_update_count = 1;
+#endif
   std::vector<granit_material> materials(material_count, GRANIT_NULL_HANDLE);
   if (archive.empty())
     return 1;
@@ -216,6 +253,20 @@ int main(int argc, char** argv) {
         0.2F + 0.6F * static_cast<float>((index * 37U) % 101U) / 100.0F,
         0.2F + 0.6F * static_cast<float>((index * 53U) % 101U) / 100.0F,
         0.2F + 0.6F * static_cast<float>((index * 71U) % 101U) / 100.0F, 1.0F};
+#ifdef GRANIT_RENDER_PIPELINE_CPU_BENCHMARK
+    const auto texture_group = index * texture_group_count / material_count;
+    const std::array updates{
+        granit_material_parameter_update{granit_material_parameter_id("base_color", 10),
+                                         GRANIT_MATERIAL_PARAMETER_FLOAT4, 0, base_color.data(),
+                                         sizeof(base_color), GRANIT_NULL_HANDLE},
+        granit_material_parameter_update{granit_material_parameter_id("base_color_texture", 18),
+                                         GRANIT_MATERIAL_PARAMETER_TEXTURE_VIEW, 0, nullptr, 0,
+                                         workload_texture_views[texture_group].native_handle()},
+        granit_material_parameter_update{granit_material_parameter_id("pbr_sampler", 11),
+                                         GRANIT_MATERIAL_PARAMETER_SAMPLER, 0, nullptr, 0,
+                                         workload_sampler.native_handle()}};
+    material_desc.initial_updates = updates.data();
+#else
     const granit_material_parameter_update update{granit_material_parameter_id("base_color", 10),
                                                   GRANIT_MATERIAL_PARAMETER_FLOAT4,
                                                   0,
@@ -223,6 +274,7 @@ int main(int argc, char** argv) {
                                                   sizeof(base_color),
                                                   GRANIT_NULL_HANDLE};
     material_desc.initial_updates = &update;
+#endif
     if (!check(granit_material_create(native_renderer, &material_desc, &materials[index]),
                "创建 Material"))
       return 1;
@@ -322,6 +374,16 @@ int main(int argc, char** argv) {
     bindings[index] = {static_cast<std::uint64_t>(index) + 1, mesh,
                        materials[index % material_count], 0};
   }
+#ifdef GRANIT_RENDER_PIPELINE_CPU_BENCHMARK
+  std::uint32_t material_switch_count = 0;
+  std::uint32_t texture_group_switch_count = 0;
+  for (std::uint32_t index = 1; index < material_count; ++index) {
+    ++material_switch_count;
+    const auto previous_group = (index - 1) * texture_group_count / material_count;
+    const auto current_group = index * texture_group_count / material_count;
+    texture_group_switch_count += previous_group != current_group ? 1U : 0U;
+  }
+#endif
   granit_render_pipeline_render_desc render_desc = GRANIT_RENDER_PIPELINE_RENDER_DESC_INIT;
   render_desc.scene = scene;
   render_desc.output = output_view;
@@ -358,17 +420,19 @@ int main(int argc, char** argv) {
       samples.push_back(elapsed.count() / static_cast<double>(benchmark.iterations));
     }
     const auto summary = summarize(std::move(samples));
-    std::cout << "2," << name << ',' << draw_count << ',' << material_count << ','
-              << point_light_count << ',' << benchmark.iterations << ',' << benchmark.samples << ','
-              << summary.mean << ',' << summary.p50 << ',' << summary.p95 << ',' << summary.p99
-              << '\n';
+    std::cout << "3," << name << ',' << draw_count << ',' << material_count << ','
+              << texture_group_count << ',' << material_switch_count << ','
+              << texture_group_switch_count << ',' << point_light_count << ','
+              << benchmark.iterations << ',' << benchmark.samples << ',' << summary.mean << ','
+              << summary.p50 << ',' << summary.p95 << ',' << summary.p99 << '\n';
     return true;
   };
   std::cout << std::fixed << std::setprecision(2) << "# revision=" << GRANIT_BENCHMARK_REVISION
             << ",compiler=" << GRANIT_BENCHMARK_COMPILER << ",system=" << GRANIT_BENCHMARK_SYSTEM
             << ",link=" << GRANIT_BENCHMARK_LINK_MODE << '\n'
-            << "schema,name,draws,materials,point_lights,iterations,samples,mean_ns,p50_ns,"
-               "p95_ns,p99_ns\n";
+            << "schema,name,draws,materials,texture_groups,material_switches,"
+               "texture_group_switches,point_lights,iterations,samples,mean_ns,p50_ns,p95_ns,"
+               "p99_ns\n";
   if (!run_benchmark("automatic_directional_end_to_end", pipeline, scene) ||
       !run_benchmark("minimal_directional_end_to_end", callback_pipeline, scene) ||
       !run_benchmark("automatic_no_light_end_to_end", pipeline, no_light_scene) ||
@@ -400,10 +464,11 @@ int main(int argc, char** argv) {
   constexpr std::array names{"gpu_shadow", "gpu_opaque", "gpu_tone_mapping"};
   for (std::size_t index = 0; index < names.size(); ++index) {
     const auto summary = summarize(std::move(gpu_samples[index]));
-    std::cout << "2," << names[index] << ',' << draw_count << ',' << material_count << ','
-              << point_light_count << ',' << benchmark.iterations << ',' << benchmark.samples << ','
-              << summary.mean << ',' << summary.p50 << ',' << summary.p95 << ',' << summary.p99
-              << '\n';
+    std::cout << "3," << names[index] << ',' << draw_count << ',' << material_count << ','
+              << texture_group_count << ',' << material_switch_count << ','
+              << texture_group_switch_count << ',' << point_light_count << ','
+              << benchmark.iterations << ',' << benchmark.samples << ',' << summary.mean << ','
+              << summary.p50 << ',' << summary.p95 << ',' << summary.p99 << '\n';
   }
 #else
   if (!check(render_once(pipeline), "渲染"))

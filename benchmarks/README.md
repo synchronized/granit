@@ -90,19 +90,22 @@ PBR HDR、Tone Mapping 和整条 GPU 渲染链。使用 `--lights` 选择点光�
 
 `granit_render_pipeline_benchmarks` 测量公共 Render Pipeline 自动路径的端到端 CPU 调用成本，
 包含 Scene 复制、Graph 构建、资源准备、命令录制、提交和当前实现中的完成等待，不包含初始化、
-材质归档构建或像素回读。固定种子负载通过 `--draws`、`--materials` 和 `--lights` 控制可见
-Draw、唯一材质和点光数量；当前分别支持最高 10,000、512 和 128。基准分别在方向光加点光与
-无灯光场景运行自动路径和最小阶段回调路径。
+材质归档构建或像素回读。固定种子负载通过 `--draws`、`--materials`、`--texture-groups` 和
+`--lights` 控制可见 Draw、唯一材质、纹理资源组和点光数量；当前分别支持最高 10,000、512、
+512 和 128。纹理组使用独立 1×1 纹理并进入真实材质 Bind Group，但当前 Shader 不采样纹理，
+因此该维度只测量资源绑定与切换成本。基准分别在方向光加点光与无灯光场景运行自动路径和最小
+阶段回调路径。
 最小回调保留相同的 Graph、瞬态附件和 Tone Mapping，但跳过自动 Shadow/Opaque Draw；四组
 结果用于拆分 Opaque Draw、Shadow 图外壳及方向光/真实 Shadow Draw 的增量：
 
 ```powershell
 ./build/windows-clang-release/bin/granit_render_pipeline_benchmarks.exe `
-  --draws 1000 --materials 64 --lights 64 --iterations 20 --samples 20 --warmup 5
+  --draws 1000 --materials 64 --texture-groups 64 --lights 64 `
+  --iterations 20 --samples 20 --warmup 5
 ```
 
 基准通过不安装的内部测量接口，在统一门面自己的 Recorder 内写入 Vulkan timestamp，输出
-`gpu_shadow`、`gpu_opaque` 和 `gpu_tone_mapping`。CSV 每行同时记录实际 Draw、材质和点光数量。
-该接口仅用于仓库基准，不属于公共 API 或 ABI。纹理组负载将在 H-09A 后续步骤补充。
+`gpu_shadow`、`gpu_opaque` 和 `gpu_tone_mapping`。CSV 每行同时记录实际 Draw、材质、纹理组、
+材质切换、纹理组切换和点光数量。该接口仅用于仓库基准，不属于公共 API 或 ABI。
 
 已提交的基线摘要见 [results/README.md](results/README.md)。

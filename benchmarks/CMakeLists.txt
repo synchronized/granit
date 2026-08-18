@@ -261,17 +261,17 @@ granit_target_output_directories(granit_lighting_gpu_benchmarks)
 set_target_properties(granit_lighting_gpu_benchmarks PROPERTIES FOLDER "Benchmarks")
 
 set(granit_render_pipeline_benchmark_package
-    "${CMAKE_CURRENT_BINARY_DIR}/assets/render_pipeline_untextured.grmat")
+    "${CMAKE_CURRENT_BINARY_DIR}/assets/render_pipeline_workload.grmat")
 add_custom_command(
   OUTPUT "${granit_render_pipeline_benchmark_package}"
   COMMAND "${CMAKE_COMMAND}" -E make_directory "${CMAKE_CURRENT_BINARY_DIR}/assets"
   COMMAND
     granit_material_tool build
-    "${PROJECT_SOURCE_DIR}/examples/assets/render_pipeline_untextured.grmat.json"
+    "${PROJECT_SOURCE_DIR}/examples/assets/render_pipeline_workload.grmat.json"
     --output "${granit_render_pipeline_benchmark_package}"
   DEPENDS
     granit_material_tool
-    "${PROJECT_SOURCE_DIR}/examples/assets/render_pipeline_untextured.grmat.json"
+    "${PROJECT_SOURCE_DIR}/examples/assets/render_pipeline_workload.grmat.json"
     "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/pbr_shadow_ibl_lights.vert.spv"
     "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/pbr_shadow_ibl_lights_untextured.frag.spv"
   VERBATIM
