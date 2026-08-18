@@ -52,9 +52,9 @@ public:
   [[nodiscard]] result initialize(const window_system_desc& desc = {}) noexcept {
     if (valid())
       return result::invalid_argument;
-    const granit_window_system_desc native_desc{.struct_size = sizeof(granit_window_system_desc),
-                                                .backend =
-                                                    static_cast<std::uint32_t>(desc.backend)};
+    granit_window_system_desc native_desc{};
+    native_desc.struct_size = sizeof(granit_window_system_desc);
+    native_desc.backend = static_cast<std::uint32_t>(desc.backend);
     return from_native(granit_window_system_create(&native_desc, &handle_));
   }
   [[nodiscard]] result poll(window_event& event) noexcept {
@@ -97,13 +97,13 @@ public:
   [[nodiscard]] result initialize(granit_window_system system, const window_desc& desc) noexcept {
     if (valid() || system == GRANIT_NULL_HANDLE || desc.title.size() > UINT32_MAX)
       return result::invalid_argument;
-    const granit_window_desc native_desc{.struct_size = sizeof(granit_window_desc),
-                                         .title = desc.title.data(),
-                                         .title_length =
-                                             static_cast<std::uint32_t>(desc.title.size()),
-                                         .width = desc.width,
-                                         .height = desc.height,
-                                         .flags = desc.flags};
+    granit_window_desc native_desc{};
+    native_desc.struct_size = sizeof(granit_window_desc);
+    native_desc.title = desc.title.data();
+    native_desc.title_length = static_cast<std::uint32_t>(desc.title.size());
+    native_desc.width = desc.width;
+    native_desc.height = desc.height;
+    native_desc.flags = desc.flags;
     const auto value = granit_window_create(system, &native_desc, &handle_);
     if (value == GRANIT_SUCCESS)
       system_ = system;

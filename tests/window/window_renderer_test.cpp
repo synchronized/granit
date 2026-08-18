@@ -61,7 +61,8 @@ bool wayland_environment_unavailable(granit::result result) {
 TEST_CASE("Wayland Window component 可以连接 Renderer Surface 和 Swapchain",
           "[window][renderer][wayland]") {
   granit::window_system window_system;
-  const auto system_result = window_system.initialize(granit::window_backend::wayland);
+  const auto system_result =
+      window_system.initialize({.backend = granit::window_backend::wayland});
   if (system_result == granit::result::backend_unavailable)
     SKIP("当前环境没有可用且支持 xdg-shell 的 Wayland compositor");
   REQUIRE(system_result == granit::result::success);
@@ -111,7 +112,8 @@ bool xcb_environment_unavailable(granit::result result) {
 TEST_CASE("XCB Window component 可以连接 Renderer Surface 和 Swapchain",
           "[window][renderer][xcb]") {
   granit::window_system window_system;
-  const auto window_system_result = window_system.initialize(granit::window_backend::xcb);
+  const auto window_system_result =
+      window_system.initialize({.backend = granit::window_backend::xcb});
   if (window_system_result == granit::result::backend_unavailable)
     SKIP("当前环境没有可用的 XCB display");
   REQUIRE(window_system_result == granit::result::success);
