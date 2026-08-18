@@ -218,6 +218,7 @@ target_compile_definitions(
   PRIVATE GRANIT_WINDOW_BUILDING_LIBRARY
           $<$<BOOL:${GRANIT_HAS_XCB}>:GRANIT_WINDOW_HAS_XCB>
           $<$<BOOL:${GRANIT_HAS_WAYLAND_SHELL}>:GRANIT_WINDOW_HAS_WAYLAND>
+          $<$<BOOL:${GRANIT_HAS_WAYLAND_INPUT}>:GRANIT_WINDOW_HAS_WAYLAND_INPUT>
   PUBLIC $<$<NOT:$<BOOL:${BUILD_SHARED_LIBS}>>:GRANIT_WINDOW_STATIC_DEFINE>
 )
 target_include_directories(
@@ -275,6 +276,12 @@ target_sources(
       "${PROJECT_SOURCE_DIR}/include/granit/input/input.h"
       "${PROJECT_SOURCE_DIR}/include/granit/input/input.hpp"
 )
+if(GRANIT_HAS_WAYLAND_INPUT)
+  target_sources(granit_input PRIVATE input/wayland_input_adapter.cpp)
+  target_compile_definitions(granit_input PRIVATE GRANIT_INPUT_HAS_WAYLAND)
+  target_include_directories(granit_input SYSTEM PRIVATE "${GRANIT_XKBCOMMON_INCLUDE_DIR}")
+  target_link_libraries(granit_input PRIVATE "${GRANIT_XKBCOMMON_LIBRARY}")
+endif()
 if(WIN32)
   target_sources(granit_input PRIVATE input/win32_input_adapter.cpp)
 endif()

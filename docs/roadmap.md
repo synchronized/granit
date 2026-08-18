@@ -145,14 +145,14 @@
 - **[S-07](plans/S-07-window-events.md) / P2**：可选 Window 组件及 Win32/XCB/Wayland Window、
   统一事件、原生值查询和 Renderer 集成已实现；Linux 后端等待 CI 复测。
 - **[S-07E](plans/S-07E-input-component.md) / P2**：Input 独立组件、C ABI、Win32 键盘文本指针及
-  XCB 键鼠与安装 Consumer 已实现；下一步进行 Wayland Seat 和布局文本适配。
+  XCB、Wayland 键鼠文本与安装 Consumer 已实现；Linux 运行矩阵等待 CI 验证。
 - **[S-08](plans/S-08-third-party-integrations.md) / P2**：独立 SDL3/ImGui 目标、安装边界、SDL3
   Surface、ImGui Draw Data 转换、字体上传、组合示例与 S-08F 测量已完成，Win32 smoke test
   已通过；下一步完成 Linux 运行验证。
 
 ## 近期执行顺序
 
-1. 完成 S-07E Wayland Seat、键盘依赖评审和跨平台事件回归。
+1. 复测 S-07E Wayland Input 与 S-08 Linux 运行矩阵。
 2. S-07C/S-07D Linux Window 后端在 Actions 账户额度恢复后补跑。
 3. 以真实材质与光源负载测量透明 PBR、CSM、Clustered Forward 与 Bindless 的收益和成本。
 4. API/ABI 稳定化在开发阶段功能边界收敛后推进；Deferred 保持为使用 Render Graph 组合的可选

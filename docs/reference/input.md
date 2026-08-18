@@ -6,8 +6,8 @@
 ## 当前能力
 
 `granit::input` 是依附于 `granit::window` 的可选组件，提供键盘、已提交文本和指针的事件与状态。
-Win32 键盘、文本和指针后端及 XCB 键鼠后端已实现；Wayland 输入仍在计划中。SDL3、GLFW、Qt
-和完整引擎应继续使用自身输入系统，不要求经过 Granit Input。
+Win32、XCB 和 Wayland 后端已实现。SDL3、GLFW、Qt 和完整引擎应继续使用自身输入系统，不要求
+经过 Granit Input。
 
 ```cmake
 find_package(granit CONFIG REQUIRED COMPONENTS Window Input)
@@ -75,9 +75,23 @@ XCB Window 订阅核心键盘和指针事件，并在同一事件泵中转交 In
 当前实现不引入 `xkbcommon`。因此 XCB 暂不提供布局相关文本提交，非标准 keycode 映射为
 `GRANIT_PHYSICAL_KEY_UNKNOWN`；布局、文本和自动重复细节将在 Wayland 键盘依赖评审时统一处理。
 
+## Wayland 语义
+
+Wayland Window 在既有事件泵中管理 `wl_seat`，Input 不单独读取 Display 队列：
+
+- `wl_keyboard` keymap 由 Input 私有链接的 `libxkbcommon` 解析，生成物理键、逻辑键和 UTF-8
+  已提交文本。
+- `wl_pointer` 提供相对 Surface 的逻辑坐标、移动、按钮、进入、离开和滚轮事件。
+- keyboard leave 会清理键盘与指针按钮状态，避免焦点切换后卡键。
+- 缺少 `libxkbcommon` 时仍可构建 Wayland Window，但 Wayland Input 创建返回不支持。
+
+`libxkbcommon` 不出现在公共头文件中；共享库构建将其保持为 Input 的私有运行时依赖。静态构建
+需要最终应用链接系统 `libxkbcommon`。首版不实现客户端重复计时器和 Compose/IME 预编辑；这些
+能力需要与应用事件循环和文本服务共同设计。
+
 ## 当前限制
 
 - 不支持手柄、触摸、手写笔、相对鼠标、捕获、指针约束、剪贴板和拖放。
 - 不提供 IME 预编辑、候选窗或组合文本协议，只提供已经提交的文本。
 - 不提供 Action Mapping、快捷键系统或外部事件注入。
-- XCB 布局文本与 Wayland Seat 的依赖和映射仍需单独实现、验证。
+- XCB 布局文本、Wayland 客户端按键重复和 Compose/IME 仍需单独实现、验证。

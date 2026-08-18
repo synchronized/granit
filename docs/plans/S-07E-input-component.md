@@ -6,7 +6,7 @@
 ## 状态
 
 - 设计状态：已确认
-- 实现状态：S-07E1～S-07E4 及安装 Consumer 已完成，等待 Wayland 输入适配
+- 实现状态：S-07E1～S-07E6 已完成；Wayland 运行矩阵等待 Linux CI 验证
 - 路线图任务：S-07E
 - 优先级：P2
 - 前置依赖：S-07 Window component
@@ -128,9 +128,10 @@ granit_input_get_pointer_state(input_system, window, &pointer);
 4. S-07E4（已完成）：XCB 核心事件已覆盖常用物理键、导航逻辑键、重复状态、指针边界、
    移动、按钮、滚轮和焦点丢失清理。当前不引入 XKB，布局文本与更完整重复语义留待 S-07E5
    统一评审。
-5. S-07E5：实现 Wayland `wl_seat`、keyboard 和 pointer；键盘映射依赖在引入前单独确认。
-6. S-07E6（部分完成）：安装后的 C11/C++20 Consumer 已覆盖 Input component 发现、动态/静态
-   链接类型一致性、创建销毁和无图形会话降级；跨平台事件回归随 S-07E5 补齐。
+5. S-07E5（已完成）：Wayland `wl_seat`、keyboard 和 pointer 已接入 Window 事件泵；采用私有
+   `libxkbcommon` 解析 compositor 提供的 keymap，并覆盖逻辑键与 UTF-8 文本转换。
+6. S-07E6（已完成）：安装后的 C11/C++20 Consumer 已覆盖 component 发现、动态/静态链接类型
+   一致性、创建销毁和无图形会话降级；平台 adapter 单元测试覆盖键盘、文本、指针和状态清理。
 
 ## 测试与验收
 
@@ -145,8 +146,10 @@ granit_input_get_pointer_state(input_system, window, &pointer);
 
 ## 风险与未决问题
 
-- XCB 基础键鼠不依赖 xkbcommon；布局文本是否与 Wayland 共用 xkbcommon，留待 S-07E5 决定。
-- Wayland 键盘映射通常需要 xkbcommon；版本、许可证和静态链接传播需要单独确认。
+- XCB 基础键鼠继续不依赖 xkbcommon；Wayland Input 使用 MIT 许可证的 `libxkbcommon`，不传播
+  到公共头文件。共享库保持私有运行时依赖，静态应用需完成最终链接。手写 keymap 解析无法可靠
+  覆盖布局、修饰键和文本，已放弃。
 - Win32 传统消息与 Raw Input 的组合可能产生重复事件，必须选定唯一权威来源。
 - UTF-8 固定分片容量、事件队列容量和高频指针移动合并策略需要原型测量。
 - 相对鼠标、捕获、手柄、触摸和完整 IME 只在出现真实使用场景后进入后续计划。
+- Wayland 客户端按键重复计时器和 Compose 序列留待应用循环需求明确后扩展。
