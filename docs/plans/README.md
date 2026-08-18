@@ -108,8 +108,8 @@ D-03-graphics-pipeline.md
   GLFW、Qt 和引擎直接接入。
 - [S-07E：Input component 边界](S-07E-input-component.md)——已完成；独立可选组件、Window 内部
   事件分发桥、键盘、指针和文本路径均已通过跨平台 CI。
-- [S-08：SDL3 与 ImGui 第三方集成](S-08-third-party-integrations.md)——S-08A～S-08F 的 Win32
-  路径已完成；Linux XCB/Wayland 运行验证仍待加入独立矩阵。第三方依赖不进入核心。
+- [S-08：SDL3 与 ImGui 第三方集成](S-08-third-party-integrations.md)——已完成；Win32 及 Linux
+  X11/Wayland 共享与静态运行矩阵均已通过，第三方依赖不进入核心。
 
 ## 状态
 

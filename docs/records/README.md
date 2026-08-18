@@ -19,3 +19,4 @@
 ## 稳定化与跨平台
 
 - [2026-08-18 Windows/Linux CI 验证记录](2026-08-18-cross-platform-ci-validation.md)
+- [2026-08-18 S-08 Linux Integration 验证记录](2026-08-18-s08-linux-integration-validation.md)

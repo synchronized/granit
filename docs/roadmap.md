@@ -147,14 +147,13 @@
 - **[S-07E](plans/S-07E-input-component.md) / P2**：Input 独立组件、C ABI、Win32 键盘文本指针及
   XCB、Wayland 键鼠文本与安装 Consumer 已实现，Linux 运行矩阵已通过。
 - **[S-08](plans/S-08-third-party-integrations.md) / P2**：独立 SDL3/ImGui 目标、安装边界、SDL3
-  Surface、ImGui Draw Data 转换、字体上传、组合示例与 S-08F 测量已完成，Win32 smoke test
-  已通过；下一步完成 Linux 运行验证。
+  Surface、ImGui Draw Data 转换、字体上传、组合示例与 S-08F 测量已完成；Win32 及 Linux
+  X11/Wayland 共享与静态 smoke test 均已通过。
 
 ## 近期执行顺序
 
-1. 为 S-08 增加启用 SDL3/ImGui 的 Linux XCB/Wayland 运行矩阵，完成可选集成的跨平台验收。
-2. 以真实材质与光源负载测量透明 PBR、CSM、Clustered Forward 与 Bindless 的收益和成本。
-3. API/ABI 稳定化在开发阶段功能边界收敛后推进；Deferred 保持为使用 Render Graph 组合的可选
+1. 以真实材质与光源负载测量透明 PBR、CSM、Clustered Forward 与 Bindless 的收益和成本。
+2. API/ABI 稳定化在开发阶段功能边界收敛后推进；Deferred 保持为使用 Render Graph 组合的可选
    高级管线研究项。
 
 若前置抽象不足，应先更新对应 Plan 和本路线图状态，再扩大公共 API。

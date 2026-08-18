@@ -26,7 +26,8 @@ C/C++ Consumer，并检查安装导出不泄漏源码树、测试依赖或 Vulka
 - 第二轮继续覆盖 Input 内部对象库重构，确认共享与静态链接模式均未依赖内部导出符号。
 - S-03、S-04、S-07 与 S-07E 的远端复测阻塞解除，当前矩阵验收完成。
 
-## 未覆盖范围
+## 后续覆盖
 
 Linux workflow 未启用可选 SDL3/ImGui Integration，因此本记录不证明 S-08 的 Linux XCB/Wayland
-运行路径已经通过。该项仍保留在路线图近期执行顺序中。
+运行路径已经通过。该范围随后由
+[S-08 Linux Integration 验证](2026-08-18-s08-linux-integration-validation.md)覆盖。

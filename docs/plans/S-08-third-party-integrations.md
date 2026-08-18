@@ -6,7 +6,7 @@
 ## 状态
 
 - 设计状态：已确认
-- 实现状态：S-08A～S-08F 的 Win32 路径已完成；等待 Linux 运行验证
+- 实现状态：已完成；Win32 及 Linux X11/Wayland 共享与静态运行矩阵已通过
 - 路线图任务：S-08
 - 优先级：P2
 - 前置依赖：S-04 Linux Surface、S-07 Window/Event 边界、H-08 公共 Canvas
@@ -101,14 +101,15 @@ granit::integration_imgui
 
 1. S-08A（已完成）：已建立 `integrations` 目录、可选构建开关、目标命名、依赖复用和安装
    component。
-2. S-08B（基础实现完成，编译已验证）：已实现 SDL3 Window 到 Granit Surface 的适配；
+2. S-08B（已完成）：已实现 SDL3 Window 到 Granit Surface 的适配；
    Win32 与 Wayland 直接借用原生值，X11 在 X11-xcb 可用时转换到 XCB connection。
-3. S-08C（Win32 已验证，等待 XCB/Wayland 验证）：已增加 SDL3 窗口、事件循环、Swapchain、
-   像素尺寸变化重建和 Present 示例，并通过三帧 smoke test。
+3. S-08C（已完成）：已增加 SDL3 窗口、事件循环、Swapchain、像素尺寸变化重建和 Present
+   示例，并通过 Win32 及 Linux X11/Wayland 三帧 smoke test。
 4. S-08D（转换测试已完成）：已实现 ImGui Draw Data 到 Granit Canvas 的转换，并以锁定的
    ImGui 1.92.9 覆盖顶点/索引偏移、FramebufferScale、剪裁、多纹理、空数据和回调限制。
-5. S-08E（Win32 已验证）：已增加 SDL3 + ImGui 组合示例，复用官方 SDL3 Platform Backend，
-   验证字体 Atlas 上传、输入、空首帧、剪裁、Resize、颜色空间和三帧 Present。
+5. S-08E（已完成）：已增加 SDL3 + ImGui 组合示例，复用官方 SDL3 Platform Backend，验证字体
+   Atlas 上传、输入、空首帧、剪裁、Resize、颜色空间和三帧 Present；Win32 及 Linux
+   X11/Wayland 路径均已通过。
 6. S-08F（已完成）：已测量 Draw Data 转换，并复用 Canvas 基线评估动态上传和 Draw 合批；
    1,000 命令转换 P50 为 124.280～125.070 微秒。字体纹理由应用上传，当前没有证据扩展专用
    上传器、多 Viewport 或事件转换。结果见
@@ -132,3 +133,9 @@ granit::integration_imgui
 - 大量 UI Draw Call 可能需要专用批量上传与合批策略，但应先测量再扩展核心 Renderer。
 - ImGui 多 Viewport 会动态创建额外平台窗口，需在 S-07 Window 和外部 Platform Backend 两种模式间
   明确唯一所有者。
+
+## 完成结论
+
+S-08A～S-08F 已完成。锁定依赖模式下，Linux Clang 共享与静态构建均通过 ImGui 转换测试，以及
+X11、Wayland 的 SDL3 清屏和 SDL3 + ImGui 三帧 smoke test。验证环境与结果见
+[S-08 Linux 验证记录](../records/2026-08-18-s08-linux-integration-validation.md)。
