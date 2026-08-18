@@ -189,6 +189,7 @@ if(GRANIT_DXC_EXECUTABLE)
   if(NOT GRANIT_DXC_PROBE_RESULT EQUAL 0)
     message(STATUS "检测到的 dxc 不支持 SPIR-V，跳过依赖该能力的测试")
     unset(GRANIT_DXC_EXECUTABLE)
+    unset(GRANIT_DXC_EXECUTABLE CACHE)
   endif()
 endif()
 find_program(

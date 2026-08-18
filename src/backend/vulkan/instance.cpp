@@ -78,7 +78,6 @@ bool validation_support_available() {
   return false;
 }
 
-#if defined(_WIN32)
 bool instance_extension_available(const char* required_name) {
   std::uint32_t extension_count = 0;
   if (volk::vkEnumerateInstanceExtensionProperties(nullptr, &extension_count, nullptr) !=
@@ -97,7 +96,6 @@ bool instance_extension_available(const char* required_name) {
   }
   return false;
 }
-#endif
 
 VkDebugUtilsMessengerCreateInfoEXT
 make_debug_messenger_create_info(const diagnostic_sink* diagnostics) noexcept {
