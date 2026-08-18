@@ -6,7 +6,7 @@
 ## 状态
 
 - 设计状态：已确认
-- 实现状态：S-07E1～S-07E6 已完成；Wayland 运行矩阵等待 Linux CI 验证
+- 实现状态：已完成；Win32、XCB 与 Wayland 路径已通过跨平台 CI
 - 路线图任务：S-07E
 - 优先级：P2
 - 前置依赖：S-07 Window component

@@ -117,13 +117,13 @@ Windows 共享验证不会把 DLL 复制到 Consumer 目录，而是从安装前
 
 | 平台 | 编译器 | 链接模式 | 安装 Consumer | 当前验证状态 |
 | --- | --- | --- | --- | --- |
-| Windows x64 | MSVC | 共享、静态 | C11、C++20、RenderPipeline | 本地通过；Release CI 已配置 |
-| Linux x64 | Clang | 共享、静态 | C11、C++20、RenderPipeline | Release CI 已配置 |
-| Linux x64 | GCC | 共享、静态 | C11、C++20、RenderPipeline | Release CI 已配置 |
+| Windows x64 | MSVC | 共享、静态 | C11、C++20、RenderPipeline、Window、Input | Release CI 已通过 |
+| Linux x64 | Clang | 共享、静态 | C11、C++20、RenderPipeline、Window、Input | Release CI 已通过 |
+| Linux x64 | GCC | 共享、静态 | C11、C++20、RenderPipeline、Window、Input | Release CI 已通过 |
 
 该矩阵描述当前持续验证范围，不等同于 API 或 ABI 稳定承诺。Windows Clang/clang-cl preset 可用于
-开发，但尚未进入安装 Consumer 的必过矩阵。当前远端 Actions 因账户付款或额度限制无法启动 Job；
-恢复额度后需要重新运行 Windows 与 Linux 工作流，才能完成远端验收。
+开发，但尚未进入安装 Consumer 的必过矩阵。2026-08-18 的跨平台验收结果见
+[CI 验证记录](../records/2026-08-18-cross-platform-ci-validation.md)。
 
 ## 安装故障排查
 

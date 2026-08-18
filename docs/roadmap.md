@@ -137,25 +137,24 @@
 - **[S-02](plans/S-02-diagnostics.md) / P1**：已完成；日志、诊断回调、GPU 调试名称和 Device Lost
   报告。
 - **[S-03](plans/S-03-package-consumers.md) / P1**：实现已完成；安装包、真实外部 C/C++
-  Consumer 和版本验证已落地，远端 CI 因账户额度限制等待重跑。
+  Consumer 和版本验证已落地，Windows/Linux 共享与静态 CI 矩阵已通过。
 - **[S-04](plans/S-04-linux-surface.md) / P2**：实现已完成；XCB、Wayland Surface、窗口示例和
-  无头集成测试均已落地，远端 Linux 运行矩阵等待 Actions 账户额度恢复后复测。
+  无头集成测试均已落地，Linux GCC/Clang 共享与静态运行矩阵已通过。
 - **S-05 / P2**：明确标记为不稳定的 Vulkan 原生互操作。
 - **S-06 / P2**：核心、高层模块和互操作接口的兼容承诺。
 - **[S-07](plans/S-07-window-events.md) / P2**：可选 Window 组件及 Win32/XCB/Wayland Window、
-  统一事件、原生值查询和 Renderer 集成已实现；Linux 后端等待 CI 复测。
+  统一事件、原生值查询和 Renderer 集成已实现并通过跨平台 CI。
 - **[S-07E](plans/S-07E-input-component.md) / P2**：Input 独立组件、C ABI、Win32 键盘文本指针及
-  XCB、Wayland 键鼠文本与安装 Consumer 已实现；Linux 运行矩阵等待 CI 验证。
+  XCB、Wayland 键鼠文本与安装 Consumer 已实现，Linux 运行矩阵已通过。
 - **[S-08](plans/S-08-third-party-integrations.md) / P2**：独立 SDL3/ImGui 目标、安装边界、SDL3
   Surface、ImGui Draw Data 转换、字体上传、组合示例与 S-08F 测量已完成，Win32 smoke test
   已通过；下一步完成 Linux 运行验证。
 
 ## 近期执行顺序
 
-1. 复测 S-07E Wayland Input 与 S-08 Linux 运行矩阵。
-2. S-07C/S-07D Linux Window 后端在 Actions 账户额度恢复后补跑。
-3. 以真实材质与光源负载测量透明 PBR、CSM、Clustered Forward 与 Bindless 的收益和成本。
-4. API/ABI 稳定化在开发阶段功能边界收敛后推进；Deferred 保持为使用 Render Graph 组合的可选
+1. 为 S-08 增加启用 SDL3/ImGui 的 Linux XCB/Wayland 运行矩阵，完成可选集成的跨平台验收。
+2. 以真实材质与光源负载测量透明 PBR、CSM、Clustered Forward 与 Bindless 的收益和成本。
+3. API/ABI 稳定化在开发阶段功能边界收敛后推进；Deferred 保持为使用 Render Graph 组合的可选
    高级管线研究项。
 
 若前置抽象不足，应先更新对应 Plan 和本路线图状态，再扩大公共 API。

@@ -6,7 +6,7 @@
 ## 状态
 
 - 设计状态：已确认
-- 实现状态：S-07D Wayland 后端实现完成，等待 Linux CI 复测
+- 实现状态：已完成；Win32、XCB 与 Wayland 后端已通过跨平台 CI
 - 路线图任务：S-07
 - 优先级：P2
 - 前置依赖：S-04 Linux Surface
@@ -144,15 +144,15 @@ while (granit_window_poll_event(window_system, &event) == GRANIT_SUCCESS) {
 
 1. S-07A（已完成）：已确认独立组件导出边界、C11 句柄、窗口描述、平台专用原生值查询、
    Window Event 范围、队列与线程错误语义。
-2. S-07B（实现完成，等待远端复测）：已建立独立共享/静态 Window 目标、安装 component、C11 ABI、
+2. S-07B（已完成）：已建立独立共享/静态 Window 目标、安装 component、C11 ABI、
    C++20 值类型、
    公共头测试、Win32 Window System、顶层窗口、关闭/Resize/焦点事件、原生 HWND 查询和 RAII
    包装；DPI/Scale、Renderer Surface/Swapchain 组合测试、公共 Window 清屏示例和独立安装
    Consumer 已接入。
-3. S-07C（实现完成，等待远端复测）：已实现 XCB Window System、顶层窗口、关闭/Resize/焦点
+3. S-07C（已完成）：已实现 XCB Window System、顶层窗口、关闭/Resize/焦点
    事件、原生 connection/window 查询，并接入 Surface 与 Swapchain 组合测试。XCB 缺少统一的
    每窗口 DPI 协议，当前不产生 Scale 事件。
-4. S-07D（实现完成，等待远端复测）：已实现 Wayland display/registry、xdg-shell 顶层角色、
+4. S-07D（已完成）：已实现 Wayland display/registry、xdg-shell 顶层角色、
    configure/close/focus 事件、原生 display/surface 查询，并接入 Surface 与 Swapchain 组合测试。
    fractional-scale 等可选协议留待真实需求出现后扩展。
 5. S-07E（设计已确认）：以独立可选 component 提供键盘、指针、文本事件与状态快照，复用

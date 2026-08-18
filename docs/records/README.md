@@ -15,3 +15,7 @@
 - [H-05 光照与后处理实施记录](H-05-lighting-pipeline-implementation.md)
 - [H-06 Unlit、2D 与 UI 实施记录](H-06-unlit-ui-implementation.md)
 - [H-07 高级参考渲染套件实施记录](H-07-reference-render-pipeline-implementation.md)
+
+## 稳定化与跨平台
+
+- [2026-08-18 Windows/Linux CI 验证记录](2026-08-18-cross-platform-ci-validation.md)

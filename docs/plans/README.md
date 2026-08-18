@@ -99,17 +99,17 @@ D-03-graphics-pipeline.md
   功能边界收敛。
 - [S-02：统一诊断、GPU 调试名称与 Device Lost 报告](S-02-diagnostics.md)——已完成；统一诊断
   sink、公共回调、GPU 调试名称、首次 Device Lost 报告及边界回归均已落地。
-- [S-03：安装包与外部 Consumer 验证](S-03-package-consumers.md)——实现已完成；本地 Windows
-  共享/静态验收通过，远端 Windows/Linux 矩阵因 Actions 账户额度限制等待重跑。
+- [S-03：安装包与外部 Consumer 验证](S-03-package-consumers.md)——已完成；Windows/Linux
+  共享与静态安装 Consumer、版本选择和导出审计均已通过 CI。
 - [S-04：Linux XCB 与 Wayland Surface](S-04-linux-surface.md)——实现已完成；XCB、Wayland、窗口
-  示例和无头集成测试已落地，远端 Linux 运行矩阵等待 Actions 账户额度恢复后复测。
+  示例和无头集成测试已通过 Linux GCC/Clang 共享与静态运行矩阵。
 - [S-07：Window、Event 与 Input 边界](S-07-window-events.md)——Win32、XCB 与 Wayland Window、
-  统一事件及 Renderer 集成均已实现，Linux 后端等待 CI 复测。Renderer Surface 仍允许 SDL、
+  统一事件及 Renderer 集成均已实现并通过跨平台 CI。Renderer Surface 仍允许 SDL、
   GLFW、Qt 和引擎直接接入。
-- [S-07E：Input component 边界](S-07E-input-component.md)——设计已确认；采用独立可选组件、
-  Window 内部事件分发桥、输入事件与状态快照双模型，第一阶段覆盖键盘、指针和已提交文本。
-- [S-08：SDL3 与 ImGui 第三方集成](S-08-third-party-integrations.md)——S-08A 目标与安装边界已
-  完成，SDL3 Surface 和 ImGui Draw Data 基础转换已实现并等待依赖环境测试；第三方依赖不进入核心。
+- [S-07E：Input component 边界](S-07E-input-component.md)——已完成；独立可选组件、Window 内部
+  事件分发桥、键盘、指针和文本路径均已通过跨平台 CI。
+- [S-08：SDL3 与 ImGui 第三方集成](S-08-third-party-integrations.md)——S-08A～S-08F 的 Win32
+  路径已完成；Linux XCB/Wayland 运行验证仍待加入独立矩阵。第三方依赖不进入核心。
 
 ## 状态
 

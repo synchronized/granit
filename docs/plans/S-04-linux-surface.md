@@ -6,7 +6,7 @@
 ## 状态
 
 - 设计状态：已确认
-- 实现状态：实现完成，等待远端复测
+- 实现状态：已完成；Linux GCC/Clang 共享与静态运行矩阵已通过
 - 路线图任务：S-04
 - 优先级：P2
 - 前置依赖：现有 Win32 Surface、Swapchain、S-03
@@ -78,14 +78,13 @@ Renderer/Surface 句柄与 RAII 销毁路径，不创建平台专用运行时对
    公共导出和参数验证测试；后端接入前有效请求明确返回不支持。
 2. S-04B（已完成）：Linux 构建私有探测 XCB 头文件，Instance 按请求启用 XCB 扩展，并已
    实现真实 XCB Surface 创建、呈现队列校验和 Registry 生命周期接入；本机 Windows 条件关闭
-   路径已验证，Linux 条件编译等待受账户额度限制的远端 CI 恢复后重跑。
-3. S-04C（实现完成，等待远端复测）：已增加基于 Xvfb 的真实 XCB 窗口、Swapchain、附件清屏和
+   路径及 Linux 条件编译均已验证。
+3. S-04C（已完成）：已增加基于 Xvfb 的真实 XCB 窗口、Swapchain、附件清屏和
    Present 集成测试，并提供处理关闭、Resize 与重建的 XCB 清屏示例；Linux CI 已准备 Xvfb、
-   Xauth 与 Mesa 软件 Vulkan 环境，等待账户额度恢复后执行远端验收。
-4. S-04D（实现完成，等待远端复测）：已增加私有 Wayland Client 探测、Instance 扩展启用、
-   真实 Wayland Surface 创建、呈现队列校验和 Registry 生命周期接入；Linux 条件编译与运行等待
-   账户额度恢复后执行远端验收。
-5. S-04E（实现完成，等待远端复测）：已配置 Weston Headless 和私有 `xdg-shell` 协议生成，并增加
+   Xauth 与 Mesa 软件 Vulkan 环境，远端矩阵已通过。
+4. S-04D（已完成）：已增加私有 Wayland Client 探测、Instance 扩展启用、真实 Wayland Surface
+   创建、呈现队列校验和 Registry 生命周期接入；Linux 条件编译与运行已验证。
+5. S-04E（已完成）：已配置 Weston Headless 和私有 `xdg-shell` 协议生成，并增加
    [SDL3/GLFW 接入指南](../guides/window-library-integration.md)、真实 Wayland
    顶层窗口、Swapchain、附件清屏、Present 与 compositor configure 后的 Resize 重建测试；已增加
    处理 configure、关闭和 Resize 的 Wayland 清屏示例。
