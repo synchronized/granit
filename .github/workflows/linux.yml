@@ -21,7 +21,8 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y ninja-build libvulkan1 libxcb1-dev libwayland-dev \
-            mesa-vulkan-drivers vulkan-validationlayers wayland-protocols weston xvfb xauth
+            libxkbcommon-dev mesa-vulkan-drivers vulkan-validationlayers wayland-protocols \
+            weston xvfb xauth
       - name: 选择 preset
         id: preset
         shell: bash

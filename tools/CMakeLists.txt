@@ -174,6 +174,23 @@ find_program(
   NAMES dxc
   HINTS "$ENV{VULKAN_SDK}/Bin" "$ENV{VULKAN_SDK}/bin"
 )
+if(GRANIT_DXC_EXECUTABLE)
+  set(GRANIT_DXC_PROBE_OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/dxc_spirv_probe.spv")
+  execute_process(
+    COMMAND
+      "${GRANIT_DXC_EXECUTABLE}" -spirv -fspv-target-env=vulkan1.3 -T ps_6_6
+      -E fragment_main -Fo "${GRANIT_DXC_PROBE_OUTPUT}"
+      "${PROJECT_SOURCE_DIR}/tests/assets/material_fixture.hlsl"
+    RESULT_VARIABLE GRANIT_DXC_PROBE_RESULT
+    OUTPUT_QUIET
+    ERROR_QUIET
+  )
+  file(REMOVE "${GRANIT_DXC_PROBE_OUTPUT}")
+  if(NOT GRANIT_DXC_PROBE_RESULT EQUAL 0)
+    message(STATUS "检测到的 dxc 不支持 SPIR-V，跳过依赖该能力的测试")
+    unset(GRANIT_DXC_EXECUTABLE)
+  endif()
+endif()
 find_program(
   GRANIT_SPIRV_VAL_EXECUTABLE
   NAMES spirv-val
