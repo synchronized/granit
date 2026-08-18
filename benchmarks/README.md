@@ -65,7 +65,10 @@ cmake --build --preset windows-clang-release --target granit_benchmarks
 
 `granit_canvas_gpu_benchmarks` 使用 Vulkan timestamp 测量实际 Canvas Pass。相邻兼容路径合为一个 Draw；
 交替路径逐项切换 Texture 与 Scissor，用于建立有意保留透明顺序时的最坏情况。目标固定为 64×64，
-时间不包含 CPU 录制、提交和等待，不应当外推为其他 GPU 或分辨率的绝对预算。
+时间不包含 CPU 录制、提交和等待，不应当外推为其他 GPU 或分辨率的绝对预算。H-09B 额外覆盖
+0、2、8、32 个完全重叠的透明层：0 层为纯清屏基线，兼容路径合为一个 Draw，交替路径保持
+每层一个 Draw。CSV 同时输出实际 Item、Batch/Draw 和覆盖层数；Canvas 不执行全局透明排序，
+调用顺序就是稳定合成顺序，CPU 构建与合批扫描成本由 `granit_canvas_benchmarks` 单独测量。
 
 启用 `GRANIT_BUILD_INTEGRATION_IMGUI` 时，`granit_imgui_benchmarks` 测量 ImGui Draw Data 转换并
 追加到公共 Canvas 的 CPU 成本，固定覆盖 10、100 和 1,000 个 Draw Command。字体 Atlas 上传不在

@@ -60,12 +60,27 @@ canvas_draw_list make_list(std::uint32_t rectangles, granit_texture_view first,
   return list;
 }
 
-void print_result(std::string_view name, std::uint32_t rectangles,
-                  const std::vector<double>& samples) {
+void print_result(std::string_view name, std::uint32_t items, std::uint32_t batches,
+                  std::uint32_t coverage_layers, const std::vector<double>& samples) {
   const auto mean = std::accumulate(samples.begin(), samples.end(), 0.0) / samples.size();
-  std::cout << "1," << name << ',' << rectangles << ',' << samples.size() << ',' << mean << ','
-            << percentile(samples, 0.50) << ',' << percentile(samples, 0.95) << ','
-            << percentile(samples, 0.99) << '\n';
+  std::cout << "2," << name << ',' << items << ',' << batches << ',' << coverage_layers << ','
+            << samples.size() << ',' << mean << ',' << percentile(samples, 0.50) << ','
+            << percentile(samples, 0.95) << ',' << percentile(samples, 0.99) << '\n';
+}
+
+granit::result record_clear(granit_renderer renderer, granit_command_recorder recorder,
+                            granit_texture_view output, std::uint32_t size) {
+  granit_color_attachment_desc color = GRANIT_COLOR_ATTACHMENT_DESC_INIT;
+  color.view = output;
+  color.clear_value.alpha = 0.0F;
+  granit_rendering_desc rendering = GRANIT_RENDERING_DESC_INIT;
+  rendering.color_attachment_count = 1;
+  rendering.color_attachments = &color;
+  rendering.area = {0, 0, size, size};
+  auto result = granit_command_recorder_begin_rendering(renderer, recorder, &rendering);
+  if (result == GRANIT_SUCCESS)
+    result = granit_command_recorder_end_rendering(renderer, recorder);
+  return granit::from_native(result);
 }
 
 } // namespace
@@ -147,70 +162,92 @@ int main() {
   std::cout << "# revision=" << GRANIT_BENCHMARK_REVISION
             << ",compiler=" << GRANIT_BENCHMARK_COMPILER << ",system=" << GRANIT_BENCHMARK_SYSTEM
             << ",link=" << GRANIT_BENCHMARK_LINK_MODE << '\n'
-            << "schema,name,rectangles,samples,mean_ns,p50_ns,p95_ns,p99_ns\n";
+            << "schema,name,items,batches,coverage_layers,samples,mean_ns,p50_ns,p95_ns,p99_ns\n";
   bool succeeded = true;
-  for (const auto rectangles : {100U, 1'000U, 10'000U}) {
-    for (const bool alternating : {false, true}) {
-      auto list = make_list(rectangles, first_view.native_handle(), second_view.native_handle(),
-                            sampler.native_handle(), alternating);
-      canvas_geometry_upload geometry;
-      if (geometry.upload(native, list) != GRANIT_SUCCESS)
-        return 1;
-      const auto iterations = rectangles == 10'000 ? 2U : 10U;
-      constexpr std::uint32_t warmup = 3;
-      constexpr std::uint32_t sample_count = 15;
-      std::vector<double> samples;
-      for (std::uint32_t sample = 0; sample < warmup + sample_count; ++sample) {
-        double total = 0;
-        for (std::uint32_t iteration = 0; iteration < iterations; ++iteration) {
-          auto result = recorder.begin();
-          if (granit::succeeded(result))
-            result = recorder.reset_timestamp_queries(timestamps.native_handle(), 0, 2);
-          if (granit::succeeded(result)) {
-            result =
-                recorder.write_timestamp(timestamps.native_handle(), GRANIT_TIMESTAMP_STAGE_TOP, 0);
-          }
-          if (granit::succeeded(result)) {
-            result = granit::from_native(granit::pipeline::detail::record_canvas_pass(
-                native, recorder.native_handle(),
-                {.color = output_view.native_handle(),
-                 .color_format = GRANIT_TEXTURE_FORMAT_RGBA8_UNORM,
-                 .width = size,
-                 .height = size,
-                 .material = material,
-                 .frame = frame,
-                 .object = object,
-                 .load_operation = GRANIT_ATTACHMENT_LOAD_OPERATION_CLEAR},
-                list, geometry));
-          }
-          if (granit::succeeded(result)) {
-            result = recorder.write_timestamp(timestamps.native_handle(),
-                                              GRANIT_TIMESTAMP_STAGE_BOTTOM, 1);
-          }
-          if (granit::succeeded(result))
-            result = recorder.end();
-          if (granit::succeeded(result))
-            result = recorder.submit();
-          if (granit::succeeded(result))
-            result = recorder.reset();
-          std::array<std::uint64_t, 2> values{};
-          if (granit::succeeded(result))
-            result = timestamps.get_results(0, values);
-          if (granit::failed(result) || values[1] < values[0]) {
-            succeeded = false;
-            break;
-          }
-          total += static_cast<double>(values[1] - values[0]);
+  struct benchmark_case {
+    std::string_view name;
+    std::uint32_t items;
+    bool alternating;
+  };
+  constexpr std::array cases{benchmark_case{"transparent_overlap_clear", 0, false},
+                             benchmark_case{"transparent_overlap_compatible", 2, false},
+                             benchmark_case{"transparent_overlap_alternating", 2, true},
+                             benchmark_case{"transparent_overlap_compatible", 8, false},
+                             benchmark_case{"transparent_overlap_alternating", 8, true},
+                             benchmark_case{"transparent_overlap_compatible", 32, false},
+                             benchmark_case{"transparent_overlap_alternating", 32, true},
+                             benchmark_case{"canvas_compatible", 100, false},
+                             benchmark_case{"canvas_alternating", 100, true},
+                             benchmark_case{"canvas_compatible", 1'000, false},
+                             benchmark_case{"canvas_alternating", 1'000, true},
+                             benchmark_case{"canvas_compatible", 10'000, false},
+                             benchmark_case{"canvas_alternating", 10'000, true}};
+  for (const auto& benchmark_case : cases) {
+    auto list =
+        make_list(benchmark_case.items, first_view.native_handle(), second_view.native_handle(),
+                  sampler.native_handle(), benchmark_case.alternating);
+    const auto batches = list.batches();
+    canvas_geometry_upload geometry;
+    if (!list.items().empty() && geometry.upload(native, list) != GRANIT_SUCCESS)
+      return 1;
+    const auto iterations = benchmark_case.items == 10'000 ? 2U : 10U;
+    constexpr std::uint32_t warmup = 3;
+    constexpr std::uint32_t sample_count = 15;
+    std::vector<double> samples;
+    for (std::uint32_t sample = 0; sample < warmup + sample_count; ++sample) {
+      double total = 0;
+      for (std::uint32_t iteration = 0; iteration < iterations; ++iteration) {
+        auto result = recorder.begin();
+        if (granit::succeeded(result))
+          result = recorder.reset_timestamp_queries(timestamps.native_handle(), 0, 2);
+        if (granit::succeeded(result)) {
+          result =
+              recorder.write_timestamp(timestamps.native_handle(), GRANIT_TIMESTAMP_STAGE_TOP, 0);
         }
-        if (!succeeded)
+        if (granit::succeeded(result)) {
+          result = list.items().empty()
+                       ? record_clear(native, recorder.native_handle(), output_view.native_handle(),
+                                      size)
+                       : granit::from_native(granit::pipeline::detail::record_canvas_pass(
+                             native, recorder.native_handle(),
+                             {.color = output_view.native_handle(),
+                              .color_format = GRANIT_TEXTURE_FORMAT_RGBA8_UNORM,
+                              .width = size,
+                              .height = size,
+                              .material = material,
+                              .frame = frame,
+                              .object = object,
+                              .load_operation = GRANIT_ATTACHMENT_LOAD_OPERATION_CLEAR},
+                             list, geometry));
+        }
+        if (granit::succeeded(result)) {
+          result = recorder.write_timestamp(timestamps.native_handle(),
+                                            GRANIT_TIMESTAMP_STAGE_BOTTOM, 1);
+        }
+        if (granit::succeeded(result))
+          result = recorder.end();
+        if (granit::succeeded(result))
+          result = recorder.submit();
+        if (granit::succeeded(result))
+          result = recorder.reset();
+        std::array<std::uint64_t, 2> values{};
+        if (granit::succeeded(result))
+          result = timestamps.get_results(0, values);
+        if (granit::failed(result) || values[1] < values[0]) {
+          succeeded = false;
           break;
-        if (sample >= warmup)
-          samples.push_back(total / iterations);
+        }
+        total += static_cast<double>(values[1] - values[0]);
       }
       if (!succeeded)
         break;
-      print_result(alternating ? "canvas_alternating" : "canvas_compatible", rectangles, samples);
+      if (sample >= warmup)
+        samples.push_back(total / iterations);
     }
+    if (!succeeded)
+      break;
+    print_result(benchmark_case.name, benchmark_case.items,
+                 static_cast<std::uint32_t>(batches.size()), benchmark_case.items, samples);
   }
   static_cast<void>(granit_material_destroy(native, material));
   return succeeded ? 0 : 1;
