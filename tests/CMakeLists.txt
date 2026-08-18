@@ -462,16 +462,10 @@ add_executable(
   input/input_api_test.cpp
   input/utf8_test.cpp
   input/xcb_input_adapter_test.cpp
-  "${PROJECT_SOURCE_DIR}/src/input/utf8.cpp"
-  "${PROJECT_SOURCE_DIR}/src/input/xcb_input_adapter.cpp"
+  $<TARGET_OBJECTS:granit_input_internal>
 )
 if(GRANIT_HAS_WAYLAND_INPUT)
-  target_sources(
-    granit_input_test
-    PRIVATE input/wayland_input_adapter_test.cpp
-            "${PROJECT_SOURCE_DIR}/src/input/wayland_input_adapter.cpp"
-  )
-  target_include_directories(granit_input_test SYSTEM PRIVATE "${GRANIT_XKBCOMMON_INCLUDE_DIR}")
+  target_sources(granit_input_test PRIVATE input/wayland_input_adapter_test.cpp)
   target_link_libraries(granit_input_test PRIVATE "${GRANIT_XKBCOMMON_LIBRARY}")
 endif()
 target_include_directories(granit_input_test PRIVATE "${PROJECT_SOURCE_DIR}/src")

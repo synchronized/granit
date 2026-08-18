@@ -261,11 +261,27 @@ install(
   COMPONENT Window
 )
 
+add_library(granit_input_internal OBJECT input/utf8.cpp input/xcb_input_adapter.cpp)
+target_compile_features(granit_input_internal PRIVATE cxx_std_20)
+target_include_directories(granit_input_internal PRIVATE "${PROJECT_SOURCE_DIR}/include")
+granit_target_compile_warnings(granit_input_internal)
+set_target_properties(
+  granit_input_internal
+  PROPERTIES FOLDER "Modules/Internal" POSITION_INDEPENDENT_CODE ON CXX_VISIBILITY_PRESET hidden
+             VISIBILITY_INLINES_HIDDEN YES
+)
+if(GRANIT_HAS_WAYLAND_INPUT)
+  target_sources(granit_input_internal PRIVATE input/wayland_input_adapter.cpp)
+  target_include_directories(
+    granit_input_internal SYSTEM PRIVATE "${GRANIT_XKBCOMMON_INCLUDE_DIR}"
+  )
+endif()
+
 add_library(granit_input)
 add_library(granit::input ALIAS granit_input)
 target_sources(
   granit_input
-  PRIVATE input/input_api.cpp input/utf8.cpp input/xcb_input_adapter.cpp
+  PRIVATE input/input_api.cpp $<TARGET_OBJECTS:granit_input_internal>
   PUBLIC
     FILE_SET HEADERS
     BASE_DIRS "${PROJECT_SOURCE_DIR}/include"
@@ -277,9 +293,7 @@ target_sources(
       "${PROJECT_SOURCE_DIR}/include/granit/input/input.hpp"
 )
 if(GRANIT_HAS_WAYLAND_INPUT)
-  target_sources(granit_input PRIVATE input/wayland_input_adapter.cpp)
   target_compile_definitions(granit_input PRIVATE GRANIT_INPUT_HAS_WAYLAND)
-  target_include_directories(granit_input SYSTEM PRIVATE "${GRANIT_XKBCOMMON_INCLUDE_DIR}")
   target_link_libraries(granit_input PRIVATE "${GRANIT_XKBCOMMON_LIBRARY}")
 endif()
 if(WIN32)
