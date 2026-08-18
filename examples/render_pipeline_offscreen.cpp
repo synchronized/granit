@@ -57,6 +57,9 @@ struct benchmark_options {
   std::uint32_t iterations = 20;
   std::uint32_t samples = 20;
   std::uint32_t warmup = 5;
+  std::uint32_t draws = 100;
+  std::uint32_t materials = 8;
+  std::uint32_t point_lights = 16;
 };
 
 bool parse_u32(std::string_view text, std::uint32_t& value) {
@@ -69,21 +72,26 @@ bool parse_options(int argc, char** argv, benchmark_options& options) {
     const std::string_view argument{argv[index]};
     if (argument == "--help") {
       std::cout << "用法：granit_render_pipeline_benchmarks [--iterations N] [--samples N] "
-                   "[--warmup N]\n";
+                   "[--warmup N] [--draws N] [--materials N] [--lights N]\n";
       return false;
     }
     if (index + 1 >= argc)
       return false;
     const std::string_view value{argv[++index]};
-    auto* target = argument == "--iterations" ? &options.iterations
-                   : argument == "--samples"  ? &options.samples
-                   : argument == "--warmup"   ? &options.warmup
-                                              : nullptr;
+    auto* target = argument == "--iterations"  ? &options.iterations
+                   : argument == "--samples"   ? &options.samples
+                   : argument == "--warmup"    ? &options.warmup
+                   : argument == "--draws"     ? &options.draws
+                   : argument == "--materials" ? &options.materials
+                   : argument == "--lights"    ? &options.point_lights
+                                               : nullptr;
     if (target == nullptr || !parse_u32(value, *target))
       return false;
   }
   return options.iterations != 0 && options.iterations <= 10'000 && options.samples != 0 &&
-         options.samples <= 1'000 && options.warmup <= 1'000;
+         options.samples <= 1'000 && options.warmup <= 1'000 && options.draws != 0 &&
+         options.draws <= 10'000 && options.materials != 0 && options.materials <= 512 &&
+         options.materials <= options.draws && options.point_lights <= 128;
 }
 
 struct benchmark_summary {
@@ -111,20 +119,23 @@ granit_result record_minimal_stage(const granit_render_pipeline_record_info* inf
                                    void* user_data) {
   if (info == nullptr || user_data == nullptr)
     return GRANIT_ERROR_INVALID_ARGUMENT;
-  if (info->stage == GRANIT_RENDER_PIPELINE_STAGE_SHADOW)
-    return GRANIT_SUCCESS;
   const auto renderer = *static_cast<const granit_renderer*>(user_data);
   granit_color_attachment_desc color = GRANIT_COLOR_ATTACHMENT_DESC_INIT;
-  color.view = info->color_output;
-  color.clear_value = {.red = 0.25F, .green = 0.5F, .blue = 1.0F, .alpha = 1.0F};
   granit_depth_stencil_attachment_desc depth = GRANIT_DEPTH_STENCIL_ATTACHMENT_DESC_INIT;
   depth.view = info->depth_output;
   granit_rendering_desc rendering = GRANIT_RENDERING_DESC_INIT;
-  rendering.color_attachment_count = 1;
-  rendering.color_attachments = &color;
-  rendering.depth_stencil_attachment = &depth;
-  rendering.area = {0, 0, static_cast<std::uint32_t>(info->view->viewport_width),
-                    static_cast<std::uint32_t>(info->view->viewport_height)};
+  if (info->depth_output != GRANIT_NULL_HANDLE)
+    rendering.depth_stencil_attachment = &depth;
+  if (info->stage == GRANIT_RENDER_PIPELINE_STAGE_SHADOW) {
+    rendering.area = {0, 0, 1024, 1024};
+  } else {
+    color.view = info->color_output;
+    color.clear_value = {.red = 0.25F, .green = 0.5F, .blue = 1.0F, .alpha = 1.0F};
+    rendering.color_attachment_count = 1;
+    rendering.color_attachments = &color;
+    rendering.area = {0, 0, static_cast<std::uint32_t>(info->view->viewport_width),
+                      static_cast<std::uint32_t>(info->view->viewport_height)};
+  }
   auto result = granit_command_recorder_begin_rendering(renderer, info->recorder, &rendering);
   if (result == GRANIT_SUCCESS)
     result = granit_command_recorder_end_rendering(renderer, info->recorder);
@@ -188,22 +199,33 @@ int main(int argc, char** argv) {
     return 1;
 
   const auto archive = load_package();
-  const std::array<float, 4> base_color{0.8F, 0.2F, 0.1F, 1.0F};
-  const granit_material_parameter_update update{granit_material_parameter_id("base_color", 10),
-                                                GRANIT_MATERIAL_PARAMETER_FLOAT4,
-                                                0,
-                                                base_color.data(),
-                                                sizeof(base_color),
-                                                GRANIT_NULL_HANDLE};
+#ifdef GRANIT_RENDER_PIPELINE_CPU_BENCHMARK
+  const auto material_count = benchmark.materials;
+#else
+  constexpr std::uint32_t material_count = 1;
+#endif
   granit_material_desc material_desc = GRANIT_MATERIAL_DESC_INIT;
   material_desc.archive_data = archive.data();
   material_desc.archive_size = archive.size();
-  material_desc.initial_updates = &update;
   material_desc.initial_update_count = 1;
-  granit_material material = GRANIT_NULL_HANDLE;
-  if (archive.empty() ||
-      !check(granit_material_create(native_renderer, &material_desc, &material), "创建 Material")) {
+  std::vector<granit_material> materials(material_count, GRANIT_NULL_HANDLE);
+  if (archive.empty())
     return 1;
+  for (std::uint32_t index = 0; index < material_count; ++index) {
+    const std::array<float, 4> base_color{
+        0.2F + 0.6F * static_cast<float>((index * 37U) % 101U) / 100.0F,
+        0.2F + 0.6F * static_cast<float>((index * 53U) % 101U) / 100.0F,
+        0.2F + 0.6F * static_cast<float>((index * 71U) % 101U) / 100.0F, 1.0F};
+    const granit_material_parameter_update update{granit_material_parameter_id("base_color", 10),
+                                                  GRANIT_MATERIAL_PARAMETER_FLOAT4,
+                                                  0,
+                                                  base_color.data(),
+                                                  sizeof(base_color),
+                                                  GRANIT_NULL_HANDLE};
+    material_desc.initial_updates = &update;
+    if (!check(granit_material_create(native_renderer, &material_desc, &materials[index]),
+               "创建 Material"))
+      return 1;
   }
 
   granit_scene_view view{};
@@ -213,22 +235,56 @@ int main(int argc, char** argv) {
   view.viewport_width = static_cast<float>(size);
   view.viewport_height = static_cast<float>(size);
   view.layer_mask = UINT64_MAX;
-  granit_scene_renderable renderable{};
-  renderable.model = identity();
-  renderable.normal_matrix = identity();
-  renderable.bounds_radius = 1.0F;
-  renderable.layer_mask = UINT64_MAX;
-  renderable.payload = 1;
+#ifdef GRANIT_RENDER_PIPELINE_CPU_BENCHMARK
+  const auto draw_count = benchmark.draws;
+  const auto point_light_count = benchmark.point_lights;
+#else
+  constexpr std::uint32_t draw_count = 1;
+  constexpr std::uint32_t point_light_count = 0;
+#endif
+  std::vector<granit_scene_renderable> renderables(draw_count);
+  const auto columns = static_cast<std::uint32_t>(std::ceil(std::sqrt(draw_count)));
+  const auto cell_size = 1.6F / static_cast<float>(columns);
+  for (std::uint32_t index = 0; index < draw_count; ++index) {
+    auto& renderable = renderables[index];
+    const auto column = index % columns;
+    const auto row = index / columns;
+    const auto x = -0.8F + (static_cast<float>(column) + 0.5F) * cell_size;
+    const auto y = -0.8F + (static_cast<float>(row) + 0.5F) * cell_size;
+    renderable.model = identity();
+    renderable.model.elements[0] = cell_size;
+    renderable.model.elements[5] = cell_size;
+    renderable.model.elements[12] = x;
+    renderable.model.elements[13] = y;
+    renderable.normal_matrix = identity();
+    renderable.bounds_center = {x, y, 0.5F};
+    renderable.bounds_radius = cell_size;
+    renderable.layer_mask = UINT64_MAX;
+    renderable.sort_key = index % material_count;
+    renderable.payload = static_cast<std::uint64_t>(index) + 1;
+    renderable.object_id = index + 1;
+  }
+  std::vector<granit_scene_point_light> point_lights(point_light_count);
+  for (std::uint32_t index = 0; index < point_light_count; ++index) {
+    const auto angle = 6.283185307F * static_cast<float>(index) /
+                       static_cast<float>(std::max(point_light_count, 1U));
+    point_lights[index] = {.position = {0.65F * std::cos(angle), 0.65F * std::sin(angle), 0.2F},
+                           .intensity = {0.2F, 0.2F, 0.2F},
+                           .radius = 2.0F,
+                           .layer_mask = UINT64_MAX};
+  }
   const granit_scene_directional_light light{.direction_to_light = {0.0F, 0.0F, 1.0F},
                                              .radiance = {1.0F, 1.0F, 1.0F},
                                              .layer_mask = UINT64_MAX};
   granit_scene_snapshot_desc scene_desc = GRANIT_SCENE_SNAPSHOT_DESC_INIT;
   scene_desc.views = &view;
   scene_desc.view_count = 1;
-  scene_desc.renderables = &renderable;
-  scene_desc.renderable_count = 1;
+  scene_desc.renderables = renderables.data();
+  scene_desc.renderable_count = draw_count;
   scene_desc.directional_lights = &light;
   scene_desc.directional_light_count = 1;
+  scene_desc.point_lights = point_lights.data();
+  scene_desc.point_light_count = point_light_count;
   granit_scene_snapshot scene = GRANIT_NULL_HANDLE;
   if (!check(granit_scene_snapshot_create(native_renderer, &scene_desc, &scene), "创建 Scene"))
     return 1;
@@ -236,6 +292,8 @@ int main(int argc, char** argv) {
   granit_scene_snapshot no_light_scene = GRANIT_NULL_HANDLE;
   scene_desc.directional_lights = nullptr;
   scene_desc.directional_light_count = 0;
+  scene_desc.point_lights = nullptr;
+  scene_desc.point_light_count = 0;
   if (!check(granit_scene_snapshot_create(native_renderer, &scene_desc, &no_light_scene),
              "创建无光照 Scene")) {
     return 1;
@@ -259,15 +317,19 @@ int main(int argc, char** argv) {
     return 1;
   }
 #endif
-  const granit_render_pipeline_draw_binding binding{1, mesh, material, 0};
+  std::vector<granit_render_pipeline_draw_binding> bindings(draw_count);
+  for (std::uint32_t index = 0; index < draw_count; ++index) {
+    bindings[index] = {static_cast<std::uint64_t>(index) + 1, mesh,
+                       materials[index % material_count], 0};
+  }
   granit_render_pipeline_render_desc render_desc = GRANIT_RENDER_PIPELINE_RENDER_DESC_INIT;
   render_desc.scene = scene;
   render_desc.output = output_view;
   render_desc.output_format = GRANIT_TEXTURE_FORMAT_RGBA8_UNORM;
   render_desc.width = size;
   render_desc.height = size;
-  render_desc.draw_binding_count = 1;
-  render_desc.draw_bindings = &binding;
+  render_desc.draw_binding_count = draw_count;
+  render_desc.draw_bindings = bindings.data();
   const auto render_once = [&](granit_render_pipeline selected,
                                granit_scene_snapshot selected_scene = GRANIT_NULL_HANDLE) {
     render_desc.scene = selected_scene == GRANIT_NULL_HANDLE ? scene : selected_scene;
@@ -296,7 +358,8 @@ int main(int argc, char** argv) {
       samples.push_back(elapsed.count() / static_cast<double>(benchmark.iterations));
     }
     const auto summary = summarize(std::move(samples));
-    std::cout << "1," << name << ',' << benchmark.iterations << ',' << benchmark.samples << ','
+    std::cout << "2," << name << ',' << draw_count << ',' << material_count << ','
+              << point_light_count << ',' << benchmark.iterations << ',' << benchmark.samples << ','
               << summary.mean << ',' << summary.p50 << ',' << summary.p95 << ',' << summary.p99
               << '\n';
     return true;
@@ -304,7 +367,8 @@ int main(int argc, char** argv) {
   std::cout << std::fixed << std::setprecision(2) << "# revision=" << GRANIT_BENCHMARK_REVISION
             << ",compiler=" << GRANIT_BENCHMARK_COMPILER << ",system=" << GRANIT_BENCHMARK_SYSTEM
             << ",link=" << GRANIT_BENCHMARK_LINK_MODE << '\n'
-            << "schema,name,iterations,samples,mean_ns,p50_ns,p95_ns,p99_ns\n";
+            << "schema,name,draws,materials,point_lights,iterations,samples,mean_ns,p50_ns,"
+               "p95_ns,p99_ns\n";
   if (!run_benchmark("automatic_directional_end_to_end", pipeline, scene) ||
       !run_benchmark("minimal_directional_end_to_end", callback_pipeline, scene) ||
       !run_benchmark("automatic_no_light_end_to_end", pipeline, no_light_scene) ||
@@ -336,9 +400,10 @@ int main(int argc, char** argv) {
   constexpr std::array names{"gpu_shadow", "gpu_opaque", "gpu_tone_mapping"};
   for (std::size_t index = 0; index < names.size(); ++index) {
     const auto summary = summarize(std::move(gpu_samples[index]));
-    std::cout << "1," << names[index] << ',' << benchmark.iterations << ',' << benchmark.samples
-              << ',' << summary.mean << ',' << summary.p50 << ',' << summary.p95 << ','
-              << summary.p99 << '\n';
+    std::cout << "2," << names[index] << ',' << draw_count << ',' << material_count << ','
+              << point_light_count << ',' << benchmark.iterations << ',' << benchmark.samples << ','
+              << summary.mean << ',' << summary.p50 << ',' << summary.p95 << ',' << summary.p99
+              << '\n';
   }
 #else
   if (!check(render_once(pipeline), "渲染"))
@@ -407,7 +472,8 @@ int main(int argc, char** argv) {
 #endif
   static_cast<void>(granit_render_pipeline_destroy(native_renderer, pipeline));
   static_cast<void>(granit_scene_snapshot_destroy(native_renderer, scene));
-  static_cast<void>(granit_material_destroy(native_renderer, material));
+  for (const auto material : materials)
+    static_cast<void>(granit_material_destroy(native_renderer, material));
   static_cast<void>(granit_mesh_destroy(native_renderer, mesh));
   static_cast<void>(granit_texture_view_destroy(native_renderer, output_view));
   static_cast<void>(granit_texture_destroy(native_renderer, output));
