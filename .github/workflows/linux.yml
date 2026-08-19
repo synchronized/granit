@@ -18,9 +18,20 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: 安装构建与软件 Vulkan 依赖
+        timeout-minutes: 10
+        env:
+          DEBIAN_FRONTEND: noninteractive
         run: |
-          sudo apt-get update
-          sudo apt-get install -y ninja-build libvulkan1 libxcb1-dev libwayland-dev \
+          apt_options=(
+            -o Acquire::Retries=3
+            -o Acquire::http::Timeout=30
+            -o Acquire::https::Timeout=30
+            -o Dpkg::Lock::Timeout=60
+          )
+          sudo env DEBIAN_FRONTEND="$DEBIAN_FRONTEND" apt-get "${apt_options[@]}" update
+          sudo env DEBIAN_FRONTEND="$DEBIAN_FRONTEND" apt-get "${apt_options[@]}" install \
+            --no-install-recommends -y \
+            ninja-build libvulkan1 libxcb1-dev libwayland-dev \
             libxkbcommon-dev mesa-vulkan-drivers vulkan-validationlayers wayland-protocols \
             weston xvfb xauth
       - name: 选择 preset
@@ -93,9 +104,20 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: 安装集成与软件 Vulkan 依赖
+        timeout-minutes: 15
+        env:
+          DEBIAN_FRONTEND: noninteractive
         run: |
-          sudo apt-get update
-          sudo apt-get install -y ninja-build libvulkan1 mesa-vulkan-drivers \
+          apt_options=(
+            -o Acquire::Retries=3
+            -o Acquire::http::Timeout=30
+            -o Acquire::https::Timeout=30
+            -o Dpkg::Lock::Timeout=60
+          )
+          sudo env DEBIAN_FRONTEND="$DEBIAN_FRONTEND" apt-get "${apt_options[@]}" update
+          sudo env DEBIAN_FRONTEND="$DEBIAN_FRONTEND" apt-get "${apt_options[@]}" install \
+            --no-install-recommends -y \
+            ninja-build libvulkan1 mesa-vulkan-drivers \
             vulkan-validationlayers xvfb xauth weston wayland-protocols libwayland-dev \
             libxkbcommon-dev libegl1-mesa-dev libx11-dev libx11-xcb-dev libxext-dev \
             libxrandr-dev \
