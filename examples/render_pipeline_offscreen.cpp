@@ -61,6 +61,8 @@ struct benchmark_options {
   std::uint32_t materials = 8;
   std::uint32_t texture_groups = 8;
   std::uint32_t point_lights = 16;
+  std::string_view shadow_range = "medium";
+  float shadow_half_extent = 20.0F;
 };
 
 bool parse_u32(std::string_view text, std::uint32_t& value) {
@@ -74,12 +76,22 @@ bool parse_options(int argc, char** argv, benchmark_options& options) {
     if (argument == "--help") {
       std::cout << "用法：granit_render_pipeline_benchmarks [--iterations N] [--samples N] "
                    "[--warmup N] [--draws N] [--materials N] [--texture-groups N] "
-                   "[--lights N]\n";
+                   "[--lights N] [--shadow-range near|medium|far]\n";
       return false;
     }
     if (index + 1 >= argc)
       return false;
     const std::string_view value{argv[++index]};
+    if (argument == "--shadow-range") {
+      options.shadow_range = value;
+      options.shadow_half_extent = value == "near"     ? 5.0F
+                                   : value == "medium" ? 20.0F
+                                   : value == "far"    ? 80.0F
+                                                       : 0.0F;
+      if (options.shadow_half_extent == 0.0F)
+        return false;
+      continue;
+    }
     auto* target = argument == "--iterations"       ? &options.iterations
                    : argument == "--samples"        ? &options.samples
                    : argument == "--warmup"         ? &options.warmup
@@ -359,6 +371,11 @@ int main(int argc, char** argv) {
     return 1;
   }
 #ifdef GRANIT_RENDER_PIPELINE_CPU_BENCHMARK
+  if (!check(granit_render_pipeline_shadow_half_extent_set(native_renderer, pipeline,
+                                                           benchmark.shadow_half_extent),
+             "设置阴影覆盖范围")) {
+    return 1;
+  }
   granit_render_pipeline callback_pipeline = GRANIT_NULL_HANDLE;
   granit_render_pipeline_desc callback_pipeline_desc = GRANIT_RENDER_PIPELINE_DESC_INIT;
   callback_pipeline_desc.record = record_minimal_stage;
@@ -366,6 +383,11 @@ int main(int argc, char** argv) {
   if (!check(granit_render_pipeline_create(native_renderer, &callback_pipeline_desc,
                                            &callback_pipeline),
              "创建最小回调 Render Pipeline")) {
+    return 1;
+  }
+  if (!check(granit_render_pipeline_shadow_half_extent_set(native_renderer, callback_pipeline,
+                                                           benchmark.shadow_half_extent),
+             "设置最小回调阴影覆盖范围")) {
     return 1;
   }
 #endif
@@ -420,19 +442,23 @@ int main(int argc, char** argv) {
       samples.push_back(elapsed.count() / static_cast<double>(benchmark.iterations));
     }
     const auto summary = summarize(std::move(samples));
-    std::cout << "3," << name << ',' << draw_count << ',' << material_count << ','
+    std::cout << "4," << name << ',' << draw_count << ',' << material_count << ','
               << texture_group_count << ',' << material_switch_count << ','
               << texture_group_switch_count << ',' << point_light_count << ','
-              << benchmark.iterations << ',' << benchmark.samples << ',' << summary.mean << ','
-              << summary.p50 << ',' << summary.p95 << ',' << summary.p99 << '\n';
+              << benchmark.shadow_range << ',' << benchmark.shadow_half_extent * 2.0F << ','
+              << std::setprecision(8) << benchmark.shadow_half_extent * 2.0F / 1024.0F << ','
+              << std::setprecision(2) << draw_count << ',' << benchmark.iterations << ','
+              << benchmark.samples << ',' << summary.mean << ',' << summary.p50 << ','
+              << summary.p95 << ',' << summary.p99 << '\n';
     return true;
   };
   std::cout << std::fixed << std::setprecision(2) << "# revision=" << GRANIT_BENCHMARK_REVISION
             << ",compiler=" << GRANIT_BENCHMARK_COMPILER << ",system=" << GRANIT_BENCHMARK_SYSTEM
             << ",link=" << GRANIT_BENCHMARK_LINK_MODE << '\n'
             << "schema,name,draws,materials,texture_groups,material_switches,"
-               "texture_group_switches,point_lights,iterations,samples,mean_ns,p50_ns,p95_ns,"
-               "p99_ns\n";
+               "texture_group_switches,point_lights,shadow_range,shadow_span,"
+               "shadow_world_units_per_texel,shadow_casters,iterations,samples,mean_ns,p50_ns,"
+               "p95_ns,p99_ns\n";
   if (!run_benchmark("automatic_directional_end_to_end", pipeline, scene) ||
       !run_benchmark("minimal_directional_end_to_end", callback_pipeline, scene) ||
       !run_benchmark("automatic_no_light_end_to_end", pipeline, no_light_scene) ||
@@ -464,11 +490,14 @@ int main(int argc, char** argv) {
   constexpr std::array names{"gpu_shadow", "gpu_opaque", "gpu_tone_mapping"};
   for (std::size_t index = 0; index < names.size(); ++index) {
     const auto summary = summarize(std::move(gpu_samples[index]));
-    std::cout << "3," << names[index] << ',' << draw_count << ',' << material_count << ','
+    std::cout << "4," << names[index] << ',' << draw_count << ',' << material_count << ','
               << texture_group_count << ',' << material_switch_count << ','
               << texture_group_switch_count << ',' << point_light_count << ','
-              << benchmark.iterations << ',' << benchmark.samples << ',' << summary.mean << ','
-              << summary.p50 << ',' << summary.p95 << ',' << summary.p99 << '\n';
+              << benchmark.shadow_range << ',' << benchmark.shadow_half_extent * 2.0F << ','
+              << std::setprecision(8) << benchmark.shadow_half_extent * 2.0F / 1024.0F << ','
+              << std::setprecision(2) << draw_count << ',' << benchmark.iterations << ','
+              << benchmark.samples << ',' << summary.mean << ',' << summary.p50 << ','
+              << summary.p95 << ',' << summary.p99 << '\n';
   }
 #else
   if (!check(render_once(pipeline), "渲染"))

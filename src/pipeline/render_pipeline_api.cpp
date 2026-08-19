@@ -67,6 +67,7 @@ struct pipeline_state {
   std::vector<draw_binding_entry> shadow_draw_bindings;
   granit_timestamp_query_pool metrics_pool = GRANIT_NULL_HANDLE;
   granit_render_pipeline_gpu_metrics metrics{};
+  float shadow_half_extent = 20.0F;
   bool alive = true;
 };
 
@@ -476,8 +477,9 @@ render_view(pipeline_state& state, const granit_render_pipeline_render_desc& des
     graph_desc.pbr.light.radiance = light.radiance;
     granit::lighting::directional_shadow_pass_desc shadow_pass;
     const granit::lighting::directional_shadow_volume volume{.focus = visible.view.camera_position,
-                                                             .half_width = 20.0F,
-                                                             .half_height = 20.0F,
+                                                             .half_width = state.shadow_half_extent,
+                                                             .half_height =
+                                                                 state.shadow_half_extent,
                                                              .near_plane = 0.1F,
                                                              .far_plane = 100.0F,
                                                              .light_distance = 50.0F};
@@ -1021,5 +1023,20 @@ granit_render_pipeline_gpu_metrics_get(granit_renderer renderer, granit_render_p
   if (state->metrics_pool == GRANIT_NULL_HANDLE)
     return GRANIT_ERROR_NOT_READY;
   *metrics = state->metrics;
+  return GRANIT_SUCCESS;
+}
+
+extern "C" granit_result
+granit_render_pipeline_shadow_half_extent_set(granit_renderer renderer,
+                                              granit_render_pipeline pipeline, float half_extent) {
+  if (!std::isfinite(half_extent) || half_extent <= 0.0F)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  const auto state = find_pipeline(renderer, pipeline);
+  if (!state)
+    return GRANIT_ERROR_INVALID_HANDLE;
+  std::scoped_lock lock{state->mutex};
+  if (!state->alive)
+    return GRANIT_ERROR_INVALID_HANDLE;
+  state->shadow_half_extent = half_extent;
   return GRANIT_SUCCESS;
 }

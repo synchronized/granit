@@ -17,5 +17,7 @@ extern "C" GRANIT_RENDER_PIPELINE_API granit_result granit_render_pipeline_gpu_m
 extern "C" GRANIT_RENDER_PIPELINE_API granit_result
 granit_render_pipeline_gpu_metrics_get(granit_renderer renderer, granit_render_pipeline pipeline,
                                        granit_render_pipeline_gpu_metrics* metrics);
+extern "C" GRANIT_RENDER_PIPELINE_API granit_result granit_render_pipeline_shadow_half_extent_set(
+    granit_renderer renderer, granit_render_pipeline pipeline, float half_extent);
 
 #endif

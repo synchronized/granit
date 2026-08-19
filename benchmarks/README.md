@@ -107,6 +107,10 @@ PBR HDR、Tone Mapping 和整条 GPU 渲染链。使用 `--lights` 选择点光�
   --iterations 20 --samples 20 --warmup 5
 ```
 
+H-09C 使用 `--shadow-range near|medium|far` 选择总跨度 10、40、160 的方向光阴影正交体，阴影图
+均保持 1024×1024。CSV 输出覆盖跨度、世界单位/texel 和实际投影物数量，用于在相同 Draw 负载
+下比较覆盖质量与 `gpu_shadow` 成本；该选项只通过仓库内部测量接口生效，不属于公共 API。
+
 基准通过不安装的内部测量接口，在统一门面自己的 Recorder 内写入 Vulkan timestamp，输出
 `gpu_shadow`、`gpu_opaque` 和 `gpu_tone_mapping`。CSV 每行同时记录实际 Draw、材质、纹理组、
 材质切换、纹理组切换和点光数量。该接口仅用于仓库基准，不属于公共 API 或 ABI。
