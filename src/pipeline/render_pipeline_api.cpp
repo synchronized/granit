@@ -36,6 +36,9 @@ namespace {
 constexpr uint64_t index_mask = UINT64_C(0xffffffff);
 constexpr uint64_t generation_mask = UINT64_C(0x00ffffff);
 constexpr uint64_t type_value = UINT64_C(0x42);
+// 自动路径固定覆盖首轮多光源评估上限，打包和逐 Draw Buffer 必须使用相同容量。
+constexpr granit::lighting::light_limits automatic_light_limits{
+    .directional = 4, .point = 128, .spot = 64};
 
 struct pipeline_state {
   struct shadow_pipeline_entry {
@@ -239,8 +242,8 @@ record_opaque_draws(pipeline_state& state, granit_command_recorder recorder,
              .ibl = {.irradiance = state.default_ibl.irradiance(),
                      .prefiltered_environment = state.default_ibl.prefiltered_environment(),
                      .brdf_lut = state.default_ibl.brdf_lut()}},
-            shadow_constants, {.intensity = 0.0F}, {}, {}, material.lighting_layout,
-            granit::memory_location::upload);
+            shadow_constants, {.intensity = 0.0F}, automatic_light_limits, {},
+            material.lighting_layout, granit::memory_location::upload);
       }
       if (result == GRANIT_SUCCESS)
         cached.material = draws[index].material;
@@ -571,7 +574,8 @@ render_view(pipeline_state& state, const granit_render_pipeline_render_desc& des
       if (state.record == nullptr) {
         granit::lighting::packed_view_lights lights;
         granit::lighting::light_requirements requirements;
-        if (granit::lighting::pack_view_lights(snapshot, view_index, {}, lights, requirements) !=
+        if (granit::lighting::pack_view_lights(snapshot, view_index, automatic_light_limits, lights,
+                                               requirements) !=
             granit::lighting::light_pack_error::none) {
           return GRANIT_ERROR_INVALID_ARGUMENT;
         }
