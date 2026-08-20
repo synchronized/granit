@@ -119,4 +119,10 @@ H-09D 固定其他负载后，分别使用 `--lights 1`、`16`、`64`、`128` �
 `gpu_shadow`、`gpu_opaque` 和 `gpu_tone_mapping`。CSV 每行同时记录实际 Draw、材质、纹理组、
 材质切换、纹理组切换和点光数量。该接口仅用于仓库基准，不属于公共 API 或 ABI。
 
+H-09E 的 CSV schema 5 额外输出材质 Bind Group 数、Render Pipeline 逐 Draw 缓存条目和 Opaque
+批次数，并用 `material_create_with_bind_group` 与 `material_bind_group_resource_update` 分行记录准备
+路径。创建指标包含归档解码、Layout、Pipeline Template 和 Bind Group，是 Bind Group 创建成本的
+保守上界；资源更新会事务式迁移实例并重建 Bind Group。首份压力曲线见
+[H-09E 绑定压力结果](results/2026-08-20-windows-clang-binding-pressure-7b3e246.md)。
+
 已提交的基线摘要见 [results/README.md](results/README.md)。

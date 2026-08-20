@@ -258,6 +258,12 @@ int main(int argc, char** argv) {
   material_desc.initial_update_count = 1;
 #endif
   std::vector<granit_material> materials(material_count, GRANIT_NULL_HANDLE);
+#ifdef GRANIT_RENDER_PIPELINE_CPU_BENCHMARK
+  std::vector<double> material_create_samples;
+  std::vector<double> material_update_samples;
+  material_create_samples.reserve(material_count);
+  material_update_samples.reserve(material_count);
+#endif
   if (archive.empty())
     return 1;
   for (std::uint32_t index = 0; index < material_count; ++index) {
@@ -287,10 +293,38 @@ int main(int argc, char** argv) {
                                                   GRANIT_NULL_HANDLE};
     material_desc.initial_updates = &update;
 #endif
+#ifdef GRANIT_RENDER_PIPELINE_CPU_BENCHMARK
+    const auto create_begin = std::chrono::steady_clock::now();
+#endif
     if (!check(granit_material_create(native_renderer, &material_desc, &materials[index]),
                "创建 Material"))
       return 1;
+#ifdef GRANIT_RENDER_PIPELINE_CPU_BENCHMARK
+    material_create_samples.push_back(
+        std::chrono::duration<double, std::nano>(std::chrono::steady_clock::now() - create_begin)
+            .count());
+#endif
   }
+#ifdef GRANIT_RENDER_PIPELINE_CPU_BENCHMARK
+  for (std::uint32_t index = 0; index < material_count; ++index) {
+    const auto texture_group = index * texture_group_count / material_count;
+    const auto replacement_group = (texture_group + 1U) % texture_group_count;
+    const granit_material_parameter_update update{
+        granit_material_parameter_id("base_color_texture", 18),
+        GRANIT_MATERIAL_PARAMETER_TEXTURE_VIEW,
+        0,
+        nullptr,
+        0,
+        workload_texture_views[replacement_group].native_handle()};
+    const auto update_begin = std::chrono::steady_clock::now();
+    if (!check(granit_material_update(native_renderer, materials[index], &update, 1),
+               "更新 Material 纹理组"))
+      return 1;
+    material_update_samples.push_back(
+        std::chrono::duration<double, std::nano>(std::chrono::steady_clock::now() - update_begin)
+            .count());
+  }
+#endif
 
   granit_scene_view view{};
   view.view = identity();
@@ -442,23 +476,41 @@ int main(int argc, char** argv) {
       samples.push_back(elapsed.count() / static_cast<double>(benchmark.iterations));
     }
     const auto summary = summarize(std::move(samples));
-    std::cout << "4," << name << ',' << draw_count << ',' << material_count << ','
+    const auto automatic = selected == pipeline;
+    std::cout << "5," << name << ',' << draw_count << ',' << material_count << ','
               << texture_group_count << ',' << material_switch_count << ','
-              << texture_group_switch_count << ',' << point_light_count << ','
-              << benchmark.shadow_range << ',' << benchmark.shadow_half_extent * 2.0F << ','
-              << std::setprecision(8) << benchmark.shadow_half_extent * 2.0F / 1024.0F << ','
-              << std::setprecision(2) << draw_count << ',' << benchmark.iterations << ','
-              << benchmark.samples << ',' << summary.mean << ',' << summary.p50 << ','
-              << summary.p95 << ',' << summary.p99 << '\n';
+              << texture_group_switch_count << ',' << material_count << ','
+              << (automatic ? draw_count * 2U : 0U) << ',' << (automatic ? draw_count : 0U) << ','
+              << point_light_count << ',' << benchmark.shadow_range << ','
+              << benchmark.shadow_half_extent * 2.0F << ',' << std::setprecision(8)
+              << benchmark.shadow_half_extent * 2.0F / 1024.0F << ',' << std::setprecision(2)
+              << draw_count << ',' << benchmark.iterations << ',' << benchmark.samples << ','
+              << summary.mean << ',' << summary.p50 << ',' << summary.p95 << ',' << summary.p99
+              << '\n';
     return true;
   };
   std::cout << std::fixed << std::setprecision(2) << "# revision=" << GRANIT_BENCHMARK_REVISION
             << ",compiler=" << GRANIT_BENCHMARK_COMPILER << ",system=" << GRANIT_BENCHMARK_SYSTEM
             << ",link=" << GRANIT_BENCHMARK_LINK_MODE << '\n'
             << "schema,name,draws,materials,texture_groups,material_switches,"
-               "texture_group_switches,point_lights,shadow_range,shadow_span,"
+               "texture_group_switches,material_bind_groups,pipeline_cache_entries,"
+               "opaque_batches,point_lights,shadow_range,shadow_span,"
                "shadow_world_units_per_texel,shadow_casters,iterations,samples,mean_ns,p50_ns,"
                "p95_ns,p99_ns\n";
+  const auto print_material_operation = [&](std::string_view name, std::vector<double> samples) {
+    const auto summary = summarize(std::move(samples));
+    std::cout << "5," << name << ',' << draw_count << ',' << material_count << ','
+              << texture_group_count << ',' << material_switch_count << ','
+              << texture_group_switch_count << ',' << material_count << ",0,0," << point_light_count
+              << ',' << benchmark.shadow_range << ',' << benchmark.shadow_half_extent * 2.0F << ','
+              << std::setprecision(8) << benchmark.shadow_half_extent * 2.0F / 1024.0F << ','
+              << std::setprecision(2) << draw_count << ",1," << material_count << ','
+              << summary.mean << ',' << summary.p50 << ',' << summary.p95 << ',' << summary.p99
+              << '\n';
+  };
+  print_material_operation("material_create_with_bind_group", std::move(material_create_samples));
+  print_material_operation("material_bind_group_resource_update",
+                           std::move(material_update_samples));
   if (!run_benchmark("automatic_directional_end_to_end", pipeline, scene) ||
       !run_benchmark("minimal_directional_end_to_end", callback_pipeline, scene) ||
       !run_benchmark("automatic_no_light_end_to_end", pipeline, no_light_scene) ||
@@ -490,14 +542,15 @@ int main(int argc, char** argv) {
   constexpr std::array names{"gpu_shadow", "gpu_opaque", "gpu_tone_mapping"};
   for (std::size_t index = 0; index < names.size(); ++index) {
     const auto summary = summarize(std::move(gpu_samples[index]));
-    std::cout << "4," << names[index] << ',' << draw_count << ',' << material_count << ','
+    std::cout << "5," << names[index] << ',' << draw_count << ',' << material_count << ','
               << texture_group_count << ',' << material_switch_count << ','
-              << texture_group_switch_count << ',' << point_light_count << ','
-              << benchmark.shadow_range << ',' << benchmark.shadow_half_extent * 2.0F << ','
-              << std::setprecision(8) << benchmark.shadow_half_extent * 2.0F / 1024.0F << ','
-              << std::setprecision(2) << draw_count << ',' << benchmark.iterations << ','
-              << benchmark.samples << ',' << summary.mean << ',' << summary.p50 << ','
-              << summary.p95 << ',' << summary.p99 << '\n';
+              << texture_group_switch_count << ',' << material_count << ',' << draw_count * 2U
+              << ',' << draw_count << ',' << point_light_count << ',' << benchmark.shadow_range
+              << ',' << benchmark.shadow_half_extent * 2.0F << ',' << std::setprecision(8)
+              << benchmark.shadow_half_extent * 2.0F / 1024.0F << ',' << std::setprecision(2)
+              << draw_count << ',' << benchmark.iterations << ',' << benchmark.samples << ','
+              << summary.mean << ',' << summary.p50 << ',' << summary.p95 << ',' << summary.p99
+              << '\n';
   }
 #else
   if (!check(render_once(pipeline), "渲染"))

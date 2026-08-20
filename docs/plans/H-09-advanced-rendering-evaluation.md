@@ -6,7 +6,7 @@
 ## 状态
 
 - 设计状态：已确认
-- 实现状态：H-09A～H-09D 已完成；Clustered Forward 暂缓，下一项为 H-09E 绑定压力
+- 实现状态：H-09A～H-09E 已完成；Bindless/Resource Table 暂缓，下一项为 H-09F 决策记录
 - 路线图任务：H-09
 - 优先级：P2
 - 前置依赖：H-03、H-05、H-07、D-09B
