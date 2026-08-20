@@ -5,7 +5,7 @@
 
 `granit/renderer/resource_types.h` 定义 Buffer、Texture、Texture View 和 Sampler 共用的后端
 无关值类型。
-这些结构目前用于冻结资源描述和验证规则；资源创建、销毁及映射函数将在 R-03 至 R-06 中加入。
+这些结构用于 Buffer、Texture、Texture View 和 Sampler 的创建、访问与验证。
 
 ## 内存位置
 

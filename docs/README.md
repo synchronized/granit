@@ -53,6 +53,7 @@
 ### 核心与数学
 
 - [版本与兼容策略](reference/compatibility.md)
+- [核心 C API 所有权、错误与扩展契约](reference/c-api-contract.md)
 - [Renderer 生命周期与诊断](reference/renderer.md)
 - [公共数学值类型](reference/math-types.md)
 - [公开对象线程安全矩阵](reference/thread-safety.md)
