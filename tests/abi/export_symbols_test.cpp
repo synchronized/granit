@@ -6,6 +6,8 @@
 
 #include <catch2/catch_all.hpp>
 
+#include "snapshots/0.1.0/core_identity.h"
+
 #if defined(_WIN32)
 #include <windows.h>
 #else
@@ -150,6 +152,8 @@ private:
 } // namespace
 
 TEST_CASE("共享库导出完整的公共 C ABI", "[abi][exports]") {
+  INFO("ABI 快照: " << GRANIT_ABI_SNAPSHOT_COMPONENT << " "
+                     << GRANIT_ABI_SNAPSHOT_VERSION);
   const shared_library library{GRANIT_ABI_LIBRARY_PATH};
   REQUIRE(library.is_open());
 

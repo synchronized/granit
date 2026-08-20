@@ -133,8 +133,8 @@
 
 **状态：持续进行。**
 
-- **[S-01](plans/S-01-abi-regression.md) / P1**：当前开发阶段范围已完成；导出、布局、版本扩展、
-  共享/静态安装 Consumer 均有回归。正式 ABI 快照等待功能边界收敛，当前仍不承诺稳定。
+- **[S-01](plans/S-01-abi-regression.md) / P1**：已完成；导出、布局、版本扩展、共享/静态安装
+  Consumer 均有回归，并已建立 Granit 0.1.0 核心 C ABI 正式快照。当前仍不承诺稳定。
 - **[S-02](plans/S-02-diagnostics.md) / P1**：已完成；日志、诊断回调、GPU 调试名称和 Device Lost
   报告。
 - **[S-03](plans/S-03-package-consumers.md) / P1**：实现已完成；安装包、真实外部 C/C++
@@ -142,8 +142,8 @@
 - **[S-04](plans/S-04-linux-surface.md) / P2**：实现已完成；XCB、Wayland Surface、窗口示例和
   无头集成测试均已落地，Linux GCC/Clang 共享与静态运行矩阵已通过。
 - **S-05 / P2**：明确标记为不稳定的 Vulkan 原生互操作。
-- **[S-06](plans/S-06-compatibility-policy.md) / P2**：当前 0.x 兼容策略已确认；1.0 ABI 冻结等待
-  S-01E 正式快照和发布验收。
+- **[S-06](plans/S-06-compatibility-policy.md) / P2**：S-06A～S-06B 已完成；当前 0.x 兼容策略
+  和首份核心 ABI 快照已落地，下一步进行稳定 component 审计。
 - **[S-07](plans/S-07-window-events.md) / P2**：可选 Window 组件及 Win32/XCB/Wayland Window、
   统一事件、原生值查询和 Renderer 集成已实现并通过跨平台 CI。
 - **[S-07E](plans/S-07E-input-component.md) / P2**：Input 独立组件、C ABI、Win32 键盘文本指针及
@@ -154,8 +154,8 @@
 
 ## 近期执行顺序
 
-1. 按 [S-06 兼容策略](plans/S-06-compatibility-policy.md)推进 S-01E 正式 ABI 快照；Deferred 保持为
-   使用 Render Graph 组合的可选高级管线研究项。
+1. 按 [S-06 兼容策略](plans/S-06-compatibility-policy.md)推进 S-06C component 稳定性审计；
+   Deferred 保持为使用 Render Graph 组合的可选高级管线研究项。
 2. H-09 的透明 PBR、CSM、Clustered Forward 与 Bindless 只在各自重新评估条件满足后独立恢复，
    不作为当前稳定化工作的前置项。
 

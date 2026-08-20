@@ -68,6 +68,10 @@ if(BUILD_SHARED_LIBS)
     granit_abi_exports_test
     PRIVATE GRANIT_ABI_LIBRARY_PATH="$<TARGET_FILE:granit>"
   )
+  target_include_directories(
+    granit_abi_exports_test
+    PRIVATE "$<TARGET_PROPERTY:granit,INTERFACE_INCLUDE_DIRECTORIES>"
+  )
   target_link_libraries(
     granit_abi_exports_test
     PRIVATE Catch2::Catch2WithMain ${CMAKE_DL_LIBS}
