@@ -146,7 +146,7 @@ Scene、Material、PBR 和 Lighting 不应各自维护含义相同但类型不�
 失败时不修改输出。
 
 现阶段不加入四元数、Transform 层级、SIMD、双精度或通用几何容器，只有实际模块产生需求后才
-扩展。项目仍处于开发阶段，公共数学值类型尚不承诺稳定 ABI。
+扩展。公共数学值类型的当前稳定等级见[兼容策略](../reference/compatibility.md)。
 
 ## Vulkan 封装边界
 

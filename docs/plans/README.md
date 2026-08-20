@@ -107,6 +107,8 @@ D-03-graphics-pipeline.md
   共享与静态安装 Consumer、版本选择和导出审计均已通过 CI。
 - [S-04：Linux XCB 与 Wayland Surface](S-04-linux-surface.md)——实现已完成；XCB、Wayland、窗口
   示例和无头集成测试已通过 Linux GCC/Clang 共享与静态运行矩阵。
+- [S-06：版本与兼容承诺](S-06-compatibility-policy.md)——已确认当前 0.x 策略；1.0 ABI 冻结等待
+  S-01E 正式快照和发布验收。
 - [S-07：Window、Event 与 Input 边界](S-07-window-events.md)——Win32、XCB 与 Wayland Window、
   统一事件及 Renderer 集成均已实现并通过跨平台 CI。Renderer Surface 仍允许 SDL、
   GLFW、Qt 和引擎直接接入。

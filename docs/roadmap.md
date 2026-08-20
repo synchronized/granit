@@ -142,7 +142,8 @@
 - **[S-04](plans/S-04-linux-surface.md) / P2**：实现已完成；XCB、Wayland Surface、窗口示例和
   无头集成测试均已落地，Linux GCC/Clang 共享与静态运行矩阵已通过。
 - **S-05 / P2**：明确标记为不稳定的 Vulkan 原生互操作。
-- **S-06 / P2**：核心、高层模块和互操作接口的兼容承诺。
+- **[S-06](plans/S-06-compatibility-policy.md) / P2**：当前 0.x 兼容策略已确认；1.0 ABI 冻结等待
+  S-01E 正式快照和发布验收。
 - **[S-07](plans/S-07-window-events.md) / P2**：可选 Window 组件及 Win32/XCB/Wayland Window、
   统一事件、原生值查询和 Renderer 集成已实现并通过跨平台 CI。
 - **[S-07E](plans/S-07E-input-component.md) / P2**：Input 独立组件、C ABI、Win32 键盘文本指针及
@@ -153,8 +154,8 @@
 
 ## 近期执行顺序
 
-1. API/ABI 稳定化在开发阶段功能边界收敛后推进；Deferred 保持为使用 Render Graph 组合的可选
-   高级管线研究项。
+1. 按 [S-06 兼容策略](plans/S-06-compatibility-policy.md)推进 S-01E 正式 ABI 快照；Deferred 保持为
+   使用 Render Graph 组合的可选高级管线研究项。
 2. H-09 的透明 PBR、CSM、Clustered Forward 与 Bindless 只在各自重新评估条件满足后独立恢复，
    不作为当前稳定化工作的前置项。
 
