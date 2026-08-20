@@ -124,6 +124,7 @@
 | [H-06 Unlit、2D 与 UI](plans/H-06-unlit-2d-ui.md) | P2 | 已完成内部技术路线验证 |
 | [H-07 参考 Render Pipeline](plans/H-07-reference-render-pipeline.md) | P2 | 已完成 |
 | [H-08 公共 UI、Debug Draw 与 Text](plans/H-08-ui-debug-text-components.md) | P2 | 已完成 |
+| [H-09 高级渲染评估](plans/H-09-advanced-rendering-evaluation.md) | P2 | 已完成；四项原型分别暂缓 |
 
 高层模块只能依赖核心 Renderer，不能形成反向依赖。使用者始终可以绕过高层模块，直接使用资源、
 命令和 Pipeline API。
@@ -152,9 +153,9 @@
 
 ## 近期执行顺序
 
-1. 按 [H-09 高级渲染评估](plans/H-09-advanced-rendering-evaluation.md)建立真实材质与光源负载，
-   测量透明 PBR、CSM、Clustered Forward 与 Bindless 的收益和成本。
-2. API/ABI 稳定化在开发阶段功能边界收敛后推进；Deferred 保持为使用 Render Graph 组合的可选
+1. API/ABI 稳定化在开发阶段功能边界收敛后推进；Deferred 保持为使用 Render Graph 组合的可选
    高级管线研究项。
+2. H-09 的透明 PBR、CSM、Clustered Forward 与 Bindless 只在各自重新评估条件满足后独立恢复，
+   不作为当前稳定化工作的前置项。
 
 若前置抽象不足，应先更新对应 Plan 和本路线图状态，再扩大公共 API。

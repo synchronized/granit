@@ -95,8 +95,8 @@ D-03-graphics-pipeline.md
   离屏/窗口用户路径、安装 component、输出与性能验收均已闭合。
 - [H-08：公共 UI、Debug Draw 与 Text components](H-08-ui-debug-text-components.md)——已完成；公共
   Canvas、Debug Draw、R8 Text Atlas、Pipeline 自动录制和第三方 Adapter 边界均已验收。
-- [H-09：高级渲染能力真实负载评估](H-09-advanced-rendering-evaluation.md)——已确认；先建立材质、
-  Draw、光源和透明重叠基线，再决定是否分别启动透明 PBR、CSM、Clustered Forward 或 Bindless。
+- [H-09：高级渲染能力真实负载评估](H-09-advanced-rendering-evaluation.md)——已完成；四项能力均按
+  独立证据暂缓原型，详见[完成记录](../records/H-09-advanced-rendering-evaluation.md)。
 - [H-09B：透明 PBR 正确性草案](H-09B-transparent-pbr-correctness.md)——已确认评估契约；现有基线和
   产品需求不足以支持进入原型，暂时保留 Unlit 透明路径。
 - [S-01：C ABI 回归验证](S-01-abi-regression.md)——当前开发阶段范围已完成；正式 ABI 快照等待

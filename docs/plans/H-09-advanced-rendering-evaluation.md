@@ -6,7 +6,7 @@
 ## 状态
 
 - 设计状态：已确认
-- 实现状态：H-09A～H-09E 已完成；Bindless/Resource Table 暂缓，下一项为 H-09F 决策记录
+- 实现状态：已完成；四项独立结论见[评估记录](../records/H-09-advanced-rendering-evaluation.md)
 - 路线图任务：H-09
 - 优先级：P2
 - 前置依赖：H-03、H-05、H-07、D-09B
@@ -80,6 +80,10 @@ CPU 和 GPU 结果分别报告 P50、P95、P99。每份结果记录提交、编�
    Draw 批次；满足 D-09 条件后才进入纯 CPU Resource Table 原型。
 6. **H-09F：决策记录**——为四项能力分别给出“继续原路径、建立原型或暂缓”的结论，不输出一个
    打包式总决策。
+
+H-09F 已完成。透明 PBR、CSM、Clustered Forward 和 Bindless 均未满足完整原型门槛，分别保留
+现有 Unlit/Alpha Cutoff、单阴影图、Forward 和传统 Bind Group 路径；各项重新评估条件由完成记录
+独立维护。
 
 ## 测试与验收
 

@@ -126,3 +126,5 @@ H-09E 的 CSV schema 5 额外输出材质 Bind Group 数、Render Pipeline 逐 D
 [H-09E 绑定压力结果](results/2026-08-20-windows-clang-binding-pressure-7b3e246.md)。
 
 已提交的基线摘要见 [results/README.md](results/README.md)。
+H-09 的四项独立结论及重新评估条件见
+[高级渲染能力评估记录](../docs/records/H-09-advanced-rendering-evaluation.md)。
