@@ -142,8 +142,8 @@
 - **[S-04](plans/S-04-linux-surface.md) / P2**：实现已完成；XCB、Wayland Surface、窗口示例和
   无头集成测试均已落地，Linux GCC/Clang 共享与静态运行矩阵已通过。
 - **S-05 / P2**：明确标记为不稳定的 Vulkan 原生互操作。
-- **[S-06](plans/S-06-compatibility-policy.md) / P2**：当前 0.x 策略、核心 ABI 快照和核心契约
-  审计已完成；下一步逐项审计 RenderPipeline、Window 与 Input。
+- **[S-06](plans/S-06-compatibility-policy.md) / P2**：当前 0.x 策略、核心 ABI 快照以及 Core、
+  RenderPipeline 契约审计已完成；下一步审计 Window 与 Input。
 - **[S-07](plans/S-07-window-events.md) / P2**：可选 Window 组件及 Win32/XCB/Wayland Window、
   统一事件、原生值查询和 Renderer 集成已实现并通过跨平台 CI。
 - **[S-07E](plans/S-07E-input-component.md) / P2**：Input 独立组件、C ABI、Win32 键盘文本指针及
@@ -154,8 +154,8 @@
 
 ## 近期执行顺序
 
-1. 按 [S-06 兼容策略](plans/S-06-compatibility-policy.md)推进 RenderPipeline、Window 与 Input
-   的独立稳定性审计；Deferred 保持为使用 Render Graph 组合的可选高级管线研究项。
+1. 按 [S-06 兼容策略](plans/S-06-compatibility-policy.md)推进 Window 与 Input 的独立稳定性审计；
+   Deferred 保持为使用 Render Graph 组合的可选高级管线研究项。
 2. H-09 的透明 PBR、CSM、Clustered Forward 与 Bindless 只在各自重新评估条件满足后独立恢复，
    不作为当前稳定化工作的前置项。
 

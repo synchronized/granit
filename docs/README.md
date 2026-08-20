@@ -74,6 +74,7 @@
 
 ### 高级 Render Pipeline component
 
+- [RenderPipeline component 契约](reference/render-pipeline-contract.md)
 - [Mesh](reference/mesh.md)
 - [Material](reference/material.md)
 - [Scene Snapshot](reference/scene-snapshot.md)
