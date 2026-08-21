@@ -193,7 +193,7 @@ extern "C" granit_result granit_text_atlas_create(granit_renderer renderer,
     return GRANIT_ERROR_INVALID_ARGUMENT;
   *atlas = GRANIT_NULL_HANDLE;
   if (renderer == GRANIT_NULL_HANDLE || desc == nullptr ||
-      desc->struct_size < sizeof(granit_text_atlas_desc) ||
+      desc->struct_size < GRANIT_TEXT_ATLAS_DESC_VERSION_1_SIZE ||
       !zero(desc->reserved, std::size(desc->reserved)) || desc->page_width == 0 ||
       desc->page_height == 0 || desc->page_width > 4096 || desc->page_height > 4096 ||
       desc->max_pages == 0 || desc->max_pages > 256 || desc->padding * 2 >= desc->page_width ||
@@ -217,8 +217,7 @@ extern "C" granit_result granit_text_atlas_create(granit_renderer renderer,
     sampler_desc.address_mode_u = GRANIT_ADDRESS_MODE_CLAMP_TO_EDGE;
     sampler_desc.address_mode_v = GRANIT_ADDRESS_MODE_CLAMP_TO_EDGE;
     sampler_desc.address_mode_w = GRANIT_ADDRESS_MODE_CLAMP_TO_EDGE;
-    const auto sampler_result =
-        granit_sampler_create(renderer, &sampler_desc, &state->sampler);
+    const auto sampler_result = granit_sampler_create(renderer, &sampler_desc, &state->sampler);
     if (sampler_result != GRANIT_SUCCESS)
       return sampler_result;
     std::scoped_lock lock{registry_mutex};
@@ -237,9 +236,11 @@ extern "C" granit_result granit_text_atlas_create(granit_renderer renderer,
   }
 }
 
-granit_result granit::pipeline::detail::text_atlas_resolve_glyph(
-    granit_renderer renderer, granit_text_atlas atlas, uint64_t font_key, uint32_t glyph_id,
-    text_atlas_glyph& glyph) noexcept {
+granit_result granit::pipeline::detail::text_atlas_resolve_glyph(granit_renderer renderer,
+                                                                 granit_text_atlas atlas,
+                                                                 uint64_t font_key,
+                                                                 uint32_t glyph_id,
+                                                                 text_atlas_glyph& glyph) noexcept {
   const auto state = find(renderer, atlas);
   if (!state)
     return GRANIT_ERROR_INVALID_HANDLE;
@@ -270,7 +271,7 @@ granit_text_atlas_upload_glyph(granit_renderer renderer, granit_text_atlas atlas
   const auto state = find(renderer, atlas);
   if (!state)
     return GRANIT_ERROR_INVALID_HANDLE;
-  if (glyph == nullptr || glyph->struct_size < sizeof(granit_text_glyph_bitmap_desc) ||
+  if (glyph == nullptr || glyph->struct_size < GRANIT_TEXT_GLYPH_BITMAP_DESC_VERSION_1_SIZE ||
       glyph->font_key == 0 || !std::isfinite(glyph->bearing_x) ||
       !std::isfinite(glyph->bearing_y) || !zero(glyph->reserved, std::size(glyph->reserved)) ||
       ((glyph->width == 0) != (glyph->height == 0))) {
@@ -351,7 +352,7 @@ granit_text_atlas_upload_glyph(granit_renderer renderer, granit_text_atlas atlas
 extern "C" granit_result granit_text_atlas_get_stats(granit_renderer renderer,
                                                      granit_text_atlas atlas,
                                                      granit_text_atlas_stats* stats) {
-  if (stats == nullptr || stats->struct_size < sizeof(granit_text_atlas_stats))
+  if (stats == nullptr || stats->struct_size < GRANIT_TEXT_ATLAS_STATS_VERSION_1_SIZE)
     return GRANIT_ERROR_INVALID_ARGUMENT;
   const auto state = find(renderer, atlas);
   if (!state)

@@ -4,12 +4,13 @@
 #ifndef GRANIT_PIPELINE_TEXT_DRAW_LIST_H_
 #define GRANIT_PIPELINE_TEXT_DRAW_LIST_H_
 
+#include <stddef.h>
 #include <stdint.h>
 
 #include <granit/core/result.h>
 #include <granit/core/types.h>
-#include <granit/pipeline/export.h>
 #include <granit/pipeline/canvas_draw_list.h>
+#include <granit/pipeline/export.h>
 #include <granit/pipeline/text_atlas.h>
 #include <granit/renderer/command_recorder.h>
 #include <granit/renderer/renderer.h>
@@ -39,6 +40,9 @@ typedef struct granit_text_glyph_run_desc {
   uint32_t reserved[4];
 } granit_text_glyph_run_desc;
 
+#define GRANIT_TEXT_GLYPH_RUN_DESC_VERSION_1_SIZE                                                  \
+  ((uint32_t)(offsetof(granit_text_glyph_run_desc, reserved) + sizeof(uint32_t[4])))
+
 #define GRANIT_TEXT_GLYPH_RUN_DESC_INIT                                                            \
   {                                                                                                \
     (uint32_t)sizeof(granit_text_glyph_run_desc), UINT32_C(0), 0, {0, 0, 0, 0}, {                  \
@@ -53,6 +57,9 @@ typedef struct granit_text_draw_list_desc {
   uint32_t reserved[5];
 } granit_text_draw_list_desc;
 
+#define GRANIT_TEXT_DRAW_LIST_DESC_VERSION_1_SIZE                                                  \
+  ((uint32_t)(offsetof(granit_text_draw_list_desc, reserved) + sizeof(uint32_t[5])))
+
 #define GRANIT_TEXT_DRAW_LIST_DESC_INIT                                                            \
   {                                                                                                \
     (uint32_t)sizeof(granit_text_draw_list_desc), UINT32_C(0), UINT32_C(0), {                      \
@@ -66,6 +73,9 @@ typedef struct granit_text_draw_list_stats {
   uint32_t run_count;
   uint32_t reserved[5];
 } granit_text_draw_list_stats;
+
+#define GRANIT_TEXT_DRAW_LIST_STATS_VERSION_1_SIZE                                                 \
+  ((uint32_t)(offsetof(granit_text_draw_list_stats, reserved) + sizeof(uint32_t[5])))
 
 #define GRANIT_TEXT_DRAW_LIST_STATS_INIT                                                           \
   {                                                                                                \
@@ -92,9 +102,9 @@ GRANIT_RENDER_PIPELINE_API granit_result granit_text_draw_list_get_stats(
  * 将已上传字形转换并追加到 Canvas；基线坐标使用 Canvas 的左上原点、Y 轴向下空间。
  * 字形缺失时返回 NOT_READY，且调用方不应依赖失败前已经追加的部分内容。
  */
-GRANIT_RENDER_PIPELINE_API granit_result granit_text_draw_list_append_to_canvas(
-    granit_renderer renderer, granit_text_draw_list list, granit_text_atlas atlas,
-    granit_canvas_draw_list canvas);
+GRANIT_RENDER_PIPELINE_API granit_result
+granit_text_draw_list_append_to_canvas(granit_renderer renderer, granit_text_draw_list list,
+                                       granit_text_atlas atlas, granit_canvas_draw_list canvas);
 GRANIT_RENDER_PIPELINE_API granit_result granit_text_draw_list_destroy(granit_renderer renderer,
                                                                        granit_text_draw_list list);
 

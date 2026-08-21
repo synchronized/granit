@@ -3,6 +3,9 @@
 
 #include <granit/pipeline/mesh.h>
 
+typedef char
+    granit_mesh_desc_v1_size[sizeof(granit_mesh_desc) == GRANIT_MESH_DESC_VERSION_1_SIZE ? 1 : -1];
+
 void granit_pipeline_mesh_h_compiles(void) {
   granit_mesh_desc desc = GRANIT_MESH_DESC_INIT;
   (void)desc;

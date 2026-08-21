@@ -138,7 +138,7 @@ struct callback_state {
 
 granit_result record(const granit_render_pipeline_record_info* info, void* user_data) {
   auto& state = *static_cast<callback_state*>(user_data);
-  if (info == nullptr || info->struct_size < sizeof(granit_render_pipeline_record_info) ||
+  if (info == nullptr || info->struct_size < GRANIT_RENDER_PIPELINE_RECORD_INFO_VERSION_1_SIZE ||
       info->recorder == GRANIT_NULL_HANDLE ||
       (info->stage == GRANIT_RENDER_PIPELINE_STAGE_OPAQUE &&
        info->color_output == GRANIT_NULL_HANDLE) ||

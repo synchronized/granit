@@ -97,7 +97,7 @@ extern "C" granit_result granit_scene_snapshot_create(granit_renderer renderer,
   if (snapshot == nullptr)
     return GRANIT_ERROR_INVALID_ARGUMENT;
   *snapshot = GRANIT_NULL_HANDLE;
-  if (desc == nullptr || desc->struct_size < sizeof(granit_scene_snapshot_desc) ||
+  if (desc == nullptr || desc->struct_size < GRANIT_SCENE_SNAPSHOT_DESC_VERSION_1_SIZE ||
       desc->reserved != 0 || !valid_array(desc->views, desc->view_count) ||
       !valid_array(desc->renderables, desc->renderable_count) ||
       !valid_array(desc->directional_lights, desc->directional_light_count) ||

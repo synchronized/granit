@@ -4,6 +4,7 @@
 #ifndef GRANIT_PIPELINE_DEBUG_DRAW_LIST_H_
 #define GRANIT_PIPELINE_DEBUG_DRAW_LIST_H_
 
+#include <stddef.h>
 #include <stdint.h>
 
 #include <granit/core/result.h>
@@ -59,6 +60,9 @@ typedef struct granit_debug_draw_list_desc {
   uint32_t reserved[5];
 } granit_debug_draw_list_desc;
 
+#define GRANIT_DEBUG_DRAW_LIST_DESC_VERSION_1_SIZE                                                 \
+  ((uint32_t)(offsetof(granit_debug_draw_list_desc, reserved) + sizeof(uint32_t[5])))
+
 #define GRANIT_DEBUG_DRAW_LIST_DESC_INIT                                                           \
   {                                                                                                \
     (uint32_t)sizeof(granit_debug_draw_list_desc), UINT32_C(0), UINT32_C(0), {                     \
@@ -72,6 +76,9 @@ typedef struct granit_debug_draw_list_stats {
   uint32_t triangle_count;
   uint32_t reserved[5];
 } granit_debug_draw_list_stats;
+
+#define GRANIT_DEBUG_DRAW_LIST_STATS_VERSION_1_SIZE                                                \
+  ((uint32_t)(offsetof(granit_debug_draw_list_stats, reserved) + sizeof(uint32_t[5])))
 
 /** 把世界空间调试图元录制到颜色目标所需的参数。 */
 typedef struct granit_debug_draw_record_desc {
@@ -88,6 +95,9 @@ typedef struct granit_debug_draw_record_desc {
   uint32_t encode_srgb;
   uint32_t reserved[3];
 } granit_debug_draw_record_desc;
+
+#define GRANIT_DEBUG_DRAW_RECORD_DESC_VERSION_1_SIZE                                               \
+  ((uint32_t)(offsetof(granit_debug_draw_record_desc, reserved) + sizeof(uint32_t[4])))
 
 #define GRANIT_DEBUG_DRAW_RECORD_DESC_INIT                                                         \
   {                                                                                                \

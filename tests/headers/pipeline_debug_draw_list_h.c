@@ -3,6 +3,15 @@
 
 #include <granit/pipeline/debug_draw_list.h>
 
+typedef char granit_debug_list_v1_size
+    [sizeof(granit_debug_draw_list_desc) == GRANIT_DEBUG_DRAW_LIST_DESC_VERSION_1_SIZE ? 1 : -1];
+typedef char granit_debug_stats_v1_size
+    [sizeof(granit_debug_draw_list_stats) == GRANIT_DEBUG_DRAW_LIST_STATS_VERSION_1_SIZE ? 1 : -1];
+typedef char granit_debug_record_v1_size[sizeof(granit_debug_draw_record_desc) ==
+                                                 GRANIT_DEBUG_DRAW_RECORD_DESC_VERSION_1_SIZE
+                                             ? 1
+                                             : -1];
+
 static granit_debug_draw_list_desc desc = GRANIT_DEBUG_DRAW_LIST_DESC_INIT;
 static granit_debug_draw_list_stats stats = GRANIT_DEBUG_DRAW_LIST_STATS_INIT;
 static granit_debug_draw_record_desc record_desc = GRANIT_DEBUG_DRAW_RECORD_DESC_INIT;

@@ -47,6 +47,9 @@ typedef struct granit_material_desc {
   uint32_t reserved_tail;
 } granit_material_desc;
 
+#define GRANIT_MATERIAL_DESC_VERSION_1_SIZE                                                        \
+  ((uint32_t)(offsetof(granit_material_desc, reserved_tail) + sizeof(uint32_t)))
+
 #define GRANIT_MATERIAL_DESC_INIT                                                                  \
   {(uint32_t)sizeof(granit_material_desc), UINT32_C(0), 0, UINT64_C(0), 0, UINT32_C(0), UINT32_C(0)}
 

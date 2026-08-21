@@ -78,6 +78,9 @@ typedef struct granit_scene_snapshot_desc {
   uint32_t spot_light_count;
 } granit_scene_snapshot_desc;
 
+#define GRANIT_SCENE_SNAPSHOT_DESC_VERSION_1_SIZE                                                  \
+  ((uint32_t)(offsetof(granit_scene_snapshot_desc, spot_light_count) + sizeof(uint64_t)))
+
 #define GRANIT_SCENE_SNAPSHOT_DESC_INIT                                                            \
   {(uint32_t)sizeof(granit_scene_snapshot_desc),                                                   \
    UINT32_C(0),                                                                                    \

@@ -4,6 +4,7 @@
 #ifndef GRANIT_PIPELINE_TEXT_ATLAS_H_
 #define GRANIT_PIPELINE_TEXT_ATLAS_H_
 
+#include <stddef.h>
 #include <stdint.h>
 
 #include <granit/core/result.h>
@@ -22,6 +23,9 @@ typedef struct granit_text_atlas_desc {
   uint32_t padding;
   uint32_t reserved[3];
 } granit_text_atlas_desc;
+
+#define GRANIT_TEXT_ATLAS_DESC_VERSION_1_SIZE                                                      \
+  ((uint32_t)(offsetof(granit_text_atlas_desc, reserved) + sizeof(uint32_t[3])))
 
 #define GRANIT_TEXT_ATLAS_DESC_INIT                                                                \
   {                                                                                                \
@@ -49,6 +53,9 @@ typedef struct granit_text_glyph_bitmap_desc {
   uint32_t reserved[3];
 } granit_text_glyph_bitmap_desc;
 
+#define GRANIT_TEXT_GLYPH_BITMAP_DESC_VERSION_1_SIZE                                               \
+  ((uint32_t)(offsetof(granit_text_glyph_bitmap_desc, reserved) + sizeof(uint32_t[3])))
+
 #define GRANIT_TEXT_GLYPH_BITMAP_DESC_INIT                                                         \
   {                                                                                                \
     (uint32_t)sizeof(granit_text_glyph_bitmap_desc), UINT32_C(0), UINT64_C(0), UINT32_C(0),        \
@@ -63,6 +70,9 @@ typedef struct granit_text_atlas_stats {
   uint32_t page_count;
   uint32_t reserved[5];
 } granit_text_atlas_stats;
+
+#define GRANIT_TEXT_ATLAS_STATS_VERSION_1_SIZE                                                     \
+  ((uint32_t)(offsetof(granit_text_atlas_stats, reserved) + sizeof(uint32_t[5])))
 
 #define GRANIT_TEXT_ATLAS_STATS_INIT                                                               \
   {                                                                                                \

@@ -4,6 +4,7 @@
 #ifndef GRANIT_PIPELINE_CANVAS_DRAW_LIST_H_
 #define GRANIT_PIPELINE_CANVAS_DRAW_LIST_H_
 
+#include <stddef.h>
 #include <stdint.h>
 
 #include <granit/core/result.h>
@@ -43,6 +44,9 @@ typedef struct granit_canvas_draw_list_desc {
   uint32_t reserved[4];
 } granit_canvas_draw_list_desc;
 
+#define GRANIT_CANVAS_DRAW_LIST_DESC_VERSION_1_SIZE                                                \
+  ((uint32_t)(offsetof(granit_canvas_draw_list_desc, reserved) + sizeof(uint32_t[4])))
+
 #define GRANIT_CANVAS_DRAW_LIST_DESC_INIT                                                          \
   {                                                                                                \
     (uint32_t)sizeof(granit_canvas_draw_list_desc), UINT32_C(0), UINT32_C(0), UINT32_C(0), {       \
@@ -66,6 +70,9 @@ typedef struct granit_canvas_rect_desc {
   uint32_t reserved[4];
 } granit_canvas_rect_desc;
 
+#define GRANIT_CANVAS_RECT_DESC_VERSION_1_SIZE                                                     \
+  ((uint32_t)(offsetof(granit_canvas_rect_desc, reserved) + sizeof(uint32_t[4])))
+
 #define GRANIT_CANVAS_RECT_DESC_INIT                                                               \
   {                                                                                                \
     (uint32_t)sizeof(granit_canvas_rect_desc), 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 1.0F, 1.0F,     \
@@ -84,6 +91,9 @@ typedef struct granit_canvas_draw_list_stats {
   uint32_t reserved[3];
 } granit_canvas_draw_list_stats;
 
+#define GRANIT_CANVAS_DRAW_LIST_STATS_VERSION_1_SIZE                                               \
+  ((uint32_t)(offsetof(granit_canvas_draw_list_stats, reserved) + sizeof(uint32_t[3])))
+
 /** 把 Canvas Draw List 录制到颜色目标所需的参数。坐标使用左上原点、Y 轴向下的像素单位。 */
 typedef struct granit_canvas_record_desc {
   uint32_t struct_size;
@@ -95,6 +105,9 @@ typedef struct granit_canvas_record_desc {
   uint32_t encode_srgb;
   uint32_t reserved[3];
 } granit_canvas_record_desc;
+
+#define GRANIT_CANVAS_RECORD_DESC_VERSION_1_SIZE                                                   \
+  ((uint32_t)(offsetof(granit_canvas_record_desc, reserved) + sizeof(uint32_t[3])))
 
 #define GRANIT_CANVAS_RECORD_DESC_INIT                                                             \
   {                                                                                                \

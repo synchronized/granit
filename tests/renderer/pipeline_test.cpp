@@ -855,3 +855,16 @@ TEST_CASE("Graphics 与 Compute 工作负载支持并行录制", "[pipeline][com
 }
 
 } // namespace
+
+TEST_CASE("Pipeline 销毁接口统一拒绝空句柄", "[pipeline][validation]") {
+  CHECK(granit_bind_group_layout_destroy(GRANIT_NULL_HANDLE, GRANIT_NULL_HANDLE) ==
+        GRANIT_ERROR_INVALID_HANDLE);
+  CHECK(granit_bind_group_destroy(GRANIT_NULL_HANDLE, GRANIT_NULL_HANDLE) ==
+        GRANIT_ERROR_INVALID_HANDLE);
+  CHECK(granit_pipeline_layout_destroy(GRANIT_NULL_HANDLE, GRANIT_NULL_HANDLE) ==
+        GRANIT_ERROR_INVALID_HANDLE);
+  CHECK(granit_graphics_pipeline_destroy(GRANIT_NULL_HANDLE, GRANIT_NULL_HANDLE) ==
+        GRANIT_ERROR_INVALID_HANDLE);
+  CHECK(granit_compute_pipeline_destroy(GRANIT_NULL_HANDLE, GRANIT_NULL_HANDLE) ==
+        GRANIT_ERROR_INVALID_HANDLE);
+}

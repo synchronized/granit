@@ -145,7 +145,7 @@ extern "C" granit_result granit_canvas_draw_list_create(granit_renderer renderer
     return GRANIT_ERROR_INVALID_ARGUMENT;
   *list = GRANIT_NULL_HANDLE;
   if (renderer == GRANIT_NULL_HANDLE || desc == nullptr ||
-      desc->struct_size < sizeof(granit_canvas_draw_list_desc) ||
+      desc->struct_size < GRANIT_CANVAS_DRAW_LIST_DESC_VERSION_1_SIZE ||
       !reserved_is_zero(desc->reserved, std::size(desc->reserved))) {
     return GRANIT_ERROR_INVALID_ARGUMENT;
   }
@@ -214,7 +214,7 @@ granit_canvas_draw_list_append(granit_renderer renderer, granit_canvas_draw_list
 extern "C" granit_result granit_canvas_draw_list_append_rect(granit_renderer renderer,
                                                              granit_canvas_draw_list list,
                                                              const granit_canvas_rect_desc* desc) {
-  if (desc == nullptr || desc->struct_size < sizeof(granit_canvas_rect_desc) ||
+  if (desc == nullptr || desc->struct_size < GRANIT_CANVAS_RECT_DESC_VERSION_1_SIZE ||
       !reserved_is_zero(desc->reserved, std::size(desc->reserved)) || !std::isfinite(desc->x) ||
       !std::isfinite(desc->y) || !std::isfinite(desc->width) || !std::isfinite(desc->height) ||
       !std::isfinite(desc->u0) || !std::isfinite(desc->v0) || !std::isfinite(desc->u1) ||
@@ -236,7 +236,7 @@ extern "C" granit_result granit_canvas_draw_list_append_rect(granit_renderer ren
 extern "C" granit_result granit_canvas_draw_list_get_stats(granit_renderer renderer,
                                                            granit_canvas_draw_list list,
                                                            granit_canvas_draw_list_stats* stats) {
-  if (stats == nullptr || stats->struct_size < sizeof(granit_canvas_draw_list_stats))
+  if (stats == nullptr || stats->struct_size < GRANIT_CANVAS_DRAW_LIST_STATS_VERSION_1_SIZE)
     return GRANIT_ERROR_INVALID_ARGUMENT;
   const auto state = find_list(renderer, list);
   if (state == nullptr)
@@ -258,7 +258,7 @@ extern "C" granit_result granit_canvas_draw_list_record(granit_renderer renderer
                                                         granit_canvas_draw_list list,
                                                         const granit_canvas_record_desc* desc) {
   if (recorder == GRANIT_NULL_HANDLE || desc == nullptr ||
-      desc->struct_size < sizeof(granit_canvas_record_desc) ||
+      desc->struct_size < GRANIT_CANVAS_RECORD_DESC_VERSION_1_SIZE ||
       !reserved_is_zero(desc->reserved, std::size(desc->reserved)) ||
       desc->color == GRANIT_NULL_HANDLE || desc->color_format == GRANIT_TEXTURE_FORMAT_UNDEFINED ||
       desc->width == 0 || desc->height == 0 || desc->encode_srgb > 1 ||

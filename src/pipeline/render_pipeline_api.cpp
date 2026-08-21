@@ -140,9 +140,10 @@ size_t tone_mapping_pipeline_index(granit_texture_format format) {
 }
 
 bool valid_output(const granit_render_pipeline_output& output) {
-  return output.struct_size >= sizeof(granit_render_pipeline_output) && output.reserved == 0 &&
-         output.reserved_tail == 0 && output.view != GRANIT_NULL_HANDLE && output.width != 0 &&
-         output.height != 0 && output.format >= GRANIT_TEXTURE_FORMAT_RGBA8_UNORM &&
+  return output.struct_size >= GRANIT_RENDER_PIPELINE_OUTPUT_VERSION_1_SIZE &&
+         output.reserved == 0 && output.reserved_tail == 0 && output.view != GRANIT_NULL_HANDLE &&
+         output.width != 0 && output.height != 0 &&
+         output.format >= GRANIT_TEXTURE_FORMAT_RGBA8_UNORM &&
          output.format <= GRANIT_TEXTURE_FORMAT_BGRA8_SRGB;
 }
 
@@ -785,7 +786,7 @@ extern "C" granit_result granit_render_pipeline_create(granit_renderer renderer,
   if (pipeline == nullptr)
     return GRANIT_ERROR_INVALID_ARGUMENT;
   *pipeline = GRANIT_NULL_HANDLE;
-  if (desc == nullptr || desc->struct_size < sizeof(granit_render_pipeline_desc) ||
+  if (desc == nullptr || desc->struct_size < GRANIT_RENDER_PIPELINE_DESC_VERSION_1_SIZE ||
       desc->reserved != 0) {
     return GRANIT_ERROR_INVALID_ARGUMENT;
   }
@@ -853,7 +854,7 @@ extern "C" granit_result granit_render_pipeline_create(granit_renderer renderer,
 extern "C" granit_result
 granit_render_pipeline_render(granit_renderer renderer, granit_render_pipeline pipeline,
                               const granit_render_pipeline_render_desc* desc) {
-  if (desc == nullptr || desc->struct_size < sizeof(granit_render_pipeline_render_desc) ||
+  if (desc == nullptr || desc->struct_size < GRANIT_RENDER_PIPELINE_RENDER_DESC_VERSION_1_SIZE ||
       desc->reserved != 0 || desc->reserved_tail != 0 || desc->scene == GRANIT_NULL_HANDLE ||
       desc->view_count == 0 || !std::isfinite(desc->exposure_ev) ||
       (desc->frame != GRANIT_NULL_HANDLE && desc->view_count != 1) ||

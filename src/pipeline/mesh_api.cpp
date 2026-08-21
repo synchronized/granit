@@ -244,7 +244,7 @@ extern "C" granit_result granit_mesh_create(granit_renderer renderer, const gran
     return GRANIT_ERROR_INVALID_ARGUMENT;
   *mesh = GRANIT_NULL_HANDLE;
   if (renderer == GRANIT_NULL_HANDLE || desc == nullptr ||
-      desc->struct_size < sizeof(granit_mesh_desc) || desc->reserved != 0 ||
+      desc->struct_size < GRANIT_MESH_DESC_VERSION_1_SIZE || desc->reserved != 0 ||
       !valid_topology(desc->topology) || desc->vertex_buffer_count == 0 ||
       desc->vertex_buffer_count > 16 || desc->vertex_buffers == nullptr ||
       desc->instance_count == 0 || desc->indexed > 1 ||

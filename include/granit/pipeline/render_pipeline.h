@@ -4,6 +4,7 @@
 #ifndef GRANIT_PIPELINE_RENDER_PIPELINE_H_
 #define GRANIT_PIPELINE_RENDER_PIPELINE_H_
 
+#include <stddef.h>
 #include <stdint.h>
 
 #include <granit/core/result.h>
@@ -61,6 +62,9 @@ typedef struct granit_render_pipeline_record_info {
   uint32_t reserved[2];
 } granit_render_pipeline_record_info;
 
+#define GRANIT_RENDER_PIPELINE_RECORD_INFO_VERSION_1_SIZE                                          \
+  ((uint32_t)(offsetof(granit_render_pipeline_record_info, reserved) + sizeof(uint32_t[2])))
+
 typedef granit_result (*granit_render_pipeline_record_callback)(
     const granit_render_pipeline_record_info* info, void* user_data);
 
@@ -70,6 +74,9 @@ typedef struct granit_render_pipeline_desc {
   granit_render_pipeline_record_callback record;
   void* user_data;
 } granit_render_pipeline_desc;
+
+#define GRANIT_RENDER_PIPELINE_DESC_VERSION_1_SIZE                                                 \
+  ((uint32_t)(offsetof(granit_render_pipeline_desc, user_data) + sizeof(void*)))
 
 #define GRANIT_RENDER_PIPELINE_DESC_INIT                                                           \
   {(uint32_t)sizeof(granit_render_pipeline_desc), UINT32_C(0), 0, 0}
@@ -87,6 +94,9 @@ typedef struct granit_render_pipeline_output {
   /** Tone Mapping 后、Canvas 前录制的可选世界 Debug Draw List。 */
   granit_debug_draw_list debug_draw;
 } granit_render_pipeline_output;
+
+#define GRANIT_RENDER_PIPELINE_OUTPUT_VERSION_1_SIZE                                               \
+  ((uint32_t)(offsetof(granit_render_pipeline_output, debug_draw) + sizeof(granit_debug_draw_list)))
 
 #define GRANIT_RENDER_PIPELINE_OUTPUT_INIT                                                         \
   {(uint32_t)sizeof(granit_render_pipeline_output),                                                \
@@ -123,6 +133,10 @@ typedef struct granit_render_pipeline_render_desc {
   /** 单 View 简写路径的可选世界 Debug Draw List；多 View 使用各 output 的 debug_draw。 */
   granit_debug_draw_list debug_draw;
 } granit_render_pipeline_render_desc;
+
+#define GRANIT_RENDER_PIPELINE_RENDER_DESC_VERSION_1_SIZE                                          \
+  ((uint32_t)(offsetof(granit_render_pipeline_render_desc, debug_draw) +                           \
+              sizeof(granit_debug_draw_list)))
 
 #define GRANIT_RENDER_PIPELINE_RENDER_DESC_INIT                                                    \
   {(uint32_t)sizeof(granit_render_pipeline_render_desc),                                           \

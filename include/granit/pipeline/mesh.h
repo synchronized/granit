@@ -4,6 +4,7 @@
 #ifndef GRANIT_PIPELINE_MESH_H_
 #define GRANIT_PIPELINE_MESH_H_
 
+#include <stddef.h>
 #include <stdint.h>
 
 #include <granit/core/result.h>
@@ -42,6 +43,9 @@ typedef struct granit_mesh_desc {
   uint32_t first_instance;
   uint32_t reserved;
 } granit_mesh_desc;
+
+#define GRANIT_MESH_DESC_VERSION_1_SIZE                                                            \
+  ((uint32_t)(offsetof(granit_mesh_desc, reserved) + sizeof(uint64_t)))
 
 #define GRANIT_MESH_DESC_INIT                                                                      \
   {(uint32_t)sizeof(granit_mesh_desc),                                                             \

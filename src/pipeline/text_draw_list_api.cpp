@@ -85,7 +85,7 @@ extern "C" granit_result granit_text_draw_list_create(granit_renderer renderer,
     return GRANIT_ERROR_INVALID_ARGUMENT;
   *list = GRANIT_NULL_HANDLE;
   if (renderer == GRANIT_NULL_HANDLE || desc == nullptr ||
-      desc->struct_size < sizeof(granit_text_draw_list_desc) ||
+      desc->struct_size < GRANIT_TEXT_DRAW_LIST_DESC_VERSION_1_SIZE ||
       !zero(desc->reserved, std::size(desc->reserved))) {
     return GRANIT_ERROR_INVALID_ARGUMENT;
   }
@@ -132,7 +132,7 @@ granit_text_draw_list_append_glyph_run(granit_renderer renderer, granit_text_dra
   const auto state = find(renderer, list);
   if (!state)
     return GRANIT_ERROR_INVALID_HANDLE;
-  if (run == nullptr || run->struct_size < sizeof(granit_text_glyph_run_desc) ||
+  if (run == nullptr || run->struct_size < GRANIT_TEXT_GLYPH_RUN_DESC_VERSION_1_SIZE ||
       run->glyph_count == 0 || run->glyphs == nullptr ||
       !zero(run->reserved, std::size(run->reserved)) || !valid_scissor(run->scissor)) {
     return GRANIT_ERROR_INVALID_ARGUMENT;
@@ -167,7 +167,7 @@ granit_text_draw_list_append_glyph_run(granit_renderer renderer, granit_text_dra
 extern "C" granit_result granit_text_draw_list_get_stats(granit_renderer renderer,
                                                          granit_text_draw_list list,
                                                          granit_text_draw_list_stats* stats) {
-  if (stats == nullptr || stats->struct_size < sizeof(granit_text_draw_list_stats))
+  if (stats == nullptr || stats->struct_size < GRANIT_TEXT_DRAW_LIST_STATS_VERSION_1_SIZE)
     return GRANIT_ERROR_INVALID_ARGUMENT;
   const auto state = find(renderer, list);
   if (!state)
@@ -179,9 +179,10 @@ extern "C" granit_result granit_text_draw_list_get_stats(granit_renderer rendere
   return GRANIT_SUCCESS;
 }
 
-extern "C" granit_result granit_text_draw_list_append_to_canvas(
-    granit_renderer renderer, granit_text_draw_list list, granit_text_atlas atlas,
-    granit_canvas_draw_list canvas) {
+extern "C" granit_result granit_text_draw_list_append_to_canvas(granit_renderer renderer,
+                                                                granit_text_draw_list list,
+                                                                granit_text_atlas atlas,
+                                                                granit_canvas_draw_list canvas) {
   const auto state = find(renderer, list);
   if (!state)
     return GRANIT_ERROR_INVALID_HANDLE;

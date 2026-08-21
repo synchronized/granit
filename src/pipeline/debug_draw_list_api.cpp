@@ -291,7 +291,7 @@ extern "C" granit_result granit_debug_draw_list_create(granit_renderer renderer,
     return GRANIT_ERROR_INVALID_ARGUMENT;
   *list = GRANIT_NULL_HANDLE;
   if (renderer == GRANIT_NULL_HANDLE || desc == nullptr ||
-      desc->struct_size < sizeof(granit_debug_draw_list_desc) ||
+      desc->struct_size < GRANIT_DEBUG_DRAW_LIST_DESC_VERSION_1_SIZE ||
       !zero(desc->reserved, std::size(desc->reserved)))
     return GRANIT_ERROR_INVALID_ARGUMENT;
   uint64_t cache_size = 0;
@@ -396,7 +396,7 @@ granit_debug_draw_list_append_triangles(granit_renderer renderer, granit_debug_d
 extern "C" granit_result granit_debug_draw_list_get_stats(granit_renderer renderer,
                                                           granit_debug_draw_list list,
                                                           granit_debug_draw_list_stats* stats) {
-  if (stats == nullptr || stats->struct_size < sizeof(granit_debug_draw_list_stats))
+  if (stats == nullptr || stats->struct_size < GRANIT_DEBUG_DRAW_LIST_STATS_VERSION_1_SIZE)
     return GRANIT_ERROR_INVALID_ARGUMENT;
   const auto state = find(renderer, list);
   if (!state)
@@ -471,7 +471,7 @@ granit_debug_draw_list_record_world(granit_renderer renderer, granit_command_rec
                                     granit_debug_draw_list list,
                                     const granit_debug_draw_record_desc* desc) {
   if (recorder == GRANIT_NULL_HANDLE || desc == nullptr ||
-      desc->struct_size < sizeof(granit_debug_draw_record_desc) ||
+      desc->struct_size < GRANIT_DEBUG_DRAW_RECORD_DESC_VERSION_1_SIZE ||
       !zero(desc->reserved, std::size(desc->reserved)) || desc->color == GRANIT_NULL_HANDLE ||
       desc->color_format == GRANIT_TEXTURE_FORMAT_UNDEFINED || desc->width == 0 ||
       desc->height == 0 || desc->encode_srgb > 1 ||
