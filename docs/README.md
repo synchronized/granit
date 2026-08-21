@@ -39,6 +39,7 @@
 ## 操作指南
 
 - [构建、测试、安装与 CMake 集成](guides/build.md)
+- [发布验收](guides/release.md)
 - [示例程序及运行方式](guides/examples.md)
 - [同步批量上传](guides/upload-batch.md)
 - [纹理同步回读](guides/texture-readback.md)
@@ -105,6 +106,7 @@
 
 ## 计划与历史
 
+- [变更记录](../CHANGELOG.md)
 - [开发计划索引](plans/README.md)
 - [架构决策索引](decisions/README.md)
 - [实施记录索引](records/README.md)
