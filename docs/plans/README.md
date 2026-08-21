@@ -99,16 +99,16 @@ D-03-graphics-pipeline.md
   独立证据暂缓原型，详见[完成记录](../records/H-09-advanced-rendering-evaluation.md)。
 - [H-09B：透明 PBR 正确性草案](H-09B-transparent-pbr-correctness.md)——已确认评估契约；现有基线和
   产品需求不足以支持进入原型，暂时保留 Unlit 透明路径。
-- [S-01：C ABI 回归验证](S-01-abi-regression.md)——当前开发阶段范围已完成；正式 ABI 快照等待
-  功能边界收敛。
+- [S-01：C ABI 回归验证](S-01-abi-regression.md)——已完成核心正式快照，以及 Core、
+  RenderPipeline、Window、Input 的共享库导出回归。
 - [S-02：统一诊断、GPU 调试名称与 Device Lost 报告](S-02-diagnostics.md)——已完成；统一诊断
   sink、公共回调、GPU 调试名称、首次 Device Lost 报告及边界回归均已落地。
 - [S-03：安装包与外部 Consumer 验证](S-03-package-consumers.md)——已完成；Windows/Linux
   共享与静态安装 Consumer、版本选择和导出审计均已通过 CI。
 - [S-04：Linux XCB 与 Wayland Surface](S-04-linux-surface.md)——实现已完成；XCB、Wayland、窗口
   示例和无头集成测试已通过 Linux GCC/Clang 共享与静态运行矩阵。
-- [S-06：版本与兼容承诺](S-06-compatibility-policy.md)——已确认当前 0.x 策略；1.0 ABI 冻结等待
-  S-01E 正式快照和发布验收。
+- [S-06：版本与兼容承诺](S-06-compatibility-policy.md)——0.x 策略、component 契约、变更记录和
+  发布验收准备已完成；最终稳定承诺等待版本与 component 范围决策。
 - [S-07：Window、Event 与 Input 边界](S-07-window-events.md)——Win32、XCB 与 Wayland Window、
   统一事件及 Renderer 集成均已实现并通过跨平台 CI。Renderer Surface 仍允许 SDL、
   GLFW、Qt 和引擎直接接入。

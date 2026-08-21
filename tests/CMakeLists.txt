@@ -66,7 +66,11 @@ if(BUILD_SHARED_LIBS)
   target_compile_features(granit_abi_exports_test PRIVATE cxx_std_20)
   target_compile_definitions(
     granit_abi_exports_test
-    PRIVATE GRANIT_ABI_LIBRARY_PATH="$<TARGET_FILE:granit>"
+    PRIVATE
+      GRANIT_ABI_CORE_LIBRARY_PATH="$<TARGET_FILE:granit>"
+      GRANIT_ABI_RENDER_PIPELINE_LIBRARY_PATH="$<TARGET_FILE:granit_render_pipeline>"
+      GRANIT_ABI_WINDOW_LIBRARY_PATH="$<TARGET_FILE:granit_window>"
+      GRANIT_ABI_INPUT_LIBRARY_PATH="$<TARGET_FILE:granit_input>"
   )
   target_include_directories(
     granit_abi_exports_test
@@ -76,7 +80,9 @@ if(BUILD_SHARED_LIBS)
     granit_abi_exports_test
     PRIVATE Catch2::Catch2WithMain ${CMAKE_DL_LIBS}
   )
-  add_dependencies(granit_abi_exports_test granit)
+  add_dependencies(
+    granit_abi_exports_test granit granit_render_pipeline granit_window granit_input
+  )
   granit_target_compile_warnings(granit_abi_exports_test)
   granit_target_output_directories(granit_abi_exports_test)
   add_test(NAME granit.abi.exports COMMAND granit_abi_exports_test)
