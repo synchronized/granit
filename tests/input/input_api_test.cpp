@@ -5,11 +5,47 @@
 
 #include <catch2/catch_all.hpp>
 
+#include <array>
+#include <cstddef>
+#include <cstring>
 #include <string_view>
 
 #if defined(_WIN32)
 #include <windows.h>
 #endif
+
+namespace {
+
+template <typename T, std::size_t VersionSize>
+void check_versioned_output(granit_result (*call)(T*), granit_result expected) {
+  alignas(T) std::array<std::byte, VersionSize + 8> storage{};
+  std::memset(storage.data(), 0x5a, storage.size());
+  auto* output = reinterpret_cast<T*>(storage.data());
+  const auto capacity = static_cast<uint32_t>(VersionSize);
+  std::memcpy(&output->struct_size, &capacity, sizeof(capacity));
+  CHECK(call(output) == expected);
+  CHECK(output->struct_size == VersionSize);
+  for (std::size_t index = VersionSize; index < storage.size(); ++index)
+    CHECK(storage[index] == std::byte{0x5a});
+}
+
+} // namespace
+
+TEST_CASE("Input 版本化输出不写越调用方容量", "[input][abi]") {
+  check_versioned_output<granit_input_event, GRANIT_INPUT_EVENT_VERSION_1_SIZE>(
+      [](granit_input_event* output) { return granit_input_poll_event(UINT64_C(1), output); },
+      GRANIT_ERROR_INVALID_HANDLE);
+  check_versioned_output<granit_keyboard_state, GRANIT_KEYBOARD_STATE_VERSION_1_SIZE>(
+      [](granit_keyboard_state* output) {
+        return granit_input_get_keyboard_state(UINT64_C(1), UINT64_C(1), output);
+      },
+      GRANIT_ERROR_INVALID_HANDLE);
+  check_versioned_output<granit_pointer_state, GRANIT_POINTER_STATE_VERSION_1_SIZE>(
+      [](granit_pointer_state* output) {
+        return granit_input_get_pointer_state(UINT64_C(1), UINT64_C(1), output);
+      },
+      GRANIT_ERROR_INVALID_HANDLE);
+}
 
 TEST_CASE("Input System 附着 Window System 并保持窗口事件队列", "[input]") {
 #if defined(_WIN32)

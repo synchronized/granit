@@ -85,6 +85,7 @@
 
 ### 窗口输出
 
+- [Window 与 Input component 契约](reference/window-input-contract.md)
 - [Window component](reference/window.md)
 - [Input component](reference/input.md)
 - [Surface](reference/surface.md)

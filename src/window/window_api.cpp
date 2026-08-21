@@ -167,6 +167,8 @@ LRESULT CALLBACK window_proc(HWND hwnd, UINT message, WPARAM word, LPARAM value)
                                                        0,
                                                        0,
                                                        0,
+                                                       0,
+                                                       0,
                                                        0};
     system->input_native_event(system->input_user_data, record->handle, &input_event);
   }

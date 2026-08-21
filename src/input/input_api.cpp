@@ -44,6 +44,12 @@ std::mutex registry_mutex;
 std::unordered_map<granit_input_system, std::shared_ptr<input_record>> inputs;
 std::atomic<std::uint64_t> next_handle{UINT64_C(1)};
 
+template <typename T> void write_output(T* output, uint32_t capacity, T value) {
+  const auto written = std::min<std::size_t>(capacity, sizeof(T));
+  value.struct_size = static_cast<uint32_t>(written);
+  std::memcpy(output, &value, written);
+}
+
 std::shared_ptr<input_record> acquire(granit_input_system handle) {
   std::lock_guard lock{registry_mutex};
   const auto found = inputs.find(handle);
@@ -270,9 +276,10 @@ extern "C" granit_result granit_input_system_destroy(granit_input_system handle)
 
 extern "C" granit_result granit_input_poll_event(granit_input_system handle,
                                                  granit_input_event* event) {
-  if (event == nullptr)
+  if (event == nullptr || event->struct_size < GRANIT_INPUT_EVENT_VERSION_1_SIZE)
     return GRANIT_ERROR_INVALID_ARGUMENT;
-  *event = GRANIT_INPUT_EVENT_INIT;
+  const auto capacity = event->struct_size;
+  write_output(event, capacity, granit_input_event GRANIT_INPUT_EVENT_INIT);
   const auto input = acquire(handle);
   if (!input)
     return GRANIT_ERROR_INVALID_HANDLE;
@@ -283,7 +290,7 @@ extern "C" granit_result granit_input_poll_event(granit_input_system handle,
     return result;
   if (input->events.empty())
     return GRANIT_ERROR_NOT_READY;
-  *event = input->events.front();
+  write_output(event, capacity, input->events.front());
   input->events.pop_front();
   return GRANIT_SUCCESS;
 }
@@ -291,9 +298,10 @@ extern "C" granit_result granit_input_poll_event(granit_input_system handle,
 extern "C" granit_result granit_input_get_keyboard_state(granit_input_system handle,
                                                          granit_window window,
                                                          granit_keyboard_state* state) {
-  if (state == nullptr)
+  if (state == nullptr || state->struct_size < GRANIT_KEYBOARD_STATE_VERSION_1_SIZE)
     return GRANIT_ERROR_INVALID_ARGUMENT;
-  *state = GRANIT_KEYBOARD_STATE_INIT;
+  const auto capacity = state->struct_size;
+  write_output(state, capacity, granit_keyboard_state GRANIT_KEYBOARD_STATE_INIT);
   const auto input = acquire(handle);
   if (!input)
     return GRANIT_ERROR_INVALID_HANDLE;
@@ -303,16 +311,17 @@ extern "C" granit_result granit_input_get_keyboard_state(granit_input_system han
   if (valid != GRANIT_SUCCESS)
     return valid;
   if (const auto found = input->keyboards.find(window); found != input->keyboards.end())
-    *state = found->second;
+    write_output(state, capacity, found->second);
   return GRANIT_SUCCESS;
 }
 
 extern "C" granit_result granit_input_get_pointer_state(granit_input_system handle,
                                                         granit_window window,
                                                         granit_pointer_state* state) {
-  if (state == nullptr)
+  if (state == nullptr || state->struct_size < GRANIT_POINTER_STATE_VERSION_1_SIZE)
     return GRANIT_ERROR_INVALID_ARGUMENT;
-  *state = GRANIT_POINTER_STATE_INIT;
+  const auto capacity = state->struct_size;
+  write_output(state, capacity, granit_pointer_state GRANIT_POINTER_STATE_INIT);
   const auto input = acquire(handle);
   if (!input)
     return GRANIT_ERROR_INVALID_HANDLE;
@@ -322,6 +331,6 @@ extern "C" granit_result granit_input_get_pointer_state(granit_input_system hand
   if (valid != GRANIT_SUCCESS)
     return valid;
   if (const auto found = input->pointers.find(window); found != input->pointers.end())
-    *state = found->second;
+    write_output(state, capacity, found->second);
   return GRANIT_SUCCESS;
 }
