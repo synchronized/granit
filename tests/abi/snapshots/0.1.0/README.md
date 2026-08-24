@@ -20,7 +20,8 @@ ABI；有意的破坏性变更仍按[版本与兼容策略](../../../../docs/ref
 
 `platform_identity.h` 在编译期校验版本、平台、架构和编译器身份。`core_identity.h` 与
 `optional_components_identity.h` 标识 component；`*_symbols.txt` 保存各共享库的完整公共 C 符号
-集合。`../../export_symbols_test.cpp` 检查快照符号可从共享库解析，
+集合；`window_private_symbols.txt` 单独记录 Window 与 Input 之间必需、但不属于公共 ABI 的私有
+动态库导出。`../../export_symbols_test.cpp` 检查快照符号可从共享库解析，
 `../../check_exported_symbols.cmake` 同时拒绝缺失和意外出现的 `granit_*` 导出。
 `../../layout_h.c` 和 `../../../headers/pipeline_*_h.c`、`window_h.c`、`input_h.c` 比较公共类型
 大小、字段偏移、对齐、枚举和标志位。

@@ -110,6 +110,7 @@ if(BUILD_SHARED_LIBS)
           "-DGRANIT_ABI_SNAPSHOT=${CMAKE_CURRENT_SOURCE_DIR}/abi/snapshots/0.1.0/${snapshot}"
           "-DGRANIT_ABI_EXPORT_TOOL=${granit_abi_export_tool}"
           "-DGRANIT_ABI_EXPORT_TOOL_KIND=${granit_abi_export_tool_kind}"
+          "-DGRANIT_ABI_PRIVATE_EXPORTS=${ARGN}"
           -P "${CMAKE_CURRENT_SOURCE_DIR}/abi/check_exported_symbols.cmake"
       )
     endfunction()
@@ -117,7 +118,10 @@ if(BUILD_SHARED_LIBS)
     granit_add_abi_export_snapshot_test(core granit core_symbols.txt)
     granit_add_abi_export_snapshot_test(render_pipeline granit_render_pipeline
                                         render_pipeline_symbols.txt)
-    granit_add_abi_export_snapshot_test(window granit_window window_symbols.txt)
+    granit_add_abi_export_snapshot_test(
+      window granit_window window_symbols.txt
+      "${CMAKE_CURRENT_SOURCE_DIR}/abi/snapshots/0.1.0/window_private_symbols.txt"
+    )
     granit_add_abi_export_snapshot_test(input granit_input input_symbols.txt)
   endif()
 endif()

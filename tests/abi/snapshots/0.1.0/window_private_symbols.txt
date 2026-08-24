@@ -1,0 +1,4 @@
+granit_window_internal_attach_input
+granit_window_internal_contains
+granit_window_internal_detach_input
+granit_window_internal_pump

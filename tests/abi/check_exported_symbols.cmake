@@ -20,7 +20,7 @@ if(GRANIT_ABI_EXPORT_TOOL_KIND STREQUAL "dumpbin")
   )
 elseif(GRANIT_ABI_EXPORT_TOOL_KIND STREQUAL "nm")
   execute_process(
-    COMMAND "${GRANIT_ABI_EXPORT_TOOL}" -D --defined-only "${GRANIT_ABI_LIBRARY}"
+    COMMAND "${GRANIT_ABI_EXPORT_TOOL}" -D --defined-only --format=posix "${GRANIT_ABI_LIBRARY}"
     RESULT_VARIABLE tool_result
     OUTPUT_VARIABLE tool_output
     ERROR_VARIABLE tool_error
@@ -33,8 +33,16 @@ if(NOT tool_result EQUAL 0)
   message(FATAL_ERROR "${GRANIT_ABI_COMPONENT} 导出读取失败：${tool_error}")
 endif()
 
-string(REGEX MATCHALL "granit_[A-Za-z0-9_]+" actual_symbols "${tool_output}")
-if(GRANIT_ABI_EXPORT_TOOL_KIND STREQUAL "dumpbin")
+if(GRANIT_ABI_EXPORT_TOOL_KIND STREQUAL "nm")
+  string(REPLACE "\r" "" tool_output "${tool_output}")
+  string(REPLACE "\n" ";" tool_lines "${tool_output}")
+  foreach(line IN LISTS tool_lines)
+    if(line MATCHES "^(granit_[A-Za-z0-9_]+)[ \t]")
+      list(APPEND actual_symbols "${CMAKE_MATCH_1}")
+    endif()
+  endforeach()
+else()
+  string(REGEX MATCHALL "granit_[A-Za-z0-9_]+" actual_symbols "${tool_output}")
   # dumpbin 的标题包含 DLL 文件名，不能把文件名误判为导出符号。
   list(REMOVE_ITEM actual_symbols granit_render_pipeline granit_window granit_input)
 endif()
@@ -50,6 +58,12 @@ set(unexpected_symbols "${actual_symbols}")
 foreach(symbol IN LISTS expected_symbols)
   list(REMOVE_ITEM unexpected_symbols "${symbol}")
 endforeach()
+if(DEFINED GRANIT_ABI_PRIVATE_EXPORTS AND EXISTS "${GRANIT_ABI_PRIVATE_EXPORTS}")
+  file(STRINGS "${GRANIT_ABI_PRIVATE_EXPORTS}" private_symbols REGEX "^granit_[A-Za-z0-9_]+$")
+  foreach(symbol IN LISTS private_symbols)
+    list(REMOVE_ITEM unexpected_symbols "${symbol}")
+  endforeach()
+endif()
 
 if(missing_symbols OR unexpected_symbols)
   message(FATAL_ERROR
