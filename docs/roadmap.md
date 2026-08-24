@@ -151,12 +151,14 @@
 - **[S-08](plans/S-08-third-party-integrations.md) / P2**：独立 SDL3/ImGui 目标、安装边界、SDL3
   Surface、ImGui Draw Data 转换、字体上传、组合示例与 S-08F 测量已完成；Win32 及 Linux
   X11/Wayland 共享与静态 smoke test 均已通过。
+- **[S-09](plans/S-09-0.3.0-sdk-usability.md) / P1**：0.3.0 公共 SDK 易用性与集成体验已确认，
+  先建立代表性使用路径并审计现有契约，再按证据决定包装层、内部行为或 C ABI 改动。
 
 ## 近期执行顺序
 
-1. S-06D 最终验收等待稳定版本与 component 范围决策；Deferred 保持为使用 Render Graph 组合的
-   可选高级管线研究项，不在 0.x 阶段提前宣布稳定。
-2. H-09 的透明 PBR、CSM、Clustered Forward 与 Bindless 只在各自重新评估条件满足后独立恢复，
+1. 按 S-09A～S-09D 完成 0.3.0 使用路径、契约、安装文档和诊断审计；没有证据时不新增 C ABI。
+2. S-06D 最终验收等待稳定版本与 component 范围决策；不在 0.x 阶段提前宣布稳定。
+3. H-09 的透明 PBR、CSM、Clustered Forward 与 Bindless 只在各自重新评估条件满足后独立恢复，
    不作为当前稳定化工作的前置项。
 
 若前置抽象不足，应先更新对应 Plan 和本路线图状态，再扩大公共 API。
