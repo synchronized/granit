@@ -3,6 +3,8 @@
 
 #include <granit/pipeline/text_draw_list.h>
 
+#include "../abi/snapshots/0.1.0/optional_components_identity.h"
+
 typedef char granit_text_run_v1_size
     [sizeof(granit_text_glyph_run_desc) == GRANIT_TEXT_GLYPH_RUN_DESC_VERSION_1_SIZE ? 1 : -1];
 typedef char granit_text_list_v1_size

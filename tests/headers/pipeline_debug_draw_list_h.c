@@ -3,6 +3,8 @@
 
 #include <granit/pipeline/debug_draw_list.h>
 
+#include "../abi/snapshots/0.1.0/optional_components_identity.h"
+
 typedef char granit_debug_list_v1_size
     [sizeof(granit_debug_draw_list_desc) == GRANIT_DEBUG_DRAW_LIST_DESC_VERSION_1_SIZE ? 1 : -1];
 typedef char granit_debug_stats_v1_size

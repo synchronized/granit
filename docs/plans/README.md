@@ -99,8 +99,8 @@ D-03-graphics-pipeline.md
   独立证据暂缓原型，详见[完成记录](../records/H-09-advanced-rendering-evaluation.md)。
 - [H-09B：透明 PBR 正确性草案](H-09B-transparent-pbr-correctness.md)——已确认评估契约；现有基线和
   产品需求不足以支持进入原型，暂时保留 Unlit 透明路径。
-- [S-01：C ABI 回归验证](S-01-abi-regression.md)——已完成核心正式快照，以及 Core、
-  RenderPipeline、Window、Input 的共享库导出回归。
+- [S-01：C ABI 回归验证](S-01-abi-regression.md)——已完成 Core、RenderPipeline、Window 与 Input
+  的版本化正式快照、共享库导出和布局回归。
 - [S-02：统一诊断、GPU 调试名称与 Device Lost 报告](S-02-diagnostics.md)——已完成；统一诊断
   sink、公共回调、GPU 调试名称、首次 Device Lost 报告及边界回归均已落地。
 - [S-03：安装包与外部 Consumer 验证](S-03-package-consumers.md)——已完成；Windows/Linux

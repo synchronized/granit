@@ -3,6 +3,8 @@
 
 #include <granit/pipeline/text_atlas.h>
 
+#include "../abi/snapshots/0.1.0/optional_components_identity.h"
+
 typedef char granit_text_atlas_v1_size
     [sizeof(granit_text_atlas_desc) == GRANIT_TEXT_ATLAS_DESC_VERSION_1_SIZE ? 1 : -1];
 typedef char granit_text_bitmap_v1_size[sizeof(granit_text_glyph_bitmap_desc) ==

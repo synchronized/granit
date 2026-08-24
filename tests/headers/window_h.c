@@ -3,6 +3,15 @@
 
 #include <granit/window.h>
 
+#include "../abi/snapshots/0.1.0/optional_components_identity.h"
+
+_Static_assert(sizeof(granit_window_system_desc) == GRANIT_WINDOW_SYSTEM_DESC_VERSION_1_SIZE,
+               "Window System V1 ABI 大小必须稳定");
+_Static_assert(sizeof(granit_window_desc) == 40, "Window ABI 大小必须稳定");
+_Static_assert(GRANIT_WINDOW_DESC_VERSION_1_SIZE == 36, "Window V1 最低尺寸必须稳定");
+_Static_assert(sizeof(granit_window_event) == GRANIT_WINDOW_EVENT_VERSION_1_SIZE,
+               "Window Event V1 ABI 大小必须稳定");
+
 static granit_window_system granit_test_window_system;
 static granit_window granit_test_window;
 static granit_window_system_desc granit_test_window_system_desc = GRANIT_WINDOW_SYSTEM_DESC_INIT;

@@ -3,6 +3,8 @@
 
 #include <granit/pipeline/mesh.h>
 
+#include "../abi/snapshots/0.1.0/optional_components_identity.h"
+
 typedef char
     granit_mesh_desc_v1_size[sizeof(granit_mesh_desc) == GRANIT_MESH_DESC_VERSION_1_SIZE ? 1 : -1];
 

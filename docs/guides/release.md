@@ -20,9 +20,9 @@
 | component | 当前 0.1.0 状态 | 稳定发布前证据 |
 |---|---|---|
 | Core | 未冻结 | 正式 ABI 快照、C 契约、共享/静态 Consumer |
-| RenderPipeline | 未冻结 | 独立导出快照、component 契约、安装 Consumer |
-| Window | 未冻结 | 独立导出快照、平台矩阵、component 契约 |
-| Input | 未冻结 | 独立导出快照、平台矩阵、component 契约 |
+| RenderPipeline | 未冻结 | 正式 ABI 快照、component 契约、安装 Consumer |
+| Window | 未冻结 | 正式 ABI 快照、平台矩阵、component 契约 |
+| Input | 未冻结 | 正式 ABI 快照、平台矩阵、component 契约 |
 | IntegrationSDL3 / IntegrationImGui | 实验性 | 第三方版本范围、目标导出和 smoke test |
 
 没有独立 ABI 快照的可选 component 不得在发布说明中标记为 ABI 稳定。
