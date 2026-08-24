@@ -116,8 +116,10 @@ if(BUILD_SHARED_LIBS)
     endfunction()
 
     granit_add_abi_export_snapshot_test(core granit core_symbols.txt)
-    granit_add_abi_export_snapshot_test(render_pipeline granit_render_pipeline
-                                        render_pipeline_symbols.txt)
+    granit_add_abi_export_snapshot_test(
+      render_pipeline granit_render_pipeline render_pipeline_symbols.txt
+      "${CMAKE_CURRENT_SOURCE_DIR}/abi/snapshots/0.1.0/render_pipeline_private_symbols.txt"
+    )
     granit_add_abi_export_snapshot_test(
       window granit_window window_symbols.txt
       "${CMAKE_CURRENT_SOURCE_DIR}/abi/snapshots/0.1.0/window_private_symbols.txt"
