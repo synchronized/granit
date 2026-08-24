@@ -8,11 +8,16 @@
 
 ## Unreleased
 
+当前没有尚未归入版本的公共变更。
+
+## 0.2.0 - 2026-08-24
+
 ### 新增
 
 - 核心 Renderer C ABI、C++20 RAII 包装及 Windows/Linux 共享、静态安装 Consumer 验证。
 - RenderPipeline、Window、Input、SDL3 Integration 和 ImGui Integration component。
-- Granit 0.1.0 核心 C ABI 快照，以及 component 级所有权、错误、线程和扩展契约。
+- Granit 0.1.0 基线上的 Core、RenderPipeline、Window 和 Input C ABI 回归快照，以及
+  component 级所有权、错误、线程和扩展契约。
 
 ### 修复
 
@@ -22,4 +27,4 @@
 
 ### 兼容性
 
-- 当前没有已发布的稳定版本。0.x 次版本仍可包含有迁移说明的破坏性变更。
+- 0.2.0 仍是非稳定版本；0.x 次版本可包含有迁移说明的破坏性变更。

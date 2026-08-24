@@ -3,9 +3,9 @@
 
 # Granit 0.1.0 C ABI 快照
 
-这是 Core、RenderPipeline、Window 与 Input 的首份正式 ABI 快照。它用于检测变更，不代表 0.x
-已承诺稳定
-ABI；有意的破坏性变更仍按[版本与兼容策略](../../../../docs/reference/compatibility.md)处理。
+这是 Core、RenderPipeline、Window 与 Input 的首份正式 ABI 基线。0.1.0 之后的版本继续与它
+比较，以检测缺失或意外导出的符号和布局变化；它不代表 0.x 已承诺稳定 ABI。有意的破坏性变更
+仍按[版本与兼容策略](../../../../docs/reference/compatibility.md)处理。
 
 ## 身份与范围
 

@@ -6,8 +6,8 @@
 
 #include <granit/core/version.h>
 
-#if GRANIT_VERSION_MAJOR != 0 || GRANIT_VERSION_MINOR != 1 || GRANIT_VERSION_PATCH != 0
-#error "当前 ABI 基线只适用于 Granit 0.1.0"
+#if GRANIT_VERSION_MAJOR == 0 && GRANIT_VERSION_MINOR < 1
+#error "当前版本早于 Granit 0.1.0 ABI 基线"
 #endif
 
 #if !defined(_WIN32) && !defined(__linux__)

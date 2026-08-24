@@ -4,9 +4,9 @@
 cmake_minimum_required(VERSION 3.23)
 project(granit_consumer LANGUAGES C CXX)
 
-find_package(granit 0.1 CONFIG REQUIRED COMPONENTS RenderPipeline Window Input)
+find_package(granit 0.2 CONFIG REQUIRED COMPONENTS RenderPipeline Window Input)
 
-if(NOT granit_VERSION VERSION_EQUAL "0.1.0")
+if(NOT granit_VERSION VERSION_EQUAL "0.2.0")
   message(FATAL_ERROR "Granit 包版本不符合预期: ${granit_VERSION}")
 endif()
 

@@ -26,8 +26,10 @@ function(granit_check_package name expected_success)
   endif()
 endfunction()
 
-granit_check_package(compatible TRUE -DGRANIT_REQUEST_VERSION=0.1)
-granit_check_package(exact TRUE -DGRANIT_REQUEST_VERSION=0.1.0 -DGRANIT_REQUEST_EXACT=ON)
+granit_check_package(compatible TRUE -DGRANIT_REQUEST_VERSION=0.2)
+granit_check_package(compatible_older_minor TRUE -DGRANIT_REQUEST_VERSION=0.1)
+granit_check_package(exact TRUE -DGRANIT_REQUEST_VERSION=0.2.0 -DGRANIT_REQUEST_EXACT=ON)
+granit_check_package(newer_minor FALSE -DGRANIT_REQUEST_VERSION=0.3)
 granit_check_package(incompatible_major FALSE -DGRANIT_REQUEST_VERSION=1.0)
 granit_check_package(unknown_component FALSE -DGRANIT_REQUEST_COMPONENT=Unknown)
 

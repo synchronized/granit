@@ -5,7 +5,7 @@ cmake_minimum_required(VERSION 3.23)
 
 project(
   granit
-  VERSION 0.1.0
+  VERSION 0.2.0
   DESCRIPTION "Vulkan-based C++20 rendering library"
   LANGUAGES C CXX
 )
