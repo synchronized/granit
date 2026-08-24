@@ -71,6 +71,10 @@ if(BUILD_SHARED_LIBS)
       GRANIT_ABI_RENDER_PIPELINE_LIBRARY_PATH="$<TARGET_FILE:granit_render_pipeline>"
       GRANIT_ABI_WINDOW_LIBRARY_PATH="$<TARGET_FILE:granit_window>"
       GRANIT_ABI_INPUT_LIBRARY_PATH="$<TARGET_FILE:granit_input>"
+      GRANIT_ABI_CORE_SYMBOLS_PATH="${CMAKE_CURRENT_SOURCE_DIR}/abi/snapshots/0.1.0/core_symbols.txt"
+      GRANIT_ABI_RENDER_PIPELINE_SYMBOLS_PATH="${CMAKE_CURRENT_SOURCE_DIR}/abi/snapshots/0.1.0/render_pipeline_symbols.txt"
+      GRANIT_ABI_WINDOW_SYMBOLS_PATH="${CMAKE_CURRENT_SOURCE_DIR}/abi/snapshots/0.1.0/window_symbols.txt"
+      GRANIT_ABI_INPUT_SYMBOLS_PATH="${CMAKE_CURRENT_SOURCE_DIR}/abi/snapshots/0.1.0/input_symbols.txt"
   )
   target_include_directories(
     granit_abi_exports_test
@@ -86,6 +90,36 @@ if(BUILD_SHARED_LIBS)
   granit_target_compile_warnings(granit_abi_exports_test)
   granit_target_output_directories(granit_abi_exports_test)
   add_test(NAME granit.abi.exports COMMAND granit_abi_exports_test)
+
+  if(MSVC)
+    set(granit_abi_export_tool "${CMAKE_DUMPBIN}")
+    set(granit_abi_export_tool_kind dumpbin)
+  elseif(UNIX)
+    set(granit_abi_export_tool "${CMAKE_NM}")
+    set(granit_abi_export_tool_kind nm)
+  endif()
+
+  if(granit_abi_export_tool)
+    function(granit_add_abi_export_snapshot_test component target snapshot)
+      add_test(
+        NAME "granit.abi.exports.${component}"
+        COMMAND
+          "${CMAKE_COMMAND}"
+          "-DGRANIT_ABI_COMPONENT=${component}"
+          "-DGRANIT_ABI_LIBRARY=$<TARGET_FILE:${target}>"
+          "-DGRANIT_ABI_SNAPSHOT=${CMAKE_CURRENT_SOURCE_DIR}/abi/snapshots/0.1.0/${snapshot}"
+          "-DGRANIT_ABI_EXPORT_TOOL=${granit_abi_export_tool}"
+          "-DGRANIT_ABI_EXPORT_TOOL_KIND=${granit_abi_export_tool_kind}"
+          -P "${CMAKE_CURRENT_SOURCE_DIR}/abi/check_exported_symbols.cmake"
+      )
+    endfunction()
+
+    granit_add_abi_export_snapshot_test(core granit core_symbols.txt)
+    granit_add_abi_export_snapshot_test(render_pipeline granit_render_pipeline
+                                        render_pipeline_symbols.txt)
+    granit_add_abi_export_snapshot_test(window granit_window window_symbols.txt)
+    granit_add_abi_export_snapshot_test(input granit_input input_symbols.txt)
+  endif()
 endif()
 
 add_executable(

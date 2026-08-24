@@ -19,9 +19,11 @@ ABI；有意的破坏性变更仍按[版本与兼容策略](../../../../docs/ref
 | 接口 | 各 component 导出宏标记的公共 C ABI |
 
 `platform_identity.h` 在编译期校验版本、平台、架构和编译器身份。`core_identity.h` 与
-`optional_components_identity.h` 标识 component；`../../export_symbols_test.cpp` 动态比较各共享库
-的完整公共 C 符号集合，`../../layout_h.c` 和 `../../../headers/pipeline_*_h.c`、`window_h.c`、
-`input_h.c` 比较公共类型大小、字段偏移、对齐、枚举和标志位。
+`optional_components_identity.h` 标识 component；`*_symbols.txt` 保存各共享库的完整公共 C 符号
+集合。`../../export_symbols_test.cpp` 检查快照符号可从共享库解析，
+`../../check_exported_symbols.cmake` 同时拒绝缺失和意外出现的 `granit_*` 导出。
+`../../layout_h.c` 和 `../../../headers/pipeline_*_h.c`、`window_h.c`、`input_h.c` 比较公共类型
+大小、字段偏移、对齐、枚举和标志位。
 
 第三方 Integration 仍是实验性 C++ component，不属于 C ABI 快照。各 component 的快照互相独立；
 Core 稳定不自动表示其他 component 稳定。

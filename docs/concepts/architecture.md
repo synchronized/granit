@@ -87,17 +87,19 @@ Renderer，也不要求现有参考管线改用 G-Buffer。只有完成 Clustere
 Granit Renderer 的长期职责止于 GPU 资源、Pipeline、Bind Group、命令、同步、提交、Swapchain 和
 GPU 生命周期。它不负责选择 PBR 模型、筛选 Scene、生成阴影、管理环境光照或执行 Tone Mapping。
 
-Material、Scene、PBR、Lighting、Post Process 和 Render Graph 作为可选高层模块存在。等这些模块
-完成独立验证后，可以由 `granit::render_pipeline` 组合成类似 DiligentFX 的高级参考渲染套件。
-统一门面提供默认可运行路径，但不是核心 Renderer 的唯一入口。
+Material、Scene、PBR、Lighting 和 Post Process 由 `granit::render_pipeline` 组合成类似
+DiligentFX 的可选高级参考渲染套件。Render Graph 当前是该套件的内部实现模块，没有公共 C ABI
+或 C++ API。统一门面提供默认可运行路径，但不是核心 Renderer 的唯一入口。
 
-使用者必须能够选择四种逐级开放的层级：
+使用者当前可以选择三种逐级开放的层级：
 
 1. 使用完整参考管线，只提交 Scene、View、目标和质量配置，获得阴影、PBR、IBL 和后处理的
    默认组合。
 2. 配置或扩展参考管线，使用自定义 Material，并在稳定扩展点插入后处理、UI 等 Pass。
-3. 选择部分高层模块并自行构建 Render Graph，决定 Pass、资源依赖和执行顺序。
-4. 直接使用核心 Renderer，自行管理 GPU 资源、命令、同步和提交。
+3. 直接使用核心 Renderer，自行管理 GPU 资源、命令、同步和提交。
+
+自行组合高层模块或构建 Render Graph 属于未来可能公开的扩展层级；在形成真实需求和独立 ABI
+设计前，不应把内部头文件或实现目标作为公共接口使用。
 
 各层职责保持正交：PBR 决定材质与光照如何着色；Render Pipeline 决定一帧包含哪些渲染阶段；
 Render Graph 根据 Pass 的资源读写声明组织依赖、顺序和资源状态；Renderer 负责执行后端中立的
@@ -106,7 +108,7 @@ GPU 命令。Render Graph 不内置 PBR、阴影或 UI 业务语义，Renderer �
 ```text
 Scene / View / Material
           -> Render Pipeline（整帧策略）
-          -> Render Graph（Pass 与资源依赖）
+          -> 内部 Render Graph（Pass 与资源依赖）
           -> Renderer / Command Recorder（GPU 执行）
           -> Vulkan（内部后端）
 ```

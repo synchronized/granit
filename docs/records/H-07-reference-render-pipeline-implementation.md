@@ -10,7 +10,7 @@
 
 - 路线图任务：H-07
 - 优先级：P2
-- 状态：进行中，公共 Mesh、自动 Shadow/Opaque Draw 与真实像素回归已完成
+- 状态：已完成
 - 必需依赖：H-01 Render Graph、H-02 Material、H-03 PBR、H-04 Scene、H-05 Lighting/Post Process
 - 可选依赖：H-06 2D/UI/调试绘制评估结果
 

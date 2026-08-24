@@ -1,0 +1,5 @@
+granit_input_get_keyboard_state
+granit_input_get_pointer_state
+granit_input_poll_event
+granit_input_system_create
+granit_input_system_destroy
