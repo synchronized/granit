@@ -64,5 +64,20 @@ ctest --preset <static-release-preset>
 正式发布前先在 Actions 页面手动运行 `Release`，输入候选标签并下载 `release-assets` 检查内容。
 预验证通过后再创建并推送同名标签。不要重用或移动已经公开的版本标签。
 
+## 6. 发布后验证
+
+Release 创建后必须从公开下载地址重新取得产物，不能复用 Actions 工作目录中的文件：
+
+1. 使用 `gh release download <tag> --dir <empty-directory>` 下载全部安装包和 `SHA256SUMS`。
+2. 重新计算每个压缩包的 SHA-256，并逐项与 `SHA256SUMS` 比较。
+3. 检查压缩包只包含带版本、平台和链接模式的单一顶层目录，且具备许可证、公共头文件、库和
+   CMake package 文件。
+4. 分别以共享库和静态库目录作为 `CMAKE_PREFIX_PATH`，构建 `tests/consumer` 的全部 C11 与
+   C++20 Consumer。
+5. 运行全部 Consumer；共享库测试必须显式使用刚下载包的运行时库目录。
+6. 确认 Release 不是草稿，标签指向已验证提交，四个安装包与 `SHA256SUMS` 均已公开。
+
+任一步失败都应保留标签和失败证据，修复后发布新的修订版本；不得移动已公开标签或静默替换产物。
+
 首次稳定发布只有在 [S-06](../plans/S-06-compatibility-policy.md) 的稳定门槛和本清单全部满足后
 才能执行。版本号、发布日期及稳定 component 仍需单独决策。
