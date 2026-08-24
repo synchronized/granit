@@ -57,5 +57,12 @@ ctest --preset <static-release-preset>
 发布说明至少列出版本、日期、稳定 component、实验性接口、已知限制、破坏性变化和迁移步骤。
 发布标签必须指向完整通过验收的提交；产物应来自该标签的干净构建，不使用开发机已有构建目录。
 
+仓库的 `Release` Actions 支持手动输入标签进行预验证，也会在推送 `v*` 标签时执行正式发布。
+工作流先校验标签与 `project(VERSION)` 一致，再构建 Windows/Linux 的共享库和静态库安装包、运行
+测试与安装审计、生成 `SHA256SUMS`；只有全部任务成功，标签触发的运行才创建 GitHub Release。
+
+正式发布前先在 Actions 页面手动运行 `Release`，输入候选标签并下载 `release-assets` 检查内容。
+预验证通过后再创建并推送同名标签。不要重用或移动已经公开的版本标签。
+
 首次稳定发布只有在 [S-06](../plans/S-06-compatibility-policy.md) 的稳定门槛和本清单全部满足后
 才能执行。版本号、发布日期及稳定 component 仍需单独决策。

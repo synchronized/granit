@@ -9,6 +9,24 @@ add_test(
     -P "${PROJECT_SOURCE_DIR}/cmake/check_documentation.cmake"
 )
 
+add_test(
+  NAME granit.release_version
+  COMMAND
+    "${CMAKE_COMMAND}"
+    "-DGRANIT_SOURCE_DIR=${PROJECT_SOURCE_DIR}"
+    "-DGRANIT_RELEASE_TAG=v${PROJECT_VERSION}"
+    -P "${PROJECT_SOURCE_DIR}/cmake/check_release_version.cmake"
+)
+add_test(
+  NAME granit.release_version_mismatch
+  COMMAND
+    "${CMAKE_COMMAND}"
+    "-DGRANIT_SOURCE_DIR=${PROJECT_SOURCE_DIR}"
+    -DGRANIT_RELEASE_TAG=v999.0.0
+    -P "${PROJECT_SOURCE_DIR}/cmake/check_release_version.cmake"
+)
+set_tests_properties(granit.release_version_mismatch PROPERTIES WILL_FAIL TRUE)
+
 add_executable(granit_c_version_test c_version_test.c)
 target_link_libraries(granit_c_version_test PRIVATE granit::granit Unity::Unity)
 set_target_properties(granit_c_version_test PROPERTIES LINKER_LANGUAGE CXX)
