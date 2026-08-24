@@ -1,0 +1,169 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Granit contributors
+
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "要验证的发布标签，例如 v0.2.0"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+env:
+  RELEASE_TAG: ${{ github.event_name == 'push' && github.ref_name || inputs.tag }}
+
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: 校验标签与项目版本
+        run: >-
+          cmake -DGRANIT_SOURCE_DIR="$PWD" -DGRANIT_RELEASE_TAG="$RELEASE_TAG"
+          -P cmake/check_release_version.cmake
+
+  windows-package:
+    needs: validate
+    runs-on: windows-2022
+    strategy:
+      fail-fast: false
+      matrix:
+        linkage: [shared, static]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+      - name: 选择 preset 和产物名
+        id: package
+        shell: pwsh
+        run: |
+          $suffix = if ('${{ matrix.linkage }}' -eq 'static') { '-static' } else { '' }
+          "preset=windows-msvc${suffix}-release" >> $env:GITHUB_OUTPUT
+          "name=granit-$($env:RELEASE_TAG.TrimStart('v'))-windows-x64-${{ matrix.linkage }}" `
+            >> $env:GITHUB_OUTPUT
+      - name: 配置、构建与测试
+        shell: pwsh
+        run: |
+          cmake --preset '${{ steps.package.outputs.preset }}'
+          cmake --build --preset '${{ steps.package.outputs.preset }}'
+          ctest --preset '${{ steps.package.outputs.preset }}' `
+            -E 'granit\.renderer\.lifecycle_diagnostic|granit\.window_renderer|granit\.example\.'
+      - name: 安装并打包
+        shell: pwsh
+        run: |
+          $stage = "$PWD/stage/${{ steps.package.outputs.name }}"
+          cmake --install "build/${{ steps.package.outputs.preset }}" --prefix $stage
+          cmake `
+            -DGRANIT_SOURCE_DIR="$PWD" `
+            -DGRANIT_BUILD_DIR="$PWD/build/${{ steps.package.outputs.preset }}" `
+            -DGRANIT_INSTALL_PREFIX="$stage" `
+            -P cmake/check_install_exports.cmake
+          Compress-Archive -Path $stage -DestinationPath "${{ steps.package.outputs.name }}.zip"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.package.outputs.name }}
+          path: ${{ steps.package.outputs.name }}.zip
+          if-no-files-found: error
+
+  linux-package:
+    needs: validate
+    runs-on: ubuntu-24.04
+    container:
+      image: >-
+        ghcr.io/synchronized/granit-ci@sha256:def0c91ae33fb0cd7abb8a27fd4cf5318343308635ee871eee67025ba10f410e
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    strategy:
+      fail-fast: false
+      matrix:
+        linkage: [shared, static]
+    steps:
+      - uses: actions/checkout@v4
+      - name: 选择 preset 和产物名
+        id: package
+        shell: bash
+        run: |
+          suffix=""
+          if [[ "${{ matrix.linkage }}" == "static" ]]; then suffix="-static"; fi
+          echo "preset=linux-clang${suffix}-release" >> "$GITHUB_OUTPUT"
+          echo "name=granit-${RELEASE_TAG#v}-linux-x64-${{ matrix.linkage }}" >> "$GITHUB_OUTPUT"
+      - name: 配置、构建与测试
+        shell: bash
+        run: |
+          cmake --preset "${{ steps.package.outputs.preset }}"
+          cmake --build --preset "${{ steps.package.outputs.preset }}"
+          export XDG_RUNTIME_DIR="$RUNNER_TEMP/granit-release-wayland"
+          install -d -m 700 "$XDG_RUNTIME_DIR"
+          export WAYLAND_DISPLAY=granit-release-wayland
+          weston --backend=headless-backend.so --socket="$WAYLAND_DISPLAY" --idle-time=0 \
+            >"$RUNNER_TEMP/granit-release-weston.log" 2>&1 &
+          weston_pid=$!
+          trap 'kill "$weston_pid" 2>/dev/null || true' EXIT
+          for attempt in {1..50}; do
+            [[ -S "$XDG_RUNTIME_DIR/$WAYLAND_DISPLAY" ]] && break
+            sleep 0.1
+          done
+          [[ -S "$XDG_RUNTIME_DIR/$WAYLAND_DISPLAY" ]]
+          xvfb-run -a ctest --preset "${{ steps.package.outputs.preset }}"
+      - name: 安装并打包
+        shell: bash
+        run: |
+          stage="$PWD/stage/${{ steps.package.outputs.name }}"
+          cmake --install "build/${{ steps.package.outputs.preset }}" --prefix "$stage"
+          cmake \
+            -DGRANIT_SOURCE_DIR="$PWD" \
+            -DGRANIT_BUILD_DIR="$PWD/build/${{ steps.package.outputs.preset }}" \
+            -DGRANIT_INSTALL_PREFIX="$stage" \
+            -P cmake/check_install_exports.cmake
+          tar -C "$PWD/stage" -czf "${{ steps.package.outputs.name }}.tar.gz" \
+            "${{ steps.package.outputs.name }}"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.package.outputs.name }}
+          path: ${{ steps.package.outputs.name }}.tar.gz
+          if-no-files-found: error
+
+  checksums:
+    needs: [windows-package, linux-package]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - name: 生成 SHA-256 校验文件
+        working-directory: dist
+        run: sha256sum granit-* > SHA256SUMS
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-assets
+          path: dist/*
+          if-no-files-found: error
+
+  publish:
+    if: github.event_name == 'push'
+    needs: checksums
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-assets
+          path: dist
+      - name: 创建 GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >-
+          gh release create "$RELEASE_TAG" dist/* --repo "$GITHUB_REPOSITORY"
+          --title "Granit ${RELEASE_TAG#v}" --generate-notes
