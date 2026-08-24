@@ -3,12 +3,13 @@
 
 # Granit
 
-[![Windows](https://github.com/synchronized/granit/actions/workflows/windows.yml/badge.svg)](https://github.com/synchronized/granit/actions/workflows/windows.yml) [![Linux](https://github.com/synchronized/granit/actions/workflows/linux.yml/badge.svg)](https://github.com/synchronized/granit/actions/workflows/linux.yml) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)<br>
+[![Windows](https://github.com/synchronized/granit/actions/workflows/windows.yml/badge.svg)](https://github.com/synchronized/granit/actions/workflows/windows.yml) [![Linux](https://github.com/synchronized/granit/actions/workflows/linux.yml/badge.svg)](https://github.com/synchronized/granit/actions/workflows/linux.yml) [![Release](https://img.shields.io/github/v/release/synchronized/granit)](https://github.com/synchronized/granit/releases/latest) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)<br>
 Granit 是一个基于 Vulkan 的 C++20 渲染库，面向游戏引擎、实时应用和图形工具开发。项目通过
 C ABI 隔离动态库边界，并在其上提供现代 C++20 RAII 包装；普通用户无需接触 Vulkan 类型、
 句柄和生命周期管理。
 
-> **开发状态：早期开发。** 0.x 不保证 API/ABI 稳定；详见[兼容策略](docs/reference/compatibility.md)。
+> **当前版本：0.2.0，仍处于早期开发。** 0.x 不保证 API/ABI 稳定；升级前请阅读
+> [变更记录](CHANGELOG.md)和[兼容策略](docs/reference/compatibility.md)。
 
 ## 项目定位
 
@@ -42,13 +43,28 @@ Granit 采用“Bring Your Own Engine”边界，不接管使用者的 ECS、Sce
 
 ## 当前可用模块
 
-| 模块 | CMake 目标 | 当前范围 |
-|---|---|---|
-| [核心 Renderer](docs/reference/renderer.md) | `granit::granit` | GPU 资源、命令录制、Graphics/Compute Pipeline、同步与提交 |
-| [参考渲染管线](docs/reference/render-pipeline.md) | `granit::render_pipeline` | Mesh、Material、Scene、Forward PBR、Lighting、Canvas、Debug Draw 与 Text |
-| [Window](docs/reference/window.md) | `granit::window` | Win32、XCB 与 Wayland 窗口、事件及 Surface 接入 |
-| [Input](docs/reference/input.md) | `granit::input` | 独立输入状态与事件；支持 Win32、XCB 和 Wayland |
-| [第三方集成](docs/reference/third-party-integrations.md) | `granit::integration_sdl3`、`granit::integration_imgui` | SDL3 Surface 与 ImGui Draw Data 转换 |
+| 模块 | CMake 目标 | 稳定性 | 当前范围 |
+|---|---|---|---|
+| [核心 Renderer](docs/reference/renderer.md) | `granit::granit` | 0.x，未冻结 | GPU 资源、命令、Pipeline、同步与提交 |
+| [参考渲染管线](docs/reference/render-pipeline.md) | `granit::render_pipeline` | 0.x，未冻结 | Forward PBR、Lighting、Canvas、Debug Draw 与 Text |
+| [Window](docs/reference/window.md) | `granit::window` | 0.x，未冻结 | Win32、XCB、Wayland 窗口、事件及 Surface 接入 |
+| [Input](docs/reference/input.md) | `granit::input` | 0.x，未冻结 | Win32、XCB 和 Wayland 输入状态与事件 |
+| [第三方集成](docs/reference/third-party-integrations.md) | `granit::integration_sdl3`、`granit::integration_imgui` | 实验性 | SDL3 Surface 与 ImGui Draw Data 转换 |
+
+## 使用发布包
+
+[Granit 0.2.0 Release](https://github.com/synchronized/granit/releases/tag/v0.2.0) 提供 Windows 与
+Linux x64 的共享库、静态库安装包及 `SHA256SUMS`。下载后先验证校验和，再解压到固定目录；压缩包
+内的顶层目录就是 CMake package 前缀：
+
+```sh
+cmake -S <your-source> -B <your-build> -DCMAKE_PREFIX_PATH=<granit-package>
+cmake --build <your-build>
+```
+
+共享库还需位于运行时搜索路径：Windows 将包内 `bin` 加入 `PATH`，Linux 将包内 `lib` 加入
+`LD_LIBRARY_PATH` 或按应用部署规则安装。源码构建、依赖要求和静态链接说明见
+[构建与安装](docs/guides/build.md)。
 
 ## 快速开始
 
@@ -62,20 +78,12 @@ Vulkan loader 和显卡驱动。
 cmake --list-presets
 ```
 
-Windows Visual Studio 2022 动态库构建：
+选择与平台匹配的 preset 进行配置、构建和测试，例如：
 
-```powershell
+```sh
 cmake --preset windows-vs2022-debug
 cmake --build --preset windows-vs2022-debug
 ctest --preset windows-vs2022-debug
-```
-
-Linux Clang 动态库构建：
-
-```sh
-cmake --preset linux-clang-debug
-cmake --build --preset linux-clang-debug
-ctest --preset linux-clang-debug
 ```
 
 构建完成后可按需安装库、公共头文件和 CMake package：
@@ -149,21 +157,9 @@ target_link_libraries(
 )
 ```
 
-源码树构建时，这两个组件默认关闭。父项目可提供 SDL3 3.2+ 与 ImGui 目标；本仓库开发和验证也可
-显式启用锁定依赖：
-
-```sh
-cmake -S . -B build/integrations \
-  -DGRANIT_BUILD_INTEGRATION_SDL3=ON \
-  -DGRANIT_BUILD_INTEGRATION_IMGUI=ON \
-  -DGRANIT_FETCH_INTEGRATION_DEPENDENCIES=ON
-```
-
-锁定依赖模式仅用于源码树构建与验证，不安装 Integration component。安装这两个 component 时，
-应由父项目提供依赖目标，或提供可由 `find_package` 找到的依赖包。
-
 SDL3 Integration 只负责创建 Granit Surface；ImGui Integration 只负责把 Draw Data 追加到 Canvas。
-两者不接管第三方库的上下文、事件循环或输入，完整边界见
+源码树构建时两者默认关闭，安装使用时由父项目或 `find_package` 提供 SDL3 3.2+ 与 ImGui；完整
+启用方式、依赖和所有权边界见
 [SDL3 与 ImGui Integration](docs/reference/third-party-integrations.md)。
 
 ## 文档
