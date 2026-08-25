@@ -11,6 +11,8 @@
 #include <granit/integrations/sdl3/surface.hpp>
 #include <granit/pipeline/canvas_draw_list.hpp>
 
+#include <array>
+#include <chrono>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
@@ -24,6 +26,23 @@
 namespace {
 
 constexpr ImTextureID font_texture_id = 1;
+constexpr std::size_t frame_slot_count = GRANIT_CANVAS_FRAME_SLOT_COUNT;
+
+struct frame_slot {
+  granit::command_recorder recorder;
+  bool submitted{};
+};
+
+struct frame_timings {
+  double cpu_ms{};
+  double gpu_ms{};
+  double present_ms{};
+};
+
+void smooth(double& value, double sample) {
+  constexpr double weight = 0.1;
+  value = value == 0 ? sample : value + (sample - value) * weight;
+}
 
 struct sdl_quit {
   ~sdl_quit() { SDL_Quit(); }
@@ -175,9 +194,10 @@ bool needs_srgb_encoding(granit::texture_format format) {
          format == granit::texture_format::bgra8_unorm;
 }
 
-granit::result render_frame(granit::swapchain& swapchain, granit::command_recorder& recorder,
+granit::result render_frame(granit::swapchain& swapchain, frame_slot& slot,
+                            std::uint32_t slot_index, granit::timestamp_query_pool& timestamps,
                             granit::canvas_draw_list& canvas, const granit::swapchain_info& info,
-                            bool& needs_recreate) {
+                            bool& needs_recreate, double& present_ms) {
   granit_canvas_draw_list_stats stats = GRANIT_CANVAS_DRAW_LIST_STATS_INIT;
   auto result = canvas.get_stats(stats);
   if (granit::failed(result))
@@ -191,11 +211,22 @@ granit::result render_frame(granit::swapchain& swapchain, granit::command_record
 
   granit_texture texture = GRANIT_NULL_HANDLE;
   granit_texture_view view = GRANIT_NULL_HANDLE;
+  auto& recorder = slot.recorder;
   operation = "backbuffer";
   result = swapchain.backbuffer(frame.image_index, texture, view);
   if (granit::succeeded(result)) {
     operation = "recorder.begin";
     result = recorder.begin();
+  }
+  const auto first_query = slot_index * 2;
+  if (granit::succeeded(result)) {
+    operation = "timestamps.reset";
+    result = recorder.reset_timestamp_queries(timestamps.native_handle(), first_query, 2);
+  }
+  if (granit::succeeded(result)) {
+    operation = "timestamps.begin";
+    result = recorder.write_timestamp(timestamps.native_handle(), GRANIT_TIMESTAMP_STAGE_TOP,
+                                      first_query);
   }
   if (granit::succeeded(result) && stats.item_count == 0) {
     const granit::color_attachment_desc color{.view = view};
@@ -215,8 +246,14 @@ granit::result render_frame(granit::swapchain& swapchain, granit::command_record
     record.height = info.height;
     record.load_operation = GRANIT_ATTACHMENT_LOAD_OPERATION_CLEAR;
     record.encode_srgb = needs_srgb_encoding(info.format) ? 1U : 0U;
+    record.frame_slot = slot_index;
     operation = "canvas.record";
     result = canvas.record(recorder.native_handle(), record);
+  }
+  if (granit::succeeded(result)) {
+    operation = "timestamps.end";
+    result = recorder.write_timestamp(timestamps.native_handle(), GRANIT_TIMESTAMP_STAGE_BOTTOM,
+                                      first_query + 1);
   }
   if (granit::succeeded(result)) {
     operation = "recorder.end";
@@ -225,16 +262,21 @@ granit::result render_frame(granit::swapchain& swapchain, granit::command_record
   if (granit::succeeded(result)) {
     operation = "recorder.submit";
     result = recorder.submit(frame);
+    if (granit::succeeded(result))
+      slot.submitted = true;
   }
   if (granit::succeeded(result)) {
     operation = "swapchain.present";
+    const auto present_begin = std::chrono::steady_clock::now();
     result = swapchain.present(frame);
+    present_ms =
+        std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - present_begin)
+            .count();
   }
   needs_recreate = needs_recreate || frame.needs_recreate;
-  const auto reset_result = recorder.reset();
   if (granit::failed(result))
     std::cerr << "帧阶段失败：" << operation << '\n';
-  return granit::failed(result) ? result : reset_result;
+  return result;
 }
 
 } // namespace
@@ -263,9 +305,11 @@ int main(int argc, char** argv) {
   auto result = granit::integration::sdl3::query_surface_type(window.get(), surface_type);
   granit::renderer renderer;
   if (granit::succeeded(result)) {
-    result = renderer.initialize({.application_name = "Granit SDL3 ImGui",
-                                  .enable_validation = true,
-                                  .surface_types = surface_type});
+    result =
+        renderer.initialize({.application_name = "Granit SDL3 ImGui",
+                             .enable_validation = true,
+                             .surface_types = surface_type,
+                             .frames_in_flight = static_cast<std::uint32_t>(frame_slot_count)});
   }
   granit::surface surface;
   if (granit::succeeded(result)) {
@@ -289,9 +333,16 @@ int main(int argc, char** argv) {
   granit::swapchain_info swapchain_info;
   if (granit::succeeded(result))
     result = swapchain.query_info(swapchain_info);
-  granit::command_recorder recorder;
-  if (granit::succeeded(result))
-    result = recorder.initialize(renderer.native_handle());
+  std::array<frame_slot, frame_slot_count> frame_slots;
+  for (auto& slot : frame_slots) {
+    if (granit::succeeded(result))
+      result = slot.recorder.initialize(renderer.native_handle());
+  }
+  granit::timestamp_query_pool timestamps;
+  if (granit::succeeded(result)) {
+    result = timestamps.initialize(renderer.native_handle(),
+                                   static_cast<std::uint32_t>(frame_slot_count * 2));
+  }
   granit::canvas_draw_list canvas;
   granit_canvas_draw_list_desc canvas_desc = GRANIT_CANVAS_DRAW_LIST_DESC_INIT;
   if (granit::succeeded(result))
@@ -314,7 +365,10 @@ int main(int argc, char** argv) {
   float render_scale = 1;
   std::uint64_t last_title_update = 0;
   std::uint32_t rendered_frames = 0;
+  std::uint64_t frame_number = 0;
+  frame_timings timings;
   while (running) {
+    const auto cpu_begin = std::chrono::steady_clock::now();
     SDL_Event event{};
     while (SDL_PollEvent(&event)) {
       ImGui_ImplSDL3_ProcessEvent(&event);
@@ -342,6 +396,21 @@ int main(int argc, char** argv) {
       recreate = false;
     }
 
+    const auto slot_index = static_cast<std::uint32_t>(frame_number % frame_slot_count);
+    auto& slot = frame_slots[slot_index];
+    if (slot.submitted) {
+      result = slot.recorder.reset();
+      if (granit::failed(result))
+        break;
+      std::array<std::uint64_t, 2> gpu_timestamps{};
+      result = timestamps.get_results(slot_index * 2, gpu_timestamps);
+      if (granit::failed(result))
+        break;
+      smooth(timings.gpu_ms,
+             static_cast<double>(gpu_timestamps[1] - gpu_timestamps[0]) / 1'000'000.0);
+      slot.submitted = false;
+    }
+
     ImGui_ImplSDL3_NewFrame();
     ImGui::NewFrame();
     constexpr auto panel_flags =
@@ -352,6 +421,8 @@ int main(int argc, char** argv) {
     ImGui::Text("Presentation: %s", swapchain_info.presentation == granit::present_mode::immediate
                                         ? "Immediate"
                                         : "FIFO fallback");
+    ImGui::Text("CPU %.3f ms | GPU %.3f ms | Present wait %.3f ms", timings.cpu_ms, timings.gpu_ms,
+                timings.present_ms);
     ImGui::Separator();
     ImGui::Checkbox("Show ImGui demo", &show_demo_window);
     ImGui::Checkbox("Validation overlay", &validation_overlay);
@@ -366,9 +437,10 @@ int main(int argc, char** argv) {
     ImGui::Render();
     const auto now = SDL_GetTicks();
     if (now - last_title_update >= 500) {
-      char title[96]{};
-      std::snprintf(title, sizeof(title), "Granit SDL3 + ImGui | %.0f FPS",
-                    ImGui::GetIO().Framerate);
+      char title[160]{};
+      std::snprintf(title, sizeof(title),
+                    "Granit SDL3 + ImGui | %.0f FPS | CPU %.2f ms | GPU %.2f ms | Present %.2f ms",
+                    ImGui::GetIO().Framerate, timings.cpu_ms, timings.gpu_ms, timings.present_ms);
       SDL_SetWindowTitle(window.get(), title);
       last_title_update = now;
     }
@@ -381,7 +453,10 @@ int main(int argc, char** argv) {
                   << '\n';
     }
     if (granit::succeeded(result)) {
-      result = render_frame(swapchain, recorder, canvas, swapchain_info, recreate);
+      double present_ms = 0;
+      result = render_frame(swapchain, slot, slot_index, timestamps, canvas, swapchain_info,
+                            recreate, present_ms);
+      smooth(timings.present_ms, present_ms);
       if (granit::failed(result) && result != granit::result::out_of_date)
         std::cerr << "ImGui Canvas 录制或呈现失败，Granit 结果码：" << static_cast<int>(result)
                   << '\n';
@@ -393,9 +468,21 @@ int main(int argc, char** argv) {
     }
     if (granit::failed(result))
       break;
+    smooth(timings.cpu_ms,
+           std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - cpu_begin)
+               .count());
+    ++frame_number;
     ++rendered_frames;
-    if (smoke_test && rendered_frames >= 3)
+    if (smoke_test && rendered_frames >= frame_slot_count + 1)
       break;
+  }
+
+  for (auto& slot : frame_slots) {
+    if (slot.submitted) {
+      const auto reset_result = slot.recorder.reset();
+      if (granit::succeeded(result) && granit::failed(reset_result))
+        result = reset_result;
+    }
   }
 
   if (granit::failed(result))

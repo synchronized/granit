@@ -64,6 +64,7 @@ record.color_format = GRANIT_TEXTURE_FORMAT_RGBA8_SRGB;
 record.width = 1280;
 record.height = 720;
 record.encode_srgb = 0; /* sRGB Attachment 由硬件编码；UNORM 显示目标通常设为 1。 */
+record.frame_slot = frame_index % GRANIT_CANVAS_FRAME_SLOT_COUNT;
 result = granit_canvas_draw_list_record(renderer, recorder, list, &record);
 granit_canvas_draw_list_destroy(renderer, list);
 ```
@@ -75,5 +76,6 @@ granit_canvas_draw_list_destroy(renderer, list);
 - `encode_srgb=1` 在 Shader 中编码 RGB，适合已经保存 sRGB 显示值的 UNORM 目标；sRGB Attachment
   应保持为零并交由硬件编码。
 - 当前列表持有并复用内部 Material 与上传 Buffer；同一列表的录制仍需调用方外部同步。
-- 动态几何使用三个持久映射的 Upload Buffer 槽轮转，避免覆盖仍由前序帧读取的数据；容量只在
-  当前槽不足时按二次幂增长。
+- 动态几何使用三个持久映射的 Upload Buffer 槽。`frame_slot` 应与调用方的 Recorder 帧槽一致，
+  并仅在该 Recorder 已执行完成后复用；`GRANIT_CANVAS_FRAME_SLOT_AUTO` 保留兼容的自动轮转行为。
+  容量只在当前槽不足时按二次幂增长。
