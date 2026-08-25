@@ -11,6 +11,7 @@
 #include <granit/integrations/sdl3/surface.hpp>
 #include <granit/pipeline/canvas_draw_list.hpp>
 
+#include <algorithm>
 #include <array>
 #include <chrono>
 #include <cmath>
@@ -19,9 +20,14 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <fstream>
+#include <iomanip>
 #include <iostream>
+#include <limits>
 #include <memory>
 #include <span>
+#include <string>
+#include <string_view>
 #include <vector>
 
 namespace {
@@ -29,6 +35,43 @@ namespace {
 constexpr ImTextureID font_texture_id = 1;
 constexpr ImTextureID checker_texture_id = 2;
 constexpr std::uint32_t default_frame_slot_count = 3;
+constexpr std::size_t invalid_sample_index = std::numeric_limits<std::size_t>::max();
+
+struct profile_options {
+  std::string output_path;
+  std::uint32_t warmup_frames{120};
+  std::uint32_t sample_frames{600};
+
+  [[nodiscard]] bool enabled() const noexcept { return !output_path.empty(); }
+};
+
+struct frame_sample {
+  std::uint64_t frame{};
+  double total_ms{};
+  double event_ms{};
+  double imgui_ms{};
+  double convert_ms{};
+  double acquire_ms{};
+  double slot_wait_ms{};
+  double canvas_record_ms{};
+  double submit_ms{};
+  double present_ms{};
+  double render_other_ms{};
+  double remaining_ms{};
+  double gpu_ms{};
+  bool gpu_valid{};
+};
+
+struct profile_metadata {
+  std::uint32_t width{};
+  std::uint32_t height{};
+  std::uint32_t frame_slots{};
+  bool validation{};
+  bool demo{};
+  bool custom_texture{};
+  bool gpu_timestamps{};
+  granit::present_mode presentation{};
+};
 
 struct frame_timings {
   double cpu_ms{};
@@ -46,6 +89,43 @@ struct frame_timings {
 void smooth(double& value, double sample) {
   constexpr double weight = 0.1;
   value = value == 0 ? sample : value + (sample - value) * weight;
+}
+
+bool parse_u32(const char* text, std::uint32_t minimum, std::uint32_t maximum,
+               std::uint32_t& value) {
+  char* end = nullptr;
+  const auto parsed = std::strtoul(text, &end, 10);
+  if (end == text || *end != '\0' || parsed < minimum || parsed > maximum)
+    return false;
+  value = static_cast<std::uint32_t>(parsed);
+  return true;
+}
+
+bool write_profile_csv(std::string_view path, std::span<const frame_sample> samples,
+                       const profile_metadata& metadata) {
+  std::ofstream output{std::string{path}, std::ios::out | std::ios::trunc};
+  if (!output)
+    return false;
+  output << "width,height,frame_slots,validation,present_mode,demo,custom_texture,gpu_timestamps,"
+            "frame,total_ms,event_ms,imgui_ms,convert_ms,acquire_ms,slot_wait_ms,"
+            "canvas_record_ms,submit_ms,present_ms,render_other_ms,remaining_ms,gpu_ms\n";
+  output << std::fixed << std::setprecision(6);
+  for (const auto& sample : samples) {
+    output << metadata.width << ',' << metadata.height << ',' << metadata.frame_slots << ','
+           << static_cast<unsigned>(metadata.validation) << ','
+           << (metadata.presentation == granit::present_mode::immediate ? "immediate" : "fifo")
+           << ',' << static_cast<unsigned>(metadata.demo) << ','
+           << static_cast<unsigned>(metadata.custom_texture) << ','
+           << static_cast<unsigned>(metadata.gpu_timestamps) << ',' << sample.frame << ','
+           << sample.total_ms << ',' << sample.event_ms << ',' << sample.imgui_ms << ','
+           << sample.convert_ms << ',' << sample.acquire_ms << ',' << sample.slot_wait_ms << ','
+           << sample.canvas_record_ms << ',' << sample.submit_ms << ',' << sample.present_ms << ','
+           << sample.render_other_ms << ',' << sample.remaining_ms << ',';
+    if (sample.gpu_valid)
+      output << sample.gpu_ms;
+    output << '\n';
+  }
+  return output.good();
 }
 
 struct sdl_quit {
@@ -228,11 +308,12 @@ bool needs_srgb_encoding(granit::texture_format format) {
 
 granit::result render_frame(granit::swapchain& swapchain, granit::frame_context& frame_context,
                             std::array<bool, GRANIT_MAX_FRAMES_IN_FLIGHT>& timestamp_valid,
+                            std::array<std::size_t, GRANIT_MAX_FRAMES_IN_FLIGHT>& pending_samples,
+                            std::vector<frame_sample>& samples, std::size_t current_sample,
                             granit::timestamp_query_pool& timestamps,
                             granit::canvas_draw_list& canvas, const granit::swapchain_info& info,
-                            bool timestamps_enabled, bool& needs_recreate, double& gpu_ms,
-                            double& slot_wait_ms, double& acquire_ms, double& canvas_record_ms,
-                            double& submit_ms, double& present_ms) {
+                            bool timestamps_enabled, bool& needs_recreate, bool& submitted,
+                            double& gpu_ms, frame_sample& sample) {
   granit_canvas_draw_list_stats stats = GRANIT_CANVAS_DRAW_LIST_STATS_INIT;
   auto result = canvas.get_stats(stats);
   if (granit::failed(result))
@@ -241,9 +322,9 @@ granit::result render_frame(granit::swapchain& swapchain, granit::frame_context&
   granit::acquired_frame frame;
   const auto acquire_begin = std::chrono::steady_clock::now();
   result = swapchain.acquire(frame);
-  smooth(acquire_ms,
-         std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - acquire_begin)
-             .count());
+  sample.acquire_ms =
+      std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - acquire_begin)
+          .count();
   if (granit::failed(result))
     return result;
   needs_recreate = frame.needs_recreate;
@@ -257,9 +338,9 @@ granit::result render_frame(granit::swapchain& swapchain, granit::frame_context&
     operation = "frame_context.begin";
     const auto slot_begin = std::chrono::steady_clock::now();
     result = frame_context.begin(frame, recording);
-    smooth(slot_wait_ms,
-           std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - slot_begin)
-               .count());
+    sample.slot_wait_ms =
+        std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - slot_begin)
+            .count();
   }
   const auto slot_index = recording.frame_slot();
   if (granit::succeeded(result) && timestamps_enabled && timestamp_valid[slot_index]) {
@@ -267,7 +348,14 @@ granit::result render_frame(granit::swapchain& swapchain, granit::frame_context&
     operation = "timestamps.results";
     result = timestamps.get_results(slot_index * 2, gpu_timestamps);
     if (granit::succeeded(result)) {
-      smooth(gpu_ms, static_cast<double>(gpu_timestamps[1] - gpu_timestamps[0]) / 1'000'000.0);
+      const auto completed_gpu_ms =
+          static_cast<double>(gpu_timestamps[1] - gpu_timestamps[0]) / 1'000'000.0;
+      smooth(gpu_ms, completed_gpu_ms);
+      const auto pending_sample = pending_samples[slot_index];
+      if (pending_sample != invalid_sample_index && pending_sample < samples.size()) {
+        samples[pending_sample].gpu_ms = completed_gpu_ms;
+        samples[pending_sample].gpu_valid = true;
+      }
     }
   }
   auto& recorder = recording.recorder();
@@ -303,9 +391,9 @@ granit::result render_frame(granit::swapchain& swapchain, granit::frame_context&
     operation = "canvas.record";
     const auto canvas_begin = std::chrono::steady_clock::now();
     result = canvas.record(recorder.native_handle(), record);
-    smooth(canvas_record_ms, std::chrono::duration<double, std::milli>(
-                                 std::chrono::steady_clock::now() - canvas_begin)
-                                 .count());
+    sample.canvas_record_ms =
+        std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - canvas_begin)
+            .count();
   }
   if (granit::succeeded(result) && timestamps_enabled) {
     operation = "timestamps.end";
@@ -316,17 +404,20 @@ granit::result render_frame(granit::swapchain& swapchain, granit::frame_context&
     operation = "frame_context.submit";
     const auto submit_begin = std::chrono::steady_clock::now();
     result = recording.submit();
-    smooth(submit_ms, std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() -
-                                                                submit_begin)
-                          .count());
-    if (granit::succeeded(result) && timestamps_enabled)
+    sample.submit_ms =
+        std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - submit_begin)
+            .count();
+    if (granit::succeeded(result) && timestamps_enabled) {
       timestamp_valid[slot_index] = true;
+      pending_samples[slot_index] = current_sample;
+    }
+    submitted = granit::succeeded(result);
   }
   if (granit::succeeded(result)) {
     operation = "swapchain.present";
     const auto present_begin = std::chrono::steady_clock::now();
     result = swapchain.present(frame);
-    present_ms =
+    sample.present_ms =
         std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - present_begin)
             .count();
   }
@@ -351,22 +442,17 @@ int main(int argc, char** argv) {
   bool demo_enabled = true;
   bool custom_texture_enabled = true;
   bool timestamps_enabled = true;
+  auto presentation = granit::present_mode::immediate;
+  profile_options profile;
   for (int index = 1; index < argc; ++index) {
     if (std::strcmp(argv[index], "--smoke-test") == 0) {
       smoke_test = true;
     } else if (std::strcmp(argv[index], "--frame-count") == 0 && index + 1 < argc) {
-      char* end = nullptr;
-      const auto value = std::strtoul(argv[++index], &end, 10);
-      if (end == argv[index] || *end != '\0' || value == 0 || value > UINT32_MAX)
+      if (!parse_u32(argv[++index], 1, UINT32_MAX, frame_limit))
         return 1;
-      frame_limit = static_cast<std::uint32_t>(value);
     } else if (std::strcmp(argv[index], "--frames-in-flight") == 0 && index + 1 < argc) {
-      char* end = nullptr;
-      const auto value = std::strtoul(argv[++index], &end, 10);
-      if (end == argv[index] || *end != '\0' || value == 0 || value > GRANIT_MAX_FRAMES_IN_FLIGHT) {
+      if (!parse_u32(argv[++index], 1, GRANIT_MAX_FRAMES_IN_FLIGHT, frame_slot_count))
         return 1;
-      }
-      frame_slot_count = static_cast<std::uint32_t>(value);
     } else if (std::strcmp(argv[index], "--no-validation") == 0) {
       validation_enabled = false;
     } else if (std::strcmp(argv[index], "--no-demo") == 0) {
@@ -375,9 +461,32 @@ int main(int argc, char** argv) {
       custom_texture_enabled = false;
     } else if (std::strcmp(argv[index], "--no-gpu-timestamps") == 0) {
       timestamps_enabled = false;
+    } else if (std::strcmp(argv[index], "--present-mode") == 0 && index + 1 < argc) {
+      const std::string_view mode{argv[++index]};
+      if (mode == "immediate")
+        presentation = granit::present_mode::immediate;
+      else if (mode == "fifo")
+        presentation = granit::present_mode::fifo;
+      else
+        return 1;
+    } else if (std::strcmp(argv[index], "--profile-output") == 0 && index + 1 < argc) {
+      profile.output_path = argv[++index];
+      if (profile.output_path.empty())
+        return 1;
+    } else if (std::strcmp(argv[index], "--profile-warmup") == 0 && index + 1 < argc) {
+      if (!parse_u32(argv[++index], 0, UINT32_MAX, profile.warmup_frames))
+        return 1;
+    } else if (std::strcmp(argv[index], "--profile-frames") == 0 && index + 1 < argc) {
+      if (!parse_u32(argv[++index], 1, UINT32_MAX, profile.sample_frames))
+        return 1;
     } else {
       return 1;
     }
+  }
+  if (profile.enabled()) {
+    if (profile.warmup_frames > UINT32_MAX - profile.sample_frames)
+      return 1;
+    frame_limit = profile.warmup_frames + profile.sample_frames;
   }
   if (smoke_test)
     frame_limit = frame_slot_count + 1;
@@ -426,7 +535,7 @@ int main(int argc, char** argv) {
     result = swapchain.initialize(renderer.native_handle(), surface.native_handle(),
                                   {.width = static_cast<std::uint32_t>(pixel_width),
                                    .height = static_cast<std::uint32_t>(pixel_height),
-                                   .presentation = granit::present_mode::immediate});
+                                   .presentation = presentation});
   }
   granit::swapchain_info swapchain_info;
   if (granit::succeeded(result))
@@ -469,9 +578,17 @@ int main(int argc, char** argv) {
   std::uint64_t last_title_update = 0;
   std::uint32_t rendered_frames = 0;
   std::array<bool, GRANIT_MAX_FRAMES_IN_FLIGHT> timestamp_valid{};
+  std::array<std::size_t, GRANIT_MAX_FRAMES_IN_FLIGHT> pending_samples{};
+  pending_samples.fill(invalid_sample_index);
+  std::vector<frame_sample> samples;
+  if (profile.enabled())
+    samples.reserve(profile.sample_frames);
   frame_timings timings;
   while (running) {
     const auto cpu_begin = std::chrono::steady_clock::now();
+    frame_sample sample;
+    sample.frame = rendered_frames;
+    const auto event_begin = cpu_begin;
     SDL_Event event{};
     while (SDL_PollEvent(&event)) {
       ImGui_ImplSDL3_ProcessEvent(&event);
@@ -483,6 +600,9 @@ int main(int argc, char** argv) {
         recreate = true;
       }
     }
+    sample.event_ms =
+        std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - event_begin)
+            .count();
     if (!running)
       break;
     if (pixel_width <= 0 || pixel_height <= 0)
@@ -490,7 +610,7 @@ int main(int argc, char** argv) {
     if (recreate) {
       result = swapchain.recreate({.width = static_cast<std::uint32_t>(pixel_width),
                                    .height = static_cast<std::uint32_t>(pixel_height),
-                                   .presentation = granit::present_mode::immediate});
+                                   .presentation = presentation});
       if (result == granit::result::not_ready)
         continue;
       if (granit::failed(result) || granit::failed(result = swapchain.query_info(swapchain_info))) {
@@ -528,9 +648,10 @@ int main(int argc, char** argv) {
     if (show_demo_window)
       ImGui::ShowDemoWindow(&show_demo_window);
     ImGui::Render();
-    smooth(timings.imgui_ms,
-           std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - imgui_begin)
-               .count());
+    sample.imgui_ms =
+        std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - imgui_begin)
+            .count();
+    smooth(timings.imgui_ms, sample.imgui_ms);
     const auto now = SDL_GetTicks();
     if (now - last_title_update >= 500) {
       char title[160]{};
@@ -551,37 +672,84 @@ int main(int argc, char** argv) {
         std::cerr << "ImGui Draw Data 转换失败，Granit 结果码：" << static_cast<int>(result)
                   << '\n';
     }
-    smooth(timings.convert_ms, std::chrono::duration<double, std::milli>(
-                                   std::chrono::steady_clock::now() - convert_begin)
-                                   .count());
+    sample.convert_ms =
+        std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - convert_begin)
+            .count();
+    smooth(timings.convert_ms, sample.convert_ms);
+    const auto collecting = profile.enabled() && rendered_frames >= profile.warmup_frames;
+    bool submitted = false;
     if (granit::succeeded(result)) {
       const auto render_begin = std::chrono::steady_clock::now();
-      double present_ms = 0;
-      result = render_frame(swapchain, frame_context, timestamp_valid, timestamps, canvas,
-                            swapchain_info, timestamps_enabled, recreate, timings.gpu_ms,
-                            timings.slot_wait_ms, timings.acquire_ms, timings.canvas_record_ms,
-                            timings.submit_ms, present_ms);
-      smooth(timings.render_ms, std::chrono::duration<double, std::milli>(
-                                    std::chrono::steady_clock::now() - render_begin)
-                                    .count());
-      smooth(timings.present_ms, present_ms);
+      const auto current_sample = collecting ? samples.size() : invalid_sample_index;
+      if (collecting)
+        samples.push_back(sample);
+      result = render_frame(swapchain, frame_context, timestamp_valid, pending_samples, samples,
+                            current_sample, timestamps, canvas, swapchain_info, timestamps_enabled,
+                            recreate, submitted, timings.gpu_ms, sample);
+      const auto render_ms =
+          std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - render_begin)
+              .count();
+      sample.render_other_ms =
+          std::max(0.0, render_ms - sample.acquire_ms - sample.slot_wait_ms -
+                            sample.canvas_record_ms - sample.submit_ms - sample.present_ms);
+      smooth(timings.render_ms, render_ms);
+      smooth(timings.slot_wait_ms, sample.slot_wait_ms);
+      smooth(timings.acquire_ms, sample.acquire_ms);
+      smooth(timings.canvas_record_ms, sample.canvas_record_ms);
+      smooth(timings.submit_ms, sample.submit_ms);
+      smooth(timings.present_ms, sample.present_ms);
       if (granit::failed(result) && result != granit::result::out_of_date)
         std::cerr << "ImGui Canvas 录制或呈现失败，Granit 结果码：" << static_cast<int>(result)
                   << '\n';
     }
+    const auto finalize_sample = [&] {
+      sample.total_ms =
+          std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - cpu_begin)
+              .count();
+      sample.remaining_ms =
+          std::max(0.0, sample.total_ms - sample.event_ms - sample.imgui_ms - sample.convert_ms -
+                            sample.acquire_ms - sample.slot_wait_ms - sample.canvas_record_ms -
+                            sample.submit_ms - sample.present_ms - sample.render_other_ms);
+      smooth(timings.cpu_ms, sample.total_ms);
+      if (collecting)
+        samples.back() = sample;
+    };
     if (result == granit::result::out_of_date) {
+      if (collecting && !submitted)
+        samples.pop_back();
+      if (submitted) {
+        finalize_sample();
+        ++rendered_frames;
+      }
       result = granit::result::success;
       recreate = true;
+      if (frame_limit != 0 && rendered_frames >= frame_limit)
+        break;
       continue;
     }
     if (granit::failed(result))
       break;
-    smooth(timings.cpu_ms,
-           std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - cpu_begin)
-               .count());
+    finalize_sample();
     ++rendered_frames;
     if (frame_limit != 0 && rendered_frames >= frame_limit)
       break;
+  }
+
+  if (profile.enabled() && granit::succeeded(result)) {
+    const profile_metadata metadata{.width = swapchain_info.width,
+                                    .height = swapchain_info.height,
+                                    .frame_slots = frame_slot_count,
+                                    .validation = validation_enabled,
+                                    .demo = demo_enabled,
+                                    .custom_texture = custom_texture_enabled,
+                                    .gpu_timestamps = timestamps_enabled,
+                                    .presentation = swapchain_info.presentation};
+    if (!write_profile_csv(profile.output_path, samples, metadata)) {
+      std::cerr << "无法写入性能样本：" << profile.output_path << '\n';
+      result = granit::result::internal;
+    } else {
+      std::cout << "已写入 " << samples.size() << " 个原始帧样本：" << profile.output_path << '\n';
+    }
   }
 
   if (frame_limit != 0 && granit::succeeded(result)) {
