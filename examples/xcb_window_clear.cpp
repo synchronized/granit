@@ -178,7 +178,7 @@ int main(int argc, char** argv) {
     if (granit::succeeded(result) && granit::failed(reset_result))
       result = reset_result;
   };
-  reset_resource(recorder);
+  reset_resource(frame_context);
   reset_resource(swapchain);
   reset_resource(surface);
   reset_resource(renderer);
