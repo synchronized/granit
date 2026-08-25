@@ -88,15 +88,27 @@ granit_result record_canvas_pass(granit_renderer renderer, granit_command_record
   if (result == GRANIT_SUCCESS)
     result = granit_command_recorder_begin_rendering(renderer, recorder, &rendering);
   if (result == GRANIT_SUCCESS) {
+    auto current_texture = batches.front().state.texture;
+    auto current_sampler = batches.front().state.sampler;
     for (const auto& batch : batches) {
-      result = update_material(batch);
-      material_draw_state batch_material;
-      if (result == GRANIT_SUCCESS)
-        result = acquire_material_draw_state(renderer, desc.material, request, batch_material);
-      if (result == GRANIT_SUCCESS) {
-        result = granit_command_recorder_bind_graphics_groups(renderer, recorder,
-                                                              batch_material.pipeline_layout, 1,
-                                                              &batch_material.material_group, 1);
+      if (batch.state.texture != current_texture || batch.state.sampler != current_sampler) {
+        // 资源绑定可能需要插入 Pipeline Barrier，必须暂时离开 Dynamic Rendering。
+        result = granit_command_recorder_end_rendering(renderer, recorder);
+        if (result == GRANIT_SUCCESS)
+          result = update_material(batch);
+        material_draw_state batch_material;
+        if (result == GRANIT_SUCCESS)
+          result = acquire_material_draw_state(renderer, desc.material, request, batch_material);
+        if (result == GRANIT_SUCCESS) {
+          result = granit_command_recorder_bind_graphics_groups(renderer, recorder,
+                                                                batch_material.pipeline_layout, 1,
+                                                                &batch_material.material_group, 1);
+        }
+        color.load_operation = GRANIT_ATTACHMENT_LOAD_OPERATION_LOAD;
+        if (result == GRANIT_SUCCESS)
+          result = granit_command_recorder_begin_rendering(renderer, recorder, &rendering);
+        current_texture = batch.state.texture;
+        current_sampler = batch.state.sampler;
       }
       const auto scissor = batch.state.scissor.width == 0 || batch.state.scissor.height == 0
                                ? granit_scissor{0, 0, desc.width, desc.height}
