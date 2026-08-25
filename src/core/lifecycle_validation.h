@@ -28,6 +28,7 @@ enum class lifecycle_resource_type : std::uint8_t {
   surface,
   swapchain,
   command_recorder,
+  frame_context,
   upload_batch,
   timestamp_query_pool,
   count,

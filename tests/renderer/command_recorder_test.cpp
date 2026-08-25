@@ -3,6 +3,7 @@
 
 #include <granit/renderer/buffer.hpp>
 #include <granit/renderer/command_recorder.hpp>
+#include <granit/renderer/frame_context.h>
 #include <granit/renderer/renderer.hpp>
 #include <granit/renderer/texture.hpp>
 #include <granit/renderer/timestamp_query.hpp>
@@ -19,6 +20,26 @@
 #include <vector>
 
 namespace {
+
+TEST_CASE("Frame Context 支持一到四个在途帧槽", "[renderer][frame-context]") {
+  for (std::uint32_t count = 1; count <= 4; ++count) {
+    granit::renderer renderer;
+    const auto initialized = renderer.initialize(
+        {.application_name = "granit-frame-context-tests", .frames_in_flight = count});
+    if (initialized == granit::result::backend_unavailable ||
+        initialized == granit::result::incompatible_driver ||
+        initialized == granit::result::no_suitable_device) {
+      SKIP("当前运行环境不支持 Vulkan Renderer");
+    }
+    REQUIRE(initialized == granit::result::success);
+    granit_frame_context_desc desc = GRANIT_FRAME_CONTEXT_DESC_INIT;
+    granit_frame_context context = GRANIT_NULL_HANDLE;
+    REQUIRE(granit_frame_context_create(renderer.native_handle(), &desc, &context) ==
+            GRANIT_SUCCESS);
+    CHECK(context != GRANIT_NULL_HANDLE);
+    REQUIRE(granit_frame_context_destroy(renderer.native_handle(), context) == GRANIT_SUCCESS);
+  }
+}
 
 bool environment_unavailable(granit::result value) {
   return value == granit::result::backend_unavailable ||

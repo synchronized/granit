@@ -295,6 +295,11 @@ granit_result renderer_registry::destroy(granit_renderer renderer) {
     state = std::move(found->second);
     renderers_.erase(found);
     if (state->validation_enabled()) {
+      for (const auto& [handle, record] : frame_contexts_) {
+        if (record->renderer == state)
+          lifecycle.add(lifecycle_resource_type::frame_context, handle,
+                        record->metadata.creation_sequence);
+      }
       for (const auto& [handle, record] : buffers_) {
         if (record->renderer == state) {
           lifecycle.add(lifecycle_resource_type::buffer, handle,
@@ -386,6 +391,15 @@ granit_result renderer_registry::destroy(granit_renderer renderer) {
         frame = frames_.erase(frame);
       } else {
         ++frame;
+      }
+    }
+    for (auto context = frame_contexts_.begin(); context != frame_contexts_.end();) {
+      if (context->second->renderer == state) {
+        static_cast<void>(
+            handles_.erase(context->first, resource_type::frame_context, state->domain()));
+        context = frame_contexts_.erase(context);
+      } else {
+        ++context;
       }
     }
     for (auto recorder = command_recorders_.begin(); recorder != command_recorders_.end();) {
@@ -2897,6 +2911,201 @@ granit_result renderer_registry::reset_command_recorder(granit_renderer renderer
   return result;
 }
 
+granit_result renderer_registry::create_frame_context(granit_renderer renderer,
+                                                      granit_frame_context& context) {
+  auto state = acquire(renderer);
+  if (!state)
+    return GRANIT_ERROR_INVALID_HANDLE;
+  auto record = std::make_shared<frame_context_record>();
+  record->renderer = state;
+  record->slots.resize(state->frame_slot_count());
+  for (auto& slot : record->slots) {
+    const auto result = create_command_recorder(renderer, slot.recorder);
+    if (result != GRANIT_SUCCESS) {
+      for (auto& created : record->slots) {
+        if (created.recorder != GRANIT_NULL_HANDLE)
+          static_cast<void>(destroy_command_recorder(renderer, created.recorder));
+      }
+      return result;
+    }
+  }
+  granit_result install_result{GRANIT_SUCCESS};
+  {
+    std::lock_guard lock{mutex_};
+    const auto found = renderers_.find(renderer);
+    if (found == renderers_.end() || found->second != state) {
+      install_result = GRANIT_ERROR_INVALID_HANDLE;
+    } else {
+      record->metadata.creation_sequence = next_creation_sequence_++;
+      const auto handle =
+          handles_.insert(record.get(), resource_type::frame_context, state->domain());
+      if (handle == GRANIT_NULL_HANDLE) {
+        install_result = GRANIT_ERROR_OUT_OF_MEMORY;
+      } else {
+        for (const auto& slot : record->slots)
+          command_recorders_.at(slot.recorder)->owned_by_frame_context = true;
+        try {
+          frame_contexts_.emplace(handle, record);
+          context = handle;
+        } catch (...) {
+          static_cast<void>(handles_.erase(handle, resource_type::frame_context, state->domain()));
+          for (const auto& slot : record->slots)
+            command_recorders_.at(slot.recorder)->owned_by_frame_context = false;
+          install_result = GRANIT_ERROR_OUT_OF_MEMORY;
+        }
+      }
+    }
+  }
+  if (install_result != GRANIT_SUCCESS) {
+    for (const auto& slot : record->slots)
+      static_cast<void>(destroy_command_recorder(renderer, slot.recorder));
+  }
+  return install_result;
+}
+
+granit_result renderer_registry::begin_frame_context(granit_renderer renderer,
+                                                     granit_frame_context context,
+                                                     granit_frame frame,
+                                                     granit_command_recorder& recorder,
+                                                     std::uint32_t& frame_slot) {
+  std::shared_ptr<frame_context_record> context_record;
+  std::shared_ptr<frame_record> frame_record_state;
+  {
+    std::lock_guard lock{mutex_};
+    const auto renderer_found = renderers_.find(renderer);
+    const auto context_found = frame_contexts_.find(context);
+    const auto frame_found = frames_.find(frame);
+    if (renderer_found == renderers_.end() || context_found == frame_contexts_.end() ||
+        frame_found == frames_.end() || context_found->second->renderer != renderer_found->second ||
+        frame_found->second->renderer != renderer_found->second)
+      return GRANIT_ERROR_INVALID_HANDLE;
+    context_record = context_found->second;
+    frame_record_state = frame_found->second;
+  }
+  std::size_t slot_index{};
+  {
+    std::lock_guard frame_lock{frame_record_state->mutex};
+    if (frame_record_state->submitted)
+      return GRANIT_ERROR_INVALID_ARGUMENT;
+    slot_index = frame_record_state->slot_index;
+  }
+  std::lock_guard context_lock{context_record->mutex};
+  if (slot_index >= context_record->slots.size())
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  auto& slot = context_record->slots[slot_index];
+  if (slot.state == frame_context_slot_state::recording)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  if (slot.state == frame_context_slot_state::submitted) {
+    const auto reset_result = reset_command_recorder(renderer, slot.recorder);
+    if (reset_result != GRANIT_SUCCESS)
+      return reset_result;
+    slot.state = frame_context_slot_state::idle;
+  }
+  const auto begin_result = begin_command_recorder(renderer, slot.recorder);
+  if (begin_result != GRANIT_SUCCESS)
+    return begin_result;
+  slot.frame = frame;
+  slot.state = frame_context_slot_state::recording;
+  recorder = slot.recorder;
+  frame_slot = static_cast<std::uint32_t>(slot_index);
+  return GRANIT_SUCCESS;
+}
+
+granit_result renderer_registry::submit_frame_context(granit_renderer renderer,
+                                                      granit_frame_context context,
+                                                      granit_frame frame) {
+  std::shared_ptr<frame_context_record> record;
+  {
+    std::lock_guard lock{mutex_};
+    const auto found = frame_contexts_.find(context);
+    const auto renderer_found = renderers_.find(renderer);
+    if (found == frame_contexts_.end() || renderer_found == renderers_.end() ||
+        found->second->renderer != renderer_found->second)
+      return GRANIT_ERROR_INVALID_HANDLE;
+    record = found->second;
+  }
+  std::lock_guard lock{record->mutex};
+  const auto slot = std::find_if(record->slots.begin(), record->slots.end(), [&](const auto& item) {
+    return item.state == frame_context_slot_state::recording && item.frame == frame;
+  });
+  if (slot == record->slots.end())
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  const auto end_result = end_command_recorder(renderer, slot->recorder);
+  if (end_result != GRANIT_SUCCESS)
+    return end_result;
+  const auto submit_result = submit_command_recorder_frame(renderer, slot->recorder, frame);
+  if (submit_result != GRANIT_SUCCESS)
+    return submit_result;
+  slot->state = frame_context_slot_state::submitted;
+  return GRANIT_SUCCESS;
+}
+
+granit_result renderer_registry::abort_frame_context(granit_renderer renderer,
+                                                     granit_frame_context context,
+                                                     granit_frame frame) {
+  std::shared_ptr<frame_context_record> context_record;
+  std::shared_ptr<command_recorder_record> command;
+  frame_context_slot* slot{};
+  {
+    std::lock_guard lock{mutex_};
+    const auto found = frame_contexts_.find(context);
+    const auto renderer_found = renderers_.find(renderer);
+    if (found == frame_contexts_.end() || renderer_found == renderers_.end() ||
+        found->second->renderer != renderer_found->second)
+      return GRANIT_ERROR_INVALID_HANDLE;
+    context_record = found->second;
+  }
+  std::lock_guard context_lock{context_record->mutex};
+  const auto found_slot = std::find_if(
+      context_record->slots.begin(), context_record->slots.end(), [&](const auto& item) {
+        return item.state == frame_context_slot_state::recording && item.frame == frame;
+      });
+  if (found_slot == context_record->slots.end())
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  slot = &*found_slot;
+  command = acquire_command_recorder(renderer, slot->recorder);
+  if (!command)
+    return GRANIT_ERROR_INVALID_HANDLE;
+  std::lock_guard command_lock{command->mutex};
+  command->renderer->destroy_native_command_recorder(command->native);
+  command->retained_resources.clear();
+  const auto result = command->renderer->create_native_command_recorder(command->native);
+  if (result == GRANIT_SUCCESS) {
+    slot->frame = GRANIT_NULL_HANDLE;
+    slot->state = frame_context_slot_state::idle;
+  }
+  return result;
+}
+
+granit_result renderer_registry::destroy_frame_context(granit_renderer renderer,
+                                                       granit_frame_context context) {
+  std::shared_ptr<frame_context_record> record;
+  {
+    std::lock_guard lock{mutex_};
+    const auto found = frame_contexts_.find(context);
+    const auto renderer_found = renderers_.find(renderer);
+    if (found == frame_contexts_.end() || renderer_found == renderers_.end() ||
+        found->second->renderer != renderer_found->second)
+      return GRANIT_ERROR_INVALID_HANDLE;
+    record = std::move(found->second);
+    frame_contexts_.erase(found);
+    static_cast<void>(
+        handles_.erase(context, resource_type::frame_context, renderer_found->second->domain()));
+    for (const auto& slot : record->slots) {
+      const auto command = command_recorders_.find(slot.recorder);
+      if (command != command_recorders_.end())
+        command->second->owned_by_frame_context = false;
+    }
+  }
+  granit_result result = GRANIT_SUCCESS;
+  for (const auto& slot : record->slots) {
+    const auto destroy_result = destroy_command_recorder(renderer, slot.recorder);
+    if (result == GRANIT_SUCCESS && destroy_result != GRANIT_SUCCESS)
+      result = destroy_result;
+  }
+  return result;
+}
+
 granit_result renderer_registry::copy_buffer(granit_renderer renderer,
                                              granit_command_recorder recorder, granit_buffer source,
                                              granit_buffer destination,
@@ -3752,6 +3961,8 @@ granit_result renderer_registry::destroy_command_recorder(granit_renderer render
   if (!record) {
     return GRANIT_ERROR_INVALID_HANDLE;
   }
+  if (record->owned_by_frame_context)
+    return GRANIT_ERROR_UNSUPPORTED;
   {
     std::lock_guard record_lock{record->mutex};
     const auto wait_result = record->renderer->wait_command_recorder(record->native);

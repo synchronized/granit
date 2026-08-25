@@ -20,7 +20,8 @@
 2. [Renderer](reference/renderer.md)
 3. [资源类型](reference/resource-types.md)
 4. [Command Recorder](reference/command-recorder.md)
-5. [线程安全](reference/thread-safety.md)
+5. [Frame Context](reference/frame-context.md)
+6. [线程安全](reference/thread-safety.md)
 
 ### 理解高级渲染层
 
@@ -70,6 +71,7 @@
 ### 命令与 Pipeline
 
 - [Command Recorder](reference/command-recorder.md)
+- [Frame Context](reference/frame-context.md)
 - [Shader Module](reference/shader.md)
 - [Graphics 与 Compute Pipeline](reference/pipeline.md)
 

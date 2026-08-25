@@ -6,7 +6,7 @@
 ## 状态
 
 - 设计状态：已确认
-- 实现状态：F-10A 已实现，F-10B～F-10F 待开始
+- 实现状态：F-10A～F-10B 已实现，F-10C～F-10F 待开始
 - 路线图任务：F-10
 - 优先级：P1
 - 前置依赖：F-03、F-04、F-06、F-07、S-09A
@@ -133,8 +133,8 @@ Recorder，不能提交部分命令，也不能把无效状态留给下一帧。
 
 1. **F-10A 契约原型（已完成）**：增加 Frame Info 的内部查询与纯 C/C++ 头测试，验证真实槽位在
    acquire、present、cancel 和重建中的生命周期；用测试冻结无效结构尺寸、跨对象与旧句柄语义。
-2. **F-10B 帧上下文 C ABI**：实现句柄、状态机、Recorder 所有权、submit/abort/销毁和诊断；覆盖
-   1、2、3、4 个 frames-in-flight。
+2. **F-10B 帧上下文 C ABI（已完成）**：实现句柄、状态机、Recorder 所有权、submit/abort/销毁
+   和诊断；覆盖 1、2、3、4 个 frames-in-flight。
 3. **F-10C C++20 包装**：提供 move-only RAII 和借用 Recorder 视图，不复制运行时状态。
 4. **F-10D 上传槽统一**：移除 Canvas 固定三槽假设，使上传容量按 Context 槽数初始化并由真实
    `frame_slot` 选择；旧 V1/V2 描述结构保持兼容或提供明确迁移。

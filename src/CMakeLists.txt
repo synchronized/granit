@@ -62,6 +62,7 @@ target_sources(
     renderer/pipeline_api.cpp
     renderer/buffer_api.cpp
     renderer/command_recorder_api.cpp
+    renderer/frame_context_api.cpp
     renderer/renderer_registry.cpp
     renderer/renderer_registry.h
     renderer/renderer_state.cpp
@@ -88,6 +89,7 @@ target_sources(
       "${PROJECT_SOURCE_DIR}/include/granit/renderer/buffer.hpp"
       "${PROJECT_SOURCE_DIR}/include/granit/renderer/command_recorder.h"
       "${PROJECT_SOURCE_DIR}/include/granit/renderer/command_recorder.hpp"
+      "${PROJECT_SOURCE_DIR}/include/granit/renderer/frame_context.h"
       "${PROJECT_SOURCE_DIR}/include/granit/granit.h"
       "${PROJECT_SOURCE_DIR}/include/granit/granit.hpp"
       "${PROJECT_SOURCE_DIR}/include/granit/math/types.h"
