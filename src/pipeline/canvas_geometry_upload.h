@@ -38,8 +38,9 @@ public:
     return *this;
   }
 
-  [[nodiscard]] granit_result upload(granit_renderer renderer,
-                                     const canvas_draw_list& list) noexcept {
+  [[nodiscard]] granit_result
+  upload(granit_renderer renderer, const canvas_draw_list& list,
+         std::uint32_t frame_slot = GRANIT_CANVAS_FRAME_SLOT_AUTO) noexcept {
     if (renderer == GRANIT_NULL_HANDLE)
       return GRANIT_ERROR_INVALID_ARGUMENT;
     if (renderer_ != GRANIT_NULL_HANDLE && renderer_ != renderer)
@@ -57,7 +58,12 @@ public:
     }
     // 先记录所属 Renderer，保证部分创建失败后析构仍能回收已经创建的 Buffer。
     renderer_ = renderer;
-    current_slot_ = (current_slot_ + 1) % slots_.size();
+    if (frame_slot == GRANIT_CANVAS_FRAME_SLOT_AUTO)
+      current_slot_ = (current_slot_ + 1) % slots_.size();
+    else if (frame_slot < slots_.size())
+      current_slot_ = frame_slot;
+    else
+      return GRANIT_ERROR_INVALID_ARGUMENT;
     auto& slot = slots_[current_slot_];
     auto result = ensure_buffer(renderer, GRANIT_BUFFER_USAGE_VERTEX_BIT,
                                 static_cast<std::uint64_t>(vertex_bytes), slot.vertex,

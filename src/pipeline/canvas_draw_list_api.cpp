@@ -295,6 +295,17 @@ extern "C" granit_result granit_canvas_draw_list_record(granit_renderer renderer
        desc->load_operation != GRANIT_ATTACHMENT_LOAD_OPERATION_DISCARD)) {
     return GRANIT_ERROR_INVALID_ARGUMENT;
   }
+  const auto frame_slot = desc->struct_size >= GRANIT_CANVAS_RECORD_DESC_VERSION_2_SIZE
+                              ? desc->frame_slot
+                              : GRANIT_CANVAS_FRAME_SLOT_AUTO;
+  if (frame_slot != GRANIT_CANVAS_FRAME_SLOT_AUTO &&
+      frame_slot >= GRANIT_CANVAS_FRAME_SLOT_COUNT) {
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  }
+  if (desc->struct_size >= GRANIT_CANVAS_RECORD_DESC_VERSION_2_SIZE &&
+      !reserved_is_zero(desc->reserved_2, std::size(desc->reserved_2))) {
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  }
   const auto state = find_list(renderer, list);
   if (state == nullptr)
     return GRANIT_ERROR_INVALID_HANDLE;
@@ -303,7 +314,7 @@ extern "C" granit_result granit_canvas_draw_list_record(granit_renderer renderer
     return GRANIT_SUCCESS;
   auto result = ensure_material(*state);
   if (result == GRANIT_SUCCESS)
-    result = state->geometry.upload(renderer, state->list);
+    result = state->geometry.upload(renderer, state->list, frame_slot);
   const granit::material::pbr_frame_constants frame{.view_projection =
                                                         pixel_projection(desc->width, desc->height),
                                                     .camera_position = {},

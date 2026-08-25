@@ -53,10 +53,16 @@ TEST_CASE("UI几何上传复用容量并保留顶点索引内容") {
   CHECK(upload.vertex_buffer() == vertex_buffers.front());
   CHECK(upload.index_buffer() == index_buffers.front());
 
+  REQUIRE(upload.upload(renderer.native_handle(), list, 2) == GRANIT_SUCCESS);
+  CHECK(upload.vertex_buffer() == vertex_buffers[2]);
+  CHECK(upload.index_buffer() == index_buffers[2]);
+  CHECK(upload.upload(renderer.native_handle(), list, GRANIT_CANVAS_FRAME_SLOT_COUNT) ==
+        GRANIT_ERROR_INVALID_ARGUMENT);
+
   canvas_draw_list empty;
   REQUIRE(upload.upload(renderer.native_handle(), empty) == GRANIT_SUCCESS);
   CHECK(upload.vertex_count() == 0);
   CHECK(upload.index_count() == 0);
-  CHECK(upload.vertex_buffer() == vertex_buffers.front());
-  CHECK(upload.index_buffer() == index_buffers.front());
+  CHECK(upload.vertex_buffer() == vertex_buffers[2]);
+  CHECK(upload.index_buffer() == index_buffers[2]);
 }
