@@ -17,6 +17,7 @@
 #include <iostream>
 #include <memory>
 #include <span>
+#include <vector>
 
 namespace {
 
@@ -61,18 +62,30 @@ granit::result upload_font_atlas(granit_renderer renderer, granit::texture& text
   if (pixels == nullptr || width <= 0 || height <= 0)
     return granit::result::internal;
 
+  const auto byte_count = static_cast<std::size_t>(width) * static_cast<std::size_t>(height) * 4;
+  std::vector<std::byte> premultiplied_pixels(byte_count);
+  for (std::size_t offset = 0; offset < byte_count; offset += 4) {
+    const auto alpha = pixels[offset + 3];
+    for (std::size_t channel = 0; channel < 3; ++channel) {
+      premultiplied_pixels[offset + channel] =
+          static_cast<std::byte>((static_cast<std::uint32_t>(pixels[offset + channel]) * alpha +
+                                  127U) /
+                                 255U);
+    }
+    premultiplied_pixels[offset + 3] = static_cast<std::byte>(alpha);
+  }
+
   auto result = texture.initialize(renderer, {.format = granit::texture_format::rgba8_unorm,
                                               .usage = granit::texture_usage::sampled |
                                                        granit::texture_usage::transfer_destination,
                                               .width = static_cast<std::uint32_t>(width),
                                               .height = static_cast<std::uint32_t>(height)});
   if (granit::succeeded(result)) {
-    const auto byte_count = static_cast<std::size_t>(width) * static_cast<std::size_t>(height) * 4;
     const granit::texture_data_layout layout{.bytes_per_row = static_cast<std::uint32_t>(width) * 4,
                                              .rows_per_image = static_cast<std::uint32_t>(height)};
     const granit::texture_write_region region{.width = static_cast<std::uint32_t>(width),
                                               .height = static_cast<std::uint32_t>(height)};
-    result = texture.write(std::as_bytes(std::span{pixels, byte_count}), layout, region);
+    result = texture.write(premultiplied_pixels, layout, region);
   }
   if (granit::succeeded(result))
     result = view.initialize(renderer, texture.native_handle());
