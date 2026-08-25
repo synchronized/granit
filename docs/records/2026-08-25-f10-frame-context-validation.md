@@ -35,6 +35,32 @@ ctest --preset windows-clang-debug --output-on-failure
 时间为示例指数平滑后的退出时数值，用于确认等待没有重新退化为逐帧串行，不代表跨设备性能
 基准。吞吐、输入延迟和不同 `frames_in_flight` 档位仍应在发布性能结论前使用 Release 构建重复测量。
 
+## Release 性能拆分
+
+示例增加 `--frames-in-flight`、`--no-validation`、`--no-demo` 和 `--no-gpu-timestamps` 参数，并
+分别报告 ImGui 构建、Draw Data 转换与渲染帧循环时间。Windows Clang Release 每组运行 2,000 帧，
+退出时指数平滑值如下：
+
+| 场景 | CPU | ImGui | 转换 | 渲染 | 约合 FPS |
+|---|---:|---:|---:|---:|---:|
+| 3 槽完整功能 | 1.112 ms | 0.104 ms | 0.069 ms | 0.907 ms | 899 |
+| 3 槽关闭 Validation | 0.896 ms | 0.181 ms | 0.099 ms | 0.603 ms | 1,116 |
+| 3 槽关闭 Demo | 0.763 ms | 0.080 ms | 0.031 ms | 0.643 ms | 1,310 |
+| 3 槽关闭 GPU 时间戳 | 1.007 ms | 0.125 ms | 0.058 ms | 0.813 ms | 993 |
+
+关闭 Validation、Demo 和 GPU 时间戳后的槽位对照：
+
+| 在途帧槽 | CPU | 渲染 | 槽等待 | 约合 FPS |
+|---:|---:|---:|---:|---:|
+| 1 | 1.264 ms | 1.114 ms | 0.078 ms | 791 |
+| 2 | 1.330 ms | 1.182 ms | 0.051 ms | 752 |
+| 3 | 0.988 ms | 0.747 ms | 0.049 ms | 1,012 |
+| 4 | 0.711 ms | 0.606 ms | 0.032 ms | 1,406 |
+
+单次短测存在调度波动，但结论一致：ImGui 转换不是主瓶颈，主要时间位于 acquire、Canvas 录制、
+提交和呈现组成的渲染阶段。增加槽数能提高吞吐，但可能增加输入到显示延迟，因此默认值仍不应仅按
+最高 FPS 选择。后续优化应继续拆分 Canvas 上传/flush、绑定更新和 Queue 提交成本。
+
 ## 覆盖与限制
 
 Windows 构建覆盖 Win32、SDL3、Triangle、HDR 和 ImGui 示例。XCB 与 Wayland 源码已迁移，但本地
