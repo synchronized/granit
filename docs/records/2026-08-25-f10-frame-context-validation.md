@@ -61,6 +61,24 @@ ctest --preset windows-clang-debug --output-on-failure
 提交和呈现组成的渲染阶段。增加槽数能提高吞吐，但可能增加输入到显示延迟，因此默认值仍不应仅按
 最高 FPS 选择。后续优化应继续拆分 Canvas 上传/flush、绑定更新和 Queue 提交成本。
 
+进一步将渲染阶段拆分后，3,000 帧 Release 测量如下：
+
+| 场景 | Acquire | Canvas Record | Submit | Present | CPU |
+|---|---:|---:|---:|---:|---:|
+| 3 槽完整功能 | 0.094 ms | 0.353 ms | 0.174 ms | 0.037 ms | 0.983 ms |
+| 3 槽完全精简 | 0.400 ms | 0.104 ms | 0.055 ms | 0.015 ms | 0.734 ms |
+| 4 槽完全精简 | 0.357 ms | 0.107 ms | 0.053 ms | 0.013 ms | 0.687 ms |
+
+独立 Canvas CPU 基准中，100 个矩形的持久映射几何上传与 flush 约为 0.001 ms，1,000 个矩形约
+0.004 ms，因此 ImGui 场景的上传不是主要瓶颈。GPU 基准中 100 个兼容 Item 合并为一个 Batch 时
+约 0.033 ms；100 个交替纹理 Batch 约 0.811 ms，说明频繁纹理切换导致的结束 Rendering、材质更新
+和重新开始 Rendering 代价显著。
+
+完全精简场景当前最大单项是 Swapchain acquire 等待，其次是 Canvas Record；Queue submit 和
+Present 不是首要瓶颈。Validation 会明显放大 Canvas 绑定校验与提交成本。后续代码优化应优先复用
+Canvas 每帧绑定，并为多纹理场景避免每次纹理变化都切断 Dynamic Rendering；acquire 等待应作为
+驱动帧节流和输入延迟指标单独观察。
+
 ## 覆盖与限制
 
 Windows 构建覆盖 Win32、SDL3、Triangle、HDR 和 ImGui 示例。XCB 与 Wayland 源码已迁移，但本地

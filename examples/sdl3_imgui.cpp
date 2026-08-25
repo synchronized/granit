@@ -37,6 +37,9 @@ struct frame_timings {
   double imgui_ms{};
   double convert_ms{};
   double render_ms{};
+  double acquire_ms{};
+  double canvas_record_ms{};
+  double submit_ms{};
 };
 
 void smooth(double& value, double sample) {
@@ -199,14 +202,19 @@ granit::result render_frame(granit::swapchain& swapchain, granit::frame_context&
                             granit::timestamp_query_pool& timestamps,
                             granit::canvas_draw_list& canvas, const granit::swapchain_info& info,
                             bool timestamps_enabled, bool& needs_recreate, double& gpu_ms,
-                            double& slot_wait_ms, double& present_ms) {
+                            double& slot_wait_ms, double& acquire_ms, double& canvas_record_ms,
+                            double& submit_ms, double& present_ms) {
   granit_canvas_draw_list_stats stats = GRANIT_CANVAS_DRAW_LIST_STATS_INIT;
   auto result = canvas.get_stats(stats);
   if (granit::failed(result))
     return result;
   const char* operation = "acquire";
   granit::acquired_frame frame;
+  const auto acquire_begin = std::chrono::steady_clock::now();
   result = swapchain.acquire(frame);
+  smooth(acquire_ms,
+         std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - acquire_begin)
+             .count());
   if (granit::failed(result))
     return result;
   needs_recreate = frame.needs_recreate;
@@ -264,7 +272,11 @@ granit::result render_frame(granit::swapchain& swapchain, granit::frame_context&
     record.encode_srgb = needs_srgb_encoding(info.format) ? 1U : 0U;
     record.frame_slot = slot_index;
     operation = "canvas.record";
+    const auto canvas_begin = std::chrono::steady_clock::now();
     result = canvas.record(recorder.native_handle(), record);
+    smooth(canvas_record_ms, std::chrono::duration<double, std::milli>(
+                                 std::chrono::steady_clock::now() - canvas_begin)
+                                 .count());
   }
   if (granit::succeeded(result) && timestamps_enabled) {
     operation = "timestamps.end";
@@ -273,7 +285,11 @@ granit::result render_frame(granit::swapchain& swapchain, granit::frame_context&
   }
   if (granit::succeeded(result)) {
     operation = "frame_context.submit";
+    const auto submit_begin = std::chrono::steady_clock::now();
     result = recording.submit();
+    smooth(submit_ms, std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() -
+                                                                submit_begin)
+                          .count());
     if (granit::succeeded(result) && timestamps_enabled)
       timestamp_valid[slot_index] = true;
   }
@@ -501,7 +517,8 @@ int main(int argc, char** argv) {
       double present_ms = 0;
       result = render_frame(swapchain, frame_context, timestamp_valid, timestamps, canvas,
                             swapchain_info, timestamps_enabled, recreate, timings.gpu_ms,
-                            timings.slot_wait_ms, present_ms);
+                            timings.slot_wait_ms, timings.acquire_ms, timings.canvas_record_ms,
+                            timings.submit_ms, present_ms);
       smooth(timings.render_ms, std::chrono::duration<double, std::milli>(
                                     std::chrono::steady_clock::now() - render_begin)
                                     .count());
@@ -530,7 +547,9 @@ int main(int argc, char** argv) {
               << timings.cpu_ms << " ms，ImGui " << timings.imgui_ms << " ms，转换 "
               << timings.convert_ms << " ms，渲染 " << timings.render_ms << " ms，GPU "
               << timings.gpu_ms << " ms，Present " << timings.present_ms << " ms，槽等待 "
-              << timings.slot_wait_ms << " ms\n";
+              << timings.slot_wait_ms << " ms，Acquire " << timings.acquire_ms
+              << " ms，Canvas Record " << timings.canvas_record_ms << " ms，Submit "
+              << timings.submit_ms << " ms\n";
   }
 
   if (granit::failed(result))
