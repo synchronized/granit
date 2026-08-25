@@ -105,8 +105,9 @@ F-12A/B 完成前不改动提交或同步架构。后续阶段只有在目标成
    校验或减少 Queue 提交固定成本；不得缓存跨 reset 后失效的裸内部指针。
 4. **F-12D Swapchain 调度优化**：仅在 acquire/present 或帧槽复用被确认是可控热点时，调整等待
    位置、批次或默认调度；保持 OUT_OF_DATE、Surface Lost、取消帧和退出排空语义。
-5. **F-12E Validation 成本解释**：定位 Validation 开启时的额外调用和同步检查，修复 Granit
-   产生的冗余工作；Validation 自身不可消除的固定成本单独报告。
+5. **F-12E Validation 成本解释（已完成）**：VVL 检查类别差分确认增量主要来自外部 Layer 的
+   Core、Command Buffer 与其他状态检查；仅保留 Layer 转发时 Canvas/Submit 已接近无
+   Validation 基线，未发现 Granit 自身重复路径，不修改实现。结果见[F-12B 性能基线][f12b-result]。
 6. **F-12F 收尾验证**：复跑 Windows/Linux、共享/静态和代表性 Present Mode，更新性能 Record、
    示例说明与路线图；实现结果和原始数据不持续追加到本计划正文。
 

@@ -76,6 +76,33 @@ Swapchain/驱动的节流表现，不应通过跳过正确等待或增加提交�
    自身重复校验或重复查找，不把外部 Layer 固定成本当作缺陷。
 4. 默认三帧槽保持不变；调整默认值前必须补充输入延迟或等价响应证据。
 
+## F-12E Validation 差分归因
+
+系统安装了 WPR/WPA，但 CPU Sample 启动被系统以 `0x80070005 Access is denied` 拒绝。为避免要求
+提权或在生产代码中加入临时 profiler，改用 Vulkan SDK 1.4.321.1 的
+`VK_LAYER_DISABLES` 对 Validation 检查类别做差分。每组使用三帧槽、Immediate、完整 Demo 与
+自定义纹理，预热 120 帧并采样 1,000 帧。
+
+| Validation 配置 | 全帧 p50 | 全帧 p95 | Canvas p50 | Submit p50 | GPU p50 |
+|---|---:|---:|---:|---:|---:|
+| 默认完整检查 | 0.83 | 1.21 | 0.24 | 0.16 | 0.29 |
+| 关闭 Thread Safety | 0.80 | 1.29 | 0.22 | 0.15 | 0.24 |
+| 关闭 Object Lifetime | 0.85 | 1.31 | 0.24 | 0.17 | 0.23 |
+| 关闭 Stateless Parameter | 0.82 | 1.37 | 0.23 | 0.15 | 0.26 |
+| 关闭 Unique Handles | 0.79 | 1.25 | 0.23 | 0.16 | 0.24 |
+| 关闭 Command Buffer State | 0.74 | 1.05 | 0.22 | 0.14 | 0.23 |
+| 关闭 Image Layout | 0.78 | 1.12 | 0.22 | 0.18 | 0.23 |
+| 关闭全部主要检查，仅保留 Layer 转发 | 0.61 | 1.62 | 0.07 | 0.05 | 0.21 |
+
+单独关闭 Core Checks 时 Canvas p50 为 0.17 ms，Submit 为 0.10 ms；完整关闭主要检查后分别为
+0.07 ms 和 0.05 ms，已经接近无 Validation 的 0.10 ms 和 0.07 ms。p95 会受 acquire 背压位置
+变化影响，不能只凭最小 Layer 的较高 p95 推断检查关闭导致回退。
+
+结果说明增量主要来自外部 Khronos Validation Layer 对每条命令和提交的核心状态检查，而不是
+Granit 在 Validation 模式下执行了另一套重复逻辑。Granit 不应默认关闭任何检查类别，也不应为
+降低开发诊断成本而合并必要的公开命令或放宽同步。需要最高吞吐时使用 Release 且关闭 Validation；
+需要正确性诊断时接受该固定成本。
+
 ## 复现命令
 
 ```powershell
