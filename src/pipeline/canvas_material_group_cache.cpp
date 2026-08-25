@@ -42,27 +42,34 @@ canvas_material_group_cache::acquire(granit_renderer renderer, granit_material m
   }
 
   granit_bind_group replacement = GRANIT_NULL_HANDLE;
-  auto result = create_canvas_material_group(renderer, material, texture, sampler, replacement);
+  const auto result =
+      create_canvas_material_group(renderer, material, texture, sampler, replacement);
   if (result != GRANIT_SUCCESS)
     return result;
   try {
-    if (entries_.size() < capacity) {
-      entries_.push_back({texture, sampler, replacement, use_serial_});
-    } else {
-      const auto oldest = std::ranges::min_element(entries_, {}, &entry::last_use);
-      result = granit_bind_group_destroy(renderer_, oldest->group);
-      if (result != GRANIT_SUCCESS) {
-        static_cast<void>(granit_bind_group_destroy(renderer_, replacement));
-        return result;
-      }
-      *oldest = {texture, sampler, replacement, use_serial_};
-    }
+    // 本帧准备期间允许暂时超过持久容量，避免尚未绑定的组被提前淘汰。
+    entries_.push_back({texture, sampler, replacement, use_serial_});
   } catch (const std::bad_alloc&) {
     static_cast<void>(granit_bind_group_destroy(renderer_, replacement));
     return GRANIT_ERROR_OUT_OF_MEMORY;
   }
   group = replacement;
   return GRANIT_SUCCESS;
+}
+
+granit_result canvas_material_group_cache::trim() noexcept {
+  granit_result first_error = GRANIT_SUCCESS;
+  if (entries_.size() <= capacity)
+    return first_error;
+  std::ranges::sort(entries_, {}, &entry::last_use);
+  const auto remove_count = entries_.size() - capacity;
+  for (std::size_t index = 0; index < remove_count; ++index) {
+    const auto result = granit_bind_group_destroy(renderer_, entries_[index].group);
+    if (first_error == GRANIT_SUCCESS)
+      first_error = result;
+  }
+  entries_.erase(entries_.begin(), entries_.begin() + static_cast<std::ptrdiff_t>(remove_count));
+  return first_error;
 }
 
 granit_result canvas_material_group_cache::reset() noexcept {

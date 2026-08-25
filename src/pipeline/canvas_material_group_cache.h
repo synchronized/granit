@@ -27,6 +27,8 @@ public:
   [[nodiscard]] granit_result acquire(granit_renderer renderer, granit_material material,
                                       granit_bind_group_layout layout, granit_texture_view texture,
                                       granit_sampler sampler, granit_bind_group& group);
+  /** 在本帧全部绑定完成后回收到持久容量；Recorder 已保留本帧实际使用的资源。 */
+  [[nodiscard]] granit_result trim() noexcept;
   [[nodiscard]] granit_result reset() noexcept;
 
 private:

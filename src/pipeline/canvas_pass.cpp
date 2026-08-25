@@ -7,7 +7,11 @@
 #include "pipeline/material_access.h"
 #include "pipeline/pbr_draw_bindings.h"
 
+#include <algorithm>
 #include <array>
+#include <new>
+#include <unordered_set>
+#include <vector>
 
 namespace granit::pipeline::detail {
 
@@ -43,16 +47,39 @@ granit_result record_canvas_pass(granit_renderer renderer, granit_command_record
       .color_format = desc.color_format,
       .depth_stencil_format = GRANIT_TEXTURE_FORMAT_UNDEFINED};
   result = acquire_material_draw_state(renderer, desc.material, request, material);
-  granit_bind_group first_material_group = GRANIT_NULL_HANDLE;
-  if (result == GRANIT_SUCCESS) {
-    result = material_groups.acquire(renderer, desc.material, material.material_layout,
-                                     batches.front().state.texture, batches.front().state.sampler,
-                                     first_material_group);
-  }
   if (result == GRANIT_SUCCESS)
     result = bindings.prepare(renderer, material, desc.frame, desc.object);
   if (result == GRANIT_SUCCESS)
     result = granit_command_recorder_bind_graphics_pipeline(renderer, recorder, material.pipeline);
+
+  std::vector<granit_bind_group> batch_material_groups;
+  std::unordered_set<granit_bind_group> prepared_material_groups;
+  if (result == GRANIT_SUCCESS) {
+    try {
+      batch_material_groups.reserve(batches.size());
+      prepared_material_groups.reserve(std::min(batches.size(), std::size_t{64}));
+      for (const auto& batch : batches) {
+        granit_bind_group group = GRANIT_NULL_HANDLE;
+        result = material_groups.acquire(renderer, desc.material, material.material_layout,
+                                         batch.state.texture, batch.state.sampler, group);
+        if (result != GRANIT_SUCCESS)
+          break;
+        batch_material_groups.push_back(group);
+        if (!prepared_material_groups.contains(group)) {
+          // 在 Rendering 外触发本帧所有采样资源的状态准备并让 Recorder 保留资源。
+          result = granit_command_recorder_bind_graphics_groups(
+              renderer, recorder, material.pipeline_layout, 1, &group, 1);
+          if (result != GRANIT_SUCCESS)
+            break;
+          prepared_material_groups.insert(group);
+        }
+      }
+    } catch (const std::bad_alloc&) {
+      result = GRANIT_ERROR_OUT_OF_MEMORY;
+    }
+  }
+  const auto first_material_group =
+      batch_material_groups.empty() ? GRANIT_NULL_HANDLE : batch_material_groups.front();
   const std::array groups{bindings.frame_group(), first_material_group, bindings.object_group()};
   if (result == GRANIT_SUCCESS) {
     result = granit_command_recorder_bind_graphics_groups(
@@ -83,26 +110,14 @@ granit_result record_canvas_pass(granit_renderer renderer, granit_command_record
   if (result == GRANIT_SUCCESS)
     result = granit_command_recorder_begin_rendering(renderer, recorder, &rendering);
   if (result == GRANIT_SUCCESS) {
-    auto current_texture = batches.front().state.texture;
-    auto current_sampler = batches.front().state.sampler;
-    for (const auto& batch : batches) {
-      if (batch.state.texture != current_texture || batch.state.sampler != current_sampler) {
-        // 资源绑定可能需要插入 Pipeline Barrier，必须暂时离开 Dynamic Rendering。
-        result = granit_command_recorder_end_rendering(renderer, recorder);
-        granit_bind_group batch_material_group = GRANIT_NULL_HANDLE;
-        if (result == GRANIT_SUCCESS)
-          result = material_groups.acquire(renderer, desc.material, material.material_layout,
-                                           batch.state.texture, batch.state.sampler,
-                                           batch_material_group);
-        if (result == GRANIT_SUCCESS) {
-          result = granit_command_recorder_bind_graphics_groups(
-              renderer, recorder, material.pipeline_layout, 1, &batch_material_group, 1);
-        }
-        color.load_operation = GRANIT_ATTACHMENT_LOAD_OPERATION_LOAD;
-        if (result == GRANIT_SUCCESS)
-          result = granit_command_recorder_begin_rendering(renderer, recorder, &rendering);
-        current_texture = batch.state.texture;
-        current_sampler = batch.state.sampler;
+    auto current_material_group = first_material_group;
+    for (std::size_t index = 0; index < batches.size(); ++index) {
+      const auto& batch = batches[index];
+      const auto batch_material_group = batch_material_groups[index];
+      if (batch_material_group != current_material_group) {
+        result = granit_command_recorder_bind_graphics_groups(
+            renderer, recorder, material.pipeline_layout, 1, &batch_material_group, 1);
+        current_material_group = batch_material_group;
       }
       const auto scissor = batch.state.scissor.width == 0 || batch.state.scissor.height == 0
                                ? granit_scissor{0, 0, desc.width, desc.height}
@@ -120,6 +135,9 @@ granit_result record_canvas_pass(granit_renderer renderer, granit_command_record
     if (result == GRANIT_SUCCESS)
       result = end_result;
   }
+  const auto trim_result = material_groups.trim();
+  if (result == GRANIT_SUCCESS)
+    result = trim_result;
   return result;
 }
 

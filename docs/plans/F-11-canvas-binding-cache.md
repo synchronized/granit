@@ -6,7 +6,7 @@
 ## 状态
 
 - 设计状态：已确认
-- 实现状态：进行中（F-11A～F-11C 已完成）
+- 实现状态：进行中（F-11A～F-11D 已完成）
 - 优先级：P1
 - 前置依赖：F-10、D-03、H-02、H-06
 
@@ -88,8 +88,10 @@ Frame/Object 常量及其 Bind Group 按 Canvas 的 `frame_slot_count` 建立槽
    Bind Group；缓存按 Renderer、Material 和布局变化整体失效，采用容量 64 的 LRU 回收，并在
    Canvas 销毁时先释放缓存。测量结果见
    [F-11C 性能结果](../../benchmarks/results/2026-08-25-windows-clang-canvas-binding-f11c.md)。
-4. **F-11D 单 Rendering 区间**：把全部资源准备移到 begin rendering 前，纹理切换时只绑定已有
-   Bind Group，不结束 Dynamic Rendering。
+4. **F-11D 单 Rendering 区间（已完成）**：在 begin rendering 前预绑定本帧唯一 Material
+   Bind Group，以完成资源状态准备和 Recorder 资源保留；Rendering 内仅切换已准备的组。相同只读
+   图像状态不再生成空转 Barrier。测量结果见
+   [F-11D 性能结果](../../benchmarks/results/2026-08-25-windows-clang-canvas-binding-f11d.md)。
 5. **F-11E ImGui 验证**：验证字体纹理、自定义 Texture ID、裁剪、窗口重排和资源销毁；重复测量
    1～4 个帧槽及 Validation 开关。
 6. **F-11F 收尾**：更新 Canvas Reference、性能 Record 和路线图；共享/静态、Windows/Linux、
