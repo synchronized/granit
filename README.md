@@ -62,6 +62,7 @@ cmake -S <your-source> -B <your-build> -DCMAKE_PREFIX_PATH=<granit-package>
 cmake --build <your-build>
 ```
 
+发布包只包含可分发 SDK；仓库示例及其资源需要从源码构建。
 共享库还需位于运行时搜索路径：Windows 将包内 `bin` 加入 `PATH`，Linux 将包内 `lib` 加入
 `LD_LIBRARY_PATH` 或按应用部署规则安装。源码构建、依赖要求和静态链接说明见
 [构建与安装](docs/guides/build.md)。

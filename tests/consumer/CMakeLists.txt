@@ -4,6 +4,8 @@
 cmake_minimum_required(VERSION 3.23)
 project(granit_consumer LANGUAGES C CXX)
 
+include(CTest)
+
 find_package(granit 0.3 CONFIG REQUIRED COMPONENTS RenderPipeline Window Input)
 
 if(NOT granit_VERSION VERSION_EQUAL "0.3.0")
@@ -72,3 +74,36 @@ set_target_properties(granit_input_c_consumer PROPERTIES C_STANDARD 11 C_STANDAR
 add_executable(granit_input_cpp_consumer input_main.cpp)
 target_link_libraries(granit_input_cpp_consumer PRIVATE granit::input)
 target_compile_features(granit_input_cpp_consumer PRIVATE cxx_std_20)
+
+foreach(
+  granit_consumer_test
+  IN ITEMS
+    granit_c_consumer
+    granit_cpp_consumer
+    granit_pipeline_c_consumer
+    granit_pipeline_cpp_consumer
+    granit_window_c_consumer
+    granit_input_c_consumer
+    granit_input_cpp_consumer
+)
+  add_test(NAME ${granit_consumer_test} COMMAND ${granit_consumer_test})
+  if(WIN32)
+    set_property(
+      TEST ${granit_consumer_test}
+      PROPERTY ENVIRONMENT_MODIFICATION
+               "PATH=path_list_prepend:$<TARGET_FILE_DIR:granit::granit>"
+    )
+  elseif(APPLE)
+    set_property(
+      TEST ${granit_consumer_test}
+      PROPERTY ENVIRONMENT_MODIFICATION
+               "DYLD_LIBRARY_PATH=path_list_prepend:$<TARGET_FILE_DIR:granit::granit>"
+    )
+  else()
+    set_property(
+      TEST ${granit_consumer_test}
+      PROPERTY ENVIRONMENT_MODIFICATION
+               "LD_LIBRARY_PATH=path_list_prepend:$<TARGET_FILE_DIR:granit::granit>"
+    )
+  endif()
+endforeach()

@@ -23,6 +23,13 @@
 - C++ RAII 包装在底层句柄或父资源已失效时，`reset()` 返回 `INVALID_HANDLE` 的同时清空本地
   状态，避免对象继续表现为有效或在析构时重复销毁。
 
+### 工程化
+
+- 独立安装 Consumer 注册为 CTest，并自动补充安装共享库的运行时搜索路径；构建指南可用一条
+  `ctest` 命令验证 Core、RenderPipeline、Window 和 Input 的七条 C/C++ 路径。
+- 文档检查锁定 README、安装 Consumer 和 RenderPipeline 教程的关键 CMake/CTest 命令，避免
+  文档入口随构建配置漂移。
+
 ## 0.2.0 - 2026-08-24
 
 ### 新增
