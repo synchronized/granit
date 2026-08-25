@@ -1,4 +1,5 @@
 granit_canvas_draw_list_append
+granit_canvas_draw_list_append_batch
 granit_canvas_draw_list_append_rect
 granit_canvas_draw_list_clear
 granit_canvas_draw_list_create

@@ -5,6 +5,7 @@ granit_bind_group_layout_destroy
 granit_buffer_create
 granit_buffer_create_with_data
 granit_buffer_destroy
+granit_buffer_flush
 granit_buffer_get_desc
 granit_buffer_map
 granit_buffer_unmap
