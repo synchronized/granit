@@ -469,7 +469,7 @@ TEST_CASE("统一Render Pipeline按固定阶段消费Scene Snapshot") {
   REQUIRE(multi_view_readback.map(0, 16 * 16 * 4 * 2, &multi_view_pixels) ==
           granit::result::success);
   const auto* first_pixel = static_cast<const uint8_t*>(multi_view_pixels) + (8 * 16 + 8) * 4;
-  const auto* text_pixel = static_cast<const uint8_t*>(multi_view_pixels) + (12 * 16 + 4) * 4;
+  const auto* text_pixel = static_cast<const uint8_t*>(multi_view_pixels) + (4 * 16 + 4) * 4;
   const auto* second_pixel =
       static_cast<const uint8_t*>(multi_view_pixels) + 16 * 16 * 4 + (8 * 16 + 8) * 4;
   CHECK(first_pixel[2] > first_pixel[0]);

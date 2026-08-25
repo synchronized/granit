@@ -166,13 +166,16 @@ TEST_CASE("Text Atlas覆盖率进入像素且跨页保持Draw顺序") {
   void* mapped = nullptr;
   REQUIRE(readback.map(0, size * size * 4, &mapped) == granit::result::success);
   std::array<uint8_t, 4> pixel{};
-  // Vulkan 颜色附件回读行序与 Canvas 的左上原点坐标相反，Canvas y=4 对应回读 y=27。
-  std::memcpy(pixel.data(), static_cast<const uint8_t*>(mapped) + (27 * size + 5) * 4,
+  // Canvas 与回读像素均使用左上原点，y=4 必须保持在第 4 行。
+  std::memcpy(pixel.data(), static_cast<const uint8_t*>(mapped) + (4 * size + 5) * 4,
               pixel.size());
   CHECK(pixel[0] == 255);
   CHECK(pixel[1] == 0);
   CHECK(pixel[2] == 0);
   CHECK(pixel[3] == Catch::Approx(128).margin(1));
+  std::memcpy(pixel.data(), static_cast<const uint8_t*>(mapped) + (27 * size + 5) * 4,
+              pixel.size());
+  CHECK(pixel == std::array<uint8_t, 4>{0, 0, 0, 0});
   REQUIRE(readback.unmap() == granit::result::success);
 }
 } // namespace
