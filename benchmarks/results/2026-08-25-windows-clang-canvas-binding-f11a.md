@@ -36,3 +36,13 @@ Wait 是同步等待 GPU 完成的结果，不能解释为 Queue API 本身成�
 - Reset Wait 包围 Recorder reset，包含等待 GPU 完成。
 - GPU 时间由命令流顶部和底部 Timestamp Query 得到。
 - 数值为 15 组样本均值，用于同机改动前后对照，不代表跨设备绝对性能。
+
+## F-11B 对照
+
+逐帧公共绑定按槽位复用后，100 个单纹理兼容 Item 的 CPU Record 从 0.032 ms 降至 0.025 ms，约
+下降 21%；GPU 仍为约 0.033 ms。100 个交替纹理 Item 尚未改善，符合 F-11B 只处理 Frame/Object
+公共绑定的范围，后续由 F-11C/D 处理纹理绑定缓存和单 Rendering 区间。
+
+SDL3 + ImGui 三槽 Release 对照中，完整功能 Canvas Record 从 0.353 ms 降至 0.320 ms，约下降
+9%；关闭 Validation、Demo 和 GPU 时间戳后从 0.104 ms 降至 0.054 ms，约下降 48%。完整功能仍受
+Validation 与纹理 Material 路径影响，尚未达到 F-11 最终验收目标。

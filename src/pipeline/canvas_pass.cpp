@@ -13,7 +13,8 @@ namespace granit::pipeline::detail {
 
 granit_result record_canvas_pass(granit_renderer renderer, granit_command_recorder recorder,
                                  const canvas_pass_desc& desc, const canvas_draw_list& list,
-                                 const canvas_geometry_upload& geometry) noexcept {
+                                 const canvas_geometry_upload& geometry,
+                                 pbr_draw_bindings& bindings) noexcept {
   if (renderer == GRANIT_NULL_HANDLE || recorder == GRANIT_NULL_HANDLE ||
       desc.color == GRANIT_NULL_HANDLE || desc.color_format == GRANIT_TEXTURE_FORMAT_UNDEFINED ||
       desc.width == 0 || desc.height == 0 || desc.material == GRANIT_NULL_HANDLE) {
@@ -53,9 +54,8 @@ granit_result record_canvas_pass(granit_renderer renderer, granit_command_record
       .depth_stencil_format = GRANIT_TEXTURE_FORMAT_UNDEFINED};
   if (result == GRANIT_SUCCESS)
     result = acquire_material_draw_state(renderer, desc.material, request, material);
-  pbr_draw_bindings bindings;
   if (result == GRANIT_SUCCESS)
-    result = bindings.initialize(renderer, material, desc.frame, desc.object);
+    result = bindings.prepare(renderer, material, desc.frame, desc.object);
   if (result == GRANIT_SUCCESS)
     result = granit_command_recorder_bind_graphics_pipeline(renderer, recorder, material.pipeline);
   const std::array groups{bindings.frame_group(), material.material_group, bindings.object_group()};
@@ -126,8 +126,7 @@ granit_result record_canvas_pass(granit_renderer renderer, granit_command_record
     if (result == GRANIT_SUCCESS)
       result = end_result;
   }
-  const auto reset_result = bindings.reset();
-  return result == GRANIT_SUCCESS ? reset_result : result;
+  return result;
 }
 
 } // namespace granit::pipeline::detail

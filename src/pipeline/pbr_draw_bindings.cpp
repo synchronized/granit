@@ -46,7 +46,26 @@ pbr_draw_bindings::initialize(granit_renderer renderer, const material_draw_stat
     result = object_group_.initialize(renderer, material.object_layout, object_entry);
   if (granit::failed(result))
     static_cast<void>(reset());
+  else {
+    renderer_ = renderer;
+    frame_layout_ = material.frame_layout;
+    object_layout_ = material.object_layout;
+  }
   return static_cast<granit_result>(result);
+}
+
+granit_result
+pbr_draw_bindings::prepare(granit_renderer renderer, const material_draw_state& material,
+                           const granit::material::pbr_frame_constants& frame,
+                           const granit::material::pbr_object_constants& object) noexcept {
+  if (initialized() && renderer_ == renderer && frame_layout_ == material.frame_layout &&
+      object_layout_ == material.object_layout) {
+    return update(frame, object);
+  }
+  auto result = reset();
+  if (result == GRANIT_SUCCESS)
+    result = initialize(renderer, material, frame, object);
+  return result;
 }
 
 granit_result
@@ -69,6 +88,9 @@ granit_result pbr_draw_bindings::reset() noexcept {
   capture(frame_group_.reset());
   capture(object_buffer_.reset());
   capture(frame_buffer_.reset());
+  renderer_ = GRANIT_NULL_HANDLE;
+  frame_layout_ = GRANIT_NULL_HANDLE;
+  object_layout_ = GRANIT_NULL_HANDLE;
   return first;
 }
 

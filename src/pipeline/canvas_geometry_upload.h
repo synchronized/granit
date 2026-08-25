@@ -120,6 +120,9 @@ public:
   [[nodiscard]] std::uint32_t frame_slot_count() const noexcept {
     return static_cast<std::uint32_t>(slots_.size());
   }
+  [[nodiscard]] std::uint32_t current_frame_slot() const noexcept {
+    return static_cast<std::uint32_t>(current_slot_);
+  }
   [[nodiscard]] const void* vertex_data() const noexcept {
     return slots_[current_slot_].vertex_mapping;
   }

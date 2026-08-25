@@ -117,6 +117,7 @@ TEST_CASE("Canvas Pass按Batch录制顶点色与Scissor") {
   REQUIRE(readback.unmap() == granit::result::success);
 
   record_desc.encode_srgb = 1;
+  record_desc.frame_slot = 0;
   REQUIRE(recorder.begin() == granit::result::success);
   REQUIRE(list.record(recorder.native_handle(), record_desc) == granit::result::success);
   REQUIRE(recorder.end() == granit::result::success);

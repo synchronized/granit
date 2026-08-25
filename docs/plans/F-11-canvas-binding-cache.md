@@ -82,8 +82,8 @@ Frame/Object 常量及其 Bind Group 按 Canvas 的 `frame_slot_count` 建立槽
 1. **F-11A 基准与契约（已完成）**：已固化单纹理裁剪与交替纹理批次语义，并分别记录 CPU
    record、submit、reset wait 及 GPU 时间；详细结果见
    [F-11A 性能基线](../../benchmarks/results/2026-08-25-windows-clang-canvas-binding-f11a.md)。
-2. **F-11B 逐帧公共绑定**：按 1～4 个真实帧槽复用 Frame/Object 常量与 Bind Group，覆盖自动槽位
-   和错误槽位路径。
+2. **F-11B 逐帧公共绑定（已完成）**：按 1～4 个真实帧槽复用 Frame/Object 常量与 Bind Group；
+   布局不变时只更新当前槽常量，布局变化时安全重建。
 3. **F-11C 纹理绑定缓存**：按资源身份缓存 Texture/Sampler Bind Group，处理 generation、跨
    Renderer、Material 重载和容量回收。
 4. **F-11D 单 Rendering 区间**：把全部资源准备移到 begin rendering 前，纹理切换时只绑定已有
