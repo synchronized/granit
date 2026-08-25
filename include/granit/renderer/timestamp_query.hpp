@@ -37,8 +37,10 @@ public:
   }
 
   [[nodiscard]] result initialize(granit_renderer renderer, std::uint32_t query_count) noexcept {
-    if (valid() || renderer == GRANIT_NULL_HANDLE)
+    if (valid())
       return result::invalid_argument;
+    if (renderer == GRANIT_NULL_HANDLE)
+      return result::invalid_handle;
     const granit_timestamp_query_pool_desc desc{GRANIT_TIMESTAMP_QUERY_POOL_DESC_VERSION_1_SIZE,
                                                 query_count, 0};
     const auto value = granit_timestamp_query_pool_create(renderer, &desc, &handle_);

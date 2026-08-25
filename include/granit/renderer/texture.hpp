@@ -21,11 +21,11 @@ struct texture_format_footprint {
   std::uint32_t bytes_per_block{};
 };
 
-[[nodiscard]] inline result get_texture_format_footprint(
-    texture_format format, texture_format_footprint& footprint) noexcept {
+[[nodiscard]] inline result
+get_texture_format_footprint(texture_format format, texture_format_footprint& footprint) noexcept {
   granit_texture_format_footprint native = GRANIT_TEXTURE_FORMAT_FOOTPRINT_INIT;
-  const auto value = granit_texture_format_get_footprint(static_cast<std::uint32_t>(format),
-                                                         &native);
+  const auto value =
+      granit_texture_format_get_footprint(static_cast<std::uint32_t>(format), &native);
   if (value == GRANIT_SUCCESS) {
     footprint = {native.block_width, native.block_height, native.bytes_per_block};
   }
@@ -108,8 +108,10 @@ public:
     return *this;
   }
   [[nodiscard]] result initialize(granit_renderer renderer, const texture_desc& desc) noexcept {
-    if (valid() || renderer == GRANIT_NULL_HANDLE)
+    if (valid())
       return result::invalid_argument;
+    if (renderer == GRANIT_NULL_HANDLE)
+      return result::invalid_handle;
     const granit_texture_desc native{.struct_size = GRANIT_TEXTURE_DESC_VERSION_1_SIZE,
                                      .dimension = static_cast<std::uint32_t>(desc.dimension),
                                      .format = static_cast<std::uint32_t>(desc.format),
@@ -185,8 +187,8 @@ private:
                                                     .depth = region.depth};
     granit_texture_readback_info native = GRANIT_TEXTURE_READBACK_INFO_INIT;
     auto size = static_cast<uint64_t>(data.size());
-    const auto value = granit_texture_read(renderer_, handle_, &native_region, data.data(), &size,
-                                           &native);
+    const auto value =
+        granit_texture_read(renderer_, handle_, &native_region, data.data(), &size, &native);
     info = {.format = static_cast<texture_format>(native.format),
             .width = native.width,
             .height = native.height,

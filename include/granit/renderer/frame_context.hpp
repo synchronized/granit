@@ -89,8 +89,10 @@ public:
   }
 
   [[nodiscard]] result initialize(granit_renderer renderer) noexcept {
-    if (valid() || renderer == GRANIT_NULL_HANDLE)
+    if (valid())
       return result::invalid_argument;
+    if (renderer == GRANIT_NULL_HANDLE)
+      return result::invalid_handle;
     const granit_frame_context_desc desc = GRANIT_FRAME_CONTEXT_DESC_INIT;
     const auto value = granit_frame_context_create(renderer, &desc, &handle_);
     if (value == GRANIT_SUCCESS)

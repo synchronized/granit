@@ -8,9 +8,11 @@
 extern "C" granit_result granit_sampler_create(granit_renderer renderer,
                                                const granit_sampler_desc* desc,
                                                granit_sampler* sampler) {
-  if (renderer == GRANIT_NULL_HANDLE || desc == nullptr || sampler == nullptr)
+  if (desc == nullptr || sampler == nullptr)
     return GRANIT_ERROR_INVALID_ARGUMENT;
   *sampler = GRANIT_NULL_HANDLE;
+  if (renderer == GRANIT_NULL_HANDLE)
+    return GRANIT_ERROR_INVALID_HANDLE;
   const auto result = granit::detail::validate_sampler_desc(*desc);
   if (result != GRANIT_SUCCESS)
     return result;

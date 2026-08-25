@@ -3,8 +3,9 @@
 
 #include <granit/renderer/buffer.hpp>
 #include <granit/renderer/command_recorder.hpp>
-#include <granit/renderer/frame_context.h>
+#include <granit/renderer/frame_context.hpp>
 #include <granit/renderer/renderer.hpp>
+#include <granit/renderer/sampler.hpp>
 #include <granit/renderer/texture.hpp>
 #include <granit/renderer/timestamp_query.hpp>
 
@@ -20,6 +21,57 @@
 #include <vector>
 
 namespace {
+
+TEST_CASE("Core资源创建把空Renderer归类为无效句柄", "[renderer][contract]") {
+  granit_buffer_desc buffer_desc = GRANIT_BUFFER_DESC_INIT;
+  granit_buffer buffer = UINT64_C(1);
+  CHECK(granit_buffer_create(GRANIT_NULL_HANDLE, &buffer_desc, &buffer) ==
+        GRANIT_ERROR_INVALID_HANDLE);
+  CHECK(buffer == GRANIT_NULL_HANDLE);
+  granit::buffer cpp_buffer;
+  CHECK(cpp_buffer.initialize(GRANIT_NULL_HANDLE, {}) == granit::result::invalid_handle);
+
+  const granit_command_recorder_desc recorder_desc = GRANIT_COMMAND_RECORDER_DESC_INIT;
+  granit_command_recorder recorder = UINT64_C(1);
+  CHECK(granit_command_recorder_create(GRANIT_NULL_HANDLE, &recorder_desc, &recorder) ==
+        GRANIT_ERROR_INVALID_HANDLE);
+  CHECK(recorder == GRANIT_NULL_HANDLE);
+  granit::command_recorder cpp_recorder;
+  CHECK(cpp_recorder.initialize(GRANIT_NULL_HANDLE) == granit::result::invalid_handle);
+
+  const granit_frame_context_desc context_desc = GRANIT_FRAME_CONTEXT_DESC_INIT;
+  granit_frame_context context = UINT64_C(1);
+  CHECK(granit_frame_context_create(GRANIT_NULL_HANDLE, &context_desc, &context) ==
+        GRANIT_ERROR_INVALID_HANDLE);
+  CHECK(context == GRANIT_NULL_HANDLE);
+  granit::frame_context cpp_context;
+  CHECK(cpp_context.initialize(GRANIT_NULL_HANDLE) == granit::result::invalid_handle);
+
+  const granit_sampler_desc sampler_desc = GRANIT_SAMPLER_DESC_INIT;
+  granit_sampler sampler = UINT64_C(1);
+  CHECK(granit_sampler_create(GRANIT_NULL_HANDLE, &sampler_desc, &sampler) ==
+        GRANIT_ERROR_INVALID_HANDLE);
+  CHECK(sampler == GRANIT_NULL_HANDLE);
+  granit::sampler cpp_sampler;
+  CHECK(cpp_sampler.initialize(GRANIT_NULL_HANDLE) == granit::result::invalid_handle);
+
+  const granit_texture_desc texture_desc = GRANIT_TEXTURE_DESC_INIT;
+  granit_texture texture = UINT64_C(1);
+  CHECK(granit_texture_create(GRANIT_NULL_HANDLE, &texture_desc, &texture) ==
+        GRANIT_ERROR_INVALID_HANDLE);
+  CHECK(texture == GRANIT_NULL_HANDLE);
+  granit::texture cpp_texture;
+  CHECK(cpp_texture.initialize(GRANIT_NULL_HANDLE, {}) == granit::result::invalid_handle);
+
+  const granit_timestamp_query_pool_desc query_desc{GRANIT_TIMESTAMP_QUERY_POOL_DESC_VERSION_1_SIZE,
+                                                    2, 0};
+  granit_timestamp_query_pool query_pool = UINT64_C(1);
+  CHECK(granit_timestamp_query_pool_create(GRANIT_NULL_HANDLE, &query_desc, &query_pool) ==
+        GRANIT_ERROR_INVALID_HANDLE);
+  CHECK(query_pool == GRANIT_NULL_HANDLE);
+  granit::timestamp_query_pool cpp_query_pool;
+  CHECK(cpp_query_pool.initialize(GRANIT_NULL_HANDLE, 2) == granit::result::invalid_handle);
+}
 
 TEST_CASE("Frame Context 支持一到四个在途帧槽", "[renderer][frame-context]") {
   for (std::uint32_t count = 1; count <= 4; ++count) {

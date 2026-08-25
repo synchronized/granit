@@ -11,9 +11,11 @@ extern "C" granit_result
 granit_timestamp_query_pool_create(granit_renderer renderer,
                                    const granit_timestamp_query_pool_desc* desc,
                                    granit_timestamp_query_pool* pool) {
-  if (renderer == GRANIT_NULL_HANDLE || desc == nullptr || pool == nullptr)
+  if (desc == nullptr || pool == nullptr)
     return GRANIT_ERROR_INVALID_ARGUMENT;
   *pool = GRANIT_NULL_HANDLE;
+  if (renderer == GRANIT_NULL_HANDLE)
+    return GRANIT_ERROR_INVALID_HANDLE;
   if (desc->struct_size < GRANIT_TIMESTAMP_QUERY_POOL_DESC_VERSION_1_SIZE ||
       desc->query_count < 2 || desc->reserved != 0)
     return GRANIT_ERROR_INVALID_ARGUMENT;

@@ -10,9 +10,11 @@
 extern "C" granit_result granit_frame_context_create(granit_renderer renderer,
                                                      const granit_frame_context_desc* desc,
                                                      granit_frame_context* context) {
-  if (renderer == GRANIT_NULL_HANDLE || desc == nullptr || context == nullptr)
+  if (desc == nullptr || context == nullptr)
     return GRANIT_ERROR_INVALID_ARGUMENT;
   *context = GRANIT_NULL_HANDLE;
+  if (renderer == GRANIT_NULL_HANDLE)
+    return GRANIT_ERROR_INVALID_HANDLE;
   if (desc->struct_size < GRANIT_FRAME_CONTEXT_DESC_VERSION_1_SIZE || desc->flags != 0 ||
       desc->reserved != 0)
     return GRANIT_ERROR_INVALID_ARGUMENT;
