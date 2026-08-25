@@ -42,10 +42,17 @@ TEST_CASE("UPLOAD Buffer 支持映射写入和显式销毁", "[buffer][c_api]") 
   REQUIRE(granit_buffer_map(renderer.native_handle(), buffer, 16, 32, &mapped) == GRANIT_SUCCESS);
   REQUIRE(mapped != nullptr);
   static_cast<std::uint8_t*>(mapped)[0] = UINT8_C(42);
+  CHECK(granit_buffer_flush(renderer.native_handle(), buffer, 16, 1) == GRANIT_SUCCESS);
+  CHECK(granit_buffer_flush(renderer.native_handle(), buffer, 15, 1) ==
+        GRANIT_ERROR_INVALID_ARGUMENT);
+  CHECK(granit_buffer_flush(renderer.native_handle(), buffer, 16, 0) ==
+        GRANIT_ERROR_INVALID_ARGUMENT);
   CHECK(granit_buffer_map(renderer.native_handle(), buffer, 0, 1, &mapped) ==
         GRANIT_ERROR_INVALID_ARGUMENT);
   CHECK(granit_buffer_destroy(renderer.native_handle(), buffer) == GRANIT_ERROR_INVALID_ARGUMENT);
   REQUIRE(granit_buffer_unmap(renderer.native_handle(), buffer) == GRANIT_SUCCESS);
+  CHECK(granit_buffer_flush(renderer.native_handle(), buffer, 16, 1) ==
+        GRANIT_ERROR_INVALID_ARGUMENT);
   REQUIRE(granit_buffer_destroy(renderer.native_handle(), buffer) == GRANIT_SUCCESS);
   CHECK(granit_buffer_destroy(renderer.native_handle(), buffer) == GRANIT_ERROR_INVALID_HANDLE);
 

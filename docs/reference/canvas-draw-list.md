@@ -20,6 +20,8 @@ Material、动态几何上传和 Canvas Pass 均不是兼容承诺，也不应�
 - `granit_canvas_vertex` 包含二维位置、UV 和打包 RGBA8 UNORM 顶点色。
 - Draw List 本身不解释位置的坐标空间；公共录制接口使用左上原点、Y 向下的像素坐标。
 - 通用追加接口接收三角形列表，索引必须相对本次传入的顶点数组。
+- 批量追加接口用一组 `granit_canvas_draw_range` 引用共享顶点和索引数组，适合 UI 后端一次提交
+  整帧几何；范围按索引顺序排列、互不重叠且不得越界。
 - 矩形便捷接口生成四个顶点和六个索引，宽高必须大于零。
 - 位置和 UV 必须是有限浮点数；列表在函数返回前复制全部数组。
 
@@ -73,3 +75,5 @@ granit_canvas_draw_list_destroy(renderer, list);
 - `encode_srgb=1` 在 Shader 中编码 RGB，适合已经保存 sRGB 显示值的 UNORM 目标；sRGB Attachment
   应保持为零并交由硬件编码。
 - 当前列表持有并复用内部 Material 与上传 Buffer；同一列表的录制仍需调用方外部同步。
+- 动态几何使用三个持久映射的 Upload Buffer 槽轮转，避免覆盖仍由前序帧读取的数据；容量只在
+  当前槽不足时按二次幂增长。

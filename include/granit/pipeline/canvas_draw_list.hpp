@@ -55,6 +55,15 @@ public:
         renderer_, handle_, vertices.data(), static_cast<std::uint32_t>(vertices.size()),
         indices.data(), static_cast<std::uint32_t>(indices.size()), &state));
   }
+
+  [[nodiscard]] result append_batch(std::span<const granit_canvas_vertex> vertices,
+                                    std::span<const std::uint32_t> indices,
+                                    std::span<const granit_canvas_draw_range> ranges) noexcept {
+    return from_native(granit_canvas_draw_list_append_batch(
+        renderer_, handle_, vertices.data(), static_cast<std::uint32_t>(vertices.size()),
+        indices.data(), static_cast<std::uint32_t>(indices.size()), ranges.data(),
+        static_cast<std::uint32_t>(ranges.size())));
+  }
   [[nodiscard]] result append_rect(const granit_canvas_rect_desc& desc) noexcept {
     return from_native(granit_canvas_draw_list_append_rect(renderer_, handle_, &desc));
   }

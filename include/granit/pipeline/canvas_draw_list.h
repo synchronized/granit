@@ -35,6 +35,13 @@ typedef struct granit_canvas_draw_state {
   granit_scissor scissor;
 } granit_canvas_draw_state;
 
+/** 批量几何中的一段索引及其绘制状态；索引范围相对于本次批量输入。 */
+typedef struct granit_canvas_draw_range {
+  uint32_t first_index;
+  uint32_t index_count;
+  granit_canvas_draw_state state;
+} granit_canvas_draw_range;
+
 /** 创建时预留容量；clear 清空内容但保留这些动态容量。 */
 typedef struct granit_canvas_draw_list_desc {
   uint32_t struct_size;
@@ -147,6 +154,15 @@ GRANIT_RENDER_PIPELINE_API granit_result granit_canvas_draw_list_append(
     granit_renderer renderer, granit_canvas_draw_list list, const granit_canvas_vertex* vertices,
     uint32_t vertex_count, const uint32_t* indices, uint32_t index_count,
     const granit_canvas_draw_state* state);
+
+/**
+ * 一次追加共享同一顶点和索引数组的多个绘制范围。输入仅在调用期间借用；indices
+ * 相对于本次 vertices 起点，ranges 必须完整位于本次 indices 内且互不重叠。
+ */
+GRANIT_RENDER_PIPELINE_API granit_result granit_canvas_draw_list_append_batch(
+    granit_renderer renderer, granit_canvas_draw_list list, const granit_canvas_vertex* vertices,
+    uint32_t vertex_count, const uint32_t* indices, uint32_t index_count,
+    const granit_canvas_draw_range* ranges, uint32_t range_count);
 
 /** 追加两个三角形组成的轴对齐矩形。 */
 GRANIT_RENDER_PIPELINE_API granit_result granit_canvas_draw_list_append_rect(

@@ -54,6 +54,10 @@ GRANIT_API granit_result granit_buffer_map(granit_renderer renderer, granit_buff
 /** 结束当前映射；UPLOAD Buffer 会自动刷新写入范围。 */
 GRANIT_API granit_result granit_buffer_unmap(granit_renderer renderer, granit_buffer buffer);
 
+/** 刷新当前映射的 UPLOAD Buffer 子范围；范围相对于 Buffer 起点且必须位于映射范围内。 */
+GRANIT_API granit_result granit_buffer_flush(granit_renderer renderer, granit_buffer buffer,
+                                             uint64_t offset, uint64_t size);
+
 /** 查询 Buffer 创建描述；用于跨模块校验用途和范围。 */
 GRANIT_API granit_result granit_buffer_get_desc(granit_renderer renderer, granit_buffer buffer,
                                                 granit_buffer_desc* desc);
