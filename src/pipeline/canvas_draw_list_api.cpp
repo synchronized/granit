@@ -119,7 +119,7 @@ granit::material::pbr_matrix4 pixel_projection(uint32_t width, uint32_t height) 
           0,
           0,
           0,
-          -2.0F / static_cast<float>(height),
+          2.0F / static_cast<float>(height),
           0,
           0,
           0,
@@ -127,7 +127,7 @@ granit::material::pbr_matrix4 pixel_projection(uint32_t width, uint32_t height) 
           1,
           0,
           -1,
-          1,
+          -1,
           0,
           1};
 }
