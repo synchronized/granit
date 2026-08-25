@@ -39,12 +39,14 @@ public:
   command_recorder& operator=(const command_recorder&) = delete;
   command_recorder(command_recorder&& other) noexcept
       : renderer_(std::exchange(other.renderer_, GRANIT_NULL_HANDLE)),
-        handle_(std::exchange(other.handle_, GRANIT_NULL_HANDLE)) {}
+        handle_(std::exchange(other.handle_, GRANIT_NULL_HANDLE)),
+        owned_(std::exchange(other.owned_, true)) {}
   command_recorder& operator=(command_recorder&& other) noexcept {
     if (this != &other) {
       static_cast<void>(destroy());
       renderer_ = std::exchange(other.renderer_, GRANIT_NULL_HANDLE);
       handle_ = std::exchange(other.handle_, GRANIT_NULL_HANDLE);
+      owned_ = std::exchange(other.owned_, true);
     }
     return *this;
   }
@@ -57,6 +59,7 @@ public:
     const auto value = granit_command_recorder_create(renderer, &desc, &handle_);
     if (value == GRANIT_SUCCESS) {
       renderer_ = renderer;
+      owned_ = true;
     }
     return from_native(value);
   }
@@ -248,6 +251,8 @@ public:
     }
     const auto renderer = std::exchange(renderer_, GRANIT_NULL_HANDLE);
     const auto handle = std::exchange(handle_, GRANIT_NULL_HANDLE);
+    if (!std::exchange(owned_, true))
+      return result::success;
     return from_native(granit_command_recorder_destroy(renderer, handle));
   }
   [[nodiscard]] bool valid() const noexcept { return handle_ != GRANIT_NULL_HANDLE; }
@@ -255,8 +260,20 @@ public:
   [[nodiscard]] granit_command_recorder native_handle() const noexcept { return handle_; }
 
 private:
+  friend class frame_context;
+  friend class frame_recording;
+
+  static command_recorder borrow(granit_renderer renderer, granit_command_recorder handle) noexcept {
+    command_recorder recorder;
+    recorder.renderer_ = renderer;
+    recorder.handle_ = handle;
+    recorder.owned_ = false;
+    return recorder;
+  }
+
   granit_renderer renderer_{GRANIT_NULL_HANDLE};
   granit_command_recorder handle_{GRANIT_NULL_HANDLE};
+  bool owned_{true};
 };
 
 } // namespace granit

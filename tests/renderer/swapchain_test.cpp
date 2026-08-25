@@ -3,6 +3,7 @@
 
 #include <granit/renderer/command_recorder.hpp>
 #include <granit/renderer/frame_context.h>
+#include <granit/renderer/frame_context.hpp>
 #include <granit/renderer/render_target.hpp>
 #include <granit/renderer/renderer.hpp>
 #include <granit/renderer/surface.hpp>
@@ -176,6 +177,37 @@ TEST_CASE("Swapchain 支持创建、查询、重建和销毁", "[swapchain][win3
   REQUIRE(granit_frame_context_destroy(renderer.native_handle(), context) == GRANIT_SUCCESS);
   CHECK(granit_frame_context_destroy(renderer.native_handle(), context) ==
         GRANIT_ERROR_INVALID_HANDLE);
+
+  granit::frame_context cpp_context;
+  REQUIRE(cpp_context.initialize(renderer.native_handle()) == granit::result::success);
+  granit::acquired_frame cpp_frame;
+  REQUIRE(swapchain.acquire(cpp_frame) == granit::result::success);
+  granit::frame_recording cpp_recording;
+  REQUIRE(cpp_context.begin(cpp_frame, cpp_recording) == granit::result::success);
+  CHECK(cpp_recording.valid());
+  granit::frame_info cpp_frame_info;
+  REQUIRE(cpp_frame.query_info(cpp_frame_info) == granit::result::success);
+  CHECK(cpp_recording.frame_slot() == cpp_frame_info.frame_slot);
+  REQUIRE(swapchain.backbuffer(cpp_frame.image_index, frame_texture, frame_view) ==
+          granit::result::success);
+  const granit::color_attachment_desc cpp_color{.view = frame_view};
+  const granit::rendering_desc cpp_rendering{
+      .color_attachments = std::span{&cpp_color, 1},
+      .area = {.width = info.width, .height = info.height}};
+  REQUIRE(cpp_recording.recorder().begin_rendering(cpp_rendering) == granit::result::success);
+  REQUIRE(cpp_recording.recorder().end_rendering() == granit::result::success);
+  REQUIRE(cpp_recording.submit() == granit::result::success);
+  CHECK_FALSE(cpp_recording.valid());
+  REQUIRE(swapchain.present(cpp_frame) == granit::result::success);
+
+  granit::acquired_frame cpp_aborted_frame;
+  REQUIRE(swapchain.acquire(cpp_aborted_frame) == granit::result::success);
+  {
+    granit::frame_recording automatic_abort;
+    REQUIRE(cpp_context.begin(cpp_aborted_frame, automatic_abort) == granit::result::success);
+  }
+  REQUIRE(swapchain.cancel(cpp_aborted_frame) == granit::result::success);
+  REQUIRE(cpp_context.reset() == granit::result::success);
 
   granit_texture old_texture = GRANIT_NULL_HANDLE;
   granit_texture_view old_view = GRANIT_NULL_HANDLE;

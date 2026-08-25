@@ -481,6 +481,7 @@ add_library(
   OBJECT
     headers/diagnostic_hpp.cpp
     headers/command_recorder_hpp.cpp
+    headers/frame_context_hpp.cpp
     headers/math_types_hpp.cpp
     headers/input_hpp.cpp
     headers/timestamp_query_hpp.cpp

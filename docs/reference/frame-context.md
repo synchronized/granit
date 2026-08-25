@@ -4,7 +4,7 @@
 # Frame Context
 
 Frame Context 按 Renderer 的真实在途帧槽轮转一组 Command Recorder，避免实时窗口每帧提交后立即
-等待并 reset 同一个 Recorder。当前只提供 C ABI；C++20 RAII 包装将在 F-10C 增加。
+等待并 reset 同一个 Recorder。当前同时提供 C ABI 和无额外运行时状态的 C++20 包装。
 
 ## 创建与帧循环
 
@@ -47,3 +47,23 @@ Context 拥有全部 Recorder。`begin` 返回的句柄只能在录制期间借�
 - 描述结构的 flags 和 reserved 当前必须为零。
 
 Frame 的获取、呈现和失效规则见 [Swapchain 参考](swapchain.md)。
+
+## C++20 包装
+
+```cpp
+granit::frame_context context;
+context.initialize(renderer.native_handle());
+
+granit::frame_recording recording;
+context.begin(frame, recording);
+recording.recorder().begin_rendering(rendering);
+// 录制绘制命令。
+recording.recorder().end_rendering();
+recording.submit();
+swapchain.present(frame);
+```
+
+`frame_context` 与 `frame_recording` 均不可复制且可以移动。`frame_recording::recorder()` 返回非拥有
+Recorder 包装，只能在 recording 有效期间使用；它不会销毁 Context 内部 Recorder。正常路径必须
+显式调用 `submit()` 并处理结果。尚未提交的 `frame_recording` 离开作用域时自动 abort，但不会自动
+取消 Frame，调用方仍须 cancel。销毁或 reset Context 前应先结束所有 recording。
