@@ -17,6 +17,7 @@
 
 #include <granit/renderer/buffer.h>
 #include <granit/renderer/command_recorder.h>
+#include <granit/renderer/frame_context.h>
 #include <granit/renderer/pipeline.h>
 #include <granit/renderer/renderer.h>
 #include <granit/renderer/sampler.h>
@@ -166,6 +167,18 @@ public:
                                                             granit_frame frame);
   [[nodiscard]] granit_result reset_command_recorder(granit_renderer renderer,
                                                      granit_command_recorder recorder);
+  [[nodiscard]] granit_result create_frame_context(granit_renderer renderer,
+                                                   granit_frame_context& context);
+  [[nodiscard]] granit_result begin_frame_context(granit_renderer renderer,
+                                                  granit_frame_context context, granit_frame frame,
+                                                  granit_command_recorder& recorder,
+                                                  std::uint32_t& frame_slot);
+  [[nodiscard]] granit_result
+  submit_frame_context(granit_renderer renderer, granit_frame_context context, granit_frame frame);
+  [[nodiscard]] granit_result abort_frame_context(granit_renderer renderer,
+                                                  granit_frame_context context, granit_frame frame);
+  [[nodiscard]] granit_result destroy_frame_context(granit_renderer renderer,
+                                                    granit_frame_context context);
   [[nodiscard]] granit_result copy_buffer(granit_renderer renderer,
                                           granit_command_recorder recorder, granit_buffer source,
                                           granit_buffer destination,
@@ -284,6 +297,7 @@ private:
   struct command_recorder_record;
   struct timestamp_query_pool_record;
   struct frame_record;
+  struct frame_context_record;
   struct upload_batch_record;
 
   struct resource_metadata {
@@ -415,7 +429,20 @@ private:
     vulkan_command_recorder native;
     std::mutex mutex;
     std::vector<retained_resource> retained_resources;
+    bool owned_by_frame_context{};
     ~command_recorder_record();
+  };
+  enum class frame_context_slot_state { idle, recording, submitted };
+  struct frame_context_slot {
+    granit_command_recorder recorder{GRANIT_NULL_HANDLE};
+    granit_frame frame{GRANIT_NULL_HANDLE};
+    frame_context_slot_state state{frame_context_slot_state::idle};
+  };
+  struct frame_context_record {
+    resource_metadata metadata;
+    std::shared_ptr<renderer_state> renderer;
+    std::mutex mutex;
+    std::vector<frame_context_slot> slots;
   };
   struct timestamp_query_pool_record {
     resource_metadata metadata;
@@ -465,6 +492,7 @@ private:
       compute_pipelines_;
   std::unordered_map<granit_command_recorder, std::shared_ptr<command_recorder_record>>
       command_recorders_;
+  std::unordered_map<granit_frame_context, std::shared_ptr<frame_context_record>> frame_contexts_;
   std::unordered_map<granit_timestamp_query_pool, std::shared_ptr<timestamp_query_pool_record>>
       timestamp_query_pools_;
   std::unordered_map<granit_frame, std::shared_ptr<frame_record>> frames_;

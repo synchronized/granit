@@ -39,6 +39,7 @@ add_library(
     abi/layout_h.c
     headers/diagnostic_h.c
     headers/command_recorder_h.c
+    headers/frame_context_h.c
     headers/math_types_h.c
     headers/input_h.c
     headers/timestamp_query_h.c

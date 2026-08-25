@@ -78,7 +78,7 @@
 | [F-07 恢复边界](plans/F-07-recovery-boundaries.md) | P0 | 已完成 |
 | F-08 多 Recorder 批量提交 | P1 | 已完成 |
 | F-09 GPU 查询与标记 | P1 | Timestamp 已完成；统计与调试标记归入 S-02 |
-| [F-10 公共帧上下文](plans/F-10-public-frame-context.md) | P1 | F-10A 已实现；继续 Context 状态机 |
+| [F-10 公共帧上下文](plans/F-10-public-frame-context.md) | P1 | F-10A～F-10B 已实现；继续 C++ 包装 |
 
 ## 五、基础渲染
 
@@ -157,7 +157,7 @@
 
 ## 近期执行顺序
 
-1. 继续 F-10B 帧上下文 C ABI，用 F-10A 已冻结的真实帧槽驱动 Recorder 与上传槽轮转。
+1. 继续 F-10C C++20 包装，以轻量 RAII 暴露已经实现的 Frame Context C ABI。
 2. 按 S-09A～S-09D 完成 0.3.0 使用路径、契约、安装文档和诊断审计；没有证据时不新增其他 C ABI。
 3. S-06D 最终验收等待稳定版本与 component 范围决策；不在 0.x 阶段提前宣布稳定。
 4. H-09 的透明 PBR、CSM、Clustered Forward 与 Bindless 只在各自重新评估条件满足后独立恢复，

@@ -35,6 +35,7 @@ enum class resource_type : std::uint8_t {
   compute_pipeline = 16,
   upload_batch = 17,
   timestamp_query_pool = 18,
+  frame_context = 19,
 };
 
 /**

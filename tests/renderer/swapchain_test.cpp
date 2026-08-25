@@ -2,6 +2,7 @@
 // Copyright (c) 2026 Granit contributors
 
 #include <granit/renderer/command_recorder.hpp>
+#include <granit/renderer/frame_context.h>
 #include <granit/renderer/render_target.hpp>
 #include <granit/renderer/renderer.hpp>
 #include <granit/renderer/surface.hpp>
@@ -108,31 +109,57 @@ TEST_CASE("Swapchain 支持创建、查询、重建和销毁", "[swapchain][win3
   CHECK(granit_frame_get_info(renderer.native_handle(), renderer.native_handle(), frame.handle,
                               &native_frame_info) == GRANIT_ERROR_INVALID_HANDLE);
   CHECK(swapchain.recreate({.width = 96, .height = 72}) == granit::result::invalid_argument);
+  granit_frame_context_desc context_desc = GRANIT_FRAME_CONTEXT_DESC_INIT;
+  granit_frame_context context = GRANIT_NULL_HANDLE;
+  REQUIRE(granit_frame_context_create(renderer.native_handle(), &context_desc, &context) ==
+          GRANIT_SUCCESS);
+  granit_command_recorder borrowed_recorder = GRANIT_NULL_HANDLE;
+  std::uint32_t context_slot{};
+  REQUIRE(granit_frame_context_begin(renderer.native_handle(), context, frame.handle,
+                                     &borrowed_recorder, &context_slot) == GRANIT_SUCCESS);
+  CHECK(context_slot == frame_info.frame_slot);
+  CHECK(borrowed_recorder != GRANIT_NULL_HANDLE);
+  CHECK(granit_command_recorder_destroy(renderer.native_handle(), borrowed_recorder) ==
+        GRANIT_ERROR_UNSUPPORTED);
+  granit_command_recorder repeated_recorder = GRANIT_NULL_HANDLE;
+  std::uint32_t repeated_slot{};
+  CHECK(granit_frame_context_begin(renderer.native_handle(), context, frame.handle,
+                                   &repeated_recorder,
+                                   &repeated_slot) == GRANIT_ERROR_INVALID_ARGUMENT);
   granit_texture frame_texture{};
   granit_texture_view frame_view{};
   REQUIRE(swapchain.backbuffer(frame.image_index, frame_texture, frame_view) ==
           granit::result::success);
-  granit::command_recorder recorder;
-  REQUIRE(recorder.initialize(renderer.native_handle()) == granit::result::success);
-  REQUIRE(recorder.begin() == granit::result::success);
-  const granit::color_attachment_desc color{.view = frame_view};
-  const granit::rendering_desc rendering{.color_attachments = std::span{&color, 1},
-                                         .area = {.width = info.width, .height = info.height}};
-  REQUIRE(recorder.begin_rendering(rendering) == granit::result::success);
-  REQUIRE(recorder.end_rendering() == granit::result::success);
-  REQUIRE(recorder.end() == granit::result::success);
-  REQUIRE(recorder.submit(frame) == granit::result::success);
-  CHECK(recorder.submit(frame) == granit::result::invalid_argument);
+  granit_color_attachment_desc color = GRANIT_COLOR_ATTACHMENT_DESC_INIT;
+  color.view = frame_view;
+  granit_rendering_desc rendering = GRANIT_RENDERING_DESC_INIT;
+  rendering.color_attachment_count = 1;
+  rendering.color_attachments = &color;
+  rendering.area.width = info.width;
+  rendering.area.height = info.height;
+  REQUIRE(granit_command_recorder_begin_rendering(renderer.native_handle(), borrowed_recorder,
+                                                  &rendering) == GRANIT_SUCCESS);
+  REQUIRE(granit_command_recorder_end_rendering(renderer.native_handle(), borrowed_recorder) ==
+          GRANIT_SUCCESS);
+  REQUIRE(granit_frame_context_submit(renderer.native_handle(), context, frame.handle) ==
+          GRANIT_SUCCESS);
+  CHECK(granit_frame_context_submit(renderer.native_handle(), context, frame.handle) ==
+        GRANIT_ERROR_INVALID_ARGUMENT);
+  CHECK(granit_frame_context_abort(renderer.native_handle(), context, frame.handle) ==
+        GRANIT_ERROR_INVALID_ARGUMENT);
   const auto presented_frame = frame.handle;
   REQUIRE(swapchain.present(frame) == granit::result::success);
   CHECK_FALSE(frame.valid());
   CHECK(granit_frame_get_info(renderer.native_handle(), swapchain.native_handle(), presented_frame,
                               &native_frame_info) == GRANIT_ERROR_INVALID_HANDLE);
-  REQUIRE(recorder.reset() == granit::result::success);
 
   granit::acquired_frame cancelled;
   REQUIRE(swapchain.acquire(cancelled) == granit::result::success);
   const auto cancelled_frame = cancelled.handle;
+  REQUIRE(granit_frame_context_begin(renderer.native_handle(), context, cancelled.handle,
+                                     &borrowed_recorder, &context_slot) == GRANIT_SUCCESS);
+  REQUIRE(granit_frame_context_abort(renderer.native_handle(), context, cancelled.handle) ==
+          GRANIT_SUCCESS);
   REQUIRE(swapchain.cancel(cancelled) == granit::result::success);
   CHECK_FALSE(cancelled.valid());
   CHECK(granit_frame_get_info(renderer.native_handle(), swapchain.native_handle(), cancelled_frame,
@@ -140,8 +167,15 @@ TEST_CASE("Swapchain 支持创建、查询、重建和销毁", "[swapchain][win3
   {
     granit::acquired_frame automatic;
     REQUIRE(swapchain.acquire(automatic) == granit::result::success);
+    REQUIRE(granit_frame_context_begin(renderer.native_handle(), context, automatic.handle,
+                                       &borrowed_recorder, &context_slot) == GRANIT_SUCCESS);
+    REQUIRE(granit_frame_context_abort(renderer.native_handle(), context, automatic.handle) ==
+            GRANIT_SUCCESS);
   }
   REQUIRE(swapchain.recreate({.width = 96, .height = 72}) == granit::result::success);
+  REQUIRE(granit_frame_context_destroy(renderer.native_handle(), context) == GRANIT_SUCCESS);
+  CHECK(granit_frame_context_destroy(renderer.native_handle(), context) ==
+        GRANIT_ERROR_INVALID_HANDLE);
 
   granit_texture old_texture = GRANIT_NULL_HANDLE;
   granit_texture_view old_view = GRANIT_NULL_HANDLE;
