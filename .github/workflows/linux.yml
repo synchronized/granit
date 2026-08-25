@@ -5,18 +5,25 @@ name: Linux
 
 on:
   push:
+    branches: [main]
   pull_request:
 
 permissions:
   contents: read
   packages: read
 
+env:
+  CCACHE_DIR: ${{ github.workspace }}/.cache/ccache
+  CCACHE_BASEDIR: ${{ github.workspace }}
+  CCACHE_COMPILERCHECK: content
+  CCACHE_MAXSIZE: 500M
+
 jobs:
   build-test-consumer:
     runs-on: ubuntu-24.04
     container:
       image: >-
-        ghcr.io/synchronized/granit-ci@sha256:def0c91ae33fb0cd7abb8a27fd4cf5318343308635ee871eee67025ba10f410e
+        ghcr.io/synchronized/granit-ci@sha256:6a2d0aba3b2464838958a4259d3a343106205eb35df9f4ad24d060bf98739015
       credentials:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
@@ -27,6 +34,14 @@ jobs:
         linkage: [shared, static]
     steps:
       - uses: actions/checkout@v4
+      - name: 恢复编译缓存
+        uses: actions/cache@v4
+        with:
+          path: .cache/ccache
+          key: >-
+            linux-ccache-v2-${{ matrix.compiler }}-${{ matrix.linkage }}-${{ github.sha }}
+          restore-keys: |
+            linux-ccache-v2-${{ matrix.compiler }}-${{ matrix.linkage }}-
       - name: 选择 preset
         id: preset
         shell: bash
@@ -37,7 +52,10 @@ jobs:
       - name: 配置、构建与测试
         shell: bash
         run: |
-          cmake --preset "${{ steps.preset.outputs.name }}"
+          ccache --zero-stats
+          cmake --preset "${{ steps.preset.outputs.name }}" \
+            -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
           cmake --build --preset "${{ steps.preset.outputs.name }}"
           export XDG_RUNTIME_DIR="$RUNNER_TEMP/granit-wayland"
           install -d -m 700 "$XDG_RUNTIME_DIR"
@@ -71,7 +89,9 @@ jobs:
             -DGRANIT_TEST_BINARY_DIR="$PWD/build/package/${{ steps.preset.outputs.name }}" \
             -P cmake/check_installed_package.cmake
           cmake -S tests/consumer -B "build/consumer/${{ steps.preset.outputs.name }}" \
-            -G Ninja -DCMAKE_PREFIX_PATH="$prefix"
+            -G Ninja -DCMAKE_PREFIX_PATH="$prefix" \
+            -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
           cmake --build "build/consumer/${{ steps.preset.outputs.name }}"
           LD_LIBRARY_PATH="$prefix/lib" \
             "build/consumer/${{ steps.preset.outputs.name }}/granit_c_consumer"
@@ -87,12 +107,16 @@ jobs:
             "build/consumer/${{ steps.preset.outputs.name }}/granit_input_c_consumer"
           LD_LIBRARY_PATH="$prefix/lib" \
             "build/consumer/${{ steps.preset.outputs.name }}/granit_input_cpp_consumer"
+      - name: 输出编译缓存统计
+        if: always()
+        shell: bash
+        run: ccache --show-stats
 
   integration-runtime:
     runs-on: ubuntu-24.04
     container:
       image: >-
-        ghcr.io/synchronized/granit-ci@sha256:def0c91ae33fb0cd7abb8a27fd4cf5318343308635ee871eee67025ba10f410e
+        ghcr.io/synchronized/granit-ci@sha256:6a2d0aba3b2464838958a4259d3a343106205eb35df9f4ad24d060bf98739015
       credentials:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
@@ -102,6 +126,20 @@ jobs:
         linkage: [shared, static]
     steps:
       - uses: actions/checkout@v4
+      - name: 恢复 Integration 编译缓存
+        uses: actions/cache@v4
+        with:
+          path: .cache/ccache
+          key: >-
+            linux-ccache-v2-integration-clang-${{ matrix.linkage }}-${{ github.sha }}
+          restore-keys: |
+            linux-ccache-v2-integration-clang-${{ matrix.linkage }}-
+      - name: 恢复 Integration 第三方依赖缓存
+        uses: actions/cache@v4
+        with:
+          path: .cache/fetchcontent
+          key: >-
+            linux-fetchcontent-v2-clang-${{ matrix.linkage }}-${{ hashFiles('CMakeLists.txt') }}
       - name: 选择 preset
         id: preset
         shell: bash
@@ -112,10 +150,14 @@ jobs:
       - name: 配置并构建 SDL3 与 ImGui Integration
         shell: bash
         run: |
+          ccache --zero-stats
           cmake --preset "${{ steps.preset.outputs.name }}" \
             -DGRANIT_BUILD_INTEGRATION_SDL3=ON \
             -DGRANIT_BUILD_INTEGRATION_IMGUI=ON \
-            -DGRANIT_FETCH_INTEGRATION_DEPENDENCIES=ON
+            -DGRANIT_FETCH_INTEGRATION_DEPENDENCIES=ON \
+            -DFETCHCONTENT_BASE_DIR="$GITHUB_WORKSPACE/.cache/fetchcontent" \
+            -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
           cmake --build --preset "${{ steps.preset.outputs.name }}"
       - name: 运行 ImGui 转换测试
         shell: bash
@@ -153,3 +195,7 @@ jobs:
             --smoke-test
           SDL_VIDEODRIVER=wayland \
             "build/${{ steps.preset.outputs.name }}/bin/granit_sdl3_imgui_example" --smoke-test
+      - name: 输出编译缓存统计
+        if: always()
+        shell: bash
+        run: ccache --show-stats

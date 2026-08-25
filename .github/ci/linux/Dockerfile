@@ -9,6 +9,7 @@ RUN apt-get update \
     && apt-get install --no-install-recommends -y \
       build-essential \
       ca-certificates \
+      ccache \
       clang \
       cmake \
       git \
@@ -40,5 +41,5 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 LABEL org.opencontainers.image.source="https://github.com/synchronized/granit"
-LABEL org.opencontainers.image.description="Granit Linux Vulkan CI 基础镜像"
+LABEL org.opencontainers.image.description="Granit Linux Vulkan CI 与编译缓存基础镜像"
 LABEL org.opencontainers.image.licenses="MIT"
