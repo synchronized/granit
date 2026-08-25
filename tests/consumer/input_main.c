@@ -21,5 +21,9 @@ int main(void) {
     return 3;
   if (granit_input_system_destroy(input) != GRANIT_SUCCESS)
     return 4;
-  return granit_window_system_destroy(windows) == GRANIT_SUCCESS ? 0 : 5;
+  if (granit_input_system_destroy(input) != GRANIT_ERROR_INVALID_HANDLE)
+    return 5;
+  if (granit_window_system_destroy(windows) != GRANIT_SUCCESS)
+    return 6;
+  return granit_window_system_destroy(windows) == GRANIT_ERROR_INVALID_HANDLE ? 0 : 7;
 }
