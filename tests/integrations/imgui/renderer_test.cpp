@@ -98,7 +98,7 @@ TEST_CASE("ImGui Integration转换偏移、裁剪与多纹理Draw Data") {
 
   granit_canvas_draw_list_stats stats = GRANIT_CANVAS_DRAW_LIST_STATS_INIT;
   REQUIRE(canvas.get_stats(stats) == granit::result::success);
-  CHECK(stats.vertex_count == 6);
+  CHECK(stats.vertex_count == 4);
   CHECK(stats.index_count == 6);
   CHECK(stats.item_count == 2);
   CHECK(stats.batch_count == 2);

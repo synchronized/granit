@@ -25,6 +25,8 @@ Buffer 只能由创建它的 Renderer 操作。成功销毁后句柄立即失效
 - offset 和 size 以字节计，size 不能为零，范围不得越界。
 - 返回指针只在 map/unmap 之间有效。
 - 同一 Buffer 不支持嵌套映射，也不能在映射期间显式销毁。
+- 映射的 `UPLOAD` Buffer 可通过 `granit_buffer_flush` 刷新映射范围内的非空子区间，并继续保持
+  映射；适合由调用方管理多帧槽的持续写入。
 
 内部目前采用持久映射以减少 Vulkan 调用，但使用者不能缓存已经 unmap 的指针。
 
@@ -39,6 +41,7 @@ const auto result = buffer.initialize(
      .location = granit::memory_location::device});
 ```
 
-同步写入适合初始化和低频更新，不适合逐帧大量小写入。高吞吐上传将在后续批量上传接口中实现。
-Buffer 已支持 Recorder 中的批量 copy 和 fill。Granit 根据 transfer read/write 意图自动录制
+同步写入适合初始化和低频更新，不适合逐帧大量小写入。高频 CPU 可见几何应持久映射、写入后
+显式 flush，并使用多个帧槽避免覆盖 GPU 尚未消费的数据。Buffer 已支持 Recorder 中的批量 copy
+和 fill。Granit 根据 transfer read/write 意图自动录制
 `vkCmdPipelineBarrier2`，普通用户不需要提供 Vulkan Stage 或 Access Mask。

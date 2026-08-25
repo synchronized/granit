@@ -37,26 +37,26 @@ TEST_CASE("UI几何上传复用容量并保留顶点索引内容") {
   CHECK(upload.vertex_capacity() >= sizeof(vertices));
   CHECK(upload.index_capacity() >= sizeof(indices));
 
-  void* mapped = nullptr;
-  REQUIRE(granit_buffer_map(renderer.native_handle(), upload.vertex_buffer(), 0, sizeof(vertices),
-                            &mapped) == GRANIT_SUCCESS);
-  CHECK(std::memcmp(mapped, vertices.data(), sizeof(vertices)) == 0);
-  REQUIRE(granit_buffer_unmap(renderer.native_handle(), upload.vertex_buffer()) == GRANIT_SUCCESS);
-  REQUIRE(granit_buffer_map(renderer.native_handle(), upload.index_buffer(), 0, sizeof(indices),
-                            &mapped) == GRANIT_SUCCESS);
-  CHECK(std::memcmp(mapped, indices.data(), sizeof(indices)) == 0);
-  REQUIRE(granit_buffer_unmap(renderer.native_handle(), upload.index_buffer()) == GRANIT_SUCCESS);
+  CHECK(std::memcmp(upload.vertex_data(), vertices.data(), sizeof(vertices)) == 0);
+  CHECK(std::memcmp(upload.index_data(), indices.data(), sizeof(indices)) == 0);
 
-  const auto vertex_buffer = upload.vertex_buffer();
-  const auto index_buffer = upload.index_buffer();
+  std::array<granit_buffer, 3> vertex_buffers{upload.vertex_buffer()};
+  std::array<granit_buffer, 3> index_buffers{upload.index_buffer()};
+  for (std::size_t slot = 1; slot < vertex_buffers.size(); ++slot) {
+    REQUIRE(upload.upload(renderer.native_handle(), list) == GRANIT_SUCCESS);
+    vertex_buffers[slot] = upload.vertex_buffer();
+    index_buffers[slot] = upload.index_buffer();
+    CHECK(vertex_buffers[slot] != vertex_buffers[slot - 1]);
+    CHECK(index_buffers[slot] != index_buffers[slot - 1]);
+  }
   REQUIRE(upload.upload(renderer.native_handle(), list) == GRANIT_SUCCESS);
-  CHECK(upload.vertex_buffer() == vertex_buffer);
-  CHECK(upload.index_buffer() == index_buffer);
+  CHECK(upload.vertex_buffer() == vertex_buffers.front());
+  CHECK(upload.index_buffer() == index_buffers.front());
 
   canvas_draw_list empty;
   REQUIRE(upload.upload(renderer.native_handle(), empty) == GRANIT_SUCCESS);
   CHECK(upload.vertex_count() == 0);
   CHECK(upload.index_count() == 0);
-  CHECK(upload.vertex_buffer() == vertex_buffer);
-  CHECK(upload.index_buffer() == index_buffer);
+  CHECK(upload.vertex_buffer() == vertex_buffers.front());
+  CHECK(upload.index_buffer() == index_buffers.front());
 }

@@ -9,9 +9,9 @@
 #include <span>
 #include <utility>
 
+#include <granit/core/result.hpp>
 #include <granit/renderer/buffer.h>
 #include <granit/renderer/resource_types.hpp>
-#include <granit/core/result.hpp>
 
 namespace granit {
 
@@ -99,6 +99,10 @@ public:
 
   [[nodiscard]] result unmap() noexcept {
     return from_native(granit_buffer_unmap(renderer_, handle_));
+  }
+
+  [[nodiscard]] result flush(std::uint64_t offset, std::uint64_t size) noexcept {
+    return from_native(granit_buffer_flush(renderer_, handle_, offset, size));
   }
 
   [[nodiscard]] result reset() noexcept {

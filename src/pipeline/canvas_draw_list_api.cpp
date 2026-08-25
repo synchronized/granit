@@ -211,6 +211,34 @@ granit_canvas_draw_list_append(granit_renderer renderer, granit_canvas_draw_list
                             convert_state(*draw_state));
 }
 
+extern "C" granit_result
+granit_canvas_draw_list_append_batch(granit_renderer renderer, granit_canvas_draw_list list,
+                                     const granit_canvas_vertex* vertices, uint32_t vertex_count,
+                                     const uint32_t* indices, uint32_t index_count,
+                                     const granit_canvas_draw_range* ranges, uint32_t range_count) {
+  const auto state = find_list(renderer, list);
+  if (state == nullptr)
+    return GRANIT_ERROR_INVALID_HANDLE;
+  if (vertices == nullptr || vertex_count == 0 || indices == nullptr || index_count == 0 ||
+      index_count % 3 != 0 || ranges == nullptr || range_count == 0) {
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  }
+  for (uint32_t index = 0; index < vertex_count; ++index) {
+    const auto& vertex = vertices[index];
+    if (!std::isfinite(vertex.x) || !std::isfinite(vertex.y) || !std::isfinite(vertex.u) ||
+        !std::isfinite(vertex.v)) {
+      return GRANIT_ERROR_INVALID_ARGUMENT;
+    }
+  }
+  for (uint32_t index = 0; index < range_count; ++index) {
+    if (!valid_state(ranges[index].state) || ranges[index].index_count % 3 != 0)
+      return GRANIT_ERROR_INVALID_ARGUMENT;
+  }
+  std::scoped_lock lock{state->mutex};
+  return state->list.append_batch(std::span{vertices, vertex_count},
+                                  std::span{indices, index_count}, std::span{ranges, range_count});
+}
+
 extern "C" granit_result granit_canvas_draw_list_append_rect(granit_renderer renderer,
                                                              granit_canvas_draw_list list,
                                                              const granit_canvas_rect_desc* desc) {

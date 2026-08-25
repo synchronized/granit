@@ -7,3 +7,4 @@
 
 static_assert(!std::is_copy_constructible_v<granit::buffer>);
 static_assert(std::is_move_constructible_v<granit::buffer>);
+static_assert(requires(granit::buffer& buffer) { buffer.flush(0, 1); });

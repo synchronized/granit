@@ -24,7 +24,8 @@
   转移给调用者。
 - `granit_result_message` 返回进程期有效的静态字符串，调用者不得释放。
 - `granit_buffer_map` 返回的地址只在配对 `unmap`、Buffer 销毁或 Renderer 销毁前有效；同一
-  Buffer 的映射、写入和销毁必须由调用者排序。
+  Buffer 的映射、flush、写入和销毁必须由调用者排序。映射期间不能调用同步 `write`，但可对
+  UPLOAD Buffer 的已映射子范围显式 flush。
 
 ## 错误与输出
 

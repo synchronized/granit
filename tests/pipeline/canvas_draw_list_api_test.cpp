@@ -113,3 +113,36 @@ TEST_CASE("公共Canvas Draw List拒绝无效输入、跨Renderer与旧句柄") 
   CHECK(granit_canvas_draw_list_get_stats(first.native_handle(), list, &stats) ==
         GRANIT_ERROR_INVALID_HANDLE);
 }
+
+TEST_CASE("公共Canvas Draw List支持一次追加共享几何的多个范围") {
+  granit::renderer renderer;
+  const auto initialized = renderer.initialize({.application_name = "granit-ui-list-batch"});
+  if (environment_unavailable(initialized))
+    SKIP("当前运行环境没有满足要求的 Vulkan 设备");
+  REQUIRE(initialized == granit::result::success);
+
+  granit::canvas_draw_list list;
+  granit_canvas_draw_list_desc desc = GRANIT_CANVAS_DRAW_LIST_DESC_INIT;
+  REQUIRE(list.initialize(renderer.native_handle(), desc) == granit::result::success);
+  constexpr std::array batch_vertices{granit_canvas_vertex{0, 0, 0, 0, UINT32_C(0xffffffff)},
+                                      granit_canvas_vertex{1, 0, 1, 0, UINT32_C(0xffffffff)},
+                                      granit_canvas_vertex{1, 1, 1, 1, UINT32_C(0xffffffff)},
+                                      granit_canvas_vertex{0, 1, 0, 1, UINT32_C(0xffffffff)}};
+  constexpr std::array<uint32_t, 6> batch_indices{0, 1, 2, 0, 2, 3};
+  constexpr granit_canvas_draw_state state{11, 21, {0, 0, 128, 128}};
+  constexpr std::array ranges{granit_canvas_draw_range{0, 3, state},
+                              granit_canvas_draw_range{3, 3, state}};
+  REQUIRE(list.append_batch(batch_vertices, batch_indices, ranges) == granit::result::success);
+
+  granit_canvas_draw_list_stats stats = GRANIT_CANVAS_DRAW_LIST_STATS_INIT;
+  REQUIRE(list.get_stats(stats) == granit::result::success);
+  CHECK(stats.vertex_count == 4);
+  CHECK(stats.index_count == 6);
+  CHECK(stats.item_count == 2);
+  CHECK(stats.batch_count == 1);
+
+  auto invalid_ranges = ranges;
+  invalid_ranges[1].first_index = 2;
+  CHECK(list.append_batch(batch_vertices, batch_indices, invalid_ranges) ==
+        granit::result::invalid_argument);
+}
