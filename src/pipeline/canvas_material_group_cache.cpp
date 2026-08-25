@@ -8,7 +8,6 @@
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
-#include <memory>
 #include <new>
 #include <vector>
 
@@ -30,9 +29,12 @@ struct canvas_material_group_cache::impl {
   std::vector<entry> entries;
 };
 
-canvas_material_group_cache::canvas_material_group_cache() : state_(std::make_unique<impl>()) {}
+canvas_material_group_cache::canvas_material_group_cache() : state_(new impl) {}
 
-canvas_material_group_cache::~canvas_material_group_cache() { static_cast<void>(reset()); }
+canvas_material_group_cache::~canvas_material_group_cache() {
+  static_cast<void>(reset());
+  delete state_;
+}
 
 granit_result
 canvas_material_group_cache::acquire(granit_renderer renderer, granit_material material,

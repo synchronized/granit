@@ -10,8 +10,6 @@
 #include <granit/renderer/sampler.h>
 #include <granit/renderer/texture.h>
 
-#include <memory>
-
 namespace granit::pipeline::detail {
 
 /** Canvas 专用 Material 绑定组有界缓存；键中的完整句柄包含资源 generation。 */
@@ -31,7 +29,8 @@ public:
 
 private:
   struct impl;
-  std::unique_ptr<impl> state_;
+  // 导出类只保存固定宽度实现指针，避免把 STL 布局带到 DLL 边界。
+  impl* state_ = nullptr;
 };
 
 } // namespace granit::pipeline::detail
