@@ -24,9 +24,13 @@ constexpr uint64_t generation_mask = UINT64_C(0x00ffffff);
 constexpr uint64_t type_value = UINT64_C(0x44);
 
 struct canvas_draw_list_state {
-  explicit canvas_draw_list_state(uint32_t frame_slot_count) : geometry(frame_slot_count) {}
+  explicit canvas_draw_list_state(uint32_t frame_slot_count)
+      : geometry(frame_slot_count), bindings(frame_slot_count) {}
 
   ~canvas_draw_list_state() {
+    static_cast<void>(material_groups.reset());
+    for (auto& binding : bindings)
+      static_cast<void>(binding.reset());
     if (material != GRANIT_NULL_HANDLE)
       static_cast<void>(granit_material_destroy(renderer, material));
   }
@@ -35,6 +39,8 @@ struct canvas_draw_list_state {
   granit_renderer renderer = GRANIT_NULL_HANDLE;
   granit::pipeline::detail::canvas_draw_list list;
   granit::pipeline::detail::canvas_geometry_upload geometry;
+  std::vector<granit::pipeline::detail::pbr_draw_bindings> bindings;
+  granit::pipeline::detail::canvas_material_group_cache material_groups;
   granit_material material = GRANIT_NULL_HANDLE;
 };
 
@@ -323,17 +329,19 @@ extern "C" granit_result granit_canvas_draw_list_record(granit_renderer renderer
   const granit::material::pbr_object_constants object{
       .model = identity_matrix(), .normal_matrix = identity_matrix(), .object_id = {}};
   if (result == GRANIT_SUCCESS) {
-    result = granit::pipeline::detail::record_canvas_pass(renderer, recorder,
-                                                          {.color = desc->color,
-                                                           .color_format = desc->color_format,
-                                                           .width = desc->width,
-                                                           .height = desc->height,
-                                                           .material = state->material,
-                                                           .frame = frame,
-                                                           .object = object,
-                                                           .load_operation = desc->load_operation,
-                                                           .encode_srgb = desc->encode_srgb != 0},
-                                                          state->list, state->geometry);
+    result = granit::pipeline::detail::record_canvas_pass(
+        renderer, recorder,
+        {.color = desc->color,
+         .color_format = desc->color_format,
+         .width = desc->width,
+         .height = desc->height,
+         .material = state->material,
+         .frame = frame,
+         .object = object,
+         .load_operation = desc->load_operation,
+         .encode_srgb = desc->encode_srgb != 0},
+        state->list, state->geometry, state->bindings[state->geometry.current_frame_slot()],
+        state->material_groups);
   }
   return result;
 }

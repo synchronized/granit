@@ -499,6 +499,10 @@ void vulkan_command_recorder::prepare_image_access(const vulkan_device& device,
           final_image_accesses_.push_back(unit);
           continue;
         }
+        if (found->layout == unit.layout && found->stages == unit.stages &&
+            found->access == unit.access) {
+          continue;
+        }
         VkImageMemoryBarrier2 barrier{};
         barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
         barrier.srcStageMask = found->stages;

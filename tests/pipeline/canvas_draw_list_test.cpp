@@ -59,3 +59,25 @@ TEST_CASE("Canvas Draw List拒绝无效几何且可以复用") {
   CHECK(list.items().empty());
   CHECK(list.batches().empty());
 }
+
+TEST_CASE("Canvas Draw List保留同纹理不同裁剪并区分交替纹理") {
+  using namespace granit::pipeline::detail;
+  const canvas_draw_state first{.texture = 11, .sampler = 21, .scissor = {0, 0, 50, 100}};
+  const canvas_draw_state clipped{.texture = 11, .sampler = 21, .scissor = {50, 0, 50, 100}};
+  const canvas_draw_state second{.texture = 12, .sampler = 21, .scissor = {0, 0, 100, 100}};
+
+  canvas_draw_list list;
+  REQUIRE(list.append(vertices, indices, first) == GRANIT_SUCCESS);
+  REQUIRE(list.append(vertices, indices, clipped) == GRANIT_SUCCESS);
+  REQUIRE(list.append(vertices, indices, second) == GRANIT_SUCCESS);
+  REQUIRE(list.append(vertices, indices, first) == GRANIT_SUCCESS);
+
+  const auto batches = list.batches();
+  REQUIRE(batches.size() == 4);
+  CHECK(batches[0].state.texture == 11);
+  CHECK(batches[0].state.scissor.width == 50);
+  CHECK(batches[1].state.texture == 11);
+  CHECK(batches[1].state.scissor.x == 50);
+  CHECK(batches[2].state.texture == 12);
+  CHECK(batches[3].state.texture == 11);
+}

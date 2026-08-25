@@ -22,3 +22,4 @@
 - [H-09B 透明覆盖层首份 GPU 性能基线](2026-08-18-windows-clang-transparent-b4b0396.md)
 - [H-09D Render Pipeline 多光源曲线](2026-08-19-windows-clang-multi-light-7e14162.md)
 - [H-09E Render Pipeline 绑定压力曲线](2026-08-20-windows-clang-binding-pressure-7b3e246.md)
+- [F-11A Canvas 绑定 CPU/GPU 基线](2026-08-25-windows-clang-canvas-binding-f11a.md)

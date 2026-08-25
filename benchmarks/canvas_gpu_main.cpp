@@ -68,6 +68,14 @@ void print_result(std::string_view name, std::uint32_t items, std::uint32_t batc
             << percentile(samples, 0.95) << ',' << percentile(samples, 0.99) << '\n';
 }
 
+void print_cpu_result(std::string_view phase, std::string_view name, std::uint32_t items,
+                      std::uint32_t batches, const std::vector<double>& samples) {
+  const auto mean = std::accumulate(samples.begin(), samples.end(), 0.0) / samples.size();
+  std::cout << "3," << phase << '.' << name << ',' << items << ',' << batches << ",0,"
+            << samples.size() << ',' << mean << ',' << percentile(samples, 0.50) << ','
+            << percentile(samples, 0.95) << ',' << percentile(samples, 0.99) << '\n';
+}
+
 granit::result record_clear(granit_renderer renderer, granit_command_recorder recorder,
                             granit_texture_view output, std::uint32_t size) {
   granit_color_attachment_desc color = GRANIT_COLOR_ATTACHMENT_DESC_INIT;
@@ -188,14 +196,22 @@ int main() {
                   sampler.native_handle(), benchmark_case.alternating);
     const auto batches = list.batches();
     canvas_geometry_upload geometry;
+    granit::pipeline::detail::pbr_draw_bindings bindings;
+    granit::pipeline::detail::canvas_material_group_cache material_groups;
     if (!list.items().empty() && geometry.upload(native, list) != GRANIT_SUCCESS)
       return 1;
     const auto iterations = benchmark_case.items == 10'000 ? 2U : 10U;
     constexpr std::uint32_t warmup = 3;
     constexpr std::uint32_t sample_count = 15;
     std::vector<double> samples;
+    std::vector<double> record_samples;
+    std::vector<double> submit_samples;
+    std::vector<double> reset_samples;
     for (std::uint32_t sample = 0; sample < warmup + sample_count; ++sample) {
       double total = 0;
+      double record_total = 0;
+      double submit_total = 0;
+      double reset_total = 0;
       for (std::uint32_t iteration = 0; iteration < iterations; ++iteration) {
         auto result = recorder.begin();
         if (granit::succeeded(result))
@@ -205,6 +221,7 @@ int main() {
               recorder.write_timestamp(timestamps.native_handle(), GRANIT_TIMESTAMP_STAGE_TOP, 0);
         }
         if (granit::succeeded(result)) {
+          const auto record_begin = std::chrono::steady_clock::now();
           result = list.items().empty()
                        ? record_clear(native, recorder.native_handle(), output_view.native_handle(),
                                       size)
@@ -218,7 +235,10 @@ int main() {
                               .frame = frame,
                               .object = object,
                               .load_operation = GRANIT_ATTACHMENT_LOAD_OPERATION_CLEAR},
-                             list, geometry));
+                             list, geometry, bindings, material_groups));
+          record_total += std::chrono::duration<double, std::nano>(
+                              std::chrono::steady_clock::now() - record_begin)
+                              .count();
         }
         if (granit::succeeded(result)) {
           result = recorder.write_timestamp(timestamps.native_handle(),
@@ -226,10 +246,20 @@ int main() {
         }
         if (granit::succeeded(result))
           result = recorder.end();
-        if (granit::succeeded(result))
+        if (granit::succeeded(result)) {
+          const auto submit_begin = std::chrono::steady_clock::now();
           result = recorder.submit();
-        if (granit::succeeded(result))
+          submit_total += std::chrono::duration<double, std::nano>(
+                              std::chrono::steady_clock::now() - submit_begin)
+                              .count();
+        }
+        if (granit::succeeded(result)) {
+          const auto reset_begin = std::chrono::steady_clock::now();
           result = recorder.reset();
+          reset_total += std::chrono::duration<double, std::nano>(std::chrono::steady_clock::now() -
+                                                                  reset_begin)
+                             .count();
+        }
         std::array<std::uint64_t, 2> values{};
         if (granit::succeeded(result))
           result = timestamps.get_results(0, values);
@@ -241,13 +271,23 @@ int main() {
       }
       if (!succeeded)
         break;
-      if (sample >= warmup)
+      if (sample >= warmup) {
         samples.push_back(total / iterations);
+        record_samples.push_back(record_total / iterations);
+        submit_samples.push_back(submit_total / iterations);
+        reset_samples.push_back(reset_total / iterations);
+      }
     }
     if (!succeeded)
       break;
     print_result(benchmark_case.name, benchmark_case.items,
                  static_cast<std::uint32_t>(batches.size()), benchmark_case.items, samples);
+    print_cpu_result("cpu_record", benchmark_case.name, benchmark_case.items,
+                     static_cast<std::uint32_t>(batches.size()), record_samples);
+    print_cpu_result("cpu_submit", benchmark_case.name, benchmark_case.items,
+                     static_cast<std::uint32_t>(batches.size()), submit_samples);
+    print_cpu_result("cpu_reset_wait", benchmark_case.name, benchmark_case.items,
+                     static_cast<std::uint32_t>(batches.size()), reset_samples);
   }
   static_cast<void>(granit_material_destroy(native, material));
   return succeeded ? 0 : 1;

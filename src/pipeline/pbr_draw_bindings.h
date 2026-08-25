@@ -21,6 +21,10 @@ public:
              const granit::material::pbr_object_constants& object) noexcept;
   [[nodiscard]] granit_result update(const granit::material::pbr_frame_constants& frame,
                                      const granit::material::pbr_object_constants& object) noexcept;
+  [[nodiscard]] granit_result
+  prepare(granit_renderer renderer, const material_draw_state& material,
+          const granit::material::pbr_frame_constants& frame,
+          const granit::material::pbr_object_constants& object) noexcept;
   [[nodiscard]] granit_result reset() noexcept;
   [[nodiscard]] bool initialized() const noexcept {
     return frame_group_.valid() && object_group_.valid();
@@ -37,6 +41,9 @@ private:
   granit::buffer object_buffer_;
   granit::bind_group frame_group_;
   granit::bind_group object_group_;
+  granit_renderer renderer_{GRANIT_NULL_HANDLE};
+  granit_bind_group_layout frame_layout_{GRANIT_NULL_HANDLE};
+  granit_bind_group_layout object_layout_{GRANIT_NULL_HANDLE};
 };
 
 } // namespace granit::pipeline::detail

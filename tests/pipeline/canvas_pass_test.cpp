@@ -117,6 +117,7 @@ TEST_CASE("Canvas Pass按Batch录制顶点色与Scissor") {
   REQUIRE(readback.unmap() == granit::result::success);
 
   record_desc.encode_srgb = 1;
+  record_desc.frame_slot = 0;
   REQUIRE(recorder.begin() == granit::result::success);
   REQUIRE(list.record(recorder.native_handle(), record_desc) == granit::result::success);
   REQUIRE(recorder.end() == granit::result::success);
@@ -131,4 +132,24 @@ TEST_CASE("Canvas Pass按Batch录制顶点色与Scissor") {
   REQUIRE(readback.map(0, size * size * 4, &mapped) == granit::result::success);
   CHECK(pixel(20) == std::array<std::uint8_t, 4>{0, 0, 188, 128});
   REQUIRE(readback.unmap() == granit::result::success);
+
+  SECTION("缓存资源销毁后使用新 generation 重新录制") {
+    REQUIRE(list.clear() == granit::result::success);
+    REQUIRE(red_view.reset() == granit::result::success);
+    REQUIRE(red_texture.reset() == granit::result::success);
+    REQUIRE(red_texture.initialize(native, sampled_desc) == granit::result::success);
+    constexpr std::array<std::uint8_t, 4> green_pixel{0, 128, 0, 128};
+    REQUIRE(red_texture.write(std::as_bytes(std::span{green_pixel}), {}, pixel_region) ==
+            granit::result::success);
+    REQUIRE(red_view.initialize(native, red_texture.native_handle()) == granit::result::success);
+    REQUIRE(list.append(red, indices,
+                        {.texture = red_view.native_handle(),
+                         .sampler = sampler.native_handle(),
+                         .scissor = {0, 0, size, size}}) == granit::result::success);
+    REQUIRE(recorder.begin() == granit::result::success);
+    REQUIRE(list.record(recorder.native_handle(), record_desc) == granit::result::success);
+    REQUIRE(recorder.end() == granit::result::success);
+    REQUIRE(recorder.submit() == granit::result::success);
+    REQUIRE(recorder.reset() == granit::result::success);
+  }
 }

@@ -7,6 +7,8 @@
 #include "material/pbr_draw_inputs.h"
 #include "pipeline/canvas_draw_list.h"
 #include "pipeline/canvas_geometry_upload.h"
+#include "pipeline/canvas_material_group_cache.h"
+#include "pipeline/pbr_draw_bindings.h"
 
 #include <granit/pipeline/export.h>
 #include <granit/pipeline/material.h>
@@ -29,7 +31,8 @@ struct canvas_pass_desc {
 /** 在一个 Rendering 区域内按稳定顺序录制带 Texture/Sampler 的 Canvas Batch。 */
 [[nodiscard]] GRANIT_RENDER_PIPELINE_API granit_result record_canvas_pass(
     granit_renderer renderer, granit_command_recorder recorder, const canvas_pass_desc& desc,
-    const canvas_draw_list& list, const canvas_geometry_upload& geometry) noexcept;
+    const canvas_draw_list& list, const canvas_geometry_upload& geometry,
+    pbr_draw_bindings& bindings, canvas_material_group_cache& material_groups) noexcept;
 
 } // namespace granit::pipeline::detail
 

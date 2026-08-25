@@ -161,6 +161,8 @@ SDL3 Integration 只负责创建 Granit Surface；ImGui Integration 只负责把
 源码树构建时两者默认关闭，安装使用时由父项目或 `find_package` 提供 SDL3 3.2+ 与 ImGui；完整
 启用方式、依赖和所有权边界见
 [SDL3 与 ImGui Integration](docs/reference/third-party-integrations.md)。
+组合示例同时覆盖字体 Atlas 与自定义 Texture ID，并通过 Canvas 的逐帧公共绑定及有界纹理绑定
+缓存录制；Canvas 的当前录制语义见 [Canvas Draw List](docs/reference/canvas-draw-list.md)。
 
 ## 文档
 

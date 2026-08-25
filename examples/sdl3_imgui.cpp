@@ -27,6 +27,7 @@
 namespace {
 
 constexpr ImTextureID font_texture_id = 1;
+constexpr ImTextureID checker_texture_id = 2;
 constexpr std::uint32_t default_frame_slot_count = 3;
 
 struct frame_timings {
@@ -65,6 +66,11 @@ struct imgui_quit {
 struct texture_binding {
   granit_texture_view view{GRANIT_NULL_HANDLE};
   granit_sampler sampler{GRANIT_NULL_HANDLE};
+};
+
+struct texture_bindings {
+  texture_binding font;
+  texture_binding checker;
 };
 
 void apply_granit_theme() {
@@ -138,12 +144,35 @@ void apply_granit_theme() {
 
 granit::result resolve_texture(ImTextureID texture, granit_canvas_draw_state& state,
                                void* user_data) noexcept {
-  if (texture != font_texture_id || user_data == nullptr)
+  if (user_data == nullptr)
     return granit::result::invalid_argument;
-  const auto& binding = *static_cast<const texture_binding*>(user_data);
-  state.texture = binding.view;
-  state.sampler = binding.sampler;
+  const auto& bindings = *static_cast<const texture_bindings*>(user_data);
+  const auto* binding = texture == font_texture_id      ? &bindings.font
+                        : texture == checker_texture_id ? &bindings.checker
+                                                        : nullptr;
+  if (binding == nullptr)
+    return granit::result::invalid_argument;
+  state.texture = binding->view;
+  state.sampler = binding->sampler;
   return granit::result::success;
+}
+
+granit::result upload_checker_texture(granit_renderer renderer, granit::texture& texture,
+                                      granit::texture_view& view) {
+  constexpr std::array<std::uint8_t, 16> pixels{238, 194, 255, 255, 35,  31, 52,  255,
+                                                35,  31,  52,  255, 104, 87, 204, 255};
+  auto result = texture.initialize(renderer, {.format = granit::texture_format::rgba8_unorm,
+                                              .usage = granit::texture_usage::sampled |
+                                                       granit::texture_usage::transfer_destination,
+                                              .width = 2,
+                                              .height = 2});
+  if (granit::succeeded(result)) {
+    result = texture.write(std::as_bytes(std::span{pixels}),
+                           {.bytes_per_row = 8, .rows_per_image = 2}, {.width = 2, .height = 2});
+  }
+  if (granit::succeeded(result))
+    result = view.initialize(renderer, texture.native_handle());
+  return result;
 }
 
 granit::result upload_font_atlas(granit_renderer renderer, granit::texture& texture,
@@ -320,6 +349,7 @@ int main(int argc, char** argv) {
   std::uint32_t frame_slot_count = default_frame_slot_count;
   bool validation_enabled = true;
   bool demo_enabled = true;
+  bool custom_texture_enabled = true;
   bool timestamps_enabled = true;
   for (int index = 1; index < argc; ++index) {
     if (std::strcmp(argv[index], "--smoke-test") == 0) {
@@ -341,6 +371,8 @@ int main(int argc, char** argv) {
       validation_enabled = false;
     } else if (std::strcmp(argv[index], "--no-demo") == 0) {
       demo_enabled = false;
+    } else if (std::strcmp(argv[index], "--no-custom-texture") == 0) {
+      custom_texture_enabled = false;
     } else if (std::strcmp(argv[index], "--no-gpu-timestamps") == 0) {
       timestamps_enabled = false;
     } else {
@@ -415,13 +447,19 @@ int main(int argc, char** argv) {
 
   granit::texture font_texture;
   granit::texture_view font_view;
+  granit::texture checker_texture;
+  granit::texture_view checker_view;
   granit::sampler font_sampler;
   if (granit::succeeded(result)) {
     result = upload_font_atlas(renderer.native_handle(), font_texture, font_view, font_sampler);
   }
+  if (granit::succeeded(result))
+    result = upload_checker_texture(renderer.native_handle(), checker_texture, checker_view);
   if (granit::failed(result))
     std::cerr << "SDL3 + ImGui 初始化失败，Granit 结果码：" << static_cast<int>(result) << '\n';
-  texture_binding font_binding{font_view.native_handle(), font_sampler.native_handle()};
+  texture_bindings bindings{
+      .font = {font_view.native_handle(), font_sampler.native_handle()},
+      .checker = {checker_view.native_handle(), font_sampler.native_handle()}};
 
   bool running = granit::succeeded(result);
   bool recreate = false;
@@ -478,6 +516,10 @@ int main(int argc, char** argv) {
     ImGui::Checkbox("Show ImGui demo", &show_demo_window);
     ImGui::Checkbox("Validation overlay", &validation_overlay);
     ImGui::SliderFloat("Render scale", &render_scale, 0.5F, 2, "%.2fx");
+    if (custom_texture_enabled) {
+      ImGui::TextUnformatted("Custom Texture ID:");
+      ImGui::Image(ImTextureRef{checker_texture_id}, {64, 64});
+    }
     if (ImGui::Button("Reload shaders"))
       render_scale = 1;
     ImGui::SameLine();
@@ -504,7 +546,7 @@ int main(int argc, char** argv) {
     result = canvas.clear();
     if (granit::succeeded(result)) {
       result = granit::integration::imgui::append_draw_data(ImGui::GetDrawData(), canvas,
-                                                            resolve_texture, &font_binding);
+                                                            resolve_texture, &bindings);
       if (granit::failed(result))
         std::cerr << "ImGui Draw Data 转换失败，Granit 结果码：" << static_cast<int>(result)
                   << '\n';

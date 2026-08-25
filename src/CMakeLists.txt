@@ -771,6 +771,8 @@ target_sources(
     pipeline/canvas_draw_list.h
     pipeline/canvas_draw_list_api.cpp
     pipeline/canvas_geometry_upload.h
+    pipeline/canvas_material_group_cache.cpp
+    pipeline/canvas_material_group_cache.h
     pipeline/canvas_pass.cpp
     pipeline/canvas_pass.h
     pipeline/debug_draw_list_api.cpp

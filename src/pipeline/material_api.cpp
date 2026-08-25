@@ -233,6 +233,33 @@ granit_result granit::pipeline::detail::acquire_material_draw_state(
   }
 }
 
+granit_result granit::pipeline::detail::create_canvas_material_group(
+    granit_renderer renderer, granit_material material, granit_texture_view texture,
+    granit_sampler sampler, granit_bind_group& group) noexcept {
+  group = GRANIT_NULL_HANDLE;
+  auto state = find_material(renderer, material);
+  if (state == nullptr)
+    return GRANIT_ERROR_INVALID_HANDLE;
+  if (texture == GRANIT_NULL_HANDLE || sampler == GRANIT_NULL_HANDLE)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  try {
+    std::scoped_lock lock{state->mutex};
+    if (!state->alive || !state->instance.initialized())
+      return GRANIT_ERROR_INVALID_HANDLE;
+    const std::array overrides{granit::material::material_gpu_instance::resource_override{
+                                   granit::material::make_parameter_id("base_color_texture"),
+                                   granit::material::parameter_type::texture_view, texture},
+                               granit::material::material_gpu_instance::resource_override{
+                                   granit::material::make_parameter_id("unlit_sampler"),
+                                   granit::material::parameter_type::sampler, sampler}};
+    return state->instance.create_bind_group(overrides, group);
+  } catch (const std::bad_alloc&) {
+    return GRANIT_ERROR_OUT_OF_MEMORY;
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
 extern "C" uint64_t granit_material_parameter_id(const char* name, uint32_t name_length) {
   if (name == nullptr || name_length == 0)
     return 0;
