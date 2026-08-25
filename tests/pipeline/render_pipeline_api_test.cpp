@@ -227,6 +227,59 @@ void initialize_test_mesh(granit_renderer renderer, granit::buffer& vertex_buffe
 
 } // namespace
 
+TEST_CASE("RenderPipeline component把空Renderer归类为无效句柄") {
+  const granit_render_pipeline_desc desc = GRANIT_RENDER_PIPELINE_DESC_INIT;
+  granit_render_pipeline pipeline = UINT64_C(1);
+  CHECK(granit_render_pipeline_create(GRANIT_NULL_HANDLE, &desc, &pipeline) ==
+        GRANIT_ERROR_INVALID_HANDLE);
+  CHECK(pipeline == GRANIT_NULL_HANDLE);
+
+  granit::render_pipeline cpp_pipeline;
+  CHECK(cpp_pipeline.initialize(GRANIT_NULL_HANDLE, desc) == granit::result::invalid_handle);
+  CHECK_FALSE(cpp_pipeline.valid());
+
+  const granit_canvas_draw_list_desc canvas_desc = GRANIT_CANVAS_DRAW_LIST_DESC_INIT;
+  granit_canvas_draw_list canvas = UINT64_C(1);
+  CHECK(granit_canvas_draw_list_create(GRANIT_NULL_HANDLE, &canvas_desc, &canvas) ==
+        GRANIT_ERROR_INVALID_HANDLE);
+  CHECK(canvas == GRANIT_NULL_HANDLE);
+
+  const granit_debug_draw_list_desc debug_desc = GRANIT_DEBUG_DRAW_LIST_DESC_INIT;
+  granit_debug_draw_list debug = UINT64_C(1);
+  CHECK(granit_debug_draw_list_create(GRANIT_NULL_HANDLE, &debug_desc, &debug) ==
+        GRANIT_ERROR_INVALID_HANDLE);
+  CHECK(debug == GRANIT_NULL_HANDLE);
+
+  const granit_text_atlas_desc atlas_desc = GRANIT_TEXT_ATLAS_DESC_INIT;
+  granit_text_atlas atlas = UINT64_C(1);
+  CHECK(granit_text_atlas_create(GRANIT_NULL_HANDLE, &atlas_desc, &atlas) ==
+        GRANIT_ERROR_INVALID_HANDLE);
+  CHECK(atlas == GRANIT_NULL_HANDLE);
+
+  const granit_text_draw_list_desc text_desc = GRANIT_TEXT_DRAW_LIST_DESC_INIT;
+  granit_text_draw_list text = UINT64_C(1);
+  CHECK(granit_text_draw_list_create(GRANIT_NULL_HANDLE, &text_desc, &text) ==
+        GRANIT_ERROR_INVALID_HANDLE);
+  CHECK(text == GRANIT_NULL_HANDLE);
+
+  const granit_material_desc material_desc = GRANIT_MATERIAL_DESC_INIT;
+  granit_material material = UINT64_C(1);
+  CHECK(granit_material_create(GRANIT_NULL_HANDLE, &material_desc, &material) ==
+        GRANIT_ERROR_INVALID_HANDLE);
+  CHECK(material == GRANIT_NULL_HANDLE);
+
+  const granit_vertex_attribute attribute{0, GRANIT_VERTEX_FORMAT_FLOAT32X3, 0, 0};
+  const granit_mesh_vertex_buffer vertex_buffer{
+      UINT64_C(1), 0, {12, GRANIT_VERTEX_STEP_MODE_VERTEX, 1, 0, &attribute}};
+  granit_mesh_desc mesh_desc = GRANIT_MESH_DESC_INIT;
+  mesh_desc.vertex_buffers = &vertex_buffer;
+  mesh_desc.vertex_buffer_count = 1;
+  mesh_desc.vertex_count = 3;
+  granit_mesh mesh = UINT64_C(1);
+  CHECK(granit_mesh_create(GRANIT_NULL_HANDLE, &mesh_desc, &mesh) == GRANIT_ERROR_INVALID_HANDLE);
+  CHECK(mesh == GRANIT_NULL_HANDLE);
+}
+
 TEST_CASE("统一Render Pipeline按固定阶段消费Scene Snapshot") {
   granit::renderer renderer;
   const auto initialized = renderer.initialize({.application_name = "granit-public-pipeline"});

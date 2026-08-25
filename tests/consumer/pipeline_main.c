@@ -19,7 +19,7 @@ int main(void) {
     return 1;
   granit_render_pipeline handle = GRANIT_NULL_HANDLE;
   if (granit_render_pipeline_create(GRANIT_NULL_HANDLE, &pipeline, &handle) !=
-          GRANIT_ERROR_INVALID_ARGUMENT ||
+          GRANIT_ERROR_INVALID_HANDLE ||
       handle != GRANIT_NULL_HANDLE)
     return 2;
 

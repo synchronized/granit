@@ -152,11 +152,12 @@ extern "C" granit_result granit_canvas_draw_list_create(granit_renderer renderer
   if (list == nullptr)
     return GRANIT_ERROR_INVALID_ARGUMENT;
   *list = GRANIT_NULL_HANDLE;
-  if (renderer == GRANIT_NULL_HANDLE || desc == nullptr ||
-      desc->struct_size < GRANIT_CANVAS_DRAW_LIST_DESC_VERSION_1_SIZE ||
+  if (desc == nullptr || desc->struct_size < GRANIT_CANVAS_DRAW_LIST_DESC_VERSION_1_SIZE ||
       !reserved_is_zero(desc->reserved, std::size(desc->reserved))) {
     return GRANIT_ERROR_INVALID_ARGUMENT;
   }
+  if (renderer == GRANIT_NULL_HANDLE)
+    return GRANIT_ERROR_INVALID_HANDLE;
   uint64_t pipeline_cache_size = 0;
   const auto renderer_result =
       granit_renderer_pipeline_cache_export(renderer, nullptr, &pipeline_cache_size);

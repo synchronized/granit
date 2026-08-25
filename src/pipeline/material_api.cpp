@@ -272,12 +272,13 @@ extern "C" granit_result granit_material_create(granit_renderer renderer,
   if (material == nullptr)
     return GRANIT_ERROR_INVALID_ARGUMENT;
   *material = GRANIT_NULL_HANDLE;
-  if (renderer == GRANIT_NULL_HANDLE || desc == nullptr ||
-      desc->struct_size < GRANIT_MATERIAL_DESC_VERSION_1_SIZE || desc->reserved != 0 ||
-      desc->reserved_tail != 0 ||
+  if (desc == nullptr || desc->struct_size < GRANIT_MATERIAL_DESC_VERSION_1_SIZE ||
+      desc->reserved != 0 || desc->reserved_tail != 0 ||
       (desc->initial_update_count != 0 && desc->initial_updates == nullptr)) {
     return GRANIT_ERROR_INVALID_ARGUMENT;
   }
+  if (renderer == GRANIT_NULL_HANDLE)
+    return GRANIT_ERROR_INVALID_HANDLE;
   try {
     auto state = std::make_shared<material_state>();
     state->renderer = renderer;

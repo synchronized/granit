@@ -10,6 +10,11 @@
 
 0.3.0 正在规划和开发；公共变更将在实现后记录于此。
 
+### 修复
+
+- RenderPipeline component 的创建接口把空 Renderer 统一归类为
+  `GRANIT_ERROR_INVALID_HANDLE`，并在失败时保持输出句柄为零。
+
 ## 0.2.0 - 2026-08-24
 
 ### 新增

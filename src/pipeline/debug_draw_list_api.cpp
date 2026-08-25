@@ -290,10 +290,11 @@ extern "C" granit_result granit_debug_draw_list_create(granit_renderer renderer,
   if (list == nullptr)
     return GRANIT_ERROR_INVALID_ARGUMENT;
   *list = GRANIT_NULL_HANDLE;
-  if (renderer == GRANIT_NULL_HANDLE || desc == nullptr ||
-      desc->struct_size < GRANIT_DEBUG_DRAW_LIST_DESC_VERSION_1_SIZE ||
+  if (desc == nullptr || desc->struct_size < GRANIT_DEBUG_DRAW_LIST_DESC_VERSION_1_SIZE ||
       !zero(desc->reserved, std::size(desc->reserved)))
     return GRANIT_ERROR_INVALID_ARGUMENT;
+  if (renderer == GRANIT_NULL_HANDLE)
+    return GRANIT_ERROR_INVALID_HANDLE;
   uint64_t cache_size = 0;
   const auto renderer_result =
       granit_renderer_pipeline_cache_export(renderer, nullptr, &cache_size);

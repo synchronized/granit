@@ -56,6 +56,8 @@ template <typename T> bool valid_array(const T* values, uint32_t count) {
 }
 
 granit_result validate_renderer(granit_renderer renderer) {
+  if (renderer == GRANIT_NULL_HANDLE)
+    return GRANIT_ERROR_INVALID_HANDLE;
   uint64_t size = 0;
   return granit_renderer_pipeline_cache_export(renderer, nullptr, &size);
 }

@@ -243,9 +243,8 @@ extern "C" granit_result granit_mesh_create(granit_renderer renderer, const gran
   if (mesh == nullptr)
     return GRANIT_ERROR_INVALID_ARGUMENT;
   *mesh = GRANIT_NULL_HANDLE;
-  if (renderer == GRANIT_NULL_HANDLE || desc == nullptr ||
-      desc->struct_size < GRANIT_MESH_DESC_VERSION_1_SIZE || desc->reserved != 0 ||
-      !valid_topology(desc->topology) || desc->vertex_buffer_count == 0 ||
+  if (desc == nullptr || desc->struct_size < GRANIT_MESH_DESC_VERSION_1_SIZE ||
+      desc->reserved != 0 || !valid_topology(desc->topology) || desc->vertex_buffer_count == 0 ||
       desc->vertex_buffer_count > 16 || desc->vertex_buffers == nullptr ||
       desc->instance_count == 0 || desc->indexed > 1 ||
       (desc->indexed == 0 && (desc->vertex_count == 0 || desc->index_buffer != GRANIT_NULL_HANDLE ||
@@ -255,6 +254,8 @@ extern "C" granit_result granit_mesh_create(granit_renderer renderer, const gran
                                desc->index_type != GRANIT_INDEX_TYPE_UINT32)))) {
     return GRANIT_ERROR_INVALID_ARGUMENT;
   }
+  if (renderer == GRANIT_NULL_HANDLE)
+    return GRANIT_ERROR_INVALID_HANDLE;
   try {
     auto state = std::make_shared<mesh_state>();
     state->renderer = renderer;

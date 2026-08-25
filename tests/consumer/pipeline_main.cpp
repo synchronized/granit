@@ -20,7 +20,7 @@ int main() {
       granit::material_parameter_id("base_color") == 0)
     return 1;
   const granit_render_pipeline_desc desc = GRANIT_RENDER_PIPELINE_DESC_INIT;
-  if (pipeline.initialize(GRANIT_NULL_HANDLE, desc) != granit::result::invalid_argument ||
+  if (pipeline.initialize(GRANIT_NULL_HANDLE, desc) != granit::result::invalid_handle ||
       pipeline.valid())
     return 2;
 
