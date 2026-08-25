@@ -61,7 +61,6 @@ struct draw_fixture {
 
     data.Valid = true;
     data.CmdLists.push_back(&list);
-    data.CmdListsCount = 1;
     data.DisplayPos = {10.0F, 20.0F};
     data.DisplaySize = {100.0F, 50.0F};
     data.FramebufferScale = {2.0F, 2.0F};

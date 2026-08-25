@@ -15,7 +15,7 @@ result append_draw_data(const ImDrawData* draw_data, canvas_draw_list& canvas,
                         texture_resolver resolver, void* user_data) noexcept {
   if (draw_data == nullptr || !canvas.valid() || resolver == nullptr)
     return result::invalid_argument;
-  if (!draw_data->Valid || draw_data->CmdListsCount == 0)
+  if (!draw_data->Valid || draw_data->CmdLists.Size == 0)
     return result::success;
   const auto framebuffer_width = draw_data->DisplaySize.x * draw_data->FramebufferScale.x;
   const auto framebuffer_height = draw_data->DisplaySize.y * draw_data->FramebufferScale.y;
@@ -26,7 +26,7 @@ result append_draw_data(const ImDrawData* draw_data, canvas_draw_list& canvas,
   try {
     std::vector<granit_canvas_vertex> vertices;
     std::vector<std::uint32_t> indices;
-    for (int list_index = 0; list_index < draw_data->CmdListsCount; ++list_index) {
+    for (int list_index = 0; list_index < draw_data->CmdLists.Size; ++list_index) {
       const auto* source = draw_data->CmdLists[list_index];
       for (const auto& command : source->CmdBuffer) {
         if (command.UserCallback == ImDrawCallback_ResetRenderState)
