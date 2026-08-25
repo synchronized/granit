@@ -13,6 +13,7 @@
 #include <granit/math/types.hpp>
 #include <granit/renderer/buffer.hpp>
 #include <granit/renderer/command_recorder.hpp>
+#include <granit/renderer/frame_context.hpp>
 #include <granit/renderer/pipeline.hpp>
 #include <granit/renderer/render_target.hpp>
 #include <granit/renderer/renderer.hpp>
