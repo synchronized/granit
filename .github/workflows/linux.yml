@@ -5,6 +5,7 @@ name: Linux
 
 on:
   push:
+    branches: [main]
   pull_request:
 
 permissions:
@@ -102,6 +103,12 @@ jobs:
         linkage: [shared, static]
     steps:
       - uses: actions/checkout@v4
+      - name: 恢复 Integration 第三方源码缓存
+        uses: actions/cache@v4
+        with:
+          path: .cache/fetchcontent
+          key: >-
+            linux-fetchcontent-clang-${{ matrix.linkage }}-${{ hashFiles('CMakeLists.txt') }}
       - name: 选择 preset
         id: preset
         shell: bash
@@ -115,7 +122,8 @@ jobs:
           cmake --preset "${{ steps.preset.outputs.name }}" \
             -DGRANIT_BUILD_INTEGRATION_SDL3=ON \
             -DGRANIT_BUILD_INTEGRATION_IMGUI=ON \
-            -DGRANIT_FETCH_INTEGRATION_DEPENDENCIES=ON
+            -DGRANIT_FETCH_INTEGRATION_DEPENDENCIES=ON \
+            -DFETCHCONTENT_BASE_DIR="$GITHUB_WORKSPACE/.cache/fetchcontent"
           cmake --build --preset "${{ steps.preset.outputs.name }}"
       - name: 运行 ImGui 转换测试
         shell: bash

@@ -5,7 +5,11 @@ name: Windows
 
 on:
   push:
+    branches: [main]
   pull_request:
+
+env:
+  SCCACHE_GHA_ENABLED: "true"
 
 jobs:
   msvc-install-consumer:
@@ -19,6 +23,8 @@ jobs:
       - uses: ilammy/msvc-dev-cmd@v1
         with:
           arch: x64
+      - name: 启用 MSVC 编译缓存
+        uses: mozilla-actions/sccache-action@v0.0.11
       - name: 选择 preset
         id: preset
         shell: pwsh
@@ -28,7 +34,9 @@ jobs:
       - name: 配置、构建与测试
         shell: pwsh
         run: |
-          cmake --preset '${{ steps.preset.outputs.name }}'
+          cmake --preset '${{ steps.preset.outputs.name }}' `
+            -DCMAKE_C_COMPILER_LAUNCHER=sccache `
+            -DCMAKE_CXX_COMPILER_LAUNCHER=sccache
           cmake --build --preset '${{ steps.preset.outputs.name }}'
           # 托管 Windows Runner 没有 Vulkan ICD；GPU 运行测试由 Linux Lavapipe 矩阵覆盖。
           ctest --preset '${{ steps.preset.outputs.name }}' `
@@ -56,7 +64,9 @@ jobs:
           $prefix = "$PWD/build/install/$preset"
           $consumer = "$PWD/build/consumer/$preset"
           cmake -S tests/consumer -B $consumer -G Ninja -DCMAKE_BUILD_TYPE=Release `
-            -DCMAKE_PREFIX_PATH="$prefix"
+            -DCMAKE_PREFIX_PATH="$prefix" `
+            -DCMAKE_C_COMPILER_LAUNCHER=sccache `
+            -DCMAKE_CXX_COMPILER_LAUNCHER=sccache
           cmake --build $consumer
           if ((Test-Path "$consumer/granit.dll") -or
               (Test-Path "$consumer/granit_render_pipeline.dll") -or
