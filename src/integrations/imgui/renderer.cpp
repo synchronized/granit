@@ -10,6 +10,18 @@
 #include <vector>
 
 namespace granit::integration::imgui {
+namespace {
+
+std::uint32_t premultiply_color(std::uint32_t color) noexcept {
+  const auto alpha = (color >> 24U) & 0xffU;
+  const auto premultiply = [alpha](std::uint32_t channel) {
+    return (channel * alpha + 127U) / 255U;
+  };
+  return (alpha << 24U) | (premultiply((color >> 16U) & 0xffU) << 16U) |
+         (premultiply((color >> 8U) & 0xffU) << 8U) | premultiply(color & 0xffU);
+}
+
+} // namespace
 
 result append_draw_data(const ImDrawData* draw_data, canvas_draw_list& canvas,
                         texture_resolver resolver, void* user_data) noexcept {
@@ -61,7 +73,7 @@ result append_draw_data(const ImDrawData* draw_data, canvas_draw_list& canvas,
               .y = (vertex.pos.y - draw_data->DisplayPos.y) * draw_data->FramebufferScale.y,
               .u = vertex.uv.x,
               .v = vertex.uv.y,
-              .color = vertex.col,
+              .color = premultiply_color(vertex.col),
           };
         }
         for (auto& index : indices)

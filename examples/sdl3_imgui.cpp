@@ -14,6 +14,7 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <cstdio>
 #include <cstring>
 #include <iostream>
 #include <memory>
@@ -137,10 +138,8 @@ granit::result upload_font_atlas(granit_renderer renderer, granit::texture& text
   for (std::size_t offset = 0; offset < byte_count; offset += 4) {
     const auto alpha = pixels[offset + 3];
     for (std::size_t channel = 0; channel < 3; ++channel) {
-      premultiplied_pixels[offset + channel] =
-          static_cast<std::byte>((static_cast<std::uint32_t>(pixels[offset + channel]) * alpha +
-                                  127U) /
-                                 255U);
+      premultiplied_pixels[offset + channel] = static_cast<std::byte>(
+          (static_cast<std::uint32_t>(pixels[offset + channel]) * alpha + 127U) / 255U);
     }
     premultiplied_pixels[offset + 3] = static_cast<std::byte>(alpha);
   }
@@ -284,7 +283,8 @@ int main(int argc, char** argv) {
   if (granit::succeeded(result)) {
     result = swapchain.initialize(renderer.native_handle(), surface.native_handle(),
                                   {.width = static_cast<std::uint32_t>(pixel_width),
-                                   .height = static_cast<std::uint32_t>(pixel_height)});
+                                   .height = static_cast<std::uint32_t>(pixel_height),
+                                   .presentation = granit::present_mode::immediate});
   }
   granit::swapchain_info swapchain_info;
   if (granit::succeeded(result))
@@ -311,6 +311,7 @@ int main(int argc, char** argv) {
   bool recreate = false;
   bool validation_overlay = true;
   float render_scale = 1;
+  std::uint64_t last_title_update = 0;
   std::uint32_t rendered_frames = 0;
   while (running) {
     SDL_Event event{};
@@ -330,7 +331,8 @@ int main(int argc, char** argv) {
       continue;
     if (recreate) {
       result = swapchain.recreate({.width = static_cast<std::uint32_t>(pixel_width),
-                                   .height = static_cast<std::uint32_t>(pixel_height)});
+                                   .height = static_cast<std::uint32_t>(pixel_height),
+                                   .presentation = granit::present_mode::immediate});
       if (result == granit::result::not_ready)
         continue;
       if (granit::failed(result) || granit::failed(result = swapchain.query_info(swapchain_info))) {
@@ -341,9 +343,14 @@ int main(int argc, char** argv) {
 
     ImGui_ImplSDL3_NewFrame();
     ImGui::NewFrame();
-    ImGui::Begin("Granit Integration");
+    constexpr auto panel_flags =
+        ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize;
+    ImGui::Begin("Granit Integration", nullptr, panel_flags);
     ImGui::TextUnformatted("SDL3 owns the window and input; Granit Canvas renders ImGui.");
     ImGui::Text("Framebuffer: %u x %u", swapchain_info.width, swapchain_info.height);
+    ImGui::Text("Presentation: %s", swapchain_info.presentation == granit::present_mode::immediate
+                                        ? "Immediate"
+                                        : "FIFO fallback");
     ImGui::Separator();
     ImGui::Checkbox("Validation overlay", &validation_overlay);
     ImGui::SliderFloat("Render scale", &render_scale, 0.5F, 2, "%.2fx");
@@ -353,6 +360,14 @@ int main(int argc, char** argv) {
     ImGui::TextDisabled("Modern Granit dark theme");
     ImGui::End();
     ImGui::Render();
+    const auto now = SDL_GetTicks();
+    if (now - last_title_update >= 500) {
+      char title[96]{};
+      std::snprintf(title, sizeof(title), "Granit SDL3 + ImGui | %.0f FPS",
+                    ImGui::GetIO().Framerate);
+      SDL_SetWindowTitle(window.get(), title);
+      last_title_update = now;
+    }
     result = canvas.clear();
     if (granit::succeeded(result)) {
       result = granit::integration::imgui::append_draw_data(ImGui::GetDrawData(), canvas,
