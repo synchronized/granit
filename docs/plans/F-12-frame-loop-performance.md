@@ -98,8 +98,9 @@ F-12A/B 完成前不改动提交或同步架构。后续阶段只有在目标成
 1. **F-12A 可重复基线（已完成）**：SDL3 + ImGui 示例已增加低扰动阶段计时、预热、固定采样
    窗口和 CSV 输出，并按真实帧槽把延迟回读的 GPU Timestamp 关联到原提交帧。运行参数与字段
    语义见[示例指南](../guides/examples.md)。
-2. **F-12B 热点归因**：执行完整矩阵，并结合 CPU profiler、GPU timestamp 和等待调用点，区分
-   应用 CPU、Recorder、Registry/锁、资源保留、驱动提交、acquire、present 与 GPU 成本。
+2. **F-12B 热点归因（已完成）**：48 组完整矩阵确认 FIFO 由 acquire 的显示节奏主导；Immediate
+   生产路径已达到约 1,600～2,800 FPS，Canvas/Submit 不是主导成本。Validation 增量集中在
+   Canvas Record 与 Submit，后续进入 F-12E 细分。数据见[F-12B 性能基线][f12b-result]。
 3. **F-12C Recorder/提交优化**：仅在 F-12B 证明成立时，缩短资源查询与保留路径、合并重复状态
    校验或减少 Queue 提交固定成本；不得缓存跨 reset 后失效的裸内部指针。
 4. **F-12D Swapchain 调度优化**：仅在 acquire/present 或帧槽复用被确认是可控热点时，调整等待
@@ -136,3 +137,5 @@ F-12A/B 完成前不改动提交或同步架构。后续阶段只有在目标成
 - 标题栏 FPS、外部叠加层和 benchmark 输出可能采用不同采样窗口；必须明确数据源，避免把展示
   平滑差异误判为性能没有变化。
 - 若热点最终位于 ImGui 自身 Demo 构建或平台事件循环，应记录边界并停止 Granit 内部改动。
+
+[f12b-result]: ../../benchmarks/results/2026-08-25-windows-clang-frame-loop-c187748.md

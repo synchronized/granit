@@ -80,7 +80,7 @@
 | F-09 GPU 查询与标记 | P1 | Timestamp 已完成；统计与调试标记归入 S-02 |
 | [F-10 公共帧上下文](plans/F-10-public-frame-context.md) | P1 | 已完成 |
 | [F-11 Canvas 绑定缓存](plans/F-11-canvas-binding-cache.md) | P1 | 已完成；跨平台 CI 已通过 |
-| [F-12 帧循环性能诊断与提交优化](plans/F-12-frame-loop-performance.md) | P1 | F-12A 已完成；待热点归因 |
+| [F-12 帧循环性能诊断与提交优化](plans/F-12-frame-loop-performance.md) | P1 | F-12A/B 已完成；进入 Validation 归因 |
 
 ## 五、基础渲染
 
@@ -159,7 +159,7 @@
 
 ## 近期执行顺序
 
-1. 按 F-12A～F-12B 建立全帧性能基线并完成热点归因；只有证据充分时才进入提交或调度优化。
+1. 按 F-12E 归因 Validation 下 Canvas Record 与 Submit 增量；生产路径暂无通用提交改造依据。
 2. 按 S-09A～S-09D 完成 0.3.0 使用路径、契约、安装文档和诊断审计；没有证据时不新增其他 C ABI。
 3. S-06D 最终验收等待稳定版本与 component 范围决策；不在 0.x 阶段提前宣布稳定。
 4. H-09 的透明 PBR、CSM、Clustered Forward 与 Bindless 只在各自重新评估条件满足后独立恢复，
