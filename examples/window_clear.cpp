@@ -10,7 +10,7 @@
 
 namespace {
 
-granit::result render_frame(granit::swapchain& swapchain, granit::command_recorder& recorder,
+granit::result render_frame(granit::swapchain& swapchain, granit::frame_context& context,
                             std::uint32_t width, std::uint32_t height, bool& needs_recreate) {
   granit::acquired_frame frame;
   auto result = swapchain.acquire(frame);
@@ -21,8 +21,10 @@ granit::result render_frame(granit::swapchain& swapchain, granit::command_record
   granit_texture texture = GRANIT_NULL_HANDLE;
   granit_texture_view view = GRANIT_NULL_HANDLE;
   result = swapchain.backbuffer(frame.image_index, texture, view);
+  granit::frame_recording recording;
   if (granit::succeeded(result))
-    result = recorder.begin();
+    result = context.begin(frame, recording);
+  auto& recorder = recording.recorder();
   const granit::color_attachment_desc color{
       .view = view, .clear_value = {.red = 0.04F, .green = 0.12F, .blue = 0.22F, .alpha = 1.0F}};
   const granit::rendering_desc rendering{.color_attachments = std::span{&color, 1},
@@ -32,14 +34,17 @@ granit::result render_frame(granit::swapchain& swapchain, granit::command_record
   if (granit::succeeded(result))
     result = recorder.end_rendering();
   if (granit::succeeded(result))
-    result = recorder.end();
-  if (granit::succeeded(result))
-    result = recorder.submit(frame);
+    result = recording.submit();
   if (granit::succeeded(result))
     result = swapchain.present(frame);
   needs_recreate = needs_recreate || frame.needs_recreate;
-  const auto reset_result = recorder.reset();
-  return granit::failed(result) ? result : reset_result;
+  if (granit::failed(result)) {
+    if (recording.valid())
+      static_cast<void>(recording.abort());
+    if (frame.valid())
+      static_cast<void>(swapchain.cancel(frame));
+  }
+  return result;
 }
 
 } // namespace
@@ -81,9 +86,9 @@ int main(int argc, char** argv) {
     result = swapchain.initialize(renderer.native_handle(), surface.native_handle(),
                                   {.width = width, .height = height});
   }
-  granit::command_recorder recorder;
+  granit::frame_context frame_context;
   if (granit::succeeded(result))
-    result = recorder.initialize(renderer.native_handle());
+    result = frame_context.initialize(renderer.native_handle());
 
   bool running = granit::succeeded(result);
   bool recreate = false;
@@ -123,7 +128,7 @@ int main(int argc, char** argv) {
       recreate = false;
     }
 
-    result = render_frame(swapchain, recorder, width, height, recreate);
+    result = render_frame(swapchain, frame_context, width, height, recreate);
     if (result == granit::result::out_of_date) {
       result = granit::result::success;
       recreate = true;

@@ -67,7 +67,7 @@ granit::result initialize_pipeline(granit_renderer renderer, granit::pipeline_la
                                         .depth_bias = std::nullopt});
 }
 
-granit::result render_frame(granit::swapchain& swapchain, granit::command_recorder& recorder,
+granit::result render_frame(granit::swapchain& swapchain, granit::frame_context& context,
                             granit::graphics_pipeline& pipeline, granit::buffer& vertex_buffer,
                             std::uint32_t width, std::uint32_t height, bool& needs_recreate) {
   granit::acquired_frame frame;
@@ -80,8 +80,10 @@ granit::result render_frame(granit::swapchain& swapchain, granit::command_record
   granit_texture_view view = GRANIT_NULL_HANDLE;
   if (granit::succeeded(result))
     result = swapchain.backbuffer(frame.image_index, texture, view);
+  granit::frame_recording recording;
   if (granit::succeeded(result))
-    result = recorder.begin();
+    result = context.begin(frame, recording);
+  auto& recorder = recording.recorder();
   if (granit::succeeded(result))
     result = recorder.bind_graphics_pipeline(pipeline.native_handle());
   const granit::viewport viewport{0, 0, static_cast<float>(width), static_cast<float>(height),
@@ -105,14 +107,17 @@ granit::result render_frame(granit::swapchain& swapchain, granit::command_record
   if (granit::succeeded(result))
     result = recorder.end_rendering();
   if (granit::succeeded(result))
-    result = recorder.end();
-  if (granit::succeeded(result))
-    result = recorder.submit(frame);
+    result = recording.submit();
   if (granit::succeeded(result))
     result = swapchain.present(frame);
   needs_recreate = needs_recreate || frame.needs_recreate;
-  const auto reset_result = recorder.reset();
-  return granit::failed(result) ? result : reset_result;
+  if (granit::failed(result)) {
+    if (recording.valid())
+      static_cast<void>(recording.abort());
+    if (frame.valid())
+      static_cast<void>(swapchain.cancel(frame));
+  }
+  return result;
 }
 
 } // namespace
@@ -191,9 +196,9 @@ int main(int argument_count, char** arguments) {
     result = vertex_buffer.initialize(
         renderer.native_handle(), {.size = sizeof(vertices), .usage = granit::buffer_usage::vertex},
         std::as_bytes(std::span{vertices}));
-  granit::command_recorder recorder;
+  granit::frame_context frame_context;
   if (granit::succeeded(result))
-    result = recorder.initialize(renderer.native_handle());
+    result = frame_context.initialize(renderer.native_handle());
   if (granit::failed(result)) {
     std::cerr << "初始化失败：" << granit::result_message(result) << '\n';
     DestroyWindow(window);
@@ -246,7 +251,8 @@ int main(int argument_count, char** arguments) {
       height = next_info.height;
       recreate = false;
     }
-    result = render_frame(swapchain, recorder, pipeline, vertex_buffer, width, height, recreate);
+    result =
+        render_frame(swapchain, frame_context, pipeline, vertex_buffer, width, height, recreate);
     if (result == granit::result::out_of_date) {
       recreate = true;
       continue;

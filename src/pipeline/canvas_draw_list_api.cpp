@@ -24,6 +24,8 @@ constexpr uint64_t generation_mask = UINT64_C(0x00ffffff);
 constexpr uint64_t type_value = UINT64_C(0x44);
 
 struct canvas_draw_list_state {
+  explicit canvas_draw_list_state(uint32_t frame_slot_count) : geometry(frame_slot_count) {}
+
   ~canvas_draw_list_state() {
     if (material != GRANIT_NULL_HANDLE)
       static_cast<void>(granit_material_destroy(renderer, material));
@@ -155,7 +157,11 @@ extern "C" granit_result granit_canvas_draw_list_create(granit_renderer renderer
   if (renderer_result != GRANIT_SUCCESS)
     return renderer_result;
   try {
-    auto state = std::make_shared<canvas_draw_list_state>();
+    const auto frame_slot_count = desc->frame_slot_count;
+    if (frame_slot_count == 0 || frame_slot_count > GRANIT_MAX_FRAMES_IN_FLIGHT) {
+      return GRANIT_ERROR_INVALID_ARGUMENT;
+    }
+    auto state = std::make_shared<canvas_draw_list_state>(frame_slot_count);
     state->renderer = renderer;
     const auto reserve_result = state->list.reserve(
         desc->initial_vertex_capacity, desc->initial_index_capacity, desc->initial_item_capacity);
@@ -295,21 +301,15 @@ extern "C" granit_result granit_canvas_draw_list_record(granit_renderer renderer
        desc->load_operation != GRANIT_ATTACHMENT_LOAD_OPERATION_DISCARD)) {
     return GRANIT_ERROR_INVALID_ARGUMENT;
   }
-  const auto frame_slot = desc->struct_size >= GRANIT_CANVAS_RECORD_DESC_VERSION_2_SIZE
-                              ? desc->frame_slot
-                              : GRANIT_CANVAS_FRAME_SLOT_AUTO;
-  if (frame_slot != GRANIT_CANVAS_FRAME_SLOT_AUTO &&
-      frame_slot >= GRANIT_CANVAS_FRAME_SLOT_COUNT) {
-    return GRANIT_ERROR_INVALID_ARGUMENT;
-  }
-  if (desc->struct_size >= GRANIT_CANVAS_RECORD_DESC_VERSION_2_SIZE &&
-      !reserved_is_zero(desc->reserved_2, std::size(desc->reserved_2))) {
-    return GRANIT_ERROR_INVALID_ARGUMENT;
-  }
+  const auto frame_slot = desc->frame_slot;
   const auto state = find_list(renderer, list);
   if (state == nullptr)
     return GRANIT_ERROR_INVALID_HANDLE;
   std::scoped_lock lock{state->mutex};
+  if (frame_slot != GRANIT_CANVAS_FRAME_SLOT_AUTO &&
+      frame_slot >= state->geometry.frame_slot_count()) {
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  }
   if (state->list.items().empty())
     return GRANIT_SUCCESS;
   auto result = ensure_material(*state);

@@ -9,12 +9,12 @@
 #include <granit/renderer/buffer.h>
 
 #include <algorithm>
-#include <array>
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
 #include <limits>
 #include <utility>
+#include <vector>
 
 namespace granit::pipeline::detail {
 
@@ -23,7 +23,8 @@ namespace granit::pipeline::detail {
  */
 class canvas_geometry_upload {
 public:
-  canvas_geometry_upload() = default;
+  explicit canvas_geometry_upload(std::uint32_t slot_count = GRANIT_DEFAULT_FRAMES_IN_FLIGHT)
+      : slots_(slot_count), current_slot_(slots_.size() - 1) {}
   ~canvas_geometry_upload() { reset(); }
 
   canvas_geometry_upload(const canvas_geometry_upload&) = delete;
@@ -97,8 +98,9 @@ public:
       }
     }
     renderer_ = GRANIT_NULL_HANDLE;
-    slots_ = {};
-    current_slot_ = slots_.size() - 1;
+    for (auto& slot : slots_)
+      slot = {};
+    current_slot_ = slots_.empty() ? 0 : slots_.size() - 1;
     vertex_count_ = 0;
     index_count_ = 0;
   }
@@ -115,6 +117,9 @@ public:
   }
   [[nodiscard]] std::uint32_t vertex_count() const noexcept { return vertex_count_; }
   [[nodiscard]] std::uint32_t index_count() const noexcept { return index_count_; }
+  [[nodiscard]] std::uint32_t frame_slot_count() const noexcept {
+    return static_cast<std::uint32_t>(slots_.size());
+  }
   [[nodiscard]] const void* vertex_data() const noexcept {
     return slots_[current_slot_].vertex_mapping;
   }
@@ -181,15 +186,15 @@ private:
 
   void move_from(canvas_geometry_upload& other) noexcept {
     renderer_ = std::exchange(other.renderer_, GRANIT_NULL_HANDLE);
-    slots_ = std::exchange(other.slots_, {});
-    current_slot_ = std::exchange(other.current_slot_, other.slots_.size() - 1);
+    slots_ = std::move(other.slots_);
+    current_slot_ = std::exchange(other.current_slot_, 0);
     vertex_count_ = std::exchange(other.vertex_count_, 0);
     index_count_ = std::exchange(other.index_count_, 0);
   }
 
   granit_renderer renderer_ = GRANIT_NULL_HANDLE;
-  std::array<upload_slot, 3> slots_{};
-  std::size_t current_slot_ = slots_.size() - 1;
+  std::vector<upload_slot> slots_;
+  std::size_t current_slot_ = 0;
   std::uint32_t vertex_count_ = 0;
   std::uint32_t index_count_ = 0;
 };

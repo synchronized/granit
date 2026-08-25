@@ -6,7 +6,7 @@
 ## 状态
 
 - 设计状态：已确认
-- 实现状态：F-10A～F-10C 已实现，F-10D～F-10F 待开始
+- 实现状态：已完成
 - 路线图任务：F-10
 - 优先级：P1
 - 前置依赖：F-03、F-04、F-06、F-07、S-09A
@@ -18,7 +18,7 @@ Renderer 内部已经按 `frames_in_flight` 保存 Fence、Semaphore 和提交�
 Command Recorder，并在每次 submit/present 后立即调用 `reset`。`reset` 必须等待该 Recorder 的
 GPU 提交完成，因而把本可并行的 CPU 录制与 GPU 执行重新串行化。
 
-SDL3 + ImGui 示例已经用三个 Recorder 和三个 Canvas 上传槽验证了问题与优化方向，但当前实现仍有
+实施前，SDL3 + ImGui 示例曾用三个 Recorder 和三个 Canvas 上传槽验证问题与优化方向，并存在
 以下限制：
 
 - 示例用本地帧序号推导槽位，而不是使用 Swapchain acquire 的真实槽位；
@@ -137,12 +137,14 @@ Recorder，不能提交部分命令，也不能把无效状态留给下一帧。
    和诊断；覆盖 1、2、3、4 个 frames-in-flight。
 3. **F-10C C++20 包装（已完成）**：提供 move-only RAII 和非拥有 Recorder 包装，不复制运行时
    状态；正常提交显式返回结果，未提交录制在析构时 abort。
-4. **F-10D 上传槽统一**：移除 Canvas 固定三槽假设，使上传容量按 Context 槽数初始化并由真实
-   `frame_slot` 选择；旧 V1/V2 描述结构保持兼容或提供明确迁移。
-5. **F-10E 示例迁移**：迁移 Clear、Triangle、HDR、SDL3、XCB 和 Wayland 实时窗口示例；
-   `sdl3_imgui` 删除本地 Recorder 数组，Render Pipeline Window 审计后复用同一抽象。
-6. **F-10F 性能与文档**：记录 CPU 帧时间、GPU 时间、Present 等待和槽位等待；更新 Reference、
-   Guide、安装 Consumer 与示例说明，再决定是否将其作为推荐默认帧循环。
+4. **F-10D 上传槽统一（已实现）**：Canvas 创建描述支持 1～4 个上传槽，并由真实
+   `frame_slot` 选择。项目尚未稳定 ABI，因此不保留旧固定三槽描述的兼容分支。
+5. **F-10E 示例迁移（已实现）**：Clear、Triangle、HDR、SDL3、XCB、Wayland 和 ImGui
+   实时窗口示例统一使用 Frame Context；`sdl3_imgui` 已删除本地 Recorder 数组。Render Pipeline
+   Window 不直接管理 Recorder，继续使用 Render Pipeline 自身的提交模型。
+6. **F-10F 性能与文档（已实现）**：示例报告 CPU、GPU、Present 和槽位等待，完成 2,000 帧
+   验证；Frame Context 已作为实时窗口推荐帧循环。结果见
+   [F-10 验证记录](../records/2026-08-25-f10-frame-context-validation.md)。
 
 ## 测试与验收
 
@@ -162,11 +164,6 @@ Recorder，不能提交部分命令，也不能把无效状态留给下一帧。
 
 - `granit_frame_context` 是否应只管理 Recorder，还是同时提供可扩展的逐帧用户数据挂接点；首版
   倾向前者，避免形成通用对象容器。
-- `abort` 对 recording Recorder 的跨后端可实现性需要先通过 Vulkan 原型确认。
-- Render Pipeline 当前部分入口内部创建、提交并等待 Recorder；窗口入口是否应改为接收外部
-  Frame Context，必须避免同时保留两套提交模型。
-- Canvas V2 已公开固定三槽语义。若改为动态槽数，需要保持旧调用方安全，并为 4 槽 Renderer
-  定义兼容行为。
+- 当前只有 Vulkan 后端；新增后端必须保持 `abort` 销毁并重建未完成 Recorder 的语义。
+- Render Pipeline Window 继续使用管线自身的提交模型，不同时叠加 Frame Context。
 - 多帧轮转可能增加输入到显示的延迟；默认槽数应跟随 Renderer 配置，不由高层组件擅自增加。
-- 公共 C ABI 只在 F-10A 证明 C++ 包装无法单独解决真实槽位和所有权问题后冻结；若内部行为或
-  轻量包装即可满足代表性路径，应缩小 ABI，而不是为了接口对称扩大表面。

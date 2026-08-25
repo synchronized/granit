@@ -77,6 +77,13 @@ TEST_CASE("公共Canvas Draw List拒绝无效输入、跨Renderer与旧句柄") 
 
   granit_canvas_draw_list list = GRANIT_NULL_HANDLE;
   granit_canvas_draw_list_desc desc = GRANIT_CANVAS_DRAW_LIST_DESC_INIT;
+  desc.frame_slot_count = 0;
+  CHECK(granit_canvas_draw_list_create(first.native_handle(), &desc, &list) ==
+        GRANIT_ERROR_INVALID_ARGUMENT);
+  desc.frame_slot_count = GRANIT_MAX_FRAMES_IN_FLIGHT + 1;
+  CHECK(granit_canvas_draw_list_create(first.native_handle(), &desc, &list) ==
+        GRANIT_ERROR_INVALID_ARGUMENT);
+  desc.frame_slot_count = GRANIT_DEFAULT_FRAMES_IN_FLIGHT;
   REQUIRE(granit_canvas_draw_list_create(first.native_handle(), &desc, &list) == GRANIT_SUCCESS);
   const granit_canvas_draw_state state{11, 21, {}};
   CHECK(granit_canvas_draw_list_append(second.native_handle(), list, vertices.data(), 3,
@@ -103,12 +110,9 @@ TEST_CASE("公共Canvas Draw List拒绝无效输入、跨Renderer与旧句柄") 
   record.color_format = GRANIT_TEXTURE_FORMAT_RGBA8_UNORM;
   record.width = 32;
   record.height = 32;
-  record.frame_slot = GRANIT_CANVAS_FRAME_SLOT_COUNT;
+  record.frame_slot = GRANIT_DEFAULT_FRAMES_IN_FLIGHT;
   CHECK(granit_canvas_draw_list_record(first.native_handle(), 1, list, &record) ==
         GRANIT_ERROR_INVALID_ARGUMENT);
-  record.struct_size = GRANIT_CANVAS_RECORD_DESC_VERSION_1_SIZE;
-  CHECK(granit_canvas_draw_list_record(first.native_handle(), 1, list, &record) == GRANIT_SUCCESS);
-  record.struct_size = GRANIT_CANVAS_RECORD_DESC_VERSION_2_SIZE;
   record.frame_slot = GRANIT_CANVAS_FRAME_SLOT_AUTO;
   CHECK(granit_canvas_draw_list_record(first.native_handle(), 1, GRANIT_NULL_HANDLE, &record) ==
         GRANIT_ERROR_INVALID_HANDLE);

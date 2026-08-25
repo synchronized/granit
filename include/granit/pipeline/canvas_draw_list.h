@@ -48,16 +48,19 @@ typedef struct granit_canvas_draw_list_desc {
   uint32_t initial_vertex_capacity;
   uint32_t initial_index_capacity;
   uint32_t initial_item_capacity;
-  uint32_t reserved[4];
+  /** 动态几何上传槽数量，必须为 1～GRANIT_MAX_FRAMES_IN_FLIGHT。 */
+  uint32_t frame_slot_count;
+  uint32_t reserved[3];
 } granit_canvas_draw_list_desc;
 
 #define GRANIT_CANVAS_DRAW_LIST_DESC_VERSION_1_SIZE                                                \
-  ((uint32_t)(offsetof(granit_canvas_draw_list_desc, reserved) + sizeof(uint32_t[4])))
+  ((uint32_t)(offsetof(granit_canvas_draw_list_desc, reserved) + sizeof(uint32_t[3])))
 
 #define GRANIT_CANVAS_DRAW_LIST_DESC_INIT                                                          \
   {                                                                                                \
-    (uint32_t)sizeof(granit_canvas_draw_list_desc), UINT32_C(0), UINT32_C(0), UINT32_C(0), {       \
-      UINT32_C(0), UINT32_C(0), UINT32_C(0), UINT32_C(0)                                           \
+    (uint32_t)sizeof(granit_canvas_draw_list_desc), UINT32_C(0), UINT32_C(0), UINT32_C(0),         \
+        GRANIT_DEFAULT_FRAMES_IN_FLIGHT, {                                                         \
+      UINT32_C(0), UINT32_C(0), UINT32_C(0)                                                        \
     }                                                                                              \
   }
 
@@ -110,26 +113,19 @@ typedef struct granit_canvas_record_desc {
   uint32_t height;
   granit_attachment_load_operation load_operation;
   uint32_t encode_srgb;
-  uint32_t reserved[3];
   uint32_t frame_slot;
-  uint32_t reserved_2[3];
+  uint32_t reserved[3];
 } granit_canvas_record_desc;
 
-#define GRANIT_CANVAS_RECORD_DESC_VERSION_1_SIZE                                                   \
-  ((uint32_t)(offsetof(granit_canvas_record_desc, reserved) + sizeof(uint32_t[3])))
-#define GRANIT_CANVAS_RECORD_DESC_VERSION_2_SIZE                                                   \
-  ((uint32_t)(offsetof(granit_canvas_record_desc, reserved_2) + sizeof(uint32_t[3])))
+#define GRANIT_CANVAS_RECORD_DESC_VERSION_1_SIZE ((uint32_t)sizeof(granit_canvas_record_desc))
 
-#define GRANIT_CANVAS_FRAME_SLOT_COUNT UINT32_C(3)
 #define GRANIT_CANVAS_FRAME_SLOT_AUTO UINT32_MAX
 
 #define GRANIT_CANVAS_RECORD_DESC_INIT                                                             \
   {                                                                                                \
     (uint32_t)sizeof(granit_canvas_record_desc), GRANIT_NULL_HANDLE,                               \
         GRANIT_TEXTURE_FORMAT_UNDEFINED, UINT32_C(0), UINT32_C(0),                                 \
-        GRANIT_ATTACHMENT_LOAD_OPERATION_LOAD, UINT32_C(0), {                                      \
-      UINT32_C(0), UINT32_C(0), UINT32_C(0)                                                        \
-    }, GRANIT_CANVAS_FRAME_SLOT_AUTO, {                                                            \
+        GRANIT_ATTACHMENT_LOAD_OPERATION_LOAD, UINT32_C(0), GRANIT_CANVAS_FRAME_SLOT_AUTO, {       \
       UINT32_C(0), UINT32_C(0), UINT32_C(0)                                                        \
     }                                                                                              \
   }
