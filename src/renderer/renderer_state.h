@@ -243,6 +243,7 @@ public:
 
   void set_domain(std::uint32_t domain) noexcept { domain_ = domain; }
   [[nodiscard]] std::uint32_t domain() const noexcept { return domain_; }
+  [[nodiscard]] std::size_t frame_slot_count() const noexcept { return frame_slots_.size(); }
   [[nodiscard]] bool validation_enabled() const noexcept { return validation_enabled_; }
   [[nodiscard]] bool device_lost() const noexcept {
     return device_status_.gate() == GRANIT_ERROR_DEVICE_LOST;
