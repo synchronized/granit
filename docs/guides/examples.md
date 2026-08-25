@@ -45,7 +45,22 @@ Win32 窗口示例在 Windows 构建；检测到 XCB 开发包时，Linux 额外
 - `granit_sdl3_imgui_example`：同时启用 SDL3、ImGui Integration 和锁定依赖时构建；复用 ImGui
   官方 SDL3 Platform Backend，并验证字体 Atlas、自定义 Texture ID、输入、Draw Data 转换、
   Canvas、Resize 与 Present。`--smoke-test` 渲染少量帧后自动退出；`--frames-in-flight 1..4`
-  选择帧槽数，`--no-validation` 关闭 Validation，`--no-custom-texture` 提供单字体性能对照。
+  选择帧槽数，`--no-validation` 关闭 Validation，`--no-custom-texture` 提供单字体性能对照；
+  `--present-mode immediate|fifo` 选择呈现模式。
+
+SDL3 + ImGui 示例也能在预热后将逐帧原始数据一次性写为 CSV，采样期间不会逐帧格式化或访问
+磁盘：
+
+```powershell
+.\build\windows-clang-release\bin\granit_sdl3_imgui_example.exe `
+  --no-validation --present-mode immediate --frames-in-flight 3 `
+  --profile-warmup 120 --profile-frames 600 --profile-output imgui-profile.csv
+```
+
+CSV 同时记录窗口尺寸、帧槽数、Validation、实际 Present Mode、UI 负载和 GPU Timestamp 开关，
+以及 total、event、ImGui、转换、acquire、槽等待、Canvas Record、submit、present、渲染剩余项和
+全帧剩余项。GPU Timestamp 按真实帧槽回填到原提交帧；程序退出前尚未轮转回收的最后几个样本会
+保留空值，分析时不应按零处理。
 
 ## 内部联调示例
 

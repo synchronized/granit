@@ -60,8 +60,9 @@ D-03-graphics-pipeline.md
 - [F-07：窗口帧恢复边界](F-07-recovery-boundaries.md)——Frame 回收、零尺寸、Surface Lost 与
   Renderer 全局 Device Lost 门禁已完成。
 - [F-10：公共帧上下文与 Recorder 轮转](F-10-public-frame-context.md)——已完成。
-- [F-11：Canvas 绑定缓存与多纹理录制](F-11-canvas-binding-cache.md)——草案；先固化缓存生命周期与
-  单 Rendering 区间契约。
+- [F-11：Canvas 绑定缓存与多纹理录制](F-11-canvas-binding-cache.md)——已完成；跨平台 CI 已通过。
+- [F-12：帧循环性能诊断与提交优化](F-12-frame-loop-performance.md)——已完成；全帧基线与
+  Validation 归因表明生产路径暂无通用提交或 Swapchain 调度改造依据。
 - [D-01：Shader 输入与离线编译策略](D-01-shader-input.md)——运行时 SPIR-V 输入、离线工具、
   反射边界和错误语义已确认。
 - [D-02：Shader Module 生命周期](D-02-shader-module.md)——SPIR-V 校验、Shader 句柄、Vulkan

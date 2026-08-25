@@ -23,3 +23,7 @@
 - [H-09D Render Pipeline 多光源曲线](2026-08-19-windows-clang-multi-light-7e14162.md)
 - [H-09E Render Pipeline 绑定压力曲线](2026-08-20-windows-clang-binding-pressure-7b3e246.md)
 - [F-11A Canvas 绑定 CPU/GPU 基线](2026-08-25-windows-clang-canvas-binding-f11a.md)
+- [F-11C Canvas 绑定缓存结果](2026-08-25-windows-clang-canvas-binding-f11c.md)
+- [F-11D Canvas 单 Rendering 区间结果](2026-08-25-windows-clang-canvas-binding-f11d.md)
+- [F-11E ImGui 验证记录](2026-08-25-windows-clang-canvas-binding-f11e.md)
+- [F-12B 帧循环性能基线](2026-08-25-windows-clang-frame-loop-c187748.md)
