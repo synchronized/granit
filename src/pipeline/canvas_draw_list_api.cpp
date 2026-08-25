@@ -28,6 +28,7 @@ struct canvas_draw_list_state {
       : geometry(frame_slot_count), bindings(frame_slot_count) {}
 
   ~canvas_draw_list_state() {
+    static_cast<void>(material_groups.reset());
     for (auto& binding : bindings)
       static_cast<void>(binding.reset());
     if (material != GRANIT_NULL_HANDLE)
@@ -39,6 +40,7 @@ struct canvas_draw_list_state {
   granit::pipeline::detail::canvas_draw_list list;
   granit::pipeline::detail::canvas_geometry_upload geometry;
   std::vector<granit::pipeline::detail::pbr_draw_bindings> bindings;
+  granit::pipeline::detail::canvas_material_group_cache material_groups;
   granit_material material = GRANIT_NULL_HANDLE;
 };
 
@@ -338,7 +340,8 @@ extern "C" granit_result granit_canvas_draw_list_record(granit_renderer renderer
          .object = object,
          .load_operation = desc->load_operation,
          .encode_srgb = desc->encode_srgb != 0},
-        state->list, state->geometry, state->bindings[state->geometry.current_frame_slot()]);
+        state->list, state->geometry, state->bindings[state->geometry.current_frame_slot()],
+        state->material_groups);
   }
   return result;
 }

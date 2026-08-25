@@ -168,6 +168,59 @@ granit_result material_gpu_instance::flush() {
   return GRANIT_SUCCESS;
 }
 
+granit_result material_gpu_instance::create_bind_group(std::span<const resource_override> overrides,
+                                                       granit_bind_group& bind_group) {
+  bind_group = GRANIT_NULL_HANDLE;
+  if (renderer_ == GRANIT_NULL_HANDLE || data_ == nullptr)
+    return GRANIT_ERROR_INVALID_HANDLE;
+
+  const auto dirty = data_->dirty();
+  if (!dirty.empty()) {
+    const auto bytes = data_->bytes().subspan(dirty.offset, dirty.size);
+    const auto result =
+        granit_buffer_write(renderer_, uniform_buffer_, dirty.offset, bytes.data(), bytes.size());
+    if (result != GRANIT_SUCCESS)
+      return result;
+    data_->clear_dirty();
+  }
+
+  std::vector<granit_bind_group_entry> entries;
+  try {
+    entries.reserve(resources_.size() + (uniform_buffer_ == GRANIT_NULL_HANDLE ? 0U : 1U));
+    if (uniform_buffer_ != GRANIT_NULL_HANDLE) {
+      entries.push_back({.binding = 0,
+                         .array_element = 0,
+                         .resource = uniform_buffer_,
+                         .offset = 0,
+                         .size = data_->bytes().size()});
+    }
+    for (const auto& binding : resources_) {
+      auto resource = binding.resource;
+      const auto found = std::ranges::find(overrides, binding.id, &resource_override::id);
+      if (found != overrides.end()) {
+        if (found->type != binding.type || found->resource == GRANIT_NULL_HANDLE)
+          return GRANIT_ERROR_INVALID_ARGUMENT;
+        resource = found->resource;
+      }
+      if (resource == GRANIT_NULL_HANDLE)
+        return GRANIT_ERROR_NOT_READY;
+      entries.push_back({.binding = binding.binding,
+                         .array_element = 0,
+                         .resource = resource,
+                         .offset = 0,
+                         .size = GRANIT_WHOLE_SIZE});
+    }
+  } catch (const std::bad_alloc&) {
+    return GRANIT_ERROR_OUT_OF_MEMORY;
+  }
+
+  granit_bind_group_desc desc = GRANIT_BIND_GROUP_DESC_INIT;
+  desc.layout = layout_;
+  desc.entry_count = static_cast<std::uint32_t>(entries.size());
+  desc.entries = entries.data();
+  return granit_bind_group_create(renderer_, &desc, &bind_group);
+}
+
 granit_result material_gpu_instance::prepare_migration(granit_bind_group_layout target_layout,
                                                        const material_metadata& target_metadata,
                                                        material_gpu_instance& target,

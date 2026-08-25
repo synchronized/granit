@@ -14,7 +14,8 @@ namespace granit::pipeline::detail {
 granit_result record_canvas_pass(granit_renderer renderer, granit_command_recorder recorder,
                                  const canvas_pass_desc& desc, const canvas_draw_list& list,
                                  const canvas_geometry_upload& geometry,
-                                 pbr_draw_bindings& bindings) noexcept {
+                                 pbr_draw_bindings& bindings,
+                                 canvas_material_group_cache& material_groups) noexcept {
   if (renderer == GRANIT_NULL_HANDLE || recorder == GRANIT_NULL_HANDLE ||
       desc.color == GRANIT_NULL_HANDLE || desc.color_format == GRANIT_TEXTURE_FORMAT_UNDEFINED ||
       desc.width == 0 || desc.height == 0 || desc.material == GRANIT_NULL_HANDLE) {
@@ -34,31 +35,25 @@ granit_result record_canvas_pass(granit_renderer renderer, granit_command_record
       return GRANIT_ERROR_INVALID_ARGUMENT;
   }
 
-  const auto update_material = [&](const canvas_draw_batch& batch) {
-    const std::array updates{
-        granit_material_parameter_update{granit_material_parameter_id("base_color_texture", 18),
-                                         GRANIT_MATERIAL_PARAMETER_TEXTURE_VIEW, 0, nullptr, 0,
-                                         batch.state.texture},
-        granit_material_parameter_update{granit_material_parameter_id("unlit_sampler", 13),
-                                         GRANIT_MATERIAL_PARAMETER_SAMPLER, 0, nullptr, 0,
-                                         batch.state.sampler}};
-    return granit_material_update(renderer, desc.material, updates.data(),
-                                  static_cast<std::uint32_t>(updates.size()));
-  };
-  auto result = update_material(batches.front());
+  auto result = GRANIT_SUCCESS;
   material_draw_state material;
   const material_draw_request request{
       .pass = granit::material::make_feature_id(desc.encode_srgb ? "unlit_canvas_encode_srgb"
                                                                  : "unlit_canvas"),
       .color_format = desc.color_format,
       .depth_stencil_format = GRANIT_TEXTURE_FORMAT_UNDEFINED};
-  if (result == GRANIT_SUCCESS)
-    result = acquire_material_draw_state(renderer, desc.material, request, material);
+  result = acquire_material_draw_state(renderer, desc.material, request, material);
+  granit_bind_group first_material_group = GRANIT_NULL_HANDLE;
+  if (result == GRANIT_SUCCESS) {
+    result = material_groups.acquire(renderer, desc.material, material.material_layout,
+                                     batches.front().state.texture, batches.front().state.sampler,
+                                     first_material_group);
+  }
   if (result == GRANIT_SUCCESS)
     result = bindings.prepare(renderer, material, desc.frame, desc.object);
   if (result == GRANIT_SUCCESS)
     result = granit_command_recorder_bind_graphics_pipeline(renderer, recorder, material.pipeline);
-  const std::array groups{bindings.frame_group(), material.material_group, bindings.object_group()};
+  const std::array groups{bindings.frame_group(), first_material_group, bindings.object_group()};
   if (result == GRANIT_SUCCESS) {
     result = granit_command_recorder_bind_graphics_groups(
         renderer, recorder, material.pipeline_layout, 0, groups.data(),
@@ -94,15 +89,14 @@ granit_result record_canvas_pass(granit_renderer renderer, granit_command_record
       if (batch.state.texture != current_texture || batch.state.sampler != current_sampler) {
         // 资源绑定可能需要插入 Pipeline Barrier，必须暂时离开 Dynamic Rendering。
         result = granit_command_recorder_end_rendering(renderer, recorder);
+        granit_bind_group batch_material_group = GRANIT_NULL_HANDLE;
         if (result == GRANIT_SUCCESS)
-          result = update_material(batch);
-        material_draw_state batch_material;
-        if (result == GRANIT_SUCCESS)
-          result = acquire_material_draw_state(renderer, desc.material, request, batch_material);
+          result = material_groups.acquire(renderer, desc.material, material.material_layout,
+                                           batch.state.texture, batch.state.sampler,
+                                           batch_material_group);
         if (result == GRANIT_SUCCESS) {
-          result = granit_command_recorder_bind_graphics_groups(renderer, recorder,
-                                                                batch_material.pipeline_layout, 1,
-                                                                &batch_material.material_group, 1);
+          result = granit_command_recorder_bind_graphics_groups(
+              renderer, recorder, material.pipeline_layout, 1, &batch_material_group, 1);
         }
         color.load_operation = GRANIT_ATTACHMENT_LOAD_OPERATION_LOAD;
         if (result == GRANIT_SUCCESS)

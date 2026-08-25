@@ -7,6 +7,8 @@
 #include <granit/pipeline/material.h>
 #include <granit/renderer/pipeline.h>
 #include <granit/renderer/resource_types.h>
+#include <granit/renderer/sampler.h>
+#include <granit/renderer/texture.h>
 
 namespace granit::pipeline::detail {
 
@@ -37,6 +39,13 @@ struct material_draw_state {
                                                         granit_material material,
                                                         const material_draw_request& request,
                                                         material_draw_state& state) noexcept;
+
+/** 基于 Material 当前常量和默认资源创建仅覆盖 Canvas 纹理资源的独立绑定组。 */
+[[nodiscard]] granit_result create_canvas_material_group(granit_renderer renderer,
+                                                         granit_material material,
+                                                         granit_texture_view texture,
+                                                         granit_sampler sampler,
+                                                         granit_bind_group& group) noexcept;
 
 } // namespace granit::pipeline::detail
 

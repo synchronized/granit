@@ -9,6 +9,7 @@
 #include <granit/renderer/pipeline.h>
 
 #include <memory>
+#include <span>
 #include <vector>
 
 #include "material/material_metadata.h"
@@ -18,6 +19,12 @@ namespace granit::material {
 
 class material_gpu_instance {
 public:
+  struct resource_override {
+    parameter_id id = 0;
+    parameter_type type = parameter_type::texture_view;
+    granit_handle resource = GRANIT_NULL_HANDLE;
+  };
+
   material_gpu_instance() = default;
   ~material_gpu_instance();
   material_gpu_instance(const material_gpu_instance&) = delete;
@@ -31,6 +38,9 @@ public:
   [[nodiscard]] metadata_error set_resource(parameter_id id, parameter_type type,
                                             granit_handle resource);
   [[nodiscard]] granit_result flush();
+  /** 使用当前常量缓冲和指定资源覆盖创建独立绑定组，不修改实例资源状态。 */
+  [[nodiscard]] granit_result create_bind_group(std::span<const resource_override> overrides,
+                                                granit_bind_group& bind_group);
   [[nodiscard]] granit_result prepare_migration(granit_bind_group_layout target_layout,
                                                 const material_metadata& target_metadata,
                                                 material_gpu_instance& target,

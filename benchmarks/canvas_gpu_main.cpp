@@ -197,6 +197,7 @@ int main() {
     const auto batches = list.batches();
     canvas_geometry_upload geometry;
     granit::pipeline::detail::pbr_draw_bindings bindings;
+    granit::pipeline::detail::canvas_material_group_cache material_groups;
     if (!list.items().empty() && geometry.upload(native, list) != GRANIT_SUCCESS)
       return 1;
     const auto iterations = benchmark_case.items == 10'000 ? 2U : 10U;
@@ -234,7 +235,7 @@ int main() {
                               .frame = frame,
                               .object = object,
                               .load_operation = GRANIT_ATTACHMENT_LOAD_OPERATION_CLEAR},
-                             list, geometry, bindings));
+                             list, geometry, bindings, material_groups));
           record_total += std::chrono::duration<double, std::nano>(
                               std::chrono::steady_clock::now() - record_begin)
                               .count();
