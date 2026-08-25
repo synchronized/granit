@@ -95,8 +95,10 @@ public:
   }
 
   [[nodiscard]] result initialize(granit_window_system system, const window_desc& desc) noexcept {
-    if (valid() || system == GRANIT_NULL_HANDLE || desc.title.size() > UINT32_MAX)
+    if (valid() || desc.title.size() > UINT32_MAX)
       return result::invalid_argument;
+    if (system == GRANIT_NULL_HANDLE)
+      return result::invalid_handle;
     granit_window_desc native_desc{};
     native_desc.struct_size = sizeof(granit_window_desc);
     native_desc.title = desc.title.data();

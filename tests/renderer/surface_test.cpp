@@ -14,6 +14,21 @@
 
 namespace {
 
+TEST_CASE("Surface创建把空Renderer归类为无效句柄", "[surface][contract]") {
+  const granit_win32_surface_desc desc{GRANIT_WIN32_SURFACE_DESC_VERSION_1_SIZE,
+                                       reinterpret_cast<void*>(1), reinterpret_cast<void*>(1)};
+  granit_surface handle = UINT64_C(1);
+  CHECK(granit_surface_create_win32(GRANIT_NULL_HANDLE, &desc, &handle) ==
+        GRANIT_ERROR_INVALID_HANDLE);
+  CHECK(handle == GRANIT_NULL_HANDLE);
+
+  granit::surface surface;
+  CHECK(surface.initialize_win32(GRANIT_NULL_HANDLE,
+                                 {.instance = reinterpret_cast<void*>(1),
+                                  .window = reinterpret_cast<void*>(1)}) ==
+        granit::result::invalid_handle);
+}
+
 TEST_CASE("Linux Surface 公共入口验证原生描述", "[surface][xcb][wayland]") {
   granit_surface output = UINT64_C(42);
   granit_xcb_surface_desc xcb = GRANIT_XCB_SURFACE_DESC_INIT;

@@ -339,8 +339,10 @@ private:
 inline result
 bind_group_layout::initialize(granit_renderer renderer,
                               std::span<const bind_group_layout_entry> entries) noexcept {
-  if (valid() || renderer == GRANIT_NULL_HANDLE || entries.size() > UINT32_MAX)
+  if (valid() || entries.size() > UINT32_MAX)
     return result::invalid_argument;
+  if (renderer == GRANIT_NULL_HANDLE)
+    return result::invalid_handle;
   static_assert(sizeof(bind_group_layout_entry) == sizeof(granit_bind_group_layout_entry));
   const granit_bind_group_layout_desc desc{
       .struct_size = GRANIT_BIND_GROUP_LAYOUT_DESC_VERSION_1_SIZE,
@@ -363,9 +365,10 @@ inline result bind_group_layout::reset() noexcept {
 
 inline result bind_group::initialize(granit_renderer renderer, granit_bind_group_layout layout,
                                      std::span<const bind_group_entry> entries) noexcept {
-  if (valid() || renderer == GRANIT_NULL_HANDLE || layout == GRANIT_NULL_HANDLE ||
-      entries.size() > UINT32_MAX)
+  if (valid() || entries.size() > UINT32_MAX)
     return result::invalid_argument;
+  if (renderer == GRANIT_NULL_HANDLE || layout == GRANIT_NULL_HANDLE)
+    return result::invalid_handle;
   static_assert(sizeof(bind_group_entry) == sizeof(granit_bind_group_entry));
   const granit_bind_group_desc desc{
       .struct_size = GRANIT_BIND_GROUP_DESC_VERSION_1_SIZE,
@@ -390,8 +393,10 @@ inline result bind_group::reset() noexcept {
 inline result
 pipeline_layout::initialize(granit_renderer renderer,
                             std::span<const granit_bind_group_layout> bind_group_layouts) noexcept {
-  if (valid() || renderer == GRANIT_NULL_HANDLE || bind_group_layouts.size() > UINT32_MAX)
+  if (valid() || bind_group_layouts.size() > UINT32_MAX)
     return result::invalid_argument;
+  if (renderer == GRANIT_NULL_HANDLE)
+    return result::invalid_handle;
   const granit_pipeline_layout_desc desc{.struct_size = GRANIT_PIPELINE_LAYOUT_DESC_VERSION_1_SIZE,
                                          .bind_group_layout_count =
                                              static_cast<std::uint32_t>(bind_group_layouts.size()),
@@ -413,9 +418,11 @@ inline result pipeline_layout::reset() noexcept {
 
 inline result graphics_pipeline::initialize(granit_renderer renderer,
                                             const graphics_pipeline_desc& desc) noexcept {
-  if (valid() || renderer == GRANIT_NULL_HANDLE || desc.color_formats.size() > UINT32_MAX ||
+  if (valid() || desc.color_formats.size() > UINT32_MAX ||
       desc.vertex_buffers.size() > UINT32_MAX || desc.color_blends.size() > UINT32_MAX)
     return result::invalid_argument;
+  if (renderer == GRANIT_NULL_HANDLE)
+    return result::invalid_handle;
   static_assert(sizeof(vertex_attribute) == sizeof(granit_vertex_attribute));
   if (desc.vertex_buffers.size() > 16)
     return result::invalid_argument;
@@ -506,8 +513,10 @@ inline result graphics_pipeline::reset() noexcept {
 
 inline result compute_pipeline::initialize(granit_renderer renderer,
                                            const compute_pipeline_desc& desc) noexcept {
-  if (valid() || renderer == GRANIT_NULL_HANDLE)
+  if (valid())
     return result::invalid_argument;
+  if (renderer == GRANIT_NULL_HANDLE)
+    return result::invalid_handle;
   const granit_compute_pipeline_desc native{.struct_size =
                                                 GRANIT_COMPUTE_PIPELINE_DESC_VERSION_1_SIZE,
                                             .reserved = 0,

@@ -233,8 +233,10 @@ extern "C" granit_result granit_input_system_create(const granit_input_system_de
     return GRANIT_ERROR_INVALID_ARGUMENT;
   *output = GRANIT_NULL_HANDLE;
   if (desc == nullptr || desc->struct_size < GRANIT_INPUT_SYSTEM_DESC_VERSION_1_SIZE ||
-      desc->window_system == GRANIT_NULL_HANDLE || desc->flags != 0 || desc->reserved != 0)
+      desc->flags != 0 || desc->reserved != 0)
     return GRANIT_ERROR_INVALID_ARGUMENT;
+  if (desc->window_system == GRANIT_NULL_HANDLE)
+    return GRANIT_ERROR_INVALID_HANDLE;
   try {
     auto input = std::make_shared<input_record>();
     input->window_system = desc->window_system;

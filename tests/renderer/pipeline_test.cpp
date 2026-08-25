@@ -24,6 +24,31 @@
 
 namespace {
 
+TEST_CASE("Pipeline资源创建把空Renderer归类为无效句柄", "[pipeline][contract]") {
+  const granit_bind_group_layout_desc bind_layout_desc{
+      GRANIT_BIND_GROUP_LAYOUT_DESC_VERSION_1_SIZE, 0, nullptr, 0};
+  granit_bind_group_layout bind_layout = UINT64_C(1);
+  CHECK(granit_bind_group_layout_create(GRANIT_NULL_HANDLE, &bind_layout_desc, &bind_layout) ==
+        GRANIT_ERROR_INVALID_HANDLE);
+  CHECK(bind_layout == GRANIT_NULL_HANDLE);
+
+  const granit_pipeline_layout_desc pipeline_layout_desc{
+      GRANIT_PIPELINE_LAYOUT_DESC_VERSION_1_SIZE, 0, nullptr, 0};
+  granit_pipeline_layout pipeline_layout = UINT64_C(1);
+  CHECK(granit_pipeline_layout_create(GRANIT_NULL_HANDLE, &pipeline_layout_desc,
+                                      &pipeline_layout) == GRANIT_ERROR_INVALID_HANDLE);
+  CHECK(pipeline_layout == GRANIT_NULL_HANDLE);
+
+  granit::bind_group_layout cpp_bind_layout;
+  CHECK(cpp_bind_layout.initialize(GRANIT_NULL_HANDLE, {}) == granit::result::invalid_handle);
+  granit::pipeline_layout cpp_pipeline_layout;
+  CHECK(cpp_pipeline_layout.initialize(GRANIT_NULL_HANDLE, {}) == granit::result::invalid_handle);
+  granit::graphics_pipeline graphics;
+  CHECK(graphics.initialize(GRANIT_NULL_HANDLE, {}) == granit::result::invalid_handle);
+  granit::compute_pipeline compute;
+  CHECK(compute.initialize(GRANIT_NULL_HANDLE, {}) == granit::result::invalid_handle);
+}
+
 bool environment_unavailable(granit::result value) {
   return value == granit::result::backend_unavailable ||
          value == granit::result::incompatible_driver ||
@@ -181,12 +206,12 @@ TEST_CASE("不可变 Bind Group 保持 Buffer 与 Sampler 生命周期", "[pipel
 TEST_CASE("Bind Group 校验完整性和资源类型", "[pipeline][bind-group][validation]") {
   granit_bind_group group = GRANIT_NULL_HANDLE;
   granit_bind_group_desc desc = GRANIT_BIND_GROUP_DESC_INIT;
-  CHECK(granit_bind_group_create(UINT64_C(1), &desc, &group) == GRANIT_ERROR_INVALID_ARGUMENT);
+  CHECK(granit_bind_group_create(UINT64_C(1), &desc, &group) == GRANIT_ERROR_INVALID_HANDLE);
   desc.layout = UINT64_C(1);
   granit_bind_group_entry entry{0, 0, GRANIT_NULL_HANDLE, 0, GRANIT_WHOLE_SIZE};
   desc.entry_count = 1;
   desc.entries = &entry;
-  CHECK(granit_bind_group_create(UINT64_C(1), &desc, &group) == GRANIT_ERROR_INVALID_ARGUMENT);
+  CHECK(granit_bind_group_create(UINT64_C(1), &desc, &group) == GRANIT_ERROR_INVALID_HANDLE);
 }
 
 TEST_CASE("Graphics Pipeline 在进入后端前校验描述", "[pipeline][validation]") {

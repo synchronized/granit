@@ -8,10 +8,12 @@
 extern "C" granit_result granit_surface_create_win32(granit_renderer renderer,
                                                      const granit_win32_surface_desc* desc,
                                                      granit_surface* surface) {
-  if (renderer == GRANIT_NULL_HANDLE || desc == nullptr || surface == nullptr) {
+  if (desc == nullptr || surface == nullptr) {
     return GRANIT_ERROR_INVALID_ARGUMENT;
   }
   *surface = GRANIT_NULL_HANDLE;
+  if (renderer == GRANIT_NULL_HANDLE)
+    return GRANIT_ERROR_INVALID_HANDLE;
   if (desc->struct_size < GRANIT_WIN32_SURFACE_DESC_VERSION_1_SIZE || desc->instance == nullptr ||
       desc->window == nullptr) {
     return GRANIT_ERROR_INVALID_ARGUMENT;
@@ -27,9 +29,11 @@ extern "C" granit_result granit_surface_create_win32(granit_renderer renderer,
 extern "C" granit_result granit_surface_create_xcb(granit_renderer renderer,
                                                    const granit_xcb_surface_desc* desc,
                                                    granit_surface* surface) {
-  if (renderer == GRANIT_NULL_HANDLE || desc == nullptr || surface == nullptr)
+  if (desc == nullptr || surface == nullptr)
     return GRANIT_ERROR_INVALID_ARGUMENT;
   *surface = GRANIT_NULL_HANDLE;
+  if (renderer == GRANIT_NULL_HANDLE)
+    return GRANIT_ERROR_INVALID_HANDLE;
   if (desc->struct_size < GRANIT_XCB_SURFACE_DESC_VERSION_1_SIZE || desc->connection == nullptr ||
       desc->window == 0)
     return GRANIT_ERROR_INVALID_ARGUMENT;
@@ -44,9 +48,11 @@ extern "C" granit_result granit_surface_create_xcb(granit_renderer renderer,
 extern "C" granit_result granit_surface_create_wayland(granit_renderer renderer,
                                                        const granit_wayland_surface_desc* desc,
                                                        granit_surface* surface) {
-  if (renderer == GRANIT_NULL_HANDLE || desc == nullptr || surface == nullptr)
+  if (desc == nullptr || surface == nullptr)
     return GRANIT_ERROR_INVALID_ARGUMENT;
   *surface = GRANIT_NULL_HANDLE;
+  if (renderer == GRANIT_NULL_HANDLE)
+    return GRANIT_ERROR_INVALID_HANDLE;
   if (desc->struct_size < GRANIT_WAYLAND_SURFACE_DESC_VERSION_1_SIZE || desc->display == nullptr ||
       desc->surface == nullptr)
     return GRANIT_ERROR_INVALID_ARGUMENT;

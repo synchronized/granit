@@ -99,9 +99,11 @@ public:
 
   [[nodiscard]] result initialize(granit_renderer renderer, granit_surface surface,
                                   const swapchain_desc& desc) noexcept {
-    if (valid() || renderer == GRANIT_NULL_HANDLE || surface == GRANIT_NULL_HANDLE) {
+    if (valid()) {
       return result::invalid_argument;
     }
+    if (renderer == GRANIT_NULL_HANDLE || surface == GRANIT_NULL_HANDLE)
+      return result::invalid_handle;
     const auto native_desc = to_native(desc);
     const auto native_result = granit_swapchain_create(renderer, surface, &native_desc, &handle_);
     if (native_result == GRANIT_SUCCESS) {

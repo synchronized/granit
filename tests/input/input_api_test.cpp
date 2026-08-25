@@ -2,6 +2,7 @@
 // Copyright (c) 2026 Granit contributors
 
 #include <granit/input.h>
+#include <granit/input.hpp>
 
 #include <catch2/catch_all.hpp>
 
@@ -30,6 +31,17 @@ void check_versioned_output(granit_result (*call)(T*), granit_result expected) {
 }
 
 } // namespace
+
+TEST_CASE("Input创建把空Window System归类为无效句柄", "[input][contract]") {
+  const granit_input_system_desc desc{GRANIT_INPUT_SYSTEM_DESC_VERSION_1_SIZE,
+                                      GRANIT_NULL_HANDLE, 0, 0};
+  granit_input_system handle = UINT64_C(1);
+  CHECK(granit_input_system_create(&desc, &handle) == GRANIT_ERROR_INVALID_HANDLE);
+  CHECK(handle == GRANIT_NULL_HANDLE);
+
+  granit::input_system input;
+  CHECK(input.initialize(GRANIT_NULL_HANDLE) == granit::result::invalid_handle);
+}
 
 TEST_CASE("Input 版本化输出不写越调用方容量", "[input][abi]") {
   check_versioned_output<granit_input_event, GRANIT_INPUT_EVENT_VERSION_1_SIZE>(
