@@ -139,8 +139,9 @@ Recorder，不能提交部分命令，也不能把无效状态留给下一帧。
    状态；正常提交显式返回结果，未提交录制在析构时 abort。
 4. **F-10D 上传槽统一（已实现）**：Canvas 创建描述支持 1～4 个上传槽，并由真实
    `frame_slot` 选择。项目尚未稳定 ABI，因此不保留旧固定三槽描述的兼容分支。
-5. **F-10E 示例迁移**：迁移 Clear、Triangle、HDR、SDL3、XCB 和 Wayland 实时窗口示例；
-   `sdl3_imgui` 删除本地 Recorder 数组，Render Pipeline Window 审计后复用同一抽象。
+5. **F-10E 示例迁移（已实现）**：Clear、Triangle、HDR、SDL3、XCB、Wayland 和 ImGui
+   实时窗口示例统一使用 Frame Context；`sdl3_imgui` 已删除本地 Recorder 数组。Render Pipeline
+   Window 不直接管理 Recorder，继续使用 Render Pipeline 自身的提交模型。
 6. **F-10F 性能与文档**：记录 CPU 帧时间、GPU 时间、Present 等待和槽位等待；更新 Reference、
    Guide、安装 Consumer 与示例说明，再决定是否将其作为推荐默认帧循环。
 

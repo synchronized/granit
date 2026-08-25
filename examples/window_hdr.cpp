@@ -24,8 +24,8 @@
 namespace {
 
 std::vector<std::uint32_t> load_shader(std::string_view name) {
-  const auto directory = name.starts_with("tone_mapping") ? GRANIT_PIPELINE_SHADER_DIR
-                                                           : GRANIT_PBR_SHADER_DIR;
+  const auto directory =
+      name.starts_with("tone_mapping") ? GRANIT_PIPELINE_SHADER_DIR : GRANIT_PBR_SHADER_DIR;
   std::ifstream stream{std::string{directory} + "/" + std::string{name}, std::ios::binary};
   const std::vector<char> bytes{std::istreambuf_iterator<char>{stream}, {}};
   if (bytes.empty() || bytes.size() % sizeof(std::uint32_t) != 0)
@@ -104,7 +104,7 @@ struct window_hdr_resources {
   }
 };
 
-granit::result render_frame(granit::swapchain& swapchain, granit::command_recorder& recorder,
+granit::result render_frame(granit::swapchain& swapchain, granit::frame_context& context,
                             const window_hdr_resources& resources,
                             granit::material::material_template_gpu& pbr_material,
                             granit_graphics_pipeline pbr_pipeline, granit_bind_group material_group,
@@ -120,8 +120,10 @@ granit::result render_frame(granit::swapchain& swapchain, granit::command_record
   granit_texture_view backbuffer_view = GRANIT_NULL_HANDLE;
   if (granit::succeeded(result))
     result = swapchain.backbuffer(frame.image_index, backbuffer, backbuffer_view);
+  granit::frame_recording recording;
   if (granit::succeeded(result))
-    result = recorder.begin();
+    result = context.begin(frame, recording);
+  auto& recorder = recording.recorder();
 
   const granit::depth_stencil_attachment_desc shadow_depth{.view = shadow_view,
                                                            .clear_value = {.depth = 1.0F}};
@@ -185,14 +187,17 @@ granit::result render_frame(granit::swapchain& swapchain, granit::command_record
   if (granit::succeeded(result))
     result = recorder.end_rendering();
   if (granit::succeeded(result))
-    result = recorder.end();
-  if (granit::succeeded(result))
-    result = recorder.submit(frame);
+    result = recording.submit();
   if (granit::succeeded(result))
     result = swapchain.present(frame);
   needs_recreate = needs_recreate || frame.needs_recreate;
-  const auto reset_result = recorder.reset();
-  return granit::failed(result) ? result : reset_result;
+  if (granit::failed(result)) {
+    if (recording.valid())
+      static_cast<void>(recording.abort());
+    if (frame.valid())
+      static_cast<void>(swapchain.cancel(frame));
+  }
+  return result;
 }
 
 } // namespace
@@ -284,9 +289,9 @@ int main(int argument_count, char** arguments) {
     result = resources.initialize(renderer.native_handle(), info.width, info.height, info.format,
                                   tone_vertex, tone_fragment);
   }
-  granit::command_recorder recorder;
+  granit::frame_context frame_context;
   if (granit::succeeded(result))
-    result = recorder.initialize(renderer.native_handle());
+    result = frame_context.initialize(renderer.native_handle());
   if (granit::succeeded(result)) {
     std::cout << "Swapchain 格式=" << static_cast<std::uint32_t>(info.format)
               << (shader_encodes_srgb(info.format) ? "，Shader 执行 sRGB 编码\n"
@@ -332,7 +337,7 @@ int main(int argument_count, char** arguments) {
       info = next_info;
       recreate = false;
     }
-    result = render_frame(swapchain, recorder, resources, pbr_material, pbr_pipeline,
+    result = render_frame(swapchain, frame_context, resources, pbr_material, pbr_pipeline,
                           pbr_instance.bind_group(), pbr_lighting.group(),
                           pbr_lighting.shadow_view(), info.width, info.height, recreate);
     if (result == granit::result::out_of_date) {
