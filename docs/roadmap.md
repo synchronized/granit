@@ -79,6 +79,7 @@
 | F-08 多 Recorder 批量提交 | P1 | 已完成 |
 | F-09 GPU 查询与标记 | P1 | Timestamp 已完成；统计与调试标记归入 S-02 |
 | [F-10 公共帧上下文](plans/F-10-public-frame-context.md) | P1 | 已完成 |
+| [F-11 Canvas 绑定缓存](plans/F-11-canvas-binding-cache.md) | P1 | 草案；待实施 |
 
 ## 五、基础渲染
 
@@ -157,7 +158,7 @@
 
 ## 近期执行顺序
 
-1. 根据 F-10 验证结果继续后续渲染性能与资源绑定工作。
+1. 实施 F-11 Canvas 绑定缓存，先完成基准契约与逐帧公共绑定复用。
 2. 按 S-09A～S-09D 完成 0.3.0 使用路径、契约、安装文档和诊断审计；没有证据时不新增其他 C ABI。
 3. S-06D 最终验收等待稳定版本与 component 范围决策；不在 0.x 阶段提前宣布稳定。
 4. H-09 的透明 PBR、CSM、Clustered Forward 与 Bindless 只在各自重新评估条件满足后独立恢复，
