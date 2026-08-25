@@ -33,6 +33,11 @@ Material、动态几何上传和 Canvas Pass 均不是兼容承诺，也不应�
 实现只合并相邻且三项状态完全相同的 Item，不跨项重排透明内容。`get_stats` 返回顶点、索引、Item
 以及合批后的 Batch 数，可用于适配层诊断和性能回归。
 
+录制前会准备本帧全部唯一 Texture View/Sampler 组合，并在同一个 Dynamic Rendering 区间内按
+原顺序切换绑定组。每个 Draw List 内部持有容量为 64 的最近使用绑定缓存；单帧唯一组合超过容量时
+可临时增长，录制完成后自动回收。缓存只影响内部性能，不改变 Texture View/Sampler 的借用语义。
+完整资源句柄包含 generation，因此资源销毁后复用槽位不会命中旧缓存项。
+
 ## 生命周期与线程安全
 
 - Draw List 创建时关联一个 Renderer，跨 Renderer 调用返回 `GRANIT_ERROR_INVALID_HANDLE`。
@@ -76,6 +81,8 @@ granit_canvas_draw_list_destroy(renderer, list);
 - `encode_srgb=1` 在 Shader 中编码 RGB，适合已经保存 sRGB 显示值的 UNORM 目标；sRGB Attachment
   应保持为零并交由硬件编码。
 - 当前列表持有并复用内部 Material 与上传 Buffer；同一列表的录制仍需调用方外部同步。
+- Frame/Object 常量与公共绑定按真实帧槽复用；Material 纹理绑定按完整 Texture View/Sampler
+  句柄复用。布局或内部 Material 变化时缓存自动重建，不形成公共 ABI 承诺。
 - 创建描述的 `frame_slot_count` 决定动态几何持久映射 Upload Buffer 的槽数，范围为 1～4，通常应
   与 Renderer 的 `frames_in_flight` 一致。`frame_slot` 必须来自 Frame Context，并与 Recorder
   的真实帧槽一致，并仅在该 Recorder 已执行完成后复用；离屏等自行保证同步的简单场景可使用

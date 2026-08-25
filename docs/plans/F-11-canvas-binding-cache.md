@@ -6,7 +6,7 @@
 ## 状态
 
 - 设计状态：已确认
-- 实现状态：进行中（F-11A～F-11E 已完成）
+- 实现状态：已完成；跨平台 CI 待合并验收
 - 优先级：P1
 - 前置依赖：F-10、D-03、H-02、H-06
 
@@ -96,8 +96,9 @@ Frame/Object 常量及其 Bind Group 按 Canvas 的 `frame_slot_count` 建立槽
    偏移、裁剪、多纹理以及缓存资源销毁后以新 generation 重建。已测量 1～4 个帧槽和 Validation
    开关，详细结果见
    [F-11E ImGui 验证记录](../../benchmarks/results/2026-08-25-windows-clang-canvas-binding-f11e.md)。
-6. **F-11F 收尾**：更新 Canvas Reference、性能 Record 和路线图；共享/静态、Windows/Linux、
-   C/C++ Consumer 与安装导出全部通过后合并。
+6. **F-11F 收尾（已完成）**：Canvas Reference、README、性能 Record 和路线图已同步；Windows
+   Clang 共享/静态测试、安装导出及独立 C/C++ Consumer 均通过。Linux 与其余编译器矩阵由 PR CI
+   完成最终合并验收。
 
 ## 测试与验收
 
