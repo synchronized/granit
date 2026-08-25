@@ -68,7 +68,7 @@ public:
     if (!valid())
       return result::success;
     const auto value = granit_input_system_destroy(handle_);
-    if (value == GRANIT_SUCCESS)
+    if (value == GRANIT_SUCCESS || value == GRANIT_ERROR_INVALID_HANDLE)
       handle_ = GRANIT_NULL_HANDLE;
     return from_native(value);
   }

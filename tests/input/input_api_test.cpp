@@ -3,6 +3,7 @@
 
 #include <granit/input.h>
 #include <granit/input.hpp>
+#include <granit/window.hpp>
 
 #include <catch2/catch_all.hpp>
 
@@ -42,6 +43,19 @@ TEST_CASE("Input创建把空Window System归类为无效句柄", "[input][contra
   granit::input_system input;
   CHECK(input.initialize(GRANIT_NULL_HANDLE) == granit::result::invalid_handle);
 }
+
+#if defined(_WIN32)
+TEST_CASE("Input包装在底层句柄失效后清空本地状态", "[input][lifetime]") {
+  granit::window_system windows;
+  REQUIRE(windows.initialize({.backend = granit::window_backend::win32}) ==
+          granit::result::success);
+  granit::input_system input;
+  REQUIRE(input.initialize(windows.native_handle()) == granit::result::success);
+  REQUIRE(granit_input_system_destroy(input.native_handle()) == GRANIT_SUCCESS);
+  CHECK(input.reset() == granit::result::invalid_handle);
+  CHECK_FALSE(input.valid());
+}
+#endif
 
 TEST_CASE("Input 版本化输出不写越调用方容量", "[input][abi]") {
   check_versioned_output<granit_input_event, GRANIT_INPUT_EVENT_VERSION_1_SIZE>(

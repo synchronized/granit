@@ -20,6 +20,8 @@
   `GRANIT_ERROR_INVALID_HANDLE`，并保持失败输出为零。
 - Texture View、Shader、Upload Batch、Recorder 批量提交和 Pipeline Cache 操作补齐相同的
   无效句柄语义，保留空批次等参数形状错误为 `GRANIT_ERROR_INVALID_ARGUMENT`。
+- C++ RAII 包装在底层句柄或父资源已失效时，`reset()` 返回 `INVALID_HANDLE` 的同时清空本地
+  状态，避免对象继续表现为有效或在析构时重复销毁。
 
 ## 0.2.0 - 2026-08-24
 

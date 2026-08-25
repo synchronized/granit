@@ -107,7 +107,7 @@ public:
       return result::success;
     }
     const auto value = granit_surface_destroy(renderer_, handle_);
-    if (value == GRANIT_SUCCESS) {
+    if (value == GRANIT_SUCCESS || value == GRANIT_ERROR_INVALID_HANDLE) {
       renderer_ = GRANIT_NULL_HANDLE;
       handle_ = GRANIT_NULL_HANDLE;
     }

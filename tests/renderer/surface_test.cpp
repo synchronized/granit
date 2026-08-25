@@ -102,7 +102,8 @@ TEST_CASE("Win32 Surface 支持创建、移动和销毁", "[surface][win32]") {
   granit::surface moved{std::move(surface)};
   CHECK_FALSE(surface.valid());
   CHECK(moved.valid());
-  CHECK(moved.reset() == granit::result::success);
+  REQUIRE(renderer.reset() == granit::result::success);
+  CHECK(moved.reset() == granit::result::invalid_handle);
   CHECK_FALSE(moved.valid());
 }
 
