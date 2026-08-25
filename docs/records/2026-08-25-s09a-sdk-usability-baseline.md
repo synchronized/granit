@@ -56,8 +56,8 @@ RenderPipeline 的默认创建会建立内部参考资源，因而验证了 comp
 1. **S-09B 结果码（已修复）**：基线时 `granit_render_pipeline_create` 的空 Renderer 返回
    `INVALID_ARGUMENT`；后续已按 Core 与 RenderPipeline 契约统一为 `INVALID_HANDLE`，Scene
    Snapshot 的相同验证入口也同步修复。
-2. **S-09B/C 清理语义文档**：C 重复销毁返回 `INVALID_HANDLE`，C++ 空对象 `reset()` 幂等成功；
-   行为合理但用户文档需要明确，不能只靠测试推断。
+2. **S-09B 清理语义（已完成）**：C 重复销毁返回 `INVALID_HANDLE`，C++ 空对象 `reset()` 幂等
+   成功；底层资源已失效时包装层返回 `INVALID_HANDLE` 并清空本地状态。
 3. **S-09C RenderPipeline 路径**：安装 Consumer 已覆盖真实创建，尚缺只依赖已安装 SDK 的最小实际
    render 路径或等价教程命令。
 4. **S-09D 诊断**：失败分支已有可区分结果码，但 Consumer 尚未验证诊断回调能指出参数、句柄类型
