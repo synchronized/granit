@@ -6,7 +6,7 @@
 ## 状态
 
 - 设计状态：已确认
-- 实现状态：进行中（F-11A～F-11D 已完成）
+- 实现状态：进行中（F-11A～F-11E 已完成）
 - 优先级：P1
 - 前置依赖：F-10、D-03、H-02、H-06
 
@@ -92,8 +92,10 @@ Frame/Object 常量及其 Bind Group 按 Canvas 的 `frame_slot_count` 建立槽
    Bind Group，以完成资源状态准备和 Recorder 资源保留；Rendering 内仅切换已准备的组。相同只读
    图像状态不再生成空转 Barrier。测量结果见
    [F-11D 性能结果](../../benchmarks/results/2026-08-25-windows-clang-canvas-binding-f11d.md)。
-5. **F-11E ImGui 验证**：验证字体纹理、自定义 Texture ID、裁剪、窗口重排和资源销毁；重复测量
-   1～4 个帧槽及 Validation 开关。
+5. **F-11E ImGui 验证（已完成）**：示例同时渲染字体 Atlas 与自定义 Texture ID；测试覆盖显示
+   偏移、裁剪、多纹理以及缓存资源销毁后以新 generation 重建。已测量 1～4 个帧槽和 Validation
+   开关，详细结果见
+   [F-11E ImGui 验证记录](../../benchmarks/results/2026-08-25-windows-clang-canvas-binding-f11e.md)。
 6. **F-11F 收尾**：更新 Canvas Reference、性能 Record 和路线图；共享/静态、Windows/Linux、
    C/C++ Consumer 与安装导出全部通过后合并。
 
@@ -120,3 +122,6 @@ Frame/Object 常量及其 Bind Group 按 Canvas 的 `frame_slot_count` 建立槽
 - 四槽吞吐更高但潜在输入延迟更大；F-11 不修改 Renderer 默认槽数。
 - 若多纹理场景最终仍受 Descriptor 更新上限限制，再单独恢复 D-09 Bindless 评估，不能在 F-11 中
   顺带引入全局 Bindless 架构。
+- 三槽完整 ImGui Demo 在无 Validation 时 Canvas Record 约 0.040 ms，相比 F-10 的 0.104 ms
+  下降约 61%；Validation 下约 0.275 ms，相比 0.353 ms 仅下降约 22%，未达到 30% 目标。
+  Validation 固定成本应独立分析，不能继续通过 Canvas 专用缓存掩盖。
