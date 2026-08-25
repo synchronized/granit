@@ -245,7 +245,7 @@ int main(int argc, char** argv) {
     return 1;
   sdl_quit quit;
   std::unique_ptr<SDL_Window, window_deleter> window(SDL_CreateWindow(
-      "Granit SDL3 + ImGui", 800, 600, SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY));
+      "Granit SDL3 + ImGui", 1280, 720, SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY));
   if (!window)
     return 1;
 
@@ -309,6 +309,7 @@ int main(int argc, char** argv) {
 
   bool running = granit::succeeded(result);
   bool recreate = false;
+  bool show_demo_window = true;
   bool validation_overlay = true;
   float render_scale = 1;
   std::uint64_t last_title_update = 0;
@@ -352,6 +353,7 @@ int main(int argc, char** argv) {
                                         ? "Immediate"
                                         : "FIFO fallback");
     ImGui::Separator();
+    ImGui::Checkbox("Show ImGui demo", &show_demo_window);
     ImGui::Checkbox("Validation overlay", &validation_overlay);
     ImGui::SliderFloat("Render scale", &render_scale, 0.5F, 2, "%.2fx");
     if (ImGui::Button("Reload shaders"))
@@ -359,6 +361,8 @@ int main(int argc, char** argv) {
     ImGui::SameLine();
     ImGui::TextDisabled("Modern Granit dark theme");
     ImGui::End();
+    if (show_demo_window)
+      ImGui::ShowDemoWindow(&show_demo_window);
     ImGui::Render();
     const auto now = SDL_GetTicks();
     if (now - last_title_update >= 500) {
