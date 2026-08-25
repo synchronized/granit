@@ -108,8 +108,9 @@ F-12A/B 完成前不改动提交或同步架构。后续阶段只有在目标成
 5. **F-12E Validation 成本解释（已完成）**：VVL 检查类别差分确认增量主要来自外部 Layer 的
    Core、Command Buffer 与其他状态检查；仅保留 Layer 转发时 Canvas/Submit 已接近无
    Validation 基线，未发现 Granit 自身重复路径，不修改实现。结果见[F-12B 性能基线][f12b-result]。
-6. **F-12F 收尾验证**：复跑 Windows/Linux、共享/静态和代表性 Present Mode，更新性能 Record、
-   示例说明与路线图；实现结果和原始数据不持续追加到本计划正文。
+6. **F-12F 收尾验证（本地已完成，等待 CI）**：Windows Clang Debug 共享 47 项、静态 43 项
+   测试均已通过，Release 示例构建和 Immediate/FIFO 实测已完成。性能 Record、示例说明与路线图
+   已同步；Linux、MSVC 和安装 Consumer 矩阵由 PR CI 完成最终验收。
 
 ## 测试与验收
 

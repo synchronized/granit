@@ -80,7 +80,7 @@
 | F-09 GPU 查询与标记 | P1 | Timestamp 已完成；统计与调试标记归入 S-02 |
 | [F-10 公共帧上下文](plans/F-10-public-frame-context.md) | P1 | 已完成 |
 | [F-11 Canvas 绑定缓存](plans/F-11-canvas-binding-cache.md) | P1 | 已完成；跨平台 CI 已通过 |
-| [F-12 帧循环性能诊断与提交优化](plans/F-12-frame-loop-performance.md) | P1 | F-12A/B/E 已完成；待跨平台收尾 |
+| [F-12 帧循环性能诊断与提交优化](plans/F-12-frame-loop-performance.md) | P1 | 本地已完成；等待跨平台 CI |
 
 ## 五、基础渲染
 
