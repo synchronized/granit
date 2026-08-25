@@ -11,6 +11,11 @@
 
 namespace {
 
+TEST_CASE("Shader包装把空Renderer归类为无效句柄", "[shader][contract]") {
+  granit::shader shader;
+  CHECK(shader.initialize(GRANIT_NULL_HANDLE, {}) == granit::result::invalid_handle);
+}
+
 constexpr std::array vertex_spirv{
     UINT32_C(0x07230203), UINT32_C(0x00010000), UINT32_C(0x000d000b), UINT32_C(0x00000015),
     UINT32_C(0x00000000), UINT32_C(0x00020011), UINT32_C(0x00000001), UINT32_C(0x0006000b),

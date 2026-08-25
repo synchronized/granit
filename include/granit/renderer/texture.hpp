@@ -224,8 +224,10 @@ public:
   }
   [[nodiscard]] result initialize(granit_renderer renderer, granit_texture texture,
                                   const texture_view_desc& desc = {}) noexcept {
-    if (valid() || renderer == GRANIT_NULL_HANDLE || texture == GRANIT_NULL_HANDLE)
+    if (valid())
       return result::invalid_argument;
+    if (renderer == GRANIT_NULL_HANDLE || texture == GRANIT_NULL_HANDLE)
+      return result::invalid_handle;
     const granit_texture_view_desc native{
         .struct_size = GRANIT_TEXTURE_VIEW_DESC_VERSION_1_SIZE,
         .dimension = static_cast<std::uint32_t>(desc.dimension),

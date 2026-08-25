@@ -34,8 +34,10 @@ public:
   }
 
   [[nodiscard]] result initialize(granit_renderer renderer) noexcept {
-    if (valid() || renderer == GRANIT_NULL_HANDLE)
+    if (valid())
       return result::invalid_argument;
+    if (renderer == GRANIT_NULL_HANDLE)
+      return result::invalid_handle;
     const granit_upload_batch_desc desc = GRANIT_UPLOAD_BATCH_DESC_INIT;
     const auto value = granit_upload_batch_create(renderer, &desc, &handle_);
     if (value == GRANIT_SUCCESS)

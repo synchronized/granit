@@ -120,8 +120,10 @@ extern "C" granit_result granit_renderer_set_object_name(granit_renderer rendere
 
 extern "C" granit_result granit_renderer_pipeline_cache_import(granit_renderer renderer,
                                                                const void* data, uint64_t size) {
-  if (renderer == GRANIT_NULL_HANDLE || (data == nullptr && size != 0))
+  if (data == nullptr && size != 0)
     return GRANIT_ERROR_INVALID_ARGUMENT;
+  if (renderer == GRANIT_NULL_HANDLE)
+    return GRANIT_ERROR_INVALID_HANDLE;
   try {
     return granit::detail::renderer_registry::instance().import_pipeline_cache(renderer, data,
                                                                                size);
@@ -132,8 +134,10 @@ extern "C" granit_result granit_renderer_pipeline_cache_import(granit_renderer r
 
 extern "C" granit_result granit_renderer_pipeline_cache_export(granit_renderer renderer, void* data,
                                                                uint64_t* size) {
-  if (renderer == GRANIT_NULL_HANDLE || size == nullptr || (data != nullptr && *size == 0))
+  if (size == nullptr || (data != nullptr && *size == 0))
     return GRANIT_ERROR_INVALID_ARGUMENT;
+  if (renderer == GRANIT_NULL_HANDLE)
+    return GRANIT_ERROR_INVALID_HANDLE;
   try {
     return granit::detail::renderer_registry::instance().export_pipeline_cache(renderer, data,
                                                                                *size);

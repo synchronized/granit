@@ -15,6 +15,11 @@ bool unavailable(granit::result value) {
          value == granit::result::no_suitable_device;
 }
 
+TEST_CASE("Upload Batch包装把空Renderer归类为无效句柄", "[upload_batch][contract]") {
+  granit::upload_batch batch;
+  CHECK(batch.initialize(GRANIT_NULL_HANDLE) == granit::result::invalid_handle);
+}
+
 TEST_CASE("Upload Batch 合并 Buffer 写入并支持复用", "[upload_batch][buffer]") {
   granit::renderer renderer;
   const auto initialized = renderer.initialize({.application_name = "granit-upload-batch"});

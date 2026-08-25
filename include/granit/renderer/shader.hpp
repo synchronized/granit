@@ -46,8 +46,10 @@ public:
   }
 
   [[nodiscard]] result initialize(granit_renderer renderer, const shader_desc& desc) noexcept {
-    if (valid() || renderer == GRANIT_NULL_HANDLE || desc.entry_point.size() > UINT32_MAX)
+    if (valid() || desc.entry_point.size() > UINT32_MAX)
       return result::invalid_argument;
+    if (renderer == GRANIT_NULL_HANDLE)
+      return result::invalid_handle;
     const granit_shader_desc native{.struct_size = GRANIT_SHADER_DESC_VERSION_1_SIZE,
                                     .stage = static_cast<granit_shader_stage>(desc.stage),
                                     .code = desc.code.data(),

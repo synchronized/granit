@@ -29,9 +29,9 @@ static void granit_test_renderer_rejects_invalid_arguments(void) {
                         granit_renderer_create(&renderer_desc, &renderer));
   TEST_ASSERT_EQUAL_INT(GRANIT_ERROR_INVALID_HANDLE, granit_renderer_destroy(GRANIT_NULL_HANDLE));
   uint64_t cache_size = 0;
-  TEST_ASSERT_EQUAL_INT(GRANIT_ERROR_INVALID_ARGUMENT,
+  TEST_ASSERT_EQUAL_INT(GRANIT_ERROR_INVALID_HANDLE,
                         granit_renderer_pipeline_cache_import(GRANIT_NULL_HANDLE, 0, 0));
-  TEST_ASSERT_EQUAL_INT(GRANIT_ERROR_INVALID_ARGUMENT,
+  TEST_ASSERT_EQUAL_INT(GRANIT_ERROR_INVALID_HANDLE,
                         granit_renderer_pipeline_cache_export(GRANIT_NULL_HANDLE, 0, &cache_size));
 }
 
@@ -39,7 +39,7 @@ static void granit_test_surface_rejects_invalid_arguments(void) {
   granit_surface surface = GRANIT_NULL_HANDLE;
   granit_win32_surface_desc desc = GRANIT_WIN32_SURFACE_DESC_INIT;
 
-  TEST_ASSERT_EQUAL_INT(GRANIT_ERROR_INVALID_ARGUMENT,
+  TEST_ASSERT_EQUAL_INT(GRANIT_ERROR_INVALID_HANDLE,
                         granit_surface_create_win32(GRANIT_NULL_HANDLE, &desc, &surface));
   TEST_ASSERT_EQUAL_INT(GRANIT_ERROR_INVALID_ARGUMENT,
                         granit_surface_create_win32(UINT64_C(1), &desc, &surface));
@@ -63,7 +63,7 @@ static void granit_test_swapchain_rejects_invalid_arguments(void) {
   granit_swapchain_info info = GRANIT_SWAPCHAIN_INFO_INIT;
 
   TEST_ASSERT_EQUAL_INT(
-      GRANIT_ERROR_INVALID_ARGUMENT,
+      GRANIT_ERROR_INVALID_HANDLE,
       granit_swapchain_create(GRANIT_NULL_HANDLE, GRANIT_NULL_HANDLE, &desc, &swapchain));
   TEST_ASSERT_EQUAL_INT(GRANIT_ERROR_INVALID_HANDLE,
                         granit_swapchain_recreate(GRANIT_NULL_HANDLE, GRANIT_NULL_HANDLE, &desc));
@@ -78,7 +78,7 @@ static void granit_test_buffer_rejects_invalid_arguments(void) {
   granit_buffer_desc desc = GRANIT_BUFFER_DESC_INIT;
   void* mapped = 0;
 
-  TEST_ASSERT_EQUAL_INT(GRANIT_ERROR_INVALID_ARGUMENT,
+  TEST_ASSERT_EQUAL_INT(GRANIT_ERROR_INVALID_HANDLE,
                         granit_buffer_create(GRANIT_NULL_HANDLE, &desc, &buffer));
   TEST_ASSERT_EQUAL_INT(GRANIT_ERROR_INVALID_HANDLE,
                         granit_buffer_map(GRANIT_NULL_HANDLE, GRANIT_NULL_HANDLE, 0, 1, &mapped));

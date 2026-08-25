@@ -83,9 +83,8 @@ public:
       handles.reserve(recorders.size());
       const auto renderer = recorders.front().renderer_;
       for (const auto& recorder : recorders) {
-        if (renderer == GRANIT_NULL_HANDLE || recorder.renderer_ != renderer || !recorder.valid()) {
-          return result::invalid_argument;
-        }
+        if (renderer == GRANIT_NULL_HANDLE || recorder.renderer_ != renderer || !recorder.valid())
+          return result::invalid_handle;
         handles.push_back(recorder.handle_);
       }
       return from_native(granit_command_recorder_submit_batch(

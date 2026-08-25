@@ -38,6 +38,9 @@ TEST_CASE("Core资源创建把空Renderer归类为无效句柄", "[renderer][con
   CHECK(recorder == GRANIT_NULL_HANDLE);
   granit::command_recorder cpp_recorder;
   CHECK(cpp_recorder.initialize(GRANIT_NULL_HANDLE) == granit::result::invalid_handle);
+  std::array<granit::command_recorder, 1> invalid_recorders;
+  CHECK(granit::command_recorder::submit_batch(invalid_recorders) ==
+        granit::result::invalid_handle);
 
   const granit_frame_context_desc context_desc = GRANIT_FRAME_CONTEXT_DESC_INIT;
   granit_frame_context context = UINT64_C(1);

@@ -18,6 +18,8 @@
   同步采用相同的空 Renderer 语义，C++ 包装与 C 接口保持一致。
 - Surface、Swapchain、底层 Pipeline、Window 和 Input 创建接口统一把空父资源及资源字段归类为
   `GRANIT_ERROR_INVALID_HANDLE`，并保持失败输出为零。
+- Texture View、Shader、Upload Batch、Recorder 批量提交和 Pipeline Cache 操作补齐相同的
+  无效句柄语义，保留空批次等参数形状错误为 `GRANIT_ERROR_INVALID_ARGUMENT`。
 
 ## 0.2.0 - 2026-08-24
 

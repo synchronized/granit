@@ -47,11 +47,12 @@ extern "C" granit_result granit_texture_view_create(granit_renderer renderer,
                                                     granit_texture texture,
                                                     const granit_texture_view_desc* desc,
                                                     granit_texture_view* view) {
-  if (renderer == GRANIT_NULL_HANDLE || texture == GRANIT_NULL_HANDLE || desc == nullptr ||
-      view == nullptr) {
+  if (desc == nullptr || view == nullptr) {
     return GRANIT_ERROR_INVALID_ARGUMENT;
   }
   *view = GRANIT_NULL_HANDLE;
+  if (renderer == GRANIT_NULL_HANDLE || texture == GRANIT_NULL_HANDLE)
+    return GRANIT_ERROR_INVALID_HANDLE;
   const auto result = granit::detail::validate_texture_view_desc(*desc);
   if (result != GRANIT_SUCCESS) {
     return result;
