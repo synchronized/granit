@@ -14,9 +14,7 @@ typedef char granit_canvas_stats_v1_size[sizeof(granit_canvas_draw_list_stats) =
                                              ? 1
                                              : -1];
 typedef char granit_canvas_record_v1_size
-    [sizeof(granit_canvas_record_desc) >= GRANIT_CANVAS_RECORD_DESC_VERSION_1_SIZE ? 1 : -1];
-typedef char granit_canvas_record_v2_size
-    [sizeof(granit_canvas_record_desc) == GRANIT_CANVAS_RECORD_DESC_VERSION_2_SIZE ? 1 : -1];
+    [sizeof(granit_canvas_record_desc) == GRANIT_CANVAS_RECORD_DESC_VERSION_1_SIZE ? 1 : -1];
 
 static granit_canvas_draw_list_desc list_desc = GRANIT_CANVAS_DRAW_LIST_DESC_INIT;
 static granit_canvas_rect_desc rect_desc = GRANIT_CANVAS_RECT_DESC_INIT;

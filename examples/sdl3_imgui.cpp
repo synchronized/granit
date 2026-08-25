@@ -26,7 +26,7 @@
 namespace {
 
 constexpr ImTextureID font_texture_id = 1;
-constexpr std::size_t frame_slot_count = GRANIT_CANVAS_FRAME_SLOT_COUNT;
+constexpr std::size_t frame_slot_count = 3;
 
 struct frame_slot {
   granit::command_recorder recorder;
@@ -345,6 +345,7 @@ int main(int argc, char** argv) {
   }
   granit::canvas_draw_list canvas;
   granit_canvas_draw_list_desc canvas_desc = GRANIT_CANVAS_DRAW_LIST_DESC_INIT;
+  canvas_desc.frame_slot_count = static_cast<std::uint32_t>(frame_slot_count);
   if (granit::succeeded(result))
     result = canvas.initialize(renderer.native_handle(), canvas_desc);
 

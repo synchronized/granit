@@ -137,8 +137,8 @@ Recorder，不能提交部分命令，也不能把无效状态留给下一帧。
    和诊断；覆盖 1、2、3、4 个 frames-in-flight。
 3. **F-10C C++20 包装（已完成）**：提供 move-only RAII 和非拥有 Recorder 包装，不复制运行时
    状态；正常提交显式返回结果，未提交录制在析构时 abort。
-4. **F-10D 上传槽统一**：移除 Canvas 固定三槽假设，使上传容量按 Context 槽数初始化并由真实
-   `frame_slot` 选择；旧 V1/V2 描述结构保持兼容或提供明确迁移。
+4. **F-10D 上传槽统一（已实现）**：Canvas 创建描述支持 1～4 个上传槽，并由真实
+   `frame_slot` 选择。项目尚未稳定 ABI，因此不保留旧固定三槽描述的兼容分支。
 5. **F-10E 示例迁移**：迁移 Clear、Triangle、HDR、SDL3、XCB 和 Wayland 实时窗口示例；
    `sdl3_imgui` 删除本地 Recorder 数组，Render Pipeline Window 审计后复用同一抽象。
 6. **F-10F 性能与文档**：记录 CPU 帧时间、GPU 时间、Present 等待和槽位等待；更新 Reference、
