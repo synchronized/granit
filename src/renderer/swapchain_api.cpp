@@ -183,6 +183,30 @@ extern "C" granit_result granit_swapchain_present(granit_renderer renderer,
   }
 }
 
+extern "C" granit_result granit_frame_get_info(granit_renderer renderer, granit_swapchain swapchain,
+                                               granit_frame frame, granit_frame_info* info) {
+  if (renderer == GRANIT_NULL_HANDLE || swapchain == GRANIT_NULL_HANDLE ||
+      frame == GRANIT_NULL_HANDLE)
+    return GRANIT_ERROR_INVALID_HANDLE;
+  if (info == nullptr || info->struct_size < GRANIT_FRAME_INFO_VERSION_1_SIZE)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  try {
+    std::uint32_t frame_slot{};
+    std::uint32_t frame_slot_count{};
+    const auto result = granit::detail::renderer_registry::instance().get_frame_info(
+        renderer, swapchain, frame, frame_slot, frame_slot_count);
+    if (result == GRANIT_SUCCESS) {
+      info->frame_slot = frame_slot;
+      info->frame_slot_count = frame_slot_count;
+      for (auto& value : info->reserved)
+        value = 0;
+    }
+    return result;
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
 extern "C" granit_result granit_frame_cancel(granit_renderer renderer, granit_swapchain swapchain,
                                              granit_frame frame, uint32_t* needs_recreate) {
   if (needs_recreate == nullptr)

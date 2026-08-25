@@ -92,6 +92,21 @@ TEST_CASE("Swapchain 支持创建、查询、重建和销毁", "[swapchain][win3
   granit::acquired_frame frame;
   REQUIRE(swapchain.acquire(frame) == granit::result::success);
   REQUIRE(frame.valid());
+  granit::frame_info frame_info;
+  REQUIRE(frame.query_info(frame_info) == granit::result::success);
+  CHECK(frame_info.frame_slot < frame_info.frame_slot_count);
+  CHECK(frame_info.frame_slot_count == GRANIT_DEFAULT_FRAMES_IN_FLIGHT);
+  granit_frame_info native_frame_info = GRANIT_FRAME_INFO_INIT;
+  native_frame_info.reserved[0] = 1;
+  REQUIRE(granit_frame_get_info(renderer.native_handle(), swapchain.native_handle(), frame.handle,
+                                &native_frame_info) == GRANIT_SUCCESS);
+  CHECK(native_frame_info.reserved[0] == 0);
+  auto undersized_frame_info = native_frame_info;
+  undersized_frame_info.struct_size = GRANIT_FRAME_INFO_VERSION_1_SIZE - 1;
+  CHECK(granit_frame_get_info(renderer.native_handle(), swapchain.native_handle(), frame.handle,
+                              &undersized_frame_info) == GRANIT_ERROR_INVALID_ARGUMENT);
+  CHECK(granit_frame_get_info(renderer.native_handle(), renderer.native_handle(), frame.handle,
+                              &native_frame_info) == GRANIT_ERROR_INVALID_HANDLE);
   CHECK(swapchain.recreate({.width = 96, .height = 72}) == granit::result::invalid_argument);
   granit_texture frame_texture{};
   granit_texture_view frame_view{};
@@ -108,14 +123,20 @@ TEST_CASE("Swapchain 支持创建、查询、重建和销毁", "[swapchain][win3
   REQUIRE(recorder.end() == granit::result::success);
   REQUIRE(recorder.submit(frame) == granit::result::success);
   CHECK(recorder.submit(frame) == granit::result::invalid_argument);
+  const auto presented_frame = frame.handle;
   REQUIRE(swapchain.present(frame) == granit::result::success);
   CHECK_FALSE(frame.valid());
+  CHECK(granit_frame_get_info(renderer.native_handle(), swapchain.native_handle(), presented_frame,
+                              &native_frame_info) == GRANIT_ERROR_INVALID_HANDLE);
   REQUIRE(recorder.reset() == granit::result::success);
 
   granit::acquired_frame cancelled;
   REQUIRE(swapchain.acquire(cancelled) == granit::result::success);
+  const auto cancelled_frame = cancelled.handle;
   REQUIRE(swapchain.cancel(cancelled) == granit::result::success);
   CHECK_FALSE(cancelled.valid());
+  CHECK(granit_frame_get_info(renderer.native_handle(), swapchain.native_handle(), cancelled_frame,
+                              &native_frame_info) == GRANIT_ERROR_INVALID_HANDLE);
   {
     granit::acquired_frame automatic;
     REQUIRE(swapchain.acquire(automatic) == granit::result::success);

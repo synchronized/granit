@@ -82,6 +82,19 @@ recorder.submit(frame);
 swapchain.present(frame);
 ```
 
+成功 acquire 后，可在 Frame 存活期间查询它使用的真实在途帧槽：
+
+```c
+granit_frame_info frame_info = GRANIT_FRAME_INFO_INIT;
+granit_result result = granit_frame_get_info(renderer, swapchain, frame, &frame_info);
+```
+
+`frame_slot` 的范围是 `[0, frame_slot_count)`，来自 Renderer 内部实际获取的帧槽，可用于选择同寿命
+的 Recorder 或临时上传资源。它不是 `image_index`，也不能由帧序号或句柄取模推导。查询只借用
+Frame；present、cancel、Swapchain 失效或 Renderer 销毁后，旧 Frame 查询返回
+`GRANIT_ERROR_INVALID_HANDLE`。Renderer、Swapchain 与 Frame 不属于同一对象关系时也返回该错误。
+调用者必须使用 `GRANIT_FRAME_INFO_INIT`，预留字段由实现写为零。
+
 `needs_recreate` 在 acquire 或 present 遇到 SUBOPTIMAL 时为 true；OUT_OF_DATE 通过结果码返回。
 成功 acquire 后必须完成 submit 和 present，或者调用 `granit_frame_cancel` / `swapchain.cancel`。
 取消操作会提交最小布局转换并归还已获取图像，因此不是简单丢弃令牌。C++ `acquired_frame` 离开

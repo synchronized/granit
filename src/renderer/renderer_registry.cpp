@@ -1079,6 +1079,32 @@ granit_result renderer_registry::acquire_swapchain_frame(granit_renderer rendere
   return GRANIT_SUCCESS;
 }
 
+granit_result renderer_registry::get_frame_info(granit_renderer renderer,
+                                                granit_swapchain swapchain, granit_frame frame,
+                                                std::uint32_t& frame_slot,
+                                                std::uint32_t& frame_slot_count) {
+  std::shared_ptr<frame_record> record;
+  {
+    std::lock_guard lock{mutex_};
+    const auto found_renderer = renderers_.find(renderer);
+    const auto found_swapchain = swapchains_.find(swapchain);
+    const auto found_frame = frames_.find(frame);
+    if (found_renderer == renderers_.end() || found_swapchain == swapchains_.end() ||
+        found_frame == frames_.end() || found_frame->second->renderer != found_renderer->second ||
+        found_frame->second->swapchain != found_swapchain->second ||
+        handles_.find(frame, resource_type::frame, found_renderer->second->domain()) == nullptr)
+      return GRANIT_ERROR_INVALID_HANDLE;
+    record = found_frame->second;
+  }
+  std::lock_guard frame_lock{record->mutex};
+  const auto slot_count = record->renderer->frame_slot_count();
+  if (record->slot_index >= slot_count || slot_count > UINT32_MAX)
+    return GRANIT_ERROR_INTERNAL;
+  frame_slot = static_cast<std::uint32_t>(record->slot_index);
+  frame_slot_count = static_cast<std::uint32_t>(slot_count);
+  return GRANIT_SUCCESS;
+}
+
 granit_result renderer_registry::submit_command_recorder_frame(granit_renderer renderer,
                                                                granit_command_recorder recorder,
                                                                granit_frame frame) {

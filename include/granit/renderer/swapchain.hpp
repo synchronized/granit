@@ -34,6 +34,11 @@ struct swapchain_info {
   texture_format format{texture_format::undefined};
 };
 
+struct frame_info {
+  std::uint32_t frame_slot{};
+  std::uint32_t frame_slot_count{};
+};
+
 struct acquired_frame {
   acquired_frame() = default;
   ~acquired_frame() {
@@ -59,6 +64,18 @@ struct acquired_frame {
   granit_swapchain swapchain{GRANIT_NULL_HANDLE};
 
   [[nodiscard]] bool valid() const noexcept { return handle != GRANIT_NULL_HANDLE; }
+
+  [[nodiscard]] result query_info(frame_info& info) const noexcept {
+    if (!valid())
+      return result::invalid_handle;
+    granit_frame_info native_info = GRANIT_FRAME_INFO_INIT;
+    const auto value = granit_frame_get_info(renderer, swapchain, handle, &native_info);
+    if (value == GRANIT_SUCCESS) {
+      info = {.frame_slot = native_info.frame_slot,
+              .frame_slot_count = native_info.frame_slot_count};
+    }
+    return from_native(value);
+  }
 };
 
 class swapchain {
