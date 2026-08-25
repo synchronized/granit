@@ -6,7 +6,7 @@
 ## 状态
 
 - 设计状态：已确认
-- 实现状态：实现中；F-12A 已完成
+- 实现状态：已完成；跨平台 CI 已通过
 - 路线图任务：F-12
 - 优先级：P1
 - 前置依赖：F-04、F-06、F-09、F-10、F-11、S-08
@@ -108,9 +108,10 @@ F-12A/B 完成前不改动提交或同步架构。后续阶段只有在目标成
 5. **F-12E Validation 成本解释（已完成）**：VVL 检查类别差分确认增量主要来自外部 Layer 的
    Core、Command Buffer 与其他状态检查；仅保留 Layer 转发时 Canvas/Submit 已接近无
    Validation 基线，未发现 Granit 自身重复路径，不修改实现。结果见[F-12B 性能基线][f12b-result]。
-6. **F-12F 收尾验证（本地已完成，等待 CI）**：Windows Clang Debug 共享 47 项、静态 43 项
-   测试均已通过，Release 示例构建和 Immediate/FIFO 实测已完成。性能 Record、示例说明与路线图
-   已同步；Linux、MSVC 和安装 Consumer 矩阵由 PR CI 完成最终验收。
+6. **F-12F 收尾验证（已完成）**：Windows Clang Debug 共享 47 项、静态 43 项测试均已通过，
+   Release 示例构建和 Immediate/FIFO 实测已完成。PR CI 的 Linux GCC/Clang 共享与静态、
+   SDL3/ImGui Runtime 共享与静态及 Windows MSVC 安装 Consumer 共享与静态矩阵全部通过。
+   性能 Record、示例说明与路线图已同步。
 
 ## 测试与验收
 
