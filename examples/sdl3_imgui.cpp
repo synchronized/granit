@@ -17,6 +17,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
 #include <iostream>
 #include <memory>
@@ -32,6 +33,7 @@ struct frame_timings {
   double cpu_ms{};
   double gpu_ms{};
   double present_ms{};
+  double slot_wait_ms{};
 };
 
 void smooth(double& value, double sample) {
@@ -193,7 +195,8 @@ granit::result render_frame(granit::swapchain& swapchain, granit::frame_context&
                             std::array<bool, frame_slot_count>& timestamp_valid,
                             granit::timestamp_query_pool& timestamps,
                             granit::canvas_draw_list& canvas, const granit::swapchain_info& info,
-                            bool& needs_recreate, double& gpu_ms, double& present_ms) {
+                            bool& needs_recreate, double& gpu_ms, double& slot_wait_ms,
+                            double& present_ms) {
   granit_canvas_draw_list_stats stats = GRANIT_CANVAS_DRAW_LIST_STATS_INIT;
   auto result = canvas.get_stats(stats);
   if (granit::failed(result))
@@ -212,7 +215,11 @@ granit::result render_frame(granit::swapchain& swapchain, granit::frame_context&
   granit::frame_recording recording;
   if (granit::succeeded(result)) {
     operation = "frame_context.begin";
+    const auto slot_begin = std::chrono::steady_clock::now();
     result = frame_context.begin(frame, recording);
+    smooth(slot_wait_ms,
+           std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - slot_begin)
+               .count());
   }
   const auto slot_index = recording.frame_slot();
   if (granit::succeeded(result) && timestamp_valid[slot_index]) {
@@ -289,7 +296,23 @@ granit::result render_frame(granit::swapchain& swapchain, granit::frame_context&
 } // namespace
 
 int main(int argc, char** argv) {
-  const bool smoke_test = argc > 1 && std::strcmp(argv[1], "--smoke-test") == 0;
+  bool smoke_test = false;
+  std::uint32_t frame_limit = 0;
+  for (int index = 1; index < argc; ++index) {
+    if (std::strcmp(argv[index], "--smoke-test") == 0) {
+      smoke_test = true;
+    } else if (std::strcmp(argv[index], "--frame-count") == 0 && index + 1 < argc) {
+      char* end = nullptr;
+      const auto value = std::strtoul(argv[++index], &end, 10);
+      if (end == argv[index] || *end != '\0' || value == 0 || value > UINT32_MAX)
+        return 1;
+      frame_limit = static_cast<std::uint32_t>(value);
+    } else {
+      return 1;
+    }
+  }
+  if (smoke_test)
+    frame_limit = static_cast<std::uint32_t>(frame_slot_count + 1);
   if (!SDL_Init(SDL_INIT_VIDEO))
     return 1;
   sdl_quit quit;
@@ -412,8 +435,8 @@ int main(int argc, char** argv) {
     ImGui::Text("Presentation: %s", swapchain_info.presentation == granit::present_mode::immediate
                                         ? "Immediate"
                                         : "FIFO fallback");
-    ImGui::Text("CPU %.3f ms | GPU %.3f ms | Present wait %.3f ms", timings.cpu_ms, timings.gpu_ms,
-                timings.present_ms);
+    ImGui::Text("CPU %.3f ms | GPU %.3f ms | Present %.3f ms | Slot wait %.3f ms", timings.cpu_ms,
+                timings.gpu_ms, timings.present_ms, timings.slot_wait_ms);
     ImGui::Separator();
     ImGui::Checkbox("Show ImGui demo", &show_demo_window);
     ImGui::Checkbox("Validation overlay", &validation_overlay);
@@ -430,8 +453,10 @@ int main(int argc, char** argv) {
     if (now - last_title_update >= 500) {
       char title[160]{};
       std::snprintf(title, sizeof(title),
-                    "Granit SDL3 + ImGui | %.0f FPS | CPU %.2f ms | GPU %.2f ms | Present %.2f ms",
-                    ImGui::GetIO().Framerate, timings.cpu_ms, timings.gpu_ms, timings.present_ms);
+                    "Granit SDL3 + ImGui | %.0f FPS | CPU %.2f | GPU %.2f | Present %.2f | Slot "
+                    "%.2f ms",
+                    ImGui::GetIO().Framerate, timings.cpu_ms, timings.gpu_ms, timings.present_ms,
+                    timings.slot_wait_ms);
       SDL_SetWindowTitle(window.get(), title);
       last_title_update = now;
     }
@@ -445,8 +470,9 @@ int main(int argc, char** argv) {
     }
     if (granit::succeeded(result)) {
       double present_ms = 0;
-      result = render_frame(swapchain, frame_context, timestamp_valid, timestamps, canvas,
-                            swapchain_info, recreate, timings.gpu_ms, present_ms);
+      result =
+          render_frame(swapchain, frame_context, timestamp_valid, timestamps, canvas,
+                       swapchain_info, recreate, timings.gpu_ms, timings.slot_wait_ms, present_ms);
       smooth(timings.present_ms, present_ms);
       if (granit::failed(result) && result != granit::result::out_of_date)
         std::cerr << "ImGui Canvas 录制或呈现失败，Granit 结果码：" << static_cast<int>(result)
@@ -463,8 +489,14 @@ int main(int argc, char** argv) {
            std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - cpu_begin)
                .count());
     ++rendered_frames;
-    if (smoke_test && rendered_frames >= frame_slot_count + 1)
+    if (frame_limit != 0 && rendered_frames >= frame_limit)
       break;
+  }
+
+  if (frame_limit != 0 && granit::succeeded(result)) {
+    std::cout << "完成 " << rendered_frames << " 帧：CPU " << timings.cpu_ms << " ms，GPU "
+              << timings.gpu_ms << " ms，Present " << timings.present_ms << " ms，槽等待 "
+              << timings.slot_wait_ms << " ms\n";
   }
 
   if (granit::failed(result))
