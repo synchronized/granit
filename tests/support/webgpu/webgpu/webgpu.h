@@ -4,6 +4,8 @@
 #ifndef GRANIT_TEST_WEBGPU_H_
 #define GRANIT_TEST_WEBGPU_H_
 
+#include <stddef.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
