@@ -28,6 +28,7 @@
 #include <granit/renderer/timestamp_query.h>
 #include <granit/renderer/upload_batch.h>
 
+#include "backend/resources.h"
 #include "backend/vulkan/timestamp_query.h"
 #include "core/handle_table.h"
 #include "core/lifecycle_validation.h"
@@ -370,8 +371,7 @@ private:
   struct sampler_record {
     resource_metadata metadata;
     std::shared_ptr<renderer_state> renderer;
-    VkSampler native{VK_NULL_HANDLE};
-    ~sampler_record();
+    std::unique_ptr<backend_sampler_resource> native;
   };
   struct shader_record {
     resource_metadata metadata;

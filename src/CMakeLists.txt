@@ -68,6 +68,7 @@ target_sources(
     $<TARGET_OBJECTS:granit_volk>
     $<TARGET_OBJECTS:granit_backend_plugin>
     backend/capabilities.h
+    backend/resources.h
     backend/vulkan/device.cpp
     backend/vulkan/device.h
     backend/vulkan/frame_context.cpp
@@ -84,6 +85,8 @@ target_sources(
     backend/vulkan/physical_device.h
     backend/vulkan/result.cpp
     backend/vulkan/result.h
+    backend/vulkan/resources.cpp
+    backend/vulkan/resources.h
     backend/vulkan/surface.cpp
     backend/vulkan/surface.h
     backend/vulkan/swapchain.cpp

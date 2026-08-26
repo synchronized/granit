@@ -182,6 +182,15 @@ target_link_libraries(
 granit_target_compile_warnings(granit_backend_capabilities_test)
 add_test(NAME granit.backend_capabilities COMMAND granit_backend_capabilities_test)
 
+add_executable(granit_backend_resources_test backend/resources_test.cpp)
+target_include_directories(granit_backend_resources_test PRIVATE "${PROJECT_SOURCE_DIR}/src")
+target_link_libraries(
+  granit_backend_resources_test
+  PRIVATE granit::granit Catch2::Catch2WithMain
+)
+granit_target_compile_warnings(granit_backend_resources_test)
+add_test(NAME granit.backend_resources COMMAND granit_backend_resources_test)
+
 add_library(granit_backend_plugin_c_header_test OBJECT backend/plugin_api_h.c)
 target_compile_features(granit_backend_plugin_c_header_test PRIVATE c_std_11)
 target_include_directories(

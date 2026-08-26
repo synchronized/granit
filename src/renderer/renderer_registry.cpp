@@ -3,6 +3,7 @@
 
 #include "renderer/renderer_registry.h"
 
+#include "backend/vulkan/resources.h"
 #include "core/texture_format.h"
 
 #include <algorithm>
@@ -23,6 +24,10 @@ template <typename Handle> std::uint64_t object_handle_value(Handle handle) noex
   } else {
     return static_cast<std::uint64_t>(handle);
   }
+}
+
+VkSampler& native_sampler(backend_sampler_resource& resource) noexcept {
+  return static_cast<vulkan_sampler_resource&>(resource).native();
 }
 
 granit_texture_format swapchain_format(VkFormat format) noexcept {
@@ -134,11 +139,6 @@ renderer_registry::texture_view_record::~texture_view_record() {
   }
 }
 
-renderer_registry::sampler_record::~sampler_record() {
-  if (renderer)
-    renderer->destroy_native_sampler(native);
-}
-
 renderer_registry::shader_record::~shader_record() {
   if (renderer)
     renderer->destroy_native_shader(native);
@@ -247,7 +247,7 @@ granit_result renderer_registry::set_object_name(granit_renderer renderer, grani
   GRANIT_NAME_OBJECT(buffers_, VK_OBJECT_TYPE_BUFFER, it->second->native.buffer)
   GRANIT_NAME_OBJECT(textures_, VK_OBJECT_TYPE_IMAGE, it->second->native.image)
   GRANIT_NAME_OBJECT(texture_views_, VK_OBJECT_TYPE_IMAGE_VIEW, it->second->native)
-  GRANIT_NAME_OBJECT(samplers_, VK_OBJECT_TYPE_SAMPLER, it->second->native)
+  GRANIT_NAME_OBJECT(samplers_, VK_OBJECT_TYPE_SAMPLER, native_sampler(*it->second->native))
   GRANIT_NAME_OBJECT(shaders_, VK_OBJECT_TYPE_SHADER_MODULE, it->second->native)
   GRANIT_NAME_OBJECT(bind_group_layouts_, VK_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT, it->second->native)
   GRANIT_NAME_OBJECT(pipeline_layouts_, VK_OBJECT_TYPE_PIPELINE_LAYOUT, it->second->native)
@@ -2138,7 +2138,8 @@ granit_result renderer_registry::create_sampler(granit_renderer renderer,
       return GRANIT_ERROR_INVALID_HANDLE;
     auto record = std::make_shared<sampler_record>();
     record->renderer = state;
-    const auto result = state->create_native_sampler(desc, record->native);
+    record->native = std::make_unique<vulkan_sampler_resource>(state);
+    const auto result = state->create_native_sampler(desc, native_sampler(*record->native));
     if (result != GRANIT_SUCCESS)
       return result;
     std::lock_guard lock{mutex_};
@@ -2397,7 +2398,7 @@ granit_result renderer_registry::create_bind_group(granit_renderer renderer,
               entry.size != GRANIT_WHOLE_SIZE)
             return GRANIT_ERROR_INVALID_ARGUMENT;
           write.type = VK_DESCRIPTOR_TYPE_SAMPLER;
-          write.sampler = found->second->native;
+          write.sampler = native_sampler(*found->second->native);
           record->resources.push_back(found->second);
         } else {
           const auto found = texture_views_.find(entry.resource);
