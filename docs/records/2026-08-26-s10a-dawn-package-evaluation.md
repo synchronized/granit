@@ -45,4 +45,8 @@ Linux 成功。工作流随后调整为从锁定修订构建 monolithic static l
 Artifact 上传。重型工作流仅手动触发，日常特性分支提交和 Pull Request 不重复构建 Dawn。
 工作流默认只上传短期验证 Artifact；显式选择发布 SDK 后，Windows 与 Linux 全部通过才会创建
 版本化预发布版本，并附带平台压缩包及 SHA-256 清单。Linux 构建镜像后续只消费该 SDK，不作为
-Windows 分发方式。下一步验证真实 Adapter、Device 和异步事件推进。
+Windows 分发方式。
+2026-08-26 的后续验证已在 Ubuntu 24.04 的 Vulkan/lavapipe 和 Windows 2022 的 D3D12 软件适配器
+上完成真实 Adapter、Device、10 秒有限 Future 等待及 Device→Adapter→Instance 反向销毁。
+Windows runner 需要将系统 `d3dcompiler_47.dll` 放入 smoke 可执行文件搜索目录，Dawn 才能初始化
+FXC。工作流已支持按平台单独验证；下一步进入后端资源基类和基础资源记录迁移。
