@@ -11,6 +11,21 @@
 #include <vector>
 
 namespace {
+
+TEST_CASE("Texture View创建把空资源句柄归类为无效句柄", "[texture][contract]") {
+  const granit_texture_view_desc desc = GRANIT_TEXTURE_VIEW_DESC_INIT;
+  granit_texture_view view = UINT64_C(1);
+  CHECK(granit_texture_view_create(GRANIT_NULL_HANDLE, UINT64_C(1), &desc, &view) ==
+        GRANIT_ERROR_INVALID_HANDLE);
+  CHECK(view == GRANIT_NULL_HANDLE);
+  CHECK(granit_texture_view_create(UINT64_C(1), GRANIT_NULL_HANDLE, &desc, &view) ==
+        GRANIT_ERROR_INVALID_HANDLE);
+  CHECK(view == GRANIT_NULL_HANDLE);
+
+  granit::texture_view cpp_view;
+  CHECK(cpp_view.initialize(GRANIT_NULL_HANDLE, UINT64_C(1)) == granit::result::invalid_handle);
+  CHECK(cpp_view.initialize(UINT64_C(1), GRANIT_NULL_HANDLE) == granit::result::invalid_handle);
+}
 bool unavailable(granit::result value) {
   return value == granit::result::backend_unavailable ||
          value == granit::result::incompatible_driver ||

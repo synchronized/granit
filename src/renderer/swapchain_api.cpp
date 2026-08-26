@@ -49,10 +49,12 @@ granit::detail::vulkan_swapchain_desc to_internal(const granit_swapchain_desc& d
 extern "C" granit_result granit_swapchain_create(granit_renderer renderer, granit_surface surface,
                                                  const granit_swapchain_desc* desc,
                                                  granit_swapchain* swapchain) {
-  if (renderer == GRANIT_NULL_HANDLE || surface == GRANIT_NULL_HANDLE || swapchain == nullptr) {
+  if (swapchain == nullptr) {
     return GRANIT_ERROR_INVALID_ARGUMENT;
   }
   *swapchain = GRANIT_NULL_HANDLE;
+  if (renderer == GRANIT_NULL_HANDLE || surface == GRANIT_NULL_HANDLE)
+    return GRANIT_ERROR_INVALID_HANDLE;
   const auto validation_result = validate_desc(desc, false);
   if (validation_result != GRANIT_SUCCESS) {
     return validation_result;

@@ -88,7 +88,11 @@ cmake -S consumer -B consumer/build -DCMAKE_PREFIX_PATH=/path/to/granit/install
 ```sh
 cmake -S tests/consumer -B build/consumer -DCMAKE_PREFIX_PATH=/path/to/granit/install
 cmake --build build/consumer
+ctest --test-dir build/consumer --output-on-failure
 ```
+
+Consumer CTest 会运行 Core C/C++、RenderPipeline C/C++、Window C 和 Input C/C++ 七条路径，
+并从安装目标自动补充共享库搜索路径；不需要把 DLL 或 SO 复制进 Consumer 构建目录。
 
 维护安装规则时还可运行包选择测试，确认兼容与精确版本能够找到包，而错误主版本和未知必需
 component 会被拒绝：

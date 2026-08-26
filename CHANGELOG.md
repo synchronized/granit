@@ -10,6 +10,48 @@
 
 0.3.0 正在规划和开发；公共变更将在实现后记录于此。
 
+### 新增
+
+- Core 新增 Frame Context、帧槽查询和显式 Buffer flush；RenderPipeline 新增 Canvas 批量追加，
+  用于复用真实在途帧槽并减少逐项跨 ABI 调用。
+- Renderer validation 诊断可定位代表性的 Buffer 描述错误、失效句柄和跨 Renderer 句柄；结果码
+  仍是程序逻辑的稳定依据。
+
+### 修复
+
+- RenderPipeline component 的创建接口把空 Renderer 统一归类为
+  `GRANIT_ERROR_INVALID_HANDLE`，并在失败时保持输出句柄为零。
+- Buffer、Command Recorder、Frame Context、Sampler、Texture 和 Timestamp Query Pool 的创建接口
+  同步采用相同的空 Renderer 语义，C++ 包装与 C 接口保持一致。
+- Surface、Swapchain、底层 Pipeline、Window 和 Input 创建接口统一把空父资源及资源字段归类为
+  `GRANIT_ERROR_INVALID_HANDLE`，并保持失败输出为零。
+- Texture View、Shader、Upload Batch、Recorder 批量提交和 Pipeline Cache 操作补齐相同的
+  无效句柄语义，保留空批次等参数形状错误为 `GRANIT_ERROR_INVALID_ARGUMENT`。
+- C++ RAII 包装在底层句柄或父资源已失效时，`reset()` 返回 `INVALID_HANDLE` 的同时清空本地
+  状态，避免对象继续表现为有效或在析构时重复销毁。
+
+### 工程化
+
+- 独立安装 Consumer 注册为 CTest，并自动补充安装共享库的运行时搜索路径；构建指南可用一条
+  `ctest` 命令验证 Core、RenderPipeline、Window 和 Input 的七条 C/C++ 路径。
+- RenderPipeline C++ 安装 Consumer 通过公开阶段回调执行真实离屏渲染图，覆盖 Scene Snapshot、
+  输出纹理、阶段录制、提交和清理，不依赖源码树资源。
+- 文档检查锁定 README、安装 Consumer 和 RenderPipeline 教程的关键 CMake/CTest 命令，避免
+  文档入口随构建配置漂移。
+- Windows/Linux Actions 的安装 Consumer 统一使用与构建指南相同的 CTest 入口，覆盖共享与静态
+  安装矩阵并由测试自身设置运行库路径。
+
+### 兼容性与迁移
+
+- 未删除或改名 0.2.0 的公共 C 导出；新增导出属于兼容扩展。
+- `granit_canvas_draw_list_desc` 将一个原保留字段定义为 `frame_slot_count`，
+  `granit_canvas_record_desc` 新增 `frame_slot` 并扩大 V1 尺寸。旧代码必须使用当前初始化宏重新编译，
+  不应手写结构大小或复用 0.2.0 二进制描述布局。
+- 空父资源、失效句柄和跨对象归属错误现在统一返回 `GRANIT_ERROR_INVALID_HANDLE`；只比较
+  `GRANIT_ERROR_INVALID_ARGUMENT` 的旧错误分支需要同步接受新分类。
+- 完整迁移步骤见[从 0.2 迁移到 0.3](docs/guides/migrate-0.2-to-0.3.md)。0.3.0 仍不承诺稳定
+  C ABI 或 C++ 二进制 ABI。
+
 ## 0.2.0 - 2026-08-24
 
 ### 新增

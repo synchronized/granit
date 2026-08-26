@@ -265,6 +265,15 @@ granit_result renderer_registry::set_object_name(granit_renderer renderer, grani
   return GRANIT_ERROR_INVALID_HANDLE;
 }
 
+void renderer_registry::emit_validation_diagnostic(granit_renderer renderer,
+                                                    std::string_view message) noexcept {
+  const auto state = acquire(renderer);
+  if (state) {
+    state->diagnostics().emit(diagnostic_severity::error, diagnostic_category::validation,
+                              message);
+  }
+}
+
 granit_result renderer_registry::destroy(granit_renderer renderer) {
   std::shared_ptr<renderer_state> state;
   lifecycle_snapshot lifecycle;

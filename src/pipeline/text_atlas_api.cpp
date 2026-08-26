@@ -192,14 +192,15 @@ extern "C" granit_result granit_text_atlas_create(granit_renderer renderer,
   if (atlas == nullptr)
     return GRANIT_ERROR_INVALID_ARGUMENT;
   *atlas = GRANIT_NULL_HANDLE;
-  if (renderer == GRANIT_NULL_HANDLE || desc == nullptr ||
-      desc->struct_size < GRANIT_TEXT_ATLAS_DESC_VERSION_1_SIZE ||
+  if (desc == nullptr || desc->struct_size < GRANIT_TEXT_ATLAS_DESC_VERSION_1_SIZE ||
       !zero(desc->reserved, std::size(desc->reserved)) || desc->page_width == 0 ||
       desc->page_height == 0 || desc->page_width > 4096 || desc->page_height > 4096 ||
       desc->max_pages == 0 || desc->max_pages > 256 || desc->padding * 2 >= desc->page_width ||
       desc->padding * 2 >= desc->page_height) {
     return GRANIT_ERROR_INVALID_ARGUMENT;
   }
+  if (renderer == GRANIT_NULL_HANDLE)
+    return GRANIT_ERROR_INVALID_HANDLE;
   uint64_t cache_size = 0;
   const auto renderer_result =
       granit_renderer_pipeline_cache_export(renderer, nullptr, &cache_size);

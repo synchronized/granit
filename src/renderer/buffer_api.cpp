@@ -6,15 +6,29 @@
 #include "core/resource_validation.h"
 #include "renderer/renderer_registry.h"
 
+namespace {
+
+void report_validation(granit_renderer renderer, std::string_view message) noexcept {
+  granit::detail::renderer_registry::instance().emit_validation_diagnostic(renderer, message);
+}
+
+} // namespace
+
 extern "C" granit_result granit_buffer_create(granit_renderer renderer,
                                               const granit_buffer_desc* desc,
                                               granit_buffer* buffer) {
-  if (renderer == GRANIT_NULL_HANDLE || desc == nullptr || buffer == nullptr) {
+  if (desc == nullptr || buffer == nullptr) {
+    report_validation(renderer,
+                      "granit_buffer_create: desc 和 buffer 输出参数均不得为空");
     return GRANIT_ERROR_INVALID_ARGUMENT;
   }
   *buffer = GRANIT_NULL_HANDLE;
+  if (renderer == GRANIT_NULL_HANDLE)
+    return GRANIT_ERROR_INVALID_HANDLE;
   const auto validation_result = granit::detail::validate_buffer_desc(*desc);
   if (validation_result != GRANIT_SUCCESS) {
+    report_validation(renderer,
+                      "granit_buffer_create: desc 的结构版本、保留字段、大小、用途或内存位置无效");
     return validation_result;
   }
   try {
@@ -134,7 +148,17 @@ extern "C" granit_result granit_buffer_destroy(granit_renderer renderer, granit_
     return GRANIT_ERROR_INVALID_HANDLE;
   }
   try {
-    return granit::detail::renderer_registry::instance().destroy_buffer(renderer, buffer);
+    auto& registry = granit::detail::renderer_registry::instance();
+    const auto result = registry.destroy_buffer(renderer, buffer);
+    if (result == GRANIT_ERROR_INVALID_HANDLE) {
+      registry.emit_validation_diagnostic(
+          renderer,
+          "granit_buffer_destroy: buffer 必须是有效的 Buffer 句柄并属于指定 Renderer");
+    } else if (result == GRANIT_ERROR_INVALID_ARGUMENT) {
+      registry.emit_validation_diagnostic(renderer,
+                                          "granit_buffer_destroy: buffer 仍处于映射状态");
+    }
+    return result;
   } catch (...) {
     return GRANIT_ERROR_INTERNAL;
   }

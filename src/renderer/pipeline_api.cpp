@@ -46,6 +46,8 @@ extern "C" granit_result granit_bind_group_layout_create(granit_renderer rendere
   if (!layout)
     return GRANIT_ERROR_INVALID_ARGUMENT;
   *layout = GRANIT_NULL_HANDLE;
+  if (renderer == GRANIT_NULL_HANDLE)
+    return GRANIT_ERROR_INVALID_HANDLE;
   if (!desc || desc->struct_size < GRANIT_BIND_GROUP_LAYOUT_DESC_VERSION_1_SIZE ||
       desc->reserved != 0 || desc->entry_count > 64 || (desc->entry_count != 0 && !desc->entries))
     return GRANIT_ERROR_INVALID_ARGUMENT;
@@ -79,13 +81,17 @@ extern "C" granit_result granit_bind_group_create(granit_renderer renderer,
   if (!bind_group)
     return GRANIT_ERROR_INVALID_ARGUMENT;
   *bind_group = GRANIT_NULL_HANDLE;
+  if (renderer == GRANIT_NULL_HANDLE)
+    return GRANIT_ERROR_INVALID_HANDLE;
   if (!desc || desc->struct_size < GRANIT_BIND_GROUP_DESC_VERSION_1_SIZE || desc->reserved != 0 ||
-      desc->layout == GRANIT_NULL_HANDLE || desc->entry_count > 1024 ||
+      desc->entry_count > 1024 ||
       (desc->entry_count != 0 && !desc->entries))
     return GRANIT_ERROR_INVALID_ARGUMENT;
+  if (desc->layout == GRANIT_NULL_HANDLE)
+    return GRANIT_ERROR_INVALID_HANDLE;
   for (uint32_t index = 0; index < desc->entry_count; ++index) {
     if (desc->entries[index].resource == GRANIT_NULL_HANDLE)
-      return GRANIT_ERROR_INVALID_ARGUMENT;
+      return GRANIT_ERROR_INVALID_HANDLE;
     for (uint32_t previous = 0; previous < index; ++previous) {
       if (desc->entries[previous].binding == desc->entries[index].binding &&
           desc->entries[previous].array_element == desc->entries[index].array_element)
@@ -109,6 +115,8 @@ extern "C" granit_result granit_pipeline_layout_create(granit_renderer renderer,
   if (!layout)
     return GRANIT_ERROR_INVALID_ARGUMENT;
   *layout = GRANIT_NULL_HANDLE;
+  if (renderer == GRANIT_NULL_HANDLE)
+    return GRANIT_ERROR_INVALID_HANDLE;
   if (!desc || desc->struct_size < GRANIT_PIPELINE_LAYOUT_DESC_VERSION_1_SIZE ||
       desc->reserved != 0 || desc->bind_group_layout_count > 8 ||
       (desc->bind_group_layout_count != 0 && !desc->bind_group_layouts))
@@ -130,10 +138,11 @@ extern "C" granit_result granit_graphics_pipeline_create(granit_renderer rendere
   if (!pipeline)
     return GRANIT_ERROR_INVALID_ARGUMENT;
   *pipeline = GRANIT_NULL_HANDLE;
+  if (renderer == GRANIT_NULL_HANDLE)
+    return GRANIT_ERROR_INVALID_HANDLE;
   if (!desc || desc->struct_size < GRANIT_GRAPHICS_PIPELINE_DESC_VERSION_1_SIZE ||
-      desc->reserved != 0 || desc->reserved_2 != 0 || desc->layout == GRANIT_NULL_HANDLE ||
-      desc->vertex_shader == GRANIT_NULL_HANDLE || desc->fragment_shader == GRANIT_NULL_HANDLE ||
-      desc->color_format_count > 8 || (desc->color_format_count != 0 && !desc->color_formats) ||
+      desc->reserved != 0 || desc->reserved_2 != 0 || desc->color_format_count > 8 ||
+      (desc->color_format_count != 0 && !desc->color_formats) ||
       (desc->color_format_count == 0 &&
        desc->depth_stencil_format == GRANIT_TEXTURE_FORMAT_UNDEFINED) ||
       (desc->depth_stencil_format != GRANIT_TEXTURE_FORMAT_UNDEFINED &&
@@ -142,6 +151,9 @@ extern "C" granit_result granit_graphics_pipeline_create(granit_renderer rendere
       (desc->sample_count != 1 && desc->sample_count != 2 && desc->sample_count != 4 &&
        desc->sample_count != 8))
     return GRANIT_ERROR_INVALID_ARGUMENT;
+  if (desc->layout == GRANIT_NULL_HANDLE || desc->vertex_shader == GRANIT_NULL_HANDLE ||
+      desc->fragment_shader == GRANIT_NULL_HANDLE)
+    return GRANIT_ERROR_INVALID_HANDLE;
   for (uint32_t index = 0; index < desc->color_format_count; ++index) {
     if (!valid_format(desc->color_formats[index]) ||
         desc->color_formats[index] >= GRANIT_TEXTURE_FORMAT_D16_UNORM)
@@ -232,10 +244,13 @@ extern "C" granit_result granit_compute_pipeline_create(granit_renderer renderer
   if (!pipeline)
     return GRANIT_ERROR_INVALID_ARGUMENT;
   *pipeline = GRANIT_NULL_HANDLE;
+  if (renderer == GRANIT_NULL_HANDLE)
+    return GRANIT_ERROR_INVALID_HANDLE;
   if (!desc || desc->struct_size < GRANIT_COMPUTE_PIPELINE_DESC_VERSION_1_SIZE ||
-      desc->reserved != 0 || desc->reserved_2 != 0 || desc->layout == GRANIT_NULL_HANDLE ||
-      desc->compute_shader == GRANIT_NULL_HANDLE)
+      desc->reserved != 0 || desc->reserved_2 != 0)
     return GRANIT_ERROR_INVALID_ARGUMENT;
+  if (desc->layout == GRANIT_NULL_HANDLE || desc->compute_shader == GRANIT_NULL_HANDLE)
+    return GRANIT_ERROR_INVALID_HANDLE;
   return granit::detail::renderer_registry::instance().create_compute_pipeline(renderer, *desc,
                                                                                *pipeline);
 }

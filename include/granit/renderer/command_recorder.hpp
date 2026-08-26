@@ -52,9 +52,11 @@ public:
   }
 
   [[nodiscard]] result initialize(granit_renderer renderer) noexcept {
-    if (valid() || renderer == GRANIT_NULL_HANDLE) {
+    if (valid()) {
       return result::invalid_argument;
     }
+    if (renderer == GRANIT_NULL_HANDLE)
+      return result::invalid_handle;
     const granit_command_recorder_desc desc = GRANIT_COMMAND_RECORDER_DESC_INIT;
     const auto value = granit_command_recorder_create(renderer, &desc, &handle_);
     if (value == GRANIT_SUCCESS) {
@@ -81,9 +83,8 @@ public:
       handles.reserve(recorders.size());
       const auto renderer = recorders.front().renderer_;
       for (const auto& recorder : recorders) {
-        if (renderer == GRANIT_NULL_HANDLE || recorder.renderer_ != renderer || !recorder.valid()) {
-          return result::invalid_argument;
-        }
+        if (renderer == GRANIT_NULL_HANDLE || recorder.renderer_ != renderer || !recorder.valid())
+          return result::invalid_handle;
         handles.push_back(recorder.handle_);
       }
       return from_native(granit_command_recorder_submit_batch(
@@ -263,7 +264,8 @@ private:
   friend class frame_context;
   friend class frame_recording;
 
-  static command_recorder borrow(granit_renderer renderer, granit_command_recorder handle) noexcept {
+  static command_recorder borrow(granit_renderer renderer,
+                                 granit_command_recorder handle) noexcept {
     command_recorder recorder;
     recorder.renderer_ = renderer;
     recorder.handle_ = handle;

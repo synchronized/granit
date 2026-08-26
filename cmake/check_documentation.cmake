@@ -57,6 +57,40 @@ foreach(granit_doc IN LISTS granit_docs_files)
 endforeach()
 
 file(READ "${granit_docs_root}/README.md" granit_root_readme)
+
+function(granit_require_document_text relative_path expected_text description)
+  file(READ "${granit_docs_root}/${relative_path}" granit_checked_document)
+  string(FIND "${granit_checked_document}" "${expected_text}" granit_text_position)
+  if(granit_text_position EQUAL -1)
+    set_property(
+      GLOBAL APPEND PROPERTY GRANIT_DOCUMENTATION_COMMAND_ERRORS
+      "${relative_path}: 缺少${description}"
+    )
+  endif()
+endfunction()
+
+set_property(GLOBAL PROPERTY GRANIT_DOCUMENTATION_COMMAND_ERRORS "")
+granit_require_document_text(
+  "README.md" "find_package(granit CONFIG REQUIRED)" "核心安装包 CMake 入口"
+)
+granit_require_document_text(
+  "README.md" "COMPONENTS RenderPipeline" "RenderPipeline component 入口"
+)
+granit_require_document_text(
+  "docs/guides/build.md"
+  "ctest --test-dir build/consumer --output-on-failure"
+  "独立安装 Consumer 执行命令"
+)
+granit_require_document_text(
+  "docs/tutorials/render-pipeline-offscreen.md"
+  "granit.example.render_pipeline_offscreen"
+  "RenderPipeline 教程验证命令"
+)
+get_property(granit_command_errors GLOBAL PROPERTY GRANIT_DOCUMENTATION_COMMAND_ERRORS)
+if(granit_command_errors)
+  list(APPEND granit_docs_errors ${granit_command_errors})
+endif()
+
 string(REGEX MATCHALL "\n" granit_root_readme_newlines "${granit_root_readme}")
 list(LENGTH granit_root_readme_newlines granit_root_readme_line_count)
 math(EXPR granit_root_readme_line_count "${granit_root_readme_line_count} + 1")

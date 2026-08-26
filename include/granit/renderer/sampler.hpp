@@ -4,8 +4,8 @@
 #ifndef GRANIT_SAMPLER_HPP_
 #define GRANIT_SAMPLER_HPP_
 
-#include <granit/renderer/resource_types.hpp>
 #include <granit/core/result.hpp>
+#include <granit/renderer/resource_types.hpp>
 #include <granit/renderer/sampler.h>
 #include <utility>
 
@@ -45,8 +45,10 @@ public:
   }
   [[nodiscard]] result initialize(granit_renderer renderer,
                                   const sampler_desc& desc = {}) noexcept {
-    if (valid() || renderer == GRANIT_NULL_HANDLE)
+    if (valid())
       return result::invalid_argument;
+    if (renderer == GRANIT_NULL_HANDLE)
+      return result::invalid_handle;
     const granit_sampler_desc native{.struct_size = GRANIT_SAMPLER_DESC_VERSION_1_SIZE,
                                      .mag_filter = static_cast<std::uint32_t>(desc.mag_filter),
                                      .min_filter = static_cast<std::uint32_t>(desc.min_filter),

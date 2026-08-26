@@ -6,7 +6,17 @@ name: Linux
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - "docs/**"
+      - "README.md"
+      - "CHANGELOG.md"
+      - "DOCUMENTATION_GUIDE.md"
   pull_request:
+    paths-ignore:
+      - "docs/**"
+      - "README.md"
+      - "CHANGELOG.md"
+      - "DOCUMENTATION_GUIDE.md"
 
 permissions:
   contents: read
@@ -93,20 +103,7 @@ jobs:
             -DCMAKE_C_COMPILER_LAUNCHER=ccache \
             -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
           cmake --build "build/consumer/${{ steps.preset.outputs.name }}"
-          LD_LIBRARY_PATH="$prefix/lib" \
-            "build/consumer/${{ steps.preset.outputs.name }}/granit_c_consumer"
-          LD_LIBRARY_PATH="$prefix/lib" \
-            "build/consumer/${{ steps.preset.outputs.name }}/granit_cpp_consumer"
-          LD_LIBRARY_PATH="$prefix/lib" \
-            "build/consumer/${{ steps.preset.outputs.name }}/granit_pipeline_c_consumer"
-          LD_LIBRARY_PATH="$prefix/lib" \
-            "build/consumer/${{ steps.preset.outputs.name }}/granit_pipeline_cpp_consumer"
-          LD_LIBRARY_PATH="$prefix/lib" \
-            "build/consumer/${{ steps.preset.outputs.name }}/granit_window_c_consumer"
-          LD_LIBRARY_PATH="$prefix/lib" \
-            "build/consumer/${{ steps.preset.outputs.name }}/granit_input_c_consumer"
-          LD_LIBRARY_PATH="$prefix/lib" \
-            "build/consumer/${{ steps.preset.outputs.name }}/granit_input_cpp_consumer"
+          ctest --test-dir "build/consumer/${{ steps.preset.outputs.name }}" --output-on-failure
       - name: 输出编译缓存统计
         if: always()
         shell: bash

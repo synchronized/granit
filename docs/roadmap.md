@@ -26,6 +26,7 @@
 | 六、多线程与性能 | 已完成 | 压力测试、基线、批量提交与上传批处理已完成 |
 | 七、可选高层渲染 | 已完成 | H-02～H-08 路线闭合，参考管线与公共 UI/Text 已验证 |
 | 八、稳定化与跨平台 | 持续进行 | ABI 策略、诊断和更多平台 Surface 待后续推进 |
+| 九、多后端与 Web 平台 | 待开始 | 0.4.0 先建立多后端边界，再验证 WebGPU 与 Emscripten MVP |
 
 ## 一、工程与 ABI 基础
 
@@ -154,14 +155,23 @@
 - **[S-08](plans/S-08-third-party-integrations.md) / P2**：独立 SDL3/ImGui 目标、安装边界、SDL3
   Surface、ImGui Draw Data 转换、字体上传、组合示例与 S-08F 测量已完成；Win32 及 Linux
   X11/Wayland 共享与静态 smoke test 均已通过。
-- **[S-09](plans/S-09-0.3.0-sdk-usability.md) / P1**：0.3.0 公共 SDK 易用性与集成体验已确认，
-  先建立代表性使用路径并审计现有契约，再按证据决定包装层、内部行为或 C ABI 改动。
+- **[S-09](plans/S-09-0.3.0-sdk-usability.md) / P1**：已完成；公共使用路径、契约一致性、诊断、
+  安装 Consumer、迁移说明及 Windows/Linux 共享与静态 Release 预验证均已通过。
+
+## 九、多后端与 Web 平台
+
+**状态：待开始；0.3.0 完成后进入 0.4.0。**
+
+- **[S-10](plans/S-10-0.4.0-webgpu-backend.md) / P2**：先定义后端无关的内部设备、资源、命令、
+  同步与 Surface 边界，在保持 Vulkan 后端功能和性能的前提下验证桌面 WebGPU 离屏 MVP；随后建立
+  WGSL 工具链，并接入 Emscripten、浏览器 Canvas 和事件循环。具体 WebGPU 实现库在原型比较后决定。
 
 ## 近期执行顺序
 
-1. 按 S-09A～S-09D 完成 0.3.0 使用路径、契约、安装文档和诊断审计；没有证据时不新增其他 C ABI。
-2. S-06D 最终验收等待稳定版本与 component 范围决策；不在 0.x 阶段提前宣布稳定。
-3. H-09 的透明 PBR、CSM、Clustered Forward 与 Bindless 只在各自重新评估条件满足后独立恢复，
+1. 合并已完成验收的 0.3.0 工作并确认发布边界；不把多后端重构混入当前版本。
+2. 0.4.0 从 S-10A 后端边界与能力模型开始，再依次验证桌面 WebGPU、WGSL 和 Emscripten。
+3. S-06D 最终验收等待稳定版本与 component 范围决策；不在 0.x 阶段提前宣布稳定。
+4. H-09 的透明 PBR、CSM、Clustered Forward 与 Bindless 只在各自重新评估条件满足后独立恢复，
    不作为当前稳定化工作的前置项。
 
 若前置抽象不足，应先更新对应 Plan 和本路线图状态，再扩大公共 API。

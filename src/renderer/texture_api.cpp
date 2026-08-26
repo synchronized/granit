@@ -10,8 +10,9 @@
 #include <algorithm>
 #include <cstring>
 
-extern "C" granit_result granit_texture_format_get_footprint(
-    granit_texture_format format, granit_texture_format_footprint* footprint) {
+extern "C" granit_result
+granit_texture_format_get_footprint(granit_texture_format format,
+                                    granit_texture_format_footprint* footprint) {
   if (footprint == nullptr ||
       footprint->struct_size < GRANIT_TEXTURE_FORMAT_FOOTPRINT_VERSION_1_SIZE) {
     return GRANIT_ERROR_INVALID_ARGUMENT;
@@ -29,10 +30,12 @@ extern "C" granit_result granit_texture_format_get_footprint(
 extern "C" granit_result granit_texture_create(granit_renderer renderer,
                                                const granit_texture_desc* desc,
                                                granit_texture* texture) {
-  if (renderer == GRANIT_NULL_HANDLE || desc == nullptr || texture == nullptr) {
+  if (desc == nullptr || texture == nullptr) {
     return GRANIT_ERROR_INVALID_ARGUMENT;
   }
   *texture = GRANIT_NULL_HANDLE;
+  if (renderer == GRANIT_NULL_HANDLE)
+    return GRANIT_ERROR_INVALID_HANDLE;
   const auto result = granit::detail::validate_texture_desc(*desc);
   if (result != GRANIT_SUCCESS) {
     return result;
@@ -44,11 +47,12 @@ extern "C" granit_result granit_texture_view_create(granit_renderer renderer,
                                                     granit_texture texture,
                                                     const granit_texture_view_desc* desc,
                                                     granit_texture_view* view) {
-  if (renderer == GRANIT_NULL_HANDLE || texture == GRANIT_NULL_HANDLE || desc == nullptr ||
-      view == nullptr) {
+  if (desc == nullptr || view == nullptr) {
     return GRANIT_ERROR_INVALID_ARGUMENT;
   }
   *view = GRANIT_NULL_HANDLE;
+  if (renderer == GRANIT_NULL_HANDLE || texture == GRANIT_NULL_HANDLE)
+    return GRANIT_ERROR_INVALID_HANDLE;
   const auto result = granit::detail::validate_texture_view_desc(*desc);
   if (result != GRANIT_SUCCESS) {
     return result;

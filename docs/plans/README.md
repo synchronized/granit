@@ -120,8 +120,10 @@ D-03-graphics-pipeline.md
   事件分发桥、键盘、指针和文本路径均已通过跨平台 CI。
 - [S-08：SDL3 与 ImGui 第三方集成](S-08-third-party-integrations.md)——已完成；Win32 及 Linux
   X11/Wayland 共享与静态运行矩阵均已通过，第三方依赖不进入核心。
-- [S-09：0.3.0 公共 SDK 易用性与集成体验](S-09-0.3.0-sdk-usability.md)——已确认；先完成代表性
-  使用路径和契约一致性审计，再按证据决定是否扩大公共 ABI。
+- [S-09：0.3.0 公共 SDK 易用性与集成体验](S-09-0.3.0-sdk-usability.md)——已完成；公共使用路径、
+  契约、诊断、安装 Consumer、迁移说明和 Release 预验证均已验收。
+- [S-10：0.4.0 多后端与 WebGPU](S-10-0.4.0-webgpu-backend.md)——草案；0.3.0 完成后先抽离
+  内部后端边界，再验证桌面 WebGPU、WGSL 和 Emscripten 浏览器路径。
 
 ## 状态
 

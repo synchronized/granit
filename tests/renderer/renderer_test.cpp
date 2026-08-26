@@ -280,4 +280,48 @@ TEST_CASE("Renderer 诊断回调接收生命周期消息", "[renderer][diagnosti
   CHECK(found_lifecycle_message);
 }
 
+TEST_CASE("Renderer 诊断回调定位参数错误和跨 Renderer 句柄", "[renderer][diagnostic]") {
+  diagnostic_messages captured;
+  granit_renderer_desc renderer_desc = GRANIT_RENDERER_DESC_INIT;
+  renderer_desc.diagnostic_callback = capture_diagnostic;
+  renderer_desc.diagnostic_user_data = &captured;
+  granit_renderer first = GRANIT_NULL_HANDLE;
+  const auto first_result = granit_renderer_create(&renderer_desc, &first);
+  if (environment_unavailable(first_result)) {
+    SKIP("当前运行环境没有满足要求的 Vulkan 设备");
+  }
+  REQUIRE(first_result == GRANIT_SUCCESS);
+
+  granit_renderer second = GRANIT_NULL_HANDLE;
+  REQUIRE(granit_renderer_create(&renderer_desc, &second) == GRANIT_SUCCESS);
+
+  granit_buffer_desc invalid_desc = GRANIT_BUFFER_DESC_INIT;
+  granit_buffer buffer = GRANIT_NULL_HANDLE;
+  CHECK(granit_buffer_create(first, &invalid_desc, &buffer) == GRANIT_ERROR_INVALID_ARGUMENT);
+
+  granit_buffer_desc valid_desc = GRANIT_BUFFER_DESC_INIT;
+  valid_desc.size = 16;
+  valid_desc.usage = GRANIT_BUFFER_USAGE_TRANSFER_DESTINATION_BIT;
+  REQUIRE(granit_buffer_create(first, &valid_desc, &buffer) == GRANIT_SUCCESS);
+  CHECK(granit_buffer_destroy(second, buffer) == GRANIT_ERROR_INVALID_HANDLE);
+  REQUIRE(granit_buffer_destroy(first, buffer) == GRANIT_SUCCESS);
+  REQUIRE(granit_renderer_destroy(second) == GRANIT_SUCCESS);
+  REQUIRE(granit_renderer_destroy(first) == GRANIT_SUCCESS);
+
+  std::lock_guard lock{captured.mutex};
+  bool found_desc = false;
+  bool found_handle = false;
+  for (std::size_t index = 0; index < captured.messages.size(); ++index) {
+    if (captured.categories[index] != GRANIT_DIAGNOSTIC_CATEGORY_VALIDATION)
+      continue;
+    found_desc |= captured.messages[index].find("granit_buffer_create") != std::string::npos &&
+                  captured.messages[index].find("desc") != std::string::npos;
+    found_handle |= captured.messages[index].find("granit_buffer_destroy") != std::string::npos &&
+                    captured.messages[index].find("Buffer") != std::string::npos &&
+                    captured.messages[index].find("Renderer") != std::string::npos;
+  }
+  CHECK(found_desc);
+  CHECK(found_handle);
+}
+
 } // namespace

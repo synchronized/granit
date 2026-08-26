@@ -6,7 +6,17 @@ name: Windows
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - "docs/**"
+      - "README.md"
+      - "CHANGELOG.md"
+      - "DOCUMENTATION_GUIDE.md"
   pull_request:
+    paths-ignore:
+      - "docs/**"
+      - "README.md"
+      - "CHANGELOG.md"
+      - "DOCUMENTATION_GUIDE.md"
 
 env:
   SCCACHE_GHA_ENABLED: "true"
@@ -81,18 +91,5 @@ jobs:
                 (-not (Test-Path "$prefix/bin/granit_input.dll"))) {
               throw '安装目录缺少共享库 DLL'
             }
-            $env:PATH = "$prefix/bin;$env:SystemRoot/System32;$env:SystemRoot"
           }
-          $apps = @(
-            'granit_c_consumer',
-            'granit_cpp_consumer',
-            'granit_pipeline_c_consumer',
-            'granit_pipeline_cpp_consumer',
-            'granit_window_c_consumer',
-            'granit_input_c_consumer',
-            'granit_input_cpp_consumer'
-          )
-          foreach ($app in $apps) {
-            & "$consumer/$app.exe"
-            if ($LASTEXITCODE -ne 0) { throw "$app 返回 $LASTEXITCODE" }
-          }
+          ctest --test-dir $consumer --output-on-failure

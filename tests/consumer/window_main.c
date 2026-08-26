@@ -10,7 +10,9 @@ int main(void) {
 #if defined(_WIN32)
   if (result != GRANIT_SUCCESS || system == GRANIT_NULL_HANDLE)
     return 1;
-  return granit_window_system_destroy(system) == GRANIT_SUCCESS ? 0 : 2;
+  if (granit_window_system_destroy(system) != GRANIT_SUCCESS)
+    return 2;
+  return granit_window_system_destroy(system) == GRANIT_ERROR_INVALID_HANDLE ? 0 : 3;
 #else
   return (result == GRANIT_ERROR_UNSUPPORTED || result == GRANIT_ERROR_BACKEND_UNAVAILABLE) &&
                  system == GRANIT_NULL_HANDLE

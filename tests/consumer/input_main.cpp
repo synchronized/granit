@@ -16,7 +16,9 @@ int main() {
   granit::input_system input;
   if (granit::failed(input.initialize(windows.native_handle())))
     return 2;
-  if (granit::failed(input.reset()))
+  if (granit::failed(input.reset()) || granit::failed(input.reset()))
     return 3;
-  return granit::failed(windows.reset()) ? 4 : 0;
+  if (granit::failed(windows.reset()) || granit::failed(windows.reset()))
+    return 4;
+  return 0;
 }

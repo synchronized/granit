@@ -13,10 +13,12 @@
 extern "C" granit_result granit_command_recorder_create(granit_renderer renderer,
                                                         const granit_command_recorder_desc* desc,
                                                         granit_command_recorder* recorder) {
-  if (renderer == GRANIT_NULL_HANDLE || desc == nullptr || recorder == nullptr) {
+  if (desc == nullptr || recorder == nullptr) {
     return GRANIT_ERROR_INVALID_ARGUMENT;
   }
   *recorder = GRANIT_NULL_HANDLE;
+  if (renderer == GRANIT_NULL_HANDLE)
+    return GRANIT_ERROR_INVALID_HANDLE;
   if (desc->struct_size < GRANIT_COMMAND_RECORDER_DESC_VERSION_1_SIZE || desc->flags != 0 ||
       desc->reserved != 0) {
     return GRANIT_ERROR_INVALID_ARGUMENT;
@@ -65,9 +67,11 @@ extern "C" granit_result granit_command_recorder_submit(granit_renderer renderer
 
 extern "C" granit_result granit_command_recorder_submit_batch(
     granit_renderer renderer, const granit_command_recorder* recorders, uint32_t recorder_count) {
-  if (renderer == GRANIT_NULL_HANDLE || recorders == nullptr || recorder_count == 0) {
+  if (recorders == nullptr || recorder_count == 0) {
     return GRANIT_ERROR_INVALID_ARGUMENT;
   }
+  if (renderer == GRANIT_NULL_HANDLE)
+    return GRANIT_ERROR_INVALID_HANDLE;
   try {
     return granit::detail::renderer_registry::instance().submit_command_recorders(
         renderer, std::span{recorders, recorder_count});

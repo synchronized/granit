@@ -51,9 +51,11 @@ public:
 
   [[nodiscard]] result initialize_win32(granit_renderer renderer,
                                         const win32_surface_desc& desc) noexcept {
-    if (valid() || renderer == GRANIT_NULL_HANDLE) {
+    if (valid()) {
       return result::invalid_argument;
     }
+    if (renderer == GRANIT_NULL_HANDLE)
+      return result::invalid_handle;
     const granit_win32_surface_desc native_desc{
         .struct_size = sizeof(granit_win32_surface_desc),
         .instance = desc.instance,
@@ -68,8 +70,10 @@ public:
 
   [[nodiscard]] result initialize_xcb(granit_renderer renderer,
                                       const xcb_surface_desc& desc) noexcept {
-    if (valid() || renderer == GRANIT_NULL_HANDLE)
+    if (valid())
       return result::invalid_argument;
+    if (renderer == GRANIT_NULL_HANDLE)
+      return result::invalid_handle;
     const granit_xcb_surface_desc native_desc{
         .struct_size = sizeof(granit_xcb_surface_desc),
         .connection = desc.connection,
@@ -83,8 +87,10 @@ public:
 
   [[nodiscard]] result initialize_wayland(granit_renderer renderer,
                                           const wayland_surface_desc& desc) noexcept {
-    if (valid() || renderer == GRANIT_NULL_HANDLE)
+    if (valid())
       return result::invalid_argument;
+    if (renderer == GRANIT_NULL_HANDLE)
+      return result::invalid_handle;
     const granit_wayland_surface_desc native_desc{
         .struct_size = sizeof(granit_wayland_surface_desc),
         .display = desc.display,
@@ -101,7 +107,7 @@ public:
       return result::success;
     }
     const auto value = granit_surface_destroy(renderer_, handle_);
-    if (value == GRANIT_SUCCESS) {
+    if (value == GRANIT_SUCCESS || value == GRANIT_ERROR_INVALID_HANDLE) {
       renderer_ = GRANIT_NULL_HANDLE;
       handle_ = GRANIT_NULL_HANDLE;
     }

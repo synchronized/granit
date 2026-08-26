@@ -48,8 +48,10 @@ public:
     return *this;
   }
   [[nodiscard]] result initialize(granit_window_system window_system) noexcept {
-    if (valid() || window_system == GRANIT_NULL_HANDLE)
+    if (valid())
       return result::invalid_argument;
+    if (window_system == GRANIT_NULL_HANDLE)
+      return result::invalid_handle;
     const granit_input_system_desc desc{sizeof(granit_input_system_desc), window_system, 0, 0};
     return from_native(granit_input_system_create(&desc, &handle_));
   }
@@ -66,7 +68,7 @@ public:
     if (!valid())
       return result::success;
     const auto value = granit_input_system_destroy(handle_);
-    if (value == GRANIT_SUCCESS)
+    if (value == GRANIT_SUCCESS || value == GRANIT_ERROR_INVALID_HANDLE)
       handle_ = GRANIT_NULL_HANDLE;
     return from_native(value);
   }

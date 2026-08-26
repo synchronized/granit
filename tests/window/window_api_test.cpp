@@ -2,6 +2,7 @@
 // Copyright (c) 2026 Granit contributors
 
 #include <granit/window.h>
+#include <granit/window.hpp>
 
 #include <catch2/catch_all.hpp>
 
@@ -12,6 +13,19 @@
 #elif defined(GRANIT_TEST_HAS_XCB)
 #include <xcb/xcb.h>
 #endif
+
+TEST_CASE("Window创建把空Window System归类为无效句柄", "[window][contract]") {
+  granit_window_desc desc = GRANIT_WINDOW_DESC_INIT;
+  desc.width = 1;
+  desc.height = 1;
+  granit_window handle = UINT64_C(1);
+  CHECK(granit_window_create(GRANIT_NULL_HANDLE, &desc, &handle) == GRANIT_ERROR_INVALID_HANDLE);
+  CHECK(handle == GRANIT_NULL_HANDLE);
+
+  granit::window window;
+  CHECK(window.initialize(GRANIT_NULL_HANDLE, {.title = "", .width = 1, .height = 1}) ==
+        granit::result::invalid_handle);
+}
 
 TEST_CASE("Window 组件骨架保持确定的失败与输出语义", "[window]") {
   granit_window_system system = UINT64_C(42);

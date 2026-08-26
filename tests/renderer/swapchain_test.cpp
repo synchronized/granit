@@ -17,6 +17,23 @@
 
 namespace {
 
+TEST_CASE("Swapchain创建把空父句柄归类为无效句柄", "[swapchain][contract]") {
+  const granit_swapchain_desc desc = GRANIT_SWAPCHAIN_DESC_INIT;
+  granit_swapchain handle = UINT64_C(1);
+  CHECK(granit_swapchain_create(GRANIT_NULL_HANDLE, UINT64_C(1), &desc, &handle) ==
+        GRANIT_ERROR_INVALID_HANDLE);
+  CHECK(handle == GRANIT_NULL_HANDLE);
+  CHECK(granit_swapchain_create(UINT64_C(1), GRANIT_NULL_HANDLE, &desc, &handle) ==
+        GRANIT_ERROR_INVALID_HANDLE);
+  CHECK(handle == GRANIT_NULL_HANDLE);
+
+  granit::swapchain swapchain;
+  CHECK(swapchain.initialize(GRANIT_NULL_HANDLE, UINT64_C(1), {}) ==
+        granit::result::invalid_handle);
+  CHECK(swapchain.initialize(UINT64_C(1), GRANIT_NULL_HANDLE, {}) ==
+        granit::result::invalid_handle);
+}
+
 #if defined(_WIN32)
 class swapchain_test_window {
 public:

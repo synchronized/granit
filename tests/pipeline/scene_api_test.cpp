@@ -33,6 +33,19 @@ bool environment_unavailable(granit::result value) {
 
 } // namespace
 
+TEST_CASE("公共Scene Snapshot把空Renderer归类为无效句柄") {
+  std::array<granit_scene_view, 1> views{};
+  const auto desc = valid_desc(views);
+  granit_scene_snapshot snapshot = UINT64_C(1);
+  CHECK(granit_scene_snapshot_create(GRANIT_NULL_HANDLE, &desc, &snapshot) ==
+        GRANIT_ERROR_INVALID_HANDLE);
+  CHECK(snapshot == GRANIT_NULL_HANDLE);
+
+  granit::scene_snapshot cpp_snapshot;
+  CHECK(cpp_snapshot.initialize(GRANIT_NULL_HANDLE, desc) == granit::result::invalid_handle);
+  CHECK_FALSE(cpp_snapshot.valid());
+}
+
 TEST_CASE("公共Scene Snapshot复制输入并使旧句柄失效") {
   granit::renderer renderer;
   const auto initialized = renderer.initialize({.application_name = "granit-scene-abi"});

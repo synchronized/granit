@@ -44,9 +44,11 @@ public:
   }
 
   [[nodiscard]] result initialize(granit_renderer renderer, const buffer_desc& desc) noexcept {
-    if (valid() || renderer == GRANIT_NULL_HANDLE) {
+    if (valid()) {
       return result::invalid_argument;
     }
+    if (renderer == GRANIT_NULL_HANDLE)
+      return result::invalid_handle;
     const granit_buffer_desc native_desc{
         .struct_size = GRANIT_BUFFER_DESC_VERSION_1_SIZE,
         .usage = static_cast<granit_buffer_usage>(desc.usage),
@@ -64,9 +66,11 @@ public:
 
   [[nodiscard]] result initialize(granit_renderer renderer, const buffer_desc& desc,
                                   std::span<const std::byte> initial_data) noexcept {
-    if (valid() || renderer == GRANIT_NULL_HANDLE) {
+    if (valid()) {
       return result::invalid_argument;
     }
+    if (renderer == GRANIT_NULL_HANDLE)
+      return result::invalid_handle;
     const granit_buffer_desc native_desc{
         .struct_size = GRANIT_BUFFER_DESC_VERSION_1_SIZE,
         .usage = static_cast<granit_buffer_usage>(desc.usage),

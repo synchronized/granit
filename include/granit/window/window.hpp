@@ -65,7 +65,7 @@ public:
     if (!valid())
       return result::success;
     const auto value = granit_window_system_destroy(handle_);
-    if (value == GRANIT_SUCCESS)
+    if (value == GRANIT_SUCCESS || value == GRANIT_ERROR_INVALID_HANDLE)
       handle_ = GRANIT_NULL_HANDLE;
     return from_native(value);
   }
@@ -95,8 +95,10 @@ public:
   }
 
   [[nodiscard]] result initialize(granit_window_system system, const window_desc& desc) noexcept {
-    if (valid() || system == GRANIT_NULL_HANDLE || desc.title.size() > UINT32_MAX)
+    if (valid() || desc.title.size() > UINT32_MAX)
       return result::invalid_argument;
+    if (system == GRANIT_NULL_HANDLE)
+      return result::invalid_handle;
     granit_window_desc native_desc{};
     native_desc.struct_size = sizeof(granit_window_desc);
     native_desc.title = desc.title.data();
@@ -113,7 +115,7 @@ public:
     if (!valid())
       return result::success;
     const auto value = granit_window_destroy(system_, handle_);
-    if (value == GRANIT_SUCCESS) {
+    if (value == GRANIT_SUCCESS || value == GRANIT_ERROR_INVALID_HANDLE) {
       system_ = GRANIT_NULL_HANDLE;
       handle_ = GRANIT_NULL_HANDLE;
     }
