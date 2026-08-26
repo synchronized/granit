@@ -5,6 +5,12 @@ name: Dawn Dependency Packages
 
 on:
   workflow_dispatch:
+    inputs:
+      publish_sdk:
+        description: "验证通过后发布长期保存的版本化 Dawn SDK"
+        required: true
+        default: false
+        type: boolean
 
 permissions:
   contents: read
@@ -211,3 +217,40 @@ jobs:
             ${{ steps.package.outputs.name }}.tar.gz
             ${{ steps.package.outputs.name }}.tar.gz.sha256
           if-no-files-found: error
+
+  publish-sdk:
+    if: ${{ inputs.publish_sdk }}
+    needs:
+      - windows-static-plugin
+      - linux-static-plugin
+    permissions:
+      contents: write
+    runs-on: ubuntu-24.04
+    steps:
+      - name: 下载已验证的 SDK 包
+        uses: actions/download-artifact@v6
+        with:
+          pattern: granit-dawn-static-*
+          path: packages
+          merge-multiple: true
+      - name: 发布版本化 Dawn SDK
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          revision_short="${DAWN_REVISION:0:12}"
+          tag="dawn-sdk-${DAWN_VERSION}-${revision_short}"
+          title="Granit Dawn SDK ${DAWN_VERSION} (${revision_short})"
+          mapfile -t packages < <(find packages -maxdepth 1 -type f | sort)
+          [[ "${#packages[@]}" -eq 4 ]]
+          if ! gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release create "$tag" \
+              --repo "$GITHUB_REPOSITORY" \
+              --target "$GITHUB_SHA" \
+              --title "$title" \
+              --prerelease \
+              --notes "由锁定 Dawn 修订 ${DAWN_REVISION} 构建并通过 Granit WebGPU 插件 smoke test。"
+          fi
+          gh release upload "$tag" "${packages[@]}" \
+            --repo "$GITHUB_REPOSITORY" \
+            --clobber
