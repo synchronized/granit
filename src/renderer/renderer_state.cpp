@@ -3,6 +3,7 @@
 
 #include "renderer/renderer_state.h"
 
+#include "backend/vulkan/resources.h"
 #include "backend/vulkan/result.h"
 #include "backend/vulkan/surface.h"
 
@@ -237,6 +238,13 @@ granit_result renderer_state::initialize(std::string_view application_name, bool
     instance_.reset();
     return device_result;
   }
+  const auto& limits = device_.properties().limits;
+  capabilities_ = {
+      .uniform_buffer_offset_alignment = limits.minUniformBufferOffsetAlignment,
+      .storage_buffer_offset_alignment = limits.minStorageBufferOffsetAlignment,
+      .max_uniform_buffer_binding_size = limits.maxUniformBufferRange,
+      .max_storage_buffer_binding_size = limits.maxStorageBufferRange,
+  };
 
   const auto allocator_result = memory_allocator_.initialize(instance_, device_);
   if (allocator_result != GRANIT_SUCCESS) {
@@ -638,7 +646,7 @@ granit_result renderer_state::upload_buffer(const vulkan_buffer_allocation& buff
 }
 
 granit_result
-renderer_state::upload_batch(std::span<const vulkan_upload_operation> uploads) noexcept {
+renderer_state::upload_batch(std::span<const backend_upload_operation> uploads) noexcept {
   if (device_lost())
     return GRANIT_ERROR_DEVICE_LOST;
   if (uploads.empty())
@@ -647,6 +655,13 @@ renderer_state::upload_batch(std::span<const vulkan_upload_operation> uploads) n
   const auto alignment =
       std::max<VkDeviceSize>(4, device_.properties().limits.optimalBufferCopyOffsetAlignment);
   for (const auto& upload : uploads) {
+    if (upload.data == nullptr || upload.size == 0 ||
+        (upload.type != backend_upload_type::buffer &&
+         upload.type != backend_upload_type::texture) ||
+        (upload.type == backend_upload_type::buffer && upload.buffer == nullptr) ||
+        (upload.type == backend_upload_type::texture && upload.texture == nullptr)) {
+      return GRANIT_ERROR_INVALID_ARGUMENT;
+    }
     const auto aligned = (required + alignment - 1) & ~(alignment - 1);
     if (aligned < required || upload.size > UINT64_MAX - aligned)
       return GRANIT_ERROR_OUT_OF_MEMORY;
@@ -694,18 +709,30 @@ renderer_state::upload_batch(std::span<const vulkan_upload_operation> uploads) n
     source_offset = 0;
     for (const auto& upload : uploads) {
       source_offset = (source_offset + alignment - 1) & ~(alignment - 1);
-      if (upload.type == vulkan_upload_type::buffer) {
+      if (upload.type == backend_upload_type::buffer) {
+        const auto& buffer = static_cast<const vulkan_buffer_resource&>(*upload.buffer).native();
         const VkBufferCopy copy{.srcOffset = source_offset,
                                 .dstOffset = upload.destination_offset,
                                 .size = upload.size};
-        functions.vkCmdCopyBuffer(context.command_buffer(), context.staging().buffer,
-                                  upload.buffer->buffer, 1, &copy);
+        functions.vkCmdCopyBuffer(context.command_buffer(), context.staging().buffer, buffer.buffer,
+                                  1, &copy);
       } else {
+        const auto& texture = static_cast<const vulkan_texture_resource&>(*upload.texture).native();
+        VkBufferImageCopy texture_copy{};
+        texture_copy.bufferRowLength = upload.texture_copy.buffer_row_length;
+        texture_copy.bufferImageHeight = upload.texture_copy.buffer_image_height;
+        texture_copy.imageSubresource = {
+            map_texture_aspect(upload.texture_copy.aspect), upload.texture_copy.mip_level,
+            upload.texture_copy.base_array_layer, upload.texture_copy.array_layer_count};
+        texture_copy.imageOffset = {upload.texture_copy.x, upload.texture_copy.y,
+                                    upload.texture_copy.z};
+        texture_copy.imageExtent = {upload.texture_copy.width, upload.texture_copy.height,
+                                    upload.texture_copy.depth};
         const vulkan_image_access destination{
-            .image = upload.texture->image,
-            .range = {upload.texture_copy.imageSubresource.aspectMask,
-                      upload.texture_copy.imageSubresource.mipLevel, 1,
-                      upload.texture_copy.imageSubresource.baseArrayLayer, 1}};
+            .image = texture.image,
+            .range = {texture_copy.imageSubresource.aspectMask,
+                      texture_copy.imageSubresource.mipLevel, 1,
+                      texture_copy.imageSubresource.baseArrayLayer, 1}};
         const auto pending = find_image_subresource(pending_states, destination);
         const auto previous = pending != pending_states.end()
                                   ? pending
@@ -723,26 +750,25 @@ renderer_state::upload_batch(std::span<const vulkan_upload_operation> uploads) n
         barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
         barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
         barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-        barrier.image = upload.texture->image;
-        barrier.subresourceRange = {upload.texture_copy.imageSubresource.aspectMask,
-                                    upload.texture_copy.imageSubresource.mipLevel, 1,
-                                    upload.texture_copy.imageSubresource.baseArrayLayer,
-                                    upload.texture_copy.imageSubresource.layerCount};
+        barrier.image = texture.image;
+        barrier.subresourceRange = {
+            texture_copy.imageSubresource.aspectMask, texture_copy.imageSubresource.mipLevel, 1,
+            texture_copy.imageSubresource.baseArrayLayer, texture_copy.imageSubresource.layerCount};
         VkDependencyInfo dependency{};
         dependency.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
         dependency.imageMemoryBarrierCount = 1;
         dependency.pImageMemoryBarriers = &barrier;
         functions.vkCmdPipelineBarrier2(context.command_buffer(), &dependency);
-        auto copy = upload.texture_copy;
+        auto copy = texture_copy;
         copy.bufferOffset = source_offset;
         functions.vkCmdCopyBufferToImage(context.command_buffer(), context.staging().buffer,
-                                         upload.texture->image,
-                                         VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copy);
-        vulkan_image_access state{.image = upload.texture->image,
-                                  .range = {upload.texture_copy.imageSubresource.aspectMask,
-                                            upload.texture_copy.imageSubresource.mipLevel, 1,
-                                            upload.texture_copy.imageSubresource.baseArrayLayer,
-                                            upload.texture_copy.imageSubresource.layerCount},
+                                         texture.image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1,
+                                         &copy);
+        vulkan_image_access state{.image = texture.image,
+                                  .range = {texture_copy.imageSubresource.aspectMask,
+                                            texture_copy.imageSubresource.mipLevel, 1,
+                                            texture_copy.imageSubresource.baseArrayLayer,
+                                            texture_copy.imageSubresource.layerCount},
                                   .layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                                   .stages = VK_PIPELINE_STAGE_2_TRANSFER_BIT,
                                   .access = VK_ACCESS_2_TRANSFER_WRITE_BIT,
@@ -1561,8 +1587,9 @@ granit_result renderer_state::complete_frame_slot(frame_slot& slot) noexcept {
   return GRANIT_SUCCESS;
 }
 
-granit_result renderer_state::submit_command_recorder(vulkan_command_recorder& recorder,
+granit_result renderer_state::submit_command_recorder(backend_command_recorder_resource& resource,
                                                       submission_serial& submitted_serial) {
+  auto& recorder = static_cast<vulkan_command_recorder_resource&>(resource).native();
   submitted_serial = 0;
   if (device_lost())
     return GRANIT_ERROR_DEVICE_LOST;
@@ -1661,12 +1688,23 @@ granit_result renderer_state::submit_command_recorder(vulkan_command_recorder& r
   return GRANIT_SUCCESS;
 }
 
-granit_result
-renderer_state::submit_command_recorders(std::span<vulkan_command_recorder* const> recorders,
-                                         submission_serial& submitted_serial) {
+granit_result renderer_state::submit_command_recorders(
+    std::span<backend_command_recorder_resource* const> resources,
+    submission_serial& submitted_serial) {
   submitted_serial = 0;
   if (device_lost())
     return GRANIT_ERROR_DEVICE_LOST;
+  std::vector<vulkan_command_recorder*> recorders;
+  try {
+    recorders.reserve(resources.size());
+    for (auto* resource : resources) {
+      if (resource == nullptr)
+        return GRANIT_ERROR_INVALID_ARGUMENT;
+      recorders.push_back(&static_cast<vulkan_command_recorder_resource&>(*resource).native());
+    }
+  } catch (const std::bad_alloc&) {
+    return GRANIT_ERROR_OUT_OF_MEMORY;
+  }
   std::lock_guard lock{queue_mutex_};
   if (recorders.empty() || frame_slots_.empty()) {
     return GRANIT_ERROR_INVALID_ARGUMENT;
@@ -1794,10 +1832,11 @@ renderer_state::submit_command_recorders(std::span<vulkan_command_recorder* cons
   return GRANIT_SUCCESS;
 }
 
-granit_result renderer_state::acquire_swapchain_frame(vulkan_swapchain& swapchain,
+granit_result renderer_state::acquire_swapchain_frame(backend_swapchain_resource& resource,
                                                       std::uint32_t& image_index,
                                                       std::size_t& slot_index,
                                                       bool& needs_recreate) {
+  auto& swapchain = static_cast<vulkan_swapchain_resource&>(resource).native();
   if (device_lost())
     return GRANIT_ERROR_DEVICE_LOST;
   std::lock_guard lock{queue_mutex_};
@@ -1817,11 +1856,13 @@ granit_result renderer_state::acquire_swapchain_frame(vulkan_swapchain& swapchai
   return GRANIT_SUCCESS;
 }
 
-granit_result renderer_state::submit_swapchain_frame(vulkan_command_recorder& recorder,
-                                                     vulkan_swapchain& swapchain,
+granit_result renderer_state::submit_swapchain_frame(backend_command_recorder_resource& command,
+                                                     backend_swapchain_resource& resource,
                                                      std::uint32_t image_index,
                                                      std::size_t slot_index,
                                                      submission_serial& submitted_serial) {
+  auto& recorder = static_cast<vulkan_command_recorder_resource&>(command).native();
+  auto& swapchain = static_cast<vulkan_swapchain_resource&>(resource).native();
   submitted_serial = 0;
   if (device_lost())
     return GRANIT_ERROR_DEVICE_LOST;
@@ -1964,10 +2005,11 @@ granit_result renderer_state::submit_swapchain_frame(vulkan_command_recorder& re
   return GRANIT_SUCCESS;
 }
 
-granit_result renderer_state::present_swapchain_frame(vulkan_swapchain& swapchain,
+granit_result renderer_state::present_swapchain_frame(backend_swapchain_resource& resource,
                                                       std::uint32_t image_index,
                                                       std::size_t slot_index,
                                                       bool& needs_recreate) {
+  auto& swapchain = static_cast<vulkan_swapchain_resource&>(resource).native();
   if (device_lost())
     return GRANIT_ERROR_DEVICE_LOST;
   std::lock_guard lock{queue_mutex_};
@@ -1983,9 +2025,10 @@ granit_result renderer_state::present_swapchain_frame(vulkan_swapchain& swapchai
   return observe_device_result(presented.result);
 }
 
-granit_result renderer_state::cancel_swapchain_frame(vulkan_swapchain& swapchain,
+granit_result renderer_state::cancel_swapchain_frame(backend_swapchain_resource& resource,
                                                      std::uint32_t image_index,
                                                      std::size_t slot_index, bool& needs_recreate) {
+  auto& swapchain = static_cast<vulkan_swapchain_resource&>(resource).native();
   if (device_lost())
     return GRANIT_ERROR_DEVICE_LOST;
   std::lock_guard lock{queue_mutex_};
@@ -2097,7 +2140,9 @@ granit_result renderer_state::observe_device_result(granit_result result,
   return observed;
 }
 
-granit_result renderer_state::wait_command_recorder(vulkan_command_recorder& recorder) noexcept {
+granit_result
+renderer_state::wait_command_recorder(backend_command_recorder_resource& resource) noexcept {
+  auto& recorder = static_cast<vulkan_command_recorder_resource&>(resource).native();
   if (device_lost())
     return GRANIT_ERROR_DEVICE_LOST;
   std::lock_guard lock{queue_mutex_};

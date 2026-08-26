@@ -28,6 +28,8 @@
 #include <granit/renderer/timestamp_query.h>
 #include <granit/renderer/upload_batch.h>
 
+#include "backend/resources.h"
+#include "backend/upload.h"
 #include "backend/vulkan/timestamp_query.h"
 #include "core/handle_table.h"
 #include "core/lifecycle_validation.h"
@@ -324,76 +326,66 @@ private:
   struct surface_record {
     resource_metadata metadata;
     std::shared_ptr<renderer_state> renderer;
-    VkSurfaceKHR native_handle{VK_NULL_HANDLE};
-    ~surface_record();
+    std::unique_ptr<backend_surface_resource> native;
   };
   struct swapchain_record {
     resource_metadata metadata;
     std::shared_ptr<renderer_state> renderer;
     std::shared_ptr<surface_record> surface;
-    std::unique_ptr<vulkan_swapchain> native;
+    std::unique_ptr<backend_swapchain_resource> native;
     std::vector<granit_texture> textures;
     std::vector<granit_texture_view> views;
     bool surface_lost{};
-    ~swapchain_record();
   };
   struct buffer_record {
     resource_metadata metadata;
     std::shared_ptr<renderer_state> renderer;
-    vulkan_buffer_allocation native;
+    std::unique_ptr<backend_buffer_resource> native;
     granit_buffer_desc desc{};
     std::mutex mutex;
     bool mapped{};
     std::uint64_t mapped_offset{};
     std::uint64_t mapped_size{};
-    ~buffer_record();
   };
   struct texture_record {
     resource_metadata metadata;
     std::shared_ptr<renderer_state> renderer;
-    vulkan_image_allocation native;
+    std::unique_ptr<backend_texture_resource> native;
     granit_texture_desc desc{};
-    bool owned{true};
     bool publicly_destroyable{true};
     std::mutex mutex;
-    ~texture_record();
   };
   struct texture_view_record {
     resource_metadata metadata;
     std::shared_ptr<renderer_state> renderer;
     std::shared_ptr<texture_record> texture;
-    VkImageView native{VK_NULL_HANDLE};
+    std::unique_ptr<backend_texture_view_resource> native;
     granit_texture_view_desc desc{};
     bool publicly_destroyable{true};
-    ~texture_view_record();
   };
   struct sampler_record {
     resource_metadata metadata;
     std::shared_ptr<renderer_state> renderer;
-    VkSampler native{VK_NULL_HANDLE};
-    ~sampler_record();
+    std::unique_ptr<backend_sampler_resource> native;
   };
   struct shader_record {
     resource_metadata metadata;
     std::shared_ptr<renderer_state> renderer;
-    VkShaderModule native{VK_NULL_HANDLE};
+    std::unique_ptr<backend_shader_resource> native;
     granit_shader_stage stage{};
     std::string entry_point;
-    ~shader_record();
   };
   struct bind_group_layout_record {
     resource_metadata metadata;
     std::shared_ptr<renderer_state> renderer;
-    VkDescriptorSetLayout native{VK_NULL_HANDLE};
+    std::unique_ptr<backend_bind_group_layout_resource> native;
     std::vector<granit_bind_group_layout_entry> entries;
-    ~bind_group_layout_record();
   };
   struct pipeline_layout_record {
     resource_metadata metadata;
     std::shared_ptr<renderer_state> renderer;
-    VkPipelineLayout native{VK_NULL_HANDLE};
+    std::unique_ptr<backend_pipeline_layout_resource> native;
     std::vector<std::shared_ptr<bind_group_layout_record>> bind_group_layouts;
-    ~pipeline_layout_record();
   };
   struct bind_group_record {
     resource_metadata metadata;
@@ -404,9 +396,7 @@ private:
     std::vector<vulkan_image_access> graphics_image_accesses;
     std::vector<std::pair<VkBuffer, VkAccessFlags2>> compute_buffer_accesses;
     std::vector<vulkan_image_access> compute_image_accesses;
-    VkDescriptorPool pool{VK_NULL_HANDLE};
-    VkDescriptorSet set{VK_NULL_HANDLE};
-    ~bind_group_record();
+    std::unique_ptr<backend_bind_group_resource> native;
   };
   struct graphics_pipeline_record {
     resource_metadata metadata;
@@ -414,25 +404,22 @@ private:
     std::shared_ptr<pipeline_layout_record> layout;
     std::shared_ptr<shader_record> vertex_shader;
     std::shared_ptr<shader_record> fragment_shader;
-    VkPipeline native{VK_NULL_HANDLE};
-    ~graphics_pipeline_record();
+    std::unique_ptr<backend_graphics_pipeline_resource> native;
   };
   struct compute_pipeline_record {
     resource_metadata metadata;
     std::shared_ptr<renderer_state> renderer;
     std::shared_ptr<pipeline_layout_record> layout;
     std::shared_ptr<shader_record> compute_shader;
-    VkPipeline native{VK_NULL_HANDLE};
-    ~compute_pipeline_record();
+    std::unique_ptr<backend_compute_pipeline_resource> native;
   };
   struct command_recorder_record {
     resource_metadata metadata;
     std::shared_ptr<renderer_state> renderer;
-    vulkan_command_recorder native;
+    std::unique_ptr<backend_command_recorder_resource> native;
     std::mutex mutex;
     std::vector<retained_resource> retained_resources;
     bool owned_by_frame_context{};
-    ~command_recorder_record();
   };
   enum class frame_context_slot_state { idle, recording, submitted };
   struct frame_context_slot {
@@ -462,12 +449,12 @@ private:
     bool submitted{};
   };
   struct upload_entry {
-    vulkan_upload_type type{vulkan_upload_type::buffer};
+    backend_upload_type type{backend_upload_type::buffer};
     std::shared_ptr<buffer_record> buffer;
     std::shared_ptr<texture_record> texture;
     std::uint64_t offset{};
     std::vector<std::byte> data;
-    VkBufferImageCopy texture_copy{};
+    backend_texture_copy texture_copy{};
   };
   struct upload_batch_record {
     resource_metadata metadata;

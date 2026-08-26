@@ -17,6 +17,9 @@
 #include <granit/renderer/renderer.h>
 #include <granit/renderer/resource_types.h>
 
+#include "backend/capabilities.h"
+#include "backend/queue.h"
+#include "backend/upload.h"
 #include "backend/vulkan/command_recorder.h"
 #include "backend/vulkan/device.h"
 #include "backend/vulkan/frame_context.h"
@@ -41,19 +44,7 @@ struct vulkan_bind_group_write {
   VkSampler sampler{VK_NULL_HANDLE};
 };
 
-enum class vulkan_upload_type { buffer, texture };
-
-struct vulkan_upload_operation {
-  vulkan_upload_type type{vulkan_upload_type::buffer};
-  const vulkan_buffer_allocation* buffer{};
-  const vulkan_image_allocation* texture{};
-  VkDeviceSize destination_offset{};
-  const void* data{};
-  VkDeviceSize size{};
-  VkBufferImageCopy texture_copy{};
-};
-
-class renderer_state {
+class renderer_state final : public backend_queue {
 public:
   renderer_state() = default;
   ~renderer_state();
@@ -100,7 +91,7 @@ public:
                                             VkDeviceSize offset, const void* data,
                                             VkDeviceSize size) noexcept;
   [[nodiscard]] granit_result
-  upload_batch(std::span<const vulkan_upload_operation> uploads) noexcept;
+  upload_batch(std::span<const backend_upload_operation> uploads) noexcept;
   [[nodiscard]] granit_result create_native_texture(const granit_texture_desc& desc,
                                                     vulkan_image_allocation& texture) noexcept;
   [[nodiscard]] bool texture_supports_linear_blit(granit_texture_format format) const noexcept;
@@ -212,29 +203,32 @@ public:
                   const VkRenderingAttachmentInfo* stencil_attachment, std::uint32_t layer_count,
                   std::span<const vulkan_image_access> image_accesses);
   [[nodiscard]] granit_result end_rendering(vulkan_command_recorder& recorder) noexcept;
-  [[nodiscard]] granit_result submit_command_recorder(vulkan_command_recorder& recorder,
-                                                      submission_serial& submitted_serial);
+  [[nodiscard]] granit_result submit_command_recorder(backend_command_recorder_resource& recorder,
+                                                      submission_serial& submitted_serial) override;
   [[nodiscard]] granit_result
-  submit_command_recorders(std::span<vulkan_command_recorder* const> recorders,
-                           submission_serial& submitted_serial);
-  [[nodiscard]] granit_result acquire_swapchain_frame(vulkan_swapchain& swapchain,
+  submit_command_recorders(std::span<backend_command_recorder_resource* const> recorders,
+                           submission_serial& submitted_serial) override;
+  [[nodiscard]] granit_result acquire_swapchain_frame(backend_swapchain_resource& swapchain,
                                                       std::uint32_t& image_index,
                                                       std::size_t& slot_index,
                                                       bool& needs_recreate);
-  [[nodiscard]] granit_result submit_swapchain_frame(vulkan_command_recorder& recorder,
-                                                     vulkan_swapchain& swapchain,
+  [[nodiscard]] granit_result submit_swapchain_frame(backend_command_recorder_resource& recorder,
+                                                     backend_swapchain_resource& swapchain,
                                                      std::uint32_t image_index,
                                                      std::size_t slot_index,
-                                                     submission_serial& submitted_serial);
-  [[nodiscard]] granit_result present_swapchain_frame(vulkan_swapchain& swapchain,
+                                                     submission_serial& submitted_serial) override;
+  [[nodiscard]] granit_result present_swapchain_frame(backend_swapchain_resource& swapchain,
                                                       std::uint32_t image_index,
-                                                      std::size_t slot_index, bool& needs_recreate);
-  [[nodiscard]] granit_result cancel_swapchain_frame(vulkan_swapchain& swapchain,
+                                                      std::size_t slot_index,
+                                                      bool& needs_recreate) override;
+  [[nodiscard]] granit_result cancel_swapchain_frame(backend_swapchain_resource& swapchain,
                                                      std::uint32_t image_index,
-                                                     std::size_t slot_index, bool& needs_recreate);
-  [[nodiscard]] granit_result wait_command_recorder(vulkan_command_recorder& recorder) noexcept;
-  [[nodiscard]] granit_result wait_for_all_submissions() noexcept;
-  [[nodiscard]] granit_result wait_for_present_idle() noexcept;
+                                                     std::size_t slot_index,
+                                                     bool& needs_recreate) override;
+  [[nodiscard]] granit_result
+  wait_command_recorder(backend_command_recorder_resource& recorder) noexcept override;
+  [[nodiscard]] granit_result wait_for_all_submissions() noexcept override;
+  [[nodiscard]] granit_result wait_for_present_idle() noexcept override;
   void retire_resource(submission_serial retire_after, retirement_order order,
                        std::shared_ptr<void> resource);
   std::size_t collect_retired() noexcept;
@@ -249,6 +243,7 @@ public:
     return device_status_.gate() == GRANIT_ERROR_DEVICE_LOST;
   }
   [[nodiscard]] const diagnostic_sink& diagnostics() const noexcept { return diagnostics_; }
+  [[nodiscard]] const backend_capabilities& capabilities() const noexcept { return capabilities_; }
   [[nodiscard]] const vulkan_instance& instance() const noexcept { return instance_; }
   [[nodiscard]] const vulkan_device& device() const noexcept { return device_; }
 
@@ -282,6 +277,7 @@ private:
   bool validation_enabled_{};
   diagnostic_sink diagnostics_;
   device_status device_status_;
+  backend_capabilities capabilities_;
   std::mutex resource_mutex_;
   std::mutex pipeline_cache_mutex_;
   std::mutex queue_mutex_;

@@ -21,6 +21,7 @@
 | `GRANIT_BUILD_EXAMPLES` | 顶层项目为 `ON` | 构建示例 |
 | `GRANIT_BUILD_BENCHMARKS` | `OFF` | 构建独立性能基准程序 |
 | `GRANIT_BUILD_TOOLS` | `OFF` | 单独构建离线工具；示例或 benchmark 会自动构建所需工具 |
+| `GRANIT_BUILD_BACKEND_WEBGPU` | `OFF` | 构建实验性 WebGPU 后端插件；需要锁定 Dawn 静态包 |
 | `GRANIT_ENABLE_XCB` | Linux 上 `ON` | 找到 XCB 开发头时启用私有 XCB Surface 后端 |
 | `GRANIT_ENABLE_WAYLAND` | Linux 上 `ON` | 找到 Wayland 协议工具时启用 Wayland 后端 |
 | `GRANIT_ENABLE_WARNINGS` | `ON` | 为 Granit 自有目标启用编译警告 |
@@ -34,6 +35,37 @@ Wayland Window 需要 `wayland-client`、`wayland-scanner` 和 `wayland-protocol
 额外查找 `libxkbcommon`。缺少 `libxkbcommon` 时只禁用 Wayland Input，XCB Input 和 Wayland
 Window 仍可构建。上述库均不进入 Granit 公共头文件；静态链接 Input 时最终应用仍需链接系统
 `libxkbcommon`。
+
+实验性 WebGPU 插件不会由普通 Vulkan 构建自动启用或下载依赖。构建时必须提供由 Granit 锁定流程
+生成、且与插件工具链匹配的 Dawn 静态安装包：
+
+```sh
+cmake -S . -B build-webgpu \
+  -DGRANIT_BUILD_BACKEND_WEBGPU=ON \
+  -DGRANIT_DAWN_ROOT=/path/to/locked/dawn
+cmake --build build-webgpu --target granit_backend_webgpu
+```
+
+配置会要求 Dawn 包导出静态的 `dawn::webgpu_dawn`；共享目标或未显式指定的系统 Dawn 会被拒绝。
+
+项目维护者通过手动 `Dawn Dependency Packages` 工作流生成锁定版本的 Windows 和 Linux SDK。
+普通验证运行只保留短期 Actions Artifact；选择“发布 SDK”后，工作流仅在两个平台的静态库、符号
+检查和真实 WebGPU 插件 smoke test 全部通过时，将压缩包及 SHA-256 清单发布为长期保存的 GitHub
+预发布版本。SDK 标签同时包含 Dawn 版本和修订短哈希，升级 Dawn 或工具链时应生成新标签，不能
+覆盖不兼容版本。
+
+安装包可以使用 GitHub CLI 下载并校验，例如：
+
+```sh
+gh release download dawn-sdk-v20260720.160313-0bc38adde72b \
+  --pattern "granit-dawn-static-v20260720.160313-<平台>-x64.*"
+```
+
+解压后将 `GRANIT_DAWN_ROOT` 指向 SDK 根目录。Windows 与 Linux 包不能交叉使用，Windows 包还必须
+与插件使用兼容的 MSVC 工具集和运行库。Linux 构建镜像属于后续加速项；版本化 SDK 是本地开发、
+CI 和未来镜像共同使用的权威二进制输入。
+插件安装到 `lib/granit/backends`，不进入核心 Granit 链接接口。该入口目前只用于 0.4.0 原型，尚未
+构成稳定的安装 component 或公共后端选择 API。
 
 ## 测试依赖
 

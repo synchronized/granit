@@ -26,7 +26,8 @@
 | 六、多线程与性能 | 已完成 | 压力测试、基线、批量提交与上传批处理已完成 |
 | 七、可选高层渲染 | 已完成 | H-02～H-08 路线闭合，参考管线与公共 UI/Text 已验证 |
 | 八、稳定化与跨平台 | 持续进行 | ABI 策略、诊断和更多平台 Surface 待后续推进 |
-| 九、多后端与 Web 平台 | 待开始 | 0.4.0 先建立多后端边界，再验证 WebGPU 与 Emscripten MVP |
+| 九、多后端与 Web 平台 | 进行中 | S-10A 已完成，下一目标为 S-10B 桌面 WebGPU MVP |
+| 十、Android 移动平台 | 待开始 | 0.4.0 多后端边界完成后规划 NDK、Surface 与移动生命周期 |
 
 ## 一、工程与 ABI 基础
 
@@ -160,18 +161,32 @@
 
 ## 九、多后端与 Web 平台
 
-**状态：待开始；0.3.0 完成后进入 0.4.0。**
+**状态：进行中；S-10A 已完成，准备进入 0.4.0 S-10B。**
 
 - **[S-10](plans/S-10-0.4.0-webgpu-backend.md) / P2**：先定义后端无关的内部设备、资源、命令、
   同步与 Surface 边界，在保持 Vulkan 后端功能和性能的前提下验证桌面 WebGPU 离屏 MVP；随后建立
-  WGSL 工具链，并接入 Emscripten、浏览器 Canvas 和事件循环。具体 WebGPU 实现库在原型比较后决定。
+  WGSL 工具链，并接入 Emscripten、浏览器 Canvas 和事件循环。S-10A 内部能力、插件、资源、
+  Queue、Surface 与 Swapchain 边界迁移已经完成，并通过 Windows/Linux 跨平台与性能回归；下一步
+  实现 S-10B 桌面 WebGPU 离屏 MVP。
+
+## 十、Android 移动平台
+
+**状态：待开始；不属于 0.4.0 交付范围。**
+
+- **S-11 / P2**：在 S-10 多后端契约、桌面 WebGPU 和 Emscripten 路径稳定后增加 Android 支持。
+  首轮以 Android NDK `arm64-v8a` 为基线，接入 `ANativeWindow`、应用暂停/恢复、Surface 重建、
+  旋转与基础触控输入；同时验证 Vulkan 后端和静态接入 Dawn 的 WebGPU 后端。
+- Android 交付需要独立规划 Gradle/Prefab 或 AAR 集成、按 ABI 打包、真机与模拟器测试以及移动端
+  GPU 能力降级。具体版本和任务拆分在 S-10 验收后确定，不阻塞当前 0.4.0。
 
 ## 近期执行顺序
 
-1. 合并已完成验收的 0.3.0 工作并确认发布边界；不把多后端重构混入当前版本。
-2. 0.4.0 从 S-10A 后端边界与能力模型开始，再依次验证桌面 WebGPU、WGSL 和 Emscripten。
+1. 细化并实现 S-10B 桌面 WebGPU 设备、基础资源、Pipeline、命令提交与离屏回读。
+2. 桌面 WebGPU MVP 通过后，依次进入 WGSL 工具链和 Emscripten 平台层。
 3. S-06D 最终验收等待稳定版本与 component 范围决策；不在 0.x 阶段提前宣布稳定。
-4. H-09 的透明 PBR、CSM、Clustered Forward 与 Bindless 只在各自重新评估条件满足后独立恢复，
+4. 完成 0.4.0 多后端与 Web 路径后，为 S-11 建立独立 Android Plan，再进入 NDK 与移动 Surface
+   实现。
+5. H-09 的透明 PBR、CSM、Clustered Forward 与 Bindless 只在各自重新评估条件满足后独立恢复，
    不作为当前稳定化工作的前置项。
 
 若前置抽象不足，应先更新对应 Plan 和本路线图状态，再扩大公共 API。
