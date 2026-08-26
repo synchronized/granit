@@ -36,6 +36,15 @@ private:
   bool& destroyed_;
 };
 
+class fake_buffer_resource final : public granit::detail::backend_buffer_resource {
+public:
+  explicit fake_buffer_resource(bool& destroyed) noexcept : destroyed_(destroyed) {}
+  ~fake_buffer_resource() override { destroyed_ = true; }
+
+private:
+  bool& destroyed_;
+};
+
 } // namespace
 
 TEST_CASE("后端资源通过抽象所有权正确销毁") {
@@ -63,6 +72,16 @@ TEST_CASE("纹理通过后端抽象正确销毁") {
   {
     std::unique_ptr<granit::detail::backend_texture_resource> resource =
         std::make_unique<fake_texture_resource>(destroyed);
+    CHECK_FALSE(destroyed);
+  }
+  CHECK(destroyed);
+}
+
+TEST_CASE("缓冲区通过后端抽象正确销毁") {
+  bool destroyed = false;
+  {
+    std::unique_ptr<granit::detail::backend_buffer_resource> resource =
+        std::make_unique<fake_buffer_resource>(destroyed);
     CHECK_FALSE(destroyed);
   }
   CHECK(destroyed);

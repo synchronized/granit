@@ -14,6 +14,19 @@ namespace granit::detail {
 
 class renderer_state;
 
+class vulkan_buffer_resource final : public backend_buffer_resource {
+public:
+  explicit vulkan_buffer_resource(std::shared_ptr<renderer_state> renderer) noexcept;
+  ~vulkan_buffer_resource() override;
+
+  [[nodiscard]] vulkan_buffer_allocation& native() noexcept { return native_; }
+  [[nodiscard]] const vulkan_buffer_allocation& native() const noexcept { return native_; }
+
+private:
+  std::shared_ptr<renderer_state> renderer_;
+  vulkan_buffer_allocation native_{};
+};
+
 class vulkan_texture_resource final : public backend_texture_resource {
 public:
   explicit vulkan_texture_resource(std::shared_ptr<renderer_state> renderer,

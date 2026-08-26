@@ -341,13 +341,12 @@ private:
   struct buffer_record {
     resource_metadata metadata;
     std::shared_ptr<renderer_state> renderer;
-    vulkan_buffer_allocation native;
+    std::unique_ptr<backend_buffer_resource> native;
     granit_buffer_desc desc{};
     std::mutex mutex;
     bool mapped{};
     std::uint64_t mapped_offset{};
     std::uint64_t mapped_size{};
-    ~buffer_record();
   };
   struct texture_record {
     resource_metadata metadata;

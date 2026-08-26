@@ -38,6 +38,10 @@ vulkan_image_allocation& native_texture(backend_texture_resource& resource) noex
   return static_cast<vulkan_texture_resource&>(resource).native();
 }
 
+vulkan_buffer_allocation& native_buffer(backend_buffer_resource& resource) noexcept {
+  return static_cast<vulkan_buffer_resource&>(resource).native();
+}
+
 granit_texture_format swapchain_format(VkFormat format) noexcept {
   switch (format) {
   case VK_FORMAT_B8G8R8A8_SRGB:
@@ -126,12 +130,6 @@ renderer_registry::surface_record::~surface_record() {
 renderer_registry::swapchain_record::~swapchain_record() {
   if (renderer && native) {
     renderer->destroy_native_swapchain(*native);
-  }
-}
-
-renderer_registry::buffer_record::~buffer_record() {
-  if (renderer) {
-    renderer->destroy_native_buffer(native);
   }
 }
 
@@ -240,7 +238,7 @@ granit_result renderer_registry::set_object_name(granit_renderer renderer, grani
   }
   GRANIT_NAME_OBJECT(surfaces_, VK_OBJECT_TYPE_SURFACE_KHR, it->second->native_handle)
   GRANIT_NAME_OBJECT(swapchains_, VK_OBJECT_TYPE_SWAPCHAIN_KHR, it->second->native->native_handle())
-  GRANIT_NAME_OBJECT(buffers_, VK_OBJECT_TYPE_BUFFER, it->second->native.buffer)
+  GRANIT_NAME_OBJECT(buffers_, VK_OBJECT_TYPE_BUFFER, native_buffer(*it->second->native).buffer)
   GRANIT_NAME_OBJECT(textures_, VK_OBJECT_TYPE_IMAGE, native_texture(*it->second->native).image)
   GRANIT_NAME_OBJECT(texture_views_, VK_OBJECT_TYPE_IMAGE_VIEW,
                      native_texture_view(*it->second->native))
@@ -1315,7 +1313,8 @@ granit_result renderer_registry::create_buffer(granit_renderer renderer,
     auto record = std::make_shared<buffer_record>();
     record->renderer = state;
     record->desc = desc;
-    const auto create_result = state->create_native_buffer(desc, record->native);
+    record->native = std::make_unique<vulkan_buffer_resource>(state);
+    const auto create_result = state->create_native_buffer(desc, native_buffer(*record->native));
     if (create_result != GRANIT_SUCCESS) {
       return create_result;
     }
@@ -1378,7 +1377,8 @@ granit_result renderer_registry::map_buffer(granit_renderer renderer, granit_buf
     return GRANIT_ERROR_INVALID_ARGUMENT;
   }
   if (record->desc.memory_location == GRANIT_MEMORY_LOCATION_READBACK) {
-    const auto result = record->renderer->invalidate_buffer(record->native, offset, size);
+    const auto result =
+        record->renderer->invalidate_buffer(native_buffer(*record->native), offset, size);
     if (result != GRANIT_SUCCESS) {
       return result;
     }
@@ -1386,7 +1386,7 @@ granit_result renderer_registry::map_buffer(granit_renderer renderer, granit_buf
   record->mapped = true;
   record->mapped_offset = offset;
   record->mapped_size = size;
-  data = static_cast<unsigned char*>(record->native.mapped_data) + offset;
+  data = static_cast<unsigned char*>(native_buffer(*record->native).mapped_data) + offset;
   return GRANIT_SUCCESS;
 }
 
@@ -1434,8 +1434,8 @@ granit_result renderer_registry::unmap_buffer(granit_renderer renderer, granit_b
   }
   granit_result result = GRANIT_SUCCESS;
   if (record->desc.memory_location == GRANIT_MEMORY_LOCATION_UPLOAD) {
-    result =
-        record->renderer->flush_buffer(record->native, record->mapped_offset, record->mapped_size);
+    result = record->renderer->flush_buffer(native_buffer(*record->native), record->mapped_offset,
+                                            record->mapped_size);
   }
   record->mapped = false;
   record->mapped_offset = 0;
@@ -1469,7 +1469,7 @@ granit_result renderer_registry::flush_mapped_buffer(granit_renderer renderer, g
       size > record->mapped_offset + record->mapped_size - offset) {
     return GRANIT_ERROR_INVALID_ARGUMENT;
   }
-  return record->renderer->flush_buffer(record->native, offset, size);
+  return record->renderer->flush_buffer(native_buffer(*record->native), offset, size);
 }
 
 granit_result renderer_registry::destroy_buffer(granit_renderer renderer, granit_buffer buffer) {
@@ -1541,11 +1541,11 @@ granit_result renderer_registry::write_buffer(granit_renderer renderer, granit_b
     return GRANIT_ERROR_UNSUPPORTED;
   }
   if (record->desc.memory_location == GRANIT_MEMORY_LOCATION_UPLOAD) {
-    std::memcpy(static_cast<unsigned char*>(record->native.mapped_data) + offset, data,
-                static_cast<std::size_t>(size));
-    return record->renderer->flush_buffer(record->native, offset, size);
+    std::memcpy(static_cast<unsigned char*>(native_buffer(*record->native).mapped_data) + offset,
+                data, static_cast<std::size_t>(size));
+    return record->renderer->flush_buffer(native_buffer(*record->native), offset, size);
   }
-  return record->renderer->upload_buffer(record->native, offset, data, size);
+  return record->renderer->upload_buffer(native_buffer(*record->native), offset, data, size);
 }
 
 granit_result renderer_registry::create_upload_batch(granit_renderer renderer,
@@ -1747,7 +1747,7 @@ granit_result renderer_registry::submit_upload_batch(granit_renderer renderer,
   for (const auto& upload : record->uploads) {
     uploads.push_back(
         {.type = upload.type,
-         .buffer = upload.buffer ? &upload.buffer->native : nullptr,
+         .buffer = upload.buffer ? &native_buffer(*upload.buffer->native) : nullptr,
          .texture = upload.texture ? &native_texture(*upload.texture->native) : nullptr,
          .destination_offset = upload.offset,
          .data = upload.data.data(),
@@ -2376,7 +2376,7 @@ granit_result renderer_registry::create_bind_group(granit_renderer renderer,
           write.type = declaration->type == GRANIT_BINDING_TYPE_UNIFORM_BUFFER
                            ? VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER
                            : VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-          write.buffer = found->second->native.buffer;
+          write.buffer = native_buffer(*found->second->native).buffer;
           write.offset = entry.offset;
           write.range = range;
           record->resources.push_back(found->second);
@@ -2386,14 +2386,16 @@ granit_result renderer_registry::create_bind_group(granit_renderer renderer,
                                     ? VkAccessFlags2{VK_ACCESS_2_UNIFORM_READ_BIT}
                                     : VkAccessFlags2{VK_ACCESS_2_SHADER_STORAGE_READ_BIT |
                                                      VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT};
-            record->graphics_buffer_accesses.emplace_back(found->second->native.buffer, access);
+            record->graphics_buffer_accesses.emplace_back(
+                native_buffer(*found->second->native).buffer, access);
           }
           if ((declaration->visibility & GRANIT_SHADER_STAGE_COMPUTE_BIT) != 0) {
             const auto access = declaration->type == GRANIT_BINDING_TYPE_UNIFORM_BUFFER
                                     ? VkAccessFlags2{VK_ACCESS_2_UNIFORM_READ_BIT}
                                     : VkAccessFlags2{VK_ACCESS_2_SHADER_STORAGE_READ_BIT |
                                                      VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT};
-            record->compute_buffer_accesses.emplace_back(found->second->native.buffer, access);
+            record->compute_buffer_accesses.emplace_back(
+                native_buffer(*found->second->native).buffer, access);
           }
         } else if (declaration->type == GRANIT_BINDING_TYPE_SAMPLER) {
           const auto found = samplers_.find(entry.resource);
@@ -3176,9 +3178,9 @@ granit_result renderer_registry::copy_buffer(granit_renderer renderer,
   retain_resource(recorder_record->retained_resources, source_record, source_record->metadata);
   retain_resource(recorder_record->retained_resources, destination_record,
                   destination_record->metadata);
-  return recorder_record->renderer->copy_buffer(recorder_record->native,
-                                                source_record->native.buffer,
-                                                destination_record->native.buffer, native_regions);
+  return recorder_record->renderer->copy_buffer(
+      recorder_record->native, native_buffer(*source_record->native).buffer,
+      native_buffer(*destination_record->native).buffer, native_regions);
 }
 
 granit_result renderer_registry::copy_texture_to_buffer(granit_renderer renderer,
@@ -3270,7 +3272,7 @@ granit_result renderer_registry::copy_texture_to_buffer(granit_renderer renderer
                   destination_record->metadata);
   return recorder_record->renderer->copy_texture_to_buffer(
       recorder_record->native, native_texture(*source_record->native).image,
-      destination_record->native.buffer, copy);
+      native_buffer(*destination_record->native).buffer, copy);
 }
 
 granit_result renderer_registry::copy_buffer_to_texture(granit_renderer renderer,
@@ -3361,7 +3363,7 @@ granit_result renderer_registry::copy_buffer_to_texture(granit_renderer renderer
   retain_resource(recorder_record->retained_resources, destination_record,
                   destination_record->metadata);
   return recorder_record->renderer->copy_buffer_to_texture(
-      recorder_record->native, source_record->native.buffer,
+      recorder_record->native, native_buffer(*source_record->native).buffer,
       native_texture(*destination_record->native).image, copy);
 }
 
@@ -3529,8 +3531,9 @@ granit_result renderer_registry::fill_buffer(granit_renderer renderer,
   }
   retain_resource(recorder_record->retained_resources, buffer_record_state,
                   buffer_record_state->metadata);
-  return recorder_record->renderer->fill_buffer(
-      recorder_record->native, buffer_record_state->native.buffer, offset, size, value);
+  return recorder_record->renderer->fill_buffer(recorder_record->native,
+                                                native_buffer(*buffer_record_state->native).buffer,
+                                                offset, size, value);
 }
 
 granit_result renderer_registry::bind_graphics_pipeline(granit_renderer renderer,
@@ -3744,7 +3747,7 @@ renderer_registry::bind_vertex_buffers(granit_renderer renderer, granit_command_
           binding.offset >= found->second->desc.size)
         return GRANIT_ERROR_INVALID_ARGUMENT;
       records.push_back(found->second);
-      buffers.push_back(found->second->native.buffer);
+      buffers.push_back(native_buffer(*found->second->native).buffer);
       offsets.push_back(binding.offset);
     }
   }
@@ -3780,8 +3783,8 @@ granit_result renderer_registry::bind_index_buffer(granit_renderer renderer,
   const auto native_type =
       type == GRANIT_INDEX_TYPE_UINT16 ? VK_INDEX_TYPE_UINT16 : VK_INDEX_TYPE_UINT32;
   std::lock_guard lock{command->mutex};
-  const auto result = command->renderer->bind_index_buffer(command->native, record->native.buffer,
-                                                           offset, native_type);
+  const auto result = command->renderer->bind_index_buffer(
+      command->native, native_buffer(*record->native).buffer, offset, native_type);
   if (result == GRANIT_SUCCESS)
     retain_resource(command->retained_resources, record, record->metadata);
   return result;

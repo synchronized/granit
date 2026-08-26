@@ -9,6 +9,15 @@
 
 namespace granit::detail {
 
+vulkan_buffer_resource::vulkan_buffer_resource(std::shared_ptr<renderer_state> renderer) noexcept
+    : renderer_(std::move(renderer)) {}
+
+vulkan_buffer_resource::~vulkan_buffer_resource() {
+  if (renderer_) {
+    renderer_->destroy_native_buffer(native_);
+  }
+}
+
 vulkan_texture_resource::vulkan_texture_resource(std::shared_ptr<renderer_state> renderer,
                                                  bool owned) noexcept
     : renderer_(std::move(renderer)), owned_(owned) {}
