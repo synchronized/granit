@@ -15,7 +15,7 @@ env:
   SCCACHE_GHA_ENABLED: "true"
 
 jobs:
-  windows-shared:
+  windows-static-plugin:
     runs-on: windows-2022
     timeout-minutes: 120
     steps:
@@ -41,18 +41,19 @@ jobs:
         shell: pwsh
         working-directory: ${{ runner.temp }}/dawn
         run: python tools/fetch_dawn_dependencies.py
-      - name: 配置并构建 Dawn 共享库
+      - name: 配置并构建 Dawn 静态库
         shell: pwsh
         run: |
           $source = "$env:RUNNER_TEMP/dawn"
           $build = "$env:RUNNER_TEMP/dawn-build"
-          $stage = "$PWD/stage/granit-dawn-$env:DAWN_VERSION-windows-x64"
+          $stage = "$PWD/stage/granit-dawn-static-$env:DAWN_VERSION-windows-x64"
           cmake -S $source -B $build -G Ninja `
             -DCMAKE_BUILD_TYPE=Release `
+            -DCMAKE_POSITION_INDEPENDENT_CODE=ON `
             -DCMAKE_C_COMPILER_LAUNCHER=sccache `
             -DCMAKE_CXX_COMPILER_LAUNCHER=sccache `
             -DBUILD_SHARED_LIBS=OFF `
-            -DDAWN_BUILD_MONOLITHIC_LIBRARY=SHARED `
+            -DDAWN_BUILD_MONOLITHIC_LIBRARY=STATIC `
             -DDAWN_ENABLE_INSTALL=ON `
             -DDAWN_FETCH_DEPENDENCIES=OFF `
             -DDAWN_BUILD_SAMPLES=OFF `
@@ -70,18 +71,35 @@ jobs:
             -DTINT_BUILD_TESTS=OFF
           cmake --build $build --target webgpu_dawn
           cmake --install $build --prefix $stage
-      - name: 验证并打包 Windows 产物
+      - name: 验证 Windows 静态产物
+        shell: pwsh
+        run: |
+          $stage = "$PWD/stage/granit-dawn-static-$env:DAWN_VERSION-windows-x64"
+          $library = Get-ChildItem -LiteralPath $stage -Recurse -File -Filter 'webgpu_dawn.lib'
+          if ($library.Count -ne 1) { throw "预期恰好一个 webgpu_dawn.lib" }
+          $symbols = dumpbin /symbols $library.FullName
+          if (-not ($symbols | Select-String 'wgpuCreateInstance')) {
+            throw "webgpu_dawn.lib 缺少 wgpuCreateInstance"
+          }
+      - name: 构建并运行 Windows WebGPU 插件 smoke test
+        shell: pwsh
+        run: |
+          $stage = "$PWD/stage/granit-dawn-static-$env:DAWN_VERSION-windows-x64"
+          $build = "$env:RUNNER_TEMP/granit-webgpu-build"
+          cmake -S . -B $build -G Ninja `
+            -DCMAKE_BUILD_TYPE=Release `
+            -DGRANIT_BUILD_BACKEND_WEBGPU=ON `
+            "-DGRANIT_DAWN_ROOT=$stage" `
+            -DGRANIT_BUILD_EXAMPLES=OFF `
+            -DGRANIT_BUILD_TESTING=ON
+          cmake --build $build --target granit_webgpu_plugin_smoke
+          ctest --test-dir $build -R granit.backend.webgpu_plugin_smoke --output-on-failure
+      - name: 打包 Windows 产物
         id: package
         shell: pwsh
         run: |
-          $name = "granit-dawn-$env:DAWN_VERSION-windows-x64"
+          $name = "granit-dawn-static-$env:DAWN_VERSION-windows-x64"
           $stage = "$PWD/stage/$name"
-          $dll = Get-ChildItem -LiteralPath $stage -Recurse -File -Filter 'webgpu_dawn.dll'
-          if ($dll.Count -ne 1) { throw "预期恰好一个 webgpu_dawn.dll" }
-          $exports = dumpbin /exports $dll.FullName
-          if (-not ($exports | Select-String 'wgpuCreateInstance')) {
-            throw "webgpu_dawn.dll 缺少 wgpuCreateInstance 导出"
-          }
           Compress-Archive -Path $stage -DestinationPath "$name.zip"
           $hash = (Get-FileHash "$name.zip" -Algorithm SHA256).Hash.ToLowerInvariant()
           "$hash  $name.zip" | Set-Content -Encoding ascii "$name.zip.sha256"
@@ -94,7 +112,7 @@ jobs:
             ${{ steps.package.outputs.name }}.zip.sha256
           if-no-files-found: error
 
-  linux-shared:
+  linux-static-plugin:
     runs-on: ubuntu-24.04
     timeout-minutes: 120
     steps:
@@ -125,17 +143,18 @@ jobs:
         shell: bash
         working-directory: ${{ runner.temp }}/dawn
         run: python3 tools/fetch_dawn_dependencies.py
-      - name: 配置并构建 Dawn 共享库
+      - name: 配置并构建 Dawn 静态库
         shell: bash
         run: |
-          stage="$PWD/stage/granit-dawn-$DAWN_VERSION-linux-x64"
+          stage="$PWD/stage/granit-dawn-static-$DAWN_VERSION-linux-x64"
           CC=clang CXX=clang++ cmake -S "$RUNNER_TEMP/dawn" -B "$RUNNER_TEMP/dawn-build" \
             -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
             -DCMAKE_C_COMPILER_LAUNCHER=sccache \
             -DCMAKE_CXX_COMPILER_LAUNCHER=sccache \
             -DBUILD_SHARED_LIBS=OFF \
-            -DDAWN_BUILD_MONOLITHIC_LIBRARY=SHARED \
+            -DDAWN_BUILD_MONOLITHIC_LIBRARY=STATIC \
             -DDAWN_ENABLE_INSTALL=ON \
             -DDAWN_FETCH_DEPENDENCIES=OFF \
             -DDAWN_BUILD_SAMPLES=OFF \
@@ -154,15 +173,34 @@ jobs:
             -DTINT_BUILD_TESTS=OFF
           cmake --build "$RUNNER_TEMP/dawn-build" --target webgpu_dawn
           cmake --install "$RUNNER_TEMP/dawn-build" --prefix "$stage"
-      - name: 验证并打包 Linux 产物
+      - name: 验证 Linux 静态产物
+        shell: bash
+        run: |
+          stage="$PWD/stage/granit-dawn-static-$DAWN_VERSION-linux-x64"
+          mapfile -t libraries < <(find "$stage" -type f -name 'libwebgpu_dawn.a')
+          [[ "${#libraries[@]}" -eq 1 ]]
+          nm --defined-only "${libraries[0]}" | grep -q 'wgpuCreateInstance'
+      - name: 构建并运行 Linux WebGPU 插件 smoke test
+        shell: bash
+        run: |
+          stage="$PWD/stage/granit-dawn-static-$DAWN_VERSION-linux-x64"
+          build="$RUNNER_TEMP/granit-webgpu-build"
+          CC=clang CXX=clang++ cmake -S . -B "$build" -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DGRANIT_BUILD_BACKEND_WEBGPU=ON \
+            -DGRANIT_DAWN_ROOT="$stage" \
+            -DGRANIT_BUILD_EXAMPLES=OFF \
+            -DGRANIT_BUILD_TESTING=ON \
+            -DGRANIT_ENABLE_XCB=OFF \
+            -DGRANIT_ENABLE_WAYLAND=OFF
+          cmake --build "$build" --target granit_webgpu_plugin_smoke
+          ctest --test-dir "$build" -R granit.backend.webgpu_plugin_smoke --output-on-failure
+      - name: 打包 Linux 产物
         id: package
         shell: bash
         run: |
-          name="granit-dawn-$DAWN_VERSION-linux-x64"
+          name="granit-dawn-static-$DAWN_VERSION-linux-x64"
           stage="$PWD/stage/$name"
-          mapfile -t libraries < <(find "$stage" -type f -name 'libwebgpu_dawn.so*')
-          [[ "${#libraries[@]}" -eq 1 ]]
-          nm -D --defined-only "${libraries[0]}" | grep -q 'wgpuCreateInstance'
           tar -czf "$name.tar.gz" -C stage "$name"
           sha256sum "$name.tar.gz" > "$name.tar.gz.sha256"
           echo "name=$name" >> "$GITHUB_OUTPUT"

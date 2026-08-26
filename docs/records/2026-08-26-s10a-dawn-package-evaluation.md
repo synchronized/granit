@@ -33,12 +33,12 @@ Dawn `v20260720.160313` 的 API 头与 Emdawnwebgpu 可以作为匹配原型基�
 
 ## 后续处理
 
-1. 在锁定的构建镜像中从同一 Dawn 修订构建 monolithic shared library。
+1. 在锁定的构建镜像中从同一 Dawn 修订构建 monolithic static library。
 2. 同时产出匹配的 headers、运行库、符号清单、许可证和 SHA-256 清单。
 3. 使用与 Dawn 相同的工具链构建 Granit WebGPU 插件，并只向核心暴露 Granit 自有插件 ABI。
 4. 完成插件握手、Instance/Adapter/Device 和离屏回读测试后再接受 ADR-004。
 
-仓库已增加 `Dawn Dependency Packages` 工作流。2026-08-26 的首次完整验证在 Windows 与 Linux
-均成功：工作流从锁定修订构建 monolithic shared library，检查 `wgpuCreateInstance` 导出，并生成
-带 SHA-256 的版本化压缩包。该重型工作流仅手动触发，日常特性分支提交和 Pull Request 不重复构建
-Dawn。
+仓库已增加 `Dawn Dependency Packages` 工作流。2026-08-26 的共享库可行性验证已在 Windows 与
+Linux 成功。工作流随后调整为从锁定修订构建 monolithic static library，并使用同一工具链构建
+`granit_backend_webgpu`、动态加载插件及创建/销毁真实 Dawn Instance；该静态插件链等待首次手动
+运行验证。重型工作流仅手动触发，日常特性分支提交和 Pull Request 不重复构建 Dawn。

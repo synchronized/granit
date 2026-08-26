@@ -249,6 +249,27 @@ granit_target_compile_warnings(granit_backend_plugin_loader_test)
 granit_target_output_directories(granit_backend_plugin_loader_test)
 add_test(NAME granit.backend.plugin_loader COMMAND granit_backend_plugin_loader_test)
 
+if(GRANIT_BUILD_BACKEND_WEBGPU)
+  add_executable(
+    granit_webgpu_plugin_smoke
+    backend/webgpu_plugin_smoke.cpp
+    $<TARGET_OBJECTS:granit_backend_plugin>
+  )
+  target_compile_features(granit_webgpu_plugin_smoke PRIVATE cxx_std_20)
+  target_include_directories(
+    granit_webgpu_plugin_smoke PRIVATE "${PROJECT_SOURCE_DIR}/include" "${PROJECT_SOURCE_DIR}/src"
+  )
+  target_compile_definitions(
+    granit_webgpu_plugin_smoke
+    PRIVATE GRANIT_WEBGPU_PLUGIN_PATH="$<TARGET_FILE:granit_backend_webgpu>"
+  )
+  target_link_libraries(granit_webgpu_plugin_smoke PRIVATE ${CMAKE_DL_LIBS})
+  add_dependencies(granit_webgpu_plugin_smoke granit_backend_webgpu)
+  granit_target_compile_warnings(granit_webgpu_plugin_smoke)
+  granit_target_output_directories(granit_webgpu_plugin_smoke)
+  add_test(NAME granit.backend.webgpu_plugin_smoke COMMAND granit_webgpu_plugin_smoke)
+endif()
+
 add_executable(
   granit_lifecycle_validation_test
   core/diagnostic_sink_test.cpp
