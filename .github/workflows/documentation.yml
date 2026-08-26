@@ -13,14 +13,7 @@ on:
       - "DOCUMENTATION_GUIDE.md"
       - "cmake/check_documentation.cmake"
       - ".github/workflows/documentation.yml"
-  pull_request:
-    paths:
-      - "docs/**"
-      - "README.md"
-      - "CHANGELOG.md"
-      - "DOCUMENTATION_GUIDE.md"
-      - "cmake/check_documentation.cmake"
-      - ".github/workflows/documentation.yml"
+  workflow_dispatch:
 
 permissions:
   contents: read
