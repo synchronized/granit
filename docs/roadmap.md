@@ -155,8 +155,8 @@
 - **[S-08](plans/S-08-third-party-integrations.md) / P2**：独立 SDL3/ImGui 目标、安装边界、SDL3
   Surface、ImGui Draw Data 转换、字体上传、组合示例与 S-08F 测量已完成；Win32 及 Linux
   X11/Wayland 共享与静态 smoke test 均已通过。
-- **[S-09](plans/S-09-0.3.0-sdk-usability.md) / P1**：0.3.0 公共 SDK 易用性与集成体验已确认，
-  S-09A～S-09D 已完成；下一步执行 0.3.0 验收。
+- **[S-09](plans/S-09-0.3.0-sdk-usability.md) / P1**：已完成；公共使用路径、契约一致性、诊断、
+  安装 Consumer、迁移说明及 Windows/Linux 共享与静态 Release 预验证均已通过。
 
 ## 九、多后端与 Web 平台
 
@@ -168,7 +168,7 @@
 
 ## 近期执行顺序
 
-1. 完成 S-09E、合并 0.3.0 工作并确认发布边界；不把多后端重构混入当前验收。
+1. 合并已完成验收的 0.3.0 工作并确认发布边界；不把多后端重构混入当前版本。
 2. 0.4.0 从 S-10A 后端边界与能力模型开始，再依次验证桌面 WebGPU、WGSL 和 Emscripten。
 3. S-06D 最终验收等待稳定版本与 component 范围决策；不在 0.x 阶段提前宣布稳定。
 4. H-09 的透明 PBR、CSM、Clustered Forward 与 Bindless 只在各自重新评估条件满足后独立恢复，
