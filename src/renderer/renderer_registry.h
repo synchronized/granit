@@ -385,9 +385,8 @@ private:
   struct pipeline_layout_record {
     resource_metadata metadata;
     std::shared_ptr<renderer_state> renderer;
-    VkPipelineLayout native{VK_NULL_HANDLE};
+    std::unique_ptr<backend_pipeline_layout_resource> native;
     std::vector<std::shared_ptr<bind_group_layout_record>> bind_group_layouts;
-    ~pipeline_layout_record();
   };
   struct bind_group_record {
     resource_metadata metadata;
@@ -406,16 +405,14 @@ private:
     std::shared_ptr<pipeline_layout_record> layout;
     std::shared_ptr<shader_record> vertex_shader;
     std::shared_ptr<shader_record> fragment_shader;
-    VkPipeline native{VK_NULL_HANDLE};
-    ~graphics_pipeline_record();
+    std::unique_ptr<backend_graphics_pipeline_resource> native;
   };
   struct compute_pipeline_record {
     resource_metadata metadata;
     std::shared_ptr<renderer_state> renderer;
     std::shared_ptr<pipeline_layout_record> layout;
     std::shared_ptr<shader_record> compute_shader;
-    VkPipeline native{VK_NULL_HANDLE};
-    ~compute_pipeline_record();
+    std::unique_ptr<backend_compute_pipeline_resource> native;
   };
   struct command_recorder_record {
     resource_metadata metadata;

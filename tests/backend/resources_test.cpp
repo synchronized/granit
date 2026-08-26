@@ -73,6 +73,36 @@ private:
   bool& destroyed_;
 };
 
+class fake_pipeline_layout_resource final
+    : public granit::detail::backend_pipeline_layout_resource {
+public:
+  explicit fake_pipeline_layout_resource(bool& destroyed) noexcept : destroyed_(destroyed) {}
+  ~fake_pipeline_layout_resource() override { destroyed_ = true; }
+
+private:
+  bool& destroyed_;
+};
+
+class fake_graphics_pipeline_resource final
+    : public granit::detail::backend_graphics_pipeline_resource {
+public:
+  explicit fake_graphics_pipeline_resource(bool& destroyed) noexcept : destroyed_(destroyed) {}
+  ~fake_graphics_pipeline_resource() override { destroyed_ = true; }
+
+private:
+  bool& destroyed_;
+};
+
+class fake_compute_pipeline_resource final
+    : public granit::detail::backend_compute_pipeline_resource {
+public:
+  explicit fake_compute_pipeline_resource(bool& destroyed) noexcept : destroyed_(destroyed) {}
+  ~fake_compute_pipeline_resource() override { destroyed_ = true; }
+
+private:
+  bool& destroyed_;
+};
+
 } // namespace
 
 TEST_CASE("后端资源通过抽象所有权正确销毁") {
@@ -140,6 +170,36 @@ TEST_CASE("绑定组通过后端抽象正确销毁") {
   {
     std::unique_ptr<granit::detail::backend_bind_group_resource> resource =
         std::make_unique<fake_bind_group_resource>(destroyed);
+    CHECK_FALSE(destroyed);
+  }
+  CHECK(destroyed);
+}
+
+TEST_CASE("管线布局通过后端抽象正确销毁") {
+  bool destroyed = false;
+  {
+    std::unique_ptr<granit::detail::backend_pipeline_layout_resource> resource =
+        std::make_unique<fake_pipeline_layout_resource>(destroyed);
+    CHECK_FALSE(destroyed);
+  }
+  CHECK(destroyed);
+}
+
+TEST_CASE("图形管线通过后端抽象正确销毁") {
+  bool destroyed = false;
+  {
+    std::unique_ptr<granit::detail::backend_graphics_pipeline_resource> resource =
+        std::make_unique<fake_graphics_pipeline_resource>(destroyed);
+    CHECK_FALSE(destroyed);
+  }
+  CHECK(destroyed);
+}
+
+TEST_CASE("计算管线通过后端抽象正确销毁") {
+  bool destroyed = false;
+  {
+    std::unique_ptr<granit::detail::backend_compute_pipeline_resource> resource =
+        std::make_unique<fake_compute_pipeline_resource>(destroyed);
     CHECK_FALSE(destroyed);
   }
   CHECK(destroyed);

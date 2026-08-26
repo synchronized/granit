@@ -109,6 +109,45 @@ private:
   VkDescriptorSet set_{VK_NULL_HANDLE};
 };
 
+class vulkan_pipeline_layout_resource final : public backend_pipeline_layout_resource {
+public:
+  explicit vulkan_pipeline_layout_resource(std::shared_ptr<renderer_state> renderer) noexcept;
+  ~vulkan_pipeline_layout_resource() override;
+
+  [[nodiscard]] VkPipelineLayout& native() noexcept { return native_; }
+  [[nodiscard]] VkPipelineLayout native() const noexcept { return native_; }
+
+private:
+  std::shared_ptr<renderer_state> renderer_;
+  VkPipelineLayout native_{VK_NULL_HANDLE};
+};
+
+class vulkan_graphics_pipeline_resource final : public backend_graphics_pipeline_resource {
+public:
+  explicit vulkan_graphics_pipeline_resource(std::shared_ptr<renderer_state> renderer) noexcept;
+  ~vulkan_graphics_pipeline_resource() override;
+
+  [[nodiscard]] VkPipeline& native() noexcept { return native_; }
+  [[nodiscard]] VkPipeline native() const noexcept { return native_; }
+
+private:
+  std::shared_ptr<renderer_state> renderer_;
+  VkPipeline native_{VK_NULL_HANDLE};
+};
+
+class vulkan_compute_pipeline_resource final : public backend_compute_pipeline_resource {
+public:
+  explicit vulkan_compute_pipeline_resource(std::shared_ptr<renderer_state> renderer) noexcept;
+  ~vulkan_compute_pipeline_resource() override;
+
+  [[nodiscard]] VkPipeline& native() noexcept { return native_; }
+  [[nodiscard]] VkPipeline native() const noexcept { return native_; }
+
+private:
+  std::shared_ptr<renderer_state> renderer_;
+  VkPipeline native_{VK_NULL_HANDLE};
+};
+
 } // namespace granit::detail
 
 #endif

@@ -76,4 +76,34 @@ vulkan_bind_group_resource::~vulkan_bind_group_resource() {
   }
 }
 
+vulkan_pipeline_layout_resource::vulkan_pipeline_layout_resource(
+    std::shared_ptr<renderer_state> renderer) noexcept
+    : renderer_(std::move(renderer)) {}
+
+vulkan_pipeline_layout_resource::~vulkan_pipeline_layout_resource() {
+  if (renderer_) {
+    renderer_->destroy_native_pipeline_layout(native_);
+  }
+}
+
+vulkan_graphics_pipeline_resource::vulkan_graphics_pipeline_resource(
+    std::shared_ptr<renderer_state> renderer) noexcept
+    : renderer_(std::move(renderer)) {}
+
+vulkan_graphics_pipeline_resource::~vulkan_graphics_pipeline_resource() {
+  if (renderer_) {
+    renderer_->destroy_native_graphics_pipeline(native_);
+  }
+}
+
+vulkan_compute_pipeline_resource::vulkan_compute_pipeline_resource(
+    std::shared_ptr<renderer_state> renderer) noexcept
+    : renderer_(std::move(renderer)) {}
+
+vulkan_compute_pipeline_resource::~vulkan_compute_pipeline_resource() {
+  if (renderer_) {
+    renderer_->destroy_native_compute_pipeline(native_);
+  }
+}
+
 } // namespace granit::detail
