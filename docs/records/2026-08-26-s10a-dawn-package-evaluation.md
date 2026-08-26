@@ -6,8 +6,9 @@
 ## 结论
 
 Dawn `v20260720.160313` 的 API 头与 Emdawnwebgpu 可以作为匹配原型基线，但官方 Windows Release
-包不适合作为 Granit 的通用桌面运行时依赖。该包只提供静态库，并且对构建工具链版本敏感。
-Granit 需要基于锁定修订自行构建 monolithic shared library，再验证动态加载。
+包不适合作为 Granit 的通用桌面运行时依赖。自建共享库验证确认 `wgpuCreateInstance` 可以动态
+加载，但逐符号加载会把 Dawn 的非稳定 ABI 变成核心运行时边界。桌面正式方向因此调整为 Granit
+自有后端插件内部静态链接 Dawn；共享包工作流保留用于升级评估和诊断，不作为最终 SDK 依赖。
 
 ## 验证输入
 
@@ -34,8 +35,8 @@ Granit 需要基于锁定修订自行构建 monolithic shared library，再验�
 
 1. 在锁定的构建镜像中从同一 Dawn 修订构建 monolithic shared library。
 2. 同时产出匹配的 headers、运行库、符号清单、许可证和 SHA-256 清单。
-3. 用 MSVC 与 Clang 消费者只加载 C ABI DLL，不直接链接 Dawn 静态 C++ 实现。
-4. 完成缺失库、缺失符号、Instance/Adapter/Device 和离屏回读测试后再接受 ADR-004。
+3. 使用与 Dawn 相同的工具链构建 Granit WebGPU 插件，并只向核心暴露 Granit 自有插件 ABI。
+4. 完成插件握手、Instance/Adapter/Device 和离屏回读测试后再接受 ADR-004。
 
 仓库已增加 `Dawn Dependency Packages` 工作流。2026-08-26 的首次完整验证在 Windows 与 Linux
 均成功：工作流从锁定修订构建 monolithic shared library，检查 `wgpuCreateInstance` 导出，并生成

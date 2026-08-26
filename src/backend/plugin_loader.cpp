@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include "backend/webgpu/loader.h"
+#include "backend/plugin_loader.h"
+
+#include <cstddef>
 
 #if defined(_WIN32)
 #include <windows.h>
@@ -36,11 +38,21 @@ void* load_symbol(void* handle, const char* name) noexcept {
 #endif
 }
 
+bool is_compatible(const granit_backend_plugin_api* api,
+                   granit_backend_plugin_kind expected_kind) noexcept {
+  constexpr std::size_t minimum_size =
+      offsetof(granit_backend_plugin_api, name_length) + sizeof(uint32_t);
+  return api != nullptr && api->struct_size >= minimum_size &&
+         api->abi_version == GRANIT_BACKEND_PLUGIN_ABI_VERSION && api->kind == expected_kind &&
+         api->reserved == 0 && api->name != nullptr && api->name_length != 0;
+}
+
 } // namespace
 
-webgpu_loader::~webgpu_loader() { close(); }
+backend_plugin_loader::~backend_plugin_loader() { close(); }
 
-granit_result webgpu_loader::open(const char* library_path) noexcept {
+granit_result backend_plugin_loader::open(const char* library_path,
+                                          granit_backend_plugin_kind expected_kind) noexcept {
   close();
   if (library_path == nullptr || library_path[0] == '\0') {
     return GRANIT_ERROR_INVALID_ARGUMENT;
@@ -51,17 +63,23 @@ granit_result webgpu_loader::open(const char* library_path) noexcept {
     return GRANIT_ERROR_BACKEND_UNAVAILABLE;
   }
 
-  create_instance_ =
-      reinterpret_cast<create_instance_fn>(load_symbol(handle_, "wgpuCreateInstance"));
-  if (create_instance_ == nullptr) {
+  const auto query = reinterpret_cast<granit_backend_plugin_query_fn>(
+      load_symbol(handle_, GRANIT_BACKEND_PLUGIN_QUERY_SYMBOL));
+  if (query == nullptr) {
+    close();
+    return GRANIT_ERROR_INCOMPATIBLE_DRIVER;
+  }
+
+  api_ = query(GRANIT_BACKEND_PLUGIN_ABI_VERSION);
+  if (!is_compatible(api_, expected_kind)) {
     close();
     return GRANIT_ERROR_INCOMPATIBLE_DRIVER;
   }
   return GRANIT_SUCCESS;
 }
 
-void webgpu_loader::close() noexcept {
-  create_instance_ = nullptr;
+void backend_plugin_loader::close() noexcept {
+  api_ = nullptr;
   if (handle_ == nullptr) {
     return;
   }
