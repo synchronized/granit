@@ -83,7 +83,8 @@ C++ 语法。C++20 包装层和内部实现测试使用 Catch2 3。两套测试�
 
 子阶段完成后可以创建聚焦的本地提交，并运行与改动相关的本地构建和测试。默认等完整任务达到
 可评审状态后再统一推送并创建一个 Pull Request。Linux、Windows 和 Documentation 不因 Pull
-Request 更新自动运行；合并前在 Actions 页面手动触发需要的工作流，避免每次推送重复运行矩阵。
+Request 更新或合并到 `main` 自动运行；合并前在 Actions 页面手动触发需要的工作流，避免重复
+运行矩阵。
 
 以下情况允许提前推送到同一特性分支进行阶段验证：
 
@@ -92,10 +93,8 @@ Request 更新自动运行；合并前在 Actions 页面手动触发需要的工
 - 正在修改 Actions、发布、缓存或镜像配置；
 - 用户明确要求立即推送或检查远端结果。
 
-CI 修复继续复用同一 Pull Request，不创建重复 PR。合并前手动运行的 Actions 全部通过后再合并；
-合并到 `main` 会自动运行一次匹配的工作流，作为最终确认。推送前应整理提交范围并运行
-`git diff --check`；不要通过空提交或无实质变化的反复推送观察 CI。
+CI 修复继续复用同一 Pull Request，不创建重复 PR。合并前手动运行的 Actions 全部通过后再合并。
+推送前应整理提交范围并运行 `git diff --check`；不要通过空提交或无实质变化的反复推送观察 CI。
 
 纯 `docs/**`、README、CHANGELOG 或文档规范修改在合并前只需手动运行轻量 Documentation；涉及
-源码、CMake、测试或工作流配置时手动运行 Windows/Linux，必要时同时运行 Documentation。合并后
-由 `main` 的路径过滤自动选择最终确认工作流。
+源码、CMake、测试或工作流配置时手动运行 Windows/Linux，必要时同时运行 Documentation。
