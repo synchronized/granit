@@ -19,6 +19,7 @@
 
 ## 稳定化与跨平台
 
+- [2026-08-26 S-10A Vulkan 耦合审计](2026-08-26-s10a-vulkan-coupling-audit.md)
 - [2026-08-26 S-09E 0.3.0 验收](2026-08-26-s09e-0.3.0-acceptance.md)
 - [2026-08-26 S-09C 安装与文档闭环](2026-08-26-s09c-installation-documentation.md)
 - [2026-08-26 S-09D 可执行诊断](2026-08-26-s09d-actionable-diagnostics.md)

@@ -8,3 +8,4 @@ Reference 和实现为准。
 
 - [ADR-001：调试绘制与文字渲染模块边界](ADR-001-debug-text-boundary.md)
 - [ADR-002：文字输入与字体后端边界](ADR-002-text-input-boundary.md)
+- [ADR-003：Renderer 内部多后端边界](ADR-003-internal-renderer-backend-boundary.md)（提议）
