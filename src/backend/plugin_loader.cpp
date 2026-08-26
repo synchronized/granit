@@ -15,8 +15,8 @@ bool is_compatible(const granit_backend_plugin_api* api,
   constexpr std::size_t minimum_size = offsetof(granit_backend_plugin_api, instance_api) +
                                        sizeof(const granit_backend_plugin_instance_api*);
   constexpr std::size_t minimum_instance_api_size =
-      offsetof(granit_backend_plugin_instance_api, read_buffer) +
-      sizeof(granit_backend_plugin_read_buffer_fn);
+      offsetof(granit_backend_plugin_instance_api, destroy_sampler) +
+      sizeof(granit_backend_plugin_destroy_sampler_fn);
   return api != nullptr && api->struct_size >= minimum_size &&
          api->abi_version == GRANIT_BACKEND_PLUGIN_ABI_VERSION && api->kind == expected_kind &&
          api->reserved == 0 && api->name != nullptr && api->name_length != 0 &&
@@ -25,7 +25,13 @@ bool is_compatible(const granit_backend_plugin_api* api,
          api->instance_api->reserved == 0 && api->instance_api->get_capabilities != nullptr &&
          api->instance_api->create_buffer != nullptr &&
          api->instance_api->destroy_buffer != nullptr &&
-         api->instance_api->write_buffer != nullptr && api->instance_api->read_buffer != nullptr;
+         api->instance_api->write_buffer != nullptr && api->instance_api->read_buffer != nullptr &&
+         api->instance_api->create_texture != nullptr &&
+         api->instance_api->destroy_texture != nullptr &&
+         api->instance_api->create_texture_view != nullptr &&
+         api->instance_api->destroy_texture_view != nullptr &&
+         api->instance_api->create_sampler != nullptr &&
+         api->instance_api->destroy_sampler != nullptr;
 }
 
 bool is_valid_host(const granit_backend_plugin_host_api* host) noexcept {
@@ -215,6 +221,105 @@ granit_result backend_plugin_loader::read_buffer(granit_backend_plugin_instance 
   }
   try {
     return api_->instance_api->read_buffer(instance, buffer, offset, data, size);
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+granit_result
+backend_plugin_loader::create_texture(granit_backend_plugin_instance instance,
+                                      const granit_backend_plugin_texture_desc* desc,
+                                      granit_backend_plugin_texture* texture) noexcept {
+  if (api_ == nullptr || instance == 0 || desc == nullptr || texture == nullptr) {
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  }
+  if (std::find(instances_.begin(), instances_.end(), instance) == instances_.end()) {
+    return GRANIT_ERROR_INVALID_HANDLE;
+  }
+  try {
+    return api_->instance_api->create_texture(instance, desc, texture);
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+granit_result
+backend_plugin_loader::destroy_texture(granit_backend_plugin_instance instance,
+                                       granit_backend_plugin_texture texture) noexcept {
+  if (api_ == nullptr || instance == 0 || texture == 0) {
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  }
+  if (std::find(instances_.begin(), instances_.end(), instance) == instances_.end()) {
+    return GRANIT_ERROR_INVALID_HANDLE;
+  }
+  try {
+    return api_->instance_api->destroy_texture(instance, texture);
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+granit_result
+backend_plugin_loader::create_texture_view(granit_backend_plugin_instance instance,
+                                           granit_backend_plugin_texture texture,
+                                           granit_backend_plugin_texture_view* view) noexcept {
+  if (api_ == nullptr || instance == 0 || texture == 0 || view == nullptr) {
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  }
+  if (std::find(instances_.begin(), instances_.end(), instance) == instances_.end()) {
+    return GRANIT_ERROR_INVALID_HANDLE;
+  }
+  try {
+    return api_->instance_api->create_texture_view(instance, texture, view);
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+granit_result
+backend_plugin_loader::destroy_texture_view(granit_backend_plugin_instance instance,
+                                            granit_backend_plugin_texture_view view) noexcept {
+  if (api_ == nullptr || instance == 0 || view == 0) {
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  }
+  if (std::find(instances_.begin(), instances_.end(), instance) == instances_.end()) {
+    return GRANIT_ERROR_INVALID_HANDLE;
+  }
+  try {
+    return api_->instance_api->destroy_texture_view(instance, view);
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+granit_result
+backend_plugin_loader::create_sampler(granit_backend_plugin_instance instance,
+                                      const granit_backend_plugin_sampler_desc* desc,
+                                      granit_backend_plugin_sampler* sampler) noexcept {
+  if (api_ == nullptr || instance == 0 || desc == nullptr || sampler == nullptr) {
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  }
+  if (std::find(instances_.begin(), instances_.end(), instance) == instances_.end()) {
+    return GRANIT_ERROR_INVALID_HANDLE;
+  }
+  try {
+    return api_->instance_api->create_sampler(instance, desc, sampler);
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+granit_result
+backend_plugin_loader::destroy_sampler(granit_backend_plugin_instance instance,
+                                       granit_backend_plugin_sampler sampler) noexcept {
+  if (api_ == nullptr || instance == 0 || sampler == 0) {
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  }
+  if (std::find(instances_.begin(), instances_.end(), instance) == instances_.end()) {
+    return GRANIT_ERROR_INVALID_HANDLE;
+  }
+  try {
+    return api_->instance_api->destroy_sampler(instance, sampler);
   } catch (...) {
     return GRANIT_ERROR_INTERNAL;
   }

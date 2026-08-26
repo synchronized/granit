@@ -29,6 +29,13 @@ struct webgpu_instance {
     std::uint64_t size;
     granit_backend_plugin_buffer_usage usage;
   };
+  struct texture_record {
+    WGPUTexture texture;
+  };
+  struct texture_view_record {
+    WGPUTextureView view;
+    granit_backend_plugin_texture texture;
+  };
 
   granit_backend_plugin_host_api host;
   WGPUInstance instance;
@@ -37,6 +44,9 @@ struct webgpu_instance {
   WGPUQueue queue;
   granit_backend_plugin_capabilities capabilities;
   std::unordered_map<granit_backend_plugin_buffer, buffer_record> buffers;
+  std::unordered_map<granit_backend_plugin_texture, texture_record> textures;
+  std::unordered_map<granit_backend_plugin_texture_view, texture_view_record> texture_views;
+  std::unordered_map<granit_backend_plugin_sampler, WGPUSampler> samplers;
 };
 
 constexpr std::uint64_t request_timeout_ns = UINT64_C(10000000000);
@@ -62,6 +72,9 @@ std::mutex instances_mutex;
 std::unordered_map<granit_backend_plugin_instance, webgpu_instance*> instances;
 std::atomic_uint64_t next_instance{1};
 std::atomic_uint64_t next_buffer{1};
+std::atomic_uint64_t next_texture{1};
+std::atomic_uint64_t next_texture_view{1};
+std::atomic_uint64_t next_sampler{1};
 
 void deallocate(const granit_backend_plugin_host_api& host, void* memory) noexcept {
   try {
@@ -72,6 +85,21 @@ void deallocate(const granit_backend_plugin_host_api& host, void* memory) noexce
 }
 
 void release_resources(webgpu_instance& state) noexcept {
+  for (const auto& [handle, view] : state.texture_views) {
+    static_cast<void>(handle);
+    wgpuTextureViewRelease(view.view);
+  }
+  state.texture_views.clear();
+  for (const auto& [handle, sampler] : state.samplers) {
+    static_cast<void>(handle);
+    wgpuSamplerRelease(sampler);
+  }
+  state.samplers.clear();
+  for (const auto& [handle, texture] : state.textures) {
+    static_cast<void>(handle);
+    wgpuTextureRelease(texture.texture);
+  }
+  state.textures.clear();
   for (const auto& [handle, buffer] : state.buffers) {
     static_cast<void>(handle);
     wgpuBufferRelease(buffer.buffer);
@@ -173,8 +201,8 @@ granit_result create_backend(const granit_backend_plugin_host_api* host,
   constexpr WGPUInstanceFeatureName features[]{WGPUInstanceFeatureName_TimedWaitAny};
   const WGPUInstanceLimits instance_limits{nullptr, 1};
   const WGPUInstanceDescriptor descriptor{nullptr, 1, features, &instance_limits};
-  auto* state = new (memory)
-      webgpu_instance{*host, wgpuCreateInstance(&descriptor), nullptr, nullptr, nullptr, {}, {}};
+  auto* state = new (memory) webgpu_instance{
+      *host, wgpuCreateInstance(&descriptor), nullptr, nullptr, nullptr, {}, {}, {}, {}, {}};
   if (state->instance == nullptr) {
     state->~webgpu_instance();
     deallocate(*host, memory);
@@ -487,6 +515,216 @@ granit_result read_buffer(granit_backend_plugin_instance instance,
   return GRANIT_SUCCESS;
 }
 
+template <typename Handle> Handle next_handle(std::atomic_uint64_t& counter) noexcept {
+  auto handle = counter.fetch_add(1, std::memory_order_relaxed);
+  if (handle == 0) {
+    handle = counter.fetch_add(1, std::memory_order_relaxed);
+  }
+  return static_cast<Handle>(handle);
+}
+
+granit_result create_texture(granit_backend_plugin_instance instance,
+                             const granit_backend_plugin_texture_desc* desc,
+                             granit_backend_plugin_texture* out_texture) noexcept {
+  constexpr auto known_usage = GRANIT_BACKEND_PLUGIN_TEXTURE_USAGE_COPY_SRC_BIT |
+                               GRANIT_BACKEND_PLUGIN_TEXTURE_USAGE_COPY_DST_BIT |
+                               GRANIT_BACKEND_PLUGIN_TEXTURE_USAGE_SAMPLED_BIT |
+                               GRANIT_BACKEND_PLUGIN_TEXTURE_USAGE_RENDER_ATTACHMENT_BIT;
+  if (out_texture != nullptr) {
+    *out_texture = 0;
+  }
+  if (instance == 0 || desc == nullptr || out_texture == nullptr ||
+      desc->struct_size < sizeof(granit_backend_plugin_texture_desc) || desc->reserved != 0 ||
+      desc->reserved_flags != 0 || desc->width == 0 || desc->height == 0 || desc->usage == 0 ||
+      (desc->usage & ~known_usage) != 0) {
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  }
+  const std::scoped_lock lock{instances_mutex};
+  const auto found = instances.find(instance);
+  if (found == instances.end()) {
+    return GRANIT_ERROR_INVALID_HANDLE;
+  }
+  auto& state = *found->second;
+  if (desc->width > state.capabilities.max_texture_dimension_2d ||
+      desc->height > state.capabilities.max_texture_dimension_2d) {
+    return GRANIT_ERROR_UNSUPPORTED;
+  }
+  WGPUTextureUsage usage = WGPUTextureUsage_None;
+  if ((desc->usage & GRANIT_BACKEND_PLUGIN_TEXTURE_USAGE_COPY_SRC_BIT) != 0)
+    usage |= WGPUTextureUsage_CopySrc;
+  if ((desc->usage & GRANIT_BACKEND_PLUGIN_TEXTURE_USAGE_COPY_DST_BIT) != 0)
+    usage |= WGPUTextureUsage_CopyDst;
+  if ((desc->usage & GRANIT_BACKEND_PLUGIN_TEXTURE_USAGE_SAMPLED_BIT) != 0)
+    usage |= WGPUTextureUsage_TextureBinding;
+  if ((desc->usage & GRANIT_BACKEND_PLUGIN_TEXTURE_USAGE_RENDER_ATTACHMENT_BIT) != 0)
+    usage |= WGPUTextureUsage_RenderAttachment;
+  WGPUTextureDescriptor descriptor = WGPU_TEXTURE_DESCRIPTOR_INIT;
+  descriptor.usage = usage;
+  descriptor.dimension = WGPUTextureDimension_2D;
+  descriptor.size = {desc->width, desc->height, 1};
+  descriptor.format = WGPUTextureFormat_RGBA8Unorm;
+  descriptor.mipLevelCount = 1;
+  descriptor.sampleCount = 1;
+  const auto native = wgpuDeviceCreateTexture(state.device, &descriptor);
+  if (native == nullptr) {
+    return GRANIT_ERROR_OUT_OF_MEMORY;
+  }
+  const auto handle = next_handle<granit_backend_plugin_texture>(next_texture);
+  try {
+    if (!state.textures.emplace(handle, webgpu_instance::texture_record{native}).second) {
+      wgpuTextureRelease(native);
+      return GRANIT_ERROR_INTERNAL;
+    }
+  } catch (const std::bad_alloc&) {
+    wgpuTextureRelease(native);
+    return GRANIT_ERROR_OUT_OF_MEMORY;
+  } catch (...) {
+    wgpuTextureRelease(native);
+    return GRANIT_ERROR_INTERNAL;
+  }
+  *out_texture = handle;
+  return GRANIT_SUCCESS;
+}
+
+granit_result destroy_texture(granit_backend_plugin_instance instance,
+                              granit_backend_plugin_texture texture) noexcept {
+  if (instance == 0 || texture == 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  const std::scoped_lock lock{instances_mutex};
+  const auto found = instances.find(instance);
+  if (found == instances.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  auto& state = *found->second;
+  const auto texture_found = state.textures.find(texture);
+  if (texture_found == state.textures.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  if (std::any_of(state.texture_views.begin(), state.texture_views.end(),
+                  [texture](const auto& entry) { return entry.second.texture == texture; })) {
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  }
+  wgpuTextureRelease(texture_found->second.texture);
+  state.textures.erase(texture_found);
+  return GRANIT_SUCCESS;
+}
+
+granit_result create_texture_view(granit_backend_plugin_instance instance,
+                                  granit_backend_plugin_texture texture,
+                                  granit_backend_plugin_texture_view* out_view) noexcept {
+  if (out_view != nullptr)
+    *out_view = 0;
+  if (instance == 0 || texture == 0 || out_view == nullptr)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  const std::scoped_lock lock{instances_mutex};
+  const auto found = instances.find(instance);
+  if (found == instances.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  auto& state = *found->second;
+  const auto texture_found = state.textures.find(texture);
+  if (texture_found == state.textures.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  const auto native = wgpuTextureCreateView(texture_found->second.texture, nullptr);
+  if (native == nullptr)
+    return GRANIT_ERROR_OUT_OF_MEMORY;
+  const auto handle = next_handle<granit_backend_plugin_texture_view>(next_texture_view);
+  try {
+    if (!state.texture_views.emplace(handle, webgpu_instance::texture_view_record{native, texture})
+             .second) {
+      wgpuTextureViewRelease(native);
+      return GRANIT_ERROR_INTERNAL;
+    }
+  } catch (const std::bad_alloc&) {
+    wgpuTextureViewRelease(native);
+    return GRANIT_ERROR_OUT_OF_MEMORY;
+  } catch (...) {
+    wgpuTextureViewRelease(native);
+    return GRANIT_ERROR_INTERNAL;
+  }
+  *out_view = handle;
+  return GRANIT_SUCCESS;
+}
+
+granit_result destroy_texture_view(granit_backend_plugin_instance instance,
+                                   granit_backend_plugin_texture_view view) noexcept {
+  if (instance == 0 || view == 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  const std::scoped_lock lock{instances_mutex};
+  const auto found = instances.find(instance);
+  if (found == instances.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  const auto view_found = found->second->texture_views.find(view);
+  if (view_found == found->second->texture_views.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  wgpuTextureViewRelease(view_found->second.view);
+  found->second->texture_views.erase(view_found);
+  return GRANIT_SUCCESS;
+}
+
+granit_result create_sampler(granit_backend_plugin_instance instance,
+                             const granit_backend_plugin_sampler_desc* desc,
+                             granit_backend_plugin_sampler* out_sampler) noexcept {
+  if (out_sampler != nullptr)
+    *out_sampler = 0;
+  const auto valid_filter = [](granit_backend_plugin_filter filter) {
+    return filter == GRANIT_BACKEND_PLUGIN_FILTER_NEAREST ||
+           filter == GRANIT_BACKEND_PLUGIN_FILTER_LINEAR;
+  };
+  if (instance == 0 || desc == nullptr || out_sampler == nullptr ||
+      desc->struct_size < sizeof(granit_backend_plugin_sampler_desc) || desc->reserved != 0 ||
+      !valid_filter(desc->min_filter) || !valid_filter(desc->mag_filter)) {
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  }
+  const std::scoped_lock lock{instances_mutex};
+  const auto found = instances.find(instance);
+  if (found == instances.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  WGPUSamplerDescriptor descriptor = WGPU_SAMPLER_DESCRIPTOR_INIT;
+  descriptor.addressModeU = WGPUAddressMode_ClampToEdge;
+  descriptor.addressModeV = WGPUAddressMode_ClampToEdge;
+  descriptor.addressModeW = WGPUAddressMode_ClampToEdge;
+  descriptor.minFilter = desc->min_filter == GRANIT_BACKEND_PLUGIN_FILTER_LINEAR
+                             ? WGPUFilterMode_Linear
+                             : WGPUFilterMode_Nearest;
+  descriptor.magFilter = desc->mag_filter == GRANIT_BACKEND_PLUGIN_FILTER_LINEAR
+                             ? WGPUFilterMode_Linear
+                             : WGPUFilterMode_Nearest;
+  descriptor.mipmapFilter = WGPUMipmapFilterMode_Nearest;
+  descriptor.maxAnisotropy = 1;
+  const auto native = wgpuDeviceCreateSampler(found->second->device, &descriptor);
+  if (native == nullptr)
+    return GRANIT_ERROR_OUT_OF_MEMORY;
+  const auto handle = next_handle<granit_backend_plugin_sampler>(next_sampler);
+  try {
+    if (!found->second->samplers.emplace(handle, native).second) {
+      wgpuSamplerRelease(native);
+      return GRANIT_ERROR_INTERNAL;
+    }
+  } catch (const std::bad_alloc&) {
+    wgpuSamplerRelease(native);
+    return GRANIT_ERROR_OUT_OF_MEMORY;
+  } catch (...) {
+    wgpuSamplerRelease(native);
+    return GRANIT_ERROR_INTERNAL;
+  }
+  *out_sampler = handle;
+  return GRANIT_SUCCESS;
+}
+
+granit_result destroy_sampler(granit_backend_plugin_instance instance,
+                              granit_backend_plugin_sampler sampler) noexcept {
+  if (instance == 0 || sampler == 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  const std::scoped_lock lock{instances_mutex};
+  const auto found = instances.find(instance);
+  if (found == instances.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  const auto sampler_found = found->second->samplers.find(sampler);
+  if (sampler_found == found->second->samplers.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  wgpuSamplerRelease(sampler_found->second);
+  found->second->samplers.erase(sampler_found);
+  return GRANIT_SUCCESS;
+}
+
 constexpr char plugin_name[] = "Granit WebGPU (Dawn)";
 constexpr granit_backend_plugin_instance_api instance_api{
     sizeof(granit_backend_plugin_instance_api),
@@ -495,7 +733,13 @@ constexpr granit_backend_plugin_instance_api instance_api{
     create_buffer,
     destroy_buffer,
     write_buffer,
-    read_buffer};
+    read_buffer,
+    create_texture,
+    destroy_texture,
+    create_texture_view,
+    destroy_texture_view,
+    create_sampler,
+    destroy_sampler};
 constexpr granit_backend_plugin_api plugin_api{sizeof(granit_backend_plugin_api),
                                                GRANIT_BACKEND_PLUGIN_ABI_VERSION,
                                                GRANIT_BACKEND_PLUGIN_KIND_WEBGPU,

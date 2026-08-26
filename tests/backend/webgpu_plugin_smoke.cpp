@@ -71,10 +71,33 @@ int main() {
     std::fprintf(stderr, "WebGPU Buffer 写入或回读失败\n");
     return 4;
   }
+
+  granit_backend_plugin_texture_desc texture_desc{};
+  texture_desc.struct_size = sizeof(texture_desc);
+  texture_desc.width = 16;
+  texture_desc.height = 16;
+  texture_desc.usage = GRANIT_BACKEND_PLUGIN_TEXTURE_USAGE_SAMPLED_BIT |
+                       GRANIT_BACKEND_PLUGIN_TEXTURE_USAGE_COPY_DST_BIT;
+  granit_backend_plugin_texture texture{};
+  granit_backend_plugin_texture_view view{};
+  granit_backend_plugin_sampler_desc sampler_desc{};
+  sampler_desc.struct_size = sizeof(sampler_desc);
+  sampler_desc.min_filter = GRANIT_BACKEND_PLUGIN_FILTER_LINEAR;
+  sampler_desc.mag_filter = GRANIT_BACKEND_PLUGIN_FILTER_LINEAR;
+  granit_backend_plugin_sampler sampler{};
+  if (loader.create_texture(instance, &texture_desc, &texture) != GRANIT_SUCCESS || texture == 0 ||
+      loader.create_texture_view(instance, texture, &view) != GRANIT_SUCCESS || view == 0 ||
+      loader.create_sampler(instance, &sampler_desc, &sampler) != GRANIT_SUCCESS || sampler == 0 ||
+      loader.destroy_sampler(instance, sampler) != GRANIT_SUCCESS ||
+      loader.destroy_texture_view(instance, view) != GRANIT_SUCCESS ||
+      loader.destroy_texture(instance, texture) != GRANIT_SUCCESS) {
+    std::fprintf(stderr, "WebGPU Texture、View 或 Sampler 生命周期验证失败\n");
+    return 5;
+  }
   const auto destroy_result = loader.destroy_instance(instance);
   if (destroy_result != GRANIT_SUCCESS) {
     std::fprintf(stderr, "销毁 WebGPU 插件实例失败：%d\n", static_cast<int>(destroy_result));
-    return 5;
+    return 6;
   }
   return 0;
 }

@@ -205,3 +205,72 @@ TEST_CASE("WebGPU 插件 Buffer 遵守所有权、Usage 与范围契约", "[back
   CHECK(loader.destroy_instance(second) == GRANIT_SUCCESS);
   CHECK(state.allocations == state.deallocations);
 }
+
+TEST_CASE("WebGPU 插件 Texture、View 与 Sampler 遵守所有权契约", "[backend][plugin]") {
+  granit::detail::backend_plugin_loader loader;
+  REQUIRE(loader.open(GRANIT_FAKE_BACKEND_PLUGIN_PATH, GRANIT_BACKEND_PLUGIN_KIND_WEBGPU) ==
+          GRANIT_SUCCESS);
+  host_state state;
+  auto host = make_host(state);
+  granit_backend_plugin_instance first{};
+  granit_backend_plugin_instance second{};
+  REQUIRE(loader.create_instance(&host, &first) == GRANIT_SUCCESS);
+  REQUIRE(loader.create_instance(&host, &second) == GRANIT_SUCCESS);
+
+  granit_backend_plugin_texture_desc texture_desc{};
+  texture_desc.struct_size = sizeof(texture_desc);
+  texture_desc.width = 64;
+  texture_desc.height = 32;
+  texture_desc.usage = GRANIT_BACKEND_PLUGIN_TEXTURE_USAGE_SAMPLED_BIT |
+                       GRANIT_BACKEND_PLUGIN_TEXTURE_USAGE_COPY_DST_BIT;
+  granit_backend_plugin_texture texture{};
+  REQUIRE(loader.create_texture(first, &texture_desc, &texture) == GRANIT_SUCCESS);
+  REQUIRE(texture != 0);
+
+  granit_backend_plugin_texture_view view{};
+  REQUIRE(loader.create_texture_view(first, texture, &view) == GRANIT_SUCCESS);
+  REQUIRE(view != 0);
+  granit_backend_plugin_texture_view foreign_view = 123;
+  CHECK(loader.create_texture_view(second, texture, &foreign_view) == GRANIT_ERROR_INVALID_HANDLE);
+  CHECK(foreign_view == 0);
+  CHECK(loader.destroy_texture(first, texture) == GRANIT_ERROR_INVALID_ARGUMENT);
+  CHECK(loader.destroy_texture_view(second, view) == GRANIT_ERROR_INVALID_HANDLE);
+
+  granit_backend_plugin_sampler_desc sampler_desc{};
+  sampler_desc.struct_size = sizeof(sampler_desc);
+  sampler_desc.min_filter = GRANIT_BACKEND_PLUGIN_FILTER_LINEAR;
+  sampler_desc.mag_filter = GRANIT_BACKEND_PLUGIN_FILTER_NEAREST;
+  granit_backend_plugin_sampler sampler{};
+  REQUIRE(loader.create_sampler(first, &sampler_desc, &sampler) == GRANIT_SUCCESS);
+  REQUIRE(sampler != 0);
+  CHECK(loader.destroy_sampler(second, sampler) == GRANIT_ERROR_INVALID_HANDLE);
+  REQUIRE(loader.destroy_sampler(first, sampler) == GRANIT_SUCCESS);
+  CHECK(loader.destroy_sampler(first, sampler) == GRANIT_ERROR_INVALID_HANDLE);
+
+  REQUIRE(loader.destroy_texture_view(first, view) == GRANIT_SUCCESS);
+  CHECK(loader.destroy_texture_view(first, view) == GRANIT_ERROR_INVALID_HANDLE);
+  REQUIRE(loader.destroy_texture(first, texture) == GRANIT_SUCCESS);
+  CHECK(loader.destroy_texture(first, texture) == GRANIT_ERROR_INVALID_HANDLE);
+
+  auto invalid_texture = texture_desc;
+  invalid_texture.width = 0;
+  texture = 123;
+  CHECK(loader.create_texture(first, &invalid_texture, &texture) == GRANIT_ERROR_INVALID_ARGUMENT);
+  CHECK(texture == 0);
+  invalid_texture = texture_desc;
+  invalid_texture.usage = UINT32_C(0x80000000);
+  CHECK(loader.create_texture(first, &invalid_texture, &texture) == GRANIT_ERROR_INVALID_ARGUMENT);
+
+  auto invalid_sampler = sampler_desc;
+  invalid_sampler.min_filter = 0;
+  sampler = 123;
+  CHECK(loader.create_sampler(first, &invalid_sampler, &sampler) == GRANIT_ERROR_INVALID_ARGUMENT);
+  CHECK(sampler == 0);
+
+  REQUIRE(loader.create_texture(first, &texture_desc, &texture) == GRANIT_SUCCESS);
+  REQUIRE(loader.create_texture_view(first, texture, &view) == GRANIT_SUCCESS);
+  REQUIRE(loader.create_sampler(first, &sampler_desc, &sampler) == GRANIT_SUCCESS);
+  CHECK(loader.destroy_instance(first) == GRANIT_SUCCESS);
+  CHECK(loader.destroy_instance(second) == GRANIT_SUCCESS);
+  CHECK(state.allocations == state.deallocations);
+}

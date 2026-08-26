@@ -15,6 +15,18 @@ struct WGPUBufferImpl {
   WGPUBufferUsage usage{};
   bool mapped{};
 };
+struct WGPUTextureImpl {
+  unsigned int width;
+  unsigned int height;
+  WGPUTextureUsage usage;
+};
+struct WGPUTextureViewImpl {
+  WGPUTexture texture;
+};
+struct WGPUSamplerImpl {
+  WGPUFilterMode min_filter;
+  WGPUFilterMode mag_filter;
+};
 
 extern "C" WGPUInstance wgpuCreateInstance(const WGPUInstanceDescriptor*) {
   return new WGPUInstanceImpl;
@@ -101,3 +113,31 @@ extern "C" const void* wgpuBufferGetConstMappedRange(WGPUBuffer buffer, size_t o
 }
 
 extern "C" void wgpuBufferUnmap(WGPUBuffer buffer) { buffer->mapped = false; }
+
+extern "C" WGPUTexture wgpuDeviceCreateTexture(WGPUDevice,
+                                               const WGPUTextureDescriptor* descriptor) {
+  if (descriptor == nullptr || descriptor->size.width == 0 || descriptor->size.height == 0 ||
+      descriptor->format != WGPUTextureFormat_RGBA8Unorm) {
+    return nullptr;
+  }
+  return new WGPUTextureImpl{descriptor->size.width, descriptor->size.height, descriptor->usage};
+}
+
+extern "C" void wgpuTextureRelease(WGPUTexture texture) { delete texture; }
+
+extern "C" WGPUTextureView wgpuTextureCreateView(WGPUTexture texture,
+                                                 const WGPUTextureViewDescriptor*) {
+  return texture == nullptr ? nullptr : new WGPUTextureViewImpl{texture};
+}
+
+extern "C" void wgpuTextureViewRelease(WGPUTextureView view) { delete view; }
+
+extern "C" WGPUSampler wgpuDeviceCreateSampler(WGPUDevice,
+                                               const WGPUSamplerDescriptor* descriptor) {
+  if (descriptor == nullptr) {
+    return nullptr;
+  }
+  return new WGPUSamplerImpl{descriptor->minFilter, descriptor->magFilter};
+}
+
+extern "C" void wgpuSamplerRelease(WGPUSampler sampler) { delete sampler; }

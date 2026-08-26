@@ -45,6 +45,23 @@ public:
   [[nodiscard]] granit_result read_buffer(granit_backend_plugin_instance instance,
                                           granit_backend_plugin_buffer buffer, std::uint64_t offset,
                                           void* data, std::uint64_t size) noexcept;
+  [[nodiscard]] granit_result create_texture(granit_backend_plugin_instance instance,
+                                             const granit_backend_plugin_texture_desc* desc,
+                                             granit_backend_plugin_texture* texture) noexcept;
+  [[nodiscard]] granit_result destroy_texture(granit_backend_plugin_instance instance,
+                                              granit_backend_plugin_texture texture) noexcept;
+  [[nodiscard]] granit_result
+  create_texture_view(granit_backend_plugin_instance instance,
+                      granit_backend_plugin_texture texture,
+                      granit_backend_plugin_texture_view* view) noexcept;
+  [[nodiscard]] granit_result
+  destroy_texture_view(granit_backend_plugin_instance instance,
+                       granit_backend_plugin_texture_view view) noexcept;
+  [[nodiscard]] granit_result create_sampler(granit_backend_plugin_instance instance,
+                                             const granit_backend_plugin_sampler_desc* desc,
+                                             granit_backend_plugin_sampler* sampler) noexcept;
+  [[nodiscard]] granit_result destroy_sampler(granit_backend_plugin_instance instance,
+                                              granit_backend_plugin_sampler sampler) noexcept;
   void close() noexcept;
 
   [[nodiscard]] bool is_open() const noexcept { return library_.is_open(); }

@@ -16,6 +16,9 @@
 typedef uint32_t granit_backend_plugin_kind;
 typedef uint64_t granit_backend_plugin_instance;
 typedef uint64_t granit_backend_plugin_buffer;
+typedef uint64_t granit_backend_plugin_texture;
+typedef uint64_t granit_backend_plugin_texture_view;
+typedef uint64_t granit_backend_plugin_sampler;
 
 typedef uint32_t granit_backend_plugin_buffer_usage;
 #define GRANIT_BACKEND_PLUGIN_BUFFER_USAGE_MAP_READ_BIT UINT32_C(0x00000001)
@@ -30,6 +33,33 @@ typedef struct granit_backend_plugin_buffer_desc {
   granit_backend_plugin_buffer_usage usage;
   uint32_t reserved_flags;
 } granit_backend_plugin_buffer_desc;
+
+typedef uint32_t granit_backend_plugin_texture_usage;
+#define GRANIT_BACKEND_PLUGIN_TEXTURE_USAGE_COPY_SRC_BIT UINT32_C(0x00000001)
+#define GRANIT_BACKEND_PLUGIN_TEXTURE_USAGE_COPY_DST_BIT UINT32_C(0x00000002)
+#define GRANIT_BACKEND_PLUGIN_TEXTURE_USAGE_SAMPLED_BIT UINT32_C(0x00000004)
+#define GRANIT_BACKEND_PLUGIN_TEXTURE_USAGE_RENDER_ATTACHMENT_BIT UINT32_C(0x00000008)
+
+/** S-10B 首轮只支持二维 RGBA8 UNORM、单层、单 mip、单采样纹理。 */
+typedef struct granit_backend_plugin_texture_desc {
+  uint32_t struct_size;
+  uint32_t reserved;
+  uint32_t width;
+  uint32_t height;
+  granit_backend_plugin_texture_usage usage;
+  uint32_t reserved_flags;
+} granit_backend_plugin_texture_desc;
+
+typedef uint32_t granit_backend_plugin_filter;
+#define GRANIT_BACKEND_PLUGIN_FILTER_NEAREST UINT32_C(1)
+#define GRANIT_BACKEND_PLUGIN_FILTER_LINEAR UINT32_C(2)
+
+typedef struct granit_backend_plugin_sampler_desc {
+  uint32_t struct_size;
+  uint32_t reserved;
+  granit_backend_plugin_filter min_filter;
+  granit_backend_plugin_filter mag_filter;
+} granit_backend_plugin_sampler_desc;
 
 /** 插件实例创建后固定的后端无关能力快照。 */
 typedef struct granit_backend_plugin_capabilities {
@@ -83,6 +113,21 @@ typedef granit_result (*granit_backend_plugin_write_buffer_fn)(
 typedef granit_result (*granit_backend_plugin_read_buffer_fn)(
     granit_backend_plugin_instance instance, granit_backend_plugin_buffer buffer, uint64_t offset,
     void* data, uint64_t size);
+typedef granit_result (*granit_backend_plugin_create_texture_fn)(
+    granit_backend_plugin_instance instance, const granit_backend_plugin_texture_desc* desc,
+    granit_backend_plugin_texture* texture);
+typedef granit_result (*granit_backend_plugin_destroy_texture_fn)(
+    granit_backend_plugin_instance instance, granit_backend_plugin_texture texture);
+typedef granit_result (*granit_backend_plugin_create_texture_view_fn)(
+    granit_backend_plugin_instance instance, granit_backend_plugin_texture texture,
+    granit_backend_plugin_texture_view* view);
+typedef granit_result (*granit_backend_plugin_destroy_texture_view_fn)(
+    granit_backend_plugin_instance instance, granit_backend_plugin_texture_view view);
+typedef granit_result (*granit_backend_plugin_create_sampler_fn)(
+    granit_backend_plugin_instance instance, const granit_backend_plugin_sampler_desc* desc,
+    granit_backend_plugin_sampler* sampler);
+typedef granit_result (*granit_backend_plugin_destroy_sampler_fn)(
+    granit_backend_plugin_instance instance, granit_backend_plugin_sampler sampler);
 
 /** 实例操作表由插件拥有，在插件卸载前保持有效。 */
 typedef struct granit_backend_plugin_instance_api {
@@ -93,6 +138,12 @@ typedef struct granit_backend_plugin_instance_api {
   granit_backend_plugin_destroy_buffer_fn destroy_buffer;
   granit_backend_plugin_write_buffer_fn write_buffer;
   granit_backend_plugin_read_buffer_fn read_buffer;
+  granit_backend_plugin_create_texture_fn create_texture;
+  granit_backend_plugin_destroy_texture_fn destroy_texture;
+  granit_backend_plugin_create_texture_view_fn create_texture_view;
+  granit_backend_plugin_destroy_texture_view_fn destroy_texture_view;
+  granit_backend_plugin_create_sampler_fn create_sampler;
+  granit_backend_plugin_destroy_sampler_fn destroy_sampler;
 } granit_backend_plugin_instance_api;
 
 /** 后端插件入口返回的只读描述；字符串在插件卸载前有效。 */

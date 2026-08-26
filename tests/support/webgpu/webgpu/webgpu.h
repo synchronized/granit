@@ -15,6 +15,9 @@ typedef struct WGPUAdapterImpl* WGPUAdapter;
 typedef struct WGPUDeviceImpl* WGPUDevice;
 typedef struct WGPUQueueImpl* WGPUQueue;
 typedef struct WGPUBufferImpl* WGPUBuffer;
+typedef struct WGPUTextureImpl* WGPUTexture;
+typedef struct WGPUTextureViewImpl* WGPUTextureView;
+typedef struct WGPUSamplerImpl* WGPUSampler;
 
 typedef unsigned int WGPUBool;
 typedef unsigned int WGPUInstanceFeatureName;
@@ -26,6 +29,13 @@ typedef unsigned int WGPUStatus;
 typedef unsigned int WGPUMapAsyncStatus;
 typedef unsigned long long WGPUBufferUsage;
 typedef unsigned long long WGPUMapMode;
+typedef unsigned long long WGPUTextureUsage;
+typedef unsigned int WGPUTextureDimension;
+typedef unsigned int WGPUTextureFormat;
+typedef unsigned int WGPUAddressMode;
+typedef unsigned int WGPUFilterMode;
+typedef unsigned int WGPUMipmapFilterMode;
+typedef unsigned int WGPUCompareFunction;
 
 #define WGPU_FALSE 0
 #define WGPU_TRUE 1
@@ -44,6 +54,17 @@ typedef unsigned long long WGPUMapMode;
 #define WGPUBufferUsage_CopySrc 4
 #define WGPUBufferUsage_CopyDst 8
 #define WGPUMapMode_Read 1
+#define WGPUTextureUsage_None 0
+#define WGPUTextureUsage_CopySrc 1
+#define WGPUTextureUsage_CopyDst 2
+#define WGPUTextureUsage_TextureBinding 4
+#define WGPUTextureUsage_RenderAttachment 16
+#define WGPUTextureDimension_2D 2
+#define WGPUTextureFormat_RGBA8Unorm 18
+#define WGPUAddressMode_ClampToEdge 1
+#define WGPUFilterMode_Nearest 1
+#define WGPUFilterMode_Linear 2
+#define WGPUMipmapFilterMode_Nearest 1
 #define WGPUBackendType_D3D12 4
 #define WGPUBackendType_Vulkan 6
 
@@ -89,6 +110,50 @@ typedef struct WGPUBufferDescriptor {
 } WGPUBufferDescriptor;
 
 #define WGPU_BUFFER_DESCRIPTOR_INIT                                                                \
+  {                                                                                                \
+  }
+
+typedef struct WGPUExtent3D {
+  unsigned int width;
+  unsigned int height;
+  unsigned int depthOrArrayLayers;
+} WGPUExtent3D;
+
+typedef struct WGPUTextureDescriptor {
+  void* nextInChain;
+  WGPUStringView label;
+  WGPUTextureUsage usage;
+  WGPUTextureDimension dimension;
+  WGPUExtent3D size;
+  WGPUTextureFormat format;
+  unsigned int mipLevelCount;
+  unsigned int sampleCount;
+  size_t viewFormatCount;
+  const WGPUTextureFormat* viewFormats;
+} WGPUTextureDescriptor;
+
+#define WGPU_TEXTURE_DESCRIPTOR_INIT                                                               \
+  {                                                                                                \
+  }
+
+typedef struct WGPUTextureViewDescriptor WGPUTextureViewDescriptor;
+
+typedef struct WGPUSamplerDescriptor {
+  void* nextInChain;
+  WGPUStringView label;
+  WGPUAddressMode addressModeU;
+  WGPUAddressMode addressModeV;
+  WGPUAddressMode addressModeW;
+  WGPUFilterMode magFilter;
+  WGPUFilterMode minFilter;
+  WGPUMipmapFilterMode mipmapFilter;
+  float lodMinClamp;
+  float lodMaxClamp;
+  WGPUCompareFunction compare;
+  unsigned short maxAnisotropy;
+} WGPUSamplerDescriptor;
+
+#define WGPU_SAMPLER_DESCRIPTOR_INIT                                                               \
   {                                                                                                \
   }
 
@@ -162,6 +227,13 @@ WGPUFuture wgpuBufferMapAsync(WGPUBuffer buffer, WGPUMapMode mode, size_t offset
                               WGPUBufferMapCallbackInfo callbackInfo);
 const void* wgpuBufferGetConstMappedRange(WGPUBuffer buffer, size_t offset, size_t size);
 void wgpuBufferUnmap(WGPUBuffer buffer);
+WGPUTexture wgpuDeviceCreateTexture(WGPUDevice device, const WGPUTextureDescriptor* descriptor);
+void wgpuTextureRelease(WGPUTexture texture);
+WGPUTextureView wgpuTextureCreateView(WGPUTexture texture,
+                                      const WGPUTextureViewDescriptor* descriptor);
+void wgpuTextureViewRelease(WGPUTextureView view);
+WGPUSampler wgpuDeviceCreateSampler(WGPUDevice device, const WGPUSamplerDescriptor* descriptor);
+void wgpuSamplerRelease(WGPUSampler sampler);
 
 #ifdef __cplusplus
 }
