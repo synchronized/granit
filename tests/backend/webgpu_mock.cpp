@@ -27,6 +27,11 @@ struct WGPUSamplerImpl {
   WGPUFilterMode min_filter;
   WGPUFilterMode mag_filter;
 };
+struct WGPUBindGroupLayoutImpl {};
+struct WGPUBindGroupImpl {};
+struct WGPUPipelineLayoutImpl {};
+struct WGPUShaderModuleImpl {};
+struct WGPURenderPipelineImpl {};
 
 extern "C" WGPUInstance wgpuCreateInstance(const WGPUInstanceDescriptor*) {
   return new WGPUInstanceImpl;
@@ -141,3 +146,37 @@ extern "C" WGPUSampler wgpuDeviceCreateSampler(WGPUDevice,
 }
 
 extern "C" void wgpuSamplerRelease(WGPUSampler sampler) { delete sampler; }
+
+extern "C" WGPUBindGroupLayout
+wgpuDeviceCreateBindGroupLayout(WGPUDevice, const WGPUBindGroupLayoutDescriptor* descriptor) {
+  return descriptor != nullptr && descriptor->entryCount == 2 ? new WGPUBindGroupLayoutImpl
+                                                              : nullptr;
+}
+extern "C" void wgpuBindGroupLayoutRelease(WGPUBindGroupLayout layout) { delete layout; }
+extern "C" WGPUBindGroup wgpuDeviceCreateBindGroup(WGPUDevice,
+                                                   const WGPUBindGroupDescriptor* descriptor) {
+  return descriptor != nullptr && descriptor->layout != nullptr && descriptor->entryCount == 2
+             ? new WGPUBindGroupImpl
+             : nullptr;
+}
+extern "C" void wgpuBindGroupRelease(WGPUBindGroup bind_group) { delete bind_group; }
+extern "C" WGPUPipelineLayout
+wgpuDeviceCreatePipelineLayout(WGPUDevice, const WGPUPipelineLayoutDescriptor* descriptor) {
+  return descriptor != nullptr && descriptor->bindGroupLayoutCount == 1 ? new WGPUPipelineLayoutImpl
+                                                                        : nullptr;
+}
+extern "C" void wgpuPipelineLayoutRelease(WGPUPipelineLayout layout) { delete layout; }
+extern "C" WGPUShaderModule
+wgpuDeviceCreateShaderModule(WGPUDevice, const WGPUShaderModuleDescriptor* descriptor) {
+  return descriptor != nullptr && descriptor->nextInChain != nullptr ? new WGPUShaderModuleImpl
+                                                                     : nullptr;
+}
+extern "C" void wgpuShaderModuleRelease(WGPUShaderModule shader_module) { delete shader_module; }
+extern "C" WGPURenderPipeline
+wgpuDeviceCreateRenderPipeline(WGPUDevice, const WGPURenderPipelineDescriptor* descriptor) {
+  return descriptor != nullptr && descriptor->layout != nullptr &&
+                 descriptor->vertex.module != nullptr && descriptor->fragment != nullptr
+             ? new WGPURenderPipelineImpl
+             : nullptr;
+}
+extern "C" void wgpuRenderPipelineRelease(WGPURenderPipeline pipeline) { delete pipeline; }

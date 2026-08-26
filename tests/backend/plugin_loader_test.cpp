@@ -274,3 +274,73 @@ TEST_CASE("WebGPU 插件 Texture、View 与 Sampler 遵守所有权契约", "[ba
   CHECK(loader.destroy_instance(second) == GRANIT_SUCCESS);
   CHECK(state.allocations == state.deallocations);
 }
+
+TEST_CASE("WebGPU 插件绑定与 Pipeline 遵守依赖生命周期", "[backend][plugin]") {
+  granit::detail::backend_plugin_loader loader;
+  REQUIRE(loader.open(GRANIT_FAKE_BACKEND_PLUGIN_PATH, GRANIT_BACKEND_PLUGIN_KIND_WEBGPU) ==
+          GRANIT_SUCCESS);
+  host_state state;
+  auto host = make_host(state);
+  granit_backend_plugin_instance first{};
+  granit_backend_plugin_instance second{};
+  REQUIRE(loader.create_instance(&host, &first) == GRANIT_SUCCESS);
+  REQUIRE(loader.create_instance(&host, &second) == GRANIT_SUCCESS);
+
+  granit_backend_plugin_texture_desc texture_desc{};
+  texture_desc.struct_size = sizeof(texture_desc);
+  texture_desc.width = 16;
+  texture_desc.height = 16;
+  texture_desc.usage = GRANIT_BACKEND_PLUGIN_TEXTURE_USAGE_SAMPLED_BIT;
+  granit_backend_plugin_texture texture{};
+  granit_backend_plugin_texture_view view{};
+  REQUIRE(loader.create_texture(first, &texture_desc, &texture) == GRANIT_SUCCESS);
+  REQUIRE(loader.create_texture_view(first, texture, &view) == GRANIT_SUCCESS);
+  granit_backend_plugin_sampler_desc sampler_desc{};
+  sampler_desc.struct_size = sizeof(sampler_desc);
+  sampler_desc.min_filter = GRANIT_BACKEND_PLUGIN_FILTER_LINEAR;
+  sampler_desc.mag_filter = GRANIT_BACKEND_PLUGIN_FILTER_LINEAR;
+  granit_backend_plugin_sampler sampler{};
+  REQUIRE(loader.create_sampler(first, &sampler_desc, &sampler) == GRANIT_SUCCESS);
+
+  granit_backend_plugin_bind_group_layout bind_group_layout{};
+  REQUIRE(loader.create_bind_group_layout(first, &bind_group_layout) == GRANIT_SUCCESS);
+  granit_backend_plugin_bind_group_desc bind_group_desc{};
+  bind_group_desc.struct_size = sizeof(bind_group_desc);
+  bind_group_desc.layout = bind_group_layout;
+  bind_group_desc.texture_view = view;
+  bind_group_desc.sampler = sampler;
+  granit_backend_plugin_bind_group bind_group{};
+  REQUIRE(loader.create_bind_group(first, &bind_group_desc, &bind_group) == GRANIT_SUCCESS);
+  granit_backend_plugin_bind_group foreign_bind_group = 123;
+  CHECK(loader.create_bind_group(second, &bind_group_desc, &foreign_bind_group) ==
+        GRANIT_ERROR_INVALID_HANDLE);
+  CHECK(foreign_bind_group == 0);
+
+  granit_backend_plugin_pipeline_layout pipeline_layout{};
+  REQUIRE(loader.create_pipeline_layout(first, bind_group_layout, &pipeline_layout) ==
+          GRANIT_SUCCESS);
+  granit_backend_plugin_render_pipeline pipeline{};
+  REQUIRE(loader.create_render_pipeline(first, pipeline_layout, &pipeline) == GRANIT_SUCCESS);
+  CHECK(loader.destroy_pipeline_layout(first, pipeline_layout) == GRANIT_ERROR_INVALID_ARGUMENT);
+  CHECK(loader.destroy_bind_group_layout(first, bind_group_layout) ==
+        GRANIT_ERROR_INVALID_ARGUMENT);
+  CHECK(loader.destroy_texture_view(first, view) == GRANIT_ERROR_INVALID_ARGUMENT);
+  CHECK(loader.destroy_sampler(first, sampler) == GRANIT_ERROR_INVALID_ARGUMENT);
+
+  REQUIRE(loader.destroy_render_pipeline(first, pipeline) == GRANIT_SUCCESS);
+  CHECK(loader.destroy_render_pipeline(first, pipeline) == GRANIT_ERROR_INVALID_HANDLE);
+  REQUIRE(loader.destroy_pipeline_layout(first, pipeline_layout) == GRANIT_SUCCESS);
+  REQUIRE(loader.destroy_bind_group(first, bind_group) == GRANIT_SUCCESS);
+  REQUIRE(loader.destroy_bind_group_layout(first, bind_group_layout) == GRANIT_SUCCESS);
+  REQUIRE(loader.destroy_sampler(first, sampler) == GRANIT_SUCCESS);
+  REQUIRE(loader.destroy_texture_view(first, view) == GRANIT_SUCCESS);
+  REQUIRE(loader.destroy_texture(first, texture) == GRANIT_SUCCESS);
+
+  REQUIRE(loader.create_bind_group_layout(first, &bind_group_layout) == GRANIT_SUCCESS);
+  REQUIRE(loader.create_pipeline_layout(first, bind_group_layout, &pipeline_layout) ==
+          GRANIT_SUCCESS);
+  REQUIRE(loader.create_render_pipeline(first, pipeline_layout, &pipeline) == GRANIT_SUCCESS);
+  CHECK(loader.destroy_instance(first) == GRANIT_SUCCESS);
+  CHECK(loader.destroy_instance(second) == GRANIT_SUCCESS);
+  CHECK(state.allocations == state.deallocations);
+}

@@ -85,19 +85,43 @@ int main() {
   sampler_desc.min_filter = GRANIT_BACKEND_PLUGIN_FILTER_LINEAR;
   sampler_desc.mag_filter = GRANIT_BACKEND_PLUGIN_FILTER_LINEAR;
   granit_backend_plugin_sampler sampler{};
+  granit_backend_plugin_bind_group_layout bind_group_layout{};
+  granit_backend_plugin_bind_group bind_group{};
+  granit_backend_plugin_pipeline_layout pipeline_layout{};
+  granit_backend_plugin_render_pipeline pipeline{};
   if (loader.create_texture(instance, &texture_desc, &texture) != GRANIT_SUCCESS || texture == 0 ||
       loader.create_texture_view(instance, texture, &view) != GRANIT_SUCCESS || view == 0 ||
       loader.create_sampler(instance, &sampler_desc, &sampler) != GRANIT_SUCCESS || sampler == 0 ||
+      loader.create_bind_group_layout(instance, &bind_group_layout) != GRANIT_SUCCESS ||
+      bind_group_layout == 0) {
+    std::fprintf(stderr, "WebGPU Texture、View、Sampler 或绑定布局创建失败\n");
+    return 5;
+  }
+  granit_backend_plugin_bind_group_desc bind_group_desc{};
+  bind_group_desc.struct_size = sizeof(bind_group_desc);
+  bind_group_desc.layout = bind_group_layout;
+  bind_group_desc.texture_view = view;
+  bind_group_desc.sampler = sampler;
+  if (loader.create_bind_group(instance, &bind_group_desc, &bind_group) != GRANIT_SUCCESS ||
+      bind_group == 0 ||
+      loader.create_pipeline_layout(instance, bind_group_layout, &pipeline_layout) !=
+          GRANIT_SUCCESS ||
+      pipeline_layout == 0 ||
+      loader.create_render_pipeline(instance, pipeline_layout, &pipeline) != GRANIT_SUCCESS ||
+      pipeline == 0 || loader.destroy_render_pipeline(instance, pipeline) != GRANIT_SUCCESS ||
+      loader.destroy_pipeline_layout(instance, pipeline_layout) != GRANIT_SUCCESS ||
+      loader.destroy_bind_group(instance, bind_group) != GRANIT_SUCCESS ||
+      loader.destroy_bind_group_layout(instance, bind_group_layout) != GRANIT_SUCCESS ||
       loader.destroy_sampler(instance, sampler) != GRANIT_SUCCESS ||
       loader.destroy_texture_view(instance, view) != GRANIT_SUCCESS ||
       loader.destroy_texture(instance, texture) != GRANIT_SUCCESS) {
-    std::fprintf(stderr, "WebGPU Texture、View 或 Sampler 生命周期验证失败\n");
-    return 5;
+    std::fprintf(stderr, "WebGPU 绑定或 Render Pipeline 生命周期验证失败\n");
+    return 6;
   }
   const auto destroy_result = loader.destroy_instance(instance);
   if (destroy_result != GRANIT_SUCCESS) {
     std::fprintf(stderr, "销毁 WebGPU 插件实例失败：%d\n", static_cast<int>(destroy_result));
-    return 6;
+    return 7;
   }
   return 0;
 }

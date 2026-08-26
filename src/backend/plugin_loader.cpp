@@ -15,8 +15,8 @@ bool is_compatible(const granit_backend_plugin_api* api,
   constexpr std::size_t minimum_size = offsetof(granit_backend_plugin_api, instance_api) +
                                        sizeof(const granit_backend_plugin_instance_api*);
   constexpr std::size_t minimum_instance_api_size =
-      offsetof(granit_backend_plugin_instance_api, destroy_sampler) +
-      sizeof(granit_backend_plugin_destroy_sampler_fn);
+      offsetof(granit_backend_plugin_instance_api, destroy_render_pipeline) +
+      sizeof(granit_backend_plugin_destroy_render_pipeline_fn);
   return api != nullptr && api->struct_size >= minimum_size &&
          api->abi_version == GRANIT_BACKEND_PLUGIN_ABI_VERSION && api->kind == expected_kind &&
          api->reserved == 0 && api->name != nullptr && api->name_length != 0 &&
@@ -31,7 +31,15 @@ bool is_compatible(const granit_backend_plugin_api* api,
          api->instance_api->create_texture_view != nullptr &&
          api->instance_api->destroy_texture_view != nullptr &&
          api->instance_api->create_sampler != nullptr &&
-         api->instance_api->destroy_sampler != nullptr;
+         api->instance_api->destroy_sampler != nullptr &&
+         api->instance_api->create_bind_group_layout != nullptr &&
+         api->instance_api->destroy_bind_group_layout != nullptr &&
+         api->instance_api->create_bind_group != nullptr &&
+         api->instance_api->destroy_bind_group != nullptr &&
+         api->instance_api->create_pipeline_layout != nullptr &&
+         api->instance_api->destroy_pipeline_layout != nullptr &&
+         api->instance_api->create_render_pipeline != nullptr &&
+         api->instance_api->destroy_render_pipeline != nullptr;
 }
 
 bool is_valid_host(const granit_backend_plugin_host_api* host) noexcept {
@@ -324,6 +332,86 @@ backend_plugin_loader::destroy_sampler(granit_backend_plugin_instance instance,
     return GRANIT_ERROR_INTERNAL;
   }
 }
+
+#define GRANIT_LOADER_CREATE_METHOD(method, function, input_type, output_type)                     \
+  granit_result backend_plugin_loader::method(granit_backend_plugin_instance instance,             \
+                                              input_type input, output_type* output) noexcept {    \
+    if (api_ == nullptr || instance == 0 || input == 0 || output == nullptr) {                     \
+      return GRANIT_ERROR_INVALID_ARGUMENT;                                                        \
+    }                                                                                              \
+    if (std::find(instances_.begin(), instances_.end(), instance) == instances_.end()) {           \
+      return GRANIT_ERROR_INVALID_HANDLE;                                                          \
+    }                                                                                              \
+    try {                                                                                          \
+      return api_->instance_api->function(instance, input, output);                                \
+    } catch (...) {                                                                                \
+      return GRANIT_ERROR_INTERNAL;                                                                \
+    }                                                                                              \
+  }
+
+#define GRANIT_LOADER_DESTROY_METHOD(method, function, handle_type)                                \
+  granit_result backend_plugin_loader::method(granit_backend_plugin_instance instance,             \
+                                              handle_type handle) noexcept {                       \
+    if (api_ == nullptr || instance == 0 || handle == 0) {                                         \
+      return GRANIT_ERROR_INVALID_ARGUMENT;                                                        \
+    }                                                                                              \
+    if (std::find(instances_.begin(), instances_.end(), instance) == instances_.end()) {           \
+      return GRANIT_ERROR_INVALID_HANDLE;                                                          \
+    }                                                                                              \
+    try {                                                                                          \
+      return api_->instance_api->function(instance, handle);                                       \
+    } catch (...) {                                                                                \
+      return GRANIT_ERROR_INTERNAL;                                                                \
+    }                                                                                              \
+  }
+
+granit_result backend_plugin_loader::create_bind_group_layout(
+    granit_backend_plugin_instance instance,
+    granit_backend_plugin_bind_group_layout* layout) noexcept {
+  if (api_ == nullptr || instance == 0 || layout == nullptr)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  if (std::find(instances_.begin(), instances_.end(), instance) == instances_.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  try {
+    return api_->instance_api->create_bind_group_layout(instance, layout);
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+GRANIT_LOADER_DESTROY_METHOD(destroy_bind_group_layout, destroy_bind_group_layout,
+                             granit_backend_plugin_bind_group_layout)
+
+granit_result
+backend_plugin_loader::create_bind_group(granit_backend_plugin_instance instance,
+                                         const granit_backend_plugin_bind_group_desc* desc,
+                                         granit_backend_plugin_bind_group* bind_group) noexcept {
+  if (api_ == nullptr || instance == 0 || desc == nullptr || bind_group == nullptr)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  if (std::find(instances_.begin(), instances_.end(), instance) == instances_.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  try {
+    return api_->instance_api->create_bind_group(instance, desc, bind_group);
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+GRANIT_LOADER_DESTROY_METHOD(destroy_bind_group, destroy_bind_group,
+                             granit_backend_plugin_bind_group)
+GRANIT_LOADER_CREATE_METHOD(create_pipeline_layout, create_pipeline_layout,
+                            granit_backend_plugin_bind_group_layout,
+                            granit_backend_plugin_pipeline_layout)
+GRANIT_LOADER_DESTROY_METHOD(destroy_pipeline_layout, destroy_pipeline_layout,
+                             granit_backend_plugin_pipeline_layout)
+GRANIT_LOADER_CREATE_METHOD(create_render_pipeline, create_render_pipeline,
+                            granit_backend_plugin_pipeline_layout,
+                            granit_backend_plugin_render_pipeline)
+GRANIT_LOADER_DESTROY_METHOD(destroy_render_pipeline, destroy_render_pipeline,
+                             granit_backend_plugin_render_pipeline)
+
+#undef GRANIT_LOADER_CREATE_METHOD
+#undef GRANIT_LOADER_DESTROY_METHOD
 
 void backend_plugin_loader::close() noexcept {
   if (api_ != nullptr) {

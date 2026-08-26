@@ -19,6 +19,10 @@ typedef uint64_t granit_backend_plugin_buffer;
 typedef uint64_t granit_backend_plugin_texture;
 typedef uint64_t granit_backend_plugin_texture_view;
 typedef uint64_t granit_backend_plugin_sampler;
+typedef uint64_t granit_backend_plugin_bind_group_layout;
+typedef uint64_t granit_backend_plugin_bind_group;
+typedef uint64_t granit_backend_plugin_pipeline_layout;
+typedef uint64_t granit_backend_plugin_render_pipeline;
 
 typedef uint32_t granit_backend_plugin_buffer_usage;
 #define GRANIT_BACKEND_PLUGIN_BUFFER_USAGE_MAP_READ_BIT UINT32_C(0x00000001)
@@ -60,6 +64,15 @@ typedef struct granit_backend_plugin_sampler_desc {
   granit_backend_plugin_filter min_filter;
   granit_backend_plugin_filter mag_filter;
 } granit_backend_plugin_sampler_desc;
+
+/** 固定绑定 0 为二维浮点 Texture View，绑定 1 为过滤 Sampler。 */
+typedef struct granit_backend_plugin_bind_group_desc {
+  uint32_t struct_size;
+  uint32_t reserved;
+  granit_backend_plugin_bind_group_layout layout;
+  granit_backend_plugin_texture_view texture_view;
+  granit_backend_plugin_sampler sampler;
+} granit_backend_plugin_bind_group_desc;
 
 /** 插件实例创建后固定的后端无关能力快照。 */
 typedef struct granit_backend_plugin_capabilities {
@@ -128,6 +141,26 @@ typedef granit_result (*granit_backend_plugin_create_sampler_fn)(
     granit_backend_plugin_sampler* sampler);
 typedef granit_result (*granit_backend_plugin_destroy_sampler_fn)(
     granit_backend_plugin_instance instance, granit_backend_plugin_sampler sampler);
+typedef granit_result (*granit_backend_plugin_create_bind_group_layout_fn)(
+    granit_backend_plugin_instance instance, granit_backend_plugin_bind_group_layout* layout);
+typedef granit_result (*granit_backend_plugin_destroy_bind_group_layout_fn)(
+    granit_backend_plugin_instance instance, granit_backend_plugin_bind_group_layout layout);
+typedef granit_result (*granit_backend_plugin_create_bind_group_fn)(
+    granit_backend_plugin_instance instance, const granit_backend_plugin_bind_group_desc* desc,
+    granit_backend_plugin_bind_group* bind_group);
+typedef granit_result (*granit_backend_plugin_destroy_bind_group_fn)(
+    granit_backend_plugin_instance instance, granit_backend_plugin_bind_group bind_group);
+typedef granit_result (*granit_backend_plugin_create_pipeline_layout_fn)(
+    granit_backend_plugin_instance instance,
+    granit_backend_plugin_bind_group_layout bind_group_layout,
+    granit_backend_plugin_pipeline_layout* pipeline_layout);
+typedef granit_result (*granit_backend_plugin_destroy_pipeline_layout_fn)(
+    granit_backend_plugin_instance instance, granit_backend_plugin_pipeline_layout pipeline_layout);
+typedef granit_result (*granit_backend_plugin_create_render_pipeline_fn)(
+    granit_backend_plugin_instance instance, granit_backend_plugin_pipeline_layout pipeline_layout,
+    granit_backend_plugin_render_pipeline* render_pipeline);
+typedef granit_result (*granit_backend_plugin_destroy_render_pipeline_fn)(
+    granit_backend_plugin_instance instance, granit_backend_plugin_render_pipeline render_pipeline);
 
 /** 实例操作表由插件拥有，在插件卸载前保持有效。 */
 typedef struct granit_backend_plugin_instance_api {
@@ -144,6 +177,14 @@ typedef struct granit_backend_plugin_instance_api {
   granit_backend_plugin_destroy_texture_view_fn destroy_texture_view;
   granit_backend_plugin_create_sampler_fn create_sampler;
   granit_backend_plugin_destroy_sampler_fn destroy_sampler;
+  granit_backend_plugin_create_bind_group_layout_fn create_bind_group_layout;
+  granit_backend_plugin_destroy_bind_group_layout_fn destroy_bind_group_layout;
+  granit_backend_plugin_create_bind_group_fn create_bind_group;
+  granit_backend_plugin_destroy_bind_group_fn destroy_bind_group;
+  granit_backend_plugin_create_pipeline_layout_fn create_pipeline_layout;
+  granit_backend_plugin_destroy_pipeline_layout_fn destroy_pipeline_layout;
+  granit_backend_plugin_create_render_pipeline_fn create_render_pipeline;
+  granit_backend_plugin_destroy_render_pipeline_fn destroy_render_pipeline;
 } granit_backend_plugin_instance_api;
 
 /** 后端插件入口返回的只读描述；字符串在插件卸载前有效。 */

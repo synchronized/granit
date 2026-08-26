@@ -18,6 +18,11 @@ typedef struct WGPUBufferImpl* WGPUBuffer;
 typedef struct WGPUTextureImpl* WGPUTexture;
 typedef struct WGPUTextureViewImpl* WGPUTextureView;
 typedef struct WGPUSamplerImpl* WGPUSampler;
+typedef struct WGPUBindGroupLayoutImpl* WGPUBindGroupLayout;
+typedef struct WGPUBindGroupImpl* WGPUBindGroup;
+typedef struct WGPUPipelineLayoutImpl* WGPUPipelineLayout;
+typedef struct WGPUShaderModuleImpl* WGPUShaderModule;
+typedef struct WGPURenderPipelineImpl* WGPURenderPipeline;
 
 typedef unsigned int WGPUBool;
 typedef unsigned int WGPUInstanceFeatureName;
@@ -36,6 +41,13 @@ typedef unsigned int WGPUAddressMode;
 typedef unsigned int WGPUFilterMode;
 typedef unsigned int WGPUMipmapFilterMode;
 typedef unsigned int WGPUCompareFunction;
+typedef unsigned long long WGPUShaderStage;
+typedef unsigned int WGPUSamplerBindingType;
+typedef unsigned int WGPUTextureSampleType;
+typedef unsigned int WGPUTextureViewDimension;
+typedef unsigned int WGPUSType;
+typedef unsigned long long WGPUColorWriteMask;
+typedef unsigned int WGPUPrimitiveTopology;
 
 #define WGPU_FALSE 0
 #define WGPU_TRUE 1
@@ -65,6 +77,13 @@ typedef unsigned int WGPUCompareFunction;
 #define WGPUFilterMode_Nearest 1
 #define WGPUFilterMode_Linear 2
 #define WGPUMipmapFilterMode_Nearest 1
+#define WGPUShaderStage_Fragment 2
+#define WGPUSamplerBindingType_Filtering 2
+#define WGPUTextureSampleType_Float 2
+#define WGPUTextureViewDimension_2D 2
+#define WGPUSType_ShaderSourceWGSL 6
+#define WGPUColorWriteMask_All 15
+#define WGPUPrimitiveTopology_TriangleList 4
 #define WGPUBackendType_D3D12 4
 #define WGPUBackendType_Vulkan 6
 
@@ -72,6 +91,11 @@ typedef struct WGPUStringView {
   const char* data;
   size_t length;
 } WGPUStringView;
+
+typedef struct WGPUChainedStruct {
+  const struct WGPUChainedStruct* next;
+  WGPUSType sType;
+} WGPUChainedStruct;
 
 typedef struct WGPUInstanceLimits {
   void* nextInChain;
@@ -157,6 +181,147 @@ typedef struct WGPUSamplerDescriptor {
   {                                                                                                \
   }
 
+typedef struct WGPUBufferBindingLayout {
+  unsigned int type;
+  WGPUBool hasDynamicOffset;
+  unsigned long long minBindingSize;
+} WGPUBufferBindingLayout;
+typedef struct WGPUSamplerBindingLayout {
+  WGPUSamplerBindingType type;
+} WGPUSamplerBindingLayout;
+typedef struct WGPUTextureBindingLayout {
+  WGPUTextureSampleType sampleType;
+  WGPUTextureViewDimension viewDimension;
+  WGPUBool multisampled;
+} WGPUTextureBindingLayout;
+typedef struct WGPUStorageTextureBindingLayout {
+  unsigned int access;
+  WGPUTextureFormat format;
+  WGPUTextureViewDimension viewDimension;
+} WGPUStorageTextureBindingLayout;
+typedef struct WGPUBindGroupLayoutEntry {
+  void* nextInChain;
+  unsigned int binding;
+  WGPUShaderStage visibility;
+  unsigned int bindingArraySize;
+  WGPUBufferBindingLayout buffer;
+  WGPUSamplerBindingLayout sampler;
+  WGPUTextureBindingLayout texture;
+  WGPUStorageTextureBindingLayout storageTexture;
+} WGPUBindGroupLayoutEntry;
+#define WGPU_BIND_GROUP_LAYOUT_ENTRY_INIT                                                          \
+  {                                                                                                \
+  }
+typedef struct WGPUBindGroupLayoutDescriptor {
+  void* nextInChain;
+  WGPUStringView label;
+  size_t entryCount;
+  const WGPUBindGroupLayoutEntry* entries;
+} WGPUBindGroupLayoutDescriptor;
+#define WGPU_BIND_GROUP_LAYOUT_DESCRIPTOR_INIT                                                     \
+  {                                                                                                \
+  }
+typedef struct WGPUBindGroupEntry {
+  void* nextInChain;
+  unsigned int binding;
+  WGPUBuffer buffer;
+  unsigned long long offset;
+  unsigned long long size;
+  WGPUSampler sampler;
+  WGPUTextureView textureView;
+} WGPUBindGroupEntry;
+#define WGPU_BIND_GROUP_ENTRY_INIT                                                                 \
+  {                                                                                                \
+  }
+typedef struct WGPUBindGroupDescriptor {
+  void* nextInChain;
+  WGPUStringView label;
+  WGPUBindGroupLayout layout;
+  size_t entryCount;
+  const WGPUBindGroupEntry* entries;
+} WGPUBindGroupDescriptor;
+#define WGPU_BIND_GROUP_DESCRIPTOR_INIT                                                            \
+  {                                                                                                \
+  }
+typedef struct WGPUPipelineLayoutDescriptor {
+  void* nextInChain;
+  WGPUStringView label;
+  size_t bindGroupLayoutCount;
+  const WGPUBindGroupLayout* bindGroupLayouts;
+} WGPUPipelineLayoutDescriptor;
+#define WGPU_PIPELINE_LAYOUT_DESCRIPTOR_INIT                                                       \
+  {                                                                                                \
+  }
+typedef struct WGPUShaderSourceWGSL {
+  WGPUChainedStruct chain;
+  WGPUStringView code;
+} WGPUShaderSourceWGSL;
+#define WGPU_SHADER_SOURCE_WGSL_INIT {{NULL, WGPUSType_ShaderSourceWGSL}, {NULL, 0}}
+typedef struct WGPUShaderModuleDescriptor {
+  const WGPUChainedStruct* nextInChain;
+  WGPUStringView label;
+} WGPUShaderModuleDescriptor;
+#define WGPU_SHADER_MODULE_DESCRIPTOR_INIT                                                         \
+  {                                                                                                \
+  }
+typedef struct WGPUColorTargetState {
+  void* nextInChain;
+  WGPUTextureFormat format;
+  const void* blend;
+  WGPUColorWriteMask writeMask;
+} WGPUColorTargetState;
+#define WGPU_COLOR_TARGET_STATE_INIT                                                               \
+  {                                                                                                \
+  }
+typedef struct WGPUVertexState {
+  void* nextInChain;
+  WGPUShaderModule module;
+  WGPUStringView entryPoint;
+  size_t constantCount;
+  const void* constants;
+  size_t bufferCount;
+  const void* buffers;
+} WGPUVertexState;
+typedef struct WGPUFragmentState {
+  void* nextInChain;
+  WGPUShaderModule module;
+  WGPUStringView entryPoint;
+  size_t constantCount;
+  const void* constants;
+  size_t targetCount;
+  const WGPUColorTargetState* targets;
+} WGPUFragmentState;
+#define WGPU_FRAGMENT_STATE_INIT                                                                   \
+  {                                                                                                \
+  }
+typedef struct WGPUPrimitiveState {
+  void* nextInChain;
+  WGPUPrimitiveTopology topology;
+  unsigned int stripIndexFormat;
+  unsigned int frontFace;
+  unsigned int cullMode;
+  WGPUBool unclippedDepth;
+} WGPUPrimitiveState;
+typedef struct WGPUMultisampleState {
+  void* nextInChain;
+  unsigned int count;
+  unsigned int mask;
+  WGPUBool alphaToCoverageEnabled;
+} WGPUMultisampleState;
+typedef struct WGPURenderPipelineDescriptor {
+  void* nextInChain;
+  WGPUStringView label;
+  WGPUPipelineLayout layout;
+  WGPUVertexState vertex;
+  WGPUPrimitiveState primitive;
+  const void* depthStencil;
+  WGPUMultisampleState multisample;
+  const WGPUFragmentState* fragment;
+} WGPURenderPipelineDescriptor;
+#define WGPU_RENDER_PIPELINE_DESCRIPTOR_INIT                                                       \
+  {                                                                                                \
+  }
+
 typedef struct WGPUFuture {
   unsigned long long id;
 } WGPUFuture;
@@ -234,6 +399,21 @@ WGPUTextureView wgpuTextureCreateView(WGPUTexture texture,
 void wgpuTextureViewRelease(WGPUTextureView view);
 WGPUSampler wgpuDeviceCreateSampler(WGPUDevice device, const WGPUSamplerDescriptor* descriptor);
 void wgpuSamplerRelease(WGPUSampler sampler);
+WGPUBindGroupLayout
+wgpuDeviceCreateBindGroupLayout(WGPUDevice device, const WGPUBindGroupLayoutDescriptor* descriptor);
+void wgpuBindGroupLayoutRelease(WGPUBindGroupLayout layout);
+WGPUBindGroup wgpuDeviceCreateBindGroup(WGPUDevice device,
+                                        const WGPUBindGroupDescriptor* descriptor);
+void wgpuBindGroupRelease(WGPUBindGroup bindGroup);
+WGPUPipelineLayout wgpuDeviceCreatePipelineLayout(WGPUDevice device,
+                                                  const WGPUPipelineLayoutDescriptor* descriptor);
+void wgpuPipelineLayoutRelease(WGPUPipelineLayout layout);
+WGPUShaderModule wgpuDeviceCreateShaderModule(WGPUDevice device,
+                                              const WGPUShaderModuleDescriptor* descriptor);
+void wgpuShaderModuleRelease(WGPUShaderModule shaderModule);
+WGPURenderPipeline wgpuDeviceCreateRenderPipeline(WGPUDevice device,
+                                                  const WGPURenderPipelineDescriptor* descriptor);
+void wgpuRenderPipelineRelease(WGPURenderPipeline pipeline);
 
 #ifdef __cplusplus
 }
