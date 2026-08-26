@@ -3,9 +3,12 @@
 
 #include "backend/plugin_api.h"
 
+#include <algorithm>
 #include <atomic>
 #include <cstddef>
 #include <cstdint>
+#include <cstring>
+#include <limits>
 #include <mutex>
 #include <new>
 #include <unordered_map>
@@ -30,11 +33,13 @@ struct webgpu_instance {
 constexpr std::uint64_t request_timeout_ns = UINT64_C(10000000000);
 
 struct adapter_request {
+  const granit_backend_plugin_host_api* host{};
   WGPURequestAdapterStatus status{};
   WGPUAdapter adapter{};
 };
 
 struct device_request {
+  const granit_backend_plugin_host_api* host{};
   WGPURequestDeviceStatus status{};
   WGPUDevice device{};
 };
@@ -75,18 +80,35 @@ void emit(const granit_backend_plugin_host_api& host, granit_diagnostic_severity
   }
 }
 
-void receive_adapter(WGPURequestAdapterStatus status, WGPUAdapter adapter, WGPUStringView,
+void emit_dawn_message(const granit_backend_plugin_host_api* host,
+                       WGPUStringView message) noexcept {
+  if (host == nullptr || message.data == nullptr) {
+    return;
+  }
+  const auto length = message.length == WGPU_STRLEN ? std::strlen(message.data) : message.length;
+  const auto bounded_length = static_cast<std::uint32_t>(
+      (std::min)(length, static_cast<std::size_t>(std::numeric_limits<std::uint32_t>::max())));
+  emit(*host, GRANIT_DIAGNOSTIC_SEVERITY_ERROR, message.data, bounded_length);
+}
+
+void receive_adapter(WGPURequestAdapterStatus status, WGPUAdapter adapter, WGPUStringView message,
                      void* data, void*) noexcept {
   auto& request = *static_cast<adapter_request*>(data);
   request.status = status;
   request.adapter = adapter;
+  if (status != WGPURequestAdapterStatus_Success) {
+    emit_dawn_message(request.host, message);
+  }
 }
 
-void receive_device(WGPURequestDeviceStatus status, WGPUDevice device, WGPUStringView, void* data,
-                    void*) noexcept {
+void receive_device(WGPURequestDeviceStatus status, WGPUDevice device, WGPUStringView message,
+                    void* data, void*) noexcept {
   auto& request = *static_cast<device_request*>(data);
   request.status = status;
   request.device = device;
+  if (status != WGPURequestDeviceStatus_Success) {
+    emit_dawn_message(request.host, message);
+  }
 }
 
 template <typename Request>
@@ -128,7 +150,7 @@ granit_result create_backend(const granit_backend_plugin_host_api* host,
     return GRANIT_ERROR_INITIALIZATION_FAILED;
   }
 
-  adapter_request adapter{};
+  adapter_request adapter{host};
   const WGPURequestAdapterCallbackInfo adapter_callback{nullptr, WGPUCallbackMode_WaitAnyOnly,
                                                         receive_adapter, &adapter, nullptr};
   WGPURequestAdapterOptions adapter_options{};
@@ -153,7 +175,7 @@ granit_result create_backend(const granit_backend_plugin_host_api* host,
   }
   state->adapter = adapter.adapter;
 
-  device_request device{};
+  device_request device{host};
   const WGPURequestDeviceCallbackInfo device_callback{nullptr, WGPUCallbackMode_WaitAnyOnly,
                                                       receive_device, &device, nullptr};
   const auto device_future = wgpuAdapterRequestDevice(state->adapter, nullptr, device_callback);

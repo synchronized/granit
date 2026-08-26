@@ -11,6 +11,16 @@ on:
         required: true
         default: false
         type: boolean
+      run_windows:
+        description: "构建并验证 Windows SDK"
+        required: true
+        default: true
+        type: boolean
+      run_linux:
+        description: "构建并验证 Linux SDK"
+        required: true
+        default: true
+        type: boolean
 
 permissions:
   contents: read
@@ -22,6 +32,7 @@ env:
 
 jobs:
   windows-static-plugin:
+    if: ${{ inputs.run_windows }}
     runs-on: windows-2022
     timeout-minutes: 120
     steps:
@@ -119,6 +130,7 @@ jobs:
           if-no-files-found: error
 
   linux-static-plugin:
+    if: ${{ inputs.run_linux }}
     runs-on: ubuntu-24.04
     timeout-minutes: 120
     steps:
@@ -219,7 +231,7 @@ jobs:
           if-no-files-found: error
 
   publish-sdk:
-    if: ${{ inputs.publish_sdk }}
+    if: ${{ inputs.publish_sdk && inputs.run_windows && inputs.run_linux }}
     needs:
       - windows-static-plugin
       - linux-static-plugin

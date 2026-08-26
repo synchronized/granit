@@ -21,6 +21,7 @@ typedef unsigned int WGPUWaitStatus;
 
 #define WGPU_FALSE 0
 #define WGPU_TRUE 1
+#define WGPU_STRLEN ((size_t)-1)
 #define WGPUInstanceFeatureName_TimedWaitAny 1
 #define WGPUCallbackMode_WaitAnyOnly 1
 #define WGPURequestAdapterStatus_Success 1
