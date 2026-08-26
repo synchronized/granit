@@ -185,7 +185,8 @@ add_test(NAME granit.backend_capabilities COMMAND granit_backend_capabilities_te
 add_library(granit_backend_plugin_c_header_test OBJECT backend/plugin_api_h.c)
 target_compile_features(granit_backend_plugin_c_header_test PRIVATE c_std_11)
 target_include_directories(
-  granit_backend_plugin_c_header_test PRIVATE "${PROJECT_SOURCE_DIR}/src"
+  granit_backend_plugin_c_header_test
+  PRIVATE "${PROJECT_SOURCE_DIR}/include" "${PROJECT_SOURCE_DIR}/src"
 )
 granit_target_compile_warnings(granit_backend_plugin_c_header_test)
 
@@ -200,8 +201,13 @@ set_target_properties(
     VISIBILITY_INLINES_HIDDEN YES
     FOLDER "Tests/WebGPU"
 )
-target_include_directories(granit_fake_backend_plugin PRIVATE "${PROJECT_SOURCE_DIR}/src")
-target_include_directories(granit_incompatible_backend_plugin PRIVATE "${PROJECT_SOURCE_DIR}/src")
+target_include_directories(
+  granit_fake_backend_plugin PRIVATE "${PROJECT_SOURCE_DIR}/include" "${PROJECT_SOURCE_DIR}/src"
+)
+target_include_directories(
+  granit_incompatible_backend_plugin
+  PRIVATE "${PROJECT_SOURCE_DIR}/include" "${PROJECT_SOURCE_DIR}/src"
+)
 granit_target_output_directories(granit_fake_backend_plugin)
 granit_target_output_directories(granit_incompatible_backend_plugin)
 granit_target_compile_warnings(granit_fake_backend_plugin)

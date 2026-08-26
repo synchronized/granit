@@ -4,6 +4,8 @@
 #ifndef GRANIT_BACKEND_PLUGIN_LOADER_H_
 #define GRANIT_BACKEND_PLUGIN_LOADER_H_
 
+#include <vector>
+
 #include <granit/core/result.h>
 
 #include "backend/plugin_api.h"
@@ -23,6 +25,10 @@ public:
   /** 加载指定插件；失败后对象保持关闭状态。 */
   [[nodiscard]] granit_result open(const char* library_path,
                                    granit_backend_plugin_kind expected_kind) noexcept;
+  [[nodiscard]] granit_result
+  create_instance(const granit_backend_plugin_host_api* host,
+                  granit_backend_plugin_instance* out_instance) noexcept;
+  [[nodiscard]] granit_result destroy_instance(granit_backend_plugin_instance instance) noexcept;
   void close() noexcept;
 
   [[nodiscard]] bool is_open() const noexcept { return library_.is_open(); }
@@ -31,6 +37,7 @@ public:
 private:
   platform::shared_library library_;
   const granit_backend_plugin_api* api_{nullptr};
+  std::vector<granit_backend_plugin_instance> instances_;
 };
 
 } // namespace granit::detail

@@ -17,7 +17,9 @@ constexpr granit_backend_plugin_api plugin_api{sizeof(granit_backend_plugin_api)
                                                GRANIT_BACKEND_PLUGIN_KIND_WEBGPU,
                                                0,
                                                plugin_name,
-                                               sizeof(plugin_name) - 1};
+                                               sizeof(plugin_name) - 1,
+                                               nullptr,
+                                               nullptr};
 
 } // namespace
 
