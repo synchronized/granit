@@ -237,6 +237,13 @@ granit_result renderer_state::initialize(std::string_view application_name, bool
     instance_.reset();
     return device_result;
   }
+  const auto& limits = device_.properties().limits;
+  capabilities_ = {
+      .uniform_buffer_offset_alignment = limits.minUniformBufferOffsetAlignment,
+      .storage_buffer_offset_alignment = limits.minStorageBufferOffsetAlignment,
+      .max_uniform_buffer_binding_size = limits.maxUniformBufferRange,
+      .max_storage_buffer_binding_size = limits.maxStorageBufferRange,
+  };
 
   const auto allocator_result = memory_allocator_.initialize(instance_, device_);
   if (allocator_result != GRANIT_SUCCESS) {

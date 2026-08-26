@@ -17,6 +17,7 @@
 #include <granit/renderer/renderer.h>
 #include <granit/renderer/resource_types.h>
 
+#include "backend/capabilities.h"
 #include "backend/vulkan/command_recorder.h"
 #include "backend/vulkan/device.h"
 #include "backend/vulkan/frame_context.h"
@@ -249,6 +250,7 @@ public:
     return device_status_.gate() == GRANIT_ERROR_DEVICE_LOST;
   }
   [[nodiscard]] const diagnostic_sink& diagnostics() const noexcept { return diagnostics_; }
+  [[nodiscard]] const backend_capabilities& capabilities() const noexcept { return capabilities_; }
   [[nodiscard]] const vulkan_instance& instance() const noexcept { return instance_; }
   [[nodiscard]] const vulkan_device& device() const noexcept { return device_; }
 
@@ -282,6 +284,7 @@ private:
   bool validation_enabled_{};
   diagnostic_sink diagnostics_;
   device_status device_status_;
+  backend_capabilities capabilities_;
   std::mutex resource_mutex_;
   std::mutex pipeline_cache_mutex_;
   std::mutex queue_mutex_;

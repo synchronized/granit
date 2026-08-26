@@ -20,6 +20,7 @@ target_sources(
   granit
   PRIVATE
     $<TARGET_OBJECTS:granit_volk>
+    backend/capabilities.h
     backend/vulkan/device.cpp
     backend/vulkan/device.h
     backend/vulkan/frame_context.cpp

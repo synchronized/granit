@@ -2364,14 +2364,10 @@ granit_result renderer_registry::create_bind_group(granit_renderer renderer,
           const auto range = entry.size == GRANIT_WHOLE_SIZE
                                  ? found->second->desc.size - entry.offset
                                  : entry.size;
-          const auto& limits = state->device().properties().limits;
-          const auto alignment = declaration->type == GRANIT_BINDING_TYPE_UNIFORM_BUFFER
-                                     ? limits.minUniformBufferOffsetAlignment
-                                     : limits.minStorageBufferOffsetAlignment;
-          const auto maximum_range = declaration->type == GRANIT_BINDING_TYPE_UNIFORM_BUFFER
-                                         ? limits.maxUniformBufferRange
-                                         : limits.maxStorageBufferRange;
-          if ((alignment != 0 && entry.offset % alignment != 0) || range > maximum_range)
+          const auto binding_type = declaration->type == GRANIT_BINDING_TYPE_UNIFORM_BUFFER
+                                        ? backend_buffer_binding_type::uniform
+                                        : backend_buffer_binding_type::storage;
+          if (!state->capabilities().supports_buffer_binding(binding_type, entry.offset, range))
             return GRANIT_ERROR_INVALID_ARGUMENT;
           write.type = declaration->type == GRANIT_BINDING_TYPE_UNIFORM_BUFFER
                            ? VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER

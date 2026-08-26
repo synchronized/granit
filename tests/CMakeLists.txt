@@ -173,6 +173,15 @@ target_link_libraries(
 granit_target_compile_warnings(granit_resource_validation_test)
 add_test(NAME granit.resource_validation COMMAND granit_resource_validation_test)
 
+add_executable(granit_backend_capabilities_test backend/capabilities_test.cpp)
+target_include_directories(granit_backend_capabilities_test PRIVATE "${PROJECT_SOURCE_DIR}/src")
+target_link_libraries(
+  granit_backend_capabilities_test
+  PRIVATE granit::granit Catch2::Catch2WithMain
+)
+granit_target_compile_warnings(granit_backend_capabilities_test)
+add_test(NAME granit.backend_capabilities COMMAND granit_backend_capabilities_test)
+
 add_executable(
   granit_lifecycle_validation_test
   core/diagnostic_sink_test.cpp
