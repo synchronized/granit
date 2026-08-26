@@ -43,9 +43,9 @@ jobs:
         compiler: [clang, gcc]
         linkage: [shared, static]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: 恢复编译缓存
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: .cache/ccache
           key: >-
@@ -122,9 +122,9 @@ jobs:
       matrix:
         linkage: [shared, static]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: 恢复 Integration 编译缓存
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: .cache/ccache
           key: >-
@@ -132,7 +132,7 @@ jobs:
           restore-keys: |
             linux-ccache-v2-integration-clang-${{ matrix.linkage }}-
       - name: 恢复 Integration 第三方依赖缓存
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: .cache/fetchcontent
           key: >-
