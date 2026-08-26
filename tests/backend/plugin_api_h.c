@@ -10,6 +10,7 @@ static granit_backend_plugin_api granit_test_plugin_api = {sizeof(granit_backend
                                                            "test",
                                                            UINT32_C(4),
                                                            0,
+                                                           0,
                                                            0};
 
 const granit_backend_plugin_api* granit_test_backend_plugin_query(uint32_t requested_abi) {

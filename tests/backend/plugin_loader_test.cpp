@@ -71,6 +71,8 @@ TEST_CASE("后端插件 Loader 完成版本化握手", "[backend][plugin]") {
   REQUIRE(loader.api() != nullptr);
   CHECK(loader.api()->abi_version == GRANIT_BACKEND_PLUGIN_ABI_VERSION);
   CHECK(loader.api()->kind == GRANIT_BACKEND_PLUGIN_KIND_WEBGPU);
+  REQUIRE(loader.api()->instance_api != nullptr);
+  CHECK(loader.api()->instance_api->struct_size >= sizeof(granit_backend_plugin_instance_api));
   CHECK(std::string_view{loader.api()->name, loader.api()->name_length} == "Granit WebGPU (Dawn)");
 
   host_state state;
@@ -93,7 +95,29 @@ TEST_CASE("后端插件 Loader 完成版本化握手", "[backend][plugin]") {
   state.throw_diagnostic = true;
   CHECK(loader.create_instance(&host, &instance) == GRANIT_SUCCESS);
   CHECK(instance != 0);
+  granit_backend_plugin_capabilities capabilities{};
+  capabilities.struct_size = sizeof(capabilities);
+  CHECK(loader.get_capabilities(instance, &capabilities) == GRANIT_SUCCESS);
+  CHECK(capabilities.uniform_buffer_offset_alignment == 256);
+  CHECK(capabilities.storage_buffer_offset_alignment == 256);
+  CHECK(capabilities.max_uniform_buffer_binding_size == 65536);
+  CHECK(capabilities.max_storage_buffer_binding_size == 134217728);
+  CHECK(capabilities.max_buffer_size == 268435456);
+  CHECK(capabilities.max_texture_dimension_2d == 8192);
+  CHECK(capabilities.max_bind_groups == 4);
+  CHECK(capabilities.max_color_attachments == 8);
+
+  capabilities.struct_size = 0;
+  CHECK(loader.get_capabilities(instance, &capabilities) == GRANIT_ERROR_INVALID_ARGUMENT);
+  capabilities = {};
+  capabilities.struct_size = sizeof(capabilities);
+  capabilities.reserved = 1;
+  CHECK(loader.get_capabilities(instance, &capabilities) == GRANIT_ERROR_INVALID_ARGUMENT);
+  capabilities = {};
+  capabilities.struct_size = sizeof(capabilities);
+  CHECK(loader.get_capabilities(instance + 1, &capabilities) == GRANIT_ERROR_INVALID_HANDLE);
   CHECK(loader.destroy_instance(instance) == GRANIT_SUCCESS);
+  CHECK(loader.get_capabilities(instance, &capabilities) == GRANIT_ERROR_INVALID_HANDLE);
   CHECK(state.allocations == 2);
   CHECK(state.deallocations == 1);
   state.throw_diagnostic = false;
@@ -117,4 +141,5 @@ TEST_CASE("后端插件 Loader 完成版本化握手", "[backend][plugin]") {
   CHECK(state.allocations == 4);
   CHECK(state.deallocations == 3);
   CHECK(state.diagnostics == 6);
+  CHECK(loader.get_capabilities(instance, &capabilities) == GRANIT_ERROR_INVALID_ARGUMENT);
 }

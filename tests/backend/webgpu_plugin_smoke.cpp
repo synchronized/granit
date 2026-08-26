@@ -45,10 +45,19 @@ int main() {
                  static_cast<int>(create_result), static_cast<unsigned long long>(instance));
     return 2;
   }
+  granit_backend_plugin_capabilities capabilities{};
+  capabilities.struct_size = sizeof(capabilities);
+  const auto capabilities_result = loader.get_capabilities(instance, &capabilities);
+  if (capabilities_result != GRANIT_SUCCESS || capabilities.max_buffer_size == 0 ||
+      capabilities.max_texture_dimension_2d == 0 || capabilities.max_bind_groups == 0 ||
+      capabilities.max_color_attachments == 0) {
+    std::fprintf(stderr, "查询 WebGPU 能力失败：%d\n", static_cast<int>(capabilities_result));
+    return 3;
+  }
   const auto destroy_result = loader.destroy_instance(instance);
   if (destroy_result != GRANIT_SUCCESS) {
     std::fprintf(stderr, "销毁 WebGPU 插件实例失败：%d\n", static_cast<int>(destroy_result));
-    return 3;
+    return 4;
   }
   return 0;
 }

@@ -28,6 +28,7 @@ struct webgpu_instance {
   WGPUInstance instance;
   WGPUAdapter adapter;
   WGPUDevice device;
+  granit_backend_plugin_capabilities capabilities;
 };
 
 constexpr std::uint64_t request_timeout_ns = UINT64_C(10000000000);
@@ -140,10 +141,10 @@ granit_result create_backend(const granit_backend_plugin_host_api* host,
     return GRANIT_ERROR_OUT_OF_MEMORY;
   }
   constexpr WGPUInstanceFeatureName features[]{WGPUInstanceFeatureName_TimedWaitAny};
-  const WGPUInstanceLimits limits{nullptr, 1};
-  const WGPUInstanceDescriptor descriptor{nullptr, 1, features, &limits};
+  const WGPUInstanceLimits instance_limits{nullptr, 1};
+  const WGPUInstanceDescriptor descriptor{nullptr, 1, features, &instance_limits};
   auto* state =
-      new (memory) webgpu_instance{*host, wgpuCreateInstance(&descriptor), nullptr, nullptr};
+      new (memory) webgpu_instance{*host, wgpuCreateInstance(&descriptor), nullptr, nullptr, {}};
   if (state->instance == nullptr) {
     state->~webgpu_instance();
     deallocate(*host, memory);
@@ -193,6 +194,28 @@ granit_result create_backend(const granit_backend_plugin_host_api* host,
     return GRANIT_ERROR_INITIALIZATION_FAILED;
   }
   state->device = device.device;
+
+  WGPULimits device_limits = WGPU_LIMITS_INIT;
+  if (wgpuDeviceGetLimits(state->device, &device_limits) != WGPUStatus_Success) {
+    constexpr char message[] = "Dawn WebGPU device limits query failed";
+    emit(*host, GRANIT_DIAGNOSTIC_SEVERITY_ERROR, message, sizeof(message) - 1);
+    release_resources(*state);
+    state->~webgpu_instance();
+    deallocate(*host, memory);
+    return GRANIT_ERROR_INITIALIZATION_FAILED;
+  }
+  state->capabilities = {
+      sizeof(granit_backend_plugin_capabilities),
+      0,
+      device_limits.minUniformBufferOffsetAlignment,
+      device_limits.minStorageBufferOffsetAlignment,
+      device_limits.maxUniformBufferBindingSize,
+      device_limits.maxStorageBufferBindingSize,
+      device_limits.maxBufferSize,
+      device_limits.maxTextureDimension2D,
+      device_limits.maxBindGroups,
+      device_limits.maxColorAttachments,
+  };
 
   granit_backend_plugin_instance handle = next_instance.fetch_add(1, std::memory_order_relaxed);
   if (handle == 0) {
@@ -246,7 +269,27 @@ void destroy_backend(granit_backend_plugin_instance instance) noexcept {
   emit(host, GRANIT_DIAGNOSTIC_SEVERITY_INFO, message, sizeof(message) - 1);
 }
 
+granit_result get_capabilities(granit_backend_plugin_instance instance,
+                               granit_backend_plugin_capabilities* capabilities) noexcept {
+  if (instance == 0 || capabilities == nullptr ||
+      capabilities->struct_size < sizeof(granit_backend_plugin_capabilities) ||
+      capabilities->reserved != 0) {
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  }
+  const std::scoped_lock lock{instances_mutex};
+  const auto found = instances.find(instance);
+  if (found == instances.end()) {
+    return GRANIT_ERROR_INVALID_HANDLE;
+  }
+  const auto caller_size = capabilities->struct_size;
+  *capabilities = found->second->capabilities;
+  capabilities->struct_size = caller_size;
+  return GRANIT_SUCCESS;
+}
+
 constexpr char plugin_name[] = "Granit WebGPU (Dawn)";
+constexpr granit_backend_plugin_instance_api instance_api{
+    sizeof(granit_backend_plugin_instance_api), 0, get_capabilities};
 constexpr granit_backend_plugin_api plugin_api{sizeof(granit_backend_plugin_api),
                                                GRANIT_BACKEND_PLUGIN_ABI_VERSION,
                                                GRANIT_BACKEND_PLUGIN_KIND_WEBGPU,
@@ -254,7 +297,8 @@ constexpr granit_backend_plugin_api plugin_api{sizeof(granit_backend_plugin_api)
                                                plugin_name,
                                                sizeof(plugin_name) - 1,
                                                create_backend,
-                                               destroy_backend};
+                                               destroy_backend,
+                                               &instance_api};
 
 } // namespace
 

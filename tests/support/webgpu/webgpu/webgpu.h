@@ -20,6 +20,7 @@ typedef unsigned int WGPUCallbackMode;
 typedef unsigned int WGPURequestAdapterStatus;
 typedef unsigned int WGPURequestDeviceStatus;
 typedef unsigned int WGPUWaitStatus;
+typedef unsigned int WGPUStatus;
 
 #define WGPU_FALSE 0
 #define WGPU_TRUE 1
@@ -29,6 +30,8 @@ typedef unsigned int WGPUWaitStatus;
 #define WGPURequestAdapterStatus_Success 1
 #define WGPURequestDeviceStatus_Success 1
 #define WGPUWaitStatus_Success 1
+#define WGPUStatus_Success 1
+#define WGPUStatus_Error 2
 #define WGPUBackendType_D3D12 4
 #define WGPUBackendType_Vulkan 6
 
@@ -48,6 +51,22 @@ typedef struct WGPUInstanceDescriptor {
   const WGPUInstanceFeatureName* requiredFeatures;
   const WGPUInstanceLimits* requiredLimits;
 } WGPUInstanceDescriptor;
+
+typedef struct WGPULimits {
+  void* nextInChain;
+  unsigned int maxTextureDimension2D;
+  unsigned int maxBindGroups;
+  unsigned int maxColorAttachments;
+  unsigned long long maxUniformBufferBindingSize;
+  unsigned long long maxStorageBufferBindingSize;
+  unsigned int minUniformBufferOffsetAlignment;
+  unsigned int minStorageBufferOffsetAlignment;
+  unsigned long long maxBufferSize;
+} WGPULimits;
+
+#define WGPU_LIMITS_INIT                                                                           \
+  {                                                                                                \
+  }
 
 typedef struct WGPUFuture {
   unsigned long long id;
@@ -99,6 +118,7 @@ WGPUFuture wgpuAdapterRequestDevice(WGPUAdapter adapter, const void* descriptor,
                                     WGPURequestDeviceCallbackInfo callbackInfo);
 void wgpuAdapterRelease(WGPUAdapter adapter);
 void wgpuDeviceRelease(WGPUDevice device);
+WGPUStatus wgpuDeviceGetLimits(WGPUDevice device, WGPULimits* limits);
 
 #ifdef __cplusplus
 }

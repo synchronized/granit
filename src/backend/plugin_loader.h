@@ -29,6 +29,9 @@ public:
   create_instance(const granit_backend_plugin_host_api* host,
                   granit_backend_plugin_instance* out_instance) noexcept;
   [[nodiscard]] granit_result destroy_instance(granit_backend_plugin_instance instance) noexcept;
+  [[nodiscard]] granit_result
+  get_capabilities(granit_backend_plugin_instance instance,
+                   granit_backend_plugin_capabilities* capabilities) noexcept;
   void close() noexcept;
 
   [[nodiscard]] bool is_open() const noexcept { return library_.is_open(); }

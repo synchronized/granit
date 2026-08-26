@@ -36,3 +36,18 @@ extern "C" WGPUFuture wgpuAdapterRequestDevice(WGPUAdapter, const void*,
 extern "C" void wgpuAdapterRelease(WGPUAdapter adapter) { delete adapter; }
 
 extern "C" void wgpuDeviceRelease(WGPUDevice device) { delete device; }
+
+extern "C" WGPUStatus wgpuDeviceGetLimits(WGPUDevice, WGPULimits* limits) {
+  if (limits == nullptr) {
+    return WGPUStatus_Error;
+  }
+  limits->minUniformBufferOffsetAlignment = 256;
+  limits->minStorageBufferOffsetAlignment = 256;
+  limits->maxUniformBufferBindingSize = 65536;
+  limits->maxStorageBufferBindingSize = 134217728;
+  limits->maxBufferSize = 268435456;
+  limits->maxTextureDimension2D = 8192;
+  limits->maxBindGroups = 4;
+  limits->maxColorAttachments = 8;
+  return WGPUStatus_Success;
+}

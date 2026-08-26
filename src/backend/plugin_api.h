@@ -9,12 +9,26 @@
 #include <granit/core/diagnostic.h>
 #include <granit/core/result.h>
 
-#define GRANIT_BACKEND_PLUGIN_ABI_VERSION UINT32_C(1)
+#define GRANIT_BACKEND_PLUGIN_ABI_VERSION UINT32_C(2)
 #define GRANIT_BACKEND_PLUGIN_KIND_WEBGPU UINT32_C(1)
 #define GRANIT_BACKEND_PLUGIN_QUERY_SYMBOL "granit_backend_plugin_query"
 
 typedef uint32_t granit_backend_plugin_kind;
 typedef uint64_t granit_backend_plugin_instance;
+
+/** 插件实例创建后固定的后端无关能力快照。 */
+typedef struct granit_backend_plugin_capabilities {
+  uint32_t struct_size;
+  uint32_t reserved;
+  uint64_t uniform_buffer_offset_alignment;
+  uint64_t storage_buffer_offset_alignment;
+  uint64_t max_uniform_buffer_binding_size;
+  uint64_t max_storage_buffer_binding_size;
+  uint64_t max_buffer_size;
+  uint32_t max_texture_dimension_2d;
+  uint32_t max_bind_groups;
+  uint32_t max_color_attachments;
+} granit_backend_plugin_capabilities;
 
 typedef void* (*granit_backend_plugin_allocate_fn)(uint64_t size, uint64_t alignment,
                                                    void* user_data);
@@ -41,6 +55,15 @@ typedef granit_result (*granit_backend_plugin_create_fn)(
     const granit_backend_plugin_host_api* host, granit_backend_plugin_instance* out_instance);
 /** instance 非零且只允许销毁一次；销毁返回前插件不得继续使用 Host 服务。 */
 typedef void (*granit_backend_plugin_destroy_fn)(granit_backend_plugin_instance instance);
+typedef granit_result (*granit_backend_plugin_get_capabilities_fn)(
+    granit_backend_plugin_instance instance, granit_backend_plugin_capabilities* capabilities);
+
+/** 实例操作表由插件拥有，在插件卸载前保持有效。 */
+typedef struct granit_backend_plugin_instance_api {
+  uint32_t struct_size;
+  uint32_t reserved;
+  granit_backend_plugin_get_capabilities_fn get_capabilities;
+} granit_backend_plugin_instance_api;
 
 /** 后端插件入口返回的只读描述；字符串在插件卸载前有效。 */
 typedef struct granit_backend_plugin_api {
@@ -52,6 +75,7 @@ typedef struct granit_backend_plugin_api {
   uint32_t name_length;
   granit_backend_plugin_create_fn create;
   granit_backend_plugin_destroy_fn destroy;
+  const granit_backend_plugin_instance_api* instance_api;
 } granit_backend_plugin_api;
 
 typedef const granit_backend_plugin_api* (*granit_backend_plugin_query_fn)(uint32_t requested_abi);
