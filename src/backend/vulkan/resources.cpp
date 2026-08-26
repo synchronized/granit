@@ -47,4 +47,13 @@ vulkan_sampler_resource::~vulkan_sampler_resource() {
   }
 }
 
+vulkan_shader_resource::vulkan_shader_resource(std::shared_ptr<renderer_state> renderer) noexcept
+    : renderer_(std::move(renderer)) {}
+
+vulkan_shader_resource::~vulkan_shader_resource() {
+  if (renderer_) {
+    renderer_->destroy_native_shader(native_);
+  }
+}
+
 } // namespace granit::detail

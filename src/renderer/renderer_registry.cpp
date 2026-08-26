@@ -42,6 +42,10 @@ vulkan_buffer_allocation& native_buffer(backend_buffer_resource& resource) noexc
   return static_cast<vulkan_buffer_resource&>(resource).native();
 }
 
+VkShaderModule& native_shader(backend_shader_resource& resource) noexcept {
+  return static_cast<vulkan_shader_resource&>(resource).native();
+}
+
 granit_texture_format swapchain_format(VkFormat format) noexcept {
   switch (format) {
   case VK_FORMAT_B8G8R8A8_SRGB:
@@ -131,11 +135,6 @@ renderer_registry::swapchain_record::~swapchain_record() {
   if (renderer && native) {
     renderer->destroy_native_swapchain(*native);
   }
-}
-
-renderer_registry::shader_record::~shader_record() {
-  if (renderer)
-    renderer->destroy_native_shader(native);
 }
 
 renderer_registry::bind_group_layout_record::~bind_group_layout_record() {
@@ -243,7 +242,7 @@ granit_result renderer_registry::set_object_name(granit_renderer renderer, grani
   GRANIT_NAME_OBJECT(texture_views_, VK_OBJECT_TYPE_IMAGE_VIEW,
                      native_texture_view(*it->second->native))
   GRANIT_NAME_OBJECT(samplers_, VK_OBJECT_TYPE_SAMPLER, native_sampler(*it->second->native))
-  GRANIT_NAME_OBJECT(shaders_, VK_OBJECT_TYPE_SHADER_MODULE, it->second->native)
+  GRANIT_NAME_OBJECT(shaders_, VK_OBJECT_TYPE_SHADER_MODULE, native_shader(*it->second->native))
   GRANIT_NAME_OBJECT(bind_group_layouts_, VK_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT, it->second->native)
   GRANIT_NAME_OBJECT(pipeline_layouts_, VK_OBJECT_TYPE_PIPELINE_LAYOUT, it->second->native)
   GRANIT_NAME_OBJECT(bind_groups_, VK_OBJECT_TYPE_DESCRIPTOR_SET, it->second->set)
@@ -2206,7 +2205,8 @@ granit_result renderer_registry::create_shader(granit_renderer renderer, granit_
     record->renderer = state;
     record->stage = stage;
     record->entry_point.assign(entry_point);
-    const auto result = state->create_native_shader(code, record->native);
+    record->native = std::make_unique<vulkan_shader_resource>(state);
+    const auto result = state->create_native_shader(code, native_shader(*record->native));
     if (result != GRANIT_SUCCESS)
       return result;
     std::lock_guard lock{mutex_};
@@ -2641,8 +2641,8 @@ granit_result renderer_registry::create_graphics_pipeline(granit_renderer render
         color_blends = {desc.color_blends, desc.color_blend_count};
     }
     const auto result = state->create_native_graphics_pipeline(
-        layout->native, vertex->native, vertex->entry_point.c_str(), fragment->native,
-        fragment->entry_point.c_str(), vertex_buffers,
+        layout->native, native_shader(*vertex->native), vertex->entry_point.c_str(),
+        native_shader(*fragment->native), fragment->entry_point.c_str(), vertex_buffers,
         desc.struct_size >= GRANIT_GRAPHICS_PIPELINE_DESC_VERSION_3_SIZE
             ? desc.primitive
             : granit_primitive_state{GRANIT_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
@@ -2728,8 +2728,9 @@ granit_result renderer_registry::create_compute_pipeline(granit_renderer rendere
     record->renderer = state;
     record->layout = layout;
     record->compute_shader = compute;
-    const auto result = state->create_native_compute_pipeline(
-        layout->native, compute->native, compute->entry_point.c_str(), record->native);
+    const auto result =
+        state->create_native_compute_pipeline(layout->native, native_shader(*compute->native),
+                                              compute->entry_point.c_str(), record->native);
     if (result != GRANIT_SUCCESS)
       return result;
     std::lock_guard lock{mutex_};

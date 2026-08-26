@@ -372,10 +372,9 @@ private:
   struct shader_record {
     resource_metadata metadata;
     std::shared_ptr<renderer_state> renderer;
-    VkShaderModule native{VK_NULL_HANDLE};
+    std::unique_ptr<backend_shader_resource> native;
     granit_shader_stage stage{};
     std::string entry_point;
-    ~shader_record();
   };
   struct bind_group_layout_record {
     resource_metadata metadata;
