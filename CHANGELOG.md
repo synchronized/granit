@@ -27,6 +27,8 @@
 
 - 独立安装 Consumer 注册为 CTest，并自动补充安装共享库的运行时搜索路径；构建指南可用一条
   `ctest` 命令验证 Core、RenderPipeline、Window 和 Input 的七条 C/C++ 路径。
+- RenderPipeline C++ 安装 Consumer 通过公开阶段回调执行真实离屏渲染图，覆盖 Scene Snapshot、
+  输出纹理、阶段录制、提交和清理，不依赖源码树资源。
 - 文档检查锁定 README、安装 Consumer 和 RenderPipeline 教程的关键 CMake/CTest 命令，避免
   文档入口随构建配置漂移。
 

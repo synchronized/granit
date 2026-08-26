@@ -58,8 +58,8 @@ RenderPipeline 的默认创建会建立内部参考资源，因而验证了 comp
    Snapshot 的相同验证入口也同步修复。
 2. **S-09B 清理语义（已完成）**：C 重复销毁返回 `INVALID_HANDLE`，C++ 空对象 `reset()` 幂等
    成功；底层资源已失效时包装层返回 `INVALID_HANDLE` 并清空本地状态。
-3. **S-09C RenderPipeline 路径**：安装 Consumer 已覆盖真实创建，尚缺只依赖已安装 SDK 的最小实际
-   render 路径或等价教程命令。
+3. **S-09C RenderPipeline 路径（已完成）**：C++ 安装 Consumer 已通过公开阶段回调执行最小实际
+   离屏渲染图，不依赖源码目录、内部模块或示例资源。
 4. **S-09D 诊断**：失败分支已有可区分结果码，但 Consumer 尚未验证诊断回调能指出参数、句柄类型
    或生命周期位置。
 
