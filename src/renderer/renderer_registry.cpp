@@ -34,6 +34,10 @@ VkImageView& native_texture_view(backend_texture_view_resource& resource) noexce
   return static_cast<vulkan_texture_view_resource&>(resource).native();
 }
 
+vulkan_image_allocation& native_texture(backend_texture_resource& resource) noexcept {
+  return static_cast<vulkan_texture_resource&>(resource).native();
+}
+
 granit_texture_format swapchain_format(VkFormat format) noexcept {
   switch (format) {
   case VK_FORMAT_B8G8R8A8_SRGB:
@@ -128,12 +132,6 @@ renderer_registry::swapchain_record::~swapchain_record() {
 renderer_registry::buffer_record::~buffer_record() {
   if (renderer) {
     renderer->destroy_native_buffer(native);
-  }
-}
-
-renderer_registry::texture_record::~texture_record() {
-  if (renderer && owned) {
-    renderer->destroy_native_texture(native);
   }
 }
 
@@ -243,7 +241,7 @@ granit_result renderer_registry::set_object_name(granit_renderer renderer, grani
   GRANIT_NAME_OBJECT(surfaces_, VK_OBJECT_TYPE_SURFACE_KHR, it->second->native_handle)
   GRANIT_NAME_OBJECT(swapchains_, VK_OBJECT_TYPE_SWAPCHAIN_KHR, it->second->native->native_handle())
   GRANIT_NAME_OBJECT(buffers_, VK_OBJECT_TYPE_BUFFER, it->second->native.buffer)
-  GRANIT_NAME_OBJECT(textures_, VK_OBJECT_TYPE_IMAGE, it->second->native.image)
+  GRANIT_NAME_OBJECT(textures_, VK_OBJECT_TYPE_IMAGE, native_texture(*it->second->native).image)
   GRANIT_NAME_OBJECT(texture_views_, VK_OBJECT_TYPE_IMAGE_VIEW,
                      native_texture_view(*it->second->native))
   GRANIT_NAME_OBJECT(samplers_, VK_OBJECT_TYPE_SAMPLER, native_sampler(*it->second->native))
@@ -943,8 +941,8 @@ renderer_registry::install_swapchain_backbuffers(granit_swapchain swapchain,
     for (const auto image : record->native->images()) {
       auto texture = std::make_shared<texture_record>();
       texture->renderer = record->renderer;
-      texture->native.image = image;
-      texture->owned = false;
+      texture->native = std::make_unique<vulkan_texture_resource>(record->renderer, false);
+      native_texture(*texture->native).image = image;
       texture->publicly_destroyable = false;
       texture->desc = GRANIT_TEXTURE_DESC_INIT;
       texture->desc.format = swapchain_format(record->native->format());
@@ -959,7 +957,8 @@ renderer_registry::install_swapchain_backbuffers(granit_swapchain swapchain,
       view->desc = desc;
       view->native = std::make_unique<vulkan_texture_view_resource>(record->renderer);
       const auto result = record->renderer->create_native_texture_view(
-          texture->native, texture->desc, desc, native_texture_view(*view->native));
+          native_texture(*texture->native), texture->desc, desc,
+          native_texture_view(*view->native));
       if (result != GRANIT_SUCCESS)
         return result;
       textures.push_back(std::move(texture));
@@ -1746,13 +1745,14 @@ granit_result renderer_registry::submit_upload_batch(granit_renderer renderer,
   std::vector<vulkan_upload_operation> uploads;
   uploads.reserve(record->uploads.size());
   for (const auto& upload : record->uploads) {
-    uploads.push_back({.type = upload.type,
-                       .buffer = upload.buffer ? &upload.buffer->native : nullptr,
-                       .texture = upload.texture ? &upload.texture->native : nullptr,
-                       .destination_offset = upload.offset,
-                       .data = upload.data.data(),
-                       .size = upload.data.size(),
-                       .texture_copy = upload.texture_copy});
+    uploads.push_back(
+        {.type = upload.type,
+         .buffer = upload.buffer ? &upload.buffer->native : nullptr,
+         .texture = upload.texture ? &native_texture(*upload.texture->native) : nullptr,
+         .destination_offset = upload.offset,
+         .data = upload.data.data(),
+         .size = upload.data.size(),
+         .texture_copy = upload.texture_copy});
   }
   const auto result = record->renderer->upload_batch(uploads);
   if (result == GRANIT_SUCCESS)
@@ -1814,7 +1814,8 @@ granit_result renderer_registry::create_texture(granit_renderer renderer,
     auto record = std::make_shared<texture_record>();
     record->renderer = state;
     record->desc = desc;
-    const auto result = state->create_native_texture(desc, record->native);
+    record->native = std::make_unique<vulkan_texture_resource>(state);
+    const auto result = state->create_native_texture(desc, native_texture(*record->native));
     if (result != GRANIT_SUCCESS)
       return result;
     std::lock_guard lock{mutex_};
@@ -1913,8 +1914,9 @@ granit_result renderer_registry::write_texture(granit_renderer renderer, granit_
   copy.imageOffset = {static_cast<std::int32_t>(region.x), static_cast<std::int32_t>(region.y),
                       static_cast<std::int32_t>(region.z)};
   copy.imageExtent = {region.width, region.height, region.depth};
-  return record->renderer->upload_texture(
-      record->native, static_cast<const unsigned char*>(data) + layout.offset, required, copy);
+  return record->renderer->upload_texture(native_texture(*record->native),
+                                          static_cast<const unsigned char*>(data) + layout.offset,
+                                          required, copy);
 }
 
 granit_result
@@ -2022,8 +2024,8 @@ granit_result renderer_registry::create_texture_view(granit_renderer renderer,
     record->texture = parent;
     record->desc = desc;
     record->native = std::make_unique<vulkan_texture_view_resource>(state);
-    const auto result = state->create_native_texture_view(parent->native, parent->desc, desc,
-                                                          native_texture_view(*record->native));
+    const auto result = state->create_native_texture_view(
+        native_texture(*parent->native), parent->desc, desc, native_texture_view(*record->native));
     if (result != GRANIT_SUCCESS)
       return result;
     std::lock_guard lock{mutex_};
@@ -2427,7 +2429,7 @@ granit_result renderer_registry::create_bind_group(granit_renderer renderer,
             }
             const bool storage = declaration->type == GRANIT_BINDING_TYPE_STORAGE_TEXTURE;
             return vulkan_image_access{
-                .image = found->second->texture->native.image,
+                .image = native_texture(*found->second->texture->native).image,
                 .range = {.aspectMask = aspect,
                           .baseMipLevel = found->second->desc.range.base_mip_level,
                           .levelCount = found->second->desc.range.mip_level_count,
@@ -3266,9 +3268,9 @@ granit_result renderer_registry::copy_texture_to_buffer(granit_renderer renderer
   retain_resource(recorder_record->retained_resources, source_record, source_record->metadata);
   retain_resource(recorder_record->retained_resources, destination_record,
                   destination_record->metadata);
-  return recorder_record->renderer->copy_texture_to_buffer(recorder_record->native,
-                                                           source_record->native.image,
-                                                           destination_record->native.buffer, copy);
+  return recorder_record->renderer->copy_texture_to_buffer(
+      recorder_record->native, native_texture(*source_record->native).image,
+      destination_record->native.buffer, copy);
 }
 
 granit_result renderer_registry::copy_buffer_to_texture(granit_renderer renderer,
@@ -3358,9 +3360,9 @@ granit_result renderer_registry::copy_buffer_to_texture(granit_renderer renderer
   retain_resource(recorder_record->retained_resources, source_record, source_record->metadata);
   retain_resource(recorder_record->retained_resources, destination_record,
                   destination_record->metadata);
-  return recorder_record->renderer->copy_buffer_to_texture(recorder_record->native,
-                                                           source_record->native.buffer,
-                                                           destination_record->native.image, copy);
+  return recorder_record->renderer->copy_buffer_to_texture(
+      recorder_record->native, source_record->native.buffer,
+      native_texture(*destination_record->native).image, copy);
 }
 
 granit_result renderer_registry::copy_texture(granit_renderer renderer,
@@ -3445,7 +3447,8 @@ granit_result renderer_registry::copy_texture(granit_renderer renderer,
   retain_resource(recorder_record->retained_resources, destination_record,
                   destination_record->metadata);
   return recorder_record->renderer->copy_texture(
-      recorder_record->native, source_record->native.image, destination_record->native.image, copy);
+      recorder_record->native, native_texture(*source_record->native).image,
+      native_texture(*destination_record->native).image, copy);
 }
 
 granit_result renderer_registry::generate_mipmaps(granit_renderer renderer,
@@ -3489,7 +3492,7 @@ granit_result renderer_registry::generate_mipmaps(granit_renderer renderer,
   retain_resource(recorder_record->retained_resources, texture_record_state,
                   texture_record_state->metadata);
   return recorder_record->renderer->generate_mipmaps(
-      recorder_record->native, texture_record_state->native.image, base_extent,
+      recorder_record->native, native_texture(*texture_record_state->native).image, base_extent,
       range.base_mip_level, range.level_count, range.base_array_layer, range.array_layer_count);
 }
 
@@ -3895,7 +3898,7 @@ granit_result renderer_registry::begin_rendering(granit_renderer renderer,
   for (std::uint32_t index = 0; index < desc.color_attachment_count; ++index) {
     const auto& view = views[index];
     image_accesses.push_back({
-        .image = view->texture->native.image,
+        .image = native_texture(*view->texture->native).image,
         .range = {.aspectMask = resolved_aspect(view),
                   .baseMipLevel = view->desc.range.base_mip_level,
                   .levelCount = view->desc.range.mip_level_count,
@@ -3919,7 +3922,7 @@ granit_result renderer_registry::begin_rendering(granit_renderer renderer,
     depth.clearValue.depthStencil = {source.clear_value.depth, source.clear_value.stencil};
     depth_ptr = &depth;
     image_accesses.push_back({
-        .image = view->texture->native.image,
+        .image = native_texture(*view->texture->native).image,
         .range = {.aspectMask = resolved_aspect(view),
                   .baseMipLevel = view->desc.range.base_mip_level,
                   .levelCount = view->desc.range.mip_level_count,

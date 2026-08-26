@@ -352,12 +352,10 @@ private:
   struct texture_record {
     resource_metadata metadata;
     std::shared_ptr<renderer_state> renderer;
-    vulkan_image_allocation native;
+    std::unique_ptr<backend_texture_resource> native;
     granit_texture_desc desc{};
-    bool owned{true};
     bool publicly_destroyable{true};
     std::mutex mutex;
-    ~texture_record();
   };
   struct texture_view_record {
     resource_metadata metadata;

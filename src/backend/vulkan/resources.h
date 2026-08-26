@@ -8,10 +8,26 @@
 #include <volk.h>
 
 #include "backend/resources.h"
+#include "backend/vulkan/memory_allocator.h"
 
 namespace granit::detail {
 
 class renderer_state;
+
+class vulkan_texture_resource final : public backend_texture_resource {
+public:
+  explicit vulkan_texture_resource(std::shared_ptr<renderer_state> renderer,
+                                   bool owned = true) noexcept;
+  ~vulkan_texture_resource() override;
+
+  [[nodiscard]] vulkan_image_allocation& native() noexcept { return native_; }
+  [[nodiscard]] const vulkan_image_allocation& native() const noexcept { return native_; }
+
+private:
+  std::shared_ptr<renderer_state> renderer_;
+  vulkan_image_allocation native_{};
+  bool owned_{true};
+};
 
 class vulkan_texture_view_resource final : public backend_texture_view_resource {
 public:
