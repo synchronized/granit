@@ -131,8 +131,15 @@ granit_result create_backend(const granit_backend_plugin_host_api* host,
   adapter_request adapter{};
   const WGPURequestAdapterCallbackInfo adapter_callback{nullptr, WGPUCallbackMode_WaitAnyOnly,
                                                         receive_adapter, &adapter, nullptr};
+  WGPURequestAdapterOptions adapter_options{};
+  adapter_options.forceFallbackAdapter = WGPU_TRUE;
+#if defined(_WIN32)
+  adapter_options.backendType = WGPUBackendType_D3D12;
+#else
+  adapter_options.backendType = WGPUBackendType_Vulkan;
+#endif
   const auto adapter_future =
-      wgpuInstanceRequestAdapter(state->instance, nullptr, adapter_callback);
+      wgpuInstanceRequestAdapter(state->instance, &adapter_options, adapter_callback);
   if (!wait_for(state->instance, adapter_future, adapter) ||
       adapter.status != WGPURequestAdapterStatus_Success || adapter.adapter == nullptr) {
     constexpr char message[] = "Dawn WebGPU adapter request failed or timed out";

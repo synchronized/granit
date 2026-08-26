@@ -20,11 +20,14 @@ typedef unsigned int WGPURequestDeviceStatus;
 typedef unsigned int WGPUWaitStatus;
 
 #define WGPU_FALSE 0
+#define WGPU_TRUE 1
 #define WGPUInstanceFeatureName_TimedWaitAny 1
 #define WGPUCallbackMode_WaitAnyOnly 1
 #define WGPURequestAdapterStatus_Success 1
 #define WGPURequestDeviceStatus_Success 1
 #define WGPUWaitStatus_Success 1
+#define WGPUBackendType_D3D12 4
+#define WGPUBackendType_Vulkan 6
 
 typedef struct WGPUStringView {
   const char* data;
@@ -52,6 +55,15 @@ typedef struct WGPUFutureWaitInfo {
   WGPUBool completed;
 } WGPUFutureWaitInfo;
 
+typedef struct WGPURequestAdapterOptions {
+  void* nextInChain;
+  unsigned int featureLevel;
+  unsigned int powerPreference;
+  WGPUBool forceFallbackAdapter;
+  unsigned int backendType;
+  void* compatibleSurface;
+} WGPURequestAdapterOptions;
+
 typedef void (*WGPURequestAdapterCallback)(WGPURequestAdapterStatus, WGPUAdapter, WGPUStringView,
                                            void*, void*);
 typedef void (*WGPURequestDeviceCallback)(WGPURequestDeviceStatus, WGPUDevice, WGPUStringView,
@@ -75,7 +87,8 @@ typedef struct WGPURequestDeviceCallbackInfo {
 
 WGPUInstance wgpuCreateInstance(const WGPUInstanceDescriptor* descriptor);
 void wgpuInstanceRelease(WGPUInstance instance);
-WGPUFuture wgpuInstanceRequestAdapter(WGPUInstance instance, const void* options,
+WGPUFuture wgpuInstanceRequestAdapter(WGPUInstance instance,
+                                      const WGPURequestAdapterOptions* options,
                                       WGPURequestAdapterCallbackInfo callbackInfo);
 WGPUWaitStatus wgpuInstanceWaitAny(WGPUInstance instance, size_t futureCount,
                                    WGPUFutureWaitInfo* futures, unsigned long long timeoutNS);

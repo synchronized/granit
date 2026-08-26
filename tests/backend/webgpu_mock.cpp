@@ -13,7 +13,7 @@ extern "C" WGPUInstance wgpuCreateInstance(const WGPUInstanceDescriptor*) {
 
 extern "C" void wgpuInstanceRelease(WGPUInstance instance) { delete instance; }
 
-extern "C" WGPUFuture wgpuInstanceRequestAdapter(WGPUInstance, const void*,
+extern "C" WGPUFuture wgpuInstanceRequestAdapter(WGPUInstance, const WGPURequestAdapterOptions*,
                                                  WGPURequestAdapterCallbackInfo callback_info) {
   callback_info.callback(WGPURequestAdapterStatus_Success, new WGPUAdapterImpl, {},
                          callback_info.userdata1, callback_info.userdata2);
