@@ -182,6 +182,44 @@ target_link_libraries(
 granit_target_compile_warnings(granit_backend_capabilities_test)
 add_test(NAME granit.backend_capabilities COMMAND granit_backend_capabilities_test)
 
+add_library(granit_webgpu_fake_provider SHARED backend/webgpu_fake_provider.cpp)
+add_library(granit_webgpu_incomplete_provider SHARED backend/webgpu_incomplete_provider.cpp)
+set_target_properties(
+  granit_webgpu_fake_provider granit_webgpu_incomplete_provider
+  PROPERTIES
+    CXX_VISIBILITY_PRESET hidden
+    VISIBILITY_INLINES_HIDDEN YES
+    FOLDER "Tests/WebGPU"
+)
+granit_target_output_directories(granit_webgpu_fake_provider)
+granit_target_output_directories(granit_webgpu_incomplete_provider)
+granit_target_compile_warnings(granit_webgpu_fake_provider)
+granit_target_compile_warnings(granit_webgpu_incomplete_provider)
+
+add_executable(
+  granit_webgpu_loader_test
+  backend/webgpu_loader_test.cpp
+  $<TARGET_OBJECTS:granit_webgpu_backend>
+)
+target_include_directories(
+  granit_webgpu_loader_test PRIVATE "${PROJECT_SOURCE_DIR}/include" "${PROJECT_SOURCE_DIR}/src"
+)
+target_compile_definitions(
+  granit_webgpu_loader_test
+  PRIVATE
+    GRANIT_WEBGPU_FAKE_PROVIDER_PATH="$<TARGET_FILE:granit_webgpu_fake_provider>"
+    GRANIT_WEBGPU_INCOMPLETE_PROVIDER_PATH="$<TARGET_FILE:granit_webgpu_incomplete_provider>"
+)
+target_link_libraries(
+  granit_webgpu_loader_test PRIVATE Catch2::Catch2WithMain ${CMAKE_DL_LIBS}
+)
+add_dependencies(
+  granit_webgpu_loader_test granit_webgpu_fake_provider granit_webgpu_incomplete_provider
+)
+granit_target_compile_warnings(granit_webgpu_loader_test)
+granit_target_output_directories(granit_webgpu_loader_test)
+add_test(NAME granit.backend.webgpu_loader COMMAND granit_webgpu_loader_test)
+
 add_executable(
   granit_lifecycle_validation_test
   core/diagnostic_sink_test.cpp

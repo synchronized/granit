@@ -1,6 +1,21 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2026 Granit contributors
 
+add_library(granit_webgpu_backend OBJECT backend/webgpu/loader.cpp backend/webgpu/loader.h)
+target_compile_features(granit_webgpu_backend PRIVATE cxx_std_20)
+target_include_directories(
+  granit_webgpu_backend PRIVATE "${PROJECT_SOURCE_DIR}/include" "${PROJECT_SOURCE_DIR}/src"
+)
+granit_target_compile_warnings(granit_webgpu_backend)
+set_target_properties(
+  granit_webgpu_backend
+  PROPERTIES
+    CXX_VISIBILITY_PRESET hidden
+    POSITION_INDEPENDENT_CODE ON
+    VISIBILITY_INLINES_HIDDEN YES
+    FOLDER "Backends/WebGPU"
+)
+
 add_library(granit)
 add_library(granit::granit ALIAS granit)
 granit_target_output_directories(granit)
@@ -20,6 +35,7 @@ target_sources(
   granit
   PRIVATE
     $<TARGET_OBJECTS:granit_volk>
+    $<TARGET_OBJECTS:granit_webgpu_backend>
     backend/capabilities.h
     backend/vulkan/device.cpp
     backend/vulkan/device.h
