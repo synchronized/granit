@@ -23,6 +23,20 @@ namespace {
 struct webgpu_instance {
   granit_backend_plugin_host_api host;
   WGPUInstance instance;
+  WGPUAdapter adapter;
+  WGPUDevice device;
+};
+
+constexpr std::uint64_t request_timeout_ns = UINT64_C(10000000000);
+
+struct adapter_request {
+  WGPURequestAdapterStatus status{};
+  WGPUAdapter adapter{};
+};
+
+struct device_request {
+  WGPURequestDeviceStatus status{};
+  WGPUDevice device{};
 };
 
 std::mutex instances_mutex;
@@ -37,6 +51,18 @@ void deallocate(const granit_backend_plugin_host_api& host, void* memory) noexce
   }
 }
 
+void release_resources(webgpu_instance& state) noexcept {
+  if (state.device != nullptr) {
+    wgpuDeviceRelease(state.device);
+  }
+  if (state.adapter != nullptr) {
+    wgpuAdapterRelease(state.adapter);
+  }
+  if (state.instance != nullptr) {
+    wgpuInstanceRelease(state.instance);
+  }
+}
+
 void emit(const granit_backend_plugin_host_api& host, granit_diagnostic_severity severity,
           const char* message, std::uint32_t message_length) noexcept {
   if (host.diagnostic_callback == nullptr) {
@@ -47,6 +73,28 @@ void emit(const granit_backend_plugin_host_api& host, granit_diagnostic_severity
                              host.diagnostic_user_data);
   } catch (...) {
   }
+}
+
+void receive_adapter(WGPURequestAdapterStatus status, WGPUAdapter adapter, WGPUStringView,
+                     void* data, void*) noexcept {
+  auto& request = *static_cast<adapter_request*>(data);
+  request.status = status;
+  request.adapter = adapter;
+}
+
+void receive_device(WGPURequestDeviceStatus status, WGPUDevice device, WGPUStringView, void* data,
+                    void*) noexcept {
+  auto& request = *static_cast<device_request*>(data);
+  request.status = status;
+  request.device = device;
+}
+
+template <typename Request>
+bool wait_for(WGPUInstance instance, WGPUFuture future, Request& request) noexcept {
+  WGPUFutureWaitInfo wait_info{future, WGPU_FALSE};
+  return wgpuInstanceWaitAny(instance, 1, &wait_info, request_timeout_ns) ==
+             WGPUWaitStatus_Success &&
+         wait_info.completed && request.status != 0;
 }
 
 granit_result create_backend(const granit_backend_plugin_host_api* host,
@@ -69,12 +117,54 @@ granit_result create_backend(const granit_backend_plugin_host_api* host,
   if (memory == nullptr) {
     return GRANIT_ERROR_OUT_OF_MEMORY;
   }
-  auto* state = new (memory) webgpu_instance{*host, wgpuCreateInstance(nullptr)};
+  constexpr WGPUInstanceFeatureName features[]{WGPUInstanceFeatureName_TimedWaitAny};
+  const WGPUInstanceLimits limits{nullptr, 1};
+  const WGPUInstanceDescriptor descriptor{nullptr, 1, features, &limits};
+  auto* state =
+      new (memory) webgpu_instance{*host, wgpuCreateInstance(&descriptor), nullptr, nullptr};
   if (state->instance == nullptr) {
     state->~webgpu_instance();
     deallocate(*host, memory);
     return GRANIT_ERROR_INITIALIZATION_FAILED;
   }
+
+  adapter_request adapter{};
+  const WGPURequestAdapterCallbackInfo adapter_callback{nullptr, WGPUCallbackMode_WaitAnyOnly,
+                                                        receive_adapter, &adapter, nullptr};
+  const auto adapter_future =
+      wgpuInstanceRequestAdapter(state->instance, nullptr, adapter_callback);
+  if (!wait_for(state->instance, adapter_future, adapter) ||
+      adapter.status != WGPURequestAdapterStatus_Success || adapter.adapter == nullptr) {
+    constexpr char message[] = "Dawn WebGPU adapter request failed or timed out";
+    emit(*host, GRANIT_DIAGNOSTIC_SEVERITY_ERROR, message, sizeof(message) - 1);
+    if (adapter.adapter != nullptr) {
+      wgpuAdapterRelease(adapter.adapter);
+    }
+    wgpuInstanceRelease(state->instance);
+    state->~webgpu_instance();
+    deallocate(*host, memory);
+    return GRANIT_ERROR_NO_SUITABLE_DEVICE;
+  }
+  state->adapter = adapter.adapter;
+
+  device_request device{};
+  const WGPURequestDeviceCallbackInfo device_callback{nullptr, WGPUCallbackMode_WaitAnyOnly,
+                                                      receive_device, &device, nullptr};
+  const auto device_future = wgpuAdapterRequestDevice(state->adapter, nullptr, device_callback);
+  if (!wait_for(state->instance, device_future, device) ||
+      device.status != WGPURequestDeviceStatus_Success || device.device == nullptr) {
+    constexpr char message[] = "Dawn WebGPU device request failed or timed out";
+    emit(*host, GRANIT_DIAGNOSTIC_SEVERITY_ERROR, message, sizeof(message) - 1);
+    if (device.device != nullptr) {
+      wgpuDeviceRelease(device.device);
+    }
+    wgpuAdapterRelease(state->adapter);
+    wgpuInstanceRelease(state->instance);
+    state->~webgpu_instance();
+    deallocate(*host, memory);
+    return GRANIT_ERROR_INITIALIZATION_FAILED;
+  }
+  state->device = device.device;
 
   granit_backend_plugin_instance handle = next_instance.fetch_add(1, std::memory_order_relaxed);
   if (handle == 0) {
@@ -85,24 +175,24 @@ granit_result create_backend(const granit_backend_plugin_host_api* host,
     const auto [iterator, inserted] = instances.emplace(handle, state);
     static_cast<void>(iterator);
     if (!inserted) {
-      wgpuInstanceRelease(state->instance);
+      release_resources(*state);
       state->~webgpu_instance();
       deallocate(*host, memory);
       return GRANIT_ERROR_INTERNAL;
     }
   } catch (const std::bad_alloc&) {
-    wgpuInstanceRelease(state->instance);
+    release_resources(*state);
     state->~webgpu_instance();
     deallocate(*host, memory);
     return GRANIT_ERROR_OUT_OF_MEMORY;
   } catch (...) {
-    wgpuInstanceRelease(state->instance);
+    release_resources(*state);
     state->~webgpu_instance();
     deallocate(*host, memory);
     return GRANIT_ERROR_INTERNAL;
   }
 
-  constexpr char message[] = "Dawn WebGPU instance created";
+  constexpr char message[] = "Dawn WebGPU instance, adapter and device created";
   emit(*host, GRANIT_DIAGNOSTIC_SEVERITY_INFO, message, sizeof(message) - 1);
   *out_instance = handle;
   return GRANIT_SUCCESS;
@@ -121,10 +211,10 @@ void destroy_backend(granit_backend_plugin_instance instance) noexcept {
   }
 
   const auto host = state->host;
-  wgpuInstanceRelease(state->instance);
+  release_resources(*state);
   state->~webgpu_instance();
   deallocate(host, state);
-  constexpr char message[] = "Dawn WebGPU instance destroyed";
+  constexpr char message[] = "Dawn WebGPU device, adapter and instance destroyed";
   emit(host, GRANIT_DIAGNOSTIC_SEVERITY_INFO, message, sizeof(message) - 1);
 }
 
