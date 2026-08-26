@@ -6,6 +6,8 @@ add_library(
   backend/plugin_api.h
   backend/plugin_loader.cpp
   backend/plugin_loader.h
+  platform/shared_library.cpp
+  platform/shared_library.h
 )
 target_compile_features(granit_backend_plugin PRIVATE cxx_std_20)
 target_include_directories(

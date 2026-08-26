@@ -210,6 +210,7 @@ granit_target_compile_warnings(granit_incompatible_backend_plugin)
 add_executable(
   granit_backend_plugin_loader_test
   backend/plugin_loader_test.cpp
+  platform/shared_library_test.cpp
   $<TARGET_OBJECTS:granit_backend_plugin>
 )
 target_include_directories(
@@ -221,6 +222,7 @@ target_compile_definitions(
   PRIVATE
     GRANIT_FAKE_BACKEND_PLUGIN_PATH="$<TARGET_FILE:granit_fake_backend_plugin>"
     GRANIT_INCOMPATIBLE_BACKEND_PLUGIN_PATH="$<TARGET_FILE:granit_incompatible_backend_plugin>"
+    GRANIT_MISSING_BACKEND_PLUGIN_PATH="${CMAKE_CURRENT_BINARY_DIR}/missing-plugin"
 )
 target_link_libraries(
   granit_backend_plugin_loader_test PRIVATE Catch2::Catch2WithMain ${CMAKE_DL_LIBS}

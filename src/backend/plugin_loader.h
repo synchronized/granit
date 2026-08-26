@@ -7,6 +7,7 @@
 #include <granit/core/result.h>
 
 #include "backend/plugin_api.h"
+#include "platform/shared_library.h"
 
 namespace granit::detail {
 
@@ -24,11 +25,11 @@ public:
                                    granit_backend_plugin_kind expected_kind) noexcept;
   void close() noexcept;
 
-  [[nodiscard]] bool is_open() const noexcept { return handle_ != nullptr; }
+  [[nodiscard]] bool is_open() const noexcept { return library_.is_open(); }
   [[nodiscard]] const granit_backend_plugin_api* api() const noexcept { return api_; }
 
 private:
-  void* handle_{nullptr};
+  platform::shared_library library_;
   const granit_backend_plugin_api* api_{nullptr};
 };
 
