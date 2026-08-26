@@ -52,7 +52,6 @@ jobs:
           $stage = "$PWD/stage/granit-dawn-$env:DAWN_VERSION-windows-x64"
           cmake -S $source -B $build -G Ninja `
             -DCMAKE_BUILD_TYPE=Release `
-            -DCMAKE_INSTALL_PREFIX=$stage `
             -DCMAKE_C_COMPILER_LAUNCHER=sccache `
             -DCMAKE_CXX_COMPILER_LAUNCHER=sccache `
             -DBUILD_SHARED_LIBS=OFF `
@@ -73,7 +72,7 @@ jobs:
             -DTINT_BUILD_CMD_TOOLS=OFF `
             -DTINT_BUILD_TESTS=OFF
           cmake --build $build --target webgpu_dawn
-          cmake --install $build
+          cmake --install $build --prefix $stage
       - name: 验证并打包 Windows 产物
         id: package
         shell: pwsh
@@ -136,7 +135,6 @@ jobs:
           CC=clang CXX=clang++ cmake -S "$RUNNER_TEMP/dawn" -B "$RUNNER_TEMP/dawn-build" \
             -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
-            -DCMAKE_INSTALL_PREFIX="$stage" \
             -DCMAKE_C_COMPILER_LAUNCHER=sccache \
             -DCMAKE_CXX_COMPILER_LAUNCHER=sccache \
             -DBUILD_SHARED_LIBS=OFF \
@@ -158,7 +156,7 @@ jobs:
             -DTINT_BUILD_CMD_TOOLS=OFF \
             -DTINT_BUILD_TESTS=OFF
           cmake --build "$RUNNER_TEMP/dawn-build" --target webgpu_dawn
-          cmake --install "$RUNNER_TEMP/dawn-build"
+          cmake --install "$RUNNER_TEMP/dawn-build" --prefix "$stage"
       - name: 验证并打包 Linux 产物
         id: package
         shell: bash
