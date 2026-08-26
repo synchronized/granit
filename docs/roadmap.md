@@ -26,7 +26,7 @@
 | 六、多线程与性能 | 已完成 | 压力测试、基线、批量提交与上传批处理已完成 |
 | 七、可选高层渲染 | 已完成 | H-02～H-08 路线闭合，参考管线与公共 UI/Text 已验证 |
 | 八、稳定化与跨平台 | 持续进行 | ABI 策略、诊断和更多平台 Surface 待后续推进 |
-| 九、多后端与 Web 平台 | 进行中 | S-10A 已完成耦合审计，开始内部后端契约与 Vulkan 迁移 |
+| 九、多后端与 Web 平台 | 进行中 | S-10A 已完成，下一目标为 S-10B 桌面 WebGPU MVP |
 | 十、Android 移动平台 | 待开始 | 0.4.0 多后端边界完成后规划 NDK、Surface 与移动生命周期 |
 
 ## 一、工程与 ABI 基础
@@ -161,12 +161,13 @@
 
 ## 九、多后端与 Web 平台
 
-**状态：进行中；已进入 0.4.0 S-10A。**
+**状态：进行中；S-10A 已完成，准备进入 0.4.0 S-10B。**
 
 - **[S-10](plans/S-10-0.4.0-webgpu-backend.md) / P2**：先定义后端无关的内部设备、资源、命令、
   同步与 Surface 边界，在保持 Vulkan 后端功能和性能的前提下验证桌面 WebGPU 离屏 MVP；随后建立
-  WGSL 工具链，并接入 Emscripten、浏览器 Canvas 和事件循环。S-10A 耦合审计已完成，内部边界
-  ADR 进入原型验证；具体 WebGPU 实现库在原型比较后决定。
+  WGSL 工具链，并接入 Emscripten、浏览器 Canvas 和事件循环。S-10A 内部能力、插件、资源、
+  Queue、Surface 与 Swapchain 边界迁移已经完成，并通过 Windows/Linux 跨平台与性能回归；下一步
+  实现 S-10B 桌面 WebGPU 离屏 MVP。
 
 ## 十、Android 移动平台
 
@@ -180,8 +181,8 @@
 
 ## 近期执行顺序
 
-1. 完成 S-10A 内部能力、资源契约与 Vulkan 无行为变化迁移。
-2. 在内部边界通过回归后，依次验证桌面 WebGPU、WGSL 和 Emscripten。
+1. 细化并实现 S-10B 桌面 WebGPU 设备、基础资源、Pipeline、命令提交与离屏回读。
+2. 桌面 WebGPU MVP 通过后，依次进入 WGSL 工具链和 Emscripten 平台层。
 3. S-06D 最终验收等待稳定版本与 component 范围决策；不在 0.x 阶段提前宣布稳定。
 4. 完成 0.4.0 多后端与 Web 路径后，为 S-11 建立独立 Android Plan，再进入 NDK 与移动 Surface
    实现。
