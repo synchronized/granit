@@ -23,6 +23,8 @@ typedef uint64_t granit_backend_plugin_bind_group_layout;
 typedef uint64_t granit_backend_plugin_bind_group;
 typedef uint64_t granit_backend_plugin_pipeline_layout;
 typedef uint64_t granit_backend_plugin_render_pipeline;
+typedef uint64_t granit_backend_plugin_command_recorder;
+typedef uint64_t granit_backend_plugin_command_buffer;
 
 typedef uint32_t granit_backend_plugin_buffer_usage;
 #define GRANIT_BACKEND_PLUGIN_BUFFER_USAGE_MAP_READ_BIT UINT32_C(0x00000001)
@@ -161,6 +163,25 @@ typedef granit_result (*granit_backend_plugin_create_render_pipeline_fn)(
     granit_backend_plugin_render_pipeline* render_pipeline);
 typedef granit_result (*granit_backend_plugin_destroy_render_pipeline_fn)(
     granit_backend_plugin_instance instance, granit_backend_plugin_render_pipeline render_pipeline);
+typedef granit_result (*granit_backend_plugin_create_command_recorder_fn)(
+    granit_backend_plugin_instance instance, granit_backend_plugin_command_recorder* recorder);
+typedef granit_result (*granit_backend_plugin_destroy_command_recorder_fn)(
+    granit_backend_plugin_instance instance, granit_backend_plugin_command_recorder recorder);
+typedef granit_result (*granit_backend_plugin_recorder_copy_buffer_to_texture_fn)(
+    granit_backend_plugin_instance instance, granit_backend_plugin_command_recorder recorder,
+    granit_backend_plugin_buffer buffer, granit_backend_plugin_texture texture, uint32_t width,
+    uint32_t height, uint32_t bytes_per_row);
+typedef granit_result (*granit_backend_plugin_recorder_draw_fn)(
+    granit_backend_plugin_instance instance, granit_backend_plugin_command_recorder recorder,
+    granit_backend_plugin_texture_view target, granit_backend_plugin_render_pipeline pipeline,
+    granit_backend_plugin_bind_group bind_group);
+typedef granit_result (*granit_backend_plugin_finish_command_recorder_fn)(
+    granit_backend_plugin_instance instance, granit_backend_plugin_command_recorder recorder,
+    granit_backend_plugin_command_buffer* command_buffer);
+typedef granit_result (*granit_backend_plugin_destroy_command_buffer_fn)(
+    granit_backend_plugin_instance instance, granit_backend_plugin_command_buffer command_buffer);
+typedef granit_result (*granit_backend_plugin_submit_command_buffer_fn)(
+    granit_backend_plugin_instance instance, granit_backend_plugin_command_buffer command_buffer);
 
 /** 实例操作表由插件拥有，在插件卸载前保持有效。 */
 typedef struct granit_backend_plugin_instance_api {
@@ -185,6 +206,13 @@ typedef struct granit_backend_plugin_instance_api {
   granit_backend_plugin_destroy_pipeline_layout_fn destroy_pipeline_layout;
   granit_backend_plugin_create_render_pipeline_fn create_render_pipeline;
   granit_backend_plugin_destroy_render_pipeline_fn destroy_render_pipeline;
+  granit_backend_plugin_create_command_recorder_fn create_command_recorder;
+  granit_backend_plugin_destroy_command_recorder_fn destroy_command_recorder;
+  granit_backend_plugin_recorder_copy_buffer_to_texture_fn recorder_copy_buffer_to_texture;
+  granit_backend_plugin_recorder_draw_fn recorder_draw;
+  granit_backend_plugin_finish_command_recorder_fn finish_command_recorder;
+  granit_backend_plugin_destroy_command_buffer_fn destroy_command_buffer;
+  granit_backend_plugin_submit_command_buffer_fn submit_command_buffer;
 } granit_backend_plugin_instance_api;
 
 /** 后端插件入口返回的只读描述；字符串在插件卸载前有效。 */

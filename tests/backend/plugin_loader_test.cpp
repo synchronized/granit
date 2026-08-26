@@ -290,7 +290,9 @@ TEST_CASE("WebGPU 插件绑定与 Pipeline 遵守依赖生命周期", "[backend]
   texture_desc.struct_size = sizeof(texture_desc);
   texture_desc.width = 16;
   texture_desc.height = 16;
-  texture_desc.usage = GRANIT_BACKEND_PLUGIN_TEXTURE_USAGE_SAMPLED_BIT;
+  texture_desc.usage = GRANIT_BACKEND_PLUGIN_TEXTURE_USAGE_SAMPLED_BIT |
+                       GRANIT_BACKEND_PLUGIN_TEXTURE_USAGE_COPY_DST_BIT |
+                       GRANIT_BACKEND_PLUGIN_TEXTURE_USAGE_RENDER_ATTACHMENT_BIT;
   granit_backend_plugin_texture texture{};
   granit_backend_plugin_texture_view view{};
   REQUIRE(loader.create_texture(first, &texture_desc, &texture) == GRANIT_SUCCESS);
@@ -321,6 +323,41 @@ TEST_CASE("WebGPU 插件绑定与 Pipeline 遵守依赖生命周期", "[backend]
           GRANIT_SUCCESS);
   granit_backend_plugin_render_pipeline pipeline{};
   REQUIRE(loader.create_render_pipeline(first, pipeline_layout, &pipeline) == GRANIT_SUCCESS);
+
+  granit_backend_plugin_buffer_desc buffer_desc{};
+  buffer_desc.struct_size = sizeof(buffer_desc);
+  buffer_desc.size = 4096;
+  buffer_desc.usage = GRANIT_BACKEND_PLUGIN_BUFFER_USAGE_COPY_SRC_BIT;
+  granit_backend_plugin_buffer buffer{};
+  REQUIRE(loader.create_buffer(first, &buffer_desc, &buffer) == GRANIT_SUCCESS);
+  granit_backend_plugin_command_recorder recorder{};
+  REQUIRE(loader.create_command_recorder(first, &recorder) == GRANIT_SUCCESS);
+  CHECK(loader.recorder_copy_buffer_to_texture(first, recorder, buffer, texture, 16, 16, 64) ==
+        GRANIT_ERROR_INVALID_ARGUMENT);
+  REQUIRE(loader.recorder_copy_buffer_to_texture(first, recorder, buffer, texture, 16, 16, 256) ==
+          GRANIT_SUCCESS);
+  REQUIRE(loader.recorder_draw(first, recorder, view, pipeline, bind_group) == GRANIT_SUCCESS);
+  granit_backend_plugin_command_buffer command_buffer{};
+  REQUIRE(loader.finish_command_recorder(first, recorder, &command_buffer) == GRANIT_SUCCESS);
+  CHECK(command_buffer != 0);
+  granit_backend_plugin_command_buffer duplicate_finish = 123;
+  CHECK(loader.finish_command_recorder(first, recorder, &duplicate_finish) ==
+        GRANIT_ERROR_INVALID_ARGUMENT);
+  CHECK(duplicate_finish == 0);
+  CHECK(loader.recorder_draw(first, recorder, view, pipeline, bind_group) ==
+        GRANIT_ERROR_INVALID_ARGUMENT);
+  CHECK(loader.submit_command_buffer(second, command_buffer) == GRANIT_ERROR_INVALID_HANDLE);
+  REQUIRE(loader.submit_command_buffer(first, command_buffer) == GRANIT_SUCCESS);
+  CHECK(loader.submit_command_buffer(first, command_buffer) == GRANIT_ERROR_INVALID_HANDLE);
+  REQUIRE(loader.destroy_command_recorder(first, recorder) == GRANIT_SUCCESS);
+  CHECK(loader.destroy_command_recorder(first, recorder) == GRANIT_ERROR_INVALID_HANDLE);
+
+  REQUIRE(loader.create_command_recorder(first, &recorder) == GRANIT_SUCCESS);
+  REQUIRE(loader.finish_command_recorder(first, recorder, &command_buffer) == GRANIT_SUCCESS);
+  REQUIRE(loader.destroy_command_buffer(first, command_buffer) == GRANIT_SUCCESS);
+  CHECK(loader.destroy_command_buffer(first, command_buffer) == GRANIT_ERROR_INVALID_HANDLE);
+  REQUIRE(loader.destroy_command_recorder(first, recorder) == GRANIT_SUCCESS);
+  REQUIRE(loader.destroy_buffer(first, buffer) == GRANIT_SUCCESS);
   CHECK(loader.destroy_pipeline_layout(first, pipeline_layout) == GRANIT_ERROR_INVALID_ARGUMENT);
   CHECK(loader.destroy_bind_group_layout(first, bind_group_layout) ==
         GRANIT_ERROR_INVALID_ARGUMENT);
@@ -340,6 +377,8 @@ TEST_CASE("WebGPU 插件绑定与 Pipeline 遵守依赖生命周期", "[backend]
   REQUIRE(loader.create_pipeline_layout(first, bind_group_layout, &pipeline_layout) ==
           GRANIT_SUCCESS);
   REQUIRE(loader.create_render_pipeline(first, pipeline_layout, &pipeline) == GRANIT_SUCCESS);
+  REQUIRE(loader.create_command_recorder(first, &recorder) == GRANIT_SUCCESS);
+  REQUIRE(loader.finish_command_recorder(first, recorder, &command_buffer) == GRANIT_SUCCESS);
   CHECK(loader.destroy_instance(first) == GRANIT_SUCCESS);
   CHECK(loader.destroy_instance(second) == GRANIT_SUCCESS);
   CHECK(state.allocations == state.deallocations);

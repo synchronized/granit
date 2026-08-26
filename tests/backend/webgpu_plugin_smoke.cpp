@@ -118,10 +118,20 @@ int main() {
     std::fprintf(stderr, "WebGPU 绑定或 Render Pipeline 生命周期验证失败\n");
     return 6;
   }
+  granit_backend_plugin_command_recorder recorder{};
+  granit_backend_plugin_command_buffer command_buffer{};
+  if (loader.create_command_recorder(instance, &recorder) != GRANIT_SUCCESS || recorder == 0 ||
+      loader.finish_command_recorder(instance, recorder, &command_buffer) != GRANIT_SUCCESS ||
+      command_buffer == 0 ||
+      loader.submit_command_buffer(instance, command_buffer) != GRANIT_SUCCESS ||
+      loader.destroy_command_recorder(instance, recorder) != GRANIT_SUCCESS) {
+    std::fprintf(stderr, "WebGPU Command Encoder 或 Queue Submit 验证失败\n");
+    return 7;
+  }
   const auto destroy_result = loader.destroy_instance(instance);
   if (destroy_result != GRANIT_SUCCESS) {
     std::fprintf(stderr, "销毁 WebGPU 插件实例失败：%d\n", static_cast<int>(destroy_result));
-    return 7;
+    return 8;
   }
   return 0;
 }

@@ -23,6 +23,9 @@ typedef struct WGPUBindGroupImpl* WGPUBindGroup;
 typedef struct WGPUPipelineLayoutImpl* WGPUPipelineLayout;
 typedef struct WGPUShaderModuleImpl* WGPUShaderModule;
 typedef struct WGPURenderPipelineImpl* WGPURenderPipeline;
+typedef struct WGPUCommandEncoderImpl* WGPUCommandEncoder;
+typedef struct WGPUCommandBufferImpl* WGPUCommandBuffer;
+typedef struct WGPURenderPassEncoderImpl* WGPURenderPassEncoder;
 
 typedef unsigned int WGPUBool;
 typedef unsigned int WGPUInstanceFeatureName;
@@ -48,6 +51,9 @@ typedef unsigned int WGPUTextureViewDimension;
 typedef unsigned int WGPUSType;
 typedef unsigned long long WGPUColorWriteMask;
 typedef unsigned int WGPUPrimitiveTopology;
+typedef unsigned int WGPUTextureAspect;
+typedef unsigned int WGPULoadOp;
+typedef unsigned int WGPUStoreOp;
 
 #define WGPU_FALSE 0
 #define WGPU_TRUE 1
@@ -84,6 +90,9 @@ typedef unsigned int WGPUPrimitiveTopology;
 #define WGPUSType_ShaderSourceWGSL 6
 #define WGPUColorWriteMask_All 15
 #define WGPUPrimitiveTopology_TriangleList 4
+#define WGPUTextureAspect_All 1
+#define WGPULoadOp_Clear 2
+#define WGPUStoreOp_Store 1
 #define WGPUBackendType_D3D12 4
 #define WGPUBackendType_Vulkan 6
 
@@ -322,6 +331,79 @@ typedef struct WGPURenderPipelineDescriptor {
   {                                                                                                \
   }
 
+typedef struct WGPUCommandEncoderDescriptor {
+  void* nextInChain;
+  WGPUStringView label;
+} WGPUCommandEncoderDescriptor;
+#define WGPU_COMMAND_ENCODER_DESCRIPTOR_INIT                                                       \
+  {                                                                                                \
+  }
+typedef struct WGPUTexelCopyBufferLayout {
+  unsigned long long offset;
+  unsigned int bytesPerRow;
+  unsigned int rowsPerImage;
+} WGPUTexelCopyBufferLayout;
+typedef struct WGPUTexelCopyBufferInfo {
+  void* nextInChain;
+  WGPUTexelCopyBufferLayout layout;
+  WGPUBuffer buffer;
+} WGPUTexelCopyBufferInfo;
+#define WGPU_TEXEL_COPY_BUFFER_INFO_INIT                                                           \
+  {                                                                                                \
+  }
+typedef struct WGPUOrigin3D {
+  unsigned int x;
+  unsigned int y;
+  unsigned int z;
+} WGPUOrigin3D;
+typedef struct WGPUTexelCopyTextureInfo {
+  void* nextInChain;
+  WGPUTexture texture;
+  unsigned int mipLevel;
+  WGPUOrigin3D origin;
+  WGPUTextureAspect aspect;
+} WGPUTexelCopyTextureInfo;
+#define WGPU_TEXEL_COPY_TEXTURE_INFO_INIT                                                          \
+  {                                                                                                \
+  }
+typedef struct WGPUColor {
+  double r;
+  double g;
+  double b;
+  double a;
+} WGPUColor;
+typedef struct WGPURenderPassColorAttachment {
+  void* nextInChain;
+  WGPUTextureView view;
+  unsigned int depthSlice;
+  WGPUTextureView resolveTarget;
+  WGPULoadOp loadOp;
+  WGPUStoreOp storeOp;
+  WGPUColor clearValue;
+} WGPURenderPassColorAttachment;
+#define WGPU_RENDER_PASS_COLOR_ATTACHMENT_INIT                                                     \
+  {                                                                                                \
+  }
+typedef struct WGPURenderPassDescriptor {
+  void* nextInChain;
+  WGPUStringView label;
+  size_t colorAttachmentCount;
+  const WGPURenderPassColorAttachment* colorAttachments;
+  const void* depthStencilAttachment;
+  const void* occlusionQuerySet;
+  const void* timestampWrites;
+} WGPURenderPassDescriptor;
+#define WGPU_RENDER_PASS_DESCRIPTOR_INIT                                                           \
+  {                                                                                                \
+  }
+typedef struct WGPUCommandBufferDescriptor {
+  void* nextInChain;
+  WGPUStringView label;
+} WGPUCommandBufferDescriptor;
+#define WGPU_COMMAND_BUFFER_DESCRIPTOR_INIT                                                        \
+  {                                                                                                \
+  }
+
 typedef struct WGPUFuture {
   unsigned long long id;
 } WGPUFuture;
@@ -414,6 +496,28 @@ void wgpuShaderModuleRelease(WGPUShaderModule shaderModule);
 WGPURenderPipeline wgpuDeviceCreateRenderPipeline(WGPUDevice device,
                                                   const WGPURenderPipelineDescriptor* descriptor);
 void wgpuRenderPipelineRelease(WGPURenderPipeline pipeline);
+WGPUCommandEncoder wgpuDeviceCreateCommandEncoder(WGPUDevice device,
+                                                  const WGPUCommandEncoderDescriptor* descriptor);
+void wgpuCommandEncoderRelease(WGPUCommandEncoder encoder);
+void wgpuCommandEncoderCopyBufferToTexture(WGPUCommandEncoder encoder,
+                                           const WGPUTexelCopyBufferInfo* source,
+                                           const WGPUTexelCopyTextureInfo* destination,
+                                           const WGPUExtent3D* copySize);
+WGPURenderPassEncoder wgpuCommandEncoderBeginRenderPass(WGPUCommandEncoder encoder,
+                                                        const WGPURenderPassDescriptor* descriptor);
+void wgpuRenderPassEncoderSetPipeline(WGPURenderPassEncoder pass, WGPURenderPipeline pipeline);
+void wgpuRenderPassEncoderSetBindGroup(WGPURenderPassEncoder pass, unsigned int groupIndex,
+                                       WGPUBindGroup group, size_t dynamicOffsetCount,
+                                       const unsigned int* dynamicOffsets);
+void wgpuRenderPassEncoderDraw(WGPURenderPassEncoder pass, unsigned int vertexCount,
+                               unsigned int instanceCount, unsigned int firstVertex,
+                               unsigned int firstInstance);
+void wgpuRenderPassEncoderEnd(WGPURenderPassEncoder pass);
+void wgpuRenderPassEncoderRelease(WGPURenderPassEncoder pass);
+WGPUCommandBuffer wgpuCommandEncoderFinish(WGPUCommandEncoder encoder,
+                                           const WGPUCommandBufferDescriptor* descriptor);
+void wgpuCommandBufferRelease(WGPUCommandBuffer commandBuffer);
+void wgpuQueueSubmit(WGPUQueue queue, size_t commandCount, const WGPUCommandBuffer* commands);
 
 #ifdef __cplusplus
 }

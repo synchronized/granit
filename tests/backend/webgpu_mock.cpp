@@ -32,6 +32,11 @@ struct WGPUBindGroupImpl {};
 struct WGPUPipelineLayoutImpl {};
 struct WGPUShaderModuleImpl {};
 struct WGPURenderPipelineImpl {};
+struct WGPUCommandEncoderImpl {
+  bool finished{};
+};
+struct WGPUCommandBufferImpl {};
+struct WGPURenderPassEncoderImpl {};
 
 extern "C" WGPUInstance wgpuCreateInstance(const WGPUInstanceDescriptor*) {
   return new WGPUInstanceImpl;
@@ -180,3 +185,38 @@ wgpuDeviceCreateRenderPipeline(WGPUDevice, const WGPURenderPipelineDescriptor* d
              : nullptr;
 }
 extern "C" void wgpuRenderPipelineRelease(WGPURenderPipeline pipeline) { delete pipeline; }
+
+extern "C" WGPUCommandEncoder wgpuDeviceCreateCommandEncoder(WGPUDevice,
+                                                             const WGPUCommandEncoderDescriptor*) {
+  return new WGPUCommandEncoderImpl;
+}
+extern "C" void wgpuCommandEncoderRelease(WGPUCommandEncoder encoder) { delete encoder; }
+extern "C" void wgpuCommandEncoderCopyBufferToTexture(WGPUCommandEncoder,
+                                                      const WGPUTexelCopyBufferInfo*,
+                                                      const WGPUTexelCopyTextureInfo*,
+                                                      const WGPUExtent3D*) {}
+extern "C" WGPURenderPassEncoder
+wgpuCommandEncoderBeginRenderPass(WGPUCommandEncoder encoder,
+                                  const WGPURenderPassDescriptor* descriptor) {
+  return encoder != nullptr && !encoder->finished && descriptor != nullptr
+             ? new WGPURenderPassEncoderImpl
+             : nullptr;
+}
+extern "C" void wgpuRenderPassEncoderSetPipeline(WGPURenderPassEncoder, WGPURenderPipeline) {}
+extern "C" void wgpuRenderPassEncoderSetBindGroup(WGPURenderPassEncoder, unsigned int,
+                                                  WGPUBindGroup, size_t, const unsigned int*) {}
+extern "C" void wgpuRenderPassEncoderDraw(WGPURenderPassEncoder, unsigned int, unsigned int,
+                                          unsigned int, unsigned int) {}
+extern "C" void wgpuRenderPassEncoderEnd(WGPURenderPassEncoder) {}
+extern "C" void wgpuRenderPassEncoderRelease(WGPURenderPassEncoder pass) { delete pass; }
+extern "C" WGPUCommandBuffer wgpuCommandEncoderFinish(WGPUCommandEncoder encoder,
+                                                      const WGPUCommandBufferDescriptor*) {
+  if (encoder == nullptr || encoder->finished)
+    return nullptr;
+  encoder->finished = true;
+  return new WGPUCommandBufferImpl;
+}
+extern "C" void wgpuCommandBufferRelease(WGPUCommandBuffer command_buffer) {
+  delete command_buffer;
+}
+extern "C" void wgpuQueueSubmit(WGPUQueue, size_t, const WGPUCommandBuffer*) {}

@@ -89,6 +89,31 @@ public:
   [[nodiscard]] granit_result
   destroy_render_pipeline(granit_backend_plugin_instance instance,
                           granit_backend_plugin_render_pipeline render_pipeline) noexcept;
+  [[nodiscard]] granit_result
+  create_command_recorder(granit_backend_plugin_instance instance,
+                          granit_backend_plugin_command_recorder* recorder) noexcept;
+  [[nodiscard]] granit_result
+  destroy_command_recorder(granit_backend_plugin_instance instance,
+                           granit_backend_plugin_command_recorder recorder) noexcept;
+  [[nodiscard]] granit_result recorder_copy_buffer_to_texture(
+      granit_backend_plugin_instance instance, granit_backend_plugin_command_recorder recorder,
+      granit_backend_plugin_buffer buffer, granit_backend_plugin_texture texture,
+      std::uint32_t width, std::uint32_t height, std::uint32_t bytes_per_row) noexcept;
+  [[nodiscard]] granit_result recorder_draw(granit_backend_plugin_instance instance,
+                                            granit_backend_plugin_command_recorder recorder,
+                                            granit_backend_plugin_texture_view target,
+                                            granit_backend_plugin_render_pipeline pipeline,
+                                            granit_backend_plugin_bind_group bind_group) noexcept;
+  [[nodiscard]] granit_result
+  finish_command_recorder(granit_backend_plugin_instance instance,
+                          granit_backend_plugin_command_recorder recorder,
+                          granit_backend_plugin_command_buffer* command_buffer) noexcept;
+  [[nodiscard]] granit_result
+  destroy_command_buffer(granit_backend_plugin_instance instance,
+                         granit_backend_plugin_command_buffer command_buffer) noexcept;
+  [[nodiscard]] granit_result
+  submit_command_buffer(granit_backend_plugin_instance instance,
+                        granit_backend_plugin_command_buffer command_buffer) noexcept;
   void close() noexcept;
 
   [[nodiscard]] bool is_open() const noexcept { return library_.is_open(); }
