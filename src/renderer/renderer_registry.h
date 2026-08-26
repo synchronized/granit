@@ -417,11 +417,10 @@ private:
   struct command_recorder_record {
     resource_metadata metadata;
     std::shared_ptr<renderer_state> renderer;
-    vulkan_command_recorder native;
+    std::unique_ptr<backend_command_recorder_resource> native;
     std::mutex mutex;
     std::vector<retained_resource> retained_resources;
     bool owned_by_frame_context{};
-    ~command_recorder_record();
   };
   enum class frame_context_slot_state { idle, recording, submitted };
   struct frame_context_slot {

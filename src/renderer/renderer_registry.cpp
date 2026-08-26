@@ -67,6 +67,11 @@ VkPipeline& native_compute_pipeline(backend_compute_pipeline_resource& resource)
   return static_cast<vulkan_compute_pipeline_resource&>(resource).native();
 }
 
+vulkan_command_recorder&
+native_command_recorder(backend_command_recorder_resource& resource) noexcept {
+  return static_cast<vulkan_command_recorder_resource&>(resource).native();
+}
+
 granit_texture_format swapchain_format(VkFormat format) noexcept {
   switch (format) {
   case VK_FORMAT_B8G8R8A8_SRGB:
@@ -158,12 +163,6 @@ renderer_registry::swapchain_record::~swapchain_record() {
   }
 }
 
-renderer_registry::command_recorder_record::~command_recorder_record() {
-  if (renderer) {
-    renderer->destroy_native_command_recorder(native);
-  }
-}
-
 renderer_registry::timestamp_query_pool_record::~timestamp_query_pool_record() {
   if (renderer)
     native.destroy(renderer->device());
@@ -250,7 +249,7 @@ granit_result renderer_registry::set_object_name(granit_renderer renderer, grani
   GRANIT_NAME_OBJECT(compute_pipelines_, VK_OBJECT_TYPE_PIPELINE,
                      native_compute_pipeline(*it->second->native))
   GRANIT_NAME_OBJECT(command_recorders_, VK_OBJECT_TYPE_COMMAND_BUFFER,
-                     it->second->native.native_handle())
+                     native_command_recorder(*it->second->native).native_handle())
   GRANIT_NAME_OBJECT(timestamp_query_pools_, VK_OBJECT_TYPE_QUERY_POOL,
                      it->second->native.native_handle())
 #undef GRANIT_NAME_OBJECT
@@ -1144,8 +1143,8 @@ granit_result renderer_registry::submit_command_recorder_frame(granit_renderer r
     return GRANIT_ERROR_INVALID_ARGUMENT;
   submission_serial serial{};
   const auto result = command->renderer->submit_swapchain_frame(
-      command->native, *frame_state->swapchain->native, frame_state->image_index,
-      frame_state->slot_index, serial);
+      native_command_recorder(*command->native), *frame_state->swapchain->native,
+      frame_state->image_index, frame_state->slot_index, serial);
   if (result == GRANIT_SUCCESS) {
     mark_resources_used(command->retained_resources, serial);
     frame_state->submitted = true;
@@ -2800,7 +2799,9 @@ granit_result renderer_registry::create_command_recorder(granit_renderer rendere
     }
     auto record = std::make_shared<command_recorder_record>();
     record->renderer = state;
-    const auto result = state->create_native_command_recorder(record->native);
+    record->native = std::make_unique<vulkan_command_recorder_resource>(state);
+    const auto result =
+        state->create_native_command_recorder(native_command_recorder(*record->native));
     if (result != GRANIT_SUCCESS) {
       return result;
     }
@@ -2837,7 +2838,7 @@ granit_result renderer_registry::begin_command_recorder(granit_renderer renderer
     return GRANIT_ERROR_INVALID_HANDLE;
   }
   std::lock_guard record_lock{record->mutex};
-  return record->renderer->begin_command_recorder(record->native);
+  return record->renderer->begin_command_recorder(native_command_recorder(*record->native));
 }
 
 granit_result renderer_registry::end_command_recorder(granit_renderer renderer,
@@ -2847,7 +2848,7 @@ granit_result renderer_registry::end_command_recorder(granit_renderer renderer,
     return GRANIT_ERROR_INVALID_HANDLE;
   }
   std::lock_guard record_lock{record->mutex};
-  return record->renderer->end_command_recorder(record->native);
+  return record->renderer->end_command_recorder(native_command_recorder(*record->native));
 }
 
 granit_result renderer_registry::submit_command_recorder(granit_renderer renderer,
@@ -2857,7 +2858,8 @@ granit_result renderer_registry::submit_command_recorder(granit_renderer rendere
     return GRANIT_ERROR_INVALID_HANDLE;
   std::lock_guard record_lock{record->mutex};
   submission_serial serial{};
-  const auto result = record->renderer->submit_command_recorder(record->native, serial);
+  const auto result =
+      record->renderer->submit_command_recorder(native_command_recorder(*record->native), serial);
   if (result == GRANIT_SUCCESS)
     mark_resources_used(record->retained_resources, serial);
   return result;
@@ -2904,7 +2906,7 @@ renderer_registry::submit_command_recorders(granit_renderer renderer,
   std::vector<vulkan_command_recorder*> native_recorders;
   native_recorders.reserve(records.size());
   for (const auto& record : records)
-    native_recorders.push_back(&record->native);
+    native_recorders.push_back(&native_command_recorder(*record->native));
   submission_serial serial{};
   const auto result = state->submit_command_recorders(native_recorders, serial);
   if (result == GRANIT_SUCCESS) {
@@ -2921,11 +2923,13 @@ granit_result renderer_registry::reset_command_recorder(granit_renderer renderer
     return GRANIT_ERROR_INVALID_HANDLE;
   }
   std::lock_guard record_lock{record->mutex};
-  const auto wait_result = record->renderer->wait_command_recorder(record->native);
+  const auto wait_result =
+      record->renderer->wait_command_recorder(native_command_recorder(*record->native));
   if (wait_result != GRANIT_SUCCESS) {
     return wait_result;
   }
-  const auto result = record->renderer->reset_command_recorder(record->native);
+  const auto result =
+      record->renderer->reset_command_recorder(native_command_recorder(*record->native));
   if (result == GRANIT_SUCCESS) {
     record->retained_resources.clear();
     static_cast<void>(record->renderer->collect_retired());
@@ -3089,9 +3093,10 @@ granit_result renderer_registry::abort_frame_context(granit_renderer renderer,
   if (!command)
     return GRANIT_ERROR_INVALID_HANDLE;
   std::lock_guard command_lock{command->mutex};
-  command->renderer->destroy_native_command_recorder(command->native);
+  command->renderer->destroy_native_command_recorder(native_command_recorder(*command->native));
   command->retained_resources.clear();
-  const auto result = command->renderer->create_native_command_recorder(command->native);
+  const auto result =
+      command->renderer->create_native_command_recorder(native_command_recorder(*command->native));
   if (result == GRANIT_SUCCESS) {
     slot->frame = GRANIT_NULL_HANDLE;
     slot->state = frame_context_slot_state::idle;
@@ -3183,15 +3188,17 @@ granit_result renderer_registry::copy_buffer(granit_renderer renderer,
   }
 
   std::lock_guard record_lock{recorder_record->mutex};
-  if (recorder_record->native.state() != command_recorder_state::recording) {
+  if (native_command_recorder(*recorder_record->native).state() !=
+      command_recorder_state::recording) {
     return GRANIT_ERROR_INVALID_ARGUMENT;
   }
   retain_resource(recorder_record->retained_resources, source_record, source_record->metadata);
   retain_resource(recorder_record->retained_resources, destination_record,
                   destination_record->metadata);
-  return recorder_record->renderer->copy_buffer(
-      recorder_record->native, native_buffer(*source_record->native).buffer,
-      native_buffer(*destination_record->native).buffer, native_regions);
+  return recorder_record->renderer->copy_buffer(native_command_recorder(*recorder_record->native),
+                                                native_buffer(*source_record->native).buffer,
+                                                native_buffer(*destination_record->native).buffer,
+                                                native_regions);
 }
 
 granit_result renderer_registry::copy_texture_to_buffer(granit_renderer renderer,
@@ -3276,13 +3283,15 @@ granit_result renderer_registry::copy_texture_to_buffer(granit_renderer renderer
   copy.imageExtent = {region.width, region.height, region.depth};
 
   std::lock_guard record_lock{recorder_record->mutex};
-  if (recorder_record->native.state() != command_recorder_state::recording)
+  if (native_command_recorder(*recorder_record->native).state() !=
+      command_recorder_state::recording)
     return GRANIT_ERROR_INVALID_ARGUMENT;
   retain_resource(recorder_record->retained_resources, source_record, source_record->metadata);
   retain_resource(recorder_record->retained_resources, destination_record,
                   destination_record->metadata);
   return recorder_record->renderer->copy_texture_to_buffer(
-      recorder_record->native, native_texture(*source_record->native).image,
+      native_command_recorder(*recorder_record->native),
+      native_texture(*source_record->native).image,
       native_buffer(*destination_record->native).buffer, copy);
 }
 
@@ -3368,13 +3377,15 @@ granit_result renderer_registry::copy_buffer_to_texture(granit_renderer renderer
   copy.imageExtent = {region.width, region.height, region.depth};
 
   std::lock_guard record_lock{recorder_record->mutex};
-  if (recorder_record->native.state() != command_recorder_state::recording)
+  if (native_command_recorder(*recorder_record->native).state() !=
+      command_recorder_state::recording)
     return GRANIT_ERROR_INVALID_ARGUMENT;
   retain_resource(recorder_record->retained_resources, source_record, source_record->metadata);
   retain_resource(recorder_record->retained_resources, destination_record,
                   destination_record->metadata);
   return recorder_record->renderer->copy_buffer_to_texture(
-      recorder_record->native, native_buffer(*source_record->native).buffer,
+      native_command_recorder(*recorder_record->native),
+      native_buffer(*source_record->native).buffer,
       native_texture(*destination_record->native).image, copy);
 }
 
@@ -3454,14 +3465,16 @@ granit_result renderer_registry::copy_texture(granit_renderer renderer,
                     static_cast<std::int32_t>(region.destination_z)},
       .extent = {region.width, region.height, region.depth}};
   std::lock_guard record_lock{recorder_record->mutex};
-  if (recorder_record->native.state() != command_recorder_state::recording)
+  if (native_command_recorder(*recorder_record->native).state() !=
+      command_recorder_state::recording)
     return GRANIT_ERROR_INVALID_ARGUMENT;
   retain_resource(recorder_record->retained_resources, source_record, source_record->metadata);
   retain_resource(recorder_record->retained_resources, destination_record,
                   destination_record->metadata);
-  return recorder_record->renderer->copy_texture(
-      recorder_record->native, native_texture(*source_record->native).image,
-      native_texture(*destination_record->native).image, copy);
+  return recorder_record->renderer->copy_texture(native_command_recorder(*recorder_record->native),
+                                                 native_texture(*source_record->native).image,
+                                                 native_texture(*destination_record->native).image,
+                                                 copy);
 }
 
 granit_result renderer_registry::generate_mipmaps(granit_renderer renderer,
@@ -3500,13 +3513,15 @@ granit_result renderer_registry::generate_mipmaps(granit_renderer renderer,
                                std::max(UINT32_C(1), desc.height >> range.base_mip_level),
                                std::max(UINT32_C(1), desc.depth >> range.base_mip_level)};
   std::lock_guard record_lock{recorder_record->mutex};
-  if (recorder_record->native.state() != command_recorder_state::recording)
+  if (native_command_recorder(*recorder_record->native).state() !=
+      command_recorder_state::recording)
     return GRANIT_ERROR_INVALID_ARGUMENT;
   retain_resource(recorder_record->retained_resources, texture_record_state,
                   texture_record_state->metadata);
   return recorder_record->renderer->generate_mipmaps(
-      recorder_record->native, native_texture(*texture_record_state->native).image, base_extent,
-      range.base_mip_level, range.level_count, range.base_array_layer, range.array_layer_count);
+      native_command_recorder(*recorder_record->native),
+      native_texture(*texture_record_state->native).image, base_extent, range.base_mip_level,
+      range.level_count, range.base_array_layer, range.array_layer_count);
 }
 
 granit_result renderer_registry::fill_buffer(granit_renderer renderer,
@@ -3537,12 +3552,13 @@ granit_result renderer_registry::fill_buffer(granit_renderer renderer,
   }
 
   std::lock_guard record_lock{recorder_record->mutex};
-  if (recorder_record->native.state() != command_recorder_state::recording) {
+  if (native_command_recorder(*recorder_record->native).state() !=
+      command_recorder_state::recording) {
     return GRANIT_ERROR_INVALID_ARGUMENT;
   }
   retain_resource(recorder_record->retained_resources, buffer_record_state,
                   buffer_record_state->metadata);
-  return recorder_record->renderer->fill_buffer(recorder_record->native,
+  return recorder_record->renderer->fill_buffer(native_command_recorder(*recorder_record->native),
                                                 native_buffer(*buffer_record_state->native).buffer,
                                                 offset, size, value);
 }
@@ -3562,10 +3578,11 @@ granit_result renderer_registry::bind_graphics_pipeline(granit_renderer renderer
     pipeline_record = found->second;
   }
   std::lock_guard command_lock{command->mutex};
-  if (command->native.state() != command_recorder_state::recording)
+  if (native_command_recorder(*command->native).state() != command_recorder_state::recording)
     return GRANIT_ERROR_INVALID_ARGUMENT;
-  const auto result = command->renderer->bind_graphics_pipeline(
-      command->native, native_graphics_pipeline(*pipeline_record->native));
+  const auto result =
+      command->renderer->bind_graphics_pipeline(native_command_recorder(*command->native),
+                                                native_graphics_pipeline(*pipeline_record->native));
   if (result == GRANIT_SUCCESS)
     retain_resource(command->retained_resources, pipeline_record, pipeline_record->metadata);
   return result;
@@ -3609,11 +3626,11 @@ renderer_registry::bind_graphics_groups(granit_renderer renderer, granit_command
     }
   }
   std::lock_guard command_lock{command->mutex};
-  if (command->native.state() != command_recorder_state::recording)
+  if (native_command_recorder(*command->native).state() != command_recorder_state::recording)
     return GRANIT_ERROR_INVALID_ARGUMENT;
   const auto result = command->renderer->bind_graphics_groups(
-      command->native, native_pipeline_layout(*layout_record->native), first_group, native_groups,
-      buffer_accesses, image_accesses);
+      native_command_recorder(*command->native), native_pipeline_layout(*layout_record->native),
+      first_group, native_groups, buffer_accesses, image_accesses);
   if (result == GRANIT_SUCCESS) {
     retain_resource(command->retained_resources, layout_record, layout_record->metadata);
     for (const auto& group : group_records)
@@ -3637,10 +3654,10 @@ granit_result renderer_registry::bind_compute_pipeline(granit_renderer renderer,
     pipeline_record = found->second;
   }
   std::lock_guard command_lock{command->mutex};
-  if (command->native.state() != command_recorder_state::recording)
+  if (native_command_recorder(*command->native).state() != command_recorder_state::recording)
     return GRANIT_ERROR_INVALID_ARGUMENT;
   const auto result = command->renderer->bind_compute_pipeline(
-      command->native, native_compute_pipeline(*pipeline_record->native));
+      native_command_recorder(*command->native), native_compute_pipeline(*pipeline_record->native));
   if (result == GRANIT_SUCCESS)
     retain_resource(command->retained_resources, pipeline_record, pipeline_record->metadata);
   return result;
@@ -3684,11 +3701,11 @@ renderer_registry::bind_compute_groups(granit_renderer renderer, granit_command_
     }
   }
   std::lock_guard command_lock{command->mutex};
-  if (command->native.state() != command_recorder_state::recording)
+  if (native_command_recorder(*command->native).state() != command_recorder_state::recording)
     return GRANIT_ERROR_INVALID_ARGUMENT;
   const auto result = command->renderer->bind_compute_groups(
-      command->native, native_pipeline_layout(*layout_record->native), first_group, native_groups,
-      buffer_accesses, image_accesses);
+      native_command_recorder(*command->native), native_pipeline_layout(*layout_record->native),
+      first_group, native_groups, buffer_accesses, image_accesses);
   if (result == GRANIT_SUCCESS) {
     retain_resource(command->retained_resources, layout_record, layout_record->metadata);
     for (const auto& group : group_records)
@@ -3705,7 +3722,8 @@ granit_result renderer_registry::dispatch(granit_renderer renderer,
   if (!command)
     return GRANIT_ERROR_INVALID_HANDLE;
   std::lock_guard lock{command->mutex};
-  return command->renderer->dispatch(command->native, group_count_x, group_count_y, group_count_z);
+  return command->renderer->dispatch(native_command_recorder(*command->native), group_count_x,
+                                     group_count_y, group_count_z);
 }
 
 granit_result renderer_registry::set_viewports(granit_renderer renderer,
@@ -3721,7 +3739,7 @@ granit_result renderer_registry::set_viewports(granit_renderer renderer,
     native.push_back(
         {value.x, value.y, value.width, value.height, value.min_depth, value.max_depth});
   std::lock_guard lock{command->mutex};
-  return command->renderer->set_viewports(command->native, first, native);
+  return command->renderer->set_viewports(native_command_recorder(*command->native), first, native);
 }
 
 granit_result renderer_registry::set_scissors(granit_renderer renderer,
@@ -3735,7 +3753,7 @@ granit_result renderer_registry::set_scissors(granit_renderer renderer,
   for (const auto& value : scissors)
     native.push_back({{value.x, value.y}, {value.width, value.height}});
   std::lock_guard lock{command->mutex};
-  return command->renderer->set_scissors(command->native, first, native);
+  return command->renderer->set_scissors(native_command_recorder(*command->native), first, native);
 }
 
 granit_result
@@ -3763,8 +3781,8 @@ renderer_registry::bind_vertex_buffers(granit_renderer renderer, granit_command_
     }
   }
   std::lock_guard lock{command->mutex};
-  const auto result =
-      command->renderer->bind_vertex_buffers(command->native, first, buffers, offsets);
+  const auto result = command->renderer->bind_vertex_buffers(
+      native_command_recorder(*command->native), first, buffers, offsets);
   if (result == GRANIT_SUCCESS) {
     for (const auto& record : records)
       retain_resource(command->retained_resources, record, record->metadata);
@@ -3795,7 +3813,8 @@ granit_result renderer_registry::bind_index_buffer(granit_renderer renderer,
       type == GRANIT_INDEX_TYPE_UINT16 ? VK_INDEX_TYPE_UINT16 : VK_INDEX_TYPE_UINT32;
   std::lock_guard lock{command->mutex};
   const auto result = command->renderer->bind_index_buffer(
-      command->native, native_buffer(*record->native).buffer, offset, native_type);
+      native_command_recorder(*command->native), native_buffer(*record->native).buffer, offset,
+      native_type);
   if (result == GRANIT_SUCCESS)
     retain_resource(command->retained_resources, record, record->metadata);
   return result;
@@ -3808,8 +3827,8 @@ granit_result renderer_registry::draw(granit_renderer renderer, granit_command_r
   if (!command)
     return GRANIT_ERROR_INVALID_HANDLE;
   std::lock_guard lock{command->mutex};
-  return command->renderer->draw(command->native, vertex_count, instance_count, first_vertex,
-                                 first_instance);
+  return command->renderer->draw(native_command_recorder(*command->native), vertex_count,
+                                 instance_count, first_vertex, first_instance);
 }
 
 granit_result renderer_registry::draw_indexed(granit_renderer renderer,
@@ -3822,8 +3841,9 @@ granit_result renderer_registry::draw_indexed(granit_renderer renderer,
   if (!command)
     return GRANIT_ERROR_INVALID_HANDLE;
   std::lock_guard lock{command->mutex};
-  return command->renderer->draw_indexed(command->native, index_count, instance_count, first_index,
-                                         vertex_offset, first_instance);
+  return command->renderer->draw_indexed(native_command_recorder(*command->native), index_count,
+                                         instance_count, first_index, vertex_offset,
+                                         first_instance);
 }
 
 granit_result renderer_registry::begin_rendering(granit_renderer renderer,
@@ -3966,8 +3986,9 @@ granit_result renderer_registry::begin_rendering(granit_renderer renderer,
   const VkRect2D area{
       {static_cast<std::int32_t>(desc.area.x), static_cast<std::int32_t>(desc.area.y)},
       {desc.area.width, desc.area.height}};
-  return command->renderer->begin_rendering(command->native, area, colors, depth_ptr, stencil_ptr,
-                                            desc.layer_count, image_accesses);
+  return command->renderer->begin_rendering(native_command_recorder(*command->native), area, colors,
+                                            depth_ptr, stencil_ptr, desc.layer_count,
+                                            image_accesses);
 }
 
 granit_result renderer_registry::end_rendering(granit_renderer renderer,
@@ -3976,7 +3997,7 @@ granit_result renderer_registry::end_rendering(granit_renderer renderer,
   if (!command)
     return GRANIT_ERROR_INVALID_HANDLE;
   std::lock_guard lock{command->mutex};
-  return command->renderer->end_rendering(command->native);
+  return command->renderer->end_rendering(native_command_recorder(*command->native));
 }
 
 granit_result renderer_registry::destroy_command_recorder(granit_renderer renderer,
@@ -3989,7 +4010,8 @@ granit_result renderer_registry::destroy_command_recorder(granit_renderer render
     return GRANIT_ERROR_UNSUPPORTED;
   {
     std::lock_guard record_lock{record->mutex};
-    const auto wait_result = record->renderer->wait_command_recorder(record->native);
+    const auto wait_result =
+        record->renderer->wait_command_recorder(native_command_recorder(*record->native));
     if (wait_result != GRANIT_SUCCESS && wait_result != GRANIT_ERROR_DEVICE_LOST) {
       return wait_result;
     }
@@ -4113,11 +4135,12 @@ granit_result renderer_registry::reset_timestamp_queries(granit_renderer rendere
     query = found->second;
   }
   std::lock_guard command_lock{command->mutex};
-  if (command->native.state() != command_recorder_state::recording)
+  if (native_command_recorder(*command->native).state() != command_recorder_state::recording)
     return GRANIT_ERROR_INVALID_ARGUMENT;
   std::lock_guard query_lock{query->mutex};
-  const auto result = query->native.reset(command->renderer->device(),
-                                          command->native.native_handle(), first, count);
+  const auto result =
+      query->native.reset(command->renderer->device(),
+                          native_command_recorder(*command->native).native_handle(), first, count);
   if (result == GRANIT_SUCCESS)
     retain_resource(command->retained_resources, query, query->metadata);
   return result;
@@ -4149,11 +4172,12 @@ granit_result renderer_registry::write_timestamp(granit_renderer renderer,
   if (native_stage == 0)
     return GRANIT_ERROR_INVALID_ARGUMENT;
   std::lock_guard command_lock{command->mutex};
-  if (command->native.state() != command_recorder_state::recording)
+  if (native_command_recorder(*command->native).state() != command_recorder_state::recording)
     return GRANIT_ERROR_INVALID_ARGUMENT;
   std::lock_guard query_lock{query->mutex};
   const auto result = query->native.write(command->renderer->device(),
-                                          command->native.native_handle(), native_stage, index);
+                                          native_command_recorder(*command->native).native_handle(),
+                                          native_stage, index);
   if (result == GRANIT_SUCCESS)
     retain_resource(command->retained_resources, query, query->metadata);
   return result;

@@ -8,6 +8,7 @@
 #include <volk.h>
 
 #include "backend/resources.h"
+#include "backend/vulkan/command_recorder.h"
 #include "backend/vulkan/memory_allocator.h"
 
 namespace granit::detail {
@@ -146,6 +147,19 @@ public:
 private:
   std::shared_ptr<renderer_state> renderer_;
   VkPipeline native_{VK_NULL_HANDLE};
+};
+
+class vulkan_command_recorder_resource final : public backend_command_recorder_resource {
+public:
+  explicit vulkan_command_recorder_resource(std::shared_ptr<renderer_state> renderer) noexcept;
+  ~vulkan_command_recorder_resource() override;
+
+  [[nodiscard]] vulkan_command_recorder& native() noexcept { return native_; }
+  [[nodiscard]] const vulkan_command_recorder& native() const noexcept { return native_; }
+
+private:
+  std::shared_ptr<renderer_state> renderer_;
+  vulkan_command_recorder native_;
 };
 
 } // namespace granit::detail

@@ -27,6 +27,7 @@ class backend_bind_group_resource : public backend_resource {};
 class backend_pipeline_layout_resource : public backend_resource {};
 class backend_graphics_pipeline_resource : public backend_resource {};
 class backend_compute_pipeline_resource : public backend_resource {};
+class backend_command_recorder_resource : public backend_resource {};
 
 } // namespace granit::detail
 

@@ -106,4 +106,14 @@ vulkan_compute_pipeline_resource::~vulkan_compute_pipeline_resource() {
   }
 }
 
+vulkan_command_recorder_resource::vulkan_command_recorder_resource(
+    std::shared_ptr<renderer_state> renderer) noexcept
+    : renderer_(std::move(renderer)) {}
+
+vulkan_command_recorder_resource::~vulkan_command_recorder_resource() {
+  if (renderer_) {
+    renderer_->destroy_native_command_recorder(native_);
+  }
+}
+
 } // namespace granit::detail
