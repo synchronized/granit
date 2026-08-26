@@ -125,4 +125,14 @@ vulkan_surface_resource::~vulkan_surface_resource() {
   }
 }
 
+vulkan_swapchain_resource::vulkan_swapchain_resource(
+    std::shared_ptr<renderer_state> renderer) noexcept
+    : renderer_(std::move(renderer)) {}
+
+vulkan_swapchain_resource::~vulkan_swapchain_resource() {
+  if (renderer_) {
+    renderer_->destroy_native_swapchain(native_);
+  }
+}
+
 } // namespace granit::detail

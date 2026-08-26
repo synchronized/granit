@@ -10,6 +10,7 @@
 #include "backend/resources.h"
 #include "backend/vulkan/command_recorder.h"
 #include "backend/vulkan/memory_allocator.h"
+#include "backend/vulkan/swapchain.h"
 
 namespace granit::detail {
 
@@ -173,6 +174,19 @@ public:
 private:
   std::shared_ptr<renderer_state> renderer_;
   VkSurfaceKHR native_{VK_NULL_HANDLE};
+};
+
+class vulkan_swapchain_resource final : public backend_swapchain_resource {
+public:
+  explicit vulkan_swapchain_resource(std::shared_ptr<renderer_state> renderer) noexcept;
+  ~vulkan_swapchain_resource() override;
+
+  [[nodiscard]] vulkan_swapchain& native() noexcept { return native_; }
+  [[nodiscard]] const vulkan_swapchain& native() const noexcept { return native_; }
+
+private:
+  std::shared_ptr<renderer_state> renderer_;
+  vulkan_swapchain native_;
 };
 
 } // namespace granit::detail

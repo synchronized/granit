@@ -332,11 +332,10 @@ private:
     resource_metadata metadata;
     std::shared_ptr<renderer_state> renderer;
     std::shared_ptr<surface_record> surface;
-    std::unique_ptr<vulkan_swapchain> native;
+    std::unique_ptr<backend_swapchain_resource> native;
     std::vector<granit_texture> textures;
     std::vector<granit_texture_view> views;
     bool surface_lost{};
-    ~swapchain_record();
   };
   struct buffer_record {
     resource_metadata metadata;

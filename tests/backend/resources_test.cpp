@@ -124,6 +124,15 @@ private:
   bool& destroyed_;
 };
 
+class fake_swapchain_resource final : public granit::detail::backend_swapchain_resource {
+public:
+  explicit fake_swapchain_resource(bool& destroyed) noexcept : destroyed_(destroyed) {}
+  ~fake_swapchain_resource() override { destroyed_ = true; }
+
+private:
+  bool& destroyed_;
+};
+
 class fake_queue final : public granit::detail::backend_queue {
 public:
   granit_result
@@ -146,6 +155,29 @@ public:
   }
 
   granit_result wait_for_all_submissions() noexcept override { return GRANIT_SUCCESS; }
+
+  granit_result
+  submit_swapchain_frame(granit::detail::backend_command_recorder_resource&,
+                         granit::detail::backend_swapchain_resource&, std::uint32_t image_index,
+                         std::size_t slot_index,
+                         granit::detail::submission_serial& submitted_serial) override {
+    submitted_serial = image_index + slot_index + 1;
+    return GRANIT_SUCCESS;
+  }
+
+  granit_result present_swapchain_frame(granit::detail::backend_swapchain_resource&, std::uint32_t,
+                                        std::size_t, bool& needs_recreate) override {
+    needs_recreate = false;
+    return GRANIT_SUCCESS;
+  }
+
+  granit_result cancel_swapchain_frame(granit::detail::backend_swapchain_resource&, std::uint32_t,
+                                       std::size_t, bool& needs_recreate) override {
+    needs_recreate = false;
+    return GRANIT_SUCCESS;
+  }
+
+  granit_result wait_for_present_idle() noexcept override { return GRANIT_SUCCESS; }
 };
 
 } // namespace
@@ -270,6 +302,16 @@ TEST_CASE("Surface 通过后端抽象正确销毁") {
   CHECK(destroyed);
 }
 
+TEST_CASE("Swapchain 通过后端抽象正确销毁") {
+  bool destroyed = false;
+  {
+    std::unique_ptr<granit::detail::backend_swapchain_resource> resource =
+        std::make_unique<fake_swapchain_resource>(destroyed);
+    CHECK_FALSE(destroyed);
+  }
+  CHECK(destroyed);
+}
+
 TEST_CASE("上传批次描述不依赖具体后端类型") {
   bool destroyed = false;
   fake_buffer_resource buffer{destroyed};
@@ -295,4 +337,13 @@ TEST_CASE("队列契约使用后端命令对象和统一提交序列") {
   CHECK(queue.submit_command_recorders(recorders, serial) == GRANIT_SUCCESS);
   CHECK(serial == 1);
   CHECK(queue.wait_command_recorder(recorder) == GRANIT_SUCCESS);
+
+  fake_swapchain_resource swapchain{destroyed};
+  bool needs_recreate = true;
+  CHECK(queue.submit_swapchain_frame(recorder, swapchain, 2, 3, serial) == GRANIT_SUCCESS);
+  CHECK(serial == 6);
+  CHECK(queue.present_swapchain_frame(swapchain, 2, 3, needs_recreate) == GRANIT_SUCCESS);
+  CHECK_FALSE(needs_recreate);
+  CHECK(queue.cancel_swapchain_frame(swapchain, 2, 3, needs_recreate) == GRANIT_SUCCESS);
+  CHECK(queue.wait_for_present_idle() == GRANIT_SUCCESS);
 }

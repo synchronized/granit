@@ -76,6 +76,10 @@ VkSurfaceKHR& native_surface_handle(backend_surface_resource& resource) noexcept
   return static_cast<vulkan_surface_resource&>(resource).native();
 }
 
+vulkan_swapchain& native_swapchain(backend_swapchain_resource& resource) noexcept {
+  return static_cast<vulkan_swapchain_resource&>(resource).native();
+}
+
 granit_texture_format swapchain_format(VkFormat format) noexcept {
   switch (format) {
   case VK_FORMAT_B8G8R8A8_SRGB:
@@ -155,12 +159,6 @@ renderer_registry& renderer_registry::instance() {
   return registry;
 }
 
-renderer_registry::swapchain_record::~swapchain_record() {
-  if (renderer && native) {
-    renderer->destroy_native_swapchain(*native);
-  }
-}
-
 renderer_registry::timestamp_query_pool_record::~timestamp_query_pool_record() {
   if (renderer)
     native.destroy(renderer->device());
@@ -230,7 +228,8 @@ granit_result renderer_registry::set_object_name(granit_renderer renderer, grani
   }
   GRANIT_NAME_OBJECT(surfaces_, VK_OBJECT_TYPE_SURFACE_KHR,
                      native_surface_handle(*it->second->native))
-  GRANIT_NAME_OBJECT(swapchains_, VK_OBJECT_TYPE_SWAPCHAIN_KHR, it->second->native->native_handle())
+  GRANIT_NAME_OBJECT(swapchains_, VK_OBJECT_TYPE_SWAPCHAIN_KHR,
+                     native_swapchain(*it->second->native).native_handle())
   GRANIT_NAME_OBJECT(buffers_, VK_OBJECT_TYPE_BUFFER, native_buffer(*it->second->native).buffer)
   GRANIT_NAME_OBJECT(textures_, VK_OBJECT_TYPE_IMAGE, native_texture(*it->second->native).image)
   GRANIT_NAME_OBJECT(texture_views_, VK_OBJECT_TYPE_IMAGE_VIEW,
@@ -814,9 +813,9 @@ granit_result renderer_registry::create_swapchain(granit_renderer renderer, gran
     auto record = std::make_shared<swapchain_record>();
     record->renderer = state;
     record->surface = surface_state;
-    record->native = std::make_unique<vulkan_swapchain>();
+    record->native = std::make_unique<vulkan_swapchain_resource>(state);
     const auto create_result = state->create_swapchain(
-        native_surface_handle(*surface_state->native), desc, *record->native);
+        native_surface_handle(*surface_state->native), desc, native_swapchain(*record->native));
     if (create_result != GRANIT_SUCCESS) {
       return create_result;
     }
@@ -924,7 +923,7 @@ granit_result renderer_registry::recreate_swapchain(granit_renderer renderer,
   old_views.clear();
   old_textures.clear();
   const auto result = record->renderer->recreate_swapchain(
-      native_surface_handle(*record->surface->native), desc, *record->native);
+      native_surface_handle(*record->surface->native), desc, native_swapchain(*record->native));
   const auto install_result = install_swapchain_backbuffers(swapchain, record);
   return result == GRANIT_SUCCESS ? install_result : result;
 }
@@ -933,19 +932,20 @@ granit_result
 renderer_registry::install_swapchain_backbuffers(granit_swapchain swapchain,
                                                  const std::shared_ptr<swapchain_record>& record) {
   try {
-    const auto info = record->native->info();
+    const auto& swapchain_native = native_swapchain(*record->native);
+    const auto info = swapchain_native.info();
     std::vector<std::shared_ptr<texture_record>> textures;
     std::vector<std::shared_ptr<texture_view_record>> views;
-    textures.reserve(record->native->images().size());
-    views.reserve(record->native->images().size());
-    for (const auto image : record->native->images()) {
+    textures.reserve(swapchain_native.images().size());
+    views.reserve(swapchain_native.images().size());
+    for (const auto image : swapchain_native.images()) {
       auto texture = std::make_shared<texture_record>();
       texture->renderer = record->renderer;
       texture->native = std::make_unique<vulkan_texture_resource>(record->renderer, false);
       native_texture(*texture->native).image = image;
       texture->publicly_destroyable = false;
       texture->desc = GRANIT_TEXTURE_DESC_INIT;
-      texture->desc.format = swapchain_format(record->native->format());
+      texture->desc.format = swapchain_format(swapchain_native.format());
       texture->desc.usage = GRANIT_TEXTURE_USAGE_COLOR_ATTACHMENT_BIT;
       texture->desc.width = info.width;
       texture->desc.height = info.height;
@@ -1015,7 +1015,7 @@ granit_result renderer_registry::get_swapchain_info(granit_renderer renderer,
   if (found == swapchains_.end() || found->second->renderer != state) {
     return GRANIT_ERROR_INVALID_HANDLE;
   }
-  info = state->get_swapchain_info(*found->second->native);
+  info = state->get_swapchain_info(native_swapchain(*found->second->native));
   return GRANIT_SUCCESS;
 }
 
@@ -1146,8 +1146,8 @@ granit_result renderer_registry::submit_command_recorder_frame(granit_renderer r
     return GRANIT_ERROR_INVALID_ARGUMENT;
   submission_serial serial{};
   const auto result = command->renderer->submit_swapchain_frame(
-      native_command_recorder(*command->native), *frame_state->swapchain->native,
-      frame_state->image_index, frame_state->slot_index, serial);
+      *command->native, *frame_state->swapchain->native, frame_state->image_index,
+      frame_state->slot_index, serial);
   if (result == GRANIT_SUCCESS) {
     mark_resources_used(command->retained_resources, serial);
     frame_state->submitted = true;

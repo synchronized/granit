@@ -29,6 +29,7 @@ class backend_graphics_pipeline_resource : public backend_resource {};
 class backend_compute_pipeline_resource : public backend_resource {};
 class backend_command_recorder_resource : public backend_resource {};
 class backend_surface_resource : public backend_resource {};
+class backend_swapchain_resource : public backend_resource {};
 
 } // namespace granit::detail
 

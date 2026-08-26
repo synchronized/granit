@@ -32,6 +32,19 @@ public:
   [[nodiscard]] virtual granit_result
   wait_command_recorder(backend_command_recorder_resource& recorder) noexcept = 0;
   [[nodiscard]] virtual granit_result wait_for_all_submissions() noexcept = 0;
+  [[nodiscard]] virtual granit_result
+  submit_swapchain_frame(backend_command_recorder_resource& recorder,
+                         backend_swapchain_resource& swapchain, std::uint32_t image_index,
+                         std::size_t slot_index, submission_serial& submitted_serial) = 0;
+  [[nodiscard]] virtual granit_result present_swapchain_frame(backend_swapchain_resource& swapchain,
+                                                              std::uint32_t image_index,
+                                                              std::size_t slot_index,
+                                                              bool& needs_recreate) = 0;
+  [[nodiscard]] virtual granit_result cancel_swapchain_frame(backend_swapchain_resource& swapchain,
+                                                             std::uint32_t image_index,
+                                                             std::size_t slot_index,
+                                                             bool& needs_recreate) = 0;
+  [[nodiscard]] virtual granit_result wait_for_present_idle() noexcept = 0;
 };
 
 } // namespace granit::detail
