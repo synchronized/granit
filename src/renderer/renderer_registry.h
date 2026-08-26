@@ -363,10 +363,9 @@ private:
     resource_metadata metadata;
     std::shared_ptr<renderer_state> renderer;
     std::shared_ptr<texture_record> texture;
-    VkImageView native{VK_NULL_HANDLE};
+    std::unique_ptr<backend_texture_view_resource> native;
     granit_texture_view_desc desc{};
     bool publicly_destroyable{true};
-    ~texture_view_record();
   };
   struct sampler_record {
     resource_metadata metadata;

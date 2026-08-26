@@ -30,6 +30,10 @@ VkSampler& native_sampler(backend_sampler_resource& resource) noexcept {
   return static_cast<vulkan_sampler_resource&>(resource).native();
 }
 
+VkImageView& native_texture_view(backend_texture_view_resource& resource) noexcept {
+  return static_cast<vulkan_texture_view_resource&>(resource).native();
+}
+
 granit_texture_format swapchain_format(VkFormat format) noexcept {
   switch (format) {
   case VK_FORMAT_B8G8R8A8_SRGB:
@@ -130,12 +134,6 @@ renderer_registry::buffer_record::~buffer_record() {
 renderer_registry::texture_record::~texture_record() {
   if (renderer && owned) {
     renderer->destroy_native_texture(native);
-  }
-}
-
-renderer_registry::texture_view_record::~texture_view_record() {
-  if (renderer) {
-    renderer->destroy_native_texture_view(native);
   }
 }
 
@@ -246,7 +244,8 @@ granit_result renderer_registry::set_object_name(granit_renderer renderer, grani
   GRANIT_NAME_OBJECT(swapchains_, VK_OBJECT_TYPE_SWAPCHAIN_KHR, it->second->native->native_handle())
   GRANIT_NAME_OBJECT(buffers_, VK_OBJECT_TYPE_BUFFER, it->second->native.buffer)
   GRANIT_NAME_OBJECT(textures_, VK_OBJECT_TYPE_IMAGE, it->second->native.image)
-  GRANIT_NAME_OBJECT(texture_views_, VK_OBJECT_TYPE_IMAGE_VIEW, it->second->native)
+  GRANIT_NAME_OBJECT(texture_views_, VK_OBJECT_TYPE_IMAGE_VIEW,
+                     native_texture_view(*it->second->native))
   GRANIT_NAME_OBJECT(samplers_, VK_OBJECT_TYPE_SAMPLER, native_sampler(*it->second->native))
   GRANIT_NAME_OBJECT(shaders_, VK_OBJECT_TYPE_SHADER_MODULE, it->second->native)
   GRANIT_NAME_OBJECT(bind_group_layouts_, VK_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT, it->second->native)
@@ -958,8 +957,9 @@ renderer_registry::install_swapchain_backbuffers(granit_swapchain swapchain,
       view->publicly_destroyable = false;
       granit_texture_view_desc desc = GRANIT_TEXTURE_VIEW_DESC_INIT;
       view->desc = desc;
+      view->native = std::make_unique<vulkan_texture_view_resource>(record->renderer);
       const auto result = record->renderer->create_native_texture_view(
-          texture->native, texture->desc, desc, view->native);
+          texture->native, texture->desc, desc, native_texture_view(*view->native));
       if (result != GRANIT_SUCCESS)
         return result;
       textures.push_back(std::move(texture));
@@ -2021,8 +2021,9 @@ granit_result renderer_registry::create_texture_view(granit_renderer renderer,
     record->renderer = state;
     record->texture = parent;
     record->desc = desc;
-    const auto result =
-        state->create_native_texture_view(parent->native, parent->desc, desc, record->native);
+    record->native = std::make_unique<vulkan_texture_view_resource>(state);
+    const auto result = state->create_native_texture_view(parent->native, parent->desc, desc,
+                                                          native_texture_view(*record->native));
     if (result != GRANIT_SUCCESS)
       return result;
     std::lock_guard lock{mutex_};
@@ -2413,7 +2414,7 @@ granit_result renderer_registry::create_bind_group(granit_renderer renderer,
           write.type = declaration->type == GRANIT_BINDING_TYPE_SAMPLED_TEXTURE
                            ? VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE
                            : VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-          write.image_view = found->second->native;
+          write.image_view = native_texture_view(*found->second->native);
           record->resources.push_back(found->second);
           const auto make_access = [&] {
             auto aspect = map_aspect(found->second->desc.range.aspect);
@@ -3870,7 +3871,7 @@ granit_result renderer_registry::begin_rendering(granit_renderer renderer,
     const auto& source = desc.color_attachments[index];
     auto& target = colors[index];
     target.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
-    target.imageView = views[index]->native;
+    target.imageView = native_texture_view(*views[index]->native);
     target.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
     target.loadOp = map_load(source.load_operation);
     target.storeOp = map_store(source.store_operation);
@@ -3911,7 +3912,7 @@ granit_result renderer_registry::begin_rendering(granit_renderer renderer,
     const auto& source = *desc.depth_stencil_attachment;
     const auto& view = views.back();
     depth.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
-    depth.imageView = view->native;
+    depth.imageView = native_texture_view(*view->native);
     depth.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
     depth.loadOp = map_load(source.depth_load_operation);
     depth.storeOp = map_store(source.depth_store_operation);
