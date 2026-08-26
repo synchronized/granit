@@ -31,6 +31,8 @@
   输出纹理、阶段录制、提交和清理，不依赖源码树资源。
 - 文档检查锁定 README、安装 Consumer 和 RenderPipeline 教程的关键 CMake/CTest 命令，避免
   文档入口随构建配置漂移。
+- Windows/Linux Actions 的安装 Consumer 统一使用与构建指南相同的 CTest 入口，覆盖共享与静态
+  安装矩阵并由测试自身设置运行库路径。
 
 ## 0.2.0 - 2026-08-24
 
