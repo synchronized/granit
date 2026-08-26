@@ -6,7 +6,17 @@ name: Linux
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - "docs/**"
+      - "README.md"
+      - "CHANGELOG.md"
+      - "DOCUMENTATION_GUIDE.md"
   pull_request:
+    paths-ignore:
+      - "docs/**"
+      - "README.md"
+      - "CHANGELOG.md"
+      - "DOCUMENTATION_GUIDE.md"
 
 permissions:
   contents: read

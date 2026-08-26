@@ -6,7 +6,17 @@ name: Windows
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - "docs/**"
+      - "README.md"
+      - "CHANGELOG.md"
+      - "DOCUMENTATION_GUIDE.md"
   pull_request:
+    paths-ignore:
+      - "docs/**"
+      - "README.md"
+      - "CHANGELOG.md"
+      - "DOCUMENTATION_GUIDE.md"
 
 env:
   SCCACHE_GHA_ENABLED: "true"

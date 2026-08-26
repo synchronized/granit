@@ -95,3 +95,7 @@ C++ 语法。C++20 包装层和内部实现测试使用 Catch2 3。两套测试�
 CI 修复继续复用同一 Pull Request，不创建重复 PR。Pull Request Actions 全部通过后再合并，合并后
 以 `main` Actions 作为最终确认。推送前应整理提交范围并运行 `git diff --check`；不要通过空提交或
 无实质变化的反复推送观察 CI。
+
+纯 `docs/**`、README、CHANGELOG 或文档规范修改只运行轻量 Documentation 工作流；涉及源码、
+CMake、测试或工作流配置时仍运行完整 Windows/Linux 矩阵。文档检查脚本本身的修改也会触发
+Documentation，避免为了更新说明重复执行编译与安装 Consumer。
