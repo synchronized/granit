@@ -379,9 +379,8 @@ private:
   struct bind_group_layout_record {
     resource_metadata metadata;
     std::shared_ptr<renderer_state> renderer;
-    VkDescriptorSetLayout native{VK_NULL_HANDLE};
+    std::unique_ptr<backend_bind_group_layout_resource> native;
     std::vector<granit_bind_group_layout_entry> entries;
-    ~bind_group_layout_record();
   };
   struct pipeline_layout_record {
     resource_metadata metadata;
@@ -399,9 +398,7 @@ private:
     std::vector<vulkan_image_access> graphics_image_accesses;
     std::vector<std::pair<VkBuffer, VkAccessFlags2>> compute_buffer_accesses;
     std::vector<vulkan_image_access> compute_image_accesses;
-    VkDescriptorPool pool{VK_NULL_HANDLE};
-    VkDescriptorSet set{VK_NULL_HANDLE};
-    ~bind_group_record();
+    std::unique_ptr<backend_bind_group_resource> native;
   };
   struct graphics_pipeline_record {
     resource_metadata metadata;

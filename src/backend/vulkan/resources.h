@@ -81,6 +81,34 @@ private:
   VkShaderModule native_{VK_NULL_HANDLE};
 };
 
+class vulkan_bind_group_layout_resource final : public backend_bind_group_layout_resource {
+public:
+  explicit vulkan_bind_group_layout_resource(std::shared_ptr<renderer_state> renderer) noexcept;
+  ~vulkan_bind_group_layout_resource() override;
+
+  [[nodiscard]] VkDescriptorSetLayout& native() noexcept { return native_; }
+  [[nodiscard]] VkDescriptorSetLayout native() const noexcept { return native_; }
+
+private:
+  std::shared_ptr<renderer_state> renderer_;
+  VkDescriptorSetLayout native_{VK_NULL_HANDLE};
+};
+
+class vulkan_bind_group_resource final : public backend_bind_group_resource {
+public:
+  explicit vulkan_bind_group_resource(std::shared_ptr<renderer_state> renderer) noexcept;
+  ~vulkan_bind_group_resource() override;
+
+  [[nodiscard]] VkDescriptorPool& pool() noexcept { return pool_; }
+  [[nodiscard]] VkDescriptorSet& set() noexcept { return set_; }
+  [[nodiscard]] VkDescriptorSet set() const noexcept { return set_; }
+
+private:
+  std::shared_ptr<renderer_state> renderer_;
+  VkDescriptorPool pool_{VK_NULL_HANDLE};
+  VkDescriptorSet set_{VK_NULL_HANDLE};
+};
+
 } // namespace granit::detail
 
 #endif

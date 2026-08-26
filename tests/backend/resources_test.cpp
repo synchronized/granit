@@ -54,6 +54,25 @@ private:
   bool& destroyed_;
 };
 
+class fake_bind_group_layout_resource final
+    : public granit::detail::backend_bind_group_layout_resource {
+public:
+  explicit fake_bind_group_layout_resource(bool& destroyed) noexcept : destroyed_(destroyed) {}
+  ~fake_bind_group_layout_resource() override { destroyed_ = true; }
+
+private:
+  bool& destroyed_;
+};
+
+class fake_bind_group_resource final : public granit::detail::backend_bind_group_resource {
+public:
+  explicit fake_bind_group_resource(bool& destroyed) noexcept : destroyed_(destroyed) {}
+  ~fake_bind_group_resource() override { destroyed_ = true; }
+
+private:
+  bool& destroyed_;
+};
+
 } // namespace
 
 TEST_CASE("后端资源通过抽象所有权正确销毁") {
@@ -101,6 +120,26 @@ TEST_CASE("着色器通过后端抽象正确销毁") {
   {
     std::unique_ptr<granit::detail::backend_shader_resource> resource =
         std::make_unique<fake_shader_resource>(destroyed);
+    CHECK_FALSE(destroyed);
+  }
+  CHECK(destroyed);
+}
+
+TEST_CASE("绑定组布局通过后端抽象正确销毁") {
+  bool destroyed = false;
+  {
+    std::unique_ptr<granit::detail::backend_bind_group_layout_resource> resource =
+        std::make_unique<fake_bind_group_layout_resource>(destroyed);
+    CHECK_FALSE(destroyed);
+  }
+  CHECK(destroyed);
+}
+
+TEST_CASE("绑定组通过后端抽象正确销毁") {
+  bool destroyed = false;
+  {
+    std::unique_ptr<granit::detail::backend_bind_group_resource> resource =
+        std::make_unique<fake_bind_group_resource>(destroyed);
     CHECK_FALSE(destroyed);
   }
   CHECK(destroyed);

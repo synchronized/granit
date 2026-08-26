@@ -22,6 +22,8 @@ class backend_texture_resource : public backend_resource {};
 class backend_texture_view_resource : public backend_resource {};
 class backend_sampler_resource : public backend_resource {};
 class backend_shader_resource : public backend_resource {};
+class backend_bind_group_layout_resource : public backend_resource {};
+class backend_bind_group_resource : public backend_resource {};
 
 } // namespace granit::detail
 

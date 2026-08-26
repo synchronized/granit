@@ -46,6 +46,15 @@ VkShaderModule& native_shader(backend_shader_resource& resource) noexcept {
   return static_cast<vulkan_shader_resource&>(resource).native();
 }
 
+VkDescriptorSetLayout&
+native_bind_group_layout(backend_bind_group_layout_resource& resource) noexcept {
+  return static_cast<vulkan_bind_group_layout_resource&>(resource).native();
+}
+
+vulkan_bind_group_resource& native_bind_group(backend_bind_group_resource& resource) noexcept {
+  return static_cast<vulkan_bind_group_resource&>(resource);
+}
+
 granit_texture_format swapchain_format(VkFormat format) noexcept {
   switch (format) {
   case VK_FORMAT_B8G8R8A8_SRGB:
@@ -135,16 +144,6 @@ renderer_registry::swapchain_record::~swapchain_record() {
   if (renderer && native) {
     renderer->destroy_native_swapchain(*native);
   }
-}
-
-renderer_registry::bind_group_layout_record::~bind_group_layout_record() {
-  if (renderer)
-    renderer->destroy_native_bind_group_layout(native);
-}
-
-renderer_registry::bind_group_record::~bind_group_record() {
-  if (renderer)
-    renderer->destroy_native_bind_group(pool);
 }
 
 renderer_registry::pipeline_layout_record::~pipeline_layout_record() {
@@ -243,9 +242,11 @@ granit_result renderer_registry::set_object_name(granit_renderer renderer, grani
                      native_texture_view(*it->second->native))
   GRANIT_NAME_OBJECT(samplers_, VK_OBJECT_TYPE_SAMPLER, native_sampler(*it->second->native))
   GRANIT_NAME_OBJECT(shaders_, VK_OBJECT_TYPE_SHADER_MODULE, native_shader(*it->second->native))
-  GRANIT_NAME_OBJECT(bind_group_layouts_, VK_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT, it->second->native)
+  GRANIT_NAME_OBJECT(bind_group_layouts_, VK_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT,
+                     native_bind_group_layout(*it->second->native))
   GRANIT_NAME_OBJECT(pipeline_layouts_, VK_OBJECT_TYPE_PIPELINE_LAYOUT, it->second->native)
-  GRANIT_NAME_OBJECT(bind_groups_, VK_OBJECT_TYPE_DESCRIPTOR_SET, it->second->set)
+  GRANIT_NAME_OBJECT(bind_groups_, VK_OBJECT_TYPE_DESCRIPTOR_SET,
+                     native_bind_group(*it->second->native).set())
   GRANIT_NAME_OBJECT(graphics_pipelines_, VK_OBJECT_TYPE_PIPELINE, it->second->native)
   GRANIT_NAME_OBJECT(compute_pipelines_, VK_OBJECT_TYPE_PIPELINE, it->second->native)
   GRANIT_NAME_OBJECT(command_recorders_, VK_OBJECT_TYPE_COMMAND_BUFFER,
@@ -2269,7 +2270,9 @@ renderer_registry::create_bind_group_layout(granit_renderer renderer,
     auto record = std::make_shared<bind_group_layout_record>();
     record->renderer = state;
     record->entries.assign(entries.begin(), entries.end());
-    const auto result = state->create_native_bind_group_layout(entries, record->native);
+    record->native = std::make_unique<vulkan_bind_group_layout_resource>(state);
+    const auto result =
+        state->create_native_bind_group_layout(entries, native_bind_group_layout(*record->native));
     if (result != GRANIT_SUCCESS)
       return result;
     std::lock_guard lock{mutex_};
@@ -2462,8 +2465,10 @@ granit_result renderer_registry::create_bind_group(granit_renderer renderer,
     }
     record->renderer = state;
     record->layout = layout;
-    const auto result =
-        state->create_native_bind_group(layout->native, writes, record->pool, record->set);
+    record->native = std::make_unique<vulkan_bind_group_resource>(state);
+    auto& native = native_bind_group(*record->native);
+    const auto result = state->create_native_bind_group(native_bind_group_layout(*layout->native),
+                                                        writes, native.pool(), native.set());
     if (result != GRANIT_SUCCESS)
       return result;
     std::lock_guard lock{mutex_};
@@ -2529,7 +2534,7 @@ granit_result renderer_registry::create_pipeline_layout(
         if (found == bind_group_layouts_.end() || found->second->renderer != state)
           return GRANIT_ERROR_INVALID_HANDLE;
         record->bind_group_layouts.push_back(found->second);
-        native_layouts.push_back(found->second->native);
+        native_layouts.push_back(native_bind_group_layout(*found->second->native));
       }
     }
     const auto result = state->create_native_pipeline_layout(native_layouts, record->native);
@@ -3591,7 +3596,7 @@ renderer_registry::bind_graphics_groups(granit_renderer renderer, granit_command
       if (found->second->layout != layout_record->bind_group_layouts[first_group + index])
         return GRANIT_ERROR_INVALID_ARGUMENT;
       group_records.push_back(found->second);
-      native_groups.push_back(found->second->set);
+      native_groups.push_back(native_bind_group(*found->second->native).set());
       buffer_accesses.insert(buffer_accesses.end(), found->second->graphics_buffer_accesses.begin(),
                              found->second->graphics_buffer_accesses.end());
       image_accesses.insert(image_accesses.end(), found->second->graphics_image_accesses.begin(),
@@ -3666,7 +3671,7 @@ renderer_registry::bind_compute_groups(granit_renderer renderer, granit_command_
       if (found->second->layout != layout_record->bind_group_layouts[first_group + index])
         return GRANIT_ERROR_INVALID_ARGUMENT;
       group_records.push_back(found->second);
-      native_groups.push_back(found->second->set);
+      native_groups.push_back(native_bind_group(*found->second->native).set());
       buffer_accesses.insert(buffer_accesses.end(), found->second->compute_buffer_accesses.begin(),
                              found->second->compute_buffer_accesses.end());
       image_accesses.insert(image_accesses.end(), found->second->compute_image_accesses.begin(),

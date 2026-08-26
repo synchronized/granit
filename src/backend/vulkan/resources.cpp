@@ -56,4 +56,24 @@ vulkan_shader_resource::~vulkan_shader_resource() {
   }
 }
 
+vulkan_bind_group_layout_resource::vulkan_bind_group_layout_resource(
+    std::shared_ptr<renderer_state> renderer) noexcept
+    : renderer_(std::move(renderer)) {}
+
+vulkan_bind_group_layout_resource::~vulkan_bind_group_layout_resource() {
+  if (renderer_) {
+    renderer_->destroy_native_bind_group_layout(native_);
+  }
+}
+
+vulkan_bind_group_resource::vulkan_bind_group_resource(
+    std::shared_ptr<renderer_state> renderer) noexcept
+    : renderer_(std::move(renderer)) {}
+
+vulkan_bind_group_resource::~vulkan_bind_group_resource() {
+  if (renderer_) {
+    renderer_->destroy_native_bind_group(pool_);
+  }
+}
+
 } // namespace granit::detail
