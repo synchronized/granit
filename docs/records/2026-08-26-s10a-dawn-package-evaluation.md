@@ -40,8 +40,9 @@ Dawn `v20260720.160313` 的 API 头与 Emdawnwebgpu 可以作为匹配原型基�
 
 仓库已增加 `Dawn Dependency Packages` 工作流。2026-08-26 的共享库可行性验证已在 Windows 与
 Linux 成功。工作流随后调整为从锁定修订构建 monolithic static library，并使用同一工具链构建
-`granit_backend_webgpu`、动态加载插件及创建/销毁真实 Dawn Instance；该静态插件链等待首次手动
-运行验证。重型工作流仅手动触发，日常特性分支提交和 Pull Request 不重复构建 Dawn。工作流默认
-只上传短期验证 Artifact；显式选择发布 SDK 后，Windows 与 Linux 全部通过才会创建版本化预发布
-版本，并附带平台压缩包及 SHA-256 清单。Linux 构建镜像后续只消费该 SDK，不作为 Windows 分发
-方式。
+`granit_backend_webgpu`、动态加载插件及创建/销毁真实 Dawn Instance。首次静态验证于 2026-08-26
+在 Windows 2022 和 Ubuntu 24.04 全部通过，包括静态符号检查、真实插件 smoke test、打包和
+Artifact 上传。重型工作流仅手动触发，日常特性分支提交和 Pull Request 不重复构建 Dawn。
+工作流默认只上传短期验证 Artifact；显式选择发布 SDK 后，Windows 与 Linux 全部通过才会创建
+版本化预发布版本，并附带平台压缩包及 SHA-256 清单。Linux 构建镜像后续只消费该 SDK，不作为
+Windows 分发方式。下一步验证真实 Adapter、Device 和异步事件推进。
