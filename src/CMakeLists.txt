@@ -68,6 +68,7 @@ target_sources(
     $<TARGET_OBJECTS:granit_volk>
     $<TARGET_OBJECTS:granit_backend_plugin>
     backend/capabilities.h
+    backend/queue.h
     backend/resources.h
     backend/upload.h
     backend/vulkan/device.cpp

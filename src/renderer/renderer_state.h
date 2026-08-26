@@ -18,6 +18,7 @@
 #include <granit/renderer/resource_types.h>
 
 #include "backend/capabilities.h"
+#include "backend/queue.h"
 #include "backend/upload.h"
 #include "backend/vulkan/command_recorder.h"
 #include "backend/vulkan/device.h"
@@ -43,7 +44,7 @@ struct vulkan_bind_group_write {
   VkSampler sampler{VK_NULL_HANDLE};
 };
 
-class renderer_state {
+class renderer_state final : public backend_queue {
 public:
   renderer_state() = default;
   ~renderer_state();
@@ -202,11 +203,11 @@ public:
                   const VkRenderingAttachmentInfo* stencil_attachment, std::uint32_t layer_count,
                   std::span<const vulkan_image_access> image_accesses);
   [[nodiscard]] granit_result end_rendering(vulkan_command_recorder& recorder) noexcept;
-  [[nodiscard]] granit_result submit_command_recorder(vulkan_command_recorder& recorder,
-                                                      submission_serial& submitted_serial);
+  [[nodiscard]] granit_result submit_command_recorder(backend_command_recorder_resource& recorder,
+                                                      submission_serial& submitted_serial) override;
   [[nodiscard]] granit_result
-  submit_command_recorders(std::span<vulkan_command_recorder* const> recorders,
-                           submission_serial& submitted_serial);
+  submit_command_recorders(std::span<backend_command_recorder_resource* const> recorders,
+                           submission_serial& submitted_serial) override;
   [[nodiscard]] granit_result acquire_swapchain_frame(vulkan_swapchain& swapchain,
                                                       std::uint32_t& image_index,
                                                       std::size_t& slot_index,
@@ -222,8 +223,9 @@ public:
   [[nodiscard]] granit_result cancel_swapchain_frame(vulkan_swapchain& swapchain,
                                                      std::uint32_t image_index,
                                                      std::size_t slot_index, bool& needs_recreate);
-  [[nodiscard]] granit_result wait_command_recorder(vulkan_command_recorder& recorder) noexcept;
-  [[nodiscard]] granit_result wait_for_all_submissions() noexcept;
+  [[nodiscard]] granit_result
+  wait_command_recorder(backend_command_recorder_resource& recorder) noexcept override;
+  [[nodiscard]] granit_result wait_for_all_submissions() noexcept override;
   [[nodiscard]] granit_result wait_for_present_idle() noexcept;
   void retire_resource(submission_serial retire_after, retirement_order order,
                        std::shared_ptr<void> resource);

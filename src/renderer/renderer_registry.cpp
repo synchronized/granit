@@ -2861,8 +2861,7 @@ granit_result renderer_registry::submit_command_recorder(granit_renderer rendere
     return GRANIT_ERROR_INVALID_HANDLE;
   std::lock_guard record_lock{record->mutex};
   submission_serial serial{};
-  const auto result =
-      record->renderer->submit_command_recorder(native_command_recorder(*record->native), serial);
+  const auto result = record->renderer->submit_command_recorder(*record->native, serial);
   if (result == GRANIT_SUCCESS)
     mark_resources_used(record->retained_resources, serial);
   return result;
@@ -2906,10 +2905,10 @@ renderer_registry::submit_command_recorders(granit_renderer renderer,
   record_locks.reserve(lock_order.size());
   for (auto* record : lock_order)
     record_locks.emplace_back(record->mutex);
-  std::vector<vulkan_command_recorder*> native_recorders;
+  std::vector<backend_command_recorder_resource*> native_recorders;
   native_recorders.reserve(records.size());
   for (const auto& record : records)
-    native_recorders.push_back(&native_command_recorder(*record->native));
+    native_recorders.push_back(record->native.get());
   submission_serial serial{};
   const auto result = state->submit_command_recorders(native_recorders, serial);
   if (result == GRANIT_SUCCESS) {
@@ -2926,8 +2925,7 @@ granit_result renderer_registry::reset_command_recorder(granit_renderer renderer
     return GRANIT_ERROR_INVALID_HANDLE;
   }
   std::lock_guard record_lock{record->mutex};
-  const auto wait_result =
-      record->renderer->wait_command_recorder(native_command_recorder(*record->native));
+  const auto wait_result = record->renderer->wait_command_recorder(*record->native);
   if (wait_result != GRANIT_SUCCESS) {
     return wait_result;
   }
@@ -4013,8 +4011,7 @@ granit_result renderer_registry::destroy_command_recorder(granit_renderer render
     return GRANIT_ERROR_UNSUPPORTED;
   {
     std::lock_guard record_lock{record->mutex};
-    const auto wait_result =
-        record->renderer->wait_command_recorder(native_command_recorder(*record->native));
+    const auto wait_result = record->renderer->wait_command_recorder(*record->native);
     if (wait_result != GRANIT_SUCCESS && wait_result != GRANIT_ERROR_DEVICE_LOST) {
       return wait_result;
     }

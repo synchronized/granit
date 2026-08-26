@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
+#include "backend/queue.h"
 #include "backend/resources.h"
 #include "backend/upload.h"
 
@@ -112,6 +113,30 @@ public:
 
 private:
   bool& destroyed_;
+};
+
+class fake_queue final : public granit::detail::backend_queue {
+public:
+  granit_result
+  submit_command_recorder(granit::detail::backend_command_recorder_resource&,
+                          granit::detail::submission_serial& submitted_serial) override {
+    submitted_serial = 1;
+    return GRANIT_SUCCESS;
+  }
+
+  granit_result submit_command_recorders(
+      std::span<granit::detail::backend_command_recorder_resource* const> recorders,
+      granit::detail::submission_serial& submitted_serial) override {
+    submitted_serial = recorders.size();
+    return recorders.empty() ? GRANIT_ERROR_INVALID_ARGUMENT : GRANIT_SUCCESS;
+  }
+
+  granit_result
+  wait_command_recorder(granit::detail::backend_command_recorder_resource&) noexcept override {
+    return GRANIT_SUCCESS;
+  }
+
+  granit_result wait_for_all_submissions() noexcept override { return GRANIT_SUCCESS; }
 };
 
 } // namespace
@@ -238,4 +263,17 @@ TEST_CASE("上传批次描述不依赖具体后端类型") {
   CHECK(upload.buffer == &buffer);
   CHECK(upload.destination_offset == 16);
   CHECK(upload.size == 32);
+}
+
+TEST_CASE("队列契约使用后端命令对象和统一提交序列") {
+  bool destroyed = false;
+  fake_command_recorder_resource recorder{destroyed};
+  fake_queue queue;
+  granit::detail::submission_serial serial{};
+  CHECK(queue.submit_command_recorder(recorder, serial) == GRANIT_SUCCESS);
+  CHECK(serial == 1);
+  granit::detail::backend_command_recorder_resource* recorders[]{&recorder};
+  CHECK(queue.submit_command_recorders(recorders, serial) == GRANIT_SUCCESS);
+  CHECK(serial == 1);
+  CHECK(queue.wait_command_recorder(recorder) == GRANIT_SUCCESS);
 }

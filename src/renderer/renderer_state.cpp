@@ -1587,8 +1587,9 @@ granit_result renderer_state::complete_frame_slot(frame_slot& slot) noexcept {
   return GRANIT_SUCCESS;
 }
 
-granit_result renderer_state::submit_command_recorder(vulkan_command_recorder& recorder,
+granit_result renderer_state::submit_command_recorder(backend_command_recorder_resource& resource,
                                                       submission_serial& submitted_serial) {
+  auto& recorder = static_cast<vulkan_command_recorder_resource&>(resource).native();
   submitted_serial = 0;
   if (device_lost())
     return GRANIT_ERROR_DEVICE_LOST;
@@ -1687,12 +1688,23 @@ granit_result renderer_state::submit_command_recorder(vulkan_command_recorder& r
   return GRANIT_SUCCESS;
 }
 
-granit_result
-renderer_state::submit_command_recorders(std::span<vulkan_command_recorder* const> recorders,
-                                         submission_serial& submitted_serial) {
+granit_result renderer_state::submit_command_recorders(
+    std::span<backend_command_recorder_resource* const> resources,
+    submission_serial& submitted_serial) {
   submitted_serial = 0;
   if (device_lost())
     return GRANIT_ERROR_DEVICE_LOST;
+  std::vector<vulkan_command_recorder*> recorders;
+  try {
+    recorders.reserve(resources.size());
+    for (auto* resource : resources) {
+      if (resource == nullptr)
+        return GRANIT_ERROR_INVALID_ARGUMENT;
+      recorders.push_back(&static_cast<vulkan_command_recorder_resource&>(*resource).native());
+    }
+  } catch (const std::bad_alloc&) {
+    return GRANIT_ERROR_OUT_OF_MEMORY;
+  }
   std::lock_guard lock{queue_mutex_};
   if (recorders.empty() || frame_slots_.empty()) {
     return GRANIT_ERROR_INVALID_ARGUMENT;
@@ -2123,7 +2135,9 @@ granit_result renderer_state::observe_device_result(granit_result result,
   return observed;
 }
 
-granit_result renderer_state::wait_command_recorder(vulkan_command_recorder& recorder) noexcept {
+granit_result
+renderer_state::wait_command_recorder(backend_command_recorder_resource& resource) noexcept {
+  auto& recorder = static_cast<vulkan_command_recorder_resource&>(resource).native();
   if (device_lost())
     return GRANIT_ERROR_DEVICE_LOST;
   std::lock_guard lock{queue_mutex_};
