@@ -36,3 +36,7 @@ Granit 需要基于锁定修订自行构建 monolithic shared library，再验�
 2. 同时产出匹配的 headers、运行库、符号清单、许可证和 SHA-256 清单。
 3. 用 MSVC 与 Clang 消费者只加载 C ABI DLL，不直接链接 Dawn 静态 C++ 实现。
 4. 完成缺失库、缺失符号、Instance/Adapter/Device 和离屏回读测试后再接受 ADR-004。
+
+仓库已增加仅手动触发的 `Dawn Dependency Packages` 工作流。它在 Windows 与 Linux 上从锁定修订
+获取依赖，构建 monolithic shared library，检查 `wgpuCreateInstance` 导出，并生成带 SHA-256 的
+版本化压缩包。普通 push 与 Pull Request 不触发该重型构建。
