@@ -116,4 +116,13 @@ vulkan_command_recorder_resource::~vulkan_command_recorder_resource() {
   }
 }
 
+vulkan_surface_resource::vulkan_surface_resource(std::shared_ptr<renderer_state> renderer) noexcept
+    : renderer_(std::move(renderer)) {}
+
+vulkan_surface_resource::~vulkan_surface_resource() {
+  if (renderer_) {
+    renderer_->destroy_native_surface(native_);
+  }
+}
+
 } // namespace granit::detail

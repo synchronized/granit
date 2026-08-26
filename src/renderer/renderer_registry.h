@@ -326,8 +326,7 @@ private:
   struct surface_record {
     resource_metadata metadata;
     std::shared_ptr<renderer_state> renderer;
-    VkSurfaceKHR native_handle{VK_NULL_HANDLE};
-    ~surface_record();
+    std::unique_ptr<backend_surface_resource> native;
   };
   struct swapchain_record {
     resource_metadata metadata;

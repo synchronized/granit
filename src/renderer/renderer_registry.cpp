@@ -72,6 +72,10 @@ native_command_recorder(backend_command_recorder_resource& resource) noexcept {
   return static_cast<vulkan_command_recorder_resource&>(resource).native();
 }
 
+VkSurfaceKHR& native_surface_handle(backend_surface_resource& resource) noexcept {
+  return static_cast<vulkan_surface_resource&>(resource).native();
+}
+
 granit_texture_format swapchain_format(VkFormat format) noexcept {
   switch (format) {
   case VK_FORMAT_B8G8R8A8_SRGB:
@@ -151,12 +155,6 @@ renderer_registry& renderer_registry::instance() {
   return registry;
 }
 
-renderer_registry::surface_record::~surface_record() {
-  if (renderer && native_handle != VK_NULL_HANDLE) {
-    renderer->destroy_native_surface(native_handle);
-  }
-}
-
 renderer_registry::swapchain_record::~swapchain_record() {
   if (renderer && native) {
     renderer->destroy_native_swapchain(*native);
@@ -230,7 +228,8 @@ granit_result renderer_registry::set_object_name(granit_renderer renderer, grani
     lock.unlock();                                                                                 \
     return state->set_object_name(type, native, name);                                             \
   }
-  GRANIT_NAME_OBJECT(surfaces_, VK_OBJECT_TYPE_SURFACE_KHR, it->second->native_handle)
+  GRANIT_NAME_OBJECT(surfaces_, VK_OBJECT_TYPE_SURFACE_KHR,
+                     native_surface_handle(*it->second->native))
   GRANIT_NAME_OBJECT(swapchains_, VK_OBJECT_TYPE_SWAPCHAIN_KHR, it->second->native->native_handle())
   GRANIT_NAME_OBJECT(buffers_, VK_OBJECT_TYPE_BUFFER, native_buffer(*it->second->native).buffer)
   GRANIT_NAME_OBJECT(textures_, VK_OBJECT_TYPE_IMAGE, native_texture(*it->second->native).image)
@@ -590,8 +589,9 @@ granit_result renderer_registry::create_win32_surface(granit_renderer renderer,
 
     auto record = std::make_shared<surface_record>();
     record->renderer = state;
-    const auto create_result =
-        state->create_win32_surface(native_instance, native_window, record->native_handle);
+    record->native = std::make_unique<vulkan_surface_resource>(state);
+    const auto create_result = state->create_win32_surface(native_instance, native_window,
+                                                           native_surface_handle(*record->native));
     if (create_result != GRANIT_SUCCESS) {
       return create_result;
     }
@@ -630,7 +630,9 @@ granit_result renderer_registry::create_xcb_surface(granit_renderer renderer, vo
 
     auto record = std::make_shared<surface_record>();
     record->renderer = state;
-    const auto create_result = state->create_xcb_surface(connection, window, record->native_handle);
+    record->native = std::make_unique<vulkan_surface_resource>(state);
+    const auto create_result =
+        state->create_xcb_surface(connection, window, native_surface_handle(*record->native));
     if (create_result != GRANIT_SUCCESS)
       return create_result;
 
@@ -667,8 +669,9 @@ granit_result renderer_registry::create_wayland_surface(granit_renderer renderer
 
     auto record = std::make_shared<surface_record>();
     record->renderer = state;
-    const auto create_result =
-        state->create_wayland_surface(display, native_surface, record->native_handle);
+    record->native = std::make_unique<vulkan_surface_resource>(state);
+    const auto create_result = state->create_wayland_surface(
+        display, native_surface, native_surface_handle(*record->native));
     if (create_result != GRANIT_SUCCESS)
       return create_result;
 
@@ -812,8 +815,8 @@ granit_result renderer_registry::create_swapchain(granit_renderer renderer, gran
     record->renderer = state;
     record->surface = surface_state;
     record->native = std::make_unique<vulkan_swapchain>();
-    const auto create_result =
-        state->create_swapchain(surface_state->native_handle, desc, *record->native);
+    const auto create_result = state->create_swapchain(
+        native_surface_handle(*surface_state->native), desc, *record->native);
     if (create_result != GRANIT_SUCCESS) {
       return create_result;
     }
@@ -920,8 +923,8 @@ granit_result renderer_registry::recreate_swapchain(granit_renderer renderer,
   }
   old_views.clear();
   old_textures.clear();
-  const auto result =
-      record->renderer->recreate_swapchain(record->surface->native_handle, desc, *record->native);
+  const auto result = record->renderer->recreate_swapchain(
+      native_surface_handle(*record->surface->native), desc, *record->native);
   const auto install_result = install_swapchain_backbuffers(swapchain, record);
   return result == GRANIT_SUCCESS ? install_result : result;
 }

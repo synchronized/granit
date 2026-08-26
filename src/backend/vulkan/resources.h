@@ -162,6 +162,19 @@ private:
   vulkan_command_recorder native_;
 };
 
+class vulkan_surface_resource final : public backend_surface_resource {
+public:
+  explicit vulkan_surface_resource(std::shared_ptr<renderer_state> renderer) noexcept;
+  ~vulkan_surface_resource() override;
+
+  [[nodiscard]] VkSurfaceKHR& native() noexcept { return native_; }
+  [[nodiscard]] VkSurfaceKHR native() const noexcept { return native_; }
+
+private:
+  std::shared_ptr<renderer_state> renderer_;
+  VkSurfaceKHR native_{VK_NULL_HANDLE};
+};
+
 } // namespace granit::detail
 
 #endif

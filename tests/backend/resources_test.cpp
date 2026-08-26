@@ -115,6 +115,15 @@ private:
   bool& destroyed_;
 };
 
+class fake_surface_resource final : public granit::detail::backend_surface_resource {
+public:
+  explicit fake_surface_resource(bool& destroyed) noexcept : destroyed_(destroyed) {}
+  ~fake_surface_resource() override { destroyed_ = true; }
+
+private:
+  bool& destroyed_;
+};
+
 class fake_queue final : public granit::detail::backend_queue {
 public:
   granit_result
@@ -246,6 +255,16 @@ TEST_CASE("命令记录器通过后端抽象正确销毁") {
   {
     std::unique_ptr<granit::detail::backend_command_recorder_resource> resource =
         std::make_unique<fake_command_recorder_resource>(destroyed);
+    CHECK_FALSE(destroyed);
+  }
+  CHECK(destroyed);
+}
+
+TEST_CASE("Surface 通过后端抽象正确销毁") {
+  bool destroyed = false;
+  {
+    std::unique_ptr<granit::detail::backend_surface_resource> resource =
+        std::make_unique<fake_surface_resource>(destroyed);
     CHECK_FALSE(destroyed);
   }
   CHECK(destroyed);
