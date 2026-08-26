@@ -24,7 +24,7 @@ jobs:
   validate:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: 校验标签与项目版本
         run: >-
           cmake -DGRANIT_SOURCE_DIR="$PWD" -DGRANIT_RELEASE_TAG="$RELEASE_TAG"
@@ -38,7 +38,7 @@ jobs:
       matrix:
         linkage: [shared, static]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: ilammy/msvc-dev-cmd@v1
         with:
           arch: x64
@@ -68,7 +68,7 @@ jobs:
             -DGRANIT_INSTALL_PREFIX="$stage" `
             -P cmake/check_install_exports.cmake
           Compress-Archive -Path $stage -DestinationPath "${{ steps.package.outputs.name }}.zip"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: ${{ steps.package.outputs.name }}
           path: ${{ steps.package.outputs.name }}.zip
@@ -88,7 +88,7 @@ jobs:
       matrix:
         linkage: [shared, static]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: 选择 preset 和产物名
         id: package
         shell: bash
@@ -127,7 +127,7 @@ jobs:
             -P cmake/check_install_exports.cmake
           tar -C "$PWD/stage" -czf "${{ steps.package.outputs.name }}.tar.gz" \
             "${{ steps.package.outputs.name }}"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: ${{ steps.package.outputs.name }}
           path: ${{ steps.package.outputs.name }}.tar.gz
@@ -137,14 +137,14 @@ jobs:
     needs: [windows-package, linux-package]
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v6
         with:
           path: dist
           merge-multiple: true
       - name: 生成 SHA-256 校验文件
         working-directory: dist
         run: sha256sum granit-* > SHA256SUMS
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: release-assets
           path: dist/*
@@ -157,7 +157,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v6
         with:
           name: release-assets
           path: dist
