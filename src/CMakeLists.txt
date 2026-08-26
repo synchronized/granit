@@ -69,6 +69,7 @@ target_sources(
     $<TARGET_OBJECTS:granit_backend_plugin>
     backend/capabilities.h
     backend/resources.h
+    backend/upload.h
     backend/vulkan/device.cpp
     backend/vulkan/device.h
     backend/vulkan/frame_context.cpp

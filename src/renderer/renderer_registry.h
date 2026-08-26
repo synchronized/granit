@@ -29,6 +29,7 @@
 #include <granit/renderer/upload_batch.h>
 
 #include "backend/resources.h"
+#include "backend/upload.h"
 #include "backend/vulkan/timestamp_query.h"
 #include "core/handle_table.h"
 #include "core/lifecycle_validation.h"
@@ -450,12 +451,12 @@ private:
     bool submitted{};
   };
   struct upload_entry {
-    vulkan_upload_type type{vulkan_upload_type::buffer};
+    backend_upload_type type{backend_upload_type::buffer};
     std::shared_ptr<buffer_record> buffer;
     std::shared_ptr<texture_record> texture;
     std::uint64_t offset{};
     std::vector<std::byte> data;
-    VkBufferImageCopy texture_copy{};
+    backend_texture_copy texture_copy{};
   };
   struct upload_batch_record {
     resource_metadata metadata;

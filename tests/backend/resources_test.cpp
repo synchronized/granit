@@ -2,6 +2,7 @@
 // Copyright (c) 2026 Granit contributors
 
 #include "backend/resources.h"
+#include "backend/upload.h"
 
 #include <catch2/catch_all.hpp>
 
@@ -223,4 +224,18 @@ TEST_CASE("命令记录器通过后端抽象正确销毁") {
     CHECK_FALSE(destroyed);
   }
   CHECK(destroyed);
+}
+
+TEST_CASE("上传批次描述不依赖具体后端类型") {
+  bool destroyed = false;
+  fake_buffer_resource buffer{destroyed};
+  const granit::detail::backend_upload_operation upload{
+      .type = granit::detail::backend_upload_type::buffer,
+      .buffer = &buffer,
+      .destination_offset = 16,
+      .size = 32,
+  };
+  CHECK(upload.buffer == &buffer);
+  CHECK(upload.destination_offset == 16);
+  CHECK(upload.size == 32);
 }

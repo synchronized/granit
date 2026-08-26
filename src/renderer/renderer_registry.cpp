@@ -1613,7 +1613,7 @@ granit_result renderer_registry::upload_batch_write_buffer(granit_renderer rende
       buffer_record->desc.memory_location != GRANIT_MEMORY_LOCATION_AUTOMATIC)
     return GRANIT_ERROR_UNSUPPORTED;
   try {
-    upload_entry entry{.type = vulkan_upload_type::buffer,
+    upload_entry entry{.type = backend_upload_type::buffer,
                        .buffer = buffer_record,
                        .texture = {},
                        .offset = offset,
@@ -1692,18 +1692,22 @@ granit_result renderer_registry::upload_batch_write_texture(
   if (layout.offset > size || required > size - layout.offset || required > SIZE_MAX)
     return GRANIT_ERROR_INVALID_ARGUMENT;
 
-  VkBufferImageCopy copy{};
-  copy.bufferRowLength = layout.bytes_per_row == 0 ? 0 : layout.bytes_per_row / bytes_per_pixel;
-  copy.bufferImageHeight = layout.rows_per_image;
-  copy.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-  copy.imageSubresource.mipLevel = region.mip_level;
-  copy.imageSubresource.baseArrayLayer = region.base_array_layer;
-  copy.imageSubresource.layerCount = region.array_layer_count;
-  copy.imageOffset = {static_cast<std::int32_t>(region.x), static_cast<std::int32_t>(region.y),
-                      static_cast<std::int32_t>(region.z)};
-  copy.imageExtent = {region.width, region.height, region.depth};
+  const backend_texture_copy copy{
+      .buffer_row_length = layout.bytes_per_row == 0 ? 0 : layout.bytes_per_row / bytes_per_pixel,
+      .buffer_image_height = layout.rows_per_image,
+      .aspect = region.aspect,
+      .mip_level = region.mip_level,
+      .base_array_layer = region.base_array_layer,
+      .array_layer_count = region.array_layer_count,
+      .x = static_cast<std::int32_t>(region.x),
+      .y = static_cast<std::int32_t>(region.y),
+      .z = static_cast<std::int32_t>(region.z),
+      .width = region.width,
+      .height = region.height,
+      .depth = region.depth,
+  };
   try {
-    upload_entry entry{.type = vulkan_upload_type::texture,
+    upload_entry entry{.type = backend_upload_type::texture,
                        .buffer = {},
                        .texture = texture_record,
                        .offset = 0,
@@ -1741,17 +1745,16 @@ granit_result renderer_registry::submit_upload_batch(granit_renderer renderer,
   if (record->uploads.empty())
     return GRANIT_ERROR_INVALID_ARGUMENT;
 
-  std::vector<vulkan_upload_operation> uploads;
+  std::vector<backend_upload_operation> uploads;
   uploads.reserve(record->uploads.size());
   for (const auto& upload : record->uploads) {
-    uploads.push_back(
-        {.type = upload.type,
-         .buffer = upload.buffer ? &native_buffer(*upload.buffer->native) : nullptr,
-         .texture = upload.texture ? &native_texture(*upload.texture->native) : nullptr,
-         .destination_offset = upload.offset,
-         .data = upload.data.data(),
-         .size = upload.data.size(),
-         .texture_copy = upload.texture_copy});
+    uploads.push_back({.type = upload.type,
+                       .buffer = upload.buffer ? upload.buffer->native.get() : nullptr,
+                       .texture = upload.texture ? upload.texture->native.get() : nullptr,
+                       .destination_offset = upload.offset,
+                       .data = upload.data.data(),
+                       .size = upload.data.size(),
+                       .texture_copy = upload.texture_copy});
   }
   const auto result = record->renderer->upload_batch(uploads);
   if (result == GRANIT_SUCCESS)
