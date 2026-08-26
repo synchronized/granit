@@ -19,6 +19,7 @@
 
 ## 稳定化与跨平台
 
+- [2026-08-26 S-09C 安装与文档闭环](2026-08-26-s09c-installation-documentation.md)
 - [2026-08-26 S-09B 公共契约一致性审计](2026-08-26-s09b-contract-consistency.md)
 - [2026-08-25 S-09A 公共 SDK 使用路径基线](2026-08-25-s09a-sdk-usability-baseline.md)
 - [2026-08-25 F-10 Frame Context 验证记录](2026-08-25-f10-frame-context-validation.md)
