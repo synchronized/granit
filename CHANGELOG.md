@@ -10,6 +10,13 @@
 
 0.3.0 正在规划和开发；公共变更将在实现后记录于此。
 
+### 新增
+
+- Core 新增 Frame Context、帧槽查询和显式 Buffer flush；RenderPipeline 新增 Canvas 批量追加，
+  用于复用真实在途帧槽并减少逐项跨 ABI 调用。
+- Renderer validation 诊断可定位代表性的 Buffer 描述错误、失效句柄和跨 Renderer 句柄；结果码
+  仍是程序逻辑的稳定依据。
+
 ### 修复
 
 - RenderPipeline component 的创建接口把空 Renderer 统一归类为
@@ -33,6 +40,17 @@
   文档入口随构建配置漂移。
 - Windows/Linux Actions 的安装 Consumer 统一使用与构建指南相同的 CTest 入口，覆盖共享与静态
   安装矩阵并由测试自身设置运行库路径。
+
+### 兼容性与迁移
+
+- 未删除或改名 0.2.0 的公共 C 导出；新增导出属于兼容扩展。
+- `granit_canvas_draw_list_desc` 将一个原保留字段定义为 `frame_slot_count`，
+  `granit_canvas_record_desc` 新增 `frame_slot` 并扩大 V1 尺寸。旧代码必须使用当前初始化宏重新编译，
+  不应手写结构大小或复用 0.2.0 二进制描述布局。
+- 空父资源、失效句柄和跨对象归属错误现在统一返回 `GRANIT_ERROR_INVALID_HANDLE`；只比较
+  `GRANIT_ERROR_INVALID_ARGUMENT` 的旧错误分支需要同步接受新分类。
+- 完整迁移步骤见[从 0.2 迁移到 0.3](docs/guides/migrate-0.2-to-0.3.md)。0.3.0 仍不承诺稳定
+  C ABI 或 C++ 二进制 ABI。
 
 ## 0.2.0 - 2026-08-24
 
