@@ -190,7 +190,11 @@ target_include_directories(
 )
 granit_target_compile_warnings(granit_backend_plugin_c_header_test)
 
-add_library(granit_fake_backend_plugin SHARED backend/fake_backend_plugin.cpp)
+add_library(
+  granit_fake_backend_plugin SHARED
+  "${PROJECT_SOURCE_DIR}/src/backend/webgpu/plugin.cpp"
+  backend/webgpu_mock.cpp
+)
 add_library(granit_incompatible_backend_plugin SHARED backend/incompatible_backend_plugin.cpp)
 target_compile_features(granit_fake_backend_plugin PRIVATE cxx_std_20)
 target_compile_features(granit_incompatible_backend_plugin PRIVATE cxx_std_20)
@@ -202,7 +206,11 @@ set_target_properties(
     FOLDER "Tests/WebGPU"
 )
 target_include_directories(
-  granit_fake_backend_plugin PRIVATE "${PROJECT_SOURCE_DIR}/include" "${PROJECT_SOURCE_DIR}/src"
+  granit_fake_backend_plugin
+  PRIVATE
+    "${CMAKE_CURRENT_SOURCE_DIR}/support/webgpu"
+    "${PROJECT_SOURCE_DIR}/include"
+    "${PROJECT_SOURCE_DIR}/src"
 )
 target_include_directories(
   granit_incompatible_backend_plugin

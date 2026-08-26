@@ -71,7 +71,7 @@ TEST_CASE("后端插件 Loader 完成版本化握手", "[backend][plugin]") {
   REQUIRE(loader.api() != nullptr);
   CHECK(loader.api()->abi_version == GRANIT_BACKEND_PLUGIN_ABI_VERSION);
   CHECK(loader.api()->kind == GRANIT_BACKEND_PLUGIN_KIND_WEBGPU);
-  CHECK(std::string_view{loader.api()->name, loader.api()->name_length} == "测试 WebGPU 插件");
+  CHECK(std::string_view{loader.api()->name, loader.api()->name_length} == "Granit WebGPU (Dawn)");
 
   host_state state;
   auto host = make_host(state);
@@ -91,8 +91,9 @@ TEST_CASE("后端插件 Loader 完成版本化握手", "[backend][plugin]") {
   state.fail_allocation = false;
 
   state.throw_diagnostic = true;
-  CHECK(loader.create_instance(&host, &instance) == GRANIT_ERROR_INTERNAL);
-  CHECK(instance == 0);
+  CHECK(loader.create_instance(&host, &instance) == GRANIT_SUCCESS);
+  CHECK(instance != 0);
+  CHECK(loader.destroy_instance(instance) == GRANIT_SUCCESS);
   CHECK(state.allocations == 2);
   CHECK(state.deallocations == 1);
   state.throw_diagnostic = false;

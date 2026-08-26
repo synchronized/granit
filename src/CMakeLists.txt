@@ -23,6 +23,30 @@ set_target_properties(
     FOLDER "Backends"
 )
 
+if(GRANIT_BUILD_BACKEND_WEBGPU)
+  add_library(granit_backend_webgpu MODULE backend/webgpu/plugin.cpp)
+  target_compile_features(granit_backend_webgpu PRIVATE cxx_std_20)
+  target_include_directories(
+    granit_backend_webgpu PRIVATE "${PROJECT_SOURCE_DIR}/include" "${PROJECT_SOURCE_DIR}/src"
+  )
+  target_link_libraries(granit_backend_webgpu PRIVATE dawn::webgpu_dawn)
+  granit_target_compile_warnings(granit_backend_webgpu)
+  granit_target_output_directories(granit_backend_webgpu)
+  set_target_properties(
+    granit_backend_webgpu
+    PROPERTIES
+      CXX_VISIBILITY_PRESET hidden
+      VISIBILITY_INLINES_HIDDEN YES
+      FOLDER "Backends/WebGPU"
+  )
+  install(
+    TARGETS granit_backend_webgpu
+    LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}/granit/backends"
+    RUNTIME DESTINATION "${CMAKE_INSTALL_LIBDIR}/granit/backends"
+    COMPONENT BackendWebGPU
+  )
+endif()
+
 add_library(granit)
 add_library(granit::granit ALIAS granit)
 granit_target_output_directories(granit)
