@@ -5,9 +5,6 @@ name: Dawn Dependency Packages
 
 on:
   workflow_dispatch:
-  pull_request:
-    paths:
-      - .github/workflows/dawn-dependencies.yml
 
 permissions:
   contents: read
