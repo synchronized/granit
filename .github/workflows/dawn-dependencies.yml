@@ -110,6 +110,11 @@ jobs:
             -DGRANIT_BUILD_EXAMPLES=OFF `
             -DGRANIT_BUILD_TESTING=ON
           cmake --build $build --target granit_webgpu_plugin_smoke
+          $fxc = "$env:WINDIR/System32/d3dcompiler_47.dll"
+          if (-not (Test-Path -LiteralPath $fxc -PathType Leaf)) {
+            throw "Windows runner 缺少 d3dcompiler_47.dll"
+          }
+          Copy-Item -LiteralPath $fxc -Destination "$build/bin/d3dcompiler_47.dll"
           ctest --test-dir $build -R granit.backend.webgpu_plugin_smoke --output-on-failure
       - name: 打包 Windows 产物
         id: package
