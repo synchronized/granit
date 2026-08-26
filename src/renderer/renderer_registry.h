@@ -51,6 +51,8 @@ public:
                                                     std::uint64_t& size);
   [[nodiscard]] granit_result set_object_name(granit_renderer renderer, granit_handle object,
                                               std::string_view name);
+  /** 向有效 Renderer 的回调发送公共 API 参数或句柄校验诊断。 */
+  void emit_validation_diagnostic(granit_renderer renderer, std::string_view message) noexcept;
   [[nodiscard]] std::shared_ptr<renderer_state> acquire(granit_renderer renderer);
   [[nodiscard]] granit_result create_win32_surface(granit_renderer renderer, void* native_instance,
                                                    void* native_window, granit_surface& surface);

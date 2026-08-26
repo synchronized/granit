@@ -5,8 +5,30 @@
 
 #include "linkage_check.h"
 
+#include <atomic>
 #include <string>
+#include <string_view>
 #include <utility>
+
+namespace {
+
+struct diagnostic_capture {
+  std::atomic<bool> found_buffer_desc{};
+};
+
+void capture_diagnostic(granit_diagnostic_severity, granit_diagnostic_category category,
+                        const char* message, std::uint32_t message_length,
+                        void* user_data) noexcept {
+  if (category != GRANIT_DIAGNOSTIC_CATEGORY_VALIDATION)
+    return;
+  const std::string_view text{message, message_length};
+  if (text.find("granit_buffer_create") != std::string_view::npos &&
+      text.find("desc") != std::string_view::npos) {
+    static_cast<diagnostic_capture*>(user_data)->found_buffer_desc.store(true);
+  }
+}
+
+} // namespace
 
 int main() {
   const auto runtime = granit::library_version();
@@ -19,14 +41,23 @@ int main() {
       runtime.patch != GRANIT_VERSION_PATCH)
     return 2;
 
+  diagnostic_capture diagnostics;
   granit::renderer renderer;
-  const auto renderer_result = renderer.initialize();
+  const auto renderer_result = renderer.initialize(
+      {.diagnostics = capture_diagnostic, .diagnostic_user_data = &diagnostics});
   if (renderer_result == granit::result::backend_unavailable ||
       renderer_result == granit::result::incompatible_driver ||
       renderer_result == granit::result::no_suitable_device)
     return renderer.valid() ? 3 : 0;
   if (granit::failed(renderer_result))
     return 4;
+
+  granit_buffer_desc invalid_desc = GRANIT_BUFFER_DESC_INIT;
+  granit_buffer invalid_buffer = GRANIT_NULL_HANDLE;
+  if (granit_buffer_create(renderer.native_handle(), &invalid_desc, &invalid_buffer) !=
+          GRANIT_ERROR_INVALID_ARGUMENT ||
+      invalid_buffer != GRANIT_NULL_HANDLE || !diagnostics.found_buffer_desc.load())
+    return 10;
 
   granit::buffer buffer;
   if (granit::failed(buffer.initialize(renderer.native_handle(),

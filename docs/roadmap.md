@@ -155,7 +155,7 @@
   Surface、ImGui Draw Data 转换、字体上传、组合示例与 S-08F 测量已完成；Win32 及 Linux
   X11/Wayland 共享与静态 smoke test 均已通过。
 - **[S-09](plans/S-09-0.3.0-sdk-usability.md) / P1**：0.3.0 公共 SDK 易用性与集成体验已确认，
-  S-09A～S-09C 已完成；下一步验证诊断可执行性并完成 0.3.0 验收。
+  S-09A～S-09D 已完成；下一步执行 0.3.0 验收。
 
 ## 近期执行顺序
 
