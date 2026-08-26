@@ -13,6 +13,8 @@ extern "C" {
 typedef struct WGPUInstanceImpl* WGPUInstance;
 typedef struct WGPUAdapterImpl* WGPUAdapter;
 typedef struct WGPUDeviceImpl* WGPUDevice;
+typedef struct WGPUQueueImpl* WGPUQueue;
+typedef struct WGPUBufferImpl* WGPUBuffer;
 
 typedef unsigned int WGPUBool;
 typedef unsigned int WGPUInstanceFeatureName;
@@ -21,6 +23,9 @@ typedef unsigned int WGPURequestAdapterStatus;
 typedef unsigned int WGPURequestDeviceStatus;
 typedef unsigned int WGPUWaitStatus;
 typedef unsigned int WGPUStatus;
+typedef unsigned int WGPUMapAsyncStatus;
+typedef unsigned long long WGPUBufferUsage;
+typedef unsigned long long WGPUMapMode;
 
 #define WGPU_FALSE 0
 #define WGPU_TRUE 1
@@ -32,6 +37,13 @@ typedef unsigned int WGPUStatus;
 #define WGPUWaitStatus_Success 1
 #define WGPUStatus_Success 1
 #define WGPUStatus_Error 2
+#define WGPUMapAsyncStatus_Success 1
+#define WGPUMapAsyncStatus_Error 3
+#define WGPUBufferUsage_None 0
+#define WGPUBufferUsage_MapRead 1
+#define WGPUBufferUsage_CopySrc 4
+#define WGPUBufferUsage_CopyDst 8
+#define WGPUMapMode_Read 1
 #define WGPUBackendType_D3D12 4
 #define WGPUBackendType_Vulkan 6
 
@@ -68,6 +80,18 @@ typedef struct WGPULimits {
   {                                                                                                \
   }
 
+typedef struct WGPUBufferDescriptor {
+  void* nextInChain;
+  WGPUStringView label;
+  WGPUBufferUsage usage;
+  unsigned long long size;
+  WGPUBool mappedAtCreation;
+} WGPUBufferDescriptor;
+
+#define WGPU_BUFFER_DESCRIPTOR_INIT                                                                \
+  {                                                                                                \
+  }
+
 typedef struct WGPUFuture {
   unsigned long long id;
 } WGPUFuture;
@@ -90,6 +114,7 @@ typedef void (*WGPURequestAdapterCallback)(WGPURequestAdapterStatus, WGPUAdapter
                                            void*, void*);
 typedef void (*WGPURequestDeviceCallback)(WGPURequestDeviceStatus, WGPUDevice, WGPUStringView,
                                           void*, void*);
+typedef void (*WGPUBufferMapCallback)(WGPUMapAsyncStatus, WGPUStringView, void*, void*);
 
 typedef struct WGPURequestAdapterCallbackInfo {
   void* nextInChain;
@@ -107,6 +132,14 @@ typedef struct WGPURequestDeviceCallbackInfo {
   void* userdata2;
 } WGPURequestDeviceCallbackInfo;
 
+typedef struct WGPUBufferMapCallbackInfo {
+  void* nextInChain;
+  WGPUCallbackMode mode;
+  WGPUBufferMapCallback callback;
+  void* userdata1;
+  void* userdata2;
+} WGPUBufferMapCallbackInfo;
+
 WGPUInstance wgpuCreateInstance(const WGPUInstanceDescriptor* descriptor);
 void wgpuInstanceRelease(WGPUInstance instance);
 WGPUFuture wgpuInstanceRequestAdapter(WGPUInstance instance,
@@ -119,6 +152,16 @@ WGPUFuture wgpuAdapterRequestDevice(WGPUAdapter adapter, const void* descriptor,
 void wgpuAdapterRelease(WGPUAdapter adapter);
 void wgpuDeviceRelease(WGPUDevice device);
 WGPUStatus wgpuDeviceGetLimits(WGPUDevice device, WGPULimits* limits);
+WGPUQueue wgpuDeviceGetQueue(WGPUDevice device);
+void wgpuQueueRelease(WGPUQueue queue);
+WGPUBuffer wgpuDeviceCreateBuffer(WGPUDevice device, const WGPUBufferDescriptor* descriptor);
+void wgpuBufferRelease(WGPUBuffer buffer);
+void wgpuQueueWriteBuffer(WGPUQueue queue, WGPUBuffer buffer, unsigned long long offset,
+                          const void* data, size_t size);
+WGPUFuture wgpuBufferMapAsync(WGPUBuffer buffer, WGPUMapMode mode, size_t offset, size_t size,
+                              WGPUBufferMapCallbackInfo callbackInfo);
+const void* wgpuBufferGetConstMappedRange(WGPUBuffer buffer, size_t offset, size_t size);
+void wgpuBufferUnmap(WGPUBuffer buffer);
 
 #ifdef __cplusplus
 }

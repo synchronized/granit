@@ -24,11 +24,19 @@
 namespace {
 
 struct webgpu_instance {
+  struct buffer_record {
+    WGPUBuffer buffer;
+    std::uint64_t size;
+    granit_backend_plugin_buffer_usage usage;
+  };
+
   granit_backend_plugin_host_api host;
   WGPUInstance instance;
   WGPUAdapter adapter;
   WGPUDevice device;
+  WGPUQueue queue;
   granit_backend_plugin_capabilities capabilities;
+  std::unordered_map<granit_backend_plugin_buffer, buffer_record> buffers;
 };
 
 constexpr std::uint64_t request_timeout_ns = UINT64_C(10000000000);
@@ -45,9 +53,15 @@ struct device_request {
   WGPUDevice device{};
 };
 
+struct map_request {
+  const granit_backend_plugin_host_api* host{};
+  WGPUMapAsyncStatus status{};
+};
+
 std::mutex instances_mutex;
 std::unordered_map<granit_backend_plugin_instance, webgpu_instance*> instances;
 std::atomic_uint64_t next_instance{1};
+std::atomic_uint64_t next_buffer{1};
 
 void deallocate(const granit_backend_plugin_host_api& host, void* memory) noexcept {
   try {
@@ -58,6 +72,14 @@ void deallocate(const granit_backend_plugin_host_api& host, void* memory) noexce
 }
 
 void release_resources(webgpu_instance& state) noexcept {
+  for (const auto& [handle, buffer] : state.buffers) {
+    static_cast<void>(handle);
+    wgpuBufferRelease(buffer.buffer);
+  }
+  state.buffers.clear();
+  if (state.queue != nullptr) {
+    wgpuQueueRelease(state.queue);
+  }
   if (state.device != nullptr) {
     wgpuDeviceRelease(state.device);
   }
@@ -112,6 +134,14 @@ void receive_device(WGPURequestDeviceStatus status, WGPUDevice device, WGPUStrin
   }
 }
 
+void receive_map(WGPUMapAsyncStatus status, WGPUStringView message, void* data, void*) noexcept {
+  auto& request = *static_cast<map_request*>(data);
+  request.status = status;
+  if (status != WGPUMapAsyncStatus_Success) {
+    emit_dawn_message(request.host, message);
+  }
+}
+
 template <typename Request>
 bool wait_for(WGPUInstance instance, WGPUFuture future, Request& request) noexcept {
   WGPUFutureWaitInfo wait_info{future, WGPU_FALSE};
@@ -143,8 +173,8 @@ granit_result create_backend(const granit_backend_plugin_host_api* host,
   constexpr WGPUInstanceFeatureName features[]{WGPUInstanceFeatureName_TimedWaitAny};
   const WGPUInstanceLimits instance_limits{nullptr, 1};
   const WGPUInstanceDescriptor descriptor{nullptr, 1, features, &instance_limits};
-  auto* state =
-      new (memory) webgpu_instance{*host, wgpuCreateInstance(&descriptor), nullptr, nullptr, {}};
+  auto* state = new (memory)
+      webgpu_instance{*host, wgpuCreateInstance(&descriptor), nullptr, nullptr, nullptr, {}, {}};
   if (state->instance == nullptr) {
     state->~webgpu_instance();
     deallocate(*host, memory);
@@ -194,6 +224,15 @@ granit_result create_backend(const granit_backend_plugin_host_api* host,
     return GRANIT_ERROR_INITIALIZATION_FAILED;
   }
   state->device = device.device;
+  state->queue = wgpuDeviceGetQueue(state->device);
+  if (state->queue == nullptr) {
+    constexpr char message[] = "Dawn WebGPU queue request failed";
+    emit(*host, GRANIT_DIAGNOSTIC_SEVERITY_ERROR, message, sizeof(message) - 1);
+    release_resources(*state);
+    state->~webgpu_instance();
+    deallocate(*host, memory);
+    return GRANIT_ERROR_INITIALIZATION_FAILED;
+  }
 
   WGPULimits device_limits = WGPU_LIMITS_INIT;
   if (wgpuDeviceGetLimits(state->device, &device_limits) != WGPUStatus_Success) {
@@ -287,9 +326,176 @@ granit_result get_capabilities(granit_backend_plugin_instance instance,
   return GRANIT_SUCCESS;
 }
 
+granit_result create_buffer(granit_backend_plugin_instance instance,
+                            const granit_backend_plugin_buffer_desc* desc,
+                            granit_backend_plugin_buffer* out_buffer) noexcept {
+  constexpr std::size_t minimum_size =
+      offsetof(granit_backend_plugin_buffer_desc, reserved_flags) + sizeof(std::uint32_t);
+  constexpr auto known_usage = GRANIT_BACKEND_PLUGIN_BUFFER_USAGE_MAP_READ_BIT |
+                               GRANIT_BACKEND_PLUGIN_BUFFER_USAGE_COPY_SRC_BIT |
+                               GRANIT_BACKEND_PLUGIN_BUFFER_USAGE_COPY_DST_BIT;
+  if (out_buffer != nullptr) {
+    *out_buffer = 0;
+  }
+  if (instance == 0 || desc == nullptr || out_buffer == nullptr ||
+      desc->struct_size < minimum_size || desc->reserved != 0 || desc->reserved_flags != 0 ||
+      desc->size == 0 || desc->usage == 0 || (desc->usage & ~known_usage) != 0 ||
+      ((desc->usage & GRANIT_BACKEND_PLUGIN_BUFFER_USAGE_MAP_READ_BIT) != 0 &&
+       (desc->usage & ~GRANIT_BACKEND_PLUGIN_BUFFER_USAGE_MAP_READ_BIT &
+        ~GRANIT_BACKEND_PLUGIN_BUFFER_USAGE_COPY_DST_BIT) != 0)) {
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  }
+  const std::scoped_lock lock{instances_mutex};
+  const auto found = instances.find(instance);
+  if (found == instances.end()) {
+    return GRANIT_ERROR_INVALID_HANDLE;
+  }
+  auto& state = *found->second;
+  if (desc->size > state.capabilities.max_buffer_size) {
+    return GRANIT_ERROR_UNSUPPORTED;
+  }
+
+  WGPUBufferUsage usage = WGPUBufferUsage_None;
+  if ((desc->usage & GRANIT_BACKEND_PLUGIN_BUFFER_USAGE_MAP_READ_BIT) != 0)
+    usage |= WGPUBufferUsage_MapRead;
+  if ((desc->usage & GRANIT_BACKEND_PLUGIN_BUFFER_USAGE_COPY_SRC_BIT) != 0)
+    usage |= WGPUBufferUsage_CopySrc;
+  if ((desc->usage & GRANIT_BACKEND_PLUGIN_BUFFER_USAGE_COPY_DST_BIT) != 0)
+    usage |= WGPUBufferUsage_CopyDst;
+  WGPUBufferDescriptor descriptor = WGPU_BUFFER_DESCRIPTOR_INIT;
+  descriptor.usage = usage;
+  descriptor.size = desc->size;
+  const auto native = wgpuDeviceCreateBuffer(state.device, &descriptor);
+  if (native == nullptr) {
+    return GRANIT_ERROR_OUT_OF_MEMORY;
+  }
+  auto handle = next_buffer.fetch_add(1, std::memory_order_relaxed);
+  if (handle == 0) {
+    handle = next_buffer.fetch_add(1, std::memory_order_relaxed);
+  }
+  try {
+    const auto [iterator, inserted] = state.buffers.emplace(
+        handle, webgpu_instance::buffer_record{native, desc->size, desc->usage});
+    static_cast<void>(iterator);
+    if (!inserted) {
+      wgpuBufferRelease(native);
+      return GRANIT_ERROR_INTERNAL;
+    }
+  } catch (const std::bad_alloc&) {
+    wgpuBufferRelease(native);
+    return GRANIT_ERROR_OUT_OF_MEMORY;
+  } catch (...) {
+    wgpuBufferRelease(native);
+    return GRANIT_ERROR_INTERNAL;
+  }
+  *out_buffer = handle;
+  return GRANIT_SUCCESS;
+}
+
+granit_result destroy_buffer(granit_backend_plugin_instance instance,
+                             granit_backend_plugin_buffer buffer) noexcept {
+  if (instance == 0 || buffer == 0) {
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  }
+  const std::scoped_lock lock{instances_mutex};
+  const auto found = instances.find(instance);
+  if (found == instances.end()) {
+    return GRANIT_ERROR_INVALID_HANDLE;
+  }
+  const auto buffer_found = found->second->buffers.find(buffer);
+  if (buffer_found == found->second->buffers.end()) {
+    return GRANIT_ERROR_INVALID_HANDLE;
+  }
+  wgpuBufferRelease(buffer_found->second.buffer);
+  found->second->buffers.erase(buffer_found);
+  return GRANIT_SUCCESS;
+}
+
+granit_result write_buffer(granit_backend_plugin_instance instance,
+                           granit_backend_plugin_buffer buffer, std::uint64_t offset,
+                           const void* data, std::uint64_t size) noexcept {
+  if (instance == 0 || buffer == 0 || data == nullptr || size == 0 || offset % 4 != 0 ||
+      size % 4 != 0 || size > static_cast<std::uint64_t>(SIZE_MAX)) {
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  }
+  const std::scoped_lock lock{instances_mutex};
+  const auto found = instances.find(instance);
+  if (found == instances.end()) {
+    return GRANIT_ERROR_INVALID_HANDLE;
+  }
+  const auto buffer_found = found->second->buffers.find(buffer);
+  if (buffer_found == found->second->buffers.end()) {
+    return GRANIT_ERROR_INVALID_HANDLE;
+  }
+  const auto& record = buffer_found->second;
+  if ((record.usage & GRANIT_BACKEND_PLUGIN_BUFFER_USAGE_COPY_DST_BIT) == 0 ||
+      offset > record.size || size > record.size - offset) {
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  }
+  wgpuQueueWriteBuffer(found->second->queue, record.buffer, offset, data,
+                       static_cast<std::size_t>(size));
+  return GRANIT_SUCCESS;
+}
+
+granit_result read_buffer(granit_backend_plugin_instance instance,
+                          granit_backend_plugin_buffer buffer, std::uint64_t offset, void* data,
+                          std::uint64_t size) noexcept {
+  if (instance == 0 || buffer == 0 || data == nullptr || size == 0 || offset % 8 != 0 ||
+      size % 4 != 0 || size > static_cast<std::uint64_t>(SIZE_MAX)) {
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  }
+  const std::scoped_lock lock{instances_mutex};
+  const auto found = instances.find(instance);
+  if (found == instances.end()) {
+    return GRANIT_ERROR_INVALID_HANDLE;
+  }
+  const auto buffer_found = found->second->buffers.find(buffer);
+  if (buffer_found == found->second->buffers.end()) {
+    return GRANIT_ERROR_INVALID_HANDLE;
+  }
+  const auto& record = buffer_found->second;
+  if ((record.usage & GRANIT_BACKEND_PLUGIN_BUFFER_USAGE_MAP_READ_BIT) == 0 ||
+      offset > record.size || size > record.size - offset) {
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  }
+
+  map_request request{&found->second->host};
+  const WGPUBufferMapCallbackInfo callback{nullptr, WGPUCallbackMode_WaitAnyOnly, receive_map,
+                                           &request, nullptr};
+  const auto future =
+      wgpuBufferMapAsync(record.buffer, WGPUMapMode_Read, static_cast<std::size_t>(offset),
+                         static_cast<std::size_t>(size), callback);
+  WGPUFutureWaitInfo wait_info{future, WGPU_FALSE};
+  const auto wait_status =
+      wgpuInstanceWaitAny(found->second->instance, 1, &wait_info, request_timeout_ns);
+  if (wait_status != WGPUWaitStatus_Success || !wait_info.completed) {
+    wgpuBufferUnmap(record.buffer);
+    return GRANIT_ERROR_NOT_READY;
+  }
+  if (request.status != WGPUMapAsyncStatus_Success) {
+    wgpuBufferUnmap(record.buffer);
+    return GRANIT_ERROR_INTERNAL;
+  }
+  const auto* mapped = wgpuBufferGetConstMappedRange(
+      record.buffer, static_cast<std::size_t>(offset), static_cast<std::size_t>(size));
+  if (mapped == nullptr) {
+    wgpuBufferUnmap(record.buffer);
+    return GRANIT_ERROR_INTERNAL;
+  }
+  std::memcpy(data, mapped, static_cast<std::size_t>(size));
+  wgpuBufferUnmap(record.buffer);
+  return GRANIT_SUCCESS;
+}
+
 constexpr char plugin_name[] = "Granit WebGPU (Dawn)";
 constexpr granit_backend_plugin_instance_api instance_api{
-    sizeof(granit_backend_plugin_instance_api), 0, get_capabilities};
+    sizeof(granit_backend_plugin_instance_api),
+    0,
+    get_capabilities,
+    create_buffer,
+    destroy_buffer,
+    write_buffer,
+    read_buffer};
 constexpr granit_backend_plugin_api plugin_api{sizeof(granit_backend_plugin_api),
                                                GRANIT_BACKEND_PLUGIN_ABI_VERSION,
                                                GRANIT_BACKEND_PLUGIN_KIND_WEBGPU,

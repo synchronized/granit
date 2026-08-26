@@ -4,6 +4,7 @@
 #ifndef GRANIT_BACKEND_PLUGIN_LOADER_H_
 #define GRANIT_BACKEND_PLUGIN_LOADER_H_
 
+#include <cstdint>
 #include <vector>
 
 #include <granit/core/result.h>
@@ -32,6 +33,18 @@ public:
   [[nodiscard]] granit_result
   get_capabilities(granit_backend_plugin_instance instance,
                    granit_backend_plugin_capabilities* capabilities) noexcept;
+  [[nodiscard]] granit_result create_buffer(granit_backend_plugin_instance instance,
+                                            const granit_backend_plugin_buffer_desc* desc,
+                                            granit_backend_plugin_buffer* buffer) noexcept;
+  [[nodiscard]] granit_result destroy_buffer(granit_backend_plugin_instance instance,
+                                             granit_backend_plugin_buffer buffer) noexcept;
+  [[nodiscard]] granit_result write_buffer(granit_backend_plugin_instance instance,
+                                           granit_backend_plugin_buffer buffer,
+                                           std::uint64_t offset, const void* data,
+                                           std::uint64_t size) noexcept;
+  [[nodiscard]] granit_result read_buffer(granit_backend_plugin_instance instance,
+                                          granit_backend_plugin_buffer buffer, std::uint64_t offset,
+                                          void* data, std::uint64_t size) noexcept;
   void close() noexcept;
 
   [[nodiscard]] bool is_open() const noexcept { return library_.is_open(); }

@@ -15,6 +15,21 @@
 
 typedef uint32_t granit_backend_plugin_kind;
 typedef uint64_t granit_backend_plugin_instance;
+typedef uint64_t granit_backend_plugin_buffer;
+
+typedef uint32_t granit_backend_plugin_buffer_usage;
+#define GRANIT_BACKEND_PLUGIN_BUFFER_USAGE_MAP_READ_BIT UINT32_C(0x00000001)
+#define GRANIT_BACKEND_PLUGIN_BUFFER_USAGE_COPY_SRC_BIT UINT32_C(0x00000002)
+#define GRANIT_BACKEND_PLUGIN_BUFFER_USAGE_COPY_DST_BIT UINT32_C(0x00000004)
+
+/** Buffer 由创建它的插件实例拥有；size 必须非零。 */
+typedef struct granit_backend_plugin_buffer_desc {
+  uint32_t struct_size;
+  uint32_t reserved;
+  uint64_t size;
+  granit_backend_plugin_buffer_usage usage;
+  uint32_t reserved_flags;
+} granit_backend_plugin_buffer_desc;
 
 /** 插件实例创建后固定的后端无关能力快照。 */
 typedef struct granit_backend_plugin_capabilities {
@@ -57,12 +72,27 @@ typedef granit_result (*granit_backend_plugin_create_fn)(
 typedef void (*granit_backend_plugin_destroy_fn)(granit_backend_plugin_instance instance);
 typedef granit_result (*granit_backend_plugin_get_capabilities_fn)(
     granit_backend_plugin_instance instance, granit_backend_plugin_capabilities* capabilities);
+typedef granit_result (*granit_backend_plugin_create_buffer_fn)(
+    granit_backend_plugin_instance instance, const granit_backend_plugin_buffer_desc* desc,
+    granit_backend_plugin_buffer* buffer);
+typedef granit_result (*granit_backend_plugin_destroy_buffer_fn)(
+    granit_backend_plugin_instance instance, granit_backend_plugin_buffer buffer);
+typedef granit_result (*granit_backend_plugin_write_buffer_fn)(
+    granit_backend_plugin_instance instance, granit_backend_plugin_buffer buffer, uint64_t offset,
+    const void* data, uint64_t size);
+typedef granit_result (*granit_backend_plugin_read_buffer_fn)(
+    granit_backend_plugin_instance instance, granit_backend_plugin_buffer buffer, uint64_t offset,
+    void* data, uint64_t size);
 
 /** 实例操作表由插件拥有，在插件卸载前保持有效。 */
 typedef struct granit_backend_plugin_instance_api {
   uint32_t struct_size;
   uint32_t reserved;
   granit_backend_plugin_get_capabilities_fn get_capabilities;
+  granit_backend_plugin_create_buffer_fn create_buffer;
+  granit_backend_plugin_destroy_buffer_fn destroy_buffer;
+  granit_backend_plugin_write_buffer_fn write_buffer;
+  granit_backend_plugin_read_buffer_fn read_buffer;
 } granit_backend_plugin_instance_api;
 
 /** 后端插件入口返回的只读描述；字符串在插件卸载前有效。 */

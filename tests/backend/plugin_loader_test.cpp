@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
+#include <algorithm>
+#include <iterator>
 #include <new>
 #include <stdexcept>
 #include <string_view>
@@ -142,4 +144,64 @@ TEST_CASE("后端插件 Loader 完成版本化握手", "[backend][plugin]") {
   CHECK(state.deallocations == 3);
   CHECK(state.diagnostics == 6);
   CHECK(loader.get_capabilities(instance, &capabilities) == GRANIT_ERROR_INVALID_ARGUMENT);
+}
+
+TEST_CASE("WebGPU 插件 Buffer 遵守所有权、Usage 与范围契约", "[backend][plugin]") {
+  granit::detail::backend_plugin_loader loader;
+  REQUIRE(loader.open(GRANIT_FAKE_BACKEND_PLUGIN_PATH, GRANIT_BACKEND_PLUGIN_KIND_WEBGPU) ==
+          GRANIT_SUCCESS);
+  host_state state;
+  auto host = make_host(state);
+  granit_backend_plugin_instance first{};
+  granit_backend_plugin_instance second{};
+  REQUIRE(loader.create_instance(&host, &first) == GRANIT_SUCCESS);
+  REQUIRE(loader.create_instance(&host, &second) == GRANIT_SUCCESS);
+
+  granit_backend_plugin_buffer_desc desc{};
+  desc.struct_size = sizeof(desc);
+  desc.size = 16;
+  desc.usage = GRANIT_BACKEND_PLUGIN_BUFFER_USAGE_MAP_READ_BIT |
+               GRANIT_BACKEND_PLUGIN_BUFFER_USAGE_COPY_DST_BIT;
+  granit_backend_plugin_buffer buffer{};
+  REQUIRE(loader.create_buffer(first, &desc, &buffer) == GRANIT_SUCCESS);
+  REQUIRE(buffer != 0);
+
+  const std::uint32_t source[]{1, 2, 3, 4};
+  std::uint32_t destination[4]{};
+  CHECK(loader.write_buffer(first, buffer, 0, source, sizeof(source)) == GRANIT_SUCCESS);
+  CHECK(loader.read_buffer(first, buffer, 0, destination, sizeof(destination)) == GRANIT_SUCCESS);
+  CHECK(std::equal(std::begin(source), std::end(source), std::begin(destination)));
+
+  CHECK(loader.write_buffer(first, buffer, 14, source, sizeof(std::uint32_t)) ==
+        GRANIT_ERROR_INVALID_ARGUMENT);
+  CHECK(loader.read_buffer(first, buffer, 8, destination, 12) == GRANIT_ERROR_INVALID_ARGUMENT);
+  CHECK(loader.write_buffer(second, buffer, 0, source, sizeof(source)) ==
+        GRANIT_ERROR_INVALID_HANDLE);
+  CHECK(loader.destroy_buffer(second, buffer) == GRANIT_ERROR_INVALID_HANDLE);
+
+  const auto valid_buffer = buffer;
+  granit_backend_plugin_buffer invalid_buffer = 123;
+  granit_backend_plugin_buffer_desc invalid = desc;
+  invalid.struct_size = 0;
+  CHECK(loader.create_buffer(first, &invalid, &invalid_buffer) == GRANIT_ERROR_INVALID_ARGUMENT);
+  CHECK(invalid_buffer == 0);
+  invalid = desc;
+  invalid.usage |= GRANIT_BACKEND_PLUGIN_BUFFER_USAGE_COPY_SRC_BIT;
+  CHECK(loader.create_buffer(first, &invalid, &invalid_buffer) == GRANIT_ERROR_INVALID_ARGUMENT);
+
+  REQUIRE(loader.destroy_buffer(first, valid_buffer) == GRANIT_SUCCESS);
+  CHECK(loader.destroy_buffer(first, valid_buffer) == GRANIT_ERROR_INVALID_HANDLE);
+  CHECK(loader.read_buffer(first, valid_buffer, 0, destination, sizeof(destination)) ==
+        GRANIT_ERROR_INVALID_HANDLE);
+
+  desc.usage = GRANIT_BACKEND_PLUGIN_BUFFER_USAGE_COPY_SRC_BIT;
+  REQUIRE(loader.create_buffer(first, &desc, &buffer) == GRANIT_SUCCESS);
+  CHECK(loader.write_buffer(first, buffer, 0, source, sizeof(source)) ==
+        GRANIT_ERROR_INVALID_ARGUMENT);
+  CHECK(loader.read_buffer(first, buffer, 0, destination, sizeof(destination)) ==
+        GRANIT_ERROR_INVALID_ARGUMENT);
+
+  CHECK(loader.destroy_instance(first) == GRANIT_SUCCESS);
+  CHECK(loader.destroy_instance(second) == GRANIT_SUCCESS);
+  CHECK(state.allocations == state.deallocations);
 }

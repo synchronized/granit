@@ -54,10 +54,27 @@ int main() {
     std::fprintf(stderr, "查询 WebGPU 能力失败：%d\n", static_cast<int>(capabilities_result));
     return 3;
   }
+
+  granit_backend_plugin_buffer_desc buffer_desc{};
+  buffer_desc.struct_size = sizeof(buffer_desc);
+  buffer_desc.size = 16;
+  buffer_desc.usage = GRANIT_BACKEND_PLUGIN_BUFFER_USAGE_MAP_READ_BIT |
+                      GRANIT_BACKEND_PLUGIN_BUFFER_USAGE_COPY_DST_BIT;
+  granit_backend_plugin_buffer buffer{};
+  const std::uint32_t source[]{1, 2, 3, 4};
+  std::uint32_t destination[4]{};
+  if (loader.create_buffer(instance, &buffer_desc, &buffer) != GRANIT_SUCCESS || buffer == 0 ||
+      loader.write_buffer(instance, buffer, 0, source, sizeof(source)) != GRANIT_SUCCESS ||
+      loader.read_buffer(instance, buffer, 0, destination, sizeof(destination)) != GRANIT_SUCCESS ||
+      destination[0] != source[0] || destination[1] != source[1] || destination[2] != source[2] ||
+      destination[3] != source[3] || loader.destroy_buffer(instance, buffer) != GRANIT_SUCCESS) {
+    std::fprintf(stderr, "WebGPU Buffer 写入或回读失败\n");
+    return 4;
+  }
   const auto destroy_result = loader.destroy_instance(instance);
   if (destroy_result != GRANIT_SUCCESS) {
     std::fprintf(stderr, "销毁 WebGPU 插件实例失败：%d\n", static_cast<int>(destroy_result));
-    return 4;
+    return 5;
   }
   return 0;
 }

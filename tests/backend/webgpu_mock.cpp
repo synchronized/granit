@@ -3,9 +3,18 @@
 
 #include <webgpu/webgpu.h>
 
+#include <cstring>
+#include <vector>
+
 struct WGPUInstanceImpl {};
 struct WGPUAdapterImpl {};
 struct WGPUDeviceImpl {};
+struct WGPUQueueImpl {};
+struct WGPUBufferImpl {
+  std::vector<unsigned char> bytes;
+  WGPUBufferUsage usage{};
+  bool mapped{};
+};
 
 extern "C" WGPUInstance wgpuCreateInstance(const WGPUInstanceDescriptor*) {
   return new WGPUInstanceImpl;
@@ -51,3 +60,44 @@ extern "C" WGPUStatus wgpuDeviceGetLimits(WGPUDevice, WGPULimits* limits) {
   limits->maxColorAttachments = 8;
   return WGPUStatus_Success;
 }
+
+extern "C" WGPUQueue wgpuDeviceGetQueue(WGPUDevice) { return new WGPUQueueImpl; }
+
+extern "C" void wgpuQueueRelease(WGPUQueue queue) { delete queue; }
+
+extern "C" WGPUBuffer wgpuDeviceCreateBuffer(WGPUDevice, const WGPUBufferDescriptor* descriptor) {
+  if (descriptor == nullptr || descriptor->size == 0) {
+    return nullptr;
+  }
+  return new WGPUBufferImpl{std::vector<unsigned char>(static_cast<std::size_t>(descriptor->size)),
+                            descriptor->usage, false};
+}
+
+extern "C" void wgpuBufferRelease(WGPUBuffer buffer) { delete buffer; }
+
+extern "C" void wgpuQueueWriteBuffer(WGPUQueue, WGPUBuffer buffer, unsigned long long offset,
+                                     const void* data, size_t size) {
+  std::memcpy(buffer->bytes.data() + static_cast<std::size_t>(offset), data, size);
+}
+
+extern "C" WGPUFuture wgpuBufferMapAsync(WGPUBuffer buffer, WGPUMapMode, size_t offset, size_t size,
+                                         WGPUBufferMapCallbackInfo callback_info) {
+  const auto valid = buffer != nullptr && offset <= buffer->bytes.size() &&
+                     size <= buffer->bytes.size() - offset &&
+                     (buffer->usage & WGPUBufferUsage_MapRead) != 0;
+  buffer->mapped = valid;
+  callback_info.callback(valid ? WGPUMapAsyncStatus_Success : WGPUMapAsyncStatus_Error, {},
+                         callback_info.userdata1, callback_info.userdata2);
+  return {3};
+}
+
+extern "C" const void* wgpuBufferGetConstMappedRange(WGPUBuffer buffer, size_t offset,
+                                                     size_t size) {
+  if (buffer == nullptr || !buffer->mapped || offset > buffer->bytes.size() ||
+      size > buffer->bytes.size() - offset) {
+    return nullptr;
+  }
+  return buffer->bytes.data() + offset;
+}
+
+extern "C" void wgpuBufferUnmap(WGPUBuffer buffer) { buffer->mapped = false; }
