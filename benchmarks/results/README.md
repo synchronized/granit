@@ -27,3 +27,4 @@
 - [F-11D Canvas 单 Rendering 区间结果](2026-08-25-windows-clang-canvas-binding-f11d.md)
 - [F-11E ImGui 验证记录](2026-08-25-windows-clang-canvas-binding-f11e.md)
 - [F-12B 帧循环性能基线](2026-08-25-windows-clang-frame-loop-c187748.md)
+- [S-10A Windows 后端边界回归](2026-08-26-windows-clang-s10a-backend-boundary-0b7b757.md)
