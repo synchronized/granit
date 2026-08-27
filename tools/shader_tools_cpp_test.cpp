@@ -10,9 +10,16 @@ int main(int argc, char** argv) {
   if (argc != 4 && argc != 5)
     return 1;
   granit_shader_tools_inspect_desc desc{};
+  constexpr auto expected_size =
+      static_cast<uint32_t>(sizeof(granit_shader_tools_expected_binding));
+  granit_shader_tools_expected_binding expected[]{
+      {expected_size, 0, 0}, {expected_size, 0, 1}, {expected_size, 0, 2}};
   desc.struct_size = sizeof(desc);
   desc.input_path = argv[1];
   desc.input_path_length = std::strlen(argv[1]);
+  desc.validate_binding_set = 1;
+  desc.expected_bindings = expected;
+  desc.expected_binding_count = sizeof(expected) / sizeof(expected[0]);
   auto [status, result] = granit::shader_tools::inspect_spirv(desc);
   if (status != GRANIT_SUCCESS || !result)
     return 2;
@@ -41,6 +48,7 @@ int main(int argc, char** argv) {
 
   desc.input_path = argv[2];
   desc.input_path_length = std::strlen(argv[2]);
+  desc.validate_binding_set = 0;
   auto [vertex_status, vertex_result] = granit::shader_tools::inspect_spirv(desc);
   if (vertex_status != GRANIT_SUCCESS || vertex_result.vertex_input_count() == 0)
     return 9;

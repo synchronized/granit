@@ -12,6 +12,13 @@
 /** ShaderTools 操作结果句柄。零值无效。 */
 typedef uint64_t granit_shader_tools_result;
 
+/** 用于核对 WGSL 与最终 SPIR-V 的预期 Binding 键。 */
+typedef struct granit_shader_tools_expected_binding {
+  uint32_t struct_size;
+  uint32_t group;
+  uint32_t binding;
+} granit_shader_tools_expected_binding;
+
 #define GRANIT_SHADER_TOOLS_STAGE_VERTEX UINT32_C(1)
 #define GRANIT_SHADER_TOOLS_STAGE_FRAGMENT UINT32_C(2)
 #define GRANIT_SHADER_TOOLS_STAGE_COMPUTE UINT32_C(3)
@@ -42,6 +49,9 @@ typedef struct granit_shader_tools_compile_desc {
   uint32_t stage;
   const char* output_path;
   uint64_t output_path_length;
+  uint32_t validate_binding_set;
+  const granit_shader_tools_expected_binding* expected_bindings;
+  uint64_t expected_binding_count;
 } granit_shader_tools_compile_desc;
 
 /** SPIR-V 检查描述。路径为 UTF-8，调用期间有效且无需以零结尾。 */
@@ -49,6 +59,9 @@ typedef struct granit_shader_tools_inspect_desc {
   uint32_t struct_size;
   const char* input_path;
   uint64_t input_path_length;
+  uint32_t validate_binding_set;
+  const granit_shader_tools_expected_binding* expected_bindings;
+  uint64_t expected_binding_count;
 } granit_shader_tools_inspect_desc;
 
 /** 结果摘要。字符串视图在结果句柄销毁前有效，调用者不得释放。 */

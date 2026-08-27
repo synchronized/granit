@@ -32,6 +32,9 @@ target_link_libraries(editor PRIVATE granit::shader_tools)
   `default_value_size` 指明原始值占用的有效字节数。
 - 参数字符串均为 UTF-8 的“指针 + 长度”，只需在调用期间有效，无需以零结尾。
 - 参数和输出结构必须初始化 `struct_size`。未来版本只在结构体尾部追加字段。
+- 编译或检查描述可设置 `validate_binding_set=1`，并传入从 WGSL 前端获得的
+  `expected_bindings`。SDK 会按 Group/Binding 比较最终 SPIR-V；缺失、多余或重复记录都会失败，
+  编译失败时删除输出文件。零值关闭该检查，保持旧调用兼容。
 - 参数有效后，即使编译或检查失败也可能返回非零结果句柄。调用者应读取 `status` 和诊断，最后
   调用 `granit_shader_tools_result_destroy`；C++ 包装会自动销毁。
 - 查询得到的字符串视图由 SDK 持有，在结果句柄销毁前有效，调用者不得释放或修改。不得让查询
@@ -43,5 +46,6 @@ target_link_libraries(editor PRIVATE granit::shader_tools)
 `inspect` 的 CSV 文本保持兼容，但程序不应解析该文本，应使用结构化 SDK 接口。
 
 当前结果提供入口点、Shader 阶段、描述符绑定、Vertex 输入、Fragment 输出、Compute Workgroup、
-Override 常量、标准输出和诊断文本。WGSL/SPIR-V 集合一致性及结构化源位置诊断仍属于 S-10C3
-的后续范围；接入前必须以锁定 Tint 版本可验证的机器输出为依据，不使用 WGSL 源码正则解析。
+Override 常量、标准输出和诊断文本。SDK 已提供 WGSL 预期 Binding 与 SPIR-V 的严格集合校验；
+自动提取预期集合仍需接入锁定 Tint 的可验证机器输出，不使用 WGSL 源码正则解析。结构化源位置
+诊断仍属于后续范围。

@@ -95,8 +95,9 @@ S-10C 需要建立一个源码权威和可复现的双后端资产流程。
    S-10C3 补齐。
 3. **S-10C3 反射 Schema**：已提供稳定 JSON，以及按数字键排序的描述符、Vertex 输入和 Fragment
    输出记录；字段覆盖资源类型、访问模式、数组数量、Buffer 最小尺寸、接口标量类型/位宽/向量
-   宽度、Compute Workgroup 和 Override 常量。继续基于锁定 Tint 的可验证机器输出补充
-   WGSL/SPIR-V 绑定集合一致性检查，不引入脆弱的 WGSL 源码正则解析。
+   宽度、Compute Workgroup 和 Override 常量。SDK 已支持调用方传入 WGSL 预期 Binding 集合并与
+   最终 SPIR-V 严格比较；继续基于锁定 Tint 的可验证机器输出自动生成预期集合，不引入脆弱的
+   WGSL 源码正则解析。
 4. **S-10C4 确定性资产与缓存**：实现 `.granit-shader` 编解码、SHA-256、损坏检测、原子写入和缓存
    命中；相同输入在不同目录及两次构建中必须逐字节一致。
 5. **S-10C5 WebGPU Shader ABI**：增加插件 Shader 资源和 Pipeline 描述，替换内置 WGSL，覆盖

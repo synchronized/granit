@@ -5,7 +5,9 @@
 
 #include "shader_tools_core.h"
 
+#include <algorithm>
 #include <atomic>
+#include <cstddef>
 #include <cstring>
 #include <filesystem>
 #include <memory>
@@ -47,6 +49,50 @@ std::filesystem::path copy_path(const char* value, uint64_t length) {
   if (length != 0)
     std::memcpy(utf8.data(), value, static_cast<std::size_t>(length));
   return std::filesystem::path{utf8};
+}
+
+template <typename Desc> bool valid_binding_expectations(const Desc& desc) {
+  if (desc.struct_size < offsetof(Desc, validate_binding_set) + sizeof(desc.validate_binding_set))
+    return true;
+  if (desc.validate_binding_set > 1)
+    return false;
+  if (desc.validate_binding_set == 0)
+    return true;
+  if (desc.struct_size < sizeof(Desc) ||
+      (desc.expected_binding_count != 0 && desc.expected_bindings == nullptr))
+    return false;
+  for (uint64_t index = 0; index < desc.expected_binding_count; ++index) {
+    if (desc.expected_bindings[index].struct_size < sizeof(granit_shader_tools_expected_binding))
+      return false;
+  }
+  return true;
+}
+
+template <typename Desc>
+bool validate_binding_expectations(const Desc& desc, const granit::tools::shader_info& info,
+                                   std::ostream& diagnostic) {
+  if (desc.struct_size < offsetof(Desc, validate_binding_set) + sizeof(desc.validate_binding_set) ||
+      desc.validate_binding_set == 0)
+    return true;
+  std::vector<std::pair<uint32_t, uint32_t>> expected;
+  expected.reserve(static_cast<std::size_t>(desc.expected_binding_count));
+  for (uint64_t index = 0; index < desc.expected_binding_count; ++index)
+    expected.emplace_back(desc.expected_bindings[index].group,
+                          desc.expected_bindings[index].binding);
+  std::ranges::sort(expected);
+  if (std::ranges::adjacent_find(expected) != expected.end()) {
+    diagnostic << "预期 Binding 集合包含重复项\n";
+    return false;
+  }
+  std::vector<std::pair<uint32_t, uint32_t>> actual;
+  actual.reserve(info.bindings.size());
+  for (const auto& binding : info.bindings)
+    actual.emplace_back(binding.group, binding.binding);
+  if (expected == actual)
+    return true;
+  diagnostic << "WGSL 预期 Binding 集合与 SPIR-V 不一致：expected=" << expected.size()
+             << " actual=" << actual.size() << '\n';
+  return false;
 }
 
 uint32_t stage_value(const std::string& stage) {
@@ -149,12 +195,13 @@ granit_result granit_shader_tools_compile_wgsl(const granit_shader_tools_compile
   if (result == nullptr)
     return GRANIT_ERROR_INVALID_ARGUMENT;
   *result = 0;
-  if (desc == nullptr || desc->struct_size < sizeof(*desc) ||
+  if (desc == nullptr ||
+      desc->struct_size < offsetof(granit_shader_tools_compile_desc, validate_binding_set) ||
       !valid_string(desc->tint_path, desc->tint_path_length) ||
       !valid_string(desc->input_path, desc->input_path_length) ||
       !valid_string(desc->entry_point, desc->entry_point_length) ||
       !valid_string(desc->output_path, desc->output_path_length) ||
-      stage_name(desc->stage) == nullptr)
+      stage_name(desc->stage) == nullptr || !valid_binding_expectations(*desc))
     return GRANIT_ERROR_INVALID_ARGUMENT;
   try {
     auto value = std::make_shared<stored_result>();
@@ -166,7 +213,12 @@ granit_result granit_shader_tools_compile_wgsl(const granit_shader_tools_compile
                                            stage_name(desc->stage),
                                            copy_path(desc->output_path, desc->output_path_length)};
     granit::tools::shader_info info;
-    const auto exit_code = granit::tools::compile_shader(options, info, output, diagnostic);
+    auto exit_code = granit::tools::compile_shader(options, info, output, diagnostic);
+    if (exit_code == 0 && !validate_binding_expectations(*desc, info, diagnostic)) {
+      std::error_code filesystem_error;
+      std::filesystem::remove(options.output, filesystem_error);
+      exit_code = 1;
+    }
     value->status = exit_code == 0 ? GRANIT_SUCCESS : GRANIT_ERROR_INITIALIZATION_FAILED;
     value->entry_point = options.entry_point;
     value->stage = desc->stage;
@@ -188,8 +240,10 @@ granit_result granit_shader_tools_inspect_spirv(const granit_shader_tools_inspec
   if (result == nullptr)
     return GRANIT_ERROR_INVALID_ARGUMENT;
   *result = 0;
-  if (desc == nullptr || desc->struct_size < sizeof(*desc) ||
-      !valid_string(desc->input_path, desc->input_path_length))
+  if (desc == nullptr ||
+      desc->struct_size < offsetof(granit_shader_tools_inspect_desc, validate_binding_set) ||
+      !valid_string(desc->input_path, desc->input_path_length) ||
+      !valid_binding_expectations(*desc))
     return GRANIT_ERROR_INVALID_ARGUMENT;
   try {
     auto value = std::make_shared<stored_result>();
@@ -197,7 +251,8 @@ granit_result granit_shader_tools_inspect_spirv(const granit_shader_tools_inspec
     std::ostringstream diagnostic;
     granit::tools::shader_info info;
     const auto path = copy_path(desc->input_path, desc->input_path_length);
-    const auto succeeded = granit::tools::inspect_shader(path, true, info, output, diagnostic);
+    const auto succeeded = granit::tools::inspect_shader(path, true, info, output, diagnostic) &&
+                           validate_binding_expectations(*desc, info, diagnostic);
     value->status = succeeded ? GRANIT_SUCCESS : GRANIT_ERROR_INVALID_ARGUMENT;
     value->entry_point = std::move(info.entry_point);
     value->stage = stage_value(info.stage);

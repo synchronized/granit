@@ -3,6 +3,7 @@
 
 #include <granit/tools/shader_tools.h>
 
+#include <stddef.h>
 #include <stdint.h>
 #include <string.h>
 
@@ -14,12 +15,23 @@ int main(int argc, char** argv) {
   uint64_t binding_count = 0;
   uint64_t output_count = 0;
   granit_shader_tools_interface_variable_info shader_output;
+  granit_shader_tools_expected_binding expected[3];
   if (argc != 2)
     return 1;
   memset(&desc, 0, sizeof(desc));
   desc.struct_size = (uint32_t)sizeof(desc);
   desc.input_path = argv[1];
   desc.input_path_length = (uint64_t)strlen(argv[1]);
+  memset(expected, 0, sizeof(expected));
+  expected[0].struct_size = (uint32_t)sizeof(expected[0]);
+  expected[1].struct_size = (uint32_t)sizeof(expected[1]);
+  expected[2].struct_size = (uint32_t)sizeof(expected[2]);
+  expected[0].binding = 0;
+  expected[1].binding = 1;
+  expected[2].binding = 2;
+  desc.validate_binding_set = 1;
+  desc.expected_bindings = expected;
+  desc.expected_binding_count = 3;
   if (granit_shader_tools_inspect_spirv(&desc, &result) != GRANIT_SUCCESS || result == 0)
     return 2;
   memset(&info, 0, sizeof(info));
@@ -58,5 +70,20 @@ int main(int argc, char** argv) {
   if (granit_shader_tools_result_destroy(result) != GRANIT_SUCCESS ||
       granit_shader_tools_result_destroy(result) != GRANIT_ERROR_INVALID_HANDLE)
     return 9;
+  result = 0;
+  desc.expected_binding_count = 2;
+  if (granit_shader_tools_inspect_spirv(&desc, &result) != GRANIT_ERROR_INVALID_ARGUMENT ||
+      result == 0)
+    return 10;
+  memset(&info, 0, sizeof(info));
+  info.struct_size = (uint32_t)sizeof(info);
+  if (granit_shader_tools_result_get_info(result, &info) != GRANIT_SUCCESS ||
+      info.diagnostic_length == 0 || granit_shader_tools_result_destroy(result) != GRANIT_SUCCESS)
+    return 11;
+  result = 0;
+  desc.struct_size = (uint32_t)offsetof(granit_shader_tools_inspect_desc, validate_binding_set);
+  if (granit_shader_tools_inspect_spirv(&desc, &result) != GRANIT_SUCCESS || result == 0 ||
+      granit_shader_tools_result_destroy(result) != GRANIT_SUCCESS)
+    return 12;
   return 0;
 }
