@@ -16,27 +16,36 @@ int main(int argc, char** argv) {
   constexpr std::string_view wgsl = "@compute @workgroup_size(1) fn main() {}\n";
   constexpr std::array spirv{std::byte{3}, std::byte{2}, std::byte{35}, std::byte{7}};
   constexpr std::string_view reflection = "{\"schema\":1}\n";
+  const auto cache_key =
+      make_shader_cache_key({wgsl, "main", "compute", "tint-r1", "vulkan1.3", "--use-ir"});
   std::vector<std::byte> first;
   std::vector<std::byte> second;
-  if (encode_shader_asset({wgsl, spirv, reflection}, first) != shader_asset_error::success ||
-      encode_shader_asset({wgsl, spirv, reflection}, second) != shader_asset_error::success ||
+  if (encode_shader_asset({wgsl, spirv, reflection, cache_key}, first) !=
+          shader_asset_error::success ||
+      encode_shader_asset({wgsl, spirv, reflection, cache_key}, second) !=
+          shader_asset_error::success ||
       first != second)
     return 1;
-  constexpr std::array expected_digest{
-      std::byte{0xba}, std::byte{0x66}, std::byte{0x15}, std::byte{0x37}, std::byte{0x5c},
-      std::byte{0xd4}, std::byte{0x97}, std::byte{0x11}, std::byte{0xa7}, std::byte{0x68},
-      std::byte{0xe3}, std::byte{0x26}, std::byte{0x00}, std::byte{0xe7}, std::byte{0x9e},
-      std::byte{0xf1}, std::byte{0xd4}, std::byte{0x34}, std::byte{0xfe}, std::byte{0xfb},
-      std::byte{0x62}, std::byte{0xb4}, std::byte{0xc8}, std::byte{0xa7}, std::byte{0xdc},
-      std::byte{0xdb}, std::byte{0xb9}, std::byte{0xb8}, std::byte{0xd6}, std::byte{0xd6},
-      std::byte{0x47}, std::byte{0xa3}};
-  if (!std::ranges::equal(expected_digest,
-                          std::span<const std::byte>{first}.subspan(48, expected_digest.size())))
-    return 9;
   shader_asset_view view;
   if (decode_shader_asset(first, view) != shader_asset_error::success || view.wgsl != wgsl ||
-      !std::ranges::equal(view.spirv, spirv) || view.reflection_json != reflection)
+      !std::ranges::equal(view.spirv, spirv) || view.reflection_json != reflection ||
+      view.cache_key != cache_key)
     return 2;
+  const auto same_from_other_directory =
+      make_shader_cache_key({wgsl, "main", "compute", "tint-r1", "vulkan1.3", "--use-ir"});
+  if (same_from_other_directory != cache_key)
+    return 9;
+  const std::array changed_contexts{
+      make_shader_cache_key({"@compute @workgroup_size(2) fn main() {}\n", "main", "compute",
+                             "tint-r1", "vulkan1.3", "--use-ir"}),
+      make_shader_cache_key({wgsl, "other", "compute", "tint-r1", "vulkan1.3", "--use-ir"}),
+      make_shader_cache_key({wgsl, "main", "fragment", "tint-r1", "vulkan1.3", "--use-ir"}),
+      make_shader_cache_key({wgsl, "main", "compute", "tint-r2", "vulkan1.3", "--use-ir"}),
+      make_shader_cache_key({wgsl, "main", "compute", "tint-r1", "webgpu", "--use-ir"}),
+      make_shader_cache_key({wgsl, "main", "compute", "tint-r1", "vulkan1.3", "--no-use-ir"})};
+  if (std::ranges::any_of(changed_contexts,
+                          [&](const auto& changed_key) { return changed_key == cache_key; }))
+    return 13;
   auto corrupted = first;
   corrupted.back() ^= std::byte{1};
   if (decode_shader_asset(corrupted, view) != shader_asset_error::digest_mismatch)
@@ -46,7 +55,7 @@ int main(int argc, char** argv) {
   if (decode_shader_asset(corrupted, view) != shader_asset_error::invalid_magic)
     return 4;
   corrupted = first;
-  corrupted[8] = std::byte{2};
+  corrupted[8] = std::byte{3};
   if (decode_shader_asset(corrupted, view) != shader_asset_error::unsupported_schema)
     return 11;
   corrupted = first;

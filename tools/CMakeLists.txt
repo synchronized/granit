@@ -160,6 +160,19 @@ if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
               "${PROJECT_SOURCE_DIR}/assets/shaders/unlit/unlit.vert.spv"
               "${PROJECT_SOURCE_DIR}/tests/assets/minimal.comp.spv"
     )
+
+    add_executable(granit_shader_asset_api_test shader_asset_api_test.cpp)
+    target_compile_features(granit_shader_asset_api_test PRIVATE cxx_std_20)
+    target_link_libraries(granit_shader_asset_api_test PRIVATE granit::shader_tools)
+    granit_target_compile_warnings(granit_shader_asset_api_test)
+    granit_target_output_directories(granit_shader_asset_api_test)
+    add_test(
+      NAME granit.shader_tools.asset_api
+      COMMAND granit_shader_asset_api_test
+              "${PROJECT_SOURCE_DIR}/tests/assets/minimal.comp.spv"
+              "${PROJECT_SOURCE_DIR}/tests/fixtures/shaders/s10c_triangle.wgsl"
+              "${CMAKE_CURRENT_BINARY_DIR}/shader-asset-api-test-cache"
+    )
   endif()
 
   add_test(

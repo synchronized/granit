@@ -24,9 +24,10 @@ namespace {
 
 constexpr std::array magic{std::byte{'G'}, std::byte{'R'}, std::byte{'N'}, std::byte{'S'},
                            std::byte{'H'}, std::byte{'D'}, std::byte{'R'}, std::byte{0}};
-constexpr std::uint32_t schema = 1;
-constexpr std::size_t header_size = 80;
+constexpr std::uint32_t schema = 2;
+constexpr std::size_t header_size = 112;
 constexpr std::size_t digest_offset = 48;
+constexpr std::size_t cache_key_offset = 80;
 
 std::uint32_t read_u32(std::span<const std::byte> bytes, std::size_t offset) noexcept {
   std::uint32_t value = 0;
@@ -168,6 +169,15 @@ std::array<std::byte, 32> digest(std::span<const std::byte> bytes) noexcept {
   return context.finish();
 }
 
+void update_cache_field(sha256_context& context, std::string_view value) noexcept {
+  std::array<std::byte, 8> size{};
+  const auto field_size = static_cast<std::uint64_t>(value.size());
+  for (std::uint32_t index = 0; index < size.size(); ++index)
+    size[index] = static_cast<std::byte>(field_size >> (index * 8U));
+  context.update(size);
+  context.update({reinterpret_cast<const std::byte*>(value.data()), value.size()});
+}
+
 bool valid_section(std::uint64_t offset, std::uint64_t size, std::uint64_t total) noexcept {
   return offset >= header_size && offset <= total && size <= total - offset;
 }
@@ -198,6 +208,19 @@ bool replace_file(const std::filesystem::path& source, const std::filesystem::pa
 
 } // namespace
 
+shader_cache_key make_shader_cache_key(const shader_cache_context& context) noexcept {
+  sha256_context hash;
+  constexpr std::string_view domain = "granit-shader-cache-v1";
+  update_cache_field(hash, domain);
+  update_cache_field(hash, context.wgsl);
+  update_cache_field(hash, context.entry_point);
+  update_cache_field(hash, context.stage);
+  update_cache_field(hash, context.tint_revision);
+  update_cache_field(hash, context.target_environment);
+  update_cache_field(hash, context.compile_options);
+  return hash.finish();
+}
+
 shader_asset_error encode_shader_asset(const shader_asset_source& source,
                                        std::vector<std::byte>& output) noexcept {
   if (source.wgsl.empty() || source.spirv.empty() || source.spirv.size() % 4 != 0 ||
@@ -219,6 +242,7 @@ shader_asset_error encode_shader_asset(const shader_asset_source& source,
     write_u64(output, 24, source.wgsl.size());
     write_u64(output, 32, source.spirv.size());
     write_u64(output, 40, source.reflection_json.size());
+    std::ranges::copy(source.cache_key, output.begin() + cache_key_offset);
     std::memcpy(output.data() + wgsl_offset, source.wgsl.data(), source.wgsl.size());
     std::memcpy(output.data() + spirv_offset, source.spirv.data(), source.spirv.size());
     std::memcpy(output.data() + reflection_offset, source.reflection_json.data(),
@@ -263,6 +287,8 @@ shader_asset_error decode_shader_asset(std::span<const std::byte> bytes,
       bytes.subspan(static_cast<std::size_t>(spirv_offset), static_cast<std::size_t>(spirv_size));
   output.reflection_json = {reinterpret_cast<const char*>(bytes.data() + reflection_offset),
                             static_cast<std::size_t>(reflection_size)};
+  std::ranges::copy(bytes.subspan(cache_key_offset, output.cache_key.size()),
+                    output.cache_key.begin());
   return shader_asset_error::success;
 }
 

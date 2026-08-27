@@ -3,6 +3,7 @@
 
 #include <granit/tools/shader_tools.h>
 
+#include "shader_asset.h"
 #include "shader_tools_core.h"
 
 #include <algorithm>
@@ -10,6 +11,7 @@
 #include <cstddef>
 #include <cstring>
 #include <filesystem>
+#include <fstream>
 #include <memory>
 #include <mutex>
 #include <sstream>
@@ -50,6 +52,26 @@ std::filesystem::path copy_path(const char* value, uint64_t length) {
   if (length != 0)
     std::memcpy(utf8.data(), value, static_cast<std::size_t>(length));
   return std::filesystem::path{utf8};
+}
+
+std::vector<std::byte> read_binary_file(const std::filesystem::path& path) {
+  std::ifstream stream(path, std::ios::binary | std::ios::ate);
+  if (!stream)
+    return {};
+  const auto size = stream.tellg();
+  if (size <= 0)
+    return {};
+  std::vector<std::byte> bytes(static_cast<std::size_t>(size));
+  stream.seekg(0);
+  stream.read(reinterpret_cast<char*>(bytes.data()), size);
+  return stream ? bytes : std::vector<std::byte>{};
+}
+
+std::string read_text_file(const std::filesystem::path& path) {
+  const auto bytes = read_binary_file(path);
+  if (bytes.empty())
+    return {};
+  return {reinterpret_cast<const char*>(bytes.data()), bytes.size()};
 }
 
 template <typename Desc> bool valid_binding_expectations(const Desc& desc) {
@@ -439,6 +461,67 @@ granit_result granit_shader_tools_result_get_reflection_json(granit_shader_tools
   *json = value->reflection_json.data();
   *length = value->reflection_json.size();
   return GRANIT_SUCCESS;
+}
+
+granit_result granit_shader_tools_result_write_asset(granit_shader_tools_result result,
+                                                     const granit_shader_tools_asset_desc* desc,
+                                                     uint32_t* cache_hit) {
+  if (cache_hit == nullptr)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  *cache_hit = 0;
+  const auto value = find_result(result);
+  if (!value)
+    return GRANIT_ERROR_INVALID_HANDLE;
+  if (desc == nullptr || desc->struct_size < sizeof(*desc) ||
+      !valid_string(desc->wgsl_path, desc->wgsl_path_length) ||
+      !valid_string(desc->spirv_path, desc->spirv_path_length) ||
+      !valid_string(desc->output_path, desc->output_path_length) ||
+      !valid_string(desc->tint_revision, desc->tint_revision_length) ||
+      !valid_string(desc->target_environment, desc->target_environment_length) ||
+      !valid_string(desc->compile_options, desc->compile_options_length) ||
+      desc->wgsl_path_length == 0 || desc->spirv_path_length == 0 ||
+      desc->output_path_length == 0 || desc->tint_revision_length == 0 ||
+      desc->target_environment_length == 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  if (value->status != GRANIT_SUCCESS || value->reflection_json.empty())
+    return GRANIT_ERROR_INITIALIZATION_FAILED;
+  try {
+    const auto wgsl_path = copy_path(desc->wgsl_path, desc->wgsl_path_length);
+    const auto spirv_path = copy_path(desc->spirv_path, desc->spirv_path_length);
+    const auto wgsl = read_text_file(wgsl_path);
+    const auto spirv = read_binary_file(spirv_path);
+    if (wgsl.empty() || spirv.empty())
+      return GRANIT_ERROR_INVALID_ARGUMENT;
+    granit::tools::shader_info packaged_info;
+    std::ostringstream inspect_output;
+    std::ostringstream inspect_diagnostic;
+    if (!granit::tools::inspect_shader(spirv_path, false, packaged_info, inspect_output,
+                                       inspect_diagnostic) ||
+        granit::tools::serialize_shader_info_json(packaged_info) != value->reflection_json)
+      return GRANIT_ERROR_INVALID_ARGUMENT;
+    const auto stage = stage_name(value->stage);
+    if (stage == nullptr)
+      return GRANIT_ERROR_INTERNAL;
+    const auto tint_revision = copy_string(desc->tint_revision, desc->tint_revision_length);
+    const auto target = copy_string(desc->target_environment, desc->target_environment_length);
+    const auto options = copy_string(desc->compile_options, desc->compile_options_length);
+    const auto key = granit::tools::make_shader_cache_key(
+        {wgsl, value->entry_point, stage, tint_revision, target, options});
+    std::vector<std::byte> asset;
+    if (granit::tools::encode_shader_asset({wgsl, spirv, value->reflection_json, key}, asset) !=
+        granit::tools::shader_asset_error::success)
+      return GRANIT_ERROR_INVALID_ARGUMENT;
+    bool hit = false;
+    if (granit::tools::store_shader_asset(copy_path(desc->output_path, desc->output_path_length),
+                                          asset, hit) != granit::tools::shader_asset_error::success)
+      return GRANIT_ERROR_INITIALIZATION_FAILED;
+    *cache_hit = hit ? 1U : 0U;
+    return GRANIT_SUCCESS;
+  } catch (const std::bad_alloc&) {
+    return GRANIT_ERROR_OUT_OF_MEMORY;
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
 }
 
 granit_result granit_shader_tools_result_destroy(granit_shader_tools_result result) {

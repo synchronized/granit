@@ -25,9 +25,14 @@ int compile_shader(int argc, char** argv) {
   const auto entry = option_value(argc, argv, "--entry");
   const auto stage = option_value(argc, argv, "--stage");
   const auto output = option_value(argc, argv, "--output");
+  const auto asset = option_value(argc, argv, "--asset");
+  const auto tint_revision = option_value(argc, argv, "--tint-revision");
+  const auto target_environment = option_value(argc, argv, "--target-environment");
   if (!tint || !input || !entry || !stage || !output ||
-      (*stage != "vertex" && *stage != "fragment" && *stage != "compute")) {
+      (*stage != "vertex" && *stage != "fragment" && *stage != "compute") ||
+      (asset && !tint_revision)) {
     std::cerr << "compile 需要 --tint、--input、--entry、--stage 和 --output\n";
+    std::cerr << "使用 --asset 时还需要 --tint-revision；可选 --target-environment\n";
     return 2;
   }
   const auto stage_value = *stage == "vertex"     ? GRANIT_SHADER_TOOLS_STAGE_VERTEX
@@ -48,6 +53,32 @@ int compile_shader(int argc, char** argv) {
   const auto info = result.info();
   std::cout << info.output;
   std::cerr << info.diagnostic;
+  if (status == GRANIT_SUCCESS && asset) {
+    constexpr std::string_view default_target = "vulkan1.3";
+    constexpr std::string_view compile_options = "format=spirv;validate=1";
+    const auto target = target_environment ? std::string_view{*target_environment} : default_target;
+    granit_shader_tools_asset_desc asset_desc{};
+    asset_desc.struct_size = sizeof(asset_desc);
+    asset_desc.wgsl_path = input->data();
+    asset_desc.wgsl_path_length = input->size();
+    asset_desc.spirv_path = output->data();
+    asset_desc.spirv_path_length = output->size();
+    asset_desc.output_path = asset->data();
+    asset_desc.output_path_length = asset->size();
+    asset_desc.tint_revision = tint_revision->data();
+    asset_desc.tint_revision_length = tint_revision->size();
+    asset_desc.target_environment = target.data();
+    asset_desc.target_environment_length = target.size();
+    asset_desc.compile_options = compile_options.data();
+    asset_desc.compile_options_length = compile_options.size();
+    const auto [asset_status, cache_hit] = result.write_asset(asset_desc);
+    if (asset_status != GRANIT_SUCCESS) {
+      std::cerr << "Shader 资产写入失败\n";
+      return 1;
+    }
+    std::cout << (cache_hit ? "Shader 资产缓存命中：" : "已生成 Shader 资产：") << *asset
+              << '\n';
+  }
   return status == GRANIT_SUCCESS ? 0 : 1;
 }
 

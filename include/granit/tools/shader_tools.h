@@ -77,6 +77,23 @@ typedef struct granit_shader_tools_result_info {
   uint64_t diagnostic_length;
 } granit_shader_tools_result_info;
 
+/** Shader 资产写入描述。路径和字符串均为 UTF-8，调用期间有效且无需以零结尾。 */
+typedef struct granit_shader_tools_asset_desc {
+  uint32_t struct_size;
+  const char* wgsl_path;
+  uint64_t wgsl_path_length;
+  const char* spirv_path;
+  uint64_t spirv_path_length;
+  const char* output_path;
+  uint64_t output_path_length;
+  const char* tint_revision;
+  uint64_t tint_revision_length;
+  const char* target_environment;
+  uint64_t target_environment_length;
+  const char* compile_options;
+  uint64_t compile_options_length;
+} granit_shader_tools_asset_desc;
+
 /** 单个描述符绑定的后端无关反射记录。名称视图在结果销毁前有效。 */
 typedef struct granit_shader_tools_binding_info {
   uint32_t struct_size;
@@ -185,6 +202,14 @@ granit_shader_tools_result_get_override(granit_shader_tools_result result, uint6
 /** 查询稳定排序的 UTF-8 反射 JSON。视图在结果销毁前有效。 */
 GRANIT_SHADER_TOOLS_API granit_result granit_shader_tools_result_get_reflection_json(
     granit_shader_tools_result result, const char** json, uint64_t* length);
+
+/**
+ * 将成功结果对应的 WGSL、SPIR-V 和稳定反射 JSON 写入确定性 Shader 资产。
+ * cache_hit 在目标文件已经逐字节相同时写为 1，否则写为 0。
+ */
+GRANIT_SHADER_TOOLS_API granit_result granit_shader_tools_result_write_asset(
+    granit_shader_tools_result result, const granit_shader_tools_asset_desc* desc,
+    uint32_t* cache_hit);
 
 /** 销毁结果句柄。零值和已经销毁的句柄返回 GRANIT_ERROR_INVALID_HANDLE。 */
 GRANIT_SHADER_TOOLS_API granit_result
