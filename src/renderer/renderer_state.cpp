@@ -1606,28 +1606,74 @@ granit_result renderer_state::dispatch(vulkan_command_recorder& recorder,
 }
 
 granit_result renderer_state::set_viewports(vulkan_command_recorder& recorder, std::uint32_t first,
-                                            std::span<const VkViewport> viewports) noexcept {
-  return device_lost() ? GRANIT_ERROR_DEVICE_LOST
-                       : recorder.set_viewports(device_, first, viewports);
+                                            std::span<const granit_viewport> viewports) noexcept {
+  if (device_lost())
+    return GRANIT_ERROR_DEVICE_LOST;
+  try {
+    std::vector<VkViewport> native;
+    native.reserve(viewports.size());
+    for (const auto& value : viewports)
+      native.push_back(
+          {value.x, value.y, value.width, value.height, value.min_depth, value.max_depth});
+    return recorder.set_viewports(device_, first, native);
+  } catch (const std::bad_alloc&) {
+    return GRANIT_ERROR_OUT_OF_MEMORY;
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
 }
 
 granit_result renderer_state::set_scissors(vulkan_command_recorder& recorder, std::uint32_t first,
-                                           std::span<const VkRect2D> scissors) noexcept {
-  return device_lost() ? GRANIT_ERROR_DEVICE_LOST : recorder.set_scissors(device_, first, scissors);
+                                           std::span<const granit_scissor> scissors) noexcept {
+  if (device_lost())
+    return GRANIT_ERROR_DEVICE_LOST;
+  try {
+    std::vector<VkRect2D> native;
+    native.reserve(scissors.size());
+    for (const auto& value : scissors)
+      native.push_back({{value.x, value.y}, {value.width, value.height}});
+    return recorder.set_scissors(device_, first, native);
+  } catch (const std::bad_alloc&) {
+    return GRANIT_ERROR_OUT_OF_MEMORY;
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
 }
 
 granit_result renderer_state::bind_vertex_buffers(vulkan_command_recorder& recorder,
                                                   std::uint32_t first,
-                                                  std::span<const VkBuffer> buffers,
-                                                  std::span<const VkDeviceSize> offsets) {
-  return device_lost() ? GRANIT_ERROR_DEVICE_LOST
-                       : recorder.bind_vertex_buffers(device_, first, buffers, offsets);
+                                                  std::span<backend_buffer_resource* const> buffers,
+                                                  std::span<const std::uint64_t> offsets) {
+  if (device_lost())
+    return GRANIT_ERROR_DEVICE_LOST;
+  try {
+    std::vector<VkBuffer> native_buffers;
+    std::vector<VkDeviceSize> native_offsets;
+    native_buffers.reserve(buffers.size());
+    native_offsets.reserve(offsets.size());
+    for (auto* buffer : buffers) {
+      if (buffer == nullptr)
+        return GRANIT_ERROR_INVALID_ARGUMENT;
+      native_buffers.push_back(static_cast<vulkan_buffer_resource&>(*buffer).native().buffer);
+    }
+    native_offsets.assign(offsets.begin(), offsets.end());
+    return recorder.bind_vertex_buffers(device_, first, native_buffers, native_offsets);
+  } catch (const std::bad_alloc&) {
+    return GRANIT_ERROR_OUT_OF_MEMORY;
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
 }
 
-granit_result renderer_state::bind_index_buffer(vulkan_command_recorder& recorder, VkBuffer buffer,
-                                                VkDeviceSize offset, VkIndexType type) {
-  return device_lost() ? GRANIT_ERROR_DEVICE_LOST
-                       : recorder.bind_index_buffer(device_, buffer, offset, type);
+granit_result renderer_state::bind_index_buffer(vulkan_command_recorder& recorder,
+                                                backend_buffer_resource& buffer,
+                                                std::uint64_t offset, granit_index_type type) {
+  if (device_lost())
+    return GRANIT_ERROR_DEVICE_LOST;
+  const auto native_type =
+      type == GRANIT_INDEX_TYPE_UINT16 ? VK_INDEX_TYPE_UINT16 : VK_INDEX_TYPE_UINT32;
+  return recorder.bind_index_buffer(
+      device_, static_cast<vulkan_buffer_resource&>(buffer).native().buffer, offset, native_type);
 }
 
 granit_result renderer_state::draw(vulkan_command_recorder& recorder, std::uint32_t vertex_count,

@@ -13,6 +13,7 @@
 #include <vector>
 
 #include <granit/core/result.h>
+#include <granit/renderer/command_recorder.h>
 #include <granit/renderer/pipeline.h>
 #include <granit/renderer/renderer.h>
 #include <granit/renderer/resource_types.h>
@@ -185,15 +186,16 @@ public:
                                        std::uint32_t group_count_x, std::uint32_t group_count_y,
                                        std::uint32_t group_count_z) noexcept;
   [[nodiscard]] granit_result set_viewports(vulkan_command_recorder& recorder, std::uint32_t first,
-                                            std::span<const VkViewport> viewports) noexcept;
+                                            std::span<const granit_viewport> viewports) noexcept;
   [[nodiscard]] granit_result set_scissors(vulkan_command_recorder& recorder, std::uint32_t first,
-                                           std::span<const VkRect2D> scissors) noexcept;
+                                           std::span<const granit_scissor> scissors) noexcept;
   [[nodiscard]] granit_result bind_vertex_buffers(vulkan_command_recorder& recorder,
                                                   std::uint32_t first,
-                                                  std::span<const VkBuffer> buffers,
-                                                  std::span<const VkDeviceSize> offsets);
-  [[nodiscard]] granit_result bind_index_buffer(vulkan_command_recorder& recorder, VkBuffer buffer,
-                                                VkDeviceSize offset, VkIndexType type);
+                                                  std::span<backend_buffer_resource* const> buffers,
+                                                  std::span<const std::uint64_t> offsets);
+  [[nodiscard]] granit_result bind_index_buffer(vulkan_command_recorder& recorder,
+                                                backend_buffer_resource& buffer,
+                                                std::uint64_t offset, granit_index_type type);
   [[nodiscard]] granit_result draw(vulkan_command_recorder& recorder, std::uint32_t vertex_count,
                                    std::uint32_t instance_count, std::uint32_t first_vertex,
                                    std::uint32_t first_instance) noexcept;

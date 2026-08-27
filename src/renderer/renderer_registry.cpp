@@ -3760,13 +3760,9 @@ granit_result renderer_registry::set_viewports(granit_renderer renderer,
   auto command = acquire_command_recorder(renderer, recorder);
   if (!command)
     return GRANIT_ERROR_INVALID_HANDLE;
-  std::vector<VkViewport> native;
-  native.reserve(viewports.size());
-  for (const auto& value : viewports)
-    native.push_back(
-        {value.x, value.y, value.width, value.height, value.min_depth, value.max_depth});
   std::lock_guard lock{command->mutex};
-  return command->renderer->set_viewports(native_command_recorder(*command->native), first, native);
+  return command->renderer->set_viewports(native_command_recorder(*command->native), first,
+                                          viewports);
 }
 
 granit_result renderer_registry::set_scissors(granit_renderer renderer,
@@ -3775,12 +3771,9 @@ granit_result renderer_registry::set_scissors(granit_renderer renderer,
   auto command = acquire_command_recorder(renderer, recorder);
   if (!command)
     return GRANIT_ERROR_INVALID_HANDLE;
-  std::vector<VkRect2D> native;
-  native.reserve(scissors.size());
-  for (const auto& value : scissors)
-    native.push_back({{value.x, value.y}, {value.width, value.height}});
   std::lock_guard lock{command->mutex};
-  return command->renderer->set_scissors(native_command_recorder(*command->native), first, native);
+  return command->renderer->set_scissors(native_command_recorder(*command->native), first,
+                                         scissors);
 }
 
 granit_result
@@ -3791,8 +3784,8 @@ renderer_registry::bind_vertex_buffers(granit_renderer renderer, granit_command_
   if (!command)
     return GRANIT_ERROR_INVALID_HANDLE;
   std::vector<std::shared_ptr<buffer_record>> records;
-  std::vector<VkBuffer> buffers;
-  std::vector<VkDeviceSize> offsets;
+  std::vector<backend_buffer_resource*> buffers;
+  std::vector<std::uint64_t> offsets;
   {
     std::lock_guard lock{mutex_};
     for (const auto& binding : bindings) {
@@ -3803,7 +3796,7 @@ renderer_registry::bind_vertex_buffers(granit_renderer renderer, granit_command_
           binding.offset >= found->second->desc.size)
         return GRANIT_ERROR_INVALID_ARGUMENT;
       records.push_back(found->second);
-      buffers.push_back(native_buffer(*found->second->native).buffer);
+      buffers.push_back(found->second->native.get());
       offsets.push_back(binding.offset);
     }
   }
@@ -3836,12 +3829,9 @@ granit_result renderer_registry::bind_index_buffer(granit_renderer renderer,
       return GRANIT_ERROR_INVALID_ARGUMENT;
     record = found->second;
   }
-  const auto native_type =
-      type == GRANIT_INDEX_TYPE_UINT16 ? VK_INDEX_TYPE_UINT16 : VK_INDEX_TYPE_UINT32;
   std::lock_guard lock{command->mutex};
   const auto result = command->renderer->bind_index_buffer(
-      native_command_recorder(*command->native), native_buffer(*record->native).buffer, offset,
-      native_type);
+      native_command_recorder(*command->native), *record->native, offset, type);
   if (result == GRANIT_SUCCESS)
     retain_resource(command->retained_resources, record, record->metadata);
   return result;
