@@ -54,6 +54,7 @@ granit_pipeline_layout_create
 granit_pipeline_layout_destroy
 granit_renderer_create
 granit_renderer_destroy
+granit_renderer_get_limits
 granit_renderer_pipeline_cache_export
 granit_renderer_pipeline_cache_import
 granit_renderer_set_object_name

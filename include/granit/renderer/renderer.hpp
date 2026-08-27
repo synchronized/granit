@@ -38,6 +38,11 @@ struct renderer_desc {
   void* diagnostic_user_data{};
 };
 
+struct renderer_limits {
+  std::uint64_t uniform_buffer_offset_alignment{};
+  std::uint64_t max_uniform_buffer_binding_size{};
+};
+
 /** 无异常、move-only 的 renderer RAII 包装。 */
 class renderer {
 public:
@@ -91,6 +96,19 @@ public:
     }
     return from_native(granit_renderer_set_object_name(handle_, object, name.data(),
                                                        static_cast<std::uint32_t>(name.size())));
+  }
+
+  [[nodiscard]] result get_limits(renderer_limits& limits) const noexcept {
+    granit_renderer_limits native = GRANIT_RENDERER_LIMITS_INIT;
+    const auto query_result = from_native(granit_renderer_get_limits(handle_, &native));
+    if (failed(query_result)) {
+      return query_result;
+    }
+    limits = {
+        .uniform_buffer_offset_alignment = native.uniform_buffer_offset_alignment,
+        .max_uniform_buffer_binding_size = native.max_uniform_buffer_binding_size,
+    };
+    return result::success;
   }
 
   [[nodiscard]] result import_pipeline_cache(std::span<const std::byte> data) noexcept {

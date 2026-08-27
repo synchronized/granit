@@ -198,6 +198,20 @@ granit_result renderer_registry::create(std::string_view application_name, bool 
   }
 }
 
+granit_result renderer_registry::get_limits(granit_renderer renderer,
+                                            granit_renderer_limits& limits) {
+  const auto state = acquire(renderer);
+  if (!state) {
+    return GRANIT_ERROR_INVALID_HANDLE;
+  }
+
+  const auto& capabilities = state->capabilities();
+  limits.reserved = 0;
+  limits.uniform_buffer_offset_alignment = capabilities.uniform_buffer_offset_alignment;
+  limits.max_uniform_buffer_binding_size = capabilities.max_uniform_buffer_binding_size;
+  return GRANIT_SUCCESS;
+}
+
 granit_result renderer_registry::import_pipeline_cache(granit_renderer renderer, const void* data,
                                                        std::uint64_t size) {
   const auto state = acquire(renderer);

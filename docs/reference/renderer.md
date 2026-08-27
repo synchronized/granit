@@ -31,6 +31,25 @@ if (result == GRANIT_SUCCESS) {
 `struct_size` 支持描述结构向后兼容。当前至少要求 `GRANIT_RENDERER_DESC_VERSION_1_SIZE`，未来
 新增字段只能追加到结构末尾；旧库会忽略超出已知范围的尾部字段。
 
+## 设备限制查询
+
+动态 Uniform Buffer 的偏移对齐由具体设备决定，调用方不得固定假定为 256。创建 Renderer 后，
+使用同一个可扩展结构查询限制快照：
+
+```c
+granit_renderer_limits limits = GRANIT_RENDERER_LIMITS_INIT;
+granit_result result = granit_renderer_get_limits(renderer, &limits);
+```
+
+`uniform_buffer_offset_alignment` 是基础 Offset 和动态 Offset 必须满足的对齐值；
+`max_uniform_buffer_binding_size` 是单个 Uniform Buffer Binding Range 的最大字节数。Uniform Arena
+步长可按 `(size + alignment - 1) / alignment * alignment` 向上对齐，计算时需要防止整数溢出。
+
+调用者必须设置 `struct_size`，当前至少为 `GRANIT_RENDERER_LIMITS_VERSION_1_SIZE`。查询接受更大的
+未来结构并只写当前版本已知字段；结构过小或空指针返回 `GRANIT_ERROR_INVALID_ARGUMENT`，失效
+Renderer 返回 `GRANIT_ERROR_INVALID_HANDLE`。限制来自 Renderer 创建时保存的不可变能力快照，
+查询不会再次访问驱动。
+
 需要创建窗口 Surface 时，通过 `surface_types` 提前声明窗口系统。当前支持
 `GRANIT_SURFACE_TYPE_WIN32_BIT`；具体创建方式见 [surface.md](surface.md)。
 
@@ -46,6 +65,9 @@ if (granit::failed(result)) {
 
 `granit::renderer` 不使用异常，是 move-only RAII 类型。成功初始化后析构函数自动销毁；`reset`
 可提前释放。`native_handle` 只返回 Granit C 句柄，用于 C/C++ 层互操作，并非 Vulkan 句柄。
+
+C++ 调用方通过 `renderer::get_limits(renderer_limits&)` 查询相同快照，结果和错误语义与 C API
+一致。
 
 ## Validation
 

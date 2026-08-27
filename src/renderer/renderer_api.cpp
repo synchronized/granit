@@ -99,6 +99,21 @@ extern "C" granit_result granit_renderer_destroy(granit_renderer renderer) {
   }
 }
 
+extern "C" granit_result granit_renderer_get_limits(granit_renderer renderer,
+                                                    granit_renderer_limits* limits) {
+  if (limits == nullptr || limits->struct_size < GRANIT_RENDERER_LIMITS_VERSION_1_SIZE) {
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  }
+  if (renderer == GRANIT_NULL_HANDLE) {
+    return GRANIT_ERROR_INVALID_HANDLE;
+  }
+  try {
+    return granit::detail::renderer_registry::instance().get_limits(renderer, *limits);
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
 extern "C" granit_result granit_renderer_set_object_name(granit_renderer renderer,
                                                          granit_handle object, const char* name,
                                                          uint32_t name_length) {

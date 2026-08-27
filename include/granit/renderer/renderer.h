@@ -27,6 +27,20 @@ typedef granit_handle granit_renderer;
 #define GRANIT_DEFAULT_FRAMES_IN_FLIGHT UINT32_C(2)
 #define GRANIT_MAX_FRAMES_IN_FLIGHT UINT32_C(4)
 
+/** Renderer 对应设备的公开限制快照。 */
+typedef struct granit_renderer_limits {
+  uint32_t struct_size;
+  uint32_t reserved;
+  uint64_t uniform_buffer_offset_alignment;
+  uint64_t max_uniform_buffer_binding_size;
+} granit_renderer_limits;
+
+#define GRANIT_RENDERER_LIMITS_VERSION_1_SIZE                                                      \
+  ((uint32_t)(offsetof(granit_renderer_limits, max_uniform_buffer_binding_size) + sizeof(uint64_t)))
+
+#define GRANIT_RENDERER_LIMITS_INIT                                                                \
+  {(uint32_t)sizeof(granit_renderer_limits), UINT32_C(0), UINT64_C(0), UINT64_C(0)}
+
 /** Renderer 创建描述。字符串以显式长度表示，不要求调用者提供结尾零字符。 */
 typedef struct granit_renderer_desc {
   uint32_t struct_size;
@@ -72,6 +86,10 @@ GRANIT_API granit_result granit_renderer_create(const granit_renderer_desc* desc
 
 /** 销毁 renderer，并使句柄立即失效。 */
 GRANIT_API granit_result granit_renderer_destroy(granit_renderer renderer);
+
+/** 查询 Renderer 对应设备的限制；调用者须先设置 limits->struct_size。 */
+GRANIT_API granit_result granit_renderer_get_limits(granit_renderer renderer,
+                                                    granit_renderer_limits* limits);
 
 /** 为公开 GPU 对象设置 UTF-8 调试名称；名称仅在调用期间借用。 */
 GRANIT_API granit_result granit_renderer_set_object_name(granit_renderer renderer,
