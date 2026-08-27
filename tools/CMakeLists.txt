@@ -12,9 +12,11 @@ target_include_directories(
 )
 set_target_properties(granit_spirv_reflect PROPERTIES FOLDER "ThirdParty/SPIRV-Reflect")
 
-add_executable(granit_shader_tool shader_tool_main.cpp)
+find_package(Threads REQUIRED)
+
+add_executable(granit_shader_tool shader_tool_main.cpp process.cpp process.h)
 target_compile_features(granit_shader_tool PRIVATE cxx_std_20)
-target_link_libraries(granit_shader_tool PRIVATE granit_spirv_reflect)
+target_link_libraries(granit_shader_tool PRIVATE granit_spirv_reflect Threads::Threads)
 target_compile_options(
   granit_shader_tool
   PRIVATE $<$<COMPILE_LANG_AND_ID:CXX,MSVC>:/utf-8>
@@ -50,6 +52,24 @@ if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
     granit.shader_tool.tone_mapping_reflect
     PROPERTIES PASS_REGULAR_EXPRESSION
                "binding,0,0,uniform_buffer,ToneMappingConstants,16.*binding,0,1,sampled_texture,hdr_color,1.*binding,0,2,sampler,hdr_sampler,1"
+  )
+  add_test(
+    NAME granit.shader_tool.verify
+    COMMAND
+      granit_shader_tool verify
+      "${PROJECT_SOURCE_DIR}/src/pipeline/shaders/tone_mapping.frag.spv"
+  )
+  set_tests_properties(
+    granit.shader_tool.verify
+    PROPERTIES PASS_REGULAR_EXPRESSION "SPIR-V 结构验证通过.*fragment_main.*fragment"
+  )
+  add_test(
+    NAME granit.shader_tool.compile_diagnostic
+    COMMAND
+      "${CMAKE_COMMAND}" "-DTOOL=$<TARGET_FILE:granit_shader_tool>"
+      "-DINPUT=${PROJECT_SOURCE_DIR}/tests/fixtures/shaders/s10c_triangle.wgsl"
+      "-DOUTPUT=${CMAKE_CURRENT_BINARY_DIR}/must-not-exist.spv" -P
+      "${PROJECT_SOURCE_DIR}/cmake/check_shader_tool_diagnostic.cmake"
   )
 
   add_test(

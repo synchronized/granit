@@ -10,8 +10,18 @@ cmake --preset windows-clang-debug -DGRANIT_BUILD_TOOLS=ON
 cmake --build --preset windows-clang-debug --target granit_shader_tool
 ```
 
-`granit_shader_tool <shader.spv>` 读取 SPIR-V，并按稳定顺序输出入口和资源绑定元数据。当前工具是
-H-02D 原型，不定义长期稳定的命令行或输出格式，也不进入 Granit 核心动态库及安装导出。
+`granit_shader_tool` 提供以下入口：
+
+```powershell
+granit_shader_tool inspect shader.spv
+granit_shader_tool verify shader.spv
+granit_shader_tool compile --tint path/to/tint --input shader.wgsl `
+  --entry fragment_main --stage fragment --output shader.spv
+```
+
+`inspect` 按稳定顺序输出入口和资源绑定元数据；`verify` 执行低成本 SPIR-V 结构与反射检查；
+`compile` 直接启动锁定版本的 Tint，捕获原始诊断并复核输出入口和阶段。完整 SPIR-V 合法性仍由
+Tint 的 `--validate` 和可选 `spirv-val` 负责。工具不进入 Granit 核心动态库及安装导出。
 
 `granit_material_tool inspect <package.grmat> --json` 验证最终二进制材质包并把稳定诊断 JSON 输出
 到标准输出。使用 `--output <path>` 可以写入文件；Renderer 不读取该 JSON。

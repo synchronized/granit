@@ -127,8 +127,13 @@ jobs:
             -DGRANIT_WEBGPU_FORCE_FALLBACK_ADAPTER=ON `
             "-DGRANIT_DAWN_ROOT=$stage" `
             -DGRANIT_BUILD_EXAMPLES=OFF `
+            -DGRANIT_BUILD_TOOLS=ON `
             -DGRANIT_BUILD_TESTING=ON
-          cmake --build $build --target granit_webgpu_plugin_smoke
+          cmake --build $build --target granit_webgpu_plugin_smoke granit_shader_tool
+          & "$build/bin/granit_shader_tool.exe" compile --tint "$stage/bin/tint.exe" `
+            --input "$PWD/tests/fixtures/shaders/s10c_triangle.wgsl" --entry vs_main `
+            --stage vertex --output "$env:RUNNER_TEMP/s10c_tool_triangle.vert.spv"
+          if ($LASTEXITCODE -ne 0) { throw "granit_shader_tool 调用 Tint 失败" }
           $fxc = "$env:WINDIR/System32/d3dcompiler_47.dll"
           if (-not (Test-Path -LiteralPath $fxc -PathType Leaf)) {
             throw "Windows runner 缺少 d3dcompiler_47.dll"
@@ -247,10 +252,14 @@ jobs:
             -DGRANIT_WEBGPU_FORCE_FALLBACK_ADAPTER=ON \
             -DGRANIT_DAWN_ROOT="$stage" \
             -DGRANIT_BUILD_EXAMPLES=OFF \
+            -DGRANIT_BUILD_TOOLS=ON \
             -DGRANIT_BUILD_TESTING=ON \
             -DGRANIT_ENABLE_XCB=OFF \
             -DGRANIT_ENABLE_WAYLAND=OFF
-          cmake --build "$build" --target granit_webgpu_plugin_smoke
+          cmake --build "$build" --target granit_webgpu_plugin_smoke granit_shader_tool
+          "$build/bin/granit_shader_tool" compile --tint "$stage/bin/tint" \
+            --input "$PWD/tests/fixtures/shaders/s10c_triangle.wgsl" --entry vs_main \
+            --stage vertex --output "$RUNNER_TEMP/s10c_tool_triangle.vert.spv"
           lvp_icd="$(find /usr/share/vulkan/icd.d -type f -name 'lvp_icd*.json' -print -quit)"
           [[ -n "$lvp_icd" ]]
           VK_DRIVER_FILES="$lvp_icd" LIBGL_ALWAYS_SOFTWARE=1 \

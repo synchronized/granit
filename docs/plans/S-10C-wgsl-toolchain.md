@@ -75,10 +75,11 @@ S-10C 需要建立一个源码权威和可复现的双后端资产流程。
 
 ## 实施顺序
 
-1. **S-10C1 编译基线**：让锁定 Dawn SDK 同时产出 Tint CLI；固定一个最小 WGSL Fixture，验证
-   Windows/Linux 上 WGSL 校验及 Vulkan 1.3 SPIR-V 输出一致。
-2. **S-10C2 工具入口**：将 `granit_shader_tool` 扩展为 `compile`、`inspect` 和 `verify` 子命令，
-   保留现有单参数反射入口的迁移提示；捕获 Tint 退出码、标准输出和标准错误。
+1. **S-10C1 编译基线**：已让锁定 Dawn SDK 同时产出 Tint CLI；最小 WGSL Fixture 的 Vertex 与
+   Fragment 入口已在 Windows/Linux 完成校验并生成有效 Vulkan SPIR-V。
+2. **S-10C2 工具入口**：已将 `granit_shader_tool` 扩展为 `compile`、`inspect` 和 `verify` 子命令，
+   保留现有单参数反射入口的迁移提示；跨平台子进程不经过 Shell，并捕获 Tint 退出码、标准输出和
+   标准错误。当前继续补齐真实 Tint 端到端测试后进入 S-10C3。
 3. **S-10C3 反射 Schema**：扩展 SPIRV-Reflect 提取范围，定义后端无关记录及稳定 JSON 调试输出，
    补充 WGSL/SPIR-V 入口点和绑定集合一致性检查。
 4. **S-10C4 确定性资产与缓存**：实现 `.granit-shader` 编解码、SHA-256、损坏检测、原子写入和缓存
