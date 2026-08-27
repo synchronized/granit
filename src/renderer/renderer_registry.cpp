@@ -31,10 +31,6 @@ native_command_recorder(backend_command_recorder_resource& resource) noexcept {
   return static_cast<vulkan_command_recorder_resource&>(resource).native();
 }
 
-VkSurfaceKHR& native_surface_handle(backend_surface_resource& resource) noexcept {
-  return static_cast<vulkan_surface_resource&>(resource).native();
-}
-
 vulkan_swapchain& native_swapchain(backend_swapchain_resource& resource) noexcept {
   return static_cast<vulkan_swapchain_resource&>(resource).native();
 }
@@ -523,8 +519,8 @@ granit_result renderer_registry::create_win32_surface(granit_renderer renderer,
     auto record = std::make_shared<surface_record>();
     record->renderer = state;
     record->native = std::make_unique<vulkan_surface_resource>(state);
-    const auto create_result = state->create_win32_surface(native_instance, native_window,
-                                                           native_surface_handle(*record->native));
+    const auto create_result =
+        state->create_win32_surface(native_instance, native_window, *record->native);
     if (create_result != GRANIT_SUCCESS) {
       return create_result;
     }
@@ -564,8 +560,7 @@ granit_result renderer_registry::create_xcb_surface(granit_renderer renderer, vo
     auto record = std::make_shared<surface_record>();
     record->renderer = state;
     record->native = std::make_unique<vulkan_surface_resource>(state);
-    const auto create_result =
-        state->create_xcb_surface(connection, window, native_surface_handle(*record->native));
+    const auto create_result = state->create_xcb_surface(connection, window, *record->native);
     if (create_result != GRANIT_SUCCESS)
       return create_result;
 
@@ -603,8 +598,8 @@ granit_result renderer_registry::create_wayland_surface(granit_renderer renderer
     auto record = std::make_shared<surface_record>();
     record->renderer = state;
     record->native = std::make_unique<vulkan_surface_resource>(state);
-    const auto create_result = state->create_wayland_surface(
-        display, native_surface, native_surface_handle(*record->native));
+    const auto create_result =
+        state->create_wayland_surface(display, native_surface, *record->native);
     if (create_result != GRANIT_SUCCESS)
       return create_result;
 
@@ -748,8 +743,8 @@ granit_result renderer_registry::create_swapchain(granit_renderer renderer, gran
     record->renderer = state;
     record->surface = surface_state;
     record->native = std::make_unique<vulkan_swapchain_resource>(state);
-    const auto create_result = state->create_swapchain(
-        native_surface_handle(*surface_state->native), desc, native_swapchain(*record->native));
+    const auto create_result =
+        state->create_swapchain(*surface_state->native, desc, *record->native);
     if (create_result != GRANIT_SUCCESS) {
       return create_result;
     }
@@ -856,8 +851,8 @@ granit_result renderer_registry::recreate_swapchain(granit_renderer renderer,
   }
   old_views.clear();
   old_textures.clear();
-  const auto result = record->renderer->recreate_swapchain(
-      native_surface_handle(*record->surface->native), desc, native_swapchain(*record->native));
+  const auto result =
+      record->renderer->recreate_swapchain(*record->surface->native, desc, *record->native);
   const auto install_result = install_swapchain_backbuffers(swapchain, record);
   return result == GRANIT_SUCCESS ? install_result : result;
 }
@@ -948,7 +943,7 @@ granit_result renderer_registry::get_swapchain_info(granit_renderer renderer,
   if (found == swapchains_.end() || found->second->renderer != state) {
     return GRANIT_ERROR_INVALID_HANDLE;
   }
-  info = state->get_swapchain_info(native_swapchain(*found->second->native));
+  info = state->get_swapchain_info(*found->second->native);
   return GRANIT_SUCCESS;
 }
 

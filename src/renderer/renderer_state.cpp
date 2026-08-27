@@ -539,36 +539,42 @@ granit_result renderer_state::set_backend_resource_name(backend_resource& resour
   return GRANIT_ERROR_UNSUPPORTED;
 }
 
-granit_result renderer_state::create_win32_surface(void* native_instance, void* native_window,
-                                                   VkSurfaceKHR& surface) noexcept {
+granit_result
+renderer_state::create_win32_surface(void* native_instance, void* native_window,
+                                     backend_surface_resource& surface_resource) noexcept {
   if (device_lost())
     return GRANIT_ERROR_DEVICE_LOST;
   std::lock_guard lock{resource_mutex_};
   if ((surface_types_ & GRANIT_SURFACE_TYPE_WIN32_BIT) == 0) {
     return GRANIT_ERROR_UNSUPPORTED;
   }
+  auto& surface = static_cast<vulkan_surface_resource&>(surface_resource).native();
   return observe_device_result(
       detail::create_win32_surface(instance_, device_, native_instance, native_window, surface));
 }
 
-granit_result renderer_state::create_xcb_surface(void* connection, std::uint32_t window,
-                                                 VkSurfaceKHR& surface) noexcept {
+granit_result
+renderer_state::create_xcb_surface(void* connection, std::uint32_t window,
+                                   backend_surface_resource& surface_resource) noexcept {
   if (device_lost())
     return GRANIT_ERROR_DEVICE_LOST;
   std::lock_guard lock{resource_mutex_};
   if ((surface_types_ & GRANIT_SURFACE_TYPE_XCB_BIT) == 0)
     return GRANIT_ERROR_UNSUPPORTED;
+  auto& surface = static_cast<vulkan_surface_resource&>(surface_resource).native();
   return observe_device_result(
       detail::create_xcb_surface(instance_, device_, connection, window, surface));
 }
 
-granit_result renderer_state::create_wayland_surface(void* display, void* native_surface,
-                                                     VkSurfaceKHR& surface) noexcept {
+granit_result
+renderer_state::create_wayland_surface(void* display, void* native_surface,
+                                       backend_surface_resource& surface_resource) noexcept {
   if (device_lost())
     return GRANIT_ERROR_DEVICE_LOST;
   std::lock_guard lock{resource_mutex_};
   if ((surface_types_ & GRANIT_SURFACE_TYPE_WAYLAND_BIT) == 0)
     return GRANIT_ERROR_UNSUPPORTED;
+  auto& surface = static_cast<vulkan_surface_resource&>(surface_resource).native();
   return observe_device_result(
       detail::create_wayland_surface(instance_, device_, display, native_surface, surface));
 }
@@ -578,20 +584,24 @@ void renderer_state::destroy_native_surface(VkSurfaceKHR surface) noexcept {
   detail::destroy_surface(instance_, surface);
 }
 
-granit_result renderer_state::create_swapchain(VkSurfaceKHR surface,
+granit_result renderer_state::create_swapchain(backend_surface_resource& surface_resource,
                                                const vulkan_swapchain_desc& desc,
-                                               vulkan_swapchain& swapchain) {
+                                               backend_swapchain_resource& swapchain_resource) {
   if (device_lost())
     return GRANIT_ERROR_DEVICE_LOST;
+  const auto surface = static_cast<vulkan_surface_resource&>(surface_resource).native();
+  auto& swapchain = static_cast<vulkan_swapchain_resource&>(swapchain_resource).native();
   std::lock_guard lock{resource_mutex_};
   return observe_device_result(swapchain.initialize(instance_, device_, surface, desc));
 }
 
-granit_result renderer_state::recreate_swapchain(VkSurfaceKHR surface,
+granit_result renderer_state::recreate_swapchain(backend_surface_resource& surface_resource,
                                                  const vulkan_swapchain_desc& desc,
-                                                 vulkan_swapchain& swapchain) {
+                                                 backend_swapchain_resource& swapchain_resource) {
   if (device_lost())
     return GRANIT_ERROR_DEVICE_LOST;
+  const auto surface = static_cast<vulkan_surface_resource&>(surface_resource).native();
+  auto& swapchain = static_cast<vulkan_swapchain_resource&>(swapchain_resource).native();
   std::lock_guard lock{resource_mutex_};
   {
     std::lock_guard queue_lock{queue_mutex_};
@@ -603,9 +613,9 @@ granit_result renderer_state::recreate_swapchain(VkSurfaceKHR surface,
 }
 
 vulkan_swapchain_info
-renderer_state::get_swapchain_info(const vulkan_swapchain& swapchain) noexcept {
+renderer_state::get_swapchain_info(backend_swapchain_resource& swapchain_resource) noexcept {
   std::lock_guard lock{resource_mutex_};
-  return swapchain.info();
+  return static_cast<vulkan_swapchain_resource&>(swapchain_resource).native().info();
 }
 
 void renderer_state::destroy_native_swapchain(vulkan_swapchain& swapchain) noexcept {

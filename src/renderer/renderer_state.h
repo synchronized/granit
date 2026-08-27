@@ -62,20 +62,20 @@ public:
                                                         std::string_view name);
 
   [[nodiscard]] granit_result create_win32_surface(void* native_instance, void* native_window,
-                                                   VkSurfaceKHR& surface) noexcept;
+                                                   backend_surface_resource& surface) noexcept;
   [[nodiscard]] granit_result create_xcb_surface(void* connection, std::uint32_t window,
-                                                 VkSurfaceKHR& surface) noexcept;
+                                                 backend_surface_resource& surface) noexcept;
   [[nodiscard]] granit_result create_wayland_surface(void* display, void* native_surface,
-                                                     VkSurfaceKHR& surface) noexcept;
+                                                     backend_surface_resource& surface) noexcept;
   void destroy_native_surface(VkSurfaceKHR surface) noexcept;
-  [[nodiscard]] granit_result create_swapchain(VkSurfaceKHR surface,
+  [[nodiscard]] granit_result create_swapchain(backend_surface_resource& surface,
                                                const vulkan_swapchain_desc& desc,
-                                               vulkan_swapchain& swapchain);
-  [[nodiscard]] granit_result recreate_swapchain(VkSurfaceKHR surface,
+                                               backend_swapchain_resource& swapchain);
+  [[nodiscard]] granit_result recreate_swapchain(backend_surface_resource& surface,
                                                  const vulkan_swapchain_desc& desc,
-                                                 vulkan_swapchain& swapchain);
+                                                 backend_swapchain_resource& swapchain);
   [[nodiscard]] vulkan_swapchain_info
-  get_swapchain_info(const vulkan_swapchain& swapchain) noexcept;
+  get_swapchain_info(backend_swapchain_resource& swapchain) noexcept;
   void destroy_native_swapchain(vulkan_swapchain& swapchain) noexcept;
   [[nodiscard]] granit_result create_native_buffer(const granit_buffer_desc& desc,
                                                    vulkan_buffer_allocation& buffer) noexcept;
