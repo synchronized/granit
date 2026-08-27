@@ -734,10 +734,12 @@ void renderer_state::destroy_native_swapchain(vulkan_swapchain& swapchain) noexc
   swapchain.reset(device_);
 }
 
-granit_result renderer_state::create_native_buffer(const granit_buffer_desc& desc,
-                                                   vulkan_buffer_allocation& buffer) noexcept {
+granit_result
+renderer_state::create_native_buffer(const granit_buffer_desc& desc,
+                                     backend_buffer_resource& buffer_resource) noexcept {
   if (device_lost())
     return GRANIT_ERROR_DEVICE_LOST;
+  auto& buffer = static_cast<vulkan_buffer_resource&>(buffer_resource).native();
   VkBufferCreateInfo create_info{};
   create_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
   create_info.size = desc.size;
@@ -755,25 +757,32 @@ void renderer_state::destroy_native_buffer(vulkan_buffer_allocation& buffer) noe
   memory_allocator_.destroy_buffer(buffer);
 }
 
-granit_result renderer_state::flush_buffer(const vulkan_buffer_allocation& buffer,
-                                           VkDeviceSize offset, VkDeviceSize size) noexcept {
+void* renderer_state::mapped_buffer_data(backend_buffer_resource& buffer) noexcept {
+  return static_cast<vulkan_buffer_resource&>(buffer).native().mapped_data;
+}
+
+granit_result renderer_state::flush_buffer(backend_buffer_resource& buffer_resource,
+                                           std::uint64_t offset, std::uint64_t size) noexcept {
   if (device_lost())
     return GRANIT_ERROR_DEVICE_LOST;
+  const auto& buffer = static_cast<vulkan_buffer_resource&>(buffer_resource).native();
   return observe_device_result(memory_allocator_.flush(buffer, offset, size));
 }
 
-granit_result renderer_state::invalidate_buffer(const vulkan_buffer_allocation& buffer,
-                                                VkDeviceSize offset, VkDeviceSize size) noexcept {
+granit_result renderer_state::invalidate_buffer(backend_buffer_resource& buffer_resource,
+                                                std::uint64_t offset, std::uint64_t size) noexcept {
   if (device_lost())
     return GRANIT_ERROR_DEVICE_LOST;
+  const auto& buffer = static_cast<vulkan_buffer_resource&>(buffer_resource).native();
   return observe_device_result(memory_allocator_.invalidate(buffer, offset, size));
 }
 
-granit_result renderer_state::upload_buffer(const vulkan_buffer_allocation& buffer,
-                                            VkDeviceSize offset, const void* data,
-                                            VkDeviceSize size) noexcept {
+granit_result renderer_state::upload_buffer(backend_buffer_resource& buffer_resource,
+                                            std::uint64_t offset, const void* data,
+                                            std::uint64_t size) noexcept {
   if (device_lost())
     return GRANIT_ERROR_DEVICE_LOST;
+  const auto& buffer = static_cast<vulkan_buffer_resource&>(buffer_resource).native();
   const auto slot_index = acquire_upload_slot();
   auto& context = *upload_slots_[slot_index].context;
   auto finish = [&](granit_result result) {
@@ -978,10 +987,12 @@ renderer_state::upload_batch(std::span<const backend_upload_operation> uploads) 
   return finish(context.wait(device_));
 }
 
-granit_result renderer_state::create_native_texture(const granit_texture_desc& desc,
-                                                    vulkan_image_allocation& texture) noexcept {
+granit_result
+renderer_state::create_native_texture(const granit_texture_desc& desc,
+                                      backend_texture_resource& texture_resource) noexcept {
   if (device_lost())
     return GRANIT_ERROR_DEVICE_LOST;
+  auto& texture = static_cast<vulkan_texture_resource&>(texture_resource).native();
   VkImageCreateInfo info{};
   info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
   info.imageType = VK_IMAGE_TYPE_2D;

@@ -101,19 +101,19 @@ public:
                             std::vector<backend_swapchain_backbuffer>& backbuffers);
   void destroy_native_swapchain(vulkan_swapchain& swapchain) noexcept;
   [[nodiscard]] granit_result create_native_buffer(const granit_buffer_desc& desc,
-                                                   vulkan_buffer_allocation& buffer) noexcept;
+                                                   backend_buffer_resource& buffer) noexcept;
   void destroy_native_buffer(vulkan_buffer_allocation& buffer) noexcept;
-  [[nodiscard]] granit_result flush_buffer(const vulkan_buffer_allocation& buffer,
-                                           VkDeviceSize offset, VkDeviceSize size) noexcept;
-  [[nodiscard]] granit_result invalidate_buffer(const vulkan_buffer_allocation& buffer,
-                                                VkDeviceSize offset, VkDeviceSize size) noexcept;
-  [[nodiscard]] granit_result upload_buffer(const vulkan_buffer_allocation& buffer,
-                                            VkDeviceSize offset, const void* data,
-                                            VkDeviceSize size) noexcept;
+  [[nodiscard]] void* mapped_buffer_data(backend_buffer_resource& buffer) noexcept;
+  [[nodiscard]] granit_result flush_buffer(backend_buffer_resource& buffer, std::uint64_t offset,
+                                           std::uint64_t size) noexcept;
+  [[nodiscard]] granit_result invalidate_buffer(backend_buffer_resource& buffer,
+                                                std::uint64_t offset, std::uint64_t size) noexcept;
+  [[nodiscard]] granit_result upload_buffer(backend_buffer_resource& buffer, std::uint64_t offset,
+                                            const void* data, std::uint64_t size) noexcept;
   [[nodiscard]] granit_result
   upload_batch(std::span<const backend_upload_operation> uploads) noexcept;
   [[nodiscard]] granit_result create_native_texture(const granit_texture_desc& desc,
-                                                    vulkan_image_allocation& texture) noexcept;
+                                                    backend_texture_resource& texture) noexcept;
   [[nodiscard]] bool texture_supports_linear_blit(granit_texture_format format) const noexcept;
   [[nodiscard]] granit_result upload_texture(backend_texture_resource& texture,
                                              granit_texture_format format, const void* data,

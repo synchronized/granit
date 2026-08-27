@@ -18,14 +18,6 @@
 namespace granit::detail {
 namespace {
 
-vulkan_image_allocation& native_texture(backend_texture_resource& resource) noexcept {
-  return static_cast<vulkan_texture_resource&>(resource).native();
-}
-
-vulkan_buffer_allocation& native_buffer(backend_buffer_resource& resource) noexcept {
-  return static_cast<vulkan_buffer_resource&>(resource).native();
-}
-
 vulkan_command_recorder&
 native_command_recorder(backend_command_recorder_resource& resource) noexcept {
   return static_cast<vulkan_command_recorder_resource&>(resource).native();
@@ -1223,7 +1215,7 @@ granit_result renderer_registry::create_buffer(granit_renderer renderer,
     record->renderer = state;
     record->desc = desc;
     record->native = state->allocate_buffer_resource();
-    const auto create_result = state->create_native_buffer(desc, native_buffer(*record->native));
+    const auto create_result = state->create_native_buffer(desc, *record->native);
     if (create_result != GRANIT_SUCCESS) {
       return create_result;
     }
@@ -1286,8 +1278,7 @@ granit_result renderer_registry::map_buffer(granit_renderer renderer, granit_buf
     return GRANIT_ERROR_INVALID_ARGUMENT;
   }
   if (record->desc.memory_location == GRANIT_MEMORY_LOCATION_READBACK) {
-    const auto result =
-        record->renderer->invalidate_buffer(native_buffer(*record->native), offset, size);
+    const auto result = record->renderer->invalidate_buffer(*record->native, offset, size);
     if (result != GRANIT_SUCCESS) {
       return result;
     }
@@ -1295,7 +1286,8 @@ granit_result renderer_registry::map_buffer(granit_renderer renderer, granit_buf
   record->mapped = true;
   record->mapped_offset = offset;
   record->mapped_size = size;
-  data = static_cast<unsigned char*>(native_buffer(*record->native).mapped_data) + offset;
+  data =
+      static_cast<unsigned char*>(record->renderer->mapped_buffer_data(*record->native)) + offset;
   return GRANIT_SUCCESS;
 }
 
@@ -1343,8 +1335,8 @@ granit_result renderer_registry::unmap_buffer(granit_renderer renderer, granit_b
   }
   granit_result result = GRANIT_SUCCESS;
   if (record->desc.memory_location == GRANIT_MEMORY_LOCATION_UPLOAD) {
-    result = record->renderer->flush_buffer(native_buffer(*record->native), record->mapped_offset,
-                                            record->mapped_size);
+    result =
+        record->renderer->flush_buffer(*record->native, record->mapped_offset, record->mapped_size);
   }
   record->mapped = false;
   record->mapped_offset = 0;
@@ -1378,7 +1370,7 @@ granit_result renderer_registry::flush_mapped_buffer(granit_renderer renderer, g
       size > record->mapped_offset + record->mapped_size - offset) {
     return GRANIT_ERROR_INVALID_ARGUMENT;
   }
-  return record->renderer->flush_buffer(native_buffer(*record->native), offset, size);
+  return record->renderer->flush_buffer(*record->native, offset, size);
 }
 
 granit_result renderer_registry::destroy_buffer(granit_renderer renderer, granit_buffer buffer) {
@@ -1450,11 +1442,12 @@ granit_result renderer_registry::write_buffer(granit_renderer renderer, granit_b
     return GRANIT_ERROR_UNSUPPORTED;
   }
   if (record->desc.memory_location == GRANIT_MEMORY_LOCATION_UPLOAD) {
-    std::memcpy(static_cast<unsigned char*>(native_buffer(*record->native).mapped_data) + offset,
+    std::memcpy(static_cast<unsigned char*>(record->renderer->mapped_buffer_data(*record->native)) +
+                    offset,
                 data, static_cast<std::size_t>(size));
-    return record->renderer->flush_buffer(native_buffer(*record->native), offset, size);
+    return record->renderer->flush_buffer(*record->native, offset, size);
   }
-  return record->renderer->upload_buffer(native_buffer(*record->native), offset, data, size);
+  return record->renderer->upload_buffer(*record->native, offset, data, size);
 }
 
 granit_result renderer_registry::create_upload_batch(granit_renderer renderer,
@@ -1727,7 +1720,7 @@ granit_result renderer_registry::create_texture(granit_renderer renderer,
     record->renderer = state;
     record->desc = desc;
     record->native = state->allocate_texture_resource();
-    const auto result = state->create_native_texture(desc, native_texture(*record->native));
+    const auto result = state->create_native_texture(desc, *record->native);
     if (result != GRANIT_SUCCESS)
       return result;
     std::lock_guard lock{mutex_};
