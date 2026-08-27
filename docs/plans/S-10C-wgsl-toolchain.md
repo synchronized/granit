@@ -98,8 +98,10 @@ S-10C 需要建立一个源码权威和可复现的双后端资产流程。
    宽度、Compute Workgroup 和 Override 常量。SDK 已支持调用方传入 WGSL 预期 Binding 集合并与
    最终 SPIR-V 严格比较；继续基于锁定 Tint 的可验证机器输出自动生成预期集合，不引入脆弱的
    WGSL 源码正则解析。
-4. **S-10C4 确定性资产与缓存**：实现 `.granit-shader` 编解码、SHA-256、损坏检测、原子写入和缓存
-   命中；相同输入在不同目录及两次构建中必须逐字节一致。
+4. **S-10C4 确定性资产与缓存**：已完成私有 `.granit-shader` 容器的确定性编解码、SHA-256、
+   Magic/Schema/布局/损坏检测、同内容缓存命中和跨平台原子替换。下一步把编译结果及稳定反射
+   JSON 接入容器，并让缓存键覆盖 Tint 修订、目标环境和编译选项；相同输入在不同目录及两次
+   构建中必须逐字节一致。
 5. **S-10C5 WebGPU Shader ABI**：增加插件 Shader 资源和 Pipeline 描述，替换内置 WGSL，覆盖
    归属、重复销毁、依赖顺序、错误诊断和实例级联清理。
 6. **S-10C6 双后端 Fixture**：同一 `.granit-shader` 的 WGSL 在 WebGPU、SPIR-V 在 Vulkan 上绘制

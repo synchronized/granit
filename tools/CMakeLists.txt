@@ -16,6 +16,8 @@ find_package(Threads REQUIRED)
 
 add_library(
   granit_shader_tools_core OBJECT
+  shader_asset.cpp
+  shader_asset.h
   shader_tools_core.cpp
   shader_tools_core.h
   child_process.h
@@ -115,6 +117,21 @@ granit_target_output_directories(granit_material_tool)
 set_target_properties(granit_material_tool PROPERTIES FOLDER "Tools")
 
 if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
+  add_executable(
+    granit_shader_asset_test
+    shader_asset_test.cpp
+    $<TARGET_OBJECTS:granit_shader_tools_core>
+    $<TARGET_OBJECTS:granit_spirv_reflect>
+  )
+  target_compile_features(granit_shader_asset_test PRIVATE cxx_std_20)
+  target_link_libraries(granit_shader_asset_test PRIVATE Threads::Threads)
+  granit_target_compile_warnings(granit_shader_asset_test)
+  granit_target_output_directories(granit_shader_asset_test)
+  add_test(
+    NAME granit.shader_tools.asset_codec
+    COMMAND granit_shader_asset_test "${CMAKE_CURRENT_BINARY_DIR}/shader-asset-test-cache"
+  )
+
   if(TARGET granit_shader_tools)
     add_executable(granit_shader_tools_c_test shader_tools_c_test.c)
     target_compile_features(granit_shader_tools_c_test PRIVATE c_std_11)
