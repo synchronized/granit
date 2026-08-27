@@ -124,6 +124,8 @@ D-03-graphics-pipeline.md
   契约、诊断、安装 Consumer、迁移说明和 Release 预验证均已验收。
 - [S-10：0.4.0 多后端与 WebGPU](S-10-0.4.0-webgpu-backend.md)——进行中；S-10A、S-10B
   已完成，下一阶段建立 WGSL 工具链，再进入 Emscripten 浏览器路径。
+- [S-10C：WGSL Shader 工具链](S-10C-wgsl-toolchain.md)——实现中；以 WGSL 为源码权威，实现到
+  SPIR-V、反射清单、确定性资产、诊断和缓存闭环。
 
 ## 状态
 

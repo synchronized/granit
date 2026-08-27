@@ -84,10 +84,14 @@ jobs:
             -DDAWN_ENABLE_NULL=OFF `
             -DDAWN_USE_GLFW=OFF `
             -DDAWN_USE_WINDOWS_UI=ON `
-            -DTINT_BUILD_CMD_TOOLS=OFF `
+            -DTINT_BUILD_CMD_TOOLS=ON `
             -DTINT_BUILD_TESTS=OFF
-          cmake --build $build --target webgpu_dawn
+          cmake --build $build --target webgpu_dawn tint_cmd_tint_cmd
           cmake --install $build --prefix $stage
+          $tint = Get-ChildItem -LiteralPath $build -Recurse -File -Filter 'tint.exe'
+          if ($tint.Count -ne 1) { throw "预期恰好一个 tint.exe" }
+          New-Item -ItemType Directory -Force -Path "$stage/bin" | Out-Null
+          Copy-Item -LiteralPath $tint.FullName -Destination "$stage/bin/tint.exe"
       - name: 验证 Windows 静态产物
         shell: pwsh
         run: |
@@ -97,6 +101,20 @@ jobs:
           $symbols = dumpbin /symbols $library.FullName
           if (-not ($symbols | Select-String 'wgpuCreateInstance')) {
             throw "webgpu_dawn.lib 缺少 wgpuCreateInstance"
+          }
+          $tint = "$stage/bin/tint.exe"
+          $fixture = "$PWD/tests/fixtures/shaders/s10c_triangle.wgsl"
+          $vertex = "$env:RUNNER_TEMP/s10c_triangle.vert.spv"
+          $fragment = "$env:RUNNER_TEMP/s10c_triangle.frag.spv"
+          & $tint --format spirv --entry-point vs_main --output-name $vertex --validate $fixture
+          if ($LASTEXITCODE -ne 0) { throw "Tint 编译 Vertex WGSL 失败" }
+          & $tint --format spirv --entry-point fs_main --output-name $fragment --validate $fixture
+          if ($LASTEXITCODE -ne 0) { throw "Tint 编译 Fragment WGSL 失败" }
+          foreach ($output in @($vertex, $fragment)) {
+            $bytes = [System.IO.File]::ReadAllBytes($output)
+            if ($bytes.Length -lt 20 -or [BitConverter]::ToUInt32($bytes, 0) -ne 0x07230203) {
+              throw "Tint 未生成有效 SPIR-V：$output"
+            }
           }
       - name: 构建并运行 Windows WebGPU 插件 smoke test
         shell: pwsh
@@ -193,10 +211,13 @@ jobs:
             -DDAWN_USE_GLFW=OFF \
             -DDAWN_USE_WAYLAND=ON \
             -DDAWN_USE_X11=ON \
-            -DTINT_BUILD_CMD_TOOLS=OFF \
+            -DTINT_BUILD_CMD_TOOLS=ON \
             -DTINT_BUILD_TESTS=OFF
-          cmake --build "$RUNNER_TEMP/dawn-build" --target webgpu_dawn
+          cmake --build "$RUNNER_TEMP/dawn-build" --target webgpu_dawn tint_cmd_tint_cmd
           cmake --install "$RUNNER_TEMP/dawn-build" --prefix "$stage"
+          mapfile -t tint_tools < <(find "$RUNNER_TEMP/dawn-build" -type f -name tint -perm -u+x)
+          [[ "${#tint_tools[@]}" -eq 1 ]]
+          install -Dm755 "${tint_tools[0]}" "$stage/bin/tint"
       - name: 验证 Linux 静态产物
         shell: bash
         run: |
@@ -204,6 +225,17 @@ jobs:
           mapfile -t libraries < <(find "$stage" -type f -name 'libwebgpu_dawn.a')
           [[ "${#libraries[@]}" -eq 1 ]]
           nm --defined-only "${libraries[0]}" | grep -q 'wgpuCreateInstance'
+          tint="$stage/bin/tint"
+          fixture="$PWD/tests/fixtures/shaders/s10c_triangle.wgsl"
+          vertex="$RUNNER_TEMP/s10c_triangle.vert.spv"
+          fragment="$RUNNER_TEMP/s10c_triangle.frag.spv"
+          "$tint" --format spirv --entry-point vs_main --output-name "$vertex" \
+            --validate "$fixture"
+          "$tint" --format spirv --entry-point fs_main --output-name "$fragment" \
+            --validate "$fixture"
+          for output in "$vertex" "$fragment"; do
+            [[ "$(od -An -tx4 -N4 "$output" | tr -d ' ')" == "07230203" ]]
+          done
       - name: 构建并运行 Linux WebGPU 插件 smoke test
         shell: bash
         run: |
