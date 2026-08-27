@@ -554,6 +554,63 @@ granit_result renderer_state::set_backend_resource_name(backend_resource& resour
   return GRANIT_ERROR_UNSUPPORTED;
 }
 
+std::unique_ptr<backend_surface_resource> renderer_state::allocate_surface_resource() {
+  return std::make_unique<vulkan_surface_resource>(shared_from_this());
+}
+
+std::unique_ptr<backend_swapchain_resource> renderer_state::allocate_swapchain_resource() {
+  return std::make_unique<vulkan_swapchain_resource>(shared_from_this());
+}
+
+std::unique_ptr<backend_buffer_resource> renderer_state::allocate_buffer_resource() {
+  return std::make_unique<vulkan_buffer_resource>(shared_from_this());
+}
+
+std::unique_ptr<backend_texture_resource> renderer_state::allocate_texture_resource() {
+  return std::make_unique<vulkan_texture_resource>(shared_from_this());
+}
+
+std::unique_ptr<backend_texture_view_resource> renderer_state::allocate_texture_view_resource() {
+  return std::make_unique<vulkan_texture_view_resource>(shared_from_this());
+}
+
+std::unique_ptr<backend_sampler_resource> renderer_state::allocate_sampler_resource() {
+  return std::make_unique<vulkan_sampler_resource>(shared_from_this());
+}
+
+std::unique_ptr<backend_shader_resource> renderer_state::allocate_shader_resource() {
+  return std::make_unique<vulkan_shader_resource>(shared_from_this());
+}
+
+std::unique_ptr<backend_bind_group_layout_resource>
+renderer_state::allocate_bind_group_layout_resource() {
+  return std::make_unique<vulkan_bind_group_layout_resource>(shared_from_this());
+}
+
+std::unique_ptr<backend_bind_group_resource> renderer_state::allocate_bind_group_resource() {
+  return std::make_unique<vulkan_bind_group_resource>(shared_from_this());
+}
+
+std::unique_ptr<backend_pipeline_layout_resource>
+renderer_state::allocate_pipeline_layout_resource() {
+  return std::make_unique<vulkan_pipeline_layout_resource>(shared_from_this());
+}
+
+std::unique_ptr<backend_graphics_pipeline_resource>
+renderer_state::allocate_graphics_pipeline_resource() {
+  return std::make_unique<vulkan_graphics_pipeline_resource>(shared_from_this());
+}
+
+std::unique_ptr<backend_compute_pipeline_resource>
+renderer_state::allocate_compute_pipeline_resource() {
+  return std::make_unique<vulkan_compute_pipeline_resource>(shared_from_this());
+}
+
+std::unique_ptr<backend_command_recorder_resource>
+renderer_state::allocate_command_recorder_resource() {
+  return std::make_unique<vulkan_command_recorder_resource>(shared_from_this());
+}
+
 granit_result
 renderer_state::create_win32_surface(void* native_instance, void* native_window,
                                      backend_surface_resource& surface_resource) noexcept {

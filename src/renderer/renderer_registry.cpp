@@ -499,7 +499,7 @@ granit_result renderer_registry::create_win32_surface(granit_renderer renderer,
 
     auto record = std::make_shared<surface_record>();
     record->renderer = state;
-    record->native = std::make_unique<vulkan_surface_resource>(state);
+    record->native = state->allocate_surface_resource();
     const auto create_result =
         state->create_win32_surface(native_instance, native_window, *record->native);
     if (create_result != GRANIT_SUCCESS) {
@@ -540,7 +540,7 @@ granit_result renderer_registry::create_xcb_surface(granit_renderer renderer, vo
 
     auto record = std::make_shared<surface_record>();
     record->renderer = state;
-    record->native = std::make_unique<vulkan_surface_resource>(state);
+    record->native = state->allocate_surface_resource();
     const auto create_result = state->create_xcb_surface(connection, window, *record->native);
     if (create_result != GRANIT_SUCCESS)
       return create_result;
@@ -578,7 +578,7 @@ granit_result renderer_registry::create_wayland_surface(granit_renderer renderer
 
     auto record = std::make_shared<surface_record>();
     record->renderer = state;
-    record->native = std::make_unique<vulkan_surface_resource>(state);
+    record->native = state->allocate_surface_resource();
     const auto create_result =
         state->create_wayland_surface(display, native_surface, *record->native);
     if (create_result != GRANIT_SUCCESS)
@@ -723,7 +723,7 @@ granit_result renderer_registry::create_swapchain(granit_renderer renderer, gran
     auto record = std::make_shared<swapchain_record>();
     record->renderer = state;
     record->surface = surface_state;
-    record->native = std::make_unique<vulkan_swapchain_resource>(state);
+    record->native = state->allocate_swapchain_resource();
     const auto create_result =
         state->create_swapchain(*surface_state->native, desc, *record->native);
     if (create_result != GRANIT_SUCCESS) {
@@ -863,7 +863,7 @@ renderer_registry::install_swapchain_backbuffers(granit_swapchain swapchain,
       view->publicly_destroyable = false;
       granit_texture_view_desc desc = GRANIT_TEXTURE_VIEW_DESC_INIT;
       view->desc = desc;
-      view->native = std::make_unique<vulkan_texture_view_resource>(record->renderer);
+      view->native = record->renderer->allocate_texture_view_resource();
       const auto result = record->renderer->create_native_texture_view(
           *texture->native, texture->desc, desc, *view->native);
       if (result != GRANIT_SUCCESS)
@@ -1222,7 +1222,7 @@ granit_result renderer_registry::create_buffer(granit_renderer renderer,
     auto record = std::make_shared<buffer_record>();
     record->renderer = state;
     record->desc = desc;
-    record->native = std::make_unique<vulkan_buffer_resource>(state);
+    record->native = state->allocate_buffer_resource();
     const auto create_result = state->create_native_buffer(desc, native_buffer(*record->native));
     if (create_result != GRANIT_SUCCESS) {
       return create_result;
@@ -1726,7 +1726,7 @@ granit_result renderer_registry::create_texture(granit_renderer renderer,
     auto record = std::make_shared<texture_record>();
     record->renderer = state;
     record->desc = desc;
-    record->native = std::make_unique<vulkan_texture_resource>(state);
+    record->native = state->allocate_texture_resource();
     const auto result = state->create_native_texture(desc, native_texture(*record->native));
     if (result != GRANIT_SUCCESS)
       return result;
@@ -1925,7 +1925,7 @@ granit_result renderer_registry::create_texture_view(granit_renderer renderer,
     record->renderer = state;
     record->texture = parent;
     record->desc = desc;
-    record->native = std::make_unique<vulkan_texture_view_resource>(state);
+    record->native = state->allocate_texture_view_resource();
     const auto result =
         state->create_native_texture_view(*parent->native, parent->desc, desc, *record->native);
     if (result != GRANIT_SUCCESS)
@@ -2043,7 +2043,7 @@ granit_result renderer_registry::create_sampler(granit_renderer renderer,
       return GRANIT_ERROR_INVALID_HANDLE;
     auto record = std::make_shared<sampler_record>();
     record->renderer = state;
-    record->native = std::make_unique<vulkan_sampler_resource>(state);
+    record->native = state->allocate_sampler_resource();
     const auto result = state->create_native_sampler(desc, *record->native);
     if (result != GRANIT_SUCCESS)
       return result;
@@ -2108,7 +2108,7 @@ granit_result renderer_registry::create_shader(granit_renderer renderer, granit_
     record->renderer = state;
     record->stage = stage;
     record->entry_point.assign(entry_point);
-    record->native = std::make_unique<vulkan_shader_resource>(state);
+    record->native = state->allocate_shader_resource();
     const auto result = state->create_native_shader(code, *record->native);
     if (result != GRANIT_SUCCESS)
       return result;
@@ -2172,7 +2172,7 @@ renderer_registry::create_bind_group_layout(granit_renderer renderer,
     auto record = std::make_shared<bind_group_layout_record>();
     record->renderer = state;
     record->entries.assign(entries.begin(), entries.end());
-    record->native = std::make_unique<vulkan_bind_group_layout_resource>(state);
+    record->native = state->allocate_bind_group_layout_resource();
     const auto result = state->create_native_bind_group_layout(entries, *record->native);
     if (result != GRANIT_SUCCESS)
       return result;
@@ -2355,7 +2355,7 @@ granit_result renderer_registry::create_bind_group(granit_renderer renderer,
     }
     record->renderer = state;
     record->layout = layout;
-    record->native = std::make_unique<vulkan_bind_group_resource>(state);
+    record->native = state->allocate_bind_group_resource();
     const auto result = state->create_native_bind_group(*layout->native, writes, *record->native);
     if (result != GRANIT_SUCCESS)
       return result;
@@ -2425,7 +2425,7 @@ granit_result renderer_registry::create_pipeline_layout(
         native_layouts.push_back(found->second->native.get());
       }
     }
-    record->native = std::make_unique<vulkan_pipeline_layout_resource>(state);
+    record->native = state->allocate_pipeline_layout_resource();
     const auto result = state->create_native_pipeline_layout(native_layouts, *record->native);
     if (result != GRANIT_SUCCESS)
       return result;
@@ -2508,7 +2508,7 @@ granit_result renderer_registry::create_graphics_pipeline(granit_renderer render
     record->layout = layout;
     record->vertex_shader = vertex;
     record->fragment_shader = fragment;
-    record->native = std::make_unique<vulkan_graphics_pipeline_resource>(state);
+    record->native = state->allocate_graphics_pipeline_resource();
     const auto vertex_buffers =
         desc.struct_size >= GRANIT_GRAPHICS_PIPELINE_DESC_VERSION_2_SIZE
             ? std::span<const granit_vertex_buffer_layout>{desc.vertex_buffer_layouts,
@@ -2623,7 +2623,7 @@ granit_result renderer_registry::create_compute_pipeline(granit_renderer rendere
     record->renderer = state;
     record->layout = layout;
     record->compute_shader = compute;
-    record->native = std::make_unique<vulkan_compute_pipeline_resource>(state);
+    record->native = state->allocate_compute_pipeline_resource();
     const auto result = state->create_native_compute_pipeline(
         *layout->native, *compute->native, compute->entry_point.c_str(), *record->native);
     if (result != GRANIT_SUCCESS)
@@ -2685,7 +2685,7 @@ granit_result renderer_registry::create_command_recorder(granit_renderer rendere
     }
     auto record = std::make_shared<command_recorder_record>();
     record->renderer = state;
-    record->native = std::make_unique<vulkan_command_recorder_resource>(state);
+    record->native = state->allocate_command_recorder_resource();
     const auto result =
         state->create_native_command_recorder(native_command_recorder(*record->native));
     if (result != GRANIT_SUCCESS) {

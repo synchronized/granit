@@ -62,6 +62,25 @@ public:
   [[nodiscard]] granit_result set_backend_resource_name(backend_resource& resource,
                                                         std::string_view name);
 
+  [[nodiscard]] std::unique_ptr<backend_surface_resource> allocate_surface_resource();
+  [[nodiscard]] std::unique_ptr<backend_swapchain_resource> allocate_swapchain_resource();
+  [[nodiscard]] std::unique_ptr<backend_buffer_resource> allocate_buffer_resource();
+  [[nodiscard]] std::unique_ptr<backend_texture_resource> allocate_texture_resource();
+  [[nodiscard]] std::unique_ptr<backend_texture_view_resource> allocate_texture_view_resource();
+  [[nodiscard]] std::unique_ptr<backend_sampler_resource> allocate_sampler_resource();
+  [[nodiscard]] std::unique_ptr<backend_shader_resource> allocate_shader_resource();
+  [[nodiscard]] std::unique_ptr<backend_bind_group_layout_resource>
+  allocate_bind_group_layout_resource();
+  [[nodiscard]] std::unique_ptr<backend_bind_group_resource> allocate_bind_group_resource();
+  [[nodiscard]] std::unique_ptr<backend_pipeline_layout_resource>
+  allocate_pipeline_layout_resource();
+  [[nodiscard]] std::unique_ptr<backend_graphics_pipeline_resource>
+  allocate_graphics_pipeline_resource();
+  [[nodiscard]] std::unique_ptr<backend_compute_pipeline_resource>
+  allocate_compute_pipeline_resource();
+  [[nodiscard]] std::unique_ptr<backend_command_recorder_resource>
+  allocate_command_recorder_resource();
+
   [[nodiscard]] granit_result create_win32_surface(void* native_instance, void* native_window,
                                                    backend_surface_resource& surface) noexcept;
   [[nodiscard]] granit_result create_xcb_surface(void* connection, std::uint32_t window,
