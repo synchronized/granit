@@ -29,6 +29,21 @@ struct binding_info {
   uint64_t minimum_binding_size = 0;
 };
 
+struct interface_variable_info {
+  uint32_t location = 0;
+  uint32_t component = 0;
+  uint32_t scalar_type = 0;
+  uint32_t bit_width = 0;
+  uint32_t vector_size = 0;
+  std::string_view name;
+};
+
+struct workgroup_size {
+  uint32_t x = 0;
+  uint32_t y = 0;
+  uint32_t z = 0;
+};
+
 class result {
 public:
   result() = default;
@@ -77,6 +92,33 @@ public:
              value.array_count,
              value.minimum_binding_size}};
   }
+  [[nodiscard]] uint64_t vertex_input_count() const noexcept {
+    uint64_t count = 0;
+    return granit_shader_tools_result_get_vertex_input_count(handle_, &count) == GRANIT_SUCCESS
+               ? count
+               : 0;
+  }
+  [[nodiscard]] uint64_t fragment_output_count() const noexcept {
+    uint64_t count = 0;
+    return granit_shader_tools_result_get_fragment_output_count(handle_, &count) == GRANIT_SUCCESS
+               ? count
+               : 0;
+  }
+  [[nodiscard]] std::pair<granit_result, interface_variable_info>
+  vertex_input(uint64_t index) const noexcept {
+    return interface_variable(index, granit_shader_tools_result_get_vertex_input);
+  }
+  [[nodiscard]] std::pair<granit_result, interface_variable_info>
+  fragment_output(uint64_t index) const noexcept {
+    return interface_variable(index, granit_shader_tools_result_get_fragment_output);
+  }
+  [[nodiscard]] workgroup_size compute_workgroup_size() const noexcept {
+    granit_shader_tools_workgroup_size value{};
+    value.struct_size = sizeof(value);
+    if (granit_shader_tools_result_get_workgroup_size(handle_, &value) != GRANIT_SUCCESS)
+      return {};
+    return {value.x, value.y, value.z};
+  }
   void reset() noexcept {
     if (handle_ != 0) {
       granit_shader_tools_result_destroy(handle_);
@@ -85,6 +127,25 @@ public:
   }
 
 private:
+  using interface_getter = granit_result (*)(granit_shader_tools_result, uint64_t,
+                                             granit_shader_tools_interface_variable_info*);
+
+  [[nodiscard]] std::pair<granit_result, interface_variable_info>
+  interface_variable(uint64_t index, interface_getter getter) const noexcept {
+    granit_shader_tools_interface_variable_info value{};
+    value.struct_size = sizeof(value);
+    const auto status = getter(handle_, index, &value);
+    if (status != GRANIT_SUCCESS)
+      return {status, {}};
+    return {GRANIT_SUCCESS,
+            {value.location,
+             value.component,
+             value.scalar_type,
+             value.bit_width,
+             value.vector_size,
+             {value.name, static_cast<std::size_t>(value.name_length)}}};
+  }
+
   granit_shader_tools_result handle_ = 0;
 };
 

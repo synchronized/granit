@@ -116,6 +116,27 @@ const char* binding_access_name(uint32_t access) {
   }
 }
 
+const char* scalar_type_name(uint32_t type) {
+  switch (type) {
+  case GRANIT_SHADER_TOOLS_SCALAR_FLOAT:
+    return "float";
+  case GRANIT_SHADER_TOOLS_SCALAR_SINT:
+    return "sint";
+  case GRANIT_SHADER_TOOLS_SCALAR_UINT:
+    return "uint";
+  default:
+    return "unsupported";
+  }
+}
+
+void print_interface_variable(const granit::shader_tools::interface_variable_info& variable) {
+  std::cout << "{\"location\": " << variable.location << ", \"component\": " << variable.component
+            << ", \"scalar_type\": " << json_string(scalar_type_name(variable.scalar_type))
+            << ", \"bit_width\": " << variable.bit_width
+            << ", \"vector_size\": " << variable.vector_size
+            << ", \"name\": " << json_string(variable.name) << '}';
+}
+
 void print_json(const granit::shader_tools::result& result,
                 const granit::shader_tools::result_info& info, const char* stage) {
   std::cout << "{\n  \"schema\": 1,\n  \"entry_point\": " << json_string(info.entry_point)
@@ -132,7 +153,26 @@ void print_json(const granit::shader_tools::result& result,
               << ", \"array_count\": " << binding.array_count
               << ", \"minimum_binding_size\": " << binding.minimum_binding_size << '}';
   }
-  std::cout << (result.binding_count() == 0 ? "" : "\n") << "  ]\n}\n";
+  std::cout << (result.binding_count() == 0 ? "" : "\n") << "  ],\n  \"vertex_inputs\": [";
+  for (uint64_t index = 0; index < result.vertex_input_count(); ++index) {
+    const auto [status, input] = result.vertex_input(index);
+    if (status != GRANIT_SUCCESS)
+      continue;
+    std::cout << (index == 0 ? "\n    " : ",\n    ");
+    print_interface_variable(input);
+  }
+  std::cout << (result.vertex_input_count() == 0 ? "" : "\n") << "  ],\n  \"fragment_outputs\": [";
+  for (uint64_t index = 0; index < result.fragment_output_count(); ++index) {
+    const auto [status, output] = result.fragment_output(index);
+    if (status != GRANIT_SUCCESS)
+      continue;
+    std::cout << (index == 0 ? "\n    " : ",\n    ");
+    print_interface_variable(output);
+  }
+  const auto workgroup = result.compute_workgroup_size();
+  std::cout << (result.fragment_output_count() == 0 ? "" : "\n")
+            << "  ],\n  \"workgroup_size\": {\"x\": " << workgroup.x << ", \"y\": " << workgroup.y
+            << ", \"z\": " << workgroup.z << "}\n}\n";
 }
 
 int inspect_shader(const char* path, bool verify, bool json = false) {

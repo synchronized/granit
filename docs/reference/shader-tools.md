@@ -26,6 +26,8 @@ target_link_libraries(editor PRIVATE granit::shader_tools)
 - `granit_shader_tools_result_get_binding_count` 和 `granit_shader_tools_result_get_binding` 按
   Group、Binding 数字顺序返回结构化绑定。记录包含资源类型、访问模式、数组数量和 Buffer
   最小绑定尺寸。
+- Vertex 输入和 Fragment 输出按 Location、Component 排序，记录标量类型、位宽及向量宽度；
+  Compute 入口点可查询固定 Workgroup 的 X/Y/Z 大小。内建接口变量不会进入用户接口列表。
 - 参数字符串均为 UTF-8 的“指针 + 长度”，只需在调用期间有效，无需以零结尾。
 - 参数和输出结构必须初始化 `struct_size`。未来版本只在结构体尾部追加字段。
 - 参数有效后，即使编译或检查失败也可能返回非零结果句柄。调用者应读取 `status` 和诊断，最后
@@ -38,5 +40,6 @@ target_link_libraries(editor PRIVATE granit::shader_tools)
 命令行可使用 `granit_shader_tool inspect --json shader.spv` 输出稳定排序的 JSON 调试视图。普通
 `inspect` 的 CSV 文本保持兼容，但程序不应解析该文本，应使用结构化 SDK 接口。
 
-当前结果提供入口点、Shader 阶段、描述符绑定、标准输出和诊断文本。Vertex 输入、Fragment
-输出、Compute Workgroup、Override 常量及结构化源位置诊断仍属于 S-10C3 的后续范围。
+当前结果提供入口点、Shader 阶段、描述符绑定、Vertex 输入、Fragment 输出、Compute Workgroup、
+标准输出和诊断文本。Override 常量、WGSL/SPIR-V 集合一致性及结构化源位置诊断仍属于 S-10C3
+的后续范围。

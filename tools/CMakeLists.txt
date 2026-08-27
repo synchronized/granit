@@ -137,6 +137,8 @@ if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
       NAME granit.shader_tools.cpp_api
       COMMAND granit_shader_tools_cpp_test
               "${PROJECT_SOURCE_DIR}/src/pipeline/shaders/tone_mapping.frag.spv"
+              "${PROJECT_SOURCE_DIR}/assets/shaders/unlit/unlit.vert.spv"
+              "${PROJECT_SOURCE_DIR}/tests/assets/minimal.comp.spv"
     )
   endif()
 

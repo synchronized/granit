@@ -81,6 +81,52 @@ bool reflect_binding(const SpvReflectDescriptorBinding& source, shader_binding_i
   return true;
 }
 
+bool reflect_interface_variable(const SpvReflectInterfaceVariable& source,
+                                shader_interface_variable_info& target) {
+  if ((source.decoration_flags & SPV_REFLECT_DECORATION_BUILT_IN) != 0)
+    return false;
+  target.location = source.location;
+  target.component = source.component == UINT32_MAX ? 0 : source.component;
+  target.name = source.name == nullptr ? "" : source.name;
+  target.bit_width = source.numeric.scalar.width;
+  target.vector_size = std::max(source.numeric.vector.component_count, UINT32_C(1));
+  const auto flags = source.type_description == nullptr ? SPV_REFLECT_TYPE_FLAG_UNDEFINED
+                                                        : source.type_description->type_flags;
+  if ((flags & SPV_REFLECT_TYPE_FLAG_FLOAT) != 0) {
+    target.scalar_type = shader_scalar_type::floating_point;
+  } else if ((flags & SPV_REFLECT_TYPE_FLAG_INT) != 0) {
+    target.scalar_type = source.numeric.scalar.signedness != 0
+                             ? shader_scalar_type::signed_integer
+                             : shader_scalar_type::unsigned_integer;
+  } else {
+    return false;
+  }
+  return target.bit_width != 0;
+}
+
+void collect_interface_variable(const SpvReflectInterfaceVariable& variable,
+                                std::vector<shader_interface_variable_info>& output) {
+  if (variable.member_count != 0) {
+    for (std::uint32_t member = 0; member < variable.member_count; ++member)
+      collect_interface_variable(variable.members[member], output);
+  } else {
+    shader_interface_variable_info reflected;
+    if (reflect_interface_variable(variable, reflected))
+      output.push_back(std::move(reflected));
+  }
+}
+
+void collect_interface_variables(SpvReflectInterfaceVariable* const* variables, std::uint32_t count,
+                                 std::vector<shader_interface_variable_info>& output) {
+  output.clear();
+  for (std::uint32_t index = 0; index < count; ++index)
+    collect_interface_variable(*variables[index], output);
+  std::ranges::sort(output, [](const auto& left, const auto& right) {
+    return left.location < right.location ||
+           (left.location == right.location && left.component < right.component);
+  });
+}
+
 std::vector<std::byte> read_file(const std::filesystem::path& path) {
   std::ifstream stream(path, std::ios::binary | std::ios::ate);
   if (!stream)
@@ -111,6 +157,23 @@ bool inspect_shader(const std::filesystem::path& path, bool emit, shader_info& i
   }
   info.entry_point = module.entry_point_name == nullptr ? "" : module.entry_point_name;
   info.stage = stage_name(module.shader_stage);
+  const auto* entry_point = spvReflectGetEntryPoint(&module, info.entry_point.c_str());
+  if (entry_point == nullptr) {
+    spvReflectDestroyShaderModule(&module);
+    error << "无法读取 SPIR-V 入口点\n";
+    return false;
+  }
+  if (info.stage == "vertex")
+    collect_interface_variables(entry_point->input_variables, entry_point->input_variable_count,
+                                info.vertex_inputs);
+  if (info.stage == "fragment")
+    collect_interface_variables(entry_point->output_variables, entry_point->output_variable_count,
+                                info.fragment_outputs);
+  if (info.stage == "compute") {
+    info.workgroup_size_x = entry_point->local_size.x;
+    info.workgroup_size_y = entry_point->local_size.y;
+    info.workgroup_size_z = entry_point->local_size.z;
+  }
   std::uint32_t binding_count = 0;
   auto reflected = spvReflectEnumerateDescriptorBindings(&module, &binding_count, nullptr);
   std::vector<SpvReflectDescriptorBinding*> bindings(binding_count);

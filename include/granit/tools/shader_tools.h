@@ -26,6 +26,10 @@ typedef uint64_t granit_shader_tools_result;
 #define GRANIT_SHADER_TOOLS_ACCESS_WRITE UINT32_C(2)
 #define GRANIT_SHADER_TOOLS_ACCESS_READ_WRITE UINT32_C(3)
 
+#define GRANIT_SHADER_TOOLS_SCALAR_FLOAT UINT32_C(1)
+#define GRANIT_SHADER_TOOLS_SCALAR_SINT UINT32_C(2)
+#define GRANIT_SHADER_TOOLS_SCALAR_UINT UINT32_C(3)
+
 /** WGSL 编译描述。所有字符串均为 UTF-8，调用期间有效且无需以零结尾。 */
 typedef struct granit_shader_tools_compile_desc {
   uint32_t struct_size;
@@ -73,6 +77,26 @@ typedef struct granit_shader_tools_binding_info {
   uint64_t minimum_binding_size;
 } granit_shader_tools_binding_info;
 
+/** Vertex 输入或 Fragment 输出的接口变量。名称视图在结果销毁前有效。 */
+typedef struct granit_shader_tools_interface_variable_info {
+  uint32_t struct_size;
+  uint32_t location;
+  uint32_t component;
+  uint32_t scalar_type;
+  uint32_t bit_width;
+  uint32_t vector_size;
+  const char* name;
+  uint64_t name_length;
+} granit_shader_tools_interface_variable_info;
+
+/** Compute 入口点的固定 Workgroup 大小。非 Compute 阶段返回零值。 */
+typedef struct granit_shader_tools_workgroup_size {
+  uint32_t struct_size;
+  uint32_t x;
+  uint32_t y;
+  uint32_t z;
+} granit_shader_tools_workgroup_size;
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -101,6 +125,28 @@ granit_shader_tools_result_get_binding_count(granit_shader_tools_result result, 
 /** 按稳定的 group、binding 数字顺序查询结构化描述符绑定。 */
 GRANIT_SHADER_TOOLS_API granit_result granit_shader_tools_result_get_binding(
     granit_shader_tools_result result, uint64_t index, granit_shader_tools_binding_info* binding);
+
+/** 查询 Vertex 输入数量。 */
+GRANIT_SHADER_TOOLS_API granit_result granit_shader_tools_result_get_vertex_input_count(
+    granit_shader_tools_result result, uint64_t* count);
+
+/** 按 Location、Component 顺序查询 Vertex 输入。 */
+GRANIT_SHADER_TOOLS_API granit_result
+granit_shader_tools_result_get_vertex_input(granit_shader_tools_result result, uint64_t index,
+                                            granit_shader_tools_interface_variable_info* input);
+
+/** 查询 Fragment 输出数量。 */
+GRANIT_SHADER_TOOLS_API granit_result granit_shader_tools_result_get_fragment_output_count(
+    granit_shader_tools_result result, uint64_t* count);
+
+/** 按 Location、Component 顺序查询 Fragment 输出。 */
+GRANIT_SHADER_TOOLS_API granit_result
+granit_shader_tools_result_get_fragment_output(granit_shader_tools_result result, uint64_t index,
+                                               granit_shader_tools_interface_variable_info* output);
+
+/** 查询 Compute Workgroup 大小。非 Compute 阶段返回零值。 */
+GRANIT_SHADER_TOOLS_API granit_result granit_shader_tools_result_get_workgroup_size(
+    granit_shader_tools_result result, granit_shader_tools_workgroup_size* size);
 
 /** 销毁结果句柄。零值和已经销毁的句柄返回 GRANIT_ERROR_INVALID_HANDLE。 */
 GRANIT_SHADER_TOOLS_API granit_result

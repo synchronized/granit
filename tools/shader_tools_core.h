@@ -22,6 +22,17 @@ enum class shader_binding_type {
 
 enum class shader_binding_access { read, write, read_write };
 
+enum class shader_scalar_type { floating_point, signed_integer, unsigned_integer };
+
+struct shader_interface_variable_info {
+  std::uint32_t location = 0;
+  std::uint32_t component = 0;
+  shader_scalar_type scalar_type = shader_scalar_type::floating_point;
+  std::uint32_t bit_width = 0;
+  std::uint32_t vector_size = 0;
+  std::string name;
+};
+
 struct shader_binding_info {
   std::uint32_t group = 0;
   std::uint32_t binding = 0;
@@ -36,6 +47,11 @@ struct shader_info {
   std::string entry_point;
   std::string stage;
   std::vector<shader_binding_info> bindings;
+  std::vector<shader_interface_variable_info> vertex_inputs;
+  std::vector<shader_interface_variable_info> fragment_outputs;
+  std::uint32_t workgroup_size_x = 0;
+  std::uint32_t workgroup_size_y = 0;
+  std::uint32_t workgroup_size_z = 0;
 };
 
 struct compile_options {
