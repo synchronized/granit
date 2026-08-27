@@ -147,6 +147,13 @@ public:
              value.default_value,
              value.default_value_size}};
   }
+  [[nodiscard]] std::string_view reflection_json() const noexcept {
+    const char* data = nullptr;
+    uint64_t size = 0;
+    if (granit_shader_tools_result_get_reflection_json(handle_, &data, &size) != GRANIT_SUCCESS)
+      return {};
+    return {data, static_cast<std::size_t>(size)};
+  }
   void reset() noexcept {
     if (handle_ != 0) {
       granit_shader_tools_result_destroy(handle_);

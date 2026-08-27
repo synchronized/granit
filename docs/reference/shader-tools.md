@@ -30,6 +30,8 @@ target_link_libraries(editor PRIVATE granit::shader_tools)
   Compute 入口点可查询固定 Workgroup 的 X/Y/Z 大小。内建接口变量不会进入用户接口列表。
 - Override／Specialization Constant 按常量 ID 排序，记录名称、标量类型、位宽和默认值原始位模式；
   `default_value_size` 指明原始值占用的有效字节数。
+- `granit_shader_tools_result_get_reflection_json` 返回与结构化查询字段一致、稳定排序的 UTF-8 JSON；
+  C++ 包装通过 `result::reflection_json()` 提供只读视图。该视图与其他结果字符串具有相同生命周期。
 - 参数字符串均为 UTF-8 的“指针 + 长度”，只需在调用期间有效，无需以零结尾。
 - 参数和输出结构必须初始化 `struct_size`。未来版本只在结构体尾部追加字段。
 - 编译或检查描述可设置 `validate_binding_set=1`，并传入从 WGSL 前端获得的
@@ -43,7 +45,7 @@ target_link_libraries(editor PRIVATE granit::shader_tools)
   `granit_result` 返回。
 
 命令行可使用 `granit_shader_tool inspect --json shader.spv` 输出稳定排序的 JSON 调试视图。普通
-`inspect` 的 CSV 文本保持兼容，但程序不应解析该文本，应使用结构化 SDK 接口。
+`inspect` 的 CSV 文本保持兼容，但程序不应解析该文本，应使用结构化 SDK 查询或反射 JSON 视图。
 
 当前结果提供入口点、Shader 阶段、描述符绑定、Vertex 输入、Fragment 输出、Compute Workgroup、
 Override 常量、标准输出和诊断文本。SDK 已提供 WGSL 预期 Binding 与 SPIR-V 的严格集合校验；

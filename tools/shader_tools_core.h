@@ -74,6 +74,7 @@ struct compile_options {
 
 bool inspect_shader(const std::filesystem::path& path, bool emit, shader_info& info,
                     std::ostream& output, std::ostream& error);
+std::string serialize_shader_info_json(const shader_info& info);
 int compile_shader(const compile_options& options, shader_info& info, std::ostream& output,
                    std::ostream& error);
 

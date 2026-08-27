@@ -13,6 +13,7 @@
 #include <cstring>
 #include <fstream>
 #include <ostream>
+#include <sstream>
 #include <vector>
 
 namespace granit::tools {
@@ -45,6 +46,71 @@ const char* binding_type_name(shader_binding_type type) {
     return "sampler";
   }
   return "unsupported";
+}
+
+const char* binding_access_name(shader_binding_access access) {
+  switch (access) {
+  case shader_binding_access::read:
+    return "read";
+  case shader_binding_access::write:
+    return "write";
+  case shader_binding_access::read_write:
+    return "read_write";
+  }
+  return "unsupported";
+}
+
+const char* scalar_type_name(shader_scalar_type type) {
+  switch (type) {
+  case shader_scalar_type::floating_point:
+    return "float";
+  case shader_scalar_type::signed_integer:
+    return "sint";
+  case shader_scalar_type::unsigned_integer:
+    return "uint";
+  }
+  return "unsupported";
+}
+
+std::string json_string(std::string_view value) {
+  std::ostringstream output;
+  output << '"';
+  for (const auto character : value) {
+    switch (character) {
+    case '"':
+      output << "\\\"";
+      break;
+    case '\\':
+      output << "\\\\";
+      break;
+    case '\n':
+      output << "\\n";
+      break;
+    case '\r':
+      output << "\\r";
+      break;
+    case '\t':
+      output << "\\t";
+      break;
+    default:
+      if (static_cast<unsigned char>(character) < 0x20) {
+        constexpr char hex[] = "0123456789abcdef";
+        output << "\\u00" << hex[(static_cast<unsigned char>(character) >> 4) & 0x0f]
+               << hex[static_cast<unsigned char>(character) & 0x0f];
+      } else {
+        output << character;
+      }
+    }
+  }
+  output << '"';
+  return std::move(output).str();
+}
+
+void write_interface_json(std::ostream& output, const shader_interface_variable_info& value) {
+  output << "{\"location\": " << value.location << ", \"component\": " << value.component
+         << ", \"scalar_type\": " << json_string(scalar_type_name(value.scalar_type))
+         << ", \"bit_width\": " << value.bit_width << ", \"vector_size\": " << value.vector_size
+         << ", \"name\": " << json_string(value.name) << '}';
 }
 
 bool reflect_binding(const SpvReflectDescriptorBinding& source, shader_binding_info& target) {
@@ -195,6 +261,46 @@ std::vector<std::byte> read_file(const std::filesystem::path& path) {
 }
 
 } // namespace
+
+std::string serialize_shader_info_json(const shader_info& info) {
+  std::ostringstream output;
+  output << "{\n  \"schema\": 1,\n  \"entry_point\": " << json_string(info.entry_point)
+         << ",\n  \"stage\": " << json_string(info.stage) << ",\n  \"bindings\": [";
+  for (std::size_t index = 0; index < info.bindings.size(); ++index) {
+    const auto& binding = info.bindings[index];
+    output << (index == 0 ? "\n" : ",\n") << "    {\"group\": " << binding.group
+           << ", \"binding\": " << binding.binding
+           << ", \"type\": " << json_string(binding_type_name(binding.type))
+           << ", \"access\": " << json_string(binding_access_name(binding.access))
+           << ", \"name\": " << json_string(binding.name)
+           << ", \"array_count\": " << binding.array_count
+           << ", \"minimum_binding_size\": " << binding.minimum_binding_size << '}';
+  }
+  output << (info.bindings.empty() ? "" : "\n") << "  ],\n  \"vertex_inputs\": [";
+  for (std::size_t index = 0; index < info.vertex_inputs.size(); ++index) {
+    output << (index == 0 ? "\n    " : ",\n    ");
+    write_interface_json(output, info.vertex_inputs[index]);
+  }
+  output << (info.vertex_inputs.empty() ? "" : "\n") << "  ],\n  \"fragment_outputs\": [";
+  for (std::size_t index = 0; index < info.fragment_outputs.size(); ++index) {
+    output << (index == 0 ? "\n    " : ",\n    ");
+    write_interface_json(output, info.fragment_outputs[index]);
+  }
+  output << (info.fragment_outputs.empty() ? "" : "\n")
+         << "  ],\n  \"workgroup_size\": {\"x\": " << info.workgroup_size_x
+         << ", \"y\": " << info.workgroup_size_y << ", \"z\": " << info.workgroup_size_z
+         << "},\n  \"overrides\": [";
+  for (std::size_t index = 0; index < info.overrides.size(); ++index) {
+    const auto& value = info.overrides[index];
+    output << (index == 0 ? "\n" : ",\n") << "    {\"id\": " << value.id
+           << ", \"scalar_type\": " << json_string(scalar_type_name(value.scalar_type))
+           << ", \"bit_width\": " << value.bit_width << ", \"name\": " << json_string(value.name)
+           << ", \"default_value\": " << value.default_value
+           << ", \"default_value_size\": " << value.default_value_size << '}';
+  }
+  output << (info.overrides.empty() ? "" : "\n") << "  ]\n}\n";
+  return std::move(output).str();
+}
 
 bool inspect_shader(const std::filesystem::path& path, bool emit, shader_info& info,
                     std::ostream& output, std::ostream& error) {

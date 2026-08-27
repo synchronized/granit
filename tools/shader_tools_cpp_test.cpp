@@ -37,6 +37,8 @@ int main(int argc, char** argv) {
     return 5;
   if (result.fragment_output_count() != 1)
     return 6;
+  if (result.reflection_json().find("\"entry_point\": \"fragment_main\"") == std::string_view::npos)
+    return 14;
   const auto [output_status, output] = result.fragment_output(0);
   if (output_status != GRANIT_SUCCESS || output.location != 0 ||
       output.scalar_type != GRANIT_SHADER_TOOLS_SCALAR_FLOAT || output.bit_width != 32 ||

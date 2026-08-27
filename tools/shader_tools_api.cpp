@@ -25,6 +25,7 @@ struct stored_result {
   uint32_t stage = 0;
   std::string output;
   std::string diagnostic;
+  std::string reflection_json;
   std::vector<granit::tools::shader_binding_info> bindings;
   std::vector<granit::tools::shader_interface_variable_info> vertex_inputs;
   std::vector<granit::tools::shader_interface_variable_info> fragment_outputs;
@@ -162,6 +163,7 @@ uint32_t scalar_type_value(granit::tools::shader_scalar_type type) {
 }
 
 void store_reflection(stored_result& target, granit::tools::shader_info& source) {
+  target.reflection_json = granit::tools::serialize_shader_info_json(source);
   target.bindings = std::move(source.bindings);
   target.vertex_inputs = std::move(source.vertex_inputs);
   target.fragment_outputs = std::move(source.fragment_outputs);
@@ -254,7 +256,7 @@ granit_result granit_shader_tools_inspect_spirv(const granit_shader_tools_inspec
     const auto succeeded = granit::tools::inspect_shader(path, true, info, output, diagnostic) &&
                            validate_binding_expectations(*desc, info, diagnostic);
     value->status = succeeded ? GRANIT_SUCCESS : GRANIT_ERROR_INVALID_ARGUMENT;
-    value->entry_point = std::move(info.entry_point);
+    value->entry_point = info.entry_point;
     value->stage = stage_value(info.stage);
     store_reflection(*value, info);
     value->output = std::move(output).str();
@@ -422,6 +424,20 @@ granit_shader_tools_result_get_override(granit_shader_tools_result result, uint6
   override_info->name_length = source.name.size();
   override_info->default_value = source.default_value;
   override_info->default_value_size = source.default_value_size;
+  return GRANIT_SUCCESS;
+}
+
+granit_result granit_shader_tools_result_get_reflection_json(granit_shader_tools_result result,
+                                                             const char** json, uint64_t* length) {
+  if (json == nullptr || length == nullptr)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  *json = nullptr;
+  *length = 0;
+  const auto value = find_result(result);
+  if (!value)
+    return GRANIT_ERROR_INVALID_HANDLE;
+  *json = value->reflection_json.data();
+  *length = value->reflection_json.size();
   return GRANIT_SUCCESS;
 }
 

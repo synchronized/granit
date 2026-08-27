@@ -16,6 +16,8 @@ int main(int argc, char** argv) {
   uint64_t output_count = 0;
   granit_shader_tools_interface_variable_info shader_output;
   granit_shader_tools_expected_binding expected[3];
+  const char* reflection_json = NULL;
+  uint64_t reflection_json_length = 0;
   if (argc != 2)
     return 1;
   memset(&desc, 0, sizeof(desc));
@@ -67,6 +69,10 @@ int main(int argc, char** argv) {
       shader_output.scalar_type != GRANIT_SHADER_TOOLS_SCALAR_FLOAT ||
       shader_output.bit_width != 32 || shader_output.vector_size != 4)
     return 8;
+  if (granit_shader_tools_result_get_reflection_json(result, &reflection_json,
+                                                     &reflection_json_length) != GRANIT_SUCCESS ||
+      reflection_json == NULL || reflection_json_length == 0)
+    return 13;
   if (granit_shader_tools_result_destroy(result) != GRANIT_SUCCESS ||
       granit_shader_tools_result_destroy(result) != GRANIT_ERROR_INVALID_HANDLE)
     return 9;

@@ -182,6 +182,10 @@ GRANIT_SHADER_TOOLS_API granit_result
 granit_shader_tools_result_get_override(granit_shader_tools_result result, uint64_t index,
                                         granit_shader_tools_override_info* override_info);
 
+/** 查询稳定排序的 UTF-8 反射 JSON。视图在结果销毁前有效。 */
+GRANIT_SHADER_TOOLS_API granit_result granit_shader_tools_result_get_reflection_json(
+    granit_shader_tools_result result, const char** json, uint64_t* length);
+
 /** 销毁结果句柄。零值和已经销毁的句柄返回 GRANIT_ERROR_INVALID_HANDLE。 */
 GRANIT_SHADER_TOOLS_API granit_result
 granit_shader_tools_result_destroy(granit_shader_tools_result result);
