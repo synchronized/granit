@@ -47,15 +47,16 @@ cmake --build build-webgpu --target granit_backend_webgpu
 ```
 
 配置会要求 Dawn 包导出静态的 `dawn::webgpu_dawn`；共享目标或未显式指定的系统 Dawn 会被拒绝。
-维护者可在无 GPU 的验证环境中额外设置 `GRANIT_WEBGPU_FORCE_FALLBACK_ADAPTER=ON`，强制 Dawn
-选择软件 fallback adapter。该选项仅用于可复现 smoke test，普通插件构建保持关闭，不应强制最终
-应用使用软件渲染。
+维护者可在无 GPU 的验证环境中额外设置 `GRANIT_WEBGPU_FORCE_FALLBACK_ADAPTER=ON`，优先请求
+Dawn 软件 fallback adapter；若当前平台未暴露 fallback adapter，插件会记录警告并自动重试普通
+adapter。该选项仅用于可复现 smoke test，普通插件构建保持关闭。
 
 项目维护者通过手动 `Dawn Dependency Packages` 工作流生成锁定版本的 Windows 和 Linux SDK。
 普通验证运行只保留短期 Actions Artifact；选择“发布 SDK”后，工作流仅在两个平台的静态库、符号
 检查和真实 WebGPU 插件 smoke test 全部通过时，将压缩包及 SHA-256 清单发布为长期保存的 GitHub
-预发布版本。smoke test 强制使用 fallback adapter，并验证 64×64 离屏绘制、像素回读、资源销毁
-和插件卸载；日志同时记录 Queue Submit 调用耗时与总耗时。SDK 标签同时包含 Dawn 版本和修订短
+预发布版本。smoke test 优先使用 fallback adapter，并验证 64×64 离屏绘制、像素回读、资源销毁
+和插件卸载；fallback 不可用时自动重试普通 adapter。日志同时记录 Queue Submit 调用耗时与总耗时。
+SDK 标签同时包含 Dawn 版本和修订短
 哈希，升级 Dawn 或工具链时应生成新标签，不能覆盖不兼容版本。
 
 安装包可以使用 GitHub CLI 下载并校验，例如：
