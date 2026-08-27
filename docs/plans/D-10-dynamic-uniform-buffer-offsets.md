@@ -6,7 +6,7 @@
 ## 状态
 
 - 设计状态：已确认
-- 实现状态：进行中；D-10A 至 D-10D 已完成，下一阶段为 D-10E 跨平台验收
+- 实现状态：已完成；D-10A 至 D-10E 已验收
 - 路线图任务：D-10
 - 优先级：P1
 - 前置依赖：D-03、D-07、F-10
@@ -71,7 +71,8 @@ Offset，使一个 Bind Group 能在多次 Draw 或 Dispatch 时选择同一 Buf
    Offset 在公共 API 校验后按原顺序传入 `vkCmdBindDescriptorSets`；公共“不支持”门禁已解除。
 4. **D-10D 测试与示例**：已覆盖单组与多组、普通/动态 Binding 混合、数量/对齐/范围/溢出，
    并通过 Validation Layer 和像素回读验证同一 Uniform Buffer 中的两组对象数据。
-5. **D-10E 跨平台验收**：运行 Windows/Linux、共享/静态、C/C++ Consumer 和安装导出矩阵。
+5. **D-10E 跨平台验收**：Windows/Linux、共享/静态、C/C++ Consumer、安装导出及 Integration
+   Runtime 矩阵已通过；结果见[验收记录](../records/2026-08-27-d10-dynamic-uniform-offsets.md)。
 
 ## 测试与验收
 

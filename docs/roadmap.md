@@ -99,7 +99,7 @@
 | [D-07 Compute Pipeline](plans/D-07-compute-pipeline.md) | P1 | 已完成 |
 | [D-08 Pipeline 生产能力](plans/D-08-pipeline-production.md) | P1 | 已完成 |
 | [D-09 Bindless Resource Table](plans/D-09-bindless-resource-table.md) | P2 | 草案；等待真实瓶颈 |
-| [D-10 动态 Uniform Buffer Offset](plans/D-10-dynamic-uniform-buffer-offsets.md) | P1 | 进行中；D-10A-D 已完成 |
+| [D-10 动态 Uniform Buffer Offset](plans/D-10-dynamic-uniform-buffer-offsets.md) | P1 | 已完成 |
 
 ## 六、多线程与性能
 
