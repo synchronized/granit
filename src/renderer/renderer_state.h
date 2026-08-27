@@ -99,9 +99,11 @@ public:
   [[nodiscard]] granit_result create_native_texture(const granit_texture_desc& desc,
                                                     vulkan_image_allocation& texture) noexcept;
   [[nodiscard]] bool texture_supports_linear_blit(granit_texture_format format) const noexcept;
-  [[nodiscard]] granit_result upload_texture(const vulkan_image_allocation& texture,
-                                             const void* data, VkDeviceSize size,
-                                             const VkBufferImageCopy& copy) noexcept;
+  [[nodiscard]] granit_result upload_texture(backend_texture_resource& texture,
+                                             granit_texture_format format, const void* data,
+                                             std::uint64_t size,
+                                             const granit_texture_data_layout& layout,
+                                             const granit_texture_write_region& region) noexcept;
   void destroy_native_texture(vulkan_image_allocation& texture) noexcept;
   [[nodiscard]] granit_result create_native_texture_view(const vulkan_image_allocation& texture,
                                                          const granit_texture_desc& texture_desc,

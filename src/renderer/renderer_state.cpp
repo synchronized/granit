@@ -838,11 +838,25 @@ bool renderer_state::texture_supports_linear_blit(granit_texture_format format) 
   return physical_device_supports_linear_blit(instance_, device_, map_texture_format(format));
 }
 
-granit_result renderer_state::upload_texture(const vulkan_image_allocation& texture,
-                                             const void* data, VkDeviceSize size,
-                                             const VkBufferImageCopy& copy) noexcept {
+granit_result renderer_state::upload_texture(backend_texture_resource& resource,
+                                             granit_texture_format format, const void* data,
+                                             std::uint64_t size,
+                                             const granit_texture_data_layout& layout,
+                                             const granit_texture_write_region& region) noexcept {
   if (device_lost())
     return GRANIT_ERROR_DEVICE_LOST;
+  const auto& texture = static_cast<vulkan_texture_resource&>(resource).native();
+  const auto bytes_per_pixel = texture_format_bytes_per_block(format);
+  if (bytes_per_pixel == 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  VkBufferImageCopy copy{};
+  copy.bufferRowLength = layout.bytes_per_row == 0 ? 0 : layout.bytes_per_row / bytes_per_pixel;
+  copy.bufferImageHeight = layout.rows_per_image;
+  copy.imageSubresource = {map_texture_aspect(region.aspect), region.mip_level,
+                           region.base_array_layer, region.array_layer_count};
+  copy.imageOffset = {static_cast<std::int32_t>(region.x), static_cast<std::int32_t>(region.y),
+                      static_cast<std::int32_t>(region.z)};
+  copy.imageExtent = {region.width, region.height, region.depth};
   const auto slot_index = acquire_upload_slot();
   auto& context = *upload_slots_[slot_index].context;
   auto finish = [&](granit_result result) {

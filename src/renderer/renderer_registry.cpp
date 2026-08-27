@@ -1923,19 +1923,9 @@ granit_result renderer_registry::write_texture(granit_renderer renderer, granit_
     return GRANIT_ERROR_INVALID_ARGUMENT;
   }
 
-  VkBufferImageCopy copy{};
-  copy.bufferRowLength = layout.bytes_per_row == 0 ? 0 : layout.bytes_per_row / bytes_per_pixel;
-  copy.bufferImageHeight = layout.rows_per_image;
-  copy.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-  copy.imageSubresource.mipLevel = region.mip_level;
-  copy.imageSubresource.baseArrayLayer = region.base_array_layer;
-  copy.imageSubresource.layerCount = region.array_layer_count;
-  copy.imageOffset = {static_cast<std::int32_t>(region.x), static_cast<std::int32_t>(region.y),
-                      static_cast<std::int32_t>(region.z)};
-  copy.imageExtent = {region.width, region.height, region.depth};
-  return record->renderer->upload_texture(native_texture(*record->native),
+  return record->renderer->upload_texture(*record->native, desc.format,
                                           static_cast<const unsigned char*>(data) + layout.offset,
-                                          required, copy);
+                                          required, layout, region);
 }
 
 granit_result
