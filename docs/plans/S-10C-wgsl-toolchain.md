@@ -90,8 +90,9 @@ S-10C 需要建立一个源码权威和可复现的双后端资产流程。
 1. **S-10C1 编译基线**：已让锁定 Dawn SDK 同时产出 Tint CLI；最小 WGSL Fixture 的 Vertex 与
    Fragment 入口已在 Windows/Linux 完成校验并生成有效 Vulkan SPIR-V。
 2. **S-10C2 工具入口与 SDK 边界**：已增加 `compile`、`inspect` 和 `verify` 子命令及不经过 Shell
-   的跨平台 Tint 子进程。继续删除旧单参数入口，将实现抽入 ShaderTools SDK，增加 C ABI、C++20
-   包装、安装导出和外部 Consumer；CLI 改为薄适配层。
+   的跨平台 Tint 子进程；旧单参数入口已删除。ShaderTools SDK 已提供首版 C ABI、C++20 RAII
+   包装、安装导出和结果生命周期测试，CLI 已改为 SDK 的薄适配层。结构化反射记录继续由
+   S-10C3 补齐。
 3. **S-10C3 反射 Schema**：基于 ShaderTools SDK 扩展 SPIRV-Reflect 提取范围，定义后端无关记录及
    稳定 JSON 调试输出，
    补充 WGSL/SPIR-V 入口点和绑定集合一致性检查。

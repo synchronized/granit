@@ -4,7 +4,7 @@
 set(GRANIT_SPIRV_REFLECT_DIR "${PROJECT_SOURCE_DIR}/3rd/spirv-reflect-1.4.350.0")
 set(GRANIT_SPIRV_HEADERS_DIR "${PROJECT_SOURCE_DIR}/3rd/spirv-headers-1.4.350.0/include")
 
-add_library(granit_spirv_reflect STATIC "${GRANIT_SPIRV_REFLECT_DIR}/spirv_reflect.c")
+add_library(granit_spirv_reflect OBJECT "${GRANIT_SPIRV_REFLECT_DIR}/spirv_reflect.c")
 target_compile_definitions(granit_spirv_reflect PUBLIC SPIRV_REFLECT_USE_SYSTEM_SPIRV_H)
 target_include_directories(
   granit_spirv_reflect
@@ -15,21 +15,80 @@ set_target_properties(granit_spirv_reflect PROPERTIES FOLDER "ThirdParty/SPIRV-R
 find_package(Threads REQUIRED)
 
 add_library(
-  granit_shader_tools_core STATIC
+  granit_shader_tools_core OBJECT
   shader_tools_core.cpp
   shader_tools_core.h
   child_process.h
   process.cpp
 )
 target_compile_features(granit_shader_tools_core PUBLIC cxx_std_20)
-target_link_libraries(granit_shader_tools_core PRIVATE granit_spirv_reflect Threads::Threads)
-target_include_directories(granit_shader_tools_core PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
+target_link_libraries(granit_shader_tools_core PRIVATE Threads::Threads)
+target_include_directories(
+  granit_shader_tools_core
+  PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}"
+  PRIVATE "${GRANIT_SPIRV_REFLECT_DIR}" "${GRANIT_SPIRV_HEADERS_DIR}"
+)
+target_compile_definitions(granit_shader_tools_core PRIVATE SPIRV_REFLECT_USE_SYSTEM_SPIRV_H)
 granit_target_compile_warnings(granit_shader_tools_core)
 set_target_properties(granit_shader_tools_core PROPERTIES FOLDER "Tools")
+set_target_properties(granit_shader_tools_core PROPERTIES POSITION_INDEPENDENT_CODE YES)
+
+if(GRANIT_BUILD_SHADER_TOOLS OR GRANIT_BUILD_TOOLS)
+  add_library(granit_shader_tools shader_tools_api.cpp)
+  add_library(granit::shader_tools ALIAS granit_shader_tools)
+  target_sources(
+    granit_shader_tools
+    PUBLIC
+      FILE_SET HEADERS
+      BASE_DIRS "${PROJECT_SOURCE_DIR}/include"
+      FILES
+        "${PROJECT_SOURCE_DIR}/include/granit/tools/shader_tools_export.h"
+        "${PROJECT_SOURCE_DIR}/include/granit/tools/shader_tools.h"
+        "${PROJECT_SOURCE_DIR}/include/granit/tools/shader_tools.hpp"
+  )
+  target_compile_features(granit_shader_tools PUBLIC cxx_std_20)
+  target_include_directories(
+    granit_shader_tools PUBLIC "$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>"
+  )
+  target_sources(
+    granit_shader_tools
+    PRIVATE $<TARGET_OBJECTS:granit_shader_tools_core> $<TARGET_OBJECTS:granit_spirv_reflect>
+  )
+  target_link_libraries(granit_shader_tools PRIVATE Threads::Threads)
+  target_compile_definitions(
+    granit_shader_tools
+    PRIVATE GRANIT_SHADER_TOOLS_BUILDING_LIBRARY
+    PUBLIC $<$<NOT:$<BOOL:${BUILD_SHARED_LIBS}>>:GRANIT_SHADER_TOOLS_STATIC_DEFINE>
+  )
+  granit_target_compile_warnings(granit_shader_tools)
+  granit_target_output_directories(granit_shader_tools)
+  set_target_properties(
+    granit_shader_tools
+    PROPERTIES
+      EXPORT_NAME shader_tools
+      FOLDER "Tools"
+      CXX_VISIBILITY_PRESET hidden
+      VISIBILITY_INLINES_HIDDEN YES
+  )
+  install(
+    TARGETS granit_shader_tools
+    EXPORT granitShaderToolsTargets
+    ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}" COMPONENT ShaderTools
+    LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}" COMPONENT ShaderTools
+    RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}" COMPONENT ShaderTools
+    FILE_SET HEADERS DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}" COMPONENT ShaderTools
+  )
+  install(
+    EXPORT granitShaderToolsTargets
+    NAMESPACE granit::
+    DESTINATION "${GRANIT_INSTALL_CMAKEDIR}"
+    COMPONENT ShaderTools
+  )
+endif()
 
 add_executable(granit_shader_tool shader_tool_main.cpp)
 target_compile_features(granit_shader_tool PRIVATE cxx_std_20)
-target_link_libraries(granit_shader_tool PRIVATE granit_shader_tools_core)
+target_link_libraries(granit_shader_tool PRIVATE granit::shader_tools)
 target_compile_options(
   granit_shader_tool
   PRIVATE $<$<COMPILE_LANG_AND_ID:CXX,MSVC>:/utf-8>
@@ -56,6 +115,31 @@ granit_target_output_directories(granit_material_tool)
 set_target_properties(granit_material_tool PROPERTIES FOLDER "Tools")
 
 if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
+  if(TARGET granit_shader_tools)
+    add_executable(granit_shader_tools_c_test shader_tools_c_test.c)
+    target_compile_features(granit_shader_tools_c_test PRIVATE c_std_11)
+    target_link_libraries(granit_shader_tools_c_test PRIVATE granit::shader_tools)
+    set_target_properties(granit_shader_tools_c_test PROPERTIES LINKER_LANGUAGE CXX)
+    granit_target_compile_warnings(granit_shader_tools_c_test)
+    granit_target_output_directories(granit_shader_tools_c_test)
+    add_test(
+      NAME granit.shader_tools.c_api
+      COMMAND granit_shader_tools_c_test
+              "${PROJECT_SOURCE_DIR}/src/pipeline/shaders/tone_mapping.frag.spv"
+    )
+
+    add_executable(granit_shader_tools_cpp_test shader_tools_cpp_test.cpp)
+    target_compile_features(granit_shader_tools_cpp_test PRIVATE cxx_std_20)
+    target_link_libraries(granit_shader_tools_cpp_test PRIVATE granit::shader_tools)
+    granit_target_compile_warnings(granit_shader_tools_cpp_test)
+    granit_target_output_directories(granit_shader_tools_cpp_test)
+    add_test(
+      NAME granit.shader_tools.cpp_api
+      COMMAND granit_shader_tools_cpp_test
+              "${PROJECT_SOURCE_DIR}/src/pipeline/shaders/tone_mapping.frag.spv"
+    )
+  endif()
+
   add_test(
     NAME granit.shader_tool.tone_mapping_reflect
     COMMAND granit_shader_tool inspect

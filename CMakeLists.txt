@@ -15,6 +15,7 @@ option(GRANIT_BUILD_TESTING "构建 Granit 测试" ON)
 option(GRANIT_BUILD_EXAMPLES "构建 Granit 示例" ${PROJECT_IS_TOP_LEVEL})
 option(GRANIT_BUILD_BENCHMARKS "构建 Granit benchmark 程序" OFF)
 option(GRANIT_BUILD_TOOLS "构建 Granit 离线工具" OFF)
+option(GRANIT_BUILD_SHADER_TOOLS "构建并安装 ShaderTools SDK" OFF)
 option(GRANIT_BUILD_INTEGRATION_SDL3 "构建 SDL3 可选集成组件" OFF)
 option(GRANIT_BUILD_INTEGRATION_IMGUI "构建 ImGui 可选集成组件" OFF)
 option(GRANIT_BUILD_BACKEND_WEBGPU "构建静态链接 Dawn 的 WebGPU 后端插件" OFF)
@@ -210,7 +211,8 @@ endif()
 
 add_subdirectory(src)
 
-if(GRANIT_BUILD_TOOLS OR GRANIT_BUILD_EXAMPLES OR GRANIT_BUILD_BENCHMARKS)
+if(GRANIT_BUILD_TOOLS OR GRANIT_BUILD_SHADER_TOOLS OR GRANIT_BUILD_EXAMPLES OR
+   GRANIT_BUILD_BENCHMARKS)
   add_subdirectory(tools)
 endif()
 

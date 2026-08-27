@@ -21,6 +21,7 @@
 | `GRANIT_BUILD_EXAMPLES` | 顶层项目为 `ON` | 构建示例 |
 | `GRANIT_BUILD_BENCHMARKS` | `OFF` | 构建独立性能基准程序 |
 | `GRANIT_BUILD_TOOLS` | `OFF` | 单独构建离线工具；示例或 benchmark 会自动构建所需工具 |
+| `GRANIT_BUILD_SHADER_TOOLS` | `OFF` | 构建并安装可供编辑器链接的 ShaderTools SDK |
 | `GRANIT_BUILD_BACKEND_WEBGPU` | `OFF` | 构建实验性 WebGPU 后端插件；需要锁定 Dawn 静态包 |
 | `GRANIT_ENABLE_XCB` | Linux 上 `ON` | 找到 XCB 开发头时启用私有 XCB Surface 后端 |
 | `GRANIT_ENABLE_WAYLAND` | Linux 上 `ON` | 找到 Wayland 协议工具时启用 Wayland 后端 |
