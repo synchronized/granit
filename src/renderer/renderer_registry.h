@@ -29,6 +29,7 @@
 #include <granit/renderer/upload_batch.h>
 
 #include "backend/access.h"
+#include "backend/presentation.h"
 #include "backend/resources.h"
 #include "backend/upload.h"
 #include "core/handle_table.h"
@@ -66,14 +67,14 @@ public:
                                                      void* native_surface, granit_surface& surface);
   [[nodiscard]] granit_result destroy_surface(granit_renderer renderer, granit_surface surface);
   [[nodiscard]] granit_result create_swapchain(granit_renderer renderer, granit_surface surface,
-                                               const vulkan_swapchain_desc& desc,
+                                               const backend_swapchain_desc& desc,
                                                granit_swapchain& swapchain);
   [[nodiscard]] granit_result recreate_swapchain(granit_renderer renderer,
                                                  granit_swapchain swapchain,
-                                                 const vulkan_swapchain_desc& desc);
+                                                 const backend_swapchain_desc& desc);
   [[nodiscard]] granit_result get_swapchain_info(granit_renderer renderer,
                                                  granit_swapchain swapchain,
-                                                 vulkan_swapchain_info& info);
+                                                 backend_swapchain_info& info);
   [[nodiscard]] granit_result destroy_swapchain(granit_renderer renderer,
                                                 granit_swapchain swapchain);
   [[nodiscard]] granit_result get_swapchain_backbuffer(granit_renderer renderer,

@@ -26,6 +26,21 @@ template <typename Handle> std::uint64_t object_handle_value(Handle handle) noex
     return static_cast<std::uint64_t>(handle);
 }
 
+granit_texture_format map_swapchain_format(VkFormat format) noexcept {
+  switch (format) {
+  case VK_FORMAT_B8G8R8A8_SRGB:
+    return GRANIT_TEXTURE_FORMAT_BGRA8_SRGB;
+  case VK_FORMAT_B8G8R8A8_UNORM:
+    return GRANIT_TEXTURE_FORMAT_BGRA8_UNORM;
+  case VK_FORMAT_R8G8B8A8_SRGB:
+    return GRANIT_TEXTURE_FORMAT_RGBA8_SRGB;
+  case VK_FORMAT_R8G8B8A8_UNORM:
+    return GRANIT_TEXTURE_FORMAT_RGBA8_UNORM;
+  default:
+    return GRANIT_TEXTURE_FORMAT_UNDEFINED;
+  }
+}
+
 bool same_image_subresource(const vulkan_image_access& left,
                             const vulkan_image_access& right) noexcept {
   return left.image == right.image && left.range.aspectMask == right.range.aspectMask &&
@@ -585,23 +600,27 @@ void renderer_state::destroy_native_surface(VkSurfaceKHR surface) noexcept {
 }
 
 granit_result renderer_state::create_swapchain(backend_surface_resource& surface_resource,
-                                               const vulkan_swapchain_desc& desc,
+                                               const backend_swapchain_desc& desc,
                                                backend_swapchain_resource& swapchain_resource) {
   if (device_lost())
     return GRANIT_ERROR_DEVICE_LOST;
   const auto surface = static_cast<vulkan_surface_resource&>(surface_resource).native();
   auto& swapchain = static_cast<vulkan_swapchain_resource&>(swapchain_resource).native();
+  const vulkan_swapchain_desc native_desc{desc.width, desc.height, desc.minimum_image_count,
+                                          desc.present_mode};
   std::lock_guard lock{resource_mutex_};
-  return observe_device_result(swapchain.initialize(instance_, device_, surface, desc));
+  return observe_device_result(swapchain.initialize(instance_, device_, surface, native_desc));
 }
 
 granit_result renderer_state::recreate_swapchain(backend_surface_resource& surface_resource,
-                                                 const vulkan_swapchain_desc& desc,
+                                                 const backend_swapchain_desc& desc,
                                                  backend_swapchain_resource& swapchain_resource) {
   if (device_lost())
     return GRANIT_ERROR_DEVICE_LOST;
   const auto surface = static_cast<vulkan_surface_resource&>(surface_resource).native();
   auto& swapchain = static_cast<vulkan_swapchain_resource&>(swapchain_resource).native();
+  const vulkan_swapchain_desc native_desc{desc.width, desc.height, desc.minimum_image_count,
+                                          desc.present_mode};
   std::lock_guard lock{resource_mutex_};
   {
     std::lock_guard queue_lock{queue_mutex_};
@@ -609,13 +628,42 @@ granit_result renderer_state::recreate_swapchain(backend_surface_resource& surfa
       std::erase_if(image_states_, [&](const auto& state) { return state.image == image; });
     }
   }
-  return observe_device_result(swapchain.recreate(instance_, device_, surface, desc));
+  return observe_device_result(swapchain.recreate(instance_, device_, surface, native_desc));
 }
 
-vulkan_swapchain_info
+backend_swapchain_info
 renderer_state::get_swapchain_info(backend_swapchain_resource& swapchain_resource) noexcept {
   std::lock_guard lock{resource_mutex_};
-  return static_cast<vulkan_swapchain_resource&>(swapchain_resource).native().info();
+  const auto info = static_cast<vulkan_swapchain_resource&>(swapchain_resource).native().info();
+  return {info.width, info.height, info.image_count, info.present_mode,
+          map_swapchain_format(info.format)};
+}
+
+granit_result
+renderer_state::get_swapchain_backbuffers(backend_swapchain_resource& swapchain_resource,
+                                          std::vector<backend_swapchain_backbuffer>& backbuffers) {
+  try {
+    std::lock_guard lock{resource_mutex_};
+    auto& swapchain = static_cast<vulkan_swapchain_resource&>(swapchain_resource).native();
+    const auto info = swapchain.info();
+    backbuffers.clear();
+    backbuffers.reserve(swapchain.images().size());
+    for (const auto image : swapchain.images()) {
+      auto texture = std::make_unique<vulkan_texture_resource>(shared_from_this(), false);
+      texture->native().image = image;
+      granit_texture_desc desc = GRANIT_TEXTURE_DESC_INIT;
+      desc.format = map_swapchain_format(info.format);
+      desc.usage = GRANIT_TEXTURE_USAGE_COLOR_ATTACHMENT_BIT;
+      desc.width = info.width;
+      desc.height = info.height;
+      backbuffers.push_back({std::move(texture), desc});
+    }
+    return GRANIT_SUCCESS;
+  } catch (const std::bad_alloc&) {
+    return GRANIT_ERROR_OUT_OF_MEMORY;
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
 }
 
 void renderer_state::destroy_native_swapchain(vulkan_swapchain& swapchain) noexcept {

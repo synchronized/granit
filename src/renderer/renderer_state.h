@@ -22,6 +22,7 @@
 #include "backend/access.h"
 #include "backend/binding.h"
 #include "backend/capabilities.h"
+#include "backend/presentation.h"
 #include "backend/queue.h"
 #include "backend/rendering.h"
 #include "backend/upload.h"
@@ -69,13 +70,16 @@ public:
                                                      backend_surface_resource& surface) noexcept;
   void destroy_native_surface(VkSurfaceKHR surface) noexcept;
   [[nodiscard]] granit_result create_swapchain(backend_surface_resource& surface,
-                                               const vulkan_swapchain_desc& desc,
+                                               const backend_swapchain_desc& desc,
                                                backend_swapchain_resource& swapchain);
   [[nodiscard]] granit_result recreate_swapchain(backend_surface_resource& surface,
-                                                 const vulkan_swapchain_desc& desc,
+                                                 const backend_swapchain_desc& desc,
                                                  backend_swapchain_resource& swapchain);
-  [[nodiscard]] vulkan_swapchain_info
+  [[nodiscard]] backend_swapchain_info
   get_swapchain_info(backend_swapchain_resource& swapchain) noexcept;
+  [[nodiscard]] granit_result
+  get_swapchain_backbuffers(backend_swapchain_resource& swapchain,
+                            std::vector<backend_swapchain_backbuffer>& backbuffers);
   void destroy_native_swapchain(vulkan_swapchain& swapchain) noexcept;
   [[nodiscard]] granit_result create_native_buffer(const granit_buffer_desc& desc,
                                                    vulkan_buffer_allocation& buffer) noexcept;

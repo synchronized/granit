@@ -5,24 +5,7 @@
 
 #include "renderer/renderer_registry.h"
 
-#include <volk.h>
-
 namespace {
-
-granit_texture_format public_format(VkFormat format) noexcept {
-  switch (format) {
-  case VK_FORMAT_B8G8R8A8_SRGB:
-    return GRANIT_TEXTURE_FORMAT_BGRA8_SRGB;
-  case VK_FORMAT_B8G8R8A8_UNORM:
-    return GRANIT_TEXTURE_FORMAT_BGRA8_UNORM;
-  case VK_FORMAT_R8G8B8A8_SRGB:
-    return GRANIT_TEXTURE_FORMAT_RGBA8_SRGB;
-  case VK_FORMAT_R8G8B8A8_UNORM:
-    return GRANIT_TEXTURE_FORMAT_RGBA8_UNORM;
-  default:
-    return GRANIT_TEXTURE_FORMAT_UNDEFINED;
-  }
-}
 
 granit_result validate_desc(const granit_swapchain_desc* desc, bool allow_zero_extent) noexcept {
   if (desc == nullptr || desc->struct_size < GRANIT_SWAPCHAIN_DESC_VERSION_1_SIZE ||
@@ -37,7 +20,7 @@ granit_result validate_desc(const granit_swapchain_desc* desc, bool allow_zero_e
   return GRANIT_SUCCESS;
 }
 
-granit::detail::vulkan_swapchain_desc to_internal(const granit_swapchain_desc& desc) noexcept {
+granit::detail::backend_swapchain_desc to_internal(const granit_swapchain_desc& desc) noexcept {
   return {.width = desc.width,
           .height = desc.height,
           .minimum_image_count = desc.minimum_image_count,
@@ -95,7 +78,7 @@ extern "C" granit_result granit_swapchain_get_info(granit_renderer renderer,
     return GRANIT_ERROR_INVALID_ARGUMENT;
   }
   try {
-    granit::detail::vulkan_swapchain_info native_info{};
+    granit::detail::backend_swapchain_info native_info{};
     const auto result = granit::detail::renderer_registry::instance().get_swapchain_info(
         renderer, swapchain, native_info);
     if (result == GRANIT_SUCCESS) {
@@ -104,7 +87,7 @@ extern "C" granit_result granit_swapchain_get_info(granit_renderer renderer,
       info->image_count = native_info.image_count;
       info->present_mode = native_info.present_mode;
       if (info->struct_size >= GRANIT_SWAPCHAIN_INFO_VERSION_2_SIZE)
-        info->format = public_format(native_info.format);
+        info->format = native_info.format;
     }
     return result;
   } catch (...) {

@@ -31,25 +31,6 @@ native_command_recorder(backend_command_recorder_resource& resource) noexcept {
   return static_cast<vulkan_command_recorder_resource&>(resource).native();
 }
 
-vulkan_swapchain& native_swapchain(backend_swapchain_resource& resource) noexcept {
-  return static_cast<vulkan_swapchain_resource&>(resource).native();
-}
-
-granit_texture_format swapchain_format(VkFormat format) noexcept {
-  switch (format) {
-  case VK_FORMAT_B8G8R8A8_SRGB:
-    return GRANIT_TEXTURE_FORMAT_BGRA8_SRGB;
-  case VK_FORMAT_B8G8R8A8_UNORM:
-    return GRANIT_TEXTURE_FORMAT_BGRA8_UNORM;
-  case VK_FORMAT_R8G8B8A8_SRGB:
-    return GRANIT_TEXTURE_FORMAT_RGBA8_SRGB;
-  case VK_FORMAT_R8G8B8A8_UNORM:
-    return GRANIT_TEXTURE_FORMAT_RGBA8_UNORM;
-  default:
-    return GRANIT_TEXTURE_FORMAT_UNDEFINED;
-  }
-}
-
 template <typename Resources, typename Resource, typename Metadata>
 void retain_resource(Resources& resources, const Resource& resource, Metadata& metadata) {
   for (const auto& retained : resources) {
@@ -716,7 +697,7 @@ granit_result renderer_registry::destroy_surface(granit_renderer renderer, grani
 }
 
 granit_result renderer_registry::create_swapchain(granit_renderer renderer, granit_surface surface,
-                                                  const vulkan_swapchain_desc& desc,
+                                                  const backend_swapchain_desc& desc,
                                                   granit_swapchain& swapchain) {
   try {
     std::shared_ptr<renderer_state> state;
@@ -783,7 +764,7 @@ granit_result renderer_registry::create_swapchain(granit_renderer renderer, gran
 
 granit_result renderer_registry::recreate_swapchain(granit_renderer renderer,
                                                     granit_swapchain swapchain,
-                                                    const vulkan_swapchain_desc& desc) {
+                                                    const backend_swapchain_desc& desc) {
   std::shared_ptr<swapchain_record> record;
   std::vector<std::shared_ptr<texture_view_record>> old_views;
   std::vector<std::shared_ptr<texture_record>> old_textures;
@@ -861,23 +842,21 @@ granit_result
 renderer_registry::install_swapchain_backbuffers(granit_swapchain swapchain,
                                                  const std::shared_ptr<swapchain_record>& record) {
   try {
-    const auto& swapchain_native = native_swapchain(*record->native);
-    const auto info = swapchain_native.info();
+    std::vector<backend_swapchain_backbuffer> backbuffers;
+    const auto backbuffer_result =
+        record->renderer->get_swapchain_backbuffers(*record->native, backbuffers);
+    if (backbuffer_result != GRANIT_SUCCESS)
+      return backbuffer_result;
     std::vector<std::shared_ptr<texture_record>> textures;
     std::vector<std::shared_ptr<texture_view_record>> views;
-    textures.reserve(swapchain_native.images().size());
-    views.reserve(swapchain_native.images().size());
-    for (const auto image : swapchain_native.images()) {
+    textures.reserve(backbuffers.size());
+    views.reserve(backbuffers.size());
+    for (auto& backbuffer : backbuffers) {
       auto texture = std::make_shared<texture_record>();
       texture->renderer = record->renderer;
-      texture->native = std::make_unique<vulkan_texture_resource>(record->renderer, false);
-      native_texture(*texture->native).image = image;
+      texture->native = std::move(backbuffer.texture);
       texture->publicly_destroyable = false;
-      texture->desc = GRANIT_TEXTURE_DESC_INIT;
-      texture->desc.format = swapchain_format(swapchain_native.format());
-      texture->desc.usage = GRANIT_TEXTURE_USAGE_COLOR_ATTACHMENT_BIT;
-      texture->desc.width = info.width;
-      texture->desc.height = info.height;
+      texture->desc = backbuffer.desc;
       auto view = std::make_shared<texture_view_record>();
       view->renderer = record->renderer;
       view->texture = texture;
@@ -928,7 +907,7 @@ renderer_registry::install_swapchain_backbuffers(granit_swapchain swapchain,
 
 granit_result renderer_registry::get_swapchain_info(granit_renderer renderer,
                                                     granit_swapchain swapchain,
-                                                    vulkan_swapchain_info& info) {
+                                                    backend_swapchain_info& info) {
   std::lock_guard lock{mutex_};
   const auto renderer_found = renderers_.find(renderer);
   if (renderer_found == renderers_.end() ||
