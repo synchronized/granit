@@ -135,4 +135,14 @@ vulkan_swapchain_resource::~vulkan_swapchain_resource() {
   }
 }
 
+vulkan_timestamp_query_pool_resource::vulkan_timestamp_query_pool_resource(
+    std::shared_ptr<renderer_state> renderer) noexcept
+    : renderer_(std::move(renderer)) {}
+
+vulkan_timestamp_query_pool_resource::~vulkan_timestamp_query_pool_resource() {
+  if (renderer_) {
+    native_.destroy(renderer_->device());
+  }
+}
+
 } // namespace granit::detail

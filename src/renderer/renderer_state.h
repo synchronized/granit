@@ -16,6 +16,7 @@
 #include <granit/renderer/pipeline.h>
 #include <granit/renderer/renderer.h>
 #include <granit/renderer/resource_types.h>
+#include <granit/renderer/timestamp_query.h>
 
 #include "backend/capabilities.h"
 #include "backend/queue.h"
@@ -44,7 +45,8 @@ struct vulkan_bind_group_write {
   VkSampler sampler{VK_NULL_HANDLE};
 };
 
-class renderer_state final : public backend_queue {
+class renderer_state final : public backend_queue,
+                             public std::enable_shared_from_this<renderer_state> {
 public:
   renderer_state() = default;
   ~renderer_state();
@@ -231,6 +233,23 @@ public:
   wait_command_recorder(backend_command_recorder_resource& recorder) noexcept override;
   [[nodiscard]] granit_result wait_for_all_submissions() noexcept override;
   [[nodiscard]] granit_result wait_for_present_idle() noexcept override;
+  [[nodiscard]] granit_result create_timestamp_query_pool(
+      std::uint32_t query_count,
+      std::unique_ptr<backend_timestamp_query_pool_resource>& pool) noexcept;
+  [[nodiscard]] granit_result
+  read_timestamp_query_results(backend_timestamp_query_pool_resource& pool, std::uint32_t first,
+                               std::span<std::uint64_t> values) noexcept;
+  [[nodiscard]] granit_result reset_timestamp_queries(backend_command_recorder_resource& recorder,
+                                                      backend_timestamp_query_pool_resource& pool,
+                                                      std::uint32_t first,
+                                                      std::uint32_t count) noexcept;
+  [[nodiscard]] granit_result write_timestamp(backend_command_recorder_resource& recorder,
+                                              backend_timestamp_query_pool_resource& pool,
+                                              granit_timestamp_stage stage,
+                                              std::uint32_t index) noexcept;
+  [[nodiscard]] granit_result
+  set_timestamp_query_pool_name(backend_timestamp_query_pool_resource& pool,
+                                std::string_view name) noexcept;
   void retire_resource(submission_serial retire_after, retirement_order order,
                        std::shared_ptr<void> resource);
   std::size_t collect_retired() noexcept;

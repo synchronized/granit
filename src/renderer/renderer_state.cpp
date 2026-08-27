@@ -13,9 +13,17 @@
 #include <cstdio>
 #include <cstring>
 #include <string>
+#include <type_traits>
 
 namespace granit::detail {
 namespace {
+
+template <typename Handle> std::uint64_t object_handle_value(Handle handle) noexcept {
+  if constexpr (std::is_pointer_v<Handle>)
+    return static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(handle));
+  else
+    return static_cast<std::uint64_t>(handle);
+}
 
 bool same_image_subresource(const vulkan_image_access& left,
                             const vulkan_image_access& right) noexcept {
@@ -2184,6 +2192,65 @@ granit_result renderer_state::wait_for_present_idle() noexcept {
   if (result == GRANIT_SUCCESS)
     submission_serials_.mark_completed(submission_serials_.last_submitted());
   return result;
+}
+
+granit_result renderer_state::create_timestamp_query_pool(
+    std::uint32_t query_count,
+    std::unique_ptr<backend_timestamp_query_pool_resource>& pool) noexcept {
+  pool.reset();
+  try {
+    auto resource = std::make_unique<vulkan_timestamp_query_pool_resource>(shared_from_this());
+    const auto result = resource->native().initialize(device_, query_count);
+    if (result != GRANIT_SUCCESS)
+      return result;
+    pool = std::move(resource);
+    return GRANIT_SUCCESS;
+  } catch (const std::bad_alloc&) {
+    return GRANIT_ERROR_OUT_OF_MEMORY;
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+granit_result
+renderer_state::read_timestamp_query_results(backend_timestamp_query_pool_resource& resource,
+                                             std::uint32_t first,
+                                             std::span<std::uint64_t> values) noexcept {
+  auto& pool = static_cast<vulkan_timestamp_query_pool_resource&>(resource).native();
+  return pool.read_nanoseconds(device_, first, values, false);
+}
+
+granit_result
+renderer_state::reset_timestamp_queries(backend_command_recorder_resource& recorder_resource,
+                                        backend_timestamp_query_pool_resource& pool_resource,
+                                        std::uint32_t first, std::uint32_t count) noexcept {
+  auto& recorder = static_cast<vulkan_command_recorder_resource&>(recorder_resource).native();
+  auto& pool = static_cast<vulkan_timestamp_query_pool_resource&>(pool_resource).native();
+  return pool.reset(device_, recorder.native_handle(), first, count);
+}
+
+granit_result renderer_state::write_timestamp(backend_command_recorder_resource& recorder_resource,
+                                              backend_timestamp_query_pool_resource& pool_resource,
+                                              granit_timestamp_stage stage,
+                                              std::uint32_t index) noexcept {
+  const auto native_stage =
+      stage == GRANIT_TIMESTAMP_STAGE_TOP      ? VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT
+      : stage == GRANIT_TIMESTAMP_STAGE_DRAW   ? VK_PIPELINE_STAGE_2_ALL_GRAPHICS_BIT
+      : stage == GRANIT_TIMESTAMP_STAGE_BOTTOM ? VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT
+                                               : VkPipelineStageFlags2{};
+  if (native_stage == 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  auto& recorder = static_cast<vulkan_command_recorder_resource&>(recorder_resource).native();
+  auto& pool = static_cast<vulkan_timestamp_query_pool_resource&>(pool_resource).native();
+  return pool.write(device_, recorder.native_handle(), native_stage, index);
+}
+
+granit_result
+renderer_state::set_timestamp_query_pool_name(backend_timestamp_query_pool_resource& resource,
+                                              std::string_view name) noexcept {
+  const auto native =
+      static_cast<vulkan_timestamp_query_pool_resource&>(resource).native().native_handle();
+  return set_object_name(VK_OBJECT_TYPE_QUERY_POOL, object_handle_value(native), name);
 }
 
 void renderer_state::retire_resource(submission_serial retire_after, retirement_order order,

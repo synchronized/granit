@@ -159,11 +159,6 @@ renderer_registry& renderer_registry::instance() {
   return registry;
 }
 
-renderer_registry::timestamp_query_pool_record::~timestamp_query_pool_record() {
-  if (renderer)
-    native.destroy(renderer->device());
-}
-
 granit_result renderer_registry::create(std::string_view application_name, bool enable_validation,
                                         std::uint32_t surface_types, std::uint32_t frames_in_flight,
                                         granit_diagnostic_callback diagnostic_callback,
@@ -232,6 +227,14 @@ granit_result renderer_registry::set_object_name(granit_renderer renderer, grani
     return GRANIT_ERROR_INVALID_HANDLE;
   const auto& state = renderer_it->second;
 
+  if (const auto it = timestamp_query_pools_.find(object); it != timestamp_query_pools_.end()) {
+    if (it->second->renderer != state)
+      return GRANIT_ERROR_INVALID_HANDLE;
+    auto* native = it->second->native.get();
+    lock.unlock();
+    return state->set_timestamp_query_pool_name(*native, name);
+  }
+
 #define GRANIT_NAME_OBJECT(map, type, expression)                                                  \
   if (const auto it = map.find(object); it != map.end()) {                                         \
     if (it->second->renderer != state)                                                             \
@@ -262,8 +265,6 @@ granit_result renderer_registry::set_object_name(granit_renderer renderer, grani
                      native_compute_pipeline(*it->second->native))
   GRANIT_NAME_OBJECT(command_recorders_, VK_OBJECT_TYPE_COMMAND_BUFFER,
                      native_command_recorder(*it->second->native).native_handle())
-  GRANIT_NAME_OBJECT(timestamp_query_pools_, VK_OBJECT_TYPE_QUERY_POOL,
-                     it->second->native.native_handle())
 #undef GRANIT_NAME_OBJECT
 
   if (frames_.contains(object) || upload_batches_.contains(object))
@@ -4085,7 +4086,7 @@ granit_result renderer_registry::create_timestamp_query_pool(granit_renderer ren
       return GRANIT_ERROR_INVALID_HANDLE;
     auto record = std::make_shared<timestamp_query_pool_record>();
     record->renderer = state;
-    const auto result = record->native.initialize(state->device(), query_count);
+    const auto result = state->create_timestamp_query_pool(query_count, record->native);
     if (result != GRANIT_SUCCESS)
       return result;
     std::lock_guard lock{mutex_};
@@ -4131,7 +4132,7 @@ granit_result renderer_registry::get_timestamp_query_results(granit_renderer ren
     record = found->second;
   }
   std::lock_guard lock{record->mutex};
-  return record->native.read_nanoseconds(record->renderer->device(), first, nanoseconds, false);
+  return record->renderer->read_timestamp_query_results(*record->native, first, nanoseconds);
 }
 
 granit_result renderer_registry::destroy_timestamp_query_pool(granit_renderer renderer,
@@ -4181,8 +4182,7 @@ granit_result renderer_registry::reset_timestamp_queries(granit_renderer rendere
     return GRANIT_ERROR_INVALID_ARGUMENT;
   std::lock_guard query_lock{query->mutex};
   const auto result =
-      query->native.reset(command->renderer->device(),
-                          native_command_recorder(*command->native).native_handle(), first, count);
+      command->renderer->reset_timestamp_queries(*command->native, *query->native, first, count);
   if (result == GRANIT_SUCCESS)
     retain_resource(command->retained_resources, query, query->metadata);
   return result;
@@ -4206,20 +4206,12 @@ granit_result renderer_registry::write_timestamp(granit_renderer renderer,
       return GRANIT_ERROR_INVALID_HANDLE;
     query = found->second;
   }
-  const auto native_stage =
-      stage == GRANIT_TIMESTAMP_STAGE_TOP      ? VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT
-      : stage == GRANIT_TIMESTAMP_STAGE_DRAW   ? VK_PIPELINE_STAGE_2_ALL_GRAPHICS_BIT
-      : stage == GRANIT_TIMESTAMP_STAGE_BOTTOM ? VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT
-                                               : VkPipelineStageFlags2{};
-  if (native_stage == 0)
-    return GRANIT_ERROR_INVALID_ARGUMENT;
   std::lock_guard command_lock{command->mutex};
   if (native_command_recorder(*command->native).state() != command_recorder_state::recording)
     return GRANIT_ERROR_INVALID_ARGUMENT;
   std::lock_guard query_lock{query->mutex};
-  const auto result = query->native.write(command->renderer->device(),
-                                          native_command_recorder(*command->native).native_handle(),
-                                          native_stage, index);
+  const auto result =
+      command->renderer->write_timestamp(*command->native, *query->native, stage, index);
   if (result == GRANIT_SUCCESS)
     retain_resource(command->retained_resources, query, query->metadata);
   return result;

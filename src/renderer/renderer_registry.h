@@ -441,9 +441,8 @@ private:
   struct timestamp_query_pool_record {
     resource_metadata metadata;
     std::shared_ptr<renderer_state> renderer;
-    vulkan_timestamp_query_pool native;
+    std::unique_ptr<backend_timestamp_query_pool_resource> native;
     std::mutex mutex;
-    ~timestamp_query_pool_record();
   };
   struct frame_record {
     std::shared_ptr<renderer_state> renderer;

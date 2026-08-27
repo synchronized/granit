@@ -11,6 +11,7 @@
 #include "backend/vulkan/command_recorder.h"
 #include "backend/vulkan/memory_allocator.h"
 #include "backend/vulkan/swapchain.h"
+#include "backend/vulkan/timestamp_query.h"
 
 namespace granit::detail {
 
@@ -187,6 +188,19 @@ public:
 private:
   std::shared_ptr<renderer_state> renderer_;
   vulkan_swapchain native_;
+};
+
+class vulkan_timestamp_query_pool_resource final : public backend_timestamp_query_pool_resource {
+public:
+  explicit vulkan_timestamp_query_pool_resource(std::shared_ptr<renderer_state> renderer) noexcept;
+  ~vulkan_timestamp_query_pool_resource() override;
+
+  [[nodiscard]] vulkan_timestamp_query_pool& native() noexcept { return native_; }
+  [[nodiscard]] const vulkan_timestamp_query_pool& native() const noexcept { return native_; }
+
+private:
+  std::shared_ptr<renderer_state> renderer_;
+  vulkan_timestamp_query_pool native_;
 };
 
 } // namespace granit::detail

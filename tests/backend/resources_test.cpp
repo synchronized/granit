@@ -133,6 +133,16 @@ private:
   bool& destroyed_;
 };
 
+class fake_timestamp_query_pool_resource final
+    : public granit::detail::backend_timestamp_query_pool_resource {
+public:
+  explicit fake_timestamp_query_pool_resource(bool& destroyed) noexcept : destroyed_(destroyed) {}
+  ~fake_timestamp_query_pool_resource() override { destroyed_ = true; }
+
+private:
+  bool& destroyed_;
+};
+
 class fake_queue final : public granit::detail::backend_queue {
 public:
   granit_result
@@ -307,6 +317,16 @@ TEST_CASE("Swapchain 通过后端抽象正确销毁") {
   {
     std::unique_ptr<granit::detail::backend_swapchain_resource> resource =
         std::make_unique<fake_swapchain_resource>(destroyed);
+    CHECK_FALSE(destroyed);
+  }
+  CHECK(destroyed);
+}
+
+TEST_CASE("时间戳查询池通过后端抽象正确销毁") {
+  bool destroyed = false;
+  {
+    std::unique_ptr<granit::detail::backend_timestamp_query_pool_resource> resource =
+        std::make_unique<fake_timestamp_query_pool_resource>(destroyed);
     CHECK_FALSE(destroyed);
   }
   CHECK(destroyed);
