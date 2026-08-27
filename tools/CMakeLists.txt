@@ -151,6 +151,16 @@ if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
                "binding,0,0,uniform_buffer,ToneMappingConstants,16.*binding,0,1,sampled_texture,hdr_color,1.*binding,0,2,sampler,hdr_sampler,1"
   )
   add_test(
+    NAME granit.shader_tool.tone_mapping_json
+    COMMAND granit_shader_tool inspect --json
+            "${PROJECT_SOURCE_DIR}/src/pipeline/shaders/tone_mapping.frag.spv"
+  )
+  set_tests_properties(
+    granit.shader_tool.tone_mapping_json
+    PROPERTIES PASS_REGULAR_EXPRESSION
+               "\"schema\": 1.*\"entry_point\": \"fragment_main\".*\"group\": 0, \"binding\": 0, \"type\": \"uniform_buffer\", \"access\": \"read\""
+  )
+  add_test(
     NAME granit.shader_tool.verify
     COMMAND
       granit_shader_tool verify

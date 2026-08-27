@@ -10,6 +10,8 @@ int main(int argc, char** argv) {
   granit_shader_tools_inspect_desc desc;
   granit_shader_tools_result result = 0;
   granit_shader_tools_result_info info;
+  granit_shader_tools_binding_info binding;
+  uint64_t binding_count = 0;
   if (argc != 2)
     return 1;
   memset(&desc, 0, sizeof(desc));
@@ -26,8 +28,22 @@ int main(int argc, char** argv) {
     granit_shader_tools_result_destroy(result);
     return 3;
   }
+  if (granit_shader_tools_result_get_binding_count(result, &binding_count) != GRANIT_SUCCESS ||
+      binding_count != 3)
+    return 4;
+  memset(&binding, 0, sizeof(binding));
+  binding.struct_size = (uint32_t)sizeof(binding);
+  if (granit_shader_tools_result_get_binding(result, 0, &binding) != GRANIT_SUCCESS ||
+      binding.group != 0 || binding.binding != 0 ||
+      binding.type != GRANIT_SHADER_TOOLS_BINDING_UNIFORM_BUFFER ||
+      binding.access != GRANIT_SHADER_TOOLS_ACCESS_READ || binding.minimum_binding_size != 16 ||
+      binding.name_length == 0)
+    return 5;
+  if (granit_shader_tools_result_get_binding(result, binding_count, &binding) !=
+      GRANIT_ERROR_INVALID_ARGUMENT)
+    return 6;
   if (granit_shader_tools_result_destroy(result) != GRANIT_SUCCESS ||
       granit_shader_tools_result_destroy(result) != GRANIT_ERROR_INVALID_HANDLE)
-    return 4;
+    return 7;
   return 0;
 }

@@ -16,6 +16,16 @@ typedef uint64_t granit_shader_tools_result;
 #define GRANIT_SHADER_TOOLS_STAGE_FRAGMENT UINT32_C(2)
 #define GRANIT_SHADER_TOOLS_STAGE_COMPUTE UINT32_C(3)
 
+#define GRANIT_SHADER_TOOLS_BINDING_UNIFORM_BUFFER UINT32_C(1)
+#define GRANIT_SHADER_TOOLS_BINDING_STORAGE_BUFFER UINT32_C(2)
+#define GRANIT_SHADER_TOOLS_BINDING_SAMPLED_TEXTURE UINT32_C(3)
+#define GRANIT_SHADER_TOOLS_BINDING_STORAGE_TEXTURE UINT32_C(4)
+#define GRANIT_SHADER_TOOLS_BINDING_SAMPLER UINT32_C(5)
+
+#define GRANIT_SHADER_TOOLS_ACCESS_READ UINT32_C(1)
+#define GRANIT_SHADER_TOOLS_ACCESS_WRITE UINT32_C(2)
+#define GRANIT_SHADER_TOOLS_ACCESS_READ_WRITE UINT32_C(3)
+
 /** WGSL 编译描述。所有字符串均为 UTF-8，调用期间有效且无需以零结尾。 */
 typedef struct granit_shader_tools_compile_desc {
   uint32_t struct_size;
@@ -50,6 +60,19 @@ typedef struct granit_shader_tools_result_info {
   uint64_t diagnostic_length;
 } granit_shader_tools_result_info;
 
+/** 单个描述符绑定的后端无关反射记录。名称视图在结果销毁前有效。 */
+typedef struct granit_shader_tools_binding_info {
+  uint32_t struct_size;
+  uint32_t group;
+  uint32_t binding;
+  uint32_t type;
+  uint32_t access;
+  const char* name;
+  uint64_t name_length;
+  uint32_t array_count;
+  uint64_t minimum_binding_size;
+} granit_shader_tools_binding_info;
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -70,6 +93,14 @@ GRANIT_SHADER_TOOLS_API granit_result granit_shader_tools_inspect_spirv(
 /** 查询结果。输出结构必须设置 struct_size。该函数线程安全。 */
 GRANIT_SHADER_TOOLS_API granit_result granit_shader_tools_result_get_info(
     granit_shader_tools_result result, granit_shader_tools_result_info* info);
+
+/** 查询结构化描述符绑定数量。编译失败或无绑定时返回零。 */
+GRANIT_SHADER_TOOLS_API granit_result
+granit_shader_tools_result_get_binding_count(granit_shader_tools_result result, uint64_t* count);
+
+/** 按稳定的 group、binding 数字顺序查询结构化描述符绑定。 */
+GRANIT_SHADER_TOOLS_API granit_result granit_shader_tools_result_get_binding(
+    granit_shader_tools_result result, uint64_t index, granit_shader_tools_binding_info* binding);
 
 /** 销毁结果句柄。零值和已经销毁的句柄返回 GRANIT_ERROR_INVALID_HANDLE。 */
 GRANIT_SHADER_TOOLS_API granit_result

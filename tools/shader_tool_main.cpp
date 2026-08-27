@@ -5,6 +5,7 @@
 
 #include <iostream>
 #include <optional>
+#include <sstream>
 #include <string>
 #include <string_view>
 
@@ -50,7 +51,91 @@ int compile_shader(int argc, char** argv) {
   return status == GRANIT_SUCCESS ? 0 : 1;
 }
 
-int inspect_shader(const char* path, bool verify) {
+std::string json_string(std::string_view value) {
+  std::ostringstream output;
+  output << '"';
+  for (const auto character : value) {
+    switch (character) {
+    case '"':
+      output << "\\\"";
+      break;
+    case '\\':
+      output << "\\\\";
+      break;
+    case '\n':
+      output << "\\n";
+      break;
+    case '\r':
+      output << "\\r";
+      break;
+    case '\t':
+      output << "\\t";
+      break;
+    default:
+      if (static_cast<unsigned char>(character) < 0x20) {
+        constexpr char hex[] = "0123456789abcdef";
+        output << "\\u00" << hex[(static_cast<unsigned char>(character) >> 4) & 0x0f]
+               << hex[static_cast<unsigned char>(character) & 0x0f];
+      } else {
+        output << character;
+      }
+      break;
+    }
+  }
+  output << '"';
+  return std::move(output).str();
+}
+
+const char* binding_type_name(uint32_t type) {
+  switch (type) {
+  case GRANIT_SHADER_TOOLS_BINDING_UNIFORM_BUFFER:
+    return "uniform_buffer";
+  case GRANIT_SHADER_TOOLS_BINDING_STORAGE_BUFFER:
+    return "storage_buffer";
+  case GRANIT_SHADER_TOOLS_BINDING_SAMPLED_TEXTURE:
+    return "sampled_texture";
+  case GRANIT_SHADER_TOOLS_BINDING_STORAGE_TEXTURE:
+    return "storage_texture";
+  case GRANIT_SHADER_TOOLS_BINDING_SAMPLER:
+    return "sampler";
+  default:
+    return "unsupported";
+  }
+}
+
+const char* binding_access_name(uint32_t access) {
+  switch (access) {
+  case GRANIT_SHADER_TOOLS_ACCESS_READ:
+    return "read";
+  case GRANIT_SHADER_TOOLS_ACCESS_WRITE:
+    return "write";
+  case GRANIT_SHADER_TOOLS_ACCESS_READ_WRITE:
+    return "read_write";
+  default:
+    return "unsupported";
+  }
+}
+
+void print_json(const granit::shader_tools::result& result,
+                const granit::shader_tools::result_info& info, const char* stage) {
+  std::cout << "{\n  \"schema\": 1,\n  \"entry_point\": " << json_string(info.entry_point)
+            << ",\n  \"stage\": " << json_string(stage) << ",\n  \"bindings\": [";
+  for (uint64_t index = 0; index < result.binding_count(); ++index) {
+    const auto [status, binding] = result.binding(index);
+    if (status != GRANIT_SUCCESS)
+      continue;
+    std::cout << (index == 0 ? "\n" : ",\n") << "    {\"group\": " << binding.group
+              << ", \"binding\": " << binding.binding
+              << ", \"type\": " << json_string(binding_type_name(binding.type))
+              << ", \"access\": " << json_string(binding_access_name(binding.access))
+              << ", \"name\": " << json_string(binding.name)
+              << ", \"array_count\": " << binding.array_count
+              << ", \"minimum_binding_size\": " << binding.minimum_binding_size << '}';
+  }
+  std::cout << (result.binding_count() == 0 ? "" : "\n") << "  ]\n}\n";
+}
+
+int inspect_shader(const char* path, bool verify, bool json = false) {
   granit_shader_tools_inspect_desc desc{};
   desc.struct_size = sizeof(desc);
   desc.input_path = path;
@@ -61,7 +146,9 @@ int inspect_shader(const char* path, bool verify) {
                      : info.stage == GRANIT_SHADER_TOOLS_STAGE_FRAGMENT ? "fragment"
                      : info.stage == GRANIT_SHADER_TOOLS_STAGE_COMPUTE  ? "compute"
                                                                         : "unsupported";
-  if (verify && status == GRANIT_SUCCESS)
+  if (json && status == GRANIT_SUCCESS)
+    print_json(result, info, stage);
+  else if (verify && status == GRANIT_SUCCESS)
     std::cout << "SPIR-V 结构验证通过（" << info.entry_point << ", " << stage << "）\n";
   else
     std::cout << info.output;
@@ -72,6 +159,7 @@ int inspect_shader(const char* path, bool verify) {
 void print_usage() {
   std::cerr << "用法：\n"
                "  granit_shader_tool inspect <shader.spv>\n"
+               "  granit_shader_tool inspect --json <shader.spv>\n"
                "  granit_shader_tool verify <shader.spv>\n"
                "  granit_shader_tool compile --tint <path> --input <shader.wgsl> "
                "--entry <name> --stage <vertex|fragment|compute> --output <shader.spv>\n";
@@ -83,6 +171,8 @@ int main(int argc, char** argv) {
   if (argc == 3 && std::string_view{argv[1]} == "inspect") {
     return inspect_shader(argv[2], false);
   }
+  if (argc == 4 && std::string_view{argv[1]} == "inspect" && std::string_view{argv[2]} == "--json")
+    return inspect_shader(argv[3], false, true);
   if (argc == 3 && std::string_view{argv[1]} == "verify") {
     return inspect_shader(argv[2], true);
   }

@@ -19,6 +19,16 @@ struct result_info {
   std::string_view diagnostic;
 };
 
+struct binding_info {
+  uint32_t group = 0;
+  uint32_t binding = 0;
+  uint32_t type = 0;
+  uint32_t access = 0;
+  std::string_view name;
+  uint32_t array_count = 0;
+  uint64_t minimum_binding_size = 0;
+};
+
 class result {
 public:
   result() = default;
@@ -46,6 +56,26 @@ public:
             value.stage,
             {value.output, static_cast<std::size_t>(value.output_length)},
             {value.diagnostic, static_cast<std::size_t>(value.diagnostic_length)}};
+  }
+  [[nodiscard]] uint64_t binding_count() const noexcept {
+    uint64_t count = 0;
+    return granit_shader_tools_result_get_binding_count(handle_, &count) == GRANIT_SUCCESS ? count
+                                                                                           : 0;
+  }
+  [[nodiscard]] std::pair<granit_result, binding_info> binding(uint64_t index) const noexcept {
+    granit_shader_tools_binding_info value{};
+    value.struct_size = sizeof(value);
+    const auto status = granit_shader_tools_result_get_binding(handle_, index, &value);
+    if (status != GRANIT_SUCCESS)
+      return {status, {}};
+    return {GRANIT_SUCCESS,
+            {value.group,
+             value.binding,
+             value.type,
+             value.access,
+             {value.name, static_cast<std::size_t>(value.name_length)},
+             value.array_count,
+             value.minimum_binding_size}};
   }
   void reset() noexcept {
     if (handle_ != 0) {

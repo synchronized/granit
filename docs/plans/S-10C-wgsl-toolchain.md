@@ -5,7 +5,7 @@
 
 ## 状态
 
-- 实现状态：实现中；推荐设计已确认，当前阶段为 S-10C1 编译基线
+- 实现状态：实现中；推荐设计已确认，当前阶段为 S-10C3 反射 Schema
 - 所属版本：0.4.0
 - 前置依赖：S-10B
 - 优先级：P2
@@ -93,9 +93,9 @@ S-10C 需要建立一个源码权威和可复现的双后端资产流程。
    的跨平台 Tint 子进程；旧单参数入口已删除。ShaderTools SDK 已提供首版 C ABI、C++20 RAII
    包装、安装导出和结果生命周期测试，CLI 已改为 SDK 的薄适配层。结构化反射记录继续由
    S-10C3 补齐。
-3. **S-10C3 反射 Schema**：基于 ShaderTools SDK 扩展 SPIRV-Reflect 提取范围，定义后端无关记录及
-   稳定 JSON 调试输出，
-   补充 WGSL/SPIR-V 入口点和绑定集合一致性检查。
+3. **S-10C3 反射 Schema**：已提供按 Group/Binding 稳定排序的结构化描述符记录及稳定 JSON
+   调试输出，首批字段包括资源类型、访问模式、数组数量和 Buffer 最小尺寸。继续补充 Vertex
+   输入、Fragment 输出、Compute Workgroup、Override 常量及 WGSL/SPIR-V 绑定集合一致性检查。
 4. **S-10C4 确定性资产与缓存**：实现 `.granit-shader` 编解码、SHA-256、损坏检测、原子写入和缓存
    命中；相同输入在不同目录及两次构建中必须逐字节一致。
 5. **S-10C5 WebGPU Shader ABI**：增加插件 Shader 资源和 Pipeline 描述，替换内置 WGSL，覆盖

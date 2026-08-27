@@ -23,6 +23,9 @@ target_link_libraries(editor PRIVATE granit::shader_tools)
 
 - C11 入口位于 `<granit/tools/shader_tools.h>`；C++20 RAII 包装位于对应 `.hpp`。
 - `granit_shader_tools_compile_wgsl` 编译 WGSL；`granit_shader_tools_inspect_spirv` 检查 SPIR-V。
+- `granit_shader_tools_result_get_binding_count` 和 `granit_shader_tools_result_get_binding` 按
+  Group、Binding 数字顺序返回结构化绑定。记录包含资源类型、访问模式、数组数量和 Buffer
+  最小绑定尺寸。
 - 参数字符串均为 UTF-8 的“指针 + 长度”，只需在调用期间有效，无需以零结尾。
 - 参数和输出结构必须初始化 `struct_size`。未来版本只在结构体尾部追加字段。
 - 参数有效后，即使编译或检查失败也可能返回非零结果句柄。调用者应读取 `status` 和诊断，最后
@@ -32,5 +35,8 @@ target_link_libraries(editor PRIVATE granit::shader_tools)
 - 所有函数捕获内部异常，不允许异常穿过 C ABI。无效参数、无效句柄、内存不足和工具失败均以
   `granit_result` 返回。
 
-首版结果提供入口点、Shader 阶段、标准输出和诊断文本。结构化绑定、资源类型及源位置诊断属于
-S-10C3 反射 Schema 的后续范围。
+命令行可使用 `granit_shader_tool inspect --json shader.spv` 输出稳定排序的 JSON 调试视图。普通
+`inspect` 的 CSV 文本保持兼容，但程序不应解析该文本，应使用结构化 SDK 接口。
+
+当前结果提供入口点、Shader 阶段、描述符绑定、标准输出和诊断文本。Vertex 输入、Fragment
+输出、Compute Workgroup、Override 常量及结构化源位置诊断仍属于 S-10C3 的后续范围。
