@@ -5,6 +5,10 @@ name: Emscripten
 
 on:
   workflow_dispatch:
+  # 首次注册工作流前，GitHub 无法从特性分支手动触发；验证后删除此临时入口。
+  push:
+    branches:
+      - feat/s10d-emscripten-platform
 
 permissions:
   contents: read
