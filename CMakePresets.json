@@ -117,6 +117,26 @@
       }
     },
     {
+      "name": "platform-emscripten",
+      "hidden": true,
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "environment": {
+        "NINJA_STATUS": "[%f/%t] "
+      },
+      "cacheVariables": {
+        "CMAKE_TOOLCHAIN_FILE": "$env{EMSDK}/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake",
+        "BUILD_SHARED_LIBS": false,
+        "GRANIT_BUILD_EMSCRIPTEN_PLATFORM": true,
+        "GRANIT_BUILD_TESTING": false,
+        "GRANIT_BUILD_EXAMPLES": false,
+        "GRANIT_BUILD_BENCHMARKS": false,
+        "GRANIT_BUILD_TOOLS": false,
+        "GRANIT_BUILD_SHADER_TOOLS": false,
+        "GRANIT_WARNINGS_AS_ERRORS": true
+      }
+    },
+    {
       "name": "generator-vs2022",
       "hidden": true,
       "inherits": "platform-windows",
@@ -238,6 +258,16 @@
       "name": "linux-gcc-static-release",
       "displayName": "Linux GCC Static Release",
       "inherits": ["platform-linux", "toolchain-gcc", "config-release", "linkage-static"]
+    },
+    {
+      "name": "emscripten-debug",
+      "displayName": "Emscripten WebGPU Debug",
+      "inherits": ["platform-emscripten", "config-debug"]
+    },
+    {
+      "name": "emscripten-release",
+      "displayName": "Emscripten WebGPU Release",
+      "inherits": ["platform-emscripten", "config-release"]
     }
   ],
   "buildPresets": [
@@ -272,7 +302,9 @@
     {"name": "linux-gcc-debug", "inherits": "build-linux", "configurePreset": "linux-gcc-debug"},
     {"name": "linux-gcc-release", "inherits": "build-linux", "configurePreset": "linux-gcc-release"},
     {"name": "linux-gcc-static-debug", "inherits": "build-linux", "configurePreset": "linux-gcc-static-debug"},
-    {"name": "linux-gcc-static-release", "inherits": "build-linux", "configurePreset": "linux-gcc-static-release"}
+    {"name": "linux-gcc-static-release", "inherits": "build-linux", "configurePreset": "linux-gcc-static-release"},
+    {"name": "emscripten-debug", "configurePreset": "emscripten-debug"},
+    {"name": "emscripten-release", "configurePreset": "emscripten-release"}
   ],
   "testPresets": [
     {

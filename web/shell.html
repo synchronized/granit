@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Granit S-10D WebGPU 平台验证</title>
+    <style>
+      body { margin: 0; background: #111827; color: #e5e7eb; font-family: sans-serif; }
+      main { display: grid; place-items: center; min-height: 100vh; gap: 1rem; }
+      canvas { width: 640px; height: 360px; border: 1px solid #374151; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <canvas id="canvas" width="640" height="360"></canvas>
+      <output id="granit-status" data-status="starting">正在初始化 WebGPU…</output>
+    </main>
+    <script>
+      const statusElement = document.getElementById("granit-status");
+      function updateStatus(text) {
+        if (text.startsWith("GRANIT_STATUS:")) {
+          const status = text.slice("GRANIT_STATUS:".length);
+          statusElement.dataset.status = status.startsWith("failed:") ? "failed" : status;
+          statusElement.textContent = status;
+        }
+      }
+      var Module = {
+        canvas: document.getElementById("canvas"),
+        print(text) {
+          console.log(text);
+          updateStatus(text);
+        },
+        printErr(text) {
+          console.error(text);
+          updateStatus(text);
+        },
+      };
+    </script>
+    {{{ SCRIPT }}}
+  </body>
+</html>

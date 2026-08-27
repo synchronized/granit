@@ -1,0 +1,59 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Granit contributors
+
+name: Emscripten
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  EMSCRIPTEN_VERSION: "5.0.6"
+  EMSDK_DIR: ${{ github.workspace }}/build/emsdk-5.0.6
+
+jobs:
+  web-platform-smoke-build:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - name: 恢复 Emscripten 工具链与 Port 缓存
+        uses: actions/cache@v5
+        with:
+          path: ${{ env.EMSDK_DIR }}
+          key: emsdk-${{ runner.os }}-${{ env.EMSCRIPTEN_VERSION }}-v1
+      - name: 安装锁定 Emscripten 工具链
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ ! -x "$EMSDK_DIR/upstream/emscripten/emcc" ]]; then
+            rm -rf "$EMSDK_DIR"
+            git clone --depth 1 https://github.com/emscripten-core/emsdk.git "$EMSDK_DIR"
+            "$EMSDK_DIR/emsdk" install "$EMSCRIPTEN_VERSION"
+          fi
+          "$EMSDK_DIR/emsdk" activate "$EMSCRIPTEN_VERSION"
+      - name: 配置并构建 WebGPU 平台验证目标
+        shell: bash
+        run: |
+          set -euo pipefail
+          source "$EMSDK_DIR/emsdk_env.sh"
+          cmake --preset emscripten-release
+          cmake --build --preset emscripten-release
+      - name: 审计浏览器产物
+        shell: bash
+        run: |
+          set -euo pipefail
+          output="build/emscripten-release/web/granit_web_platform_smoke"
+          test -s "${output}.html"
+          test -s "${output}.js"
+          test -s "${output}.wasm"
+          test -s "${output}.data"
+      - name: 安装浏览器测试驱动
+        working-directory: web/tests
+        run: npm ci
+      - name: 验证浏览器 WebGPU 启动与输入转发
+        working-directory: web/tests
+        env:
+          CHROME_PATH: /usr/bin/google-chrome
+        run: npm test -- ../../build/emscripten-release/web
