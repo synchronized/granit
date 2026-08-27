@@ -51,6 +51,40 @@ TEST_CASE("C API 创建并销毁真实 renderer", "[renderer][c_api]") {
   CHECK(granit_renderer_destroy(renderer) == GRANIT_ERROR_INVALID_HANDLE);
 }
 
+TEST_CASE("Renderer 公开查询 Uniform Buffer 限制", "[renderer][limits][c_api]") {
+  granit_renderer_limits limits = GRANIT_RENDERER_LIMITS_INIT;
+  CHECK(granit_renderer_get_limits(GRANIT_NULL_HANDLE, nullptr) == GRANIT_ERROR_INVALID_ARGUMENT);
+
+  limits.struct_size = GRANIT_RENDERER_LIMITS_VERSION_1_SIZE - 1;
+  CHECK(granit_renderer_get_limits(GRANIT_NULL_HANDLE, &limits) == GRANIT_ERROR_INVALID_ARGUMENT);
+
+  limits = GRANIT_RENDERER_LIMITS_INIT;
+  CHECK(granit_renderer_get_limits(GRANIT_NULL_HANDLE, &limits) == GRANIT_ERROR_INVALID_HANDLE);
+
+  granit_renderer_desc desc = GRANIT_RENDERER_DESC_INIT;
+  granit_renderer renderer = GRANIT_NULL_HANDLE;
+  const auto create_result = granit_renderer_create(&desc, &renderer);
+  if (environment_unavailable(create_result)) {
+    SKIP("当前运行环境没有满足要求的 Vulkan 设备");
+  }
+  REQUIRE(create_result == GRANIT_SUCCESS);
+
+  limits = GRANIT_RENDERER_LIMITS_INIT;
+  limits.reserved = UINT32_MAX;
+  REQUIRE(granit_renderer_get_limits(renderer, &limits) == GRANIT_SUCCESS);
+  CHECK(limits.struct_size == sizeof(granit_renderer_limits));
+  CHECK(limits.reserved == 0);
+  CHECK(limits.uniform_buffer_offset_alignment > 0);
+  CHECK(limits.max_uniform_buffer_binding_size > 0);
+
+  limits.struct_size = static_cast<std::uint32_t>(sizeof(granit_renderer_limits) + 64);
+  REQUIRE(granit_renderer_get_limits(renderer, &limits) == GRANIT_SUCCESS);
+  CHECK(limits.struct_size == sizeof(granit_renderer_limits) + 64);
+
+  REQUIRE(granit_renderer_destroy(renderer) == GRANIT_SUCCESS);
+  CHECK(granit_renderer_get_limits(renderer, &limits) == GRANIT_ERROR_INVALID_HANDLE);
+}
+
 TEST_CASE("Renderer 描述拒绝未知字段和非法字符串", "[renderer][validation]") {
   granit_renderer renderer = GRANIT_NULL_HANDLE;
   granit_renderer_desc desc = GRANIT_RENDERER_DESC_INIT;
@@ -200,6 +234,11 @@ TEST_CASE("C++ renderer 提供 move-only RAII", "[renderer][cpp_api]") {
   REQUIRE(result == granit::result::success);
   CHECK(renderer.import_pipeline_cache({}) == granit::result::success);
   REQUIRE(renderer.valid());
+
+  granit::renderer_limits limits;
+  REQUIRE(renderer.get_limits(limits) == granit::result::success);
+  CHECK(limits.uniform_buffer_offset_alignment > 0);
+  CHECK(limits.max_uniform_buffer_binding_size > 0);
 
   granit::renderer moved{std::move(renderer)};
   CHECK_FALSE(renderer.valid());

@@ -48,6 +48,7 @@ public:
                                      granit_diagnostic_callback diagnostic_callback,
                                      void* diagnostic_user_data, granit_renderer& renderer);
   [[nodiscard]] granit_result destroy(granit_renderer renderer);
+  [[nodiscard]] granit_result get_limits(granit_renderer renderer, granit_renderer_limits& limits);
   [[nodiscard]] granit_result import_pipeline_cache(granit_renderer renderer, const void* data,
                                                     std::uint64_t size);
   [[nodiscard]] granit_result export_pipeline_cache(granit_renderer renderer, void* data,

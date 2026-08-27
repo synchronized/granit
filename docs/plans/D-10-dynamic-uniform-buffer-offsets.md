@@ -6,7 +6,7 @@
 ## 状态
 
 - 设计状态：已确认
-- 实现状态：已完成；D-10A 至 D-10E 已验收
+- 实现状态：进行中；D-10A 至 D-10E 已验收，D-10F 已完成本地验证并等待跨平台 Actions
 - 路线图任务：D-10
 - 优先级：P1
 - 前置依赖：D-03、D-07、F-10
@@ -51,6 +51,8 @@ Offset，使一个 Bind Group 能在多次 Draw 或 Dispatch 时选择同一 Buf
 - 项目公共 ABI 尚未稳定，本任务直接迁移现有绑定函数及所有调用点，不保留旧签名兼容分支。
 - C++20 包装接受 `std::span`，只做边界转换；Recorder 在调用期复制数组，不保存调用方指针。
 - 公共接口不暴露 Vulkan/WebGPU 类型，也不传播任何后端头文件或链接依赖。
+- Renderer 通过单个可扩展限制结构公开设备能力快照，首版提供 Uniform Buffer 动态偏移对齐和
+  单次绑定最大范围；调用方不得假定固定对齐值。
 
 ### 后端映射
 
@@ -73,6 +75,9 @@ Offset，使一个 Bind Group 能在多次 Draw 或 Dispatch 时选择同一 Buf
    并通过 Validation Layer 和像素回读验证同一 Uniform Buffer 中的两组对象数据。
 5. **D-10E 跨平台验收**：Windows/Linux、共享/静态、C/C++ Consumer、安装导出及 Integration
    Runtime 矩阵已通过；结果见[验收记录](../records/2026-08-27-d10-dynamic-uniform-offsets.md)。
+6. **D-10F 公共限制查询**：已增加可扩展 `granit_renderer_limits`、C 查询函数和轻量 C++ 包装，
+   直接返回 Renderer 创建时保存的后端能力快照；参数、`struct_size`、失效句柄、公共头、真实
+   设备值传递以及共享/静态安装 Consumer 本地验证均已通过，等待跨平台 Actions 验收。
 
 ## 测试与验收
 
@@ -83,10 +88,12 @@ Offset，使一个 Bind Group 能在多次 Draw 或 Dispatch 时选择同一 Buf
 - 一个 Uniform Buffer 保存两组变换，通过不同动态 Offset 绘制两个位置可区分的对象并回读像素。
 - Vulkan Validation Layer 不报告 Descriptor、Offset、Range 或生命周期错误。
 - C11/C++20 公共头、共享/静态安装 Consumer 以及 Windows/Linux Actions 全部通过。
+- Gneiss 等调用方可查询 Uniform Buffer 对齐和最大绑定范围，据此安全计算 Uniform Arena 步长。
 
 ## 风险与未决问题
 
 - 绑定描述签名会产生源码和 ABI 变更；0.x 阶段直接迁移，但必须在迁移说明中明确记录。
 - 动态 Offset 数组是扁平序列，排序规则必须由测试锁定，不能依赖容器遍历或后端隐式顺序。
-- 设备的 `minUniformBufferOffsetAlignment` 可能显著增加 Arena 空洞，分配策略由上层应用负责。
+- 设备的 `minUniformBufferOffsetAlignment` 可能显著增加 Arena 空洞；Granit 公开实际限制，分配
+  策略仍由上层应用负责。
 - 后续若增加动态 Storage Buffer，应复用同一描述和排序规则，不新增平行绑定命令。
