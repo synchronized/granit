@@ -83,6 +83,11 @@ set(
 )
 
 if(GRANIT_BUILD_BACKEND_WEBGPU)
+  option(
+    GRANIT_WEBGPU_FORCE_FALLBACK_ADAPTER
+    "WebGPU 插件强制使用软件 fallback adapter，仅用于可复现验证"
+    OFF
+  )
   set(GRANIT_DAWN_ROOT "" CACHE PATH "锁定 Dawn 静态安装包根目录")
   if(NOT GRANIT_DAWN_ROOT)
     message(FATAL_ERROR "已启用 WebGPU 后端插件，但未设置 GRANIT_DAWN_ROOT")

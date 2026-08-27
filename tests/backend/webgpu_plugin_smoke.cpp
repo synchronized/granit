@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
+#include <chrono>
 #include <cstddef>
 #include <cstdio>
 #include <new>
@@ -32,6 +33,7 @@ bool near_byte(std::uint32_t value, std::uint32_t expected) {
 } // namespace
 
 int main() {
+  const auto smoke_begin = std::chrono::steady_clock::now();
   granit::detail::backend_plugin_loader loader;
   const auto open_result =
       loader.open(GRANIT_WEBGPU_PLUGIN_PATH, GRANIT_BACKEND_PLUGIN_KIND_WEBGPU);
@@ -134,6 +136,7 @@ int main() {
   granit_backend_plugin_command_buffer command_buffer{};
   std::uint32_t corner{};
   std::uint32_t center{};
+  std::chrono::steady_clock::duration submit_duration{};
   if (loader.create_texture(instance, &target_desc, &target_texture) != GRANIT_SUCCESS ||
       loader.create_texture_view(instance, target_texture, &target_view) != GRANIT_SUCCESS ||
       loader.create_buffer(instance, &readback_desc, &readback) != GRANIT_SUCCESS ||
@@ -143,8 +146,14 @@ int main() {
       loader.recorder_copy_texture_to_buffer(instance, recorder, target_texture, readback, 64, 64,
                                              256) != GRANIT_SUCCESS ||
       loader.finish_command_recorder(instance, recorder, &command_buffer) != GRANIT_SUCCESS ||
-      command_buffer == 0 ||
-      loader.submit_command_buffer(instance, command_buffer) != GRANIT_SUCCESS ||
+      command_buffer == 0) {
+    std::fprintf(stderr, "WebGPU 离屏三角形命令录制失败\n");
+    return 7;
+  }
+  const auto submit_begin = std::chrono::steady_clock::now();
+  const auto submit_result = loader.submit_command_buffer(instance, command_buffer);
+  submit_duration = std::chrono::steady_clock::now() - submit_begin;
+  if (submit_result != GRANIT_SUCCESS ||
       loader.read_buffer(instance, readback, 0, &corner, sizeof(corner)) != GRANIT_SUCCESS ||
       loader.read_buffer(instance, readback, 32 * 256 + 32 * 4, &center, sizeof(center)) !=
           GRANIT_SUCCESS ||
@@ -171,5 +180,16 @@ int main() {
     std::fprintf(stderr, "销毁 WebGPU 插件实例失败：%d\n", static_cast<int>(destroy_result));
     return 8;
   }
+  loader.close();
+  if (loader.is_open()) {
+    std::fprintf(stderr, "卸载 WebGPU 插件失败\n");
+    return 9;
+  }
+  const auto total_duration = std::chrono::steady_clock::now() - smoke_begin;
+  std::fprintf(stdout, "WebGPU smoke：Queue Submit %lld us，总耗时 %lld ms\n",
+               static_cast<long long>(
+                   std::chrono::duration_cast<std::chrono::microseconds>(submit_duration).count()),
+               static_cast<long long>(
+                   std::chrono::duration_cast<std::chrono::milliseconds>(total_duration).count()));
   return 0;
 }

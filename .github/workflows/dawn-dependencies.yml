@@ -106,6 +106,7 @@ jobs:
           cmake -S . -B $build -G Ninja `
             -DCMAKE_BUILD_TYPE=Release `
             -DGRANIT_BUILD_BACKEND_WEBGPU=ON `
+            -DGRANIT_WEBGPU_FORCE_FALLBACK_ADAPTER=ON `
             "-DGRANIT_DAWN_ROOT=$stage" `
             -DGRANIT_BUILD_EXAMPLES=OFF `
             -DGRANIT_BUILD_TESTING=ON
@@ -115,7 +116,7 @@ jobs:
             throw "Windows runner 缺少 d3dcompiler_47.dll"
           }
           Copy-Item -LiteralPath $fxc -Destination "$build/bin/d3dcompiler_47.dll"
-          ctest --test-dir $build -R granit.backend.webgpu_plugin_smoke --output-on-failure
+          ctest --test-dir $build -R granit.backend.webgpu_plugin_smoke --verbose --output-on-failure
       - name: 打包 Windows 产物
         id: package
         shell: pwsh
@@ -211,13 +212,18 @@ jobs:
           CC=clang CXX=clang++ cmake -S . -B "$build" -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
             -DGRANIT_BUILD_BACKEND_WEBGPU=ON \
+            -DGRANIT_WEBGPU_FORCE_FALLBACK_ADAPTER=ON \
             -DGRANIT_DAWN_ROOT="$stage" \
             -DGRANIT_BUILD_EXAMPLES=OFF \
             -DGRANIT_BUILD_TESTING=ON \
             -DGRANIT_ENABLE_XCB=OFF \
             -DGRANIT_ENABLE_WAYLAND=OFF
           cmake --build "$build" --target granit_webgpu_plugin_smoke
-          ctest --test-dir "$build" -R granit.backend.webgpu_plugin_smoke --output-on-failure
+          lvp_icd="$(find /usr/share/vulkan/icd.d -type f -name 'lvp_icd*.json' -print -quit)"
+          [[ -n "$lvp_icd" ]]
+          VK_DRIVER_FILES="$lvp_icd" LIBGL_ALWAYS_SOFTWARE=1 \
+            ctest --test-dir "$build" -R granit.backend.webgpu_plugin_smoke \
+              --verbose --output-on-failure
       - name: 打包 Linux 产物
         id: package
         shell: bash

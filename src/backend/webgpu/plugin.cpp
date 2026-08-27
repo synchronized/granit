@@ -289,6 +289,9 @@ granit_result create_backend(const granit_backend_plugin_host_api* host,
 #else
   adapter_options.backendType = WGPUBackendType_Vulkan;
 #endif
+#if defined(GRANIT_WEBGPU_FORCE_FALLBACK_ADAPTER)
+  adapter_options.forceFallbackAdapter = WGPU_TRUE;
+#endif
   const auto adapter_future =
       wgpuInstanceRequestAdapter(state->instance, &adapter_options, adapter_callback);
   if (!wait_for(state->instance, adapter_future, adapter) ||
