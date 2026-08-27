@@ -22,6 +22,7 @@ granit_shader_tool compile --tint path/to/tint --input shader.wgsl `
 `inspect` 按稳定顺序输出入口和资源绑定元数据；`verify` 执行低成本 SPIR-V 结构与反射检查；
 `compile` 直接启动锁定版本的 Tint，捕获原始诊断并复核输出入口和阶段。完整 SPIR-V 合法性仍由
 Tint 的 `--validate` 和可选 `spirv-val` 负责。工具不进入 Granit 核心动态库及安装导出。
+所有调用都必须使用显式子命令；早期原型的单参数入口不再保留。
 
 `granit_material_tool inspect <package.grmat> --json` 验证最终二进制材质包并把稳定诊断 JSON 输出
 到标准输出。使用 `--output <path>` 可以写入文件；Renderer 不读取该 JSON。

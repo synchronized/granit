@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include "process.h"
+#include "child_process.h"
 
 #include <array>
 #include <thread>

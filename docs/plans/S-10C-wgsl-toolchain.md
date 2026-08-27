@@ -24,6 +24,7 @@ S-10C 需要建立一个源码权威和可复现的双后端资产流程。
 - 产出同时包含 WGSL、SPIR-V 和反射信息的确定性 Shader 资产。
 - 让 WebGPU 插件从资产创建 Shader，不再依赖内置固定 WGSL。
 - 提供包含文件、行列、阶段和入口点的可执行诊断，并验证缓存失效规则。
+- 提供独立可选的 ShaderTools SDK，让编辑器和资产构建器直接链接同一实现；CLI 只作为薄适配层。
 
 ## 非目标
 
@@ -73,14 +74,26 @@ S-10C 需要建立一个源码权威和可复现的双后端资产流程。
   是否增加公共 Shader 资产创建 API，留到插件闭环验证后单独审议，避免提前锁定 0.4.0 ABI。
 - 反射清单用于校验显式 Bind Group Layout、Pipeline Layout 和阶段可见性，不在运行时自动修改布局。
 
+### 工具 SDK 边界
+
+- 新增独立可选 `ShaderTools` 安装组件和 `granit::shader_tools` CMake 目标，不成为
+  `granit::granit` 的传递依赖。
+- `.h` 提供 C11 ABI，使用版本化描述、整数句柄、调用期字符串视图和成对结果销毁函数；`.hpp`
+  在其上提供 C++20 RAII、容器和字符串便利接口。
+- SDK 返回结构化诊断与反射记录，不暴露 Tint、SPIRV-Reflect、STL、异常或平台进程句柄。
+- `granit_shader_tool` 的 `main()` 只解析参数、调用 SDK、格式化输出和映射退出码，不复制编译、
+  校验、反射或缓存逻辑。
+- 项目仍处于早期，旧的单参数 CLI 入口直接删除，不建立弃用兼容分支。
+
 ## 实施顺序
 
 1. **S-10C1 编译基线**：已让锁定 Dawn SDK 同时产出 Tint CLI；最小 WGSL Fixture 的 Vertex 与
    Fragment 入口已在 Windows/Linux 完成校验并生成有效 Vulkan SPIR-V。
-2. **S-10C2 工具入口**：已将 `granit_shader_tool` 扩展为 `compile`、`inspect` 和 `verify` 子命令，
-   保留现有单参数反射入口的迁移提示；跨平台子进程不经过 Shell，并捕获 Tint 退出码、标准输出和
-   标准错误。当前继续补齐真实 Tint 端到端测试后进入 S-10C3。
-3. **S-10C3 反射 Schema**：扩展 SPIRV-Reflect 提取范围，定义后端无关记录及稳定 JSON 调试输出，
+2. **S-10C2 工具入口与 SDK 边界**：已增加 `compile`、`inspect` 和 `verify` 子命令及不经过 Shell
+   的跨平台 Tint 子进程。继续删除旧单参数入口，将实现抽入 ShaderTools SDK，增加 C ABI、C++20
+   包装、安装导出和外部 Consumer；CLI 改为薄适配层。
+3. **S-10C3 反射 Schema**：基于 ShaderTools SDK 扩展 SPIRV-Reflect 提取范围，定义后端无关记录及
+   稳定 JSON 调试输出，
    补充 WGSL/SPIR-V 入口点和绑定集合一致性检查。
 4. **S-10C4 确定性资产与缓存**：实现 `.granit-shader` 编解码、SHA-256、损坏检测、原子写入和缓存
    命中；相同输入在不同目录及两次构建中必须逐字节一致。

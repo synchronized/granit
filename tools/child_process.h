@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#ifndef GRANIT_TOOLS_PROCESS_H_
-#define GRANIT_TOOLS_PROCESS_H_
+#ifndef GRANIT_TOOLS_CHILD_PROCESS_H_
+#define GRANIT_TOOLS_CHILD_PROCESS_H_
 
 #include <string>
 #include <vector>

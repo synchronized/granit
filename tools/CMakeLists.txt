@@ -14,9 +14,22 @@ set_target_properties(granit_spirv_reflect PROPERTIES FOLDER "ThirdParty/SPIRV-R
 
 find_package(Threads REQUIRED)
 
-add_executable(granit_shader_tool shader_tool_main.cpp process.cpp process.h)
+add_library(
+  granit_shader_tools_core STATIC
+  shader_tools_core.cpp
+  shader_tools_core.h
+  child_process.h
+  process.cpp
+)
+target_compile_features(granit_shader_tools_core PUBLIC cxx_std_20)
+target_link_libraries(granit_shader_tools_core PRIVATE granit_spirv_reflect Threads::Threads)
+target_include_directories(granit_shader_tools_core PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
+granit_target_compile_warnings(granit_shader_tools_core)
+set_target_properties(granit_shader_tools_core PROPERTIES FOLDER "Tools")
+
+add_executable(granit_shader_tool shader_tool_main.cpp)
 target_compile_features(granit_shader_tool PRIVATE cxx_std_20)
-target_link_libraries(granit_shader_tool PRIVATE granit_spirv_reflect Threads::Threads)
+target_link_libraries(granit_shader_tool PRIVATE granit_shader_tools_core)
 target_compile_options(
   granit_shader_tool
   PRIVATE $<$<COMPILE_LANG_AND_ID:CXX,MSVC>:/utf-8>
@@ -45,7 +58,7 @@ set_target_properties(granit_material_tool PROPERTIES FOLDER "Tools")
 if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
   add_test(
     NAME granit.shader_tool.tone_mapping_reflect
-    COMMAND granit_shader_tool
+    COMMAND granit_shader_tool inspect
             "${PROJECT_SOURCE_DIR}/src/pipeline/shaders/tone_mapping.frag.spv"
   )
   set_tests_properties(
@@ -74,7 +87,7 @@ if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
 
   add_test(
     NAME granit.shader_tool.pbr_ibl_reflect
-    COMMAND granit_shader_tool
+    COMMAND granit_shader_tool inspect
             "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/pbr_ibl_untextured.frag.spv"
   )
   set_tests_properties(
@@ -85,7 +98,7 @@ if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
   add_test(
     NAME granit.shader_tool.pbr_shadow_ibl_reflect
     COMMAND
-      granit_shader_tool
+      granit_shader_tool inspect
       "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/pbr_shadow_ibl_untextured.frag.spv"
   )
   set_tests_properties(
@@ -97,13 +110,13 @@ if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
   add_test(
     NAME granit.shader_tool.pbr_shadow_ibl_lights_reflect
     COMMAND
-      granit_shader_tool
+      granit_shader_tool inspect
       "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/pbr_shadow_ibl_lights_untextured.frag.spv"
   )
 
   add_test(
     NAME granit.shader_tool.pbr_lights_reflect
-    COMMAND granit_shader_tool
+    COMMAND granit_shader_tool inspect
             "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/pbr_lights_untextured.frag.spv"
   )
   set_tests_properties(
@@ -113,7 +126,7 @@ if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
   )
   add_test(
     NAME granit.shader_tool.pbr_ibl_lights_reflect
-    COMMAND granit_shader_tool
+    COMMAND granit_shader_tool inspect
             "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/pbr_ibl_lights_untextured.frag.spv"
   )
   set_tests_properties(
@@ -123,7 +136,7 @@ if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
   )
   add_test(
     NAME granit.shader_tool.pbr_shadow_lights_reflect
-    COMMAND granit_shader_tool
+    COMMAND granit_shader_tool inspect
             "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/pbr_shadow_lights_untextured.frag.spv"
   )
   set_tests_properties(
@@ -139,7 +152,7 @@ if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
 
   add_test(
     NAME granit.shader_tool.unlit_reflect
-    COMMAND granit_shader_tool
+    COMMAND granit_shader_tool inspect
             "${PROJECT_SOURCE_DIR}/assets/shaders/unlit/unlit_alpha_cutoff.frag.spv"
   )
   set_tests_properties(
@@ -240,7 +253,10 @@ if(GRANIT_BUILD_TESTING AND BUILD_TESTING AND GRANIT_DXC_EXECUTABLE)
               "${GRANIT_MATERIAL_FIXTURE}"
     )
   endif()
-  add_test(NAME granit.shader_tool.reflect COMMAND granit_shader_tool "${GRANIT_MATERIAL_FIXTURE}")
+  add_test(
+    NAME granit.shader_tool.reflect
+    COMMAND granit_shader_tool inspect "${GRANIT_MATERIAL_FIXTURE}"
+  )
   set_tests_properties(
     granit.shader_tool.reflect
     PROPERTIES PASS_REGULAR_EXPRESSION
