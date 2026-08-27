@@ -3170,8 +3170,6 @@ granit_result renderer_registry::copy_buffer(granit_renderer renderer,
       (destination_record->desc.usage & GRANIT_BUFFER_USAGE_TRANSFER_DESTINATION_BIT) == 0) {
     return GRANIT_ERROR_INVALID_ARGUMENT;
   }
-  std::vector<VkBufferCopy> native_regions;
-  native_regions.reserve(regions.size());
   for (const auto& region : regions) {
     if (region.size == 0 || region.source_offset >= source_record->desc.size ||
         region.size > source_record->desc.size - region.source_offset ||
@@ -3179,9 +3177,6 @@ granit_result renderer_registry::copy_buffer(granit_renderer renderer,
         region.size > destination_record->desc.size - region.destination_offset) {
       return GRANIT_ERROR_INVALID_ARGUMENT;
     }
-    native_regions.push_back({.srcOffset = region.source_offset,
-                              .dstOffset = region.destination_offset,
-                              .size = region.size});
   }
   if (source_record == destination_record) {
     for (const auto& source_region : regions) {
@@ -3203,9 +3198,8 @@ granit_result renderer_registry::copy_buffer(granit_renderer renderer,
   retain_resource(recorder_record->retained_resources, destination_record,
                   destination_record->metadata);
   return recorder_record->renderer->copy_buffer(native_command_recorder(*recorder_record->native),
-                                                native_buffer(*source_record->native).buffer,
-                                                native_buffer(*destination_record->native).buffer,
-                                                native_regions);
+                                                *source_record->native, *destination_record->native,
+                                                regions);
 }
 
 granit_result renderer_registry::copy_texture_to_buffer(granit_renderer renderer,
@@ -3279,16 +3273,6 @@ granit_result renderer_registry::copy_texture_to_buffer(granit_renderer renderer
     return GRANIT_ERROR_INVALID_ARGUMENT;
   }
 
-  VkBufferImageCopy copy{};
-  copy.bufferOffset = layout.offset;
-  copy.bufferRowLength = layout.bytes_per_row == 0 ? 0 : layout.bytes_per_row / bytes_per_pixel;
-  copy.bufferImageHeight = layout.rows_per_image;
-  copy.imageSubresource = {VK_IMAGE_ASPECT_COLOR_BIT, region.mip_level, region.base_array_layer,
-                           region.array_layer_count};
-  copy.imageOffset = {static_cast<std::int32_t>(region.x), static_cast<std::int32_t>(region.y),
-                      static_cast<std::int32_t>(region.z)};
-  copy.imageExtent = {region.width, region.height, region.depth};
-
   std::lock_guard record_lock{recorder_record->mutex};
   if (native_command_recorder(*recorder_record->native).state() !=
       command_recorder_state::recording)
@@ -3297,9 +3281,8 @@ granit_result renderer_registry::copy_texture_to_buffer(granit_renderer renderer
   retain_resource(recorder_record->retained_resources, destination_record,
                   destination_record->metadata);
   return recorder_record->renderer->copy_texture_to_buffer(
-      native_command_recorder(*recorder_record->native),
-      native_texture(*source_record->native).image,
-      native_buffer(*destination_record->native).buffer, copy);
+      native_command_recorder(*recorder_record->native), *source_record->native,
+      *destination_record->native, desc.format, layout, region);
 }
 
 granit_result renderer_registry::copy_buffer_to_texture(granit_renderer renderer,
@@ -3373,16 +3356,6 @@ granit_result renderer_registry::copy_buffer_to_texture(granit_renderer renderer
     return GRANIT_ERROR_INVALID_ARGUMENT;
   }
 
-  VkBufferImageCopy copy{};
-  copy.bufferOffset = layout.offset;
-  copy.bufferRowLength = layout.bytes_per_row == 0 ? 0 : layout.bytes_per_row / bytes_per_pixel;
-  copy.bufferImageHeight = layout.rows_per_image;
-  copy.imageSubresource = {VK_IMAGE_ASPECT_COLOR_BIT, region.mip_level, region.base_array_layer,
-                           region.array_layer_count};
-  copy.imageOffset = {static_cast<std::int32_t>(region.x), static_cast<std::int32_t>(region.y),
-                      static_cast<std::int32_t>(region.z)};
-  copy.imageExtent = {region.width, region.height, region.depth};
-
   std::lock_guard record_lock{recorder_record->mutex};
   if (native_command_recorder(*recorder_record->native).state() !=
       command_recorder_state::recording)
@@ -3391,9 +3364,8 @@ granit_result renderer_registry::copy_buffer_to_texture(granit_renderer renderer
   retain_resource(recorder_record->retained_resources, destination_record,
                   destination_record->metadata);
   return recorder_record->renderer->copy_buffer_to_texture(
-      native_command_recorder(*recorder_record->native),
-      native_buffer(*source_record->native).buffer,
-      native_texture(*destination_record->native).image, copy);
+      native_command_recorder(*recorder_record->native), *source_record->native,
+      *destination_record->native, desc.format, layout, region);
 }
 
 granit_result renderer_registry::copy_texture(granit_renderer renderer,
@@ -3459,18 +3431,6 @@ granit_result renderer_registry::copy_texture(granit_renderer renderer,
     return GRANIT_ERROR_INVALID_ARGUMENT;
   }
 
-  const VkImageCopy copy{
-      .srcSubresource = {VK_IMAGE_ASPECT_COLOR_BIT, region.source_mip_level,
-                         region.source_base_array_layer, region.array_layer_count},
-      .srcOffset = {static_cast<std::int32_t>(region.source_x),
-                    static_cast<std::int32_t>(region.source_y),
-                    static_cast<std::int32_t>(region.source_z)},
-      .dstSubresource = {VK_IMAGE_ASPECT_COLOR_BIT, region.destination_mip_level,
-                         region.destination_base_array_layer, region.array_layer_count},
-      .dstOffset = {static_cast<std::int32_t>(region.destination_x),
-                    static_cast<std::int32_t>(region.destination_y),
-                    static_cast<std::int32_t>(region.destination_z)},
-      .extent = {region.width, region.height, region.depth}};
   std::lock_guard record_lock{recorder_record->mutex};
   if (native_command_recorder(*recorder_record->native).state() !=
       command_recorder_state::recording)
@@ -3479,9 +3439,8 @@ granit_result renderer_registry::copy_texture(granit_renderer renderer,
   retain_resource(recorder_record->retained_resources, destination_record,
                   destination_record->metadata);
   return recorder_record->renderer->copy_texture(native_command_recorder(*recorder_record->native),
-                                                 native_texture(*source_record->native).image,
-                                                 native_texture(*destination_record->native).image,
-                                                 copy);
+                                                 *source_record->native,
+                                                 *destination_record->native, region);
 }
 
 granit_result renderer_registry::generate_mipmaps(granit_renderer renderer,
@@ -3516,9 +3475,6 @@ granit_result renderer_registry::generate_mipmaps(granit_renderer renderer,
       range.array_layer_count > desc.array_layers - range.base_array_layer) {
     return GRANIT_ERROR_INVALID_ARGUMENT;
   }
-  const VkExtent3D base_extent{std::max(UINT32_C(1), desc.width >> range.base_mip_level),
-                               std::max(UINT32_C(1), desc.height >> range.base_mip_level),
-                               std::max(UINT32_C(1), desc.depth >> range.base_mip_level)};
   std::lock_guard record_lock{recorder_record->mutex};
   if (native_command_recorder(*recorder_record->native).state() !=
       command_recorder_state::recording)
@@ -3526,9 +3482,8 @@ granit_result renderer_registry::generate_mipmaps(granit_renderer renderer,
   retain_resource(recorder_record->retained_resources, texture_record_state,
                   texture_record_state->metadata);
   return recorder_record->renderer->generate_mipmaps(
-      native_command_recorder(*recorder_record->native),
-      native_texture(*texture_record_state->native).image, base_extent, range.base_mip_level,
-      range.level_count, range.base_array_layer, range.array_layer_count);
+      native_command_recorder(*recorder_record->native), *texture_record_state->native, desc,
+      range);
 }
 
 granit_result renderer_registry::fill_buffer(granit_renderer renderer,
@@ -3566,8 +3521,7 @@ granit_result renderer_registry::fill_buffer(granit_renderer renderer,
   retain_resource(recorder_record->retained_resources, buffer_record_state,
                   buffer_record_state->metadata);
   return recorder_record->renderer->fill_buffer(native_command_recorder(*recorder_record->native),
-                                                native_buffer(*buffer_record_state->native).buffer,
-                                                offset, size, value);
+                                                *buffer_record_state->native, offset, size, value);
 }
 
 granit_result renderer_registry::bind_graphics_pipeline(granit_renderer renderer,

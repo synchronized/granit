@@ -6,6 +6,7 @@
 #include "backend/vulkan/resources.h"
 #include "backend/vulkan/result.h"
 #include "backend/vulkan/surface.h"
+#include "core/texture_format.h"
 
 #include <algorithm>
 #include <array>
@@ -1428,57 +1429,120 @@ granit_result renderer_state::reset_command_recorder(vulkan_command_recorder& re
   return observe_device_result(recorder.reset(device_));
 }
 
-granit_result renderer_state::copy_buffer(vulkan_command_recorder& recorder, VkBuffer source,
-                                          VkBuffer destination,
-                                          std::span<const VkBufferCopy> regions) {
+granit_result renderer_state::copy_buffer(vulkan_command_recorder& recorder,
+                                          backend_buffer_resource& source,
+                                          backend_buffer_resource& destination,
+                                          std::span<const granit_buffer_copy_region> regions) {
   if (device_lost())
     return GRANIT_ERROR_DEVICE_LOST;
-  return observe_device_result(recorder.copy_buffer(device_, source, destination, regions));
+  try {
+    std::vector<VkBufferCopy> native_regions;
+    native_regions.reserve(regions.size());
+    for (const auto& region : regions) {
+      native_regions.push_back({.srcOffset = region.source_offset,
+                                .dstOffset = region.destination_offset,
+                                .size = region.size});
+    }
+    return observe_device_result(recorder.copy_buffer(
+        device_, static_cast<vulkan_buffer_resource&>(source).native().buffer,
+        static_cast<vulkan_buffer_resource&>(destination).native().buffer, native_regions));
+  } catch (const std::bad_alloc&) {
+    return GRANIT_ERROR_OUT_OF_MEMORY;
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
 }
 
 granit_result renderer_state::copy_texture_to_buffer(vulkan_command_recorder& recorder,
-                                                     VkImage source, VkBuffer destination,
-                                                     const VkBufferImageCopy& region) {
+                                                     backend_texture_resource& source,
+                                                     backend_buffer_resource& destination,
+                                                     granit_texture_format format,
+                                                     const granit_texture_data_layout& layout,
+                                                     const granit_texture_write_region& region) {
   if (device_lost())
     return GRANIT_ERROR_DEVICE_LOST;
-  return observe_device_result(
-      recorder.copy_texture_to_buffer(device_, source, destination, region));
+  const auto bytes_per_pixel = texture_format_bytes_per_block(format);
+  VkBufferImageCopy copy{};
+  copy.bufferOffset = layout.offset;
+  copy.bufferRowLength = layout.bytes_per_row == 0 ? 0 : layout.bytes_per_row / bytes_per_pixel;
+  copy.bufferImageHeight = layout.rows_per_image;
+  copy.imageSubresource = {map_texture_aspect(region.aspect), region.mip_level,
+                           region.base_array_layer, region.array_layer_count};
+  copy.imageOffset = {static_cast<std::int32_t>(region.x), static_cast<std::int32_t>(region.y),
+                      static_cast<std::int32_t>(region.z)};
+  copy.imageExtent = {region.width, region.height, region.depth};
+  return observe_device_result(recorder.copy_texture_to_buffer(
+      device_, static_cast<vulkan_texture_resource&>(source).native().image,
+      static_cast<vulkan_buffer_resource&>(destination).native().buffer, copy));
 }
 
 granit_result renderer_state::copy_buffer_to_texture(vulkan_command_recorder& recorder,
-                                                     VkBuffer source, VkImage destination,
-                                                     const VkBufferImageCopy& region) {
+                                                     backend_buffer_resource& source,
+                                                     backend_texture_resource& destination,
+                                                     granit_texture_format format,
+                                                     const granit_texture_data_layout& layout,
+                                                     const granit_texture_write_region& region) {
   if (device_lost())
     return GRANIT_ERROR_DEVICE_LOST;
-  return observe_device_result(
-      recorder.copy_buffer_to_texture(device_, source, destination, region));
+  const auto bytes_per_pixel = texture_format_bytes_per_block(format);
+  VkBufferImageCopy copy{};
+  copy.bufferOffset = layout.offset;
+  copy.bufferRowLength = layout.bytes_per_row == 0 ? 0 : layout.bytes_per_row / bytes_per_pixel;
+  copy.bufferImageHeight = layout.rows_per_image;
+  copy.imageSubresource = {map_texture_aspect(region.aspect), region.mip_level,
+                           region.base_array_layer, region.array_layer_count};
+  copy.imageOffset = {static_cast<std::int32_t>(region.x), static_cast<std::int32_t>(region.y),
+                      static_cast<std::int32_t>(region.z)};
+  copy.imageExtent = {region.width, region.height, region.depth};
+  return observe_device_result(recorder.copy_buffer_to_texture(
+      device_, static_cast<vulkan_buffer_resource&>(source).native().buffer,
+      static_cast<vulkan_texture_resource&>(destination).native().image, copy));
 }
 
-granit_result renderer_state::copy_texture(vulkan_command_recorder& recorder, VkImage source,
-                                           VkImage destination, const VkImageCopy& region) {
+granit_result renderer_state::copy_texture(vulkan_command_recorder& recorder,
+                                           backend_texture_resource& source,
+                                           backend_texture_resource& destination,
+                                           const granit_texture_copy_region& region) {
   if (device_lost())
     return GRANIT_ERROR_DEVICE_LOST;
-  return observe_device_result(recorder.copy_texture(device_, source, destination, region));
+  const VkImageCopy copy{
+      .srcSubresource = {map_texture_aspect(region.aspect), region.source_mip_level,
+                         region.source_base_array_layer, region.array_layer_count},
+      .srcOffset = {static_cast<std::int32_t>(region.source_x),
+                    static_cast<std::int32_t>(region.source_y),
+                    static_cast<std::int32_t>(region.source_z)},
+      .dstSubresource = {map_texture_aspect(region.aspect), region.destination_mip_level,
+                         region.destination_base_array_layer, region.array_layer_count},
+      .dstOffset = {static_cast<std::int32_t>(region.destination_x),
+                    static_cast<std::int32_t>(region.destination_y),
+                    static_cast<std::int32_t>(region.destination_z)},
+      .extent = {region.width, region.height, region.depth}};
+  return observe_device_result(recorder.copy_texture(
+      device_, static_cast<vulkan_texture_resource&>(source).native().image,
+      static_cast<vulkan_texture_resource&>(destination).native().image, copy));
 }
 
-granit_result renderer_state::generate_mipmaps(vulkan_command_recorder& recorder, VkImage image,
-                                               VkExtent3D base_extent, std::uint32_t base_mip_level,
-                                               std::uint32_t level_count,
-                                               std::uint32_t base_array_layer,
-                                               std::uint32_t array_layer_count) {
+granit_result renderer_state::generate_mipmaps(vulkan_command_recorder& recorder,
+                                               backend_texture_resource& texture,
+                                               const granit_texture_desc& desc,
+                                               const granit_texture_mipmap_range& range) {
   if (device_lost())
     return GRANIT_ERROR_DEVICE_LOST;
-  return observe_device_result(recorder.generate_mipmaps(device_, image, base_extent,
-                                                         base_mip_level, level_count,
-                                                         base_array_layer, array_layer_count));
+  const VkExtent3D base_extent{std::max(UINT32_C(1), desc.width >> range.base_mip_level),
+                               std::max(UINT32_C(1), desc.height >> range.base_mip_level),
+                               std::max(UINT32_C(1), desc.depth >> range.base_mip_level)};
+  return observe_device_result(recorder.generate_mipmaps(
+      device_, static_cast<vulkan_texture_resource&>(texture).native().image, base_extent,
+      range.base_mip_level, range.level_count, range.base_array_layer, range.array_layer_count));
 }
 
-granit_result renderer_state::fill_buffer(vulkan_command_recorder& recorder, VkBuffer buffer,
-                                          VkDeviceSize offset, VkDeviceSize size,
-                                          std::uint32_t value) {
+granit_result renderer_state::fill_buffer(vulkan_command_recorder& recorder,
+                                          backend_buffer_resource& buffer, std::uint64_t offset,
+                                          std::uint64_t size, std::uint32_t value) {
   if (device_lost())
     return GRANIT_ERROR_DEVICE_LOST;
-  return observe_device_result(recorder.fill_buffer(device_, buffer, offset, size, value));
+  return observe_device_result(recorder.fill_buffer(
+      device_, static_cast<vulkan_buffer_resource&>(buffer).native().buffer, offset, size, value));
 }
 
 granit_result renderer_state::bind_graphics_pipeline(vulkan_command_recorder& recorder,
