@@ -25,15 +25,15 @@
 namespace {
 
 TEST_CASE("Pipeline资源创建把空Renderer归类为无效句柄", "[pipeline][contract]") {
-  const granit_bind_group_layout_desc bind_layout_desc{
-      GRANIT_BIND_GROUP_LAYOUT_DESC_VERSION_1_SIZE, 0, nullptr, 0};
+  const granit_bind_group_layout_desc bind_layout_desc{GRANIT_BIND_GROUP_LAYOUT_DESC_VERSION_1_SIZE,
+                                                       0, nullptr, 0};
   granit_bind_group_layout bind_layout = UINT64_C(1);
   CHECK(granit_bind_group_layout_create(GRANIT_NULL_HANDLE, &bind_layout_desc, &bind_layout) ==
         GRANIT_ERROR_INVALID_HANDLE);
   CHECK(bind_layout == GRANIT_NULL_HANDLE);
 
-  const granit_pipeline_layout_desc pipeline_layout_desc{
-      GRANIT_PIPELINE_LAYOUT_DESC_VERSION_1_SIZE, 0, nullptr, 0};
+  const granit_pipeline_layout_desc pipeline_layout_desc{GRANIT_PIPELINE_LAYOUT_DESC_VERSION_1_SIZE,
+                                                         0, nullptr, 0};
   granit_pipeline_layout pipeline_layout = UINT64_C(1);
   CHECK(granit_pipeline_layout_create(GRANIT_NULL_HANDLE, &pipeline_layout_desc,
                                       &pipeline_layout) == GRANIT_ERROR_INVALID_HANDLE);
@@ -47,6 +47,26 @@ TEST_CASE("Pipeline资源创建把空Renderer归类为无效句柄", "[pipeline]
   CHECK(graphics.initialize(GRANIT_NULL_HANDLE, {}) == granit::result::invalid_handle);
   granit::compute_pipeline compute;
   CHECK(compute.initialize(GRANIT_NULL_HANDLE, {}) == granit::result::invalid_handle);
+}
+
+TEST_CASE("Bind Group 绑定描述校验版本和动态 Offset 指针", "[pipeline][contract]") {
+  const granit_bind_group group = UINT64_C(4);
+  granit_bind_groups_desc desc = GRANIT_BIND_GROUPS_DESC_INIT;
+  desc.bind_group_count = 1;
+  desc.bind_groups = &group;
+
+  desc.struct_size = GRANIT_BIND_GROUPS_DESC_VERSION_1_SIZE - 1;
+  CHECK(granit_command_recorder_bind_graphics_groups(UINT64_C(1), UINT64_C(2), UINT64_C(3),
+                                                     &desc) == GRANIT_ERROR_INVALID_ARGUMENT);
+  desc.struct_size = GRANIT_BIND_GROUPS_DESC_VERSION_1_SIZE;
+  desc.dynamic_offset_count = 1;
+  CHECK(granit_command_recorder_bind_compute_groups(UINT64_C(1), UINT64_C(2), UINT64_C(3), &desc) ==
+        GRANIT_ERROR_INVALID_ARGUMENT);
+
+  const std::uint32_t dynamic_offset = 256;
+  desc.dynamic_offsets = &dynamic_offset;
+  CHECK(granit_command_recorder_bind_graphics_groups(UINT64_C(1), UINT64_C(2), UINT64_C(3),
+                                                     &desc) == GRANIT_ERROR_UNSUPPORTED);
 }
 
 bool environment_unavailable(granit::result value) {

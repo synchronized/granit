@@ -600,8 +600,10 @@ std::uint64_t run_operations(granit_renderer renderer, thread_context& context,
           result = granit_command_recorder_bind_compute_pipeline(renderer, context.recorder,
                                                                  pipelines->compute_pipeline);
         if (result == GRANIT_SUCCESS) {
+          const granit_bind_groups_desc bind_desc{
+              GRANIT_BIND_GROUPS_DESC_VERSION_1_SIZE, 0, &context.compute_group, 1, 0, nullptr};
           result = granit_command_recorder_bind_compute_groups(
-              renderer, context.recorder, pipelines->compute_layout, 0, &context.compute_group, 1);
+              renderer, context.recorder, pipelines->compute_layout, &bind_desc);
         }
         if (result == GRANIT_SUCCESS)
           result = granit_command_recorder_dispatch(renderer, context.recorder, 1, 1, 1);

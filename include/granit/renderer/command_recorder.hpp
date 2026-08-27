@@ -143,24 +143,42 @@ public:
   }
   [[nodiscard]] result
   bind_graphics_groups(granit_pipeline_layout layout, std::uint32_t first_group,
-                       std::span<const granit_bind_group> bind_groups) noexcept {
-    if (bind_groups.empty() || bind_groups.size() > UINT32_MAX)
+                       std::span<const granit_bind_group> bind_groups,
+                       std::span<const std::uint32_t> dynamic_offsets = {}) noexcept {
+    if (bind_groups.empty() || bind_groups.size() > UINT32_MAX ||
+        dynamic_offsets.size() > UINT32_MAX)
       return result::invalid_argument;
-    return from_native(granit_command_recorder_bind_graphics_groups(
-        renderer_, handle_, layout, first_group, bind_groups.data(),
-        static_cast<std::uint32_t>(bind_groups.size())));
+    const granit_bind_groups_desc desc{
+        .struct_size = GRANIT_BIND_GROUPS_DESC_VERSION_1_SIZE,
+        .first_group = first_group,
+        .bind_groups = bind_groups.data(),
+        .bind_group_count = static_cast<std::uint32_t>(bind_groups.size()),
+        .dynamic_offset_count = static_cast<std::uint32_t>(dynamic_offsets.size()),
+        .dynamic_offsets = dynamic_offsets.data(),
+    };
+    return from_native(
+        granit_command_recorder_bind_graphics_groups(renderer_, handle_, layout, &desc));
   }
   [[nodiscard]] result bind_compute_pipeline(granit_compute_pipeline pipeline) noexcept {
     return from_native(granit_command_recorder_bind_compute_pipeline(renderer_, handle_, pipeline));
   }
   [[nodiscard]] result
   bind_compute_groups(granit_pipeline_layout layout, std::uint32_t first_group,
-                      std::span<const granit_bind_group> bind_groups) noexcept {
-    if (bind_groups.empty() || bind_groups.size() > UINT32_MAX)
+                      std::span<const granit_bind_group> bind_groups,
+                      std::span<const std::uint32_t> dynamic_offsets = {}) noexcept {
+    if (bind_groups.empty() || bind_groups.size() > UINT32_MAX ||
+        dynamic_offsets.size() > UINT32_MAX)
       return result::invalid_argument;
-    return from_native(granit_command_recorder_bind_compute_groups(
-        renderer_, handle_, layout, first_group, bind_groups.data(),
-        static_cast<std::uint32_t>(bind_groups.size())));
+    const granit_bind_groups_desc desc{
+        .struct_size = GRANIT_BIND_GROUPS_DESC_VERSION_1_SIZE,
+        .first_group = first_group,
+        .bind_groups = bind_groups.data(),
+        .bind_group_count = static_cast<std::uint32_t>(bind_groups.size()),
+        .dynamic_offset_count = static_cast<std::uint32_t>(dynamic_offsets.size()),
+        .dynamic_offsets = dynamic_offsets.data(),
+    };
+    return from_native(
+        granit_command_recorder_bind_compute_groups(renderer_, handle_, layout, &desc));
   }
   [[nodiscard]] result dispatch(std::uint32_t group_count_x, std::uint32_t group_count_y = 1,
                                 std::uint32_t group_count_z = 1) noexcept {

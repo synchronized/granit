@@ -21,6 +21,7 @@ enum class binding_type : std::uint32_t {
   sampled_texture = GRANIT_BINDING_TYPE_SAMPLED_TEXTURE,
   storage_texture = GRANIT_BINDING_TYPE_STORAGE_TEXTURE,
   sampler = GRANIT_BINDING_TYPE_SAMPLER,
+  dynamic_uniform_buffer = GRANIT_BINDING_TYPE_DYNAMIC_UNIFORM_BUFFER,
 };
 
 enum class shader_stage_flags : std::uint32_t {

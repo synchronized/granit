@@ -8,7 +8,7 @@ Granit 是一个基于 Vulkan 的 C++20 渲染库，面向游戏引擎、实时�
 C ABI 隔离动态库边界，并在其上提供现代 C++20 RAII 包装；普通用户无需接触 Vulkan 类型、
 句柄和生命周期管理。
 
-> **最新发布版本：0.2.0；main 正在开发 0.3.0。** 0.x 不保证 API/ABI 稳定；升级前请阅读
+> **最新发布版本：0.3.0；main 正在开发 0.4.0。** 0.x 不保证 API/ABI 稳定；升级前请阅读
 > [变更记录](CHANGELOG.md)和[兼容策略](docs/reference/compatibility.md)。
 
 ## 项目定位

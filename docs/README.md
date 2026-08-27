@@ -42,6 +42,7 @@
 - [构建、测试、安装与 CMake 集成](guides/build.md)
 - [发布验收](guides/release.md)
 - [从 0.2 迁移到 0.3](guides/migrate-0.2-to-0.3.md)
+- [从 0.3 迁移到 0.4](guides/migrate-0.3-to-0.4.md)
 - [示例程序及运行方式](guides/examples.md)
 - [同步批量上传](guides/upload-batch.md)
 - [纹理同步回读](guides/texture-readback.md)

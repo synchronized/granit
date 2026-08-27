@@ -88,6 +88,24 @@ typedef struct granit_command_recorder_desc {
 #define GRANIT_COMMAND_RECORDER_DESC_INIT                                                          \
   {GRANIT_COMMAND_RECORDER_DESC_VERSION_1_SIZE, UINT32_C(0), UINT64_C(0)}
 
+/**
+ * 一次 Bind Group 绑定操作。
+ *
+ * 动态 Offset 按 Bind Group 数组顺序排列；组内按 Layout 的 binding 数值升序排列。调用期间复制
+ * 两个数组，返回后调用方可以立即释放。动态 Binding 的运行时支持由对应后端能力决定。
+ */
+typedef struct granit_bind_groups_desc {
+  uint32_t struct_size;
+  uint32_t first_group;
+  const granit_bind_group* bind_groups;
+  uint32_t bind_group_count;
+  uint32_t dynamic_offset_count;
+  const uint32_t* dynamic_offsets;
+} granit_bind_groups_desc;
+#define GRANIT_BIND_GROUPS_DESC_VERSION_1_SIZE UINT32_C(32)
+#define GRANIT_BIND_GROUPS_DESC_INIT                                                               \
+  {GRANIT_BIND_GROUPS_DESC_VERSION_1_SIZE, UINT32_C(0), 0, UINT32_C(0), UINT32_C(0), 0}
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -149,12 +167,12 @@ GRANIT_API granit_result granit_command_recorder_bind_graphics_pipeline(
     granit_renderer renderer, granit_command_recorder recorder, granit_graphics_pipeline pipeline);
 GRANIT_API granit_result granit_command_recorder_bind_graphics_groups(
     granit_renderer renderer, granit_command_recorder recorder, granit_pipeline_layout layout,
-    uint32_t first_group, const granit_bind_group* bind_groups, uint32_t bind_group_count);
+    const granit_bind_groups_desc* desc);
 GRANIT_API granit_result granit_command_recorder_bind_compute_pipeline(
     granit_renderer renderer, granit_command_recorder recorder, granit_compute_pipeline pipeline);
 GRANIT_API granit_result granit_command_recorder_bind_compute_groups(
     granit_renderer renderer, granit_command_recorder recorder, granit_pipeline_layout layout,
-    uint32_t first_group, const granit_bind_group* bind_groups, uint32_t bind_group_count);
+    const granit_bind_groups_desc* desc);
 GRANIT_API granit_result granit_command_recorder_dispatch(granit_renderer renderer,
                                                           granit_command_recorder recorder,
                                                           uint32_t group_count_x,

@@ -67,8 +67,10 @@ granit_result record_canvas_pass(granit_renderer renderer, granit_command_record
         batch_material_groups.push_back(group);
         if (!prepared_material_groups.contains(group)) {
           // 在 Rendering 外触发本帧所有采样资源的状态准备并让 Recorder 保留资源。
+          const granit_bind_groups_desc bind_desc{
+              GRANIT_BIND_GROUPS_DESC_VERSION_1_SIZE, 1, &group, 1, 0, nullptr};
           result = granit_command_recorder_bind_graphics_groups(
-              renderer, recorder, material.pipeline_layout, 1, &group, 1);
+              renderer, recorder, material.pipeline_layout, &bind_desc);
           if (result != GRANIT_SUCCESS)
             break;
           prepared_material_groups.insert(group);
@@ -82,9 +84,11 @@ granit_result record_canvas_pass(granit_renderer renderer, granit_command_record
       batch_material_groups.empty() ? GRANIT_NULL_HANDLE : batch_material_groups.front();
   const std::array groups{bindings.frame_group(), first_material_group, bindings.object_group()};
   if (result == GRANIT_SUCCESS) {
-    result = granit_command_recorder_bind_graphics_groups(
-        renderer, recorder, material.pipeline_layout, 0, groups.data(),
-        static_cast<std::uint32_t>(groups.size()));
+    const granit_bind_groups_desc bind_desc{
+        GRANIT_BIND_GROUPS_DESC_VERSION_1_SIZE,    0, groups.data(),
+        static_cast<std::uint32_t>(groups.size()), 0, nullptr};
+    result = granit_command_recorder_bind_graphics_groups(renderer, recorder,
+                                                          material.pipeline_layout, &bind_desc);
   }
   const granit_vertex_buffer_binding vertex_binding{geometry.vertex_buffer(), 0};
   if (result == GRANIT_SUCCESS) {
@@ -115,8 +119,10 @@ granit_result record_canvas_pass(granit_renderer renderer, granit_command_record
       const auto& batch = batches[index];
       const auto batch_material_group = batch_material_groups[index];
       if (batch_material_group != current_material_group) {
-        result = granit_command_recorder_bind_graphics_groups(
-            renderer, recorder, material.pipeline_layout, 1, &batch_material_group, 1);
+        const granit_bind_groups_desc bind_desc{
+            GRANIT_BIND_GROUPS_DESC_VERSION_1_SIZE, 1, &batch_material_group, 1, 0, nullptr};
+        result = granit_command_recorder_bind_graphics_groups(renderer, recorder,
+                                                              material.pipeline_layout, &bind_desc);
         current_material_group = batch_material_group;
       }
       const auto scissor = batch.state.scissor.width == 0 || batch.state.scissor.height == 0

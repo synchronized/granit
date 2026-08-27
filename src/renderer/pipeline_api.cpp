@@ -56,9 +56,11 @@ extern "C" granit_result granit_bind_group_layout_create(granit_renderer rendere
   for (uint32_t index = 0; index < desc->entry_count; ++index) {
     const auto& entry = desc->entries[index];
     if (entry.type < GRANIT_BINDING_TYPE_UNIFORM_BUFFER ||
-        entry.type > GRANIT_BINDING_TYPE_SAMPLER || entry.array_count == 0 ||
+        entry.type > GRANIT_BINDING_TYPE_DYNAMIC_UNIFORM_BUFFER || entry.array_count == 0 ||
         entry.visibility == 0 || (entry.visibility & ~valid_stages) != 0)
       return GRANIT_ERROR_INVALID_ARGUMENT;
+    if (entry.type == GRANIT_BINDING_TYPE_DYNAMIC_UNIFORM_BUFFER)
+      return GRANIT_ERROR_UNSUPPORTED;
     for (uint32_t previous = 0; previous < index; ++previous) {
       if (desc->entries[previous].binding == entry.binding)
         return GRANIT_ERROR_INVALID_ARGUMENT;
@@ -84,8 +86,7 @@ extern "C" granit_result granit_bind_group_create(granit_renderer renderer,
   if (renderer == GRANIT_NULL_HANDLE)
     return GRANIT_ERROR_INVALID_HANDLE;
   if (!desc || desc->struct_size < GRANIT_BIND_GROUP_DESC_VERSION_1_SIZE || desc->reserved != 0 ||
-      desc->entry_count > 1024 ||
-      (desc->entry_count != 0 && !desc->entries))
+      desc->entry_count > 1024 || (desc->entry_count != 0 && !desc->entries))
     return GRANIT_ERROR_INVALID_ARGUMENT;
   if (desc->layout == GRANIT_NULL_HANDLE)
     return GRANIT_ERROR_INVALID_HANDLE;

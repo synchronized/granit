@@ -22,7 +22,7 @@
 | 二、Vulkan 与窗口输出 | 基本完成 | Renderer、Win32 Surface、Swapchain 和帧循环已实现 |
 | 三、GPU 资源 | 基本完成 | 资源、上传、回读、状态跟踪和安全退役已实现 |
 | 四、命令与帧同步 | 基本完成 | Recorder、提交、Frame、查询和恢复边界已实现 |
-| 五、基础渲染 | 进行中 | 既有能力已完成，新增 D-10 动态 Uniform Buffer Offset 待实施 |
+| 五、基础渲染 | 进行中 | D-10A 公共契约已完成，下一步实现动态 Offset 验证与后端绑定 |
 | 六、多线程与性能 | 已完成 | 压力测试、基线、批量提交与上传批处理已完成 |
 | 七、可选高层渲染 | 已完成 | H-02～H-08 路线闭合，参考管线与公共 UI/Text 已验证 |
 | 八、稳定化与跨平台 | 持续进行 | ABI 策略、诊断和更多平台 Surface 待后续推进 |
@@ -86,7 +86,7 @@
 
 ## 五、基础渲染
 
-**状态：进行中；既有任务已完成，D-10 待实施。**
+**状态：进行中；D-10A 已完成。**
 
 | 任务 | 优先级 | 状态 |
 |---|---:|---|
@@ -99,7 +99,7 @@
 | [D-07 Compute Pipeline](plans/D-07-compute-pipeline.md) | P1 | 已完成 |
 | [D-08 Pipeline 生产能力](plans/D-08-pipeline-production.md) | P1 | 已完成 |
 | [D-09 Bindless Resource Table](plans/D-09-bindless-resource-table.md) | P2 | 草案；等待真实瓶颈 |
-| [D-10 动态 Uniform Buffer Offset](plans/D-10-dynamic-uniform-buffer-offsets.md) | P1 | 待开始 |
+| [D-10 动态 Uniform Buffer Offset](plans/D-10-dynamic-uniform-buffer-offsets.md) | P1 | 进行中；D-10A 已完成 |
 
 ## 六、多线程与性能
 

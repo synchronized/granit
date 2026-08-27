@@ -10,6 +10,7 @@ Vulkan Pipeline、Pipeline Layout 或 Dynamic Rendering 结构。
 
 - 创建 Bind Group Layout，并由 Pipeline Layout 按组序号组合零至八个布局。
 - 使用 Buffer、Texture View 和 Sampler 创建不可变 Bind Group。
+- 公共 Binding 类型已预留 Dynamic Uniform Buffer；D-10B/C 完成前创建该 Layout 返回“不支持”。
 - 使用 Vertex Shader、Fragment Shader、颜色格式、可选深度模板格式和样本数创建 Pipeline。
 - 支持点、线和三角形拓扑，以及正面绕序、剔除模式和 Fill/Line/Point 多边形模式。
 - 支持深度测试、深度写入、比较操作和可选固定 depth bias，以及每个颜色附件独立的混合与写入

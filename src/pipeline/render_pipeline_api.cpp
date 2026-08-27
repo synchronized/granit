@@ -171,8 +171,10 @@ granit_result record_tone_mapping(granit::lighting::tone_mapping_pipeline_resour
   }
   const auto group = binding.group();
   if (result == GRANIT_SUCCESS) {
+    const granit_bind_groups_desc bind_desc{
+        GRANIT_BIND_GROUPS_DESC_VERSION_1_SIZE, 0, &group, 1, 0, nullptr};
     result = granit_command_recorder_bind_graphics_groups(renderer, recorder,
-                                                          pipeline.pipeline_layout(), 0, &group, 1);
+                                                          pipeline.pipeline_layout(), &bind_desc);
   }
   const granit_viewport viewport{0, 0, static_cast<float>(width), static_cast<float>(height), 0, 1};
   const granit_scissor scissor{0, 0, width, height};
@@ -263,9 +265,11 @@ record_opaque_draws(pipeline_state& state, granit_command_recorder recorder,
     const std::array groups{cached.bindings.frame_group(), material.material_group,
                             cached.bindings.object_group(), cached.lighting.group()};
     if (result == GRANIT_SUCCESS) {
-      result = granit_command_recorder_bind_graphics_groups(
-          state.renderer, recorder, material.pipeline_layout, 0, groups.data(),
-          static_cast<uint32_t>(groups.size()));
+      const granit_bind_groups_desc bind_desc{
+          GRANIT_BIND_GROUPS_DESC_VERSION_1_SIZE, 0, groups.data(),
+          static_cast<uint32_t>(groups.size()),   0, nullptr};
+      result = granit_command_recorder_bind_graphics_groups(state.renderer, recorder,
+                                                            material.pipeline_layout, &bind_desc);
     }
     if (result == GRANIT_SUCCESS)
       result = granit_command_recorder_set_viewports(state.renderer, recorder, 0, &viewport, 1);
@@ -416,9 +420,11 @@ granit_result record_shadow_draws(pipeline_state& state, granit_command_recorder
       break;
     const std::array groups{cached.bindings.object_group(), cached.lighting.group()};
     if (result == GRANIT_SUCCESS) {
-      result = granit_command_recorder_bind_graphics_groups(
-          state.renderer, recorder, material.pipeline_layout, 2, groups.data(),
-          static_cast<uint32_t>(groups.size()));
+      const granit_bind_groups_desc bind_desc{
+          GRANIT_BIND_GROUPS_DESC_VERSION_1_SIZE, 2, groups.data(),
+          static_cast<uint32_t>(groups.size()),   0, nullptr};
+      result = granit_command_recorder_bind_graphics_groups(state.renderer, recorder,
+                                                            material.pipeline_layout, &bind_desc);
     }
     if (result != GRANIT_SUCCESS)
       break;

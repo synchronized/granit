@@ -57,6 +57,10 @@ Buffer Copy 支持一次传入多个区域。参与命令的 Buffer 会由 Recor
 Graphics Pipeline 可以单独绑定；Bind Group 通过 Pipeline Layout 和起始组序号批量绑定。Recorder
 会保持 Pipeline、Pipeline Layout 与 Bind Group，直至提交完成并重置。
 
+Graphics 与 Compute 的 Bind Group 绑定函数接收 `granit_bind_groups_desc`。描述中的 Bind Group
+和动态 Offset 数组只要求在调用期间有效，Recorder 会复制所需内容。动态 Offset 的公共排列规则
+已经确定，但 D-10B/C 完成前非空动态 Offset 数组返回 `GRANIT_ERROR_UNSUPPORTED`。
+
 Viewport 与 Scissor 支持批量设置。Vertex/Index Buffer 在 Dynamic Rendering 开始前绑定，以便
 自动屏障在渲染区域外完成；Draw 和 Draw Indexed 只能在渲染区域内录制。
 
