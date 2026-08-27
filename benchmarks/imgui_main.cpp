@@ -95,7 +95,8 @@ bool run_case(std::string_view name, std::uint32_t command_count, std::uint32_t 
         std::chrono::duration<double, std::nano>(clock_type::now() - begin).count();
     samples.push_back(elapsed / iterations);
   }
-  const auto mean = std::accumulate(samples.begin(), samples.end(), 0.0) / samples.size();
+  const auto mean =
+      std::accumulate(samples.begin(), samples.end(), 0.0) / static_cast<double>(samples.size());
   std::cout << "1," << name << ',' << command_count << ',' << iterations << ',' << sample_count
             << ',' << mean << ',' << percentile(samples, 0.50) << ',' << percentile(samples, 0.95)
             << ',' << percentile(samples, 0.99) << ',' << checksum << '\n';

@@ -64,6 +64,7 @@ function(granit_target_compile_warnings target)
       PRIVATE
         $<$<COMPILE_LANG_AND_ID:CXX,GNU,Clang,AppleClang>:-Wall>
         $<$<COMPILE_LANG_AND_ID:CXX,GNU,Clang,AppleClang>:-Wextra>
+        $<$<COMPILE_LANG_AND_ID:CXX,GNU>:-Wconversion>
         $<$<COMPILE_LANG_AND_ID:CXX,Clang,AppleClang>:-Wshorten-64-to-32>
     )
   endif()

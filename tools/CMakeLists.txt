@@ -28,7 +28,10 @@ target_link_libraries(granit_shader_tools_core PRIVATE Threads::Threads)
 target_include_directories(
   granit_shader_tools_core
   PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}"
-  PRIVATE "${GRANIT_SPIRV_REFLECT_DIR}" "${GRANIT_SPIRV_HEADERS_DIR}"
+)
+target_include_directories(
+  granit_shader_tools_core
+  SYSTEM PRIVATE "${GRANIT_SPIRV_REFLECT_DIR}" "${GRANIT_SPIRV_HEADERS_DIR}"
 )
 target_compile_definitions(granit_shader_tools_core PRIVATE SPIRV_REFLECT_USE_SYSTEM_SPIRV_H)
 granit_target_compile_warnings(granit_shader_tools_core)
