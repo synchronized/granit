@@ -112,7 +112,7 @@ vulkan_command_recorder_resource::vulkan_command_recorder_resource(
 
 vulkan_command_recorder_resource::~vulkan_command_recorder_resource() {
   if (renderer_) {
-    renderer_->destroy_native_command_recorder(native_);
+    renderer_->destroy_native_command_recorder(*this);
   }
 }
 

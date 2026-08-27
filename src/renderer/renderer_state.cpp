@@ -1652,29 +1652,42 @@ void renderer_state::destroy_native_compute_pipeline(VkPipeline pipeline) noexce
   }
 }
 
-granit_result
-renderer_state::create_native_command_recorder(vulkan_command_recorder& recorder) noexcept {
+granit_result renderer_state::create_native_command_recorder(
+    backend_command_recorder_resource& resource) noexcept {
   if (device_lost())
     return GRANIT_ERROR_DEVICE_LOST;
+  auto& recorder = static_cast<vulkan_command_recorder_resource&>(resource).native();
   return observe_device_result(recorder.initialize(device_));
 }
 
-granit_result renderer_state::begin_command_recorder(vulkan_command_recorder& recorder) noexcept {
+granit_result
+renderer_state::begin_command_recorder(backend_command_recorder_resource& resource) noexcept {
   if (device_lost())
     return GRANIT_ERROR_DEVICE_LOST;
+  auto& recorder = static_cast<vulkan_command_recorder_resource&>(resource).native();
   return observe_device_result(recorder.begin(device_));
 }
 
-granit_result renderer_state::end_command_recorder(vulkan_command_recorder& recorder) noexcept {
+granit_result
+renderer_state::end_command_recorder(backend_command_recorder_resource& resource) noexcept {
   if (device_lost())
     return GRANIT_ERROR_DEVICE_LOST;
+  auto& recorder = static_cast<vulkan_command_recorder_resource&>(resource).native();
   return observe_device_result(recorder.end(device_));
 }
 
-granit_result renderer_state::reset_command_recorder(vulkan_command_recorder& recorder) noexcept {
+granit_result
+renderer_state::reset_command_recorder(backend_command_recorder_resource& resource) noexcept {
   if (device_lost())
     return GRANIT_ERROR_DEVICE_LOST;
+  auto& recorder = static_cast<vulkan_command_recorder_resource&>(resource).native();
   return observe_device_result(recorder.reset(device_));
+}
+
+bool renderer_state::command_recorder_is_recording(
+    backend_command_recorder_resource& resource) noexcept {
+  return static_cast<vulkan_command_recorder_resource&>(resource).native().state() ==
+         command_recorder_state::recording;
 }
 
 granit_result renderer_state::copy_buffer(vulkan_command_recorder& recorder,
@@ -2814,8 +2827,9 @@ std::size_t renderer_state::drain_retired() noexcept {
   return retirement_queue_.drain();
 }
 
-void renderer_state::destroy_native_command_recorder(vulkan_command_recorder& recorder) noexcept {
-  recorder.destroy(device_);
+void renderer_state::destroy_native_command_recorder(
+    backend_command_recorder_resource& resource) noexcept {
+  static_cast<vulkan_command_recorder_resource&>(resource).native().destroy(device_);
 }
 
 } // namespace granit::detail

@@ -161,10 +161,15 @@ public:
                                  backend_compute_pipeline_resource& pipeline) noexcept;
   void destroy_native_compute_pipeline(VkPipeline pipeline) noexcept;
   [[nodiscard]] granit_result
-  create_native_command_recorder(vulkan_command_recorder& recorder) noexcept;
-  [[nodiscard]] granit_result begin_command_recorder(vulkan_command_recorder& recorder) noexcept;
-  [[nodiscard]] granit_result end_command_recorder(vulkan_command_recorder& recorder) noexcept;
-  [[nodiscard]] granit_result reset_command_recorder(vulkan_command_recorder& recorder) noexcept;
+  create_native_command_recorder(backend_command_recorder_resource& recorder) noexcept;
+  [[nodiscard]] granit_result
+  begin_command_recorder(backend_command_recorder_resource& recorder) noexcept;
+  [[nodiscard]] granit_result
+  end_command_recorder(backend_command_recorder_resource& recorder) noexcept;
+  [[nodiscard]] granit_result
+  reset_command_recorder(backend_command_recorder_resource& recorder) noexcept;
+  [[nodiscard]] bool
+  command_recorder_is_recording(backend_command_recorder_resource& recorder) noexcept;
   [[nodiscard]] granit_result copy_buffer(vulkan_command_recorder& recorder,
                                           backend_buffer_resource& source,
                                           backend_buffer_resource& destination,
@@ -286,7 +291,7 @@ public:
                        std::shared_ptr<void> resource);
   std::size_t collect_retired() noexcept;
   std::size_t drain_retired() noexcept;
-  void destroy_native_command_recorder(vulkan_command_recorder& recorder) noexcept;
+  void destroy_native_command_recorder(backend_command_recorder_resource& recorder) noexcept;
 
   void set_domain(std::uint32_t domain) noexcept { domain_ = domain; }
   [[nodiscard]] std::uint32_t domain() const noexcept { return domain_; }
