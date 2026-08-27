@@ -33,6 +33,7 @@
 #include "backend/vulkan/timestamp_query.h"
 #include "core/handle_table.h"
 #include "core/lifecycle_validation.h"
+#include "renderer/dynamic_uniform_offsets.h"
 #include "renderer/renderer_state.h"
 
 namespace granit::detail {
@@ -218,7 +219,8 @@ public:
                                                    granit_command_recorder recorder,
                                                    granit_pipeline_layout layout,
                                                    std::uint32_t first_group,
-                                                   std::span<const granit_bind_group> bind_groups);
+                                                   std::span<const granit_bind_group> bind_groups,
+                                                   std::span<const std::uint32_t> dynamic_offsets);
   [[nodiscard]] granit_result bind_compute_pipeline(granit_renderer renderer,
                                                     granit_command_recorder recorder,
                                                     granit_compute_pipeline pipeline);
@@ -226,7 +228,8 @@ public:
                                                   granit_command_recorder recorder,
                                                   granit_pipeline_layout layout,
                                                   std::uint32_t first_group,
-                                                  std::span<const granit_bind_group> bind_groups);
+                                                  std::span<const granit_bind_group> bind_groups,
+                                                  std::span<const std::uint32_t> dynamic_offsets);
   [[nodiscard]] granit_result dispatch(granit_renderer renderer, granit_command_recorder recorder,
                                        std::uint32_t group_count_x, std::uint32_t group_count_y,
                                        std::uint32_t group_count_z);
@@ -396,6 +399,7 @@ private:
     std::vector<vulkan_image_access> graphics_image_accesses;
     std::vector<std::pair<VkBuffer, VkAccessFlags2>> compute_buffer_accesses;
     std::vector<vulkan_image_access> compute_image_accesses;
+    std::vector<dynamic_uniform_binding> dynamic_uniform_bindings;
     std::unique_ptr<backend_bind_group_resource> native;
   };
   struct graphics_pipeline_record {

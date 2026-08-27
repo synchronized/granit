@@ -15,6 +15,7 @@
 #include <atomic>
 #include <barrier>
 #include <cstddef>
+#include <cstring>
 #include <fstream>
 #include <iterator>
 #include <span>
@@ -25,15 +26,15 @@
 namespace {
 
 TEST_CASE("Pipeline资源创建把空Renderer归类为无效句柄", "[pipeline][contract]") {
-  const granit_bind_group_layout_desc bind_layout_desc{
-      GRANIT_BIND_GROUP_LAYOUT_DESC_VERSION_1_SIZE, 0, nullptr, 0};
+  const granit_bind_group_layout_desc bind_layout_desc{GRANIT_BIND_GROUP_LAYOUT_DESC_VERSION_1_SIZE,
+                                                       0, nullptr, 0};
   granit_bind_group_layout bind_layout = UINT64_C(1);
   CHECK(granit_bind_group_layout_create(GRANIT_NULL_HANDLE, &bind_layout_desc, &bind_layout) ==
         GRANIT_ERROR_INVALID_HANDLE);
   CHECK(bind_layout == GRANIT_NULL_HANDLE);
 
-  const granit_pipeline_layout_desc pipeline_layout_desc{
-      GRANIT_PIPELINE_LAYOUT_DESC_VERSION_1_SIZE, 0, nullptr, 0};
+  const granit_pipeline_layout_desc pipeline_layout_desc{GRANIT_PIPELINE_LAYOUT_DESC_VERSION_1_SIZE,
+                                                         0, nullptr, 0};
   granit_pipeline_layout pipeline_layout = UINT64_C(1);
   CHECK(granit_pipeline_layout_create(GRANIT_NULL_HANDLE, &pipeline_layout_desc,
                                       &pipeline_layout) == GRANIT_ERROR_INVALID_HANDLE);
@@ -49,6 +50,26 @@ TEST_CASE("Pipeline资源创建把空Renderer归类为无效句柄", "[pipeline]
   CHECK(compute.initialize(GRANIT_NULL_HANDLE, {}) == granit::result::invalid_handle);
 }
 
+TEST_CASE("Bind Group 绑定描述校验版本和动态 Offset 指针", "[pipeline][contract]") {
+  const granit_bind_group group = UINT64_C(4);
+  granit_bind_groups_desc desc = GRANIT_BIND_GROUPS_DESC_INIT;
+  desc.bind_group_count = 1;
+  desc.bind_groups = &group;
+
+  desc.struct_size = GRANIT_BIND_GROUPS_DESC_VERSION_1_SIZE - 1;
+  CHECK(granit_command_recorder_bind_graphics_groups(UINT64_C(1), UINT64_C(2), UINT64_C(3),
+                                                     &desc) == GRANIT_ERROR_INVALID_ARGUMENT);
+  desc.struct_size = GRANIT_BIND_GROUPS_DESC_VERSION_1_SIZE;
+  desc.dynamic_offset_count = 1;
+  CHECK(granit_command_recorder_bind_compute_groups(UINT64_C(1), UINT64_C(2), UINT64_C(3), &desc) ==
+        GRANIT_ERROR_INVALID_ARGUMENT);
+
+  const std::uint32_t dynamic_offset = 256;
+  desc.dynamic_offsets = &dynamic_offset;
+  CHECK(granit_command_recorder_bind_graphics_groups(UINT64_C(1), UINT64_C(2), UINT64_C(3),
+                                                     &desc) == GRANIT_ERROR_INVALID_HANDLE);
+}
+
 bool environment_unavailable(granit::result value) {
   return value == granit::result::backend_unavailable ||
          value == granit::result::incompatible_driver ||
@@ -62,6 +83,15 @@ std::vector<std::byte> load_shader(const char* name) {
   for (std::size_t index = 0; index < bytes.size(); ++index)
     result[index] = static_cast<std::byte>(bytes[index]);
   return result;
+}
+
+void count_validation_errors(granit_diagnostic_severity severity,
+                             granit_diagnostic_category category, const char*, std::uint32_t,
+                             void* user_data) noexcept {
+  if (severity == GRANIT_DIAGNOSTIC_SEVERITY_ERROR &&
+      category == GRANIT_DIAGNOSTIC_CATEGORY_VALIDATION) {
+    static_cast<std::atomic_uint32_t*>(user_data)->fetch_add(1, std::memory_order_relaxed);
+  }
 }
 
 TEST_CASE("空 Pipeline Layout 具有独立生命周期和 Renderer domain", "[pipeline]") {
@@ -127,6 +157,272 @@ TEST_CASE("Bind Group Layout 拒绝重复 binding 和非法可见阶段", "[pipe
   desc.entries = &invalid;
   CHECK(granit_bind_group_layout_create(UINT64_C(1), &desc, &layout) ==
         GRANIT_ERROR_INVALID_ARGUMENT);
+
+  granit_bind_group_layout_entry dynamic_array{0, GRANIT_BINDING_TYPE_DYNAMIC_UNIFORM_BUFFER, 2,
+                                               GRANIT_SHADER_STAGE_VERTEX_BIT};
+  desc.entries = &dynamic_array;
+  CHECK(granit_bind_group_layout_create(UINT64_C(1), &desc, &layout) ==
+        GRANIT_ERROR_INVALID_ARGUMENT);
+}
+
+TEST_CASE("动态 Uniform Offset 贯通 Bind Group 与图形计算命令录制", "[pipeline][bind-group]") {
+  granit::renderer renderer;
+  const auto result = renderer.initialize({.application_name = "granit-dynamic-uniform"});
+  if (environment_unavailable(result))
+    SKIP("当前运行环境没有满足要求的 Vulkan 设备");
+  REQUIRE(result == granit::result::success);
+
+  const std::array declarations{granit::bind_group_layout_entry{
+      .binding = 0,
+      .type = granit::binding_type::dynamic_uniform_buffer,
+      .visibility = granit::shader_stage_flags::vertex | granit::shader_stage_flags::compute}};
+  granit::bind_group_layout group_layout;
+  REQUIRE(group_layout.initialize(renderer.native_handle(), declarations) ==
+          granit::result::success);
+  const auto group_layout_handle = group_layout.native_handle();
+  granit::pipeline_layout pipeline_layout;
+  REQUIRE(
+      pipeline_layout.initialize(renderer.native_handle(), std::span{&group_layout_handle, 1}) ==
+      granit::result::success);
+
+  granit::buffer buffer;
+  REQUIRE(buffer.initialize(renderer.native_handle(),
+                            {.size = 512, .usage = granit::buffer_usage::uniform}) ==
+          granit::result::success);
+  const std::array entries{granit::bind_group_entry{
+      .binding = 0, .resource = buffer.native_handle(), .offset = 0, .size = 64}};
+  granit::bind_group group;
+  REQUIRE(group.initialize(renderer.native_handle(), group_layout.native_handle(), entries) ==
+          granit::result::success);
+
+  granit::command_recorder recorder;
+  REQUIRE(recorder.initialize(renderer.native_handle()) == granit::result::success);
+  REQUIRE(recorder.begin() == granit::result::success);
+  const granit_bind_group group_handle = group.native_handle();
+  const std::array valid_offsets{UINT32_C(256)};
+  const std::array out_of_range_offsets{UINT32_C(512)};
+  CHECK(recorder.bind_graphics_groups(pipeline_layout.native_handle(), 0,
+                                      std::span{&group_handle, 1}) ==
+        granit::result::invalid_argument);
+  CHECK(recorder.bind_graphics_groups(pipeline_layout.native_handle(), 0,
+                                      std::span{&group_handle, 1},
+                                      out_of_range_offsets) == granit::result::invalid_argument);
+  REQUIRE(recorder.bind_graphics_groups(pipeline_layout.native_handle(), 0,
+                                        std::span{&group_handle, 1},
+                                        valid_offsets) == granit::result::success);
+  REQUIRE(recorder.bind_compute_groups(pipeline_layout.native_handle(), 0,
+                                       std::span{&group_handle, 1},
+                                       valid_offsets) == granit::result::success);
+  REQUIRE(recorder.end() == granit::result::success);
+}
+
+TEST_CASE("动态 Offset 按 Bind Group 顺序跳过普通 Uniform", "[pipeline][bind-group]") {
+  granit::renderer renderer;
+  const auto result = renderer.initialize({.application_name = "granit-dynamic-uniform-order"});
+  if (environment_unavailable(result))
+    SKIP("当前运行环境没有满足要求的 Vulkan 设备");
+  REQUIRE(result == granit::result::success);
+
+  const std::array first_declarations{
+      granit::bind_group_layout_entry{.binding = 5,
+                                      .type = granit::binding_type::dynamic_uniform_buffer,
+                                      .visibility = granit::shader_stage_flags::vertex},
+      granit::bind_group_layout_entry{.binding = 0,
+                                      .type = granit::binding_type::uniform_buffer,
+                                      .visibility = granit::shader_stage_flags::vertex}};
+  const std::array second_declarations{
+      granit::bind_group_layout_entry{.binding = 2,
+                                      .type = granit::binding_type::dynamic_uniform_buffer,
+                                      .visibility = granit::shader_stage_flags::vertex}};
+  granit::bind_group_layout first_layout;
+  granit::bind_group_layout second_layout;
+  REQUIRE(first_layout.initialize(renderer.native_handle(), first_declarations) ==
+          granit::result::success);
+  REQUIRE(second_layout.initialize(renderer.native_handle(), second_declarations) ==
+          granit::result::success);
+  const std::array layout_handles{first_layout.native_handle(), second_layout.native_handle()};
+  granit::pipeline_layout pipeline_layout;
+  REQUIRE(pipeline_layout.initialize(renderer.native_handle(), layout_handles) ==
+          granit::result::success);
+
+  granit::buffer large_buffer;
+  granit::buffer small_buffer;
+  REQUIRE(large_buffer.initialize(renderer.native_handle(),
+                                  {.size = 512, .usage = granit::buffer_usage::uniform}) ==
+          granit::result::success);
+  REQUIRE(small_buffer.initialize(renderer.native_handle(),
+                                  {.size = 64, .usage = granit::buffer_usage::uniform}) ==
+          granit::result::success);
+  const std::array first_entries{
+      granit::bind_group_entry{
+          .binding = 5, .resource = large_buffer.native_handle(), .offset = 0, .size = 64},
+      granit::bind_group_entry{
+          .binding = 0, .resource = large_buffer.native_handle(), .offset = 0, .size = 64}};
+  const std::array second_entries{granit::bind_group_entry{
+      .binding = 2, .resource = small_buffer.native_handle(), .offset = 0, .size = 64}};
+  granit::bind_group first_group;
+  granit::bind_group second_group;
+  REQUIRE(first_group.initialize(renderer.native_handle(), first_layout.native_handle(),
+                                 first_entries) == granit::result::success);
+  REQUIRE(second_group.initialize(renderer.native_handle(), second_layout.native_handle(),
+                                  second_entries) == granit::result::success);
+
+  granit::command_recorder recorder;
+  REQUIRE(recorder.initialize(renderer.native_handle()) == granit::result::success);
+  REQUIRE(recorder.begin() == granit::result::success);
+  const std::array groups{first_group.native_handle(), second_group.native_handle()};
+  const std::array valid_offsets{UINT32_C(256), UINT32_C(0)};
+  const std::array reversed_offsets{UINT32_C(0), UINT32_C(256)};
+  CHECK(recorder.bind_graphics_groups(pipeline_layout.native_handle(), 0, groups,
+                                      reversed_offsets) == granit::result::invalid_argument);
+  REQUIRE(recorder.bind_graphics_groups(pipeline_layout.native_handle(), 0, groups,
+                                        valid_offsets) == granit::result::success);
+  REQUIRE(recorder.end() == granit::result::success);
+}
+
+TEST_CASE("动态 Uniform Offset 从同一 Buffer 绘制两个对象", "[pipeline][bind-group][smoke]") {
+  std::atomic_uint32_t validation_errors{};
+  granit::renderer renderer;
+  const auto result = renderer.initialize({.application_name = "granit-dynamic-uniform-smoke",
+                                           .enable_validation = true,
+                                           .diagnostics = count_validation_errors,
+                                           .diagnostic_user_data = &validation_errors});
+  if (environment_unavailable(result) || result == granit::result::unsupported)
+    SKIP("当前运行环境不支持验证层或没有满足要求的 Vulkan 设备");
+  REQUIRE(result == granit::result::success);
+
+  const auto vertex_code = load_shader("dynamic_uniform.vert.spv");
+  const auto fragment_code = load_shader("dynamic_uniform.frag.spv");
+  REQUIRE_FALSE(vertex_code.empty());
+  REQUIRE_FALSE(fragment_code.empty());
+  granit::shader vertex;
+  granit::shader fragment;
+  REQUIRE(vertex.initialize(renderer.native_handle(),
+                            {.stage = granit::shader_stage::vertex, .code = vertex_code}) ==
+          granit::result::success);
+  REQUIRE(fragment.initialize(renderer.native_handle(),
+                              {.stage = granit::shader_stage::fragment, .code = fragment_code}) ==
+          granit::result::success);
+
+  const std::array declarations{
+      granit::bind_group_layout_entry{.binding = 0,
+                                      .type = granit::binding_type::dynamic_uniform_buffer,
+                                      .visibility = granit::shader_stage_flags::vertex}};
+  granit::bind_group_layout group_layout;
+  REQUIRE(group_layout.initialize(renderer.native_handle(), declarations) ==
+          granit::result::success);
+  const auto group_layout_handle = group_layout.native_handle();
+  granit::pipeline_layout pipeline_layout;
+  REQUIRE(
+      pipeline_layout.initialize(renderer.native_handle(), std::span{&group_layout_handle, 1}) ==
+      granit::result::success);
+  const granit::texture_format format = granit::texture_format::rgba8_unorm;
+  granit::graphics_pipeline pipeline;
+  REQUIRE(pipeline.initialize(renderer.native_handle(),
+                              {.layout = pipeline_layout.native_handle(),
+                               .vertex_shader = vertex.native_handle(),
+                               .fragment_shader = fragment.native_handle(),
+                               .color_formats = std::span{&format, 1},
+                               .vertex_buffers = {},
+                               .primitive = {},
+                               .depth = {},
+                               .color_blends = {},
+                               .depth_bias = std::nullopt}) == granit::result::success);
+
+  std::array<std::byte, 512> uniform_data{};
+  const auto write_vec4 = [&uniform_data](std::size_t offset, const std::array<float, 4>& value) {
+    std::memcpy(uniform_data.data() + offset, value.data(), sizeof(value));
+  };
+  write_vec4(0, {-0.5F, 0.0F, 0.0F, 0.0F});
+  write_vec4(16, {1.0F, 0.0F, 0.0F, 1.0F});
+  write_vec4(256, {0.5F, 0.0F, 0.0F, 0.0F});
+  write_vec4(272, {0.0F, 1.0F, 0.0F, 1.0F});
+  granit::buffer uniform;
+  REQUIRE(uniform.initialize(renderer.native_handle(),
+                             {.size = uniform_data.size(), .usage = granit::buffer_usage::uniform},
+                             uniform_data) == granit::result::success);
+  const std::array entries{granit::bind_group_entry{
+      .binding = 0, .resource = uniform.native_handle(), .offset = 0, .size = 32}};
+  granit::bind_group group;
+  REQUIRE(group.initialize(renderer.native_handle(), group_layout.native_handle(), entries) ==
+          granit::result::success);
+
+  constexpr std::uint32_t width = 64;
+  constexpr std::uint32_t height = 32;
+  granit_texture_desc target_desc = GRANIT_TEXTURE_DESC_INIT;
+  target_desc.format = GRANIT_TEXTURE_FORMAT_RGBA8_UNORM;
+  target_desc.usage =
+      GRANIT_TEXTURE_USAGE_COLOR_ATTACHMENT_BIT | GRANIT_TEXTURE_USAGE_TRANSFER_SOURCE_BIT;
+  target_desc.width = width;
+  target_desc.height = height;
+  granit_texture target = GRANIT_NULL_HANDLE;
+  granit_texture_view target_view = GRANIT_NULL_HANDLE;
+  REQUIRE(granit_texture_create_with_default_view(renderer.native_handle(), &target_desc, &target,
+                                                  &target_view) == GRANIT_SUCCESS);
+  granit::buffer readback;
+  REQUIRE(readback.initialize(renderer.native_handle(),
+                              {.size = width * height * 4,
+                               .usage = granit::buffer_usage::transfer_destination,
+                               .location = granit::memory_location::readback}) ==
+          granit::result::success);
+
+  granit::command_recorder recorder;
+  REQUIRE(recorder.initialize(renderer.native_handle()) == granit::result::success);
+  REQUIRE(recorder.begin() == granit::result::success);
+  REQUIRE(recorder.bind_graphics_pipeline(pipeline.native_handle()) == granit::result::success);
+  const granit::viewport viewport{0, 0, width, height, 0, 1};
+  const granit::scissor scissor{0, 0, width, height};
+  REQUIRE(recorder.set_viewports(0, std::span{&viewport, 1}) == granit::result::success);
+  REQUIRE(recorder.set_scissors(0, std::span{&scissor, 1}) == granit::result::success);
+  const granit_bind_group group_handle = group.native_handle();
+  const std::array left_offset{UINT32_C(0)};
+  const std::array right_offset{UINT32_C(256)};
+  // 首次绑定在 Rendering 外准备资源状态，Rendering 内只切换同一资源的动态 Offset。
+  REQUIRE(recorder.bind_graphics_groups(pipeline_layout.native_handle(), 0,
+                                        std::span{&group_handle, 1},
+                                        left_offset) == granit::result::success);
+  const granit::color_attachment_desc color{.view = target_view};
+  const granit::rendering_desc rendering{.color_attachments = std::span{&color, 1},
+                                         .area = {0, 0, width, height}};
+  REQUIRE(recorder.begin_rendering(rendering) == granit::result::success);
+  REQUIRE(recorder.draw(3) == granit::result::success);
+  REQUIRE(recorder.bind_graphics_groups(pipeline_layout.native_handle(), 0,
+                                        std::span{&group_handle, 1},
+                                        right_offset) == granit::result::success);
+  REQUIRE(recorder.draw(3) == granit::result::success);
+  REQUIRE(recorder.end_rendering() == granit::result::success);
+  const granit_texture_data_layout copy_layout{};
+  const granit_texture_write_region copy_region{.mip_level = 0,
+                                                .base_array_layer = 0,
+                                                .array_layer_count = 1,
+                                                .aspect = GRANIT_TEXTURE_ASPECT_COLOR_BIT,
+                                                .x = 0,
+                                                .y = 0,
+                                                .z = 0,
+                                                .width = width,
+                                                .height = height,
+                                                .depth = 1};
+  REQUIRE(recorder.copy_texture_to_buffer(target, readback.native_handle(), copy_layout,
+                                          copy_region) == granit::result::success);
+  REQUIRE(recorder.end() == granit::result::success);
+  REQUIRE(recorder.submit() == granit::result::success);
+  REQUIRE(recorder.reset() == granit::result::success);
+
+  void* mapped = nullptr;
+  REQUIRE(readback.map(0, width * height * 4, &mapped) == granit::result::success);
+  const auto* pixels = static_cast<const std::uint8_t*>(mapped);
+  const auto* left = pixels + (height / 2 * width + width / 4) * 4;
+  const auto* right = pixels + (height / 2 * width + width * 3 / 4) * 4;
+  CHECK(left[0] > 240);
+  CHECK(left[1] < 16);
+  CHECK(left[2] < 16);
+  CHECK(right[0] < 16);
+  CHECK(right[1] > 240);
+  CHECK(right[2] < 16);
+  REQUIRE(readback.unmap() == granit::result::success);
+  CHECK(validation_errors.load(std::memory_order_relaxed) == 0);
+  REQUIRE(granit_texture_view_destroy(renderer.native_handle(), target_view) == GRANIT_SUCCESS);
+  REQUIRE(granit_texture_destroy(renderer.native_handle(), target) == GRANIT_SUCCESS);
 }
 
 TEST_CASE("不可变 Bind Group 保持 Buffer 与 Sampler 生命周期", "[pipeline][bind-group]") {

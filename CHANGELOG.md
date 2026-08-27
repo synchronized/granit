@@ -8,7 +8,17 @@
 
 ## Unreleased
 
-当前没有尚未归入版本的公共变更。
+### 新增
+
+- Renderer 支持 Dynamic Uniform Buffer Binding，并为 Graphics/Compute Bind Group 绑定增加统一
+  的版本化描述、动态 Offset 数组及数量、对齐和范围校验。
+
+### 兼容性与迁移
+
+- `granit_command_recorder_bind_graphics_groups` 和
+  `granit_command_recorder_bind_compute_groups` 改为接收 `granit_bind_groups_desc`；旧参数需要迁移
+  到初始化后的描述结构。详见[从 0.3 迁移到 0.4](docs/guides/migrate-0.3-to-0.4.md)。
+- 项目开发版本已提升到 0.4.0；0.3.0 使用者必须重新编译，不承诺二进制兼容。
 
 ## 0.3.0 - 2026-08-26
 

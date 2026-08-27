@@ -247,16 +247,19 @@ extern "C" granit_result granit_command_recorder_bind_graphics_pipeline(
 
 extern "C" granit_result granit_command_recorder_bind_graphics_groups(
     granit_renderer renderer, granit_command_recorder recorder, granit_pipeline_layout layout,
-    uint32_t first_group, const granit_bind_group* bind_groups, uint32_t bind_group_count) {
+    const granit_bind_groups_desc* desc) {
   if (renderer == GRANIT_NULL_HANDLE || recorder == GRANIT_NULL_HANDLE ||
       layout == GRANIT_NULL_HANDLE)
     return GRANIT_ERROR_INVALID_HANDLE;
-  if (!bind_groups || bind_group_count == 0 || first_group > 8 || bind_group_count > 8 ||
-      first_group + bind_group_count > 8)
+  if (!desc || desc->struct_size < GRANIT_BIND_GROUPS_DESC_VERSION_1_SIZE || !desc->bind_groups ||
+      desc->bind_group_count == 0 || desc->first_group > 8 || desc->bind_group_count > 8 ||
+      desc->first_group + desc->bind_group_count > 8 ||
+      (desc->dynamic_offset_count != 0 && !desc->dynamic_offsets))
     return GRANIT_ERROR_INVALID_ARGUMENT;
   try {
     return granit::detail::renderer_registry::instance().bind_graphics_groups(
-        renderer, recorder, layout, first_group, {bind_groups, bind_group_count});
+        renderer, recorder, layout, desc->first_group, {desc->bind_groups, desc->bind_group_count},
+        {desc->dynamic_offsets, desc->dynamic_offset_count});
   } catch (const std::bad_alloc&) {
     return GRANIT_ERROR_OUT_OF_MEMORY;
   } catch (...) {
@@ -281,16 +284,19 @@ extern "C" granit_result granit_command_recorder_bind_compute_pipeline(
 
 extern "C" granit_result granit_command_recorder_bind_compute_groups(
     granit_renderer renderer, granit_command_recorder recorder, granit_pipeline_layout layout,
-    uint32_t first_group, const granit_bind_group* bind_groups, uint32_t bind_group_count) {
+    const granit_bind_groups_desc* desc) {
   if (renderer == GRANIT_NULL_HANDLE || recorder == GRANIT_NULL_HANDLE ||
       layout == GRANIT_NULL_HANDLE)
     return GRANIT_ERROR_INVALID_HANDLE;
-  if (!bind_groups || bind_group_count == 0 || first_group > 8 || bind_group_count > 8 ||
-      first_group + bind_group_count > 8)
+  if (!desc || desc->struct_size < GRANIT_BIND_GROUPS_DESC_VERSION_1_SIZE || !desc->bind_groups ||
+      desc->bind_group_count == 0 || desc->first_group > 8 || desc->bind_group_count > 8 ||
+      desc->first_group + desc->bind_group_count > 8 ||
+      (desc->dynamic_offset_count != 0 && !desc->dynamic_offsets))
     return GRANIT_ERROR_INVALID_ARGUMENT;
   try {
     return granit::detail::renderer_registry::instance().bind_compute_groups(
-        renderer, recorder, layout, first_group, {bind_groups, bind_group_count});
+        renderer, recorder, layout, desc->first_group, {desc->bind_groups, desc->bind_group_count},
+        {desc->dynamic_offsets, desc->dynamic_offset_count});
   } catch (const std::bad_alloc&) {
     return GRANIT_ERROR_OUT_OF_MEMORY;
   } catch (...) {

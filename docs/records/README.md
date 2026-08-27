@@ -19,6 +19,7 @@
 
 ## 稳定化与跨平台
 
+- [2026-08-27 D-10 动态 Uniform Buffer Offset 验收](2026-08-27-d10-dynamic-uniform-offsets.md)
 - [2026-08-27 S-10C WGSL Shader 工具链验收](2026-08-27-s10c-wgsl-toolchain-acceptance.md)
 - [2026-08-27 S-10B 桌面 WebGPU MVP 验收](2026-08-27-s10b-webgpu-mvp-acceptance.md)
 - [2026-08-26 S-10A Dawn 发布包评估](2026-08-26-s10a-dawn-package-evaluation.md)

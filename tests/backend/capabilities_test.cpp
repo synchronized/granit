@@ -2,8 +2,11 @@
 // Copyright (c) 2026 Granit contributors
 
 #include "backend/capabilities.h"
+#include "renderer/dynamic_uniform_offsets.h"
 
 #include <catch2/catch_all.hpp>
+
+#include <array>
 
 TEST_CASE("后端能力快照统一校验 Buffer 绑定限制", "[backend][capabilities]") {
   const granit::detail::backend_capabilities capabilities{
@@ -18,4 +21,31 @@ TEST_CASE("后端能力快照统一校验 Buffer 绑定限制", "[backend][capab
   CHECK_FALSE(capabilities.supports_buffer_binding(backend_buffer_binding_type::uniform, 4, 16));
   CHECK_FALSE(capabilities.supports_buffer_binding(backend_buffer_binding_type::storage, 16, 2048));
   CHECK_FALSE(capabilities.supports_buffer_binding(backend_buffer_binding_type::storage, 16, 0));
+}
+
+TEST_CASE("动态 Uniform Offset 校验数量、对齐、范围和溢出", "[backend][capabilities]") {
+  using granit::detail::dynamic_uniform_binding;
+  using granit::detail::sort_dynamic_uniform_bindings;
+  using granit::detail::validate_dynamic_uniform_offsets;
+
+  std::array bindings{
+      dynamic_uniform_binding{.binding = 5, .base_offset = 256, .range = 128, .buffer_size = 1024},
+      dynamic_uniform_binding{.binding = 1, .base_offset = 0, .range = 64, .buffer_size = 1024},
+  };
+  sort_dynamic_uniform_bindings(bindings);
+  REQUIRE(bindings[0].binding == 1);
+  REQUIRE(bindings[1].binding == 5);
+  const std::array valid_offsets{UINT32_C(256), UINT32_C(512)};
+  CHECK(validate_dynamic_uniform_offsets(bindings, valid_offsets, 256));
+
+  CHECK_FALSE(validate_dynamic_uniform_offsets(bindings, std::span{valid_offsets}.first(1), 256));
+  const std::array unaligned_offsets{UINT32_C(4), UINT32_C(0)};
+  CHECK_FALSE(validate_dynamic_uniform_offsets(bindings, unaligned_offsets, 256));
+  const std::array out_of_bounds_offsets{UINT32_C(0), UINT32_C(768)};
+  CHECK_FALSE(validate_dynamic_uniform_offsets(bindings, out_of_bounds_offsets, 256));
+
+  const std::array overflow_binding{dynamic_uniform_binding{
+      .binding = 0, .base_offset = UINT64_MAX - 8, .range = 16, .buffer_size = UINT64_MAX}};
+  const std::array overflow_offset{UINT32_C(256)};
+  CHECK_FALSE(validate_dynamic_uniform_offsets(overflow_binding, overflow_offset, 1));
 }

@@ -22,7 +22,7 @@
 | 二、Vulkan 与窗口输出 | 基本完成 | Renderer、Win32 Surface、Swapchain 和帧循环已实现 |
 | 三、GPU 资源 | 基本完成 | 资源、上传、回读、状态跟踪和安全退役已实现 |
 | 四、命令与帧同步 | 基本完成 | Recorder、提交、Frame、查询和恢复边界已实现 |
-| 五、基础渲染 | 已完成 | Graphics/Compute Pipeline、绑定与 Draw/Dispatch 已完成 |
+| 五、基础渲染 | 进行中 | D-10A/B 已完成，下一步接通 Vulkan 动态 Descriptor |
 | 六、多线程与性能 | 已完成 | 压力测试、基线、批量提交与上传批处理已完成 |
 | 七、可选高层渲染 | 已完成 | H-02～H-08 路线闭合，参考管线与公共 UI/Text 已验证 |
 | 八、稳定化与跨平台 | 持续进行 | ABI 策略、诊断和更多平台 Surface 待后续推进 |
@@ -86,7 +86,7 @@
 
 ## 五、基础渲染
 
-**状态：已完成。**
+**状态：进行中；D-10A、D-10B 已完成。**
 
 | 任务 | 优先级 | 状态 |
 |---|---:|---|
@@ -99,6 +99,7 @@
 | [D-07 Compute Pipeline](plans/D-07-compute-pipeline.md) | P1 | 已完成 |
 | [D-08 Pipeline 生产能力](plans/D-08-pipeline-production.md) | P1 | 已完成 |
 | [D-09 Bindless Resource Table](plans/D-09-bindless-resource-table.md) | P2 | 草案；等待真实瓶颈 |
+| [D-10 动态 Uniform Buffer Offset](plans/D-10-dynamic-uniform-buffer-offsets.md) | P1 | 已完成 |
 
 ## 六、多线程与性能
 
@@ -182,12 +183,13 @@
 
 ## 近期执行顺序
 
-1. 实现 S-10D Emscripten 设备请求、Canvas Surface、非阻塞主循环和资源加载。
-2. 浏览器平台层通过后进入 S-10E 高层路径与 CI。
-3. S-06D 最终验收等待稳定版本与 component 范围决策；不在 0.x 阶段提前宣布稳定。
-4. 完成 0.4.0 多后端与 Web 路径后，为 S-11 建立独立 Android Plan，再进入 NDK 与移动 Surface
+1. 实现 D-10 动态 Uniform Buffer Offset，为上层每帧 Uniform Arena 提供通用能力。
+2. 实现 S-10D Emscripten 设备请求、Canvas Surface、非阻塞主循环和资源加载。
+3. 浏览器平台层通过后进入 S-10E 高层路径与 CI。
+4. S-06D 最终验收等待稳定版本与 component 范围决策；不在 0.x 阶段提前宣布稳定。
+5. 完成 0.4.0 多后端与 Web 路径后，为 S-11 建立独立 Android Plan，再进入 NDK 与移动 Surface
    实现。
-5. H-09 的透明 PBR、CSM、Clustered Forward 与 Bindless 只在各自重新评估条件满足后独立恢复，
+6. H-09 的透明 PBR、CSM、Clustered Forward 与 Bindless 只在各自重新评估条件满足后独立恢复，
    不作为当前稳定化工作的前置项。
 
 若前置抽象不足，应先更新对应 Plan 和本路线图状态，再扩大公共 API。

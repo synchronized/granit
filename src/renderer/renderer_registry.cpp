@@ -258,11 +258,10 @@ granit_result renderer_registry::set_object_name(granit_renderer renderer, grani
 }
 
 void renderer_registry::emit_validation_diagnostic(granit_renderer renderer,
-                                                    std::string_view message) noexcept {
+                                                   std::string_view message) noexcept {
   const auto state = acquire(renderer);
   if (state) {
-    state->diagnostics().emit(diagnostic_severity::error, diagnostic_category::validation,
-                              message);
+    state->diagnostics().emit(diagnostic_severity::error, diagnostic_category::validation, message);
   }
 }
 
@@ -2361,47 +2360,54 @@ granit_result renderer_registry::create_bind_group(granit_renderer renderer,
         vulkan_bind_group_write write{.binding = entry.binding,
                                       .array_element = entry.array_element};
         if (declaration->type == GRANIT_BINDING_TYPE_UNIFORM_BUFFER ||
+            declaration->type == GRANIT_BINDING_TYPE_DYNAMIC_UNIFORM_BUFFER ||
             declaration->type == GRANIT_BINDING_TYPE_STORAGE_BUFFER) {
+          const bool uniform = declaration->type != GRANIT_BINDING_TYPE_STORAGE_BUFFER;
           const auto found = buffers_.find(entry.resource);
           if (found == buffers_.end() || found->second->renderer != state ||
               entry.offset >= found->second->desc.size || entry.size == 0 ||
               (entry.size != GRANIT_WHOLE_SIZE &&
                entry.size > found->second->desc.size - entry.offset))
             return GRANIT_ERROR_INVALID_ARGUMENT;
-          const auto required_usage = declaration->type == GRANIT_BINDING_TYPE_UNIFORM_BUFFER
-                                          ? GRANIT_BUFFER_USAGE_UNIFORM_BIT
-                                          : GRANIT_BUFFER_USAGE_STORAGE_BIT;
+          const auto required_usage =
+              uniform ? GRANIT_BUFFER_USAGE_UNIFORM_BIT : GRANIT_BUFFER_USAGE_STORAGE_BIT;
           if ((found->second->desc.usage & required_usage) == 0)
             return GRANIT_ERROR_INVALID_ARGUMENT;
           const auto range = entry.size == GRANIT_WHOLE_SIZE
                                  ? found->second->desc.size - entry.offset
                                  : entry.size;
-          const auto binding_type = declaration->type == GRANIT_BINDING_TYPE_UNIFORM_BUFFER
-                                        ? backend_buffer_binding_type::uniform
-                                        : backend_buffer_binding_type::storage;
+          const auto binding_type =
+              uniform ? backend_buffer_binding_type::uniform : backend_buffer_binding_type::storage;
           if (!state->capabilities().supports_buffer_binding(binding_type, entry.offset, range))
             return GRANIT_ERROR_INVALID_ARGUMENT;
-          write.type = declaration->type == GRANIT_BINDING_TYPE_UNIFORM_BUFFER
-                           ? VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER
-                           : VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+          write.type = declaration->type == GRANIT_BINDING_TYPE_DYNAMIC_UNIFORM_BUFFER
+                           ? VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC
+                       : uniform ? VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER
+                                 : VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
           write.buffer = native_buffer(*found->second->native).buffer;
           write.offset = entry.offset;
           write.range = range;
           record->resources.push_back(found->second);
+          if (declaration->type == GRANIT_BINDING_TYPE_DYNAMIC_UNIFORM_BUFFER) {
+            record->dynamic_uniform_bindings.push_back({
+                .binding = entry.binding,
+                .base_offset = entry.offset,
+                .range = range,
+                .buffer_size = found->second->desc.size,
+            });
+          }
           if ((declaration->visibility &
                (GRANIT_SHADER_STAGE_VERTEX_BIT | GRANIT_SHADER_STAGE_FRAGMENT_BIT)) != 0) {
-            const auto access = declaration->type == GRANIT_BINDING_TYPE_UNIFORM_BUFFER
-                                    ? VkAccessFlags2{VK_ACCESS_2_UNIFORM_READ_BIT}
-                                    : VkAccessFlags2{VK_ACCESS_2_SHADER_STORAGE_READ_BIT |
-                                                     VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT};
+            const auto access = uniform ? VkAccessFlags2{VK_ACCESS_2_UNIFORM_READ_BIT}
+                                        : VkAccessFlags2{VK_ACCESS_2_SHADER_STORAGE_READ_BIT |
+                                                         VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT};
             record->graphics_buffer_accesses.emplace_back(
                 native_buffer(*found->second->native).buffer, access);
           }
           if ((declaration->visibility & GRANIT_SHADER_STAGE_COMPUTE_BIT) != 0) {
-            const auto access = declaration->type == GRANIT_BINDING_TYPE_UNIFORM_BUFFER
-                                    ? VkAccessFlags2{VK_ACCESS_2_UNIFORM_READ_BIT}
-                                    : VkAccessFlags2{VK_ACCESS_2_SHADER_STORAGE_READ_BIT |
-                                                     VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT};
+            const auto access = uniform ? VkAccessFlags2{VK_ACCESS_2_UNIFORM_READ_BIT}
+                                        : VkAccessFlags2{VK_ACCESS_2_SHADER_STORAGE_READ_BIT |
+                                                         VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT};
             record->compute_buffer_accesses.emplace_back(
                 native_buffer(*found->second->native).buffer, access);
           }
@@ -2467,6 +2473,7 @@ granit_result renderer_registry::create_bind_group(granit_renderer renderer,
         }
         writes.push_back(write);
       }
+      sort_dynamic_uniform_bindings(record->dynamic_uniform_bindings);
     }
     record->renderer = state;
     record->layout = layout;
@@ -3595,7 +3602,8 @@ granit_result renderer_registry::bind_graphics_pipeline(granit_renderer renderer
 granit_result
 renderer_registry::bind_graphics_groups(granit_renderer renderer, granit_command_recorder recorder,
                                         granit_pipeline_layout layout, std::uint32_t first_group,
-                                        std::span<const granit_bind_group> bind_groups) {
+                                        std::span<const granit_bind_group> bind_groups,
+                                        std::span<const std::uint32_t> dynamic_offsets) {
   auto command = acquire_command_recorder(renderer, recorder);
   if (!command)
     return GRANIT_ERROR_INVALID_HANDLE;
@@ -3604,6 +3612,7 @@ renderer_registry::bind_graphics_groups(granit_renderer renderer, granit_command
   std::vector<VkDescriptorSet> native_groups;
   std::vector<std::pair<VkBuffer, VkAccessFlags2>> buffer_accesses;
   std::vector<vulkan_image_access> image_accesses;
+  std::vector<dynamic_uniform_binding> dynamic_bindings;
   {
     std::lock_guard lock{mutex_};
     const auto layout_found = pipeline_layouts_.find(layout);
@@ -3627,14 +3636,21 @@ renderer_registry::bind_graphics_groups(granit_renderer renderer, granit_command
                              found->second->graphics_buffer_accesses.end());
       image_accesses.insert(image_accesses.end(), found->second->graphics_image_accesses.begin(),
                             found->second->graphics_image_accesses.end());
+      dynamic_bindings.insert(dynamic_bindings.end(),
+                              found->second->dynamic_uniform_bindings.begin(),
+                              found->second->dynamic_uniform_bindings.end());
     }
   }
+  if (!validate_dynamic_uniform_offsets(
+          dynamic_bindings, dynamic_offsets,
+          command->renderer->capabilities().uniform_buffer_offset_alignment))
+    return GRANIT_ERROR_INVALID_ARGUMENT;
   std::lock_guard command_lock{command->mutex};
   if (native_command_recorder(*command->native).state() != command_recorder_state::recording)
     return GRANIT_ERROR_INVALID_ARGUMENT;
   const auto result = command->renderer->bind_graphics_groups(
       native_command_recorder(*command->native), native_pipeline_layout(*layout_record->native),
-      first_group, native_groups, buffer_accesses, image_accesses);
+      first_group, native_groups, dynamic_offsets, buffer_accesses, image_accesses);
   if (result == GRANIT_SUCCESS) {
     retain_resource(command->retained_resources, layout_record, layout_record->metadata);
     for (const auto& group : group_records)
@@ -3670,7 +3686,8 @@ granit_result renderer_registry::bind_compute_pipeline(granit_renderer renderer,
 granit_result
 renderer_registry::bind_compute_groups(granit_renderer renderer, granit_command_recorder recorder,
                                        granit_pipeline_layout layout, std::uint32_t first_group,
-                                       std::span<const granit_bind_group> bind_groups) {
+                                       std::span<const granit_bind_group> bind_groups,
+                                       std::span<const std::uint32_t> dynamic_offsets) {
   auto command = acquire_command_recorder(renderer, recorder);
   if (!command)
     return GRANIT_ERROR_INVALID_HANDLE;
@@ -3679,6 +3696,7 @@ renderer_registry::bind_compute_groups(granit_renderer renderer, granit_command_
   std::vector<VkDescriptorSet> native_groups;
   std::vector<std::pair<VkBuffer, VkAccessFlags2>> buffer_accesses;
   std::vector<vulkan_image_access> image_accesses;
+  std::vector<dynamic_uniform_binding> dynamic_bindings;
   {
     std::lock_guard lock{mutex_};
     const auto layout_found = pipeline_layouts_.find(layout);
@@ -3702,14 +3720,21 @@ renderer_registry::bind_compute_groups(granit_renderer renderer, granit_command_
                              found->second->compute_buffer_accesses.end());
       image_accesses.insert(image_accesses.end(), found->second->compute_image_accesses.begin(),
                             found->second->compute_image_accesses.end());
+      dynamic_bindings.insert(dynamic_bindings.end(),
+                              found->second->dynamic_uniform_bindings.begin(),
+                              found->second->dynamic_uniform_bindings.end());
     }
   }
+  if (!validate_dynamic_uniform_offsets(
+          dynamic_bindings, dynamic_offsets,
+          command->renderer->capabilities().uniform_buffer_offset_alignment))
+    return GRANIT_ERROR_INVALID_ARGUMENT;
   std::lock_guard command_lock{command->mutex};
   if (native_command_recorder(*command->native).state() != command_recorder_state::recording)
     return GRANIT_ERROR_INVALID_ARGUMENT;
   const auto result = command->renderer->bind_compute_groups(
       native_command_recorder(*command->native), native_pipeline_layout(*layout_record->native),
-      first_group, native_groups, buffer_accesses, image_accesses);
+      first_group, native_groups, dynamic_offsets, buffer_accesses, image_accesses);
   if (result == GRANIT_SUCCESS) {
     retain_resource(command->retained_resources, layout_record, layout_record->metadata);
     for (const auto& group : group_records)

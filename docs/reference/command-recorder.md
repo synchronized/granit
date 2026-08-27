@@ -57,6 +57,11 @@ Buffer Copy 支持一次传入多个区域。参与命令的 Buffer 会由 Recor
 Graphics Pipeline 可以单独绑定；Bind Group 通过 Pipeline Layout 和起始组序号批量绑定。Recorder
 会保持 Pipeline、Pipeline Layout 与 Bind Group，直至提交完成并重置。
 
+Graphics 与 Compute 的 Bind Group 绑定函数接收 `granit_bind_groups_desc`。描述中的 Bind Group
+和动态 Offset 数组只要求在调用期间有效，Recorder 会复制所需内容。动态 Offset 按 Bind Group
+数组顺序排列，并在每组内按 Layout 的 `binding` 升序排列。Offset 数量必须精确匹配动态 Binding
+数量，并满足设备对齐；基础 Offset、动态 Offset 与 Range 的和不得越过 Buffer，计算也不得溢出。
+
 Viewport 与 Scissor 支持批量设置。Vertex/Index Buffer 在 Dynamic Rendering 开始前绑定，以便
 自动屏障在渲染区域外完成；Draw 和 Draw Indexed 只能在渲染区域内录制。
 
@@ -73,9 +78,17 @@ if (recorder.initialize(renderer.native_handle()) == granit::result::success) {
 
 std::array<granit::command_recorder, 3> recorders;
 granit::command_recorder::submit_batch(recorders);
+
+const std::array groups{object_group.native_handle()};
+const std::array dynamic_offsets{object_uniform_offset};
+recorder.bind_graphics_groups(pipeline_layout.native_handle(), 0, groups, dynamic_offsets);
 ```
 
 包装类型无异常、不可复制且可以移动。`reset()` 重置录制状态，`destroy()` 销毁 Recorder 句柄。
+同一个动态 Uniform Bind Group 可以在多次 Draw 前传入不同 Offset，复用每帧 Uniform Arena；
+Offset 的对齐步长由设备决定，上层分配器必须按设备能力生成地址。
+首次 Bind Group 绑定应在 `begin_rendering` 前完成，让 Granit 准备资源状态；进入 Rendering 后可以
+继续绑定同一组并只切换动态 Offset。切换到尚未准备状态的新资源应结束 Rendering 后再绑定。
 
 ## 状态与线程
 
