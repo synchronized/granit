@@ -5,7 +5,7 @@
 
 ## 状态
 
-- 实现状态：实现中；推荐设计已确认，当前阶段为 S-10C7 跨平台验收
+- 实现状态：实现中；推荐设计已确认，当前阶段为 S-10C6 双后端 Fixture
 - 所属版本：0.4.0
 - 前置依赖：S-10B
 - 优先级：P2
@@ -106,8 +106,8 @@ S-10C 需要建立一个源码权威和可复现的双后端资产流程。
    插件不再内置固定 WGSL。Mock 回归已覆盖归属、跨实例混用、重复销毁、依赖顺序和实例级联清理；
    Windows D3D12 与 Linux Vulkan/Lavapipe 已通过真实 Dawn Shader/Pipeline smoke test。
 6. **S-10C6 双后端 Fixture**：已让同一组 `.granit-shader` 的 WGSL 在 WebGPU、SPIR-V 在 Vulkan
-   上绘制相同离屏三角形，并使用统一量化容差比较中心与角落像素。Windows D3D12 和 Linux
-   Vulkan/Lavapipe 的真实 Dawn 工作流均已通过。
+   上绘制相同离屏三角形，并使用统一量化容差比较中心与角落像素。Windows D3D12 的 WebGPU
+   路径已通过；Linux Vulkan/Lavapipe 双后端运行验证待重新执行。
 7. **S-10C7 跨平台验收**：手动运行 Windows D3D12、Linux Vulkan/Lavapipe 和普通 Vulkan 回归，
    记录编译时间、缓存命中时间、资产大小及诊断示例，再决定公共 Shader 资产 API。
 

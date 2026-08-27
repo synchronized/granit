@@ -284,7 +284,8 @@ jobs:
           lvp_icd="$(find /usr/share/vulkan/icd.d -type f -name 'lvp_icd*.json' -print -quit)"
           [[ -n "$lvp_icd" ]]
           VK_DRIVER_FILES="$lvp_icd" LIBGL_ALWAYS_SOFTWARE=1 \
-            ctest --test-dir "$build" -R granit.backend.webgpu_plugin_smoke \
+            ctest --test-dir "$build" \
+              -R 'granit\.backend\.(webgpu_plugin|shader_asset_vulkan)_smoke' \
               --verbose --output-on-failure
       - name: 打包 Linux 产物
         id: package
