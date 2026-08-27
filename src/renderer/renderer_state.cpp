@@ -1261,16 +1261,21 @@ void renderer_state::destroy_native_pipeline_layout(VkPipelineLayout layout) noe
 }
 
 granit_result renderer_state::create_native_graphics_pipeline(
-    VkPipelineLayout layout, VkShaderModule vertex_shader, const char* vertex_entry,
-    VkShaderModule fragment_shader, const char* fragment_entry,
-    std::span<const granit_vertex_buffer_layout> vertex_buffers, granit_primitive_state primitive,
-    granit_depth_state depth_state, const granit_depth_bias_state* depth_bias,
+    backend_pipeline_layout_resource& layout_resource, backend_shader_resource& vertex_resource,
+    const char* vertex_entry, backend_shader_resource& fragment_resource,
+    const char* fragment_entry, std::span<const granit_vertex_buffer_layout> vertex_buffers,
+    granit_primitive_state primitive, granit_depth_state depth_state,
+    const granit_depth_bias_state* depth_bias,
     std::span<const granit_color_blend_state> color_blends,
     std::span<const granit_texture_format> color_formats,
     granit_texture_format depth_stencil_format, granit_sample_count sample_count,
-    VkPipeline& pipeline) noexcept {
+    backend_graphics_pipeline_resource& pipeline_resource) noexcept {
   if (device_lost())
     return GRANIT_ERROR_DEVICE_LOST;
+  const auto layout = static_cast<vulkan_pipeline_layout_resource&>(layout_resource).native();
+  const auto vertex_shader = static_cast<vulkan_shader_resource&>(vertex_resource).native();
+  const auto fragment_shader = static_cast<vulkan_shader_resource&>(fragment_resource).native();
+  auto& pipeline = static_cast<vulkan_graphics_pipeline_resource&>(pipeline_resource).native();
   std::array<VkPipelineShaderStageCreateInfo, 2> stages{};
   stages[0].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
   stages[0].stage = VK_SHADER_STAGE_VERTEX_BIT;
@@ -1447,12 +1452,14 @@ void renderer_state::destroy_native_graphics_pipeline(VkPipeline pipeline) noexc
   }
 }
 
-granit_result renderer_state::create_native_compute_pipeline(VkPipelineLayout layout,
-                                                             VkShaderModule compute_shader,
-                                                             const char* compute_entry,
-                                                             VkPipeline& pipeline) noexcept {
+granit_result renderer_state::create_native_compute_pipeline(
+    backend_pipeline_layout_resource& layout_resource, backend_shader_resource& compute_resource,
+    const char* compute_entry, backend_compute_pipeline_resource& pipeline_resource) noexcept {
   if (device_lost())
     return GRANIT_ERROR_DEVICE_LOST;
+  const auto layout = static_cast<vulkan_pipeline_layout_resource&>(layout_resource).native();
+  const auto compute_shader = static_cast<vulkan_shader_resource&>(compute_resource).native();
+  auto& pipeline = static_cast<vulkan_compute_pipeline_resource&>(pipeline_resource).native();
   VkComputePipelineCreateInfo info{};
   info.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
   info.stage.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
@@ -1613,11 +1620,13 @@ granit_result renderer_state::fill_buffer(vulkan_command_recorder& recorder,
       device_, static_cast<vulkan_buffer_resource&>(buffer).native().buffer, offset, size, value));
 }
 
-granit_result renderer_state::bind_graphics_pipeline(vulkan_command_recorder& recorder,
-                                                     VkPipeline pipeline) noexcept {
+granit_result
+renderer_state::bind_graphics_pipeline(vulkan_command_recorder& recorder,
+                                       backend_graphics_pipeline_resource& resource) noexcept {
   if (device_lost())
     return GRANIT_ERROR_DEVICE_LOST;
-  return recorder.bind_graphics_pipeline(device_, pipeline);
+  return recorder.bind_graphics_pipeline(
+      device_, static_cast<vulkan_graphics_pipeline_resource&>(resource).native());
 }
 
 granit_result renderer_state::bind_graphics_groups(
@@ -1681,10 +1690,13 @@ granit_result renderer_state::bind_graphics_groups(
   }
 }
 
-granit_result renderer_state::bind_compute_pipeline(vulkan_command_recorder& recorder,
-                                                    VkPipeline pipeline) noexcept {
-  return device_lost() ? GRANIT_ERROR_DEVICE_LOST
-                       : recorder.bind_compute_pipeline(device_, pipeline);
+granit_result
+renderer_state::bind_compute_pipeline(vulkan_command_recorder& recorder,
+                                      backend_compute_pipeline_resource& resource) noexcept {
+  return device_lost()
+             ? GRANIT_ERROR_DEVICE_LOST
+             : recorder.bind_compute_pipeline(
+                   device_, static_cast<vulkan_compute_pipeline_resource&>(resource).native());
 }
 
 granit_result renderer_state::bind_compute_groups(

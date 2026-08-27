@@ -2621,8 +2621,7 @@ granit_result renderer_registry::create_graphics_pipeline(granit_renderer render
         color_blends = {desc.color_blends, desc.color_blend_count};
     }
     const auto result = state->create_native_graphics_pipeline(
-        native_pipeline_layout(*layout->native), native_shader(*vertex->native),
-        vertex->entry_point.c_str(), native_shader(*fragment->native),
+        *layout->native, *vertex->native, vertex->entry_point.c_str(), *fragment->native,
         fragment->entry_point.c_str(), vertex_buffers,
         desc.struct_size >= GRANIT_GRAPHICS_PIPELINE_DESC_VERSION_3_SIZE
             ? desc.primitive
@@ -2633,7 +2632,7 @@ granit_result renderer_registry::create_graphics_pipeline(granit_renderer render
         desc.struct_size >= GRANIT_GRAPHICS_PIPELINE_DESC_VERSION_5_SIZE ? desc.depth_bias
                                                                          : nullptr,
         color_blends, {desc.color_formats, static_cast<std::size_t>(desc.color_format_count)},
-        desc.depth_stencil_format, desc.sample_count, native_graphics_pipeline(*record->native));
+        desc.depth_stencil_format, desc.sample_count, *record->native);
     if (result != GRANIT_SUCCESS)
       return result;
     std::lock_guard lock{mutex_};
@@ -2711,8 +2710,7 @@ granit_result renderer_registry::create_compute_pipeline(granit_renderer rendere
     record->compute_shader = compute;
     record->native = std::make_unique<vulkan_compute_pipeline_resource>(state);
     const auto result = state->create_native_compute_pipeline(
-        native_pipeline_layout(*layout->native), native_shader(*compute->native),
-        compute->entry_point.c_str(), native_compute_pipeline(*record->native));
+        *layout->native, *compute->native, compute->entry_point.c_str(), *record->native);
     if (result != GRANIT_SUCCESS)
       return result;
     std::lock_guard lock{mutex_};
@@ -3505,9 +3503,8 @@ granit_result renderer_registry::bind_graphics_pipeline(granit_renderer renderer
   std::lock_guard command_lock{command->mutex};
   if (native_command_recorder(*command->native).state() != command_recorder_state::recording)
     return GRANIT_ERROR_INVALID_ARGUMENT;
-  const auto result =
-      command->renderer->bind_graphics_pipeline(native_command_recorder(*command->native),
-                                                native_graphics_pipeline(*pipeline_record->native));
+  const auto result = command->renderer->bind_graphics_pipeline(
+      native_command_recorder(*command->native), *pipeline_record->native);
   if (result == GRANIT_SUCCESS)
     retain_resource(command->retained_resources, pipeline_record, pipeline_record->metadata);
   return result;
@@ -3592,7 +3589,7 @@ granit_result renderer_registry::bind_compute_pipeline(granit_renderer renderer,
   if (native_command_recorder(*command->native).state() != command_recorder_state::recording)
     return GRANIT_ERROR_INVALID_ARGUMENT;
   const auto result = command->renderer->bind_compute_pipeline(
-      native_command_recorder(*command->native), native_compute_pipeline(*pipeline_record->native));
+      native_command_recorder(*command->native), *pipeline_record->native);
   if (result == GRANIT_SUCCESS)
     retain_resource(command->retained_resources, pipeline_record, pipeline_record->metadata);
   return result;

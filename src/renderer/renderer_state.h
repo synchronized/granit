@@ -121,19 +121,20 @@ public:
       backend_pipeline_layout_resource& layout) noexcept;
   void destroy_native_pipeline_layout(VkPipelineLayout layout) noexcept;
   [[nodiscard]] granit_result create_native_graphics_pipeline(
-      VkPipelineLayout layout, VkShaderModule vertex_shader, const char* vertex_entry,
-      VkShaderModule fragment_shader, const char* fragment_entry,
-      std::span<const granit_vertex_buffer_layout> vertex_buffers, granit_primitive_state primitive,
-      granit_depth_state depth, const granit_depth_bias_state* depth_bias,
+      backend_pipeline_layout_resource& layout, backend_shader_resource& vertex_shader,
+      const char* vertex_entry, backend_shader_resource& fragment_shader,
+      const char* fragment_entry, std::span<const granit_vertex_buffer_layout> vertex_buffers,
+      granit_primitive_state primitive, granit_depth_state depth,
+      const granit_depth_bias_state* depth_bias,
       std::span<const granit_color_blend_state> color_blends,
       std::span<const granit_texture_format> color_formats,
       granit_texture_format depth_stencil_format, granit_sample_count sample_count,
-      VkPipeline& pipeline) noexcept;
+      backend_graphics_pipeline_resource& pipeline) noexcept;
   void destroy_native_graphics_pipeline(VkPipeline pipeline) noexcept;
-  [[nodiscard]] granit_result create_native_compute_pipeline(VkPipelineLayout layout,
-                                                             VkShaderModule compute_shader,
-                                                             const char* compute_entry,
-                                                             VkPipeline& pipeline) noexcept;
+  [[nodiscard]] granit_result
+  create_native_compute_pipeline(backend_pipeline_layout_resource& layout,
+                                 backend_shader_resource& compute_shader, const char* compute_entry,
+                                 backend_compute_pipeline_resource& pipeline) noexcept;
   void destroy_native_compute_pipeline(VkPipeline pipeline) noexcept;
   [[nodiscard]] granit_result
   create_native_command_recorder(vulkan_command_recorder& recorder) noexcept;
@@ -167,8 +168,9 @@ public:
   [[nodiscard]] granit_result fill_buffer(vulkan_command_recorder& recorder,
                                           backend_buffer_resource& buffer, std::uint64_t offset,
                                           std::uint64_t size, std::uint32_t value);
-  [[nodiscard]] granit_result bind_graphics_pipeline(vulkan_command_recorder& recorder,
-                                                     VkPipeline pipeline) noexcept;
+  [[nodiscard]] granit_result
+  bind_graphics_pipeline(vulkan_command_recorder& recorder,
+                         backend_graphics_pipeline_resource& pipeline) noexcept;
   [[nodiscard]] granit_result
   bind_graphics_groups(vulkan_command_recorder& recorder, backend_pipeline_layout_resource& layout,
                        std::uint32_t first_group,
@@ -176,8 +178,9 @@ public:
                        std::span<const std::uint32_t> dynamic_offsets,
                        std::span<const backend_buffer_access> buffer_accesses,
                        std::span<const backend_texture_access> texture_accesses);
-  [[nodiscard]] granit_result bind_compute_pipeline(vulkan_command_recorder& recorder,
-                                                    VkPipeline pipeline) noexcept;
+  [[nodiscard]] granit_result
+  bind_compute_pipeline(vulkan_command_recorder& recorder,
+                        backend_compute_pipeline_resource& pipeline) noexcept;
   [[nodiscard]] granit_result
   bind_compute_groups(vulkan_command_recorder& recorder, backend_pipeline_layout_resource& layout,
                       std::uint32_t first_group,
