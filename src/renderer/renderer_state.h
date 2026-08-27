@@ -217,7 +217,7 @@ public:
                       std::span<const std::uint32_t> dynamic_offsets,
                       std::span<const backend_buffer_access> buffer_accesses,
                       std::span<const backend_texture_access> texture_accesses);
-  [[nodiscard]] granit_result dispatch(vulkan_command_recorder& recorder,
+  [[nodiscard]] granit_result dispatch(backend_command_recorder_resource& recorder,
                                        std::uint32_t group_count_x, std::uint32_t group_count_y,
                                        std::uint32_t group_count_z) noexcept;
   [[nodiscard]] granit_result set_viewports(backend_command_recorder_resource& recorder,
@@ -233,19 +233,20 @@ public:
   [[nodiscard]] granit_result bind_index_buffer(backend_command_recorder_resource& recorder,
                                                 backend_buffer_resource& buffer,
                                                 std::uint64_t offset, granit_index_type type);
-  [[nodiscard]] granit_result draw(vulkan_command_recorder& recorder, std::uint32_t vertex_count,
-                                   std::uint32_t instance_count, std::uint32_t first_vertex,
+  [[nodiscard]] granit_result draw(backend_command_recorder_resource& recorder,
+                                   std::uint32_t vertex_count, std::uint32_t instance_count,
+                                   std::uint32_t first_vertex,
                                    std::uint32_t first_instance) noexcept;
-  [[nodiscard]] granit_result draw_indexed(vulkan_command_recorder& recorder,
+  [[nodiscard]] granit_result draw_indexed(backend_command_recorder_resource& recorder,
                                            std::uint32_t index_count, std::uint32_t instance_count,
                                            std::uint32_t first_index, std::int32_t vertex_offset,
                                            std::uint32_t first_instance) noexcept;
   [[nodiscard]] granit_result
-  begin_rendering(vulkan_command_recorder& recorder, granit_rendering_area area,
+  begin_rendering(backend_command_recorder_resource& recorder, granit_rendering_area area,
                   std::span<const backend_color_attachment> color_attachments,
                   const backend_depth_stencil_attachment* depth_stencil_attachment,
                   std::uint32_t layer_count);
-  [[nodiscard]] granit_result end_rendering(vulkan_command_recorder& recorder) noexcept;
+  [[nodiscard]] granit_result end_rendering(backend_command_recorder_resource& recorder) noexcept;
   [[nodiscard]] granit_result submit_command_recorder(backend_command_recorder_resource& recorder,
                                                       submission_serial& submitted_serial) override;
   [[nodiscard]] granit_result

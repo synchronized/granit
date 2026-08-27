@@ -1956,9 +1956,10 @@ renderer_state::bind_compute_groups(backend_command_recorder_resource& recorder_
   }
 }
 
-granit_result renderer_state::dispatch(vulkan_command_recorder& recorder,
+granit_result renderer_state::dispatch(backend_command_recorder_resource& recorder_resource,
                                        std::uint32_t group_count_x, std::uint32_t group_count_y,
                                        std::uint32_t group_count_z) noexcept {
+  auto& recorder = static_cast<vulkan_command_recorder_resource&>(recorder_resource).native();
   return device_lost() ? GRANIT_ERROR_DEVICE_LOST
                        : recorder.dispatch(device_, group_count_x, group_count_y, group_count_z);
 }
@@ -2040,30 +2041,33 @@ renderer_state::bind_index_buffer(backend_command_recorder_resource& recorder_re
       device_, static_cast<vulkan_buffer_resource&>(buffer).native().buffer, offset, native_type);
 }
 
-granit_result renderer_state::draw(vulkan_command_recorder& recorder, std::uint32_t vertex_count,
-                                   std::uint32_t instance_count, std::uint32_t first_vertex,
+granit_result renderer_state::draw(backend_command_recorder_resource& recorder_resource,
+                                   std::uint32_t vertex_count, std::uint32_t instance_count,
+                                   std::uint32_t first_vertex,
                                    std::uint32_t first_instance) noexcept {
+  auto& recorder = static_cast<vulkan_command_recorder_resource&>(recorder_resource).native();
   return device_lost()
              ? GRANIT_ERROR_DEVICE_LOST
              : recorder.draw(device_, vertex_count, instance_count, first_vertex, first_instance);
 }
 
-granit_result renderer_state::draw_indexed(vulkan_command_recorder& recorder,
+granit_result renderer_state::draw_indexed(backend_command_recorder_resource& recorder_resource,
                                            std::uint32_t index_count, std::uint32_t instance_count,
                                            std::uint32_t first_index, std::int32_t vertex_offset,
                                            std::uint32_t first_instance) noexcept {
+  auto& recorder = static_cast<vulkan_command_recorder_resource&>(recorder_resource).native();
   return device_lost() ? GRANIT_ERROR_DEVICE_LOST
                        : recorder.draw_indexed(device_, index_count, instance_count, first_index,
                                                vertex_offset, first_instance);
 }
 
-granit_result
-renderer_state::begin_rendering(vulkan_command_recorder& recorder, granit_rendering_area area,
-                                std::span<const backend_color_attachment> color_attachments,
-                                const backend_depth_stencil_attachment* depth_stencil_attachment,
-                                std::uint32_t layer_count) {
+granit_result renderer_state::begin_rendering(
+    backend_command_recorder_resource& recorder_resource, granit_rendering_area area,
+    std::span<const backend_color_attachment> color_attachments,
+    const backend_depth_stencil_attachment* depth_stencil_attachment, std::uint32_t layer_count) {
   if (device_lost())
     return GRANIT_ERROR_DEVICE_LOST;
+  auto& recorder = static_cast<vulkan_command_recorder_resource&>(recorder_resource).native();
   try {
     std::vector<VkRenderingAttachmentInfo> native_colors;
     std::vector<vulkan_image_access> image_accesses;
@@ -2148,9 +2152,11 @@ renderer_state::begin_rendering(vulkan_command_recorder& recorder, granit_render
   }
 }
 
-granit_result renderer_state::end_rendering(vulkan_command_recorder& recorder) noexcept {
+granit_result
+renderer_state::end_rendering(backend_command_recorder_resource& recorder_resource) noexcept {
   if (device_lost())
     return GRANIT_ERROR_DEVICE_LOST;
+  auto& recorder = static_cast<vulkan_command_recorder_resource&>(recorder_resource).native();
   return observe_device_result(recorder.end_rendering(device_));
 }
 

@@ -3,7 +3,6 @@
 
 #include "renderer/renderer_registry.h"
 
-#include "backend/vulkan/resources.h"
 #include "core/texture_format.h"
 
 #include <algorithm>
@@ -11,17 +10,11 @@
 #include <functional>
 #include <limits>
 #include <new>
-#include <type_traits>
 #include <utility>
 #include <vector>
 
 namespace granit::detail {
 namespace {
-
-vulkan_command_recorder&
-native_command_recorder(backend_command_recorder_resource& resource) noexcept {
-  return static_cast<vulkan_command_recorder_resource&>(resource).native();
-}
 
 template <typename Resources, typename Resource, typename Metadata>
 void retain_resource(Resources& resources, const Resource& resource, Metadata& metadata) {
@@ -3560,8 +3553,7 @@ granit_result renderer_registry::dispatch(granit_renderer renderer,
   if (!command)
     return GRANIT_ERROR_INVALID_HANDLE;
   std::lock_guard lock{command->mutex};
-  return command->renderer->dispatch(native_command_recorder(*command->native), group_count_x,
-                                     group_count_y, group_count_z);
+  return command->renderer->dispatch(*command->native, group_count_x, group_count_y, group_count_z);
 }
 
 granit_result renderer_registry::set_viewports(granit_renderer renderer,
@@ -3653,8 +3645,8 @@ granit_result renderer_registry::draw(granit_renderer renderer, granit_command_r
   if (!command)
     return GRANIT_ERROR_INVALID_HANDLE;
   std::lock_guard lock{command->mutex};
-  return command->renderer->draw(native_command_recorder(*command->native), vertex_count,
-                                 instance_count, first_vertex, first_instance);
+  return command->renderer->draw(*command->native, vertex_count, instance_count, first_vertex,
+                                 first_instance);
 }
 
 granit_result renderer_registry::draw_indexed(granit_renderer renderer,
@@ -3667,9 +3659,8 @@ granit_result renderer_registry::draw_indexed(granit_renderer renderer,
   if (!command)
     return GRANIT_ERROR_INVALID_HANDLE;
   std::lock_guard lock{command->mutex};
-  return command->renderer->draw_indexed(native_command_recorder(*command->native), index_count,
-                                         instance_count, first_index, vertex_offset,
-                                         first_instance);
+  return command->renderer->draw_indexed(*command->native, index_count, instance_count, first_index,
+                                         vertex_offset, first_instance);
 }
 
 granit_result renderer_registry::begin_rendering(granit_renderer renderer,
@@ -3770,8 +3761,8 @@ granit_result renderer_registry::begin_rendering(granit_renderer renderer,
   std::lock_guard command_lock{command->mutex};
   for (const auto& view : views)
     retain_resource(command->retained_resources, view, view->metadata);
-  return command->renderer->begin_rendering(native_command_recorder(*command->native), desc.area,
-                                            colors, depth_stencil_ptr, desc.layer_count);
+  return command->renderer->begin_rendering(*command->native, desc.area, colors, depth_stencil_ptr,
+                                            desc.layer_count);
 }
 
 granit_result renderer_registry::end_rendering(granit_renderer renderer,
@@ -3780,7 +3771,7 @@ granit_result renderer_registry::end_rendering(granit_renderer renderer,
   if (!command)
     return GRANIT_ERROR_INVALID_HANDLE;
   std::lock_guard lock{command->mutex};
-  return command->renderer->end_rendering(native_command_recorder(*command->native));
+  return command->renderer->end_rendering(*command->native);
 }
 
 granit_result renderer_registry::destroy_command_recorder(granit_renderer renderer,
