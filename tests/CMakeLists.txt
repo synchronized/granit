@@ -264,10 +264,12 @@ if(GRANIT_BUILD_BACKEND_WEBGPU)
     granit_webgpu_plugin_smoke
     backend/webgpu_plugin_smoke.cpp
     $<TARGET_OBJECTS:granit_backend_plugin>
+    $<TARGET_OBJECTS:granit_shader_asset>
   )
   target_compile_features(granit_webgpu_plugin_smoke PRIVATE cxx_std_20)
   target_include_directories(
-    granit_webgpu_plugin_smoke PRIVATE "${PROJECT_SOURCE_DIR}/include" "${PROJECT_SOURCE_DIR}/src"
+    granit_webgpu_plugin_smoke
+    PRIVATE "${PROJECT_SOURCE_DIR}/include" "${PROJECT_SOURCE_DIR}/src" "${PROJECT_SOURCE_DIR}/tools"
   )
   target_compile_definitions(
     granit_webgpu_plugin_smoke
@@ -277,7 +279,13 @@ if(GRANIT_BUILD_BACKEND_WEBGPU)
   add_dependencies(granit_webgpu_plugin_smoke granit_backend_webgpu)
   granit_target_compile_warnings(granit_webgpu_plugin_smoke)
   granit_target_output_directories(granit_webgpu_plugin_smoke)
-  add_test(NAME granit.backend.webgpu_plugin_smoke COMMAND granit_webgpu_plugin_smoke)
+  if(NOT GRANIT_WEBGPU_SHADER_ASSET)
+    message(FATAL_ERROR "WebGPU smoke test 需要设置 GRANIT_WEBGPU_SHADER_ASSET")
+  endif()
+  add_test(
+    NAME granit.backend.webgpu_plugin_smoke
+    COMMAND granit_webgpu_plugin_smoke "${GRANIT_WEBGPU_SHADER_ASSET}"
+  )
 endif()
 
 add_executable(

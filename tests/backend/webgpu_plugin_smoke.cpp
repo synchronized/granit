@@ -4,21 +4,26 @@
 #include <chrono>
 #include <cstddef>
 #include <cstdio>
+#include <fstream>
+#include <iterator>
 #include <new>
+#include <string>
 #include <string_view>
+#include <vector>
 
 #include "backend/plugin_loader.h"
+#include "shader_asset.h"
 
 namespace {
 
-constexpr std::string_view vertex_wgsl =
-    R"(@vertex fn vs_main(@builtin(vertex_index) index: u32) -> @builtin(position) vec4f {
-  var positions = array<vec2f, 3>(vec2f(0.0, -0.7), vec2f(0.7, 0.7), vec2f(-0.7, 0.7));
-  return vec4f(positions[index], 0.0, 1.0);
-})";
-constexpr std::string_view fragment_wgsl = R"(@fragment fn fs_main() -> @location(0) vec4f {
-  return vec4f(0.2, 0.7, 0.4, 1.0);
-})";
+std::vector<std::byte> load_file(const char* path) {
+  std::ifstream stream(path, std::ios::binary);
+  const std::vector<char> input{std::istreambuf_iterator<char>{stream}, {}};
+  std::vector<std::byte> output(input.size());
+  for (std::size_t index = 0; index < input.size(); ++index)
+    output[index] = static_cast<std::byte>(input[index]);
+  return output;
+}
 
 void* allocate(uint64_t size, uint64_t alignment, void*) {
   return ::operator new(static_cast<std::size_t>(size),
@@ -42,7 +47,19 @@ bool near_byte(std::uint32_t value, std::uint32_t expected) {
 
 } // namespace
 
-int main() {
+int main(int argc, char** argv) {
+  if (argc != 2) {
+    std::fprintf(stderr, "用法：granit_webgpu_plugin_smoke <shader.granit-shader>\n");
+    return 1;
+  }
+  const auto asset_bytes = load_file(argv[1]);
+  granit::tools::shader_asset_view asset;
+  if (granit::tools::decode_shader_asset(asset_bytes, asset) !=
+          granit::tools::shader_asset_error::success ||
+      asset.wgsl.empty()) {
+    std::fprintf(stderr, "读取 WebGPU Shader 资产失败：%s\n", argv[1]);
+    return 1;
+  }
   const auto smoke_begin = std::chrono::steady_clock::now();
   granit::detail::backend_plugin_loader loader;
   const auto open_result =
@@ -122,14 +139,14 @@ int main() {
   bind_group_desc.sampler = sampler;
   granit_backend_plugin_shader_desc vertex_desc{sizeof(granit_backend_plugin_shader_desc),
                                                 GRANIT_BACKEND_PLUGIN_SHADER_STAGE_VERTEX,
-                                                vertex_wgsl.data(),
-                                                vertex_wgsl.size(),
+                                                asset.wgsl.data(),
+                                                asset.wgsl.size(),
                                                 "vs_main",
                                                 7};
   auto fragment_desc = vertex_desc;
   fragment_desc.stage = GRANIT_BACKEND_PLUGIN_SHADER_STAGE_FRAGMENT;
-  fragment_desc.wgsl = fragment_wgsl.data();
-  fragment_desc.wgsl_length = fragment_wgsl.size();
+  fragment_desc.wgsl = asset.wgsl.data();
+  fragment_desc.wgsl_length = asset.wgsl.size();
   fragment_desc.entry_point = "fs_main";
   if (loader.create_bind_group(instance, &bind_group_desc, &bind_group) != GRANIT_SUCCESS ||
       bind_group == 0 ||

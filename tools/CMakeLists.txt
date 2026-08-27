@@ -15,9 +15,19 @@ set_target_properties(granit_spirv_reflect PROPERTIES FOLDER "ThirdParty/SPIRV-R
 find_package(Threads REQUIRED)
 
 add_library(
-  granit_shader_tools_core OBJECT
+  granit_shader_asset OBJECT
   shader_asset.cpp
   shader_asset.h
+)
+target_compile_features(granit_shader_asset PUBLIC cxx_std_20)
+target_include_directories(granit_shader_asset PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
+granit_target_compile_warnings(granit_shader_asset)
+set_target_properties(
+  granit_shader_asset PROPERTIES FOLDER "Tools" POSITION_INDEPENDENT_CODE YES
+)
+
+add_library(
+  granit_shader_tools_core OBJECT
   shader_tools_core.cpp
   shader_tools_core.h
   child_process.h
@@ -57,7 +67,10 @@ if(GRANIT_BUILD_SHADER_TOOLS OR GRANIT_BUILD_TOOLS OR (GRANIT_BUILD_TESTING AND 
   )
   target_sources(
     granit_shader_tools
-    PRIVATE $<TARGET_OBJECTS:granit_shader_tools_core> $<TARGET_OBJECTS:granit_spirv_reflect>
+    PRIVATE
+      $<TARGET_OBJECTS:granit_shader_asset>
+      $<TARGET_OBJECTS:granit_shader_tools_core>
+      $<TARGET_OBJECTS:granit_spirv_reflect>
   )
   target_link_libraries(granit_shader_tools PRIVATE Threads::Threads)
   target_compile_definitions(
@@ -123,6 +136,7 @@ if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
   add_executable(
     granit_shader_asset_test
     shader_asset_test.cpp
+    $<TARGET_OBJECTS:granit_shader_asset>
     $<TARGET_OBJECTS:granit_shader_tools_core>
     $<TARGET_OBJECTS:granit_spirv_reflect>
   )

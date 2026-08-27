@@ -5,7 +5,7 @@
 
 ## 状态
 
-- 实现状态：实现中；推荐设计已确认，当前阶段为 S-10C3 反射 Schema
+- 实现状态：实现中；推荐设计已确认，当前阶段为 S-10C6 双后端 Fixture
 - 所属版本：0.4.0
 - 前置依赖：S-10B
 - 优先级：P2
@@ -104,7 +104,7 @@ S-10C 需要建立一个源码权威和可复现的双后端资产流程。
    环境和编译选项，并已验证路径无关、重复构建一致及各输入变化均失效。下一步进入 S-10C5。
 5. **S-10C5 WebGPU Shader ABI**：已增加实验性插件 Shader 资源和显式 Pipeline 描述，WebGPU
    插件不再内置固定 WGSL。Mock 回归已覆盖归属、跨实例混用、重复销毁、依赖顺序和实例级联清理；
-   下一步使用真实 Dawn 验证 Shader 编译诊断，再进入 S-10C6 双后端 Fixture。
+   Windows D3D12 与 Linux Vulkan/Lavapipe 已通过真实 Dawn Shader/Pipeline smoke test。
 6. **S-10C6 双后端 Fixture**：同一 `.granit-shader` 的 WGSL 在 WebGPU、SPIR-V 在 Vulkan 上绘制
    相同离屏三角形，并比较允许量化容差后的关键像素。
 7. **S-10C7 跨平台验收**：手动运行 Windows D3D12、Linux Vulkan/Lavapipe 和普通 Vulkan 回归，

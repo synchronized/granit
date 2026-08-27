@@ -245,7 +245,8 @@ void print_usage() {
                "  granit_shader_tool inspect --json <shader.spv>\n"
                "  granit_shader_tool verify <shader.spv>\n"
                "  granit_shader_tool compile --tint <path> --input <shader.wgsl> "
-               "--entry <name> --stage <vertex|fragment|compute> --output <shader.spv>\n";
+               "--entry <name> --stage <vertex|fragment|compute> --output <shader.spv> "
+               "[--asset <shader.granit-shader> --tint-revision <revision>]\n";
 }
 
 } // namespace
