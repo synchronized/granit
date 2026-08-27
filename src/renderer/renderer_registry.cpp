@@ -2193,7 +2193,7 @@ granit_result renderer_registry::create_shader(granit_renderer renderer, granit_
     record->stage = stage;
     record->entry_point.assign(entry_point);
     record->native = std::make_unique<vulkan_shader_resource>(state);
-    const auto result = state->create_native_shader(code, native_shader(*record->native));
+    const auto result = state->create_native_shader(code, *record->native);
     if (result != GRANIT_SUCCESS)
       return result;
     std::lock_guard lock{mutex_};
@@ -2257,8 +2257,7 @@ renderer_registry::create_bind_group_layout(granit_renderer renderer,
     record->renderer = state;
     record->entries.assign(entries.begin(), entries.end());
     record->native = std::make_unique<vulkan_bind_group_layout_resource>(state);
-    const auto result =
-        state->create_native_bind_group_layout(entries, native_bind_group_layout(*record->native));
+    const auto result = state->create_native_bind_group_layout(entries, *record->native);
     if (result != GRANIT_SUCCESS)
       return result;
     std::lock_guard lock{mutex_};

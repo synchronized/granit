@@ -1048,10 +1048,12 @@ void renderer_state::destroy_native_sampler(VkSampler sampler) noexcept {
   }
 }
 
-granit_result renderer_state::create_native_shader(std::span<const std::uint32_t> code,
-                                                   VkShaderModule& shader) noexcept {
+granit_result
+renderer_state::create_native_shader(std::span<const std::uint32_t> code,
+                                     backend_shader_resource& shader_resource) noexcept {
   if (device_lost())
     return GRANIT_ERROR_DEVICE_LOST;
+  auto& shader = static_cast<vulkan_shader_resource&>(shader_resource).native();
   VkShaderModuleCreateInfo info{};
   info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
   info.codeSize = code.size_bytes();
@@ -1067,9 +1069,10 @@ void renderer_state::destroy_native_shader(VkShaderModule shader) noexcept {
 
 granit_result renderer_state::create_native_bind_group_layout(
     std::span<const granit_bind_group_layout_entry> entries,
-    VkDescriptorSetLayout& layout) noexcept {
+    backend_bind_group_layout_resource& layout_resource) noexcept {
   if (device_lost())
     return GRANIT_ERROR_DEVICE_LOST;
+  auto& layout = static_cast<vulkan_bind_group_layout_resource&>(layout_resource).native();
   std::vector<VkDescriptorSetLayoutBinding> bindings;
   bindings.reserve(entries.size());
   for (const auto& entry : entries) {

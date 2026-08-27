@@ -105,11 +105,11 @@ public:
                                                     VkSampler& sampler) noexcept;
   void destroy_native_sampler(VkSampler sampler) noexcept;
   [[nodiscard]] granit_result create_native_shader(std::span<const std::uint32_t> code,
-                                                   VkShaderModule& shader) noexcept;
+                                                   backend_shader_resource& shader) noexcept;
   void destroy_native_shader(VkShaderModule shader) noexcept;
   [[nodiscard]] granit_result
   create_native_bind_group_layout(std::span<const granit_bind_group_layout_entry> entries,
-                                  VkDescriptorSetLayout& layout) noexcept;
+                                  backend_bind_group_layout_resource& layout) noexcept;
   void destroy_native_bind_group_layout(VkDescriptorSetLayout layout) noexcept;
   [[nodiscard]] granit_result
   create_native_bind_group(backend_bind_group_layout_resource& layout,
