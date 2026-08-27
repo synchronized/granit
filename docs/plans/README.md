@@ -74,8 +74,8 @@ D-03-graphics-pipeline.md
 - [D-08：Graphics Pipeline 完整状态、缓存与重载边界](D-08-pipeline-production.md)——设计已确认。
 - [D-09：Bindless Resource Table 边界](D-09-bindless-resource-table.md)——草案；H-02E 只预留绑定
   模型，完成真实场景测量后再实现 Renderer 能力。
-- [D-10：动态 Uniform Buffer Offset](D-10-dynamic-uniform-buffer-offsets.md)——D-10A 至 D-10E
-  已验收；D-10F 公共限制查询已完成本地验证，等待跨平台 Actions。
+- [D-10：动态 Uniform Buffer Offset](D-10-dynamic-uniform-buffer-offsets.md)——已完成；动态绑定、
+  公共设备限制查询、像素 Smoke Test 与跨平台矩阵均已验收。
 - [P-01：并行录制、资源创建与上传压力测试](P-01-parallel-recording.md)——已完成。
 - [P-02：CPU 并发与资源管理性能基线](P-02-performance-baseline.md)——已完成。
 - [P-03：锁竞争归因与批量 API 优化](P-03-contention-and-batching.md)——已完成。

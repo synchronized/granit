@@ -6,7 +6,7 @@
 ## 状态
 
 - 设计状态：已确认
-- 实现状态：进行中；D-10A 至 D-10E 已验收，D-10F 已完成本地验证并等待跨平台 Actions
+- 实现状态：已完成；D-10A 至 D-10F 已验收
 - 路线图任务：D-10
 - 优先级：P1
 - 前置依赖：D-03、D-07、F-10
@@ -77,7 +77,7 @@ Offset，使一个 Bind Group 能在多次 Draw 或 Dispatch 时选择同一 Buf
    Runtime 矩阵已通过；结果见[验收记录](../records/2026-08-27-d10-dynamic-uniform-offsets.md)。
 6. **D-10F 公共限制查询**：已增加可扩展 `granit_renderer_limits`、C 查询函数和轻量 C++ 包装，
    直接返回 Renderer 创建时保存的后端能力快照；参数、`struct_size`、失效句柄、公共头、真实
-   设备值传递以及共享/静态安装 Consumer 本地验证均已通过，等待跨平台 Actions 验收。
+   设备值传递以及 Windows/Linux 共享/静态安装 Consumer 均已通过。
 
 ## 测试与验收
 
