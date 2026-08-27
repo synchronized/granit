@@ -397,7 +397,8 @@ int compile_shader(const compile_options& options, shader_info& info, std::ostre
   error << process.standard_error;
   if (process.exit_code != 0) {
     std::filesystem::remove(options.output, filesystem_error);
-    error << "Tint 编译失败，退出码：" << process.exit_code << '\n';
+    error << "Tint 编译失败，入口点：" << options.entry_point << "，阶段：" << options.stage
+          << "，退出码：" << process.exit_code << '\n';
     return 1;
   }
   if (!inspect_shader(options.output, false, info, output, error) ||

@@ -18,7 +18,7 @@ if(NOT result EQUAL 1)
   message(FATAL_ERROR "Shader 工具应返回编译失败，实际退出码：${result}")
 endif()
 if(NOT standard_error MATCHES "用法" OR
-   NOT standard_error MATCHES "Tint 编译失败，退出码：2")
+   NOT standard_error MATCHES "Tint 编译失败，入口点：vs_main，阶段：vertex，退出码：2")
   message(FATAL_ERROR "未捕获完整 Tint 子进程诊断：${standard_error}")
 endif()
 if(EXISTS "${OUTPUT}")

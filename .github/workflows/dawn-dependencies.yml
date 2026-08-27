@@ -163,6 +163,18 @@ jobs:
             --stage fragment --output "$env:RUNNER_TEMP/s10c_tool_triangle.frag.spv" `
             --asset $fragmentAsset --tint-revision "$env:DAWN_REVISION"
           if ($LASTEXITCODE -ne 0) { throw "granit_shader_tool 调用 Tint 失败" }
+          $invalidOutput = "$env:RUNNER_TEMP/s10c_invalid.spv"
+          $invalidDiagnostic = (& $shaderTool compile --tint "$stage/bin/tint.exe" `
+            --input "$PWD/tests/fixtures/shaders/s10c_invalid.wgsl" --entry vs_main `
+            --stage vertex --output $invalidOutput 2>&1 | Out-String)
+          if ($LASTEXITCODE -ne 1 -or `
+              $invalidDiagnostic -notmatch 's10c_invalid\.wgsl:\d+:\d+' -or `
+              $invalidDiagnostic -notmatch '入口点：vs_main' -or `
+              $invalidDiagnostic -notmatch '阶段：vertex' -or `
+              (Test-Path -LiteralPath $invalidOutput)) {
+            throw "真实 Tint 诊断缺少文件、行列、入口点或阶段：$invalidDiagnostic"
+          }
+          Write-Host $invalidDiagnostic
           $vertexBytes = (Get-Item -LiteralPath $vertexAsset).Length
           $fragmentBytes = (Get-Item -LiteralPath $fragmentAsset).Length
           @"
@@ -323,6 +335,18 @@ jobs:
             --input "$PWD/tests/fixtures/shaders/s10c_triangle.wgsl" --entry fs_main \
             --stage fragment --output "$RUNNER_TEMP/s10c_tool_triangle.frag.spv" \
             --asset "$fragment_asset" --tint-revision "$DAWN_REVISION"
+          invalid_output="$RUNNER_TEMP/s10c_invalid.spv"
+          if invalid_diagnostic="$("$shader_tool" compile --tint "$stage/bin/tint" \
+            --input "$PWD/tests/fixtures/shaders/s10c_invalid.wgsl" --entry vs_main \
+            --stage vertex --output "$invalid_output" 2>&1)"; then
+            echo '无效 WGSL 意外编译成功' >&2
+            exit 1
+          fi
+          grep -Eq 's10c_invalid\.wgsl:[0-9]+:[0-9]+' <<< "$invalid_diagnostic"
+          grep -Fq '入口点：vs_main' <<< "$invalid_diagnostic"
+          grep -Fq '阶段：vertex' <<< "$invalid_diagnostic"
+          [[ ! -e "$invalid_output" ]]
+          printf '%s\n' "$invalid_diagnostic"
           vertex_bytes="$(stat -c '%s' "$vertex_asset")"
           fragment_bytes="$(stat -c '%s' "$fragment_asset")"
           {
