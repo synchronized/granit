@@ -500,6 +500,45 @@ granit_result renderer_state::set_object_name(VkObjectType type, std::uint64_t o
       instance_.functions().vkSetDebugUtilsObjectNameEXT(device_.native_handle(), &info)));
 }
 
+granit_result renderer_state::set_backend_resource_name(backend_resource& resource,
+                                                        std::string_view name) {
+  if (auto* value = dynamic_cast<vulkan_surface_resource*>(&resource))
+    return set_object_name(VK_OBJECT_TYPE_SURFACE_KHR, object_handle_value(value->native()), name);
+  if (auto* value = dynamic_cast<vulkan_swapchain_resource*>(&resource))
+    return set_object_name(VK_OBJECT_TYPE_SWAPCHAIN_KHR,
+                           object_handle_value(value->native().native_handle()), name);
+  if (auto* value = dynamic_cast<vulkan_buffer_resource*>(&resource))
+    return set_object_name(VK_OBJECT_TYPE_BUFFER, object_handle_value(value->native().buffer),
+                           name);
+  if (auto* value = dynamic_cast<vulkan_texture_resource*>(&resource))
+    return set_object_name(VK_OBJECT_TYPE_IMAGE, object_handle_value(value->native().image), name);
+  if (auto* value = dynamic_cast<vulkan_texture_view_resource*>(&resource))
+    return set_object_name(VK_OBJECT_TYPE_IMAGE_VIEW, object_handle_value(value->native()), name);
+  if (auto* value = dynamic_cast<vulkan_sampler_resource*>(&resource))
+    return set_object_name(VK_OBJECT_TYPE_SAMPLER, object_handle_value(value->native()), name);
+  if (auto* value = dynamic_cast<vulkan_shader_resource*>(&resource))
+    return set_object_name(VK_OBJECT_TYPE_SHADER_MODULE, object_handle_value(value->native()),
+                           name);
+  if (auto* value = dynamic_cast<vulkan_bind_group_layout_resource*>(&resource))
+    return set_object_name(VK_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT,
+                           object_handle_value(value->native()), name);
+  if (auto* value = dynamic_cast<vulkan_pipeline_layout_resource*>(&resource))
+    return set_object_name(VK_OBJECT_TYPE_PIPELINE_LAYOUT, object_handle_value(value->native()),
+                           name);
+  if (auto* value = dynamic_cast<vulkan_bind_group_resource*>(&resource))
+    return set_object_name(VK_OBJECT_TYPE_DESCRIPTOR_SET, object_handle_value(value->set()), name);
+  if (auto* value = dynamic_cast<vulkan_graphics_pipeline_resource*>(&resource))
+    return set_object_name(VK_OBJECT_TYPE_PIPELINE, object_handle_value(value->native()), name);
+  if (auto* value = dynamic_cast<vulkan_compute_pipeline_resource*>(&resource))
+    return set_object_name(VK_OBJECT_TYPE_PIPELINE, object_handle_value(value->native()), name);
+  if (auto* value = dynamic_cast<vulkan_command_recorder_resource*>(&resource))
+    return set_object_name(VK_OBJECT_TYPE_COMMAND_BUFFER,
+                           object_handle_value(value->native().native_handle()), name);
+  if (auto* value = dynamic_cast<vulkan_timestamp_query_pool_resource*>(&resource))
+    return set_timestamp_query_pool_name(*value, name);
+  return GRANIT_ERROR_UNSUPPORTED;
+}
+
 granit_result renderer_state::create_win32_surface(void* native_instance, void* native_window,
                                                    VkSurfaceKHR& surface) noexcept {
   if (device_lost())

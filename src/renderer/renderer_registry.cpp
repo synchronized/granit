@@ -18,14 +18,6 @@
 namespace granit::detail {
 namespace {
 
-template <typename Handle> std::uint64_t object_handle_value(Handle handle) noexcept {
-  if constexpr (std::is_pointer_v<Handle>) {
-    return static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(handle));
-  } else {
-    return static_cast<std::uint64_t>(handle);
-  }
-}
-
 VkSampler& native_sampler(backend_sampler_resource& resource) noexcept {
   return static_cast<vulkan_sampler_resource&>(resource).native();
 }
@@ -40,31 +32,6 @@ vulkan_image_allocation& native_texture(backend_texture_resource& resource) noex
 
 vulkan_buffer_allocation& native_buffer(backend_buffer_resource& resource) noexcept {
   return static_cast<vulkan_buffer_resource&>(resource).native();
-}
-
-VkShaderModule& native_shader(backend_shader_resource& resource) noexcept {
-  return static_cast<vulkan_shader_resource&>(resource).native();
-}
-
-VkDescriptorSetLayout&
-native_bind_group_layout(backend_bind_group_layout_resource& resource) noexcept {
-  return static_cast<vulkan_bind_group_layout_resource&>(resource).native();
-}
-
-vulkan_bind_group_resource& native_bind_group(backend_bind_group_resource& resource) noexcept {
-  return static_cast<vulkan_bind_group_resource&>(resource);
-}
-
-VkPipelineLayout& native_pipeline_layout(backend_pipeline_layout_resource& resource) noexcept {
-  return static_cast<vulkan_pipeline_layout_resource&>(resource).native();
-}
-
-VkPipeline& native_graphics_pipeline(backend_graphics_pipeline_resource& resource) noexcept {
-  return static_cast<vulkan_graphics_pipeline_resource&>(resource).native();
-}
-
-VkPipeline& native_compute_pipeline(backend_compute_pipeline_resource& resource) noexcept {
-  return static_cast<vulkan_compute_pipeline_resource&>(resource).native();
 }
 
 vulkan_command_recorder&
@@ -204,44 +171,28 @@ granit_result renderer_registry::set_object_name(granit_renderer renderer, grani
     return GRANIT_ERROR_INVALID_HANDLE;
   const auto& state = renderer_it->second;
 
-  if (const auto it = timestamp_query_pools_.find(object); it != timestamp_query_pools_.end()) {
-    if (it->second->renderer != state)
-      return GRANIT_ERROR_INVALID_HANDLE;
-    auto* native = it->second->native.get();
-    lock.unlock();
-    return state->set_timestamp_query_pool_name(*native, name);
-  }
-
-#define GRANIT_NAME_OBJECT(map, type, expression)                                                  \
+#define GRANIT_NAME_OBJECT(map)                                                                    \
   if (const auto it = map.find(object); it != map.end()) {                                         \
     if (it->second->renderer != state)                                                             \
       return GRANIT_ERROR_INVALID_HANDLE;                                                          \
-    const auto native = object_handle_value(expression);                                           \
+    auto* native = it->second->native.get();                                                       \
     lock.unlock();                                                                                 \
-    return state->set_object_name(type, native, name);                                             \
+    return state->set_backend_resource_name(*native, name);                                        \
   }
-  GRANIT_NAME_OBJECT(surfaces_, VK_OBJECT_TYPE_SURFACE_KHR,
-                     native_surface_handle(*it->second->native))
-  GRANIT_NAME_OBJECT(swapchains_, VK_OBJECT_TYPE_SWAPCHAIN_KHR,
-                     native_swapchain(*it->second->native).native_handle())
-  GRANIT_NAME_OBJECT(buffers_, VK_OBJECT_TYPE_BUFFER, native_buffer(*it->second->native).buffer)
-  GRANIT_NAME_OBJECT(textures_, VK_OBJECT_TYPE_IMAGE, native_texture(*it->second->native).image)
-  GRANIT_NAME_OBJECT(texture_views_, VK_OBJECT_TYPE_IMAGE_VIEW,
-                     native_texture_view(*it->second->native))
-  GRANIT_NAME_OBJECT(samplers_, VK_OBJECT_TYPE_SAMPLER, native_sampler(*it->second->native))
-  GRANIT_NAME_OBJECT(shaders_, VK_OBJECT_TYPE_SHADER_MODULE, native_shader(*it->second->native))
-  GRANIT_NAME_OBJECT(bind_group_layouts_, VK_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT,
-                     native_bind_group_layout(*it->second->native))
-  GRANIT_NAME_OBJECT(pipeline_layouts_, VK_OBJECT_TYPE_PIPELINE_LAYOUT,
-                     native_pipeline_layout(*it->second->native))
-  GRANIT_NAME_OBJECT(bind_groups_, VK_OBJECT_TYPE_DESCRIPTOR_SET,
-                     native_bind_group(*it->second->native).set())
-  GRANIT_NAME_OBJECT(graphics_pipelines_, VK_OBJECT_TYPE_PIPELINE,
-                     native_graphics_pipeline(*it->second->native))
-  GRANIT_NAME_OBJECT(compute_pipelines_, VK_OBJECT_TYPE_PIPELINE,
-                     native_compute_pipeline(*it->second->native))
-  GRANIT_NAME_OBJECT(command_recorders_, VK_OBJECT_TYPE_COMMAND_BUFFER,
-                     native_command_recorder(*it->second->native).native_handle())
+  GRANIT_NAME_OBJECT(surfaces_)
+  GRANIT_NAME_OBJECT(swapchains_)
+  GRANIT_NAME_OBJECT(buffers_)
+  GRANIT_NAME_OBJECT(textures_)
+  GRANIT_NAME_OBJECT(texture_views_)
+  GRANIT_NAME_OBJECT(samplers_)
+  GRANIT_NAME_OBJECT(shaders_)
+  GRANIT_NAME_OBJECT(bind_group_layouts_)
+  GRANIT_NAME_OBJECT(pipeline_layouts_)
+  GRANIT_NAME_OBJECT(bind_groups_)
+  GRANIT_NAME_OBJECT(graphics_pipelines_)
+  GRANIT_NAME_OBJECT(compute_pipelines_)
+  GRANIT_NAME_OBJECT(command_recorders_)
+  GRANIT_NAME_OBJECT(timestamp_query_pools_)
 #undef GRANIT_NAME_OBJECT
 
   if (frames_.contains(object) || upload_batches_.contains(object))

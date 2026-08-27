@@ -58,6 +58,8 @@ public:
   [[nodiscard]] granit_result export_pipeline_cache(void* data, std::uint64_t& size) noexcept;
   [[nodiscard]] granit_result set_object_name(VkObjectType type, std::uint64_t object,
                                               std::string_view name);
+  [[nodiscard]] granit_result set_backend_resource_name(backend_resource& resource,
+                                                        std::string_view name);
 
   [[nodiscard]] granit_result create_win32_surface(void* native_instance, void* native_window,
                                                    VkSurfaceKHR& surface) noexcept;
