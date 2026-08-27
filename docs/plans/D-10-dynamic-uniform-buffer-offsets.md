@@ -6,7 +6,7 @@
 ## 状态
 
 - 设计状态：已确认
-- 实现状态：进行中；D-10A 公共契约已完成
+- 实现状态：进行中；D-10A、D-10B 已完成，下一阶段为 D-10C Vulkan 后端
 - 路线图任务：D-10
 - 优先级：P1
 - 前置依赖：D-03、D-07、F-10
@@ -64,8 +64,9 @@ Offset，使一个 Bind Group 能在多次 Draw 或 Dispatch 时选择同一 Buf
 
 1. **D-10A 公共契约**：已增加 Binding 类型和版本化绑定描述，同步 C API、C++ 包装、公共头文件
    编译测试及现有 Graphics/Compute 调用点；后端接通前非空动态 Offset 明确返回“不支持”。
-2. **D-10B 注册表与验证**：记录每个 Layout 的动态 Binding 顺序，在绑定时校验数量、对齐、Range、
-   Buffer Usage、资源归属和溢出。
+2. **D-10B 注册表与验证**：已按每组 `binding` 升序记录动态 Uniform 元数据，并按 Bind Group
+   数组顺序拼接；统一校验 Offset 数量、设备对齐、有效 Range 和溢出。Buffer Usage、基础 Offset、
+   最大 Range 与资源归属复用 Bind Group 创建校验；D-10C 接通 Vulkan 后解除公共“不支持”门禁。
 3. **D-10C Vulkan 后端**：接入动态 Descriptor 类型、Pool 容量和 Graphics/Compute 命令绑定，确保
    Recorder 复制 Offset 并维持资源生命周期。
 4. **D-10D 测试与示例**：补齐单元测试、Validation Layer 回归及双对象动态变换 smoke test，更新

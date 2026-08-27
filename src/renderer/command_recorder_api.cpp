@@ -261,7 +261,8 @@ extern "C" granit_result granit_command_recorder_bind_graphics_groups(
     return GRANIT_ERROR_UNSUPPORTED;
   try {
     return granit::detail::renderer_registry::instance().bind_graphics_groups(
-        renderer, recorder, layout, desc->first_group, {desc->bind_groups, desc->bind_group_count});
+        renderer, recorder, layout, desc->first_group, {desc->bind_groups, desc->bind_group_count},
+        {desc->dynamic_offsets, desc->dynamic_offset_count});
   } catch (const std::bad_alloc&) {
     return GRANIT_ERROR_OUT_OF_MEMORY;
   } catch (...) {
@@ -299,7 +300,8 @@ extern "C" granit_result granit_command_recorder_bind_compute_groups(
     return GRANIT_ERROR_UNSUPPORTED;
   try {
     return granit::detail::renderer_registry::instance().bind_compute_groups(
-        renderer, recorder, layout, desc->first_group, {desc->bind_groups, desc->bind_group_count});
+        renderer, recorder, layout, desc->first_group, {desc->bind_groups, desc->bind_group_count},
+        {desc->dynamic_offsets, desc->dynamic_offset_count});
   } catch (const std::bad_alloc&) {
     return GRANIT_ERROR_OUT_OF_MEMORY;
   } catch (...) {
