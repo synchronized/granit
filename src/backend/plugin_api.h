@@ -9,7 +9,7 @@
 #include <granit/core/diagnostic.h>
 #include <granit/core/result.h>
 
-#define GRANIT_BACKEND_PLUGIN_ABI_VERSION UINT32_C(3)
+#define GRANIT_BACKEND_PLUGIN_ABI_VERSION UINT32_C(4)
 #define GRANIT_BACKEND_PLUGIN_KIND_WEBGPU UINT32_C(1)
 #define GRANIT_BACKEND_PLUGIN_QUERY_SYMBOL "granit_backend_plugin_query"
 
@@ -26,6 +26,20 @@ typedef uint64_t granit_backend_plugin_pipeline_layout;
 typedef uint64_t granit_backend_plugin_render_pipeline;
 typedef uint64_t granit_backend_plugin_command_recorder;
 typedef uint64_t granit_backend_plugin_command_buffer;
+
+typedef uint32_t granit_backend_plugin_instance_state;
+#define GRANIT_BACKEND_PLUGIN_INSTANCE_STATE_INITIALIZING UINT32_C(1)
+#define GRANIT_BACKEND_PLUGIN_INSTANCE_STATE_READY UINT32_C(2)
+#define GRANIT_BACKEND_PLUGIN_INSTANCE_STATE_FAILED UINT32_C(3)
+#define GRANIT_BACKEND_PLUGIN_INSTANCE_STATE_DEVICE_LOST UINT32_C(4)
+
+/** 插件实例当前生命周期快照；failure_result 仅在失败或设备丢失状态下非成功。 */
+typedef struct granit_backend_plugin_instance_status {
+  uint32_t struct_size;
+  granit_backend_plugin_instance_state state;
+  granit_result failure_result;
+  uint32_t reserved;
+} granit_backend_plugin_instance_status;
 
 typedef uint32_t granit_backend_plugin_buffer_usage;
 #define GRANIT_BACKEND_PLUGIN_BUFFER_USAGE_MAP_READ_BIT UINT32_C(0x00000001)
@@ -214,6 +228,11 @@ typedef granit_result (*granit_backend_plugin_recorder_copy_texture_to_buffer_fn
     granit_backend_plugin_instance instance, granit_backend_plugin_command_recorder recorder,
     granit_backend_plugin_texture texture, granit_backend_plugin_buffer buffer, uint32_t width,
     uint32_t height, uint32_t bytes_per_row);
+typedef granit_result (*granit_backend_plugin_get_instance_status_fn)(
+    granit_backend_plugin_instance instance, granit_backend_plugin_instance_status* status);
+/** 非阻塞地推进已完成的异步回调；没有待处理事件也返回成功。 */
+typedef granit_result (*granit_backend_plugin_process_events_fn)(
+    granit_backend_plugin_instance instance);
 
 /** 实例操作表由插件拥有，在插件卸载前保持有效。 */
 typedef struct granit_backend_plugin_instance_api {
@@ -248,6 +267,8 @@ typedef struct granit_backend_plugin_instance_api {
   granit_backend_plugin_destroy_command_buffer_fn destroy_command_buffer;
   granit_backend_plugin_submit_command_buffer_fn submit_command_buffer;
   granit_backend_plugin_recorder_copy_texture_to_buffer_fn recorder_copy_texture_to_buffer;
+  granit_backend_plugin_get_instance_status_fn get_instance_status;
+  granit_backend_plugin_process_events_fn process_events;
 } granit_backend_plugin_instance_api;
 
 /** 后端插件入口返回的只读描述；字符串在插件卸载前有效。 */

@@ -106,6 +106,23 @@ TEST_CASE("后端插件 Loader 完成版本化握手", "[backend][plugin]") {
   state.throw_diagnostic = true;
   CHECK(loader.create_instance(&host, &instance) == GRANIT_SUCCESS);
   CHECK(instance != 0);
+  granit_backend_plugin_instance_status status{};
+  status.struct_size = sizeof(status);
+  CHECK(loader.get_instance_status(instance, &status) == GRANIT_SUCCESS);
+  CHECK(status.state == GRANIT_BACKEND_PLUGIN_INSTANCE_STATE_READY);
+  CHECK(status.failure_result == GRANIT_SUCCESS);
+  CHECK(loader.process_events(instance) == GRANIT_SUCCESS);
+
+  status.struct_size = 0;
+  CHECK(loader.get_instance_status(instance, &status) == GRANIT_ERROR_INVALID_ARGUMENT);
+  status = {};
+  status.struct_size = sizeof(status);
+  status.reserved = 1;
+  CHECK(loader.get_instance_status(instance, &status) == GRANIT_ERROR_INVALID_ARGUMENT);
+  status = {};
+  status.struct_size = sizeof(status);
+  CHECK(loader.get_instance_status(instance + 1, &status) == GRANIT_ERROR_INVALID_HANDLE);
+  CHECK(loader.process_events(instance + 1) == GRANIT_ERROR_INVALID_HANDLE);
   granit_backend_plugin_capabilities capabilities{};
   capabilities.struct_size = sizeof(capabilities);
   CHECK(loader.get_capabilities(instance, &capabilities) == GRANIT_SUCCESS);
@@ -128,6 +145,8 @@ TEST_CASE("后端插件 Loader 完成版本化握手", "[backend][plugin]") {
   capabilities.struct_size = sizeof(capabilities);
   CHECK(loader.get_capabilities(instance + 1, &capabilities) == GRANIT_ERROR_INVALID_HANDLE);
   CHECK(loader.destroy_instance(instance) == GRANIT_SUCCESS);
+  CHECK(loader.get_instance_status(instance, &status) == GRANIT_ERROR_INVALID_HANDLE);
+  CHECK(loader.process_events(instance) == GRANIT_ERROR_INVALID_HANDLE);
   CHECK(loader.get_capabilities(instance, &capabilities) == GRANIT_ERROR_INVALID_HANDLE);
   CHECK(state.allocations == 2);
   CHECK(state.deallocations == 1);

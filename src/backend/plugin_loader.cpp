@@ -15,8 +15,8 @@ bool is_compatible(const granit_backend_plugin_api* api,
   constexpr std::size_t minimum_size = offsetof(granit_backend_plugin_api, instance_api) +
                                        sizeof(const granit_backend_plugin_instance_api*);
   constexpr std::size_t minimum_instance_api_size =
-      offsetof(granit_backend_plugin_instance_api, recorder_copy_texture_to_buffer) +
-      sizeof(granit_backend_plugin_recorder_copy_texture_to_buffer_fn);
+      offsetof(granit_backend_plugin_instance_api, process_events) +
+      sizeof(granit_backend_plugin_process_events_fn);
   return api != nullptr && api->struct_size >= minimum_size &&
          api->abi_version == GRANIT_BACKEND_PLUGIN_ABI_VERSION && api->kind == expected_kind &&
          api->reserved == 0 && api->name != nullptr && api->name_length != 0 &&
@@ -49,7 +49,9 @@ bool is_compatible(const granit_backend_plugin_api* api,
          api->instance_api->finish_command_recorder != nullptr &&
          api->instance_api->destroy_command_buffer != nullptr &&
          api->instance_api->submit_command_buffer != nullptr &&
-         api->instance_api->recorder_copy_texture_to_buffer != nullptr;
+         api->instance_api->recorder_copy_texture_to_buffer != nullptr &&
+         api->instance_api->get_instance_status != nullptr &&
+         api->instance_api->process_events != nullptr;
 }
 
 bool is_valid_host(const granit_backend_plugin_host_api* host) noexcept {
@@ -174,6 +176,39 @@ backend_plugin_loader::get_capabilities(granit_backend_plugin_instance instance,
   }
   try {
     return api_->instance_api->get_capabilities(instance, capabilities);
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+granit_result backend_plugin_loader::get_instance_status(
+    granit_backend_plugin_instance instance,
+    granit_backend_plugin_instance_status* status) noexcept {
+  if (api_ == nullptr || instance == 0 || status == nullptr ||
+      status->struct_size < sizeof(granit_backend_plugin_instance_status) ||
+      status->reserved != 0) {
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  }
+  if (std::find(instances_.begin(), instances_.end(), instance) == instances_.end()) {
+    return GRANIT_ERROR_INVALID_HANDLE;
+  }
+  try {
+    return api_->instance_api->get_instance_status(instance, status);
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+granit_result
+backend_plugin_loader::process_events(granit_backend_plugin_instance instance) noexcept {
+  if (api_ == nullptr || instance == 0) {
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  }
+  if (std::find(instances_.begin(), instances_.end(), instance) == instances_.end()) {
+    return GRANIT_ERROR_INVALID_HANDLE;
+  }
+  try {
+    return api_->instance_api->process_events(instance);
   } catch (...) {
     return GRANIT_ERROR_INTERNAL;
   }

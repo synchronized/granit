@@ -467,6 +467,31 @@ granit_result get_capabilities(granit_backend_plugin_instance instance,
   return GRANIT_SUCCESS;
 }
 
+granit_result get_instance_status(granit_backend_plugin_instance instance,
+                                  granit_backend_plugin_instance_status* status) noexcept {
+  if (instance == 0 || status == nullptr ||
+      status->struct_size < sizeof(granit_backend_plugin_instance_status) ||
+      status->reserved != 0) {
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  }
+  const std::scoped_lock lock{instances_mutex};
+  if (instances.find(instance) == instances.end()) {
+    return GRANIT_ERROR_INVALID_HANDLE;
+  }
+  const auto caller_size = status->struct_size;
+  *status = {caller_size, GRANIT_BACKEND_PLUGIN_INSTANCE_STATE_READY, GRANIT_SUCCESS, 0};
+  return GRANIT_SUCCESS;
+}
+
+granit_result process_events(granit_backend_plugin_instance instance) noexcept {
+  if (instance == 0) {
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  }
+  const std::scoped_lock lock{instances_mutex};
+  return instances.find(instance) == instances.end() ? GRANIT_ERROR_INVALID_HANDLE
+                                                      : GRANIT_SUCCESS;
+}
+
 granit_result create_buffer(granit_backend_plugin_instance instance,
                             const granit_backend_plugin_buffer_desc* desc,
                             granit_backend_plugin_buffer* out_buffer) noexcept {
@@ -1483,7 +1508,9 @@ constexpr granit_backend_plugin_instance_api instance_api{
     finish_command_recorder,
     destroy_command_buffer,
     submit_command_buffer,
-    recorder_copy_texture_to_buffer};
+    recorder_copy_texture_to_buffer,
+    get_instance_status,
+    process_events};
 constexpr granit_backend_plugin_api plugin_api{sizeof(granit_backend_plugin_api),
                                                GRANIT_BACKEND_PLUGIN_ABI_VERSION,
                                                GRANIT_BACKEND_PLUGIN_KIND_WEBGPU,
