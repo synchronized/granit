@@ -34,28 +34,39 @@ function(granit_target_compile_warnings target)
     message(FATAL_ERROR "目标不存在: ${target}")
   endif()
 
-  # 项目源码和注释统一使用 UTF-8；该选项只作用于 Granit 自有目标。
-  target_compile_options(
-    ${target}
-    PRIVATE
-      $<$<COMPILE_LANG_AND_ID:C,MSVC>:/utf-8>
-      $<$<COMPILE_LANG_AND_ID:CXX,MSVC>:/utf-8>
-  )
+  # clang-cl 的编译器 ID 是 Clang，但使用 MSVC 风格命令行，必须按前端变体分流。
+  if(CMAKE_C_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC")
+    target_compile_options(${target} PRIVATE $<$<COMPILE_LANGUAGE:C>:/utf-8>)
+  endif()
+  if(CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC")
+    target_compile_options(${target} PRIVATE $<$<COMPILE_LANGUAGE:CXX>:/utf-8>)
+  endif()
 
   if(NOT GRANIT_ENABLE_WARNINGS)
     return()
   endif()
 
-  target_compile_options(
-    ${target}
-    PRIVATE
-      $<$<COMPILE_LANG_AND_ID:C,MSVC>:/W4>
-      $<$<COMPILE_LANG_AND_ID:CXX,MSVC>:/W4>
-      $<$<COMPILE_LANG_AND_ID:C,GNU,Clang,AppleClang>:-Wall>
-      $<$<COMPILE_LANG_AND_ID:CXX,GNU,Clang,AppleClang>:-Wall>
-      $<$<COMPILE_LANG_AND_ID:C,GNU,Clang,AppleClang>:-Wextra>
-      $<$<COMPILE_LANG_AND_ID:CXX,GNU,Clang,AppleClang>:-Wextra>
-  )
+  if(CMAKE_C_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC")
+    target_compile_options(${target} PRIVATE $<$<COMPILE_LANGUAGE:C>:/W4>)
+  else()
+    target_compile_options(
+      ${target}
+      PRIVATE
+        $<$<COMPILE_LANG_AND_ID:C,GNU,Clang,AppleClang>:-Wall>
+        $<$<COMPILE_LANG_AND_ID:C,GNU,Clang,AppleClang>:-Wextra>
+    )
+  endif()
+  if(CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC")
+    target_compile_options(${target} PRIVATE $<$<COMPILE_LANGUAGE:CXX>:/W4>)
+  else()
+    target_compile_options(
+      ${target}
+      PRIVATE
+        $<$<COMPILE_LANG_AND_ID:CXX,GNU,Clang,AppleClang>:-Wall>
+        $<$<COMPILE_LANG_AND_ID:CXX,GNU,Clang,AppleClang>:-Wextra>
+        $<$<COMPILE_LANG_AND_ID:CXX,Clang,AppleClang>:-Wshorten-64-to-32>
+    )
+  endif()
 
   if(GRANIT_ENABLE_PEDANTIC_WARNINGS)
     target_compile_options(
