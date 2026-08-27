@@ -75,11 +75,13 @@ int main(int argc, char** argv) {
   granit::graphics_pipeline pipeline;
   result = vertex.initialize(renderer.native_handle(),
                              {.stage = granit::shader_stage::vertex,
-                              .code = vertex_asset.spirv});
+                              .code = vertex_asset.spirv,
+                              .entry_point = "vs_main"});
   if (granit::succeeded(result))
     result = fragment.initialize(renderer.native_handle(),
                                  {.stage = granit::shader_stage::fragment,
-                                  .code = fragment_asset.spirv});
+                                  .code = fragment_asset.spirv,
+                                  .entry_point = "fs_main"});
   if (granit::succeeded(result))
     result = layout.initialize(renderer.native_handle());
   const granit::texture_format format = granit::texture_format::rgba8_unorm;
