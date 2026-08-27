@@ -32,6 +32,14 @@ bool near_byte(std::uint8_t value, std::uint8_t expected) {
   return value + 1 >= expected && value <= expected + 1;
 }
 
+bool report_failure(granit::result result, const char* stage) {
+  if (granit::succeeded(result))
+    return false;
+  std::cerr << stage << "失败：" << granit::result_message(result) << "（"
+            << static_cast<granit_result>(result) << "）\n";
+  return true;
+}
+
 } // namespace
 
 int main(int argc, char** argv) {
@@ -87,6 +95,8 @@ int main(int argc, char** argv) {
                                   .color_blends = {},
                                   .depth_bias = std::nullopt});
   }
+  if (report_failure(result, "创建 Vulkan Shader/Pipeline"))
+    return 3;
 
   granit_texture_desc texture_desc = GRANIT_TEXTURE_DESC_INIT;
   texture_desc.format = GRANIT_TEXTURE_FORMAT_RGBA8_UNORM;
@@ -130,6 +140,8 @@ int main(int argc, char** argv) {
     result = recorder.submit();
   if (granit::succeeded(result))
     result = recorder.reset();
+  if (report_failure(result, "录制并提交 Vulkan 三角形"))
+    return 3;
 
   constexpr std::uint64_t readback_size = render_size * render_size * 4;
   granit::buffer readback;
@@ -165,6 +177,8 @@ int main(int argc, char** argv) {
     result = copy_recorder.submit();
   if (granit::succeeded(result))
     result = copy_recorder.reset();
+  if (report_failure(result, "复制 Vulkan 渲染目标"))
+    return 3;
 
   void* mapped = nullptr;
   if (granit::succeeded(result))
@@ -178,12 +192,14 @@ int main(int argc, char** argv) {
                 center.size());
     result = readback.unmap();
   }
+  if (report_failure(result, "映射 Vulkan 回读 Buffer"))
+    return 3;
 
   if (view != GRANIT_NULL_HANDLE)
     static_cast<void>(granit_texture_view_destroy(renderer.native_handle(), view));
   if (texture != GRANIT_NULL_HANDLE)
     static_cast<void>(granit_texture_destroy(renderer.native_handle(), texture));
-  if (granit::failed(result) || corner != std::array<std::uint8_t, 4>{0, 0, 0, 255} ||
+  if (corner != std::array<std::uint8_t, 4>{0, 0, 0, 255} ||
       !near_byte(center[0], 51) || !near_byte(center[1], 179) ||
       !near_byte(center[2], 102) || center[3] != 255) {
     std::cerr << "Vulkan Shader 资产离屏像素验证失败，center="
