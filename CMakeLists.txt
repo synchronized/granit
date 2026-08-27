@@ -19,6 +19,7 @@ option(GRANIT_BUILD_SHADER_TOOLS "构建并安装 ShaderTools SDK" OFF)
 option(GRANIT_BUILD_INTEGRATION_SDL3 "构建 SDL3 可选集成组件" OFF)
 option(GRANIT_BUILD_INTEGRATION_IMGUI "构建 ImGui 可选集成组件" OFF)
 option(GRANIT_BUILD_BACKEND_WEBGPU "构建静态链接 Dawn 的 WebGPU 后端插件" OFF)
+option(GRANIT_BUILD_EMSCRIPTEN_PLATFORM "构建 S-10D Emscripten 平台验证目标" OFF)
 set(GRANIT_S10C_VERTEX_SHADER_ASSET "" CACHE FILEPATH "S-10C6 Vertex Shader 资产")
 set(GRANIT_S10C_FRAGMENT_SHADER_ASSET "" CACHE FILEPATH "S-10C6 Fragment Shader 资产")
 option(GRANIT_FETCH_INTEGRATION_DEPENDENCIES "下载锁定版本的 SDL3 与 ImGui 集成依赖" OFF)
@@ -30,6 +31,32 @@ include(CMakePackageConfigHelpers)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 include(utility)
+
+if(GRANIT_BUILD_EMSCRIPTEN_PLATFORM)
+  if(NOT EMSCRIPTEN)
+    message(FATAL_ERROR "Emscripten 平台验证目标必须使用 emcmake 或 Emscripten toolchain 配置")
+  endif()
+  if(BUILD_SHARED_LIBS)
+    message(FATAL_ERROR "Emscripten 平台验证目标只支持静态链接")
+  endif()
+  execute_process(
+    COMMAND "${CMAKE_CXX_COMPILER}" --version
+    RESULT_VARIABLE granit_emcc_version_result
+    OUTPUT_VARIABLE granit_emcc_version_output
+    ERROR_VARIABLE granit_emcc_version_error
+  )
+  if(NOT granit_emcc_version_result EQUAL 0 OR
+     NOT granit_emcc_version_output MATCHES "[Ee]mscripten[^\n]* 5\\.0\\.6")
+    message(
+      FATAL_ERROR
+      "S-10D 要求锁定 Emscripten 5.0.6：${granit_emcc_version_output}${granit_emcc_version_error}"
+    )
+  endif()
+  add_subdirectory(web)
+  return()
+elseif(EMSCRIPTEN)
+  message(FATAL_ERROR "当前 Emscripten 构建必须显式启用 GRANIT_BUILD_EMSCRIPTEN_PLATFORM")
+endif()
 
 set(GRANIT_HAS_XCB OFF)
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND GRANIT_ENABLE_XCB)
