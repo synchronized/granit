@@ -114,6 +114,10 @@ public:
   [[nodiscard]] granit_result
   submit_command_buffer(granit_backend_plugin_instance instance,
                         granit_backend_plugin_command_buffer command_buffer) noexcept;
+  [[nodiscard]] granit_result recorder_copy_texture_to_buffer(
+      granit_backend_plugin_instance instance, granit_backend_plugin_command_recorder recorder,
+      granit_backend_plugin_texture texture, granit_backend_plugin_buffer buffer,
+      std::uint32_t width, std::uint32_t height, std::uint32_t bytes_per_row) noexcept;
   void close() noexcept;
 
   [[nodiscard]] bool is_open() const noexcept { return library_.is_open(); }

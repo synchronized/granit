@@ -182,6 +182,10 @@ typedef granit_result (*granit_backend_plugin_destroy_command_buffer_fn)(
     granit_backend_plugin_instance instance, granit_backend_plugin_command_buffer command_buffer);
 typedef granit_result (*granit_backend_plugin_submit_command_buffer_fn)(
     granit_backend_plugin_instance instance, granit_backend_plugin_command_buffer command_buffer);
+typedef granit_result (*granit_backend_plugin_recorder_copy_texture_to_buffer_fn)(
+    granit_backend_plugin_instance instance, granit_backend_plugin_command_recorder recorder,
+    granit_backend_plugin_texture texture, granit_backend_plugin_buffer buffer, uint32_t width,
+    uint32_t height, uint32_t bytes_per_row);
 
 /** 实例操作表由插件拥有，在插件卸载前保持有效。 */
 typedef struct granit_backend_plugin_instance_api {
@@ -213,6 +217,7 @@ typedef struct granit_backend_plugin_instance_api {
   granit_backend_plugin_finish_command_recorder_fn finish_command_recorder;
   granit_backend_plugin_destroy_command_buffer_fn destroy_command_buffer;
   granit_backend_plugin_submit_command_buffer_fn submit_command_buffer;
+  granit_backend_plugin_recorder_copy_texture_to_buffer_fn recorder_copy_texture_to_buffer;
 } granit_backend_plugin_instance_api;
 
 /** 后端插件入口返回的只读描述；字符串在插件卸载前有效。 */

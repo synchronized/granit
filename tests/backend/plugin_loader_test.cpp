@@ -291,8 +291,7 @@ TEST_CASE("WebGPU 插件绑定与 Pipeline 遵守依赖生命周期", "[backend]
   texture_desc.width = 16;
   texture_desc.height = 16;
   texture_desc.usage = GRANIT_BACKEND_PLUGIN_TEXTURE_USAGE_SAMPLED_BIT |
-                       GRANIT_BACKEND_PLUGIN_TEXTURE_USAGE_COPY_DST_BIT |
-                       GRANIT_BACKEND_PLUGIN_TEXTURE_USAGE_RENDER_ATTACHMENT_BIT;
+                       GRANIT_BACKEND_PLUGIN_TEXTURE_USAGE_COPY_DST_BIT;
   granit_backend_plugin_texture texture{};
   granit_backend_plugin_texture_view view{};
   REQUIRE(loader.create_texture(first, &texture_desc, &texture) == GRANIT_SUCCESS);
@@ -324,6 +323,14 @@ TEST_CASE("WebGPU 插件绑定与 Pipeline 遵守依赖生命周期", "[backend]
   granit_backend_plugin_render_pipeline pipeline{};
   REQUIRE(loader.create_render_pipeline(first, pipeline_layout, &pipeline) == GRANIT_SUCCESS);
 
+  auto target_desc = texture_desc;
+  target_desc.usage = GRANIT_BACKEND_PLUGIN_TEXTURE_USAGE_COPY_SRC_BIT |
+                      GRANIT_BACKEND_PLUGIN_TEXTURE_USAGE_RENDER_ATTACHMENT_BIT;
+  granit_backend_plugin_texture target_texture{};
+  granit_backend_plugin_texture_view target_view{};
+  REQUIRE(loader.create_texture(first, &target_desc, &target_texture) == GRANIT_SUCCESS);
+  REQUIRE(loader.create_texture_view(first, target_texture, &target_view) == GRANIT_SUCCESS);
+
   granit_backend_plugin_buffer_desc buffer_desc{};
   buffer_desc.struct_size = sizeof(buffer_desc);
   buffer_desc.size = 4096;
@@ -336,7 +343,17 @@ TEST_CASE("WebGPU 插件绑定与 Pipeline 遵守依赖生命周期", "[backend]
         GRANIT_ERROR_INVALID_ARGUMENT);
   REQUIRE(loader.recorder_copy_buffer_to_texture(first, recorder, buffer, texture, 16, 16, 256) ==
           GRANIT_SUCCESS);
-  REQUIRE(loader.recorder_draw(first, recorder, view, pipeline, bind_group) == GRANIT_SUCCESS);
+  REQUIRE(loader.recorder_draw(first, recorder, target_view, pipeline, bind_group) ==
+          GRANIT_SUCCESS);
+  granit_backend_plugin_buffer_desc readback_desc{};
+  readback_desc.struct_size = sizeof(readback_desc);
+  readback_desc.size = 4096;
+  readback_desc.usage = GRANIT_BACKEND_PLUGIN_BUFFER_USAGE_MAP_READ_BIT |
+                        GRANIT_BACKEND_PLUGIN_BUFFER_USAGE_COPY_DST_BIT;
+  granit_backend_plugin_buffer readback{};
+  REQUIRE(loader.create_buffer(first, &readback_desc, &readback) == GRANIT_SUCCESS);
+  REQUIRE(loader.recorder_copy_texture_to_buffer(first, recorder, target_texture, readback, 16, 16,
+                                                 256) == GRANIT_SUCCESS);
   granit_backend_plugin_command_buffer command_buffer{};
   REQUIRE(loader.finish_command_recorder(first, recorder, &command_buffer) == GRANIT_SUCCESS);
   CHECK(command_buffer != 0);
@@ -344,11 +361,18 @@ TEST_CASE("WebGPU 插件绑定与 Pipeline 遵守依赖生命周期", "[backend]
   CHECK(loader.finish_command_recorder(first, recorder, &duplicate_finish) ==
         GRANIT_ERROR_INVALID_ARGUMENT);
   CHECK(duplicate_finish == 0);
-  CHECK(loader.recorder_draw(first, recorder, view, pipeline, bind_group) ==
+  CHECK(loader.recorder_draw(first, recorder, target_view, pipeline, bind_group) ==
         GRANIT_ERROR_INVALID_ARGUMENT);
   CHECK(loader.submit_command_buffer(second, command_buffer) == GRANIT_ERROR_INVALID_HANDLE);
   REQUIRE(loader.submit_command_buffer(first, command_buffer) == GRANIT_SUCCESS);
   CHECK(loader.submit_command_buffer(first, command_buffer) == GRANIT_ERROR_INVALID_HANDLE);
+  std::uint32_t corner{};
+  std::uint32_t center{};
+  REQUIRE(loader.read_buffer(first, readback, 0, &corner, sizeof(corner)) == GRANIT_SUCCESS);
+  REQUIRE(loader.read_buffer(first, readback, 8 * 256 + 8 * 4, &center, sizeof(center)) ==
+          GRANIT_SUCCESS);
+  CHECK(corner == UINT32_C(0xff000000));
+  CHECK(center == UINT32_C(0xff66b333));
   REQUIRE(loader.destroy_command_recorder(first, recorder) == GRANIT_SUCCESS);
   CHECK(loader.destroy_command_recorder(first, recorder) == GRANIT_ERROR_INVALID_HANDLE);
 
@@ -358,6 +382,9 @@ TEST_CASE("WebGPU 插件绑定与 Pipeline 遵守依赖生命周期", "[backend]
   CHECK(loader.destroy_command_buffer(first, command_buffer) == GRANIT_ERROR_INVALID_HANDLE);
   REQUIRE(loader.destroy_command_recorder(first, recorder) == GRANIT_SUCCESS);
   REQUIRE(loader.destroy_buffer(first, buffer) == GRANIT_SUCCESS);
+  REQUIRE(loader.destroy_buffer(first, readback) == GRANIT_SUCCESS);
+  REQUIRE(loader.destroy_texture_view(first, target_view) == GRANIT_SUCCESS);
+  REQUIRE(loader.destroy_texture(first, target_texture) == GRANIT_SUCCESS);
   CHECK(loader.destroy_pipeline_layout(first, pipeline_layout) == GRANIT_ERROR_INVALID_ARGUMENT);
   CHECK(loader.destroy_bind_group_layout(first, bind_group_layout) ==
         GRANIT_ERROR_INVALID_ARGUMENT);

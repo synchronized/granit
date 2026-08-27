@@ -25,6 +25,10 @@ void diagnose(granit_diagnostic_severity severity, granit_diagnostic_category ca
                static_cast<int>(message_length), message == nullptr ? "" : message);
 }
 
+bool near_byte(std::uint32_t value, std::uint32_t expected) {
+  return value + 1 >= expected && value <= expected + 1;
+}
+
 } // namespace
 
 int main() {
@@ -108,24 +112,58 @@ int main() {
           GRANIT_SUCCESS ||
       pipeline_layout == 0 ||
       loader.create_render_pipeline(instance, pipeline_layout, &pipeline) != GRANIT_SUCCESS ||
-      pipeline == 0 || loader.destroy_render_pipeline(instance, pipeline) != GRANIT_SUCCESS ||
+      pipeline == 0) {
+    std::fprintf(stderr, "WebGPU 绑定或 Render Pipeline 生命周期验证失败\n");
+    return 6;
+  }
+
+  auto target_desc = texture_desc;
+  target_desc.width = 64;
+  target_desc.height = 64;
+  target_desc.usage = GRANIT_BACKEND_PLUGIN_TEXTURE_USAGE_COPY_SRC_BIT |
+                      GRANIT_BACKEND_PLUGIN_TEXTURE_USAGE_RENDER_ATTACHMENT_BIT;
+  granit_backend_plugin_texture target_texture{};
+  granit_backend_plugin_texture_view target_view{};
+  granit_backend_plugin_buffer_desc readback_desc{};
+  readback_desc.struct_size = sizeof(readback_desc);
+  readback_desc.size = 16384;
+  readback_desc.usage = GRANIT_BACKEND_PLUGIN_BUFFER_USAGE_MAP_READ_BIT |
+                        GRANIT_BACKEND_PLUGIN_BUFFER_USAGE_COPY_DST_BIT;
+  granit_backend_plugin_buffer readback{};
+  granit_backend_plugin_command_recorder recorder{};
+  granit_backend_plugin_command_buffer command_buffer{};
+  std::uint32_t corner{};
+  std::uint32_t center{};
+  if (loader.create_texture(instance, &target_desc, &target_texture) != GRANIT_SUCCESS ||
+      loader.create_texture_view(instance, target_texture, &target_view) != GRANIT_SUCCESS ||
+      loader.create_buffer(instance, &readback_desc, &readback) != GRANIT_SUCCESS ||
+      loader.create_command_recorder(instance, &recorder) != GRANIT_SUCCESS || recorder == 0 ||
+      loader.recorder_draw(instance, recorder, target_view, pipeline, bind_group) !=
+          GRANIT_SUCCESS ||
+      loader.recorder_copy_texture_to_buffer(instance, recorder, target_texture, readback, 64, 64,
+                                             256) != GRANIT_SUCCESS ||
+      loader.finish_command_recorder(instance, recorder, &command_buffer) != GRANIT_SUCCESS ||
+      command_buffer == 0 ||
+      loader.submit_command_buffer(instance, command_buffer) != GRANIT_SUCCESS ||
+      loader.read_buffer(instance, readback, 0, &corner, sizeof(corner)) != GRANIT_SUCCESS ||
+      loader.read_buffer(instance, readback, 32 * 256 + 32 * 4, &center, sizeof(center)) !=
+          GRANIT_SUCCESS ||
+      corner != UINT32_C(0xff000000) || !near_byte(center & UINT32_C(0xff), 51) ||
+      !near_byte((center >> 8) & UINT32_C(0xff), 179) ||
+      !near_byte((center >> 16) & UINT32_C(0xff), 102) ||
+      ((center >> 24) & UINT32_C(0xff)) != 255 ||
+      loader.destroy_command_recorder(instance, recorder) != GRANIT_SUCCESS ||
+      loader.destroy_buffer(instance, readback) != GRANIT_SUCCESS ||
+      loader.destroy_texture_view(instance, target_view) != GRANIT_SUCCESS ||
+      loader.destroy_texture(instance, target_texture) != GRANIT_SUCCESS ||
+      loader.destroy_render_pipeline(instance, pipeline) != GRANIT_SUCCESS ||
       loader.destroy_pipeline_layout(instance, pipeline_layout) != GRANIT_SUCCESS ||
       loader.destroy_bind_group(instance, bind_group) != GRANIT_SUCCESS ||
       loader.destroy_bind_group_layout(instance, bind_group_layout) != GRANIT_SUCCESS ||
       loader.destroy_sampler(instance, sampler) != GRANIT_SUCCESS ||
       loader.destroy_texture_view(instance, view) != GRANIT_SUCCESS ||
       loader.destroy_texture(instance, texture) != GRANIT_SUCCESS) {
-    std::fprintf(stderr, "WebGPU 绑定或 Render Pipeline 生命周期验证失败\n");
-    return 6;
-  }
-  granit_backend_plugin_command_recorder recorder{};
-  granit_backend_plugin_command_buffer command_buffer{};
-  if (loader.create_command_recorder(instance, &recorder) != GRANIT_SUCCESS || recorder == 0 ||
-      loader.finish_command_recorder(instance, recorder, &command_buffer) != GRANIT_SUCCESS ||
-      command_buffer == 0 ||
-      loader.submit_command_buffer(instance, command_buffer) != GRANIT_SUCCESS ||
-      loader.destroy_command_recorder(instance, recorder) != GRANIT_SUCCESS) {
-    std::fprintf(stderr, "WebGPU Command Encoder 或 Queue Submit 验证失败\n");
+    std::fprintf(stderr, "WebGPU 离屏三角形渲染或像素回读验证失败\n");
     return 7;
   }
   const auto destroy_result = loader.destroy_instance(instance);

@@ -1230,6 +1230,51 @@ granit_result recorder_draw(granit_backend_plugin_instance instance,
   return GRANIT_SUCCESS;
 }
 
+granit_result recorder_copy_texture_to_buffer(granit_backend_plugin_instance instance,
+                                              granit_backend_plugin_command_recorder recorder,
+                                              granit_backend_plugin_texture texture,
+                                              granit_backend_plugin_buffer buffer,
+                                              std::uint32_t width, std::uint32_t height,
+                                              std::uint32_t bytes_per_row) noexcept {
+  if (instance == 0 || recorder == 0 || texture == 0 || buffer == 0 || width == 0 || height == 0 ||
+      bytes_per_row < static_cast<std::uint64_t>(width) * 4 || bytes_per_row % 256 != 0) {
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  }
+  const std::scoped_lock lock{instances_mutex};
+  const auto found = instances.find(instance);
+  if (found == instances.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  auto& state = *found->second;
+  const auto recorder_found = state.command_recorders.find(recorder);
+  const auto texture_found = state.textures.find(texture);
+  const auto buffer_found = state.buffers.find(buffer);
+  if (recorder_found == state.command_recorders.end() || texture_found == state.textures.end() ||
+      buffer_found == state.buffers.end()) {
+    return GRANIT_ERROR_INVALID_HANDLE;
+  }
+  if (recorder_found->second.finished)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  const auto required_size = static_cast<std::uint64_t>(bytes_per_row) * (height - 1) +
+                             static_cast<std::uint64_t>(width) * 4;
+  if ((texture_found->second.usage & GRANIT_BACKEND_PLUGIN_TEXTURE_USAGE_COPY_SRC_BIT) == 0 ||
+      (buffer_found->second.usage & GRANIT_BACKEND_PLUGIN_BUFFER_USAGE_COPY_DST_BIT) == 0 ||
+      width > texture_found->second.width || height > texture_found->second.height ||
+      required_size > buffer_found->second.size) {
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  }
+  WGPUTexelCopyTextureInfo source = WGPU_TEXEL_COPY_TEXTURE_INFO_INIT;
+  source.texture = texture_found->second.texture;
+  source.aspect = WGPUTextureAspect_All;
+  WGPUTexelCopyBufferInfo destination = WGPU_TEXEL_COPY_BUFFER_INFO_INIT;
+  destination.buffer = buffer_found->second.buffer;
+  destination.layout.bytesPerRow = bytes_per_row;
+  destination.layout.rowsPerImage = height;
+  const WGPUExtent3D extent{width, height, 1};
+  wgpuCommandEncoderCopyTextureToBuffer(recorder_found->second.encoder, &source, &destination,
+                                        &extent);
+  return GRANIT_SUCCESS;
+}
+
 granit_result
 finish_command_recorder(granit_backend_plugin_instance instance,
                         granit_backend_plugin_command_recorder recorder,
@@ -1333,7 +1378,8 @@ constexpr granit_backend_plugin_instance_api instance_api{
     recorder_draw,
     finish_command_recorder,
     destroy_command_buffer,
-    submit_command_buffer};
+    submit_command_buffer,
+    recorder_copy_texture_to_buffer};
 constexpr granit_backend_plugin_api plugin_api{sizeof(granit_backend_plugin_api),
                                                GRANIT_BACKEND_PLUGIN_ABI_VERSION,
                                                GRANIT_BACKEND_PLUGIN_KIND_WEBGPU,

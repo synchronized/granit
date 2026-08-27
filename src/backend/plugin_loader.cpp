@@ -15,8 +15,8 @@ bool is_compatible(const granit_backend_plugin_api* api,
   constexpr std::size_t minimum_size = offsetof(granit_backend_plugin_api, instance_api) +
                                        sizeof(const granit_backend_plugin_instance_api*);
   constexpr std::size_t minimum_instance_api_size =
-      offsetof(granit_backend_plugin_instance_api, submit_command_buffer) +
-      sizeof(granit_backend_plugin_submit_command_buffer_fn);
+      offsetof(granit_backend_plugin_instance_api, recorder_copy_texture_to_buffer) +
+      sizeof(granit_backend_plugin_recorder_copy_texture_to_buffer_fn);
   return api != nullptr && api->struct_size >= minimum_size &&
          api->abi_version == GRANIT_BACKEND_PLUGIN_ABI_VERSION && api->kind == expected_kind &&
          api->reserved == 0 && api->name != nullptr && api->name_length != 0 &&
@@ -46,7 +46,8 @@ bool is_compatible(const granit_backend_plugin_api* api,
          api->instance_api->recorder_draw != nullptr &&
          api->instance_api->finish_command_recorder != nullptr &&
          api->instance_api->destroy_command_buffer != nullptr &&
-         api->instance_api->submit_command_buffer != nullptr;
+         api->instance_api->submit_command_buffer != nullptr &&
+         api->instance_api->recorder_copy_texture_to_buffer != nullptr;
 }
 
 bool is_valid_host(const granit_backend_plugin_host_api* host) noexcept {
@@ -484,6 +485,22 @@ GRANIT_LOADER_DESTROY_METHOD(destroy_command_buffer, destroy_command_buffer,
                              granit_backend_plugin_command_buffer)
 GRANIT_LOADER_DESTROY_METHOD(submit_command_buffer, submit_command_buffer,
                              granit_backend_plugin_command_buffer)
+
+granit_result backend_plugin_loader::recorder_copy_texture_to_buffer(
+    granit_backend_plugin_instance instance, granit_backend_plugin_command_recorder recorder,
+    granit_backend_plugin_texture texture, granit_backend_plugin_buffer buffer, std::uint32_t width,
+    std::uint32_t height, std::uint32_t bytes_per_row) noexcept {
+  if (api_ == nullptr || instance == 0 || recorder == 0 || texture == 0 || buffer == 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  if (std::find(instances_.begin(), instances_.end(), instance) == instances_.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  try {
+    return api_->instance_api->recorder_copy_texture_to_buffer(instance, recorder, texture, buffer,
+                                                               width, height, bytes_per_row);
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
 
 #undef GRANIT_LOADER_CREATE_METHOD
 #undef GRANIT_LOADER_DESTROY_METHOD

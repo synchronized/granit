@@ -503,6 +503,10 @@ void wgpuCommandEncoderCopyBufferToTexture(WGPUCommandEncoder encoder,
                                            const WGPUTexelCopyBufferInfo* source,
                                            const WGPUTexelCopyTextureInfo* destination,
                                            const WGPUExtent3D* copySize);
+void wgpuCommandEncoderCopyTextureToBuffer(WGPUCommandEncoder encoder,
+                                           const WGPUTexelCopyTextureInfo* source,
+                                           const WGPUTexelCopyBufferInfo* destination,
+                                           const WGPUExtent3D* copySize);
 WGPURenderPassEncoder wgpuCommandEncoderBeginRenderPass(WGPUCommandEncoder encoder,
                                                         const WGPURenderPassDescriptor* descriptor);
 void wgpuRenderPassEncoderSetPipeline(WGPURenderPassEncoder pass, WGPURenderPipeline pipeline);

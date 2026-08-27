@@ -19,6 +19,7 @@ struct WGPUTextureImpl {
   unsigned int width;
   unsigned int height;
   WGPUTextureUsage usage;
+  std::vector<unsigned char> bytes;
 };
 struct WGPUTextureViewImpl {
   WGPUTexture texture;
@@ -36,7 +37,9 @@ struct WGPUCommandEncoderImpl {
   bool finished{};
 };
 struct WGPUCommandBufferImpl {};
-struct WGPURenderPassEncoderImpl {};
+struct WGPURenderPassEncoderImpl {
+  WGPUTexture target;
+};
 
 extern "C" WGPUInstance wgpuCreateInstance(const WGPUInstanceDescriptor*) {
   return new WGPUInstanceImpl;
@@ -130,7 +133,10 @@ extern "C" WGPUTexture wgpuDeviceCreateTexture(WGPUDevice,
       descriptor->format != WGPUTextureFormat_RGBA8Unorm) {
     return nullptr;
   }
-  return new WGPUTextureImpl{descriptor->size.width, descriptor->size.height, descriptor->usage};
+  return new WGPUTextureImpl{
+      descriptor->size.width, descriptor->size.height, descriptor->usage,
+      std::vector<unsigned char>(static_cast<std::size_t>(descriptor->size.width) *
+                                 descriptor->size.height * 4)};
 }
 
 extern "C" void wgpuTextureRelease(WGPUTexture texture) { delete texture; }
@@ -192,21 +198,67 @@ extern "C" WGPUCommandEncoder wgpuDeviceCreateCommandEncoder(WGPUDevice,
 }
 extern "C" void wgpuCommandEncoderRelease(WGPUCommandEncoder encoder) { delete encoder; }
 extern "C" void wgpuCommandEncoderCopyBufferToTexture(WGPUCommandEncoder,
-                                                      const WGPUTexelCopyBufferInfo*,
-                                                      const WGPUTexelCopyTextureInfo*,
-                                                      const WGPUExtent3D*) {}
+                                                      const WGPUTexelCopyBufferInfo* source,
+                                                      const WGPUTexelCopyTextureInfo* destination,
+                                                      const WGPUExtent3D* size) {
+  for (unsigned int row = 0; row < size->height; ++row) {
+    std::memcpy(destination->texture->bytes.data() +
+                    static_cast<std::size_t>(row) * destination->texture->width * 4,
+                source->buffer->bytes.data() + source->layout.offset +
+                    static_cast<std::size_t>(row) * source->layout.bytesPerRow,
+                static_cast<std::size_t>(size->width) * 4);
+  }
+}
+extern "C" void wgpuCommandEncoderCopyTextureToBuffer(WGPUCommandEncoder,
+                                                      const WGPUTexelCopyTextureInfo* source,
+                                                      const WGPUTexelCopyBufferInfo* destination,
+                                                      const WGPUExtent3D* size) {
+  for (unsigned int row = 0; row < size->height; ++row) {
+    std::memcpy(destination->buffer->bytes.data() + destination->layout.offset +
+                    static_cast<std::size_t>(row) * destination->layout.bytesPerRow,
+                source->texture->bytes.data() +
+                    static_cast<std::size_t>(row) * source->texture->width * 4,
+                static_cast<std::size_t>(size->width) * 4);
+  }
+}
 extern "C" WGPURenderPassEncoder
 wgpuCommandEncoderBeginRenderPass(WGPUCommandEncoder encoder,
                                   const WGPURenderPassDescriptor* descriptor) {
-  return encoder != nullptr && !encoder->finished && descriptor != nullptr
-             ? new WGPURenderPassEncoderImpl
-             : nullptr;
+  if (encoder == nullptr || encoder->finished || descriptor == nullptr ||
+      descriptor->colorAttachmentCount != 1 || descriptor->colorAttachments == nullptr ||
+      descriptor->colorAttachments[0].view == nullptr) {
+    return nullptr;
+  }
+  const auto texture = descriptor->colorAttachments[0].view->texture;
+  for (std::size_t index = 0; index < texture->bytes.size(); index += 4) {
+    texture->bytes[index] = 0;
+    texture->bytes[index + 1] = 0;
+    texture->bytes[index + 2] = 0;
+    texture->bytes[index + 3] = 255;
+  }
+  return new WGPURenderPassEncoderImpl{texture};
 }
 extern "C" void wgpuRenderPassEncoderSetPipeline(WGPURenderPassEncoder, WGPURenderPipeline) {}
 extern "C" void wgpuRenderPassEncoderSetBindGroup(WGPURenderPassEncoder, unsigned int,
                                                   WGPUBindGroup, size_t, const unsigned int*) {}
-extern "C" void wgpuRenderPassEncoderDraw(WGPURenderPassEncoder, unsigned int, unsigned int,
-                                          unsigned int, unsigned int) {}
+extern "C" void wgpuRenderPassEncoderDraw(WGPURenderPassEncoder pass, unsigned int, unsigned int,
+                                          unsigned int, unsigned int) {
+  const auto width = pass->target->width;
+  const auto height = pass->target->height;
+  for (unsigned int y = 0; y < height; ++y) {
+    for (unsigned int x = 0; x < width; ++x) {
+      const auto nx = 2.0 * (static_cast<double>(x) + 0.5) / width - 1.0;
+      const auto ny = 2.0 * (static_cast<double>(y) + 0.5) / height - 1.0;
+      if (ny < -0.7 || ny > 0.7 || nx < -(ny + 0.7) / 2.0 || nx > (ny + 0.7) / 2.0)
+        continue;
+      const auto index = (static_cast<std::size_t>(y) * width + x) * 4;
+      pass->target->bytes[index] = 51;
+      pass->target->bytes[index + 1] = 179;
+      pass->target->bytes[index + 2] = 102;
+      pass->target->bytes[index + 3] = 255;
+    }
+  }
+}
 extern "C" void wgpuRenderPassEncoderEnd(WGPURenderPassEncoder) {}
 extern "C" void wgpuRenderPassEncoderRelease(WGPURenderPassEncoder pass) { delete pass; }
 extern "C" WGPUCommandBuffer wgpuCommandEncoderFinish(WGPUCommandEncoder encoder,
