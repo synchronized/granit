@@ -135,12 +135,13 @@ set_target_properties(granit_material_tool PROPERTIES FOLDER "Tools")
 if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
   add_executable(
     granit_shader_asset_test
-    shader_asset_test.cpp
+    "${PROJECT_SOURCE_DIR}/tests/tools/shader_asset_test.cpp"
     $<TARGET_OBJECTS:granit_shader_asset>
     $<TARGET_OBJECTS:granit_shader_tools_core>
     $<TARGET_OBJECTS:granit_spirv_reflect>
   )
   target_compile_features(granit_shader_asset_test PRIVATE cxx_std_20)
+  target_include_directories(granit_shader_asset_test PRIVATE "${PROJECT_SOURCE_DIR}/tools")
   target_link_libraries(granit_shader_asset_test PRIVATE Threads::Threads)
   granit_target_compile_warnings(granit_shader_asset_test)
   granit_target_output_directories(granit_shader_asset_test)
@@ -150,7 +151,9 @@ if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
   )
 
   if(TARGET granit_shader_tools)
-    add_executable(granit_shader_tools_c_test shader_tools_c_test.c)
+    add_executable(
+      granit_shader_tools_c_test "${PROJECT_SOURCE_DIR}/tests/tools/shader_tools_c_test.c"
+    )
     target_compile_features(granit_shader_tools_c_test PRIVATE c_std_11)
     target_link_libraries(granit_shader_tools_c_test PRIVATE granit::shader_tools)
     set_target_properties(granit_shader_tools_c_test PROPERTIES LINKER_LANGUAGE CXX)
@@ -162,7 +165,9 @@ if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
               "${PROJECT_SOURCE_DIR}/src/pipeline/shaders/tone_mapping.frag.spv"
     )
 
-    add_executable(granit_shader_tools_cpp_test shader_tools_cpp_test.cpp)
+    add_executable(
+      granit_shader_tools_cpp_test "${PROJECT_SOURCE_DIR}/tests/tools/shader_tools_cpp_test.cpp"
+    )
     target_compile_features(granit_shader_tools_cpp_test PRIVATE cxx_std_20)
     target_link_libraries(granit_shader_tools_cpp_test PRIVATE granit::shader_tools)
     granit_target_compile_warnings(granit_shader_tools_cpp_test)
@@ -175,7 +180,9 @@ if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
               "${PROJECT_SOURCE_DIR}/tests/assets/minimal.comp.spv"
     )
 
-    add_executable(granit_shader_asset_api_test shader_asset_api_test.cpp)
+    add_executable(
+      granit_shader_asset_api_test "${PROJECT_SOURCE_DIR}/tests/tools/shader_asset_api_test.cpp"
+    )
     target_compile_features(granit_shader_asset_api_test PRIVATE cxx_std_20)
     target_link_libraries(granit_shader_asset_api_test PRIVATE granit::shader_tools)
     granit_target_compile_warnings(granit_shader_asset_api_test)

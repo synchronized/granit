@@ -27,7 +27,7 @@ add_test(
 )
 set_tests_properties(granit.release_version_mismatch PROPERTIES WILL_FAIL TRUE)
 
-add_executable(granit_c_version_test c_version_test.c)
+add_executable(granit_c_version_test core/version_c_test.c)
 target_link_libraries(granit_c_version_test PRIVATE granit::granit Unity::Unity)
 set_target_properties(granit_c_version_test PROPERTIES LINKER_LANGUAGE CXX)
 granit_target_compile_warnings(granit_c_version_test)
@@ -72,7 +72,7 @@ target_link_libraries(
 )
 granit_target_compile_warnings(granit_c_header_test)
 
-add_executable(granit_cpp_version_test cpp_version_test.cpp)
+add_executable(granit_cpp_version_test core/version_cpp_test.cpp)
 target_link_libraries(
   granit_cpp_version_test
   PRIVATE granit::granit Catch2::Catch2WithMain
