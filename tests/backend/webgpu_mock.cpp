@@ -47,8 +47,15 @@ extern "C" WGPUInstance wgpuCreateInstance(const WGPUInstanceDescriptor*) {
 
 extern "C" void wgpuInstanceRelease(WGPUInstance instance) { delete instance; }
 
-extern "C" WGPUFuture wgpuInstanceRequestAdapter(WGPUInstance, const WGPURequestAdapterOptions*,
+extern "C" WGPUFuture wgpuInstanceRequestAdapter(WGPUInstance,
+                                                 const WGPURequestAdapterOptions* options,
                                                  WGPURequestAdapterCallbackInfo callback_info) {
+  if (options != nullptr && options->forceFallbackAdapter) {
+    constexpr char message[] = "mock fallback adapter unavailable";
+    callback_info.callback(0, nullptr, {message, sizeof(message) - 1}, callback_info.userdata1,
+                           callback_info.userdata2);
+    return {1};
+  }
   callback_info.callback(WGPURequestAdapterStatus_Success, new WGPUAdapterImpl, {},
                          callback_info.userdata1, callback_info.userdata2);
   return {1};

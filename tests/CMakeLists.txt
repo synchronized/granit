@@ -206,6 +206,7 @@ add_library(
 )
 add_library(granit_incompatible_backend_plugin SHARED backend/incompatible_backend_plugin.cpp)
 target_compile_features(granit_fake_backend_plugin PRIVATE cxx_std_20)
+target_compile_definitions(granit_fake_backend_plugin PRIVATE GRANIT_WEBGPU_FORCE_FALLBACK_ADAPTER)
 target_compile_features(granit_incompatible_backend_plugin PRIVATE cxx_std_20)
 set_target_properties(
   granit_fake_backend_plugin granit_incompatible_backend_plugin

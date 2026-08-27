@@ -88,9 +88,10 @@ struct webgpu_instance {
 constexpr std::uint64_t request_timeout_ns = UINT64_C(10000000000);
 
 struct adapter_request {
-  const granit_backend_plugin_host_api* host{};
   WGPURequestAdapterStatus status{};
   WGPUAdapter adapter{};
+  char message[256]{};
+  std::uint32_t message_length{};
 };
 
 struct device_request {
@@ -219,8 +220,12 @@ void receive_adapter(WGPURequestAdapterStatus status, WGPUAdapter adapter, WGPUS
   auto& request = *static_cast<adapter_request*>(data);
   request.status = status;
   request.adapter = adapter;
-  if (status != WGPURequestAdapterStatus_Success) {
-    emit_dawn_message(request.host, message);
+  if (message.data != nullptr) {
+    const auto length = message.length == WGPU_STRLEN ? std::strlen(message.data) : message.length;
+    const auto copy_length = (std::min)(length, sizeof(request.message) - 1);
+    std::memcpy(request.message, message.data, copy_length);
+    request.message[copy_length] = '\0';
+    request.message_length = static_cast<std::uint32_t>(copy_length);
   }
 }
 
@@ -248,6 +253,16 @@ bool wait_for(WGPUInstance instance, WGPUFuture future, Request& request) noexce
   return wgpuInstanceWaitAny(instance, 1, &wait_info, request_timeout_ns) ==
              WGPUWaitStatus_Success &&
          wait_info.completed && request.status != 0;
+}
+
+bool request_adapter(WGPUInstance instance, WGPURequestAdapterOptions& options,
+                     adapter_request& request) noexcept {
+  request = {};
+  const WGPURequestAdapterCallbackInfo callback{nullptr, WGPUCallbackMode_WaitAnyOnly,
+                                                receive_adapter, &request, nullptr};
+  const auto future = wgpuInstanceRequestAdapter(instance, &options, callback);
+  return wait_for(instance, future, request) &&
+         request.status == WGPURequestAdapterStatus_Success && request.adapter != nullptr;
 }
 
 granit_result create_backend(const granit_backend_plugin_host_api* host,
@@ -280,9 +295,7 @@ granit_result create_backend(const granit_backend_plugin_host_api* host,
     return GRANIT_ERROR_INITIALIZATION_FAILED;
   }
 
-  adapter_request adapter{host};
-  const WGPURequestAdapterCallbackInfo adapter_callback{nullptr, WGPUCallbackMode_WaitAnyOnly,
-                                                        receive_adapter, &adapter, nullptr};
+  adapter_request adapter{};
   WGPURequestAdapterOptions adapter_options{};
 #if defined(_WIN32)
   adapter_options.backendType = WGPUBackendType_D3D12;
@@ -292,11 +305,22 @@ granit_result create_backend(const granit_backend_plugin_host_api* host,
 #if defined(GRANIT_WEBGPU_FORCE_FALLBACK_ADAPTER)
   adapter_options.forceFallbackAdapter = WGPU_TRUE;
 #endif
-  const auto adapter_future =
-      wgpuInstanceRequestAdapter(state->instance, &adapter_options, adapter_callback);
-  if (!wait_for(state->instance, adapter_future, adapter) ||
-      adapter.status != WGPURequestAdapterStatus_Success || adapter.adapter == nullptr) {
-    constexpr char message[] = "Dawn WebGPU adapter request failed or timed out";
+#if defined(GRANIT_WEBGPU_FORCE_FALLBACK_ADAPTER)
+  if (!request_adapter(state->instance, adapter_options, adapter)) {
+    constexpr char retry_message[] = "WebGPU fallback adapter 请求失败，正在重试普通 adapter";
+    emit(*host, GRANIT_DIAGNOSTIC_SEVERITY_WARNING, retry_message, sizeof(retry_message) - 1);
+    if (adapter.adapter != nullptr) {
+      wgpuAdapterRelease(adapter.adapter);
+      adapter.adapter = nullptr;
+    }
+    adapter_options.forceFallbackAdapter = WGPU_FALSE;
+  }
+#endif
+  if (adapter.adapter == nullptr && !request_adapter(state->instance, adapter_options, adapter)) {
+    if (adapter.message_length != 0) {
+      emit(*host, GRANIT_DIAGNOSTIC_SEVERITY_ERROR, adapter.message, adapter.message_length);
+    }
+    constexpr char message[] = "Dawn WebGPU adapter 请求失败或超时";
     emit(*host, GRANIT_DIAGNOSTIC_SEVERITY_ERROR, message, sizeof(message) - 1);
     if (adapter.adapter != nullptr) {
       wgpuAdapterRelease(adapter.adapter);

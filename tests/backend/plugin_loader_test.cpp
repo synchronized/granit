@@ -128,12 +128,12 @@ TEST_CASE("后端插件 Loader 完成版本化握手", "[backend][plugin]") {
   REQUIRE(loader.create_instance(&host, &instance) == GRANIT_SUCCESS);
   CHECK(instance != 0);
   CHECK(state.allocations == 3);
-  CHECK(state.diagnostics == 3);
+  CHECK(state.diagnostics == 5);
 
   CHECK(loader.destroy_instance(instance) == GRANIT_SUCCESS);
   CHECK(loader.destroy_instance(instance) == GRANIT_ERROR_INVALID_HANDLE);
   CHECK(state.deallocations == 2);
-  CHECK(state.diagnostics == 4);
+  CHECK(state.diagnostics == 6);
 
   REQUIRE(loader.create_instance(&host, &instance) == GRANIT_SUCCESS);
 
@@ -142,7 +142,7 @@ TEST_CASE("后端插件 Loader 完成版本化握手", "[backend][plugin]") {
   CHECK(loader.api() == nullptr);
   CHECK(state.allocations == 4);
   CHECK(state.deallocations == 3);
-  CHECK(state.diagnostics == 6);
+  CHECK(state.diagnostics == 9);
   CHECK(loader.get_capabilities(instance, &capabilities) == GRANIT_ERROR_INVALID_ARGUMENT);
 }
 
