@@ -3399,8 +3399,8 @@ granit_result renderer_registry::bind_graphics_pipeline(granit_renderer renderer
   std::lock_guard command_lock{command->mutex};
   if (!command->renderer->command_recorder_is_recording(*command->native))
     return GRANIT_ERROR_INVALID_ARGUMENT;
-  const auto result = command->renderer->bind_graphics_pipeline(
-      native_command_recorder(*command->native), *pipeline_record->native);
+  const auto result =
+      command->renderer->bind_graphics_pipeline(*command->native, *pipeline_record->native);
   if (result == GRANIT_SUCCESS)
     retain_resource(command->retained_resources, pipeline_record, pipeline_record->metadata);
   return result;
@@ -3457,8 +3457,8 @@ renderer_registry::bind_graphics_groups(granit_renderer renderer, granit_command
   if (!command->renderer->command_recorder_is_recording(*command->native))
     return GRANIT_ERROR_INVALID_ARGUMENT;
   const auto result = command->renderer->bind_graphics_groups(
-      native_command_recorder(*command->native), *layout_record->native, first_group, native_groups,
-      dynamic_offsets, buffer_accesses, texture_accesses);
+      *command->native, *layout_record->native, first_group, native_groups, dynamic_offsets,
+      buffer_accesses, texture_accesses);
   if (result == GRANIT_SUCCESS) {
     retain_resource(command->retained_resources, layout_record, layout_record->metadata);
     for (const auto& group : group_records)
@@ -3484,8 +3484,8 @@ granit_result renderer_registry::bind_compute_pipeline(granit_renderer renderer,
   std::lock_guard command_lock{command->mutex};
   if (!command->renderer->command_recorder_is_recording(*command->native))
     return GRANIT_ERROR_INVALID_ARGUMENT;
-  const auto result = command->renderer->bind_compute_pipeline(
-      native_command_recorder(*command->native), *pipeline_record->native);
+  const auto result =
+      command->renderer->bind_compute_pipeline(*command->native, *pipeline_record->native);
   if (result == GRANIT_SUCCESS)
     retain_resource(command->retained_resources, pipeline_record, pipeline_record->metadata);
   return result;
@@ -3542,8 +3542,8 @@ renderer_registry::bind_compute_groups(granit_renderer renderer, granit_command_
   if (!command->renderer->command_recorder_is_recording(*command->native))
     return GRANIT_ERROR_INVALID_ARGUMENT;
   const auto result = command->renderer->bind_compute_groups(
-      native_command_recorder(*command->native), *layout_record->native, first_group, native_groups,
-      dynamic_offsets, buffer_accesses, texture_accesses);
+      *command->native, *layout_record->native, first_group, native_groups, dynamic_offsets,
+      buffer_accesses, texture_accesses);
   if (result == GRANIT_SUCCESS) {
     retain_resource(command->retained_resources, layout_record, layout_record->metadata);
     for (const auto& group : group_records)
@@ -3572,8 +3572,7 @@ granit_result renderer_registry::set_viewports(granit_renderer renderer,
   if (!command)
     return GRANIT_ERROR_INVALID_HANDLE;
   std::lock_guard lock{command->mutex};
-  return command->renderer->set_viewports(native_command_recorder(*command->native), first,
-                                          viewports);
+  return command->renderer->set_viewports(*command->native, first, viewports);
 }
 
 granit_result renderer_registry::set_scissors(granit_renderer renderer,
@@ -3583,8 +3582,7 @@ granit_result renderer_registry::set_scissors(granit_renderer renderer,
   if (!command)
     return GRANIT_ERROR_INVALID_HANDLE;
   std::lock_guard lock{command->mutex};
-  return command->renderer->set_scissors(native_command_recorder(*command->native), first,
-                                         scissors);
+  return command->renderer->set_scissors(*command->native, first, scissors);
 }
 
 granit_result
@@ -3612,8 +3610,8 @@ renderer_registry::bind_vertex_buffers(granit_renderer renderer, granit_command_
     }
   }
   std::lock_guard lock{command->mutex};
-  const auto result = command->renderer->bind_vertex_buffers(
-      native_command_recorder(*command->native), first, buffers, offsets);
+  const auto result =
+      command->renderer->bind_vertex_buffers(*command->native, first, buffers, offsets);
   if (result == GRANIT_SUCCESS) {
     for (const auto& record : records)
       retain_resource(command->retained_resources, record, record->metadata);
@@ -3641,8 +3639,8 @@ granit_result renderer_registry::bind_index_buffer(granit_renderer renderer,
     record = found->second;
   }
   std::lock_guard lock{command->mutex};
-  const auto result = command->renderer->bind_index_buffer(
-      native_command_recorder(*command->native), *record->native, offset, type);
+  const auto result =
+      command->renderer->bind_index_buffer(*command->native, *record->native, offset, type);
   if (result == GRANIT_SUCCESS)
     retain_resource(command->retained_resources, record, record->metadata);
   return result;

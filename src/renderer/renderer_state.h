@@ -198,21 +198,21 @@ public:
                                           backend_buffer_resource& buffer, std::uint64_t offset,
                                           std::uint64_t size, std::uint32_t value);
   [[nodiscard]] granit_result
-  bind_graphics_pipeline(vulkan_command_recorder& recorder,
+  bind_graphics_pipeline(backend_command_recorder_resource& recorder,
                          backend_graphics_pipeline_resource& pipeline) noexcept;
   [[nodiscard]] granit_result
-  bind_graphics_groups(vulkan_command_recorder& recorder, backend_pipeline_layout_resource& layout,
-                       std::uint32_t first_group,
+  bind_graphics_groups(backend_command_recorder_resource& recorder,
+                       backend_pipeline_layout_resource& layout, std::uint32_t first_group,
                        std::span<backend_bind_group_resource* const> bind_groups,
                        std::span<const std::uint32_t> dynamic_offsets,
                        std::span<const backend_buffer_access> buffer_accesses,
                        std::span<const backend_texture_access> texture_accesses);
   [[nodiscard]] granit_result
-  bind_compute_pipeline(vulkan_command_recorder& recorder,
+  bind_compute_pipeline(backend_command_recorder_resource& recorder,
                         backend_compute_pipeline_resource& pipeline) noexcept;
   [[nodiscard]] granit_result
-  bind_compute_groups(vulkan_command_recorder& recorder, backend_pipeline_layout_resource& layout,
-                      std::uint32_t first_group,
+  bind_compute_groups(backend_command_recorder_resource& recorder,
+                      backend_pipeline_layout_resource& layout, std::uint32_t first_group,
                       std::span<backend_bind_group_resource* const> bind_groups,
                       std::span<const std::uint32_t> dynamic_offsets,
                       std::span<const backend_buffer_access> buffer_accesses,
@@ -220,15 +220,17 @@ public:
   [[nodiscard]] granit_result dispatch(vulkan_command_recorder& recorder,
                                        std::uint32_t group_count_x, std::uint32_t group_count_y,
                                        std::uint32_t group_count_z) noexcept;
-  [[nodiscard]] granit_result set_viewports(vulkan_command_recorder& recorder, std::uint32_t first,
+  [[nodiscard]] granit_result set_viewports(backend_command_recorder_resource& recorder,
+                                            std::uint32_t first,
                                             std::span<const granit_viewport> viewports) noexcept;
-  [[nodiscard]] granit_result set_scissors(vulkan_command_recorder& recorder, std::uint32_t first,
+  [[nodiscard]] granit_result set_scissors(backend_command_recorder_resource& recorder,
+                                           std::uint32_t first,
                                            std::span<const granit_scissor> scissors) noexcept;
-  [[nodiscard]] granit_result bind_vertex_buffers(vulkan_command_recorder& recorder,
+  [[nodiscard]] granit_result bind_vertex_buffers(backend_command_recorder_resource& recorder,
                                                   std::uint32_t first,
                                                   std::span<backend_buffer_resource* const> buffers,
                                                   std::span<const std::uint64_t> offsets);
-  [[nodiscard]] granit_result bind_index_buffer(vulkan_command_recorder& recorder,
+  [[nodiscard]] granit_result bind_index_buffer(backend_command_recorder_resource& recorder,
                                                 backend_buffer_resource& buffer,
                                                 std::uint64_t offset, granit_index_type type);
   [[nodiscard]] granit_result draw(vulkan_command_recorder& recorder, std::uint32_t vertex_count,

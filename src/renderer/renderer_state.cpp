@@ -1809,22 +1809,26 @@ granit_result renderer_state::fill_buffer(backend_command_recorder_resource& rec
 }
 
 granit_result
-renderer_state::bind_graphics_pipeline(vulkan_command_recorder& recorder,
+renderer_state::bind_graphics_pipeline(backend_command_recorder_resource& recorder_resource,
                                        backend_graphics_pipeline_resource& resource) noexcept {
   if (device_lost())
     return GRANIT_ERROR_DEVICE_LOST;
+  auto& recorder = static_cast<vulkan_command_recorder_resource&>(recorder_resource).native();
   return recorder.bind_graphics_pipeline(
       device_, static_cast<vulkan_graphics_pipeline_resource&>(resource).native());
 }
 
-granit_result renderer_state::bind_graphics_groups(
-    vulkan_command_recorder& recorder, backend_pipeline_layout_resource& layout_resource,
-    std::uint32_t first_group, std::span<backend_bind_group_resource* const> bind_groups,
-    std::span<const std::uint32_t> dynamic_offsets,
-    std::span<const backend_buffer_access> buffer_accesses,
-    std::span<const backend_texture_access> texture_accesses) {
+granit_result
+renderer_state::bind_graphics_groups(backend_command_recorder_resource& recorder_resource,
+                                     backend_pipeline_layout_resource& layout_resource,
+                                     std::uint32_t first_group,
+                                     std::span<backend_bind_group_resource* const> bind_groups,
+                                     std::span<const std::uint32_t> dynamic_offsets,
+                                     std::span<const backend_buffer_access> buffer_accesses,
+                                     std::span<const backend_texture_access> texture_accesses) {
   if (device_lost())
     return GRANIT_ERROR_DEVICE_LOST;
+  auto& recorder = static_cast<vulkan_command_recorder_resource&>(recorder_resource).native();
   try {
     std::vector<std::pair<VkBuffer, VkAccessFlags2>> native_buffers;
     std::vector<vulkan_image_access> native_textures;
@@ -1879,22 +1883,26 @@ granit_result renderer_state::bind_graphics_groups(
 }
 
 granit_result
-renderer_state::bind_compute_pipeline(vulkan_command_recorder& recorder,
+renderer_state::bind_compute_pipeline(backend_command_recorder_resource& recorder_resource,
                                       backend_compute_pipeline_resource& resource) noexcept {
+  auto& recorder = static_cast<vulkan_command_recorder_resource&>(recorder_resource).native();
   return device_lost()
              ? GRANIT_ERROR_DEVICE_LOST
              : recorder.bind_compute_pipeline(
                    device_, static_cast<vulkan_compute_pipeline_resource&>(resource).native());
 }
 
-granit_result renderer_state::bind_compute_groups(
-    vulkan_command_recorder& recorder, backend_pipeline_layout_resource& layout_resource,
-    std::uint32_t first_group, std::span<backend_bind_group_resource* const> bind_groups,
-    std::span<const std::uint32_t> dynamic_offsets,
-    std::span<const backend_buffer_access> buffer_accesses,
-    std::span<const backend_texture_access> texture_accesses) {
+granit_result
+renderer_state::bind_compute_groups(backend_command_recorder_resource& recorder_resource,
+                                    backend_pipeline_layout_resource& layout_resource,
+                                    std::uint32_t first_group,
+                                    std::span<backend_bind_group_resource* const> bind_groups,
+                                    std::span<const std::uint32_t> dynamic_offsets,
+                                    std::span<const backend_buffer_access> buffer_accesses,
+                                    std::span<const backend_texture_access> texture_accesses) {
   if (device_lost())
     return GRANIT_ERROR_DEVICE_LOST;
+  auto& recorder = static_cast<vulkan_command_recorder_resource&>(recorder_resource).native();
   try {
     std::vector<std::pair<VkBuffer, VkAccessFlags2>> native_buffers;
     std::vector<vulkan_image_access> native_textures;
@@ -1955,10 +1963,12 @@ granit_result renderer_state::dispatch(vulkan_command_recorder& recorder,
                        : recorder.dispatch(device_, group_count_x, group_count_y, group_count_z);
 }
 
-granit_result renderer_state::set_viewports(vulkan_command_recorder& recorder, std::uint32_t first,
+granit_result renderer_state::set_viewports(backend_command_recorder_resource& recorder_resource,
+                                            std::uint32_t first,
                                             std::span<const granit_viewport> viewports) noexcept {
   if (device_lost())
     return GRANIT_ERROR_DEVICE_LOST;
+  auto& recorder = static_cast<vulkan_command_recorder_resource&>(recorder_resource).native();
   try {
     std::vector<VkViewport> native;
     native.reserve(viewports.size());
@@ -1973,10 +1983,12 @@ granit_result renderer_state::set_viewports(vulkan_command_recorder& recorder, s
   }
 }
 
-granit_result renderer_state::set_scissors(vulkan_command_recorder& recorder, std::uint32_t first,
+granit_result renderer_state::set_scissors(backend_command_recorder_resource& recorder_resource,
+                                           std::uint32_t first,
                                            std::span<const granit_scissor> scissors) noexcept {
   if (device_lost())
     return GRANIT_ERROR_DEVICE_LOST;
+  auto& recorder = static_cast<vulkan_command_recorder_resource&>(recorder_resource).native();
   try {
     std::vector<VkRect2D> native;
     native.reserve(scissors.size());
@@ -1990,12 +2002,12 @@ granit_result renderer_state::set_scissors(vulkan_command_recorder& recorder, st
   }
 }
 
-granit_result renderer_state::bind_vertex_buffers(vulkan_command_recorder& recorder,
-                                                  std::uint32_t first,
-                                                  std::span<backend_buffer_resource* const> buffers,
-                                                  std::span<const std::uint64_t> offsets) {
+granit_result renderer_state::bind_vertex_buffers(
+    backend_command_recorder_resource& recorder_resource, std::uint32_t first,
+    std::span<backend_buffer_resource* const> buffers, std::span<const std::uint64_t> offsets) {
   if (device_lost())
     return GRANIT_ERROR_DEVICE_LOST;
+  auto& recorder = static_cast<vulkan_command_recorder_resource&>(recorder_resource).native();
   try {
     std::vector<VkBuffer> native_buffers;
     std::vector<VkDeviceSize> native_offsets;
@@ -2015,11 +2027,13 @@ granit_result renderer_state::bind_vertex_buffers(vulkan_command_recorder& recor
   }
 }
 
-granit_result renderer_state::bind_index_buffer(vulkan_command_recorder& recorder,
-                                                backend_buffer_resource& buffer,
-                                                std::uint64_t offset, granit_index_type type) {
+granit_result
+renderer_state::bind_index_buffer(backend_command_recorder_resource& recorder_resource,
+                                  backend_buffer_resource& buffer, std::uint64_t offset,
+                                  granit_index_type type) {
   if (device_lost())
     return GRANIT_ERROR_DEVICE_LOST;
+  auto& recorder = static_cast<vulkan_command_recorder_resource&>(recorder_resource).native();
   const auto native_type =
       type == GRANIT_INDEX_TYPE_UINT16 ? VK_INDEX_TYPE_UINT16 : VK_INDEX_TYPE_UINT32;
   return recorder.bind_index_buffer(
