@@ -157,8 +157,10 @@ bool reflect_interface_variable(const SpvReflectInterfaceVariable& source,
   target.name = source.name == nullptr ? "" : source.name;
   target.bit_width = source.numeric.scalar.width;
   target.vector_size = std::max(source.numeric.vector.component_count, UINT32_C(1));
-  const auto flags = source.type_description == nullptr ? SPV_REFLECT_TYPE_FLAG_UNDEFINED
-                                                        : source.type_description->type_flags;
+  const SpvReflectTypeFlags flags =
+      source.type_description == nullptr
+          ? static_cast<SpvReflectTypeFlags>(SPV_REFLECT_TYPE_FLAG_UNDEFINED)
+          : source.type_description->type_flags;
   if ((flags & SPV_REFLECT_TYPE_FLAG_FLOAT) != 0) {
     target.scalar_type = shader_scalar_type::floating_point;
   } else if ((flags & SPV_REFLECT_TYPE_FLAG_INT) != 0) {
