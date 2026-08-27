@@ -135,16 +135,46 @@ jobs:
             -DGRANIT_BUILD_TESTING=ON
           cmake --build $build --target granit_webgpu_plugin_smoke `
             granit_shader_asset_vulkan_smoke granit_shader_tool
-          & "$build/bin/granit_shader_tool.exe" compile --tint "$stage/bin/tint.exe" `
+          $shaderTool = "$build/bin/granit_shader_tool.exe"
+          $watch = [System.Diagnostics.Stopwatch]::StartNew()
+          $firstOutput = (& $shaderTool compile --tint "$stage/bin/tint.exe" `
             --input "$PWD/tests/fixtures/shaders/s10c_triangle.wgsl" --entry vs_main `
             --stage vertex --output "$env:RUNNER_TEMP/s10c_tool_triangle.vert.spv" `
-            --asset $vertexAsset --tint-revision "$env:DAWN_REVISION"
-          if ($LASTEXITCODE -ne 0) { throw "granit_shader_tool 调用 Tint 失败" }
-          & "$build/bin/granit_shader_tool.exe" compile --tint "$stage/bin/tint.exe" `
+            --asset $vertexAsset --tint-revision "$env:DAWN_REVISION" 2>&1 | Out-String)
+          $firstCode = $LASTEXITCODE
+          $watch.Stop()
+          $firstMilliseconds = $watch.ElapsedMilliseconds
+          Write-Host $firstOutput
+          if ($firstCode -ne 0) { throw "granit_shader_tool 调用 Tint 失败" }
+          $watch.Restart()
+          $cacheOutput = (& $shaderTool compile --tint "$stage/bin/tint.exe" `
+            --input "$PWD/tests/fixtures/shaders/s10c_triangle.wgsl" --entry vs_main `
+            --stage vertex --output "$env:RUNNER_TEMP/s10c_tool_triangle.vert.spv" `
+            --asset $vertexAsset --tint-revision "$env:DAWN_REVISION" 2>&1 | Out-String)
+          $cacheCode = $LASTEXITCODE
+          $watch.Stop()
+          $cacheMilliseconds = $watch.ElapsedMilliseconds
+          Write-Host $cacheOutput
+          if ($cacheCode -ne 0 -or $cacheOutput -notmatch "缓存命中") {
+            throw "Shader 资产重复构建未报告缓存命中"
+          }
+          & $shaderTool compile --tint "$stage/bin/tint.exe" `
             --input "$PWD/tests/fixtures/shaders/s10c_triangle.wgsl" --entry fs_main `
             --stage fragment --output "$env:RUNNER_TEMP/s10c_tool_triangle.frag.spv" `
             --asset $fragmentAsset --tint-revision "$env:DAWN_REVISION"
           if ($LASTEXITCODE -ne 0) { throw "granit_shader_tool 调用 Tint 失败" }
+          $vertexBytes = (Get-Item -LiteralPath $vertexAsset).Length
+          $fragmentBytes = (Get-Item -LiteralPath $fragmentAsset).Length
+          @"
+          ### Windows Shader 资产
+
+          | 指标 | 结果 |
+          |---|---:|
+          | 首次构建 | $firstMilliseconds ms |
+          | 缓存命中构建 | $cacheMilliseconds ms |
+          | Vertex 资产 | $vertexBytes bytes |
+          | Fragment 资产 | $fragmentBytes bytes |
+          "@ | Add-Content -Encoding utf8 $env:GITHUB_STEP_SUMMARY
           $fxc = "$env:WINDIR/System32/d3dcompiler_47.dll"
           if (-not (Test-Path -LiteralPath $fxc -PathType Leaf)) {
             throw "Windows runner 缺少 d3dcompiler_47.dll"
@@ -273,14 +303,38 @@ jobs:
             -DGRANIT_ENABLE_WAYLAND=OFF
           cmake --build "$build" --target granit_webgpu_plugin_smoke \
             granit_shader_asset_vulkan_smoke granit_shader_tool
-          "$build/bin/granit_shader_tool" compile --tint "$stage/bin/tint" \
+          shader_tool="$build/bin/granit_shader_tool"
+          first_start="$(date +%s%N)"
+          first_output="$("$shader_tool" compile --tint "$stage/bin/tint" \
             --input "$PWD/tests/fixtures/shaders/s10c_triangle.wgsl" --entry vs_main \
             --stage vertex --output "$RUNNER_TEMP/s10c_tool_triangle.vert.spv" \
-            --asset "$vertex_asset" --tint-revision "$DAWN_REVISION"
-          "$build/bin/granit_shader_tool" compile --tint "$stage/bin/tint" \
+            --asset "$vertex_asset" --tint-revision "$DAWN_REVISION" 2>&1)"
+          first_ms=$(( ($(date +%s%N) - first_start) / 1000000 ))
+          printf '%s\n' "$first_output"
+          cache_start="$(date +%s%N)"
+          cache_output="$("$shader_tool" compile --tint "$stage/bin/tint" \
+            --input "$PWD/tests/fixtures/shaders/s10c_triangle.wgsl" --entry vs_main \
+            --stage vertex --output "$RUNNER_TEMP/s10c_tool_triangle.vert.spv" \
+            --asset "$vertex_asset" --tint-revision "$DAWN_REVISION" 2>&1)"
+          cache_ms=$(( ($(date +%s%N) - cache_start) / 1000000 ))
+          printf '%s\n' "$cache_output"
+          grep -Fq '缓存命中' <<< "$cache_output"
+          "$shader_tool" compile --tint "$stage/bin/tint" \
             --input "$PWD/tests/fixtures/shaders/s10c_triangle.wgsl" --entry fs_main \
             --stage fragment --output "$RUNNER_TEMP/s10c_tool_triangle.frag.spv" \
             --asset "$fragment_asset" --tint-revision "$DAWN_REVISION"
+          vertex_bytes="$(stat -c '%s' "$vertex_asset")"
+          fragment_bytes="$(stat -c '%s' "$fragment_asset")"
+          {
+            echo '### Linux Shader 资产'
+            echo
+            echo '| 指标 | 结果 |'
+            echo '|---|---:|'
+            echo "| 首次构建 | $first_ms ms |"
+            echo "| 缓存命中构建 | $cache_ms ms |"
+            echo "| Vertex 资产 | $vertex_bytes bytes |"
+            echo "| Fragment 资产 | $fragment_bytes bytes |"
+          } >> "$GITHUB_STEP_SUMMARY"
           lvp_icd="$(find /usr/share/vulkan/icd.d -type f -name 'lvp_icd*.json' -print -quit)"
           [[ -n "$lvp_icd" ]]
           VK_DRIVER_FILES="$lvp_icd" LIBGL_ALWAYS_SOFTWARE=1 \
