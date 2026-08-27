@@ -20,6 +20,7 @@
 #include <granit/renderer/timestamp_query.h>
 
 #include "backend/access.h"
+#include "backend/binding.h"
 #include "backend/capabilities.h"
 #include "backend/queue.h"
 #include "backend/rendering.h"
@@ -36,17 +37,6 @@
 #include "core/retirement_queue.h"
 
 namespace granit::detail {
-
-struct vulkan_bind_group_write {
-  std::uint32_t binding{};
-  std::uint32_t array_element{};
-  VkDescriptorType type{};
-  VkBuffer buffer{VK_NULL_HANDLE};
-  VkDeviceSize offset{};
-  VkDeviceSize range{};
-  VkImageView image_view{VK_NULL_HANDLE};
-  VkSampler sampler{VK_NULL_HANDLE};
-};
 
 class renderer_state final : public backend_queue,
                              public std::enable_shared_from_this<renderer_state> {
@@ -122,9 +112,9 @@ public:
                                   VkDescriptorSetLayout& layout) noexcept;
   void destroy_native_bind_group_layout(VkDescriptorSetLayout layout) noexcept;
   [[nodiscard]] granit_result
-  create_native_bind_group(VkDescriptorSetLayout layout,
-                           std::span<const vulkan_bind_group_write> writes, VkDescriptorPool& pool,
-                           VkDescriptorSet& set) noexcept;
+  create_native_bind_group(backend_bind_group_layout_resource& layout,
+                           std::span<const backend_bind_group_write> writes,
+                           backend_bind_group_resource& bind_group) noexcept;
   void destroy_native_bind_group(VkDescriptorPool pool) noexcept;
   [[nodiscard]] granit_result
   create_native_pipeline_layout(std::span<const VkDescriptorSetLayout> bind_group_layouts,

@@ -71,6 +71,7 @@ target_sources(
     $<TARGET_OBJECTS:granit_volk>
     $<TARGET_OBJECTS:granit_backend_plugin>
     backend/access.h
+    backend/binding.h
     backend/capabilities.h
     backend/queue.h
     backend/rendering.h

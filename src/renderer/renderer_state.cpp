@@ -1109,24 +1109,45 @@ void renderer_state::destroy_native_bind_group_layout(VkDescriptorSetLayout layo
   }
 }
 
-granit_result
-renderer_state::create_native_bind_group(VkDescriptorSetLayout layout,
-                                         std::span<const vulkan_bind_group_write> writes,
-                                         VkDescriptorPool& pool, VkDescriptorSet& set) noexcept {
+granit_result renderer_state::create_native_bind_group(
+    backend_bind_group_layout_resource& layout_resource,
+    std::span<const backend_bind_group_write> writes,
+    backend_bind_group_resource& bind_group_resource) noexcept {
   if (device_lost())
     return GRANIT_ERROR_DEVICE_LOST;
+  auto& layout = static_cast<vulkan_bind_group_layout_resource&>(layout_resource).native();
+  auto& bind_group = static_cast<vulkan_bind_group_resource&>(bind_group_resource);
+  auto& pool = bind_group.pool();
+  auto& set = bind_group.set();
+  const auto map_type = [](backend_binding_type type) {
+    switch (type) {
+    case backend_binding_type::dynamic_uniform_buffer:
+      return VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
+    case backend_binding_type::storage_buffer:
+      return VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    case backend_binding_type::sampled_texture:
+      return VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+    case backend_binding_type::storage_texture:
+      return VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+    case backend_binding_type::sampler:
+      return VK_DESCRIPTOR_TYPE_SAMPLER;
+    case backend_binding_type::uniform_buffer:
+    default:
+      return VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    }
+  };
   std::array<std::uint32_t, 6> counts{};
   for (const auto& write : writes) {
     std::size_t index{};
-    if (write.type == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC)
+    if (write.type == backend_binding_type::dynamic_uniform_buffer)
       index = 1;
-    else if (write.type == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER)
+    else if (write.type == backend_binding_type::storage_buffer)
       index = 2;
-    else if (write.type == VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE)
+    else if (write.type == backend_binding_type::sampled_texture)
       index = 3;
-    else if (write.type == VK_DESCRIPTOR_TYPE_STORAGE_IMAGE)
+    else if (write.type == backend_binding_type::storage_texture)
       index = 4;
-    else if (write.type == VK_DESCRIPTOR_TYPE_SAMPLER)
+    else if (write.type == backend_binding_type::sampler)
       index = 5;
     ++counts[index];
   }
@@ -1172,14 +1193,19 @@ renderer_state::create_native_bind_group(VkDescriptorSetLayout layout,
     destination.dstBinding = source.binding;
     destination.dstArrayElement = source.array_element;
     destination.descriptorCount = 1;
-    destination.descriptorType = source.type;
-    if (source.buffer != VK_NULL_HANDLE) {
-      buffers[index] = {source.buffer, source.offset, source.range};
+    destination.descriptorType = map_type(source.type);
+    if (source.buffer != nullptr) {
+      buffers[index] = {static_cast<vulkan_buffer_resource&>(*source.buffer).native().buffer,
+                        source.offset, source.range};
       destination.pBufferInfo = &buffers[index];
     } else {
-      images[index].imageView = source.image_view;
-      images[index].sampler = source.sampler;
-      images[index].imageLayout = source.type == VK_DESCRIPTOR_TYPE_STORAGE_IMAGE
+      if (source.texture_view != nullptr) {
+        images[index].imageView =
+            static_cast<vulkan_texture_view_resource&>(*source.texture_view).native();
+      }
+      if (source.sampler != nullptr)
+        images[index].sampler = static_cast<vulkan_sampler_resource&>(*source.sampler).native();
+      images[index].imageLayout = source.type == backend_binding_type::storage_texture
                                       ? VK_IMAGE_LAYOUT_GENERAL
                                       : VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
       destination.pImageInfo = &images[index];

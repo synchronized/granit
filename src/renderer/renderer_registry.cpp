@@ -2315,7 +2315,7 @@ granit_result renderer_registry::create_bind_group(granit_renderer renderer,
     std::shared_ptr<renderer_state> state;
     std::shared_ptr<bind_group_layout_record> layout;
     auto record = std::make_shared<bind_group_record>();
-    std::vector<vulkan_bind_group_write> writes;
+    std::vector<backend_bind_group_write> writes;
     {
       std::lock_guard lock{mutex_};
       const auto renderer_found = renderers_.find(renderer);
@@ -2339,8 +2339,8 @@ granit_result renderer_registry::create_bind_group(granit_renderer renderer,
                          [&](const auto& value) { return value.binding == entry.binding; });
         if (declaration == layout->entries.end() || entry.array_element >= declaration->array_count)
           return GRANIT_ERROR_INVALID_ARGUMENT;
-        vulkan_bind_group_write write{.binding = entry.binding,
-                                      .array_element = entry.array_element};
+        backend_bind_group_write write{.binding = entry.binding,
+                                       .array_element = entry.array_element};
         if (declaration->type == GRANIT_BINDING_TYPE_UNIFORM_BUFFER ||
             declaration->type == GRANIT_BINDING_TYPE_DYNAMIC_UNIFORM_BUFFER ||
             declaration->type == GRANIT_BINDING_TYPE_STORAGE_BUFFER) {
@@ -2363,10 +2363,10 @@ granit_result renderer_registry::create_bind_group(granit_renderer renderer,
           if (!state->capabilities().supports_buffer_binding(binding_type, entry.offset, range))
             return GRANIT_ERROR_INVALID_ARGUMENT;
           write.type = declaration->type == GRANIT_BINDING_TYPE_DYNAMIC_UNIFORM_BUFFER
-                           ? VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC
-                       : uniform ? VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER
-                                 : VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-          write.buffer = native_buffer(*found->second->native).buffer;
+                           ? backend_binding_type::dynamic_uniform_buffer
+                       : uniform ? backend_binding_type::uniform_buffer
+                                 : backend_binding_type::storage_buffer;
+          write.buffer = found->second->native.get();
           write.offset = entry.offset;
           write.range = range;
           record->resources.push_back(found->second);
@@ -2398,8 +2398,8 @@ granit_result renderer_registry::create_bind_group(granit_renderer renderer,
           if (found == samplers_.end() || found->second->renderer != state || entry.offset != 0 ||
               entry.size != GRANIT_WHOLE_SIZE)
             return GRANIT_ERROR_INVALID_ARGUMENT;
-          write.type = VK_DESCRIPTOR_TYPE_SAMPLER;
-          write.sampler = native_sampler(*found->second->native);
+          write.type = backend_binding_type::sampler;
+          write.sampler = found->second->native.get();
           record->resources.push_back(found->second);
         } else {
           const auto found = texture_views_.find(entry.resource);
@@ -2412,9 +2412,9 @@ granit_result renderer_registry::create_bind_group(granit_renderer renderer,
           if ((found->second->texture->desc.usage & required_usage) == 0)
             return GRANIT_ERROR_INVALID_ARGUMENT;
           write.type = declaration->type == GRANIT_BINDING_TYPE_SAMPLED_TEXTURE
-                           ? VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE
-                           : VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-          write.image_view = native_texture_view(*found->second->native);
+                           ? backend_binding_type::sampled_texture
+                           : backend_binding_type::storage_texture;
+          write.texture_view = found->second->native.get();
           record->resources.push_back(found->second);
           const auto make_access = [&] {
             const bool storage = declaration->type == GRANIT_BINDING_TYPE_STORAGE_TEXTURE;
@@ -2441,9 +2441,7 @@ granit_result renderer_registry::create_bind_group(granit_renderer renderer,
     record->renderer = state;
     record->layout = layout;
     record->native = std::make_unique<vulkan_bind_group_resource>(state);
-    auto& native = native_bind_group(*record->native);
-    const auto result = state->create_native_bind_group(native_bind_group_layout(*layout->native),
-                                                        writes, native.pool(), native.set());
+    const auto result = state->create_native_bind_group(*layout->native, writes, *record->native);
     if (result != GRANIT_SUCCESS)
       return result;
     std::lock_guard lock{mutex_};
