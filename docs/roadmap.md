@@ -26,7 +26,7 @@
 | 六、多线程与性能 | 已完成 | 压力测试、基线、批量提交与上传批处理已完成 |
 | 七、可选高层渲染 | 已完成 | H-02～H-08 路线闭合，参考管线与公共 UI/Text 已验证 |
 | 八、稳定化与跨平台 | 持续进行 | ABI 策略、诊断和更多平台 Surface 待后续推进 |
-| 九、多后端与 Web 平台 | 进行中 | S-10A、S-10B 已完成，下一目标为 S-10C Shader 工具链 |
+| 九、多后端与 Web 平台 | 进行中 | S-10A、S-10B、S-10C 已完成，下一目标为 S-10D Emscripten |
 | 十、Android 移动平台 | 待开始 | 0.4.0 多后端边界完成后规划 NDK、Surface 与移动生命周期 |
 
 ## 一、工程与 ABI 基础
@@ -161,14 +161,14 @@
 
 ## 九、多后端与 Web 平台
 
-**状态：进行中；S-10A、S-10B 已完成，准备进入 S-10C。**
+**状态：进行中；S-10A、S-10B、S-10C 已完成，准备进入 S-10D。**
 
 - **[S-10](plans/S-10-0.4.0-webgpu-backend.md) / P2**：先定义后端无关的内部设备、资源、命令、
   同步与 Surface 边界，在保持 Vulkan 后端功能和性能的前提下验证桌面 WebGPU 离屏 MVP；随后建立
   WGSL 工具链，并接入 Emscripten、浏览器 Canvas 和事件循环。S-10A 内部能力、插件、资源、
   Queue、Surface 与 Swapchain 边界迁移已经完成；S-10B 桌面 WebGPU 设备、资源、绑定、Pipeline、
-  命令提交和确定性离屏回读已通过 Windows/Linux 真实 Dawn 验证。下一步建立 S-10C WGSL 输入、
-  诊断、反射与缓存边界。
+  命令提交和确定性离屏回读已通过 Windows/Linux 真实 Dawn 验证。S-10C 已完成 WGSL 权威输入、
+  诊断、反射、确定性资产与缓存闭环。下一步接入 S-10D Emscripten 平台层。
 
 ## 十、Android 移动平台
 
@@ -182,8 +182,8 @@
 
 ## 近期执行顺序
 
-1. 细化并实现 S-10C WGSL 权威输入、诊断、反射与缓存边界。
-2. Shader 工具链通过后进入 S-10D Emscripten 平台层。
+1. 实现 S-10D Emscripten 设备请求、Canvas Surface、非阻塞主循环和资源加载。
+2. 浏览器平台层通过后进入 S-10E 高层路径与 CI。
 3. S-06D 最终验收等待稳定版本与 component 范围决策；不在 0.x 阶段提前宣布稳定。
 4. 完成 0.4.0 多后端与 Web 路径后，为 S-11 建立独立 Android Plan，再进入 NDK 与移动 Surface
    实现。

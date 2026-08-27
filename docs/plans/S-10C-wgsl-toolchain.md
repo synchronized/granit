@@ -5,7 +5,7 @@
 
 ## 状态
 
-- 实现状态：实现中；推荐设计已确认，当前阶段为 S-10C7 跨平台验收
+- 实现状态：已完成；跨平台验收与公共 API 决策已记录
 - 所属版本：0.4.0
 - 前置依赖：S-10B
 - 优先级：P2
@@ -101,15 +101,18 @@ S-10C 需要建立一个源码权威和可复现的双后端资产流程。
 4. **S-10C4 确定性资产与缓存**：已完成私有 `.granit-shader` 容器的确定性编解码、SHA-256、
    Magic/Schema/布局/损坏检测、同内容缓存命中和跨平台原子替换。ShaderTools SDK 和 CLI 已能将
    WGSL、SPIR-V 与稳定反射 JSON 写入同一资产；缓存键覆盖源码、入口点、阶段、Tint 修订、目标
-   环境和编译选项，并已验证路径无关、重复构建一致及各输入变化均失效。下一步进入 S-10C5。
+   环境和编译选项，并已验证路径无关、重复构建一致及各输入变化均失效。
 5. **S-10C5 WebGPU Shader ABI**：已增加实验性插件 Shader 资源和显式 Pipeline 描述，WebGPU
    插件不再内置固定 WGSL。Mock 回归已覆盖归属、跨实例混用、重复销毁、依赖顺序和实例级联清理；
    Windows D3D12 与 Linux Vulkan/Lavapipe 已通过真实 Dawn Shader/Pipeline smoke test。
 6. **S-10C6 双后端 Fixture**：已让同一组 `.granit-shader` 的 WGSL 在 WebGPU、SPIR-V 在 Vulkan
    上绘制相同离屏三角形，并使用统一量化容差比较中心与角落像素。Windows D3D12 的 WebGPU
    路径以及 Linux Vulkan/Lavapipe 的 WebGPU、Vulkan 双后端运行验证均已通过。
-7. **S-10C7 跨平台验收**：手动运行 Windows D3D12、Linux Vulkan/Lavapipe 和普通 Vulkan 回归，
-   记录编译时间、缓存命中时间、资产大小及诊断示例，再决定公共 Shader 资产 API。
+7. **S-10C7 跨平台验收**：已手动运行 Windows D3D12、Linux Vulkan/Lavapipe 和普通 Vulkan
+   回归。首次编译分别为 101 ms 和 6 ms，缓存恢复分别为 6 ms 和 3 ms；Vertex/Fragment 资产为
+   1739/1296 bytes。真实 Tint 诊断包含文件、行列、入口点和阶段，失败不留下输出文件。验收结果及
+   暂不增加核心公共 Shader 资产 API 的决定见
+   [S-10C 验收记录](../records/2026-08-27-s10c-wgsl-toolchain-acceptance.md)。
 
 ## 测试与验收
 
@@ -123,8 +126,8 @@ S-10C 需要建立一个源码权威和可复现的双后端资产流程。
 
 ## 风险与待确认问题
 
-- **公共 API 时机**：推荐先完成插件和资产闭环，再决定新增资产创建函数，避免直接扩展现有
-  SPIR-V 描述后形成两套互斥字段。
+- **公共 API 时机**：S-10C 已决定暂不新增核心资产创建函数；ShaderTools SDK 保持独立，待
+  WebGPU 进入公共 Renderer 抽象或 S-10D/S-10E 明确资源加载契约后再审议。
 - **Tint CLI 稳定性**：命令行参数不是 Granit 公共契约；升级 Dawn 时必须通过锁定 Fixture 验证，
   不允许静默使用系统中任意版本的 Tint。
 - **反射覆盖**：SPIRV-Reflect 对 WGSL Override、纹理细分类和访问模式的表达可能不足；缺失字段
