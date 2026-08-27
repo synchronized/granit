@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
+#include <chrono>
 #include <cstddef>
 #include <cstdio>
 #include <new>
@@ -25,9 +26,14 @@ void diagnose(granit_diagnostic_severity severity, granit_diagnostic_category ca
                static_cast<int>(message_length), message == nullptr ? "" : message);
 }
 
+bool near_byte(std::uint32_t value, std::uint32_t expected) {
+  return value + 1 >= expected && value <= expected + 1;
+}
+
 } // namespace
 
 int main() {
+  const auto smoke_begin = std::chrono::steady_clock::now();
   granit::detail::backend_plugin_loader loader;
   const auto open_result =
       loader.open(GRANIT_WEBGPU_PLUGIN_PATH, GRANIT_BACKEND_PLUGIN_KIND_WEBGPU);
@@ -45,10 +51,145 @@ int main() {
                  static_cast<int>(create_result), static_cast<unsigned long long>(instance));
     return 2;
   }
+  granit_backend_plugin_capabilities capabilities{};
+  capabilities.struct_size = sizeof(capabilities);
+  const auto capabilities_result = loader.get_capabilities(instance, &capabilities);
+  if (capabilities_result != GRANIT_SUCCESS || capabilities.max_buffer_size == 0 ||
+      capabilities.max_texture_dimension_2d == 0 || capabilities.max_bind_groups == 0 ||
+      capabilities.max_color_attachments == 0) {
+    std::fprintf(stderr, "查询 WebGPU 能力失败：%d\n", static_cast<int>(capabilities_result));
+    return 3;
+  }
+
+  granit_backend_plugin_buffer_desc buffer_desc{};
+  buffer_desc.struct_size = sizeof(buffer_desc);
+  buffer_desc.size = 16;
+  buffer_desc.usage = GRANIT_BACKEND_PLUGIN_BUFFER_USAGE_MAP_READ_BIT |
+                      GRANIT_BACKEND_PLUGIN_BUFFER_USAGE_COPY_DST_BIT;
+  granit_backend_plugin_buffer buffer{};
+  const std::uint32_t source[]{1, 2, 3, 4};
+  std::uint32_t destination[4]{};
+  if (loader.create_buffer(instance, &buffer_desc, &buffer) != GRANIT_SUCCESS || buffer == 0 ||
+      loader.write_buffer(instance, buffer, 0, source, sizeof(source)) != GRANIT_SUCCESS ||
+      loader.read_buffer(instance, buffer, 0, destination, sizeof(destination)) != GRANIT_SUCCESS ||
+      destination[0] != source[0] || destination[1] != source[1] || destination[2] != source[2] ||
+      destination[3] != source[3] || loader.destroy_buffer(instance, buffer) != GRANIT_SUCCESS) {
+    std::fprintf(stderr, "WebGPU Buffer 写入或回读失败\n");
+    return 4;
+  }
+
+  granit_backend_plugin_texture_desc texture_desc{};
+  texture_desc.struct_size = sizeof(texture_desc);
+  texture_desc.width = 16;
+  texture_desc.height = 16;
+  texture_desc.usage = GRANIT_BACKEND_PLUGIN_TEXTURE_USAGE_SAMPLED_BIT |
+                       GRANIT_BACKEND_PLUGIN_TEXTURE_USAGE_COPY_DST_BIT;
+  granit_backend_plugin_texture texture{};
+  granit_backend_plugin_texture_view view{};
+  granit_backend_plugin_sampler_desc sampler_desc{};
+  sampler_desc.struct_size = sizeof(sampler_desc);
+  sampler_desc.min_filter = GRANIT_BACKEND_PLUGIN_FILTER_LINEAR;
+  sampler_desc.mag_filter = GRANIT_BACKEND_PLUGIN_FILTER_LINEAR;
+  granit_backend_plugin_sampler sampler{};
+  granit_backend_plugin_bind_group_layout bind_group_layout{};
+  granit_backend_plugin_bind_group bind_group{};
+  granit_backend_plugin_pipeline_layout pipeline_layout{};
+  granit_backend_plugin_render_pipeline pipeline{};
+  if (loader.create_texture(instance, &texture_desc, &texture) != GRANIT_SUCCESS || texture == 0 ||
+      loader.create_texture_view(instance, texture, &view) != GRANIT_SUCCESS || view == 0 ||
+      loader.create_sampler(instance, &sampler_desc, &sampler) != GRANIT_SUCCESS || sampler == 0 ||
+      loader.create_bind_group_layout(instance, &bind_group_layout) != GRANIT_SUCCESS ||
+      bind_group_layout == 0) {
+    std::fprintf(stderr, "WebGPU Texture、View、Sampler 或绑定布局创建失败\n");
+    return 5;
+  }
+  granit_backend_plugin_bind_group_desc bind_group_desc{};
+  bind_group_desc.struct_size = sizeof(bind_group_desc);
+  bind_group_desc.layout = bind_group_layout;
+  bind_group_desc.texture_view = view;
+  bind_group_desc.sampler = sampler;
+  if (loader.create_bind_group(instance, &bind_group_desc, &bind_group) != GRANIT_SUCCESS ||
+      bind_group == 0 ||
+      loader.create_pipeline_layout(instance, bind_group_layout, &pipeline_layout) !=
+          GRANIT_SUCCESS ||
+      pipeline_layout == 0 ||
+      loader.create_render_pipeline(instance, pipeline_layout, &pipeline) != GRANIT_SUCCESS ||
+      pipeline == 0) {
+    std::fprintf(stderr, "WebGPU 绑定或 Render Pipeline 生命周期验证失败\n");
+    return 6;
+  }
+
+  auto target_desc = texture_desc;
+  target_desc.width = 64;
+  target_desc.height = 64;
+  target_desc.usage = GRANIT_BACKEND_PLUGIN_TEXTURE_USAGE_COPY_SRC_BIT |
+                      GRANIT_BACKEND_PLUGIN_TEXTURE_USAGE_RENDER_ATTACHMENT_BIT;
+  granit_backend_plugin_texture target_texture{};
+  granit_backend_plugin_texture_view target_view{};
+  granit_backend_plugin_buffer_desc readback_desc{};
+  readback_desc.struct_size = sizeof(readback_desc);
+  readback_desc.size = 16384;
+  readback_desc.usage = GRANIT_BACKEND_PLUGIN_BUFFER_USAGE_MAP_READ_BIT |
+                        GRANIT_BACKEND_PLUGIN_BUFFER_USAGE_COPY_DST_BIT;
+  granit_backend_plugin_buffer readback{};
+  granit_backend_plugin_command_recorder recorder{};
+  granit_backend_plugin_command_buffer command_buffer{};
+  std::uint32_t corner{};
+  std::uint32_t center{};
+  std::chrono::steady_clock::duration submit_duration{};
+  if (loader.create_texture(instance, &target_desc, &target_texture) != GRANIT_SUCCESS ||
+      loader.create_texture_view(instance, target_texture, &target_view) != GRANIT_SUCCESS ||
+      loader.create_buffer(instance, &readback_desc, &readback) != GRANIT_SUCCESS ||
+      loader.create_command_recorder(instance, &recorder) != GRANIT_SUCCESS || recorder == 0 ||
+      loader.recorder_draw(instance, recorder, target_view, pipeline, bind_group) !=
+          GRANIT_SUCCESS ||
+      loader.recorder_copy_texture_to_buffer(instance, recorder, target_texture, readback, 64, 64,
+                                             256) != GRANIT_SUCCESS ||
+      loader.finish_command_recorder(instance, recorder, &command_buffer) != GRANIT_SUCCESS ||
+      command_buffer == 0) {
+    std::fprintf(stderr, "WebGPU 离屏三角形命令录制失败\n");
+    return 7;
+  }
+  const auto submit_begin = std::chrono::steady_clock::now();
+  const auto submit_result = loader.submit_command_buffer(instance, command_buffer);
+  submit_duration = std::chrono::steady_clock::now() - submit_begin;
+  if (submit_result != GRANIT_SUCCESS ||
+      loader.read_buffer(instance, readback, 0, &corner, sizeof(corner)) != GRANIT_SUCCESS ||
+      loader.read_buffer(instance, readback, 32 * 256 + 32 * 4, &center, sizeof(center)) !=
+          GRANIT_SUCCESS ||
+      corner != UINT32_C(0xff000000) || !near_byte(center & UINT32_C(0xff), 51) ||
+      !near_byte((center >> 8) & UINT32_C(0xff), 179) ||
+      !near_byte((center >> 16) & UINT32_C(0xff), 102) ||
+      ((center >> 24) & UINT32_C(0xff)) != 255 ||
+      loader.destroy_command_recorder(instance, recorder) != GRANIT_SUCCESS ||
+      loader.destroy_buffer(instance, readback) != GRANIT_SUCCESS ||
+      loader.destroy_texture_view(instance, target_view) != GRANIT_SUCCESS ||
+      loader.destroy_texture(instance, target_texture) != GRANIT_SUCCESS ||
+      loader.destroy_render_pipeline(instance, pipeline) != GRANIT_SUCCESS ||
+      loader.destroy_pipeline_layout(instance, pipeline_layout) != GRANIT_SUCCESS ||
+      loader.destroy_bind_group(instance, bind_group) != GRANIT_SUCCESS ||
+      loader.destroy_bind_group_layout(instance, bind_group_layout) != GRANIT_SUCCESS ||
+      loader.destroy_sampler(instance, sampler) != GRANIT_SUCCESS ||
+      loader.destroy_texture_view(instance, view) != GRANIT_SUCCESS ||
+      loader.destroy_texture(instance, texture) != GRANIT_SUCCESS) {
+    std::fprintf(stderr, "WebGPU 离屏三角形渲染或像素回读验证失败\n");
+    return 7;
+  }
   const auto destroy_result = loader.destroy_instance(instance);
   if (destroy_result != GRANIT_SUCCESS) {
     std::fprintf(stderr, "销毁 WebGPU 插件实例失败：%d\n", static_cast<int>(destroy_result));
-    return 3;
+    return 8;
   }
+  loader.close();
+  if (loader.is_open()) {
+    std::fprintf(stderr, "卸载 WebGPU 插件失败\n");
+    return 9;
+  }
+  const auto total_duration = std::chrono::steady_clock::now() - smoke_begin;
+  std::fprintf(stdout, "WebGPU smoke：Queue Submit %lld us，总耗时 %lld ms\n",
+               static_cast<long long>(
+                   std::chrono::duration_cast<std::chrono::microseconds>(submit_duration).count()),
+               static_cast<long long>(
+                   std::chrono::duration_cast<std::chrono::milliseconds>(total_duration).count()));
   return 0;
 }

@@ -3,9 +3,43 @@
 
 #include <webgpu/webgpu.h>
 
+#include <cstring>
+#include <vector>
+
 struct WGPUInstanceImpl {};
 struct WGPUAdapterImpl {};
 struct WGPUDeviceImpl {};
+struct WGPUQueueImpl {};
+struct WGPUBufferImpl {
+  std::vector<unsigned char> bytes;
+  WGPUBufferUsage usage{};
+  bool mapped{};
+};
+struct WGPUTextureImpl {
+  unsigned int width;
+  unsigned int height;
+  WGPUTextureUsage usage;
+  std::vector<unsigned char> bytes;
+};
+struct WGPUTextureViewImpl {
+  WGPUTexture texture;
+};
+struct WGPUSamplerImpl {
+  WGPUFilterMode min_filter;
+  WGPUFilterMode mag_filter;
+};
+struct WGPUBindGroupLayoutImpl {};
+struct WGPUBindGroupImpl {};
+struct WGPUPipelineLayoutImpl {};
+struct WGPUShaderModuleImpl {};
+struct WGPURenderPipelineImpl {};
+struct WGPUCommandEncoderImpl {
+  bool finished{};
+};
+struct WGPUCommandBufferImpl {};
+struct WGPURenderPassEncoderImpl {
+  WGPUTexture target;
+};
 
 extern "C" WGPUInstance wgpuCreateInstance(const WGPUInstanceDescriptor*) {
   return new WGPUInstanceImpl;
@@ -13,8 +47,15 @@ extern "C" WGPUInstance wgpuCreateInstance(const WGPUInstanceDescriptor*) {
 
 extern "C" void wgpuInstanceRelease(WGPUInstance instance) { delete instance; }
 
-extern "C" WGPUFuture wgpuInstanceRequestAdapter(WGPUInstance, const WGPURequestAdapterOptions*,
+extern "C" WGPUFuture wgpuInstanceRequestAdapter(WGPUInstance,
+                                                 const WGPURequestAdapterOptions* options,
                                                  WGPURequestAdapterCallbackInfo callback_info) {
+  if (options != nullptr && options->forceFallbackAdapter) {
+    constexpr char message[] = "mock fallback adapter unavailable";
+    callback_info.callback(0, nullptr, {message, sizeof(message) - 1}, callback_info.userdata1,
+                           callback_info.userdata2);
+    return {1};
+  }
   callback_info.callback(WGPURequestAdapterStatus_Success, new WGPUAdapterImpl, {},
                          callback_info.userdata1, callback_info.userdata2);
   return {1};
@@ -36,3 +77,205 @@ extern "C" WGPUFuture wgpuAdapterRequestDevice(WGPUAdapter, const void*,
 extern "C" void wgpuAdapterRelease(WGPUAdapter adapter) { delete adapter; }
 
 extern "C" void wgpuDeviceRelease(WGPUDevice device) { delete device; }
+
+extern "C" WGPUStatus wgpuDeviceGetLimits(WGPUDevice, WGPULimits* limits) {
+  if (limits == nullptr) {
+    return WGPUStatus_Error;
+  }
+  limits->minUniformBufferOffsetAlignment = 256;
+  limits->minStorageBufferOffsetAlignment = 256;
+  limits->maxUniformBufferBindingSize = 65536;
+  limits->maxStorageBufferBindingSize = 134217728;
+  limits->maxBufferSize = 268435456;
+  limits->maxTextureDimension2D = 8192;
+  limits->maxBindGroups = 4;
+  limits->maxColorAttachments = 8;
+  return WGPUStatus_Success;
+}
+
+extern "C" WGPUQueue wgpuDeviceGetQueue(WGPUDevice) { return new WGPUQueueImpl; }
+
+extern "C" void wgpuQueueRelease(WGPUQueue queue) { delete queue; }
+
+extern "C" WGPUBuffer wgpuDeviceCreateBuffer(WGPUDevice, const WGPUBufferDescriptor* descriptor) {
+  if (descriptor == nullptr || descriptor->size == 0) {
+    return nullptr;
+  }
+  return new WGPUBufferImpl{std::vector<unsigned char>(static_cast<std::size_t>(descriptor->size)),
+                            descriptor->usage, false};
+}
+
+extern "C" void wgpuBufferRelease(WGPUBuffer buffer) { delete buffer; }
+
+extern "C" void wgpuQueueWriteBuffer(WGPUQueue, WGPUBuffer buffer, unsigned long long offset,
+                                     const void* data, size_t size) {
+  std::memcpy(buffer->bytes.data() + static_cast<std::size_t>(offset), data, size);
+}
+
+extern "C" WGPUFuture wgpuBufferMapAsync(WGPUBuffer buffer, WGPUMapMode, size_t offset, size_t size,
+                                         WGPUBufferMapCallbackInfo callback_info) {
+  const auto valid = buffer != nullptr && offset <= buffer->bytes.size() &&
+                     size <= buffer->bytes.size() - offset &&
+                     (buffer->usage & WGPUBufferUsage_MapRead) != 0;
+  buffer->mapped = valid;
+  callback_info.callback(valid ? WGPUMapAsyncStatus_Success : WGPUMapAsyncStatus_Error, {},
+                         callback_info.userdata1, callback_info.userdata2);
+  return {3};
+}
+
+extern "C" const void* wgpuBufferGetConstMappedRange(WGPUBuffer buffer, size_t offset,
+                                                     size_t size) {
+  if (buffer == nullptr || !buffer->mapped || offset > buffer->bytes.size() ||
+      size > buffer->bytes.size() - offset) {
+    return nullptr;
+  }
+  return buffer->bytes.data() + offset;
+}
+
+extern "C" void wgpuBufferUnmap(WGPUBuffer buffer) { buffer->mapped = false; }
+
+extern "C" WGPUTexture wgpuDeviceCreateTexture(WGPUDevice,
+                                               const WGPUTextureDescriptor* descriptor) {
+  if (descriptor == nullptr || descriptor->size.width == 0 || descriptor->size.height == 0 ||
+      descriptor->format != WGPUTextureFormat_RGBA8Unorm) {
+    return nullptr;
+  }
+  return new WGPUTextureImpl{
+      descriptor->size.width, descriptor->size.height, descriptor->usage,
+      std::vector<unsigned char>(static_cast<std::size_t>(descriptor->size.width) *
+                                 descriptor->size.height * 4)};
+}
+
+extern "C" void wgpuTextureRelease(WGPUTexture texture) { delete texture; }
+
+extern "C" WGPUTextureView wgpuTextureCreateView(WGPUTexture texture,
+                                                 const WGPUTextureViewDescriptor*) {
+  return texture == nullptr ? nullptr : new WGPUTextureViewImpl{texture};
+}
+
+extern "C" void wgpuTextureViewRelease(WGPUTextureView view) { delete view; }
+
+extern "C" WGPUSampler wgpuDeviceCreateSampler(WGPUDevice,
+                                               const WGPUSamplerDescriptor* descriptor) {
+  if (descriptor == nullptr) {
+    return nullptr;
+  }
+  return new WGPUSamplerImpl{descriptor->minFilter, descriptor->magFilter};
+}
+
+extern "C" void wgpuSamplerRelease(WGPUSampler sampler) { delete sampler; }
+
+extern "C" WGPUBindGroupLayout
+wgpuDeviceCreateBindGroupLayout(WGPUDevice, const WGPUBindGroupLayoutDescriptor* descriptor) {
+  return descriptor != nullptr && descriptor->entryCount == 2 ? new WGPUBindGroupLayoutImpl
+                                                              : nullptr;
+}
+extern "C" void wgpuBindGroupLayoutRelease(WGPUBindGroupLayout layout) { delete layout; }
+extern "C" WGPUBindGroup wgpuDeviceCreateBindGroup(WGPUDevice,
+                                                   const WGPUBindGroupDescriptor* descriptor) {
+  return descriptor != nullptr && descriptor->layout != nullptr && descriptor->entryCount == 2
+             ? new WGPUBindGroupImpl
+             : nullptr;
+}
+extern "C" void wgpuBindGroupRelease(WGPUBindGroup bind_group) { delete bind_group; }
+extern "C" WGPUPipelineLayout
+wgpuDeviceCreatePipelineLayout(WGPUDevice, const WGPUPipelineLayoutDescriptor* descriptor) {
+  return descriptor != nullptr && descriptor->bindGroupLayoutCount == 1 ? new WGPUPipelineLayoutImpl
+                                                                        : nullptr;
+}
+extern "C" void wgpuPipelineLayoutRelease(WGPUPipelineLayout layout) { delete layout; }
+extern "C" WGPUShaderModule
+wgpuDeviceCreateShaderModule(WGPUDevice, const WGPUShaderModuleDescriptor* descriptor) {
+  return descriptor != nullptr && descriptor->nextInChain != nullptr ? new WGPUShaderModuleImpl
+                                                                     : nullptr;
+}
+extern "C" void wgpuShaderModuleRelease(WGPUShaderModule shader_module) { delete shader_module; }
+extern "C" WGPURenderPipeline
+wgpuDeviceCreateRenderPipeline(WGPUDevice, const WGPURenderPipelineDescriptor* descriptor) {
+  return descriptor != nullptr && descriptor->layout != nullptr &&
+                 descriptor->vertex.module != nullptr && descriptor->fragment != nullptr
+             ? new WGPURenderPipelineImpl
+             : nullptr;
+}
+extern "C" void wgpuRenderPipelineRelease(WGPURenderPipeline pipeline) { delete pipeline; }
+
+extern "C" WGPUCommandEncoder wgpuDeviceCreateCommandEncoder(WGPUDevice,
+                                                             const WGPUCommandEncoderDescriptor*) {
+  return new WGPUCommandEncoderImpl;
+}
+extern "C" void wgpuCommandEncoderRelease(WGPUCommandEncoder encoder) { delete encoder; }
+extern "C" void wgpuCommandEncoderCopyBufferToTexture(WGPUCommandEncoder,
+                                                      const WGPUTexelCopyBufferInfo* source,
+                                                      const WGPUTexelCopyTextureInfo* destination,
+                                                      const WGPUExtent3D* size) {
+  for (unsigned int row = 0; row < size->height; ++row) {
+    std::memcpy(destination->texture->bytes.data() +
+                    static_cast<std::size_t>(row) * destination->texture->width * 4,
+                source->buffer->bytes.data() + source->layout.offset +
+                    static_cast<std::size_t>(row) * source->layout.bytesPerRow,
+                static_cast<std::size_t>(size->width) * 4);
+  }
+}
+extern "C" void wgpuCommandEncoderCopyTextureToBuffer(WGPUCommandEncoder,
+                                                      const WGPUTexelCopyTextureInfo* source,
+                                                      const WGPUTexelCopyBufferInfo* destination,
+                                                      const WGPUExtent3D* size) {
+  for (unsigned int row = 0; row < size->height; ++row) {
+    std::memcpy(destination->buffer->bytes.data() + destination->layout.offset +
+                    static_cast<std::size_t>(row) * destination->layout.bytesPerRow,
+                source->texture->bytes.data() +
+                    static_cast<std::size_t>(row) * source->texture->width * 4,
+                static_cast<std::size_t>(size->width) * 4);
+  }
+}
+extern "C" WGPURenderPassEncoder
+wgpuCommandEncoderBeginRenderPass(WGPUCommandEncoder encoder,
+                                  const WGPURenderPassDescriptor* descriptor) {
+  if (encoder == nullptr || encoder->finished || descriptor == nullptr ||
+      descriptor->colorAttachmentCount != 1 || descriptor->colorAttachments == nullptr ||
+      descriptor->colorAttachments[0].view == nullptr) {
+    return nullptr;
+  }
+  const auto texture = descriptor->colorAttachments[0].view->texture;
+  for (std::size_t index = 0; index < texture->bytes.size(); index += 4) {
+    texture->bytes[index] = 0;
+    texture->bytes[index + 1] = 0;
+    texture->bytes[index + 2] = 0;
+    texture->bytes[index + 3] = 255;
+  }
+  return new WGPURenderPassEncoderImpl{texture};
+}
+extern "C" void wgpuRenderPassEncoderSetPipeline(WGPURenderPassEncoder, WGPURenderPipeline) {}
+extern "C" void wgpuRenderPassEncoderSetBindGroup(WGPURenderPassEncoder, unsigned int,
+                                                  WGPUBindGroup, size_t, const unsigned int*) {}
+extern "C" void wgpuRenderPassEncoderDraw(WGPURenderPassEncoder pass, unsigned int, unsigned int,
+                                          unsigned int, unsigned int) {
+  const auto width = pass->target->width;
+  const auto height = pass->target->height;
+  for (unsigned int y = 0; y < height; ++y) {
+    for (unsigned int x = 0; x < width; ++x) {
+      const auto nx = 2.0 * (static_cast<double>(x) + 0.5) / width - 1.0;
+      const auto ny = 2.0 * (static_cast<double>(y) + 0.5) / height - 1.0;
+      if (ny < -0.7 || ny > 0.7 || nx < -(ny + 0.7) / 2.0 || nx > (ny + 0.7) / 2.0)
+        continue;
+      const auto index = (static_cast<std::size_t>(y) * width + x) * 4;
+      pass->target->bytes[index] = 51;
+      pass->target->bytes[index + 1] = 179;
+      pass->target->bytes[index + 2] = 102;
+      pass->target->bytes[index + 3] = 255;
+    }
+  }
+}
+extern "C" void wgpuRenderPassEncoderEnd(WGPURenderPassEncoder) {}
+extern "C" void wgpuRenderPassEncoderRelease(WGPURenderPassEncoder pass) { delete pass; }
+extern "C" WGPUCommandBuffer wgpuCommandEncoderFinish(WGPUCommandEncoder encoder,
+                                                      const WGPUCommandBufferDescriptor*) {
+  if (encoder == nullptr || encoder->finished)
+    return nullptr;
+  encoder->finished = true;
+  return new WGPUCommandBufferImpl;
+}
+extern "C" void wgpuCommandBufferRelease(WGPUCommandBuffer command_buffer) {
+  delete command_buffer;
+}
+extern "C" void wgpuQueueSubmit(WGPUQueue, size_t, const WGPUCommandBuffer*) {}

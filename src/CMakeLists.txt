@@ -30,6 +30,9 @@ if(GRANIT_BUILD_BACKEND_WEBGPU)
     granit_backend_webgpu PRIVATE "${PROJECT_SOURCE_DIR}/include" "${PROJECT_SOURCE_DIR}/src"
   )
   target_link_libraries(granit_backend_webgpu PRIVATE dawn::webgpu_dawn)
+  if(GRANIT_WEBGPU_FORCE_FALLBACK_ADAPTER)
+    target_compile_definitions(granit_backend_webgpu PRIVATE GRANIT_WEBGPU_FORCE_FALLBACK_ADAPTER)
+  endif()
   granit_target_compile_warnings(granit_backend_webgpu)
   granit_target_output_directories(granit_backend_webgpu)
   set_target_properties(

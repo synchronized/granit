@@ -19,6 +19,7 @@
 
 ## 稳定化与跨平台
 
+- [2026-08-27 S-10B 桌面 WebGPU MVP 验收](2026-08-27-s10b-webgpu-mvp-acceptance.md)
 - [2026-08-26 S-10A Dawn 发布包评估](2026-08-26-s10a-dawn-package-evaluation.md)
 - [2026-08-26 S-10A Vulkan 耦合审计](2026-08-26-s10a-vulkan-coupling-audit.md)
 - [2026-08-26 S-09E 0.3.0 验收](2026-08-26-s09e-0.3.0-acceptance.md)
