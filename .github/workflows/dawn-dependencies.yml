@@ -121,21 +121,29 @@ jobs:
         run: |
           $stage = "$PWD/stage/granit-dawn-static-$env:DAWN_VERSION-windows-x64"
           $build = "$env:RUNNER_TEMP/granit-webgpu-build"
-          $asset = "$env:RUNNER_TEMP/s10c_tool_triangle.vert.granit-shader"
+          $vertexAsset = "$env:RUNNER_TEMP/s10c_tool_triangle.vert.granit-shader"
+          $fragmentAsset = "$env:RUNNER_TEMP/s10c_tool_triangle.frag.granit-shader"
           cmake -S . -B $build -G Ninja `
             -DCMAKE_BUILD_TYPE=Release `
             -DGRANIT_BUILD_BACKEND_WEBGPU=ON `
             -DGRANIT_WEBGPU_FORCE_FALLBACK_ADAPTER=ON `
             "-DGRANIT_DAWN_ROOT=$stage" `
-            "-DGRANIT_WEBGPU_SHADER_ASSET=$asset" `
+            "-DGRANIT_S10C_VERTEX_SHADER_ASSET=$vertexAsset" `
+            "-DGRANIT_S10C_FRAGMENT_SHADER_ASSET=$fragmentAsset" `
             -DGRANIT_BUILD_EXAMPLES=OFF `
             -DGRANIT_BUILD_TOOLS=ON `
             -DGRANIT_BUILD_TESTING=ON
-          cmake --build $build --target granit_webgpu_plugin_smoke granit_shader_tool
+          cmake --build $build --target granit_webgpu_plugin_smoke `
+            granit_shader_asset_vulkan_smoke granit_shader_tool
           & "$build/bin/granit_shader_tool.exe" compile --tint "$stage/bin/tint.exe" `
             --input "$PWD/tests/fixtures/shaders/s10c_triangle.wgsl" --entry vs_main `
             --stage vertex --output "$env:RUNNER_TEMP/s10c_tool_triangle.vert.spv" `
-            --asset $asset --tint-revision "$env:DAWN_REVISION"
+            --asset $vertexAsset --tint-revision "$env:DAWN_REVISION"
+          if ($LASTEXITCODE -ne 0) { throw "granit_shader_tool 调用 Tint 失败" }
+          & "$build/bin/granit_shader_tool.exe" compile --tint "$stage/bin/tint.exe" `
+            --input "$PWD/tests/fixtures/shaders/s10c_triangle.wgsl" --entry fs_main `
+            --stage fragment --output "$env:RUNNER_TEMP/s10c_tool_triangle.frag.spv" `
+            --asset $fragmentAsset --tint-revision "$env:DAWN_REVISION"
           if ($LASTEXITCODE -ne 0) { throw "granit_shader_tool 调用 Tint 失败" }
           $fxc = "$env:WINDIR/System32/d3dcompiler_47.dll"
           if (-not (Test-Path -LiteralPath $fxc -PathType Leaf)) {
@@ -249,23 +257,30 @@ jobs:
         run: |
           stage="$PWD/stage/granit-dawn-static-$DAWN_VERSION-linux-x64"
           build="$RUNNER_TEMP/granit-webgpu-build"
-          asset="$RUNNER_TEMP/s10c_tool_triangle.vert.granit-shader"
+          vertex_asset="$RUNNER_TEMP/s10c_tool_triangle.vert.granit-shader"
+          fragment_asset="$RUNNER_TEMP/s10c_tool_triangle.frag.granit-shader"
           CC=clang CXX=clang++ cmake -S . -B "$build" -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
             -DGRANIT_BUILD_BACKEND_WEBGPU=ON \
             -DGRANIT_WEBGPU_FORCE_FALLBACK_ADAPTER=ON \
             -DGRANIT_DAWN_ROOT="$stage" \
-            -DGRANIT_WEBGPU_SHADER_ASSET="$asset" \
+            -DGRANIT_S10C_VERTEX_SHADER_ASSET="$vertex_asset" \
+            -DGRANIT_S10C_FRAGMENT_SHADER_ASSET="$fragment_asset" \
             -DGRANIT_BUILD_EXAMPLES=OFF \
             -DGRANIT_BUILD_TOOLS=ON \
             -DGRANIT_BUILD_TESTING=ON \
             -DGRANIT_ENABLE_XCB=OFF \
             -DGRANIT_ENABLE_WAYLAND=OFF
-          cmake --build "$build" --target granit_webgpu_plugin_smoke granit_shader_tool
+          cmake --build "$build" --target granit_webgpu_plugin_smoke \
+            granit_shader_asset_vulkan_smoke granit_shader_tool
           "$build/bin/granit_shader_tool" compile --tint "$stage/bin/tint" \
             --input "$PWD/tests/fixtures/shaders/s10c_triangle.wgsl" --entry vs_main \
             --stage vertex --output "$RUNNER_TEMP/s10c_tool_triangle.vert.spv" \
-            --asset "$asset" --tint-revision "$DAWN_REVISION"
+            --asset "$vertex_asset" --tint-revision "$DAWN_REVISION"
+          "$build/bin/granit_shader_tool" compile --tint "$stage/bin/tint" \
+            --input "$PWD/tests/fixtures/shaders/s10c_triangle.wgsl" --entry fs_main \
+            --stage fragment --output "$RUNNER_TEMP/s10c_tool_triangle.frag.spv" \
+            --asset "$fragment_asset" --tint-revision "$DAWN_REVISION"
           lvp_icd="$(find /usr/share/vulkan/icd.d -type f -name 'lvp_icd*.json' -print -quit)"
           [[ -n "$lvp_icd" ]]
           VK_DRIVER_FILES="$lvp_icd" LIBGL_ALWAYS_SOFTWARE=1 \

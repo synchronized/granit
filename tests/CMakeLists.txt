@@ -279,12 +279,32 @@ if(GRANIT_BUILD_BACKEND_WEBGPU)
   add_dependencies(granit_webgpu_plugin_smoke granit_backend_webgpu)
   granit_target_compile_warnings(granit_webgpu_plugin_smoke)
   granit_target_output_directories(granit_webgpu_plugin_smoke)
-  if(NOT GRANIT_WEBGPU_SHADER_ASSET)
-    message(FATAL_ERROR "WebGPU smoke test 需要设置 GRANIT_WEBGPU_SHADER_ASSET")
+  if(NOT GRANIT_S10C_VERTEX_SHADER_ASSET OR NOT GRANIT_S10C_FRAGMENT_SHADER_ASSET)
+    message(FATAL_ERROR "S-10C6 smoke test 需要设置 Vertex 和 Fragment Shader 资产")
   endif()
   add_test(
     NAME granit.backend.webgpu_plugin_smoke
-    COMMAND granit_webgpu_plugin_smoke "${GRANIT_WEBGPU_SHADER_ASSET}"
+    COMMAND granit_webgpu_plugin_smoke "${GRANIT_S10C_VERTEX_SHADER_ASSET}"
+  )
+
+  add_executable(
+    granit_shader_asset_vulkan_smoke
+    backend/shader_asset_vulkan_smoke.cpp
+    $<TARGET_OBJECTS:granit_shader_asset>
+  )
+  target_compile_features(granit_shader_asset_vulkan_smoke PRIVATE cxx_std_20)
+  target_include_directories(
+    granit_shader_asset_vulkan_smoke PRIVATE "${PROJECT_SOURCE_DIR}/tools"
+  )
+  target_link_libraries(granit_shader_asset_vulkan_smoke PRIVATE granit::granit)
+  granit_target_compile_warnings(granit_shader_asset_vulkan_smoke)
+  granit_target_output_directories(granit_shader_asset_vulkan_smoke)
+  add_test(
+    NAME granit.backend.shader_asset_vulkan_smoke
+    COMMAND
+      granit_shader_asset_vulkan_smoke
+      "${GRANIT_S10C_VERTEX_SHADER_ASSET}"
+      "${GRANIT_S10C_FRAGMENT_SHADER_ASSET}"
   )
 endif()
 
