@@ -358,6 +358,14 @@ if(GRANIT_BUILD_TESTING AND BUILD_TESTING AND GRANIT_DXC_EXECUTABLE)
     PROPERTIES PASS_REGULAR_EXPRESSION
                "entry,fragment_main,fragment.*binding,1,0,uniform_buffer,MaterialConstants,32.*binding,1,1,sampled_texture,albedo_texture,1.*binding,1,2,sampler,linear_sampler,1"
   )
+  add_test(
+    NAME granit.shader_tools.cpp_override_api
+    COMMAND
+      granit_shader_tools_cpp_test
+      "${PROJECT_SOURCE_DIR}/src/pipeline/shaders/tone_mapping.frag.spv"
+      "${PROJECT_SOURCE_DIR}/assets/shaders/unlit/unlit.vert.spv"
+      "${PROJECT_SOURCE_DIR}/tests/assets/minimal.comp.spv" "${GRANIT_MATERIAL_FIXTURE}"
+  )
 elseif(GRANIT_BUILD_TESTING AND BUILD_TESTING)
   message(WARNING "未找到 dxc，跳过 Granit Shader 工具端到端测试")
 endif()

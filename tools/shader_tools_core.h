@@ -33,6 +33,15 @@ struct shader_interface_variable_info {
   std::string name;
 };
 
+struct shader_override_info {
+  std::uint32_t id = 0;
+  shader_scalar_type scalar_type = shader_scalar_type::floating_point;
+  std::uint32_t bit_width = 0;
+  std::string name;
+  std::uint64_t default_value = 0;
+  std::uint32_t default_value_size = 0;
+};
+
 struct shader_binding_info {
   std::uint32_t group = 0;
   std::uint32_t binding = 0;
@@ -49,6 +58,7 @@ struct shader_info {
   std::vector<shader_binding_info> bindings;
   std::vector<shader_interface_variable_info> vertex_inputs;
   std::vector<shader_interface_variable_info> fragment_outputs;
+  std::vector<shader_override_info> overrides;
   std::uint32_t workgroup_size_x = 0;
   std::uint32_t workgroup_size_y = 0;
   std::uint32_t workgroup_size_z = 0;

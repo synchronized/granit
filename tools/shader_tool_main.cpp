@@ -172,7 +172,19 @@ void print_json(const granit::shader_tools::result& result,
   const auto workgroup = result.compute_workgroup_size();
   std::cout << (result.fragment_output_count() == 0 ? "" : "\n")
             << "  ],\n  \"workgroup_size\": {\"x\": " << workgroup.x << ", \"y\": " << workgroup.y
-            << ", \"z\": " << workgroup.z << "}\n}\n";
+            << ", \"z\": " << workgroup.z << "},\n  \"overrides\": [";
+  for (uint64_t index = 0; index < result.override_count(); ++index) {
+    const auto [status, override_info] = result.override_at(index);
+    if (status != GRANIT_SUCCESS)
+      continue;
+    std::cout << (index == 0 ? "\n" : ",\n") << "    {\"id\": " << override_info.id
+              << ", \"scalar_type\": " << json_string(scalar_type_name(override_info.scalar_type))
+              << ", \"bit_width\": " << override_info.bit_width
+              << ", \"name\": " << json_string(override_info.name)
+              << ", \"default_value\": " << override_info.default_value
+              << ", \"default_value_size\": " << override_info.default_value_size << '}';
+  }
+  std::cout << (result.override_count() == 0 ? "" : "\n") << "  ]\n}\n";
 }
 
 int inspect_shader(const char* path, bool verify, bool json = false) {

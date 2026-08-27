@@ -14,12 +14,14 @@ cmake --build --preset windows-clang-debug --target granit_shader_tool
 
 ```powershell
 granit_shader_tool inspect shader.spv
+granit_shader_tool inspect --json shader.spv
 granit_shader_tool verify shader.spv
 granit_shader_tool compile --tint path/to/tint --input shader.wgsl `
   --entry fragment_main --stage fragment --output shader.spv
 ```
 
-`inspect` 按稳定顺序输出入口和资源绑定元数据；`verify` 执行低成本 SPIR-V 结构与反射检查；
+`inspect` 按稳定顺序输出入口和资源绑定元数据；`inspect --json` 额外输出描述符、阶段接口、
+Compute Workgroup 和 Override 常量的结构化调试视图；`verify` 执行低成本 SPIR-V 结构与反射检查；
 `compile` 直接启动锁定版本的 Tint，捕获原始诊断并复核输出入口和阶段。完整 SPIR-V 合法性仍由
 Tint 的 `--validate` 和可选 `spirv-val` 负责。工具不进入 Granit 核心动态库及安装导出。
 所有调用都必须使用显式子命令；早期原型的单参数入口不再保留。

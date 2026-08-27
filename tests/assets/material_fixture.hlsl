@@ -14,7 +14,8 @@ struct fragment_input {
 
 [[vk::binding(1, 1)]] Texture2D<float4> albedo_texture;
 [[vk::binding(2, 1)]] SamplerState linear_sampler;
+[[vk::constant_id(7)]] const float exposure = 1.0;
 
 float4 fragment_main(fragment_input input) : SV_Target0 {
-  return albedo_texture.Sample(linear_sampler, input.uv) * base_color;
+  return albedo_texture.Sample(linear_sampler, input.uv) * base_color * exposure;
 }

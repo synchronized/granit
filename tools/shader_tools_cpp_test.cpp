@@ -7,7 +7,7 @@
 #include <string_view>
 
 int main(int argc, char** argv) {
-  if (argc != 4)
+  if (argc != 4 && argc != 5)
     return 1;
   granit_shader_tools_inspect_desc desc{};
   desc.struct_size = sizeof(desc);
@@ -55,5 +55,17 @@ int main(int argc, char** argv) {
   const auto workgroup = compute_result.compute_workgroup_size();
   if (compute_status != GRANIT_SUCCESS || workgroup.x == 0 || workgroup.y == 0 || workgroup.z == 0)
     return 11;
+  if (argc == 5) {
+    desc.input_path = argv[4];
+    desc.input_path_length = std::strlen(argv[4]);
+    auto [override_status, override_result] = granit::shader_tools::inspect_spirv(desc);
+    if (override_status != GRANIT_SUCCESS || override_result.override_count() != 1)
+      return 12;
+    const auto [constant_status, constant] = override_result.override_at(0);
+    if (constant_status != GRANIT_SUCCESS || constant.id != 7 ||
+        constant.scalar_type != GRANIT_SHADER_TOOLS_SCALAR_FLOAT || constant.bit_width != 32 ||
+        constant.default_value_size != 4)
+      return 13;
+  }
   return 0;
 }

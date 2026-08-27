@@ -26,6 +26,7 @@ struct stored_result {
   std::vector<granit::tools::shader_binding_info> bindings;
   std::vector<granit::tools::shader_interface_variable_info> vertex_inputs;
   std::vector<granit::tools::shader_interface_variable_info> fragment_outputs;
+  std::vector<granit::tools::shader_override_info> overrides;
   uint32_t workgroup_size_x = 0;
   uint32_t workgroup_size_y = 0;
   uint32_t workgroup_size_z = 0;
@@ -118,6 +119,7 @@ void store_reflection(stored_result& target, granit::tools::shader_info& source)
   target.bindings = std::move(source.bindings);
   target.vertex_inputs = std::move(source.vertex_inputs);
   target.fragment_outputs = std::move(source.fragment_outputs);
+  target.overrides = std::move(source.overrides);
   target.workgroup_size_x = source.workgroup_size_x;
   target.workgroup_size_y = source.workgroup_size_y;
   target.workgroup_size_z = source.workgroup_size_z;
@@ -333,6 +335,38 @@ granit_shader_tools_result_get_workgroup_size(granit_shader_tools_result result,
   size->x = value->workgroup_size_x;
   size->y = value->workgroup_size_y;
   size->z = value->workgroup_size_z;
+  return GRANIT_SUCCESS;
+}
+
+granit_result granit_shader_tools_result_get_override_count(granit_shader_tools_result result,
+                                                            uint64_t* count) {
+  if (count == nullptr)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  const auto value = find_result(result);
+  if (!value)
+    return GRANIT_ERROR_INVALID_HANDLE;
+  *count = value->overrides.size();
+  return GRANIT_SUCCESS;
+}
+
+granit_result
+granit_shader_tools_result_get_override(granit_shader_tools_result result, uint64_t index,
+                                        granit_shader_tools_override_info* override_info) {
+  if (override_info == nullptr || override_info->struct_size < sizeof(*override_info))
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  const auto value = find_result(result);
+  if (!value)
+    return GRANIT_ERROR_INVALID_HANDLE;
+  if (index >= value->overrides.size())
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  const auto& source = value->overrides[static_cast<std::size_t>(index)];
+  override_info->id = source.id;
+  override_info->scalar_type = scalar_type_value(source.scalar_type);
+  override_info->bit_width = source.bit_width;
+  override_info->name = source.name.data();
+  override_info->name_length = source.name.size();
+  override_info->default_value = source.default_value;
+  override_info->default_value_size = source.default_value_size;
   return GRANIT_SUCCESS;
 }
 

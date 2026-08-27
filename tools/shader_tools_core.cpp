@@ -10,6 +10,7 @@
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
+#include <cstring>
 #include <fstream>
 #include <ostream>
 #include <vector>
@@ -127,6 +128,59 @@ void collect_interface_variables(SpvReflectInterfaceVariable* const* variables, 
   });
 }
 
+bool reflect_scalar_type(const SpvReflectTypeDescription* description, shader_scalar_type& type) {
+  if (description == nullptr)
+    return false;
+  if ((description->type_flags & SPV_REFLECT_TYPE_FLAG_FLOAT) != 0) {
+    type = shader_scalar_type::floating_point;
+    return true;
+  }
+  if ((description->type_flags & SPV_REFLECT_TYPE_FLAG_INT) != 0) {
+    type = description->traits.numeric.scalar.signedness != 0
+               ? shader_scalar_type::signed_integer
+               : shader_scalar_type::unsigned_integer;
+    return true;
+  }
+  if ((description->type_flags & SPV_REFLECT_TYPE_FLAG_BOOL) != 0) {
+    type = shader_scalar_type::unsigned_integer;
+    return true;
+  }
+  return false;
+}
+
+bool collect_overrides(const SpvReflectShaderModule& module,
+                       std::vector<shader_override_info>& output) {
+  std::uint32_t count = 0;
+  auto reflected = spvReflectEnumerateSpecializationConstants(&module, &count, nullptr);
+  std::vector<SpvReflectSpecializationConstant*> constants(count);
+  if (reflected == SPV_REFLECT_RESULT_SUCCESS)
+    reflected = spvReflectEnumerateSpecializationConstants(&module, &count, constants.data());
+  if (reflected != SPV_REFLECT_RESULT_SUCCESS)
+    return false;
+  output.clear();
+  output.reserve(constants.size());
+  for (const auto* constant : constants) {
+    shader_override_info value;
+    value.id = constant->constant_id;
+    value.name = constant->name == nullptr ? "" : constant->name;
+    value.bit_width = constant->type_description == nullptr
+                          ? 0
+                          : constant->type_description->traits.numeric.scalar.width;
+    if (constant->type_description != nullptr &&
+        (constant->type_description->type_flags & SPV_REFLECT_TYPE_FLAG_BOOL) != 0)
+      value.bit_width = 1;
+    if (!reflect_scalar_type(constant->type_description, value.scalar_type) ||
+        constant->default_value_size > sizeof(value.default_value))
+      return false;
+    value.default_value_size = constant->default_value_size;
+    if (value.default_value_size != 0 && constant->default_value != nullptr)
+      std::memcpy(&value.default_value, constant->default_value, value.default_value_size);
+    output.push_back(std::move(value));
+  }
+  std::ranges::sort(output, [](const auto& left, const auto& right) { return left.id < right.id; });
+  return true;
+}
+
 std::vector<std::byte> read_file(const std::filesystem::path& path) {
   std::ifstream stream(path, std::ios::binary | std::ios::ate);
   if (!stream)
@@ -173,6 +227,11 @@ bool inspect_shader(const std::filesystem::path& path, bool emit, shader_info& i
     info.workgroup_size_x = entry_point->local_size.x;
     info.workgroup_size_y = entry_point->local_size.y;
     info.workgroup_size_z = entry_point->local_size.z;
+  }
+  if (!collect_overrides(module, info.overrides)) {
+    spvReflectDestroyShaderModule(&module);
+    error << "Override 常量反射失败\n";
+    return false;
   }
   std::uint32_t binding_count = 0;
   auto reflected = spvReflectEnumerateDescriptorBindings(&module, &binding_count, nullptr);

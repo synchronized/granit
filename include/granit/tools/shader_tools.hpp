@@ -44,6 +44,15 @@ struct workgroup_size {
   uint32_t z = 0;
 };
 
+struct override_info {
+  uint32_t id = 0;
+  uint32_t scalar_type = 0;
+  uint32_t bit_width = 0;
+  std::string_view name;
+  uint64_t default_value = 0;
+  uint32_t default_value_size = 0;
+};
+
 class result {
 public:
   result() = default;
@@ -118,6 +127,25 @@ public:
     if (granit_shader_tools_result_get_workgroup_size(handle_, &value) != GRANIT_SUCCESS)
       return {};
     return {value.x, value.y, value.z};
+  }
+  [[nodiscard]] uint64_t override_count() const noexcept {
+    uint64_t count = 0;
+    return granit_shader_tools_result_get_override_count(handle_, &count) == GRANIT_SUCCESS ? count
+                                                                                            : 0;
+  }
+  [[nodiscard]] std::pair<granit_result, override_info> override_at(uint64_t index) const noexcept {
+    granit_shader_tools_override_info value{};
+    value.struct_size = sizeof(value);
+    const auto status = granit_shader_tools_result_get_override(handle_, index, &value);
+    if (status != GRANIT_SUCCESS)
+      return {status, {}};
+    return {GRANIT_SUCCESS,
+            {value.id,
+             value.scalar_type,
+             value.bit_width,
+             {value.name, static_cast<std::size_t>(value.name_length)},
+             value.default_value,
+             value.default_value_size}};
   }
   void reset() noexcept {
     if (handle_ != 0) {

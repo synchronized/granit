@@ -97,6 +97,18 @@ typedef struct granit_shader_tools_workgroup_size {
   uint32_t z;
 } granit_shader_tools_workgroup_size;
 
+/** Override／Specialization Constant 记录。默认值保存为原始小端位模式。 */
+typedef struct granit_shader_tools_override_info {
+  uint32_t struct_size;
+  uint32_t id;
+  uint32_t scalar_type;
+  uint32_t bit_width;
+  const char* name;
+  uint64_t name_length;
+  uint64_t default_value;
+  uint32_t default_value_size;
+} granit_shader_tools_override_info;
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -147,6 +159,15 @@ granit_shader_tools_result_get_fragment_output(granit_shader_tools_result result
 /** 查询 Compute Workgroup 大小。非 Compute 阶段返回零值。 */
 GRANIT_SHADER_TOOLS_API granit_result granit_shader_tools_result_get_workgroup_size(
     granit_shader_tools_result result, granit_shader_tools_workgroup_size* size);
+
+/** 查询按常量 ID 排序的 Override 数量。 */
+GRANIT_SHADER_TOOLS_API granit_result
+granit_shader_tools_result_get_override_count(granit_shader_tools_result result, uint64_t* count);
+
+/** 按常量 ID 顺序查询 Override。 */
+GRANIT_SHADER_TOOLS_API granit_result
+granit_shader_tools_result_get_override(granit_shader_tools_result result, uint64_t index,
+                                        granit_shader_tools_override_info* override_info);
 
 /** 销毁结果句柄。零值和已经销毁的句柄返回 GRANIT_ERROR_INVALID_HANDLE。 */
 GRANIT_SHADER_TOOLS_API granit_result
