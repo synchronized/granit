@@ -120,18 +120,6 @@ bool ranges_overlap(std::uint64_t left_offset, std::uint64_t left_size, std::uin
   return left_offset < right_offset + right_size && right_offset < left_offset + left_size;
 }
 
-VkAttachmentLoadOp map_load(granit_attachment_load_operation value) noexcept {
-  return value == GRANIT_ATTACHMENT_LOAD_OPERATION_LOAD
-             ? VK_ATTACHMENT_LOAD_OP_LOAD
-             : (value == GRANIT_ATTACHMENT_LOAD_OPERATION_CLEAR ? VK_ATTACHMENT_LOAD_OP_CLEAR
-                                                                : VK_ATTACHMENT_LOAD_OP_DONT_CARE);
-}
-
-VkAttachmentStoreOp map_store(granit_attachment_store_operation value) noexcept {
-  return value == GRANIT_ATTACHMENT_STORE_OPERATION_STORE ? VK_ATTACHMENT_STORE_OP_STORE
-                                                          : VK_ATTACHMENT_STORE_OP_DONT_CARE;
-}
-
 bool depth_format(granit_texture_format format) noexcept {
   return format >= GRANIT_TEXTURE_FORMAT_D16_UNORM;
 }
@@ -139,17 +127,6 @@ bool depth_format(granit_texture_format format) noexcept {
 bool stencil_format(granit_texture_format format) noexcept {
   return format == GRANIT_TEXTURE_FORMAT_D24_UNORM_S8_UINT ||
          format == GRANIT_TEXTURE_FORMAT_D32_FLOAT_S8_UINT;
-}
-
-VkImageAspectFlags map_aspect(granit_texture_aspect aspect) noexcept {
-  VkImageAspectFlags result{};
-  if ((aspect & GRANIT_TEXTURE_ASPECT_COLOR_BIT) != 0)
-    result |= VK_IMAGE_ASPECT_COLOR_BIT;
-  if ((aspect & GRANIT_TEXTURE_ASPECT_DEPTH_BIT) != 0)
-    result |= VK_IMAGE_ASPECT_DEPTH_BIT;
-  if ((aspect & GRANIT_TEXTURE_ASPECT_STENCIL_BIT) != 0)
-    result |= VK_IMAGE_ASPECT_STENCIL_BIT;
-  return result;
 }
 
 } // namespace
@@ -3864,92 +3841,49 @@ granit_result renderer_registry::begin_rendering(granit_renderer renderer,
       desc.area.height > height - desc.area.y)
     return GRANIT_ERROR_INVALID_ARGUMENT;
 
-  std::vector<VkRenderingAttachmentInfo> colors(desc.color_attachment_count);
+  std::vector<backend_color_attachment> colors;
+  colors.reserve(desc.color_attachment_count);
   for (std::uint32_t index = 0; index < desc.color_attachment_count; ++index) {
     const auto& source = desc.color_attachments[index];
-    auto& target = colors[index];
-    target.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
-    target.imageView = native_texture_view(*views[index]->native);
-    target.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-    target.loadOp = map_load(source.load_operation);
-    target.storeOp = map_store(source.store_operation);
-    target.clearValue.color = {{source.clear_value.red, source.clear_value.green,
-                                source.clear_value.blue, source.clear_value.alpha}};
-  }
-  VkRenderingAttachmentInfo depth{}, stencil{};
-  std::vector<vulkan_image_access> image_accesses;
-  image_accesses.reserve(views.size());
-  const auto resolved_aspect = [](const auto& view) {
-    if (view->desc.range.aspect != GRANIT_TEXTURE_ASPECT_AUTOMATIC)
-      return map_aspect(view->desc.range.aspect);
-    VkImageAspectFlags aspect = depth_format(view->texture->desc.format)
-                                    ? VK_IMAGE_ASPECT_DEPTH_BIT
-                                    : VK_IMAGE_ASPECT_COLOR_BIT;
-    if (stencil_format(view->texture->desc.format))
-      aspect |= VK_IMAGE_ASPECT_STENCIL_BIT;
-    return aspect;
-  };
-  const VkRenderingAttachmentInfo *depth_ptr = nullptr, *stencil_ptr = nullptr;
-  for (std::uint32_t index = 0; index < desc.color_attachment_count; ++index) {
     const auto& view = views[index];
-    image_accesses.push_back({
-        .image = native_texture(*view->texture->native).image,
-        .range = {.aspectMask = resolved_aspect(view),
-                  .baseMipLevel = view->desc.range.base_mip_level,
-                  .levelCount = view->desc.range.mip_level_count,
-                  .baseArrayLayer = view->desc.range.base_array_layer,
-                  .layerCount = view->desc.range.array_layer_count},
-        .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-        .stages = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
-        .access = VK_ACCESS_2_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
-        .preserve_content =
-            desc.color_attachments[index].load_operation == GRANIT_ATTACHMENT_LOAD_OPERATION_LOAD,
+    colors.push_back({
+        .texture = view->texture->native.get(),
+        .view = view->native.get(),
+        .range = view->desc.range,
+        .format = view->texture->desc.format,
+        .load_operation = source.load_operation,
+        .store_operation = source.store_operation,
+        .clear_value = source.clear_value,
     });
   }
+  backend_depth_stencil_attachment depth_stencil{};
+  const backend_depth_stencil_attachment* depth_stencil_ptr = nullptr;
   if (desc.depth_stencil_attachment) {
     const auto& source = *desc.depth_stencil_attachment;
     const auto& view = views.back();
-    depth.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
-    depth.imageView = native_texture_view(*view->native);
-    depth.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-    depth.loadOp = map_load(source.depth_load_operation);
-    depth.storeOp = map_store(source.depth_store_operation);
-    depth.clearValue.depthStencil = {source.clear_value.depth, source.clear_value.stencil};
-    depth_ptr = &depth;
-    image_accesses.push_back({
-        .image = native_texture(*view->texture->native).image,
-        .range = {.aspectMask = resolved_aspect(view),
-                  .baseMipLevel = view->desc.range.base_mip_level,
-                  .levelCount = view->desc.range.mip_level_count,
-                  .baseArrayLayer = view->desc.range.base_array_layer,
-                  .layerCount = view->desc.range.array_layer_count},
-        .layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
-        .stages = VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT |
-                  VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT,
-        .access = VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_READ_BIT |
-                  VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
-        .preserve_content = source.depth_load_operation == GRANIT_ATTACHMENT_LOAD_OPERATION_LOAD ||
-                            source.stencil_load_operation == GRANIT_ATTACHMENT_LOAD_OPERATION_LOAD,
-    });
-    if (stencil_format(view->texture->desc.format)) {
-      stencil = depth;
-      stencil.loadOp = map_load(source.stencil_load_operation);
-      stencil.storeOp = map_store(source.stencil_store_operation);
-      stencil_ptr = &stencil;
-    } else if (source.stencil_load_operation != GRANIT_ATTACHMENT_LOAD_OPERATION_DISCARD ||
-               source.stencil_store_operation != GRANIT_ATTACHMENT_STORE_OPERATION_DISCARD) {
+    if (!stencil_format(view->texture->desc.format) &&
+        (source.stencil_load_operation != GRANIT_ATTACHMENT_LOAD_OPERATION_DISCARD ||
+         source.stencil_store_operation != GRANIT_ATTACHMENT_STORE_OPERATION_DISCARD)) {
       return GRANIT_ERROR_INVALID_ARGUMENT;
     }
+    depth_stencil = {
+        .texture = view->texture->native.get(),
+        .view = view->native.get(),
+        .range = view->desc.range,
+        .format = view->texture->desc.format,
+        .depth_load_operation = source.depth_load_operation,
+        .depth_store_operation = source.depth_store_operation,
+        .stencil_load_operation = source.stencil_load_operation,
+        .stencil_store_operation = source.stencil_store_operation,
+        .clear_value = source.clear_value,
+    };
+    depth_stencil_ptr = &depth_stencil;
   }
   std::lock_guard command_lock{command->mutex};
   for (const auto& view : views)
     retain_resource(command->retained_resources, view, view->metadata);
-  const VkRect2D area{
-      {static_cast<std::int32_t>(desc.area.x), static_cast<std::int32_t>(desc.area.y)},
-      {desc.area.width, desc.area.height}};
-  return command->renderer->begin_rendering(native_command_recorder(*command->native), area, colors,
-                                            depth_ptr, stencil_ptr, desc.layer_count,
-                                            image_accesses);
+  return command->renderer->begin_rendering(native_command_recorder(*command->native), desc.area,
+                                            colors, depth_stencil_ptr, desc.layer_count);
 }
 
 granit_result renderer_registry::end_rendering(granit_renderer renderer,

@@ -73,6 +73,7 @@ target_sources(
     backend/access.h
     backend/capabilities.h
     backend/queue.h
+    backend/rendering.h
     backend/resources.h
     backend/upload.h
     backend/vulkan/device.cpp

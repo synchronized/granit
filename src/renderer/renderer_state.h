@@ -22,6 +22,7 @@
 #include "backend/access.h"
 #include "backend/capabilities.h"
 #include "backend/queue.h"
+#include "backend/rendering.h"
 #include "backend/upload.h"
 #include "backend/vulkan/command_recorder.h"
 #include "backend/vulkan/device.h"
@@ -214,11 +215,10 @@ public:
                                            std::uint32_t first_index, std::int32_t vertex_offset,
                                            std::uint32_t first_instance) noexcept;
   [[nodiscard]] granit_result
-  begin_rendering(vulkan_command_recorder& recorder, VkRect2D area,
-                  std::span<const VkRenderingAttachmentInfo> color_attachments,
-                  const VkRenderingAttachmentInfo* depth_attachment,
-                  const VkRenderingAttachmentInfo* stencil_attachment, std::uint32_t layer_count,
-                  std::span<const vulkan_image_access> image_accesses);
+  begin_rendering(vulkan_command_recorder& recorder, granit_rendering_area area,
+                  std::span<const backend_color_attachment> color_attachments,
+                  const backend_depth_stencil_attachment* depth_stencil_attachment,
+                  std::uint32_t layer_count);
   [[nodiscard]] granit_result end_rendering(vulkan_command_recorder& recorder) noexcept;
   [[nodiscard]] granit_result submit_command_recorder(backend_command_recorder_resource& recorder,
                                                       submission_serial& submitted_serial) override;

@@ -183,6 +183,18 @@ VkImageAspectFlags map_texture_aspect(granit_texture_aspect aspect) noexcept {
   return flags;
 }
 
+VkAttachmentLoadOp map_attachment_load(granit_attachment_load_operation value) noexcept {
+  return value == GRANIT_ATTACHMENT_LOAD_OPERATION_LOAD
+             ? VK_ATTACHMENT_LOAD_OP_LOAD
+             : (value == GRANIT_ATTACHMENT_LOAD_OPERATION_CLEAR ? VK_ATTACHMENT_LOAD_OP_CLEAR
+                                                                : VK_ATTACHMENT_LOAD_OP_DONT_CARE);
+}
+
+VkAttachmentStoreOp map_attachment_store(granit_attachment_store_operation value) noexcept {
+  return value == GRANIT_ATTACHMENT_STORE_OPERATION_STORE ? VK_ATTACHMENT_STORE_OP_STORE
+                                                          : VK_ATTACHMENT_STORE_OP_DONT_CARE;
+}
+
 VkComponentSwizzle map_component_swizzle(granit_component_swizzle swizzle) noexcept {
   constexpr std::array values{VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_ZERO,
                               VK_COMPONENT_SWIZZLE_ONE,      VK_COMPONENT_SWIZZLE_R,
@@ -1772,17 +1784,94 @@ granit_result renderer_state::draw_indexed(vulkan_command_recorder& recorder,
 }
 
 granit_result
-renderer_state::begin_rendering(vulkan_command_recorder& recorder, VkRect2D area,
-                                std::span<const VkRenderingAttachmentInfo> color_attachments,
-                                const VkRenderingAttachmentInfo* depth_attachment,
-                                const VkRenderingAttachmentInfo* stencil_attachment,
-                                std::uint32_t layer_count,
-                                std::span<const vulkan_image_access> image_accesses) {
+renderer_state::begin_rendering(vulkan_command_recorder& recorder, granit_rendering_area area,
+                                std::span<const backend_color_attachment> color_attachments,
+                                const backend_depth_stencil_attachment* depth_stencil_attachment,
+                                std::uint32_t layer_count) {
   if (device_lost())
     return GRANIT_ERROR_DEVICE_LOST;
-  return observe_device_result(recorder.begin_rendering(device_, area, color_attachments,
-                                                        depth_attachment, stencil_attachment,
-                                                        layer_count, image_accesses));
+  try {
+    std::vector<VkRenderingAttachmentInfo> native_colors;
+    std::vector<vulkan_image_access> image_accesses;
+    native_colors.reserve(color_attachments.size());
+    image_accesses.reserve(color_attachments.size() + (depth_stencil_attachment ? 1U : 0U));
+    for (const auto& source : color_attachments) {
+      if (source.texture == nullptr || source.view == nullptr)
+        return GRANIT_ERROR_INVALID_ARGUMENT;
+      VkRenderingAttachmentInfo target{};
+      target.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
+      target.imageView = static_cast<vulkan_texture_view_resource&>(*source.view).native();
+      target.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+      target.loadOp = map_attachment_load(source.load_operation);
+      target.storeOp = map_attachment_store(source.store_operation);
+      target.clearValue.color = {{source.clear_value.red, source.clear_value.green,
+                                  source.clear_value.blue, source.clear_value.alpha}};
+      native_colors.push_back(target);
+      image_accesses.push_back({
+          .image = static_cast<vulkan_texture_resource&>(*source.texture).native().image,
+          .range = {.aspectMask = source.range.aspect == GRANIT_TEXTURE_ASPECT_AUTOMATIC
+                                      ? default_aspect(source.format)
+                                      : map_texture_aspect(source.range.aspect),
+                    .baseMipLevel = source.range.base_mip_level,
+                    .levelCount = source.range.mip_level_count,
+                    .baseArrayLayer = source.range.base_array_layer,
+                    .layerCount = source.range.array_layer_count},
+          .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+          .stages = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+          .access = VK_ACCESS_2_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
+          .preserve_content = source.load_operation == GRANIT_ATTACHMENT_LOAD_OPERATION_LOAD,
+      });
+    }
+
+    VkRenderingAttachmentInfo depth{}, stencil{};
+    const VkRenderingAttachmentInfo *depth_ptr = nullptr, *stencil_ptr = nullptr;
+    if (depth_stencil_attachment != nullptr) {
+      const auto& source = *depth_stencil_attachment;
+      if (source.texture == nullptr || source.view == nullptr)
+        return GRANIT_ERROR_INVALID_ARGUMENT;
+      depth.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
+      depth.imageView = static_cast<vulkan_texture_view_resource&>(*source.view).native();
+      depth.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+      depth.loadOp = map_attachment_load(source.depth_load_operation);
+      depth.storeOp = map_attachment_store(source.depth_store_operation);
+      depth.clearValue.depthStencil = {source.clear_value.depth, source.clear_value.stencil};
+      depth_ptr = &depth;
+      image_accesses.push_back({
+          .image = static_cast<vulkan_texture_resource&>(*source.texture).native().image,
+          .range = {.aspectMask = source.range.aspect == GRANIT_TEXTURE_ASPECT_AUTOMATIC
+                                      ? default_aspect(source.format)
+                                      : map_texture_aspect(source.range.aspect),
+                    .baseMipLevel = source.range.base_mip_level,
+                    .levelCount = source.range.mip_level_count,
+                    .baseArrayLayer = source.range.base_array_layer,
+                    .layerCount = source.range.array_layer_count},
+          .layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+          .stages = VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT |
+                    VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT,
+          .access = VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_READ_BIT |
+                    VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
+          .preserve_content =
+              source.depth_load_operation == GRANIT_ATTACHMENT_LOAD_OPERATION_LOAD ||
+              source.stencil_load_operation == GRANIT_ATTACHMENT_LOAD_OPERATION_LOAD,
+      });
+      if (source.format == GRANIT_TEXTURE_FORMAT_D24_UNORM_S8_UINT ||
+          source.format == GRANIT_TEXTURE_FORMAT_D32_FLOAT_S8_UINT) {
+        stencil = depth;
+        stencil.loadOp = map_attachment_load(source.stencil_load_operation);
+        stencil.storeOp = map_attachment_store(source.stencil_store_operation);
+        stencil_ptr = &stencil;
+      }
+    }
+    const VkRect2D native_area{
+        {static_cast<std::int32_t>(area.x), static_cast<std::int32_t>(area.y)},
+        {area.width, area.height}};
+    return observe_device_result(recorder.begin_rendering(
+        device_, native_area, native_colors, depth_ptr, stencil_ptr, layer_count, image_accesses));
+  } catch (const std::bad_alloc&) {
+    return GRANIT_ERROR_OUT_OF_MEMORY;
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
 }
 
 granit_result renderer_state::end_rendering(vulkan_command_recorder& recorder) noexcept {
