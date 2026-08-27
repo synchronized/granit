@@ -177,6 +177,8 @@ jobs:
           Write-Host $invalidDiagnostic
           $vertexBytes = (Get-Item -LiteralPath $vertexAsset).Length
           $fragmentBytes = (Get-Item -LiteralPath $fragmentAsset).Length
+          Write-Host "Shader 指标：首次=${firstMilliseconds}ms，缓存=${cacheMilliseconds}ms，" `
+            "vertex=${vertexBytes}bytes，fragment=${fragmentBytes}bytes"
           @"
           ### Windows Shader 资产
 
@@ -349,6 +351,8 @@ jobs:
           printf '%s\n' "$invalid_diagnostic"
           vertex_bytes="$(stat -c '%s' "$vertex_asset")"
           fragment_bytes="$(stat -c '%s' "$fragment_asset")"
+          printf 'Shader 指标：首次=%sms，缓存=%sms，vertex=%sbytes，fragment=%sbytes\n' \
+            "$first_ms" "$cache_ms" "$vertex_bytes" "$fragment_bytes"
           {
             echo '### Linux Shader 资产'
             echo
