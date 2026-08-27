@@ -3063,9 +3063,8 @@ granit_result renderer_registry::copy_buffer(granit_renderer renderer,
   retain_resource(recorder_record->retained_resources, source_record, source_record->metadata);
   retain_resource(recorder_record->retained_resources, destination_record,
                   destination_record->metadata);
-  return recorder_record->renderer->copy_buffer(native_command_recorder(*recorder_record->native),
-                                                *source_record->native, *destination_record->native,
-                                                regions);
+  return recorder_record->renderer->copy_buffer(*recorder_record->native, *source_record->native,
+                                                *destination_record->native, regions);
 }
 
 granit_result renderer_registry::copy_texture_to_buffer(granit_renderer renderer,
@@ -3146,8 +3145,8 @@ granit_result renderer_registry::copy_texture_to_buffer(granit_renderer renderer
   retain_resource(recorder_record->retained_resources, destination_record,
                   destination_record->metadata);
   return recorder_record->renderer->copy_texture_to_buffer(
-      native_command_recorder(*recorder_record->native), *source_record->native,
-      *destination_record->native, desc.format, layout, region);
+      *recorder_record->native, *source_record->native, *destination_record->native, desc.format,
+      layout, region);
 }
 
 granit_result renderer_registry::copy_buffer_to_texture(granit_renderer renderer,
@@ -3228,8 +3227,8 @@ granit_result renderer_registry::copy_buffer_to_texture(granit_renderer renderer
   retain_resource(recorder_record->retained_resources, destination_record,
                   destination_record->metadata);
   return recorder_record->renderer->copy_buffer_to_texture(
-      native_command_recorder(*recorder_record->native), *source_record->native,
-      *destination_record->native, desc.format, layout, region);
+      *recorder_record->native, *source_record->native, *destination_record->native, desc.format,
+      layout, region);
 }
 
 granit_result renderer_registry::copy_texture(granit_renderer renderer,
@@ -3301,8 +3300,7 @@ granit_result renderer_registry::copy_texture(granit_renderer renderer,
   retain_resource(recorder_record->retained_resources, source_record, source_record->metadata);
   retain_resource(recorder_record->retained_resources, destination_record,
                   destination_record->metadata);
-  return recorder_record->renderer->copy_texture(native_command_recorder(*recorder_record->native),
-                                                 *source_record->native,
+  return recorder_record->renderer->copy_texture(*recorder_record->native, *source_record->native,
                                                  *destination_record->native, region);
 }
 
@@ -3343,9 +3341,8 @@ granit_result renderer_registry::generate_mipmaps(granit_renderer renderer,
     return GRANIT_ERROR_INVALID_ARGUMENT;
   retain_resource(recorder_record->retained_resources, texture_record_state,
                   texture_record_state->metadata);
-  return recorder_record->renderer->generate_mipmaps(
-      native_command_recorder(*recorder_record->native), *texture_record_state->native, desc,
-      range);
+  return recorder_record->renderer->generate_mipmaps(*recorder_record->native,
+                                                     *texture_record_state->native, desc, range);
 }
 
 granit_result renderer_registry::fill_buffer(granit_renderer renderer,
@@ -3381,7 +3378,7 @@ granit_result renderer_registry::fill_buffer(granit_renderer renderer,
   }
   retain_resource(recorder_record->retained_resources, buffer_record_state,
                   buffer_record_state->metadata);
-  return recorder_record->renderer->fill_buffer(native_command_recorder(*recorder_record->native),
+  return recorder_record->renderer->fill_buffer(*recorder_record->native,
                                                 *buffer_record_state->native, offset, size, value);
 }
 

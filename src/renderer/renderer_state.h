@@ -170,31 +170,31 @@ public:
   reset_command_recorder(backend_command_recorder_resource& recorder) noexcept;
   [[nodiscard]] bool
   command_recorder_is_recording(backend_command_recorder_resource& recorder) noexcept;
-  [[nodiscard]] granit_result copy_buffer(vulkan_command_recorder& recorder,
+  [[nodiscard]] granit_result copy_buffer(backend_command_recorder_resource& recorder,
                                           backend_buffer_resource& source,
                                           backend_buffer_resource& destination,
                                           std::span<const granit_buffer_copy_region> regions);
-  [[nodiscard]] granit_result copy_texture_to_buffer(vulkan_command_recorder& recorder,
+  [[nodiscard]] granit_result copy_texture_to_buffer(backend_command_recorder_resource& recorder,
                                                      backend_texture_resource& source,
                                                      backend_buffer_resource& destination,
                                                      granit_texture_format format,
                                                      const granit_texture_data_layout& layout,
                                                      const granit_texture_write_region& region);
-  [[nodiscard]] granit_result copy_buffer_to_texture(vulkan_command_recorder& recorder,
+  [[nodiscard]] granit_result copy_buffer_to_texture(backend_command_recorder_resource& recorder,
                                                      backend_buffer_resource& source,
                                                      backend_texture_resource& destination,
                                                      granit_texture_format format,
                                                      const granit_texture_data_layout& layout,
                                                      const granit_texture_write_region& region);
-  [[nodiscard]] granit_result copy_texture(vulkan_command_recorder& recorder,
+  [[nodiscard]] granit_result copy_texture(backend_command_recorder_resource& recorder,
                                            backend_texture_resource& source,
                                            backend_texture_resource& destination,
                                            const granit_texture_copy_region& region);
-  [[nodiscard]] granit_result generate_mipmaps(vulkan_command_recorder& recorder,
+  [[nodiscard]] granit_result generate_mipmaps(backend_command_recorder_resource& recorder,
                                                backend_texture_resource& texture,
                                                const granit_texture_desc& desc,
                                                const granit_texture_mipmap_range& range);
-  [[nodiscard]] granit_result fill_buffer(vulkan_command_recorder& recorder,
+  [[nodiscard]] granit_result fill_buffer(backend_command_recorder_resource& recorder,
                                           backend_buffer_resource& buffer, std::uint64_t offset,
                                           std::uint64_t size, std::uint32_t value);
   [[nodiscard]] granit_result
