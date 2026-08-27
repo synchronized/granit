@@ -27,7 +27,7 @@ add_test(
 )
 set_tests_properties(granit.release_version_mismatch PROPERTIES WILL_FAIL TRUE)
 
-add_executable(granit_c_version_test c_version_test.c)
+add_executable(granit_c_version_test core/version_c_test.c)
 target_link_libraries(granit_c_version_test PRIVATE granit::granit Unity::Unity)
 set_target_properties(granit_c_version_test PROPERTIES LINKER_LANGUAGE CXX)
 granit_target_compile_warnings(granit_c_version_test)
@@ -72,7 +72,7 @@ target_link_libraries(
 )
 granit_target_compile_warnings(granit_c_header_test)
 
-add_executable(granit_cpp_version_test cpp_version_test.cpp)
+add_executable(granit_cpp_version_test core/version_cpp_test.cpp)
 target_link_libraries(
   granit_cpp_version_test
   PRIVATE granit::granit Catch2::Catch2WithMain
@@ -264,10 +264,12 @@ if(GRANIT_BUILD_BACKEND_WEBGPU)
     granit_webgpu_plugin_smoke
     backend/webgpu_plugin_smoke.cpp
     $<TARGET_OBJECTS:granit_backend_plugin>
+    $<TARGET_OBJECTS:granit_shader_asset>
   )
   target_compile_features(granit_webgpu_plugin_smoke PRIVATE cxx_std_20)
   target_include_directories(
-    granit_webgpu_plugin_smoke PRIVATE "${PROJECT_SOURCE_DIR}/include" "${PROJECT_SOURCE_DIR}/src"
+    granit_webgpu_plugin_smoke
+    PRIVATE "${PROJECT_SOURCE_DIR}/include" "${PROJECT_SOURCE_DIR}/src" "${PROJECT_SOURCE_DIR}/tools"
   )
   target_compile_definitions(
     granit_webgpu_plugin_smoke
@@ -277,7 +279,33 @@ if(GRANIT_BUILD_BACKEND_WEBGPU)
   add_dependencies(granit_webgpu_plugin_smoke granit_backend_webgpu)
   granit_target_compile_warnings(granit_webgpu_plugin_smoke)
   granit_target_output_directories(granit_webgpu_plugin_smoke)
-  add_test(NAME granit.backend.webgpu_plugin_smoke COMMAND granit_webgpu_plugin_smoke)
+  if(NOT GRANIT_S10C_VERTEX_SHADER_ASSET OR NOT GRANIT_S10C_FRAGMENT_SHADER_ASSET)
+    message(FATAL_ERROR "S-10C6 smoke test 需要设置 Vertex 和 Fragment Shader 资产")
+  endif()
+  add_test(
+    NAME granit.backend.webgpu_plugin_smoke
+    COMMAND granit_webgpu_plugin_smoke "${GRANIT_S10C_VERTEX_SHADER_ASSET}"
+  )
+
+  add_executable(
+    granit_shader_asset_vulkan_smoke
+    backend/shader_asset_vulkan_smoke.cpp
+    $<TARGET_OBJECTS:granit_shader_asset>
+  )
+  target_compile_features(granit_shader_asset_vulkan_smoke PRIVATE cxx_std_20)
+  target_include_directories(
+    granit_shader_asset_vulkan_smoke PRIVATE "${PROJECT_SOURCE_DIR}/tools"
+  )
+  target_link_libraries(granit_shader_asset_vulkan_smoke PRIVATE granit::granit)
+  granit_target_compile_warnings(granit_shader_asset_vulkan_smoke)
+  granit_target_output_directories(granit_shader_asset_vulkan_smoke)
+  add_test(
+    NAME granit.backend.shader_asset_vulkan_smoke
+    COMMAND
+      granit_shader_asset_vulkan_smoke
+      "${GRANIT_S10C_VERTEX_SHADER_ASSET}"
+      "${GRANIT_S10C_FRAGMENT_SHADER_ASSET}"
+  )
 endif()
 
 add_executable(

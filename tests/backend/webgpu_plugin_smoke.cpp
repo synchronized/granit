@@ -4,11 +4,26 @@
 #include <chrono>
 #include <cstddef>
 #include <cstdio>
+#include <fstream>
+#include <iterator>
 #include <new>
+#include <string>
+#include <string_view>
+#include <vector>
 
 #include "backend/plugin_loader.h"
+#include "shader_asset.h"
 
 namespace {
+
+std::vector<std::byte> load_file(const char* path) {
+  std::ifstream stream(path, std::ios::binary);
+  const std::vector<char> input{std::istreambuf_iterator<char>{stream}, {}};
+  std::vector<std::byte> output(input.size());
+  for (std::size_t index = 0; index < input.size(); ++index)
+    output[index] = static_cast<std::byte>(input[index]);
+  return output;
+}
 
 void* allocate(uint64_t size, uint64_t alignment, void*) {
   return ::operator new(static_cast<std::size_t>(size),
@@ -32,7 +47,19 @@ bool near_byte(std::uint32_t value, std::uint32_t expected) {
 
 } // namespace
 
-int main() {
+int main(int argc, char** argv) {
+  if (argc != 2) {
+    std::fprintf(stderr, "用法：granit_webgpu_plugin_smoke <shader.granit-shader>\n");
+    return 1;
+  }
+  const auto asset_bytes = load_file(argv[1]);
+  granit::tools::shader_asset_view asset;
+  if (granit::tools::decode_shader_asset(asset_bytes, asset) !=
+          granit::tools::shader_asset_error::success ||
+      asset.wgsl.empty()) {
+    std::fprintf(stderr, "读取 WebGPU Shader 资产失败：%s\n", argv[1]);
+    return 1;
+  }
   const auto smoke_begin = std::chrono::steady_clock::now();
   granit::detail::backend_plugin_loader loader;
   const auto open_result =
@@ -94,6 +121,8 @@ int main() {
   granit_backend_plugin_bind_group_layout bind_group_layout{};
   granit_backend_plugin_bind_group bind_group{};
   granit_backend_plugin_pipeline_layout pipeline_layout{};
+  granit_backend_plugin_shader vertex_shader{};
+  granit_backend_plugin_shader fragment_shader{};
   granit_backend_plugin_render_pipeline pipeline{};
   if (loader.create_texture(instance, &texture_desc, &texture) != GRANIT_SUCCESS || texture == 0 ||
       loader.create_texture_view(instance, texture, &view) != GRANIT_SUCCESS || view == 0 ||
@@ -108,12 +137,31 @@ int main() {
   bind_group_desc.layout = bind_group_layout;
   bind_group_desc.texture_view = view;
   bind_group_desc.sampler = sampler;
+  granit_backend_plugin_shader_desc vertex_desc{sizeof(granit_backend_plugin_shader_desc),
+                                                GRANIT_BACKEND_PLUGIN_SHADER_STAGE_VERTEX,
+                                                asset.wgsl.data(),
+                                                asset.wgsl.size(),
+                                                "vs_main",
+                                                7};
+  auto fragment_desc = vertex_desc;
+  fragment_desc.stage = GRANIT_BACKEND_PLUGIN_SHADER_STAGE_FRAGMENT;
+  fragment_desc.wgsl = asset.wgsl.data();
+  fragment_desc.wgsl_length = asset.wgsl.size();
+  fragment_desc.entry_point = "fs_main";
   if (loader.create_bind_group(instance, &bind_group_desc, &bind_group) != GRANIT_SUCCESS ||
       bind_group == 0 ||
       loader.create_pipeline_layout(instance, bind_group_layout, &pipeline_layout) !=
           GRANIT_SUCCESS ||
       pipeline_layout == 0 ||
-      loader.create_render_pipeline(instance, pipeline_layout, &pipeline) != GRANIT_SUCCESS ||
+      loader.create_shader(instance, &vertex_desc, &vertex_shader) != GRANIT_SUCCESS ||
+      loader.create_shader(instance, &fragment_desc, &fragment_shader) != GRANIT_SUCCESS) {
+    std::fprintf(stderr, "WebGPU 绑定或 Shader 生命周期验证失败\n");
+    return 6;
+  }
+  granit_backend_plugin_render_pipeline_desc pipeline_desc{
+      sizeof(granit_backend_plugin_render_pipeline_desc), 0, pipeline_layout, vertex_shader,
+      fragment_shader};
+  if (loader.create_render_pipeline(instance, &pipeline_desc, &pipeline) != GRANIT_SUCCESS ||
       pipeline == 0) {
     std::fprintf(stderr, "WebGPU 绑定或 Render Pipeline 生命周期验证失败\n");
     return 6;
@@ -166,6 +214,8 @@ int main() {
       loader.destroy_texture_view(instance, target_view) != GRANIT_SUCCESS ||
       loader.destroy_texture(instance, target_texture) != GRANIT_SUCCESS ||
       loader.destroy_render_pipeline(instance, pipeline) != GRANIT_SUCCESS ||
+      loader.destroy_shader(instance, vertex_shader) != GRANIT_SUCCESS ||
+      loader.destroy_shader(instance, fragment_shader) != GRANIT_SUCCESS ||
       loader.destroy_pipeline_layout(instance, pipeline_layout) != GRANIT_SUCCESS ||
       loader.destroy_bind_group(instance, bind_group) != GRANIT_SUCCESS ||
       loader.destroy_bind_group_layout(instance, bind_group_layout) != GRANIT_SUCCESS ||

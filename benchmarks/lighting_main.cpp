@@ -126,7 +126,8 @@ int main(int argc, char** argv) {
     samples.push_back(elapsed / static_cast<double>(config.iterations));
   }
 
-  const auto mean = std::accumulate(samples.begin(), samples.end(), 0.0) / samples.size();
+  const auto mean =
+      std::accumulate(samples.begin(), samples.end(), 0.0) / static_cast<double>(samples.size());
   std::cout << std::setprecision(10) << "# revision=" << GRANIT_BENCHMARK_REVISION
             << ",compiler=" << GRANIT_BENCHMARK_COMPILER << ",system=" << GRANIT_BENCHMARK_SYSTEM
             << ",link=" << GRANIT_BENCHMARK_LINK_MODE << '\n'

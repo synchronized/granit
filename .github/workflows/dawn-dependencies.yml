@@ -84,10 +84,14 @@ jobs:
             -DDAWN_ENABLE_NULL=OFF `
             -DDAWN_USE_GLFW=OFF `
             -DDAWN_USE_WINDOWS_UI=ON `
-            -DTINT_BUILD_CMD_TOOLS=OFF `
+            -DTINT_BUILD_CMD_TOOLS=ON `
             -DTINT_BUILD_TESTS=OFF
-          cmake --build $build --target webgpu_dawn
+          cmake --build $build --target webgpu_dawn tint_cmd_tint_cmd
           cmake --install $build --prefix $stage
+          $tint = Get-ChildItem -LiteralPath $build -Recurse -File -Filter 'tint.exe'
+          if ($tint.Count -ne 1) { throw "预期恰好一个 tint.exe" }
+          New-Item -ItemType Directory -Force -Path "$stage/bin" | Out-Null
+          Copy-Item -LiteralPath $tint.FullName -Destination "$stage/bin/tint.exe"
       - name: 验证 Windows 静态产物
         shell: pwsh
         run: |
@@ -98,19 +102,93 @@ jobs:
           if (-not ($symbols | Select-String 'wgpuCreateInstance')) {
             throw "webgpu_dawn.lib 缺少 wgpuCreateInstance"
           }
+          $tint = "$stage/bin/tint.exe"
+          $fixture = "$PWD/tests/fixtures/shaders/s10c_triangle.wgsl"
+          $vertex = "$env:RUNNER_TEMP/s10c_triangle.vert.spv"
+          $fragment = "$env:RUNNER_TEMP/s10c_triangle.frag.spv"
+          & $tint --format spirv --entry-point vs_main --output-name $vertex --validate $fixture
+          if ($LASTEXITCODE -ne 0) { throw "Tint 编译 Vertex WGSL 失败" }
+          & $tint --format spirv --entry-point fs_main --output-name $fragment --validate $fixture
+          if ($LASTEXITCODE -ne 0) { throw "Tint 编译 Fragment WGSL 失败" }
+          foreach ($output in @($vertex, $fragment)) {
+            $bytes = [System.IO.File]::ReadAllBytes($output)
+            if ($bytes.Length -lt 20 -or [BitConverter]::ToUInt32($bytes, 0) -ne 0x07230203) {
+              throw "Tint 未生成有效 SPIR-V：$output"
+            }
+          }
       - name: 构建并运行 Windows WebGPU 插件 smoke test
         shell: pwsh
         run: |
           $stage = "$PWD/stage/granit-dawn-static-$env:DAWN_VERSION-windows-x64"
           $build = "$env:RUNNER_TEMP/granit-webgpu-build"
+          $vertexAsset = "$env:RUNNER_TEMP/s10c_tool_triangle.vert.granit-shader"
+          $fragmentAsset = "$env:RUNNER_TEMP/s10c_tool_triangle.frag.granit-shader"
           cmake -S . -B $build -G Ninja `
             -DCMAKE_BUILD_TYPE=Release `
             -DGRANIT_BUILD_BACKEND_WEBGPU=ON `
             -DGRANIT_WEBGPU_FORCE_FALLBACK_ADAPTER=ON `
             "-DGRANIT_DAWN_ROOT=$stage" `
+            "-DGRANIT_S10C_VERTEX_SHADER_ASSET=$vertexAsset" `
+            "-DGRANIT_S10C_FRAGMENT_SHADER_ASSET=$fragmentAsset" `
             -DGRANIT_BUILD_EXAMPLES=OFF `
+            -DGRANIT_BUILD_TOOLS=ON `
             -DGRANIT_BUILD_TESTING=ON
-          cmake --build $build --target granit_webgpu_plugin_smoke
+          cmake --build $build --target granit_webgpu_plugin_smoke `
+            granit_shader_asset_vulkan_smoke granit_shader_tool
+          $shaderTool = "$build/bin/granit_shader_tool.exe"
+          $watch = [System.Diagnostics.Stopwatch]::StartNew()
+          $firstOutput = (& $shaderTool compile --tint "$stage/bin/tint.exe" `
+            --input "$PWD/tests/fixtures/shaders/s10c_triangle.wgsl" --entry vs_main `
+            --stage vertex --output "$env:RUNNER_TEMP/s10c_tool_triangle.vert.spv" `
+            --asset $vertexAsset --tint-revision "$env:DAWN_REVISION" 2>&1 | Out-String)
+          $firstCode = $LASTEXITCODE
+          $watch.Stop()
+          $firstMilliseconds = $watch.ElapsedMilliseconds
+          Write-Host $firstOutput
+          if ($firstCode -ne 0) { throw "granit_shader_tool 调用 Tint 失败" }
+          $watch.Restart()
+          $cacheOutput = (& $shaderTool compile --tint "$stage/bin/tint.exe" `
+            --input "$PWD/tests/fixtures/shaders/s10c_triangle.wgsl" --entry vs_main `
+            --stage vertex --output "$env:RUNNER_TEMP/s10c_tool_triangle.vert.spv" `
+            --asset $vertexAsset --tint-revision "$env:DAWN_REVISION" 2>&1 | Out-String)
+          $cacheCode = $LASTEXITCODE
+          $watch.Stop()
+          $cacheMilliseconds = $watch.ElapsedMilliseconds
+          Write-Host $cacheOutput
+          if ($cacheCode -ne 0 -or $cacheOutput -notmatch "缓存命中") {
+            throw "Shader 资产重复构建未报告缓存命中"
+          }
+          & $shaderTool compile --tint "$stage/bin/tint.exe" `
+            --input "$PWD/tests/fixtures/shaders/s10c_triangle.wgsl" --entry fs_main `
+            --stage fragment --output "$env:RUNNER_TEMP/s10c_tool_triangle.frag.spv" `
+            --asset $fragmentAsset --tint-revision "$env:DAWN_REVISION"
+          if ($LASTEXITCODE -ne 0) { throw "granit_shader_tool 调用 Tint 失败" }
+          $invalidOutput = "$env:RUNNER_TEMP/s10c_invalid.spv"
+          $invalidDiagnostic = (& $shaderTool compile --tint "$stage/bin/tint.exe" `
+            --input "$PWD/tests/fixtures/shaders/s10c_invalid.wgsl" --entry vs_main `
+            --stage vertex --output $invalidOutput 2>&1 | Out-String)
+          if ($LASTEXITCODE -ne 1 -or `
+              $invalidDiagnostic -notmatch 's10c_invalid\.wgsl:\d+:\d+' -or `
+              $invalidDiagnostic -notmatch '入口点：vs_main' -or `
+              $invalidDiagnostic -notmatch '阶段：vertex' -or `
+              (Test-Path -LiteralPath $invalidOutput)) {
+            throw "真实 Tint 诊断缺少文件、行列、入口点或阶段：$invalidDiagnostic"
+          }
+          Write-Host $invalidDiagnostic
+          $vertexBytes = (Get-Item -LiteralPath $vertexAsset).Length
+          $fragmentBytes = (Get-Item -LiteralPath $fragmentAsset).Length
+          Write-Host "Shader 指标：首次=${firstMilliseconds}ms，缓存=${cacheMilliseconds}ms，" `
+            "vertex=${vertexBytes}bytes，fragment=${fragmentBytes}bytes"
+          @"
+          ### Windows Shader 资产
+
+          | 指标 | 结果 |
+          |---|---:|
+          | 首次构建 | $firstMilliseconds ms |
+          | 缓存命中构建 | $cacheMilliseconds ms |
+          | Vertex 资产 | $vertexBytes bytes |
+          | Fragment 资产 | $fragmentBytes bytes |
+          "@ | Add-Content -Encoding utf8 $env:GITHUB_STEP_SUMMARY
           $fxc = "$env:WINDIR/System32/d3dcompiler_47.dll"
           if (-not (Test-Path -LiteralPath $fxc -PathType Leaf)) {
             throw "Windows runner 缺少 d3dcompiler_47.dll"
@@ -193,10 +271,13 @@ jobs:
             -DDAWN_USE_GLFW=OFF \
             -DDAWN_USE_WAYLAND=ON \
             -DDAWN_USE_X11=ON \
-            -DTINT_BUILD_CMD_TOOLS=OFF \
+            -DTINT_BUILD_CMD_TOOLS=ON \
             -DTINT_BUILD_TESTS=OFF
-          cmake --build "$RUNNER_TEMP/dawn-build" --target webgpu_dawn
+          cmake --build "$RUNNER_TEMP/dawn-build" --target webgpu_dawn tint_cmd_tint_cmd
           cmake --install "$RUNNER_TEMP/dawn-build" --prefix "$stage"
+          mapfile -t tint_tools < <(find "$RUNNER_TEMP/dawn-build" -type f -name tint -perm -u+x)
+          [[ "${#tint_tools[@]}" -eq 1 ]]
+          install -Dm755 "${tint_tools[0]}" "$stage/bin/tint"
       - name: 验证 Linux 静态产物
         shell: bash
         run: |
@@ -204,25 +285,89 @@ jobs:
           mapfile -t libraries < <(find "$stage" -type f -name 'libwebgpu_dawn.a')
           [[ "${#libraries[@]}" -eq 1 ]]
           nm --defined-only "${libraries[0]}" | grep -q 'wgpuCreateInstance'
+          tint="$stage/bin/tint"
+          fixture="$PWD/tests/fixtures/shaders/s10c_triangle.wgsl"
+          vertex="$RUNNER_TEMP/s10c_triangle.vert.spv"
+          fragment="$RUNNER_TEMP/s10c_triangle.frag.spv"
+          "$tint" --format spirv --entry-point vs_main --output-name "$vertex" \
+            --validate "$fixture"
+          "$tint" --format spirv --entry-point fs_main --output-name "$fragment" \
+            --validate "$fixture"
+          for output in "$vertex" "$fragment"; do
+            [[ "$(od -An -tx4 -N4 "$output" | tr -d ' ')" == "07230203" ]]
+          done
       - name: 构建并运行 Linux WebGPU 插件 smoke test
         shell: bash
         run: |
           stage="$PWD/stage/granit-dawn-static-$DAWN_VERSION-linux-x64"
           build="$RUNNER_TEMP/granit-webgpu-build"
+          vertex_asset="$RUNNER_TEMP/s10c_tool_triangle.vert.granit-shader"
+          fragment_asset="$RUNNER_TEMP/s10c_tool_triangle.frag.granit-shader"
           CC=clang CXX=clang++ cmake -S . -B "$build" -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
             -DGRANIT_BUILD_BACKEND_WEBGPU=ON \
             -DGRANIT_WEBGPU_FORCE_FALLBACK_ADAPTER=ON \
             -DGRANIT_DAWN_ROOT="$stage" \
+            -DGRANIT_S10C_VERTEX_SHADER_ASSET="$vertex_asset" \
+            -DGRANIT_S10C_FRAGMENT_SHADER_ASSET="$fragment_asset" \
             -DGRANIT_BUILD_EXAMPLES=OFF \
+            -DGRANIT_BUILD_TOOLS=ON \
             -DGRANIT_BUILD_TESTING=ON \
             -DGRANIT_ENABLE_XCB=OFF \
             -DGRANIT_ENABLE_WAYLAND=OFF
-          cmake --build "$build" --target granit_webgpu_plugin_smoke
+          cmake --build "$build" --target granit_webgpu_plugin_smoke \
+            granit_shader_asset_vulkan_smoke granit_shader_tool
+          shader_tool="$build/bin/granit_shader_tool"
+          first_start="$(date +%s%N)"
+          first_output="$("$shader_tool" compile --tint "$stage/bin/tint" \
+            --input "$PWD/tests/fixtures/shaders/s10c_triangle.wgsl" --entry vs_main \
+            --stage vertex --output "$RUNNER_TEMP/s10c_tool_triangle.vert.spv" \
+            --asset "$vertex_asset" --tint-revision "$DAWN_REVISION" 2>&1)"
+          first_ms=$(( ($(date +%s%N) - first_start) / 1000000 ))
+          printf '%s\n' "$first_output"
+          cache_start="$(date +%s%N)"
+          cache_output="$("$shader_tool" compile --tint "$stage/bin/tint" \
+            --input "$PWD/tests/fixtures/shaders/s10c_triangle.wgsl" --entry vs_main \
+            --stage vertex --output "$RUNNER_TEMP/s10c_tool_triangle.vert.spv" \
+            --asset "$vertex_asset" --tint-revision "$DAWN_REVISION" 2>&1)"
+          cache_ms=$(( ($(date +%s%N) - cache_start) / 1000000 ))
+          printf '%s\n' "$cache_output"
+          grep -Fq '缓存命中' <<< "$cache_output"
+          "$shader_tool" compile --tint "$stage/bin/tint" \
+            --input "$PWD/tests/fixtures/shaders/s10c_triangle.wgsl" --entry fs_main \
+            --stage fragment --output "$RUNNER_TEMP/s10c_tool_triangle.frag.spv" \
+            --asset "$fragment_asset" --tint-revision "$DAWN_REVISION"
+          invalid_output="$RUNNER_TEMP/s10c_invalid.spv"
+          if invalid_diagnostic="$("$shader_tool" compile --tint "$stage/bin/tint" \
+            --input "$PWD/tests/fixtures/shaders/s10c_invalid.wgsl" --entry vs_main \
+            --stage vertex --output "$invalid_output" 2>&1)"; then
+            echo '无效 WGSL 意外编译成功' >&2
+            exit 1
+          fi
+          grep -Eq 's10c_invalid\.wgsl:[0-9]+:[0-9]+' <<< "$invalid_diagnostic"
+          grep -Fq '入口点：vs_main' <<< "$invalid_diagnostic"
+          grep -Fq '阶段：vertex' <<< "$invalid_diagnostic"
+          [[ ! -e "$invalid_output" ]]
+          printf '%s\n' "$invalid_diagnostic"
+          vertex_bytes="$(stat -c '%s' "$vertex_asset")"
+          fragment_bytes="$(stat -c '%s' "$fragment_asset")"
+          printf 'Shader 指标：首次=%sms，缓存=%sms，vertex=%sbytes，fragment=%sbytes\n' \
+            "$first_ms" "$cache_ms" "$vertex_bytes" "$fragment_bytes"
+          {
+            echo '### Linux Shader 资产'
+            echo
+            echo '| 指标 | 结果 |'
+            echo '|---|---:|'
+            echo "| 首次构建 | $first_ms ms |"
+            echo "| 缓存命中构建 | $cache_ms ms |"
+            echo "| Vertex 资产 | $vertex_bytes bytes |"
+            echo "| Fragment 资产 | $fragment_bytes bytes |"
+          } >> "$GITHUB_STEP_SUMMARY"
           lvp_icd="$(find /usr/share/vulkan/icd.d -type f -name 'lvp_icd*.json' -print -quit)"
           [[ -n "$lvp_icd" ]]
           VK_DRIVER_FILES="$lvp_icd" LIBGL_ALWAYS_SOFTWARE=1 \
-            ctest --test-dir "$build" -R granit.backend.webgpu_plugin_smoke \
+            ctest --test-dir "$build" \
+              -R 'granit\.backend\.(webgpu_plugin|shader_asset_vulkan)_smoke' \
               --verbose --output-on-failure
       - name: 打包 Linux 产物
         id: package

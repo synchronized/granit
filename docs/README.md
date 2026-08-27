@@ -71,6 +71,7 @@
 
 ### 命令与 Pipeline
 
+- [ShaderTools SDK](reference/shader-tools.md)
 - [Command Recorder](reference/command-recorder.md)
 - [Frame Context](reference/frame-context.md)
 - [Shader Module](reference/shader.md)

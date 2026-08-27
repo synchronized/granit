@@ -36,6 +36,8 @@ bool is_compatible(const granit_backend_plugin_api* api,
          api->instance_api->destroy_bind_group_layout != nullptr &&
          api->instance_api->create_bind_group != nullptr &&
          api->instance_api->destroy_bind_group != nullptr &&
+         api->instance_api->create_shader != nullptr &&
+         api->instance_api->destroy_shader != nullptr &&
          api->instance_api->create_pipeline_layout != nullptr &&
          api->instance_api->destroy_pipeline_layout != nullptr &&
          api->instance_api->create_render_pipeline != nullptr &&
@@ -407,13 +409,16 @@ backend_plugin_loader::create_bind_group(granit_backend_plugin_instance instance
 
 GRANIT_LOADER_DESTROY_METHOD(destroy_bind_group, destroy_bind_group,
                              granit_backend_plugin_bind_group)
+GRANIT_LOADER_CREATE_METHOD(create_shader, create_shader, const granit_backend_plugin_shader_desc*,
+                            granit_backend_plugin_shader)
+GRANIT_LOADER_DESTROY_METHOD(destroy_shader, destroy_shader, granit_backend_plugin_shader)
 GRANIT_LOADER_CREATE_METHOD(create_pipeline_layout, create_pipeline_layout,
                             granit_backend_plugin_bind_group_layout,
                             granit_backend_plugin_pipeline_layout)
 GRANIT_LOADER_DESTROY_METHOD(destroy_pipeline_layout, destroy_pipeline_layout,
                              granit_backend_plugin_pipeline_layout)
 GRANIT_LOADER_CREATE_METHOD(create_render_pipeline, create_render_pipeline,
-                            granit_backend_plugin_pipeline_layout,
+                            const granit_backend_plugin_render_pipeline_desc*,
                             granit_backend_plugin_render_pipeline)
 GRANIT_LOADER_DESTROY_METHOD(destroy_render_pipeline, destroy_render_pipeline,
                              granit_backend_plugin_render_pipeline)

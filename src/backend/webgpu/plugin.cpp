@@ -11,6 +11,7 @@
 #include <limits>
 #include <mutex>
 #include <new>
+#include <string>
 #include <unordered_map>
 
 #include <webgpu/webgpu.h>
@@ -49,9 +50,16 @@ struct webgpu_instance {
     WGPUPipelineLayout pipeline_layout;
     granit_backend_plugin_bind_group_layout bind_group_layout;
   };
+  struct shader_record {
+    WGPUShaderModule shader;
+    granit_backend_plugin_shader_stage stage;
+    std::string entry_point;
+  };
   struct render_pipeline_record {
     WGPURenderPipeline render_pipeline;
     granit_backend_plugin_pipeline_layout pipeline_layout;
+    granit_backend_plugin_shader vertex_shader;
+    granit_backend_plugin_shader fragment_shader;
   };
   struct command_recorder_record {
     WGPUCommandEncoder encoder;
@@ -71,6 +79,7 @@ struct webgpu_instance {
   std::unordered_map<granit_backend_plugin_bind_group_layout, WGPUBindGroupLayout>
       bind_group_layouts;
   std::unordered_map<granit_backend_plugin_bind_group, bind_group_record> bind_groups;
+  std::unordered_map<granit_backend_plugin_shader, shader_record> shaders;
   std::unordered_map<granit_backend_plugin_pipeline_layout, pipeline_layout_record>
       pipeline_layouts;
   std::unordered_map<granit_backend_plugin_render_pipeline, render_pipeline_record>
@@ -114,6 +123,7 @@ std::atomic_uint64_t next_texture_view{1};
 std::atomic_uint64_t next_sampler{1};
 std::atomic_uint64_t next_bind_group_layout{1};
 std::atomic_uint64_t next_bind_group{1};
+std::atomic_uint64_t next_shader{1};
 std::atomic_uint64_t next_pipeline_layout{1};
 std::atomic_uint64_t next_render_pipeline{1};
 std::atomic_uint64_t next_command_recorder{1};
@@ -143,6 +153,11 @@ void release_resources(webgpu_instance& state) noexcept {
     wgpuRenderPipelineRelease(pipeline.render_pipeline);
   }
   state.render_pipelines.clear();
+  for (const auto& [handle, shader] : state.shaders) {
+    static_cast<void>(handle);
+    wgpuShaderModuleRelease(shader.shader);
+  }
+  state.shaders.clear();
   for (const auto& [handle, layout] : state.pipeline_layouts) {
     static_cast<void>(handle);
     wgpuPipelineLayoutRelease(layout.pipeline_layout);
@@ -970,6 +985,72 @@ granit_result destroy_bind_group(granit_backend_plugin_instance instance,
   return GRANIT_SUCCESS;
 }
 
+granit_result create_shader(granit_backend_plugin_instance instance,
+                            const granit_backend_plugin_shader_desc* desc,
+                            granit_backend_plugin_shader* out_shader) noexcept {
+  if (out_shader != nullptr)
+    *out_shader = 0;
+  if (instance == 0 || desc == nullptr || out_shader == nullptr ||
+      desc->struct_size < sizeof(*desc) || desc->wgsl == nullptr || desc->wgsl_length == 0 ||
+      desc->entry_point == nullptr || desc->entry_point_length == 0 ||
+      (desc->stage != GRANIT_BACKEND_PLUGIN_SHADER_STAGE_VERTEX &&
+       desc->stage != GRANIT_BACKEND_PLUGIN_SHADER_STAGE_FRAGMENT))
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  const std::scoped_lock lock{instances_mutex};
+  const auto found = instances.find(instance);
+  if (found == instances.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  auto& state = *found->second;
+  WGPUShaderSourceWGSL source = WGPU_SHADER_SOURCE_WGSL_INIT;
+  source.code = {desc->wgsl, static_cast<std::size_t>(desc->wgsl_length)};
+  WGPUShaderModuleDescriptor descriptor = WGPU_SHADER_MODULE_DESCRIPTOR_INIT;
+  descriptor.nextInChain = &source.chain;
+  const auto native = wgpuDeviceCreateShaderModule(state.device, &descriptor);
+  if (native == nullptr)
+    return GRANIT_ERROR_INITIALIZATION_FAILED;
+  const auto handle = next_handle<granit_backend_plugin_shader>(next_shader);
+  try {
+    webgpu_instance::shader_record record{
+        native, desc->stage,
+        std::string{desc->entry_point, static_cast<std::size_t>(desc->entry_point_length)}};
+    if (!state.shaders.emplace(handle, std::move(record)).second) {
+      wgpuShaderModuleRelease(native);
+      return GRANIT_ERROR_INTERNAL;
+    }
+  } catch (const std::bad_alloc&) {
+    wgpuShaderModuleRelease(native);
+    return GRANIT_ERROR_OUT_OF_MEMORY;
+  } catch (...) {
+    wgpuShaderModuleRelease(native);
+    return GRANIT_ERROR_INTERNAL;
+  }
+  *out_shader = handle;
+  return GRANIT_SUCCESS;
+}
+
+granit_result destroy_shader(granit_backend_plugin_instance instance,
+                             granit_backend_plugin_shader shader) noexcept {
+  if (instance == 0 || shader == 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  const std::scoped_lock lock{instances_mutex};
+  const auto found = instances.find(instance);
+  if (found == instances.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  auto& state = *found->second;
+  const auto shader_found = state.shaders.find(shader);
+  if (shader_found == state.shaders.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  if (std::any_of(state.render_pipelines.begin(), state.render_pipelines.end(),
+                  [shader](const auto& entry) {
+                    return entry.second.vertex_shader == shader ||
+                           entry.second.fragment_shader == shader;
+                  }))
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  wgpuShaderModuleRelease(shader_found->second.shader);
+  state.shaders.erase(shader_found);
+  return GRANIT_SUCCESS;
+}
+
 granit_result
 create_pipeline_layout(granit_backend_plugin_instance instance,
                        granit_backend_plugin_bind_group_layout bind_group_layout,
@@ -1032,59 +1113,53 @@ granit_result destroy_pipeline_layout(granit_backend_plugin_instance instance,
 
 granit_result
 create_render_pipeline(granit_backend_plugin_instance instance,
-                       granit_backend_plugin_pipeline_layout pipeline_layout,
+                       const granit_backend_plugin_render_pipeline_desc* desc,
                        granit_backend_plugin_render_pipeline* out_render_pipeline) noexcept {
   if (out_render_pipeline != nullptr)
     *out_render_pipeline = 0;
-  if (instance == 0 || pipeline_layout == 0 || out_render_pipeline == nullptr)
+  if (instance == 0 || desc == nullptr || out_render_pipeline == nullptr ||
+      desc->struct_size < sizeof(*desc) || desc->reserved != 0 || desc->layout == 0 ||
+      desc->vertex_shader == 0 || desc->fragment_shader == 0)
     return GRANIT_ERROR_INVALID_ARGUMENT;
   const std::scoped_lock lock{instances_mutex};
   const auto found = instances.find(instance);
   if (found == instances.end())
     return GRANIT_ERROR_INVALID_HANDLE;
   auto& state = *found->second;
-  const auto layout = state.pipeline_layouts.find(pipeline_layout);
-  if (layout == state.pipeline_layouts.end())
+  const auto layout = state.pipeline_layouts.find(desc->layout);
+  const auto vertex = state.shaders.find(desc->vertex_shader);
+  const auto fragment_shader = state.shaders.find(desc->fragment_shader);
+  if (layout == state.pipeline_layouts.end() || vertex == state.shaders.end() ||
+      fragment_shader == state.shaders.end())
     return GRANIT_ERROR_INVALID_HANDLE;
-
-  constexpr char shader_code[] = R"(
-@vertex fn vs_main(@builtin(vertex_index) index: u32) -> @builtin(position) vec4f {
-  var positions = array<vec2f, 3>(vec2f(0.0, -0.7), vec2f(0.7, 0.7), vec2f(-0.7, 0.7));
-  return vec4f(positions[index], 0.0, 1.0);
-}
-@fragment fn fs_main() -> @location(0) vec4f {
-  return vec4f(0.2, 0.7, 0.4, 1.0);
-})";
-  WGPUShaderSourceWGSL source = WGPU_SHADER_SOURCE_WGSL_INIT;
-  source.code = {shader_code, sizeof(shader_code) - 1};
-  WGPUShaderModuleDescriptor shader_descriptor = WGPU_SHADER_MODULE_DESCRIPTOR_INIT;
-  shader_descriptor.nextInChain = &source.chain;
-  const auto shader = wgpuDeviceCreateShaderModule(state.device, &shader_descriptor);
-  if (shader == nullptr)
-    return GRANIT_ERROR_INITIALIZATION_FAILED;
+  if (vertex->second.stage != GRANIT_BACKEND_PLUGIN_SHADER_STAGE_VERTEX ||
+      fragment_shader->second.stage != GRANIT_BACKEND_PLUGIN_SHADER_STAGE_FRAGMENT)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
   WGPUColorTargetState target = WGPU_COLOR_TARGET_STATE_INIT;
   target.format = WGPUTextureFormat_RGBA8Unorm;
   target.writeMask = WGPUColorWriteMask_All;
   WGPUFragmentState fragment = WGPU_FRAGMENT_STATE_INIT;
-  fragment.module = shader;
-  fragment.entryPoint = {"fs_main", 7};
+  fragment.module = fragment_shader->second.shader;
+  fragment.entryPoint = {fragment_shader->second.entry_point.data(),
+                         fragment_shader->second.entry_point.size()};
   fragment.targetCount = 1;
   fragment.targets = &target;
   WGPURenderPipelineDescriptor descriptor = WGPU_RENDER_PIPELINE_DESCRIPTOR_INIT;
   descriptor.layout = layout->second.pipeline_layout;
-  descriptor.vertex.module = shader;
-  descriptor.vertex.entryPoint = {"vs_main", 7};
+  descriptor.vertex.module = vertex->second.shader;
+  descriptor.vertex.entryPoint = {vertex->second.entry_point.data(),
+                                  vertex->second.entry_point.size()};
   descriptor.primitive.topology = WGPUPrimitiveTopology_TriangleList;
   descriptor.multisample.count = 1;
   descriptor.multisample.mask = UINT32_MAX;
   descriptor.fragment = &fragment;
   const auto native = wgpuDeviceCreateRenderPipeline(state.device, &descriptor);
-  wgpuShaderModuleRelease(shader);
   if (native == nullptr)
     return GRANIT_ERROR_INITIALIZATION_FAILED;
   const auto handle = next_handle<granit_backend_plugin_render_pipeline>(next_render_pipeline);
   try {
-    const auto record = webgpu_instance::render_pipeline_record{native, pipeline_layout};
+    const auto record = webgpu_instance::render_pipeline_record{
+        native, desc->layout, desc->vertex_shader, desc->fragment_shader};
     if (!state.render_pipelines.emplace(handle, record).second) {
       wgpuRenderPipelineRelease(native);
       return GRANIT_ERROR_INTERNAL;
@@ -1395,6 +1470,8 @@ constexpr granit_backend_plugin_instance_api instance_api{
     destroy_bind_group_layout,
     create_bind_group,
     destroy_bind_group,
+    create_shader,
+    destroy_shader,
     create_pipeline_layout,
     destroy_pipeline_layout,
     create_render_pipeline,

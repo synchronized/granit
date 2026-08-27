@@ -62,7 +62,8 @@ canvas_draw_list make_list(std::uint32_t rectangles, granit_texture_view first,
 
 void print_result(std::string_view name, std::uint32_t items, std::uint32_t batches,
                   std::uint32_t coverage_layers, const std::vector<double>& samples) {
-  const auto mean = std::accumulate(samples.begin(), samples.end(), 0.0) / samples.size();
+  const auto mean =
+      std::accumulate(samples.begin(), samples.end(), 0.0) / static_cast<double>(samples.size());
   std::cout << "2," << name << ',' << items << ',' << batches << ',' << coverage_layers << ','
             << samples.size() << ',' << mean << ',' << percentile(samples, 0.50) << ','
             << percentile(samples, 0.95) << ',' << percentile(samples, 0.99) << '\n';
@@ -70,7 +71,8 @@ void print_result(std::string_view name, std::uint32_t items, std::uint32_t batc
 
 void print_cpu_result(std::string_view phase, std::string_view name, std::uint32_t items,
                       std::uint32_t batches, const std::vector<double>& samples) {
-  const auto mean = std::accumulate(samples.begin(), samples.end(), 0.0) / samples.size();
+  const auto mean =
+      std::accumulate(samples.begin(), samples.end(), 0.0) / static_cast<double>(samples.size());
   std::cout << "3," << phase << '.' << name << ',' << items << ',' << batches << ",0,"
             << samples.size() << ',' << mean << ',' << percentile(samples, 0.50) << ','
             << percentile(samples, 0.95) << ',' << percentile(samples, 0.99) << '\n';

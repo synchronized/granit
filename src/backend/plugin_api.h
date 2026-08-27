@@ -9,7 +9,7 @@
 #include <granit/core/diagnostic.h>
 #include <granit/core/result.h>
 
-#define GRANIT_BACKEND_PLUGIN_ABI_VERSION UINT32_C(2)
+#define GRANIT_BACKEND_PLUGIN_ABI_VERSION UINT32_C(3)
 #define GRANIT_BACKEND_PLUGIN_KIND_WEBGPU UINT32_C(1)
 #define GRANIT_BACKEND_PLUGIN_QUERY_SYMBOL "granit_backend_plugin_query"
 
@@ -21,6 +21,7 @@ typedef uint64_t granit_backend_plugin_texture_view;
 typedef uint64_t granit_backend_plugin_sampler;
 typedef uint64_t granit_backend_plugin_bind_group_layout;
 typedef uint64_t granit_backend_plugin_bind_group;
+typedef uint64_t granit_backend_plugin_shader;
 typedef uint64_t granit_backend_plugin_pipeline_layout;
 typedef uint64_t granit_backend_plugin_render_pipeline;
 typedef uint64_t granit_backend_plugin_command_recorder;
@@ -75,6 +76,28 @@ typedef struct granit_backend_plugin_bind_group_desc {
   granit_backend_plugin_texture_view texture_view;
   granit_backend_plugin_sampler sampler;
 } granit_backend_plugin_bind_group_desc;
+
+typedef uint32_t granit_backend_plugin_shader_stage;
+#define GRANIT_BACKEND_PLUGIN_SHADER_STAGE_VERTEX UINT32_C(1)
+#define GRANIT_BACKEND_PLUGIN_SHADER_STAGE_FRAGMENT UINT32_C(2)
+
+/** WGSL 字节和入口点仅在调用期间有效，插件必须复制所需内容。 */
+typedef struct granit_backend_plugin_shader_desc {
+  uint32_t struct_size;
+  granit_backend_plugin_shader_stage stage;
+  const char* wgsl;
+  uint64_t wgsl_length;
+  const char* entry_point;
+  uint64_t entry_point_length;
+} granit_backend_plugin_shader_desc;
+
+typedef struct granit_backend_plugin_render_pipeline_desc {
+  uint32_t struct_size;
+  uint32_t reserved;
+  granit_backend_plugin_pipeline_layout layout;
+  granit_backend_plugin_shader vertex_shader;
+  granit_backend_plugin_shader fragment_shader;
+} granit_backend_plugin_render_pipeline_desc;
 
 /** 插件实例创建后固定的后端无关能力快照。 */
 typedef struct granit_backend_plugin_capabilities {
@@ -152,6 +175,11 @@ typedef granit_result (*granit_backend_plugin_create_bind_group_fn)(
     granit_backend_plugin_bind_group* bind_group);
 typedef granit_result (*granit_backend_plugin_destroy_bind_group_fn)(
     granit_backend_plugin_instance instance, granit_backend_plugin_bind_group bind_group);
+typedef granit_result (*granit_backend_plugin_create_shader_fn)(
+    granit_backend_plugin_instance instance, const granit_backend_plugin_shader_desc* desc,
+    granit_backend_plugin_shader* shader);
+typedef granit_result (*granit_backend_plugin_destroy_shader_fn)(
+    granit_backend_plugin_instance instance, granit_backend_plugin_shader shader);
 typedef granit_result (*granit_backend_plugin_create_pipeline_layout_fn)(
     granit_backend_plugin_instance instance,
     granit_backend_plugin_bind_group_layout bind_group_layout,
@@ -159,7 +187,7 @@ typedef granit_result (*granit_backend_plugin_create_pipeline_layout_fn)(
 typedef granit_result (*granit_backend_plugin_destroy_pipeline_layout_fn)(
     granit_backend_plugin_instance instance, granit_backend_plugin_pipeline_layout pipeline_layout);
 typedef granit_result (*granit_backend_plugin_create_render_pipeline_fn)(
-    granit_backend_plugin_instance instance, granit_backend_plugin_pipeline_layout pipeline_layout,
+    granit_backend_plugin_instance instance, const granit_backend_plugin_render_pipeline_desc* desc,
     granit_backend_plugin_render_pipeline* render_pipeline);
 typedef granit_result (*granit_backend_plugin_destroy_render_pipeline_fn)(
     granit_backend_plugin_instance instance, granit_backend_plugin_render_pipeline render_pipeline);
@@ -206,6 +234,8 @@ typedef struct granit_backend_plugin_instance_api {
   granit_backend_plugin_destroy_bind_group_layout_fn destroy_bind_group_layout;
   granit_backend_plugin_create_bind_group_fn create_bind_group;
   granit_backend_plugin_destroy_bind_group_fn destroy_bind_group;
+  granit_backend_plugin_create_shader_fn create_shader;
+  granit_backend_plugin_destroy_shader_fn destroy_shader;
   granit_backend_plugin_create_pipeline_layout_fn create_pipeline_layout;
   granit_backend_plugin_destroy_pipeline_layout_fn destroy_pipeline_layout;
   granit_backend_plugin_create_render_pipeline_fn create_render_pipeline;
