@@ -1225,16 +1225,32 @@ void renderer_state::destroy_native_bind_group(VkDescriptorPool pool) noexcept {
 }
 
 granit_result renderer_state::create_native_pipeline_layout(
-    std::span<const VkDescriptorSetLayout> bind_group_layouts, VkPipelineLayout& layout) noexcept {
+    std::span<backend_bind_group_layout_resource* const> bind_group_layouts,
+    backend_pipeline_layout_resource& layout_resource) noexcept {
   if (device_lost())
     return GRANIT_ERROR_DEVICE_LOST;
-  VkPipelineLayoutCreateInfo info{};
-  info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-  info.setLayoutCount = static_cast<std::uint32_t>(bind_group_layouts.size());
-  info.pSetLayouts = bind_group_layouts.data();
-  std::lock_guard lock{resource_mutex_};
-  return observe_device_result(map_vulkan_result(device_.functions().vkCreatePipelineLayout(
-      device_.native_handle(), &info, nullptr, &layout)));
+  try {
+    std::vector<VkDescriptorSetLayout> native_layouts;
+    native_layouts.reserve(bind_group_layouts.size());
+    for (auto* bind_group_layout : bind_group_layouts) {
+      if (bind_group_layout == nullptr)
+        return GRANIT_ERROR_INVALID_ARGUMENT;
+      native_layouts.push_back(
+          static_cast<vulkan_bind_group_layout_resource&>(*bind_group_layout).native());
+    }
+    auto& layout = static_cast<vulkan_pipeline_layout_resource&>(layout_resource).native();
+    VkPipelineLayoutCreateInfo info{};
+    info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    info.setLayoutCount = static_cast<std::uint32_t>(native_layouts.size());
+    info.pSetLayouts = native_layouts.data();
+    std::lock_guard lock{resource_mutex_};
+    return observe_device_result(map_vulkan_result(device_.functions().vkCreatePipelineLayout(
+        device_.native_handle(), &info, nullptr, &layout)));
+  } catch (const std::bad_alloc&) {
+    return GRANIT_ERROR_OUT_OF_MEMORY;
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
 }
 
 void renderer_state::destroy_native_pipeline_layout(VkPipelineLayout layout) noexcept {
@@ -1605,8 +1621,9 @@ granit_result renderer_state::bind_graphics_pipeline(vulkan_command_recorder& re
 }
 
 granit_result renderer_state::bind_graphics_groups(
-    vulkan_command_recorder& recorder, VkPipelineLayout layout, std::uint32_t first_group,
-    std::span<const VkDescriptorSet> bind_groups, std::span<const std::uint32_t> dynamic_offsets,
+    vulkan_command_recorder& recorder, backend_pipeline_layout_resource& layout_resource,
+    std::uint32_t first_group, std::span<backend_bind_group_resource* const> bind_groups,
+    std::span<const std::uint32_t> dynamic_offsets,
     std::span<const backend_buffer_access> buffer_accesses,
     std::span<const backend_texture_access> texture_accesses) {
   if (device_lost())
@@ -1614,8 +1631,15 @@ granit_result renderer_state::bind_graphics_groups(
   try {
     std::vector<std::pair<VkBuffer, VkAccessFlags2>> native_buffers;
     std::vector<vulkan_image_access> native_textures;
+    std::vector<VkDescriptorSet> native_groups;
     native_buffers.reserve(buffer_accesses.size());
     native_textures.reserve(texture_accesses.size());
+    native_groups.reserve(bind_groups.size());
+    for (auto* bind_group : bind_groups) {
+      if (bind_group == nullptr)
+        return GRANIT_ERROR_INVALID_ARGUMENT;
+      native_groups.push_back(static_cast<vulkan_bind_group_resource&>(*bind_group).set());
+    }
     for (const auto& access : buffer_accesses) {
       if (access.buffer == nullptr)
         return GRANIT_ERROR_INVALID_ARGUMENT;
@@ -1647,8 +1671,9 @@ granit_result renderer_state::bind_graphics_groups(
           .preserve_content = false,
       });
     }
-    return recorder.bind_graphics_groups(device_, layout, first_group, bind_groups, dynamic_offsets,
-                                         native_buffers, native_textures);
+    const auto layout = static_cast<vulkan_pipeline_layout_resource&>(layout_resource).native();
+    return recorder.bind_graphics_groups(device_, layout, first_group, native_groups,
+                                         dynamic_offsets, native_buffers, native_textures);
   } catch (const std::bad_alloc&) {
     return GRANIT_ERROR_OUT_OF_MEMORY;
   } catch (...) {
@@ -1663,8 +1688,9 @@ granit_result renderer_state::bind_compute_pipeline(vulkan_command_recorder& rec
 }
 
 granit_result renderer_state::bind_compute_groups(
-    vulkan_command_recorder& recorder, VkPipelineLayout layout, std::uint32_t first_group,
-    std::span<const VkDescriptorSet> bind_groups, std::span<const std::uint32_t> dynamic_offsets,
+    vulkan_command_recorder& recorder, backend_pipeline_layout_resource& layout_resource,
+    std::uint32_t first_group, std::span<backend_bind_group_resource* const> bind_groups,
+    std::span<const std::uint32_t> dynamic_offsets,
     std::span<const backend_buffer_access> buffer_accesses,
     std::span<const backend_texture_access> texture_accesses) {
   if (device_lost())
@@ -1672,8 +1698,15 @@ granit_result renderer_state::bind_compute_groups(
   try {
     std::vector<std::pair<VkBuffer, VkAccessFlags2>> native_buffers;
     std::vector<vulkan_image_access> native_textures;
+    std::vector<VkDescriptorSet> native_groups;
     native_buffers.reserve(buffer_accesses.size());
     native_textures.reserve(texture_accesses.size());
+    native_groups.reserve(bind_groups.size());
+    for (auto* bind_group : bind_groups) {
+      if (bind_group == nullptr)
+        return GRANIT_ERROR_INVALID_ARGUMENT;
+      native_groups.push_back(static_cast<vulkan_bind_group_resource&>(*bind_group).set());
+    }
     for (const auto& access : buffer_accesses) {
       if (access.buffer == nullptr)
         return GRANIT_ERROR_INVALID_ARGUMENT;
@@ -1705,8 +1738,9 @@ granit_result renderer_state::bind_compute_groups(
           .preserve_content = false,
       });
     }
-    return recorder.bind_compute_groups(device_, layout, first_group, bind_groups, dynamic_offsets,
-                                        native_buffers, native_textures);
+    const auto layout = static_cast<vulkan_pipeline_layout_resource&>(layout_resource).native();
+    return recorder.bind_compute_groups(device_, layout, first_group, native_groups,
+                                        dynamic_offsets, native_buffers, native_textures);
   } catch (const std::bad_alloc&) {
     return GRANIT_ERROR_OUT_OF_MEMORY;
   } catch (...) {

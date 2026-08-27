@@ -116,9 +116,9 @@ public:
                            std::span<const backend_bind_group_write> writes,
                            backend_bind_group_resource& bind_group) noexcept;
   void destroy_native_bind_group(VkDescriptorPool pool) noexcept;
-  [[nodiscard]] granit_result
-  create_native_pipeline_layout(std::span<const VkDescriptorSetLayout> bind_group_layouts,
-                                VkPipelineLayout& layout) noexcept;
+  [[nodiscard]] granit_result create_native_pipeline_layout(
+      std::span<backend_bind_group_layout_resource* const> bind_group_layouts,
+      backend_pipeline_layout_resource& layout) noexcept;
   void destroy_native_pipeline_layout(VkPipelineLayout layout) noexcept;
   [[nodiscard]] granit_result create_native_graphics_pipeline(
       VkPipelineLayout layout, VkShaderModule vertex_shader, const char* vertex_entry,
@@ -170,16 +170,18 @@ public:
   [[nodiscard]] granit_result bind_graphics_pipeline(vulkan_command_recorder& recorder,
                                                      VkPipeline pipeline) noexcept;
   [[nodiscard]] granit_result
-  bind_graphics_groups(vulkan_command_recorder& recorder, VkPipelineLayout layout,
-                       std::uint32_t first_group, std::span<const VkDescriptorSet> bind_groups,
+  bind_graphics_groups(vulkan_command_recorder& recorder, backend_pipeline_layout_resource& layout,
+                       std::uint32_t first_group,
+                       std::span<backend_bind_group_resource* const> bind_groups,
                        std::span<const std::uint32_t> dynamic_offsets,
                        std::span<const backend_buffer_access> buffer_accesses,
                        std::span<const backend_texture_access> texture_accesses);
   [[nodiscard]] granit_result bind_compute_pipeline(vulkan_command_recorder& recorder,
                                                     VkPipeline pipeline) noexcept;
   [[nodiscard]] granit_result
-  bind_compute_groups(vulkan_command_recorder& recorder, VkPipelineLayout layout,
-                      std::uint32_t first_group, std::span<const VkDescriptorSet> bind_groups,
+  bind_compute_groups(vulkan_command_recorder& recorder, backend_pipeline_layout_resource& layout,
+                      std::uint32_t first_group,
+                      std::span<backend_bind_group_resource* const> bind_groups,
                       std::span<const std::uint32_t> dynamic_offsets,
                       std::span<const backend_buffer_access> buffer_accesses,
                       std::span<const backend_texture_access> texture_accesses);

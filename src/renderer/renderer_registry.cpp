@@ -2499,7 +2499,7 @@ granit_result renderer_registry::create_pipeline_layout(
       return GRANIT_ERROR_INVALID_HANDLE;
     auto record = std::make_shared<pipeline_layout_record>();
     record->renderer = state;
-    std::vector<VkDescriptorSetLayout> native_layouts;
+    std::vector<backend_bind_group_layout_resource*> native_layouts;
     {
       std::lock_guard lock{mutex_};
       for (const auto handle : bind_group_layouts) {
@@ -2507,12 +2507,11 @@ granit_result renderer_registry::create_pipeline_layout(
         if (found == bind_group_layouts_.end() || found->second->renderer != state)
           return GRANIT_ERROR_INVALID_HANDLE;
         record->bind_group_layouts.push_back(found->second);
-        native_layouts.push_back(native_bind_group_layout(*found->second->native));
+        native_layouts.push_back(found->second->native.get());
       }
     }
     record->native = std::make_unique<vulkan_pipeline_layout_resource>(state);
-    const auto result = state->create_native_pipeline_layout(
-        native_layouts, native_pipeline_layout(*record->native));
+    const auto result = state->create_native_pipeline_layout(native_layouts, *record->native);
     if (result != GRANIT_SUCCESS)
       return result;
     std::lock_guard lock{mutex_};
@@ -3524,7 +3523,7 @@ renderer_registry::bind_graphics_groups(granit_renderer renderer, granit_command
     return GRANIT_ERROR_INVALID_HANDLE;
   std::shared_ptr<pipeline_layout_record> layout_record;
   std::vector<std::shared_ptr<bind_group_record>> group_records;
-  std::vector<VkDescriptorSet> native_groups;
+  std::vector<backend_bind_group_resource*> native_groups;
   std::vector<backend_buffer_access> buffer_accesses;
   std::vector<backend_texture_access> texture_accesses;
   std::vector<dynamic_uniform_binding> dynamic_bindings;
@@ -3546,7 +3545,7 @@ renderer_registry::bind_graphics_groups(granit_renderer renderer, granit_command
       if (found->second->layout != layout_record->bind_group_layouts[first_group + index])
         return GRANIT_ERROR_INVALID_ARGUMENT;
       group_records.push_back(found->second);
-      native_groups.push_back(native_bind_group(*found->second->native).set());
+      native_groups.push_back(found->second->native.get());
       buffer_accesses.insert(buffer_accesses.end(), found->second->graphics_buffer_accesses.begin(),
                              found->second->graphics_buffer_accesses.end());
       texture_accesses.insert(texture_accesses.end(),
@@ -3565,8 +3564,8 @@ renderer_registry::bind_graphics_groups(granit_renderer renderer, granit_command
   if (native_command_recorder(*command->native).state() != command_recorder_state::recording)
     return GRANIT_ERROR_INVALID_ARGUMENT;
   const auto result = command->renderer->bind_graphics_groups(
-      native_command_recorder(*command->native), native_pipeline_layout(*layout_record->native),
-      first_group, native_groups, dynamic_offsets, buffer_accesses, texture_accesses);
+      native_command_recorder(*command->native), *layout_record->native, first_group, native_groups,
+      dynamic_offsets, buffer_accesses, texture_accesses);
   if (result == GRANIT_SUCCESS) {
     retain_resource(command->retained_resources, layout_record, layout_record->metadata);
     for (const auto& group : group_records)
@@ -3609,7 +3608,7 @@ renderer_registry::bind_compute_groups(granit_renderer renderer, granit_command_
     return GRANIT_ERROR_INVALID_HANDLE;
   std::shared_ptr<pipeline_layout_record> layout_record;
   std::vector<std::shared_ptr<bind_group_record>> group_records;
-  std::vector<VkDescriptorSet> native_groups;
+  std::vector<backend_bind_group_resource*> native_groups;
   std::vector<backend_buffer_access> buffer_accesses;
   std::vector<backend_texture_access> texture_accesses;
   std::vector<dynamic_uniform_binding> dynamic_bindings;
@@ -3631,7 +3630,7 @@ renderer_registry::bind_compute_groups(granit_renderer renderer, granit_command_
       if (found->second->layout != layout_record->bind_group_layouts[first_group + index])
         return GRANIT_ERROR_INVALID_ARGUMENT;
       group_records.push_back(found->second);
-      native_groups.push_back(native_bind_group(*found->second->native).set());
+      native_groups.push_back(found->second->native.get());
       buffer_accesses.insert(buffer_accesses.end(), found->second->compute_buffer_accesses.begin(),
                              found->second->compute_buffer_accesses.end());
       texture_accesses.insert(texture_accesses.end(),
@@ -3650,8 +3649,8 @@ renderer_registry::bind_compute_groups(granit_renderer renderer, granit_command_
   if (native_command_recorder(*command->native).state() != command_recorder_state::recording)
     return GRANIT_ERROR_INVALID_ARGUMENT;
   const auto result = command->renderer->bind_compute_groups(
-      native_command_recorder(*command->native), native_pipeline_layout(*layout_record->native),
-      first_group, native_groups, dynamic_offsets, buffer_accesses, texture_accesses);
+      native_command_recorder(*command->native), *layout_record->native, first_group, native_groups,
+      dynamic_offsets, buffer_accesses, texture_accesses);
   if (result == GRANIT_SUCCESS) {
     retain_resource(command->retained_resources, layout_record, layout_record->metadata);
     for (const auto& group : group_records)
