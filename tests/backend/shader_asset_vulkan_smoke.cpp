@@ -55,8 +55,7 @@ int main(int argc, char** argv) {
   }
 
   granit::renderer renderer;
-  auto result = renderer.initialize(
-      {.application_name = "Granit S-10C6 Vulkan Smoke", .enable_validation = true});
+  auto result = renderer.initialize({.application_name = "Granit S-10C6 Vulkan Smoke"});
   if (granit::failed(result)) {
     std::cerr << "创建 Vulkan Renderer 失败：" << granit::result_message(result) << '\n';
     return 2;
