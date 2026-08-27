@@ -18,14 +18,6 @@
 namespace granit::detail {
 namespace {
 
-VkSampler& native_sampler(backend_sampler_resource& resource) noexcept {
-  return static_cast<vulkan_sampler_resource&>(resource).native();
-}
-
-VkImageView& native_texture_view(backend_texture_view_resource& resource) noexcept {
-  return static_cast<vulkan_texture_view_resource&>(resource).native();
-}
-
 vulkan_image_allocation& native_texture(backend_texture_resource& resource) noexcept {
   return static_cast<vulkan_texture_resource&>(resource).native();
 }
@@ -899,8 +891,7 @@ renderer_registry::install_swapchain_backbuffers(granit_swapchain swapchain,
       view->desc = desc;
       view->native = std::make_unique<vulkan_texture_view_resource>(record->renderer);
       const auto result = record->renderer->create_native_texture_view(
-          native_texture(*texture->native), texture->desc, desc,
-          native_texture_view(*view->native));
+          *texture->native, texture->desc, desc, *view->native);
       if (result != GRANIT_SUCCESS)
         return result;
       textures.push_back(std::move(texture));
@@ -1961,8 +1952,8 @@ granit_result renderer_registry::create_texture_view(granit_renderer renderer,
     record->texture = parent;
     record->desc = desc;
     record->native = std::make_unique<vulkan_texture_view_resource>(state);
-    const auto result = state->create_native_texture_view(
-        native_texture(*parent->native), parent->desc, desc, native_texture_view(*record->native));
+    const auto result =
+        state->create_native_texture_view(*parent->native, parent->desc, desc, *record->native);
     if (result != GRANIT_SUCCESS)
       return result;
     std::lock_guard lock{mutex_};
@@ -2079,7 +2070,7 @@ granit_result renderer_registry::create_sampler(granit_renderer renderer,
     auto record = std::make_shared<sampler_record>();
     record->renderer = state;
     record->native = std::make_unique<vulkan_sampler_resource>(state);
-    const auto result = state->create_native_sampler(desc, native_sampler(*record->native));
+    const auto result = state->create_native_sampler(desc, *record->native);
     if (result != GRANIT_SUCCESS)
       return result;
     std::lock_guard lock{mutex_};

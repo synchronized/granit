@@ -996,12 +996,15 @@ void renderer_state::destroy_native_texture(vulkan_image_allocation& texture) no
   memory_allocator_.destroy_image(texture);
 }
 
-granit_result renderer_state::create_native_texture_view(const vulkan_image_allocation& texture,
-                                                         const granit_texture_desc& texture_desc,
-                                                         const granit_texture_view_desc& view_desc,
-                                                         VkImageView& view) noexcept {
+granit_result
+renderer_state::create_native_texture_view(backend_texture_resource& texture_resource,
+                                           const granit_texture_desc& texture_desc,
+                                           const granit_texture_view_desc& view_desc,
+                                           backend_texture_view_resource& view_resource) noexcept {
   if (device_lost())
     return GRANIT_ERROR_DEVICE_LOST;
+  const auto& texture = static_cast<vulkan_texture_resource&>(texture_resource).native();
+  auto& view = static_cast<vulkan_texture_view_resource&>(view_resource).native();
   VkImageViewCreateInfo info{};
   info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
   info.image = texture.image;
@@ -1030,10 +1033,12 @@ void renderer_state::destroy_native_texture_view(VkImageView view) noexcept {
   }
 }
 
-granit_result renderer_state::create_native_sampler(const granit_sampler_desc& desc,
-                                                    VkSampler& sampler) noexcept {
+granit_result
+renderer_state::create_native_sampler(const granit_sampler_desc& desc,
+                                      backend_sampler_resource& sampler_resource) noexcept {
   if (device_lost())
     return GRANIT_ERROR_DEVICE_LOST;
+  auto& sampler = static_cast<vulkan_sampler_resource&>(sampler_resource).native();
   if ((desc.anisotropy_enabled != 0 && !device_.sampler_anisotropy_supported()) ||
       desc.max_anisotropy > device_.properties().limits.maxSamplerAnisotropy ||
       std::abs(desc.lod_bias) > device_.properties().limits.maxSamplerLodBias) {

@@ -98,13 +98,12 @@ public:
                                              const granit_texture_data_layout& layout,
                                              const granit_texture_write_region& region) noexcept;
   void destroy_native_texture(vulkan_image_allocation& texture) noexcept;
-  [[nodiscard]] granit_result create_native_texture_view(const vulkan_image_allocation& texture,
-                                                         const granit_texture_desc& texture_desc,
-                                                         const granit_texture_view_desc& view_desc,
-                                                         VkImageView& view) noexcept;
+  [[nodiscard]] granit_result create_native_texture_view(
+      backend_texture_resource& texture, const granit_texture_desc& texture_desc,
+      const granit_texture_view_desc& view_desc, backend_texture_view_resource& view) noexcept;
   void destroy_native_texture_view(VkImageView view) noexcept;
   [[nodiscard]] granit_result create_native_sampler(const granit_sampler_desc& desc,
-                                                    VkSampler& sampler) noexcept;
+                                                    backend_sampler_resource& sampler) noexcept;
   void destroy_native_sampler(VkSampler sampler) noexcept;
   [[nodiscard]] granit_result create_native_shader(std::span<const std::uint32_t> code,
                                                    backend_shader_resource& shader) noexcept;
