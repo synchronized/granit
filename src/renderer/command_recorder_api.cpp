@@ -256,9 +256,6 @@ extern "C" granit_result granit_command_recorder_bind_graphics_groups(
       desc->first_group + desc->bind_group_count > 8 ||
       (desc->dynamic_offset_count != 0 && !desc->dynamic_offsets))
     return GRANIT_ERROR_INVALID_ARGUMENT;
-  // D-10B/C 接通布局验证和后端绑定前，不允许静默忽略动态 Offset。
-  if (desc->dynamic_offset_count != 0)
-    return GRANIT_ERROR_UNSUPPORTED;
   try {
     return granit::detail::renderer_registry::instance().bind_graphics_groups(
         renderer, recorder, layout, desc->first_group, {desc->bind_groups, desc->bind_group_count},
@@ -296,8 +293,6 @@ extern "C" granit_result granit_command_recorder_bind_compute_groups(
       desc->first_group + desc->bind_group_count > 8 ||
       (desc->dynamic_offset_count != 0 && !desc->dynamic_offsets))
     return GRANIT_ERROR_INVALID_ARGUMENT;
-  if (desc->dynamic_offset_count != 0)
-    return GRANIT_ERROR_UNSUPPORTED;
   try {
     return granit::detail::renderer_registry::instance().bind_compute_groups(
         renderer, recorder, layout, desc->first_group, {desc->bind_groups, desc->bind_group_count},

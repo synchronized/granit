@@ -10,8 +10,8 @@
 
 ### 新增
 
-- Renderer 预留 Dynamic Uniform Buffer Binding 类型，并为 Graphics/Compute Bind Group 绑定
-  增加统一的版本化描述和动态 Offset 数组。
+- Renderer 支持 Dynamic Uniform Buffer Binding，并为 Graphics/Compute Bind Group 绑定增加统一
+  的版本化描述、动态 Offset 数组及数量、对齐和范围校验。
 
 ### 兼容性与迁移
 

@@ -2380,8 +2380,10 @@ granit_result renderer_registry::create_bind_group(granit_renderer renderer,
               uniform ? backend_buffer_binding_type::uniform : backend_buffer_binding_type::storage;
           if (!state->capabilities().supports_buffer_binding(binding_type, entry.offset, range))
             return GRANIT_ERROR_INVALID_ARGUMENT;
-          write.type =
-              uniform ? VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER : VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+          write.type = declaration->type == GRANIT_BINDING_TYPE_DYNAMIC_UNIFORM_BUFFER
+                           ? VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC
+                       : uniform ? VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER
+                                 : VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
           write.buffer = native_buffer(*found->second->native).buffer;
           write.offset = entry.offset;
           write.range = range;
@@ -3648,7 +3650,7 @@ renderer_registry::bind_graphics_groups(granit_renderer renderer, granit_command
     return GRANIT_ERROR_INVALID_ARGUMENT;
   const auto result = command->renderer->bind_graphics_groups(
       native_command_recorder(*command->native), native_pipeline_layout(*layout_record->native),
-      first_group, native_groups, buffer_accesses, image_accesses);
+      first_group, native_groups, dynamic_offsets, buffer_accesses, image_accesses);
   if (result == GRANIT_SUCCESS) {
     retain_resource(command->retained_resources, layout_record, layout_record->metadata);
     for (const auto& group : group_records)
@@ -3732,7 +3734,7 @@ renderer_registry::bind_compute_groups(granit_renderer renderer, granit_command_
     return GRANIT_ERROR_INVALID_ARGUMENT;
   const auto result = command->renderer->bind_compute_groups(
       native_command_recorder(*command->native), native_pipeline_layout(*layout_record->native),
-      first_group, native_groups, buffer_accesses, image_accesses);
+      first_group, native_groups, dynamic_offsets, buffer_accesses, image_accesses);
   if (result == GRANIT_SUCCESS) {
     retain_resource(command->retained_resources, layout_record, layout_record->metadata);
     for (const auto& group : group_records)

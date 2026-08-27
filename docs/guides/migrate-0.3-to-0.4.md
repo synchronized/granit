@@ -35,8 +35,8 @@ granit_command_recorder_bind_graphics_groups(
 Compute 使用相同描述结构。C++20 包装仍可按原来的参数顺序调用，并新增可选的动态 Offset
 `std::span`，普通 Bind Group 调用通常无需修改。
 
-## Dynamic Uniform Buffer 阶段状态
+## Dynamic Uniform Buffer
 
-`GRANIT_BINDING_TYPE_DYNAMIC_UNIFORM_BUFFER` 和动态 Offset 数组已经进入公共契约。D-10B/C 完成
-布局验证及后端绑定前，创建动态 Layout 或传入非空动态 Offset 会返回
-`GRANIT_ERROR_UNSUPPORTED`，调用方不得把当前阶段视为运行时能力已经可用。
+`GRANIT_BINDING_TYPE_DYNAMIC_UNIFORM_BUFFER` 和动态 Offset 数组已经可用。Bind Group 创建时的
+Offset 是基础 Offset，绑定命令传入的 Offset 在其上追加；动态 Offset 必须满足设备对齐，且最终
+范围不能越过 Buffer。数组顺序按 Bind Group 参数顺序，再按每组 Layout 的 `binding` 升序排列。

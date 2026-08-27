@@ -59,8 +59,8 @@ extern "C" granit_result granit_bind_group_layout_create(granit_renderer rendere
         entry.type > GRANIT_BINDING_TYPE_DYNAMIC_UNIFORM_BUFFER || entry.array_count == 0 ||
         entry.visibility == 0 || (entry.visibility & ~valid_stages) != 0)
       return GRANIT_ERROR_INVALID_ARGUMENT;
-    if (entry.type == GRANIT_BINDING_TYPE_DYNAMIC_UNIFORM_BUFFER)
-      return GRANIT_ERROR_UNSUPPORTED;
+    if (entry.type == GRANIT_BINDING_TYPE_DYNAMIC_UNIFORM_BUFFER && entry.array_count != 1)
+      return GRANIT_ERROR_INVALID_ARGUMENT;
     for (uint32_t previous = 0; previous < index; ++previous) {
       if (desc->entries[previous].binding == entry.binding)
         return GRANIT_ERROR_INVALID_ARGUMENT;

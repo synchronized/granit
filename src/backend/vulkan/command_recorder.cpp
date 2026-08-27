@@ -325,7 +325,7 @@ granit_result vulkan_command_recorder::bind_graphics_pipeline(const vulkan_devic
 
 granit_result vulkan_command_recorder::bind_graphics_groups(
     const vulkan_device& device, VkPipelineLayout layout, std::uint32_t first_group,
-    std::span<const VkDescriptorSet> bind_groups,
+    std::span<const VkDescriptorSet> bind_groups, std::span<const std::uint32_t> dynamic_offsets,
     std::span<const std::pair<VkBuffer, VkAccessFlags2>> buffer_accesses,
     std::span<const vulkan_image_access> image_accesses) {
   if (state_ != command_recorder_state::recording || layout == VK_NULL_HANDLE ||
@@ -340,7 +340,8 @@ granit_result vulkan_command_recorder::bind_graphics_groups(
     prepare_image_access(device, access);
   device.functions().vkCmdBindDescriptorSets(
       command_buffer_, VK_PIPELINE_BIND_POINT_GRAPHICS, layout, first_group,
-      static_cast<std::uint32_t>(bind_groups.size()), bind_groups.data(), 0, nullptr);
+      static_cast<std::uint32_t>(bind_groups.size()), bind_groups.data(),
+      static_cast<std::uint32_t>(dynamic_offsets.size()), dynamic_offsets.data());
   return GRANIT_SUCCESS;
 }
 
@@ -356,7 +357,7 @@ granit_result vulkan_command_recorder::bind_compute_pipeline(const vulkan_device
 
 granit_result vulkan_command_recorder::bind_compute_groups(
     const vulkan_device& device, VkPipelineLayout layout, std::uint32_t first_group,
-    std::span<const VkDescriptorSet> bind_groups,
+    std::span<const VkDescriptorSet> bind_groups, std::span<const std::uint32_t> dynamic_offsets,
     std::span<const std::pair<VkBuffer, VkAccessFlags2>> buffer_accesses,
     std::span<const vulkan_image_access> image_accesses) {
   if (state_ != command_recorder_state::recording || inside_rendering_ ||
@@ -368,7 +369,8 @@ granit_result vulkan_command_recorder::bind_compute_groups(
                                  image_accesses.end());
   device.functions().vkCmdBindDescriptorSets(
       command_buffer_, VK_PIPELINE_BIND_POINT_COMPUTE, layout, first_group,
-      static_cast<std::uint32_t>(bind_groups.size()), bind_groups.data(), 0, nullptr);
+      static_cast<std::uint32_t>(bind_groups.size()), bind_groups.data(),
+      static_cast<std::uint32_t>(dynamic_offsets.size()), dynamic_offsets.data());
   return GRANIT_SUCCESS;
 }
 

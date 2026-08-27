@@ -1039,7 +1039,9 @@ granit_result renderer_state::create_native_bind_group_layout(
   bindings.reserve(entries.size());
   for (const auto& entry : entries) {
     VkDescriptorType type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    if (entry.type == GRANIT_BINDING_TYPE_STORAGE_BUFFER)
+    if (entry.type == GRANIT_BINDING_TYPE_DYNAMIC_UNIFORM_BUFFER)
+      type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
+    else if (entry.type == GRANIT_BINDING_TYPE_STORAGE_BUFFER)
       type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
     else if (entry.type == GRANIT_BINDING_TYPE_SAMPLED_TEXTURE)
       type = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
@@ -1078,22 +1080,25 @@ renderer_state::create_native_bind_group(VkDescriptorSetLayout layout,
                                          VkDescriptorPool& pool, VkDescriptorSet& set) noexcept {
   if (device_lost())
     return GRANIT_ERROR_DEVICE_LOST;
-  std::array<std::uint32_t, 5> counts{};
+  std::array<std::uint32_t, 6> counts{};
   for (const auto& write : writes) {
     std::size_t index{};
-    if (write.type == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER)
+    if (write.type == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC)
       index = 1;
-    else if (write.type == VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE)
+    else if (write.type == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER)
       index = 2;
-    else if (write.type == VK_DESCRIPTOR_TYPE_STORAGE_IMAGE)
+    else if (write.type == VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE)
       index = 3;
-    else if (write.type == VK_DESCRIPTOR_TYPE_SAMPLER)
+    else if (write.type == VK_DESCRIPTOR_TYPE_STORAGE_IMAGE)
       index = 4;
+    else if (write.type == VK_DESCRIPTOR_TYPE_SAMPLER)
+      index = 5;
     ++counts[index];
   }
-  constexpr std::array types{VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-                             VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
-                             VK_DESCRIPTOR_TYPE_SAMPLER};
+  constexpr std::array types{
+      VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,
+      VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
+      VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,  VK_DESCRIPTOR_TYPE_SAMPLER};
   std::vector<VkDescriptorPoolSize> sizes;
   for (std::size_t index = 0; index < counts.size(); ++index) {
     if (counts[index] != 0)
@@ -1477,13 +1482,13 @@ granit_result renderer_state::bind_graphics_pipeline(vulkan_command_recorder& re
 
 granit_result renderer_state::bind_graphics_groups(
     vulkan_command_recorder& recorder, VkPipelineLayout layout, std::uint32_t first_group,
-    std::span<const VkDescriptorSet> bind_groups,
+    std::span<const VkDescriptorSet> bind_groups, std::span<const std::uint32_t> dynamic_offsets,
     std::span<const std::pair<VkBuffer, VkAccessFlags2>> buffer_accesses,
     std::span<const vulkan_image_access> image_accesses) {
   if (device_lost())
     return GRANIT_ERROR_DEVICE_LOST;
-  return recorder.bind_graphics_groups(device_, layout, first_group, bind_groups, buffer_accesses,
-                                       image_accesses);
+  return recorder.bind_graphics_groups(device_, layout, first_group, bind_groups, dynamic_offsets,
+                                       buffer_accesses, image_accesses);
 }
 
 granit_result renderer_state::bind_compute_pipeline(vulkan_command_recorder& recorder,
@@ -1494,12 +1499,13 @@ granit_result renderer_state::bind_compute_pipeline(vulkan_command_recorder& rec
 
 granit_result renderer_state::bind_compute_groups(
     vulkan_command_recorder& recorder, VkPipelineLayout layout, std::uint32_t first_group,
-    std::span<const VkDescriptorSet> bind_groups,
+    std::span<const VkDescriptorSet> bind_groups, std::span<const std::uint32_t> dynamic_offsets,
     std::span<const std::pair<VkBuffer, VkAccessFlags2>> buffer_accesses,
     std::span<const vulkan_image_access> image_accesses) {
-  return device_lost() ? GRANIT_ERROR_DEVICE_LOST
-                       : recorder.bind_compute_groups(device_, layout, first_group, bind_groups,
-                                                      buffer_accesses, image_accesses);
+  return device_lost()
+             ? GRANIT_ERROR_DEVICE_LOST
+             : recorder.bind_compute_groups(device_, layout, first_group, bind_groups,
+                                            dynamic_offsets, buffer_accesses, image_accesses);
 }
 
 granit_result renderer_state::dispatch(vulkan_command_recorder& recorder,

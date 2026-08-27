@@ -66,7 +66,7 @@ TEST_CASE("Bind Group 绑定描述校验版本和动态 Offset 指针", "[pipeli
   const std::uint32_t dynamic_offset = 256;
   desc.dynamic_offsets = &dynamic_offset;
   CHECK(granit_command_recorder_bind_graphics_groups(UINT64_C(1), UINT64_C(2), UINT64_C(3),
-                                                     &desc) == GRANIT_ERROR_UNSUPPORTED);
+                                                     &desc) == GRANIT_ERROR_INVALID_HANDLE);
 }
 
 bool environment_unavailable(granit::result value) {
@@ -147,6 +147,63 @@ TEST_CASE("Bind Group Layout 拒绝重复 binding 和非法可见阶段", "[pipe
   desc.entries = &invalid;
   CHECK(granit_bind_group_layout_create(UINT64_C(1), &desc, &layout) ==
         GRANIT_ERROR_INVALID_ARGUMENT);
+
+  granit_bind_group_layout_entry dynamic_array{0, GRANIT_BINDING_TYPE_DYNAMIC_UNIFORM_BUFFER, 2,
+                                               GRANIT_SHADER_STAGE_VERTEX_BIT};
+  desc.entries = &dynamic_array;
+  CHECK(granit_bind_group_layout_create(UINT64_C(1), &desc, &layout) ==
+        GRANIT_ERROR_INVALID_ARGUMENT);
+}
+
+TEST_CASE("动态 Uniform Offset 贯通 Bind Group 与图形计算命令录制", "[pipeline][bind-group]") {
+  granit::renderer renderer;
+  const auto result = renderer.initialize({.application_name = "granit-dynamic-uniform"});
+  if (environment_unavailable(result))
+    SKIP("当前运行环境没有满足要求的 Vulkan 设备");
+  REQUIRE(result == granit::result::success);
+
+  const std::array declarations{granit::bind_group_layout_entry{
+      .binding = 0,
+      .type = granit::binding_type::dynamic_uniform_buffer,
+      .visibility = granit::shader_stage_flags::vertex | granit::shader_stage_flags::compute}};
+  granit::bind_group_layout group_layout;
+  REQUIRE(group_layout.initialize(renderer.native_handle(), declarations) ==
+          granit::result::success);
+  const auto group_layout_handle = group_layout.native_handle();
+  granit::pipeline_layout pipeline_layout;
+  REQUIRE(
+      pipeline_layout.initialize(renderer.native_handle(), std::span{&group_layout_handle, 1}) ==
+      granit::result::success);
+
+  granit::buffer buffer;
+  REQUIRE(buffer.initialize(renderer.native_handle(),
+                            {.size = 512, .usage = granit::buffer_usage::uniform}) ==
+          granit::result::success);
+  const std::array entries{granit::bind_group_entry{
+      .binding = 0, .resource = buffer.native_handle(), .offset = 0, .size = 64}};
+  granit::bind_group group;
+  REQUIRE(group.initialize(renderer.native_handle(), group_layout.native_handle(), entries) ==
+          granit::result::success);
+
+  granit::command_recorder recorder;
+  REQUIRE(recorder.initialize(renderer.native_handle()) == granit::result::success);
+  REQUIRE(recorder.begin() == granit::result::success);
+  const granit_bind_group group_handle = group.native_handle();
+  const std::array valid_offsets{UINT32_C(256)};
+  const std::array out_of_range_offsets{UINT32_C(512)};
+  CHECK(recorder.bind_graphics_groups(pipeline_layout.native_handle(), 0,
+                                      std::span{&group_handle, 1}) ==
+        granit::result::invalid_argument);
+  CHECK(recorder.bind_graphics_groups(pipeline_layout.native_handle(), 0,
+                                      std::span{&group_handle, 1},
+                                      out_of_range_offsets) == granit::result::invalid_argument);
+  REQUIRE(recorder.bind_graphics_groups(pipeline_layout.native_handle(), 0,
+                                        std::span{&group_handle, 1},
+                                        valid_offsets) == granit::result::success);
+  REQUIRE(recorder.bind_compute_groups(pipeline_layout.native_handle(), 0,
+                                       std::span{&group_handle, 1},
+                                       valid_offsets) == granit::result::success);
+  REQUIRE(recorder.end() == granit::result::success);
 }
 
 TEST_CASE("不可变 Bind Group 保持 Buffer 与 Sampler 生命周期", "[pipeline][bind-group]") {
