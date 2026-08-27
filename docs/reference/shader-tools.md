@@ -23,6 +23,8 @@ target_link_libraries(editor PRIVATE granit::shader_tools)
 
 - C11 入口位于 `<granit/tools/shader_tools.h>`；C++20 RAII 包装位于对应 `.hpp`。
 - `granit_shader_tools_compile_wgsl` 编译 WGSL；`granit_shader_tools_inspect_spirv` 检查 SPIR-V。
+- `granit_shader_tools_restore_asset_cache` 在启动 Tint 前校验输入、编译上下文和资产摘要；命中时
+  直接恢复 SPIR-V，资产不存在、损坏或缓存键变化均作为正常未命中处理。
 - `granit_shader_tools_result_write_asset` 将成功结果对应的 WGSL、SPIR-V 和稳定反射 JSON 写入
   私有 `.granit-shader` 资产，并报告目标文件是否已经逐字节命中。
 - `granit_shader_tools_result_get_binding_count` 和 `granit_shader_tools_result_get_binding` 按

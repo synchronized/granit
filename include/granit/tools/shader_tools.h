@@ -94,6 +94,26 @@ typedef struct granit_shader_tools_asset_desc {
   uint64_t compile_options_length;
 } granit_shader_tools_asset_desc;
 
+/** Shader 资产缓存恢复描述。所有路径和字符串均在调用期间有效。 */
+typedef struct granit_shader_tools_cache_desc {
+  uint32_t struct_size;
+  const char* wgsl_path;
+  uint64_t wgsl_path_length;
+  const char* spirv_output_path;
+  uint64_t spirv_output_path_length;
+  const char* asset_path;
+  uint64_t asset_path_length;
+  const char* entry_point;
+  uint64_t entry_point_length;
+  uint32_t stage;
+  const char* tint_revision;
+  uint64_t tint_revision_length;
+  const char* target_environment;
+  uint64_t target_environment_length;
+  const char* compile_options;
+  uint64_t compile_options_length;
+} granit_shader_tools_cache_desc;
+
 /** 单个描述符绑定的后端无关反射记录。名称视图在结果销毁前有效。 */
 typedef struct granit_shader_tools_binding_info {
   uint32_t struct_size;
@@ -210,6 +230,15 @@ GRANIT_SHADER_TOOLS_API granit_result granit_shader_tools_result_get_reflection_
 GRANIT_SHADER_TOOLS_API granit_result granit_shader_tools_result_write_asset(
     granit_shader_tools_result result, const granit_shader_tools_asset_desc* desc,
     uint32_t* cache_hit);
+
+/**
+ * 在运行 Tint 前尝试恢复确定性 Shader 资产。
+ *
+ * 有效缓存命中时将 SPIR-V 写入 spirv_output_path，并把 cache_hit 写为 1；资产不存在、损坏或
+ * 缓存键不匹配均作为正常未命中返回 GRANIT_SUCCESS 和 0。
+ */
+GRANIT_SHADER_TOOLS_API granit_result granit_shader_tools_restore_asset_cache(
+    const granit_shader_tools_cache_desc* desc, uint32_t* cache_hit);
 
 /** 销毁结果句柄。零值和已经销毁的句柄返回 GRANIT_ERROR_INVALID_HANDLE。 */
 GRANIT_SHADER_TOOLS_API granit_result

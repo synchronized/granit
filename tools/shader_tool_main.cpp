@@ -38,6 +38,37 @@ int compile_shader(int argc, char** argv) {
   const auto stage_value = *stage == "vertex"     ? GRANIT_SHADER_TOOLS_STAGE_VERTEX
                            : *stage == "fragment" ? GRANIT_SHADER_TOOLS_STAGE_FRAGMENT
                                                   : GRANIT_SHADER_TOOLS_STAGE_COMPUTE;
+  constexpr std::string_view default_target = "vulkan1.3";
+  constexpr std::string_view compile_options = "format=spirv;validate=1";
+  const auto target = target_environment ? std::string_view{*target_environment} : default_target;
+  if (asset) {
+    granit_shader_tools_cache_desc cache{};
+    cache.struct_size = sizeof(cache);
+    cache.wgsl_path = input->data();
+    cache.wgsl_path_length = input->size();
+    cache.spirv_output_path = output->data();
+    cache.spirv_output_path_length = output->size();
+    cache.asset_path = asset->data();
+    cache.asset_path_length = asset->size();
+    cache.entry_point = entry->data();
+    cache.entry_point_length = entry->size();
+    cache.stage = stage_value;
+    cache.tint_revision = tint_revision->data();
+    cache.tint_revision_length = tint_revision->size();
+    cache.target_environment = target.data();
+    cache.target_environment_length = target.size();
+    cache.compile_options = compile_options.data();
+    cache.compile_options_length = compile_options.size();
+    const auto [cache_status, cache_hit] = granit::shader_tools::restore_asset_cache(cache);
+    if (cache_status != GRANIT_SUCCESS) {
+      std::cerr << "Shader 资产缓存查询失败\n";
+      return 1;
+    }
+    if (cache_hit) {
+      std::cout << "Shader 资产缓存命中：" << *asset << '\n';
+      return 0;
+    }
+  }
   granit_shader_tools_compile_desc desc{};
   desc.struct_size = sizeof(desc);
   desc.tint_path = tint->data();
@@ -54,9 +85,6 @@ int compile_shader(int argc, char** argv) {
   std::cout << info.output;
   std::cerr << info.diagnostic;
   if (status == GRANIT_SUCCESS && asset) {
-    constexpr std::string_view default_target = "vulkan1.3";
-    constexpr std::string_view compile_options = "format=spirv;validate=1";
-    const auto target = target_environment ? std::string_view{*target_environment} : default_target;
     granit_shader_tools_asset_desc asset_desc{};
     asset_desc.struct_size = sizeof(asset_desc);
     asset_desc.wgsl_path = input->data();

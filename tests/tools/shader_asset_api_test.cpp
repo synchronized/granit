@@ -20,6 +20,7 @@ int main(int argc, char** argv) {
     return 2;
 
   const std::string output = (std::filesystem::path{argv[3]} / "fixture.granit-shader").string();
+  const std::string restored = (std::filesystem::path{argv[3]} / "restored.spv").string();
   std::error_code error;
   std::filesystem::remove_all(argv[3], error);
   constexpr std::string_view revision = "dawn-v20260720.160313";
@@ -46,14 +47,52 @@ int main(int argc, char** argv) {
   const auto first = std::filesystem::file_size(output, error);
   if (error || first == 0)
     return 4;
+  granit_shader_tools_cache_desc cache{};
+  cache.struct_size = sizeof(cache);
+  cache.wgsl_path = argv[2];
+  cache.wgsl_path_length = std::strlen(argv[2]);
+  cache.spirv_output_path = restored.data();
+  cache.spirv_output_path_length = restored.size();
+  cache.asset_path = output.data();
+  cache.asset_path_length = output.size();
+  cache.entry_point = "main";
+  cache.entry_point_length = 4;
+  cache.stage = GRANIT_SHADER_TOOLS_STAGE_COMPUTE;
+  cache.tint_revision = revision.data();
+  cache.tint_revision_length = revision.size();
+  cache.target_environment = target.data();
+  cache.target_environment_length = target.size();
+  cache.compile_options = options.data();
+  cache.compile_options_length = options.size();
+  auto [restore_status, restored_hit] = granit::shader_tools::restore_asset_cache(cache);
+  if (restore_status != GRANIT_SUCCESS)
+    return 51;
+  if (!restored_hit)
+    return 52;
+  if (std::filesystem::file_size(restored, error) != std::filesystem::file_size(argv[1], error))
+    return 53;
   std::tie(status, cache_hit) = result.write_asset(asset);
   if (status != GRANIT_SUCCESS || !cache_hit)
-    return 5;
+    return 6;
   options += ";robustness=1";
+  asset.compile_options = options.data();
   asset.compile_options_length = options.size();
   std::tie(status, cache_hit) = result.write_asset(asset);
   if (status != GRANIT_SUCCESS || cache_hit || std::filesystem::file_size(output, error) != first)
-    return 6;
+    return 7;
+  std::filesystem::remove(restored, error);
+  cache.compile_options = options.data();
+  cache.compile_options_length = options.size();
+  std::tie(restore_status, restored_hit) = granit::shader_tools::restore_asset_cache(cache);
+  if (restore_status != GRANIT_SUCCESS || !restored_hit ||
+      std::filesystem::file_size(restored, error) != std::filesystem::file_size(argv[1], error))
+    return 8;
+  options += ";changed=1";
+  cache.compile_options = options.data();
+  cache.compile_options_length = options.size();
+  std::tie(restore_status, restored_hit) = granit::shader_tools::restore_asset_cache(cache);
+  if (restore_status != GRANIT_SUCCESS || restored_hit)
+    return 9;
   std::filesystem::remove_all(argv[3], error);
   return 0;
 }

@@ -204,6 +204,13 @@ inspect_spirv(const granit_shader_tools_inspect_desc& desc) noexcept {
   return {status, result{handle}};
 }
 
+inline std::pair<granit_result, bool>
+restore_asset_cache(const granit_shader_tools_cache_desc& desc) noexcept {
+  uint32_t cache_hit = 0;
+  const auto status = granit_shader_tools_restore_asset_cache(&desc, &cache_hit);
+  return {status, cache_hit != 0};
+}
+
 } // namespace granit::shader_tools
 
 #endif
