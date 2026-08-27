@@ -38,7 +38,7 @@ granit_target_compile_warnings(granit_shader_tools_core)
 set_target_properties(granit_shader_tools_core PROPERTIES FOLDER "Tools")
 set_target_properties(granit_shader_tools_core PROPERTIES POSITION_INDEPENDENT_CODE YES)
 
-if(GRANIT_BUILD_SHADER_TOOLS OR GRANIT_BUILD_TOOLS)
+if(GRANIT_BUILD_SHADER_TOOLS OR GRANIT_BUILD_TOOLS OR (GRANIT_BUILD_TESTING AND BUILD_TESTING))
   add_library(granit_shader_tools shader_tools_api.cpp)
   add_library(granit::shader_tools ALIAS granit_shader_tools)
   target_sources(
