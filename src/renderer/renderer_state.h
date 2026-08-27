@@ -18,6 +18,7 @@
 #include <granit/renderer/resource_types.h>
 #include <granit/renderer/timestamp_query.h>
 
+#include "backend/access.h"
 #include "backend/capabilities.h"
 #include "backend/queue.h"
 #include "backend/upload.h"
@@ -170,16 +171,16 @@ public:
   bind_graphics_groups(vulkan_command_recorder& recorder, VkPipelineLayout layout,
                        std::uint32_t first_group, std::span<const VkDescriptorSet> bind_groups,
                        std::span<const std::uint32_t> dynamic_offsets,
-                       std::span<const std::pair<VkBuffer, VkAccessFlags2>> buffer_accesses,
-                       std::span<const vulkan_image_access> image_accesses);
+                       std::span<const backend_buffer_access> buffer_accesses,
+                       std::span<const backend_texture_access> texture_accesses);
   [[nodiscard]] granit_result bind_compute_pipeline(vulkan_command_recorder& recorder,
                                                     VkPipeline pipeline) noexcept;
   [[nodiscard]] granit_result
   bind_compute_groups(vulkan_command_recorder& recorder, VkPipelineLayout layout,
                       std::uint32_t first_group, std::span<const VkDescriptorSet> bind_groups,
                       std::span<const std::uint32_t> dynamic_offsets,
-                      std::span<const std::pair<VkBuffer, VkAccessFlags2>> buffer_accesses,
-                      std::span<const vulkan_image_access> image_accesses);
+                      std::span<const backend_buffer_access> buffer_accesses,
+                      std::span<const backend_texture_access> texture_accesses);
   [[nodiscard]] granit_result dispatch(vulkan_command_recorder& recorder,
                                        std::uint32_t group_count_x, std::uint32_t group_count_y,
                                        std::uint32_t group_count_z) noexcept;

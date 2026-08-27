@@ -2413,18 +2413,18 @@ granit_result renderer_registry::create_bind_group(granit_renderer renderer,
           }
           if ((declaration->visibility &
                (GRANIT_SHADER_STAGE_VERTEX_BIT | GRANIT_SHADER_STAGE_FRAGMENT_BIT)) != 0) {
-            const auto access = uniform ? VkAccessFlags2{VK_ACCESS_2_UNIFORM_READ_BIT}
-                                        : VkAccessFlags2{VK_ACCESS_2_SHADER_STORAGE_READ_BIT |
-                                                         VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT};
-            record->graphics_buffer_accesses.emplace_back(
-                native_buffer(*found->second->native).buffer, access);
+            record->graphics_buffer_accesses.push_back({
+                .buffer = found->second->native.get(),
+                .type = uniform ? backend_buffer_access_type::uniform_read
+                                : backend_buffer_access_type::storage_read_write,
+            });
           }
           if ((declaration->visibility & GRANIT_SHADER_STAGE_COMPUTE_BIT) != 0) {
-            const auto access = uniform ? VkAccessFlags2{VK_ACCESS_2_UNIFORM_READ_BIT}
-                                        : VkAccessFlags2{VK_ACCESS_2_SHADER_STORAGE_READ_BIT |
-                                                         VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT};
-            record->compute_buffer_accesses.emplace_back(
-                native_buffer(*found->second->native).buffer, access);
+            record->compute_buffer_accesses.push_back({
+                .buffer = found->second->native.get(),
+                .type = uniform ? backend_buffer_access_type::uniform_read
+                                : backend_buffer_access_type::storage_read_write,
+            });
           }
         } else if (declaration->type == GRANIT_BINDING_TYPE_SAMPLER) {
           const auto found = samplers_.find(entry.resource);
@@ -2450,40 +2450,21 @@ granit_result renderer_registry::create_bind_group(granit_renderer renderer,
           write.image_view = native_texture_view(*found->second->native);
           record->resources.push_back(found->second);
           const auto make_access = [&] {
-            auto aspect = map_aspect(found->second->desc.range.aspect);
-            if (found->second->desc.range.aspect == GRANIT_TEXTURE_ASPECT_AUTOMATIC) {
-              aspect = depth_format(found->second->texture->desc.format)
-                           ? VK_IMAGE_ASPECT_DEPTH_BIT
-                           : VK_IMAGE_ASPECT_COLOR_BIT;
-              if (stencil_format(found->second->texture->desc.format))
-                aspect |= VK_IMAGE_ASPECT_STENCIL_BIT;
-            }
             const bool storage = declaration->type == GRANIT_BINDING_TYPE_STORAGE_TEXTURE;
-            return vulkan_image_access{
-                .image = native_texture(*found->second->texture->native).image,
-                .range = {.aspectMask = aspect,
-                          .baseMipLevel = found->second->desc.range.base_mip_level,
-                          .levelCount = found->second->desc.range.mip_level_count,
-                          .baseArrayLayer = found->second->desc.range.base_array_layer,
-                          .layerCount = found->second->desc.range.array_layer_count},
-                .layout =
-                    storage ? VK_IMAGE_LAYOUT_GENERAL : VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-                .access = storage ? VkAccessFlags2{VK_ACCESS_2_SHADER_STORAGE_READ_BIT |
-                                                   VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT}
-                                  : VkAccessFlags2{VK_ACCESS_2_SHADER_SAMPLED_READ_BIT},
-                .preserve_content = false};
+            return backend_texture_access{
+                .texture = found->second->texture->native.get(),
+                .range = found->second->desc.range,
+                .format = found->second->texture->desc.format,
+                .type = storage ? backend_texture_access_type::storage_read_write
+                                : backend_texture_access_type::sampled_read,
+            };
           };
           if ((declaration->visibility &
                (GRANIT_SHADER_STAGE_VERTEX_BIT | GRANIT_SHADER_STAGE_FRAGMENT_BIT)) != 0) {
-            auto access = make_access();
-            access.stages =
-                VK_PIPELINE_STAGE_2_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT;
-            record->graphics_image_accesses.push_back(access);
+            record->graphics_texture_accesses.push_back(make_access());
           }
           if ((declaration->visibility & GRANIT_SHADER_STAGE_COMPUTE_BIT) != 0) {
-            auto access = make_access();
-            access.stages = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT;
-            record->compute_image_accesses.push_back(access);
+            record->compute_texture_accesses.push_back(make_access());
           }
         }
         writes.push_back(write);
@@ -3625,8 +3606,8 @@ renderer_registry::bind_graphics_groups(granit_renderer renderer, granit_command
   std::shared_ptr<pipeline_layout_record> layout_record;
   std::vector<std::shared_ptr<bind_group_record>> group_records;
   std::vector<VkDescriptorSet> native_groups;
-  std::vector<std::pair<VkBuffer, VkAccessFlags2>> buffer_accesses;
-  std::vector<vulkan_image_access> image_accesses;
+  std::vector<backend_buffer_access> buffer_accesses;
+  std::vector<backend_texture_access> texture_accesses;
   std::vector<dynamic_uniform_binding> dynamic_bindings;
   {
     std::lock_guard lock{mutex_};
@@ -3649,8 +3630,9 @@ renderer_registry::bind_graphics_groups(granit_renderer renderer, granit_command
       native_groups.push_back(native_bind_group(*found->second->native).set());
       buffer_accesses.insert(buffer_accesses.end(), found->second->graphics_buffer_accesses.begin(),
                              found->second->graphics_buffer_accesses.end());
-      image_accesses.insert(image_accesses.end(), found->second->graphics_image_accesses.begin(),
-                            found->second->graphics_image_accesses.end());
+      texture_accesses.insert(texture_accesses.end(),
+                              found->second->graphics_texture_accesses.begin(),
+                              found->second->graphics_texture_accesses.end());
       dynamic_bindings.insert(dynamic_bindings.end(),
                               found->second->dynamic_uniform_bindings.begin(),
                               found->second->dynamic_uniform_bindings.end());
@@ -3665,7 +3647,7 @@ renderer_registry::bind_graphics_groups(granit_renderer renderer, granit_command
     return GRANIT_ERROR_INVALID_ARGUMENT;
   const auto result = command->renderer->bind_graphics_groups(
       native_command_recorder(*command->native), native_pipeline_layout(*layout_record->native),
-      first_group, native_groups, dynamic_offsets, buffer_accesses, image_accesses);
+      first_group, native_groups, dynamic_offsets, buffer_accesses, texture_accesses);
   if (result == GRANIT_SUCCESS) {
     retain_resource(command->retained_resources, layout_record, layout_record->metadata);
     for (const auto& group : group_records)
@@ -3709,8 +3691,8 @@ renderer_registry::bind_compute_groups(granit_renderer renderer, granit_command_
   std::shared_ptr<pipeline_layout_record> layout_record;
   std::vector<std::shared_ptr<bind_group_record>> group_records;
   std::vector<VkDescriptorSet> native_groups;
-  std::vector<std::pair<VkBuffer, VkAccessFlags2>> buffer_accesses;
-  std::vector<vulkan_image_access> image_accesses;
+  std::vector<backend_buffer_access> buffer_accesses;
+  std::vector<backend_texture_access> texture_accesses;
   std::vector<dynamic_uniform_binding> dynamic_bindings;
   {
     std::lock_guard lock{mutex_};
@@ -3733,8 +3715,9 @@ renderer_registry::bind_compute_groups(granit_renderer renderer, granit_command_
       native_groups.push_back(native_bind_group(*found->second->native).set());
       buffer_accesses.insert(buffer_accesses.end(), found->second->compute_buffer_accesses.begin(),
                              found->second->compute_buffer_accesses.end());
-      image_accesses.insert(image_accesses.end(), found->second->compute_image_accesses.begin(),
-                            found->second->compute_image_accesses.end());
+      texture_accesses.insert(texture_accesses.end(),
+                              found->second->compute_texture_accesses.begin(),
+                              found->second->compute_texture_accesses.end());
       dynamic_bindings.insert(dynamic_bindings.end(),
                               found->second->dynamic_uniform_bindings.begin(),
                               found->second->dynamic_uniform_bindings.end());
@@ -3749,7 +3732,7 @@ renderer_registry::bind_compute_groups(granit_renderer renderer, granit_command_
     return GRANIT_ERROR_INVALID_ARGUMENT;
   const auto result = command->renderer->bind_compute_groups(
       native_command_recorder(*command->native), native_pipeline_layout(*layout_record->native),
-      first_group, native_groups, dynamic_offsets, buffer_accesses, image_accesses);
+      first_group, native_groups, dynamic_offsets, buffer_accesses, texture_accesses);
   if (result == GRANIT_SUCCESS) {
     retain_resource(command->retained_resources, layout_record, layout_record->metadata);
     for (const auto& group : group_records)

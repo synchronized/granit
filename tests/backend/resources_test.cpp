@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
+#include "backend/access.h"
 #include "backend/queue.h"
 #include "backend/resources.h"
 #include "backend/upload.h"
@@ -344,6 +345,30 @@ TEST_CASE("上传批次描述不依赖具体后端类型") {
   CHECK(upload.buffer == &buffer);
   CHECK(upload.destination_offset == 16);
   CHECK(upload.size == 32);
+}
+
+TEST_CASE("绑定访问描述只引用后端抽象资源") {
+  bool buffer_destroyed = false;
+  bool texture_destroyed = false;
+  fake_buffer_resource buffer{buffer_destroyed};
+  fake_texture_resource texture{texture_destroyed};
+  const granit::detail::backend_buffer_access buffer_access{
+      .buffer = &buffer,
+      .type = granit::detail::backend_buffer_access_type::storage_read_write,
+  };
+  const granit::detail::backend_texture_access texture_access{
+      .texture = &texture,
+      .range = {.aspect = GRANIT_TEXTURE_ASPECT_COLOR_BIT,
+                .base_mip_level = 0,
+                .mip_level_count = 1,
+                .base_array_layer = 0,
+                .array_layer_count = 1},
+      .format = GRANIT_TEXTURE_FORMAT_RGBA8_UNORM,
+      .type = granit::detail::backend_texture_access_type::sampled_read,
+  };
+  CHECK(buffer_access.buffer == &buffer);
+  CHECK(texture_access.texture == &texture);
+  CHECK(texture_access.range.aspect == GRANIT_TEXTURE_ASPECT_COLOR_BIT);
 }
 
 TEST_CASE("队列契约使用后端命令对象和统一提交序列") {

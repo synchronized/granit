@@ -28,9 +28,9 @@
 #include <granit/renderer/timestamp_query.h>
 #include <granit/renderer/upload_batch.h>
 
+#include "backend/access.h"
 #include "backend/resources.h"
 #include "backend/upload.h"
-#include "backend/vulkan/timestamp_query.h"
 #include "core/handle_table.h"
 #include "core/lifecycle_validation.h"
 #include "renderer/dynamic_uniform_offsets.h"
@@ -396,10 +396,10 @@ private:
     std::shared_ptr<renderer_state> renderer;
     std::shared_ptr<bind_group_layout_record> layout;
     std::vector<std::shared_ptr<void>> resources;
-    std::vector<std::pair<VkBuffer, VkAccessFlags2>> graphics_buffer_accesses;
-    std::vector<vulkan_image_access> graphics_image_accesses;
-    std::vector<std::pair<VkBuffer, VkAccessFlags2>> compute_buffer_accesses;
-    std::vector<vulkan_image_access> compute_image_accesses;
+    std::vector<backend_buffer_access> graphics_buffer_accesses;
+    std::vector<backend_texture_access> graphics_texture_accesses;
+    std::vector<backend_buffer_access> compute_buffer_accesses;
+    std::vector<backend_texture_access> compute_texture_accesses;
     std::vector<dynamic_uniform_binding> dynamic_uniform_bindings;
     std::unique_ptr<backend_bind_group_resource> native;
   };

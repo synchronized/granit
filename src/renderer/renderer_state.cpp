@@ -1491,12 +1491,53 @@ granit_result renderer_state::bind_graphics_pipeline(vulkan_command_recorder& re
 granit_result renderer_state::bind_graphics_groups(
     vulkan_command_recorder& recorder, VkPipelineLayout layout, std::uint32_t first_group,
     std::span<const VkDescriptorSet> bind_groups, std::span<const std::uint32_t> dynamic_offsets,
-    std::span<const std::pair<VkBuffer, VkAccessFlags2>> buffer_accesses,
-    std::span<const vulkan_image_access> image_accesses) {
+    std::span<const backend_buffer_access> buffer_accesses,
+    std::span<const backend_texture_access> texture_accesses) {
   if (device_lost())
     return GRANIT_ERROR_DEVICE_LOST;
-  return recorder.bind_graphics_groups(device_, layout, first_group, bind_groups, dynamic_offsets,
-                                       buffer_accesses, image_accesses);
+  try {
+    std::vector<std::pair<VkBuffer, VkAccessFlags2>> native_buffers;
+    std::vector<vulkan_image_access> native_textures;
+    native_buffers.reserve(buffer_accesses.size());
+    native_textures.reserve(texture_accesses.size());
+    for (const auto& access : buffer_accesses) {
+      if (access.buffer == nullptr)
+        return GRANIT_ERROR_INVALID_ARGUMENT;
+      const auto flags = access.type == backend_buffer_access_type::uniform_read
+                             ? VkAccessFlags2{VK_ACCESS_2_UNIFORM_READ_BIT}
+                             : VkAccessFlags2{VK_ACCESS_2_SHADER_STORAGE_READ_BIT |
+                                              VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT};
+      native_buffers.emplace_back(
+          static_cast<vulkan_buffer_resource&>(*access.buffer).native().buffer, flags);
+    }
+    for (const auto& access : texture_accesses) {
+      if (access.texture == nullptr)
+        return GRANIT_ERROR_INVALID_ARGUMENT;
+      const bool storage = access.type == backend_texture_access_type::storage_read_write;
+      native_textures.push_back({
+          .image = static_cast<vulkan_texture_resource&>(*access.texture).native().image,
+          .range = {.aspectMask = access.range.aspect == GRANIT_TEXTURE_ASPECT_AUTOMATIC
+                                      ? default_aspect(access.format)
+                                      : map_texture_aspect(access.range.aspect),
+                    .baseMipLevel = access.range.base_mip_level,
+                    .levelCount = access.range.mip_level_count,
+                    .baseArrayLayer = access.range.base_array_layer,
+                    .layerCount = access.range.array_layer_count},
+          .layout = storage ? VK_IMAGE_LAYOUT_GENERAL : VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+          .stages = VK_PIPELINE_STAGE_2_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
+          .access = storage ? VkAccessFlags2{VK_ACCESS_2_SHADER_STORAGE_READ_BIT |
+                                             VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT}
+                            : VkAccessFlags2{VK_ACCESS_2_SHADER_SAMPLED_READ_BIT},
+          .preserve_content = false,
+      });
+    }
+    return recorder.bind_graphics_groups(device_, layout, first_group, bind_groups, dynamic_offsets,
+                                         native_buffers, native_textures);
+  } catch (const std::bad_alloc&) {
+    return GRANIT_ERROR_OUT_OF_MEMORY;
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
 }
 
 granit_result renderer_state::bind_compute_pipeline(vulkan_command_recorder& recorder,
@@ -1508,12 +1549,53 @@ granit_result renderer_state::bind_compute_pipeline(vulkan_command_recorder& rec
 granit_result renderer_state::bind_compute_groups(
     vulkan_command_recorder& recorder, VkPipelineLayout layout, std::uint32_t first_group,
     std::span<const VkDescriptorSet> bind_groups, std::span<const std::uint32_t> dynamic_offsets,
-    std::span<const std::pair<VkBuffer, VkAccessFlags2>> buffer_accesses,
-    std::span<const vulkan_image_access> image_accesses) {
-  return device_lost()
-             ? GRANIT_ERROR_DEVICE_LOST
-             : recorder.bind_compute_groups(device_, layout, first_group, bind_groups,
-                                            dynamic_offsets, buffer_accesses, image_accesses);
+    std::span<const backend_buffer_access> buffer_accesses,
+    std::span<const backend_texture_access> texture_accesses) {
+  if (device_lost())
+    return GRANIT_ERROR_DEVICE_LOST;
+  try {
+    std::vector<std::pair<VkBuffer, VkAccessFlags2>> native_buffers;
+    std::vector<vulkan_image_access> native_textures;
+    native_buffers.reserve(buffer_accesses.size());
+    native_textures.reserve(texture_accesses.size());
+    for (const auto& access : buffer_accesses) {
+      if (access.buffer == nullptr)
+        return GRANIT_ERROR_INVALID_ARGUMENT;
+      const auto flags = access.type == backend_buffer_access_type::uniform_read
+                             ? VkAccessFlags2{VK_ACCESS_2_UNIFORM_READ_BIT}
+                             : VkAccessFlags2{VK_ACCESS_2_SHADER_STORAGE_READ_BIT |
+                                              VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT};
+      native_buffers.emplace_back(
+          static_cast<vulkan_buffer_resource&>(*access.buffer).native().buffer, flags);
+    }
+    for (const auto& access : texture_accesses) {
+      if (access.texture == nullptr)
+        return GRANIT_ERROR_INVALID_ARGUMENT;
+      const bool storage = access.type == backend_texture_access_type::storage_read_write;
+      native_textures.push_back({
+          .image = static_cast<vulkan_texture_resource&>(*access.texture).native().image,
+          .range = {.aspectMask = access.range.aspect == GRANIT_TEXTURE_ASPECT_AUTOMATIC
+                                      ? default_aspect(access.format)
+                                      : map_texture_aspect(access.range.aspect),
+                    .baseMipLevel = access.range.base_mip_level,
+                    .levelCount = access.range.mip_level_count,
+                    .baseArrayLayer = access.range.base_array_layer,
+                    .layerCount = access.range.array_layer_count},
+          .layout = storage ? VK_IMAGE_LAYOUT_GENERAL : VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+          .stages = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+          .access = storage ? VkAccessFlags2{VK_ACCESS_2_SHADER_STORAGE_READ_BIT |
+                                             VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT}
+                            : VkAccessFlags2{VK_ACCESS_2_SHADER_SAMPLED_READ_BIT},
+          .preserve_content = false,
+      });
+    }
+    return recorder.bind_compute_groups(device_, layout, first_group, bind_groups, dynamic_offsets,
+                                        native_buffers, native_textures);
+  } catch (const std::bad_alloc&) {
+    return GRANIT_ERROR_OUT_OF_MEMORY;
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
 }
 
 granit_result renderer_state::dispatch(vulkan_command_recorder& recorder,

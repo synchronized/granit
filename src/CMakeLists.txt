@@ -70,6 +70,7 @@ target_sources(
   PRIVATE
     $<TARGET_OBJECTS:granit_volk>
     $<TARGET_OBJECTS:granit_backend_plugin>
+    backend/access.h
     backend/capabilities.h
     backend/queue.h
     backend/resources.h
