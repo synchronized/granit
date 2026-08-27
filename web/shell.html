@@ -17,20 +17,22 @@
     </main>
     <script>
       const statusElement = document.getElementById("granit-status");
+      function updateStatus(text) {
+        if (text.startsWith("GRANIT_STATUS:")) {
+          const status = text.slice("GRANIT_STATUS:".length);
+          statusElement.dataset.status = status.startsWith("failed:") ? "failed" : status;
+          statusElement.textContent = status;
+        }
+      }
       var Module = {
         canvas: document.getElementById("canvas"),
         print(text) {
           console.log(text);
-          if (text.startsWith("GRANIT_STATUS:")) {
-            const status = text.slice("GRANIT_STATUS:".length);
-            statusElement.dataset.status = status;
-            statusElement.textContent = status;
-          }
+          updateStatus(text);
         },
         printErr(text) {
           console.error(text);
-          statusElement.dataset.status = "failed";
-          statusElement.textContent = text;
+          updateStatus(text);
         },
       };
     </script>

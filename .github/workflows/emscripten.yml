@@ -49,3 +49,11 @@ jobs:
           test -s "${output}.js"
           test -s "${output}.wasm"
           test -s "${output}.data"
+      - name: 安装浏览器测试驱动
+        working-directory: web/tests
+        run: npm ci
+      - name: 验证浏览器 WebGPU 启动与输入转发
+        working-directory: web/tests
+        env:
+          CHROME_PATH: /usr/bin/google-chrome
+        run: npm test -- ../../build/emscripten-release/web
