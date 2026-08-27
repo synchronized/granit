@@ -75,6 +75,11 @@ public:
   [[nodiscard]] granit_result
   destroy_bind_group(granit_backend_plugin_instance instance,
                      granit_backend_plugin_bind_group bind_group) noexcept;
+  [[nodiscard]] granit_result create_shader(granit_backend_plugin_instance instance,
+                                            const granit_backend_plugin_shader_desc* desc,
+                                            granit_backend_plugin_shader* shader) noexcept;
+  [[nodiscard]] granit_result destroy_shader(granit_backend_plugin_instance instance,
+                                             granit_backend_plugin_shader shader) noexcept;
   [[nodiscard]] granit_result
   create_pipeline_layout(granit_backend_plugin_instance instance,
                          granit_backend_plugin_bind_group_layout bind_group_layout,
@@ -84,7 +89,7 @@ public:
                           granit_backend_plugin_pipeline_layout pipeline_layout) noexcept;
   [[nodiscard]] granit_result
   create_render_pipeline(granit_backend_plugin_instance instance,
-                         granit_backend_plugin_pipeline_layout pipeline_layout,
+                         const granit_backend_plugin_render_pipeline_desc* desc,
                          granit_backend_plugin_render_pipeline* render_pipeline) noexcept;
   [[nodiscard]] granit_result
   destroy_render_pipeline(granit_backend_plugin_instance instance,

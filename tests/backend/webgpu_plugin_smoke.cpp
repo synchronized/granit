@@ -5,10 +5,20 @@
 #include <cstddef>
 #include <cstdio>
 #include <new>
+#include <string_view>
 
 #include "backend/plugin_loader.h"
 
 namespace {
+
+constexpr std::string_view vertex_wgsl =
+    R"(@vertex fn vs_main(@builtin(vertex_index) index: u32) -> @builtin(position) vec4f {
+  var positions = array<vec2f, 3>(vec2f(0.0, -0.7), vec2f(0.7, 0.7), vec2f(-0.7, 0.7));
+  return vec4f(positions[index], 0.0, 1.0);
+})";
+constexpr std::string_view fragment_wgsl = R"(@fragment fn fs_main() -> @location(0) vec4f {
+  return vec4f(0.2, 0.7, 0.4, 1.0);
+})";
 
 void* allocate(uint64_t size, uint64_t alignment, void*) {
   return ::operator new(static_cast<std::size_t>(size),
@@ -94,6 +104,8 @@ int main() {
   granit_backend_plugin_bind_group_layout bind_group_layout{};
   granit_backend_plugin_bind_group bind_group{};
   granit_backend_plugin_pipeline_layout pipeline_layout{};
+  granit_backend_plugin_shader vertex_shader{};
+  granit_backend_plugin_shader fragment_shader{};
   granit_backend_plugin_render_pipeline pipeline{};
   if (loader.create_texture(instance, &texture_desc, &texture) != GRANIT_SUCCESS || texture == 0 ||
       loader.create_texture_view(instance, texture, &view) != GRANIT_SUCCESS || view == 0 ||
@@ -108,12 +120,31 @@ int main() {
   bind_group_desc.layout = bind_group_layout;
   bind_group_desc.texture_view = view;
   bind_group_desc.sampler = sampler;
+  granit_backend_plugin_shader_desc vertex_desc{sizeof(granit_backend_plugin_shader_desc),
+                                                GRANIT_BACKEND_PLUGIN_SHADER_STAGE_VERTEX,
+                                                vertex_wgsl.data(),
+                                                vertex_wgsl.size(),
+                                                "vs_main",
+                                                7};
+  auto fragment_desc = vertex_desc;
+  fragment_desc.stage = GRANIT_BACKEND_PLUGIN_SHADER_STAGE_FRAGMENT;
+  fragment_desc.wgsl = fragment_wgsl.data();
+  fragment_desc.wgsl_length = fragment_wgsl.size();
+  fragment_desc.entry_point = "fs_main";
   if (loader.create_bind_group(instance, &bind_group_desc, &bind_group) != GRANIT_SUCCESS ||
       bind_group == 0 ||
       loader.create_pipeline_layout(instance, bind_group_layout, &pipeline_layout) !=
           GRANIT_SUCCESS ||
       pipeline_layout == 0 ||
-      loader.create_render_pipeline(instance, pipeline_layout, &pipeline) != GRANIT_SUCCESS ||
+      loader.create_shader(instance, &vertex_desc, &vertex_shader) != GRANIT_SUCCESS ||
+      loader.create_shader(instance, &fragment_desc, &fragment_shader) != GRANIT_SUCCESS) {
+    std::fprintf(stderr, "WebGPU 绑定或 Shader 生命周期验证失败\n");
+    return 6;
+  }
+  granit_backend_plugin_render_pipeline_desc pipeline_desc{
+      sizeof(granit_backend_plugin_render_pipeline_desc), 0, pipeline_layout, vertex_shader,
+      fragment_shader};
+  if (loader.create_render_pipeline(instance, &pipeline_desc, &pipeline) != GRANIT_SUCCESS ||
       pipeline == 0) {
     std::fprintf(stderr, "WebGPU 绑定或 Render Pipeline 生命周期验证失败\n");
     return 6;
@@ -166,6 +197,8 @@ int main() {
       loader.destroy_texture_view(instance, target_view) != GRANIT_SUCCESS ||
       loader.destroy_texture(instance, target_texture) != GRANIT_SUCCESS ||
       loader.destroy_render_pipeline(instance, pipeline) != GRANIT_SUCCESS ||
+      loader.destroy_shader(instance, vertex_shader) != GRANIT_SUCCESS ||
+      loader.destroy_shader(instance, fragment_shader) != GRANIT_SUCCESS ||
       loader.destroy_pipeline_layout(instance, pipeline_layout) != GRANIT_SUCCESS ||
       loader.destroy_bind_group(instance, bind_group) != GRANIT_SUCCESS ||
       loader.destroy_bind_group_layout(instance, bind_group_layout) != GRANIT_SUCCESS ||

@@ -102,8 +102,9 @@ S-10C 需要建立一个源码权威和可复现的双后端资产流程。
    Magic/Schema/布局/损坏检测、同内容缓存命中和跨平台原子替换。ShaderTools SDK 和 CLI 已能将
    WGSL、SPIR-V 与稳定反射 JSON 写入同一资产；缓存键覆盖源码、入口点、阶段、Tint 修订、目标
    环境和编译选项，并已验证路径无关、重复构建一致及各输入变化均失效。下一步进入 S-10C5。
-5. **S-10C5 WebGPU Shader ABI**：增加插件 Shader 资源和 Pipeline 描述，替换内置 WGSL，覆盖
-   归属、重复销毁、依赖顺序、错误诊断和实例级联清理。
+5. **S-10C5 WebGPU Shader ABI**：已增加实验性插件 Shader 资源和显式 Pipeline 描述，WebGPU
+   插件不再内置固定 WGSL。Mock 回归已覆盖归属、跨实例混用、重复销毁、依赖顺序和实例级联清理；
+   下一步使用真实 Dawn 验证 Shader 编译诊断，再进入 S-10C6 双后端 Fixture。
 6. **S-10C6 双后端 Fixture**：同一 `.granit-shader` 的 WGSL 在 WebGPU、SPIR-V 在 Vulkan 上绘制
    相同离屏三角形，并比较允许量化容差后的关键像素。
 7. **S-10C7 跨平台验收**：手动运行 Windows D3D12、Linux Vulkan/Lavapipe 和普通 Vulkan 回归，
