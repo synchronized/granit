@@ -50,6 +50,23 @@ granit_result result = granit_renderer_get_limits(renderer, &limits);
 Renderer 返回 `GRANIT_ERROR_INVALID_HANDLE`。限制来自 Renderer 创建时保存的不可变能力快照，
 查询不会再次访问驱动。
 
+## 生命周期状态
+
+Renderer 提供非阻塞状态查询和事件推进接口：
+
+```c
+granit_renderer_status status = GRANIT_RENDERER_STATUS_INIT;
+granit_result result = granit_renderer_get_status(renderer, &status);
+if (result == GRANIT_SUCCESS && status.state == GRANIT_RENDERER_STATE_INITIALIZING) {
+  result = granit_renderer_process_events(renderer);
+}
+```
+
+状态包括 `INITIALIZING`、`READY`、`FAILED` 和 `DEVICE_LOST`。`failure_result` 仅在失败或设备
+丢失状态下保存稳定结果码；详细原因仍由诊断回调提供。状态查询不会等待或执行用户回调，
+`granit_renderer_process_events` 也只非阻塞地推进后端已完成事件。当前 Vulkan Renderer 创建成功后
+立即为 `READY`；该模型同时为异步 WebGPU 初始化保留统一入口。
+
 需要创建窗口 Surface 时，通过 `surface_types` 提前声明窗口系统。当前支持
 `GRANIT_SURFACE_TYPE_WIN32_BIT`；具体创建方式见 [surface.md](surface.md)。
 
@@ -66,8 +83,9 @@ if (granit::failed(result)) {
 `granit::renderer` 不使用异常，是 move-only RAII 类型。成功初始化后析构函数自动销毁；`reset`
 可提前释放。`native_handle` 只返回 Granit C 句柄，用于 C/C++ 层互操作，并非 Vulkan 句柄。
 
-C++ 调用方通过 `renderer::get_limits(renderer_limits&)` 查询相同快照，结果和错误语义与 C API
-一致。
+C++ 调用方通过 `renderer::get_limits(renderer_limits&)` 查询相同限制快照，并通过
+`renderer::get_status(renderer_status&)` 和 `renderer::process_events()` 使用相同的非阻塞生命周期
+模型；结果和错误语义与 C API 一致。
 
 ## Validation
 

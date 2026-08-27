@@ -114,6 +114,33 @@ extern "C" granit_result granit_renderer_get_limits(granit_renderer renderer,
   }
 }
 
+extern "C" granit_result granit_renderer_get_status(granit_renderer renderer,
+                                                     granit_renderer_status* status) {
+  if (status == nullptr || status->struct_size < GRANIT_RENDERER_STATUS_VERSION_1_SIZE ||
+      status->reserved != 0) {
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  }
+  if (renderer == GRANIT_NULL_HANDLE) {
+    return GRANIT_ERROR_INVALID_HANDLE;
+  }
+  try {
+    return granit::detail::renderer_registry::instance().get_status(renderer, *status);
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+extern "C" granit_result granit_renderer_process_events(granit_renderer renderer) {
+  if (renderer == GRANIT_NULL_HANDLE) {
+    return GRANIT_ERROR_INVALID_HANDLE;
+  }
+  try {
+    return granit::detail::renderer_registry::instance().process_events(renderer);
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
 extern "C" granit_result granit_renderer_set_object_name(granit_renderer renderer,
                                                          granit_handle object, const char* name,
                                                          uint32_t name_length) {

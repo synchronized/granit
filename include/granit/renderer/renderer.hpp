@@ -43,6 +43,18 @@ struct renderer_limits {
   std::uint64_t max_uniform_buffer_binding_size{};
 };
 
+enum class renderer_state : std::uint32_t {
+  initializing = GRANIT_RENDERER_STATE_INITIALIZING,
+  ready = GRANIT_RENDERER_STATE_READY,
+  failed = GRANIT_RENDERER_STATE_FAILED,
+  device_lost = GRANIT_RENDERER_STATE_DEVICE_LOST,
+};
+
+struct renderer_status {
+  renderer_state state{renderer_state::initializing};
+  result failure_result{result::success};
+};
+
 /** 无异常、move-only 的 renderer RAII 包装。 */
 class renderer {
 public:
@@ -109,6 +121,21 @@ public:
         .max_uniform_buffer_binding_size = native.max_uniform_buffer_binding_size,
     };
     return result::success;
+  }
+
+  [[nodiscard]] result get_status(renderer_status& status) const noexcept {
+    granit_renderer_status native = GRANIT_RENDERER_STATUS_INIT;
+    const auto query_result = from_native(granit_renderer_get_status(handle_, &native));
+    if (failed(query_result)) {
+      return query_result;
+    }
+    status = {.state = static_cast<renderer_state>(native.state),
+              .failure_result = from_native(native.failure_result)};
+    return result::success;
+  }
+
+  [[nodiscard]] result process_events() noexcept {
+    return from_native(granit_renderer_process_events(handle_));
   }
 
   [[nodiscard]] result import_pipeline_cache(std::span<const std::byte> data) noexcept {

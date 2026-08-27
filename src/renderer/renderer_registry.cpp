@@ -105,6 +105,24 @@ granit_result renderer_registry::get_limits(granit_renderer renderer,
   return GRANIT_SUCCESS;
 }
 
+granit_result renderer_registry::get_status(granit_renderer renderer,
+                                            granit_renderer_status& status) {
+  const auto state = acquire(renderer);
+  if (!state) {
+    return GRANIT_ERROR_INVALID_HANDLE;
+  }
+  status.reserved = 0;
+  status.state = state->device_lost() ? GRANIT_RENDERER_STATE_DEVICE_LOST
+                                     : GRANIT_RENDERER_STATE_READY;
+  status.failure_result =
+      state->device_lost() ? GRANIT_ERROR_DEVICE_LOST : GRANIT_SUCCESS;
+  return GRANIT_SUCCESS;
+}
+
+granit_result renderer_registry::process_events(granit_renderer renderer) {
+  return acquire(renderer) ? GRANIT_SUCCESS : GRANIT_ERROR_INVALID_HANDLE;
+}
+
 granit_result renderer_registry::import_pipeline_cache(granit_renderer renderer, const void* data,
                                                        std::uint64_t size) {
   const auto state = acquire(renderer);
