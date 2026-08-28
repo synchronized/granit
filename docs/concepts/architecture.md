@@ -22,8 +22,9 @@ Granit 定位为基于 Vulkan 的中层、显式、可嵌入式渲染库，主�
 动画或资产数据库。PBR、场景渲染、后处理套件和 Render Graph 可以在核心能力稳定后作为独立
 高层模块提供，不能反向污染稳定 C ABI。
 
-当前只实现 Vulkan 后端，不承诺同时支持 Direct3D、Metal 或 OpenGL。公共概念仍保持后端中立，
-目的是避免 Vulkan 实现细节泄漏，而不是立即承担多后端的最低公共能力限制。
+当前 Vulkan 后端覆盖完整生产路径，WebGPU 后端已覆盖 0.4.0 浏览器 MVP 所需的基础资源、Pipeline、
+命令与呈现闭环。两者通过私有 HAL 共享 Registry，但不承诺能力完全对称；Direct3D、Metal 和
+OpenGL 当前不在支持范围内。
 
 ## 渲染目标模型
 
@@ -110,7 +111,7 @@ Scene / View / Material
           -> Render Pipeline（整帧策略）
           -> 内部 Render Graph（Pass 与资源依赖）
           -> Renderer / Command Recorder（GPU 执行）
-          -> Vulkan（内部后端）
+          -> Vulkan / WebGPU（内部后端）
 ```
 
 依赖始终从高级层指向核心层。核心动态库不能链接高层目标，也不能为 `render(view)` 接管 ECS、
@@ -124,11 +125,11 @@ PBR 质量体系主要参考 Filament；底层资源组织和高层组件分离�
 
 ## 分层
 
-Granit 使用三层接口隔离使用者与 Vulkan：
+Granit 使用三层接口隔离使用者与具体图形后端：
 
 1. `.hpp` C++20 API：面向普通用户，提供强类型、移动语义和 RAII。
 2. `.h` C API：动态库的稳定 ABI，也是其他语言绑定的基础。
-3. 内部实现：资源表、渲染调度和 Vulkan 后端，不进入公共头文件。
+3. 内部实现：资源表、渲染调度、私有 HAL 与 Vulkan/WebGPU 后端，不进入公共头文件。
 
 C++ 包装层保持轻量，不维护一套独立的渲染状态。它拥有或引用 C 句柄，并将所有实际操作转发给
 C API。普通 C++ 用户不需要直接使用 C API。

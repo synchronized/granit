@@ -724,23 +724,18 @@ granit_result renderer_registry::create_pipeline_layout(
   if (!bind_group_layouts.empty()) {
     return GRANIT_ERROR_UNSUPPORTED;
   }
-  return create_webgpu_pipeline_layout(renderer, layout);
-}
-
-granit_result renderer_registry::create_webgpu_pipeline_layout(granit_renderer renderer,
-                                                               granit_pipeline_layout& layout) {
   try {
     auto owner = acquire_backend(renderer);
-    auto pipelines = std::dynamic_pointer_cast<backend_pipeline_renderer>(owner);
-    if (!owner || !pipelines)
+    auto layouts = std::dynamic_pointer_cast<backend_pipeline_layout_renderer>(owner);
+    if (!owner || !layouts)
       return owner ? GRANIT_ERROR_UNSUPPORTED : GRANIT_ERROR_INVALID_HANDLE;
     auto record = std::make_shared<pipeline_layout_record>();
     record->owner = owner;
-    record->native = pipelines->allocate_pipeline_layout_resource();
+    record->native = layouts->allocate_pipeline_layout_resource();
     if (!record->native) {
       return GRANIT_ERROR_OUT_OF_MEMORY;
     }
-    const auto result = pipelines->create_empty_pipeline_layout(*record->native);
+    const auto result = layouts->create_pipeline_layout({}, *record->native);
     if (result != GRANIT_SUCCESS) {
       return result;
     }
@@ -837,6 +832,7 @@ granit_result renderer_registry::create_webgpu_graphics_pipeline(
     }
     auto record = std::make_shared<graphics_pipeline_record>();
     record->owner = owner;
+    record->pipelines = pipelines;
     record->layout = layout_record;
     record->vertex_shader = vertex_record;
     record->fragment_shader = fragment_record;
@@ -844,9 +840,22 @@ granit_result renderer_registry::create_webgpu_graphics_pipeline(
     if (!record->native) {
       return GRANIT_ERROR_OUT_OF_MEMORY;
     }
-    const auto result = pipelines->create_graphics_pipeline(*record->native, *layout_record->native,
-                                                            *vertex_record->native,
-                                                            *fragment_record->native, color_format);
+    const backend_graphics_pipeline_create_info info{
+        *layout_record->native,
+        *vertex_record->native,
+        vertex_record->entry_point.c_str(),
+        *fragment_record->native,
+        fragment_record->entry_point.c_str(),
+        {},
+        {GRANIT_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST, GRANIT_FRONT_FACE_COUNTER_CLOCKWISE,
+         GRANIT_CULL_MODE_NONE, GRANIT_POLYGON_MODE_FILL},
+        {},
+        nullptr,
+        {},
+        {&color_format, 1},
+        GRANIT_TEXTURE_FORMAT_UNDEFINED,
+        GRANIT_SAMPLE_COUNT_1};
+    const auto result = pipelines->create_graphics_pipeline(info, *record->native);
     if (result != GRANIT_SUCCESS) {
       return result;
     }
