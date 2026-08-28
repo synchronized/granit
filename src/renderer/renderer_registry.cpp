@@ -140,14 +140,20 @@ granit_result renderer_registry::process_events(granit_renderer renderer) {
 
 granit_result renderer_registry::import_pipeline_cache(granit_renderer renderer, const void* data,
                                                        std::uint64_t size) {
-  const auto state = std::dynamic_pointer_cast<renderer_state>(acquire_backend(renderer));
-  return state ? state->import_pipeline_cache(data, size) : GRANIT_ERROR_INVALID_HANDLE;
+  const auto owner = acquire_backend(renderer);
+  if (!owner)
+    return GRANIT_ERROR_INVALID_HANDLE;
+  const auto cache = std::dynamic_pointer_cast<backend_pipeline_cache_renderer>(owner);
+  return cache ? cache->import_pipeline_cache(data, size) : GRANIT_ERROR_UNSUPPORTED;
 }
 
 granit_result renderer_registry::export_pipeline_cache(granit_renderer renderer, void* data,
                                                        std::uint64_t& size) {
-  const auto state = std::dynamic_pointer_cast<renderer_state>(acquire_backend(renderer));
-  return state ? state->export_pipeline_cache(data, size) : GRANIT_ERROR_INVALID_HANDLE;
+  const auto owner = acquire_backend(renderer);
+  if (!owner)
+    return GRANIT_ERROR_INVALID_HANDLE;
+  const auto cache = std::dynamic_pointer_cast<backend_pipeline_cache_renderer>(owner);
+  return cache ? cache->export_pipeline_cache(data, size) : GRANIT_ERROR_UNSUPPORTED;
 }
 
 granit_result renderer_registry::set_object_name(granit_renderer renderer, granit_handle object,
@@ -156,25 +162,26 @@ granit_result renderer_registry::set_object_name(granit_renderer renderer, grani
   const auto renderer_it = backend_renderers_.find(renderer);
   if (renderer_it == backend_renderers_.end())
     return GRANIT_ERROR_INVALID_HANDLE;
-  const auto state = std::dynamic_pointer_cast<renderer_state>(renderer_it->second);
-  if (!state)
+  const auto owner = renderer_it->second;
+  const auto diagnostics = std::dynamic_pointer_cast<backend_diagnostic_renderer>(owner);
+  if (!diagnostics)
     return GRANIT_ERROR_UNSUPPORTED;
 
 #define GRANIT_NAME_OBJECT(map)                                                                    \
   if (const auto it = map.find(object); it != map.end()) {                                         \
-    if (it->second->renderer != state)                                                             \
+    if (it->second->renderer != owner)                                                             \
       return GRANIT_ERROR_INVALID_HANDLE;                                                          \
     auto* native = it->second->native.get();                                                       \
     lock.unlock();                                                                                 \
-    return state->set_backend_resource_name(*native, name);                                        \
+    return diagnostics->set_backend_resource_name(*native, name);                                  \
   }
 #define GRANIT_NAME_PRESENTATION_OBJECT(map)                                                       \
   if (const auto it = map.find(object); it != map.end()) {                                         \
-    if (it->second->owner != state)                                                                \
+    if (it->second->owner != owner)                                                                \
       return GRANIT_ERROR_INVALID_HANDLE;                                                          \
     auto* native = it->second->native.get();                                                       \
     lock.unlock();                                                                                 \
-    return state->set_backend_resource_name(*native, name);                                        \
+    return diagnostics->set_backend_resource_name(*native, name);                                  \
   }
   GRANIT_NAME_PRESENTATION_OBJECT(surfaces_)
   GRANIT_NAME_PRESENTATION_OBJECT(swapchains_)
@@ -200,9 +207,11 @@ granit_result renderer_registry::set_object_name(granit_renderer renderer, grani
 
 void renderer_registry::emit_validation_diagnostic(granit_renderer renderer,
                                                    std::string_view message) noexcept {
-  const auto state = std::dynamic_pointer_cast<renderer_state>(acquire_backend(renderer));
-  if (state) {
-    state->diagnostics().emit(diagnostic_severity::error, diagnostic_category::validation, message);
+  const auto diagnostics =
+      std::dynamic_pointer_cast<backend_diagnostic_renderer>(acquire_backend(renderer));
+  if (diagnostics) {
+    diagnostics->diagnostics().emit(diagnostic_severity::error, diagnostic_category::validation,
+                                    message);
   }
 }
 

@@ -60,6 +60,7 @@ class renderer_state final : public backend_renderer,
                              public backend_graphics_command_renderer,
                              public backend_pipeline_layout_renderer,
                              public backend_pipeline_renderer,
+                             public backend_pipeline_cache_renderer,
                              public backend_spirv_shader_renderer,
                              public backend_retirement_renderer,
                              public backend_timestamp_renderer,
@@ -79,12 +80,14 @@ public:
                                          std::uint32_t frames_in_flight,
                                          granit_diagnostic_callback diagnostic_callback,
                                          void* diagnostic_user_data);
-  [[nodiscard]] granit_result import_pipeline_cache(const void* data, std::uint64_t size) noexcept;
-  [[nodiscard]] granit_result export_pipeline_cache(void* data, std::uint64_t& size) noexcept;
+  [[nodiscard]] granit_result import_pipeline_cache(const void* data,
+                                                    std::uint64_t size) noexcept override;
+  [[nodiscard]] granit_result export_pipeline_cache(void* data,
+                                                    std::uint64_t& size) noexcept override;
   [[nodiscard]] granit_result set_object_name(VkObjectType type, std::uint64_t object,
                                               std::string_view name);
   [[nodiscard]] granit_result set_backend_resource_name(backend_resource& resource,
-                                                        std::string_view name);
+                                                        std::string_view name) override;
 
   [[nodiscard]] std::unique_ptr<backend_surface_resource> allocate_surface_resource() override;
   [[nodiscard]] std::unique_ptr<backend_swapchain_resource> allocate_swapchain_resource() override;
