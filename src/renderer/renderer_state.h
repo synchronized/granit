@@ -26,6 +26,7 @@
 #include "backend/compute.h"
 #include "backend/diagnostics.h"
 #include "backend/lifecycle.h"
+#include "backend/pipeline.h"
 #include "backend/presentation.h"
 #include "backend/queue.h"
 #include "backend/renderer.h"
@@ -57,6 +58,7 @@ class renderer_state final : public backend_renderer,
                              public backend_command_renderer,
                              public backend_compute_command_renderer,
                              public backend_graphics_command_renderer,
+                             public backend_pipeline_layout_renderer,
                              public backend_spirv_shader_renderer,
                              public backend_retirement_renderer,
                              public backend_timestamp_renderer,
@@ -96,7 +98,7 @@ public:
   [[nodiscard]] std::unique_ptr<backend_bind_group_resource>
   allocate_bind_group_resource() override;
   [[nodiscard]] std::unique_ptr<backend_pipeline_layout_resource>
-  allocate_pipeline_layout_resource();
+  allocate_pipeline_layout_resource() override;
   [[nodiscard]] std::unique_ptr<backend_graphics_pipeline_resource>
   allocate_graphics_pipeline_resource();
   [[nodiscard]] std::unique_ptr<backend_compute_pipeline_resource>
@@ -210,6 +212,11 @@ public:
   [[nodiscard]] granit_result create_native_pipeline_layout(
       std::span<backend_bind_group_layout_resource* const> bind_group_layouts,
       backend_pipeline_layout_resource& layout) noexcept;
+  [[nodiscard]] granit_result
+  create_pipeline_layout(std::span<backend_bind_group_layout_resource* const> bind_group_layouts,
+                         backend_pipeline_layout_resource& layout) noexcept override {
+    return create_native_pipeline_layout(bind_group_layouts, layout);
+  }
   void destroy_native_pipeline_layout(VkPipelineLayout layout) noexcept;
   [[nodiscard]] granit_result create_native_graphics_pipeline(
       backend_pipeline_layout_resource& layout, backend_shader_resource& vertex_shader,

@@ -421,24 +421,29 @@ granit_result renderer_registry::create_pipeline_layout(
     granit_renderer renderer, std::span<const granit_bind_group_layout> bind_group_layouts,
     granit_pipeline_layout& layout) {
   try {
-    auto state = std::dynamic_pointer_cast<renderer_state>(acquire_backend(renderer));
-    if (!state)
+    auto owner = acquire_backend(renderer);
+    if (!owner)
       return GRANIT_ERROR_INVALID_HANDLE;
+    auto pipelines = std::dynamic_pointer_cast<backend_pipeline_layout_renderer>(owner);
+    if (!pipelines)
+      return GRANIT_ERROR_UNSUPPORTED;
     auto record = std::make_shared<pipeline_layout_record>();
-    record->owner = state;
+    record->owner = owner;
+    record->pipelines = pipelines;
+    record->retirement = std::dynamic_pointer_cast<backend_retirement_renderer>(owner);
     std::vector<backend_bind_group_layout_resource*> native_layouts;
     {
       std::lock_guard lock{mutex_};
       for (const auto handle : bind_group_layouts) {
         const auto found = bind_group_layouts_.find(handle);
-        if (found == bind_group_layouts_.end() || found->second->owner != state)
+        if (found == bind_group_layouts_.end() || found->second->owner != owner)
           return GRANIT_ERROR_INVALID_HANDLE;
         record->bind_group_layouts.push_back(found->second);
         native_layouts.push_back(found->second->native.get());
       }
     }
-    record->native = state->allocate_pipeline_layout_resource();
-    const auto result = state->create_native_pipeline_layout(native_layouts, *record->native);
+    record->native = pipelines->allocate_pipeline_layout_resource();
+    const auto result = pipelines->create_pipeline_layout(native_layouts, *record->native);
     if (result != GRANIT_SUCCESS)
       return result;
     std::lock_guard lock{mutex_};
@@ -446,49 +451,15 @@ granit_result renderer_registry::create_pipeline_layout(
       return GRANIT_ERROR_INVALID_HANDLE;
     record->metadata.creation_sequence = next_creation_sequence_++;
     const auto handle =
-        handles_.insert(record.get(), resource_type::pipeline_layout, state->domain());
+        handles_.insert(record.get(), resource_type::pipeline_layout, owner->domain());
     if (handle == GRANIT_NULL_HANDLE)
       return GRANIT_ERROR_OUT_OF_MEMORY;
     try {
       pipeline_layouts_.emplace(handle, std::move(record));
     } catch (...) {
-      static_cast<void>(handles_.erase(handle, resource_type::pipeline_layout, state->domain()));
+      static_cast<void>(handles_.erase(handle, resource_type::pipeline_layout, owner->domain()));
       throw;
     }
-    layout = handle;
-    return GRANIT_SUCCESS;
-  } catch (const std::bad_alloc&) {
-    return GRANIT_ERROR_OUT_OF_MEMORY;
-  } catch (...) {
-    return GRANIT_ERROR_INTERNAL;
-  }
-}
-
-granit_result renderer_registry::create_webgpu_pipeline_layout(granit_renderer renderer,
-                                                               granit_pipeline_layout& layout) {
-  try {
-    auto owner = acquire_backend(renderer);
-    auto pipelines = std::dynamic_pointer_cast<backend_pipeline_renderer>(owner);
-    if (!owner || !pipelines)
-      return GRANIT_ERROR_INVALID_HANDLE;
-    auto record = std::make_shared<pipeline_layout_record>();
-    record->owner = owner;
-    record->native = pipelines->allocate_pipeline_layout_resource();
-    if (!record->native)
-      return GRANIT_ERROR_OUT_OF_MEMORY;
-    const auto result = pipelines->create_empty_pipeline_layout(*record->native);
-    if (result != GRANIT_SUCCESS)
-      return result;
-    std::lock_guard lock{mutex_};
-    const auto found = backend_renderers_.find(renderer);
-    if (found == backend_renderers_.end() || found->second != owner)
-      return GRANIT_ERROR_INVALID_HANDLE;
-    record->metadata.creation_sequence = next_creation_sequence_++;
-    const auto handle =
-        handles_.insert(record.get(), resource_type::pipeline_layout, owner->domain());
-    if (handle == GRANIT_NULL_HANDLE)
-      return GRANIT_ERROR_OUT_OF_MEMORY;
-    pipeline_layouts_.emplace(handle, std::move(record));
     layout = handle;
     return GRANIT_SUCCESS;
   } catch (const std::bad_alloc&) {
@@ -515,11 +486,11 @@ granit_result renderer_registry::destroy_pipeline_layout(granit_renderer rendere
     static_cast<void>(
         handles_.erase(layout, resource_type::pipeline_layout, state->second->domain()));
   }
-  const auto state = std::dynamic_pointer_cast<renderer_state>(record->owner);
+  const auto retirement = record->retirement;
   const auto serial = record->metadata.last_use_serial.load();
-  if (state) {
-    state->retire_resource(serial, retirement_order::dependent, std::move(record));
-    static_cast<void>(state->collect_retired());
+  if (retirement) {
+    retirement->retire_resource(serial, retirement_order::dependent, std::move(record));
+    static_cast<void>(retirement->collect_retired());
   }
   return GRANIT_SUCCESS;
 }

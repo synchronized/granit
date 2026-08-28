@@ -79,7 +79,8 @@ public:
   [[nodiscard]] std::unique_ptr<backend_pipeline_layout_resource>
   allocate_pipeline_layout_resource() override;
   [[nodiscard]] granit_result
-  create_empty_pipeline_layout(backend_pipeline_layout_resource& layout) noexcept override;
+  create_pipeline_layout(std::span<backend_bind_group_layout_resource* const> bind_group_layouts,
+                         backend_pipeline_layout_resource& layout) noexcept override;
   [[nodiscard]] std::unique_ptr<backend_graphics_pipeline_resource>
   allocate_graphics_pipeline_resource() override;
   [[nodiscard]] granit_result

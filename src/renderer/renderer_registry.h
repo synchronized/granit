@@ -173,8 +173,6 @@ public:
   create_pipeline_layout(granit_renderer renderer,
                          std::span<const granit_bind_group_layout> bind_group_layouts,
                          granit_pipeline_layout& layout);
-  [[nodiscard]] granit_result create_webgpu_pipeline_layout(granit_renderer renderer,
-                                                            granit_pipeline_layout& layout);
   [[nodiscard]] granit_result destroy_pipeline_layout(granit_renderer renderer,
                                                       granit_pipeline_layout layout);
   [[nodiscard]] granit_result create_graphics_pipeline(granit_renderer renderer,
