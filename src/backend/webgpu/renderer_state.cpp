@@ -104,14 +104,13 @@ granit_result webgpu_renderer_state::validate_graphics_pipeline(
 }
 
 granit_result webgpu_renderer_state::create_graphics_pipeline(
-    backend_graphics_pipeline_resource& pipeline, backend_pipeline_layout_resource& layout,
-    backend_shader_resource& vertex_shader, backend_shader_resource& fragment_shader,
-    granit_texture_format color_format) noexcept {
-  if (!pipelines_ || !shaders_)
+    const backend_graphics_pipeline_create_info& info,
+    backend_graphics_pipeline_resource& pipeline) noexcept {
+  if (!pipelines_ || !shaders_ || info.color_formats.size() != 1)
     return GRANIT_ERROR_UNSUPPORTED;
   return pipelines_->create_graphics_pipeline(
-      pipeline, layout, shaders_->native_handle(vertex_shader),
-      shaders_->native_handle(fragment_shader), color_format);
+      pipeline, info.layout, shaders_->native_handle(info.vertex_shader),
+      shaders_->native_handle(info.fragment_shader), info.color_formats.front());
 }
 
 void* webgpu_renderer_state::allocate(std::uint64_t size, std::uint64_t alignment, void*) noexcept {

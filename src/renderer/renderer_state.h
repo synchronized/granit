@@ -59,6 +59,7 @@ class renderer_state final : public backend_renderer,
                              public backend_compute_command_renderer,
                              public backend_graphics_command_renderer,
                              public backend_pipeline_layout_renderer,
+                             public backend_pipeline_renderer,
                              public backend_spirv_shader_renderer,
                              public backend_retirement_renderer,
                              public backend_timestamp_renderer,
@@ -100,7 +101,14 @@ public:
   [[nodiscard]] std::unique_ptr<backend_pipeline_layout_resource>
   allocate_pipeline_layout_resource() override;
   [[nodiscard]] std::unique_ptr<backend_graphics_pipeline_resource>
-  allocate_graphics_pipeline_resource();
+  allocate_graphics_pipeline_resource() override;
+  [[nodiscard]] granit_result
+  validate_graphics_pipeline(const granit_graphics_pipeline_desc&) const noexcept override {
+    return GRANIT_SUCCESS;
+  }
+  [[nodiscard]] granit_result
+  create_graphics_pipeline(const backend_graphics_pipeline_create_info& info,
+                           backend_graphics_pipeline_resource& pipeline) noexcept override;
   [[nodiscard]] std::unique_ptr<backend_compute_pipeline_resource>
   allocate_compute_pipeline_resource() override;
   [[nodiscard]] std::unique_ptr<backend_command_recorder_resource>

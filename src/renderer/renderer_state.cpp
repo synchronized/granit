@@ -602,6 +602,15 @@ renderer_state::allocate_graphics_pipeline_resource() {
   return std::make_unique<vulkan_graphics_pipeline_resource>(shared_from_this());
 }
 
+granit_result
+renderer_state::create_graphics_pipeline(const backend_graphics_pipeline_create_info& info,
+                                         backend_graphics_pipeline_resource& pipeline) noexcept {
+  return create_native_graphics_pipeline(
+      info.layout, info.vertex_shader, info.vertex_entry, info.fragment_shader, info.fragment_entry,
+      info.vertex_buffers, info.primitive, info.depth, info.depth_bias, info.color_blends,
+      info.color_formats, info.depth_stencil_format, info.sample_count, pipeline);
+}
+
 std::unique_ptr<backend_compute_pipeline_resource>
 renderer_state::allocate_compute_pipeline_resource() {
   return std::make_unique<vulkan_compute_pipeline_resource>(shared_from_this());
@@ -2875,8 +2884,8 @@ void renderer_state::destroy_native_command_recorder(
   static_cast<vulkan_command_recorder_resource&>(resource).native().destroy(device_);
 }
 
-granit_result renderer_state::discard_command_recorder(
-    backend_command_recorder_resource& resource) noexcept {
+granit_result
+renderer_state::discard_command_recorder(backend_command_recorder_resource& resource) noexcept {
   destroy_native_command_recorder(resource);
   return GRANIT_SUCCESS;
 }

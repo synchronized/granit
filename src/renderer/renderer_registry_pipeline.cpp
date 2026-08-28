@@ -4,7 +4,6 @@
 #include "renderer/renderer_registry.h"
 #include "renderer/renderer_registry_records.h"
 
-#include "renderer/renderer_state.h"
 #include "renderer/shader_validation.h"
 
 #include <algorithm>
@@ -499,7 +498,8 @@ granit_result renderer_registry::create_graphics_pipeline(granit_renderer render
                                                           const granit_graphics_pipeline_desc& desc,
                                                           granit_graphics_pipeline& pipeline) {
   try {
-    std::shared_ptr<renderer_state> state;
+    std::shared_ptr<backend_renderer> state;
+    std::shared_ptr<backend_pipeline_renderer> pipelines;
     std::shared_ptr<pipeline_layout_record> layout;
     std::shared_ptr<shader_record> vertex;
     std::shared_ptr<shader_record> fragment;
@@ -508,8 +508,9 @@ granit_result renderer_registry::create_graphics_pipeline(granit_renderer render
       const auto found = backend_renderers_.find(renderer);
       if (found == backend_renderers_.end())
         return GRANIT_ERROR_INVALID_HANDLE;
-      state = std::dynamic_pointer_cast<renderer_state>(found->second);
-      if (!state)
+      state = found->second;
+      pipelines = std::dynamic_pointer_cast<backend_pipeline_renderer>(state);
+      if (!pipelines)
         return GRANIT_ERROR_UNSUPPORTED;
       const auto layout_found = pipeline_layouts_.find(desc.layout);
       const auto vertex_found = shaders_.find(desc.vertex_shader);
@@ -526,10 +527,17 @@ granit_result renderer_registry::create_graphics_pipeline(granit_renderer render
     }
     auto record = std::make_shared<graphics_pipeline_record>();
     record->owner = state;
+    record->pipelines = pipelines;
+    record->retirement = std::dynamic_pointer_cast<backend_retirement_renderer>(state);
     record->layout = layout;
     record->vertex_shader = vertex;
     record->fragment_shader = fragment;
-    record->native = state->allocate_graphics_pipeline_resource();
+    record->native = pipelines->allocate_graphics_pipeline_resource();
+    if (!record->native)
+      return GRANIT_ERROR_OUT_OF_MEMORY;
+    const auto validation = pipelines->validate_graphics_pipeline(desc);
+    if (validation != GRANIT_SUCCESS)
+      return validation;
     const auto vertex_buffers =
         desc.struct_size >= GRANIT_GRAPHICS_PIPELINE_DESC_VERSION_2_SIZE
             ? std::span<const granit_vertex_buffer_layout>{desc.vertex_buffer_layouts,
@@ -556,9 +564,13 @@ granit_result renderer_registry::create_graphics_pipeline(granit_renderer render
       if (desc.color_blend_count != 0)
         color_blends = {desc.color_blends, desc.color_blend_count};
     }
-    const auto result = state->create_native_graphics_pipeline(
-        *layout->native, *vertex->native, vertex->entry_point.c_str(), *fragment->native,
-        fragment->entry_point.c_str(), vertex_buffers,
+    const backend_graphics_pipeline_create_info info{
+        *layout->native,
+        *vertex->native,
+        vertex->entry_point.c_str(),
+        *fragment->native,
+        fragment->entry_point.c_str(),
+        vertex_buffers,
         desc.struct_size >= GRANIT_GRAPHICS_PIPELINE_DESC_VERSION_3_SIZE
             ? desc.primitive
             : granit_primitive_state{GRANIT_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
@@ -567,8 +579,11 @@ granit_result renderer_registry::create_graphics_pipeline(granit_renderer render
         depth,
         desc.struct_size >= GRANIT_GRAPHICS_PIPELINE_DESC_VERSION_5_SIZE ? desc.depth_bias
                                                                          : nullptr,
-        color_blends, {desc.color_formats, static_cast<std::size_t>(desc.color_format_count)},
-        desc.depth_stencil_format, desc.sample_count, *record->native);
+        color_blends,
+        {desc.color_formats, static_cast<std::size_t>(desc.color_format_count)},
+        desc.depth_stencil_format,
+        desc.sample_count};
+    const auto result = pipelines->create_graphics_pipeline(info, *record->native);
     if (result != GRANIT_SUCCESS)
       return result;
     std::lock_guard lock{mutex_};
@@ -622,14 +637,30 @@ granit_result renderer_registry::create_webgpu_graphics_pipeline(
     }
     auto record = std::make_shared<graphics_pipeline_record>();
     record->owner = owner;
+    record->pipelines = pipelines;
+    record->retirement = std::dynamic_pointer_cast<backend_retirement_renderer>(owner);
     record->layout = layout;
     record->vertex_shader = vertex;
     record->fragment_shader = fragment;
     record->native = pipelines->allocate_graphics_pipeline_resource();
     if (!record->native)
       return GRANIT_ERROR_OUT_OF_MEMORY;
-    const auto result = pipelines->create_graphics_pipeline(
-        *record->native, *layout->native, *vertex->native, *fragment->native, color_format);
+    const backend_graphics_pipeline_create_info info{
+        *layout->native,
+        *vertex->native,
+        vertex->entry_point.c_str(),
+        *fragment->native,
+        fragment->entry_point.c_str(),
+        {},
+        {GRANIT_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST, GRANIT_FRONT_FACE_COUNTER_CLOCKWISE,
+         GRANIT_CULL_MODE_NONE, GRANIT_POLYGON_MODE_FILL},
+        {},
+        nullptr,
+        {},
+        {&color_format, 1},
+        GRANIT_TEXTURE_FORMAT_UNDEFINED,
+        GRANIT_SAMPLE_COUNT_1};
+    const auto result = pipelines->create_graphics_pipeline(info, *record->native);
     if (result != GRANIT_SUCCESS)
       return result;
     std::lock_guard lock{mutex_};
@@ -662,11 +693,11 @@ granit_result renderer_registry::destroy_graphics_pipeline(granit_renderer rende
     graphics_pipelines_.erase(found);
     static_cast<void>(handles_.erase(pipeline, resource_type::pipeline, state->second->domain()));
   }
-  const auto state = std::dynamic_pointer_cast<renderer_state>(record->owner);
+  const auto retirement = record->retirement;
   const auto serial = record->metadata.last_use_serial.load();
-  if (state) {
-    state->retire_resource(serial, retirement_order::dependent, std::move(record));
-    static_cast<void>(state->collect_retired());
+  if (retirement) {
+    retirement->retire_resource(serial, retirement_order::dependent, std::move(record));
+    static_cast<void>(retirement->collect_retired());
   }
   return GRANIT_SUCCESS;
 }

@@ -31,6 +31,7 @@ class webgpu_renderer_state final : public backend_renderer,
                                     public backend_command_renderer,
                                     public backend_graphics_command_renderer,
                                     public backend_shader_renderer,
+                                    public backend_pipeline_layout_renderer,
                                     public backend_pipeline_renderer {
 public:
   webgpu_renderer_state() = default;
@@ -85,10 +86,9 @@ public:
   allocate_graphics_pipeline_resource() override;
   [[nodiscard]] granit_result
   validate_graphics_pipeline(const granit_graphics_pipeline_desc& desc) const noexcept override;
-  [[nodiscard]] granit_result create_graphics_pipeline(
-      backend_graphics_pipeline_resource& pipeline, backend_pipeline_layout_resource& layout,
-      backend_shader_resource& vertex_shader, backend_shader_resource& fragment_shader,
-      granit_texture_format color_format) noexcept override;
+  [[nodiscard]] granit_result
+  create_graphics_pipeline(const backend_graphics_pipeline_create_info& info,
+                           backend_graphics_pipeline_resource& pipeline) noexcept override;
 
   [[nodiscard]] std::unique_ptr<backend_surface_resource> allocate_surface_resource() override;
   [[nodiscard]] std::unique_ptr<backend_swapchain_resource> allocate_swapchain_resource() override;
