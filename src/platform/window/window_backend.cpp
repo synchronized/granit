@@ -3,12 +3,8 @@
 
 #include <granit/window/window.h>
 
-#include "platform/window/input_bridge.hpp"
+#include "platform/window/window_backend_internal.h"
 
-#if defined(_WIN32)
-#include <windows.h>
-#include <windowsx.h>
-#else
 #if defined(GRANIT_WINDOW_HAS_XCB)
 #include <xcb/xcb.h>
 #endif
@@ -18,7 +14,6 @@
 #include <unistd.h>
 #include <wayland-client.h>
 #include <xdg-shell-client-protocol.h>
-#endif
 #endif
 
 #include <algorithm>
@@ -36,65 +31,7 @@
 #include <utility>
 #include <vector>
 
-namespace {
-
-struct window_system_record;
-
-struct window_record {
-  granit_window handle{};
-  std::weak_ptr<window_system_record> system;
-#if defined(_WIN32)
-  HINSTANCE instance{};
-  HWND window{};
-  bool high_dpi{};
-  bool pointer_tracking{};
-#endif
-#if defined(GRANIT_WINDOW_HAS_XCB)
-  xcb_window_t window{XCB_WINDOW_NONE};
-#endif
-#if defined(GRANIT_WINDOW_HAS_WAYLAND)
-  wl_surface* wayland_surface{};
-  xdg_surface* wayland_xdg_surface{};
-  xdg_toplevel* wayland_toplevel{};
-  std::uint32_t configured_width{};
-  std::uint32_t configured_height{};
-  bool configured{};
-  bool focused{};
-#endif
-};
-
-struct window_system_record {
-  std::thread::id owner_thread;
-  std::uint32_t backend{};
-  std::unordered_map<granit_window, std::shared_ptr<window_record>> windows;
-  std::deque<granit_window_event> events;
-  void* input_user_data{};
-  granit_window_input_window_callback input_window_destroyed{};
-  granit_window_input_window_callback input_focus_lost{};
-  granit_window_input_native_event_callback input_native_event{};
-#if defined(GRANIT_WINDOW_HAS_XCB)
-  xcb_connection_t* connection{};
-  xcb_screen_t* screen{};
-  xcb_atom_t wm_protocols{XCB_ATOM_NONE};
-  xcb_atom_t wm_delete_window{XCB_ATOM_NONE};
-  xcb_atom_t wm_size_hints{XCB_ATOM_NONE};
-  xcb_atom_t net_wm_name{XCB_ATOM_NONE};
-  xcb_atom_t utf8_string{XCB_ATOM_NONE};
-#endif
-#if defined(GRANIT_WINDOW_HAS_WAYLAND)
-  wl_display* display{};
-  wl_registry* registry{};
-  wl_compositor* compositor{};
-  xdg_wm_base* wm_base{};
-  std::uint32_t seat_name{};
-  std::uint32_t seat_version{};
-  wl_seat* seat{};
-  wl_keyboard* keyboard{};
-  wl_pointer* pointer{};
-  granit_window keyboard_window{};
-  granit_window pointer_window{};
-#endif
-};
+namespace granit::window::detail {
 
 std::mutex registry_mutex;
 std::unordered_map<granit_window_system, std::shared_ptr<window_system_record>> systems;
@@ -129,9 +66,7 @@ void enqueue_event(const std::shared_ptr<window_system_record>& system, granit_w
   system->events.push_back(event);
 }
 
-#if defined(_WIN32)
-#include "platform/win32/window_backend.inl"
-#elif defined(GRANIT_WINDOW_HAS_XCB)
+#if defined(GRANIT_WINDOW_HAS_XCB)
 xcb_atom_t intern_atom(xcb_connection_t* connection, const char* name) {
   const auto cookie =
       xcb_intern_atom(connection, 0, static_cast<std::uint16_t>(std::strlen(name)), name);
@@ -516,7 +451,9 @@ granit_result pump_wayland_events(window_system_record& system) {
 }
 #endif
 
-} // namespace
+} // namespace granit::window::detail
+
+using namespace granit::window::detail;
 
 extern "C" granit_result granit_window_system_create(const granit_window_system_desc* desc,
                                                      granit_window_system* output) {

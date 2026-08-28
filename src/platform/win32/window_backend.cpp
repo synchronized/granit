@@ -1,7 +1,17 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-// 本文件包含 Win32 回调实现，并由 Window Registry 的内部命名空间引入。
+#include "platform/window/window_backend_internal.h"
+
+#include <windows.h>
+#include <windowsx.h>
+
+#include <memory>
+#include <mutex>
+#include <string>
+#include <vector>
+
+namespace granit::window::detail {
 
 constexpr wchar_t window_class_name[] = L"GranitWindowComponent";
 std::once_flag window_class_once;
@@ -160,7 +170,7 @@ granit_result destroy_win32_system(granit_window_system handle,
   }
   for (const auto& window : windows)
     if (window->window != nullptr)
-      DestroyWindow(window->window);
+      DestroyWindow(static_cast<HWND>(window->window));
   return GRANIT_SUCCESS;
 }
 
@@ -203,14 +213,14 @@ granit_result create_win32_window(const std::shared_ptr<window_system_record>& s
     record->window =
         CreateWindowExW(0, window_class_name, title.c_str(), style, CW_USEDEFAULT, CW_USEDEFAULT,
                         rectangle.right - rectangle.left, rectangle.bottom - rectangle.top, nullptr,
-                        nullptr, record->instance, record.get());
+                        nullptr, static_cast<HINSTANCE>(record->instance), record.get());
     if (previous_dpi_context != nullptr)
       SetThreadDpiAwarenessContext(previous_dpi_context);
     if (record->window == nullptr)
       return GRANIT_ERROR_BACKEND_UNAVAILABLE;
     system->windows.emplace(record->handle, record);
     if ((desc->flags & GRANIT_WINDOW_VISIBLE_BIT) != 0)
-      ShowWindow(record->window, SW_SHOW);
+      ShowWindow(static_cast<HWND>(record->window), SW_SHOW);
     *output = record->handle;
     return GRANIT_SUCCESS;
   } catch (const std::bad_alloc&) {
@@ -225,7 +235,9 @@ granit_result destroy_win32_window(const std::shared_ptr<window_system_record>& 
   const auto found = system->windows.find(handle);
   auto window = std::move(found->second);
   system->windows.erase(found);
-  return DestroyWindow(window->window) != FALSE ? GRANIT_SUCCESS : GRANIT_ERROR_BACKEND_UNAVAILABLE;
+  return DestroyWindow(static_cast<HWND>(window->window)) != FALSE
+             ? GRANIT_SUCCESS
+             : GRANIT_ERROR_BACKEND_UNAVAILABLE;
 }
 
 granit_result get_win32_window(const std::shared_ptr<window_record>& window, void** instance,
@@ -234,3 +246,5 @@ granit_result get_win32_window(const std::shared_ptr<window_record>& window, voi
   *native_window = window->window;
   return GRANIT_SUCCESS;
 }
+
+} // namespace granit::window::detail

@@ -300,7 +300,8 @@ add_library(granit::window ALIAS granit_window)
 target_sources(
   granit_window
   PRIVATE platform/window/window_backend.cpp
-          $<$<PLATFORM_ID:Windows>:platform/win32/window_backend.inl>
+          platform/window/window_backend_internal.h
+          $<$<PLATFORM_ID:Windows>:platform/win32/window_backend.cpp>
           $<$<BOOL:${GRANIT_HAS_WAYLAND_SHELL}>:$<TARGET_OBJECTS:granit_xdg_shell_protocol>>
   PUBLIC
     FILE_SET HEADERS
