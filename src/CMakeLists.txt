@@ -163,8 +163,8 @@ target_sources(
     renderer/renderer_registry_timestamp.cpp
     renderer/renderer_registry_texture.cpp
     renderer/renderer_registry_transfer.cpp
-    renderer/renderer_state.cpp
-    renderer/renderer_state.h
+    backend/vulkan/vulkan_renderer_state.cpp
+    backend/vulkan/vulkan_renderer_state.h
     renderer/renderer_validation.h
     renderer/surface_validation.h
     renderer/shader_validation.h

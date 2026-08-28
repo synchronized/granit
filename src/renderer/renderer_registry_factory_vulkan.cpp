@@ -3,7 +3,7 @@
 
 #include "renderer/renderer_registry.h"
 
-#include "renderer/renderer_state.h"
+#include "backend/vulkan/vulkan_renderer_state.h"
 
 #include <new>
 
@@ -14,7 +14,7 @@ granit_result renderer_registry::create(std::string_view application_name, bool 
                                         granit_diagnostic_callback diagnostic_callback,
                                         void* diagnostic_user_data, granit_renderer& renderer) {
   try {
-    auto state = std::make_shared<renderer_state>();
+    auto state = std::make_shared<vulkan_renderer_state>();
     const auto initialize_result =
         state->initialize(application_name, enable_validation, surface_types, frames_in_flight,
                           diagnostic_callback, diagnostic_user_data);

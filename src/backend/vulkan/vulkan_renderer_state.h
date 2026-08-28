@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#ifndef GRANIT_RENDERER_RENDERER_STATE_H_
-#define GRANIT_RENDERER_RENDERER_STATE_H_
+#ifndef GRANIT_BACKEND_VULKAN_RENDERER_STATE_H_
+#define GRANIT_BACKEND_VULKAN_RENDERER_STATE_H_
 
 #include <condition_variable>
 #include <cstdint>
@@ -50,30 +50,30 @@
 
 namespace granit::detail {
 
-class renderer_state final : public backend_renderer,
-                             public backend_diagnostic_renderer,
-                             public backend_resource_renderer,
-                             public backend_presentation_renderer,
-                             public backend_queue,
-                             public backend_command_renderer,
-                             public backend_compute_command_renderer,
-                             public backend_graphics_command_renderer,
-                             public backend_pipeline_layout_renderer,
-                             public backend_pipeline_renderer,
-                             public backend_pipeline_cache_renderer,
-                             public backend_spirv_shader_renderer,
-                             public backend_retirement_renderer,
-                             public backend_timestamp_renderer,
-                             public backend_transfer_command_renderer,
-                             public std::enable_shared_from_this<renderer_state> {
+class vulkan_renderer_state final : public backend_renderer,
+                                    public backend_diagnostic_renderer,
+                                    public backend_resource_renderer,
+                                    public backend_presentation_renderer,
+                                    public backend_queue,
+                                    public backend_command_renderer,
+                                    public backend_compute_command_renderer,
+                                    public backend_graphics_command_renderer,
+                                    public backend_pipeline_layout_renderer,
+                                    public backend_pipeline_renderer,
+                                    public backend_pipeline_cache_renderer,
+                                    public backend_spirv_shader_renderer,
+                                    public backend_retirement_renderer,
+                                    public backend_timestamp_renderer,
+                                    public backend_transfer_command_renderer,
+                                    public std::enable_shared_from_this<vulkan_renderer_state> {
 public:
-  renderer_state() = default;
-  ~renderer_state();
+  vulkan_renderer_state() = default;
+  ~vulkan_renderer_state();
 
-  renderer_state(const renderer_state&) = delete;
-  renderer_state& operator=(const renderer_state&) = delete;
-  renderer_state(renderer_state&&) = delete;
-  renderer_state& operator=(renderer_state&&) = delete;
+  vulkan_renderer_state(const vulkan_renderer_state&) = delete;
+  vulkan_renderer_state& operator=(const vulkan_renderer_state&) = delete;
+  vulkan_renderer_state(vulkan_renderer_state&&) = delete;
+  vulkan_renderer_state& operator=(vulkan_renderer_state&&) = delete;
 
   [[nodiscard]] granit_result initialize(std::string_view application_name, bool enable_validation,
                                          std::uint32_t surface_types,

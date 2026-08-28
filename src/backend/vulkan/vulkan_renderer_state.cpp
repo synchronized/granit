@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include "renderer/renderer_state.h"
+#include "backend/vulkan/vulkan_renderer_state.h"
 
 #include "backend/vulkan/resources.h"
 #include "backend/vulkan/result.h"
@@ -237,7 +237,7 @@ VkImageUsageFlags map_texture_usage(granit_texture_usage usage) noexcept {
 
 } // namespace
 
-renderer_state::~renderer_state() {
+vulkan_renderer_state::~vulkan_renderer_state() {
   static_cast<void>(wait_for_all_submissions());
   for (auto& slot : upload_slots_)
     slot.context->destroy(device_, memory_allocator_);
@@ -254,11 +254,11 @@ renderer_state::~renderer_state() {
     device_.functions().vkDestroyPipelineCache(device_.native_handle(), pipeline_cache_, nullptr);
 }
 
-granit_result renderer_state::initialize(std::string_view application_name, bool enable_validation,
-                                         std::uint32_t surface_types,
-                                         std::uint32_t frames_in_flight,
-                                         granit_diagnostic_callback diagnostic_callback,
-                                         void* diagnostic_user_data) {
+granit_result vulkan_renderer_state::initialize(std::string_view application_name,
+                                                bool enable_validation, std::uint32_t surface_types,
+                                                std::uint32_t frames_in_flight,
+                                                granit_diagnostic_callback diagnostic_callback,
+                                                void* diagnostic_user_data) {
   validation_enabled_ = enable_validation;
   diagnostics_.configure(diagnostic_callback, diagnostic_user_data);
   const auto instance_result = instance_.initialize({.application_name = application_name,
@@ -416,7 +416,7 @@ granit_result renderer_state::initialize(std::string_view application_name, bool
   return GRANIT_SUCCESS;
 }
 
-std::size_t renderer_state::acquire_upload_slot() {
+std::size_t vulkan_renderer_state::acquire_upload_slot() {
   std::unique_lock lock{upload_mutex_};
   upload_available_.wait(lock, [this] {
     return std::ranges::any_of(upload_slots_, [](const auto& slot) { return !slot.acquired; });
@@ -427,7 +427,7 @@ std::size_t renderer_state::acquire_upload_slot() {
   return static_cast<std::size_t>(std::distance(upload_slots_.begin(), found));
 }
 
-void renderer_state::release_upload_slot(std::size_t index) noexcept {
+void vulkan_renderer_state::release_upload_slot(std::size_t index) noexcept {
   {
     std::lock_guard lock{upload_mutex_};
     upload_slots_[index].acquired = false;
@@ -435,7 +435,8 @@ void renderer_state::release_upload_slot(std::size_t index) noexcept {
   upload_available_.notify_one();
 }
 
-granit_result renderer_state::import_pipeline_cache(const void* data, std::uint64_t size) noexcept {
+granit_result vulkan_renderer_state::import_pipeline_cache(const void* data,
+                                                           std::uint64_t size) noexcept {
   if (device_lost())
     return GRANIT_ERROR_DEVICE_LOST;
   if (size == 0)
@@ -475,7 +476,8 @@ granit_result renderer_state::import_pipeline_cache(const void* data, std::uint6
   return observe_device_result(map_vulkan_result(merged));
 }
 
-granit_result renderer_state::export_pipeline_cache(void* data, std::uint64_t& size) noexcept {
+granit_result vulkan_renderer_state::export_pipeline_cache(void* data,
+                                                           std::uint64_t& size) noexcept {
   if (device_lost())
     return GRANIT_ERROR_DEVICE_LOST;
   std::lock_guard lock{pipeline_cache_mutex_};
@@ -499,8 +501,8 @@ granit_result renderer_state::export_pipeline_cache(void* data, std::uint64_t& s
   return observe_device_result(map_vulkan_result(result));
 }
 
-granit_result renderer_state::set_object_name(VkObjectType type, std::uint64_t object,
-                                              std::string_view name) {
+granit_result vulkan_renderer_state::set_object_name(VkObjectType type, std::uint64_t object,
+                                                     std::string_view name) {
   if (device_lost())
     return GRANIT_ERROR_DEVICE_LOST;
   if (!validation_enabled_ || instance_.functions().vkSetDebugUtilsObjectNameEXT == nullptr)
@@ -516,8 +518,8 @@ granit_result renderer_state::set_object_name(VkObjectType type, std::uint64_t o
       instance_.functions().vkSetDebugUtilsObjectNameEXT(device_.native_handle(), &info)));
 }
 
-granit_result renderer_state::set_backend_resource_name(backend_resource& resource,
-                                                        std::string_view name) {
+granit_result vulkan_renderer_state::set_backend_resource_name(backend_resource& resource,
+                                                               std::string_view name) {
   if (auto* value = dynamic_cast<vulkan_surface_resource*>(&resource))
     return set_object_name(VK_OBJECT_TYPE_SURFACE_KHR, object_handle_value(value->native()), name);
   if (auto* value = dynamic_cast<vulkan_swapchain_resource*>(&resource))
@@ -555,56 +557,57 @@ granit_result renderer_state::set_backend_resource_name(backend_resource& resour
   return GRANIT_ERROR_UNSUPPORTED;
 }
 
-std::unique_ptr<backend_surface_resource> renderer_state::allocate_surface_resource() {
+std::unique_ptr<backend_surface_resource> vulkan_renderer_state::allocate_surface_resource() {
   return std::make_unique<vulkan_surface_resource>(shared_from_this());
 }
 
-std::unique_ptr<backend_swapchain_resource> renderer_state::allocate_swapchain_resource() {
+std::unique_ptr<backend_swapchain_resource> vulkan_renderer_state::allocate_swapchain_resource() {
   return std::make_unique<vulkan_swapchain_resource>(shared_from_this());
 }
 
-std::unique_ptr<backend_buffer_resource> renderer_state::allocate_buffer_resource() {
+std::unique_ptr<backend_buffer_resource> vulkan_renderer_state::allocate_buffer_resource() {
   return std::make_unique<vulkan_buffer_resource>(shared_from_this());
 }
 
-std::unique_ptr<backend_texture_resource> renderer_state::allocate_texture_resource() {
+std::unique_ptr<backend_texture_resource> vulkan_renderer_state::allocate_texture_resource() {
   return std::make_unique<vulkan_texture_resource>(shared_from_this());
 }
 
-std::unique_ptr<backend_texture_view_resource> renderer_state::allocate_texture_view_resource() {
+std::unique_ptr<backend_texture_view_resource>
+vulkan_renderer_state::allocate_texture_view_resource() {
   return std::make_unique<vulkan_texture_view_resource>(shared_from_this());
 }
 
-std::unique_ptr<backend_sampler_resource> renderer_state::allocate_sampler_resource() {
+std::unique_ptr<backend_sampler_resource> vulkan_renderer_state::allocate_sampler_resource() {
   return std::make_unique<vulkan_sampler_resource>(shared_from_this());
 }
 
-std::unique_ptr<backend_shader_resource> renderer_state::allocate_shader_resource() {
+std::unique_ptr<backend_shader_resource> vulkan_renderer_state::allocate_shader_resource() {
   return std::make_unique<vulkan_shader_resource>(shared_from_this());
 }
 
 std::unique_ptr<backend_bind_group_layout_resource>
-renderer_state::allocate_bind_group_layout_resource() {
+vulkan_renderer_state::allocate_bind_group_layout_resource() {
   return std::make_unique<vulkan_bind_group_layout_resource>(shared_from_this());
 }
 
-std::unique_ptr<backend_bind_group_resource> renderer_state::allocate_bind_group_resource() {
+std::unique_ptr<backend_bind_group_resource> vulkan_renderer_state::allocate_bind_group_resource() {
   return std::make_unique<vulkan_bind_group_resource>(shared_from_this());
 }
 
 std::unique_ptr<backend_pipeline_layout_resource>
-renderer_state::allocate_pipeline_layout_resource() {
+vulkan_renderer_state::allocate_pipeline_layout_resource() {
   return std::make_unique<vulkan_pipeline_layout_resource>(shared_from_this());
 }
 
 std::unique_ptr<backend_graphics_pipeline_resource>
-renderer_state::allocate_graphics_pipeline_resource() {
+vulkan_renderer_state::allocate_graphics_pipeline_resource() {
   return std::make_unique<vulkan_graphics_pipeline_resource>(shared_from_this());
 }
 
-granit_result
-renderer_state::create_graphics_pipeline(const backend_graphics_pipeline_create_info& info,
-                                         backend_graphics_pipeline_resource& pipeline) noexcept {
+granit_result vulkan_renderer_state::create_graphics_pipeline(
+    const backend_graphics_pipeline_create_info& info,
+    backend_graphics_pipeline_resource& pipeline) noexcept {
   return create_native_graphics_pipeline(
       info.layout, info.vertex_shader, info.vertex_entry, info.fragment_shader, info.fragment_entry,
       info.vertex_buffers, info.primitive, info.depth, info.depth_bias, info.color_blends,
@@ -612,18 +615,18 @@ renderer_state::create_graphics_pipeline(const backend_graphics_pipeline_create_
 }
 
 std::unique_ptr<backend_compute_pipeline_resource>
-renderer_state::allocate_compute_pipeline_resource() {
+vulkan_renderer_state::allocate_compute_pipeline_resource() {
   return std::make_unique<vulkan_compute_pipeline_resource>(shared_from_this());
 }
 
 std::unique_ptr<backend_command_recorder_resource>
-renderer_state::allocate_command_recorder_resource() {
+vulkan_renderer_state::allocate_command_recorder_resource() {
   return std::make_unique<vulkan_command_recorder_resource>(shared_from_this());
 }
 
 granit_result
-renderer_state::create_win32_surface(void* native_instance, void* native_window,
-                                     backend_surface_resource& surface_resource) noexcept {
+vulkan_renderer_state::create_win32_surface(void* native_instance, void* native_window,
+                                            backend_surface_resource& surface_resource) noexcept {
   if (device_lost())
     return GRANIT_ERROR_DEVICE_LOST;
   std::lock_guard lock{resource_mutex_};
@@ -636,8 +639,8 @@ renderer_state::create_win32_surface(void* native_instance, void* native_window,
 }
 
 granit_result
-renderer_state::create_xcb_surface(void* connection, std::uint32_t window,
-                                   backend_surface_resource& surface_resource) noexcept {
+vulkan_renderer_state::create_xcb_surface(void* connection, std::uint32_t window,
+                                          backend_surface_resource& surface_resource) noexcept {
   if (device_lost())
     return GRANIT_ERROR_DEVICE_LOST;
   std::lock_guard lock{resource_mutex_};
@@ -649,8 +652,8 @@ renderer_state::create_xcb_surface(void* connection, std::uint32_t window,
 }
 
 granit_result
-renderer_state::create_wayland_surface(void* display, void* native_surface,
-                                       backend_surface_resource& surface_resource) noexcept {
+vulkan_renderer_state::create_wayland_surface(void* display, void* native_surface,
+                                              backend_surface_resource& surface_resource) noexcept {
   if (device_lost())
     return GRANIT_ERROR_DEVICE_LOST;
   std::lock_guard lock{resource_mutex_};
@@ -661,19 +664,20 @@ renderer_state::create_wayland_surface(void* display, void* native_surface,
       detail::create_wayland_surface(instance_, device_, display, native_surface, surface));
 }
 
-granit_result renderer_state::create_canvas_surface(std::string_view,
-                                                    backend_surface_resource&) noexcept {
+granit_result vulkan_renderer_state::create_canvas_surface(std::string_view,
+                                                           backend_surface_resource&) noexcept {
   return device_lost() ? GRANIT_ERROR_DEVICE_LOST : GRANIT_ERROR_UNSUPPORTED;
 }
 
-void renderer_state::destroy_native_surface(VkSurfaceKHR surface) noexcept {
+void vulkan_renderer_state::destroy_native_surface(VkSurfaceKHR surface) noexcept {
   std::lock_guard lock{resource_mutex_};
   detail::destroy_surface(instance_, surface);
 }
 
-granit_result renderer_state::create_swapchain(backend_surface_resource& surface_resource,
-                                               const backend_swapchain_desc& desc,
-                                               backend_swapchain_resource& swapchain_resource) {
+granit_result
+vulkan_renderer_state::create_swapchain(backend_surface_resource& surface_resource,
+                                        const backend_swapchain_desc& desc,
+                                        backend_swapchain_resource& swapchain_resource) {
   if (device_lost())
     return GRANIT_ERROR_DEVICE_LOST;
   const auto surface = static_cast<vulkan_surface_resource&>(surface_resource).native();
@@ -684,9 +688,10 @@ granit_result renderer_state::create_swapchain(backend_surface_resource& surface
   return observe_device_result(swapchain.initialize(instance_, device_, surface, native_desc));
 }
 
-granit_result renderer_state::recreate_swapchain(backend_surface_resource& surface_resource,
-                                                 const backend_swapchain_desc& desc,
-                                                 backend_swapchain_resource& swapchain_resource) {
+granit_result
+vulkan_renderer_state::recreate_swapchain(backend_surface_resource& surface_resource,
+                                          const backend_swapchain_desc& desc,
+                                          backend_swapchain_resource& swapchain_resource) {
   if (device_lost())
     return GRANIT_ERROR_DEVICE_LOST;
   const auto surface = static_cast<vulkan_surface_resource&>(surface_resource).native();
@@ -704,16 +709,16 @@ granit_result renderer_state::recreate_swapchain(backend_surface_resource& surfa
 }
 
 backend_swapchain_info
-renderer_state::get_swapchain_info(backend_swapchain_resource& swapchain_resource) noexcept {
+vulkan_renderer_state::get_swapchain_info(backend_swapchain_resource& swapchain_resource) noexcept {
   std::lock_guard lock{resource_mutex_};
   const auto info = static_cast<vulkan_swapchain_resource&>(swapchain_resource).native().info();
   return {info.width, info.height, info.image_count, info.present_mode,
           map_swapchain_format(info.format)};
 }
 
-granit_result
-renderer_state::get_swapchain_backbuffers(backend_swapchain_resource& swapchain_resource,
-                                          std::vector<backend_swapchain_backbuffer>& backbuffers) {
+granit_result vulkan_renderer_state::get_swapchain_backbuffers(
+    backend_swapchain_resource& swapchain_resource,
+    std::vector<backend_swapchain_backbuffer>& backbuffers) {
   try {
     std::lock_guard lock{resource_mutex_};
     auto& swapchain = static_cast<vulkan_swapchain_resource&>(swapchain_resource).native();
@@ -739,7 +744,7 @@ renderer_state::get_swapchain_backbuffers(backend_swapchain_resource& swapchain_
 }
 
 granit_result
-renderer_state::prepare_swapchain_backbuffer(backend_swapchain_backbuffer& backbuffer) {
+vulkan_renderer_state::prepare_swapchain_backbuffer(backend_swapchain_backbuffer& backbuffer) {
   if (!backbuffer.texture)
     return GRANIT_ERROR_INTERNAL;
   if (backbuffer.view)
@@ -751,7 +756,7 @@ renderer_state::prepare_swapchain_backbuffer(backend_swapchain_backbuffer& backb
   return create_native_texture_view(*backbuffer.texture, backbuffer.desc, desc, *backbuffer.view);
 }
 
-void renderer_state::destroy_native_swapchain(vulkan_swapchain& swapchain) noexcept {
+void vulkan_renderer_state::destroy_native_swapchain(vulkan_swapchain& swapchain) noexcept {
   std::lock_guard lock{resource_mutex_};
   {
     std::lock_guard queue_lock{queue_mutex_};
@@ -763,8 +768,8 @@ void renderer_state::destroy_native_swapchain(vulkan_swapchain& swapchain) noexc
 }
 
 granit_result
-renderer_state::create_native_buffer(const granit_buffer_desc& desc,
-                                     backend_buffer_resource& buffer_resource) noexcept {
+vulkan_renderer_state::create_native_buffer(const granit_buffer_desc& desc,
+                                            backend_buffer_resource& buffer_resource) noexcept {
   if (device_lost())
     return GRANIT_ERROR_DEVICE_LOST;
   auto& buffer = static_cast<vulkan_buffer_resource&>(buffer_resource).native();
@@ -781,33 +786,35 @@ renderer_state::create_native_buffer(const granit_buffer_desc& desc,
       create_info, map_memory_location(desc.memory_location), buffer));
 }
 
-void renderer_state::destroy_native_buffer(vulkan_buffer_allocation& buffer) noexcept {
+void vulkan_renderer_state::destroy_native_buffer(vulkan_buffer_allocation& buffer) noexcept {
   memory_allocator_.destroy_buffer(buffer);
 }
 
-void* renderer_state::mapped_buffer_data(backend_buffer_resource& buffer) noexcept {
+void* vulkan_renderer_state::mapped_buffer_data(backend_buffer_resource& buffer) noexcept {
   return static_cast<vulkan_buffer_resource&>(buffer).native().mapped_data;
 }
 
-granit_result renderer_state::flush_buffer(backend_buffer_resource& buffer_resource,
-                                           std::uint64_t offset, std::uint64_t size) noexcept {
+granit_result vulkan_renderer_state::flush_buffer(backend_buffer_resource& buffer_resource,
+                                                  std::uint64_t offset,
+                                                  std::uint64_t size) noexcept {
   if (device_lost())
     return GRANIT_ERROR_DEVICE_LOST;
   const auto& buffer = static_cast<vulkan_buffer_resource&>(buffer_resource).native();
   return observe_device_result(memory_allocator_.flush(buffer, offset, size));
 }
 
-granit_result renderer_state::invalidate_buffer(backend_buffer_resource& buffer_resource,
-                                                std::uint64_t offset, std::uint64_t size) noexcept {
+granit_result vulkan_renderer_state::invalidate_buffer(backend_buffer_resource& buffer_resource,
+                                                       std::uint64_t offset,
+                                                       std::uint64_t size) noexcept {
   if (device_lost())
     return GRANIT_ERROR_DEVICE_LOST;
   const auto& buffer = static_cast<vulkan_buffer_resource&>(buffer_resource).native();
   return observe_device_result(memory_allocator_.invalidate(buffer, offset, size));
 }
 
-granit_result renderer_state::upload_buffer(backend_buffer_resource& buffer_resource,
-                                            std::uint64_t offset, const void* data,
-                                            std::uint64_t size) noexcept {
+granit_result vulkan_renderer_state::upload_buffer(backend_buffer_resource& buffer_resource,
+                                                   std::uint64_t offset, const void* data,
+                                                   std::uint64_t size) noexcept {
   if (device_lost())
     return GRANIT_ERROR_DEVICE_LOST;
   const auto& buffer = static_cast<vulkan_buffer_resource&>(buffer_resource).native();
@@ -858,7 +865,7 @@ granit_result renderer_state::upload_buffer(backend_buffer_resource& buffer_reso
 }
 
 granit_result
-renderer_state::upload_batch(std::span<const backend_upload_operation> uploads) noexcept {
+vulkan_renderer_state::upload_batch(std::span<const backend_upload_operation> uploads) noexcept {
   if (device_lost())
     return GRANIT_ERROR_DEVICE_LOST;
   if (uploads.empty())
@@ -1016,8 +1023,8 @@ renderer_state::upload_batch(std::span<const backend_upload_operation> uploads) 
 }
 
 granit_result
-renderer_state::create_native_texture(const granit_texture_desc& desc,
-                                      backend_texture_resource& texture_resource) noexcept {
+vulkan_renderer_state::create_native_texture(const granit_texture_desc& desc,
+                                             backend_texture_resource& texture_resource) noexcept {
   if (device_lost())
     return GRANIT_ERROR_DEVICE_LOST;
   auto& texture = static_cast<vulkan_texture_resource&>(texture_resource).native();
@@ -1039,15 +1046,16 @@ renderer_state::create_native_texture(const granit_texture_desc& desc,
       memory_allocator_.create_image(info, map_memory_location(desc.memory_location), texture));
 }
 
-bool renderer_state::texture_supports_linear_blit(granit_texture_format format) const noexcept {
+bool vulkan_renderer_state::texture_supports_linear_blit(
+    granit_texture_format format) const noexcept {
   return physical_device_supports_linear_blit(instance_, device_, map_texture_format(format));
 }
 
-granit_result renderer_state::upload_texture(backend_texture_resource& resource,
-                                             granit_texture_format format, const void* data,
-                                             std::uint64_t size,
-                                             const granit_texture_data_layout& layout,
-                                             const granit_texture_write_region& region) noexcept {
+granit_result
+vulkan_renderer_state::upload_texture(backend_texture_resource& resource,
+                                      granit_texture_format format, const void* data,
+                                      std::uint64_t size, const granit_texture_data_layout& layout,
+                                      const granit_texture_write_region& region) noexcept {
   if (device_lost())
     return GRANIT_ERROR_DEVICE_LOST;
   const auto& texture = static_cast<vulkan_texture_resource&>(resource).native();
@@ -1142,7 +1150,7 @@ granit_result renderer_state::upload_texture(backend_texture_resource& resource,
   return finish(context.wait(device_));
 }
 
-void renderer_state::destroy_native_texture(vulkan_image_allocation& texture) noexcept {
+void vulkan_renderer_state::destroy_native_texture(vulkan_image_allocation& texture) noexcept {
   {
     std::lock_guard lock{queue_mutex_};
     std::erase_if(image_states_, [&](const auto& state) { return state.image == texture.image; });
@@ -1150,11 +1158,10 @@ void renderer_state::destroy_native_texture(vulkan_image_allocation& texture) no
   memory_allocator_.destroy_image(texture);
 }
 
-granit_result
-renderer_state::create_native_texture_view(backend_texture_resource& texture_resource,
-                                           const granit_texture_desc& texture_desc,
-                                           const granit_texture_view_desc& view_desc,
-                                           backend_texture_view_resource& view_resource) noexcept {
+granit_result vulkan_renderer_state::create_native_texture_view(
+    backend_texture_resource& texture_resource, const granit_texture_desc& texture_desc,
+    const granit_texture_view_desc& view_desc,
+    backend_texture_view_resource& view_resource) noexcept {
   if (device_lost())
     return GRANIT_ERROR_DEVICE_LOST;
   const auto& texture = static_cast<vulkan_texture_resource&>(texture_resource).native();
@@ -1181,15 +1188,15 @@ renderer_state::create_native_texture_view(backend_texture_resource& texture_res
       device_.functions().vkCreateImageView(device_.native_handle(), &info, nullptr, &view)));
 }
 
-void renderer_state::destroy_native_texture_view(VkImageView view) noexcept {
+void vulkan_renderer_state::destroy_native_texture_view(VkImageView view) noexcept {
   if (view != VK_NULL_HANDLE) {
     device_.functions().vkDestroyImageView(device_.native_handle(), view, nullptr);
   }
 }
 
 granit_result
-renderer_state::create_native_sampler(const granit_sampler_desc& desc,
-                                      backend_sampler_resource& sampler_resource) noexcept {
+vulkan_renderer_state::create_native_sampler(const granit_sampler_desc& desc,
+                                             backend_sampler_resource& sampler_resource) noexcept {
   if (device_lost())
     return GRANIT_ERROR_DEVICE_LOST;
   auto& sampler = static_cast<vulkan_sampler_resource&>(sampler_resource).native();
@@ -1240,15 +1247,15 @@ renderer_state::create_native_sampler(const granit_sampler_desc& desc,
       device_.functions().vkCreateSampler(device_.native_handle(), &info, nullptr, &sampler)));
 }
 
-void renderer_state::destroy_native_sampler(VkSampler sampler) noexcept {
+void vulkan_renderer_state::destroy_native_sampler(VkSampler sampler) noexcept {
   if (sampler != VK_NULL_HANDLE) {
     device_.functions().vkDestroySampler(device_.native_handle(), sampler, nullptr);
   }
 }
 
 granit_result
-renderer_state::create_native_shader(std::span<const std::uint32_t> code,
-                                     backend_shader_resource& shader_resource) noexcept {
+vulkan_renderer_state::create_native_shader(std::span<const std::uint32_t> code,
+                                            backend_shader_resource& shader_resource) noexcept {
   if (device_lost())
     return GRANIT_ERROR_DEVICE_LOST;
   auto& shader = static_cast<vulkan_shader_resource&>(shader_resource).native();
@@ -1260,12 +1267,12 @@ renderer_state::create_native_shader(std::span<const std::uint32_t> code,
       device_.functions().vkCreateShaderModule(device_.native_handle(), &info, nullptr, &shader)));
 }
 
-void renderer_state::destroy_native_shader(VkShaderModule shader) noexcept {
+void vulkan_renderer_state::destroy_native_shader(VkShaderModule shader) noexcept {
   if (shader != VK_NULL_HANDLE)
     device_.functions().vkDestroyShaderModule(device_.native_handle(), shader, nullptr);
 }
 
-granit_result renderer_state::create_native_bind_group_layout(
+granit_result vulkan_renderer_state::create_native_bind_group_layout(
     std::span<const granit_bind_group_layout_entry> entries,
     backend_bind_group_layout_resource& layout_resource) noexcept {
   if (device_lost())
@@ -1303,14 +1310,15 @@ granit_result renderer_state::create_native_bind_group_layout(
       device_.native_handle(), &info, nullptr, &layout)));
 }
 
-void renderer_state::destroy_native_bind_group_layout(VkDescriptorSetLayout layout) noexcept {
+void vulkan_renderer_state::destroy_native_bind_group_layout(
+    VkDescriptorSetLayout layout) noexcept {
   if (layout != VK_NULL_HANDLE) {
     std::lock_guard lock{resource_mutex_};
     device_.functions().vkDestroyDescriptorSetLayout(device_.native_handle(), layout, nullptr);
   }
 }
 
-granit_result renderer_state::create_native_bind_group(
+granit_result vulkan_renderer_state::create_native_bind_group(
     backend_bind_group_layout_resource& layout_resource,
     std::span<const backend_bind_group_write> writes,
     backend_bind_group_resource& bind_group_resource) noexcept {
@@ -1418,14 +1426,14 @@ granit_result renderer_state::create_native_bind_group(
   return GRANIT_SUCCESS;
 }
 
-void renderer_state::destroy_native_bind_group(VkDescriptorPool pool) noexcept {
+void vulkan_renderer_state::destroy_native_bind_group(VkDescriptorPool pool) noexcept {
   if (pool != VK_NULL_HANDLE) {
     std::lock_guard lock{resource_mutex_};
     device_.functions().vkDestroyDescriptorPool(device_.native_handle(), pool, nullptr);
   }
 }
 
-granit_result renderer_state::create_native_pipeline_layout(
+granit_result vulkan_renderer_state::create_native_pipeline_layout(
     std::span<backend_bind_group_layout_resource* const> bind_group_layouts,
     backend_pipeline_layout_resource& layout_resource) noexcept {
   if (device_lost())
@@ -1454,14 +1462,14 @@ granit_result renderer_state::create_native_pipeline_layout(
   }
 }
 
-void renderer_state::destroy_native_pipeline_layout(VkPipelineLayout layout) noexcept {
+void vulkan_renderer_state::destroy_native_pipeline_layout(VkPipelineLayout layout) noexcept {
   if (layout != VK_NULL_HANDLE) {
     std::lock_guard lock{resource_mutex_};
     device_.functions().vkDestroyPipelineLayout(device_.native_handle(), layout, nullptr);
   }
 }
 
-granit_result renderer_state::create_native_graphics_pipeline(
+granit_result vulkan_renderer_state::create_native_graphics_pipeline(
     backend_pipeline_layout_resource& layout_resource, backend_shader_resource& vertex_resource,
     const char* vertex_entry, backend_shader_resource& fragment_resource,
     const char* fragment_entry, std::span<const granit_vertex_buffer_layout> vertex_buffers,
@@ -1646,14 +1654,14 @@ granit_result renderer_state::create_native_graphics_pipeline(
       device_.native_handle(), pipeline_cache_, 1, &info, nullptr, &pipeline)));
 }
 
-void renderer_state::destroy_native_graphics_pipeline(VkPipeline pipeline) noexcept {
+void vulkan_renderer_state::destroy_native_graphics_pipeline(VkPipeline pipeline) noexcept {
   if (pipeline != VK_NULL_HANDLE) {
     std::lock_guard lock{resource_mutex_};
     device_.functions().vkDestroyPipeline(device_.native_handle(), pipeline, nullptr);
   }
 }
 
-granit_result renderer_state::create_native_compute_pipeline(
+granit_result vulkan_renderer_state::create_native_compute_pipeline(
     backend_pipeline_layout_resource& layout_resource, backend_shader_resource& compute_resource,
     const char* compute_entry, backend_compute_pipeline_resource& pipeline_resource) noexcept {
   if (device_lost())
@@ -1673,23 +1681,23 @@ granit_result renderer_state::create_native_compute_pipeline(
       device_.native_handle(), pipeline_cache_, 1, &info, nullptr, &pipeline)));
 }
 
-void renderer_state::destroy_native_compute_pipeline(VkPipeline pipeline) noexcept {
+void vulkan_renderer_state::destroy_native_compute_pipeline(VkPipeline pipeline) noexcept {
   if (pipeline != VK_NULL_HANDLE) {
     std::lock_guard lock{resource_mutex_};
     device_.functions().vkDestroyPipeline(device_.native_handle(), pipeline, nullptr);
   }
 }
 
-granit_result
-renderer_state::create_command_recorder(backend_command_recorder_resource& resource) noexcept {
+granit_result vulkan_renderer_state::create_command_recorder(
+    backend_command_recorder_resource& resource) noexcept {
   if (device_lost())
     return GRANIT_ERROR_DEVICE_LOST;
   auto& recorder = static_cast<vulkan_command_recorder_resource&>(resource).native();
   return observe_device_result(recorder.initialize(device_));
 }
 
-granit_result
-renderer_state::begin_command_recorder(backend_command_recorder_resource& resource) noexcept {
+granit_result vulkan_renderer_state::begin_command_recorder(
+    backend_command_recorder_resource& resource) noexcept {
   if (device_lost())
     return GRANIT_ERROR_DEVICE_LOST;
   auto& recorder = static_cast<vulkan_command_recorder_resource&>(resource).native();
@@ -1697,31 +1705,30 @@ renderer_state::begin_command_recorder(backend_command_recorder_resource& resour
 }
 
 granit_result
-renderer_state::end_command_recorder(backend_command_recorder_resource& resource) noexcept {
+vulkan_renderer_state::end_command_recorder(backend_command_recorder_resource& resource) noexcept {
   if (device_lost())
     return GRANIT_ERROR_DEVICE_LOST;
   auto& recorder = static_cast<vulkan_command_recorder_resource&>(resource).native();
   return observe_device_result(recorder.end(device_));
 }
 
-granit_result
-renderer_state::reset_command_recorder(backend_command_recorder_resource& resource) noexcept {
+granit_result vulkan_renderer_state::reset_command_recorder(
+    backend_command_recorder_resource& resource) noexcept {
   if (device_lost())
     return GRANIT_ERROR_DEVICE_LOST;
   auto& recorder = static_cast<vulkan_command_recorder_resource&>(resource).native();
   return observe_device_result(recorder.reset(device_));
 }
 
-bool renderer_state::command_recorder_is_recording(
+bool vulkan_renderer_state::command_recorder_is_recording(
     backend_command_recorder_resource& resource) noexcept {
   return static_cast<vulkan_command_recorder_resource&>(resource).native().state() ==
          command_recorder_state::recording;
 }
 
-granit_result renderer_state::copy_buffer(backend_command_recorder_resource& recorder_resource,
-                                          backend_buffer_resource& source,
-                                          backend_buffer_resource& destination,
-                                          std::span<const granit_buffer_copy_region> regions) {
+granit_result vulkan_renderer_state::copy_buffer(
+    backend_command_recorder_resource& recorder_resource, backend_buffer_resource& source,
+    backend_buffer_resource& destination, std::span<const granit_buffer_copy_region> regions) {
   if (device_lost())
     return GRANIT_ERROR_DEVICE_LOST;
   auto& recorder = static_cast<vulkan_command_recorder_resource&>(recorder_resource).native();
@@ -1743,7 +1750,7 @@ granit_result renderer_state::copy_buffer(backend_command_recorder_resource& rec
   }
 }
 
-granit_result renderer_state::copy_texture_to_buffer(
+granit_result vulkan_renderer_state::copy_texture_to_buffer(
     backend_command_recorder_resource& recorder_resource, backend_texture_resource& source,
     backend_buffer_resource& destination, granit_texture_format format,
     const granit_texture_data_layout& layout, const granit_texture_write_region& region) {
@@ -1765,7 +1772,7 @@ granit_result renderer_state::copy_texture_to_buffer(
       static_cast<vulkan_buffer_resource&>(destination).native().buffer, copy));
 }
 
-granit_result renderer_state::copy_buffer_to_texture(
+granit_result vulkan_renderer_state::copy_buffer_to_texture(
     backend_command_recorder_resource& recorder_resource, backend_buffer_resource& source,
     backend_texture_resource& destination, granit_texture_format format,
     const granit_texture_data_layout& layout, const granit_texture_write_region& region) {
@@ -1787,10 +1794,9 @@ granit_result renderer_state::copy_buffer_to_texture(
       static_cast<vulkan_texture_resource&>(destination).native().image, copy));
 }
 
-granit_result renderer_state::copy_texture(backend_command_recorder_resource& recorder_resource,
-                                           backend_texture_resource& source,
-                                           backend_texture_resource& destination,
-                                           const granit_texture_copy_region& region) {
+granit_result vulkan_renderer_state::copy_texture(
+    backend_command_recorder_resource& recorder_resource, backend_texture_resource& source,
+    backend_texture_resource& destination, const granit_texture_copy_region& region) {
   if (device_lost())
     return GRANIT_ERROR_DEVICE_LOST;
   auto& recorder = static_cast<vulkan_command_recorder_resource&>(recorder_resource).native();
@@ -1811,10 +1817,9 @@ granit_result renderer_state::copy_texture(backend_command_recorder_resource& re
       static_cast<vulkan_texture_resource&>(destination).native().image, copy));
 }
 
-granit_result renderer_state::generate_mipmaps(backend_command_recorder_resource& recorder_resource,
-                                               backend_texture_resource& texture,
-                                               const granit_texture_desc& desc,
-                                               const granit_texture_mipmap_range& range) {
+granit_result vulkan_renderer_state::generate_mipmaps(
+    backend_command_recorder_resource& recorder_resource, backend_texture_resource& texture,
+    const granit_texture_desc& desc, const granit_texture_mipmap_range& range) {
   if (device_lost())
     return GRANIT_ERROR_DEVICE_LOST;
   auto& recorder = static_cast<vulkan_command_recorder_resource&>(recorder_resource).native();
@@ -1826,9 +1831,10 @@ granit_result renderer_state::generate_mipmaps(backend_command_recorder_resource
       range.base_mip_level, range.level_count, range.base_array_layer, range.array_layer_count));
 }
 
-granit_result renderer_state::fill_buffer(backend_command_recorder_resource& recorder_resource,
-                                          backend_buffer_resource& buffer, std::uint64_t offset,
-                                          std::uint64_t size, std::uint32_t value) {
+granit_result
+vulkan_renderer_state::fill_buffer(backend_command_recorder_resource& recorder_resource,
+                                   backend_buffer_resource& buffer, std::uint64_t offset,
+                                   std::uint64_t size, std::uint32_t value) {
   if (device_lost())
     return GRANIT_ERROR_DEVICE_LOST;
   auto& recorder = static_cast<vulkan_command_recorder_resource&>(recorder_resource).native();
@@ -1836,9 +1842,9 @@ granit_result renderer_state::fill_buffer(backend_command_recorder_resource& rec
       device_, static_cast<vulkan_buffer_resource&>(buffer).native().buffer, offset, size, value));
 }
 
-granit_result
-renderer_state::bind_graphics_pipeline(backend_command_recorder_resource& recorder_resource,
-                                       backend_graphics_pipeline_resource& resource) noexcept {
+granit_result vulkan_renderer_state::bind_graphics_pipeline(
+    backend_command_recorder_resource& recorder_resource,
+    backend_graphics_pipeline_resource& resource) noexcept {
   if (device_lost())
     return GRANIT_ERROR_DEVICE_LOST;
   auto& recorder = static_cast<vulkan_command_recorder_resource&>(recorder_resource).native();
@@ -1846,14 +1852,13 @@ renderer_state::bind_graphics_pipeline(backend_command_recorder_resource& record
       device_, static_cast<vulkan_graphics_pipeline_resource&>(resource).native());
 }
 
-granit_result
-renderer_state::bind_graphics_groups(backend_command_recorder_resource& recorder_resource,
-                                     backend_pipeline_layout_resource& layout_resource,
-                                     std::uint32_t first_group,
-                                     std::span<backend_bind_group_resource* const> bind_groups,
-                                     std::span<const std::uint32_t> dynamic_offsets,
-                                     std::span<const backend_buffer_access> buffer_accesses,
-                                     std::span<const backend_texture_access> texture_accesses) {
+granit_result vulkan_renderer_state::bind_graphics_groups(
+    backend_command_recorder_resource& recorder_resource,
+    backend_pipeline_layout_resource& layout_resource, std::uint32_t first_group,
+    std::span<backend_bind_group_resource* const> bind_groups,
+    std::span<const std::uint32_t> dynamic_offsets,
+    std::span<const backend_buffer_access> buffer_accesses,
+    std::span<const backend_texture_access> texture_accesses) {
   if (device_lost())
     return GRANIT_ERROR_DEVICE_LOST;
   auto& recorder = static_cast<vulkan_command_recorder_resource&>(recorder_resource).native();
@@ -1911,8 +1916,8 @@ renderer_state::bind_graphics_groups(backend_command_recorder_resource& recorder
 }
 
 granit_result
-renderer_state::bind_compute_pipeline(backend_command_recorder_resource& recorder_resource,
-                                      backend_compute_pipeline_resource& resource) noexcept {
+vulkan_renderer_state::bind_compute_pipeline(backend_command_recorder_resource& recorder_resource,
+                                             backend_compute_pipeline_resource& resource) noexcept {
   auto& recorder = static_cast<vulkan_command_recorder_resource&>(recorder_resource).native();
   return device_lost()
              ? GRANIT_ERROR_DEVICE_LOST
@@ -1920,14 +1925,13 @@ renderer_state::bind_compute_pipeline(backend_command_recorder_resource& recorde
                    device_, static_cast<vulkan_compute_pipeline_resource&>(resource).native());
 }
 
-granit_result
-renderer_state::bind_compute_groups(backend_command_recorder_resource& recorder_resource,
-                                    backend_pipeline_layout_resource& layout_resource,
-                                    std::uint32_t first_group,
-                                    std::span<backend_bind_group_resource* const> bind_groups,
-                                    std::span<const std::uint32_t> dynamic_offsets,
-                                    std::span<const backend_buffer_access> buffer_accesses,
-                                    std::span<const backend_texture_access> texture_accesses) {
+granit_result vulkan_renderer_state::bind_compute_groups(
+    backend_command_recorder_resource& recorder_resource,
+    backend_pipeline_layout_resource& layout_resource, std::uint32_t first_group,
+    std::span<backend_bind_group_resource* const> bind_groups,
+    std::span<const std::uint32_t> dynamic_offsets,
+    std::span<const backend_buffer_access> buffer_accesses,
+    std::span<const backend_texture_access> texture_accesses) {
   if (device_lost())
     return GRANIT_ERROR_DEVICE_LOST;
   auto& recorder = static_cast<vulkan_command_recorder_resource&>(recorder_resource).native();
@@ -1984,17 +1988,19 @@ renderer_state::bind_compute_groups(backend_command_recorder_resource& recorder_
   }
 }
 
-granit_result renderer_state::dispatch(backend_command_recorder_resource& recorder_resource,
-                                       std::uint32_t group_count_x, std::uint32_t group_count_y,
-                                       std::uint32_t group_count_z) noexcept {
+granit_result vulkan_renderer_state::dispatch(backend_command_recorder_resource& recorder_resource,
+                                              std::uint32_t group_count_x,
+                                              std::uint32_t group_count_y,
+                                              std::uint32_t group_count_z) noexcept {
   auto& recorder = static_cast<vulkan_command_recorder_resource&>(recorder_resource).native();
   return device_lost() ? GRANIT_ERROR_DEVICE_LOST
                        : recorder.dispatch(device_, group_count_x, group_count_y, group_count_z);
 }
 
-granit_result renderer_state::set_viewports(backend_command_recorder_resource& recorder_resource,
-                                            std::uint32_t first,
-                                            std::span<const granit_viewport> viewports) noexcept {
+granit_result
+vulkan_renderer_state::set_viewports(backend_command_recorder_resource& recorder_resource,
+                                     std::uint32_t first,
+                                     std::span<const granit_viewport> viewports) noexcept {
   if (device_lost())
     return GRANIT_ERROR_DEVICE_LOST;
   auto& recorder = static_cast<vulkan_command_recorder_resource&>(recorder_resource).native();
@@ -2012,9 +2018,10 @@ granit_result renderer_state::set_viewports(backend_command_recorder_resource& r
   }
 }
 
-granit_result renderer_state::set_scissors(backend_command_recorder_resource& recorder_resource,
-                                           std::uint32_t first,
-                                           std::span<const granit_scissor> scissors) noexcept {
+granit_result
+vulkan_renderer_state::set_scissors(backend_command_recorder_resource& recorder_resource,
+                                    std::uint32_t first,
+                                    std::span<const granit_scissor> scissors) noexcept {
   if (device_lost())
     return GRANIT_ERROR_DEVICE_LOST;
   auto& recorder = static_cast<vulkan_command_recorder_resource&>(recorder_resource).native();
@@ -2031,7 +2038,7 @@ granit_result renderer_state::set_scissors(backend_command_recorder_resource& re
   }
 }
 
-granit_result renderer_state::bind_vertex_buffers(
+granit_result vulkan_renderer_state::bind_vertex_buffers(
     backend_command_recorder_resource& recorder_resource, std::uint32_t first,
     std::span<backend_buffer_resource* const> buffers, std::span<const std::uint64_t> offsets) {
   if (device_lost())
@@ -2057,9 +2064,9 @@ granit_result renderer_state::bind_vertex_buffers(
 }
 
 granit_result
-renderer_state::bind_index_buffer(backend_command_recorder_resource& recorder_resource,
-                                  backend_buffer_resource& buffer, std::uint64_t offset,
-                                  granit_index_type type) {
+vulkan_renderer_state::bind_index_buffer(backend_command_recorder_resource& recorder_resource,
+                                         backend_buffer_resource& buffer, std::uint64_t offset,
+                                         granit_index_type type) {
   if (device_lost())
     return GRANIT_ERROR_DEVICE_LOST;
   auto& recorder = static_cast<vulkan_command_recorder_resource&>(recorder_resource).native();
@@ -2069,28 +2076,30 @@ renderer_state::bind_index_buffer(backend_command_recorder_resource& recorder_re
       device_, static_cast<vulkan_buffer_resource&>(buffer).native().buffer, offset, native_type);
 }
 
-granit_result renderer_state::draw(backend_command_recorder_resource& recorder_resource,
-                                   backend_texture_view_resource*,
-                                   backend_graphics_pipeline_resource*, std::uint32_t vertex_count,
-                                   std::uint32_t instance_count, std::uint32_t first_vertex,
-                                   std::uint32_t first_instance) noexcept {
+granit_result vulkan_renderer_state::draw(backend_command_recorder_resource& recorder_resource,
+                                          backend_texture_view_resource*,
+                                          backend_graphics_pipeline_resource*,
+                                          std::uint32_t vertex_count, std::uint32_t instance_count,
+                                          std::uint32_t first_vertex,
+                                          std::uint32_t first_instance) noexcept {
   auto& recorder = static_cast<vulkan_command_recorder_resource&>(recorder_resource).native();
   return device_lost()
              ? GRANIT_ERROR_DEVICE_LOST
              : recorder.draw(device_, vertex_count, instance_count, first_vertex, first_instance);
 }
 
-granit_result renderer_state::draw_indexed(backend_command_recorder_resource& recorder_resource,
-                                           std::uint32_t index_count, std::uint32_t instance_count,
-                                           std::uint32_t first_index, std::int32_t vertex_offset,
-                                           std::uint32_t first_instance) noexcept {
+granit_result
+vulkan_renderer_state::draw_indexed(backend_command_recorder_resource& recorder_resource,
+                                    std::uint32_t index_count, std::uint32_t instance_count,
+                                    std::uint32_t first_index, std::int32_t vertex_offset,
+                                    std::uint32_t first_instance) noexcept {
   auto& recorder = static_cast<vulkan_command_recorder_resource&>(recorder_resource).native();
   return device_lost() ? GRANIT_ERROR_DEVICE_LOST
                        : recorder.draw_indexed(device_, index_count, instance_count, first_index,
                                                vertex_offset, first_instance);
 }
 
-granit_result renderer_state::begin_rendering(
+granit_result vulkan_renderer_state::begin_rendering(
     backend_command_recorder_resource& recorder_resource, granit_rendering_area area,
     std::span<const backend_color_attachment> color_attachments,
     const backend_depth_stencil_attachment* depth_stencil_attachment, std::uint32_t layer_count) {
@@ -2181,15 +2190,15 @@ granit_result renderer_state::begin_rendering(
   }
 }
 
-granit_result
-renderer_state::end_rendering(backend_command_recorder_resource& recorder_resource) noexcept {
+granit_result vulkan_renderer_state::end_rendering(
+    backend_command_recorder_resource& recorder_resource) noexcept {
   if (device_lost())
     return GRANIT_ERROR_DEVICE_LOST;
   auto& recorder = static_cast<vulkan_command_recorder_resource&>(recorder_resource).native();
   return observe_device_result(recorder.end_rendering(device_));
 }
 
-granit_result renderer_state::complete_frame_slot(frame_slot& slot) noexcept {
+granit_result vulkan_renderer_state::complete_frame_slot(frame_slot& slot) noexcept {
   if (slot.serial == 0) {
     return GRANIT_SUCCESS;
   }
@@ -2205,8 +2214,9 @@ granit_result renderer_state::complete_frame_slot(frame_slot& slot) noexcept {
   return GRANIT_SUCCESS;
 }
 
-granit_result renderer_state::submit_command_recorder(backend_command_recorder_resource& resource,
-                                                      submission_serial& submitted_serial) {
+granit_result
+vulkan_renderer_state::submit_command_recorder(backend_command_recorder_resource& resource,
+                                               submission_serial& submitted_serial) {
   auto& recorder = static_cast<vulkan_command_recorder_resource&>(resource).native();
   submitted_serial = 0;
   if (device_lost())
@@ -2306,7 +2316,7 @@ granit_result renderer_state::submit_command_recorder(backend_command_recorder_r
   return GRANIT_SUCCESS;
 }
 
-granit_result renderer_state::submit_command_recorders(
+granit_result vulkan_renderer_state::submit_command_recorders(
     std::span<backend_command_recorder_resource* const> resources,
     submission_serial& submitted_serial) {
   submitted_serial = 0;
@@ -2450,8 +2460,9 @@ granit_result renderer_state::submit_command_recorders(
   return GRANIT_SUCCESS;
 }
 
-granit_result renderer_state::acquire_swapchain_frame(backend_swapchain_resource& resource,
-                                                      backend_acquired_swapchain_frame& frame) {
+granit_result
+vulkan_renderer_state::acquire_swapchain_frame(backend_swapchain_resource& resource,
+                                               backend_acquired_swapchain_frame& frame) {
   auto& swapchain = static_cast<vulkan_swapchain_resource&>(resource).native();
   if (device_lost())
     return GRANIT_ERROR_DEVICE_LOST;
@@ -2473,11 +2484,9 @@ granit_result renderer_state::acquire_swapchain_frame(backend_swapchain_resource
   return GRANIT_SUCCESS;
 }
 
-granit_result renderer_state::submit_swapchain_frame(backend_command_recorder_resource& command,
-                                                     backend_swapchain_resource& resource,
-                                                     std::uint32_t image_index,
-                                                     std::size_t slot_index,
-                                                     submission_serial& submitted_serial) {
+granit_result vulkan_renderer_state::submit_swapchain_frame(
+    backend_command_recorder_resource& command, backend_swapchain_resource& resource,
+    std::uint32_t image_index, std::size_t slot_index, submission_serial& submitted_serial) {
   auto& recorder = static_cast<vulkan_command_recorder_resource&>(command).native();
   auto& swapchain = static_cast<vulkan_swapchain_resource&>(resource).native();
   submitted_serial = 0;
@@ -2622,10 +2631,10 @@ granit_result renderer_state::submit_swapchain_frame(backend_command_recorder_re
   return GRANIT_SUCCESS;
 }
 
-granit_result renderer_state::present_swapchain_frame(backend_swapchain_resource& resource,
-                                                      std::uint32_t image_index,
-                                                      std::size_t slot_index,
-                                                      bool& needs_recreate) {
+granit_result vulkan_renderer_state::present_swapchain_frame(backend_swapchain_resource& resource,
+                                                             std::uint32_t image_index,
+                                                             std::size_t slot_index,
+                                                             bool& needs_recreate) {
   auto& swapchain = static_cast<vulkan_swapchain_resource&>(resource).native();
   if (device_lost())
     return GRANIT_ERROR_DEVICE_LOST;
@@ -2642,9 +2651,10 @@ granit_result renderer_state::present_swapchain_frame(backend_swapchain_resource
   return observe_device_result(presented.result);
 }
 
-granit_result renderer_state::cancel_swapchain_frame(backend_swapchain_resource& resource,
-                                                     std::uint32_t image_index,
-                                                     std::size_t slot_index, bool& needs_recreate) {
+granit_result vulkan_renderer_state::cancel_swapchain_frame(backend_swapchain_resource& resource,
+                                                            std::uint32_t image_index,
+                                                            std::size_t slot_index,
+                                                            bool& needs_recreate) {
   auto& swapchain = static_cast<vulkan_swapchain_resource&>(resource).native();
   if (device_lost())
     return GRANIT_ERROR_DEVICE_LOST;
@@ -2737,8 +2747,9 @@ granit_result renderer_state::cancel_swapchain_frame(backend_swapchain_resource&
   return observe_device_result(presented.result);
 }
 
-granit_result renderer_state::observe_device_result(granit_result result,
-                                                    const std::source_location& location) noexcept {
+granit_result
+vulkan_renderer_state::observe_device_result(granit_result result,
+                                             const std::source_location& location) noexcept {
   bool first_loss = false;
   const auto observed = device_status_.observe(result, &first_loss);
   if (observed == GRANIT_ERROR_DEVICE_LOST)
@@ -2760,7 +2771,7 @@ granit_result renderer_state::observe_device_result(granit_result result,
 }
 
 granit_result
-renderer_state::wait_command_recorder(backend_command_recorder_resource& resource) noexcept {
+vulkan_renderer_state::wait_command_recorder(backend_command_recorder_resource& resource) noexcept {
   auto& recorder = static_cast<vulkan_command_recorder_resource&>(resource).native();
   if (device_lost())
     return GRANIT_ERROR_DEVICE_LOST;
@@ -2777,7 +2788,7 @@ renderer_state::wait_command_recorder(backend_command_recorder_resource& resourc
   return GRANIT_ERROR_INTERNAL;
 }
 
-granit_result renderer_state::wait_for_all_submissions() noexcept {
+granit_result vulkan_renderer_state::wait_for_all_submissions() noexcept {
   std::lock_guard lock{queue_mutex_};
   for (auto& slot : frame_slots_) {
     const auto result = complete_frame_slot(slot);
@@ -2788,7 +2799,7 @@ granit_result renderer_state::wait_for_all_submissions() noexcept {
   return GRANIT_SUCCESS;
 }
 
-granit_result renderer_state::wait_for_present_idle() noexcept {
+granit_result vulkan_renderer_state::wait_for_present_idle() noexcept {
   if (device_lost())
     return GRANIT_ERROR_DEVICE_LOST;
   std::lock_guard lock{queue_mutex_};
@@ -2799,7 +2810,7 @@ granit_result renderer_state::wait_for_present_idle() noexcept {
   return result;
 }
 
-granit_result renderer_state::create_timestamp_query_pool(
+granit_result vulkan_renderer_state::create_timestamp_query_pool(
     std::uint32_t query_count,
     std::unique_ptr<backend_timestamp_query_pool_resource>& pool) noexcept {
   pool.reset();
@@ -2818,26 +2829,26 @@ granit_result renderer_state::create_timestamp_query_pool(
 }
 
 granit_result
-renderer_state::read_timestamp_query_results(backend_timestamp_query_pool_resource& resource,
-                                             std::uint32_t first,
-                                             std::span<std::uint64_t> values) noexcept {
+vulkan_renderer_state::read_timestamp_query_results(backend_timestamp_query_pool_resource& resource,
+                                                    std::uint32_t first,
+                                                    std::span<std::uint64_t> values) noexcept {
   auto& pool = static_cast<vulkan_timestamp_query_pool_resource&>(resource).native();
   return pool.read_nanoseconds(device_, first, values, false);
 }
 
 granit_result
-renderer_state::reset_timestamp_queries(backend_command_recorder_resource& recorder_resource,
-                                        backend_timestamp_query_pool_resource& pool_resource,
-                                        std::uint32_t first, std::uint32_t count) noexcept {
+vulkan_renderer_state::reset_timestamp_queries(backend_command_recorder_resource& recorder_resource,
+                                               backend_timestamp_query_pool_resource& pool_resource,
+                                               std::uint32_t first, std::uint32_t count) noexcept {
   auto& recorder = static_cast<vulkan_command_recorder_resource&>(recorder_resource).native();
   auto& pool = static_cast<vulkan_timestamp_query_pool_resource&>(pool_resource).native();
   return pool.reset(device_, recorder.native_handle(), first, count);
 }
 
-granit_result renderer_state::write_timestamp(backend_command_recorder_resource& recorder_resource,
-                                              backend_timestamp_query_pool_resource& pool_resource,
-                                              granit_timestamp_stage stage,
-                                              std::uint32_t index) noexcept {
+granit_result
+vulkan_renderer_state::write_timestamp(backend_command_recorder_resource& recorder_resource,
+                                       backend_timestamp_query_pool_resource& pool_resource,
+                                       granit_timestamp_stage stage, std::uint32_t index) noexcept {
   const auto native_stage =
       stage == GRANIT_TIMESTAMP_STAGE_TOP      ? VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT
       : stage == GRANIT_TIMESTAMP_STAGE_DRAW   ? VK_PIPELINE_STAGE_2_ALL_GRAPHICS_BIT
@@ -2850,21 +2861,20 @@ granit_result renderer_state::write_timestamp(backend_command_recorder_resource&
   return pool.write(device_, recorder.native_handle(), native_stage, index);
 }
 
-granit_result
-renderer_state::set_timestamp_query_pool_name(backend_timestamp_query_pool_resource& resource,
-                                              std::string_view name) noexcept {
+granit_result vulkan_renderer_state::set_timestamp_query_pool_name(
+    backend_timestamp_query_pool_resource& resource, std::string_view name) noexcept {
   const auto native =
       static_cast<vulkan_timestamp_query_pool_resource&>(resource).native().native_handle();
   return set_object_name(VK_OBJECT_TYPE_QUERY_POOL, object_handle_value(native), name);
 }
 
-void renderer_state::retire_resource(submission_serial retire_after, retirement_order order,
-                                     std::shared_ptr<void> resource) {
+void vulkan_renderer_state::retire_resource(submission_serial retire_after, retirement_order order,
+                                            std::shared_ptr<void> resource) {
   std::lock_guard lock{retirement_mutex_};
   retirement_queue_.retire(retire_after, order, std::move(resource));
 }
 
-std::size_t renderer_state::collect_retired() noexcept {
+std::size_t vulkan_renderer_state::collect_retired() noexcept {
   submission_serial completed{};
   {
     std::lock_guard lock{queue_mutex_};
@@ -2874,18 +2884,18 @@ std::size_t renderer_state::collect_retired() noexcept {
   return retirement_queue_.collect(completed);
 }
 
-std::size_t renderer_state::drain_retired() noexcept {
+std::size_t vulkan_renderer_state::drain_retired() noexcept {
   std::lock_guard lock{retirement_mutex_};
   return retirement_queue_.drain();
 }
 
-void renderer_state::destroy_native_command_recorder(
+void vulkan_renderer_state::destroy_native_command_recorder(
     backend_command_recorder_resource& resource) noexcept {
   static_cast<vulkan_command_recorder_resource&>(resource).native().destroy(device_);
 }
 
-granit_result
-renderer_state::discard_command_recorder(backend_command_recorder_resource& resource) noexcept {
+granit_result vulkan_renderer_state::discard_command_recorder(
+    backend_command_recorder_resource& resource) noexcept {
   destroy_native_command_recorder(resource);
   return GRANIT_SUCCESS;
 }

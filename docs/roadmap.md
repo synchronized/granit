@@ -181,8 +181,9 @@
   WGSL 视图，WebGPU Shader 创建/销毁已接入 generation 句柄；空 Pipeline Layout、基础单颜色
   Graphics Pipeline，以及最小三角形 Command Recorder/Queue Submit 已接入公共 API。浏览器
   三角形示例与浏览器状态、输入及可读合成层像素验收已经完成；Windows、Linux 和 Emscripten
-  首轮矩阵均已通过。Emscripten 与桌面现统一包含同一 Registry 入口，平台实现集中在
-  `src/renderer`；旧类型和旧入口已删除，静态 SDK 与独立浏览器 Consumer 已通过构建和无头
+  首轮矩阵均已通过。Emscripten 与桌面现统一包含同一 Registry 入口，具体后端实现集中在
+  `src/backend/vulkan` 与 `src/backend/webgpu`，Renderer 创建差异由独立工厂编译单元承接；旧类型
+  和旧入口已删除，静态 SDK 与独立浏览器 Consumer 已通过构建和无头
   Chrome 验证。平台专用 Registry 已删除，两端共用唯一 Registry、句柄表、资源记录和公共 API
   编译单元；Registry 根记录现统一使用后端无关 Renderer 状态，不再保留 Vulkan 专用根表。
   Shader、Pipeline 与 Renderer 创建的平台差异已下沉到私有 HAL 和 Provider 工厂；命令、帧与资源
