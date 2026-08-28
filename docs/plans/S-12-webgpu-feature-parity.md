@@ -82,6 +82,62 @@ typedef struct granit_renderer_info {
 - `auto` 所有候选均失败时返回优先候选最能说明原因的结果，并通过 Diagnostic Callback 报告每次
   尝试；显式选择只报告所选后端的结果。
 
+### S-12B 桌面 Surface 契约
+
+公共 `granit_surface_create_win32`、`granit_surface_create_xcb` 和
+`granit_surface_create_wayland` 保持不变。SDL3 Integration 继续把 `SDL_Window` 转换成这些公共
+描述，不感知 Renderer 实际使用 Vulkan 还是 WebGPU。
+
+WebGPU Provider 插件 ABI 增加与公共入口对应的三组描述和创建函数，不使用一个携带无类型字段的
+通用结构体：
+
+```c
+typedef struct granit_backend_plugin_win32_surface_desc {
+  uint32_t struct_size;
+  uint32_t reserved;
+  void* instance;
+  void* window;
+} granit_backend_plugin_win32_surface_desc;
+
+typedef struct granit_backend_plugin_xcb_surface_desc {
+  uint32_t struct_size;
+  uint32_t reserved;
+  void* connection;
+  uint32_t window;
+  uint32_t reserved_2;
+} granit_backend_plugin_xcb_surface_desc;
+
+typedef struct granit_backend_plugin_wayland_surface_desc {
+  uint32_t struct_size;
+  uint32_t reserved;
+  void* display;
+  void* surface;
+} granit_backend_plugin_wayland_surface_desc;
+```
+
+- 实验性 Provider ABI 直接升级版本，操作表尾部追加三个创建函数；不保留旧版兼容分支。
+- 锁定 Dawn 头已经提供 Windows HWND、XCB Window 和 Wayland Surface 链结构，Provider 内部负责
+  转换，核心与公共头不包含 Dawn 或平台 SDK 类型。
+- 创建调用期间只借用描述结构和指针值；Granit 不拥有原生窗口、Display、Connection 或 Surface。
+  调用者必须让对应原生对象至少存活到 Granit Surface 销毁，且不得在其仍被使用时从其他线程销毁。
+- Renderer 创建描述中的 `surface_types` 继续作为允许集合。创建未声明类型返回
+  `GRANIT_ERROR_UNSUPPORTED`，无效空句柄返回 `GRANIT_ERROR_INVALID_ARGUMENT`。
+- Provider 能力快照尾部增加 `surface_types` 位集；`auto` 在创建 Renderer 前用请求位集筛选候选，
+  实际创建 Surface 时仍由 Provider 再校验平台与设备支持。
+- 一个 Surface 同时只能属于一个 Renderer；跨 Renderer、错误类型、重复销毁和父 Renderer 销毁后
+  使用继续由统一 generation 句柄表拒绝。
+
+呈现和重建沿用现有公共 Swapchain/Frame 语义：
+
+- 首次配置及窗口尺寸变化都通过 `granit_swapchain_create/recreate`，不增加 WebGPU 专用入口。
+- Native WebGPU 在成功提交帧后执行显式 Surface Present；Emscripten 仍由浏览器隐式呈现，不调用
+  平台禁止的显式 Present。
+- Acquire 返回的 Backbuffer Texture/View 继续由 Swapchain 借出，在 Present、Cancel、重建、
+  Surface Lost 或销毁后立即失效。
+- 零尺寸窗口返回 `GRANIT_ERROR_NOT_READY`；过期配置返回 `GRANIT_ERROR_OUT_OF_DATE`，Surface 丢失
+  返回 `GRANIT_ERROR_SURFACE_LOST`。调用方据此等待非零尺寸、重建 Swapchain 或重建 Surface。
+- Registry 串行化同一 Renderer 的 Surface/Swapchain 操作，但不替调用方同步窗口系统事件线程。
+
 ## 实施顺序
 
 1. **S-12A 后端选择**：实现 C ABI、C++ 包装、实际后端查询、插件定位和严格/自动选择语义。
@@ -100,6 +156,10 @@ typedef struct granit_renderer_info {
   调用者 `struct_size` 的内存。
 - 显式选择从不回退；`auto` 的候选顺序、可回退结果码及逐次诊断均由测试固定。
 - 桌面 WebGPU 能通过 Granit Surface/Swapchain 公共 API 在 Win32、XCB 与 Wayland 窗口呈现。
+- Mock Provider 覆盖三种描述布局、空值、允许位集、归属、销毁顺序、Surface Lost 和重建；真实
+  Dawn Smoke 在 Windows HWND、Linux XCB 与 Wayland 环境各完成多帧 Acquire/Submit/Present。
+- SDL3 + ImGui Smoke 不包含后端条件分支；测试参数只改变 Renderer 后端选择，并验证窗口缩放、
+  最小化恢复和退出期间的资源清理。
 - 后端不可用、能力不足、资源跨 Renderer 混用和动态偏移错误均有确定结果码。
 - 同一确定性 Fixture 在 Vulkan、桌面 Dawn WebGPU 和 Emscripten WebGPU 产生容差内一致的结果。
 - Windows、Linux 和 Emscripten 手动 Actions 通过；安装包不泄漏任何后端实现依赖。
