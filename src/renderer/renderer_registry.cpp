@@ -2312,6 +2312,7 @@ granit_result renderer_registry::create_shader(granit_renderer renderer, granit_
     if (!state)
       return GRANIT_ERROR_INVALID_HANDLE;
     auto record = std::make_shared<shader_record>();
+    record->owner = state;
     record->renderer = state;
     record->stage = stage;
     record->entry_point.assign(entry_point);
@@ -2342,29 +2343,79 @@ granit_result renderer_registry::create_shader(granit_renderer renderer, granit_
   }
 }
 
+granit_result renderer_registry::create_wgsl_shader(granit_renderer renderer,
+                                                    granit_shader_stage stage,
+                                                    std::string_view source,
+                                                    std::string_view entry_point,
+                                                    granit_shader& shader) {
+  try {
+    auto owner = acquire_backend(renderer);
+    auto state = std::dynamic_pointer_cast<webgpu_renderer_state>(owner);
+    if (!owner || !state)
+      return GRANIT_ERROR_INVALID_HANDLE;
+    if (state->shaders() == nullptr)
+      return GRANIT_ERROR_NOT_READY;
+    auto record = std::make_shared<shader_record>();
+    record->owner = owner;
+    record->stage = stage;
+    record->entry_point.assign(entry_point);
+    record->native = state->shaders()->allocate_shader();
+    if (!record->native)
+      return GRANIT_ERROR_OUT_OF_MEMORY;
+    const auto result =
+        state->shaders()->create_shader(*record->native, stage, source.data(), source.size(),
+                                        entry_point.data(), entry_point.size());
+    if (result != GRANIT_SUCCESS)
+      return result;
+    std::lock_guard lock{mutex_};
+    const auto found = backend_renderers_.find(renderer);
+    if (found == backend_renderers_.end() || found->second != owner)
+      return GRANIT_ERROR_INVALID_HANDLE;
+    record->metadata.creation_sequence = next_creation_sequence_++;
+    const auto handle = handles_.insert(record.get(), resource_type::shader, owner->domain());
+    if (handle == GRANIT_NULL_HANDLE)
+      return GRANIT_ERROR_OUT_OF_MEMORY;
+    try {
+      shaders_.emplace(handle, std::move(record));
+    } catch (...) {
+      static_cast<void>(handles_.erase(handle, resource_type::shader, owner->domain()));
+      throw;
+    }
+    shader = handle;
+    return GRANIT_SUCCESS;
+  } catch (const std::bad_alloc&) {
+    return GRANIT_ERROR_OUT_OF_MEMORY;
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
 granit_result renderer_registry::destroy_shader(granit_renderer renderer, granit_shader shader) {
   std::shared_ptr<shader_record> record;
   {
     std::lock_guard lock{mutex_};
-    const auto found_renderer = renderers_.find(renderer);
-    if (found_renderer == renderers_.end() ||
+    const auto found_renderer = backend_renderers_.find(renderer);
+    if (found_renderer == backend_renderers_.end() ||
         handles_.find(renderer, resource_type::renderer, 0) == nullptr)
       return GRANIT_ERROR_INVALID_HANDLE;
-    const auto& state = found_renderer->second;
-    if (handles_.find(shader, resource_type::shader, state->domain()) == nullptr)
+    const auto& owner = found_renderer->second;
+    if (handles_.find(shader, resource_type::shader, owner->domain()) == nullptr)
       return GRANIT_ERROR_INVALID_HANDLE;
     const auto found = shaders_.find(shader);
-    if (found == shaders_.end() || found->second->renderer != state)
+    if (found == shaders_.end() || found->second->owner != owner)
       return GRANIT_ERROR_INVALID_HANDLE;
     record = std::move(found->second);
     shaders_.erase(found);
-    static_cast<void>(handles_.erase(shader, resource_type::shader, state->domain()));
+    static_cast<void>(handles_.erase(shader, resource_type::shader, owner->domain()));
   }
   auto state = record->renderer;
-  state->retire_resource(record->metadata.last_use_serial.load(), retirement_order::resource,
-                         record);
+  if (state) {
+    state->retire_resource(record->metadata.last_use_serial.load(), retirement_order::resource,
+                           record);
+  }
   record.reset();
-  static_cast<void>(state->collect_retired());
+  if (state)
+    static_cast<void>(state->collect_retired());
   return GRANIT_SUCCESS;
 }
 
@@ -2620,6 +2671,7 @@ granit_result renderer_registry::create_pipeline_layout(
     if (!state)
       return GRANIT_ERROR_INVALID_HANDLE;
     auto record = std::make_shared<pipeline_layout_record>();
+    record->owner = state;
     record->renderer = state;
     std::vector<backend_bind_group_layout_resource*> native_layouts;
     {
@@ -2659,17 +2711,53 @@ granit_result renderer_registry::create_pipeline_layout(
   }
 }
 
+granit_result renderer_registry::create_webgpu_pipeline_layout(granit_renderer renderer,
+                                                               granit_pipeline_layout& layout) {
+  try {
+    auto owner = acquire_backend(renderer);
+    auto state = std::dynamic_pointer_cast<webgpu_renderer_state>(owner);
+    if (!owner || !state)
+      return GRANIT_ERROR_INVALID_HANDLE;
+    if (state->pipelines() == nullptr)
+      return GRANIT_ERROR_NOT_READY;
+    auto record = std::make_shared<pipeline_layout_record>();
+    record->owner = owner;
+    record->native = state->pipelines()->allocate_pipeline_layout();
+    if (!record->native)
+      return GRANIT_ERROR_OUT_OF_MEMORY;
+    const auto result = state->pipelines()->create_pipeline_layout(*record->native);
+    if (result != GRANIT_SUCCESS)
+      return result;
+    std::lock_guard lock{mutex_};
+    const auto found = backend_renderers_.find(renderer);
+    if (found == backend_renderers_.end() || found->second != owner)
+      return GRANIT_ERROR_INVALID_HANDLE;
+    record->metadata.creation_sequence = next_creation_sequence_++;
+    const auto handle =
+        handles_.insert(record.get(), resource_type::pipeline_layout, owner->domain());
+    if (handle == GRANIT_NULL_HANDLE)
+      return GRANIT_ERROR_OUT_OF_MEMORY;
+    pipeline_layouts_.emplace(handle, std::move(record));
+    layout = handle;
+    return GRANIT_SUCCESS;
+  } catch (const std::bad_alloc&) {
+    return GRANIT_ERROR_OUT_OF_MEMORY;
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
 granit_result renderer_registry::destroy_pipeline_layout(granit_renderer renderer,
                                                          granit_pipeline_layout layout) {
   std::shared_ptr<pipeline_layout_record> record;
   {
     std::lock_guard lock{mutex_};
-    const auto state = renderers_.find(renderer);
-    if (state == renderers_.end() ||
+    const auto state = backend_renderers_.find(renderer);
+    if (state == backend_renderers_.end() ||
         handles_.find(layout, resource_type::pipeline_layout, state->second->domain()) == nullptr)
       return GRANIT_ERROR_INVALID_HANDLE;
     const auto found = pipeline_layouts_.find(layout);
-    if (found == pipeline_layouts_.end() || found->second->renderer != state->second)
+    if (found == pipeline_layouts_.end() || found->second->owner != state->second)
       return GRANIT_ERROR_INVALID_HANDLE;
     record = std::move(found->second);
     pipeline_layouts_.erase(found);
@@ -2678,8 +2766,10 @@ granit_result renderer_registry::destroy_pipeline_layout(granit_renderer rendere
   }
   const auto state = record->renderer;
   const auto serial = record->metadata.last_use_serial.load();
-  state->retire_resource(serial, retirement_order::dependent, std::move(record));
-  static_cast<void>(state->collect_retired());
+  if (state) {
+    state->retire_resource(serial, retirement_order::dependent, std::move(record));
+    static_cast<void>(state->collect_retired());
+  }
   return GRANIT_SUCCESS;
 }
 
@@ -2711,6 +2801,7 @@ granit_result renderer_registry::create_graphics_pipeline(granit_renderer render
       fragment = fragment_found->second;
     }
     auto record = std::make_shared<graphics_pipeline_record>();
+    record->owner = state;
     record->renderer = state;
     record->layout = layout;
     record->vertex_shader = vertex;
@@ -2781,17 +2872,71 @@ granit_result renderer_registry::create_graphics_pipeline(granit_renderer render
   }
 }
 
+granit_result renderer_registry::create_webgpu_graphics_pipeline(
+    granit_renderer renderer, granit_pipeline_layout layout_handle, granit_shader vertex_shader,
+    granit_shader fragment_shader, granit_texture_format color_format,
+    granit_graphics_pipeline& pipeline) {
+  try {
+    auto owner = acquire_backend(renderer);
+    auto state = std::dynamic_pointer_cast<webgpu_renderer_state>(owner);
+    if (!owner || !state)
+      return GRANIT_ERROR_INVALID_HANDLE;
+    if (state->pipelines() == nullptr || state->shaders() == nullptr)
+      return GRANIT_ERROR_NOT_READY;
+    std::shared_ptr<pipeline_layout_record> layout;
+    std::shared_ptr<shader_record> vertex;
+    std::shared_ptr<shader_record> fragment;
+    {
+      std::lock_guard lock{mutex_};
+      const auto layout_found = pipeline_layouts_.find(layout_handle);
+      const auto vertex_found = shaders_.find(vertex_shader);
+      const auto fragment_found = shaders_.find(fragment_shader);
+      if (layout_found == pipeline_layouts_.end() || vertex_found == shaders_.end() ||
+          fragment_found == shaders_.end() || layout_found->second->owner != owner ||
+          vertex_found->second->owner != owner || fragment_found->second->owner != owner)
+        return GRANIT_ERROR_INVALID_HANDLE;
+      layout = layout_found->second;
+      vertex = vertex_found->second;
+      fragment = fragment_found->second;
+    }
+    auto record = std::make_shared<graphics_pipeline_record>();
+    record->owner = owner;
+    record->layout = layout;
+    record->vertex_shader = vertex;
+    record->fragment_shader = fragment;
+    record->native = state->pipelines()->allocate_graphics_pipeline();
+    if (!record->native)
+      return GRANIT_ERROR_OUT_OF_MEMORY;
+    const auto result = state->pipelines()->create_graphics_pipeline(
+        *record->native, *layout->native, state->shaders()->native_handle(*vertex->native),
+        state->shaders()->native_handle(*fragment->native), color_format);
+    if (result != GRANIT_SUCCESS)
+      return result;
+    std::lock_guard lock{mutex_};
+    const auto handle = handles_.insert(record.get(), resource_type::pipeline, owner->domain());
+    if (handle == GRANIT_NULL_HANDLE)
+      return GRANIT_ERROR_OUT_OF_MEMORY;
+    graphics_pipelines_.emplace(handle, std::move(record));
+    pipeline = handle;
+    return GRANIT_SUCCESS;
+  } catch (const std::bad_alloc&) {
+    return GRANIT_ERROR_OUT_OF_MEMORY;
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
 granit_result renderer_registry::destroy_graphics_pipeline(granit_renderer renderer,
                                                            granit_graphics_pipeline pipeline) {
   std::shared_ptr<graphics_pipeline_record> record;
   {
     std::lock_guard lock{mutex_};
-    const auto state = renderers_.find(renderer);
-    if (state == renderers_.end() ||
+    const auto state = backend_renderers_.find(renderer);
+    if (state == backend_renderers_.end() ||
         handles_.find(pipeline, resource_type::pipeline, state->second->domain()) == nullptr)
       return GRANIT_ERROR_INVALID_HANDLE;
     const auto found = graphics_pipelines_.find(pipeline);
-    if (found == graphics_pipelines_.end() || found->second->renderer != state->second)
+    if (found == graphics_pipelines_.end() || found->second->owner != state->second)
       return GRANIT_ERROR_INVALID_HANDLE;
     record = std::move(found->second);
     graphics_pipelines_.erase(found);
@@ -2799,8 +2944,10 @@ granit_result renderer_registry::destroy_graphics_pipeline(granit_renderer rende
   }
   const auto state = record->renderer;
   const auto serial = record->metadata.last_use_serial.load();
-  state->retire_resource(serial, retirement_order::dependent, std::move(record));
-  static_cast<void>(state->collect_retired());
+  if (state) {
+    state->retire_resource(serial, retirement_order::dependent, std::move(record));
+    static_cast<void>(state->collect_retired());
+  }
   return GRANIT_SUCCESS;
 }
 

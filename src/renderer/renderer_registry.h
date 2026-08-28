@@ -142,6 +142,10 @@ public:
   [[nodiscard]] granit_result create_shader(granit_renderer renderer, granit_shader_stage stage,
                                             std::span<const std::uint32_t> code,
                                             std::string_view entry_point, granit_shader& shader);
+  [[nodiscard]] granit_result create_wgsl_shader(granit_renderer renderer,
+                                                 granit_shader_stage stage, std::string_view source,
+                                                 std::string_view entry_point,
+                                                 granit_shader& shader);
   [[nodiscard]] granit_result destroy_shader(granit_renderer renderer, granit_shader shader);
   [[nodiscard]] granit_result
   create_bind_group_layout(granit_renderer renderer,
@@ -158,11 +162,19 @@ public:
   create_pipeline_layout(granit_renderer renderer,
                          std::span<const granit_bind_group_layout> bind_group_layouts,
                          granit_pipeline_layout& layout);
+  [[nodiscard]] granit_result create_webgpu_pipeline_layout(granit_renderer renderer,
+                                                            granit_pipeline_layout& layout);
   [[nodiscard]] granit_result destroy_pipeline_layout(granit_renderer renderer,
                                                       granit_pipeline_layout layout);
   [[nodiscard]] granit_result create_graphics_pipeline(granit_renderer renderer,
                                                        const granit_graphics_pipeline_desc& desc,
                                                        granit_graphics_pipeline& pipeline);
+  [[nodiscard]] granit_result create_webgpu_graphics_pipeline(granit_renderer renderer,
+                                                              granit_pipeline_layout layout,
+                                                              granit_shader vertex_shader,
+                                                              granit_shader fragment_shader,
+                                                              granit_texture_format color_format,
+                                                              granit_graphics_pipeline& pipeline);
   [[nodiscard]] granit_result destroy_graphics_pipeline(granit_renderer renderer,
                                                         granit_graphics_pipeline pipeline);
   [[nodiscard]] granit_result create_compute_pipeline(granit_renderer renderer,
@@ -399,6 +411,7 @@ private:
   };
   struct shader_record {
     resource_metadata metadata;
+    std::shared_ptr<backend_renderer> owner;
     std::shared_ptr<renderer_state> renderer;
     std::unique_ptr<backend_shader_resource> native;
     granit_shader_stage stage{};
@@ -412,6 +425,7 @@ private:
   };
   struct pipeline_layout_record {
     resource_metadata metadata;
+    std::shared_ptr<backend_renderer> owner;
     std::shared_ptr<renderer_state> renderer;
     std::unique_ptr<backend_pipeline_layout_resource> native;
     std::vector<std::shared_ptr<bind_group_layout_record>> bind_group_layouts;
@@ -430,6 +444,7 @@ private:
   };
   struct graphics_pipeline_record {
     resource_metadata metadata;
+    std::shared_ptr<backend_renderer> owner;
     std::shared_ptr<renderer_state> renderer;
     std::shared_ptr<pipeline_layout_record> layout;
     std::shared_ptr<shader_record> vertex_shader;
