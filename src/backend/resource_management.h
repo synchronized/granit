@@ -12,6 +12,7 @@
 #include <granit/renderer/buffer.h>
 #include <granit/renderer/pipeline.h>
 #include <granit/renderer/sampler.h>
+#include <granit/renderer/texture.h>
 
 #include "backend/binding.h"
 #include "backend/resources.h"
@@ -42,6 +43,19 @@ public:
                                                     std::uint64_t size) noexcept = 0;
   [[nodiscard]] virtual granit_result
   upload_batch(std::span<const backend_upload_operation> uploads) noexcept = 0;
+  [[nodiscard]] virtual std::unique_ptr<backend_texture_resource> allocate_texture_resource() = 0;
+  [[nodiscard]] virtual granit_result
+  create_texture(const granit_texture_desc& desc, backend_texture_resource& texture) noexcept = 0;
+  [[nodiscard]] virtual granit_result
+  upload_texture(backend_texture_resource& texture, granit_texture_format format, const void* data,
+                 std::uint64_t size, const granit_texture_data_layout& layout,
+                 const granit_texture_write_region& region) noexcept = 0;
+  [[nodiscard]] virtual std::unique_ptr<backend_texture_view_resource>
+  allocate_texture_view_resource() = 0;
+  [[nodiscard]] virtual granit_result
+  create_texture_view(backend_texture_resource& texture, const granit_texture_desc& texture_desc,
+                      const granit_texture_view_desc& view_desc,
+                      backend_texture_view_resource& view) noexcept = 0;
   [[nodiscard]] virtual std::unique_ptr<backend_sampler_resource> allocate_sampler_resource() = 0;
   [[nodiscard]] virtual granit_result
   create_sampler(const granit_sampler_desc& desc, backend_sampler_resource& sampler) noexcept = 0;

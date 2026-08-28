@@ -47,6 +47,8 @@ struct renderer_registry::buffer_record {
 struct renderer_registry::texture_record {
   resource_metadata metadata;
   std::shared_ptr<backend_renderer> owner;
+  std::shared_ptr<backend_resource_renderer> resource_api;
+  std::shared_ptr<backend_retirement_renderer> retirement;
   std::unique_ptr<backend_texture_resource> native;
   granit_texture_desc desc{};
   bool publicly_destroyable{true};
@@ -55,6 +57,8 @@ struct renderer_registry::texture_record {
 struct renderer_registry::texture_view_record {
   resource_metadata metadata;
   std::shared_ptr<backend_renderer> owner;
+  std::shared_ptr<backend_resource_renderer> resource_api;
+  std::shared_ptr<backend_retirement_renderer> retirement;
   std::shared_ptr<texture_record> texture;
   std::unique_ptr<backend_texture_view_resource> native;
   granit_texture_view_desc desc{};

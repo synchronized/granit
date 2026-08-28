@@ -21,28 +21,33 @@ granit_result renderer_registry::create_texture(granit_renderer renderer,
                                                 const granit_texture_desc& desc,
                                                 granit_texture& texture) {
   try {
-    auto state = std::dynamic_pointer_cast<renderer_state>(acquire_backend(renderer));
-    if (!state)
+    auto owner = acquire_backend(renderer);
+    if (!owner)
       return GRANIT_ERROR_INVALID_HANDLE;
+    auto resource_api = std::dynamic_pointer_cast<backend_resource_renderer>(owner);
+    if (!resource_api)
+      return GRANIT_ERROR_UNSUPPORTED;
     auto record = std::make_shared<texture_record>();
-    record->owner = state;
+    record->owner = owner;
+    record->resource_api = resource_api;
+    record->retirement = std::dynamic_pointer_cast<backend_retirement_renderer>(owner);
     record->desc = desc;
-    record->native = state->allocate_texture_resource();
-    const auto result = state->create_native_texture(desc, *record->native);
+    record->native = resource_api->allocate_texture_resource();
+    const auto result = resource_api->create_texture(desc, *record->native);
     if (result != GRANIT_SUCCESS)
       return result;
     std::lock_guard lock{mutex_};
     const auto found = backend_renderers_.find(renderer);
-    if (found == backend_renderers_.end() || found->second != state)
+    if (found == backend_renderers_.end() || found->second != owner)
       return GRANIT_ERROR_INVALID_HANDLE;
     record->metadata.creation_sequence = next_creation_sequence_++;
-    const auto handle = handles_.insert(record.get(), resource_type::texture, state->domain());
+    const auto handle = handles_.insert(record.get(), resource_type::texture, owner->domain());
     if (handle == GRANIT_NULL_HANDLE)
       return GRANIT_ERROR_OUT_OF_MEMORY;
     try {
       textures_.emplace(handle, std::move(record));
     } catch (...) {
-      static_cast<void>(handles_.erase(handle, resource_type::texture, state->domain()));
+      static_cast<void>(handles_.erase(handle, resource_type::texture, owner->domain()));
       throw;
     }
     texture = handle;
@@ -65,13 +70,11 @@ granit_result renderer_registry::write_texture(granit_renderer renderer, granit_
     if (renderer_found == backend_renderers_.end() ||
         handles_.find(renderer, resource_type::renderer, 0) == nullptr)
       return GRANIT_ERROR_INVALID_HANDLE;
-    const auto state = std::dynamic_pointer_cast<renderer_state>(renderer_found->second);
-    if (!state)
-      return GRANIT_ERROR_UNSUPPORTED;
-    if (handles_.find(texture, resource_type::texture, state->domain()) == nullptr)
+    const auto& owner = renderer_found->second;
+    if (handles_.find(texture, resource_type::texture, owner->domain()) == nullptr)
       return GRANIT_ERROR_INVALID_HANDLE;
     const auto found = textures_.find(texture);
-    if (found == textures_.end() || found->second->owner != state)
+    if (found == textures_.end() || found->second->owner != owner)
       return GRANIT_ERROR_INVALID_HANDLE;
     record = found->second;
   }
@@ -119,10 +122,9 @@ granit_result renderer_registry::write_texture(granit_renderer renderer, granit_
     return GRANIT_ERROR_INVALID_ARGUMENT;
   }
 
-  const auto state = std::dynamic_pointer_cast<renderer_state>(record->owner);
-  return state->upload_texture(*record->native, desc.format,
-                               static_cast<const unsigned char*>(data) + layout.offset, required,
-                               layout, region);
+  return record->resource_api->upload_texture(
+      *record->native, desc.format, static_cast<const unsigned char*>(data) + layout.offset,
+      required, layout, region);
 }
 
 granit_result
@@ -184,7 +186,8 @@ granit_result renderer_registry::create_texture_view(granit_renderer renderer,
                                                      const granit_texture_view_desc& desc,
                                                      granit_texture_view& view) {
   try {
-    std::shared_ptr<renderer_state> state;
+    std::shared_ptr<backend_renderer> owner;
+    std::shared_ptr<backend_resource_renderer> resource_api;
     std::shared_ptr<texture_record> parent;
     {
       std::lock_guard lock{mutex_};
@@ -193,14 +196,15 @@ granit_result renderer_registry::create_texture_view(granit_renderer renderer,
           handles_.find(renderer, resource_type::renderer, 0) == nullptr) {
         return GRANIT_ERROR_INVALID_HANDLE;
       }
-      state = std::dynamic_pointer_cast<renderer_state>(renderer_found->second);
-      if (!state)
+      owner = renderer_found->second;
+      resource_api = std::dynamic_pointer_cast<backend_resource_renderer>(owner);
+      if (!resource_api)
         return GRANIT_ERROR_UNSUPPORTED;
-      if (handles_.find(texture, resource_type::texture, state->domain()) == nullptr) {
+      if (handles_.find(texture, resource_type::texture, owner->domain()) == nullptr) {
         return GRANIT_ERROR_INVALID_HANDLE;
       }
       const auto found = textures_.find(texture);
-      if (found == textures_.end() || found->second->owner != state) {
+      if (found == textures_.end() || found->second->owner != owner) {
         return GRANIT_ERROR_INVALID_HANDLE;
       }
       parent = found->second;
@@ -228,12 +232,14 @@ granit_result renderer_registry::create_texture_view(granit_renderer renderer,
       return GRANIT_ERROR_INVALID_ARGUMENT;
     }
     auto record = std::make_shared<texture_view_record>();
-    record->owner = state;
+    record->owner = owner;
+    record->resource_api = resource_api;
+    record->retirement = std::dynamic_pointer_cast<backend_retirement_renderer>(owner);
     record->texture = parent;
     record->desc = desc;
-    record->native = state->allocate_texture_view_resource();
+    record->native = resource_api->allocate_texture_view_resource();
     const auto result =
-        state->create_native_texture_view(*parent->native, parent->desc, desc, *record->native);
+        resource_api->create_texture_view(*parent->native, parent->desc, desc, *record->native);
     if (result != GRANIT_SUCCESS)
       return result;
     std::lock_guard lock{mutex_};
@@ -242,13 +248,13 @@ granit_result renderer_registry::create_texture_view(granit_renderer renderer,
       return GRANIT_ERROR_INVALID_HANDLE;
     }
     record->metadata.creation_sequence = next_creation_sequence_++;
-    const auto handle = handles_.insert(record.get(), resource_type::texture_view, state->domain());
+    const auto handle = handles_.insert(record.get(), resource_type::texture_view, owner->domain());
     if (handle == GRANIT_NULL_HANDLE)
       return GRANIT_ERROR_OUT_OF_MEMORY;
     try {
       texture_views_.emplace(handle, std::move(record));
     } catch (...) {
-      static_cast<void>(handles_.erase(handle, resource_type::texture_view, state->domain()));
+      static_cast<void>(handles_.erase(handle, resource_type::texture_view, owner->domain()));
       throw;
     }
     view = handle;

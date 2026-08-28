@@ -82,8 +82,9 @@ public:
   [[nodiscard]] std::unique_ptr<backend_surface_resource> allocate_surface_resource() override;
   [[nodiscard]] std::unique_ptr<backend_swapchain_resource> allocate_swapchain_resource() override;
   [[nodiscard]] std::unique_ptr<backend_buffer_resource> allocate_buffer_resource() override;
-  [[nodiscard]] std::unique_ptr<backend_texture_resource> allocate_texture_resource();
-  [[nodiscard]] std::unique_ptr<backend_texture_view_resource> allocate_texture_view_resource();
+  [[nodiscard]] std::unique_ptr<backend_texture_resource> allocate_texture_resource() override;
+  [[nodiscard]] std::unique_ptr<backend_texture_view_resource>
+  allocate_texture_view_resource() override;
   [[nodiscard]] std::unique_ptr<backend_sampler_resource> allocate_sampler_resource() override;
   [[nodiscard]] std::unique_ptr<backend_shader_resource> allocate_shader_resource();
   [[nodiscard]] std::unique_ptr<backend_bind_group_layout_resource>
@@ -145,17 +146,26 @@ public:
   upload_batch(std::span<const backend_upload_operation> uploads) noexcept override;
   [[nodiscard]] granit_result create_native_texture(const granit_texture_desc& desc,
                                                     backend_texture_resource& texture) noexcept;
+  [[nodiscard]] granit_result create_texture(const granit_texture_desc& desc,
+                                             backend_texture_resource& texture) noexcept override {
+    return create_native_texture(desc, texture);
+  }
   [[nodiscard]] bool
   texture_supports_linear_blit(granit_texture_format format) const noexcept override;
-  [[nodiscard]] granit_result upload_texture(backend_texture_resource& texture,
-                                             granit_texture_format format, const void* data,
-                                             std::uint64_t size,
-                                             const granit_texture_data_layout& layout,
-                                             const granit_texture_write_region& region) noexcept;
+  [[nodiscard]] granit_result
+  upload_texture(backend_texture_resource& texture, granit_texture_format format, const void* data,
+                 std::uint64_t size, const granit_texture_data_layout& layout,
+                 const granit_texture_write_region& region) noexcept override;
   void destroy_native_texture(vulkan_image_allocation& texture) noexcept;
   [[nodiscard]] granit_result create_native_texture_view(
       backend_texture_resource& texture, const granit_texture_desc& texture_desc,
       const granit_texture_view_desc& view_desc, backend_texture_view_resource& view) noexcept;
+  [[nodiscard]] granit_result
+  create_texture_view(backend_texture_resource& texture, const granit_texture_desc& texture_desc,
+                      const granit_texture_view_desc& view_desc,
+                      backend_texture_view_resource& view) noexcept override {
+    return create_native_texture_view(texture, texture_desc, view_desc, view);
+  }
   void destroy_native_texture_view(VkImageView view) noexcept;
   [[nodiscard]] granit_result create_native_sampler(const granit_sampler_desc& desc,
                                                     backend_sampler_resource& sampler) noexcept;
