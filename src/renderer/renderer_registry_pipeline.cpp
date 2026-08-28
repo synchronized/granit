@@ -675,7 +675,8 @@ granit_result renderer_registry::create_compute_pipeline(granit_renderer rendere
                                                          const granit_compute_pipeline_desc& desc,
                                                          granit_compute_pipeline& pipeline) {
   try {
-    std::shared_ptr<renderer_state> state;
+    std::shared_ptr<backend_renderer> state;
+    std::shared_ptr<backend_resource_renderer> resource_api;
     std::shared_ptr<pipeline_layout_record> layout;
     std::shared_ptr<shader_record> compute;
     {
@@ -683,8 +684,9 @@ granit_result renderer_registry::create_compute_pipeline(granit_renderer rendere
       const auto found = backend_renderers_.find(renderer);
       if (found == backend_renderers_.end())
         return GRANIT_ERROR_INVALID_HANDLE;
-      state = std::dynamic_pointer_cast<renderer_state>(found->second);
-      if (!state)
+      state = found->second;
+      resource_api = std::dynamic_pointer_cast<backend_resource_renderer>(state);
+      if (!resource_api)
         return GRANIT_ERROR_UNSUPPORTED;
       const auto layout_found = pipeline_layouts_.find(desc.layout);
       const auto compute_found = shaders_.find(desc.compute_shader);
@@ -697,8 +699,8 @@ granit_result renderer_registry::create_compute_pipeline(granit_renderer rendere
     }
     auto record = std::make_shared<compute_pipeline_record>();
     record->owner = state;
-    record->resource_api = state;
-    record->retirement = state;
+    record->resource_api = resource_api;
+    record->retirement = std::dynamic_pointer_cast<backend_retirement_renderer>(state);
     record->layout = layout;
     record->compute_shader = compute;
     record->native = record->resource_api->allocate_compute_pipeline_resource();
@@ -750,8 +752,10 @@ granit_result renderer_registry::destroy_compute_pipeline(granit_renderer render
   }
   const auto retirement = record->retirement;
   const auto serial = record->metadata.last_use_serial.load();
-  retirement->retire_resource(serial, retirement_order::dependent, std::move(record));
-  static_cast<void>(retirement->collect_retired());
+  if (retirement) {
+    retirement->retire_resource(serial, retirement_order::dependent, std::move(record));
+    static_cast<void>(retirement->collect_retired());
+  }
   return GRANIT_SUCCESS;
 }
 
