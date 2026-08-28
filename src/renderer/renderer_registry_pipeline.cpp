@@ -160,13 +160,16 @@ renderer_registry::create_bind_group_layout(granit_renderer renderer,
                                             std::span<const granit_bind_group_layout_entry> entries,
                                             granit_bind_group_layout& layout) {
   try {
-    auto state = std::dynamic_pointer_cast<renderer_state>(acquire_backend(renderer));
-    if (!state)
+    auto owner = acquire_backend(renderer);
+    if (!owner)
       return GRANIT_ERROR_INVALID_HANDLE;
+    auto resource_api = std::dynamic_pointer_cast<backend_resource_renderer>(owner);
+    if (!resource_api)
+      return GRANIT_ERROR_UNSUPPORTED;
     auto record = std::make_shared<bind_group_layout_record>();
-    record->owner = state;
-    record->resource_api = state;
-    record->retirement = state;
+    record->owner = owner;
+    record->resource_api = resource_api;
+    record->retirement = std::dynamic_pointer_cast<backend_retirement_renderer>(owner);
     record->entries.assign(entries.begin(), entries.end());
     record->native = record->resource_api->allocate_bind_group_layout_resource();
     const auto result = record->resource_api->create_bind_group_layout(entries, *record->native);
@@ -177,13 +180,13 @@ renderer_registry::create_bind_group_layout(granit_renderer renderer,
       return GRANIT_ERROR_INVALID_HANDLE;
     record->metadata.creation_sequence = next_creation_sequence_++;
     const auto handle =
-        handles_.insert(record.get(), resource_type::bind_group_layout, state->domain());
+        handles_.insert(record.get(), resource_type::bind_group_layout, owner->domain());
     if (handle == GRANIT_NULL_HANDLE)
       return GRANIT_ERROR_OUT_OF_MEMORY;
     try {
       bind_group_layouts_.emplace(handle, std::move(record));
     } catch (...) {
-      static_cast<void>(handles_.erase(handle, resource_type::bind_group_layout, state->domain()));
+      static_cast<void>(handles_.erase(handle, resource_type::bind_group_layout, owner->domain()));
       throw;
     }
     layout = handle;
@@ -214,8 +217,10 @@ granit_result renderer_registry::destroy_bind_group_layout(granit_renderer rende
   }
   const auto retirement = record->retirement;
   const auto serial = record->metadata.last_use_serial.load();
-  retirement->retire_resource(serial, retirement_order::dependent, std::move(record));
-  static_cast<void>(retirement->collect_retired());
+  if (retirement) {
+    retirement->retire_resource(serial, retirement_order::dependent, std::move(record));
+    static_cast<void>(retirement->collect_retired());
+  }
   return GRANIT_SUCCESS;
 }
 
@@ -223,7 +228,8 @@ granit_result renderer_registry::create_bind_group(granit_renderer renderer,
                                                    const granit_bind_group_desc& desc,
                                                    granit_bind_group& bind_group) {
   try {
-    std::shared_ptr<renderer_state> state;
+    std::shared_ptr<backend_renderer> state;
+    std::shared_ptr<backend_resource_renderer> resource_api;
     std::shared_ptr<bind_group_layout_record> layout;
     auto record = std::make_shared<bind_group_record>();
     std::vector<backend_bind_group_write> writes;
@@ -234,8 +240,9 @@ granit_result renderer_registry::create_bind_group(granit_renderer renderer,
       if (renderer_found == backend_renderers_.end() || layout_found == bind_group_layouts_.end() ||
           layout_found->second->owner != renderer_found->second)
         return GRANIT_ERROR_INVALID_HANDLE;
-      state = std::dynamic_pointer_cast<renderer_state>(renderer_found->second);
-      if (!state)
+      state = renderer_found->second;
+      resource_api = std::dynamic_pointer_cast<backend_resource_renderer>(state);
+      if (!resource_api)
         return GRANIT_ERROR_UNSUPPORTED;
       layout = layout_found->second;
       std::uint64_t required_count{};
@@ -352,8 +359,8 @@ granit_result renderer_registry::create_bind_group(granit_renderer renderer,
       sort_dynamic_uniform_bindings(record->dynamic_uniform_bindings);
     }
     record->owner = state;
-    record->resource_api = state;
-    record->retirement = state;
+    record->resource_api = resource_api;
+    record->retirement = std::dynamic_pointer_cast<backend_retirement_renderer>(state);
     record->layout = layout;
     record->native = record->resource_api->allocate_bind_group_resource();
     const auto result =
