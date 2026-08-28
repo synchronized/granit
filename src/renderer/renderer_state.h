@@ -47,6 +47,7 @@ class renderer_state final : public backend_renderer,
                              public backend_presentation_renderer,
                              public backend_queue,
                              public backend_command_renderer,
+                             public backend_graphics_command_renderer,
                              public backend_transfer_command_renderer,
                              public std::enable_shared_from_this<renderer_state> {
 public:
@@ -216,14 +217,14 @@ public:
                                           std::uint64_t size, std::uint32_t value) override;
   [[nodiscard]] granit_result
   bind_graphics_pipeline(backend_command_recorder_resource& recorder,
-                         backend_graphics_pipeline_resource& pipeline) noexcept;
+                         backend_graphics_pipeline_resource& pipeline) noexcept override;
   [[nodiscard]] granit_result
   bind_graphics_groups(backend_command_recorder_resource& recorder,
                        backend_pipeline_layout_resource& layout, std::uint32_t first_group,
                        std::span<backend_bind_group_resource* const> bind_groups,
                        std::span<const std::uint32_t> dynamic_offsets,
                        std::span<const backend_buffer_access> buffer_accesses,
-                       std::span<const backend_texture_access> texture_accesses);
+                       std::span<const backend_texture_access> texture_accesses) override;
   [[nodiscard]] granit_result
   bind_compute_pipeline(backend_command_recorder_resource& recorder,
                         backend_compute_pipeline_resource& pipeline) noexcept;
@@ -237,19 +238,20 @@ public:
   [[nodiscard]] granit_result dispatch(backend_command_recorder_resource& recorder,
                                        std::uint32_t group_count_x, std::uint32_t group_count_y,
                                        std::uint32_t group_count_z) noexcept;
-  [[nodiscard]] granit_result set_viewports(backend_command_recorder_resource& recorder,
-                                            std::uint32_t first,
-                                            std::span<const granit_viewport> viewports) noexcept;
-  [[nodiscard]] granit_result set_scissors(backend_command_recorder_resource& recorder,
-                                           std::uint32_t first,
-                                           std::span<const granit_scissor> scissors) noexcept;
+  [[nodiscard]] granit_result
+  set_viewports(backend_command_recorder_resource& recorder, std::uint32_t first,
+                std::span<const granit_viewport> viewports) noexcept override;
+  [[nodiscard]] granit_result
+  set_scissors(backend_command_recorder_resource& recorder, std::uint32_t first,
+               std::span<const granit_scissor> scissors) noexcept override;
   [[nodiscard]] granit_result bind_vertex_buffers(backend_command_recorder_resource& recorder,
                                                   std::uint32_t first,
                                                   std::span<backend_buffer_resource* const> buffers,
-                                                  std::span<const std::uint64_t> offsets);
+                                                  std::span<const std::uint64_t> offsets) override;
   [[nodiscard]] granit_result bind_index_buffer(backend_command_recorder_resource& recorder,
                                                 backend_buffer_resource& buffer,
-                                                std::uint64_t offset, granit_index_type type);
+                                                std::uint64_t offset,
+                                                granit_index_type type) override;
   [[nodiscard]] granit_result draw(backend_command_recorder_resource& recorder,
                                    backend_texture_view_resource* target,
                                    backend_graphics_pipeline_resource* pipeline,
@@ -259,13 +261,14 @@ public:
   [[nodiscard]] granit_result draw_indexed(backend_command_recorder_resource& recorder,
                                            std::uint32_t index_count, std::uint32_t instance_count,
                                            std::uint32_t first_index, std::int32_t vertex_offset,
-                                           std::uint32_t first_instance) noexcept;
+                                           std::uint32_t first_instance) noexcept override;
   [[nodiscard]] granit_result
   begin_rendering(backend_command_recorder_resource& recorder, granit_rendering_area area,
                   std::span<const backend_color_attachment> color_attachments,
                   const backend_depth_stencil_attachment* depth_stencil_attachment,
-                  std::uint32_t layer_count);
-  [[nodiscard]] granit_result end_rendering(backend_command_recorder_resource& recorder) noexcept;
+                  std::uint32_t layer_count) override;
+  [[nodiscard]] granit_result
+  end_rendering(backend_command_recorder_resource& recorder) noexcept override;
   [[nodiscard]] granit_result submit_command_recorder(backend_command_recorder_resource& recorder,
                                                       submission_serial& submitted_serial) override;
   [[nodiscard]] granit_result

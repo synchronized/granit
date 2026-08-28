@@ -15,6 +15,7 @@
 #include "backend/plugin_loader.h"
 #include "backend/queue.h"
 #include "backend/renderer.h"
+#include "backend/rendering.h"
 #include "backend/shader.h"
 #include "backend/webgpu/command_adapter.h"
 #include "backend/webgpu/pipeline_adapter.h"
@@ -28,6 +29,7 @@ class webgpu_renderer_state final : public backend_renderer,
                                     public backend_presentation_renderer,
                                     public backend_queue,
                                     public backend_command_renderer,
+                                    public backend_graphics_command_renderer,
                                     public backend_shader_renderer,
                                     public backend_pipeline_renderer {
 public:

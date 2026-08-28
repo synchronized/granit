@@ -35,6 +35,7 @@
 #include "backend/presentation.h"
 #include "backend/queue.h"
 #include "backend/renderer.h"
+#include "backend/rendering.h"
 #include "backend/resources.h"
 #include "backend/shader.h"
 #include "backend/transfer.h"
@@ -473,6 +474,7 @@ private:
     std::shared_ptr<backend_renderer> owner;
     std::shared_ptr<backend_queue> queue;
     std::shared_ptr<backend_command_renderer> commands;
+    std::shared_ptr<backend_graphics_command_renderer> graphics;
     std::shared_ptr<backend_transfer_command_renderer> transfers;
     std::shared_ptr<renderer_state> renderer;
     std::unique_ptr<backend_command_recorder_resource> native;

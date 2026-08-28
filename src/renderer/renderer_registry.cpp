@@ -3046,8 +3046,9 @@ granit_result renderer_registry::create_command_recorder(granit_renderer rendere
     record->owner = owner;
     record->queue = std::dynamic_pointer_cast<backend_queue>(owner);
     record->commands = std::dynamic_pointer_cast<backend_command_renderer>(owner);
+    record->graphics = std::dynamic_pointer_cast<backend_graphics_command_renderer>(owner);
     record->transfers = std::dynamic_pointer_cast<backend_transfer_command_renderer>(owner);
-    if (!record->queue || !record->commands)
+    if (!record->queue || !record->commands || !record->graphics)
       return GRANIT_ERROR_INTERNAL;
     record->renderer = std::dynamic_pointer_cast<renderer_state>(owner);
     record->native = record->commands->allocate_command_recorder_resource();
@@ -3835,7 +3836,7 @@ granit_result renderer_registry::bind_graphics_pipeline(granit_renderer renderer
   if (!command->commands->command_recorder_is_recording(*command->native))
     return GRANIT_ERROR_INVALID_ARGUMENT;
   const auto result =
-      command->renderer->bind_graphics_pipeline(*command->native, *pipeline_record->native);
+      command->graphics->bind_graphics_pipeline(*command->native, *pipeline_record->native);
   if (result == GRANIT_SUCCESS)
     retain_resource(command->retained_resources, pipeline_record, pipeline_record->metadata);
   return result;
@@ -3891,7 +3892,7 @@ renderer_registry::bind_graphics_groups(granit_renderer renderer, granit_command
   std::lock_guard command_lock{command->mutex};
   if (!command->commands->command_recorder_is_recording(*command->native))
     return GRANIT_ERROR_INVALID_ARGUMENT;
-  const auto result = command->renderer->bind_graphics_groups(
+  const auto result = command->graphics->bind_graphics_groups(
       *command->native, *layout_record->native, first_group, native_groups, dynamic_offsets,
       buffer_accesses, texture_accesses);
   if (result == GRANIT_SUCCESS) {
@@ -4006,7 +4007,7 @@ granit_result renderer_registry::set_viewports(granit_renderer renderer,
   if (!command)
     return GRANIT_ERROR_INVALID_HANDLE;
   std::lock_guard lock{command->mutex};
-  return command->renderer->set_viewports(*command->native, first, viewports);
+  return command->graphics->set_viewports(*command->native, first, viewports);
 }
 
 granit_result renderer_registry::set_scissors(granit_renderer renderer,
@@ -4016,7 +4017,7 @@ granit_result renderer_registry::set_scissors(granit_renderer renderer,
   if (!command)
     return GRANIT_ERROR_INVALID_HANDLE;
   std::lock_guard lock{command->mutex};
-  return command->renderer->set_scissors(*command->native, first, scissors);
+  return command->graphics->set_scissors(*command->native, first, scissors);
 }
 
 granit_result
@@ -4045,7 +4046,7 @@ renderer_registry::bind_vertex_buffers(granit_renderer renderer, granit_command_
   }
   std::lock_guard lock{command->mutex};
   const auto result =
-      command->renderer->bind_vertex_buffers(*command->native, first, buffers, offsets);
+      command->graphics->bind_vertex_buffers(*command->native, first, buffers, offsets);
   if (result == GRANIT_SUCCESS) {
     for (const auto& record : records)
       retain_resource(command->retained_resources, record, record->metadata);
@@ -4074,7 +4075,7 @@ granit_result renderer_registry::bind_index_buffer(granit_renderer renderer,
   }
   std::lock_guard lock{command->mutex};
   const auto result =
-      command->renderer->bind_index_buffer(*command->native, *record->native, offset, type);
+      command->graphics->bind_index_buffer(*command->native, *record->native, offset, type);
   if (result == GRANIT_SUCCESS)
     retain_resource(command->retained_resources, record, record->metadata);
   return result;
@@ -4091,14 +4092,14 @@ granit_result renderer_registry::draw(granit_renderer renderer, granit_command_r
     if (command->web_status != command_recorder_record::web_state::rendering ||
         !command->web_target || !command->web_pipeline)
       return GRANIT_ERROR_INVALID_ARGUMENT;
-    const auto result = command->commands->draw(*command->native, command->web_target->native.get(),
+    const auto result = command->graphics->draw(*command->native, command->web_target->native.get(),
                                                 command->web_pipeline->native.get(), vertex_count,
                                                 instance_count, first_vertex, first_instance);
     if (result == GRANIT_SUCCESS)
       command->web_drew = true;
     return result;
   }
-  return command->commands->draw(*command->native, nullptr, nullptr, vertex_count, instance_count,
+  return command->graphics->draw(*command->native, nullptr, nullptr, vertex_count, instance_count,
                                  first_vertex, first_instance);
 }
 
@@ -4112,7 +4113,7 @@ granit_result renderer_registry::draw_indexed(granit_renderer renderer,
   if (!command)
     return GRANIT_ERROR_INVALID_HANDLE;
   std::lock_guard lock{command->mutex};
-  return command->renderer->draw_indexed(*command->native, index_count, instance_count, first_index,
+  return command->graphics->draw_indexed(*command->native, index_count, instance_count, first_index,
                                          vertex_offset, first_instance);
 }
 
@@ -4233,7 +4234,7 @@ granit_result renderer_registry::begin_rendering(granit_renderer renderer,
   std::lock_guard command_lock{command->mutex};
   for (const auto& view : views)
     retain_resource(command->retained_resources, view, view->metadata);
-  return command->renderer->begin_rendering(*command->native, desc.area, colors, depth_stencil_ptr,
+  return command->graphics->begin_rendering(*command->native, desc.area, colors, depth_stencil_ptr,
                                             desc.layer_count);
 }
 
@@ -4249,7 +4250,7 @@ granit_result renderer_registry::end_rendering(granit_renderer renderer,
     command->web_status = command_recorder_record::web_state::recording;
     return GRANIT_SUCCESS;
   }
-  return command->renderer->end_rendering(*command->native);
+  return command->graphics->end_rendering(*command->native);
 }
 
 granit_result renderer_registry::destroy_command_recorder(granit_renderer renderer,
