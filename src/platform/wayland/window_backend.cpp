@@ -11,6 +11,7 @@
 
 #include <algorithm>
 #include <cstring>
+#include <string>
 
 namespace granit::window::detail {
 
@@ -322,6 +323,147 @@ granit_result pump_wayland_events(window_system_record& system) {
   }
   return wl_display_dispatch_pending(system.display) < 0 ? GRANIT_ERROR_BACKEND_UNAVAILABLE
                                                          : GRANIT_SUCCESS;
+}
+
+granit_result create_wayland_system(granit_window_system* output) {
+  try {
+    auto system = std::make_shared<window_system_record>();
+    const auto result = initialize_wayland_system(*system);
+    if (result != GRANIT_SUCCESS)
+      return result;
+    system->owner_thread = std::this_thread::get_id();
+    system->backend = GRANIT_WINDOW_BACKEND_WAYLAND;
+    const auto handle = allocate_handle();
+    try {
+      std::lock_guard lock{registry_mutex};
+      systems.emplace(handle, system);
+    } catch (...) {
+      destroy_wayland_system(*system);
+      throw;
+    }
+    *output = handle;
+    return GRANIT_SUCCESS;
+  } catch (const std::bad_alloc&) {
+    return GRANIT_ERROR_OUT_OF_MEMORY;
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+granit_result
+destroy_registered_wayland_system(granit_window_system handle,
+                                  const std::shared_ptr<window_system_record>& system) {
+  for (const auto& [unused, window] : system->windows) {
+    static_cast<void>(unused);
+    destroy_wayland_window(*window);
+  }
+  system->windows.clear();
+  {
+    std::lock_guard lock{registry_mutex};
+    systems.erase(handle);
+  }
+  static_cast<void>(wl_display_flush(system->display));
+  destroy_wayland_system(*system);
+  return GRANIT_SUCCESS;
+}
+
+granit_result poll_wayland_event(const std::shared_ptr<window_system_record>& system,
+                                 granit_window_event* event) {
+  const auto result = pump_wayland_events(*system);
+  if (result != GRANIT_SUCCESS)
+    return result;
+  if (system->events.empty())
+    return GRANIT_ERROR_NOT_READY;
+  *event = system->events.front();
+  system->events.pop_front();
+  return GRANIT_SUCCESS;
+}
+
+granit_result create_wayland_window(const std::shared_ptr<window_system_record>& system,
+                                    const granit_window_desc* desc, granit_window* output) {
+  try {
+    if (desc->width > INT32_MAX || desc->height > INT32_MAX ||
+        (desc->title_length != 0 && desc->title == nullptr))
+      return GRANIT_ERROR_INVALID_ARGUMENT;
+    auto record = std::make_shared<window_record>();
+    record->handle = allocate_handle();
+    record->system = system;
+    record->configured_width = desc->width;
+    record->configured_height = desc->height;
+    record->wayland_surface = wl_compositor_create_surface(system->compositor);
+    if (record->wayland_surface == nullptr)
+      return GRANIT_ERROR_BACKEND_UNAVAILABLE;
+    record->wayland_xdg_surface =
+        xdg_wm_base_get_xdg_surface(system->wm_base, record->wayland_surface);
+    if (record->wayland_xdg_surface == nullptr) {
+      destroy_wayland_window(*record);
+      return GRANIT_ERROR_BACKEND_UNAVAILABLE;
+    }
+    xdg_surface_add_listener(record->wayland_xdg_surface, &wayland_surface_listener, record.get());
+    record->wayland_toplevel = xdg_surface_get_toplevel(record->wayland_xdg_surface);
+    if (record->wayland_toplevel == nullptr) {
+      destroy_wayland_window(*record);
+      return GRANIT_ERROR_BACKEND_UNAVAILABLE;
+    }
+    xdg_toplevel_add_listener(record->wayland_toplevel, &wayland_toplevel_listener, record.get());
+    const std::string title = desc->title_length == 0
+                                  ? std::string{"Granit"}
+                                  : std::string{desc->title, desc->title_length};
+    xdg_toplevel_set_title(record->wayland_toplevel, title.c_str());
+    if ((desc->flags & GRANIT_WINDOW_RESIZABLE_BIT) == 0) {
+      xdg_toplevel_set_min_size(record->wayland_toplevel, static_cast<std::int32_t>(desc->width),
+                                static_cast<std::int32_t>(desc->height));
+      xdg_toplevel_set_max_size(record->wayland_toplevel, static_cast<std::int32_t>(desc->width),
+                                static_cast<std::int32_t>(desc->height));
+    }
+    wl_surface_commit(record->wayland_surface);
+    if (wl_display_roundtrip(system->display) < 0 || !record->configured) {
+      destroy_wayland_window(*record);
+      return GRANIT_ERROR_BACKEND_UNAVAILABLE;
+    }
+    try {
+      system->windows.emplace(record->handle, record);
+    } catch (...) {
+      destroy_wayland_window(*record);
+      throw;
+    }
+    *output = record->handle;
+    return GRANIT_SUCCESS;
+  } catch (const std::bad_alloc&) {
+    return GRANIT_ERROR_OUT_OF_MEMORY;
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+granit_result destroy_registered_wayland_window(const std::shared_ptr<window_system_record>& system,
+                                                const std::shared_ptr<window_record>& window,
+                                                granit_window handle) {
+  if (system->keyboard_window == handle)
+    system->keyboard_window = GRANIT_NULL_HANDLE;
+  if (system->pointer_window == handle)
+    system->pointer_window = GRANIT_NULL_HANDLE;
+  destroy_wayland_window(*window);
+  return wl_display_flush(system->display) >= 0 ? GRANIT_SUCCESS : GRANIT_ERROR_BACKEND_UNAVAILABLE;
+}
+
+granit_result attach_wayland_input(window_system_record& system) {
+#if defined(GRANIT_WINDOW_HAS_WAYLAND_INPUT)
+  return initialize_wayland_input(system);
+#else
+  static_cast<void>(system);
+  return GRANIT_ERROR_UNSUPPORTED;
+#endif
+}
+
+void detach_wayland_input(window_system_record& system) { destroy_wayland_input(system); }
+
+granit_result get_wayland_window(const std::shared_ptr<window_system_record>& system,
+                                 const std::shared_ptr<window_record>& window, void** display,
+                                 void** native_surface) {
+  *display = system->display;
+  *native_surface = window->wayland_surface;
+  return GRANIT_SUCCESS;
 }
 
 } // namespace granit::window::detail
