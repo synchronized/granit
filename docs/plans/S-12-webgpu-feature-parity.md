@@ -210,6 +210,26 @@ Texture View 子资源和 Renderer 归属。Bind Group 保留 Layout 与所有�
 类型错误、缺失项、跨 Renderer 句柄与不支持数组。Provider ABI 直接升级，不保留
 旧的固定 Texture/Sampler 分支。
 
+### S-12E 每帧数据契约
+
+S-12E 不新增 Uniform Arena 公共类型；上层继续用 Buffer、Upload Batch、Renderer Limits
+和现有动态 Offset 数组组合逐帧策略。后端共同契约如下：
+
+- WebGPU Provider 将 `DYNAMIC_UNIFORM_BUFFER` 映射为带动态 Offset 的 Uniform Binding，
+  Graphics 与 Compute Bind Group 均按 Layout 中 binding 升序消费 Offset。
+- `granit_renderer_get_limits` 返回实后端的 Uniform Offset 对齐与最大绑定大小，
+  不使用固定 256 字节假设。
+- Registry 校验 Offset 数量、对齐、基础 Offset 加动态 Offset 加 Range 的溢出与
+  Buffer 越界；Provider 保留等价防御性校验。
+- Upload Batch 将同一批 Buffer/Texture 写入合并为一次 Provider 调用；`submit`
+  成功后才释放 Host 持有的数据副本，单次 `buffer_write` 仍保留便利语义。
+- 浏览器不暴露持久映射指针；不可直接映射的 Upload Buffer 使用 Host 副本和
+  Queue Write 实现，公共 Map 请求明确返回 `GRANIT_ERROR_UNSUPPORTED`。
+
+验证覆盖单个 Uniform Buffer 内两组变换、多 Bind Group、Graphics/Compute、数量错误、
+未对齐、越界、整数溢出与批量上传失败原子性。Vulkan 与 WebGPU 复用同一组
+Registry 契约测试，Provider Mock 只验证后端参数映射。
+
 ## 实施顺序
 
 1. **S-12A 后端选择**：实现 C ABI、C++ 包装、实际后端查询、插件定位和严格/自动选择语义。
