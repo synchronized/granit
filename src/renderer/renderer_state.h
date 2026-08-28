@@ -24,6 +24,7 @@
 #include "backend/capabilities.h"
 #include "backend/command.h"
 #include "backend/compute.h"
+#include "backend/diagnostics.h"
 #include "backend/lifecycle.h"
 #include "backend/presentation.h"
 #include "backend/queue.h"
@@ -48,6 +49,7 @@
 namespace granit::detail {
 
 class renderer_state final : public backend_renderer,
+                             public backend_diagnostic_renderer,
                              public backend_resource_renderer,
                              public backend_presentation_renderer,
                              public backend_queue,
@@ -368,7 +370,7 @@ public:
   [[nodiscard]] std::size_t frame_slot_count() const noexcept override {
     return frame_slots_.size();
   }
-  [[nodiscard]] bool validation_enabled() const noexcept { return validation_enabled_; }
+  [[nodiscard]] bool validation_enabled() const noexcept override { return validation_enabled_; }
   [[nodiscard]] bool device_lost() const noexcept {
     return lifecycle_.status().state == backend_lifecycle_state::device_lost;
   }
@@ -378,7 +380,9 @@ public:
   [[nodiscard]] granit_result process_backend_events() noexcept override {
     return lifecycle_.gate();
   }
-  [[nodiscard]] const diagnostic_sink& diagnostics() const noexcept { return diagnostics_; }
+  [[nodiscard]] const diagnostic_sink& diagnostics() const noexcept override {
+    return diagnostics_;
+  }
   [[nodiscard]] const backend_capabilities& capabilities() const noexcept override {
     return capabilities_;
   }

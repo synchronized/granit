@@ -4,9 +4,9 @@
 #include "renderer/renderer_registry.h"
 #include "renderer/renderer_registry_records.h"
 
+#include "backend/diagnostics.h"
 #include "core/texture_format.h"
 #include "renderer/renderer_registry_helpers.h"
-#include "renderer/renderer_state.h"
 
 #include <algorithm>
 #include <cstring>
@@ -275,32 +275,34 @@ granit_result renderer_registry::destroy_texture_view(granit_renderer renderer,
     if (renderer_found == backend_renderers_.end() ||
         handles_.find(renderer, resource_type::renderer, 0) == nullptr)
       return GRANIT_ERROR_INVALID_HANDLE;
-    const auto& backend_state = renderer_found->second;
-    const auto state = std::dynamic_pointer_cast<renderer_state>(backend_state);
-    if (!state)
-      return GRANIT_ERROR_UNSUPPORTED;
-    if (handles_.find(view, resource_type::texture_view, state->domain()) == nullptr)
+    const auto& owner = renderer_found->second;
+    if (handles_.find(view, resource_type::texture_view, owner->domain()) == nullptr)
       return GRANIT_ERROR_INVALID_HANDLE;
     const auto found = texture_views_.find(view);
-    if (found == texture_views_.end() || found->second->owner != state)
+    if (found == texture_views_.end() || found->second->owner != owner)
       return GRANIT_ERROR_INVALID_HANDLE;
     if (!found->second->publicly_destroyable)
       return GRANIT_ERROR_UNSUPPORTED;
     record = std::move(found->second);
     texture_views_.erase(found);
-    static_cast<void>(handles_.erase(view, resource_type::texture_view, state->domain()));
+    static_cast<void>(handles_.erase(view, resource_type::texture_view, owner->domain()));
   }
-  auto state = std::dynamic_pointer_cast<renderer_state>(record->owner);
-  state->retire_resource(record->metadata.last_use_serial.load(), retirement_order::dependent,
-                         record);
-  record.reset();
-  static_cast<void>(state->collect_retired());
+  const auto retirement = record->retirement;
+  if (retirement) {
+    retirement->retire_resource(record->metadata.last_use_serial.load(),
+                                retirement_order::dependent, record);
+    record.reset();
+    static_cast<void>(retirement->collect_retired());
+  } else {
+    record.reset();
+  }
   return GRANIT_SUCCESS;
 }
 
 granit_result renderer_registry::destroy_texture(granit_renderer renderer, granit_texture texture) {
   std::shared_ptr<texture_record> record;
   std::vector<std::shared_ptr<texture_view_record>> views;
+  std::shared_ptr<backend_diagnostic_renderer> diagnostics;
   lifecycle_snapshot lifecycle;
   {
     std::lock_guard lock{mutex_};
@@ -308,46 +310,50 @@ granit_result renderer_registry::destroy_texture(granit_renderer renderer, grani
     if (renderer_found == backend_renderers_.end() ||
         handles_.find(renderer, resource_type::renderer, 0) == nullptr)
       return GRANIT_ERROR_INVALID_HANDLE;
-    const auto state = std::dynamic_pointer_cast<renderer_state>(renderer_found->second);
-    if (!state)
-      return GRANIT_ERROR_UNSUPPORTED;
-    if (handles_.find(texture, resource_type::texture, state->domain()) == nullptr)
+    const auto& owner = renderer_found->second;
+    diagnostics = std::dynamic_pointer_cast<backend_diagnostic_renderer>(owner);
+    if (handles_.find(texture, resource_type::texture, owner->domain()) == nullptr)
       return GRANIT_ERROR_INVALID_HANDLE;
     const auto found = textures_.find(texture);
-    if (found == textures_.end() || found->second->owner != state)
+    if (found == textures_.end() || found->second->owner != owner)
       return GRANIT_ERROR_INVALID_HANDLE;
     if (!found->second->publicly_destroyable)
       return GRANIT_ERROR_UNSUPPORTED;
     for (auto view = texture_views_.begin(); view != texture_views_.end();) {
       if (view->second->texture == found->second) {
-        if (state->validation_enabled() && view->second->publicly_destroyable) {
+        if (diagnostics && diagnostics->validation_enabled() &&
+            view->second->publicly_destroyable) {
           lifecycle.add(lifecycle_resource_type::texture_view, view->first,
                         view->second->metadata.creation_sequence);
         }
         views.push_back(std::move(view->second));
         static_cast<void>(
-            handles_.erase(view->first, resource_type::texture_view, state->domain()));
+            handles_.erase(view->first, resource_type::texture_view, owner->domain()));
         view = texture_views_.erase(view);
       } else
         ++view;
     }
     record = std::move(found->second);
     textures_.erase(found);
-    static_cast<void>(handles_.erase(texture, resource_type::texture, state->domain()));
+    static_cast<void>(handles_.erase(texture, resource_type::texture, owner->domain()));
   }
-  auto state = std::dynamic_pointer_cast<renderer_state>(record->owner);
-  write_child_lifecycle_diagnostic(state->diagnostics(), lifecycle_resource_type::texture, texture,
-                                   lifecycle_resource_type::texture_view,
-                                   lifecycle.summary(lifecycle_resource_type::texture_view));
+  if (diagnostics)
+    write_child_lifecycle_diagnostic(diagnostics->diagnostics(), lifecycle_resource_type::texture,
+                                     texture, lifecycle_resource_type::texture_view,
+                                     lifecycle.summary(lifecycle_resource_type::texture_view));
+  const auto retirement = record->retirement;
   for (auto& view : views) {
-    state->retire_resource(view->metadata.last_use_serial.load(), retirement_order::dependent,
-                           view);
+    if (retirement)
+      retirement->retire_resource(view->metadata.last_use_serial.load(),
+                                  retirement_order::dependent, view);
   }
   views.clear();
-  state->retire_resource(record->metadata.last_use_serial.load(), retirement_order::resource,
-                         record);
+  if (retirement)
+    retirement->retire_resource(record->metadata.last_use_serial.load(), retirement_order::resource,
+                                record);
   record.reset();
-  static_cast<void>(state->collect_retired());
+  if (retirement)
+    static_cast<void>(retirement->collect_retired());
   return GRANIT_SUCCESS;
 }
 
@@ -355,29 +361,32 @@ granit_result renderer_registry::create_sampler(granit_renderer renderer,
                                                 const granit_sampler_desc& desc,
                                                 granit_sampler& sampler) {
   try {
-    auto state = std::dynamic_pointer_cast<renderer_state>(acquire_backend(renderer));
-    if (!state)
+    auto owner = acquire_backend(renderer);
+    if (!owner)
       return GRANIT_ERROR_INVALID_HANDLE;
+    auto resource_api = std::dynamic_pointer_cast<backend_resource_renderer>(owner);
+    if (!resource_api)
+      return GRANIT_ERROR_UNSUPPORTED;
     auto record = std::make_shared<sampler_record>();
-    record->owner = state;
-    record->resource_api = state;
-    record->retirement = state;
+    record->owner = owner;
+    record->resource_api = resource_api;
+    record->retirement = std::dynamic_pointer_cast<backend_retirement_renderer>(owner);
     record->native = record->resource_api->allocate_sampler_resource();
     const auto result = record->resource_api->create_sampler(desc, *record->native);
     if (result != GRANIT_SUCCESS)
       return result;
     std::lock_guard lock{mutex_};
     const auto found = backend_renderers_.find(renderer);
-    if (found == backend_renderers_.end() || found->second != state)
+    if (found == backend_renderers_.end() || found->second != owner)
       return GRANIT_ERROR_INVALID_HANDLE;
     record->metadata.creation_sequence = next_creation_sequence_++;
-    const auto handle = handles_.insert(record.get(), resource_type::sampler, state->domain());
+    const auto handle = handles_.insert(record.get(), resource_type::sampler, owner->domain());
     if (handle == GRANIT_NULL_HANDLE)
       return GRANIT_ERROR_OUT_OF_MEMORY;
     try {
       samplers_.emplace(handle, std::move(record));
     } catch (...) {
-      static_cast<void>(handles_.erase(handle, resource_type::sampler, state->domain()));
+      static_cast<void>(handles_.erase(handle, resource_type::sampler, owner->domain()));
       throw;
     }
     sampler = handle;
@@ -409,8 +418,10 @@ granit_result renderer_registry::destroy_sampler(granit_renderer renderer, grani
   }
   const auto retirement = record->retirement;
   const auto serial = record->metadata.last_use_serial.load();
-  retirement->retire_resource(serial, retirement_order::resource, std::move(record));
-  static_cast<void>(retirement->collect_retired());
+  if (retirement) {
+    retirement->retire_resource(serial, retirement_order::resource, std::move(record));
+    static_cast<void>(retirement->collect_retired());
+  }
   return GRANIT_SUCCESS;
 }
 
