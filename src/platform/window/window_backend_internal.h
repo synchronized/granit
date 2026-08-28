@@ -107,6 +107,11 @@ granit_result get_win32_window(const std::shared_ptr<window_record>& window, voi
                                void** native_window);
 #endif
 
+#if defined(GRANIT_WINDOW_HAS_XCB)
+xcb_atom_t intern_xcb_atom(xcb_connection_t* connection, const char* name);
+void pump_xcb_events(const std::shared_ptr<window_system_record>& system);
+#endif
+
 } // namespace granit::window::detail
 
 #endif
