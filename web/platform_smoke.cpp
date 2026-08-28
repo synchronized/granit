@@ -4,15 +4,16 @@
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
-#include <memory>
+#include <new>
 
 #include <emscripten/emscripten.h>
 #include <emscripten/html5.h>
 
 #include <granit/renderer/renderer.h>
+#include <granit/renderer/surface.h>
+#include <granit/renderer/swapchain.h>
 
 #include "backend/lifecycle.h"
-#include "renderer_registry.h"
 
 namespace {
 
@@ -20,9 +21,8 @@ enum class startup_status : int { failed = -1, starting, provider_pending, ready
 
 struct web_platform_state {
   granit_renderer renderer{};
-  std::shared_ptr<granit::detail::webgpu_renderer_state> backend;
-  std::unique_ptr<granit::detail::backend_surface_resource> surface;
-  std::unique_ptr<granit::detail::backend_swapchain_resource> swapchain;
+  granit_surface surface{};
+  granit_swapchain swapchain{};
   startup_status status{startup_status::starting};
   unsigned input_event_count{};
   granit::detail::backend_lifecycle lifecycle;
@@ -71,42 +71,65 @@ granit_result create_presentation_resources() {
     return GRANIT_ERROR_INITIALIZATION_FAILED;
   }
 
-  auto* presentation = state.backend->presentation();
-  if (presentation == nullptr) {
-    return GRANIT_ERROR_NOT_READY;
-  }
-  state.surface = presentation->allocate_surface();
-  state.swapchain = presentation->allocate_swapchain();
-  if (state.surface == nullptr || state.swapchain == nullptr) {
-    return GRANIT_ERROR_OUT_OF_MEMORY;
-  }
-  auto result = presentation->create_canvas_surface(*state.surface, "#canvas", 7);
+  granit_canvas_surface_desc surface_desc = GRANIT_CANVAS_SURFACE_DESC_INIT;
+  auto result = granit_surface_create_canvas(state.renderer, &surface_desc, &state.surface);
   if (result != GRANIT_SUCCESS) {
     return result;
   }
-  const granit::detail::backend_swapchain_desc desc{static_cast<std::uint32_t>(width),
-                                                    static_cast<std::uint32_t>(height), 2,
-                                                    GRANIT_BACKEND_PLUGIN_PRESENT_MODE_FIFO};
-  result = presentation->create_swapchain(*state.surface, desc, *state.swapchain);
+  granit_swapchain_desc swapchain_desc = GRANIT_SWAPCHAIN_DESC_INIT;
+  swapchain_desc.width = static_cast<std::uint32_t>(width);
+  swapchain_desc.height = static_cast<std::uint32_t>(height);
+  swapchain_desc.minimum_image_count = 2;
+  result =
+      granit_swapchain_create(state.renderer, state.surface, &swapchain_desc, &state.swapchain);
   if (result != GRANIT_SUCCESS) {
     return result;
   }
-  granit::detail::backend_swapchain_info info{};
-  result = presentation->get_swapchain_info(*state.swapchain, info);
+  granit_swapchain_info info = GRANIT_SWAPCHAIN_INFO_INIT;
+  result = granit_swapchain_get_info(state.renderer, state.swapchain, &info);
   if (result != GRANIT_SUCCESS || info.width == 0 || info.height == 0 || info.image_count == 0) {
     return result == GRANIT_SUCCESS ? GRANIT_ERROR_INITIALIZATION_FAILED : result;
   }
-  granit::detail::backend_acquired_swapchain_frame frame{};
-  result = presentation->acquire_swapchain(*state.swapchain, frame);
-  if (result != GRANIT_SUCCESS || frame.dynamic_backbuffer.texture == nullptr ||
-      frame.dynamic_backbuffer.view == nullptr) {
+  granit_frame frame{};
+  std::uint32_t image_index{};
+  std::uint32_t needs_recreate{};
+  result = granit_swapchain_acquire(state.renderer, state.swapchain, &frame, &image_index,
+                                    &needs_recreate);
+  if (result != GRANIT_SUCCESS || frame == GRANIT_NULL_HANDLE) {
     return result == GRANIT_SUCCESS ? GRANIT_ERROR_INITIALIZATION_FAILED : result;
   }
-  bool needs_recreate{};
-  result = presentation->cancel_swapchain(*state.swapchain, needs_recreate);
-  frame = {};
+  granit_texture texture{};
+  granit_texture_view view{};
+  result = granit_swapchain_get_backbuffer(state.renderer, state.swapchain, image_index, &texture,
+                                           &view);
+  if (result != GRANIT_SUCCESS || texture == GRANIT_NULL_HANDLE || view == GRANIT_NULL_HANDLE) {
+    return result == GRANIT_SUCCESS ? GRANIT_ERROR_INITIALIZATION_FAILED : result;
+  }
+  granit_frame_info frame_info = GRANIT_FRAME_INFO_INIT;
+  result = granit_frame_get_info(state.renderer, state.swapchain, frame, &frame_info);
+  if (result != GRANIT_SUCCESS || frame_info.frame_slot_count == 0) {
+    return result == GRANIT_SUCCESS ? GRANIT_ERROR_INITIALIZATION_FAILED : result;
+  }
+  result = granit_frame_cancel(state.renderer, state.swapchain, frame, &needs_recreate);
   if (result != GRANIT_SUCCESS) {
     return result;
+  }
+  if (granit_frame_get_info(state.renderer, state.swapchain, frame, &frame_info) !=
+          GRANIT_ERROR_INVALID_HANDLE ||
+      granit_swapchain_get_backbuffer(state.renderer, state.swapchain, image_index, &texture,
+                                      &view) != GRANIT_ERROR_INVALID_ARGUMENT) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+  result = granit_swapchain_acquire(state.renderer, state.swapchain, &frame, &image_index,
+                                    &needs_recreate);
+  if (result != GRANIT_SUCCESS) {
+    return result;
+  }
+  result = granit_swapchain_present(state.renderer, state.swapchain, frame, &needs_recreate);
+  if (result != GRANIT_SUCCESS ||
+      granit_frame_get_info(state.renderer, state.swapchain, frame, &frame_info) !=
+          GRANIT_ERROR_INVALID_HANDLE) {
+    return result == GRANIT_SUCCESS ? GRANIT_ERROR_INTERNAL : result;
   }
   return GRANIT_SUCCESS;
 }
@@ -144,12 +167,6 @@ void tick(void*) noexcept {
          limits_result == GRANIT_SUCCESS ? GRANIT_ERROR_INTERNAL : limits_result);
     return;
   }
-  state.backend = granit::detail::web_renderer_registry::instance().acquire(state.renderer);
-  if (!state.backend) {
-    fail("renderer-acquire", GRANIT_ERROR_INVALID_HANDLE);
-    return;
-  }
-
   try {
     const auto result = create_presentation_resources();
     if (result != GRANIT_SUCCESS) {

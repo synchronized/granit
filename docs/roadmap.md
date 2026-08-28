@@ -176,8 +176,9 @@
   Acquire/Cancel、状态与输入验证。S-10E4 已建立统一拥有 Provider、异步生命周期、能力和呈现
   适配器的 WebGPU Renderer 状态对象；Vulkan/WebGPU 状态共同实现最小 Renderer 后端接口，
   Registry 根记录已通过该接口统一状态、能力和事件推进，并已增加 WebGPU 静态 Provider 工厂
-  与通用销毁路径；Emscripten Smoke 已通过公共 Renderer 创建、状态、限制和事件 API 驱动
-  WebGPU。下一步迁移公共 Canvas 呈现路径。
+  与通用销毁路径；Emscripten Smoke 已通过公共 Renderer、Canvas Surface、Swapchain、Frame 和
+  动态 Backbuffer API 驱动 WebGPU，并验证帧结束后的借用句柄失效。下一步迁移 Shader、Pipeline、
+  命令记录与提交路径。
 
 ## 十、Android 移动平台
 

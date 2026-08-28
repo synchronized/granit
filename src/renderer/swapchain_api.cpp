@@ -4,30 +4,7 @@
 #include <granit/renderer/swapchain.h>
 
 #include "renderer/renderer_registry.h"
-
-namespace {
-
-granit_result validate_desc(const granit_swapchain_desc* desc, bool allow_zero_extent) noexcept {
-  if (desc == nullptr || desc->struct_size < GRANIT_SWAPCHAIN_DESC_VERSION_1_SIZE ||
-      (!allow_zero_extent && (desc->width == 0 || desc->height == 0)) ||
-      desc->present_mode > GRANIT_PRESENT_MODE_IMMEDIATE) {
-    return GRANIT_ERROR_INVALID_ARGUMENT;
-  }
-  if (desc->minimum_image_count > 16)
-    return GRANIT_ERROR_INVALID_ARGUMENT;
-  if (desc->width == 0 || desc->height == 0)
-    return GRANIT_ERROR_NOT_READY;
-  return GRANIT_SUCCESS;
-}
-
-granit::detail::backend_swapchain_desc to_internal(const granit_swapchain_desc& desc) noexcept {
-  return {.width = desc.width,
-          .height = desc.height,
-          .minimum_image_count = desc.minimum_image_count,
-          .present_mode = desc.present_mode};
-}
-
-} // namespace
+#include "renderer/swapchain_validation.h"
 
 extern "C" granit_result granit_swapchain_create(granit_renderer renderer, granit_surface surface,
                                                  const granit_swapchain_desc* desc,
@@ -38,13 +15,13 @@ extern "C" granit_result granit_swapchain_create(granit_renderer renderer, grani
   *swapchain = GRANIT_NULL_HANDLE;
   if (renderer == GRANIT_NULL_HANDLE || surface == GRANIT_NULL_HANDLE)
     return GRANIT_ERROR_INVALID_HANDLE;
-  const auto validation_result = validate_desc(desc, false);
+  const auto validation_result = granit::detail::validate_swapchain_desc(desc, false);
   if (validation_result != GRANIT_SUCCESS) {
     return validation_result;
   }
   try {
     return granit::detail::renderer_registry::instance().create_swapchain(
-        renderer, surface, to_internal(*desc), *swapchain);
+        renderer, surface, granit::detail::to_backend_swapchain_desc(*desc), *swapchain);
   } catch (...) {
     return GRANIT_ERROR_INTERNAL;
   }
@@ -56,13 +33,13 @@ extern "C" granit_result granit_swapchain_recreate(granit_renderer renderer,
   if (renderer == GRANIT_NULL_HANDLE || swapchain == GRANIT_NULL_HANDLE) {
     return GRANIT_ERROR_INVALID_HANDLE;
   }
-  const auto validation_result = validate_desc(desc, true);
+  const auto validation_result = granit::detail::validate_swapchain_desc(desc, true);
   if (validation_result != GRANIT_SUCCESS) {
     return validation_result;
   }
   try {
-    return granit::detail::renderer_registry::instance().recreate_swapchain(renderer, swapchain,
-                                                                            to_internal(*desc));
+    return granit::detail::renderer_registry::instance().recreate_swapchain(
+        renderer, swapchain, granit::detail::to_backend_swapchain_desc(*desc));
   } catch (...) {
     return GRANIT_ERROR_INTERNAL;
   }
