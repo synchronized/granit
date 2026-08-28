@@ -179,6 +179,37 @@ Provider ABI 需要完成以下演进：
 - Provider 限制不足返回 `GRANIT_ERROR_UNSUPPORTED`，无效公共参数返回
   `GRANIT_ERROR_INVALID_ARGUMENT`，错误归属或失效句柄返回 `GRANIT_ERROR_INVALID_HANDLE`。
 
+### S-12D 材质资源契约
+
+S-12D 复用现有 Texture、Texture View、Sampler 和 Bind Group 公共 API，不引入 PBR 或
+glTF 专用资源接口。WebGPU Provider 必须从当前固定“一张 RGBA8 Texture 加一个
+Sampler”的描述升级为数组化、由 Layout 驱动的通用资源绑定。
+
+首轮模型查看器需要的共同子集如下：
+
+- Texture 支持 2D、单采样、单数组层和多 mip；首轮必须支持 `R8_UNORM`、
+  `RG8_UNORM`、`RGBA8_UNORM`、`RGBA8_SRGB` 和 `D32_FLOAT`。其他公开格式在 Provider
+  未实现时明确返回 `GRANIT_ERROR_UNSUPPORTED`。
+- Base Color 与 Emissive 使用 sRGB 格式；Normal、Metallic-Roughness 和 Occlusion 使用
+  线性格式。后端依赖格式解码，Shader 不重复执行 sRGB 转换。
+- `granit_texture_write` 可写入指定 mip 和矩形区域，处理紧密或显式行跨度；Host 负责
+  WebGPU 行对齐与暂存复制，不将平台对齐规则泄漏到公共 API。
+- 首轮不要求 WebGPU 运行时生成 mip；模型资源路径应上传预生成或 CPU 生成的
+  完整 mip 链。不得在启用 mip 采样时静默退化为单层。
+- Sampler 支持现有 min/mag/mipmap Filter、U/V/W Address Mode 与 LOD 范围。各向异性和
+  Compare Sampler 依能力支持；不支持时不改写请求。
+- Bind Group Layout 保留任意 binding 号、可见阶段和资源类型；Bind Group 按 Layout
+  数组化创建并支持 Uniform Buffer、Sampled Texture 与 Sampler 混合。首轮仅保证
+  `array_count = 1`，资源数组留给后续能力任务。
+- Pipeline Layout 支持多个 Bind Group Layout；材质常量、五类 PBR Texture 和共享
+  Sampler 只是一个测试用例，不固化到 Provider ABI。
+
+Registry 在进入 Provider 前校验重复或缺失 binding、资源类型、usage、Buffer 范围、
+Texture View 子资源和 Renderer 归属。Bind Group 保留 Layout 与所有绑定资源的内部
+共享所有权。测试覆盖线性/sRGB 组合、多 mip 上传、采样状态、多 Bind Group、
+类型错误、缺失项、跨 Renderer 句柄与不支持数组。Provider ABI 直接升级，不保留
+旧的固定 Texture/Sampler 分支。
+
 ## 实施顺序
 
 1. **S-12A 后端选择**：实现 C ABI、C++ 包装、实际后端查询、插件定位和严格/自动选择语义。
