@@ -30,6 +30,7 @@
 
 #include "backend/access.h"
 #include "backend/command.h"
+#include "backend/compute.h"
 #include "backend/pipeline.h"
 #include "backend/plugin_api.h"
 #include "backend/presentation.h"
@@ -474,6 +475,7 @@ private:
     std::shared_ptr<backend_renderer> owner;
     std::shared_ptr<backend_queue> queue;
     std::shared_ptr<backend_command_renderer> commands;
+    std::shared_ptr<backend_compute_command_renderer> compute;
     std::shared_ptr<backend_graphics_command_renderer> graphics;
     std::shared_ptr<backend_transfer_command_renderer> transfers;
     std::shared_ptr<renderer_state> renderer;

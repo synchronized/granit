@@ -3046,6 +3046,7 @@ granit_result renderer_registry::create_command_recorder(granit_renderer rendere
     record->owner = owner;
     record->queue = std::dynamic_pointer_cast<backend_queue>(owner);
     record->commands = std::dynamic_pointer_cast<backend_command_renderer>(owner);
+    record->compute = std::dynamic_pointer_cast<backend_compute_command_renderer>(owner);
     record->graphics = std::dynamic_pointer_cast<backend_graphics_command_renderer>(owner);
     record->transfers = std::dynamic_pointer_cast<backend_transfer_command_renderer>(owner);
     if (!record->queue || !record->commands || !record->graphics)
@@ -3909,6 +3910,8 @@ granit_result renderer_registry::bind_compute_pipeline(granit_renderer renderer,
   auto command = acquire_command_recorder(renderer, recorder);
   if (!command)
     return GRANIT_ERROR_INVALID_HANDLE;
+  if (!command->compute)
+    return GRANIT_ERROR_UNSUPPORTED;
   std::shared_ptr<compute_pipeline_record> pipeline_record;
   {
     std::lock_guard lock{mutex_};
@@ -3921,7 +3924,7 @@ granit_result renderer_registry::bind_compute_pipeline(granit_renderer renderer,
   if (!command->commands->command_recorder_is_recording(*command->native))
     return GRANIT_ERROR_INVALID_ARGUMENT;
   const auto result =
-      command->renderer->bind_compute_pipeline(*command->native, *pipeline_record->native);
+      command->compute->bind_compute_pipeline(*command->native, *pipeline_record->native);
   if (result == GRANIT_SUCCESS)
     retain_resource(command->retained_resources, pipeline_record, pipeline_record->metadata);
   return result;
@@ -3935,6 +3938,8 @@ renderer_registry::bind_compute_groups(granit_renderer renderer, granit_command_
   auto command = acquire_command_recorder(renderer, recorder);
   if (!command)
     return GRANIT_ERROR_INVALID_HANDLE;
+  if (!command->compute)
+    return GRANIT_ERROR_UNSUPPORTED;
   std::shared_ptr<pipeline_layout_record> layout_record;
   std::vector<std::shared_ptr<bind_group_record>> group_records;
   std::vector<backend_bind_group_resource*> native_groups;
@@ -3977,7 +3982,7 @@ renderer_registry::bind_compute_groups(granit_renderer renderer, granit_command_
   std::lock_guard command_lock{command->mutex};
   if (!command->commands->command_recorder_is_recording(*command->native))
     return GRANIT_ERROR_INVALID_ARGUMENT;
-  const auto result = command->renderer->bind_compute_groups(
+  const auto result = command->compute->bind_compute_groups(
       *command->native, *layout_record->native, first_group, native_groups, dynamic_offsets,
       buffer_accesses, texture_accesses);
   if (result == GRANIT_SUCCESS) {
@@ -3995,8 +4000,10 @@ granit_result renderer_registry::dispatch(granit_renderer renderer,
   auto command = acquire_command_recorder(renderer, recorder);
   if (!command)
     return GRANIT_ERROR_INVALID_HANDLE;
+  if (!command->compute)
+    return GRANIT_ERROR_UNSUPPORTED;
   std::lock_guard lock{command->mutex};
-  return command->renderer->dispatch(*command->native, group_count_x, group_count_y, group_count_z);
+  return command->compute->dispatch(*command->native, group_count_x, group_count_y, group_count_z);
 }
 
 granit_result renderer_registry::set_viewports(granit_renderer renderer,

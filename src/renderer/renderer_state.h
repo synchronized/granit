@@ -23,6 +23,7 @@
 #include "backend/binding.h"
 #include "backend/capabilities.h"
 #include "backend/command.h"
+#include "backend/compute.h"
 #include "backend/lifecycle.h"
 #include "backend/presentation.h"
 #include "backend/queue.h"
@@ -47,6 +48,7 @@ class renderer_state final : public backend_renderer,
                              public backend_presentation_renderer,
                              public backend_queue,
                              public backend_command_renderer,
+                             public backend_compute_command_renderer,
                              public backend_graphics_command_renderer,
                              public backend_transfer_command_renderer,
                              public std::enable_shared_from_this<renderer_state> {
@@ -227,17 +229,17 @@ public:
                        std::span<const backend_texture_access> texture_accesses) override;
   [[nodiscard]] granit_result
   bind_compute_pipeline(backend_command_recorder_resource& recorder,
-                        backend_compute_pipeline_resource& pipeline) noexcept;
+                        backend_compute_pipeline_resource& pipeline) noexcept override;
   [[nodiscard]] granit_result
   bind_compute_groups(backend_command_recorder_resource& recorder,
                       backend_pipeline_layout_resource& layout, std::uint32_t first_group,
                       std::span<backend_bind_group_resource* const> bind_groups,
                       std::span<const std::uint32_t> dynamic_offsets,
                       std::span<const backend_buffer_access> buffer_accesses,
-                      std::span<const backend_texture_access> texture_accesses);
+                      std::span<const backend_texture_access> texture_accesses) override;
   [[nodiscard]] granit_result dispatch(backend_command_recorder_resource& recorder,
                                        std::uint32_t group_count_x, std::uint32_t group_count_y,
-                                       std::uint32_t group_count_z) noexcept;
+                                       std::uint32_t group_count_z) noexcept override;
   [[nodiscard]] granit_result
   set_viewports(backend_command_recorder_resource& recorder, std::uint32_t first,
                 std::span<const granit_viewport> viewports) noexcept override;

@@ -84,6 +84,7 @@ target_sources(
     backend/binding.h
     backend/capabilities.h
     backend/command.h
+    backend/compute.h
     backend/pipeline.h
     backend/presentation.h
     backend/queue.h
