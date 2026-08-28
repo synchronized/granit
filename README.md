@@ -99,8 +99,8 @@ cmake --install build/<preset-name> --prefix build/install
 build/windows-clang-debug/bin/granit_offscreen_clear_example.exe
 ```
 
-完整的环境要求、构建选项、静态库和安装说明见[构建与安装](docs/guides/build.md)；其他可运行
-程序及平台差异见[示例程序](docs/guides/examples.md)。
+完整构建说明见[构建与安装](docs/guides/build.md)，其他程序见[示例程序](docs/guides/examples.md)，
+WebGPU 浏览器三角形的构建与运行见[专门指南](docs/guides/webgpu-browser-example.md)。
 
 最小 C++20 程序只需包含聚合头并初始化 Renderer：
 
