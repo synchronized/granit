@@ -172,7 +172,8 @@
   诊断、反射、确定性资产与缓存闭环；S-10D 已完成 Emscripten 平台验证，S-10E1 已完成 Registry
   资源、呈现与命令路径的核心去 Vulkan 化；S-10E2 已统一异步 Provider 生命周期、状态查询、
   事件推进和终止错误传播。S-10E3 已完成 Canvas/Swapchain 插件状态机、Registry 动态 Backbuffer
-  和插件呈现资源适配器，下一步进行 Emscripten 实际验证并接入公共 Renderer。
+  和插件呈现资源适配器；Emscripten Debug/Release 及 Windows Chrome WebGPU 启动与输入验证已
+  通过，下一步接入公共 Renderer。
 
 ## 十、Android 移动平台
 
@@ -186,7 +187,7 @@
 
 ## 近期执行顺序
 
-1. 完成 S-10E3 Emscripten Canvas 实际验证及公共 Renderer 呈现接线。
+1. 完成 S-10E3 公共 Renderer 呈现接线。
 2. 依次完成 S-10E4 公共 Renderer 接入及 S-10E5 示例与验收。
 3. S-06D 最终验收等待稳定版本与 component 范围决策；不在 0.x 阶段提前宣布稳定。
 4. 完成 0.4.0 多后端与 Web 路径后，为 S-11 建立独立 Android Plan，再进入 NDK 与移动 Surface

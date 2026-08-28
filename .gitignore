@@ -25,3 +25,6 @@ compile_commands.json
 
 # Catch2 运行时可能生成的测试报告。
 test-results/
+
+# Web 浏览器测试的本地 npm 依赖。
+web/tests/node_modules/

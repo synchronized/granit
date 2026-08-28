@@ -46,17 +46,19 @@ function startServer() {
 async function main() {
   const server = await startServer();
   const address = server.address();
-  const browser = await chromium.launch({
-    executablePath: chromePath,
-    headless: true,
-    args: [
-      "--enable-unsafe-webgpu",
+  const browserArguments = ["--enable-unsafe-webgpu", "--no-sandbox"];
+  if (process.platform !== "win32") {
+    browserArguments.push(
       "--enable-unsafe-swiftshader",
       "--enable-features=Vulkan",
       "--use-angle=swiftshader",
       "--disable-vulkan-surface",
-      "--no-sandbox",
-    ],
+    );
+  }
+  const browser = await chromium.launch({
+    executablePath: chromePath,
+    headless: true,
+    args: browserArguments,
   });
   const page = await browser.newPage();
   const browserMessages = [];

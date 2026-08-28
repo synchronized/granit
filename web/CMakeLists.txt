@@ -3,7 +3,9 @@
 
 add_executable(granit_web_platform_smoke platform_smoke.cpp)
 target_compile_features(granit_web_platform_smoke PRIVATE cxx_std_20)
-target_include_directories(granit_web_platform_smoke PRIVATE "${PROJECT_SOURCE_DIR}/src")
+target_include_directories(
+  granit_web_platform_smoke PRIVATE "${PROJECT_SOURCE_DIR}/include" "${PROJECT_SOURCE_DIR}/src"
+)
 target_compile_options(
   granit_web_platform_smoke
   PRIVATE "--use-port=emdawnwebgpu:cpp_bindings=false"
