@@ -49,6 +49,19 @@ bool webgpu_renderer_state::command_recorder_is_recording(
   return false;
 }
 
+granit_result webgpu_renderer_state::draw(backend_command_recorder_resource& recorder,
+                                          backend_texture_view_resource* target,
+                                          backend_graphics_pipeline_resource* pipeline,
+                                          std::uint32_t vertex_count, std::uint32_t instance_count,
+                                          std::uint32_t first_vertex,
+                                          std::uint32_t first_instance) noexcept {
+  if (!commands_ || !presentation_ || !pipelines_ || !target || !pipeline || vertex_count != 3 ||
+      instance_count != 1 || first_vertex != 0 || first_instance != 0)
+    return GRANIT_ERROR_UNSUPPORTED;
+  return commands_->draw(recorder, presentation_->native_view(*target),
+                         pipelines_->native_handle(*pipeline));
+}
+
 void* webgpu_renderer_state::allocate(std::uint64_t size, std::uint64_t alignment, void*) noexcept {
   return ::operator new(static_cast<std::size_t>(size),
                         std::align_val_t{static_cast<std::size_t>(alignment)}, std::nothrow);

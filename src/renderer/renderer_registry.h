@@ -473,7 +473,6 @@ private:
     std::shared_ptr<backend_queue> queue;
     std::shared_ptr<backend_command_renderer> commands;
     std::shared_ptr<renderer_state> renderer;
-    std::shared_ptr<webgpu_renderer_state> webgpu;
     std::unique_ptr<backend_command_recorder_resource> native;
     std::mutex mutex;
     std::vector<retained_resource> retained_resources;

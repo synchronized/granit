@@ -4,6 +4,7 @@
 #ifndef GRANIT_BACKEND_COMMAND_H_
 #define GRANIT_BACKEND_COMMAND_H_
 
+#include <cstdint>
 #include <memory>
 
 #include <granit/core/result.h>
@@ -32,6 +33,12 @@ public:
   reset_command_recorder(backend_command_recorder_resource& recorder) noexcept = 0;
   [[nodiscard]] virtual bool
   command_recorder_is_recording(backend_command_recorder_resource& recorder) noexcept = 0;
+  [[nodiscard]] virtual granit_result draw(backend_command_recorder_resource& recorder,
+                                           backend_texture_view_resource* target,
+                                           backend_graphics_pipeline_resource* pipeline,
+                                           std::uint32_t vertex_count, std::uint32_t instance_count,
+                                           std::uint32_t first_vertex,
+                                           std::uint32_t first_instance) noexcept = 0;
 };
 
 } // namespace granit::detail

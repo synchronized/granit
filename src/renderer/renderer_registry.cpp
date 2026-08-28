@@ -1219,7 +1219,7 @@ granit_result renderer_registry::submit_command_recorder_frame(granit_renderer r
   std::scoped_lock locks{command->mutex, frame_state->mutex};
   if (frame_state->submitted)
     return GRANIT_ERROR_INVALID_ARGUMENT;
-  if (command->webgpu) {
+  if (!command->renderer) {
     if (command->web_status != command_recorder_record::web_state::executable)
       return GRANIT_ERROR_INVALID_ARGUMENT;
     submission_serial serial{};
@@ -3062,7 +3062,6 @@ granit_result renderer_registry::create_command_recorder(granit_renderer rendere
     if (!record->queue || !record->commands)
       return GRANIT_ERROR_INTERNAL;
     record->renderer = std::dynamic_pointer_cast<renderer_state>(owner);
-    record->webgpu = std::dynamic_pointer_cast<webgpu_renderer_state>(owner);
     record->native = record->commands->allocate_command_recorder_resource();
     const auto result = record->native ? record->commands->create_command_recorder(*record->native)
                                        : GRANIT_ERROR_OUT_OF_MEMORY;
@@ -3102,7 +3101,7 @@ granit_result renderer_registry::begin_command_recorder(granit_renderer renderer
     return GRANIT_ERROR_INVALID_HANDLE;
   }
   std::lock_guard record_lock{record->mutex};
-  if (record->webgpu) {
+  if (!record->renderer) {
     if (record->web_status != command_recorder_record::web_state::initial)
       return GRANIT_ERROR_INVALID_ARGUMENT;
     const auto result = record->commands->begin_command_recorder(*record->native);
@@ -3120,7 +3119,7 @@ granit_result renderer_registry::end_command_recorder(granit_renderer renderer,
     return GRANIT_ERROR_INVALID_HANDLE;
   }
   std::lock_guard record_lock{record->mutex};
-  if (record->webgpu) {
+  if (!record->renderer) {
     if (record->web_status != command_recorder_record::web_state::recording || !record->web_drew)
       return GRANIT_ERROR_INVALID_ARGUMENT;
     const auto result = record->commands->end_command_recorder(*record->native);
@@ -3137,7 +3136,7 @@ granit_result renderer_registry::submit_command_recorder(granit_renderer rendere
   if (!record)
     return GRANIT_ERROR_INVALID_HANDLE;
   std::lock_guard record_lock{record->mutex};
-  if (record->webgpu) {
+  if (!record->renderer) {
     if (record->web_status != command_recorder_record::web_state::executable)
       return GRANIT_ERROR_INVALID_ARGUMENT;
     submission_serial serial{};
@@ -3211,7 +3210,7 @@ granit_result renderer_registry::reset_command_recorder(granit_renderer renderer
     return GRANIT_ERROR_INVALID_HANDLE;
   }
   std::lock_guard record_lock{record->mutex};
-  if (record->webgpu) {
+  if (!record->renderer) {
     if (record->web_status == command_recorder_record::web_state::recording ||
         record->web_status == command_recorder_record::web_state::rendering)
       return GRANIT_ERROR_INVALID_ARGUMENT;
@@ -3821,7 +3820,7 @@ granit_result renderer_registry::bind_graphics_pipeline(granit_renderer renderer
     pipeline_record = found->second;
   }
   std::lock_guard command_lock{command->mutex};
-  if (command->webgpu) {
+  if (!command->renderer) {
     if (command->web_status != command_recorder_record::web_state::recording)
       return GRANIT_ERROR_INVALID_ARGUMENT;
     command->web_pipeline = pipeline_record;
@@ -4082,20 +4081,19 @@ granit_result renderer_registry::draw(granit_renderer renderer, granit_command_r
   if (!command)
     return GRANIT_ERROR_INVALID_HANDLE;
   std::lock_guard lock{command->mutex};
-  if (command->webgpu) {
+  if (!command->renderer) {
     if (command->web_status != command_recorder_record::web_state::rendering ||
         !command->web_target || !command->web_pipeline)
       return GRANIT_ERROR_INVALID_ARGUMENT;
-    const auto result = command->webgpu->commands()->draw(
-        *command->native,
-        command->webgpu->presentation()->native_view(*command->web_target->native),
-        command->webgpu->pipelines()->native_handle(*command->web_pipeline->native));
+    const auto result = command->commands->draw(*command->native, command->web_target->native.get(),
+                                                command->web_pipeline->native.get(), vertex_count,
+                                                instance_count, first_vertex, first_instance);
     if (result == GRANIT_SUCCESS)
       command->web_drew = true;
     return result;
   }
-  return command->renderer->draw(*command->native, vertex_count, instance_count, first_vertex,
-                                 first_instance);
+  return command->commands->draw(*command->native, nullptr, nullptr, vertex_count, instance_count,
+                                 first_vertex, first_instance);
 }
 
 granit_result renderer_registry::draw_indexed(granit_renderer renderer,
@@ -4118,7 +4116,7 @@ granit_result renderer_registry::begin_rendering(granit_renderer renderer,
   auto command = acquire_command_recorder(renderer, recorder);
   if (!command)
     return GRANIT_ERROR_INVALID_HANDLE;
-  if (command->webgpu) {
+  if (!command->renderer) {
     if (desc.color_attachment_count != 1 || desc.color_attachments == nullptr ||
         desc.depth_stencil_attachment != nullptr)
       return GRANIT_ERROR_UNSUPPORTED;
@@ -4239,7 +4237,7 @@ granit_result renderer_registry::end_rendering(granit_renderer renderer,
   if (!command)
     return GRANIT_ERROR_INVALID_HANDLE;
   std::lock_guard lock{command->mutex};
-  if (command->webgpu) {
+  if (!command->renderer) {
     if (command->web_status != command_recorder_record::web_state::rendering)
       return GRANIT_ERROR_INVALID_ARGUMENT;
     command->web_status = command_recorder_record::web_state::recording;

@@ -2061,8 +2061,9 @@ renderer_state::bind_index_buffer(backend_command_recorder_resource& recorder_re
 }
 
 granit_result renderer_state::draw(backend_command_recorder_resource& recorder_resource,
-                                   std::uint32_t vertex_count, std::uint32_t instance_count,
-                                   std::uint32_t first_vertex,
+                                   backend_texture_view_resource*,
+                                   backend_graphics_pipeline_resource*, std::uint32_t vertex_count,
+                                   std::uint32_t instance_count, std::uint32_t first_vertex,
                                    std::uint32_t first_instance) noexcept {
   auto& recorder = static_cast<vulkan_command_recorder_resource&>(recorder_resource).native();
   return device_lost()
