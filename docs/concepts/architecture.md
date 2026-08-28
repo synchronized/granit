@@ -133,6 +133,26 @@ Granit 使用三层接口隔离使用者与 Vulkan：
 C++ 包装层保持轻量，不维护一套独立的渲染状态。它拥有或引用 C 句柄，并将所有实际操作转发给
 C API。普通 C++ 用户不需要直接使用 C API。
 
+### Renderer 私有 HAL
+
+Renderer 内部在公共 Registry 与具体图形 API 之间使用 `src/backend` 私有 HAL：
+
+```text
+公共 C/C++ API
+  -> Renderer Registry（句柄、所有权、生命周期、公共校验）
+  -> 私有 backend_* HAL（能力、资源、命令、Queue、呈现契约）
+  -> Vulkan / WebGPU 平台实现
+```
+
+HAL 是一组按职责拆分的粗粒度内部接口，不是新的公共 API，也不是 Vulkan 接口的逐项翻译。
+Registry 不保存 `Vk*` 或 `WGPU*` 类型，不负责后端同步和描述转换；后端实现也不复制公共句柄表、
+资源父子关系或 C ABI 校验。高频 Draw、资源访问和提交继续采用命令记录或批量契约，避免为每个
+细粒度操作增加动态库或虚函数调用。
+
+Vulkan 与 WebGPU 不必提供完全对称的内部能力。共同语义由 Registry 校验，设备差异通过不可变
+能力快照和统一结果码表达；无法安全模拟的能力明确返回不支持。该边界的决策依据见
+[ADR-003：Renderer 内部多后端边界](../decisions/ADR-003-internal-renderer-backend-boundary.md)。
+
 ## 数学值类型与内部运算
 
 公共目录 `granit/math` 提供 C ABI 普通值类型 `granit_float2/3/4` 和列主序
