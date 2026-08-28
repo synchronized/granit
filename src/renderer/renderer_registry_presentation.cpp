@@ -4,8 +4,8 @@
 #include "renderer/renderer_registry.h"
 #include "renderer/renderer_registry_records.h"
 
+#include "backend/diagnostics.h"
 #include "renderer/renderer_registry_helpers.h"
-#include "renderer/renderer_state.h"
 
 #include <algorithm>
 #include <new>
@@ -181,7 +181,8 @@ granit_result renderer_registry::create_canvas_surface(granit_renderer renderer,
 
 granit_result renderer_registry::destroy_surface(granit_renderer renderer, granit_surface surface) {
   std::shared_ptr<backend_renderer> owner;
-  std::shared_ptr<renderer_state> vulkan_state;
+  std::shared_ptr<backend_presentation_renderer> presentation;
+  std::shared_ptr<backend_diagnostic_renderer> diagnostics;
   std::shared_ptr<surface_record> native_surface;
   lifecycle_snapshot lifecycle;
   std::vector<std::shared_ptr<swapchain_record>> native_swapchains;
@@ -195,7 +196,10 @@ granit_result renderer_registry::destroy_surface(granit_renderer renderer, grani
       return GRANIT_ERROR_INVALID_HANDLE;
     }
     owner = renderer_found->second;
-    vulkan_state = std::dynamic_pointer_cast<renderer_state>(owner);
+    presentation = std::dynamic_pointer_cast<backend_presentation_renderer>(owner);
+    diagnostics = std::dynamic_pointer_cast<backend_diagnostic_renderer>(owner);
+    if (!presentation)
+      return GRANIT_ERROR_UNSUPPORTED;
     if (handles_.find(surface, resource_type::surface, owner->domain()) == nullptr) {
       return GRANIT_ERROR_INVALID_HANDLE;
     }
@@ -210,12 +214,10 @@ granit_result renderer_registry::destroy_surface(granit_renderer renderer, grani
     }
     native_surface = found->second;
   }
-  if (vulkan_state) {
-    const auto idle_result = vulkan_state->wait_for_present_idle();
-    if (idle_result != GRANIT_SUCCESS && idle_result != GRANIT_ERROR_DEVICE_LOST)
-      return idle_result;
-    static_cast<void>(vulkan_state->collect_retired());
-  }
+  const auto idle_result = presentation->wait_for_present_idle();
+  if (idle_result != GRANIT_SUCCESS && idle_result != GRANIT_ERROR_DEVICE_LOST)
+    return idle_result;
+  static_cast<void>(presentation->collect_present_retired());
   {
     std::lock_guard lock{mutex_};
     const auto found = surfaces_.find(surface);
@@ -228,7 +230,7 @@ granit_result renderer_registry::destroy_surface(granit_renderer renderer, grani
     }
     for (auto swapchain = swapchains_.begin(); swapchain != swapchains_.end();) {
       if (swapchain->second->surface == found->second) {
-        if (vulkan_state && vulkan_state->validation_enabled()) {
+        if (diagnostics && diagnostics->validation_enabled()) {
           lifecycle.add(lifecycle_resource_type::swapchain, swapchain->first,
                         swapchain->second->metadata.creation_sequence);
         }
@@ -262,8 +264,8 @@ granit_result renderer_registry::destroy_surface(granit_renderer renderer, grani
       return erase_result;
     }
   }
-  if (vulkan_state) {
-    write_child_lifecycle_diagnostic(vulkan_state->diagnostics(), lifecycle_resource_type::surface,
+  if (diagnostics) {
+    write_child_lifecycle_diagnostic(diagnostics->diagnostics(), lifecycle_resource_type::surface,
                                      surface, lifecycle_resource_type::swapchain,
                                      lifecycle.summary(lifecycle_resource_type::swapchain));
   }
