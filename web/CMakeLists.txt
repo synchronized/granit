@@ -4,10 +4,13 @@
 add_executable(
   granit_web_platform_smoke
   platform_smoke.cpp
+  renderer_api.cpp
+  renderer_registry.cpp
   "${PROJECT_SOURCE_DIR}/src/backend/plugin_loader.cpp"
   "${PROJECT_SOURCE_DIR}/src/backend/webgpu/plugin.cpp"
   "${PROJECT_SOURCE_DIR}/src/backend/webgpu/presentation_adapter.cpp"
   "${PROJECT_SOURCE_DIR}/src/backend/webgpu/renderer_state.cpp"
+  "${PROJECT_SOURCE_DIR}/src/core/handle_table.cpp"
   "${PROJECT_SOURCE_DIR}/src/platform/shared_library.cpp"
 )
 target_compile_features(granit_web_platform_smoke PRIVATE cxx_std_20)

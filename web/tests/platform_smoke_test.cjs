@@ -83,7 +83,8 @@ async function main() {
     }
     const rendererState = await page.evaluate(() => Module._granit_web_renderer_state());
     const failureResult = await page.evaluate(() => Module._granit_web_renderer_failure_result());
-    if (rendererState !== 1 || failureResult !== 0) {
+    // GRANIT_RENDERER_STATE_READY 的公共 ABI 数值为 2。
+    if (rendererState !== 2 || failureResult !== 0) {
       throw new Error(
         `WebGPU Renderer 生命周期异常，state=${rendererState}, failure=${failureResult}`,
       );

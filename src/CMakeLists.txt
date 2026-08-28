@@ -134,6 +134,7 @@ target_sources(
     renderer/renderer_registry.h
     renderer/renderer_state.cpp
     renderer/renderer_state.h
+    renderer/renderer_validation.h
     renderer/sampler_api.cpp
     renderer/shader_api.cpp
     renderer/surface_api.cpp

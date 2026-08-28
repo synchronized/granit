@@ -9,18 +9,18 @@
 #include <emscripten/emscripten.h>
 #include <emscripten/html5.h>
 
-#include "backend/lifecycle.h"
-#include "backend/webgpu/renderer_state.h"
+#include <granit/renderer/renderer.h>
 
-extern "C" const granit_backend_plugin_api*
-granit_backend_plugin_query(std::uint32_t requested_abi) noexcept;
+#include "backend/lifecycle.h"
+#include "renderer_registry.h"
 
 namespace {
 
 enum class startup_status : int { failed = -1, starting, provider_pending, ready };
 
 struct web_platform_state {
-  granit::detail::webgpu_renderer_state renderer;
+  granit_renderer renderer{};
+  std::shared_ptr<granit::detail::webgpu_renderer_state> backend;
   std::unique_ptr<granit::detail::backend_surface_resource> surface;
   std::unique_ptr<granit::detail::backend_swapchain_resource> swapchain;
   startup_status status{startup_status::starting};
@@ -71,7 +71,7 @@ granit_result create_presentation_resources() {
     return GRANIT_ERROR_INITIALIZATION_FAILED;
   }
 
-  auto* presentation = state.renderer.presentation();
+  auto* presentation = state.backend->presentation();
   if (presentation == nullptr) {
     return GRANIT_ERROR_NOT_READY;
   }
@@ -115,19 +115,38 @@ void tick(void*) noexcept {
   if (state.status != startup_status::provider_pending) {
     return;
   }
-  const auto process_result = state.renderer.process_backend_events();
+  const auto process_result = granit_renderer_process_events(state.renderer);
   if (process_result != GRANIT_SUCCESS) {
     fail("provider-events", process_result);
     return;
   }
 
-  const auto renderer_status = state.renderer.lifecycle_status();
-  if (renderer_status.state == granit::detail::backend_lifecycle_state::failed ||
-      renderer_status.state == granit::detail::backend_lifecycle_state::device_lost) {
+  granit_renderer_status renderer_status = GRANIT_RENDERER_STATUS_INIT;
+  const auto status_result = granit_renderer_get_status(state.renderer, &renderer_status);
+  if (status_result != GRANIT_SUCCESS) {
+    fail("renderer-status", status_result);
+    return;
+  }
+  if (renderer_status.state == GRANIT_RENDERER_STATE_FAILED ||
+      renderer_status.state == GRANIT_RENDERER_STATE_DEVICE_LOST) {
     fail("provider-terminal", renderer_status.failure_result);
     return;
   }
-  if (renderer_status.state != granit::detail::backend_lifecycle_state::ready) {
+  if (renderer_status.state != GRANIT_RENDERER_STATE_READY) {
+    return;
+  }
+
+  granit_renderer_limits limits = GRANIT_RENDERER_LIMITS_INIT;
+  const auto limits_result = granit_renderer_get_limits(state.renderer, &limits);
+  if (limits_result != GRANIT_SUCCESS || limits.uniform_buffer_offset_alignment == 0 ||
+      limits.max_uniform_buffer_binding_size == 0) {
+    fail("renderer-limits",
+         limits_result == GRANIT_SUCCESS ? GRANIT_ERROR_INTERNAL : limits_result);
+    return;
+  }
+  state.backend = granit::detail::web_renderer_registry::instance().acquire(state.renderer);
+  if (!state.backend) {
+    fail("renderer-acquire", GRANIT_ERROR_INVALID_HANDLE);
     return;
   }
 
@@ -160,11 +179,15 @@ extern "C" EMSCRIPTEN_KEEPALIVE unsigned granit_web_input_event_count() noexcept
 }
 
 extern "C" EMSCRIPTEN_KEEPALIVE unsigned granit_web_renderer_state() noexcept {
-  return static_cast<unsigned>(state.lifecycle.status().state);
+  granit_renderer_status status = GRANIT_RENDERER_STATUS_INIT;
+  return granit_renderer_get_status(state.renderer, &status) == GRANIT_SUCCESS ? status.state : 0;
 }
 
 extern "C" EMSCRIPTEN_KEEPALIVE int granit_web_renderer_failure_result() noexcept {
-  return state.lifecycle.status().failure_result;
+  granit_renderer_status status = GRANIT_RENDERER_STATUS_INIT;
+  return granit_renderer_get_status(state.renderer, &status) == GRANIT_SUCCESS
+             ? status.failure_result
+             : GRANIT_ERROR_INVALID_HANDLE;
 }
 
 int main() {
@@ -173,8 +196,10 @@ int main() {
     return 1;
   }
 
-  const auto* api = granit_backend_plugin_query(GRANIT_BACKEND_PLUGIN_ABI_VERSION);
-  const auto result = state.renderer.initialize_static(api, diagnose, nullptr);
+  granit_renderer_desc desc = GRANIT_RENDERER_DESC_INIT;
+  desc.surface_types = GRANIT_SURFACE_TYPE_CANVAS_BIT;
+  desc.diagnostic_callback = diagnose;
+  const auto result = granit_renderer_create(&desc, &state.renderer);
   if (result != GRANIT_SUCCESS) {
     fail("provider-open", result);
     return 1;
