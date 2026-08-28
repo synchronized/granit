@@ -427,7 +427,7 @@ private:
   struct shader_record {
     resource_metadata metadata;
     std::shared_ptr<backend_renderer> owner;
-    std::shared_ptr<platform_renderer_state> renderer;
+    std::shared_ptr<renderer_state> renderer;
     std::unique_ptr<backend_shader_resource> native;
     granit_shader_stage stage{};
     std::string entry_point;
@@ -441,7 +441,7 @@ private:
   struct pipeline_layout_record {
     resource_metadata metadata;
     std::shared_ptr<backend_renderer> owner;
-    std::shared_ptr<platform_renderer_state> renderer;
+    std::shared_ptr<renderer_state> renderer;
     std::unique_ptr<backend_pipeline_layout_resource> native;
     std::vector<std::shared_ptr<bind_group_layout_record>> bind_group_layouts;
   };
@@ -460,7 +460,7 @@ private:
   struct graphics_pipeline_record {
     resource_metadata metadata;
     std::shared_ptr<backend_renderer> owner;
-    std::shared_ptr<platform_renderer_state> renderer;
+    std::shared_ptr<renderer_state> renderer;
     std::shared_ptr<pipeline_layout_record> layout;
     std::shared_ptr<shader_record> vertex_shader;
     std::shared_ptr<shader_record> fragment_shader;
@@ -479,7 +479,7 @@ private:
     std::shared_ptr<backend_renderer> owner;
     std::shared_ptr<backend_queue> queue;
     std::shared_ptr<backend_command_renderer> commands;
-    std::shared_ptr<platform_renderer_state> renderer;
+    std::shared_ptr<renderer_state> renderer;
     std::unique_ptr<backend_command_recorder_resource> native;
     std::mutex mutex;
     std::vector<retained_resource> retained_resources;
@@ -513,7 +513,7 @@ private:
     std::shared_ptr<backend_presentation_renderer> presentation;
     std::shared_ptr<backend_queue> queue;
     // 命令提交迁移前保留 Vulkan Queue 具体视图。
-    std::shared_ptr<platform_renderer_state> renderer;
+    std::shared_ptr<renderer_state> renderer;
     std::shared_ptr<swapchain_record> swapchain;
     std::mutex mutex;
     std::uint32_t image_index{};
