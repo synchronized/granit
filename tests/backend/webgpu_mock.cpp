@@ -26,6 +26,14 @@ struct WGPUTextureImpl {
 struct WGPUTextureViewImpl {
   WGPUTexture texture;
 };
+struct WGPUSurfaceImpl {
+  WGPUDevice device{};
+  unsigned int width{};
+  unsigned int height{};
+  WGPUTextureFormat format{};
+  WGPUPresentMode present_mode{};
+  WGPUTexture current{};
+};
 struct WGPUSamplerImpl {
   WGPUFilterMode min_filter;
   WGPUFilterMode mag_filter;
@@ -45,6 +53,81 @@ struct WGPURenderPassEncoderImpl {
 
 extern "C" WGPUInstance wgpuCreateInstance(const WGPUInstanceDescriptor*) {
   return new WGPUInstanceImpl;
+}
+
+extern "C" WGPUSurface wgpuInstanceCreateSurface(WGPUInstance,
+                                                 const WGPUSurfaceDescriptor* descriptor) {
+  if (descriptor == nullptr || descriptor->nextInChain == nullptr ||
+      descriptor->nextInChain->sType != WGPUSType_EmscriptenSurfaceSourceCanvasHTMLSelector) {
+    return nullptr;
+  }
+  const auto* canvas = reinterpret_cast<const WGPUEmscriptenSurfaceSourceCanvasHTMLSelector*>(
+      descriptor->nextInChain);
+  return canvas->selector.data != nullptr && canvas->selector.length != 0 ? new WGPUSurfaceImpl
+                                                                          : nullptr;
+}
+
+extern "C" void wgpuSurfaceRelease(WGPUSurface surface) {
+  delete surface->current;
+  delete surface;
+}
+
+extern "C" WGPUStatus wgpuSurfaceGetCapabilities(WGPUSurface surface, WGPUAdapter,
+                                                 WGPUSurfaceCapabilities* capabilities) {
+  static constexpr WGPUTextureFormat formats[]{WGPUTextureFormat_RGBA8Unorm};
+  static constexpr WGPUPresentMode modes[]{WGPUPresentMode_Fifo};
+  static constexpr WGPUCompositeAlphaMode alpha_modes[]{WGPUCompositeAlphaMode_Auto};
+  if (surface == nullptr || capabilities == nullptr)
+    return WGPUStatus_Error;
+  capabilities->usages = WGPUTextureUsage_RenderAttachment;
+  capabilities->formatCount = 1;
+  capabilities->formats = formats;
+  capabilities->presentModeCount = 1;
+  capabilities->presentModes = modes;
+  capabilities->alphaModeCount = 1;
+  capabilities->alphaModes = alpha_modes;
+  return WGPUStatus_Success;
+}
+
+extern "C" void wgpuSurfaceCapabilitiesFreeMembers(WGPUSurfaceCapabilities) {}
+
+extern "C" void wgpuSurfaceConfigure(WGPUSurface surface,
+                                     const WGPUSurfaceConfiguration* configuration) {
+  if (surface == nullptr || configuration == nullptr)
+    return;
+  surface->device = configuration->device;
+  surface->width = configuration->width;
+  surface->height = configuration->height;
+  surface->format = configuration->format;
+  surface->present_mode = configuration->presentMode;
+}
+
+extern "C" void wgpuSurfaceUnconfigure(WGPUSurface surface) {
+  if (surface != nullptr)
+    surface->device = nullptr;
+}
+
+extern "C" void wgpuSurfaceGetCurrentTexture(WGPUSurface surface,
+                                             WGPUSurfaceTexture* surface_texture) {
+  if (surface_texture == nullptr)
+    return;
+  *surface_texture = {};
+  if (surface == nullptr || surface->device == nullptr || surface->current != nullptr) {
+    surface_texture->status = WGPUSurfaceGetCurrentTextureStatus_Error;
+    return;
+  }
+  surface->current = new WGPUTextureImpl{
+      surface->width, surface->height, WGPUTextureUsage_RenderAttachment,
+      std::vector<unsigned char>(static_cast<std::size_t>(surface->width) * surface->height * 4)};
+  surface_texture->texture = surface->current;
+  surface_texture->status = WGPUSurfaceGetCurrentTextureStatus_SuccessOptimal;
+}
+
+extern "C" WGPUStatus wgpuSurfacePresent(WGPUSurface surface) {
+  if (surface == nullptr || surface->current == nullptr)
+    return WGPUStatus_Error;
+  surface->current = nullptr;
+  return WGPUStatus_Success;
 }
 
 extern "C" void wgpuInstanceRelease(WGPUInstance instance) { delete instance; }

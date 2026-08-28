@@ -37,10 +37,12 @@ struct webgpu_instance {
     std::uint32_t width;
     std::uint32_t height;
     granit_backend_plugin_texture_usage usage;
+    bool borrowed;
   };
   struct texture_view_record {
     WGPUTextureView view;
     granit_backend_plugin_texture texture;
+    bool borrowed;
   };
   struct bind_group_record {
     WGPUBindGroup bind_group;
@@ -71,6 +73,13 @@ struct webgpu_instance {
     void* surface;
     std::string selector;
   };
+  struct swapchain_record {
+    granit_backend_plugin_surface surface;
+    void* native_surface;
+    granit_backend_plugin_swapchain_info info;
+    granit_backend_plugin_texture acquired_texture;
+    granit_backend_plugin_texture_view acquired_view;
+  };
 
   granit_backend_plugin_host_api host;
   WGPUInstance instance;
@@ -100,6 +109,7 @@ struct webgpu_instance {
       command_recorders;
   std::unordered_map<granit_backend_plugin_command_buffer, WGPUCommandBuffer> command_buffers;
   std::unordered_map<granit_backend_plugin_surface, surface_record> surfaces;
+  std::unordered_map<granit_backend_plugin_swapchain, swapchain_record> swapchains;
 
   webgpu_instance(const granit_backend_plugin_host_api& host_api,
                   WGPUInstance native_instance) noexcept
@@ -143,7 +153,8 @@ std::atomic_uint64_t next_pipeline_layout{1};
 std::atomic_uint64_t next_render_pipeline{1};
 std::atomic_uint64_t next_command_recorder{1};
 std::atomic_uint64_t next_command_buffer{1};
-#if defined(__EMSCRIPTEN__)
+std::atomic_uint64_t next_swapchain{1};
+#if defined(__EMSCRIPTEN__) || defined(GRANIT_WEBGPU_CANVAS_SURFACE_TEST)
 std::atomic_uint64_t next_surface{1};
 #endif
 #if defined(GRANIT_WEBGPU_DEFER_INITIALIZATION_TEST)
@@ -164,9 +175,30 @@ void deallocate(const granit_backend_plugin_host_api& host, void* memory) noexce
 
 void release_resources(webgpu_instance& state) noexcept {
   state.callback_lifetime.invalidate();
+  for (const auto& [handle, swapchain] : state.swapchains) {
+    static_cast<void>(handle);
+    const auto native_surface = static_cast<WGPUSurface>(swapchain.native_surface);
+    if (swapchain.acquired_view != 0) {
+      const auto view = state.texture_views.find(swapchain.acquired_view);
+      if (view != state.texture_views.end()) {
+        wgpuTextureViewRelease(view->second.view);
+        state.texture_views.erase(view);
+      }
+    }
+    if (swapchain.acquired_texture != 0) {
+      const auto texture = state.textures.find(swapchain.acquired_texture);
+      if (texture != state.textures.end()) {
+        static_cast<void>(wgpuSurfacePresent(native_surface));
+        wgpuTextureRelease(texture->second.texture);
+        state.textures.erase(texture);
+      }
+    }
+    wgpuSurfaceUnconfigure(native_surface);
+  }
+  state.swapchains.clear();
   for (const auto& [handle, surface] : state.surfaces) {
     static_cast<void>(handle);
-#if defined(__EMSCRIPTEN__)
+#if defined(__EMSCRIPTEN__) || defined(GRANIT_WEBGPU_CANVAS_SURFACE_TEST)
     wgpuSurfaceRelease(static_cast<WGPUSurface>(surface.surface));
 #else
     static_cast<void>(surface);
@@ -826,7 +858,7 @@ granit_result create_texture(granit_backend_plugin_instance instance,
   try {
     if (!state.textures
              .emplace(handle, webgpu_instance::texture_record{native, desc->width, desc->height,
-                                                              desc->usage})
+                                                              desc->usage, false})
              .second) {
       wgpuTextureRelease(native);
       return GRANIT_ERROR_INTERNAL;
@@ -854,6 +886,8 @@ granit_result destroy_texture(granit_backend_plugin_instance instance,
   const auto texture_found = state.textures.find(texture);
   if (texture_found == state.textures.end())
     return GRANIT_ERROR_INVALID_HANDLE;
+  if (texture_found->second.borrowed)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
   if (std::any_of(state.texture_views.begin(), state.texture_views.end(),
                   [texture](const auto& entry) { return entry.second.texture == texture; })) {
     return GRANIT_ERROR_INVALID_ARGUMENT;
@@ -885,7 +919,8 @@ granit_result create_texture_view(granit_backend_plugin_instance instance,
     return GRANIT_ERROR_OUT_OF_MEMORY;
   const auto handle = next_handle<granit_backend_plugin_texture_view>(next_texture_view);
   try {
-    if (!state.texture_views.emplace(handle, webgpu_instance::texture_view_record{native, texture})
+    if (!state.texture_views
+             .emplace(handle, webgpu_instance::texture_view_record{native, texture, false})
              .second) {
       wgpuTextureViewRelease(native);
       return GRANIT_ERROR_INTERNAL;
@@ -912,6 +947,8 @@ granit_result destroy_texture_view(granit_backend_plugin_instance instance,
   const auto view_found = found->second->texture_views.find(view);
   if (view_found == found->second->texture_views.end())
     return GRANIT_ERROR_INVALID_HANDLE;
+  if (view_found->second.borrowed)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
   if (std::any_of(found->second->bind_groups.begin(), found->second->bind_groups.end(),
                   [view](const auto& entry) { return entry.second.texture_view == view; }))
     return GRANIT_ERROR_INVALID_ARGUMENT;
@@ -1632,7 +1669,7 @@ granit_result create_canvas_surface(granit_backend_plugin_instance instance,
     return GRANIT_ERROR_INVALID_HANDLE;
   if (const auto ready = require_ready(*found->second); ready != GRANIT_SUCCESS)
     return ready;
-#if defined(__EMSCRIPTEN__)
+#if defined(__EMSCRIPTEN__) || defined(GRANIT_WEBGPU_CANVAS_SURFACE_TEST)
   try {
     std::string selector{desc->selector, desc->selector_length};
     WGPUEmscriptenSurfaceSourceCanvasHTMLSelector canvas_desc{};
@@ -1674,10 +1711,67 @@ granit_result destroy_surface(granit_backend_plugin_instance instance,
   const auto surface_found = found->second->surfaces.find(surface);
   if (surface_found == found->second->surfaces.end())
     return GRANIT_ERROR_INVALID_HANDLE;
-#if defined(__EMSCRIPTEN__)
+  if (std::any_of(found->second->swapchains.begin(), found->second->swapchains.end(),
+                  [surface](const auto& entry) { return entry.second.surface == surface; }))
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+#if defined(__EMSCRIPTEN__) || defined(GRANIT_WEBGPU_CANVAS_SURFACE_TEST)
   wgpuSurfaceRelease(static_cast<WGPUSurface>(surface_found->second.surface));
 #endif
   found->second->surfaces.erase(surface_found);
+  return GRANIT_SUCCESS;
+}
+
+granit_result configure_swapchain(webgpu_instance& state, WGPUSurface surface,
+                                  const granit_backend_plugin_swapchain_desc& desc,
+                                  granit_backend_plugin_swapchain_info& info) noexcept {
+  WGPUSurfaceCapabilities capabilities = WGPU_SURFACE_CAPABILITIES_INIT;
+  if (wgpuSurfaceGetCapabilities(surface, state.adapter, &capabilities) != WGPUStatus_Success)
+    return GRANIT_ERROR_UNSUPPORTED;
+  const auto release_capabilities = [&capabilities] {
+    wgpuSurfaceCapabilitiesFreeMembers(capabilities);
+  };
+  WGPUTextureFormat format{};
+  for (std::size_t index = 0; index < capabilities.formatCount; ++index) {
+    if (capabilities.formats[index] == WGPUTextureFormat_RGBA8Unorm) {
+      format = capabilities.formats[index];
+      break;
+    }
+  }
+  if (format == 0) {
+    release_capabilities();
+    return GRANIT_ERROR_UNSUPPORTED;
+  }
+  const WGPUPresentMode requested_mode =
+      desc.present_mode == GRANIT_BACKEND_PLUGIN_PRESENT_MODE_MAILBOX ? WGPUPresentMode_Mailbox
+      : desc.present_mode == GRANIT_BACKEND_PLUGIN_PRESENT_MODE_IMMEDIATE
+          ? WGPUPresentMode_Immediate
+          : WGPUPresentMode_Fifo;
+  WGPUPresentMode selected_mode = WGPUPresentMode_Fifo;
+  for (std::size_t index = 0; index < capabilities.presentModeCount; ++index) {
+    if (capabilities.presentModes[index] == requested_mode) {
+      selected_mode = requested_mode;
+      break;
+    }
+  }
+  WGPUSurfaceConfiguration configuration = WGPU_SURFACE_CONFIGURATION_INIT;
+  configuration.device = state.device;
+  configuration.format = format;
+  configuration.usage = WGPUTextureUsage_RenderAttachment;
+  configuration.width = desc.width;
+  configuration.height = desc.height;
+  configuration.presentMode = selected_mode;
+  configuration.alphaMode = WGPUCompositeAlphaMode_Auto;
+  wgpuSurfaceConfigure(surface, &configuration);
+  release_capabilities();
+  info = {sizeof(granit_backend_plugin_swapchain_info),
+          desc.width,
+          desc.height,
+          1,
+          selected_mode == WGPUPresentMode_Mailbox ? GRANIT_BACKEND_PLUGIN_PRESENT_MODE_MAILBOX
+          : selected_mode == WGPUPresentMode_Immediate
+              ? GRANIT_BACKEND_PLUGIN_PRESENT_MODE_IMMEDIATE
+              : GRANIT_BACKEND_PLUGIN_PRESENT_MODE_FIFO,
+          GRANIT_BACKEND_PLUGIN_TEXTURE_FORMAT_RGBA8_UNORM};
   return GRANIT_SUCCESS;
 }
 
@@ -1698,37 +1792,197 @@ granit_result create_swapchain(granit_backend_plugin_instance instance,
     return GRANIT_ERROR_INVALID_HANDLE;
   if (const auto ready = require_ready(*found->second); ready != GRANIT_SUCCESS)
     return ready;
-  return GRANIT_ERROR_UNSUPPORTED;
+  if (std::any_of(found->second->swapchains.begin(), found->second->swapchains.end(),
+                  [surface](const auto& entry) { return entry.second.surface == surface; }))
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  const auto native_surface =
+      static_cast<WGPUSurface>(found->second->surfaces.find(surface)->second.surface);
+  granit_backend_plugin_swapchain_info info{};
+  if (const auto result = configure_swapchain(*found->second, native_surface, *desc, info);
+      result != GRANIT_SUCCESS)
+    return result;
+  const auto handle = next_handle<granit_backend_plugin_swapchain>(next_swapchain);
+  try {
+    found->second->swapchains.emplace(
+        handle, webgpu_instance::swapchain_record{surface, native_surface, info, 0, 0});
+  } catch (const std::bad_alloc&) {
+    wgpuSurfaceUnconfigure(native_surface);
+    return GRANIT_ERROR_OUT_OF_MEMORY;
+  } catch (...) {
+    wgpuSurfaceUnconfigure(native_surface);
+    return GRANIT_ERROR_INTERNAL;
+  }
+  *swapchain = handle;
+  return GRANIT_SUCCESS;
 }
 
-granit_result recreate_swapchain(granit_backend_plugin_instance, granit_backend_plugin_swapchain,
-                                 const granit_backend_plugin_swapchain_desc*) noexcept {
-  return GRANIT_ERROR_UNSUPPORTED;
+granit_result recreate_swapchain(granit_backend_plugin_instance instance,
+                                 granit_backend_plugin_swapchain swapchain,
+                                 const granit_backend_plugin_swapchain_desc* desc) noexcept {
+  if (instance == 0 || swapchain == 0 || desc == nullptr ||
+      desc->struct_size < sizeof(granit_backend_plugin_swapchain_desc) || desc->width == 0 ||
+      desc->height == 0 || desc->present_mode > GRANIT_BACKEND_PLUGIN_PRESENT_MODE_IMMEDIATE)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  const std::scoped_lock lock{instances_mutex};
+  const auto found = instances.find(instance);
+  if (found == instances.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  const auto swapchain_found = found->second->swapchains.find(swapchain);
+  if (swapchain_found == found->second->swapchains.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  if (swapchain_found->second.acquired_texture != 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  granit_backend_plugin_swapchain_info info{};
+  const auto result = configure_swapchain(
+      *found->second, static_cast<WGPUSurface>(swapchain_found->second.native_surface), *desc,
+      info);
+  if (result == GRANIT_SUCCESS)
+    swapchain_found->second.info = info;
+  return result;
 }
 
-granit_result get_swapchain_info(granit_backend_plugin_instance, granit_backend_plugin_swapchain,
-                                 granit_backend_plugin_swapchain_info*) noexcept {
-  return GRANIT_ERROR_UNSUPPORTED;
+granit_result get_swapchain_info(granit_backend_plugin_instance instance,
+                                 granit_backend_plugin_swapchain swapchain,
+                                 granit_backend_plugin_swapchain_info* info) noexcept {
+  if (instance == 0 || swapchain == 0 || info == nullptr ||
+      info->struct_size < sizeof(granit_backend_plugin_swapchain_info))
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  const std::scoped_lock lock{instances_mutex};
+  const auto found = instances.find(instance);
+  if (found == instances.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  const auto swapchain_found = found->second->swapchains.find(swapchain);
+  if (swapchain_found == found->second->swapchains.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  *info = swapchain_found->second.info;
+  return GRANIT_SUCCESS;
 }
 
-granit_result acquire_swapchain(granit_backend_plugin_instance, granit_backend_plugin_swapchain,
-                                granit_backend_plugin_acquired_frame*) noexcept {
-  return GRANIT_ERROR_UNSUPPORTED;
+granit_result acquire_swapchain(granit_backend_plugin_instance instance,
+                                granit_backend_plugin_swapchain swapchain,
+                                granit_backend_plugin_acquired_frame* frame) noexcept {
+  if (instance == 0 || swapchain == 0 || frame == nullptr ||
+      frame->struct_size < sizeof(granit_backend_plugin_acquired_frame) || frame->reserved != 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  const std::scoped_lock lock{instances_mutex};
+  const auto found = instances.find(instance);
+  if (found == instances.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  auto swapchain_found = found->second->swapchains.find(swapchain);
+  if (swapchain_found == found->second->swapchains.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  if (swapchain_found->second.acquired_texture != 0)
+    return GRANIT_ERROR_NOT_READY;
+  WGPUSurfaceTexture acquired{};
+  wgpuSurfaceGetCurrentTexture(static_cast<WGPUSurface>(swapchain_found->second.native_surface),
+                               &acquired);
+  const auto suboptimal = acquired.status == WGPUSurfaceGetCurrentTextureStatus_SuccessSuboptimal;
+  if (acquired.texture == nullptr)
+    return acquired.status == WGPUSurfaceGetCurrentTextureStatus_Timeout ? GRANIT_ERROR_NOT_READY
+           : acquired.status == WGPUSurfaceGetCurrentTextureStatus_Outdated
+               ? GRANIT_ERROR_OUT_OF_DATE
+           : acquired.status == WGPUSurfaceGetCurrentTextureStatus_Lost ? GRANIT_ERROR_SURFACE_LOST
+                                                                        : GRANIT_ERROR_INTERNAL;
+  const auto native_view = wgpuTextureCreateView(acquired.texture, nullptr);
+  if (native_view == nullptr) {
+    static_cast<void>(
+        wgpuSurfacePresent(static_cast<WGPUSurface>(swapchain_found->second.native_surface)));
+    wgpuTextureRelease(acquired.texture);
+    return GRANIT_ERROR_OUT_OF_MEMORY;
+  }
+  const auto texture = next_handle<granit_backend_plugin_texture>(next_texture);
+  const auto view = next_handle<granit_backend_plugin_texture_view>(next_texture_view);
+  try {
+    found->second->textures.emplace(
+        texture, webgpu_instance::texture_record{
+                     acquired.texture, swapchain_found->second.info.width,
+                     swapchain_found->second.info.height,
+                     GRANIT_BACKEND_PLUGIN_TEXTURE_USAGE_RENDER_ATTACHMENT_BIT, true});
+    found->second->texture_views.emplace(
+        view, webgpu_instance::texture_view_record{native_view, texture, true});
+  } catch (...) {
+    found->second->texture_views.erase(view);
+    found->second->textures.erase(texture);
+    wgpuTextureViewRelease(native_view);
+    static_cast<void>(
+        wgpuSurfacePresent(static_cast<WGPUSurface>(swapchain_found->second.native_surface)));
+    wgpuTextureRelease(acquired.texture);
+    return GRANIT_ERROR_OUT_OF_MEMORY;
+  }
+  swapchain_found->second.acquired_texture = texture;
+  swapchain_found->second.acquired_view = view;
+  *frame = {
+      sizeof(granit_backend_plugin_acquired_frame), 0, suboptimal ? 1U : 0U, 0, texture, view};
+  return GRANIT_SUCCESS;
 }
 
-granit_result present_swapchain(granit_backend_plugin_instance, granit_backend_plugin_swapchain,
-                                std::uint32_t*) noexcept {
-  return GRANIT_ERROR_UNSUPPORTED;
+granit_result finish_swapchain_frame(webgpu_instance& state,
+                                     webgpu_instance::swapchain_record& swapchain,
+                                     std::uint32_t& needs_recreate) noexcept {
+  needs_recreate = 0;
+  if (swapchain.acquired_texture == 0 || swapchain.acquired_view == 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  const auto view = state.texture_views.find(swapchain.acquired_view);
+  const auto texture = state.textures.find(swapchain.acquired_texture);
+  if (view == state.texture_views.end() || texture == state.textures.end())
+    return GRANIT_ERROR_INTERNAL;
+  const auto present_result =
+      wgpuSurfacePresent(static_cast<WGPUSurface>(swapchain.native_surface));
+  wgpuTextureViewRelease(view->second.view);
+  wgpuTextureRelease(texture->second.texture);
+  state.texture_views.erase(view);
+  state.textures.erase(texture);
+  swapchain.acquired_view = 0;
+  swapchain.acquired_texture = 0;
+  return present_result == WGPUStatus_Success ? GRANIT_SUCCESS : GRANIT_ERROR_OUT_OF_DATE;
 }
 
-granit_result cancel_swapchain(granit_backend_plugin_instance, granit_backend_plugin_swapchain,
-                               std::uint32_t*) noexcept {
-  return GRANIT_ERROR_UNSUPPORTED;
+granit_result present_swapchain(granit_backend_plugin_instance instance,
+                                granit_backend_plugin_swapchain swapchain,
+                                std::uint32_t* needs_recreate) noexcept {
+  if (instance == 0 || swapchain == 0 || needs_recreate == nullptr)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  const std::scoped_lock lock{instances_mutex};
+  const auto found = instances.find(instance);
+  if (found == instances.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  const auto swapchain_found = found->second->swapchains.find(swapchain);
+  if (swapchain_found == found->second->swapchains.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  return finish_swapchain_frame(*found->second, swapchain_found->second, *needs_recreate);
 }
 
-granit_result destroy_swapchain(granit_backend_plugin_instance,
-                                granit_backend_plugin_swapchain) noexcept {
-  return GRANIT_ERROR_UNSUPPORTED;
+granit_result cancel_swapchain(granit_backend_plugin_instance instance,
+                               granit_backend_plugin_swapchain swapchain,
+                               std::uint32_t* needs_recreate) noexcept {
+  if (instance == 0 || swapchain == 0 || needs_recreate == nullptr)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  const std::scoped_lock lock{instances_mutex};
+  const auto found = instances.find(instance);
+  if (found == instances.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  const auto swapchain_found = found->second->swapchains.find(swapchain);
+  if (swapchain_found == found->second->swapchains.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  return finish_swapchain_frame(*found->second, swapchain_found->second, *needs_recreate);
+}
+
+granit_result destroy_swapchain(granit_backend_plugin_instance instance,
+                                granit_backend_plugin_swapchain swapchain) noexcept {
+  if (instance == 0 || swapchain == 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  const std::scoped_lock lock{instances_mutex};
+  const auto found = instances.find(instance);
+  if (found == instances.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  const auto swapchain_found = found->second->swapchains.find(swapchain);
+  if (swapchain_found == found->second->swapchains.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  if (swapchain_found->second.acquired_texture != 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  wgpuSurfaceUnconfigure(static_cast<WGPUSurface>(swapchain_found->second.native_surface));
+  found->second->swapchains.erase(swapchain_found);
+  return GRANIT_SUCCESS;
 }
 
 constexpr char plugin_name[] = "Granit WebGPU (Dawn)";

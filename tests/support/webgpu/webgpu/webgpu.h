@@ -26,6 +26,7 @@ typedef struct WGPURenderPipelineImpl* WGPURenderPipeline;
 typedef struct WGPUCommandEncoderImpl* WGPUCommandEncoder;
 typedef struct WGPUCommandBufferImpl* WGPUCommandBuffer;
 typedef struct WGPURenderPassEncoderImpl* WGPURenderPassEncoder;
+typedef struct WGPUSurfaceImpl* WGPUSurface;
 
 typedef unsigned int WGPUBool;
 typedef unsigned int WGPUInstanceFeatureName;
@@ -55,6 +56,9 @@ typedef unsigned int WGPUTextureAspect;
 typedef unsigned int WGPULoadOp;
 typedef unsigned int WGPUStoreOp;
 typedef unsigned int WGPUDeviceLostReason;
+typedef unsigned int WGPUPresentMode;
+typedef unsigned int WGPUCompositeAlphaMode;
+typedef unsigned int WGPUSurfaceGetCurrentTextureStatus;
 
 #define WGPU_FALSE 0
 #define WGPU_TRUE 1
@@ -101,6 +105,17 @@ typedef unsigned int WGPUDeviceLostReason;
 #define WGPUStoreOp_Store 1
 #define WGPUBackendType_D3D12 4
 #define WGPUBackendType_Vulkan 6
+#define WGPUSType_EmscriptenSurfaceSourceCanvasHTMLSelector 0x00050000
+#define WGPUPresentMode_Fifo 1
+#define WGPUPresentMode_Immediate 2
+#define WGPUPresentMode_Mailbox 3
+#define WGPUCompositeAlphaMode_Auto 1
+#define WGPUSurfaceGetCurrentTextureStatus_SuccessOptimal 1
+#define WGPUSurfaceGetCurrentTextureStatus_SuccessSuboptimal 2
+#define WGPUSurfaceGetCurrentTextureStatus_Timeout 3
+#define WGPUSurfaceGetCurrentTextureStatus_Outdated 4
+#define WGPUSurfaceGetCurrentTextureStatus_Lost 5
+#define WGPUSurfaceGetCurrentTextureStatus_Error 6
 
 typedef struct WGPUStringView {
   const char* data;
@@ -111,6 +126,51 @@ typedef struct WGPUChainedStruct {
   const struct WGPUChainedStruct* next;
   WGPUSType sType;
 } WGPUChainedStruct;
+
+typedef struct WGPUEmscriptenSurfaceSourceCanvasHTMLSelector {
+  WGPUChainedStruct chain;
+  WGPUStringView selector;
+} WGPUEmscriptenSurfaceSourceCanvasHTMLSelector;
+
+typedef struct WGPUSurfaceDescriptor {
+  const WGPUChainedStruct* nextInChain;
+  WGPUStringView label;
+} WGPUSurfaceDescriptor;
+
+typedef struct WGPUSurfaceCapabilities {
+  void* nextInChain;
+  WGPUTextureUsage usages;
+  size_t formatCount;
+  const WGPUTextureFormat* formats;
+  size_t presentModeCount;
+  const WGPUPresentMode* presentModes;
+  size_t alphaModeCount;
+  const WGPUCompositeAlphaMode* alphaModes;
+} WGPUSurfaceCapabilities;
+#define WGPU_SURFACE_CAPABILITIES_INIT                                                             \
+  {                                                                                                \
+  }
+
+typedef struct WGPUSurfaceConfiguration {
+  void* nextInChain;
+  WGPUDevice device;
+  WGPUTextureFormat format;
+  WGPUTextureUsage usage;
+  unsigned int width;
+  unsigned int height;
+  WGPUPresentMode presentMode;
+  WGPUCompositeAlphaMode alphaMode;
+  size_t viewFormatCount;
+  const WGPUTextureFormat* viewFormats;
+} WGPUSurfaceConfiguration;
+#define WGPU_SURFACE_CONFIGURATION_INIT                                                            \
+  {                                                                                                \
+  }
+
+typedef struct WGPUSurfaceTexture {
+  WGPUTexture texture;
+  WGPUSurfaceGetCurrentTextureStatus status;
+} WGPUSurfaceTexture;
 
 typedef struct WGPUInstanceLimits {
   void* nextInChain;
@@ -483,6 +543,16 @@ typedef struct WGPUBufferMapCallbackInfo {
 } WGPUBufferMapCallbackInfo;
 
 WGPUInstance wgpuCreateInstance(const WGPUInstanceDescriptor* descriptor);
+WGPUSurface wgpuInstanceCreateSurface(WGPUInstance instance,
+                                      const WGPUSurfaceDescriptor* descriptor);
+void wgpuSurfaceRelease(WGPUSurface surface);
+WGPUStatus wgpuSurfaceGetCapabilities(WGPUSurface surface, WGPUAdapter adapter,
+                                      WGPUSurfaceCapabilities* capabilities);
+void wgpuSurfaceCapabilitiesFreeMembers(WGPUSurfaceCapabilities capabilities);
+void wgpuSurfaceConfigure(WGPUSurface surface, const WGPUSurfaceConfiguration* configuration);
+void wgpuSurfaceUnconfigure(WGPUSurface surface);
+void wgpuSurfaceGetCurrentTexture(WGPUSurface surface, WGPUSurfaceTexture* surfaceTexture);
+WGPUStatus wgpuSurfacePresent(WGPUSurface surface);
 void wgpuInstanceRelease(WGPUInstance instance);
 void wgpuInstanceProcessEvents(WGPUInstance instance);
 WGPUFuture wgpuInstanceRequestAdapter(WGPUInstance instance,

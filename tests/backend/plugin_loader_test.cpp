@@ -292,31 +292,72 @@ TEST_CASE("WebGPU 插件 Canvas Surface 契约区分平台支持", "[backend][pl
   CHECK(surface == 0);
   desc.struct_size = sizeof(desc);
   CHECK(loader.create_canvas_surface(instance + 1, &desc, &surface) == GRANIT_ERROR_INVALID_HANDLE);
-  CHECK(loader.create_canvas_surface(instance, &desc, &surface) == GRANIT_ERROR_UNSUPPORTED);
-  CHECK(surface == 0);
-  CHECK(loader.destroy_surface(instance, 1) == GRANIT_ERROR_INVALID_HANDLE);
+  REQUIRE(loader.create_canvas_surface(instance, &desc, &surface) == GRANIT_SUCCESS);
+  REQUIRE(surface != 0);
 
   granit_backend_plugin_swapchain_desc swapchain_desc{};
   swapchain_desc.struct_size = sizeof(swapchain_desc);
   swapchain_desc.width = 640;
   swapchain_desc.height = 480;
   swapchain_desc.minimum_image_count = 2;
-  swapchain_desc.present_mode = GRANIT_BACKEND_PLUGIN_PRESENT_MODE_FIFO;
+  swapchain_desc.present_mode = GRANIT_BACKEND_PLUGIN_PRESENT_MODE_MAILBOX;
   granit_backend_plugin_swapchain swapchain = 42;
-  CHECK(loader.create_swapchain(instance, 1, &swapchain_desc, &swapchain) ==
-        GRANIT_ERROR_INVALID_HANDLE);
-  CHECK(swapchain == 0);
-  CHECK(loader.recreate_swapchain(instance, 1, &swapchain_desc) == GRANIT_ERROR_UNSUPPORTED);
+  REQUIRE(loader.create_swapchain(instance, surface, &swapchain_desc, &swapchain) ==
+          GRANIT_SUCCESS);
+  REQUIRE(swapchain != 0);
+  CHECK(loader.destroy_surface(instance, surface) == GRANIT_ERROR_INVALID_ARGUMENT);
   granit_backend_plugin_swapchain_info info{};
   info.struct_size = sizeof(info);
-  CHECK(loader.get_swapchain_info(instance, 1, &info) == GRANIT_ERROR_UNSUPPORTED);
+  REQUIRE(loader.get_swapchain_info(instance, swapchain, &info) == GRANIT_SUCCESS);
+  CHECK(info.width == 640);
+  CHECK(info.height == 480);
+  CHECK(info.image_count == 1);
+  CHECK(info.present_mode == GRANIT_BACKEND_PLUGIN_PRESENT_MODE_FIFO);
+  CHECK(info.format == GRANIT_BACKEND_PLUGIN_TEXTURE_FORMAT_RGBA8_UNORM);
   granit_backend_plugin_acquired_frame frame{};
   frame.struct_size = sizeof(frame);
-  CHECK(loader.acquire_swapchain(instance, 1, &frame) == GRANIT_ERROR_UNSUPPORTED);
+  REQUIRE(loader.acquire_swapchain(instance, swapchain, &frame) == GRANIT_SUCCESS);
+  REQUIRE(frame.texture != 0);
+  REQUIRE(frame.view != 0);
+  granit_backend_plugin_acquired_frame duplicate{};
+  duplicate.struct_size = sizeof(duplicate);
+  CHECK(loader.acquire_swapchain(instance, swapchain, &duplicate) == GRANIT_ERROR_NOT_READY);
+  CHECK(loader.destroy_texture(instance, frame.texture) == GRANIT_ERROR_INVALID_ARGUMENT);
+  CHECK(loader.destroy_texture_view(instance, frame.view) == GRANIT_ERROR_INVALID_ARGUMENT);
+  CHECK(loader.recreate_swapchain(instance, swapchain, &swapchain_desc) ==
+        GRANIT_ERROR_INVALID_ARGUMENT);
   std::uint32_t needs_recreate{};
-  CHECK(loader.present_swapchain(instance, 1, &needs_recreate) == GRANIT_ERROR_UNSUPPORTED);
-  CHECK(loader.cancel_swapchain(instance, 1, &needs_recreate) == GRANIT_ERROR_UNSUPPORTED);
-  CHECK(loader.destroy_swapchain(instance, 1) == GRANIT_ERROR_UNSUPPORTED);
+  REQUIRE(loader.present_swapchain(instance, swapchain, &needs_recreate) == GRANIT_SUCCESS);
+  CHECK(needs_recreate == 0);
+  CHECK(loader.destroy_texture(instance, frame.texture) == GRANIT_ERROR_INVALID_HANDLE);
+  CHECK(loader.destroy_texture_view(instance, frame.view) == GRANIT_ERROR_INVALID_HANDLE);
+
+  frame = {};
+  frame.struct_size = sizeof(frame);
+  REQUIRE(loader.acquire_swapchain(instance, swapchain, &frame) == GRANIT_SUCCESS);
+  REQUIRE(loader.cancel_swapchain(instance, swapchain, &needs_recreate) == GRANIT_SUCCESS);
+  swapchain_desc.width = 800;
+  swapchain_desc.height = 600;
+  REQUIRE(loader.recreate_swapchain(instance, swapchain, &swapchain_desc) == GRANIT_SUCCESS);
+  info = {};
+  info.struct_size = sizeof(info);
+  REQUIRE(loader.get_swapchain_info(instance, swapchain, &info) == GRANIT_SUCCESS);
+  CHECK(info.width == 800);
+  CHECK(info.height == 600);
+
+  REQUIRE(loader.destroy_swapchain(instance, swapchain) == GRANIT_SUCCESS);
+  CHECK(loader.destroy_swapchain(instance, swapchain) == GRANIT_ERROR_INVALID_HANDLE);
+  REQUIRE(loader.destroy_surface(instance, surface) == GRANIT_SUCCESS);
+  CHECK(loader.destroy_surface(instance, surface) == GRANIT_ERROR_INVALID_HANDLE);
+
+  REQUIRE(loader.create_canvas_surface(instance, &desc, &surface) == GRANIT_SUCCESS);
+  swapchain_desc.width = 64;
+  swapchain_desc.height = 64;
+  REQUIRE(loader.create_swapchain(instance, surface, &swapchain_desc, &swapchain) ==
+          GRANIT_SUCCESS);
+  frame = {};
+  frame.struct_size = sizeof(frame);
+  REQUIRE(loader.acquire_swapchain(instance, swapchain, &frame) == GRANIT_SUCCESS);
 
   CHECK(loader.destroy_instance(instance) == GRANIT_SUCCESS);
   CHECK(state.allocations == state.deallocations);
