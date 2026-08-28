@@ -125,7 +125,7 @@ D-03-graphics-pipeline.md
 - [S-09：0.3.0 公共 SDK 易用性与集成体验](S-09-0.3.0-sdk-usability.md)——已完成；公共使用路径、
   契约、诊断、安装 Consumer、迁移说明和 Release 预验证均已验收。
 - [S-10：0.4.0 多后端与 WebGPU](S-10-0.4.0-webgpu-backend.md)——收尾中；静态 SDK Consumer 与
-  浏览器闭环及 Registry 状态声明已通过，正在收敛平台实现。
+  浏览器闭环、Registry 状态声明及公共 API 源统一已通过，正在收敛平台实现。
 - [S-10C：WGSL Shader 工具链](S-10C-wgsl-toolchain.md)——已完成；以 WGSL 为源码权威，已形成
   SPIR-V、反射清单、确定性资产、诊断和缓存闭环。
 
