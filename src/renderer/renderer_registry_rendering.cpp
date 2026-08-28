@@ -30,7 +30,7 @@ granit_result renderer_registry::bind_graphics_pipeline(granit_renderer renderer
   }
   std::lock_guard command_lock{command->mutex};
   if (command->platform_managed_rendering) {
-    if (command->web_status != command_recorder_record::web_state::recording)
+    if (command->web_status != command_recorder_record::web_state::rendering)
       return GRANIT_ERROR_INVALID_ARGUMENT;
     command->web_pipeline = pipeline_record;
     return GRANIT_SUCCESS;
