@@ -222,7 +222,7 @@ granit_result renderer_registry::set_object_name(granit_renderer renderer, grani
   GRANIT_NAME_OBJECT(bind_groups_)
   GRANIT_NAME_PRESENTATION_OBJECT(graphics_pipelines_)
   GRANIT_NAME_OBJECT(compute_pipelines_)
-  GRANIT_NAME_OBJECT(command_recorders_)
+  GRANIT_NAME_PRESENTATION_OBJECT(command_recorders_)
   GRANIT_NAME_PRESENTATION_OBJECT(timestamp_query_pools_)
 #undef GRANIT_NAME_OBJECT
 #undef GRANIT_NAME_PRESENTATION_OBJECT
@@ -354,7 +354,7 @@ granit_result renderer_registry::destroy(granit_renderer renderer) {
         }
       }
       for (const auto& [handle, record] : command_recorders_) {
-        if (record->renderer == state) {
+        if (record->owner == state) {
           lifecycle.add(lifecycle_resource_type::command_recorder, handle,
                         record->metadata.creation_sequence);
         }
@@ -389,7 +389,7 @@ granit_result renderer_registry::destroy(granit_renderer renderer) {
       }
     }
     for (auto recorder = command_recorders_.begin(); recorder != command_recorders_.end();) {
-      if (recorder->second->renderer == state) {
+      if (recorder->second->owner == state) {
         native_command_recorders.push_back(std::move(recorder->second));
         static_cast<void>(
             handles_.erase(recorder->first, resource_type::command_recorder, state->domain()));
@@ -1217,7 +1217,7 @@ granit_result renderer_registry::submit_command_recorder_frame(granit_renderer r
   std::scoped_lock locks{command->mutex, frame_state->mutex};
   if (frame_state->submitted)
     return GRANIT_ERROR_INVALID_ARGUMENT;
-  if (!command->renderer) {
+  if (command->platform_managed_rendering) {
     if (command->web_status != command_recorder_record::web_state::executable)
       return GRANIT_ERROR_INVALID_ARGUMENT;
     submission_serial serial{};
@@ -1442,6 +1442,7 @@ granit_result renderer_registry::create_buffer(granit_renderer renderer,
       return GRANIT_ERROR_INVALID_HANDLE;
     }
     auto record = std::make_shared<buffer_record>();
+    record->owner = state;
     record->renderer = state;
     record->desc = desc;
     record->native = state->allocate_buffer_resource();
@@ -2624,6 +2625,7 @@ granit_result renderer_registry::create_bind_group(granit_renderer renderer,
       sort_dynamic_uniform_bindings(record->dynamic_uniform_bindings);
     }
     record->renderer = state;
+    record->owner = state;
     record->layout = layout;
     record->native = state->allocate_bind_group_resource();
     const auto result = state->create_native_bind_group(*layout->native, writes, *record->native);
@@ -2979,6 +2981,7 @@ granit_result renderer_registry::create_compute_pipeline(granit_renderer rendere
       compute = compute_found->second;
     }
     auto record = std::make_shared<compute_pipeline_record>();
+    record->owner = state;
     record->renderer = state;
     record->layout = layout;
     record->compute_shader = compute;
@@ -3048,11 +3051,12 @@ granit_result renderer_registry::create_command_recorder(granit_renderer rendere
     record->commands = std::dynamic_pointer_cast<backend_command_renderer>(owner);
     record->compute = std::dynamic_pointer_cast<backend_compute_command_renderer>(owner);
     record->graphics = std::dynamic_pointer_cast<backend_graphics_command_renderer>(owner);
+    record->retirement = std::dynamic_pointer_cast<backend_retirement_renderer>(owner);
     record->timestamps = std::dynamic_pointer_cast<backend_timestamp_renderer>(owner);
     record->transfers = std::dynamic_pointer_cast<backend_transfer_command_renderer>(owner);
     if (!record->queue || !record->commands || !record->graphics)
       return GRANIT_ERROR_INTERNAL;
-    record->renderer = std::dynamic_pointer_cast<renderer_state>(owner);
+    record->platform_managed_rendering = !record->retirement;
     record->native = record->commands->allocate_command_recorder_resource();
     const auto result = record->native ? record->commands->create_command_recorder(*record->native)
                                        : GRANIT_ERROR_OUT_OF_MEMORY;
@@ -3092,7 +3096,7 @@ granit_result renderer_registry::begin_command_recorder(granit_renderer renderer
     return GRANIT_ERROR_INVALID_HANDLE;
   }
   std::lock_guard record_lock{record->mutex};
-  if (!record->renderer) {
+  if (record->platform_managed_rendering) {
     if (record->web_status != command_recorder_record::web_state::initial)
       return GRANIT_ERROR_INVALID_ARGUMENT;
     const auto result = record->commands->begin_command_recorder(*record->native);
@@ -3110,7 +3114,7 @@ granit_result renderer_registry::end_command_recorder(granit_renderer renderer,
     return GRANIT_ERROR_INVALID_HANDLE;
   }
   std::lock_guard record_lock{record->mutex};
-  if (!record->renderer) {
+  if (record->platform_managed_rendering) {
     if (record->web_status != command_recorder_record::web_state::recording || !record->web_drew)
       return GRANIT_ERROR_INVALID_ARGUMENT;
     const auto result = record->commands->end_command_recorder(*record->native);
@@ -3127,7 +3131,7 @@ granit_result renderer_registry::submit_command_recorder(granit_renderer rendere
   if (!record)
     return GRANIT_ERROR_INVALID_HANDLE;
   std::lock_guard record_lock{record->mutex};
-  if (!record->renderer) {
+  if (record->platform_managed_rendering) {
     if (record->web_status != command_recorder_record::web_state::executable)
       return GRANIT_ERROR_INVALID_ARGUMENT;
     submission_serial serial{};
@@ -3201,7 +3205,7 @@ granit_result renderer_registry::reset_command_recorder(granit_renderer renderer
     return GRANIT_ERROR_INVALID_HANDLE;
   }
   std::lock_guard record_lock{record->mutex};
-  if (!record->renderer) {
+  if (record->platform_managed_rendering) {
     if (record->web_status == command_recorder_record::web_state::recording ||
         record->web_status == command_recorder_record::web_state::rendering)
       return GRANIT_ERROR_INVALID_ARGUMENT;
@@ -3221,7 +3225,8 @@ granit_result renderer_registry::reset_command_recorder(granit_renderer renderer
   const auto result = record->commands->reset_command_recorder(*record->native);
   if (result == GRANIT_SUCCESS) {
     record->retained_resources.clear();
-    static_cast<void>(record->renderer->collect_retired());
+    if (record->retirement)
+      static_cast<void>(record->retirement->collect_retired());
   }
   return result;
 }
@@ -3437,7 +3442,7 @@ granit_result renderer_registry::copy_buffer(granit_renderer renderer,
   std::shared_ptr<buffer_record> destination_record;
   {
     std::lock_guard lock{mutex_};
-    const auto& state = recorder_record->renderer;
+    const auto& state = recorder_record->owner;
     if (handles_.find(source, resource_type::buffer, state->domain()) == nullptr ||
         handles_.find(destination, resource_type::buffer, state->domain()) == nullptr) {
       return GRANIT_ERROR_INVALID_HANDLE;
@@ -3445,8 +3450,7 @@ granit_result renderer_registry::copy_buffer(granit_renderer renderer,
     const auto found_source = buffers_.find(source);
     const auto found_destination = buffers_.find(destination);
     if (found_source == buffers_.end() || found_destination == buffers_.end() ||
-        found_source->second->renderer != state ||
-        found_destination->second->renderer != state) {
+        found_source->second->owner != state || found_destination->second->owner != state) {
       return GRANIT_ERROR_INVALID_HANDLE;
     }
     source_record = found_source->second;
@@ -3501,7 +3505,7 @@ granit_result renderer_registry::copy_texture_to_buffer(granit_renderer renderer
   std::shared_ptr<buffer_record> destination_record;
   {
     std::lock_guard lock{mutex_};
-    const auto& state = recorder_record->renderer;
+    const auto& state = recorder_record->owner;
     if (handles_.find(source, resource_type::texture, state->domain()) == nullptr ||
         handles_.find(destination, resource_type::buffer, state->domain()) == nullptr) {
       return GRANIT_ERROR_INVALID_HANDLE;
@@ -3510,7 +3514,7 @@ granit_result renderer_registry::copy_texture_to_buffer(granit_renderer renderer
     const auto found_destination = buffers_.find(destination);
     if (found_source == textures_.end() || found_destination == buffers_.end() ||
         found_source->second->owner != recorder_record->owner ||
-        found_destination->second->renderer != state) {
+        found_destination->second->owner != state) {
       return GRANIT_ERROR_INVALID_HANDLE;
     }
     source_record = found_source->second;
@@ -3586,7 +3590,7 @@ granit_result renderer_registry::copy_buffer_to_texture(granit_renderer renderer
   std::shared_ptr<texture_record> destination_record;
   {
     std::lock_guard lock{mutex_};
-    const auto& state = recorder_record->renderer;
+    const auto& state = recorder_record->owner;
     if (handles_.find(source, resource_type::buffer, state->domain()) == nullptr ||
         handles_.find(destination, resource_type::texture, state->domain()) == nullptr) {
       return GRANIT_ERROR_INVALID_HANDLE;
@@ -3594,7 +3598,7 @@ granit_result renderer_registry::copy_buffer_to_texture(granit_renderer renderer
     const auto found_source = buffers_.find(source);
     const auto found_destination = textures_.find(destination);
     if (found_source == buffers_.end() || found_destination == textures_.end() ||
-        found_source->second->renderer != state ||
+        found_source->second->owner != state ||
         found_destination->second->owner != recorder_record->owner) {
       return GRANIT_ERROR_INVALID_HANDLE;
     }
@@ -3669,7 +3673,7 @@ granit_result renderer_registry::copy_texture(granit_renderer renderer,
   std::shared_ptr<texture_record> destination_record;
   {
     std::lock_guard lock{mutex_};
-    const auto& state = recorder_record->renderer;
+    const auto& state = recorder_record->owner;
     if (handles_.find(source, resource_type::texture, state->domain()) == nullptr ||
         handles_.find(destination, resource_type::texture, state->domain()) == nullptr) {
       return GRANIT_ERROR_INVALID_HANDLE;
@@ -3744,7 +3748,7 @@ granit_result renderer_registry::generate_mipmaps(granit_renderer renderer,
   std::shared_ptr<texture_record> texture_record_state;
   {
     std::lock_guard lock{mutex_};
-    const auto& state = recorder_record->renderer;
+    const auto& state = recorder_record->owner;
     if (handles_.find(texture, resource_type::texture, state->domain()) == nullptr)
       return GRANIT_ERROR_INVALID_HANDLE;
     const auto found = textures_.find(texture);
@@ -3788,12 +3792,12 @@ granit_result renderer_registry::fill_buffer(granit_renderer renderer,
   std::shared_ptr<buffer_record> buffer_record_state;
   {
     std::lock_guard lock{mutex_};
-    const auto& state = recorder_record->renderer;
+    const auto& state = recorder_record->owner;
     if (handles_.find(buffer, resource_type::buffer, state->domain()) == nullptr) {
       return GRANIT_ERROR_INVALID_HANDLE;
     }
     const auto found = buffers_.find(buffer);
-    if (found == buffers_.end() || found->second->renderer != state) {
+    if (found == buffers_.end() || found->second->owner != state) {
       return GRANIT_ERROR_INVALID_HANDLE;
     }
     buffer_record_state = found->second;
@@ -3829,7 +3833,7 @@ granit_result renderer_registry::bind_graphics_pipeline(granit_renderer renderer
     pipeline_record = found->second;
   }
   std::lock_guard command_lock{command->mutex};
-  if (!command->renderer) {
+  if (command->platform_managed_rendering) {
     if (command->web_status != command_recorder_record::web_state::recording)
       return GRANIT_ERROR_INVALID_ARGUMENT;
     command->web_pipeline = pipeline_record;
@@ -3871,7 +3875,7 @@ renderer_registry::bind_graphics_groups(granit_renderer renderer, granit_command
     native_groups.reserve(bind_groups.size());
     for (std::size_t index = 0; index < bind_groups.size(); ++index) {
       const auto found = bind_groups_.find(bind_groups[index]);
-      if (found == bind_groups_.end() || found->second->renderer != command->renderer)
+      if (found == bind_groups_.end() || found->second->owner != command->owner)
         return GRANIT_ERROR_INVALID_HANDLE;
       if (found->second->layout != layout_record->bind_group_layouts[first_group + index])
         return GRANIT_ERROR_INVALID_ARGUMENT;
@@ -3889,7 +3893,7 @@ renderer_registry::bind_graphics_groups(granit_renderer renderer, granit_command
   }
   if (!validate_dynamic_uniform_offsets(
           dynamic_bindings, dynamic_offsets,
-          command->renderer->capabilities().uniform_buffer_offset_alignment))
+          command->owner->capabilities().uniform_buffer_offset_alignment))
     return GRANIT_ERROR_INVALID_ARGUMENT;
   std::lock_guard command_lock{command->mutex};
   if (!command->commands->command_recorder_is_recording(*command->native))
@@ -3917,7 +3921,7 @@ granit_result renderer_registry::bind_compute_pipeline(granit_renderer renderer,
   {
     std::lock_guard lock{mutex_};
     const auto found = compute_pipelines_.find(pipeline);
-    if (found == compute_pipelines_.end() || found->second->renderer != command->renderer)
+    if (found == compute_pipelines_.end() || found->second->owner != command->owner)
       return GRANIT_ERROR_INVALID_HANDLE;
     pipeline_record = found->second;
   }
@@ -3960,7 +3964,7 @@ renderer_registry::bind_compute_groups(granit_renderer renderer, granit_command_
     native_groups.reserve(bind_groups.size());
     for (std::size_t index = 0; index < bind_groups.size(); ++index) {
       const auto found = bind_groups_.find(bind_groups[index]);
-      if (found == bind_groups_.end() || found->second->renderer != command->renderer)
+      if (found == bind_groups_.end() || found->second->owner != command->owner)
         return GRANIT_ERROR_INVALID_HANDLE;
       if (found->second->layout != layout_record->bind_group_layouts[first_group + index])
         return GRANIT_ERROR_INVALID_ARGUMENT;
@@ -3978,7 +3982,7 @@ renderer_registry::bind_compute_groups(granit_renderer renderer, granit_command_
   }
   if (!validate_dynamic_uniform_offsets(
           dynamic_bindings, dynamic_offsets,
-          command->renderer->capabilities().uniform_buffer_offset_alignment))
+          command->owner->capabilities().uniform_buffer_offset_alignment))
     return GRANIT_ERROR_INVALID_ARGUMENT;
   std::lock_guard command_lock{command->mutex};
   if (!command->commands->command_recorder_is_recording(*command->native))
@@ -4042,7 +4046,7 @@ renderer_registry::bind_vertex_buffers(granit_renderer renderer, granit_command_
     std::lock_guard lock{mutex_};
     for (const auto& binding : bindings) {
       const auto found = buffers_.find(binding.buffer);
-      if (found == buffers_.end() || found->second->renderer != command->renderer)
+      if (found == buffers_.end() || found->second->owner != command->owner)
         return GRANIT_ERROR_INVALID_HANDLE;
       if ((found->second->desc.usage & GRANIT_BUFFER_USAGE_VERTEX_BIT) == 0 ||
           binding.offset >= found->second->desc.size)
@@ -4073,7 +4077,7 @@ granit_result renderer_registry::bind_index_buffer(granit_renderer renderer,
   {
     std::lock_guard lock{mutex_};
     const auto found = buffers_.find(buffer);
-    if (found == buffers_.end() || found->second->renderer != command->renderer)
+    if (found == buffers_.end() || found->second->owner != command->owner)
       return GRANIT_ERROR_INVALID_HANDLE;
     const auto alignment = type == GRANIT_INDEX_TYPE_UINT16 ? 2U : 4U;
     if ((found->second->desc.usage & GRANIT_BUFFER_USAGE_INDEX_BIT) == 0 ||
@@ -4096,7 +4100,7 @@ granit_result renderer_registry::draw(granit_renderer renderer, granit_command_r
   if (!command)
     return GRANIT_ERROR_INVALID_HANDLE;
   std::lock_guard lock{command->mutex};
-  if (!command->renderer) {
+  if (command->platform_managed_rendering) {
     if (command->web_status != command_recorder_record::web_state::rendering ||
         !command->web_target || !command->web_pipeline)
       return GRANIT_ERROR_INVALID_ARGUMENT;
@@ -4131,7 +4135,7 @@ granit_result renderer_registry::begin_rendering(granit_renderer renderer,
   auto command = acquire_command_recorder(renderer, recorder);
   if (!command)
     return GRANIT_ERROR_INVALID_HANDLE;
-  if (!command->renderer) {
+  if (command->platform_managed_rendering) {
     if (desc.color_attachment_count != 1 || desc.color_attachments == nullptr ||
         desc.depth_stencil_attachment != nullptr)
       return GRANIT_ERROR_UNSUPPORTED;
@@ -4155,7 +4159,7 @@ granit_result renderer_registry::begin_rendering(granit_renderer renderer,
   {
     std::lock_guard lock{mutex_};
     const auto acquire_view = [&](granit_texture_view handle) {
-      if (handles_.find(handle, resource_type::texture_view, command->renderer->domain()) ==
+      if (handles_.find(handle, resource_type::texture_view, command->owner->domain()) ==
           nullptr)
         return std::shared_ptr<texture_view_record>{};
       const auto found = texture_views_.find(handle);
@@ -4252,7 +4256,7 @@ granit_result renderer_registry::end_rendering(granit_renderer renderer,
   if (!command)
     return GRANIT_ERROR_INVALID_HANDLE;
   std::lock_guard lock{command->mutex};
-  if (!command->renderer) {
+  if (command->platform_managed_rendering) {
     if (command->web_status != command_recorder_record::web_state::rendering)
       return GRANIT_ERROR_INVALID_ARGUMENT;
     command->web_status = command_recorder_record::web_state::recording;
@@ -4288,10 +4292,10 @@ granit_result renderer_registry::destroy_command_recorder(granit_renderer render
     static_cast<void>(
         handles_.erase(recorder, resource_type::command_recorder, record->owner->domain()));
   }
-  auto state = record->renderer;
+  auto retirement = record->retirement;
   record.reset();
-  if (state)
-    static_cast<void>(state->collect_retired());
+  if (retirement)
+    static_cast<void>(retirement->collect_retired());
   return GRANIT_SUCCESS;
 }
 

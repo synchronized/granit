@@ -396,6 +396,7 @@ private:
   };
   struct buffer_record {
     resource_metadata metadata;
+    std::shared_ptr<backend_renderer> owner;
     std::shared_ptr<renderer_state> renderer;
     std::unique_ptr<backend_buffer_resource> native;
     granit_buffer_desc desc{};
@@ -446,6 +447,7 @@ private:
   };
   struct bind_group_record {
     resource_metadata metadata;
+    std::shared_ptr<backend_renderer> owner;
     std::shared_ptr<renderer_state> renderer;
     std::shared_ptr<bind_group_layout_record> layout;
     std::vector<std::shared_ptr<void>> resources;
@@ -466,6 +468,7 @@ private:
   };
   struct compute_pipeline_record {
     resource_metadata metadata;
+    std::shared_ptr<backend_renderer> owner;
     std::shared_ptr<renderer_state> renderer;
     std::shared_ptr<pipeline_layout_record> layout;
     std::shared_ptr<shader_record> compute_shader;
@@ -479,9 +482,9 @@ private:
     std::shared_ptr<backend_command_renderer> commands;
     std::shared_ptr<backend_compute_command_renderer> compute;
     std::shared_ptr<backend_graphics_command_renderer> graphics;
+    std::shared_ptr<backend_retirement_renderer> retirement;
     std::shared_ptr<backend_timestamp_renderer> timestamps;
     std::shared_ptr<backend_transfer_command_renderer> transfers;
-    std::shared_ptr<renderer_state> renderer;
     std::unique_ptr<backend_command_recorder_resource> native;
     std::mutex mutex;
     std::vector<retained_resource> retained_resources;
@@ -489,6 +492,7 @@ private:
     std::shared_ptr<graphics_pipeline_record> web_pipeline;
     web_state web_status{web_state::initial};
     bool web_drew{};
+    bool platform_managed_rendering{};
     bool owned_by_frame_context{};
   };
   enum class frame_context_slot_state { idle, recording, submitted };
