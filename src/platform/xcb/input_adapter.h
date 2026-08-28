@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#ifndef GRANIT_INPUT_XCB_INPUT_ADAPTER_H_
-#define GRANIT_INPUT_XCB_INPUT_ADAPTER_H_
+#ifndef GRANIT_PLATFORM_XCB_INPUT_ADAPTER_H_
+#define GRANIT_PLATFORM_XCB_INPUT_ADAPTER_H_
 
 #include <granit/input/input.h>
 

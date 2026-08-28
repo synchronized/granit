@@ -18,6 +18,8 @@ add_library(
   backend/webgpu/shader_adapter.h
   platform/shared_library.cpp
   platform/shared_library.h
+  $<$<PLATFORM_ID:Windows>:platform/win32/shared_library_backend.cpp>
+  $<$<NOT:$<PLATFORM_ID:Windows>>:platform/posix/shared_library_backend.cpp>
 )
 target_compile_features(granit_backend_plugin PRIVATE cxx_std_20)
 target_include_directories(
@@ -297,7 +299,7 @@ add_library(granit_window)
 add_library(granit::window ALIAS granit_window)
 target_sources(
   granit_window
-  PRIVATE window/window_api.cpp
+  PRIVATE platform/window/window_backend.cpp
           $<$<BOOL:${GRANIT_HAS_WAYLAND_SHELL}>:$<TARGET_OBJECTS:granit_xdg_shell_protocol>>
   PUBLIC
     FILE_SET HEADERS
@@ -311,7 +313,9 @@ target_sources(
 )
 target_compile_features(granit_window PUBLIC cxx_std_20)
 target_include_directories(
-  granit_window PUBLIC "$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>"
+  granit_window
+  PRIVATE "${PROJECT_SOURCE_DIR}/src"
+  PUBLIC "$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>"
 )
 target_compile_definitions(
   granit_window
@@ -361,9 +365,11 @@ install(
   COMPONENT Window
 )
 
-add_library(granit_input_internal OBJECT input/utf8.cpp input/xcb_input_adapter.cpp)
+add_library(granit_input_internal OBJECT input/utf8.cpp platform/xcb/input_adapter.cpp)
 target_compile_features(granit_input_internal PRIVATE cxx_std_20)
-target_include_directories(granit_input_internal PRIVATE "${PROJECT_SOURCE_DIR}/include")
+target_include_directories(
+  granit_input_internal PRIVATE "${PROJECT_SOURCE_DIR}/include" "${PROJECT_SOURCE_DIR}/src"
+)
 granit_target_compile_warnings(granit_input_internal)
 set_target_properties(
   granit_input_internal
@@ -371,7 +377,7 @@ set_target_properties(
              VISIBILITY_INLINES_HIDDEN YES
 )
 if(GRANIT_HAS_WAYLAND_INPUT)
-  target_sources(granit_input_internal PRIVATE input/wayland_input_adapter.cpp)
+  target_sources(granit_input_internal PRIVATE platform/wayland/input_adapter.cpp)
   target_include_directories(
     granit_input_internal SYSTEM PRIVATE "${GRANIT_XKBCOMMON_INCLUDE_DIR}"
   )
@@ -397,10 +403,14 @@ if(GRANIT_HAS_WAYLAND_INPUT)
   target_link_libraries(granit_input PRIVATE "${GRANIT_XKBCOMMON_LIBRARY}")
 endif()
 if(WIN32)
-  target_sources(granit_input PRIVATE input/win32_input_adapter.cpp)
+  target_sources(granit_input PRIVATE platform/win32/input_adapter.cpp)
 endif()
 target_compile_features(granit_input PUBLIC cxx_std_20)
-target_include_directories(granit_input PUBLIC "$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>")
+target_include_directories(
+  granit_input
+  PRIVATE "${PROJECT_SOURCE_DIR}/src"
+  PUBLIC "$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>"
+)
 target_compile_definitions(
   granit_input
   PRIVATE GRANIT_INPUT_BUILDING_LIBRARY

@@ -3,7 +3,7 @@
 
 #include <granit/window/window.h>
 
-#include "input_bridge.hpp"
+#include "platform/window/input_bridge.hpp"
 
 #if defined(_WIN32)
 #include <windows.h>

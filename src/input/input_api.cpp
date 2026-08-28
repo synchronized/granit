@@ -3,14 +3,14 @@
 
 #include <granit/input/input.h>
 
-#include "../window/input_bridge.hpp"
+#include "platform/window/input_bridge.hpp"
+#include "platform/xcb/input_adapter.h"
 #include "utf8.h"
-#include "xcb_input_adapter.h"
 #if defined(GRANIT_INPUT_HAS_WAYLAND)
-#include "wayland_input_adapter.h"
+#include "platform/wayland/input_adapter.h"
 #endif
 #if defined(_WIN32)
-#include "win32_input_adapter.h"
+#include "platform/win32/input_adapter.h"
 #endif
 
 #include <algorithm>

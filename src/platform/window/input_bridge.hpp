@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#ifndef GRANIT_WINDOW_INPUT_BRIDGE_HPP_
-#define GRANIT_WINDOW_INPUT_BRIDGE_HPP_
+#ifndef GRANIT_PLATFORM_WINDOW_INPUT_BRIDGE_HPP_
+#define GRANIT_PLATFORM_WINDOW_INPUT_BRIDGE_HPP_
 
 #include <granit/window/export.h>
 #include <granit/window/window.h>
