@@ -106,6 +106,7 @@ target_sources(
     backend/vulkan/upload_context.h
     backend/vulkan/version_check.cpp
     backend/vulkan/vma_implementation.cpp
+    backend/callback_lifetime.h
     backend/lifecycle.h
     core/handle_table.cpp
     core/handle_table.h
