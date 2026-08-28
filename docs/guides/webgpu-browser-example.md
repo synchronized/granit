@@ -52,7 +52,7 @@ http://127.0.0.1:8000/granit_webgpu_triangle_example.html
 ## 自动验证
 
 仓库浏览器测试会启动无头 Chrome，验证 Renderer 生命周期、键盘和鼠标输入转发；浏览器合成层
-可读时还会验证中心绿色像素和角落黑色像素。Linux SwiftShader 若返回全透明截图，会明确记录跳过
+可读时还会验证中心绿色像素和角落黑色像素。Linux SwiftShader 若中心返回透明像素，会明确记录跳过
 截图颜色断言，绘制结果继续由 WebGPU 插件离屏回读测试覆盖：
 
 ```powershell
