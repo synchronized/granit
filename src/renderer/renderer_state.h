@@ -42,6 +42,7 @@
 namespace granit::detail {
 
 class renderer_state final : public backend_renderer,
+                             public backend_presentation_renderer,
                              public backend_queue,
                              public std::enable_shared_from_this<renderer_state> {
 public:
@@ -65,8 +66,8 @@ public:
   [[nodiscard]] granit_result set_backend_resource_name(backend_resource& resource,
                                                         std::string_view name);
 
-  [[nodiscard]] std::unique_ptr<backend_surface_resource> allocate_surface_resource();
-  [[nodiscard]] std::unique_ptr<backend_swapchain_resource> allocate_swapchain_resource();
+  [[nodiscard]] std::unique_ptr<backend_surface_resource> allocate_surface_resource() override;
+  [[nodiscard]] std::unique_ptr<backend_swapchain_resource> allocate_swapchain_resource() override;
   [[nodiscard]] std::unique_ptr<backend_buffer_resource> allocate_buffer_resource();
   [[nodiscard]] std::unique_ptr<backend_texture_resource> allocate_texture_resource();
   [[nodiscard]] std::unique_ptr<backend_texture_view_resource> allocate_texture_view_resource();
@@ -84,26 +85,30 @@ public:
   [[nodiscard]] std::unique_ptr<backend_command_recorder_resource>
   allocate_command_recorder_resource();
 
-  [[nodiscard]] granit_result create_win32_surface(void* native_instance, void* native_window,
-                                                   backend_surface_resource& surface) noexcept;
-  [[nodiscard]] granit_result create_xcb_surface(void* connection, std::uint32_t window,
-                                                 backend_surface_resource& surface) noexcept;
-  [[nodiscard]] granit_result create_wayland_surface(void* display, void* native_surface,
-                                                     backend_surface_resource& surface) noexcept;
-  [[nodiscard]] granit_result create_canvas_surface(std::string_view selector,
-                                                    backend_surface_resource& surface) noexcept;
+  [[nodiscard]] granit_result
+  create_win32_surface(void* native_instance, void* native_window,
+                       backend_surface_resource& surface) noexcept override;
+  [[nodiscard]] granit_result
+  create_xcb_surface(void* connection, std::uint32_t window,
+                     backend_surface_resource& surface) noexcept override;
+  [[nodiscard]] granit_result
+  create_wayland_surface(void* display, void* native_surface,
+                         backend_surface_resource& surface) noexcept override;
+  [[nodiscard]] granit_result
+  create_canvas_surface(std::string_view selector,
+                        backend_surface_resource& surface) noexcept override;
   void destroy_native_surface(VkSurfaceKHR surface) noexcept;
   [[nodiscard]] granit_result create_swapchain(backend_surface_resource& surface,
                                                const backend_swapchain_desc& desc,
-                                               backend_swapchain_resource& swapchain);
+                                               backend_swapchain_resource& swapchain) override;
   [[nodiscard]] granit_result recreate_swapchain(backend_surface_resource& surface,
                                                  const backend_swapchain_desc& desc,
-                                                 backend_swapchain_resource& swapchain);
+                                                 backend_swapchain_resource& swapchain) override;
   [[nodiscard]] backend_swapchain_info
-  get_swapchain_info(backend_swapchain_resource& swapchain) noexcept;
+  get_swapchain_info(backend_swapchain_resource& swapchain) noexcept override;
   [[nodiscard]] granit_result
   get_swapchain_backbuffers(backend_swapchain_resource& swapchain,
-                            std::vector<backend_swapchain_backbuffer>& backbuffers);
+                            std::vector<backend_swapchain_backbuffer>& backbuffers) override;
   void destroy_native_swapchain(vulkan_swapchain& swapchain) noexcept;
   [[nodiscard]] granit_result create_native_buffer(const granit_buffer_desc& desc,
                                                    backend_buffer_resource& buffer) noexcept;
@@ -257,8 +262,9 @@ public:
   [[nodiscard]] granit_result
   submit_command_recorders(std::span<backend_command_recorder_resource* const> recorders,
                            submission_serial& submitted_serial) override;
-  [[nodiscard]] granit_result acquire_swapchain_frame(backend_swapchain_resource& swapchain,
-                                                      backend_acquired_swapchain_frame& frame);
+  [[nodiscard]] granit_result
+  acquire_swapchain_frame(backend_swapchain_resource& swapchain,
+                          backend_acquired_swapchain_frame& frame) override;
   [[nodiscard]] granit_result submit_swapchain_frame(backend_command_recorder_resource& recorder,
                                                      backend_swapchain_resource& swapchain,
                                                      std::uint32_t image_index,
