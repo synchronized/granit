@@ -6,7 +6,7 @@
 
 #include <memory>
 
-#include <granit/renderer/resource_types.h>
+#include <granit/renderer/pipeline.h>
 
 #include "backend/resources.h"
 
@@ -26,6 +26,8 @@ public:
   create_empty_pipeline_layout(backend_pipeline_layout_resource& layout) noexcept = 0;
   [[nodiscard]] virtual std::unique_ptr<backend_graphics_pipeline_resource>
   allocate_graphics_pipeline_resource() = 0;
+  [[nodiscard]] virtual granit_result
+  validate_graphics_pipeline(const granit_graphics_pipeline_desc& desc) const noexcept = 0;
   [[nodiscard]] virtual granit_result create_graphics_pipeline(
       backend_graphics_pipeline_resource& pipeline, backend_pipeline_layout_resource& layout,
       backend_shader_resource& vertex_shader, backend_shader_resource& fragment_shader,

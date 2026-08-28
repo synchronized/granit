@@ -95,6 +95,11 @@ webgpu_renderer_state::allocate_graphics_pipeline_resource() {
   return pipelines_ ? pipelines_->allocate_graphics_pipeline() : nullptr;
 }
 
+granit_result webgpu_renderer_state::validate_graphics_pipeline(
+    const granit_graphics_pipeline_desc& desc) const noexcept {
+  return pipelines_ ? pipelines_->validate_graphics_pipeline(desc) : GRANIT_ERROR_UNSUPPORTED;
+}
+
 granit_result webgpu_renderer_state::create_graphics_pipeline(
     backend_graphics_pipeline_resource& pipeline, backend_pipeline_layout_resource& layout,
     backend_shader_resource& vertex_shader, backend_shader_resource& fragment_shader,

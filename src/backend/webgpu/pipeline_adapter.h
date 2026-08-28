@@ -6,7 +6,7 @@
 
 #include <memory>
 
-#include <granit/renderer/resource_types.h>
+#include <granit/renderer/pipeline.h>
 
 #include "backend/plugin_loader.h"
 #include "backend/resources.h"
@@ -23,6 +23,8 @@ public:
   [[nodiscard]] std::unique_ptr<backend_pipeline_layout_resource> allocate_pipeline_layout() const;
   [[nodiscard]] std::unique_ptr<backend_graphics_pipeline_resource>
   allocate_graphics_pipeline() const;
+  [[nodiscard]] granit_result
+  validate_graphics_pipeline(const granit_graphics_pipeline_desc& desc) const noexcept;
   [[nodiscard]] granit_result
   create_pipeline_layout(backend_pipeline_layout_resource& resource) const noexcept;
   [[nodiscard]] granit_result create_graphics_pipeline(

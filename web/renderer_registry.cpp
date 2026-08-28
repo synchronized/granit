@@ -245,19 +245,18 @@ granit_result renderer_registry::create_canvas_surface(granit_renderer renderer,
                                                        std::string_view selector,
                                                        granit_surface& surface) {
   try {
-    const auto state = std::dynamic_pointer_cast<webgpu_renderer_state>(acquire_backend(renderer));
-    if (!state || state->presentation() == nullptr) {
-      return state ? GRANIT_ERROR_NOT_READY : GRANIT_ERROR_INVALID_HANDLE;
-    }
+    auto owner = acquire_backend(renderer);
+    auto presentation = std::dynamic_pointer_cast<backend_presentation_renderer>(owner);
+    if (!owner || !presentation)
+      return owner ? GRANIT_ERROR_UNSUPPORTED : GRANIT_ERROR_INVALID_HANDLE;
     auto record = std::make_shared<surface_record>();
-    record->owner = state;
-    record->renderer = state;
-    record->native = state->presentation()->allocate_surface();
+    record->owner = owner;
+    record->renderer = presentation;
+    record->native = presentation->allocate_surface_resource();
     if (!record->native) {
       return GRANIT_ERROR_OUT_OF_MEMORY;
     }
-    const auto result = state->presentation()->create_canvas_surface(
-        *record->native, selector.data(), selector.size());
+    const auto result = presentation->create_canvas_surface(selector, *record->native);
     if (result != GRANIT_SUCCESS) {
       return result;
     }
@@ -315,29 +314,29 @@ granit_result renderer_registry::create_swapchain(granit_renderer renderer, gran
                                                   const backend_swapchain_desc& desc,
                                                   granit_swapchain& swapchain) {
   try {
-    const auto state = std::dynamic_pointer_cast<webgpu_renderer_state>(acquire_backend(renderer));
-    if (!state || state->presentation() == nullptr) {
-      return state ? GRANIT_ERROR_NOT_READY : GRANIT_ERROR_INVALID_HANDLE;
-    }
+    auto owner = acquire_backend(renderer);
+    auto presentation = std::dynamic_pointer_cast<backend_presentation_renderer>(owner);
+    if (!owner || !presentation)
+      return owner ? GRANIT_ERROR_UNSUPPORTED : GRANIT_ERROR_INVALID_HANDLE;
     std::shared_ptr<surface_record> surface_record_ptr;
     {
       std::lock_guard lock{mutex_};
       const auto found = surfaces_.find(surface);
-      if (found == surfaces_.end() || found->second->owner != state) {
+      if (found == surfaces_.end() || found->second->owner != owner) {
         return GRANIT_ERROR_INVALID_HANDLE;
       }
       surface_record_ptr = found->second;
     }
     auto record = std::make_shared<swapchain_record>();
-    record->owner = state;
-    record->presentation = state;
+    record->owner = owner;
+    record->presentation = presentation;
     record->surface = surface_record_ptr;
-    record->native = state->presentation()->allocate_swapchain();
+    record->native = presentation->allocate_swapchain_resource();
     if (!record->native) {
       return GRANIT_ERROR_OUT_OF_MEMORY;
     }
     const auto result =
-        state->presentation()->create_swapchain(*surface_record_ptr->native, desc, *record->native);
+        presentation->create_swapchain(*surface_record_ptr->native, desc, *record->native);
     if (result != GRANIT_SUCCESS) {
       return result;
     }
@@ -621,19 +620,19 @@ granit_result renderer_registry::create_wgsl_shader(granit_renderer renderer,
                                                     std::string_view entry_point,
                                                     granit_shader& shader) {
   try {
-    const auto state = std::dynamic_pointer_cast<webgpu_renderer_state>(acquire_backend(renderer));
-    if (!state || state->shaders() == nullptr) {
-      return state ? GRANIT_ERROR_NOT_READY : GRANIT_ERROR_INVALID_HANDLE;
-    }
+    auto owner = acquire_backend(renderer);
+    auto shaders = std::dynamic_pointer_cast<backend_shader_renderer>(owner);
+    if (!owner || !shaders)
+      return owner ? GRANIT_ERROR_UNSUPPORTED : GRANIT_ERROR_INVALID_HANDLE;
     auto record = std::make_shared<shader_record>();
-    record->owner = state;
+    record->owner = owner;
     record->stage = stage;
     record->entry_point.assign(entry_point);
-    record->native = state->shaders()->allocate_shader();
+    record->native = shaders->allocate_shader_resource();
     if (!record->native) {
       return GRANIT_ERROR_OUT_OF_MEMORY;
     }
-    const auto result = state->create_wgsl_shader(*record->native, stage, source, entry_point);
+    const auto result = shaders->create_wgsl_shader(*record->native, stage, source, entry_point);
     if (result != GRANIT_SUCCESS) {
       return result;
     }
@@ -731,17 +730,17 @@ granit_result renderer_registry::create_pipeline_layout(
 granit_result renderer_registry::create_webgpu_pipeline_layout(granit_renderer renderer,
                                                                granit_pipeline_layout& layout) {
   try {
-    const auto state = std::dynamic_pointer_cast<webgpu_renderer_state>(acquire_backend(renderer));
-    if (!state || state->pipelines() == nullptr) {
-      return state ? GRANIT_ERROR_NOT_READY : GRANIT_ERROR_INVALID_HANDLE;
-    }
+    auto owner = acquire_backend(renderer);
+    auto pipelines = std::dynamic_pointer_cast<backend_pipeline_renderer>(owner);
+    if (!owner || !pipelines)
+      return owner ? GRANIT_ERROR_UNSUPPORTED : GRANIT_ERROR_INVALID_HANDLE;
     auto record = std::make_shared<pipeline_layout_record>();
-    record->owner = state;
-    record->native = state->pipelines()->allocate_pipeline_layout();
+    record->owner = owner;
+    record->native = pipelines->allocate_pipeline_layout_resource();
     if (!record->native) {
       return GRANIT_ERROR_OUT_OF_MEMORY;
     }
-    const auto result = state->pipelines()->create_pipeline_layout(*record->native);
+    const auto result = pipelines->create_empty_pipeline_layout(*record->native);
     if (result != GRANIT_SUCCESS) {
       return result;
     }
@@ -799,17 +798,13 @@ granit_result renderer_registry::destroy_pipeline_layout(granit_renderer rendere
 granit_result renderer_registry::create_graphics_pipeline(granit_renderer renderer,
                                                           const granit_graphics_pipeline_desc& desc,
                                                           granit_graphics_pipeline& pipeline) {
-  if (desc.color_format_count != 1 ||
-      (desc.color_formats[0] != GRANIT_TEXTURE_FORMAT_RGBA8_UNORM &&
-       desc.color_formats[0] != GRANIT_TEXTURE_FORMAT_BGRA8_UNORM) ||
-      desc.depth_stencil_format != GRANIT_TEXTURE_FORMAT_UNDEFINED || desc.sample_count != 1 ||
-      (desc.struct_size >= GRANIT_GRAPHICS_PIPELINE_DESC_VERSION_2_SIZE &&
-       desc.vertex_buffer_layout_count != 0) ||
-      (desc.struct_size >= GRANIT_GRAPHICS_PIPELINE_DESC_VERSION_4_SIZE &&
-       (desc.depth != nullptr || desc.color_blend_count != 0)) ||
-      (desc.struct_size >= GRANIT_GRAPHICS_PIPELINE_DESC_VERSION_5_SIZE && desc.depth_bias)) {
-    return GRANIT_ERROR_UNSUPPORTED;
-  }
+  auto owner = acquire_backend(renderer);
+  auto pipelines = std::dynamic_pointer_cast<backend_pipeline_renderer>(owner);
+  if (!owner || !pipelines)
+    return owner ? GRANIT_ERROR_UNSUPPORTED : GRANIT_ERROR_INVALID_HANDLE;
+  const auto validation = pipelines->validate_graphics_pipeline(desc);
+  if (validation != GRANIT_SUCCESS)
+    return validation;
   return create_webgpu_graphics_pipeline(renderer, desc.layout, desc.vertex_shader,
                                          desc.fragment_shader, desc.color_formats[0], pipeline);
 }
@@ -819,10 +814,10 @@ granit_result renderer_registry::create_webgpu_graphics_pipeline(
     granit_shader fragment_shader, granit_texture_format color_format,
     granit_graphics_pipeline& pipeline) {
   try {
-    const auto state = std::dynamic_pointer_cast<webgpu_renderer_state>(acquire_backend(renderer));
-    if (!state || state->pipelines() == nullptr || state->shaders() == nullptr) {
-      return state ? GRANIT_ERROR_NOT_READY : GRANIT_ERROR_INVALID_HANDLE;
-    }
+    auto owner = acquire_backend(renderer);
+    auto pipelines = std::dynamic_pointer_cast<backend_pipeline_renderer>(owner);
+    if (!owner || !pipelines)
+      return owner ? GRANIT_ERROR_UNSUPPORTED : GRANIT_ERROR_INVALID_HANDLE;
     std::shared_ptr<pipeline_layout_record> layout_record;
     std::shared_ptr<shader_record> vertex_record;
     std::shared_ptr<shader_record> fragment_record;
@@ -832,8 +827,8 @@ granit_result renderer_registry::create_webgpu_graphics_pipeline(
       const auto vertex_found = shaders_.find(vertex_shader);
       const auto fragment_found = shaders_.find(fragment_shader);
       if (layout_found == pipeline_layouts_.end() || vertex_found == shaders_.end() ||
-          fragment_found == shaders_.end() || layout_found->second->owner != state ||
-          vertex_found->second->owner != state || fragment_found->second->owner != state) {
+          fragment_found == shaders_.end() || layout_found->second->owner != owner ||
+          vertex_found->second->owner != owner || fragment_found->second->owner != owner) {
         return GRANIT_ERROR_INVALID_HANDLE;
       }
       layout_record = layout_found->second;
@@ -841,18 +836,17 @@ granit_result renderer_registry::create_webgpu_graphics_pipeline(
       fragment_record = fragment_found->second;
     }
     auto record = std::make_shared<graphics_pipeline_record>();
-    record->owner = state;
+    record->owner = owner;
     record->layout = layout_record;
     record->vertex_shader = vertex_record;
     record->fragment_shader = fragment_record;
-    record->native = state->pipelines()->allocate_graphics_pipeline();
+    record->native = pipelines->allocate_graphics_pipeline_resource();
     if (!record->native) {
       return GRANIT_ERROR_OUT_OF_MEMORY;
     }
-    const auto result = state->pipelines()->create_graphics_pipeline(
-        *record->native, *layout_record->native,
-        state->shaders()->native_handle(*vertex_record->native),
-        state->shaders()->native_handle(*fragment_record->native), color_format);
+    const auto result = pipelines->create_graphics_pipeline(*record->native, *layout_record->native,
+                                                            *vertex_record->native,
+                                                            *fragment_record->native, color_format);
     if (result != GRANIT_SUCCESS) {
       return result;
     }

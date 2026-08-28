@@ -51,9 +51,6 @@ public:
   [[nodiscard]] std::uint32_t domain() const noexcept override { return domain_; }
   void set_domain(std::uint32_t domain) noexcept override { domain_ = domain; }
   [[nodiscard]] webgpu_presentation_adapter* presentation() noexcept { return presentation_.get(); }
-  [[nodiscard]] webgpu_shader_adapter* shaders() noexcept { return shaders_.get(); }
-  [[nodiscard]] webgpu_pipeline_adapter* pipelines() noexcept { return pipelines_.get(); }
-  [[nodiscard]] webgpu_command_adapter* commands() noexcept { return commands_.get(); }
 
   [[nodiscard]] std::unique_ptr<backend_command_recorder_resource>
   allocate_command_recorder_resource() override;
@@ -85,6 +82,8 @@ public:
   create_empty_pipeline_layout(backend_pipeline_layout_resource& layout) noexcept override;
   [[nodiscard]] std::unique_ptr<backend_graphics_pipeline_resource>
   allocate_graphics_pipeline_resource() override;
+  [[nodiscard]] granit_result
+  validate_graphics_pipeline(const granit_graphics_pipeline_desc& desc) const noexcept override;
   [[nodiscard]] granit_result create_graphics_pipeline(
       backend_graphics_pipeline_resource& pipeline, backend_pipeline_layout_resource& layout,
       backend_shader_resource& vertex_shader, backend_shader_resource& fragment_shader,

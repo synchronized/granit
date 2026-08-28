@@ -21,6 +21,7 @@ add_library(
   "${PROJECT_SOURCE_DIR}/src/core/handle_table.cpp"
   "${PROJECT_SOURCE_DIR}/src/core/resource_validation.cpp"
   "${PROJECT_SOURCE_DIR}/src/platform/shared_library.cpp"
+  "${PROJECT_SOURCE_DIR}/src/platform/emscripten/shared_library_backend.cpp"
 )
 add_library(granit::granit ALIAS granit)
 target_compile_features(granit PUBLIC cxx_std_20)

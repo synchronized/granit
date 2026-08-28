@@ -149,6 +149,11 @@ Registry 不保存 `Vk*` 或 `WGPU*` 类型，不负责后端同步和描述转�
 资源父子关系或 C ABI 校验。高频 Draw、资源访问和提交继续采用命令记录或批量契约，避免为每个
 细粒度操作增加动态库或虚函数调用。
 
+Registry 只通过 `backend_shader_renderer`、`backend_pipeline_renderer` 和
+`backend_presentation_renderer` 等职责接口访问 WebGPU，不直接取得 WebGPU Adapter 对象。WebGPU
+支持的 Pipeline 描述范围和格式转换由 Pipeline Adapter 判断；Dawn 与 Emscripten 的 Provider
+差异也不得回流到公共 API 或 Registry。
+
 Vulkan 与 WebGPU 不必提供完全对称的内部能力。共同语义由 Registry 校验，设备差异通过不可变
 能力快照和统一结果码表达；无法安全模拟的能力明确返回不支持。该边界的决策依据见
 [ADR-003：Renderer 内部多后端边界](../decisions/ADR-003-internal-renderer-backend-boundary.md)。

@@ -76,6 +76,22 @@ webgpu_pipeline_adapter::allocate_graphics_pipeline() const {
   return std::make_unique<webgpu_graphics_pipeline_resource>(context_);
 }
 
+granit_result webgpu_pipeline_adapter::validate_graphics_pipeline(
+    const granit_graphics_pipeline_desc& desc) const noexcept {
+  if (desc.color_format_count != 1 ||
+      (desc.color_formats[0] != GRANIT_TEXTURE_FORMAT_RGBA8_UNORM &&
+       desc.color_formats[0] != GRANIT_TEXTURE_FORMAT_BGRA8_UNORM) ||
+      desc.depth_stencil_format != GRANIT_TEXTURE_FORMAT_UNDEFINED || desc.sample_count != 1 ||
+      (desc.struct_size >= GRANIT_GRAPHICS_PIPELINE_DESC_VERSION_2_SIZE &&
+       desc.vertex_buffer_layout_count != 0) ||
+      (desc.struct_size >= GRANIT_GRAPHICS_PIPELINE_DESC_VERSION_4_SIZE &&
+       (desc.depth != nullptr || desc.color_blend_count != 0)) ||
+      (desc.struct_size >= GRANIT_GRAPHICS_PIPELINE_DESC_VERSION_5_SIZE && desc.depth_bias)) {
+    return GRANIT_ERROR_UNSUPPORTED;
+  }
+  return GRANIT_SUCCESS;
+}
+
 granit_result webgpu_pipeline_adapter::create_pipeline_layout(
     backend_pipeline_layout_resource& resource) const noexcept {
   auto* layout = as_layout(resource);
