@@ -20,16 +20,27 @@ extern "C" granit_result granit_shader_create(granit_renderer renderer,
   *shader = GRANIT_NULL_HANDLE;
   if (renderer == GRANIT_NULL_HANDLE)
     return GRANIT_ERROR_INVALID_HANDLE;
-  const auto validation = granit::detail::validate_shader_spirv(desc);
+  const auto validation =
+#ifdef __EMSCRIPTEN__
+      granit::detail::validate_shader_wgsl(desc);
+#else
+      granit::detail::validate_shader_spirv(desc);
+#endif
   if (validation != GRANIT_SUCCESS)
     return validation;
   try {
+#ifdef __EMSCRIPTEN__
+    return granit::detail::renderer_registry::instance().create_wgsl_shader(
+        renderer, desc->stage, {desc->wgsl, static_cast<std::size_t>(desc->wgsl_length)},
+        {desc->entry_point, static_cast<std::size_t>(desc->entry_point_length)}, *shader);
+#else
     std::vector<std::uint32_t> code(static_cast<std::size_t>(desc->code_size) /
                                     sizeof(std::uint32_t));
     std::memcpy(code.data(), desc->code, static_cast<std::size_t>(desc->code_size));
     return granit::detail::renderer_registry::instance().create_shader(
         renderer, desc->stage, code, std::string_view{desc->entry_point, desc->entry_point_length},
         *shader);
+#endif
   } catch (const std::bad_alloc&) {
     return GRANIT_ERROR_OUT_OF_MEMORY;
   } catch (...) {

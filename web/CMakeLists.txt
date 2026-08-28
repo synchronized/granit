@@ -5,10 +5,10 @@ add_library(
   granit STATIC
   command_recorder_api.cpp
   pipeline_api.cpp
-  renderer_api.cpp
+  "${PROJECT_SOURCE_DIR}/src/renderer/renderer_api.cpp"
   renderer_registry.cpp
-  shader_api.cpp
-  surface_api.cpp
+  "${PROJECT_SOURCE_DIR}/src/renderer/shader_api.cpp"
+  "${PROJECT_SOURCE_DIR}/src/renderer/surface_api.cpp"
   swapchain_api.cpp
   "${PROJECT_SOURCE_DIR}/src/backend/plugin_loader.cpp"
   "${PROJECT_SOURCE_DIR}/src/backend/webgpu/plugin.cpp"

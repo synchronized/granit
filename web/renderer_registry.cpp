@@ -210,6 +210,36 @@ granit_result renderer_registry::process_events(granit_renderer renderer) {
   return state ? state->process_backend_events() : GRANIT_ERROR_INVALID_HANDLE;
 }
 
+granit_result renderer_registry::set_object_name(granit_renderer, granit_handle, std::string_view) {
+  return GRANIT_ERROR_UNSUPPORTED;
+}
+
+granit_result renderer_registry::import_pipeline_cache(granit_renderer, const void*,
+                                                       std::uint64_t) {
+  return GRANIT_ERROR_UNSUPPORTED;
+}
+
+granit_result renderer_registry::export_pipeline_cache(granit_renderer, void*, std::uint64_t&) {
+  return GRANIT_ERROR_UNSUPPORTED;
+}
+
+void renderer_registry::emit_validation_diagnostic(granit_renderer, std::string_view) noexcept {}
+
+granit_result renderer_registry::create_win32_surface(granit_renderer, void*, void*,
+                                                      granit_surface&) {
+  return GRANIT_ERROR_UNSUPPORTED;
+}
+
+granit_result renderer_registry::create_xcb_surface(granit_renderer, void*, std::uint32_t,
+                                                    granit_surface&) {
+  return GRANIT_ERROR_UNSUPPORTED;
+}
+
+granit_result renderer_registry::create_wayland_surface(granit_renderer, void*, void*,
+                                                        granit_surface&) {
+  return GRANIT_ERROR_UNSUPPORTED;
+}
+
 granit_result renderer_registry::create_canvas_surface(granit_renderer renderer,
                                                        std::string_view selector,
                                                        granit_surface& surface) {
