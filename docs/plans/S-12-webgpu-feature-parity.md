@@ -138,6 +138,47 @@ typedef struct granit_backend_plugin_wayland_surface_desc {
   返回 `GRANIT_ERROR_SURFACE_LOST`。调用方据此等待非零尺寸、重建 Swapchain 或重建 Surface。
 - Registry 串行化同一 Renderer 的 Surface/Swapchain 操作，但不替调用方同步窗口系统事件线程。
 
+### S-12C 几何与绘制契约
+
+现有公共 API 已表达 Vertex/Index Buffer usage、多个 Vertex Buffer Layout、Attribute、逐顶点或
+逐实例步进、Buffer 绑定以及 Indexed Draw。S-12C 不新增平行公共接口，只扩展私有 HAL 与 WebGPU
+Provider 实现这些现有语义。
+
+首轮模型查看器需要的共同子集如下：
+
+- Buffer usage 支持 `VERTEX`、`INDEX`、`TRANSFER_SOURCE` 和 `TRANSFER_DESTINATION` 的合法组合。
+- Index 类型支持 `uint16` 与 `uint32`，不增加 WebGPU/Vulkan 均非通用的 `uint8` 索引。
+- Vertex Attribute 至少支持 `float32`、`float32x2`、`float32x3` 和 `float32x4`；足以表达位置、
+  法线、切线、UV 和实例变换。整数格式继续按现有公共枚举支持，不为 glTF 新增专用格式。
+- 支持多个 Vertex Buffer binding、非零 binding offset、逐顶点/逐实例步进、`first_vertex`、
+  `first_index`、有符号 `vertex_offset`、`first_instance` 和多实例绘制。
+- 首轮只要求 Triangle List 模型闭环；其他已公开拓扑由能力与 Provider 验证决定，不静默替换。
+
+Provider ABI 需要完成以下演进：
+
+1. Buffer usage 增加 Vertex 与 Index 位，并在 Provider Buffer 记录中保留创建大小和 usage。
+2. Graphics Pipeline 描述增加 Vertex Buffer Layout 与 Attribute 数组；调用期间深拷贝或同步消费，
+   不借用 Host 数组到调用返回之后。
+3. Command 操作表增加 Begin/End Rendering、Bind Graphics Pipeline、Bind Vertex Buffers、
+   Bind Index Buffer、Draw 与 Draw Indexed；参数使用定宽整数和插件资源句柄。
+4. 删除只接受 Target/Pipeline/Bind Group 并固定执行三顶点绘制的 `recorder_draw` 语义。实验性插件
+   ABI 直接升级，不同时保留新旧命令分支。
+5. WebGPU Renderer 移除 `platform_managed_rendering` 固定三角形捷径，改由 Command Adapter 实现与
+   Vulkan 相同的公共记录顺序：Begin Rendering、Bind、Draw、End Rendering、Finish、Submit。
+
+验证规则由 Registry 先执行，Provider 仍须防御不可信插件调用：
+
+- Vertex binding 数、Attribute 数、最大 location、stride 与 offset 受公开能力限制；Attribute 范围
+  必须落在 stride 内，location 不得重复，所有加法和乘法均做溢出检查。
+- Vertex Buffer offset 必须小于 Buffer 大小；Index Buffer offset 必须在范围内并满足 2 或 4 字节
+  对齐。Draw Indexed 的索引读取范围不得越过绑定 Buffer。
+- Buffer 必须带对应 usage 并属于同一 Renderer；空数组、首 binding 加数量溢出、无 Pipeline、
+  无 Index Buffer 或在 Render Pass 外 Draw 均返回 `GRANIT_ERROR_INVALID_ARGUMENT`。
+- 命令成功记录后由 Recorder 保留 Pipeline 与 Buffer 的内部共享所有权；用户可在 Submit 前销毁
+  公共句柄，但不得影响已记录命令。失败记录不改变命令状态或资源保留集合。
+- Provider 限制不足返回 `GRANIT_ERROR_UNSUPPORTED`，无效公共参数返回
+  `GRANIT_ERROR_INVALID_ARGUMENT`，错误归属或失效句柄返回 `GRANIT_ERROR_INVALID_HANDLE`。
+
 ## 实施顺序
 
 1. **S-12A 后端选择**：实现 C ABI、C++ 包装、实际后端查询、插件定位和严格/自动选择语义。
@@ -160,6 +201,10 @@ typedef struct granit_backend_plugin_wayland_surface_desc {
   Dawn Smoke 在 Windows HWND、Linux XCB 与 Wayland 环境各完成多帧 Acquire/Submit/Present。
 - SDL3 + ImGui Smoke 不包含后端条件分支；测试参数只改变 Renderer 后端选择，并验证窗口缩放、
   最小化恢复和退出期间的资源清理。
+- 几何测试覆盖单一交错 Vertex Buffer、多个 Buffer、实例步进、`uint16/uint32` Index、非零 Offset、
+  Base Vertex 和 First Instance，并在两个后端验证相同像素与资源生命周期。
+- 几何失败测试覆盖 usage 错误、错位 Index、越界 Offset/Index 范围、重复 location、Attribute 越过
+  stride、超过设备限制、跨 Renderer 资源及错误命令顺序。
 - 后端不可用、能力不足、资源跨 Renderer 混用和动态偏移错误均有确定结果码。
 - 同一确定性 Fixture 在 Vulkan、桌面 Dawn WebGPU 和 Emscripten WebGPU 产生容差内一致的结果。
 - Windows、Linux 和 Emscripten 手动 Actions 通过；安装包不泄漏任何后端实现依赖。
