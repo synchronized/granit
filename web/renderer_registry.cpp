@@ -55,6 +55,7 @@ granit_result web_renderer_registry::destroy(granit_renderer renderer) {
   std::vector<std::shared_ptr<frame_record>> frames;
   std::vector<std::shared_ptr<swapchain_record>> swapchains;
   std::vector<std::shared_ptr<surface_record>> surfaces;
+  std::vector<std::shared_ptr<shader_record>> shaders;
   {
     std::lock_guard lock{mutex_};
     if (handles_.find(renderer, resource_type::renderer, 0) == nullptr) {
@@ -95,6 +96,15 @@ granit_result web_renderer_registry::destroy(granit_renderer renderer) {
         ++surface;
       }
     }
+    for (auto shader = shaders_.begin(); shader != shaders_.end();) {
+      if (shader->second->renderer == found->second) {
+        static_cast<void>(handles_.erase(shader->first, resource_type::shader, 0));
+        shaders.push_back(std::move(shader->second));
+        shader = shaders_.erase(shader);
+      } else {
+        ++shader;
+      }
+    }
     state = std::move(found->second);
     renderers_.erase(found);
     const auto result = handles_.erase(renderer, resource_type::renderer, 0);
@@ -105,6 +115,7 @@ granit_result web_renderer_registry::destroy(granit_renderer renderer) {
   frames.clear();
   swapchains.clear();
   surfaces.clear();
+  shaders.clear();
   state.reset();
   return GRANIT_SUCCESS;
 }
@@ -482,6 +493,72 @@ granit_result web_renderer_registry::destroy_swapchain(granit_renderer renderer,
     record = std::move(found->second);
     swapchains_.erase(found);
     const auto result = handles_.erase(swapchain, resource_type::swapchain, 0);
+    if (result != GRANIT_SUCCESS) {
+      return result;
+    }
+  }
+  record.reset();
+  return GRANIT_SUCCESS;
+}
+
+granit_result web_renderer_registry::create_shader(granit_renderer renderer, std::uint32_t stage,
+                                                   const char* wgsl, std::uint64_t wgsl_length,
+                                                   const char* entry_point,
+                                                   std::uint64_t entry_point_length,
+                                                   granit_shader& shader) {
+  try {
+    const auto state = acquire(renderer);
+    if (!state || state->shaders() == nullptr) {
+      return state ? GRANIT_ERROR_NOT_READY : GRANIT_ERROR_INVALID_HANDLE;
+    }
+    auto record = std::make_shared<shader_record>();
+    record->renderer = state;
+    record->native = state->shaders()->allocate_shader();
+    if (!record->native) {
+      return GRANIT_ERROR_OUT_OF_MEMORY;
+    }
+    const auto result = state->shaders()->create_shader(*record->native, stage, wgsl, wgsl_length,
+                                                        entry_point, entry_point_length);
+    if (result != GRANIT_SUCCESS) {
+      return result;
+    }
+    std::lock_guard lock{mutex_};
+    if (renderers_.find(renderer) == renderers_.end()) {
+      return GRANIT_ERROR_INVALID_HANDLE;
+    }
+    const auto handle = handles_.insert(record.get(), resource_type::shader, 0);
+    if (handle == GRANIT_NULL_HANDLE) {
+      return GRANIT_ERROR_OUT_OF_MEMORY;
+    }
+    try {
+      shaders_.emplace(handle, std::move(record));
+    } catch (...) {
+      static_cast<void>(handles_.erase(handle, resource_type::shader, 0));
+      throw;
+    }
+    shader = handle;
+    return GRANIT_SUCCESS;
+  } catch (const std::bad_alloc&) {
+    return GRANIT_ERROR_OUT_OF_MEMORY;
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+granit_result web_renderer_registry::destroy_shader(granit_renderer renderer,
+                                                    granit_shader shader) {
+  std::shared_ptr<shader_record> record;
+  {
+    std::lock_guard lock{mutex_};
+    const auto state = renderers_.find(renderer);
+    const auto found = shaders_.find(shader);
+    if (state == renderers_.end() || found == shaders_.end() ||
+        found->second->renderer != state->second) {
+      return GRANIT_ERROR_INVALID_HANDLE;
+    }
+    record = std::move(found->second);
+    shaders_.erase(found);
+    const auto result = handles_.erase(shader, resource_type::shader, 0);
     if (result != GRANIT_SUCCESS) {
       return result;
     }

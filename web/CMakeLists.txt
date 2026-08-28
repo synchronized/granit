@@ -6,12 +6,14 @@ add_executable(
   platform_smoke.cpp
   renderer_api.cpp
   renderer_registry.cpp
+  shader_api.cpp
   surface_api.cpp
   swapchain_api.cpp
   "${PROJECT_SOURCE_DIR}/src/backend/plugin_loader.cpp"
   "${PROJECT_SOURCE_DIR}/src/backend/webgpu/plugin.cpp"
   "${PROJECT_SOURCE_DIR}/src/backend/webgpu/presentation_adapter.cpp"
   "${PROJECT_SOURCE_DIR}/src/backend/webgpu/renderer_state.cpp"
+  "${PROJECT_SOURCE_DIR}/src/backend/webgpu/shader_adapter.cpp"
   "${PROJECT_SOURCE_DIR}/src/core/handle_table.cpp"
   "${PROJECT_SOURCE_DIR}/src/platform/shared_library.cpp"
 )

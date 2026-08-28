@@ -1,0 +1,60 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Granit contributors
+
+#include "backend/webgpu/shader_adapter.h"
+
+#include <utility>
+
+namespace granit::detail {
+
+struct webgpu_shader_context {
+  backend_plugin_loader* loader{};
+  granit_backend_plugin_instance instance{};
+};
+
+namespace {
+
+class webgpu_shader_resource final : public backend_shader_resource {
+public:
+  explicit webgpu_shader_resource(std::shared_ptr<webgpu_shader_context> context)
+      : context_(std::move(context)) {}
+
+  ~webgpu_shader_resource() override {
+    if (handle_ != 0) {
+      static_cast<void>(context_->loader->destroy_shader(context_->instance, handle_));
+    }
+  }
+
+  std::shared_ptr<webgpu_shader_context> context_;
+  granit_backend_plugin_shader handle_{};
+};
+
+webgpu_shader_resource* as_shader(backend_shader_resource& resource) {
+  return dynamic_cast<webgpu_shader_resource*>(&resource);
+}
+
+} // namespace
+
+webgpu_shader_adapter::webgpu_shader_adapter(backend_plugin_loader& loader,
+                                             granit_backend_plugin_instance instance)
+    : context_(std::make_shared<webgpu_shader_context>(webgpu_shader_context{&loader, instance})) {}
+
+std::unique_ptr<backend_shader_resource> webgpu_shader_adapter::allocate_shader() const {
+  return std::make_unique<webgpu_shader_resource>(context_);
+}
+
+granit_result
+webgpu_shader_adapter::create_shader(backend_shader_resource& resource, std::uint32_t stage,
+                                     const char* wgsl, std::uint64_t wgsl_length,
+                                     const char* entry_point,
+                                     std::uint64_t entry_point_length) const noexcept {
+  auto* shader = as_shader(resource);
+  if (shader == nullptr || shader->handle_ != 0) {
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  }
+  const granit_backend_plugin_shader_desc desc{sizeof(desc), stage,       wgsl,
+                                               wgsl_length,  entry_point, entry_point_length};
+  return context_->loader->create_shader(context_->instance, &desc, &shader->handle_);
+}
+
+} // namespace granit::detail

@@ -4,36 +4,13 @@
 #include <granit/renderer/shader.h>
 
 #include "renderer/renderer_registry.h"
+#include "renderer/shader_validation.h"
 
 #include <cstdint>
 #include <cstring>
 #include <new>
 #include <string_view>
 #include <vector>
-
-namespace {
-
-constexpr std::uint32_t spirv_magic = UINT32_C(0x07230203);
-constexpr std::uint64_t maximum_shader_size = UINT64_C(64) * UINT64_C(1024) * UINT64_C(1024);
-constexpr std::uint32_t maximum_entry_point_length = UINT32_C(255);
-
-granit_result validate_desc(const granit_shader_desc* desc) noexcept {
-  if (desc == nullptr || desc->struct_size < GRANIT_SHADER_DESC_VERSION_1_SIZE ||
-      desc->code == nullptr || desc->code_size < sizeof(std::uint32_t) * 5 ||
-      desc->code_size > maximum_shader_size || desc->code_size % sizeof(std::uint32_t) != 0 ||
-      desc->entry_point == nullptr || desc->entry_point_length == 0 ||
-      desc->entry_point_length > maximum_entry_point_length || desc->reserved != 0)
-    return GRANIT_ERROR_INVALID_ARGUMENT;
-  if (desc->stage < GRANIT_SHADER_STAGE_VERTEX || desc->stage > GRANIT_SHADER_STAGE_COMPUTE)
-    return GRANIT_ERROR_INVALID_ARGUMENT;
-  if (std::memchr(desc->entry_point, '\0', desc->entry_point_length) != nullptr)
-    return GRANIT_ERROR_INVALID_ARGUMENT;
-  std::uint32_t magic{};
-  std::memcpy(&magic, desc->code, sizeof(magic));
-  return magic == spirv_magic ? GRANIT_SUCCESS : GRANIT_ERROR_INVALID_ARGUMENT;
-}
-
-} // namespace
 
 extern "C" granit_result granit_shader_create(granit_renderer renderer,
                                               const granit_shader_desc* desc,
@@ -43,7 +20,7 @@ extern "C" granit_result granit_shader_create(granit_renderer renderer,
   *shader = GRANIT_NULL_HANDLE;
   if (renderer == GRANIT_NULL_HANDLE)
     return GRANIT_ERROR_INVALID_HANDLE;
-  const auto validation = validate_desc(desc);
+  const auto validation = granit::detail::validate_shader_spirv(desc);
   if (validation != GRANIT_SUCCESS)
     return validation;
   try {

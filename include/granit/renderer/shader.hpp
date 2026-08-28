@@ -27,6 +27,14 @@ struct shader_desc {
   std::string_view entry_point{"main"};
 };
 
+/** 同时携带 Vulkan SPIR-V 与 WebGPU WGSL 的跨后端 Shader 描述。 */
+struct shader_asset_desc {
+  shader_stage stage{shader_stage::vertex};
+  std::span<const std::byte> spirv;
+  std::string_view wgsl;
+  std::string_view entry_point{"main"};
+};
+
 class shader {
 public:
   shader() = default;
@@ -57,11 +65,29 @@ public:
                                     .entry_point = desc.entry_point.data(),
                                     .entry_point_length =
                                         static_cast<std::uint32_t>(desc.entry_point.size()),
-                                    .reserved = 0};
-    const auto value = granit_shader_create(renderer, &native, &handle_);
-    if (value == GRANIT_SUCCESS)
-      renderer_ = renderer;
-    return from_native(value);
+                                    .reserved = 0,
+                                    .wgsl = nullptr,
+                                    .wgsl_length = 0};
+    return initialize_native(renderer, native);
+  }
+
+  [[nodiscard]] result initialize_asset(granit_renderer renderer,
+                                        const shader_asset_desc& desc) noexcept {
+    if (valid() || desc.entry_point.size() > UINT32_MAX)
+      return result::invalid_argument;
+    if (renderer == GRANIT_NULL_HANDLE)
+      return result::invalid_handle;
+    const granit_shader_desc native{.struct_size = GRANIT_SHADER_DESC_VERSION_2_SIZE,
+                                    .stage = static_cast<granit_shader_stage>(desc.stage),
+                                    .code = desc.spirv.data(),
+                                    .code_size = desc.spirv.size(),
+                                    .entry_point = desc.entry_point.data(),
+                                    .entry_point_length =
+                                        static_cast<std::uint32_t>(desc.entry_point.size()),
+                                    .reserved = 0,
+                                    .wgsl = desc.wgsl.data(),
+                                    .wgsl_length = desc.wgsl.size()};
+    return initialize_native(renderer, native);
   }
 
   [[nodiscard]] result reset() noexcept {
@@ -77,6 +103,14 @@ public:
   [[nodiscard]] granit_shader native_handle() const noexcept { return handle_; }
 
 private:
+  [[nodiscard]] result initialize_native(granit_renderer renderer,
+                                         const granit_shader_desc& native) noexcept {
+    const auto value = granit_shader_create(renderer, &native, &handle_);
+    if (value == GRANIT_SUCCESS)
+      renderer_ = renderer;
+    return from_native(value);
+  }
+
   granit_renderer renderer_{GRANIT_NULL_HANDLE};
   granit_shader handle_{GRANIT_NULL_HANDLE};
 };

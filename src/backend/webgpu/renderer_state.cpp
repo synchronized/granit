@@ -9,6 +9,7 @@ namespace granit::detail {
 
 webgpu_renderer_state::~webgpu_renderer_state() {
   presentation_.reset();
+  shaders_.reset();
   if (instance_ != 0) {
     static_cast<void>(loader_.destroy_instance(instance_));
     instance_ = 0;
@@ -111,7 +112,7 @@ granit_result webgpu_renderer_state::refresh_state() noexcept {
     return GRANIT_ERROR_INTERNAL;
   }
 
-  if (presentation_ == nullptr) {
+  if (presentation_ == nullptr || shaders_ == nullptr) {
     granit_backend_plugin_capabilities capabilities{};
     capabilities.struct_size = sizeof(capabilities);
     const auto capabilities_result = loader_.get_capabilities(instance_, &capabilities);
@@ -126,7 +127,10 @@ granit_result webgpu_renderer_state::refresh_state() noexcept {
         capabilities.max_storage_buffer_binding_size,
     };
     try {
-      presentation_ = std::make_unique<webgpu_presentation_adapter>(loader_, instance_);
+      auto presentation = std::make_unique<webgpu_presentation_adapter>(loader_, instance_);
+      auto shaders = std::make_unique<webgpu_shader_adapter>(loader_, instance_);
+      presentation_ = std::move(presentation);
+      shaders_ = std::move(shaders);
     } catch (const std::bad_alloc&) {
       lifecycle_ = {backend_lifecycle_state::failed, GRANIT_ERROR_OUT_OF_MEMORY};
       return GRANIT_ERROR_OUT_OF_MEMORY;

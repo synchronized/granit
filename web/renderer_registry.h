@@ -10,6 +10,7 @@
 #include <unordered_map>
 
 #include <granit/renderer/renderer.h>
+#include <granit/renderer/shader.h>
 #include <granit/renderer/surface.h>
 #include <granit/renderer/swapchain.h>
 
@@ -57,6 +58,12 @@ public:
                                              std::uint32_t& frame_slot_count);
   [[nodiscard]] granit_result destroy_swapchain(granit_renderer renderer,
                                                 granit_swapchain swapchain);
+  [[nodiscard]] granit_result create_shader(granit_renderer renderer, std::uint32_t stage,
+                                            const char* wgsl, std::uint64_t wgsl_length,
+                                            const char* entry_point,
+                                            std::uint64_t entry_point_length,
+                                            granit_shader& shader);
+  [[nodiscard]] granit_result destroy_shader(granit_renderer renderer, granit_shader shader);
 
 private:
   struct surface_record {
@@ -75,6 +82,10 @@ private:
     std::shared_ptr<swapchain_record> swapchain;
     backend_acquired_swapchain_frame acquired;
   };
+  struct shader_record {
+    std::shared_ptr<webgpu_renderer_state> renderer;
+    std::unique_ptr<backend_shader_resource> native;
+  };
 
   [[nodiscard]] std::shared_ptr<webgpu_renderer_state> acquire(granit_renderer renderer);
   void erase_backbuffer(swapchain_record& swapchain) noexcept;
@@ -85,6 +96,7 @@ private:
   std::unordered_map<granit_surface, std::shared_ptr<surface_record>> surfaces_;
   std::unordered_map<granit_swapchain, std::shared_ptr<swapchain_record>> swapchains_;
   std::unordered_map<granit_frame, std::shared_ptr<frame_record>> frames_;
+  std::unordered_map<granit_shader, std::shared_ptr<shader_record>> shaders_;
 };
 
 } // namespace granit::detail

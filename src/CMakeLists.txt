@@ -10,6 +10,8 @@ add_library(
   backend/webgpu/presentation_adapter.h
   backend/webgpu/renderer_state.cpp
   backend/webgpu/renderer_state.h
+  backend/webgpu/shader_adapter.cpp
+  backend/webgpu/shader_adapter.h
   platform/shared_library.cpp
   platform/shared_library.h
 )
@@ -136,6 +138,7 @@ target_sources(
     renderer/renderer_state.h
     renderer/renderer_validation.h
     renderer/surface_validation.h
+    renderer/shader_validation.h
     renderer/swapchain_validation.h
     renderer/sampler_api.cpp
     renderer/shader_api.cpp

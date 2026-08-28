@@ -177,8 +177,9 @@
   适配器的 WebGPU Renderer 状态对象；Vulkan/WebGPU 状态共同实现最小 Renderer 后端接口，
   Registry 根记录已通过该接口统一状态、能力和事件推进，并已增加 WebGPU 静态 Provider 工厂
   与通用销毁路径；Emscripten Smoke 已通过公共 Renderer、Canvas Surface、Swapchain、Frame 和
-  动态 Backbuffer API 驱动 WebGPU，并验证帧结束后的借用句柄失效。下一步迁移 Shader、Pipeline、
-  命令记录与提交路径。
+  动态 Backbuffer API 驱动 WebGPU，并验证帧结束后的借用句柄失效。公共 Shader 描述已增加可选
+  WGSL 视图，WebGPU Shader 创建/销毁已接入 generation 句柄。下一步迁移 Pipeline、命令记录与
+  提交路径。
 
 ## 十、Android 移动平台
 

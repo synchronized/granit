@@ -10,6 +10,7 @@
 #include <emscripten/html5.h>
 
 #include <granit/renderer/renderer.h>
+#include <granit/renderer/shader.h>
 #include <granit/renderer/surface.h>
 #include <granit/renderer/swapchain.h>
 
@@ -46,6 +47,46 @@ bool load_startup_resource() noexcept {
   std::fclose(file);
   constexpr char expected[] = "granit-s10d-web-platform";
   return size >= sizeof(expected) - 1 && std::memcmp(content, expected, sizeof(expected) - 1) == 0;
+}
+
+granit_result validate_public_shaders() {
+  constexpr char vertex_wgsl[] = R"(
+@vertex fn main(@builtin(vertex_index) index: u32) -> @builtin(position) vec4f {
+  var positions = array<vec2f, 3>(vec2f(0.0, 0.5), vec2f(-0.5, -0.5), vec2f(0.5, -0.5));
+  return vec4f(positions[index], 0.0, 1.0);
+})";
+  constexpr char fragment_wgsl[] = R"(
+@fragment fn main() -> @location(0) vec4f {
+  return vec4f(0.0, 1.0, 0.0, 1.0);
+})";
+  granit_shader_desc desc = GRANIT_SHADER_DESC_INIT;
+  desc.code = nullptr;
+  desc.code_size = 0;
+  desc.wgsl = vertex_wgsl;
+  desc.wgsl_length = sizeof(vertex_wgsl) - 1;
+  granit_shader vertex{};
+  auto result = granit_shader_create(state.renderer, &desc, &vertex);
+  if (result != GRANIT_SUCCESS) {
+    return result;
+  }
+  desc.stage = GRANIT_SHADER_STAGE_FRAGMENT;
+  desc.wgsl = fragment_wgsl;
+  desc.wgsl_length = sizeof(fragment_wgsl) - 1;
+  granit_shader fragment{};
+  result = granit_shader_create(state.renderer, &desc, &fragment);
+  if (result != GRANIT_SUCCESS) {
+    static_cast<void>(granit_shader_destroy(state.renderer, vertex));
+    return result;
+  }
+  result = granit_shader_destroy(state.renderer, fragment);
+  if (result == GRANIT_SUCCESS) {
+    result = granit_shader_destroy(state.renderer, vertex);
+  }
+  if (result != GRANIT_SUCCESS ||
+      granit_shader_destroy(state.renderer, vertex) != GRANIT_ERROR_INVALID_HANDLE) {
+    return result == GRANIT_SUCCESS ? GRANIT_ERROR_INTERNAL : result;
+  }
+  return GRANIT_SUCCESS;
 }
 
 void diagnose(granit_diagnostic_severity, granit_diagnostic_category, const char* message,
@@ -165,6 +206,11 @@ void tick(void*) noexcept {
       limits.max_uniform_buffer_binding_size == 0) {
     fail("renderer-limits",
          limits_result == GRANIT_SUCCESS ? GRANIT_ERROR_INTERNAL : limits_result);
+    return;
+  }
+  const auto shader_result = validate_public_shaders();
+  if (shader_result != GRANIT_SUCCESS) {
+    fail("renderer-shaders", shader_result);
     return;
   }
   try {
