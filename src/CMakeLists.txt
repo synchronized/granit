@@ -140,12 +140,24 @@ target_sources(
     core/retirement_queue.h
     core/device_status.h
     renderer/renderer_api.cpp
+    renderer/renderer_factory.cpp
+    renderer/renderer_factory.h
     renderer/pipeline_api.cpp
     renderer/buffer_api.cpp
     renderer/command_recorder_api.cpp
     renderer/frame_context_api.cpp
     renderer/renderer_registry.cpp
+    renderer/renderer_registry_buffer.cpp
+    renderer/renderer_registry_command.cpp
     renderer/renderer_registry.h
+    renderer/renderer_registry_helpers.h
+    renderer/renderer_registry_pipeline.cpp
+    renderer/renderer_registry_presentation.cpp
+    renderer/renderer_registry_records.h
+    renderer/renderer_registry_rendering.cpp
+    renderer/renderer_registry_timestamp.cpp
+    renderer/renderer_registry_texture.cpp
+    renderer/renderer_registry_transfer.cpp
     renderer/renderer_state.cpp
     renderer/renderer_state.h
     renderer/renderer_validation.h

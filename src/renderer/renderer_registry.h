@@ -50,9 +50,6 @@
 
 namespace granit::detail {
 
-class webgpu_renderer_state;
-class renderer_state;
-
 /** 线程安全地管理进程内公开 renderer 句柄。 */
 class renderer_registry {
 public:
@@ -79,11 +76,6 @@ public:
   /** 向有效 Renderer 的回调发送公共 API 参数或句柄校验诊断。 */
   void emit_validation_diagnostic(granit_renderer renderer, std::string_view message) noexcept;
   [[nodiscard]] std::shared_ptr<backend_renderer> acquire_backend(granit_renderer renderer);
-#ifdef __EMSCRIPTEN__
-  [[nodiscard]] std::shared_ptr<webgpu_renderer_state> acquire(granit_renderer renderer);
-#else
-  [[nodiscard]] std::shared_ptr<renderer_state> acquire(granit_renderer renderer);
-#endif
   [[nodiscard]] granit_result create_win32_surface(granit_renderer renderer, void* native_instance,
                                                    void* native_window, granit_surface& surface);
   [[nodiscard]] granit_result create_xcb_surface(granit_renderer renderer, void* connection,
@@ -158,6 +150,9 @@ public:
   [[nodiscard]] granit_result create_shader(granit_renderer renderer, granit_shader_stage stage,
                                             std::span<const std::uint32_t> code,
                                             std::string_view entry_point, granit_shader& shader);
+  [[nodiscard]] granit_result create_shader_from_desc(granit_renderer renderer,
+                                                      const granit_shader_desc& desc,
+                                                      granit_shader& shader);
   [[nodiscard]] granit_result create_wgsl_shader(granit_renderer renderer,
                                                  granit_shader_stage stage, std::string_view source,
                                                  std::string_view entry_point,
@@ -342,21 +337,28 @@ public:
 private:
   renderer_registry() = default;
 
+  struct resource_metadata;
+  struct retained_resource;
+  struct surface_record;
   struct swapchain_record;
+  struct buffer_record;
+  struct texture_record;
+  struct texture_view_record;
+  struct sampler_record;
+  struct shader_record;
+  struct bind_group_layout_record;
+  struct pipeline_layout_record;
+  struct bind_group_record;
+  struct graphics_pipeline_record;
+  struct compute_pipeline_record;
   struct command_recorder_record;
+  enum class frame_context_slot_state;
+  struct frame_context_slot;
+  struct frame_context_record;
   struct timestamp_query_pool_record;
   struct frame_record;
-  struct frame_context_record;
+  struct upload_entry;
   struct upload_batch_record;
-
-  struct resource_metadata {
-    std::uint64_t creation_sequence{};
-    std::atomic<submission_serial> last_use_serial{};
-  };
-  struct retained_resource {
-    std::shared_ptr<void> resource;
-    resource_metadata* metadata{};
-  };
 
   [[nodiscard]] std::uint32_t allocate_domain() noexcept;
   [[nodiscard]] granit_result
@@ -375,181 +377,7 @@ private:
   std::mutex mutex_;
   handle_table handles_;
   std::unordered_map<granit_renderer, std::shared_ptr<backend_renderer>> backend_renderers_;
-#ifndef __EMSCRIPTEN__
-  // Vulkan 资源路径迁移完成前，保留具体状态视图；它与通用根表共享同一状态对象。
-  std::unordered_map<granit_renderer, std::shared_ptr<renderer_state>> renderers_;
-#endif
-  struct surface_record {
-    resource_metadata metadata;
-    std::shared_ptr<backend_renderer> owner;
-    std::shared_ptr<backend_presentation_renderer> renderer;
-    std::unique_ptr<backend_surface_resource> native;
-  };
-  struct swapchain_record {
-    resource_metadata metadata;
-    std::shared_ptr<backend_renderer> owner;
-    std::shared_ptr<backend_presentation_renderer> presentation;
-    std::shared_ptr<surface_record> surface;
-    std::unique_ptr<backend_swapchain_resource> native;
-    std::vector<granit_texture> textures;
-    std::vector<granit_texture_view> views;
-    bool surface_lost{};
-  };
-  struct buffer_record {
-    resource_metadata metadata;
-    std::shared_ptr<backend_renderer> owner;
-    std::shared_ptr<backend_resource_renderer> resource_api;
-    std::shared_ptr<backend_retirement_renderer> retirement;
-    std::unique_ptr<backend_buffer_resource> native;
-    granit_buffer_desc desc{};
-    std::mutex mutex;
-    bool mapped{};
-    std::uint64_t mapped_offset{};
-    std::uint64_t mapped_size{};
-  };
-  struct texture_record {
-    resource_metadata metadata;
-    std::shared_ptr<backend_renderer> owner;
-    std::unique_ptr<backend_texture_resource> native;
-    granit_texture_desc desc{};
-    bool publicly_destroyable{true};
-    std::mutex mutex;
-  };
-  struct texture_view_record {
-    resource_metadata metadata;
-    std::shared_ptr<backend_renderer> owner;
-    std::shared_ptr<texture_record> texture;
-    std::unique_ptr<backend_texture_view_resource> native;
-    granit_texture_view_desc desc{};
-    bool publicly_destroyable{true};
-  };
-  struct sampler_record {
-    resource_metadata metadata;
-    std::shared_ptr<backend_renderer> owner;
-    std::shared_ptr<backend_resource_renderer> resource_api;
-    std::shared_ptr<backend_retirement_renderer> retirement;
-    std::unique_ptr<backend_sampler_resource> native;
-  };
-  struct shader_record {
-    resource_metadata metadata;
-    std::shared_ptr<backend_renderer> owner;
-    std::unique_ptr<backend_shader_resource> native;
-    granit_shader_stage stage{};
-    std::string entry_point;
-  };
-  struct bind_group_layout_record {
-    resource_metadata metadata;
-    std::shared_ptr<backend_renderer> owner;
-    std::shared_ptr<backend_resource_renderer> resource_api;
-    std::shared_ptr<backend_retirement_renderer> retirement;
-    std::unique_ptr<backend_bind_group_layout_resource> native;
-    std::vector<granit_bind_group_layout_entry> entries;
-  };
-  struct pipeline_layout_record {
-    resource_metadata metadata;
-    std::shared_ptr<backend_renderer> owner;
-    std::unique_ptr<backend_pipeline_layout_resource> native;
-    std::vector<std::shared_ptr<bind_group_layout_record>> bind_group_layouts;
-  };
-  struct bind_group_record {
-    resource_metadata metadata;
-    std::shared_ptr<backend_renderer> owner;
-    std::shared_ptr<backend_resource_renderer> resource_api;
-    std::shared_ptr<backend_retirement_renderer> retirement;
-    std::shared_ptr<bind_group_layout_record> layout;
-    std::vector<std::shared_ptr<void>> resources;
-    std::vector<backend_buffer_access> graphics_buffer_accesses;
-    std::vector<backend_texture_access> graphics_texture_accesses;
-    std::vector<backend_buffer_access> compute_buffer_accesses;
-    std::vector<backend_texture_access> compute_texture_accesses;
-    std::vector<dynamic_uniform_binding> dynamic_uniform_bindings;
-    std::unique_ptr<backend_bind_group_resource> native;
-  };
-  struct graphics_pipeline_record {
-    resource_metadata metadata;
-    std::shared_ptr<backend_renderer> owner;
-    std::shared_ptr<pipeline_layout_record> layout;
-    std::shared_ptr<shader_record> vertex_shader;
-    std::shared_ptr<shader_record> fragment_shader;
-    std::unique_ptr<backend_graphics_pipeline_resource> native;
-  };
-  struct compute_pipeline_record {
-    resource_metadata metadata;
-    std::shared_ptr<backend_renderer> owner;
-    std::shared_ptr<backend_resource_renderer> resource_api;
-    std::shared_ptr<backend_retirement_renderer> retirement;
-    std::shared_ptr<pipeline_layout_record> layout;
-    std::shared_ptr<shader_record> compute_shader;
-    std::unique_ptr<backend_compute_pipeline_resource> native;
-  };
-  struct command_recorder_record {
-    enum class web_state { initial, recording, rendering, executable, submitted };
-    resource_metadata metadata;
-    std::shared_ptr<backend_renderer> owner;
-    std::shared_ptr<backend_queue> queue;
-    std::shared_ptr<backend_command_renderer> commands;
-    std::shared_ptr<backend_compute_command_renderer> compute;
-    std::shared_ptr<backend_graphics_command_renderer> graphics;
-    std::shared_ptr<backend_retirement_renderer> retirement;
-    std::shared_ptr<backend_timestamp_renderer> timestamps;
-    std::shared_ptr<backend_transfer_command_renderer> transfers;
-    std::unique_ptr<backend_command_recorder_resource> native;
-    std::mutex mutex;
-    std::vector<retained_resource> retained_resources;
-    std::shared_ptr<texture_view_record> web_target;
-    std::shared_ptr<graphics_pipeline_record> web_pipeline;
-    web_state web_status{web_state::initial};
-    bool web_drew{};
-    bool platform_managed_rendering{};
-    bool owned_by_frame_context{};
-  };
-  enum class frame_context_slot_state { idle, recording, submitted };
-  struct frame_context_slot {
-    granit_command_recorder recorder{GRANIT_NULL_HANDLE};
-    granit_frame frame{GRANIT_NULL_HANDLE};
-    frame_context_slot_state state{frame_context_slot_state::idle};
-  };
-  struct frame_context_record {
-    resource_metadata metadata;
-    std::shared_ptr<backend_renderer> owner;
-    std::mutex mutex;
-    std::vector<frame_context_slot> slots;
-  };
-  struct timestamp_query_pool_record {
-    resource_metadata metadata;
-    std::shared_ptr<backend_renderer> owner;
-    std::shared_ptr<backend_timestamp_renderer> timestamps;
-    std::shared_ptr<backend_retirement_renderer> retirement;
-    std::unique_ptr<backend_timestamp_query_pool_resource> native;
-    std::mutex mutex;
-  };
-  struct frame_record {
-    std::shared_ptr<backend_renderer> owner;
-    std::shared_ptr<backend_presentation_renderer> presentation;
-    std::shared_ptr<backend_queue> queue;
-    std::shared_ptr<swapchain_record> swapchain;
-    std::mutex mutex;
-    std::uint32_t image_index{};
-    std::size_t slot_index{};
-    bool submitted{};
-    bool dynamic_backbuffer{};
-  };
-  struct upload_entry {
-    backend_upload_type type{backend_upload_type::buffer};
-    std::shared_ptr<buffer_record> buffer;
-    std::shared_ptr<texture_record> texture;
-    std::uint64_t offset{};
-    std::vector<std::byte> data;
-    backend_texture_copy texture_copy{};
-  };
-  struct upload_batch_record {
-    resource_metadata metadata;
-    std::shared_ptr<backend_renderer> owner;
-    std::shared_ptr<backend_resource_renderer> resource_api;
-    std::mutex mutex;
-    std::vector<upload_entry> uploads;
-    bool failed{};
-  };
+
   std::unordered_map<granit_surface, std::shared_ptr<surface_record>> surfaces_;
   std::unordered_map<granit_swapchain, std::shared_ptr<swapchain_record>> swapchains_;
   std::unordered_map<granit_buffer, std::shared_ptr<buffer_record>> buffers_;

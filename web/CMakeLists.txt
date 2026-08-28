@@ -6,6 +6,7 @@ add_library(
   "${PROJECT_SOURCE_DIR}/src/renderer/command_recorder_api.cpp"
   "${PROJECT_SOURCE_DIR}/src/renderer/pipeline_api.cpp"
   "${PROJECT_SOURCE_DIR}/src/renderer/renderer_api.cpp"
+  renderer_factory.cpp
   renderer_registry.cpp
   "${PROJECT_SOURCE_DIR}/src/renderer/shader_api.cpp"
   "${PROJECT_SOURCE_DIR}/src/renderer/surface_api.cpp"

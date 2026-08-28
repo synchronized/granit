@@ -374,12 +374,4 @@ typedef struct granit_backend_plugin_api {
 
 typedef const granit_backend_plugin_api* (*granit_backend_plugin_query_fn)(uint32_t requested_abi);
 
-#if defined(__EMSCRIPTEN__) && defined(__cplusplus)
-extern "C" {
-const granit_backend_plugin_api* granit_backend_plugin_query(uint32_t requested_abi)
-    noexcept
-    ;
-}
-#endif
-
 #endif
