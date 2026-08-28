@@ -454,6 +454,7 @@ typedef struct WGPUBufferMapCallbackInfo {
 
 WGPUInstance wgpuCreateInstance(const WGPUInstanceDescriptor* descriptor);
 void wgpuInstanceRelease(WGPUInstance instance);
+void wgpuInstanceProcessEvents(WGPUInstance instance);
 WGPUFuture wgpuInstanceRequestAdapter(WGPUInstance instance,
                                       const WGPURequestAdapterOptions* options,
                                       WGPURequestAdapterCallbackInfo callbackInfo);

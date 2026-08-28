@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
+#include "backend/lifecycle.h"
 #include "backend/plugin_api.h"
 
 #include <algorithm>
@@ -72,6 +73,7 @@ struct webgpu_instance {
   WGPUDevice device;
   WGPUQueue queue;
   granit_backend_plugin_capabilities capabilities;
+  granit::detail::backend_lifecycle lifecycle;
   std::unordered_map<granit_backend_plugin_buffer, buffer_record> buffers;
   std::unordered_map<granit_backend_plugin_texture, texture_record> textures;
   std::unordered_map<granit_backend_plugin_texture_view, texture_view_record> texture_views;
@@ -396,6 +398,7 @@ granit_result create_backend(const granit_backend_plugin_host_api* host,
       device_limits.maxBindGroups,
       device_limits.maxColorAttachments,
   };
+  state->lifecycle.mark_ready();
 
   granit_backend_plugin_instance handle = next_instance.fetch_add(1, std::memory_order_relaxed);
   if (handle == 0) {
@@ -475,11 +478,28 @@ granit_result get_instance_status(granit_backend_plugin_instance instance,
     return GRANIT_ERROR_INVALID_ARGUMENT;
   }
   const std::scoped_lock lock{instances_mutex};
-  if (instances.find(instance) == instances.end()) {
+  const auto found = instances.find(instance);
+  if (found == instances.end()) {
     return GRANIT_ERROR_INVALID_HANDLE;
   }
   const auto caller_size = status->struct_size;
-  *status = {caller_size, GRANIT_BACKEND_PLUGIN_INSTANCE_STATE_READY, GRANIT_SUCCESS, 0};
+  const auto lifecycle = found->second->lifecycle.status();
+  granit_backend_plugin_instance_state plugin_state{};
+  switch (lifecycle.state) {
+  case granit::detail::backend_lifecycle_state::initializing:
+    plugin_state = GRANIT_BACKEND_PLUGIN_INSTANCE_STATE_INITIALIZING;
+    break;
+  case granit::detail::backend_lifecycle_state::ready:
+    plugin_state = GRANIT_BACKEND_PLUGIN_INSTANCE_STATE_READY;
+    break;
+  case granit::detail::backend_lifecycle_state::failed:
+    plugin_state = GRANIT_BACKEND_PLUGIN_INSTANCE_STATE_FAILED;
+    break;
+  case granit::detail::backend_lifecycle_state::device_lost:
+    plugin_state = GRANIT_BACKEND_PLUGIN_INSTANCE_STATE_DEVICE_LOST;
+    break;
+  }
+  *status = {caller_size, plugin_state, lifecycle.failure_result, 0};
   return GRANIT_SUCCESS;
 }
 
@@ -488,8 +508,12 @@ granit_result process_events(granit_backend_plugin_instance instance) noexcept {
     return GRANIT_ERROR_INVALID_ARGUMENT;
   }
   const std::scoped_lock lock{instances_mutex};
-  return instances.find(instance) == instances.end() ? GRANIT_ERROR_INVALID_HANDLE
-                                                      : GRANIT_SUCCESS;
+  const auto found = instances.find(instance);
+  if (found == instances.end()) {
+    return GRANIT_ERROR_INVALID_HANDLE;
+  }
+  wgpuInstanceProcessEvents(found->second->instance);
+  return found->second->lifecycle.gate();
 }
 
 granit_result create_buffer(granit_backend_plugin_instance instance,

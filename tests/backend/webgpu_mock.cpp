@@ -47,6 +47,8 @@ extern "C" WGPUInstance wgpuCreateInstance(const WGPUInstanceDescriptor*) {
 
 extern "C" void wgpuInstanceRelease(WGPUInstance instance) { delete instance; }
 
+extern "C" void wgpuInstanceProcessEvents(WGPUInstance) {}
+
 extern "C" WGPUFuture wgpuInstanceRequestAdapter(WGPUInstance,
                                                  const WGPURequestAdapterOptions* options,
                                                  WGPURequestAdapterCallbackInfo callback_info) {
