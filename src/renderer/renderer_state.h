@@ -256,9 +256,7 @@ public:
   submit_command_recorders(std::span<backend_command_recorder_resource* const> recorders,
                            submission_serial& submitted_serial) override;
   [[nodiscard]] granit_result acquire_swapchain_frame(backend_swapchain_resource& swapchain,
-                                                      std::uint32_t& image_index,
-                                                      std::size_t& slot_index,
-                                                      bool& needs_recreate);
+                                                      backend_acquired_swapchain_frame& frame);
   [[nodiscard]] granit_result submit_swapchain_frame(backend_command_recorder_resource& recorder,
                                                      backend_swapchain_resource& swapchain,
                                                      std::uint32_t image_index,

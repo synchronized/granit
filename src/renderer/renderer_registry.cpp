@@ -901,6 +901,18 @@ renderer_registry::install_swapchain_backbuffers(granit_swapchain swapchain,
         record->renderer->get_swapchain_backbuffers(*record->native, backbuffers);
     if (backbuffer_result != GRANIT_SUCCESS)
       return backbuffer_result;
+    return install_swapchain_backbuffers(swapchain, record, std::move(backbuffers));
+  } catch (const std::bad_alloc&) {
+    return GRANIT_ERROR_OUT_OF_MEMORY;
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+granit_result renderer_registry::install_swapchain_backbuffers(
+    granit_swapchain swapchain, const std::shared_ptr<swapchain_record>& record,
+    std::vector<backend_swapchain_backbuffer> backbuffers) {
+  try {
     std::vector<std::shared_ptr<texture_record>> textures;
     std::vector<std::shared_ptr<texture_view_record>> views;
     textures.reserve(backbuffers.size());
@@ -917,11 +929,15 @@ renderer_registry::install_swapchain_backbuffers(granit_swapchain swapchain,
       view->publicly_destroyable = false;
       granit_texture_view_desc desc = GRANIT_TEXTURE_VIEW_DESC_INIT;
       view->desc = desc;
-      view->native = record->renderer->allocate_texture_view_resource();
-      const auto result = record->renderer->create_native_texture_view(
-          *texture->native, texture->desc, desc, *view->native);
-      if (result != GRANIT_SUCCESS)
-        return result;
+      if (backbuffer.view) {
+        view->native = std::move(backbuffer.view);
+      } else {
+        view->native = record->renderer->allocate_texture_view_resource();
+        const auto result = record->renderer->create_native_texture_view(
+            *texture->native, texture->desc, desc, *view->native);
+        if (result != GRANIT_SUCCESS)
+          return result;
+      }
       textures.push_back(std::move(texture));
       views.push_back(std::move(view));
     }
@@ -1046,8 +1062,12 @@ granit_result renderer_registry::acquire_swapchain_frame(granit_renderer rendere
       throw;
     }
   }
-  const auto result = record->renderer->acquire_swapchain_frame(
-      *swapchain_record_state->native, record->image_index, record->slot_index, needs_recreate);
+  backend_acquired_swapchain_frame acquired{};
+  const auto result =
+      record->renderer->acquire_swapchain_frame(*swapchain_record_state->native, acquired);
+  record->image_index = acquired.image_index;
+  record->slot_index = acquired.slot_index;
+  needs_recreate = acquired.needs_recreate;
   static_cast<void>(record->renderer->collect_retired());
   if (result != GRANIT_SUCCESS) {
     std::lock_guard lock{mutex_};
@@ -1056,6 +1076,23 @@ granit_result renderer_registry::acquire_swapchain_frame(granit_renderer rendere
     frames_.erase(handle);
     static_cast<void>(handles_.erase(handle, resource_type::frame, record->renderer->domain()));
     return result;
+  }
+  if (acquired.dynamic_backbuffer.texture) {
+    std::vector<backend_swapchain_backbuffer> backbuffers;
+    backbuffers.push_back(std::move(acquired.dynamic_backbuffer));
+    const auto install_result =
+        install_swapchain_backbuffers(swapchain, swapchain_record_state, std::move(backbuffers));
+    if (install_result != GRANIT_SUCCESS) {
+      bool ignored_needs_recreate{};
+      static_cast<void>(record->renderer->cancel_swapchain_frame(
+          *swapchain_record_state->native, record->image_index, record->slot_index,
+          ignored_needs_recreate));
+      std::lock_guard lock{mutex_};
+      frames_.erase(handle);
+      static_cast<void>(handles_.erase(handle, resource_type::frame, record->renderer->domain()));
+      return install_result;
+    }
+    record->dynamic_backbuffer = true;
   }
   frame = handle;
   image_index = record->image_index;
@@ -1143,8 +1180,30 @@ granit_result renderer_registry::present_swapchain_frame(granit_renderer rendere
     std::lock_guard lock{mutex_};
     record->swapchain->surface_lost = true;
   }
+  std::vector<std::shared_ptr<texture_view_record>> expired_views;
+  std::vector<std::shared_ptr<texture_record>> expired_textures;
   {
     std::lock_guard lock{mutex_};
+    if (record->dynamic_backbuffer) {
+      for (const auto handle : record->swapchain->views) {
+        if (const auto found = texture_views_.find(handle); found != texture_views_.end()) {
+          expired_views.push_back(std::move(found->second));
+          texture_views_.erase(found);
+        }
+        static_cast<void>(
+            handles_.erase(handle, resource_type::texture_view, record->renderer->domain()));
+      }
+      for (const auto handle : record->swapchain->textures) {
+        if (const auto found = textures_.find(handle); found != textures_.end()) {
+          expired_textures.push_back(std::move(found->second));
+          textures_.erase(found);
+        }
+        static_cast<void>(
+            handles_.erase(handle, resource_type::texture, record->renderer->domain()));
+      }
+      record->swapchain->views.clear();
+      record->swapchain->textures.clear();
+    }
     const auto found = frames_.find(frame);
     if (found != frames_.end() && found->second == record) {
       frames_.erase(found);
@@ -1181,8 +1240,31 @@ granit_result renderer_registry::cancel_swapchain_frame(granit_renderer renderer
   if (result != GRANIT_SUCCESS && result != GRANIT_ERROR_OUT_OF_DATE &&
       result != GRANIT_ERROR_SURFACE_LOST && result != GRANIT_ERROR_DEVICE_LOST)
     return result;
+  std::vector<std::shared_ptr<texture_view_record>> expired_views;
+  std::vector<std::shared_ptr<texture_record>> expired_textures;
   {
     std::lock_guard lock{mutex_};
+    if (record->dynamic_backbuffer) {
+      for (const auto handle : record->swapchain->views) {
+        if (const auto found_view = texture_views_.find(handle);
+            found_view != texture_views_.end()) {
+          expired_views.push_back(std::move(found_view->second));
+          texture_views_.erase(found_view);
+        }
+        static_cast<void>(
+            handles_.erase(handle, resource_type::texture_view, record->renderer->domain()));
+      }
+      for (const auto handle : record->swapchain->textures) {
+        if (const auto found_texture = textures_.find(handle); found_texture != textures_.end()) {
+          expired_textures.push_back(std::move(found_texture->second));
+          textures_.erase(found_texture);
+        }
+        static_cast<void>(
+            handles_.erase(handle, resource_type::texture, record->renderer->domain()));
+      }
+      record->swapchain->views.clear();
+      record->swapchain->textures.clear();
+    }
     const auto found = frames_.find(frame);
     if (found != frames_.end() && found->second == record) {
       frames_.erase(found);

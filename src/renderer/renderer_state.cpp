@@ -719,7 +719,7 @@ renderer_state::get_swapchain_backbuffers(backend_swapchain_resource& swapchain_
       desc.usage = GRANIT_TEXTURE_USAGE_COLOR_ATTACHMENT_BIT;
       desc.width = info.width;
       desc.height = info.height;
-      backbuffers.push_back({std::move(texture), desc});
+      backbuffers.push_back({std::move(texture), nullptr, desc});
     }
     return GRANIT_SUCCESS;
   } catch (const std::bad_alloc&) {
@@ -2428,9 +2428,7 @@ granit_result renderer_state::submit_command_recorders(
 }
 
 granit_result renderer_state::acquire_swapchain_frame(backend_swapchain_resource& resource,
-                                                      std::uint32_t& image_index,
-                                                      std::size_t& slot_index,
-                                                      bool& needs_recreate) {
+                                                      backend_acquired_swapchain_frame& frame) {
   auto& swapchain = static_cast<vulkan_swapchain_resource&>(resource).native();
   if (device_lost())
     return GRANIT_ERROR_DEVICE_LOST;
@@ -2445,9 +2443,10 @@ granit_result renderer_state::acquire_swapchain_frame(backend_swapchain_resource
   if (acquired.result != GRANIT_SUCCESS)
     return observe_device_result(acquired.result);
   slot.acquired = true;
-  image_index = acquired.image_index;
-  slot_index = next_frame_slot_;
-  needs_recreate = acquired.suboptimal;
+  frame.image_index = acquired.image_index;
+  frame.slot_index = next_frame_slot_;
+  frame.needs_recreate = acquired.suboptimal;
+  frame.dynamic_backbuffer = {};
   return GRANIT_SUCCESS;
 }
 

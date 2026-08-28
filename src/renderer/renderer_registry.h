@@ -327,6 +327,10 @@ private:
   [[nodiscard]] granit_result
   install_swapchain_backbuffers(granit_swapchain swapchain,
                                 const std::shared_ptr<swapchain_record>& record);
+  [[nodiscard]] granit_result
+  install_swapchain_backbuffers(granit_swapchain swapchain,
+                                const std::shared_ptr<swapchain_record>& record,
+                                std::vector<backend_swapchain_backbuffer> backbuffers);
   [[nodiscard]] std::shared_ptr<command_recorder_record>
   acquire_command_recorder(granit_renderer renderer, granit_command_recorder recorder);
 
@@ -457,6 +461,7 @@ private:
     std::uint32_t image_index{};
     std::size_t slot_index{};
     bool submitted{};
+    bool dynamic_backbuffer{};
   };
   struct upload_entry {
     backend_upload_type type{backend_upload_type::buffer};
