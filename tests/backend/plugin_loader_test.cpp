@@ -174,15 +174,25 @@ TEST_CASE("后端插件 Loader 完成版本化握手", "[backend][plugin]") {
 
   host.struct_size += 32;
   REQUIRE(loader.create_instance(&host, &instance) == GRANIT_SUCCESS);
-  REQUIRE(loader.process_events(instance) == GRANIT_SUCCESS);
   CHECK(instance != 0);
+  status = {};
+  status.struct_size = sizeof(status);
+  REQUIRE(loader.get_instance_status(instance, &status) == GRANIT_SUCCESS);
+  CHECK(status.state == GRANIT_BACKEND_PLUGIN_INSTANCE_STATE_INITIALIZING);
+  REQUIRE(loader.process_events(instance) == GRANIT_ERROR_INITIALIZATION_FAILED);
+  REQUIRE(loader.get_instance_status(instance, &status) == GRANIT_SUCCESS);
+  CHECK(status.state == GRANIT_BACKEND_PLUGIN_INSTANCE_STATE_FAILED);
+  CHECK(status.failure_result == GRANIT_ERROR_INITIALIZATION_FAILED);
+  capabilities = {};
+  capabilities.struct_size = sizeof(capabilities);
+  CHECK(loader.get_capabilities(instance, &capabilities) == GRANIT_ERROR_INITIALIZATION_FAILED);
   CHECK(state.allocations == 3);
-  CHECK(state.diagnostics == 7);
+  CHECK(state.diagnostics == 8);
 
   CHECK(loader.destroy_instance(instance) == GRANIT_SUCCESS);
   CHECK(loader.destroy_instance(instance) == GRANIT_ERROR_INVALID_HANDLE);
   CHECK(state.deallocations == 2);
-  CHECK(state.diagnostics == 8);
+  CHECK(state.diagnostics == 9);
 
   REQUIRE(loader.create_instance(&host, &instance) == GRANIT_SUCCESS);
   REQUIRE(loader.process_events(instance) == GRANIT_SUCCESS);
@@ -192,7 +202,7 @@ TEST_CASE("后端插件 Loader 完成版本化握手", "[backend][plugin]") {
   CHECK(loader.api() == nullptr);
   CHECK(state.allocations == 4);
   CHECK(state.deallocations == 3);
-  CHECK(state.diagnostics == 11);
+  CHECK(state.diagnostics == 12);
   CHECK(loader.get_capabilities(instance, &capabilities) == GRANIT_ERROR_INVALID_ARGUMENT);
 }
 

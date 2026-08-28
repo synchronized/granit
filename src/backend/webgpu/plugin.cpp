@@ -78,6 +78,7 @@ struct webgpu_instance {
   granit::detail::backend_callback_lifetime callback_lifetime;
   granit::detail::backend_callback_ticket device_lost_ticket;
   bool deferred_initialization_for_test;
+  bool fail_initialization_for_test;
   bool force_device_loss_for_test;
   std::unordered_map<granit_backend_plugin_buffer, buffer_record> buffers;
   std::unordered_map<granit_backend_plugin_texture, texture_record> textures;
@@ -99,7 +100,8 @@ struct webgpu_instance {
                   WGPUInstance native_instance) noexcept
       : host(host_api), instance(native_instance), adapter(nullptr), device(nullptr),
         queue(nullptr), capabilities{}, device_lost_ticket(callback_lifetime.ticket()),
-        deferred_initialization_for_test(false), force_device_loss_for_test(false) {}
+        deferred_initialization_for_test(false), fail_initialization_for_test(false),
+        force_device_loss_for_test(false) {}
 };
 
 constexpr std::uint64_t request_timeout_ns = UINT64_C(10000000000);
@@ -137,7 +139,7 @@ std::atomic_uint64_t next_render_pipeline{1};
 std::atomic_uint64_t next_command_recorder{1};
 std::atomic_uint64_t next_command_buffer{1};
 #if defined(GRANIT_WEBGPU_DEFER_INITIALIZATION_TEST)
-std::atomic_bool defer_next_initialization_for_test{true};
+std::atomic_uint32_t initialization_sequence_for_test{};
 #endif
 
 granit_result require_ready(const webgpu_instance& state) noexcept {
@@ -432,7 +434,11 @@ granit_result create_backend(const granit_backend_plugin_host_api* host,
       device_limits.maxColorAttachments,
   };
 #if defined(GRANIT_WEBGPU_DEFER_INITIALIZATION_TEST)
-  state->deferred_initialization_for_test = defer_next_initialization_for_test.exchange(false);
+  const auto initialization_index = initialization_sequence_for_test.fetch_add(1);
+  const auto extended_host = host->struct_size > sizeof(granit_backend_plugin_host_api);
+  state->fail_initialization_for_test = initialization_index == 1 && extended_host;
+  state->deferred_initialization_for_test =
+      initialization_index == 0 || state->fail_initialization_for_test;
   if (!state->deferred_initialization_for_test)
     state->lifecycle.mark_ready();
 #else
@@ -557,8 +563,15 @@ granit_result process_events(granit_backend_plugin_instance instance) noexcept {
 #if defined(GRANIT_WEBGPU_DEFER_INITIALIZATION_TEST)
   if (found->second->deferred_initialization_for_test) {
     found->second->deferred_initialization_for_test = false;
-    found->second->force_device_loss_for_test = true;
-    found->second->lifecycle.mark_ready();
+    if (found->second->fail_initialization_for_test) {
+      found->second->fail_initialization_for_test = false;
+      found->second->lifecycle.mark_failed(GRANIT_ERROR_INITIALIZATION_FAILED);
+      constexpr char message[] = "mock forced WebGPU initialization failure";
+      emit(found->second->host, GRANIT_DIAGNOSTIC_SEVERITY_ERROR, message, sizeof(message) - 1);
+    } else {
+      found->second->force_device_loss_for_test = true;
+      found->second->lifecycle.mark_ready();
+    }
   } else if (found->second->force_device_loss_for_test) {
     found->second->force_device_loss_for_test = false;
     constexpr char message[] = "mock forced device loss";
