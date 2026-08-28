@@ -369,10 +369,7 @@ private:
   std::mutex mutex_;
   handle_table handles_;
   std::unordered_map<granit_renderer, std::shared_ptr<backend_renderer>> backend_renderers_;
-#ifdef __EMSCRIPTEN__
-  // Web 仅保留通用根表；兼容视图用于平台实现收敛期间减少无关改动。
-  decltype(backend_renderers_)& renderers_{backend_renderers_};
-#else
+#ifndef __EMSCRIPTEN__
   // Vulkan 资源路径迁移完成前，保留具体状态视图；它与通用根表共享同一状态对象。
   std::unordered_map<granit_renderer, std::shared_ptr<renderer_state>> renderers_;
 #endif
