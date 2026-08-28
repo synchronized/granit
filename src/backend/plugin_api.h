@@ -9,7 +9,7 @@
 #include <granit/core/diagnostic.h>
 #include <granit/core/result.h>
 
-#define GRANIT_BACKEND_PLUGIN_ABI_VERSION UINT32_C(4)
+#define GRANIT_BACKEND_PLUGIN_ABI_VERSION UINT32_C(5)
 #define GRANIT_BACKEND_PLUGIN_KIND_WEBGPU UINT32_C(1)
 #define GRANIT_BACKEND_PLUGIN_QUERY_SYMBOL "granit_backend_plugin_query"
 
@@ -26,6 +26,7 @@ typedef uint64_t granit_backend_plugin_pipeline_layout;
 typedef uint64_t granit_backend_plugin_render_pipeline;
 typedef uint64_t granit_backend_plugin_command_recorder;
 typedef uint64_t granit_backend_plugin_command_buffer;
+typedef uint64_t granit_backend_plugin_surface;
 
 typedef uint32_t granit_backend_plugin_instance_state;
 #define GRANIT_BACKEND_PLUGIN_INSTANCE_STATE_INITIALIZING UINT32_C(1)
@@ -112,6 +113,14 @@ typedef struct granit_backend_plugin_render_pipeline_desc {
   granit_backend_plugin_shader vertex_shader;
   granit_backend_plugin_shader fragment_shader;
 } granit_backend_plugin_render_pipeline_desc;
+
+/** Canvas selector 仅在调用期间有效；插件必须复制后续需要的内容。 */
+typedef struct granit_backend_plugin_canvas_surface_desc {
+  uint32_t struct_size;
+  uint32_t reserved;
+  const char* selector;
+  uint32_t selector_length;
+} granit_backend_plugin_canvas_surface_desc;
 
 /** 插件实例创建后固定的后端无关能力快照。 */
 typedef struct granit_backend_plugin_capabilities {
@@ -233,6 +242,11 @@ typedef granit_result (*granit_backend_plugin_get_instance_status_fn)(
 /** 非阻塞地推进已完成的异步回调；没有待处理事件也返回成功。 */
 typedef granit_result (*granit_backend_plugin_process_events_fn)(
     granit_backend_plugin_instance instance);
+typedef granit_result (*granit_backend_plugin_create_canvas_surface_fn)(
+    granit_backend_plugin_instance instance, const granit_backend_plugin_canvas_surface_desc* desc,
+    granit_backend_plugin_surface* surface);
+typedef granit_result (*granit_backend_plugin_destroy_surface_fn)(
+    granit_backend_plugin_instance instance, granit_backend_plugin_surface surface);
 
 /**
  * 实例操作表由插件拥有，在插件卸载前保持有效。
@@ -274,6 +288,8 @@ typedef struct granit_backend_plugin_instance_api {
   granit_backend_plugin_recorder_copy_texture_to_buffer_fn recorder_copy_texture_to_buffer;
   granit_backend_plugin_get_instance_status_fn get_instance_status;
   granit_backend_plugin_process_events_fn process_events;
+  granit_backend_plugin_create_canvas_surface_fn create_canvas_surface;
+  granit_backend_plugin_destroy_surface_fn destroy_surface;
 } granit_backend_plugin_instance_api;
 
 /** 后端插件入口返回的只读描述；字符串在插件卸载前有效。 */

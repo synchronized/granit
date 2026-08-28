@@ -36,8 +36,13 @@ public:
   [[nodiscard]] granit_result
   get_instance_status(granit_backend_plugin_instance instance,
                       granit_backend_plugin_instance_status* status) noexcept;
+  [[nodiscard]] granit_result process_events(granit_backend_plugin_instance instance) noexcept;
   [[nodiscard]] granit_result
-  process_events(granit_backend_plugin_instance instance) noexcept;
+  create_canvas_surface(granit_backend_plugin_instance instance,
+                        const granit_backend_plugin_canvas_surface_desc* desc,
+                        granit_backend_plugin_surface* surface) noexcept;
+  [[nodiscard]] granit_result destroy_surface(granit_backend_plugin_instance instance,
+                                              granit_backend_plugin_surface surface) noexcept;
   [[nodiscard]] granit_result create_buffer(granit_backend_plugin_instance instance,
                                             const granit_backend_plugin_buffer_desc* desc,
                                             granit_backend_plugin_buffer* buffer) noexcept;

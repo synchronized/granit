@@ -15,8 +15,8 @@ bool is_compatible(const granit_backend_plugin_api* api,
   constexpr std::size_t minimum_size = offsetof(granit_backend_plugin_api, instance_api) +
                                        sizeof(const granit_backend_plugin_instance_api*);
   constexpr std::size_t minimum_instance_api_size =
-      offsetof(granit_backend_plugin_instance_api, process_events) +
-      sizeof(granit_backend_plugin_process_events_fn);
+      offsetof(granit_backend_plugin_instance_api, destroy_surface) +
+      sizeof(granit_backend_plugin_destroy_surface_fn);
   return api != nullptr && api->struct_size >= minimum_size &&
          api->abi_version == GRANIT_BACKEND_PLUGIN_ABI_VERSION && api->kind == expected_kind &&
          api->reserved == 0 && api->name != nullptr && api->name_length != 0 &&
@@ -51,7 +51,9 @@ bool is_compatible(const granit_backend_plugin_api* api,
          api->instance_api->submit_command_buffer != nullptr &&
          api->instance_api->recorder_copy_texture_to_buffer != nullptr &&
          api->instance_api->get_instance_status != nullptr &&
-         api->instance_api->process_events != nullptr;
+         api->instance_api->process_events != nullptr &&
+         api->instance_api->create_canvas_surface != nullptr &&
+         api->instance_api->destroy_surface != nullptr;
 }
 
 bool is_valid_host(const granit_backend_plugin_host_api* host) noexcept {
@@ -181,9 +183,9 @@ backend_plugin_loader::get_capabilities(granit_backend_plugin_instance instance,
   }
 }
 
-granit_result backend_plugin_loader::get_instance_status(
-    granit_backend_plugin_instance instance,
-    granit_backend_plugin_instance_status* status) noexcept {
+granit_result
+backend_plugin_loader::get_instance_status(granit_backend_plugin_instance instance,
+                                           granit_backend_plugin_instance_status* status) noexcept {
   if (api_ == nullptr || instance == 0 || status == nullptr ||
       status->struct_size < sizeof(granit_backend_plugin_instance_status) ||
       status->reserved != 0) {
@@ -209,6 +211,35 @@ backend_plugin_loader::process_events(granit_backend_plugin_instance instance) n
   }
   try {
     return api_->instance_api->process_events(instance);
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+granit_result
+backend_plugin_loader::create_canvas_surface(granit_backend_plugin_instance instance,
+                                             const granit_backend_plugin_canvas_surface_desc* desc,
+                                             granit_backend_plugin_surface* surface) noexcept {
+  if (api_ == nullptr || instance == 0 || desc == nullptr || surface == nullptr)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  if (std::find(instances_.begin(), instances_.end(), instance) == instances_.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  try {
+    return api_->instance_api->create_canvas_surface(instance, desc, surface);
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+granit_result
+backend_plugin_loader::destroy_surface(granit_backend_plugin_instance instance,
+                                       granit_backend_plugin_surface surface) noexcept {
+  if (api_ == nullptr || instance == 0 || surface == 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  if (std::find(instances_.begin(), instances_.end(), instance) == instances_.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  try {
+    return api_->instance_api->destroy_surface(instance, surface);
   } catch (...) {
     return GRANIT_ERROR_INTERNAL;
   }
