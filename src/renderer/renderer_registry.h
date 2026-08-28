@@ -354,6 +354,9 @@ private:
   };
   struct swapchain_record {
     resource_metadata metadata;
+    std::shared_ptr<backend_renderer> owner;
+    std::shared_ptr<backend_presentation_renderer> presentation;
+    // 固定后备缓冲仍需 Vulkan 资源接口；迁移 Texture 后移除此临时具体视图。
     std::shared_ptr<renderer_state> renderer;
     std::shared_ptr<surface_record> surface;
     std::unique_ptr<backend_swapchain_resource> native;

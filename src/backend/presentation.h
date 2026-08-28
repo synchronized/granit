@@ -90,6 +90,9 @@ public:
                                                              std::uint32_t image_index,
                                                              std::size_t slot_index,
                                                              bool& needs_recreate) = 0;
+  [[nodiscard]] virtual granit_result wait_for_present_idle() noexcept = 0;
+  virtual std::size_t collect_present_retired() noexcept = 0;
+  [[nodiscard]] virtual std::size_t frame_slot_count() const noexcept = 0;
 };
 
 } // namespace granit::detail

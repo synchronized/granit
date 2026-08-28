@@ -302,12 +302,15 @@ public:
   void retire_resource(submission_serial retire_after, retirement_order order,
                        std::shared_ptr<void> resource);
   std::size_t collect_retired() noexcept;
+  std::size_t collect_present_retired() noexcept override { return collect_retired(); }
   std::size_t drain_retired() noexcept;
   void destroy_native_command_recorder(backend_command_recorder_resource& recorder) noexcept;
 
   void set_domain(std::uint32_t domain) noexcept override { domain_ = domain; }
   [[nodiscard]] std::uint32_t domain() const noexcept override { return domain_; }
-  [[nodiscard]] std::size_t frame_slot_count() const noexcept { return frame_slots_.size(); }
+  [[nodiscard]] std::size_t frame_slot_count() const noexcept override {
+    return frame_slots_.size();
+  }
   [[nodiscard]] bool validation_enabled() const noexcept { return validation_enabled_; }
   [[nodiscard]] bool device_lost() const noexcept {
     return lifecycle_.status().state == backend_lifecycle_state::device_lost;

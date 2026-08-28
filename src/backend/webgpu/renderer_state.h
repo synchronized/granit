@@ -77,6 +77,9 @@ public:
                                                      std::uint32_t image_index,
                                                      std::size_t slot_index,
                                                      bool& needs_recreate) override;
+  [[nodiscard]] granit_result wait_for_present_idle() noexcept override;
+  std::size_t collect_present_retired() noexcept override;
+  [[nodiscard]] std::size_t frame_slot_count() const noexcept override;
 
 private:
   static void* allocate(std::uint64_t size, std::uint64_t alignment, void*) noexcept;

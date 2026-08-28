@@ -232,4 +232,16 @@ granit_result webgpu_renderer_state::cancel_swapchain_frame(backend_swapchain_re
                                   : GRANIT_ERROR_NOT_READY;
 }
 
+granit_result webgpu_renderer_state::wait_for_present_idle() noexcept {
+  return lifecycle_.state == backend_lifecycle_state::device_lost ? GRANIT_ERROR_DEVICE_LOST
+                                                                  : GRANIT_SUCCESS;
+}
+
+std::size_t webgpu_renderer_state::collect_present_retired() noexcept { return 0; }
+
+std::size_t webgpu_renderer_state::frame_slot_count() const noexcept {
+  // 浏览器交换链按 Acquire 返回动态纹理，当前只允许一个在途呈现帧。
+  return 1;
+}
+
 } // namespace granit::detail
