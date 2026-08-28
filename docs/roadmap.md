@@ -26,7 +26,7 @@
 | 六、多线程与性能 | 已完成 | 压力测试、基线、批量提交与上传批处理已完成 |
 | 七、可选高层渲染 | 已完成 | H-02～H-08 路线闭合，参考管线与公共 UI/Text 已验证 |
 | 八、稳定化与跨平台 | 持续进行 | ABI 策略、诊断和更多平台 Surface 待后续推进 |
-| 九、多后端与 Web 平台 | 进行中 | S-10A、S-10B、S-10C 已完成，下一目标为 S-10D Emscripten |
+| 九、多后端与 Web 平台 | 已完成 | S-10A～S-10E 已完成，桌面与浏览器 WebGPU 路径通过验收 |
 | 十、Android 移动平台 | 待开始 | 0.4.0 多后端边界完成后规划 NDK、Surface 与移动生命周期 |
 
 ## 一、工程与 ABI 基础
@@ -162,7 +162,7 @@
 
 ## 九、多后端与 Web 平台
 
-**状态：进行中；S-10A 至 S-10D、S-10E1 至 S-10E4 已完成，正在实施 S-10E5。**
+**状态：已完成；S-10A 至 S-10E5 均已通过验收。**
 
 - **[S-10](plans/S-10-0.4.0-webgpu-backend.md) / P2**：先定义后端无关的内部设备、资源、命令、
   同步与 Surface 边界，在保持 Vulkan 后端功能和性能的前提下验证桌面 WebGPU 离屏 MVP；随后建立
@@ -180,8 +180,9 @@
   动态 Backbuffer API 驱动 WebGPU，并验证帧结束后的借用句柄失效。公共 Shader 描述已增加可选
   WGSL 视图，WebGPU Shader 创建/销毁已接入 generation 句柄；空 Pipeline Layout、基础单颜色
   Graphics Pipeline，以及最小三角形 Command Recorder/Queue Submit 已接入公共 API。浏览器
-  三角形示例与浏览器状态、输入及可读合成层像素验收已经完成，下一步执行 S-10E5 最终跨平台
-  验收矩阵。
+  三角形示例与浏览器状态、输入及可读合成层像素验收已经完成；Windows、Linux 和 Emscripten
+  最终矩阵均已通过。详细结果见
+  [S-10E WebGPU Renderer 验收](records/2026-08-28-s10e-webgpu-renderer-acceptance.md)。
 
 ## 十、Android 移动平台
 
@@ -195,12 +196,10 @@
 
 ## 近期执行顺序
 
-1. 执行 S-10E5 原生 Vulkan、C/C++ Consumer、安装导出与 Emscripten 最终验收矩阵。
-2. 记录 S-10 验收结果并收敛 0.4.0 后续任务。
+1. 收敛 0.4.0 版本说明、发布候选构建和发布验收。
+2. 为 S-11 建立独立 Android Plan，再进入 NDK 与移动 Surface 实现。
 3. S-06D 最终验收等待稳定版本与 component 范围决策；不在 0.x 阶段提前宣布稳定。
-4. 完成 0.4.0 多后端与 Web 路径后，为 S-11 建立独立 Android Plan，再进入 NDK 与移动 Surface
-   实现。
-5. H-09 的透明 PBR、CSM、Clustered Forward 与 Bindless 只在各自重新评估条件满足后独立恢复，
+4. H-09 的透明 PBR、CSM、Clustered Forward 与 Bindless 只在各自重新评估条件满足后独立恢复，
    不作为当前稳定化工作的前置项。
 
 若前置抽象不足，应先更新对应 Plan 和本路线图状态，再扩大公共 API。
