@@ -1,13 +1,18 @@
 <!-- SPDX-License-Identifier: MIT -->
 <!-- Copyright (c) 2026 Granit contributors -->
 
-# S-10E WebGPU Renderer 验收
+# S-10E WebGPU Renderer 阶段验收
 
 ## 结论
 
-S-10E 已完成。Emscripten 构建现可通过 Granit 公共 Renderer、Surface、Swapchain、Shader、
-Graphics Pipeline 和 Command Recorder API，在浏览器 Canvas 绘制确定性三角形；公共头文件不暴露
-WebGPU、Emscripten 或 Vulkan 原生类型。Windows、Linux 与 Emscripten 最终矩阵均已通过。
+S-10E 浏览器绘制闭环的首轮矩阵已完成。Emscripten 构建现可通过 Granit 公共 Renderer、Surface、
+Swapchain、Shader、Graphics Pipeline 和 Command Recorder API，在浏览器 Canvas 绘制确定性
+三角形；公共头文件不暴露 WebGPU、Emscripten 或 Vulkan 原生类型。Windows、Linux 与
+Emscripten 首轮矩阵均已通过。
+
+PR 架构审查确认 Emscripten 仍使用独立 Web Registry，且原构建只生成示例目标。当前已拆出
+`granit::granit` 静态目标；统一通用 Registry、安装导出和独立 Web Consumer 完成前，本记录不作为
+S-10E 最终完成依据。
 
 ## 验收范围
 
