@@ -3378,7 +3378,9 @@ granit_result renderer_registry::abort_frame_context(granit_renderer renderer,
   if (!command)
     return GRANIT_ERROR_INVALID_HANDLE;
   std::lock_guard command_lock{command->mutex};
-  command->renderer->destroy_native_command_recorder(*command->native);
+  const auto discard_result = command->commands->discard_command_recorder(*command->native);
+  if (discard_result != GRANIT_SUCCESS)
+    return discard_result;
   command->retained_resources.clear();
   const auto result = command->commands->create_command_recorder(*command->native);
   if (result == GRANIT_SUCCESS) {

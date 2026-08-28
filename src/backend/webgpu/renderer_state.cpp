@@ -44,6 +44,11 @@ granit_result webgpu_renderer_state::reset_command_recorder(
   return commands_ ? commands_->reset(recorder) : GRANIT_ERROR_UNSUPPORTED;
 }
 
+granit_result webgpu_renderer_state::discard_command_recorder(
+    backend_command_recorder_resource& recorder) noexcept {
+  return commands_ ? commands_->reset(recorder) : GRANIT_ERROR_UNSUPPORTED;
+}
+
 bool webgpu_renderer_state::command_recorder_is_recording(
     backend_command_recorder_resource&) noexcept {
   return false;

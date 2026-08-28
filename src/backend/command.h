@@ -31,6 +31,9 @@ public:
   end_command_recorder(backend_command_recorder_resource& recorder) noexcept = 0;
   [[nodiscard]] virtual granit_result
   reset_command_recorder(backend_command_recorder_resource& recorder) noexcept = 0;
+  /** 丢弃正在记录或待提交的原生状态，使资源可重新创建。 */
+  [[nodiscard]] virtual granit_result
+  discard_command_recorder(backend_command_recorder_resource& recorder) noexcept = 0;
   [[nodiscard]] virtual bool
   command_recorder_is_recording(backend_command_recorder_resource& recorder) noexcept = 0;
   [[nodiscard]] virtual granit_result draw(backend_command_recorder_resource& recorder,

@@ -2875,4 +2875,10 @@ void renderer_state::destroy_native_command_recorder(
   static_cast<vulkan_command_recorder_resource&>(resource).native().destroy(device_);
 }
 
+granit_result renderer_state::discard_command_recorder(
+    backend_command_recorder_resource& resource) noexcept {
+  destroy_native_command_recorder(resource);
+  return GRANIT_SUCCESS;
+}
+
 } // namespace granit::detail

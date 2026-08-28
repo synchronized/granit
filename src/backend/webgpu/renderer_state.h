@@ -63,6 +63,8 @@ public:
   end_command_recorder(backend_command_recorder_resource& recorder) noexcept override;
   [[nodiscard]] granit_result
   reset_command_recorder(backend_command_recorder_resource& recorder) noexcept override;
+  [[nodiscard]] granit_result
+  discard_command_recorder(backend_command_recorder_resource& recorder) noexcept override;
   [[nodiscard]] bool
   command_recorder_is_recording(backend_command_recorder_resource& recorder) noexcept override;
   [[nodiscard]] granit_result draw(backend_command_recorder_resource& recorder,
