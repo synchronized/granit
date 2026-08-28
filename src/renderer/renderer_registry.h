@@ -41,6 +41,8 @@
 
 namespace granit::detail {
 
+class webgpu_renderer_state;
+
 /** 线程安全地管理进程内公开 renderer 句柄。 */
 class renderer_registry {
 public:
@@ -459,11 +461,18 @@ private:
     std::unique_ptr<backend_compute_pipeline_resource> native;
   };
   struct command_recorder_record {
+    enum class web_state { initial, recording, rendering, executable, submitted };
     resource_metadata metadata;
+    std::shared_ptr<backend_renderer> owner;
     std::shared_ptr<renderer_state> renderer;
+    std::shared_ptr<webgpu_renderer_state> webgpu;
     std::unique_ptr<backend_command_recorder_resource> native;
     std::mutex mutex;
     std::vector<retained_resource> retained_resources;
+    std::shared_ptr<texture_view_record> web_target;
+    std::shared_ptr<graphics_pipeline_record> web_pipeline;
+    web_state web_status{web_state::initial};
+    bool web_drew{};
     bool owned_by_frame_context{};
   };
   enum class frame_context_slot_state { idle, recording, submitted };
