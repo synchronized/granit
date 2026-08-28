@@ -150,8 +150,8 @@ target_sources(
     renderer/command_recorder_api.cpp
     renderer/frame_context_api.cpp
     renderer/renderer_registry.cpp
-    renderer/renderer_registry_factory_vulkan.cpp
-    renderer/renderer_registry_factory_webgpu.cpp
+    backend/vulkan/renderer_factory.cpp
+    backend/webgpu/renderer_factory.cpp
     renderer/renderer_registry_buffer.cpp
     renderer/renderer_registry_command.cpp
     renderer/renderer_registry.h

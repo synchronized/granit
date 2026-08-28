@@ -8,7 +8,7 @@ add_library(
   "${PROJECT_SOURCE_DIR}/src/renderer/renderer_api.cpp"
   renderer_factory.cpp
   "${PROJECT_SOURCE_DIR}/src/renderer/renderer_registry.cpp"
-  "${PROJECT_SOURCE_DIR}/src/renderer/renderer_registry_factory_webgpu.cpp"
+  "${PROJECT_SOURCE_DIR}/src/backend/webgpu/renderer_factory.cpp"
   "${PROJECT_SOURCE_DIR}/src/renderer/renderer_registry_buffer.cpp"
   "${PROJECT_SOURCE_DIR}/src/renderer/renderer_registry_command.cpp"
   "${PROJECT_SOURCE_DIR}/src/renderer/renderer_registry_pipeline.cpp"
