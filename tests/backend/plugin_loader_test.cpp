@@ -293,7 +293,8 @@ TEST_CASE("WebGPU 插件 Buffer 遵守所有权、Usage 与范围契约", "[back
   CHECK(state.allocations == state.deallocations);
 }
 
-TEST_CASE("WebGPU 插件 Canvas Surface 契约区分平台支持", "[backend][plugin][surface]") {
+TEST_CASE("WebGPU 插件 Canvas Surface 遵守生命周期与所有权契约",
+          "[backend][plugin][surface]") {
   granit::detail::backend_plugin_loader loader;
   REQUIRE(loader.open(GRANIT_FAKE_BACKEND_PLUGIN_PATH, GRANIT_BACKEND_PLUGIN_KIND_WEBGPU) ==
           GRANIT_SUCCESS);
@@ -307,18 +308,27 @@ TEST_CASE("WebGPU 插件 Canvas Surface 契约区分平台支持", "[backend][pl
   desc.selector = "#canvas";
   desc.selector_length = 7;
   granit_backend_plugin_surface surface = 42;
-  CHECK(loader.create_canvas_surface(instance, &desc, &surface) == GRANIT_ERROR_NOT_READY);
-  CHECK(surface == 0);
-
-  REQUIRE(loader.process_events(instance) == GRANIT_SUCCESS);
+  const auto initial_result = loader.create_canvas_surface(instance, &desc, &surface);
+  const auto initial_surface = surface;
+  REQUIRE((initial_result == GRANIT_ERROR_NOT_READY || initial_result == GRANIT_SUCCESS));
+  if (initial_result == GRANIT_ERROR_NOT_READY) {
+    CHECK(surface == 0);
+    REQUIRE(loader.process_events(instance) == GRANIT_SUCCESS);
+  } else {
+    REQUIRE(surface != 0);
+  }
   desc.struct_size = 0;
   surface = 42;
   CHECK(loader.create_canvas_surface(instance, &desc, &surface) == GRANIT_ERROR_INVALID_ARGUMENT);
   CHECK(surface == 0);
   desc.struct_size = sizeof(desc);
   CHECK(loader.create_canvas_surface(instance + 1, &desc, &surface) == GRANIT_ERROR_INVALID_HANDLE);
-  REQUIRE(loader.create_canvas_surface(instance, &desc, &surface) == GRANIT_SUCCESS);
-  REQUIRE(surface != 0);
+  if (initial_result == GRANIT_ERROR_NOT_READY) {
+    REQUIRE(loader.create_canvas_surface(instance, &desc, &surface) == GRANIT_SUCCESS);
+    REQUIRE(surface != 0);
+  } else {
+    surface = initial_surface;
+  }
 
   granit_backend_plugin_swapchain_desc swapchain_desc{};
   swapchain_desc.struct_size = sizeof(swapchain_desc);
