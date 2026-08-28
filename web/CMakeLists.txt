@@ -9,7 +9,7 @@ add_library(
   renderer_registry.cpp
   "${PROJECT_SOURCE_DIR}/src/renderer/shader_api.cpp"
   "${PROJECT_SOURCE_DIR}/src/renderer/surface_api.cpp"
-  swapchain_api.cpp
+  "${PROJECT_SOURCE_DIR}/src/renderer/swapchain_api.cpp"
   "${PROJECT_SOURCE_DIR}/src/backend/plugin_loader.cpp"
   "${PROJECT_SOURCE_DIR}/src/backend/webgpu/plugin.cpp"
   "${PROJECT_SOURCE_DIR}/src/backend/webgpu/command_adapter.cpp"
