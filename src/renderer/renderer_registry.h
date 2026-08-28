@@ -438,7 +438,6 @@ private:
   struct pipeline_layout_record {
     resource_metadata metadata;
     std::shared_ptr<backend_renderer> owner;
-    std::shared_ptr<renderer_state> renderer;
     std::unique_ptr<backend_pipeline_layout_resource> native;
     std::vector<std::shared_ptr<bind_group_layout_record>> bind_group_layouts;
   };

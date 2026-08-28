@@ -218,7 +218,7 @@ granit_result renderer_registry::set_object_name(granit_renderer renderer, grani
   GRANIT_NAME_OBJECT(samplers_)
   GRANIT_NAME_PRESENTATION_OBJECT(shaders_)
   GRANIT_NAME_OBJECT(bind_group_layouts_)
-  GRANIT_NAME_OBJECT(pipeline_layouts_)
+  GRANIT_NAME_PRESENTATION_OBJECT(pipeline_layouts_)
   GRANIT_NAME_OBJECT(bind_groups_)
   GRANIT_NAME_PRESENTATION_OBJECT(graphics_pipelines_)
   GRANIT_NAME_OBJECT(compute_pipelines_)
@@ -317,7 +317,7 @@ granit_result renderer_registry::destroy(granit_renderer renderer) {
         }
       }
       for (const auto& [handle, record] : pipeline_layouts_) {
-        if (record->renderer == state)
+        if (record->owner == state)
           lifecycle.add(lifecycle_resource_type::pipeline_layout, handle,
                         record->metadata.creation_sequence);
       }
@@ -458,7 +458,7 @@ granit_result renderer_registry::destroy(granit_renderer renderer) {
       }
     }
     for (auto layout = pipeline_layouts_.begin(); layout != pipeline_layouts_.end();) {
-      if (layout->second->renderer == state) {
+      if (layout->second->owner == state) {
         native_pipeline_layouts.push_back(std::move(layout->second));
         static_cast<void>(
             handles_.erase(layout->first, resource_type::pipeline_layout, state->domain()));
@@ -2685,7 +2685,6 @@ granit_result renderer_registry::create_pipeline_layout(
       return GRANIT_ERROR_INVALID_HANDLE;
     auto record = std::make_shared<pipeline_layout_record>();
     record->owner = state;
-    record->renderer = state;
     std::vector<backend_bind_group_layout_resource*> native_layouts;
     {
       std::lock_guard lock{mutex_};
@@ -2775,7 +2774,7 @@ granit_result renderer_registry::destroy_pipeline_layout(granit_renderer rendere
     static_cast<void>(
         handles_.erase(layout, resource_type::pipeline_layout, state->second->domain()));
   }
-  const auto state = record->renderer;
+  const auto state = std::dynamic_pointer_cast<renderer_state>(record->owner);
   const auto serial = record->metadata.last_use_serial.load();
   if (state) {
     state->retire_resource(serial, retirement_order::dependent, std::move(record));
@@ -2802,7 +2801,7 @@ granit_result renderer_registry::create_graphics_pipeline(granit_renderer render
       const auto vertex_found = shaders_.find(desc.vertex_shader);
       const auto fragment_found = shaders_.find(desc.fragment_shader);
       if (layout_found == pipeline_layouts_.end() || vertex_found == shaders_.end() ||
-          fragment_found == shaders_.end() || layout_found->second->renderer != state ||
+          fragment_found == shaders_.end() || layout_found->second->owner != state ||
           vertex_found->second->owner != state || fragment_found->second->owner != state ||
           vertex_found->second->stage != GRANIT_SHADER_STAGE_VERTEX ||
           fragment_found->second->stage != GRANIT_SHADER_STAGE_FRAGMENT)
@@ -2974,7 +2973,7 @@ granit_result renderer_registry::create_compute_pipeline(granit_renderer rendere
       const auto layout_found = pipeline_layouts_.find(desc.layout);
       const auto compute_found = shaders_.find(desc.compute_shader);
       if (layout_found == pipeline_layouts_.end() || compute_found == shaders_.end() ||
-          layout_found->second->renderer != state || compute_found->second->owner != state ||
+          layout_found->second->owner != state || compute_found->second->owner != state ||
           compute_found->second->stage != GRANIT_SHADER_STAGE_COMPUTE)
         return GRANIT_ERROR_INVALID_HANDLE;
       layout = layout_found->second;
@@ -3842,7 +3841,7 @@ renderer_registry::bind_graphics_groups(granit_renderer renderer, granit_command
     std::lock_guard lock{mutex_};
     const auto layout_found = pipeline_layouts_.find(layout);
     if (layout_found == pipeline_layouts_.end() ||
-        layout_found->second->renderer != command->renderer)
+        layout_found->second->owner != command->owner)
       return GRANIT_ERROR_INVALID_HANDLE;
     layout_record = layout_found->second;
     if (first_group + bind_groups.size() > layout_record->bind_group_layouts.size())
@@ -3927,7 +3926,7 @@ renderer_registry::bind_compute_groups(granit_renderer renderer, granit_command_
     std::lock_guard lock{mutex_};
     const auto layout_found = pipeline_layouts_.find(layout);
     if (layout_found == pipeline_layouts_.end() ||
-        layout_found->second->renderer != command->renderer)
+        layout_found->second->owner != command->owner)
       return GRANIT_ERROR_INVALID_HANDLE;
     layout_record = layout_found->second;
     if (first_group + bind_groups.size() > layout_record->bind_group_layouts.size())
