@@ -29,7 +29,8 @@ typedef struct granit_renderer_status {
   uint32_t reserved;
 } granit_renderer_status;
 
-#define GRANIT_RENDERER_STATUS_VERSION_1_SIZE ((uint32_t)sizeof(granit_renderer_status))
+#define GRANIT_RENDERER_STATUS_VERSION_1_SIZE                                                     \
+  ((uint32_t)(offsetof(granit_renderer_status, reserved) + sizeof(uint32_t)))
 #define GRANIT_RENDERER_STATUS_INIT                                                                \
   {(uint32_t)sizeof(granit_renderer_status), GRANIT_RENDERER_STATE_INITIALIZING, GRANIT_SUCCESS,   \
    UINT32_C(0)}
