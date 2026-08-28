@@ -3,7 +3,7 @@
 
 #include <granit/renderer/command_recorder.h>
 
-#include "renderer_registry.h"
+#include "renderer/renderer_registry.h"
 
 extern "C" granit_result granit_command_recorder_create(granit_renderer renderer,
                                                         const granit_command_recorder_desc* desc,
@@ -16,31 +16,29 @@ extern "C" granit_result granit_command_recorder_create(granit_renderer renderer
   if (desc == nullptr || desc->struct_size < GRANIT_COMMAND_RECORDER_DESC_VERSION_1_SIZE ||
       desc->flags != 0 || desc->reserved != 0)
     return GRANIT_ERROR_INVALID_ARGUMENT;
-  return granit::detail::web_renderer_registry::instance().create_command_recorder(renderer,
-                                                                                   *recorder);
+  return granit::detail::renderer_registry::instance().create_command_recorder(renderer, *recorder);
 }
 
 extern "C" granit_result granit_command_recorder_begin(granit_renderer renderer,
                                                        granit_command_recorder recorder) {
   if (renderer == GRANIT_NULL_HANDLE || recorder == GRANIT_NULL_HANDLE)
     return GRANIT_ERROR_INVALID_HANDLE;
-  return granit::detail::web_renderer_registry::instance().begin_command_recorder(renderer,
-                                                                                  recorder);
+  return granit::detail::renderer_registry::instance().begin_command_recorder(renderer, recorder);
 }
 
 extern "C" granit_result granit_command_recorder_end(granit_renderer renderer,
                                                      granit_command_recorder recorder) {
   if (renderer == GRANIT_NULL_HANDLE || recorder == GRANIT_NULL_HANDLE)
     return GRANIT_ERROR_INVALID_HANDLE;
-  return granit::detail::web_renderer_registry::instance().end_command_recorder(renderer, recorder);
+  return granit::detail::renderer_registry::instance().end_command_recorder(renderer, recorder);
 }
 
 extern "C" granit_result granit_command_recorder_submit(granit_renderer renderer,
                                                         granit_command_recorder recorder) {
   if (renderer == GRANIT_NULL_HANDLE || recorder == GRANIT_NULL_HANDLE)
     return GRANIT_ERROR_INVALID_HANDLE;
-  return granit::detail::web_renderer_registry::instance().submit_command_recorder(
-      renderer, recorder, GRANIT_NULL_HANDLE);
+  return granit::detail::renderer_registry::instance().submit_command_recorder(renderer, recorder,
+                                                                               GRANIT_NULL_HANDLE);
 }
 
 extern "C" granit_result
@@ -54,16 +52,15 @@ extern "C" granit_result granit_command_recorder_submit_frame(granit_renderer re
   if (renderer == GRANIT_NULL_HANDLE || recorder == GRANIT_NULL_HANDLE ||
       frame == GRANIT_NULL_HANDLE)
     return GRANIT_ERROR_INVALID_HANDLE;
-  return granit::detail::web_renderer_registry::instance().submit_command_recorder(renderer,
-                                                                                   recorder, frame);
+  return granit::detail::renderer_registry::instance().submit_command_recorder(renderer, recorder,
+                                                                               frame);
 }
 
 extern "C" granit_result granit_command_recorder_reset(granit_renderer renderer,
                                                        granit_command_recorder recorder) {
   if (renderer == GRANIT_NULL_HANDLE || recorder == GRANIT_NULL_HANDLE)
     return GRANIT_ERROR_INVALID_HANDLE;
-  return granit::detail::web_renderer_registry::instance().reset_command_recorder(renderer,
-                                                                                  recorder);
+  return granit::detail::renderer_registry::instance().reset_command_recorder(renderer, recorder);
 }
 
 extern "C" granit_result
@@ -108,8 +105,8 @@ extern "C" granit_result granit_command_recorder_bind_graphics_pipeline(
   if (renderer == GRANIT_NULL_HANDLE || recorder == GRANIT_NULL_HANDLE ||
       pipeline == GRANIT_NULL_HANDLE)
     return GRANIT_ERROR_INVALID_HANDLE;
-  return granit::detail::web_renderer_registry::instance().bind_graphics_pipeline(
-      renderer, recorder, pipeline);
+  return granit::detail::renderer_registry::instance().bind_graphics_pipeline(renderer, recorder,
+                                                                              pipeline);
 }
 
 extern "C" granit_result
@@ -170,7 +167,7 @@ granit_command_recorder_draw(granit_renderer renderer, granit_command_recorder r
     return GRANIT_ERROR_INVALID_HANDLE;
   if (vertex_count != 3 || instance_count != 1 || first_vertex != 0 || first_instance != 0)
     return GRANIT_ERROR_UNSUPPORTED;
-  return granit::detail::web_renderer_registry::instance().draw(renderer, recorder);
+  return granit::detail::renderer_registry::instance().draw(renderer, recorder);
 }
 
 extern "C" granit_result granit_command_recorder_draw_indexed(granit_renderer,
@@ -196,21 +193,20 @@ granit_command_recorder_begin_rendering(granit_renderer renderer, granit_command
       color.load_operation != GRANIT_ATTACHMENT_LOAD_OPERATION_CLEAR ||
       color.store_operation != GRANIT_ATTACHMENT_STORE_OPERATION_STORE)
     return GRANIT_ERROR_UNSUPPORTED;
-  return granit::detail::web_renderer_registry::instance().begin_rendering(renderer, recorder,
-                                                                           color.view);
+  return granit::detail::renderer_registry::instance().begin_rendering(renderer, recorder,
+                                                                       color.view);
 }
 
 extern "C" granit_result granit_command_recorder_end_rendering(granit_renderer renderer,
                                                                granit_command_recorder recorder) {
   if (renderer == GRANIT_NULL_HANDLE || recorder == GRANIT_NULL_HANDLE)
     return GRANIT_ERROR_INVALID_HANDLE;
-  return granit::detail::web_renderer_registry::instance().end_rendering(renderer, recorder);
+  return granit::detail::renderer_registry::instance().end_rendering(renderer, recorder);
 }
 
 extern "C" granit_result granit_command_recorder_destroy(granit_renderer renderer,
                                                          granit_command_recorder recorder) {
   if (renderer == GRANIT_NULL_HANDLE || recorder == GRANIT_NULL_HANDLE)
     return GRANIT_ERROR_INVALID_HANDLE;
-  return granit::detail::web_renderer_registry::instance().destroy_command_recorder(renderer,
-                                                                                    recorder);
+  return granit::detail::renderer_registry::instance().destroy_command_recorder(renderer, recorder);
 }

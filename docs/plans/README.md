@@ -124,8 +124,8 @@ D-03-graphics-pipeline.md
   X11/Wayland 共享与静态运行矩阵均已通过，第三方依赖不进入核心。
 - [S-09：0.3.0 公共 SDK 易用性与集成体验](S-09-0.3.0-sdk-usability.md)——已完成；公共使用路径、
   契约、诊断、安装 Consumer、迁移说明和 Release 预验证均已验收。
-- [S-10：0.4.0 多后端与 WebGPU](S-10-0.4.0-webgpu-backend.md)——收尾中；浏览器绘制闭环已通过，
-  正在统一 Emscripten SDK Registry 并补充独立 Web Consumer。
+- [S-10：0.4.0 多后端与 WebGPU](S-10-0.4.0-webgpu-backend.md)——已完成；统一 Registry、静态 SDK
+  Consumer 与浏览器绘制闭环已通过。
 - [S-10C：WGSL Shader 工具链](S-10C-wgsl-toolchain.md)——已完成；以 WGSL 为源码权威，已形成
   SPIR-V、反射清单、确定性资产、诊断和缓存闭环。
 

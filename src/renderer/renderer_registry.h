@@ -4,6 +4,12 @@
 #ifndef GRANIT_RENDERER_RENDERER_REGISTRY_H_
 #define GRANIT_RENDERER_RENDERER_REGISTRY_H_
 
+#ifdef __EMSCRIPTEN__
+
+#include "renderer/renderer_registry_emscripten.h"
+
+#else
+
 #include <atomic>
 #include <cstddef>
 #include <cstdint>
@@ -549,5 +555,7 @@ private:
 };
 
 } // namespace granit::detail
+
+#endif // __EMSCRIPTEN__
 
 #endif

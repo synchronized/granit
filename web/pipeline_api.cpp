@@ -3,7 +3,7 @@
 
 #include <granit/renderer/pipeline.h>
 
-#include "renderer_registry.h"
+#include "renderer/renderer_registry.h"
 
 extern "C" granit_result granit_bind_group_layout_create(granit_renderer,
                                                          const granit_bind_group_layout_desc*,
@@ -49,8 +49,7 @@ extern "C" granit_result granit_pipeline_layout_create(granit_renderer renderer,
   if (desc->bind_group_layout_count != 0) {
     return GRANIT_ERROR_UNSUPPORTED;
   }
-  return granit::detail::web_renderer_registry::instance().create_pipeline_layout(renderer,
-                                                                                  *layout);
+  return granit::detail::renderer_registry::instance().create_pipeline_layout(renderer, *layout);
 }
 
 extern "C" granit_result granit_pipeline_layout_destroy(granit_renderer renderer,
@@ -58,8 +57,7 @@ extern "C" granit_result granit_pipeline_layout_destroy(granit_renderer renderer
   if (renderer == GRANIT_NULL_HANDLE || layout == GRANIT_NULL_HANDLE) {
     return GRANIT_ERROR_INVALID_HANDLE;
   }
-  return granit::detail::web_renderer_registry::instance().destroy_pipeline_layout(renderer,
-                                                                                   layout);
+  return granit::detail::renderer_registry::instance().destroy_pipeline_layout(renderer, layout);
 }
 
 extern "C" granit_result granit_graphics_pipeline_create(granit_renderer renderer,
@@ -101,7 +99,7 @@ extern "C" granit_result granit_graphics_pipeline_create(granit_renderer rendere
       desc->depth_bias != nullptr) {
     return GRANIT_ERROR_UNSUPPORTED;
   }
-  return granit::detail::web_renderer_registry::instance().create_graphics_pipeline(
+  return granit::detail::renderer_registry::instance().create_graphics_pipeline(
       renderer, desc->layout, desc->vertex_shader, desc->fragment_shader, desc->color_formats[0],
       *pipeline);
 }
@@ -111,8 +109,8 @@ extern "C" granit_result granit_graphics_pipeline_destroy(granit_renderer render
   if (renderer == GRANIT_NULL_HANDLE || pipeline == GRANIT_NULL_HANDLE) {
     return GRANIT_ERROR_INVALID_HANDLE;
   }
-  return granit::detail::web_renderer_registry::instance().destroy_graphics_pipeline(renderer,
-                                                                                     pipeline);
+  return granit::detail::renderer_registry::instance().destroy_graphics_pipeline(renderer,
+                                                                                 pipeline);
 }
 
 extern "C" granit_result granit_compute_pipeline_create(granit_renderer,

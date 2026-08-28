@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include "renderer_registry.h"
+#include "renderer/renderer_registry.h"
 
 #include "backend/plugin_api.h"
 
@@ -15,13 +15,13 @@ granit_backend_plugin_query(std::uint32_t requested_abi) noexcept;
 
 namespace granit::detail {
 
-web_renderer_registry& web_renderer_registry::instance() {
-  static web_renderer_registry registry;
+renderer_registry& renderer_registry::instance() {
+  static renderer_registry registry;
   return registry;
 }
 
-granit_result web_renderer_registry::create(granit_diagnostic_callback diagnostic_callback,
-                                            void* diagnostic_user_data, granit_renderer& renderer) {
+granit_result renderer_registry::create(granit_diagnostic_callback diagnostic_callback,
+                                        void* diagnostic_user_data, granit_renderer& renderer) {
   try {
     auto state = std::make_shared<webgpu_renderer_state>();
     const auto result =
@@ -51,7 +51,7 @@ granit_result web_renderer_registry::create(granit_diagnostic_callback diagnosti
   }
 }
 
-granit_result web_renderer_registry::destroy(granit_renderer renderer) {
+granit_result renderer_registry::destroy(granit_renderer renderer) {
   std::shared_ptr<webgpu_renderer_state> state;
   std::vector<std::shared_ptr<frame_record>> frames;
   std::vector<std::shared_ptr<swapchain_record>> swapchains;
@@ -154,8 +154,8 @@ granit_result web_renderer_registry::destroy(granit_renderer renderer) {
   return GRANIT_SUCCESS;
 }
 
-granit_result web_renderer_registry::get_limits(granit_renderer renderer,
-                                                granit_renderer_limits& limits) {
+granit_result renderer_registry::get_limits(granit_renderer renderer,
+                                            granit_renderer_limits& limits) {
   const auto state = acquire(renderer);
   if (!state) {
     return GRANIT_ERROR_INVALID_HANDLE;
@@ -167,8 +167,8 @@ granit_result web_renderer_registry::get_limits(granit_renderer renderer,
   return GRANIT_SUCCESS;
 }
 
-granit_result web_renderer_registry::get_status(granit_renderer renderer,
-                                                granit_renderer_status& status) {
+granit_result renderer_registry::get_status(granit_renderer renderer,
+                                            granit_renderer_status& status) {
   const auto state = acquire(renderer);
   if (!state) {
     return GRANIT_ERROR_INVALID_HANDLE;
@@ -193,15 +193,15 @@ granit_result web_renderer_registry::get_status(granit_renderer renderer,
   return GRANIT_SUCCESS;
 }
 
-granit_result web_renderer_registry::process_events(granit_renderer renderer) {
+granit_result renderer_registry::process_events(granit_renderer renderer) {
   const auto state = acquire(renderer);
   return state ? state->process_backend_events() : GRANIT_ERROR_INVALID_HANDLE;
 }
 
-granit_result web_renderer_registry::create_canvas_surface(granit_renderer renderer,
-                                                           const char* selector,
-                                                           std::uint32_t selector_length,
-                                                           granit_surface& surface) {
+granit_result renderer_registry::create_canvas_surface(granit_renderer renderer,
+                                                       const char* selector,
+                                                       std::uint32_t selector_length,
+                                                       granit_surface& surface) {
   try {
     const auto state = acquire(renderer);
     if (!state || state->presentation() == nullptr) {
@@ -241,8 +241,7 @@ granit_result web_renderer_registry::create_canvas_surface(granit_renderer rende
   }
 }
 
-granit_result web_renderer_registry::destroy_surface(granit_renderer renderer,
-                                                     granit_surface surface) {
+granit_result renderer_registry::destroy_surface(granit_renderer renderer, granit_surface surface) {
   std::shared_ptr<surface_record> record;
   {
     std::lock_guard lock{mutex_};
@@ -269,10 +268,9 @@ granit_result web_renderer_registry::destroy_surface(granit_renderer renderer,
   return GRANIT_SUCCESS;
 }
 
-granit_result web_renderer_registry::create_swapchain(granit_renderer renderer,
-                                                      granit_surface surface,
-                                                      const backend_swapchain_desc& desc,
-                                                      granit_swapchain& swapchain) {
+granit_result renderer_registry::create_swapchain(granit_renderer renderer, granit_surface surface,
+                                                  const backend_swapchain_desc& desc,
+                                                  granit_swapchain& swapchain) {
   try {
     const auto state = acquire(renderer);
     if (!state || state->presentation() == nullptr) {
@@ -324,9 +322,9 @@ granit_result web_renderer_registry::create_swapchain(granit_renderer renderer,
   }
 }
 
-granit_result web_renderer_registry::recreate_swapchain(granit_renderer renderer,
-                                                        granit_swapchain swapchain,
-                                                        const backend_swapchain_desc& desc) {
+granit_result renderer_registry::recreate_swapchain(granit_renderer renderer,
+                                                    granit_swapchain swapchain,
+                                                    const backend_swapchain_desc& desc) {
   std::lock_guard lock{mutex_};
   const auto state = renderers_.find(renderer);
   const auto found = swapchains_.find(swapchain);
@@ -340,9 +338,9 @@ granit_result web_renderer_registry::recreate_swapchain(granit_renderer renderer
   return state->second->presentation()->recreate_swapchain(*found->second->native, desc);
 }
 
-granit_result web_renderer_registry::get_swapchain_info(granit_renderer renderer,
-                                                        granit_swapchain swapchain,
-                                                        backend_swapchain_info& info) {
+granit_result renderer_registry::get_swapchain_info(granit_renderer renderer,
+                                                    granit_swapchain swapchain,
+                                                    backend_swapchain_info& info) {
   std::lock_guard lock{mutex_};
   const auto state = renderers_.find(renderer);
   const auto found = swapchains_.find(swapchain);
@@ -353,11 +351,11 @@ granit_result web_renderer_registry::get_swapchain_info(granit_renderer renderer
   return state->second->presentation()->get_swapchain_info(*found->second->native, info);
 }
 
-granit_result web_renderer_registry::get_swapchain_backbuffer(granit_renderer renderer,
-                                                              granit_swapchain swapchain,
-                                                              std::uint32_t index,
-                                                              granit_texture& texture,
-                                                              granit_texture_view& view) {
+granit_result renderer_registry::get_swapchain_backbuffer(granit_renderer renderer,
+                                                          granit_swapchain swapchain,
+                                                          std::uint32_t index,
+                                                          granit_texture& texture,
+                                                          granit_texture_view& view) {
   std::lock_guard lock{mutex_};
   const auto state = renderers_.find(renderer);
   const auto found = swapchains_.find(swapchain);
@@ -373,11 +371,10 @@ granit_result web_renderer_registry::get_swapchain_backbuffer(granit_renderer re
   return GRANIT_SUCCESS;
 }
 
-granit_result web_renderer_registry::acquire_swapchain(granit_renderer renderer,
-                                                       granit_swapchain swapchain,
-                                                       granit_frame& frame,
-                                                       std::uint32_t& image_index,
-                                                       bool& needs_recreate) {
+granit_result renderer_registry::acquire_swapchain(granit_renderer renderer,
+                                                   granit_swapchain swapchain, granit_frame& frame,
+                                                   std::uint32_t& image_index,
+                                                   bool& needs_recreate) {
   try {
     std::lock_guard lock{mutex_};
     const auto state = renderers_.find(renderer);
@@ -444,7 +441,7 @@ granit_result web_renderer_registry::acquire_swapchain(granit_renderer renderer,
   }
 }
 
-void web_renderer_registry::erase_backbuffer(swapchain_record& swapchain) noexcept {
+void renderer_registry::erase_backbuffer(swapchain_record& swapchain) noexcept {
   if (swapchain.view != GRANIT_NULL_HANDLE) {
     static_cast<void>(handles_.erase(swapchain.view, resource_type::texture_view, 0));
   }
@@ -456,9 +453,9 @@ void web_renderer_registry::erase_backbuffer(swapchain_record& swapchain) noexce
   swapchain.image_index = 0;
 }
 
-granit_result web_renderer_registry::finish_frame(granit_renderer renderer,
-                                                  granit_swapchain swapchain, granit_frame frame,
-                                                  bool present, bool& needs_recreate) {
+granit_result renderer_registry::finish_frame(granit_renderer renderer, granit_swapchain swapchain,
+                                              granit_frame frame, bool present,
+                                              bool& needs_recreate) {
   std::shared_ptr<frame_record> record;
   granit_result result{};
   {
@@ -487,10 +484,10 @@ granit_result web_renderer_registry::finish_frame(granit_renderer renderer,
   return GRANIT_SUCCESS;
 }
 
-granit_result web_renderer_registry::get_frame_info(granit_renderer renderer,
-                                                    granit_swapchain swapchain, granit_frame frame,
-                                                    std::uint32_t& frame_slot,
-                                                    std::uint32_t& frame_slot_count) {
+granit_result renderer_registry::get_frame_info(granit_renderer renderer,
+                                                granit_swapchain swapchain, granit_frame frame,
+                                                std::uint32_t& frame_slot,
+                                                std::uint32_t& frame_slot_count) {
   std::lock_guard lock{mutex_};
   const auto state = renderers_.find(renderer);
   const auto swapchain_found = swapchains_.find(swapchain);
@@ -510,8 +507,8 @@ granit_result web_renderer_registry::get_frame_info(granit_renderer renderer,
   return result;
 }
 
-granit_result web_renderer_registry::destroy_swapchain(granit_renderer renderer,
-                                                       granit_swapchain swapchain) {
+granit_result renderer_registry::destroy_swapchain(granit_renderer renderer,
+                                                   granit_swapchain swapchain) {
   std::shared_ptr<swapchain_record> record;
   {
     std::lock_guard lock{mutex_};
@@ -535,11 +532,11 @@ granit_result web_renderer_registry::destroy_swapchain(granit_renderer renderer,
   return GRANIT_SUCCESS;
 }
 
-granit_result web_renderer_registry::create_shader(granit_renderer renderer, std::uint32_t stage,
-                                                   const char* wgsl, std::uint64_t wgsl_length,
-                                                   const char* entry_point,
-                                                   std::uint64_t entry_point_length,
-                                                   granit_shader& shader) {
+granit_result renderer_registry::create_shader(granit_renderer renderer, std::uint32_t stage,
+                                               const char* wgsl, std::uint64_t wgsl_length,
+                                               const char* entry_point,
+                                               std::uint64_t entry_point_length,
+                                               granit_shader& shader) {
   try {
     const auto state = acquire(renderer);
     if (!state || state->shaders() == nullptr) {
@@ -579,8 +576,7 @@ granit_result web_renderer_registry::create_shader(granit_renderer renderer, std
   }
 }
 
-granit_result web_renderer_registry::destroy_shader(granit_renderer renderer,
-                                                    granit_shader shader) {
+granit_result renderer_registry::destroy_shader(granit_renderer renderer, granit_shader shader) {
   std::shared_ptr<shader_record> record;
   {
     std::lock_guard lock{mutex_};
@@ -607,8 +603,8 @@ granit_result web_renderer_registry::destroy_shader(granit_renderer renderer,
   return GRANIT_SUCCESS;
 }
 
-granit_result web_renderer_registry::create_pipeline_layout(granit_renderer renderer,
-                                                            granit_pipeline_layout& layout) {
+granit_result renderer_registry::create_pipeline_layout(granit_renderer renderer,
+                                                        granit_pipeline_layout& layout) {
   try {
     const auto state = acquire(renderer);
     if (!state || state->pipelines() == nullptr) {
@@ -647,8 +643,8 @@ granit_result web_renderer_registry::create_pipeline_layout(granit_renderer rend
   }
 }
 
-granit_result web_renderer_registry::destroy_pipeline_layout(granit_renderer renderer,
-                                                             granit_pipeline_layout layout) {
+granit_result renderer_registry::destroy_pipeline_layout(granit_renderer renderer,
+                                                         granit_pipeline_layout layout) {
   std::shared_ptr<pipeline_layout_record> record;
   {
     std::lock_guard lock{mutex_};
@@ -675,12 +671,12 @@ granit_result web_renderer_registry::destroy_pipeline_layout(granit_renderer ren
   return GRANIT_SUCCESS;
 }
 
-granit_result web_renderer_registry::create_graphics_pipeline(granit_renderer renderer,
-                                                              granit_pipeline_layout layout,
-                                                              granit_shader vertex_shader,
-                                                              granit_shader fragment_shader,
-                                                              granit_texture_format color_format,
-                                                              granit_graphics_pipeline& pipeline) {
+granit_result renderer_registry::create_graphics_pipeline(granit_renderer renderer,
+                                                          granit_pipeline_layout layout,
+                                                          granit_shader vertex_shader,
+                                                          granit_shader fragment_shader,
+                                                          granit_texture_format color_format,
+                                                          granit_graphics_pipeline& pipeline) {
   try {
     const auto state = acquire(renderer);
     if (!state || state->pipelines() == nullptr || state->shaders() == nullptr) {
@@ -744,8 +740,8 @@ granit_result web_renderer_registry::create_graphics_pipeline(granit_renderer re
   }
 }
 
-granit_result web_renderer_registry::destroy_graphics_pipeline(granit_renderer renderer,
-                                                               granit_graphics_pipeline pipeline) {
+granit_result renderer_registry::destroy_graphics_pipeline(granit_renderer renderer,
+                                                           granit_graphics_pipeline pipeline) {
   std::shared_ptr<graphics_pipeline_record> record;
   {
     std::lock_guard lock{mutex_};
@@ -766,7 +762,7 @@ granit_result web_renderer_registry::destroy_graphics_pipeline(granit_renderer r
   return GRANIT_SUCCESS;
 }
 
-std::shared_ptr<webgpu_renderer_state> web_renderer_registry::acquire(granit_renderer renderer) {
+std::shared_ptr<webgpu_renderer_state> renderer_registry::acquire(granit_renderer renderer) {
   std::lock_guard lock{mutex_};
   if (handles_.find(renderer, resource_type::renderer, 0) == nullptr) {
     return {};
@@ -775,8 +771,8 @@ std::shared_ptr<webgpu_renderer_state> web_renderer_registry::acquire(granit_ren
   return found == renderers_.end() ? std::shared_ptr<webgpu_renderer_state>{} : found->second;
 }
 
-granit_result web_renderer_registry::create_command_recorder(granit_renderer renderer,
-                                                             granit_command_recorder& recorder) {
+granit_result renderer_registry::create_command_recorder(granit_renderer renderer,
+                                                         granit_command_recorder& recorder) {
   try {
     const auto state = acquire(renderer);
     if (!state || state->commands() == nullptr)
@@ -807,8 +803,8 @@ granit_result web_renderer_registry::create_command_recorder(granit_renderer ren
   }
 }
 
-granit_result web_renderer_registry::begin_command_recorder(granit_renderer renderer,
-                                                            granit_command_recorder recorder) {
+granit_result renderer_registry::begin_command_recorder(granit_renderer renderer,
+                                                        granit_command_recorder recorder) {
   std::lock_guard lock{mutex_};
   const auto state = renderers_.find(renderer);
   const auto found = command_recorders_.find(recorder);
@@ -823,9 +819,9 @@ granit_result web_renderer_registry::begin_command_recorder(granit_renderer rend
   return result;
 }
 
-granit_result web_renderer_registry::begin_rendering(granit_renderer renderer,
-                                                     granit_command_recorder recorder,
-                                                     granit_texture_view view) {
+granit_result renderer_registry::begin_rendering(granit_renderer renderer,
+                                                 granit_command_recorder recorder,
+                                                 granit_texture_view view) {
   std::lock_guard lock{mutex_};
   const auto state = renderers_.find(renderer);
   const auto command = command_recorders_.find(recorder);
@@ -845,9 +841,9 @@ granit_result web_renderer_registry::begin_rendering(granit_renderer renderer,
   return GRANIT_SUCCESS;
 }
 
-granit_result web_renderer_registry::bind_graphics_pipeline(granit_renderer renderer,
-                                                            granit_command_recorder recorder,
-                                                            granit_graphics_pipeline pipeline) {
+granit_result renderer_registry::bind_graphics_pipeline(granit_renderer renderer,
+                                                        granit_command_recorder recorder,
+                                                        granit_graphics_pipeline pipeline) {
   std::lock_guard lock{mutex_};
   const auto state = renderers_.find(renderer);
   const auto command = command_recorders_.find(recorder);
@@ -862,8 +858,7 @@ granit_result web_renderer_registry::bind_graphics_pipeline(granit_renderer rend
   return GRANIT_SUCCESS;
 }
 
-granit_result web_renderer_registry::draw(granit_renderer renderer,
-                                          granit_command_recorder recorder) {
+granit_result renderer_registry::draw(granit_renderer renderer, granit_command_recorder recorder) {
   std::lock_guard lock{mutex_};
   const auto state = renderers_.find(renderer);
   const auto command = command_recorders_.find(recorder);
@@ -882,8 +877,8 @@ granit_result web_renderer_registry::draw(granit_renderer renderer,
   return result;
 }
 
-granit_result web_renderer_registry::end_rendering(granit_renderer renderer,
-                                                   granit_command_recorder recorder) {
+granit_result renderer_registry::end_rendering(granit_renderer renderer,
+                                               granit_command_recorder recorder) {
   std::lock_guard lock{mutex_};
   const auto state = renderers_.find(renderer);
   const auto found = command_recorders_.find(recorder);
@@ -896,8 +891,8 @@ granit_result web_renderer_registry::end_rendering(granit_renderer renderer,
   return GRANIT_SUCCESS;
 }
 
-granit_result web_renderer_registry::end_command_recorder(granit_renderer renderer,
-                                                          granit_command_recorder recorder) {
+granit_result renderer_registry::end_command_recorder(granit_renderer renderer,
+                                                      granit_command_recorder recorder) {
   std::lock_guard lock{mutex_};
   const auto state = renderers_.find(renderer);
   const auto found = command_recorders_.find(recorder);
@@ -912,9 +907,9 @@ granit_result web_renderer_registry::end_command_recorder(granit_renderer render
   return result;
 }
 
-granit_result web_renderer_registry::submit_command_recorder(granit_renderer renderer,
-                                                             granit_command_recorder recorder,
-                                                             granit_frame frame) {
+granit_result renderer_registry::submit_command_recorder(granit_renderer renderer,
+                                                         granit_command_recorder recorder,
+                                                         granit_frame frame) {
   std::lock_guard lock{mutex_};
   const auto state = renderers_.find(renderer);
   const auto command = command_recorders_.find(recorder);
@@ -934,8 +929,8 @@ granit_result web_renderer_registry::submit_command_recorder(granit_renderer ren
   return result;
 }
 
-granit_result web_renderer_registry::reset_command_recorder(granit_renderer renderer,
-                                                            granit_command_recorder recorder) {
+granit_result renderer_registry::reset_command_recorder(granit_renderer renderer,
+                                                        granit_command_recorder recorder) {
   std::lock_guard lock{mutex_};
   const auto state = renderers_.find(renderer);
   const auto found = command_recorders_.find(recorder);
@@ -955,8 +950,8 @@ granit_result web_renderer_registry::reset_command_recorder(granit_renderer rend
   return result;
 }
 
-granit_result web_renderer_registry::destroy_command_recorder(granit_renderer renderer,
-                                                              granit_command_recorder recorder) {
+granit_result renderer_registry::destroy_command_recorder(granit_renderer renderer,
+                                                          granit_command_recorder recorder) {
   std::shared_ptr<command_recorder_record> record;
   {
     std::lock_guard lock{mutex_};

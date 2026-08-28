@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#ifndef GRANIT_WEB_RENDERER_REGISTRY_H_
-#define GRANIT_WEB_RENDERER_REGISTRY_H_
+#ifndef GRANIT_RENDERER_RENDERER_REGISTRY_EMSCRIPTEN_H_
+#define GRANIT_RENDERER_RENDERER_REGISTRY_EMSCRIPTEN_H_
 
 #include <cstdint>
 #include <memory>
@@ -22,10 +22,10 @@
 
 namespace granit::detail {
 
-/** Emscripten 平台的 Renderer 根句柄表；资源接口迁移后由通用 Registry 取代。 */
-class web_renderer_registry {
+/** Emscripten 平台的统一 Renderer Registry 实现。 */
+class renderer_registry {
 public:
-  static web_renderer_registry& instance();
+  static renderer_registry& instance();
 
   [[nodiscard]] granit_result create(granit_diagnostic_callback diagnostic_callback,
                                      void* diagnostic_user_data, granit_renderer& renderer);

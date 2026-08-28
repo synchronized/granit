@@ -3,8 +3,8 @@
 
 #include <granit/renderer/renderer.h>
 
+#include "renderer/renderer_registry.h"
 #include "renderer/renderer_validation.h"
-#include "renderer_registry.h"
 
 #include <cstring>
 
@@ -28,14 +28,14 @@ extern "C" granit_result granit_renderer_create(const granit_renderer_desc* desc
   auto* user_data = desc->struct_size >= GRANIT_RENDERER_DESC_VERSION_4_SIZE
                         ? desc->diagnostic_user_data
                         : nullptr;
-  return granit::detail::web_renderer_registry::instance().create(callback, user_data, *renderer);
+  return granit::detail::renderer_registry::instance().create(callback, user_data, *renderer);
 }
 
 extern "C" granit_result granit_renderer_destroy(granit_renderer renderer) {
   if (renderer == GRANIT_NULL_HANDLE) {
     return GRANIT_ERROR_INVALID_HANDLE;
   }
-  return granit::detail::web_renderer_registry::instance().destroy(renderer);
+  return granit::detail::renderer_registry::instance().destroy(renderer);
 }
 
 extern "C" granit_result granit_renderer_get_limits(granit_renderer renderer,
@@ -46,7 +46,7 @@ extern "C" granit_result granit_renderer_get_limits(granit_renderer renderer,
   if (renderer == GRANIT_NULL_HANDLE) {
     return GRANIT_ERROR_INVALID_HANDLE;
   }
-  return granit::detail::web_renderer_registry::instance().get_limits(renderer, *limits);
+  return granit::detail::renderer_registry::instance().get_limits(renderer, *limits);
 }
 
 extern "C" granit_result granit_renderer_get_status(granit_renderer renderer,
@@ -58,14 +58,14 @@ extern "C" granit_result granit_renderer_get_status(granit_renderer renderer,
   if (renderer == GRANIT_NULL_HANDLE) {
     return GRANIT_ERROR_INVALID_HANDLE;
   }
-  return granit::detail::web_renderer_registry::instance().get_status(renderer, *status);
+  return granit::detail::renderer_registry::instance().get_status(renderer, *status);
 }
 
 extern "C" granit_result granit_renderer_process_events(granit_renderer renderer) {
   if (renderer == GRANIT_NULL_HANDLE) {
     return GRANIT_ERROR_INVALID_HANDLE;
   }
-  return granit::detail::web_renderer_registry::instance().process_events(renderer);
+  return granit::detail::renderer_registry::instance().process_events(renderer);
 }
 
 extern "C" granit_result granit_renderer_set_object_name(granit_renderer renderer,

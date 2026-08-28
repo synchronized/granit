@@ -5,14 +5,15 @@
 
 ## 结论
 
-S-10E 浏览器绘制闭环的首轮矩阵已完成。Emscripten 构建现可通过 Granit 公共 Renderer、Surface、
+S-10E 已完成。Emscripten 构建现可通过 Granit 公共 Renderer、Surface、
 Swapchain、Shader、Graphics Pipeline 和 Command Recorder API，在浏览器 Canvas 绘制确定性
 三角形；公共头文件不暴露 WebGPU、Emscripten 或 Vulkan 原生类型。Windows、Linux 与
 Emscripten 首轮矩阵均已通过。
 
-PR 架构审查确认 Emscripten 仍使用独立 Web Registry，且原构建只生成示例目标。当前已拆出
-`granit::granit` 静态目标；统一通用 Registry、安装导出和独立 Web Consumer 完成前，本记录不作为
-S-10E 最终完成依据。
+架构审查发现的独立 Web Registry 和仅生成示例目标问题均已关闭。Emscripten 与桌面统一通过
+`renderer/renderer_registry.h` 进入 Registry，平台实现均位于 `src/renderer`；原
+`web_renderer_registry` 类型及 `web/renderer_registry.*` 已删除。构建同时提供静态
+`granit::granit` SDK 目标，浏览器示例作为只包含公共头文件的独立 Consumer 链接该目标。
 
 ## 验收范围
 
@@ -30,6 +31,8 @@ S-10E 最终完成依据。
 - Emscripten Actions：锁定 emsdk 5.0.6 的产物审计和无头 Chrome 公共绘制闭环通过。
 - 本地 Windows Clang：浏览器示例、插件 Loader、完整测试、安装导出和 Consumer 验证通过。
 - Mock Provider 使用 10 个随机种子重复执行，确认测试结果不依赖 Catch2 用例顺序。
+- 统一 Registry 收尾后，本地 Windows Clang 58 项测试、Emscripten Debug SDK/示例构建及无头
+  Chrome 公共绘制闭环与输入转发再次通过。
 
 最终验证运行：
 

@@ -3,8 +3,8 @@
 
 #include <granit/renderer/surface.h>
 
+#include "renderer/renderer_registry.h"
 #include "renderer/surface_validation.h"
-#include "renderer_registry.h"
 
 extern "C" granit_result granit_surface_create_win32(granit_renderer,
                                                      const granit_win32_surface_desc*,
@@ -49,7 +49,7 @@ extern "C" granit_result granit_surface_create_canvas(granit_renderer renderer,
   const auto selector = desc->selector == nullptr
                             ? granit::detail::default_canvas_selector
                             : std::string_view{desc->selector, desc->selector_length};
-  return granit::detail::web_renderer_registry::instance().create_canvas_surface(
+  return granit::detail::renderer_registry::instance().create_canvas_surface(
       renderer, selector.data(), static_cast<std::uint32_t>(selector.size()), *surface);
 }
 
@@ -57,5 +57,5 @@ extern "C" granit_result granit_surface_destroy(granit_renderer renderer, granit
   if (renderer == GRANIT_NULL_HANDLE || surface == GRANIT_NULL_HANDLE) {
     return GRANIT_ERROR_INVALID_HANDLE;
   }
-  return granit::detail::web_renderer_registry::instance().destroy_surface(renderer, surface);
+  return granit::detail::renderer_registry::instance().destroy_surface(renderer, surface);
 }
