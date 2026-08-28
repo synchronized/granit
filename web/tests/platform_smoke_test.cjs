@@ -79,6 +79,13 @@ async function main() {
     if (status !== "ready") {
       throw new Error(`WebGPU 平台启动失败，页面状态为 ${status}`);
     }
+    const rendererState = await page.evaluate(() => Module._granit_web_renderer_state());
+    const failureResult = await page.evaluate(() => Module._granit_web_renderer_failure_result());
+    if (rendererState !== 1 || failureResult !== 0) {
+      throw new Error(
+        `WebGPU Renderer 生命周期异常，state=${rendererState}, failure=${failureResult}`,
+      );
+    }
 
     await page.keyboard.press("A");
     await page.locator("#canvas").click({ position: { x: 16, y: 16 } });

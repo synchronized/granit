@@ -9,6 +9,9 @@
 #include <emscripten/html5.h>
 #include <webgpu/webgpu.h>
 
+#include "backend/callback_lifetime.h"
+#include "backend/lifecycle.h"
+
 namespace {
 
 enum class startup_status : int { failed = -1, starting, adapter_pending, device_pending, ready };
@@ -20,12 +23,17 @@ struct web_platform_state {
   WGPUDevice device{};
   startup_status status{startup_status::starting};
   unsigned input_event_count{};
+  granit::detail::backend_lifecycle lifecycle;
+  granit::detail::backend_callback_lifetime callback_lifetime;
+  granit::detail::backend_callback_ticket adapter_ticket;
+  granit::detail::backend_callback_ticket device_ticket;
 };
 
 web_platform_state state;
 
 void fail(const char* message) noexcept {
   state.status = startup_status::failed;
+  state.lifecycle.mark_failed(GRANIT_ERROR_INITIALIZATION_FAILED);
   std::fprintf(stderr, "GRANIT_STATUS:failed:%s\n", message);
 }
 
@@ -82,33 +90,41 @@ bool configure_surface() noexcept {
   return true;
 }
 
-void receive_device(WGPURequestDeviceStatus status, WGPUDevice device, WGPUStringView, void*,
+void receive_device(WGPURequestDeviceStatus status, WGPUDevice device, WGPUStringView, void* data,
                     void*) noexcept {
-  if (status != WGPURequestDeviceStatus_Success || device == nullptr) {
-    fail("device-request");
-    return;
-  }
-  state.device = device;
-  if (!configure_surface()) {
-    fail("surface-configure");
-    return;
-  }
-  state.status = startup_status::ready;
-  std::puts("GRANIT_STATUS:ready");
+  const auto& ticket = *static_cast<granit::detail::backend_callback_ticket*>(data);
+  static_cast<void>(ticket.invoke([status, device] {
+    if (status != WGPURequestDeviceStatus_Success || device == nullptr) {
+      fail("device-request");
+      return;
+    }
+    state.device = device;
+    if (!configure_surface()) {
+      fail("surface-configure");
+      return;
+    }
+    state.status = startup_status::ready;
+    state.lifecycle.mark_ready();
+    std::puts("GRANIT_STATUS:ready");
+  }));
 }
 
-void receive_adapter(WGPURequestAdapterStatus status, WGPUAdapter adapter, WGPUStringView, void*,
-                     void*) noexcept {
-  if (status != WGPURequestAdapterStatus_Success || adapter == nullptr) {
-    fail("adapter-request");
-    return;
-  }
-  state.adapter = adapter;
-  state.status = startup_status::device_pending;
-  WGPURequestDeviceCallbackInfo callback = WGPU_REQUEST_DEVICE_CALLBACK_INFO_INIT;
-  callback.mode = WGPUCallbackMode_AllowSpontaneous;
-  callback.callback = receive_device;
-  static_cast<void>(wgpuAdapterRequestDevice(state.adapter, nullptr, callback));
+void receive_adapter(WGPURequestAdapterStatus status, WGPUAdapter adapter, WGPUStringView,
+                     void* data, void*) noexcept {
+  const auto& ticket = *static_cast<granit::detail::backend_callback_ticket*>(data);
+  static_cast<void>(ticket.invoke([status, adapter] {
+    if (status != WGPURequestAdapterStatus_Success || adapter == nullptr) {
+      fail("adapter-request");
+      return;
+    }
+    state.adapter = adapter;
+    state.status = startup_status::device_pending;
+    WGPURequestDeviceCallbackInfo callback = WGPU_REQUEST_DEVICE_CALLBACK_INFO_INIT;
+    callback.mode = WGPUCallbackMode_AllowSpontaneous;
+    callback.callback = receive_device;
+    callback.userdata1 = &state.device_ticket;
+    static_cast<void>(wgpuAdapterRequestDevice(state.adapter, nullptr, callback));
+  }));
 }
 
 void tick(void*) noexcept {
@@ -125,6 +141,14 @@ extern "C" EMSCRIPTEN_KEEPALIVE int granit_web_platform_status() noexcept {
 
 extern "C" EMSCRIPTEN_KEEPALIVE unsigned granit_web_input_event_count() noexcept {
   return state.input_event_count;
+}
+
+extern "C" EMSCRIPTEN_KEEPALIVE unsigned granit_web_renderer_state() noexcept {
+  return static_cast<unsigned>(state.lifecycle.status().state);
+}
+
+extern "C" EMSCRIPTEN_KEEPALIVE int granit_web_renderer_failure_result() noexcept {
+  return state.lifecycle.status().failure_result;
 }
 
 int main() {
@@ -161,6 +185,9 @@ int main() {
   WGPURequestAdapterCallbackInfo callback = WGPU_REQUEST_ADAPTER_CALLBACK_INFO_INIT;
   callback.mode = WGPUCallbackMode_AllowSpontaneous;
   callback.callback = receive_adapter;
+  state.adapter_ticket = state.callback_lifetime.ticket();
+  state.device_ticket = state.callback_lifetime.ticket();
+  callback.userdata1 = &state.adapter_ticket;
   state.status = startup_status::adapter_pending;
   static_cast<void>(wgpuInstanceRequestAdapter(state.instance, &options, callback));
 

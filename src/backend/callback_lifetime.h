@@ -27,7 +27,8 @@ public:
 
 private:
   struct control {
-    std::mutex mutex;
+    // WebGPU AllowSpontaneous 回调可能在发起下一级请求时重入同一线程。
+    std::recursive_mutex mutex;
     bool active{true};
   };
 
