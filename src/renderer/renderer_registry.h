@@ -376,6 +376,7 @@ private:
   };
   struct texture_record {
     resource_metadata metadata;
+    std::shared_ptr<backend_renderer> owner;
     std::shared_ptr<renderer_state> renderer;
     std::unique_ptr<backend_texture_resource> native;
     granit_texture_desc desc{};
@@ -384,6 +385,7 @@ private:
   };
   struct texture_view_record {
     resource_metadata metadata;
+    std::shared_ptr<backend_renderer> owner;
     std::shared_ptr<renderer_state> renderer;
     std::shared_ptr<texture_record> texture;
     std::unique_ptr<backend_texture_view_resource> native;
@@ -468,6 +470,9 @@ private:
     std::mutex mutex;
   };
   struct frame_record {
+    std::shared_ptr<backend_renderer> owner;
+    std::shared_ptr<backend_presentation_renderer> presentation;
+    // 命令提交迁移前保留 Vulkan Queue 具体视图。
     std::shared_ptr<renderer_state> renderer;
     std::shared_ptr<swapchain_record> swapchain;
     std::mutex mutex;
