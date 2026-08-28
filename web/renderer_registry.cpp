@@ -5,6 +5,7 @@
 
 #include "backend/plugin_api.h"
 
+#include <algorithm>
 #include <new>
 #include <utility>
 #include <vector>
@@ -58,6 +59,7 @@ granit_result web_renderer_registry::destroy(granit_renderer renderer) {
   std::vector<std::shared_ptr<shader_record>> shaders;
   std::vector<std::shared_ptr<graphics_pipeline_record>> graphics_pipelines;
   std::vector<std::shared_ptr<pipeline_layout_record>> pipeline_layouts;
+  std::vector<std::shared_ptr<command_recorder_record>> command_recorders;
   {
     std::lock_guard lock{mutex_};
     if (handles_.find(renderer, resource_type::renderer, 0) == nullptr) {
@@ -66,6 +68,15 @@ granit_result web_renderer_registry::destroy(granit_renderer renderer) {
     const auto found = renderers_.find(renderer);
     if (found == renderers_.end()) {
       return GRANIT_ERROR_INTERNAL;
+    }
+    for (auto command = command_recorders_.begin(); command != command_recorders_.end();) {
+      if (command->second->renderer == found->second) {
+        static_cast<void>(handles_.erase(command->first, resource_type::command_recorder, 0));
+        command_recorders.push_back(std::move(command->second));
+        command = command_recorders_.erase(command);
+      } else {
+        ++command;
+      }
     }
     for (auto frame = frames_.begin(); frame != frames_.end();) {
       if (frame->second->swapchain->renderer == found->second) {
@@ -133,6 +144,7 @@ granit_result web_renderer_registry::destroy(granit_renderer renderer) {
     }
   }
   frames.clear();
+  command_recorders.clear();
   swapchains.clear();
   surfaces.clear();
   graphics_pipelines.clear();
@@ -761,6 +773,206 @@ std::shared_ptr<webgpu_renderer_state> web_renderer_registry::acquire(granit_ren
   }
   const auto found = renderers_.find(renderer);
   return found == renderers_.end() ? std::shared_ptr<webgpu_renderer_state>{} : found->second;
+}
+
+granit_result web_renderer_registry::create_command_recorder(granit_renderer renderer,
+                                                             granit_command_recorder& recorder) {
+  try {
+    const auto state = acquire(renderer);
+    if (!state || state->commands() == nullptr)
+      return state ? GRANIT_ERROR_NOT_READY : GRANIT_ERROR_INVALID_HANDLE;
+    auto record = std::make_shared<command_recorder_record>();
+    record->renderer = state;
+    record->native = state->commands()->allocate_recorder();
+    if (!record->native)
+      return GRANIT_ERROR_OUT_OF_MEMORY;
+    std::lock_guard lock{mutex_};
+    if (renderers_.find(renderer) == renderers_.end())
+      return GRANIT_ERROR_INVALID_HANDLE;
+    const auto handle = handles_.insert(record.get(), resource_type::command_recorder, 0);
+    if (handle == GRANIT_NULL_HANDLE)
+      return GRANIT_ERROR_OUT_OF_MEMORY;
+    try {
+      command_recorders_.emplace(handle, std::move(record));
+    } catch (...) {
+      static_cast<void>(handles_.erase(handle, resource_type::command_recorder, 0));
+      throw;
+    }
+    recorder = handle;
+    return GRANIT_SUCCESS;
+  } catch (const std::bad_alloc&) {
+    return GRANIT_ERROR_OUT_OF_MEMORY;
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+granit_result web_renderer_registry::begin_command_recorder(granit_renderer renderer,
+                                                            granit_command_recorder recorder) {
+  std::lock_guard lock{mutex_};
+  const auto state = renderers_.find(renderer);
+  const auto found = command_recorders_.find(recorder);
+  if (state == renderers_.end() || found == command_recorders_.end() ||
+      found->second->renderer != state->second)
+    return GRANIT_ERROR_INVALID_HANDLE;
+  if (found->second->state != command_state::initial)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  const auto result = state->second->commands()->begin(*found->second->native);
+  if (result == GRANIT_SUCCESS)
+    found->second->state = command_state::recording;
+  return result;
+}
+
+granit_result web_renderer_registry::begin_rendering(granit_renderer renderer,
+                                                     granit_command_recorder recorder,
+                                                     granit_texture_view view) {
+  std::lock_guard lock{mutex_};
+  const auto state = renderers_.find(renderer);
+  const auto command = command_recorders_.find(recorder);
+  if (state == renderers_.end() || command == command_recorders_.end() ||
+      command->second->renderer != state->second)
+    return GRANIT_ERROR_INVALID_HANDLE;
+  if (command->second->state != command_state::recording)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  const auto frame = std::find_if(frames_.begin(), frames_.end(), [&](const auto& entry) {
+    return entry.second->swapchain->renderer == state->second &&
+           entry.second->swapchain->view == view;
+  });
+  if (frame == frames_.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  command->second->frame = frame->second;
+  command->second->state = command_state::rendering;
+  return GRANIT_SUCCESS;
+}
+
+granit_result web_renderer_registry::bind_graphics_pipeline(granit_renderer renderer,
+                                                            granit_command_recorder recorder,
+                                                            granit_graphics_pipeline pipeline) {
+  std::lock_guard lock{mutex_};
+  const auto state = renderers_.find(renderer);
+  const auto command = command_recorders_.find(recorder);
+  const auto found = graphics_pipelines_.find(pipeline);
+  if (state == renderers_.end() || command == command_recorders_.end() ||
+      found == graphics_pipelines_.end() || command->second->renderer != state->second ||
+      found->second->renderer != state->second)
+    return GRANIT_ERROR_INVALID_HANDLE;
+  if (command->second->state != command_state::rendering)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  command->second->pipeline = found->second;
+  return GRANIT_SUCCESS;
+}
+
+granit_result web_renderer_registry::draw(granit_renderer renderer,
+                                          granit_command_recorder recorder) {
+  std::lock_guard lock{mutex_};
+  const auto state = renderers_.find(renderer);
+  const auto command = command_recorders_.find(recorder);
+  if (state == renderers_.end() || command == command_recorders_.end() ||
+      command->second->renderer != state->second)
+    return GRANIT_ERROR_INVALID_HANDLE;
+  auto& record = *command->second;
+  if (record.state != command_state::rendering || !record.frame || !record.pipeline || record.drew)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  const auto target =
+      state->second->presentation()->native_view(*record.frame->acquired.dynamic_backbuffer.view);
+  const auto pipeline = state->second->pipelines()->native_handle(*record.pipeline->native);
+  const auto result = state->second->commands()->draw(*record.native, target, pipeline);
+  if (result == GRANIT_SUCCESS)
+    record.drew = true;
+  return result;
+}
+
+granit_result web_renderer_registry::end_rendering(granit_renderer renderer,
+                                                   granit_command_recorder recorder) {
+  std::lock_guard lock{mutex_};
+  const auto state = renderers_.find(renderer);
+  const auto found = command_recorders_.find(recorder);
+  if (state == renderers_.end() || found == command_recorders_.end() ||
+      found->second->renderer != state->second)
+    return GRANIT_ERROR_INVALID_HANDLE;
+  if (found->second->state != command_state::rendering || !found->second->drew)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  found->second->state = command_state::recording;
+  return GRANIT_SUCCESS;
+}
+
+granit_result web_renderer_registry::end_command_recorder(granit_renderer renderer,
+                                                          granit_command_recorder recorder) {
+  std::lock_guard lock{mutex_};
+  const auto state = renderers_.find(renderer);
+  const auto found = command_recorders_.find(recorder);
+  if (state == renderers_.end() || found == command_recorders_.end() ||
+      found->second->renderer != state->second)
+    return GRANIT_ERROR_INVALID_HANDLE;
+  if (found->second->state != command_state::recording || !found->second->drew)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  const auto result = state->second->commands()->end(*found->second->native);
+  if (result == GRANIT_SUCCESS)
+    found->second->state = command_state::executable;
+  return result;
+}
+
+granit_result web_renderer_registry::submit_command_recorder(granit_renderer renderer,
+                                                             granit_command_recorder recorder,
+                                                             granit_frame frame) {
+  std::lock_guard lock{mutex_};
+  const auto state = renderers_.find(renderer);
+  const auto command = command_recorders_.find(recorder);
+  if (state == renderers_.end() || command == command_recorders_.end() ||
+      command->second->renderer != state->second)
+    return GRANIT_ERROR_INVALID_HANDLE;
+  if (command->second->state != command_state::executable)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  if (frame != GRANIT_NULL_HANDLE) {
+    const auto found = frames_.find(frame);
+    if (found == frames_.end() || found->second != command->second->frame)
+      return GRANIT_ERROR_INVALID_HANDLE;
+  }
+  const auto result = state->second->commands()->submit(*command->second->native);
+  if (result == GRANIT_SUCCESS)
+    command->second->state = command_state::submitted;
+  return result;
+}
+
+granit_result web_renderer_registry::reset_command_recorder(granit_renderer renderer,
+                                                            granit_command_recorder recorder) {
+  std::lock_guard lock{mutex_};
+  const auto state = renderers_.find(renderer);
+  const auto found = command_recorders_.find(recorder);
+  if (state == renderers_.end() || found == command_recorders_.end() ||
+      found->second->renderer != state->second)
+    return GRANIT_ERROR_INVALID_HANDLE;
+  if (found->second->state == command_state::recording ||
+      found->second->state == command_state::rendering)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  const auto result = state->second->commands()->reset(*found->second->native);
+  if (result == GRANIT_SUCCESS) {
+    found->second->frame.reset();
+    found->second->pipeline.reset();
+    found->second->state = command_state::initial;
+    found->second->drew = false;
+  }
+  return result;
+}
+
+granit_result web_renderer_registry::destroy_command_recorder(granit_renderer renderer,
+                                                              granit_command_recorder recorder) {
+  std::shared_ptr<command_recorder_record> record;
+  {
+    std::lock_guard lock{mutex_};
+    const auto state = renderers_.find(renderer);
+    const auto found = command_recorders_.find(recorder);
+    if (state == renderers_.end() || found == command_recorders_.end() ||
+        found->second->renderer != state->second)
+      return GRANIT_ERROR_INVALID_HANDLE;
+    record = std::move(found->second);
+    command_recorders_.erase(found);
+    const auto result = handles_.erase(recorder, resource_type::command_recorder, 0);
+    if (result != GRANIT_SUCCESS)
+      return result;
+  }
+  record.reset();
+  return GRANIT_SUCCESS;
 }
 
 } // namespace granit::detail

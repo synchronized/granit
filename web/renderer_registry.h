@@ -9,6 +9,7 @@
 #include <mutex>
 #include <unordered_map>
 
+#include <granit/renderer/command_recorder.h>
 #include <granit/renderer/pipeline.h>
 #include <granit/renderer/renderer.h>
 #include <granit/renderer/shader.h>
@@ -75,6 +76,28 @@ public:
                            granit_texture_format color_format, granit_graphics_pipeline& pipeline);
   [[nodiscard]] granit_result destroy_graphics_pipeline(granit_renderer renderer,
                                                         granit_graphics_pipeline pipeline);
+  [[nodiscard]] granit_result create_command_recorder(granit_renderer renderer,
+                                                      granit_command_recorder& recorder);
+  [[nodiscard]] granit_result begin_command_recorder(granit_renderer renderer,
+                                                     granit_command_recorder recorder);
+  [[nodiscard]] granit_result begin_rendering(granit_renderer renderer,
+                                              granit_command_recorder recorder,
+                                              granit_texture_view view);
+  [[nodiscard]] granit_result bind_graphics_pipeline(granit_renderer renderer,
+                                                     granit_command_recorder recorder,
+                                                     granit_graphics_pipeline pipeline);
+  [[nodiscard]] granit_result draw(granit_renderer renderer, granit_command_recorder recorder);
+  [[nodiscard]] granit_result end_rendering(granit_renderer renderer,
+                                            granit_command_recorder recorder);
+  [[nodiscard]] granit_result end_command_recorder(granit_renderer renderer,
+                                                   granit_command_recorder recorder);
+  [[nodiscard]] granit_result submit_command_recorder(granit_renderer renderer,
+                                                      granit_command_recorder recorder,
+                                                      granit_frame frame);
+  [[nodiscard]] granit_result reset_command_recorder(granit_renderer renderer,
+                                                     granit_command_recorder recorder);
+  [[nodiscard]] granit_result destroy_command_recorder(granit_renderer renderer,
+                                                       granit_command_recorder recorder);
 
 private:
   struct surface_record {
@@ -108,6 +131,15 @@ private:
     std::shared_ptr<shader_record> fragment_shader;
     std::unique_ptr<backend_graphics_pipeline_resource> native;
   };
+  enum class command_state { initial, recording, rendering, executable, submitted };
+  struct command_recorder_record {
+    std::shared_ptr<webgpu_renderer_state> renderer;
+    std::unique_ptr<backend_command_recorder_resource> native;
+    std::shared_ptr<frame_record> frame;
+    std::shared_ptr<graphics_pipeline_record> pipeline;
+    command_state state{command_state::initial};
+    bool drew{};
+  };
 
   [[nodiscard]] std::shared_ptr<webgpu_renderer_state> acquire(granit_renderer renderer);
   void erase_backbuffer(swapchain_record& swapchain) noexcept;
@@ -123,6 +155,8 @@ private:
       pipeline_layouts_;
   std::unordered_map<granit_graphics_pipeline, std::shared_ptr<graphics_pipeline_record>>
       graphics_pipelines_;
+  std::unordered_map<granit_command_recorder, std::shared_ptr<command_recorder_record>>
+      command_recorders_;
 };
 
 } // namespace granit::detail

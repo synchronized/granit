@@ -101,4 +101,10 @@ granit_result webgpu_pipeline_adapter::create_graphics_pipeline(
   return context_->loader->create_render_pipeline(context_->instance, &desc, &pipeline->handle_);
 }
 
+granit_backend_plugin_render_pipeline webgpu_pipeline_adapter::native_handle(
+    backend_graphics_pipeline_resource& resource) const noexcept {
+  const auto* pipeline = as_pipeline(resource);
+  return pipeline == nullptr ? 0 : pipeline->handle_;
+}
+
 } // namespace granit::detail

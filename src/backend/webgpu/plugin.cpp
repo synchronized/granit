@@ -1597,7 +1597,7 @@ granit_result recorder_draw(granit_backend_plugin_instance instance,
                             granit_backend_plugin_texture_view target,
                             granit_backend_plugin_render_pipeline pipeline,
                             granit_backend_plugin_bind_group bind_group) noexcept {
-  if (instance == 0 || recorder == 0 || target == 0 || pipeline == 0 || bind_group == 0)
+  if (instance == 0 || recorder == 0 || target == 0 || pipeline == 0)
     return GRANIT_ERROR_INVALID_ARGUMENT;
   const std::scoped_lock lock{instances_mutex};
   const auto found = instances.find(instance);
@@ -1609,11 +1609,13 @@ granit_result recorder_draw(granit_backend_plugin_instance instance,
   const auto recorder_found = state.command_recorders.find(recorder);
   const auto view_found = state.texture_views.find(target);
   const auto pipeline_found = state.render_pipelines.find(pipeline);
-  const auto group_found = state.bind_groups.find(bind_group);
   if (recorder_found == state.command_recorders.end() || view_found == state.texture_views.end() ||
-      pipeline_found == state.render_pipelines.end() || group_found == state.bind_groups.end()) {
+      pipeline_found == state.render_pipelines.end()) {
     return GRANIT_ERROR_INVALID_HANDLE;
   }
+  const auto group_found = state.bind_groups.find(bind_group);
+  if (bind_group != 0 && group_found == state.bind_groups.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
   if (recorder_found->second.finished)
     return GRANIT_ERROR_INVALID_ARGUMENT;
   const auto texture_found = state.textures.find(view_found->second.texture);
@@ -1634,7 +1636,8 @@ granit_result recorder_draw(granit_backend_plugin_instance instance,
   if (pass == nullptr)
     return GRANIT_ERROR_INITIALIZATION_FAILED;
   wgpuRenderPassEncoderSetPipeline(pass, pipeline_found->second.render_pipeline);
-  wgpuRenderPassEncoderSetBindGroup(pass, 0, group_found->second.bind_group, 0, nullptr);
+  if (bind_group != 0)
+    wgpuRenderPassEncoderSetBindGroup(pass, 0, group_found->second.bind_group, 0, nullptr);
   wgpuRenderPassEncoderDraw(pass, 3, 1, 0, 0);
   wgpuRenderPassEncoderEnd(pass);
   wgpuRenderPassEncoderRelease(pass);

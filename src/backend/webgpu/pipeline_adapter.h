@@ -29,6 +29,8 @@ public:
       backend_graphics_pipeline_resource& resource, backend_pipeline_layout_resource& layout,
       granit_backend_plugin_shader vertex_shader, granit_backend_plugin_shader fragment_shader,
       granit_texture_format color_format) const noexcept;
+  [[nodiscard]] granit_backend_plugin_render_pipeline
+  native_handle(backend_graphics_pipeline_resource& resource) const noexcept;
 
 private:
   std::shared_ptr<webgpu_pipeline_context> context_;

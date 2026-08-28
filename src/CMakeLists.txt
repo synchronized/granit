@@ -6,6 +6,8 @@ add_library(
   backend/plugin_api.h
   backend/plugin_loader.cpp
   backend/plugin_loader.h
+  backend/webgpu/command_adapter.cpp
+  backend/webgpu/command_adapter.h
   backend/webgpu/presentation_adapter.cpp
   backend/webgpu/presentation_adapter.h
   backend/webgpu/pipeline_adapter.cpp

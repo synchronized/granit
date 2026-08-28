@@ -100,7 +100,7 @@ async function main() {
       undefined,
       { timeout: 5_000 },
     );
-    console.log("浏览器 WebGPU 启动与输入转发验证通过");
+    console.log("浏览器 WebGPU 公共绘制闭环与输入转发验证通过");
   } catch (error) {
     console.error(browserMessages.join("\n"));
     throw error;

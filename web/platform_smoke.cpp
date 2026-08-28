@@ -9,6 +9,7 @@
 #include <emscripten/emscripten.h>
 #include <emscripten/html5.h>
 
+#include <granit/renderer/command_recorder.h>
 #include <granit/renderer/pipeline.h>
 #include <granit/renderer/renderer.h>
 #include <granit/renderer/shader.h>
@@ -123,6 +124,84 @@ granit_result validate_public_pipeline() {
   return GRANIT_SUCCESS;
 }
 
+granit_result draw_public_triangle(granit_frame frame, granit_texture_view view,
+                                   granit_texture_format format, std::uint32_t width,
+                                   std::uint32_t height) {
+  constexpr char vertex_wgsl[] = R"(
+@vertex fn main(@builtin(vertex_index) index: u32) -> @builtin(position) vec4f {
+  var positions = array<vec2f, 3>(vec2f(0.0, 0.6), vec2f(-0.6, -0.6), vec2f(0.6, -0.6));
+  return vec4f(positions[index], 0.0, 1.0);
+})";
+  constexpr char fragment_wgsl[] = R"(
+@fragment fn main() -> @location(0) vec4f {
+  return vec4f(0.0, 1.0, 0.0, 1.0);
+})";
+  granit_shader_desc shader_desc = GRANIT_SHADER_DESC_INIT;
+  shader_desc.code = nullptr;
+  shader_desc.code_size = 0;
+  shader_desc.wgsl = vertex_wgsl;
+  shader_desc.wgsl_length = sizeof(vertex_wgsl) - 1;
+  granit_shader vertex{};
+  auto result = granit_shader_create(state.renderer, &shader_desc, &vertex);
+  if (result != GRANIT_SUCCESS)
+    return result;
+  shader_desc.stage = GRANIT_SHADER_STAGE_FRAGMENT;
+  shader_desc.wgsl = fragment_wgsl;
+  shader_desc.wgsl_length = sizeof(fragment_wgsl) - 1;
+  granit_shader fragment{};
+  result = granit_shader_create(state.renderer, &shader_desc, &fragment);
+  granit_pipeline_layout layout{};
+  granit_graphics_pipeline pipeline{};
+  granit_command_recorder recorder{};
+  if (result == GRANIT_SUCCESS) {
+    const granit_pipeline_layout_desc desc = GRANIT_PIPELINE_LAYOUT_DESC_INIT;
+    result = granit_pipeline_layout_create(state.renderer, &desc, &layout);
+  }
+  if (result == GRANIT_SUCCESS) {
+    granit_graphics_pipeline_desc desc = GRANIT_GRAPHICS_PIPELINE_DESC_INIT;
+    desc.layout = layout;
+    desc.vertex_shader = vertex;
+    desc.fragment_shader = fragment;
+    desc.color_format_count = 1;
+    desc.color_formats = &format;
+    result = granit_graphics_pipeline_create(state.renderer, &desc, &pipeline);
+  }
+  if (result == GRANIT_SUCCESS) {
+    const granit_command_recorder_desc desc = GRANIT_COMMAND_RECORDER_DESC_INIT;
+    result = granit_command_recorder_create(state.renderer, &desc, &recorder);
+  }
+  if (result == GRANIT_SUCCESS)
+    result = granit_command_recorder_begin(state.renderer, recorder);
+  granit_color_attachment_desc color = GRANIT_COLOR_ATTACHMENT_DESC_INIT;
+  color.view = view;
+  granit_rendering_desc rendering = GRANIT_RENDERING_DESC_INIT;
+  rendering.color_attachment_count = 1;
+  rendering.color_attachments = &color;
+  rendering.area = {0, 0, width, height};
+  if (result == GRANIT_SUCCESS)
+    result = granit_command_recorder_begin_rendering(state.renderer, recorder, &rendering);
+  if (result == GRANIT_SUCCESS)
+    result = granit_command_recorder_bind_graphics_pipeline(state.renderer, recorder, pipeline);
+  if (result == GRANIT_SUCCESS)
+    result = granit_command_recorder_draw(state.renderer, recorder, 3, 1, 0, 0);
+  if (result == GRANIT_SUCCESS)
+    result = granit_command_recorder_end_rendering(state.renderer, recorder);
+  if (result == GRANIT_SUCCESS)
+    result = granit_command_recorder_end(state.renderer, recorder);
+  if (result == GRANIT_SUCCESS)
+    result = granit_command_recorder_submit_frame(state.renderer, recorder, frame);
+  if (recorder != GRANIT_NULL_HANDLE)
+    static_cast<void>(granit_command_recorder_destroy(state.renderer, recorder));
+  if (pipeline != GRANIT_NULL_HANDLE)
+    static_cast<void>(granit_graphics_pipeline_destroy(state.renderer, pipeline));
+  if (layout != GRANIT_NULL_HANDLE)
+    static_cast<void>(granit_pipeline_layout_destroy(state.renderer, layout));
+  if (fragment != GRANIT_NULL_HANDLE)
+    static_cast<void>(granit_shader_destroy(state.renderer, fragment));
+  static_cast<void>(granit_shader_destroy(state.renderer, vertex));
+  return result;
+}
+
 void diagnose(granit_diagnostic_severity, granit_diagnostic_category, const char* message,
               std::uint32_t message_length, void*) noexcept {
   std::fprintf(stderr, "GRANIT_DIAGNOSTIC:%.*s\n", static_cast<int>(message_length), message);
@@ -198,6 +277,15 @@ granit_result create_presentation_resources() {
   result = granit_swapchain_acquire(state.renderer, state.swapchain, &frame, &image_index,
                                     &needs_recreate);
   if (result != GRANIT_SUCCESS) {
+    return result;
+  }
+  result = granit_swapchain_get_backbuffer(state.renderer, state.swapchain, image_index, &texture,
+                                           &view);
+  if (result == GRANIT_SUCCESS) {
+    result = draw_public_triangle(frame, view, info.format, info.width, info.height);
+  }
+  if (result != GRANIT_SUCCESS) {
+    static_cast<void>(granit_frame_cancel(state.renderer, state.swapchain, frame, &needs_recreate));
     return result;
   }
   result = granit_swapchain_present(state.renderer, state.swapchain, frame, &needs_recreate);

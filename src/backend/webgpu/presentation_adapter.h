@@ -41,6 +41,8 @@ public:
                                                 bool& needs_recreate) const noexcept;
   [[nodiscard]] granit_result cancel_swapchain(backend_swapchain_resource& swapchain,
                                                bool& needs_recreate) const noexcept;
+  [[nodiscard]] granit_backend_plugin_texture_view
+  native_view(backend_texture_view_resource& view) const noexcept;
 
 private:
   std::shared_ptr<webgpu_presentation_context> context_;

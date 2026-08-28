@@ -3,6 +3,7 @@
 
 add_executable(
   granit_web_platform_smoke
+  command_recorder_api.cpp
   platform_smoke.cpp
   pipeline_api.cpp
   renderer_api.cpp
@@ -12,6 +13,7 @@ add_executable(
   swapchain_api.cpp
   "${PROJECT_SOURCE_DIR}/src/backend/plugin_loader.cpp"
   "${PROJECT_SOURCE_DIR}/src/backend/webgpu/plugin.cpp"
+  "${PROJECT_SOURCE_DIR}/src/backend/webgpu/command_adapter.cpp"
   "${PROJECT_SOURCE_DIR}/src/backend/webgpu/presentation_adapter.cpp"
   "${PROJECT_SOURCE_DIR}/src/backend/webgpu/pipeline_adapter.cpp"
   "${PROJECT_SOURCE_DIR}/src/backend/webgpu/renderer_state.cpp"

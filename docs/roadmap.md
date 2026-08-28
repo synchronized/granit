@@ -178,8 +178,9 @@
   Registry 根记录已通过该接口统一状态、能力和事件推进，并已增加 WebGPU 静态 Provider 工厂
   与通用销毁路径；Emscripten Smoke 已通过公共 Renderer、Canvas Surface、Swapchain、Frame 和
   动态 Backbuffer API 驱动 WebGPU，并验证帧结束后的借用句柄失效。公共 Shader 描述已增加可选
-  WGSL 视图，WebGPU Shader 创建/销毁已接入 generation 句柄；空 Pipeline Layout 和基础单颜色
-  Graphics Pipeline 已接入公共 API。下一步迁移命令记录与提交路径。
+  WGSL 视图，WebGPU Shader 创建/销毁已接入 generation 句柄；空 Pipeline Layout、基础单颜色
+  Graphics Pipeline，以及最小三角形 Command Recorder/Queue Submit 已接入公共 API。下一步完成
+  浏览器中心像素验收与 S-10E5 示例收尾。
 
 ## 十、Android 移动平台
 

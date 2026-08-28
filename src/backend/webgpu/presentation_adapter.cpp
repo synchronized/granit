@@ -241,4 +241,10 @@ granit_result webgpu_presentation_adapter::cancel_swapchain(backend_swapchain_re
   return result;
 }
 
+granit_backend_plugin_texture_view
+webgpu_presentation_adapter::native_view(backend_texture_view_resource& resource) const noexcept {
+  const auto* view = dynamic_cast<webgpu_borrowed_texture_view_resource*>(&resource);
+  return view == nullptr ? 0 : view->handle_;
+}
+
 } // namespace granit::detail

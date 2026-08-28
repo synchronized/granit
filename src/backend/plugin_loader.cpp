@@ -657,8 +657,7 @@ granit_result backend_plugin_loader::recorder_draw(
     granit_backend_plugin_instance instance, granit_backend_plugin_command_recorder recorder,
     granit_backend_plugin_texture_view target, granit_backend_plugin_render_pipeline pipeline,
     granit_backend_plugin_bind_group bind_group) noexcept {
-  if (api_ == nullptr || instance == 0 || recorder == 0 || target == 0 || pipeline == 0 ||
-      bind_group == 0)
+  if (api_ == nullptr || instance == 0 || recorder == 0 || target == 0 || pipeline == 0)
     return GRANIT_ERROR_INVALID_ARGUMENT;
   if (std::find(instances_.begin(), instances_.end(), instance) == instances_.end())
     return GRANIT_ERROR_INVALID_HANDLE;
