@@ -194,6 +194,7 @@ TEST_CASE("后端插件 Loader 完成版本化握手", "[backend][plugin]") {
   CHECK(state.deallocations == 2);
   CHECK(state.diagnostics == 9);
 
+  host.struct_size = sizeof(host);
   REQUIRE(loader.create_instance(&host, &instance) == GRANIT_SUCCESS);
   REQUIRE(loader.process_events(instance) == GRANIT_SUCCESS);
 

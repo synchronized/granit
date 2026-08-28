@@ -161,7 +161,6 @@ std::atomic_uint64_t next_swapchain{1};
 std::atomic_uint64_t next_surface{1};
 #endif
 #if defined(GRANIT_WEBGPU_DEFER_INITIALIZATION_TEST)
-std::atomic_uint32_t initialization_sequence_for_test{};
 #endif
 
 granit_result require_ready(const webgpu_instance& state) noexcept {
@@ -605,13 +604,9 @@ granit_result create_backend(const granit_backend_plugin_host_api* host,
       device_limits.maxColorAttachments,
   };
 #if defined(GRANIT_WEBGPU_DEFER_INITIALIZATION_TEST)
-  const auto initialization_index = initialization_sequence_for_test.fetch_add(1);
   const auto extended_host = host->struct_size > sizeof(granit_backend_plugin_host_api);
-  state->fail_initialization_for_test = initialization_index == 1 && extended_host;
-  state->deferred_initialization_for_test =
-      initialization_index == 0 || state->fail_initialization_for_test;
-  if (!state->deferred_initialization_for_test)
-    state->lifecycle.mark_ready();
+  state->fail_initialization_for_test = extended_host;
+  state->deferred_initialization_for_test = true;
 #else
   state->lifecycle.mark_ready();
 #endif
