@@ -26,6 +26,9 @@ public:
   /** 加载指定插件；失败后对象保持关闭状态。 */
   [[nodiscard]] granit_result open(const char* library_path,
                                    granit_backend_plugin_kind expected_kind) noexcept;
+  /** 校验并接入已静态链接的插件 API；不拥有 API 所在模块。 */
+  [[nodiscard]] granit_result open_static(const granit_backend_plugin_api* api,
+                                          granit_backend_plugin_kind expected_kind) noexcept;
   [[nodiscard]] granit_result
   create_instance(const granit_backend_plugin_host_api* host,
                   granit_backend_plugin_instance* out_instance) noexcept;
@@ -159,7 +162,7 @@ public:
       std::uint32_t width, std::uint32_t height, std::uint32_t bytes_per_row) noexcept;
   void close() noexcept;
 
-  [[nodiscard]] bool is_open() const noexcept { return library_.is_open(); }
+  [[nodiscard]] bool is_open() const noexcept { return api_ != nullptr; }
   [[nodiscard]] const granit_backend_plugin_api* api() const noexcept { return api_; }
 
 private:

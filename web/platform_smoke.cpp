@@ -4,37 +4,40 @@
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
+#include <memory>
+#include <new>
 
 #include <emscripten/emscripten.h>
 #include <emscripten/html5.h>
-#include <webgpu/webgpu.h>
 
-#include "backend/callback_lifetime.h"
 #include "backend/lifecycle.h"
+#include "backend/plugin_loader.h"
+#include "backend/webgpu/presentation_adapter.h"
+
+extern "C" const granit_backend_plugin_api*
+granit_backend_plugin_query(std::uint32_t requested_abi) noexcept;
 
 namespace {
 
-enum class startup_status : int { failed = -1, starting, adapter_pending, device_pending, ready };
+enum class startup_status : int { failed = -1, starting, provider_pending, ready };
 
 struct web_platform_state {
-  WGPUInstance instance{};
-  WGPUSurface surface{};
-  WGPUAdapter adapter{};
-  WGPUDevice device{};
+  granit::detail::backend_plugin_loader loader;
+  granit_backend_plugin_instance instance{};
+  std::unique_ptr<granit::detail::webgpu_presentation_adapter> presentation;
+  std::unique_ptr<granit::detail::backend_surface_resource> surface;
+  std::unique_ptr<granit::detail::backend_swapchain_resource> swapchain;
   startup_status status{startup_status::starting};
   unsigned input_event_count{};
   granit::detail::backend_lifecycle lifecycle;
-  granit::detail::backend_callback_lifetime callback_lifetime;
-  granit::detail::backend_callback_ticket adapter_ticket;
-  granit::detail::backend_callback_ticket device_ticket;
 };
 
 web_platform_state state;
 
-void fail(const char* message) noexcept {
+void fail(const char* message, granit_result result = GRANIT_ERROR_INITIALIZATION_FAILED) noexcept {
   state.status = startup_status::failed;
-  state.lifecycle.mark_failed(GRANIT_ERROR_INITIALIZATION_FAILED);
-  std::fprintf(stderr, "GRANIT_STATUS:failed:%s\n", message);
+  state.lifecycle.mark_failed(result);
+  std::fprintf(stderr, "GRANIT_STATUS:failed:%s:%d\n", message, result);
 }
 
 bool load_startup_resource() noexcept {
@@ -49,6 +52,20 @@ bool load_startup_resource() noexcept {
   return size >= sizeof(expected) - 1 && std::memcmp(content, expected, sizeof(expected) - 1) == 0;
 }
 
+void* allocate(std::uint64_t size, std::uint64_t alignment, void*) noexcept {
+  return ::operator new(static_cast<std::size_t>(size),
+                        std::align_val_t{static_cast<std::size_t>(alignment)}, std::nothrow);
+}
+
+void deallocate(void* memory, std::uint64_t, std::uint64_t alignment, void*) noexcept {
+  ::operator delete(memory, std::align_val_t{static_cast<std::size_t>(alignment)});
+}
+
+void diagnose(granit_diagnostic_severity, granit_diagnostic_category, const char* message,
+              std::uint32_t message_length, void*) noexcept {
+  std::fprintf(stderr, "GRANIT_DIAGNOSTIC:%.*s\n", static_cast<int>(message_length), message);
+}
+
 EM_BOOL receive_keyboard(int, const EmscriptenKeyboardEvent*, void* user_data) noexcept {
   ++static_cast<web_platform_state*>(user_data)->input_event_count;
   return EM_FALSE;
@@ -59,78 +76,94 @@ EM_BOOL receive_mouse(int, const EmscriptenMouseEvent*, void* user_data) noexcep
   return EM_FALSE;
 }
 
-bool configure_surface() noexcept {
-  WGPUSurfaceCapabilities capabilities = WGPU_SURFACE_CAPABILITIES_INIT;
-  if (wgpuSurfaceGetCapabilities(state.surface, state.adapter, &capabilities) !=
-          WGPUStatus_Success ||
-      capabilities.formatCount == 0 || capabilities.presentModeCount == 0 ||
-      capabilities.alphaModeCount == 0) {
-    wgpuSurfaceCapabilitiesFreeMembers(capabilities);
-    return false;
-  }
-
+granit_result create_presentation_resources() {
   int width{};
   int height{};
   if (emscripten_get_canvas_element_size("#canvas", &width, &height) != EMSCRIPTEN_RESULT_SUCCESS ||
       width <= 0 || height <= 0) {
-    wgpuSurfaceCapabilitiesFreeMembers(capabilities);
-    return false;
+    return GRANIT_ERROR_INITIALIZATION_FAILED;
   }
 
-  WGPUSurfaceConfiguration configuration = WGPU_SURFACE_CONFIGURATION_INIT;
-  configuration.device = state.device;
-  configuration.format = capabilities.formats[0];
-  configuration.usage = WGPUTextureUsage_RenderAttachment;
-  configuration.width = static_cast<std::uint32_t>(width);
-  configuration.height = static_cast<std::uint32_t>(height);
-  configuration.presentMode = capabilities.presentModes[0];
-  configuration.alphaMode = capabilities.alphaModes[0];
-  wgpuSurfaceConfigure(state.surface, &configuration);
-  wgpuSurfaceCapabilitiesFreeMembers(capabilities);
-  return true;
-}
-
-void receive_device(WGPURequestDeviceStatus status, WGPUDevice device, WGPUStringView, void* data,
-                    void*) noexcept {
-  const auto& ticket = *static_cast<granit::detail::backend_callback_ticket*>(data);
-  static_cast<void>(ticket.invoke([status, device] {
-    if (status != WGPURequestDeviceStatus_Success || device == nullptr) {
-      fail("device-request");
-      return;
-    }
-    state.device = device;
-    if (!configure_surface()) {
-      fail("surface-configure");
-      return;
-    }
-    state.status = startup_status::ready;
-    state.lifecycle.mark_ready();
-    std::puts("GRANIT_STATUS:ready");
-  }));
-}
-
-void receive_adapter(WGPURequestAdapterStatus status, WGPUAdapter adapter, WGPUStringView,
-                     void* data, void*) noexcept {
-  const auto& ticket = *static_cast<granit::detail::backend_callback_ticket*>(data);
-  static_cast<void>(ticket.invoke([status, adapter] {
-    if (status != WGPURequestAdapterStatus_Success || adapter == nullptr) {
-      fail("adapter-request");
-      return;
-    }
-    state.adapter = adapter;
-    state.status = startup_status::device_pending;
-    WGPURequestDeviceCallbackInfo callback = WGPU_REQUEST_DEVICE_CALLBACK_INFO_INIT;
-    callback.mode = WGPUCallbackMode_AllowSpontaneous;
-    callback.callback = receive_device;
-    callback.userdata1 = &state.device_ticket;
-    static_cast<void>(wgpuAdapterRequestDevice(state.adapter, nullptr, callback));
-  }));
+  state.presentation =
+      std::make_unique<granit::detail::webgpu_presentation_adapter>(state.loader, state.instance);
+  state.surface = state.presentation->allocate_surface();
+  state.swapchain = state.presentation->allocate_swapchain();
+  if (state.surface == nullptr || state.swapchain == nullptr) {
+    return GRANIT_ERROR_OUT_OF_MEMORY;
+  }
+  auto result = state.presentation->create_canvas_surface(*state.surface, "#canvas", 7);
+  if (result != GRANIT_SUCCESS) {
+    return result;
+  }
+  const granit::detail::backend_swapchain_desc desc{static_cast<std::uint32_t>(width),
+                                                    static_cast<std::uint32_t>(height), 2,
+                                                    GRANIT_BACKEND_PLUGIN_PRESENT_MODE_FIFO};
+  result = state.presentation->create_swapchain(*state.surface, desc, *state.swapchain);
+  if (result != GRANIT_SUCCESS) {
+    return result;
+  }
+  granit::detail::backend_swapchain_info info{};
+  result = state.presentation->get_swapchain_info(*state.swapchain, info);
+  if (result != GRANIT_SUCCESS || info.width == 0 || info.height == 0 || info.image_count == 0) {
+    return result == GRANIT_SUCCESS ? GRANIT_ERROR_INITIALIZATION_FAILED : result;
+  }
+  granit::detail::backend_acquired_swapchain_frame frame{};
+  result = state.presentation->acquire_swapchain(*state.swapchain, frame);
+  if (result != GRANIT_SUCCESS || frame.dynamic_backbuffer.texture == nullptr ||
+      frame.dynamic_backbuffer.view == nullptr) {
+    return result == GRANIT_SUCCESS ? GRANIT_ERROR_INITIALIZATION_FAILED : result;
+  }
+  bool needs_recreate{};
+  result = state.presentation->cancel_swapchain(*state.swapchain, needs_recreate);
+  frame = {};
+  if (result != GRANIT_SUCCESS) {
+    return result;
+  }
+  return GRANIT_SUCCESS;
 }
 
 void tick(void*) noexcept {
-  if (state.instance != nullptr) {
-    wgpuInstanceProcessEvents(state.instance);
+  if (state.status != startup_status::provider_pending) {
+    return;
   }
+  const auto process_result = state.loader.process_events(state.instance);
+  if (process_result != GRANIT_SUCCESS && process_result != GRANIT_ERROR_NOT_READY) {
+    fail("provider-events", process_result);
+    return;
+  }
+
+  granit_backend_plugin_instance_status provider_status{};
+  provider_status.struct_size = sizeof(provider_status);
+  const auto status_result = state.loader.get_instance_status(state.instance, &provider_status);
+  if (status_result != GRANIT_SUCCESS) {
+    fail("provider-status", status_result);
+    return;
+  }
+  if (provider_status.state == GRANIT_BACKEND_PLUGIN_INSTANCE_STATE_FAILED ||
+      provider_status.state == GRANIT_BACKEND_PLUGIN_INSTANCE_STATE_DEVICE_LOST) {
+    fail("provider-terminal", provider_status.failure_result);
+    return;
+  }
+  if (provider_status.state != GRANIT_BACKEND_PLUGIN_INSTANCE_STATE_READY) {
+    return;
+  }
+
+  try {
+    const auto result = create_presentation_resources();
+    if (result != GRANIT_SUCCESS) {
+      fail("presentation-create", result);
+      return;
+    }
+  } catch (const std::bad_alloc&) {
+    fail("presentation-allocation", GRANIT_ERROR_OUT_OF_MEMORY);
+    return;
+  } catch (...) {
+    fail("presentation-exception", GRANIT_ERROR_INTERNAL);
+    return;
+  }
+  state.status = startup_status::ready;
+  state.lifecycle.mark_ready();
+  std::puts("GRANIT_STATUS:ready");
 }
 
 } // namespace
@@ -157,21 +190,17 @@ int main() {
     return 1;
   }
 
-  WGPUInstanceDescriptor instance_descriptor = WGPU_INSTANCE_DESCRIPTOR_INIT;
-  state.instance = wgpuCreateInstance(&instance_descriptor);
-  if (state.instance == nullptr) {
-    fail("instance-create");
+  const auto* api = granit_backend_plugin_query(GRANIT_BACKEND_PLUGIN_ABI_VERSION);
+  auto result = state.loader.open_static(api, GRANIT_BACKEND_PLUGIN_KIND_WEBGPU);
+  if (result != GRANIT_SUCCESS) {
+    fail("provider-open", result);
     return 1;
   }
-
-  WGPUEmscriptenSurfaceSourceCanvasHTMLSelector canvas_source =
-      WGPU_EMSCRIPTEN_SURFACE_SOURCE_CANVAS_HTML_SELECTOR_INIT;
-  canvas_source.selector = {"#canvas", WGPU_STRLEN};
-  WGPUSurfaceDescriptor surface_descriptor = WGPU_SURFACE_DESCRIPTOR_INIT;
-  surface_descriptor.nextInChain = &canvas_source.chain;
-  state.surface = wgpuInstanceCreateSurface(state.instance, &surface_descriptor);
-  if (state.surface == nullptr) {
-    fail("surface-create");
+  granit_backend_plugin_host_api host{sizeof(host), 0,          diagnose, nullptr,
+                                      allocate,     deallocate, nullptr};
+  result = state.loader.create_instance(&host, &state.instance);
+  if (result != GRANIT_SUCCESS) {
+    fail("provider-create", result);
     return 1;
   }
 
@@ -180,17 +209,7 @@ int main() {
   static_cast<void>(emscripten_set_mousedown_callback("#canvas", &state, EM_FALSE, receive_mouse));
   static_cast<void>(emscripten_set_mousemove_callback("#canvas", &state, EM_FALSE, receive_mouse));
 
-  WGPURequestAdapterOptions options = WGPU_REQUEST_ADAPTER_OPTIONS_INIT;
-  options.compatibleSurface = state.surface;
-  WGPURequestAdapterCallbackInfo callback = WGPU_REQUEST_ADAPTER_CALLBACK_INFO_INIT;
-  callback.mode = WGPUCallbackMode_AllowSpontaneous;
-  callback.callback = receive_adapter;
-  state.adapter_ticket = state.callback_lifetime.ticket();
-  state.device_ticket = state.callback_lifetime.ticket();
-  callback.userdata1 = &state.adapter_ticket;
-  state.status = startup_status::adapter_pending;
-  static_cast<void>(wgpuInstanceRequestAdapter(state.instance, &options, callback));
-
+  state.status = startup_status::provider_pending;
   emscripten_set_main_loop_arg(tick, &state, 0, EM_FALSE);
   return 0;
 }

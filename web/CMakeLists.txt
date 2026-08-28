@@ -1,7 +1,14 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2026 Granit contributors
 
-add_executable(granit_web_platform_smoke platform_smoke.cpp)
+add_executable(
+  granit_web_platform_smoke
+  platform_smoke.cpp
+  "${PROJECT_SOURCE_DIR}/src/backend/plugin_loader.cpp"
+  "${PROJECT_SOURCE_DIR}/src/backend/webgpu/plugin.cpp"
+  "${PROJECT_SOURCE_DIR}/src/backend/webgpu/presentation_adapter.cpp"
+  "${PROJECT_SOURCE_DIR}/src/platform/shared_library.cpp"
+)
 target_compile_features(granit_web_platform_smoke PRIVATE cxx_std_20)
 target_include_directories(
   granit_web_platform_smoke PRIVATE "${PROJECT_SOURCE_DIR}/include" "${PROJECT_SOURCE_DIR}/src"

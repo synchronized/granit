@@ -89,6 +89,8 @@ struct webgpu_instance {
   granit_backend_plugin_capabilities capabilities;
   granit::detail::backend_lifecycle lifecycle;
   granit::detail::backend_callback_lifetime callback_lifetime;
+  granit::detail::backend_callback_ticket adapter_ticket;
+  granit::detail::backend_callback_ticket device_ticket;
   granit::detail::backend_callback_ticket device_lost_ticket;
   bool deferred_initialization_for_test;
   bool fail_initialization_for_test;
@@ -114,7 +116,8 @@ struct webgpu_instance {
   webgpu_instance(const granit_backend_plugin_host_api& host_api,
                   WGPUInstance native_instance) noexcept
       : host(host_api), instance(native_instance), adapter(nullptr), device(nullptr),
-        queue(nullptr), capabilities{}, device_lost_ticket(callback_lifetime.ticket()),
+        queue(nullptr), capabilities{}, adapter_ticket(callback_lifetime.ticket()),
+        device_ticket(callback_lifetime.ticket()), device_lost_ticket(callback_lifetime.ticket()),
         deferred_initialization_for_test(false), fail_initialization_for_test(false),
         force_device_loss_for_test(false) {}
 };
@@ -173,6 +176,16 @@ void deallocate(const granit_backend_plugin_host_api& host, void* memory) noexce
   }
 }
 
+WGPUStatus present_surface(WGPUSurface surface) noexcept {
+#if defined(__EMSCRIPTEN__)
+  // 浏览器在 requestAnimationFrame 边界隐式呈现，Emscripten 禁止显式调用 Present。
+  static_cast<void>(surface);
+  return WGPUStatus_Success;
+#else
+  return wgpuSurfacePresent(surface);
+#endif
+}
+
 void release_resources(webgpu_instance& state) noexcept {
   state.callback_lifetime.invalidate();
   for (const auto& [handle, swapchain] : state.swapchains) {
@@ -188,7 +201,7 @@ void release_resources(webgpu_instance& state) noexcept {
     if (swapchain.acquired_texture != 0) {
       const auto texture = state.textures.find(swapchain.acquired_texture);
       if (texture != state.textures.end()) {
-        static_cast<void>(wgpuSurfacePresent(native_surface));
+        static_cast<void>(present_surface(native_surface));
         wgpuTextureRelease(texture->second.texture);
         state.textures.erase(texture);
       }
@@ -311,6 +324,7 @@ void receive_device_lost(const WGPUDevice*, WGPUDeviceLostReason reason, WGPUStr
   }));
 }
 
+#if !defined(__EMSCRIPTEN__)
 void receive_adapter(WGPURequestAdapterStatus status, WGPUAdapter adapter, WGPUStringView message,
                      void* data, void*) noexcept {
   auto& request = *static_cast<adapter_request*>(data);
@@ -334,6 +348,65 @@ void receive_device(WGPURequestDeviceStatus status, WGPUDevice device, WGPUStrin
     emit_dawn_message(request.host, message);
   }
 }
+#endif
+
+#if defined(__EMSCRIPTEN__)
+void receive_device_async(WGPURequestDeviceStatus status, WGPUDevice device, WGPUStringView message,
+                          void* data, void*) noexcept {
+  auto& state = *static_cast<webgpu_instance*>(data);
+  static_cast<void>(state.device_ticket.invoke([&state, status, device, message] {
+    if (status != WGPURequestDeviceStatus_Success || device == nullptr) {
+      emit_dawn_message(&state.host, message);
+      state.lifecycle.mark_failed(GRANIT_ERROR_INITIALIZATION_FAILED);
+      return;
+    }
+    state.device = device;
+    state.queue = wgpuDeviceGetQueue(device);
+    WGPULimits limits = WGPU_LIMITS_INIT;
+    if (state.queue == nullptr || wgpuDeviceGetLimits(device, &limits) != WGPUStatus_Success) {
+      state.lifecycle.mark_failed(GRANIT_ERROR_INITIALIZATION_FAILED);
+      return;
+    }
+    state.capabilities = {
+        sizeof(granit_backend_plugin_capabilities),
+        0,
+        limits.minUniformBufferOffsetAlignment,
+        limits.minStorageBufferOffsetAlignment,
+        limits.maxUniformBufferBindingSize,
+        limits.maxStorageBufferBindingSize,
+        limits.maxBufferSize,
+        limits.maxTextureDimension2D,
+        limits.maxBindGroups,
+        limits.maxColorAttachments,
+    };
+    state.lifecycle.mark_ready();
+    constexpr char diagnostic[] = "Emscripten WebGPU adapter and device are ready";
+    emit(state.host, GRANIT_DIAGNOSTIC_SEVERITY_INFO, diagnostic, sizeof(diagnostic) - 1);
+  }));
+}
+
+void receive_adapter_async(WGPURequestAdapterStatus status, WGPUAdapter adapter,
+                           WGPUStringView message, void* data, void*) noexcept {
+  auto& state = *static_cast<webgpu_instance*>(data);
+  static_cast<void>(state.adapter_ticket.invoke([&state, status, adapter, message] {
+    if (status != WGPURequestAdapterStatus_Success || adapter == nullptr) {
+      emit_dawn_message(&state.host, message);
+      state.lifecycle.mark_failed(GRANIT_ERROR_NO_SUITABLE_DEVICE);
+      return;
+    }
+    state.adapter = adapter;
+    WGPUDeviceDescriptor descriptor = WGPU_DEVICE_DESCRIPTOR_INIT;
+    descriptor.deviceLostCallbackInfo.mode = WGPUCallbackMode_AllowSpontaneous;
+    descriptor.deviceLostCallbackInfo.callback = receive_device_lost;
+    descriptor.deviceLostCallbackInfo.userdata1 = &state;
+    WGPURequestDeviceCallbackInfo callback = WGPU_REQUEST_DEVICE_CALLBACK_INFO_INIT;
+    callback.mode = WGPUCallbackMode_AllowSpontaneous;
+    callback.callback = receive_device_async;
+    callback.userdata1 = &state;
+    static_cast<void>(wgpuAdapterRequestDevice(adapter, &descriptor, callback));
+  }));
+}
+#endif
 
 void receive_map(WGPUMapAsyncStatus status, WGPUStringView message, void* data, void*) noexcept {
   auto& request = *static_cast<map_request*>(data);
@@ -343,6 +416,7 @@ void receive_map(WGPUMapAsyncStatus status, WGPUStringView message, void* data, 
   }
 }
 
+#if !defined(__EMSCRIPTEN__)
 template <typename Request>
 bool wait_for(WGPUInstance instance, WGPUFuture future, Request& request) noexcept {
   WGPUFutureWaitInfo wait_info{future, WGPU_FALSE};
@@ -359,6 +433,29 @@ bool request_adapter(WGPUInstance instance, WGPURequestAdapterOptions& options,
   const auto future = wgpuInstanceRequestAdapter(instance, &options, callback);
   return wait_for(instance, future, request) &&
          request.status == WGPURequestAdapterStatus_Success && request.adapter != nullptr;
+}
+#endif
+
+granit_result register_instance(webgpu_instance* state,
+                                granit_backend_plugin_instance* out_instance) noexcept {
+  granit_backend_plugin_instance handle = next_instance.fetch_add(1, std::memory_order_relaxed);
+  if (handle == 0) {
+    handle = next_instance.fetch_add(1, std::memory_order_relaxed);
+  }
+  try {
+    const std::scoped_lock lock{instances_mutex};
+    const auto [iterator, inserted] = instances.emplace(handle, state);
+    static_cast<void>(iterator);
+    if (!inserted) {
+      return GRANIT_ERROR_INTERNAL;
+    }
+  } catch (const std::bad_alloc&) {
+    return GRANIT_ERROR_OUT_OF_MEMORY;
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+  *out_instance = handle;
+  return GRANIT_SUCCESS;
 }
 
 granit_result create_backend(const granit_backend_plugin_host_api* host,
@@ -381,15 +478,40 @@ granit_result create_backend(const granit_backend_plugin_host_api* host,
   if (memory == nullptr) {
     return GRANIT_ERROR_OUT_OF_MEMORY;
   }
+  WGPUInstanceDescriptor descriptor{};
+#if !defined(__EMSCRIPTEN__)
   constexpr WGPUInstanceFeatureName features[]{WGPUInstanceFeatureName_TimedWaitAny};
   const WGPUInstanceLimits instance_limits{nullptr, 1};
-  const WGPUInstanceDescriptor descriptor{nullptr, 1, features, &instance_limits};
+  descriptor.requiredFeatureCount = 1;
+  descriptor.requiredFeatures = features;
+  descriptor.requiredLimits = &instance_limits;
+#endif
   auto* state = new (memory) webgpu_instance{*host, wgpuCreateInstance(&descriptor)};
   if (state->instance == nullptr) {
     state->~webgpu_instance();
     deallocate(*host, memory);
     return GRANIT_ERROR_INITIALIZATION_FAILED;
   }
+
+#if defined(__EMSCRIPTEN__)
+  const auto register_result = register_instance(state, out_instance);
+  if (register_result != GRANIT_SUCCESS) {
+    release_resources(*state);
+    state->~webgpu_instance();
+    deallocate(*host, memory);
+    return register_result;
+  }
+  WGPURequestAdapterOptions options = WGPU_REQUEST_ADAPTER_OPTIONS_INIT;
+  WGPURequestAdapterCallbackInfo callback = WGPU_REQUEST_ADAPTER_CALLBACK_INFO_INIT;
+  callback.mode = WGPUCallbackMode_AllowSpontaneous;
+  callback.callback = receive_adapter_async;
+  callback.userdata1 = state;
+  static_cast<void>(wgpuInstanceRequestAdapter(state->instance, &options, callback));
+  constexpr char initializing_message[] = "Emscripten WebGPU initialization started";
+  emit(*host, GRANIT_DIAGNOSTIC_SEVERITY_INFO, initializing_message,
+       sizeof(initializing_message) - 1);
+  return GRANIT_SUCCESS;
+#else
 
   adapter_request adapter{};
   WGPURequestAdapterOptions adapter_options{};
@@ -494,36 +616,18 @@ granit_result create_backend(const granit_backend_plugin_host_api* host,
   state->lifecycle.mark_ready();
 #endif
 
-  granit_backend_plugin_instance handle = next_instance.fetch_add(1, std::memory_order_relaxed);
-  if (handle == 0) {
-    handle = next_instance.fetch_add(1, std::memory_order_relaxed);
-  }
-  try {
-    const std::scoped_lock lock{instances_mutex};
-    const auto [iterator, inserted] = instances.emplace(handle, state);
-    static_cast<void>(iterator);
-    if (!inserted) {
-      release_resources(*state);
-      state->~webgpu_instance();
-      deallocate(*host, memory);
-      return GRANIT_ERROR_INTERNAL;
-    }
-  } catch (const std::bad_alloc&) {
+  const auto register_result = register_instance(state, out_instance);
+  if (register_result != GRANIT_SUCCESS) {
     release_resources(*state);
     state->~webgpu_instance();
     deallocate(*host, memory);
-    return GRANIT_ERROR_OUT_OF_MEMORY;
-  } catch (...) {
-    release_resources(*state);
-    state->~webgpu_instance();
-    deallocate(*host, memory);
-    return GRANIT_ERROR_INTERNAL;
+    return register_result;
   }
 
   constexpr char message[] = "Dawn WebGPU instance, adapter and device created";
   emit(*host, GRANIT_DIAGNOSTIC_SEVERITY_INFO, message, sizeof(message) - 1);
-  *out_instance = handle;
   return GRANIT_SUCCESS;
+#endif
 }
 
 void destroy_backend(granit_backend_plugin_instance instance) noexcept {
@@ -1886,7 +1990,7 @@ granit_result acquire_swapchain(granit_backend_plugin_instance instance,
   const auto native_view = wgpuTextureCreateView(acquired.texture, nullptr);
   if (native_view == nullptr) {
     static_cast<void>(
-        wgpuSurfacePresent(static_cast<WGPUSurface>(swapchain_found->second.native_surface)));
+        present_surface(static_cast<WGPUSurface>(swapchain_found->second.native_surface)));
     wgpuTextureRelease(acquired.texture);
     return GRANIT_ERROR_OUT_OF_MEMORY;
   }
@@ -1905,7 +2009,7 @@ granit_result acquire_swapchain(granit_backend_plugin_instance instance,
     found->second->textures.erase(texture);
     wgpuTextureViewRelease(native_view);
     static_cast<void>(
-        wgpuSurfacePresent(static_cast<WGPUSurface>(swapchain_found->second.native_surface)));
+        present_surface(static_cast<WGPUSurface>(swapchain_found->second.native_surface)));
     wgpuTextureRelease(acquired.texture);
     return GRANIT_ERROR_OUT_OF_MEMORY;
   }
@@ -1926,8 +2030,7 @@ granit_result finish_swapchain_frame(webgpu_instance& state,
   const auto texture = state.textures.find(swapchain.acquired_texture);
   if (view == state.texture_views.end() || texture == state.textures.end())
     return GRANIT_ERROR_INTERNAL;
-  const auto present_result =
-      wgpuSurfacePresent(static_cast<WGPUSurface>(swapchain.native_surface));
+  const auto present_result = present_surface(static_cast<WGPUSurface>(swapchain.native_surface));
   wgpuTextureViewRelease(view->second.view);
   wgpuTextureRelease(texture->second.texture);
   state.texture_views.erase(view);

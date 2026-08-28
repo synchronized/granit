@@ -162,7 +162,7 @@
 
 ## 九、多后端与 Web 平台
 
-**状态：进行中；S-10A 至 S-10D、S-10E1 至 S-10E2 已完成，S-10E3 正在实施。**
+**状态：进行中；S-10A 至 S-10D、S-10E1 至 S-10E3 已完成，准备进入 S-10E4。**
 
 - **[S-10](plans/S-10-0.4.0-webgpu-backend.md) / P2**：先定义后端无关的内部设备、资源、命令、
   同步与 Surface 边界，在保持 Vulkan 后端功能和性能的前提下验证桌面 WebGPU 离屏 MVP；随后建立
@@ -172,8 +172,8 @@
   诊断、反射、确定性资产与缓存闭环；S-10D 已完成 Emscripten 平台验证，S-10E1 已完成 Registry
   资源、呈现与命令路径的核心去 Vulkan 化；S-10E2 已统一异步 Provider 生命周期、状态查询、
   事件推进和终止错误传播。S-10E3 已完成 Canvas/Swapchain 插件状态机、Registry 动态 Backbuffer
-  和插件呈现资源适配器；Emscripten Debug/Release 及 Windows Chrome WebGPU 启动与输入验证已
-  通过，下一步接入公共 Renderer。
+  和插件呈现资源适配器；Emscripten 静态 Provider 已通过 Debug/Release 浏览器异步初始化、Canvas、
+  Acquire/Cancel、状态与输入验证。下一步进入 S-10E4 公共 Renderer 接入。
 
 ## 十、Android 移动平台
 
@@ -187,7 +187,7 @@
 
 ## 近期执行顺序
 
-1. 完成 S-10E3 公共 Renderer 呈现接线。
+1. 实现 S-10E4 WebGPU Provider 状态与公共 Renderer 工厂接线。
 2. 依次完成 S-10E4 公共 Renderer 接入及 S-10E5 示例与验收。
 3. S-06D 最终验收等待稳定版本与 component 范围决策；不在 0.x 阶段提前宣布稳定。
 4. 完成 0.4.0 多后端与 Web 路径后，为 S-11 建立独立 Android Plan，再进入 NDK 与移动 Surface

@@ -206,6 +206,31 @@ TEST_CASE("后端插件 Loader 完成版本化握手", "[backend][plugin]") {
   CHECK(loader.get_capabilities(instance, &capabilities) == GRANIT_ERROR_INVALID_ARGUMENT);
 }
 
+TEST_CASE("后端插件 Loader 接入静态 Provider API", "[backend][plugin][static]") {
+  granit::detail::backend_plugin_loader module;
+  REQUIRE(module.open(GRANIT_FAKE_BACKEND_PLUGIN_PATH, GRANIT_BACKEND_PLUGIN_KIND_WEBGPU) ==
+          GRANIT_SUCCESS);
+  REQUIRE(module.api() != nullptr);
+
+  granit::detail::backend_plugin_loader loader;
+  CHECK(loader.open_static(nullptr, GRANIT_BACKEND_PLUGIN_KIND_WEBGPU) ==
+        GRANIT_ERROR_INCOMPATIBLE_DRIVER);
+  CHECK_FALSE(loader.is_open());
+  REQUIRE(loader.open_static(module.api(), GRANIT_BACKEND_PLUGIN_KIND_WEBGPU) == GRANIT_SUCCESS);
+  CHECK(loader.is_open());
+  CHECK(loader.api() == module.api());
+
+  host_state state;
+  auto host = make_host(state);
+  granit_backend_plugin_instance instance{};
+  REQUIRE(loader.create_instance(&host, &instance) == GRANIT_SUCCESS);
+  REQUIRE(loader.process_events(instance) == GRANIT_SUCCESS);
+  CHECK(loader.destroy_instance(instance) == GRANIT_SUCCESS);
+  loader.close();
+  CHECK_FALSE(loader.is_open());
+  CHECK(module.is_open());
+}
+
 TEST_CASE("WebGPU 插件 Buffer 遵守所有权、Usage 与范围契约", "[backend][plugin]") {
   granit::detail::backend_plugin_loader loader;
   REQUIRE(loader.open(GRANIT_FAKE_BACKEND_PLUGIN_PATH, GRANIT_BACKEND_PLUGIN_KIND_WEBGPU) ==

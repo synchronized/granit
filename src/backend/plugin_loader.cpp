@@ -101,6 +101,17 @@ granit_result backend_plugin_loader::open(const char* library_path,
 }
 
 granit_result
+backend_plugin_loader::open_static(const granit_backend_plugin_api* api,
+                                   granit_backend_plugin_kind expected_kind) noexcept {
+  close();
+  if (!is_compatible(api, expected_kind)) {
+    return GRANIT_ERROR_INCOMPATIBLE_DRIVER;
+  }
+  api_ = api;
+  return GRANIT_SUCCESS;
+}
+
+granit_result
 backend_plugin_loader::create_instance(const granit_backend_plugin_host_api* host,
                                        granit_backend_plugin_instance* out_instance) noexcept {
   if (api_ == nullptr || out_instance == nullptr || !is_valid_host(host)) {
