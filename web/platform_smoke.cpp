@@ -9,6 +9,7 @@
 #include <emscripten/emscripten.h>
 #include <emscripten/html5.h>
 
+#include <granit/renderer/pipeline.h>
 #include <granit/renderer/renderer.h>
 #include <granit/renderer/shader.h>
 #include <granit/renderer/surface.h>
@@ -49,7 +50,7 @@ bool load_startup_resource() noexcept {
   return size >= sizeof(expected) - 1 && std::memcmp(content, expected, sizeof(expected) - 1) == 0;
 }
 
-granit_result validate_public_shaders() {
+granit_result validate_public_pipeline() {
   constexpr char vertex_wgsl[] = R"(
 @vertex fn main(@builtin(vertex_index) index: u32) -> @builtin(position) vec4f {
   var positions = array<vec2f, 3>(vec2f(0.0, 0.5), vec2f(-0.5, -0.5), vec2f(0.5, -0.5));
@@ -78,7 +79,40 @@ granit_result validate_public_shaders() {
     static_cast<void>(granit_shader_destroy(state.renderer, vertex));
     return result;
   }
-  result = granit_shader_destroy(state.renderer, fragment);
+  granit_pipeline_layout_desc layout_desc = GRANIT_PIPELINE_LAYOUT_DESC_INIT;
+  granit_pipeline_layout layout{};
+  result = granit_pipeline_layout_create(state.renderer, &layout_desc, &layout);
+  if (result != GRANIT_SUCCESS) {
+    static_cast<void>(granit_shader_destroy(state.renderer, fragment));
+    static_cast<void>(granit_shader_destroy(state.renderer, vertex));
+    return result;
+  }
+  constexpr granit_texture_format color_format = GRANIT_TEXTURE_FORMAT_RGBA8_UNORM;
+  granit_graphics_pipeline_desc pipeline_desc = GRANIT_GRAPHICS_PIPELINE_DESC_INIT;
+  pipeline_desc.layout = layout;
+  pipeline_desc.vertex_shader = vertex;
+  pipeline_desc.fragment_shader = fragment;
+  pipeline_desc.color_format_count = 1;
+  pipeline_desc.color_formats = &color_format;
+  granit_graphics_pipeline pipeline{};
+  result = granit_graphics_pipeline_create(state.renderer, &pipeline_desc, &pipeline);
+  if (result != GRANIT_SUCCESS) {
+    static_cast<void>(granit_pipeline_layout_destroy(state.renderer, layout));
+    static_cast<void>(granit_shader_destroy(state.renderer, fragment));
+    static_cast<void>(granit_shader_destroy(state.renderer, vertex));
+    return result;
+  }
+  if (granit_shader_destroy(state.renderer, vertex) != GRANIT_ERROR_INVALID_ARGUMENT ||
+      granit_pipeline_layout_destroy(state.renderer, layout) != GRANIT_ERROR_INVALID_ARGUMENT) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+  result = granit_graphics_pipeline_destroy(state.renderer, pipeline);
+  if (result == GRANIT_SUCCESS) {
+    result = granit_pipeline_layout_destroy(state.renderer, layout);
+  }
+  if (result == GRANIT_SUCCESS) {
+    result = granit_shader_destroy(state.renderer, fragment);
+  }
   if (result == GRANIT_SUCCESS) {
     result = granit_shader_destroy(state.renderer, vertex);
   }
@@ -208,9 +242,9 @@ void tick(void*) noexcept {
          limits_result == GRANIT_SUCCESS ? GRANIT_ERROR_INTERNAL : limits_result);
     return;
   }
-  const auto shader_result = validate_public_shaders();
-  if (shader_result != GRANIT_SUCCESS) {
-    fail("renderer-shaders", shader_result);
+  const auto pipeline_result = validate_public_pipeline();
+  if (pipeline_result != GRANIT_SUCCESS) {
+    fail("renderer-pipeline", pipeline_result);
     return;
   }
   try {

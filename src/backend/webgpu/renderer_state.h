@@ -12,6 +12,7 @@
 #include "backend/lifecycle.h"
 #include "backend/plugin_loader.h"
 #include "backend/renderer.h"
+#include "backend/webgpu/pipeline_adapter.h"
 #include "backend/webgpu/presentation_adapter.h"
 #include "backend/webgpu/shader_adapter.h"
 
@@ -37,6 +38,7 @@ public:
   }
   [[nodiscard]] webgpu_presentation_adapter* presentation() noexcept { return presentation_.get(); }
   [[nodiscard]] webgpu_shader_adapter* shaders() noexcept { return shaders_.get(); }
+  [[nodiscard]] webgpu_pipeline_adapter* pipelines() noexcept { return pipelines_.get(); }
 
 private:
   static void* allocate(std::uint64_t size, std::uint64_t alignment, void*) noexcept;
@@ -53,6 +55,7 @@ private:
   backend_capabilities capabilities_{};
   std::unique_ptr<webgpu_presentation_adapter> presentation_;
   std::unique_ptr<webgpu_shader_adapter> shaders_;
+  std::unique_ptr<webgpu_pipeline_adapter> pipelines_;
 };
 
 } // namespace granit::detail

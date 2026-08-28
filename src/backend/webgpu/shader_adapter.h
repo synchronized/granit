@@ -23,6 +23,8 @@ public:
                                             const char* wgsl, std::uint64_t wgsl_length,
                                             const char* entry_point,
                                             std::uint64_t entry_point_length) const noexcept;
+  [[nodiscard]] granit_backend_plugin_shader
+  native_handle(backend_shader_resource& resource) const noexcept;
 
 private:
   std::shared_ptr<webgpu_shader_context> context_;

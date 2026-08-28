@@ -89,6 +89,7 @@ typedef unsigned int WGPUSurfaceGetCurrentTextureStatus;
 #define WGPUTextureUsage_RenderAttachment 16
 #define WGPUTextureDimension_2D 2
 #define WGPUTextureFormat_RGBA8Unorm 18
+#define WGPUTextureFormat_BGRA8Unorm 23
 #define WGPUAddressMode_ClampToEdge 1
 #define WGPUFilterMode_Nearest 1
 #define WGPUFilterMode_Linear 2

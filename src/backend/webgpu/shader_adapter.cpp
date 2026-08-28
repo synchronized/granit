@@ -57,4 +57,10 @@ webgpu_shader_adapter::create_shader(backend_shader_resource& resource, std::uin
   return context_->loader->create_shader(context_->instance, &desc, &shader->handle_);
 }
 
+granit_backend_plugin_shader
+webgpu_shader_adapter::native_handle(backend_shader_resource& resource) const noexcept {
+  const auto* shader = as_shader(resource);
+  return shader == nullptr ? 0 : shader->handle_;
+}
+
 } // namespace granit::detail

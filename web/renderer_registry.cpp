@@ -56,6 +56,8 @@ granit_result web_renderer_registry::destroy(granit_renderer renderer) {
   std::vector<std::shared_ptr<swapchain_record>> swapchains;
   std::vector<std::shared_ptr<surface_record>> surfaces;
   std::vector<std::shared_ptr<shader_record>> shaders;
+  std::vector<std::shared_ptr<graphics_pipeline_record>> graphics_pipelines;
+  std::vector<std::shared_ptr<pipeline_layout_record>> pipeline_layouts;
   {
     std::lock_guard lock{mutex_};
     if (handles_.find(renderer, resource_type::renderer, 0) == nullptr) {
@@ -96,6 +98,24 @@ granit_result web_renderer_registry::destroy(granit_renderer renderer) {
         ++surface;
       }
     }
+    for (auto pipeline = graphics_pipelines_.begin(); pipeline != graphics_pipelines_.end();) {
+      if (pipeline->second->renderer == found->second) {
+        static_cast<void>(handles_.erase(pipeline->first, resource_type::pipeline, 0));
+        graphics_pipelines.push_back(std::move(pipeline->second));
+        pipeline = graphics_pipelines_.erase(pipeline);
+      } else {
+        ++pipeline;
+      }
+    }
+    for (auto layout = pipeline_layouts_.begin(); layout != pipeline_layouts_.end();) {
+      if (layout->second->renderer == found->second) {
+        static_cast<void>(handles_.erase(layout->first, resource_type::pipeline_layout, 0));
+        pipeline_layouts.push_back(std::move(layout->second));
+        layout = pipeline_layouts_.erase(layout);
+      } else {
+        ++layout;
+      }
+    }
     for (auto shader = shaders_.begin(); shader != shaders_.end();) {
       if (shader->second->renderer == found->second) {
         static_cast<void>(handles_.erase(shader->first, resource_type::shader, 0));
@@ -115,6 +135,8 @@ granit_result web_renderer_registry::destroy(granit_renderer renderer) {
   frames.clear();
   swapchains.clear();
   surfaces.clear();
+  graphics_pipelines.clear();
+  pipeline_layouts.clear();
   shaders.clear();
   state.reset();
   return GRANIT_SUCCESS;
@@ -556,9 +578,174 @@ granit_result web_renderer_registry::destroy_shader(granit_renderer renderer,
         found->second->renderer != state->second) {
       return GRANIT_ERROR_INVALID_HANDLE;
     }
+    for (const auto& [handle, pipeline] : graphics_pipelines_) {
+      static_cast<void>(handle);
+      if (pipeline->vertex_shader == found->second || pipeline->fragment_shader == found->second) {
+        return GRANIT_ERROR_INVALID_ARGUMENT;
+      }
+    }
     record = std::move(found->second);
     shaders_.erase(found);
     const auto result = handles_.erase(shader, resource_type::shader, 0);
+    if (result != GRANIT_SUCCESS) {
+      return result;
+    }
+  }
+  record.reset();
+  return GRANIT_SUCCESS;
+}
+
+granit_result web_renderer_registry::create_pipeline_layout(granit_renderer renderer,
+                                                            granit_pipeline_layout& layout) {
+  try {
+    const auto state = acquire(renderer);
+    if (!state || state->pipelines() == nullptr) {
+      return state ? GRANIT_ERROR_NOT_READY : GRANIT_ERROR_INVALID_HANDLE;
+    }
+    auto record = std::make_shared<pipeline_layout_record>();
+    record->renderer = state;
+    record->native = state->pipelines()->allocate_pipeline_layout();
+    if (!record->native) {
+      return GRANIT_ERROR_OUT_OF_MEMORY;
+    }
+    const auto result = state->pipelines()->create_pipeline_layout(*record->native);
+    if (result != GRANIT_SUCCESS) {
+      return result;
+    }
+    std::lock_guard lock{mutex_};
+    if (renderers_.find(renderer) == renderers_.end()) {
+      return GRANIT_ERROR_INVALID_HANDLE;
+    }
+    const auto handle = handles_.insert(record.get(), resource_type::pipeline_layout, 0);
+    if (handle == GRANIT_NULL_HANDLE) {
+      return GRANIT_ERROR_OUT_OF_MEMORY;
+    }
+    try {
+      pipeline_layouts_.emplace(handle, std::move(record));
+    } catch (...) {
+      static_cast<void>(handles_.erase(handle, resource_type::pipeline_layout, 0));
+      throw;
+    }
+    layout = handle;
+    return GRANIT_SUCCESS;
+  } catch (const std::bad_alloc&) {
+    return GRANIT_ERROR_OUT_OF_MEMORY;
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+granit_result web_renderer_registry::destroy_pipeline_layout(granit_renderer renderer,
+                                                             granit_pipeline_layout layout) {
+  std::shared_ptr<pipeline_layout_record> record;
+  {
+    std::lock_guard lock{mutex_};
+    const auto state = renderers_.find(renderer);
+    const auto found = pipeline_layouts_.find(layout);
+    if (state == renderers_.end() || found == pipeline_layouts_.end() ||
+        found->second->renderer != state->second) {
+      return GRANIT_ERROR_INVALID_HANDLE;
+    }
+    for (const auto& [handle, pipeline] : graphics_pipelines_) {
+      static_cast<void>(handle);
+      if (pipeline->layout == found->second) {
+        return GRANIT_ERROR_INVALID_ARGUMENT;
+      }
+    }
+    record = std::move(found->second);
+    pipeline_layouts_.erase(found);
+    const auto result = handles_.erase(layout, resource_type::pipeline_layout, 0);
+    if (result != GRANIT_SUCCESS) {
+      return result;
+    }
+  }
+  record.reset();
+  return GRANIT_SUCCESS;
+}
+
+granit_result web_renderer_registry::create_graphics_pipeline(granit_renderer renderer,
+                                                              granit_pipeline_layout layout,
+                                                              granit_shader vertex_shader,
+                                                              granit_shader fragment_shader,
+                                                              granit_texture_format color_format,
+                                                              granit_graphics_pipeline& pipeline) {
+  try {
+    const auto state = acquire(renderer);
+    if (!state || state->pipelines() == nullptr || state->shaders() == nullptr) {
+      return state ? GRANIT_ERROR_NOT_READY : GRANIT_ERROR_INVALID_HANDLE;
+    }
+    std::shared_ptr<pipeline_layout_record> layout_record;
+    std::shared_ptr<shader_record> vertex_record;
+    std::shared_ptr<shader_record> fragment_record;
+    {
+      std::lock_guard lock{mutex_};
+      const auto layout_found = pipeline_layouts_.find(layout);
+      const auto vertex_found = shaders_.find(vertex_shader);
+      const auto fragment_found = shaders_.find(fragment_shader);
+      if (layout_found == pipeline_layouts_.end() || vertex_found == shaders_.end() ||
+          fragment_found == shaders_.end() || layout_found->second->renderer != state ||
+          vertex_found->second->renderer != state || fragment_found->second->renderer != state) {
+        return GRANIT_ERROR_INVALID_HANDLE;
+      }
+      layout_record = layout_found->second;
+      vertex_record = vertex_found->second;
+      fragment_record = fragment_found->second;
+    }
+    auto record = std::make_shared<graphics_pipeline_record>();
+    record->renderer = state;
+    record->layout = layout_record;
+    record->vertex_shader = vertex_record;
+    record->fragment_shader = fragment_record;
+    record->native = state->pipelines()->allocate_graphics_pipeline();
+    if (!record->native) {
+      return GRANIT_ERROR_OUT_OF_MEMORY;
+    }
+    const auto result = state->pipelines()->create_graphics_pipeline(
+        *record->native, *layout_record->native,
+        state->shaders()->native_handle(*vertex_record->native),
+        state->shaders()->native_handle(*fragment_record->native), color_format);
+    if (result != GRANIT_SUCCESS) {
+      return result;
+    }
+    std::lock_guard lock{mutex_};
+    if (pipeline_layouts_.find(layout) == pipeline_layouts_.end() ||
+        shaders_.find(vertex_shader) == shaders_.end() ||
+        shaders_.find(fragment_shader) == shaders_.end()) {
+      return GRANIT_ERROR_INVALID_HANDLE;
+    }
+    const auto handle = handles_.insert(record.get(), resource_type::pipeline, 0);
+    if (handle == GRANIT_NULL_HANDLE) {
+      return GRANIT_ERROR_OUT_OF_MEMORY;
+    }
+    try {
+      graphics_pipelines_.emplace(handle, std::move(record));
+    } catch (...) {
+      static_cast<void>(handles_.erase(handle, resource_type::pipeline, 0));
+      throw;
+    }
+    pipeline = handle;
+    return GRANIT_SUCCESS;
+  } catch (const std::bad_alloc&) {
+    return GRANIT_ERROR_OUT_OF_MEMORY;
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+granit_result web_renderer_registry::destroy_graphics_pipeline(granit_renderer renderer,
+                                                               granit_graphics_pipeline pipeline) {
+  std::shared_ptr<graphics_pipeline_record> record;
+  {
+    std::lock_guard lock{mutex_};
+    const auto state = renderers_.find(renderer);
+    const auto found = graphics_pipelines_.find(pipeline);
+    if (state == renderers_.end() || found == graphics_pipelines_.end() ||
+        found->second->renderer != state->second) {
+      return GRANIT_ERROR_INVALID_HANDLE;
+    }
+    record = std::move(found->second);
+    graphics_pipelines_.erase(found);
+    const auto result = handles_.erase(pipeline, resource_type::pipeline, 0);
     if (result != GRANIT_SUCCESS) {
       return result;
     }

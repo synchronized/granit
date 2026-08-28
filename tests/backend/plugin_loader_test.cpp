@@ -528,8 +528,13 @@ TEST_CASE("WebGPU 插件绑定与 Pipeline 遵守依赖生命周期", "[backend]
   REQUIRE(loader.create_shader(first, &vertex_desc, &vertex_shader) == GRANIT_SUCCESS);
   REQUIRE(loader.create_shader(first, &fragment_desc, &fragment_shader) == GRANIT_SUCCESS);
   granit_backend_plugin_render_pipeline_desc pipeline_desc{
-      sizeof(granit_backend_plugin_render_pipeline_desc), 0, pipeline_layout, vertex_shader,
-      fragment_shader};
+      sizeof(granit_backend_plugin_render_pipeline_desc),
+      0,
+      pipeline_layout,
+      vertex_shader,
+      fragment_shader,
+      GRANIT_BACKEND_PLUGIN_TEXTURE_FORMAT_RGBA8_UNORM,
+      0};
   granit_backend_plugin_render_pipeline pipeline{};
   REQUIRE(loader.create_render_pipeline(first, &pipeline_desc, &pipeline) == GRANIT_SUCCESS);
   granit_backend_plugin_render_pipeline foreign_pipeline = 123;

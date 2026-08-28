@@ -162,7 +162,7 @@
 
 ## 九、多后端与 Web 平台
 
-**状态：进行中；S-10A 至 S-10D、S-10E1 至 S-10E3 已完成，准备进入 S-10E4。**
+**状态：进行中；S-10A 至 S-10D、S-10E1 至 S-10E3 已完成，正在实施 S-10E4。**
 
 - **[S-10](plans/S-10-0.4.0-webgpu-backend.md) / P2**：先定义后端无关的内部设备、资源、命令、
   同步与 Surface 边界，在保持 Vulkan 后端功能和性能的前提下验证桌面 WebGPU 离屏 MVP；随后建立
@@ -178,8 +178,8 @@
   Registry 根记录已通过该接口统一状态、能力和事件推进，并已增加 WebGPU 静态 Provider 工厂
   与通用销毁路径；Emscripten Smoke 已通过公共 Renderer、Canvas Surface、Swapchain、Frame 和
   动态 Backbuffer API 驱动 WebGPU，并验证帧结束后的借用句柄失效。公共 Shader 描述已增加可选
-  WGSL 视图，WebGPU Shader 创建/销毁已接入 generation 句柄。下一步迁移 Pipeline、命令记录与
-  提交路径。
+  WGSL 视图，WebGPU Shader 创建/销毁已接入 generation 句柄；空 Pipeline Layout 和基础单颜色
+  Graphics Pipeline 已接入公共 API。下一步迁移命令记录与提交路径。
 
 ## 十、Android 移动平台
 

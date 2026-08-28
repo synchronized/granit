@@ -4,6 +4,7 @@
 add_executable(
   granit_web_platform_smoke
   platform_smoke.cpp
+  pipeline_api.cpp
   renderer_api.cpp
   renderer_registry.cpp
   shader_api.cpp
@@ -12,6 +13,7 @@ add_executable(
   "${PROJECT_SOURCE_DIR}/src/backend/plugin_loader.cpp"
   "${PROJECT_SOURCE_DIR}/src/backend/webgpu/plugin.cpp"
   "${PROJECT_SOURCE_DIR}/src/backend/webgpu/presentation_adapter.cpp"
+  "${PROJECT_SOURCE_DIR}/src/backend/webgpu/pipeline_adapter.cpp"
   "${PROJECT_SOURCE_DIR}/src/backend/webgpu/renderer_state.cpp"
   "${PROJECT_SOURCE_DIR}/src/backend/webgpu/shader_adapter.cpp"
   "${PROJECT_SOURCE_DIR}/src/core/handle_table.cpp"

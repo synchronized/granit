@@ -9,6 +9,7 @@
 #include <mutex>
 #include <unordered_map>
 
+#include <granit/renderer/pipeline.h>
 #include <granit/renderer/renderer.h>
 #include <granit/renderer/shader.h>
 #include <granit/renderer/surface.h>
@@ -64,6 +65,16 @@ public:
                                             std::uint64_t entry_point_length,
                                             granit_shader& shader);
   [[nodiscard]] granit_result destroy_shader(granit_renderer renderer, granit_shader shader);
+  [[nodiscard]] granit_result create_pipeline_layout(granit_renderer renderer,
+                                                     granit_pipeline_layout& layout);
+  [[nodiscard]] granit_result destroy_pipeline_layout(granit_renderer renderer,
+                                                      granit_pipeline_layout layout);
+  [[nodiscard]] granit_result
+  create_graphics_pipeline(granit_renderer renderer, granit_pipeline_layout layout,
+                           granit_shader vertex_shader, granit_shader fragment_shader,
+                           granit_texture_format color_format, granit_graphics_pipeline& pipeline);
+  [[nodiscard]] granit_result destroy_graphics_pipeline(granit_renderer renderer,
+                                                        granit_graphics_pipeline pipeline);
 
 private:
   struct surface_record {
@@ -86,6 +97,17 @@ private:
     std::shared_ptr<webgpu_renderer_state> renderer;
     std::unique_ptr<backend_shader_resource> native;
   };
+  struct pipeline_layout_record {
+    std::shared_ptr<webgpu_renderer_state> renderer;
+    std::unique_ptr<backend_pipeline_layout_resource> native;
+  };
+  struct graphics_pipeline_record {
+    std::shared_ptr<webgpu_renderer_state> renderer;
+    std::shared_ptr<pipeline_layout_record> layout;
+    std::shared_ptr<shader_record> vertex_shader;
+    std::shared_ptr<shader_record> fragment_shader;
+    std::unique_ptr<backend_graphics_pipeline_resource> native;
+  };
 
   [[nodiscard]] std::shared_ptr<webgpu_renderer_state> acquire(granit_renderer renderer);
   void erase_backbuffer(swapchain_record& swapchain) noexcept;
@@ -97,6 +119,10 @@ private:
   std::unordered_map<granit_swapchain, std::shared_ptr<swapchain_record>> swapchains_;
   std::unordered_map<granit_frame, std::shared_ptr<frame_record>> frames_;
   std::unordered_map<granit_shader, std::shared_ptr<shader_record>> shaders_;
+  std::unordered_map<granit_pipeline_layout, std::shared_ptr<pipeline_layout_record>>
+      pipeline_layouts_;
+  std::unordered_map<granit_graphics_pipeline, std::shared_ptr<graphics_pipeline_record>>
+      graphics_pipelines_;
 };
 
 } // namespace granit::detail

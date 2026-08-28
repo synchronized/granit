@@ -9,7 +9,7 @@
 #include <granit/core/diagnostic.h>
 #include <granit/core/result.h>
 
-#define GRANIT_BACKEND_PLUGIN_ABI_VERSION UINT32_C(6)
+#define GRANIT_BACKEND_PLUGIN_ABI_VERSION UINT32_C(7)
 #define GRANIT_BACKEND_PLUGIN_KIND_WEBGPU UINT32_C(1)
 #define GRANIT_BACKEND_PLUGIN_QUERY_SYMBOL "granit_backend_plugin_query"
 
@@ -113,6 +113,8 @@ typedef struct granit_backend_plugin_render_pipeline_desc {
   granit_backend_plugin_pipeline_layout layout;
   granit_backend_plugin_shader vertex_shader;
   granit_backend_plugin_shader fragment_shader;
+  uint32_t color_format;
+  uint32_t reserved_2;
 } granit_backend_plugin_render_pipeline_desc;
 
 /** Canvas selector 仅在调用期间有效；插件必须复制后续需要的内容。 */

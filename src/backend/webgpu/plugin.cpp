@@ -1348,7 +1348,7 @@ create_pipeline_layout(granit_backend_plugin_instance instance,
                        granit_backend_plugin_pipeline_layout* out_pipeline_layout) noexcept {
   if (out_pipeline_layout != nullptr)
     *out_pipeline_layout = 0;
-  if (instance == 0 || bind_group_layout == 0 || out_pipeline_layout == nullptr)
+  if (instance == 0 || out_pipeline_layout == nullptr)
     return GRANIT_ERROR_INVALID_ARGUMENT;
   const std::scoped_lock lock{instances_mutex};
   const auto found = instances.find(instance);
@@ -1357,12 +1357,16 @@ create_pipeline_layout(granit_backend_plugin_instance instance,
   if (const auto ready = require_ready(*found->second); ready != GRANIT_SUCCESS)
     return ready;
   auto& state = *found->second;
-  const auto layout = state.bind_group_layouts.find(bind_group_layout);
-  if (layout == state.bind_group_layouts.end())
-    return GRANIT_ERROR_INVALID_HANDLE;
   WGPUPipelineLayoutDescriptor descriptor = WGPU_PIPELINE_LAYOUT_DESCRIPTOR_INIT;
-  descriptor.bindGroupLayoutCount = 1;
-  descriptor.bindGroupLayouts = &layout->second;
+  WGPUBindGroupLayout native_layout{};
+  if (bind_group_layout != 0) {
+    const auto layout = state.bind_group_layouts.find(bind_group_layout);
+    if (layout == state.bind_group_layouts.end())
+      return GRANIT_ERROR_INVALID_HANDLE;
+    native_layout = layout->second;
+    descriptor.bindGroupLayoutCount = 1;
+    descriptor.bindGroupLayouts = &native_layout;
+  }
   const auto native = wgpuDeviceCreatePipelineLayout(state.device, &descriptor);
   if (native == nullptr)
     return GRANIT_ERROR_OUT_OF_MEMORY;
@@ -1412,7 +1416,9 @@ create_render_pipeline(granit_backend_plugin_instance instance,
     *out_render_pipeline = 0;
   if (instance == 0 || desc == nullptr || out_render_pipeline == nullptr ||
       desc->struct_size < sizeof(*desc) || desc->reserved != 0 || desc->layout == 0 ||
-      desc->vertex_shader == 0 || desc->fragment_shader == 0)
+      desc->vertex_shader == 0 || desc->fragment_shader == 0 || desc->reserved_2 != 0 ||
+      (desc->color_format != GRANIT_BACKEND_PLUGIN_TEXTURE_FORMAT_RGBA8_UNORM &&
+       desc->color_format != GRANIT_BACKEND_PLUGIN_TEXTURE_FORMAT_BGRA8_UNORM))
     return GRANIT_ERROR_INVALID_ARGUMENT;
   const std::scoped_lock lock{instances_mutex};
   const auto found = instances.find(instance);
@@ -1431,7 +1437,9 @@ create_render_pipeline(granit_backend_plugin_instance instance,
       fragment_shader->second.stage != GRANIT_BACKEND_PLUGIN_SHADER_STAGE_FRAGMENT)
     return GRANIT_ERROR_INVALID_ARGUMENT;
   WGPUColorTargetState target = WGPU_COLOR_TARGET_STATE_INIT;
-  target.format = WGPUTextureFormat_RGBA8Unorm;
+  target.format = desc->color_format == GRANIT_BACKEND_PLUGIN_TEXTURE_FORMAT_RGBA8_UNORM
+                      ? WGPUTextureFormat_RGBA8Unorm
+                      : WGPUTextureFormat_BGRA8Unorm;
   target.writeMask = WGPUColorWriteMask_All;
   WGPUFragmentState fragment = WGPU_FRAGMENT_STATE_INIT;
   fragment.module = fragment_shader->second.shader;

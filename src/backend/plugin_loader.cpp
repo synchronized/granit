@@ -598,9 +598,20 @@ GRANIT_LOADER_DESTROY_METHOD(destroy_bind_group, destroy_bind_group,
 GRANIT_LOADER_CREATE_METHOD(create_shader, create_shader, const granit_backend_plugin_shader_desc*,
                             granit_backend_plugin_shader)
 GRANIT_LOADER_DESTROY_METHOD(destroy_shader, destroy_shader, granit_backend_plugin_shader)
-GRANIT_LOADER_CREATE_METHOD(create_pipeline_layout, create_pipeline_layout,
-                            granit_backend_plugin_bind_group_layout,
-                            granit_backend_plugin_pipeline_layout)
+granit_result backend_plugin_loader::create_pipeline_layout(
+    granit_backend_plugin_instance instance,
+    granit_backend_plugin_bind_group_layout bind_group_layout,
+    granit_backend_plugin_pipeline_layout* pipeline_layout) noexcept {
+  if (api_ == nullptr || instance == 0 || pipeline_layout == nullptr)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  if (std::find(instances_.begin(), instances_.end(), instance) == instances_.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  try {
+    return api_->instance_api->create_pipeline_layout(instance, bind_group_layout, pipeline_layout);
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
 GRANIT_LOADER_DESTROY_METHOD(destroy_pipeline_layout, destroy_pipeline_layout,
                              granit_backend_plugin_pipeline_layout)
 GRANIT_LOADER_CREATE_METHOD(create_render_pipeline, create_render_pipeline,

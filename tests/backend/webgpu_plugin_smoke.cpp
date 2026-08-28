@@ -159,8 +159,13 @@ int main(int argc, char** argv) {
     return 6;
   }
   granit_backend_plugin_render_pipeline_desc pipeline_desc{
-      sizeof(granit_backend_plugin_render_pipeline_desc), 0, pipeline_layout, vertex_shader,
-      fragment_shader};
+      sizeof(granit_backend_plugin_render_pipeline_desc),
+      0,
+      pipeline_layout,
+      vertex_shader,
+      fragment_shader,
+      GRANIT_BACKEND_PLUGIN_TEXTURE_FORMAT_RGBA8_UNORM,
+      0};
   if (loader.create_render_pipeline(instance, &pipeline_desc, &pipeline) != GRANIT_SUCCESS ||
       pipeline == 0) {
     std::fprintf(stderr, "WebGPU 绑定或 Render Pipeline 生命周期验证失败\n");

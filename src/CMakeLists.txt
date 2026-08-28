@@ -8,6 +8,8 @@ add_library(
   backend/plugin_loader.h
   backend/webgpu/presentation_adapter.cpp
   backend/webgpu/presentation_adapter.h
+  backend/webgpu/pipeline_adapter.cpp
+  backend/webgpu/pipeline_adapter.h
   backend/webgpu/renderer_state.cpp
   backend/webgpu/renderer_state.h
   backend/webgpu/shader_adapter.cpp
