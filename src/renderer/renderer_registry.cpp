@@ -95,9 +95,10 @@ granit_result renderer_registry::create(std::string_view application_name, bool 
   }
 }
 
-granit_result renderer_registry::create_webgpu_static(
-    const granit_backend_plugin_api* api, granit_diagnostic_callback diagnostic_callback,
-    void* diagnostic_user_data, granit_renderer& renderer) {
+granit_result
+renderer_registry::create_webgpu_static(const granit_backend_plugin_api* api,
+                                        granit_diagnostic_callback diagnostic_callback,
+                                        void* diagnostic_user_data, granit_renderer& renderer) {
   try {
     auto state = std::make_shared<webgpu_renderer_state>();
     const auto initialize_result =
@@ -107,6 +108,7 @@ granit_result renderer_registry::create_webgpu_static(
     }
 
     std::lock_guard lock{mutex_};
+    state->set_domain(allocate_domain());
     const auto handle = handles_.insert(state.get(), resource_type::renderer, 0);
     if (handle == GRANIT_NULL_HANDLE) {
       return GRANIT_ERROR_OUT_OF_MEMORY;

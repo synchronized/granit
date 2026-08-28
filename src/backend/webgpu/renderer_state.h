@@ -37,6 +37,8 @@ public:
   [[nodiscard]] const backend_capabilities& capabilities() const noexcept override {
     return capabilities_;
   }
+  [[nodiscard]] std::uint32_t domain() const noexcept override { return domain_; }
+  void set_domain(std::uint32_t domain) noexcept override { domain_ = domain; }
   [[nodiscard]] webgpu_presentation_adapter* presentation() noexcept { return presentation_.get(); }
   [[nodiscard]] webgpu_shader_adapter* shaders() noexcept { return shaders_.get(); }
   [[nodiscard]] webgpu_pipeline_adapter* pipelines() noexcept { return pipelines_.get(); }
@@ -89,6 +91,7 @@ private:
   void* diagnostic_user_data_{};
   backend_lifecycle_status lifecycle_{};
   backend_capabilities capabilities_{};
+  std::uint32_t domain_{};
   std::unique_ptr<webgpu_presentation_adapter> presentation_;
   std::unique_ptr<webgpu_shader_adapter> shaders_;
   std::unique_ptr<webgpu_pipeline_adapter> pipelines_;

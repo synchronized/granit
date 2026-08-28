@@ -23,6 +23,8 @@ public:
   [[nodiscard]] virtual backend_lifecycle_status lifecycle_status() const noexcept = 0;
   [[nodiscard]] virtual granit_result process_backend_events() noexcept = 0;
   [[nodiscard]] virtual const backend_capabilities& capabilities() const noexcept = 0;
+  [[nodiscard]] virtual std::uint32_t domain() const noexcept = 0;
+  virtual void set_domain(std::uint32_t domain) noexcept = 0;
 };
 
 } // namespace granit::detail

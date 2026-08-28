@@ -305,8 +305,8 @@ public:
   std::size_t drain_retired() noexcept;
   void destroy_native_command_recorder(backend_command_recorder_resource& recorder) noexcept;
 
-  void set_domain(std::uint32_t domain) noexcept { domain_ = domain; }
-  [[nodiscard]] std::uint32_t domain() const noexcept { return domain_; }
+  void set_domain(std::uint32_t domain) noexcept override { domain_ = domain; }
+  [[nodiscard]] std::uint32_t domain() const noexcept override { return domain_; }
   [[nodiscard]] std::size_t frame_slot_count() const noexcept { return frame_slots_.size(); }
   [[nodiscard]] bool validation_enabled() const noexcept { return validation_enabled_; }
   [[nodiscard]] bool device_lost() const noexcept {
