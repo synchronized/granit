@@ -234,7 +234,12 @@ typedef granit_result (*granit_backend_plugin_get_instance_status_fn)(
 typedef granit_result (*granit_backend_plugin_process_events_fn)(
     granit_backend_plugin_instance instance);
 
-/** 实例操作表由插件拥有，在插件卸载前保持有效。 */
+/**
+ * 实例操作表由插件拥有，在插件卸载前保持有效。
+ *
+ * 除状态查询、事件推进和销毁操作外，依赖设备的调用在 initializing 状态返回 NOT_READY，在 failed
+ * 或 device_lost 状态返回状态快照中的 failure_result。销毁操作必须始终允许清理已有资源。
+ */
 typedef struct granit_backend_plugin_instance_api {
   uint32_t struct_size;
   uint32_t reserved;

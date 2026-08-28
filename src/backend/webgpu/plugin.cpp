@@ -74,6 +74,7 @@ struct webgpu_instance {
   WGPUQueue queue;
   granit_backend_plugin_capabilities capabilities;
   granit::detail::backend_lifecycle lifecycle;
+  bool deferred_initialization_for_test;
   std::unordered_map<granit_backend_plugin_buffer, buffer_record> buffers;
   std::unordered_map<granit_backend_plugin_texture, texture_record> textures;
   std::unordered_map<granit_backend_plugin_texture_view, texture_view_record> texture_views;
@@ -93,7 +94,7 @@ struct webgpu_instance {
   webgpu_instance(const granit_backend_plugin_host_api& host_api,
                   WGPUInstance native_instance) noexcept
       : host(host_api), instance(native_instance), adapter(nullptr), device(nullptr),
-        queue(nullptr), capabilities{} {}
+        queue(nullptr), capabilities{}, deferred_initialization_for_test(false) {}
 };
 
 constexpr std::uint64_t request_timeout_ns = UINT64_C(10000000000);
@@ -130,6 +131,13 @@ std::atomic_uint64_t next_pipeline_layout{1};
 std::atomic_uint64_t next_render_pipeline{1};
 std::atomic_uint64_t next_command_recorder{1};
 std::atomic_uint64_t next_command_buffer{1};
+#if defined(GRANIT_WEBGPU_DEFER_INITIALIZATION_TEST)
+std::atomic_bool defer_next_initialization_for_test{true};
+#endif
+
+granit_result require_ready(const webgpu_instance& state) noexcept {
+  return state.lifecycle.gate();
+}
 
 void deallocate(const granit_backend_plugin_host_api& host, void* memory) noexcept {
   try {
@@ -398,7 +406,13 @@ granit_result create_backend(const granit_backend_plugin_host_api* host,
       device_limits.maxBindGroups,
       device_limits.maxColorAttachments,
   };
+#if defined(GRANIT_WEBGPU_DEFER_INITIALIZATION_TEST)
+  state->deferred_initialization_for_test = defer_next_initialization_for_test.exchange(false);
+  if (!state->deferred_initialization_for_test)
+    state->lifecycle.mark_ready();
+#else
   state->lifecycle.mark_ready();
+#endif
 
   granit_backend_plugin_instance handle = next_instance.fetch_add(1, std::memory_order_relaxed);
   if (handle == 0) {
@@ -464,6 +478,8 @@ granit_result get_capabilities(granit_backend_plugin_instance instance,
   if (found == instances.end()) {
     return GRANIT_ERROR_INVALID_HANDLE;
   }
+  if (const auto ready = require_ready(*found->second); ready != GRANIT_SUCCESS)
+    return ready;
   const auto caller_size = capabilities->struct_size;
   *capabilities = found->second->capabilities;
   capabilities->struct_size = caller_size;
@@ -513,6 +529,12 @@ granit_result process_events(granit_backend_plugin_instance instance) noexcept {
     return GRANIT_ERROR_INVALID_HANDLE;
   }
   wgpuInstanceProcessEvents(found->second->instance);
+#if defined(GRANIT_WEBGPU_DEFER_INITIALIZATION_TEST)
+  if (found->second->deferred_initialization_for_test) {
+    found->second->deferred_initialization_for_test = false;
+    found->second->lifecycle.mark_ready();
+  }
+#endif
   return found->second->lifecycle.gate();
 }
 
@@ -540,6 +562,8 @@ granit_result create_buffer(granit_backend_plugin_instance instance,
   if (found == instances.end()) {
     return GRANIT_ERROR_INVALID_HANDLE;
   }
+  if (const auto ready = require_ready(*found->second); ready != GRANIT_SUCCESS)
+    return ready;
   auto& state = *found->second;
   if (desc->size > state.capabilities.max_buffer_size) {
     return GRANIT_ERROR_UNSUPPORTED;
@@ -613,6 +637,8 @@ granit_result write_buffer(granit_backend_plugin_instance instance,
   if (found == instances.end()) {
     return GRANIT_ERROR_INVALID_HANDLE;
   }
+  if (const auto ready = require_ready(*found->second); ready != GRANIT_SUCCESS)
+    return ready;
   const auto buffer_found = found->second->buffers.find(buffer);
   if (buffer_found == found->second->buffers.end()) {
     return GRANIT_ERROR_INVALID_HANDLE;
@@ -639,6 +665,8 @@ granit_result read_buffer(granit_backend_plugin_instance instance,
   if (found == instances.end()) {
     return GRANIT_ERROR_INVALID_HANDLE;
   }
+  if (const auto ready = require_ready(*found->second); ready != GRANIT_SUCCESS)
+    return ready;
   const auto buffer_found = found->second->buffers.find(buffer);
   if (buffer_found == found->second->buffers.end()) {
     return GRANIT_ERROR_INVALID_HANDLE;
@@ -706,6 +734,8 @@ granit_result create_texture(granit_backend_plugin_instance instance,
   if (found == instances.end()) {
     return GRANIT_ERROR_INVALID_HANDLE;
   }
+  if (const auto ready = require_ready(*found->second); ready != GRANIT_SUCCESS)
+    return ready;
   auto& state = *found->second;
   if (desc->width > state.capabilities.max_texture_dimension_2d ||
       desc->height > state.capabilities.max_texture_dimension_2d) {
@@ -783,6 +813,8 @@ granit_result create_texture_view(granit_backend_plugin_instance instance,
   const auto found = instances.find(instance);
   if (found == instances.end())
     return GRANIT_ERROR_INVALID_HANDLE;
+  if (const auto ready = require_ready(*found->second); ready != GRANIT_SUCCESS)
+    return ready;
   auto& state = *found->second;
   const auto texture_found = state.textures.find(texture);
   if (texture_found == state.textures.end())
@@ -845,6 +877,8 @@ granit_result create_sampler(granit_backend_plugin_instance instance,
   const auto found = instances.find(instance);
   if (found == instances.end())
     return GRANIT_ERROR_INVALID_HANDLE;
+  if (const auto ready = require_ready(*found->second); ready != GRANIT_SUCCESS)
+    return ready;
   WGPUSamplerDescriptor descriptor = WGPU_SAMPLER_DESCRIPTOR_INIT;
   descriptor.addressModeU = WGPUAddressMode_ClampToEdge;
   descriptor.addressModeV = WGPUAddressMode_ClampToEdge;
@@ -907,6 +941,8 @@ create_bind_group_layout(granit_backend_plugin_instance instance,
   const auto found = instances.find(instance);
   if (found == instances.end())
     return GRANIT_ERROR_INVALID_HANDLE;
+  if (const auto ready = require_ready(*found->second); ready != GRANIT_SUCCESS)
+    return ready;
 
   WGPUBindGroupLayoutEntry entries[2]{WGPU_BIND_GROUP_LAYOUT_ENTRY_INIT,
                                       WGPU_BIND_GROUP_LAYOUT_ENTRY_INIT};
@@ -979,6 +1015,8 @@ granit_result create_bind_group(granit_backend_plugin_instance instance,
   const auto found = instances.find(instance);
   if (found == instances.end())
     return GRANIT_ERROR_INVALID_HANDLE;
+  if (const auto ready = require_ready(*found->second); ready != GRANIT_SUCCESS)
+    return ready;
   auto& state = *found->second;
   const auto layout = state.bind_group_layouts.find(desc->layout);
   const auto view = state.texture_views.find(desc->texture_view);
@@ -1049,6 +1087,8 @@ granit_result create_shader(granit_backend_plugin_instance instance,
   const auto found = instances.find(instance);
   if (found == instances.end())
     return GRANIT_ERROR_INVALID_HANDLE;
+  if (const auto ready = require_ready(*found->second); ready != GRANIT_SUCCESS)
+    return ready;
   auto& state = *found->second;
   WGPUShaderSourceWGSL source = WGPU_SHADER_SOURCE_WGSL_INIT;
   source.code = {desc->wgsl, static_cast<std::size_t>(desc->wgsl_length)};
@@ -1112,6 +1152,8 @@ create_pipeline_layout(granit_backend_plugin_instance instance,
   const auto found = instances.find(instance);
   if (found == instances.end())
     return GRANIT_ERROR_INVALID_HANDLE;
+  if (const auto ready = require_ready(*found->second); ready != GRANIT_SUCCESS)
+    return ready;
   auto& state = *found->second;
   const auto layout = state.bind_group_layouts.find(bind_group_layout);
   if (layout == state.bind_group_layouts.end())
@@ -1174,6 +1216,8 @@ create_render_pipeline(granit_backend_plugin_instance instance,
   const auto found = instances.find(instance);
   if (found == instances.end())
     return GRANIT_ERROR_INVALID_HANDLE;
+  if (const auto ready = require_ready(*found->second); ready != GRANIT_SUCCESS)
+    return ready;
   auto& state = *found->second;
   const auto layout = state.pipeline_layouts.find(desc->layout);
   const auto vertex = state.shaders.find(desc->vertex_shader);
@@ -1251,6 +1295,8 @@ create_command_recorder(granit_backend_plugin_instance instance,
   const auto found = instances.find(instance);
   if (found == instances.end())
     return GRANIT_ERROR_INVALID_HANDLE;
+  if (const auto ready = require_ready(*found->second); ready != GRANIT_SUCCESS)
+    return ready;
   WGPUCommandEncoderDescriptor descriptor = WGPU_COMMAND_ENCODER_DESCRIPTOR_INIT;
   const auto native = wgpuDeviceCreateCommandEncoder(found->second->device, &descriptor);
   if (native == nullptr)
@@ -1303,6 +1349,8 @@ granit_result recorder_copy_buffer_to_texture(granit_backend_plugin_instance ins
   const auto found = instances.find(instance);
   if (found == instances.end())
     return GRANIT_ERROR_INVALID_HANDLE;
+  if (const auto ready = require_ready(*found->second); ready != GRANIT_SUCCESS)
+    return ready;
   auto& state = *found->second;
   const auto recorder_found = state.command_recorders.find(recorder);
   const auto buffer_found = state.buffers.find(buffer);
@@ -1345,6 +1393,8 @@ granit_result recorder_draw(granit_backend_plugin_instance instance,
   const auto found = instances.find(instance);
   if (found == instances.end())
     return GRANIT_ERROR_INVALID_HANDLE;
+  if (const auto ready = require_ready(*found->second); ready != GRANIT_SUCCESS)
+    return ready;
   auto& state = *found->second;
   const auto recorder_found = state.command_recorders.find(recorder);
   const auto view_found = state.texture_views.find(target);
@@ -1395,6 +1445,8 @@ granit_result recorder_copy_texture_to_buffer(granit_backend_plugin_instance ins
   const auto found = instances.find(instance);
   if (found == instances.end())
     return GRANIT_ERROR_INVALID_HANDLE;
+  if (const auto ready = require_ready(*found->second); ready != GRANIT_SUCCESS)
+    return ready;
   auto& state = *found->second;
   const auto recorder_found = state.command_recorders.find(recorder);
   const auto texture_found = state.textures.find(texture);
@@ -1438,6 +1490,8 @@ finish_command_recorder(granit_backend_plugin_instance instance,
   const auto found = instances.find(instance);
   if (found == instances.end())
     return GRANIT_ERROR_INVALID_HANDLE;
+  if (const auto ready = require_ready(*found->second); ready != GRANIT_SUCCESS)
+    return ready;
   auto& state = *found->second;
   const auto recorder_found = state.command_recorders.find(recorder);
   if (recorder_found == state.command_recorders.end())
@@ -1490,6 +1544,8 @@ granit_result submit_command_buffer(granit_backend_plugin_instance instance,
   const auto found = instances.find(instance);
   if (found == instances.end())
     return GRANIT_ERROR_INVALID_HANDLE;
+  if (const auto ready = require_ready(*found->second); ready != GRANIT_SUCCESS)
+    return ready;
   const auto buffer_found = found->second->command_buffers.find(command_buffer);
   if (buffer_found == found->second->command_buffers.end())
     return GRANIT_ERROR_INVALID_HANDLE;

@@ -109,9 +109,22 @@ TEST_CASE("后端插件 Loader 完成版本化握手", "[backend][plugin]") {
   granit_backend_plugin_instance_status status{};
   status.struct_size = sizeof(status);
   CHECK(loader.get_instance_status(instance, &status) == GRANIT_SUCCESS);
-  CHECK(status.state == GRANIT_BACKEND_PLUGIN_INSTANCE_STATE_READY);
+  CHECK(status.state == GRANIT_BACKEND_PLUGIN_INSTANCE_STATE_INITIALIZING);
   CHECK(status.failure_result == GRANIT_SUCCESS);
+  granit_backend_plugin_capabilities capabilities{};
+  capabilities.struct_size = sizeof(capabilities);
+  CHECK(loader.get_capabilities(instance, &capabilities) == GRANIT_ERROR_NOT_READY);
+  granit_backend_plugin_buffer_desc pending_buffer_desc{};
+  pending_buffer_desc.struct_size = sizeof(pending_buffer_desc);
+  pending_buffer_desc.size = 16;
+  pending_buffer_desc.usage = GRANIT_BACKEND_PLUGIN_BUFFER_USAGE_COPY_DST_BIT;
+  granit_backend_plugin_buffer pending_buffer{};
+  CHECK(loader.create_buffer(instance, &pending_buffer_desc, &pending_buffer) ==
+        GRANIT_ERROR_NOT_READY);
+  CHECK(pending_buffer == 0);
   CHECK(loader.process_events(instance) == GRANIT_SUCCESS);
+  CHECK(loader.get_instance_status(instance, &status) == GRANIT_SUCCESS);
+  CHECK(status.state == GRANIT_BACKEND_PLUGIN_INSTANCE_STATE_READY);
 
   status.struct_size = 0;
   CHECK(loader.get_instance_status(instance, &status) == GRANIT_ERROR_INVALID_ARGUMENT);
@@ -123,7 +136,7 @@ TEST_CASE("后端插件 Loader 完成版本化握手", "[backend][plugin]") {
   status.struct_size = sizeof(status);
   CHECK(loader.get_instance_status(instance + 1, &status) == GRANIT_ERROR_INVALID_HANDLE);
   CHECK(loader.process_events(instance + 1) == GRANIT_ERROR_INVALID_HANDLE);
-  granit_backend_plugin_capabilities capabilities{};
+  capabilities = {};
   capabilities.struct_size = sizeof(capabilities);
   CHECK(loader.get_capabilities(instance, &capabilities) == GRANIT_SUCCESS);
   CHECK(capabilities.uniform_buffer_offset_alignment == 256);
@@ -154,6 +167,7 @@ TEST_CASE("后端插件 Loader 完成版本化握手", "[backend][plugin]") {
 
   host.struct_size += 32;
   REQUIRE(loader.create_instance(&host, &instance) == GRANIT_SUCCESS);
+  REQUIRE(loader.process_events(instance) == GRANIT_SUCCESS);
   CHECK(instance != 0);
   CHECK(state.allocations == 3);
   CHECK(state.diagnostics == 5);
@@ -164,6 +178,7 @@ TEST_CASE("后端插件 Loader 完成版本化握手", "[backend][plugin]") {
   CHECK(state.diagnostics == 6);
 
   REQUIRE(loader.create_instance(&host, &instance) == GRANIT_SUCCESS);
+  REQUIRE(loader.process_events(instance) == GRANIT_SUCCESS);
 
   loader.close();
   CHECK_FALSE(loader.is_open());
@@ -184,6 +199,8 @@ TEST_CASE("WebGPU 插件 Buffer 遵守所有权、Usage 与范围契约", "[back
   granit_backend_plugin_instance second{};
   REQUIRE(loader.create_instance(&host, &first) == GRANIT_SUCCESS);
   REQUIRE(loader.create_instance(&host, &second) == GRANIT_SUCCESS);
+  REQUIRE(loader.process_events(first) == GRANIT_SUCCESS);
+  REQUIRE(loader.process_events(second) == GRANIT_SUCCESS);
 
   granit_backend_plugin_buffer_desc desc{};
   desc.struct_size = sizeof(desc);
@@ -244,6 +261,8 @@ TEST_CASE("WebGPU 插件 Texture、View 与 Sampler 遵守所有权契约", "[ba
   granit_backend_plugin_instance second{};
   REQUIRE(loader.create_instance(&host, &first) == GRANIT_SUCCESS);
   REQUIRE(loader.create_instance(&host, &second) == GRANIT_SUCCESS);
+  REQUIRE(loader.process_events(first) == GRANIT_SUCCESS);
+  REQUIRE(loader.process_events(second) == GRANIT_SUCCESS);
 
   granit_backend_plugin_texture_desc texture_desc{};
   texture_desc.struct_size = sizeof(texture_desc);
@@ -313,6 +332,8 @@ TEST_CASE("WebGPU 插件绑定与 Pipeline 遵守依赖生命周期", "[backend]
   granit_backend_plugin_instance second{};
   REQUIRE(loader.create_instance(&host, &first) == GRANIT_SUCCESS);
   REQUIRE(loader.create_instance(&host, &second) == GRANIT_SUCCESS);
+  REQUIRE(loader.process_events(first) == GRANIT_SUCCESS);
+  REQUIRE(loader.process_events(second) == GRANIT_SUCCESS);
 
   granit_backend_plugin_texture_desc texture_desc{};
   texture_desc.struct_size = sizeof(texture_desc);
