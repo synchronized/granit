@@ -8,6 +8,8 @@ add_library(
   backend/plugin_loader.h
   backend/webgpu/presentation_adapter.cpp
   backend/webgpu/presentation_adapter.h
+  backend/webgpu/renderer_state.cpp
+  backend/webgpu/renderer_state.h
   platform/shared_library.cpp
   platform/shared_library.h
 )

@@ -5,14 +5,12 @@
 #include <cstdio>
 #include <cstring>
 #include <memory>
-#include <new>
 
 #include <emscripten/emscripten.h>
 #include <emscripten/html5.h>
 
 #include "backend/lifecycle.h"
-#include "backend/plugin_loader.h"
-#include "backend/webgpu/presentation_adapter.h"
+#include "backend/webgpu/renderer_state.h"
 
 extern "C" const granit_backend_plugin_api*
 granit_backend_plugin_query(std::uint32_t requested_abi) noexcept;
@@ -22,9 +20,7 @@ namespace {
 enum class startup_status : int { failed = -1, starting, provider_pending, ready };
 
 struct web_platform_state {
-  granit::detail::backend_plugin_loader loader;
-  granit_backend_plugin_instance instance{};
-  std::unique_ptr<granit::detail::webgpu_presentation_adapter> presentation;
+  granit::detail::webgpu_renderer_state renderer;
   std::unique_ptr<granit::detail::backend_surface_resource> surface;
   std::unique_ptr<granit::detail::backend_swapchain_resource> swapchain;
   startup_status status{startup_status::starting};
@@ -52,15 +48,6 @@ bool load_startup_resource() noexcept {
   return size >= sizeof(expected) - 1 && std::memcmp(content, expected, sizeof(expected) - 1) == 0;
 }
 
-void* allocate(std::uint64_t size, std::uint64_t alignment, void*) noexcept {
-  return ::operator new(static_cast<std::size_t>(size),
-                        std::align_val_t{static_cast<std::size_t>(alignment)}, std::nothrow);
-}
-
-void deallocate(void* memory, std::uint64_t, std::uint64_t alignment, void*) noexcept {
-  ::operator delete(memory, std::align_val_t{static_cast<std::size_t>(alignment)});
-}
-
 void diagnose(granit_diagnostic_severity, granit_diagnostic_category, const char* message,
               std::uint32_t message_length, void*) noexcept {
   std::fprintf(stderr, "GRANIT_DIAGNOSTIC:%.*s\n", static_cast<int>(message_length), message);
@@ -84,37 +71,39 @@ granit_result create_presentation_resources() {
     return GRANIT_ERROR_INITIALIZATION_FAILED;
   }
 
-  state.presentation =
-      std::make_unique<granit::detail::webgpu_presentation_adapter>(state.loader, state.instance);
-  state.surface = state.presentation->allocate_surface();
-  state.swapchain = state.presentation->allocate_swapchain();
+  auto* presentation = state.renderer.presentation();
+  if (presentation == nullptr) {
+    return GRANIT_ERROR_NOT_READY;
+  }
+  state.surface = presentation->allocate_surface();
+  state.swapchain = presentation->allocate_swapchain();
   if (state.surface == nullptr || state.swapchain == nullptr) {
     return GRANIT_ERROR_OUT_OF_MEMORY;
   }
-  auto result = state.presentation->create_canvas_surface(*state.surface, "#canvas", 7);
+  auto result = presentation->create_canvas_surface(*state.surface, "#canvas", 7);
   if (result != GRANIT_SUCCESS) {
     return result;
   }
   const granit::detail::backend_swapchain_desc desc{static_cast<std::uint32_t>(width),
                                                     static_cast<std::uint32_t>(height), 2,
                                                     GRANIT_BACKEND_PLUGIN_PRESENT_MODE_FIFO};
-  result = state.presentation->create_swapchain(*state.surface, desc, *state.swapchain);
+  result = presentation->create_swapchain(*state.surface, desc, *state.swapchain);
   if (result != GRANIT_SUCCESS) {
     return result;
   }
   granit::detail::backend_swapchain_info info{};
-  result = state.presentation->get_swapchain_info(*state.swapchain, info);
+  result = presentation->get_swapchain_info(*state.swapchain, info);
   if (result != GRANIT_SUCCESS || info.width == 0 || info.height == 0 || info.image_count == 0) {
     return result == GRANIT_SUCCESS ? GRANIT_ERROR_INITIALIZATION_FAILED : result;
   }
   granit::detail::backend_acquired_swapchain_frame frame{};
-  result = state.presentation->acquire_swapchain(*state.swapchain, frame);
+  result = presentation->acquire_swapchain(*state.swapchain, frame);
   if (result != GRANIT_SUCCESS || frame.dynamic_backbuffer.texture == nullptr ||
       frame.dynamic_backbuffer.view == nullptr) {
     return result == GRANIT_SUCCESS ? GRANIT_ERROR_INITIALIZATION_FAILED : result;
   }
   bool needs_recreate{};
-  result = state.presentation->cancel_swapchain(*state.swapchain, needs_recreate);
+  result = presentation->cancel_swapchain(*state.swapchain, needs_recreate);
   frame = {};
   if (result != GRANIT_SUCCESS) {
     return result;
@@ -126,25 +115,19 @@ void tick(void*) noexcept {
   if (state.status != startup_status::provider_pending) {
     return;
   }
-  const auto process_result = state.loader.process_events(state.instance);
-  if (process_result != GRANIT_SUCCESS && process_result != GRANIT_ERROR_NOT_READY) {
+  const auto process_result = state.renderer.process_events();
+  if (process_result != GRANIT_SUCCESS) {
     fail("provider-events", process_result);
     return;
   }
 
-  granit_backend_plugin_instance_status provider_status{};
-  provider_status.struct_size = sizeof(provider_status);
-  const auto status_result = state.loader.get_instance_status(state.instance, &provider_status);
-  if (status_result != GRANIT_SUCCESS) {
-    fail("provider-status", status_result);
+  const auto renderer_status = state.renderer.lifecycle_status();
+  if (renderer_status.state == granit::detail::backend_lifecycle_state::failed ||
+      renderer_status.state == granit::detail::backend_lifecycle_state::device_lost) {
+    fail("provider-terminal", renderer_status.failure_result);
     return;
   }
-  if (provider_status.state == GRANIT_BACKEND_PLUGIN_INSTANCE_STATE_FAILED ||
-      provider_status.state == GRANIT_BACKEND_PLUGIN_INSTANCE_STATE_DEVICE_LOST) {
-    fail("provider-terminal", provider_status.failure_result);
-    return;
-  }
-  if (provider_status.state != GRANIT_BACKEND_PLUGIN_INSTANCE_STATE_READY) {
+  if (renderer_status.state != granit::detail::backend_lifecycle_state::ready) {
     return;
   }
 
@@ -191,19 +174,11 @@ int main() {
   }
 
   const auto* api = granit_backend_plugin_query(GRANIT_BACKEND_PLUGIN_ABI_VERSION);
-  auto result = state.loader.open_static(api, GRANIT_BACKEND_PLUGIN_KIND_WEBGPU);
+  const auto result = state.renderer.initialize_static(api, diagnose, nullptr);
   if (result != GRANIT_SUCCESS) {
     fail("provider-open", result);
     return 1;
   }
-  granit_backend_plugin_host_api host{sizeof(host), 0,          diagnose, nullptr,
-                                      allocate,     deallocate, nullptr};
-  result = state.loader.create_instance(&host, &state.instance);
-  if (result != GRANIT_SUCCESS) {
-    fail("provider-create", result);
-    return 1;
-  }
-
   static_cast<void>(emscripten_set_keydown_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, &state,
                                                     EM_FALSE, receive_keyboard));
   static_cast<void>(emscripten_set_mousedown_callback("#canvas", &state, EM_FALSE, receive_mouse));
