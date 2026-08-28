@@ -13,8 +13,10 @@ Emscripten 首轮矩阵均已通过。
 
 仅生成示例目标的问题已经关闭，构建同时提供静态 `granit::granit` SDK 目标，浏览器示例作为只
 包含公共头文件的独立 Consumer 链接该目标。Emscripten 与桌面也已统一包含
-`renderer/renderer_registry.h`。原 `web_renderer_registry` 与 `renderer_registry_emscripten.*` 已删除；
-桌面和 Emscripten 现使用同一个 Registry 类、句柄表成员、资源记录声明及公共 API 编译单元。
+`renderer/renderer_registry.h`。原 `web_renderer_registry` 类型、独立头文件、平台 API 文件与
+`renderer_registry_emscripten.*` 已删除；桌面和 Emscripten 现使用同一个 Registry 类、句柄表成员、
+资源记录声明及公共 API 编译单元。Web Renderer 已只保留通用根表，动态 Backbuffer 也已进入公共
+Texture/View 资源表。
 平台生命周期实现仍需继续收敛，因此尚不能作为 S-10E 最终完成依据。
 
 ## 验收范围

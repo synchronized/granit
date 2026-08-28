@@ -48,7 +48,6 @@ renderer_registry::create_webgpu_static(const granit_backend_plugin_api* api,
     try {
       state->set_domain(allocate_domain());
       backend_renderers_.emplace(handle, state);
-      renderers_.emplace(handle, std::move(state));
     } catch (...) {
       static_cast<void>(handles_.erase(handle, resource_type::renderer, 0));
       throw;
@@ -92,8 +91,9 @@ granit_result renderer_registry::destroy(granit_renderer renderer) {
     for (auto frame = frames_.begin(); frame != frames_.end();) {
       if (frame->second->swapchain->owner == found->second) {
         bool ignored{};
-        static_cast<void>(found->second->presentation()->cancel_swapchain(
-            *frame->second->swapchain->native, ignored));
+        static_cast<void>(frame->second->presentation->cancel_swapchain_frame(
+            *frame->second->swapchain->native, frame->second->image_index,
+            frame->second->slot_index, ignored));
         erase_dynamic_backbuffer(*frame->second->swapchain);
         static_cast<void>(handles_.erase(frame->first, resource_type::frame, 0));
         frames.push_back(std::move(frame->second));
@@ -147,7 +147,7 @@ granit_result renderer_registry::destroy(granit_renderer renderer) {
         ++shader;
       }
     }
-    state = std::move(found->second);
+    state = std::dynamic_pointer_cast<webgpu_renderer_state>(found->second);
     renderers_.erase(found);
     backend_renderers_.erase(renderer);
     const auto result = handles_.erase(renderer, resource_type::renderer, 0);
@@ -378,7 +378,8 @@ granit_result renderer_registry::recreate_swapchain(granit_renderer renderer,
   if (!found->second->textures.empty()) {
     return GRANIT_ERROR_NOT_READY;
   }
-  return state->second->presentation()->recreate_swapchain(*found->second->native, desc);
+  return found->second->presentation->recreate_swapchain(
+      *found->second->surface->native, desc, *found->second->native);
 }
 
 granit_result renderer_registry::get_swapchain_info(granit_renderer renderer,
@@ -391,7 +392,8 @@ granit_result renderer_registry::get_swapchain_info(granit_renderer renderer,
       found->second->owner != state->second) {
     return GRANIT_ERROR_INVALID_HANDLE;
   }
-  return state->second->presentation()->get_swapchain_info(*found->second->native, info);
+  info = found->second->presentation->get_swapchain_info(*found->second->native);
+  return GRANIT_SUCCESS;
 }
 
 granit_result renderer_registry::get_swapchain_backbuffer(granit_renderer renderer,
@@ -432,19 +434,23 @@ granit_result renderer_registry::acquire_swapchain_frame(granit_renderer rendere
     }
     auto record = std::make_shared<frame_record>();
     record->owner = state->second;
-    record->presentation = state->second;
-    record->queue = state->second;
+    record->presentation = found->second->presentation;
+    record->queue = std::dynamic_pointer_cast<backend_queue>(state->second);
+    if (!record->queue)
+      return GRANIT_ERROR_INTERNAL;
     record->swapchain = found->second;
     backend_acquired_swapchain_frame acquired{};
     const auto acquire_result =
-        state->second->presentation()->acquire_swapchain(*found->second->native, acquired);
+        record->presentation->acquire_swapchain_frame(*found->second->native, acquired);
     if (acquire_result != GRANIT_SUCCESS) {
       return acquire_result;
     }
     auto cancel = [&]() noexcept {
       bool ignored{};
       static_cast<void>(
-          state->second->presentation()->cancel_swapchain(*found->second->native, ignored));
+          record->presentation->cancel_swapchain_frame(*found->second->native,
+                                                       acquired.image_index,
+                                                       acquired.slot_index, ignored));
     };
     auto texture_record_state = std::make_shared<texture_record>();
     texture_record_state->owner = state->second;
@@ -535,10 +541,12 @@ granit_result renderer_registry::finish_frame(granit_renderer renderer, granit_s
         frame_found->second->swapchain != swapchain_found->second) {
       return GRANIT_ERROR_INVALID_HANDLE;
     }
-    result = present ? state->second->presentation()->present_swapchain(
-                           *swapchain_found->second->native, needs_recreate)
-                     : state->second->presentation()->cancel_swapchain(
-                           *swapchain_found->second->native, needs_recreate);
+    result = present ? swapchain_found->second->presentation->present_swapchain_frame(
+                           *swapchain_found->second->native, frame_found->second->image_index,
+                           frame_found->second->slot_index, needs_recreate)
+                     : swapchain_found->second->presentation->cancel_swapchain_frame(
+                           *swapchain_found->second->native, frame_found->second->image_index,
+                           frame_found->second->slot_index, needs_recreate);
     if (result != GRANIT_SUCCESS) {
       return result;
     }
@@ -576,14 +584,11 @@ granit_result renderer_registry::get_frame_info(granit_renderer renderer,
       frame_found->second->swapchain != swapchain_found->second) {
     return GRANIT_ERROR_INVALID_HANDLE;
   }
-  backend_swapchain_info info{};
-  const auto result =
-      state->second->presentation()->get_swapchain_info(*swapchain_found->second->native, info);
-  if (result == GRANIT_SUCCESS) {
-    frame_slot = static_cast<std::uint32_t>(frame_found->second->slot_index);
-    frame_slot_count = info.image_count;
-  }
-  return result;
+  const auto info =
+      swapchain_found->second->presentation->get_swapchain_info(*swapchain_found->second->native);
+  frame_slot = static_cast<std::uint32_t>(frame_found->second->slot_index);
+  frame_slot_count = info.image_count;
+  return GRANIT_SUCCESS;
 }
 
 granit_result renderer_registry::destroy_swapchain(granit_renderer renderer,
@@ -846,7 +851,9 @@ std::shared_ptr<webgpu_renderer_state> renderer_registry::acquire(granit_rendere
     return {};
   }
   const auto found = renderers_.find(renderer);
-  return found == renderers_.end() ? std::shared_ptr<webgpu_renderer_state>{} : found->second;
+  return found == renderers_.end()
+             ? std::shared_ptr<webgpu_renderer_state>{}
+             : std::dynamic_pointer_cast<webgpu_renderer_state>(found->second);
 }
 
 std::shared_ptr<backend_renderer> renderer_registry::acquire_backend(granit_renderer renderer) {
@@ -904,7 +911,8 @@ granit_result renderer_registry::begin_command_recorder(granit_renderer renderer
     return GRANIT_ERROR_INVALID_HANDLE;
   if (found->second->web_status != command_recorder_record::web_state::initial)
     return GRANIT_ERROR_INVALID_ARGUMENT;
-  const auto result = state->second->begin_command_recorder(*found->second->native);
+  const auto web_state = std::static_pointer_cast<webgpu_renderer_state>(state->second);
+  const auto result = web_state->begin_command_recorder(*found->second->native);
   if (result == GRANIT_SUCCESS)
     found->second->web_status = command_recorder_record::web_state::recording;
   return result;
@@ -960,10 +968,11 @@ granit_result renderer_registry::draw(granit_renderer renderer, granit_command_r
   if (record.web_status != command_recorder_record::web_state::rendering || !record.web_target ||
       !record.web_pipeline || record.web_drew)
     return GRANIT_ERROR_INVALID_ARGUMENT;
+  const auto web_state = std::static_pointer_cast<webgpu_renderer_state>(state->second);
   const auto result =
-      state->second->draw(*record.native, record.web_target->native.get(),
-                          record.web_pipeline->native.get(), vertex_count, instance_count,
-                          first_vertex, first_instance);
+      web_state->draw(*record.native, record.web_target->native.get(),
+                      record.web_pipeline->native.get(), vertex_count, instance_count,
+                      first_vertex, first_instance);
   if (result == GRANIT_SUCCESS)
     record.web_drew = true;
   return result;
@@ -995,7 +1004,8 @@ granit_result renderer_registry::end_command_recorder(granit_renderer renderer,
   if (found->second->web_status != command_recorder_record::web_state::recording ||
       !found->second->web_drew)
     return GRANIT_ERROR_INVALID_ARGUMENT;
-  const auto result = state->second->end_command_recorder(*found->second->native);
+  const auto web_state = std::static_pointer_cast<webgpu_renderer_state>(state->second);
+  const auto result = web_state->end_command_recorder(*found->second->native);
   if (result == GRANIT_SUCCESS)
     found->second->web_status = command_recorder_record::web_state::executable;
   return result;
@@ -1032,7 +1042,8 @@ granit_result renderer_registry::submit_command_recorder_frame(granit_renderer r
       return GRANIT_ERROR_INVALID_HANDLE;
   }
   submission_serial serial{};
-  const auto result = state->second->submit_command_recorder(*command->second->native, serial);
+  const auto web_state = std::static_pointer_cast<webgpu_renderer_state>(state->second);
+  const auto result = web_state->submit_command_recorder(*command->second->native, serial);
   if (result == GRANIT_SUCCESS)
     command->second->web_status = command_recorder_record::web_state::submitted;
   return result;
@@ -1049,7 +1060,8 @@ granit_result renderer_registry::reset_command_recorder(granit_renderer renderer
   if (found->second->web_status == command_recorder_record::web_state::recording ||
       found->second->web_status == command_recorder_record::web_state::rendering)
     return GRANIT_ERROR_INVALID_ARGUMENT;
-  const auto result = state->second->reset_command_recorder(*found->second->native);
+  const auto web_state = std::static_pointer_cast<webgpu_renderer_state>(state->second);
+  const auto result = web_state->reset_command_recorder(*found->second->native);
   if (result == GRANIT_SUCCESS) {
     found->second->web_target.reset();
     found->second->web_pipeline.reset();

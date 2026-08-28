@@ -46,11 +46,6 @@ namespace granit::detail {
 
 class webgpu_renderer_state;
 class renderer_state;
-#ifdef __EMSCRIPTEN__
-using platform_renderer_state = webgpu_renderer_state;
-#else
-using platform_renderer_state = renderer_state;
-#endif
 
 /** 线程安全地管理进程内公开 renderer 句柄。 */
 class renderer_registry {
@@ -78,7 +73,11 @@ public:
   /** 向有效 Renderer 的回调发送公共 API 参数或句柄校验诊断。 */
   void emit_validation_diagnostic(granit_renderer renderer, std::string_view message) noexcept;
   [[nodiscard]] std::shared_ptr<backend_renderer> acquire_backend(granit_renderer renderer);
-  [[nodiscard]] std::shared_ptr<platform_renderer_state> acquire(granit_renderer renderer);
+#ifdef __EMSCRIPTEN__
+  [[nodiscard]] std::shared_ptr<webgpu_renderer_state> acquire(granit_renderer renderer);
+#else
+  [[nodiscard]] std::shared_ptr<renderer_state> acquire(granit_renderer renderer);
+#endif
   [[nodiscard]] granit_result create_win32_surface(granit_renderer renderer, void* native_instance,
                                                    void* native_window, granit_surface& surface);
   [[nodiscard]] granit_result create_xcb_surface(granit_renderer renderer, void* connection,
@@ -370,8 +369,13 @@ private:
   std::mutex mutex_;
   handle_table handles_;
   std::unordered_map<granit_renderer, std::shared_ptr<backend_renderer>> backend_renderers_;
+#ifdef __EMSCRIPTEN__
+  // Web 仅保留通用根表；兼容视图用于平台实现收敛期间减少无关改动。
+  decltype(backend_renderers_)& renderers_{backend_renderers_};
+#else
   // Vulkan 资源路径迁移完成前，保留具体状态视图；它与通用根表共享同一状态对象。
-  std::unordered_map<granit_renderer, std::shared_ptr<platform_renderer_state>> renderers_;
+  std::unordered_map<granit_renderer, std::shared_ptr<renderer_state>> renderers_;
+#endif
   struct surface_record {
     resource_metadata metadata;
     std::shared_ptr<backend_renderer> owner;
