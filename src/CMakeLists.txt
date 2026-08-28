@@ -84,11 +84,13 @@ target_sources(
     backend/binding.h
     backend/capabilities.h
     backend/command.h
+    backend/pipeline.h
     backend/presentation.h
     backend/queue.h
     backend/rendering.h
     backend/renderer.h
     backend/resources.h
+    backend/shader.h
     backend/upload.h
     backend/vulkan/device.cpp
     backend/vulkan/device.h

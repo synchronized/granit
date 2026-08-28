@@ -36,11 +36,13 @@
 
 #include "backend/access.h"
 #include "backend/command.h"
+#include "backend/pipeline.h"
 #include "backend/plugin_api.h"
 #include "backend/presentation.h"
 #include "backend/queue.h"
 #include "backend/renderer.h"
 #include "backend/resources.h"
+#include "backend/shader.h"
 #include "backend/upload.h"
 #include "core/handle_table.h"
 #include "core/lifecycle_validation.h"

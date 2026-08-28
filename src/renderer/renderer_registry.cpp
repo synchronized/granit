@@ -2368,21 +2368,17 @@ granit_result renderer_registry::create_wgsl_shader(granit_renderer renderer,
                                                     granit_shader& shader) {
   try {
     auto owner = acquire_backend(renderer);
-    auto state = std::dynamic_pointer_cast<webgpu_renderer_state>(owner);
-    if (!owner || !state)
+    auto shaders = std::dynamic_pointer_cast<backend_shader_renderer>(owner);
+    if (!owner || !shaders)
       return GRANIT_ERROR_INVALID_HANDLE;
-    if (state->shaders() == nullptr)
-      return GRANIT_ERROR_NOT_READY;
     auto record = std::make_shared<shader_record>();
     record->owner = owner;
     record->stage = stage;
     record->entry_point.assign(entry_point);
-    record->native = state->shaders()->allocate_shader();
+    record->native = shaders->allocate_shader_resource();
     if (!record->native)
       return GRANIT_ERROR_OUT_OF_MEMORY;
-    const auto result =
-        state->shaders()->create_shader(*record->native, stage, source.data(), source.size(),
-                                        entry_point.data(), entry_point.size());
+    const auto result = shaders->create_wgsl_shader(*record->native, stage, source, entry_point);
     if (result != GRANIT_SUCCESS)
       return result;
     std::lock_guard lock{mutex_};
@@ -2733,17 +2729,15 @@ granit_result renderer_registry::create_webgpu_pipeline_layout(granit_renderer r
                                                                granit_pipeline_layout& layout) {
   try {
     auto owner = acquire_backend(renderer);
-    auto state = std::dynamic_pointer_cast<webgpu_renderer_state>(owner);
-    if (!owner || !state)
+    auto pipelines = std::dynamic_pointer_cast<backend_pipeline_renderer>(owner);
+    if (!owner || !pipelines)
       return GRANIT_ERROR_INVALID_HANDLE;
-    if (state->pipelines() == nullptr)
-      return GRANIT_ERROR_NOT_READY;
     auto record = std::make_shared<pipeline_layout_record>();
     record->owner = owner;
-    record->native = state->pipelines()->allocate_pipeline_layout();
+    record->native = pipelines->allocate_pipeline_layout_resource();
     if (!record->native)
       return GRANIT_ERROR_OUT_OF_MEMORY;
-    const auto result = state->pipelines()->create_pipeline_layout(*record->native);
+    const auto result = pipelines->create_empty_pipeline_layout(*record->native);
     if (result != GRANIT_SUCCESS)
       return result;
     std::lock_guard lock{mutex_};
@@ -2896,11 +2890,9 @@ granit_result renderer_registry::create_webgpu_graphics_pipeline(
     granit_graphics_pipeline& pipeline) {
   try {
     auto owner = acquire_backend(renderer);
-    auto state = std::dynamic_pointer_cast<webgpu_renderer_state>(owner);
-    if (!owner || !state)
+    auto pipelines = std::dynamic_pointer_cast<backend_pipeline_renderer>(owner);
+    if (!owner || !pipelines)
       return GRANIT_ERROR_INVALID_HANDLE;
-    if (state->pipelines() == nullptr || state->shaders() == nullptr)
-      return GRANIT_ERROR_NOT_READY;
     std::shared_ptr<pipeline_layout_record> layout;
     std::shared_ptr<shader_record> vertex;
     std::shared_ptr<shader_record> fragment;
@@ -2922,12 +2914,11 @@ granit_result renderer_registry::create_webgpu_graphics_pipeline(
     record->layout = layout;
     record->vertex_shader = vertex;
     record->fragment_shader = fragment;
-    record->native = state->pipelines()->allocate_graphics_pipeline();
+    record->native = pipelines->allocate_graphics_pipeline_resource();
     if (!record->native)
       return GRANIT_ERROR_OUT_OF_MEMORY;
-    const auto result = state->pipelines()->create_graphics_pipeline(
-        *record->native, *layout->native, state->shaders()->native_handle(*vertex->native),
-        state->shaders()->native_handle(*fragment->native), color_format);
+    const auto result = pipelines->create_graphics_pipeline(
+        *record->native, *layout->native, *vertex->native, *fragment->native, color_format);
     if (result != GRANIT_SUCCESS)
       return result;
     std::lock_guard lock{mutex_};

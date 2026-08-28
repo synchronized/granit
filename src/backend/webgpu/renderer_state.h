@@ -11,9 +11,11 @@
 #include "backend/capabilities.h"
 #include "backend/command.h"
 #include "backend/lifecycle.h"
+#include "backend/pipeline.h"
 #include "backend/plugin_loader.h"
 #include "backend/queue.h"
 #include "backend/renderer.h"
+#include "backend/shader.h"
 #include "backend/webgpu/command_adapter.h"
 #include "backend/webgpu/pipeline_adapter.h"
 #include "backend/webgpu/presentation_adapter.h"
@@ -25,7 +27,9 @@ namespace granit::detail {
 class webgpu_renderer_state final : public backend_renderer,
                                     public backend_presentation_renderer,
                                     public backend_queue,
-                                    public backend_command_renderer {
+                                    public backend_command_renderer,
+                                    public backend_shader_renderer,
+                                    public backend_pipeline_renderer {
 public:
   webgpu_renderer_state() = default;
   ~webgpu_renderer_state();
@@ -67,6 +71,20 @@ public:
                                    std::uint32_t vertex_count, std::uint32_t instance_count,
                                    std::uint32_t first_vertex,
                                    std::uint32_t first_instance) noexcept override;
+  [[nodiscard]] std::unique_ptr<backend_shader_resource> allocate_shader_resource() override;
+  [[nodiscard]] granit_result create_wgsl_shader(backend_shader_resource& shader,
+                                                 granit_shader_stage stage, std::string_view source,
+                                                 std::string_view entry_point) noexcept override;
+  [[nodiscard]] std::unique_ptr<backend_pipeline_layout_resource>
+  allocate_pipeline_layout_resource() override;
+  [[nodiscard]] granit_result
+  create_empty_pipeline_layout(backend_pipeline_layout_resource& layout) noexcept override;
+  [[nodiscard]] std::unique_ptr<backend_graphics_pipeline_resource>
+  allocate_graphics_pipeline_resource() override;
+  [[nodiscard]] granit_result create_graphics_pipeline(
+      backend_graphics_pipeline_resource& pipeline, backend_pipeline_layout_resource& layout,
+      backend_shader_resource& vertex_shader, backend_shader_resource& fragment_shader,
+      granit_texture_format color_format) noexcept override;
 
   [[nodiscard]] std::unique_ptr<backend_surface_resource> allocate_surface_resource() override;
   [[nodiscard]] std::unique_ptr<backend_swapchain_resource> allocate_swapchain_resource() override;

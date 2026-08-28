@@ -62,6 +62,45 @@ granit_result webgpu_renderer_state::draw(backend_command_recorder_resource& rec
                          pipelines_->native_handle(*pipeline));
 }
 
+std::unique_ptr<backend_shader_resource> webgpu_renderer_state::allocate_shader_resource() {
+  return shaders_ ? shaders_->allocate_shader() : nullptr;
+}
+
+granit_result webgpu_renderer_state::create_wgsl_shader(backend_shader_resource& shader,
+                                                        granit_shader_stage stage,
+                                                        std::string_view source,
+                                                        std::string_view entry_point) noexcept {
+  return shaders_ ? shaders_->create_shader(shader, stage, source.data(), source.size(),
+                                            entry_point.data(), entry_point.size())
+                  : GRANIT_ERROR_UNSUPPORTED;
+}
+
+std::unique_ptr<backend_pipeline_layout_resource>
+webgpu_renderer_state::allocate_pipeline_layout_resource() {
+  return pipelines_ ? pipelines_->allocate_pipeline_layout() : nullptr;
+}
+
+granit_result webgpu_renderer_state::create_empty_pipeline_layout(
+    backend_pipeline_layout_resource& layout) noexcept {
+  return pipelines_ ? pipelines_->create_pipeline_layout(layout) : GRANIT_ERROR_UNSUPPORTED;
+}
+
+std::unique_ptr<backend_graphics_pipeline_resource>
+webgpu_renderer_state::allocate_graphics_pipeline_resource() {
+  return pipelines_ ? pipelines_->allocate_graphics_pipeline() : nullptr;
+}
+
+granit_result webgpu_renderer_state::create_graphics_pipeline(
+    backend_graphics_pipeline_resource& pipeline, backend_pipeline_layout_resource& layout,
+    backend_shader_resource& vertex_shader, backend_shader_resource& fragment_shader,
+    granit_texture_format color_format) noexcept {
+  if (!pipelines_ || !shaders_)
+    return GRANIT_ERROR_UNSUPPORTED;
+  return pipelines_->create_graphics_pipeline(
+      pipeline, layout, shaders_->native_handle(vertex_shader),
+      shaders_->native_handle(fragment_shader), color_format);
+}
+
 void* webgpu_renderer_state::allocate(std::uint64_t size, std::uint64_t alignment, void*) noexcept {
   return ::operator new(static_cast<std::size_t>(size),
                         std::align_val_t{static_cast<std::size_t>(alignment)}, std::nothrow);
