@@ -91,7 +91,7 @@ extern "C" granit_result granit_swapchain_acquire(granit_renderer renderer,
     return GRANIT_ERROR_INVALID_HANDLE;
   }
   bool recreate{};
-  const auto result = granit::detail::renderer_registry::instance().acquire_swapchain(
+  const auto result = granit::detail::renderer_registry::instance().acquire_swapchain_frame(
       renderer, swapchain, *frame, *image_index, recreate);
   *needs_recreate = recreate ? 1U : 0U;
   return result;
@@ -129,8 +129,11 @@ granit_result finish_frame(granit_renderer renderer, granit_swapchain swapchain,
     return GRANIT_ERROR_INVALID_HANDLE;
   }
   bool recreate{};
-  const auto result = granit::detail::renderer_registry::instance().finish_frame(
-      renderer, swapchain, frame, present, recreate);
+  const auto result = present
+                          ? granit::detail::renderer_registry::instance().present_swapchain_frame(
+                                renderer, swapchain, frame, recreate)
+                          : granit::detail::renderer_registry::instance().cancel_swapchain_frame(
+                                renderer, swapchain, frame, recreate);
   *needs_recreate = recreate ? 1U : 0U;
   return result;
 }

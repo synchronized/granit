@@ -49,8 +49,8 @@ extern "C" granit_result granit_surface_create_canvas(granit_renderer renderer,
   const auto selector = desc->selector == nullptr
                             ? granit::detail::default_canvas_selector
                             : std::string_view{desc->selector, desc->selector_length};
-  return granit::detail::renderer_registry::instance().create_canvas_surface(
-      renderer, selector.data(), static_cast<std::uint32_t>(selector.size()), *surface);
+  return granit::detail::renderer_registry::instance().create_canvas_surface(renderer, selector,
+                                                                             *surface);
 }
 
 extern "C" granit_result granit_surface_destroy(granit_renderer renderer, granit_surface surface) {

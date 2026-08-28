@@ -20,9 +20,9 @@ extern "C" granit_result granit_shader_create(granit_renderer renderer,
   if (validation != GRANIT_SUCCESS) {
     return validation;
   }
-  return granit::detail::renderer_registry::instance().create_shader(
-      renderer, desc->stage, desc->wgsl, desc->wgsl_length, desc->entry_point,
-      desc->entry_point_length, *shader);
+  return granit::detail::renderer_registry::instance().create_wgsl_shader(
+      renderer, desc->stage, {desc->wgsl, static_cast<std::size_t>(desc->wgsl_length)},
+      {desc->entry_point, static_cast<std::size_t>(desc->entry_point_length)}, *shader);
 }
 
 extern "C" granit_result granit_shader_destroy(granit_renderer renderer, granit_shader shader) {

@@ -3,6 +3,7 @@
 
 #include <granit/renderer/renderer.h>
 
+#include "backend/plugin_api.h"
 #include "renderer/renderer_registry.h"
 #include "renderer/renderer_validation.h"
 
@@ -28,7 +29,9 @@ extern "C" granit_result granit_renderer_create(const granit_renderer_desc* desc
   auto* user_data = desc->struct_size >= GRANIT_RENDERER_DESC_VERSION_4_SIZE
                         ? desc->diagnostic_user_data
                         : nullptr;
-  return granit::detail::renderer_registry::instance().create(callback, user_data, *renderer);
+  return granit::detail::renderer_registry::instance().create_webgpu_static(
+      granit_backend_plugin_query(GRANIT_BACKEND_PLUGIN_ABI_VERSION), callback, user_data,
+      *renderer);
 }
 
 extern "C" granit_result granit_renderer_destroy(granit_renderer renderer) {

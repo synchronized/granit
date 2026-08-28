@@ -49,7 +49,8 @@ extern "C" granit_result granit_pipeline_layout_create(granit_renderer renderer,
   if (desc->bind_group_layout_count != 0) {
     return GRANIT_ERROR_UNSUPPORTED;
   }
-  return granit::detail::renderer_registry::instance().create_pipeline_layout(renderer, *layout);
+  return granit::detail::renderer_registry::instance().create_webgpu_pipeline_layout(renderer,
+                                                                                     *layout);
 }
 
 extern "C" granit_result granit_pipeline_layout_destroy(granit_renderer renderer,
@@ -99,7 +100,7 @@ extern "C" granit_result granit_graphics_pipeline_create(granit_renderer rendere
       desc->depth_bias != nullptr) {
     return GRANIT_ERROR_UNSUPPORTED;
   }
-  return granit::detail::renderer_registry::instance().create_graphics_pipeline(
+  return granit::detail::renderer_registry::instance().create_webgpu_graphics_pipeline(
       renderer, desc->layout, desc->vertex_shader, desc->fragment_shader, desc->color_formats[0],
       *pipeline);
 }

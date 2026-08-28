@@ -37,8 +37,7 @@ extern "C" granit_result granit_command_recorder_submit(granit_renderer renderer
                                                         granit_command_recorder recorder) {
   if (renderer == GRANIT_NULL_HANDLE || recorder == GRANIT_NULL_HANDLE)
     return GRANIT_ERROR_INVALID_HANDLE;
-  return granit::detail::renderer_registry::instance().submit_command_recorder(renderer, recorder,
-                                                                               GRANIT_NULL_HANDLE);
+  return granit::detail::renderer_registry::instance().submit_command_recorder(renderer, recorder);
 }
 
 extern "C" granit_result
@@ -52,8 +51,8 @@ extern "C" granit_result granit_command_recorder_submit_frame(granit_renderer re
   if (renderer == GRANIT_NULL_HANDLE || recorder == GRANIT_NULL_HANDLE ||
       frame == GRANIT_NULL_HANDLE)
     return GRANIT_ERROR_INVALID_HANDLE;
-  return granit::detail::renderer_registry::instance().submit_command_recorder(renderer, recorder,
-                                                                               frame);
+  return granit::detail::renderer_registry::instance().submit_command_recorder_frame(
+      renderer, recorder, frame);
 }
 
 extern "C" granit_result granit_command_recorder_reset(granit_renderer renderer,
@@ -167,7 +166,8 @@ granit_command_recorder_draw(granit_renderer renderer, granit_command_recorder r
     return GRANIT_ERROR_INVALID_HANDLE;
   if (vertex_count != 3 || instance_count != 1 || first_vertex != 0 || first_instance != 0)
     return GRANIT_ERROR_UNSUPPORTED;
-  return granit::detail::renderer_registry::instance().draw(renderer, recorder);
+  return granit::detail::renderer_registry::instance().draw(
+      renderer, recorder, vertex_count, instance_count, first_vertex, first_instance);
 }
 
 extern "C" granit_result granit_command_recorder_draw_indexed(granit_renderer,
@@ -193,8 +193,7 @@ granit_command_recorder_begin_rendering(granit_renderer renderer, granit_command
       color.load_operation != GRANIT_ATTACHMENT_LOAD_OPERATION_CLEAR ||
       color.store_operation != GRANIT_ATTACHMENT_STORE_OPERATION_STORE)
     return GRANIT_ERROR_UNSUPPORTED;
-  return granit::detail::renderer_registry::instance().begin_rendering(renderer, recorder,
-                                                                       color.view);
+  return granit::detail::renderer_registry::instance().begin_rendering(renderer, recorder, *desc);
 }
 
 extern "C" granit_result granit_command_recorder_end_rendering(granit_renderer renderer,

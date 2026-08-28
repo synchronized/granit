@@ -6,7 +6,7 @@ add_library(
   command_recorder_api.cpp
   pipeline_api.cpp
   renderer_api.cpp
-  "${PROJECT_SOURCE_DIR}/src/renderer/renderer_registry_emscripten.cpp"
+  renderer_registry.cpp
   shader_api.cpp
   surface_api.cpp
   swapchain_api.cpp

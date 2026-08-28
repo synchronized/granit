@@ -4,12 +4,6 @@
 #ifndef GRANIT_RENDERER_RENDERER_REGISTRY_H_
 #define GRANIT_RENDERER_RENDERER_REGISTRY_H_
 
-#ifdef __EMSCRIPTEN__
-
-#include "renderer/renderer_registry_emscripten.h"
-
-#else
-
 #include <atomic>
 #include <cstddef>
 #include <cstdint>
@@ -52,6 +46,11 @@ namespace granit::detail {
 
 class webgpu_renderer_state;
 class renderer_state;
+#ifdef __EMSCRIPTEN__
+using platform_renderer_state = webgpu_renderer_state;
+#else
+using platform_renderer_state = renderer_state;
+#endif
 
 /** 线程安全地管理进程内公开 renderer 句柄。 */
 class renderer_registry {
@@ -79,7 +78,7 @@ public:
   /** 向有效 Renderer 的回调发送公共 API 参数或句柄校验诊断。 */
   void emit_validation_diagnostic(granit_renderer renderer, std::string_view message) noexcept;
   [[nodiscard]] std::shared_ptr<backend_renderer> acquire_backend(granit_renderer renderer);
-  [[nodiscard]] std::shared_ptr<renderer_state> acquire(granit_renderer renderer);
+  [[nodiscard]] std::shared_ptr<platform_renderer_state> acquire(granit_renderer renderer);
   [[nodiscard]] granit_result create_win32_surface(granit_renderer renderer, void* native_instance,
                                                    void* native_window, granit_surface& surface);
   [[nodiscard]] granit_result create_xcb_surface(granit_renderer renderer, void* connection,
@@ -364,12 +363,15 @@ private:
                                 std::vector<backend_swapchain_backbuffer> backbuffers);
   [[nodiscard]] std::shared_ptr<command_recorder_record>
   acquire_command_recorder(granit_renderer renderer, granit_command_recorder recorder);
+  void erase_backbuffer(swapchain_record& swapchain) noexcept;
+  [[nodiscard]] granit_result finish_frame(granit_renderer renderer, granit_swapchain swapchain,
+                                           granit_frame frame, bool present, bool& needs_recreate);
 
   std::mutex mutex_;
   handle_table handles_;
   std::unordered_map<granit_renderer, std::shared_ptr<backend_renderer>> backend_renderers_;
   // Vulkan 资源路径迁移完成前，保留具体状态视图；它与通用根表共享同一状态对象。
-  std::unordered_map<granit_renderer, std::shared_ptr<renderer_state>> renderers_;
+  std::unordered_map<granit_renderer, std::shared_ptr<platform_renderer_state>> renderers_;
   struct surface_record {
     resource_metadata metadata;
     std::shared_ptr<backend_renderer> owner;
@@ -382,8 +384,13 @@ private:
     std::shared_ptr<backend_presentation_renderer> presentation;
     std::shared_ptr<surface_record> surface;
     std::unique_ptr<backend_swapchain_resource> native;
+    // 统一迁移期间保留平台状态视图；完成资源能力迁移后移除。
+    std::shared_ptr<platform_renderer_state> renderer;
     std::vector<granit_texture> textures;
     std::vector<granit_texture_view> views;
+    granit_texture texture{};
+    granit_texture_view view{};
+    std::uint32_t image_index{};
     bool surface_lost{};
   };
   struct buffer_record {
@@ -422,7 +429,7 @@ private:
   struct shader_record {
     resource_metadata metadata;
     std::shared_ptr<backend_renderer> owner;
-    std::shared_ptr<renderer_state> renderer;
+    std::shared_ptr<platform_renderer_state> renderer;
     std::unique_ptr<backend_shader_resource> native;
     granit_shader_stage stage{};
     std::string entry_point;
@@ -436,7 +443,7 @@ private:
   struct pipeline_layout_record {
     resource_metadata metadata;
     std::shared_ptr<backend_renderer> owner;
-    std::shared_ptr<renderer_state> renderer;
+    std::shared_ptr<platform_renderer_state> renderer;
     std::unique_ptr<backend_pipeline_layout_resource> native;
     std::vector<std::shared_ptr<bind_group_layout_record>> bind_group_layouts;
   };
@@ -455,7 +462,7 @@ private:
   struct graphics_pipeline_record {
     resource_metadata metadata;
     std::shared_ptr<backend_renderer> owner;
-    std::shared_ptr<renderer_state> renderer;
+    std::shared_ptr<platform_renderer_state> renderer;
     std::shared_ptr<pipeline_layout_record> layout;
     std::shared_ptr<shader_record> vertex_shader;
     std::shared_ptr<shader_record> fragment_shader;
@@ -474,12 +481,13 @@ private:
     std::shared_ptr<backend_renderer> owner;
     std::shared_ptr<backend_queue> queue;
     std::shared_ptr<backend_command_renderer> commands;
-    std::shared_ptr<renderer_state> renderer;
+    std::shared_ptr<platform_renderer_state> renderer;
     std::unique_ptr<backend_command_recorder_resource> native;
     std::mutex mutex;
     std::vector<retained_resource> retained_resources;
     std::shared_ptr<texture_view_record> web_target;
     std::shared_ptr<graphics_pipeline_record> web_pipeline;
+    std::shared_ptr<frame_record> web_frame;
     web_state web_status{web_state::initial};
     bool web_drew{};
     bool owned_by_frame_context{};
@@ -507,13 +515,14 @@ private:
     std::shared_ptr<backend_presentation_renderer> presentation;
     std::shared_ptr<backend_queue> queue;
     // 命令提交迁移前保留 Vulkan Queue 具体视图。
-    std::shared_ptr<renderer_state> renderer;
+    std::shared_ptr<platform_renderer_state> renderer;
     std::shared_ptr<swapchain_record> swapchain;
     std::mutex mutex;
     std::uint32_t image_index{};
     std::size_t slot_index{};
     bool submitted{};
     bool dynamic_backbuffer{};
+    backend_acquired_swapchain_frame acquired;
   };
   struct upload_entry {
     backend_upload_type type{backend_upload_type::buffer};
@@ -558,7 +567,5 @@ private:
 };
 
 } // namespace granit::detail
-
-#endif // __EMSCRIPTEN__
 
 #endif
