@@ -296,6 +296,28 @@ TEST_CASE("WebGPU 插件 Canvas Surface 契约区分平台支持", "[backend][pl
   CHECK(surface == 0);
   CHECK(loader.destroy_surface(instance, 1) == GRANIT_ERROR_INVALID_HANDLE);
 
+  granit_backend_plugin_swapchain_desc swapchain_desc{};
+  swapchain_desc.struct_size = sizeof(swapchain_desc);
+  swapchain_desc.width = 640;
+  swapchain_desc.height = 480;
+  swapchain_desc.minimum_image_count = 2;
+  swapchain_desc.present_mode = GRANIT_BACKEND_PLUGIN_PRESENT_MODE_FIFO;
+  granit_backend_plugin_swapchain swapchain = 42;
+  CHECK(loader.create_swapchain(instance, 1, &swapchain_desc, &swapchain) ==
+        GRANIT_ERROR_INVALID_HANDLE);
+  CHECK(swapchain == 0);
+  CHECK(loader.recreate_swapchain(instance, 1, &swapchain_desc) == GRANIT_ERROR_UNSUPPORTED);
+  granit_backend_plugin_swapchain_info info{};
+  info.struct_size = sizeof(info);
+  CHECK(loader.get_swapchain_info(instance, 1, &info) == GRANIT_ERROR_UNSUPPORTED);
+  granit_backend_plugin_acquired_frame frame{};
+  frame.struct_size = sizeof(frame);
+  CHECK(loader.acquire_swapchain(instance, 1, &frame) == GRANIT_ERROR_UNSUPPORTED);
+  std::uint32_t needs_recreate{};
+  CHECK(loader.present_swapchain(instance, 1, &needs_recreate) == GRANIT_ERROR_UNSUPPORTED);
+  CHECK(loader.cancel_swapchain(instance, 1, &needs_recreate) == GRANIT_ERROR_UNSUPPORTED);
+  CHECK(loader.destroy_swapchain(instance, 1) == GRANIT_ERROR_UNSUPPORTED);
+
   CHECK(loader.destroy_instance(instance) == GRANIT_SUCCESS);
   CHECK(state.allocations == state.deallocations);
 }

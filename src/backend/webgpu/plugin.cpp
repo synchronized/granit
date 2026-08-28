@@ -1681,6 +1681,56 @@ granit_result destroy_surface(granit_backend_plugin_instance instance,
   return GRANIT_SUCCESS;
 }
 
+granit_result create_swapchain(granit_backend_plugin_instance instance,
+                               granit_backend_plugin_surface surface,
+                               const granit_backend_plugin_swapchain_desc* desc,
+                               granit_backend_plugin_swapchain* swapchain) noexcept {
+  if (swapchain != nullptr)
+    *swapchain = 0;
+  if (instance == 0 || surface == 0 || desc == nullptr || swapchain == nullptr ||
+      desc->struct_size < sizeof(granit_backend_plugin_swapchain_desc) || desc->width == 0 ||
+      desc->height == 0 || desc->present_mode > GRANIT_BACKEND_PLUGIN_PRESENT_MODE_IMMEDIATE)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  const std::scoped_lock lock{instances_mutex};
+  const auto found = instances.find(instance);
+  if (found == instances.end() ||
+      found->second->surfaces.find(surface) == found->second->surfaces.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  if (const auto ready = require_ready(*found->second); ready != GRANIT_SUCCESS)
+    return ready;
+  return GRANIT_ERROR_UNSUPPORTED;
+}
+
+granit_result recreate_swapchain(granit_backend_plugin_instance, granit_backend_plugin_swapchain,
+                                 const granit_backend_plugin_swapchain_desc*) noexcept {
+  return GRANIT_ERROR_UNSUPPORTED;
+}
+
+granit_result get_swapchain_info(granit_backend_plugin_instance, granit_backend_plugin_swapchain,
+                                 granit_backend_plugin_swapchain_info*) noexcept {
+  return GRANIT_ERROR_UNSUPPORTED;
+}
+
+granit_result acquire_swapchain(granit_backend_plugin_instance, granit_backend_plugin_swapchain,
+                                granit_backend_plugin_acquired_frame*) noexcept {
+  return GRANIT_ERROR_UNSUPPORTED;
+}
+
+granit_result present_swapchain(granit_backend_plugin_instance, granit_backend_plugin_swapchain,
+                                std::uint32_t*) noexcept {
+  return GRANIT_ERROR_UNSUPPORTED;
+}
+
+granit_result cancel_swapchain(granit_backend_plugin_instance, granit_backend_plugin_swapchain,
+                               std::uint32_t*) noexcept {
+  return GRANIT_ERROR_UNSUPPORTED;
+}
+
+granit_result destroy_swapchain(granit_backend_plugin_instance,
+                                granit_backend_plugin_swapchain) noexcept {
+  return GRANIT_ERROR_UNSUPPORTED;
+}
+
 constexpr char plugin_name[] = "Granit WebGPU (Dawn)";
 constexpr granit_backend_plugin_instance_api instance_api{
     sizeof(granit_backend_plugin_instance_api),
@@ -1717,7 +1767,14 @@ constexpr granit_backend_plugin_instance_api instance_api{
     get_instance_status,
     process_events,
     create_canvas_surface,
-    destroy_surface};
+    destroy_surface,
+    create_swapchain,
+    recreate_swapchain,
+    get_swapchain_info,
+    acquire_swapchain,
+    present_swapchain,
+    cancel_swapchain,
+    destroy_swapchain};
 constexpr granit_backend_plugin_api plugin_api{sizeof(granit_backend_plugin_api),
                                                GRANIT_BACKEND_PLUGIN_ABI_VERSION,
                                                GRANIT_BACKEND_PLUGIN_KIND_WEBGPU,

@@ -43,6 +43,30 @@ public:
                         granit_backend_plugin_surface* surface) noexcept;
   [[nodiscard]] granit_result destroy_surface(granit_backend_plugin_instance instance,
                                               granit_backend_plugin_surface surface) noexcept;
+  [[nodiscard]] granit_result create_swapchain(granit_backend_plugin_instance instance,
+                                               granit_backend_plugin_surface surface,
+                                               const granit_backend_plugin_swapchain_desc* desc,
+                                               granit_backend_plugin_swapchain* swapchain) noexcept;
+  [[nodiscard]] granit_result
+  recreate_swapchain(granit_backend_plugin_instance instance,
+                     granit_backend_plugin_swapchain swapchain,
+                     const granit_backend_plugin_swapchain_desc* desc) noexcept;
+  [[nodiscard]] granit_result
+  get_swapchain_info(granit_backend_plugin_instance instance,
+                     granit_backend_plugin_swapchain swapchain,
+                     granit_backend_plugin_swapchain_info* info) noexcept;
+  [[nodiscard]] granit_result
+  acquire_swapchain(granit_backend_plugin_instance instance,
+                    granit_backend_plugin_swapchain swapchain,
+                    granit_backend_plugin_acquired_frame* frame) noexcept;
+  [[nodiscard]] granit_result present_swapchain(granit_backend_plugin_instance instance,
+                                                granit_backend_plugin_swapchain swapchain,
+                                                std::uint32_t* needs_recreate) noexcept;
+  [[nodiscard]] granit_result cancel_swapchain(granit_backend_plugin_instance instance,
+                                               granit_backend_plugin_swapchain swapchain,
+                                               std::uint32_t* needs_recreate) noexcept;
+  [[nodiscard]] granit_result destroy_swapchain(granit_backend_plugin_instance instance,
+                                                granit_backend_plugin_swapchain swapchain) noexcept;
   [[nodiscard]] granit_result create_buffer(granit_backend_plugin_instance instance,
                                             const granit_backend_plugin_buffer_desc* desc,
                                             granit_backend_plugin_buffer* buffer) noexcept;

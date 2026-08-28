@@ -15,8 +15,8 @@ bool is_compatible(const granit_backend_plugin_api* api,
   constexpr std::size_t minimum_size = offsetof(granit_backend_plugin_api, instance_api) +
                                        sizeof(const granit_backend_plugin_instance_api*);
   constexpr std::size_t minimum_instance_api_size =
-      offsetof(granit_backend_plugin_instance_api, destroy_surface) +
-      sizeof(granit_backend_plugin_destroy_surface_fn);
+      offsetof(granit_backend_plugin_instance_api, destroy_swapchain) +
+      sizeof(granit_backend_plugin_destroy_swapchain_fn);
   return api != nullptr && api->struct_size >= minimum_size &&
          api->abi_version == GRANIT_BACKEND_PLUGIN_ABI_VERSION && api->kind == expected_kind &&
          api->reserved == 0 && api->name != nullptr && api->name_length != 0 &&
@@ -53,7 +53,14 @@ bool is_compatible(const granit_backend_plugin_api* api,
          api->instance_api->get_instance_status != nullptr &&
          api->instance_api->process_events != nullptr &&
          api->instance_api->create_canvas_surface != nullptr &&
-         api->instance_api->destroy_surface != nullptr;
+         api->instance_api->destroy_surface != nullptr &&
+         api->instance_api->create_swapchain != nullptr &&
+         api->instance_api->recreate_swapchain != nullptr &&
+         api->instance_api->get_swapchain_info != nullptr &&
+         api->instance_api->acquire_swapchain != nullptr &&
+         api->instance_api->present_swapchain != nullptr &&
+         api->instance_api->cancel_swapchain != nullptr &&
+         api->instance_api->destroy_swapchain != nullptr;
 }
 
 bool is_valid_host(const granit_backend_plugin_host_api* host) noexcept {
@@ -240,6 +247,108 @@ backend_plugin_loader::destroy_surface(granit_backend_plugin_instance instance,
     return GRANIT_ERROR_INVALID_HANDLE;
   try {
     return api_->instance_api->destroy_surface(instance, surface);
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+granit_result
+backend_plugin_loader::create_swapchain(granit_backend_plugin_instance instance,
+                                        granit_backend_plugin_surface surface,
+                                        const granit_backend_plugin_swapchain_desc* desc,
+                                        granit_backend_plugin_swapchain* swapchain) noexcept {
+  if (api_ == nullptr || instance == 0 || surface == 0 || desc == nullptr || swapchain == nullptr)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  if (std::find(instances_.begin(), instances_.end(), instance) == instances_.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  try {
+    return api_->instance_api->create_swapchain(instance, surface, desc, swapchain);
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+granit_result backend_plugin_loader::recreate_swapchain(
+    granit_backend_plugin_instance instance, granit_backend_plugin_swapchain swapchain,
+    const granit_backend_plugin_swapchain_desc* desc) noexcept {
+  if (api_ == nullptr || instance == 0 || swapchain == 0 || desc == nullptr)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  if (std::find(instances_.begin(), instances_.end(), instance) == instances_.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  try {
+    return api_->instance_api->recreate_swapchain(instance, swapchain, desc);
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+granit_result
+backend_plugin_loader::get_swapchain_info(granit_backend_plugin_instance instance,
+                                          granit_backend_plugin_swapchain swapchain,
+                                          granit_backend_plugin_swapchain_info* info) noexcept {
+  if (api_ == nullptr || instance == 0 || swapchain == 0 || info == nullptr)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  if (std::find(instances_.begin(), instances_.end(), instance) == instances_.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  try {
+    return api_->instance_api->get_swapchain_info(instance, swapchain, info);
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+granit_result
+backend_plugin_loader::acquire_swapchain(granit_backend_plugin_instance instance,
+                                         granit_backend_plugin_swapchain swapchain,
+                                         granit_backend_plugin_acquired_frame* frame) noexcept {
+  if (api_ == nullptr || instance == 0 || swapchain == 0 || frame == nullptr)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  if (std::find(instances_.begin(), instances_.end(), instance) == instances_.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  try {
+    return api_->instance_api->acquire_swapchain(instance, swapchain, frame);
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+granit_result backend_plugin_loader::present_swapchain(granit_backend_plugin_instance instance,
+                                                       granit_backend_plugin_swapchain swapchain,
+                                                       std::uint32_t* needs_recreate) noexcept {
+  if (api_ == nullptr || instance == 0 || swapchain == 0 || needs_recreate == nullptr)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  if (std::find(instances_.begin(), instances_.end(), instance) == instances_.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  try {
+    return api_->instance_api->present_swapchain(instance, swapchain, needs_recreate);
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+granit_result backend_plugin_loader::cancel_swapchain(granit_backend_plugin_instance instance,
+                                                      granit_backend_plugin_swapchain swapchain,
+                                                      std::uint32_t* needs_recreate) noexcept {
+  if (api_ == nullptr || instance == 0 || swapchain == 0 || needs_recreate == nullptr)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  if (std::find(instances_.begin(), instances_.end(), instance) == instances_.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  try {
+    return api_->instance_api->cancel_swapchain(instance, swapchain, needs_recreate);
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+granit_result
+backend_plugin_loader::destroy_swapchain(granit_backend_plugin_instance instance,
+                                         granit_backend_plugin_swapchain swapchain) noexcept {
+  if (api_ == nullptr || instance == 0 || swapchain == 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  if (std::find(instances_.begin(), instances_.end(), instance) == instances_.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  try {
+    return api_->instance_api->destroy_swapchain(instance, swapchain);
   } catch (...) {
     return GRANIT_ERROR_INTERNAL;
   }
