@@ -30,9 +30,9 @@ typedef struct granit_renderer_status {
 } granit_renderer_status;
 
 #define GRANIT_RENDERER_STATUS_VERSION_1_SIZE ((uint32_t)sizeof(granit_renderer_status))
-#define GRANIT_RENDERER_STATUS_INIT                                                           \
-  {(uint32_t)sizeof(granit_renderer_status), GRANIT_RENDERER_STATE_INITIALIZING,               \
-   GRANIT_SUCCESS, UINT32_C(0)}
+#define GRANIT_RENDERER_STATUS_INIT                                                                \
+  {(uint32_t)sizeof(granit_renderer_status), GRANIT_RENDERER_STATE_INITIALIZING, GRANIT_SUCCESS,   \
+   UINT32_C(0)}
 
 #define GRANIT_RENDERER_API_VERSION_1 UINT32_C(1)
 #define GRANIT_RENDERER_API_VERSION_CURRENT GRANIT_RENDERER_API_VERSION_1
@@ -42,6 +42,7 @@ typedef struct granit_renderer_status {
 #define GRANIT_SURFACE_TYPE_WIN32_BIT (UINT32_C(1) << 0)
 #define GRANIT_SURFACE_TYPE_XCB_BIT (UINT32_C(1) << 1)
 #define GRANIT_SURFACE_TYPE_WAYLAND_BIT (UINT32_C(1) << 2)
+#define GRANIT_SURFACE_TYPE_CANVAS_BIT (UINT32_C(1) << 3)
 
 #define GRANIT_DEFAULT_FRAMES_IN_FLIGHT UINT32_C(2)
 #define GRANIT_MAX_FRAMES_IN_FLIGHT UINT32_C(4)

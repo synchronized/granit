@@ -5,6 +5,8 @@
 #define GRANIT_SURFACE_HPP_
 
 #include <cstdint>
+#include <limits>
+#include <string_view>
 #include <utility>
 
 #include <granit/core/result.hpp>
@@ -25,6 +27,10 @@ struct xcb_surface_desc {
 struct wayland_surface_desc {
   void* display{};
   void* surface{};
+};
+
+struct canvas_surface_desc {
+  std::string_view selector{"#canvas"};
 };
 
 /** 无异常、move-only 的 Surface RAII 包装。 */
@@ -97,6 +103,24 @@ public:
         .surface = desc.surface,
     };
     const auto native_result = granit_surface_create_wayland(renderer, &native_desc, &handle_);
+    if (native_result == GRANIT_SUCCESS)
+      renderer_ = renderer;
+    return from_native(native_result);
+  }
+
+  [[nodiscard]] result initialize_canvas(granit_renderer renderer,
+                                         const canvas_surface_desc& desc = {}) noexcept {
+    if (valid() || desc.selector.size() > std::numeric_limits<std::uint32_t>::max())
+      return result::invalid_argument;
+    if (renderer == GRANIT_NULL_HANDLE)
+      return result::invalid_handle;
+    const granit_canvas_surface_desc native_desc{
+        .struct_size = sizeof(granit_canvas_surface_desc),
+        .reserved = 0,
+        .selector = desc.selector.data(),
+        .selector_length = static_cast<std::uint32_t>(desc.selector.size()),
+    };
+    const auto native_result = granit_surface_create_canvas(renderer, &native_desc, &handle_);
     if (native_result == GRANIT_SUCCESS)
       renderer_ = renderer;
     return from_native(native_result);

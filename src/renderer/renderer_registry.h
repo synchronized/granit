@@ -50,8 +50,7 @@ public:
                                      void* diagnostic_user_data, granit_renderer& renderer);
   [[nodiscard]] granit_result destroy(granit_renderer renderer);
   [[nodiscard]] granit_result get_limits(granit_renderer renderer, granit_renderer_limits& limits);
-  [[nodiscard]] granit_result get_status(granit_renderer renderer,
-                                         granit_renderer_status& status);
+  [[nodiscard]] granit_result get_status(granit_renderer renderer, granit_renderer_status& status);
   [[nodiscard]] granit_result process_events(granit_renderer renderer);
   [[nodiscard]] granit_result import_pipeline_cache(granit_renderer renderer, const void* data,
                                                     std::uint64_t size);
@@ -68,6 +67,9 @@ public:
                                                  std::uint32_t window, granit_surface& surface);
   [[nodiscard]] granit_result create_wayland_surface(granit_renderer renderer, void* display,
                                                      void* native_surface, granit_surface& surface);
+  [[nodiscard]] granit_result create_canvas_surface(granit_renderer renderer,
+                                                    std::string_view selector,
+                                                    granit_surface& surface);
   [[nodiscard]] granit_result destroy_surface(granit_renderer renderer, granit_surface surface);
   [[nodiscard]] granit_result create_swapchain(granit_renderer renderer, granit_surface surface,
                                                const backend_swapchain_desc& desc,

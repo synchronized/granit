@@ -22,6 +22,7 @@ enum class surface_type : std::uint32_t {
   win32 = GRANIT_SURFACE_TYPE_WIN32_BIT,
   xcb = GRANIT_SURFACE_TYPE_XCB_BIT,
   wayland = GRANIT_SURFACE_TYPE_WAYLAND_BIT,
+  canvas = GRANIT_SURFACE_TYPE_CANVAS_BIT,
 };
 
 [[nodiscard]] constexpr surface_type operator|(surface_type left, surface_type right) noexcept {

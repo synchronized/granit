@@ -88,6 +88,8 @@ public:
                                                  backend_surface_resource& surface) noexcept;
   [[nodiscard]] granit_result create_wayland_surface(void* display, void* native_surface,
                                                      backend_surface_resource& surface) noexcept;
+  [[nodiscard]] granit_result create_canvas_surface(std::string_view selector,
+                                                    backend_surface_resource& surface) noexcept;
   void destroy_native_surface(VkSurfaceKHR surface) noexcept;
   [[nodiscard]] granit_result create_swapchain(backend_surface_resource& surface,
                                                const backend_swapchain_desc& desc,

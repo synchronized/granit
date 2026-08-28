@@ -13,7 +13,8 @@ namespace {
 
 constexpr std::uint32_t supported_flags = GRANIT_RENDERER_ENABLE_VALIDATION_BIT;
 constexpr std::uint32_t supported_surface_types =
-    GRANIT_SURFACE_TYPE_WIN32_BIT | GRANIT_SURFACE_TYPE_XCB_BIT | GRANIT_SURFACE_TYPE_WAYLAND_BIT;
+    GRANIT_SURFACE_TYPE_WIN32_BIT | GRANIT_SURFACE_TYPE_XCB_BIT | GRANIT_SURFACE_TYPE_WAYLAND_BIT |
+    GRANIT_SURFACE_TYPE_CANVAS_BIT;
 constexpr std::uint32_t maximum_application_name_length = 4096;
 constexpr std::uint32_t maximum_object_name_length = 4096;
 constexpr std::string_view default_application_name = "Granit Application";
@@ -115,7 +116,7 @@ extern "C" granit_result granit_renderer_get_limits(granit_renderer renderer,
 }
 
 extern "C" granit_result granit_renderer_get_status(granit_renderer renderer,
-                                                     granit_renderer_status* status) {
+                                                    granit_renderer_status* status) {
   if (status == nullptr || status->struct_size < GRANIT_RENDERER_STATUS_VERSION_1_SIZE ||
       status->reserved != 0) {
     return GRANIT_ERROR_INVALID_ARGUMENT;

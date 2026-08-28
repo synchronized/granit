@@ -49,6 +49,19 @@ typedef struct granit_wayland_surface_desc {
   ((uint32_t)(offsetof(granit_wayland_surface_desc, surface) + sizeof(void*)))
 #define GRANIT_WAYLAND_SURFACE_DESC_INIT {(uint32_t)sizeof(granit_wayland_surface_desc), 0, 0}
 
+/** 浏览器 Canvas Surface 创建描述；selector 仅在调用期间借用。 */
+typedef struct granit_canvas_surface_desc {
+  uint32_t struct_size;
+  uint32_t reserved;
+  const char* selector;
+  uint32_t selector_length;
+} granit_canvas_surface_desc;
+
+#define GRANIT_CANVAS_SURFACE_DESC_VERSION_1_SIZE                                                  \
+  ((uint32_t)(offsetof(granit_canvas_surface_desc, selector_length) + sizeof(uint32_t)))
+#define GRANIT_CANVAS_SURFACE_DESC_INIT                                                            \
+  {(uint32_t)sizeof(granit_canvas_surface_desc), UINT32_C(0), 0, UINT32_C(0)}
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -67,6 +80,11 @@ GRANIT_API granit_result granit_surface_create_xcb(granit_renderer renderer,
 GRANIT_API granit_result granit_surface_create_wayland(granit_renderer renderer,
                                                        const granit_wayland_surface_desc* desc,
                                                        granit_surface* surface);
+
+/** 从 CSS selector 创建浏览器 Canvas Surface；空 selector 使用默认值 #canvas。 */
+GRANIT_API granit_result granit_surface_create_canvas(granit_renderer renderer,
+                                                      const granit_canvas_surface_desc* desc,
+                                                      granit_surface* surface);
 
 /** 销毁属于指定 Renderer 的 Surface，并使句柄立即失效。 */
 GRANIT_API granit_result granit_surface_destroy(granit_renderer renderer, granit_surface surface);

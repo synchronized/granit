@@ -23,9 +23,8 @@ TEST_CASE("Surface创建把空Renderer归类为无效句柄", "[surface][contrac
   CHECK(handle == GRANIT_NULL_HANDLE);
 
   granit::surface surface;
-  CHECK(surface.initialize_win32(GRANIT_NULL_HANDLE,
-                                 {.instance = reinterpret_cast<void*>(1),
-                                  .window = reinterpret_cast<void*>(1)}) ==
+  CHECK(surface.initialize_win32(GRANIT_NULL_HANDLE, {.instance = reinterpret_cast<void*>(1),
+                                                      .window = reinterpret_cast<void*>(1)}) ==
         granit::result::invalid_handle);
 }
 
@@ -45,6 +44,44 @@ TEST_CASE("Linux Surface 公共入口验证原生描述", "[surface][xcb][waylan
   wayland.surface = &wayland;
   CHECK(granit_surface_create_wayland(UINT64_C(1), &wayland, &output) ==
         GRANIT_ERROR_INVALID_HANDLE);
+}
+
+TEST_CASE("Canvas Surface 校验 CSS selector 契约", "[surface][canvas][contract]") {
+  granit_surface output = UINT64_C(42);
+  CHECK(granit_surface_create_canvas(UINT64_C(1), nullptr, &output) ==
+        GRANIT_ERROR_INVALID_ARGUMENT);
+
+  granit_canvas_surface_desc desc = GRANIT_CANVAS_SURFACE_DESC_INIT;
+  desc.selector_length = 1;
+  CHECK(granit_surface_create_canvas(UINT64_C(1), &desc, &output) == GRANIT_ERROR_INVALID_ARGUMENT);
+  desc.selector = "#canvas";
+  desc.selector_length = 0;
+  CHECK(granit_surface_create_canvas(UINT64_C(1), &desc, &output) == GRANIT_ERROR_INVALID_ARGUMENT);
+  constexpr char embedded_zero[] = {'#', 'a', '\0', 'b'};
+  desc.selector = embedded_zero;
+  desc.selector_length = sizeof(embedded_zero);
+  CHECK(granit_surface_create_canvas(UINT64_C(1), &desc, &output) == GRANIT_ERROR_INVALID_ARGUMENT);
+
+  desc = GRANIT_CANVAS_SURFACE_DESC_INIT;
+  CHECK(granit_surface_create_canvas(UINT64_C(1), &desc, &output) == GRANIT_ERROR_INVALID_HANDLE);
+  CHECK(output == GRANIT_NULL_HANDLE);
+}
+
+TEST_CASE("Vulkan Renderer 明确拒绝 Canvas Surface", "[surface][canvas]") {
+  granit::renderer renderer;
+  const auto renderer_result =
+      renderer.initialize({.application_name = "granit-canvas-surface-tests",
+                           .surface_types = granit::surface_type::canvas});
+  if (renderer_result == granit::result::backend_unavailable ||
+      renderer_result == granit::result::incompatible_driver ||
+      renderer_result == granit::result::no_suitable_device) {
+    SKIP("当前运行环境没有满足要求的 Vulkan 设备");
+  }
+  REQUIRE(renderer_result == granit::result::success);
+
+  granit::surface surface;
+  CHECK(surface.initialize_canvas(renderer.native_handle()) == granit::result::unsupported);
+  CHECK_FALSE(surface.valid());
 }
 
 #if defined(_WIN32)

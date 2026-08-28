@@ -652,6 +652,11 @@ renderer_state::create_wayland_surface(void* display, void* native_surface,
       detail::create_wayland_surface(instance_, device_, display, native_surface, surface));
 }
 
+granit_result renderer_state::create_canvas_surface(std::string_view,
+                                                    backend_surface_resource&) noexcept {
+  return device_lost() ? GRANIT_ERROR_DEVICE_LOST : GRANIT_ERROR_UNSUPPORTED;
+}
+
 void renderer_state::destroy_native_surface(VkSurfaceKHR surface) noexcept {
   std::lock_guard lock{resource_mutex_};
   detail::destroy_surface(instance_, surface);
