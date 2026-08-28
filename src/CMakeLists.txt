@@ -83,6 +83,7 @@ target_sources(
     backend/access.h
     backend/binding.h
     backend/capabilities.h
+    backend/command.h
     backend/presentation.h
     backend/queue.h
     backend/rendering.h

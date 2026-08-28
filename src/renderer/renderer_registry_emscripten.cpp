@@ -775,13 +775,16 @@ granit_result renderer_registry::create_command_recorder(granit_renderer rendere
                                                          granit_command_recorder& recorder) {
   try {
     const auto state = acquire(renderer);
-    if (!state || state->commands() == nullptr)
-      return state ? GRANIT_ERROR_NOT_READY : GRANIT_ERROR_INVALID_HANDLE;
+    if (!state)
+      return GRANIT_ERROR_INVALID_HANDLE;
     auto record = std::make_shared<command_recorder_record>();
     record->renderer = state;
-    record->native = state->commands()->allocate_recorder();
+    record->native = state->allocate_command_recorder_resource();
     if (!record->native)
       return GRANIT_ERROR_OUT_OF_MEMORY;
+    const auto create_result = state->create_command_recorder(*record->native);
+    if (create_result != GRANIT_SUCCESS)
+      return create_result;
     std::lock_guard lock{mutex_};
     if (renderers_.find(renderer) == renderers_.end())
       return GRANIT_ERROR_INVALID_HANDLE;
@@ -813,7 +816,7 @@ granit_result renderer_registry::begin_command_recorder(granit_renderer renderer
     return GRANIT_ERROR_INVALID_HANDLE;
   if (found->second->state != command_state::initial)
     return GRANIT_ERROR_INVALID_ARGUMENT;
-  const auto result = state->second->commands()->begin(*found->second->native);
+  const auto result = state->second->begin_command_recorder(*found->second->native);
   if (result == GRANIT_SUCCESS)
     found->second->state = command_state::recording;
   return result;
@@ -901,7 +904,7 @@ granit_result renderer_registry::end_command_recorder(granit_renderer renderer,
     return GRANIT_ERROR_INVALID_HANDLE;
   if (found->second->state != command_state::recording || !found->second->drew)
     return GRANIT_ERROR_INVALID_ARGUMENT;
-  const auto result = state->second->commands()->end(*found->second->native);
+  const auto result = state->second->end_command_recorder(*found->second->native);
   if (result == GRANIT_SUCCESS)
     found->second->state = command_state::executable;
   return result;
@@ -923,7 +926,8 @@ granit_result renderer_registry::submit_command_recorder(granit_renderer rendere
     if (found == frames_.end() || found->second != command->second->frame)
       return GRANIT_ERROR_INVALID_HANDLE;
   }
-  const auto result = state->second->commands()->submit(*command->second->native);
+  submission_serial serial{};
+  const auto result = state->second->submit_command_recorder(*command->second->native, serial);
   if (result == GRANIT_SUCCESS)
     command->second->state = command_state::submitted;
   return result;
@@ -940,7 +944,7 @@ granit_result renderer_registry::reset_command_recorder(granit_renderer renderer
   if (found->second->state == command_state::recording ||
       found->second->state == command_state::rendering)
     return GRANIT_ERROR_INVALID_ARGUMENT;
-  const auto result = state->second->commands()->reset(*found->second->native);
+  const auto result = state->second->reset_command_recorder(*found->second->native);
   if (result == GRANIT_SUCCESS) {
     found->second->frame.reset();
     found->second->pipeline.reset();

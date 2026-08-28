@@ -3058,18 +3058,14 @@ granit_result renderer_registry::create_command_recorder(granit_renderer rendere
     auto record = std::make_shared<command_recorder_record>();
     record->owner = owner;
     record->queue = std::dynamic_pointer_cast<backend_queue>(owner);
-    if (!record->queue)
+    record->commands = std::dynamic_pointer_cast<backend_command_renderer>(owner);
+    if (!record->queue || !record->commands)
       return GRANIT_ERROR_INTERNAL;
     record->renderer = std::dynamic_pointer_cast<renderer_state>(owner);
     record->webgpu = std::dynamic_pointer_cast<webgpu_renderer_state>(owner);
-    granit_result result{GRANIT_ERROR_UNSUPPORTED};
-    if (record->renderer) {
-      record->native = record->renderer->allocate_command_recorder_resource();
-      result = record->renderer->create_native_command_recorder(*record->native);
-    } else if (record->webgpu && record->webgpu->commands()) {
-      record->native = record->webgpu->commands()->allocate_recorder();
-      result = record->native ? GRANIT_SUCCESS : GRANIT_ERROR_OUT_OF_MEMORY;
-    }
+    record->native = record->commands->allocate_command_recorder_resource();
+    const auto result = record->native ? record->commands->create_command_recorder(*record->native)
+                                       : GRANIT_ERROR_OUT_OF_MEMORY;
     if (result != GRANIT_SUCCESS) {
       return result;
     }
@@ -3109,12 +3105,12 @@ granit_result renderer_registry::begin_command_recorder(granit_renderer renderer
   if (record->webgpu) {
     if (record->web_status != command_recorder_record::web_state::initial)
       return GRANIT_ERROR_INVALID_ARGUMENT;
-    const auto result = record->webgpu->commands()->begin(*record->native);
+    const auto result = record->commands->begin_command_recorder(*record->native);
     if (result == GRANIT_SUCCESS)
       record->web_status = command_recorder_record::web_state::recording;
     return result;
   }
-  return record->renderer->begin_command_recorder(*record->native);
+  return record->commands->begin_command_recorder(*record->native);
 }
 
 granit_result renderer_registry::end_command_recorder(granit_renderer renderer,
@@ -3127,12 +3123,12 @@ granit_result renderer_registry::end_command_recorder(granit_renderer renderer,
   if (record->webgpu) {
     if (record->web_status != command_recorder_record::web_state::recording || !record->web_drew)
       return GRANIT_ERROR_INVALID_ARGUMENT;
-    const auto result = record->webgpu->commands()->end(*record->native);
+    const auto result = record->commands->end_command_recorder(*record->native);
     if (result == GRANIT_SUCCESS)
       record->web_status = command_recorder_record::web_state::executable;
     return result;
   }
-  return record->renderer->end_command_recorder(*record->native);
+  return record->commands->end_command_recorder(*record->native);
 }
 
 granit_result renderer_registry::submit_command_recorder(granit_renderer renderer,
@@ -3219,7 +3215,7 @@ granit_result renderer_registry::reset_command_recorder(granit_renderer renderer
     if (record->web_status == command_recorder_record::web_state::recording ||
         record->web_status == command_recorder_record::web_state::rendering)
       return GRANIT_ERROR_INVALID_ARGUMENT;
-    const auto result = record->webgpu->commands()->reset(*record->native);
+    const auto result = record->commands->reset_command_recorder(*record->native);
     if (result == GRANIT_SUCCESS) {
       record->web_status = command_recorder_record::web_state::initial;
       record->web_target.reset();
@@ -3232,7 +3228,7 @@ granit_result renderer_registry::reset_command_recorder(granit_renderer renderer
   if (wait_result != GRANIT_SUCCESS) {
     return wait_result;
   }
-  const auto result = record->renderer->reset_command_recorder(*record->native);
+  const auto result = record->commands->reset_command_recorder(*record->native);
   if (result == GRANIT_SUCCESS) {
     record->retained_resources.clear();
     static_cast<void>(record->renderer->collect_retired());
@@ -3398,7 +3394,7 @@ granit_result renderer_registry::abort_frame_context(granit_renderer renderer,
   std::lock_guard command_lock{command->mutex};
   command->renderer->destroy_native_command_recorder(*command->native);
   command->retained_resources.clear();
-  const auto result = command->renderer->create_native_command_recorder(*command->native);
+  const auto result = command->commands->create_command_recorder(*command->native);
   if (result == GRANIT_SUCCESS) {
     slot->frame = GRANIT_NULL_HANDLE;
     slot->state = frame_context_slot_state::idle;

@@ -22,6 +22,7 @@
 #include "backend/access.h"
 #include "backend/binding.h"
 #include "backend/capabilities.h"
+#include "backend/command.h"
 #include "backend/lifecycle.h"
 #include "backend/presentation.h"
 #include "backend/queue.h"
@@ -44,6 +45,7 @@ namespace granit::detail {
 class renderer_state final : public backend_renderer,
                              public backend_presentation_renderer,
                              public backend_queue,
+                             public backend_command_renderer,
                              public std::enable_shared_from_this<renderer_state> {
 public:
   renderer_state() = default;
@@ -83,7 +85,7 @@ public:
   [[nodiscard]] std::unique_ptr<backend_compute_pipeline_resource>
   allocate_compute_pipeline_resource();
   [[nodiscard]] std::unique_ptr<backend_command_recorder_resource>
-  allocate_command_recorder_resource();
+  allocate_command_recorder_resource() override;
 
   [[nodiscard]] granit_result
   create_win32_surface(void* native_instance, void* native_window,
@@ -173,15 +175,15 @@ public:
                                  backend_compute_pipeline_resource& pipeline) noexcept;
   void destroy_native_compute_pipeline(VkPipeline pipeline) noexcept;
   [[nodiscard]] granit_result
-  create_native_command_recorder(backend_command_recorder_resource& recorder) noexcept;
+  create_command_recorder(backend_command_recorder_resource& recorder) noexcept override;
   [[nodiscard]] granit_result
-  begin_command_recorder(backend_command_recorder_resource& recorder) noexcept;
+  begin_command_recorder(backend_command_recorder_resource& recorder) noexcept override;
   [[nodiscard]] granit_result
-  end_command_recorder(backend_command_recorder_resource& recorder) noexcept;
+  end_command_recorder(backend_command_recorder_resource& recorder) noexcept override;
   [[nodiscard]] granit_result
-  reset_command_recorder(backend_command_recorder_resource& recorder) noexcept;
+  reset_command_recorder(backend_command_recorder_resource& recorder) noexcept override;
   [[nodiscard]] bool
-  command_recorder_is_recording(backend_command_recorder_resource& recorder) noexcept;
+  command_recorder_is_recording(backend_command_recorder_resource& recorder) noexcept override;
   [[nodiscard]] granit_result copy_buffer(backend_command_recorder_resource& recorder,
                                           backend_buffer_resource& source,
                                           backend_buffer_resource& destination,

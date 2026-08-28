@@ -9,6 +9,7 @@
 #include <granit/core/diagnostic.h>
 
 #include "backend/capabilities.h"
+#include "backend/command.h"
 #include "backend/lifecycle.h"
 #include "backend/plugin_loader.h"
 #include "backend/queue.h"
@@ -23,7 +24,8 @@ namespace granit::detail {
 /** 集中管理 WebGPU Provider、异步生命周期、能力快照和呈现适配器。 */
 class webgpu_renderer_state final : public backend_renderer,
                                     public backend_presentation_renderer,
-                                    public backend_queue {
+                                    public backend_queue,
+                                    public backend_command_renderer {
 public:
   webgpu_renderer_state() = default;
   ~webgpu_renderer_state();
@@ -46,6 +48,19 @@ public:
   [[nodiscard]] webgpu_shader_adapter* shaders() noexcept { return shaders_.get(); }
   [[nodiscard]] webgpu_pipeline_adapter* pipelines() noexcept { return pipelines_.get(); }
   [[nodiscard]] webgpu_command_adapter* commands() noexcept { return commands_.get(); }
+
+  [[nodiscard]] std::unique_ptr<backend_command_recorder_resource>
+  allocate_command_recorder_resource() override;
+  [[nodiscard]] granit_result
+  create_command_recorder(backend_command_recorder_resource& recorder) noexcept override;
+  [[nodiscard]] granit_result
+  begin_command_recorder(backend_command_recorder_resource& recorder) noexcept override;
+  [[nodiscard]] granit_result
+  end_command_recorder(backend_command_recorder_resource& recorder) noexcept override;
+  [[nodiscard]] granit_result
+  reset_command_recorder(backend_command_recorder_resource& recorder) noexcept override;
+  [[nodiscard]] bool
+  command_recorder_is_recording(backend_command_recorder_resource& recorder) noexcept override;
 
   [[nodiscard]] std::unique_ptr<backend_surface_resource> allocate_surface_resource() override;
   [[nodiscard]] std::unique_ptr<backend_swapchain_resource> allocate_swapchain_resource() override;

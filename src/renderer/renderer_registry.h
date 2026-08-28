@@ -35,6 +35,7 @@
 #include <granit/renderer/upload_batch.h>
 
 #include "backend/access.h"
+#include "backend/command.h"
 #include "backend/plugin_api.h"
 #include "backend/presentation.h"
 #include "backend/queue.h"
@@ -470,6 +471,7 @@ private:
     resource_metadata metadata;
     std::shared_ptr<backend_renderer> owner;
     std::shared_ptr<backend_queue> queue;
+    std::shared_ptr<backend_command_renderer> commands;
     std::shared_ptr<renderer_state> renderer;
     std::shared_ptr<webgpu_renderer_state> webgpu;
     std::unique_ptr<backend_command_recorder_resource> native;

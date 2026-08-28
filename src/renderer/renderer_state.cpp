@@ -1671,8 +1671,8 @@ void renderer_state::destroy_native_compute_pipeline(VkPipeline pipeline) noexce
   }
 }
 
-granit_result renderer_state::create_native_command_recorder(
-    backend_command_recorder_resource& resource) noexcept {
+granit_result
+renderer_state::create_command_recorder(backend_command_recorder_resource& resource) noexcept {
   if (device_lost())
     return GRANIT_ERROR_DEVICE_LOST;
   auto& recorder = static_cast<vulkan_command_recorder_resource&>(resource).native();

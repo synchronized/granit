@@ -19,6 +19,36 @@ webgpu_renderer_state::~webgpu_renderer_state() {
   loader_.close();
 }
 
+std::unique_ptr<backend_command_recorder_resource>
+webgpu_renderer_state::allocate_command_recorder_resource() {
+  return commands_ ? commands_->allocate_recorder() : nullptr;
+}
+
+granit_result
+webgpu_renderer_state::create_command_recorder(backend_command_recorder_resource&) noexcept {
+  return commands_ ? GRANIT_SUCCESS : GRANIT_ERROR_UNSUPPORTED;
+}
+
+granit_result webgpu_renderer_state::begin_command_recorder(
+    backend_command_recorder_resource& recorder) noexcept {
+  return commands_ ? commands_->begin(recorder) : GRANIT_ERROR_UNSUPPORTED;
+}
+
+granit_result
+webgpu_renderer_state::end_command_recorder(backend_command_recorder_resource& recorder) noexcept {
+  return commands_ ? commands_->end(recorder) : GRANIT_ERROR_UNSUPPORTED;
+}
+
+granit_result webgpu_renderer_state::reset_command_recorder(
+    backend_command_recorder_resource& recorder) noexcept {
+  return commands_ ? commands_->reset(recorder) : GRANIT_ERROR_UNSUPPORTED;
+}
+
+bool webgpu_renderer_state::command_recorder_is_recording(
+    backend_command_recorder_resource&) noexcept {
+  return false;
+}
+
 void* webgpu_renderer_state::allocate(std::uint64_t size, std::uint64_t alignment, void*) noexcept {
   return ::operator new(static_cast<std::size_t>(size),
                         std::align_val_t{static_cast<std::size_t>(alignment)}, std::nothrow);
