@@ -49,29 +49,33 @@ granit_result renderer_registry::create_shader(granit_renderer renderer, granit_
                                                std::string_view entry_point,
                                                granit_shader& shader) {
   try {
-    auto state = std::dynamic_pointer_cast<renderer_state>(acquire_backend(renderer));
-    if (!state)
+    auto owner = acquire_backend(renderer);
+    if (!owner)
       return GRANIT_ERROR_INVALID_HANDLE;
+    auto shaders = std::dynamic_pointer_cast<backend_spirv_shader_renderer>(owner);
+    if (!shaders)
+      return GRANIT_ERROR_UNSUPPORTED;
     auto record = std::make_shared<shader_record>();
-    record->owner = state;
+    record->owner = owner;
+    record->retirement = std::dynamic_pointer_cast<backend_retirement_renderer>(owner);
     record->stage = stage;
     record->entry_point.assign(entry_point);
-    record->native = state->allocate_shader_resource();
-    const auto result = state->create_native_shader(code, *record->native);
+    record->native = shaders->allocate_shader_resource();
+    const auto result = shaders->create_spirv_shader(*record->native, stage, code, entry_point);
     if (result != GRANIT_SUCCESS)
       return result;
     std::lock_guard lock{mutex_};
     const auto found = backend_renderers_.find(renderer);
-    if (found == backend_renderers_.end() || found->second != state)
+    if (found == backend_renderers_.end() || found->second != owner)
       return GRANIT_ERROR_INVALID_HANDLE;
     record->metadata.creation_sequence = next_creation_sequence_++;
-    const auto handle = handles_.insert(record.get(), resource_type::shader, state->domain());
+    const auto handle = handles_.insert(record.get(), resource_type::shader, owner->domain());
     if (handle == GRANIT_NULL_HANDLE)
       return GRANIT_ERROR_OUT_OF_MEMORY;
     try {
       shaders_.emplace(handle, std::move(record));
     } catch (...) {
-      static_cast<void>(handles_.erase(handle, resource_type::shader, state->domain()));
+      static_cast<void>(handles_.erase(handle, resource_type::shader, owner->domain()));
       throw;
     }
     shader = handle;
@@ -95,6 +99,7 @@ granit_result renderer_registry::create_wgsl_shader(granit_renderer renderer,
       return GRANIT_ERROR_INVALID_HANDLE;
     auto record = std::make_shared<shader_record>();
     record->owner = owner;
+    record->retirement = std::dynamic_pointer_cast<backend_retirement_renderer>(owner);
     record->stage = stage;
     record->entry_point.assign(entry_point);
     record->native = shaders->allocate_shader_resource();
@@ -144,14 +149,13 @@ granit_result renderer_registry::destroy_shader(granit_renderer renderer, granit
     shaders_.erase(found);
     static_cast<void>(handles_.erase(shader, resource_type::shader, owner->domain()));
   }
-  auto state = std::dynamic_pointer_cast<renderer_state>(record->owner);
-  if (state) {
-    state->retire_resource(record->metadata.last_use_serial.load(), retirement_order::resource,
-                           record);
-  }
+  const auto retirement = record->retirement;
+  if (retirement)
+    retirement->retire_resource(record->metadata.last_use_serial.load(), retirement_order::resource,
+                                record);
   record.reset();
-  if (state)
-    static_cast<void>(state->collect_retired());
+  if (retirement)
+    static_cast<void>(retirement->collect_retired());
   return GRANIT_SUCCESS;
 }
 

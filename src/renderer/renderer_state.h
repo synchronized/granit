@@ -32,6 +32,7 @@
 #include "backend/rendering.h"
 #include "backend/resource_management.h"
 #include "backend/retirement.h"
+#include "backend/shader.h"
 #include "backend/timestamp.h"
 #include "backend/transfer.h"
 #include "backend/upload.h"
@@ -56,6 +57,7 @@ class renderer_state final : public backend_renderer,
                              public backend_command_renderer,
                              public backend_compute_command_renderer,
                              public backend_graphics_command_renderer,
+                             public backend_spirv_shader_renderer,
                              public backend_retirement_renderer,
                              public backend_timestamp_renderer,
                              public backend_transfer_command_renderer,
@@ -88,7 +90,7 @@ public:
   [[nodiscard]] std::unique_ptr<backend_texture_view_resource>
   allocate_texture_view_resource() override;
   [[nodiscard]] std::unique_ptr<backend_sampler_resource> allocate_sampler_resource() override;
-  [[nodiscard]] std::unique_ptr<backend_shader_resource> allocate_shader_resource();
+  [[nodiscard]] std::unique_ptr<backend_shader_resource> allocate_shader_resource() override;
   [[nodiscard]] std::unique_ptr<backend_bind_group_layout_resource>
   allocate_bind_group_layout_resource() override;
   [[nodiscard]] std::unique_ptr<backend_bind_group_resource>
@@ -178,6 +180,12 @@ public:
   void destroy_native_sampler(VkSampler sampler) noexcept;
   [[nodiscard]] granit_result create_native_shader(std::span<const std::uint32_t> code,
                                                    backend_shader_resource& shader) noexcept;
+  [[nodiscard]] granit_result create_spirv_shader(backend_shader_resource& shader,
+                                                  granit_shader_stage,
+                                                  std::span<const std::uint32_t> code,
+                                                  std::string_view) noexcept override {
+    return create_native_shader(code, shader);
+  }
   void destroy_native_shader(VkShaderModule shader) noexcept;
   [[nodiscard]] granit_result
   create_native_bind_group_layout(std::span<const granit_bind_group_layout_entry> entries,

@@ -74,6 +74,7 @@ struct renderer_registry::sampler_record {
 struct renderer_registry::shader_record {
   resource_metadata metadata;
   std::shared_ptr<backend_renderer> owner;
+  std::shared_ptr<backend_retirement_renderer> retirement;
   std::unique_ptr<backend_shader_resource> native;
   granit_shader_stage stage{};
   std::string entry_point;
