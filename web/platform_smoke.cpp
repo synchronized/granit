@@ -99,19 +99,13 @@ granit_result validate_public_pipeline() {
     static_cast<void>(granit_shader_destroy(state.renderer, vertex));
     return result;
   }
-  if (granit_shader_destroy(state.renderer, vertex) != GRANIT_ERROR_INVALID_ARGUMENT ||
-      granit_pipeline_layout_destroy(state.renderer, layout) != GRANIT_ERROR_INVALID_ARGUMENT) {
+  if (granit_shader_destroy(state.renderer, vertex) != GRANIT_SUCCESS ||
+      granit_pipeline_layout_destroy(state.renderer, layout) != GRANIT_SUCCESS) {
     return GRANIT_ERROR_INTERNAL;
   }
   result = granit_graphics_pipeline_destroy(state.renderer, pipeline);
   if (result == GRANIT_SUCCESS) {
-    result = granit_pipeline_layout_destroy(state.renderer, layout);
-  }
-  if (result == GRANIT_SUCCESS) {
     result = granit_shader_destroy(state.renderer, fragment);
-  }
-  if (result == GRANIT_SUCCESS) {
-    result = granit_shader_destroy(state.renderer, vertex);
   }
   if (result != GRANIT_SUCCESS ||
       granit_shader_destroy(state.renderer, vertex) != GRANIT_ERROR_INVALID_HANDLE) {
