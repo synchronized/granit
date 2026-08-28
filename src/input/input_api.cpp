@@ -4,7 +4,9 @@
 #include <granit/input/input.h>
 
 #include "platform/window/input_bridge.hpp"
+#if defined(GRANIT_INPUT_HAS_XCB)
 #include "platform/xcb/input_adapter.h"
+#endif
 #include "utf8.h"
 #if defined(GRANIT_INPUT_HAS_WAYLAND)
 #include "platform/wayland/input_adapter.h"
@@ -210,12 +212,14 @@ void native_event(void* user_data, granit_window window,
     if (event->backend == GRANIT_WINDOW_INPUT_BACKEND_WIN32)
       handle_win32_event(input, window, *event);
 #endif
+#if defined(GRANIT_INPUT_HAS_XCB)
     if (event->backend == GRANIT_WINDOW_INPUT_BACKEND_XCB) {
       const granit::input::detail::xcb_input_sink sink{&input, adapter_keyboard, adapter_pointer,
                                                        adapter_event};
       granit::input::detail::handle_xcb_input(
           window, {event->type, event->x, event->y, event->state, event->detail}, sink);
     }
+#endif
 #if defined(GRANIT_INPUT_HAS_WAYLAND)
     if (event->backend == GRANIT_WINDOW_INPUT_BACKEND_WAYLAND)
       handle_wayland_event(input, window, *event);

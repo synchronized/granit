@@ -672,9 +672,11 @@ add_executable(
   granit_input_test
   input/input_api_test.cpp
   input/utf8_test.cpp
-  input/xcb_input_adapter_test.cpp
   $<TARGET_OBJECTS:granit_input_internal>
 )
+if(GRANIT_HAS_XCB)
+  target_sources(granit_input_test PRIVATE input/xcb_input_adapter_test.cpp)
+endif()
 if(GRANIT_HAS_WAYLAND_INPUT)
   target_sources(granit_input_test PRIVATE input/wayland_input_adapter_test.cpp)
   target_link_libraries(granit_input_test PRIVATE "${GRANIT_XKBCOMMON_LIBRARY}")

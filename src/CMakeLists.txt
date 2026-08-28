@@ -365,7 +365,7 @@ install(
   COMPONENT Window
 )
 
-add_library(granit_input_internal OBJECT input/utf8.cpp platform/xcb/input_adapter.cpp)
+add_library(granit_input_internal OBJECT input/utf8.cpp)
 target_compile_features(granit_input_internal PRIVATE cxx_std_20)
 target_include_directories(
   granit_input_internal PRIVATE "${PROJECT_SOURCE_DIR}/include" "${PROJECT_SOURCE_DIR}/src"
@@ -376,6 +376,9 @@ set_target_properties(
   PROPERTIES FOLDER "Modules/Internal" POSITION_INDEPENDENT_CODE ON CXX_VISIBILITY_PRESET hidden
              VISIBILITY_INLINES_HIDDEN YES
 )
+if(GRANIT_HAS_XCB)
+  target_sources(granit_input_internal PRIVATE platform/xcb/input_adapter.cpp)
+endif()
 if(GRANIT_HAS_WAYLAND_INPUT)
   target_sources(granit_input_internal PRIVATE platform/wayland/input_adapter.cpp)
   target_include_directories(
@@ -398,6 +401,9 @@ target_sources(
       "${PROJECT_SOURCE_DIR}/include/granit/input/input.h"
       "${PROJECT_SOURCE_DIR}/include/granit/input/input.hpp"
 )
+if(GRANIT_HAS_XCB)
+  target_compile_definitions(granit_input PRIVATE GRANIT_INPUT_HAS_XCB)
+endif()
 if(GRANIT_HAS_WAYLAND_INPUT)
   target_compile_definitions(granit_input PRIVATE GRANIT_INPUT_HAS_WAYLAND)
   target_link_libraries(granit_input PRIVATE "${GRANIT_XKBCOMMON_LIBRARY}")
