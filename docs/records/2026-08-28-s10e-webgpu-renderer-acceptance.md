@@ -9,7 +9,7 @@ S-10E 已完成。浏览器闭环、Registry 状态声明、公共 API 源与平
 现可通过 Granit 公共 Renderer、Surface、
 Swapchain、Shader、Graphics Pipeline 和 Command Recorder API，在浏览器 Canvas 绘制确定性
 三角形；公共头文件不暴露 WebGPU、Emscripten 或 Vulkan 原生类型。Windows、Linux 与
-Emscripten 首轮矩阵均已通过。
+Emscripten 最终矩阵均已通过。
 
 仅生成示例目标的问题已经关闭，构建同时提供静态 `granit::granit` SDK 目标，浏览器示例作为只
 包含公共头文件的独立 Consumer 链接该目标。Emscripten 与桌面也已统一包含
@@ -44,14 +44,14 @@ Queue、Present 和延迟退役能力。命令、帧、时间戳、Buffer、Samp
   无头 Chrome 公共绘制闭环与输入转发再次通过。
 - 私有 HAL 与资源记录收敛后，本地 Windows Clang 58 项测试、Emscripten Debug 构建及无头 Chrome
   公共绘制闭环再次通过；最终手动 Windows、Linux 与 Emscripten Actions 矩阵全部通过。
-- Registry 编译单元拆分与平台分派下沉后，本地 Windows Clang 58 项测试、Emscripten Debug 构建及
-  无头 Chrome 公共绘制闭环与输入转发再次通过；远端矩阵留待更新特性分支后复验。
+- Registry 编译单元拆分、平台分派下沉及 Web 命令状态机修正后，本地 Windows Clang 相关测试、
+  Emscripten Release SDK 和示例构建通过；最终远端矩阵再次验证全部平台。
 
 最终验证运行：
 
-- [Windows #33158805311](https://github.com/synchronized/granit/actions/runs/33158805311)
-- [Linux #33158808772](https://github.com/synchronized/granit/actions/runs/33158808772)
-- [Emscripten #33158812018](https://github.com/synchronized/granit/actions/runs/33158812018)
+- [Windows #33181357594](https://github.com/synchronized/granit/actions/runs/33181357594)
+- [Linux #33181362634](https://github.com/synchronized/granit/actions/runs/33181362634)
+- [Emscripten #33181366626](https://github.com/synchronized/granit/actions/runs/33181366626)
 
 ## 验收中修正的问题
 
