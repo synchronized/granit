@@ -50,9 +50,10 @@ public:
                                      std::uint32_t surface_types, std::uint32_t frames_in_flight,
                                      granit_diagnostic_callback diagnostic_callback,
                                      void* diagnostic_user_data, granit_renderer& renderer);
-  [[nodiscard]] granit_result create_webgpu_static(
-      const granit_backend_plugin_api* api, granit_diagnostic_callback diagnostic_callback,
-      void* diagnostic_user_data, granit_renderer& renderer);
+  [[nodiscard]] granit_result create_webgpu_static(const granit_backend_plugin_api* api,
+                                                   granit_diagnostic_callback diagnostic_callback,
+                                                   void* diagnostic_user_data,
+                                                   granit_renderer& renderer);
   [[nodiscard]] granit_result destroy(granit_renderer renderer);
   [[nodiscard]] granit_result get_limits(granit_renderer renderer, granit_renderer_limits& limits);
   [[nodiscard]] granit_result get_status(granit_renderer renderer, granit_renderer_status& status);
@@ -347,7 +348,8 @@ private:
   std::unordered_map<granit_renderer, std::shared_ptr<renderer_state>> renderers_;
   struct surface_record {
     resource_metadata metadata;
-    std::shared_ptr<renderer_state> renderer;
+    std::shared_ptr<backend_renderer> owner;
+    std::shared_ptr<backend_presentation_renderer> renderer;
     std::unique_ptr<backend_surface_resource> native;
   };
   struct swapchain_record {

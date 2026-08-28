@@ -556,12 +556,14 @@ granit_result renderer_registry::create_win32_surface(granit_renderer renderer,
                                                       void* native_instance, void* native_window,
                                                       granit_surface& surface) {
   try {
-    auto state = acquire(renderer);
-    if (!state) {
+    auto owner = acquire_backend(renderer);
+    auto state = std::dynamic_pointer_cast<backend_presentation_renderer>(owner);
+    if (!owner || !state) {
       return GRANIT_ERROR_INVALID_HANDLE;
     }
 
     auto record = std::make_shared<surface_record>();
+    record->owner = owner;
     record->renderer = state;
     record->native = state->allocate_surface_resource();
     const auto create_result =
@@ -571,19 +573,19 @@ granit_result renderer_registry::create_win32_surface(granit_renderer renderer,
     }
 
     std::lock_guard lock{mutex_};
-    const auto renderer_found = renderers_.find(renderer);
-    if (renderer_found == renderers_.end() || renderer_found->second != state) {
+    const auto renderer_found = backend_renderers_.find(renderer);
+    if (renderer_found == backend_renderers_.end() || renderer_found->second != owner) {
       return GRANIT_ERROR_INVALID_HANDLE;
     }
     record->metadata.creation_sequence = next_creation_sequence_++;
-    const auto handle = handles_.insert(record.get(), resource_type::surface, state->domain());
+    const auto handle = handles_.insert(record.get(), resource_type::surface, owner->domain());
     if (handle == GRANIT_NULL_HANDLE) {
       return GRANIT_ERROR_OUT_OF_MEMORY;
     }
     try {
       surfaces_.emplace(handle, std::move(record));
     } catch (...) {
-      static_cast<void>(handles_.erase(handle, resource_type::surface, state->domain()));
+      static_cast<void>(handles_.erase(handle, resource_type::surface, owner->domain()));
       throw;
     }
     surface = handle;
@@ -598,11 +600,13 @@ granit_result renderer_registry::create_win32_surface(granit_renderer renderer,
 granit_result renderer_registry::create_xcb_surface(granit_renderer renderer, void* connection,
                                                     std::uint32_t window, granit_surface& surface) {
   try {
-    auto state = acquire(renderer);
-    if (!state)
+    auto owner = acquire_backend(renderer);
+    auto state = std::dynamic_pointer_cast<backend_presentation_renderer>(owner);
+    if (!owner || !state)
       return GRANIT_ERROR_INVALID_HANDLE;
 
     auto record = std::make_shared<surface_record>();
+    record->owner = owner;
     record->renderer = state;
     record->native = state->allocate_surface_resource();
     const auto create_result = state->create_xcb_surface(connection, window, *record->native);
@@ -610,17 +614,17 @@ granit_result renderer_registry::create_xcb_surface(granit_renderer renderer, vo
       return create_result;
 
     std::lock_guard lock{mutex_};
-    const auto renderer_found = renderers_.find(renderer);
-    if (renderer_found == renderers_.end() || renderer_found->second != state)
+    const auto renderer_found = backend_renderers_.find(renderer);
+    if (renderer_found == backend_renderers_.end() || renderer_found->second != owner)
       return GRANIT_ERROR_INVALID_HANDLE;
     record->metadata.creation_sequence = next_creation_sequence_++;
-    const auto handle = handles_.insert(record.get(), resource_type::surface, state->domain());
+    const auto handle = handles_.insert(record.get(), resource_type::surface, owner->domain());
     if (handle == GRANIT_NULL_HANDLE)
       return GRANIT_ERROR_OUT_OF_MEMORY;
     try {
       surfaces_.emplace(handle, std::move(record));
     } catch (...) {
-      static_cast<void>(handles_.erase(handle, resource_type::surface, state->domain()));
+      static_cast<void>(handles_.erase(handle, resource_type::surface, owner->domain()));
       throw;
     }
     surface = handle;
@@ -636,11 +640,13 @@ granit_result renderer_registry::create_wayland_surface(granit_renderer renderer
                                                         void* native_surface,
                                                         granit_surface& surface) {
   try {
-    auto state = acquire(renderer);
-    if (!state)
+    auto owner = acquire_backend(renderer);
+    auto state = std::dynamic_pointer_cast<backend_presentation_renderer>(owner);
+    if (!owner || !state)
       return GRANIT_ERROR_INVALID_HANDLE;
 
     auto record = std::make_shared<surface_record>();
+    record->owner = owner;
     record->renderer = state;
     record->native = state->allocate_surface_resource();
     const auto create_result =
@@ -649,17 +655,17 @@ granit_result renderer_registry::create_wayland_surface(granit_renderer renderer
       return create_result;
 
     std::lock_guard lock{mutex_};
-    const auto renderer_found = renderers_.find(renderer);
-    if (renderer_found == renderers_.end() || renderer_found->second != state)
+    const auto renderer_found = backend_renderers_.find(renderer);
+    if (renderer_found == backend_renderers_.end() || renderer_found->second != owner)
       return GRANIT_ERROR_INVALID_HANDLE;
     record->metadata.creation_sequence = next_creation_sequence_++;
-    const auto handle = handles_.insert(record.get(), resource_type::surface, state->domain());
+    const auto handle = handles_.insert(record.get(), resource_type::surface, owner->domain());
     if (handle == GRANIT_NULL_HANDLE)
       return GRANIT_ERROR_OUT_OF_MEMORY;
     try {
       surfaces_.emplace(handle, std::move(record));
     } catch (...) {
-      static_cast<void>(handles_.erase(handle, resource_type::surface, state->domain()));
+      static_cast<void>(handles_.erase(handle, resource_type::surface, owner->domain()));
       throw;
     }
     surface = handle;
@@ -675,11 +681,13 @@ granit_result renderer_registry::create_canvas_surface(granit_renderer renderer,
                                                        std::string_view selector,
                                                        granit_surface& surface) {
   try {
-    auto state = acquire(renderer);
-    if (!state)
+    auto owner = acquire_backend(renderer);
+    auto state = std::dynamic_pointer_cast<backend_presentation_renderer>(owner);
+    if (!owner || !state)
       return GRANIT_ERROR_INVALID_HANDLE;
 
     auto record = std::make_shared<surface_record>();
+    record->owner = owner;
     record->renderer = state;
     record->native = state->allocate_surface_resource();
     const auto create_result = state->create_canvas_surface(selector, *record->native);
@@ -687,17 +695,17 @@ granit_result renderer_registry::create_canvas_surface(granit_renderer renderer,
       return create_result;
 
     std::lock_guard lock{mutex_};
-    const auto renderer_found = renderers_.find(renderer);
-    if (renderer_found == renderers_.end() || renderer_found->second != state)
+    const auto renderer_found = backend_renderers_.find(renderer);
+    if (renderer_found == backend_renderers_.end() || renderer_found->second != owner)
       return GRANIT_ERROR_INVALID_HANDLE;
     record->metadata.creation_sequence = next_creation_sequence_++;
-    const auto handle = handles_.insert(record.get(), resource_type::surface, state->domain());
+    const auto handle = handles_.insert(record.get(), resource_type::surface, owner->domain());
     if (handle == GRANIT_NULL_HANDLE)
       return GRANIT_ERROR_OUT_OF_MEMORY;
     try {
       surfaces_.emplace(handle, std::move(record));
     } catch (...) {
-      static_cast<void>(handles_.erase(handle, resource_type::surface, state->domain()));
+      static_cast<void>(handles_.erase(handle, resource_type::surface, owner->domain()));
       throw;
     }
     surface = handle;
@@ -710,7 +718,8 @@ granit_result renderer_registry::create_canvas_surface(granit_renderer renderer,
 }
 
 granit_result renderer_registry::destroy_surface(granit_renderer renderer, granit_surface surface) {
-  std::shared_ptr<renderer_state> state;
+  std::shared_ptr<backend_renderer> owner;
+  std::shared_ptr<renderer_state> vulkan_state;
   std::shared_ptr<surface_record> native_surface;
   lifecycle_snapshot lifecycle;
   std::vector<std::shared_ptr<swapchain_record>> native_swapchains;
@@ -718,17 +727,18 @@ granit_result renderer_registry::destroy_surface(granit_renderer renderer, grani
   std::vector<std::shared_ptr<texture_record>> native_textures;
   {
     std::lock_guard lock{mutex_};
-    const auto renderer_found = renderers_.find(renderer);
-    if (renderer_found == renderers_.end() ||
+    const auto renderer_found = backend_renderers_.find(renderer);
+    if (renderer_found == backend_renderers_.end() ||
         handles_.find(renderer, resource_type::renderer, 0) == nullptr) {
       return GRANIT_ERROR_INVALID_HANDLE;
     }
-    state = renderer_found->second;
-    if (handles_.find(surface, resource_type::surface, state->domain()) == nullptr) {
+    owner = renderer_found->second;
+    vulkan_state = std::dynamic_pointer_cast<renderer_state>(owner);
+    if (handles_.find(surface, resource_type::surface, owner->domain()) == nullptr) {
       return GRANIT_ERROR_INVALID_HANDLE;
     }
     const auto found = surfaces_.find(surface);
-    if (found == surfaces_.end() || found->second->renderer != state) {
+    if (found == surfaces_.end() || found->second->owner != owner) {
       return GRANIT_ERROR_INVALID_HANDLE;
     }
     for (const auto& [frame_handle, frame] : frames_) {
@@ -738,10 +748,12 @@ granit_result renderer_registry::destroy_surface(granit_renderer renderer, grani
     }
     native_surface = found->second;
   }
-  const auto idle_result = state->wait_for_present_idle();
-  if (idle_result != GRANIT_SUCCESS && idle_result != GRANIT_ERROR_DEVICE_LOST)
-    return idle_result;
-  static_cast<void>(state->collect_retired());
+  if (vulkan_state) {
+    const auto idle_result = vulkan_state->wait_for_present_idle();
+    if (idle_result != GRANIT_SUCCESS && idle_result != GRANIT_ERROR_DEVICE_LOST)
+      return idle_result;
+    static_cast<void>(vulkan_state->collect_retired());
+  }
   {
     std::lock_guard lock{mutex_};
     const auto found = surfaces_.find(surface);
@@ -754,7 +766,7 @@ granit_result renderer_registry::destroy_surface(granit_renderer renderer, grani
     }
     for (auto swapchain = swapchains_.begin(); swapchain != swapchains_.end();) {
       if (swapchain->second->surface == found->second) {
-        if (state->validation_enabled()) {
+        if (vulkan_state && vulkan_state->validation_enabled()) {
           lifecycle.add(lifecycle_resource_type::swapchain, swapchain->first,
                         swapchain->second->metadata.creation_sequence);
         }
@@ -764,7 +776,7 @@ granit_result renderer_registry::destroy_surface(granit_renderer renderer, grani
             native_views.push_back(std::move(view->second));
             texture_views_.erase(view);
           }
-          static_cast<void>(handles_.erase(handle, resource_type::texture_view, state->domain()));
+          static_cast<void>(handles_.erase(handle, resource_type::texture_view, owner->domain()));
         }
         for (const auto handle : swapchain->second->textures) {
           const auto texture = textures_.find(handle);
@@ -772,25 +784,27 @@ granit_result renderer_registry::destroy_surface(granit_renderer renderer, grani
             native_textures.push_back(std::move(texture->second));
             textures_.erase(texture);
           }
-          static_cast<void>(handles_.erase(handle, resource_type::texture, state->domain()));
+          static_cast<void>(handles_.erase(handle, resource_type::texture, owner->domain()));
         }
         native_swapchains.push_back(std::move(swapchain->second));
         static_cast<void>(
-            handles_.erase(swapchain->first, resource_type::swapchain, state->domain()));
+            handles_.erase(swapchain->first, resource_type::swapchain, owner->domain()));
         swapchain = swapchains_.erase(swapchain);
       } else {
         ++swapchain;
       }
     }
     surfaces_.erase(found);
-    const auto erase_result = handles_.erase(surface, resource_type::surface, state->domain());
+    const auto erase_result = handles_.erase(surface, resource_type::surface, owner->domain());
     if (erase_result != GRANIT_SUCCESS) {
       return erase_result;
     }
   }
-  write_child_lifecycle_diagnostic(state->diagnostics(), lifecycle_resource_type::surface, surface,
-                                   lifecycle_resource_type::swapchain,
-                                   lifecycle.summary(lifecycle_resource_type::swapchain));
+  if (vulkan_state) {
+    write_child_lifecycle_diagnostic(vulkan_state->diagnostics(), lifecycle_resource_type::surface,
+                                     surface, lifecycle_resource_type::swapchain,
+                                     lifecycle.summary(lifecycle_resource_type::swapchain));
+  }
   native_views.clear();
   native_textures.clear();
   native_swapchains.clear();
