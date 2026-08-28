@@ -194,6 +194,42 @@ Canvas Draw List。Texture Resolver 只映射字体 Atlas 与已存活的查看�
 `NOT_READY/UNSUPPORTED` 和样本统计。图形 Smoke Test 只检查面板可见与 Draw Data 非空，
 不依赖字体光栅的逐像素结果。
 
+### S-13F 三端启动与资源流程
+
+共享应用核心构建为不安装的 `granit_model_viewer_core` 静态目标，拥有 Loader、
+CPU/GPU Scene、Orbit Camera、Viewer State、ImGui 面板与单帧 `tick`。它不提供 `main`、
+不创建原生窗口，也不包含桌面或浏览器条件编译。
+
+三个运行配置如下：
+
+- **桌面 Vulkan** 与 **桌面 Dawn WebGPU** 共用一个 `granit_model_viewer_example`；
+  SDL3 拥有 Window/事件，`integration_sdl3` 创建 Surface，`--backend=vulkan|webgpu|auto`
+  只修改 Renderer 选择。显式选择 WebGPU 时不回退 Vulkan。
+- **浏览器 WebGPU** 构建 `granit_webgpu_model_viewer_example.html`；Renderer 与 Provider 静态链接，
+  Canvas Surface、`requestAnimationFrame` 主循环及 Keyboard/Pointer/Wheel 事件留在 `web/`
+  薄壳中。壳层将事件同时送入 ImGui IO 和规范化 `viewer_input`。
+
+资源来源抽象为只读字节请求，完成后才调用 S-13B Loader：桌面壳异步读取
+`--asset=<path>`；浏览器壳通过 Fetch 读取 URL。小型 Smoke Fixture 可预加载，
+完整 FlightHelmet 作为独立缓存资源提供，不嵌入 Wasm/JS 或桌面可执行文件。
+
+启动是显式状态机：`platform_ready`、`renderer_pending`、`asset_loading`、
+`gpu_upload`、`ready`、`failed`。WebGPU 设备异步创建期间不进入 Scene 上传；失败页面/窗口
+保留诊断文本、Granit 结果码和实际后端，不仅输出黑屏。
+
+- 每帧顺序固定为：事件转换、ImGui New Frame、状态更新、Scene Snapshot、ImGui
+  Draw Data 转换、Acquire/Frame Context、Render Pipeline、Submit/Present 与延迟指标读取。
+- 桌面以 `SDL_GetWindowSizeInPixels` 为 Swapchain 尺寸；浏览器根据 CSS 尺寸与
+  `devicePixelRatio` 设置 Canvas 像素尺寸。尺寸变化只在帧边界重建 Swapchain。
+- Device Lost、Surface Lost 与 Out Of Date 分别进入 Renderer 失败、Surface 重建和
+  Swapchain 重建路径；不将三者泛化为一次无限重试。
+- 退出时先停止新帧/Fetch 回调，再等待 Renderer 提交完成，按 UI、GPU Scene、
+  Pipeline、Swapchain、Surface、Renderer、Window 顺序释放。异步回调不得捕获已销毁状态。
+
+桌面目标只在 SDL3、ImGui 与对应 Integration 可用时构建；浏览器目标只在
+Emscripten 预设构建。两者都不进入 Granit 安装导出，且不复制一份 Renderer Registry
+或 WebGPU Provider 实现到示例目录。
+
 ## 实施顺序
 
 1. **S-13A 资产与依赖评估**：锁定模型、`cgltf`、图片解码器版本、许可证及获取/打包方式。
