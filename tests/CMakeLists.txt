@@ -238,6 +238,7 @@ granit_target_compile_warnings(granit_incompatible_backend_plugin)
 add_executable(
   granit_backend_plugin_loader_test
   backend/plugin_loader_test.cpp
+  backend/webgpu_presentation_adapter_test.cpp
   platform/shared_library_test.cpp
   $<TARGET_OBJECTS:granit_backend_plugin>
 )
