@@ -1,10 +1,9 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2026 Granit contributors
 
-add_executable(
-  granit_web_platform_smoke
+add_library(
+  granit STATIC
   command_recorder_api.cpp
-  platform_smoke.cpp
   pipeline_api.cpp
   renderer_api.cpp
   renderer_registry.cpp
@@ -21,13 +20,23 @@ add_executable(
   "${PROJECT_SOURCE_DIR}/src/core/handle_table.cpp"
   "${PROJECT_SOURCE_DIR}/src/platform/shared_library.cpp"
 )
+add_library(granit::granit ALIAS granit)
+target_compile_features(granit PUBLIC cxx_std_20)
+target_include_directories(
+  granit
+  PUBLIC "$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>"
+  PRIVATE "${PROJECT_SOURCE_DIR}/src"
+)
+target_compile_definitions(granit PUBLIC GRANIT_STATIC_DEFINE)
+target_compile_options(granit PRIVATE "--use-port=emdawnwebgpu:cpp_bindings=false")
+target_link_options(granit INTERFACE "--use-port=emdawnwebgpu:cpp_bindings=false")
+granit_target_compile_warnings(granit)
+
+add_executable(granit_web_platform_smoke platform_smoke.cpp)
 target_compile_features(granit_web_platform_smoke PRIVATE cxx_std_20)
+target_link_libraries(granit_web_platform_smoke PRIVATE granit::granit)
 target_include_directories(
   granit_web_platform_smoke PRIVATE "${PROJECT_SOURCE_DIR}/include" "${PROJECT_SOURCE_DIR}/src"
-)
-target_compile_options(
-  granit_web_platform_smoke
-  PRIVATE "--use-port=emdawnwebgpu:cpp_bindings=false"
 )
 target_link_options(
   granit_web_platform_smoke
