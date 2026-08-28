@@ -5,7 +5,6 @@
 #include "renderer/renderer_registry_records.h"
 
 #include "renderer/renderer_registry_helpers.h"
-#include "renderer/renderer_state.h"
 
 #include <new>
 #include <utility>

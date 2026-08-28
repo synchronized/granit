@@ -6,7 +6,6 @@
 
 #include "core/texture_format.h"
 #include "renderer/renderer_registry_helpers.h"
-#include "renderer/renderer_state.h"
 
 #include <cstring>
 #include <new>
