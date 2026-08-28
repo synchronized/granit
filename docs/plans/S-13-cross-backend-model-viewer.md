@@ -42,6 +42,26 @@ glTF 首阶段只是示例输入格式，加载代码位于 `examples/common/glt
 - 桌面窗口与输入优先复用 SDL3 Integration；ImGui 继续通过现有 Draw Data 转换入口渲染。
 - 浏览器目标复用相同查看器核心，平台层只负责主循环、Canvas、输入与资源获取。
 
+### S-13A 资产与依赖契约
+
+首轮固定使用 `cgltf` 1.15 解析 glTF/GLB，使用 `stb_image` 2.30 解码 PNG/JPEG。
+两者均以确切 Git commit 和 SHA-256 锁定，由 `granit_example_gltf_support` 私有编译；
+不安装头文件、不导出 CMake Target，不向 `granit` 传递 Include 目录或编译定义。
+
+- `cgltf` 采用 MIT 许可；`stb_image` 按其 MIT 选项纳入第三方通知，并仅开启
+  PNG/JPEG 解码以收窄攻击面与产物大小。
+- 完整示例资产采用 Khronos glTF Sample Assets 的 `FlightHelmet` GLB 变体，许可为
+  CC0-1.0。仓库记录上游提交、原始 URL、SHA-256 和许可文本。
+- 完整头盔不进入默认 Git 工作树；通过显式 CMake 选项或辅助脚本下载到构建
+  缓存，校验 SHA-256 后使用。离线构建可指向已验证的本地资产路径。
+- 一个仓库内 CC0 小型 GLB Fixture 用于解析、错误语义和 Smoke Test；手动下载失败
+  不得导致默认 Granit 库构建失败。
+- 依赖获取顺序为父项目 Target、`find_package`、锁定的内置回退；不使用浮动
+  `main`/`master` 分支。更新时单独审核许可、安全修复、产物大小和三平台构建。
+
+S-13A 的交付物包含依赖锁定记录、第三方通知、资产 manifest、可重入的获取
+脚本和离线路径验证。没有通过哈希与许可校验时，不得开始将完整资产接入查看器。
+
 ## 实施顺序
 
 1. **S-13A 资产与依赖评估**：锁定模型、`cgltf`、图片解码器版本、许可证及获取/打包方式。
