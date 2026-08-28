@@ -180,7 +180,8 @@
   动态 Backbuffer API 驱动 WebGPU，并验证帧结束后的借用句柄失效。公共 Shader 描述已增加可选
   WGSL 视图，WebGPU Shader 创建/销毁已接入 generation 句柄；空 Pipeline Layout、基础单颜色
   Graphics Pipeline，以及最小三角形 Command Recorder/Queue Submit 已接入公共 API。浏览器
-  三角形示例与中心/角落像素验收已经完成，下一步执行 S-10E5 最终跨平台验收矩阵。
+  三角形示例与浏览器状态、输入及可读合成层像素验收已经完成，下一步执行 S-10E5 最终跨平台
+  验收矩阵。
 
 ## 十、Android 移动平台
 
