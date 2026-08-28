@@ -303,6 +303,7 @@ target_sources(
           platform/window/window_backend_internal.h
           $<$<PLATFORM_ID:Windows>:platform/win32/window_backend.cpp>
           $<$<BOOL:${GRANIT_HAS_XCB}>:platform/xcb/window_backend.cpp>
+          $<$<BOOL:${GRANIT_HAS_WAYLAND_SHELL}>:platform/wayland/window_backend.cpp>
           $<$<BOOL:${GRANIT_HAS_WAYLAND_SHELL}>:$<TARGET_OBJECTS:granit_xdg_shell_protocol>>
   PUBLIC
     FILE_SET HEADERS

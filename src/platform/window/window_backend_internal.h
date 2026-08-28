@@ -11,6 +11,15 @@
 #if defined(GRANIT_WINDOW_HAS_XCB)
 #include <xcb/xcb.h>
 #endif
+
+#if defined(GRANIT_WINDOW_HAS_WAYLAND)
+void destroy_wayland_window(window_record& window);
+void destroy_wayland_input(window_system_record& system);
+granit_result initialize_wayland_input(window_system_record& system);
+void destroy_wayland_system(window_system_record& system);
+granit_result initialize_wayland_system(window_system_record& system);
+granit_result pump_wayland_events(window_system_record& system);
+#endif
 #if defined(GRANIT_WINDOW_HAS_WAYLAND)
 #include <wayland-client.h>
 #include <xdg-shell-client-protocol.h>
