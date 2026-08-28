@@ -230,6 +230,27 @@ S-12E 不新增 Uniform Arena 公共类型；上层继续用 Buffer、Upload Bat
 未对齐、越界、整数溢出与批量上传失败原子性。Vulkan 与 WebGPU 复用同一组
 Registry 契约测试，Provider Mock 只验证后端参数映射。
 
+### S-12F 跨后端 Fixture 契约
+
+Fixture 是不依赖窗口的 64×64 离屏测试，不使用 S-13 头盔模型或外部资产。它由
+固定种子生成带 UV/法线的索引几何、sRGB Base Color、线性 Normal 与
+Metallic-Roughness Texture，并用同一 Uniform Buffer 的两个动态 Offset 绘制两个实例。
+
+- Vulkan、桌面 Dawn 与 Emscripten 调用同一 Fixture 函数；只在 Renderer 创建参数中选择
+  后端，测试正文不含后端条件分支。
+- Shader Asset 包同一逻辑的 Vulkan 与 WebGPU 变体；测试不在运行时调用 Tint。
+- 回读统一为 RGBA8 线性比较；检查背景、两个实例与遮挡区域的语义探针，
+  有效像素通道绝对误差不超过 2/255。不使用跨 GPU 不稳定的整图精确哈希。
+- 失败时保存实际图、期望图、差异图及后端/适配器元数据；成功时不上传产物。
+
+### S-12G 验收门槛
+
+- Registry 契约测试在无 GPU 环境全部通过，WebGPU Provider Mock 覆盖全部新 ABI 操作。
+- Windows 手动 Actions 运行 MSVC/Clang、Vulkan Fixture 与 Dawn Fixture；Linux 运行
+  GCC/Clang、Vulkan Fixture 与 Dawn Fixture；Emscripten 在 Chromium WebGPU 中运行同一 Fixture。
+- 共享/静态安装 Consumer、C11/C++20 公共头、ABI 布局、插件版本拒绝和安装包
+  不泄漏 Dawn/Vulkan 依赖全部通过，才可将 S-12 标记完成并启动 S-13。
+
 ## 实施顺序
 
 1. **S-12A 后端选择**：实现 C ABI、C++ 包装、实际后端查询、插件定位和严格/自动选择语义。
