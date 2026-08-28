@@ -31,17 +31,18 @@
 #include "backend/access.h"
 #include "backend/plugin_api.h"
 #include "backend/presentation.h"
+#include "backend/queue.h"
 #include "backend/renderer.h"
 #include "backend/resources.h"
 #include "backend/upload.h"
 #include "core/handle_table.h"
 #include "core/lifecycle_validation.h"
 #include "renderer/dynamic_uniform_offsets.h"
-#include "renderer/renderer_state.h"
 
 namespace granit::detail {
 
 class webgpu_renderer_state;
+class renderer_state;
 
 /** 线程安全地管理进程内公开 renderer 句柄。 */
 class renderer_registry {

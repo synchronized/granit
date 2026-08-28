@@ -5,6 +5,7 @@
 
 #include "backend/webgpu/renderer_state.h"
 #include "core/texture_format.h"
+#include "renderer/renderer_state.h"
 
 #include <algorithm>
 #include <cstring>
