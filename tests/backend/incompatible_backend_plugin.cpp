@@ -25,6 +25,6 @@ constexpr granit_backend_plugin_api plugin_api{sizeof(granit_backend_plugin_api)
 } // namespace
 
 extern "C" GRANIT_TEST_PLUGIN_EXPORT const granit_backend_plugin_api*
-granit_backend_plugin_query(uint32_t) {
+granit_backend_plugin_query(uint32_t) noexcept {
   return &plugin_api;
 }

@@ -94,7 +94,7 @@ granit_result renderer_registry::destroy(granit_renderer renderer) {
         bool ignored{};
         static_cast<void>(found->second->presentation()->cancel_swapchain(
             *frame->second->swapchain->native, ignored));
-        erase_backbuffer(*frame->second->swapchain);
+        erase_dynamic_backbuffer(*frame->second->swapchain);
         static_cast<void>(handles_.erase(frame->first, resource_type::frame, 0));
         frames.push_back(std::move(frame->second));
         frame = frames_.erase(frame);
@@ -375,7 +375,7 @@ granit_result renderer_registry::recreate_swapchain(granit_renderer renderer,
       found->second->owner != state->second) {
     return GRANIT_ERROR_INVALID_HANDLE;
   }
-  if (found->second->texture != GRANIT_NULL_HANDLE) {
+  if (!found->second->textures.empty()) {
     return GRANIT_ERROR_NOT_READY;
   }
   return state->second->presentation()->recreate_swapchain(*found->second->native, desc);
@@ -406,11 +406,11 @@ granit_result renderer_registry::get_swapchain_backbuffer(granit_renderer render
       found->second->owner != state->second) {
     return GRANIT_ERROR_INVALID_HANDLE;
   }
-  if (found->second->texture == GRANIT_NULL_HANDLE || found->second->image_index != index) {
+  if (index >= found->second->textures.size()) {
     return GRANIT_ERROR_INVALID_ARGUMENT;
   }
-  texture = found->second->texture;
-  view = found->second->view;
+  texture = found->second->textures[index];
+  view = found->second->views[index];
   return GRANIT_SUCCESS;
 }
 
@@ -427,7 +427,7 @@ granit_result renderer_registry::acquire_swapchain_frame(granit_renderer rendere
         found->second->owner != state->second) {
       return GRANIT_ERROR_INVALID_HANDLE;
     }
-    if (found->second->texture != GRANIT_NULL_HANDLE) {
+    if (!found->second->textures.empty()) {
       return GRANIT_ERROR_NOT_READY;
     }
     auto record = std::make_shared<frame_record>();
@@ -435,8 +435,9 @@ granit_result renderer_registry::acquire_swapchain_frame(granit_renderer rendere
     record->presentation = state->second;
     record->queue = state->second;
     record->swapchain = found->second;
+    backend_acquired_swapchain_frame acquired{};
     const auto acquire_result =
-        state->second->presentation()->acquire_swapchain(*found->second->native, record->acquired);
+        state->second->presentation()->acquire_swapchain(*found->second->native, acquired);
     if (acquire_result != GRANIT_SUCCESS) {
       return acquire_result;
     }
@@ -445,13 +446,23 @@ granit_result renderer_registry::acquire_swapchain_frame(granit_renderer rendere
       static_cast<void>(
           state->second->presentation()->cancel_swapchain(*found->second->native, ignored));
     };
-    const auto texture_handle = handles_.insert(record->acquired.dynamic_backbuffer.texture.get(),
+    auto texture_record_state = std::make_shared<texture_record>();
+    texture_record_state->owner = state->second;
+    texture_record_state->native = std::move(acquired.dynamic_backbuffer.texture);
+    texture_record_state->desc = acquired.dynamic_backbuffer.desc;
+    texture_record_state->publicly_destroyable = false;
+    auto view_record_state = std::make_shared<texture_view_record>();
+    view_record_state->owner = state->second;
+    view_record_state->texture = texture_record_state;
+    view_record_state->native = std::move(acquired.dynamic_backbuffer.view);
+    view_record_state->publicly_destroyable = false;
+    const auto texture_handle = handles_.insert(texture_record_state.get(),
                                                 resource_type::texture, 0);
     if (texture_handle == GRANIT_NULL_HANDLE) {
       cancel();
       return GRANIT_ERROR_OUT_OF_MEMORY;
     }
-    const auto view_handle = handles_.insert(record->acquired.dynamic_backbuffer.view.get(),
+    const auto view_handle = handles_.insert(view_record_state.get(),
                                              resource_type::texture_view, 0);
     if (view_handle == GRANIT_NULL_HANDLE) {
       static_cast<void>(handles_.erase(texture_handle, resource_type::texture, 0));
@@ -466,20 +477,28 @@ granit_result renderer_registry::acquire_swapchain_frame(granit_renderer rendere
       return GRANIT_ERROR_OUT_OF_MEMORY;
     }
     try {
+      found->second->textures.push_back(texture_handle);
+      found->second->views.push_back(view_handle);
+      textures_.emplace(texture_handle, texture_record_state);
+      texture_views_.emplace(view_handle, view_record_state);
       frames_.emplace(frame_handle, std::move(record));
     } catch (...) {
+      found->second->views.clear();
+      found->second->textures.clear();
+      texture_views_.erase(view_handle);
+      textures_.erase(texture_handle);
       static_cast<void>(handles_.erase(frame_handle, resource_type::frame, 0));
       static_cast<void>(handles_.erase(view_handle, resource_type::texture_view, 0));
       static_cast<void>(handles_.erase(texture_handle, resource_type::texture, 0));
       cancel();
       throw;
     }
-    found->second->texture = texture_handle;
-    found->second->view = view_handle;
-    found->second->image_index = frames_.at(frame_handle)->acquired.image_index;
+    frames_.at(frame_handle)->image_index = acquired.image_index;
+    frames_.at(frame_handle)->slot_index = acquired.slot_index;
+    frames_.at(frame_handle)->dynamic_backbuffer = true;
     frame = frame_handle;
-    image_index = found->second->image_index;
-    needs_recreate = frames_.at(frame_handle)->acquired.needs_recreate;
+    image_index = acquired.image_index;
+    needs_recreate = acquired.needs_recreate;
     return GRANIT_SUCCESS;
   } catch (const std::bad_alloc&) {
     return GRANIT_ERROR_OUT_OF_MEMORY;
@@ -488,16 +507,17 @@ granit_result renderer_registry::acquire_swapchain_frame(granit_renderer rendere
   }
 }
 
-void renderer_registry::erase_backbuffer(swapchain_record& swapchain) noexcept {
-  if (swapchain.view != GRANIT_NULL_HANDLE) {
-    static_cast<void>(handles_.erase(swapchain.view, resource_type::texture_view, 0));
+void renderer_registry::erase_dynamic_backbuffer(swapchain_record& swapchain) noexcept {
+  for (const auto view : swapchain.views) {
+    texture_views_.erase(view);
+    static_cast<void>(handles_.erase(view, resource_type::texture_view, 0));
   }
-  if (swapchain.texture != GRANIT_NULL_HANDLE) {
-    static_cast<void>(handles_.erase(swapchain.texture, resource_type::texture, 0));
+  for (const auto texture : swapchain.textures) {
+    textures_.erase(texture);
+    static_cast<void>(handles_.erase(texture, resource_type::texture, 0));
   }
-  swapchain.texture = GRANIT_NULL_HANDLE;
-  swapchain.view = GRANIT_NULL_HANDLE;
-  swapchain.image_index = 0;
+  swapchain.views.clear();
+  swapchain.textures.clear();
 }
 
 granit_result renderer_registry::finish_frame(granit_renderer renderer, granit_swapchain swapchain,
@@ -522,7 +542,7 @@ granit_result renderer_registry::finish_frame(granit_renderer renderer, granit_s
     if (result != GRANIT_SUCCESS) {
       return result;
     }
-    erase_backbuffer(*swapchain_found->second);
+    erase_dynamic_backbuffer(*swapchain_found->second);
     record = std::move(frame_found->second);
     frames_.erase(frame_found);
     static_cast<void>(handles_.erase(frame, resource_type::frame, 0));
@@ -560,7 +580,7 @@ granit_result renderer_registry::get_frame_info(granit_renderer renderer,
   const auto result =
       state->second->presentation()->get_swapchain_info(*swapchain_found->second->native, info);
   if (result == GRANIT_SUCCESS) {
-    frame_slot = frame_found->second->acquired.image_index;
+    frame_slot = static_cast<std::uint32_t>(frame_found->second->slot_index);
     frame_slot_count = info.image_count;
   }
   return result;
@@ -577,7 +597,7 @@ granit_result renderer_registry::destroy_swapchain(granit_renderer renderer,
         found->second->owner != state->second) {
       return GRANIT_ERROR_INVALID_HANDLE;
     }
-    if (found->second->texture != GRANIT_NULL_HANDLE) {
+    if (!found->second->textures.empty()) {
       return GRANIT_ERROR_NOT_READY;
     }
     record = std::move(found->second);
@@ -902,12 +922,10 @@ granit_result renderer_registry::begin_rendering(granit_renderer renderer,
   if (command->second->web_status != command_recorder_record::web_state::recording)
     return GRANIT_ERROR_INVALID_ARGUMENT;
   const auto view = desc.color_attachments[0].view;
-  const auto frame = std::find_if(frames_.begin(), frames_.end(), [&](const auto& entry) {
-    return entry.second->swapchain->owner == state->second && entry.second->swapchain->view == view;
-  });
-  if (frame == frames_.end())
+  const auto target = texture_views_.find(view);
+  if (target == texture_views_.end() || target->second->owner != state->second)
     return GRANIT_ERROR_INVALID_HANDLE;
-  command->second->web_frame = frame->second;
+  command->second->web_target = target->second;
   command->second->web_status = command_recorder_record::web_state::rendering;
   return GRANIT_SUCCESS;
 }
@@ -939,11 +957,11 @@ granit_result renderer_registry::draw(granit_renderer renderer, granit_command_r
       command->second->owner != state->second)
     return GRANIT_ERROR_INVALID_HANDLE;
   auto& record = *command->second;
-  if (record.web_status != command_recorder_record::web_state::rendering || !record.web_frame ||
+  if (record.web_status != command_recorder_record::web_state::rendering || !record.web_target ||
       !record.web_pipeline || record.web_drew)
     return GRANIT_ERROR_INVALID_ARGUMENT;
   const auto result =
-      state->second->draw(*record.native, record.web_frame->acquired.dynamic_backbuffer.view.get(),
+      state->second->draw(*record.native, record.web_target->native.get(),
                           record.web_pipeline->native.get(), vertex_count, instance_count,
                           first_vertex, first_instance);
   if (result == GRANIT_SUCCESS)
@@ -1001,7 +1019,16 @@ granit_result renderer_registry::submit_command_recorder_frame(granit_renderer r
     return GRANIT_ERROR_INVALID_ARGUMENT;
   if (frame != GRANIT_NULL_HANDLE) {
     const auto found = frames_.find(frame);
-    if (found == frames_.end() || found->second != command->second->web_frame)
+    if (found == frames_.end() || !command->second->web_target)
+      return GRANIT_ERROR_INVALID_HANDLE;
+    const auto target_belongs_to_frame =
+        std::any_of(found->second->swapchain->views.begin(), found->second->swapchain->views.end(),
+                    [&](const auto handle) {
+                      const auto view = texture_views_.find(handle);
+                      return view != texture_views_.end() &&
+                             view->second == command->second->web_target;
+                    });
+    if (!target_belongs_to_frame)
       return GRANIT_ERROR_INVALID_HANDLE;
   }
   submission_serial serial{};
@@ -1024,7 +1051,7 @@ granit_result renderer_registry::reset_command_recorder(granit_renderer renderer
     return GRANIT_ERROR_INVALID_ARGUMENT;
   const auto result = state->second->reset_command_recorder(*found->second->native);
   if (result == GRANIT_SUCCESS) {
-    found->second->web_frame.reset();
+    found->second->web_target.reset();
     found->second->web_pipeline.reset();
     found->second->web_status = command_recorder_record::web_state::initial;
     found->second->web_drew = false;

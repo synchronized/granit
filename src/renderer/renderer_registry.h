@@ -363,7 +363,7 @@ private:
                                 std::vector<backend_swapchain_backbuffer> backbuffers);
   [[nodiscard]] std::shared_ptr<command_recorder_record>
   acquire_command_recorder(granit_renderer renderer, granit_command_recorder recorder);
-  void erase_backbuffer(swapchain_record& swapchain) noexcept;
+  void erase_dynamic_backbuffer(swapchain_record& swapchain) noexcept;
   [[nodiscard]] granit_result finish_frame(granit_renderer renderer, granit_swapchain swapchain,
                                            granit_frame frame, bool present, bool& needs_recreate);
 
@@ -386,9 +386,6 @@ private:
     std::unique_ptr<backend_swapchain_resource> native;
     std::vector<granit_texture> textures;
     std::vector<granit_texture_view> views;
-    granit_texture texture{};
-    granit_texture_view view{};
-    std::uint32_t image_index{};
     bool surface_lost{};
   };
   struct buffer_record {
@@ -485,7 +482,6 @@ private:
     std::vector<retained_resource> retained_resources;
     std::shared_ptr<texture_view_record> web_target;
     std::shared_ptr<graphics_pipeline_record> web_pipeline;
-    std::shared_ptr<frame_record> web_frame;
     web_state web_status{web_state::initial};
     bool web_drew{};
     bool owned_by_frame_context{};
@@ -520,7 +516,6 @@ private:
     std::size_t slot_index{};
     bool submitted{};
     bool dynamic_backbuffer{};
-    backend_acquired_swapchain_frame acquired;
   };
   struct upload_entry {
     backend_upload_type type{backend_upload_type::buffer};
