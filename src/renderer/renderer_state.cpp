@@ -412,6 +412,7 @@ granit_result renderer_state::initialize(std::string_view application_name, bool
     return map_vulkan_result(cache_result);
   }
   surface_types_ = surface_types;
+  lifecycle_.mark_ready();
   return GRANIT_SUCCESS;
 }
 
@@ -2713,6 +2714,8 @@ granit_result renderer_state::observe_device_result(granit_result result,
                                                     const std::source_location& location) noexcept {
   bool first_loss = false;
   const auto observed = device_status_.observe(result, &first_loss);
+  if (observed == GRANIT_ERROR_DEVICE_LOST)
+    lifecycle_.mark_device_lost();
   if (first_loss) {
     std::array<char, 768> message{};
     const auto written = std::snprintf(

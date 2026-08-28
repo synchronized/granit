@@ -2,6 +2,7 @@
 // Copyright (c) 2026 Granit contributors
 
 #include "backend/capabilities.h"
+#include "backend/lifecycle.h"
 #include "renderer/dynamic_uniform_offsets.h"
 
 #include <catch2/catch_all.hpp>
@@ -48,4 +49,26 @@ TEST_CASE("动态 Uniform Offset 校验数量、对齐、范围和溢出", "[bac
       .binding = 0, .base_offset = UINT64_MAX - 8, .range = 16, .buffer_size = UINT64_MAX}};
   const std::array overflow_offset{UINT32_C(256)};
   CHECK_FALSE(validate_dynamic_uniform_offsets(overflow_binding, overflow_offset, 1));
+}
+
+TEST_CASE("后端生命周期统一门控初始化和终止状态", "[backend][lifecycle]") {
+  using granit::detail::backend_lifecycle;
+  using granit::detail::backend_lifecycle_state;
+
+  backend_lifecycle lifecycle;
+  CHECK(lifecycle.gate() == GRANIT_ERROR_NOT_READY);
+  CHECK(lifecycle.status().state == backend_lifecycle_state::initializing);
+
+  lifecycle.mark_ready();
+  CHECK(lifecycle.gate() == GRANIT_SUCCESS);
+  CHECK(lifecycle.status().state == backend_lifecycle_state::ready);
+
+  lifecycle.mark_failed(GRANIT_ERROR_INITIALIZATION_FAILED);
+  CHECK(lifecycle.gate() == GRANIT_ERROR_INITIALIZATION_FAILED);
+  lifecycle.mark_ready();
+  CHECK(lifecycle.status().state == backend_lifecycle_state::failed);
+
+  lifecycle.mark_device_lost();
+  CHECK(lifecycle.gate() == GRANIT_ERROR_DEVICE_LOST);
+  CHECK(lifecycle.status().state == backend_lifecycle_state::device_lost);
 }

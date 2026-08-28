@@ -112,15 +112,28 @@ granit_result renderer_registry::get_status(granit_renderer renderer,
     return GRANIT_ERROR_INVALID_HANDLE;
   }
   status.reserved = 0;
-  status.state = state->device_lost() ? GRANIT_RENDERER_STATE_DEVICE_LOST
-                                     : GRANIT_RENDERER_STATE_READY;
-  status.failure_result =
-      state->device_lost() ? GRANIT_ERROR_DEVICE_LOST : GRANIT_SUCCESS;
+  const auto lifecycle = state->lifecycle_status();
+  switch (lifecycle.state) {
+  case backend_lifecycle_state::initializing:
+    status.state = GRANIT_RENDERER_STATE_INITIALIZING;
+    break;
+  case backend_lifecycle_state::ready:
+    status.state = GRANIT_RENDERER_STATE_READY;
+    break;
+  case backend_lifecycle_state::failed:
+    status.state = GRANIT_RENDERER_STATE_FAILED;
+    break;
+  case backend_lifecycle_state::device_lost:
+    status.state = GRANIT_RENDERER_STATE_DEVICE_LOST;
+    break;
+  }
+  status.failure_result = lifecycle.failure_result;
   return GRANIT_SUCCESS;
 }
 
 granit_result renderer_registry::process_events(granit_renderer renderer) {
-  return acquire(renderer) ? GRANIT_SUCCESS : GRANIT_ERROR_INVALID_HANDLE;
+  const auto state = acquire(renderer);
+  return state ? state->process_backend_events() : GRANIT_ERROR_INVALID_HANDLE;
 }
 
 granit_result renderer_registry::import_pipeline_cache(granit_renderer renderer, const void* data,

@@ -22,6 +22,7 @@
 #include "backend/access.h"
 #include "backend/binding.h"
 #include "backend/capabilities.h"
+#include "backend/lifecycle.h"
 #include "backend/presentation.h"
 #include "backend/queue.h"
 #include "backend/rendering.h"
@@ -301,8 +302,12 @@ public:
   [[nodiscard]] std::size_t frame_slot_count() const noexcept { return frame_slots_.size(); }
   [[nodiscard]] bool validation_enabled() const noexcept { return validation_enabled_; }
   [[nodiscard]] bool device_lost() const noexcept {
-    return device_status_.gate() == GRANIT_ERROR_DEVICE_LOST;
+    return lifecycle_.status().state == backend_lifecycle_state::device_lost;
   }
+  [[nodiscard]] backend_lifecycle_status lifecycle_status() const noexcept {
+    return lifecycle_.status();
+  }
+  [[nodiscard]] granit_result process_backend_events() noexcept { return lifecycle_.gate(); }
   [[nodiscard]] const diagnostic_sink& diagnostics() const noexcept { return diagnostics_; }
   [[nodiscard]] const backend_capabilities& capabilities() const noexcept { return capabilities_; }
   [[nodiscard]] const vulkan_instance& instance() const noexcept { return instance_; }
@@ -338,6 +343,7 @@ private:
   bool validation_enabled_{};
   diagnostic_sink diagnostics_;
   device_status device_status_;
+  backend_lifecycle lifecycle_;
   backend_capabilities capabilities_;
   std::mutex resource_mutex_;
   std::mutex pipeline_cache_mutex_;
