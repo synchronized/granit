@@ -230,6 +230,36 @@ CPU/GPU Scene、Orbit Camera、Viewer State、ImGui 面板与单帧 `tick`。它
 Emscripten 预设构建。两者都不进入 Granit 安装导出，且不复制一份 Renderer Registry
 或 WebGPU Provider 实现到示例目录。
 
+### S-13G 验收与回归契约
+
+验收分为四层，不用一个可视化窗口 Smoke 代替可定位的单元和像素回归：
+
+1. **CPU 契约**：Loader、Scene、Camera、UI State、资源打包与统计在无 GPU 环境运行。
+2. **离屏 GPU Fixture**：仓库内小型 GLB 在 Vulkan 与桌面 Dawn 上通过同一公共路径
+   上传和绘制，不创建窗口；浏览器在 Chromium WebGPU 中运行同一 Fixture。
+3. **交互 Smoke**：运行 60 帧，注入环绕、缩放、选择、ImGui 修改和一次 Resize，
+   验证实际后端、非空 Draw Data、有限相机与无 Validation/浏览器 Console 错误。
+4. **FlightHelmet 验收**：手动 Actions 下载并校验锁定资产，使用固定相机、光源、
+   曝光、尺寸和时间生成无 UI 截图，另行验证带 UI 的启动截图。
+
+固定截图使用 512×512 RGBA8 输出，在资源上传后预热至少三帧再回读。比较分层进行：
+背景/轮廓遮罩允许一像素边缘容差，深度先验证前后关系，再对非边缘颜色统计
+平均绝对误差与超阈值像素比例。不使用整图精确哈希，也不通过扩大阈值掩盖
+稳定的材质、法线、sRGB 或深度差异。
+
+- Windows 手动 Actions 覆盖 MSVC/Clang、Vulkan 与 Dawn D3D12；Linux 覆盖 GCC/Clang、
+  Vulkan 与 Dawn Vulkan，并复用 X11/Wayland Integration Runtime；Emscripten 使用锁定
+  Chrome/Emdawnwebgpu 运行浏览器 Fixture 和交互 Smoke。
+- 截图失败时上传实际图、期望图、差异图、模型 manifest、Renderer/Adapter
+  信息和诊断日志；成功时仅保留简短汇总，不重复上传大资产。
+- Release 性能基线固定 1920×1080、相机和 FlightHelmet，分别测量 UI 开/关与
+  Immediate/FIFO；预热 300 帧、采样 1000 帧，报告 CPU/GPU/等待的 p50/p95/p99。
+  首份数据建立基线而非不经复测的硬性 FPS 门槛。
+
+S-13 只在上述手动 Actions 全部通过，公共头/安装 Consumer 通过，并完成示例指南、
+依赖/资产许可参考与带日期的验收 Record 后标记完成。验收结果再决定是否启动
+S-14，不在 S-13 实施中预先安装或导出 glTF 加载层。
+
 ## 实施顺序
 
 1. **S-13A 资产与依赖评估**：锁定模型、`cgltf`、图片解码器版本、许可证及获取/打包方式。
