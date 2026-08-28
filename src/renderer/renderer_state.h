@@ -29,6 +29,8 @@
 #include "backend/queue.h"
 #include "backend/renderer.h"
 #include "backend/rendering.h"
+#include "backend/retirement.h"
+#include "backend/timestamp.h"
 #include "backend/transfer.h"
 #include "backend/upload.h"
 #include "backend/vulkan/command_recorder.h"
@@ -50,6 +52,8 @@ class renderer_state final : public backend_renderer,
                              public backend_command_renderer,
                              public backend_compute_command_renderer,
                              public backend_graphics_command_renderer,
+                             public backend_retirement_renderer,
+                             public backend_timestamp_renderer,
                              public backend_transfer_command_renderer,
                              public std::enable_shared_from_this<renderer_state> {
 public:
@@ -298,24 +302,24 @@ public:
   [[nodiscard]] granit_result wait_for_present_idle() noexcept override;
   [[nodiscard]] granit_result create_timestamp_query_pool(
       std::uint32_t query_count,
-      std::unique_ptr<backend_timestamp_query_pool_resource>& pool) noexcept;
+      std::unique_ptr<backend_timestamp_query_pool_resource>& pool) noexcept override;
   [[nodiscard]] granit_result
   read_timestamp_query_results(backend_timestamp_query_pool_resource& pool, std::uint32_t first,
-                               std::span<std::uint64_t> values) noexcept;
+                               std::span<std::uint64_t> values) noexcept override;
   [[nodiscard]] granit_result reset_timestamp_queries(backend_command_recorder_resource& recorder,
                                                       backend_timestamp_query_pool_resource& pool,
                                                       std::uint32_t first,
-                                                      std::uint32_t count) noexcept;
+                                                      std::uint32_t count) noexcept override;
   [[nodiscard]] granit_result write_timestamp(backend_command_recorder_resource& recorder,
                                               backend_timestamp_query_pool_resource& pool,
                                               granit_timestamp_stage stage,
-                                              std::uint32_t index) noexcept;
+                                              std::uint32_t index) noexcept override;
   [[nodiscard]] granit_result
   set_timestamp_query_pool_name(backend_timestamp_query_pool_resource& pool,
-                                std::string_view name) noexcept;
+                                std::string_view name) noexcept override;
   void retire_resource(submission_serial retire_after, retirement_order order,
-                       std::shared_ptr<void> resource);
-  std::size_t collect_retired() noexcept;
+                       std::shared_ptr<void> resource) override;
+  std::size_t collect_retired() noexcept override;
   std::size_t collect_present_retired() noexcept override { return collect_retired(); }
   std::size_t drain_retired() noexcept;
   void destroy_native_command_recorder(backend_command_recorder_resource& recorder) noexcept;

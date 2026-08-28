@@ -37,9 +37,11 @@
 #include "backend/queue.h"
 #include "backend/renderer.h"
 #include "backend/rendering.h"
+#include "backend/retirement.h"
 #include "backend/resources.h"
 #include "backend/shader.h"
 #include "backend/transfer.h"
+#include "backend/timestamp.h"
 #include "backend/upload.h"
 #include "core/handle_table.h"
 #include "core/lifecycle_validation.h"
@@ -477,6 +479,7 @@ private:
     std::shared_ptr<backend_command_renderer> commands;
     std::shared_ptr<backend_compute_command_renderer> compute;
     std::shared_ptr<backend_graphics_command_renderer> graphics;
+    std::shared_ptr<backend_timestamp_renderer> timestamps;
     std::shared_ptr<backend_transfer_command_renderer> transfers;
     std::shared_ptr<renderer_state> renderer;
     std::unique_ptr<backend_command_recorder_resource> native;
@@ -502,7 +505,9 @@ private:
   };
   struct timestamp_query_pool_record {
     resource_metadata metadata;
-    std::shared_ptr<renderer_state> renderer;
+    std::shared_ptr<backend_renderer> owner;
+    std::shared_ptr<backend_timestamp_renderer> timestamps;
+    std::shared_ptr<backend_retirement_renderer> retirement;
     std::unique_ptr<backend_timestamp_query_pool_resource> native;
     std::mutex mutex;
   };

@@ -89,10 +89,12 @@ target_sources(
     backend/presentation.h
     backend/queue.h
     backend/rendering.h
+    backend/retirement.h
     backend/transfer.h
     backend/renderer.h
     backend/resources.h
     backend/shader.h
+    backend/timestamp.h
     backend/upload.h
     backend/vulkan/device.cpp
     backend/vulkan/device.h

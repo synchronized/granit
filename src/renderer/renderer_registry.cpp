@@ -223,7 +223,7 @@ granit_result renderer_registry::set_object_name(granit_renderer renderer, grani
   GRANIT_NAME_PRESENTATION_OBJECT(graphics_pipelines_)
   GRANIT_NAME_OBJECT(compute_pipelines_)
   GRANIT_NAME_OBJECT(command_recorders_)
-  GRANIT_NAME_OBJECT(timestamp_query_pools_)
+  GRANIT_NAME_PRESENTATION_OBJECT(timestamp_query_pools_)
 #undef GRANIT_NAME_OBJECT
 #undef GRANIT_NAME_PRESENTATION_OBJECT
 
@@ -366,7 +366,7 @@ granit_result renderer_registry::destroy(granit_renderer renderer) {
         }
       }
       for (const auto& [handle, record] : timestamp_query_pools_) {
-        if (record->renderer == state)
+        if (record->owner == state)
           lifecycle.add(lifecycle_resource_type::timestamp_query_pool, handle,
                         record->metadata.creation_sequence);
       }
@@ -399,7 +399,7 @@ granit_result renderer_registry::destroy(granit_renderer renderer) {
       }
     }
     for (auto query = timestamp_query_pools_.begin(); query != timestamp_query_pools_.end();) {
-      if (query->second->renderer == state) {
+      if (query->second->owner == state) {
         native_timestamp_query_pools.push_back(std::move(query->second));
         static_cast<void>(
             handles_.erase(query->first, resource_type::timestamp_query_pool, state->domain()));
@@ -1720,8 +1720,8 @@ granit_result renderer_registry::upload_batch_write_buffer(granit_renderer rende
   std::shared_ptr<buffer_record> buffer_record;
   {
     std::lock_guard lock{mutex_};
-    const auto found_renderer = renderers_.find(renderer);
-    if (found_renderer == renderers_.end() ||
+    const auto found_renderer = backend_renderers_.find(renderer);
+    if (found_renderer == backend_renderers_.end() ||
         handles_.find(renderer, resource_type::renderer, 0) == nullptr)
       return GRANIT_ERROR_INVALID_HANDLE;
     const auto& state = found_renderer->second;
@@ -1769,8 +1769,8 @@ granit_result renderer_registry::upload_batch_write_texture(
   std::shared_ptr<texture_record> texture_record;
   {
     std::lock_guard lock{mutex_};
-    const auto found_renderer = renderers_.find(renderer);
-    if (found_renderer == renderers_.end() ||
+    const auto found_renderer = backend_renderers_.find(renderer);
+    if (found_renderer == backend_renderers_.end() ||
         handles_.find(renderer, resource_type::renderer, 0) == nullptr)
       return GRANIT_ERROR_INVALID_HANDLE;
     const auto& state = found_renderer->second;
@@ -3048,6 +3048,7 @@ granit_result renderer_registry::create_command_recorder(granit_renderer rendere
     record->commands = std::dynamic_pointer_cast<backend_command_renderer>(owner);
     record->compute = std::dynamic_pointer_cast<backend_compute_command_renderer>(owner);
     record->graphics = std::dynamic_pointer_cast<backend_graphics_command_renderer>(owner);
+    record->timestamps = std::dynamic_pointer_cast<backend_timestamp_renderer>(owner);
     record->transfers = std::dynamic_pointer_cast<backend_transfer_command_renderer>(owner);
     if (!record->queue || !record->commands || !record->graphics)
       return GRANIT_ERROR_INTERNAL;
@@ -4298,28 +4299,33 @@ granit_result renderer_registry::create_timestamp_query_pool(granit_renderer ren
                                                              std::uint32_t query_count,
                                                              granit_timestamp_query_pool& pool) {
   try {
-    auto state = acquire(renderer);
-    if (!state)
+    auto owner = acquire_backend(renderer);
+    if (!owner)
       return GRANIT_ERROR_INVALID_HANDLE;
+    auto timestamps = std::dynamic_pointer_cast<backend_timestamp_renderer>(owner);
+    if (!timestamps)
+      return GRANIT_ERROR_UNSUPPORTED;
     auto record = std::make_shared<timestamp_query_pool_record>();
-    record->renderer = state;
-    const auto result = state->create_timestamp_query_pool(query_count, record->native);
+    record->owner = owner;
+    record->timestamps = timestamps;
+    record->retirement = std::dynamic_pointer_cast<backend_retirement_renderer>(owner);
+    const auto result = timestamps->create_timestamp_query_pool(query_count, record->native);
     if (result != GRANIT_SUCCESS)
       return result;
     std::lock_guard lock{mutex_};
-    const auto found = renderers_.find(renderer);
-    if (found == renderers_.end() || found->second != state)
+    const auto found = backend_renderers_.find(renderer);
+    if (found == backend_renderers_.end() || found->second != owner)
       return GRANIT_ERROR_INVALID_HANDLE;
     record->metadata.creation_sequence = next_creation_sequence_++;
     const auto handle =
-        handles_.insert(record.get(), resource_type::timestamp_query_pool, state->domain());
+        handles_.insert(record.get(), resource_type::timestamp_query_pool, owner->domain());
     if (handle == GRANIT_NULL_HANDLE)
       return GRANIT_ERROR_OUT_OF_MEMORY;
     try {
       timestamp_query_pools_.emplace(handle, std::move(record));
     } catch (...) {
       static_cast<void>(
-          handles_.erase(handle, resource_type::timestamp_query_pool, state->domain()));
+          handles_.erase(handle, resource_type::timestamp_query_pool, owner->domain()));
       throw;
     }
     pool = handle;
@@ -4344,12 +4350,12 @@ granit_result renderer_registry::get_timestamp_query_results(granit_renderer ren
                       found_renderer->second->domain()) == nullptr)
       return GRANIT_ERROR_INVALID_HANDLE;
     const auto found = timestamp_query_pools_.find(pool);
-    if (found == timestamp_query_pools_.end() || found->second->renderer != found_renderer->second)
+    if (found == timestamp_query_pools_.end() || found->second->owner != found_renderer->second)
       return GRANIT_ERROR_INVALID_HANDLE;
     record = found->second;
   }
   std::lock_guard lock{record->mutex};
-  return record->renderer->read_timestamp_query_results(*record->native, first, nanoseconds);
+  return record->timestamps->read_timestamp_query_results(*record->native, first, nanoseconds);
 }
 
 granit_result renderer_registry::destroy_timestamp_query_pool(granit_renderer renderer,
@@ -4363,17 +4369,21 @@ granit_result renderer_registry::destroy_timestamp_query_pool(granit_renderer re
                       found_renderer->second->domain()) == nullptr)
       return GRANIT_ERROR_INVALID_HANDLE;
     const auto found = timestamp_query_pools_.find(pool);
-    if (found == timestamp_query_pools_.end() || found->second->renderer != found_renderer->second)
+    if (found == timestamp_query_pools_.end() || found->second->owner != found_renderer->second)
       return GRANIT_ERROR_INVALID_HANDLE;
     record = std::move(found->second);
     timestamp_query_pools_.erase(found);
     static_cast<void>(handles_.erase(pool, resource_type::timestamp_query_pool,
                                      found_renderer->second->domain()));
   }
-  const auto state = record->renderer;
+  const auto retirement = record->retirement;
   const auto serial = record->metadata.last_use_serial.load();
-  state->retire_resource(serial, retirement_order::dependent, std::move(record));
-  static_cast<void>(state->collect_retired());
+  if (retirement) {
+    retirement->retire_resource(serial, retirement_order::dependent, std::move(record));
+    static_cast<void>(retirement->collect_retired());
+  } else {
+    record.reset();
+  }
   return GRANIT_SUCCESS;
 }
 
@@ -4384,12 +4394,14 @@ granit_result renderer_registry::reset_timestamp_queries(granit_renderer rendere
   auto command = acquire_command_recorder(renderer, recorder);
   if (!command)
     return GRANIT_ERROR_INVALID_HANDLE;
+  if (!command->timestamps)
+    return GRANIT_ERROR_UNSUPPORTED;
   std::shared_ptr<timestamp_query_pool_record> query;
   {
     std::lock_guard lock{mutex_};
     const auto found = timestamp_query_pools_.find(pool);
-    if (found == timestamp_query_pools_.end() || found->second->renderer != command->renderer ||
-        handles_.find(pool, resource_type::timestamp_query_pool, command->renderer->domain()) ==
+    if (found == timestamp_query_pools_.end() || found->second->owner != command->owner ||
+        handles_.find(pool, resource_type::timestamp_query_pool, command->owner->domain()) ==
             nullptr)
       return GRANIT_ERROR_INVALID_HANDLE;
     query = found->second;
@@ -4399,7 +4411,7 @@ granit_result renderer_registry::reset_timestamp_queries(granit_renderer rendere
     return GRANIT_ERROR_INVALID_ARGUMENT;
   std::lock_guard query_lock{query->mutex};
   const auto result =
-      command->renderer->reset_timestamp_queries(*command->native, *query->native, first, count);
+      command->timestamps->reset_timestamp_queries(*command->native, *query->native, first, count);
   if (result == GRANIT_SUCCESS)
     retain_resource(command->retained_resources, query, query->metadata);
   return result;
@@ -4413,12 +4425,14 @@ granit_result renderer_registry::write_timestamp(granit_renderer renderer,
   auto command = acquire_command_recorder(renderer, recorder);
   if (!command)
     return GRANIT_ERROR_INVALID_HANDLE;
+  if (!command->timestamps)
+    return GRANIT_ERROR_UNSUPPORTED;
   std::shared_ptr<timestamp_query_pool_record> query;
   {
     std::lock_guard lock{mutex_};
     const auto found = timestamp_query_pools_.find(pool);
-    if (found == timestamp_query_pools_.end() || found->second->renderer != command->renderer ||
-        handles_.find(pool, resource_type::timestamp_query_pool, command->renderer->domain()) ==
+    if (found == timestamp_query_pools_.end() || found->second->owner != command->owner ||
+        handles_.find(pool, resource_type::timestamp_query_pool, command->owner->domain()) ==
             nullptr)
       return GRANIT_ERROR_INVALID_HANDLE;
     query = found->second;
@@ -4428,7 +4442,7 @@ granit_result renderer_registry::write_timestamp(granit_renderer renderer,
     return GRANIT_ERROR_INVALID_ARGUMENT;
   std::lock_guard query_lock{query->mutex};
   const auto result =
-      command->renderer->write_timestamp(*command->native, *query->native, stage, index);
+      command->timestamps->write_timestamp(*command->native, *query->native, stage, index);
   if (result == GRANIT_SUCCESS)
     retain_resource(command->retained_resources, query, query->metadata);
   return result;
@@ -4438,8 +4452,8 @@ std::shared_ptr<renderer_registry::command_recorder_record>
 renderer_registry::acquire_command_recorder(granit_renderer renderer,
                                             granit_command_recorder recorder) {
   std::lock_guard lock{mutex_};
-  const auto found_renderer = renderers_.find(renderer);
-  if (found_renderer == renderers_.end() ||
+  const auto found_renderer = backend_renderers_.find(renderer);
+  if (found_renderer == backend_renderers_.end() ||
       handles_.find(renderer, resource_type::renderer, 0) == nullptr) {
     return {};
   }
