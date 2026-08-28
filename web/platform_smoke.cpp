@@ -16,8 +16,6 @@
 #include <granit/renderer/surface.h>
 #include <granit/renderer/swapchain.h>
 
-#include "backend/lifecycle.h"
-
 namespace {
 
 enum class startup_status : int { failed = -1, starting, provider_pending, ready };
@@ -28,14 +26,12 @@ struct web_platform_state {
   granit_swapchain swapchain{};
   startup_status status{startup_status::starting};
   unsigned input_event_count{};
-  granit::detail::backend_lifecycle lifecycle;
 };
 
 web_platform_state state;
 
 void fail(const char* message, granit_result result = GRANIT_ERROR_INITIALIZATION_FAILED) noexcept {
   state.status = startup_status::failed;
-  state.lifecycle.mark_failed(result);
   std::fprintf(stderr, "GRANIT_STATUS:failed:%s:%d\n", message, result);
 }
 
@@ -349,7 +345,6 @@ void tick(void*) noexcept {
     return;
   }
   state.status = startup_status::ready;
-  state.lifecycle.mark_ready();
   std::puts("GRANIT_STATUS:ready");
 }
 

@@ -36,7 +36,7 @@ add_executable(granit_web_platform_smoke platform_smoke.cpp)
 target_compile_features(granit_web_platform_smoke PRIVATE cxx_std_20)
 target_link_libraries(granit_web_platform_smoke PRIVATE granit::granit)
 target_include_directories(
-  granit_web_platform_smoke PRIVATE "${PROJECT_SOURCE_DIR}/include" "${PROJECT_SOURCE_DIR}/src"
+  granit_web_platform_smoke PRIVATE "${PROJECT_SOURCE_DIR}/include"
 )
 target_link_options(
   granit_web_platform_smoke
