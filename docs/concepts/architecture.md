@@ -160,10 +160,11 @@ Vulkan 与 WebGPU 不必提供完全对称的内部能力。共同语义由 Regi
 
 ### 操作系统平台层
 
-`src/platform` 集中保存操作系统和原生窗口系统实现，当前包括 Win32、XCB、Wayland、Window
-Backend 以及动态库装载。`src/input` 只保留公共 Input 状态、UTF-8 处理和事件分派；原生输入消息
-解码器位于对应平台目录。动态库外观与所有权位于 `platform/shared_library.*`，`LoadLibrary` 和
-`dlopen` 实现分别位于 Win32 与 POSIX 编译单元，避免通用实现文件包含系统 Loader 头文件。
+`src/platform` 集中保存操作系统和原生窗口系统实现。Window Registry 只管理公共句柄、线程规则、
+事件队列和后端分派；Win32、XCB 与 Wayland 的原生窗口生命周期及事件泵分别位于对应平台编译单元。
+`src/input` 只保留公共 Input 状态、UTF-8 处理和事件分派，统一平台输入门面再调用对应平台解码器。
+动态库外观与所有权位于 `platform/shared_library.*`，`LoadLibrary` 和 `dlopen` 实现分别位于 Win32
+与 POSIX 编译单元，避免通用实现文件包含系统 Loader 头文件。
 
 `src/integrations` 不承担操作系统抽象，只保存 SDL3、ImGui 等第三方库与 Granit 公共接口之间的
 可选适配。平台层不得依赖这些集成目标；集成层可以调用 Granit 的 Window、Input 或 Renderer

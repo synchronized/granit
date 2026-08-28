@@ -299,7 +299,7 @@ add_library(granit_window)
 add_library(granit::window ALIAS granit_window)
 target_sources(
   granit_window
-  PRIVATE platform/window/window_backend.cpp
+  PRIVATE platform/window/window_registry.cpp
           platform/window/window_backend_internal.h
           $<$<PLATFORM_ID:Windows>:platform/win32/window_backend.cpp>
           $<$<BOOL:${GRANIT_HAS_XCB}>:platform/xcb/window_backend.cpp>
