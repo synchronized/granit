@@ -175,8 +175,8 @@
   和插件呈现资源适配器；Emscripten 静态 Provider 已通过 Debug/Release 浏览器异步初始化、Canvas、
   Acquire/Cancel、状态与输入验证。S-10E4 已建立统一拥有 Provider、异步生命周期、能力和呈现
   适配器的 WebGPU Renderer 状态对象；Vulkan/WebGPU 状态共同实现最小 Renderer 后端接口，
-  Registry 根记录已通过该接口统一状态、能力和事件推进。下一步接入 WebGPU Registry 工厂与
-  公共 Renderer 句柄。
+  Registry 根记录已通过该接口统一状态、能力和事件推进，并已增加 WebGPU 静态 Provider 工厂
+  与通用销毁路径。下一步让 Emscripten 公共 Renderer API 接入该工厂。
 
 ## 十、Android 移动平台
 

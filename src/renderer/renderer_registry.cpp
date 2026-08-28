@@ -3,6 +3,7 @@
 
 #include "renderer/renderer_registry.h"
 
+#include "backend/webgpu/renderer_state.h"
 #include "core/texture_format.h"
 
 #include <algorithm>
@@ -82,6 +83,37 @@ granit_result renderer_registry::create(std::string_view application_name, bool 
     } catch (...) {
       renderers_.erase(handle);
       backend_renderers_.erase(handle);
+      static_cast<void>(handles_.erase(handle, resource_type::renderer, 0));
+      throw;
+    }
+    renderer = handle;
+    return GRANIT_SUCCESS;
+  } catch (const std::bad_alloc&) {
+    return GRANIT_ERROR_OUT_OF_MEMORY;
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+granit_result renderer_registry::create_webgpu_static(
+    const granit_backend_plugin_api* api, granit_diagnostic_callback diagnostic_callback,
+    void* diagnostic_user_data, granit_renderer& renderer) {
+  try {
+    auto state = std::make_shared<webgpu_renderer_state>();
+    const auto initialize_result =
+        state->initialize_static(api, diagnostic_callback, diagnostic_user_data);
+    if (initialize_result != GRANIT_SUCCESS) {
+      return initialize_result;
+    }
+
+    std::lock_guard lock{mutex_};
+    const auto handle = handles_.insert(state.get(), resource_type::renderer, 0);
+    if (handle == GRANIT_NULL_HANDLE) {
+      return GRANIT_ERROR_OUT_OF_MEMORY;
+    }
+    try {
+      backend_renderers_.emplace(handle, std::move(state));
+    } catch (...) {
       static_cast<void>(handles_.erase(handle, resource_type::renderer, 0));
       throw;
     }
@@ -197,6 +229,7 @@ void renderer_registry::emit_validation_diagnostic(granit_renderer renderer,
 }
 
 granit_result renderer_registry::destroy(granit_renderer renderer) {
+  std::shared_ptr<backend_renderer> backend_state;
   std::shared_ptr<renderer_state> state;
   lifecycle_snapshot lifecycle;
   std::vector<std::shared_ptr<command_recorder_record>> native_command_recorders;
@@ -215,13 +248,22 @@ granit_result renderer_registry::destroy(granit_renderer renderer) {
   std::vector<std::shared_ptr<upload_batch_record>> native_upload_batches;
   std::vector<std::shared_ptr<timestamp_query_pool_record>> native_timestamp_query_pools;
   {
-    std::lock_guard lock{mutex_};
+    std::unique_lock lock{mutex_};
     if (handles_.find(renderer, resource_type::renderer, 0) == nullptr) {
       return GRANIT_ERROR_INVALID_HANDLE;
     }
+    auto backend_found = backend_renderers_.find(renderer);
+    if (backend_found == backend_renderers_.end()) {
+      return GRANIT_ERROR_INTERNAL;
+    }
     auto found = renderers_.find(renderer);
     if (found == renderers_.end()) {
-      return GRANIT_ERROR_INTERNAL;
+      backend_state = std::move(backend_found->second);
+      backend_renderers_.erase(backend_found);
+      const auto erase_result = handles_.erase(renderer, resource_type::renderer, 0);
+      lock.unlock();
+      backend_state.reset();
+      return erase_result;
     }
     state = std::move(found->second);
     renderers_.erase(found);

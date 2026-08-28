@@ -29,6 +29,7 @@
 #include <granit/renderer/upload_batch.h>
 
 #include "backend/access.h"
+#include "backend/plugin_api.h"
 #include "backend/presentation.h"
 #include "backend/renderer.h"
 #include "backend/resources.h"
@@ -49,6 +50,9 @@ public:
                                      std::uint32_t surface_types, std::uint32_t frames_in_flight,
                                      granit_diagnostic_callback diagnostic_callback,
                                      void* diagnostic_user_data, granit_renderer& renderer);
+  [[nodiscard]] granit_result create_webgpu_static(
+      const granit_backend_plugin_api* api, granit_diagnostic_callback diagnostic_callback,
+      void* diagnostic_user_data, granit_renderer& renderer);
   [[nodiscard]] granit_result destroy(granit_renderer renderer);
   [[nodiscard]] granit_result get_limits(granit_renderer renderer, granit_renderer_limits& limits);
   [[nodiscard]] granit_result get_status(granit_renderer renderer, granit_renderer_status& status);
