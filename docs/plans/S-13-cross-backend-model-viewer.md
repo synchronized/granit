@@ -159,6 +159,41 @@ Distance、Near/Far 由模型尺度推导并保持严格有效。
 限制、高 DPI 等价、ImGui 捕获、焦点丢失和零尺寸恢复。Smoke Test 需在调整
 窗口前后验证模型仍位于视野内，且不依赖绝对屏幕坐标。
 
+### S-13E ImGui 与性能指标契约
+
+`viewer_state` 是示例唯一的可编辑状态，拥有选中 Node/Material 索引、相机、
+方向光、曝光、调试显示与面板开关。ImGui Widget 只生成有类型的状态更改；资源更新在
+UI 构建结束后事务式应用，不在 Widget 调用中创建或销毁 GPU 资源。
+
+首轮面板结构固定为：
+
+- **Scene**：Node 层级、可见状态与选择；选择失效时回退为未选中。
+- **Inspector**：只读 Transform/Mesh 信息，以及 PBR Factor、Texture 缩略图和 Sampler 信息；
+  材质修改通过批量 `material_instance::update` 提交，失败保留上一有效值。
+- **Lighting**：方向、辐亮度、曝光和调试模式；输入保持有限并限制在文档范围。
+- **Renderer**：只读显示实际后端、Adapter、Swapchain 格式/尺寸、Present Mode、帧槽数和
+  能力；不允许运行中原地替换 Renderer。
+- **Performance**：显示平滑 FPS、CPU 帧时间、帧槽等待、Present 等待与 GPU 阶段时间；
+  默认保留 240 个原始样本，显示 p50/p95 和最大值，不用单次峰值宣称性能。
+
+ImGui 渲染复用 `granit::integration::imgui::append_draw_data` 和与 Renderer 帧槽数一致的
+Canvas Draw List。Texture Resolver 只映射字体 Atlas 与已存活的查看器 Texture View；
+未知或已销毁 ID 返回错误，不解引用指针型 `ImTextureID`。
+
+为避免示例包含现有私有 `render_pipeline_metrics.h`，S-13E 将通用指标查询提升到
+`include/granit/pipeline/render_pipeline.h/.hpp`：
+
+- 可扩展结构返回样本序号、Shadow、Opaque、Tone Mapping 和 Total GPU 纳秒，
+  C API 与 C++ 包装同步更新，不公开 Timestamp Query 的后端实现。
+- Query Pool 按帧槽隔离，只读取已完成槽的结果；未完成返回 `NOT_READY`，后端
+  不支持返回 `UNSUPPORTED`。UI 显示“不可用”，不伪造 0 ms 且不中止查看器。
+- CPU 墙钟、GPU Timestamp 与等待时间分开报告，不相加为“总帧时间”。性能导出
+  记录构建类型、Validation、后端、Adapter、驱动、尺寸、Present Mode 和帧槽数。
+
+测试覆盖面板状态转换、材质回滚、Texture ID 失效、ImGui 捕获、指标帧槽延迟、
+`NOT_READY/UNSUPPORTED` 和样本统计。图形 Smoke Test 只检查面板可见与 Draw Data 非空，
+不依赖字体光栅的逐像素结果。
+
 ## 实施顺序
 
 1. **S-13A 资产与依赖评估**：锁定模型、`cgltf`、图片解码器版本、许可证及获取/打包方式。
