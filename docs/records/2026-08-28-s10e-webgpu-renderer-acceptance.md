@@ -5,7 +5,7 @@
 
 ## 结论
 
-S-10E 浏览器闭环已完成，Registry 内部状态统一仍在收尾。Emscripten 构建现可通过 Granit 公共
+S-10E 浏览器闭环与 Registry 状态声明统一已完成，平台实现收敛仍在收尾。Emscripten 构建现可通过 Granit 公共
 Renderer、Surface、
 Swapchain、Shader、Graphics Pipeline 和 Command Recorder API，在浏览器 Canvas 绘制确定性
 三角形；公共头文件不暴露 WebGPU、Emscripten 或 Vulkan 原生类型。Windows、Linux 与
@@ -13,9 +13,9 @@ Emscripten 首轮矩阵均已通过。
 
 仅生成示例目标的问题已经关闭，构建同时提供静态 `granit::granit` SDK 目标，浏览器示例作为只
 包含公共头文件的独立 Consumer 链接该目标。Emscripten 与桌面也已统一包含
-`renderer/renderer_registry.h`，原 `web_renderer_registry` 名称及 `web/renderer_registry.*`
-已删除；但 `renderer_registry_emscripten.*` 仍拥有独立句柄表和资源映射，因此这只是入口统一，
-不能作为 Registry 状态统一的完成依据。
+`renderer/renderer_registry.h`。原 `web_renderer_registry` 与 `renderer_registry_emscripten.*` 已删除；
+桌面和 Emscripten 现使用同一个 Registry 类、句柄表成员和资源记录声明。平台实现编译单元及
+部分过渡状态视图仍需收敛，因此尚不能作为 S-10E 最终完成依据。
 
 ## 验收范围
 
