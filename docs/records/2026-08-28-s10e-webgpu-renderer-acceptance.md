@@ -15,13 +15,14 @@ Emscripten 首轮矩阵均已通过。
 包含公共头文件的独立 Consumer 链接该目标。Emscripten 与桌面也已统一包含
 `renderer/renderer_registry.h`。原 `web_renderer_registry` 类型、独立头文件、平台 API 文件与
 `renderer_registry_emscripten.*` 已删除；桌面和 Emscripten 现使用同一个 Registry 类、句柄表成员、
-资源记录声明及公共 API 编译单元。Web Renderer 已只保留通用根表，动态 Backbuffer 也已进入公共
-Texture/View 资源表。
+资源记录声明及公共 API 编译单元。Registry 根记录已统一为后端无关 Renderer 状态，动态
+Backbuffer 也已进入公共 Texture/View 资源表。
 
 Registry 现通过按能力拆分的私有 HAL 访问资源管理、命令生命周期、图形、计算、传输、时间戳、
 Queue、Present 和延迟退役能力。命令、帧、时间戳、Buffer、Sampler、Bind Group、Compute Pipeline
-及 Upload Batch 记录均不再持有 Vulkan `renderer_state` 具体视图。Vulkan 专用根表仅为 0.4.0
-尚未跨后端开放的原生创建路径提供实现入口，不进入公共 ABI 或通用资源记录。
+及 Upload Batch 记录均不再持有 Vulkan `renderer_state` 具体视图。Vulkan 专用根表与条件化
+`acquire` 已删除；Shader、Pipeline 和 Renderer 创建的平台差异分别由后端分派与 Provider 工厂
+处理，公共 API 编译单元不再判断 Emscripten 平台。
 
 ## 验收范围
 
@@ -43,6 +44,8 @@ Queue、Present 和延迟退役能力。命令、帧、时间戳、Buffer、Samp
   无头 Chrome 公共绘制闭环与输入转发再次通过。
 - 私有 HAL 与资源记录收敛后，本地 Windows Clang 58 项测试、Emscripten Debug 构建及无头 Chrome
   公共绘制闭环再次通过；最终手动 Windows、Linux 与 Emscripten Actions 矩阵全部通过。
+- Registry 编译单元拆分与平台分派下沉后，本地 Windows Clang 58 项测试、Emscripten Debug 构建及
+  无头 Chrome 公共绘制闭环与输入转发再次通过；远端矩阵留待更新特性分支后复验。
 
 最终验证运行：
 

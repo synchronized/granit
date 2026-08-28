@@ -184,8 +184,9 @@
   首轮矩阵均已通过。Emscripten 与桌面现统一包含同一 Registry 入口，平台实现集中在
   `src/renderer`；旧类型和旧入口已删除，静态 SDK 与独立浏览器 Consumer 已通过构建和无头
   Chrome 验证。平台专用 Registry 已删除，两端共用唯一 Registry、句柄表、资源记录和公共 API
-  编译单元；命令、帧与资源记录通过私有 HAL 使用资源管理、命令、时间戳、Queue、Present 和延迟
-  退役能力，不再持有 Vulkan `renderer_state` 具体视图。最终 Windows、Linux 与 Emscripten 手动
+  编译单元；Registry 根记录现统一使用后端无关 Renderer 状态，不再保留 Vulkan 专用根表。
+  Shader、Pipeline 与 Renderer 创建的平台差异已下沉到私有 HAL 和 Provider 工厂；命令、帧与资源
+  记录也不再持有 Vulkan `renderer_state` 具体视图。最终 Windows、Linux 与 Emscripten 手动
   Actions 矩阵全部通过，S-10 已完成。详细结果见
   [S-10E WebGPU Renderer 阶段验收](records/2026-08-28-s10e-webgpu-renderer-acceptance.md)。
 
