@@ -214,7 +214,7 @@ granit_result renderer_registry::set_object_name(granit_renderer renderer, grani
   GRANIT_NAME_PRESENTATION_OBJECT(swapchains_)
   GRANIT_NAME_OBJECT(buffers_)
   GRANIT_NAME_OBJECT(textures_)
-  GRANIT_NAME_OBJECT(texture_views_)
+  GRANIT_NAME_PRESENTATION_OBJECT(texture_views_)
   GRANIT_NAME_OBJECT(samplers_)
   GRANIT_NAME_PRESENTATION_OBJECT(shaders_)
   GRANIT_NAME_OBJECT(bind_group_layouts_)
@@ -299,7 +299,7 @@ granit_result renderer_registry::destroy(granit_renderer renderer) {
         }
       }
       for (const auto& [handle, record] : texture_views_) {
-        if (record->renderer == state && record->publicly_destroyable) {
+        if (record->owner == state && record->publicly_destroyable) {
           lifecycle.add(lifecycle_resource_type::texture_view, handle,
                         record->metadata.creation_sequence);
         }
@@ -487,7 +487,7 @@ granit_result renderer_registry::destroy(granit_renderer renderer) {
       }
     }
     for (auto view = texture_views_.begin(); view != texture_views_.end();) {
-      if (view->second->renderer == state) {
+      if (view->second->owner == state) {
         native_texture_views.push_back(std::move(view->second));
         static_cast<void>(
             handles_.erase(view->first, resource_type::texture_view, state->domain()));
@@ -1004,7 +1004,6 @@ granit_result renderer_registry::install_swapchain_backbuffers(
       texture->desc = backbuffer.desc;
       auto view = std::make_shared<texture_view_record>();
       view->owner = record->owner;
-      view->renderer = texture->renderer;
       view->texture = texture;
       view->publicly_destroyable = false;
       granit_texture_view_desc desc = GRANIT_TEXTURE_VIEW_DESC_INIT;
@@ -2147,7 +2146,7 @@ granit_result renderer_registry::create_texture_view(granit_renderer renderer,
       return GRANIT_ERROR_INVALID_ARGUMENT;
     }
     auto record = std::make_shared<texture_view_record>();
-    record->renderer = state;
+    record->owner = state;
     record->texture = parent;
     record->desc = desc;
     record->native = state->allocate_texture_view_resource();
@@ -2192,7 +2191,7 @@ granit_result renderer_registry::destroy_texture_view(granit_renderer renderer,
     if (handles_.find(view, resource_type::texture_view, state->domain()) == nullptr)
       return GRANIT_ERROR_INVALID_HANDLE;
     const auto found = texture_views_.find(view);
-    if (found == texture_views_.end() || found->second->renderer != state)
+    if (found == texture_views_.end() || found->second->owner != state)
       return GRANIT_ERROR_INVALID_HANDLE;
     if (!found->second->publicly_destroyable)
       return GRANIT_ERROR_UNSUPPORTED;
@@ -2200,7 +2199,7 @@ granit_result renderer_registry::destroy_texture_view(granit_renderer renderer,
     texture_views_.erase(found);
     static_cast<void>(handles_.erase(view, resource_type::texture_view, state->domain()));
   }
-  auto state = record->renderer;
+  auto state = std::dynamic_pointer_cast<renderer_state>(record->owner);
   state->retire_resource(record->metadata.last_use_serial.load(), retirement_order::dependent,
                          record);
   record.reset();
@@ -2589,7 +2588,7 @@ granit_result renderer_registry::create_bind_group(granit_renderer renderer,
           record->resources.push_back(found->second);
         } else {
           const auto found = texture_views_.find(entry.resource);
-          if (found == texture_views_.end() || found->second->renderer != state ||
+          if (found == texture_views_.end() || found->second->owner != state ||
               entry.offset != 0 || entry.size != GRANIT_WHOLE_SIZE)
             return GRANIT_ERROR_INVALID_ARGUMENT;
           const auto required_usage = declaration->type == GRANIT_BINDING_TYPE_SAMPLED_TEXTURE
@@ -4132,7 +4131,7 @@ granit_result renderer_registry::begin_rendering(granit_renderer renderer,
           nullptr)
         return std::shared_ptr<texture_view_record>{};
       const auto found = texture_views_.find(handle);
-      return found != texture_views_.end() && found->second->renderer == command->renderer
+      return found != texture_views_.end() && found->second->owner == command->owner
                  ? found->second
                  : std::shared_ptr<texture_view_record>{};
     };
