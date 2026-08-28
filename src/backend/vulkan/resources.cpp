@@ -5,11 +5,12 @@
 
 #include <utility>
 
-#include "renderer/renderer_state.h"
+#include "backend/vulkan/vulkan_renderer_state.h"
 
 namespace granit::detail {
 
-vulkan_buffer_resource::vulkan_buffer_resource(std::shared_ptr<renderer_state> renderer) noexcept
+vulkan_buffer_resource::vulkan_buffer_resource(
+    std::shared_ptr<vulkan_renderer_state> renderer) noexcept
     : renderer_(std::move(renderer)) {}
 
 vulkan_buffer_resource::~vulkan_buffer_resource() {
@@ -18,7 +19,7 @@ vulkan_buffer_resource::~vulkan_buffer_resource() {
   }
 }
 
-vulkan_texture_resource::vulkan_texture_resource(std::shared_ptr<renderer_state> renderer,
+vulkan_texture_resource::vulkan_texture_resource(std::shared_ptr<vulkan_renderer_state> renderer,
                                                  bool owned) noexcept
     : renderer_(std::move(renderer)), owned_(owned) {}
 
@@ -29,7 +30,7 @@ vulkan_texture_resource::~vulkan_texture_resource() {
 }
 
 vulkan_texture_view_resource::vulkan_texture_view_resource(
-    std::shared_ptr<renderer_state> renderer) noexcept
+    std::shared_ptr<vulkan_renderer_state> renderer) noexcept
     : renderer_(std::move(renderer)) {}
 
 vulkan_texture_view_resource::~vulkan_texture_view_resource() {
@@ -38,7 +39,8 @@ vulkan_texture_view_resource::~vulkan_texture_view_resource() {
   }
 }
 
-vulkan_sampler_resource::vulkan_sampler_resource(std::shared_ptr<renderer_state> renderer) noexcept
+vulkan_sampler_resource::vulkan_sampler_resource(
+    std::shared_ptr<vulkan_renderer_state> renderer) noexcept
     : renderer_(std::move(renderer)) {}
 
 vulkan_sampler_resource::~vulkan_sampler_resource() {
@@ -47,7 +49,8 @@ vulkan_sampler_resource::~vulkan_sampler_resource() {
   }
 }
 
-vulkan_shader_resource::vulkan_shader_resource(std::shared_ptr<renderer_state> renderer) noexcept
+vulkan_shader_resource::vulkan_shader_resource(
+    std::shared_ptr<vulkan_renderer_state> renderer) noexcept
     : renderer_(std::move(renderer)) {}
 
 vulkan_shader_resource::~vulkan_shader_resource() {
@@ -57,7 +60,7 @@ vulkan_shader_resource::~vulkan_shader_resource() {
 }
 
 vulkan_bind_group_layout_resource::vulkan_bind_group_layout_resource(
-    std::shared_ptr<renderer_state> renderer) noexcept
+    std::shared_ptr<vulkan_renderer_state> renderer) noexcept
     : renderer_(std::move(renderer)) {}
 
 vulkan_bind_group_layout_resource::~vulkan_bind_group_layout_resource() {
@@ -67,7 +70,7 @@ vulkan_bind_group_layout_resource::~vulkan_bind_group_layout_resource() {
 }
 
 vulkan_bind_group_resource::vulkan_bind_group_resource(
-    std::shared_ptr<renderer_state> renderer) noexcept
+    std::shared_ptr<vulkan_renderer_state> renderer) noexcept
     : renderer_(std::move(renderer)) {}
 
 vulkan_bind_group_resource::~vulkan_bind_group_resource() {
@@ -77,7 +80,7 @@ vulkan_bind_group_resource::~vulkan_bind_group_resource() {
 }
 
 vulkan_pipeline_layout_resource::vulkan_pipeline_layout_resource(
-    std::shared_ptr<renderer_state> renderer) noexcept
+    std::shared_ptr<vulkan_renderer_state> renderer) noexcept
     : renderer_(std::move(renderer)) {}
 
 vulkan_pipeline_layout_resource::~vulkan_pipeline_layout_resource() {
@@ -87,7 +90,7 @@ vulkan_pipeline_layout_resource::~vulkan_pipeline_layout_resource() {
 }
 
 vulkan_graphics_pipeline_resource::vulkan_graphics_pipeline_resource(
-    std::shared_ptr<renderer_state> renderer) noexcept
+    std::shared_ptr<vulkan_renderer_state> renderer) noexcept
     : renderer_(std::move(renderer)) {}
 
 vulkan_graphics_pipeline_resource::~vulkan_graphics_pipeline_resource() {
@@ -97,7 +100,7 @@ vulkan_graphics_pipeline_resource::~vulkan_graphics_pipeline_resource() {
 }
 
 vulkan_compute_pipeline_resource::vulkan_compute_pipeline_resource(
-    std::shared_ptr<renderer_state> renderer) noexcept
+    std::shared_ptr<vulkan_renderer_state> renderer) noexcept
     : renderer_(std::move(renderer)) {}
 
 vulkan_compute_pipeline_resource::~vulkan_compute_pipeline_resource() {
@@ -107,16 +110,17 @@ vulkan_compute_pipeline_resource::~vulkan_compute_pipeline_resource() {
 }
 
 vulkan_command_recorder_resource::vulkan_command_recorder_resource(
-    std::shared_ptr<renderer_state> renderer) noexcept
+    std::shared_ptr<vulkan_renderer_state> renderer) noexcept
     : renderer_(std::move(renderer)) {}
 
 vulkan_command_recorder_resource::~vulkan_command_recorder_resource() {
   if (renderer_) {
-    renderer_->destroy_native_command_recorder(native_);
+    renderer_->destroy_native_command_recorder(*this);
   }
 }
 
-vulkan_surface_resource::vulkan_surface_resource(std::shared_ptr<renderer_state> renderer) noexcept
+vulkan_surface_resource::vulkan_surface_resource(
+    std::shared_ptr<vulkan_renderer_state> renderer) noexcept
     : renderer_(std::move(renderer)) {}
 
 vulkan_surface_resource::~vulkan_surface_resource() {
@@ -126,12 +130,22 @@ vulkan_surface_resource::~vulkan_surface_resource() {
 }
 
 vulkan_swapchain_resource::vulkan_swapchain_resource(
-    std::shared_ptr<renderer_state> renderer) noexcept
+    std::shared_ptr<vulkan_renderer_state> renderer) noexcept
     : renderer_(std::move(renderer)) {}
 
 vulkan_swapchain_resource::~vulkan_swapchain_resource() {
   if (renderer_) {
     renderer_->destroy_native_swapchain(native_);
+  }
+}
+
+vulkan_timestamp_query_pool_resource::vulkan_timestamp_query_pool_resource(
+    std::shared_ptr<vulkan_renderer_state> renderer) noexcept
+    : renderer_(std::move(renderer)) {}
+
+vulkan_timestamp_query_pool_resource::~vulkan_timestamp_query_pool_resource() {
+  if (renderer_) {
+    native_.destroy(renderer_->device());
   }
 }
 

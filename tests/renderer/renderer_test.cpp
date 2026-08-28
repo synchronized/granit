@@ -47,8 +47,28 @@ TEST_CASE("C API 创建并销毁真实 renderer", "[renderer][c_api]") {
   }
   REQUIRE(result == GRANIT_SUCCESS);
   REQUIRE(renderer != GRANIT_NULL_HANDLE);
+  granit_renderer_status status = GRANIT_RENDERER_STATUS_INIT;
+  REQUIRE(granit_renderer_get_status(renderer, &status) == GRANIT_SUCCESS);
+  CHECK(status.state == GRANIT_RENDERER_STATE_READY);
+  CHECK(status.failure_result == GRANIT_SUCCESS);
+  CHECK(granit_renderer_process_events(renderer) == GRANIT_SUCCESS);
   REQUIRE(granit_renderer_destroy(renderer) == GRANIT_SUCCESS);
+  CHECK(granit_renderer_get_status(renderer, &status) == GRANIT_ERROR_INVALID_HANDLE);
+  CHECK(granit_renderer_process_events(renderer) == GRANIT_ERROR_INVALID_HANDLE);
   CHECK(granit_renderer_destroy(renderer) == GRANIT_ERROR_INVALID_HANDLE);
+}
+
+TEST_CASE("Renderer 状态查询校验参数", "[renderer][status][c_api]") {
+  granit_renderer_status status = GRANIT_RENDERER_STATUS_INIT;
+  CHECK(granit_renderer_get_status(GRANIT_NULL_HANDLE, nullptr) == GRANIT_ERROR_INVALID_ARGUMENT);
+  status.struct_size = GRANIT_RENDERER_STATUS_VERSION_1_SIZE - 1;
+  CHECK(granit_renderer_get_status(GRANIT_NULL_HANDLE, &status) == GRANIT_ERROR_INVALID_ARGUMENT);
+  status = GRANIT_RENDERER_STATUS_INIT;
+  status.reserved = 1;
+  CHECK(granit_renderer_get_status(GRANIT_NULL_HANDLE, &status) == GRANIT_ERROR_INVALID_ARGUMENT);
+  status = GRANIT_RENDERER_STATUS_INIT;
+  CHECK(granit_renderer_get_status(GRANIT_NULL_HANDLE, &status) == GRANIT_ERROR_INVALID_HANDLE);
+  CHECK(granit_renderer_process_events(GRANIT_NULL_HANDLE) == GRANIT_ERROR_INVALID_HANDLE);
 }
 
 TEST_CASE("Renderer 公开查询 Uniform Buffer 限制", "[renderer][limits][c_api]") {
@@ -239,6 +259,12 @@ TEST_CASE("C++ renderer 提供 move-only RAII", "[renderer][cpp_api]") {
   REQUIRE(renderer.get_limits(limits) == granit::result::success);
   CHECK(limits.uniform_buffer_offset_alignment > 0);
   CHECK(limits.max_uniform_buffer_binding_size > 0);
+
+  granit::renderer_status status;
+  REQUIRE(renderer.get_status(status) == granit::result::success);
+  CHECK(status.state == granit::renderer_state::ready);
+  CHECK(status.failure_result == granit::result::success);
+  CHECK(renderer.process_events() == granit::result::success);
 
   granit::renderer moved{std::move(renderer)};
   CHECK_FALSE(renderer.valid());

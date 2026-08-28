@@ -26,7 +26,7 @@
 | 六、多线程与性能 | 已完成 | 压力测试、基线、批量提交与上传批处理已完成 |
 | 七、可选高层渲染 | 已完成 | H-02～H-08 路线闭合，参考管线与公共 UI/Text 已验证 |
 | 八、稳定化与跨平台 | 持续进行 | ABI 策略、诊断和更多平台 Surface 待后续推进 |
-| 九、多后端与 Web 平台 | 进行中 | S-10A、S-10B、S-10C 已完成，下一目标为 S-10D Emscripten |
+| 九、多后端与 Web 平台 | 已完成 | 桌面 WebGPU、浏览器闭环与私有 HAL 收敛已验收 |
 | 十、Android 移动平台 | 待开始 | 0.4.0 多后端边界完成后规划 NDK、Surface 与移动生命周期 |
 
 ## 一、工程与 ABI 基础
@@ -162,14 +162,34 @@
 
 ## 九、多后端与 Web 平台
 
-**状态：进行中；S-10A、S-10B、S-10C 已完成，准备进入 S-10D。**
+**状态：已完成；桌面 WebGPU、Emscripten 浏览器闭环与私有 HAL 收敛已通过最终验收。**
 
 - **[S-10](plans/S-10-0.4.0-webgpu-backend.md) / P2**：先定义后端无关的内部设备、资源、命令、
   同步与 Surface 边界，在保持 Vulkan 后端功能和性能的前提下验证桌面 WebGPU 离屏 MVP；随后建立
   WGSL 工具链，并接入 Emscripten、浏览器 Canvas 和事件循环。S-10A 内部能力、插件、资源、
   Queue、Surface 与 Swapchain 边界迁移已经完成；S-10B 桌面 WebGPU 设备、资源、绑定、Pipeline、
   命令提交和确定性离屏回读已通过 Windows/Linux 真实 Dawn 验证。S-10C 已完成 WGSL 权威输入、
-  诊断、反射、确定性资产与缓存闭环。下一步接入 S-10D Emscripten 平台层。
+  诊断、反射、确定性资产与缓存闭环；S-10D 已完成 Emscripten 平台验证，S-10E1 已完成 Registry
+  资源、呈现与命令路径的核心去 Vulkan 化；S-10E2 已统一异步 Provider 生命周期、状态查询、
+  事件推进和终止错误传播。S-10E3 已完成 Canvas/Swapchain 插件状态机、Registry 动态 Backbuffer
+  和插件呈现资源适配器；Emscripten 静态 Provider 已通过 Debug/Release 浏览器异步初始化、Canvas、
+  Acquire/Cancel、状态与输入验证。S-10E4 已建立统一拥有 Provider、异步生命周期、能力和呈现
+  适配器的 WebGPU Renderer 状态对象；Vulkan/WebGPU 状态共同实现最小 Renderer 后端接口，
+  Registry 根记录已通过该接口统一状态、能力和事件推进，并已增加 WebGPU 静态 Provider 工厂
+  与通用销毁路径；Emscripten Smoke 已通过公共 Renderer、Canvas Surface、Swapchain、Frame 和
+  动态 Backbuffer API 驱动 WebGPU，并验证帧结束后的借用句柄失效。公共 Shader 描述已增加可选
+  WGSL 视图，WebGPU Shader 创建/销毁已接入 generation 句柄；空 Pipeline Layout、基础单颜色
+  Graphics Pipeline，以及最小三角形 Command Recorder/Queue Submit 已接入公共 API。浏览器
+  三角形示例与浏览器状态、输入及可读合成层像素验收已经完成；Windows、Linux 和 Emscripten
+  首轮矩阵均已通过。Emscripten 与桌面现统一包含同一 Registry 入口，具体后端实现集中在
+  `src/backend/vulkan` 与 `src/backend/webgpu`，Renderer 创建差异由独立工厂编译单元承接；旧类型
+  和旧入口已删除，静态 SDK 与独立浏览器 Consumer 已通过构建和无头
+  Chrome 验证。平台专用 Registry 已删除，两端共用唯一 Registry、句柄表、资源记录和公共 API
+  编译单元；Registry 根记录现统一使用后端无关 Renderer 状态，不再保留 Vulkan 专用根表。
+  Shader、Pipeline 与 Renderer 创建的平台差异已下沉到私有 HAL 和 Provider 工厂；命令、帧与资源
+  记录也不再持有 Vulkan `renderer_state` 具体视图。最终 Windows、Linux 与 Emscripten 手动
+  Actions 矩阵全部通过，S-10 已完成。详细结果见
+  [S-10E WebGPU Renderer 阶段验收](records/2026-08-28-s10e-webgpu-renderer-acceptance.md)。
 
 ## 十、Android 移动平台
 
@@ -183,12 +203,8 @@
 
 ## 近期执行顺序
 
-1. 实现 S-10D Emscripten 设备请求、Canvas Surface、非阻塞主循环和资源加载。
-2. 浏览器平台层通过后进入 S-10E 高层路径与 CI。
-3. S-06D 最终验收等待稳定版本与 component 范围决策；不在 0.x 阶段提前宣布稳定。
-4. 完成 0.4.0 多后端与 Web 路径后，为 S-11 建立独立 Android Plan，再进入 NDK 与移动 Surface
-   实现。
-5. H-09 的透明 PBR、CSM、Clustered Forward 与 Bindless 只在各自重新评估条件满足后独立恢复，
+1. S-06D 最终验收等待稳定版本与 component 范围决策；不在 0.x 阶段提前宣布稳定。
+2. H-09 的透明 PBR、CSM、Clustered Forward 与 Bindless 只在各自重新评估条件满足后独立恢复，
    不作为当前稳定化工作的前置项。
 
 若前置抽象不足，应先更新对应 Plan 和本路线图状态，再扩大公共 API。

@@ -9,6 +9,9 @@ Surface 表示 Renderer 与原生窗口系统之间的输出连接。公开接�
 Granit 64 位整数句柄，不暴露 Vulkan 类型。Win32、Linux XCB 与 Wayland 后端已经实现；实际
 可用性取决于构建时平台开发包和运行时 Vulkan 扩展支持。
 
+Canvas Surface 是 WebGPU 浏览器后端的公共输出入口。它与原生窗口 Surface 共用同一类句柄，
+但 Vulkan Renderer 不支持创建 Canvas Surface，并返回 `GRANIT_ERROR_UNSUPPORTED`。
+
 ## 启用 Win32 支持
 
 Vulkan 平台扩展必须在创建 Instance 时启用，因此需要在 Renderer 描述中提前声明：
@@ -66,6 +69,28 @@ C++ 包装对应 `xcb_surface_desc`、`wayland_surface_desc`、`surface::initial
 Linux 构建默认探测 XCB 和 Wayland Client 开发包；找到时启用对应后端，找不到时保留公共入口并
 返回不支持。可分别通过 `GRANIT_ENABLE_XCB=OFF`、`GRANIT_ENABLE_WAYLAND=OFF` 显式关闭。
 平台头文件、链接库与 Vulkan 平台定义不会传播给使用者。
+
+## Canvas 公共边界
+
+创建 Renderer 时可通过 `GRANIT_SURFACE_TYPE_CANVAS_BIT` 声明 Canvas 输出需求。Canvas 创建
+描述使用 CSS selector 定位页面元素：
+
+```c
+granit_canvas_surface_desc desc = GRANIT_CANVAS_SURFACE_DESC_INIT;
+desc.selector = "#viewport";
+desc.selector_length = 9;
+
+granit_surface surface = GRANIT_NULL_HANDLE;
+granit_result result = granit_surface_create_canvas(renderer, &desc, &surface);
+```
+
+`selector` 使用“指针 + UTF-8 字节长度”，不要求以空字符结尾；Granit 只在创建调用期间读取内容，
+不会保留调用方指针。`selector == NULL` 且 `selector_length == 0` 时使用默认值 `#canvas`。空选择器、
+超过 4096 字节或包含内嵌空字符的选择器返回 `GRANIT_ERROR_INVALID_ARGUMENT`。
+
+C++ 包装使用 `canvas_surface_desc::selector` 和 `surface::initialize_canvas`，默认 selector 同样为
+`#canvas`。当前公共契约已经可编译，实际浏览器 Canvas 连接将在 WebGPU Renderer 后端接入；
+在 Vulkan Renderer 上调用该入口始终明确返回不支持。
 
 ## 生命周期与归属
 

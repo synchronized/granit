@@ -26,6 +26,7 @@ typedef struct WGPURenderPipelineImpl* WGPURenderPipeline;
 typedef struct WGPUCommandEncoderImpl* WGPUCommandEncoder;
 typedef struct WGPUCommandBufferImpl* WGPUCommandBuffer;
 typedef struct WGPURenderPassEncoderImpl* WGPURenderPassEncoder;
+typedef struct WGPUSurfaceImpl* WGPUSurface;
 
 typedef unsigned int WGPUBool;
 typedef unsigned int WGPUInstanceFeatureName;
@@ -54,12 +55,21 @@ typedef unsigned int WGPUPrimitiveTopology;
 typedef unsigned int WGPUTextureAspect;
 typedef unsigned int WGPULoadOp;
 typedef unsigned int WGPUStoreOp;
+typedef unsigned int WGPUDeviceLostReason;
+typedef unsigned int WGPUPresentMode;
+typedef unsigned int WGPUCompositeAlphaMode;
+typedef unsigned int WGPUSurfaceGetCurrentTextureStatus;
 
 #define WGPU_FALSE 0
 #define WGPU_TRUE 1
 #define WGPU_STRLEN ((size_t)-1)
 #define WGPUInstanceFeatureName_TimedWaitAny 1
 #define WGPUCallbackMode_WaitAnyOnly 1
+#define WGPUCallbackMode_AllowSpontaneous 2
+#define WGPUDeviceLostReason_Unknown 1
+#define WGPUDeviceLostReason_Destroyed 2
+#define WGPUDeviceLostReason_CallbackCancelled 3
+#define WGPUDeviceLostReason_FailedCreation 4
 #define WGPURequestAdapterStatus_Success 1
 #define WGPURequestDeviceStatus_Success 1
 #define WGPUWaitStatus_Success 1
@@ -79,6 +89,7 @@ typedef unsigned int WGPUStoreOp;
 #define WGPUTextureUsage_RenderAttachment 16
 #define WGPUTextureDimension_2D 2
 #define WGPUTextureFormat_RGBA8Unorm 18
+#define WGPUTextureFormat_BGRA8Unorm 23
 #define WGPUAddressMode_ClampToEdge 1
 #define WGPUFilterMode_Nearest 1
 #define WGPUFilterMode_Linear 2
@@ -95,6 +106,17 @@ typedef unsigned int WGPUStoreOp;
 #define WGPUStoreOp_Store 1
 #define WGPUBackendType_D3D12 4
 #define WGPUBackendType_Vulkan 6
+#define WGPUSType_EmscriptenSurfaceSourceCanvasHTMLSelector 0x00050000
+#define WGPUPresentMode_Fifo 1
+#define WGPUPresentMode_Immediate 2
+#define WGPUPresentMode_Mailbox 3
+#define WGPUCompositeAlphaMode_Auto 1
+#define WGPUSurfaceGetCurrentTextureStatus_SuccessOptimal 1
+#define WGPUSurfaceGetCurrentTextureStatus_SuccessSuboptimal 2
+#define WGPUSurfaceGetCurrentTextureStatus_Timeout 3
+#define WGPUSurfaceGetCurrentTextureStatus_Outdated 4
+#define WGPUSurfaceGetCurrentTextureStatus_Lost 5
+#define WGPUSurfaceGetCurrentTextureStatus_Error 6
 
 typedef struct WGPUStringView {
   const char* data;
@@ -105,6 +127,51 @@ typedef struct WGPUChainedStruct {
   const struct WGPUChainedStruct* next;
   WGPUSType sType;
 } WGPUChainedStruct;
+
+typedef struct WGPUEmscriptenSurfaceSourceCanvasHTMLSelector {
+  WGPUChainedStruct chain;
+  WGPUStringView selector;
+} WGPUEmscriptenSurfaceSourceCanvasHTMLSelector;
+
+typedef struct WGPUSurfaceDescriptor {
+  const WGPUChainedStruct* nextInChain;
+  WGPUStringView label;
+} WGPUSurfaceDescriptor;
+
+typedef struct WGPUSurfaceCapabilities {
+  void* nextInChain;
+  WGPUTextureUsage usages;
+  size_t formatCount;
+  const WGPUTextureFormat* formats;
+  size_t presentModeCount;
+  const WGPUPresentMode* presentModes;
+  size_t alphaModeCount;
+  const WGPUCompositeAlphaMode* alphaModes;
+} WGPUSurfaceCapabilities;
+#define WGPU_SURFACE_CAPABILITIES_INIT                                                             \
+  {                                                                                                \
+  }
+
+typedef struct WGPUSurfaceConfiguration {
+  void* nextInChain;
+  WGPUDevice device;
+  WGPUTextureFormat format;
+  WGPUTextureUsage usage;
+  unsigned int width;
+  unsigned int height;
+  WGPUPresentMode presentMode;
+  WGPUCompositeAlphaMode alphaMode;
+  size_t viewFormatCount;
+  const WGPUTextureFormat* viewFormats;
+} WGPUSurfaceConfiguration;
+#define WGPU_SURFACE_CONFIGURATION_INIT                                                            \
+  {                                                                                                \
+  }
+
+typedef struct WGPUSurfaceTexture {
+  WGPUTexture texture;
+  WGPUSurfaceGetCurrentTextureStatus status;
+} WGPUSurfaceTexture;
 
 typedef struct WGPUInstanceLimits {
   void* nextInChain;
@@ -426,6 +493,8 @@ typedef void (*WGPURequestAdapterCallback)(WGPURequestAdapterStatus, WGPUAdapter
                                            void*, void*);
 typedef void (*WGPURequestDeviceCallback)(WGPURequestDeviceStatus, WGPUDevice, WGPUStringView,
                                           void*, void*);
+typedef void (*WGPUDeviceLostCallback)(const WGPUDevice*, WGPUDeviceLostReason, WGPUStringView,
+                                       void*, void*);
 typedef void (*WGPUBufferMapCallback)(WGPUMapAsyncStatus, WGPUStringView, void*, void*);
 
 typedef struct WGPURequestAdapterCallbackInfo {
@@ -444,6 +513,28 @@ typedef struct WGPURequestDeviceCallbackInfo {
   void* userdata2;
 } WGPURequestDeviceCallbackInfo;
 
+typedef struct WGPUDeviceLostCallbackInfo {
+  void* nextInChain;
+  WGPUCallbackMode mode;
+  WGPUDeviceLostCallback callback;
+  void* userdata1;
+  void* userdata2;
+} WGPUDeviceLostCallbackInfo;
+
+typedef struct WGPUDeviceDescriptor {
+  void* nextInChain;
+  WGPUStringView label;
+  size_t requiredFeatureCount;
+  const void* requiredFeatures;
+  const WGPULimits* requiredLimits;
+  char defaultQueue[32];
+  WGPUDeviceLostCallbackInfo deviceLostCallbackInfo;
+  char uncapturedErrorCallbackInfo[40];
+} WGPUDeviceDescriptor;
+#define WGPU_DEVICE_DESCRIPTOR_INIT                                                                \
+  {                                                                                                \
+  }
+
 typedef struct WGPUBufferMapCallbackInfo {
   void* nextInChain;
   WGPUCallbackMode mode;
@@ -453,16 +544,28 @@ typedef struct WGPUBufferMapCallbackInfo {
 } WGPUBufferMapCallbackInfo;
 
 WGPUInstance wgpuCreateInstance(const WGPUInstanceDescriptor* descriptor);
+WGPUSurface wgpuInstanceCreateSurface(WGPUInstance instance,
+                                      const WGPUSurfaceDescriptor* descriptor);
+void wgpuSurfaceRelease(WGPUSurface surface);
+WGPUStatus wgpuSurfaceGetCapabilities(WGPUSurface surface, WGPUAdapter adapter,
+                                      WGPUSurfaceCapabilities* capabilities);
+void wgpuSurfaceCapabilitiesFreeMembers(WGPUSurfaceCapabilities capabilities);
+void wgpuSurfaceConfigure(WGPUSurface surface, const WGPUSurfaceConfiguration* configuration);
+void wgpuSurfaceUnconfigure(WGPUSurface surface);
+void wgpuSurfaceGetCurrentTexture(WGPUSurface surface, WGPUSurfaceTexture* surfaceTexture);
+WGPUStatus wgpuSurfacePresent(WGPUSurface surface);
 void wgpuInstanceRelease(WGPUInstance instance);
+void wgpuInstanceProcessEvents(WGPUInstance instance);
 WGPUFuture wgpuInstanceRequestAdapter(WGPUInstance instance,
                                       const WGPURequestAdapterOptions* options,
                                       WGPURequestAdapterCallbackInfo callbackInfo);
 WGPUWaitStatus wgpuInstanceWaitAny(WGPUInstance instance, size_t futureCount,
                                    WGPUFutureWaitInfo* futures, unsigned long long timeoutNS);
-WGPUFuture wgpuAdapterRequestDevice(WGPUAdapter adapter, const void* descriptor,
+WGPUFuture wgpuAdapterRequestDevice(WGPUAdapter adapter, const WGPUDeviceDescriptor* descriptor,
                                     WGPURequestDeviceCallbackInfo callbackInfo);
 void wgpuAdapterRelease(WGPUAdapter adapter);
 void wgpuDeviceRelease(WGPUDevice device);
+void wgpuDeviceForceLoss(WGPUDevice device, WGPUDeviceLostReason reason, WGPUStringView message);
 WGPUStatus wgpuDeviceGetLimits(WGPUDevice device, WGPULimits* limits);
 WGPUQueue wgpuDeviceGetQueue(WGPUDevice device);
 void wgpuQueueRelease(WGPUQueue queue);

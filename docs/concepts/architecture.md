@@ -22,8 +22,9 @@ Granit 定位为基于 Vulkan 的中层、显式、可嵌入式渲染库，主�
 动画或资产数据库。PBR、场景渲染、后处理套件和 Render Graph 可以在核心能力稳定后作为独立
 高层模块提供，不能反向污染稳定 C ABI。
 
-当前只实现 Vulkan 后端，不承诺同时支持 Direct3D、Metal 或 OpenGL。公共概念仍保持后端中立，
-目的是避免 Vulkan 实现细节泄漏，而不是立即承担多后端的最低公共能力限制。
+当前 Vulkan 后端覆盖完整生产路径，WebGPU 后端已覆盖 0.4.0 浏览器 MVP 所需的基础资源、Pipeline、
+命令与呈现闭环。两者通过私有 HAL 共享 Registry，但不承诺能力完全对称；Direct3D、Metal 和
+OpenGL 当前不在支持范围内。
 
 ## 渲染目标模型
 
@@ -110,7 +111,7 @@ Scene / View / Material
           -> Render Pipeline（整帧策略）
           -> 内部 Render Graph（Pass 与资源依赖）
           -> Renderer / Command Recorder（GPU 执行）
-          -> Vulkan（内部后端）
+          -> Vulkan / WebGPU（内部后端）
 ```
 
 依赖始终从高级层指向核心层。核心动态库不能链接高层目标，也不能为 `render(view)` 接管 ECS、
@@ -124,14 +125,55 @@ PBR 质量体系主要参考 Filament；底层资源组织和高层组件分离�
 
 ## 分层
 
-Granit 使用三层接口隔离使用者与 Vulkan：
+Granit 使用三层接口隔离使用者与具体图形后端：
 
 1. `.hpp` C++20 API：面向普通用户，提供强类型、移动语义和 RAII。
 2. `.h` C API：动态库的稳定 ABI，也是其他语言绑定的基础。
-3. 内部实现：资源表、渲染调度和 Vulkan 后端，不进入公共头文件。
+3. 内部实现：资源表、渲染调度、私有 HAL 与 Vulkan/WebGPU 后端，不进入公共头文件。
 
 C++ 包装层保持轻量，不维护一套独立的渲染状态。它拥有或引用 C 句柄，并将所有实际操作转发给
 C API。普通 C++ 用户不需要直接使用 C API。
+
+### Renderer 私有 HAL
+
+Renderer 内部在公共 Registry 与具体图形 API 之间使用 `src/backend` 私有 HAL：
+
+```text
+公共 C/C++ API
+  -> Renderer Registry（句柄、所有权、生命周期、公共校验）
+  -> 私有 backend_* HAL（能力、资源、命令、Queue、呈现契约）
+  -> Vulkan / WebGPU 平台实现
+```
+
+HAL 是一组按职责拆分的粗粒度内部接口，不是新的公共 API，也不是 Vulkan 接口的逐项翻译。
+Registry 不保存 `Vk*` 或 `WGPU*` 类型，不负责后端同步和描述转换；后端实现也不复制公共句柄表、
+资源父子关系或 C ABI 校验。高频 Draw、资源访问和提交继续采用命令记录或批量契约，避免为每个
+细粒度操作增加动态库或虚函数调用。
+
+Registry 只通过 `backend_shader_renderer`、`backend_pipeline_renderer` 和
+`backend_presentation_renderer` 等职责接口访问 WebGPU，不直接取得 WebGPU Adapter 对象。WebGPU
+支持的 Pipeline 描述范围和格式转换由 Pipeline Adapter 判断；Dawn 与 Emscripten 的 Provider
+差异也不得回流到公共 API 或 Registry。
+
+桌面与 Emscripten 复用同一组 Registry 编译单元，不维护浏览器专用的资源表或命令实现。
+Renderer 创建按后端拆成独立工厂编译单元：桌面默认工厂构造 Vulkan 状态，浏览器工厂静态绑定
+WebGPU Provider；平台选择不进入通用 Registry 实现。
+
+Vulkan 与 WebGPU 不必提供完全对称的内部能力。共同语义由 Registry 校验，设备差异通过不可变
+能力快照和统一结果码表达；无法安全模拟的能力明确返回不支持。该边界的决策依据见
+[ADR-003：Renderer 内部多后端边界](../decisions/ADR-003-internal-renderer-backend-boundary.md)。
+
+### 操作系统平台层
+
+`src/platform` 集中保存操作系统和原生窗口系统实现。Window Registry 只管理公共句柄、线程规则、
+事件队列和后端分派；Win32、XCB 与 Wayland 的原生窗口生命周期及事件泵分别位于对应平台编译单元。
+`src/input` 只保留公共 Input 状态、UTF-8 处理和事件分派，统一平台输入门面再调用对应平台解码器。
+动态库外观与所有权位于 `platform/shared_library.*`，`LoadLibrary` 和 `dlopen` 实现分别位于 Win32
+与 POSIX 编译单元，避免通用实现文件包含系统 Loader 头文件。
+
+`src/integrations` 不承担操作系统抽象，只保存 SDL3、ImGui 等第三方库与 Granit 公共接口之间的
+可选适配。平台层不得依赖这些集成目标；集成层可以调用 Granit 的 Window、Input 或 Renderer
+公共 API。
 
 ## 数学值类型与内部运算
 

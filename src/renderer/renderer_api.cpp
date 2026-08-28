@@ -3,52 +3,13 @@
 
 #include <granit/renderer/renderer.h>
 
+#include "renderer/renderer_factory.h"
 #include "renderer/renderer_registry.h"
+#include "renderer/renderer_validation.h"
 
 #include <cstring>
 #include <new>
 #include <string_view>
-
-namespace {
-
-constexpr std::uint32_t supported_flags = GRANIT_RENDERER_ENABLE_VALIDATION_BIT;
-constexpr std::uint32_t supported_surface_types =
-    GRANIT_SURFACE_TYPE_WIN32_BIT | GRANIT_SURFACE_TYPE_XCB_BIT | GRANIT_SURFACE_TYPE_WAYLAND_BIT;
-constexpr std::uint32_t maximum_application_name_length = 4096;
-constexpr std::uint32_t maximum_object_name_length = 4096;
-constexpr std::string_view default_application_name = "Granit Application";
-
-granit_result validate_desc(const granit_renderer_desc& desc) noexcept {
-  if (desc.struct_size < GRANIT_RENDERER_DESC_VERSION_1_SIZE ||
-      desc.api_version != GRANIT_RENDERER_API_VERSION_CURRENT ||
-      (desc.flags & ~supported_flags) != 0 ||
-      desc.application_name_length > maximum_application_name_length) {
-    return GRANIT_ERROR_INVALID_ARGUMENT;
-  }
-  if (desc.struct_size >= GRANIT_RENDERER_DESC_VERSION_2_SIZE &&
-      (desc.surface_types & ~supported_surface_types) != 0) {
-    return GRANIT_ERROR_INVALID_ARGUMENT;
-  }
-  if (desc.struct_size >= GRANIT_RENDERER_DESC_VERSION_3_SIZE &&
-      (desc.reserved != 0 || desc.frames_in_flight == 0 ||
-       desc.frames_in_flight > GRANIT_MAX_FRAMES_IN_FLIGHT)) {
-    return GRANIT_ERROR_INVALID_ARGUMENT;
-  }
-  if (desc.struct_size >= GRANIT_RENDERER_DESC_VERSION_4_SIZE &&
-      desc.diagnostic_callback == nullptr && desc.diagnostic_user_data != nullptr) {
-    return GRANIT_ERROR_INVALID_ARGUMENT;
-  }
-  if (desc.application_name == nullptr) {
-    return desc.application_name_length == 0 ? GRANIT_SUCCESS : GRANIT_ERROR_INVALID_ARGUMENT;
-  }
-  if (desc.application_name_length == 0 ||
-      std::memchr(desc.application_name, '\0', desc.application_name_length) != nullptr) {
-    return GRANIT_ERROR_INVALID_ARGUMENT;
-  }
-  return GRANIT_SUCCESS;
-}
-
-} // namespace
 
 extern "C" granit_result granit_renderer_create(const granit_renderer_desc* desc,
                                                 granit_renderer* renderer) {
@@ -56,31 +17,13 @@ extern "C" granit_result granit_renderer_create(const granit_renderer_desc* desc
     return GRANIT_ERROR_INVALID_ARGUMENT;
   }
   *renderer = GRANIT_NULL_HANDLE;
-  const auto validation_result = validate_desc(*desc);
+  const auto validation_result = granit::detail::validate_renderer_desc(*desc);
   if (validation_result != GRANIT_SUCCESS) {
     return validation_result;
   }
 
-  const auto application_name =
-      desc->application_name == nullptr
-          ? default_application_name
-          : std::string_view{desc->application_name, desc->application_name_length};
-  const auto validation_enabled = (desc->flags & GRANIT_RENDERER_ENABLE_VALIDATION_BIT) != 0;
-  const auto surface_types =
-      desc->struct_size >= GRANIT_RENDERER_DESC_VERSION_2_SIZE ? desc->surface_types : UINT32_C(0);
-  const auto frames_in_flight = desc->struct_size >= GRANIT_RENDERER_DESC_VERSION_3_SIZE
-                                    ? desc->frames_in_flight
-                                    : GRANIT_DEFAULT_FRAMES_IN_FLIGHT;
-  const auto diagnostic_callback = desc->struct_size >= GRANIT_RENDERER_DESC_VERSION_4_SIZE
-                                       ? desc->diagnostic_callback
-                                       : nullptr;
-  auto* diagnostic_user_data = desc->struct_size >= GRANIT_RENDERER_DESC_VERSION_4_SIZE
-                                   ? desc->diagnostic_user_data
-                                   : nullptr;
   try {
-    return granit::detail::renderer_registry::instance().create(
-        application_name, validation_enabled, surface_types, frames_in_flight, diagnostic_callback,
-        diagnostic_user_data, *renderer);
+    return granit::detail::create_default_renderer(*desc, *renderer);
   } catch (const std::bad_alloc&) {
     return GRANIT_ERROR_OUT_OF_MEMORY;
   } catch (...) {
@@ -114,12 +57,40 @@ extern "C" granit_result granit_renderer_get_limits(granit_renderer renderer,
   }
 }
 
+extern "C" granit_result granit_renderer_get_status(granit_renderer renderer,
+                                                    granit_renderer_status* status) {
+  if (status == nullptr || status->struct_size < GRANIT_RENDERER_STATUS_VERSION_1_SIZE ||
+      status->reserved != 0) {
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  }
+  if (renderer == GRANIT_NULL_HANDLE) {
+    return GRANIT_ERROR_INVALID_HANDLE;
+  }
+  try {
+    return granit::detail::renderer_registry::instance().get_status(renderer, *status);
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+extern "C" granit_result granit_renderer_process_events(granit_renderer renderer) {
+  if (renderer == GRANIT_NULL_HANDLE) {
+    return GRANIT_ERROR_INVALID_HANDLE;
+  }
+  try {
+    return granit::detail::renderer_registry::instance().process_events(renderer);
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
 extern "C" granit_result granit_renderer_set_object_name(granit_renderer renderer,
                                                          granit_handle object, const char* name,
                                                          uint32_t name_length) {
   if (renderer == GRANIT_NULL_HANDLE || object == GRANIT_NULL_HANDLE)
     return GRANIT_ERROR_INVALID_HANDLE;
-  if (name == nullptr || name_length == 0 || name_length > maximum_object_name_length ||
+  if (name == nullptr || name_length == 0 ||
+      name_length > granit::detail::maximum_renderer_object_name_length ||
       std::memchr(name, '\0', name_length) != nullptr) {
     return GRANIT_ERROR_INVALID_ARGUMENT;
   }

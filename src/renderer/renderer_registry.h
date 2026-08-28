@@ -28,13 +28,25 @@
 #include <granit/renderer/timestamp_query.h>
 #include <granit/renderer/upload_batch.h>
 
+#include "backend/access.h"
+#include "backend/command.h"
+#include "backend/compute.h"
+#include "backend/pipeline.h"
+#include "backend/plugin_api.h"
+#include "backend/presentation.h"
+#include "backend/queue.h"
+#include "backend/renderer.h"
+#include "backend/rendering.h"
+#include "backend/resource_management.h"
 #include "backend/resources.h"
+#include "backend/retirement.h"
+#include "backend/shader.h"
+#include "backend/timestamp.h"
+#include "backend/transfer.h"
 #include "backend/upload.h"
-#include "backend/vulkan/timestamp_query.h"
 #include "core/handle_table.h"
 #include "core/lifecycle_validation.h"
 #include "renderer/dynamic_uniform_offsets.h"
-#include "renderer/renderer_state.h"
 
 namespace granit::detail {
 
@@ -47,8 +59,14 @@ public:
                                      std::uint32_t surface_types, std::uint32_t frames_in_flight,
                                      granit_diagnostic_callback diagnostic_callback,
                                      void* diagnostic_user_data, granit_renderer& renderer);
+  [[nodiscard]] granit_result create_webgpu_static(const granit_backend_plugin_api* api,
+                                                   granit_diagnostic_callback diagnostic_callback,
+                                                   void* diagnostic_user_data,
+                                                   granit_renderer& renderer);
   [[nodiscard]] granit_result destroy(granit_renderer renderer);
   [[nodiscard]] granit_result get_limits(granit_renderer renderer, granit_renderer_limits& limits);
+  [[nodiscard]] granit_result get_status(granit_renderer renderer, granit_renderer_status& status);
+  [[nodiscard]] granit_result process_events(granit_renderer renderer);
   [[nodiscard]] granit_result import_pipeline_cache(granit_renderer renderer, const void* data,
                                                     std::uint64_t size);
   [[nodiscard]] granit_result export_pipeline_cache(granit_renderer renderer, void* data,
@@ -57,23 +75,26 @@ public:
                                               std::string_view name);
   /** 向有效 Renderer 的回调发送公共 API 参数或句柄校验诊断。 */
   void emit_validation_diagnostic(granit_renderer renderer, std::string_view message) noexcept;
-  [[nodiscard]] std::shared_ptr<renderer_state> acquire(granit_renderer renderer);
+  [[nodiscard]] std::shared_ptr<backend_renderer> acquire_backend(granit_renderer renderer);
   [[nodiscard]] granit_result create_win32_surface(granit_renderer renderer, void* native_instance,
                                                    void* native_window, granit_surface& surface);
   [[nodiscard]] granit_result create_xcb_surface(granit_renderer renderer, void* connection,
                                                  std::uint32_t window, granit_surface& surface);
   [[nodiscard]] granit_result create_wayland_surface(granit_renderer renderer, void* display,
                                                      void* native_surface, granit_surface& surface);
+  [[nodiscard]] granit_result create_canvas_surface(granit_renderer renderer,
+                                                    std::string_view selector,
+                                                    granit_surface& surface);
   [[nodiscard]] granit_result destroy_surface(granit_renderer renderer, granit_surface surface);
   [[nodiscard]] granit_result create_swapchain(granit_renderer renderer, granit_surface surface,
-                                               const vulkan_swapchain_desc& desc,
+                                               const backend_swapchain_desc& desc,
                                                granit_swapchain& swapchain);
   [[nodiscard]] granit_result recreate_swapchain(granit_renderer renderer,
                                                  granit_swapchain swapchain,
-                                                 const vulkan_swapchain_desc& desc);
+                                                 const backend_swapchain_desc& desc);
   [[nodiscard]] granit_result get_swapchain_info(granit_renderer renderer,
                                                  granit_swapchain swapchain,
-                                                 vulkan_swapchain_info& info);
+                                                 backend_swapchain_info& info);
   [[nodiscard]] granit_result destroy_swapchain(granit_renderer renderer,
                                                 granit_swapchain swapchain);
   [[nodiscard]] granit_result get_swapchain_backbuffer(granit_renderer renderer,
@@ -129,6 +150,13 @@ public:
   [[nodiscard]] granit_result create_shader(granit_renderer renderer, granit_shader_stage stage,
                                             std::span<const std::uint32_t> code,
                                             std::string_view entry_point, granit_shader& shader);
+  [[nodiscard]] granit_result create_shader_from_desc(granit_renderer renderer,
+                                                      const granit_shader_desc& desc,
+                                                      granit_shader& shader);
+  [[nodiscard]] granit_result create_wgsl_shader(granit_renderer renderer,
+                                                 granit_shader_stage stage, std::string_view source,
+                                                 std::string_view entry_point,
+                                                 granit_shader& shader);
   [[nodiscard]] granit_result destroy_shader(granit_renderer renderer, granit_shader shader);
   [[nodiscard]] granit_result
   create_bind_group_layout(granit_renderer renderer,
@@ -150,6 +178,12 @@ public:
   [[nodiscard]] granit_result create_graphics_pipeline(granit_renderer renderer,
                                                        const granit_graphics_pipeline_desc& desc,
                                                        granit_graphics_pipeline& pipeline);
+  [[nodiscard]] granit_result create_webgpu_graphics_pipeline(granit_renderer renderer,
+                                                              granit_pipeline_layout layout,
+                                                              granit_shader vertex_shader,
+                                                              granit_shader fragment_shader,
+                                                              granit_texture_format color_format,
+                                                              granit_graphics_pipeline& pipeline);
   [[nodiscard]] granit_result destroy_graphics_pipeline(granit_renderer renderer,
                                                         granit_graphics_pipeline pipeline);
   [[nodiscard]] granit_result create_compute_pipeline(granit_renderer renderer,
@@ -301,173 +335,47 @@ public:
 private:
   renderer_registry() = default;
 
+  struct resource_metadata;
+  struct retained_resource;
+  struct surface_record;
   struct swapchain_record;
+  struct buffer_record;
+  struct texture_record;
+  struct texture_view_record;
+  struct sampler_record;
+  struct shader_record;
+  struct bind_group_layout_record;
+  struct pipeline_layout_record;
+  struct bind_group_record;
+  struct graphics_pipeline_record;
+  struct compute_pipeline_record;
   struct command_recorder_record;
+  enum class frame_context_slot_state;
+  struct frame_context_slot;
+  struct frame_context_record;
   struct timestamp_query_pool_record;
   struct frame_record;
-  struct frame_context_record;
+  struct upload_entry;
   struct upload_batch_record;
-
-  struct resource_metadata {
-    std::uint64_t creation_sequence{};
-    std::atomic<submission_serial> last_use_serial{};
-  };
-  struct retained_resource {
-    std::shared_ptr<void> resource;
-    resource_metadata* metadata{};
-  };
 
   [[nodiscard]] std::uint32_t allocate_domain() noexcept;
   [[nodiscard]] granit_result
   install_swapchain_backbuffers(granit_swapchain swapchain,
                                 const std::shared_ptr<swapchain_record>& record);
+  [[nodiscard]] granit_result
+  install_swapchain_backbuffers(granit_swapchain swapchain,
+                                const std::shared_ptr<swapchain_record>& record,
+                                std::vector<backend_swapchain_backbuffer> backbuffers);
   [[nodiscard]] std::shared_ptr<command_recorder_record>
   acquire_command_recorder(granit_renderer renderer, granit_command_recorder recorder);
+  void erase_dynamic_backbuffer(swapchain_record& swapchain) noexcept;
+  [[nodiscard]] granit_result finish_frame(granit_renderer renderer, granit_swapchain swapchain,
+                                           granit_frame frame, bool present, bool& needs_recreate);
 
   std::mutex mutex_;
   handle_table handles_;
-  std::unordered_map<granit_renderer, std::shared_ptr<renderer_state>> renderers_;
-  struct surface_record {
-    resource_metadata metadata;
-    std::shared_ptr<renderer_state> renderer;
-    std::unique_ptr<backend_surface_resource> native;
-  };
-  struct swapchain_record {
-    resource_metadata metadata;
-    std::shared_ptr<renderer_state> renderer;
-    std::shared_ptr<surface_record> surface;
-    std::unique_ptr<backend_swapchain_resource> native;
-    std::vector<granit_texture> textures;
-    std::vector<granit_texture_view> views;
-    bool surface_lost{};
-  };
-  struct buffer_record {
-    resource_metadata metadata;
-    std::shared_ptr<renderer_state> renderer;
-    std::unique_ptr<backend_buffer_resource> native;
-    granit_buffer_desc desc{};
-    std::mutex mutex;
-    bool mapped{};
-    std::uint64_t mapped_offset{};
-    std::uint64_t mapped_size{};
-  };
-  struct texture_record {
-    resource_metadata metadata;
-    std::shared_ptr<renderer_state> renderer;
-    std::unique_ptr<backend_texture_resource> native;
-    granit_texture_desc desc{};
-    bool publicly_destroyable{true};
-    std::mutex mutex;
-  };
-  struct texture_view_record {
-    resource_metadata metadata;
-    std::shared_ptr<renderer_state> renderer;
-    std::shared_ptr<texture_record> texture;
-    std::unique_ptr<backend_texture_view_resource> native;
-    granit_texture_view_desc desc{};
-    bool publicly_destroyable{true};
-  };
-  struct sampler_record {
-    resource_metadata metadata;
-    std::shared_ptr<renderer_state> renderer;
-    std::unique_ptr<backend_sampler_resource> native;
-  };
-  struct shader_record {
-    resource_metadata metadata;
-    std::shared_ptr<renderer_state> renderer;
-    std::unique_ptr<backend_shader_resource> native;
-    granit_shader_stage stage{};
-    std::string entry_point;
-  };
-  struct bind_group_layout_record {
-    resource_metadata metadata;
-    std::shared_ptr<renderer_state> renderer;
-    std::unique_ptr<backend_bind_group_layout_resource> native;
-    std::vector<granit_bind_group_layout_entry> entries;
-  };
-  struct pipeline_layout_record {
-    resource_metadata metadata;
-    std::shared_ptr<renderer_state> renderer;
-    std::unique_ptr<backend_pipeline_layout_resource> native;
-    std::vector<std::shared_ptr<bind_group_layout_record>> bind_group_layouts;
-  };
-  struct bind_group_record {
-    resource_metadata metadata;
-    std::shared_ptr<renderer_state> renderer;
-    std::shared_ptr<bind_group_layout_record> layout;
-    std::vector<std::shared_ptr<void>> resources;
-    std::vector<std::pair<VkBuffer, VkAccessFlags2>> graphics_buffer_accesses;
-    std::vector<vulkan_image_access> graphics_image_accesses;
-    std::vector<std::pair<VkBuffer, VkAccessFlags2>> compute_buffer_accesses;
-    std::vector<vulkan_image_access> compute_image_accesses;
-    std::vector<dynamic_uniform_binding> dynamic_uniform_bindings;
-    std::unique_ptr<backend_bind_group_resource> native;
-  };
-  struct graphics_pipeline_record {
-    resource_metadata metadata;
-    std::shared_ptr<renderer_state> renderer;
-    std::shared_ptr<pipeline_layout_record> layout;
-    std::shared_ptr<shader_record> vertex_shader;
-    std::shared_ptr<shader_record> fragment_shader;
-    std::unique_ptr<backend_graphics_pipeline_resource> native;
-  };
-  struct compute_pipeline_record {
-    resource_metadata metadata;
-    std::shared_ptr<renderer_state> renderer;
-    std::shared_ptr<pipeline_layout_record> layout;
-    std::shared_ptr<shader_record> compute_shader;
-    std::unique_ptr<backend_compute_pipeline_resource> native;
-  };
-  struct command_recorder_record {
-    resource_metadata metadata;
-    std::shared_ptr<renderer_state> renderer;
-    std::unique_ptr<backend_command_recorder_resource> native;
-    std::mutex mutex;
-    std::vector<retained_resource> retained_resources;
-    bool owned_by_frame_context{};
-  };
-  enum class frame_context_slot_state { idle, recording, submitted };
-  struct frame_context_slot {
-    granit_command_recorder recorder{GRANIT_NULL_HANDLE};
-    granit_frame frame{GRANIT_NULL_HANDLE};
-    frame_context_slot_state state{frame_context_slot_state::idle};
-  };
-  struct frame_context_record {
-    resource_metadata metadata;
-    std::shared_ptr<renderer_state> renderer;
-    std::mutex mutex;
-    std::vector<frame_context_slot> slots;
-  };
-  struct timestamp_query_pool_record {
-    resource_metadata metadata;
-    std::shared_ptr<renderer_state> renderer;
-    vulkan_timestamp_query_pool native;
-    std::mutex mutex;
-    ~timestamp_query_pool_record();
-  };
-  struct frame_record {
-    std::shared_ptr<renderer_state> renderer;
-    std::shared_ptr<swapchain_record> swapchain;
-    std::mutex mutex;
-    std::uint32_t image_index{};
-    std::size_t slot_index{};
-    bool submitted{};
-  };
-  struct upload_entry {
-    backend_upload_type type{backend_upload_type::buffer};
-    std::shared_ptr<buffer_record> buffer;
-    std::shared_ptr<texture_record> texture;
-    std::uint64_t offset{};
-    std::vector<std::byte> data;
-    backend_texture_copy texture_copy{};
-  };
-  struct upload_batch_record {
-    resource_metadata metadata;
-    std::shared_ptr<renderer_state> renderer;
-    std::mutex mutex;
-    std::vector<upload_entry> uploads;
-    bool failed{};
-  };
+  std::unordered_map<granit_renderer, std::shared_ptr<backend_renderer>> backend_renderers_;
+
   std::unordered_map<granit_surface, std::shared_ptr<surface_record>> surfaces_;
   std::unordered_map<granit_swapchain, std::shared_ptr<swapchain_record>> swapchains_;
   std::unordered_map<granit_buffer, std::shared_ptr<buffer_record>> buffers_;

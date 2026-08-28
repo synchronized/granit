@@ -9,7 +9,7 @@
 #include <granit/core/diagnostic.h>
 #include <granit/core/result.h>
 
-#define GRANIT_BACKEND_PLUGIN_ABI_VERSION UINT32_C(3)
+#define GRANIT_BACKEND_PLUGIN_ABI_VERSION UINT32_C(7)
 #define GRANIT_BACKEND_PLUGIN_KIND_WEBGPU UINT32_C(1)
 #define GRANIT_BACKEND_PLUGIN_QUERY_SYMBOL "granit_backend_plugin_query"
 
@@ -26,6 +26,22 @@ typedef uint64_t granit_backend_plugin_pipeline_layout;
 typedef uint64_t granit_backend_plugin_render_pipeline;
 typedef uint64_t granit_backend_plugin_command_recorder;
 typedef uint64_t granit_backend_plugin_command_buffer;
+typedef uint64_t granit_backend_plugin_surface;
+typedef uint64_t granit_backend_plugin_swapchain;
+
+typedef uint32_t granit_backend_plugin_instance_state;
+#define GRANIT_BACKEND_PLUGIN_INSTANCE_STATE_INITIALIZING UINT32_C(1)
+#define GRANIT_BACKEND_PLUGIN_INSTANCE_STATE_READY UINT32_C(2)
+#define GRANIT_BACKEND_PLUGIN_INSTANCE_STATE_FAILED UINT32_C(3)
+#define GRANIT_BACKEND_PLUGIN_INSTANCE_STATE_DEVICE_LOST UINT32_C(4)
+
+/** 插件实例当前生命周期快照；failure_result 仅在失败或设备丢失状态下非成功。 */
+typedef struct granit_backend_plugin_instance_status {
+  uint32_t struct_size;
+  granit_backend_plugin_instance_state state;
+  granit_result failure_result;
+  uint32_t reserved;
+} granit_backend_plugin_instance_status;
 
 typedef uint32_t granit_backend_plugin_buffer_usage;
 #define GRANIT_BACKEND_PLUGIN_BUFFER_USAGE_MAP_READ_BIT UINT32_C(0x00000001)
@@ -97,7 +113,54 @@ typedef struct granit_backend_plugin_render_pipeline_desc {
   granit_backend_plugin_pipeline_layout layout;
   granit_backend_plugin_shader vertex_shader;
   granit_backend_plugin_shader fragment_shader;
+  uint32_t color_format;
+  uint32_t reserved_2;
 } granit_backend_plugin_render_pipeline_desc;
+
+/** Canvas selector 仅在调用期间有效；插件必须复制后续需要的内容。 */
+typedef struct granit_backend_plugin_canvas_surface_desc {
+  uint32_t struct_size;
+  uint32_t reserved;
+  const char* selector;
+  uint32_t selector_length;
+} granit_backend_plugin_canvas_surface_desc;
+
+typedef uint32_t granit_backend_plugin_present_mode;
+#define GRANIT_BACKEND_PLUGIN_PRESENT_MODE_FIFO UINT32_C(0)
+#define GRANIT_BACKEND_PLUGIN_PRESENT_MODE_MAILBOX UINT32_C(1)
+#define GRANIT_BACKEND_PLUGIN_PRESENT_MODE_IMMEDIATE UINT32_C(2)
+
+typedef uint32_t granit_backend_plugin_texture_format;
+#define GRANIT_BACKEND_PLUGIN_TEXTURE_FORMAT_RGBA8_UNORM UINT32_C(1)
+#define GRANIT_BACKEND_PLUGIN_TEXTURE_FORMAT_BGRA8_UNORM UINT32_C(2)
+
+typedef struct granit_backend_plugin_swapchain_desc {
+  uint32_t struct_size;
+  uint32_t width;
+  uint32_t height;
+  uint32_t minimum_image_count;
+  granit_backend_plugin_present_mode present_mode;
+} granit_backend_plugin_swapchain_desc;
+
+/** Swapchain 实际采用的配置；不支持请求模式时 Provider 必须报告降级后的模式。 */
+typedef struct granit_backend_plugin_swapchain_info {
+  uint32_t struct_size;
+  uint32_t width;
+  uint32_t height;
+  uint32_t image_count;
+  granit_backend_plugin_present_mode present_mode;
+  granit_backend_plugin_texture_format format;
+} granit_backend_plugin_swapchain_info;
+
+/** Acquire 返回的 Texture/View 由 Swapchain 借出，在帧结束或重建后失效。 */
+typedef struct granit_backend_plugin_acquired_frame {
+  uint32_t struct_size;
+  uint32_t image_index;
+  uint32_t needs_recreate;
+  uint32_t reserved;
+  granit_backend_plugin_texture texture;
+  granit_backend_plugin_texture_view view;
+} granit_backend_plugin_acquired_frame;
 
 /** 插件实例创建后固定的后端无关能力快照。 */
 typedef struct granit_backend_plugin_capabilities {
@@ -214,8 +277,43 @@ typedef granit_result (*granit_backend_plugin_recorder_copy_texture_to_buffer_fn
     granit_backend_plugin_instance instance, granit_backend_plugin_command_recorder recorder,
     granit_backend_plugin_texture texture, granit_backend_plugin_buffer buffer, uint32_t width,
     uint32_t height, uint32_t bytes_per_row);
+typedef granit_result (*granit_backend_plugin_get_instance_status_fn)(
+    granit_backend_plugin_instance instance, granit_backend_plugin_instance_status* status);
+/** 非阻塞地推进已完成的异步回调；没有待处理事件也返回成功。 */
+typedef granit_result (*granit_backend_plugin_process_events_fn)(
+    granit_backend_plugin_instance instance);
+typedef granit_result (*granit_backend_plugin_create_canvas_surface_fn)(
+    granit_backend_plugin_instance instance, const granit_backend_plugin_canvas_surface_desc* desc,
+    granit_backend_plugin_surface* surface);
+typedef granit_result (*granit_backend_plugin_destroy_surface_fn)(
+    granit_backend_plugin_instance instance, granit_backend_plugin_surface surface);
+typedef granit_result (*granit_backend_plugin_create_swapchain_fn)(
+    granit_backend_plugin_instance instance, granit_backend_plugin_surface surface,
+    const granit_backend_plugin_swapchain_desc* desc, granit_backend_plugin_swapchain* swapchain);
+typedef granit_result (*granit_backend_plugin_recreate_swapchain_fn)(
+    granit_backend_plugin_instance instance, granit_backend_plugin_swapchain swapchain,
+    const granit_backend_plugin_swapchain_desc* desc);
+typedef granit_result (*granit_backend_plugin_get_swapchain_info_fn)(
+    granit_backend_plugin_instance instance, granit_backend_plugin_swapchain swapchain,
+    granit_backend_plugin_swapchain_info* info);
+typedef granit_result (*granit_backend_plugin_acquire_swapchain_fn)(
+    granit_backend_plugin_instance instance, granit_backend_plugin_swapchain swapchain,
+    granit_backend_plugin_acquired_frame* frame);
+typedef granit_result (*granit_backend_plugin_present_swapchain_fn)(
+    granit_backend_plugin_instance instance, granit_backend_plugin_swapchain swapchain,
+    uint32_t* needs_recreate);
+typedef granit_result (*granit_backend_plugin_cancel_swapchain_fn)(
+    granit_backend_plugin_instance instance, granit_backend_plugin_swapchain swapchain,
+    uint32_t* needs_recreate);
+typedef granit_result (*granit_backend_plugin_destroy_swapchain_fn)(
+    granit_backend_plugin_instance instance, granit_backend_plugin_swapchain swapchain);
 
-/** 实例操作表由插件拥有，在插件卸载前保持有效。 */
+/**
+ * 实例操作表由插件拥有，在插件卸载前保持有效。
+ *
+ * 除状态查询、事件推进和销毁操作外，依赖设备的调用在 initializing 状态返回 NOT_READY，在 failed
+ * 或 device_lost 状态返回状态快照中的 failure_result。销毁操作必须始终允许清理已有资源。
+ */
 typedef struct granit_backend_plugin_instance_api {
   uint32_t struct_size;
   uint32_t reserved;
@@ -248,6 +346,17 @@ typedef struct granit_backend_plugin_instance_api {
   granit_backend_plugin_destroy_command_buffer_fn destroy_command_buffer;
   granit_backend_plugin_submit_command_buffer_fn submit_command_buffer;
   granit_backend_plugin_recorder_copy_texture_to_buffer_fn recorder_copy_texture_to_buffer;
+  granit_backend_plugin_get_instance_status_fn get_instance_status;
+  granit_backend_plugin_process_events_fn process_events;
+  granit_backend_plugin_create_canvas_surface_fn create_canvas_surface;
+  granit_backend_plugin_destroy_surface_fn destroy_surface;
+  granit_backend_plugin_create_swapchain_fn create_swapchain;
+  granit_backend_plugin_recreate_swapchain_fn recreate_swapchain;
+  granit_backend_plugin_get_swapchain_info_fn get_swapchain_info;
+  granit_backend_plugin_acquire_swapchain_fn acquire_swapchain;
+  granit_backend_plugin_present_swapchain_fn present_swapchain;
+  granit_backend_plugin_cancel_swapchain_fn cancel_swapchain;
+  granit_backend_plugin_destroy_swapchain_fn destroy_swapchain;
 } granit_backend_plugin_instance_api;
 
 /** 后端插件入口返回的只读描述；字符串在插件卸载前有效。 */

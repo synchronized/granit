@@ -1,12 +1,16 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
+#include "backend/callback_lifetime.h"
 #include "backend/capabilities.h"
+#include "backend/lifecycle.h"
 #include "renderer/dynamic_uniform_offsets.h"
 
 #include <catch2/catch_all.hpp>
 
 #include <array>
+#include <atomic>
+#include <future>
 
 TEST_CASE("后端能力快照统一校验 Buffer 绑定限制", "[backend][capabilities]") {
   const granit::detail::backend_capabilities capabilities{
@@ -48,4 +52,65 @@ TEST_CASE("动态 Uniform Offset 校验数量、对齐、范围和溢出", "[bac
       .binding = 0, .base_offset = UINT64_MAX - 8, .range = 16, .buffer_size = UINT64_MAX}};
   const std::array overflow_offset{UINT32_C(256)};
   CHECK_FALSE(validate_dynamic_uniform_offsets(overflow_binding, overflow_offset, 1));
+}
+
+TEST_CASE("后端生命周期统一门控初始化和终止状态", "[backend][lifecycle]") {
+  using granit::detail::backend_lifecycle;
+  using granit::detail::backend_lifecycle_state;
+
+  backend_lifecycle lifecycle;
+  CHECK(lifecycle.gate() == GRANIT_ERROR_NOT_READY);
+  CHECK(lifecycle.status().state == backend_lifecycle_state::initializing);
+
+  lifecycle.mark_ready();
+  CHECK(lifecycle.gate() == GRANIT_SUCCESS);
+  CHECK(lifecycle.status().state == backend_lifecycle_state::ready);
+
+  lifecycle.mark_failed(GRANIT_ERROR_INITIALIZATION_FAILED);
+  CHECK(lifecycle.gate() == GRANIT_ERROR_INITIALIZATION_FAILED);
+  lifecycle.mark_ready();
+  CHECK(lifecycle.status().state == backend_lifecycle_state::failed);
+
+  lifecycle.mark_device_lost();
+  CHECK(lifecycle.gate() == GRANIT_ERROR_DEVICE_LOST);
+  CHECK(lifecycle.status().state == backend_lifecycle_state::device_lost);
+}
+
+TEST_CASE("后端异步回调票据在销毁后失效", "[backend][lifecycle][callback]") {
+  granit::detail::backend_callback_lifetime lifetime;
+  const auto ticket = lifetime.ticket();
+  std::uint32_t calls{};
+  CHECK(ticket.invoke([&calls] { ++calls; }));
+  CHECK(calls == 1);
+
+  lifetime.invalidate();
+  CHECK_FALSE(ticket.invoke([&calls] { ++calls; }));
+  CHECK(calls == 1);
+}
+
+TEST_CASE("后端销毁等待已经进入的异步回调", "[backend][lifecycle][callback]") {
+  granit::detail::backend_callback_lifetime lifetime;
+  const auto ticket = lifetime.ticket();
+  std::promise<void> entered;
+  std::promise<void> release;
+  auto release_future = release.get_future();
+  std::atomic_bool invalidated{};
+
+  auto callback = std::async(std::launch::async, [&] {
+    return ticket.invoke([&] {
+      entered.set_value();
+      release_future.wait();
+    });
+  });
+  entered.get_future().wait();
+  auto invalidation = std::async(std::launch::async, [&] {
+    lifetime.invalidate();
+    invalidated = true;
+  });
+  CHECK_FALSE(invalidated.load());
+  release.set_value();
+  CHECK(callback.get());
+  invalidation.get();
+  CHECK(invalidated.load());
+  CHECK_FALSE(ticket.invoke([] {}));
 }

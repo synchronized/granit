@@ -1,0 +1,33 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Granit contributors
+
+#include "renderer/renderer_factory.h"
+
+#include "renderer/renderer_registry.h"
+
+#include <string_view>
+
+namespace granit::detail {
+
+granit_result create_default_renderer(const granit_renderer_desc& desc, granit_renderer& renderer) {
+  constexpr std::string_view default_application_name = "Granit Application";
+  const auto application_name =
+      desc.application_name == nullptr
+          ? default_application_name
+          : std::string_view{desc.application_name, desc.application_name_length};
+  const auto validation_enabled = (desc.flags & GRANIT_RENDERER_ENABLE_VALIDATION_BIT) != 0;
+  const auto surface_types =
+      desc.struct_size >= GRANIT_RENDERER_DESC_VERSION_2_SIZE ? desc.surface_types : UINT32_C(0);
+  const auto frames_in_flight = desc.struct_size >= GRANIT_RENDERER_DESC_VERSION_3_SIZE
+                                    ? desc.frames_in_flight
+                                    : GRANIT_DEFAULT_FRAMES_IN_FLIGHT;
+  const auto diagnostic_callback =
+      desc.struct_size >= GRANIT_RENDERER_DESC_VERSION_4_SIZE ? desc.diagnostic_callback : nullptr;
+  auto* diagnostic_user_data =
+      desc.struct_size >= GRANIT_RENDERER_DESC_VERSION_4_SIZE ? desc.diagnostic_user_data : nullptr;
+  return renderer_registry::instance().create(application_name, validation_enabled, surface_types,
+                                              frames_in_flight, diagnostic_callback,
+                                              diagnostic_user_data, renderer);
+}
+
+} // namespace granit::detail

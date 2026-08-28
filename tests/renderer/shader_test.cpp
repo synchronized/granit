@@ -14,6 +14,7 @@ namespace {
 TEST_CASE("Shader包装把空Renderer归类为无效句柄", "[shader][contract]") {
   granit::shader shader;
   CHECK(shader.initialize(GRANIT_NULL_HANDLE, {}) == granit::result::invalid_handle);
+  CHECK(shader.initialize_asset(GRANIT_NULL_HANDLE, {}) == granit::result::invalid_handle);
 }
 
 constexpr std::array vertex_spirv{

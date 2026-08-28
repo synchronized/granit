@@ -206,7 +206,11 @@ add_library(
 )
 add_library(granit_incompatible_backend_plugin SHARED backend/incompatible_backend_plugin.cpp)
 target_compile_features(granit_fake_backend_plugin PRIVATE cxx_std_20)
-target_compile_definitions(granit_fake_backend_plugin PRIVATE GRANIT_WEBGPU_FORCE_FALLBACK_ADAPTER)
+target_compile_definitions(
+  granit_fake_backend_plugin
+  PRIVATE GRANIT_WEBGPU_FORCE_FALLBACK_ADAPTER GRANIT_WEBGPU_DEFER_INITIALIZATION_TEST
+          GRANIT_WEBGPU_CANVAS_SURFACE_TEST
+)
 target_compile_features(granit_incompatible_backend_plugin PRIVATE cxx_std_20)
 set_target_properties(
   granit_fake_backend_plugin granit_incompatible_backend_plugin
@@ -234,6 +238,8 @@ granit_target_compile_warnings(granit_incompatible_backend_plugin)
 add_executable(
   granit_backend_plugin_loader_test
   backend/plugin_loader_test.cpp
+  backend/webgpu_presentation_adapter_test.cpp
+  backend/webgpu_renderer_state_test.cpp
   platform/shared_library_test.cpp
   $<TARGET_OBJECTS:granit_backend_plugin>
 )
@@ -666,9 +672,11 @@ add_executable(
   granit_input_test
   input/input_api_test.cpp
   input/utf8_test.cpp
-  input/xcb_input_adapter_test.cpp
   $<TARGET_OBJECTS:granit_input_internal>
 )
+if(GRANIT_HAS_XCB)
+  target_sources(granit_input_test PRIVATE input/xcb_input_adapter_test.cpp)
+endif()
 if(GRANIT_HAS_WAYLAND_INPUT)
   target_sources(granit_input_test PRIVATE input/wayland_input_adapter_test.cpp)
   target_link_libraries(granit_input_test PRIVATE "${GRANIT_XKBCOMMON_LIBRARY}")

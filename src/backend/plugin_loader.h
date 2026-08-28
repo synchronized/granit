@@ -26,6 +26,9 @@ public:
   /** 加载指定插件；失败后对象保持关闭状态。 */
   [[nodiscard]] granit_result open(const char* library_path,
                                    granit_backend_plugin_kind expected_kind) noexcept;
+  /** 校验并接入已静态链接的插件 API；不拥有 API 所在模块。 */
+  [[nodiscard]] granit_result open_static(const granit_backend_plugin_api* api,
+                                          granit_backend_plugin_kind expected_kind) noexcept;
   [[nodiscard]] granit_result
   create_instance(const granit_backend_plugin_host_api* host,
                   granit_backend_plugin_instance* out_instance) noexcept;
@@ -33,6 +36,40 @@ public:
   [[nodiscard]] granit_result
   get_capabilities(granit_backend_plugin_instance instance,
                    granit_backend_plugin_capabilities* capabilities) noexcept;
+  [[nodiscard]] granit_result
+  get_instance_status(granit_backend_plugin_instance instance,
+                      granit_backend_plugin_instance_status* status) noexcept;
+  [[nodiscard]] granit_result process_events(granit_backend_plugin_instance instance) noexcept;
+  [[nodiscard]] granit_result
+  create_canvas_surface(granit_backend_plugin_instance instance,
+                        const granit_backend_plugin_canvas_surface_desc* desc,
+                        granit_backend_plugin_surface* surface) noexcept;
+  [[nodiscard]] granit_result destroy_surface(granit_backend_plugin_instance instance,
+                                              granit_backend_plugin_surface surface) noexcept;
+  [[nodiscard]] granit_result create_swapchain(granit_backend_plugin_instance instance,
+                                               granit_backend_plugin_surface surface,
+                                               const granit_backend_plugin_swapchain_desc* desc,
+                                               granit_backend_plugin_swapchain* swapchain) noexcept;
+  [[nodiscard]] granit_result
+  recreate_swapchain(granit_backend_plugin_instance instance,
+                     granit_backend_plugin_swapchain swapchain,
+                     const granit_backend_plugin_swapchain_desc* desc) noexcept;
+  [[nodiscard]] granit_result
+  get_swapchain_info(granit_backend_plugin_instance instance,
+                     granit_backend_plugin_swapchain swapchain,
+                     granit_backend_plugin_swapchain_info* info) noexcept;
+  [[nodiscard]] granit_result
+  acquire_swapchain(granit_backend_plugin_instance instance,
+                    granit_backend_plugin_swapchain swapchain,
+                    granit_backend_plugin_acquired_frame* frame) noexcept;
+  [[nodiscard]] granit_result present_swapchain(granit_backend_plugin_instance instance,
+                                                granit_backend_plugin_swapchain swapchain,
+                                                std::uint32_t* needs_recreate) noexcept;
+  [[nodiscard]] granit_result cancel_swapchain(granit_backend_plugin_instance instance,
+                                               granit_backend_plugin_swapchain swapchain,
+                                               std::uint32_t* needs_recreate) noexcept;
+  [[nodiscard]] granit_result destroy_swapchain(granit_backend_plugin_instance instance,
+                                                granit_backend_plugin_swapchain swapchain) noexcept;
   [[nodiscard]] granit_result create_buffer(granit_backend_plugin_instance instance,
                                             const granit_backend_plugin_buffer_desc* desc,
                                             granit_backend_plugin_buffer* buffer) noexcept;
@@ -125,7 +162,7 @@ public:
       std::uint32_t width, std::uint32_t height, std::uint32_t bytes_per_row) noexcept;
   void close() noexcept;
 
-  [[nodiscard]] bool is_open() const noexcept { return library_.is_open(); }
+  [[nodiscard]] bool is_open() const noexcept { return api_ != nullptr; }
   [[nodiscard]] const granit_backend_plugin_api* api() const noexcept { return api_; }
 
 private:

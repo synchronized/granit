@@ -15,6 +15,26 @@
 /** Renderer 对象句柄。零值无效。 */
 typedef granit_handle granit_renderer;
 
+typedef uint32_t granit_renderer_state;
+#define GRANIT_RENDERER_STATE_INITIALIZING UINT32_C(1)
+#define GRANIT_RENDERER_STATE_READY UINT32_C(2)
+#define GRANIT_RENDERER_STATE_FAILED UINT32_C(3)
+#define GRANIT_RENDERER_STATE_DEVICE_LOST UINT32_C(4)
+
+/** Renderer 当前生命周期快照；failure_result 仅在失败或设备丢失状态下非成功。 */
+typedef struct granit_renderer_status {
+  uint32_t struct_size;
+  granit_renderer_state state;
+  granit_result failure_result;
+  uint32_t reserved;
+} granit_renderer_status;
+
+#define GRANIT_RENDERER_STATUS_VERSION_1_SIZE                                                     \
+  ((uint32_t)(offsetof(granit_renderer_status, reserved) + sizeof(uint32_t)))
+#define GRANIT_RENDERER_STATUS_INIT                                                                \
+  {(uint32_t)sizeof(granit_renderer_status), GRANIT_RENDERER_STATE_INITIALIZING, GRANIT_SUCCESS,   \
+   UINT32_C(0)}
+
 #define GRANIT_RENDERER_API_VERSION_1 UINT32_C(1)
 #define GRANIT_RENDERER_API_VERSION_CURRENT GRANIT_RENDERER_API_VERSION_1
 
@@ -23,6 +43,7 @@ typedef granit_handle granit_renderer;
 #define GRANIT_SURFACE_TYPE_WIN32_BIT (UINT32_C(1) << 0)
 #define GRANIT_SURFACE_TYPE_XCB_BIT (UINT32_C(1) << 1)
 #define GRANIT_SURFACE_TYPE_WAYLAND_BIT (UINT32_C(1) << 2)
+#define GRANIT_SURFACE_TYPE_CANVAS_BIT (UINT32_C(1) << 3)
 
 #define GRANIT_DEFAULT_FRAMES_IN_FLIGHT UINT32_C(2)
 #define GRANIT_MAX_FRAMES_IN_FLIGHT UINT32_C(4)
@@ -90,6 +111,13 @@ GRANIT_API granit_result granit_renderer_destroy(granit_renderer renderer);
 /** 查询 Renderer 对应设备的限制；调用者须先设置 limits->struct_size。 */
 GRANIT_API granit_result granit_renderer_get_limits(granit_renderer renderer,
                                                     granit_renderer_limits* limits);
+
+/** 查询 Renderer 生命周期；该调用不等待，也不执行用户回调。 */
+GRANIT_API granit_result granit_renderer_get_status(granit_renderer renderer,
+                                                    granit_renderer_status* status);
+
+/** 非阻塞地推进 Renderer 后端已完成的异步事件。 */
+GRANIT_API granit_result granit_renderer_process_events(granit_renderer renderer);
 
 /** 为公开 GPU 对象设置 UTF-8 调试名称；名称仅在调用期间借用。 */
 GRANIT_API granit_result granit_renderer_set_object_name(granit_renderer renderer,

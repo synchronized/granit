@@ -3,15 +3,8 @@
 
 #include <granit/input/input.h>
 
-#include "../window/input_bridge.hpp"
+#include "platform/input_adapter.h"
 #include "utf8.h"
-#include "xcb_input_adapter.h"
-#if defined(GRANIT_INPUT_HAS_WAYLAND)
-#include "wayland_input_adapter.h"
-#endif
-#if defined(_WIN32)
-#include "win32_input_adapter.h"
-#endif
 
 #include <algorithm>
 #include <atomic>
@@ -32,12 +25,7 @@ struct input_record {
   std::deque<granit_input_event> events;
   std::unordered_map<granit_window, granit_keyboard_state> keyboards;
   std::unordered_map<granit_window, granit_pointer_state> pointers;
-#if defined(_WIN32)
-  granit::input::detail::win32_input_adapter platform;
-#endif
-#if defined(GRANIT_INPUT_HAS_WAYLAND)
-  granit::input::detail::wayland_input_adapter wayland;
-#endif
+  granit::input::detail::platform_input_adapter platform;
 };
 
 std::mutex registry_mutex;
@@ -111,12 +99,7 @@ void clear_window(void* user_data, granit_window window) {
   auto& input = *static_cast<input_record*>(user_data);
   input.keyboards.erase(window);
   input.pointers.erase(window);
-#if defined(_WIN32)
   input.platform.clear_window(window);
-#endif
-#if defined(GRANIT_INPUT_HAS_WAYLAND)
-  input.wayland.clear_window(window);
-#endif
   std::erase_if(input.events, [window](const auto& event) { return event.window == window; });
 }
 
@@ -126,12 +109,7 @@ void clear_focus(void* user_data, granit_window window) {
     keyboard->second = GRANIT_KEYBOARD_STATE_INIT;
   if (const auto pointer = input.pointers.find(window); pointer != input.pointers.end())
     pointer->second.buttons = 0;
-#if defined(_WIN32)
   input.platform.clear_window(window);
-#endif
-#if defined(GRANIT_INPUT_HAS_WAYLAND)
-  input.wayland.clear_window(window);
-#endif
 }
 
 granit_keyboard_state& adapter_keyboard(void* user_data, granit_window window) {
@@ -151,75 +129,15 @@ void adapter_text(void* user_data, granit_window window, std::string_view text) 
   enqueue_text(*static_cast<input_record*>(user_data), window, text);
 }
 
-#if defined(_WIN32)
-void handle_win32_event(input_record& input, granit_window window,
-                        const granit_window_input_native_event& event) {
-  const granit::input::detail::win32_input_sink sink{&input, adapter_keyboard, adapter_pointer,
-                                                     adapter_event, adapter_text};
-  input.platform.handle(window, event.type, event.word, event.value, sink);
-}
-#endif
-
-#if defined(GRANIT_INPUT_HAS_WAYLAND)
-void handle_wayland_event(input_record& input, granit_window window,
-                          const granit_window_input_native_event& event) {
-  const granit::input::detail::wayland_input_sink sink{&input, adapter_keyboard, adapter_pointer,
-                                                       adapter_event, adapter_text};
-  switch (event.type) {
-  case GRANIT_WINDOW_INPUT_WAYLAND_KEYMAP:
-    static_cast<void>(input.wayland.set_keymap(reinterpret_cast<const char*>(event.word),
-                                               static_cast<std::size_t>(event.value)));
-    break;
-  case GRANIT_WINDOW_INPUT_WAYLAND_KEY:
-    input.wayland.key(window, event.detail, event.state != 0, sink);
-    break;
-  case GRANIT_WINDOW_INPUT_WAYLAND_MODIFIERS:
-    input.wayland.modifiers(window, event.state, event.detail, event.data0, event.data1, sink);
-    break;
-  case GRANIT_WINDOW_INPUT_WAYLAND_POINTER_ENTER:
-    input.wayland.pointer_enter(window, static_cast<float>(event.x) / 256.0F,
-                                static_cast<float>(event.y) / 256.0F, sink);
-    break;
-  case GRANIT_WINDOW_INPUT_WAYLAND_POINTER_LEAVE:
-    input.wayland.pointer_leave(window, sink);
-    break;
-  case GRANIT_WINDOW_INPUT_WAYLAND_POINTER_MOTION:
-    input.wayland.pointer_motion(window, static_cast<float>(event.x) / 256.0F,
-                                 static_cast<float>(event.y) / 256.0F, sink);
-    break;
-  case GRANIT_WINDOW_INPUT_WAYLAND_POINTER_BUTTON:
-    input.wayland.pointer_button(window, event.detail, event.state != 0, sink);
-    break;
-  case GRANIT_WINDOW_INPUT_WAYLAND_POINTER_AXIS:
-    input.wayland.pointer_axis(window, event.detail, static_cast<float>(event.value) / 256.0F,
-                               sink);
-    break;
-  default:
-    break;
-  }
-}
-#endif
-
 void native_event(void* user_data, granit_window window,
                   const granit_window_input_native_event* event) {
   if (event == nullptr)
     return;
   auto& input = *static_cast<input_record*>(user_data);
   try {
-#if defined(_WIN32)
-    if (event->backend == GRANIT_WINDOW_INPUT_BACKEND_WIN32)
-      handle_win32_event(input, window, *event);
-#endif
-    if (event->backend == GRANIT_WINDOW_INPUT_BACKEND_XCB) {
-      const granit::input::detail::xcb_input_sink sink{&input, adapter_keyboard, adapter_pointer,
-                                                       adapter_event};
-      granit::input::detail::handle_xcb_input(
-          window, {event->type, event->x, event->y, event->state, event->detail}, sink);
-    }
-#if defined(GRANIT_INPUT_HAS_WAYLAND)
-    if (event->backend == GRANIT_WINDOW_INPUT_BACKEND_WAYLAND)
-      handle_wayland_event(input, window, *event);
-#endif
+    const granit::input::detail::platform_input_sink sink{&input, adapter_keyboard, adapter_pointer,
+                                                          adapter_event, adapter_text};
+    input.platform.handle(window, *event, sink);
   } catch (...) {
     // 平台回调不能让分配异常穿过 DLL 或原生事件边界。
   }

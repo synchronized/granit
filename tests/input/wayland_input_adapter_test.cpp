@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include "input/wayland_input_adapter.h"
+#include "platform/wayland/input_adapter.h"
 
 #include <xkbcommon/xkbcommon.h>
 
