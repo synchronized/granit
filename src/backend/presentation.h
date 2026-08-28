@@ -80,6 +80,8 @@ public:
   get_swapchain_backbuffers(backend_swapchain_resource& swapchain,
                             std::vector<backend_swapchain_backbuffer>& backbuffers) = 0;
   [[nodiscard]] virtual granit_result
+  prepare_swapchain_backbuffer(backend_swapchain_backbuffer& backbuffer) = 0;
+  [[nodiscard]] virtual granit_result
   acquire_swapchain_frame(backend_swapchain_resource& swapchain,
                           backend_acquired_swapchain_frame& frame) = 0;
   [[nodiscard]] virtual granit_result present_swapchain_frame(backend_swapchain_resource& swapchain,

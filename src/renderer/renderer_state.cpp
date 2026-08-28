@@ -729,6 +729,19 @@ renderer_state::get_swapchain_backbuffers(backend_swapchain_resource& swapchain_
   }
 }
 
+granit_result
+renderer_state::prepare_swapchain_backbuffer(backend_swapchain_backbuffer& backbuffer) {
+  if (!backbuffer.texture)
+    return GRANIT_ERROR_INTERNAL;
+  if (backbuffer.view)
+    return GRANIT_SUCCESS;
+  backbuffer.view = allocate_texture_view_resource();
+  if (!backbuffer.view)
+    return GRANIT_ERROR_OUT_OF_MEMORY;
+  granit_texture_view_desc desc = GRANIT_TEXTURE_VIEW_DESC_INIT;
+  return create_native_texture_view(*backbuffer.texture, backbuffer.desc, desc, *backbuffer.view);
+}
+
 void renderer_state::destroy_native_swapchain(vulkan_swapchain& swapchain) noexcept {
   std::lock_guard lock{resource_mutex_};
   {

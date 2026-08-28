@@ -11,6 +11,7 @@
 #include "backend/capabilities.h"
 #include "backend/lifecycle.h"
 #include "backend/plugin_loader.h"
+#include "backend/queue.h"
 #include "backend/renderer.h"
 #include "backend/webgpu/command_adapter.h"
 #include "backend/webgpu/pipeline_adapter.h"
@@ -20,7 +21,9 @@
 namespace granit::detail {
 
 /** 集中管理 WebGPU Provider、异步生命周期、能力快照和呈现适配器。 */
-class webgpu_renderer_state final : public backend_renderer, public backend_presentation_renderer {
+class webgpu_renderer_state final : public backend_renderer,
+                                    public backend_presentation_renderer,
+                                    public backend_queue {
 public:
   webgpu_renderer_state() = default;
   ~webgpu_renderer_state();
@@ -67,6 +70,8 @@ public:
   get_swapchain_backbuffers(backend_swapchain_resource& swapchain,
                             std::vector<backend_swapchain_backbuffer>& backbuffers) override;
   [[nodiscard]] granit_result
+  prepare_swapchain_backbuffer(backend_swapchain_backbuffer& backbuffer) override;
+  [[nodiscard]] granit_result
   acquire_swapchain_frame(backend_swapchain_resource& swapchain,
                           backend_acquired_swapchain_frame& frame) override;
   [[nodiscard]] granit_result present_swapchain_frame(backend_swapchain_resource& swapchain,
@@ -80,6 +85,19 @@ public:
   [[nodiscard]] granit_result wait_for_present_idle() noexcept override;
   std::size_t collect_present_retired() noexcept override;
   [[nodiscard]] std::size_t frame_slot_count() const noexcept override;
+  [[nodiscard]] granit_result submit_command_recorder(backend_command_recorder_resource& recorder,
+                                                      submission_serial& submitted_serial) override;
+  [[nodiscard]] granit_result
+  submit_command_recorders(std::span<backend_command_recorder_resource* const> recorders,
+                           submission_serial& submitted_serial) override;
+  [[nodiscard]] granit_result
+  wait_command_recorder(backend_command_recorder_resource& recorder) noexcept override;
+  [[nodiscard]] granit_result wait_for_all_submissions() noexcept override;
+  [[nodiscard]] granit_result submit_swapchain_frame(backend_command_recorder_resource& recorder,
+                                                     backend_swapchain_resource& swapchain,
+                                                     std::uint32_t image_index,
+                                                     std::size_t slot_index,
+                                                     submission_serial& submitted_serial) override;
 
 private:
   static void* allocate(std::uint64_t size, std::uint64_t alignment, void*) noexcept;
@@ -95,6 +113,7 @@ private:
   backend_lifecycle_status lifecycle_{};
   backend_capabilities capabilities_{};
   std::uint32_t domain_{};
+  submission_serial next_submission_serial_{1};
   std::unique_ptr<webgpu_presentation_adapter> presentation_;
   std::unique_ptr<webgpu_shader_adapter> shaders_;
   std::unique_ptr<webgpu_pipeline_adapter> pipelines_;

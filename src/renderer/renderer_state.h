@@ -109,6 +109,8 @@ public:
   [[nodiscard]] granit_result
   get_swapchain_backbuffers(backend_swapchain_resource& swapchain,
                             std::vector<backend_swapchain_backbuffer>& backbuffers) override;
+  [[nodiscard]] granit_result
+  prepare_swapchain_backbuffer(backend_swapchain_backbuffer& backbuffer) override;
   void destroy_native_swapchain(vulkan_swapchain& swapchain) noexcept;
   [[nodiscard]] granit_result create_native_buffer(const granit_buffer_desc& desc,
                                                    backend_buffer_resource& buffer) noexcept;

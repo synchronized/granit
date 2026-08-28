@@ -202,8 +202,16 @@ granit_result renderer_registry::set_object_name(granit_renderer renderer, grani
     lock.unlock();                                                                                 \
     return state->set_backend_resource_name(*native, name);                                        \
   }
-  GRANIT_NAME_OBJECT(surfaces_)
-  GRANIT_NAME_OBJECT(swapchains_)
+#define GRANIT_NAME_PRESENTATION_OBJECT(map)                                                       \
+  if (const auto it = map.find(object); it != map.end()) {                                         \
+    if (it->second->owner != state)                                                                \
+      return GRANIT_ERROR_INVALID_HANDLE;                                                          \
+    auto* native = it->second->native.get();                                                       \
+    lock.unlock();                                                                                 \
+    return state->set_backend_resource_name(*native, name);                                        \
+  }
+  GRANIT_NAME_PRESENTATION_OBJECT(surfaces_)
+  GRANIT_NAME_PRESENTATION_OBJECT(swapchains_)
   GRANIT_NAME_OBJECT(buffers_)
   GRANIT_NAME_OBJECT(textures_)
   GRANIT_NAME_OBJECT(texture_views_)
@@ -217,6 +225,7 @@ granit_result renderer_registry::set_object_name(granit_renderer renderer, grani
   GRANIT_NAME_OBJECT(command_recorders_)
   GRANIT_NAME_OBJECT(timestamp_query_pools_)
 #undef GRANIT_NAME_OBJECT
+#undef GRANIT_NAME_PRESENTATION_OBJECT
 
   if (frames_.contains(object) || upload_batches_.contains(object))
     return GRANIT_ERROR_UNSUPPORTED;
@@ -333,13 +342,13 @@ granit_result renderer_registry::destroy(granit_renderer renderer) {
                         record->metadata.creation_sequence);
       }
       for (const auto& [handle, record] : surfaces_) {
-        if (record->renderer == state) {
+        if (record->owner == state) {
           lifecycle.add(lifecycle_resource_type::surface, handle,
                         record->metadata.creation_sequence);
         }
       }
       for (const auto& [handle, record] : swapchains_) {
-        if (record->renderer == state) {
+        if (record->owner == state) {
           lifecycle.add(lifecycle_resource_type::swapchain, handle,
                         record->metadata.creation_sequence);
         }
@@ -506,7 +515,7 @@ granit_result renderer_registry::destroy(granit_renderer renderer) {
       }
     }
     for (auto swapchain = swapchains_.begin(); swapchain != swapchains_.end();) {
-      if (swapchain->second->renderer == state) {
+      if (swapchain->second->owner == state) {
         native_swapchains.push_back(std::move(swapchain->second));
         static_cast<void>(
             handles_.erase(swapchain->first, resource_type::swapchain, state->domain()));
@@ -516,7 +525,7 @@ granit_result renderer_registry::destroy(granit_renderer renderer) {
       }
     }
     for (auto surface = surfaces_.begin(); surface != surfaces_.end();) {
-      if (surface->second->renderer == state) {
+      if (surface->second->owner == state) {
         native_surfaces.push_back(std::move(surface->second));
         static_cast<void>(handles_.erase(surface->first, resource_type::surface, state->domain()));
         surface = surfaces_.erase(surface);
@@ -842,7 +851,6 @@ granit_result renderer_registry::create_swapchain(granit_renderer renderer, gran
     auto record = std::make_shared<swapchain_record>();
     record->owner = owner;
     record->presentation = state;
-    record->renderer = std::dynamic_pointer_cast<renderer_state>(owner);
     record->surface = surface_state;
     record->native = state->allocate_swapchain_resource();
     const auto create_result =
@@ -965,7 +973,7 @@ renderer_registry::install_swapchain_backbuffers(granit_swapchain swapchain,
   try {
     std::vector<backend_swapchain_backbuffer> backbuffers;
     const auto backbuffer_result =
-        record->renderer->get_swapchain_backbuffers(*record->native, backbuffers);
+        record->presentation->get_swapchain_backbuffers(*record->native, backbuffers);
     if (backbuffer_result != GRANIT_SUCCESS)
       return backbuffer_result;
     return install_swapchain_backbuffers(swapchain, record, std::move(backbuffers));
@@ -985,30 +993,23 @@ granit_result renderer_registry::install_swapchain_backbuffers(
     textures.reserve(backbuffers.size());
     views.reserve(backbuffers.size());
     for (auto& backbuffer : backbuffers) {
+      const auto prepare_result = record->presentation->prepare_swapchain_backbuffer(backbuffer);
+      if (prepare_result != GRANIT_SUCCESS)
+        return prepare_result;
       auto texture = std::make_shared<texture_record>();
       texture->owner = record->owner;
-      texture->renderer = record->renderer;
+      texture->renderer = std::dynamic_pointer_cast<renderer_state>(record->owner);
       texture->native = std::move(backbuffer.texture);
       texture->publicly_destroyable = false;
       texture->desc = backbuffer.desc;
       auto view = std::make_shared<texture_view_record>();
       view->owner = record->owner;
-      view->renderer = record->renderer;
+      view->renderer = texture->renderer;
       view->texture = texture;
       view->publicly_destroyable = false;
       granit_texture_view_desc desc = GRANIT_TEXTURE_VIEW_DESC_INIT;
       view->desc = desc;
-      if (backbuffer.view) {
-        view->native = std::move(backbuffer.view);
-      } else {
-        if (!record->renderer)
-          return GRANIT_ERROR_INTERNAL;
-        view->native = record->renderer->allocate_texture_view_resource();
-        const auto result = record->renderer->create_native_texture_view(
-            *texture->native, texture->desc, desc, *view->native);
-        if (result != GRANIT_SUCCESS)
-          return result;
-      }
+      view->native = std::move(backbuffer.view);
       textures.push_back(std::move(texture));
       views.push_back(std::move(view));
     }
@@ -1117,7 +1118,10 @@ granit_result renderer_registry::acquire_swapchain_frame(granit_renderer rendere
   auto record = std::make_shared<frame_record>();
   record->owner = swapchain_record_state->owner;
   record->presentation = swapchain_record_state->presentation;
-  record->renderer = swapchain_record_state->renderer;
+  record->queue = std::dynamic_pointer_cast<backend_queue>(swapchain_record_state->owner);
+  if (!record->queue)
+    return GRANIT_ERROR_INTERNAL;
+  record->renderer = std::dynamic_pointer_cast<renderer_state>(swapchain_record_state->owner);
   record->swapchain = swapchain_record_state;
   granit_frame handle{};
   {
@@ -1218,7 +1222,10 @@ granit_result renderer_registry::submit_command_recorder_frame(granit_renderer r
   if (command->webgpu) {
     if (command->web_status != command_recorder_record::web_state::executable)
       return GRANIT_ERROR_INVALID_ARGUMENT;
-    const auto result = command->webgpu->commands()->submit(*command->native);
+    submission_serial serial{};
+    const auto result = frame_state->queue->submit_swapchain_frame(
+        *command->native, *frame_state->swapchain->native, frame_state->image_index,
+        frame_state->slot_index, serial);
     if (result == GRANIT_SUCCESS) {
       command->web_status = command_recorder_record::web_state::submitted;
       frame_state->submitted = true;
@@ -1226,7 +1233,7 @@ granit_result renderer_registry::submit_command_recorder_frame(granit_renderer r
     return result;
   }
   submission_serial serial{};
-  const auto result = command->renderer->submit_swapchain_frame(
+  const auto result = frame_state->queue->submit_swapchain_frame(
       *command->native, *frame_state->swapchain->native, frame_state->image_index,
       frame_state->slot_index, serial);
   if (result == GRANIT_SUCCESS) {
@@ -3050,6 +3057,9 @@ granit_result renderer_registry::create_command_recorder(granit_renderer rendere
     }
     auto record = std::make_shared<command_recorder_record>();
     record->owner = owner;
+    record->queue = std::dynamic_pointer_cast<backend_queue>(owner);
+    if (!record->queue)
+      return GRANIT_ERROR_INTERNAL;
     record->renderer = std::dynamic_pointer_cast<renderer_state>(owner);
     record->webgpu = std::dynamic_pointer_cast<webgpu_renderer_state>(owner);
     granit_result result{GRANIT_ERROR_UNSUPPORTED};
@@ -3134,13 +3144,14 @@ granit_result renderer_registry::submit_command_recorder(granit_renderer rendere
   if (record->webgpu) {
     if (record->web_status != command_recorder_record::web_state::executable)
       return GRANIT_ERROR_INVALID_ARGUMENT;
-    const auto result = record->webgpu->commands()->submit(*record->native);
+    submission_serial serial{};
+    const auto result = record->queue->submit_command_recorder(*record->native, serial);
     if (result == GRANIT_SUCCESS)
       record->web_status = command_recorder_record::web_state::submitted;
     return result;
   }
   submission_serial serial{};
-  const auto result = record->renderer->submit_command_recorder(*record->native, serial);
+  const auto result = record->queue->submit_command_recorder(*record->native, serial);
   if (result == GRANIT_SUCCESS)
     mark_resources_used(record->retained_resources, serial);
   return result;
@@ -3217,7 +3228,7 @@ granit_result renderer_registry::reset_command_recorder(granit_renderer renderer
     }
     return result;
   }
-  const auto wait_result = record->renderer->wait_command_recorder(*record->native);
+  const auto wait_result = record->queue->wait_command_recorder(*record->native);
   if (wait_result != GRANIT_SUCCESS) {
     return wait_result;
   }
@@ -4251,9 +4262,7 @@ granit_result renderer_registry::destroy_command_recorder(granit_renderer render
     return GRANIT_ERROR_UNSUPPORTED;
   {
     std::lock_guard record_lock{record->mutex};
-    const auto wait_result = record->renderer
-                                 ? record->renderer->wait_command_recorder(*record->native)
-                                 : GRANIT_SUCCESS;
+    const auto wait_result = record->queue->wait_command_recorder(*record->native);
     if (wait_result != GRANIT_SUCCESS && wait_result != GRANIT_ERROR_DEVICE_LOST) {
       return wait_result;
     }

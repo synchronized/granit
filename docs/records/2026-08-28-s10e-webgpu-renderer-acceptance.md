@@ -5,15 +5,17 @@
 
 ## 结论
 
-S-10E 已完成。Emscripten 构建现可通过 Granit 公共 Renderer、Surface、
+S-10E 浏览器闭环已完成，Registry 内部状态统一仍在收尾。Emscripten 构建现可通过 Granit 公共
+Renderer、Surface、
 Swapchain、Shader、Graphics Pipeline 和 Command Recorder API，在浏览器 Canvas 绘制确定性
 三角形；公共头文件不暴露 WebGPU、Emscripten 或 Vulkan 原生类型。Windows、Linux 与
 Emscripten 首轮矩阵均已通过。
 
-架构审查发现的独立 Web Registry 和仅生成示例目标问题均已关闭。Emscripten 与桌面统一通过
-`renderer/renderer_registry.h` 进入 Registry，平台实现均位于 `src/renderer`；原
-`web_renderer_registry` 类型及 `web/renderer_registry.*` 已删除。构建同时提供静态
-`granit::granit` SDK 目标，浏览器示例作为只包含公共头文件的独立 Consumer 链接该目标。
+仅生成示例目标的问题已经关闭，构建同时提供静态 `granit::granit` SDK 目标，浏览器示例作为只
+包含公共头文件的独立 Consumer 链接该目标。Emscripten 与桌面也已统一包含
+`renderer/renderer_registry.h`，原 `web_renderer_registry` 名称及 `web/renderer_registry.*`
+已删除；但 `renderer_registry_emscripten.*` 仍拥有独立句柄表和资源映射，因此这只是入口统一，
+不能作为 Registry 状态统一的完成依据。
 
 ## 验收范围
 
@@ -31,8 +33,8 @@ Emscripten 首轮矩阵均已通过。
 - Emscripten Actions：锁定 emsdk 5.0.6 的产物审计和无头 Chrome 公共绘制闭环通过。
 - 本地 Windows Clang：浏览器示例、插件 Loader、完整测试、安装导出和 Consumer 验证通过。
 - Mock Provider 使用 10 个随机种子重复执行，确认测试结果不依赖 Catch2 用例顺序。
-- 统一 Registry 收尾后，本地 Windows Clang 58 项测试、Emscripten Debug SDK/示例构建及无头
-  Chrome 公共绘制闭环与输入转发再次通过。
+- Registry 入口调整后，本地 Windows Clang 58 项测试、Emscripten Debug/Release SDK 和示例构建、
+  无头 Chrome 公共绘制闭环与输入转发再次通过。
 
 最终验证运行：
 

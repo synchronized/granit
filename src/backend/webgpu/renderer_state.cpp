@@ -212,6 +212,11 @@ granit_result webgpu_renderer_state::get_swapchain_backbuffers(
 }
 
 granit_result
+webgpu_renderer_state::prepare_swapchain_backbuffer(backend_swapchain_backbuffer& backbuffer) {
+  return backbuffer.texture && backbuffer.view ? GRANIT_SUCCESS : GRANIT_ERROR_INTERNAL;
+}
+
+granit_result
 webgpu_renderer_state::acquire_swapchain_frame(backend_swapchain_resource& swapchain,
                                                backend_acquired_swapchain_frame& frame) {
   return presentation_ != nullptr ? presentation_->acquire_swapchain(swapchain, frame)
@@ -242,6 +247,52 @@ std::size_t webgpu_renderer_state::collect_present_retired() noexcept { return 0
 std::size_t webgpu_renderer_state::frame_slot_count() const noexcept {
   // 浏览器交换链按 Acquire 返回动态纹理，当前只允许一个在途呈现帧。
   return 1;
+}
+
+granit_result
+webgpu_renderer_state::submit_command_recorder(backend_command_recorder_resource& recorder,
+                                               submission_serial& submitted_serial) {
+  submitted_serial = 0;
+  if (commands_ == nullptr)
+    return GRANIT_ERROR_NOT_READY;
+  const auto result = commands_->submit(recorder);
+  if (result == GRANIT_SUCCESS)
+    submitted_serial = next_submission_serial_++;
+  return result;
+}
+
+granit_result webgpu_renderer_state::submit_command_recorders(
+    std::span<backend_command_recorder_resource* const> recorders,
+    submission_serial& submitted_serial) {
+  submitted_serial = 0;
+  if (recorders.empty())
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  for (auto* recorder : recorders) {
+    if (recorder == nullptr)
+      return GRANIT_ERROR_INVALID_ARGUMENT;
+    const auto result = commands_->submit(*recorder);
+    if (result != GRANIT_SUCCESS)
+      return result;
+  }
+  submitted_serial = next_submission_serial_++;
+  return GRANIT_SUCCESS;
+}
+
+granit_result
+webgpu_renderer_state::wait_command_recorder(backend_command_recorder_resource&) noexcept {
+  return GRANIT_SUCCESS;
+}
+
+granit_result webgpu_renderer_state::wait_for_all_submissions() noexcept {
+  return lifecycle_.state == backend_lifecycle_state::device_lost ? GRANIT_ERROR_DEVICE_LOST
+                                                                  : GRANIT_SUCCESS;
+}
+
+granit_result
+webgpu_renderer_state::submit_swapchain_frame(backend_command_recorder_resource& recorder,
+                                              backend_swapchain_resource&, std::uint32_t,
+                                              std::size_t, submission_serial& submitted_serial) {
+  return submit_command_recorder(recorder, submitted_serial);
 }
 
 } // namespace granit::detail
