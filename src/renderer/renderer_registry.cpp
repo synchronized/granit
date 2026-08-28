@@ -4,6 +4,7 @@
 #include "renderer/renderer_registry.h"
 #include "renderer/renderer_registry_records.h"
 
+#include "backend/diagnostics.h"
 #include "backend/webgpu/renderer_state.h"
 #include "core/texture_format.h"
 #include "renderer/renderer_registry_helpers.h"
@@ -206,8 +207,11 @@ void renderer_registry::emit_validation_diagnostic(granit_renderer renderer,
 }
 
 granit_result renderer_registry::destroy(granit_renderer renderer) {
-  std::shared_ptr<backend_renderer> backend_state;
-  std::shared_ptr<renderer_state> state;
+  std::shared_ptr<backend_renderer> state;
+  std::shared_ptr<backend_diagnostic_renderer> diagnostics;
+  std::shared_ptr<backend_presentation_renderer> presentation;
+  std::shared_ptr<backend_queue> queue;
+  std::shared_ptr<backend_retirement_renderer> retirement;
   lifecycle_snapshot lifecycle;
   std::vector<std::shared_ptr<command_recorder_record>> native_command_recorders;
   std::vector<std::shared_ptr<swapchain_record>> native_swapchains;
@@ -233,17 +237,13 @@ granit_result renderer_registry::destroy(granit_renderer renderer) {
     if (backend_found == backend_renderers_.end()) {
       return GRANIT_ERROR_INTERNAL;
     }
-    state = std::dynamic_pointer_cast<renderer_state>(backend_found->second);
-    if (!state) {
-      backend_state = std::move(backend_found->second);
-      backend_renderers_.erase(backend_found);
-      const auto erase_result = handles_.erase(renderer, resource_type::renderer, 0);
-      lock.unlock();
-      backend_state.reset();
-      return erase_result;
-    }
+    state = backend_found->second;
+    diagnostics = std::dynamic_pointer_cast<backend_diagnostic_renderer>(state);
+    presentation = std::dynamic_pointer_cast<backend_presentation_renderer>(state);
+    queue = std::dynamic_pointer_cast<backend_queue>(state);
+    retirement = std::dynamic_pointer_cast<backend_retirement_renderer>(state);
     backend_renderers_.erase(renderer);
-    if (state->validation_enabled()) {
+    if (diagnostics && diagnostics->validation_enabled()) {
       for (const auto& [handle, record] : frame_contexts_) {
         if (record->owner == state)
           lifecycle.add(lifecycle_resource_type::frame_context, handle,
@@ -501,13 +501,17 @@ granit_result renderer_registry::destroy(granit_renderer renderer) {
       return erase_result;
     }
   }
-  write_lifecycle_diagnostic(state->diagnostics(), renderer, state->domain(), lifecycle);
-  static_cast<void>(state->wait_for_present_idle());
-  static_cast<void>(state->wait_for_all_submissions());
+  if (diagnostics)
+    write_lifecycle_diagnostic(diagnostics->diagnostics(), renderer, state->domain(), lifecycle);
+  if (presentation)
+    static_cast<void>(presentation->wait_for_present_idle());
+  if (queue)
+    static_cast<void>(queue->wait_for_all_submissions());
   native_command_recorders.clear();
   native_timestamp_query_pools.clear();
   native_upload_batches.clear();
-  static_cast<void>(state->drain_retired());
+  if (retirement)
+    static_cast<void>(retirement->collect_retired());
   native_swapchains.clear();
   native_surfaces.clear();
   native_buffers.clear();
