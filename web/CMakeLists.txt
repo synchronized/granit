@@ -3,8 +3,8 @@
 
 add_library(
   granit STATIC
-  command_recorder_api.cpp
-  pipeline_api.cpp
+  "${PROJECT_SOURCE_DIR}/src/renderer/command_recorder_api.cpp"
+  "${PROJECT_SOURCE_DIR}/src/renderer/pipeline_api.cpp"
   "${PROJECT_SOURCE_DIR}/src/renderer/renderer_api.cpp"
   renderer_registry.cpp
   "${PROJECT_SOURCE_DIR}/src/renderer/shader_api.cpp"
@@ -18,6 +18,7 @@ add_library(
   "${PROJECT_SOURCE_DIR}/src/backend/webgpu/renderer_state.cpp"
   "${PROJECT_SOURCE_DIR}/src/backend/webgpu/shader_adapter.cpp"
   "${PROJECT_SOURCE_DIR}/src/core/handle_table.cpp"
+  "${PROJECT_SOURCE_DIR}/src/core/resource_validation.cpp"
   "${PROJECT_SOURCE_DIR}/src/platform/shared_library.cpp"
 )
 add_library(granit::granit ALIAS granit)

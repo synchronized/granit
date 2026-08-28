@@ -51,6 +51,9 @@ extern "C" granit_result granit_bind_group_layout_create(granit_renderer rendere
   if (!desc || desc->struct_size < GRANIT_BIND_GROUP_LAYOUT_DESC_VERSION_1_SIZE ||
       desc->reserved != 0 || desc->entry_count > 64 || (desc->entry_count != 0 && !desc->entries))
     return GRANIT_ERROR_INVALID_ARGUMENT;
+#ifdef __EMSCRIPTEN__
+  return GRANIT_ERROR_UNSUPPORTED;
+#else
   constexpr auto valid_stages = GRANIT_SHADER_STAGE_VERTEX_BIT | GRANIT_SHADER_STAGE_FRAGMENT_BIT |
                                 GRANIT_SHADER_STAGE_COMPUTE_BIT;
   for (uint32_t index = 0; index < desc->entry_count; ++index) {
@@ -68,13 +71,18 @@ extern "C" granit_result granit_bind_group_layout_create(granit_renderer rendere
   }
   return granit::detail::renderer_registry::instance().create_bind_group_layout(
       renderer, {desc->entries, desc->entry_count}, *layout);
+#endif
 }
 
 extern "C" granit_result granit_bind_group_layout_destroy(granit_renderer renderer,
                                                           granit_bind_group_layout layout) {
   if (renderer == GRANIT_NULL_HANDLE || layout == GRANIT_NULL_HANDLE)
     return GRANIT_ERROR_INVALID_HANDLE;
+#ifdef __EMSCRIPTEN__
+  return GRANIT_ERROR_UNSUPPORTED;
+#else
   return granit::detail::renderer_registry::instance().destroy_bind_group_layout(renderer, layout);
+#endif
 }
 
 extern "C" granit_result granit_bind_group_create(granit_renderer renderer,
@@ -99,15 +107,23 @@ extern "C" granit_result granit_bind_group_create(granit_renderer renderer,
         return GRANIT_ERROR_INVALID_ARGUMENT;
     }
   }
+#ifdef __EMSCRIPTEN__
+  return GRANIT_ERROR_UNSUPPORTED;
+#else
   return granit::detail::renderer_registry::instance().create_bind_group(renderer, *desc,
                                                                          *bind_group);
+#endif
 }
 
 extern "C" granit_result granit_bind_group_destroy(granit_renderer renderer,
                                                    granit_bind_group bind_group) {
   if (renderer == GRANIT_NULL_HANDLE || bind_group == GRANIT_NULL_HANDLE)
     return GRANIT_ERROR_INVALID_HANDLE;
+#ifdef __EMSCRIPTEN__
+  return GRANIT_ERROR_UNSUPPORTED;
+#else
   return granit::detail::renderer_registry::instance().destroy_bind_group(renderer, bind_group);
+#endif
 }
 
 extern "C" granit_result granit_pipeline_layout_create(granit_renderer renderer,
@@ -122,8 +138,15 @@ extern "C" granit_result granit_pipeline_layout_create(granit_renderer renderer,
       desc->reserved != 0 || desc->bind_group_layout_count > 8 ||
       (desc->bind_group_layout_count != 0 && !desc->bind_group_layouts))
     return GRANIT_ERROR_INVALID_ARGUMENT;
+#ifdef __EMSCRIPTEN__
+  if (desc->bind_group_layout_count != 0)
+    return GRANIT_ERROR_UNSUPPORTED;
+  return granit::detail::renderer_registry::instance().create_webgpu_pipeline_layout(renderer,
+                                                                                     *layout);
+#else
   return granit::detail::renderer_registry::instance().create_pipeline_layout(
       renderer, {desc->bind_group_layouts, desc->bind_group_layout_count}, *layout);
+#endif
 }
 
 extern "C" granit_result granit_pipeline_layout_destroy(granit_renderer renderer,
@@ -227,8 +250,24 @@ extern "C" granit_result granit_graphics_pipeline_create(granit_renderer rendere
        !std::isfinite(desc->depth_bias->slope_factor) || !std::isfinite(desc->depth_bias->clamp) ||
        desc->depth_bias->clamp < 0.0F || desc->depth_bias->reserved != 0))
     return GRANIT_ERROR_INVALID_ARGUMENT;
+#ifdef __EMSCRIPTEN__
+  if (desc->color_format_count != 1 ||
+      (desc->color_formats[0] != GRANIT_TEXTURE_FORMAT_RGBA8_UNORM &&
+       desc->color_formats[0] != GRANIT_TEXTURE_FORMAT_BGRA8_UNORM) ||
+      desc->depth_stencil_format != GRANIT_TEXTURE_FORMAT_UNDEFINED || desc->sample_count != 1 ||
+      (desc->struct_size >= GRANIT_GRAPHICS_PIPELINE_DESC_VERSION_2_SIZE &&
+       desc->vertex_buffer_layout_count != 0) ||
+      (desc->struct_size >= GRANIT_GRAPHICS_PIPELINE_DESC_VERSION_4_SIZE &&
+       (desc->depth != nullptr || desc->color_blend_count != 0)) ||
+      (desc->struct_size >= GRANIT_GRAPHICS_PIPELINE_DESC_VERSION_5_SIZE && desc->depth_bias))
+    return GRANIT_ERROR_UNSUPPORTED;
+  return granit::detail::renderer_registry::instance().create_webgpu_graphics_pipeline(
+      renderer, desc->layout, desc->vertex_shader, desc->fragment_shader, desc->color_formats[0],
+      *pipeline);
+#else
   return granit::detail::renderer_registry::instance().create_graphics_pipeline(renderer, *desc,
                                                                                 *pipeline);
+#endif
 }
 
 extern "C" granit_result granit_graphics_pipeline_destroy(granit_renderer renderer,
@@ -252,13 +291,21 @@ extern "C" granit_result granit_compute_pipeline_create(granit_renderer renderer
     return GRANIT_ERROR_INVALID_ARGUMENT;
   if (desc->layout == GRANIT_NULL_HANDLE || desc->compute_shader == GRANIT_NULL_HANDLE)
     return GRANIT_ERROR_INVALID_HANDLE;
+#ifdef __EMSCRIPTEN__
+  return GRANIT_ERROR_UNSUPPORTED;
+#else
   return granit::detail::renderer_registry::instance().create_compute_pipeline(renderer, *desc,
                                                                                *pipeline);
+#endif
 }
 
 extern "C" granit_result granit_compute_pipeline_destroy(granit_renderer renderer,
                                                          granit_compute_pipeline pipeline) {
   if (renderer == GRANIT_NULL_HANDLE || pipeline == GRANIT_NULL_HANDLE)
     return GRANIT_ERROR_INVALID_HANDLE;
+#ifdef __EMSCRIPTEN__
+  return GRANIT_ERROR_UNSUPPORTED;
+#else
   return granit::detail::renderer_registry::instance().destroy_compute_pipeline(renderer, pipeline);
+#endif
 }

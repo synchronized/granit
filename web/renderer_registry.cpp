@@ -1032,6 +1032,102 @@ granit_result renderer_registry::reset_command_recorder(granit_renderer renderer
   return result;
 }
 
+granit_result
+renderer_registry::submit_command_recorders(granit_renderer,
+                                            std::span<const granit_command_recorder>) {
+  return GRANIT_ERROR_UNSUPPORTED;
+}
+
+granit_result renderer_registry::copy_buffer(granit_renderer, granit_command_recorder,
+                                             granit_buffer, granit_buffer,
+                                             std::span<const granit_buffer_copy_region>) {
+  return GRANIT_ERROR_UNSUPPORTED;
+}
+
+granit_result renderer_registry::copy_texture_to_buffer(granit_renderer, granit_command_recorder,
+                                                        granit_texture, granit_buffer,
+                                                        const granit_texture_data_layout&,
+                                                        const granit_texture_write_region&) {
+  return GRANIT_ERROR_UNSUPPORTED;
+}
+
+granit_result renderer_registry::copy_buffer_to_texture(granit_renderer, granit_command_recorder,
+                                                        granit_buffer, granit_texture,
+                                                        const granit_texture_data_layout&,
+                                                        const granit_texture_write_region&) {
+  return GRANIT_ERROR_UNSUPPORTED;
+}
+
+granit_result renderer_registry::copy_texture(granit_renderer, granit_command_recorder,
+                                              granit_texture, granit_texture,
+                                              const granit_texture_copy_region&) {
+  return GRANIT_ERROR_UNSUPPORTED;
+}
+
+granit_result renderer_registry::generate_mipmaps(granit_renderer, granit_command_recorder,
+                                                  granit_texture,
+                                                  const granit_texture_mipmap_range&) {
+  return GRANIT_ERROR_UNSUPPORTED;
+}
+
+granit_result renderer_registry::fill_buffer(granit_renderer, granit_command_recorder,
+                                             granit_buffer, std::uint64_t, std::uint64_t,
+                                             std::uint32_t) {
+  return GRANIT_ERROR_UNSUPPORTED;
+}
+
+granit_result renderer_registry::bind_graphics_groups(granit_renderer, granit_command_recorder,
+                                                      granit_pipeline_layout, std::uint32_t,
+                                                      std::span<const granit_bind_group>,
+                                                      std::span<const std::uint32_t>) {
+  return GRANIT_ERROR_UNSUPPORTED;
+}
+
+granit_result renderer_registry::bind_compute_pipeline(granit_renderer, granit_command_recorder,
+                                                       granit_compute_pipeline) {
+  return GRANIT_ERROR_UNSUPPORTED;
+}
+
+granit_result renderer_registry::bind_compute_groups(granit_renderer, granit_command_recorder,
+                                                     granit_pipeline_layout, std::uint32_t,
+                                                     std::span<const granit_bind_group>,
+                                                     std::span<const std::uint32_t>) {
+  return GRANIT_ERROR_UNSUPPORTED;
+}
+
+granit_result renderer_registry::dispatch(granit_renderer, granit_command_recorder, std::uint32_t,
+                                          std::uint32_t, std::uint32_t) {
+  return GRANIT_ERROR_UNSUPPORTED;
+}
+
+granit_result renderer_registry::set_viewports(granit_renderer, granit_command_recorder,
+                                               std::uint32_t, std::span<const granit_viewport>) {
+  return GRANIT_ERROR_UNSUPPORTED;
+}
+
+granit_result renderer_registry::set_scissors(granit_renderer, granit_command_recorder,
+                                              std::uint32_t, std::span<const granit_scissor>) {
+  return GRANIT_ERROR_UNSUPPORTED;
+}
+
+granit_result
+renderer_registry::bind_vertex_buffers(granit_renderer, granit_command_recorder, std::uint32_t,
+                                       std::span<const granit_vertex_buffer_binding>) {
+  return GRANIT_ERROR_UNSUPPORTED;
+}
+
+granit_result renderer_registry::bind_index_buffer(granit_renderer, granit_command_recorder,
+                                                   granit_buffer, std::uint64_t,
+                                                   granit_index_type) {
+  return GRANIT_ERROR_UNSUPPORTED;
+}
+
+granit_result renderer_registry::draw_indexed(granit_renderer, granit_command_recorder,
+                                              std::uint32_t, std::uint32_t, std::uint32_t,
+                                              std::int32_t, std::uint32_t) {
+  return GRANIT_ERROR_UNSUPPORTED;
+}
+
 granit_result renderer_registry::destroy_command_recorder(granit_renderer renderer,
                                                           granit_command_recorder recorder) {
   std::shared_ptr<command_recorder_record> record;
