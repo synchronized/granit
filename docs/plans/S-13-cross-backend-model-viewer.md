@@ -62,6 +62,41 @@ glTF 首阶段只是示例输入格式，加载代码位于 `examples/common/glt
 S-13A 的交付物包含依赖锁定记录、第三方通知、资产 manifest、可重入的获取
 脚本和离线路径验证。没有通过哈希与许可校验时，不得开始将完整资产接入查看器。
 
+### S-13B CPU Scene 与加载契约
+
+实现位于 `examples/common/gltf`，建议拆分为 `scene.h`、`loader.h/.cpp`、
+`image_decoder.h/.cpp` 和目录内 `CMakeLists.txt`。`scene.h` 是示例私有的 CPU 数据契约，
+不安装且不包含 `cgltf_*`、GPU 句柄或后端类型。
+
+CPU Scene 包含以下所有权对象：
+
+- `scene`：拥有 Node、Mesh、Material、Image 和 Sampler 数组及根 Node 索引。
+- `node`：保存名称、父子索引、可选 Mesh 索引、本地矩阵和已求值的世界矩阵。
+- `mesh` 与 `primitive`：保存 Primitive 范围、统一为 `uint32` 的索引、材质索引、
+  AABB，以及 Position/Normal/Tangent/UV0 语义数组；不保留 glTF Accessor 指针。
+- `material`：保存 Base Color、Metallic、Roughness、Normal Scale、Occlusion Strength、
+  Emissive Factor 以及五类 PBR Texture 引用。
+- `image`：拥有解码后的 RGBA8 像素、尺寸与 mip 链；颜色空间由 Material 使用
+  语义决定，不固化在可能被多处引用的 Image 上。
+- `sampler`：保存 glTF Filter 与 U/V Wrap；转换为 Granit Sampler 由 S-13C 负责。
+
+加载入口接受只读字节 Span 并填充输出 Scene，不直接访问文件系统；因此桌面文件、
+浏览器 Fetch 和内嵌 Fixture 可复用同一解析路径。首轮只接受 GLB 与其内嵌 Buffer/Image，
+外部 URI、Data URI 和网络获取不进入解析器。
+
+- 坐标保持 glTF 右手、Y 向上语义；矩阵转为 Granit 列主序数值，不翻转顶点、
+  索引绕序或纹理 V 坐标。剪裁空间差异由 Renderer/Shader 契约处理。
+- 只支持 Triangle Primitive、UV0、`uint8/uint16/uint32` 索引与 glTF 允许的对应
+  顶点分量类型；Sparse Accessor、Draco/Meshopt、UV1、Skin、Animation 与 Morph 明确拒绝。
+- Position 与 Normal 必须存在；使用任意 Texture 时必须存在 UV0，使用 Normal Texture
+  时必须存在 Tangent。首轮不在加载期自动生成法线或切线。
+- 解析成功后 Scene 不借用输入 Span 或第三方内存；失败保持输出不变。
+- 错误由示例私有 `load_error` 与可选诊断文本返回，区分非法 GLB、截断数据、
+  越界 Accessor、不支持 Feature、图片解码失败、数值溢出与内存不足。
+
+单元测试覆盖 Node 层级、TRS/矩阵、交错 Accessor、索引归一化、材质纹理语义、
+图片解码、AABB 与上述所有错误。测试只使用仓库内小型 Fixture，不下载头盔。
+
 ## 实施顺序
 
 1. **S-13A 资产与依赖评估**：锁定模型、`cgltf`、图片解码器版本、许可证及获取/打包方式。
