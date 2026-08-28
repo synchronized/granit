@@ -529,20 +529,7 @@ extern "C" granit_result granit_window_system_create(const granit_window_system_
 #if defined(_WIN32)
   if (desc->backend != GRANIT_WINDOW_BACKEND_AUTO && desc->backend != GRANIT_WINDOW_BACKEND_WIN32)
     return GRANIT_ERROR_UNSUPPORTED;
-  try {
-    auto system = std::make_shared<window_system_record>();
-    system->owner_thread = std::this_thread::get_id();
-    system->backend = GRANIT_WINDOW_BACKEND_WIN32;
-    const auto handle = allocate_handle();
-    std::lock_guard lock{registry_mutex};
-    systems.emplace(handle, std::move(system));
-    *output = handle;
-    return GRANIT_SUCCESS;
-  } catch (const std::bad_alloc&) {
-    return GRANIT_ERROR_OUT_OF_MEMORY;
-  } catch (...) {
-    return GRANIT_ERROR_INTERNAL;
-  }
+  return create_win32_system(output);
 #elif defined(GRANIT_WINDOW_HAS_XCB) || defined(GRANIT_WINDOW_HAS_WAYLAND)
 #if defined(GRANIT_WINDOW_HAS_WAYLAND)
   if (desc->backend == GRANIT_WINDOW_BACKEND_WAYLAND ||
@@ -625,21 +612,7 @@ extern "C" granit_result granit_window_system_destroy(granit_window_system handl
   if (system->input_user_data != nullptr)
     return GRANIT_ERROR_INVALID_ARGUMENT;
 #if defined(_WIN32)
-  std::vector<std::shared_ptr<window_record>> windows;
-  windows.reserve(system->windows.size());
-  for (auto& [unused, window] : system->windows) {
-    static_cast<void>(unused);
-    windows.push_back(std::move(window));
-  }
-  system->windows.clear();
-  {
-    std::lock_guard lock{registry_mutex};
-    systems.erase(handle);
-  }
-  for (const auto& window : windows)
-    if (window->window != nullptr)
-      DestroyWindow(window->window);
-  return GRANIT_SUCCESS;
+  return destroy_win32_system(handle, system);
 #elif defined(GRANIT_WINDOW_HAS_XCB) || defined(GRANIT_WINDOW_HAS_WAYLAND)
 #if defined(GRANIT_WINDOW_HAS_WAYLAND)
   if (system->backend == GRANIT_WINDOW_BACKEND_WAYLAND) {
@@ -689,16 +662,7 @@ extern "C" granit_result granit_window_poll_event(granit_window_system handle,
   if (!on_owner_thread(*system))
     return GRANIT_ERROR_INVALID_ARGUMENT;
 #if defined(_WIN32)
-  MSG message{};
-  while (PeekMessageW(&message, nullptr, 0, 0, PM_REMOVE) != 0) {
-    TranslateMessage(&message);
-    DispatchMessageW(&message);
-  }
-  if (system->events.empty())
-    return GRANIT_ERROR_NOT_READY;
-  *event = system->events.front();
-  system->events.pop_front();
-  return GRANIT_SUCCESS;
+  return poll_win32_event(system, event);
 #elif defined(GRANIT_WINDOW_HAS_XCB) || defined(GRANIT_WINDOW_HAS_WAYLAND)
 #if defined(GRANIT_WINDOW_HAS_WAYLAND)
   if (system->backend == GRANIT_WINDOW_BACKEND_WAYLAND) {
@@ -741,44 +705,7 @@ extern "C" granit_result granit_window_create(granit_window_system system_handle
   if (!on_owner_thread(*system))
     return GRANIT_ERROR_INVALID_ARGUMENT;
 #if defined(_WIN32)
-  try {
-    ensure_window_class();
-    if (!window_class_registered)
-      return GRANIT_ERROR_BACKEND_UNAVAILABLE;
-    std::wstring title;
-    if (!utf8_to_wide(desc->title, desc->title_length, title))
-      return GRANIT_ERROR_INVALID_ARGUMENT;
-    auto record = std::make_shared<window_record>();
-    record->handle = allocate_handle();
-    record->system = system;
-    record->instance = GetModuleHandleW(nullptr);
-    record->high_dpi = (desc->flags & GRANIT_WINDOW_HIGH_DPI_BIT) != 0;
-    DWORD style = WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX;
-    if ((desc->flags & GRANIT_WINDOW_RESIZABLE_BIT) != 0)
-      style |= WS_THICKFRAME | WS_MAXIMIZEBOX;
-    RECT rectangle{0, 0, static_cast<LONG>(desc->width), static_cast<LONG>(desc->height)};
-    AdjustWindowRect(&rectangle, style, FALSE);
-    const auto previous_dpi_context =
-        record->high_dpi ? SetThreadDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2)
-                         : nullptr;
-    record->window =
-        CreateWindowExW(0, window_class_name, title.c_str(), style, CW_USEDEFAULT, CW_USEDEFAULT,
-                        rectangle.right - rectangle.left, rectangle.bottom - rectangle.top, nullptr,
-                        nullptr, record->instance, record.get());
-    if (previous_dpi_context != nullptr)
-      SetThreadDpiAwarenessContext(previous_dpi_context);
-    if (record->window == nullptr)
-      return GRANIT_ERROR_BACKEND_UNAVAILABLE;
-    system->windows.emplace(record->handle, record);
-    if ((desc->flags & GRANIT_WINDOW_VISIBLE_BIT) != 0)
-      ShowWindow(record->window, SW_SHOW);
-    *output = record->handle;
-    return GRANIT_SUCCESS;
-  } catch (const std::bad_alloc&) {
-    return GRANIT_ERROR_OUT_OF_MEMORY;
-  } catch (...) {
-    return GRANIT_ERROR_INTERNAL;
-  }
+  return create_win32_window(system, desc, output);
 #elif defined(GRANIT_WINDOW_HAS_XCB) || defined(GRANIT_WINDOW_HAS_WAYLAND)
 #if defined(GRANIT_WINDOW_HAS_WAYLAND)
   if (system->backend == GRANIT_WINDOW_BACKEND_WAYLAND) {
@@ -916,9 +843,7 @@ extern "C" granit_result granit_window_destroy(granit_window_system system_handl
   if (system->input_window_destroyed != nullptr)
     system->input_window_destroyed(system->input_user_data, window_handle);
 #if defined(_WIN32)
-  auto window = std::move(found->second);
-  system->windows.erase(found);
-  return DestroyWindow(window->window) != FALSE ? GRANIT_SUCCESS : GRANIT_ERROR_BACKEND_UNAVAILABLE;
+  return destroy_win32_window(system, window_handle);
 #elif defined(GRANIT_WINDOW_HAS_XCB) || defined(GRANIT_WINDOW_HAS_WAYLAND)
   const auto window = std::move(found->second);
   system->windows.erase(found);
@@ -1036,9 +961,7 @@ extern "C" granit_result granit_window_get_win32(granit_window_system system_han
   if (found == system->windows.end())
     return GRANIT_ERROR_INVALID_HANDLE;
 #if defined(_WIN32)
-  *instance = found->second->instance;
-  *native_window = found->second->window;
-  return GRANIT_SUCCESS;
+  return get_win32_window(found->second, instance, native_window);
 #else
   return GRANIT_ERROR_UNSUPPORTED;
 #endif

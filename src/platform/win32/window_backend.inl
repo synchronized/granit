@@ -127,3 +127,110 @@ bool utf8_to_wide(const char* text, std::uint32_t length, std::wstring& output) 
   return MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, text, static_cast<int>(length),
                              output.data(), required) == required;
 }
+
+granit_result create_win32_system(granit_window_system* output) {
+  try {
+    auto system = std::make_shared<window_system_record>();
+    system->owner_thread = std::this_thread::get_id();
+    system->backend = GRANIT_WINDOW_BACKEND_WIN32;
+    const auto handle = allocate_handle();
+    std::lock_guard lock{registry_mutex};
+    systems.emplace(handle, std::move(system));
+    *output = handle;
+    return GRANIT_SUCCESS;
+  } catch (const std::bad_alloc&) {
+    return GRANIT_ERROR_OUT_OF_MEMORY;
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+granit_result destroy_win32_system(granit_window_system handle,
+                                   const std::shared_ptr<window_system_record>& system) {
+  std::vector<std::shared_ptr<window_record>> windows;
+  windows.reserve(system->windows.size());
+  for (auto& [unused, window] : system->windows) {
+    static_cast<void>(unused);
+    windows.push_back(std::move(window));
+  }
+  system->windows.clear();
+  {
+    std::lock_guard lock{registry_mutex};
+    systems.erase(handle);
+  }
+  for (const auto& window : windows)
+    if (window->window != nullptr)
+      DestroyWindow(window->window);
+  return GRANIT_SUCCESS;
+}
+
+granit_result poll_win32_event(const std::shared_ptr<window_system_record>& system,
+                               granit_window_event* event) {
+  MSG message{};
+  while (PeekMessageW(&message, nullptr, 0, 0, PM_REMOVE) != 0) {
+    TranslateMessage(&message);
+    DispatchMessageW(&message);
+  }
+  if (system->events.empty())
+    return GRANIT_ERROR_NOT_READY;
+  *event = system->events.front();
+  system->events.pop_front();
+  return GRANIT_SUCCESS;
+}
+
+granit_result create_win32_window(const std::shared_ptr<window_system_record>& system,
+                                  const granit_window_desc* desc, granit_window* output) {
+  try {
+    ensure_window_class();
+    if (!window_class_registered)
+      return GRANIT_ERROR_BACKEND_UNAVAILABLE;
+    std::wstring title;
+    if (!utf8_to_wide(desc->title, desc->title_length, title))
+      return GRANIT_ERROR_INVALID_ARGUMENT;
+    auto record = std::make_shared<window_record>();
+    record->handle = allocate_handle();
+    record->system = system;
+    record->instance = GetModuleHandleW(nullptr);
+    record->high_dpi = (desc->flags & GRANIT_WINDOW_HIGH_DPI_BIT) != 0;
+    DWORD style = WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX;
+    if ((desc->flags & GRANIT_WINDOW_RESIZABLE_BIT) != 0)
+      style |= WS_THICKFRAME | WS_MAXIMIZEBOX;
+    RECT rectangle{0, 0, static_cast<LONG>(desc->width), static_cast<LONG>(desc->height)};
+    AdjustWindowRect(&rectangle, style, FALSE);
+    const auto previous_dpi_context =
+        record->high_dpi ? SetThreadDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2)
+                         : nullptr;
+    record->window =
+        CreateWindowExW(0, window_class_name, title.c_str(), style, CW_USEDEFAULT, CW_USEDEFAULT,
+                        rectangle.right - rectangle.left, rectangle.bottom - rectangle.top, nullptr,
+                        nullptr, record->instance, record.get());
+    if (previous_dpi_context != nullptr)
+      SetThreadDpiAwarenessContext(previous_dpi_context);
+    if (record->window == nullptr)
+      return GRANIT_ERROR_BACKEND_UNAVAILABLE;
+    system->windows.emplace(record->handle, record);
+    if ((desc->flags & GRANIT_WINDOW_VISIBLE_BIT) != 0)
+      ShowWindow(record->window, SW_SHOW);
+    *output = record->handle;
+    return GRANIT_SUCCESS;
+  } catch (const std::bad_alloc&) {
+    return GRANIT_ERROR_OUT_OF_MEMORY;
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+granit_result destroy_win32_window(const std::shared_ptr<window_system_record>& system,
+                                   granit_window handle) {
+  const auto found = system->windows.find(handle);
+  auto window = std::move(found->second);
+  system->windows.erase(found);
+  return DestroyWindow(window->window) != FALSE ? GRANIT_SUCCESS : GRANIT_ERROR_BACKEND_UNAVAILABLE;
+}
+
+granit_result get_win32_window(const std::shared_ptr<window_record>& window, void** instance,
+                               void** native_window) {
+  *instance = window->instance;
+  *native_window = window->window;
+  return GRANIT_SUCCESS;
+}
