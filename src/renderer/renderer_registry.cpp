@@ -3046,6 +3046,7 @@ granit_result renderer_registry::create_command_recorder(granit_renderer rendere
     record->owner = owner;
     record->queue = std::dynamic_pointer_cast<backend_queue>(owner);
     record->commands = std::dynamic_pointer_cast<backend_command_renderer>(owner);
+    record->transfers = std::dynamic_pointer_cast<backend_transfer_command_renderer>(owner);
     if (!record->queue || !record->commands)
       return GRANIT_ERROR_INTERNAL;
     record->renderer = std::dynamic_pointer_cast<renderer_state>(owner);
@@ -3427,6 +3428,8 @@ granit_result renderer_registry::copy_buffer(granit_renderer renderer,
   if (!recorder_record) {
     return GRANIT_ERROR_INVALID_HANDLE;
   }
+  if (!recorder_record->transfers)
+    return GRANIT_ERROR_UNSUPPORTED;
   std::shared_ptr<buffer_record> source_record;
   std::shared_ptr<buffer_record> destination_record;
   {
@@ -3476,8 +3479,8 @@ granit_result renderer_registry::copy_buffer(granit_renderer renderer,
   retain_resource(recorder_record->retained_resources, source_record, source_record->metadata);
   retain_resource(recorder_record->retained_resources, destination_record,
                   destination_record->metadata);
-  return recorder_record->renderer->copy_buffer(*recorder_record->native, *source_record->native,
-                                                *destination_record->native, regions);
+  return recorder_record->transfers->copy_buffer(*recorder_record->native, *source_record->native,
+                                                 *destination_record->native, regions);
 }
 
 granit_result renderer_registry::copy_texture_to_buffer(granit_renderer renderer,
@@ -3489,6 +3492,8 @@ granit_result renderer_registry::copy_texture_to_buffer(granit_renderer renderer
   auto recorder_record = acquire_command_recorder(renderer, recorder);
   if (!recorder_record)
     return GRANIT_ERROR_INVALID_HANDLE;
+  if (!recorder_record->transfers)
+    return GRANIT_ERROR_UNSUPPORTED;
   std::shared_ptr<texture_record> source_record;
   std::shared_ptr<buffer_record> destination_record;
   {
@@ -3558,7 +3563,7 @@ granit_result renderer_registry::copy_texture_to_buffer(granit_renderer renderer
   retain_resource(recorder_record->retained_resources, source_record, source_record->metadata);
   retain_resource(recorder_record->retained_resources, destination_record,
                   destination_record->metadata);
-  return recorder_record->renderer->copy_texture_to_buffer(
+  return recorder_record->transfers->copy_texture_to_buffer(
       *recorder_record->native, *source_record->native, *destination_record->native, desc.format,
       layout, region);
 }
@@ -3572,6 +3577,8 @@ granit_result renderer_registry::copy_buffer_to_texture(granit_renderer renderer
   auto recorder_record = acquire_command_recorder(renderer, recorder);
   if (!recorder_record)
     return GRANIT_ERROR_INVALID_HANDLE;
+  if (!recorder_record->transfers)
+    return GRANIT_ERROR_UNSUPPORTED;
   std::shared_ptr<buffer_record> source_record;
   std::shared_ptr<texture_record> destination_record;
   {
@@ -3641,7 +3648,7 @@ granit_result renderer_registry::copy_buffer_to_texture(granit_renderer renderer
   retain_resource(recorder_record->retained_resources, source_record, source_record->metadata);
   retain_resource(recorder_record->retained_resources, destination_record,
                   destination_record->metadata);
-  return recorder_record->renderer->copy_buffer_to_texture(
+  return recorder_record->transfers->copy_buffer_to_texture(
       *recorder_record->native, *source_record->native, *destination_record->native, desc.format,
       layout, region);
 }
@@ -3653,6 +3660,8 @@ granit_result renderer_registry::copy_texture(granit_renderer renderer,
   auto recorder_record = acquire_command_recorder(renderer, recorder);
   if (!recorder_record)
     return GRANIT_ERROR_INVALID_HANDLE;
+  if (!recorder_record->transfers)
+    return GRANIT_ERROR_UNSUPPORTED;
   std::shared_ptr<texture_record> source_record;
   std::shared_ptr<texture_record> destination_record;
   {
@@ -3716,8 +3725,8 @@ granit_result renderer_registry::copy_texture(granit_renderer renderer,
   retain_resource(recorder_record->retained_resources, source_record, source_record->metadata);
   retain_resource(recorder_record->retained_resources, destination_record,
                   destination_record->metadata);
-  return recorder_record->renderer->copy_texture(*recorder_record->native, *source_record->native,
-                                                 *destination_record->native, region);
+  return recorder_record->transfers->copy_texture(*recorder_record->native, *source_record->native,
+                                                  *destination_record->native, region);
 }
 
 granit_result renderer_registry::generate_mipmaps(granit_renderer renderer,
@@ -3727,6 +3736,8 @@ granit_result renderer_registry::generate_mipmaps(granit_renderer renderer,
   auto recorder_record = acquire_command_recorder(renderer, recorder);
   if (!recorder_record)
     return GRANIT_ERROR_INVALID_HANDLE;
+  if (!recorder_record->transfers)
+    return GRANIT_ERROR_UNSUPPORTED;
   std::shared_ptr<texture_record> texture_record_state;
   {
     std::lock_guard lock{mutex_};
@@ -3742,7 +3753,7 @@ granit_result renderer_registry::generate_mipmaps(granit_renderer renderer,
   if (depth_format(desc.format) || desc.sample_count != GRANIT_SAMPLE_COUNT_1 ||
       (desc.usage & GRANIT_TEXTURE_USAGE_TRANSFER_SOURCE_BIT) == 0 ||
       (desc.usage & GRANIT_TEXTURE_USAGE_TRANSFER_DESTINATION_BIT) == 0 ||
-      !recorder_record->renderer->texture_supports_linear_blit(desc.format)) {
+      !recorder_record->transfers->texture_supports_linear_blit(desc.format)) {
     return GRANIT_ERROR_UNSUPPORTED;
   }
   if (range.level_count < 2 || range.array_layer_count == 0 ||
@@ -3757,8 +3768,8 @@ granit_result renderer_registry::generate_mipmaps(granit_renderer renderer,
     return GRANIT_ERROR_INVALID_ARGUMENT;
   retain_resource(recorder_record->retained_resources, texture_record_state,
                   texture_record_state->metadata);
-  return recorder_record->renderer->generate_mipmaps(*recorder_record->native,
-                                                     *texture_record_state->native, desc, range);
+  return recorder_record->transfers->generate_mipmaps(*recorder_record->native,
+                                                      *texture_record_state->native, desc, range);
 }
 
 granit_result renderer_registry::fill_buffer(granit_renderer renderer,
@@ -3769,6 +3780,8 @@ granit_result renderer_registry::fill_buffer(granit_renderer renderer,
   if (!recorder_record) {
     return GRANIT_ERROR_INVALID_HANDLE;
   }
+  if (!recorder_record->transfers)
+    return GRANIT_ERROR_UNSUPPORTED;
   std::shared_ptr<buffer_record> buffer_record_state;
   {
     std::lock_guard lock{mutex_};
@@ -3794,8 +3807,8 @@ granit_result renderer_registry::fill_buffer(granit_renderer renderer,
   }
   retain_resource(recorder_record->retained_resources, buffer_record_state,
                   buffer_record_state->metadata);
-  return recorder_record->renderer->fill_buffer(*recorder_record->native,
-                                                *buffer_record_state->native, offset, size, value);
+  return recorder_record->transfers->fill_buffer(*recorder_record->native,
+                                                 *buffer_record_state->native, offset, size, value);
 }
 
 granit_result renderer_registry::bind_graphics_pipeline(granit_renderer renderer,

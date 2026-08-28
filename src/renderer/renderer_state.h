@@ -28,6 +28,7 @@
 #include "backend/queue.h"
 #include "backend/renderer.h"
 #include "backend/rendering.h"
+#include "backend/transfer.h"
 #include "backend/upload.h"
 #include "backend/vulkan/command_recorder.h"
 #include "backend/vulkan/device.h"
@@ -46,6 +47,7 @@ class renderer_state final : public backend_renderer,
                              public backend_presentation_renderer,
                              public backend_queue,
                              public backend_command_renderer,
+                             public backend_transfer_command_renderer,
                              public std::enable_shared_from_this<renderer_state> {
 public:
   renderer_state() = default;
@@ -128,7 +130,8 @@ public:
   upload_batch(std::span<const backend_upload_operation> uploads) noexcept;
   [[nodiscard]] granit_result create_native_texture(const granit_texture_desc& desc,
                                                     backend_texture_resource& texture) noexcept;
-  [[nodiscard]] bool texture_supports_linear_blit(granit_texture_format format) const noexcept;
+  [[nodiscard]] bool
+  texture_supports_linear_blit(granit_texture_format format) const noexcept override;
   [[nodiscard]] granit_result upload_texture(backend_texture_resource& texture,
                                              granit_texture_format format, const void* data,
                                              std::uint64_t size,
@@ -186,33 +189,31 @@ public:
   discard_command_recorder(backend_command_recorder_resource& recorder) noexcept override;
   [[nodiscard]] bool
   command_recorder_is_recording(backend_command_recorder_resource& recorder) noexcept override;
-  [[nodiscard]] granit_result copy_buffer(backend_command_recorder_resource& recorder,
-                                          backend_buffer_resource& source,
-                                          backend_buffer_resource& destination,
-                                          std::span<const granit_buffer_copy_region> regions);
-  [[nodiscard]] granit_result copy_texture_to_buffer(backend_command_recorder_resource& recorder,
-                                                     backend_texture_resource& source,
-                                                     backend_buffer_resource& destination,
-                                                     granit_texture_format format,
-                                                     const granit_texture_data_layout& layout,
-                                                     const granit_texture_write_region& region);
-  [[nodiscard]] granit_result copy_buffer_to_texture(backend_command_recorder_resource& recorder,
-                                                     backend_buffer_resource& source,
-                                                     backend_texture_resource& destination,
-                                                     granit_texture_format format,
-                                                     const granit_texture_data_layout& layout,
-                                                     const granit_texture_write_region& region);
+  [[nodiscard]] granit_result
+  copy_buffer(backend_command_recorder_resource& recorder, backend_buffer_resource& source,
+              backend_buffer_resource& destination,
+              std::span<const granit_buffer_copy_region> regions) override;
+  [[nodiscard]] granit_result
+  copy_texture_to_buffer(backend_command_recorder_resource& recorder,
+                         backend_texture_resource& source, backend_buffer_resource& destination,
+                         granit_texture_format format, const granit_texture_data_layout& layout,
+                         const granit_texture_write_region& region) override;
+  [[nodiscard]] granit_result
+  copy_buffer_to_texture(backend_command_recorder_resource& recorder,
+                         backend_buffer_resource& source, backend_texture_resource& destination,
+                         granit_texture_format format, const granit_texture_data_layout& layout,
+                         const granit_texture_write_region& region) override;
   [[nodiscard]] granit_result copy_texture(backend_command_recorder_resource& recorder,
                                            backend_texture_resource& source,
                                            backend_texture_resource& destination,
-                                           const granit_texture_copy_region& region);
+                                           const granit_texture_copy_region& region) override;
   [[nodiscard]] granit_result generate_mipmaps(backend_command_recorder_resource& recorder,
                                                backend_texture_resource& texture,
                                                const granit_texture_desc& desc,
-                                               const granit_texture_mipmap_range& range);
+                                               const granit_texture_mipmap_range& range) override;
   [[nodiscard]] granit_result fill_buffer(backend_command_recorder_resource& recorder,
                                           backend_buffer_resource& buffer, std::uint64_t offset,
-                                          std::uint64_t size, std::uint32_t value);
+                                          std::uint64_t size, std::uint32_t value) override;
   [[nodiscard]] granit_result
   bind_graphics_pipeline(backend_command_recorder_resource& recorder,
                          backend_graphics_pipeline_resource& pipeline) noexcept;
