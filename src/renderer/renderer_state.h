@@ -25,6 +25,7 @@
 #include "backend/lifecycle.h"
 #include "backend/presentation.h"
 #include "backend/queue.h"
+#include "backend/renderer.h"
 #include "backend/rendering.h"
 #include "backend/upload.h"
 #include "backend/vulkan/command_recorder.h"
@@ -40,7 +41,8 @@
 
 namespace granit::detail {
 
-class renderer_state final : public backend_queue,
+class renderer_state final : public backend_renderer,
+                             public backend_queue,
                              public std::enable_shared_from_this<renderer_state> {
 public:
   renderer_state() = default;
@@ -304,12 +306,16 @@ public:
   [[nodiscard]] bool device_lost() const noexcept {
     return lifecycle_.status().state == backend_lifecycle_state::device_lost;
   }
-  [[nodiscard]] backend_lifecycle_status lifecycle_status() const noexcept {
+  [[nodiscard]] backend_lifecycle_status lifecycle_status() const noexcept override {
     return lifecycle_.status();
   }
-  [[nodiscard]] granit_result process_backend_events() noexcept { return lifecycle_.gate(); }
+  [[nodiscard]] granit_result process_backend_events() noexcept override {
+    return lifecycle_.gate();
+  }
   [[nodiscard]] const diagnostic_sink& diagnostics() const noexcept { return diagnostics_; }
-  [[nodiscard]] const backend_capabilities& capabilities() const noexcept { return capabilities_; }
+  [[nodiscard]] const backend_capabilities& capabilities() const noexcept override {
+    return capabilities_;
+  }
   [[nodiscard]] const vulkan_instance& instance() const noexcept { return instance_; }
   [[nodiscard]] const vulkan_device& device() const noexcept { return device_; }
 

@@ -77,8 +77,11 @@ granit_result renderer_registry::create(std::string_view application_name, bool 
       return GRANIT_ERROR_OUT_OF_MEMORY;
     }
     try {
-      renderers_.emplace(handle, std::move(state));
+      backend_renderers_.emplace(handle, state);
+      renderers_.emplace(handle, state);
     } catch (...) {
+      renderers_.erase(handle);
+      backend_renderers_.erase(handle);
       static_cast<void>(handles_.erase(handle, resource_type::renderer, 0));
       throw;
     }
@@ -93,7 +96,7 @@ granit_result renderer_registry::create(std::string_view application_name, bool 
 
 granit_result renderer_registry::get_limits(granit_renderer renderer,
                                             granit_renderer_limits& limits) {
-  const auto state = acquire(renderer);
+  const auto state = acquire_backend(renderer);
   if (!state) {
     return GRANIT_ERROR_INVALID_HANDLE;
   }
@@ -107,7 +110,7 @@ granit_result renderer_registry::get_limits(granit_renderer renderer,
 
 granit_result renderer_registry::get_status(granit_renderer renderer,
                                             granit_renderer_status& status) {
-  const auto state = acquire(renderer);
+  const auto state = acquire_backend(renderer);
   if (!state) {
     return GRANIT_ERROR_INVALID_HANDLE;
   }
@@ -132,7 +135,7 @@ granit_result renderer_registry::get_status(granit_renderer renderer,
 }
 
 granit_result renderer_registry::process_events(granit_renderer renderer) {
-  const auto state = acquire(renderer);
+  const auto state = acquire_backend(renderer);
   return state ? state->process_backend_events() : GRANIT_ERROR_INVALID_HANDLE;
 }
 
@@ -222,6 +225,7 @@ granit_result renderer_registry::destroy(granit_renderer renderer) {
     }
     state = std::move(found->second);
     renderers_.erase(found);
+    backend_renderers_.erase(renderer);
     if (state->validation_enabled()) {
       for (const auto& [handle, record] : frame_contexts_) {
         if (record->renderer == state)
@@ -4125,6 +4129,15 @@ std::shared_ptr<renderer_state> renderer_registry::acquire(granit_renderer rende
   }
   const auto found = renderers_.find(renderer);
   return found == renderers_.end() ? std::shared_ptr<renderer_state>{} : found->second;
+}
+
+std::shared_ptr<backend_renderer> renderer_registry::acquire_backend(granit_renderer renderer) {
+  std::lock_guard lock{mutex_};
+  if (handles_.find(renderer, resource_type::renderer, 0) == nullptr) {
+    return {};
+  }
+  const auto found = backend_renderers_.find(renderer);
+  return found == backend_renderers_.end() ? std::shared_ptr<backend_renderer>{} : found->second;
 }
 
 std::uint32_t renderer_registry::allocate_domain() noexcept {

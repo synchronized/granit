@@ -115,7 +115,7 @@ void tick(void*) noexcept {
   if (state.status != startup_status::provider_pending) {
     return;
   }
-  const auto process_result = state.renderer.process_events();
+  const auto process_result = state.renderer.process_backend_events();
   if (process_result != GRANIT_SUCCESS) {
     fail("provider-events", process_result);
     return;

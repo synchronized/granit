@@ -80,6 +80,7 @@ target_sources(
     backend/presentation.h
     backend/queue.h
     backend/rendering.h
+    backend/renderer.h
     backend/resources.h
     backend/upload.h
     backend/vulkan/device.cpp

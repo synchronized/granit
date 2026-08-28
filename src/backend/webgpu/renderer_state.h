@@ -11,12 +11,13 @@
 #include "backend/capabilities.h"
 #include "backend/lifecycle.h"
 #include "backend/plugin_loader.h"
+#include "backend/renderer.h"
 #include "backend/webgpu/presentation_adapter.h"
 
 namespace granit::detail {
 
 /** 集中管理 WebGPU Provider、异步生命周期、能力快照和呈现适配器。 */
-class webgpu_renderer_state {
+class webgpu_renderer_state final : public backend_renderer {
 public:
   webgpu_renderer_state() = default;
   ~webgpu_renderer_state();
@@ -27,10 +28,12 @@ public:
   [[nodiscard]] granit_result initialize_static(const granit_backend_plugin_api* api,
                                                 granit_diagnostic_callback diagnostic_callback,
                                                 void* diagnostic_user_data) noexcept;
-  [[nodiscard]] granit_result process_events() noexcept;
+  [[nodiscard]] granit_result process_backend_events() noexcept override;
 
-  [[nodiscard]] backend_lifecycle_status lifecycle_status() const noexcept;
-  [[nodiscard]] const backend_capabilities& capabilities() const noexcept { return capabilities_; }
+  [[nodiscard]] backend_lifecycle_status lifecycle_status() const noexcept override;
+  [[nodiscard]] const backend_capabilities& capabilities() const noexcept override {
+    return capabilities_;
+  }
   [[nodiscard]] webgpu_presentation_adapter* presentation() noexcept { return presentation_.get(); }
 
 private:

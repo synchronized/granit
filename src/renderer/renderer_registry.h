@@ -30,6 +30,7 @@
 
 #include "backend/access.h"
 #include "backend/presentation.h"
+#include "backend/renderer.h"
 #include "backend/resources.h"
 #include "backend/upload.h"
 #include "core/handle_table.h"
@@ -60,6 +61,7 @@ public:
                                               std::string_view name);
   /** 向有效 Renderer 的回调发送公共 API 参数或句柄校验诊断。 */
   void emit_validation_diagnostic(granit_renderer renderer, std::string_view message) noexcept;
+  [[nodiscard]] std::shared_ptr<backend_renderer> acquire_backend(granit_renderer renderer);
   [[nodiscard]] std::shared_ptr<renderer_state> acquire(granit_renderer renderer);
   [[nodiscard]] granit_result create_win32_surface(granit_renderer renderer, void* native_instance,
                                                    void* native_window, granit_surface& surface);
@@ -336,6 +338,8 @@ private:
 
   std::mutex mutex_;
   handle_table handles_;
+  std::unordered_map<granit_renderer, std::shared_ptr<backend_renderer>> backend_renderers_;
+  // Vulkan 资源路径迁移完成前，保留具体状态视图；它与通用根表共享同一状态对象。
   std::unordered_map<granit_renderer, std::shared_ptr<renderer_state>> renderers_;
   struct surface_record {
     resource_metadata metadata;

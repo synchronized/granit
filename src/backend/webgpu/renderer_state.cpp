@@ -69,7 +69,7 @@ webgpu_renderer_state::initialize_static(const granit_backend_plugin_api* api,
   return refresh_result == GRANIT_ERROR_NOT_READY ? GRANIT_SUCCESS : refresh_result;
 }
 
-granit_result webgpu_renderer_state::process_events() noexcept {
+granit_result webgpu_renderer_state::process_backend_events() noexcept {
   if (instance_ == 0) {
     return GRANIT_ERROR_INVALID_HANDLE;
   }
