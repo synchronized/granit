@@ -54,12 +54,18 @@ typedef unsigned int WGPUPrimitiveTopology;
 typedef unsigned int WGPUTextureAspect;
 typedef unsigned int WGPULoadOp;
 typedef unsigned int WGPUStoreOp;
+typedef unsigned int WGPUDeviceLostReason;
 
 #define WGPU_FALSE 0
 #define WGPU_TRUE 1
 #define WGPU_STRLEN ((size_t)-1)
 #define WGPUInstanceFeatureName_TimedWaitAny 1
 #define WGPUCallbackMode_WaitAnyOnly 1
+#define WGPUCallbackMode_AllowSpontaneous 2
+#define WGPUDeviceLostReason_Unknown 1
+#define WGPUDeviceLostReason_Destroyed 2
+#define WGPUDeviceLostReason_CallbackCancelled 3
+#define WGPUDeviceLostReason_FailedCreation 4
 #define WGPURequestAdapterStatus_Success 1
 #define WGPURequestDeviceStatus_Success 1
 #define WGPUWaitStatus_Success 1
@@ -426,6 +432,8 @@ typedef void (*WGPURequestAdapterCallback)(WGPURequestAdapterStatus, WGPUAdapter
                                            void*, void*);
 typedef void (*WGPURequestDeviceCallback)(WGPURequestDeviceStatus, WGPUDevice, WGPUStringView,
                                           void*, void*);
+typedef void (*WGPUDeviceLostCallback)(const WGPUDevice*, WGPUDeviceLostReason, WGPUStringView,
+                                       void*, void*);
 typedef void (*WGPUBufferMapCallback)(WGPUMapAsyncStatus, WGPUStringView, void*, void*);
 
 typedef struct WGPURequestAdapterCallbackInfo {
@@ -444,6 +452,28 @@ typedef struct WGPURequestDeviceCallbackInfo {
   void* userdata2;
 } WGPURequestDeviceCallbackInfo;
 
+typedef struct WGPUDeviceLostCallbackInfo {
+  void* nextInChain;
+  WGPUCallbackMode mode;
+  WGPUDeviceLostCallback callback;
+  void* userdata1;
+  void* userdata2;
+} WGPUDeviceLostCallbackInfo;
+
+typedef struct WGPUDeviceDescriptor {
+  void* nextInChain;
+  WGPUStringView label;
+  size_t requiredFeatureCount;
+  const void* requiredFeatures;
+  const WGPULimits* requiredLimits;
+  char defaultQueue[32];
+  WGPUDeviceLostCallbackInfo deviceLostCallbackInfo;
+  char uncapturedErrorCallbackInfo[40];
+} WGPUDeviceDescriptor;
+#define WGPU_DEVICE_DESCRIPTOR_INIT                                                                \
+  {                                                                                                \
+  }
+
 typedef struct WGPUBufferMapCallbackInfo {
   void* nextInChain;
   WGPUCallbackMode mode;
@@ -460,10 +490,11 @@ WGPUFuture wgpuInstanceRequestAdapter(WGPUInstance instance,
                                       WGPURequestAdapterCallbackInfo callbackInfo);
 WGPUWaitStatus wgpuInstanceWaitAny(WGPUInstance instance, size_t futureCount,
                                    WGPUFutureWaitInfo* futures, unsigned long long timeoutNS);
-WGPUFuture wgpuAdapterRequestDevice(WGPUAdapter adapter, const void* descriptor,
+WGPUFuture wgpuAdapterRequestDevice(WGPUAdapter adapter, const WGPUDeviceDescriptor* descriptor,
                                     WGPURequestDeviceCallbackInfo callbackInfo);
 void wgpuAdapterRelease(WGPUAdapter adapter);
 void wgpuDeviceRelease(WGPUDevice device);
+void wgpuDeviceForceLoss(WGPUDevice device, WGPUDeviceLostReason reason, WGPUStringView message);
 WGPUStatus wgpuDeviceGetLimits(WGPUDevice device, WGPULimits* limits);
 WGPUQueue wgpuDeviceGetQueue(WGPUDevice device);
 void wgpuQueueRelease(WGPUQueue queue);

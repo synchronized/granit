@@ -8,7 +8,9 @@
 
 struct WGPUInstanceImpl {};
 struct WGPUAdapterImpl {};
-struct WGPUDeviceImpl {};
+struct WGPUDeviceImpl {
+  WGPUDeviceLostCallbackInfo lost_callback{};
+};
 struct WGPUQueueImpl {};
 struct WGPUBufferImpl {
   std::vector<unsigned char> bytes;
@@ -69,16 +71,34 @@ extern "C" WGPUWaitStatus wgpuInstanceWaitAny(WGPUInstance, size_t, WGPUFutureWa
   return WGPUWaitStatus_Success;
 }
 
-extern "C" WGPUFuture wgpuAdapterRequestDevice(WGPUAdapter, const void*,
+extern "C" WGPUFuture wgpuAdapterRequestDevice(WGPUAdapter, const WGPUDeviceDescriptor* descriptor,
                                                WGPURequestDeviceCallbackInfo callback_info) {
-  callback_info.callback(WGPURequestDeviceStatus_Success, new WGPUDeviceImpl, {},
-                         callback_info.userdata1, callback_info.userdata2);
+  auto* device = new WGPUDeviceImpl;
+  if (descriptor != nullptr)
+    device->lost_callback = descriptor->deviceLostCallbackInfo;
+  callback_info.callback(WGPURequestDeviceStatus_Success, device, {}, callback_info.userdata1,
+                         callback_info.userdata2);
   return {2};
 }
 
 extern "C" void wgpuAdapterRelease(WGPUAdapter adapter) { delete adapter; }
 
-extern "C" void wgpuDeviceRelease(WGPUDevice device) { delete device; }
+extern "C" void wgpuDeviceRelease(WGPUDevice device) {
+  if (device->lost_callback.callback != nullptr) {
+    device->lost_callback.callback(&device, WGPUDeviceLostReason_Destroyed, {},
+                                   device->lost_callback.userdata1,
+                                   device->lost_callback.userdata2);
+  }
+  delete device;
+}
+
+extern "C" void wgpuDeviceForceLoss(WGPUDevice device, WGPUDeviceLostReason reason,
+                                    WGPUStringView message) {
+  if (device->lost_callback.callback != nullptr) {
+    device->lost_callback.callback(&device, reason, message, device->lost_callback.userdata1,
+                                   device->lost_callback.userdata2);
+  }
+}
 
 extern "C" WGPUStatus wgpuDeviceGetLimits(WGPUDevice, WGPULimits* limits) {
   if (limits == nullptr) {

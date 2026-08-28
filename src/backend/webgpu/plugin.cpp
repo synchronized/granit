@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
+#include "backend/callback_lifetime.h"
 #include "backend/lifecycle.h"
 #include "backend/plugin_api.h"
 
@@ -74,7 +75,10 @@ struct webgpu_instance {
   WGPUQueue queue;
   granit_backend_plugin_capabilities capabilities;
   granit::detail::backend_lifecycle lifecycle;
+  granit::detail::backend_callback_lifetime callback_lifetime;
+  granit::detail::backend_callback_ticket device_lost_ticket;
   bool deferred_initialization_for_test;
+  bool force_device_loss_for_test;
   std::unordered_map<granit_backend_plugin_buffer, buffer_record> buffers;
   std::unordered_map<granit_backend_plugin_texture, texture_record> textures;
   std::unordered_map<granit_backend_plugin_texture_view, texture_view_record> texture_views;
@@ -94,7 +98,8 @@ struct webgpu_instance {
   webgpu_instance(const granit_backend_plugin_host_api& host_api,
                   WGPUInstance native_instance) noexcept
       : host(host_api), instance(native_instance), adapter(nullptr), device(nullptr),
-        queue(nullptr), capabilities{}, deferred_initialization_for_test(false) {}
+        queue(nullptr), capabilities{}, device_lost_ticket(callback_lifetime.ticket()),
+        deferred_initialization_for_test(false), force_device_loss_for_test(false) {}
 };
 
 constexpr std::uint64_t request_timeout_ns = UINT64_C(10000000000);
@@ -148,6 +153,7 @@ void deallocate(const granit_backend_plugin_host_api& host, void* memory) noexce
 }
 
 void release_resources(webgpu_instance& state) noexcept {
+  state.callback_lifetime.invalidate();
   for (const auto& [handle, command_buffer] : state.command_buffers) {
     static_cast<void>(handle);
     wgpuCommandBufferRelease(command_buffer);
@@ -238,6 +244,20 @@ void emit_dawn_message(const granit_backend_plugin_host_api* host,
   const auto bounded_length = static_cast<std::uint32_t>(
       (std::min)(length, static_cast<std::size_t>(std::numeric_limits<std::uint32_t>::max())));
   emit(*host, GRANIT_DIAGNOSTIC_SEVERITY_ERROR, message.data, bounded_length);
+}
+
+void receive_device_lost(const WGPUDevice*, WGPUDeviceLostReason reason, WGPUStringView message,
+                         void* data, void*) noexcept {
+  auto& state = *static_cast<webgpu_instance*>(data);
+  static_cast<void>(state.device_lost_ticket.invoke([&state, reason, message] {
+    if (reason == WGPUDeviceLostReason_Destroyed ||
+        reason == WGPUDeviceLostReason_CallbackCancelled)
+      return;
+    state.lifecycle.mark_device_lost();
+    emit_dawn_message(&state.host, message);
+    constexpr char diagnostic[] = "Dawn WebGPU device lost";
+    emit(state.host, GRANIT_DIAGNOSTIC_SEVERITY_ERROR, diagnostic, sizeof(diagnostic) - 1);
+  }));
 }
 
 void receive_adapter(WGPURequestAdapterStatus status, WGPUAdapter adapter, WGPUStringView message,
@@ -358,9 +378,14 @@ granit_result create_backend(const granit_backend_plugin_host_api* host,
   state->adapter = adapter.adapter;
 
   device_request device{host};
+  WGPUDeviceDescriptor device_descriptor = WGPU_DEVICE_DESCRIPTOR_INIT;
+  device_descriptor.deviceLostCallbackInfo.mode = WGPUCallbackMode_AllowSpontaneous;
+  device_descriptor.deviceLostCallbackInfo.callback = receive_device_lost;
+  device_descriptor.deviceLostCallbackInfo.userdata1 = state;
   const WGPURequestDeviceCallbackInfo device_callback{nullptr, WGPUCallbackMode_WaitAnyOnly,
                                                       receive_device, &device, nullptr};
-  const auto device_future = wgpuAdapterRequestDevice(state->adapter, nullptr, device_callback);
+  const auto device_future =
+      wgpuAdapterRequestDevice(state->adapter, &device_descriptor, device_callback);
   if (!wait_for(state->instance, device_future, device) ||
       device.status != WGPURequestDeviceStatus_Success || device.device == nullptr) {
     constexpr char message[] = "Dawn WebGPU device request failed or timed out";
@@ -532,7 +557,13 @@ granit_result process_events(granit_backend_plugin_instance instance) noexcept {
 #if defined(GRANIT_WEBGPU_DEFER_INITIALIZATION_TEST)
   if (found->second->deferred_initialization_for_test) {
     found->second->deferred_initialization_for_test = false;
+    found->second->force_device_loss_for_test = true;
     found->second->lifecycle.mark_ready();
+  } else if (found->second->force_device_loss_for_test) {
+    found->second->force_device_loss_for_test = false;
+    constexpr char message[] = "mock forced device loss";
+    wgpuDeviceForceLoss(found->second->device, WGPUDeviceLostReason_Unknown,
+                        {message, sizeof(message) - 1});
   }
 #endif
   return found->second->lifecycle.gate();
