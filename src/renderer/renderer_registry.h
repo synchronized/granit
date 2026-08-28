@@ -384,8 +384,6 @@ private:
     std::shared_ptr<backend_presentation_renderer> presentation;
     std::shared_ptr<surface_record> surface;
     std::unique_ptr<backend_swapchain_resource> native;
-    // 统一迁移期间保留平台状态视图；完成资源能力迁移后移除。
-    std::shared_ptr<platform_renderer_state> renderer;
     std::vector<granit_texture> textures;
     std::vector<granit_texture_view> views;
     granit_texture texture{};

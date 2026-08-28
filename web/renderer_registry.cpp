@@ -81,7 +81,7 @@ granit_result renderer_registry::destroy(granit_renderer renderer) {
       return GRANIT_ERROR_INTERNAL;
     }
     for (auto command = command_recorders_.begin(); command != command_recorders_.end();) {
-      if (command->second->renderer == found->second) {
+      if (command->second->owner == found->second) {
         static_cast<void>(handles_.erase(command->first, resource_type::command_recorder, 0));
         command_recorders.push_back(std::move(command->second));
         command = command_recorders_.erase(command);
@@ -90,7 +90,7 @@ granit_result renderer_registry::destroy(granit_renderer renderer) {
       }
     }
     for (auto frame = frames_.begin(); frame != frames_.end();) {
-      if (frame->second->swapchain->renderer == found->second) {
+      if (frame->second->swapchain->owner == found->second) {
         bool ignored{};
         static_cast<void>(found->second->presentation()->cancel_swapchain(
             *frame->second->swapchain->native, ignored));
@@ -103,7 +103,7 @@ granit_result renderer_registry::destroy(granit_renderer renderer) {
       }
     }
     for (auto swapchain = swapchains_.begin(); swapchain != swapchains_.end();) {
-      if (swapchain->second->renderer == found->second) {
+      if (swapchain->second->owner == found->second) {
         static_cast<void>(handles_.erase(swapchain->first, resource_type::swapchain, 0));
         swapchains.push_back(std::move(swapchain->second));
         swapchain = swapchains_.erase(swapchain);
@@ -112,7 +112,7 @@ granit_result renderer_registry::destroy(granit_renderer renderer) {
       }
     }
     for (auto surface = surfaces_.begin(); surface != surfaces_.end();) {
-      if (surface->second->renderer == found->second) {
+      if (surface->second->owner == found->second) {
         static_cast<void>(handles_.erase(surface->first, resource_type::surface, 0));
         surfaces.push_back(std::move(surface->second));
         surface = surfaces_.erase(surface);
@@ -121,7 +121,7 @@ granit_result renderer_registry::destroy(granit_renderer renderer) {
       }
     }
     for (auto pipeline = graphics_pipelines_.begin(); pipeline != graphics_pipelines_.end();) {
-      if (pipeline->second->renderer == found->second) {
+      if (pipeline->second->owner == found->second) {
         static_cast<void>(handles_.erase(pipeline->first, resource_type::pipeline, 0));
         graphics_pipelines.push_back(std::move(pipeline->second));
         pipeline = graphics_pipelines_.erase(pipeline);
@@ -130,7 +130,7 @@ granit_result renderer_registry::destroy(granit_renderer renderer) {
       }
     }
     for (auto layout = pipeline_layouts_.begin(); layout != pipeline_layouts_.end();) {
-      if (layout->second->renderer == found->second) {
+      if (layout->second->owner == found->second) {
         static_cast<void>(handles_.erase(layout->first, resource_type::pipeline_layout, 0));
         pipeline_layouts.push_back(std::move(layout->second));
         layout = pipeline_layouts_.erase(layout);
@@ -139,7 +139,7 @@ granit_result renderer_registry::destroy(granit_renderer renderer) {
       }
     }
     for (auto shader = shaders_.begin(); shader != shaders_.end();) {
-      if (shader->second->renderer == found->second) {
+      if (shader->second->owner == found->second) {
         static_cast<void>(handles_.erase(shader->first, resource_type::shader, 0));
         shaders.push_back(std::move(shader->second));
         shader = shaders_.erase(shader);
@@ -260,7 +260,7 @@ granit_result renderer_registry::destroy_surface(granit_renderer renderer, grani
     const auto state = renderers_.find(renderer);
     const auto found = surfaces_.find(surface);
     if (state == renderers_.end() || found == surfaces_.end() ||
-        found->second->renderer != state->second) {
+        found->second->owner != state->second) {
       return GRANIT_ERROR_INVALID_HANDLE;
     }
     for (const auto& [handle, swapchain] : swapchains_) {
@@ -292,7 +292,7 @@ granit_result renderer_registry::create_swapchain(granit_renderer renderer, gran
     {
       std::lock_guard lock{mutex_};
       const auto found = surfaces_.find(surface);
-      if (found == surfaces_.end() || found->second->renderer != state) {
+      if (found == surfaces_.end() || found->second->owner != state) {
         return GRANIT_ERROR_INVALID_HANDLE;
       }
       surface_record_ptr = found->second;
@@ -300,7 +300,6 @@ granit_result renderer_registry::create_swapchain(granit_renderer renderer, gran
     auto record = std::make_shared<swapchain_record>();
     record->owner = state;
     record->presentation = state;
-    record->renderer = state;
     record->surface = surface_record_ptr;
     record->native = state->presentation()->allocate_swapchain();
     if (!record->native) {
@@ -343,7 +342,7 @@ granit_result renderer_registry::recreate_swapchain(granit_renderer renderer,
   const auto state = renderers_.find(renderer);
   const auto found = swapchains_.find(swapchain);
   if (state == renderers_.end() || found == swapchains_.end() ||
-      found->second->renderer != state->second) {
+      found->second->owner != state->second) {
     return GRANIT_ERROR_INVALID_HANDLE;
   }
   if (found->second->texture != GRANIT_NULL_HANDLE) {
@@ -359,7 +358,7 @@ granit_result renderer_registry::get_swapchain_info(granit_renderer renderer,
   const auto state = renderers_.find(renderer);
   const auto found = swapchains_.find(swapchain);
   if (state == renderers_.end() || found == swapchains_.end() ||
-      found->second->renderer != state->second) {
+      found->second->owner != state->second) {
     return GRANIT_ERROR_INVALID_HANDLE;
   }
   return state->second->presentation()->get_swapchain_info(*found->second->native, info);
@@ -374,7 +373,7 @@ granit_result renderer_registry::get_swapchain_backbuffer(granit_renderer render
   const auto state = renderers_.find(renderer);
   const auto found = swapchains_.find(swapchain);
   if (state == renderers_.end() || found == swapchains_.end() ||
-      found->second->renderer != state->second) {
+      found->second->owner != state->second) {
     return GRANIT_ERROR_INVALID_HANDLE;
   }
   if (found->second->texture == GRANIT_NULL_HANDLE || found->second->image_index != index) {
@@ -395,7 +394,7 @@ granit_result renderer_registry::acquire_swapchain_frame(granit_renderer rendere
     const auto state = renderers_.find(renderer);
     const auto found = swapchains_.find(swapchain);
     if (state == renderers_.end() || found == swapchains_.end() ||
-        found->second->renderer != state->second) {
+        found->second->owner != state->second) {
       return GRANIT_ERROR_INVALID_HANDLE;
     }
     if (found->second->texture != GRANIT_NULL_HANDLE) {
@@ -405,7 +404,6 @@ granit_result renderer_registry::acquire_swapchain_frame(granit_renderer rendere
     record->owner = state->second;
     record->presentation = state->second;
     record->queue = state->second;
-    record->renderer = state->second;
     record->swapchain = found->second;
     const auto acquire_result =
         state->second->presentation()->acquire_swapchain(*found->second->native, record->acquired);
@@ -483,7 +481,7 @@ granit_result renderer_registry::finish_frame(granit_renderer renderer, granit_s
     const auto swapchain_found = swapchains_.find(swapchain);
     const auto frame_found = frames_.find(frame);
     if (state == renderers_.end() || swapchain_found == swapchains_.end() ||
-        frame_found == frames_.end() || swapchain_found->second->renderer != state->second ||
+        frame_found == frames_.end() || swapchain_found->second->owner != state->second ||
         frame_found->second->swapchain != swapchain_found->second) {
       return GRANIT_ERROR_INVALID_HANDLE;
     }
@@ -524,7 +522,7 @@ granit_result renderer_registry::get_frame_info(granit_renderer renderer,
   const auto swapchain_found = swapchains_.find(swapchain);
   const auto frame_found = frames_.find(frame);
   if (state == renderers_.end() || swapchain_found == swapchains_.end() ||
-      frame_found == frames_.end() || swapchain_found->second->renderer != state->second ||
+      frame_found == frames_.end() || swapchain_found->second->owner != state->second ||
       frame_found->second->swapchain != swapchain_found->second) {
     return GRANIT_ERROR_INVALID_HANDLE;
   }
@@ -546,7 +544,7 @@ granit_result renderer_registry::destroy_swapchain(granit_renderer renderer,
     const auto state = renderers_.find(renderer);
     const auto found = swapchains_.find(swapchain);
     if (state == renderers_.end() || found == swapchains_.end() ||
-        found->second->renderer != state->second) {
+        found->second->owner != state->second) {
       return GRANIT_ERROR_INVALID_HANDLE;
     }
     if (found->second->texture != GRANIT_NULL_HANDLE) {
@@ -575,7 +573,6 @@ granit_result renderer_registry::create_wgsl_shader(granit_renderer renderer,
     }
     auto record = std::make_shared<shader_record>();
     record->owner = state;
-    record->renderer = state;
     record->stage = stage;
     record->entry_point.assign(entry_point);
     record->native = state->shaders()->allocate_shader();
@@ -616,7 +613,7 @@ granit_result renderer_registry::destroy_shader(granit_renderer renderer, granit
     const auto state = renderers_.find(renderer);
     const auto found = shaders_.find(shader);
     if (state == renderers_.end() || found == shaders_.end() ||
-        found->second->renderer != state->second) {
+        found->second->owner != state->second) {
       return GRANIT_ERROR_INVALID_HANDLE;
     }
     for (const auto& [handle, pipeline] : graphics_pipelines_) {
@@ -645,7 +642,6 @@ granit_result renderer_registry::create_webgpu_pipeline_layout(granit_renderer r
     }
     auto record = std::make_shared<pipeline_layout_record>();
     record->owner = state;
-    record->renderer = state;
     record->native = state->pipelines()->allocate_pipeline_layout();
     if (!record->native) {
       return GRANIT_ERROR_OUT_OF_MEMORY;
@@ -685,7 +681,7 @@ granit_result renderer_registry::destroy_pipeline_layout(granit_renderer rendere
     const auto state = renderers_.find(renderer);
     const auto found = pipeline_layouts_.find(layout);
     if (state == renderers_.end() || found == pipeline_layouts_.end() ||
-        found->second->renderer != state->second) {
+        found->second->owner != state->second) {
       return GRANIT_ERROR_INVALID_HANDLE;
     }
     for (const auto& [handle, pipeline] : graphics_pipelines_) {
@@ -723,8 +719,8 @@ granit_result renderer_registry::create_webgpu_graphics_pipeline(
       const auto vertex_found = shaders_.find(vertex_shader);
       const auto fragment_found = shaders_.find(fragment_shader);
       if (layout_found == pipeline_layouts_.end() || vertex_found == shaders_.end() ||
-          fragment_found == shaders_.end() || layout_found->second->renderer != state ||
-          vertex_found->second->renderer != state || fragment_found->second->renderer != state) {
+          fragment_found == shaders_.end() || layout_found->second->owner != state ||
+          vertex_found->second->owner != state || fragment_found->second->owner != state) {
         return GRANIT_ERROR_INVALID_HANDLE;
       }
       layout_record = layout_found->second;
@@ -733,7 +729,6 @@ granit_result renderer_registry::create_webgpu_graphics_pipeline(
     }
     auto record = std::make_shared<graphics_pipeline_record>();
     record->owner = state;
-    record->renderer = state;
     record->layout = layout_record;
     record->vertex_shader = vertex_record;
     record->fragment_shader = fragment_record;
@@ -781,7 +776,7 @@ granit_result renderer_registry::destroy_graphics_pipeline(granit_renderer rende
     const auto state = renderers_.find(renderer);
     const auto found = graphics_pipelines_.find(pipeline);
     if (state == renderers_.end() || found == graphics_pipelines_.end() ||
-        found->second->renderer != state->second) {
+        found->second->owner != state->second) {
       return GRANIT_ERROR_INVALID_HANDLE;
     }
     record = std::move(found->second);
@@ -822,7 +817,6 @@ granit_result renderer_registry::create_command_recorder(granit_renderer rendere
     record->owner = state;
     record->queue = state;
     record->commands = state;
-    record->renderer = state;
     record->native = state->allocate_command_recorder_resource();
     if (!record->native)
       return GRANIT_ERROR_OUT_OF_MEMORY;
@@ -856,7 +850,7 @@ granit_result renderer_registry::begin_command_recorder(granit_renderer renderer
   const auto state = renderers_.find(renderer);
   const auto found = command_recorders_.find(recorder);
   if (state == renderers_.end() || found == command_recorders_.end() ||
-      found->second->renderer != state->second)
+      found->second->owner != state->second)
     return GRANIT_ERROR_INVALID_HANDLE;
   if (found->second->web_status != command_recorder_record::web_state::initial)
     return GRANIT_ERROR_INVALID_ARGUMENT;
@@ -873,14 +867,13 @@ granit_result renderer_registry::begin_rendering(granit_renderer renderer,
   const auto state = renderers_.find(renderer);
   const auto command = command_recorders_.find(recorder);
   if (state == renderers_.end() || command == command_recorders_.end() ||
-      command->second->renderer != state->second)
+      command->second->owner != state->second)
     return GRANIT_ERROR_INVALID_HANDLE;
   if (command->second->web_status != command_recorder_record::web_state::recording)
     return GRANIT_ERROR_INVALID_ARGUMENT;
   const auto view = desc.color_attachments[0].view;
   const auto frame = std::find_if(frames_.begin(), frames_.end(), [&](const auto& entry) {
-    return entry.second->swapchain->renderer == state->second &&
-           entry.second->swapchain->view == view;
+    return entry.second->swapchain->owner == state->second && entry.second->swapchain->view == view;
   });
   if (frame == frames_.end())
     return GRANIT_ERROR_INVALID_HANDLE;
@@ -897,8 +890,8 @@ granit_result renderer_registry::bind_graphics_pipeline(granit_renderer renderer
   const auto command = command_recorders_.find(recorder);
   const auto found = graphics_pipelines_.find(pipeline);
   if (state == renderers_.end() || command == command_recorders_.end() ||
-      found == graphics_pipelines_.end() || command->second->renderer != state->second ||
-      found->second->renderer != state->second)
+      found == graphics_pipelines_.end() || command->second->owner != state->second ||
+      found->second->owner != state->second)
     return GRANIT_ERROR_INVALID_HANDLE;
   if (command->second->web_status != command_recorder_record::web_state::rendering)
     return GRANIT_ERROR_INVALID_ARGUMENT;
@@ -913,7 +906,7 @@ granit_result renderer_registry::draw(granit_renderer renderer, granit_command_r
   const auto state = renderers_.find(renderer);
   const auto command = command_recorders_.find(recorder);
   if (state == renderers_.end() || command == command_recorders_.end() ||
-      command->second->renderer != state->second)
+      command->second->owner != state->second)
     return GRANIT_ERROR_INVALID_HANDLE;
   auto& record = *command->second;
   if (record.web_status != command_recorder_record::web_state::rendering || !record.web_frame ||
@@ -934,7 +927,7 @@ granit_result renderer_registry::end_rendering(granit_renderer renderer,
   const auto state = renderers_.find(renderer);
   const auto found = command_recorders_.find(recorder);
   if (state == renderers_.end() || found == command_recorders_.end() ||
-      found->second->renderer != state->second)
+      found->second->owner != state->second)
     return GRANIT_ERROR_INVALID_HANDLE;
   if (found->second->web_status != command_recorder_record::web_state::rendering ||
       !found->second->web_drew)
@@ -949,7 +942,7 @@ granit_result renderer_registry::end_command_recorder(granit_renderer renderer,
   const auto state = renderers_.find(renderer);
   const auto found = command_recorders_.find(recorder);
   if (state == renderers_.end() || found == command_recorders_.end() ||
-      found->second->renderer != state->second)
+      found->second->owner != state->second)
     return GRANIT_ERROR_INVALID_HANDLE;
   if (found->second->web_status != command_recorder_record::web_state::recording ||
       !found->second->web_drew)
@@ -972,7 +965,7 @@ granit_result renderer_registry::submit_command_recorder_frame(granit_renderer r
   const auto state = renderers_.find(renderer);
   const auto command = command_recorders_.find(recorder);
   if (state == renderers_.end() || command == command_recorders_.end() ||
-      command->second->renderer != state->second)
+      command->second->owner != state->second)
     return GRANIT_ERROR_INVALID_HANDLE;
   if (command->second->web_status != command_recorder_record::web_state::executable)
     return GRANIT_ERROR_INVALID_ARGUMENT;
@@ -994,7 +987,7 @@ granit_result renderer_registry::reset_command_recorder(granit_renderer renderer
   const auto state = renderers_.find(renderer);
   const auto found = command_recorders_.find(recorder);
   if (state == renderers_.end() || found == command_recorders_.end() ||
-      found->second->renderer != state->second)
+      found->second->owner != state->second)
     return GRANIT_ERROR_INVALID_HANDLE;
   if (found->second->web_status == command_recorder_record::web_state::recording ||
       found->second->web_status == command_recorder_record::web_state::rendering)
@@ -1017,7 +1010,7 @@ granit_result renderer_registry::destroy_command_recorder(granit_renderer render
     const auto state = renderers_.find(renderer);
     const auto found = command_recorders_.find(recorder);
     if (state == renderers_.end() || found == command_recorders_.end() ||
-        found->second->renderer != state->second)
+        found->second->owner != state->second)
       return GRANIT_ERROR_INVALID_HANDLE;
     record = std::move(found->second);
     command_recorders_.erase(found);
