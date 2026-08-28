@@ -216,11 +216,11 @@ granit_result renderer_registry::set_object_name(granit_renderer renderer, grani
   GRANIT_NAME_OBJECT(textures_)
   GRANIT_NAME_OBJECT(texture_views_)
   GRANIT_NAME_OBJECT(samplers_)
-  GRANIT_NAME_OBJECT(shaders_)
+  GRANIT_NAME_PRESENTATION_OBJECT(shaders_)
   GRANIT_NAME_OBJECT(bind_group_layouts_)
   GRANIT_NAME_OBJECT(pipeline_layouts_)
   GRANIT_NAME_OBJECT(bind_groups_)
-  GRANIT_NAME_OBJECT(graphics_pipelines_)
+  GRANIT_NAME_PRESENTATION_OBJECT(graphics_pipelines_)
   GRANIT_NAME_OBJECT(compute_pipelines_)
   GRANIT_NAME_OBJECT(command_recorders_)
   GRANIT_NAME_OBJECT(timestamp_query_pools_)
@@ -311,7 +311,7 @@ granit_result renderer_registry::destroy(granit_renderer renderer) {
         }
       }
       for (const auto& [handle, record] : shaders_) {
-        if (record->renderer == state) {
+        if (record->owner == state) {
           lifecycle.add(lifecycle_resource_type::shader, handle,
                         record->metadata.creation_sequence);
         }
@@ -332,7 +332,7 @@ granit_result renderer_registry::destroy(granit_renderer renderer) {
                         record->metadata.creation_sequence);
       }
       for (const auto& [handle, record] : graphics_pipelines_) {
-        if (record->renderer == state)
+        if (record->owner == state)
           lifecycle.add(lifecycle_resource_type::graphics_pipeline, handle,
                         record->metadata.creation_sequence);
       }
@@ -428,7 +428,7 @@ granit_result renderer_registry::destroy(granit_renderer renderer) {
       }
     }
     for (auto pipeline = graphics_pipelines_.begin(); pipeline != graphics_pipelines_.end();) {
-      if (pipeline->second->renderer == state) {
+      if (pipeline->second->owner == state) {
         native_graphics_pipelines.push_back(std::move(pipeline->second));
         static_cast<void>(
             handles_.erase(pipeline->first, resource_type::pipeline, state->domain()));
@@ -478,7 +478,7 @@ granit_result renderer_registry::destroy(granit_renderer renderer) {
       }
     }
     for (auto shader = shaders_.begin(); shader != shaders_.end();) {
-      if (shader->second->renderer == state) {
+      if (shader->second->owner == state) {
         native_shaders.push_back(std::move(shader->second));
         static_cast<void>(handles_.erase(shader->first, resource_type::shader, state->domain()));
         shader = shaders_.erase(shader);
@@ -2331,7 +2331,6 @@ granit_result renderer_registry::create_shader(granit_renderer renderer, granit_
       return GRANIT_ERROR_INVALID_HANDLE;
     auto record = std::make_shared<shader_record>();
     record->owner = state;
-    record->renderer = state;
     record->stage = stage;
     record->entry_point.assign(entry_point);
     record->native = state->allocate_shader_resource();
@@ -2422,7 +2421,7 @@ granit_result renderer_registry::destroy_shader(granit_renderer renderer, granit
     shaders_.erase(found);
     static_cast<void>(handles_.erase(shader, resource_type::shader, owner->domain()));
   }
-  auto state = record->renderer;
+  auto state = std::dynamic_pointer_cast<renderer_state>(record->owner);
   if (state) {
     state->retire_resource(record->metadata.last_use_serial.load(), retirement_order::resource,
                            record);
@@ -2804,7 +2803,7 @@ granit_result renderer_registry::create_graphics_pipeline(granit_renderer render
       const auto fragment_found = shaders_.find(desc.fragment_shader);
       if (layout_found == pipeline_layouts_.end() || vertex_found == shaders_.end() ||
           fragment_found == shaders_.end() || layout_found->second->renderer != state ||
-          vertex_found->second->renderer != state || fragment_found->second->renderer != state ||
+          vertex_found->second->owner != state || fragment_found->second->owner != state ||
           vertex_found->second->stage != GRANIT_SHADER_STAGE_VERTEX ||
           fragment_found->second->stage != GRANIT_SHADER_STAGE_FRAGMENT)
         return GRANIT_ERROR_INVALID_HANDLE;
@@ -2814,7 +2813,6 @@ granit_result renderer_registry::create_graphics_pipeline(granit_renderer render
     }
     auto record = std::make_shared<graphics_pipeline_record>();
     record->owner = state;
-    record->renderer = state;
     record->layout = layout;
     record->vertex_shader = vertex;
     record->fragment_shader = fragment;
@@ -2951,7 +2949,7 @@ granit_result renderer_registry::destroy_graphics_pipeline(granit_renderer rende
     graphics_pipelines_.erase(found);
     static_cast<void>(handles_.erase(pipeline, resource_type::pipeline, state->second->domain()));
   }
-  const auto state = record->renderer;
+  const auto state = std::dynamic_pointer_cast<renderer_state>(record->owner);
   const auto serial = record->metadata.last_use_serial.load();
   if (state) {
     state->retire_resource(serial, retirement_order::dependent, std::move(record));
@@ -2976,7 +2974,7 @@ granit_result renderer_registry::create_compute_pipeline(granit_renderer rendere
       const auto layout_found = pipeline_layouts_.find(desc.layout);
       const auto compute_found = shaders_.find(desc.compute_shader);
       if (layout_found == pipeline_layouts_.end() || compute_found == shaders_.end() ||
-          layout_found->second->renderer != state || compute_found->second->renderer != state ||
+          layout_found->second->renderer != state || compute_found->second->owner != state ||
           compute_found->second->stage != GRANIT_SHADER_STAGE_COMPUTE)
         return GRANIT_ERROR_INVALID_HANDLE;
       layout = layout_found->second;

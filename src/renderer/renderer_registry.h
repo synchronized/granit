@@ -425,7 +425,6 @@ private:
   struct shader_record {
     resource_metadata metadata;
     std::shared_ptr<backend_renderer> owner;
-    std::shared_ptr<renderer_state> renderer;
     std::unique_ptr<backend_shader_resource> native;
     granit_shader_stage stage{};
     std::string entry_point;
@@ -458,7 +457,6 @@ private:
   struct graphics_pipeline_record {
     resource_metadata metadata;
     std::shared_ptr<backend_renderer> owner;
-    std::shared_ptr<renderer_state> renderer;
     std::shared_ptr<pipeline_layout_record> layout;
     std::shared_ptr<shader_record> vertex_shader;
     std::shared_ptr<shader_record> fragment_shader;
