@@ -402,7 +402,6 @@ private:
   struct texture_record {
     resource_metadata metadata;
     std::shared_ptr<backend_renderer> owner;
-    std::shared_ptr<renderer_state> renderer;
     std::unique_ptr<backend_texture_resource> native;
     granit_texture_desc desc{};
     bool publicly_destroyable{true};
