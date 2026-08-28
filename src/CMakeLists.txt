@@ -90,6 +90,7 @@ target_sources(
     backend/queue.h
     backend/rendering.h
     backend/retirement.h
+    backend/resource_management.h
     backend/transfer.h
     backend/renderer.h
     backend/resources.h

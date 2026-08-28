@@ -37,11 +37,12 @@
 #include "backend/queue.h"
 #include "backend/renderer.h"
 #include "backend/rendering.h"
-#include "backend/retirement.h"
+#include "backend/resource_management.h"
 #include "backend/resources.h"
+#include "backend/retirement.h"
 #include "backend/shader.h"
-#include "backend/transfer.h"
 #include "backend/timestamp.h"
+#include "backend/transfer.h"
 #include "backend/upload.h"
 #include "core/handle_table.h"
 #include "core/lifecycle_validation.h"
@@ -397,7 +398,8 @@ private:
   struct buffer_record {
     resource_metadata metadata;
     std::shared_ptr<backend_renderer> owner;
-    std::shared_ptr<renderer_state> renderer;
+    std::shared_ptr<backend_resource_renderer> resource_api;
+    std::shared_ptr<backend_retirement_renderer> retirement;
     std::unique_ptr<backend_buffer_resource> native;
     granit_buffer_desc desc{};
     std::mutex mutex;
@@ -423,7 +425,9 @@ private:
   };
   struct sampler_record {
     resource_metadata metadata;
-    std::shared_ptr<renderer_state> renderer;
+    std::shared_ptr<backend_renderer> owner;
+    std::shared_ptr<backend_resource_renderer> resource_api;
+    std::shared_ptr<backend_retirement_renderer> retirement;
     std::unique_ptr<backend_sampler_resource> native;
   };
   struct shader_record {
@@ -435,7 +439,9 @@ private:
   };
   struct bind_group_layout_record {
     resource_metadata metadata;
-    std::shared_ptr<renderer_state> renderer;
+    std::shared_ptr<backend_renderer> owner;
+    std::shared_ptr<backend_resource_renderer> resource_api;
+    std::shared_ptr<backend_retirement_renderer> retirement;
     std::unique_ptr<backend_bind_group_layout_resource> native;
     std::vector<granit_bind_group_layout_entry> entries;
   };
@@ -448,7 +454,8 @@ private:
   struct bind_group_record {
     resource_metadata metadata;
     std::shared_ptr<backend_renderer> owner;
-    std::shared_ptr<renderer_state> renderer;
+    std::shared_ptr<backend_resource_renderer> resource_api;
+    std::shared_ptr<backend_retirement_renderer> retirement;
     std::shared_ptr<bind_group_layout_record> layout;
     std::vector<std::shared_ptr<void>> resources;
     std::vector<backend_buffer_access> graphics_buffer_accesses;
@@ -469,7 +476,8 @@ private:
   struct compute_pipeline_record {
     resource_metadata metadata;
     std::shared_ptr<backend_renderer> owner;
-    std::shared_ptr<renderer_state> renderer;
+    std::shared_ptr<backend_resource_renderer> resource_api;
+    std::shared_ptr<backend_retirement_renderer> retirement;
     std::shared_ptr<pipeline_layout_record> layout;
     std::shared_ptr<shader_record> compute_shader;
     std::unique_ptr<backend_compute_pipeline_resource> native;
@@ -503,7 +511,7 @@ private:
   };
   struct frame_context_record {
     resource_metadata metadata;
-    std::shared_ptr<renderer_state> renderer;
+    std::shared_ptr<backend_renderer> owner;
     std::mutex mutex;
     std::vector<frame_context_slot> slots;
   };
@@ -519,8 +527,6 @@ private:
     std::shared_ptr<backend_renderer> owner;
     std::shared_ptr<backend_presentation_renderer> presentation;
     std::shared_ptr<backend_queue> queue;
-    // 命令提交迁移前保留 Vulkan Queue 具体视图。
-    std::shared_ptr<renderer_state> renderer;
     std::shared_ptr<swapchain_record> swapchain;
     std::mutex mutex;
     std::uint32_t image_index{};
@@ -538,7 +544,8 @@ private:
   };
   struct upload_batch_record {
     resource_metadata metadata;
-    std::shared_ptr<renderer_state> renderer;
+    std::shared_ptr<backend_renderer> owner;
+    std::shared_ptr<backend_resource_renderer> resource_api;
     std::mutex mutex;
     std::vector<upload_entry> uploads;
     bool failed{};

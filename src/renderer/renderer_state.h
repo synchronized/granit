@@ -29,6 +29,7 @@
 #include "backend/queue.h"
 #include "backend/renderer.h"
 #include "backend/rendering.h"
+#include "backend/resource_management.h"
 #include "backend/retirement.h"
 #include "backend/timestamp.h"
 #include "backend/transfer.h"
@@ -47,6 +48,7 @@
 namespace granit::detail {
 
 class renderer_state final : public backend_renderer,
+                             public backend_resource_renderer,
                              public backend_presentation_renderer,
                              public backend_queue,
                              public backend_command_renderer,
@@ -79,20 +81,21 @@ public:
 
   [[nodiscard]] std::unique_ptr<backend_surface_resource> allocate_surface_resource() override;
   [[nodiscard]] std::unique_ptr<backend_swapchain_resource> allocate_swapchain_resource() override;
-  [[nodiscard]] std::unique_ptr<backend_buffer_resource> allocate_buffer_resource();
+  [[nodiscard]] std::unique_ptr<backend_buffer_resource> allocate_buffer_resource() override;
   [[nodiscard]] std::unique_ptr<backend_texture_resource> allocate_texture_resource();
   [[nodiscard]] std::unique_ptr<backend_texture_view_resource> allocate_texture_view_resource();
-  [[nodiscard]] std::unique_ptr<backend_sampler_resource> allocate_sampler_resource();
+  [[nodiscard]] std::unique_ptr<backend_sampler_resource> allocate_sampler_resource() override;
   [[nodiscard]] std::unique_ptr<backend_shader_resource> allocate_shader_resource();
   [[nodiscard]] std::unique_ptr<backend_bind_group_layout_resource>
-  allocate_bind_group_layout_resource();
-  [[nodiscard]] std::unique_ptr<backend_bind_group_resource> allocate_bind_group_resource();
+  allocate_bind_group_layout_resource() override;
+  [[nodiscard]] std::unique_ptr<backend_bind_group_resource>
+  allocate_bind_group_resource() override;
   [[nodiscard]] std::unique_ptr<backend_pipeline_layout_resource>
   allocate_pipeline_layout_resource();
   [[nodiscard]] std::unique_ptr<backend_graphics_pipeline_resource>
   allocate_graphics_pipeline_resource();
   [[nodiscard]] std::unique_ptr<backend_compute_pipeline_resource>
-  allocate_compute_pipeline_resource();
+  allocate_compute_pipeline_resource() override;
   [[nodiscard]] std::unique_ptr<backend_command_recorder_resource>
   allocate_command_recorder_resource() override;
 
@@ -125,16 +128,21 @@ public:
   void destroy_native_swapchain(vulkan_swapchain& swapchain) noexcept;
   [[nodiscard]] granit_result create_native_buffer(const granit_buffer_desc& desc,
                                                    backend_buffer_resource& buffer) noexcept;
+  [[nodiscard]] granit_result create_buffer(const granit_buffer_desc& desc,
+                                            backend_buffer_resource& buffer) noexcept override {
+    return create_native_buffer(desc, buffer);
+  }
   void destroy_native_buffer(vulkan_buffer_allocation& buffer) noexcept;
-  [[nodiscard]] void* mapped_buffer_data(backend_buffer_resource& buffer) noexcept;
+  [[nodiscard]] void* mapped_buffer_data(backend_buffer_resource& buffer) noexcept override;
   [[nodiscard]] granit_result flush_buffer(backend_buffer_resource& buffer, std::uint64_t offset,
-                                           std::uint64_t size) noexcept;
+                                           std::uint64_t size) noexcept override;
   [[nodiscard]] granit_result invalidate_buffer(backend_buffer_resource& buffer,
-                                                std::uint64_t offset, std::uint64_t size) noexcept;
+                                                std::uint64_t offset,
+                                                std::uint64_t size) noexcept override;
   [[nodiscard]] granit_result upload_buffer(backend_buffer_resource& buffer, std::uint64_t offset,
-                                            const void* data, std::uint64_t size) noexcept;
+                                            const void* data, std::uint64_t size) noexcept override;
   [[nodiscard]] granit_result
-  upload_batch(std::span<const backend_upload_operation> uploads) noexcept;
+  upload_batch(std::span<const backend_upload_operation> uploads) noexcept override;
   [[nodiscard]] granit_result create_native_texture(const granit_texture_desc& desc,
                                                     backend_texture_resource& texture) noexcept;
   [[nodiscard]] bool
@@ -151,6 +159,10 @@ public:
   void destroy_native_texture_view(VkImageView view) noexcept;
   [[nodiscard]] granit_result create_native_sampler(const granit_sampler_desc& desc,
                                                     backend_sampler_resource& sampler) noexcept;
+  [[nodiscard]] granit_result create_sampler(const granit_sampler_desc& desc,
+                                             backend_sampler_resource& sampler) noexcept override {
+    return create_native_sampler(desc, sampler);
+  }
   void destroy_native_sampler(VkSampler sampler) noexcept;
   [[nodiscard]] granit_result create_native_shader(std::span<const std::uint32_t> code,
                                                    backend_shader_resource& shader) noexcept;
@@ -158,11 +170,22 @@ public:
   [[nodiscard]] granit_result
   create_native_bind_group_layout(std::span<const granit_bind_group_layout_entry> entries,
                                   backend_bind_group_layout_resource& layout) noexcept;
+  [[nodiscard]] granit_result
+  create_bind_group_layout(std::span<const granit_bind_group_layout_entry> entries,
+                           backend_bind_group_layout_resource& layout) noexcept override {
+    return create_native_bind_group_layout(entries, layout);
+  }
   void destroy_native_bind_group_layout(VkDescriptorSetLayout layout) noexcept;
   [[nodiscard]] granit_result
   create_native_bind_group(backend_bind_group_layout_resource& layout,
                            std::span<const backend_bind_group_write> writes,
                            backend_bind_group_resource& bind_group) noexcept;
+  [[nodiscard]] granit_result
+  create_bind_group(backend_bind_group_layout_resource& layout,
+                    std::span<const backend_bind_group_write> writes,
+                    backend_bind_group_resource& bind_group) noexcept override {
+    return create_native_bind_group(layout, writes, bind_group);
+  }
   void destroy_native_bind_group(VkDescriptorPool pool) noexcept;
   [[nodiscard]] granit_result create_native_pipeline_layout(
       std::span<backend_bind_group_layout_resource* const> bind_group_layouts,
@@ -183,6 +206,12 @@ public:
   create_native_compute_pipeline(backend_pipeline_layout_resource& layout,
                                  backend_shader_resource& compute_shader, const char* compute_entry,
                                  backend_compute_pipeline_resource& pipeline) noexcept;
+  [[nodiscard]] granit_result
+  create_compute_pipeline(backend_pipeline_layout_resource& layout,
+                          backend_shader_resource& compute_shader, const char* compute_entry,
+                          backend_compute_pipeline_resource& pipeline) noexcept override {
+    return create_native_compute_pipeline(layout, compute_shader, compute_entry, pipeline);
+  }
   void destroy_native_compute_pipeline(VkPipeline pipeline) noexcept;
   [[nodiscard]] granit_result
   create_command_recorder(backend_command_recorder_resource& recorder) noexcept override;
