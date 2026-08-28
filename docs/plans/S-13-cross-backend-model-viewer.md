@@ -97,6 +97,43 @@ CPU Scene 包含以下所有权对象：
 单元测试覆盖 Node 层级、TRS/矩阵、交错 Accessor、索引归一化、材质纹理语义、
 图片解码、AABB 与上述所有错误。测试只使用仓库内小型 Fixture，不下载头盔。
 
+### S-13C GPU Scene 与逐帧数据契约
+
+GPU 侧适配位于 `examples/common/model_viewer`，建议拆分为 `gpu_scene.h/.cpp` 与
+`frame_data.h/.cpp`。它只组合已安装的 Granit C++ 公共 API，不包含 `src/` 私有头、
+Vulkan、Dawn 或 Emscripten 类型。
+
+`gpu_scene` 与一个 Renderer 绑定，并拥有以下 move-only 资源：
+
+- 将全部 Primitive 打包进少量不可变 Vertex/Index Buffer；每个 `granit::mesh` 保存
+  对应 Offset 和 Draw 范围，不为每个 Primitive 执行独立 GPU 分配。
+- 每个唯一 Image/颜色空间组合对应 Texture 与默认 View；同一 Image 同时作为
+  sRGB 和线性资源时创建两个显式格式资源，不在 Shader 中补偿。
+- Sampler 按规范化后的 Filter/Wrap 去重；材质使用 `granit::material_instance`、内置
+  PBR 材质归档及批量初始参数，缺失纹理使用 Granit 的 PBR 默认资源。
+- 每个 Node/Primitive 实例生成稳定 payload，映射到 `granit_mesh` 与 `granit_material`；
+  世界矩阵、法线矩阵与世界空间 Bounds 通过 `granit::scene_snapshot` 提交。
+
+上传是事务式的：先在候选 `gpu_scene` 中创建所有句柄，再使用一个 Upload Batch 写入
+Buffer 与全部 Texture mip，只在提交成功后替换旧 Scene。失败时按 Mesh、Material、
+Sampler、View、Texture、Buffer 的依赖逆序销毁候选资源，原 Scene 保持可用。
+
+逐帧常量不在示例中创建另一套渲染入口。`granit_render_pipeline` 内部的现有
+逐 Draw Uniform 资源升级为通用动态 Uniform Arena：
+
+- 根据 `frames_in_flight` 创建帧槽；每个帧槽独立保留 Buffer 区域、写入游标和
+  Bind Group，只在 Frame Context 返回该槽后重用。
+- 用 `granit_renderer_get_limits` 的 Uniform Offset 对齐对 Frame/Object 常量块取整；
+  所有尺寸计算做溢出检查，单块不得超过最大 Uniform Binding 大小。
+- 每帧使用一个 Upload Batch 写入常量区域，录制 Draw 时只传递动态 Offset；空间
+  不足时按受控倍率增长，不在每个 Draw 创建 Buffer 或 Bind Group。
+- Arena 是 Render Pipeline 的私有实现，不形成新公共句柄；后续有第二个非内部
+  Consumer 需求时再单独评估提升。
+
+测试覆盖打包 Offset、去重、线性/sRGB 分裂、完整 mip 上传、事务回滚、销毁顺序、
+跨 Renderer 拒绝、帧槽重用、对齐/溢出和 Arena 增长。同一 CPU Scene 必须可在两个
+Renderer 上分别创建独立 GPU Scene，不共享任何 GPU 句柄。
+
 ## 实施顺序
 
 1. **S-13A 资产与依赖评估**：锁定模型、`cgltf`、图片解码器版本、许可证及获取/打包方式。
