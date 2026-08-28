@@ -108,7 +108,18 @@ granit_result get_win32_window(const std::shared_ptr<window_record>& window, voi
 #endif
 
 #if defined(GRANIT_WINDOW_HAS_XCB)
-xcb_atom_t intern_xcb_atom(xcb_connection_t* connection, const char* name);
+granit_result create_xcb_system(granit_window_system* output);
+granit_result destroy_xcb_system(granit_window_system handle,
+                                 const std::shared_ptr<window_system_record>& system);
+granit_result poll_xcb_event(const std::shared_ptr<window_system_record>& system,
+                             granit_window_event* event);
+granit_result create_xcb_window(const std::shared_ptr<window_system_record>& system,
+                                const granit_window_desc* desc, granit_window* output);
+granit_result destroy_xcb_window(const std::shared_ptr<window_system_record>& system,
+                                 const std::shared_ptr<window_record>& window);
+granit_result get_xcb_window(const std::shared_ptr<window_system_record>& system,
+                             const std::shared_ptr<window_record>& window, void** connection,
+                             std::uint32_t* native_window);
 void pump_xcb_events(const std::shared_ptr<window_system_record>& system);
 #endif
 
