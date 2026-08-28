@@ -134,6 +134,31 @@ Sampler、View、Texture、Buffer 的依赖逆序销毁候选资源，原 Scene 
 跨 Renderer 拒绝、帧槽重用、对齐/溢出和 Arena 增长。同一 CPU Scene 必须可在两个
 Renderer 上分别创建独立 GPU Scene，不共享任何 GPU 句柄。
 
+### S-13D 查看器交互契约
+
+交互核心位于 `examples/common/model_viewer/orbit_camera.h/.cpp`，只接收规范化的
+`viewer_input` 和帧缓冲像素尺寸。SDL3 事件、浏览器事件与 ImGui Capture 决策由
+平台壳转换，相机类不包含 SDL、Emscripten 或 ImGui 头文件。
+
+`orbit_camera` 保存 Target、Distance、Yaw、Pitch、垂直 FOV 和 Near/Far，并输出 Granit
+右手 View 矩阵与 `[0,1]` 深度投影矩阵。所有状态必须有限，Pitch 限制在两极之内，
+Distance、Near/Far 由模型尺度推导并保持严格有效。
+
+- 初始与 `F` 键聚焦合并后的世界空间 Bounds：Target 取中心，Distance 根据球半径、
+  垂直/水平 FOV 中较紧的一边和 10% 边距计算。空 Scene 使用有限的默认相机。
+- 鼠标右键拖动环绕，中键拖动在相机 Right/Up 平面平移，滚轮按指数比例缩放，
+  `F` 聚焦当前选择或整个 Scene，`Home` 恢复初始视图。首轮不承诺触摸手势。
+- 拖动量除以帧缓冲高度，平移再按 Distance 与 FOV 缩放；因此高 DPI、
+  CSS Canvas 尺寸和桌面窗口尺寸不会改变单位拖动的视觉敏感度。
+- ImGui 声明捕获鼠标或键盘时，平台壳不向相机转发对应操作；焦点丢失、
+  指针离开或按键释放时清理拖动状态，防止粘滞输入。
+- 像素尺寸变化只重算 Aspect 和 Projection；Swapchain 重建由平台壳处理。零尺寸时
+  暂停渲染但继续消费退出/恢复事件，恢复后不累积鼠标 Delta。
+
+相机单元测试使用固定输入序列，覆盖 Bounds 聚焦、空 Scene、极端 Aspect、Pitch/Distance
+限制、高 DPI 等价、ImGui 捕获、焦点丢失和零尺寸恢复。Smoke Test 需在调整
+窗口前后验证模型仍位于视野内，且不依赖绝对屏幕坐标。
+
 ## 实施顺序
 
 1. **S-13A 资产与依赖评估**：锁定模型、`cgltf`、图片解码器版本、许可证及获取/打包方式。
