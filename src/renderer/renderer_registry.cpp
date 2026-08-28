@@ -5,10 +5,9 @@
 #include "renderer/renderer_registry_records.h"
 
 #include "backend/diagnostics.h"
-#include "backend/webgpu/renderer_state.h"
+#include "core/diagnostic_sink.h"
 #include "core/texture_format.h"
 #include "renderer/renderer_registry_helpers.h"
-#include "renderer/renderer_state.h"
 
 #include <algorithm>
 #include <cstring>
@@ -23,74 +22,6 @@ namespace granit::detail {
 renderer_registry& renderer_registry::instance() {
   static renderer_registry registry;
   return registry;
-}
-
-granit_result renderer_registry::create(std::string_view application_name, bool enable_validation,
-                                        std::uint32_t surface_types, std::uint32_t frames_in_flight,
-                                        granit_diagnostic_callback diagnostic_callback,
-                                        void* diagnostic_user_data, granit_renderer& renderer) {
-  try {
-    auto state = std::make_shared<renderer_state>();
-    const auto initialize_result =
-        state->initialize(application_name, enable_validation, surface_types, frames_in_flight,
-                          diagnostic_callback, diagnostic_user_data);
-    if (initialize_result != GRANIT_SUCCESS) {
-      return initialize_result;
-    }
-
-    std::lock_guard lock{mutex_};
-    state->set_domain(allocate_domain());
-    const auto handle = handles_.insert(state.get(), resource_type::renderer, 0);
-    if (handle == GRANIT_NULL_HANDLE) {
-      return GRANIT_ERROR_OUT_OF_MEMORY;
-    }
-    try {
-      backend_renderers_.emplace(handle, state);
-    } catch (...) {
-      backend_renderers_.erase(handle);
-      static_cast<void>(handles_.erase(handle, resource_type::renderer, 0));
-      throw;
-    }
-    renderer = handle;
-    return GRANIT_SUCCESS;
-  } catch (const std::bad_alloc&) {
-    return GRANIT_ERROR_OUT_OF_MEMORY;
-  } catch (...) {
-    return GRANIT_ERROR_INTERNAL;
-  }
-}
-
-granit_result
-renderer_registry::create_webgpu_static(const granit_backend_plugin_api* api,
-                                        granit_diagnostic_callback diagnostic_callback,
-                                        void* diagnostic_user_data, granit_renderer& renderer) {
-  try {
-    auto state = std::make_shared<webgpu_renderer_state>();
-    const auto initialize_result =
-        state->initialize_static(api, diagnostic_callback, diagnostic_user_data);
-    if (initialize_result != GRANIT_SUCCESS) {
-      return initialize_result;
-    }
-
-    std::lock_guard lock{mutex_};
-    state->set_domain(allocate_domain());
-    const auto handle = handles_.insert(state.get(), resource_type::renderer, 0);
-    if (handle == GRANIT_NULL_HANDLE) {
-      return GRANIT_ERROR_OUT_OF_MEMORY;
-    }
-    try {
-      backend_renderers_.emplace(handle, std::move(state));
-    } catch (...) {
-      static_cast<void>(handles_.erase(handle, resource_type::renderer, 0));
-      throw;
-    }
-    renderer = handle;
-    return GRANIT_SUCCESS;
-  } catch (const std::bad_alloc&) {
-    return GRANIT_ERROR_OUT_OF_MEMORY;
-  } catch (...) {
-    return GRANIT_ERROR_INTERNAL;
-  }
 }
 
 granit_result renderer_registry::get_limits(granit_renderer renderer,

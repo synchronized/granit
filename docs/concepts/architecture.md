@@ -155,6 +155,10 @@ Registry 只通过 `backend_shader_renderer`、`backend_pipeline_renderer` 和
 支持的 Pipeline 描述范围和格式转换由 Pipeline Adapter 判断；Dawn 与 Emscripten 的 Provider
 差异也不得回流到公共 API 或 Registry。
 
+桌面与 Emscripten 复用同一组 Registry 编译单元，不维护浏览器专用的资源表或命令实现。
+Renderer 创建按后端拆成独立工厂编译单元：桌面默认工厂构造 Vulkan 状态，浏览器工厂静态绑定
+WebGPU Provider；平台选择不进入通用 Registry 实现。
+
 Vulkan 与 WebGPU 不必提供完全对称的内部能力。共同语义由 Registry 校验，设备差异通过不可变
 能力快照和统一结果码表达；无法安全模拟的能力明确返回不支持。该边界的决策依据见
 [ADR-003：Renderer 内部多后端边界](../decisions/ADR-003-internal-renderer-backend-boundary.md)。
