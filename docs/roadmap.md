@@ -26,7 +26,7 @@
 | 六、多线程与性能 | 已完成 | 压力测试、基线、批量提交与上传批处理已完成 |
 | 七、可选高层渲染 | 已完成 | H-02～H-08 路线闭合，参考管线与公共 UI/Text 已验证 |
 | 八、稳定化与跨平台 | 持续进行 | ABI 策略、诊断和更多平台 Surface 待后续推进 |
-| 九、多后端与 Web 平台 | 收尾中 | Registry 状态与公共 API 源已统一，正在收敛平台实现 |
+| 九、多后端与 Web 平台 | 已完成 | 桌面 WebGPU、浏览器闭环与私有 HAL 收敛已验收 |
 | 十、Android 移动平台 | 待开始 | 0.4.0 多后端边界完成后规划 NDK、Surface 与移动生命周期 |
 
 ## 一、工程与 ABI 基础
@@ -162,7 +162,7 @@
 
 ## 九、多后端与 Web 平台
 
-**状态：收尾中；SDK Consumer、浏览器验收、Registry 状态与公共 API 源已统一，平台实现尚待收敛。**
+**状态：已完成；桌面 WebGPU、Emscripten 浏览器闭环与私有 HAL 收敛已通过最终验收。**
 
 - **[S-10](plans/S-10-0.4.0-webgpu-backend.md) / P2**：先定义后端无关的内部设备、资源、命令、
   同步与 Surface 边界，在保持 Vulkan 后端功能和性能的前提下验证桌面 WebGPU 离屏 MVP；随后建立
@@ -183,8 +183,10 @@
   三角形示例与浏览器状态、输入及可读合成层像素验收已经完成；Windows、Linux 和 Emscripten
   首轮矩阵均已通过。Emscripten 与桌面现统一包含同一 Registry 入口，平台实现集中在
   `src/renderer`；旧类型和旧入口已删除，静态 SDK 与独立浏览器 Consumer 已通过构建和无头
-  Chrome 验证。Emscripten 编译单元仍维护独立句柄表和资源映射，下一步将其合并进唯一通用
-  Registry 状态并删除平台 Registry 实现。详细结果见
+  Chrome 验证。平台专用 Registry 已删除，两端共用唯一 Registry、句柄表、资源记录和公共 API
+  编译单元；命令、帧与资源记录通过私有 HAL 使用资源管理、命令、时间戳、Queue、Present 和延迟
+  退役能力，不再持有 Vulkan `renderer_state` 具体视图。最终 Windows、Linux 与 Emscripten 手动
+  Actions 矩阵全部通过，S-10 已完成。详细结果见
   [S-10E WebGPU Renderer 阶段验收](records/2026-08-28-s10e-webgpu-renderer-acceptance.md)。
 
 ## 十、Android 移动平台
@@ -199,9 +201,8 @@
 
 ## 近期执行顺序
 
-1. 合并 Emscripten Registry 的句柄表、资源记录和生命周期状态，删除平台 Registry 实现。
-2. S-06D 最终验收等待稳定版本与 component 范围决策；不在 0.x 阶段提前宣布稳定。
-3. H-09 的透明 PBR、CSM、Clustered Forward 与 Bindless 只在各自重新评估条件满足后独立恢复，
+1. S-06D 最终验收等待稳定版本与 component 范围决策；不在 0.x 阶段提前宣布稳定。
+2. H-09 的透明 PBR、CSM、Clustered Forward 与 Bindless 只在各自重新评估条件满足后独立恢复，
    不作为当前稳定化工作的前置项。
 
 若前置抽象不足，应先更新对应 Plan 和本路线图状态，再扩大公共 API。

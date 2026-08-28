@@ -5,8 +5,8 @@
 
 ## 结论
 
-S-10E 浏览器闭环、Registry 状态声明与公共 API 源统一已完成，平台实现收敛仍在收尾。Emscripten 构建现可通过 Granit 公共
-Renderer、Surface、
+S-10E 已完成。浏览器闭环、Registry 状态声明、公共 API 源与平台实现均已收敛。Emscripten 构建
+现可通过 Granit 公共 Renderer、Surface、
 Swapchain、Shader、Graphics Pipeline 和 Command Recorder API，在浏览器 Canvas 绘制确定性
 三角形；公共头文件不暴露 WebGPU、Emscripten 或 Vulkan 原生类型。Windows、Linux 与
 Emscripten 首轮矩阵均已通过。
@@ -17,7 +17,11 @@ Emscripten 首轮矩阵均已通过。
 `renderer_registry_emscripten.*` 已删除；桌面和 Emscripten 现使用同一个 Registry 类、句柄表成员、
 资源记录声明及公共 API 编译单元。Web Renderer 已只保留通用根表，动态 Backbuffer 也已进入公共
 Texture/View 资源表。
-平台生命周期实现仍需继续收敛，因此尚不能作为 S-10E 最终完成依据。
+
+Registry 现通过按能力拆分的私有 HAL 访问资源管理、命令生命周期、图形、计算、传输、时间戳、
+Queue、Present 和延迟退役能力。命令、帧、时间戳、Buffer、Sampler、Bind Group、Compute Pipeline
+及 Upload Batch 记录均不再持有 Vulkan `renderer_state` 具体视图。Vulkan 专用根表仅为 0.4.0
+尚未跨后端开放的原生创建路径提供实现入口，不进入公共 ABI 或通用资源记录。
 
 ## 验收范围
 
@@ -37,12 +41,14 @@ Texture/View 资源表。
 - Mock Provider 使用 10 个随机种子重复执行，确认测试结果不依赖 Catch2 用例顺序。
 - Registry 入口调整后，本地 Windows Clang 58 项测试、Emscripten Debug/Release SDK 和示例构建、
   无头 Chrome 公共绘制闭环与输入转发再次通过。
+- 私有 HAL 与资源记录收敛后，本地 Windows Clang 58 项测试、Emscripten Debug 构建及无头 Chrome
+  公共绘制闭环再次通过；最终手动 Windows、Linux 与 Emscripten Actions 矩阵全部通过。
 
 最终验证运行：
 
-- [Windows #33142507199](https://github.com/synchronized/granit/actions/runs/33142507199)
-- [Linux #33143254661](https://github.com/synchronized/granit/actions/runs/33143254661)
-- [Emscripten #33142924824](https://github.com/synchronized/granit/actions/runs/33142924824)
+- [Windows #33158805311](https://github.com/synchronized/granit/actions/runs/33158805311)
+- [Linux #33158808772](https://github.com/synchronized/granit/actions/runs/33158808772)
+- [Emscripten #33158812018](https://github.com/synchronized/granit/actions/runs/33158812018)
 
 ## 验收中修正的问题
 
