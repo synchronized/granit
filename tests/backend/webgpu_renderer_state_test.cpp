@@ -27,6 +27,29 @@ TEST_CASE("WebGPU Renderer 状态集中管理静态 Provider 生命周期", "[ba
   CHECK(backend.capabilities().storage_buffer_offset_alignment == 256);
   CHECK(backend.capabilities().max_uniform_buffer_binding_size == 65536);
   CHECK(state.presentation() != nullptr);
+
+  auto vertex_buffer = state.allocate_buffer_resource();
+  REQUIRE(vertex_buffer != nullptr);
+  granit_buffer_desc vertex_desc = GRANIT_BUFFER_DESC_INIT;
+  vertex_desc.size = 64;
+  vertex_desc.usage = GRANIT_BUFFER_USAGE_VERTEX_BIT | GRANIT_BUFFER_USAGE_INDEX_BIT |
+                      GRANIT_BUFFER_USAGE_TRANSFER_DESTINATION_BIT;
+  vertex_desc.memory_location = GRANIT_MEMORY_LOCATION_DEVICE;
+  REQUIRE(state.create_buffer(vertex_desc, *vertex_buffer) == GRANIT_SUCCESS);
+  const std::uint32_t geometry[]{0, 1, 2, 3};
+  REQUIRE(state.upload_buffer(*vertex_buffer, 0, geometry, sizeof(geometry)) == GRANIT_SUCCESS);
+
+  auto upload_buffer = state.allocate_buffer_resource();
+  REQUIRE(upload_buffer != nullptr);
+  auto upload_desc = vertex_desc;
+  upload_desc.usage = GRANIT_BUFFER_USAGE_VERTEX_BIT;
+  upload_desc.memory_location = GRANIT_MEMORY_LOCATION_UPLOAD;
+  REQUIRE(state.create_buffer(upload_desc, *upload_buffer) == GRANIT_SUCCESS);
+  auto* mapped = static_cast<std::uint32_t*>(state.mapped_buffer_data(*upload_buffer));
+  REQUIRE(mapped != nullptr);
+  mapped[0] = 42;
+  REQUIRE(state.flush_buffer(*upload_buffer, 0, sizeof(std::uint32_t)) == GRANIT_SUCCESS);
+
   auto surface = state.allocate_surface_resource();
   REQUIRE(surface != nullptr);
   const auto native_a = reinterpret_cast<void*>(std::uintptr_t{1});

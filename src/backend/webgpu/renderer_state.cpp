@@ -26,6 +26,7 @@ std::uint32_t to_plugin_surface_types(std::uint32_t surface_types) noexcept {
 
 webgpu_renderer_state::~webgpu_renderer_state() {
   presentation_.reset();
+  resources_.reset();
   commands_.reset();
   pipelines_.reset();
   shaders_.reset();
@@ -39,6 +40,113 @@ webgpu_renderer_state::~webgpu_renderer_state() {
 std::unique_ptr<backend_command_recorder_resource>
 webgpu_renderer_state::allocate_command_recorder_resource() {
   return commands_ ? commands_->allocate_recorder() : nullptr;
+}
+
+std::unique_ptr<backend_buffer_resource> webgpu_renderer_state::allocate_buffer_resource() {
+  return resources_ ? resources_->allocate_buffer() : nullptr;
+}
+
+granit_result webgpu_renderer_state::create_buffer(const granit_buffer_desc& desc,
+                                                   backend_buffer_resource& buffer) noexcept {
+  return resources_ ? resources_->create_buffer(desc, buffer) : GRANIT_ERROR_NOT_READY;
+}
+
+void* webgpu_renderer_state::mapped_buffer_data(backend_buffer_resource& buffer) noexcept {
+  return resources_ ? resources_->mapped_data(buffer) : nullptr;
+}
+
+granit_result webgpu_renderer_state::flush_buffer(backend_buffer_resource& buffer,
+                                                  std::uint64_t offset,
+                                                  std::uint64_t size) noexcept {
+  return resources_ ? resources_->flush(buffer, offset, size) : GRANIT_ERROR_NOT_READY;
+}
+
+granit_result webgpu_renderer_state::invalidate_buffer(backend_buffer_resource& buffer,
+                                                       std::uint64_t offset,
+                                                       std::uint64_t size) noexcept {
+  return resources_ ? resources_->invalidate(buffer, offset, size) : GRANIT_ERROR_NOT_READY;
+}
+
+granit_result webgpu_renderer_state::upload_buffer(backend_buffer_resource& buffer,
+                                                   std::uint64_t offset, const void* data,
+                                                   std::uint64_t size) noexcept {
+  return resources_ ? resources_->upload(buffer, offset, data, size) : GRANIT_ERROR_NOT_READY;
+}
+
+granit_result
+webgpu_renderer_state::upload_batch(std::span<const backend_upload_operation> uploads) noexcept {
+  return resources_ ? resources_->upload_batch(uploads) : GRANIT_ERROR_NOT_READY;
+}
+
+std::unique_ptr<backend_texture_resource> webgpu_renderer_state::allocate_texture_resource() {
+  return std::make_unique<backend_texture_resource>();
+}
+
+granit_result webgpu_renderer_state::create_texture(const granit_texture_desc&,
+                                                    backend_texture_resource&) noexcept {
+  return GRANIT_ERROR_UNSUPPORTED;
+}
+
+granit_result webgpu_renderer_state::upload_texture(backend_texture_resource&,
+                                                    granit_texture_format, const void*,
+                                                    std::uint64_t,
+                                                    const granit_texture_data_layout&,
+                                                    const granit_texture_write_region&) noexcept {
+  return GRANIT_ERROR_UNSUPPORTED;
+}
+
+std::unique_ptr<backend_texture_view_resource>
+webgpu_renderer_state::allocate_texture_view_resource() {
+  return std::make_unique<backend_texture_view_resource>();
+}
+
+granit_result webgpu_renderer_state::create_texture_view(backend_texture_resource&,
+                                                         const granit_texture_desc&,
+                                                         const granit_texture_view_desc&,
+                                                         backend_texture_view_resource&) noexcept {
+  return GRANIT_ERROR_UNSUPPORTED;
+}
+
+std::unique_ptr<backend_sampler_resource> webgpu_renderer_state::allocate_sampler_resource() {
+  return std::make_unique<backend_sampler_resource>();
+}
+
+granit_result webgpu_renderer_state::create_sampler(const granit_sampler_desc&,
+                                                    backend_sampler_resource&) noexcept {
+  return GRANIT_ERROR_UNSUPPORTED;
+}
+
+std::unique_ptr<backend_bind_group_layout_resource>
+webgpu_renderer_state::allocate_bind_group_layout_resource() {
+  return std::make_unique<backend_bind_group_layout_resource>();
+}
+
+granit_result
+webgpu_renderer_state::create_bind_group_layout(std::span<const granit_bind_group_layout_entry>,
+                                                backend_bind_group_layout_resource&) noexcept {
+  return GRANIT_ERROR_UNSUPPORTED;
+}
+
+std::unique_ptr<backend_bind_group_resource> webgpu_renderer_state::allocate_bind_group_resource() {
+  return std::make_unique<backend_bind_group_resource>();
+}
+
+granit_result webgpu_renderer_state::create_bind_group(backend_bind_group_layout_resource&,
+                                                       std::span<const backend_bind_group_write>,
+                                                       backend_bind_group_resource&) noexcept {
+  return GRANIT_ERROR_UNSUPPORTED;
+}
+
+std::unique_ptr<backend_compute_pipeline_resource>
+webgpu_renderer_state::allocate_compute_pipeline_resource() {
+  return std::make_unique<backend_compute_pipeline_resource>();
+}
+
+granit_result
+webgpu_renderer_state::create_compute_pipeline(backend_pipeline_layout_resource&,
+                                               backend_shader_resource&, const char*,
+                                               backend_compute_pipeline_resource&) noexcept {
+  return GRANIT_ERROR_UNSUPPORTED;
 }
 
 granit_result
@@ -253,8 +361,8 @@ granit_result webgpu_renderer_state::refresh_state() noexcept {
     return GRANIT_ERROR_INTERNAL;
   }
 
-  if (presentation_ == nullptr || shaders_ == nullptr || pipelines_ == nullptr ||
-      commands_ == nullptr) {
+  if (presentation_ == nullptr || resources_ == nullptr || shaders_ == nullptr ||
+      pipelines_ == nullptr || commands_ == nullptr) {
     granit_backend_plugin_capabilities capabilities{};
     capabilities.struct_size = sizeof(capabilities);
     const auto capabilities_result = loader_.get_capabilities(instance_, &capabilities);
@@ -275,10 +383,12 @@ granit_result webgpu_renderer_state::refresh_state() noexcept {
     }
     try {
       auto presentation = std::make_unique<webgpu_presentation_adapter>(loader_, instance_);
+      auto resources = std::make_unique<webgpu_resource_adapter>(loader_, instance_);
       auto shaders = std::make_unique<webgpu_shader_adapter>(loader_, instance_);
       auto pipelines = std::make_unique<webgpu_pipeline_adapter>(loader_, instance_);
       auto commands = std::make_unique<webgpu_command_adapter>(loader_, instance_);
       presentation_ = std::move(presentation);
+      resources_ = std::move(resources);
       shaders_ = std::move(shaders);
       pipelines_ = std::move(pipelines);
       commands_ = std::move(commands);

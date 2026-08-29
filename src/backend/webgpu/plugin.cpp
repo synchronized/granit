@@ -1454,7 +1454,7 @@ WGPUVertexFormat to_vertex_format(granit_backend_plugin_vertex_format format) no
   case GRANIT_BACKEND_PLUGIN_VERTEX_FORMAT_SINT32X4:
     return WGPUVertexFormat_Sint32x4;
   default:
-    return WGPUVertexFormat_Undefined;
+    return static_cast<WGPUVertexFormat>(0);
   }
 }
 
@@ -1526,23 +1526,28 @@ create_render_pipeline(granit_backend_plugin_instance instance,
         const auto& attribute = source.attributes[index];
         const auto format = to_vertex_format(attribute.format);
         const auto size = vertex_format_size(attribute.format);
-        if (attribute.reserved != 0 || format == WGPUVertexFormat_Undefined ||
-            attribute.offset > source.stride || size > source.stride - attribute.offset)
+        if (attribute.reserved != 0 || size == 0 || attribute.offset > source.stride ||
+            size > source.stride - attribute.offset)
           return GRANIT_ERROR_INVALID_ARGUMENT;
         if (std::any_of(vertex_attributes.begin(), vertex_attributes.end(),
                         [&attribute](const auto& existing) {
                           return existing.shaderLocation == attribute.location;
                         }))
           return GRANIT_ERROR_INVALID_ARGUMENT;
-        vertex_attributes.push_back({format, attribute.offset, attribute.location});
+        WGPUVertexAttribute native_attribute{};
+        native_attribute.format = format;
+        native_attribute.offset = attribute.offset;
+        native_attribute.shaderLocation = attribute.location;
+        vertex_attributes.push_back(native_attribute);
       }
-      vertex_buffers.push_back(
-          {source.stride,
-           static_cast<WGPUVertexStepMode>(source.step_mode ==
-                                                   GRANIT_BACKEND_PLUGIN_VERTEX_STEP_MODE_VERTEX
-                                               ? WGPUVertexStepMode_Vertex
-                                               : WGPUVertexStepMode_Instance),
-           source.attribute_count, vertex_attributes.data() + first});
+      WGPUVertexBufferLayout native_layout{};
+      native_layout.arrayStride = source.stride;
+      native_layout.stepMode = source.step_mode == GRANIT_BACKEND_PLUGIN_VERTEX_STEP_MODE_VERTEX
+                                   ? WGPUVertexStepMode_Vertex
+                                   : WGPUVertexStepMode_Instance;
+      native_layout.attributeCount = source.attribute_count;
+      native_layout.attributes = vertex_attributes.data() + first;
+      vertex_buffers.push_back(native_layout);
     }
   } catch (const std::bad_alloc&) {
     return GRANIT_ERROR_OUT_OF_MEMORY;

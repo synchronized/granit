@@ -25,6 +25,7 @@ add_library(
   "${PROJECT_SOURCE_DIR}/src/backend/webgpu/command_adapter.cpp"
   "${PROJECT_SOURCE_DIR}/src/backend/webgpu/presentation_adapter.cpp"
   "${PROJECT_SOURCE_DIR}/src/backend/webgpu/pipeline_adapter.cpp"
+  "${PROJECT_SOURCE_DIR}/src/backend/webgpu/resource_adapter.cpp"
   "${PROJECT_SOURCE_DIR}/src/backend/webgpu/renderer_state.cpp"
   "${PROJECT_SOURCE_DIR}/src/backend/webgpu/shader_adapter.cpp"
   "${PROJECT_SOURCE_DIR}/src/core/handle_table.cpp"

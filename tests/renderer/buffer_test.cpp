@@ -7,6 +7,8 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
+#include <cstring>
+#include <string_view>
 #include <utility>
 
 #include <catch2/catch_all.hpp>
@@ -156,6 +158,42 @@ TEST_CASE("初始数据和同步写入支持 UPLOAD 与 DEVICE Buffer", "[buffer
   CHECK(granit_buffer_create_with_data(renderer.native_handle(), &readback_desc, &initial_data,
                                        &readback) == GRANIT_ERROR_UNSUPPORTED);
   CHECK(readback == GRANIT_NULL_HANDLE);
+}
+
+TEST_CASE("WebGPU 后端通过公共 API 创建并写入 Buffer", "[buffer][webgpu]") {
+  constexpr std::string_view plugin_path = GRANIT_FAKE_BACKEND_PLUGIN_PATH;
+  granit_renderer_desc renderer_desc = GRANIT_RENDERER_DESC_INIT;
+  renderer_desc.backend = GRANIT_RENDERER_BACKEND_WEBGPU;
+  renderer_desc.backend_library_path = plugin_path.data();
+  renderer_desc.backend_library_path_length = static_cast<std::uint32_t>(plugin_path.size());
+  granit_renderer renderer = GRANIT_NULL_HANDLE;
+  REQUIRE(granit_renderer_create(&renderer_desc, &renderer) == GRANIT_SUCCESS);
+  REQUIRE(granit_renderer_process_events(renderer) == GRANIT_SUCCESS);
+
+  std::array<std::uint32_t, 4> data{1, 2, 3, 4};
+  granit_buffer_desc buffer_desc = GRANIT_BUFFER_DESC_INIT;
+  buffer_desc.size = sizeof(data);
+  buffer_desc.usage = GRANIT_BUFFER_USAGE_VERTEX_BIT | GRANIT_BUFFER_USAGE_TRANSFER_DESTINATION_BIT;
+  buffer_desc.memory_location = GRANIT_MEMORY_LOCATION_DEVICE;
+  granit_buffer device_buffer = GRANIT_NULL_HANDLE;
+  REQUIRE(granit_buffer_create(renderer, &buffer_desc, &device_buffer) == GRANIT_SUCCESS);
+  REQUIRE(granit_buffer_write(renderer, device_buffer, 0, data.data(), sizeof(data)) ==
+          GRANIT_SUCCESS);
+
+  buffer_desc.usage = GRANIT_BUFFER_USAGE_VERTEX_BIT;
+  buffer_desc.memory_location = GRANIT_MEMORY_LOCATION_UPLOAD;
+  granit_buffer upload_buffer = GRANIT_NULL_HANDLE;
+  REQUIRE(granit_buffer_create(renderer, &buffer_desc, &upload_buffer) == GRANIT_SUCCESS);
+  void* mapped = nullptr;
+  REQUIRE(granit_buffer_map(renderer, upload_buffer, 0, sizeof(data), &mapped) == GRANIT_SUCCESS);
+  REQUIRE(mapped != nullptr);
+  std::memcpy(mapped, data.data(), sizeof(data));
+  REQUIRE(granit_buffer_flush(renderer, upload_buffer, 0, sizeof(data)) == GRANIT_SUCCESS);
+  REQUIRE(granit_buffer_unmap(renderer, upload_buffer) == GRANIT_SUCCESS);
+
+  REQUIRE(granit_buffer_destroy(renderer, upload_buffer) == GRANIT_SUCCESS);
+  REQUIRE(granit_buffer_destroy(renderer, device_buffer) == GRANIT_SUCCESS);
+  REQUIRE(granit_renderer_destroy(renderer) == GRANIT_SUCCESS);
 }
 
 } // namespace

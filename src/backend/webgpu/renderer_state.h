@@ -16,10 +16,12 @@
 #include "backend/queue.h"
 #include "backend/renderer.h"
 #include "backend/rendering.h"
+#include "backend/resource_management.h"
 #include "backend/shader.h"
 #include "backend/webgpu/command_adapter.h"
 #include "backend/webgpu/pipeline_adapter.h"
 #include "backend/webgpu/presentation_adapter.h"
+#include "backend/webgpu/resource_adapter.h"
 #include "backend/webgpu/shader_adapter.h"
 
 namespace granit::detail {
@@ -30,6 +32,7 @@ class webgpu_renderer_state final : public backend_renderer,
                                     public backend_queue,
                                     public backend_command_renderer,
                                     public backend_graphics_command_renderer,
+                                    public backend_resource_renderer,
                                     public backend_shader_renderer,
                                     public backend_pipeline_layout_renderer,
                                     public backend_pipeline_renderer {
@@ -63,6 +66,51 @@ public:
   [[nodiscard]] std::uint32_t domain() const noexcept override { return domain_; }
   void set_domain(std::uint32_t domain) noexcept override { domain_ = domain; }
   [[nodiscard]] webgpu_presentation_adapter* presentation() noexcept { return presentation_.get(); }
+
+  [[nodiscard]] std::unique_ptr<backend_buffer_resource> allocate_buffer_resource() override;
+  [[nodiscard]] granit_result create_buffer(const granit_buffer_desc& desc,
+                                            backend_buffer_resource& buffer) noexcept override;
+  [[nodiscard]] void* mapped_buffer_data(backend_buffer_resource& buffer) noexcept override;
+  [[nodiscard]] granit_result flush_buffer(backend_buffer_resource& buffer, std::uint64_t offset,
+                                           std::uint64_t size) noexcept override;
+  [[nodiscard]] granit_result invalidate_buffer(backend_buffer_resource& buffer,
+                                                std::uint64_t offset,
+                                                std::uint64_t size) noexcept override;
+  [[nodiscard]] granit_result upload_buffer(backend_buffer_resource& buffer, std::uint64_t offset,
+                                            const void* data, std::uint64_t size) noexcept override;
+  [[nodiscard]] granit_result
+  upload_batch(std::span<const backend_upload_operation> uploads) noexcept override;
+  [[nodiscard]] std::unique_ptr<backend_texture_resource> allocate_texture_resource() override;
+  [[nodiscard]] granit_result create_texture(const granit_texture_desc&,
+                                             backend_texture_resource&) noexcept override;
+  [[nodiscard]] granit_result upload_texture(backend_texture_resource&, granit_texture_format,
+                                             const void*, std::uint64_t,
+                                             const granit_texture_data_layout&,
+                                             const granit_texture_write_region&) noexcept override;
+  [[nodiscard]] std::unique_ptr<backend_texture_view_resource>
+  allocate_texture_view_resource() override;
+  [[nodiscard]] granit_result create_texture_view(backend_texture_resource&,
+                                                  const granit_texture_desc&,
+                                                  const granit_texture_view_desc&,
+                                                  backend_texture_view_resource&) noexcept override;
+  [[nodiscard]] std::unique_ptr<backend_sampler_resource> allocate_sampler_resource() override;
+  [[nodiscard]] granit_result create_sampler(const granit_sampler_desc&,
+                                             backend_sampler_resource&) noexcept override;
+  [[nodiscard]] std::unique_ptr<backend_bind_group_layout_resource>
+  allocate_bind_group_layout_resource() override;
+  [[nodiscard]] granit_result
+  create_bind_group_layout(std::span<const granit_bind_group_layout_entry>,
+                           backend_bind_group_layout_resource&) noexcept override;
+  [[nodiscard]] std::unique_ptr<backend_bind_group_resource>
+  allocate_bind_group_resource() override;
+  [[nodiscard]] granit_result create_bind_group(backend_bind_group_layout_resource&,
+                                                std::span<const backend_bind_group_write>,
+                                                backend_bind_group_resource&) noexcept override;
+  [[nodiscard]] std::unique_ptr<backend_compute_pipeline_resource>
+  allocate_compute_pipeline_resource() override;
+  [[nodiscard]] granit_result
+  create_compute_pipeline(backend_pipeline_layout_resource&, backend_shader_resource&, const char*,
+                          backend_compute_pipeline_resource&) noexcept override;
 
   [[nodiscard]] std::unique_ptr<backend_command_recorder_resource>
   allocate_command_recorder_resource() override;
@@ -172,6 +220,7 @@ private:
   std::uint32_t domain_{};
   submission_serial next_submission_serial_{1};
   std::unique_ptr<webgpu_presentation_adapter> presentation_;
+  std::unique_ptr<webgpu_resource_adapter> resources_;
   std::unique_ptr<webgpu_shader_adapter> shaders_;
   std::unique_ptr<webgpu_pipeline_adapter> pipelines_;
   std::unique_ptr<webgpu_command_adapter> commands_;
