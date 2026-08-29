@@ -29,7 +29,7 @@ typedef struct granit_renderer_status {
   uint32_t reserved;
 } granit_renderer_status;
 
-#define GRANIT_RENDERER_STATUS_VERSION_1_SIZE                                                     \
+#define GRANIT_RENDERER_STATUS_VERSION_1_SIZE                                                      \
   ((uint32_t)(offsetof(granit_renderer_status, reserved) + sizeof(uint32_t)))
 #define GRANIT_RENDERER_STATUS_INIT                                                                \
   {(uint32_t)sizeof(granit_renderer_status), GRANIT_RENDERER_STATE_INITIALIZING, GRANIT_SUCCESS,   \
@@ -61,6 +61,57 @@ typedef struct granit_renderer_limits {
 
 #define GRANIT_RENDERER_LIMITS_INIT                                                                \
   {(uint32_t)sizeof(granit_renderer_limits), UINT32_C(0), UINT64_C(0), UINT64_C(0)}
+
+/** Renderer 当前存活的公开子资源及后端待回收资源快照。 */
+typedef struct granit_renderer_resource_stats {
+  uint32_t struct_size;
+  uint32_t reserved;
+  uint64_t total_live_count;
+  uint64_t buffer_count;
+  uint64_t texture_count;
+  uint64_t texture_view_count;
+  uint64_t sampler_count;
+  uint64_t shader_count;
+  uint64_t bind_group_layout_count;
+  uint64_t bind_group_count;
+  uint64_t pipeline_layout_count;
+  uint64_t graphics_pipeline_count;
+  uint64_t compute_pipeline_count;
+  uint64_t surface_count;
+  uint64_t swapchain_count;
+  uint64_t command_recorder_count;
+  uint64_t frame_context_count;
+  uint64_t frame_count;
+  uint64_t timestamp_query_pool_count;
+  uint64_t upload_batch_count;
+  uint64_t pending_retirement_count;
+} granit_renderer_resource_stats;
+
+#define GRANIT_RENDERER_RESOURCE_STATS_VERSION_1_SIZE                                              \
+  ((uint32_t)(offsetof(granit_renderer_resource_stats, pending_retirement_count) +                 \
+              sizeof(uint64_t)))
+#define GRANIT_RENDERER_RESOURCE_STATS_INIT                                                        \
+  {(uint32_t)sizeof(granit_renderer_resource_stats),                                               \
+   UINT32_C(0),                                                                                    \
+   UINT64_C(0),                                                                                    \
+   UINT64_C(0),                                                                                    \
+   UINT64_C(0),                                                                                    \
+   UINT64_C(0),                                                                                    \
+   UINT64_C(0),                                                                                    \
+   UINT64_C(0),                                                                                    \
+   UINT64_C(0),                                                                                    \
+   UINT64_C(0),                                                                                    \
+   UINT64_C(0),                                                                                    \
+   UINT64_C(0),                                                                                    \
+   UINT64_C(0),                                                                                    \
+   UINT64_C(0),                                                                                    \
+   UINT64_C(0),                                                                                    \
+   UINT64_C(0),                                                                                    \
+   UINT64_C(0),                                                                                    \
+   UINT64_C(0),                                                                                    \
+   UINT64_C(0),                                                                                    \
+   UINT64_C(0),                                                                                    \
+   UINT64_C(0)}
 
 /** Renderer 创建描述。字符串以显式长度表示，不要求调用者提供结尾零字符。 */
 typedef struct granit_renderer_desc {
@@ -111,6 +162,10 @@ GRANIT_API granit_result granit_renderer_destroy(granit_renderer renderer);
 /** 查询 Renderer 对应设备的限制；调用者须先设置 limits->struct_size。 */
 GRANIT_API granit_result granit_renderer_get_limits(granit_renderer renderer,
                                                     granit_renderer_limits* limits);
+
+/** 查询公开子资源与延迟回收队列；调用者须先设置 stats->struct_size。 */
+GRANIT_API granit_result granit_renderer_get_resource_stats(granit_renderer renderer,
+                                                            granit_renderer_resource_stats* stats);
 
 /** 查询 Renderer 生命周期；该调用不等待，也不执行用户回调。 */
 GRANIT_API granit_result granit_renderer_get_status(granit_renderer renderer,

@@ -2,6 +2,7 @@
 // Copyright (c) 2026 Granit contributors
 
 #include <granit/renderer/buffer.h>
+#include <granit/renderer/command_recorder.h>
 #include <granit/renderer/renderer.hpp>
 #include <granit/renderer/upload_batch.h>
 
@@ -103,6 +104,67 @@ TEST_CASE("Renderer 公开查询 Uniform Buffer 限制", "[renderer][limits][c_a
 
   REQUIRE(granit_renderer_destroy(renderer) == GRANIT_SUCCESS);
   CHECK(granit_renderer_get_limits(renderer, &limits) == GRANIT_ERROR_INVALID_HANDLE);
+}
+
+TEST_CASE("Renderer 资源统计覆盖创建销毁和无效句柄", "[renderer][resource-stats][c_api]") {
+  granit_renderer_resource_stats stats = GRANIT_RENDERER_RESOURCE_STATS_INIT;
+  CHECK(granit_renderer_get_resource_stats(GRANIT_NULL_HANDLE, nullptr) ==
+        GRANIT_ERROR_INVALID_ARGUMENT);
+  stats.struct_size = GRANIT_RENDERER_RESOURCE_STATS_VERSION_1_SIZE - 1;
+  CHECK(granit_renderer_get_resource_stats(GRANIT_NULL_HANDLE, &stats) ==
+        GRANIT_ERROR_INVALID_ARGUMENT);
+  stats = GRANIT_RENDERER_RESOURCE_STATS_INIT;
+  stats.reserved = 1;
+  CHECK(granit_renderer_get_resource_stats(GRANIT_NULL_HANDLE, &stats) ==
+        GRANIT_ERROR_INVALID_ARGUMENT);
+  stats = GRANIT_RENDERER_RESOURCE_STATS_INIT;
+  CHECK(granit_renderer_get_resource_stats(GRANIT_NULL_HANDLE, &stats) ==
+        GRANIT_ERROR_INVALID_HANDLE);
+
+  granit_renderer_desc desc = GRANIT_RENDERER_DESC_INIT;
+  granit_renderer renderer = GRANIT_NULL_HANDLE;
+  const auto create_result = granit_renderer_create(&desc, &renderer);
+  if (environment_unavailable(create_result)) {
+    SKIP("当前运行环境没有满足要求的 Vulkan 设备");
+  }
+  REQUIRE(create_result == GRANIT_SUCCESS);
+  REQUIRE(granit_renderer_get_resource_stats(renderer, &stats) == GRANIT_SUCCESS);
+  CHECK(stats.total_live_count == 0);
+
+  granit_buffer_desc buffer_desc = GRANIT_BUFFER_DESC_INIT;
+  buffer_desc.size = 16;
+  buffer_desc.usage = GRANIT_BUFFER_USAGE_TRANSFER_DESTINATION_BIT;
+  granit_buffer buffer = GRANIT_NULL_HANDLE;
+  REQUIRE(granit_buffer_create(renderer, &buffer_desc, &buffer) == GRANIT_SUCCESS);
+  REQUIRE(granit_renderer_get_resource_stats(renderer, &stats) == GRANIT_SUCCESS);
+  CHECK(stats.total_live_count == 1);
+  CHECK(stats.buffer_count == 1);
+
+  REQUIRE(granit_buffer_destroy(renderer, buffer) == GRANIT_SUCCESS);
+  REQUIRE(granit_renderer_get_resource_stats(renderer, &stats) == GRANIT_SUCCESS);
+  CHECK(stats.total_live_count == 0);
+  CHECK(stats.buffer_count == 0);
+  CHECK(stats.pending_retirement_count == 0);
+
+  buffer = GRANIT_NULL_HANDLE;
+  REQUIRE(granit_buffer_create(renderer, &buffer_desc, &buffer) == GRANIT_SUCCESS);
+  const granit_command_recorder_desc recorder_desc = GRANIT_COMMAND_RECORDER_DESC_INIT;
+  granit_command_recorder recorder = GRANIT_NULL_HANDLE;
+  REQUIRE(granit_command_recorder_create(renderer, &recorder_desc, &recorder) == GRANIT_SUCCESS);
+  REQUIRE(granit_command_recorder_begin(renderer, recorder) == GRANIT_SUCCESS);
+  REQUIRE(granit_command_recorder_fill_buffer(renderer, recorder, buffer, 0, 16, 0) ==
+          GRANIT_SUCCESS);
+  REQUIRE(granit_command_recorder_end(renderer, recorder) == GRANIT_SUCCESS);
+  REQUIRE(granit_command_recorder_submit(renderer, recorder) == GRANIT_SUCCESS);
+  REQUIRE(granit_buffer_destroy(renderer, buffer) == GRANIT_SUCCESS);
+  REQUIRE(granit_renderer_get_resource_stats(renderer, &stats) == GRANIT_SUCCESS);
+  CHECK(stats.buffer_count == 0);
+  CHECK(stats.command_recorder_count == 1);
+  CHECK(stats.pending_retirement_count >= 1);
+  REQUIRE(granit_command_recorder_destroy(renderer, recorder) == GRANIT_SUCCESS);
+
+  REQUIRE(granit_renderer_destroy(renderer) == GRANIT_SUCCESS);
+  CHECK(granit_renderer_get_resource_stats(renderer, &stats) == GRANIT_ERROR_INVALID_HANDLE);
 }
 
 TEST_CASE("Renderer 描述拒绝未知字段和非法字符串", "[renderer][validation]") {
@@ -258,6 +320,9 @@ TEST_CASE("C++ renderer 提供 move-only RAII", "[renderer][cpp_api]") {
   granit::renderer_limits limits;
   REQUIRE(renderer.get_limits(limits) == granit::result::success);
   CHECK(limits.uniform_buffer_offset_alignment > 0);
+  granit::renderer_resource_stats stats;
+  REQUIRE(renderer.get_resource_stats(stats) == granit::result::success);
+  CHECK(stats.total_live_count == 0);
   CHECK(limits.max_uniform_buffer_binding_size > 0);
 
   granit::renderer_status status;

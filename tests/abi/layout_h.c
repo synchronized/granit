@@ -20,6 +20,10 @@ GRANIT_ABI_ASSERT(granit_abi_last_error, GRANIT_ERROR_NOT_READY == INT32_C(-14))
 GRANIT_ABI_ASSERT(granit_abi_renderer_api_version, GRANIT_RENDERER_API_VERSION_CURRENT == 1);
 GRANIT_ABI_ASSERT(granit_abi_renderer_status_size, sizeof(granit_renderer_status) == 16);
 GRANIT_ABI_ASSERT(granit_abi_renderer_status_v1, GRANIT_RENDERER_STATUS_VERSION_1_SIZE == 16);
+GRANIT_ABI_ASSERT(granit_abi_renderer_resource_stats_size,
+                  sizeof(granit_renderer_resource_stats) == 160);
+GRANIT_ABI_ASSERT(granit_abi_renderer_resource_stats_v1,
+                  GRANIT_RENDERER_RESOURCE_STATS_VERSION_1_SIZE == 160);
 GRANIT_ABI_ASSERT(granit_abi_validation_bit, GRANIT_RENDERER_ENABLE_VALIDATION_BIT == (1U << 0));
 GRANIT_ABI_ASSERT(granit_abi_xcb_surface_bit, GRANIT_SURFACE_TYPE_XCB_BIT == (1U << 1));
 GRANIT_ABI_ASSERT(granit_abi_wayland_surface_bit, GRANIT_SURFACE_TYPE_WAYLAND_BIT == (1U << 2));

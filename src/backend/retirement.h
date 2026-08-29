@@ -23,6 +23,7 @@ public:
   virtual void retire_resource(submission_serial retire_after, retirement_order order,
                                std::shared_ptr<void> resource) = 0;
   [[nodiscard]] virtual std::size_t collect_retired() noexcept = 0;
+  [[nodiscard]] virtual std::size_t pending_retirement_count() const noexcept = 0;
 };
 
 } // namespace granit::detail
