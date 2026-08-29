@@ -9,7 +9,7 @@
 #include <granit/core/diagnostic.h>
 #include <granit/core/result.h>
 
-#define GRANIT_BACKEND_PLUGIN_ABI_VERSION UINT32_C(10)
+#define GRANIT_BACKEND_PLUGIN_ABI_VERSION UINT32_C(11)
 #define GRANIT_BACKEND_PLUGIN_KIND_WEBGPU UINT32_C(1)
 #define GRANIT_BACKEND_PLUGIN_QUERY_SYMBOL "granit_backend_plugin_query"
 #define GRANIT_BACKEND_PLUGIN_SURFACE_TYPE_WIN32_BIT UINT32_C(0x00000001)
@@ -38,6 +38,10 @@ typedef struct granit_backend_plugin_vertex_buffer_binding {
   granit_backend_plugin_buffer buffer;
   uint64_t offset;
 } granit_backend_plugin_vertex_buffer_binding;
+
+typedef uint32_t granit_backend_plugin_index_format;
+#define GRANIT_BACKEND_PLUGIN_INDEX_FORMAT_UINT16 UINT32_C(1)
+#define GRANIT_BACKEND_PLUGIN_INDEX_FORMAT_UINT32 UINT32_C(2)
 
 typedef uint32_t granit_backend_plugin_instance_state;
 #define GRANIT_BACKEND_PLUGIN_INSTANCE_STATE_INITIALIZING UINT32_C(1)
@@ -337,7 +341,10 @@ typedef granit_result (*granit_backend_plugin_recorder_draw_fn)(
     granit_backend_plugin_texture_view target, granit_backend_plugin_render_pipeline pipeline,
     granit_backend_plugin_bind_group bind_group, uint32_t first_vertex_buffer,
     const granit_backend_plugin_vertex_buffer_binding* vertex_buffers, uint32_t vertex_buffer_count,
-    uint32_t vertex_count, uint32_t instance_count, uint32_t first_vertex, uint32_t first_instance);
+    uint32_t indexed, granit_backend_plugin_buffer index_buffer, uint64_t index_buffer_offset,
+    granit_backend_plugin_index_format index_format, uint32_t element_count,
+    uint32_t instance_count, uint32_t first_element, int32_t vertex_offset,
+    uint32_t first_instance);
 typedef granit_result (*granit_backend_plugin_finish_command_recorder_fn)(
     granit_backend_plugin_instance instance, granit_backend_plugin_command_recorder recorder,
     granit_backend_plugin_command_buffer* command_buffer);

@@ -54,6 +54,7 @@ typedef unsigned int WGPUSType;
 typedef unsigned long long WGPUColorWriteMask;
 typedef unsigned int WGPUPrimitiveTopology;
 typedef unsigned int WGPUVertexFormat;
+typedef unsigned int WGPUIndexFormat;
 typedef unsigned int WGPUVertexStepMode;
 typedef unsigned int WGPUTextureAspect;
 typedef unsigned int WGPULoadOp;
@@ -117,6 +118,8 @@ typedef unsigned int WGPUSurfaceGetCurrentTextureStatus;
 #define WGPUVertexFormat_Sint32x2 17
 #define WGPUVertexFormat_Sint32x3 18
 #define WGPUVertexFormat_Sint32x4 19
+#define WGPUIndexFormat_Uint16 1
+#define WGPUIndexFormat_Uint32 2
 #define WGPUVertexFormat_Float32 28
 #define WGPUVertexFormat_Float32x2 29
 #define WGPUVertexFormat_Float32x3 30
@@ -670,9 +673,14 @@ void wgpuRenderPassEncoderSetBindGroup(WGPURenderPassEncoder pass, unsigned int 
                                        const unsigned int* dynamicOffsets);
 void wgpuRenderPassEncoderSetVertexBuffer(WGPURenderPassEncoder pass, unsigned int slot,
                                           WGPUBuffer buffer, uint64_t offset, uint64_t size);
+void wgpuRenderPassEncoderSetIndexBuffer(WGPURenderPassEncoder pass, WGPUBuffer buffer,
+                                         WGPUIndexFormat format, uint64_t offset, uint64_t size);
 void wgpuRenderPassEncoderDraw(WGPURenderPassEncoder pass, unsigned int vertexCount,
                                unsigned int instanceCount, unsigned int firstVertex,
                                unsigned int firstInstance);
+void wgpuRenderPassEncoderDrawIndexed(WGPURenderPassEncoder pass, unsigned int indexCount,
+                                      unsigned int instanceCount, unsigned int firstIndex,
+                                      int baseVertex, unsigned int firstInstance);
 void wgpuRenderPassEncoderEnd(WGPURenderPassEncoder pass);
 void wgpuRenderPassEncoderRelease(WGPURenderPassEncoder pass);
 WGPUCommandBuffer wgpuCommandEncoderFinish(WGPUCommandEncoder encoder,

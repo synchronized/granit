@@ -393,6 +393,13 @@ extern "C" void wgpuRenderPassEncoderDraw(WGPURenderPassEncoder pass, unsigned i
 
 extern "C" void wgpuRenderPassEncoderSetVertexBuffer(WGPURenderPassEncoder, unsigned int,
                                                      WGPUBuffer, uint64_t, uint64_t) {}
+extern "C" void wgpuRenderPassEncoderSetIndexBuffer(WGPURenderPassEncoder, WGPUBuffer,
+                                                    WGPUIndexFormat, uint64_t, uint64_t) {}
+extern "C" void wgpuRenderPassEncoderDrawIndexed(WGPURenderPassEncoder pass, unsigned int count,
+                                                 unsigned int instances, unsigned int first, int,
+                                                 unsigned int first_instance) {
+  wgpuRenderPassEncoderDraw(pass, count, instances, first, first_instance);
+}
 extern "C" void wgpuRenderPassEncoderEnd(WGPURenderPassEncoder) {}
 extern "C" void wgpuRenderPassEncoderRelease(WGPURenderPassEncoder pass) { delete pass; }
 extern "C" WGPUCommandBuffer wgpuCommandEncoderFinish(WGPUCommandEncoder encoder,

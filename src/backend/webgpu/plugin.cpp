@@ -1717,11 +1717,17 @@ granit_result recorder_draw(
     granit_backend_plugin_texture_view target, granit_backend_plugin_render_pipeline pipeline,
     granit_backend_plugin_bind_group bind_group, std::uint32_t first_vertex_buffer,
     const granit_backend_plugin_vertex_buffer_binding* vertex_buffers,
-    std::uint32_t vertex_buffer_count, std::uint32_t vertex_count, std::uint32_t instance_count,
-    std::uint32_t first_vertex, std::uint32_t first_instance) noexcept {
-  if (instance == 0 || recorder == 0 || target == 0 || pipeline == 0 || vertex_count == 0 ||
+    std::uint32_t vertex_buffer_count, std::uint32_t indexed,
+    granit_backend_plugin_buffer index_buffer, std::uint64_t index_buffer_offset,
+    granit_backend_plugin_index_format index_format, std::uint32_t element_count,
+    std::uint32_t instance_count, std::uint32_t first_element, std::int32_t vertex_offset,
+    std::uint32_t first_instance) noexcept {
+  if (instance == 0 || recorder == 0 || target == 0 || pipeline == 0 || element_count == 0 ||
       instance_count == 0 || (vertex_buffer_count != 0 && vertex_buffers == nullptr) ||
-      first_vertex_buffer > UINT32_MAX - vertex_buffer_count)
+      first_vertex_buffer > UINT32_MAX - vertex_buffer_count || indexed > 1 ||
+      (indexed != 0 &&
+       (index_buffer == 0 || (index_format != GRANIT_BACKEND_PLUGIN_INDEX_FORMAT_UINT16 &&
+                              index_format != GRANIT_BACKEND_PLUGIN_INDEX_FORMAT_UINT32))))
     return GRANIT_ERROR_INVALID_ARGUMENT;
   const std::scoped_lock lock{instances_mutex};
   const auto found = instances.find(instance);
@@ -1750,6 +1756,21 @@ granit_result recorder_draw(
         vertex_buffers[index].offset >= buffer->second.size)
       return GRANIT_ERROR_INVALID_ARGUMENT;
   }
+  webgpu_instance::buffer_record* native_index_buffer = nullptr;
+  if (indexed != 0) {
+    const auto buffer = state.buffers.find(index_buffer);
+    if (buffer == state.buffers.end())
+      return GRANIT_ERROR_INVALID_HANDLE;
+    const auto element_size = index_format == GRANIT_BACKEND_PLUGIN_INDEX_FORMAT_UINT16 ? 2U : 4U;
+    const auto first_byte = static_cast<std::uint64_t>(first_element) * element_size;
+    const auto draw_size = static_cast<std::uint64_t>(element_count) * element_size;
+    if ((buffer->second.usage & GRANIT_BACKEND_PLUGIN_BUFFER_USAGE_INDEX_BIT) == 0 ||
+        index_buffer_offset >= buffer->second.size || index_buffer_offset % element_size != 0 ||
+        first_byte > buffer->second.size - index_buffer_offset ||
+        draw_size > buffer->second.size - index_buffer_offset - first_byte)
+      return GRANIT_ERROR_INVALID_ARGUMENT;
+    native_index_buffer = &buffer->second;
+  }
   const auto texture_found = state.textures.find(view_found->second.texture);
   if (texture_found == state.textures.end() ||
       (texture_found->second.usage & GRANIT_BACKEND_PLUGIN_TEXTURE_USAGE_RENDER_ATTACHMENT_BIT) ==
@@ -1776,7 +1797,18 @@ granit_result recorder_draw(
     wgpuRenderPassEncoderSetVertexBuffer(pass, first_vertex_buffer + index, buffer.buffer,
                                          binding.offset, buffer.size - binding.offset);
   }
-  wgpuRenderPassEncoderDraw(pass, vertex_count, instance_count, first_vertex, first_instance);
+  if (indexed != 0) {
+    const auto format = index_format == GRANIT_BACKEND_PLUGIN_INDEX_FORMAT_UINT16
+                            ? WGPUIndexFormat_Uint16
+                            : WGPUIndexFormat_Uint32;
+    wgpuRenderPassEncoderSetIndexBuffer(pass, native_index_buffer->buffer, format,
+                                        index_buffer_offset,
+                                        native_index_buffer->size - index_buffer_offset);
+    wgpuRenderPassEncoderDrawIndexed(pass, element_count, instance_count, first_element,
+                                     vertex_offset, first_instance);
+  } else {
+    wgpuRenderPassEncoderDraw(pass, element_count, instance_count, first_element, first_instance);
+  }
   wgpuRenderPassEncoderEnd(pass);
   wgpuRenderPassEncoderRelease(pass);
   return GRANIT_SUCCESS;

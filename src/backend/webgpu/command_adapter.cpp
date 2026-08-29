@@ -36,6 +36,9 @@ public:
   granit_backend_plugin_command_buffer command_buffer_{};
   std::uint32_t first_vertex_buffer_{};
   std::vector<granit_backend_plugin_vertex_buffer_binding> vertex_buffers_;
+  granit_backend_plugin_buffer index_buffer_{};
+  std::uint64_t index_buffer_offset_{};
+  granit_backend_plugin_index_format index_format_{};
 };
 
 webgpu_command_recorder_resource* as_recorder(backend_command_recorder_resource& resource) {
@@ -72,9 +75,26 @@ granit_result webgpu_command_adapter::draw(backend_command_recorder_resource& re
   if (recorder == nullptr || recorder->recorder_ == 0 || recorder->command_buffer_ != 0 ||
       target == 0 || pipeline == 0)
     return GRANIT_ERROR_INVALID_ARGUMENT;
+  return context_->loader->recorder_draw(context_->instance, recorder->recorder_, target, pipeline,
+                                         0, recorder->first_vertex_buffer_,
+                                         recorder->vertex_buffers_, false, 0, 0, 0, vertex_count,
+                                         instance_count, first_vertex, 0, first_instance);
+}
+
+granit_result webgpu_command_adapter::draw_indexed(
+    backend_command_recorder_resource& resource, granit_backend_plugin_texture_view target,
+    granit_backend_plugin_render_pipeline pipeline, std::uint32_t index_count,
+    std::uint32_t instance_count, std::uint32_t first_index, std::int32_t vertex_offset,
+    std::uint32_t first_instance) const noexcept {
+  auto* recorder = as_recorder(resource);
+  if (recorder == nullptr || recorder->recorder_ == 0 || recorder->command_buffer_ != 0 ||
+      target == 0 || pipeline == 0 || recorder->index_buffer_ == 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
   return context_->loader->recorder_draw(
       context_->instance, recorder->recorder_, target, pipeline, 0, recorder->first_vertex_buffer_,
-      recorder->vertex_buffers_, vertex_count, instance_count, first_vertex, first_instance);
+      recorder->vertex_buffers_, true, recorder->index_buffer_, recorder->index_buffer_offset_,
+      recorder->index_format_, index_count, instance_count, first_index, vertex_offset,
+      first_instance);
 }
 
 granit_result webgpu_command_adapter::bind_vertex_buffers(
@@ -94,6 +114,21 @@ granit_result webgpu_command_adapter::bind_vertex_buffers(
   } catch (...) {
     return GRANIT_ERROR_INTERNAL;
   }
+  return GRANIT_SUCCESS;
+}
+
+granit_result webgpu_command_adapter::bind_index_buffer(
+    backend_command_recorder_resource& resource, granit_backend_plugin_buffer buffer,
+    std::uint64_t offset, granit_backend_plugin_index_format format) const noexcept {
+  auto* recorder = as_recorder(resource);
+  if (recorder == nullptr || recorder->recorder_ == 0 || recorder->command_buffer_ != 0 ||
+      buffer == 0 ||
+      (format != GRANIT_BACKEND_PLUGIN_INDEX_FORMAT_UINT16 &&
+       format != GRANIT_BACKEND_PLUGIN_INDEX_FORMAT_UINT32))
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  recorder->index_buffer_ = buffer;
+  recorder->index_buffer_offset_ = offset;
+  recorder->index_format_ = format;
   return GRANIT_SUCCESS;
 }
 
@@ -145,6 +180,9 @@ webgpu_command_adapter::reset(backend_command_recorder_resource& resource) const
   }
   recorder->vertex_buffers_.clear();
   recorder->first_vertex_buffer_ = 0;
+  recorder->index_buffer_ = 0;
+  recorder->index_buffer_offset_ = 0;
+  recorder->index_format_ = 0;
   return GRANIT_SUCCESS;
 }
 

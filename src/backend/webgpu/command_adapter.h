@@ -24,12 +24,22 @@ public:
   [[nodiscard]] granit_result bind_vertex_buffers(
       backend_command_recorder_resource& resource, std::uint32_t first,
       std::span<const granit_backend_plugin_vertex_buffer_binding> bindings) const noexcept;
+  [[nodiscard]] granit_result
+  bind_index_buffer(backend_command_recorder_resource& resource,
+                    granit_backend_plugin_buffer buffer, std::uint64_t offset,
+                    granit_backend_plugin_index_format format) const noexcept;
   [[nodiscard]] granit_result draw(backend_command_recorder_resource& resource,
                                    granit_backend_plugin_texture_view target,
                                    granit_backend_plugin_render_pipeline pipeline,
                                    std::uint32_t vertex_count, std::uint32_t instance_count,
                                    std::uint32_t first_vertex,
                                    std::uint32_t first_instance) const noexcept;
+  [[nodiscard]] granit_result draw_indexed(backend_command_recorder_resource& resource,
+                                           granit_backend_plugin_texture_view target,
+                                           granit_backend_plugin_render_pipeline pipeline,
+                                           std::uint32_t index_count, std::uint32_t instance_count,
+                                           std::uint32_t first_index, std::int32_t vertex_offset,
+                                           std::uint32_t first_instance) const noexcept;
   [[nodiscard]] bool is_recording(backend_command_recorder_resource& resource) const noexcept;
   [[nodiscard]] granit_result end(backend_command_recorder_resource& resource) const noexcept;
   [[nodiscard]] granit_result submit(backend_command_recorder_resource& resource) const noexcept;

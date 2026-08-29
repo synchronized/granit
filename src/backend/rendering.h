@@ -88,6 +88,8 @@ public:
                                            std::uint32_t first_vertex,
                                            std::uint32_t first_instance) noexcept = 0;
   [[nodiscard]] virtual granit_result draw_indexed(backend_command_recorder_resource&,
+                                                   backend_texture_view_resource*,
+                                                   backend_graphics_pipeline_resource*,
                                                    std::uint32_t, std::uint32_t, std::uint32_t,
                                                    std::int32_t, std::uint32_t) noexcept {
     return GRANIT_ERROR_UNSUPPORTED;

@@ -195,8 +195,8 @@ int main(int argc, char** argv) {
       loader.create_texture_view(instance, target_texture, &target_view) != GRANIT_SUCCESS ||
       loader.create_buffer(instance, &readback_desc, &readback) != GRANIT_SUCCESS ||
       loader.create_command_recorder(instance, &recorder) != GRANIT_SUCCESS || recorder == 0 ||
-      loader.recorder_draw(instance, recorder, target_view, pipeline, bind_group, 0, {}, 3, 1, 0,
-                           0) != GRANIT_SUCCESS ||
+      loader.recorder_draw(instance, recorder, target_view, pipeline, bind_group, 0, {}, false, 0,
+                           0, 0, 3, 1, 0, 0, 0) != GRANIT_SUCCESS ||
       loader.recorder_copy_texture_to_buffer(instance, recorder, target_texture, readback, 64, 64,
                                              256) != GRANIT_SUCCESS ||
       loader.finish_command_recorder(instance, recorder, &command_buffer) != GRANIT_SUCCESS ||

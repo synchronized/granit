@@ -130,12 +130,22 @@ public:
                                                   std::uint32_t first,
                                                   std::span<backend_buffer_resource* const> buffers,
                                                   std::span<const std::uint64_t> offsets) override;
+  [[nodiscard]] granit_result bind_index_buffer(backend_command_recorder_resource& recorder,
+                                                backend_buffer_resource& buffer,
+                                                std::uint64_t offset,
+                                                granit_index_type type) override;
   [[nodiscard]] granit_result draw(backend_command_recorder_resource& recorder,
                                    backend_texture_view_resource* target,
                                    backend_graphics_pipeline_resource* pipeline,
                                    std::uint32_t vertex_count, std::uint32_t instance_count,
                                    std::uint32_t first_vertex,
                                    std::uint32_t first_instance) noexcept override;
+  [[nodiscard]] granit_result draw_indexed(backend_command_recorder_resource& recorder,
+                                           backend_texture_view_resource* target,
+                                           backend_graphics_pipeline_resource* pipeline,
+                                           std::uint32_t index_count, std::uint32_t instance_count,
+                                           std::uint32_t first_index, std::int32_t vertex_offset,
+                                           std::uint32_t first_instance) noexcept override;
   [[nodiscard]] std::unique_ptr<backend_shader_resource> allocate_shader_resource() override;
   [[nodiscard]] granit_result create_wgsl_shader(backend_shader_resource& shader,
                                                  granit_shader_stage stage, std::string_view source,

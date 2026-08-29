@@ -319,8 +319,20 @@ granit_result renderer_registry::draw_indexed(granit_renderer renderer,
   if (!command)
     return GRANIT_ERROR_INVALID_HANDLE;
   std::lock_guard lock{command->mutex};
-  return command->graphics->draw_indexed(*command->native, index_count, instance_count, first_index,
-                                         vertex_offset, first_instance);
+  if (command->platform_managed_rendering) {
+    if (command->web_status != command_recorder_record::web_state::rendering ||
+        !command->web_target || !command->web_pipeline)
+      return GRANIT_ERROR_INVALID_ARGUMENT;
+    const auto result = command->graphics->draw_indexed(
+        *command->native, command->web_target->native.get(), command->web_pipeline->native.get(),
+        index_count, instance_count, first_index, vertex_offset, first_instance);
+    if (result == GRANIT_SUCCESS)
+      command->web_drew = true;
+    return result;
+  }
+  return command->graphics->draw_indexed(*command->native, nullptr, nullptr, index_count,
+                                         instance_count, first_index, vertex_offset,
+                                         first_instance);
 }
 
 granit_result renderer_registry::begin_rendering(granit_renderer renderer,

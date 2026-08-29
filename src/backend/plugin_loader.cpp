@@ -705,8 +705,10 @@ granit_result backend_plugin_loader::recorder_draw(
     granit_backend_plugin_instance instance, granit_backend_plugin_command_recorder recorder,
     granit_backend_plugin_texture_view target, granit_backend_plugin_render_pipeline pipeline,
     granit_backend_plugin_bind_group bind_group, std::uint32_t first_vertex_buffer,
-    std::span<const granit_backend_plugin_vertex_buffer_binding> vertex_buffers,
-    std::uint32_t vertex_count, std::uint32_t instance_count, std::uint32_t first_vertex,
+    std::span<const granit_backend_plugin_vertex_buffer_binding> vertex_buffers, bool indexed,
+    granit_backend_plugin_buffer index_buffer, std::uint64_t index_buffer_offset,
+    granit_backend_plugin_index_format index_format, std::uint32_t element_count,
+    std::uint32_t instance_count, std::uint32_t first_element, std::int32_t vertex_offset,
     std::uint32_t first_instance) noexcept {
   if (api_ == nullptr || instance == 0 || recorder == 0 || target == 0 || pipeline == 0)
     return GRANIT_ERROR_INVALID_ARGUMENT;
@@ -715,8 +717,9 @@ granit_result backend_plugin_loader::recorder_draw(
   try {
     return api_->instance_api->recorder_draw(
         instance, recorder, target, pipeline, bind_group, first_vertex_buffer,
-        vertex_buffers.data(), static_cast<std::uint32_t>(vertex_buffers.size()), vertex_count,
-        instance_count, first_vertex, first_instance);
+        vertex_buffers.data(), static_cast<std::uint32_t>(vertex_buffers.size()), indexed ? 1U : 0U,
+        index_buffer, index_buffer_offset, index_format, element_count, instance_count,
+        first_element, vertex_offset, first_instance);
   } catch (...) {
     return GRANIT_ERROR_INTERNAL;
   }

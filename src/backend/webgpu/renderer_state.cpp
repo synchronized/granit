@@ -201,6 +201,20 @@ granit_result webgpu_renderer_state::bind_vertex_buffers(
   return commands_->bind_vertex_buffers(recorder, first, bindings);
 }
 
+granit_result webgpu_renderer_state::bind_index_buffer(backend_command_recorder_resource& recorder,
+                                                       backend_buffer_resource& buffer,
+                                                       std::uint64_t offset,
+                                                       granit_index_type type) {
+  if (!commands_ || !resources_)
+    return GRANIT_ERROR_UNSUPPORTED;
+  const auto native = resources_->native_buffer(buffer);
+  if (native == 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  const auto format = type == GRANIT_INDEX_TYPE_UINT16 ? GRANIT_BACKEND_PLUGIN_INDEX_FORMAT_UINT16
+                                                       : GRANIT_BACKEND_PLUGIN_INDEX_FORMAT_UINT32;
+  return commands_->bind_index_buffer(recorder, native, offset, format);
+}
+
 granit_result webgpu_renderer_state::draw(backend_command_recorder_resource& recorder,
                                           backend_texture_view_resource* target,
                                           backend_graphics_pipeline_resource* pipeline,
@@ -212,6 +226,18 @@ granit_result webgpu_renderer_state::draw(backend_command_recorder_resource& rec
   return commands_->draw(recorder, presentation_->native_view(*target),
                          pipelines_->native_handle(*pipeline), vertex_count, instance_count,
                          first_vertex, first_instance);
+}
+
+granit_result webgpu_renderer_state::draw_indexed(
+    backend_command_recorder_resource& recorder, backend_texture_view_resource* target,
+    backend_graphics_pipeline_resource* pipeline, std::uint32_t index_count,
+    std::uint32_t instance_count, std::uint32_t first_index, std::int32_t vertex_offset,
+    std::uint32_t first_instance) noexcept {
+  if (!commands_ || !presentation_ || !pipelines_ || !target || !pipeline)
+    return GRANIT_ERROR_UNSUPPORTED;
+  return commands_->draw_indexed(recorder, presentation_->native_view(*target),
+                                 pipelines_->native_handle(*pipeline), index_count, instance_count,
+                                 first_index, vertex_offset, first_instance);
 }
 
 std::unique_ptr<backend_shader_resource> webgpu_renderer_state::allocate_shader_resource() {

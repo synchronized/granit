@@ -157,8 +157,10 @@ public:
       granit_backend_plugin_instance instance, granit_backend_plugin_command_recorder recorder,
       granit_backend_plugin_texture_view target, granit_backend_plugin_render_pipeline pipeline,
       granit_backend_plugin_bind_group bind_group, std::uint32_t first_vertex_buffer,
-      std::span<const granit_backend_plugin_vertex_buffer_binding> vertex_buffers,
-      std::uint32_t vertex_count, std::uint32_t instance_count, std::uint32_t first_vertex,
+      std::span<const granit_backend_plugin_vertex_buffer_binding> vertex_buffers, bool indexed,
+      granit_backend_plugin_buffer index_buffer, std::uint64_t index_buffer_offset,
+      granit_backend_plugin_index_format index_format, std::uint32_t element_count,
+      std::uint32_t instance_count, std::uint32_t first_element, std::int32_t vertex_offset,
       std::uint32_t first_instance) noexcept;
   [[nodiscard]] granit_result
   finish_command_recorder(granit_backend_plugin_instance instance,
