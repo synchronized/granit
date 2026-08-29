@@ -9,7 +9,7 @@
 #include <granit/core/diagnostic.h>
 #include <granit/core/result.h>
 
-#define GRANIT_BACKEND_PLUGIN_ABI_VERSION UINT32_C(11)
+#define GRANIT_BACKEND_PLUGIN_ABI_VERSION UINT32_C(12)
 #define GRANIT_BACKEND_PLUGIN_KIND_WEBGPU UINT32_C(1)
 #define GRANIT_BACKEND_PLUGIN_QUERY_SYMBOL "granit_backend_plugin_query"
 #define GRANIT_BACKEND_PLUGIN_SURFACE_TYPE_WIN32_BIT UINT32_C(0x00000001)
@@ -42,6 +42,14 @@ typedef struct granit_backend_plugin_vertex_buffer_binding {
 typedef uint32_t granit_backend_plugin_index_format;
 #define GRANIT_BACKEND_PLUGIN_INDEX_FORMAT_UINT16 UINT32_C(1)
 #define GRANIT_BACKEND_PLUGIN_INDEX_FORMAT_UINT32 UINT32_C(2)
+
+typedef uint32_t granit_backend_plugin_load_operation;
+#define GRANIT_BACKEND_PLUGIN_LOAD_OPERATION_LOAD UINT32_C(1)
+#define GRANIT_BACKEND_PLUGIN_LOAD_OPERATION_CLEAR UINT32_C(2)
+#define GRANIT_BACKEND_PLUGIN_LOAD_OPERATION_DISCARD UINT32_C(3)
+typedef uint32_t granit_backend_plugin_store_operation;
+#define GRANIT_BACKEND_PLUGIN_STORE_OPERATION_STORE UINT32_C(1)
+#define GRANIT_BACKEND_PLUGIN_STORE_OPERATION_DISCARD UINT32_C(2)
 
 typedef uint32_t granit_backend_plugin_instance_state;
 #define GRANIT_BACKEND_PLUGIN_INSTANCE_STATE_INITIALIZING UINT32_C(1)
@@ -345,6 +353,30 @@ typedef granit_result (*granit_backend_plugin_recorder_draw_fn)(
     granit_backend_plugin_index_format index_format, uint32_t element_count,
     uint32_t instance_count, uint32_t first_element, int32_t vertex_offset,
     uint32_t first_instance);
+typedef granit_result (*granit_backend_plugin_recorder_begin_rendering_fn)(
+    granit_backend_plugin_instance instance, granit_backend_plugin_command_recorder recorder,
+    granit_backend_plugin_texture_view target, granit_backend_plugin_load_operation load_operation,
+    granit_backend_plugin_store_operation store_operation, float clear_r, float clear_g,
+    float clear_b, float clear_a);
+typedef granit_result (*granit_backend_plugin_recorder_bind_pipeline_fn)(
+    granit_backend_plugin_instance instance, granit_backend_plugin_command_recorder recorder,
+    granit_backend_plugin_render_pipeline pipeline);
+typedef granit_result (*granit_backend_plugin_recorder_bind_vertex_buffers_fn)(
+    granit_backend_plugin_instance instance, granit_backend_plugin_command_recorder recorder,
+    uint32_t first, const granit_backend_plugin_vertex_buffer_binding* bindings, uint32_t count);
+typedef granit_result (*granit_backend_plugin_recorder_bind_index_buffer_fn)(
+    granit_backend_plugin_instance instance, granit_backend_plugin_command_recorder recorder,
+    granit_backend_plugin_buffer buffer, uint64_t offset,
+    granit_backend_plugin_index_format format);
+typedef granit_result (*granit_backend_plugin_recorder_draw_vertices_fn)(
+    granit_backend_plugin_instance instance, granit_backend_plugin_command_recorder recorder,
+    uint32_t vertex_count, uint32_t instance_count, uint32_t first_vertex, uint32_t first_instance);
+typedef granit_result (*granit_backend_plugin_recorder_draw_indices_fn)(
+    granit_backend_plugin_instance instance, granit_backend_plugin_command_recorder recorder,
+    uint32_t index_count, uint32_t instance_count, uint32_t first_index, int32_t vertex_offset,
+    uint32_t first_instance);
+typedef granit_result (*granit_backend_plugin_recorder_end_rendering_fn)(
+    granit_backend_plugin_instance instance, granit_backend_plugin_command_recorder recorder);
 typedef granit_result (*granit_backend_plugin_finish_command_recorder_fn)(
     granit_backend_plugin_instance instance, granit_backend_plugin_command_recorder recorder,
     granit_backend_plugin_command_buffer* command_buffer);
@@ -448,6 +480,13 @@ typedef struct granit_backend_plugin_instance_api {
   granit_backend_plugin_present_swapchain_fn present_swapchain;
   granit_backend_plugin_cancel_swapchain_fn cancel_swapchain;
   granit_backend_plugin_destroy_swapchain_fn destroy_swapchain;
+  granit_backend_plugin_recorder_begin_rendering_fn recorder_begin_rendering;
+  granit_backend_plugin_recorder_bind_pipeline_fn recorder_bind_pipeline;
+  granit_backend_plugin_recorder_bind_vertex_buffers_fn recorder_bind_vertex_buffers;
+  granit_backend_plugin_recorder_bind_index_buffer_fn recorder_bind_index_buffer;
+  granit_backend_plugin_recorder_draw_vertices_fn recorder_draw_vertices;
+  granit_backend_plugin_recorder_draw_indices_fn recorder_draw_indices;
+  granit_backend_plugin_recorder_end_rendering_fn recorder_end_rendering;
 } granit_backend_plugin_instance_api;
 
 /** 后端插件入口返回的只读描述；字符串在插件卸载前有效。 */

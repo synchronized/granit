@@ -162,6 +162,36 @@ public:
       granit_backend_plugin_index_format index_format, std::uint32_t element_count,
       std::uint32_t instance_count, std::uint32_t first_element, std::int32_t vertex_offset,
       std::uint32_t first_instance) noexcept;
+  [[nodiscard]] granit_result recorder_begin_rendering(
+      granit_backend_plugin_instance instance, granit_backend_plugin_command_recorder recorder,
+      granit_backend_plugin_texture_view target, granit_backend_plugin_load_operation load,
+      granit_backend_plugin_store_operation store, const float clear[4]) noexcept;
+  [[nodiscard]] granit_result
+  recorder_bind_pipeline(granit_backend_plugin_instance instance,
+                         granit_backend_plugin_command_recorder recorder,
+                         granit_backend_plugin_render_pipeline pipeline) noexcept;
+  [[nodiscard]] granit_result recorder_bind_vertex_buffers(
+      granit_backend_plugin_instance instance, granit_backend_plugin_command_recorder recorder,
+      std::uint32_t first,
+      std::span<const granit_backend_plugin_vertex_buffer_binding> bindings) noexcept;
+  [[nodiscard]] granit_result
+  recorder_bind_index_buffer(granit_backend_plugin_instance instance,
+                             granit_backend_plugin_command_recorder recorder,
+                             granit_backend_plugin_buffer buffer, std::uint64_t offset,
+                             granit_backend_plugin_index_format format) noexcept;
+  [[nodiscard]] granit_result
+  recorder_draw_vertices(granit_backend_plugin_instance instance,
+                         granit_backend_plugin_command_recorder recorder,
+                         std::uint32_t vertex_count, std::uint32_t instance_count,
+                         std::uint32_t first_vertex, std::uint32_t first_instance) noexcept;
+  [[nodiscard]] granit_result
+  recorder_draw_indices(granit_backend_plugin_instance instance,
+                        granit_backend_plugin_command_recorder recorder, std::uint32_t index_count,
+                        std::uint32_t instance_count, std::uint32_t first_index,
+                        std::int32_t vertex_offset, std::uint32_t first_instance) noexcept;
+  [[nodiscard]] granit_result
+  recorder_end_rendering(granit_backend_plugin_instance instance,
+                         granit_backend_plugin_command_recorder recorder) noexcept;
   [[nodiscard]] granit_result
   finish_command_recorder(granit_backend_plugin_instance instance,
                           granit_backend_plugin_command_recorder recorder,

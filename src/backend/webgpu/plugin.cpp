@@ -83,7 +83,11 @@ struct webgpu_instance {
   };
   struct command_recorder_record {
     WGPUCommandEncoder encoder;
+    WGPURenderPassEncoder pass;
     bool finished;
+    bool pipeline_bound;
+    std::uint64_t index_available;
+    std::uint32_t index_element_size;
   };
   struct surface_record {
     void* surface;
@@ -238,6 +242,8 @@ void release_resources(webgpu_instance& state) noexcept {
   state.command_buffers.clear();
   for (const auto& [handle, recorder] : state.command_recorders) {
     static_cast<void>(handle);
+    if (recorder.pass != nullptr)
+      wgpuRenderPassEncoderRelease(recorder.pass);
     wgpuCommandEncoderRelease(recorder.encoder);
   }
   state.command_recorders.clear();
@@ -1633,7 +1639,8 @@ create_command_recorder(granit_backend_plugin_instance instance,
     return GRANIT_ERROR_OUT_OF_MEMORY;
   const auto handle = next_handle<granit_backend_plugin_command_recorder>(next_command_recorder);
   try {
-    const auto record = webgpu_instance::command_recorder_record{native, false};
+    const auto record =
+        webgpu_instance::command_recorder_record{native, nullptr, false, false, 0, 0};
     if (!found->second->command_recorders.emplace(handle, record).second) {
       wgpuCommandEncoderRelease(native);
       return GRANIT_ERROR_INTERNAL;
@@ -1660,6 +1667,8 @@ granit_result destroy_command_recorder(granit_backend_plugin_instance instance,
   const auto recorder_found = found->second->command_recorders.find(recorder);
   if (recorder_found == found->second->command_recorders.end())
     return GRANIT_ERROR_INVALID_HANDLE;
+  if (recorder_found->second.pass != nullptr)
+    wgpuRenderPassEncoderRelease(recorder_found->second.pass);
   wgpuCommandEncoderRelease(recorder_found->second.encoder);
   found->second->command_recorders.erase(recorder_found);
   return GRANIT_SUCCESS;
@@ -1689,7 +1698,7 @@ granit_result recorder_copy_buffer_to_texture(granit_backend_plugin_instance ins
       texture_found == state.textures.end()) {
     return GRANIT_ERROR_INVALID_HANDLE;
   }
-  if (recorder_found->second.finished)
+  if (recorder_found->second.finished || recorder_found->second.pass != nullptr)
     return GRANIT_ERROR_INVALID_ARGUMENT;
   const auto required_size = static_cast<std::uint64_t>(bytes_per_row) * (height - 1) +
                              static_cast<std::uint64_t>(width) * 4;
@@ -1746,7 +1755,7 @@ granit_result recorder_draw(
   const auto group_found = state.bind_groups.find(bind_group);
   if (bind_group != 0 && group_found == state.bind_groups.end())
     return GRANIT_ERROR_INVALID_HANDLE;
-  if (recorder_found->second.finished)
+  if (recorder_found->second.finished || recorder_found->second.pass != nullptr)
     return GRANIT_ERROR_INVALID_ARGUMENT;
   for (std::uint32_t index = 0; index < vertex_buffer_count; ++index) {
     const auto buffer = state.buffers.find(vertex_buffers[index].buffer);
@@ -1814,6 +1823,215 @@ granit_result recorder_draw(
   return GRANIT_SUCCESS;
 }
 
+granit_result recorder_begin_rendering(granit_backend_plugin_instance instance,
+                                       granit_backend_plugin_command_recorder recorder,
+                                       granit_backend_plugin_texture_view target,
+                                       granit_backend_plugin_load_operation load_operation,
+                                       granit_backend_plugin_store_operation store_operation,
+                                       float clear_r, float clear_g, float clear_b,
+                                       float clear_a) noexcept {
+  if (instance == 0 || recorder == 0 || target == 0 ||
+      (load_operation != GRANIT_BACKEND_PLUGIN_LOAD_OPERATION_LOAD &&
+       load_operation != GRANIT_BACKEND_PLUGIN_LOAD_OPERATION_CLEAR) ||
+      (store_operation != GRANIT_BACKEND_PLUGIN_STORE_OPERATION_STORE &&
+       store_operation != GRANIT_BACKEND_PLUGIN_STORE_OPERATION_DISCARD))
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  const std::scoped_lock lock{instances_mutex};
+  const auto found = instances.find(instance);
+  if (found == instances.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  if (const auto ready = require_ready(*found->second); ready != GRANIT_SUCCESS)
+    return ready;
+  auto& state = *found->second;
+  const auto command = state.command_recorders.find(recorder);
+  const auto view = state.texture_views.find(target);
+  if (command == state.command_recorders.end() || view == state.texture_views.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  const auto texture = state.textures.find(view->second.texture);
+  if (command->second.finished || command->second.pass != nullptr ||
+      texture == state.textures.end() ||
+      (texture->second.usage & GRANIT_BACKEND_PLUGIN_TEXTURE_USAGE_RENDER_ATTACHMENT_BIT) == 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  WGPURenderPassColorAttachment color = WGPU_RENDER_PASS_COLOR_ATTACHMENT_INIT;
+  color.view = view->second.view;
+  color.loadOp = load_operation == GRANIT_BACKEND_PLUGIN_LOAD_OPERATION_LOAD ? WGPULoadOp_Load
+                                                                             : WGPULoadOp_Clear;
+  color.storeOp = store_operation == GRANIT_BACKEND_PLUGIN_STORE_OPERATION_STORE
+                      ? WGPUStoreOp_Store
+                      : WGPUStoreOp_Discard;
+  color.clearValue = {clear_r, clear_g, clear_b, clear_a};
+  WGPURenderPassDescriptor descriptor = WGPU_RENDER_PASS_DESCRIPTOR_INIT;
+  descriptor.colorAttachmentCount = 1;
+  descriptor.colorAttachments = &color;
+  command->second.pass = wgpuCommandEncoderBeginRenderPass(command->second.encoder, &descriptor);
+  if (command->second.pass == nullptr)
+    return GRANIT_ERROR_INITIALIZATION_FAILED;
+  command->second.pipeline_bound = false;
+  command->second.index_available = 0;
+  command->second.index_element_size = 0;
+  return GRANIT_SUCCESS;
+}
+
+granit_result recorder_bind_pipeline(granit_backend_plugin_instance instance,
+                                     granit_backend_plugin_command_recorder recorder,
+                                     granit_backend_plugin_render_pipeline pipeline) noexcept {
+  if (instance == 0 || recorder == 0 || pipeline == 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  const std::scoped_lock lock{instances_mutex};
+  const auto found = instances.find(instance);
+  if (found == instances.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  auto& state = *found->second;
+  const auto command = state.command_recorders.find(recorder);
+  const auto native = state.render_pipelines.find(pipeline);
+  if (command == state.command_recorders.end() || native == state.render_pipelines.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  if (command->second.pass == nullptr || command->second.finished)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  wgpuRenderPassEncoderSetPipeline(command->second.pass, native->second.render_pipeline);
+  command->second.pipeline_bound = true;
+  return GRANIT_SUCCESS;
+}
+
+granit_result
+recorder_bind_vertex_buffers(granit_backend_plugin_instance instance,
+                             granit_backend_plugin_command_recorder recorder, std::uint32_t first,
+                             const granit_backend_plugin_vertex_buffer_binding* bindings,
+                             std::uint32_t count) noexcept {
+  if (instance == 0 || recorder == 0 || count == 0 || bindings == nullptr ||
+      first > UINT32_MAX - count)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  const std::scoped_lock lock{instances_mutex};
+  const auto found = instances.find(instance);
+  if (found == instances.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  auto& state = *found->second;
+  const auto command = state.command_recorders.find(recorder);
+  if (command == state.command_recorders.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  if (command->second.pass == nullptr || command->second.finished)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  for (std::uint32_t index = 0; index < count; ++index) {
+    const auto buffer = state.buffers.find(bindings[index].buffer);
+    if (buffer == state.buffers.end())
+      return GRANIT_ERROR_INVALID_HANDLE;
+    if ((buffer->second.usage & GRANIT_BACKEND_PLUGIN_BUFFER_USAGE_VERTEX_BIT) == 0 ||
+        bindings[index].offset >= buffer->second.size)
+      return GRANIT_ERROR_INVALID_ARGUMENT;
+  }
+  for (std::uint32_t index = 0; index < count; ++index) {
+    const auto& binding = bindings[index];
+    const auto& buffer = state.buffers.find(binding.buffer)->second;
+    wgpuRenderPassEncoderSetVertexBuffer(command->second.pass, first + index, buffer.buffer,
+                                         binding.offset, buffer.size - binding.offset);
+  }
+  return GRANIT_SUCCESS;
+}
+
+granit_result recorder_bind_index_buffer(granit_backend_plugin_instance instance,
+                                         granit_backend_plugin_command_recorder recorder,
+                                         granit_backend_plugin_buffer buffer, std::uint64_t offset,
+                                         granit_backend_plugin_index_format format) noexcept {
+  if (instance == 0 || recorder == 0 || buffer == 0 ||
+      (format != GRANIT_BACKEND_PLUGIN_INDEX_FORMAT_UINT16 &&
+       format != GRANIT_BACKEND_PLUGIN_INDEX_FORMAT_UINT32))
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  const std::scoped_lock lock{instances_mutex};
+  const auto found = instances.find(instance);
+  if (found == instances.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  auto& state = *found->second;
+  const auto command = state.command_recorders.find(recorder);
+  const auto native = state.buffers.find(buffer);
+  if (command == state.command_recorders.end() || native == state.buffers.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  const auto element_size = format == GRANIT_BACKEND_PLUGIN_INDEX_FORMAT_UINT16 ? 2U : 4U;
+  if (command->second.pass == nullptr || command->second.finished ||
+      (native->second.usage & GRANIT_BACKEND_PLUGIN_BUFFER_USAGE_INDEX_BIT) == 0 ||
+      offset >= native->second.size || offset % element_size != 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  wgpuRenderPassEncoderSetIndexBuffer(command->second.pass, native->second.buffer,
+                                      format == GRANIT_BACKEND_PLUGIN_INDEX_FORMAT_UINT16
+                                          ? WGPUIndexFormat_Uint16
+                                          : WGPUIndexFormat_Uint32,
+                                      offset, native->second.size - offset);
+  command->second.index_available = native->second.size - offset;
+  command->second.index_element_size = element_size;
+  return GRANIT_SUCCESS;
+}
+
+granit_result recorder_draw_vertices(granit_backend_plugin_instance instance,
+                                     granit_backend_plugin_command_recorder recorder,
+                                     std::uint32_t vertex_count, std::uint32_t instance_count,
+                                     std::uint32_t first_vertex,
+                                     std::uint32_t first_instance) noexcept {
+  if (instance == 0 || recorder == 0 || vertex_count == 0 || instance_count == 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  const std::scoped_lock lock{instances_mutex};
+  const auto found = instances.find(instance);
+  if (found == instances.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  const auto command = found->second->command_recorders.find(recorder);
+  if (command == found->second->command_recorders.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  if (command->second.pass == nullptr || !command->second.pipeline_bound ||
+      command->second.finished)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  wgpuRenderPassEncoderDraw(command->second.pass, vertex_count, instance_count, first_vertex,
+                            first_instance);
+  return GRANIT_SUCCESS;
+}
+
+granit_result recorder_draw_indices(granit_backend_plugin_instance instance,
+                                    granit_backend_plugin_command_recorder recorder,
+                                    std::uint32_t index_count, std::uint32_t instance_count,
+                                    std::uint32_t first_index, std::int32_t vertex_offset,
+                                    std::uint32_t first_instance) noexcept {
+  if (instance == 0 || recorder == 0 || index_count == 0 || instance_count == 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  const std::scoped_lock lock{instances_mutex};
+  const auto found = instances.find(instance);
+  if (found == instances.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  const auto command = found->second->command_recorders.find(recorder);
+  if (command == found->second->command_recorders.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  const auto first_byte =
+      static_cast<std::uint64_t>(first_index) * command->second.index_element_size;
+  const auto draw_size =
+      static_cast<std::uint64_t>(index_count) * command->second.index_element_size;
+  if (command->second.pass == nullptr || !command->second.pipeline_bound ||
+      command->second.finished || command->second.index_element_size == 0 ||
+      first_byte > command->second.index_available ||
+      draw_size > command->second.index_available - first_byte)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  wgpuRenderPassEncoderDrawIndexed(command->second.pass, index_count, instance_count, first_index,
+                                   vertex_offset, first_instance);
+  return GRANIT_SUCCESS;
+}
+
+granit_result recorder_end_rendering(granit_backend_plugin_instance instance,
+                                     granit_backend_plugin_command_recorder recorder) noexcept {
+  if (instance == 0 || recorder == 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  const std::scoped_lock lock{instances_mutex};
+  const auto found = instances.find(instance);
+  if (found == instances.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  const auto command = found->second->command_recorders.find(recorder);
+  if (command == found->second->command_recorders.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  if (command->second.pass == nullptr || command->second.finished)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  wgpuRenderPassEncoderEnd(command->second.pass);
+  wgpuRenderPassEncoderRelease(command->second.pass);
+  command->second.pass = nullptr;
+  command->second.pipeline_bound = false;
+  command->second.index_available = 0;
+  command->second.index_element_size = 0;
+  return GRANIT_SUCCESS;
+}
+
 granit_result recorder_copy_texture_to_buffer(granit_backend_plugin_instance instance,
                                               granit_backend_plugin_command_recorder recorder,
                                               granit_backend_plugin_texture texture,
@@ -1838,7 +2056,7 @@ granit_result recorder_copy_texture_to_buffer(granit_backend_plugin_instance ins
       buffer_found == state.buffers.end()) {
     return GRANIT_ERROR_INVALID_HANDLE;
   }
-  if (recorder_found->second.finished)
+  if (recorder_found->second.finished || recorder_found->second.pass != nullptr)
     return GRANIT_ERROR_INVALID_ARGUMENT;
   const auto required_size = static_cast<std::uint64_t>(bytes_per_row) * (height - 1) +
                              static_cast<std::uint64_t>(width) * 4;
@@ -1879,7 +2097,7 @@ finish_command_recorder(granit_backend_plugin_instance instance,
   const auto recorder_found = state.command_recorders.find(recorder);
   if (recorder_found == state.command_recorders.end())
     return GRANIT_ERROR_INVALID_HANDLE;
-  if (recorder_found->second.finished)
+  if (recorder_found->second.finished || recorder_found->second.pass != nullptr)
     return GRANIT_ERROR_INVALID_ARGUMENT;
   WGPUCommandBufferDescriptor descriptor = WGPU_COMMAND_BUFFER_DESCRIPTOR_INIT;
   const auto native = wgpuCommandEncoderFinish(recorder_found->second.encoder, &descriptor);
@@ -2399,7 +2617,14 @@ constexpr granit_backend_plugin_instance_api instance_api{
     acquire_swapchain,
     present_swapchain,
     cancel_swapchain,
-    destroy_swapchain};
+    destroy_swapchain,
+    recorder_begin_rendering,
+    recorder_bind_pipeline,
+    recorder_bind_vertex_buffers,
+    recorder_bind_index_buffer,
+    recorder_draw_vertices,
+    recorder_draw_indices,
+    recorder_end_rendering};
 constexpr granit_backend_plugin_api plugin_api{sizeof(granit_backend_plugin_api),
                                                GRANIT_BACKEND_PLUGIN_ABI_VERSION,
                                                GRANIT_BACKEND_PLUGIN_KIND_WEBGPU,

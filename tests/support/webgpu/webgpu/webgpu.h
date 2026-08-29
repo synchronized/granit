@@ -125,8 +125,10 @@ typedef unsigned int WGPUSurfaceGetCurrentTextureStatus;
 #define WGPUVertexFormat_Float32x3 30
 #define WGPUVertexFormat_Float32x4 31
 #define WGPUTextureAspect_All 1
+#define WGPULoadOp_Load 1
 #define WGPULoadOp_Clear 2
 #define WGPUStoreOp_Store 1
+#define WGPUStoreOp_Discard 2
 #define WGPUBackendType_D3D12 4
 #define WGPUBackendType_Vulkan 6
 #define WGPUSType_EmscriptenSurfaceSourceCanvasHTMLSelector 0x00050000
