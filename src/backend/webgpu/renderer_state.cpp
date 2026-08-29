@@ -4,6 +4,7 @@
 #include "backend/webgpu/renderer_state.h"
 
 #include <new>
+#include <string>
 
 namespace granit::detail {
 
@@ -154,9 +155,36 @@ webgpu_renderer_state::initialize_static(const granit_backend_plugin_api* api,
     lifecycle_ = {backend_lifecycle_state::failed, result};
     return result;
   }
+  return finish_initialization();
+}
+
+granit_result
+webgpu_renderer_state::initialize_dynamic(std::string_view library_path,
+                                          granit_diagnostic_callback diagnostic_callback,
+                                          void* diagnostic_user_data) noexcept {
+  if (instance_ != 0 || loader_.is_open() || library_path.empty())
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  diagnostic_callback_ = diagnostic_callback;
+  diagnostic_user_data_ = diagnostic_user_data;
+  try {
+    const std::string path{library_path};
+    const auto result = loader_.open(path.c_str(), GRANIT_BACKEND_PLUGIN_KIND_WEBGPU);
+    if (result != GRANIT_SUCCESS) {
+      lifecycle_ = {backend_lifecycle_state::failed, result};
+      return result;
+    }
+  } catch (const std::bad_alloc&) {
+    return GRANIT_ERROR_OUT_OF_MEMORY;
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+  return finish_initialization();
+}
+
+granit_result webgpu_renderer_state::finish_initialization() noexcept {
   granit_backend_plugin_host_api host{sizeof(host), 0,          diagnose, this,
                                       allocate,     deallocate, nullptr};
-  result = loader_.create_instance(&host, &instance_);
+  auto result = loader_.create_instance(&host, &instance_);
   if (result != GRANIT_SUCCESS) {
     lifecycle_ = {backend_lifecycle_state::failed, result};
     loader_.close();

@@ -63,8 +63,13 @@ public:
                                                    granit_diagnostic_callback diagnostic_callback,
                                                    void* diagnostic_user_data,
                                                    granit_renderer& renderer);
+  [[nodiscard]] granit_result create_webgpu_dynamic(std::string_view library_path,
+                                                    granit_diagnostic_callback diagnostic_callback,
+                                                    void* diagnostic_user_data,
+                                                    granit_renderer& renderer);
   [[nodiscard]] granit_result destroy(granit_renderer renderer);
   [[nodiscard]] granit_result get_limits(granit_renderer renderer, granit_renderer_limits& limits);
+  [[nodiscard]] granit_result get_info(granit_renderer renderer, granit_renderer_info& info);
   [[nodiscard]] granit_result get_resource_stats(granit_renderer renderer,
                                                  granit_renderer_resource_stats& stats);
   [[nodiscard]] granit_result get_status(granit_renderer renderer, granit_renderer_status& status);

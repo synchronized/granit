@@ -15,6 +15,11 @@
 /** Renderer 对象句柄。零值无效。 */
 typedef granit_handle granit_renderer;
 
+typedef uint32_t granit_renderer_backend;
+#define GRANIT_RENDERER_BACKEND_AUTO UINT32_C(0)
+#define GRANIT_RENDERER_BACKEND_VULKAN UINT32_C(1)
+#define GRANIT_RENDERER_BACKEND_WEBGPU UINT32_C(2)
+
 typedef uint32_t granit_renderer_state;
 #define GRANIT_RENDERER_STATE_INITIALIZING UINT32_C(1)
 #define GRANIT_RENDERER_STATE_READY UINT32_C(2)
@@ -125,6 +130,9 @@ typedef struct granit_renderer_desc {
   uint32_t reserved;
   granit_diagnostic_callback diagnostic_callback;
   void* diagnostic_user_data;
+  granit_renderer_backend backend;
+  uint32_t backend_library_path_length;
+  const char* backend_library_path;
 } granit_renderer_desc;
 
 #define GRANIT_RENDERER_DESC_VERSION_1_SIZE                                                        \
@@ -135,6 +143,8 @@ typedef struct granit_renderer_desc {
   ((uint32_t)(offsetof(granit_renderer_desc, reserved) + sizeof(uint32_t)))
 #define GRANIT_RENDERER_DESC_VERSION_4_SIZE                                                        \
   ((uint32_t)(offsetof(granit_renderer_desc, diagnostic_user_data) + sizeof(void*)))
+#define GRANIT_RENDERER_DESC_VERSION_5_SIZE                                                        \
+  ((uint32_t)(offsetof(granit_renderer_desc, backend_library_path) + sizeof(const char*)))
 
 #define GRANIT_RENDERER_DESC_INIT                                                                  \
   {(uint32_t)sizeof(granit_renderer_desc),                                                         \
@@ -146,7 +156,32 @@ typedef struct granit_renderer_desc {
    GRANIT_DEFAULT_FRAMES_IN_FLIGHT,                                                                \
    UINT32_C(0),                                                                                    \
    0,                                                                                              \
+   0,                                                                                              \
+   GRANIT_RENDERER_BACKEND_AUTO,                                                                   \
+   UINT32_C(0),                                                                                    \
    0}
+
+/** Renderer 实际后端与只用于诊断的 Adapter 元数据。 */
+typedef struct granit_renderer_info {
+  uint32_t struct_size;
+  granit_renderer_backend backend;
+  char* adapter_name;
+  uint32_t adapter_name_capacity;
+  uint32_t adapter_name_length;
+  uint32_t vendor_id;
+  uint32_t device_id;
+  uint32_t reserved[2];
+} granit_renderer_info;
+
+#define GRANIT_RENDERER_INFO_VERSION_1_SIZE                                                        \
+  ((uint32_t)(offsetof(granit_renderer_info, reserved) + sizeof(uint32_t) * 2))
+#define GRANIT_RENDERER_INFO_INIT                                                                  \
+  {                                                                                                \
+    (uint32_t)sizeof(granit_renderer_info), GRANIT_RENDERER_BACKEND_AUTO, 0, UINT32_C(0),          \
+        UINT32_C(0), UINT32_C(0), UINT32_C(0), {                                                   \
+      UINT32_C(0), UINT32_C(0)                                                                     \
+    }                                                                                              \
+  }
 
 #ifdef __cplusplus
 extern "C" {
@@ -162,6 +197,10 @@ GRANIT_API granit_result granit_renderer_destroy(granit_renderer renderer);
 /** 查询 Renderer 对应设备的限制；调用者须先设置 limits->struct_size。 */
 GRANIT_API granit_result granit_renderer_get_limits(granit_renderer renderer,
                                                     granit_renderer_limits* limits);
+
+/** 查询实际后端和 Adapter 元数据；名称容量包含结尾零字符。 */
+GRANIT_API granit_result granit_renderer_get_info(granit_renderer renderer,
+                                                  granit_renderer_info* info);
 
 /** 查询公开子资源与延迟回收队列；调用者须先设置 stats->struct_size。 */
 GRANIT_API granit_result granit_renderer_get_resource_stats(granit_renderer renderer,

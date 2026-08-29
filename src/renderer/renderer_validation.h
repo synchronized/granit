@@ -13,6 +13,7 @@ namespace granit::detail {
 
 inline constexpr std::uint32_t maximum_renderer_application_name_length = 4096;
 inline constexpr std::uint32_t maximum_renderer_object_name_length = 4096;
+inline constexpr std::uint32_t maximum_renderer_backend_path_length = 32768;
 
 [[nodiscard]] inline granit_result
 validate_renderer_desc(const granit_renderer_desc& desc) noexcept {
@@ -38,6 +39,16 @@ validate_renderer_desc(const granit_renderer_desc& desc) noexcept {
   if (desc.struct_size >= GRANIT_RENDERER_DESC_VERSION_4_SIZE &&
       desc.diagnostic_callback == nullptr && desc.diagnostic_user_data != nullptr) {
     return GRANIT_ERROR_INVALID_ARGUMENT;
+  }
+  if (desc.struct_size >= GRANIT_RENDERER_DESC_VERSION_5_SIZE) {
+    if (desc.backend > GRANIT_RENDERER_BACKEND_WEBGPU ||
+        desc.backend_library_path_length > maximum_renderer_backend_path_length ||
+        (desc.backend_library_path == nullptr) != (desc.backend_library_path_length == 0) ||
+        (desc.backend_library_path != nullptr &&
+         std::memchr(desc.backend_library_path, '\0', desc.backend_library_path_length) !=
+             nullptr)) {
+      return GRANIT_ERROR_INVALID_ARGUMENT;
+    }
   }
   if (desc.application_name == nullptr) {
     return desc.application_name_length == 0 ? GRANIT_SUCCESS : GRANIT_ERROR_INVALID_ARGUMENT;

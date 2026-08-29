@@ -407,6 +407,18 @@ public:
   [[nodiscard]] granit_result process_backend_events() noexcept override {
     return lifecycle_.gate();
   }
+  [[nodiscard]] granit_renderer_backend backend() const noexcept override {
+    return GRANIT_RENDERER_BACKEND_VULKAN;
+  }
+  [[nodiscard]] std::string_view adapter_name() const noexcept override {
+    return device_.properties().deviceName;
+  }
+  [[nodiscard]] std::uint32_t adapter_vendor_id() const noexcept override {
+    return device_.properties().vendorID;
+  }
+  [[nodiscard]] std::uint32_t adapter_device_id() const noexcept override {
+    return device_.properties().deviceID;
+  }
   [[nodiscard]] const diagnostic_sink& diagnostics() const noexcept override {
     return diagnostics_;
   }

@@ -43,7 +43,16 @@ public:
   [[nodiscard]] granit_result initialize_static(const granit_backend_plugin_api* api,
                                                 granit_diagnostic_callback diagnostic_callback,
                                                 void* diagnostic_user_data) noexcept;
+  [[nodiscard]] granit_result initialize_dynamic(std::string_view library_path,
+                                                 granit_diagnostic_callback diagnostic_callback,
+                                                 void* diagnostic_user_data) noexcept;
   [[nodiscard]] granit_result process_backend_events() noexcept override;
+  [[nodiscard]] granit_renderer_backend backend() const noexcept override {
+    return GRANIT_RENDERER_BACKEND_WEBGPU;
+  }
+  [[nodiscard]] std::string_view adapter_name() const noexcept override { return {}; }
+  [[nodiscard]] std::uint32_t adapter_vendor_id() const noexcept override { return 0; }
+  [[nodiscard]] std::uint32_t adapter_device_id() const noexcept override { return 0; }
 
   [[nodiscard]] backend_lifecycle_status lifecycle_status() const noexcept override;
   [[nodiscard]] const backend_capabilities& capabilities() const noexcept override {
@@ -148,6 +157,7 @@ private:
   static void diagnose(granit_diagnostic_severity severity, granit_diagnostic_category category,
                        const char* message, std::uint32_t message_length, void* user_data) noexcept;
   [[nodiscard]] granit_result refresh_state() noexcept;
+  [[nodiscard]] granit_result finish_initialization() noexcept;
 
   backend_plugin_loader loader_;
   granit_backend_plugin_instance instance_{};

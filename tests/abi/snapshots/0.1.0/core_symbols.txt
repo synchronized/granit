@@ -54,6 +54,7 @@ granit_pipeline_layout_create
 granit_pipeline_layout_destroy
 granit_renderer_create
 granit_renderer_destroy
+granit_renderer_get_info
 granit_renderer_get_limits
 granit_renderer_get_resource_stats
 granit_renderer_get_status

@@ -50,6 +50,17 @@ granit_result result = granit_renderer_get_limits(renderer, &limits);
 Renderer 返回 `GRANIT_ERROR_INVALID_HANDLE`。限制来自 Renderer 创建时保存的不可变能力快照，
 查询不会再次访问驱动。
 
+## 后端选择与信息
+
+`granit_renderer_desc::backend` 可设置 `AUTO`、`VULKAN` 或 `WEBGPU`。显式选择不会回退到
+另一后端；桌面 WebGPU 可通过 `backend_library_path` 指定 Granit WebGPU Provider 的绝对路径。
+路径只在创建调用期间借用。旧版描述不含这些尾部字段时保持 `AUTO`。
+
+创建成功后使用 `granit_renderer_get_info` 查询实际后端。Adapter 名称采用两次查询：第一次将
+`adapter_name` 和容量设为零以取得所需字节数，第二次提供包含结尾零字符的缓冲区。名称长度不含
+结尾零字符；名称、Vendor ID 或 Device ID 不可用时返回空值。这些元数据只用于诊断和性能记录，
+不应作为渲染行为分支条件。C++ 包装通过 `renderer::get_info(renderer_info&)` 完成缓冲区管理。
+
 ## 资源统计
 
 关闭 Renderer 前，可查询仍由调用方持有的公开子资源：
