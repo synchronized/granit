@@ -152,8 +152,19 @@ TEST_CASE("Renderer 严格选择动态 WebGPU Provider", "[renderer][backend][we
   constexpr std::string_view missing_path = "D:/granit/missing-webgpu-provider.dll";
   desc.backend_library_path = missing_path.data();
   desc.backend_library_path_length = static_cast<std::uint32_t>(missing_path.size());
+  diagnostic_messages captured;
+  desc.diagnostic_callback = capture_diagnostic;
+  desc.diagnostic_user_data = &captured;
   CHECK(granit_renderer_create(&desc, &renderer) == GRANIT_ERROR_BACKEND_UNAVAILABLE);
   CHECK(renderer == GRANIT_NULL_HANDLE);
+  REQUIRE(captured.categories.size() == 1);
+  CHECK(captured.categories.front() == GRANIT_DIAGNOSTIC_CATEGORY_DEVICE);
+  CHECK(captured.messages.front().find("WebGPU") != std::string::npos);
+
+  constexpr std::string_view relative_path = "granit_backend_webgpu.dll";
+  desc.backend_library_path = relative_path.data();
+  desc.backend_library_path_length = static_cast<std::uint32_t>(relative_path.size());
+  CHECK(granit_renderer_create(&desc, &renderer) == GRANIT_ERROR_INVALID_ARGUMENT);
 }
 
 TEST_CASE("Renderer 资源统计覆盖创建销毁和无效句柄", "[renderer][resource-stats][c_api]") {
@@ -364,6 +375,23 @@ TEST_CASE("Renderer 旧版描述不读取 frames-in-flight 扩展字段", "[rend
   }
   REQUIRE(result == GRANIT_SUCCESS);
   CHECK(granit_renderer_destroy(renderer) == GRANIT_SUCCESS);
+}
+
+TEST_CASE("Renderer V4 描述不读取后端选择扩展字段", "[renderer][compatibility]") {
+  granit_renderer_desc desc = GRANIT_RENDERER_DESC_INIT;
+  desc.struct_size = GRANIT_RENDERER_DESC_VERSION_4_SIZE;
+  desc.backend = UINT32_MAX;
+  desc.backend_library_path_length = UINT32_MAX;
+  desc.backend_library_path = nullptr;
+  granit_renderer renderer = GRANIT_NULL_HANDLE;
+  const auto result = granit_renderer_create(&desc, &renderer);
+  if (environment_unavailable(result))
+    SKIP("当前运行环境没有满足要求的 Vulkan 设备");
+  REQUIRE(result == GRANIT_SUCCESS);
+  granit_renderer_info info = GRANIT_RENDERER_INFO_INIT;
+  REQUIRE(granit_renderer_get_info(renderer, &info) == GRANIT_SUCCESS);
+  CHECK(info.backend == GRANIT_RENDERER_BACKEND_VULKAN);
+  REQUIRE(granit_renderer_destroy(renderer) == GRANIT_SUCCESS);
 }
 
 TEST_CASE("C++ renderer 提供 move-only RAII", "[renderer][cpp_api]") {

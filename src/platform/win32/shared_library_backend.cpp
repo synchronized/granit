@@ -5,7 +5,36 @@
 
 #include <windows.h>
 
+#include <filesystem>
+#include <string>
+#include <vector>
+
 namespace granit::detail::platform {
+namespace {
+const int module_marker{};
+}
+
+std::string module_directory() noexcept {
+  HMODULE module{};
+  if (GetModuleHandleExA(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS |
+                             GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+                         reinterpret_cast<LPCSTR>(&module_marker), &module) == 0) {
+    return {};
+  }
+  try {
+    std::vector<char> path(512);
+    for (;;) {
+      const auto length = GetModuleFileNameA(module, path.data(), static_cast<DWORD>(path.size()));
+      if (length == 0)
+        return {};
+      if (length < path.size() - 1)
+        return std::filesystem::path{std::string_view{path.data(), length}}.parent_path().string();
+      path.resize(path.size() * 2);
+    }
+  } catch (...) {
+    return {};
+  }
+}
 
 bool shared_library::open(const char* absolute_path) noexcept {
   close();

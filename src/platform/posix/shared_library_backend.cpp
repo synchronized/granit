@@ -5,7 +5,25 @@
 
 #include <dlfcn.h>
 
+#include <filesystem>
+#include <string>
+
 namespace granit::detail::platform {
+namespace {
+const int module_marker{};
+}
+
+std::string module_directory() noexcept {
+  Dl_info info{};
+  if (dladdr(&module_marker, &info) == 0 || info.dli_fname == nullptr) {
+    return {};
+  }
+  try {
+    return std::filesystem::absolute(info.dli_fname).parent_path().string();
+  } catch (...) {
+    return {};
+  }
+}
 
 bool shared_library::open(const char* absolute_path) noexcept {
   close();

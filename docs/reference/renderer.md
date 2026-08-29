@@ -54,7 +54,13 @@ Renderer 返回 `GRANIT_ERROR_INVALID_HANDLE`。限制来自 Renderer 创建时�
 
 `granit_renderer_desc::backend` 可设置 `AUTO`、`VULKAN` 或 `WEBGPU`。显式选择不会回退到
 另一后端；桌面 WebGPU 可通过 `backend_library_path` 指定 Granit WebGPU Provider 的绝对路径。
-路径只在创建调用期间借用。旧版描述不含这些尾部字段时保持 `AUTO`。
+路径只在创建调用期间借用，拒绝相对路径。路径为空时只检查 Granit Core 模块旁及安装布局中固定
+的 `granit/backends` 位置，不扫描当前工作目录或系统 `PATH`。静态链接应用若没有把 Provider
+放在这些固定相对位置，应显式传入打包后的绝对路径。旧版描述不含这些尾部字段时保持 `AUTO`。
+
+桌面 `AUTO` 先尝试 Vulkan；仅当结果为后端不可用、驱动不兼容、没有合适设备或请求能力不支持时
+尝试 WebGPU。内存不足、参数错误和内部错误不会触发回退。两次尝试均失败时返回 Vulkan 的结果，
+并通过 Diagnostic Callback 记录各候选失败原因。显式选择只尝试指定后端。
 
 创建成功后使用 `granit_renderer_get_info` 查询实际后端。Adapter 名称采用两次查询：第一次将
 `adapter_name` 和容量设为零以取得所需字节数，第二次提供包含结尾零字符的缓冲区。名称长度不含
