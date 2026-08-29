@@ -129,7 +129,6 @@ struct renderer_registry::compute_pipeline_record {
   std::unique_ptr<backend_compute_pipeline_resource> native;
 };
 struct renderer_registry::command_recorder_record {
-  enum class web_state { initial, recording, rendering, executable, submitted };
   resource_metadata metadata;
   std::shared_ptr<backend_renderer> owner;
   std::shared_ptr<backend_queue> queue;
@@ -142,11 +141,6 @@ struct renderer_registry::command_recorder_record {
   std::unique_ptr<backend_command_recorder_resource> native;
   std::mutex mutex;
   std::vector<retained_resource> retained_resources;
-  std::shared_ptr<texture_view_record> web_target;
-  std::shared_ptr<graphics_pipeline_record> web_pipeline;
-  web_state web_status{web_state::initial};
-  bool web_drew{};
-  bool platform_managed_rendering{};
   bool owned_by_frame_context{};
 };
 enum class renderer_registry::frame_context_slot_state { idle, recording, submitted };

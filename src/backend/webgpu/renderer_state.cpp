@@ -179,6 +179,14 @@ bool webgpu_renderer_state::command_recorder_is_recording(
   return commands_ && commands_->is_recording(recorder);
 }
 
+granit_result webgpu_renderer_state::bind_graphics_pipeline(
+    backend_command_recorder_resource& recorder,
+    backend_graphics_pipeline_resource& pipeline) noexcept {
+  return commands_ && pipelines_
+             ? commands_->bind_pipeline(recorder, pipelines_->native_handle(pipeline))
+             : GRANIT_ERROR_UNSUPPORTED;
+}
+
 granit_result webgpu_renderer_state::bind_vertex_buffers(
     backend_command_recorder_resource& recorder, std::uint32_t first,
     std::span<backend_buffer_resource* const> buffers, std::span<const std::uint64_t> offsets) {
@@ -216,28 +224,51 @@ granit_result webgpu_renderer_state::bind_index_buffer(backend_command_recorder_
 }
 
 granit_result webgpu_renderer_state::draw(backend_command_recorder_resource& recorder,
-                                          backend_texture_view_resource* target,
-                                          backend_graphics_pipeline_resource* pipeline,
+                                          backend_texture_view_resource*,
+                                          backend_graphics_pipeline_resource*,
                                           std::uint32_t vertex_count, std::uint32_t instance_count,
                                           std::uint32_t first_vertex,
                                           std::uint32_t first_instance) noexcept {
-  if (!commands_ || !presentation_ || !pipelines_ || !target || !pipeline)
+  if (!commands_)
     return GRANIT_ERROR_UNSUPPORTED;
-  return commands_->draw(recorder, presentation_->native_view(*target),
-                         pipelines_->native_handle(*pipeline), vertex_count, instance_count,
-                         first_vertex, first_instance);
+  return commands_->draw(recorder, vertex_count, instance_count, first_vertex, first_instance);
 }
 
 granit_result webgpu_renderer_state::draw_indexed(
-    backend_command_recorder_resource& recorder, backend_texture_view_resource* target,
-    backend_graphics_pipeline_resource* pipeline, std::uint32_t index_count,
-    std::uint32_t instance_count, std::uint32_t first_index, std::int32_t vertex_offset,
-    std::uint32_t first_instance) noexcept {
-  if (!commands_ || !presentation_ || !pipelines_ || !target || !pipeline)
+    backend_command_recorder_resource& recorder, backend_texture_view_resource*,
+    backend_graphics_pipeline_resource*, std::uint32_t index_count, std::uint32_t instance_count,
+    std::uint32_t first_index, std::int32_t vertex_offset, std::uint32_t first_instance) noexcept {
+  if (!commands_)
     return GRANIT_ERROR_UNSUPPORTED;
-  return commands_->draw_indexed(recorder, presentation_->native_view(*target),
-                                 pipelines_->native_handle(*pipeline), index_count, instance_count,
-                                 first_index, vertex_offset, first_instance);
+  return commands_->draw_indexed(recorder, index_count, instance_count, first_index, vertex_offset,
+                                 first_instance);
+}
+
+granit_result webgpu_renderer_state::begin_rendering(
+    backend_command_recorder_resource& recorder, granit_rendering_area,
+    std::span<const backend_color_attachment> color_attachments,
+    const backend_depth_stencil_attachment* depth_stencil_attachment, std::uint32_t layer_count) {
+  if (!commands_ || !presentation_ || color_attachments.size() != 1 ||
+      depth_stencil_attachment != nullptr || layer_count != 1)
+    return GRANIT_ERROR_UNSUPPORTED;
+  const auto& attachment = color_attachments.front();
+  if (attachment.load_operation == GRANIT_ATTACHMENT_LOAD_OPERATION_DISCARD)
+    return GRANIT_ERROR_UNSUPPORTED;
+  const auto load = attachment.load_operation == GRANIT_ATTACHMENT_LOAD_OPERATION_LOAD
+                        ? GRANIT_BACKEND_PLUGIN_LOAD_OPERATION_LOAD
+                        : GRANIT_BACKEND_PLUGIN_LOAD_OPERATION_CLEAR;
+  const auto store = attachment.store_operation == GRANIT_ATTACHMENT_STORE_OPERATION_STORE
+                         ? GRANIT_BACKEND_PLUGIN_STORE_OPERATION_STORE
+                         : GRANIT_BACKEND_PLUGIN_STORE_OPERATION_DISCARD;
+  const float clear[]{attachment.clear_value.red, attachment.clear_value.green,
+                      attachment.clear_value.blue, attachment.clear_value.alpha};
+  return commands_->begin_rendering(recorder, presentation_->native_view(*attachment.view), load,
+                                    store, clear);
+}
+
+granit_result
+webgpu_renderer_state::end_rendering(backend_command_recorder_resource& recorder) noexcept {
+  return commands_ ? commands_->end_rendering(recorder) : GRANIT_ERROR_UNSUPPORTED;
 }
 
 std::unique_ptr<backend_shader_resource> webgpu_renderer_state::allocate_shader_resource() {

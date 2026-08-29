@@ -126,6 +126,9 @@ public:
   discard_command_recorder(backend_command_recorder_resource& recorder) noexcept override;
   [[nodiscard]] bool
   command_recorder_is_recording(backend_command_recorder_resource& recorder) noexcept override;
+  [[nodiscard]] granit_result
+  bind_graphics_pipeline(backend_command_recorder_resource& recorder,
+                         backend_graphics_pipeline_resource& pipeline) noexcept override;
   [[nodiscard]] granit_result bind_vertex_buffers(backend_command_recorder_resource& recorder,
                                                   std::uint32_t first,
                                                   std::span<backend_buffer_resource* const> buffers,
@@ -146,6 +149,13 @@ public:
                                            std::uint32_t index_count, std::uint32_t instance_count,
                                            std::uint32_t first_index, std::int32_t vertex_offset,
                                            std::uint32_t first_instance) noexcept override;
+  [[nodiscard]] granit_result
+  begin_rendering(backend_command_recorder_resource& recorder, granit_rendering_area area,
+                  std::span<const backend_color_attachment> color_attachments,
+                  const backend_depth_stencil_attachment* depth_stencil_attachment,
+                  std::uint32_t layer_count) override;
+  [[nodiscard]] granit_result
+  end_rendering(backend_command_recorder_resource& recorder) noexcept override;
   [[nodiscard]] std::unique_ptr<backend_shader_resource> allocate_shader_resource() override;
   [[nodiscard]] granit_result create_wgsl_shader(backend_shader_resource& shader,
                                                  granit_shader_stage stage, std::string_view source,
