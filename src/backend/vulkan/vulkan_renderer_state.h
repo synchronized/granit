@@ -387,6 +387,7 @@ public:
   void retire_resource(submission_serial retire_after, retirement_order order,
                        std::shared_ptr<void> resource) override;
   std::size_t collect_retired() noexcept override;
+  [[nodiscard]] std::size_t pending_retirement_count() const noexcept override;
   std::size_t collect_present_retired() noexcept override { return collect_retired(); }
   std::size_t drain_retired() noexcept;
   void destroy_native_command_recorder(backend_command_recorder_resource& recorder) noexcept;
@@ -460,7 +461,7 @@ private:
   std::vector<upload_slot> upload_slots_;
   std::size_t next_frame_slot_{};
   submission_serials submission_serials_;
-  std::mutex retirement_mutex_;
+  mutable std::mutex retirement_mutex_;
   retirement_queue retirement_queue_;
   std::vector<vulkan_image_access> image_states_;
 };

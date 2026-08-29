@@ -44,6 +44,28 @@ struct renderer_limits {
   std::uint64_t max_uniform_buffer_binding_size{};
 };
 
+struct renderer_resource_stats {
+  std::uint64_t total_live_count{};
+  std::uint64_t buffer_count{};
+  std::uint64_t texture_count{};
+  std::uint64_t texture_view_count{};
+  std::uint64_t sampler_count{};
+  std::uint64_t shader_count{};
+  std::uint64_t bind_group_layout_count{};
+  std::uint64_t bind_group_count{};
+  std::uint64_t pipeline_layout_count{};
+  std::uint64_t graphics_pipeline_count{};
+  std::uint64_t compute_pipeline_count{};
+  std::uint64_t surface_count{};
+  std::uint64_t swapchain_count{};
+  std::uint64_t command_recorder_count{};
+  std::uint64_t frame_context_count{};
+  std::uint64_t frame_count{};
+  std::uint64_t timestamp_query_pool_count{};
+  std::uint64_t upload_batch_count{};
+  std::uint64_t pending_retirement_count{};
+};
+
 enum class renderer_state : std::uint32_t {
   initializing = GRANIT_RENDERER_STATE_INITIALIZING,
   ready = GRANIT_RENDERER_STATE_READY,
@@ -132,6 +154,34 @@ public:
     }
     status = {.state = static_cast<renderer_state>(native.state),
               .failure_result = from_native(native.failure_result)};
+    return result::success;
+  }
+
+  [[nodiscard]] result get_resource_stats(renderer_resource_stats& stats) const noexcept {
+    granit_renderer_resource_stats native = GRANIT_RENDERER_RESOURCE_STATS_INIT;
+    const auto query_result = from_native(granit_renderer_get_resource_stats(handle_, &native));
+    if (failed(query_result)) {
+      return query_result;
+    }
+    stats = {.total_live_count = native.total_live_count,
+             .buffer_count = native.buffer_count,
+             .texture_count = native.texture_count,
+             .texture_view_count = native.texture_view_count,
+             .sampler_count = native.sampler_count,
+             .shader_count = native.shader_count,
+             .bind_group_layout_count = native.bind_group_layout_count,
+             .bind_group_count = native.bind_group_count,
+             .pipeline_layout_count = native.pipeline_layout_count,
+             .graphics_pipeline_count = native.graphics_pipeline_count,
+             .compute_pipeline_count = native.compute_pipeline_count,
+             .surface_count = native.surface_count,
+             .swapchain_count = native.swapchain_count,
+             .command_recorder_count = native.command_recorder_count,
+             .frame_context_count = native.frame_context_count,
+             .frame_count = native.frame_count,
+             .timestamp_query_pool_count = native.timestamp_query_pool_count,
+             .upload_batch_count = native.upload_batch_count,
+             .pending_retirement_count = native.pending_retirement_count};
     return result::success;
   }
 

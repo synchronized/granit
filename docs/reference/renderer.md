@@ -50,6 +50,29 @@ granit_result result = granit_renderer_get_limits(renderer, &limits);
 Renderer 返回 `GRANIT_ERROR_INVALID_HANDLE`。限制来自 Renderer 创建时保存的不可变能力快照，
 查询不会再次访问驱动。
 
+## 资源统计
+
+关闭 Renderer 前，可查询仍由调用方持有的公开子资源：
+
+```c
+granit_renderer_resource_stats stats = GRANIT_RENDERER_RESOURCE_STATS_INIT;
+granit_result result = granit_renderer_get_resource_stats(renderer, &stats);
+if (result == GRANIT_SUCCESS && stats.total_live_count != 0) {
+  /* 先销毁仍存活的子资源。 */
+}
+```
+
+`total_live_count` 汇总 Buffer、Texture、Texture View、Sampler、Shader、布局、Bind Group、
+Pipeline、Surface、Swapchain、Command Recorder、Frame Context、活动 Frame、Timestamp Query Pool
+和 Upload Batch。各字段可用于定位具体类型。Swapchain Backbuffer 的 Texture/View 是借用句柄，
+不计入公开 Texture/View 数量；因此调用方可用 `total_live_count == 0` 作为关闭前检查，且无需了解
+未来追加的分类字段。
+
+公开句柄销毁后会立即从存活数量中移除。Vulkan 后端可能继续持有其原生资源，直到相关 GPU 提交
+完成；这部分由 `pending_retirement_count` 单独报告，不代表调用方泄漏，也不要求关闭前为零。
+查询只读取 Registry 和后端队列状态，不等待 GPU、不推进事件，也不执行用户回调。空指针或过小
+结构返回 `GRANIT_ERROR_INVALID_ARGUMENT`，无效 Renderer 返回 `GRANIT_ERROR_INVALID_HANDLE`。
+
 ## 生命周期状态
 
 Renderer 提供非阻塞状态查询和事件推进接口：
@@ -84,6 +107,7 @@ if (granit::failed(result)) {
 可提前释放。`native_handle` 只返回 Granit C 句柄，用于 C/C++ 层互操作，并非 Vulkan 句柄。
 
 C++ 调用方通过 `renderer::get_limits(renderer_limits&)` 查询相同限制快照，并通过
+`renderer::get_resource_stats(renderer_resource_stats&)` 查询资源统计，通过
 `renderer::get_status(renderer_status&)` 和 `renderer::process_events()` 使用相同的非阻塞生命周期
 模型；结果和错误语义与 C API 一致。
 

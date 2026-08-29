@@ -65,6 +65,8 @@ public:
                                                    granit_renderer& renderer);
   [[nodiscard]] granit_result destroy(granit_renderer renderer);
   [[nodiscard]] granit_result get_limits(granit_renderer renderer, granit_renderer_limits& limits);
+  [[nodiscard]] granit_result get_resource_stats(granit_renderer renderer,
+                                                 granit_renderer_resource_stats& stats);
   [[nodiscard]] granit_result get_status(granit_renderer renderer, granit_renderer_status& status);
   [[nodiscard]] granit_result process_events(granit_renderer renderer);
   [[nodiscard]] granit_result import_pipeline_cache(granit_renderer renderer, const void* data,

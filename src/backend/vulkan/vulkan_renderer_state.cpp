@@ -2884,6 +2884,11 @@ std::size_t vulkan_renderer_state::collect_retired() noexcept {
   return retirement_queue_.collect(completed);
 }
 
+std::size_t vulkan_renderer_state::pending_retirement_count() const noexcept {
+  std::lock_guard lock{retirement_mutex_};
+  return retirement_queue_.size();
+}
+
 std::size_t vulkan_renderer_state::drain_retired() noexcept {
   std::lock_guard lock{retirement_mutex_};
   return retirement_queue_.drain();

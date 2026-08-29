@@ -38,6 +38,60 @@ granit_result renderer_registry::get_limits(granit_renderer renderer,
   return GRANIT_SUCCESS;
 }
 
+granit_result renderer_registry::get_resource_stats(granit_renderer renderer,
+                                                    granit_renderer_resource_stats& stats) {
+  std::shared_ptr<backend_retirement_renderer> retirement;
+  {
+    std::lock_guard lock{mutex_};
+    const auto found = backend_renderers_.find(renderer);
+    if (found == backend_renderers_.end() ||
+        handles_.find(renderer, resource_type::renderer, 0) == nullptr) {
+      return GRANIT_ERROR_INVALID_HANDLE;
+    }
+    const auto& owner = found->second;
+    const auto count_owned = [&owner](const auto& records) {
+      return static_cast<std::uint64_t>(
+          std::count_if(records.begin(), records.end(),
+                        [&owner](const auto& entry) { return entry.second->owner == owner; }));
+    };
+    const auto count_public = [&owner](const auto& records) {
+      return static_cast<std::uint64_t>(
+          std::count_if(records.begin(), records.end(), [&owner](const auto& entry) {
+            return entry.second->owner == owner && entry.second->publicly_destroyable;
+          }));
+    };
+
+    stats.reserved = 0;
+    stats.buffer_count = count_owned(buffers_);
+    stats.texture_count = count_public(textures_);
+    stats.texture_view_count = count_public(texture_views_);
+    stats.sampler_count = count_owned(samplers_);
+    stats.shader_count = count_owned(shaders_);
+    stats.bind_group_layout_count = count_owned(bind_group_layouts_);
+    stats.bind_group_count = count_owned(bind_groups_);
+    stats.pipeline_layout_count = count_owned(pipeline_layouts_);
+    stats.graphics_pipeline_count = count_owned(graphics_pipelines_);
+    stats.compute_pipeline_count = count_owned(compute_pipelines_);
+    stats.surface_count = count_owned(surfaces_);
+    stats.swapchain_count = count_owned(swapchains_);
+    stats.command_recorder_count = count_owned(command_recorders_);
+    stats.frame_context_count = count_owned(frame_contexts_);
+    stats.frame_count = count_owned(frames_);
+    stats.timestamp_query_pool_count = count_owned(timestamp_query_pools_);
+    stats.upload_batch_count = count_owned(upload_batches_);
+    stats.total_live_count =
+        stats.buffer_count + stats.texture_count + stats.texture_view_count + stats.sampler_count +
+        stats.shader_count + stats.bind_group_layout_count + stats.bind_group_count +
+        stats.pipeline_layout_count + stats.graphics_pipeline_count + stats.compute_pipeline_count +
+        stats.surface_count + stats.swapchain_count + stats.command_recorder_count +
+        stats.frame_context_count + stats.frame_count + stats.timestamp_query_pool_count +
+        stats.upload_batch_count;
+    retirement = std::dynamic_pointer_cast<backend_retirement_renderer>(owner);
+  }
+  stats.pending_retirement_count = retirement ? retirement->pending_retirement_count() : 0;
+  return GRANIT_SUCCESS;
+}
+
 granit_result renderer_registry::get_status(granit_renderer renderer,
                                             granit_renderer_status& status) {
   const auto state = acquire_backend(renderer);
