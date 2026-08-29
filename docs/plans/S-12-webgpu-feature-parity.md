@@ -39,8 +39,8 @@ S-10 已打通 Emscripten WebGPU 的公共 Renderer、Canvas 和无顶点输入�
   变化而悄悄切换后端。
 - `auto` 在桌面优先 Vulkan，仅当候选后端不可用、不兼容、无合适设备或不支持请求的 Surface 时
   尝试 WebGPU；Emscripten 只选择静态 WebGPU。内存不足、无效参数和 Granit 内部错误不触发回退。
-- 创建成功后通过可扩展的 Renderer Info 查询实际后端；不把后端信息塞入生命周期 Status，也不
-  暴露 Provider、Adapter、Device 或原生句柄。
+- 创建成功后通过可扩展的 Renderer Info 查询实际后端与稳定的只读 Adapter 元数据；
+  不把这些信息塞入生命周期 Status，也不暴露 Provider、Adapter、Device 对象或原生句柄。
 - 桌面 WebGPU 使用现有 Granit Provider 插件。创建描述允许传入可选插件绝对路径；空路径使用
   Granit 定义的安装/构建产物位置，不扫描当前工作目录或任意系统 `PATH`。Emscripten 静态接入时
   路径必须为空。
@@ -67,9 +67,19 @@ const char* backend_library_path;
 typedef struct granit_renderer_info {
   uint32_t struct_size;
   granit_renderer_backend backend;
+  char* adapter_name;
+  uint32_t adapter_name_capacity;
+  uint32_t adapter_name_length;
+  uint32_t vendor_id;
+  uint32_t device_id;
   uint32_t reserved[2];
 } granit_renderer_info;
 ```
+
+`adapter_name` 使用调用者缓冲区：空指针与零容量只查询所需 UTF-8 长度，容量包含
+结尾零字符，`adapter_name_length` 不包含它。后端或浏览器隐私策略不提供名称时
+返回空串，Vendor/Device ID 不可用时返回零；这些字段只用于诊断和性能记录，
+不得作为渲染行为分支条件。
 
 错误语义如下：
 
