@@ -9,7 +9,7 @@
 #include <granit/core/diagnostic.h>
 #include <granit/core/result.h>
 
-#define GRANIT_BACKEND_PLUGIN_ABI_VERSION UINT32_C(12)
+#define GRANIT_BACKEND_PLUGIN_ABI_VERSION UINT32_C(13)
 #define GRANIT_BACKEND_PLUGIN_KIND_WEBGPU UINT32_C(1)
 #define GRANIT_BACKEND_PLUGIN_QUERY_SYMBOL "granit_backend_plugin_query"
 #define GRANIT_BACKEND_PLUGIN_SURFACE_TYPE_WIN32_BIT UINT32_C(0x00000001)
@@ -344,15 +344,6 @@ typedef granit_result (*granit_backend_plugin_recorder_copy_buffer_to_texture_fn
     granit_backend_plugin_instance instance, granit_backend_plugin_command_recorder recorder,
     granit_backend_plugin_buffer buffer, granit_backend_plugin_texture texture, uint32_t width,
     uint32_t height, uint32_t bytes_per_row);
-typedef granit_result (*granit_backend_plugin_recorder_draw_fn)(
-    granit_backend_plugin_instance instance, granit_backend_plugin_command_recorder recorder,
-    granit_backend_plugin_texture_view target, granit_backend_plugin_render_pipeline pipeline,
-    granit_backend_plugin_bind_group bind_group, uint32_t first_vertex_buffer,
-    const granit_backend_plugin_vertex_buffer_binding* vertex_buffers, uint32_t vertex_buffer_count,
-    uint32_t indexed, granit_backend_plugin_buffer index_buffer, uint64_t index_buffer_offset,
-    granit_backend_plugin_index_format index_format, uint32_t element_count,
-    uint32_t instance_count, uint32_t first_element, int32_t vertex_offset,
-    uint32_t first_instance);
 typedef granit_result (*granit_backend_plugin_recorder_begin_rendering_fn)(
     granit_backend_plugin_instance instance, granit_backend_plugin_command_recorder recorder,
     granit_backend_plugin_texture_view target, granit_backend_plugin_load_operation load_operation,
@@ -461,7 +452,6 @@ typedef struct granit_backend_plugin_instance_api {
   granit_backend_plugin_create_command_recorder_fn create_command_recorder;
   granit_backend_plugin_destroy_command_recorder_fn destroy_command_recorder;
   granit_backend_plugin_recorder_copy_buffer_to_texture_fn recorder_copy_buffer_to_texture;
-  granit_backend_plugin_recorder_draw_fn recorder_draw;
   granit_backend_plugin_finish_command_recorder_fn finish_command_recorder;
   granit_backend_plugin_destroy_command_buffer_fn destroy_command_buffer;
   granit_backend_plugin_submit_command_buffer_fn submit_command_buffer;

@@ -5,7 +5,7 @@
 
 ## 状态
 
-- 实现状态：进行中；S-12A、S-12B 已完成，下一步 S-12C
+- 实现状态：进行中；S-12A、S-12B、S-12C 已完成，下一步 S-12D
 - 前置依赖：S-10
 - 后续任务：S-13
 - 优先级：P1
@@ -150,6 +150,9 @@ typedef struct granit_backend_plugin_wayland_surface_desc {
 
 ### S-12C 几何与绘制契约
 
+S-12C 已完成。Provider ABI v13 已接通 Vertex/Index Buffer、顶点布局、显式 Render Pass 命令、
+普通与索引绘制；旧固定三角形 `recorder_draw` 和 Registry 的 WebGPU 专用命令状态均已删除。
+
 现有公共 API 已表达 Vertex/Index Buffer usage、多个 Vertex Buffer Layout、Attribute、逐顶点或
 逐实例步进、Buffer 绑定以及 Indexed Draw。S-12C 不新增平行公共接口，只扩展私有 HAL 与 WebGPU
 Provider 实现这些现有语义。
@@ -266,9 +269,10 @@ Metallic-Roughness Texture，并用同一 Uniform Buffer 的两个动态 Offset 
 1. **S-12A 后端选择（已完成）**：已实现 C ABI、C++ 包装、实际后端查询、固定位置插件定位、
    严格选择与桌面 Vulkan 优先的自动回退；旧描述兼容、动态 Provider、失败诊断和 Emscripten
    静态选择均已验证。
-2. **S-12B 桌面呈现**：为 WebGPU Provider 接通 Win32、XCB 与 Wayland Surface；SDL3 继续通过
-   对应原生窗口描述创建 Surface，不增加 SDL 专用 Renderer API。
-3. **S-12C 几何资源**：接通 WebGPU Vertex/Index Buffer、顶点布局、索引格式和 Indexed Draw。
+2. **S-12B 桌面呈现（已完成）**：为 WebGPU Provider 接通 Win32、XCB 与 Wayland Surface；
+   SDL3 继续通过对应原生窗口描述创建 Surface，不增加 SDL 专用 Renderer API。
+3. **S-12C 几何资源（已完成）**：已接通 WebGPU Vertex/Index Buffer、顶点布局、索引格式、
+   显式 Render Pass 命令和 Indexed Draw。
 4. **S-12D 材质资源**：接通 Texture、Texture View、Sampler、Bind Group 与 PBR 所需基础格式。
 5. **S-12E 每帧数据**：将动态 Uniform Offset、对齐限制和逐帧上传路径映射到两个后端。
 6. **S-12F 跨后端 Fixture**：同一带纹理索引 Mesh 在 Vulkan、桌面 WebGPU 和浏览器 WebGPU 绘制。

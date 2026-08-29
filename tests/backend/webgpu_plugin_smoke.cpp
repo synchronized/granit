@@ -191,12 +191,17 @@ int main(int argc, char** argv) {
   std::uint32_t corner{};
   std::uint32_t center{};
   std::chrono::steady_clock::duration submit_duration{};
+  const float clear_color[]{0.0F, 0.0F, 0.0F, 1.0F};
   if (loader.create_texture(instance, &target_desc, &target_texture) != GRANIT_SUCCESS ||
       loader.create_texture_view(instance, target_texture, &target_view) != GRANIT_SUCCESS ||
       loader.create_buffer(instance, &readback_desc, &readback) != GRANIT_SUCCESS ||
       loader.create_command_recorder(instance, &recorder) != GRANIT_SUCCESS || recorder == 0 ||
-      loader.recorder_draw(instance, recorder, target_view, pipeline, bind_group, 0, {}, false, 0,
-                           0, 0, 3, 1, 0, 0, 0) != GRANIT_SUCCESS ||
+      loader.recorder_begin_rendering(
+          instance, recorder, target_view, GRANIT_BACKEND_PLUGIN_LOAD_OPERATION_CLEAR,
+          GRANIT_BACKEND_PLUGIN_STORE_OPERATION_STORE, clear_color) != GRANIT_SUCCESS ||
+      loader.recorder_bind_pipeline(instance, recorder, pipeline) != GRANIT_SUCCESS ||
+      loader.recorder_draw_vertices(instance, recorder, 3, 1, 0, 0) != GRANIT_SUCCESS ||
+      loader.recorder_end_rendering(instance, recorder) != GRANIT_SUCCESS ||
       loader.recorder_copy_texture_to_buffer(instance, recorder, target_texture, readback, 64, 64,
                                              256) != GRANIT_SUCCESS ||
       loader.finish_command_recorder(instance, recorder, &command_buffer) != GRANIT_SUCCESS ||

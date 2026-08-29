@@ -45,7 +45,6 @@ bool is_compatible(const granit_backend_plugin_api* api,
          api->instance_api->create_command_recorder != nullptr &&
          api->instance_api->destroy_command_recorder != nullptr &&
          api->instance_api->recorder_copy_buffer_to_texture != nullptr &&
-         api->instance_api->recorder_draw != nullptr &&
          api->instance_api->finish_command_recorder != nullptr &&
          api->instance_api->destroy_command_buffer != nullptr &&
          api->instance_api->submit_command_buffer != nullptr &&
@@ -703,30 +702,6 @@ granit_result backend_plugin_loader::recorder_copy_buffer_to_texture(
   try {
     return api_->instance_api->recorder_copy_buffer_to_texture(instance, recorder, buffer, texture,
                                                                width, height, bytes_per_row);
-  } catch (...) {
-    return GRANIT_ERROR_INTERNAL;
-  }
-}
-
-granit_result backend_plugin_loader::recorder_draw(
-    granit_backend_plugin_instance instance, granit_backend_plugin_command_recorder recorder,
-    granit_backend_plugin_texture_view target, granit_backend_plugin_render_pipeline pipeline,
-    granit_backend_plugin_bind_group bind_group, std::uint32_t first_vertex_buffer,
-    std::span<const granit_backend_plugin_vertex_buffer_binding> vertex_buffers, bool indexed,
-    granit_backend_plugin_buffer index_buffer, std::uint64_t index_buffer_offset,
-    granit_backend_plugin_index_format index_format, std::uint32_t element_count,
-    std::uint32_t instance_count, std::uint32_t first_element, std::int32_t vertex_offset,
-    std::uint32_t first_instance) noexcept {
-  if (api_ == nullptr || instance == 0 || recorder == 0 || target == 0 || pipeline == 0)
-    return GRANIT_ERROR_INVALID_ARGUMENT;
-  if (std::find(instances_.begin(), instances_.end(), instance) == instances_.end())
-    return GRANIT_ERROR_INVALID_HANDLE;
-  try {
-    return api_->instance_api->recorder_draw(
-        instance, recorder, target, pipeline, bind_group, first_vertex_buffer,
-        vertex_buffers.data(), static_cast<std::uint32_t>(vertex_buffers.size()), indexed ? 1U : 0U,
-        index_buffer, index_buffer_offset, index_format, element_count, instance_count,
-        first_element, vertex_offset, first_instance);
   } catch (...) {
     return GRANIT_ERROR_INTERNAL;
   }

@@ -636,8 +636,6 @@ TEST_CASE("WebGPU 插件绑定与 Pipeline 遵守依赖生命周期", "[backend]
   REQUIRE(loader.recorder_copy_buffer_to_texture(first, recorder, buffer, texture, 16, 16, 256) ==
           GRANIT_SUCCESS);
   const granit_backend_plugin_vertex_buffer_binding vertex_binding{buffer, 0};
-  const granit_backend_plugin_vertex_buffer_binding invalid_vertex_binding{buffer,
-                                                                           buffer_desc.size};
   const float clear_color[]{0.0F, 0.0F, 0.0F, 1.0F};
   REQUIRE(loader.recorder_begin_rendering(
               first, recorder, target_view, GRANIT_BACKEND_PLUGIN_LOAD_OPERATION_CLEAR,
@@ -656,24 +654,6 @@ TEST_CASE("WebGPU 插件绑定与 Pipeline 遵守依赖生命周期", "[backend]
   REQUIRE(loader.recorder_draw_indices(first, recorder, 3, 1, 0, -1, 0) == GRANIT_SUCCESS);
   REQUIRE(loader.recorder_end_rendering(first, recorder) == GRANIT_SUCCESS);
   CHECK(loader.recorder_end_rendering(first, recorder) == GRANIT_ERROR_INVALID_ARGUMENT);
-  CHECK(loader.recorder_draw(first, recorder, target_view, pipeline, bind_group, 0,
-                             std::span{&invalid_vertex_binding, 1}, false, 0, 0, 0, 3, 1, 0, 0,
-                             0) == GRANIT_ERROR_INVALID_ARGUMENT);
-  REQUIRE(loader.recorder_draw(first, recorder, target_view, pipeline, bind_group, 0,
-                               std::span{&vertex_binding, 1}, false, 0, 0, 0, 3, 2, 1, 0,
-                               4) == GRANIT_SUCCESS);
-  CHECK(loader.recorder_draw(first, recorder, target_view, pipeline, bind_group, 0,
-                             std::span{&vertex_binding, 1}, true, buffer, 1,
-                             GRANIT_BACKEND_PLUGIN_INDEX_FORMAT_UINT16, 3, 1, 0, 0,
-                             0) == GRANIT_ERROR_INVALID_ARGUMENT);
-  CHECK(loader.recorder_draw(first, recorder, target_view, pipeline, bind_group, 0,
-                             std::span{&vertex_binding, 1}, true, buffer, 0,
-                             GRANIT_BACKEND_PLUGIN_INDEX_FORMAT_UINT16, 3000, 1, 0, 0,
-                             0) == GRANIT_ERROR_INVALID_ARGUMENT);
-  REQUIRE(loader.recorder_draw(first, recorder, target_view, pipeline, bind_group, 0,
-                               std::span{&vertex_binding, 1}, true, buffer, 0,
-                               GRANIT_BACKEND_PLUGIN_INDEX_FORMAT_UINT16, 3, 1, 0, -1,
-                               0) == GRANIT_SUCCESS);
   granit_backend_plugin_buffer_desc readback_desc{};
   readback_desc.struct_size = sizeof(readback_desc);
   readback_desc.size = 4096;
@@ -690,9 +670,8 @@ TEST_CASE("WebGPU 插件绑定与 Pipeline 遵守依赖生命周期", "[backend]
   CHECK(loader.finish_command_recorder(first, recorder, &duplicate_finish) ==
         GRANIT_ERROR_INVALID_ARGUMENT);
   CHECK(duplicate_finish == 0);
-  CHECK(loader.recorder_draw(first, recorder, target_view, pipeline, bind_group, 0,
-                             std::span{&vertex_binding, 1}, false, 0, 0, 0, 3, 1, 0, 0,
-                             0) == GRANIT_ERROR_INVALID_ARGUMENT);
+  CHECK(loader.recorder_draw_vertices(first, recorder, 3, 1, 0, 0) ==
+        GRANIT_ERROR_INVALID_ARGUMENT);
   CHECK(loader.submit_command_buffer(second, command_buffer) == GRANIT_ERROR_INVALID_HANDLE);
   REQUIRE(loader.submit_command_buffer(first, command_buffer) == GRANIT_SUCCESS);
   CHECK(loader.submit_command_buffer(first, command_buffer) == GRANIT_ERROR_INVALID_HANDLE);
