@@ -5,6 +5,7 @@
 #define GRANIT_BACKEND_WEBGPU_PIPELINE_ADAPTER_H_
 
 #include <memory>
+#include <span>
 
 #include <granit/renderer/pipeline.h>
 
@@ -30,6 +31,7 @@ public:
   [[nodiscard]] granit_result create_graphics_pipeline(
       backend_graphics_pipeline_resource& resource, backend_pipeline_layout_resource& layout,
       granit_backend_plugin_shader vertex_shader, granit_backend_plugin_shader fragment_shader,
+      std::span<const granit_vertex_buffer_layout> vertex_buffers,
       granit_texture_format color_format) const noexcept;
   [[nodiscard]] granit_backend_plugin_render_pipeline
   native_handle(backend_graphics_pipeline_resource& resource) const noexcept;

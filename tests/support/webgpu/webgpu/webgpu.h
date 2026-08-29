@@ -53,6 +53,8 @@ typedef unsigned int WGPUTextureViewDimension;
 typedef unsigned int WGPUSType;
 typedef unsigned long long WGPUColorWriteMask;
 typedef unsigned int WGPUPrimitiveTopology;
+typedef unsigned int WGPUVertexFormat;
+typedef unsigned int WGPUVertexStepMode;
 typedef unsigned int WGPUTextureAspect;
 typedef unsigned int WGPULoadOp;
 typedef unsigned int WGPUStoreOp;
@@ -82,6 +84,8 @@ typedef unsigned int WGPUSurfaceGetCurrentTextureStatus;
 #define WGPUBufferUsage_MapRead 1
 #define WGPUBufferUsage_CopySrc 4
 #define WGPUBufferUsage_CopyDst 8
+#define WGPUBufferUsage_Index 16
+#define WGPUBufferUsage_Vertex 32
 #define WGPUMapMode_Read 1
 #define WGPUTextureUsage_None 0
 #define WGPUTextureUsage_CopySrc 1
@@ -102,6 +106,21 @@ typedef unsigned int WGPUSurfaceGetCurrentTextureStatus;
 #define WGPUSType_ShaderSourceWGSL 6
 #define WGPUColorWriteMask_All 15
 #define WGPUPrimitiveTopology_TriangleList 4
+#define WGPUVertexStepMode_Vertex 1
+#define WGPUVertexStepMode_Instance 2
+#define WGPUVertexFormat_Undefined 0
+#define WGPUVertexFormat_Uint32 12
+#define WGPUVertexFormat_Uint32x2 13
+#define WGPUVertexFormat_Uint32x3 14
+#define WGPUVertexFormat_Uint32x4 15
+#define WGPUVertexFormat_Sint32 16
+#define WGPUVertexFormat_Sint32x2 17
+#define WGPUVertexFormat_Sint32x3 18
+#define WGPUVertexFormat_Sint32x4 19
+#define WGPUVertexFormat_Float32 28
+#define WGPUVertexFormat_Float32x2 29
+#define WGPUVertexFormat_Float32x3 30
+#define WGPUVertexFormat_Float32x4 31
 #define WGPUTextureAspect_All 1
 #define WGPULoadOp_Clear 2
 #define WGPUStoreOp_Store 1
@@ -371,6 +390,17 @@ typedef struct WGPUColorTargetState {
 #define WGPU_COLOR_TARGET_STATE_INIT                                                               \
   {                                                                                                \
   }
+typedef struct WGPUVertexAttribute {
+  WGPUVertexFormat format;
+  unsigned long long offset;
+  unsigned int shaderLocation;
+} WGPUVertexAttribute;
+typedef struct WGPUVertexBufferLayout {
+  unsigned long long arrayStride;
+  WGPUVertexStepMode stepMode;
+  size_t attributeCount;
+  const WGPUVertexAttribute* attributes;
+} WGPUVertexBufferLayout;
 typedef struct WGPUVertexState {
   void* nextInChain;
   WGPUShaderModule module;
@@ -378,7 +408,7 @@ typedef struct WGPUVertexState {
   size_t constantCount;
   const void* constants;
   size_t bufferCount;
-  const void* buffers;
+  const WGPUVertexBufferLayout* buffers;
 } WGPUVertexState;
 typedef struct WGPUFragmentState {
   void* nextInChain;

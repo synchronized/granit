@@ -15,6 +15,7 @@
 #include <new>
 #include <string>
 #include <unordered_map>
+#include <vector>
 
 #include <webgpu/webgpu.h>
 
@@ -754,7 +755,9 @@ granit_result create_buffer(granit_backend_plugin_instance instance,
       offsetof(granit_backend_plugin_buffer_desc, reserved_flags) + sizeof(std::uint32_t);
   constexpr auto known_usage = GRANIT_BACKEND_PLUGIN_BUFFER_USAGE_MAP_READ_BIT |
                                GRANIT_BACKEND_PLUGIN_BUFFER_USAGE_COPY_SRC_BIT |
-                               GRANIT_BACKEND_PLUGIN_BUFFER_USAGE_COPY_DST_BIT;
+                               GRANIT_BACKEND_PLUGIN_BUFFER_USAGE_COPY_DST_BIT |
+                               GRANIT_BACKEND_PLUGIN_BUFFER_USAGE_VERTEX_BIT |
+                               GRANIT_BACKEND_PLUGIN_BUFFER_USAGE_INDEX_BIT;
   if (out_buffer != nullptr) {
     *out_buffer = 0;
   }
@@ -785,6 +788,10 @@ granit_result create_buffer(granit_backend_plugin_instance instance,
     usage |= WGPUBufferUsage_CopySrc;
   if ((desc->usage & GRANIT_BACKEND_PLUGIN_BUFFER_USAGE_COPY_DST_BIT) != 0)
     usage |= WGPUBufferUsage_CopyDst;
+  if ((desc->usage & GRANIT_BACKEND_PLUGIN_BUFFER_USAGE_VERTEX_BIT) != 0)
+    usage |= WGPUBufferUsage_Vertex;
+  if ((desc->usage & GRANIT_BACKEND_PLUGIN_BUFFER_USAGE_INDEX_BIT) != 0)
+    usage |= WGPUBufferUsage_Index;
   WGPUBufferDescriptor descriptor = WGPU_BUFFER_DESCRIPTOR_INIT;
   descriptor.usage = usage;
   descriptor.size = desc->size;
@@ -1420,6 +1427,57 @@ granit_result destroy_pipeline_layout(granit_backend_plugin_instance instance,
   return GRANIT_SUCCESS;
 }
 
+WGPUVertexFormat to_vertex_format(granit_backend_plugin_vertex_format format) noexcept {
+  switch (format) {
+  case GRANIT_BACKEND_PLUGIN_VERTEX_FORMAT_FLOAT32:
+    return WGPUVertexFormat_Float32;
+  case GRANIT_BACKEND_PLUGIN_VERTEX_FORMAT_FLOAT32X2:
+    return WGPUVertexFormat_Float32x2;
+  case GRANIT_BACKEND_PLUGIN_VERTEX_FORMAT_FLOAT32X3:
+    return WGPUVertexFormat_Float32x3;
+  case GRANIT_BACKEND_PLUGIN_VERTEX_FORMAT_FLOAT32X4:
+    return WGPUVertexFormat_Float32x4;
+  case GRANIT_BACKEND_PLUGIN_VERTEX_FORMAT_UINT32:
+    return WGPUVertexFormat_Uint32;
+  case GRANIT_BACKEND_PLUGIN_VERTEX_FORMAT_UINT32X2:
+    return WGPUVertexFormat_Uint32x2;
+  case GRANIT_BACKEND_PLUGIN_VERTEX_FORMAT_UINT32X3:
+    return WGPUVertexFormat_Uint32x3;
+  case GRANIT_BACKEND_PLUGIN_VERTEX_FORMAT_UINT32X4:
+    return WGPUVertexFormat_Uint32x4;
+  case GRANIT_BACKEND_PLUGIN_VERTEX_FORMAT_SINT32:
+    return WGPUVertexFormat_Sint32;
+  case GRANIT_BACKEND_PLUGIN_VERTEX_FORMAT_SINT32X2:
+    return WGPUVertexFormat_Sint32x2;
+  case GRANIT_BACKEND_PLUGIN_VERTEX_FORMAT_SINT32X3:
+    return WGPUVertexFormat_Sint32x3;
+  case GRANIT_BACKEND_PLUGIN_VERTEX_FORMAT_SINT32X4:
+    return WGPUVertexFormat_Sint32x4;
+  default:
+    return WGPUVertexFormat_Undefined;
+  }
+}
+
+std::uint32_t vertex_format_size(granit_backend_plugin_vertex_format format) noexcept {
+  if (format == GRANIT_BACKEND_PLUGIN_VERTEX_FORMAT_FLOAT32 ||
+      format == GRANIT_BACKEND_PLUGIN_VERTEX_FORMAT_UINT32 ||
+      format == GRANIT_BACKEND_PLUGIN_VERTEX_FORMAT_SINT32)
+    return 4;
+  if (format == GRANIT_BACKEND_PLUGIN_VERTEX_FORMAT_FLOAT32X2 ||
+      format == GRANIT_BACKEND_PLUGIN_VERTEX_FORMAT_UINT32X2 ||
+      format == GRANIT_BACKEND_PLUGIN_VERTEX_FORMAT_SINT32X2)
+    return 8;
+  if (format == GRANIT_BACKEND_PLUGIN_VERTEX_FORMAT_FLOAT32X3 ||
+      format == GRANIT_BACKEND_PLUGIN_VERTEX_FORMAT_UINT32X3 ||
+      format == GRANIT_BACKEND_PLUGIN_VERTEX_FORMAT_SINT32X3)
+    return 12;
+  if (format == GRANIT_BACKEND_PLUGIN_VERTEX_FORMAT_FLOAT32X4 ||
+      format == GRANIT_BACKEND_PLUGIN_VERTEX_FORMAT_UINT32X4 ||
+      format == GRANIT_BACKEND_PLUGIN_VERTEX_FORMAT_SINT32X4)
+    return 16;
+  return 0;
+}
+
 granit_result
 create_render_pipeline(granit_backend_plugin_instance instance,
                        const granit_backend_plugin_render_pipeline_desc* desc,
@@ -1428,7 +1486,8 @@ create_render_pipeline(granit_backend_plugin_instance instance,
     *out_render_pipeline = 0;
   if (instance == 0 || desc == nullptr || out_render_pipeline == nullptr ||
       desc->struct_size < sizeof(*desc) || desc->reserved != 0 || desc->layout == 0 ||
-      desc->vertex_shader == 0 || desc->fragment_shader == 0 || desc->reserved_2 != 0 ||
+      desc->vertex_shader == 0 || desc->fragment_shader == 0 ||
+      (desc->vertex_buffer_layout_count != 0 && desc->vertex_buffer_layouts == nullptr) ||
       (desc->color_format != GRANIT_BACKEND_PLUGIN_TEXTURE_FORMAT_RGBA8_UNORM &&
        desc->color_format != GRANIT_BACKEND_PLUGIN_TEXTURE_FORMAT_BGRA8_UNORM))
     return GRANIT_ERROR_INVALID_ARGUMENT;
@@ -1448,6 +1507,48 @@ create_render_pipeline(granit_backend_plugin_instance instance,
   if (vertex->second.stage != GRANIT_BACKEND_PLUGIN_SHADER_STAGE_VERTEX ||
       fragment_shader->second.stage != GRANIT_BACKEND_PLUGIN_SHADER_STAGE_FRAGMENT)
     return GRANIT_ERROR_INVALID_ARGUMENT;
+  std::vector<WGPUVertexBufferLayout> vertex_buffers;
+  std::vector<WGPUVertexAttribute> vertex_attributes;
+  try {
+    vertex_buffers.reserve(desc->vertex_buffer_layout_count);
+    for (std::uint32_t binding = 0; binding < desc->vertex_buffer_layout_count; ++binding)
+      vertex_attributes.reserve(vertex_attributes.size() +
+                                desc->vertex_buffer_layouts[binding].attribute_count);
+    for (std::uint32_t binding = 0; binding < desc->vertex_buffer_layout_count; ++binding) {
+      const auto& source = desc->vertex_buffer_layouts[binding];
+      if (source.stride == 0 || source.reserved != 0 || source.attribute_count == 0 ||
+          source.attributes == nullptr ||
+          (source.step_mode != GRANIT_BACKEND_PLUGIN_VERTEX_STEP_MODE_VERTEX &&
+           source.step_mode != GRANIT_BACKEND_PLUGIN_VERTEX_STEP_MODE_INSTANCE))
+        return GRANIT_ERROR_INVALID_ARGUMENT;
+      const auto first = vertex_attributes.size();
+      for (std::uint32_t index = 0; index < source.attribute_count; ++index) {
+        const auto& attribute = source.attributes[index];
+        const auto format = to_vertex_format(attribute.format);
+        const auto size = vertex_format_size(attribute.format);
+        if (attribute.reserved != 0 || format == WGPUVertexFormat_Undefined ||
+            attribute.offset > source.stride || size > source.stride - attribute.offset)
+          return GRANIT_ERROR_INVALID_ARGUMENT;
+        if (std::any_of(vertex_attributes.begin(), vertex_attributes.end(),
+                        [&attribute](const auto& existing) {
+                          return existing.shaderLocation == attribute.location;
+                        }))
+          return GRANIT_ERROR_INVALID_ARGUMENT;
+        vertex_attributes.push_back({format, attribute.offset, attribute.location});
+      }
+      vertex_buffers.push_back(
+          {source.stride,
+           static_cast<WGPUVertexStepMode>(source.step_mode ==
+                                                   GRANIT_BACKEND_PLUGIN_VERTEX_STEP_MODE_VERTEX
+                                               ? WGPUVertexStepMode_Vertex
+                                               : WGPUVertexStepMode_Instance),
+           source.attribute_count, vertex_attributes.data() + first});
+    }
+  } catch (const std::bad_alloc&) {
+    return GRANIT_ERROR_OUT_OF_MEMORY;
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
   WGPUColorTargetState target = WGPU_COLOR_TARGET_STATE_INIT;
   target.format = desc->color_format == GRANIT_BACKEND_PLUGIN_TEXTURE_FORMAT_RGBA8_UNORM
                       ? WGPUTextureFormat_RGBA8Unorm
@@ -1464,6 +1565,8 @@ create_render_pipeline(granit_backend_plugin_instance instance,
   descriptor.vertex.module = vertex->second.shader;
   descriptor.vertex.entryPoint = {vertex->second.entry_point.data(),
                                   vertex->second.entry_point.size()};
+  descriptor.vertex.bufferCount = vertex_buffers.size();
+  descriptor.vertex.buffers = vertex_buffers.data();
   descriptor.primitive.topology = WGPUPrimitiveTopology_TriangleList;
   descriptor.multisample.count = 1;
   descriptor.multisample.mask = UINT32_MAX;

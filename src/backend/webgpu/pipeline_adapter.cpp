@@ -4,6 +4,7 @@
 #include "backend/webgpu/pipeline_adapter.h"
 
 #include <utility>
+#include <vector>
 
 namespace granit::detail {
 
@@ -82,8 +83,6 @@ granit_result webgpu_pipeline_adapter::validate_graphics_pipeline(
       (desc.color_formats[0] != GRANIT_TEXTURE_FORMAT_RGBA8_UNORM &&
        desc.color_formats[0] != GRANIT_TEXTURE_FORMAT_BGRA8_UNORM) ||
       desc.depth_stencil_format != GRANIT_TEXTURE_FORMAT_UNDEFINED || desc.sample_count != 1 ||
-      (desc.struct_size >= GRANIT_GRAPHICS_PIPELINE_DESC_VERSION_2_SIZE &&
-       desc.vertex_buffer_layout_count != 0) ||
       (desc.struct_size >= GRANIT_GRAPHICS_PIPELINE_DESC_VERSION_4_SIZE &&
        (desc.depth != nullptr || desc.color_blend_count != 0)) ||
       (desc.struct_size >= GRANIT_GRAPHICS_PIPELINE_DESC_VERSION_5_SIZE && desc.depth_bias)) {
@@ -104,6 +103,7 @@ granit_result webgpu_pipeline_adapter::create_pipeline_layout(
 granit_result webgpu_pipeline_adapter::create_graphics_pipeline(
     backend_graphics_pipeline_resource& resource, backend_pipeline_layout_resource& layout_resource,
     granit_backend_plugin_shader vertex_shader, granit_backend_plugin_shader fragment_shader,
+    std::span<const granit_vertex_buffer_layout> vertex_buffers,
     granit_texture_format color_format) const noexcept {
   auto* pipeline = as_pipeline(resource);
   auto* layout = as_layout(layout_resource);
@@ -112,9 +112,37 @@ granit_result webgpu_pipeline_adapter::create_graphics_pipeline(
       vertex_shader == 0 || fragment_shader == 0 || plugin_format == 0) {
     return GRANIT_ERROR_INVALID_ARGUMENT;
   }
-  const granit_backend_plugin_render_pipeline_desc desc{
-      sizeof(desc), 0, layout->handle_, vertex_shader, fragment_shader, plugin_format, 0};
-  return context_->loader->create_render_pipeline(context_->instance, &desc, &pipeline->handle_);
+  try {
+    std::vector<granit_backend_plugin_vertex_buffer_layout> layouts;
+    std::vector<granit_backend_plugin_vertex_attribute> attributes;
+    layouts.reserve(vertex_buffers.size());
+    for (const auto& source : vertex_buffers)
+      attributes.reserve(attributes.size() + source.attribute_count);
+    for (const auto& source : vertex_buffers) {
+      const auto first = attributes.size();
+      for (std::uint32_t index = 0; index < source.attribute_count; ++index) {
+        const auto& attribute = source.attributes[index];
+        attributes.push_back(
+            {attribute.location, attribute.format, attribute.offset, attribute.reserved});
+      }
+      layouts.push_back({source.stride, source.step_mode, source.attribute_count, source.reserved,
+                         attributes.data() + first});
+    }
+    const granit_backend_plugin_render_pipeline_desc desc{
+        sizeof(desc),
+        0,
+        layout->handle_,
+        vertex_shader,
+        fragment_shader,
+        plugin_format,
+        static_cast<std::uint32_t>(layouts.size()),
+        layouts.data()};
+    return context_->loader->create_render_pipeline(context_->instance, &desc, &pipeline->handle_);
+  } catch (const std::bad_alloc&) {
+    return GRANIT_ERROR_OUT_OF_MEMORY;
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
 }
 
 granit_backend_plugin_render_pipeline webgpu_pipeline_adapter::native_handle(

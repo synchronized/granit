@@ -585,9 +585,29 @@ TEST_CASE("WebGPU 插件绑定与 Pipeline 遵守依赖生命周期", "[backend]
       vertex_shader,
       fragment_shader,
       GRANIT_BACKEND_PLUGIN_TEXTURE_FORMAT_RGBA8_UNORM,
-      0};
+      0,
+      nullptr};
   granit_backend_plugin_render_pipeline pipeline{};
   REQUIRE(loader.create_render_pipeline(first, &pipeline_desc, &pipeline) == GRANIT_SUCCESS);
+  const granit_backend_plugin_vertex_attribute vertex_attributes[]{
+      {0, GRANIT_BACKEND_PLUGIN_VERTEX_FORMAT_FLOAT32X3, 0, 0},
+      {1, GRANIT_BACKEND_PLUGIN_VERTEX_FORMAT_FLOAT32X2, 12, 0}};
+  const granit_backend_plugin_vertex_buffer_layout vertex_layout{
+      20, GRANIT_BACKEND_PLUGIN_VERTEX_STEP_MODE_VERTEX, 2, 0, vertex_attributes};
+  pipeline_desc.vertex_buffer_layout_count = 1;
+  pipeline_desc.vertex_buffer_layouts = &vertex_layout;
+  granit_backend_plugin_render_pipeline geometry_pipeline{};
+  REQUIRE(loader.create_render_pipeline(first, &pipeline_desc, &geometry_pipeline) ==
+          GRANIT_SUCCESS);
+  auto invalid_layout = vertex_layout;
+  invalid_layout.stride = 16;
+  pipeline_desc.vertex_buffer_layouts = &invalid_layout;
+  granit_backend_plugin_render_pipeline invalid_pipeline = 42;
+  CHECK(loader.create_render_pipeline(first, &pipeline_desc, &invalid_pipeline) ==
+        GRANIT_ERROR_INVALID_ARGUMENT);
+  CHECK(invalid_pipeline == 0);
+  pipeline_desc.vertex_buffer_layout_count = 0;
+  pipeline_desc.vertex_buffer_layouts = nullptr;
   granit_backend_plugin_render_pipeline foreign_pipeline = 123;
   CHECK(loader.create_render_pipeline(second, &pipeline_desc, &foreign_pipeline) ==
         GRANIT_ERROR_INVALID_HANDLE);
@@ -604,7 +624,9 @@ TEST_CASE("WebGPU 插件绑定与 Pipeline 遵守依赖生命周期", "[backend]
   granit_backend_plugin_buffer_desc buffer_desc{};
   buffer_desc.struct_size = sizeof(buffer_desc);
   buffer_desc.size = 4096;
-  buffer_desc.usage = GRANIT_BACKEND_PLUGIN_BUFFER_USAGE_COPY_SRC_BIT;
+  buffer_desc.usage = GRANIT_BACKEND_PLUGIN_BUFFER_USAGE_COPY_SRC_BIT |
+                      GRANIT_BACKEND_PLUGIN_BUFFER_USAGE_VERTEX_BIT |
+                      GRANIT_BACKEND_PLUGIN_BUFFER_USAGE_INDEX_BIT;
   granit_backend_plugin_buffer buffer{};
   REQUIRE(loader.create_buffer(first, &buffer_desc, &buffer) == GRANIT_SUCCESS);
   granit_backend_plugin_command_recorder recorder{};
@@ -663,6 +685,7 @@ TEST_CASE("WebGPU 插件绑定与 Pipeline 遵守依赖生命周期", "[backend]
   CHECK(loader.destroy_sampler(first, sampler) == GRANIT_ERROR_INVALID_ARGUMENT);
 
   REQUIRE(loader.destroy_render_pipeline(first, pipeline) == GRANIT_SUCCESS);
+  REQUIRE(loader.destroy_render_pipeline(first, geometry_pipeline) == GRANIT_SUCCESS);
   CHECK(loader.destroy_render_pipeline(first, pipeline) == GRANIT_ERROR_INVALID_HANDLE);
   REQUIRE(loader.destroy_pipeline_layout(first, pipeline_layout) == GRANIT_SUCCESS);
   REQUIRE(loader.destroy_shader(first, vertex_shader) == GRANIT_SUCCESS);

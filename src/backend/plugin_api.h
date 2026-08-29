@@ -9,7 +9,7 @@
 #include <granit/core/diagnostic.h>
 #include <granit/core/result.h>
 
-#define GRANIT_BACKEND_PLUGIN_ABI_VERSION UINT32_C(8)
+#define GRANIT_BACKEND_PLUGIN_ABI_VERSION UINT32_C(9)
 #define GRANIT_BACKEND_PLUGIN_KIND_WEBGPU UINT32_C(1)
 #define GRANIT_BACKEND_PLUGIN_QUERY_SYMBOL "granit_backend_plugin_query"
 #define GRANIT_BACKEND_PLUGIN_SURFACE_TYPE_WIN32_BIT UINT32_C(0x00000001)
@@ -51,6 +51,8 @@ typedef uint32_t granit_backend_plugin_buffer_usage;
 #define GRANIT_BACKEND_PLUGIN_BUFFER_USAGE_MAP_READ_BIT UINT32_C(0x00000001)
 #define GRANIT_BACKEND_PLUGIN_BUFFER_USAGE_COPY_SRC_BIT UINT32_C(0x00000002)
 #define GRANIT_BACKEND_PLUGIN_BUFFER_USAGE_COPY_DST_BIT UINT32_C(0x00000004)
+#define GRANIT_BACKEND_PLUGIN_BUFFER_USAGE_VERTEX_BIT UINT32_C(0x00000008)
+#define GRANIT_BACKEND_PLUGIN_BUFFER_USAGE_INDEX_BIT UINT32_C(0x00000010)
 
 /** Buffer 由创建它的插件实例拥有；size 必须非零。 */
 typedef struct granit_backend_plugin_buffer_desc {
@@ -111,6 +113,39 @@ typedef struct granit_backend_plugin_shader_desc {
   uint64_t entry_point_length;
 } granit_backend_plugin_shader_desc;
 
+typedef uint32_t granit_backend_plugin_vertex_format;
+#define GRANIT_BACKEND_PLUGIN_VERTEX_FORMAT_FLOAT32 UINT32_C(1)
+#define GRANIT_BACKEND_PLUGIN_VERTEX_FORMAT_FLOAT32X2 UINT32_C(2)
+#define GRANIT_BACKEND_PLUGIN_VERTEX_FORMAT_FLOAT32X3 UINT32_C(3)
+#define GRANIT_BACKEND_PLUGIN_VERTEX_FORMAT_FLOAT32X4 UINT32_C(4)
+#define GRANIT_BACKEND_PLUGIN_VERTEX_FORMAT_UINT32 UINT32_C(5)
+#define GRANIT_BACKEND_PLUGIN_VERTEX_FORMAT_UINT32X2 UINT32_C(6)
+#define GRANIT_BACKEND_PLUGIN_VERTEX_FORMAT_UINT32X3 UINT32_C(7)
+#define GRANIT_BACKEND_PLUGIN_VERTEX_FORMAT_UINT32X4 UINT32_C(8)
+#define GRANIT_BACKEND_PLUGIN_VERTEX_FORMAT_SINT32 UINT32_C(9)
+#define GRANIT_BACKEND_PLUGIN_VERTEX_FORMAT_SINT32X2 UINT32_C(10)
+#define GRANIT_BACKEND_PLUGIN_VERTEX_FORMAT_SINT32X3 UINT32_C(11)
+#define GRANIT_BACKEND_PLUGIN_VERTEX_FORMAT_SINT32X4 UINT32_C(12)
+
+typedef uint32_t granit_backend_plugin_vertex_step_mode;
+#define GRANIT_BACKEND_PLUGIN_VERTEX_STEP_MODE_VERTEX UINT32_C(1)
+#define GRANIT_BACKEND_PLUGIN_VERTEX_STEP_MODE_INSTANCE UINT32_C(2)
+
+typedef struct granit_backend_plugin_vertex_attribute {
+  uint32_t location;
+  granit_backend_plugin_vertex_format format;
+  uint32_t offset;
+  uint32_t reserved;
+} granit_backend_plugin_vertex_attribute;
+
+typedef struct granit_backend_plugin_vertex_buffer_layout {
+  uint32_t stride;
+  granit_backend_plugin_vertex_step_mode step_mode;
+  uint32_t attribute_count;
+  uint32_t reserved;
+  const granit_backend_plugin_vertex_attribute* attributes;
+} granit_backend_plugin_vertex_buffer_layout;
+
 typedef struct granit_backend_plugin_render_pipeline_desc {
   uint32_t struct_size;
   uint32_t reserved;
@@ -118,7 +153,8 @@ typedef struct granit_backend_plugin_render_pipeline_desc {
   granit_backend_plugin_shader vertex_shader;
   granit_backend_plugin_shader fragment_shader;
   uint32_t color_format;
-  uint32_t reserved_2;
+  uint32_t vertex_buffer_layout_count;
+  const granit_backend_plugin_vertex_buffer_layout* vertex_buffer_layouts;
 } granit_backend_plugin_render_pipeline_desc;
 
 /** Canvas selector 仅在调用期间有效；插件必须复制后续需要的内容。 */
