@@ -175,8 +175,30 @@ granit_result webgpu_renderer_state::discard_command_recorder(
 }
 
 bool webgpu_renderer_state::command_recorder_is_recording(
-    backend_command_recorder_resource&) noexcept {
-  return false;
+    backend_command_recorder_resource& recorder) noexcept {
+  return commands_ && commands_->is_recording(recorder);
+}
+
+granit_result webgpu_renderer_state::bind_vertex_buffers(
+    backend_command_recorder_resource& recorder, std::uint32_t first,
+    std::span<backend_buffer_resource* const> buffers, std::span<const std::uint64_t> offsets) {
+  if (!commands_ || !resources_ || buffers.empty() || buffers.size() != offsets.size())
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  std::vector<granit_backend_plugin_vertex_buffer_binding> bindings;
+  try {
+    bindings.reserve(buffers.size());
+    for (std::size_t index = 0; index < buffers.size(); ++index) {
+      const auto native = resources_->native_buffer(*buffers[index]);
+      if (native == 0)
+        return GRANIT_ERROR_INVALID_ARGUMENT;
+      bindings.push_back({native, offsets[index]});
+    }
+  } catch (const std::bad_alloc&) {
+    return GRANIT_ERROR_OUT_OF_MEMORY;
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+  return commands_->bind_vertex_buffers(recorder, first, bindings);
 }
 
 granit_result webgpu_renderer_state::draw(backend_command_recorder_resource& recorder,
@@ -185,11 +207,11 @@ granit_result webgpu_renderer_state::draw(backend_command_recorder_resource& rec
                                           std::uint32_t vertex_count, std::uint32_t instance_count,
                                           std::uint32_t first_vertex,
                                           std::uint32_t first_instance) noexcept {
-  if (!commands_ || !presentation_ || !pipelines_ || !target || !pipeline || vertex_count != 3 ||
-      instance_count != 1 || first_vertex != 0 || first_instance != 0)
+  if (!commands_ || !presentation_ || !pipelines_ || !target || !pipeline)
     return GRANIT_ERROR_UNSUPPORTED;
   return commands_->draw(recorder, presentation_->native_view(*target),
-                         pipelines_->native_handle(*pipeline));
+                         pipelines_->native_handle(*pipeline), vertex_count, instance_count,
+                         first_vertex, first_instance);
 }
 
 std::unique_ptr<backend_shader_resource> webgpu_renderer_state::allocate_shader_resource() {

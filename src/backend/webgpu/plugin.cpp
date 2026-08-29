@@ -1712,12 +1712,16 @@ granit_result recorder_copy_buffer_to_texture(granit_backend_plugin_instance ins
   return GRANIT_SUCCESS;
 }
 
-granit_result recorder_draw(granit_backend_plugin_instance instance,
-                            granit_backend_plugin_command_recorder recorder,
-                            granit_backend_plugin_texture_view target,
-                            granit_backend_plugin_render_pipeline pipeline,
-                            granit_backend_plugin_bind_group bind_group) noexcept {
-  if (instance == 0 || recorder == 0 || target == 0 || pipeline == 0)
+granit_result recorder_draw(
+    granit_backend_plugin_instance instance, granit_backend_plugin_command_recorder recorder,
+    granit_backend_plugin_texture_view target, granit_backend_plugin_render_pipeline pipeline,
+    granit_backend_plugin_bind_group bind_group, std::uint32_t first_vertex_buffer,
+    const granit_backend_plugin_vertex_buffer_binding* vertex_buffers,
+    std::uint32_t vertex_buffer_count, std::uint32_t vertex_count, std::uint32_t instance_count,
+    std::uint32_t first_vertex, std::uint32_t first_instance) noexcept {
+  if (instance == 0 || recorder == 0 || target == 0 || pipeline == 0 || vertex_count == 0 ||
+      instance_count == 0 || (vertex_buffer_count != 0 && vertex_buffers == nullptr) ||
+      first_vertex_buffer > UINT32_MAX - vertex_buffer_count)
     return GRANIT_ERROR_INVALID_ARGUMENT;
   const std::scoped_lock lock{instances_mutex};
   const auto found = instances.find(instance);
@@ -1738,6 +1742,14 @@ granit_result recorder_draw(granit_backend_plugin_instance instance,
     return GRANIT_ERROR_INVALID_HANDLE;
   if (recorder_found->second.finished)
     return GRANIT_ERROR_INVALID_ARGUMENT;
+  for (std::uint32_t index = 0; index < vertex_buffer_count; ++index) {
+    const auto buffer = state.buffers.find(vertex_buffers[index].buffer);
+    if (buffer == state.buffers.end())
+      return GRANIT_ERROR_INVALID_HANDLE;
+    if ((buffer->second.usage & GRANIT_BACKEND_PLUGIN_BUFFER_USAGE_VERTEX_BIT) == 0 ||
+        vertex_buffers[index].offset >= buffer->second.size)
+      return GRANIT_ERROR_INVALID_ARGUMENT;
+  }
   const auto texture_found = state.textures.find(view_found->second.texture);
   if (texture_found == state.textures.end() ||
       (texture_found->second.usage & GRANIT_BACKEND_PLUGIN_TEXTURE_USAGE_RENDER_ATTACHMENT_BIT) ==
@@ -1758,7 +1770,13 @@ granit_result recorder_draw(granit_backend_plugin_instance instance,
   wgpuRenderPassEncoderSetPipeline(pass, pipeline_found->second.render_pipeline);
   if (bind_group != 0)
     wgpuRenderPassEncoderSetBindGroup(pass, 0, group_found->second.bind_group, 0, nullptr);
-  wgpuRenderPassEncoderDraw(pass, 3, 1, 0, 0);
+  for (std::uint32_t index = 0; index < vertex_buffer_count; ++index) {
+    const auto& binding = vertex_buffers[index];
+    const auto& buffer = state.buffers.find(binding.buffer)->second;
+    wgpuRenderPassEncoderSetVertexBuffer(pass, first_vertex_buffer + index, buffer.buffer,
+                                         binding.offset, buffer.size - binding.offset);
+  }
+  wgpuRenderPassEncoderDraw(pass, vertex_count, instance_count, first_vertex, first_instance);
   wgpuRenderPassEncoderEnd(pass);
   wgpuRenderPassEncoderRelease(pass);
   return GRANIT_SUCCESS;

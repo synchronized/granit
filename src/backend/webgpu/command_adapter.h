@@ -5,6 +5,7 @@
 #define GRANIT_BACKEND_WEBGPU_COMMAND_ADAPTER_H_
 
 #include <memory>
+#include <span>
 
 #include "backend/plugin_loader.h"
 #include "backend/resources.h"
@@ -20,9 +21,16 @@ public:
 
   [[nodiscard]] std::unique_ptr<backend_command_recorder_resource> allocate_recorder() const;
   [[nodiscard]] granit_result begin(backend_command_recorder_resource& resource) const noexcept;
+  [[nodiscard]] granit_result bind_vertex_buffers(
+      backend_command_recorder_resource& resource, std::uint32_t first,
+      std::span<const granit_backend_plugin_vertex_buffer_binding> bindings) const noexcept;
   [[nodiscard]] granit_result draw(backend_command_recorder_resource& resource,
                                    granit_backend_plugin_texture_view target,
-                                   granit_backend_plugin_render_pipeline pipeline) const noexcept;
+                                   granit_backend_plugin_render_pipeline pipeline,
+                                   std::uint32_t vertex_count, std::uint32_t instance_count,
+                                   std::uint32_t first_vertex,
+                                   std::uint32_t first_instance) const noexcept;
+  [[nodiscard]] bool is_recording(backend_command_recorder_resource& resource) const noexcept;
   [[nodiscard]] granit_result end(backend_command_recorder_resource& resource) const noexcept;
   [[nodiscard]] granit_result submit(backend_command_recorder_resource& resource) const noexcept;
   [[nodiscard]] granit_result reset(backend_command_recorder_resource& resource) const noexcept;

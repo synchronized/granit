@@ -5,6 +5,7 @@
 #define GRANIT_BACKEND_PLUGIN_LOADER_H_
 
 #include <cstdint>
+#include <span>
 #include <vector>
 
 #include <granit/core/result.h>
@@ -152,11 +153,13 @@ public:
       granit_backend_plugin_instance instance, granit_backend_plugin_command_recorder recorder,
       granit_backend_plugin_buffer buffer, granit_backend_plugin_texture texture,
       std::uint32_t width, std::uint32_t height, std::uint32_t bytes_per_row) noexcept;
-  [[nodiscard]] granit_result recorder_draw(granit_backend_plugin_instance instance,
-                                            granit_backend_plugin_command_recorder recorder,
-                                            granit_backend_plugin_texture_view target,
-                                            granit_backend_plugin_render_pipeline pipeline,
-                                            granit_backend_plugin_bind_group bind_group) noexcept;
+  [[nodiscard]] granit_result recorder_draw(
+      granit_backend_plugin_instance instance, granit_backend_plugin_command_recorder recorder,
+      granit_backend_plugin_texture_view target, granit_backend_plugin_render_pipeline pipeline,
+      granit_backend_plugin_bind_group bind_group, std::uint32_t first_vertex_buffer,
+      std::span<const granit_backend_plugin_vertex_buffer_binding> vertex_buffers,
+      std::uint32_t vertex_count, std::uint32_t instance_count, std::uint32_t first_vertex,
+      std::uint32_t first_instance) noexcept;
   [[nodiscard]] granit_result
   finish_command_recorder(granit_backend_plugin_instance instance,
                           granit_backend_plugin_command_recorder recorder,

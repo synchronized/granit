@@ -668,6 +668,8 @@ void wgpuRenderPassEncoderSetPipeline(WGPURenderPassEncoder pass, WGPURenderPipe
 void wgpuRenderPassEncoderSetBindGroup(WGPURenderPassEncoder pass, unsigned int groupIndex,
                                        WGPUBindGroup group, size_t dynamicOffsetCount,
                                        const unsigned int* dynamicOffsets);
+void wgpuRenderPassEncoderSetVertexBuffer(WGPURenderPassEncoder pass, unsigned int slot,
+                                          WGPUBuffer buffer, uint64_t offset, uint64_t size);
 void wgpuRenderPassEncoderDraw(WGPURenderPassEncoder pass, unsigned int vertexCount,
                                unsigned int instanceCount, unsigned int firstVertex,
                                unsigned int firstInstance);

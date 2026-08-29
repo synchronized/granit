@@ -126,6 +126,10 @@ public:
   discard_command_recorder(backend_command_recorder_resource& recorder) noexcept override;
   [[nodiscard]] bool
   command_recorder_is_recording(backend_command_recorder_resource& recorder) noexcept override;
+  [[nodiscard]] granit_result bind_vertex_buffers(backend_command_recorder_resource& recorder,
+                                                  std::uint32_t first,
+                                                  std::span<backend_buffer_resource* const> buffers,
+                                                  std::span<const std::uint64_t> offsets) override;
   [[nodiscard]] granit_result draw(backend_command_recorder_resource& recorder,
                                    backend_texture_view_resource* target,
                                    backend_graphics_pipeline_resource* pipeline,

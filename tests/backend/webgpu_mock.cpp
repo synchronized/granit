@@ -390,6 +390,9 @@ extern "C" void wgpuRenderPassEncoderDraw(WGPURenderPassEncoder pass, unsigned i
     }
   }
 }
+
+extern "C" void wgpuRenderPassEncoderSetVertexBuffer(WGPURenderPassEncoder, unsigned int,
+                                                     WGPUBuffer, uint64_t, uint64_t) {}
 extern "C" void wgpuRenderPassEncoderEnd(WGPURenderPassEncoder) {}
 extern "C" void wgpuRenderPassEncoderRelease(WGPURenderPassEncoder pass) { delete pass; }
 extern "C" WGPUCommandBuffer wgpuCommandEncoderFinish(WGPUCommandEncoder encoder,
