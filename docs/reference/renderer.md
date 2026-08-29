@@ -67,6 +67,9 @@ Renderer 返回 `GRANIT_ERROR_INVALID_HANDLE`。限制来自 Renderer 创建时�
 结尾零字符；名称、Vendor ID 或 Device ID 不可用时返回空值。这些元数据只用于诊断和性能记录，
 不应作为渲染行为分支条件。C++ 包装通过 `renderer::get_info(renderer_info&)` 完成缓冲区管理。
 
+Emscripten 使用静态 WebGPU Provider，`AUTO` 与 `WEBGPU` 都选择该后端；显式 Vulkan 返回
+`GRANIT_ERROR_BACKEND_UNAVAILABLE`，任何动态库路径均返回 `GRANIT_ERROR_INVALID_ARGUMENT`。
+
 ## 资源统计
 
 关闭 Renderer 前，可查询仍由调用方持有的公开子资源：

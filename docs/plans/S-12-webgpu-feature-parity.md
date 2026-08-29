@@ -5,7 +5,7 @@
 
 ## 状态
 
-- 实现状态：进行中；S-12A 已开始
+- 实现状态：进行中；S-12A 已完成，下一步 S-12B
 - 前置依赖：S-10
 - 后续任务：S-13
 - 优先级：P1
@@ -263,7 +263,9 @@ Metallic-Roughness Texture，并用同一 Uniform Buffer 的两个动态 Offset 
 
 ## 实施顺序
 
-1. **S-12A 后端选择**：实现 C ABI、C++ 包装、实际后端查询、插件定位和严格/自动选择语义。
+1. **S-12A 后端选择（已完成）**：已实现 C ABI、C++ 包装、实际后端查询、固定位置插件定位、
+   严格选择与桌面 Vulkan 优先的自动回退；旧描述兼容、动态 Provider、失败诊断和 Emscripten
+   静态选择均已验证。
 2. **S-12B 桌面呈现**：为 WebGPU Provider 接通 Win32、XCB 与 Wayland Surface；SDL3 继续通过
    对应原生窗口描述创建 Surface，不增加 SDL 专用 Renderer API。
 3. **S-12C 几何资源**：接通 WebGPU Vertex/Index Buffer、顶点布局、索引格式和 Indexed Draw。

@@ -17,6 +17,15 @@ granit_result create_default_renderer(const granit_renderer_desc& desc, granit_r
   if ((surface_types & ~GRANIT_SURFACE_TYPE_CANVAS_BIT) != 0) {
     return GRANIT_ERROR_UNSUPPORTED;
   }
+  const auto backend = desc.struct_size >= GRANIT_RENDERER_DESC_VERSION_5_SIZE
+                           ? desc.backend
+                           : GRANIT_RENDERER_BACKEND_AUTO;
+  if (backend == GRANIT_RENDERER_BACKEND_VULKAN)
+    return GRANIT_ERROR_BACKEND_UNAVAILABLE;
+  if (desc.struct_size >= GRANIT_RENDERER_DESC_VERSION_5_SIZE &&
+      desc.backend_library_path_length != 0) {
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  }
   const auto diagnostic_callback =
       desc.struct_size >= GRANIT_RENDERER_DESC_VERSION_4_SIZE ? desc.diagnostic_callback : nullptr;
   auto* diagnostic_user_data =
