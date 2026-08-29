@@ -60,10 +60,12 @@ public:
                                      granit_diagnostic_callback diagnostic_callback,
                                      void* diagnostic_user_data, granit_renderer& renderer);
   [[nodiscard]] granit_result create_webgpu_static(const granit_backend_plugin_api* api,
+                                                   std::uint32_t surface_types,
                                                    granit_diagnostic_callback diagnostic_callback,
                                                    void* diagnostic_user_data,
                                                    granit_renderer& renderer);
   [[nodiscard]] granit_result create_webgpu_dynamic(std::string_view library_path,
+                                                    std::uint32_t surface_types,
                                                     granit_diagnostic_callback diagnostic_callback,
                                                     void* diagnostic_user_data,
                                                     granit_renderer& renderer);

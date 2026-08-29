@@ -7,6 +7,22 @@
 #include <string>
 
 namespace granit::detail {
+namespace {
+
+std::uint32_t to_plugin_surface_types(std::uint32_t surface_types) noexcept {
+  std::uint32_t result{};
+  if ((surface_types & GRANIT_SURFACE_TYPE_WIN32_BIT) != 0)
+    result |= GRANIT_BACKEND_PLUGIN_SURFACE_TYPE_WIN32_BIT;
+  if ((surface_types & GRANIT_SURFACE_TYPE_XCB_BIT) != 0)
+    result |= GRANIT_BACKEND_PLUGIN_SURFACE_TYPE_XCB_BIT;
+  if ((surface_types & GRANIT_SURFACE_TYPE_WAYLAND_BIT) != 0)
+    result |= GRANIT_BACKEND_PLUGIN_SURFACE_TYPE_WAYLAND_BIT;
+  if ((surface_types & GRANIT_SURFACE_TYPE_CANVAS_BIT) != 0)
+    result |= GRANIT_BACKEND_PLUGIN_SURFACE_TYPE_CANVAS_BIT;
+  return result;
+}
+
+} // namespace
 
 webgpu_renderer_state::~webgpu_renderer_state() {
   presentation_.reset();
@@ -141,15 +157,15 @@ void webgpu_renderer_state::diagnose(granit_diagnostic_severity severity,
   }
 }
 
-granit_result
-webgpu_renderer_state::initialize_static(const granit_backend_plugin_api* api,
-                                         granit_diagnostic_callback diagnostic_callback,
-                                         void* diagnostic_user_data) noexcept {
+granit_result webgpu_renderer_state::initialize_static(
+    const granit_backend_plugin_api* api, std::uint32_t surface_types,
+    granit_diagnostic_callback diagnostic_callback, void* diagnostic_user_data) noexcept {
   if (instance_ != 0 || loader_.is_open()) {
     return GRANIT_ERROR_INVALID_ARGUMENT;
   }
   diagnostic_callback_ = diagnostic_callback;
   diagnostic_user_data_ = diagnostic_user_data;
+  surface_types_ = surface_types;
   auto result = loader_.open_static(api, GRANIT_BACKEND_PLUGIN_KIND_WEBGPU);
   if (result != GRANIT_SUCCESS) {
     lifecycle_ = {backend_lifecycle_state::failed, result};
@@ -158,14 +174,14 @@ webgpu_renderer_state::initialize_static(const granit_backend_plugin_api* api,
   return finish_initialization();
 }
 
-granit_result
-webgpu_renderer_state::initialize_dynamic(std::string_view library_path,
-                                          granit_diagnostic_callback diagnostic_callback,
-                                          void* diagnostic_user_data) noexcept {
+granit_result webgpu_renderer_state::initialize_dynamic(
+    std::string_view library_path, std::uint32_t surface_types,
+    granit_diagnostic_callback diagnostic_callback, void* diagnostic_user_data) noexcept {
   if (instance_ != 0 || loader_.is_open() || library_path.empty())
     return GRANIT_ERROR_INVALID_ARGUMENT;
   diagnostic_callback_ = diagnostic_callback;
   diagnostic_user_data_ = diagnostic_user_data;
+  surface_types_ = surface_types;
   try {
     const std::string path{library_path};
     const auto result = loader_.open(path.c_str(), GRANIT_BACKEND_PLUGIN_KIND_WEBGPU);
@@ -251,6 +267,11 @@ granit_result webgpu_renderer_state::refresh_state() noexcept {
         capabilities.max_uniform_buffer_binding_size,
         capabilities.max_storage_buffer_binding_size,
     };
+    provider_surface_types_ = capabilities.surface_types;
+    if ((to_plugin_surface_types(surface_types_) & ~provider_surface_types_) != 0) {
+      lifecycle_ = {backend_lifecycle_state::failed, GRANIT_ERROR_UNSUPPORTED};
+      return GRANIT_ERROR_UNSUPPORTED;
+    }
     try {
       auto presentation = std::make_unique<webgpu_presentation_adapter>(loader_, instance_);
       auto shaders = std::make_unique<webgpu_shader_adapter>(loader_, instance_);
@@ -280,24 +301,43 @@ std::unique_ptr<backend_swapchain_resource> webgpu_renderer_state::allocate_swap
   return presentation_ != nullptr ? presentation_->allocate_swapchain() : nullptr;
 }
 
-granit_result webgpu_renderer_state::create_win32_surface(void*, void*,
-                                                          backend_surface_resource&) noexcept {
-  return GRANIT_ERROR_UNSUPPORTED;
+granit_result
+webgpu_renderer_state::create_win32_surface(void* instance, void* window,
+                                            backend_surface_resource& surface) noexcept {
+  if ((surface_types_ & GRANIT_SURFACE_TYPE_WIN32_BIT) == 0 ||
+      (provider_surface_types_ & GRANIT_BACKEND_PLUGIN_SURFACE_TYPE_WIN32_BIT) == 0)
+    return GRANIT_ERROR_UNSUPPORTED;
+  return presentation_ != nullptr ? presentation_->create_win32_surface(surface, instance, window)
+                                  : GRANIT_ERROR_NOT_READY;
 }
 
-granit_result webgpu_renderer_state::create_xcb_surface(void*, std::uint32_t,
-                                                        backend_surface_resource&) noexcept {
-  return GRANIT_ERROR_UNSUPPORTED;
+granit_result
+webgpu_renderer_state::create_xcb_surface(void* connection, std::uint32_t window,
+                                          backend_surface_resource& surface) noexcept {
+  if ((surface_types_ & GRANIT_SURFACE_TYPE_XCB_BIT) == 0 ||
+      (provider_surface_types_ & GRANIT_BACKEND_PLUGIN_SURFACE_TYPE_XCB_BIT) == 0)
+    return GRANIT_ERROR_UNSUPPORTED;
+  return presentation_ != nullptr ? presentation_->create_xcb_surface(surface, connection, window)
+                                  : GRANIT_ERROR_NOT_READY;
 }
 
-granit_result webgpu_renderer_state::create_wayland_surface(void*, void*,
-                                                            backend_surface_resource&) noexcept {
-  return GRANIT_ERROR_UNSUPPORTED;
+granit_result
+webgpu_renderer_state::create_wayland_surface(void* display, void* native_surface,
+                                              backend_surface_resource& surface) noexcept {
+  if ((surface_types_ & GRANIT_SURFACE_TYPE_WAYLAND_BIT) == 0 ||
+      (provider_surface_types_ & GRANIT_BACKEND_PLUGIN_SURFACE_TYPE_WAYLAND_BIT) == 0)
+    return GRANIT_ERROR_UNSUPPORTED;
+  return presentation_ != nullptr
+             ? presentation_->create_wayland_surface(surface, display, native_surface)
+             : GRANIT_ERROR_NOT_READY;
 }
 
 granit_result
 webgpu_renderer_state::create_canvas_surface(std::string_view selector,
                                              backend_surface_resource& surface) noexcept {
+  if ((surface_types_ & GRANIT_SURFACE_TYPE_CANVAS_BIT) == 0 ||
+      (provider_surface_types_ & GRANIT_BACKEND_PLUGIN_SURFACE_TYPE_CANVAS_BIT) == 0)
+    return GRANIT_ERROR_UNSUPPORTED;
   if (presentation_ == nullptr)
     return GRANIT_ERROR_NOT_READY;
   return presentation_->create_canvas_surface(surface, selector.data(),

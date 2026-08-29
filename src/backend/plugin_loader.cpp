@@ -52,6 +52,9 @@ bool is_compatible(const granit_backend_plugin_api* api,
          api->instance_api->recorder_copy_texture_to_buffer != nullptr &&
          api->instance_api->get_instance_status != nullptr &&
          api->instance_api->process_events != nullptr &&
+         api->instance_api->create_win32_surface != nullptr &&
+         api->instance_api->create_xcb_surface != nullptr &&
+         api->instance_api->create_wayland_surface != nullptr &&
          api->instance_api->create_canvas_surface != nullptr &&
          api->instance_api->destroy_surface != nullptr &&
          api->instance_api->create_swapchain != nullptr &&
@@ -186,9 +189,10 @@ granit_result
 backend_plugin_loader::get_capabilities(granit_backend_plugin_instance instance,
                                         granit_backend_plugin_capabilities* capabilities) noexcept {
   constexpr std::size_t minimum_size =
-      offsetof(granit_backend_plugin_capabilities, max_color_attachments) + sizeof(std::uint32_t);
+      offsetof(granit_backend_plugin_capabilities, reserved_2) + sizeof(std::uint32_t);
   if (api_ == nullptr || instance == 0 || capabilities == nullptr ||
-      capabilities->struct_size < minimum_size || capabilities->reserved != 0) {
+      capabilities->struct_size < minimum_size || capabilities->reserved != 0 ||
+      capabilities->reserved_2 != 0) {
     return GRANIT_ERROR_INVALID_ARGUMENT;
   }
   if (std::find(instances_.begin(), instances_.end(), instance) == instances_.end()) {
@@ -229,6 +233,50 @@ backend_plugin_loader::process_events(granit_backend_plugin_instance instance) n
   }
   try {
     return api_->instance_api->process_events(instance);
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+granit_result
+backend_plugin_loader::create_win32_surface(granit_backend_plugin_instance instance,
+                                            const granit_backend_plugin_win32_surface_desc* desc,
+                                            granit_backend_plugin_surface* surface) noexcept {
+  if (api_ == nullptr || instance == 0 || desc == nullptr || surface == nullptr)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  if (std::find(instances_.begin(), instances_.end(), instance) == instances_.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  try {
+    return api_->instance_api->create_win32_surface(instance, desc, surface);
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+granit_result
+backend_plugin_loader::create_xcb_surface(granit_backend_plugin_instance instance,
+                                          const granit_backend_plugin_xcb_surface_desc* desc,
+                                          granit_backend_plugin_surface* surface) noexcept {
+  if (api_ == nullptr || instance == 0 || desc == nullptr || surface == nullptr)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  if (std::find(instances_.begin(), instances_.end(), instance) == instances_.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  try {
+    return api_->instance_api->create_xcb_surface(instance, desc, surface);
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+granit_result backend_plugin_loader::create_wayland_surface(
+    granit_backend_plugin_instance instance, const granit_backend_plugin_wayland_surface_desc* desc,
+    granit_backend_plugin_surface* surface) noexcept {
+  if (api_ == nullptr || instance == 0 || desc == nullptr || surface == nullptr)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  if (std::find(instances_.begin(), instances_.end(), instance) == instances_.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  try {
+    return api_->instance_api->create_wayland_surface(instance, desc, surface);
   } catch (...) {
     return GRANIT_ERROR_INTERNAL;
   }

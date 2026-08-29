@@ -5,6 +5,7 @@
 #define GRANIT_TEST_WEBGPU_H_
 
 #include <stddef.h>
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -107,6 +108,9 @@ typedef unsigned int WGPUSurfaceGetCurrentTextureStatus;
 #define WGPUBackendType_D3D12 4
 #define WGPUBackendType_Vulkan 6
 #define WGPUSType_EmscriptenSurfaceSourceCanvasHTMLSelector 0x00050000
+#define WGPUSType_SurfaceSourceWindowsHWND 0x00000005
+#define WGPUSType_SurfaceSourceWaylandSurface 0x00000007
+#define WGPUSType_SurfaceSourceXCBWindow 0x00000009
 #define WGPUPresentMode_Fifo 1
 #define WGPUPresentMode_Immediate 2
 #define WGPUPresentMode_Mailbox 3
@@ -132,6 +136,24 @@ typedef struct WGPUEmscriptenSurfaceSourceCanvasHTMLSelector {
   WGPUChainedStruct chain;
   WGPUStringView selector;
 } WGPUEmscriptenSurfaceSourceCanvasHTMLSelector;
+
+typedef struct WGPUSurfaceSourceWindowsHWND {
+  WGPUChainedStruct chain;
+  void* hinstance;
+  void* hwnd;
+} WGPUSurfaceSourceWindowsHWND;
+
+typedef struct WGPUSurfaceSourceXCBWindow {
+  WGPUChainedStruct chain;
+  void* connection;
+  uint32_t window;
+} WGPUSurfaceSourceXCBWindow;
+
+typedef struct WGPUSurfaceSourceWaylandSurface {
+  WGPUChainedStruct chain;
+  void* display;
+  void* surface;
+} WGPUSurfaceSourceWaylandSurface;
 
 typedef struct WGPUSurfaceDescriptor {
   const WGPUChainedStruct* nextInChain;

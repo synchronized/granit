@@ -110,8 +110,9 @@ if (result == GRANIT_SUCCESS && status.state == GRANIT_RENDERER_STATE_INITIALIZI
 `granit_renderer_process_events` 也只非阻塞地推进后端已完成事件。当前 Vulkan Renderer 创建成功后
 立即为 `READY`；该模型同时为异步 WebGPU 初始化保留统一入口。
 
-需要创建窗口 Surface 时，通过 `surface_types` 提前声明窗口系统。当前支持
-`GRANIT_SURFACE_TYPE_WIN32_BIT`；具体创建方式见 [surface.md](surface.md)。
+需要创建窗口 Surface 时，通过 `surface_types` 提前声明窗口系统。当前公共入口支持 Win32、XCB、
+Wayland 和 Canvas；实际可用集合取决于所选后端、平台及 Provider 能力。具体创建方式见
+[surface.md](surface.md)。
 
 ## C++ API
 

@@ -9,9 +9,13 @@
 #include <granit/core/diagnostic.h>
 #include <granit/core/result.h>
 
-#define GRANIT_BACKEND_PLUGIN_ABI_VERSION UINT32_C(7)
+#define GRANIT_BACKEND_PLUGIN_ABI_VERSION UINT32_C(8)
 #define GRANIT_BACKEND_PLUGIN_KIND_WEBGPU UINT32_C(1)
 #define GRANIT_BACKEND_PLUGIN_QUERY_SYMBOL "granit_backend_plugin_query"
+#define GRANIT_BACKEND_PLUGIN_SURFACE_TYPE_WIN32_BIT UINT32_C(0x00000001)
+#define GRANIT_BACKEND_PLUGIN_SURFACE_TYPE_XCB_BIT UINT32_C(0x00000002)
+#define GRANIT_BACKEND_PLUGIN_SURFACE_TYPE_WAYLAND_BIT UINT32_C(0x00000004)
+#define GRANIT_BACKEND_PLUGIN_SURFACE_TYPE_CANVAS_BIT UINT32_C(0x00000008)
 
 typedef uint32_t granit_backend_plugin_kind;
 typedef uint64_t granit_backend_plugin_instance;
@@ -125,6 +129,28 @@ typedef struct granit_backend_plugin_canvas_surface_desc {
   uint32_t selector_length;
 } granit_backend_plugin_canvas_surface_desc;
 
+typedef struct granit_backend_plugin_win32_surface_desc {
+  uint32_t struct_size;
+  uint32_t reserved;
+  void* instance;
+  void* window;
+} granit_backend_plugin_win32_surface_desc;
+
+typedef struct granit_backend_plugin_xcb_surface_desc {
+  uint32_t struct_size;
+  uint32_t reserved;
+  void* connection;
+  uint32_t window;
+  uint32_t reserved_2;
+} granit_backend_plugin_xcb_surface_desc;
+
+typedef struct granit_backend_plugin_wayland_surface_desc {
+  uint32_t struct_size;
+  uint32_t reserved;
+  void* display;
+  void* surface;
+} granit_backend_plugin_wayland_surface_desc;
+
 typedef uint32_t granit_backend_plugin_present_mode;
 #define GRANIT_BACKEND_PLUGIN_PRESENT_MODE_FIFO UINT32_C(0)
 #define GRANIT_BACKEND_PLUGIN_PRESENT_MODE_MAILBOX UINT32_C(1)
@@ -174,6 +200,8 @@ typedef struct granit_backend_plugin_capabilities {
   uint32_t max_texture_dimension_2d;
   uint32_t max_bind_groups;
   uint32_t max_color_attachments;
+  uint32_t surface_types;
+  uint32_t reserved_2;
 } granit_backend_plugin_capabilities;
 
 typedef void* (*granit_backend_plugin_allocate_fn)(uint64_t size, uint64_t alignment,
@@ -282,6 +310,15 @@ typedef granit_result (*granit_backend_plugin_get_instance_status_fn)(
 /** 非阻塞地推进已完成的异步回调；没有待处理事件也返回成功。 */
 typedef granit_result (*granit_backend_plugin_process_events_fn)(
     granit_backend_plugin_instance instance);
+typedef granit_result (*granit_backend_plugin_create_win32_surface_fn)(
+    granit_backend_plugin_instance instance, const granit_backend_plugin_win32_surface_desc* desc,
+    granit_backend_plugin_surface* surface);
+typedef granit_result (*granit_backend_plugin_create_xcb_surface_fn)(
+    granit_backend_plugin_instance instance, const granit_backend_plugin_xcb_surface_desc* desc,
+    granit_backend_plugin_surface* surface);
+typedef granit_result (*granit_backend_plugin_create_wayland_surface_fn)(
+    granit_backend_plugin_instance instance, const granit_backend_plugin_wayland_surface_desc* desc,
+    granit_backend_plugin_surface* surface);
 typedef granit_result (*granit_backend_plugin_create_canvas_surface_fn)(
     granit_backend_plugin_instance instance, const granit_backend_plugin_canvas_surface_desc* desc,
     granit_backend_plugin_surface* surface);
@@ -348,6 +385,9 @@ typedef struct granit_backend_plugin_instance_api {
   granit_backend_plugin_recorder_copy_texture_to_buffer_fn recorder_copy_texture_to_buffer;
   granit_backend_plugin_get_instance_status_fn get_instance_status;
   granit_backend_plugin_process_events_fn process_events;
+  granit_backend_plugin_create_win32_surface_fn create_win32_surface;
+  granit_backend_plugin_create_xcb_surface_fn create_xcb_surface;
+  granit_backend_plugin_create_wayland_surface_fn create_wayland_surface;
   granit_backend_plugin_create_canvas_surface_fn create_canvas_surface;
   granit_backend_plugin_destroy_surface_fn destroy_surface;
   granit_backend_plugin_create_swapchain_fn create_swapchain;

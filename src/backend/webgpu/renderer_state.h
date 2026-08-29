@@ -41,9 +41,11 @@ public:
   webgpu_renderer_state& operator=(const webgpu_renderer_state&) = delete;
 
   [[nodiscard]] granit_result initialize_static(const granit_backend_plugin_api* api,
+                                                std::uint32_t surface_types,
                                                 granit_diagnostic_callback diagnostic_callback,
                                                 void* diagnostic_user_data) noexcept;
   [[nodiscard]] granit_result initialize_dynamic(std::string_view library_path,
+                                                 std::uint32_t surface_types,
                                                  granit_diagnostic_callback diagnostic_callback,
                                                  void* diagnostic_user_data) noexcept;
   [[nodiscard]] granit_result process_backend_events() noexcept override;
@@ -165,6 +167,8 @@ private:
   void* diagnostic_user_data_{};
   backend_lifecycle_status lifecycle_{};
   backend_capabilities capabilities_{};
+  std::uint32_t surface_types_{};
+  std::uint32_t provider_surface_types_{};
   std::uint32_t domain_{};
   submission_serial next_submission_serial_{1};
   std::unique_ptr<webgpu_presentation_adapter> presentation_;

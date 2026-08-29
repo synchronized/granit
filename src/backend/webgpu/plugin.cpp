@@ -26,6 +26,21 @@
 
 namespace {
 
+constexpr std::uint32_t provider_surface_types =
+#if defined(GRANIT_WEBGPU_NATIVE_SURFACE_TEST)
+    GRANIT_BACKEND_PLUGIN_SURFACE_TYPE_WIN32_BIT | GRANIT_BACKEND_PLUGIN_SURFACE_TYPE_XCB_BIT |
+    GRANIT_BACKEND_PLUGIN_SURFACE_TYPE_WAYLAND_BIT |
+#elif defined(_WIN32) && !defined(__EMSCRIPTEN__)
+    GRANIT_BACKEND_PLUGIN_SURFACE_TYPE_WIN32_BIT |
+#elif defined(__linux__) && !defined(__EMSCRIPTEN__)
+    GRANIT_BACKEND_PLUGIN_SURFACE_TYPE_XCB_BIT | GRANIT_BACKEND_PLUGIN_SURFACE_TYPE_WAYLAND_BIT |
+#endif
+#if defined(__EMSCRIPTEN__) || defined(GRANIT_WEBGPU_CANVAS_SURFACE_TEST)
+    GRANIT_BACKEND_PLUGIN_SURFACE_TYPE_CANVAS_BIT;
+#else
+    UINT32_C(0);
+#endif
+
 struct webgpu_instance {
   struct buffer_record {
     WGPUBuffer buffer;
@@ -157,9 +172,7 @@ std::atomic_uint64_t next_render_pipeline{1};
 std::atomic_uint64_t next_command_recorder{1};
 std::atomic_uint64_t next_command_buffer{1};
 std::atomic_uint64_t next_swapchain{1};
-#if defined(__EMSCRIPTEN__) || defined(GRANIT_WEBGPU_CANVAS_SURFACE_TEST)
 std::atomic_uint64_t next_surface{1};
-#endif
 #if defined(GRANIT_WEBGPU_DEFER_INITIALIZATION_TEST)
 #endif
 
@@ -377,6 +390,8 @@ void receive_device_async(WGPURequestDeviceStatus status, WGPUDevice device, WGP
         limits.maxTextureDimension2D,
         limits.maxBindGroups,
         limits.maxColorAttachments,
+        provider_surface_types,
+        0,
     };
     state.lifecycle.mark_ready();
     constexpr char diagnostic[] = "Emscripten WebGPU adapter and device are ready";
@@ -602,6 +617,8 @@ granit_result create_backend(const granit_backend_plugin_host_api* host,
       device_limits.maxTextureDimension2D,
       device_limits.maxBindGroups,
       device_limits.maxColorAttachments,
+      provider_surface_types,
+      0,
   };
 #if defined(GRANIT_WEBGPU_DEFER_INITIALIZATION_TEST)
   const auto extended_host = host->struct_size > sizeof(granit_backend_plugin_host_api);
@@ -1764,6 +1781,92 @@ granit_result submit_command_buffer(granit_backend_plugin_instance instance,
   return GRANIT_SUCCESS;
 }
 
+template <typename NativeDesc>
+granit_result create_native_surface(granit_backend_plugin_instance instance, NativeDesc source,
+                                    granit_backend_plugin_surface* surface) noexcept {
+  const std::scoped_lock lock{instances_mutex};
+  const auto found = instances.find(instance);
+  if (found == instances.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  if (const auto ready = require_ready(*found->second); ready != GRANIT_SUCCESS)
+    return ready;
+  WGPUSurfaceDescriptor native_desc{};
+  native_desc.nextInChain = &source.chain;
+  const auto native_surface = wgpuInstanceCreateSurface(found->second->instance, &native_desc);
+  if (native_surface == nullptr)
+    return GRANIT_ERROR_INITIALIZATION_FAILED;
+  const auto handle = next_handle<granit_backend_plugin_surface>(next_surface);
+  try {
+    found->second->surfaces.emplace(handle, webgpu_instance::surface_record{native_surface, {}});
+  } catch (const std::bad_alloc&) {
+    wgpuSurfaceRelease(native_surface);
+    return GRANIT_ERROR_OUT_OF_MEMORY;
+  } catch (...) {
+    wgpuSurfaceRelease(native_surface);
+    return GRANIT_ERROR_INTERNAL;
+  }
+  *surface = handle;
+  return GRANIT_SUCCESS;
+}
+
+granit_result create_win32_surface(granit_backend_plugin_instance instance,
+                                   const granit_backend_plugin_win32_surface_desc* desc,
+                                   granit_backend_plugin_surface* surface) noexcept {
+  if (surface != nullptr)
+    *surface = 0;
+  if (instance == 0 || desc == nullptr || surface == nullptr || desc->struct_size < sizeof(*desc) ||
+      desc->reserved != 0 || desc->instance == nullptr || desc->window == nullptr)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+#if (defined(_WIN32) && !defined(__EMSCRIPTEN__)) || defined(GRANIT_WEBGPU_NATIVE_SURFACE_TEST)
+  WGPUSurfaceSourceWindowsHWND source{};
+  source.chain.sType = WGPUSType_SurfaceSourceWindowsHWND;
+  source.hinstance = desc->instance;
+  source.hwnd = desc->window;
+  return create_native_surface(instance, source, surface);
+#else
+  return GRANIT_ERROR_UNSUPPORTED;
+#endif
+}
+
+granit_result create_xcb_surface(granit_backend_plugin_instance instance,
+                                 const granit_backend_plugin_xcb_surface_desc* desc,
+                                 granit_backend_plugin_surface* surface) noexcept {
+  if (surface != nullptr)
+    *surface = 0;
+  if (instance == 0 || desc == nullptr || surface == nullptr || desc->struct_size < sizeof(*desc) ||
+      desc->reserved != 0 || desc->reserved_2 != 0 || desc->connection == nullptr ||
+      desc->window == 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+#if (defined(__linux__) && !defined(__EMSCRIPTEN__)) || defined(GRANIT_WEBGPU_NATIVE_SURFACE_TEST)
+  WGPUSurfaceSourceXCBWindow source{};
+  source.chain.sType = WGPUSType_SurfaceSourceXCBWindow;
+  source.connection = desc->connection;
+  source.window = desc->window;
+  return create_native_surface(instance, source, surface);
+#else
+  return GRANIT_ERROR_UNSUPPORTED;
+#endif
+}
+
+granit_result create_wayland_surface(granit_backend_plugin_instance instance,
+                                     const granit_backend_plugin_wayland_surface_desc* desc,
+                                     granit_backend_plugin_surface* surface) noexcept {
+  if (surface != nullptr)
+    *surface = 0;
+  if (instance == 0 || desc == nullptr || surface == nullptr || desc->struct_size < sizeof(*desc) ||
+      desc->reserved != 0 || desc->display == nullptr || desc->surface == nullptr)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+#if (defined(__linux__) && !defined(__EMSCRIPTEN__)) || defined(GRANIT_WEBGPU_NATIVE_SURFACE_TEST)
+  WGPUSurfaceSourceWaylandSurface source{};
+  source.chain.sType = WGPUSType_SurfaceSourceWaylandSurface;
+  source.display = desc->display;
+  source.surface = desc->surface;
+  return create_native_surface(instance, source, surface);
+#else
+  return GRANIT_ERROR_UNSUPPORTED;
+#endif
+}
+
 granit_result create_canvas_surface(granit_backend_plugin_instance instance,
                                     const granit_backend_plugin_canvas_surface_desc* desc,
                                     granit_backend_plugin_surface* surface) noexcept {
@@ -1824,9 +1927,7 @@ granit_result destroy_surface(granit_backend_plugin_instance instance,
   if (std::any_of(found->second->swapchains.begin(), found->second->swapchains.end(),
                   [surface](const auto& entry) { return entry.second.surface == surface; }))
     return GRANIT_ERROR_INVALID_ARGUMENT;
-#if defined(__EMSCRIPTEN__) || defined(GRANIT_WEBGPU_CANVAS_SURFACE_TEST)
   wgpuSurfaceRelease(static_cast<WGPUSurface>(surface_found->second.surface));
-#endif
   found->second->surfaces.erase(surface_found);
   return GRANIT_SUCCESS;
 }
@@ -2129,6 +2230,9 @@ constexpr granit_backend_plugin_instance_api instance_api{
     recorder_copy_texture_to_buffer,
     get_instance_status,
     process_events,
+    create_win32_surface,
+    create_xcb_surface,
+    create_wayland_surface,
     create_canvas_surface,
     destroy_surface,
     create_swapchain,

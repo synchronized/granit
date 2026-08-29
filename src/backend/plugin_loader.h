@@ -41,6 +41,17 @@ public:
                       granit_backend_plugin_instance_status* status) noexcept;
   [[nodiscard]] granit_result process_events(granit_backend_plugin_instance instance) noexcept;
   [[nodiscard]] granit_result
+  create_win32_surface(granit_backend_plugin_instance instance,
+                       const granit_backend_plugin_win32_surface_desc* desc,
+                       granit_backend_plugin_surface* surface) noexcept;
+  [[nodiscard]] granit_result create_xcb_surface(granit_backend_plugin_instance instance,
+                                                 const granit_backend_plugin_xcb_surface_desc* desc,
+                                                 granit_backend_plugin_surface* surface) noexcept;
+  [[nodiscard]] granit_result
+  create_wayland_surface(granit_backend_plugin_instance instance,
+                         const granit_backend_plugin_wayland_surface_desc* desc,
+                         granit_backend_plugin_surface* surface) noexcept;
+  [[nodiscard]] granit_result
   create_canvas_surface(granit_backend_plugin_instance instance,
                         const granit_backend_plugin_canvas_surface_desc* desc,
                         granit_backend_plugin_surface* surface) noexcept;

@@ -209,7 +209,7 @@ target_compile_features(granit_fake_backend_plugin PRIVATE cxx_std_20)
 target_compile_definitions(
   granit_fake_backend_plugin
   PRIVATE GRANIT_WEBGPU_FORCE_FALLBACK_ADAPTER GRANIT_WEBGPU_DEFER_INITIALIZATION_TEST
-          GRANIT_WEBGPU_CANVAS_SURFACE_TEST
+          GRANIT_WEBGPU_CANVAS_SURFACE_TEST GRANIT_WEBGPU_NATIVE_SURFACE_TEST
 )
 target_compile_features(granit_incompatible_backend_plugin PRIVATE cxx_std_20)
 set_target_properties(

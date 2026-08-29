@@ -105,6 +105,35 @@ webgpu_presentation_adapter::allocate_swapchain() const {
   return std::make_unique<webgpu_swapchain_resource>(context_);
 }
 
+granit_result webgpu_presentation_adapter::create_win32_surface(backend_surface_resource& resource,
+                                                                void* instance,
+                                                                void* window) const noexcept {
+  auto* surface = as_surface(resource);
+  if (surface == nullptr || surface->handle_ != 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  granit_backend_plugin_win32_surface_desc desc{sizeof(desc), 0, instance, window};
+  return context_->loader->create_win32_surface(context_->instance, &desc, &surface->handle_);
+}
+
+granit_result webgpu_presentation_adapter::create_xcb_surface(backend_surface_resource& resource,
+                                                              void* connection,
+                                                              std::uint32_t window) const noexcept {
+  auto* surface = as_surface(resource);
+  if (surface == nullptr || surface->handle_ != 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  granit_backend_plugin_xcb_surface_desc desc{sizeof(desc), 0, connection, window, 0};
+  return context_->loader->create_xcb_surface(context_->instance, &desc, &surface->handle_);
+}
+
+granit_result webgpu_presentation_adapter::create_wayland_surface(
+    backend_surface_resource& resource, void* display, void* native_surface) const noexcept {
+  auto* surface = as_surface(resource);
+  if (surface == nullptr || surface->handle_ != 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  granit_backend_plugin_wayland_surface_desc desc{sizeof(desc), 0, display, native_surface};
+  return context_->loader->create_wayland_surface(context_->instance, &desc, &surface->handle_);
+}
+
 granit_result
 webgpu_presentation_adapter::create_canvas_surface(backend_surface_resource& resource,
                                                    const char* selector,

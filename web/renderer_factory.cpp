@@ -31,8 +31,8 @@ granit_result create_default_renderer(const granit_renderer_desc& desc, granit_r
   auto* diagnostic_user_data =
       desc.struct_size >= GRANIT_RENDERER_DESC_VERSION_4_SIZE ? desc.diagnostic_user_data : nullptr;
   return renderer_registry::instance().create_webgpu_static(
-      granit_backend_plugin_query(GRANIT_BACKEND_PLUGIN_ABI_VERSION), diagnostic_callback,
-      diagnostic_user_data, renderer);
+      granit_backend_plugin_query(GRANIT_BACKEND_PLUGIN_ABI_VERSION), surface_types,
+      diagnostic_callback, diagnostic_user_data, renderer);
 }
 
 } // namespace granit::detail

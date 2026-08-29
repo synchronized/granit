@@ -30,6 +30,11 @@ struct host_state {
   bool throw_diagnostic{};
 };
 
+void deallocate(void* memory, uint64_t size, uint64_t alignment, void* user_data);
+void diagnose(granit_diagnostic_severity severity, granit_diagnostic_category category,
+              const char* message, uint32_t message_length, void* user_data);
+granit_backend_plugin_host_api make_host(host_state& state);
+
 void* allocate(uint64_t size, uint64_t alignment, void* user_data) {
   auto& state = *static_cast<host_state*>(user_data);
   ++state.allocations;
@@ -38,6 +43,42 @@ void* allocate(uint64_t size, uint64_t alignment, void* user_data) {
   }
   return ::operator new(static_cast<std::size_t>(size),
                         std::align_val_t{static_cast<std::size_t>(alignment)}, std::nothrow);
+}
+
+TEST_CASE("WebGPU 插件创建桌面原生 Surface", "[backend][plugin][surface]") {
+  granit::detail::backend_plugin_loader loader;
+  REQUIRE(loader.open(GRANIT_FAKE_BACKEND_PLUGIN_PATH, GRANIT_BACKEND_PLUGIN_KIND_WEBGPU) ==
+          GRANIT_SUCCESS);
+  host_state state;
+  auto host = make_host(state);
+  granit_backend_plugin_instance instance{};
+  REQUIRE(loader.create_instance(&host, &instance) == GRANIT_SUCCESS);
+  REQUIRE(loader.process_events(instance) == GRANIT_SUCCESS);
+
+  const auto native_a = reinterpret_cast<void*>(std::uintptr_t{1});
+  const auto native_b = reinterpret_cast<void*>(std::uintptr_t{2});
+  granit_backend_plugin_surface surface{};
+  granit_backend_plugin_win32_surface_desc win32{sizeof(win32), 0, native_a, native_b};
+  REQUIRE(loader.create_win32_surface(instance, &win32, &surface) == GRANIT_SUCCESS);
+  REQUIRE(loader.destroy_surface(instance, surface) == GRANIT_SUCCESS);
+  win32.window = nullptr;
+  CHECK(loader.create_win32_surface(instance, &win32, &surface) == GRANIT_ERROR_INVALID_ARGUMENT);
+
+  granit_backend_plugin_xcb_surface_desc xcb{sizeof(xcb), 0, native_a, 42, 0};
+  REQUIRE(loader.create_xcb_surface(instance, &xcb, &surface) == GRANIT_SUCCESS);
+  REQUIRE(loader.destroy_surface(instance, surface) == GRANIT_SUCCESS);
+  xcb.reserved_2 = 1;
+  CHECK(loader.create_xcb_surface(instance, &xcb, &surface) == GRANIT_ERROR_INVALID_ARGUMENT);
+
+  granit_backend_plugin_wayland_surface_desc wayland{sizeof(wayland), 0, native_a, native_b};
+  REQUIRE(loader.create_wayland_surface(instance, &wayland, &surface) == GRANIT_SUCCESS);
+  REQUIRE(loader.destroy_surface(instance, surface) == GRANIT_SUCCESS);
+  wayland.struct_size = 0;
+  CHECK(loader.create_wayland_surface(instance, &wayland, &surface) ==
+        GRANIT_ERROR_INVALID_ARGUMENT);
+
+  REQUIRE(loader.destroy_instance(instance) == GRANIT_SUCCESS);
+  CHECK(state.allocations == state.deallocations);
 }
 
 void deallocate(void* memory, uint64_t, uint64_t alignment, void* user_data) {
@@ -294,8 +335,7 @@ TEST_CASE("WebGPU 插件 Buffer 遵守所有权、Usage 与范围契约", "[back
   CHECK(state.allocations == state.deallocations);
 }
 
-TEST_CASE("WebGPU 插件 Canvas Surface 遵守生命周期与所有权契约",
-          "[backend][plugin][surface]") {
+TEST_CASE("WebGPU 插件 Canvas Surface 遵守生命周期与所有权契约", "[backend][plugin][surface]") {
   granit::detail::backend_plugin_loader loader;
   REQUIRE(loader.open(GRANIT_FAKE_BACKEND_PLUGIN_PATH, GRANIT_BACKEND_PLUGIN_KIND_WEBGPU) ==
           GRANIT_SUCCESS);

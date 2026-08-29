@@ -11,12 +11,13 @@ namespace granit::detail {
 
 granit_result
 renderer_registry::create_webgpu_static(const granit_backend_plugin_api* api,
+                                        std::uint32_t surface_types,
                                         granit_diagnostic_callback diagnostic_callback,
                                         void* diagnostic_user_data, granit_renderer& renderer) {
   try {
     auto state = std::make_shared<webgpu_renderer_state>();
     const auto initialize_result =
-        state->initialize_static(api, diagnostic_callback, diagnostic_user_data);
+        state->initialize_static(api, surface_types, diagnostic_callback, diagnostic_user_data);
     if (initialize_result != GRANIT_SUCCESS)
       return initialize_result;
 
@@ -41,13 +42,13 @@ renderer_registry::create_webgpu_static(const granit_backend_plugin_api* api,
 }
 
 granit_result
-renderer_registry::create_webgpu_dynamic(std::string_view library_path,
+renderer_registry::create_webgpu_dynamic(std::string_view library_path, std::uint32_t surface_types,
                                          granit_diagnostic_callback diagnostic_callback,
                                          void* diagnostic_user_data, granit_renderer& renderer) {
   try {
     auto state = std::make_shared<webgpu_renderer_state>();
-    const auto initialize_result =
-        state->initialize_dynamic(library_path, diagnostic_callback, diagnostic_user_data);
+    const auto initialize_result = state->initialize_dynamic(
+        library_path, surface_types, diagnostic_callback, diagnostic_user_data);
     if (initialize_result != GRANIT_SUCCESS)
       return initialize_result;
 

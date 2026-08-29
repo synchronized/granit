@@ -5,7 +5,7 @@
 
 ## 状态
 
-- 实现状态：进行中；S-12A 已完成，下一步 S-12B
+- 实现状态：进行中；S-12A、S-12B 已完成，下一步 S-12C
 - 前置依赖：S-10
 - 后续任务：S-13
 - 优先级：P1
@@ -125,7 +125,7 @@ typedef struct granit_backend_plugin_wayland_surface_desc {
 } granit_backend_plugin_wayland_surface_desc;
 ```
 
-- 实验性 Provider ABI 直接升级版本，操作表尾部追加三个创建函数；不保留旧版兼容分支。
+- 实验性 Provider ABI 已直接升级到 v8，操作表追加三个创建函数；不保留旧版兼容分支。
 - 锁定 Dawn 头已经提供 Windows HWND、XCB Window 和 Wayland Surface 链结构，Provider 内部负责
   转换，核心与公共头不包含 Dawn 或平台 SDK 类型。
 - 创建调用期间只借用描述结构和指针值；Granit 不拥有原生窗口、Display、Connection 或 Surface。

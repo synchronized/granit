@@ -57,14 +57,33 @@ extern "C" WGPUInstance wgpuCreateInstance(const WGPUInstanceDescriptor*) {
 
 extern "C" WGPUSurface wgpuInstanceCreateSurface(WGPUInstance,
                                                  const WGPUSurfaceDescriptor* descriptor) {
-  if (descriptor == nullptr || descriptor->nextInChain == nullptr ||
-      descriptor->nextInChain->sType != WGPUSType_EmscriptenSurfaceSourceCanvasHTMLSelector) {
+  if (descriptor == nullptr || descriptor->nextInChain == nullptr)
+    return nullptr;
+  switch (descriptor->nextInChain->sType) {
+  case WGPUSType_EmscriptenSurfaceSourceCanvasHTMLSelector: {
+    const auto* canvas = reinterpret_cast<const WGPUEmscriptenSurfaceSourceCanvasHTMLSelector*>(
+        descriptor->nextInChain);
+    return canvas->selector.data != nullptr && canvas->selector.length != 0 ? new WGPUSurfaceImpl
+                                                                            : nullptr;
+  }
+  case WGPUSType_SurfaceSourceWindowsHWND: {
+    const auto* source =
+        reinterpret_cast<const WGPUSurfaceSourceWindowsHWND*>(descriptor->nextInChain);
+    return source->hinstance != nullptr && source->hwnd != nullptr ? new WGPUSurfaceImpl : nullptr;
+  }
+  case WGPUSType_SurfaceSourceXCBWindow: {
+    const auto* source =
+        reinterpret_cast<const WGPUSurfaceSourceXCBWindow*>(descriptor->nextInChain);
+    return source->connection != nullptr && source->window != 0 ? new WGPUSurfaceImpl : nullptr;
+  }
+  case WGPUSType_SurfaceSourceWaylandSurface: {
+    const auto* source =
+        reinterpret_cast<const WGPUSurfaceSourceWaylandSurface*>(descriptor->nextInChain);
+    return source->display != nullptr && source->surface != nullptr ? new WGPUSurfaceImpl : nullptr;
+  }
+  default:
     return nullptr;
   }
-  const auto* canvas = reinterpret_cast<const WGPUEmscriptenSurfaceSourceCanvasHTMLSelector*>(
-      descriptor->nextInChain);
-  return canvas->selector.data != nullptr && canvas->selector.length != 0 ? new WGPUSurfaceImpl
-                                                                          : nullptr;
 }
 
 extern "C" void wgpuSurfaceRelease(WGPUSurface surface) {
