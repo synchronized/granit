@@ -69,6 +69,7 @@ struct webgpu_instance {
     std::vector<granit_backend_plugin_buffer> buffers;
     std::vector<granit_backend_plugin_texture_view> texture_views;
     std::vector<granit_backend_plugin_sampler> samplers;
+    std::vector<granit_backend_plugin_bind_group_entry> entries;
   };
   struct bind_group_layout_record {
     WGPUBindGroupLayout bind_group_layout;
@@ -1391,6 +1392,8 @@ create_bind_group_layout(granit_backend_plugin_instance instance,
         return GRANIT_ERROR_INVALID_ARGUMENT;
       }
     }
+    std::sort(declarations.begin(), declarations.end(),
+              [](const auto& left, const auto& right) { return left.binding < right.binding; });
     WGPUBindGroupLayoutDescriptor descriptor = WGPU_BIND_GROUP_LAYOUT_DESCRIPTOR_INIT;
     descriptor.entryCount = entries.size();
     descriptor.entries = entries.data();
@@ -1473,7 +1476,8 @@ granit_result create_bind_group(granit_backend_plugin_instance instance,
     return GRANIT_ERROR_INVALID_ARGUMENT;
   try {
     std::vector<WGPUBindGroupEntry> entries(desc->entry_count);
-    webgpu_instance::bind_group_record record{nullptr, desc->layout, {}, {}, {}};
+    webgpu_instance::bind_group_record record{nullptr, desc->layout, {}, {}, {}, {}};
+    record.entries.assign(desc->entries, desc->entries + desc->entry_count);
     for (std::uint32_t index = 0; index < desc->entry_count; ++index) {
       const auto& source = desc->entries[index];
       if (std::any_of(desc->entries, desc->entries + index,
@@ -2079,6 +2083,80 @@ granit_result recorder_bind_pipeline(granit_backend_plugin_instance instance,
     return GRANIT_ERROR_INVALID_ARGUMENT;
   wgpuRenderPassEncoderSetPipeline(command->second.pass, native->second.render_pipeline);
   command->second.pipeline_bound = true;
+  return GRANIT_SUCCESS;
+}
+
+granit_result recorder_bind_graphics_groups(
+    granit_backend_plugin_instance instance, granit_backend_plugin_command_recorder recorder,
+    granit_backend_plugin_pipeline_layout pipeline_layout, std::uint32_t first_group,
+    const granit_backend_plugin_bind_group* groups, std::uint32_t group_count,
+    const std::uint32_t* dynamic_offsets, std::uint32_t dynamic_offset_count) noexcept {
+  if (instance == 0 || recorder == 0 || pipeline_layout == 0 || group_count == 0 ||
+      groups == nullptr || first_group > UINT32_MAX - group_count ||
+      (dynamic_offset_count != 0 && dynamic_offsets == nullptr))
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  const std::scoped_lock lock{instances_mutex};
+  const auto found = instances.find(instance);
+  if (found == instances.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  auto& state = *found->second;
+  const auto command = state.command_recorders.find(recorder);
+  const auto layout = state.pipeline_layouts.find(pipeline_layout);
+  if (command == state.command_recorders.end() || layout == state.pipeline_layouts.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  if (command->second.pass == nullptr || command->second.finished ||
+      first_group > layout->second.bind_group_layouts.size() ||
+      group_count > layout->second.bind_group_layouts.size() - first_group)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+
+  std::uint32_t offset_index = 0;
+  for (std::uint32_t group_index = 0; group_index < group_count; ++group_index) {
+    const auto group = state.bind_groups.find(groups[group_index]);
+    if (group == state.bind_groups.end())
+      return GRANIT_ERROR_INVALID_HANDLE;
+    if (group->second.layout != layout->second.bind_group_layouts[first_group + group_index])
+      return GRANIT_ERROR_INVALID_ARGUMENT;
+    const auto declarations = state.bind_group_layouts.find(group->second.layout);
+    if (declarations == state.bind_group_layouts.end())
+      return GRANIT_ERROR_INVALID_HANDLE;
+    for (const auto& declaration : declarations->second.entries) {
+      if (declaration.type != GRANIT_BACKEND_PLUGIN_BINDING_TYPE_DYNAMIC_UNIFORM_BUFFER)
+        continue;
+      if (offset_index >= dynamic_offset_count)
+        return GRANIT_ERROR_INVALID_ARGUMENT;
+      const auto write =
+          std::find_if(group->second.entries.begin(), group->second.entries.end(),
+                       [&](const auto& entry) { return entry.binding == declaration.binding; });
+      if (write == group->second.entries.end())
+        return GRANIT_ERROR_INVALID_ARGUMENT;
+      const auto buffer = state.buffers.find(write->buffer);
+      const auto dynamic_offset = static_cast<std::uint64_t>(dynamic_offsets[offset_index++]);
+      if (buffer == state.buffers.end())
+        return GRANIT_ERROR_INVALID_HANDLE;
+      if ((state.capabilities.uniform_buffer_offset_alignment != 0 &&
+           dynamic_offset % state.capabilities.uniform_buffer_offset_alignment != 0) ||
+          write->offset > buffer->second.size ||
+          dynamic_offset > buffer->second.size - write->offset ||
+          write->size > buffer->second.size - write->offset - dynamic_offset)
+        return GRANIT_ERROR_INVALID_ARGUMENT;
+    }
+  }
+  if (offset_index != dynamic_offset_count)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+
+  offset_index = 0;
+  for (std::uint32_t group_index = 0; group_index < group_count; ++group_index) {
+    const auto& group = state.bind_groups.find(groups[group_index])->second;
+    const auto& declarations = state.bind_group_layouts.find(group.layout)->second.entries;
+    const auto count = static_cast<std::uint32_t>(
+        std::count_if(declarations.begin(), declarations.end(), [](const auto& declaration) {
+          return declaration.type == GRANIT_BACKEND_PLUGIN_BINDING_TYPE_DYNAMIC_UNIFORM_BUFFER;
+        }));
+    wgpuRenderPassEncoderSetBindGroup(command->second.pass, first_group + group_index,
+                                      group.bind_group, count,
+                                      count == 0 ? nullptr : dynamic_offsets + offset_index);
+    offset_index += count;
+  }
   return GRANIT_SUCCESS;
 }
 
@@ -2809,6 +2887,7 @@ constexpr granit_backend_plugin_instance_api instance_api{
     destroy_swapchain,
     recorder_begin_rendering,
     recorder_bind_pipeline,
+    recorder_bind_graphics_groups,
     recorder_bind_vertex_buffers,
     recorder_bind_index_buffer,
     recorder_draw_vertices,

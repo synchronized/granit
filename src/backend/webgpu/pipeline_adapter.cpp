@@ -104,6 +104,12 @@ granit_result webgpu_pipeline_adapter::create_pipeline_layout(
   return context_->loader->create_pipeline_layout(context_->instance, &desc, &layout->handle_);
 }
 
+granit_backend_plugin_pipeline_layout webgpu_pipeline_adapter::native_pipeline_layout(
+    backend_pipeline_layout_resource& resource) const noexcept {
+  const auto* layout = as_layout(resource);
+  return layout == nullptr ? 0 : layout->handle_;
+}
+
 granit_result webgpu_pipeline_adapter::create_graphics_pipeline(
     backend_graphics_pipeline_resource& resource, backend_pipeline_layout_resource& layout_resource,
     granit_backend_plugin_shader vertex_shader, granit_backend_plugin_shader fragment_shader,

@@ -129,6 +129,13 @@ public:
   [[nodiscard]] granit_result
   bind_graphics_pipeline(backend_command_recorder_resource& recorder,
                          backend_graphics_pipeline_resource& pipeline) noexcept override;
+  [[nodiscard]] granit_result
+  bind_graphics_groups(backend_command_recorder_resource& recorder,
+                       backend_pipeline_layout_resource& layout, std::uint32_t first_group,
+                       std::span<backend_bind_group_resource* const> bind_groups,
+                       std::span<const std::uint32_t> dynamic_offsets,
+                       std::span<const backend_buffer_access> buffer_accesses,
+                       std::span<const backend_texture_access> texture_accesses) override;
   [[nodiscard]] granit_result bind_vertex_buffers(backend_command_recorder_resource& recorder,
                                                   std::uint32_t first,
                                                   std::span<backend_buffer_resource* const> buffers,

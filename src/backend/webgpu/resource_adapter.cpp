@@ -475,4 +475,10 @@ granit_backend_plugin_bind_group_layout webgpu_resource_adapter::native_bind_gro
   return layout == nullptr ? 0 : layout->handle_;
 }
 
+granit_backend_plugin_bind_group
+webgpu_resource_adapter::native_bind_group(backend_bind_group_resource& resource) const noexcept {
+  const auto* group = dynamic_cast<webgpu_bind_group_resource*>(&resource);
+  return group == nullptr ? 0 : group->handle_;
+}
+
 } // namespace granit::detail

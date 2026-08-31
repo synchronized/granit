@@ -82,6 +82,18 @@ granit_result webgpu_command_adapter::bind_pipeline(
                                                   pipeline);
 }
 
+granit_result webgpu_command_adapter::bind_graphics_groups(
+    backend_command_recorder_resource& resource, granit_backend_plugin_pipeline_layout layout,
+    std::uint32_t first_group, std::span<const granit_backend_plugin_bind_group> groups,
+    std::span<const std::uint32_t> dynamic_offsets) const noexcept {
+  auto* recorder = as_recorder(resource);
+  if (recorder == nullptr || recorder->recorder_ == 0 || recorder->command_buffer_ != 0 ||
+      layout == 0 || groups.empty())
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  return context_->loader->recorder_bind_graphics_groups(
+      context_->instance, recorder->recorder_, layout, first_group, groups, dynamic_offsets);
+}
+
 granit_result webgpu_command_adapter::bind_vertex_buffers(
     backend_command_recorder_resource& resource, std::uint32_t first,
     std::span<const granit_backend_plugin_vertex_buffer_binding> bindings) const noexcept {

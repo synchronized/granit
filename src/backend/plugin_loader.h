@@ -167,6 +167,11 @@ public:
   recorder_bind_pipeline(granit_backend_plugin_instance instance,
                          granit_backend_plugin_command_recorder recorder,
                          granit_backend_plugin_render_pipeline pipeline) noexcept;
+  [[nodiscard]] granit_result recorder_bind_graphics_groups(
+      granit_backend_plugin_instance instance, granit_backend_plugin_command_recorder recorder,
+      granit_backend_plugin_pipeline_layout layout, std::uint32_t first_group,
+      std::span<const granit_backend_plugin_bind_group> groups,
+      std::span<const std::uint32_t> dynamic_offsets) noexcept;
   [[nodiscard]] granit_result recorder_bind_vertex_buffers(
       granit_backend_plugin_instance instance, granit_backend_plugin_command_recorder recorder,
       std::uint32_t first,

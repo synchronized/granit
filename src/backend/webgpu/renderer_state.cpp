@@ -189,6 +189,39 @@ granit_result webgpu_renderer_state::bind_graphics_pipeline(
              : GRANIT_ERROR_UNSUPPORTED;
 }
 
+granit_result webgpu_renderer_state::bind_graphics_groups(
+    backend_command_recorder_resource& recorder, backend_pipeline_layout_resource& layout,
+    std::uint32_t first_group, std::span<backend_bind_group_resource* const> bind_groups,
+    std::span<const std::uint32_t> dynamic_offsets,
+    std::span<const backend_buffer_access> buffer_accesses,
+    std::span<const backend_texture_access> texture_accesses) {
+  static_cast<void>(buffer_accesses);
+  static_cast<void>(texture_accesses);
+  if (!commands_ || !resources_ || !pipelines_ || bind_groups.empty())
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  try {
+    std::vector<granit_backend_plugin_bind_group> native_groups;
+    native_groups.reserve(bind_groups.size());
+    for (auto* bind_group : bind_groups) {
+      if (bind_group == nullptr)
+        return GRANIT_ERROR_INVALID_ARGUMENT;
+      const auto native = resources_->native_bind_group(*bind_group);
+      if (native == 0)
+        return GRANIT_ERROR_INVALID_ARGUMENT;
+      native_groups.push_back(native);
+    }
+    const auto native_layout = pipelines_->native_pipeline_layout(layout);
+    if (native_layout == 0)
+      return GRANIT_ERROR_INVALID_ARGUMENT;
+    return commands_->bind_graphics_groups(recorder, native_layout, first_group, native_groups,
+                                           dynamic_offsets);
+  } catch (const std::bad_alloc&) {
+    return GRANIT_ERROR_OUT_OF_MEMORY;
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
 granit_result webgpu_renderer_state::bind_vertex_buffers(
     backend_command_recorder_resource& recorder, std::uint32_t first,
     std::span<backend_buffer_resource* const> buffers, std::span<const std::uint64_t> offsets) {

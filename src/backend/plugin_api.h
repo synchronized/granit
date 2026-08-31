@@ -9,7 +9,7 @@
 #include <granit/core/diagnostic.h>
 #include <granit/core/result.h>
 
-#define GRANIT_BACKEND_PLUGIN_ABI_VERSION UINT32_C(18)
+#define GRANIT_BACKEND_PLUGIN_ABI_VERSION UINT32_C(19)
 #define GRANIT_BACKEND_PLUGIN_KIND_WEBGPU UINT32_C(1)
 #define GRANIT_BACKEND_PLUGIN_QUERY_SYMBOL "granit_backend_plugin_query"
 #define GRANIT_BACKEND_PLUGIN_SURFACE_TYPE_WIN32_BIT UINT32_C(0x00000001)
@@ -447,6 +447,11 @@ typedef granit_result (*granit_backend_plugin_recorder_begin_rendering_fn)(
 typedef granit_result (*granit_backend_plugin_recorder_bind_pipeline_fn)(
     granit_backend_plugin_instance instance, granit_backend_plugin_command_recorder recorder,
     granit_backend_plugin_render_pipeline pipeline);
+typedef granit_result (*granit_backend_plugin_recorder_bind_graphics_groups_fn)(
+    granit_backend_plugin_instance instance, granit_backend_plugin_command_recorder recorder,
+    granit_backend_plugin_pipeline_layout layout, uint32_t first_group,
+    const granit_backend_plugin_bind_group* groups, uint32_t group_count,
+    const uint32_t* dynamic_offsets, uint32_t dynamic_offset_count);
 typedef granit_result (*granit_backend_plugin_recorder_bind_vertex_buffers_fn)(
     granit_backend_plugin_instance instance, granit_backend_plugin_command_recorder recorder,
     uint32_t first, const granit_backend_plugin_vertex_buffer_binding* bindings, uint32_t count);
@@ -568,6 +573,7 @@ typedef struct granit_backend_plugin_instance_api {
   granit_backend_plugin_destroy_swapchain_fn destroy_swapchain;
   granit_backend_plugin_recorder_begin_rendering_fn recorder_begin_rendering;
   granit_backend_plugin_recorder_bind_pipeline_fn recorder_bind_pipeline;
+  granit_backend_plugin_recorder_bind_graphics_groups_fn recorder_bind_graphics_groups;
   granit_backend_plugin_recorder_bind_vertex_buffers_fn recorder_bind_vertex_buffers;
   granit_backend_plugin_recorder_bind_index_buffer_fn recorder_bind_index_buffer;
   granit_backend_plugin_recorder_draw_vertices_fn recorder_draw_vertices;

@@ -66,6 +66,7 @@ bool is_compatible(const granit_backend_plugin_api* api,
          api->instance_api->destroy_swapchain != nullptr &&
          api->instance_api->recorder_begin_rendering != nullptr &&
          api->instance_api->recorder_bind_pipeline != nullptr &&
+         api->instance_api->recorder_bind_graphics_groups != nullptr &&
          api->instance_api->recorder_bind_vertex_buffers != nullptr &&
          api->instance_api->recorder_bind_index_buffer != nullptr &&
          api->instance_api->recorder_draw_vertices != nullptr &&
@@ -747,6 +748,24 @@ granit_result backend_plugin_loader::recorder_bind_pipeline(
     return GRANIT_ERROR_INVALID_ARGUMENT;
   try {
     return api_->instance_api->recorder_bind_pipeline(instance, recorder, pipeline);
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+granit_result backend_plugin_loader::recorder_bind_graphics_groups(
+    granit_backend_plugin_instance instance, granit_backend_plugin_command_recorder recorder,
+    granit_backend_plugin_pipeline_layout layout, std::uint32_t first_group,
+    std::span<const granit_backend_plugin_bind_group> groups,
+    std::span<const std::uint32_t> dynamic_offsets) noexcept {
+  if (api_ == nullptr || instance == 0 || recorder == 0 || layout == 0 || groups.empty() ||
+      groups.size() > UINT32_MAX || dynamic_offsets.size() > UINT32_MAX)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  try {
+    return api_->instance_api->recorder_bind_graphics_groups(
+        instance, recorder, layout, first_group, groups.data(),
+        static_cast<std::uint32_t>(groups.size()), dynamic_offsets.data(),
+        static_cast<std::uint32_t>(dynamic_offsets.size()));
   } catch (...) {
     return GRANIT_ERROR_INTERNAL;
   }

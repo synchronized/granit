@@ -577,22 +577,33 @@ TEST_CASE("WebGPU 插件绑定与 Pipeline 遵守依赖生命周期", "[backend]
   granit_backend_plugin_sampler sampler{};
   REQUIRE(loader.create_sampler(first, &sampler_desc, &sampler) == GRANIT_SUCCESS);
 
+  granit_backend_plugin_buffer_desc uniform_desc{};
+  uniform_desc.struct_size = sizeof(uniform_desc);
+  uniform_desc.size = 1024;
+  uniform_desc.usage = GRANIT_BACKEND_PLUGIN_BUFFER_USAGE_UNIFORM_BIT |
+                       GRANIT_BACKEND_PLUGIN_BUFFER_USAGE_COPY_DST_BIT;
+  granit_backend_plugin_buffer uniform_buffer{};
+  REQUIRE(loader.create_buffer(first, &uniform_desc, &uniform_buffer) == GRANIT_SUCCESS);
+
   const granit_backend_plugin_bind_group_layout_entry layout_entries[]{
       {0, GRANIT_BACKEND_PLUGIN_BINDING_TYPE_SAMPLED_TEXTURE,
        GRANIT_BACKEND_PLUGIN_SHADER_STAGE_FRAGMENT, 1},
       {1, GRANIT_BACKEND_PLUGIN_BINDING_TYPE_SAMPLER, GRANIT_BACKEND_PLUGIN_SHADER_STAGE_FRAGMENT,
-       1}};
+       1},
+      {2, GRANIT_BACKEND_PLUGIN_BINDING_TYPE_DYNAMIC_UNIFORM_BUFFER,
+       GRANIT_BACKEND_PLUGIN_SHADER_STAGE_VERTEX, 1}};
   const granit_backend_plugin_bind_group_layout_desc layout_desc{
-      sizeof(granit_backend_plugin_bind_group_layout_desc), 2, layout_entries, 0};
+      sizeof(granit_backend_plugin_bind_group_layout_desc), 3, layout_entries, 0};
   granit_backend_plugin_bind_group_layout bind_group_layout{};
   REQUIRE(loader.create_bind_group_layout(first, &layout_desc, &bind_group_layout) ==
           GRANIT_SUCCESS);
   const granit_backend_plugin_bind_group_entry group_entries[]{
       {0, GRANIT_BACKEND_PLUGIN_BINDING_TYPE_SAMPLED_TEXTURE, 0, view, 0, 0, 0},
-      {1, GRANIT_BACKEND_PLUGIN_BINDING_TYPE_SAMPLER, 0, 0, sampler, 0, 0}};
+      {1, GRANIT_BACKEND_PLUGIN_BINDING_TYPE_SAMPLER, 0, 0, sampler, 0, 0},
+      {2, GRANIT_BACKEND_PLUGIN_BINDING_TYPE_DYNAMIC_UNIFORM_BUFFER, uniform_buffer, 0, 0, 0, 256}};
   granit_backend_plugin_bind_group_desc bind_group_desc{};
   bind_group_desc.struct_size = sizeof(bind_group_desc);
-  bind_group_desc.entry_count = 2;
+  bind_group_desc.entry_count = 3;
   bind_group_desc.layout = bind_group_layout;
   bind_group_desc.entries = group_entries;
   granit_backend_plugin_bind_group bind_group{};
@@ -708,6 +719,16 @@ TEST_CASE("WebGPU 插件绑定与 Pipeline 遵守依赖生命周期", "[backend]
   REQUIRE(loader.recorder_begin_rendering(
               first, recorder, target_view, GRANIT_BACKEND_PLUGIN_LOAD_OPERATION_CLEAR,
               GRANIT_BACKEND_PLUGIN_STORE_OPERATION_STORE, clear_color) == GRANIT_SUCCESS);
+  const granit_backend_plugin_bind_group graphics_groups[]{bind_group};
+  const std::uint32_t dynamic_offset[]{256};
+  REQUIRE(loader.recorder_bind_graphics_groups(first, recorder, pipeline_layout, 1, graphics_groups,
+                                               dynamic_offset) == GRANIT_SUCCESS);
+  const std::uint32_t unexpected_dynamic_offset[]{1};
+  CHECK(loader.recorder_bind_graphics_groups(first, recorder, pipeline_layout, 0, graphics_groups,
+                                             unexpected_dynamic_offset) ==
+        GRANIT_ERROR_INVALID_ARGUMENT);
+  CHECK(loader.recorder_bind_graphics_groups(first, recorder, pipeline_layout, 2, graphics_groups,
+                                             {}) == GRANIT_ERROR_INVALID_ARGUMENT);
   CHECK(loader.recorder_draw_vertices(first, recorder, 3, 1, 0, 0) ==
         GRANIT_ERROR_INVALID_ARGUMENT);
   REQUIRE(loader.recorder_bind_pipeline(first, recorder, pipeline) == GRANIT_SUCCESS);
@@ -778,6 +799,7 @@ TEST_CASE("WebGPU 插件绑定与 Pipeline 遵守依赖生命周期", "[backend]
   CHECK(loader.destroy_shader(first, fragment_shader) == GRANIT_ERROR_INVALID_HANDLE);
   REQUIRE(loader.destroy_bind_group(first, bind_group) == GRANIT_SUCCESS);
   REQUIRE(loader.destroy_bind_group_layout(first, bind_group_layout) == GRANIT_SUCCESS);
+  REQUIRE(loader.destroy_buffer(first, uniform_buffer) == GRANIT_SUCCESS);
   REQUIRE(loader.destroy_sampler(first, sampler) == GRANIT_SUCCESS);
   REQUIRE(loader.destroy_texture_view(first, view) == GRANIT_SUCCESS);
   REQUIRE(loader.destroy_texture(first, texture) == GRANIT_SUCCESS);

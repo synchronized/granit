@@ -229,6 +229,8 @@ int main(int argc, char** argv) {
           instance, recorder, target_view, GRANIT_BACKEND_PLUGIN_LOAD_OPERATION_CLEAR,
           GRANIT_BACKEND_PLUGIN_STORE_OPERATION_STORE, clear_color) != GRANIT_SUCCESS ||
       loader.recorder_bind_pipeline(instance, recorder, pipeline) != GRANIT_SUCCESS ||
+      loader.recorder_bind_graphics_groups(instance, recorder, pipeline_layout, 0,
+                                           std::span{&bind_group, 1}, {}) != GRANIT_SUCCESS ||
       loader.recorder_draw_vertices(instance, recorder, 3, 1, 0, 0) != GRANIT_SUCCESS ||
       loader.recorder_end_rendering(instance, recorder) != GRANIT_SUCCESS ||
       loader.recorder_copy_texture_to_buffer(instance, recorder, target_texture, readback, 64, 64,
