@@ -37,6 +37,9 @@ runs:
           if ($line -notmatch '^([^=]+)=(.*)$') { continue }
           $name = $Matches[1]
           $value = $Matches[2]
-          if ($name -match '^(GITHUB_|RUNNER_)' -or $name -eq 'NODE_OPTIONS') { continue }
+          $allowed = $name -match `
+            '^(PATH|INCLUDE|LIB|LIBPATH|VC.*|VS.*|WindowsSdk.*|UniversalCRTSdkDir|' + `
+            'UCRTVersion|ExtensionSdkDir|Framework.*|NETFXSDKDir)$'
+          if (-not $allowed) { continue }
           "$name=$value" | Add-Content -Encoding utf8 $env:GITHUB_ENV
         }

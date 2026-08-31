@@ -38,11 +38,12 @@ std::string module_directory() noexcept {
 
 bool shared_library::open(const char* absolute_path) noexcept {
   close();
-  if (absolute_path == nullptr || absolute_path[0] == '\0')
+  if (absolute_path == nullptr)
     return false;
+  const std::string_view path{absolute_path};
   const bool drive_path =
-      absolute_path[1] == ':' && (absolute_path[2] == '\\' || absolute_path[2] == '/');
-  const bool unc_path = absolute_path[0] == '\\' && absolute_path[1] == '\\';
+      path.size() >= 3 && path[1] == ':' && (path[2] == '\\' || path[2] == '/');
+  const bool unc_path = path.size() >= 2 && path[0] == '\\' && path[1] == '\\';
   if (!drive_path && !unc_path)
     return false;
   handle_ = static_cast<void*>(LoadLibraryExA(

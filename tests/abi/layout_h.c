@@ -6,7 +6,7 @@
 
 #include <granit/granit.h>
 
-#include "snapshots/0.1.0/core_identity.h"
+#include "snapshots/0.4.0/core_identity.h"
 
 #define GRANIT_ABI_ASSERT(name, expression) typedef char name[(expression) ? 1 : -1]
 
