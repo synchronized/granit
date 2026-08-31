@@ -48,6 +48,7 @@ typedef unsigned int WGPUAddressMode;
 typedef unsigned int WGPUFilterMode;
 typedef unsigned int WGPUMipmapFilterMode;
 typedef unsigned int WGPUCompareFunction;
+typedef unsigned int WGPUOptionalBool;
 typedef unsigned int WGPUBufferBindingType;
 typedef unsigned long long WGPUShaderStage;
 typedef unsigned int WGPUSamplerBindingType;
@@ -122,6 +123,9 @@ typedef unsigned int WGPUSurfaceGetCurrentTextureStatus;
 #define WGPUCompareFunction_NotEqual 6
 #define WGPUCompareFunction_GreaterEqual 7
 #define WGPUCompareFunction_Always 8
+#define WGPUOptionalBool_Undefined 0
+#define WGPUOptionalBool_False 1
+#define WGPUOptionalBool_True 2
 #define WGPUShaderStage_Fragment 2
 #define WGPUShaderStage_Vertex 1
 #define WGPUShaderStage_Compute 4
@@ -151,8 +155,10 @@ typedef unsigned int WGPUSurfaceGetCurrentTextureStatus;
 #define WGPUVertexFormat_Float32x3 30
 #define WGPUVertexFormat_Float32x4 31
 #define WGPUTextureAspect_All 1
+#define WGPULoadOp_Undefined 0
 #define WGPULoadOp_Load 1
 #define WGPULoadOp_Clear 2
+#define WGPUStoreOp_Undefined 0
 #define WGPUStoreOp_Store 1
 #define WGPUStoreOp_Discard 2
 #define WGPUBackendType_D3D12 4
@@ -468,6 +474,28 @@ typedef struct WGPUFragmentState {
 #define WGPU_FRAGMENT_STATE_INIT                                                                   \
   {                                                                                                \
   }
+typedef struct WGPUStencilFaceState {
+  WGPUCompareFunction compare;
+  unsigned int failOp;
+  unsigned int depthFailOp;
+  unsigned int passOp;
+} WGPUStencilFaceState;
+typedef struct WGPUDepthStencilState {
+  void* nextInChain;
+  WGPUTextureFormat format;
+  WGPUOptionalBool depthWriteEnabled;
+  WGPUCompareFunction depthCompare;
+  WGPUStencilFaceState stencilFront;
+  WGPUStencilFaceState stencilBack;
+  unsigned int stencilReadMask;
+  unsigned int stencilWriteMask;
+  int depthBias;
+  float depthBiasSlopeScale;
+  float depthBiasClamp;
+} WGPUDepthStencilState;
+#define WGPU_DEPTH_STENCIL_STATE_INIT                                                              \
+  {                                                                                                \
+  }
 typedef struct WGPUPrimitiveState {
   void* nextInChain;
   WGPUPrimitiveTopology topology;
@@ -573,12 +601,27 @@ typedef struct WGPURenderPassColorAttachment {
 #define WGPU_RENDER_PASS_COLOR_ATTACHMENT_INIT                                                     \
   {                                                                                                \
   }
+typedef struct WGPURenderPassDepthStencilAttachment {
+  void* nextInChain;
+  WGPUTextureView view;
+  WGPULoadOp depthLoadOp;
+  WGPUStoreOp depthStoreOp;
+  float depthClearValue;
+  WGPUBool depthReadOnly;
+  WGPULoadOp stencilLoadOp;
+  WGPUStoreOp stencilStoreOp;
+  unsigned int stencilClearValue;
+  WGPUBool stencilReadOnly;
+} WGPURenderPassDepthStencilAttachment;
+#define WGPU_RENDER_PASS_DEPTH_STENCIL_ATTACHMENT_INIT                                             \
+  {                                                                                                \
+  }
 typedef struct WGPURenderPassDescriptor {
   void* nextInChain;
   WGPUStringView label;
   size_t colorAttachmentCount;
   const WGPURenderPassColorAttachment* colorAttachments;
-  const void* depthStencilAttachment;
+  const WGPURenderPassDepthStencilAttachment* depthStencilAttachment;
   const void* occlusionQuerySet;
   const void* timestampWrites;
 } WGPURenderPassDescriptor;

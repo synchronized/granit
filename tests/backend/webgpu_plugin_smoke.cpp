@@ -194,7 +194,11 @@ int main(int argc, char** argv) {
       fragment_shader,
       GRANIT_BACKEND_PLUGIN_TEXTURE_FORMAT_RGBA8_UNORM,
       0,
-      nullptr};
+      nullptr,
+      0,
+      0,
+      0,
+      GRANIT_BACKEND_PLUGIN_COMPARE_OPERATION_ALWAYS};
   if (loader.create_render_pipeline(instance, &pipeline_desc, &pipeline) != GRANIT_SUCCESS ||
       pipeline == 0) {
     std::fprintf(stderr, "WebGPU 绑定或 Render Pipeline 生命周期验证失败\n");

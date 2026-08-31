@@ -21,11 +21,12 @@ public:
 
   [[nodiscard]] std::unique_ptr<backend_command_recorder_resource> allocate_recorder() const;
   [[nodiscard]] granit_result begin(backend_command_recorder_resource& resource) const noexcept;
-  [[nodiscard]] granit_result begin_rendering(backend_command_recorder_resource& resource,
-                                              granit_backend_plugin_texture_view target,
-                                              granit_backend_plugin_load_operation load,
-                                              granit_backend_plugin_store_operation store,
-                                              const float clear[4]) const noexcept;
+  [[nodiscard]] granit_result begin_rendering(
+      backend_command_recorder_resource& resource, granit_backend_plugin_texture_view target,
+      granit_backend_plugin_load_operation load, granit_backend_plugin_store_operation store,
+      const float clear[4], granit_backend_plugin_texture_view depth_target,
+      granit_backend_plugin_load_operation depth_load,
+      granit_backend_plugin_store_operation depth_store, float clear_depth) const noexcept;
   [[nodiscard]] granit_result
   bind_pipeline(backend_command_recorder_resource& resource,
                 granit_backend_plugin_render_pipeline pipeline) const noexcept;

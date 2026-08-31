@@ -67,6 +67,8 @@ std::uint32_t to_plugin_format(granit_texture_format format) noexcept {
     return GRANIT_BACKEND_PLUGIN_TEXTURE_FORMAT_RGBA8_UNORM;
   case GRANIT_TEXTURE_FORMAT_BGRA8_UNORM:
     return GRANIT_BACKEND_PLUGIN_TEXTURE_FORMAT_BGRA8_UNORM;
+  case GRANIT_TEXTURE_FORMAT_D32_FLOAT:
+    return GRANIT_BACKEND_PLUGIN_TEXTURE_FORMAT_D32_FLOAT;
   default:
     return 0;
   }
@@ -99,9 +101,11 @@ granit_result webgpu_pipeline_adapter::validate_graphics_pipeline(
   if (desc.color_format_count != 1 ||
       (desc.color_formats[0] != GRANIT_TEXTURE_FORMAT_RGBA8_UNORM &&
        desc.color_formats[0] != GRANIT_TEXTURE_FORMAT_BGRA8_UNORM) ||
-      desc.depth_stencil_format != GRANIT_TEXTURE_FORMAT_UNDEFINED || desc.sample_count != 1 ||
+      (desc.depth_stencil_format != GRANIT_TEXTURE_FORMAT_UNDEFINED &&
+       desc.depth_stencil_format != GRANIT_TEXTURE_FORMAT_D32_FLOAT) ||
+      desc.sample_count != 1 ||
       (desc.struct_size >= GRANIT_GRAPHICS_PIPELINE_DESC_VERSION_4_SIZE &&
-       (desc.depth != nullptr || desc.color_blend_count != 0)) ||
+       desc.color_blend_count != 0) ||
       (desc.struct_size >= GRANIT_GRAPHICS_PIPELINE_DESC_VERSION_5_SIZE && desc.depth_bias)) {
     return GRANIT_ERROR_UNSUPPORTED;
   }
@@ -146,8 +150,8 @@ granit_backend_plugin_compute_pipeline webgpu_pipeline_adapter::native_compute_p
 granit_result webgpu_pipeline_adapter::create_graphics_pipeline(
     backend_graphics_pipeline_resource& resource, backend_pipeline_layout_resource& layout_resource,
     granit_backend_plugin_shader vertex_shader, granit_backend_plugin_shader fragment_shader,
-    std::span<const granit_vertex_buffer_layout> vertex_buffers,
-    granit_texture_format color_format) const noexcept {
+    std::span<const granit_vertex_buffer_layout> vertex_buffers, granit_texture_format color_format,
+    granit_texture_format depth_stencil_format, const granit_depth_state& depth) const noexcept {
   auto* pipeline = as_pipeline(resource);
   auto* layout = as_layout(layout_resource);
   const auto plugin_format = to_plugin_format(color_format);
@@ -179,7 +183,11 @@ granit_result webgpu_pipeline_adapter::create_graphics_pipeline(
         fragment_shader,
         plugin_format,
         static_cast<std::uint32_t>(layouts.size()),
-        layouts.data()};
+        layouts.data(),
+        to_plugin_format(depth_stencil_format),
+        depth.test_enabled,
+        depth.write_enabled,
+        depth.compare};
     return context_->loader->create_render_pipeline(context_->instance, &desc, &pipeline->handle_);
   } catch (const std::bad_alloc&) {
     return GRANIT_ERROR_OUT_OF_MEMORY;

@@ -437,18 +437,20 @@ TEST_CASE("跨后端索引纹理 Fixture 使用动态 Uniform 绘制两个对象
   const std::array vertex_layouts{
       granit::vertex_buffer_layout{.stride = sizeof(float) * 7, .attributes = vertex_attributes}};
   granit::graphics_pipeline pipeline;
-  REQUIRE(pipeline.initialize(renderer.native_handle(),
-                              {.layout = pipeline_layout.native_handle(),
-                               .vertex_shader = vertex.native_handle(),
-                               .fragment_shader = fragment.native_handle(),
-                               .color_formats = std::span{&format, 1},
-                               .vertex_buffers = vertex_layouts,
-                               .primitive = {},
-                               .depth = {},
-                               .color_blends = {},
-                               .depth_bias = std::nullopt}) == granit::result::success);
+  REQUIRE(pipeline.initialize(
+              renderer.native_handle(),
+              {.layout = pipeline_layout.native_handle(),
+               .vertex_shader = vertex.native_handle(),
+               .fragment_shader = fragment.native_handle(),
+               .color_formats = std::span{&format, 1},
+               .depth_stencil_format = granit::texture_format::d32_float,
+               .vertex_buffers = vertex_layouts,
+               .primitive = {},
+               .depth = granit::depth_state{.test_enabled = true, .write_enabled = true},
+               .color_blends = {},
+               .depth_bias = std::nullopt}) == granit::result::success);
 
-  std::array<std::byte, 512> uniform_data{};
+  std::array<std::byte, 1024> uniform_data{};
   const auto write_vec4 = [&uniform_data](std::size_t offset, const std::array<float, 4>& value) {
     std::memcpy(uniform_data.data() + offset, value.data(), sizeof(value));
   };
@@ -456,6 +458,10 @@ TEST_CASE("跨后端索引纹理 Fixture 使用动态 Uniform 绘制两个对象
   write_vec4(16, {1.0F, 0.0F, 0.0F, 1.0F});
   write_vec4(256, {0.5F, 0.0F, 0.0F, 0.0F});
   write_vec4(272, {0.0F, 1.0F, 0.0F, 1.0F});
+  write_vec4(512, {0.0F, 0.0F, 0.2F, 0.0F});
+  write_vec4(528, {0.0F, 0.0F, 1.0F, 1.0F});
+  write_vec4(768, {0.0F, 0.0F, 0.8F, 0.0F});
+  write_vec4(784, {1.0F, 1.0F, 0.0F, 1.0F});
   granit::buffer uniform;
   REQUIRE(uniform.initialize(
               renderer.native_handle(),
@@ -555,6 +561,15 @@ TEST_CASE("跨后端索引纹理 Fixture 使用动态 Uniform 绘制两个对象
   granit_texture_view target_view = GRANIT_NULL_HANDLE;
   REQUIRE(granit_texture_create_with_default_view(renderer.native_handle(), &target_desc, &target,
                                                   &target_view) == GRANIT_SUCCESS);
+  granit_texture_desc depth_desc = GRANIT_TEXTURE_DESC_INIT;
+  depth_desc.format = GRANIT_TEXTURE_FORMAT_D32_FLOAT;
+  depth_desc.usage = GRANIT_TEXTURE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+  depth_desc.width = width;
+  depth_desc.height = height;
+  granit_texture depth_target = GRANIT_NULL_HANDLE;
+  granit_texture_view depth_view = GRANIT_NULL_HANDLE;
+  REQUIRE(granit_texture_create_with_default_view(renderer.native_handle(), &depth_desc,
+                                                  &depth_target, &depth_view) == GRANIT_SUCCESS);
   granit::buffer readback;
   REQUIRE(readback.initialize(renderer.native_handle(),
                               {.size = width * height * 4,
@@ -578,14 +593,28 @@ TEST_CASE("跨后端索引纹理 Fixture 使用动态 Uniform 绘制两个对象
   const granit_bind_group group_handle = group.native_handle();
   const std::array left_offset{UINT32_C(0)};
   const std::array right_offset{UINT32_C(256)};
+  const std::array near_offset{UINT32_C(512)};
+  const std::array far_offset{UINT32_C(768)};
   // 首次绑定在 Rendering 外准备资源状态，Rendering 内只切换同一资源的动态 Offset。
   REQUIRE(recorder.bind_graphics_groups(pipeline_layout.native_handle(), 0,
                                         std::span{&group_handle, 1},
                                         left_offset) == granit::result::success);
   const granit::color_attachment_desc color{.view = target_view};
+  const granit::depth_stencil_attachment_desc depth{.view = depth_view};
   const granit::rendering_desc rendering{.color_attachments = std::span{&color, 1},
+                                         .depth_stencil_attachment = &depth,
                                          .area = {0, 0, width, height}};
   REQUIRE(recorder.begin_rendering(rendering) == granit::result::success);
+  REQUIRE(recorder.draw_indexed(static_cast<std::uint32_t>(indices.size())) ==
+          granit::result::success);
+  REQUIRE(recorder.bind_graphics_groups(pipeline_layout.native_handle(), 0,
+                                        std::span{&group_handle, 1},
+                                        near_offset) == granit::result::success);
+  REQUIRE(recorder.draw_indexed(static_cast<std::uint32_t>(indices.size())) ==
+          granit::result::success);
+  REQUIRE(recorder.bind_graphics_groups(pipeline_layout.native_handle(), 0,
+                                        std::span{&group_handle, 1},
+                                        far_offset) == granit::result::success);
   REQUIRE(recorder.draw_indexed(static_cast<std::uint32_t>(indices.size())) ==
           granit::result::success);
   REQUIRE(recorder.bind_graphics_groups(pipeline_layout.native_handle(), 0,
@@ -616,7 +645,7 @@ TEST_CASE("跨后端索引纹理 Fixture 使用动态 Uniform 绘制两个对象
   const auto* pixels = static_cast<const std::uint8_t*>(mapped);
   const std::array probes{
       pixel_probe{0, 0, {0, 0, 0}, 0},
-      pixel_probe{width / 2, height / 2, {0, 0, 0}, 0},
+      pixel_probe{width / 2, height / 2, {0, 0, 42}, 2},
       pixel_probe{width / 4, height / 2, {129, 0, 0}, 2},
       pixel_probe{width * 3 / 4, height / 2, {0, 79, 0}, 2},
   };
@@ -635,6 +664,8 @@ TEST_CASE("跨后端索引纹理 Fixture 使用动态 Uniform 绘制两个对象
   CHECK(validation_errors.load(std::memory_order_relaxed) == 0);
   REQUIRE(granit_texture_view_destroy(renderer.native_handle(), target_view) == GRANIT_SUCCESS);
   REQUIRE(granit_texture_destroy(renderer.native_handle(), target) == GRANIT_SUCCESS);
+  REQUIRE(granit_texture_view_destroy(renderer.native_handle(), depth_view) == GRANIT_SUCCESS);
+  REQUIRE(granit_texture_destroy(renderer.native_handle(), depth_target) == GRANIT_SUCCESS);
   REQUIRE(readback.reset() == granit::result::success);
   REQUIRE(group.reset() == granit::result::success);
   REQUIRE(base_color_sampler.reset() == granit::result::success);

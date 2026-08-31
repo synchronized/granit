@@ -43,7 +43,8 @@ public:
       backend_graphics_pipeline_resource& resource, backend_pipeline_layout_resource& layout,
       granit_backend_plugin_shader vertex_shader, granit_backend_plugin_shader fragment_shader,
       std::span<const granit_vertex_buffer_layout> vertex_buffers,
-      granit_texture_format color_format) const noexcept;
+      granit_texture_format color_format, granit_texture_format depth_stencil_format,
+      const granit_depth_state& depth) const noexcept;
   [[nodiscard]] granit_backend_plugin_render_pipeline
   native_handle(backend_graphics_pipeline_resource& resource) const noexcept;
 

@@ -14,7 +14,7 @@ layout(location = 1) in vec2 vertex_uv_input;
 layout(location = 2) in vec3 vertex_normal_input;
 
 void main() {
-  gl_Position = vec4(vertex_position + draw_data.translation.xy, 0.0, 1.0);
+  gl_Position = vec4(vertex_position + draw_data.translation.xy, draw_data.translation.z, 1.0);
   vertex_color = draw_data.color;
   vertex_uv = vertex_uv_input;
   vertex_normal = vertex_normal_input;

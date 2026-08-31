@@ -990,6 +990,30 @@ WGPUTextureFormat to_native_texture_format(granit_backend_plugin_texture_format 
   }
 }
 
+WGPUCompareFunction
+to_native_compare_operation(granit_backend_plugin_compare_operation operation) noexcept {
+  switch (operation) {
+  case GRANIT_BACKEND_PLUGIN_COMPARE_OPERATION_NEVER:
+    return WGPUCompareFunction_Never;
+  case GRANIT_BACKEND_PLUGIN_COMPARE_OPERATION_LESS:
+    return WGPUCompareFunction_Less;
+  case GRANIT_BACKEND_PLUGIN_COMPARE_OPERATION_EQUAL:
+    return WGPUCompareFunction_Equal;
+  case GRANIT_BACKEND_PLUGIN_COMPARE_OPERATION_LESS_EQUAL:
+    return WGPUCompareFunction_LessEqual;
+  case GRANIT_BACKEND_PLUGIN_COMPARE_OPERATION_GREATER:
+    return WGPUCompareFunction_Greater;
+  case GRANIT_BACKEND_PLUGIN_COMPARE_OPERATION_NOT_EQUAL:
+    return WGPUCompareFunction_NotEqual;
+  case GRANIT_BACKEND_PLUGIN_COMPARE_OPERATION_GREATER_EQUAL:
+    return WGPUCompareFunction_GreaterEqual;
+  case GRANIT_BACKEND_PLUGIN_COMPARE_OPERATION_ALWAYS:
+    return WGPUCompareFunction_Always;
+  default:
+    return WGPUCompareFunction_Undefined;
+  }
+}
+
 std::uint32_t texture_bytes_per_pixel(granit_backend_plugin_texture_format format) noexcept {
   switch (format) {
   case GRANIT_BACKEND_PLUGIN_TEXTURE_FORMAT_R8_UNORM:
@@ -1906,7 +1930,14 @@ create_render_pipeline(granit_backend_plugin_instance instance,
       desc->vertex_shader == 0 || desc->fragment_shader == 0 ||
       (desc->vertex_buffer_layout_count != 0 && desc->vertex_buffer_layouts == nullptr) ||
       (desc->color_format != GRANIT_BACKEND_PLUGIN_TEXTURE_FORMAT_RGBA8_UNORM &&
-       desc->color_format != GRANIT_BACKEND_PLUGIN_TEXTURE_FORMAT_BGRA8_UNORM))
+       desc->color_format != GRANIT_BACKEND_PLUGIN_TEXTURE_FORMAT_BGRA8_UNORM) ||
+      (desc->depth_stencil_format != 0 &&
+       desc->depth_stencil_format != GRANIT_BACKEND_PLUGIN_TEXTURE_FORMAT_D32_FLOAT) ||
+      desc->depth_test_enabled > 1 || desc->depth_write_enabled > 1 ||
+      (desc->depth_stencil_format == 0 &&
+       (desc->depth_test_enabled != 0 || desc->depth_write_enabled != 0)) ||
+      (desc->depth_test_enabled != 0 &&
+       to_native_compare_operation(desc->depth_compare) == WGPUCompareFunction_Undefined))
     return GRANIT_ERROR_INVALID_ARGUMENT;
   const std::scoped_lock lock{instances_mutex};
   const auto found = instances.find(instance);
@@ -1993,6 +2024,16 @@ create_render_pipeline(granit_backend_plugin_instance instance,
   descriptor.multisample.count = 1;
   descriptor.multisample.mask = UINT32_MAX;
   descriptor.fragment = &fragment;
+  WGPUDepthStencilState depth = WGPU_DEPTH_STENCIL_STATE_INIT;
+  if (desc->depth_stencil_format != 0) {
+    depth.format = WGPUTextureFormat_Depth32Float;
+    depth.depthWriteEnabled =
+        desc->depth_write_enabled != 0 ? WGPUOptionalBool_True : WGPUOptionalBool_False;
+    depth.depthCompare = desc->depth_test_enabled != 0
+                             ? to_native_compare_operation(desc->depth_compare)
+                             : WGPUCompareFunction_Always;
+    descriptor.depthStencil = &depth;
+  }
   const auto native = wgpuDeviceCreateRenderPipeline(state.device, &descriptor);
   if (native == nullptr)
     return GRANIT_ERROR_INITIALIZATION_FAILED;
@@ -2197,18 +2238,24 @@ granit_result recorder_copy_buffer_to_texture(granit_backend_plugin_instance ins
   return GRANIT_SUCCESS;
 }
 
-granit_result recorder_begin_rendering(granit_backend_plugin_instance instance,
-                                       granit_backend_plugin_command_recorder recorder,
-                                       granit_backend_plugin_texture_view target,
-                                       granit_backend_plugin_load_operation load_operation,
-                                       granit_backend_plugin_store_operation store_operation,
-                                       float clear_r, float clear_g, float clear_b,
-                                       float clear_a) noexcept {
+granit_result recorder_begin_rendering(
+    granit_backend_plugin_instance instance, granit_backend_plugin_command_recorder recorder,
+    granit_backend_plugin_texture_view target, granit_backend_plugin_load_operation load_operation,
+    granit_backend_plugin_store_operation store_operation, float clear_r, float clear_g,
+    float clear_b, float clear_a, granit_backend_plugin_texture_view depth_target,
+    granit_backend_plugin_load_operation depth_load_operation,
+    granit_backend_plugin_store_operation depth_store_operation, float clear_depth) noexcept {
   if (instance == 0 || recorder == 0 || target == 0 ||
       (load_operation != GRANIT_BACKEND_PLUGIN_LOAD_OPERATION_LOAD &&
        load_operation != GRANIT_BACKEND_PLUGIN_LOAD_OPERATION_CLEAR) ||
       (store_operation != GRANIT_BACKEND_PLUGIN_STORE_OPERATION_STORE &&
-       store_operation != GRANIT_BACKEND_PLUGIN_STORE_OPERATION_DISCARD))
+       store_operation != GRANIT_BACKEND_PLUGIN_STORE_OPERATION_DISCARD) ||
+      (depth_target != 0 &&
+       ((depth_load_operation != GRANIT_BACKEND_PLUGIN_LOAD_OPERATION_LOAD &&
+         depth_load_operation != GRANIT_BACKEND_PLUGIN_LOAD_OPERATION_CLEAR) ||
+        (depth_store_operation != GRANIT_BACKEND_PLUGIN_STORE_OPERATION_STORE &&
+         depth_store_operation != GRANIT_BACKEND_PLUGIN_STORE_OPERATION_DISCARD) ||
+        !std::isfinite(clear_depth) || clear_depth < 0.0F || clear_depth > 1.0F)))
     return GRANIT_ERROR_INVALID_ARGUMENT;
   const std::scoped_lock lock{instances_mutex};
   const auto found = instances.find(instance);
@@ -2219,6 +2266,7 @@ granit_result recorder_begin_rendering(granit_backend_plugin_instance instance,
   auto& state = *found->second;
   const auto command = state.command_recorders.find(recorder);
   const auto view = state.texture_views.find(target);
+  const auto depth_view = state.texture_views.find(depth_target);
   if (command == state.command_recorders.end() || view == state.texture_views.end())
     return GRANIT_ERROR_INVALID_HANDLE;
   const auto texture = state.textures.find(view->second.texture);
@@ -2226,6 +2274,31 @@ granit_result recorder_begin_rendering(granit_backend_plugin_instance instance,
       command->second.compute_pass != nullptr || texture == state.textures.end() ||
       (texture->second.usage & GRANIT_BACKEND_PLUGIN_TEXTURE_USAGE_RENDER_ATTACHMENT_BIT) == 0)
     return GRANIT_ERROR_INVALID_ARGUMENT;
+  WGPURenderPassDepthStencilAttachment depth_attachment =
+      WGPU_RENDER_PASS_DEPTH_STENCIL_ATTACHMENT_INIT;
+  if (depth_target != 0) {
+    if (depth_view == state.texture_views.end())
+      return GRANIT_ERROR_INVALID_HANDLE;
+    const auto depth_texture = state.textures.find(depth_view->second.texture);
+    if (depth_texture == state.textures.end() ||
+        depth_texture->second.format != GRANIT_BACKEND_PLUGIN_TEXTURE_FORMAT_D32_FLOAT ||
+        (depth_texture->second.usage & GRANIT_BACKEND_PLUGIN_TEXTURE_USAGE_RENDER_ATTACHMENT_BIT) ==
+            0) {
+      return GRANIT_ERROR_INVALID_ARGUMENT;
+    }
+    depth_attachment.view = depth_view->second.view;
+    depth_attachment.depthLoadOp = depth_load_operation == GRANIT_BACKEND_PLUGIN_LOAD_OPERATION_LOAD
+                                       ? WGPULoadOp_Load
+                                       : WGPULoadOp_Clear;
+    depth_attachment.depthStoreOp =
+        depth_store_operation == GRANIT_BACKEND_PLUGIN_STORE_OPERATION_STORE ? WGPUStoreOp_Store
+                                                                             : WGPUStoreOp_Discard;
+    depth_attachment.depthClearValue = clear_depth;
+    depth_attachment.depthReadOnly = false;
+    depth_attachment.stencilLoadOp = WGPULoadOp_Undefined;
+    depth_attachment.stencilStoreOp = WGPUStoreOp_Undefined;
+    depth_attachment.stencilReadOnly = true;
+  }
   WGPURenderPassColorAttachment color = WGPU_RENDER_PASS_COLOR_ATTACHMENT_INIT;
   color.view = view->second.view;
   color.loadOp = load_operation == GRANIT_BACKEND_PLUGIN_LOAD_OPERATION_LOAD ? WGPULoadOp_Load
@@ -2237,6 +2310,7 @@ granit_result recorder_begin_rendering(granit_backend_plugin_instance instance,
   WGPURenderPassDescriptor descriptor = WGPU_RENDER_PASS_DESCRIPTOR_INIT;
   descriptor.colorAttachmentCount = 1;
   descriptor.colorAttachments = &color;
+  descriptor.depthStencilAttachment = depth_target == 0 ? nullptr : &depth_attachment;
   command->second.pass = wgpuCommandEncoderBeginRenderPass(command->second.encoder, &descriptor);
   if (command->second.pass == nullptr)
     return GRANIT_ERROR_INITIALIZATION_FAILED;

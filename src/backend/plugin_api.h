@@ -290,6 +290,10 @@ typedef struct granit_backend_plugin_render_pipeline_desc {
   uint32_t color_format;
   uint32_t vertex_buffer_layout_count;
   const granit_backend_plugin_vertex_buffer_layout* vertex_buffer_layouts;
+  granit_backend_plugin_texture_format depth_stencil_format;
+  uint32_t depth_test_enabled;
+  uint32_t depth_write_enabled;
+  granit_backend_plugin_compare_operation depth_compare;
 } granit_backend_plugin_render_pipeline_desc;
 
 /** Canvas selector 仅在调用期间有效；插件必须复制后续需要的内容。 */
@@ -515,7 +519,9 @@ typedef granit_result (*granit_backend_plugin_recorder_begin_rendering_fn)(
     granit_backend_plugin_instance instance, granit_backend_plugin_command_recorder recorder,
     granit_backend_plugin_texture_view target, granit_backend_plugin_load_operation load_operation,
     granit_backend_plugin_store_operation store_operation, float clear_r, float clear_g,
-    float clear_b, float clear_a);
+    float clear_b, float clear_a, granit_backend_plugin_texture_view depth_target,
+    granit_backend_plugin_load_operation depth_load_operation,
+    granit_backend_plugin_store_operation depth_store_operation, float clear_depth);
 typedef granit_result (*granit_backend_plugin_recorder_bind_pipeline_fn)(
     granit_backend_plugin_instance instance, granit_backend_plugin_command_recorder recorder,
     granit_backend_plugin_render_pipeline pipeline);

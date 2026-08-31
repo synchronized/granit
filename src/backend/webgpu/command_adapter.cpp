@@ -81,17 +81,19 @@ webgpu_command_adapter::begin(backend_command_recorder_resource& resource) const
   return context_->loader->create_command_recorder(context_->instance, &recorder->recorder_);
 }
 
-granit_result webgpu_command_adapter::begin_rendering(backend_command_recorder_resource& resource,
-                                                      granit_backend_plugin_texture_view target,
-                                                      granit_backend_plugin_load_operation load,
-                                                      granit_backend_plugin_store_operation store,
-                                                      const float clear[4]) const noexcept {
+granit_result webgpu_command_adapter::begin_rendering(
+    backend_command_recorder_resource& resource, granit_backend_plugin_texture_view target,
+    granit_backend_plugin_load_operation load, granit_backend_plugin_store_operation store,
+    const float clear[4], granit_backend_plugin_texture_view depth_target,
+    granit_backend_plugin_load_operation depth_load,
+    granit_backend_plugin_store_operation depth_store, float clear_depth) const noexcept {
   auto* recorder = as_recorder(resource);
   if (recorder == nullptr || recorder->recorder_ == 0 || recorder->command_buffer_ != 0 ||
       target == 0)
     return GRANIT_ERROR_INVALID_ARGUMENT;
   auto result = context_->loader->recorder_begin_rendering(context_->instance, recorder->recorder_,
-                                                           target, load, store, clear);
+                                                           target, load, store, clear, depth_target,
+                                                           depth_load, depth_store, clear_depth);
   if (result != GRANIT_SUCCESS)
     return result;
   recorder->render_open_ = true;

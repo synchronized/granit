@@ -66,7 +66,11 @@ struct WGPUBindGroupImpl {
 };
 struct WGPUPipelineLayoutImpl {};
 struct WGPUShaderModuleImpl {};
-struct WGPURenderPipelineImpl {};
+struct WGPURenderPipelineImpl {
+  bool depth_enabled{};
+  bool depth_write{};
+  WGPUCompareFunction depth_compare{WGPUCompareFunction_Always};
+};
 struct WGPUComputePipelineImpl {};
 struct WGPUCommandEncoderImpl {
   bool finished{};
@@ -74,6 +78,8 @@ struct WGPUCommandEncoderImpl {
 struct WGPUCommandBufferImpl {};
 struct WGPURenderPassEncoderImpl {
   WGPUTexture target;
+  WGPUTexture depth_target{};
+  WGPURenderPipeline pipeline{};
   WGPUBindGroup bind_group{};
   unsigned int dynamic_offset{};
 };
@@ -423,10 +429,14 @@ wgpuDeviceCreateShaderModule(WGPUDevice, const WGPUShaderModuleDescriptor* descr
 extern "C" void wgpuShaderModuleRelease(WGPUShaderModule shader_module) { delete shader_module; }
 extern "C" WGPURenderPipeline
 wgpuDeviceCreateRenderPipeline(WGPUDevice, const WGPURenderPipelineDescriptor* descriptor) {
-  return descriptor != nullptr && descriptor->layout != nullptr &&
-                 descriptor->vertex.module != nullptr && descriptor->fragment != nullptr
-             ? new WGPURenderPipelineImpl
-             : nullptr;
+  if (descriptor == nullptr || descriptor->layout == nullptr ||
+      descriptor->vertex.module == nullptr || descriptor->fragment == nullptr) {
+    return nullptr;
+  }
+  const auto* depth = static_cast<const WGPUDepthStencilState*>(descriptor->depthStencil);
+  return new WGPURenderPipelineImpl{
+      depth != nullptr, depth != nullptr && depth->depthWriteEnabled == WGPUOptionalBool_True,
+      depth == nullptr ? WGPUCompareFunction_Always : depth->depthCompare};
 }
 extern "C" void wgpuRenderPipelineRelease(WGPURenderPipeline pipeline) { delete pipeline; }
 extern "C" WGPUComputePipeline
@@ -493,9 +503,23 @@ wgpuCommandEncoderBeginRenderPass(WGPUCommandEncoder encoder,
     texture->bytes[index + 2] = 0;
     texture->bytes[index + 3] = 255;
   }
-  return new WGPURenderPassEncoderImpl{texture};
+  WGPUTexture depth_texture{};
+  if (descriptor->depthStencilAttachment != nullptr) {
+    if (descriptor->depthStencilAttachment->view == nullptr)
+      return nullptr;
+    depth_texture = descriptor->depthStencilAttachment->view->texture;
+    if (descriptor->depthStencilAttachment->depthLoadOp == WGPULoadOp_Clear) {
+      const auto clear = static_cast<float>(descriptor->depthStencilAttachment->depthClearValue);
+      for (std::size_t index = 0; index < depth_texture->bytes.size(); index += sizeof(float))
+        std::memcpy(depth_texture->bytes.data() + index, &clear, sizeof(clear));
+    }
+  }
+  return new WGPURenderPassEncoderImpl{texture, depth_texture};
 }
-extern "C" void wgpuRenderPassEncoderSetPipeline(WGPURenderPassEncoder, WGPURenderPipeline) {}
+extern "C" void wgpuRenderPassEncoderSetPipeline(WGPURenderPassEncoder pass,
+                                                 WGPURenderPipeline pipeline) {
+  pass->pipeline = pipeline;
+}
 extern "C" void wgpuRenderPassEncoderSetViewport(WGPURenderPassEncoder, float, float, float, float,
                                                  float, float) {}
 extern "C" void wgpuRenderPassEncoderSetScissorRect(WGPURenderPassEncoder, unsigned int,
@@ -511,6 +535,7 @@ extern "C" void wgpuRenderPassEncoderDraw(WGPURenderPassEncoder pass, unsigned i
   const auto width = pass->target->width;
   const auto height = pass->target->height;
   float translation_x = 0.0F;
+  float depth_value = 0.0F;
   std::array<unsigned char, 4> color{51, 179, 102, 255};
   bool use_uniform = false;
   const auto* group = pass->bind_group;
@@ -522,6 +547,7 @@ extern "C" void wgpuRenderPassEncoderDraw(WGPURenderPassEncoder pass, unsigned i
       use_uniform = values[7] > 0.0F;
       if (use_uniform) {
         translation_x = values[0];
+        depth_value = values[2];
         float material_scale = 1.0F;
         if (group->has_material_textures) {
           const auto decode_normal = [](unsigned char value) {
@@ -559,6 +585,46 @@ extern "C" void wgpuRenderPassEncoderDraw(WGPURenderPassEncoder pass, unsigned i
                       : ny < -0.7 || ny > 0.7 || nx < -(ny + 0.7) / 2.0 || nx > (ny + 0.7) / 2.0;
       if (outside)
         continue;
+      const auto pixel = static_cast<std::size_t>(y) * width + x;
+      if (pass->pipeline != nullptr && pass->pipeline->depth_enabled &&
+          pass->depth_target != nullptr) {
+        float previous{};
+        std::memcpy(&previous, pass->depth_target->bytes.data() + pixel * sizeof(float),
+                    sizeof(previous));
+        bool accepted{};
+        switch (pass->pipeline->depth_compare) {
+        case WGPUCompareFunction_Never:
+          accepted = false;
+          break;
+        case WGPUCompareFunction_Less:
+          accepted = depth_value < previous;
+          break;
+        case WGPUCompareFunction_Equal:
+          accepted = depth_value == previous;
+          break;
+        case WGPUCompareFunction_LessEqual:
+          accepted = depth_value <= previous;
+          break;
+        case WGPUCompareFunction_Greater:
+          accepted = depth_value > previous;
+          break;
+        case WGPUCompareFunction_NotEqual:
+          accepted = depth_value != previous;
+          break;
+        case WGPUCompareFunction_GreaterEqual:
+          accepted = depth_value >= previous;
+          break;
+        default:
+          accepted = true;
+          break;
+        }
+        if (!accepted)
+          continue;
+        if (pass->pipeline->depth_write) {
+          std::memcpy(pass->depth_target->bytes.data() + pixel * sizeof(float), &depth_value,
+                      sizeof(depth_value));
+        }
+      }
       const auto index = (static_cast<std::size_t>(y) * width + x) * 4;
       std::copy(color.begin(), color.end(), pass->target->bytes.begin() + index);
     }

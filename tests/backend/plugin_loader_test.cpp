@@ -698,7 +698,11 @@ TEST_CASE("WebGPU 插件绑定与 Pipeline 遵守依赖生命周期", "[backend]
       fragment_shader,
       GRANIT_BACKEND_PLUGIN_TEXTURE_FORMAT_RGBA8_UNORM,
       0,
-      nullptr};
+      nullptr,
+      0,
+      0,
+      0,
+      GRANIT_BACKEND_PLUGIN_COMPARE_OPERATION_ALWAYS};
   granit_backend_plugin_render_pipeline pipeline{};
   REQUIRE(loader.create_render_pipeline(first, &pipeline_desc, &pipeline) == GRANIT_SUCCESS);
   const granit_backend_plugin_vertex_attribute vertex_attributes[]{

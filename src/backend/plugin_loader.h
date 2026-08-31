@@ -191,7 +191,12 @@ public:
   [[nodiscard]] granit_result recorder_begin_rendering(
       granit_backend_plugin_instance instance, granit_backend_plugin_command_recorder recorder,
       granit_backend_plugin_texture_view target, granit_backend_plugin_load_operation load,
-      granit_backend_plugin_store_operation store, const float clear[4]) noexcept;
+      granit_backend_plugin_store_operation store, const float clear[4],
+      granit_backend_plugin_texture_view depth_target = 0,
+      granit_backend_plugin_load_operation depth_load = GRANIT_BACKEND_PLUGIN_LOAD_OPERATION_CLEAR,
+      granit_backend_plugin_store_operation depth_store =
+          GRANIT_BACKEND_PLUGIN_STORE_OPERATION_DISCARD,
+      float clear_depth = 1.0F) noexcept;
   [[nodiscard]] granit_result
   recorder_bind_pipeline(granit_backend_plugin_instance instance,
                          granit_backend_plugin_command_recorder recorder,
