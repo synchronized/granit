@@ -25,6 +25,8 @@ using viewport = granit_viewport;
 using scissor = granit_scissor;
 using vertex_buffer_binding = granit_vertex_buffer_binding;
 
+static_assert(sizeof(granit_bind_groups_desc) == GRANIT_BIND_GROUPS_DESC_VERSION_1_SIZE);
+
 enum class index_type : std::uint32_t {
   uint16 = GRANIT_INDEX_TYPE_UINT16,
   uint32 = GRANIT_INDEX_TYPE_UINT32,

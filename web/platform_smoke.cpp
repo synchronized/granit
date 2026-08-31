@@ -12,7 +12,7 @@
 #include <emscripten/html5.h>
 
 #include <granit/renderer/buffer.hpp>
-#include <granit/renderer/command_recorder.h>
+#include <granit/renderer/command_recorder.hpp>
 #include <granit/renderer/pipeline.hpp>
 #include <granit/renderer/renderer.h>
 #include <granit/renderer/sampler.hpp>

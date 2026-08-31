@@ -4,6 +4,7 @@
 #ifndef GRANIT_RENDER_TARGET_H_
 #define GRANIT_RENDER_TARGET_H_
 
+#include <stddef.h>
 #include <stdint.h>
 
 #include <granit/renderer/texture.h>
@@ -100,7 +101,8 @@ typedef struct granit_rendering_desc {
   uint32_t reserved;
   uint64_t reserved_2;
 } granit_rendering_desc;
-#define GRANIT_RENDERING_DESC_VERSION_1_SIZE UINT32_C(56)
+#define GRANIT_RENDERING_DESC_VERSION_1_SIZE                                                    \
+  ((uint32_t)(offsetof(granit_rendering_desc, reserved_2) + sizeof(uint64_t)))
 #define GRANIT_RENDERING_DESC_INIT                                                                 \
   {GRANIT_RENDERING_DESC_VERSION_1_SIZE,                                                           \
    UINT32_C(0),                                                                                    \
