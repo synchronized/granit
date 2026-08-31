@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2026 Granit contributors
 
-name: Dawn Dependency Packages
+name: Dawn SDK Build
 
 on:
   workflow_dispatch:
