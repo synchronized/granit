@@ -11,17 +11,14 @@ struct DrawData {
 struct VertexOutput {
   @builtin(position) position: vec4f,
   @location(0) color: vec4f,
+  @location(1) uv: vec2f,
 };
 
 @vertex
-fn main(@builtin(vertex_index) vertex_index: u32) -> VertexOutput {
-  var positions = array<vec2f, 3>(
-    vec2f(-0.22, -0.30),
-    vec2f(0.22, -0.30),
-    vec2f(0.0, 0.30),
-  );
+fn main(@location(0) position: vec2f, @location(1) uv: vec2f) -> VertexOutput {
   var output: VertexOutput;
-  output.position = vec4f(positions[vertex_index] + draw_data.translation.xy, 0.0, 1.0);
+  output.position = vec4f(position + draw_data.translation.xy, 0.0, 1.0);
   output.color = draw_data.color;
+  output.uv = uv;
   return output;
 }

@@ -285,7 +285,7 @@ TEST_CASE("动态 Offset 按 Bind Group 顺序跳过普通 Uniform", "[pipeline]
   REQUIRE(recorder.end() == granit::result::success);
 }
 
-TEST_CASE("动态 Uniform Offset 从同一 Buffer 绘制两个对象", "[pipeline][bind-group][smoke]") {
+TEST_CASE("跨后端索引纹理 Fixture 使用动态 Uniform 绘制两个对象", "[pipeline][bind-group][smoke]") {
   struct backend_case {
     granit::renderer_backend backend;
     std::string_view library_path;
@@ -327,7 +327,13 @@ TEST_CASE("动态 Uniform Offset 从同一 Buffer 绘制两个对象", "[pipelin
   const std::array declarations{
       granit::bind_group_layout_entry{.binding = 0,
                                       .type = granit::binding_type::dynamic_uniform_buffer,
-                                      .visibility = granit::shader_stage_flags::vertex}};
+                                      .visibility = granit::shader_stage_flags::vertex},
+      granit::bind_group_layout_entry{.binding = 1,
+                                      .type = granit::binding_type::sampled_texture,
+                                      .visibility = granit::shader_stage_flags::fragment},
+      granit::bind_group_layout_entry{.binding = 2,
+                                      .type = granit::binding_type::sampler,
+                                      .visibility = granit::shader_stage_flags::fragment}};
   granit::bind_group_layout group_layout;
   REQUIRE(group_layout.initialize(renderer.native_handle(), declarations) ==
           granit::result::success);
@@ -337,13 +343,19 @@ TEST_CASE("动态 Uniform Offset 从同一 Buffer 绘制两个对象", "[pipelin
       pipeline_layout.initialize(renderer.native_handle(), std::span{&group_layout_handle, 1}) ==
       granit::result::success);
   const granit::texture_format format = granit::texture_format::rgba8_unorm;
+  const std::array vertex_attributes{
+      granit::vertex_attribute{.location = 0, .format = granit::vertex_format::float32x2},
+      granit::vertex_attribute{
+          .location = 1, .format = granit::vertex_format::float32x2, .offset = sizeof(float) * 2}};
+  const std::array vertex_layouts{
+      granit::vertex_buffer_layout{.stride = sizeof(float) * 4, .attributes = vertex_attributes}};
   granit::graphics_pipeline pipeline;
   REQUIRE(pipeline.initialize(renderer.native_handle(),
                               {.layout = pipeline_layout.native_handle(),
                                .vertex_shader = vertex.native_handle(),
                                .fragment_shader = fragment.native_handle(),
                                .color_formats = std::span{&format, 1},
-                               .vertex_buffers = {},
+                               .vertex_buffers = vertex_layouts,
                                .primitive = {},
                                .depth = {},
                                .color_blends = {},
@@ -363,11 +375,61 @@ TEST_CASE("动态 Uniform Offset 从同一 Buffer 绘制两个对象", "[pipelin
               {.size = uniform_data.size(),
                .usage = granit::buffer_usage::uniform | granit::buffer_usage::transfer_destination},
               uniform_data) == granit::result::success);
-  const std::array entries{granit::bind_group_entry{
-      .binding = 0, .resource = uniform.native_handle(), .offset = 0, .size = 32}};
+  granit_texture_desc base_color_desc = GRANIT_TEXTURE_DESC_INIT;
+  base_color_desc.format = GRANIT_TEXTURE_FORMAT_RGBA8_UNORM;
+  base_color_desc.usage =
+      GRANIT_TEXTURE_USAGE_SAMPLED_BIT | GRANIT_TEXTURE_USAGE_TRANSFER_DESTINATION_BIT;
+  base_color_desc.width = 2;
+  base_color_desc.height = 2;
+  granit_texture base_color = GRANIT_NULL_HANDLE;
+  granit_texture_view base_color_view = GRANIT_NULL_HANDLE;
+  REQUIRE(granit_texture_create_with_default_view(renderer.native_handle(), &base_color_desc,
+                                                  &base_color, &base_color_view) == GRANIT_SUCCESS);
+  constexpr std::array<std::uint8_t, 16> base_color_pixels{
+      200, 160, 120, 255, 200, 160, 120, 255, 200, 160, 120, 255, 200, 160, 120, 255,
+  };
+  const granit_texture_data_layout base_color_layout{};
+  const granit_texture_write_region base_color_region{.mip_level = 0,
+                                                      .base_array_layer = 0,
+                                                      .array_layer_count = 1,
+                                                      .aspect = GRANIT_TEXTURE_ASPECT_COLOR_BIT,
+                                                      .x = 0,
+                                                      .y = 0,
+                                                      .z = 0,
+                                                      .width = 2,
+                                                      .height = 2,
+                                                      .depth = 1};
+  REQUIRE(granit_texture_write(renderer.native_handle(), base_color, base_color_pixels.data(),
+                               base_color_pixels.size(), &base_color_layout,
+                               &base_color_region) == GRANIT_SUCCESS);
+  granit::sampler base_color_sampler;
+  REQUIRE(base_color_sampler.initialize(renderer.native_handle()) == granit::result::success);
+  const std::array entries{
+      granit::bind_group_entry{
+          .binding = 0, .resource = uniform.native_handle(), .offset = 0, .size = 32},
+      granit::bind_group_entry{.binding = 1, .resource = base_color_view},
+      granit::bind_group_entry{.binding = 2, .resource = base_color_sampler.native_handle()}};
   granit::bind_group group;
   REQUIRE(group.initialize(renderer.native_handle(), group_layout.native_handle(), entries) ==
           granit::result::success);
+
+  constexpr std::array<float, 16> vertices{
+      -0.22F, -0.30F, 0.0F, 0.0F, 0.22F,  -0.30F, 1.0F, 0.0F,
+      0.22F,  0.30F,  1.0F, 1.0F, -0.22F, 0.30F,  0.0F, 1.0F,
+  };
+  constexpr std::array<std::uint16_t, 6> indices{0, 1, 2, 2, 3, 0};
+  granit::buffer vertex_buffer;
+  REQUIRE(vertex_buffer.initialize(
+              renderer.native_handle(),
+              {.size = sizeof(vertices),
+               .usage = granit::buffer_usage::vertex | granit::buffer_usage::transfer_destination},
+              std::as_bytes(std::span{vertices})) == granit::result::success);
+  granit::buffer index_buffer;
+  REQUIRE(index_buffer.initialize(
+              renderer.native_handle(),
+              {.size = sizeof(indices),
+               .usage = granit::buffer_usage::index | granit::buffer_usage::transfer_destination},
+              std::as_bytes(std::span{indices})) == granit::result::success);
 
   constexpr std::uint32_t width = 64;
   constexpr std::uint32_t height = 32;
@@ -396,6 +458,11 @@ TEST_CASE("动态 Uniform Offset 从同一 Buffer 绘制两个对象", "[pipelin
   const granit::scissor scissor{0, 0, width, height};
   REQUIRE(recorder.set_viewports(0, std::span{&viewport, 1}) == granit::result::success);
   REQUIRE(recorder.set_scissors(0, std::span{&scissor, 1}) == granit::result::success);
+  const granit::vertex_buffer_binding vertex_binding{vertex_buffer.native_handle(), 0};
+  REQUIRE(recorder.bind_vertex_buffers(0, std::span{&vertex_binding, 1}) ==
+          granit::result::success);
+  REQUIRE(recorder.bind_index_buffer(index_buffer.native_handle(), 0, granit::index_type::uint16) ==
+          granit::result::success);
   const granit_bind_group group_handle = group.native_handle();
   const std::array left_offset{UINT32_C(0)};
   const std::array right_offset{UINT32_C(256)};
@@ -407,11 +474,13 @@ TEST_CASE("动态 Uniform Offset 从同一 Buffer 绘制两个对象", "[pipelin
   const granit::rendering_desc rendering{.color_attachments = std::span{&color, 1},
                                          .area = {0, 0, width, height}};
   REQUIRE(recorder.begin_rendering(rendering) == granit::result::success);
-  REQUIRE(recorder.draw(3) == granit::result::success);
+  REQUIRE(recorder.draw_indexed(static_cast<std::uint32_t>(indices.size())) ==
+          granit::result::success);
   REQUIRE(recorder.bind_graphics_groups(pipeline_layout.native_handle(), 0,
                                         std::span{&group_handle, 1},
                                         right_offset) == granit::result::success);
-  REQUIRE(recorder.draw(3) == granit::result::success);
+  REQUIRE(recorder.draw_indexed(static_cast<std::uint32_t>(indices.size())) ==
+          granit::result::success);
   REQUIRE(recorder.end_rendering() == granit::result::success);
   const granit_texture_data_layout copy_layout{};
   const granit_texture_write_region copy_region{.mip_level = 0,
@@ -435,11 +504,11 @@ TEST_CASE("动态 Uniform Offset 从同一 Buffer 绘制两个对象", "[pipelin
   const auto* pixels = static_cast<const std::uint8_t*>(mapped);
   const auto* left = pixels + (height / 2 * width + width / 4) * 4;
   const auto* right = pixels + (height / 2 * width + width * 3 / 4) * 4;
-  CHECK(left[0] > 240);
+  CHECK(left[0] >= 198);
   CHECK(left[1] < 16);
   CHECK(left[2] < 16);
   CHECK(right[0] < 16);
-  CHECK(right[1] > 240);
+  CHECK(right[1] >= 158);
   CHECK(right[2] < 16);
   REQUIRE(readback.unmap() == granit::result::success);
   CHECK(validation_errors.load(std::memory_order_relaxed) == 0);
@@ -447,6 +516,11 @@ TEST_CASE("动态 Uniform Offset 从同一 Buffer 绘制两个对象", "[pipelin
   REQUIRE(granit_texture_destroy(renderer.native_handle(), target) == GRANIT_SUCCESS);
   REQUIRE(readback.reset() == granit::result::success);
   REQUIRE(group.reset() == granit::result::success);
+  REQUIRE(base_color_sampler.reset() == granit::result::success);
+  REQUIRE(granit_texture_view_destroy(renderer.native_handle(), base_color_view) == GRANIT_SUCCESS);
+  REQUIRE(granit_texture_destroy(renderer.native_handle(), base_color) == GRANIT_SUCCESS);
+  REQUIRE(index_buffer.reset() == granit::result::success);
+  REQUIRE(vertex_buffer.reset() == granit::result::success);
   REQUIRE(uniform.reset() == granit::result::success);
   REQUIRE(pipeline.reset() == granit::result::success);
   REQUIRE(pipeline_layout.reset() == granit::result::success);

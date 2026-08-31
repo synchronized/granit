@@ -55,6 +55,7 @@ struct WGPUBindGroupLayoutImpl {
 };
 struct WGPUBindGroupImpl {
   std::vector<unsigned char> uniform_bytes;
+  std::array<unsigned char, 4> sampled_color{255, 255, 255, 255};
   unsigned long long offset{};
   bool has_dynamic_uniform{};
 };
@@ -385,7 +386,10 @@ extern "C" WGPUBindGroup wgpuDeviceCreateBindGroup(WGPUDevice,
     if (entry.buffer != nullptr) {
       result->uniform_bytes = entry.buffer->bytes;
       result->offset = entry.offset;
-      break;
+    } else if (entry.textureView != nullptr && entry.textureView->texture != nullptr &&
+               entry.textureView->texture->bytes.size() >= result->sampled_color.size()) {
+      std::copy_n(entry.textureView->texture->bytes.begin(), result->sampled_color.size(),
+                  result->sampled_color.begin());
     }
   }
   return result;
@@ -506,8 +510,9 @@ extern "C" void wgpuRenderPassEncoderDraw(WGPURenderPassEncoder pass, unsigned i
       if (use_uniform) {
         translation_x = values[0];
         for (std::size_t channel = 0; channel < color.size(); ++channel) {
+          const auto tint = std::clamp(values[4 + channel], 0.0F, 1.0F);
           color[channel] = static_cast<unsigned char>(
-              std::clamp(values[4 + channel], 0.0F, 1.0F) * 255.0F + 0.5F);
+              tint * static_cast<float>(group->sampled_color[channel]) + 0.5F);
         }
       }
     }
