@@ -260,8 +260,14 @@ extern "C" void wgpuBufferUnmap(WGPUBuffer buffer) { buffer->mapped = false; }
 
 extern "C" WGPUTexture wgpuDeviceCreateTexture(WGPUDevice,
                                                const WGPUTextureDescriptor* descriptor) {
+  const auto supported_format = descriptor != nullptr &&
+                                (descriptor->format == WGPUTextureFormat_R8Unorm ||
+                                 descriptor->format == WGPUTextureFormat_RG8Unorm ||
+                                 descriptor->format == WGPUTextureFormat_RGBA8Unorm ||
+                                 descriptor->format == WGPUTextureFormat_RGBA8UnormSrgb ||
+                                 descriptor->format == WGPUTextureFormat_Depth32Float);
   if (descriptor == nullptr || descriptor->size.width == 0 || descriptor->size.height == 0 ||
-      descriptor->format != WGPUTextureFormat_RGBA8Unorm) {
+      descriptor->mipLevelCount == 0 || !supported_format) {
     return nullptr;
   }
   return new WGPUTextureImpl{

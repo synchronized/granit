@@ -50,6 +50,26 @@ TEST_CASE("WebGPU Renderer 状态集中管理静态 Provider 生命周期", "[ba
   mapped[0] = 42;
   REQUIRE(state.flush_buffer(*upload_buffer, 0, sizeof(std::uint32_t)) == GRANIT_SUCCESS);
 
+  auto texture = state.allocate_texture_resource();
+  REQUIRE(texture != nullptr);
+  granit_texture_desc texture_desc = GRANIT_TEXTURE_DESC_INIT;
+  texture_desc.format = GRANIT_TEXTURE_FORMAT_RGBA8_SRGB;
+  texture_desc.usage = GRANIT_TEXTURE_USAGE_SAMPLED_BIT |
+                       GRANIT_TEXTURE_USAGE_TRANSFER_DESTINATION_BIT;
+  texture_desc.width = 64;
+  texture_desc.height = 32;
+  texture_desc.mip_levels = 4;
+  REQUIRE(state.create_texture(texture_desc, *texture) == GRANIT_SUCCESS);
+
+  auto texture_view = state.allocate_texture_view_resource();
+  REQUIRE(texture_view != nullptr);
+  granit_texture_view_desc view_desc = GRANIT_TEXTURE_VIEW_DESC_INIT;
+  view_desc.format = GRANIT_TEXTURE_FORMAT_RGBA8_SRGB;
+  view_desc.range.base_mip_level = 1;
+  view_desc.range.mip_level_count = 2;
+  REQUIRE(state.create_texture_view(*texture, texture_desc, view_desc, *texture_view) ==
+          GRANIT_SUCCESS);
+
   auto surface = state.allocate_surface_resource();
   REQUIRE(surface != nullptr);
   const auto native_a = reinterpret_cast<void*>(std::uintptr_t{1});

@@ -223,6 +223,10 @@ Texture View 子资源和 Renderer 归属。Bind Group 保留 Layout 与所有�
 类型错误、缺失项、跨 Renderer 句柄与不支持数组。Provider ABI 直接升级，不保留
 旧的固定 Texture/Sampler 分支。
 
+当前已完成首个子阶段：Provider ABI v14 接收显式 Texture 格式、mip 数量和 View mip 范围，
+公共 Renderer 已接通上述五种必需格式的二维、单层、单采样 Texture 创建及子 View 创建。
+Texture 区域上传、完整 Sampler 状态和数组化 Bind Group 仍属于本阶段后续工作。
+
 ### S-12E 每帧数据契约
 
 S-12E 不新增 Uniform Arena 公共类型；上层继续用 Buffer、Upload Batch、Renderer Limits
@@ -273,7 +277,8 @@ Metallic-Roughness Texture，并用同一 Uniform Buffer 的两个动态 Offset 
    SDL3 继续通过对应原生窗口描述创建 Surface，不增加 SDL 专用 Renderer API。
 3. **S-12C 几何资源（已完成）**：已接通 WebGPU Vertex/Index Buffer、顶点布局、索引格式、
    显式 Render Pass 命令和 Indexed Draw。
-4. **S-12D 材质资源**：接通 Texture、Texture View、Sampler、Bind Group 与 PBR 所需基础格式。
+4. **S-12D 材质资源（进行中）**：已接通 Texture 创建和子 View；继续完成区域上传、Sampler、
+   Bind Group 与 Pipeline Layout。
 5. **S-12E 每帧数据**：将动态 Uniform Offset、对齐限制和逐帧上传路径映射到两个后端。
 6. **S-12F 跨后端 Fixture**：同一带纹理索引 Mesh 在 Vulkan、桌面 WebGPU 和浏览器 WebGPU 绘制。
 7. **S-12G 验收**：验证公共头、共享/静态安装 Consumer、错误路径、截图结果和平台矩阵。

@@ -13,7 +13,7 @@ namespace granit::detail {
 
 struct webgpu_resource_context;
 
-/** 将公共 Buffer 资源契约适配到 WebGPU Provider。 */
+/** 将公共基础资源契约适配到 WebGPU Provider。 */
 class webgpu_resource_adapter {
 public:
   webgpu_resource_adapter(backend_plugin_loader& loader, granit_backend_plugin_instance instance);
@@ -32,6 +32,14 @@ public:
   upload_batch(std::span<const backend_upload_operation> uploads) const noexcept;
   [[nodiscard]] granit_backend_plugin_buffer
   native_buffer(backend_buffer_resource& resource) const noexcept;
+  [[nodiscard]] std::unique_ptr<backend_texture_resource> allocate_texture() const;
+  [[nodiscard]] granit_result create_texture(const granit_texture_desc& desc,
+                                             backend_texture_resource& resource) const noexcept;
+  [[nodiscard]] std::unique_ptr<backend_texture_view_resource> allocate_texture_view() const;
+  [[nodiscard]] granit_result
+  create_texture_view(backend_texture_resource& texture, const granit_texture_desc& texture_desc,
+                      const granit_texture_view_desc& desc,
+                      backend_texture_view_resource& resource) const noexcept;
 
 private:
   std::shared_ptr<webgpu_resource_context> context_;

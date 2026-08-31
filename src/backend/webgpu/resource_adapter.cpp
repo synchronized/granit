@@ -33,12 +33,69 @@ public:
   std::vector<std::byte> host_memory_;
 };
 
+class webgpu_texture_resource final : public backend_texture_resource {
+public:
+  explicit webgpu_texture_resource(std::shared_ptr<webgpu_resource_context> context)
+      : context_(std::move(context)) {}
+  ~webgpu_texture_resource() override {
+    if (handle_ != 0)
+      static_cast<void>(context_->loader->destroy_texture(context_->instance, handle_));
+  }
+
+  std::shared_ptr<webgpu_resource_context> context_;
+  granit_backend_plugin_texture handle_{};
+};
+
+class webgpu_texture_view_resource final : public backend_texture_view_resource {
+public:
+  explicit webgpu_texture_view_resource(std::shared_ptr<webgpu_resource_context> context)
+      : context_(std::move(context)) {}
+  ~webgpu_texture_view_resource() override {
+    if (handle_ != 0)
+      static_cast<void>(context_->loader->destroy_texture_view(context_->instance, handle_));
+  }
+
+  std::shared_ptr<webgpu_resource_context> context_;
+  granit_backend_plugin_texture_view handle_{};
+};
+
 webgpu_buffer_resource* as_buffer(backend_buffer_resource& resource) noexcept {
   return dynamic_cast<webgpu_buffer_resource*>(&resource);
 }
 
 const webgpu_buffer_resource* as_buffer(const backend_buffer_resource& resource) noexcept {
   return dynamic_cast<const webgpu_buffer_resource*>(&resource);
+}
+
+granit_backend_plugin_texture_format to_format(granit_texture_format format) noexcept {
+  switch (format) {
+  case GRANIT_TEXTURE_FORMAT_R8_UNORM:
+    return GRANIT_BACKEND_PLUGIN_TEXTURE_FORMAT_R8_UNORM;
+  case GRANIT_TEXTURE_FORMAT_RG8_UNORM:
+    return GRANIT_BACKEND_PLUGIN_TEXTURE_FORMAT_RG8_UNORM;
+  case GRANIT_TEXTURE_FORMAT_RGBA8_UNORM:
+    return GRANIT_BACKEND_PLUGIN_TEXTURE_FORMAT_RGBA8_UNORM;
+  case GRANIT_TEXTURE_FORMAT_RGBA8_SRGB:
+    return GRANIT_BACKEND_PLUGIN_TEXTURE_FORMAT_RGBA8_SRGB;
+  case GRANIT_TEXTURE_FORMAT_D32_FLOAT:
+    return GRANIT_BACKEND_PLUGIN_TEXTURE_FORMAT_D32_FLOAT;
+  default:
+    return 0;
+  }
+}
+
+granit_backend_plugin_texture_usage to_usage(granit_texture_usage usage) noexcept {
+  granit_backend_plugin_texture_usage result{};
+  if ((usage & GRANIT_TEXTURE_USAGE_TRANSFER_SOURCE_BIT) != 0)
+    result |= GRANIT_BACKEND_PLUGIN_TEXTURE_USAGE_COPY_SRC_BIT;
+  if ((usage & GRANIT_TEXTURE_USAGE_TRANSFER_DESTINATION_BIT) != 0)
+    result |= GRANIT_BACKEND_PLUGIN_TEXTURE_USAGE_COPY_DST_BIT;
+  if ((usage & GRANIT_TEXTURE_USAGE_SAMPLED_BIT) != 0)
+    result |= GRANIT_BACKEND_PLUGIN_TEXTURE_USAGE_SAMPLED_BIT;
+  if ((usage & (GRANIT_TEXTURE_USAGE_COLOR_ATTACHMENT_BIT |
+                GRANIT_TEXTURE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT)) != 0)
+    result |= GRANIT_BACKEND_PLUGIN_TEXTURE_USAGE_RENDER_ATTACHMENT_BIT;
+  return result;
 }
 
 granit_backend_plugin_buffer_usage to_usage(granit_buffer_usage usage,
@@ -153,6 +210,50 @@ granit_backend_plugin_buffer
 webgpu_resource_adapter::native_buffer(backend_buffer_resource& resource) const noexcept {
   const auto* buffer = as_buffer(resource);
   return buffer == nullptr ? 0 : buffer->handle_;
+}
+
+std::unique_ptr<backend_texture_resource> webgpu_resource_adapter::allocate_texture() const {
+  return std::make_unique<webgpu_texture_resource>(context_);
+}
+
+granit_result
+webgpu_resource_adapter::create_texture(const granit_texture_desc& desc,
+                                        backend_texture_resource& resource) const noexcept {
+  auto* texture = dynamic_cast<webgpu_texture_resource*>(&resource);
+  const auto format = to_format(desc.format);
+  const auto usage = to_usage(desc.usage);
+  if (texture == nullptr || texture->handle_ != 0 || format == 0 || usage == 0 ||
+      desc.dimension != GRANIT_TEXTURE_DIMENSION_2D || desc.depth != 1 ||
+      desc.array_layers != 1 || desc.sample_count != GRANIT_SAMPLE_COUNT_1)
+    return GRANIT_ERROR_UNSUPPORTED;
+  const granit_backend_plugin_texture_desc plugin_desc{
+      sizeof(plugin_desc), 0, desc.width, desc.height, usage, format, desc.mip_levels, 0};
+  return context_->loader->create_texture(context_->instance, &plugin_desc, &texture->handle_);
+}
+
+std::unique_ptr<backend_texture_view_resource>
+webgpu_resource_adapter::allocate_texture_view() const {
+  return std::make_unique<webgpu_texture_view_resource>(context_);
+}
+
+granit_result webgpu_resource_adapter::create_texture_view(
+    backend_texture_resource& texture, const granit_texture_desc& texture_desc,
+    const granit_texture_view_desc& desc, backend_texture_view_resource& resource) const noexcept {
+  auto* native_texture = dynamic_cast<webgpu_texture_resource*>(&texture);
+  auto* view = dynamic_cast<webgpu_texture_view_resource*>(&resource);
+  const auto format = to_format(desc.format == GRANIT_TEXTURE_FORMAT_UNDEFINED ? texture_desc.format
+                                                                               : desc.format);
+  const auto mip_count = desc.range.mip_level_count == GRANIT_REMAINING_MIP_LEVELS
+                             ? texture_desc.mip_levels - desc.range.base_mip_level
+                             : desc.range.mip_level_count;
+  if (native_texture == nullptr || view == nullptr || view->handle_ != 0 || format == 0 ||
+      desc.dimension != GRANIT_TEXTURE_DIMENSION_2D || desc.range.base_array_layer != 0 ||
+      desc.range.array_layer_count != 1)
+    return GRANIT_ERROR_UNSUPPORTED;
+  const granit_backend_plugin_texture_view_desc plugin_desc{
+      sizeof(plugin_desc), format, desc.range.base_mip_level, mip_count, {0, 0}};
+  return context_->loader->create_texture_view(context_->instance, native_texture->handle_,
+                                                &plugin_desc, &view->handle_);
 }
 
 } // namespace granit::detail

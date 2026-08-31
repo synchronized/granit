@@ -102,6 +102,7 @@ public:
   [[nodiscard]] granit_result
   create_texture_view(granit_backend_plugin_instance instance,
                       granit_backend_plugin_texture texture,
+                      const granit_backend_plugin_texture_view_desc* desc,
                       granit_backend_plugin_texture_view* view) noexcept;
   [[nodiscard]] granit_result
   destroy_texture_view(granit_backend_plugin_instance instance,

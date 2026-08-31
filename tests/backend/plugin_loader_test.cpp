@@ -458,15 +458,21 @@ TEST_CASE("WebGPU 插件 Texture、View 与 Sampler 遵守所有权契约", "[ba
   texture_desc.height = 32;
   texture_desc.usage = GRANIT_BACKEND_PLUGIN_TEXTURE_USAGE_SAMPLED_BIT |
                        GRANIT_BACKEND_PLUGIN_TEXTURE_USAGE_COPY_DST_BIT;
+  texture_desc.format = GRANIT_BACKEND_PLUGIN_TEXTURE_FORMAT_RGBA8_UNORM;
+  texture_desc.mip_level_count = 1;
   granit_backend_plugin_texture texture{};
   REQUIRE(loader.create_texture(first, &texture_desc, &texture) == GRANIT_SUCCESS);
   REQUIRE(texture != 0);
 
   granit_backend_plugin_texture_view view{};
-  REQUIRE(loader.create_texture_view(first, texture, &view) == GRANIT_SUCCESS);
+  const granit_backend_plugin_texture_view_desc view_desc{
+      sizeof(granit_backend_plugin_texture_view_desc),
+      GRANIT_BACKEND_PLUGIN_TEXTURE_FORMAT_RGBA8_UNORM, 0, 1, {0, 0}};
+  REQUIRE(loader.create_texture_view(first, texture, &view_desc, &view) == GRANIT_SUCCESS);
   REQUIRE(view != 0);
   granit_backend_plugin_texture_view foreign_view = 123;
-  CHECK(loader.create_texture_view(second, texture, &foreign_view) == GRANIT_ERROR_INVALID_HANDLE);
+  CHECK(loader.create_texture_view(second, texture, &view_desc, &foreign_view) ==
+        GRANIT_ERROR_INVALID_HANDLE);
   CHECK(foreign_view == 0);
   CHECK(loader.destroy_texture(first, texture) == GRANIT_ERROR_INVALID_ARGUMENT);
   CHECK(loader.destroy_texture_view(second, view) == GRANIT_ERROR_INVALID_HANDLE);
@@ -503,7 +509,7 @@ TEST_CASE("WebGPU 插件 Texture、View 与 Sampler 遵守所有权契约", "[ba
   CHECK(sampler == 0);
 
   REQUIRE(loader.create_texture(first, &texture_desc, &texture) == GRANIT_SUCCESS);
-  REQUIRE(loader.create_texture_view(first, texture, &view) == GRANIT_SUCCESS);
+  REQUIRE(loader.create_texture_view(first, texture, &view_desc, &view) == GRANIT_SUCCESS);
   REQUIRE(loader.create_sampler(first, &sampler_desc, &sampler) == GRANIT_SUCCESS);
   CHECK(loader.destroy_instance(first) == GRANIT_SUCCESS);
   CHECK(loader.destroy_instance(second) == GRANIT_SUCCESS);
@@ -529,10 +535,15 @@ TEST_CASE("WebGPU 插件绑定与 Pipeline 遵守依赖生命周期", "[backend]
   texture_desc.height = 16;
   texture_desc.usage = GRANIT_BACKEND_PLUGIN_TEXTURE_USAGE_SAMPLED_BIT |
                        GRANIT_BACKEND_PLUGIN_TEXTURE_USAGE_COPY_DST_BIT;
+  texture_desc.format = GRANIT_BACKEND_PLUGIN_TEXTURE_FORMAT_RGBA8_UNORM;
+  texture_desc.mip_level_count = 1;
   granit_backend_plugin_texture texture{};
   granit_backend_plugin_texture_view view{};
+  const granit_backend_plugin_texture_view_desc view_desc{
+      sizeof(granit_backend_plugin_texture_view_desc),
+      GRANIT_BACKEND_PLUGIN_TEXTURE_FORMAT_RGBA8_UNORM, 0, 1, {0, 0}};
   REQUIRE(loader.create_texture(first, &texture_desc, &texture) == GRANIT_SUCCESS);
-  REQUIRE(loader.create_texture_view(first, texture, &view) == GRANIT_SUCCESS);
+  REQUIRE(loader.create_texture_view(first, texture, &view_desc, &view) == GRANIT_SUCCESS);
   granit_backend_plugin_sampler_desc sampler_desc{};
   sampler_desc.struct_size = sizeof(sampler_desc);
   sampler_desc.min_filter = GRANIT_BACKEND_PLUGIN_FILTER_LINEAR;
@@ -619,7 +630,8 @@ TEST_CASE("WebGPU 插件绑定与 Pipeline 遵守依赖生命周期", "[backend]
   granit_backend_plugin_texture target_texture{};
   granit_backend_plugin_texture_view target_view{};
   REQUIRE(loader.create_texture(first, &target_desc, &target_texture) == GRANIT_SUCCESS);
-  REQUIRE(loader.create_texture_view(first, target_texture, &target_view) == GRANIT_SUCCESS);
+  REQUIRE(loader.create_texture_view(first, target_texture, &view_desc, &target_view) ==
+          GRANIT_SUCCESS);
 
   granit_backend_plugin_buffer_desc buffer_desc{};
   buffer_desc.struct_size = sizeof(buffer_desc);

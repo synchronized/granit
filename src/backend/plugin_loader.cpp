@@ -520,15 +520,16 @@ backend_plugin_loader::destroy_texture(granit_backend_plugin_instance instance,
 granit_result
 backend_plugin_loader::create_texture_view(granit_backend_plugin_instance instance,
                                            granit_backend_plugin_texture texture,
+                                           const granit_backend_plugin_texture_view_desc* desc,
                                            granit_backend_plugin_texture_view* view) noexcept {
-  if (api_ == nullptr || instance == 0 || texture == 0 || view == nullptr) {
+  if (api_ == nullptr || instance == 0 || texture == 0 || desc == nullptr || view == nullptr) {
     return GRANIT_ERROR_INVALID_ARGUMENT;
   }
   if (std::find(instances_.begin(), instances_.end(), instance) == instances_.end()) {
     return GRANIT_ERROR_INVALID_HANDLE;
   }
   try {
-    return api_->instance_api->create_texture_view(instance, texture, view);
+    return api_->instance_api->create_texture_view(instance, texture, desc, view);
   } catch (...) {
     return GRANIT_ERROR_INTERNAL;
   }

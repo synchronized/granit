@@ -111,6 +111,11 @@ int main(int argc, char** argv) {
   texture_desc.height = 16;
   texture_desc.usage = GRANIT_BACKEND_PLUGIN_TEXTURE_USAGE_SAMPLED_BIT |
                        GRANIT_BACKEND_PLUGIN_TEXTURE_USAGE_COPY_DST_BIT;
+  texture_desc.format = GRANIT_BACKEND_PLUGIN_TEXTURE_FORMAT_RGBA8_UNORM;
+  texture_desc.mip_level_count = 1;
+  const granit_backend_plugin_texture_view_desc texture_view_desc{
+      sizeof(granit_backend_plugin_texture_view_desc),
+      GRANIT_BACKEND_PLUGIN_TEXTURE_FORMAT_RGBA8_UNORM, 0, 1, {0, 0}};
   granit_backend_plugin_texture texture{};
   granit_backend_plugin_texture_view view{};
   granit_backend_plugin_sampler_desc sampler_desc{};
@@ -125,7 +130,8 @@ int main(int argc, char** argv) {
   granit_backend_plugin_shader fragment_shader{};
   granit_backend_plugin_render_pipeline pipeline{};
   if (loader.create_texture(instance, &texture_desc, &texture) != GRANIT_SUCCESS || texture == 0 ||
-      loader.create_texture_view(instance, texture, &view) != GRANIT_SUCCESS || view == 0 ||
+      loader.create_texture_view(instance, texture, &texture_view_desc, &view) != GRANIT_SUCCESS ||
+      view == 0 ||
       loader.create_sampler(instance, &sampler_desc, &sampler) != GRANIT_SUCCESS || sampler == 0 ||
       loader.create_bind_group_layout(instance, &bind_group_layout) != GRANIT_SUCCESS ||
       bind_group_layout == 0) {
@@ -193,7 +199,8 @@ int main(int argc, char** argv) {
   std::chrono::steady_clock::duration submit_duration{};
   const float clear_color[]{0.0F, 0.0F, 0.0F, 1.0F};
   if (loader.create_texture(instance, &target_desc, &target_texture) != GRANIT_SUCCESS ||
-      loader.create_texture_view(instance, target_texture, &target_view) != GRANIT_SUCCESS ||
+      loader.create_texture_view(instance, target_texture, &texture_view_desc, &target_view) !=
+          GRANIT_SUCCESS ||
       loader.create_buffer(instance, &readback_desc, &readback) != GRANIT_SUCCESS ||
       loader.create_command_recorder(instance, &recorder) != GRANIT_SUCCESS || recorder == 0 ||
       loader.recorder_begin_rendering(

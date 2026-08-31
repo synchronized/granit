@@ -79,12 +79,12 @@ webgpu_renderer_state::upload_batch(std::span<const backend_upload_operation> up
 }
 
 std::unique_ptr<backend_texture_resource> webgpu_renderer_state::allocate_texture_resource() {
-  return std::make_unique<backend_texture_resource>();
+  return resources_ ? resources_->allocate_texture() : nullptr;
 }
 
-granit_result webgpu_renderer_state::create_texture(const granit_texture_desc&,
-                                                    backend_texture_resource&) noexcept {
-  return GRANIT_ERROR_UNSUPPORTED;
+granit_result webgpu_renderer_state::create_texture(const granit_texture_desc& desc,
+                                                    backend_texture_resource& texture) noexcept {
+  return resources_ ? resources_->create_texture(desc, texture) : GRANIT_ERROR_NOT_READY;
 }
 
 granit_result webgpu_renderer_state::upload_texture(backend_texture_resource&,
@@ -97,14 +97,14 @@ granit_result webgpu_renderer_state::upload_texture(backend_texture_resource&,
 
 std::unique_ptr<backend_texture_view_resource>
 webgpu_renderer_state::allocate_texture_view_resource() {
-  return std::make_unique<backend_texture_view_resource>();
+  return resources_ ? resources_->allocate_texture_view() : nullptr;
 }
 
-granit_result webgpu_renderer_state::create_texture_view(backend_texture_resource&,
-                                                         const granit_texture_desc&,
-                                                         const granit_texture_view_desc&,
-                                                         backend_texture_view_resource&) noexcept {
-  return GRANIT_ERROR_UNSUPPORTED;
+granit_result webgpu_renderer_state::create_texture_view(
+    backend_texture_resource& texture, const granit_texture_desc& texture_desc,
+    const granit_texture_view_desc& desc, backend_texture_view_resource& view) noexcept {
+  return resources_ ? resources_->create_texture_view(texture, texture_desc, desc, view)
+                    : GRANIT_ERROR_NOT_READY;
 }
 
 std::unique_ptr<backend_sampler_resource> webgpu_renderer_state::allocate_sampler_resource() {

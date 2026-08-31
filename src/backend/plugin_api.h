@@ -9,7 +9,7 @@
 #include <granit/core/diagnostic.h>
 #include <granit/core/result.h>
 
-#define GRANIT_BACKEND_PLUGIN_ABI_VERSION UINT32_C(13)
+#define GRANIT_BACKEND_PLUGIN_ABI_VERSION UINT32_C(14)
 #define GRANIT_BACKEND_PLUGIN_KIND_WEBGPU UINT32_C(1)
 #define GRANIT_BACKEND_PLUGIN_QUERY_SYMBOL "granit_backend_plugin_query"
 #define GRANIT_BACKEND_PLUGIN_SURFACE_TYPE_WIN32_BIT UINT32_C(0x00000001)
@@ -87,15 +87,27 @@ typedef uint32_t granit_backend_plugin_texture_usage;
 #define GRANIT_BACKEND_PLUGIN_TEXTURE_USAGE_SAMPLED_BIT UINT32_C(0x00000004)
 #define GRANIT_BACKEND_PLUGIN_TEXTURE_USAGE_RENDER_ATTACHMENT_BIT UINT32_C(0x00000008)
 
-/** S-10B 首轮只支持二维 RGBA8 UNORM、单层、单 mip、单采样纹理。 */
+typedef uint32_t granit_backend_plugin_texture_format;
+
+/** S-12D 首轮支持二维、单层、单采样纹理及多个 mip。 */
 typedef struct granit_backend_plugin_texture_desc {
   uint32_t struct_size;
   uint32_t reserved;
   uint32_t width;
   uint32_t height;
   granit_backend_plugin_texture_usage usage;
+  granit_backend_plugin_texture_format format;
+  uint32_t mip_level_count;
   uint32_t reserved_flags;
 } granit_backend_plugin_texture_desc;
+
+typedef struct granit_backend_plugin_texture_view_desc {
+  uint32_t struct_size;
+  granit_backend_plugin_texture_format format;
+  uint32_t base_mip_level;
+  uint32_t mip_level_count;
+  uint32_t reserved[2];
+} granit_backend_plugin_texture_view_desc;
 
 typedef uint32_t granit_backend_plugin_filter;
 #define GRANIT_BACKEND_PLUGIN_FILTER_NEAREST UINT32_C(1)
@@ -210,9 +222,12 @@ typedef uint32_t granit_backend_plugin_present_mode;
 #define GRANIT_BACKEND_PLUGIN_PRESENT_MODE_MAILBOX UINT32_C(1)
 #define GRANIT_BACKEND_PLUGIN_PRESENT_MODE_IMMEDIATE UINT32_C(2)
 
-typedef uint32_t granit_backend_plugin_texture_format;
 #define GRANIT_BACKEND_PLUGIN_TEXTURE_FORMAT_RGBA8_UNORM UINT32_C(1)
 #define GRANIT_BACKEND_PLUGIN_TEXTURE_FORMAT_BGRA8_UNORM UINT32_C(2)
+#define GRANIT_BACKEND_PLUGIN_TEXTURE_FORMAT_R8_UNORM UINT32_C(3)
+#define GRANIT_BACKEND_PLUGIN_TEXTURE_FORMAT_RG8_UNORM UINT32_C(4)
+#define GRANIT_BACKEND_PLUGIN_TEXTURE_FORMAT_RGBA8_SRGB UINT32_C(5)
+#define GRANIT_BACKEND_PLUGIN_TEXTURE_FORMAT_D32_FLOAT UINT32_C(6)
 
 typedef struct granit_backend_plugin_swapchain_desc {
   uint32_t struct_size;
@@ -303,6 +318,7 @@ typedef granit_result (*granit_backend_plugin_destroy_texture_fn)(
     granit_backend_plugin_instance instance, granit_backend_plugin_texture texture);
 typedef granit_result (*granit_backend_plugin_create_texture_view_fn)(
     granit_backend_plugin_instance instance, granit_backend_plugin_texture texture,
+    const granit_backend_plugin_texture_view_desc* desc,
     granit_backend_plugin_texture_view* view);
 typedef granit_result (*granit_backend_plugin_destroy_texture_view_fn)(
     granit_backend_plugin_instance instance, granit_backend_plugin_texture_view view);

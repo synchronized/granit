@@ -94,8 +94,13 @@ typedef unsigned int WGPUSurfaceGetCurrentTextureStatus;
 #define WGPUTextureUsage_TextureBinding 4
 #define WGPUTextureUsage_RenderAttachment 16
 #define WGPUTextureDimension_2D 2
+#define WGPUTextureFormat_Undefined 0
+#define WGPUTextureFormat_R8Unorm 1
+#define WGPUTextureFormat_RG8Unorm 6
 #define WGPUTextureFormat_RGBA8Unorm 18
+#define WGPUTextureFormat_RGBA8UnormSrgb 19
 #define WGPUTextureFormat_BGRA8Unorm 23
+#define WGPUTextureFormat_Depth32Float 40
 #define WGPUAddressMode_ClampToEdge 1
 #define WGPUFilterMode_Nearest 1
 #define WGPUFilterMode_Linear 2
@@ -282,7 +287,22 @@ typedef struct WGPUTextureDescriptor {
   {                                                                                                \
   }
 
-typedef struct WGPUTextureViewDescriptor WGPUTextureViewDescriptor;
+typedef struct WGPUTextureViewDescriptor {
+  void* nextInChain;
+  WGPUStringView label;
+  WGPUTextureFormat format;
+  WGPUTextureViewDimension dimension;
+  unsigned int baseMipLevel;
+  unsigned int mipLevelCount;
+  unsigned int baseArrayLayer;
+  unsigned int arrayLayerCount;
+  WGPUTextureAspect aspect;
+  WGPUTextureUsage usage;
+} WGPUTextureViewDescriptor;
+
+#define WGPU_TEXTURE_VIEW_DESCRIPTOR_INIT                                                          \
+  {                                                                                                \
+  }
 
 typedef struct WGPUSamplerDescriptor {
   void* nextInChain;
