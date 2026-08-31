@@ -9,7 +9,7 @@
 #include <granit/core/diagnostic.h>
 #include <granit/core/result.h>
 
-#define GRANIT_BACKEND_PLUGIN_ABI_VERSION UINT32_C(20)
+#define GRANIT_BACKEND_PLUGIN_ABI_VERSION UINT32_C(21)
 #define GRANIT_BACKEND_PLUGIN_KIND_WEBGPU UINT32_C(1)
 #define GRANIT_BACKEND_PLUGIN_QUERY_SYMBOL "granit_backend_plugin_query"
 #define GRANIT_BACKEND_PLUGIN_SURFACE_TYPE_WIN32_BIT UINT32_C(0x00000001)
@@ -28,6 +28,7 @@ typedef uint64_t granit_backend_plugin_bind_group;
 typedef uint64_t granit_backend_plugin_shader;
 typedef uint64_t granit_backend_plugin_pipeline_layout;
 typedef uint64_t granit_backend_plugin_render_pipeline;
+typedef uint64_t granit_backend_plugin_compute_pipeline;
 typedef uint64_t granit_backend_plugin_command_recorder;
 typedef uint64_t granit_backend_plugin_command_buffer;
 typedef uint64_t granit_backend_plugin_surface;
@@ -219,6 +220,7 @@ typedef struct granit_backend_plugin_bind_group_desc {
 typedef uint32_t granit_backend_plugin_shader_stage;
 #define GRANIT_BACKEND_PLUGIN_SHADER_STAGE_VERTEX UINT32_C(1)
 #define GRANIT_BACKEND_PLUGIN_SHADER_STAGE_FRAGMENT UINT32_C(2)
+#define GRANIT_BACKEND_PLUGIN_SHADER_STAGE_COMPUTE UINT32_C(3)
 
 /** WGSL 字节和入口点仅在调用期间有效，插件必须复制所需内容。 */
 typedef struct granit_backend_plugin_shader_desc {
@@ -451,6 +453,19 @@ typedef granit_result (*granit_backend_plugin_create_render_pipeline_fn)(
     granit_backend_plugin_render_pipeline* render_pipeline);
 typedef granit_result (*granit_backend_plugin_destroy_render_pipeline_fn)(
     granit_backend_plugin_instance instance, granit_backend_plugin_render_pipeline render_pipeline);
+typedef struct granit_backend_plugin_compute_pipeline_desc {
+  uint32_t struct_size;
+  uint32_t reserved;
+  granit_backend_plugin_pipeline_layout layout;
+  granit_backend_plugin_shader shader;
+} granit_backend_plugin_compute_pipeline_desc;
+typedef granit_result (*granit_backend_plugin_create_compute_pipeline_fn)(
+    granit_backend_plugin_instance instance,
+    const granit_backend_plugin_compute_pipeline_desc* desc,
+    granit_backend_plugin_compute_pipeline* compute_pipeline);
+typedef granit_result (*granit_backend_plugin_destroy_compute_pipeline_fn)(
+    granit_backend_plugin_instance instance,
+    granit_backend_plugin_compute_pipeline compute_pipeline);
 typedef granit_result (*granit_backend_plugin_create_command_recorder_fn)(
     granit_backend_plugin_instance instance, granit_backend_plugin_command_recorder* recorder);
 typedef granit_result (*granit_backend_plugin_destroy_command_recorder_fn)(
@@ -600,6 +615,8 @@ typedef struct granit_backend_plugin_instance_api {
   granit_backend_plugin_recorder_draw_indices_fn recorder_draw_indices;
   granit_backend_plugin_recorder_end_rendering_fn recorder_end_rendering;
   granit_backend_plugin_write_upload_batch_fn write_upload_batch;
+  granit_backend_plugin_create_compute_pipeline_fn create_compute_pipeline;
+  granit_backend_plugin_destroy_compute_pipeline_fn destroy_compute_pipeline;
 } granit_backend_plugin_instance_api;
 
 /** 后端插件入口返回的只读描述；字符串在插件卸载前有效。 */

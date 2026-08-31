@@ -24,6 +24,7 @@ typedef struct WGPUBindGroupImpl* WGPUBindGroup;
 typedef struct WGPUPipelineLayoutImpl* WGPUPipelineLayout;
 typedef struct WGPUShaderModuleImpl* WGPUShaderModule;
 typedef struct WGPURenderPipelineImpl* WGPURenderPipeline;
+typedef struct WGPUComputePipelineImpl* WGPUComputePipeline;
 typedef struct WGPUCommandEncoderImpl* WGPUCommandEncoder;
 typedef struct WGPUCommandBufferImpl* WGPUCommandBuffer;
 typedef struct WGPURenderPassEncoderImpl* WGPURenderPassEncoder;
@@ -493,6 +494,22 @@ typedef struct WGPURenderPipelineDescriptor {
 #define WGPU_RENDER_PIPELINE_DESCRIPTOR_INIT                                                       \
   {                                                                                                \
   }
+typedef struct WGPUComputeState {
+  void* nextInChain;
+  WGPUShaderModule module;
+  WGPUStringView entryPoint;
+  size_t constantCount;
+  const void* constants;
+} WGPUComputeState;
+typedef struct WGPUComputePipelineDescriptor {
+  void* nextInChain;
+  WGPUStringView label;
+  WGPUPipelineLayout layout;
+  WGPUComputeState compute;
+} WGPUComputePipelineDescriptor;
+#define WGPU_COMPUTE_PIPELINE_DESCRIPTOR_INIT                                                      \
+  {                                                                                                \
+  }
 
 typedef struct WGPUCommandEncoderDescriptor {
   void* nextInChain;
@@ -699,6 +716,9 @@ void wgpuShaderModuleRelease(WGPUShaderModule shaderModule);
 WGPURenderPipeline wgpuDeviceCreateRenderPipeline(WGPUDevice device,
                                                   const WGPURenderPipelineDescriptor* descriptor);
 void wgpuRenderPipelineRelease(WGPURenderPipeline pipeline);
+WGPUComputePipeline
+wgpuDeviceCreateComputePipeline(WGPUDevice device, const WGPUComputePipelineDescriptor* descriptor);
+void wgpuComputePipelineRelease(WGPUComputePipeline pipeline);
 WGPUCommandEncoder wgpuDeviceCreateCommandEncoder(WGPUDevice device,
                                                   const WGPUCommandEncoderDescriptor* descriptor);
 void wgpuCommandEncoderRelease(WGPUCommandEncoder encoder);

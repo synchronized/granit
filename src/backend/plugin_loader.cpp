@@ -15,8 +15,8 @@ bool is_compatible(const granit_backend_plugin_api* api,
   constexpr std::size_t minimum_size = offsetof(granit_backend_plugin_api, instance_api) +
                                        sizeof(const granit_backend_plugin_instance_api*);
   constexpr std::size_t minimum_instance_api_size =
-      offsetof(granit_backend_plugin_instance_api, write_upload_batch) +
-      sizeof(granit_backend_plugin_write_upload_batch_fn);
+      offsetof(granit_backend_plugin_instance_api, destroy_compute_pipeline) +
+      sizeof(granit_backend_plugin_destroy_compute_pipeline_fn);
   return api != nullptr && api->struct_size >= minimum_size &&
          api->abi_version == GRANIT_BACKEND_PLUGIN_ABI_VERSION && api->kind == expected_kind &&
          api->reserved == 0 && api->name != nullptr && api->name_length != 0 &&
@@ -72,7 +72,9 @@ bool is_compatible(const granit_backend_plugin_api* api,
          api->instance_api->recorder_draw_vertices != nullptr &&
          api->instance_api->recorder_draw_indices != nullptr &&
          api->instance_api->recorder_end_rendering != nullptr &&
-         api->instance_api->write_upload_batch != nullptr;
+         api->instance_api->write_upload_batch != nullptr &&
+         api->instance_api->create_compute_pipeline != nullptr &&
+         api->instance_api->destroy_compute_pipeline != nullptr;
 }
 
 bool is_valid_host(const granit_backend_plugin_host_api* host) noexcept {
@@ -704,6 +706,11 @@ granit_result backend_plugin_loader::create_pipeline_layout(
 }
 GRANIT_LOADER_DESTROY_METHOD(destroy_pipeline_layout, destroy_pipeline_layout,
                              granit_backend_plugin_pipeline_layout)
+GRANIT_LOADER_CREATE_METHOD(create_compute_pipeline, create_compute_pipeline,
+                            const granit_backend_plugin_compute_pipeline_desc*,
+                            granit_backend_plugin_compute_pipeline)
+GRANIT_LOADER_DESTROY_METHOD(destroy_compute_pipeline, destroy_compute_pipeline,
+                             granit_backend_plugin_compute_pipeline)
 GRANIT_LOADER_CREATE_METHOD(create_render_pipeline, create_render_pipeline,
                             const granit_backend_plugin_render_pipeline_desc*,
                             granit_backend_plugin_render_pipeline)

@@ -90,6 +90,11 @@ struct webgpu_instance {
     granit_backend_plugin_shader vertex_shader;
     granit_backend_plugin_shader fragment_shader;
   };
+  struct compute_pipeline_record {
+    WGPUComputePipeline compute_pipeline;
+    granit_backend_plugin_pipeline_layout pipeline_layout;
+    granit_backend_plugin_shader shader;
+  };
   struct command_recorder_record {
     WGPUCommandEncoder encoder;
     WGPURenderPassEncoder pass;
@@ -136,6 +141,8 @@ struct webgpu_instance {
       pipeline_layouts;
   std::unordered_map<granit_backend_plugin_render_pipeline, render_pipeline_record>
       render_pipelines;
+  std::unordered_map<granit_backend_plugin_compute_pipeline, compute_pipeline_record>
+      compute_pipelines;
   std::unordered_map<granit_backend_plugin_command_recorder, command_recorder_record>
       command_recorders;
   std::unordered_map<granit_backend_plugin_command_buffer, WGPUCommandBuffer> command_buffers;
@@ -183,6 +190,7 @@ std::atomic_uint64_t next_bind_group{1};
 std::atomic_uint64_t next_shader{1};
 std::atomic_uint64_t next_pipeline_layout{1};
 std::atomic_uint64_t next_render_pipeline{1};
+std::atomic_uint64_t next_compute_pipeline{1};
 std::atomic_uint64_t next_command_recorder{1};
 std::atomic_uint64_t next_command_buffer{1};
 std::atomic_uint64_t next_swapchain{1};
@@ -261,6 +269,11 @@ void release_resources(webgpu_instance& state) noexcept {
     wgpuRenderPipelineRelease(pipeline.render_pipeline);
   }
   state.render_pipelines.clear();
+  for (const auto& [handle, pipeline] : state.compute_pipelines) {
+    static_cast<void>(handle);
+    wgpuComputePipelineRelease(pipeline.compute_pipeline);
+  }
+  state.compute_pipelines.clear();
   for (const auto& [handle, shader] : state.shaders) {
     static_cast<void>(handle);
     wgpuShaderModuleRelease(shader.shader);
@@ -1681,7 +1694,8 @@ granit_result create_shader(granit_backend_plugin_instance instance,
       desc->struct_size < sizeof(*desc) || desc->wgsl == nullptr || desc->wgsl_length == 0 ||
       desc->entry_point == nullptr || desc->entry_point_length == 0 ||
       (desc->stage != GRANIT_BACKEND_PLUGIN_SHADER_STAGE_VERTEX &&
-       desc->stage != GRANIT_BACKEND_PLUGIN_SHADER_STAGE_FRAGMENT))
+       desc->stage != GRANIT_BACKEND_PLUGIN_SHADER_STAGE_FRAGMENT &&
+       desc->stage != GRANIT_BACKEND_PLUGIN_SHADER_STAGE_COMPUTE))
     return GRANIT_ERROR_INVALID_ARGUMENT;
   const std::scoped_lock lock{instances_mutex};
   const auto found = instances.find(instance);
@@ -1733,7 +1747,9 @@ granit_result destroy_shader(granit_backend_plugin_instance instance,
                   [shader](const auto& entry) {
                     return entry.second.vertex_shader == shader ||
                            entry.second.fragment_shader == shader;
-                  }))
+                  }) ||
+      std::any_of(state.compute_pipelines.begin(), state.compute_pipelines.end(),
+                  [shader](const auto& entry) { return entry.second.shader == shader; }))
     return GRANIT_ERROR_INVALID_ARGUMENT;
   wgpuShaderModuleRelease(shader_found->second.shader);
   state.shaders.erase(shader_found);
@@ -1815,6 +1831,8 @@ granit_result destroy_pipeline_layout(granit_backend_plugin_instance instance,
   if (layout_found == state.pipeline_layouts.end())
     return GRANIT_ERROR_INVALID_HANDLE;
   if (std::any_of(state.render_pipelines.begin(), state.render_pipelines.end(),
+                  [layout](const auto& entry) { return entry.second.pipeline_layout == layout; }) ||
+      std::any_of(state.compute_pipelines.begin(), state.compute_pipelines.end(),
                   [layout](const auto& entry) { return entry.second.pipeline_layout == layout; }))
     return GRANIT_ERROR_INVALID_ARGUMENT;
   wgpuPipelineLayoutRelease(layout_found->second.pipeline_layout);
@@ -2006,6 +2024,68 @@ granit_result destroy_render_pipeline(granit_backend_plugin_instance instance,
     return GRANIT_ERROR_INVALID_HANDLE;
   wgpuRenderPipelineRelease(pipeline_found->second.render_pipeline);
   found->second->render_pipelines.erase(pipeline_found);
+  return GRANIT_SUCCESS;
+}
+
+granit_result
+create_compute_pipeline(granit_backend_plugin_instance instance,
+                        const granit_backend_plugin_compute_pipeline_desc* desc,
+                        granit_backend_plugin_compute_pipeline* out_pipeline) noexcept {
+  if (out_pipeline != nullptr)
+    *out_pipeline = 0;
+  if (instance == 0 || desc == nullptr || out_pipeline == nullptr ||
+      desc->struct_size < sizeof(granit_backend_plugin_compute_pipeline_desc) ||
+      desc->reserved != 0 || desc->layout == 0 || desc->shader == 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  const std::scoped_lock lock{instances_mutex};
+  const auto found = instances.find(instance);
+  if (found == instances.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  if (const auto ready = require_ready(*found->second); ready != GRANIT_SUCCESS)
+    return ready;
+  auto& state = *found->second;
+  const auto layout = state.pipeline_layouts.find(desc->layout);
+  const auto shader = state.shaders.find(desc->shader);
+  if (layout == state.pipeline_layouts.end() || shader == state.shaders.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  if (shader->second.stage != GRANIT_BACKEND_PLUGIN_SHADER_STAGE_COMPUTE)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  WGPUComputePipelineDescriptor descriptor = WGPU_COMPUTE_PIPELINE_DESCRIPTOR_INIT;
+  descriptor.layout = layout->second.pipeline_layout;
+  descriptor.compute.module = shader->second.shader;
+  descriptor.compute.entryPoint = {shader->second.entry_point.data(),
+                                   shader->second.entry_point.size()};
+  const auto native = wgpuDeviceCreateComputePipeline(state.device, &descriptor);
+  if (native == nullptr)
+    return GRANIT_ERROR_OUT_OF_MEMORY;
+  const auto handle = next_handle<granit_backend_plugin_compute_pipeline>(next_compute_pipeline);
+  try {
+    const webgpu_instance::compute_pipeline_record record{native, desc->layout, desc->shader};
+    if (!state.compute_pipelines.emplace(handle, record).second) {
+      wgpuComputePipelineRelease(native);
+      return GRANIT_ERROR_INTERNAL;
+    }
+  } catch (...) {
+    wgpuComputePipelineRelease(native);
+    return GRANIT_ERROR_OUT_OF_MEMORY;
+  }
+  *out_pipeline = handle;
+  return GRANIT_SUCCESS;
+}
+
+granit_result destroy_compute_pipeline(granit_backend_plugin_instance instance,
+                                       granit_backend_plugin_compute_pipeline pipeline) noexcept {
+  if (instance == 0 || pipeline == 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  const std::scoped_lock lock{instances_mutex};
+  const auto found = instances.find(instance);
+  if (found == instances.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  const auto pipeline_found = found->second->compute_pipelines.find(pipeline);
+  if (pipeline_found == found->second->compute_pipelines.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  wgpuComputePipelineRelease(pipeline_found->second.compute_pipeline);
+  found->second->compute_pipelines.erase(pipeline_found);
   return GRANIT_SUCCESS;
 }
 
@@ -2987,7 +3067,9 @@ constexpr granit_backend_plugin_instance_api instance_api{
     recorder_draw_vertices,
     recorder_draw_indices,
     recorder_end_rendering,
-    write_upload_batch};
+    write_upload_batch,
+    create_compute_pipeline,
+    destroy_compute_pipeline};
 constexpr granit_backend_plugin_api plugin_api{sizeof(granit_backend_plugin_api),
                                                GRANIT_BACKEND_PLUGIN_ABI_VERSION,
                                                GRANIT_BACKEND_PLUGIN_KIND_WEBGPU,

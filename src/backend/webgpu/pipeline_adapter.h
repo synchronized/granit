@@ -24,6 +24,8 @@ public:
   [[nodiscard]] std::unique_ptr<backend_pipeline_layout_resource> allocate_pipeline_layout() const;
   [[nodiscard]] std::unique_ptr<backend_graphics_pipeline_resource>
   allocate_graphics_pipeline() const;
+  [[nodiscard]] std::unique_ptr<backend_compute_pipeline_resource>
+  allocate_compute_pipeline() const;
   [[nodiscard]] granit_result
   validate_graphics_pipeline(const granit_graphics_pipeline_desc& desc) const noexcept;
   [[nodiscard]] granit_result
@@ -31,6 +33,10 @@ public:
                          backend_pipeline_layout_resource& resource) const noexcept;
   [[nodiscard]] granit_backend_plugin_pipeline_layout
   native_pipeline_layout(backend_pipeline_layout_resource& resource) const noexcept;
+  [[nodiscard]] granit_result
+  create_compute_pipeline(backend_compute_pipeline_resource& resource,
+                          granit_backend_plugin_pipeline_layout layout,
+                          granit_backend_plugin_shader shader) const noexcept;
   [[nodiscard]] granit_result create_graphics_pipeline(
       backend_graphics_pipeline_resource& resource, backend_pipeline_layout_resource& layout,
       granit_backend_plugin_shader vertex_shader, granit_backend_plugin_shader fragment_shader,

@@ -41,6 +41,18 @@ public:
   granit_backend_plugin_render_pipeline handle_{};
 };
 
+class webgpu_compute_pipeline_resource final : public backend_compute_pipeline_resource {
+public:
+  explicit webgpu_compute_pipeline_resource(std::shared_ptr<webgpu_pipeline_context> context)
+      : context_(std::move(context)) {}
+  ~webgpu_compute_pipeline_resource() override {
+    if (handle_ != 0)
+      static_cast<void>(context_->loader->destroy_compute_pipeline(context_->instance, handle_));
+  }
+  std::shared_ptr<webgpu_pipeline_context> context_;
+  granit_backend_plugin_compute_pipeline handle_{};
+};
+
 webgpu_pipeline_layout_resource* as_layout(backend_pipeline_layout_resource& resource) {
   return dynamic_cast<webgpu_pipeline_layout_resource*>(&resource);
 }
@@ -77,6 +89,11 @@ webgpu_pipeline_adapter::allocate_graphics_pipeline() const {
   return std::make_unique<webgpu_graphics_pipeline_resource>(context_);
 }
 
+std::unique_ptr<backend_compute_pipeline_resource>
+webgpu_pipeline_adapter::allocate_compute_pipeline() const {
+  return std::make_unique<webgpu_compute_pipeline_resource>(context_);
+}
+
 granit_result webgpu_pipeline_adapter::validate_graphics_pipeline(
     const granit_graphics_pipeline_desc& desc) const noexcept {
   if (desc.color_format_count != 1 ||
@@ -108,6 +125,16 @@ granit_backend_plugin_pipeline_layout webgpu_pipeline_adapter::native_pipeline_l
     backend_pipeline_layout_resource& resource) const noexcept {
   const auto* layout = as_layout(resource);
   return layout == nullptr ? 0 : layout->handle_;
+}
+
+granit_result webgpu_pipeline_adapter::create_compute_pipeline(
+    backend_compute_pipeline_resource& resource, granit_backend_plugin_pipeline_layout layout,
+    granit_backend_plugin_shader shader) const noexcept {
+  auto* pipeline = dynamic_cast<webgpu_compute_pipeline_resource*>(&resource);
+  if (pipeline == nullptr || pipeline->handle_ != 0 || layout == 0 || shader == 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  const granit_backend_plugin_compute_pipeline_desc desc{sizeof(desc), 0, layout, shader};
+  return context_->loader->create_compute_pipeline(context_->instance, &desc, &pipeline->handle_);
 }
 
 granit_result webgpu_pipeline_adapter::create_graphics_pipeline(

@@ -141,14 +141,16 @@ webgpu_renderer_state::create_bind_group(backend_bind_group_layout_resource& lay
 
 std::unique_ptr<backend_compute_pipeline_resource>
 webgpu_renderer_state::allocate_compute_pipeline_resource() {
-  return std::make_unique<backend_compute_pipeline_resource>();
+  return pipelines_ ? pipelines_->allocate_compute_pipeline() : nullptr;
 }
 
-granit_result
-webgpu_renderer_state::create_compute_pipeline(backend_pipeline_layout_resource&,
-                                               backend_shader_resource&, const char*,
-                                               backend_compute_pipeline_resource&) noexcept {
-  return GRANIT_ERROR_UNSUPPORTED;
+granit_result webgpu_renderer_state::create_compute_pipeline(
+    backend_pipeline_layout_resource& layout, backend_shader_resource& shader, const char*,
+    backend_compute_pipeline_resource& pipeline) noexcept {
+  if (!pipelines_ || !shaders_)
+    return GRANIT_ERROR_UNSUPPORTED;
+  return pipelines_->create_compute_pipeline(pipeline, pipelines_->native_pipeline_layout(layout),
+                                             shaders_->native_handle(shader));
 }
 
 granit_result

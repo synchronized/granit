@@ -54,6 +54,7 @@ struct WGPUBindGroupImpl {};
 struct WGPUPipelineLayoutImpl {};
 struct WGPUShaderModuleImpl {};
 struct WGPURenderPipelineImpl {};
+struct WGPUComputePipelineImpl {};
 struct WGPUCommandEncoderImpl {
   bool finished{};
 };
@@ -384,6 +385,14 @@ wgpuDeviceCreateRenderPipeline(WGPUDevice, const WGPURenderPipelineDescriptor* d
              : nullptr;
 }
 extern "C" void wgpuRenderPipelineRelease(WGPURenderPipeline pipeline) { delete pipeline; }
+extern "C" WGPUComputePipeline
+wgpuDeviceCreateComputePipeline(WGPUDevice, const WGPUComputePipelineDescriptor* descriptor) {
+  return descriptor != nullptr && descriptor->layout != nullptr &&
+                 descriptor->compute.module != nullptr
+             ? new WGPUComputePipelineImpl
+             : nullptr;
+}
+extern "C" void wgpuComputePipelineRelease(WGPUComputePipeline pipeline) { delete pipeline; }
 
 extern "C" WGPUCommandEncoder wgpuDeviceCreateCommandEncoder(WGPUDevice,
                                                              const WGPUCommandEncoderDescriptor*) {

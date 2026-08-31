@@ -21,6 +21,7 @@ constexpr std::string_view vertex_wgsl =
 constexpr std::string_view fragment_wgsl = R"(@fragment fn fs_main() -> @location(0) vec4f {
   return vec4f(0.2, 0.7, 0.4, 1.0);
 })";
+constexpr std::string_view compute_wgsl = R"(@compute @workgroup_size(1) fn cs_main() {})";
 
 struct host_state {
   std::uint32_t allocations{};
@@ -671,6 +672,24 @@ TEST_CASE("WebGPU 插件绑定与 Pipeline 遵守依赖生命周期", "[backend]
   CHECK(invalid_shader == 0);
   REQUIRE(loader.create_shader(first, &vertex_desc, &vertex_shader) == GRANIT_SUCCESS);
   REQUIRE(loader.create_shader(first, &fragment_desc, &fragment_shader) == GRANIT_SUCCESS);
+  auto compute_desc = vertex_desc;
+  compute_desc.stage = GRANIT_BACKEND_PLUGIN_SHADER_STAGE_COMPUTE;
+  compute_desc.wgsl = compute_wgsl.data();
+  compute_desc.wgsl_length = compute_wgsl.size();
+  compute_desc.entry_point = "cs_main";
+  granit_backend_plugin_shader compute_shader{};
+  REQUIRE(loader.create_shader(first, &compute_desc, &compute_shader) == GRANIT_SUCCESS);
+  granit_backend_plugin_compute_pipeline_desc compute_pipeline_desc{
+      sizeof(granit_backend_plugin_compute_pipeline_desc), 0, pipeline_layout, compute_shader};
+  granit_backend_plugin_compute_pipeline compute_pipeline{};
+  REQUIRE(loader.create_compute_pipeline(first, &compute_pipeline_desc, &compute_pipeline) ==
+          GRANIT_SUCCESS);
+  compute_pipeline_desc.shader = vertex_shader;
+  granit_backend_plugin_compute_pipeline invalid_compute = 123;
+  CHECK(loader.create_compute_pipeline(first, &compute_pipeline_desc, &invalid_compute) ==
+        GRANIT_ERROR_INVALID_ARGUMENT);
+  CHECK(invalid_compute == 0);
+  compute_pipeline_desc.shader = compute_shader;
   granit_backend_plugin_render_pipeline_desc pipeline_desc{
       sizeof(granit_backend_plugin_render_pipeline_desc),
       0,
@@ -799,6 +818,7 @@ TEST_CASE("WebGPU 插件绑定与 Pipeline 遵守依赖生命周期", "[backend]
   REQUIRE(loader.destroy_texture_view(first, target_view) == GRANIT_SUCCESS);
   REQUIRE(loader.destroy_texture(first, target_texture) == GRANIT_SUCCESS);
   CHECK(loader.destroy_pipeline_layout(first, pipeline_layout) == GRANIT_ERROR_INVALID_ARGUMENT);
+  CHECK(loader.destroy_shader(first, compute_shader) == GRANIT_ERROR_INVALID_ARGUMENT);
   CHECK(loader.destroy_shader(first, vertex_shader) == GRANIT_ERROR_INVALID_ARGUMENT);
   CHECK(loader.destroy_bind_group_layout(first, bind_group_layout) ==
         GRANIT_ERROR_INVALID_ARGUMENT);
@@ -807,6 +827,8 @@ TEST_CASE("WebGPU 插件绑定与 Pipeline 遵守依赖生命周期", "[backend]
 
   REQUIRE(loader.destroy_render_pipeline(first, pipeline) == GRANIT_SUCCESS);
   REQUIRE(loader.destroy_render_pipeline(first, geometry_pipeline) == GRANIT_SUCCESS);
+  REQUIRE(loader.destroy_compute_pipeline(first, compute_pipeline) == GRANIT_SUCCESS);
+  REQUIRE(loader.destroy_shader(first, compute_shader) == GRANIT_SUCCESS);
   CHECK(loader.destroy_render_pipeline(first, pipeline) == GRANIT_ERROR_INVALID_HANDLE);
   REQUIRE(loader.destroy_pipeline_layout(first, pipeline_layout) == GRANIT_SUCCESS);
   REQUIRE(loader.destroy_shader(first, vertex_shader) == GRANIT_SUCCESS);

@@ -4,6 +4,7 @@
 #include <catch2/catch_all.hpp>
 
 #include <array>
+#include <string_view>
 
 #include "backend/webgpu/renderer_state.h"
 
@@ -176,6 +177,15 @@ TEST_CASE("WebGPU Renderer 状态集中管理静态 Provider 生命周期", "[ba
   const std::array<granit::detail::backend_bind_group_layout_resource*, 2> pipeline_layouts{
       bind_group_layout.get(), bind_group_layout.get()};
   REQUIRE(state.create_pipeline_layout(pipeline_layouts, *pipeline_layout) == GRANIT_SUCCESS);
+  auto compute_shader = state.allocate_shader_resource();
+  REQUIRE(compute_shader != nullptr);
+  constexpr std::string_view compute_source = "@compute @workgroup_size(1) fn cs_main() {}";
+  REQUIRE(state.create_wgsl_shader(*compute_shader, GRANIT_SHADER_STAGE_COMPUTE, compute_source,
+                                   "cs_main") == GRANIT_SUCCESS);
+  auto compute_pipeline = state.allocate_compute_pipeline_resource();
+  REQUIRE(compute_pipeline != nullptr);
+  REQUIRE(state.create_compute_pipeline(*pipeline_layout, *compute_shader, "cs_main",
+                                        *compute_pipeline) == GRANIT_SUCCESS);
   auto empty_pipeline_layout = state.allocate_pipeline_layout_resource();
   REQUIRE(empty_pipeline_layout != nullptr);
   REQUIRE(state.create_pipeline_layout({}, *empty_pipeline_layout) == GRANIT_SUCCESS);
