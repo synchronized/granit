@@ -560,6 +560,7 @@ target_compile_definitions(
   granit_renderer_test
   PRIVATE
     GRANIT_TEST_ASSET_DIR="${PROJECT_SOURCE_DIR}/tests/assets"
+    GRANIT_TEST_ARTIFACT_DIR="${CMAKE_BINARY_DIR}/test-artifacts"
     GRANIT_FAKE_BACKEND_PLUGIN_PATH="$<TARGET_FILE:granit_fake_backend_plugin>"
 )
 add_dependencies(granit_renderer_test granit_fake_backend_plugin)

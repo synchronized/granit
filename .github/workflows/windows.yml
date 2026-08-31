@@ -39,6 +39,13 @@ jobs:
           # 托管 Windows Runner 没有 Vulkan ICD；GPU 运行测试由 Linux Lavapipe 矩阵覆盖。
           ctest --preset '${{ steps.preset.outputs.name }}' `
             -E 'granit\.renderer\.lifecycle_diagnostic|granit\.window_renderer|granit\.example\.'
+      - name: 上传渲染 Fixture 失败诊断
+        if: failure()
+        uses: actions/upload-artifact@v6
+        with:
+          name: s12-fixture-windows-${{ matrix.linkage }}
+          path: build/${{ steps.preset.outputs.name }}/test-artifacts
+          if-no-files-found: ignore
       - name: 安装并审计包
         shell: pwsh
         run: |

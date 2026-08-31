@@ -15,7 +15,9 @@
 #include <atomic>
 #include <barrier>
 #include <cstddef>
+#include <cstdlib>
 #include <cstring>
+#include <filesystem>
 #include <fstream>
 #include <iterator>
 #include <span>
@@ -97,6 +99,80 @@ void count_validation_errors(granit_diagnostic_severity severity,
       category == GRANIT_DIAGNOSTIC_CATEGORY_VALIDATION) {
     static_cast<std::atomic_uint32_t*>(user_data)->fetch_add(1, std::memory_order_relaxed);
   }
+}
+
+struct pixel_probe {
+  std::uint32_t x{};
+  std::uint32_t y{};
+  std::array<std::uint8_t, 3> expected{};
+  std::uint8_t tolerance{};
+};
+
+bool pixel_matches(const std::uint8_t* pixels, std::uint32_t width, const pixel_probe& probe) {
+  const auto* actual = pixels + (static_cast<std::size_t>(probe.y) * width + probe.x) * 4;
+  for (std::size_t channel = 0; channel < probe.expected.size(); ++channel) {
+    const auto difference =
+        std::abs(static_cast<int>(actual[channel]) - static_cast<int>(probe.expected[channel]));
+    if (difference > probe.tolerance)
+      return false;
+  }
+  return true;
+}
+
+void write_ppm(const std::filesystem::path& path, std::span<const std::uint8_t> pixels,
+               std::uint32_t width, std::uint32_t height) {
+  std::ofstream stream{path, std::ios::binary};
+  if (!stream)
+    return;
+  stream << "P6\n" << width << ' ' << height << "\n255\n";
+  for (std::size_t index = 0; index < pixels.size(); index += 4)
+    stream.write(reinterpret_cast<const char*>(pixels.data() + index), 3);
+}
+
+std::string fixture_artifact_prefix(const granit::renderer_info& info) {
+  return std::string{"s12_fixture_"} +
+         (info.backend == granit::renderer_backend::vulkan ? "vulkan" : "webgpu");
+}
+
+void clear_fixture_diagnostics(const granit::renderer_info& info) {
+  const std::filesystem::path directory{GRANIT_TEST_ARTIFACT_DIR};
+  const auto prefix = fixture_artifact_prefix(info);
+  std::error_code error;
+  for (const auto* suffix : {"_actual.ppm", "_expected.ppm", "_difference.ppm", "_metadata.txt"}) {
+    std::filesystem::remove(directory / (prefix + suffix), error);
+    error.clear();
+  }
+}
+
+void write_fixture_diagnostics(std::span<const std::uint8_t> actual, std::uint32_t width,
+                               std::uint32_t height, std::span<const pixel_probe> probes,
+                               const granit::renderer_info& info) {
+  const auto backend_name = info.backend == granit::renderer_backend::vulkan ? "vulkan" : "webgpu";
+  const std::filesystem::path directory{GRANIT_TEST_ARTIFACT_DIR};
+  std::error_code error;
+  std::filesystem::create_directories(directory, error);
+  if (error)
+    return;
+  std::vector<std::uint8_t> expected(actual.begin(), actual.end());
+  for (const auto& probe : probes) {
+    auto* pixel = expected.data() + (static_cast<std::size_t>(probe.y) * width + probe.x) * 4;
+    std::copy(probe.expected.begin(), probe.expected.end(), pixel);
+  }
+  std::vector<std::uint8_t> difference(actual.size());
+  for (std::size_t index = 0; index < actual.size(); ++index) {
+    difference[index] = static_cast<std::uint8_t>(
+        std::abs(static_cast<int>(actual[index]) - static_cast<int>(expected[index])));
+  }
+  const auto prefix = fixture_artifact_prefix(info);
+  write_ppm(directory / (prefix + "_actual.ppm"), actual, width, height);
+  write_ppm(directory / (prefix + "_expected.ppm"), expected, width, height);
+  write_ppm(directory / (prefix + "_difference.ppm"), difference, width, height);
+  std::ofstream metadata{directory / (prefix + "_metadata.txt")};
+  metadata << "backend=" << backend_name << '\n'
+           << "adapter=" << info.adapter_name << '\n'
+           << "vendor_id=" << info.vendor_id << '\n'
+           << "device_id=" << info.device_id << '\n'
+           << "expected_image=actual image with semantic probe pixels corrected\n";
 }
 
 TEST_CASE("空 Pipeline Layout 具有独立生命周期和 Renderer domain", "[pipeline]") {
@@ -306,6 +382,9 @@ TEST_CASE("跨后端索引纹理 Fixture 使用动态 Uniform 绘制两个对象
     SKIP("当前运行环境不支持验证层或没有满足要求的 Vulkan 设备");
   REQUIRE(result == granit::result::success);
   REQUIRE(renderer.process_events() == granit::result::success);
+  granit::renderer_info renderer_info;
+  REQUIRE(renderer.get_info(renderer_info) == granit::result::success);
+  clear_fixture_diagnostics(renderer_info);
 
   const auto vertex_code = load_shader("dynamic_uniform.vert.spv");
   const auto fragment_code = load_shader("dynamic_uniform.frag.spv");
@@ -535,16 +614,23 @@ TEST_CASE("跨后端索引纹理 Fixture 使用动态 Uniform 绘制两个对象
   void* mapped = nullptr;
   REQUIRE(readback.map(0, width * height * 4, &mapped) == granit::result::success);
   const auto* pixels = static_cast<const std::uint8_t*>(mapped);
-  const auto* left = pixels + (height / 2 * width + width / 4) * 4;
-  const auto* right = pixels + (height / 2 * width + width * 3 / 4) * 4;
-  CHECK(left[0] >= 127);
-  CHECK(left[0] <= 131);
-  CHECK(left[1] < 16);
-  CHECK(left[2] < 16);
-  CHECK(right[0] < 16);
-  CHECK(right[1] >= 77);
-  CHECK(right[1] <= 81);
-  CHECK(right[2] < 16);
+  const std::array probes{
+      pixel_probe{0, 0, {0, 0, 0}, 0},
+      pixel_probe{width / 2, height / 2, {0, 0, 0}, 0},
+      pixel_probe{width / 4, height / 2, {129, 0, 0}, 2},
+      pixel_probe{width * 3 / 4, height / 2, {0, 79, 0}, 2},
+  };
+  const auto image = std::span{pixels, static_cast<std::size_t>(width) * height * 4};
+  const auto matches = std::all_of(probes.begin(), probes.end(), [&](const auto& probe) {
+    return pixel_matches(pixels, width, probe);
+  });
+  if (!matches)
+    write_fixture_diagnostics(image, width, height, probes, renderer_info);
+  INFO("Fixture 失败诊断目录: " << GRANIT_TEST_ARTIFACT_DIR);
+  for (const auto& probe : probes) {
+    CAPTURE(probe.x, probe.y, probe.expected, probe.tolerance);
+    CHECK(pixel_matches(pixels, width, probe));
+  }
   REQUIRE(readback.unmap() == granit::result::success);
   CHECK(validation_errors.load(std::memory_order_relaxed) == 0);
   REQUIRE(granit_texture_view_destroy(renderer.native_handle(), target_view) == GRANIT_SUCCESS);

@@ -71,6 +71,13 @@ jobs:
             exit 1
           }
           xvfb-run -a ctest --preset "${{ steps.preset.outputs.name }}"
+      - name: 上传渲染 Fixture 失败诊断
+        if: failure()
+        uses: actions/upload-artifact@v6
+        with:
+          name: s12-fixture-linux-${{ matrix.compiler }}-${{ matrix.linkage }}
+          path: build/${{ steps.preset.outputs.name }}/test-artifacts
+          if-no-files-found: ignore
       - name: 安装并验证独立 C 和 C++ Consumer
         shell: bash
         run: |

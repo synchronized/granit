@@ -279,8 +279,13 @@ WebGPU 命令适配器暂存这些状态，并在 Provider 打开 Render Pass �
 Normal 与 Metallic-Roughness Texture，以及共享 Sampler，再从同一个 Uniform Buffer 使用两个动态
 Offset 完成两次 Indexed Draw，并以 RGBA8 回读探针验证纹理、法线、材质参数与实例颜色组合结果。
 测试同时固定资源销毁路径；WebGPU 依赖命令对象持有已编码资源的引用，因此公共资源记录退出后可
-立即释放应用侧 Provider 引用，不需要复制 Vulkan 的提交序列延迟回收队列。遮挡探针、失败图像
-产物，以及桌面 Dawn 和浏览器实机执行仍属于 S-12F 后续工作。
+立即释放应用侧 Provider 引用，不需要复制 Vulkan 的提交序列延迟回收队列。深度遮挡探针，以及
+桌面 Dawn 和浏览器实机执行仍属于 S-12F 后续工作。
+
+当前测试已增加背景、两个实例和实例间隙的语义探针。探针失败时在构建目录的
+`test-artifacts` 中写出实际图、按语义探针修正的期望图、绝对差异图和 Renderer/Adapter 元数据；
+成功前会清理同后端的旧诊断文件。Windows 与 Linux 手动工作流只在失败时上传该目录，避免成功
+任务产生无意义产物。真正依赖深度关系的遮挡探针将在 WebGPU Depth Attachment 接通后补充。
 
 - Vulkan、桌面 Dawn 与 Emscripten 调用同一 Fixture 函数；只在 Renderer 创建参数中选择
   后端，测试正文不含后端条件分支。
@@ -311,8 +316,8 @@ Offset 完成两次 Indexed Draw，并以 RGBA8 回读探针验证纹理、法�
 5. **S-12E 每帧数据（已完成）**：已将动态 Uniform Offset、对齐限制、混合 Upload Batch 和
    Compute 命令路径映射到两个后端。
 6. **S-12F 跨后端 Fixture（进行中）**：带 Base Color、Normal 和 Metallic-Roughness Texture
-   的索引几何及动态 Uniform 离屏 Fixture 已在 Vulkan 与 WebGPU Mock 共用；下一步补齐遮挡探针
-   与诊断产物，并接入桌面 WebGPU 和浏览器 WebGPU 执行。
+   的索引几何及动态 Uniform 离屏 Fixture 已在 Vulkan 与 WebGPU Mock 共用，背景/间隙探针与失败
+   诊断产物也已接入；下一步补齐深度遮挡并接入桌面 WebGPU 和浏览器 WebGPU 执行。
 7. **S-12G 验收**：验证公共头、共享/静态安装 Consumer、错误路径、截图结果和平台矩阵。
 
 ## 测试与验收
