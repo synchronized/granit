@@ -18,7 +18,7 @@ jobs:
         linkage: [shared, static]
     steps:
       - uses: actions/checkout@v5
-      - uses: ilammy/msvc-dev-cmd@v1
+      - uses: ./.github/actions/setup-msvc
         with:
           arch: x64
       - name: 启用 MSVC 编译缓存

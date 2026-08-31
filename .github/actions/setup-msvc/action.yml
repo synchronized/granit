@@ -1,0 +1,42 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Granit contributors
+
+name: 配置 MSVC 开发环境
+description: 使用 GitHub Windows Runner 自带的 VsDevCmd.bat 配置 MSVC
+
+inputs:
+  arch:
+    description: 目标架构
+    required: false
+    default: x64
+
+runs:
+  using: composite
+  steps:
+    - name: 导出 MSVC 环境变量
+      shell: pwsh
+      env:
+        GRANIT_MSVC_ARCH: ${{ inputs.arch }}
+      run: |
+        $vswhere = "${env:ProgramFiles(x86)}/Microsoft Visual Studio/Installer/vswhere.exe"
+        if (-not (Test-Path -LiteralPath $vswhere -PathType Leaf)) {
+          throw "未找到 Visual Studio Installer 的 vswhere.exe"
+        }
+        $installation = & $vswhere -latest -products * `
+          -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 `
+          -property installationPath
+        if (-not $installation) { throw "未找到包含 MSVC 工具链的 Visual Studio" }
+        $devCmd = Join-Path $installation.Trim() "Common7/Tools/VsDevCmd.bat"
+        if (-not (Test-Path -LiteralPath $devCmd -PathType Leaf)) {
+          throw "未找到 VsDevCmd.bat：$devCmd"
+        }
+        $command = "`"$devCmd`" -no_logo -arch=$env:GRANIT_MSVC_ARCH >nul && set"
+        $variables = & $env:COMSPEC /d /s /c $command
+        if ($LASTEXITCODE -ne 0) { throw "VsDevCmd.bat 执行失败" }
+        foreach ($line in $variables) {
+          if ($line -notmatch '^([^=]+)=(.*)$') { continue }
+          $name = $Matches[1]
+          $value = $Matches[2]
+          if ($name -match '^(GITHUB_|RUNNER_)' -or $name -eq 'NODE_OPTIONS') { continue }
+          "$name=$value" | Add-Content -Encoding utf8 $env:GITHUB_ENV
+        }

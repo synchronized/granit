@@ -42,7 +42,7 @@ jobs:
     timeout-minutes: 120
     steps:
       - uses: actions/checkout@v5
-      - uses: ilammy/msvc-dev-cmd@v1
+      - uses: ./.github/actions/setup-msvc
         with:
           arch: x64
       - name: 启用编译缓存
