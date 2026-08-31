@@ -650,6 +650,10 @@ WGPUBuffer wgpuDeviceCreateBuffer(WGPUDevice device, const WGPUBufferDescriptor*
 void wgpuBufferRelease(WGPUBuffer buffer);
 void wgpuQueueWriteBuffer(WGPUQueue queue, WGPUBuffer buffer, unsigned long long offset,
                           const void* data, size_t size);
+void wgpuQueueWriteTexture(WGPUQueue queue, const WGPUTexelCopyTextureInfo* destination,
+                           const void* data, size_t dataSize,
+                           const WGPUTexelCopyBufferLayout* dataLayout,
+                           const WGPUExtent3D* writeSize);
 WGPUFuture wgpuBufferMapAsync(WGPUBuffer buffer, WGPUMapMode mode, size_t offset, size_t size,
                               WGPUBufferMapCallbackInfo callbackInfo);
 const void* wgpuBufferGetConstMappedRange(WGPUBuffer buffer, size_t offset, size_t size);

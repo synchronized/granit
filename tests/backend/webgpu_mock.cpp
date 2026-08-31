@@ -3,6 +3,7 @@
 
 #include <webgpu/webgpu.h>
 
+#include <algorithm>
 #include <cstring>
 #include <vector>
 
@@ -21,6 +22,8 @@ struct WGPUTextureImpl {
   unsigned int width;
   unsigned int height;
   WGPUTextureUsage usage;
+  WGPUTextureFormat format;
+  unsigned int mip_levels;
   std::vector<unsigned char> bytes;
 };
 struct WGPUTextureViewImpl {
@@ -137,6 +140,7 @@ extern "C" void wgpuSurfaceGetCurrentTexture(WGPUSurface surface,
   }
   surface->current = new WGPUTextureImpl{
       surface->width, surface->height, WGPUTextureUsage_RenderAttachment,
+      surface->format, 1,
       std::vector<unsigned char>(static_cast<std::size_t>(surface->width) * surface->height * 4)};
   surface_texture->texture = surface->current;
   surface_texture->status = WGPUSurfaceGetCurrentTextureStatus_SuccessOptimal;
@@ -236,6 +240,39 @@ extern "C" void wgpuQueueWriteBuffer(WGPUQueue, WGPUBuffer buffer, unsigned long
   std::memcpy(buffer->bytes.data() + static_cast<std::size_t>(offset), data, size);
 }
 
+extern "C" void wgpuQueueWriteTexture(WGPUQueue, const WGPUTexelCopyTextureInfo* destination,
+                                       const void* data, size_t data_size,
+                                       const WGPUTexelCopyBufferLayout* layout,
+                                       const WGPUExtent3D* write_size) {
+  if (destination == nullptr || destination->texture == nullptr || data == nullptr ||
+      layout == nullptr || write_size == nullptr)
+    return;
+  auto* texture = destination->texture;
+  const auto bytes_per_pixel = texture->format == WGPUTextureFormat_R8Unorm
+                                   ? 1U
+                                   : texture->format == WGPUTextureFormat_RG8Unorm ? 2U : 4U;
+  std::size_t mip_offset{};
+  for (unsigned int mip = 0; mip < destination->mipLevel; ++mip) {
+    mip_offset += static_cast<std::size_t>(std::max(1U, texture->width >> mip)) *
+                  std::max(1U, texture->height >> mip) * bytes_per_pixel;
+  }
+  const auto mip_width = std::max(1U, texture->width >> destination->mipLevel);
+  const auto source_row = layout->bytesPerRow;
+  const auto tight_row = static_cast<std::size_t>(write_size->width) * bytes_per_pixel;
+  if (data_size < (static_cast<std::size_t>(write_size->height) - 1) * source_row + tight_row)
+    return;
+  for (unsigned int row = 0; row < write_size->height; ++row) {
+    const auto destination_offset =
+        mip_offset + (static_cast<std::size_t>(destination->origin.y + row) * mip_width +
+                      destination->origin.x) *
+                         bytes_per_pixel;
+    std::memcpy(texture->bytes.data() + destination_offset,
+                static_cast<const unsigned char*>(data) + layout->offset +
+                    static_cast<std::size_t>(row) * source_row,
+                tight_row);
+  }
+}
+
 extern "C" WGPUFuture wgpuBufferMapAsync(WGPUBuffer buffer, WGPUMapMode, size_t offset, size_t size,
                                          WGPUBufferMapCallbackInfo callback_info) {
   const auto valid = buffer != nullptr && offset <= buffer->bytes.size() &&
@@ -270,10 +307,16 @@ extern "C" WGPUTexture wgpuDeviceCreateTexture(WGPUDevice,
       descriptor->mipLevelCount == 0 || !supported_format) {
     return nullptr;
   }
-  return new WGPUTextureImpl{
-      descriptor->size.width, descriptor->size.height, descriptor->usage,
-      std::vector<unsigned char>(static_cast<std::size_t>(descriptor->size.width) *
-                                 descriptor->size.height * 4)};
+  const auto bytes_per_pixel = descriptor->format == WGPUTextureFormat_R8Unorm
+                                   ? 1U
+                                   : descriptor->format == WGPUTextureFormat_RG8Unorm ? 2U : 4U;
+  std::size_t byte_count{};
+  for (unsigned int mip = 0; mip < descriptor->mipLevelCount; ++mip)
+    byte_count += static_cast<std::size_t>(std::max(1U, descriptor->size.width >> mip)) *
+                  std::max(1U, descriptor->size.height >> mip) * bytes_per_pixel;
+  return new WGPUTextureImpl{descriptor->size.width, descriptor->size.height, descriptor->usage,
+                             descriptor->format, descriptor->mipLevelCount,
+                             std::vector<unsigned char>(byte_count)};
 }
 
 extern "C" void wgpuTextureRelease(WGPUTexture texture) { delete texture; }

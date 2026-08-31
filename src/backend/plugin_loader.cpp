@@ -26,6 +26,7 @@ bool is_compatible(const granit_backend_plugin_api* api,
          api->instance_api->create_buffer != nullptr &&
          api->instance_api->destroy_buffer != nullptr &&
          api->instance_api->write_buffer != nullptr && api->instance_api->read_buffer != nullptr &&
+         api->instance_api->write_texture != nullptr &&
          api->instance_api->create_texture != nullptr &&
          api->instance_api->destroy_texture != nullptr &&
          api->instance_api->create_texture_view != nullptr &&
@@ -512,6 +513,22 @@ backend_plugin_loader::destroy_texture(granit_backend_plugin_instance instance,
   }
   try {
     return api_->instance_api->destroy_texture(instance, texture);
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+granit_result backend_plugin_loader::write_texture(
+    granit_backend_plugin_instance instance, granit_backend_plugin_texture texture,
+    const granit_backend_plugin_texture_write_desc* desc, const void* data,
+    std::uint64_t size) noexcept {
+  if (api_ == nullptr || instance == 0 || texture == 0 || desc == nullptr || data == nullptr ||
+      size == 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  if (std::find(instances_.begin(), instances_.end(), instance) == instances_.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  try {
+    return api_->instance_api->write_texture(instance, texture, desc, data, size);
   } catch (...) {
     return GRANIT_ERROR_INTERNAL;
   }

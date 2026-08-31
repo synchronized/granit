@@ -954,6 +954,21 @@ WGPUTextureFormat to_native_texture_format(granit_backend_plugin_texture_format 
   }
 }
 
+std::uint32_t texture_bytes_per_pixel(granit_backend_plugin_texture_format format) noexcept {
+  switch (format) {
+  case GRANIT_BACKEND_PLUGIN_TEXTURE_FORMAT_R8_UNORM:
+    return 1;
+  case GRANIT_BACKEND_PLUGIN_TEXTURE_FORMAT_RG8_UNORM:
+    return 2;
+  case GRANIT_BACKEND_PLUGIN_TEXTURE_FORMAT_RGBA8_UNORM:
+  case GRANIT_BACKEND_PLUGIN_TEXTURE_FORMAT_RGBA8_SRGB:
+  case GRANIT_BACKEND_PLUGIN_TEXTURE_FORMAT_D32_FLOAT:
+    return 4;
+  default:
+    return 0;
+  }
+}
+
 granit_result create_texture(granit_backend_plugin_instance instance,
                              const granit_backend_plugin_texture_desc* desc,
                              granit_backend_plugin_texture* out_texture) noexcept {
@@ -1045,6 +1060,58 @@ granit_result destroy_texture(granit_backend_plugin_instance instance,
   }
   wgpuTextureRelease(texture_found->second.texture);
   state.textures.erase(texture_found);
+  return GRANIT_SUCCESS;
+}
+
+granit_result write_texture(granit_backend_plugin_instance instance,
+                            granit_backend_plugin_texture texture,
+                            const granit_backend_plugin_texture_write_desc* desc, const void* data,
+                            std::uint64_t size) noexcept {
+  if (instance == 0 || texture == 0 || desc == nullptr || data == nullptr || size == 0 ||
+      desc->struct_size < sizeof(granit_backend_plugin_texture_write_desc) ||
+      desc->reserved[0] != 0 || desc->reserved[1] != 0 || desc->width == 0 || desc->height == 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  const std::scoped_lock lock{instances_mutex};
+  const auto found = instances.find(instance);
+  if (found == instances.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  if (const auto ready = require_ready(*found->second); ready != GRANIT_SUCCESS)
+    return ready;
+  const auto texture_found = found->second->textures.find(texture);
+  if (texture_found == found->second->textures.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  const auto& record = texture_found->second;
+  if (record.borrowed || (record.usage & GRANIT_BACKEND_PLUGIN_TEXTURE_USAGE_COPY_DST_BIT) == 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  if (desc->mip_level >= record.mip_level_count)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  const auto mip_width = std::max(UINT32_C(1), record.width >> desc->mip_level);
+  const auto mip_height = std::max(UINT32_C(1), record.height >> desc->mip_level);
+  if (desc->x >= mip_width || desc->width > mip_width - desc->x || desc->y >= mip_height ||
+      desc->height > mip_height - desc->y)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  const std::uint64_t tight_row =
+      std::uint64_t{desc->width} * texture_bytes_per_pixel(record.format);
+  const std::uint64_t row_pitch = desc->bytes_per_row == 0 ? tight_row : desc->bytes_per_row;
+  const std::uint64_t rows = desc->rows_per_image == 0 ? desc->height : desc->rows_per_image;
+  if (row_pitch < tight_row || rows < desc->height ||
+      row_pitch > std::numeric_limits<std::uint32_t>::max())
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  const std::uint64_t required = (std::uint64_t{desc->height} - 1) * row_pitch + tight_row;
+  if (required > size || size > std::numeric_limits<std::size_t>::max())
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  WGPUTexelCopyTextureInfo destination = WGPU_TEXEL_COPY_TEXTURE_INFO_INIT;
+  destination.texture = record.texture;
+  destination.mipLevel = desc->mip_level;
+  destination.origin = {desc->x, desc->y, 0};
+  destination.aspect = WGPUTextureAspect_All;
+  WGPUTexelCopyBufferLayout layout{};
+  layout.offset = 0;
+  layout.bytesPerRow = static_cast<std::uint32_t>(row_pitch);
+  layout.rowsPerImage = static_cast<std::uint32_t>(rows);
+  const WGPUExtent3D extent{desc->width, desc->height, 1};
+  wgpuQueueWriteTexture(found->second->queue, &destination, data, static_cast<std::size_t>(size),
+                        &layout, &extent);
   return GRANIT_SUCCESS;
 }
 
@@ -2518,6 +2585,7 @@ constexpr granit_backend_plugin_instance_api instance_api{
     read_buffer,
     create_texture,
     destroy_texture,
+    write_texture,
     create_texture_view,
     destroy_texture_view,
     create_sampler,

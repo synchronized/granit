@@ -231,6 +231,26 @@ webgpu_resource_adapter::create_texture(const granit_texture_desc& desc,
   return context_->loader->create_texture(context_->instance, &plugin_desc, &texture->handle_);
 }
 
+granit_result webgpu_resource_adapter::upload_texture(
+    backend_texture_resource& resource, const void* data, std::uint64_t size,
+    const granit_texture_data_layout& layout,
+    const granit_texture_write_region& region) const noexcept {
+  auto* texture = dynamic_cast<webgpu_texture_resource*>(&resource);
+  if (texture == nullptr)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  const granit_backend_plugin_texture_write_desc desc{
+      sizeof(granit_backend_plugin_texture_write_desc),
+      region.mip_level,
+      region.x,
+      region.y,
+      region.width,
+      region.height,
+      layout.bytes_per_row,
+      layout.rows_per_image,
+      {0, 0}};
+  return context_->loader->write_texture(context_->instance, texture->handle_, &desc, data, size);
+}
+
 std::unique_ptr<backend_texture_view_resource>
 webgpu_resource_adapter::allocate_texture_view() const {
   return std::make_unique<webgpu_texture_view_resource>(context_);

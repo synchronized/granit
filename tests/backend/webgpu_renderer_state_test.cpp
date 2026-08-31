@@ -3,6 +3,8 @@
 
 #include <catch2/catch_all.hpp>
 
+#include <array>
+
 #include "backend/webgpu/renderer_state.h"
 
 TEST_CASE("WebGPU Renderer 状态集中管理静态 Provider 生命周期", "[backend][webgpu][renderer]") {
@@ -60,6 +62,22 @@ TEST_CASE("WebGPU Renderer 状态集中管理静态 Provider 生命周期", "[ba
   texture_desc.height = 32;
   texture_desc.mip_levels = 4;
   REQUIRE(state.create_texture(texture_desc, *texture) == GRANIT_SUCCESS);
+  const std::array<std::uint8_t, 32> mip_pixels{};
+  const granit_texture_data_layout mip_layout{.offset = 0,
+                                               .bytes_per_row = 16,
+                                               .rows_per_image = 2};
+  const granit_texture_write_region mip_region{.mip_level = 1,
+                                                .base_array_layer = 0,
+                                                .array_layer_count = 1,
+                                                .aspect = GRANIT_TEXTURE_ASPECT_COLOR_BIT,
+                                                .x = 2,
+                                                .y = 3,
+                                                .z = 0,
+                                                .width = 3,
+                                                .height = 2,
+                                                .depth = 1};
+  REQUIRE(state.upload_texture(*texture, texture_desc.format, mip_pixels.data(),
+                               mip_pixels.size(), mip_layout, mip_region) == GRANIT_SUCCESS);
 
   auto texture_view = state.allocate_texture_view_resource();
   REQUIRE(texture_view != nullptr);

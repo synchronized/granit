@@ -35,6 +35,10 @@ public:
   [[nodiscard]] std::unique_ptr<backend_texture_resource> allocate_texture() const;
   [[nodiscard]] granit_result create_texture(const granit_texture_desc& desc,
                                              backend_texture_resource& resource) const noexcept;
+  [[nodiscard]] granit_result
+  upload_texture(backend_texture_resource& resource, const void* data, std::uint64_t size,
+                 const granit_texture_data_layout& layout,
+                 const granit_texture_write_region& region) const noexcept;
   [[nodiscard]] std::unique_ptr<backend_texture_view_resource> allocate_texture_view() const;
   [[nodiscard]] granit_result
   create_texture_view(backend_texture_resource& texture, const granit_texture_desc& texture_desc,

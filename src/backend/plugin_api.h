@@ -9,7 +9,7 @@
 #include <granit/core/diagnostic.h>
 #include <granit/core/result.h>
 
-#define GRANIT_BACKEND_PLUGIN_ABI_VERSION UINT32_C(14)
+#define GRANIT_BACKEND_PLUGIN_ABI_VERSION UINT32_C(15)
 #define GRANIT_BACKEND_PLUGIN_KIND_WEBGPU UINT32_C(1)
 #define GRANIT_BACKEND_PLUGIN_QUERY_SYMBOL "granit_backend_plugin_query"
 #define GRANIT_BACKEND_PLUGIN_SURFACE_TYPE_WIN32_BIT UINT32_C(0x00000001)
@@ -108,6 +108,19 @@ typedef struct granit_backend_plugin_texture_view_desc {
   uint32_t mip_level_count;
   uint32_t reserved[2];
 } granit_backend_plugin_texture_view_desc;
+
+/** 数据指针从首个有效字节开始；行跨度为零表示按写入宽度紧密排列。 */
+typedef struct granit_backend_plugin_texture_write_desc {
+  uint32_t struct_size;
+  uint32_t mip_level;
+  uint32_t x;
+  uint32_t y;
+  uint32_t width;
+  uint32_t height;
+  uint32_t bytes_per_row;
+  uint32_t rows_per_image;
+  uint32_t reserved[2];
+} granit_backend_plugin_texture_write_desc;
 
 typedef uint32_t granit_backend_plugin_filter;
 #define GRANIT_BACKEND_PLUGIN_FILTER_NEAREST UINT32_C(1)
@@ -316,6 +329,9 @@ typedef granit_result (*granit_backend_plugin_create_texture_fn)(
     granit_backend_plugin_texture* texture);
 typedef granit_result (*granit_backend_plugin_destroy_texture_fn)(
     granit_backend_plugin_instance instance, granit_backend_plugin_texture texture);
+typedef granit_result (*granit_backend_plugin_write_texture_fn)(
+    granit_backend_plugin_instance instance, granit_backend_plugin_texture texture,
+    const granit_backend_plugin_texture_write_desc* desc, const void* data, uint64_t size);
 typedef granit_result (*granit_backend_plugin_create_texture_view_fn)(
     granit_backend_plugin_instance instance, granit_backend_plugin_texture texture,
     const granit_backend_plugin_texture_view_desc* desc,
@@ -451,6 +467,7 @@ typedef struct granit_backend_plugin_instance_api {
   granit_backend_plugin_read_buffer_fn read_buffer;
   granit_backend_plugin_create_texture_fn create_texture;
   granit_backend_plugin_destroy_texture_fn destroy_texture;
+  granit_backend_plugin_write_texture_fn write_texture;
   granit_backend_plugin_create_texture_view_fn create_texture_view;
   granit_backend_plugin_destroy_texture_view_fn destroy_texture_view;
   granit_backend_plugin_create_sampler_fn create_sampler;

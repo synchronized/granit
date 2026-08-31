@@ -87,12 +87,12 @@ granit_result webgpu_renderer_state::create_texture(const granit_texture_desc& d
   return resources_ ? resources_->create_texture(desc, texture) : GRANIT_ERROR_NOT_READY;
 }
 
-granit_result webgpu_renderer_state::upload_texture(backend_texture_resource&,
-                                                    granit_texture_format, const void*,
-                                                    std::uint64_t,
-                                                    const granit_texture_data_layout&,
-                                                    const granit_texture_write_region&) noexcept {
-  return GRANIT_ERROR_UNSUPPORTED;
+granit_result webgpu_renderer_state::upload_texture(
+    backend_texture_resource& texture, granit_texture_format, const void* data, std::uint64_t size,
+    const granit_texture_data_layout& layout,
+    const granit_texture_write_region& region) noexcept {
+  return resources_ ? resources_->upload_texture(texture, data, size, layout, region)
+                    : GRANIT_ERROR_NOT_READY;
 }
 
 std::unique_ptr<backend_texture_view_resource>

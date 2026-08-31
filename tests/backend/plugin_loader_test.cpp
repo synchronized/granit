@@ -463,6 +463,15 @@ TEST_CASE("WebGPU 插件 Texture、View 与 Sampler 遵守所有权契约", "[ba
   granit_backend_plugin_texture texture{};
   REQUIRE(loader.create_texture(first, &texture_desc, &texture) == GRANIT_SUCCESS);
   REQUIRE(texture != 0);
+  const granit_backend_plugin_texture_write_desc write_desc{
+      sizeof(granit_backend_plugin_texture_write_desc), 0, 2, 3, 3, 2, 16, 2, {0, 0}};
+  const std::array<std::uint8_t, 32> pixels{};
+  REQUIRE(loader.write_texture(first, texture, &write_desc, pixels.data(), pixels.size()) ==
+          GRANIT_SUCCESS);
+  auto invalid_write = write_desc;
+  invalid_write.mip_level = 1;
+  CHECK(loader.write_texture(first, texture, &invalid_write, pixels.data(), pixels.size()) ==
+        GRANIT_ERROR_INVALID_ARGUMENT);
 
   granit_backend_plugin_texture_view view{};
   const granit_backend_plugin_texture_view_desc view_desc{
