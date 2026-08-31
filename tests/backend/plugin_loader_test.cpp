@@ -602,9 +602,28 @@ TEST_CASE("WebGPU 插件绑定与 Pipeline 遵守依赖生命周期", "[backend]
         GRANIT_ERROR_INVALID_HANDLE);
   CHECK(foreign_bind_group == 0);
 
+  const granit_backend_plugin_bind_group_layout pipeline_layouts[]{bind_group_layout,
+                                                                   bind_group_layout};
+  const granit_backend_plugin_pipeline_layout_desc pipeline_layout_desc{
+      sizeof(granit_backend_plugin_pipeline_layout_desc), 2, pipeline_layouts, 0};
   granit_backend_plugin_pipeline_layout pipeline_layout{};
-  REQUIRE(loader.create_pipeline_layout(first, bind_group_layout, &pipeline_layout) ==
+  REQUIRE(loader.create_pipeline_layout(first, &pipeline_layout_desc, &pipeline_layout) ==
           GRANIT_SUCCESS);
+  granit_backend_plugin_pipeline_layout foreign_layout = 123;
+  CHECK(loader.create_pipeline_layout(second, &pipeline_layout_desc, &foreign_layout) ==
+        GRANIT_ERROR_INVALID_HANDLE);
+  CHECK(foreign_layout == 0);
+  const granit_backend_plugin_pipeline_layout_desc empty_pipeline_layout_desc{
+      sizeof(granit_backend_plugin_pipeline_layout_desc), 0, nullptr, 0};
+  granit_backend_plugin_pipeline_layout empty_pipeline_layout{};
+  REQUIRE(loader.create_pipeline_layout(first, &empty_pipeline_layout_desc,
+                                        &empty_pipeline_layout) == GRANIT_SUCCESS);
+  REQUIRE(loader.destroy_pipeline_layout(first, empty_pipeline_layout) == GRANIT_SUCCESS);
+  const granit_backend_plugin_pipeline_layout_desc invalid_pipeline_layout_desc{
+      sizeof(granit_backend_plugin_pipeline_layout_desc), 1, nullptr, 0};
+  CHECK(loader.create_pipeline_layout(first, &invalid_pipeline_layout_desc, &foreign_layout) ==
+        GRANIT_ERROR_INVALID_ARGUMENT);
+  CHECK(foreign_layout == 0);
   granit_backend_plugin_shader_desc vertex_desc{sizeof(granit_backend_plugin_shader_desc),
                                                 GRANIT_BACKEND_PLUGIN_SHADER_STAGE_VERTEX,
                                                 vertex_wgsl.data(),
@@ -765,7 +784,10 @@ TEST_CASE("WebGPU 插件绑定与 Pipeline 遵守依赖生命周期", "[backend]
 
   REQUIRE(loader.create_bind_group_layout(first, &layout_desc, &bind_group_layout) ==
           GRANIT_SUCCESS);
-  REQUIRE(loader.create_pipeline_layout(first, bind_group_layout, &pipeline_layout) ==
+  const granit_backend_plugin_bind_group_layout recreated_layouts[]{bind_group_layout};
+  const granit_backend_plugin_pipeline_layout_desc recreated_pipeline_layout_desc{
+      sizeof(granit_backend_plugin_pipeline_layout_desc), 1, recreated_layouts, 0};
+  REQUIRE(loader.create_pipeline_layout(first, &recreated_pipeline_layout_desc, &pipeline_layout) ==
           GRANIT_SUCCESS);
   REQUIRE(loader.create_shader(first, &vertex_desc, &vertex_shader) == GRANIT_SUCCESS);
   REQUIRE(loader.create_shader(first, &fragment_desc, &fragment_shader) == GRANIT_SUCCESS);

@@ -76,7 +76,7 @@ struct webgpu_instance {
   };
   struct pipeline_layout_record {
     WGPUPipelineLayout pipeline_layout;
-    granit_backend_plugin_bind_group_layout bind_group_layout;
+    std::vector<granit_backend_plugin_bind_group_layout> bind_group_layouts;
   };
   struct shader_record {
     WGPUShaderModule shader;
@@ -1436,9 +1436,12 @@ granit_result destroy_bind_group_layout(granit_backend_plugin_instance instance,
   const auto used_by_group =
       std::any_of(state.bind_groups.begin(), state.bind_groups.end(),
                   [layout](const auto& entry) { return entry.second.layout == layout; });
-  const auto used_by_pipeline =
-      std::any_of(state.pipeline_layouts.begin(), state.pipeline_layouts.end(),
-                  [layout](const auto& entry) { return entry.second.bind_group_layout == layout; });
+  const auto used_by_pipeline = std::any_of(
+      state.pipeline_layouts.begin(), state.pipeline_layouts.end(), [layout](const auto& entry) {
+        return std::find(entry.second.bind_group_layouts.begin(),
+                         entry.second.bind_group_layouts.end(),
+                         layout) != entry.second.bind_group_layouts.end();
+      });
   if (used_by_group || used_by_pipeline)
     return GRANIT_ERROR_INVALID_ARGUMENT;
   wgpuBindGroupLayoutRelease(layout_found->second.bind_group_layout);
@@ -1641,11 +1644,14 @@ granit_result destroy_shader(granit_backend_plugin_instance instance,
 
 granit_result
 create_pipeline_layout(granit_backend_plugin_instance instance,
-                       granit_backend_plugin_bind_group_layout bind_group_layout,
+                       const granit_backend_plugin_pipeline_layout_desc* desc,
                        granit_backend_plugin_pipeline_layout* out_pipeline_layout) noexcept {
   if (out_pipeline_layout != nullptr)
     *out_pipeline_layout = 0;
-  if (instance == 0 || out_pipeline_layout == nullptr)
+  if (instance == 0 || desc == nullptr || out_pipeline_layout == nullptr ||
+      desc->struct_size < sizeof(granit_backend_plugin_pipeline_layout_desc) ||
+      desc->reserved != 0 || desc->bind_group_layout_count > 8 ||
+      (desc->bind_group_layout_count != 0 && desc->bind_group_layouts == nullptr))
     return GRANIT_ERROR_INVALID_ARGUMENT;
   const std::scoped_lock lock{instances_mutex};
   const auto found = instances.find(instance);
@@ -1654,35 +1660,48 @@ create_pipeline_layout(granit_backend_plugin_instance instance,
   if (const auto ready = require_ready(*found->second); ready != GRANIT_SUCCESS)
     return ready;
   auto& state = *found->second;
-  WGPUPipelineLayoutDescriptor descriptor = WGPU_PIPELINE_LAYOUT_DESCRIPTOR_INIT;
-  WGPUBindGroupLayout native_layout{};
-  if (bind_group_layout != 0) {
-    const auto layout = state.bind_group_layouts.find(bind_group_layout);
-    if (layout == state.bind_group_layouts.end())
-      return GRANIT_ERROR_INVALID_HANDLE;
-    native_layout = layout->second.bind_group_layout;
-    descriptor.bindGroupLayoutCount = 1;
-    descriptor.bindGroupLayouts = &native_layout;
-  }
-  const auto native = wgpuDeviceCreatePipelineLayout(state.device, &descriptor);
-  if (native == nullptr)
-    return GRANIT_ERROR_OUT_OF_MEMORY;
-  const auto handle = next_handle<granit_backend_plugin_pipeline_layout>(next_pipeline_layout);
   try {
-    const auto record = webgpu_instance::pipeline_layout_record{native, bind_group_layout};
-    if (!state.pipeline_layouts.emplace(handle, record).second) {
+    std::vector<WGPUBindGroupLayout> native_layouts;
+    std::vector<granit_backend_plugin_bind_group_layout> dependencies;
+    native_layouts.reserve(desc->bind_group_layout_count);
+    dependencies.reserve(desc->bind_group_layout_count);
+    for (std::uint32_t index = 0; index < desc->bind_group_layout_count; ++index) {
+      const auto handle = desc->bind_group_layouts[index];
+      if (handle == 0)
+        return GRANIT_ERROR_INVALID_ARGUMENT;
+      const auto layout = state.bind_group_layouts.find(handle);
+      if (layout == state.bind_group_layouts.end())
+        return GRANIT_ERROR_INVALID_HANDLE;
+      native_layouts.push_back(layout->second.bind_group_layout);
+      dependencies.push_back(handle);
+    }
+    WGPUPipelineLayoutDescriptor descriptor = WGPU_PIPELINE_LAYOUT_DESCRIPTOR_INIT;
+    descriptor.bindGroupLayoutCount = native_layouts.size();
+    descriptor.bindGroupLayouts = native_layouts.empty() ? nullptr : native_layouts.data();
+    const auto native = wgpuDeviceCreatePipelineLayout(state.device, &descriptor);
+    if (native == nullptr)
+      return GRANIT_ERROR_OUT_OF_MEMORY;
+    const auto handle = next_handle<granit_backend_plugin_pipeline_layout>(next_pipeline_layout);
+    try {
+      webgpu_instance::pipeline_layout_record record{native, std::move(dependencies)};
+      if (!state.pipeline_layouts.emplace(handle, std::move(record)).second) {
+        wgpuPipelineLayoutRelease(native);
+        return GRANIT_ERROR_INTERNAL;
+      }
+    } catch (const std::bad_alloc&) {
+      wgpuPipelineLayoutRelease(native);
+      return GRANIT_ERROR_OUT_OF_MEMORY;
+    } catch (...) {
       wgpuPipelineLayoutRelease(native);
       return GRANIT_ERROR_INTERNAL;
     }
+    *out_pipeline_layout = handle;
+    return GRANIT_SUCCESS;
   } catch (const std::bad_alloc&) {
-    wgpuPipelineLayoutRelease(native);
     return GRANIT_ERROR_OUT_OF_MEMORY;
   } catch (...) {
-    wgpuPipelineLayoutRelease(native);
     return GRANIT_ERROR_INTERNAL;
   }
-  *out_pipeline_layout = handle;
-  return GRANIT_SUCCESS;
 }
 
 granit_result destroy_pipeline_layout(granit_backend_plugin_instance instance,

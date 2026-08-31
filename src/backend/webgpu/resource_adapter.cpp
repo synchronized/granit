@@ -469,4 +469,10 @@ webgpu_resource_adapter::create_bind_group(backend_bind_group_layout_resource& l
   return context_->loader->create_bind_group(context_->instance, &desc, &group->handle_);
 }
 
+granit_backend_plugin_bind_group_layout webgpu_resource_adapter::native_bind_group_layout(
+    backend_bind_group_layout_resource& resource) const noexcept {
+  const auto* layout = dynamic_cast<webgpu_bind_group_layout_resource*>(&resource);
+  return layout == nullptr ? 0 : layout->handle_;
+}
+
 } // namespace granit::detail

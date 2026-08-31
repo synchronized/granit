@@ -173,9 +173,12 @@ int main(int argc, char** argv) {
   fragment_desc.wgsl = asset.wgsl.data();
   fragment_desc.wgsl_length = asset.wgsl.size();
   fragment_desc.entry_point = "fs_main";
+  const granit_backend_plugin_bind_group_layout pipeline_layouts[]{bind_group_layout};
+  const granit_backend_plugin_pipeline_layout_desc pipeline_layout_desc{
+      sizeof(granit_backend_plugin_pipeline_layout_desc), 1, pipeline_layouts, 0};
   if (loader.create_bind_group(instance, &bind_group_desc, &bind_group) != GRANIT_SUCCESS ||
       bind_group == 0 ||
-      loader.create_pipeline_layout(instance, bind_group_layout, &pipeline_layout) !=
+      loader.create_pipeline_layout(instance, &pipeline_layout_desc, &pipeline_layout) !=
           GRANIT_SUCCESS ||
       pipeline_layout == 0 ||
       loader.create_shader(instance, &vertex_desc, &vertex_shader) != GRANIT_SUCCESS ||

@@ -5,6 +5,7 @@
 
 #include <new>
 #include <string>
+#include <vector>
 
 namespace granit::detail {
 namespace {
@@ -293,9 +294,25 @@ webgpu_renderer_state::allocate_pipeline_layout_resource() {
 granit_result webgpu_renderer_state::create_pipeline_layout(
     std::span<backend_bind_group_layout_resource* const> bind_group_layouts,
     backend_pipeline_layout_resource& layout) noexcept {
-  if (!bind_group_layouts.empty())
+  if (!pipelines_ || !resources_)
     return GRANIT_ERROR_UNSUPPORTED;
-  return pipelines_ ? pipelines_->create_pipeline_layout(layout) : GRANIT_ERROR_UNSUPPORTED;
+  try {
+    std::vector<granit_backend_plugin_bind_group_layout> native_layouts;
+    native_layouts.reserve(bind_group_layouts.size());
+    for (auto* bind_group_layout : bind_group_layouts) {
+      if (bind_group_layout == nullptr)
+        return GRANIT_ERROR_INVALID_ARGUMENT;
+      const auto native = resources_->native_bind_group_layout(*bind_group_layout);
+      if (native == 0)
+        return GRANIT_ERROR_INVALID_ARGUMENT;
+      native_layouts.push_back(native);
+    }
+    return pipelines_->create_pipeline_layout(native_layouts, layout);
+  } catch (const std::bad_alloc&) {
+    return GRANIT_ERROR_OUT_OF_MEMORY;
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
 }
 
 std::unique_ptr<backend_graphics_pipeline_resource>

@@ -57,6 +57,8 @@ public:
   create_bind_group(backend_bind_group_layout_resource& layout,
                     std::span<const backend_bind_group_write> writes,
                     backend_bind_group_resource& resource) const noexcept;
+  [[nodiscard]] granit_backend_plugin_bind_group_layout
+  native_bind_group_layout(backend_bind_group_layout_resource& resource) const noexcept;
 
 private:
   std::shared_ptr<webgpu_resource_context> context_;

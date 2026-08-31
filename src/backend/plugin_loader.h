@@ -137,7 +137,7 @@ public:
                                              granit_backend_plugin_shader shader) noexcept;
   [[nodiscard]] granit_result
   create_pipeline_layout(granit_backend_plugin_instance instance,
-                         granit_backend_plugin_bind_group_layout bind_group_layout,
+                         const granit_backend_plugin_pipeline_layout_desc* desc,
                          granit_backend_plugin_pipeline_layout* pipeline_layout) noexcept;
   [[nodiscard]] granit_result
   destroy_pipeline_layout(granit_backend_plugin_instance instance,

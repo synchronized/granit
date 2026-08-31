@@ -5,7 +5,7 @@
 
 ## 状态
 
-- 实现状态：进行中；S-12A、S-12B、S-12C 已完成，下一步 S-12D
+- 实现状态：进行中；S-12A、S-12B、S-12C、S-12D 已完成，下一步 S-12E
 - 前置依赖：S-10
 - 后续任务：S-13
 - 优先级：P1
@@ -223,7 +223,7 @@ Texture View 子资源和 Renderer 归属。Bind Group 保留 Layout 与所有�
 类型错误、缺失项、跨 Renderer 句柄与不支持数组。Provider ABI 直接升级，不保留
 旧的固定 Texture/Sampler 分支。
 
-当前已完成 Texture、Sampler 与 Bind Group 子阶段：Provider ABI v17 接收显式格式、mip 数量、
+S-12D 已完成：Provider ABI v18 接收显式格式、mip 数量、
 View mip 范围、写入区域、Sampler 状态和由 Layout 驱动的绑定数组，
 公共 Renderer 已接通上述五种必需格式的二维、单层、单采样 Texture 创建、子 View 创建，以及
 指定 mip、矩形区域和显式行跨度上传。Sampler 已接通过滤、寻址、LOD 范围和整数倍
@@ -231,7 +231,8 @@ View mip 范围、写入区域、Sampler 状态和由 Layout 驱动的绑定数�
 Bind Group 已支持任意 binding 号以及 Uniform、Dynamic Uniform、Storage Buffer、Sampled Texture
 和 Sampler 混合，首轮仍限制 `array_count = 1`。比较 Sampler 需要公共 Layout 增加绑定子类型，
 当前创建时明确返回 `GRANIT_ERROR_UNSUPPORTED`，不生成与 Layout 不匹配的 WebGPU 对象。
-多 Bind Group Pipeline Layout 仍属于本阶段后续工作。
+Pipeline Layout 已支持空布局和多个 Bind Group Layout，并在 Provider 内保留其依赖关系，防止布局
+仍被 Pipeline Layout 使用时提前销毁。比较 Sampler 的公共契约扩展留给后续独立能力任务。
 
 ### S-12E 每帧数据契约
 
@@ -283,8 +284,8 @@ Metallic-Roughness Texture，并用同一 Uniform Buffer 的两个动态 Offset 
    SDL3 继续通过对应原生窗口描述创建 Surface，不增加 SDL 专用 Renderer API。
 3. **S-12C 几何资源（已完成）**：已接通 WebGPU Vertex/Index Buffer、顶点布局、索引格式、
    显式 Render Pass 命令和 Indexed Draw。
-4. **S-12D 材质资源（进行中）**：已接通 Texture、子 View、区域上传、Sampler 和通用
-   Bind Group；继续完成多 Bind Group Pipeline Layout。
+4. **S-12D 材质资源（已完成）**：已接通 Texture、子 View、区域上传、Sampler、通用
+   Bind Group，以及空布局和多 Bind Group Pipeline Layout。
 5. **S-12E 每帧数据**：将动态 Uniform Offset、对齐限制和逐帧上传路径映射到两个后端。
 6. **S-12F 跨后端 Fixture**：同一带纹理索引 Mesh 在 Vulkan、桌面 WebGPU 和浏览器 WebGPU 绘制。
 7. **S-12G 验收**：验证公共头、共享/静态安装 Consumer、错误路径、截图结果和平台矩阵。

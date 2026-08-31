@@ -92,12 +92,16 @@ granit_result webgpu_pipeline_adapter::validate_graphics_pipeline(
 }
 
 granit_result webgpu_pipeline_adapter::create_pipeline_layout(
+    std::span<const granit_backend_plugin_bind_group_layout> layouts,
     backend_pipeline_layout_resource& resource) const noexcept {
   auto* layout = as_layout(resource);
   if (layout == nullptr || layout->handle_ != 0) {
     return GRANIT_ERROR_INVALID_ARGUMENT;
   }
-  return context_->loader->create_pipeline_layout(context_->instance, 0, &layout->handle_);
+  const granit_backend_plugin_pipeline_layout_desc desc{
+      sizeof(granit_backend_plugin_pipeline_layout_desc),
+      static_cast<std::uint32_t>(layouts.size()), layouts.data(), 0};
+  return context_->loader->create_pipeline_layout(context_->instance, &desc, &layout->handle_);
 }
 
 granit_result webgpu_pipeline_adapter::create_graphics_pipeline(

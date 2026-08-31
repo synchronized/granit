@@ -146,6 +146,21 @@ TEST_CASE("WebGPU Renderer 状态集中管理静态 Provider 生命周期", "[ba
   CHECK(state.create_bind_group_layout(array_layout, *unsupported_layout) ==
         GRANIT_ERROR_UNSUPPORTED);
 
+  auto pipeline_layout = state.allocate_pipeline_layout_resource();
+  REQUIRE(pipeline_layout != nullptr);
+  const std::array<granit::detail::backend_bind_group_layout_resource*, 2> pipeline_layouts{
+      bind_group_layout.get(), bind_group_layout.get()};
+  REQUIRE(state.create_pipeline_layout(pipeline_layouts, *pipeline_layout) == GRANIT_SUCCESS);
+  auto empty_pipeline_layout = state.allocate_pipeline_layout_resource();
+  REQUIRE(empty_pipeline_layout != nullptr);
+  REQUIRE(state.create_pipeline_layout({}, *empty_pipeline_layout) == GRANIT_SUCCESS);
+  const std::array<granit::detail::backend_bind_group_layout_resource*, 1> invalid_pipeline_layouts{
+      nullptr};
+  auto invalid_pipeline_layout = state.allocate_pipeline_layout_resource();
+  REQUIRE(invalid_pipeline_layout != nullptr);
+  CHECK(state.create_pipeline_layout(invalid_pipeline_layouts, *invalid_pipeline_layout) ==
+        GRANIT_ERROR_INVALID_ARGUMENT);
+
   auto surface = state.allocate_surface_resource();
   REQUIRE(surface != nullptr);
   const auto native_a = reinterpret_cast<void*>(std::uintptr_t{1});

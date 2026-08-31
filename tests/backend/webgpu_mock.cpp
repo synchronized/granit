@@ -365,8 +365,9 @@ extern "C" WGPUBindGroup wgpuDeviceCreateBindGroup(WGPUDevice,
 extern "C" void wgpuBindGroupRelease(WGPUBindGroup bind_group) { delete bind_group; }
 extern "C" WGPUPipelineLayout
 wgpuDeviceCreatePipelineLayout(WGPUDevice, const WGPUPipelineLayoutDescriptor* descriptor) {
-  return descriptor != nullptr && descriptor->bindGroupLayoutCount == 1 ? new WGPUPipelineLayoutImpl
-                                                                        : nullptr;
+  const auto valid_layouts = descriptor != nullptr && (descriptor->bindGroupLayoutCount == 0 ||
+                                                       descriptor->bindGroupLayouts != nullptr);
+  return valid_layouts ? new WGPUPipelineLayoutImpl : nullptr;
 }
 extern "C" void wgpuPipelineLayoutRelease(WGPUPipelineLayout layout) { delete layout; }
 extern "C" WGPUShaderModule

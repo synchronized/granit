@@ -9,7 +9,7 @@
 #include <granit/core/diagnostic.h>
 #include <granit/core/result.h>
 
-#define GRANIT_BACKEND_PLUGIN_ABI_VERSION UINT32_C(17)
+#define GRANIT_BACKEND_PLUGIN_ABI_VERSION UINT32_C(18)
 #define GRANIT_BACKEND_PLUGIN_KIND_WEBGPU UINT32_C(1)
 #define GRANIT_BACKEND_PLUGIN_QUERY_SYMBOL "granit_backend_plugin_query"
 #define GRANIT_BACKEND_PLUGIN_SURFACE_TYPE_WIN32_BIT UINT32_C(0x00000001)
@@ -415,9 +415,14 @@ typedef granit_result (*granit_backend_plugin_create_shader_fn)(
     granit_backend_plugin_shader* shader);
 typedef granit_result (*granit_backend_plugin_destroy_shader_fn)(
     granit_backend_plugin_instance instance, granit_backend_plugin_shader shader);
+typedef struct granit_backend_plugin_pipeline_layout_desc {
+  uint32_t struct_size;
+  uint32_t bind_group_layout_count;
+  const granit_backend_plugin_bind_group_layout* bind_group_layouts;
+  uint64_t reserved;
+} granit_backend_plugin_pipeline_layout_desc;
 typedef granit_result (*granit_backend_plugin_create_pipeline_layout_fn)(
-    granit_backend_plugin_instance instance,
-    granit_backend_plugin_bind_group_layout bind_group_layout,
+    granit_backend_plugin_instance instance, const granit_backend_plugin_pipeline_layout_desc* desc,
     granit_backend_plugin_pipeline_layout* pipeline_layout);
 typedef granit_result (*granit_backend_plugin_destroy_pipeline_layout_fn)(
     granit_backend_plugin_instance instance, granit_backend_plugin_pipeline_layout pipeline_layout);

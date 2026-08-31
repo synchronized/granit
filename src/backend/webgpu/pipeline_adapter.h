@@ -27,7 +27,8 @@ public:
   [[nodiscard]] granit_result
   validate_graphics_pipeline(const granit_graphics_pipeline_desc& desc) const noexcept;
   [[nodiscard]] granit_result
-  create_pipeline_layout(backend_pipeline_layout_resource& resource) const noexcept;
+  create_pipeline_layout(std::span<const granit_backend_plugin_bind_group_layout> layouts,
+                         backend_pipeline_layout_resource& resource) const noexcept;
   [[nodiscard]] granit_result create_graphics_pipeline(
       backend_graphics_pipeline_resource& resource, backend_pipeline_layout_resource& layout,
       granit_backend_plugin_shader vertex_shader, granit_backend_plugin_shader fragment_shader,
