@@ -18,6 +18,7 @@
 #include "backend/renderer.h"
 #include "backend/rendering.h"
 #include "backend/resource_management.h"
+#include "backend/retirement.h"
 #include "backend/shader.h"
 #include "backend/transfer.h"
 #include "backend/webgpu/command_adapter.h"
@@ -37,6 +38,7 @@ class webgpu_renderer_state final : public backend_renderer,
                                     public backend_compute_command_renderer,
                                     public backend_resource_renderer,
                                     public backend_transfer_command_renderer,
+                                    public backend_retirement_renderer,
                                     public backend_shader_renderer,
                                     public backend_pipeline_layout_renderer,
                                     public backend_pipeline_renderer {
@@ -272,6 +274,10 @@ public:
   [[nodiscard]] granit_result
   wait_command_recorder(backend_command_recorder_resource& recorder) noexcept override;
   [[nodiscard]] granit_result wait_for_all_submissions() noexcept override;
+  void retire_resource(submission_serial retire_after, retirement_order order,
+                       std::shared_ptr<void> resource) override;
+  [[nodiscard]] std::size_t collect_retired() noexcept override;
+  [[nodiscard]] std::size_t pending_retirement_count() const noexcept override;
   [[nodiscard]] granit_result submit_swapchain_frame(backend_command_recorder_resource& recorder,
                                                      backend_swapchain_resource& swapchain,
                                                      std::uint32_t image_index,

@@ -827,6 +827,16 @@ granit_result webgpu_renderer_state::wait_for_all_submissions() noexcept {
                                                                   : GRANIT_SUCCESS;
 }
 
+void webgpu_renderer_state::retire_resource(submission_serial, retirement_order,
+                                            std::shared_ptr<void> resource) {
+  // WebGPU 命令会持有所引用对象；命令完成编码后即可释放应用侧引用。
+  resource.reset();
+}
+
+std::size_t webgpu_renderer_state::collect_retired() noexcept { return 0; }
+
+std::size_t webgpu_renderer_state::pending_retirement_count() const noexcept { return 0; }
+
 granit_result
 webgpu_renderer_state::submit_swapchain_frame(backend_command_recorder_resource& recorder,
                                               backend_swapchain_resource&, std::uint32_t,

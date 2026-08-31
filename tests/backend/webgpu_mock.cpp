@@ -4,6 +4,7 @@
 #include <webgpu/webgpu.h>
 
 #include <algorithm>
+#include <array>
 #include <cstring>
 #include <vector>
 
@@ -49,8 +50,14 @@ struct WGPUSamplerImpl {
   float min_lod;
   float max_lod;
 };
-struct WGPUBindGroupLayoutImpl {};
-struct WGPUBindGroupImpl {};
+struct WGPUBindGroupLayoutImpl {
+  bool has_dynamic_uniform{};
+};
+struct WGPUBindGroupImpl {
+  std::vector<unsigned char> uniform_bytes;
+  unsigned long long offset{};
+  bool has_dynamic_uniform{};
+};
 struct WGPUPipelineLayoutImpl {};
 struct WGPUShaderModuleImpl {};
 struct WGPURenderPipelineImpl {};
@@ -61,6 +68,8 @@ struct WGPUCommandEncoderImpl {
 struct WGPUCommandBufferImpl {};
 struct WGPURenderPassEncoderImpl {
   WGPUTexture target;
+  WGPUBindGroup bind_group{};
+  unsigned int dynamic_offset{};
 };
 struct WGPUComputePassEncoderImpl {};
 
@@ -357,12 +366,29 @@ extern "C" void wgpuSamplerRelease(WGPUSampler sampler) { delete sampler; }
 
 extern "C" WGPUBindGroupLayout
 wgpuDeviceCreateBindGroupLayout(WGPUDevice, const WGPUBindGroupLayoutDescriptor* descriptor) {
-  return descriptor != nullptr ? new WGPUBindGroupLayoutImpl : nullptr;
+  if (descriptor == nullptr)
+    return nullptr;
+  auto* result = new WGPUBindGroupLayoutImpl;
+  for (std::size_t index = 0; index < descriptor->entryCount; ++index)
+    result->has_dynamic_uniform |= descriptor->entries[index].buffer.hasDynamicOffset != 0;
+  return result;
 }
 extern "C" void wgpuBindGroupLayoutRelease(WGPUBindGroupLayout layout) { delete layout; }
 extern "C" WGPUBindGroup wgpuDeviceCreateBindGroup(WGPUDevice,
                                                    const WGPUBindGroupDescriptor* descriptor) {
-  return descriptor != nullptr && descriptor->layout != nullptr ? new WGPUBindGroupImpl : nullptr;
+  if (descriptor == nullptr || descriptor->layout == nullptr)
+    return nullptr;
+  auto* result = new WGPUBindGroupImpl;
+  result->has_dynamic_uniform = descriptor->layout->has_dynamic_uniform;
+  for (std::size_t index = 0; index < descriptor->entryCount; ++index) {
+    const auto& entry = descriptor->entries[index];
+    if (entry.buffer != nullptr) {
+      result->uniform_bytes = entry.buffer->bytes;
+      result->offset = entry.offset;
+      break;
+    }
+  }
+  return result;
 }
 extern "C" void wgpuBindGroupRelease(WGPUBindGroup bind_group) { delete bind_group; }
 extern "C" WGPUPipelineLayout
@@ -457,23 +483,47 @@ extern "C" void wgpuRenderPassEncoderSetViewport(WGPURenderPassEncoder, float, f
                                                  float, float) {}
 extern "C" void wgpuRenderPassEncoderSetScissorRect(WGPURenderPassEncoder, unsigned int,
                                                     unsigned int, unsigned int, unsigned int) {}
-extern "C" void wgpuRenderPassEncoderSetBindGroup(WGPURenderPassEncoder, unsigned int,
-                                                  WGPUBindGroup, size_t, const unsigned int*) {}
+extern "C" void wgpuRenderPassEncoderSetBindGroup(WGPURenderPassEncoder pass, unsigned int,
+                                                  WGPUBindGroup group, size_t offset_count,
+                                                  const unsigned int* offsets) {
+  pass->bind_group = group;
+  pass->dynamic_offset = offset_count == 0 ? 0 : offsets[0];
+}
 extern "C" void wgpuRenderPassEncoderDraw(WGPURenderPassEncoder pass, unsigned int, unsigned int,
                                           unsigned int, unsigned int) {
   const auto width = pass->target->width;
   const auto height = pass->target->height;
+  float translation_x = 0.0F;
+  std::array<unsigned char, 4> color{51, 179, 102, 255};
+  bool use_uniform = false;
+  const auto* group = pass->bind_group;
+  if (group != nullptr && group->has_dynamic_uniform && !group->uniform_bytes.empty()) {
+    const auto offset = static_cast<std::size_t>(group->offset) + pass->dynamic_offset;
+    if (offset + sizeof(float) * 8 <= group->uniform_bytes.size()) {
+      float values[8]{};
+      std::memcpy(values, group->uniform_bytes.data() + offset, sizeof(values));
+      use_uniform = values[7] > 0.0F;
+      if (use_uniform) {
+        translation_x = values[0];
+        for (std::size_t channel = 0; channel < color.size(); ++channel) {
+          color[channel] = static_cast<unsigned char>(
+              std::clamp(values[4 + channel], 0.0F, 1.0F) * 255.0F + 0.5F);
+        }
+      }
+    }
+  }
   for (unsigned int y = 0; y < height; ++y) {
     for (unsigned int x = 0; x < width; ++x) {
-      const auto nx = 2.0 * (static_cast<double>(x) + 0.5) / width - 1.0;
+      const auto nx = 2.0 * (static_cast<double>(x) + 0.5) / width - 1.0 - translation_x;
       const auto ny = 2.0 * (static_cast<double>(y) + 0.5) / height - 1.0;
-      if (ny < -0.7 || ny > 0.7 || nx < -(ny + 0.7) / 2.0 || nx > (ny + 0.7) / 2.0)
+      const auto outside =
+          use_uniform ? ny < -0.30 || ny > 0.30 || nx < -(0.30 - ny) * 0.22 / 0.60 ||
+                            nx > (0.30 - ny) * 0.22 / 0.60
+                      : ny < -0.7 || ny > 0.7 || nx < -(ny + 0.7) / 2.0 || nx > (ny + 0.7) / 2.0;
+      if (outside)
         continue;
       const auto index = (static_cast<std::size_t>(y) * width + x) * 4;
-      pass->target->bytes[index] = 51;
-      pass->target->bytes[index + 1] = 179;
-      pass->target->bytes[index + 2] = 102;
-      pass->target->bytes[index + 3] = 255;
+      std::copy(color.begin(), color.end(), pass->target->bytes.begin() + index);
     }
   }
 }

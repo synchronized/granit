@@ -85,6 +85,11 @@ std::vector<std::byte> load_shader(const char* name) {
   return result;
 }
 
+std::string load_text_asset(const char* name) {
+  std::ifstream stream{std::string{GRANIT_TEST_ASSET_DIR} + "/" + name};
+  return {std::istreambuf_iterator<char>{stream}, {}};
+}
+
 void count_validation_errors(granit_diagnostic_severity severity,
                              granit_diagnostic_category category, const char*, std::uint32_t,
                              void* user_data) noexcept {
@@ -281,28 +286,43 @@ TEST_CASE("动态 Offset 按 Bind Group 顺序跳过普通 Uniform", "[pipeline]
 }
 
 TEST_CASE("动态 Uniform Offset 从同一 Buffer 绘制两个对象", "[pipeline][bind-group][smoke]") {
+  struct backend_case {
+    granit::renderer_backend backend;
+    std::string_view library_path;
+  };
+  const auto backend =
+      GENERATE(backend_case{granit::renderer_backend::vulkan, {}},
+               backend_case{granit::renderer_backend::webgpu, GRANIT_FAKE_BACKEND_PLUGIN_PATH});
+  CAPTURE(backend.backend);
   std::atomic_uint32_t validation_errors{};
   granit::renderer renderer;
   const auto result = renderer.initialize({.application_name = "granit-dynamic-uniform-smoke",
                                            .enable_validation = true,
                                            .diagnostics = count_validation_errors,
-                                           .diagnostic_user_data = &validation_errors});
+                                           .diagnostic_user_data = &validation_errors,
+                                           .backend = backend.backend,
+                                           .backend_library_path = backend.library_path});
   if (environment_unavailable(result) || result == granit::result::unsupported)
     SKIP("当前运行环境不支持验证层或没有满足要求的 Vulkan 设备");
   REQUIRE(result == granit::result::success);
+  REQUIRE(renderer.process_events() == granit::result::success);
 
   const auto vertex_code = load_shader("dynamic_uniform.vert.spv");
   const auto fragment_code = load_shader("dynamic_uniform.frag.spv");
+  const auto vertex_wgsl = load_text_asset("dynamic_uniform.vert.wgsl");
+  const auto fragment_wgsl = load_text_asset("dynamic_uniform.frag.wgsl");
   REQUIRE_FALSE(vertex_code.empty());
   REQUIRE_FALSE(fragment_code.empty());
   granit::shader vertex;
   granit::shader fragment;
-  REQUIRE(vertex.initialize(renderer.native_handle(),
-                            {.stage = granit::shader_stage::vertex, .code = vertex_code}) ==
+  REQUIRE(vertex.initialize_asset(
+              renderer.native_handle(),
+              {.stage = granit::shader_stage::vertex, .spirv = vertex_code, .wgsl = vertex_wgsl}) ==
           granit::result::success);
-  REQUIRE(fragment.initialize(renderer.native_handle(),
-                              {.stage = granit::shader_stage::fragment, .code = fragment_code}) ==
-          granit::result::success);
+  REQUIRE(fragment.initialize_asset(renderer.native_handle(),
+                                    {.stage = granit::shader_stage::fragment,
+                                     .spirv = fragment_code,
+                                     .wgsl = fragment_wgsl}) == granit::result::success);
 
   const std::array declarations{
       granit::bind_group_layout_entry{.binding = 0,
@@ -338,9 +358,11 @@ TEST_CASE("动态 Uniform Offset 从同一 Buffer 绘制两个对象", "[pipelin
   write_vec4(256, {0.5F, 0.0F, 0.0F, 0.0F});
   write_vec4(272, {0.0F, 1.0F, 0.0F, 1.0F});
   granit::buffer uniform;
-  REQUIRE(uniform.initialize(renderer.native_handle(),
-                             {.size = uniform_data.size(), .usage = granit::buffer_usage::uniform},
-                             uniform_data) == granit::result::success);
+  REQUIRE(uniform.initialize(
+              renderer.native_handle(),
+              {.size = uniform_data.size(),
+               .usage = granit::buffer_usage::uniform | granit::buffer_usage::transfer_destination},
+              uniform_data) == granit::result::success);
   const std::array entries{granit::bind_group_entry{
       .binding = 0, .resource = uniform.native_handle(), .offset = 0, .size = 32}};
   granit::bind_group group;
@@ -423,6 +445,15 @@ TEST_CASE("动态 Uniform Offset 从同一 Buffer 绘制两个对象", "[pipelin
   CHECK(validation_errors.load(std::memory_order_relaxed) == 0);
   REQUIRE(granit_texture_view_destroy(renderer.native_handle(), target_view) == GRANIT_SUCCESS);
   REQUIRE(granit_texture_destroy(renderer.native_handle(), target) == GRANIT_SUCCESS);
+  REQUIRE(readback.reset() == granit::result::success);
+  REQUIRE(group.reset() == granit::result::success);
+  REQUIRE(uniform.reset() == granit::result::success);
+  REQUIRE(pipeline.reset() == granit::result::success);
+  REQUIRE(pipeline_layout.reset() == granit::result::success);
+  REQUIRE(group_layout.reset() == granit::result::success);
+  REQUIRE(fragment.reset() == granit::result::success);
+  REQUIRE(vertex.reset() == granit::result::success);
+  REQUIRE(renderer.reset() == granit::result::success);
 }
 
 TEST_CASE("不可变 Bind Group 保持 Buffer 与 Sampler 生命周期", "[pipeline][bind-group]") {
