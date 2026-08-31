@@ -289,8 +289,9 @@ Fixture 的尺寸、交错顶点、`uint16` 索引、四组动态 Uniform、三�
 Shader Asset。Emscripten 5.0.6 浏览器 Smoke 已通过公共 Buffer、Texture、Sampler、Bind Group、
 Pipeline 与 Command Recorder API 运行完整场景；Chromium 截图同时验证左右材质实例、中心近远遮挡
 和清屏背景。包含指针的 Bind Group 绑定与 Rendering 描述已改用实际布局计算 `struct_size`，因此
-公共 `command_recorder.hpp` 也能由 wasm32 C++20 使用，同时保持桌面 64 位 ABI 数值不变。S-12F
-剩余工作是确认手动 Actions 中真实桌面 Dawn 与浏览器平台矩阵结果。
+公共 `command_recorder.hpp` 也能由 wasm32 C++20 使用，同时保持桌面 64 位 ABI 数值不变。浏览器
+产物统一命名为 `granit_webgpu_fixture_example`，避免继续将完整场景误称为三角形示例。S-12F 剩余
+工作是确认手动 Actions 中真实桌面 Dawn 与浏览器平台矩阵结果。
 
 当前测试已增加背景、两个实例和深度遮挡区域的语义探针。探针失败时在构建目录的
 `test-artifacts` 中写出实际图、按语义探针修正的期望图、绝对差异图和 Renderer/Adapter 元数据；

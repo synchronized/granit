@@ -44,7 +44,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          output="build/emscripten-release/web/granit_webgpu_triangle_example"
+          output="build/emscripten-release/web/granit_webgpu_fixture_example"
           test -s "${output}.html"
           test -s "${output}.js"
           test -s "${output}.wasm"
@@ -52,7 +52,7 @@ jobs:
       - name: 安装浏览器测试驱动
         working-directory: web/tests
         run: npm ci
-      - name: 验证浏览器 WebGPU 启动与输入转发
+      - name: 验证浏览器 WebGPU 共享 Fixture 与输入转发
         working-directory: web/tests
         env:
           CHROME_PATH: /usr/bin/google-chrome

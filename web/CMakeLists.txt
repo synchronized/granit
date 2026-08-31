@@ -75,7 +75,7 @@ target_link_options(
 set_target_properties(
   granit_web_platform_smoke
   PROPERTIES
-    OUTPUT_NAME granit_webgpu_triangle_example
+    OUTPUT_NAME granit_webgpu_fixture_example
     SUFFIX ".html"
     FOLDER "Examples/Web"
 )

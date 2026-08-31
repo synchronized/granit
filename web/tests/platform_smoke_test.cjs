@@ -9,7 +9,7 @@ const { chromium } = require("playwright-core");
 
 const outputDirectory = path.resolve(process.argv[2] ?? "build/emscripten-release/web");
 const chromePath = process.env.CHROME_PATH ?? "/usr/bin/google-chrome";
-const entryName = "granit_webgpu_triangle_example.html";
+const entryName = "granit_webgpu_fixture_example.html";
 
 const contentTypes = new Map([
   [".data", "application/octet-stream"],
