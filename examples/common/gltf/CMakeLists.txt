@@ -76,7 +76,7 @@ target_link_libraries(
 )
 set_target_properties(granit_example_gltf_dependencies PROPERTIES FOLDER "Examples/Third Party")
 
-add_library(granit_example_gltf_support STATIC loader.cpp resource_uri.cpp)
+add_library(granit_example_gltf_support STATIC image_decoder.cpp loader.cpp resource_uri.cpp)
 if(MSVC OR WIN32)
   target_compile_definitions(granit_example_gltf_support PRIVATE _CRT_SECURE_NO_WARNINGS)
 endif()

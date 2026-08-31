@@ -17,10 +17,11 @@ std::span<const std::byte> bytes(std::string_view text) {
 
 class memory_resolver final : public granit::example::gltf::resource_resolver {
 public:
-  explicit memory_resolver(std::vector<std::byte> data) : data_(std::move(data)) {}
+  explicit memory_resolver(std::vector<std::byte> data, std::string path = "scene.bin")
+      : data_(std::move(data)), path_(std::move(path)) {}
 
   bool resolve(std::string_view path, std::vector<std::byte>& output) const override {
-    if (path != "scene.bin")
+    if (path != path_)
       return false;
     output = data_;
     return true;
@@ -28,10 +29,10 @@ public:
 
 private:
   std::vector<std::byte> data_;
+  std::string path_;
 };
 
-template <typename Value>
-void append(std::vector<std::byte>& output, const Value& value) {
+template <typename Value> void append(std::vector<std::byte>& output, const Value& value) {
   const auto offset = output.size();
   output.resize(offset + sizeof(value));
   std::memcpy(output.data() + offset, &value, sizeof(value));
@@ -43,14 +44,13 @@ static_assert(!std::is_copy_constructible_v<granit::example::gltf::resource_reso
 
 TEST_CASE("glTF 资源 URI 仅接受受控相对路径", "[example][gltf][uri]") {
   std::string normalized = "unchanged";
-  REQUIRE(granit::example::gltf::normalize_resource_uri(
-      "textures/./base_color.png", normalized));
+  REQUIRE(granit::example::gltf::normalize_resource_uri("textures/./base_color.png", normalized));
   CHECK(normalized == "textures/base_color.png");
 
-  for (const std::string_view invalid : {"", "../secret.bin", "textures/../../secret.bin",
-                                         "/absolute.bin", "C:/absolute.bin", "https://host/a.bin",
-                                         "data:application/octet-stream;base64,AA==", "a\\b.bin",
-                                         "a%2f..%2fsecret.bin", "a.bin?x=1", "a.bin#fragment"}) {
+  for (const std::string_view invalid :
+       {"", "../secret.bin", "textures/../../secret.bin", "/absolute.bin", "C:/absolute.bin",
+        "https://host/a.bin", "data:application/octet-stream;base64,AA==", "a\\b.bin",
+        "a%2f..%2fsecret.bin", "a.bin?x=1", "a.bin#fragment"}) {
     normalized = "unchanged";
     CHECK_FALSE(granit::example::gltf::normalize_resource_uri(invalid, normalized));
     CHECK(normalized == "unchanged");
@@ -134,4 +134,44 @@ TEST_CASE("glTF Loader 读取 Primitive、索引和 AABB", "[example][gltf][load
   CHECK(primitive.normals.size() == 3);
   CHECK(primitive.local_bounds.minimum == granit::math::float3{-1, -2, -1});
   CHECK(primitive.local_bounds.maximum == granit::math::float3{3, 4, 1});
+}
+
+TEST_CASE("glTF Loader 解码 PBR Material 图片与 Sampler", "[example][gltf][loader]") {
+  constexpr std::string_view document = R"({
+    "asset":{"version":"2.0"},
+    "images":[{"name":"pixel","uri":"pixel.png"}],
+    "samplers":[{"magFilter":9729,"minFilter":9987,"wrapS":10497,"wrapT":33071}],
+    "textures":[{"source":0,"sampler":0}],
+    "materials":[{"name":"paint","pbrMetallicRoughness":{
+      "baseColorFactor":[0.5,0.6,0.7,1.0],"metallicFactor":0.25,"roughnessFactor":0.75,
+      "baseColorTexture":{"index":0}
+    }}]
+  })";
+  const std::uint8_t png[] = {
+      0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d, 0x49, 0x48,
+      0x44, 0x52, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x08, 0x04, 0x00, 0x00,
+      0x00, 0xb5, 0x1c, 0x0c, 0x02, 0x00, 0x00, 0x00, 0x0b, 0x49, 0x44, 0x41, 0x54, 0x78,
+      0xda, 0x63, 0x64, 0xf8, 0x0f, 0x00, 0x01, 0x05, 0x01, 0x01, 0x27, 0x18, 0xe3, 0x66,
+      0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4e, 0x44, 0xae, 0x42, 0x60, 0x82};
+  std::vector<std::byte> encoded(sizeof(png));
+  std::memcpy(encoded.data(), png, sizeof(png));
+  const memory_resolver resolver(std::move(encoded), "pixel.png");
+
+  granit::example::gltf::scene scene;
+  const auto result = granit::example::gltf::load(bytes(document), &resolver, scene);
+  REQUIRE(result);
+  REQUIRE(scene.images.size() == 1);
+  REQUIRE(scene.images[0].mips.size() == 1);
+  CHECK(scene.images[0].name == "pixel");
+  CHECK(scene.images[0].mips[0].width == 1);
+  CHECK(scene.images[0].mips[0].height == 1);
+  CHECK(scene.images[0].rgba8_pixels.size() == 4);
+  REQUIRE(scene.materials.size() == 1);
+  CHECK(scene.materials[0].base_color == granit::math::float4{0.5F, 0.6F, 0.7F, 1.0F});
+  CHECK(scene.materials[0].metallic == 0.25F);
+  CHECK(scene.materials[0].roughness == 0.75F);
+  CHECK(scene.materials[0].base_color_texture.image == 0);
+  CHECK(scene.materials[0].base_color_texture.sampler == 0);
+  REQUIRE(scene.samplers.size() == 1);
+  CHECK(scene.samplers[0].wrap_v == 33071);
 }
