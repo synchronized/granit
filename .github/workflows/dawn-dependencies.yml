@@ -6,6 +6,11 @@ name: Dawn SDK Build
 on:
   workflow_dispatch:
     inputs:
+      integration_only:
+        description: "跳过 SDK 构建，使用已发布 SDK 运行轻量集成验证"
+        required: true
+        default: false
+        type: boolean
       publish_sdk:
         description: "验证通过后发布长期保存的版本化 Dawn SDK"
         required: true
@@ -32,7 +37,7 @@ env:
 
 jobs:
   windows-static-plugin:
-    if: ${{ inputs.run_windows }}
+    if: ${{ inputs.run_windows && !inputs.integration_only }}
     runs-on: windows-2022
     timeout-minutes: 120
     steps:
@@ -216,7 +221,7 @@ jobs:
           if-no-files-found: error
 
   linux-static-plugin:
-    if: ${{ inputs.run_linux }}
+    if: ${{ inputs.run_linux && !inputs.integration_only }}
     runs-on: ubuntu-24.04
     timeout-minutes: 120
     steps:
@@ -391,7 +396,9 @@ jobs:
           if-no-files-found: error
 
   publish-sdk:
-    if: ${{ inputs.publish_sdk && inputs.run_windows && inputs.run_linux }}
+    if: >-
+      ${{ !inputs.integration_only && inputs.publish_sdk && inputs.run_windows &&
+      inputs.run_linux }}
     needs:
       - windows-static-plugin
       - linux-static-plugin
@@ -426,3 +433,10 @@ jobs:
           gh release upload "$tag" "${packages[@]}" \
             --repo "$GITHUB_REPOSITORY" \
             --clobber
+
+  integration:
+    if: ${{ inputs.integration_only }}
+    uses: ./.github/workflows/dawn-integration.yml
+    with:
+      run_windows: ${{ inputs.run_windows }}
+      run_linux: ${{ inputs.run_linux }}

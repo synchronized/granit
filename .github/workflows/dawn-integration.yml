@@ -4,6 +4,14 @@
 name: Dawn Integration
 
 on:
+  workflow_call:
+    inputs:
+      run_windows:
+        required: true
+        type: boolean
+      run_linux:
+        required: true
+        type: boolean
   workflow_dispatch:
     inputs:
       run_windows:
