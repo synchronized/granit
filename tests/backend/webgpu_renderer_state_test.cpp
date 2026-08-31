@@ -56,9 +56,10 @@ TEST_CASE("WebGPU Renderer 状态集中管理静态 Provider 生命周期", "[ba
   auto texture = state.allocate_texture_resource();
   REQUIRE(texture != nullptr);
   granit_texture_desc texture_desc = GRANIT_TEXTURE_DESC_INIT;
-  texture_desc.format = GRANIT_TEXTURE_FORMAT_RGBA8_SRGB;
-  texture_desc.usage =
-      GRANIT_TEXTURE_USAGE_SAMPLED_BIT | GRANIT_TEXTURE_USAGE_TRANSFER_DESTINATION_BIT;
+  texture_desc.format = GRANIT_TEXTURE_FORMAT_RGBA8_UNORM;
+  texture_desc.usage = GRANIT_TEXTURE_USAGE_SAMPLED_BIT | GRANIT_TEXTURE_USAGE_TRANSFER_SOURCE_BIT |
+                       GRANIT_TEXTURE_USAGE_TRANSFER_DESTINATION_BIT |
+                       GRANIT_TEXTURE_USAGE_COLOR_ATTACHMENT_BIT;
   texture_desc.width = 64;
   texture_desc.height = 32;
   texture_desc.mip_levels = 4;
@@ -107,7 +108,7 @@ TEST_CASE("WebGPU Renderer 状态集中管理静态 Provider 生命周期", "[ba
   auto texture_view = state.allocate_texture_view_resource();
   REQUIRE(texture_view != nullptr);
   granit_texture_view_desc view_desc = GRANIT_TEXTURE_VIEW_DESC_INIT;
-  view_desc.format = GRANIT_TEXTURE_FORMAT_RGBA8_SRGB;
+  view_desc.format = GRANIT_TEXTURE_FORMAT_RGBA8_UNORM;
   view_desc.range.base_mip_level = 1;
   view_desc.range.mip_level_count = 2;
   REQUIRE(state.create_texture_view(*texture, texture_desc, view_desc, *texture_view) ==
@@ -197,7 +198,41 @@ TEST_CASE("WebGPU Renderer 状态集中管理静态 Provider 生命周期", "[ba
   REQUIRE(state.bind_compute_groups(*compute_recorder, *pipeline_layout, 0, compute_groups, {}, {},
                                     {}) == GRANIT_SUCCESS);
   REQUIRE(state.dispatch(*compute_recorder, 2, 1, 1) == GRANIT_SUCCESS);
+  const granit::detail::backend_color_attachment color_attachment{
+      texture.get(),
+      texture_view.get(),
+      {},
+      GRANIT_TEXTURE_FORMAT_RGBA8_UNORM,
+      GRANIT_ATTACHMENT_LOAD_OPERATION_CLEAR,
+      GRANIT_ATTACHMENT_STORE_OPERATION_STORE,
+      {0.0F, 0.0F, 0.0F, 1.0F}};
+  REQUIRE(state.begin_rendering(*compute_recorder, {}, std::span{&color_attachment, 1}, nullptr,
+                                1) == GRANIT_SUCCESS);
+  REQUIRE(state.end_rendering(*compute_recorder) == GRANIT_SUCCESS);
   REQUIRE(state.end_command_recorder(*compute_recorder) == GRANIT_SUCCESS);
+
+  auto compute_copy_recorder = state.allocate_command_recorder_resource();
+  REQUIRE(compute_copy_recorder != nullptr);
+  REQUIRE(state.create_command_recorder(*compute_copy_recorder) == GRANIT_SUCCESS);
+  REQUIRE(state.begin_command_recorder(*compute_copy_recorder) == GRANIT_SUCCESS);
+  REQUIRE(state.bind_compute_pipeline(*compute_copy_recorder, *compute_pipeline) == GRANIT_SUCCESS);
+  REQUIRE(state.dispatch(*compute_copy_recorder, 1, 1, 1) == GRANIT_SUCCESS);
+  const granit_texture_data_layout copy_layout{
+      .offset = 0, .bytes_per_row = 256, .rows_per_image = 1};
+  const granit_texture_write_region copy_region{.mip_level = 0,
+                                                .base_array_layer = 0,
+                                                .array_layer_count = 1,
+                                                .aspect = GRANIT_TEXTURE_ASPECT_COLOR_BIT,
+                                                .x = 0,
+                                                .y = 0,
+                                                .z = 0,
+                                                .width = 1,
+                                                .height = 1,
+                                                .depth = 1};
+  REQUIRE(state.copy_texture_to_buffer(*compute_copy_recorder, *texture, *vertex_buffer,
+                                       GRANIT_TEXTURE_FORMAT_RGBA8_UNORM, copy_layout,
+                                       copy_region) == GRANIT_SUCCESS);
+  REQUIRE(state.end_command_recorder(*compute_copy_recorder) == GRANIT_SUCCESS);
   auto empty_pipeline_layout = state.allocate_pipeline_layout_resource();
   REQUIRE(empty_pipeline_layout != nullptr);
   REQUIRE(state.create_pipeline_layout({}, *empty_pipeline_layout) == GRANIT_SUCCESS);

@@ -61,6 +61,16 @@ webgpu_command_recorder_resource* as_recorder(backend_command_recorder_resource&
   return dynamic_cast<webgpu_command_recorder_resource*>(&resource);
 }
 
+granit_result end_compute_if_open(const webgpu_command_context& context,
+                                  webgpu_command_recorder_resource& recorder) noexcept {
+  if (!recorder.compute_open_)
+    return GRANIT_SUCCESS;
+  const auto result = context.loader->recorder_end_compute(context.instance, recorder.recorder_);
+  if (result == GRANIT_SUCCESS)
+    recorder.compute_open_ = false;
+  return result;
+}
+
 } // namespace
 
 webgpu_command_adapter::webgpu_command_adapter(backend_plugin_loader& loader,
@@ -91,6 +101,8 @@ granit_result webgpu_command_adapter::begin_rendering(
   if (recorder == nullptr || recorder->recorder_ == 0 || recorder->command_buffer_ != 0 ||
       target == 0)
     return GRANIT_ERROR_INVALID_ARGUMENT;
+  if (const auto result = end_compute_if_open(*context_, *recorder); result != GRANIT_SUCCESS)
+    return result;
   auto result = context_->loader->recorder_begin_rendering(context_->instance, recorder->recorder_,
                                                            target, load, store, clear, depth_target,
                                                            depth_load, depth_store, clear_depth);
@@ -184,9 +196,14 @@ granit_result webgpu_command_adapter::bind_graphics_groups(
 granit_result
 webgpu_command_adapter::begin_compute(backend_command_recorder_resource& resource) const noexcept {
   auto* recorder = as_recorder(resource);
-  return recorder == nullptr
-             ? GRANIT_ERROR_INVALID_ARGUMENT
-             : context_->loader->recorder_begin_compute(context_->instance, recorder->recorder_);
+  if (recorder == nullptr || recorder->recorder_ == 0 || recorder->command_buffer_ != 0 ||
+      recorder->compute_open_ || recorder->render_open_)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  const auto result =
+      context_->loader->recorder_begin_compute(context_->instance, recorder->recorder_);
+  if (result == GRANIT_SUCCESS)
+    recorder->compute_open_ = true;
+  return result;
 }
 
 granit_result webgpu_command_adapter::bind_compute_pipeline(
@@ -230,9 +247,9 @@ granit_result webgpu_command_adapter::dispatch(backend_command_recorder_resource
 granit_result
 webgpu_command_adapter::end_compute(backend_command_recorder_resource& resource) const noexcept {
   auto* recorder = as_recorder(resource);
-  return recorder == nullptr
-             ? GRANIT_ERROR_INVALID_ARGUMENT
-             : context_->loader->recorder_end_compute(context_->instance, recorder->recorder_);
+  if (recorder == nullptr || !recorder->compute_open_)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  return end_compute_if_open(*context_, *recorder);
 }
 
 granit_result webgpu_command_adapter::bind_vertex_buffers(
@@ -336,6 +353,8 @@ granit_result webgpu_command_adapter::copy_texture_to_buffer(
   auto* recorder = as_recorder(resource);
   if (recorder == nullptr || recorder->render_open_ || texture == 0 || buffer == 0)
     return GRANIT_ERROR_INVALID_ARGUMENT;
+  if (const auto result = end_compute_if_open(*context_, *recorder); result != GRANIT_SUCCESS)
+    return result;
   return context_->loader->recorder_copy_texture_to_buffer(
       context_->instance, recorder->recorder_, texture, buffer, width, height, bytes_per_row);
 }
