@@ -3,6 +3,7 @@
 
 #include "backend/webgpu/pipeline_adapter.h"
 
+#include <limits>
 #include <utility>
 #include <vector>
 
@@ -163,8 +164,14 @@ granit_result webgpu_pipeline_adapter::create_graphics_pipeline(
     std::vector<granit_backend_plugin_vertex_buffer_layout> layouts;
     std::vector<granit_backend_plugin_vertex_attribute> attributes;
     layouts.reserve(vertex_buffers.size());
-    for (const auto& source : vertex_buffers)
-      attributes.reserve(attributes.size() + source.attribute_count);
+    std::size_t attribute_count = 0;
+    for (const auto& source : vertex_buffers) {
+      if (source.attribute_count > std::numeric_limits<std::size_t>::max() - attribute_count)
+        return GRANIT_ERROR_INVALID_ARGUMENT;
+      attribute_count += source.attribute_count;
+    }
+    // 布局保存 attributes 中元素的地址，因此必须在写入任何布局前一次性完成容量分配。
+    attributes.reserve(attribute_count);
     for (const auto& source : vertex_buffers) {
       const auto first = attributes.size();
       for (std::uint32_t index = 0; index < source.attribute_count; ++index) {

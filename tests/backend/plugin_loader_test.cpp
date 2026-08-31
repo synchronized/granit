@@ -708,15 +708,21 @@ TEST_CASE("WebGPU 插件绑定与 Pipeline 遵守依赖生命周期", "[backend]
   const granit_backend_plugin_vertex_attribute vertex_attributes[]{
       {0, GRANIT_BACKEND_PLUGIN_VERTEX_FORMAT_FLOAT32X3, 0, 0},
       {1, GRANIT_BACKEND_PLUGIN_VERTEX_FORMAT_FLOAT32X2, 12, 0}};
-  const granit_backend_plugin_vertex_buffer_layout vertex_layout{
-      20, GRANIT_BACKEND_PLUGIN_VERTEX_STEP_MODE_VERTEX, 2, 0, vertex_attributes};
-  pipeline_desc.vertex_buffer_layout_count = 1;
-  pipeline_desc.vertex_buffer_layouts = &vertex_layout;
+  const granit_backend_plugin_vertex_attribute instance_attributes[]{
+      {2, GRANIT_BACKEND_PLUGIN_VERTEX_FORMAT_FLOAT32X4, 0, 0},
+      {3, GRANIT_BACKEND_PLUGIN_VERTEX_FORMAT_FLOAT32X4, 16, 0},
+      {4, GRANIT_BACKEND_PLUGIN_VERTEX_FORMAT_FLOAT32X4, 32, 0}};
+  const granit_backend_plugin_vertex_buffer_layout vertex_layouts[]{
+      {20, GRANIT_BACKEND_PLUGIN_VERTEX_STEP_MODE_VERTEX, 2, 0, vertex_attributes},
+      {48, GRANIT_BACKEND_PLUGIN_VERTEX_STEP_MODE_INSTANCE, 3, 0, instance_attributes}};
+  pipeline_desc.vertex_buffer_layout_count = 2;
+  pipeline_desc.vertex_buffer_layouts = vertex_layouts;
   granit_backend_plugin_render_pipeline geometry_pipeline{};
   REQUIRE(loader.create_render_pipeline(first, &pipeline_desc, &geometry_pipeline) ==
           GRANIT_SUCCESS);
-  auto invalid_layout = vertex_layout;
+  auto invalid_layout = vertex_layouts[0];
   invalid_layout.stride = 16;
+  pipeline_desc.vertex_buffer_layout_count = 1;
   pipeline_desc.vertex_buffer_layouts = &invalid_layout;
   granit_backend_plugin_render_pipeline invalid_pipeline = 42;
   CHECK(loader.create_render_pipeline(first, &pipeline_desc, &invalid_pipeline) ==

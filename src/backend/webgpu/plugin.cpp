@@ -1959,9 +1959,15 @@ create_render_pipeline(granit_backend_plugin_instance instance,
   std::vector<WGPUVertexAttribute> vertex_attributes;
   try {
     vertex_buffers.reserve(desc->vertex_buffer_layout_count);
-    for (std::uint32_t binding = 0; binding < desc->vertex_buffer_layout_count; ++binding)
-      vertex_attributes.reserve(vertex_attributes.size() +
-                                desc->vertex_buffer_layouts[binding].attribute_count);
+    std::size_t attribute_count = 0;
+    for (std::uint32_t binding = 0; binding < desc->vertex_buffer_layout_count; ++binding) {
+      const auto count = desc->vertex_buffer_layouts[binding].attribute_count;
+      if (count > std::numeric_limits<std::size_t>::max() - attribute_count)
+        return GRANIT_ERROR_INVALID_ARGUMENT;
+      attribute_count += count;
+    }
+    // WGPUVertexBufferLayout 保存属性数组指针，后续不得再触发 vector 重新分配。
+    vertex_attributes.reserve(attribute_count);
     for (std::uint32_t binding = 0; binding < desc->vertex_buffer_layout_count; ++binding) {
       const auto& source = desc->vertex_buffer_layouts[binding];
       if (source.stride == 0 || source.reserved != 0 || source.attribute_count == 0 ||
