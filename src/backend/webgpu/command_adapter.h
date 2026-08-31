@@ -34,6 +34,18 @@ public:
                        granit_backend_plugin_pipeline_layout layout, std::uint32_t first_group,
                        std::span<const granit_backend_plugin_bind_group> groups,
                        std::span<const std::uint32_t> dynamic_offsets) const noexcept;
+  [[nodiscard]] granit_result begin_compute(backend_command_recorder_resource&) const noexcept;
+  [[nodiscard]] granit_result
+  bind_compute_pipeline(backend_command_recorder_resource&,
+                        granit_backend_plugin_compute_pipeline) const noexcept;
+  [[nodiscard]] granit_result bind_compute_groups(backend_command_recorder_resource&,
+                                                  granit_backend_plugin_pipeline_layout,
+                                                  std::uint32_t,
+                                                  std::span<const granit_backend_plugin_bind_group>,
+                                                  std::span<const std::uint32_t>) const noexcept;
+  [[nodiscard]] granit_result dispatch(backend_command_recorder_resource&, std::uint32_t,
+                                       std::uint32_t, std::uint32_t) const noexcept;
+  [[nodiscard]] granit_result end_compute(backend_command_recorder_resource&) const noexcept;
   [[nodiscard]] granit_result bind_vertex_buffers(
       backend_command_recorder_resource& resource, std::uint32_t first,
       std::span<const granit_backend_plugin_vertex_buffer_binding> bindings) const noexcept;

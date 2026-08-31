@@ -186,6 +186,18 @@ TEST_CASE("WebGPU Renderer 状态集中管理静态 Provider 生命周期", "[ba
   REQUIRE(compute_pipeline != nullptr);
   REQUIRE(state.create_compute_pipeline(*pipeline_layout, *compute_shader, "cs_main",
                                         *compute_pipeline) == GRANIT_SUCCESS);
+  auto compute_recorder = state.allocate_command_recorder_resource();
+  REQUIRE(compute_recorder != nullptr);
+  REQUIRE(state.create_command_recorder(*compute_recorder) == GRANIT_SUCCESS);
+  REQUIRE(state.begin_command_recorder(*compute_recorder) == GRANIT_SUCCESS);
+  CHECK(state.dispatch(*compute_recorder, 1, 1, 1) == GRANIT_ERROR_INVALID_ARGUMENT);
+  REQUIRE(state.bind_compute_pipeline(*compute_recorder, *compute_pipeline) == GRANIT_SUCCESS);
+  const std::array<granit::detail::backend_bind_group_resource*, 1> compute_groups{
+      bind_group.get()};
+  REQUIRE(state.bind_compute_groups(*compute_recorder, *pipeline_layout, 0, compute_groups, {}, {},
+                                    {}) == GRANIT_SUCCESS);
+  REQUIRE(state.dispatch(*compute_recorder, 2, 1, 1) == GRANIT_SUCCESS);
+  REQUIRE(state.end_command_recorder(*compute_recorder) == GRANIT_SUCCESS);
   auto empty_pipeline_layout = state.allocate_pipeline_layout_resource();
   REQUIRE(empty_pipeline_layout != nullptr);
   REQUIRE(state.create_pipeline_layout({}, *empty_pipeline_layout) == GRANIT_SUCCESS);

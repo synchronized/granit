@@ -62,6 +62,7 @@ struct WGPUCommandBufferImpl {};
 struct WGPURenderPassEncoderImpl {
   WGPUTexture target;
 };
+struct WGPUComputePassEncoderImpl {};
 
 extern "C" WGPUInstance wgpuCreateInstance(const WGPUInstanceDescriptor*) {
   return new WGPUInstanceImpl;
@@ -393,6 +394,17 @@ wgpuDeviceCreateComputePipeline(WGPUDevice, const WGPUComputePipelineDescriptor*
              : nullptr;
 }
 extern "C" void wgpuComputePipelineRelease(WGPUComputePipeline pipeline) { delete pipeline; }
+extern "C" WGPUComputePassEncoder
+wgpuCommandEncoderBeginComputePass(WGPUCommandEncoder, const WGPUComputePassDescriptor*) {
+  return new WGPUComputePassEncoderImpl;
+}
+extern "C" void wgpuComputePassEncoderSetPipeline(WGPUComputePassEncoder, WGPUComputePipeline) {}
+extern "C" void wgpuComputePassEncoderSetBindGroup(WGPUComputePassEncoder, unsigned int,
+                                                   WGPUBindGroup, size_t, const unsigned int*) {}
+extern "C" void wgpuComputePassEncoderDispatchWorkgroups(WGPUComputePassEncoder, unsigned int,
+                                                         unsigned int, unsigned int) {}
+extern "C" void wgpuComputePassEncoderEnd(WGPUComputePassEncoder) {}
+extern "C" void wgpuComputePassEncoderRelease(WGPUComputePassEncoder pass) { delete pass; }
 
 extern "C" WGPUCommandEncoder wgpuDeviceCreateCommandEncoder(WGPUDevice,
                                                              const WGPUCommandEncoderDescriptor*) {

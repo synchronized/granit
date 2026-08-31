@@ -10,6 +10,7 @@
 
 #include "backend/capabilities.h"
 #include "backend/command.h"
+#include "backend/compute.h"
 #include "backend/lifecycle.h"
 #include "backend/pipeline.h"
 #include "backend/plugin_loader.h"
@@ -32,6 +33,7 @@ class webgpu_renderer_state final : public backend_renderer,
                                     public backend_queue,
                                     public backend_command_renderer,
                                     public backend_graphics_command_renderer,
+                                    public backend_compute_command_renderer,
                                     public backend_resource_renderer,
                                     public backend_shader_renderer,
                                     public backend_pipeline_layout_renderer,
@@ -111,6 +113,17 @@ public:
   [[nodiscard]] granit_result
   create_compute_pipeline(backend_pipeline_layout_resource&, backend_shader_resource&, const char*,
                           backend_compute_pipeline_resource&) noexcept override;
+  [[nodiscard]] granit_result
+  bind_compute_pipeline(backend_command_recorder_resource&,
+                        backend_compute_pipeline_resource&) noexcept override;
+  [[nodiscard]] granit_result bind_compute_groups(backend_command_recorder_resource&,
+                                                  backend_pipeline_layout_resource&, std::uint32_t,
+                                                  std::span<backend_bind_group_resource* const>,
+                                                  std::span<const std::uint32_t>,
+                                                  std::span<const backend_buffer_access>,
+                                                  std::span<const backend_texture_access>) override;
+  [[nodiscard]] granit_result dispatch(backend_command_recorder_resource&, std::uint32_t,
+                                       std::uint32_t, std::uint32_t) noexcept override;
 
   [[nodiscard]] std::unique_ptr<backend_command_recorder_resource>
   allocate_command_recorder_resource() override;

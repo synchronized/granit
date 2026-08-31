@@ -137,6 +137,12 @@ granit_result webgpu_pipeline_adapter::create_compute_pipeline(
   return context_->loader->create_compute_pipeline(context_->instance, &desc, &pipeline->handle_);
 }
 
+granit_backend_plugin_compute_pipeline webgpu_pipeline_adapter::native_compute_pipeline(
+    backend_compute_pipeline_resource& resource) const noexcept {
+  const auto* pipeline = dynamic_cast<webgpu_compute_pipeline_resource*>(&resource);
+  return pipeline == nullptr ? 0 : pipeline->handle_;
+}
+
 granit_result webgpu_pipeline_adapter::create_graphics_pipeline(
     backend_graphics_pipeline_resource& resource, backend_pipeline_layout_resource& layout_resource,
     granit_backend_plugin_shader vertex_shader, granit_backend_plugin_shader fragment_shader,

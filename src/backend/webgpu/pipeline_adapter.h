@@ -37,6 +37,8 @@ public:
   create_compute_pipeline(backend_compute_pipeline_resource& resource,
                           granit_backend_plugin_pipeline_layout layout,
                           granit_backend_plugin_shader shader) const noexcept;
+  [[nodiscard]] granit_backend_plugin_compute_pipeline
+  native_compute_pipeline(backend_compute_pipeline_resource& resource) const noexcept;
   [[nodiscard]] granit_result create_graphics_pipeline(
       backend_graphics_pipeline_resource& resource, backend_pipeline_layout_resource& layout,
       granit_backend_plugin_shader vertex_shader, granit_backend_plugin_shader fragment_shader,

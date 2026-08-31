@@ -813,6 +813,19 @@ TEST_CASE("WebGPU 插件绑定与 Pipeline 遵守依赖生命周期", "[backend]
   REQUIRE(loader.destroy_command_buffer(first, command_buffer) == GRANIT_SUCCESS);
   CHECK(loader.destroy_command_buffer(first, command_buffer) == GRANIT_ERROR_INVALID_HANDLE);
   REQUIRE(loader.destroy_command_recorder(first, recorder) == GRANIT_SUCCESS);
+  REQUIRE(loader.create_command_recorder(first, &recorder) == GRANIT_SUCCESS);
+  REQUIRE(loader.recorder_begin_compute(first, recorder) == GRANIT_SUCCESS);
+  CHECK(loader.recorder_dispatch(first, recorder, 1, 1, 1) == GRANIT_ERROR_INVALID_ARGUMENT);
+  REQUIRE(loader.recorder_bind_compute_pipeline(first, recorder, compute_pipeline) ==
+          GRANIT_SUCCESS);
+  const std::uint32_t compute_dynamic_offset[]{256};
+  REQUIRE(loader.recorder_bind_compute_groups(first, recorder, pipeline_layout, 0, graphics_groups,
+                                              compute_dynamic_offset) == GRANIT_SUCCESS);
+  REQUIRE(loader.recorder_dispatch(first, recorder, 2, 1, 1) == GRANIT_SUCCESS);
+  REQUIRE(loader.recorder_end_compute(first, recorder) == GRANIT_SUCCESS);
+  REQUIRE(loader.finish_command_recorder(first, recorder, &command_buffer) == GRANIT_SUCCESS);
+  REQUIRE(loader.destroy_command_buffer(first, command_buffer) == GRANIT_SUCCESS);
+  REQUIRE(loader.destroy_command_recorder(first, recorder) == GRANIT_SUCCESS);
   REQUIRE(loader.destroy_buffer(first, buffer) == GRANIT_SUCCESS);
   REQUIRE(loader.destroy_buffer(first, readback) == GRANIT_SUCCESS);
   REQUIRE(loader.destroy_texture_view(first, target_view) == GRANIT_SUCCESS);

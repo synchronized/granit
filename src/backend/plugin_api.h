@@ -466,6 +466,21 @@ typedef granit_result (*granit_backend_plugin_create_compute_pipeline_fn)(
 typedef granit_result (*granit_backend_plugin_destroy_compute_pipeline_fn)(
     granit_backend_plugin_instance instance,
     granit_backend_plugin_compute_pipeline compute_pipeline);
+typedef granit_result (*granit_backend_plugin_recorder_begin_compute_fn)(
+    granit_backend_plugin_instance instance, granit_backend_plugin_command_recorder recorder);
+typedef granit_result (*granit_backend_plugin_recorder_bind_compute_pipeline_fn)(
+    granit_backend_plugin_instance instance, granit_backend_plugin_command_recorder recorder,
+    granit_backend_plugin_compute_pipeline pipeline);
+typedef granit_result (*granit_backend_plugin_recorder_bind_compute_groups_fn)(
+    granit_backend_plugin_instance instance, granit_backend_plugin_command_recorder recorder,
+    granit_backend_plugin_pipeline_layout layout, uint32_t first_group,
+    const granit_backend_plugin_bind_group* groups, uint32_t group_count,
+    const uint32_t* dynamic_offsets, uint32_t dynamic_offset_count);
+typedef granit_result (*granit_backend_plugin_recorder_dispatch_fn)(
+    granit_backend_plugin_instance instance, granit_backend_plugin_command_recorder recorder,
+    uint32_t group_count_x, uint32_t group_count_y, uint32_t group_count_z);
+typedef granit_result (*granit_backend_plugin_recorder_end_compute_fn)(
+    granit_backend_plugin_instance instance, granit_backend_plugin_command_recorder recorder);
 typedef granit_result (*granit_backend_plugin_create_command_recorder_fn)(
     granit_backend_plugin_instance instance, granit_backend_plugin_command_recorder* recorder);
 typedef granit_result (*granit_backend_plugin_destroy_command_recorder_fn)(
@@ -617,6 +632,11 @@ typedef struct granit_backend_plugin_instance_api {
   granit_backend_plugin_write_upload_batch_fn write_upload_batch;
   granit_backend_plugin_create_compute_pipeline_fn create_compute_pipeline;
   granit_backend_plugin_destroy_compute_pipeline_fn destroy_compute_pipeline;
+  granit_backend_plugin_recorder_begin_compute_fn recorder_begin_compute;
+  granit_backend_plugin_recorder_bind_compute_pipeline_fn recorder_bind_compute_pipeline;
+  granit_backend_plugin_recorder_bind_compute_groups_fn recorder_bind_compute_groups;
+  granit_backend_plugin_recorder_dispatch_fn recorder_dispatch;
+  granit_backend_plugin_recorder_end_compute_fn recorder_end_compute;
 } granit_backend_plugin_instance_api;
 
 /** 后端插件入口返回的只读描述；字符串在插件卸载前有效。 */

@@ -28,6 +28,7 @@ typedef struct WGPUComputePipelineImpl* WGPUComputePipeline;
 typedef struct WGPUCommandEncoderImpl* WGPUCommandEncoder;
 typedef struct WGPUCommandBufferImpl* WGPUCommandBuffer;
 typedef struct WGPURenderPassEncoderImpl* WGPURenderPassEncoder;
+typedef struct WGPUComputePassEncoderImpl* WGPUComputePassEncoder;
 typedef struct WGPUSurfaceImpl* WGPUSurface;
 
 typedef unsigned int WGPUBool;
@@ -510,6 +511,14 @@ typedef struct WGPUComputePipelineDescriptor {
 #define WGPU_COMPUTE_PIPELINE_DESCRIPTOR_INIT                                                      \
   {                                                                                                \
   }
+typedef struct WGPUComputePassDescriptor {
+  void* nextInChain;
+  WGPUStringView label;
+  const void* timestampWrites;
+} WGPUComputePassDescriptor;
+#define WGPU_COMPUTE_PASS_DESCRIPTOR_INIT                                                          \
+  {                                                                                                \
+  }
 
 typedef struct WGPUCommandEncoderDescriptor {
   void* nextInChain;
@@ -719,6 +728,17 @@ void wgpuRenderPipelineRelease(WGPURenderPipeline pipeline);
 WGPUComputePipeline
 wgpuDeviceCreateComputePipeline(WGPUDevice device, const WGPUComputePipelineDescriptor* descriptor);
 void wgpuComputePipelineRelease(WGPUComputePipeline pipeline);
+WGPUComputePassEncoder
+wgpuCommandEncoderBeginComputePass(WGPUCommandEncoder encoder,
+                                   const WGPUComputePassDescriptor* descriptor);
+void wgpuComputePassEncoderSetPipeline(WGPUComputePassEncoder pass, WGPUComputePipeline pipeline);
+void wgpuComputePassEncoderSetBindGroup(WGPUComputePassEncoder pass, unsigned int groupIndex,
+                                        WGPUBindGroup group, size_t dynamicOffsetCount,
+                                        const unsigned int* dynamicOffsets);
+void wgpuComputePassEncoderDispatchWorkgroups(WGPUComputePassEncoder pass, unsigned int x,
+                                              unsigned int y, unsigned int z);
+void wgpuComputePassEncoderEnd(WGPUComputePassEncoder pass);
+void wgpuComputePassEncoderRelease(WGPUComputePassEncoder pass);
 WGPUCommandEncoder wgpuDeviceCreateCommandEncoder(WGPUDevice device,
                                                   const WGPUCommandEncoderDescriptor* descriptor);
 void wgpuCommandEncoderRelease(WGPUCommandEncoder encoder);

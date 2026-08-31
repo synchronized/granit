@@ -32,6 +32,7 @@ public:
   std::shared_ptr<webgpu_command_context> context_;
   granit_backend_plugin_command_recorder recorder_{};
   granit_backend_plugin_command_buffer command_buffer_{};
+  bool compute_open_{};
 };
 
 webgpu_command_recorder_resource* as_recorder(backend_command_recorder_resource& resource) {
@@ -92,6 +93,60 @@ granit_result webgpu_command_adapter::bind_graphics_groups(
     return GRANIT_ERROR_INVALID_ARGUMENT;
   return context_->loader->recorder_bind_graphics_groups(
       context_->instance, recorder->recorder_, layout, first_group, groups, dynamic_offsets);
+}
+
+granit_result
+webgpu_command_adapter::begin_compute(backend_command_recorder_resource& resource) const noexcept {
+  auto* recorder = as_recorder(resource);
+  return recorder == nullptr
+             ? GRANIT_ERROR_INVALID_ARGUMENT
+             : context_->loader->recorder_begin_compute(context_->instance, recorder->recorder_);
+}
+
+granit_result webgpu_command_adapter::bind_compute_pipeline(
+    backend_command_recorder_resource& resource,
+    granit_backend_plugin_compute_pipeline pipeline) const noexcept {
+  auto* recorder = as_recorder(resource);
+  if (recorder == nullptr)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  if (!recorder->compute_open_) {
+    const auto result =
+        context_->loader->recorder_begin_compute(context_->instance, recorder->recorder_);
+    if (result != GRANIT_SUCCESS)
+      return result;
+    recorder->compute_open_ = true;
+  }
+  return context_->loader->recorder_bind_compute_pipeline(context_->instance, recorder->recorder_,
+                                                          pipeline);
+}
+
+granit_result webgpu_command_adapter::bind_compute_groups(
+    backend_command_recorder_resource& resource, granit_backend_plugin_pipeline_layout layout,
+    std::uint32_t first_group, std::span<const granit_backend_plugin_bind_group> groups,
+    std::span<const std::uint32_t> dynamic_offsets) const noexcept {
+  auto* recorder = as_recorder(resource);
+  return recorder == nullptr
+             ? GRANIT_ERROR_INVALID_ARGUMENT
+             : context_->loader->recorder_bind_compute_groups(context_->instance,
+                                                              recorder->recorder_, layout,
+                                                              first_group, groups, dynamic_offsets);
+}
+
+granit_result webgpu_command_adapter::dispatch(backend_command_recorder_resource& resource,
+                                               std::uint32_t x, std::uint32_t y,
+                                               std::uint32_t z) const noexcept {
+  auto* recorder = as_recorder(resource);
+  return recorder == nullptr ? GRANIT_ERROR_INVALID_ARGUMENT
+                             : context_->loader->recorder_dispatch(context_->instance,
+                                                                   recorder->recorder_, x, y, z);
+}
+
+granit_result
+webgpu_command_adapter::end_compute(backend_command_recorder_resource& resource) const noexcept {
+  auto* recorder = as_recorder(resource);
+  return recorder == nullptr
+             ? GRANIT_ERROR_INVALID_ARGUMENT
+             : context_->loader->recorder_end_compute(context_->instance, recorder->recorder_);
 }
 
 granit_result webgpu_command_adapter::bind_vertex_buffers(
@@ -163,6 +218,13 @@ webgpu_command_adapter::end(backend_command_recorder_resource& resource) const n
   auto* recorder = as_recorder(resource);
   if (recorder == nullptr || recorder->recorder_ == 0 || recorder->command_buffer_ != 0)
     return GRANIT_ERROR_INVALID_ARGUMENT;
+  if (recorder->compute_open_) {
+    const auto result =
+        context_->loader->recorder_end_compute(context_->instance, recorder->recorder_);
+    if (result != GRANIT_SUCCESS)
+      return result;
+    recorder->compute_open_ = false;
+  }
   return context_->loader->finish_command_recorder(context_->instance, recorder->recorder_,
                                                    &recorder->command_buffer_);
 }
@@ -198,6 +260,7 @@ webgpu_command_adapter::reset(backend_command_recorder_resource& resource) const
       return result;
     recorder->recorder_ = 0;
   }
+  recorder->compute_open_ = false;
   return GRANIT_SUCCESS;
 }
 

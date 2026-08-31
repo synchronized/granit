@@ -154,6 +154,45 @@ granit_result webgpu_renderer_state::create_compute_pipeline(
 }
 
 granit_result
+webgpu_renderer_state::bind_compute_pipeline(backend_command_recorder_resource& recorder,
+                                             backend_compute_pipeline_resource& pipeline) noexcept {
+  return commands_ && pipelines_ ? commands_->bind_compute_pipeline(
+                                       recorder, pipelines_->native_compute_pipeline(pipeline))
+                                 : GRANIT_ERROR_UNSUPPORTED;
+}
+
+granit_result webgpu_renderer_state::bind_compute_groups(
+    backend_command_recorder_resource& recorder, backend_pipeline_layout_resource& layout,
+    std::uint32_t first_group, std::span<backend_bind_group_resource* const> bind_groups,
+    std::span<const std::uint32_t> dynamic_offsets, std::span<const backend_buffer_access>,
+    std::span<const backend_texture_access>) {
+  if (!commands_ || !resources_ || !pipelines_ || bind_groups.empty())
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  try {
+    std::vector<granit_backend_plugin_bind_group> native_groups;
+    native_groups.reserve(bind_groups.size());
+    for (auto* group : bind_groups) {
+      if (group == nullptr)
+        return GRANIT_ERROR_INVALID_ARGUMENT;
+      const auto native = resources_->native_bind_group(*group);
+      if (native == 0)
+        return GRANIT_ERROR_INVALID_ARGUMENT;
+      native_groups.push_back(native);
+    }
+    return commands_->bind_compute_groups(recorder, pipelines_->native_pipeline_layout(layout),
+                                          first_group, native_groups, dynamic_offsets);
+  } catch (const std::bad_alloc&) {
+    return GRANIT_ERROR_OUT_OF_MEMORY;
+  }
+}
+
+granit_result webgpu_renderer_state::dispatch(backend_command_recorder_resource& recorder,
+                                              std::uint32_t x, std::uint32_t y,
+                                              std::uint32_t z) noexcept {
+  return commands_ ? commands_->dispatch(recorder, x, y, z) : GRANIT_ERROR_UNSUPPORTED;
+}
+
+granit_result
 webgpu_renderer_state::create_command_recorder(backend_command_recorder_resource&) noexcept {
   return commands_ ? GRANIT_SUCCESS : GRANIT_ERROR_UNSUPPORTED;
 }

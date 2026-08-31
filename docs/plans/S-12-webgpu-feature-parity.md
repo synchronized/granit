@@ -5,7 +5,7 @@
 
 ## 状态
 
-- 实现状态：进行中；S-12A、S-12B、S-12C、S-12D 已完成，下一步 S-12E
+- 实现状态：进行中；S-12A 至 S-12E 已完成，下一步 S-12F
 - 前置依赖：S-10
 - 后续任务：S-13
 - 优先级：P1
@@ -259,8 +259,8 @@ Bind Group 与动态偏移批量传给 Provider；Provider 按 Pipeline Layout �
 递增的 binding 顺序切分偏移，并再次校验数量、设备对齐、Buffer 范围、句柄归属和录制状态。
 Upload Batch 已支持在同一批次混合 Buffer 与二维单层 Texture 写入，并通过一次 Provider ABI 调用
 提交；Provider 在执行任何 Queue Write 前完整校验整批描述，公共 Registry 只在成功后统一释放 Host
-副本。WebGPU Compute Pipeline 创建与生命周期也已接通；Compute Bind Group、命令 Pass 和
-Dispatch 仍属于本阶段后续工作。
+副本。WebGPU Compute Pipeline、惰性 Compute Pass、Compute Bind Group 动态偏移和 Dispatch
+也已接通；Provider 会再次校验偏移数量、顺序、设备对齐和 Buffer 范围。S-12E 已完成。
 
 ### S-12F 跨后端 Fixture 契约
 
@@ -294,7 +294,8 @@ Metallic-Roughness Texture，并用同一 Uniform Buffer 的两个动态 Offset 
    显式 Render Pass 命令和 Indexed Draw。
 4. **S-12D 材质资源（已完成）**：已接通 Texture、子 View、区域上传、Sampler、通用
    Bind Group，以及空布局和多 Bind Group Pipeline Layout。
-5. **S-12E 每帧数据**：将动态 Uniform Offset、对齐限制和逐帧上传路径映射到两个后端。
+5. **S-12E 每帧数据（已完成）**：已将动态 Uniform Offset、对齐限制、混合 Upload Batch 和
+   Compute 命令路径映射到两个后端。
 6. **S-12F 跨后端 Fixture**：同一带纹理索引 Mesh 在 Vulkan、桌面 WebGPU 和浏览器 WebGPU 绘制。
 7. **S-12G 验收**：验证公共头、共享/静态安装 Consumer、错误路径、截图结果和平台矩阵。
 

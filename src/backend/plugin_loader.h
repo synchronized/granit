@@ -153,6 +153,25 @@ public:
   destroy_compute_pipeline(granit_backend_plugin_instance instance,
                            granit_backend_plugin_compute_pipeline pipeline) noexcept;
   [[nodiscard]] granit_result
+  recorder_begin_compute(granit_backend_plugin_instance instance,
+                         granit_backend_plugin_command_recorder recorder) noexcept;
+  [[nodiscard]] granit_result
+  recorder_bind_compute_pipeline(granit_backend_plugin_instance instance,
+                                 granit_backend_plugin_command_recorder recorder,
+                                 granit_backend_plugin_compute_pipeline pipeline) noexcept;
+  [[nodiscard]] granit_result recorder_bind_compute_groups(
+      granit_backend_plugin_instance instance, granit_backend_plugin_command_recorder recorder,
+      granit_backend_plugin_pipeline_layout layout, std::uint32_t first_group,
+      std::span<const granit_backend_plugin_bind_group> groups,
+      std::span<const std::uint32_t> dynamic_offsets) noexcept;
+  [[nodiscard]] granit_result recorder_dispatch(granit_backend_plugin_instance instance,
+                                                granit_backend_plugin_command_recorder recorder,
+                                                std::uint32_t x, std::uint32_t y,
+                                                std::uint32_t z) noexcept;
+  [[nodiscard]] granit_result
+  recorder_end_compute(granit_backend_plugin_instance instance,
+                       granit_backend_plugin_command_recorder recorder) noexcept;
+  [[nodiscard]] granit_result
   create_render_pipeline(granit_backend_plugin_instance instance,
                          const granit_backend_plugin_render_pipeline_desc* desc,
                          granit_backend_plugin_render_pipeline* render_pipeline) noexcept;
