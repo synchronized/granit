@@ -5,6 +5,7 @@
 #include <cstdio>
 #include <cstring>
 #include <new>
+#include <string>
 
 #include <emscripten/emscripten.h>
 #include <emscripten/html5.h>
@@ -16,6 +17,8 @@
 #include <granit/renderer/surface.h>
 #include <granit/renderer/swapchain.h>
 #include <granit/renderer/texture.h>
+
+#include "support/renderer_fixture.h"
 
 namespace {
 
@@ -46,6 +49,26 @@ bool load_startup_resource() noexcept {
   std::fclose(file);
   constexpr char expected[] = "granit-s10d-web-platform";
   return size >= sizeof(expected) - 1 && std::memcmp(content, expected, sizeof(expected) - 1) == 0;
+}
+
+bool validate_fixture_assets() {
+  const auto load_text = [](const char* path) {
+    auto* file = std::fopen(path, "rb");
+    if (file == nullptr)
+      return std::string{};
+    std::string content;
+    std::array<char, 1024> buffer{};
+    while (const auto size = std::fread(buffer.data(), 1, buffer.size(), file))
+      content.append(buffer.data(), size);
+    std::fclose(file);
+    return content;
+  };
+  const auto vertex = load_text("/assets/dynamic_uniform.vert.wgsl");
+  const auto fragment = load_text("/assets/dynamic_uniform.frag.wgsl");
+  return !vertex.empty() && !fragment.empty() &&
+         granit::test::renderer_fixture::vertices.size() == 4 * 7 &&
+         granit::test::renderer_fixture::indices.size() == 6 &&
+         granit::test::renderer_fixture::make_uniform_data().size() == 4 * 256;
 }
 
 granit_result validate_public_pipeline() {
@@ -426,7 +449,7 @@ extern "C" EMSCRIPTEN_KEEPALIVE int granit_web_renderer_failure_result() noexcep
 }
 
 int main() {
-  if (!load_startup_resource()) {
+  if (!load_startup_resource() || !validate_fixture_assets()) {
     fail("preloaded-resource");
     return 1;
   }
