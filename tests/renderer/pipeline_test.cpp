@@ -366,9 +366,16 @@ TEST_CASE("跨后端索引纹理 Fixture 使用动态 Uniform 绘制两个对象
     granit::renderer_backend backend;
     std::string_view library_path;
   };
+#if defined(GRANIT_WEBGPU_BACKEND_PLUGIN_PATH)
+  const auto backend = GENERATE(
+      backend_case{granit::renderer_backend::vulkan, {}},
+      backend_case{granit::renderer_backend::webgpu, GRANIT_FAKE_BACKEND_PLUGIN_PATH},
+      backend_case{granit::renderer_backend::webgpu, GRANIT_WEBGPU_BACKEND_PLUGIN_PATH});
+#else
   const auto backend =
       GENERATE(backend_case{granit::renderer_backend::vulkan, {}},
                backend_case{granit::renderer_backend::webgpu, GRANIT_FAKE_BACKEND_PLUGIN_PATH});
+#endif
   CAPTURE(backend.backend);
   std::atomic_uint32_t validation_errors{};
   granit::renderer renderer;

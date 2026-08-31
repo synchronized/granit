@@ -564,6 +564,13 @@ target_compile_definitions(
     GRANIT_FAKE_BACKEND_PLUGIN_PATH="$<TARGET_FILE:granit_fake_backend_plugin>"
 )
 add_dependencies(granit_renderer_test granit_fake_backend_plugin)
+if(GRANIT_BUILD_BACKEND_WEBGPU)
+  target_compile_definitions(
+    granit_renderer_test
+    PRIVATE GRANIT_WEBGPU_BACKEND_PLUGIN_PATH="$<TARGET_FILE:granit_backend_webgpu>"
+  )
+  add_dependencies(granit_renderer_test granit_backend_webgpu)
+endif()
 granit_target_compile_warnings(granit_renderer_test)
 add_test(NAME granit.renderer COMMAND granit_renderer_test)
 add_test(

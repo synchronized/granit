@@ -134,7 +134,7 @@ jobs:
             -DGRANIT_BUILD_TOOLS=ON `
             -DGRANIT_BUILD_TESTING=ON
           cmake --build $build --target granit_webgpu_plugin_smoke `
-            granit_shader_asset_vulkan_smoke granit_shader_tool
+            granit_shader_asset_vulkan_smoke granit_renderer_test granit_shader_tool
           $shaderTool = "$build/bin/granit_shader_tool.exe"
           $watch = [System.Diagnostics.Stopwatch]::StartNew()
           $firstOutput = (& $shaderTool compile --tint "$stage/bin/tint.exe" `
@@ -195,6 +195,8 @@ jobs:
           }
           Copy-Item -LiteralPath $fxc -Destination "$build/bin/d3dcompiler_47.dll"
           ctest --test-dir $build -R granit.backend.webgpu_plugin_smoke --verbose --output-on-failure
+          & "$build/bin/granit_renderer_test.exe" "[pipeline][bind-group][smoke]"
+          if ($LASTEXITCODE -ne 0) { throw "Windows 跨后端 Renderer Fixture 失败" }
       - name: 打包 Windows 产物
         id: package
         shell: pwsh
@@ -316,7 +318,7 @@ jobs:
             -DGRANIT_ENABLE_XCB=OFF \
             -DGRANIT_ENABLE_WAYLAND=OFF
           cmake --build "$build" --target granit_webgpu_plugin_smoke \
-            granit_shader_asset_vulkan_smoke granit_shader_tool
+            granit_shader_asset_vulkan_smoke granit_renderer_test granit_shader_tool
           shader_tool="$build/bin/granit_shader_tool"
           first_start="$(date +%s%N)"
           first_output="$("$shader_tool" compile --tint "$stage/bin/tint" \
@@ -369,6 +371,8 @@ jobs:
             ctest --test-dir "$build" \
               -R 'granit\.backend\.(webgpu_plugin|shader_asset_vulkan)_smoke' \
               --verbose --output-on-failure
+          VK_DRIVER_FILES="$lvp_icd" LIBGL_ALWAYS_SOFTWARE=1 \
+            "$build/bin/granit_renderer_test" '[pipeline][bind-group][smoke]'
       - name: 打包 Linux 产物
         id: package
         shell: bash
