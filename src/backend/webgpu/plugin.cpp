@@ -7,6 +7,7 @@
 
 #include <algorithm>
 #include <atomic>
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
@@ -1199,9 +1200,24 @@ granit_result create_sampler(granit_backend_plugin_instance instance,
     return filter == GRANIT_BACKEND_PLUGIN_FILTER_NEAREST ||
            filter == GRANIT_BACKEND_PLUGIN_FILTER_LINEAR;
   };
+  const auto valid_address_mode = [](granit_backend_plugin_address_mode mode) {
+    return mode >= GRANIT_BACKEND_PLUGIN_ADDRESS_MODE_REPEAT &&
+           mode <= GRANIT_BACKEND_PLUGIN_ADDRESS_MODE_CLAMP_TO_EDGE;
+  };
   if (instance == 0 || desc == nullptr || out_sampler == nullptr ||
       desc->struct_size < sizeof(granit_backend_plugin_sampler_desc) || desc->reserved != 0 ||
-      !valid_filter(desc->min_filter) || !valid_filter(desc->mag_filter)) {
+      desc->reserved_2[0] != 0 || desc->reserved_2[1] != 0 ||
+      !valid_filter(desc->min_filter) || !valid_filter(desc->mag_filter) ||
+      !valid_filter(desc->mipmap_filter) || !valid_address_mode(desc->address_mode_u) ||
+      !valid_address_mode(desc->address_mode_v) || !valid_address_mode(desc->address_mode_w) ||
+      desc->compare_operation > GRANIT_BACKEND_PLUGIN_COMPARE_OPERATION_ALWAYS ||
+      desc->max_anisotropy == 0 || desc->max_anisotropy > UINT16_MAX ||
+      (desc->max_anisotropy > 1 &&
+       (desc->min_filter != GRANIT_BACKEND_PLUGIN_FILTER_LINEAR ||
+        desc->mag_filter != GRANIT_BACKEND_PLUGIN_FILTER_LINEAR ||
+        desc->mipmap_filter != GRANIT_BACKEND_PLUGIN_FILTER_LINEAR)) ||
+      !std::isfinite(desc->min_lod) || !std::isfinite(desc->max_lod) ||
+      desc->min_lod < 0.0F || desc->max_lod < desc->min_lod) {
     return GRANIT_ERROR_INVALID_ARGUMENT;
   }
   const std::scoped_lock lock{instances_mutex};
@@ -1210,18 +1226,55 @@ granit_result create_sampler(granit_backend_plugin_instance instance,
     return GRANIT_ERROR_INVALID_HANDLE;
   if (const auto ready = require_ready(*found->second); ready != GRANIT_SUCCESS)
     return ready;
+  const auto to_address_mode = [](granit_backend_plugin_address_mode mode) {
+    switch (mode) {
+    case GRANIT_BACKEND_PLUGIN_ADDRESS_MODE_REPEAT:
+      return WGPUAddressMode_Repeat;
+    case GRANIT_BACKEND_PLUGIN_ADDRESS_MODE_MIRROR_REPEAT:
+      return WGPUAddressMode_MirrorRepeat;
+    default:
+      return WGPUAddressMode_ClampToEdge;
+    }
+  };
+  const auto to_compare = [](granit_backend_plugin_compare_operation operation) {
+    switch (operation) {
+    case GRANIT_BACKEND_PLUGIN_COMPARE_OPERATION_NEVER:
+      return WGPUCompareFunction_Never;
+    case GRANIT_BACKEND_PLUGIN_COMPARE_OPERATION_LESS:
+      return WGPUCompareFunction_Less;
+    case GRANIT_BACKEND_PLUGIN_COMPARE_OPERATION_EQUAL:
+      return WGPUCompareFunction_Equal;
+    case GRANIT_BACKEND_PLUGIN_COMPARE_OPERATION_LESS_EQUAL:
+      return WGPUCompareFunction_LessEqual;
+    case GRANIT_BACKEND_PLUGIN_COMPARE_OPERATION_GREATER:
+      return WGPUCompareFunction_Greater;
+    case GRANIT_BACKEND_PLUGIN_COMPARE_OPERATION_NOT_EQUAL:
+      return WGPUCompareFunction_NotEqual;
+    case GRANIT_BACKEND_PLUGIN_COMPARE_OPERATION_GREATER_EQUAL:
+      return WGPUCompareFunction_GreaterEqual;
+    case GRANIT_BACKEND_PLUGIN_COMPARE_OPERATION_ALWAYS:
+      return WGPUCompareFunction_Always;
+    default:
+      return WGPUCompareFunction_Undefined;
+    }
+  };
   WGPUSamplerDescriptor descriptor = WGPU_SAMPLER_DESCRIPTOR_INIT;
-  descriptor.addressModeU = WGPUAddressMode_ClampToEdge;
-  descriptor.addressModeV = WGPUAddressMode_ClampToEdge;
-  descriptor.addressModeW = WGPUAddressMode_ClampToEdge;
+  descriptor.addressModeU = to_address_mode(desc->address_mode_u);
+  descriptor.addressModeV = to_address_mode(desc->address_mode_v);
+  descriptor.addressModeW = to_address_mode(desc->address_mode_w);
   descriptor.minFilter = desc->min_filter == GRANIT_BACKEND_PLUGIN_FILTER_LINEAR
                              ? WGPUFilterMode_Linear
                              : WGPUFilterMode_Nearest;
   descriptor.magFilter = desc->mag_filter == GRANIT_BACKEND_PLUGIN_FILTER_LINEAR
                              ? WGPUFilterMode_Linear
                              : WGPUFilterMode_Nearest;
-  descriptor.mipmapFilter = WGPUMipmapFilterMode_Nearest;
-  descriptor.maxAnisotropy = 1;
+  descriptor.mipmapFilter = desc->mipmap_filter == GRANIT_BACKEND_PLUGIN_FILTER_LINEAR
+                                ? WGPUMipmapFilterMode_Linear
+                                : WGPUMipmapFilterMode_Nearest;
+  descriptor.lodMinClamp = desc->min_lod;
+  descriptor.lodMaxClamp = desc->max_lod;
+  descriptor.compare = to_compare(desc->compare_operation);
+  descriptor.maxAnisotropy = static_cast<std::uint16_t>(desc->max_anisotropy);
   const auto native = wgpuDeviceCreateSampler(found->second->device, &descriptor);
   if (native == nullptr)
     return GRANIT_ERROR_OUT_OF_MEMORY;

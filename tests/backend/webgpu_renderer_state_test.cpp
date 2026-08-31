@@ -88,6 +88,30 @@ TEST_CASE("WebGPU Renderer 状态集中管理静态 Provider 生命周期", "[ba
   REQUIRE(state.create_texture_view(*texture, texture_desc, view_desc, *texture_view) ==
           GRANIT_SUCCESS);
 
+  auto sampler = state.allocate_sampler_resource();
+  REQUIRE(sampler != nullptr);
+  granit_sampler_desc sampler_desc = GRANIT_SAMPLER_DESC_INIT;
+  sampler_desc.mag_filter = GRANIT_FILTER_NEAREST;
+  sampler_desc.address_mode_v = GRANIT_ADDRESS_MODE_MIRRORED_REPEAT;
+  sampler_desc.compare_operation = GRANIT_COMPARE_OPERATION_LESS_EQUAL;
+  sampler_desc.min_lod = 1.0F;
+  sampler_desc.max_lod = 3.0F;
+  REQUIRE(state.create_sampler(sampler_desc, *sampler) == GRANIT_SUCCESS);
+
+  auto anisotropic_sampler = state.allocate_sampler_resource();
+  REQUIRE(anisotropic_sampler != nullptr);
+  auto anisotropic_desc = sampler_desc;
+  anisotropic_desc.mag_filter = GRANIT_FILTER_LINEAR;
+  anisotropic_desc.compare_operation = GRANIT_COMPARE_OPERATION_DISABLED;
+  anisotropic_desc.anisotropy_enabled = 1;
+  anisotropic_desc.max_anisotropy = 4.0F;
+  REQUIRE(state.create_sampler(anisotropic_desc, *anisotropic_sampler) == GRANIT_SUCCESS);
+
+  auto unsupported_sampler = state.allocate_sampler_resource();
+  REQUIRE(unsupported_sampler != nullptr);
+  sampler_desc.lod_bias = 0.5F;
+  CHECK(state.create_sampler(sampler_desc, *unsupported_sampler) == GRANIT_ERROR_UNSUPPORTED);
+
   auto surface = state.allocate_surface_resource();
   REQUIRE(surface != nullptr);
   const auto native_a = reinterpret_cast<void*>(std::uintptr_t{1});

@@ -44,6 +44,9 @@ public:
   create_texture_view(backend_texture_resource& texture, const granit_texture_desc& texture_desc,
                       const granit_texture_view_desc& desc,
                       backend_texture_view_resource& resource) const noexcept;
+  [[nodiscard]] std::unique_ptr<backend_sampler_resource> allocate_sampler() const;
+  [[nodiscard]] granit_result create_sampler(const granit_sampler_desc& desc,
+                                             backend_sampler_resource& resource) const noexcept;
 
 private:
   std::shared_ptr<webgpu_resource_context> context_;

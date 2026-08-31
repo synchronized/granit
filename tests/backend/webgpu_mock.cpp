@@ -40,6 +40,14 @@ struct WGPUSurfaceImpl {
 struct WGPUSamplerImpl {
   WGPUFilterMode min_filter;
   WGPUFilterMode mag_filter;
+  WGPUMipmapFilterMode mipmap_filter;
+  WGPUAddressMode address_mode_u;
+  WGPUAddressMode address_mode_v;
+  WGPUAddressMode address_mode_w;
+  WGPUCompareFunction compare;
+  unsigned short max_anisotropy;
+  float min_lod;
+  float max_lod;
 };
 struct WGPUBindGroupLayoutImpl {};
 struct WGPUBindGroupImpl {};
@@ -333,7 +341,16 @@ extern "C" WGPUSampler wgpuDeviceCreateSampler(WGPUDevice,
   if (descriptor == nullptr) {
     return nullptr;
   }
-  return new WGPUSamplerImpl{descriptor->minFilter, descriptor->magFilter};
+  return new WGPUSamplerImpl{descriptor->minFilter,
+                             descriptor->magFilter,
+                             descriptor->mipmapFilter,
+                             descriptor->addressModeU,
+                             descriptor->addressModeV,
+                             descriptor->addressModeW,
+                             descriptor->compare,
+                             descriptor->maxAnisotropy,
+                             descriptor->lodMinClamp,
+                             descriptor->lodMaxClamp};
 }
 
 extern "C" void wgpuSamplerRelease(WGPUSampler sampler) { delete sampler; }

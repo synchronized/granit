@@ -490,6 +490,12 @@ TEST_CASE("WebGPU 插件 Texture、View 与 Sampler 遵守所有权契约", "[ba
   sampler_desc.struct_size = sizeof(sampler_desc);
   sampler_desc.min_filter = GRANIT_BACKEND_PLUGIN_FILTER_LINEAR;
   sampler_desc.mag_filter = GRANIT_BACKEND_PLUGIN_FILTER_NEAREST;
+  sampler_desc.mipmap_filter = GRANIT_BACKEND_PLUGIN_FILTER_LINEAR;
+  sampler_desc.address_mode_u = GRANIT_BACKEND_PLUGIN_ADDRESS_MODE_REPEAT;
+  sampler_desc.address_mode_v = GRANIT_BACKEND_PLUGIN_ADDRESS_MODE_MIRROR_REPEAT;
+  sampler_desc.address_mode_w = GRANIT_BACKEND_PLUGIN_ADDRESS_MODE_CLAMP_TO_EDGE;
+  sampler_desc.compare_operation = GRANIT_BACKEND_PLUGIN_COMPARE_OPERATION_LESS_EQUAL;
+  sampler_desc.max_anisotropy = 1;
   granit_backend_plugin_sampler sampler{};
   REQUIRE(loader.create_sampler(first, &sampler_desc, &sampler) == GRANIT_SUCCESS);
   REQUIRE(sampler != 0);
@@ -557,6 +563,11 @@ TEST_CASE("WebGPU 插件绑定与 Pipeline 遵守依赖生命周期", "[backend]
   sampler_desc.struct_size = sizeof(sampler_desc);
   sampler_desc.min_filter = GRANIT_BACKEND_PLUGIN_FILTER_LINEAR;
   sampler_desc.mag_filter = GRANIT_BACKEND_PLUGIN_FILTER_LINEAR;
+  sampler_desc.mipmap_filter = GRANIT_BACKEND_PLUGIN_FILTER_LINEAR;
+  sampler_desc.address_mode_u = GRANIT_BACKEND_PLUGIN_ADDRESS_MODE_REPEAT;
+  sampler_desc.address_mode_v = GRANIT_BACKEND_PLUGIN_ADDRESS_MODE_REPEAT;
+  sampler_desc.address_mode_w = GRANIT_BACKEND_PLUGIN_ADDRESS_MODE_REPEAT;
+  sampler_desc.max_anisotropy = 1;
   granit_backend_plugin_sampler sampler{};
   REQUIRE(loader.create_sampler(first, &sampler_desc, &sampler) == GRANIT_SUCCESS);
 

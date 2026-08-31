@@ -9,7 +9,7 @@
 #include <granit/core/diagnostic.h>
 #include <granit/core/result.h>
 
-#define GRANIT_BACKEND_PLUGIN_ABI_VERSION UINT32_C(15)
+#define GRANIT_BACKEND_PLUGIN_ABI_VERSION UINT32_C(16)
 #define GRANIT_BACKEND_PLUGIN_KIND_WEBGPU UINT32_C(1)
 #define GRANIT_BACKEND_PLUGIN_QUERY_SYMBOL "granit_backend_plugin_query"
 #define GRANIT_BACKEND_PLUGIN_SURFACE_TYPE_WIN32_BIT UINT32_C(0x00000001)
@@ -126,11 +126,36 @@ typedef uint32_t granit_backend_plugin_filter;
 #define GRANIT_BACKEND_PLUGIN_FILTER_NEAREST UINT32_C(1)
 #define GRANIT_BACKEND_PLUGIN_FILTER_LINEAR UINT32_C(2)
 
+typedef uint32_t granit_backend_plugin_address_mode;
+#define GRANIT_BACKEND_PLUGIN_ADDRESS_MODE_REPEAT UINT32_C(1)
+#define GRANIT_BACKEND_PLUGIN_ADDRESS_MODE_MIRROR_REPEAT UINT32_C(2)
+#define GRANIT_BACKEND_PLUGIN_ADDRESS_MODE_CLAMP_TO_EDGE UINT32_C(3)
+
+typedef uint32_t granit_backend_plugin_compare_operation;
+#define GRANIT_BACKEND_PLUGIN_COMPARE_OPERATION_DISABLED UINT32_C(0)
+#define GRANIT_BACKEND_PLUGIN_COMPARE_OPERATION_NEVER UINT32_C(1)
+#define GRANIT_BACKEND_PLUGIN_COMPARE_OPERATION_LESS UINT32_C(2)
+#define GRANIT_BACKEND_PLUGIN_COMPARE_OPERATION_EQUAL UINT32_C(3)
+#define GRANIT_BACKEND_PLUGIN_COMPARE_OPERATION_LESS_EQUAL UINT32_C(4)
+#define GRANIT_BACKEND_PLUGIN_COMPARE_OPERATION_GREATER UINT32_C(5)
+#define GRANIT_BACKEND_PLUGIN_COMPARE_OPERATION_NOT_EQUAL UINT32_C(6)
+#define GRANIT_BACKEND_PLUGIN_COMPARE_OPERATION_GREATER_EQUAL UINT32_C(7)
+#define GRANIT_BACKEND_PLUGIN_COMPARE_OPERATION_ALWAYS UINT32_C(8)
+
 typedef struct granit_backend_plugin_sampler_desc {
   uint32_t struct_size;
   uint32_t reserved;
   granit_backend_plugin_filter min_filter;
   granit_backend_plugin_filter mag_filter;
+  granit_backend_plugin_filter mipmap_filter;
+  granit_backend_plugin_address_mode address_mode_u;
+  granit_backend_plugin_address_mode address_mode_v;
+  granit_backend_plugin_address_mode address_mode_w;
+  granit_backend_plugin_compare_operation compare_operation;
+  uint32_t max_anisotropy;
+  float min_lod;
+  float max_lod;
+  uint32_t reserved_2[2];
 } granit_backend_plugin_sampler_desc;
 
 /** 固定绑定 0 为二维浮点 Texture View，绑定 1 为过滤 Sampler。 */

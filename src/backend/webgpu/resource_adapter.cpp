@@ -4,6 +4,7 @@
 #include "backend/webgpu/resource_adapter.h"
 
 #include <cstddef>
+#include <cmath>
 #include <limits>
 #include <new>
 #include <utility>
@@ -57,6 +58,19 @@ public:
 
   std::shared_ptr<webgpu_resource_context> context_;
   granit_backend_plugin_texture_view handle_{};
+};
+
+class webgpu_sampler_resource final : public backend_sampler_resource {
+public:
+  explicit webgpu_sampler_resource(std::shared_ptr<webgpu_resource_context> context)
+      : context_(std::move(context)) {}
+  ~webgpu_sampler_resource() override {
+    if (handle_ != 0)
+      static_cast<void>(context_->loader->destroy_sampler(context_->instance, handle_));
+  }
+
+  std::shared_ptr<webgpu_resource_context> context_;
+  granit_backend_plugin_sampler handle_{};
 };
 
 webgpu_buffer_resource* as_buffer(backend_buffer_resource& resource) noexcept {
@@ -274,6 +288,39 @@ granit_result webgpu_resource_adapter::create_texture_view(
       sizeof(plugin_desc), format, desc.range.base_mip_level, mip_count, {0, 0}};
   return context_->loader->create_texture_view(context_->instance, native_texture->handle_,
                                                 &plugin_desc, &view->handle_);
+}
+
+std::unique_ptr<backend_sampler_resource> webgpu_resource_adapter::allocate_sampler() const {
+  return std::make_unique<webgpu_sampler_resource>(context_);
+}
+
+granit_result
+webgpu_resource_adapter::create_sampler(const granit_sampler_desc& desc,
+                                        backend_sampler_resource& resource) const noexcept {
+  auto* sampler = dynamic_cast<webgpu_sampler_resource*>(&resource);
+  if (sampler == nullptr || sampler->handle_ != 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  if (desc.lod_bias != 0.0F || desc.max_anisotropy > UINT16_MAX ||
+      std::floor(desc.max_anisotropy) != desc.max_anisotropy ||
+      (desc.max_anisotropy > 1.0F &&
+       (desc.min_filter != GRANIT_FILTER_LINEAR || desc.mag_filter != GRANIT_FILTER_LINEAR ||
+        desc.mipmap_filter != GRANIT_MIPMAP_FILTER_LINEAR)))
+    return GRANIT_ERROR_UNSUPPORTED;
+  const granit_backend_plugin_sampler_desc plugin_desc{
+      sizeof(granit_backend_plugin_sampler_desc),
+      0,
+      desc.min_filter + 1,
+      desc.mag_filter + 1,
+      desc.mipmap_filter + 1,
+      desc.address_mode_u + 1,
+      desc.address_mode_v + 1,
+      desc.address_mode_w + 1,
+      desc.compare_operation,
+      static_cast<std::uint32_t>(desc.max_anisotropy),
+      desc.min_lod,
+      desc.max_lod,
+      {0, 0}};
+  return context_->loader->create_sampler(context_->instance, &plugin_desc, &sampler->handle_);
 }
 
 } // namespace granit::detail

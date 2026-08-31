@@ -122,6 +122,11 @@ int main(int argc, char** argv) {
   sampler_desc.struct_size = sizeof(sampler_desc);
   sampler_desc.min_filter = GRANIT_BACKEND_PLUGIN_FILTER_LINEAR;
   sampler_desc.mag_filter = GRANIT_BACKEND_PLUGIN_FILTER_LINEAR;
+  sampler_desc.mipmap_filter = GRANIT_BACKEND_PLUGIN_FILTER_LINEAR;
+  sampler_desc.address_mode_u = GRANIT_BACKEND_PLUGIN_ADDRESS_MODE_REPEAT;
+  sampler_desc.address_mode_v = GRANIT_BACKEND_PLUGIN_ADDRESS_MODE_REPEAT;
+  sampler_desc.address_mode_w = GRANIT_BACKEND_PLUGIN_ADDRESS_MODE_REPEAT;
+  sampler_desc.max_anisotropy = 1;
   granit_backend_plugin_sampler sampler{};
   granit_backend_plugin_bind_group_layout bind_group_layout{};
   granit_backend_plugin_bind_group bind_group{};

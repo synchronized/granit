@@ -108,12 +108,12 @@ granit_result webgpu_renderer_state::create_texture_view(
 }
 
 std::unique_ptr<backend_sampler_resource> webgpu_renderer_state::allocate_sampler_resource() {
-  return std::make_unique<backend_sampler_resource>();
+  return resources_ ? resources_->allocate_sampler() : nullptr;
 }
 
-granit_result webgpu_renderer_state::create_sampler(const granit_sampler_desc&,
-                                                    backend_sampler_resource&) noexcept {
-  return GRANIT_ERROR_UNSUPPORTED;
+granit_result webgpu_renderer_state::create_sampler(const granit_sampler_desc& desc,
+                                                    backend_sampler_resource& sampler) noexcept {
+  return resources_ ? resources_->create_sampler(desc, sampler) : GRANIT_ERROR_NOT_READY;
 }
 
 std::unique_ptr<backend_bind_group_layout_resource>
