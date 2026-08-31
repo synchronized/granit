@@ -45,6 +45,7 @@ public:
 
   std::shared_ptr<webgpu_resource_context> context_;
   granit_backend_plugin_texture handle_{};
+  granit_texture_format format_{GRANIT_TEXTURE_FORMAT_UNDEFINED};
 };
 
 class webgpu_texture_view_resource final : public backend_texture_view_resource {
@@ -119,6 +120,21 @@ granit_backend_plugin_texture_format to_format(granit_texture_format format) noe
     return GRANIT_BACKEND_PLUGIN_TEXTURE_FORMAT_RGBA8_SRGB;
   case GRANIT_TEXTURE_FORMAT_D32_FLOAT:
     return GRANIT_BACKEND_PLUGIN_TEXTURE_FORMAT_D32_FLOAT;
+  default:
+    return 0;
+  }
+}
+
+std::uint32_t bytes_per_pixel(granit_texture_format format) noexcept {
+  switch (format) {
+  case GRANIT_TEXTURE_FORMAT_R8_UNORM:
+    return 1;
+  case GRANIT_TEXTURE_FORMAT_RG8_UNORM:
+    return 2;
+  case GRANIT_TEXTURE_FORMAT_RGBA8_UNORM:
+  case GRANIT_TEXTURE_FORMAT_RGBA8_SRGB:
+  case GRANIT_TEXTURE_FORMAT_D32_FLOAT:
+    return 4;
   default:
     return 0;
   }
@@ -236,14 +252,48 @@ granit_result webgpu_resource_adapter::upload(backend_buffer_resource& resource,
 
 granit_result webgpu_resource_adapter::upload_batch(
     std::span<const backend_upload_operation> uploads) const noexcept {
+  if (uploads.empty())
+    return GRANIT_ERROR_INVALID_ARGUMENT;
   for (const auto& upload : uploads) {
-    if (upload.type != backend_upload_type::buffer || upload.buffer == nullptr)
-      return GRANIT_ERROR_UNSUPPORTED;
-    const auto* buffer = as_buffer(*upload.buffer);
-    if (buffer == nullptr)
+    if (upload.data == nullptr || upload.size == 0)
       return GRANIT_ERROR_INVALID_ARGUMENT;
-    const auto result = context_->loader->write_buffer(
-        context_->instance, buffer->handle_, upload.destination_offset, upload.data, upload.size);
+    if (upload.type == backend_upload_type::buffer) {
+      if (upload.buffer == nullptr || as_buffer(*upload.buffer) == nullptr)
+        return GRANIT_ERROR_INVALID_ARGUMENT;
+      continue;
+    }
+    if (upload.type != backend_upload_type::texture || upload.texture == nullptr ||
+        dynamic_cast<const webgpu_texture_resource*>(upload.texture) == nullptr)
+      return GRANIT_ERROR_INVALID_ARGUMENT;
+  }
+  for (const auto& upload : uploads) {
+    granit_result result{};
+    if (upload.type == backend_upload_type::buffer) {
+      const auto* buffer = as_buffer(*upload.buffer);
+      result = context_->loader->write_buffer(context_->instance, buffer->handle_,
+                                              upload.destination_offset, upload.data, upload.size);
+    } else {
+      const auto* texture = dynamic_cast<const webgpu_texture_resource*>(upload.texture);
+      const auto& copy = upload.texture_copy;
+      const auto pixel_size = bytes_per_pixel(texture->format_);
+      if (pixel_size == 0 || copy.aspect != GRANIT_TEXTURE_ASPECT_COLOR_BIT ||
+          copy.base_array_layer != 0 || copy.array_layer_count != 1 || copy.z != 0 ||
+          copy.depth != 1 || copy.x < 0 || copy.y < 0 ||
+          (copy.buffer_row_length != 0 && copy.buffer_row_length > UINT32_MAX / pixel_size))
+        return GRANIT_ERROR_UNSUPPORTED;
+      const granit_backend_plugin_texture_write_desc desc{
+          sizeof(granit_backend_plugin_texture_write_desc),
+          copy.mip_level,
+          static_cast<std::uint32_t>(copy.x),
+          static_cast<std::uint32_t>(copy.y),
+          copy.width,
+          copy.height,
+          copy.buffer_row_length == 0 ? 0 : copy.buffer_row_length * pixel_size,
+          copy.buffer_image_height,
+          {0, 0}};
+      result = context_->loader->write_texture(context_->instance, texture->handle_, &desc,
+                                               upload.data, upload.size);
+    }
     if (result != GRANIT_SUCCESS)
       return result;
   }
@@ -272,7 +322,11 @@ webgpu_resource_adapter::create_texture(const granit_texture_desc& desc,
     return GRANIT_ERROR_UNSUPPORTED;
   const granit_backend_plugin_texture_desc plugin_desc{
       sizeof(plugin_desc), 0, desc.width, desc.height, usage, format, desc.mip_levels, 0};
-  return context_->loader->create_texture(context_->instance, &plugin_desc, &texture->handle_);
+  const auto result =
+      context_->loader->create_texture(context_->instance, &plugin_desc, &texture->handle_);
+  if (result == GRANIT_SUCCESS)
+    texture->format_ = desc.format;
+  return result;
 }
 
 granit_result

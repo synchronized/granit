@@ -257,7 +257,9 @@ Registry 契约测试，Provider Mock 只验证后端参数映射。
 当前已完成图形命令的动态 Uniform Offset 路径：公共 Registry 校验后，WebGPU HAL 将多个
 Bind Group 与动态偏移批量传给 Provider；Provider 按 Pipeline Layout 中的组顺序及 Layout 中
 递增的 binding 顺序切分偏移，并再次校验数量、设备对齐、Buffer 范围、句柄归属和录制状态。
-Compute Bind Group 与包含 Texture 的 Upload Batch 仍属于本阶段后续工作。
+Upload Batch 已支持在同一批次混合 Buffer 与二维单层 Texture 写入，并保留成功后统一释放 Host
+副本的公共语义。将整批写入压缩为单次 Provider ABI 调用，以及 Compute Bind Group，仍属于本阶段
+后续工作。
 
 ### S-12F 跨后端 Fixture 契约
 

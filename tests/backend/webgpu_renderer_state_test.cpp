@@ -77,6 +77,31 @@ TEST_CASE("WebGPU Renderer 状态集中管理静态 Provider 生命周期", "[ba
                                                .depth = 1};
   REQUIRE(state.upload_texture(*texture, texture_desc.format, mip_pixels.data(), mip_pixels.size(),
                                mip_layout, mip_region) == GRANIT_SUCCESS);
+  const std::array<granit::detail::backend_upload_operation, 2> mixed_uploads{{
+      {.type = granit::detail::backend_upload_type::buffer,
+       .buffer = vertex_buffer.get(),
+       .destination_offset = 16,
+       .data = geometry,
+       .size = sizeof(geometry)},
+      {.type = granit::detail::backend_upload_type::texture,
+       .texture = texture.get(),
+       .data = mip_pixels.data(),
+       .size = mip_pixels.size(),
+       .texture_copy = {.buffer_row_length = 4,
+                        .buffer_image_height = 2,
+                        .aspect = GRANIT_TEXTURE_ASPECT_COLOR_BIT,
+                        .mip_level = 1,
+                        .base_array_layer = 0,
+                        .array_layer_count = 1,
+                        .x = 2,
+                        .y = 3,
+                        .z = 0,
+                        .width = 3,
+                        .height = 2,
+                        .depth = 1}},
+  }};
+  REQUIRE(state.upload_batch(mixed_uploads) == GRANIT_SUCCESS);
+  CHECK(state.upload_batch({}) == GRANIT_ERROR_INVALID_ARGUMENT);
 
   auto texture_view = state.allocate_texture_view_resource();
   REQUIRE(texture_view != nullptr);
