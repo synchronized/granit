@@ -753,6 +753,16 @@ TEST_CASE("WebGPU 插件绑定与 Pipeline 遵守依赖生命周期", "[backend]
   REQUIRE(loader.recorder_begin_rendering(
               first, recorder, target_view, GRANIT_BACKEND_PLUGIN_LOAD_OPERATION_CLEAR,
               GRANIT_BACKEND_PLUGIN_STORE_OPERATION_STORE, clear_color) == GRANIT_SUCCESS);
+  const granit_backend_plugin_viewport viewport{0.0F, 0.0F, 16.0F, 16.0F, 0.0F, 1.0F};
+  const granit_backend_plugin_scissor scissor{0, 0, 16, 16};
+  REQUIRE(loader.recorder_set_viewports(first, recorder, 0, std::span{&viewport, 1}) ==
+          GRANIT_SUCCESS);
+  REQUIRE(loader.recorder_set_scissors(first, recorder, 0, std::span{&scissor, 1}) ==
+          GRANIT_SUCCESS);
+  CHECK(loader.recorder_set_viewports(first, recorder, 1, std::span{&viewport, 1}) ==
+        GRANIT_ERROR_INVALID_ARGUMENT);
+  CHECK(loader.recorder_set_scissors(first, recorder, 1, std::span{&scissor, 1}) ==
+        GRANIT_ERROR_INVALID_ARGUMENT);
   const granit_backend_plugin_bind_group graphics_groups[]{bind_group};
   const std::uint32_t dynamic_offset[]{256};
   REQUIRE(loader.recorder_bind_graphics_groups(first, recorder, pipeline_layout, 1, graphics_groups,

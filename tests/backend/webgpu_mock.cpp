@@ -453,6 +453,10 @@ wgpuCommandEncoderBeginRenderPass(WGPUCommandEncoder encoder,
   return new WGPURenderPassEncoderImpl{texture};
 }
 extern "C" void wgpuRenderPassEncoderSetPipeline(WGPURenderPassEncoder, WGPURenderPipeline) {}
+extern "C" void wgpuRenderPassEncoderSetViewport(WGPURenderPassEncoder, float, float, float, float,
+                                                 float, float) {}
+extern "C" void wgpuRenderPassEncoderSetScissorRect(WGPURenderPassEncoder, unsigned int,
+                                                    unsigned int, unsigned int, unsigned int) {}
 extern "C" void wgpuRenderPassEncoderSetBindGroup(WGPURenderPassEncoder, unsigned int,
                                                   WGPUBindGroup, size_t, const unsigned int*) {}
 extern "C" void wgpuRenderPassEncoderDraw(WGPURenderPassEncoder pass, unsigned int, unsigned int,

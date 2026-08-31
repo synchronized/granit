@@ -2408,6 +2408,54 @@ granit_result recorder_bind_index_buffer(granit_backend_plugin_instance instance
   return GRANIT_SUCCESS;
 }
 
+granit_result recorder_set_viewports(granit_backend_plugin_instance instance,
+                                     granit_backend_plugin_command_recorder recorder,
+                                     std::uint32_t first,
+                                     const granit_backend_plugin_viewport* viewports,
+                                     std::uint32_t count) noexcept {
+  if (instance == 0 || recorder == 0 || first != 0 || viewports == nullptr || count != 1)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  const auto& viewport = viewports[0];
+  if (viewport.width <= 0.0F || viewport.height <= 0.0F || viewport.min_depth < 0.0F ||
+      viewport.max_depth > 1.0F || viewport.min_depth > viewport.max_depth)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  const std::scoped_lock lock{instances_mutex};
+  const auto found = instances.find(instance);
+  if (found == instances.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  const auto command = found->second->command_recorders.find(recorder);
+  if (command == found->second->command_recorders.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  if (command->second.pass == nullptr || command->second.finished)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  wgpuRenderPassEncoderSetViewport(command->second.pass, viewport.x, viewport.y, viewport.width,
+                                   viewport.height, viewport.min_depth, viewport.max_depth);
+  return GRANIT_SUCCESS;
+}
+
+granit_result recorder_set_scissors(granit_backend_plugin_instance instance,
+                                    granit_backend_plugin_command_recorder recorder,
+                                    std::uint32_t first,
+                                    const granit_backend_plugin_scissor* scissors,
+                                    std::uint32_t count) noexcept {
+  if (instance == 0 || recorder == 0 || first != 0 || scissors == nullptr || count != 1 ||
+      scissors[0].width == 0 || scissors[0].height == 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  const std::scoped_lock lock{instances_mutex};
+  const auto found = instances.find(instance);
+  if (found == instances.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  const auto command = found->second->command_recorders.find(recorder);
+  if (command == found->second->command_recorders.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  if (command->second.pass == nullptr || command->second.finished)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  const auto& scissor = scissors[0];
+  wgpuRenderPassEncoderSetScissorRect(command->second.pass, scissor.x, scissor.y, scissor.width,
+                                      scissor.height);
+  return GRANIT_SUCCESS;
+}
+
 granit_result recorder_draw_vertices(granit_backend_plugin_instance instance,
                                      granit_backend_plugin_command_recorder recorder,
                                      std::uint32_t vertex_count, std::uint32_t instance_count,
@@ -3226,7 +3274,9 @@ constexpr granit_backend_plugin_instance_api instance_api{
     recorder_bind_compute_pipeline,
     recorder_bind_compute_groups,
     recorder_dispatch,
-    recorder_end_compute};
+    recorder_end_compute,
+    recorder_set_viewports,
+    recorder_set_scissors};
 constexpr granit_backend_plugin_api plugin_api{sizeof(granit_backend_plugin_api),
                                                GRANIT_BACKEND_PLUGIN_ABI_VERSION,
                                                GRANIT_BACKEND_PLUGIN_KIND_WEBGPU,

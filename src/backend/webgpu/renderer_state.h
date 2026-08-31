@@ -157,6 +157,12 @@ public:
                                                 backend_buffer_resource& buffer,
                                                 std::uint64_t offset,
                                                 granit_index_type type) override;
+  [[nodiscard]] granit_result
+  set_viewports(backend_command_recorder_resource& recorder, std::uint32_t first,
+                std::span<const granit_viewport> viewports) noexcept override;
+  [[nodiscard]] granit_result
+  set_scissors(backend_command_recorder_resource& recorder, std::uint32_t first,
+               std::span<const granit_scissor> scissors) noexcept override;
   [[nodiscard]] granit_result draw(backend_command_recorder_resource& recorder,
                                    backend_texture_view_resource* target,
                                    backend_graphics_pipeline_resource* pipeline,

@@ -40,6 +40,22 @@ typedef struct granit_backend_plugin_vertex_buffer_binding {
   uint64_t offset;
 } granit_backend_plugin_vertex_buffer_binding;
 
+typedef struct granit_backend_plugin_viewport {
+  float x;
+  float y;
+  float width;
+  float height;
+  float min_depth;
+  float max_depth;
+} granit_backend_plugin_viewport;
+
+typedef struct granit_backend_plugin_scissor {
+  uint32_t x;
+  uint32_t y;
+  uint32_t width;
+  uint32_t height;
+} granit_backend_plugin_scissor;
+
 typedef uint32_t granit_backend_plugin_index_format;
 #define GRANIT_BACKEND_PLUGIN_INDEX_FORMAT_UINT16 UINT32_C(1)
 #define GRANIT_BACKEND_PLUGIN_INDEX_FORMAT_UINT32 UINT32_C(2)
@@ -481,6 +497,12 @@ typedef granit_result (*granit_backend_plugin_recorder_dispatch_fn)(
     uint32_t group_count_x, uint32_t group_count_y, uint32_t group_count_z);
 typedef granit_result (*granit_backend_plugin_recorder_end_compute_fn)(
     granit_backend_plugin_instance instance, granit_backend_plugin_command_recorder recorder);
+typedef granit_result (*granit_backend_plugin_recorder_set_viewports_fn)(
+    granit_backend_plugin_instance instance, granit_backend_plugin_command_recorder recorder,
+    uint32_t first, const granit_backend_plugin_viewport* viewports, uint32_t count);
+typedef granit_result (*granit_backend_plugin_recorder_set_scissors_fn)(
+    granit_backend_plugin_instance instance, granit_backend_plugin_command_recorder recorder,
+    uint32_t first, const granit_backend_plugin_scissor* scissors, uint32_t count);
 typedef granit_result (*granit_backend_plugin_create_command_recorder_fn)(
     granit_backend_plugin_instance instance, granit_backend_plugin_command_recorder* recorder);
 typedef granit_result (*granit_backend_plugin_destroy_command_recorder_fn)(
@@ -637,6 +659,8 @@ typedef struct granit_backend_plugin_instance_api {
   granit_backend_plugin_recorder_bind_compute_groups_fn recorder_bind_compute_groups;
   granit_backend_plugin_recorder_dispatch_fn recorder_dispatch;
   granit_backend_plugin_recorder_end_compute_fn recorder_end_compute;
+  granit_backend_plugin_recorder_set_viewports_fn recorder_set_viewports;
+  granit_backend_plugin_recorder_set_scissors_fn recorder_set_scissors;
 } granit_backend_plugin_instance_api;
 
 /** 后端插件入口返回的只读描述；字符串在插件卸载前有效。 */

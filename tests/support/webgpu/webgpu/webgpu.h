@@ -753,6 +753,10 @@ void wgpuCommandEncoderCopyTextureToBuffer(WGPUCommandEncoder encoder,
 WGPURenderPassEncoder wgpuCommandEncoderBeginRenderPass(WGPUCommandEncoder encoder,
                                                         const WGPURenderPassDescriptor* descriptor);
 void wgpuRenderPassEncoderSetPipeline(WGPURenderPassEncoder pass, WGPURenderPipeline pipeline);
+void wgpuRenderPassEncoderSetViewport(WGPURenderPassEncoder pass, float x, float y, float width,
+                                      float height, float min_depth, float max_depth);
+void wgpuRenderPassEncoderSetScissorRect(WGPURenderPassEncoder pass, unsigned int x, unsigned int y,
+                                         unsigned int width, unsigned int height);
 void wgpuRenderPassEncoderSetBindGroup(WGPURenderPassEncoder pass, unsigned int groupIndex,
                                        WGPUBindGroup group, size_t dynamicOffsetCount,
                                        const unsigned int* dynamicOffsets);

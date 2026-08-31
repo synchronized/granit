@@ -53,6 +53,12 @@ public:
   bind_index_buffer(backend_command_recorder_resource& resource,
                     granit_backend_plugin_buffer buffer, std::uint64_t offset,
                     granit_backend_plugin_index_format format) const noexcept;
+  [[nodiscard]] granit_result
+  set_viewports(backend_command_recorder_resource& resource, std::uint32_t first,
+                std::span<const granit_backend_plugin_viewport> viewports) const noexcept;
+  [[nodiscard]] granit_result
+  set_scissors(backend_command_recorder_resource& resource, std::uint32_t first,
+               std::span<const granit_backend_plugin_scissor> scissors) const noexcept;
   [[nodiscard]] granit_result draw(backend_command_recorder_resource& resource,
                                    std::uint32_t vertex_count, std::uint32_t instance_count,
                                    std::uint32_t first_vertex,

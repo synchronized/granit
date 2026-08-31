@@ -299,6 +299,48 @@ granit_result webgpu_renderer_state::bind_index_buffer(backend_command_recorder_
   return commands_->bind_index_buffer(recorder, native, offset, format);
 }
 
+granit_result
+webgpu_renderer_state::set_viewports(backend_command_recorder_resource& recorder,
+                                     std::uint32_t first,
+                                     std::span<const granit_viewport> viewports) noexcept {
+  if (!commands_ || viewports.empty())
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  try {
+    std::vector<granit_backend_plugin_viewport> native;
+    native.reserve(viewports.size());
+    for (const auto& viewport : viewports) {
+      native.push_back({viewport.x, viewport.y, viewport.width, viewport.height, viewport.min_depth,
+                        viewport.max_depth});
+    }
+    return commands_->set_viewports(recorder, first, native);
+  } catch (const std::bad_alloc&) {
+    return GRANIT_ERROR_OUT_OF_MEMORY;
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+granit_result
+webgpu_renderer_state::set_scissors(backend_command_recorder_resource& recorder,
+                                    std::uint32_t first,
+                                    std::span<const granit_scissor> scissors) noexcept {
+  if (!commands_ || scissors.empty())
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  try {
+    std::vector<granit_backend_plugin_scissor> native;
+    native.reserve(scissors.size());
+    for (const auto& scissor : scissors) {
+      native.push_back({static_cast<std::uint32_t>(scissor.x),
+                        static_cast<std::uint32_t>(scissor.y), scissor.width, scissor.height});
+    }
+    return commands_->set_scissors(recorder, first, native);
+  } catch (const std::bad_alloc&) {
+    return GRANIT_ERROR_OUT_OF_MEMORY;
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
 granit_result webgpu_renderer_state::draw(backend_command_recorder_resource& recorder,
                                           backend_texture_view_resource*,
                                           backend_graphics_pipeline_resource*,

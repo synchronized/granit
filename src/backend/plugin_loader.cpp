@@ -15,8 +15,8 @@ bool is_compatible(const granit_backend_plugin_api* api,
   constexpr std::size_t minimum_size = offsetof(granit_backend_plugin_api, instance_api) +
                                        sizeof(const granit_backend_plugin_instance_api*);
   constexpr std::size_t minimum_instance_api_size =
-      offsetof(granit_backend_plugin_instance_api, recorder_end_compute) +
-      sizeof(granit_backend_plugin_recorder_end_compute_fn);
+      offsetof(granit_backend_plugin_instance_api, recorder_set_scissors) +
+      sizeof(granit_backend_plugin_recorder_set_scissors_fn);
   return api != nullptr && api->struct_size >= minimum_size &&
          api->abi_version == GRANIT_BACKEND_PLUGIN_ABI_VERSION && api->kind == expected_kind &&
          api->reserved == 0 && api->name != nullptr && api->name_length != 0 &&
@@ -79,7 +79,9 @@ bool is_compatible(const granit_backend_plugin_api* api,
          api->instance_api->recorder_bind_compute_pipeline != nullptr &&
          api->instance_api->recorder_bind_compute_groups != nullptr &&
          api->instance_api->recorder_dispatch != nullptr &&
-         api->instance_api->recorder_end_compute != nullptr;
+         api->instance_api->recorder_end_compute != nullptr &&
+         api->instance_api->recorder_set_viewports != nullptr &&
+         api->instance_api->recorder_set_scissors != nullptr;
 }
 
 bool is_valid_host(const granit_backend_plugin_host_api* host) noexcept {
@@ -888,6 +890,34 @@ granit_result backend_plugin_loader::recorder_bind_index_buffer(
   try {
     return api_->instance_api->recorder_bind_index_buffer(instance, recorder, buffer, offset,
                                                           format);
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+granit_result backend_plugin_loader::recorder_set_viewports(
+    granit_backend_plugin_instance instance, granit_backend_plugin_command_recorder recorder,
+    std::uint32_t first, std::span<const granit_backend_plugin_viewport> viewports) noexcept {
+  if (api_ == nullptr || instance == 0 || recorder == 0 || viewports.empty() ||
+      viewports.size() > UINT32_MAX)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  try {
+    return api_->instance_api->recorder_set_viewports(instance, recorder, first, viewports.data(),
+                                                      static_cast<std::uint32_t>(viewports.size()));
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+granit_result backend_plugin_loader::recorder_set_scissors(
+    granit_backend_plugin_instance instance, granit_backend_plugin_command_recorder recorder,
+    std::uint32_t first, std::span<const granit_backend_plugin_scissor> scissors) noexcept {
+  if (api_ == nullptr || instance == 0 || recorder == 0 || scissors.empty() ||
+      scissors.size() > UINT32_MAX)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  try {
+    return api_->instance_api->recorder_set_scissors(instance, recorder, first, scissors.data(),
+                                                     static_cast<std::uint32_t>(scissors.size()));
   } catch (...) {
     return GRANIT_ERROR_INTERNAL;
   }

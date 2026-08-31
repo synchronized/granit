@@ -173,6 +173,24 @@ granit_result webgpu_command_adapter::bind_index_buffer(
                                                       buffer, offset, format);
 }
 
+granit_result webgpu_command_adapter::set_viewports(
+    backend_command_recorder_resource& resource, std::uint32_t first,
+    std::span<const granit_backend_plugin_viewport> viewports) const noexcept {
+  auto* recorder = as_recorder(resource);
+  return recorder == nullptr ? GRANIT_ERROR_INVALID_ARGUMENT
+                             : context_->loader->recorder_set_viewports(
+                                   context_->instance, recorder->recorder_, first, viewports);
+}
+
+granit_result webgpu_command_adapter::set_scissors(
+    backend_command_recorder_resource& resource, std::uint32_t first,
+    std::span<const granit_backend_plugin_scissor> scissors) const noexcept {
+  auto* recorder = as_recorder(resource);
+  return recorder == nullptr ? GRANIT_ERROR_INVALID_ARGUMENT
+                             : context_->loader->recorder_set_scissors(
+                                   context_->instance, recorder->recorder_, first, scissors);
+}
+
 granit_result webgpu_command_adapter::draw(backend_command_recorder_resource& resource,
                                            std::uint32_t vertex_count, std::uint32_t instance_count,
                                            std::uint32_t first_vertex,

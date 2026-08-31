@@ -211,6 +211,14 @@ public:
                              granit_backend_plugin_buffer buffer, std::uint64_t offset,
                              granit_backend_plugin_index_format format) noexcept;
   [[nodiscard]] granit_result
+  recorder_set_viewports(granit_backend_plugin_instance instance,
+                         granit_backend_plugin_command_recorder recorder, std::uint32_t first,
+                         std::span<const granit_backend_plugin_viewport> viewports) noexcept;
+  [[nodiscard]] granit_result
+  recorder_set_scissors(granit_backend_plugin_instance instance,
+                        granit_backend_plugin_command_recorder recorder, std::uint32_t first,
+                        std::span<const granit_backend_plugin_scissor> scissors) noexcept;
+  [[nodiscard]] granit_result
   recorder_draw_vertices(granit_backend_plugin_instance instance,
                          granit_backend_plugin_command_recorder recorder,
                          std::uint32_t vertex_count, std::uint32_t instance_count,
