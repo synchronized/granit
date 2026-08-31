@@ -284,6 +284,9 @@ Offset 完成四次 Indexed Draw，并以 RGBA8 回读探针验证纹理、法�
 立即释放应用侧 Provider 引用，不需要复制 Vulkan 的提交序列延迟回收队列。桌面 Dawn 和浏览器
 实机执行仍属于 S-12F 后续工作。启用 Dawn 的依赖工作流已将真实 Provider 作为第三个生成案例
 注入同一 Renderer Fixture，并在构建 Dawn SDK 的同一工具链和软件适配器环境中执行。
+Emscripten 5.0.6 浏览器 Smoke 已使用 D32 Float 深度附件按近、远顺序绘制重叠三角形，Chromium
+像素探针确认后绘制的远端黄色片元不会覆盖近端蓝色片元；完整索引纹理 Fixture 的公共主体仍需
+从原生测试中抽取后复用到浏览器入口。
 
 当前测试已增加背景、两个实例和深度遮挡区域的语义探针。探针失败时在构建目录的
 `test-artifacts` 中写出实际图、按语义探针修正的期望图、绝对差异图和 Renderer/Adapter 元数据；
@@ -320,8 +323,8 @@ Offset 完成四次 Indexed Draw，并以 RGBA8 回读探针验证纹理、法�
    Compute 命令路径映射到两个后端。
 6. **S-12F 跨后端 Fixture（进行中）**：带 Base Color、Normal 和 Metallic-Roughness Texture
    的索引几何及动态 Uniform 离屏 Fixture 已在 Vulkan 与 WebGPU Mock 共用，背景、实例、深度遮挡
-   探针与失败诊断产物也已接入，桌面 Dawn 工作流验证已接线；下一步确认远端结果并接入浏览器
-   WebGPU 实机执行。
+   探针与失败诊断产物也已接入，桌面 Dawn 工作流验证已接线，浏览器深度遮挡 Smoke 已通过；
+   下一步抽取 Fixture 公共主体并在 Chromium 中运行完整索引纹理场景。
 7. **S-12G 验收**：验证公共头、共享/静态安装 Consumer、错误路径、截图结果和平台矩阵。
 
 ## 测试与验收

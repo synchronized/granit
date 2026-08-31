@@ -20,6 +20,7 @@ add_library(
   "${PROJECT_SOURCE_DIR}/src/renderer/shader_api.cpp"
   "${PROJECT_SOURCE_DIR}/src/renderer/surface_api.cpp"
   "${PROJECT_SOURCE_DIR}/src/renderer/swapchain_api.cpp"
+  "${PROJECT_SOURCE_DIR}/src/renderer/texture_api.cpp"
   "${PROJECT_SOURCE_DIR}/src/backend/plugin_loader.cpp"
   "${PROJECT_SOURCE_DIR}/src/backend/webgpu/plugin.cpp"
   "${PROJECT_SOURCE_DIR}/src/backend/webgpu/command_adapter.cpp"

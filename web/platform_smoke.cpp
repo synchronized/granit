@@ -15,6 +15,7 @@
 #include <granit/renderer/shader.h>
 #include <granit/renderer/surface.h>
 #include <granit/renderer/swapchain.h>
+#include <granit/renderer/texture.h>
 
 namespace {
 
@@ -120,11 +121,20 @@ granit_result draw_public_triangle(granit_frame frame, granit_texture_view view,
   constexpr char vertex_wgsl[] = R"(
 @vertex fn main(@builtin(vertex_index) index: u32) -> @builtin(position) vec4f {
   var positions = array<vec2f, 3>(vec2f(0.0, 0.6), vec2f(-0.6, -0.6), vec2f(0.6, -0.6));
-  return vec4f(positions[index], 0.0, 1.0);
+  return vec4f(positions[index], 0.2, 1.0);
 })";
   constexpr char fragment_wgsl[] = R"(
 @fragment fn main() -> @location(0) vec4f {
-  return vec4f(0.0, 1.0, 0.0, 1.0);
+  return vec4f(0.0, 0.0, 1.0, 1.0);
+})";
+  constexpr char far_vertex_wgsl[] = R"(
+@vertex fn main(@builtin(vertex_index) index: u32) -> @builtin(position) vec4f {
+  var positions = array<vec2f, 3>(vec2f(0.0, 0.6), vec2f(-0.6, -0.6), vec2f(0.6, -0.6));
+  return vec4f(positions[index], 0.8, 1.0);
+})";
+  constexpr char far_fragment_wgsl[] = R"(
+@fragment fn main() -> @location(0) vec4f {
+  return vec4f(1.0, 1.0, 0.0, 1.0);
 })";
   granit_shader_desc shader_desc = GRANIT_SHADER_DESC_INIT;
   shader_desc.code = nullptr;
@@ -140,8 +150,23 @@ granit_result draw_public_triangle(granit_frame frame, granit_texture_view view,
   shader_desc.wgsl_length = sizeof(fragment_wgsl) - 1;
   granit_shader fragment{};
   result = granit_shader_create(state.renderer, &shader_desc, &fragment);
+  shader_desc.stage = GRANIT_SHADER_STAGE_VERTEX;
+  shader_desc.wgsl = far_vertex_wgsl;
+  shader_desc.wgsl_length = sizeof(far_vertex_wgsl) - 1;
+  granit_shader far_vertex{};
+  if (result == GRANIT_SUCCESS)
+    result = granit_shader_create(state.renderer, &shader_desc, &far_vertex);
+  shader_desc.stage = GRANIT_SHADER_STAGE_FRAGMENT;
+  shader_desc.wgsl = far_fragment_wgsl;
+  shader_desc.wgsl_length = sizeof(far_fragment_wgsl) - 1;
+  granit_shader far_fragment{};
+  if (result == GRANIT_SUCCESS)
+    result = granit_shader_create(state.renderer, &shader_desc, &far_fragment);
   granit_pipeline_layout layout{};
   granit_graphics_pipeline pipeline{};
+  granit_graphics_pipeline far_pipeline{};
+  granit_texture depth_texture{};
+  granit_texture_view depth_view{};
   granit_command_recorder recorder{};
   if (result == GRANIT_SUCCESS) {
     const granit_pipeline_layout_desc desc = GRANIT_PIPELINE_LAYOUT_DESC_INIT;
@@ -154,7 +179,26 @@ granit_result draw_public_triangle(granit_frame frame, granit_texture_view view,
     desc.fragment_shader = fragment;
     desc.color_format_count = 1;
     desc.color_formats = &format;
+    desc.depth_stencil_format = GRANIT_TEXTURE_FORMAT_D32_FLOAT;
+    granit_depth_state depth = GRANIT_DEPTH_STATE_INIT;
+    depth.test_enabled = 1;
+    depth.write_enabled = 1;
+    desc.depth = &depth;
     result = granit_graphics_pipeline_create(state.renderer, &desc, &pipeline);
+    if (result == GRANIT_SUCCESS) {
+      desc.vertex_shader = far_vertex;
+      desc.fragment_shader = far_fragment;
+      result = granit_graphics_pipeline_create(state.renderer, &desc, &far_pipeline);
+    }
+  }
+  if (result == GRANIT_SUCCESS) {
+    granit_texture_desc desc = GRANIT_TEXTURE_DESC_INIT;
+    desc.format = GRANIT_TEXTURE_FORMAT_D32_FLOAT;
+    desc.usage = GRANIT_TEXTURE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+    desc.width = width;
+    desc.height = height;
+    result =
+        granit_texture_create_with_default_view(state.renderer, &desc, &depth_texture, &depth_view);
   }
   if (result == GRANIT_SUCCESS) {
     const granit_command_recorder_desc desc = GRANIT_COMMAND_RECORDER_DESC_INIT;
@@ -167,11 +211,18 @@ granit_result draw_public_triangle(granit_frame frame, granit_texture_view view,
   granit_rendering_desc rendering = GRANIT_RENDERING_DESC_INIT;
   rendering.color_attachment_count = 1;
   rendering.color_attachments = &color;
+  granit_depth_stencil_attachment_desc depth = GRANIT_DEPTH_STENCIL_ATTACHMENT_DESC_INIT;
+  depth.view = depth_view;
+  rendering.depth_stencil_attachment = &depth;
   rendering.area = {0, 0, width, height};
   if (result == GRANIT_SUCCESS)
     result = granit_command_recorder_begin_rendering(state.renderer, recorder, &rendering);
   if (result == GRANIT_SUCCESS)
     result = granit_command_recorder_bind_graphics_pipeline(state.renderer, recorder, pipeline);
+  if (result == GRANIT_SUCCESS)
+    result = granit_command_recorder_draw(state.renderer, recorder, 3, 1, 0, 0);
+  if (result == GRANIT_SUCCESS)
+    result = granit_command_recorder_bind_graphics_pipeline(state.renderer, recorder, far_pipeline);
   if (result == GRANIT_SUCCESS)
     result = granit_command_recorder_draw(state.renderer, recorder, 3, 1, 0, 0);
   if (result == GRANIT_SUCCESS)
@@ -184,10 +235,20 @@ granit_result draw_public_triangle(granit_frame frame, granit_texture_view view,
     static_cast<void>(granit_command_recorder_destroy(state.renderer, recorder));
   if (pipeline != GRANIT_NULL_HANDLE)
     static_cast<void>(granit_graphics_pipeline_destroy(state.renderer, pipeline));
+  if (far_pipeline != GRANIT_NULL_HANDLE)
+    static_cast<void>(granit_graphics_pipeline_destroy(state.renderer, far_pipeline));
+  if (depth_view != GRANIT_NULL_HANDLE)
+    static_cast<void>(granit_texture_view_destroy(state.renderer, depth_view));
+  if (depth_texture != GRANIT_NULL_HANDLE)
+    static_cast<void>(granit_texture_destroy(state.renderer, depth_texture));
   if (layout != GRANIT_NULL_HANDLE)
     static_cast<void>(granit_pipeline_layout_destroy(state.renderer, layout));
   if (fragment != GRANIT_NULL_HANDLE)
     static_cast<void>(granit_shader_destroy(state.renderer, fragment));
+  if (far_fragment != GRANIT_NULL_HANDLE)
+    static_cast<void>(granit_shader_destroy(state.renderer, far_fragment));
+  if (far_vertex != GRANIT_NULL_HANDLE)
+    static_cast<void>(granit_shader_destroy(state.renderer, far_vertex));
   static_cast<void>(granit_shader_destroy(state.renderer, vertex));
   return result;
 }

@@ -97,8 +97,8 @@ function validateCanvasPixels(png) {
     console.warn("Linux 无头 Chrome 未暴露 WebGPU Canvas 合成像素，跳过截图颜色断言");
     return;
   }
-  if (!(center[1] >= 180 && center[0] <= 80 && center[2] <= 80))
-    throw new Error(`WebGPU 三角形中心像素异常：${center.join(",")}`);
+  if (!(center[2] >= 180 && center[0] <= 80 && center[1] <= 80))
+    throw new Error(`WebGPU 深度遮挡中心像素异常：${center.join(",")}`);
   if (!(corner[0] <= 40 && corner[1] <= 40 && corner[2] <= 40))
     throw new Error(`WebGPU 清屏角落像素异常：${corner.join(",")}`);
 }
@@ -187,7 +187,7 @@ async function main() {
       undefined,
       { timeout: 5_000 },
     );
-    console.log("浏览器 WebGPU 公共绘制闭环与输入转发验证通过");
+    console.log("浏览器 WebGPU 深度遮挡绘制闭环与输入转发验证通过");
   } catch (error) {
     console.error(browserMessages.join("\n"));
     throw error;
