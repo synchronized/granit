@@ -268,6 +268,12 @@ Fixture 是不依赖窗口的 64×64 离屏测试，不使用 S-13 头盔模型�
 固定种子生成带 UV/法线的索引几何、sRGB Base Color、线性 Normal 与
 Metallic-Roughness Texture，并用同一 Uniform Buffer 的两个动态 Offset 绘制两个实例。
 
+在接入 Fixture 前先收口图形命令适配。公共命令保持 Vulkan 当前采用的 Pass 前状态声明：
+Pipeline、Bind Group、Vertex/Index Buffer、Viewport 与 Scissor 可以在 `begin_rendering` 前设置；
+WebGPU 命令适配器暂存这些状态，并在 Provider 打开 Render Pass 后按确定顺序回放。Pass 内再次设置
+时立即下发。Provider 操作表补充 Viewport 与 Scissor，当前未合并分支继续修改 ABI v21 的布局，
+不在每个子提交中递增版本号；S-12 完成前统一审查并确定最终版本号。
+
 - Vulkan、桌面 Dawn 与 Emscripten 调用同一 Fixture 函数；只在 Renderer 创建参数中选择
   后端，测试正文不含后端条件分支。
 - Shader Asset 包同一逻辑的 Vulkan 与 WebGPU 变体；测试不在运行时调用 Tint。
