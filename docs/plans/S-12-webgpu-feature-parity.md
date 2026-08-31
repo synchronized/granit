@@ -281,15 +281,14 @@ Offset 完成四次 Indexed Draw，并以 RGBA8 回读探针验证纹理、法�
 结果。WebGPU 的 D32 Float Pipeline 深度状态、Render Pass 深度附件和清除/存储行为已贯通私有 HAL
 与 Provider；Fixture 按近、远顺序绘制重叠几何，确认后绘制的远端片元被深度测试拒绝。
 测试同时固定资源销毁路径；WebGPU 依赖命令对象持有已编码资源的引用，因此公共资源记录退出后可
-立即释放应用侧 Provider 引用，不需要复制 Vulkan 的提交序列延迟回收队列。桌面 Dawn 和浏览器
-实机执行仍属于 S-12F 后续工作。启用 Dawn 的依赖工作流已将真实 Provider 作为第三个生成案例
-注入同一 Renderer Fixture，并在构建 Dawn SDK 的同一工具链和软件适配器环境中执行。
-Emscripten 5.0.6 浏览器 Smoke 已使用 D32 Float 深度附件按近、远顺序绘制重叠三角形，Chromium
-像素探针确认后绘制的远端黄色片元不会覆盖近端蓝色片元；完整索引纹理 Fixture 的公共主体仍需
-从原生测试中抽取后复用到浏览器入口。Fixture 的尺寸、交错顶点、`uint16` 索引、四组动态 Uniform、
-三张材质纹理像素和语义探针已集中到 `tests/support/renderer_fixture.h`，原生测试不再持有这些常量
-的副本。Emscripten 目标已直接编译该契约、预加载同一组 WGSL Shader Asset，并补齐 Buffer、Sampler、
-Texture 与 Upload Batch 公共入口；下一步用这些公共能力替换浏览器当前的双三角执行函数。
+立即释放应用侧 Provider 引用，不需要复制 Vulkan 的提交序列延迟回收队列。启用 Dawn 的依赖工作流
+已将真实 Provider 作为第三个生成案例注入同一 Renderer Fixture，并在构建 Dawn SDK 的同一工具链和
+软件适配器环境中执行。
+Fixture 的尺寸、交错顶点、`uint16` 索引、四组动态 Uniform、三张材质纹理像素和语义探针已集中到
+`tests/support/renderer_fixture.h`，原生测试与 Emscripten 浏览器入口均复用这些数据和同一组 WGSL
+Shader Asset。Emscripten 5.0.6 浏览器 Smoke 已通过公共 Buffer、Texture、Sampler、Bind Group、
+Pipeline 与 Command Recorder API 运行完整场景；Chromium 截图同时验证左右材质实例、中心近远遮挡
+和清屏背景。S-12F 剩余工作是确认手动 Actions 中真实桌面 Dawn 与浏览器平台矩阵结果。
 
 当前测试已增加背景、两个实例和深度遮挡区域的语义探针。探针失败时在构建目录的
 `test-artifacts` 中写出实际图、按语义探针修正的期望图、绝对差异图和 Renderer/Adapter 元数据；
@@ -325,9 +324,8 @@ Texture 与 Upload Batch 公共入口；下一步用这些公共能力替换浏�
 5. **S-12E 每帧数据（已完成）**：已将动态 Uniform Offset、对齐限制、混合 Upload Batch 和
    Compute 命令路径映射到两个后端。
 6. **S-12F 跨后端 Fixture（进行中）**：带 Base Color、Normal 和 Metallic-Roughness Texture
-   的索引几何及动态 Uniform 离屏 Fixture 已在 Vulkan 与 WebGPU Mock 共用，背景、实例、深度遮挡
-   探针与失败诊断产物也已接入，桌面 Dawn 工作流验证已接线，浏览器深度遮挡 Smoke 已通过；
-   下一步抽取 Fixture 公共主体并在 Chromium 中运行完整索引纹理场景。
+   的索引几何及动态 Uniform Fixture 已在 Vulkan、WebGPU Mock 与 Chromium 共用，背景、实例、
+   深度遮挡探针与失败诊断产物也已接入；桌面 Dawn 工作流验证已接线，等待完整平台矩阵确认。
 7. **S-12G 验收**：验证公共头、共享/静态安装 Consumer、错误路径、截图结果和平台矩阵。
 
 ## 测试与验收
