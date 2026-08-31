@@ -5,7 +5,7 @@
 
 ## 状态
 
-- 实现状态：进行中；S-12A 至 S-12E 已完成，下一步 S-12F
+- 实现状态：已完成；S-12A 至 S-12G 均已通过验收
 - 前置依赖：S-10
 - 后续任务：S-13
 - 优先级：P1
@@ -223,7 +223,7 @@ Texture View 子资源和 Renderer 归属。Bind Group 保留 Layout 与所有�
 类型错误、缺失项、跨 Renderer 句柄与不支持数组。Provider ABI 直接升级，不保留
 旧的固定 Texture/Sampler 分支。
 
-S-12D 已完成：Provider ABI v21 接收显式格式、mip 数量、
+S-12D 已完成：Provider ABI 接收显式格式、mip 数量、
 View mip 范围、写入区域、Sampler 状态和由 Layout 驱动的绑定数组，
 公共 Renderer 已接通上述五种必需格式的二维、单层、单采样 Texture 创建、子 View 创建，以及
 指定 mip、矩形区域和显式行跨度上传。Sampler 已接通过滤、寻址、LOD 范围和整数倍
@@ -271,8 +271,8 @@ Metallic-Roughness Texture，并用同一 Uniform Buffer 的动态 Offset 绘制
 在接入 Fixture 前先收口图形命令适配。公共命令保持 Vulkan 当前采用的 Pass 前状态声明：
 Pipeline、Bind Group、Vertex/Index Buffer、Viewport 与 Scissor 可以在 `begin_rendering` 前设置；
 WebGPU 命令适配器暂存这些状态，并在 Provider 打开 Render Pass 后按确定顺序回放。Pass 内再次设置
-时立即下发。Provider 操作表补充 Viewport 与 Scissor，当前未合并分支继续修改 ABI v21 的布局，
-不在每个子提交中递增版本号；S-12 完成前统一审查并确定最终版本号。
+时立即下发。Provider 操作表补充 Viewport 与 Scissor；本分支开发期间冻结操作表版本，S-12 完成后
+统一将最终 Provider ABI 确定为 v22。
 
 跨后端基础 Fixture 已经落地：Vulkan 与 WebGPU Mock 通过相同测试正文、Shader Asset 和命令顺序，
 使用交错 Position/UV/Normal Vertex Buffer、`uint16` Index Buffer、sRGB Base Color Texture、线性
@@ -290,8 +290,8 @@ Shader Asset。Emscripten 5.0.6 浏览器 Smoke 已通过公共 Buffer、Texture
 Pipeline 与 Command Recorder API 运行完整场景；Chromium 截图同时验证左右材质实例、中心近远遮挡
 和清屏背景。包含指针的 Bind Group 绑定与 Rendering 描述已改用实际布局计算 `struct_size`，因此
 公共 `command_recorder.hpp` 也能由 wasm32 C++20 使用，同时保持桌面 64 位 ABI 数值不变。浏览器
-产物统一命名为 `granit_webgpu_fixture_example`，避免继续将完整场景误称为三角形示例。S-12F 剩余
-工作是确认手动 Actions 中真实桌面 Dawn 与浏览器平台矩阵结果。
+产物统一命名为 `granit_webgpu_fixture_example`，避免继续将完整场景误称为三角形示例。Linux
+Lavapipe、Windows/Linux 真实 Dawn 与 Chromium 平台矩阵均已通过，S-12F 已完成。
 
 当前测试已增加背景、两个实例和深度遮挡区域的语义探针。探针失败时在构建目录的
 `test-artifacts` 中写出实际图、按语义探针修正的期望图、绝对差异图和 Renderer/Adapter 元数据；
@@ -328,10 +328,11 @@ Pipeline 与 Command Recorder API 运行完整场景；Chromium 截图同时验�
    Bind Group，以及空布局和多 Bind Group Pipeline Layout。
 5. **S-12E 每帧数据（已完成）**：已将动态 Uniform Offset、对齐限制、混合 Upload Batch 和
    Compute 命令路径映射到两个后端。
-6. **S-12F 跨后端 Fixture（进行中）**：带 Base Color、Normal 和 Metallic-Roughness Texture
+6. **S-12F 跨后端 Fixture（已完成）**：带 Base Color、Normal 和 Metallic-Roughness Texture
    的索引几何及动态 Uniform Fixture 已在 Vulkan、WebGPU Mock 与 Chromium 共用，背景、实例、
-   深度遮挡探针与失败诊断产物也已接入；桌面 Dawn 工作流验证已接线，等待完整平台矩阵确认。
-7. **S-12G 验收**：验证公共头、共享/静态安装 Consumer、错误路径、截图结果和平台矩阵。
+   深度遮挡探针与失败诊断产物也已接入，Windows/Linux 真实 Dawn 验证通过。
+7. **S-12G 验收（已完成）**：公共头、共享/静态安装 Consumer、错误路径、截图结果和平台矩阵
+   均已通过，最终 Provider ABI 为 v22。
 
 ## 测试与验收
 

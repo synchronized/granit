@@ -128,8 +128,8 @@ D-03-graphics-pipeline.md
   SDK Consumer、Emscripten 浏览器闭环、统一 Registry 与私有 HAL 收敛均已通过最终验收。
 - [S-10C：WGSL Shader 工具链](S-10C-wgsl-toolchain.md)——已完成；以 WGSL 为源码权威，已形成
   SPIR-V、反射清单、确定性资产、诊断和缓存闭环。
-- [S-12：WebGPU 公共能力补齐](S-12-webgpu-feature-parity.md)——已确认；补齐公共后端选择、模型
-  绘制所需资源与命令，并建立 Vulkan、桌面 WebGPU 和浏览器 WebGPU 共同 Fixture。
+- [S-12：WebGPU 公共能力补齐](S-12-webgpu-feature-parity.md)——已完成；公共后端选择、模型绘制
+  所需资源与命令，以及 Vulkan、桌面 WebGPU 和浏览器 WebGPU 共同 Fixture 均已验收。
 - [S-13：跨后端模型查看器](S-13-cross-backend-model-viewer.md)——已确认；以示例私有 glTF 加载器、
   PBR 头盔、轨道相机和 ImGui 验证三个运行目标。
 

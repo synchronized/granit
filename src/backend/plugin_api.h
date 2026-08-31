@@ -9,7 +9,7 @@
 #include <granit/core/diagnostic.h>
 #include <granit/core/result.h>
 
-#define GRANIT_BACKEND_PLUGIN_ABI_VERSION UINT32_C(21)
+#define GRANIT_BACKEND_PLUGIN_ABI_VERSION UINT32_C(22)
 #define GRANIT_BACKEND_PLUGIN_KIND_WEBGPU UINT32_C(1)
 #define GRANIT_BACKEND_PLUGIN_QUERY_SYMBOL "granit_backend_plugin_query"
 #define GRANIT_BACKEND_PLUGIN_SURFACE_TYPE_WIN32_BIT UINT32_C(0x00000001)
