@@ -149,7 +149,11 @@ TEST_CASE("Renderer 严格选择动态 WebGPU Provider", "[renderer][backend][we
   CHECK(info.adapter_name_length == 0);
   REQUIRE(granit_renderer_destroy(renderer) == GRANIT_SUCCESS);
 
+#if defined(_WIN32)
   constexpr std::string_view missing_path = "D:/granit/missing-webgpu-provider.dll";
+#else
+  constexpr std::string_view missing_path = "/tmp/granit/missing-webgpu-provider.so";
+#endif
   desc.backend_library_path = missing_path.data();
   desc.backend_library_path_length = static_cast<std::uint32_t>(missing_path.size());
   diagnostic_messages captured;
