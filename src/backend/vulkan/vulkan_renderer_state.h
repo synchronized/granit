@@ -332,6 +332,8 @@ public:
                                    std::uint32_t first_vertex,
                                    std::uint32_t first_instance) noexcept override;
   [[nodiscard]] granit_result draw_indexed(backend_command_recorder_resource& recorder,
+                                           backend_texture_view_resource* target,
+                                           backend_graphics_pipeline_resource* pipeline,
                                            std::uint32_t index_count, std::uint32_t instance_count,
                                            std::uint32_t first_index, std::int32_t vertex_offset,
                                            std::uint32_t first_instance) noexcept override;
@@ -406,6 +408,18 @@ public:
   }
   [[nodiscard]] granit_result process_backend_events() noexcept override {
     return lifecycle_.gate();
+  }
+  [[nodiscard]] granit_renderer_backend backend() const noexcept override {
+    return GRANIT_RENDERER_BACKEND_VULKAN;
+  }
+  [[nodiscard]] std::string_view adapter_name() const noexcept override {
+    return device_.properties().deviceName;
+  }
+  [[nodiscard]] std::uint32_t adapter_vendor_id() const noexcept override {
+    return device_.properties().vendorID;
+  }
+  [[nodiscard]] std::uint32_t adapter_device_id() const noexcept override {
+    return device_.properties().deviceID;
   }
   [[nodiscard]] const diagnostic_sink& diagnostics() const noexcept override {
     return diagnostics_;

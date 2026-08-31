@@ -90,7 +90,7 @@ if(BUILD_SHARED_LIBS)
       GRANIT_ABI_RENDER_PIPELINE_LIBRARY_PATH="$<TARGET_FILE:granit_render_pipeline>"
       GRANIT_ABI_WINDOW_LIBRARY_PATH="$<TARGET_FILE:granit_window>"
       GRANIT_ABI_INPUT_LIBRARY_PATH="$<TARGET_FILE:granit_input>"
-      GRANIT_ABI_CORE_SYMBOLS_PATH="${CMAKE_CURRENT_SOURCE_DIR}/abi/snapshots/0.1.0/core_symbols.txt"
+      GRANIT_ABI_CORE_SYMBOLS_PATH="${CMAKE_CURRENT_SOURCE_DIR}/abi/snapshots/0.4.0/core_symbols.txt"
       GRANIT_ABI_RENDER_PIPELINE_SYMBOLS_PATH="${CMAKE_CURRENT_SOURCE_DIR}/abi/snapshots/0.1.0/render_pipeline_symbols.txt"
       GRANIT_ABI_WINDOW_SYMBOLS_PATH="${CMAKE_CURRENT_SOURCE_DIR}/abi/snapshots/0.1.0/window_symbols.txt"
       GRANIT_ABI_INPUT_SYMBOLS_PATH="${CMAKE_CURRENT_SOURCE_DIR}/abi/snapshots/0.1.0/input_symbols.txt"
@@ -134,7 +134,17 @@ if(BUILD_SHARED_LIBS)
       )
     endfunction()
 
-    granit_add_abi_export_snapshot_test(core granit core_symbols.txt)
+    add_test(
+      NAME granit.abi.exports.core
+      COMMAND
+        "${CMAKE_COMMAND}"
+        "-DGRANIT_ABI_COMPONENT=core"
+        "-DGRANIT_ABI_LIBRARY=$<TARGET_FILE:granit>"
+        "-DGRANIT_ABI_SNAPSHOT=${CMAKE_CURRENT_SOURCE_DIR}/abi/snapshots/0.4.0/core_symbols.txt"
+        "-DGRANIT_ABI_EXPORT_TOOL=${granit_abi_export_tool}"
+        "-DGRANIT_ABI_EXPORT_TOOL_KIND=${granit_abi_export_tool_kind}"
+        -P "${CMAKE_CURRENT_SOURCE_DIR}/abi/check_exported_symbols.cmake"
+    )
     granit_add_abi_export_snapshot_test(
       render_pipeline granit_render_pipeline render_pipeline_symbols.txt
       "${CMAKE_CURRENT_SOURCE_DIR}/abi/snapshots/0.1.0/render_pipeline_private_symbols.txt"
@@ -209,7 +219,7 @@ target_compile_features(granit_fake_backend_plugin PRIVATE cxx_std_20)
 target_compile_definitions(
   granit_fake_backend_plugin
   PRIVATE GRANIT_WEBGPU_FORCE_FALLBACK_ADAPTER GRANIT_WEBGPU_DEFER_INITIALIZATION_TEST
-          GRANIT_WEBGPU_CANVAS_SURFACE_TEST
+          GRANIT_WEBGPU_CANVAS_SURFACE_TEST GRANIT_WEBGPU_NATIVE_SURFACE_TEST
 )
 target_compile_features(granit_incompatible_backend_plugin PRIVATE cxx_std_20)
 set_target_properties(
@@ -556,10 +566,22 @@ target_link_libraries(
     Catch2::Catch2WithMain
     $<$<PLATFORM_ID:Windows>:user32>
 )
+target_include_directories(granit_renderer_test PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
 target_compile_definitions(
   granit_renderer_test
-  PRIVATE GRANIT_TEST_ASSET_DIR="${PROJECT_SOURCE_DIR}/tests/assets"
+  PRIVATE
+    GRANIT_TEST_ASSET_DIR="${PROJECT_SOURCE_DIR}/tests/assets"
+    GRANIT_TEST_ARTIFACT_DIR="${CMAKE_BINARY_DIR}/test-artifacts"
+    GRANIT_FAKE_BACKEND_PLUGIN_PATH="$<TARGET_FILE:granit_fake_backend_plugin>"
 )
+add_dependencies(granit_renderer_test granit_fake_backend_plugin)
+if(GRANIT_BUILD_BACKEND_WEBGPU)
+  target_compile_definitions(
+    granit_renderer_test
+    PRIVATE GRANIT_WEBGPU_BACKEND_PLUGIN_PATH="$<TARGET_FILE:granit_backend_webgpu>"
+  )
+  add_dependencies(granit_renderer_test granit_backend_webgpu)
+endif()
 granit_target_compile_warnings(granit_renderer_test)
 add_test(NAME granit.renderer COMMAND granit_renderer_test)
 add_test(

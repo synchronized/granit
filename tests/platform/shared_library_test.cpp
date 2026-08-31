@@ -9,8 +9,13 @@
 #include "platform/shared_library.h"
 
 TEST_CASE("平台动态库只加载显式绝对路径", "[platform][shared_library]") {
+  CHECK_FALSE(granit::detail::platform::module_directory().empty());
   granit::detail::platform::shared_library library;
   CHECK_FALSE(library.open(nullptr));
+  CHECK_FALSE(library.open(""));
+  CHECK_FALSE(library.open("a"));
+  CHECK_FALSE(library.open("C:"));
+  CHECK_FALSE(library.open("\\"));
   CHECK_FALSE(library.open("relative-plugin-path"));
   CHECK_FALSE(library.open(GRANIT_MISSING_BACKEND_PLUGIN_PATH));
   CHECK_FALSE(library.is_open());

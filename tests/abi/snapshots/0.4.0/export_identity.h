@@ -1,0 +1,14 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Granit contributors
+
+#ifndef GRANIT_TESTS_ABI_SNAPSHOTS_0_4_0_EXPORT_IDENTITY_H_
+#define GRANIT_TESTS_ABI_SNAPSHOTS_0_4_0_EXPORT_IDENTITY_H_
+
+#include "core_identity.h"
+
+#define GRANIT_ABI_SNAPSHOT_RENDER_PIPELINE_COMPONENT "RenderPipeline"
+#define GRANIT_ABI_SNAPSHOT_WINDOW_COMPONENT "Window"
+#define GRANIT_ABI_SNAPSHOT_INPUT_COMPONENT "Input"
+#define GRANIT_ABI_OPTIONAL_SNAPSHOT_VERSION "0.1.0"
+
+#endif

@@ -5,6 +5,7 @@
 #define GRANIT_BACKEND_PLUGIN_LOADER_H_
 
 #include <cstdint>
+#include <span>
 #include <vector>
 
 #include <granit/core/result.h>
@@ -40,6 +41,17 @@ public:
   get_instance_status(granit_backend_plugin_instance instance,
                       granit_backend_plugin_instance_status* status) noexcept;
   [[nodiscard]] granit_result process_events(granit_backend_plugin_instance instance) noexcept;
+  [[nodiscard]] granit_result
+  create_win32_surface(granit_backend_plugin_instance instance,
+                       const granit_backend_plugin_win32_surface_desc* desc,
+                       granit_backend_plugin_surface* surface) noexcept;
+  [[nodiscard]] granit_result create_xcb_surface(granit_backend_plugin_instance instance,
+                                                 const granit_backend_plugin_xcb_surface_desc* desc,
+                                                 granit_backend_plugin_surface* surface) noexcept;
+  [[nodiscard]] granit_result
+  create_wayland_surface(granit_backend_plugin_instance instance,
+                         const granit_backend_plugin_wayland_surface_desc* desc,
+                         granit_backend_plugin_surface* surface) noexcept;
   [[nodiscard]] granit_result
   create_canvas_surface(granit_backend_plugin_instance instance,
                         const granit_backend_plugin_canvas_surface_desc* desc,
@@ -87,9 +99,17 @@ public:
                                              granit_backend_plugin_texture* texture) noexcept;
   [[nodiscard]] granit_result destroy_texture(granit_backend_plugin_instance instance,
                                               granit_backend_plugin_texture texture) noexcept;
+  [[nodiscard]] granit_result write_texture(granit_backend_plugin_instance instance,
+                                            granit_backend_plugin_texture texture,
+                                            const granit_backend_plugin_texture_write_desc* desc,
+                                            const void* data, std::uint64_t size) noexcept;
+  [[nodiscard]] granit_result
+  write_upload_batch(granit_backend_plugin_instance instance,
+                     std::span<const granit_backend_plugin_upload_operation> operations) noexcept;
   [[nodiscard]] granit_result
   create_texture_view(granit_backend_plugin_instance instance,
                       granit_backend_plugin_texture texture,
+                      const granit_backend_plugin_texture_view_desc* desc,
                       granit_backend_plugin_texture_view* view) noexcept;
   [[nodiscard]] granit_result
   destroy_texture_view(granit_backend_plugin_instance instance,
@@ -101,6 +121,7 @@ public:
                                               granit_backend_plugin_sampler sampler) noexcept;
   [[nodiscard]] granit_result
   create_bind_group_layout(granit_backend_plugin_instance instance,
+                           const granit_backend_plugin_bind_group_layout_desc* desc,
                            granit_backend_plugin_bind_group_layout* layout) noexcept;
   [[nodiscard]] granit_result
   destroy_bind_group_layout(granit_backend_plugin_instance instance,
@@ -119,11 +140,37 @@ public:
                                              granit_backend_plugin_shader shader) noexcept;
   [[nodiscard]] granit_result
   create_pipeline_layout(granit_backend_plugin_instance instance,
-                         granit_backend_plugin_bind_group_layout bind_group_layout,
+                         const granit_backend_plugin_pipeline_layout_desc* desc,
                          granit_backend_plugin_pipeline_layout* pipeline_layout) noexcept;
   [[nodiscard]] granit_result
   destroy_pipeline_layout(granit_backend_plugin_instance instance,
                           granit_backend_plugin_pipeline_layout pipeline_layout) noexcept;
+  [[nodiscard]] granit_result
+  create_compute_pipeline(granit_backend_plugin_instance instance,
+                          const granit_backend_plugin_compute_pipeline_desc* desc,
+                          granit_backend_plugin_compute_pipeline* pipeline) noexcept;
+  [[nodiscard]] granit_result
+  destroy_compute_pipeline(granit_backend_plugin_instance instance,
+                           granit_backend_plugin_compute_pipeline pipeline) noexcept;
+  [[nodiscard]] granit_result
+  recorder_begin_compute(granit_backend_plugin_instance instance,
+                         granit_backend_plugin_command_recorder recorder) noexcept;
+  [[nodiscard]] granit_result
+  recorder_bind_compute_pipeline(granit_backend_plugin_instance instance,
+                                 granit_backend_plugin_command_recorder recorder,
+                                 granit_backend_plugin_compute_pipeline pipeline) noexcept;
+  [[nodiscard]] granit_result recorder_bind_compute_groups(
+      granit_backend_plugin_instance instance, granit_backend_plugin_command_recorder recorder,
+      granit_backend_plugin_pipeline_layout layout, std::uint32_t first_group,
+      std::span<const granit_backend_plugin_bind_group> groups,
+      std::span<const std::uint32_t> dynamic_offsets) noexcept;
+  [[nodiscard]] granit_result recorder_dispatch(granit_backend_plugin_instance instance,
+                                                granit_backend_plugin_command_recorder recorder,
+                                                std::uint32_t x, std::uint32_t y,
+                                                std::uint32_t z) noexcept;
+  [[nodiscard]] granit_result
+  recorder_end_compute(granit_backend_plugin_instance instance,
+                       granit_backend_plugin_command_recorder recorder) noexcept;
   [[nodiscard]] granit_result
   create_render_pipeline(granit_backend_plugin_instance instance,
                          const granit_backend_plugin_render_pipeline_desc* desc,
@@ -141,11 +188,54 @@ public:
       granit_backend_plugin_instance instance, granit_backend_plugin_command_recorder recorder,
       granit_backend_plugin_buffer buffer, granit_backend_plugin_texture texture,
       std::uint32_t width, std::uint32_t height, std::uint32_t bytes_per_row) noexcept;
-  [[nodiscard]] granit_result recorder_draw(granit_backend_plugin_instance instance,
-                                            granit_backend_plugin_command_recorder recorder,
-                                            granit_backend_plugin_texture_view target,
-                                            granit_backend_plugin_render_pipeline pipeline,
-                                            granit_backend_plugin_bind_group bind_group) noexcept;
+  [[nodiscard]] granit_result recorder_begin_rendering(
+      granit_backend_plugin_instance instance, granit_backend_plugin_command_recorder recorder,
+      granit_backend_plugin_texture_view target, granit_backend_plugin_load_operation load,
+      granit_backend_plugin_store_operation store, const float clear[4],
+      granit_backend_plugin_texture_view depth_target = 0,
+      granit_backend_plugin_load_operation depth_load = GRANIT_BACKEND_PLUGIN_LOAD_OPERATION_CLEAR,
+      granit_backend_plugin_store_operation depth_store =
+          GRANIT_BACKEND_PLUGIN_STORE_OPERATION_DISCARD,
+      float clear_depth = 1.0F) noexcept;
+  [[nodiscard]] granit_result
+  recorder_bind_pipeline(granit_backend_plugin_instance instance,
+                         granit_backend_plugin_command_recorder recorder,
+                         granit_backend_plugin_render_pipeline pipeline) noexcept;
+  [[nodiscard]] granit_result recorder_bind_graphics_groups(
+      granit_backend_plugin_instance instance, granit_backend_plugin_command_recorder recorder,
+      granit_backend_plugin_pipeline_layout layout, std::uint32_t first_group,
+      std::span<const granit_backend_plugin_bind_group> groups,
+      std::span<const std::uint32_t> dynamic_offsets) noexcept;
+  [[nodiscard]] granit_result recorder_bind_vertex_buffers(
+      granit_backend_plugin_instance instance, granit_backend_plugin_command_recorder recorder,
+      std::uint32_t first,
+      std::span<const granit_backend_plugin_vertex_buffer_binding> bindings) noexcept;
+  [[nodiscard]] granit_result
+  recorder_bind_index_buffer(granit_backend_plugin_instance instance,
+                             granit_backend_plugin_command_recorder recorder,
+                             granit_backend_plugin_buffer buffer, std::uint64_t offset,
+                             granit_backend_plugin_index_format format) noexcept;
+  [[nodiscard]] granit_result
+  recorder_set_viewports(granit_backend_plugin_instance instance,
+                         granit_backend_plugin_command_recorder recorder, std::uint32_t first,
+                         std::span<const granit_backend_plugin_viewport> viewports) noexcept;
+  [[nodiscard]] granit_result
+  recorder_set_scissors(granit_backend_plugin_instance instance,
+                        granit_backend_plugin_command_recorder recorder, std::uint32_t first,
+                        std::span<const granit_backend_plugin_scissor> scissors) noexcept;
+  [[nodiscard]] granit_result
+  recorder_draw_vertices(granit_backend_plugin_instance instance,
+                         granit_backend_plugin_command_recorder recorder,
+                         std::uint32_t vertex_count, std::uint32_t instance_count,
+                         std::uint32_t first_vertex, std::uint32_t first_instance) noexcept;
+  [[nodiscard]] granit_result
+  recorder_draw_indices(granit_backend_plugin_instance instance,
+                        granit_backend_plugin_command_recorder recorder, std::uint32_t index_count,
+                        std::uint32_t instance_count, std::uint32_t first_index,
+                        std::int32_t vertex_offset, std::uint32_t first_instance) noexcept;
+  [[nodiscard]] granit_result
+  recorder_end_rendering(granit_backend_plugin_instance instance,
+                         granit_backend_plugin_command_recorder recorder) noexcept;
   [[nodiscard]] granit_result
   finish_command_recorder(granit_backend_plugin_instance instance,
                           granit_backend_plugin_command_recorder recorder,

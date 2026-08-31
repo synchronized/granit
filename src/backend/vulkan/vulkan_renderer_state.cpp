@@ -2088,11 +2088,10 @@ granit_result vulkan_renderer_state::draw(backend_command_recorder_resource& rec
              : recorder.draw(device_, vertex_count, instance_count, first_vertex, first_instance);
 }
 
-granit_result
-vulkan_renderer_state::draw_indexed(backend_command_recorder_resource& recorder_resource,
-                                    std::uint32_t index_count, std::uint32_t instance_count,
-                                    std::uint32_t first_index, std::int32_t vertex_offset,
-                                    std::uint32_t first_instance) noexcept {
+granit_result vulkan_renderer_state::draw_indexed(
+    backend_command_recorder_resource& recorder_resource, backend_texture_view_resource*,
+    backend_graphics_pipeline_resource*, std::uint32_t index_count, std::uint32_t instance_count,
+    std::uint32_t first_index, std::int32_t vertex_offset, std::uint32_t first_instance) noexcept {
   auto& recorder = static_cast<vulkan_command_recorder_resource&>(recorder_resource).native();
   return device_lost() ? GRANIT_ERROR_DEVICE_LOST
                        : recorder.draw_indexed(device_, index_count, instance_count, first_index,

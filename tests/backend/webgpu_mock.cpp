@@ -3,6 +3,9 @@
 
 #include <webgpu/webgpu.h>
 
+#include <algorithm>
+#include <array>
+#include <cmath>
 #include <cstring>
 #include <vector>
 
@@ -21,6 +24,8 @@ struct WGPUTextureImpl {
   unsigned int width;
   unsigned int height;
   WGPUTextureUsage usage;
+  WGPUTextureFormat format;
+  unsigned int mip_levels;
   std::vector<unsigned char> bytes;
 };
 struct WGPUTextureViewImpl {
@@ -37,19 +42,48 @@ struct WGPUSurfaceImpl {
 struct WGPUSamplerImpl {
   WGPUFilterMode min_filter;
   WGPUFilterMode mag_filter;
+  WGPUMipmapFilterMode mipmap_filter;
+  WGPUAddressMode address_mode_u;
+  WGPUAddressMode address_mode_v;
+  WGPUAddressMode address_mode_w;
+  WGPUCompareFunction compare;
+  unsigned short max_anisotropy;
+  float min_lod;
+  float max_lod;
 };
-struct WGPUBindGroupLayoutImpl {};
-struct WGPUBindGroupImpl {};
+struct WGPUBindGroupLayoutImpl {
+  bool has_dynamic_uniform{};
+};
+struct WGPUBindGroupImpl {
+  std::vector<unsigned char> uniform_bytes;
+  std::array<unsigned char, 4> sampled_color{255, 255, 255, 255};
+  std::array<unsigned char, 4> normal_color{128, 128, 255, 255};
+  std::array<unsigned char, 4> metallic_roughness_color{};
+  bool sampled_color_is_srgb{};
+  bool has_material_textures{};
+  unsigned long long offset{};
+  bool has_dynamic_uniform{};
+};
 struct WGPUPipelineLayoutImpl {};
 struct WGPUShaderModuleImpl {};
-struct WGPURenderPipelineImpl {};
+struct WGPURenderPipelineImpl {
+  bool depth_enabled{};
+  bool depth_write{};
+  WGPUCompareFunction depth_compare{WGPUCompareFunction_Always};
+};
+struct WGPUComputePipelineImpl {};
 struct WGPUCommandEncoderImpl {
   bool finished{};
 };
 struct WGPUCommandBufferImpl {};
 struct WGPURenderPassEncoderImpl {
   WGPUTexture target;
+  WGPUTexture depth_target{};
+  WGPURenderPipeline pipeline{};
+  WGPUBindGroup bind_group{};
+  unsigned int dynamic_offset{};
 };
+struct WGPUComputePassEncoderImpl {};
 
 extern "C" WGPUInstance wgpuCreateInstance(const WGPUInstanceDescriptor*) {
   return new WGPUInstanceImpl;
@@ -57,14 +91,33 @@ extern "C" WGPUInstance wgpuCreateInstance(const WGPUInstanceDescriptor*) {
 
 extern "C" WGPUSurface wgpuInstanceCreateSurface(WGPUInstance,
                                                  const WGPUSurfaceDescriptor* descriptor) {
-  if (descriptor == nullptr || descriptor->nextInChain == nullptr ||
-      descriptor->nextInChain->sType != WGPUSType_EmscriptenSurfaceSourceCanvasHTMLSelector) {
+  if (descriptor == nullptr || descriptor->nextInChain == nullptr)
+    return nullptr;
+  switch (descriptor->nextInChain->sType) {
+  case WGPUSType_EmscriptenSurfaceSourceCanvasHTMLSelector: {
+    const auto* canvas = reinterpret_cast<const WGPUEmscriptenSurfaceSourceCanvasHTMLSelector*>(
+        descriptor->nextInChain);
+    return canvas->selector.data != nullptr && canvas->selector.length != 0 ? new WGPUSurfaceImpl
+                                                                            : nullptr;
+  }
+  case WGPUSType_SurfaceSourceWindowsHWND: {
+    const auto* source =
+        reinterpret_cast<const WGPUSurfaceSourceWindowsHWND*>(descriptor->nextInChain);
+    return source->hinstance != nullptr && source->hwnd != nullptr ? new WGPUSurfaceImpl : nullptr;
+  }
+  case WGPUSType_SurfaceSourceXCBWindow: {
+    const auto* source =
+        reinterpret_cast<const WGPUSurfaceSourceXCBWindow*>(descriptor->nextInChain);
+    return source->connection != nullptr && source->window != 0 ? new WGPUSurfaceImpl : nullptr;
+  }
+  case WGPUSType_SurfaceSourceWaylandSurface: {
+    const auto* source =
+        reinterpret_cast<const WGPUSurfaceSourceWaylandSurface*>(descriptor->nextInChain);
+    return source->display != nullptr && source->surface != nullptr ? new WGPUSurfaceImpl : nullptr;
+  }
+  default:
     return nullptr;
   }
-  const auto* canvas = reinterpret_cast<const WGPUEmscriptenSurfaceSourceCanvasHTMLSelector*>(
-      descriptor->nextInChain);
-  return canvas->selector.data != nullptr && canvas->selector.length != 0 ? new WGPUSurfaceImpl
-                                                                          : nullptr;
 }
 
 extern "C" void wgpuSurfaceRelease(WGPUSurface surface) {
@@ -117,7 +170,11 @@ extern "C" void wgpuSurfaceGetCurrentTexture(WGPUSurface surface,
     return;
   }
   surface->current = new WGPUTextureImpl{
-      surface->width, surface->height, WGPUTextureUsage_RenderAttachment,
+      surface->width,
+      surface->height,
+      WGPUTextureUsage_RenderAttachment,
+      surface->format,
+      1,
       std::vector<unsigned char>(static_cast<std::size_t>(surface->width) * surface->height * 4)};
   surface_texture->texture = surface->current;
   surface_texture->status = WGPUSurfaceGetCurrentTextureStatus_SuccessOptimal;
@@ -217,6 +274,39 @@ extern "C" void wgpuQueueWriteBuffer(WGPUQueue, WGPUBuffer buffer, unsigned long
   std::memcpy(buffer->bytes.data() + static_cast<std::size_t>(offset), data, size);
 }
 
+extern "C" void wgpuQueueWriteTexture(WGPUQueue, const WGPUTexelCopyTextureInfo* destination,
+                                      const void* data, size_t data_size,
+                                      const WGPUTexelCopyBufferLayout* layout,
+                                      const WGPUExtent3D* write_size) {
+  if (destination == nullptr || destination->texture == nullptr || data == nullptr ||
+      layout == nullptr || write_size == nullptr)
+    return;
+  auto* texture = destination->texture;
+  const auto bytes_per_pixel = texture->format == WGPUTextureFormat_R8Unorm    ? 1U
+                               : texture->format == WGPUTextureFormat_RG8Unorm ? 2U
+                                                                               : 4U;
+  std::size_t mip_offset{};
+  for (unsigned int mip = 0; mip < destination->mipLevel; ++mip) {
+    mip_offset += static_cast<std::size_t>(std::max(1U, texture->width >> mip)) *
+                  std::max(1U, texture->height >> mip) * bytes_per_pixel;
+  }
+  const auto mip_width = std::max(1U, texture->width >> destination->mipLevel);
+  const auto source_row = layout->bytesPerRow;
+  const auto tight_row = static_cast<std::size_t>(write_size->width) * bytes_per_pixel;
+  if (data_size < (static_cast<std::size_t>(write_size->height) - 1) * source_row + tight_row)
+    return;
+  for (unsigned int row = 0; row < write_size->height; ++row) {
+    const auto destination_offset =
+        mip_offset + (static_cast<std::size_t>(destination->origin.y + row) * mip_width +
+                      destination->origin.x) *
+                         bytes_per_pixel;
+    std::memcpy(texture->bytes.data() + destination_offset,
+                static_cast<const unsigned char*>(data) + layout->offset +
+                    static_cast<std::size_t>(row) * source_row,
+                tight_row);
+  }
+}
+
 extern "C" WGPUFuture wgpuBufferMapAsync(WGPUBuffer buffer, WGPUMapMode, size_t offset, size_t size,
                                          WGPUBufferMapCallbackInfo callback_info) {
   const auto valid = buffer != nullptr && offset <= buffer->bytes.size() &&
@@ -241,14 +331,26 @@ extern "C" void wgpuBufferUnmap(WGPUBuffer buffer) { buffer->mapped = false; }
 
 extern "C" WGPUTexture wgpuDeviceCreateTexture(WGPUDevice,
                                                const WGPUTextureDescriptor* descriptor) {
+  const auto supported_format =
+      descriptor != nullptr && (descriptor->format == WGPUTextureFormat_R8Unorm ||
+                                descriptor->format == WGPUTextureFormat_RG8Unorm ||
+                                descriptor->format == WGPUTextureFormat_RGBA8Unorm ||
+                                descriptor->format == WGPUTextureFormat_RGBA8UnormSrgb ||
+                                descriptor->format == WGPUTextureFormat_Depth32Float);
   if (descriptor == nullptr || descriptor->size.width == 0 || descriptor->size.height == 0 ||
-      descriptor->format != WGPUTextureFormat_RGBA8Unorm) {
+      descriptor->mipLevelCount == 0 || !supported_format) {
     return nullptr;
   }
-  return new WGPUTextureImpl{
-      descriptor->size.width, descriptor->size.height, descriptor->usage,
-      std::vector<unsigned char>(static_cast<std::size_t>(descriptor->size.width) *
-                                 descriptor->size.height * 4)};
+  const auto bytes_per_pixel = descriptor->format == WGPUTextureFormat_R8Unorm    ? 1U
+                               : descriptor->format == WGPUTextureFormat_RG8Unorm ? 2U
+                                                                                  : 4U;
+  std::size_t byte_count{};
+  for (unsigned int mip = 0; mip < descriptor->mipLevelCount; ++mip)
+    byte_count += static_cast<std::size_t>(std::max(1U, descriptor->size.width >> mip)) *
+                  std::max(1U, descriptor->size.height >> mip) * bytes_per_pixel;
+  return new WGPUTextureImpl{descriptor->size.width,    descriptor->size.height,
+                             descriptor->usage,         descriptor->format,
+                             descriptor->mipLevelCount, std::vector<unsigned char>(byte_count)};
 }
 
 extern "C" void wgpuTextureRelease(WGPUTexture texture) { delete texture; }
@@ -265,28 +367,58 @@ extern "C" WGPUSampler wgpuDeviceCreateSampler(WGPUDevice,
   if (descriptor == nullptr) {
     return nullptr;
   }
-  return new WGPUSamplerImpl{descriptor->minFilter, descriptor->magFilter};
+  return new WGPUSamplerImpl{descriptor->minFilter,    descriptor->magFilter,
+                             descriptor->mipmapFilter, descriptor->addressModeU,
+                             descriptor->addressModeV, descriptor->addressModeW,
+                             descriptor->compare,      descriptor->maxAnisotropy,
+                             descriptor->lodMinClamp,  descriptor->lodMaxClamp};
 }
 
 extern "C" void wgpuSamplerRelease(WGPUSampler sampler) { delete sampler; }
 
 extern "C" WGPUBindGroupLayout
 wgpuDeviceCreateBindGroupLayout(WGPUDevice, const WGPUBindGroupLayoutDescriptor* descriptor) {
-  return descriptor != nullptr && descriptor->entryCount == 2 ? new WGPUBindGroupLayoutImpl
-                                                              : nullptr;
+  if (descriptor == nullptr)
+    return nullptr;
+  auto* result = new WGPUBindGroupLayoutImpl;
+  for (std::size_t index = 0; index < descriptor->entryCount; ++index)
+    result->has_dynamic_uniform |= descriptor->entries[index].buffer.hasDynamicOffset != 0;
+  return result;
 }
 extern "C" void wgpuBindGroupLayoutRelease(WGPUBindGroupLayout layout) { delete layout; }
 extern "C" WGPUBindGroup wgpuDeviceCreateBindGroup(WGPUDevice,
                                                    const WGPUBindGroupDescriptor* descriptor) {
-  return descriptor != nullptr && descriptor->layout != nullptr && descriptor->entryCount == 2
-             ? new WGPUBindGroupImpl
-             : nullptr;
+  if (descriptor == nullptr || descriptor->layout == nullptr)
+    return nullptr;
+  auto* result = new WGPUBindGroupImpl;
+  result->has_dynamic_uniform = descriptor->layout->has_dynamic_uniform;
+  for (std::size_t index = 0; index < descriptor->entryCount; ++index) {
+    const auto& entry = descriptor->entries[index];
+    if (entry.buffer != nullptr) {
+      result->uniform_bytes = entry.buffer->bytes;
+      result->offset = entry.offset;
+    } else if (entry.textureView != nullptr && entry.textureView->texture != nullptr &&
+               entry.textureView->texture->bytes.size() >= result->sampled_color.size()) {
+      auto* destination = &result->sampled_color;
+      if (entry.binding == 3)
+        destination = &result->normal_color;
+      else if (entry.binding == 4)
+        destination = &result->metallic_roughness_color;
+      std::copy_n(entry.textureView->texture->bytes.begin(), destination->size(),
+                  destination->begin());
+      result->sampled_color_is_srgb |= entry.binding == 1 && entry.textureView->texture->format ==
+                                                                 WGPUTextureFormat_RGBA8UnormSrgb;
+      result->has_material_textures |= entry.binding == 3 || entry.binding == 4;
+    }
+  }
+  return result;
 }
 extern "C" void wgpuBindGroupRelease(WGPUBindGroup bind_group) { delete bind_group; }
 extern "C" WGPUPipelineLayout
 wgpuDeviceCreatePipelineLayout(WGPUDevice, const WGPUPipelineLayoutDescriptor* descriptor) {
-  return descriptor != nullptr && descriptor->bindGroupLayoutCount == 1 ? new WGPUPipelineLayoutImpl
-                                                                        : nullptr;
+  const auto valid_layouts = descriptor != nullptr && (descriptor->bindGroupLayoutCount == 0 ||
+                                                       descriptor->bindGroupLayouts != nullptr);
+  return valid_layouts ? new WGPUPipelineLayoutImpl : nullptr;
 }
 extern "C" void wgpuPipelineLayoutRelease(WGPUPipelineLayout layout) { delete layout; }
 extern "C" WGPUShaderModule
@@ -297,12 +429,35 @@ wgpuDeviceCreateShaderModule(WGPUDevice, const WGPUShaderModuleDescriptor* descr
 extern "C" void wgpuShaderModuleRelease(WGPUShaderModule shader_module) { delete shader_module; }
 extern "C" WGPURenderPipeline
 wgpuDeviceCreateRenderPipeline(WGPUDevice, const WGPURenderPipelineDescriptor* descriptor) {
-  return descriptor != nullptr && descriptor->layout != nullptr &&
-                 descriptor->vertex.module != nullptr && descriptor->fragment != nullptr
-             ? new WGPURenderPipelineImpl
-             : nullptr;
+  if (descriptor == nullptr || descriptor->layout == nullptr ||
+      descriptor->vertex.module == nullptr || descriptor->fragment == nullptr) {
+    return nullptr;
+  }
+  const auto* depth = static_cast<const WGPUDepthStencilState*>(descriptor->depthStencil);
+  return new WGPURenderPipelineImpl{
+      depth != nullptr, depth != nullptr && depth->depthWriteEnabled == WGPUOptionalBool_True,
+      depth == nullptr ? WGPUCompareFunction_Always : depth->depthCompare};
 }
 extern "C" void wgpuRenderPipelineRelease(WGPURenderPipeline pipeline) { delete pipeline; }
+extern "C" WGPUComputePipeline
+wgpuDeviceCreateComputePipeline(WGPUDevice, const WGPUComputePipelineDescriptor* descriptor) {
+  return descriptor != nullptr && descriptor->layout != nullptr &&
+                 descriptor->compute.module != nullptr
+             ? new WGPUComputePipelineImpl
+             : nullptr;
+}
+extern "C" void wgpuComputePipelineRelease(WGPUComputePipeline pipeline) { delete pipeline; }
+extern "C" WGPUComputePassEncoder
+wgpuCommandEncoderBeginComputePass(WGPUCommandEncoder, const WGPUComputePassDescriptor*) {
+  return new WGPUComputePassEncoderImpl;
+}
+extern "C" void wgpuComputePassEncoderSetPipeline(WGPUComputePassEncoder, WGPUComputePipeline) {}
+extern "C" void wgpuComputePassEncoderSetBindGroup(WGPUComputePassEncoder, unsigned int,
+                                                   WGPUBindGroup, size_t, const unsigned int*) {}
+extern "C" void wgpuComputePassEncoderDispatchWorkgroups(WGPUComputePassEncoder, unsigned int,
+                                                         unsigned int, unsigned int) {}
+extern "C" void wgpuComputePassEncoderEnd(WGPUComputePassEncoder) {}
+extern "C" void wgpuComputePassEncoderRelease(WGPUComputePassEncoder pass) { delete pass; }
 
 extern "C" WGPUCommandEncoder wgpuDeviceCreateCommandEncoder(WGPUDevice,
                                                              const WGPUCommandEncoderDescriptor*) {
@@ -348,28 +503,142 @@ wgpuCommandEncoderBeginRenderPass(WGPUCommandEncoder encoder,
     texture->bytes[index + 2] = 0;
     texture->bytes[index + 3] = 255;
   }
-  return new WGPURenderPassEncoderImpl{texture};
+  WGPUTexture depth_texture{};
+  if (descriptor->depthStencilAttachment != nullptr) {
+    if (descriptor->depthStencilAttachment->view == nullptr)
+      return nullptr;
+    depth_texture = descriptor->depthStencilAttachment->view->texture;
+    if (descriptor->depthStencilAttachment->depthLoadOp == WGPULoadOp_Clear) {
+      const auto clear = static_cast<float>(descriptor->depthStencilAttachment->depthClearValue);
+      for (std::size_t index = 0; index < depth_texture->bytes.size(); index += sizeof(float))
+        std::memcpy(depth_texture->bytes.data() + index, &clear, sizeof(clear));
+    }
+  }
+  return new WGPURenderPassEncoderImpl{texture, depth_texture};
 }
-extern "C" void wgpuRenderPassEncoderSetPipeline(WGPURenderPassEncoder, WGPURenderPipeline) {}
-extern "C" void wgpuRenderPassEncoderSetBindGroup(WGPURenderPassEncoder, unsigned int,
-                                                  WGPUBindGroup, size_t, const unsigned int*) {}
+extern "C" void wgpuRenderPassEncoderSetPipeline(WGPURenderPassEncoder pass,
+                                                 WGPURenderPipeline pipeline) {
+  pass->pipeline = pipeline;
+}
+extern "C" void wgpuRenderPassEncoderSetViewport(WGPURenderPassEncoder, float, float, float, float,
+                                                 float, float) {}
+extern "C" void wgpuRenderPassEncoderSetScissorRect(WGPURenderPassEncoder, unsigned int,
+                                                    unsigned int, unsigned int, unsigned int) {}
+extern "C" void wgpuRenderPassEncoderSetBindGroup(WGPURenderPassEncoder pass, unsigned int,
+                                                  WGPUBindGroup group, size_t offset_count,
+                                                  const unsigned int* offsets) {
+  pass->bind_group = group;
+  pass->dynamic_offset = offset_count == 0 ? 0 : offsets[0];
+}
 extern "C" void wgpuRenderPassEncoderDraw(WGPURenderPassEncoder pass, unsigned int, unsigned int,
                                           unsigned int, unsigned int) {
   const auto width = pass->target->width;
   const auto height = pass->target->height;
-  for (unsigned int y = 0; y < height; ++y) {
-    for (unsigned int x = 0; x < width; ++x) {
-      const auto nx = 2.0 * (static_cast<double>(x) + 0.5) / width - 1.0;
-      const auto ny = 2.0 * (static_cast<double>(y) + 0.5) / height - 1.0;
-      if (ny < -0.7 || ny > 0.7 || nx < -(ny + 0.7) / 2.0 || nx > (ny + 0.7) / 2.0)
-        continue;
-      const auto index = (static_cast<std::size_t>(y) * width + x) * 4;
-      pass->target->bytes[index] = 51;
-      pass->target->bytes[index + 1] = 179;
-      pass->target->bytes[index + 2] = 102;
-      pass->target->bytes[index + 3] = 255;
+  float translation_x = 0.0F;
+  float depth_value = 0.0F;
+  std::array<unsigned char, 4> color{51, 179, 102, 255};
+  bool use_uniform = false;
+  const auto* group = pass->bind_group;
+  if (group != nullptr && group->has_dynamic_uniform && !group->uniform_bytes.empty()) {
+    const auto offset = static_cast<std::size_t>(group->offset) + pass->dynamic_offset;
+    if (offset + sizeof(float) * 8 <= group->uniform_bytes.size()) {
+      float values[8]{};
+      std::memcpy(values, group->uniform_bytes.data() + offset, sizeof(values));
+      use_uniform = values[7] > 0.0F;
+      if (use_uniform) {
+        translation_x = values[0];
+        depth_value = values[2];
+        float material_scale = 1.0F;
+        if (group->has_material_textures) {
+          const auto decode_normal = [](unsigned char value) {
+            return static_cast<float>(value) / 255.0F * 2.0F - 1.0F;
+          };
+          const auto normal_x = decode_normal(group->normal_color[0]);
+          const auto normal_y = decode_normal(group->normal_color[1]);
+          const auto normal_z = decode_normal(group->normal_color[2]);
+          const auto normal_length =
+              std::sqrt(normal_x * normal_x + normal_y * normal_y + normal_z * normal_z);
+          const auto normal_factor = normal_length == 0.0F ? 0.0F : normal_z / normal_length;
+          const auto metallic = static_cast<float>(group->metallic_roughness_color[2]) / 255.0F;
+          material_scale = 0.5F + 0.25F * std::max(normal_factor, 0.0F) + 0.25F * metallic;
+        }
+        for (std::size_t channel = 0; channel < color.size(); ++channel) {
+          const auto tint = std::clamp(values[4 + channel], 0.0F, 1.0F);
+          auto sampled = static_cast<float>(group->sampled_color[channel]) / 255.0F;
+          if (channel < 3 && group->sampled_color_is_srgb) {
+            sampled = sampled <= 0.04045F ? sampled / 12.92F
+                                          : std::pow((sampled + 0.055F) / 1.055F, 2.4F);
+          }
+          color[channel] = static_cast<unsigned char>(
+              std::clamp(tint * sampled * material_scale, 0.0F, 1.0F) * 255.0F + 0.5F);
+        }
+      }
     }
   }
+  for (unsigned int y = 0; y < height; ++y) {
+    for (unsigned int x = 0; x < width; ++x) {
+      const auto nx = 2.0 * (static_cast<double>(x) + 0.5) / width - 1.0 - translation_x;
+      const auto ny = 2.0 * (static_cast<double>(y) + 0.5) / height - 1.0;
+      const auto outside =
+          use_uniform ? ny < -0.30 || ny > 0.30 || nx < -(0.30 - ny) * 0.22 / 0.60 ||
+                            nx > (0.30 - ny) * 0.22 / 0.60
+                      : ny < -0.7 || ny > 0.7 || nx < -(ny + 0.7) / 2.0 || nx > (ny + 0.7) / 2.0;
+      if (outside)
+        continue;
+      const auto pixel = static_cast<std::size_t>(y) * width + x;
+      if (pass->pipeline != nullptr && pass->pipeline->depth_enabled &&
+          pass->depth_target != nullptr) {
+        float previous{};
+        std::memcpy(&previous, pass->depth_target->bytes.data() + pixel * sizeof(float),
+                    sizeof(previous));
+        bool accepted{};
+        switch (pass->pipeline->depth_compare) {
+        case WGPUCompareFunction_Never:
+          accepted = false;
+          break;
+        case WGPUCompareFunction_Less:
+          accepted = depth_value < previous;
+          break;
+        case WGPUCompareFunction_Equal:
+          accepted = depth_value == previous;
+          break;
+        case WGPUCompareFunction_LessEqual:
+          accepted = depth_value <= previous;
+          break;
+        case WGPUCompareFunction_Greater:
+          accepted = depth_value > previous;
+          break;
+        case WGPUCompareFunction_NotEqual:
+          accepted = depth_value != previous;
+          break;
+        case WGPUCompareFunction_GreaterEqual:
+          accepted = depth_value >= previous;
+          break;
+        default:
+          accepted = true;
+          break;
+        }
+        if (!accepted)
+          continue;
+        if (pass->pipeline->depth_write) {
+          std::memcpy(pass->depth_target->bytes.data() + pixel * sizeof(float), &depth_value,
+                      sizeof(depth_value));
+        }
+      }
+      const auto index = (static_cast<std::size_t>(y) * width + x) * 4;
+      std::copy(color.begin(), color.end(), pass->target->bytes.begin() + index);
+    }
+  }
+}
+
+extern "C" void wgpuRenderPassEncoderSetVertexBuffer(WGPURenderPassEncoder, unsigned int,
+                                                     WGPUBuffer, uint64_t, uint64_t) {}
+extern "C" void wgpuRenderPassEncoderSetIndexBuffer(WGPURenderPassEncoder, WGPUBuffer,
+                                                    WGPUIndexFormat, uint64_t, uint64_t) {}
+extern "C" void wgpuRenderPassEncoderDrawIndexed(WGPURenderPassEncoder pass, unsigned int count,
+                                                 unsigned int instances, unsigned int first, int,
+                                                 unsigned int first_instance) {
+  wgpuRenderPassEncoderDraw(pass, count, instances, first, first_instance);
 }
 extern "C" void wgpuRenderPassEncoderEnd(WGPURenderPassEncoder) {}
 extern "C" void wgpuRenderPassEncoderRelease(WGPURenderPassEncoder pass) { delete pass; }

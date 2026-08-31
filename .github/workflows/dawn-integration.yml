@@ -1,0 +1,158 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Granit contributors
+
+name: Dawn Integration
+
+on:
+  workflow_call:
+    inputs:
+      run_windows:
+        required: true
+        type: boolean
+      run_linux:
+        required: true
+        type: boolean
+  workflow_dispatch:
+    inputs:
+      run_windows:
+        description: "使用预编译 SDK 验证 Windows WebGPU 插件"
+        required: true
+        default: true
+        type: boolean
+      run_linux:
+        description: "使用预编译 SDK 验证 Linux WebGPU 插件"
+        required: true
+        default: true
+        type: boolean
+
+permissions:
+  contents: read
+
+env:
+  DAWN_REVISION: 0bc38adde72b79013536f8ce354b639ae19ae195
+  DAWN_VERSION: v20260720.160313
+  DAWN_SDK_TAG: dawn-sdk-v20260720.160313-0bc38adde72b
+
+jobs:
+  windows:
+    if: ${{ inputs.run_windows }}
+    runs-on: windows-2022
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/setup-msvc
+        with:
+          arch: x64
+      - name: 下载并校验 Windows Dawn SDK
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $name = "granit-dawn-static-$env:DAWN_VERSION-windows-x64"
+          gh release download $env:DAWN_SDK_TAG --repo $env:GITHUB_REPOSITORY `
+            --pattern "$name.zip" --pattern "$name.zip.sha256"
+          $expected = (Get-Content "$name.zip.sha256").Split(' ')[0].Trim()
+          $actual = (Get-FileHash "$name.zip" -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($actual -ne $expected) { throw "Windows Dawn SDK SHA-256 不匹配" }
+          Expand-Archive -LiteralPath "$name.zip" -DestinationPath stage
+      - name: 构建并运行 Windows WebGPU 集成测试
+        shell: pwsh
+        run: |
+          $stage = "$PWD/stage/granit-dawn-static-$env:DAWN_VERSION-windows-x64"
+          $build = "$env:RUNNER_TEMP/granit-webgpu-build"
+          $vertexAsset = "$env:RUNNER_TEMP/s10c_tool_triangle.vert.granit-shader"
+          $fragmentAsset = "$env:RUNNER_TEMP/s10c_tool_triangle.frag.granit-shader"
+          cmake -S . -B $build -G Ninja `
+            -DCMAKE_BUILD_TYPE=Release `
+            -DGRANIT_BUILD_BACKEND_WEBGPU=ON `
+            -DGRANIT_WEBGPU_FORCE_FALLBACK_ADAPTER=ON `
+            "-DGRANIT_DAWN_ROOT=$stage" `
+            "-DGRANIT_S10C_VERTEX_SHADER_ASSET=$vertexAsset" `
+            "-DGRANIT_S10C_FRAGMENT_SHADER_ASSET=$fragmentAsset" `
+            -DGRANIT_BUILD_EXAMPLES=OFF `
+            -DGRANIT_BUILD_TOOLS=ON `
+            -DGRANIT_BUILD_TESTING=ON
+          cmake --build $build --target granit_webgpu_plugin_smoke `
+            granit_renderer_test granit_shader_tool
+          $shaderTool = "$build/bin/granit_shader_tool.exe"
+          & $shaderTool compile --tint "$stage/bin/tint.exe" `
+            --input "$PWD/tests/fixtures/shaders/s10c_triangle.wgsl" --entry vs_main `
+            --stage vertex --output "$env:RUNNER_TEMP/s10c_tool_triangle.vert.spv" `
+            --asset $vertexAsset --tint-revision "$env:DAWN_REVISION"
+          if ($LASTEXITCODE -ne 0) { throw "Vertex Shader 资产构建失败" }
+          & $shaderTool compile --tint "$stage/bin/tint.exe" `
+            --input "$PWD/tests/fixtures/shaders/s10c_triangle.wgsl" --entry fs_main `
+            --stage fragment --output "$env:RUNNER_TEMP/s10c_tool_triangle.frag.spv" `
+            --asset $fragmentAsset --tint-revision "$env:DAWN_REVISION"
+          if ($LASTEXITCODE -ne 0) { throw "Fragment Shader 资产构建失败" }
+          $fxc = "$env:WINDIR/System32/d3dcompiler_47.dll"
+          if (-not (Test-Path -LiteralPath $fxc -PathType Leaf)) {
+            throw "Windows runner 缺少 d3dcompiler_47.dll"
+          }
+          Copy-Item -LiteralPath $fxc -Destination "$build/bin/d3dcompiler_47.dll"
+          ctest --test-dir $build -R granit.backend.webgpu_plugin_smoke `
+            --verbose --output-on-failure
+          if ($LASTEXITCODE -ne 0) { throw "Windows WebGPU 插件 smoke test 失败" }
+          & "$build/bin/granit_renderer_test.exe" "[pipeline][bind-group][smoke]"
+          if ($LASTEXITCODE -ne 0) { throw "Windows 跨后端 Renderer Fixture 失败" }
+
+  linux:
+    if: ${{ inputs.run_linux }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - name: 安装运行依赖
+        shell: bash
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y \
+            clang libvulkan-dev mesa-vulkan-drivers ninja-build vulkan-validationlayers
+      - name: 下载并校验 Linux Dawn SDK
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          name="granit-dawn-static-$DAWN_VERSION-linux-x64"
+          gh release download "$DAWN_SDK_TAG" --repo "$GITHUB_REPOSITORY" \
+            --pattern "$name.tar.gz" --pattern "$name.tar.gz.sha256"
+          sha256sum --check "$name.tar.gz.sha256"
+          mkdir -p stage
+          tar -xzf "$name.tar.gz" -C stage
+      - name: 构建并运行 Linux WebGPU 集成测试
+        shell: bash
+        run: |
+          stage="$PWD/stage/granit-dawn-static-$DAWN_VERSION-linux-x64"
+          build="$RUNNER_TEMP/granit-webgpu-build"
+          vertex_asset="$RUNNER_TEMP/s10c_tool_triangle.vert.granit-shader"
+          fragment_asset="$RUNNER_TEMP/s10c_tool_triangle.frag.granit-shader"
+          CC=clang CXX=clang++ cmake -S . -B "$build" -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DGRANIT_BUILD_BACKEND_WEBGPU=ON \
+            -DGRANIT_WEBGPU_FORCE_FALLBACK_ADAPTER=ON \
+            -DGRANIT_DAWN_ROOT="$stage" \
+            -DGRANIT_S10C_VERTEX_SHADER_ASSET="$vertex_asset" \
+            -DGRANIT_S10C_FRAGMENT_SHADER_ASSET="$fragment_asset" \
+            -DGRANIT_BUILD_EXAMPLES=OFF \
+            -DGRANIT_BUILD_TOOLS=ON \
+            -DGRANIT_BUILD_TESTING=ON \
+            -DGRANIT_ENABLE_XCB=OFF \
+            -DGRANIT_ENABLE_WAYLAND=OFF
+          cmake --build "$build" --target granit_webgpu_plugin_smoke \
+            granit_renderer_test granit_shader_tool
+          shader_tool="$build/bin/granit_shader_tool"
+          "$shader_tool" compile --tint "$stage/bin/tint" \
+            --input "$PWD/tests/fixtures/shaders/s10c_triangle.wgsl" --entry vs_main \
+            --stage vertex --output "$RUNNER_TEMP/s10c_tool_triangle.vert.spv" \
+            --asset "$vertex_asset" --tint-revision "$DAWN_REVISION"
+          "$shader_tool" compile --tint "$stage/bin/tint" \
+            --input "$PWD/tests/fixtures/shaders/s10c_triangle.wgsl" --entry fs_main \
+            --stage fragment --output "$RUNNER_TEMP/s10c_tool_triangle.frag.spv" \
+            --asset "$fragment_asset" --tint-revision "$DAWN_REVISION"
+          lvp_icd="$(find /usr/share/vulkan/icd.d -type f -name 'lvp_icd*.json' -print -quit)"
+          [[ -n "$lvp_icd" ]]
+          VK_DRIVER_FILES="$lvp_icd" LIBGL_ALWAYS_SOFTWARE=1 \
+            ctest --test-dir "$build" -R granit.backend.webgpu_plugin_smoke \
+              --verbose --output-on-failure
+          VK_DRIVER_FILES="$lvp_icd" LIBGL_ALWAYS_SOFTWARE=1 \
+            "$build/bin/granit_renderer_test" '[pipeline][bind-group][smoke]'

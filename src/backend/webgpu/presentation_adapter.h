@@ -24,6 +24,13 @@ public:
   [[nodiscard]] std::unique_ptr<backend_surface_resource> allocate_surface() const;
   [[nodiscard]] std::unique_ptr<backend_swapchain_resource> allocate_swapchain() const;
 
+  [[nodiscard]] granit_result create_win32_surface(backend_surface_resource& resource,
+                                                   void* instance, void* window) const noexcept;
+  [[nodiscard]] granit_result create_xcb_surface(backend_surface_resource& resource,
+                                                 void* connection,
+                                                 std::uint32_t window) const noexcept;
+  [[nodiscard]] granit_result create_wayland_surface(backend_surface_resource& resource,
+                                                     void* display, void* surface) const noexcept;
   [[nodiscard]] granit_result create_canvas_surface(backend_surface_resource& resource,
                                                     const char* selector,
                                                     std::uint32_t selector_length) const noexcept;

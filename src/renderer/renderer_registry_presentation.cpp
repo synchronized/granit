@@ -670,19 +670,6 @@ granit_result renderer_registry::submit_command_recorder_frame(granit_renderer r
   std::scoped_lock locks{command->mutex, frame_state->mutex};
   if (frame_state->submitted)
     return GRANIT_ERROR_INVALID_ARGUMENT;
-  if (command->platform_managed_rendering) {
-    if (command->web_status != command_recorder_record::web_state::executable)
-      return GRANIT_ERROR_INVALID_ARGUMENT;
-    submission_serial serial{};
-    const auto result = frame_state->queue->submit_swapchain_frame(
-        *command->native, *frame_state->swapchain->native, frame_state->image_index,
-        frame_state->slot_index, serial);
-    if (result == GRANIT_SUCCESS) {
-      command->web_status = command_recorder_record::web_state::submitted;
-      frame_state->submitted = true;
-    }
-    return result;
-  }
   submission_serial serial{};
   const auto result = frame_state->queue->submit_swapchain_frame(
       *command->native, *frame_state->swapchain->native, frame_state->image_index,

@@ -29,7 +29,6 @@ granit_result renderer_registry::create_command_recorder(granit_renderer rendere
     record->transfers = std::dynamic_pointer_cast<backend_transfer_command_renderer>(owner);
     if (!record->queue || !record->commands || !record->graphics)
       return GRANIT_ERROR_INTERNAL;
-    record->platform_managed_rendering = !record->retirement;
     record->native = record->commands->allocate_command_recorder_resource();
     const auto result = record->native ? record->commands->create_command_recorder(*record->native)
                                        : GRANIT_ERROR_OUT_OF_MEMORY;
@@ -69,14 +68,6 @@ granit_result renderer_registry::begin_command_recorder(granit_renderer renderer
     return GRANIT_ERROR_INVALID_HANDLE;
   }
   std::lock_guard record_lock{record->mutex};
-  if (record->platform_managed_rendering) {
-    if (record->web_status != command_recorder_record::web_state::initial)
-      return GRANIT_ERROR_INVALID_ARGUMENT;
-    const auto result = record->commands->begin_command_recorder(*record->native);
-    if (result == GRANIT_SUCCESS)
-      record->web_status = command_recorder_record::web_state::recording;
-    return result;
-  }
   return record->commands->begin_command_recorder(*record->native);
 }
 
@@ -87,14 +78,6 @@ granit_result renderer_registry::end_command_recorder(granit_renderer renderer,
     return GRANIT_ERROR_INVALID_HANDLE;
   }
   std::lock_guard record_lock{record->mutex};
-  if (record->platform_managed_rendering) {
-    if (record->web_status != command_recorder_record::web_state::recording || !record->web_drew)
-      return GRANIT_ERROR_INVALID_ARGUMENT;
-    const auto result = record->commands->end_command_recorder(*record->native);
-    if (result == GRANIT_SUCCESS)
-      record->web_status = command_recorder_record::web_state::executable;
-    return result;
-  }
   return record->commands->end_command_recorder(*record->native);
 }
 
@@ -104,15 +87,6 @@ granit_result renderer_registry::submit_command_recorder(granit_renderer rendere
   if (!record)
     return GRANIT_ERROR_INVALID_HANDLE;
   std::lock_guard record_lock{record->mutex};
-  if (record->platform_managed_rendering) {
-    if (record->web_status != command_recorder_record::web_state::executable)
-      return GRANIT_ERROR_INVALID_ARGUMENT;
-    submission_serial serial{};
-    const auto result = record->queue->submit_command_recorder(*record->native, serial);
-    if (result == GRANIT_SUCCESS)
-      record->web_status = command_recorder_record::web_state::submitted;
-    return result;
-  }
   submission_serial serial{};
   const auto result = record->queue->submit_command_recorder(*record->native, serial);
   if (result == GRANIT_SUCCESS)
@@ -178,19 +152,6 @@ granit_result renderer_registry::reset_command_recorder(granit_renderer renderer
     return GRANIT_ERROR_INVALID_HANDLE;
   }
   std::lock_guard record_lock{record->mutex};
-  if (record->platform_managed_rendering) {
-    if (record->web_status == command_recorder_record::web_state::recording ||
-        record->web_status == command_recorder_record::web_state::rendering)
-      return GRANIT_ERROR_INVALID_ARGUMENT;
-    const auto result = record->commands->reset_command_recorder(*record->native);
-    if (result == GRANIT_SUCCESS) {
-      record->web_status = command_recorder_record::web_state::initial;
-      record->web_target.reset();
-      record->web_pipeline.reset();
-      record->web_drew = false;
-    }
-    return result;
-  }
   const auto wait_result = record->queue->wait_command_recorder(*record->native);
   if (wait_result != GRANIT_SUCCESS) {
     return wait_result;

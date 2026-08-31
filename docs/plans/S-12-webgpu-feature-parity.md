@@ -5,7 +5,7 @@
 
 ## 状态
 
-- 实现状态：已确认，待开始
+- 实现状态：已完成；S-12A 至 S-12G 均已通过验收
 - 前置依赖：S-10
 - 后续任务：S-13
 - 优先级：P1
@@ -125,7 +125,7 @@ typedef struct granit_backend_plugin_wayland_surface_desc {
 } granit_backend_plugin_wayland_surface_desc;
 ```
 
-- 实验性 Provider ABI 直接升级版本，操作表尾部追加三个创建函数；不保留旧版兼容分支。
+- 实验性 Provider ABI 已直接升级到 v8，操作表追加三个创建函数；不保留旧版兼容分支。
 - 锁定 Dawn 头已经提供 Windows HWND、XCB Window 和 Wayland Surface 链结构，Provider 内部负责
   转换，核心与公共头不包含 Dawn 或平台 SDK 类型。
 - 创建调用期间只借用描述结构和指针值；Granit 不拥有原生窗口、Display、Connection 或 Surface。
@@ -149,6 +149,9 @@ typedef struct granit_backend_plugin_wayland_surface_desc {
 - Registry 串行化同一 Renderer 的 Surface/Swapchain 操作，但不替调用方同步窗口系统事件线程。
 
 ### S-12C 几何与绘制契约
+
+S-12C 已完成。Provider ABI v13 已接通 Vertex/Index Buffer、顶点布局、显式 Render Pass 命令、
+普通与索引绘制；旧固定三角形 `recorder_draw` 和 Registry 的 WebGPU 专用命令状态均已删除。
 
 现有公共 API 已表达 Vertex/Index Buffer usage、多个 Vertex Buffer Layout、Attribute、逐顶点或
 逐实例步进、Buffer 绑定以及 Indexed Draw。S-12C 不新增平行公共接口，只扩展私有 HAL 与 WebGPU
@@ -220,6 +223,17 @@ Texture View 子资源和 Renderer 归属。Bind Group 保留 Layout 与所有�
 类型错误、缺失项、跨 Renderer 句柄与不支持数组。Provider ABI 直接升级，不保留
 旧的固定 Texture/Sampler 分支。
 
+S-12D 已完成：Provider ABI 接收显式格式、mip 数量、
+View mip 范围、写入区域、Sampler 状态和由 Layout 驱动的绑定数组，
+公共 Renderer 已接通上述五种必需格式的二维、单层、单采样 Texture 创建、子 View 创建，以及
+指定 mip、矩形区域和显式行跨度上传。Sampler 已接通过滤、寻址、LOD 范围和整数倍
+各向异性；WebGPU 没有 LOD Bias 描述字段，非零请求明确返回 `GRANIT_ERROR_UNSUPPORTED`。
+Bind Group 已支持任意 binding 号以及 Uniform、Dynamic Uniform、Storage Buffer、Sampled Texture
+和 Sampler 混合，首轮仍限制 `array_count = 1`。比较 Sampler 需要公共 Layout 增加绑定子类型，
+当前创建时明确返回 `GRANIT_ERROR_UNSUPPORTED`，不生成与 Layout 不匹配的 WebGPU 对象。
+Pipeline Layout 已支持空布局和多个 Bind Group Layout，并在 Provider 内保留其依赖关系，防止布局
+仍被 Pipeline Layout 使用时提前销毁。比较 Sampler 的公共契约扩展留给后续独立能力任务。
+
 ### S-12E 每帧数据契约
 
 S-12E 不新增 Uniform Arena 公共类型；上层继续用 Buffer、Upload Batch、Renderer Limits
@@ -240,11 +254,49 @@ S-12E 不新增 Uniform Arena 公共类型；上层继续用 Buffer、Upload Bat
 未对齐、越界、整数溢出与批量上传失败原子性。Vulkan 与 WebGPU 复用同一组
 Registry 契约测试，Provider Mock 只验证后端参数映射。
 
+当前已完成图形命令的动态 Uniform Offset 路径：公共 Registry 校验后，WebGPU HAL 将多个
+Bind Group 与动态偏移批量传给 Provider；Provider 按 Pipeline Layout 中的组顺序及 Layout 中
+递增的 binding 顺序切分偏移，并再次校验数量、设备对齐、Buffer 范围、句柄归属和录制状态。
+Upload Batch 已支持在同一批次混合 Buffer 与二维单层 Texture 写入，并通过一次 Provider ABI 调用
+提交；Provider 在执行任何 Queue Write 前完整校验整批描述，公共 Registry 只在成功后统一释放 Host
+副本。WebGPU Compute Pipeline、惰性 Compute Pass、Compute Bind Group 动态偏移和 Dispatch
+也已接通；Provider 会再次校验偏移数量、顺序、设备对齐和 Buffer 范围。S-12E 已完成。
+
 ### S-12F 跨后端 Fixture 契约
 
-Fixture 是不依赖窗口的 64×64 离屏测试，不使用 S-13 头盔模型或外部资产。它由
+Fixture 是不依赖窗口的 64×32 离屏测试，不使用 S-13 头盔模型或外部资产。它由
 固定种子生成带 UV/法线的索引几何、sRGB Base Color、线性 Normal 与
-Metallic-Roughness Texture，并用同一 Uniform Buffer 的两个动态 Offset 绘制两个实例。
+Metallic-Roughness Texture，并用同一 Uniform Buffer 的动态 Offset 绘制实例和遮挡几何。
+
+在接入 Fixture 前先收口图形命令适配。公共命令保持 Vulkan 当前采用的 Pass 前状态声明：
+Pipeline、Bind Group、Vertex/Index Buffer、Viewport 与 Scissor 可以在 `begin_rendering` 前设置；
+WebGPU 命令适配器暂存这些状态，并在 Provider 打开 Render Pass 后按确定顺序回放。Pass 内再次设置
+时立即下发。Provider 操作表补充 Viewport 与 Scissor；本分支开发期间冻结操作表版本，S-12 完成后
+统一将最终 Provider ABI 确定为 v22。
+
+跨后端基础 Fixture 已经落地：Vulkan 与 WebGPU Mock 通过相同测试正文、Shader Asset 和命令顺序，
+使用交错 Position/UV/Normal Vertex Buffer、`uint16` Index Buffer、sRGB Base Color Texture、线性
+Normal 与 Metallic-Roughness Texture，以及共享 Sampler，再从同一个 Uniform Buffer 使用四个动态
+Offset 完成四次 Indexed Draw，并以 RGBA8 回读探针验证纹理、法线、材质参数、实例颜色与深度遮挡
+结果。WebGPU 的 D32 Float Pipeline 深度状态、Render Pass 深度附件和清除/存储行为已贯通私有 HAL
+与 Provider；Fixture 按近、远顺序绘制重叠几何，确认后绘制的远端片元被深度测试拒绝。
+测试同时固定资源销毁路径；WebGPU 依赖命令对象持有已编码资源的引用，因此公共资源记录退出后可
+立即释放应用侧 Provider 引用，不需要复制 Vulkan 的提交序列延迟回收队列。启用 Dawn 的依赖工作流
+已将真实 Provider 作为第三个生成案例注入同一 Renderer Fixture，并在构建 Dawn SDK 的同一工具链和
+软件适配器环境中执行。
+Fixture 的尺寸、交错顶点、`uint16` 索引、四组动态 Uniform、三张材质纹理像素和语义探针已集中到
+`tests/support/renderer_fixture.h`，原生测试与 Emscripten 浏览器入口均复用这些数据和同一组 WGSL
+Shader Asset。Emscripten 5.0.6 浏览器 Smoke 已通过公共 Buffer、Texture、Sampler、Bind Group、
+Pipeline 与 Command Recorder API 运行完整场景；Chromium 截图同时验证左右材质实例、中心近远遮挡
+和清屏背景。包含指针的 Bind Group 绑定与 Rendering 描述已改用实际布局计算 `struct_size`，因此
+公共 `command_recorder.hpp` 也能由 wasm32 C++20 使用，同时保持桌面 64 位 ABI 数值不变。浏览器
+产物统一命名为 `granit_webgpu_fixture_example`，避免继续将完整场景误称为三角形示例。Linux
+Lavapipe、Windows/Linux 真实 Dawn 与 Chromium 平台矩阵均已通过，S-12F 已完成。
+
+当前测试已增加背景、两个实例和深度遮挡区域的语义探针。探针失败时在构建目录的
+`test-artifacts` 中写出实际图、按语义探针修正的期望图、绝对差异图和 Renderer/Adapter 元数据；
+成功前会清理同后端的旧诊断文件。Windows 与 Linux 手动工作流只在失败时上传该目录，避免成功
+任务产生无意义产物。
 
 - Vulkan、桌面 Dawn 与 Emscripten 调用同一 Fixture 函数；只在 Renderer 创建参数中选择
   后端，测试正文不含后端条件分支。
@@ -256,21 +308,31 @@ Metallic-Roughness Texture，并用同一 Uniform Buffer 的两个动态 Offset 
 ### S-12G 验收门槛
 
 - Registry 契约测试在无 GPU 环境全部通过，WebGPU Provider Mock 覆盖全部新 ABI 操作。
-- Windows 手动 Actions 运行 MSVC/Clang、Vulkan Fixture 与 Dawn Fixture；Linux 运行
-  GCC/Clang、Vulkan Fixture 与 Dawn Fixture；Emscripten 在 Chromium WebGPU 中运行同一 Fixture。
+- Windows 手动 Actions 运行 MSVC/Clang CPU 测试，并在 Dawn 工作流运行 WebGPU Mock 与真实 Dawn
+  Fixture；托管 Windows Runner 没有 Vulkan ICD，因此 Vulkan Fixture 由 Linux Lavapipe 运行。Linux
+  同时验证 GCC/Clang、Vulkan、WebGPU Mock 与真实 Dawn；Emscripten 在 Chromium WebGPU 中运行同一
+  Fixture 契约。
 - 共享/静态安装 Consumer、C11/C++20 公共头、ABI 布局、插件版本拒绝和安装包
   不泄漏 Dawn/Vulkan 依赖全部通过，才可将 S-12 标记完成并启动 S-13。
 
 ## 实施顺序
 
-1. **S-12A 后端选择**：实现 C ABI、C++ 包装、实际后端查询、插件定位和严格/自动选择语义。
-2. **S-12B 桌面呈现**：为 WebGPU Provider 接通 Win32、XCB 与 Wayland Surface；SDL3 继续通过
-   对应原生窗口描述创建 Surface，不增加 SDL 专用 Renderer API。
-3. **S-12C 几何资源**：接通 WebGPU Vertex/Index Buffer、顶点布局、索引格式和 Indexed Draw。
-4. **S-12D 材质资源**：接通 Texture、Texture View、Sampler、Bind Group 与 PBR 所需基础格式。
-5. **S-12E 每帧数据**：将动态 Uniform Offset、对齐限制和逐帧上传路径映射到两个后端。
-6. **S-12F 跨后端 Fixture**：同一带纹理索引 Mesh 在 Vulkan、桌面 WebGPU 和浏览器 WebGPU 绘制。
-7. **S-12G 验收**：验证公共头、共享/静态安装 Consumer、错误路径、截图结果和平台矩阵。
+1. **S-12A 后端选择（已完成）**：已实现 C ABI、C++ 包装、实际后端查询、固定位置插件定位、
+   严格选择与桌面 Vulkan 优先的自动回退；旧描述兼容、动态 Provider、失败诊断和 Emscripten
+   静态选择均已验证。
+2. **S-12B 桌面呈现（已完成）**：为 WebGPU Provider 接通 Win32、XCB 与 Wayland Surface；
+   SDL3 继续通过对应原生窗口描述创建 Surface，不增加 SDL 专用 Renderer API。
+3. **S-12C 几何资源（已完成）**：已接通 WebGPU Vertex/Index Buffer、顶点布局、索引格式、
+   显式 Render Pass 命令和 Indexed Draw。
+4. **S-12D 材质资源（已完成）**：已接通 Texture、子 View、区域上传、Sampler、通用
+   Bind Group，以及空布局和多 Bind Group Pipeline Layout。
+5. **S-12E 每帧数据（已完成）**：已将动态 Uniform Offset、对齐限制、混合 Upload Batch 和
+   Compute 命令路径映射到两个后端。
+6. **S-12F 跨后端 Fixture（已完成）**：带 Base Color、Normal 和 Metallic-Roughness Texture
+   的索引几何及动态 Uniform Fixture 已在 Vulkan、WebGPU Mock 与 Chromium 共用，背景、实例、
+   深度遮挡探针与失败诊断产物也已接入，Windows/Linux 真实 Dawn 验证通过。
+7. **S-12G 验收（已完成）**：公共头、共享/静态安装 Consumer、错误路径、截图结果和平台矩阵
+   均已通过，最终 Provider ABI 为 v22。
 
 ## 测试与验收
 

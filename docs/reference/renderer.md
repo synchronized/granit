@@ -50,6 +50,26 @@ granit_result result = granit_renderer_get_limits(renderer, &limits);
 Renderer 返回 `GRANIT_ERROR_INVALID_HANDLE`。限制来自 Renderer 创建时保存的不可变能力快照，
 查询不会再次访问驱动。
 
+## 后端选择与信息
+
+`granit_renderer_desc::backend` 可设置 `AUTO`、`VULKAN` 或 `WEBGPU`。显式选择不会回退到
+另一后端；桌面 WebGPU 可通过 `backend_library_path` 指定 Granit WebGPU Provider 的绝对路径。
+路径只在创建调用期间借用，拒绝相对路径。路径为空时只检查 Granit Core 模块旁及安装布局中固定
+的 `granit/backends` 位置，不扫描当前工作目录或系统 `PATH`。静态链接应用若没有把 Provider
+放在这些固定相对位置，应显式传入打包后的绝对路径。旧版描述不含这些尾部字段时保持 `AUTO`。
+
+桌面 `AUTO` 先尝试 Vulkan；仅当结果为后端不可用、驱动不兼容、没有合适设备或请求能力不支持时
+尝试 WebGPU。内存不足、参数错误和内部错误不会触发回退。两次尝试均失败时返回 Vulkan 的结果，
+并通过 Diagnostic Callback 记录各候选失败原因。显式选择只尝试指定后端。
+
+创建成功后使用 `granit_renderer_get_info` 查询实际后端。Adapter 名称采用两次查询：第一次将
+`adapter_name` 和容量设为零以取得所需字节数，第二次提供包含结尾零字符的缓冲区。名称长度不含
+结尾零字符；名称、Vendor ID 或 Device ID 不可用时返回空值。这些元数据只用于诊断和性能记录，
+不应作为渲染行为分支条件。C++ 包装通过 `renderer::get_info(renderer_info&)` 完成缓冲区管理。
+
+Emscripten 使用静态 WebGPU Provider，`AUTO` 与 `WEBGPU` 都选择该后端；显式 Vulkan 返回
+`GRANIT_ERROR_BACKEND_UNAVAILABLE`，任何动态库路径均返回 `GRANIT_ERROR_INVALID_ARGUMENT`。
+
 ## 资源统计
 
 关闭 Renderer 前，可查询仍由调用方持有的公开子资源：
@@ -90,8 +110,9 @@ if (result == GRANIT_SUCCESS && status.state == GRANIT_RENDERER_STATE_INITIALIZI
 `granit_renderer_process_events` 也只非阻塞地推进后端已完成事件。当前 Vulkan Renderer 创建成功后
 立即为 `READY`；该模型同时为异步 WebGPU 初始化保留统一入口。
 
-需要创建窗口 Surface 时，通过 `surface_types` 提前声明窗口系统。当前支持
-`GRANIT_SURFACE_TYPE_WIN32_BIT`；具体创建方式见 [surface.md](surface.md)。
+需要创建窗口 Surface 时，通过 `surface_types` 提前声明窗口系统。当前公共入口支持 Win32、XCB、
+Wayland 和 Canvas；实际可用集合取决于所选后端、平台及 Provider 能力。具体创建方式见
+[surface.md](surface.md)。
 
 ## C++ API
 

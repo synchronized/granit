@@ -38,6 +38,26 @@ granit_result renderer_registry::get_limits(granit_renderer renderer,
   return GRANIT_SUCCESS;
 }
 
+granit_result renderer_registry::get_info(granit_renderer renderer, granit_renderer_info& info) {
+  const auto state = acquire_backend(renderer);
+  if (!state)
+    return GRANIT_ERROR_INVALID_HANDLE;
+  const auto name = state->adapter_name();
+  info.backend = state->backend();
+  info.adapter_name_length = static_cast<std::uint32_t>(name.size());
+  info.vendor_id = state->adapter_vendor_id();
+  info.device_id = state->adapter_device_id();
+  info.reserved[0] = 0;
+  info.reserved[1] = 0;
+  if (info.adapter_name == nullptr)
+    return info.adapter_name_capacity == 0 ? GRANIT_SUCCESS : GRANIT_ERROR_INVALID_ARGUMENT;
+  if (info.adapter_name_capacity <= name.size())
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  std::memcpy(info.adapter_name, name.data(), name.size());
+  info.adapter_name[name.size()] = '\0';
+  return GRANIT_SUCCESS;
+}
+
 granit_result renderer_registry::get_resource_stats(granit_renderer renderer,
                                                     granit_renderer_resource_stats& stats) {
   std::shared_ptr<backend_retirement_renderer> retirement;

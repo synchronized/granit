@@ -3,6 +3,7 @@
 
 add_library(
   granit STATIC
+  "${PROJECT_SOURCE_DIR}/src/renderer/buffer_api.cpp"
   "${PROJECT_SOURCE_DIR}/src/renderer/command_recorder_api.cpp"
   "${PROJECT_SOURCE_DIR}/src/renderer/pipeline_api.cpp"
   "${PROJECT_SOURCE_DIR}/src/renderer/renderer_api.cpp"
@@ -17,14 +18,18 @@ add_library(
   "${PROJECT_SOURCE_DIR}/src/renderer/renderer_registry_texture.cpp"
   "${PROJECT_SOURCE_DIR}/src/renderer/renderer_registry_timestamp.cpp"
   "${PROJECT_SOURCE_DIR}/src/renderer/renderer_registry_transfer.cpp"
+  "${PROJECT_SOURCE_DIR}/src/renderer/sampler_api.cpp"
   "${PROJECT_SOURCE_DIR}/src/renderer/shader_api.cpp"
   "${PROJECT_SOURCE_DIR}/src/renderer/surface_api.cpp"
   "${PROJECT_SOURCE_DIR}/src/renderer/swapchain_api.cpp"
+  "${PROJECT_SOURCE_DIR}/src/renderer/texture_api.cpp"
+  "${PROJECT_SOURCE_DIR}/src/renderer/upload_batch_api.cpp"
   "${PROJECT_SOURCE_DIR}/src/backend/plugin_loader.cpp"
   "${PROJECT_SOURCE_DIR}/src/backend/webgpu/plugin.cpp"
   "${PROJECT_SOURCE_DIR}/src/backend/webgpu/command_adapter.cpp"
   "${PROJECT_SOURCE_DIR}/src/backend/webgpu/presentation_adapter.cpp"
   "${PROJECT_SOURCE_DIR}/src/backend/webgpu/pipeline_adapter.cpp"
+  "${PROJECT_SOURCE_DIR}/src/backend/webgpu/resource_adapter.cpp"
   "${PROJECT_SOURCE_DIR}/src/backend/webgpu/renderer_state.cpp"
   "${PROJECT_SOURCE_DIR}/src/backend/webgpu/shader_adapter.cpp"
   "${PROJECT_SOURCE_DIR}/src/core/handle_table.cpp"
@@ -52,6 +57,7 @@ target_compile_features(granit_web_platform_smoke PRIVATE cxx_std_20)
 target_link_libraries(granit_web_platform_smoke PRIVATE granit::granit)
 target_include_directories(
   granit_web_platform_smoke PRIVATE "${PROJECT_SOURCE_DIR}/include"
+                                    "${PROJECT_SOURCE_DIR}/tests"
 )
 target_link_options(
   granit_web_platform_smoke
@@ -59,6 +65,8 @@ target_link_options(
     "--use-port=emdawnwebgpu:cpp_bindings=false"
     "--shell-file=${CMAKE_CURRENT_SOURCE_DIR}/shell.html"
     "--preload-file=${CMAKE_CURRENT_SOURCE_DIR}/assets/s10d_startup.txt@/assets/s10d_startup.txt"
+    "--preload-file=${PROJECT_SOURCE_DIR}/tests/assets/dynamic_uniform.vert.wgsl@/assets/dynamic_uniform.vert.wgsl"
+    "--preload-file=${PROJECT_SOURCE_DIR}/tests/assets/dynamic_uniform.frag.wgsl@/assets/dynamic_uniform.frag.wgsl"
     "-sALLOW_MEMORY_GROWTH=1"
     "-sNO_EXIT_RUNTIME=1"
     "$<$<CONFIG:Debug>:-sASSERTIONS=1>"
@@ -67,7 +75,7 @@ target_link_options(
 set_target_properties(
   granit_web_platform_smoke
   PROPERTIES
-    OUTPUT_NAME granit_webgpu_triangle_example
+    OUTPUT_NAME granit_webgpu_fixture_example
     SUFFIX ".html"
     FOLDER "Examples/Web"
 )

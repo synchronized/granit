@@ -9,9 +9,13 @@
 #include <granit/core/diagnostic.h>
 #include <granit/core/result.h>
 
-#define GRANIT_BACKEND_PLUGIN_ABI_VERSION UINT32_C(7)
+#define GRANIT_BACKEND_PLUGIN_ABI_VERSION UINT32_C(22)
 #define GRANIT_BACKEND_PLUGIN_KIND_WEBGPU UINT32_C(1)
 #define GRANIT_BACKEND_PLUGIN_QUERY_SYMBOL "granit_backend_plugin_query"
+#define GRANIT_BACKEND_PLUGIN_SURFACE_TYPE_WIN32_BIT UINT32_C(0x00000001)
+#define GRANIT_BACKEND_PLUGIN_SURFACE_TYPE_XCB_BIT UINT32_C(0x00000002)
+#define GRANIT_BACKEND_PLUGIN_SURFACE_TYPE_WAYLAND_BIT UINT32_C(0x00000004)
+#define GRANIT_BACKEND_PLUGIN_SURFACE_TYPE_CANVAS_BIT UINT32_C(0x00000008)
 
 typedef uint32_t granit_backend_plugin_kind;
 typedef uint64_t granit_backend_plugin_instance;
@@ -24,10 +28,45 @@ typedef uint64_t granit_backend_plugin_bind_group;
 typedef uint64_t granit_backend_plugin_shader;
 typedef uint64_t granit_backend_plugin_pipeline_layout;
 typedef uint64_t granit_backend_plugin_render_pipeline;
+typedef uint64_t granit_backend_plugin_compute_pipeline;
 typedef uint64_t granit_backend_plugin_command_recorder;
 typedef uint64_t granit_backend_plugin_command_buffer;
 typedef uint64_t granit_backend_plugin_surface;
 typedef uint64_t granit_backend_plugin_swapchain;
+
+/** Draw 调用期间借用的顶点 Buffer 绑定。 */
+typedef struct granit_backend_plugin_vertex_buffer_binding {
+  granit_backend_plugin_buffer buffer;
+  uint64_t offset;
+} granit_backend_plugin_vertex_buffer_binding;
+
+typedef struct granit_backend_plugin_viewport {
+  float x;
+  float y;
+  float width;
+  float height;
+  float min_depth;
+  float max_depth;
+} granit_backend_plugin_viewport;
+
+typedef struct granit_backend_plugin_scissor {
+  uint32_t x;
+  uint32_t y;
+  uint32_t width;
+  uint32_t height;
+} granit_backend_plugin_scissor;
+
+typedef uint32_t granit_backend_plugin_index_format;
+#define GRANIT_BACKEND_PLUGIN_INDEX_FORMAT_UINT16 UINT32_C(1)
+#define GRANIT_BACKEND_PLUGIN_INDEX_FORMAT_UINT32 UINT32_C(2)
+
+typedef uint32_t granit_backend_plugin_load_operation;
+#define GRANIT_BACKEND_PLUGIN_LOAD_OPERATION_LOAD UINT32_C(1)
+#define GRANIT_BACKEND_PLUGIN_LOAD_OPERATION_CLEAR UINT32_C(2)
+#define GRANIT_BACKEND_PLUGIN_LOAD_OPERATION_DISCARD UINT32_C(3)
+typedef uint32_t granit_backend_plugin_store_operation;
+#define GRANIT_BACKEND_PLUGIN_STORE_OPERATION_STORE UINT32_C(1)
+#define GRANIT_BACKEND_PLUGIN_STORE_OPERATION_DISCARD UINT32_C(2)
 
 typedef uint32_t granit_backend_plugin_instance_state;
 #define GRANIT_BACKEND_PLUGIN_INSTANCE_STATE_INITIALIZING UINT32_C(1)
@@ -47,6 +86,10 @@ typedef uint32_t granit_backend_plugin_buffer_usage;
 #define GRANIT_BACKEND_PLUGIN_BUFFER_USAGE_MAP_READ_BIT UINT32_C(0x00000001)
 #define GRANIT_BACKEND_PLUGIN_BUFFER_USAGE_COPY_SRC_BIT UINT32_C(0x00000002)
 #define GRANIT_BACKEND_PLUGIN_BUFFER_USAGE_COPY_DST_BIT UINT32_C(0x00000004)
+#define GRANIT_BACKEND_PLUGIN_BUFFER_USAGE_VERTEX_BIT UINT32_C(0x00000008)
+#define GRANIT_BACKEND_PLUGIN_BUFFER_USAGE_INDEX_BIT UINT32_C(0x00000010)
+#define GRANIT_BACKEND_PLUGIN_BUFFER_USAGE_UNIFORM_BIT UINT32_C(0x00000020)
+#define GRANIT_BACKEND_PLUGIN_BUFFER_USAGE_STORAGE_BIT UINT32_C(0x00000040)
 
 /** Buffer 由创建它的插件实例拥有；size 必须非零。 */
 typedef struct granit_backend_plugin_buffer_desc {
@@ -63,39 +106,137 @@ typedef uint32_t granit_backend_plugin_texture_usage;
 #define GRANIT_BACKEND_PLUGIN_TEXTURE_USAGE_SAMPLED_BIT UINT32_C(0x00000004)
 #define GRANIT_BACKEND_PLUGIN_TEXTURE_USAGE_RENDER_ATTACHMENT_BIT UINT32_C(0x00000008)
 
-/** S-10B 首轮只支持二维 RGBA8 UNORM、单层、单 mip、单采样纹理。 */
+typedef uint32_t granit_backend_plugin_texture_format;
+
+/** S-12D 首轮支持二维、单层、单采样纹理及多个 mip。 */
 typedef struct granit_backend_plugin_texture_desc {
   uint32_t struct_size;
   uint32_t reserved;
   uint32_t width;
   uint32_t height;
   granit_backend_plugin_texture_usage usage;
+  granit_backend_plugin_texture_format format;
+  uint32_t mip_level_count;
   uint32_t reserved_flags;
 } granit_backend_plugin_texture_desc;
+
+typedef struct granit_backend_plugin_texture_view_desc {
+  uint32_t struct_size;
+  granit_backend_plugin_texture_format format;
+  uint32_t base_mip_level;
+  uint32_t mip_level_count;
+  uint32_t reserved[2];
+} granit_backend_plugin_texture_view_desc;
+
+/** 数据指针从首个有效字节开始；行跨度为零表示按写入宽度紧密排列。 */
+typedef struct granit_backend_plugin_texture_write_desc {
+  uint32_t struct_size;
+  uint32_t mip_level;
+  uint32_t x;
+  uint32_t y;
+  uint32_t width;
+  uint32_t height;
+  uint32_t bytes_per_row;
+  uint32_t rows_per_image;
+  uint32_t reserved[2];
+} granit_backend_plugin_texture_write_desc;
+
+typedef uint32_t granit_backend_plugin_upload_type;
+#define GRANIT_BACKEND_PLUGIN_UPLOAD_TYPE_BUFFER UINT32_C(1)
+#define GRANIT_BACKEND_PLUGIN_UPLOAD_TYPE_TEXTURE UINT32_C(2)
+
+/** 批量上传调用期间借用 data；未使用的资源句柄和字段必须为零。 */
+typedef struct granit_backend_plugin_upload_operation {
+  uint32_t struct_size;
+  granit_backend_plugin_upload_type type;
+  granit_backend_plugin_buffer buffer;
+  granit_backend_plugin_texture texture;
+  uint64_t destination_offset;
+  granit_backend_plugin_texture_write_desc texture_write;
+  const void* data;
+  uint64_t size;
+  uint64_t reserved;
+} granit_backend_plugin_upload_operation;
 
 typedef uint32_t granit_backend_plugin_filter;
 #define GRANIT_BACKEND_PLUGIN_FILTER_NEAREST UINT32_C(1)
 #define GRANIT_BACKEND_PLUGIN_FILTER_LINEAR UINT32_C(2)
+
+typedef uint32_t granit_backend_plugin_address_mode;
+#define GRANIT_BACKEND_PLUGIN_ADDRESS_MODE_REPEAT UINT32_C(1)
+#define GRANIT_BACKEND_PLUGIN_ADDRESS_MODE_MIRROR_REPEAT UINT32_C(2)
+#define GRANIT_BACKEND_PLUGIN_ADDRESS_MODE_CLAMP_TO_EDGE UINT32_C(3)
+
+typedef uint32_t granit_backend_plugin_compare_operation;
+#define GRANIT_BACKEND_PLUGIN_COMPARE_OPERATION_DISABLED UINT32_C(0)
+#define GRANIT_BACKEND_PLUGIN_COMPARE_OPERATION_NEVER UINT32_C(1)
+#define GRANIT_BACKEND_PLUGIN_COMPARE_OPERATION_LESS UINT32_C(2)
+#define GRANIT_BACKEND_PLUGIN_COMPARE_OPERATION_EQUAL UINT32_C(3)
+#define GRANIT_BACKEND_PLUGIN_COMPARE_OPERATION_LESS_EQUAL UINT32_C(4)
+#define GRANIT_BACKEND_PLUGIN_COMPARE_OPERATION_GREATER UINT32_C(5)
+#define GRANIT_BACKEND_PLUGIN_COMPARE_OPERATION_NOT_EQUAL UINT32_C(6)
+#define GRANIT_BACKEND_PLUGIN_COMPARE_OPERATION_GREATER_EQUAL UINT32_C(7)
+#define GRANIT_BACKEND_PLUGIN_COMPARE_OPERATION_ALWAYS UINT32_C(8)
 
 typedef struct granit_backend_plugin_sampler_desc {
   uint32_t struct_size;
   uint32_t reserved;
   granit_backend_plugin_filter min_filter;
   granit_backend_plugin_filter mag_filter;
+  granit_backend_plugin_filter mipmap_filter;
+  granit_backend_plugin_address_mode address_mode_u;
+  granit_backend_plugin_address_mode address_mode_v;
+  granit_backend_plugin_address_mode address_mode_w;
+  granit_backend_plugin_compare_operation compare_operation;
+  uint32_t max_anisotropy;
+  float min_lod;
+  float max_lod;
+  uint32_t reserved_2[2];
 } granit_backend_plugin_sampler_desc;
 
-/** 固定绑定 0 为二维浮点 Texture View，绑定 1 为过滤 Sampler。 */
-typedef struct granit_backend_plugin_bind_group_desc {
+typedef uint32_t granit_backend_plugin_binding_type;
+#define GRANIT_BACKEND_PLUGIN_BINDING_TYPE_UNIFORM_BUFFER UINT32_C(1)
+#define GRANIT_BACKEND_PLUGIN_BINDING_TYPE_DYNAMIC_UNIFORM_BUFFER UINT32_C(2)
+#define GRANIT_BACKEND_PLUGIN_BINDING_TYPE_STORAGE_BUFFER UINT32_C(3)
+#define GRANIT_BACKEND_PLUGIN_BINDING_TYPE_SAMPLED_TEXTURE UINT32_C(4)
+#define GRANIT_BACKEND_PLUGIN_BINDING_TYPE_SAMPLER UINT32_C(5)
+
+typedef struct granit_backend_plugin_bind_group_layout_entry {
+  uint32_t binding;
+  granit_backend_plugin_binding_type type;
+  uint32_t visibility;
+  uint32_t array_count;
+} granit_backend_plugin_bind_group_layout_entry;
+
+typedef struct granit_backend_plugin_bind_group_layout_desc {
   uint32_t struct_size;
-  uint32_t reserved;
-  granit_backend_plugin_bind_group_layout layout;
+  uint32_t entry_count;
+  const granit_backend_plugin_bind_group_layout_entry* entries;
+  uint64_t reserved;
+} granit_backend_plugin_bind_group_layout_desc;
+
+typedef struct granit_backend_plugin_bind_group_entry {
+  uint32_t binding;
+  granit_backend_plugin_binding_type type;
+  granit_backend_plugin_buffer buffer;
   granit_backend_plugin_texture_view texture_view;
   granit_backend_plugin_sampler sampler;
+  uint64_t offset;
+  uint64_t size;
+} granit_backend_plugin_bind_group_entry;
+
+typedef struct granit_backend_plugin_bind_group_desc {
+  uint32_t struct_size;
+  uint32_t entry_count;
+  granit_backend_plugin_bind_group_layout layout;
+  const granit_backend_plugin_bind_group_entry* entries;
+  uint64_t reserved;
 } granit_backend_plugin_bind_group_desc;
 
 typedef uint32_t granit_backend_plugin_shader_stage;
 #define GRANIT_BACKEND_PLUGIN_SHADER_STAGE_VERTEX UINT32_C(1)
 #define GRANIT_BACKEND_PLUGIN_SHADER_STAGE_FRAGMENT UINT32_C(2)
+#define GRANIT_BACKEND_PLUGIN_SHADER_STAGE_COMPUTE UINT32_C(3)
 
 /** WGSL 字节和入口点仅在调用期间有效，插件必须复制所需内容。 */
 typedef struct granit_backend_plugin_shader_desc {
@@ -107,6 +248,39 @@ typedef struct granit_backend_plugin_shader_desc {
   uint64_t entry_point_length;
 } granit_backend_plugin_shader_desc;
 
+typedef uint32_t granit_backend_plugin_vertex_format;
+#define GRANIT_BACKEND_PLUGIN_VERTEX_FORMAT_FLOAT32 UINT32_C(1)
+#define GRANIT_BACKEND_PLUGIN_VERTEX_FORMAT_FLOAT32X2 UINT32_C(2)
+#define GRANIT_BACKEND_PLUGIN_VERTEX_FORMAT_FLOAT32X3 UINT32_C(3)
+#define GRANIT_BACKEND_PLUGIN_VERTEX_FORMAT_FLOAT32X4 UINT32_C(4)
+#define GRANIT_BACKEND_PLUGIN_VERTEX_FORMAT_UINT32 UINT32_C(5)
+#define GRANIT_BACKEND_PLUGIN_VERTEX_FORMAT_UINT32X2 UINT32_C(6)
+#define GRANIT_BACKEND_PLUGIN_VERTEX_FORMAT_UINT32X3 UINT32_C(7)
+#define GRANIT_BACKEND_PLUGIN_VERTEX_FORMAT_UINT32X4 UINT32_C(8)
+#define GRANIT_BACKEND_PLUGIN_VERTEX_FORMAT_SINT32 UINT32_C(9)
+#define GRANIT_BACKEND_PLUGIN_VERTEX_FORMAT_SINT32X2 UINT32_C(10)
+#define GRANIT_BACKEND_PLUGIN_VERTEX_FORMAT_SINT32X3 UINT32_C(11)
+#define GRANIT_BACKEND_PLUGIN_VERTEX_FORMAT_SINT32X4 UINT32_C(12)
+
+typedef uint32_t granit_backend_plugin_vertex_step_mode;
+#define GRANIT_BACKEND_PLUGIN_VERTEX_STEP_MODE_VERTEX UINT32_C(1)
+#define GRANIT_BACKEND_PLUGIN_VERTEX_STEP_MODE_INSTANCE UINT32_C(2)
+
+typedef struct granit_backend_plugin_vertex_attribute {
+  uint32_t location;
+  granit_backend_plugin_vertex_format format;
+  uint32_t offset;
+  uint32_t reserved;
+} granit_backend_plugin_vertex_attribute;
+
+typedef struct granit_backend_plugin_vertex_buffer_layout {
+  uint32_t stride;
+  granit_backend_plugin_vertex_step_mode step_mode;
+  uint32_t attribute_count;
+  uint32_t reserved;
+  const granit_backend_plugin_vertex_attribute* attributes;
+} granit_backend_plugin_vertex_buffer_layout;
+
 typedef struct granit_backend_plugin_render_pipeline_desc {
   uint32_t struct_size;
   uint32_t reserved;
@@ -114,7 +288,12 @@ typedef struct granit_backend_plugin_render_pipeline_desc {
   granit_backend_plugin_shader vertex_shader;
   granit_backend_plugin_shader fragment_shader;
   uint32_t color_format;
-  uint32_t reserved_2;
+  uint32_t vertex_buffer_layout_count;
+  const granit_backend_plugin_vertex_buffer_layout* vertex_buffer_layouts;
+  granit_backend_plugin_texture_format depth_stencil_format;
+  uint32_t depth_test_enabled;
+  uint32_t depth_write_enabled;
+  granit_backend_plugin_compare_operation depth_compare;
 } granit_backend_plugin_render_pipeline_desc;
 
 /** Canvas selector 仅在调用期间有效；插件必须复制后续需要的内容。 */
@@ -125,14 +304,39 @@ typedef struct granit_backend_plugin_canvas_surface_desc {
   uint32_t selector_length;
 } granit_backend_plugin_canvas_surface_desc;
 
+typedef struct granit_backend_plugin_win32_surface_desc {
+  uint32_t struct_size;
+  uint32_t reserved;
+  void* instance;
+  void* window;
+} granit_backend_plugin_win32_surface_desc;
+
+typedef struct granit_backend_plugin_xcb_surface_desc {
+  uint32_t struct_size;
+  uint32_t reserved;
+  void* connection;
+  uint32_t window;
+  uint32_t reserved_2;
+} granit_backend_plugin_xcb_surface_desc;
+
+typedef struct granit_backend_plugin_wayland_surface_desc {
+  uint32_t struct_size;
+  uint32_t reserved;
+  void* display;
+  void* surface;
+} granit_backend_plugin_wayland_surface_desc;
+
 typedef uint32_t granit_backend_plugin_present_mode;
 #define GRANIT_BACKEND_PLUGIN_PRESENT_MODE_FIFO UINT32_C(0)
 #define GRANIT_BACKEND_PLUGIN_PRESENT_MODE_MAILBOX UINT32_C(1)
 #define GRANIT_BACKEND_PLUGIN_PRESENT_MODE_IMMEDIATE UINT32_C(2)
 
-typedef uint32_t granit_backend_plugin_texture_format;
 #define GRANIT_BACKEND_PLUGIN_TEXTURE_FORMAT_RGBA8_UNORM UINT32_C(1)
 #define GRANIT_BACKEND_PLUGIN_TEXTURE_FORMAT_BGRA8_UNORM UINT32_C(2)
+#define GRANIT_BACKEND_PLUGIN_TEXTURE_FORMAT_R8_UNORM UINT32_C(3)
+#define GRANIT_BACKEND_PLUGIN_TEXTURE_FORMAT_RG8_UNORM UINT32_C(4)
+#define GRANIT_BACKEND_PLUGIN_TEXTURE_FORMAT_RGBA8_SRGB UINT32_C(5)
+#define GRANIT_BACKEND_PLUGIN_TEXTURE_FORMAT_D32_FLOAT UINT32_C(6)
 
 typedef struct granit_backend_plugin_swapchain_desc {
   uint32_t struct_size;
@@ -174,6 +378,8 @@ typedef struct granit_backend_plugin_capabilities {
   uint32_t max_texture_dimension_2d;
   uint32_t max_bind_groups;
   uint32_t max_color_attachments;
+  uint32_t surface_types;
+  uint32_t reserved_2;
 } granit_backend_plugin_capabilities;
 
 typedef void* (*granit_backend_plugin_allocate_fn)(uint64_t size, uint64_t alignment,
@@ -219,9 +425,15 @@ typedef granit_result (*granit_backend_plugin_create_texture_fn)(
     granit_backend_plugin_texture* texture);
 typedef granit_result (*granit_backend_plugin_destroy_texture_fn)(
     granit_backend_plugin_instance instance, granit_backend_plugin_texture texture);
+typedef granit_result (*granit_backend_plugin_write_texture_fn)(
+    granit_backend_plugin_instance instance, granit_backend_plugin_texture texture,
+    const granit_backend_plugin_texture_write_desc* desc, const void* data, uint64_t size);
+typedef granit_result (*granit_backend_plugin_write_upload_batch_fn)(
+    granit_backend_plugin_instance instance,
+    const granit_backend_plugin_upload_operation* operations, uint32_t operation_count);
 typedef granit_result (*granit_backend_plugin_create_texture_view_fn)(
     granit_backend_plugin_instance instance, granit_backend_plugin_texture texture,
-    granit_backend_plugin_texture_view* view);
+    const granit_backend_plugin_texture_view_desc* desc, granit_backend_plugin_texture_view* view);
 typedef granit_result (*granit_backend_plugin_destroy_texture_view_fn)(
     granit_backend_plugin_instance instance, granit_backend_plugin_texture_view view);
 typedef granit_result (*granit_backend_plugin_create_sampler_fn)(
@@ -230,7 +442,9 @@ typedef granit_result (*granit_backend_plugin_create_sampler_fn)(
 typedef granit_result (*granit_backend_plugin_destroy_sampler_fn)(
     granit_backend_plugin_instance instance, granit_backend_plugin_sampler sampler);
 typedef granit_result (*granit_backend_plugin_create_bind_group_layout_fn)(
-    granit_backend_plugin_instance instance, granit_backend_plugin_bind_group_layout* layout);
+    granit_backend_plugin_instance instance,
+    const granit_backend_plugin_bind_group_layout_desc* desc,
+    granit_backend_plugin_bind_group_layout* layout);
 typedef granit_result (*granit_backend_plugin_destroy_bind_group_layout_fn)(
     granit_backend_plugin_instance instance, granit_backend_plugin_bind_group_layout layout);
 typedef granit_result (*granit_backend_plugin_create_bind_group_fn)(
@@ -243,9 +457,14 @@ typedef granit_result (*granit_backend_plugin_create_shader_fn)(
     granit_backend_plugin_shader* shader);
 typedef granit_result (*granit_backend_plugin_destroy_shader_fn)(
     granit_backend_plugin_instance instance, granit_backend_plugin_shader shader);
+typedef struct granit_backend_plugin_pipeline_layout_desc {
+  uint32_t struct_size;
+  uint32_t bind_group_layout_count;
+  const granit_backend_plugin_bind_group_layout* bind_group_layouts;
+  uint64_t reserved;
+} granit_backend_plugin_pipeline_layout_desc;
 typedef granit_result (*granit_backend_plugin_create_pipeline_layout_fn)(
-    granit_backend_plugin_instance instance,
-    granit_backend_plugin_bind_group_layout bind_group_layout,
+    granit_backend_plugin_instance instance, const granit_backend_plugin_pipeline_layout_desc* desc,
     granit_backend_plugin_pipeline_layout* pipeline_layout);
 typedef granit_result (*granit_backend_plugin_destroy_pipeline_layout_fn)(
     granit_backend_plugin_instance instance, granit_backend_plugin_pipeline_layout pipeline_layout);
@@ -254,6 +473,40 @@ typedef granit_result (*granit_backend_plugin_create_render_pipeline_fn)(
     granit_backend_plugin_render_pipeline* render_pipeline);
 typedef granit_result (*granit_backend_plugin_destroy_render_pipeline_fn)(
     granit_backend_plugin_instance instance, granit_backend_plugin_render_pipeline render_pipeline);
+typedef struct granit_backend_plugin_compute_pipeline_desc {
+  uint32_t struct_size;
+  uint32_t reserved;
+  granit_backend_plugin_pipeline_layout layout;
+  granit_backend_plugin_shader shader;
+} granit_backend_plugin_compute_pipeline_desc;
+typedef granit_result (*granit_backend_plugin_create_compute_pipeline_fn)(
+    granit_backend_plugin_instance instance,
+    const granit_backend_plugin_compute_pipeline_desc* desc,
+    granit_backend_plugin_compute_pipeline* compute_pipeline);
+typedef granit_result (*granit_backend_plugin_destroy_compute_pipeline_fn)(
+    granit_backend_plugin_instance instance,
+    granit_backend_plugin_compute_pipeline compute_pipeline);
+typedef granit_result (*granit_backend_plugin_recorder_begin_compute_fn)(
+    granit_backend_plugin_instance instance, granit_backend_plugin_command_recorder recorder);
+typedef granit_result (*granit_backend_plugin_recorder_bind_compute_pipeline_fn)(
+    granit_backend_plugin_instance instance, granit_backend_plugin_command_recorder recorder,
+    granit_backend_plugin_compute_pipeline pipeline);
+typedef granit_result (*granit_backend_plugin_recorder_bind_compute_groups_fn)(
+    granit_backend_plugin_instance instance, granit_backend_plugin_command_recorder recorder,
+    granit_backend_plugin_pipeline_layout layout, uint32_t first_group,
+    const granit_backend_plugin_bind_group* groups, uint32_t group_count,
+    const uint32_t* dynamic_offsets, uint32_t dynamic_offset_count);
+typedef granit_result (*granit_backend_plugin_recorder_dispatch_fn)(
+    granit_backend_plugin_instance instance, granit_backend_plugin_command_recorder recorder,
+    uint32_t group_count_x, uint32_t group_count_y, uint32_t group_count_z);
+typedef granit_result (*granit_backend_plugin_recorder_end_compute_fn)(
+    granit_backend_plugin_instance instance, granit_backend_plugin_command_recorder recorder);
+typedef granit_result (*granit_backend_plugin_recorder_set_viewports_fn)(
+    granit_backend_plugin_instance instance, granit_backend_plugin_command_recorder recorder,
+    uint32_t first, const granit_backend_plugin_viewport* viewports, uint32_t count);
+typedef granit_result (*granit_backend_plugin_recorder_set_scissors_fn)(
+    granit_backend_plugin_instance instance, granit_backend_plugin_command_recorder recorder,
+    uint32_t first, const granit_backend_plugin_scissor* scissors, uint32_t count);
 typedef granit_result (*granit_backend_plugin_create_command_recorder_fn)(
     granit_backend_plugin_instance instance, granit_backend_plugin_command_recorder* recorder);
 typedef granit_result (*granit_backend_plugin_destroy_command_recorder_fn)(
@@ -262,10 +515,37 @@ typedef granit_result (*granit_backend_plugin_recorder_copy_buffer_to_texture_fn
     granit_backend_plugin_instance instance, granit_backend_plugin_command_recorder recorder,
     granit_backend_plugin_buffer buffer, granit_backend_plugin_texture texture, uint32_t width,
     uint32_t height, uint32_t bytes_per_row);
-typedef granit_result (*granit_backend_plugin_recorder_draw_fn)(
+typedef granit_result (*granit_backend_plugin_recorder_begin_rendering_fn)(
     granit_backend_plugin_instance instance, granit_backend_plugin_command_recorder recorder,
-    granit_backend_plugin_texture_view target, granit_backend_plugin_render_pipeline pipeline,
-    granit_backend_plugin_bind_group bind_group);
+    granit_backend_plugin_texture_view target, granit_backend_plugin_load_operation load_operation,
+    granit_backend_plugin_store_operation store_operation, float clear_r, float clear_g,
+    float clear_b, float clear_a, granit_backend_plugin_texture_view depth_target,
+    granit_backend_plugin_load_operation depth_load_operation,
+    granit_backend_plugin_store_operation depth_store_operation, float clear_depth);
+typedef granit_result (*granit_backend_plugin_recorder_bind_pipeline_fn)(
+    granit_backend_plugin_instance instance, granit_backend_plugin_command_recorder recorder,
+    granit_backend_plugin_render_pipeline pipeline);
+typedef granit_result (*granit_backend_plugin_recorder_bind_graphics_groups_fn)(
+    granit_backend_plugin_instance instance, granit_backend_plugin_command_recorder recorder,
+    granit_backend_plugin_pipeline_layout layout, uint32_t first_group,
+    const granit_backend_plugin_bind_group* groups, uint32_t group_count,
+    const uint32_t* dynamic_offsets, uint32_t dynamic_offset_count);
+typedef granit_result (*granit_backend_plugin_recorder_bind_vertex_buffers_fn)(
+    granit_backend_plugin_instance instance, granit_backend_plugin_command_recorder recorder,
+    uint32_t first, const granit_backend_plugin_vertex_buffer_binding* bindings, uint32_t count);
+typedef granit_result (*granit_backend_plugin_recorder_bind_index_buffer_fn)(
+    granit_backend_plugin_instance instance, granit_backend_plugin_command_recorder recorder,
+    granit_backend_plugin_buffer buffer, uint64_t offset,
+    granit_backend_plugin_index_format format);
+typedef granit_result (*granit_backend_plugin_recorder_draw_vertices_fn)(
+    granit_backend_plugin_instance instance, granit_backend_plugin_command_recorder recorder,
+    uint32_t vertex_count, uint32_t instance_count, uint32_t first_vertex, uint32_t first_instance);
+typedef granit_result (*granit_backend_plugin_recorder_draw_indices_fn)(
+    granit_backend_plugin_instance instance, granit_backend_plugin_command_recorder recorder,
+    uint32_t index_count, uint32_t instance_count, uint32_t first_index, int32_t vertex_offset,
+    uint32_t first_instance);
+typedef granit_result (*granit_backend_plugin_recorder_end_rendering_fn)(
+    granit_backend_plugin_instance instance, granit_backend_plugin_command_recorder recorder);
 typedef granit_result (*granit_backend_plugin_finish_command_recorder_fn)(
     granit_backend_plugin_instance instance, granit_backend_plugin_command_recorder recorder,
     granit_backend_plugin_command_buffer* command_buffer);
@@ -282,6 +562,15 @@ typedef granit_result (*granit_backend_plugin_get_instance_status_fn)(
 /** 非阻塞地推进已完成的异步回调；没有待处理事件也返回成功。 */
 typedef granit_result (*granit_backend_plugin_process_events_fn)(
     granit_backend_plugin_instance instance);
+typedef granit_result (*granit_backend_plugin_create_win32_surface_fn)(
+    granit_backend_plugin_instance instance, const granit_backend_plugin_win32_surface_desc* desc,
+    granit_backend_plugin_surface* surface);
+typedef granit_result (*granit_backend_plugin_create_xcb_surface_fn)(
+    granit_backend_plugin_instance instance, const granit_backend_plugin_xcb_surface_desc* desc,
+    granit_backend_plugin_surface* surface);
+typedef granit_result (*granit_backend_plugin_create_wayland_surface_fn)(
+    granit_backend_plugin_instance instance, const granit_backend_plugin_wayland_surface_desc* desc,
+    granit_backend_plugin_surface* surface);
 typedef granit_result (*granit_backend_plugin_create_canvas_surface_fn)(
     granit_backend_plugin_instance instance, const granit_backend_plugin_canvas_surface_desc* desc,
     granit_backend_plugin_surface* surface);
@@ -324,6 +613,7 @@ typedef struct granit_backend_plugin_instance_api {
   granit_backend_plugin_read_buffer_fn read_buffer;
   granit_backend_plugin_create_texture_fn create_texture;
   granit_backend_plugin_destroy_texture_fn destroy_texture;
+  granit_backend_plugin_write_texture_fn write_texture;
   granit_backend_plugin_create_texture_view_fn create_texture_view;
   granit_backend_plugin_destroy_texture_view_fn destroy_texture_view;
   granit_backend_plugin_create_sampler_fn create_sampler;
@@ -341,13 +631,15 @@ typedef struct granit_backend_plugin_instance_api {
   granit_backend_plugin_create_command_recorder_fn create_command_recorder;
   granit_backend_plugin_destroy_command_recorder_fn destroy_command_recorder;
   granit_backend_plugin_recorder_copy_buffer_to_texture_fn recorder_copy_buffer_to_texture;
-  granit_backend_plugin_recorder_draw_fn recorder_draw;
   granit_backend_plugin_finish_command_recorder_fn finish_command_recorder;
   granit_backend_plugin_destroy_command_buffer_fn destroy_command_buffer;
   granit_backend_plugin_submit_command_buffer_fn submit_command_buffer;
   granit_backend_plugin_recorder_copy_texture_to_buffer_fn recorder_copy_texture_to_buffer;
   granit_backend_plugin_get_instance_status_fn get_instance_status;
   granit_backend_plugin_process_events_fn process_events;
+  granit_backend_plugin_create_win32_surface_fn create_win32_surface;
+  granit_backend_plugin_create_xcb_surface_fn create_xcb_surface;
+  granit_backend_plugin_create_wayland_surface_fn create_wayland_surface;
   granit_backend_plugin_create_canvas_surface_fn create_canvas_surface;
   granit_backend_plugin_destroy_surface_fn destroy_surface;
   granit_backend_plugin_create_swapchain_fn create_swapchain;
@@ -357,6 +649,24 @@ typedef struct granit_backend_plugin_instance_api {
   granit_backend_plugin_present_swapchain_fn present_swapchain;
   granit_backend_plugin_cancel_swapchain_fn cancel_swapchain;
   granit_backend_plugin_destroy_swapchain_fn destroy_swapchain;
+  granit_backend_plugin_recorder_begin_rendering_fn recorder_begin_rendering;
+  granit_backend_plugin_recorder_bind_pipeline_fn recorder_bind_pipeline;
+  granit_backend_plugin_recorder_bind_graphics_groups_fn recorder_bind_graphics_groups;
+  granit_backend_plugin_recorder_bind_vertex_buffers_fn recorder_bind_vertex_buffers;
+  granit_backend_plugin_recorder_bind_index_buffer_fn recorder_bind_index_buffer;
+  granit_backend_plugin_recorder_draw_vertices_fn recorder_draw_vertices;
+  granit_backend_plugin_recorder_draw_indices_fn recorder_draw_indices;
+  granit_backend_plugin_recorder_end_rendering_fn recorder_end_rendering;
+  granit_backend_plugin_write_upload_batch_fn write_upload_batch;
+  granit_backend_plugin_create_compute_pipeline_fn create_compute_pipeline;
+  granit_backend_plugin_destroy_compute_pipeline_fn destroy_compute_pipeline;
+  granit_backend_plugin_recorder_begin_compute_fn recorder_begin_compute;
+  granit_backend_plugin_recorder_bind_compute_pipeline_fn recorder_bind_compute_pipeline;
+  granit_backend_plugin_recorder_bind_compute_groups_fn recorder_bind_compute_groups;
+  granit_backend_plugin_recorder_dispatch_fn recorder_dispatch;
+  granit_backend_plugin_recorder_end_compute_fn recorder_end_compute;
+  granit_backend_plugin_recorder_set_viewports_fn recorder_set_viewports;
+  granit_backend_plugin_recorder_set_scissors_fn recorder_set_scissors;
 } granit_backend_plugin_instance_api;
 
 /** 后端插件入口返回的只读描述；字符串在插件卸载前有效。 */

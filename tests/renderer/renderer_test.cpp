@@ -106,6 +106,71 @@ TEST_CASE("Renderer 公开查询 Uniform Buffer 限制", "[renderer][limits][c_a
   CHECK(granit_renderer_get_limits(renderer, &limits) == GRANIT_ERROR_INVALID_HANDLE);
 }
 
+TEST_CASE("Renderer 查询实际后端与 Adapter 信息", "[renderer][info][c_api]") {
+  granit_renderer_info info = GRANIT_RENDERER_INFO_INIT;
+  CHECK(granit_renderer_get_info(GRANIT_NULL_HANDLE, nullptr) == GRANIT_ERROR_INVALID_ARGUMENT);
+  info.struct_size = GRANIT_RENDERER_INFO_VERSION_1_SIZE - 1;
+  CHECK(granit_renderer_get_info(GRANIT_NULL_HANDLE, &info) == GRANIT_ERROR_INVALID_ARGUMENT);
+  info = GRANIT_RENDERER_INFO_INIT;
+  CHECK(granit_renderer_get_info(GRANIT_NULL_HANDLE, &info) == GRANIT_ERROR_INVALID_HANDLE);
+
+  granit_renderer_desc desc = GRANIT_RENDERER_DESC_INIT;
+  desc.backend = GRANIT_RENDERER_BACKEND_VULKAN;
+  granit_renderer renderer = GRANIT_NULL_HANDLE;
+  const auto create_result = granit_renderer_create(&desc, &renderer);
+  if (environment_unavailable(create_result))
+    SKIP("当前运行环境没有满足要求的 Vulkan 设备");
+  REQUIRE(create_result == GRANIT_SUCCESS);
+
+  REQUIRE(granit_renderer_get_info(renderer, &info) == GRANIT_SUCCESS);
+  CHECK(info.backend == GRANIT_RENDERER_BACKEND_VULKAN);
+  CHECK(info.adapter_name_length > 0);
+  std::vector<char> adapter_name(info.adapter_name_length + 1);
+  info.adapter_name = adapter_name.data();
+  info.adapter_name_capacity = static_cast<std::uint32_t>(adapter_name.size());
+  REQUIRE(granit_renderer_get_info(renderer, &info) == GRANIT_SUCCESS);
+  CHECK(adapter_name.back() == '\0');
+  CHECK(adapter_name.front() != '\0');
+  REQUIRE(granit_renderer_destroy(renderer) == GRANIT_SUCCESS);
+}
+
+TEST_CASE("Renderer 严格选择动态 WebGPU Provider", "[renderer][backend][webgpu]") {
+  constexpr std::string_view plugin_path = GRANIT_FAKE_BACKEND_PLUGIN_PATH;
+  granit_renderer_desc desc = GRANIT_RENDERER_DESC_INIT;
+  desc.backend = GRANIT_RENDERER_BACKEND_WEBGPU;
+  desc.backend_library_path = plugin_path.data();
+  desc.backend_library_path_length = static_cast<std::uint32_t>(plugin_path.size());
+  granit_renderer renderer = GRANIT_NULL_HANDLE;
+  REQUIRE(granit_renderer_create(&desc, &renderer) == GRANIT_SUCCESS);
+
+  granit_renderer_info info = GRANIT_RENDERER_INFO_INIT;
+  REQUIRE(granit_renderer_get_info(renderer, &info) == GRANIT_SUCCESS);
+  CHECK(info.backend == GRANIT_RENDERER_BACKEND_WEBGPU);
+  CHECK(info.adapter_name_length == 0);
+  REQUIRE(granit_renderer_destroy(renderer) == GRANIT_SUCCESS);
+
+#if defined(_WIN32)
+  constexpr std::string_view missing_path = "D:/granit/missing-webgpu-provider.dll";
+#else
+  constexpr std::string_view missing_path = "/tmp/granit/missing-webgpu-provider.so";
+#endif
+  desc.backend_library_path = missing_path.data();
+  desc.backend_library_path_length = static_cast<std::uint32_t>(missing_path.size());
+  diagnostic_messages captured;
+  desc.diagnostic_callback = capture_diagnostic;
+  desc.diagnostic_user_data = &captured;
+  CHECK(granit_renderer_create(&desc, &renderer) == GRANIT_ERROR_BACKEND_UNAVAILABLE);
+  CHECK(renderer == GRANIT_NULL_HANDLE);
+  REQUIRE(captured.categories.size() == 1);
+  CHECK(captured.categories.front() == GRANIT_DIAGNOSTIC_CATEGORY_DEVICE);
+  CHECK(captured.messages.front().find("WebGPU") != std::string::npos);
+
+  constexpr std::string_view relative_path = "granit_backend_webgpu.dll";
+  desc.backend_library_path = relative_path.data();
+  desc.backend_library_path_length = static_cast<std::uint32_t>(relative_path.size());
+  CHECK(granit_renderer_create(&desc, &renderer) == GRANIT_ERROR_INVALID_ARGUMENT);
+}
+
 TEST_CASE("Renderer 资源统计覆盖创建销毁和无效句柄", "[renderer][resource-stats][c_api]") {
   granit_renderer_resource_stats stats = GRANIT_RENDERER_RESOURCE_STATS_INIT;
   CHECK(granit_renderer_get_resource_stats(GRANIT_NULL_HANDLE, nullptr) ==
@@ -202,6 +267,15 @@ TEST_CASE("Renderer 描述拒绝未知字段和非法字符串", "[renderer][val
 
   desc = GRANIT_RENDERER_DESC_INIT;
   desc.diagnostic_user_data = &renderer;
+  CHECK(granit_renderer_create(&desc, &renderer) == GRANIT_ERROR_INVALID_ARGUMENT);
+
+  desc = GRANIT_RENDERER_DESC_INIT;
+  desc.backend = UINT32_MAX;
+  CHECK(granit_renderer_create(&desc, &renderer) == GRANIT_ERROR_INVALID_ARGUMENT);
+
+  desc = GRANIT_RENDERER_DESC_INIT;
+  desc.backend = GRANIT_RENDERER_BACKEND_WEBGPU;
+  desc.backend_library_path_length = 1;
   CHECK(granit_renderer_create(&desc, &renderer) == GRANIT_ERROR_INVALID_ARGUMENT);
 
   CHECK(granit_renderer_set_object_name(GRANIT_NULL_HANDLE, UINT64_C(1), "buffer", 6) ==
@@ -307,6 +381,23 @@ TEST_CASE("Renderer 旧版描述不读取 frames-in-flight 扩展字段", "[rend
   CHECK(granit_renderer_destroy(renderer) == GRANIT_SUCCESS);
 }
 
+TEST_CASE("Renderer V4 描述不读取后端选择扩展字段", "[renderer][compatibility]") {
+  granit_renderer_desc desc = GRANIT_RENDERER_DESC_INIT;
+  desc.struct_size = GRANIT_RENDERER_DESC_VERSION_4_SIZE;
+  desc.backend = UINT32_MAX;
+  desc.backend_library_path_length = UINT32_MAX;
+  desc.backend_library_path = nullptr;
+  granit_renderer renderer = GRANIT_NULL_HANDLE;
+  const auto result = granit_renderer_create(&desc, &renderer);
+  if (environment_unavailable(result))
+    SKIP("当前运行环境没有满足要求的 Vulkan 设备");
+  REQUIRE(result == GRANIT_SUCCESS);
+  granit_renderer_info info = GRANIT_RENDERER_INFO_INIT;
+  REQUIRE(granit_renderer_get_info(renderer, &info) == GRANIT_SUCCESS);
+  CHECK(info.backend == GRANIT_RENDERER_BACKEND_VULKAN);
+  REQUIRE(granit_renderer_destroy(renderer) == GRANIT_SUCCESS);
+}
+
 TEST_CASE("C++ renderer 提供 move-only RAII", "[renderer][cpp_api]") {
   granit::renderer renderer;
   const auto result = renderer.initialize({.application_name = "granit-cpp-tests"});
@@ -323,6 +414,10 @@ TEST_CASE("C++ renderer 提供 move-only RAII", "[renderer][cpp_api]") {
   granit::renderer_resource_stats stats;
   REQUIRE(renderer.get_resource_stats(stats) == granit::result::success);
   CHECK(stats.total_live_count == 0);
+  granit::renderer_info info;
+  REQUIRE(renderer.get_info(info) == granit::result::success);
+  CHECK(info.backend == granit::renderer_backend::vulkan);
+  CHECK_FALSE(info.adapter_name.empty());
   CHECK(limits.max_uniform_buffer_binding_size > 0);
 
   granit::renderer_status status;

@@ -9,13 +9,17 @@
 #include <granit/renderer/shader.hpp>
 #include <granit/renderer/texture.h>
 
+#include "support/renderer_fixture.h"
+
 #include <catch2/catch_all.hpp>
 
 #include <array>
 #include <atomic>
 #include <barrier>
 #include <cstddef>
+#include <cstdlib>
 #include <cstring>
+#include <filesystem>
 #include <fstream>
 #include <iterator>
 #include <span>
@@ -85,6 +89,11 @@ std::vector<std::byte> load_shader(const char* name) {
   return result;
 }
 
+std::string load_text_asset(const char* name) {
+  std::ifstream stream{std::string{GRANIT_TEST_ASSET_DIR} + "/" + name};
+  return {std::istreambuf_iterator<char>{stream}, {}};
+}
+
 void count_validation_errors(granit_diagnostic_severity severity,
                              granit_diagnostic_category category, const char*, std::uint32_t,
                              void* user_data) noexcept {
@@ -92,6 +101,75 @@ void count_validation_errors(granit_diagnostic_severity severity,
       category == GRANIT_DIAGNOSTIC_CATEGORY_VALIDATION) {
     static_cast<std::atomic_uint32_t*>(user_data)->fetch_add(1, std::memory_order_relaxed);
   }
+}
+
+using pixel_probe = granit::test::renderer_fixture::semantic_probe;
+
+bool pixel_matches(const std::uint8_t* pixels, std::uint32_t width, const pixel_probe& probe) {
+  const auto* actual = pixels + (static_cast<std::size_t>(probe.y) * width + probe.x) * 4;
+  for (std::size_t channel = 0; channel < probe.expected.size(); ++channel) {
+    const auto difference =
+        std::abs(static_cast<int>(actual[channel]) - static_cast<int>(probe.expected[channel]));
+    if (difference > probe.tolerance)
+      return false;
+  }
+  return true;
+}
+
+void write_ppm(const std::filesystem::path& path, std::span<const std::uint8_t> pixels,
+               std::uint32_t width, std::uint32_t height) {
+  std::ofstream stream{path, std::ios::binary};
+  if (!stream)
+    return;
+  stream << "P6\n" << width << ' ' << height << "\n255\n";
+  for (std::size_t index = 0; index < pixels.size(); index += 4)
+    stream.write(reinterpret_cast<const char*>(pixels.data() + index), 3);
+}
+
+std::string fixture_artifact_prefix(const granit::renderer_info& info) {
+  return std::string{"s12_fixture_"} +
+         (info.backend == granit::renderer_backend::vulkan ? "vulkan" : "webgpu");
+}
+
+void clear_fixture_diagnostics(const granit::renderer_info& info) {
+  const std::filesystem::path directory{GRANIT_TEST_ARTIFACT_DIR};
+  const auto prefix = fixture_artifact_prefix(info);
+  std::error_code error;
+  for (const auto* suffix : {"_actual.ppm", "_expected.ppm", "_difference.ppm", "_metadata.txt"}) {
+    std::filesystem::remove(directory / (prefix + suffix), error);
+    error.clear();
+  }
+}
+
+void write_fixture_diagnostics(std::span<const std::uint8_t> actual, std::uint32_t width,
+                               std::uint32_t height, std::span<const pixel_probe> probes,
+                               const granit::renderer_info& info) {
+  const auto backend_name = info.backend == granit::renderer_backend::vulkan ? "vulkan" : "webgpu";
+  const std::filesystem::path directory{GRANIT_TEST_ARTIFACT_DIR};
+  std::error_code error;
+  std::filesystem::create_directories(directory, error);
+  if (error)
+    return;
+  std::vector<std::uint8_t> expected(actual.begin(), actual.end());
+  for (const auto& probe : probes) {
+    auto* pixel = expected.data() + (static_cast<std::size_t>(probe.y) * width + probe.x) * 4;
+    std::copy(probe.expected.begin(), probe.expected.end(), pixel);
+  }
+  std::vector<std::uint8_t> difference(actual.size());
+  for (std::size_t index = 0; index < actual.size(); ++index) {
+    difference[index] = static_cast<std::uint8_t>(
+        std::abs(static_cast<int>(actual[index]) - static_cast<int>(expected[index])));
+  }
+  const auto prefix = fixture_artifact_prefix(info);
+  write_ppm(directory / (prefix + "_actual.ppm"), actual, width, height);
+  write_ppm(directory / (prefix + "_expected.ppm"), expected, width, height);
+  write_ppm(directory / (prefix + "_difference.ppm"), difference, width, height);
+  std::ofstream metadata{directory / (prefix + "_metadata.txt")};
+  metadata << "backend=" << backend_name << '\n'
+           << "adapter=" << info.adapter_name << '\n'
+           << "vendor_id=" << info.vendor_id << '\n'
+           << "device_id=" << info.device_id << '\n'
+           << "expected_image=actual image with semantic probe pixels corrected\n";
 }
 
 TEST_CASE("空 Pipeline Layout 具有独立生命周期和 Renderer domain", "[pipeline]") {
@@ -280,34 +358,78 @@ TEST_CASE("动态 Offset 按 Bind Group 顺序跳过普通 Uniform", "[pipeline]
   REQUIRE(recorder.end() == granit::result::success);
 }
 
-TEST_CASE("动态 Uniform Offset 从同一 Buffer 绘制两个对象", "[pipeline][bind-group][smoke]") {
+TEST_CASE("跨后端索引纹理 Fixture 使用动态 Uniform 绘制两个对象", "[pipeline][bind-group][smoke]") {
+  struct backend_case {
+    granit::renderer_backend backend;
+    std::string_view library_path;
+  };
+#if defined(GRANIT_WEBGPU_BACKEND_PLUGIN_PATH)
+#if defined(_WIN32)
+  // 托管 Windows Runner 没有 Vulkan ICD；真实 Vulkan Fixture 由 Linux Lavapipe 矩阵执行。
+  const auto backend =
+      GENERATE(backend_case{granit::renderer_backend::webgpu, GRANIT_FAKE_BACKEND_PLUGIN_PATH},
+               backend_case{granit::renderer_backend::webgpu, GRANIT_WEBGPU_BACKEND_PLUGIN_PATH});
+#else
+  const auto backend =
+      GENERATE(backend_case{granit::renderer_backend::vulkan, {}},
+               backend_case{granit::renderer_backend::webgpu, GRANIT_FAKE_BACKEND_PLUGIN_PATH},
+               backend_case{granit::renderer_backend::webgpu, GRANIT_WEBGPU_BACKEND_PLUGIN_PATH});
+#endif
+#else
+  const auto backend =
+      GENERATE(backend_case{granit::renderer_backend::vulkan, {}},
+               backend_case{granit::renderer_backend::webgpu, GRANIT_FAKE_BACKEND_PLUGIN_PATH});
+#endif
+  CAPTURE(backend.backend);
   std::atomic_uint32_t validation_errors{};
   granit::renderer renderer;
   const auto result = renderer.initialize({.application_name = "granit-dynamic-uniform-smoke",
                                            .enable_validation = true,
                                            .diagnostics = count_validation_errors,
-                                           .diagnostic_user_data = &validation_errors});
+                                           .diagnostic_user_data = &validation_errors,
+                                           .backend = backend.backend,
+                                           .backend_library_path = backend.library_path});
   if (environment_unavailable(result) || result == granit::result::unsupported)
     SKIP("当前运行环境不支持验证层或没有满足要求的 Vulkan 设备");
   REQUIRE(result == granit::result::success);
+  REQUIRE(renderer.process_events() == granit::result::success);
+  granit::renderer_info renderer_info;
+  REQUIRE(renderer.get_info(renderer_info) == granit::result::success);
+  clear_fixture_diagnostics(renderer_info);
 
   const auto vertex_code = load_shader("dynamic_uniform.vert.spv");
   const auto fragment_code = load_shader("dynamic_uniform.frag.spv");
+  const auto vertex_wgsl = load_text_asset("dynamic_uniform.vert.wgsl");
+  const auto fragment_wgsl = load_text_asset("dynamic_uniform.frag.wgsl");
   REQUIRE_FALSE(vertex_code.empty());
   REQUIRE_FALSE(fragment_code.empty());
   granit::shader vertex;
   granit::shader fragment;
-  REQUIRE(vertex.initialize(renderer.native_handle(),
-                            {.stage = granit::shader_stage::vertex, .code = vertex_code}) ==
+  REQUIRE(vertex.initialize_asset(
+              renderer.native_handle(),
+              {.stage = granit::shader_stage::vertex, .spirv = vertex_code, .wgsl = vertex_wgsl}) ==
           granit::result::success);
-  REQUIRE(fragment.initialize(renderer.native_handle(),
-                              {.stage = granit::shader_stage::fragment, .code = fragment_code}) ==
-          granit::result::success);
+  REQUIRE(fragment.initialize_asset(renderer.native_handle(),
+                                    {.stage = granit::shader_stage::fragment,
+                                     .spirv = fragment_code,
+                                     .wgsl = fragment_wgsl}) == granit::result::success);
 
   const std::array declarations{
       granit::bind_group_layout_entry{.binding = 0,
                                       .type = granit::binding_type::dynamic_uniform_buffer,
-                                      .visibility = granit::shader_stage_flags::vertex}};
+                                      .visibility = granit::shader_stage_flags::vertex},
+      granit::bind_group_layout_entry{.binding = 1,
+                                      .type = granit::binding_type::sampled_texture,
+                                      .visibility = granit::shader_stage_flags::fragment},
+      granit::bind_group_layout_entry{.binding = 2,
+                                      .type = granit::binding_type::sampler,
+                                      .visibility = granit::shader_stage_flags::fragment},
+      granit::bind_group_layout_entry{.binding = 3,
+                                      .type = granit::binding_type::sampled_texture,
+                                      .visibility = granit::shader_stage_flags::fragment},
+      granit::bind_group_layout_entry{.binding = 4,
+                                      .type = granit::binding_type::sampled_texture,
+                                      .visibility = granit::shader_stage_flags::fragment}};
   granit::bind_group_layout group_layout;
   REQUIRE(group_layout.initialize(renderer.native_handle(), declarations) ==
           granit::result::success);
@@ -317,38 +439,110 @@ TEST_CASE("动态 Uniform Offset 从同一 Buffer 绘制两个对象", "[pipelin
       pipeline_layout.initialize(renderer.native_handle(), std::span{&group_layout_handle, 1}) ==
       granit::result::success);
   const granit::texture_format format = granit::texture_format::rgba8_unorm;
+  const std::array vertex_attributes{
+      granit::vertex_attribute{.location = 0, .format = granit::vertex_format::float32x2},
+      granit::vertex_attribute{
+          .location = 1, .format = granit::vertex_format::float32x2, .offset = sizeof(float) * 2},
+      granit::vertex_attribute{
+          .location = 2, .format = granit::vertex_format::float32x3, .offset = sizeof(float) * 4}};
+  const std::array vertex_layouts{
+      granit::vertex_buffer_layout{.stride = sizeof(float) * 7, .attributes = vertex_attributes}};
   granit::graphics_pipeline pipeline;
-  REQUIRE(pipeline.initialize(renderer.native_handle(),
-                              {.layout = pipeline_layout.native_handle(),
-                               .vertex_shader = vertex.native_handle(),
-                               .fragment_shader = fragment.native_handle(),
-                               .color_formats = std::span{&format, 1},
-                               .vertex_buffers = {},
-                               .primitive = {},
-                               .depth = {},
-                               .color_blends = {},
-                               .depth_bias = std::nullopt}) == granit::result::success);
+  REQUIRE(pipeline.initialize(
+              renderer.native_handle(),
+              {.layout = pipeline_layout.native_handle(),
+               .vertex_shader = vertex.native_handle(),
+               .fragment_shader = fragment.native_handle(),
+               .color_formats = std::span{&format, 1},
+               .depth_stencil_format = granit::texture_format::d32_float,
+               .vertex_buffers = vertex_layouts,
+               .primitive = {},
+               .depth = granit::depth_state{.test_enabled = true, .write_enabled = true},
+               .color_blends = {},
+               .depth_bias = std::nullopt}) == granit::result::success);
 
-  std::array<std::byte, 512> uniform_data{};
-  const auto write_vec4 = [&uniform_data](std::size_t offset, const std::array<float, 4>& value) {
-    std::memcpy(uniform_data.data() + offset, value.data(), sizeof(value));
-  };
-  write_vec4(0, {-0.5F, 0.0F, 0.0F, 0.0F});
-  write_vec4(16, {1.0F, 0.0F, 0.0F, 1.0F});
-  write_vec4(256, {0.5F, 0.0F, 0.0F, 0.0F});
-  write_vec4(272, {0.0F, 1.0F, 0.0F, 1.0F});
+  const auto uniform_data = granit::test::renderer_fixture::make_uniform_data();
   granit::buffer uniform;
-  REQUIRE(uniform.initialize(renderer.native_handle(),
-                             {.size = uniform_data.size(), .usage = granit::buffer_usage::uniform},
-                             uniform_data) == granit::result::success);
-  const std::array entries{granit::bind_group_entry{
-      .binding = 0, .resource = uniform.native_handle(), .offset = 0, .size = 32}};
+  REQUIRE(uniform.initialize(
+              renderer.native_handle(),
+              {.size = uniform_data.size(),
+               .usage = granit::buffer_usage::uniform | granit::buffer_usage::transfer_destination},
+              uniform_data) == granit::result::success);
+  granit_texture_desc base_color_desc = GRANIT_TEXTURE_DESC_INIT;
+  base_color_desc.format = GRANIT_TEXTURE_FORMAT_RGBA8_SRGB;
+  base_color_desc.usage =
+      GRANIT_TEXTURE_USAGE_SAMPLED_BIT | GRANIT_TEXTURE_USAGE_TRANSFER_DESTINATION_BIT;
+  base_color_desc.width = 2;
+  base_color_desc.height = 2;
+  granit_texture base_color = GRANIT_NULL_HANDLE;
+  granit_texture_view base_color_view = GRANIT_NULL_HANDLE;
+  REQUIRE(granit_texture_create_with_default_view(renderer.native_handle(), &base_color_desc,
+                                                  &base_color, &base_color_view) == GRANIT_SUCCESS);
+  constexpr auto& base_color_pixels = granit::test::renderer_fixture::base_color_pixels;
+  const granit_texture_data_layout base_color_layout{};
+  const granit_texture_write_region base_color_region{.mip_level = 0,
+                                                      .base_array_layer = 0,
+                                                      .array_layer_count = 1,
+                                                      .aspect = GRANIT_TEXTURE_ASPECT_COLOR_BIT,
+                                                      .x = 0,
+                                                      .y = 0,
+                                                      .z = 0,
+                                                      .width = 2,
+                                                      .height = 2,
+                                                      .depth = 1};
+  REQUIRE(granit_texture_write(renderer.native_handle(), base_color, base_color_pixels.data(),
+                               base_color_pixels.size(), &base_color_layout,
+                               &base_color_region) == GRANIT_SUCCESS);
+  granit_texture normal = GRANIT_NULL_HANDLE;
+  granit_texture_view normal_view = GRANIT_NULL_HANDLE;
+  auto material_texture_desc = base_color_desc;
+  material_texture_desc.format = GRANIT_TEXTURE_FORMAT_RGBA8_UNORM;
+  REQUIRE(granit_texture_create_with_default_view(renderer.native_handle(), &material_texture_desc,
+                                                  &normal, &normal_view) == GRANIT_SUCCESS);
+  constexpr auto& normal_pixels = granit::test::renderer_fixture::normal_pixels;
+  REQUIRE(granit_texture_write(renderer.native_handle(), normal, normal_pixels.data(),
+                               normal_pixels.size(), &base_color_layout,
+                               &base_color_region) == GRANIT_SUCCESS);
+  granit_texture metallic_roughness = GRANIT_NULL_HANDLE;
+  granit_texture_view metallic_roughness_view = GRANIT_NULL_HANDLE;
+  REQUIRE(granit_texture_create_with_default_view(renderer.native_handle(), &material_texture_desc,
+                                                  &metallic_roughness,
+                                                  &metallic_roughness_view) == GRANIT_SUCCESS);
+  constexpr auto& metallic_roughness_pixels =
+      granit::test::renderer_fixture::metallic_roughness_pixels;
+  REQUIRE(granit_texture_write(renderer.native_handle(), metallic_roughness,
+                               metallic_roughness_pixels.data(), metallic_roughness_pixels.size(),
+                               &base_color_layout, &base_color_region) == GRANIT_SUCCESS);
+  granit::sampler base_color_sampler;
+  REQUIRE(base_color_sampler.initialize(renderer.native_handle()) == granit::result::success);
+  const std::array entries{
+      granit::bind_group_entry{
+          .binding = 0, .resource = uniform.native_handle(), .offset = 0, .size = 32},
+      granit::bind_group_entry{.binding = 1, .resource = base_color_view},
+      granit::bind_group_entry{.binding = 2, .resource = base_color_sampler.native_handle()},
+      granit::bind_group_entry{.binding = 3, .resource = normal_view},
+      granit::bind_group_entry{.binding = 4, .resource = metallic_roughness_view}};
   granit::bind_group group;
   REQUIRE(group.initialize(renderer.native_handle(), group_layout.native_handle(), entries) ==
           granit::result::success);
 
-  constexpr std::uint32_t width = 64;
-  constexpr std::uint32_t height = 32;
+  constexpr auto& vertices = granit::test::renderer_fixture::vertices;
+  constexpr auto& indices = granit::test::renderer_fixture::indices;
+  granit::buffer vertex_buffer;
+  REQUIRE(vertex_buffer.initialize(
+              renderer.native_handle(),
+              {.size = sizeof(vertices),
+               .usage = granit::buffer_usage::vertex | granit::buffer_usage::transfer_destination},
+              std::as_bytes(std::span{vertices})) == granit::result::success);
+  granit::buffer index_buffer;
+  REQUIRE(index_buffer.initialize(
+              renderer.native_handle(),
+              {.size = sizeof(indices),
+               .usage = granit::buffer_usage::index | granit::buffer_usage::transfer_destination},
+              std::as_bytes(std::span{indices})) == granit::result::success);
+
+  constexpr auto width = granit::test::renderer_fixture::width;
+  constexpr auto height = granit::test::renderer_fixture::height;
   granit_texture_desc target_desc = GRANIT_TEXTURE_DESC_INIT;
   target_desc.format = GRANIT_TEXTURE_FORMAT_RGBA8_UNORM;
   target_desc.usage =
@@ -359,6 +553,15 @@ TEST_CASE("动态 Uniform Offset 从同一 Buffer 绘制两个对象", "[pipelin
   granit_texture_view target_view = GRANIT_NULL_HANDLE;
   REQUIRE(granit_texture_create_with_default_view(renderer.native_handle(), &target_desc, &target,
                                                   &target_view) == GRANIT_SUCCESS);
+  granit_texture_desc depth_desc = GRANIT_TEXTURE_DESC_INIT;
+  depth_desc.format = GRANIT_TEXTURE_FORMAT_D32_FLOAT;
+  depth_desc.usage = GRANIT_TEXTURE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+  depth_desc.width = width;
+  depth_desc.height = height;
+  granit_texture depth_target = GRANIT_NULL_HANDLE;
+  granit_texture_view depth_view = GRANIT_NULL_HANDLE;
+  REQUIRE(granit_texture_create_with_default_view(renderer.native_handle(), &depth_desc,
+                                                  &depth_target, &depth_view) == GRANIT_SUCCESS);
   granit::buffer readback;
   REQUIRE(readback.initialize(renderer.native_handle(),
                               {.size = width * height * 4,
@@ -374,22 +577,43 @@ TEST_CASE("动态 Uniform Offset 从同一 Buffer 绘制两个对象", "[pipelin
   const granit::scissor scissor{0, 0, width, height};
   REQUIRE(recorder.set_viewports(0, std::span{&viewport, 1}) == granit::result::success);
   REQUIRE(recorder.set_scissors(0, std::span{&scissor, 1}) == granit::result::success);
+  const granit::vertex_buffer_binding vertex_binding{vertex_buffer.native_handle(), 0};
+  REQUIRE(recorder.bind_vertex_buffers(0, std::span{&vertex_binding, 1}) ==
+          granit::result::success);
+  REQUIRE(recorder.bind_index_buffer(index_buffer.native_handle(), 0, granit::index_type::uint16) ==
+          granit::result::success);
   const granit_bind_group group_handle = group.native_handle();
   const std::array left_offset{UINT32_C(0)};
   const std::array right_offset{UINT32_C(256)};
+  const std::array near_offset{UINT32_C(512)};
+  const std::array far_offset{UINT32_C(768)};
   // 首次绑定在 Rendering 外准备资源状态，Rendering 内只切换同一资源的动态 Offset。
   REQUIRE(recorder.bind_graphics_groups(pipeline_layout.native_handle(), 0,
                                         std::span{&group_handle, 1},
                                         left_offset) == granit::result::success);
   const granit::color_attachment_desc color{.view = target_view};
+  const granit::depth_stencil_attachment_desc depth{.view = depth_view};
   const granit::rendering_desc rendering{.color_attachments = std::span{&color, 1},
+                                         .depth_stencil_attachment = &depth,
                                          .area = {0, 0, width, height}};
   REQUIRE(recorder.begin_rendering(rendering) == granit::result::success);
-  REQUIRE(recorder.draw(3) == granit::result::success);
+  REQUIRE(recorder.draw_indexed(static_cast<std::uint32_t>(indices.size())) ==
+          granit::result::success);
+  REQUIRE(recorder.bind_graphics_groups(pipeline_layout.native_handle(), 0,
+                                        std::span{&group_handle, 1},
+                                        near_offset) == granit::result::success);
+  REQUIRE(recorder.draw_indexed(static_cast<std::uint32_t>(indices.size())) ==
+          granit::result::success);
+  REQUIRE(recorder.bind_graphics_groups(pipeline_layout.native_handle(), 0,
+                                        std::span{&group_handle, 1},
+                                        far_offset) == granit::result::success);
+  REQUIRE(recorder.draw_indexed(static_cast<std::uint32_t>(indices.size())) ==
+          granit::result::success);
   REQUIRE(recorder.bind_graphics_groups(pipeline_layout.native_handle(), 0,
                                         std::span{&group_handle, 1},
                                         right_offset) == granit::result::success);
-  REQUIRE(recorder.draw(3) == granit::result::success);
+  REQUIRE(recorder.draw_indexed(static_cast<std::uint32_t>(indices.size())) ==
+          granit::result::success);
   REQUIRE(recorder.end_rendering() == granit::result::success);
   const granit_texture_data_layout copy_layout{};
   const granit_texture_write_region copy_region{.mip_level = 0,
@@ -411,18 +635,43 @@ TEST_CASE("动态 Uniform Offset 从同一 Buffer 绘制两个对象", "[pipelin
   void* mapped = nullptr;
   REQUIRE(readback.map(0, width * height * 4, &mapped) == granit::result::success);
   const auto* pixels = static_cast<const std::uint8_t*>(mapped);
-  const auto* left = pixels + (height / 2 * width + width / 4) * 4;
-  const auto* right = pixels + (height / 2 * width + width * 3 / 4) * 4;
-  CHECK(left[0] > 240);
-  CHECK(left[1] < 16);
-  CHECK(left[2] < 16);
-  CHECK(right[0] < 16);
-  CHECK(right[1] > 240);
-  CHECK(right[2] < 16);
+  constexpr auto& probes = granit::test::renderer_fixture::semantic_probes;
+  const auto image = std::span{pixels, static_cast<std::size_t>(width) * height * 4};
+  const auto matches = std::all_of(probes.begin(), probes.end(), [&](const auto& probe) {
+    return pixel_matches(pixels, width, probe);
+  });
+  if (!matches)
+    write_fixture_diagnostics(image, width, height, probes, renderer_info);
+  INFO("Fixture 失败诊断目录: " << GRANIT_TEST_ARTIFACT_DIR);
+  for (const auto& probe : probes) {
+    CAPTURE(probe.x, probe.y, probe.expected, probe.tolerance);
+    CHECK(pixel_matches(pixels, width, probe));
+  }
   REQUIRE(readback.unmap() == granit::result::success);
   CHECK(validation_errors.load(std::memory_order_relaxed) == 0);
   REQUIRE(granit_texture_view_destroy(renderer.native_handle(), target_view) == GRANIT_SUCCESS);
   REQUIRE(granit_texture_destroy(renderer.native_handle(), target) == GRANIT_SUCCESS);
+  REQUIRE(granit_texture_view_destroy(renderer.native_handle(), depth_view) == GRANIT_SUCCESS);
+  REQUIRE(granit_texture_destroy(renderer.native_handle(), depth_target) == GRANIT_SUCCESS);
+  REQUIRE(readback.reset() == granit::result::success);
+  REQUIRE(group.reset() == granit::result::success);
+  REQUIRE(base_color_sampler.reset() == granit::result::success);
+  REQUIRE(granit_texture_view_destroy(renderer.native_handle(), metallic_roughness_view) ==
+          GRANIT_SUCCESS);
+  REQUIRE(granit_texture_destroy(renderer.native_handle(), metallic_roughness) == GRANIT_SUCCESS);
+  REQUIRE(granit_texture_view_destroy(renderer.native_handle(), normal_view) == GRANIT_SUCCESS);
+  REQUIRE(granit_texture_destroy(renderer.native_handle(), normal) == GRANIT_SUCCESS);
+  REQUIRE(granit_texture_view_destroy(renderer.native_handle(), base_color_view) == GRANIT_SUCCESS);
+  REQUIRE(granit_texture_destroy(renderer.native_handle(), base_color) == GRANIT_SUCCESS);
+  REQUIRE(index_buffer.reset() == granit::result::success);
+  REQUIRE(vertex_buffer.reset() == granit::result::success);
+  REQUIRE(uniform.reset() == granit::result::success);
+  REQUIRE(pipeline.reset() == granit::result::success);
+  REQUIRE(pipeline_layout.reset() == granit::result::success);
+  REQUIRE(group_layout.reset() == granit::result::success);
+  REQUIRE(fragment.reset() == granit::result::success);
+  REQUIRE(vertex.reset() == granit::result::success);
+  REQUIRE(renderer.reset() == granit::result::success);
 }
 
 TEST_CASE("不可变 Bind Group 保持 Buffer 与 Sampler 生命周期", "[pipeline][bind-group]") {

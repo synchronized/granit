@@ -111,13 +111,33 @@ int main(int argc, char** argv) {
   texture_desc.height = 16;
   texture_desc.usage = GRANIT_BACKEND_PLUGIN_TEXTURE_USAGE_SAMPLED_BIT |
                        GRANIT_BACKEND_PLUGIN_TEXTURE_USAGE_COPY_DST_BIT;
+  texture_desc.format = GRANIT_BACKEND_PLUGIN_TEXTURE_FORMAT_RGBA8_UNORM;
+  texture_desc.mip_level_count = 1;
+  const granit_backend_plugin_texture_view_desc texture_view_desc{
+      sizeof(granit_backend_plugin_texture_view_desc),
+      GRANIT_BACKEND_PLUGIN_TEXTURE_FORMAT_RGBA8_UNORM,
+      0,
+      1,
+      {0, 0}};
   granit_backend_plugin_texture texture{};
   granit_backend_plugin_texture_view view{};
   granit_backend_plugin_sampler_desc sampler_desc{};
   sampler_desc.struct_size = sizeof(sampler_desc);
   sampler_desc.min_filter = GRANIT_BACKEND_PLUGIN_FILTER_LINEAR;
   sampler_desc.mag_filter = GRANIT_BACKEND_PLUGIN_FILTER_LINEAR;
+  sampler_desc.mipmap_filter = GRANIT_BACKEND_PLUGIN_FILTER_LINEAR;
+  sampler_desc.address_mode_u = GRANIT_BACKEND_PLUGIN_ADDRESS_MODE_REPEAT;
+  sampler_desc.address_mode_v = GRANIT_BACKEND_PLUGIN_ADDRESS_MODE_REPEAT;
+  sampler_desc.address_mode_w = GRANIT_BACKEND_PLUGIN_ADDRESS_MODE_REPEAT;
+  sampler_desc.max_anisotropy = 1;
   granit_backend_plugin_sampler sampler{};
+  const granit_backend_plugin_bind_group_layout_entry layout_entries[]{
+      {0, GRANIT_BACKEND_PLUGIN_BINDING_TYPE_SAMPLED_TEXTURE,
+       GRANIT_BACKEND_PLUGIN_SHADER_STAGE_FRAGMENT, 1},
+      {1, GRANIT_BACKEND_PLUGIN_BINDING_TYPE_SAMPLER, GRANIT_BACKEND_PLUGIN_SHADER_STAGE_FRAGMENT,
+       1}};
+  const granit_backend_plugin_bind_group_layout_desc layout_desc{
+      sizeof(granit_backend_plugin_bind_group_layout_desc), 2, layout_entries, 0};
   granit_backend_plugin_bind_group_layout bind_group_layout{};
   granit_backend_plugin_bind_group bind_group{};
   granit_backend_plugin_pipeline_layout pipeline_layout{};
@@ -125,18 +145,23 @@ int main(int argc, char** argv) {
   granit_backend_plugin_shader fragment_shader{};
   granit_backend_plugin_render_pipeline pipeline{};
   if (loader.create_texture(instance, &texture_desc, &texture) != GRANIT_SUCCESS || texture == 0 ||
-      loader.create_texture_view(instance, texture, &view) != GRANIT_SUCCESS || view == 0 ||
-      loader.create_sampler(instance, &sampler_desc, &sampler) != GRANIT_SUCCESS || sampler == 0 ||
-      loader.create_bind_group_layout(instance, &bind_group_layout) != GRANIT_SUCCESS ||
+      loader.create_texture_view(instance, texture, &texture_view_desc, &view) != GRANIT_SUCCESS ||
+      view == 0 || loader.create_sampler(instance, &sampler_desc, &sampler) != GRANIT_SUCCESS ||
+      sampler == 0 ||
+      loader.create_bind_group_layout(instance, &layout_desc, &bind_group_layout) !=
+          GRANIT_SUCCESS ||
       bind_group_layout == 0) {
     std::fprintf(stderr, "WebGPU Texture、View、Sampler 或绑定布局创建失败\n");
     return 5;
   }
   granit_backend_plugin_bind_group_desc bind_group_desc{};
+  const granit_backend_plugin_bind_group_entry group_entries[]{
+      {0, GRANIT_BACKEND_PLUGIN_BINDING_TYPE_SAMPLED_TEXTURE, 0, view, 0, 0, 0},
+      {1, GRANIT_BACKEND_PLUGIN_BINDING_TYPE_SAMPLER, 0, 0, sampler, 0, 0}};
   bind_group_desc.struct_size = sizeof(bind_group_desc);
+  bind_group_desc.entry_count = 2;
   bind_group_desc.layout = bind_group_layout;
-  bind_group_desc.texture_view = view;
-  bind_group_desc.sampler = sampler;
+  bind_group_desc.entries = group_entries;
   granit_backend_plugin_shader_desc vertex_desc{sizeof(granit_backend_plugin_shader_desc),
                                                 GRANIT_BACKEND_PLUGIN_SHADER_STAGE_VERTEX,
                                                 asset.wgsl.data(),
@@ -148,9 +173,12 @@ int main(int argc, char** argv) {
   fragment_desc.wgsl = asset.wgsl.data();
   fragment_desc.wgsl_length = asset.wgsl.size();
   fragment_desc.entry_point = "fs_main";
+  const granit_backend_plugin_bind_group_layout pipeline_layouts[]{bind_group_layout};
+  const granit_backend_plugin_pipeline_layout_desc pipeline_layout_desc{
+      sizeof(granit_backend_plugin_pipeline_layout_desc), 1, pipeline_layouts, 0};
   if (loader.create_bind_group(instance, &bind_group_desc, &bind_group) != GRANIT_SUCCESS ||
       bind_group == 0 ||
-      loader.create_pipeline_layout(instance, bind_group_layout, &pipeline_layout) !=
+      loader.create_pipeline_layout(instance, &pipeline_layout_desc, &pipeline_layout) !=
           GRANIT_SUCCESS ||
       pipeline_layout == 0 ||
       loader.create_shader(instance, &vertex_desc, &vertex_shader) != GRANIT_SUCCESS ||
@@ -165,7 +193,12 @@ int main(int argc, char** argv) {
       vertex_shader,
       fragment_shader,
       GRANIT_BACKEND_PLUGIN_TEXTURE_FORMAT_RGBA8_UNORM,
-      0};
+      0,
+      nullptr,
+      0,
+      0,
+      0,
+      GRANIT_BACKEND_PLUGIN_COMPARE_OPERATION_ALWAYS};
   if (loader.create_render_pipeline(instance, &pipeline_desc, &pipeline) != GRANIT_SUCCESS ||
       pipeline == 0) {
     std::fprintf(stderr, "WebGPU 绑定或 Render Pipeline 生命周期验证失败\n");
@@ -190,12 +223,20 @@ int main(int argc, char** argv) {
   std::uint32_t corner{};
   std::uint32_t center{};
   std::chrono::steady_clock::duration submit_duration{};
+  const float clear_color[]{0.0F, 0.0F, 0.0F, 1.0F};
   if (loader.create_texture(instance, &target_desc, &target_texture) != GRANIT_SUCCESS ||
-      loader.create_texture_view(instance, target_texture, &target_view) != GRANIT_SUCCESS ||
+      loader.create_texture_view(instance, target_texture, &texture_view_desc, &target_view) !=
+          GRANIT_SUCCESS ||
       loader.create_buffer(instance, &readback_desc, &readback) != GRANIT_SUCCESS ||
       loader.create_command_recorder(instance, &recorder) != GRANIT_SUCCESS || recorder == 0 ||
-      loader.recorder_draw(instance, recorder, target_view, pipeline, bind_group) !=
-          GRANIT_SUCCESS ||
+      loader.recorder_begin_rendering(
+          instance, recorder, target_view, GRANIT_BACKEND_PLUGIN_LOAD_OPERATION_CLEAR,
+          GRANIT_BACKEND_PLUGIN_STORE_OPERATION_STORE, clear_color) != GRANIT_SUCCESS ||
+      loader.recorder_bind_pipeline(instance, recorder, pipeline) != GRANIT_SUCCESS ||
+      loader.recorder_bind_graphics_groups(instance, recorder, pipeline_layout, 0,
+                                           std::span{&bind_group, 1}, {}) != GRANIT_SUCCESS ||
+      loader.recorder_draw_vertices(instance, recorder, 3, 1, 0, 0) != GRANIT_SUCCESS ||
+      loader.recorder_end_rendering(instance, recorder) != GRANIT_SUCCESS ||
       loader.recorder_copy_texture_to_buffer(instance, recorder, target_texture, readback, 64, 64,
                                              256) != GRANIT_SUCCESS ||
       loader.finish_command_recorder(instance, recorder, &command_buffer) != GRANIT_SUCCESS ||

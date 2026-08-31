@@ -4,6 +4,7 @@
 #ifndef GRANIT_COMMAND_RECORDER_H_
 #define GRANIT_COMMAND_RECORDER_H_
 
+#include <stddef.h>
 #include <stdint.h>
 
 #include <granit/core/export.h>
@@ -102,7 +103,8 @@ typedef struct granit_bind_groups_desc {
   uint32_t dynamic_offset_count;
   const uint32_t* dynamic_offsets;
 } granit_bind_groups_desc;
-#define GRANIT_BIND_GROUPS_DESC_VERSION_1_SIZE UINT32_C(32)
+#define GRANIT_BIND_GROUPS_DESC_VERSION_1_SIZE                                                   \
+  ((uint32_t)(offsetof(granit_bind_groups_desc, dynamic_offsets) + sizeof(void*)))
 #define GRANIT_BIND_GROUPS_DESC_INIT                                                               \
   {GRANIT_BIND_GROUPS_DESC_VERSION_1_SIZE, UINT32_C(0), 0, UINT32_C(0), UINT32_C(0), 0}
 

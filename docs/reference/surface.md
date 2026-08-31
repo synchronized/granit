@@ -6,8 +6,9 @@
 ## 定位
 
 Surface 表示 Renderer 与原生窗口系统之间的输出连接。公开接口只接收平台窗口句柄并返回
-Granit 64 位整数句柄，不暴露 Vulkan 类型。Win32、Linux XCB 与 Wayland 后端已经实现；实际
-可用性取决于构建时平台开发包和运行时 Vulkan 扩展支持。
+Granit 64 位整数句柄，不暴露 Vulkan 或 WebGPU 类型。Vulkan 与桌面 Dawn WebGPU 均通过相同的
+Win32、Linux XCB 和 Wayland 公共入口创建 Surface；实际可用性取决于所选后端、平台开发包、
+运行时扩展及 Provider 能力。
 
 Canvas Surface 是 WebGPU 浏览器后端的公共输出入口。它与原生窗口 Surface 共用同一类句柄，
 但 Vulkan Renderer 不支持创建 Canvas Surface，并返回 `GRANIT_ERROR_UNSUPPORTED`。
@@ -53,8 +54,8 @@ const auto result = surface.initialize_win32(
 `granit::surface` 是无异常、move-only RAII 类型，内部同时保存所属 Renderer 句柄，析构时调用
 C API。它不拥有原生窗口。
 
-C++ 创建 Renderer 时使用 `renderer_desc::surface_types = granit::surface_type::win32`。未来同时
-启用多个窗口系统时可通过按位或组合 `surface_type`。
+C++ 创建 Renderer 时使用 `renderer_desc::surface_types = granit::surface_type::win32`。同时启用
+多个窗口系统时可通过按位或组合 `surface_type`。
 
 ## Linux 公共边界
 

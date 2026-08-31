@@ -14,6 +14,38 @@ void* allocate(std::uint64_t size, std::uint64_t alignment, void*) {
                         std::align_val_t{static_cast<std::size_t>(alignment)}, std::nothrow);
 }
 
+void deallocate(void* memory, std::uint64_t size, std::uint64_t alignment, void* user_data);
+void diagnose(granit_diagnostic_severity severity, granit_diagnostic_category category,
+              const char* message, std::uint32_t message_length, void* user_data);
+
+TEST_CASE("WebGPU 呈现适配器转发桌面原生窗口参数", "[backend][webgpu][presentation]") {
+  granit::detail::backend_plugin_loader loader;
+  REQUIRE(loader.open(GRANIT_FAKE_BACKEND_PLUGIN_PATH, GRANIT_BACKEND_PLUGIN_KIND_WEBGPU) ==
+          GRANIT_SUCCESS);
+  granit_backend_plugin_host_api host{sizeof(host), 0,          diagnose, nullptr,
+                                      allocate,     deallocate, nullptr};
+  granit_backend_plugin_instance instance{};
+  REQUIRE(loader.create_instance(&host, &instance) == GRANIT_SUCCESS);
+  REQUIRE(loader.process_events(instance) == GRANIT_SUCCESS);
+
+  granit::detail::webgpu_presentation_adapter adapter{loader, instance};
+  const auto native_a = reinterpret_cast<void*>(std::uintptr_t{1});
+  const auto native_b = reinterpret_cast<void*>(std::uintptr_t{2});
+  {
+    auto surface = adapter.allocate_surface();
+    REQUIRE(adapter.create_win32_surface(*surface, native_a, native_b) == GRANIT_SUCCESS);
+  }
+  {
+    auto surface = adapter.allocate_surface();
+    REQUIRE(adapter.create_xcb_surface(*surface, native_a, 42) == GRANIT_SUCCESS);
+  }
+  {
+    auto surface = adapter.allocate_surface();
+    REQUIRE(adapter.create_wayland_surface(*surface, native_a, native_b) == GRANIT_SUCCESS);
+  }
+  CHECK(loader.destroy_instance(instance) == GRANIT_SUCCESS);
+}
+
 void deallocate(void* memory, std::uint64_t, std::uint64_t alignment, void*) {
   ::operator delete(memory, std::align_val_t{static_cast<std::size_t>(alignment)});
 }

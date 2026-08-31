@@ -3,7 +3,9 @@
 
 #include "backend/webgpu/pipeline_adapter.h"
 
+#include <limits>
 #include <utility>
+#include <vector>
 
 namespace granit::detail {
 
@@ -40,6 +42,18 @@ public:
   granit_backend_plugin_render_pipeline handle_{};
 };
 
+class webgpu_compute_pipeline_resource final : public backend_compute_pipeline_resource {
+public:
+  explicit webgpu_compute_pipeline_resource(std::shared_ptr<webgpu_pipeline_context> context)
+      : context_(std::move(context)) {}
+  ~webgpu_compute_pipeline_resource() override {
+    if (handle_ != 0)
+      static_cast<void>(context_->loader->destroy_compute_pipeline(context_->instance, handle_));
+  }
+  std::shared_ptr<webgpu_pipeline_context> context_;
+  granit_backend_plugin_compute_pipeline handle_{};
+};
+
 webgpu_pipeline_layout_resource* as_layout(backend_pipeline_layout_resource& resource) {
   return dynamic_cast<webgpu_pipeline_layout_resource*>(&resource);
 }
@@ -54,6 +68,8 @@ std::uint32_t to_plugin_format(granit_texture_format format) noexcept {
     return GRANIT_BACKEND_PLUGIN_TEXTURE_FORMAT_RGBA8_UNORM;
   case GRANIT_TEXTURE_FORMAT_BGRA8_UNORM:
     return GRANIT_BACKEND_PLUGIN_TEXTURE_FORMAT_BGRA8_UNORM;
+  case GRANIT_TEXTURE_FORMAT_D32_FLOAT:
+    return GRANIT_BACKEND_PLUGIN_TEXTURE_FORMAT_D32_FLOAT;
   default:
     return 0;
   }
@@ -76,16 +92,21 @@ webgpu_pipeline_adapter::allocate_graphics_pipeline() const {
   return std::make_unique<webgpu_graphics_pipeline_resource>(context_);
 }
 
+std::unique_ptr<backend_compute_pipeline_resource>
+webgpu_pipeline_adapter::allocate_compute_pipeline() const {
+  return std::make_unique<webgpu_compute_pipeline_resource>(context_);
+}
+
 granit_result webgpu_pipeline_adapter::validate_graphics_pipeline(
     const granit_graphics_pipeline_desc& desc) const noexcept {
   if (desc.color_format_count != 1 ||
       (desc.color_formats[0] != GRANIT_TEXTURE_FORMAT_RGBA8_UNORM &&
        desc.color_formats[0] != GRANIT_TEXTURE_FORMAT_BGRA8_UNORM) ||
-      desc.depth_stencil_format != GRANIT_TEXTURE_FORMAT_UNDEFINED || desc.sample_count != 1 ||
-      (desc.struct_size >= GRANIT_GRAPHICS_PIPELINE_DESC_VERSION_2_SIZE &&
-       desc.vertex_buffer_layout_count != 0) ||
+      (desc.depth_stencil_format != GRANIT_TEXTURE_FORMAT_UNDEFINED &&
+       desc.depth_stencil_format != GRANIT_TEXTURE_FORMAT_D32_FLOAT) ||
+      desc.sample_count != 1 ||
       (desc.struct_size >= GRANIT_GRAPHICS_PIPELINE_DESC_VERSION_4_SIZE &&
-       (desc.depth != nullptr || desc.color_blend_count != 0)) ||
+       desc.color_blend_count != 0) ||
       (desc.struct_size >= GRANIT_GRAPHICS_PIPELINE_DESC_VERSION_5_SIZE && desc.depth_bias)) {
     return GRANIT_ERROR_UNSUPPORTED;
   }
@@ -93,18 +114,45 @@ granit_result webgpu_pipeline_adapter::validate_graphics_pipeline(
 }
 
 granit_result webgpu_pipeline_adapter::create_pipeline_layout(
+    std::span<const granit_backend_plugin_bind_group_layout> layouts,
     backend_pipeline_layout_resource& resource) const noexcept {
   auto* layout = as_layout(resource);
   if (layout == nullptr || layout->handle_ != 0) {
     return GRANIT_ERROR_INVALID_ARGUMENT;
   }
-  return context_->loader->create_pipeline_layout(context_->instance, 0, &layout->handle_);
+  const granit_backend_plugin_pipeline_layout_desc desc{
+      sizeof(granit_backend_plugin_pipeline_layout_desc),
+      static_cast<std::uint32_t>(layouts.size()), layouts.data(), 0};
+  return context_->loader->create_pipeline_layout(context_->instance, &desc, &layout->handle_);
+}
+
+granit_backend_plugin_pipeline_layout webgpu_pipeline_adapter::native_pipeline_layout(
+    backend_pipeline_layout_resource& resource) const noexcept {
+  const auto* layout = as_layout(resource);
+  return layout == nullptr ? 0 : layout->handle_;
+}
+
+granit_result webgpu_pipeline_adapter::create_compute_pipeline(
+    backend_compute_pipeline_resource& resource, granit_backend_plugin_pipeline_layout layout,
+    granit_backend_plugin_shader shader) const noexcept {
+  auto* pipeline = dynamic_cast<webgpu_compute_pipeline_resource*>(&resource);
+  if (pipeline == nullptr || pipeline->handle_ != 0 || layout == 0 || shader == 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  const granit_backend_plugin_compute_pipeline_desc desc{sizeof(desc), 0, layout, shader};
+  return context_->loader->create_compute_pipeline(context_->instance, &desc, &pipeline->handle_);
+}
+
+granit_backend_plugin_compute_pipeline webgpu_pipeline_adapter::native_compute_pipeline(
+    backend_compute_pipeline_resource& resource) const noexcept {
+  const auto* pipeline = dynamic_cast<webgpu_compute_pipeline_resource*>(&resource);
+  return pipeline == nullptr ? 0 : pipeline->handle_;
 }
 
 granit_result webgpu_pipeline_adapter::create_graphics_pipeline(
     backend_graphics_pipeline_resource& resource, backend_pipeline_layout_resource& layout_resource,
     granit_backend_plugin_shader vertex_shader, granit_backend_plugin_shader fragment_shader,
-    granit_texture_format color_format) const noexcept {
+    std::span<const granit_vertex_buffer_layout> vertex_buffers, granit_texture_format color_format,
+    granit_texture_format depth_stencil_format, const granit_depth_state& depth) const noexcept {
   auto* pipeline = as_pipeline(resource);
   auto* layout = as_layout(layout_resource);
   const auto plugin_format = to_plugin_format(color_format);
@@ -112,9 +160,47 @@ granit_result webgpu_pipeline_adapter::create_graphics_pipeline(
       vertex_shader == 0 || fragment_shader == 0 || plugin_format == 0) {
     return GRANIT_ERROR_INVALID_ARGUMENT;
   }
-  const granit_backend_plugin_render_pipeline_desc desc{
-      sizeof(desc), 0, layout->handle_, vertex_shader, fragment_shader, plugin_format, 0};
-  return context_->loader->create_render_pipeline(context_->instance, &desc, &pipeline->handle_);
+  try {
+    std::vector<granit_backend_plugin_vertex_buffer_layout> layouts;
+    std::vector<granit_backend_plugin_vertex_attribute> attributes;
+    layouts.reserve(vertex_buffers.size());
+    std::size_t attribute_count = 0;
+    for (const auto& source : vertex_buffers) {
+      if (source.attribute_count > std::numeric_limits<std::size_t>::max() - attribute_count)
+        return GRANIT_ERROR_INVALID_ARGUMENT;
+      attribute_count += source.attribute_count;
+    }
+    // 布局保存 attributes 中元素的地址，因此必须在写入任何布局前一次性完成容量分配。
+    attributes.reserve(attribute_count);
+    for (const auto& source : vertex_buffers) {
+      const auto first = attributes.size();
+      for (std::uint32_t index = 0; index < source.attribute_count; ++index) {
+        const auto& attribute = source.attributes[index];
+        attributes.push_back(
+            {attribute.location, attribute.format, attribute.offset, attribute.reserved});
+      }
+      layouts.push_back({source.stride, source.step_mode, source.attribute_count, source.reserved,
+                         attributes.data() + first});
+    }
+    const granit_backend_plugin_render_pipeline_desc desc{
+        sizeof(desc),
+        0,
+        layout->handle_,
+        vertex_shader,
+        fragment_shader,
+        plugin_format,
+        static_cast<std::uint32_t>(layouts.size()),
+        layouts.data(),
+        to_plugin_format(depth_stencil_format),
+        depth.test_enabled,
+        depth.write_enabled,
+        depth.compare};
+    return context_->loader->create_render_pipeline(context_->instance, &desc, &pipeline->handle_);
+  } catch (const std::bad_alloc&) {
+    return GRANIT_ERROR_OUT_OF_MEMORY;
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
 }
 
 granit_backend_plugin_render_pipeline webgpu_pipeline_adapter::native_handle(

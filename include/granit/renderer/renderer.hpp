@@ -8,6 +8,7 @@
 #include <cstdint>
 #include <limits>
 #include <span>
+#include <string>
 #include <string_view>
 #include <utility>
 
@@ -25,6 +26,12 @@ enum class surface_type : std::uint32_t {
   canvas = GRANIT_SURFACE_TYPE_CANVAS_BIT,
 };
 
+enum class renderer_backend : std::uint32_t {
+  automatic = GRANIT_RENDERER_BACKEND_AUTO,
+  vulkan = GRANIT_RENDERER_BACKEND_VULKAN,
+  webgpu = GRANIT_RENDERER_BACKEND_WEBGPU,
+};
+
 [[nodiscard]] constexpr surface_type operator|(surface_type left, surface_type right) noexcept {
   return static_cast<surface_type>(static_cast<std::uint32_t>(left) |
                                    static_cast<std::uint32_t>(right));
@@ -37,6 +44,15 @@ struct renderer_desc {
   std::uint32_t frames_in_flight{GRANIT_DEFAULT_FRAMES_IN_FLIGHT};
   diagnostic_callback diagnostics{};
   void* diagnostic_user_data{};
+  renderer_backend backend{renderer_backend::automatic};
+  std::string_view backend_library_path{};
+};
+
+struct renderer_info {
+  renderer_backend backend{renderer_backend::automatic};
+  std::string adapter_name;
+  std::uint32_t vendor_id{};
+  std::uint32_t device_id{};
 };
 
 struct renderer_limits {
@@ -98,7 +114,8 @@ public:
   }
 
   [[nodiscard]] result initialize(const renderer_desc& desc = {}) noexcept {
-    if (valid() || desc.application_name.size() > std::numeric_limits<std::uint32_t>::max()) {
+    if (valid() || desc.application_name.size() > std::numeric_limits<std::uint32_t>::max() ||
+        desc.backend_library_path.size() > std::numeric_limits<std::uint32_t>::max()) {
       return result::invalid_argument;
     }
 
@@ -113,8 +130,32 @@ public:
         .reserved = 0,
         .diagnostic_callback = desc.diagnostics,
         .diagnostic_user_data = desc.diagnostic_user_data,
+        .backend = static_cast<granit_renderer_backend>(desc.backend),
+        .backend_library_path_length = static_cast<std::uint32_t>(desc.backend_library_path.size()),
+        .backend_library_path =
+            desc.backend_library_path.empty() ? nullptr : desc.backend_library_path.data(),
     };
     return from_native(granit_renderer_create(&native_desc, &handle_));
+  }
+
+  [[nodiscard]] result get_info(renderer_info& info) const {
+    granit_renderer_info native = GRANIT_RENDERER_INFO_INIT;
+    auto query_result = from_native(granit_renderer_get_info(handle_, &native));
+    if (failed(query_result))
+      return query_result;
+    std::string adapter(native.adapter_name_length, '\0');
+    if (!adapter.empty()) {
+      native.adapter_name = adapter.data();
+      native.adapter_name_capacity = static_cast<std::uint32_t>(adapter.size() + 1);
+      query_result = from_native(granit_renderer_get_info(handle_, &native));
+      if (failed(query_result))
+        return query_result;
+    }
+    info = {.backend = static_cast<renderer_backend>(native.backend),
+            .adapter_name = std::move(adapter),
+            .vendor_id = native.vendor_id,
+            .device_id = native.device_id};
+    return result::success;
   }
 
   [[nodiscard]] result reset() noexcept {

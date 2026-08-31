@@ -7,8 +7,7 @@
 
 #include <catch2/catch_all.hpp>
 
-#include "snapshots/0.1.0/core_identity.h"
-#include "snapshots/0.1.0/optional_components_identity.h"
+#include "snapshots/0.4.0/export_identity.h"
 
 #if defined(_WIN32)
 #include <windows.h>
@@ -90,6 +89,7 @@ void check_exports(const char* component, const char* path, const char* snapshot
 
 TEST_CASE("共享库导出完整的公共 C ABI", "[abi][exports]") {
   INFO("ABI 快照: " << GRANIT_ABI_SNAPSHOT_COMPONENT << " " << GRANIT_ABI_SNAPSHOT_VERSION);
+  INFO("可选 component ABI 快照: " << GRANIT_ABI_OPTIONAL_SNAPSHOT_VERSION);
   check_exports("Core", GRANIT_ABI_CORE_LIBRARY_PATH, GRANIT_ABI_CORE_SYMBOLS_PATH);
   check_exports(GRANIT_ABI_SNAPSHOT_RENDER_PIPELINE_COMPONENT,
                 GRANIT_ABI_RENDER_PIPELINE_LIBRARY_PATH, GRANIT_ABI_RENDER_PIPELINE_SYMBOLS_PATH);

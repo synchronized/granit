@@ -29,12 +29,6 @@ granit_result renderer_registry::bind_graphics_pipeline(granit_renderer renderer
     pipeline_record = found->second;
   }
   std::lock_guard command_lock{command->mutex};
-  if (command->platform_managed_rendering) {
-    if (command->web_status != command_recorder_record::web_state::rendering)
-      return GRANIT_ERROR_INVALID_ARGUMENT;
-    command->web_pipeline = pipeline_record;
-    return GRANIT_SUCCESS;
-  }
   if (!command->commands->command_recorder_is_recording(*command->native))
     return GRANIT_ERROR_INVALID_ARGUMENT;
   const auto result =
@@ -294,17 +288,6 @@ granit_result renderer_registry::draw(granit_renderer renderer, granit_command_r
   if (!command)
     return GRANIT_ERROR_INVALID_HANDLE;
   std::lock_guard lock{command->mutex};
-  if (command->platform_managed_rendering) {
-    if (command->web_status != command_recorder_record::web_state::rendering ||
-        !command->web_target || !command->web_pipeline)
-      return GRANIT_ERROR_INVALID_ARGUMENT;
-    const auto result = command->graphics->draw(*command->native, command->web_target->native.get(),
-                                                command->web_pipeline->native.get(), vertex_count,
-                                                instance_count, first_vertex, first_instance);
-    if (result == GRANIT_SUCCESS)
-      command->web_drew = true;
-    return result;
-  }
   return command->graphics->draw(*command->native, nullptr, nullptr, vertex_count, instance_count,
                                  first_vertex, first_instance);
 }
@@ -319,8 +302,9 @@ granit_result renderer_registry::draw_indexed(granit_renderer renderer,
   if (!command)
     return GRANIT_ERROR_INVALID_HANDLE;
   std::lock_guard lock{command->mutex};
-  return command->graphics->draw_indexed(*command->native, index_count, instance_count, first_index,
-                                         vertex_offset, first_instance);
+  return command->graphics->draw_indexed(*command->native, nullptr, nullptr, index_count,
+                                         instance_count, first_index, vertex_offset,
+                                         first_instance);
 }
 
 granit_result renderer_registry::begin_rendering(granit_renderer renderer,
@@ -329,25 +313,6 @@ granit_result renderer_registry::begin_rendering(granit_renderer renderer,
   auto command = acquire_command_recorder(renderer, recorder);
   if (!command)
     return GRANIT_ERROR_INVALID_HANDLE;
-  if (command->platform_managed_rendering) {
-    if (desc.color_attachment_count != 1 || desc.color_attachments == nullptr ||
-        desc.depth_stencil_attachment != nullptr)
-      return GRANIT_ERROR_UNSUPPORTED;
-    std::shared_ptr<texture_view_record> view;
-    {
-      std::lock_guard lock{mutex_};
-      const auto found = texture_views_.find(desc.color_attachments[0].view);
-      if (found == texture_views_.end() || found->second->owner != command->owner)
-        return GRANIT_ERROR_INVALID_HANDLE;
-      view = found->second;
-    }
-    std::lock_guard command_lock{command->mutex};
-    if (command->web_status != command_recorder_record::web_state::recording)
-      return GRANIT_ERROR_INVALID_ARGUMENT;
-    command->web_target = std::move(view);
-    command->web_status = command_recorder_record::web_state::rendering;
-    return GRANIT_SUCCESS;
-  }
   std::vector<std::shared_ptr<texture_view_record>> views;
   views.reserve(desc.color_attachment_count + (desc.depth_stencil_attachment ? 1U : 0U));
   {
@@ -449,12 +414,6 @@ granit_result renderer_registry::end_rendering(granit_renderer renderer,
   if (!command)
     return GRANIT_ERROR_INVALID_HANDLE;
   std::lock_guard lock{command->mutex};
-  if (command->platform_managed_rendering) {
-    if (command->web_status != command_recorder_record::web_state::rendering)
-      return GRANIT_ERROR_INVALID_ARGUMENT;
-    command->web_status = command_recorder_record::web_state::recording;
-    return GRANIT_SUCCESS;
-  }
   return command->graphics->end_rendering(*command->native);
 }
 

@@ -57,6 +57,21 @@ extern "C" granit_result granit_renderer_get_limits(granit_renderer renderer,
   }
 }
 
+extern "C" granit_result granit_renderer_get_info(granit_renderer renderer,
+                                                  granit_renderer_info* info) {
+  if (info == nullptr || info->struct_size < GRANIT_RENDERER_INFO_VERSION_1_SIZE ||
+      info->reserved[0] != 0 || info->reserved[1] != 0) {
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  }
+  if (renderer == GRANIT_NULL_HANDLE)
+    return GRANIT_ERROR_INVALID_HANDLE;
+  try {
+    return granit::detail::renderer_registry::instance().get_info(renderer, *info);
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
 extern "C" granit_result granit_renderer_get_resource_stats(granit_renderer renderer,
                                                             granit_renderer_resource_stats* stats) {
   if (stats == nullptr || stats->struct_size < GRANIT_RENDERER_RESOURCE_STATS_VERSION_1_SIZE ||

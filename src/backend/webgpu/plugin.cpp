@@ -7,6 +7,7 @@
 
 #include <algorithm>
 #include <atomic>
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
@@ -15,6 +16,7 @@
 #include <new>
 #include <string>
 #include <unordered_map>
+#include <vector>
 
 #include <webgpu/webgpu.h>
 
@@ -26,6 +28,21 @@
 
 namespace {
 
+constexpr std::uint32_t provider_surface_types =
+#if defined(GRANIT_WEBGPU_NATIVE_SURFACE_TEST)
+    GRANIT_BACKEND_PLUGIN_SURFACE_TYPE_WIN32_BIT | GRANIT_BACKEND_PLUGIN_SURFACE_TYPE_XCB_BIT |
+    GRANIT_BACKEND_PLUGIN_SURFACE_TYPE_WAYLAND_BIT |
+#elif defined(_WIN32) && !defined(__EMSCRIPTEN__)
+    GRANIT_BACKEND_PLUGIN_SURFACE_TYPE_WIN32_BIT |
+#elif defined(__linux__) && !defined(__EMSCRIPTEN__)
+    GRANIT_BACKEND_PLUGIN_SURFACE_TYPE_XCB_BIT | GRANIT_BACKEND_PLUGIN_SURFACE_TYPE_WAYLAND_BIT |
+#endif
+#if defined(__EMSCRIPTEN__) || defined(GRANIT_WEBGPU_CANVAS_SURFACE_TEST)
+    GRANIT_BACKEND_PLUGIN_SURFACE_TYPE_CANVAS_BIT;
+#else
+    UINT32_C(0);
+#endif
+
 struct webgpu_instance {
   struct buffer_record {
     WGPUBuffer buffer;
@@ -36,6 +53,8 @@ struct webgpu_instance {
     WGPUTexture texture;
     std::uint32_t width;
     std::uint32_t height;
+    granit_backend_plugin_texture_format format;
+    std::uint32_t mip_level_count;
     granit_backend_plugin_texture_usage usage;
     bool borrowed;
   };
@@ -47,12 +66,18 @@ struct webgpu_instance {
   struct bind_group_record {
     WGPUBindGroup bind_group;
     granit_backend_plugin_bind_group_layout layout;
-    granit_backend_plugin_texture_view texture_view;
-    granit_backend_plugin_sampler sampler;
+    std::vector<granit_backend_plugin_buffer> buffers;
+    std::vector<granit_backend_plugin_texture_view> texture_views;
+    std::vector<granit_backend_plugin_sampler> samplers;
+    std::vector<granit_backend_plugin_bind_group_entry> entries;
+  };
+  struct bind_group_layout_record {
+    WGPUBindGroupLayout bind_group_layout;
+    std::vector<granit_backend_plugin_bind_group_layout_entry> entries;
   };
   struct pipeline_layout_record {
     WGPUPipelineLayout pipeline_layout;
-    granit_backend_plugin_bind_group_layout bind_group_layout;
+    std::vector<granit_backend_plugin_bind_group_layout> bind_group_layouts;
   };
   struct shader_record {
     WGPUShaderModule shader;
@@ -65,9 +90,20 @@ struct webgpu_instance {
     granit_backend_plugin_shader vertex_shader;
     granit_backend_plugin_shader fragment_shader;
   };
+  struct compute_pipeline_record {
+    WGPUComputePipeline compute_pipeline;
+    granit_backend_plugin_pipeline_layout pipeline_layout;
+    granit_backend_plugin_shader shader;
+  };
   struct command_recorder_record {
     WGPUCommandEncoder encoder;
+    WGPURenderPassEncoder pass;
+    WGPUComputePassEncoder compute_pass;
     bool finished;
+    bool pipeline_bound;
+    bool compute_pipeline_bound;
+    std::uint64_t index_available;
+    std::uint32_t index_element_size;
   };
   struct surface_record {
     void* surface;
@@ -99,7 +135,7 @@ struct webgpu_instance {
   std::unordered_map<granit_backend_plugin_texture, texture_record> textures;
   std::unordered_map<granit_backend_plugin_texture_view, texture_view_record> texture_views;
   std::unordered_map<granit_backend_plugin_sampler, WGPUSampler> samplers;
-  std::unordered_map<granit_backend_plugin_bind_group_layout, WGPUBindGroupLayout>
+  std::unordered_map<granit_backend_plugin_bind_group_layout, bind_group_layout_record>
       bind_group_layouts;
   std::unordered_map<granit_backend_plugin_bind_group, bind_group_record> bind_groups;
   std::unordered_map<granit_backend_plugin_shader, shader_record> shaders;
@@ -107,6 +143,8 @@ struct webgpu_instance {
       pipeline_layouts;
   std::unordered_map<granit_backend_plugin_render_pipeline, render_pipeline_record>
       render_pipelines;
+  std::unordered_map<granit_backend_plugin_compute_pipeline, compute_pipeline_record>
+      compute_pipelines;
   std::unordered_map<granit_backend_plugin_command_recorder, command_recorder_record>
       command_recorders;
   std::unordered_map<granit_backend_plugin_command_buffer, WGPUCommandBuffer> command_buffers;
@@ -154,12 +192,11 @@ std::atomic_uint64_t next_bind_group{1};
 std::atomic_uint64_t next_shader{1};
 std::atomic_uint64_t next_pipeline_layout{1};
 std::atomic_uint64_t next_render_pipeline{1};
+std::atomic_uint64_t next_compute_pipeline{1};
 std::atomic_uint64_t next_command_recorder{1};
 std::atomic_uint64_t next_command_buffer{1};
 std::atomic_uint64_t next_swapchain{1};
-#if defined(__EMSCRIPTEN__) || defined(GRANIT_WEBGPU_CANVAS_SURFACE_TEST)
 std::atomic_uint64_t next_surface{1};
-#endif
 #if defined(GRANIT_WEBGPU_DEFER_INITIALIZATION_TEST)
 #endif
 
@@ -224,6 +261,10 @@ void release_resources(webgpu_instance& state) noexcept {
   state.command_buffers.clear();
   for (const auto& [handle, recorder] : state.command_recorders) {
     static_cast<void>(handle);
+    if (recorder.pass != nullptr)
+      wgpuRenderPassEncoderRelease(recorder.pass);
+    if (recorder.compute_pass != nullptr)
+      wgpuComputePassEncoderRelease(recorder.compute_pass);
     wgpuCommandEncoderRelease(recorder.encoder);
   }
   state.command_recorders.clear();
@@ -232,6 +273,11 @@ void release_resources(webgpu_instance& state) noexcept {
     wgpuRenderPipelineRelease(pipeline.render_pipeline);
   }
   state.render_pipelines.clear();
+  for (const auto& [handle, pipeline] : state.compute_pipelines) {
+    static_cast<void>(handle);
+    wgpuComputePipelineRelease(pipeline.compute_pipeline);
+  }
+  state.compute_pipelines.clear();
   for (const auto& [handle, shader] : state.shaders) {
     static_cast<void>(handle);
     wgpuShaderModuleRelease(shader.shader);
@@ -249,7 +295,7 @@ void release_resources(webgpu_instance& state) noexcept {
   state.bind_groups.clear();
   for (const auto& [handle, layout] : state.bind_group_layouts) {
     static_cast<void>(handle);
-    wgpuBindGroupLayoutRelease(layout);
+    wgpuBindGroupLayoutRelease(layout.bind_group_layout);
   }
   state.bind_group_layouts.clear();
   for (const auto& [handle, view] : state.texture_views) {
@@ -377,6 +423,8 @@ void receive_device_async(WGPURequestDeviceStatus status, WGPUDevice device, WGP
         limits.maxTextureDimension2D,
         limits.maxBindGroups,
         limits.maxColorAttachments,
+        provider_surface_types,
+        0,
     };
     state.lifecycle.mark_ready();
     constexpr char diagnostic[] = "Emscripten WebGPU adapter and device are ready";
@@ -602,6 +650,8 @@ granit_result create_backend(const granit_backend_plugin_host_api* host,
       device_limits.maxTextureDimension2D,
       device_limits.maxBindGroups,
       device_limits.maxColorAttachments,
+      provider_surface_types,
+      0,
   };
 #if defined(GRANIT_WEBGPU_DEFER_INITIALIZATION_TEST)
   const auto extended_host = host->struct_size > sizeof(granit_backend_plugin_host_api);
@@ -737,7 +787,11 @@ granit_result create_buffer(granit_backend_plugin_instance instance,
       offsetof(granit_backend_plugin_buffer_desc, reserved_flags) + sizeof(std::uint32_t);
   constexpr auto known_usage = GRANIT_BACKEND_PLUGIN_BUFFER_USAGE_MAP_READ_BIT |
                                GRANIT_BACKEND_PLUGIN_BUFFER_USAGE_COPY_SRC_BIT |
-                               GRANIT_BACKEND_PLUGIN_BUFFER_USAGE_COPY_DST_BIT;
+                               GRANIT_BACKEND_PLUGIN_BUFFER_USAGE_COPY_DST_BIT |
+                               GRANIT_BACKEND_PLUGIN_BUFFER_USAGE_VERTEX_BIT |
+                               GRANIT_BACKEND_PLUGIN_BUFFER_USAGE_INDEX_BIT |
+                               GRANIT_BACKEND_PLUGIN_BUFFER_USAGE_UNIFORM_BIT |
+                               GRANIT_BACKEND_PLUGIN_BUFFER_USAGE_STORAGE_BIT;
   if (out_buffer != nullptr) {
     *out_buffer = 0;
   }
@@ -768,6 +822,14 @@ granit_result create_buffer(granit_backend_plugin_instance instance,
     usage |= WGPUBufferUsage_CopySrc;
   if ((desc->usage & GRANIT_BACKEND_PLUGIN_BUFFER_USAGE_COPY_DST_BIT) != 0)
     usage |= WGPUBufferUsage_CopyDst;
+  if ((desc->usage & GRANIT_BACKEND_PLUGIN_BUFFER_USAGE_VERTEX_BIT) != 0)
+    usage |= WGPUBufferUsage_Vertex;
+  if ((desc->usage & GRANIT_BACKEND_PLUGIN_BUFFER_USAGE_INDEX_BIT) != 0)
+    usage |= WGPUBufferUsage_Index;
+  if ((desc->usage & GRANIT_BACKEND_PLUGIN_BUFFER_USAGE_UNIFORM_BIT) != 0)
+    usage |= WGPUBufferUsage_Uniform;
+  if ((desc->usage & GRANIT_BACKEND_PLUGIN_BUFFER_USAGE_STORAGE_BIT) != 0)
+    usage |= WGPUBufferUsage_Storage;
   WGPUBufferDescriptor descriptor = WGPU_BUFFER_DESCRIPTOR_INIT;
   descriptor.usage = usage;
   descriptor.size = desc->size;
@@ -812,6 +874,12 @@ granit_result destroy_buffer(granit_backend_plugin_instance instance,
   if (buffer_found == found->second->buffers.end()) {
     return GRANIT_ERROR_INVALID_HANDLE;
   }
+  if (std::any_of(found->second->bind_groups.begin(), found->second->bind_groups.end(),
+                  [buffer](const auto& entry) {
+                    return std::find(entry.second.buffers.begin(), entry.second.buffers.end(),
+                                     buffer) != entry.second.buffers.end();
+                  }))
+    return GRANIT_ERROR_INVALID_ARGUMENT;
   wgpuBufferRelease(buffer_found->second.buffer);
   found->second->buffers.erase(buffer_found);
   return GRANIT_SUCCESS;
@@ -905,6 +973,62 @@ template <typename Handle> Handle next_handle(std::atomic_uint64_t& counter) noe
   return static_cast<Handle>(handle);
 }
 
+WGPUTextureFormat to_native_texture_format(granit_backend_plugin_texture_format format) noexcept {
+  switch (format) {
+  case GRANIT_BACKEND_PLUGIN_TEXTURE_FORMAT_R8_UNORM:
+    return WGPUTextureFormat_R8Unorm;
+  case GRANIT_BACKEND_PLUGIN_TEXTURE_FORMAT_RG8_UNORM:
+    return WGPUTextureFormat_RG8Unorm;
+  case GRANIT_BACKEND_PLUGIN_TEXTURE_FORMAT_RGBA8_UNORM:
+    return WGPUTextureFormat_RGBA8Unorm;
+  case GRANIT_BACKEND_PLUGIN_TEXTURE_FORMAT_RGBA8_SRGB:
+    return WGPUTextureFormat_RGBA8UnormSrgb;
+  case GRANIT_BACKEND_PLUGIN_TEXTURE_FORMAT_D32_FLOAT:
+    return WGPUTextureFormat_Depth32Float;
+  default:
+    return WGPUTextureFormat_Undefined;
+  }
+}
+
+WGPUCompareFunction
+to_native_compare_operation(granit_backend_plugin_compare_operation operation) noexcept {
+  switch (operation) {
+  case GRANIT_BACKEND_PLUGIN_COMPARE_OPERATION_NEVER:
+    return WGPUCompareFunction_Never;
+  case GRANIT_BACKEND_PLUGIN_COMPARE_OPERATION_LESS:
+    return WGPUCompareFunction_Less;
+  case GRANIT_BACKEND_PLUGIN_COMPARE_OPERATION_EQUAL:
+    return WGPUCompareFunction_Equal;
+  case GRANIT_BACKEND_PLUGIN_COMPARE_OPERATION_LESS_EQUAL:
+    return WGPUCompareFunction_LessEqual;
+  case GRANIT_BACKEND_PLUGIN_COMPARE_OPERATION_GREATER:
+    return WGPUCompareFunction_Greater;
+  case GRANIT_BACKEND_PLUGIN_COMPARE_OPERATION_NOT_EQUAL:
+    return WGPUCompareFunction_NotEqual;
+  case GRANIT_BACKEND_PLUGIN_COMPARE_OPERATION_GREATER_EQUAL:
+    return WGPUCompareFunction_GreaterEqual;
+  case GRANIT_BACKEND_PLUGIN_COMPARE_OPERATION_ALWAYS:
+    return WGPUCompareFunction_Always;
+  default:
+    return WGPUCompareFunction_Undefined;
+  }
+}
+
+std::uint32_t texture_bytes_per_pixel(granit_backend_plugin_texture_format format) noexcept {
+  switch (format) {
+  case GRANIT_BACKEND_PLUGIN_TEXTURE_FORMAT_R8_UNORM:
+    return 1;
+  case GRANIT_BACKEND_PLUGIN_TEXTURE_FORMAT_RG8_UNORM:
+    return 2;
+  case GRANIT_BACKEND_PLUGIN_TEXTURE_FORMAT_RGBA8_UNORM:
+  case GRANIT_BACKEND_PLUGIN_TEXTURE_FORMAT_RGBA8_SRGB:
+  case GRANIT_BACKEND_PLUGIN_TEXTURE_FORMAT_D32_FLOAT:
+    return 4;
+  default:
+    return 0;
+  }
+}
+
 granit_result create_texture(granit_backend_plugin_instance instance,
                              const granit_backend_plugin_texture_desc* desc,
                              granit_backend_plugin_texture* out_texture) noexcept {
@@ -918,6 +1042,8 @@ granit_result create_texture(granit_backend_plugin_instance instance,
   if (instance == 0 || desc == nullptr || out_texture == nullptr ||
       desc->struct_size < sizeof(granit_backend_plugin_texture_desc) || desc->reserved != 0 ||
       desc->reserved_flags != 0 || desc->width == 0 || desc->height == 0 || desc->usage == 0 ||
+      desc->mip_level_count == 0 ||
+      to_native_texture_format(desc->format) == WGPUTextureFormat_Undefined ||
       (desc->usage & ~known_usage) != 0) {
     return GRANIT_ERROR_INVALID_ARGUMENT;
   }
@@ -946,8 +1072,8 @@ granit_result create_texture(granit_backend_plugin_instance instance,
   descriptor.usage = usage;
   descriptor.dimension = WGPUTextureDimension_2D;
   descriptor.size = {desc->width, desc->height, 1};
-  descriptor.format = WGPUTextureFormat_RGBA8Unorm;
-  descriptor.mipLevelCount = 1;
+  descriptor.format = to_native_texture_format(desc->format);
+  descriptor.mipLevelCount = desc->mip_level_count;
   descriptor.sampleCount = 1;
   const auto native = wgpuDeviceCreateTexture(state.device, &descriptor);
   if (native == nullptr) {
@@ -957,6 +1083,7 @@ granit_result create_texture(granit_backend_plugin_instance instance,
   try {
     if (!state.textures
              .emplace(handle, webgpu_instance::texture_record{native, desc->width, desc->height,
+                                                              desc->format, desc->mip_level_count,
                                                               desc->usage, false})
              .second) {
       wgpuTextureRelease(native);
@@ -996,12 +1123,161 @@ granit_result destroy_texture(granit_backend_plugin_instance instance,
   return GRANIT_SUCCESS;
 }
 
+granit_result write_texture(granit_backend_plugin_instance instance,
+                            granit_backend_plugin_texture texture,
+                            const granit_backend_plugin_texture_write_desc* desc, const void* data,
+                            std::uint64_t size) noexcept {
+  if (instance == 0 || texture == 0 || desc == nullptr || data == nullptr || size == 0 ||
+      desc->struct_size < sizeof(granit_backend_plugin_texture_write_desc) ||
+      desc->reserved[0] != 0 || desc->reserved[1] != 0 || desc->width == 0 || desc->height == 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  const std::scoped_lock lock{instances_mutex};
+  const auto found = instances.find(instance);
+  if (found == instances.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  if (const auto ready = require_ready(*found->second); ready != GRANIT_SUCCESS)
+    return ready;
+  const auto texture_found = found->second->textures.find(texture);
+  if (texture_found == found->second->textures.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  const auto& record = texture_found->second;
+  if (record.borrowed || (record.usage & GRANIT_BACKEND_PLUGIN_TEXTURE_USAGE_COPY_DST_BIT) == 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  if (desc->mip_level >= record.mip_level_count)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  const auto mip_width = std::max(UINT32_C(1), record.width >> desc->mip_level);
+  const auto mip_height = std::max(UINT32_C(1), record.height >> desc->mip_level);
+  if (desc->x >= mip_width || desc->width > mip_width - desc->x || desc->y >= mip_height ||
+      desc->height > mip_height - desc->y)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  const std::uint64_t tight_row =
+      std::uint64_t{desc->width} * texture_bytes_per_pixel(record.format);
+  const std::uint64_t row_pitch = desc->bytes_per_row == 0 ? tight_row : desc->bytes_per_row;
+  const std::uint64_t rows = desc->rows_per_image == 0 ? desc->height : desc->rows_per_image;
+  if (row_pitch < tight_row || rows < desc->height ||
+      row_pitch > std::numeric_limits<std::uint32_t>::max())
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  const std::uint64_t required = (std::uint64_t{desc->height} - 1) * row_pitch + tight_row;
+  if (required > size || size > std::numeric_limits<std::size_t>::max())
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  WGPUTexelCopyTextureInfo destination = WGPU_TEXEL_COPY_TEXTURE_INFO_INIT;
+  destination.texture = record.texture;
+  destination.mipLevel = desc->mip_level;
+  destination.origin = {desc->x, desc->y, 0};
+  destination.aspect = WGPUTextureAspect_All;
+  WGPUTexelCopyBufferLayout layout{};
+  layout.offset = 0;
+  layout.bytesPerRow = static_cast<std::uint32_t>(row_pitch);
+  layout.rowsPerImage = static_cast<std::uint32_t>(rows);
+  const WGPUExtent3D extent{desc->width, desc->height, 1};
+  wgpuQueueWriteTexture(found->second->queue, &destination, data, static_cast<std::size_t>(size),
+                        &layout, &extent);
+  return GRANIT_SUCCESS;
+}
+
+granit_result write_upload_batch(granit_backend_plugin_instance instance,
+                                 const granit_backend_plugin_upload_operation* operations,
+                                 std::uint32_t operation_count) noexcept {
+  if (instance == 0 || operations == nullptr || operation_count == 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  const std::scoped_lock lock{instances_mutex};
+  const auto found = instances.find(instance);
+  if (found == instances.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  if (const auto ready = require_ready(*found->second); ready != GRANIT_SUCCESS)
+    return ready;
+  auto& state = *found->second;
+
+  for (std::uint32_t index = 0; index < operation_count; ++index) {
+    const auto& operation = operations[index];
+    if (operation.struct_size < sizeof(granit_backend_plugin_upload_operation) ||
+        operation.data == nullptr || operation.size == 0 || operation.reserved != 0 ||
+        operation.size > static_cast<std::uint64_t>(SIZE_MAX))
+      return GRANIT_ERROR_INVALID_ARGUMENT;
+    if (operation.type == GRANIT_BACKEND_PLUGIN_UPLOAD_TYPE_BUFFER) {
+      if (operation.buffer == 0 || operation.texture != 0 ||
+          operation.texture_write.struct_size != 0 || operation.destination_offset % 4 != 0 ||
+          operation.size % 4 != 0)
+        return GRANIT_ERROR_INVALID_ARGUMENT;
+      const auto buffer = state.buffers.find(operation.buffer);
+      if (buffer == state.buffers.end())
+        return GRANIT_ERROR_INVALID_HANDLE;
+      if ((buffer->second.usage & GRANIT_BACKEND_PLUGIN_BUFFER_USAGE_COPY_DST_BIT) == 0 ||
+          operation.destination_offset > buffer->second.size ||
+          operation.size > buffer->second.size - operation.destination_offset)
+        return GRANIT_ERROR_INVALID_ARGUMENT;
+      continue;
+    }
+    if (operation.type != GRANIT_BACKEND_PLUGIN_UPLOAD_TYPE_TEXTURE || operation.buffer != 0 ||
+        operation.texture == 0 || operation.destination_offset != 0)
+      return GRANIT_ERROR_INVALID_ARGUMENT;
+    const auto& desc = operation.texture_write;
+    if (desc.struct_size < sizeof(granit_backend_plugin_texture_write_desc) ||
+        desc.reserved[0] != 0 || desc.reserved[1] != 0 || desc.width == 0 || desc.height == 0)
+      return GRANIT_ERROR_INVALID_ARGUMENT;
+    const auto texture = state.textures.find(operation.texture);
+    if (texture == state.textures.end())
+      return GRANIT_ERROR_INVALID_HANDLE;
+    const auto& record = texture->second;
+    if (record.borrowed || (record.usage & GRANIT_BACKEND_PLUGIN_TEXTURE_USAGE_COPY_DST_BIT) == 0 ||
+        desc.mip_level >= record.mip_level_count)
+      return GRANIT_ERROR_INVALID_ARGUMENT;
+    const auto mip_width = std::max(UINT32_C(1), record.width >> desc.mip_level);
+    const auto mip_height = std::max(UINT32_C(1), record.height >> desc.mip_level);
+    if (desc.x >= mip_width || desc.width > mip_width - desc.x || desc.y >= mip_height ||
+        desc.height > mip_height - desc.y)
+      return GRANIT_ERROR_INVALID_ARGUMENT;
+    const std::uint64_t tight_row =
+        std::uint64_t{desc.width} * texture_bytes_per_pixel(record.format);
+    const std::uint64_t row_pitch = desc.bytes_per_row == 0 ? tight_row : desc.bytes_per_row;
+    const std::uint64_t rows = desc.rows_per_image == 0 ? desc.height : desc.rows_per_image;
+    if (row_pitch < tight_row || rows < desc.height ||
+        row_pitch > std::numeric_limits<std::uint32_t>::max())
+      return GRANIT_ERROR_INVALID_ARGUMENT;
+    const std::uint64_t required = (std::uint64_t{desc.height} - 1) * row_pitch + tight_row;
+    if (required > operation.size)
+      return GRANIT_ERROR_INVALID_ARGUMENT;
+  }
+
+  for (std::uint32_t index = 0; index < operation_count; ++index) {
+    const auto& operation = operations[index];
+    if (operation.type == GRANIT_BACKEND_PLUGIN_UPLOAD_TYPE_BUFFER) {
+      const auto& buffer = state.buffers.find(operation.buffer)->second;
+      wgpuQueueWriteBuffer(state.queue, buffer.buffer, operation.destination_offset, operation.data,
+                           static_cast<std::size_t>(operation.size));
+      continue;
+    }
+    const auto& desc = operation.texture_write;
+    const auto& texture = state.textures.find(operation.texture)->second;
+    const std::uint64_t tight_row =
+        std::uint64_t{desc.width} * texture_bytes_per_pixel(texture.format);
+    const auto row_pitch =
+        static_cast<std::uint32_t>(desc.bytes_per_row == 0 ? tight_row : desc.bytes_per_row);
+    const auto rows = desc.rows_per_image == 0 ? desc.height : desc.rows_per_image;
+    WGPUTexelCopyTextureInfo destination = WGPU_TEXEL_COPY_TEXTURE_INFO_INIT;
+    destination.texture = texture.texture;
+    destination.mipLevel = desc.mip_level;
+    destination.origin = {desc.x, desc.y, 0};
+    destination.aspect = WGPUTextureAspect_All;
+    WGPUTexelCopyBufferLayout layout{};
+    layout.bytesPerRow = row_pitch;
+    layout.rowsPerImage = rows;
+    const WGPUExtent3D extent{desc.width, desc.height, 1};
+    wgpuQueueWriteTexture(state.queue, &destination, operation.data,
+                          static_cast<std::size_t>(operation.size), &layout, &extent);
+  }
+  return GRANIT_SUCCESS;
+}
+
 granit_result create_texture_view(granit_backend_plugin_instance instance,
                                   granit_backend_plugin_texture texture,
+                                  const granit_backend_plugin_texture_view_desc* desc,
                                   granit_backend_plugin_texture_view* out_view) noexcept {
   if (out_view != nullptr)
     *out_view = 0;
-  if (instance == 0 || texture == 0 || out_view == nullptr)
+  if (instance == 0 || texture == 0 || desc == nullptr || out_view == nullptr ||
+      desc->struct_size < sizeof(granit_backend_plugin_texture_view_desc) ||
+      desc->reserved[0] != 0 || desc->reserved[1] != 0 || desc->mip_level_count == 0)
     return GRANIT_ERROR_INVALID_ARGUMENT;
   const std::scoped_lock lock{instances_mutex};
   const auto found = instances.find(instance);
@@ -1013,7 +1289,19 @@ granit_result create_texture_view(granit_backend_plugin_instance instance,
   const auto texture_found = state.textures.find(texture);
   if (texture_found == state.textures.end())
     return GRANIT_ERROR_INVALID_HANDLE;
-  const auto native = wgpuTextureCreateView(texture_found->second.texture, nullptr);
+  if (desc->format != texture_found->second.format ||
+      desc->base_mip_level >= texture_found->second.mip_level_count ||
+      desc->mip_level_count > texture_found->second.mip_level_count - desc->base_mip_level)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  WGPUTextureViewDescriptor descriptor = WGPU_TEXTURE_VIEW_DESCRIPTOR_INIT;
+  descriptor.format = to_native_texture_format(desc->format);
+  descriptor.dimension = WGPUTextureViewDimension_2D;
+  descriptor.baseMipLevel = desc->base_mip_level;
+  descriptor.mipLevelCount = desc->mip_level_count;
+  descriptor.baseArrayLayer = 0;
+  descriptor.arrayLayerCount = 1;
+  descriptor.aspect = WGPUTextureAspect_All;
+  const auto native = wgpuTextureCreateView(texture_found->second.texture, &descriptor);
   if (native == nullptr)
     return GRANIT_ERROR_OUT_OF_MEMORY;
   const auto handle = next_handle<granit_backend_plugin_texture_view>(next_texture_view);
@@ -1049,7 +1337,11 @@ granit_result destroy_texture_view(granit_backend_plugin_instance instance,
   if (view_found->second.borrowed)
     return GRANIT_ERROR_INVALID_ARGUMENT;
   if (std::any_of(found->second->bind_groups.begin(), found->second->bind_groups.end(),
-                  [view](const auto& entry) { return entry.second.texture_view == view; }))
+                  [view](const auto& entry) {
+                    return std::find(entry.second.texture_views.begin(),
+                                     entry.second.texture_views.end(),
+                                     view) != entry.second.texture_views.end();
+                  }))
     return GRANIT_ERROR_INVALID_ARGUMENT;
   wgpuTextureViewRelease(view_found->second.view);
   found->second->texture_views.erase(view_found);
@@ -1065,9 +1357,23 @@ granit_result create_sampler(granit_backend_plugin_instance instance,
     return filter == GRANIT_BACKEND_PLUGIN_FILTER_NEAREST ||
            filter == GRANIT_BACKEND_PLUGIN_FILTER_LINEAR;
   };
+  const auto valid_address_mode = [](granit_backend_plugin_address_mode mode) {
+    return mode >= GRANIT_BACKEND_PLUGIN_ADDRESS_MODE_REPEAT &&
+           mode <= GRANIT_BACKEND_PLUGIN_ADDRESS_MODE_CLAMP_TO_EDGE;
+  };
   if (instance == 0 || desc == nullptr || out_sampler == nullptr ||
       desc->struct_size < sizeof(granit_backend_plugin_sampler_desc) || desc->reserved != 0 ||
-      !valid_filter(desc->min_filter) || !valid_filter(desc->mag_filter)) {
+      desc->reserved_2[0] != 0 || desc->reserved_2[1] != 0 || !valid_filter(desc->min_filter) ||
+      !valid_filter(desc->mag_filter) || !valid_filter(desc->mipmap_filter) ||
+      !valid_address_mode(desc->address_mode_u) || !valid_address_mode(desc->address_mode_v) ||
+      !valid_address_mode(desc->address_mode_w) ||
+      desc->compare_operation > GRANIT_BACKEND_PLUGIN_COMPARE_OPERATION_ALWAYS ||
+      desc->max_anisotropy == 0 || desc->max_anisotropy > UINT16_MAX ||
+      (desc->max_anisotropy > 1 && (desc->min_filter != GRANIT_BACKEND_PLUGIN_FILTER_LINEAR ||
+                                    desc->mag_filter != GRANIT_BACKEND_PLUGIN_FILTER_LINEAR ||
+                                    desc->mipmap_filter != GRANIT_BACKEND_PLUGIN_FILTER_LINEAR)) ||
+      !std::isfinite(desc->min_lod) || !std::isfinite(desc->max_lod) || desc->min_lod < 0.0F ||
+      desc->max_lod < desc->min_lod) {
     return GRANIT_ERROR_INVALID_ARGUMENT;
   }
   const std::scoped_lock lock{instances_mutex};
@@ -1076,18 +1382,55 @@ granit_result create_sampler(granit_backend_plugin_instance instance,
     return GRANIT_ERROR_INVALID_HANDLE;
   if (const auto ready = require_ready(*found->second); ready != GRANIT_SUCCESS)
     return ready;
+  const auto to_address_mode = [](granit_backend_plugin_address_mode mode) {
+    switch (mode) {
+    case GRANIT_BACKEND_PLUGIN_ADDRESS_MODE_REPEAT:
+      return WGPUAddressMode_Repeat;
+    case GRANIT_BACKEND_PLUGIN_ADDRESS_MODE_MIRROR_REPEAT:
+      return WGPUAddressMode_MirrorRepeat;
+    default:
+      return WGPUAddressMode_ClampToEdge;
+    }
+  };
+  const auto to_compare = [](granit_backend_plugin_compare_operation operation) {
+    switch (operation) {
+    case GRANIT_BACKEND_PLUGIN_COMPARE_OPERATION_NEVER:
+      return WGPUCompareFunction_Never;
+    case GRANIT_BACKEND_PLUGIN_COMPARE_OPERATION_LESS:
+      return WGPUCompareFunction_Less;
+    case GRANIT_BACKEND_PLUGIN_COMPARE_OPERATION_EQUAL:
+      return WGPUCompareFunction_Equal;
+    case GRANIT_BACKEND_PLUGIN_COMPARE_OPERATION_LESS_EQUAL:
+      return WGPUCompareFunction_LessEqual;
+    case GRANIT_BACKEND_PLUGIN_COMPARE_OPERATION_GREATER:
+      return WGPUCompareFunction_Greater;
+    case GRANIT_BACKEND_PLUGIN_COMPARE_OPERATION_NOT_EQUAL:
+      return WGPUCompareFunction_NotEqual;
+    case GRANIT_BACKEND_PLUGIN_COMPARE_OPERATION_GREATER_EQUAL:
+      return WGPUCompareFunction_GreaterEqual;
+    case GRANIT_BACKEND_PLUGIN_COMPARE_OPERATION_ALWAYS:
+      return WGPUCompareFunction_Always;
+    default:
+      return WGPUCompareFunction_Undefined;
+    }
+  };
   WGPUSamplerDescriptor descriptor = WGPU_SAMPLER_DESCRIPTOR_INIT;
-  descriptor.addressModeU = WGPUAddressMode_ClampToEdge;
-  descriptor.addressModeV = WGPUAddressMode_ClampToEdge;
-  descriptor.addressModeW = WGPUAddressMode_ClampToEdge;
+  descriptor.addressModeU = to_address_mode(desc->address_mode_u);
+  descriptor.addressModeV = to_address_mode(desc->address_mode_v);
+  descriptor.addressModeW = to_address_mode(desc->address_mode_w);
   descriptor.minFilter = desc->min_filter == GRANIT_BACKEND_PLUGIN_FILTER_LINEAR
                              ? WGPUFilterMode_Linear
                              : WGPUFilterMode_Nearest;
   descriptor.magFilter = desc->mag_filter == GRANIT_BACKEND_PLUGIN_FILTER_LINEAR
                              ? WGPUFilterMode_Linear
                              : WGPUFilterMode_Nearest;
-  descriptor.mipmapFilter = WGPUMipmapFilterMode_Nearest;
-  descriptor.maxAnisotropy = 1;
+  descriptor.mipmapFilter = desc->mipmap_filter == GRANIT_BACKEND_PLUGIN_FILTER_LINEAR
+                                ? WGPUMipmapFilterMode_Linear
+                                : WGPUMipmapFilterMode_Nearest;
+  descriptor.lodMinClamp = desc->min_lod;
+  descriptor.lodMaxClamp = desc->max_lod;
+  descriptor.compare = to_compare(desc->compare_operation);
+  descriptor.maxAnisotropy = static_cast<std::uint16_t>(desc->max_anisotropy);
   const auto native = wgpuDeviceCreateSampler(found->second->device, &descriptor);
   if (native == nullptr)
     return GRANIT_ERROR_OUT_OF_MEMORY;
@@ -1120,7 +1463,10 @@ granit_result destroy_sampler(granit_backend_plugin_instance instance,
   if (sampler_found == found->second->samplers.end())
     return GRANIT_ERROR_INVALID_HANDLE;
   if (std::any_of(found->second->bind_groups.begin(), found->second->bind_groups.end(),
-                  [sampler](const auto& entry) { return entry.second.sampler == sampler; }))
+                  [sampler](const auto& entry) {
+                    return std::find(entry.second.samplers.begin(), entry.second.samplers.end(),
+                                     sampler) != entry.second.samplers.end();
+                  }))
     return GRANIT_ERROR_INVALID_ARGUMENT;
   wgpuSamplerRelease(sampler_found->second);
   found->second->samplers.erase(sampler_found);
@@ -1129,10 +1475,13 @@ granit_result destroy_sampler(granit_backend_plugin_instance instance,
 
 granit_result
 create_bind_group_layout(granit_backend_plugin_instance instance,
+                         const granit_backend_plugin_bind_group_layout_desc* desc,
                          granit_backend_plugin_bind_group_layout* out_layout) noexcept {
   if (out_layout != nullptr)
     *out_layout = 0;
-  if (instance == 0 || out_layout == nullptr)
+  if (instance == 0 || desc == nullptr || out_layout == nullptr ||
+      desc->struct_size < sizeof(granit_backend_plugin_bind_group_layout_desc) ||
+      desc->reserved != 0 || (desc->entry_count != 0 && desc->entries == nullptr))
     return GRANIT_ERROR_INVALID_ARGUMENT;
   const std::scoped_lock lock{instances_mutex};
   const auto found = instances.find(instance);
@@ -1140,37 +1489,74 @@ create_bind_group_layout(granit_backend_plugin_instance instance,
     return GRANIT_ERROR_INVALID_HANDLE;
   if (const auto ready = require_ready(*found->second); ready != GRANIT_SUCCESS)
     return ready;
-
-  WGPUBindGroupLayoutEntry entries[2]{WGPU_BIND_GROUP_LAYOUT_ENTRY_INIT,
-                                      WGPU_BIND_GROUP_LAYOUT_ENTRY_INIT};
-  entries[0].binding = 0;
-  entries[0].visibility = WGPUShaderStage_Fragment;
-  entries[0].texture.sampleType = WGPUTextureSampleType_Float;
-  entries[0].texture.viewDimension = WGPUTextureViewDimension_2D;
-  entries[1].binding = 1;
-  entries[1].visibility = WGPUShaderStage_Fragment;
-  entries[1].sampler.type = WGPUSamplerBindingType_Filtering;
-  WGPUBindGroupLayoutDescriptor descriptor = WGPU_BIND_GROUP_LAYOUT_DESCRIPTOR_INIT;
-  descriptor.entryCount = 2;
-  descriptor.entries = entries;
-  const auto native = wgpuDeviceCreateBindGroupLayout(found->second->device, &descriptor);
-  if (native == nullptr)
-    return GRANIT_ERROR_OUT_OF_MEMORY;
-  const auto handle = next_handle<granit_backend_plugin_bind_group_layout>(next_bind_group_layout);
   try {
-    if (!found->second->bind_group_layouts.emplace(handle, native).second) {
+    std::vector<WGPUBindGroupLayoutEntry> entries(desc->entry_count);
+    std::vector<granit_backend_plugin_bind_group_layout_entry> declarations;
+    if (desc->entry_count != 0)
+      declarations.assign(desc->entries, desc->entries + desc->entry_count);
+    for (std::uint32_t index = 0; index < desc->entry_count; ++index) {
+      const auto& source = desc->entries[index];
+      if (source.array_count != 1 || source.visibility == 0 ||
+          (source.visibility & ~UINT32_C(7)) != 0 ||
+          std::any_of(desc->entries, desc->entries + index,
+                      [&](const auto& previous) { return previous.binding == source.binding; }))
+        return GRANIT_ERROR_INVALID_ARGUMENT;
+      auto& entry = entries[index];
+      entry = WGPU_BIND_GROUP_LAYOUT_ENTRY_INIT;
+      entry.binding = source.binding;
+      entry.visibility = source.visibility;
+      switch (source.type) {
+      case GRANIT_BACKEND_PLUGIN_BINDING_TYPE_UNIFORM_BUFFER:
+        entry.buffer.type = WGPUBufferBindingType_Uniform;
+        break;
+      case GRANIT_BACKEND_PLUGIN_BINDING_TYPE_DYNAMIC_UNIFORM_BUFFER:
+        entry.buffer.type = WGPUBufferBindingType_Uniform;
+        entry.buffer.hasDynamicOffset = WGPU_TRUE;
+        break;
+      case GRANIT_BACKEND_PLUGIN_BINDING_TYPE_STORAGE_BUFFER:
+        entry.buffer.type = WGPUBufferBindingType_Storage;
+        break;
+      case GRANIT_BACKEND_PLUGIN_BINDING_TYPE_SAMPLED_TEXTURE:
+        entry.texture.sampleType = WGPUTextureSampleType_Float;
+        entry.texture.viewDimension = WGPUTextureViewDimension_2D;
+        break;
+      case GRANIT_BACKEND_PLUGIN_BINDING_TYPE_SAMPLER:
+        entry.sampler.type = WGPUSamplerBindingType_Filtering;
+        break;
+      default:
+        return GRANIT_ERROR_INVALID_ARGUMENT;
+      }
+    }
+    std::sort(declarations.begin(), declarations.end(),
+              [](const auto& left, const auto& right) { return left.binding < right.binding; });
+    WGPUBindGroupLayoutDescriptor descriptor = WGPU_BIND_GROUP_LAYOUT_DESCRIPTOR_INIT;
+    descriptor.entryCount = entries.size();
+    descriptor.entries = entries.data();
+    const auto native = wgpuDeviceCreateBindGroupLayout(found->second->device, &descriptor);
+    if (native == nullptr)
+      return GRANIT_ERROR_OUT_OF_MEMORY;
+    const auto handle =
+        next_handle<granit_backend_plugin_bind_group_layout>(next_bind_group_layout);
+    try {
+      webgpu_instance::bind_group_layout_record record{native, std::move(declarations)};
+      if (!found->second->bind_group_layouts.emplace(handle, std::move(record)).second) {
+        wgpuBindGroupLayoutRelease(native);
+        return GRANIT_ERROR_INTERNAL;
+      }
+    } catch (const std::bad_alloc&) {
+      wgpuBindGroupLayoutRelease(native);
+      return GRANIT_ERROR_OUT_OF_MEMORY;
+    } catch (...) {
       wgpuBindGroupLayoutRelease(native);
       return GRANIT_ERROR_INTERNAL;
     }
+    *out_layout = handle;
+    return GRANIT_SUCCESS;
   } catch (const std::bad_alloc&) {
-    wgpuBindGroupLayoutRelease(native);
     return GRANIT_ERROR_OUT_OF_MEMORY;
   } catch (...) {
-    wgpuBindGroupLayoutRelease(native);
     return GRANIT_ERROR_INTERNAL;
   }
-  *out_layout = handle;
-  return GRANIT_SUCCESS;
 }
 
 granit_result destroy_bind_group_layout(granit_backend_plugin_instance instance,
@@ -1188,12 +1574,15 @@ granit_result destroy_bind_group_layout(granit_backend_plugin_instance instance,
   const auto used_by_group =
       std::any_of(state.bind_groups.begin(), state.bind_groups.end(),
                   [layout](const auto& entry) { return entry.second.layout == layout; });
-  const auto used_by_pipeline =
-      std::any_of(state.pipeline_layouts.begin(), state.pipeline_layouts.end(),
-                  [layout](const auto& entry) { return entry.second.bind_group_layout == layout; });
+  const auto used_by_pipeline = std::any_of(
+      state.pipeline_layouts.begin(), state.pipeline_layouts.end(), [layout](const auto& entry) {
+        return std::find(entry.second.bind_group_layouts.begin(),
+                         entry.second.bind_group_layouts.end(),
+                         layout) != entry.second.bind_group_layouts.end();
+      });
   if (used_by_group || used_by_pipeline)
     return GRANIT_ERROR_INVALID_ARGUMENT;
-  wgpuBindGroupLayoutRelease(layout_found->second);
+  wgpuBindGroupLayoutRelease(layout_found->second.bind_group_layout);
   state.bind_group_layouts.erase(layout_found);
   return GRANIT_SUCCESS;
 }
@@ -1205,7 +1594,7 @@ granit_result create_bind_group(granit_backend_plugin_instance instance,
     *out_bind_group = 0;
   if (instance == 0 || desc == nullptr || out_bind_group == nullptr ||
       desc->struct_size < sizeof(granit_backend_plugin_bind_group_desc) || desc->reserved != 0 ||
-      desc->layout == 0 || desc->texture_view == 0 || desc->sampler == 0) {
+      desc->layout == 0 || (desc->entry_count != 0 && desc->entries == nullptr)) {
     return GRANIT_ERROR_INVALID_ARGUMENT;
   }
   const std::scoped_lock lock{instances_mutex};
@@ -1216,41 +1605,96 @@ granit_result create_bind_group(granit_backend_plugin_instance instance,
     return ready;
   auto& state = *found->second;
   const auto layout = state.bind_group_layouts.find(desc->layout);
-  const auto view = state.texture_views.find(desc->texture_view);
-  const auto sampler = state.samplers.find(desc->sampler);
-  if (layout == state.bind_group_layouts.end() || view == state.texture_views.end() ||
-      sampler == state.samplers.end()) {
+  if (layout == state.bind_group_layouts.end())
     return GRANIT_ERROR_INVALID_HANDLE;
-  }
-  WGPUBindGroupEntry entries[2]{WGPU_BIND_GROUP_ENTRY_INIT, WGPU_BIND_GROUP_ENTRY_INIT};
-  entries[0].binding = 0;
-  entries[0].textureView = view->second.view;
-  entries[1].binding = 1;
-  entries[1].sampler = sampler->second;
-  WGPUBindGroupDescriptor descriptor = WGPU_BIND_GROUP_DESCRIPTOR_INIT;
-  descriptor.layout = layout->second;
-  descriptor.entryCount = 2;
-  descriptor.entries = entries;
-  const auto native = wgpuDeviceCreateBindGroup(state.device, &descriptor);
-  if (native == nullptr)
-    return GRANIT_ERROR_OUT_OF_MEMORY;
-  const auto handle = next_handle<granit_backend_plugin_bind_group>(next_bind_group);
+  if (desc->entry_count != layout->second.entries.size())
+    return GRANIT_ERROR_INVALID_ARGUMENT;
   try {
-    const auto record =
-        webgpu_instance::bind_group_record{native, desc->layout, desc->texture_view, desc->sampler};
-    if (!state.bind_groups.emplace(handle, record).second) {
+    std::vector<WGPUBindGroupEntry> entries(desc->entry_count);
+    webgpu_instance::bind_group_record record{nullptr, desc->layout, {}, {}, {}, {}};
+    record.entries.assign(desc->entries, desc->entries + desc->entry_count);
+    for (std::uint32_t index = 0; index < desc->entry_count; ++index) {
+      const auto& source = desc->entries[index];
+      if (std::any_of(desc->entries, desc->entries + index,
+                      [&](const auto& previous) { return previous.binding == source.binding; }))
+        return GRANIT_ERROR_INVALID_ARGUMENT;
+      const auto declaration =
+          std::find_if(layout->second.entries.begin(), layout->second.entries.end(),
+                       [&](const auto& candidate) { return candidate.binding == source.binding; });
+      if (declaration == layout->second.entries.end() || declaration->type != source.type)
+        return GRANIT_ERROR_INVALID_ARGUMENT;
+      auto& entry = entries[index];
+      entry = WGPU_BIND_GROUP_ENTRY_INIT;
+      entry.binding = source.binding;
+      if (source.type == GRANIT_BACKEND_PLUGIN_BINDING_TYPE_UNIFORM_BUFFER ||
+          source.type == GRANIT_BACKEND_PLUGIN_BINDING_TYPE_DYNAMIC_UNIFORM_BUFFER ||
+          source.type == GRANIT_BACKEND_PLUGIN_BINDING_TYPE_STORAGE_BUFFER) {
+        const auto buffer = state.buffers.find(source.buffer);
+        if (buffer == state.buffers.end())
+          return GRANIT_ERROR_INVALID_HANDLE;
+        const auto required_usage = source.type == GRANIT_BACKEND_PLUGIN_BINDING_TYPE_STORAGE_BUFFER
+                                        ? GRANIT_BACKEND_PLUGIN_BUFFER_USAGE_STORAGE_BIT
+                                        : GRANIT_BACKEND_PLUGIN_BUFFER_USAGE_UNIFORM_BIT;
+        if (source.offset >= buffer->second.size || source.size == 0 ||
+            source.size > buffer->second.size - source.offset ||
+            (buffer->second.usage & required_usage) == 0)
+          return GRANIT_ERROR_INVALID_ARGUMENT;
+        entry.buffer = buffer->second.buffer;
+        entry.offset = source.offset;
+        entry.size = source.size;
+        record.buffers.push_back(source.buffer);
+      } else if (source.type == GRANIT_BACKEND_PLUGIN_BINDING_TYPE_SAMPLED_TEXTURE) {
+        const auto view = state.texture_views.find(source.texture_view);
+        if (view == state.texture_views.end())
+          return GRANIT_ERROR_INVALID_HANDLE;
+        const auto texture = state.textures.find(view->second.texture);
+        if (texture == state.textures.end() ||
+            (texture->second.usage & GRANIT_BACKEND_PLUGIN_TEXTURE_USAGE_SAMPLED_BIT) == 0)
+          return GRANIT_ERROR_INVALID_ARGUMENT;
+        entry.textureView = view->second.view;
+        record.texture_views.push_back(source.texture_view);
+      } else if (source.type == GRANIT_BACKEND_PLUGIN_BINDING_TYPE_SAMPLER) {
+        const auto sampler = state.samplers.find(source.sampler);
+        if (sampler == state.samplers.end())
+          return GRANIT_ERROR_INVALID_HANDLE;
+        entry.sampler = sampler->second;
+        record.samplers.push_back(source.sampler);
+      } else {
+        return GRANIT_ERROR_INVALID_ARGUMENT;
+      }
+    }
+    if (record.buffers.size() + record.texture_views.size() + record.samplers.size() !=
+        desc->entry_count) {
+      return GRANIT_ERROR_INVALID_HANDLE;
+    }
+    WGPUBindGroupDescriptor descriptor = WGPU_BIND_GROUP_DESCRIPTOR_INIT;
+    descriptor.layout = layout->second.bind_group_layout;
+    descriptor.entryCount = entries.size();
+    descriptor.entries = entries.data();
+    const auto native = wgpuDeviceCreateBindGroup(state.device, &descriptor);
+    if (native == nullptr)
+      return GRANIT_ERROR_OUT_OF_MEMORY;
+    const auto handle = next_handle<granit_backend_plugin_bind_group>(next_bind_group);
+    try {
+      record.bind_group = native;
+      if (!state.bind_groups.emplace(handle, std::move(record)).second) {
+        wgpuBindGroupRelease(native);
+        return GRANIT_ERROR_INTERNAL;
+      }
+    } catch (const std::bad_alloc&) {
+      wgpuBindGroupRelease(native);
+      return GRANIT_ERROR_OUT_OF_MEMORY;
+    } catch (...) {
       wgpuBindGroupRelease(native);
       return GRANIT_ERROR_INTERNAL;
     }
+    *out_bind_group = handle;
+    return GRANIT_SUCCESS;
   } catch (const std::bad_alloc&) {
-    wgpuBindGroupRelease(native);
     return GRANIT_ERROR_OUT_OF_MEMORY;
   } catch (...) {
-    wgpuBindGroupRelease(native);
     return GRANIT_ERROR_INTERNAL;
   }
-  *out_bind_group = handle;
-  return GRANIT_SUCCESS;
 }
 
 granit_result destroy_bind_group(granit_backend_plugin_instance instance,
@@ -1278,7 +1722,8 @@ granit_result create_shader(granit_backend_plugin_instance instance,
       desc->struct_size < sizeof(*desc) || desc->wgsl == nullptr || desc->wgsl_length == 0 ||
       desc->entry_point == nullptr || desc->entry_point_length == 0 ||
       (desc->stage != GRANIT_BACKEND_PLUGIN_SHADER_STAGE_VERTEX &&
-       desc->stage != GRANIT_BACKEND_PLUGIN_SHADER_STAGE_FRAGMENT))
+       desc->stage != GRANIT_BACKEND_PLUGIN_SHADER_STAGE_FRAGMENT &&
+       desc->stage != GRANIT_BACKEND_PLUGIN_SHADER_STAGE_COMPUTE))
     return GRANIT_ERROR_INVALID_ARGUMENT;
   const std::scoped_lock lock{instances_mutex};
   const auto found = instances.find(instance);
@@ -1330,7 +1775,9 @@ granit_result destroy_shader(granit_backend_plugin_instance instance,
                   [shader](const auto& entry) {
                     return entry.second.vertex_shader == shader ||
                            entry.second.fragment_shader == shader;
-                  }))
+                  }) ||
+      std::any_of(state.compute_pipelines.begin(), state.compute_pipelines.end(),
+                  [shader](const auto& entry) { return entry.second.shader == shader; }))
     return GRANIT_ERROR_INVALID_ARGUMENT;
   wgpuShaderModuleRelease(shader_found->second.shader);
   state.shaders.erase(shader_found);
@@ -1339,11 +1786,14 @@ granit_result destroy_shader(granit_backend_plugin_instance instance,
 
 granit_result
 create_pipeline_layout(granit_backend_plugin_instance instance,
-                       granit_backend_plugin_bind_group_layout bind_group_layout,
+                       const granit_backend_plugin_pipeline_layout_desc* desc,
                        granit_backend_plugin_pipeline_layout* out_pipeline_layout) noexcept {
   if (out_pipeline_layout != nullptr)
     *out_pipeline_layout = 0;
-  if (instance == 0 || out_pipeline_layout == nullptr)
+  if (instance == 0 || desc == nullptr || out_pipeline_layout == nullptr ||
+      desc->struct_size < sizeof(granit_backend_plugin_pipeline_layout_desc) ||
+      desc->reserved != 0 || desc->bind_group_layout_count > 8 ||
+      (desc->bind_group_layout_count != 0 && desc->bind_group_layouts == nullptr))
     return GRANIT_ERROR_INVALID_ARGUMENT;
   const std::scoped_lock lock{instances_mutex};
   const auto found = instances.find(instance);
@@ -1352,35 +1802,48 @@ create_pipeline_layout(granit_backend_plugin_instance instance,
   if (const auto ready = require_ready(*found->second); ready != GRANIT_SUCCESS)
     return ready;
   auto& state = *found->second;
-  WGPUPipelineLayoutDescriptor descriptor = WGPU_PIPELINE_LAYOUT_DESCRIPTOR_INIT;
-  WGPUBindGroupLayout native_layout{};
-  if (bind_group_layout != 0) {
-    const auto layout = state.bind_group_layouts.find(bind_group_layout);
-    if (layout == state.bind_group_layouts.end())
-      return GRANIT_ERROR_INVALID_HANDLE;
-    native_layout = layout->second;
-    descriptor.bindGroupLayoutCount = 1;
-    descriptor.bindGroupLayouts = &native_layout;
-  }
-  const auto native = wgpuDeviceCreatePipelineLayout(state.device, &descriptor);
-  if (native == nullptr)
-    return GRANIT_ERROR_OUT_OF_MEMORY;
-  const auto handle = next_handle<granit_backend_plugin_pipeline_layout>(next_pipeline_layout);
   try {
-    const auto record = webgpu_instance::pipeline_layout_record{native, bind_group_layout};
-    if (!state.pipeline_layouts.emplace(handle, record).second) {
+    std::vector<WGPUBindGroupLayout> native_layouts;
+    std::vector<granit_backend_plugin_bind_group_layout> dependencies;
+    native_layouts.reserve(desc->bind_group_layout_count);
+    dependencies.reserve(desc->bind_group_layout_count);
+    for (std::uint32_t index = 0; index < desc->bind_group_layout_count; ++index) {
+      const auto handle = desc->bind_group_layouts[index];
+      if (handle == 0)
+        return GRANIT_ERROR_INVALID_ARGUMENT;
+      const auto layout = state.bind_group_layouts.find(handle);
+      if (layout == state.bind_group_layouts.end())
+        return GRANIT_ERROR_INVALID_HANDLE;
+      native_layouts.push_back(layout->second.bind_group_layout);
+      dependencies.push_back(handle);
+    }
+    WGPUPipelineLayoutDescriptor descriptor = WGPU_PIPELINE_LAYOUT_DESCRIPTOR_INIT;
+    descriptor.bindGroupLayoutCount = native_layouts.size();
+    descriptor.bindGroupLayouts = native_layouts.empty() ? nullptr : native_layouts.data();
+    const auto native = wgpuDeviceCreatePipelineLayout(state.device, &descriptor);
+    if (native == nullptr)
+      return GRANIT_ERROR_OUT_OF_MEMORY;
+    const auto handle = next_handle<granit_backend_plugin_pipeline_layout>(next_pipeline_layout);
+    try {
+      webgpu_instance::pipeline_layout_record record{native, std::move(dependencies)};
+      if (!state.pipeline_layouts.emplace(handle, std::move(record)).second) {
+        wgpuPipelineLayoutRelease(native);
+        return GRANIT_ERROR_INTERNAL;
+      }
+    } catch (const std::bad_alloc&) {
+      wgpuPipelineLayoutRelease(native);
+      return GRANIT_ERROR_OUT_OF_MEMORY;
+    } catch (...) {
       wgpuPipelineLayoutRelease(native);
       return GRANIT_ERROR_INTERNAL;
     }
+    *out_pipeline_layout = handle;
+    return GRANIT_SUCCESS;
   } catch (const std::bad_alloc&) {
-    wgpuPipelineLayoutRelease(native);
     return GRANIT_ERROR_OUT_OF_MEMORY;
   } catch (...) {
-    wgpuPipelineLayoutRelease(native);
     return GRANIT_ERROR_INTERNAL;
   }
-  *out_pipeline_layout = handle;
-  return GRANIT_SUCCESS;
 }
 
 granit_result destroy_pipeline_layout(granit_backend_plugin_instance instance,
@@ -1396,11 +1859,64 @@ granit_result destroy_pipeline_layout(granit_backend_plugin_instance instance,
   if (layout_found == state.pipeline_layouts.end())
     return GRANIT_ERROR_INVALID_HANDLE;
   if (std::any_of(state.render_pipelines.begin(), state.render_pipelines.end(),
+                  [layout](const auto& entry) { return entry.second.pipeline_layout == layout; }) ||
+      std::any_of(state.compute_pipelines.begin(), state.compute_pipelines.end(),
                   [layout](const auto& entry) { return entry.second.pipeline_layout == layout; }))
     return GRANIT_ERROR_INVALID_ARGUMENT;
   wgpuPipelineLayoutRelease(layout_found->second.pipeline_layout);
   state.pipeline_layouts.erase(layout_found);
   return GRANIT_SUCCESS;
+}
+
+WGPUVertexFormat to_vertex_format(granit_backend_plugin_vertex_format format) noexcept {
+  switch (format) {
+  case GRANIT_BACKEND_PLUGIN_VERTEX_FORMAT_FLOAT32:
+    return WGPUVertexFormat_Float32;
+  case GRANIT_BACKEND_PLUGIN_VERTEX_FORMAT_FLOAT32X2:
+    return WGPUVertexFormat_Float32x2;
+  case GRANIT_BACKEND_PLUGIN_VERTEX_FORMAT_FLOAT32X3:
+    return WGPUVertexFormat_Float32x3;
+  case GRANIT_BACKEND_PLUGIN_VERTEX_FORMAT_FLOAT32X4:
+    return WGPUVertexFormat_Float32x4;
+  case GRANIT_BACKEND_PLUGIN_VERTEX_FORMAT_UINT32:
+    return WGPUVertexFormat_Uint32;
+  case GRANIT_BACKEND_PLUGIN_VERTEX_FORMAT_UINT32X2:
+    return WGPUVertexFormat_Uint32x2;
+  case GRANIT_BACKEND_PLUGIN_VERTEX_FORMAT_UINT32X3:
+    return WGPUVertexFormat_Uint32x3;
+  case GRANIT_BACKEND_PLUGIN_VERTEX_FORMAT_UINT32X4:
+    return WGPUVertexFormat_Uint32x4;
+  case GRANIT_BACKEND_PLUGIN_VERTEX_FORMAT_SINT32:
+    return WGPUVertexFormat_Sint32;
+  case GRANIT_BACKEND_PLUGIN_VERTEX_FORMAT_SINT32X2:
+    return WGPUVertexFormat_Sint32x2;
+  case GRANIT_BACKEND_PLUGIN_VERTEX_FORMAT_SINT32X3:
+    return WGPUVertexFormat_Sint32x3;
+  case GRANIT_BACKEND_PLUGIN_VERTEX_FORMAT_SINT32X4:
+    return WGPUVertexFormat_Sint32x4;
+  default:
+    return static_cast<WGPUVertexFormat>(0);
+  }
+}
+
+std::uint32_t vertex_format_size(granit_backend_plugin_vertex_format format) noexcept {
+  if (format == GRANIT_BACKEND_PLUGIN_VERTEX_FORMAT_FLOAT32 ||
+      format == GRANIT_BACKEND_PLUGIN_VERTEX_FORMAT_UINT32 ||
+      format == GRANIT_BACKEND_PLUGIN_VERTEX_FORMAT_SINT32)
+    return 4;
+  if (format == GRANIT_BACKEND_PLUGIN_VERTEX_FORMAT_FLOAT32X2 ||
+      format == GRANIT_BACKEND_PLUGIN_VERTEX_FORMAT_UINT32X2 ||
+      format == GRANIT_BACKEND_PLUGIN_VERTEX_FORMAT_SINT32X2)
+    return 8;
+  if (format == GRANIT_BACKEND_PLUGIN_VERTEX_FORMAT_FLOAT32X3 ||
+      format == GRANIT_BACKEND_PLUGIN_VERTEX_FORMAT_UINT32X3 ||
+      format == GRANIT_BACKEND_PLUGIN_VERTEX_FORMAT_SINT32X3)
+    return 12;
+  if (format == GRANIT_BACKEND_PLUGIN_VERTEX_FORMAT_FLOAT32X4 ||
+      format == GRANIT_BACKEND_PLUGIN_VERTEX_FORMAT_UINT32X4 ||
+      format == GRANIT_BACKEND_PLUGIN_VERTEX_FORMAT_SINT32X4)
+    return 16;
+  return 0;
 }
 
 granit_result
@@ -1411,9 +1927,17 @@ create_render_pipeline(granit_backend_plugin_instance instance,
     *out_render_pipeline = 0;
   if (instance == 0 || desc == nullptr || out_render_pipeline == nullptr ||
       desc->struct_size < sizeof(*desc) || desc->reserved != 0 || desc->layout == 0 ||
-      desc->vertex_shader == 0 || desc->fragment_shader == 0 || desc->reserved_2 != 0 ||
+      desc->vertex_shader == 0 || desc->fragment_shader == 0 ||
+      (desc->vertex_buffer_layout_count != 0 && desc->vertex_buffer_layouts == nullptr) ||
       (desc->color_format != GRANIT_BACKEND_PLUGIN_TEXTURE_FORMAT_RGBA8_UNORM &&
-       desc->color_format != GRANIT_BACKEND_PLUGIN_TEXTURE_FORMAT_BGRA8_UNORM))
+       desc->color_format != GRANIT_BACKEND_PLUGIN_TEXTURE_FORMAT_BGRA8_UNORM) ||
+      (desc->depth_stencil_format != 0 &&
+       desc->depth_stencil_format != GRANIT_BACKEND_PLUGIN_TEXTURE_FORMAT_D32_FLOAT) ||
+      desc->depth_test_enabled > 1 || desc->depth_write_enabled > 1 ||
+      (desc->depth_stencil_format == 0 &&
+       (desc->depth_test_enabled != 0 || desc->depth_write_enabled != 0)) ||
+      (desc->depth_test_enabled != 0 &&
+       to_native_compare_operation(desc->depth_compare) == WGPUCompareFunction_Undefined))
     return GRANIT_ERROR_INVALID_ARGUMENT;
   const std::scoped_lock lock{instances_mutex};
   const auto found = instances.find(instance);
@@ -1431,6 +1955,59 @@ create_render_pipeline(granit_backend_plugin_instance instance,
   if (vertex->second.stage != GRANIT_BACKEND_PLUGIN_SHADER_STAGE_VERTEX ||
       fragment_shader->second.stage != GRANIT_BACKEND_PLUGIN_SHADER_STAGE_FRAGMENT)
     return GRANIT_ERROR_INVALID_ARGUMENT;
+  std::vector<WGPUVertexBufferLayout> vertex_buffers;
+  std::vector<WGPUVertexAttribute> vertex_attributes;
+  try {
+    vertex_buffers.reserve(desc->vertex_buffer_layout_count);
+    std::size_t attribute_count = 0;
+    for (std::uint32_t binding = 0; binding < desc->vertex_buffer_layout_count; ++binding) {
+      const auto count = desc->vertex_buffer_layouts[binding].attribute_count;
+      if (count > std::numeric_limits<std::size_t>::max() - attribute_count)
+        return GRANIT_ERROR_INVALID_ARGUMENT;
+      attribute_count += count;
+    }
+    // WGPUVertexBufferLayout 保存属性数组指针，后续不得再触发 vector 重新分配。
+    vertex_attributes.reserve(attribute_count);
+    for (std::uint32_t binding = 0; binding < desc->vertex_buffer_layout_count; ++binding) {
+      const auto& source = desc->vertex_buffer_layouts[binding];
+      if (source.stride == 0 || source.reserved != 0 || source.attribute_count == 0 ||
+          source.attributes == nullptr ||
+          (source.step_mode != GRANIT_BACKEND_PLUGIN_VERTEX_STEP_MODE_VERTEX &&
+           source.step_mode != GRANIT_BACKEND_PLUGIN_VERTEX_STEP_MODE_INSTANCE))
+        return GRANIT_ERROR_INVALID_ARGUMENT;
+      const auto first = vertex_attributes.size();
+      for (std::uint32_t index = 0; index < source.attribute_count; ++index) {
+        const auto& attribute = source.attributes[index];
+        const auto format = to_vertex_format(attribute.format);
+        const auto size = vertex_format_size(attribute.format);
+        if (attribute.reserved != 0 || size == 0 || attribute.offset > source.stride ||
+            size > source.stride - attribute.offset)
+          return GRANIT_ERROR_INVALID_ARGUMENT;
+        if (std::any_of(vertex_attributes.begin(), vertex_attributes.end(),
+                        [&attribute](const auto& existing) {
+                          return existing.shaderLocation == attribute.location;
+                        }))
+          return GRANIT_ERROR_INVALID_ARGUMENT;
+        WGPUVertexAttribute native_attribute{};
+        native_attribute.format = format;
+        native_attribute.offset = attribute.offset;
+        native_attribute.shaderLocation = attribute.location;
+        vertex_attributes.push_back(native_attribute);
+      }
+      WGPUVertexBufferLayout native_layout{};
+      native_layout.arrayStride = source.stride;
+      native_layout.stepMode = source.step_mode == GRANIT_BACKEND_PLUGIN_VERTEX_STEP_MODE_VERTEX
+                                   ? WGPUVertexStepMode_Vertex
+                                   : WGPUVertexStepMode_Instance;
+      native_layout.attributeCount = source.attribute_count;
+      native_layout.attributes = vertex_attributes.data() + first;
+      vertex_buffers.push_back(native_layout);
+    }
+  } catch (const std::bad_alloc&) {
+    return GRANIT_ERROR_OUT_OF_MEMORY;
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
   WGPUColorTargetState target = WGPU_COLOR_TARGET_STATE_INIT;
   target.format = desc->color_format == GRANIT_BACKEND_PLUGIN_TEXTURE_FORMAT_RGBA8_UNORM
                       ? WGPUTextureFormat_RGBA8Unorm
@@ -1447,10 +2024,22 @@ create_render_pipeline(granit_backend_plugin_instance instance,
   descriptor.vertex.module = vertex->second.shader;
   descriptor.vertex.entryPoint = {vertex->second.entry_point.data(),
                                   vertex->second.entry_point.size()};
+  descriptor.vertex.bufferCount = vertex_buffers.size();
+  descriptor.vertex.buffers = vertex_buffers.data();
   descriptor.primitive.topology = WGPUPrimitiveTopology_TriangleList;
   descriptor.multisample.count = 1;
   descriptor.multisample.mask = UINT32_MAX;
   descriptor.fragment = &fragment;
+  WGPUDepthStencilState depth = WGPU_DEPTH_STENCIL_STATE_INIT;
+  if (desc->depth_stencil_format != 0) {
+    depth.format = WGPUTextureFormat_Depth32Float;
+    depth.depthWriteEnabled =
+        desc->depth_write_enabled != 0 ? WGPUOptionalBool_True : WGPUOptionalBool_False;
+    depth.depthCompare = desc->depth_test_enabled != 0
+                             ? to_native_compare_operation(desc->depth_compare)
+                             : WGPUCompareFunction_Always;
+    descriptor.depthStencil = &depth;
+  }
   const auto native = wgpuDeviceCreateRenderPipeline(state.device, &descriptor);
   if (native == nullptr)
     return GRANIT_ERROR_INITIALIZATION_FAILED;
@@ -1490,6 +2079,68 @@ granit_result destroy_render_pipeline(granit_backend_plugin_instance instance,
 }
 
 granit_result
+create_compute_pipeline(granit_backend_plugin_instance instance,
+                        const granit_backend_plugin_compute_pipeline_desc* desc,
+                        granit_backend_plugin_compute_pipeline* out_pipeline) noexcept {
+  if (out_pipeline != nullptr)
+    *out_pipeline = 0;
+  if (instance == 0 || desc == nullptr || out_pipeline == nullptr ||
+      desc->struct_size < sizeof(granit_backend_plugin_compute_pipeline_desc) ||
+      desc->reserved != 0 || desc->layout == 0 || desc->shader == 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  const std::scoped_lock lock{instances_mutex};
+  const auto found = instances.find(instance);
+  if (found == instances.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  if (const auto ready = require_ready(*found->second); ready != GRANIT_SUCCESS)
+    return ready;
+  auto& state = *found->second;
+  const auto layout = state.pipeline_layouts.find(desc->layout);
+  const auto shader = state.shaders.find(desc->shader);
+  if (layout == state.pipeline_layouts.end() || shader == state.shaders.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  if (shader->second.stage != GRANIT_BACKEND_PLUGIN_SHADER_STAGE_COMPUTE)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  WGPUComputePipelineDescriptor descriptor = WGPU_COMPUTE_PIPELINE_DESCRIPTOR_INIT;
+  descriptor.layout = layout->second.pipeline_layout;
+  descriptor.compute.module = shader->second.shader;
+  descriptor.compute.entryPoint = {shader->second.entry_point.data(),
+                                   shader->second.entry_point.size()};
+  const auto native = wgpuDeviceCreateComputePipeline(state.device, &descriptor);
+  if (native == nullptr)
+    return GRANIT_ERROR_OUT_OF_MEMORY;
+  const auto handle = next_handle<granit_backend_plugin_compute_pipeline>(next_compute_pipeline);
+  try {
+    const webgpu_instance::compute_pipeline_record record{native, desc->layout, desc->shader};
+    if (!state.compute_pipelines.emplace(handle, record).second) {
+      wgpuComputePipelineRelease(native);
+      return GRANIT_ERROR_INTERNAL;
+    }
+  } catch (...) {
+    wgpuComputePipelineRelease(native);
+    return GRANIT_ERROR_OUT_OF_MEMORY;
+  }
+  *out_pipeline = handle;
+  return GRANIT_SUCCESS;
+}
+
+granit_result destroy_compute_pipeline(granit_backend_plugin_instance instance,
+                                       granit_backend_plugin_compute_pipeline pipeline) noexcept {
+  if (instance == 0 || pipeline == 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  const std::scoped_lock lock{instances_mutex};
+  const auto found = instances.find(instance);
+  if (found == instances.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  const auto pipeline_found = found->second->compute_pipelines.find(pipeline);
+  if (pipeline_found == found->second->compute_pipelines.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  wgpuComputePipelineRelease(pipeline_found->second.compute_pipeline);
+  found->second->compute_pipelines.erase(pipeline_found);
+  return GRANIT_SUCCESS;
+}
+
+granit_result
 create_command_recorder(granit_backend_plugin_instance instance,
                         granit_backend_plugin_command_recorder* out_recorder) noexcept {
   if (out_recorder != nullptr)
@@ -1508,7 +2159,8 @@ create_command_recorder(granit_backend_plugin_instance instance,
     return GRANIT_ERROR_OUT_OF_MEMORY;
   const auto handle = next_handle<granit_backend_plugin_command_recorder>(next_command_recorder);
   try {
-    const auto record = webgpu_instance::command_recorder_record{native, false};
+    const auto record = webgpu_instance::command_recorder_record{native, nullptr, nullptr, false,
+                                                                 false,  false,   0,       0};
     if (!found->second->command_recorders.emplace(handle, record).second) {
       wgpuCommandEncoderRelease(native);
       return GRANIT_ERROR_INTERNAL;
@@ -1535,6 +2187,10 @@ granit_result destroy_command_recorder(granit_backend_plugin_instance instance,
   const auto recorder_found = found->second->command_recorders.find(recorder);
   if (recorder_found == found->second->command_recorders.end())
     return GRANIT_ERROR_INVALID_HANDLE;
+  if (recorder_found->second.pass != nullptr)
+    wgpuRenderPassEncoderRelease(recorder_found->second.pass);
+  if (recorder_found->second.compute_pass != nullptr)
+    wgpuComputePassEncoderRelease(recorder_found->second.compute_pass);
   wgpuCommandEncoderRelease(recorder_found->second.encoder);
   found->second->command_recorders.erase(recorder_found);
   return GRANIT_SUCCESS;
@@ -1564,7 +2220,8 @@ granit_result recorder_copy_buffer_to_texture(granit_backend_plugin_instance ins
       texture_found == state.textures.end()) {
     return GRANIT_ERROR_INVALID_HANDLE;
   }
-  if (recorder_found->second.finished)
+  if (recorder_found->second.finished || recorder_found->second.pass != nullptr ||
+      recorder_found->second.compute_pass != nullptr)
     return GRANIT_ERROR_INVALID_ARGUMENT;
   const auto required_size = static_cast<std::uint64_t>(bytes_per_row) * (height - 1) +
                              static_cast<std::uint64_t>(width) * 4;
@@ -1587,12 +2244,24 @@ granit_result recorder_copy_buffer_to_texture(granit_backend_plugin_instance ins
   return GRANIT_SUCCESS;
 }
 
-granit_result recorder_draw(granit_backend_plugin_instance instance,
-                            granit_backend_plugin_command_recorder recorder,
-                            granit_backend_plugin_texture_view target,
-                            granit_backend_plugin_render_pipeline pipeline,
-                            granit_backend_plugin_bind_group bind_group) noexcept {
-  if (instance == 0 || recorder == 0 || target == 0 || pipeline == 0)
+granit_result recorder_begin_rendering(
+    granit_backend_plugin_instance instance, granit_backend_plugin_command_recorder recorder,
+    granit_backend_plugin_texture_view target, granit_backend_plugin_load_operation load_operation,
+    granit_backend_plugin_store_operation store_operation, float clear_r, float clear_g,
+    float clear_b, float clear_a, granit_backend_plugin_texture_view depth_target,
+    granit_backend_plugin_load_operation depth_load_operation,
+    granit_backend_plugin_store_operation depth_store_operation, float clear_depth) noexcept {
+  if (instance == 0 || recorder == 0 || target == 0 ||
+      (load_operation != GRANIT_BACKEND_PLUGIN_LOAD_OPERATION_LOAD &&
+       load_operation != GRANIT_BACKEND_PLUGIN_LOAD_OPERATION_CLEAR) ||
+      (store_operation != GRANIT_BACKEND_PLUGIN_STORE_OPERATION_STORE &&
+       store_operation != GRANIT_BACKEND_PLUGIN_STORE_OPERATION_DISCARD) ||
+      (depth_target != 0 &&
+       ((depth_load_operation != GRANIT_BACKEND_PLUGIN_LOAD_OPERATION_LOAD &&
+         depth_load_operation != GRANIT_BACKEND_PLUGIN_LOAD_OPERATION_CLEAR) ||
+        (depth_store_operation != GRANIT_BACKEND_PLUGIN_STORE_OPERATION_STORE &&
+         depth_store_operation != GRANIT_BACKEND_PLUGIN_STORE_OPERATION_DISCARD) ||
+        !std::isfinite(clear_depth) || clear_depth < 0.0F || clear_depth > 1.0F)))
     return GRANIT_ERROR_INVALID_ARGUMENT;
   const std::scoped_lock lock{instances_mutex};
   const auto found = instances.find(instance);
@@ -1601,41 +2270,484 @@ granit_result recorder_draw(granit_backend_plugin_instance instance,
   if (const auto ready = require_ready(*found->second); ready != GRANIT_SUCCESS)
     return ready;
   auto& state = *found->second;
-  const auto recorder_found = state.command_recorders.find(recorder);
-  const auto view_found = state.texture_views.find(target);
-  const auto pipeline_found = state.render_pipelines.find(pipeline);
-  if (recorder_found == state.command_recorders.end() || view_found == state.texture_views.end() ||
-      pipeline_found == state.render_pipelines.end()) {
+  const auto command = state.command_recorders.find(recorder);
+  const auto view = state.texture_views.find(target);
+  const auto depth_view = state.texture_views.find(depth_target);
+  if (command == state.command_recorders.end() || view == state.texture_views.end())
     return GRANIT_ERROR_INVALID_HANDLE;
-  }
-  const auto group_found = state.bind_groups.find(bind_group);
-  if (bind_group != 0 && group_found == state.bind_groups.end())
-    return GRANIT_ERROR_INVALID_HANDLE;
-  if (recorder_found->second.finished)
+  const auto texture = state.textures.find(view->second.texture);
+  if (command->second.finished || command->second.pass != nullptr ||
+      command->second.compute_pass != nullptr || texture == state.textures.end() ||
+      (texture->second.usage & GRANIT_BACKEND_PLUGIN_TEXTURE_USAGE_RENDER_ATTACHMENT_BIT) == 0)
     return GRANIT_ERROR_INVALID_ARGUMENT;
-  const auto texture_found = state.textures.find(view_found->second.texture);
-  if (texture_found == state.textures.end() ||
-      (texture_found->second.usage & GRANIT_BACKEND_PLUGIN_TEXTURE_USAGE_RENDER_ATTACHMENT_BIT) ==
-          0) {
-    return GRANIT_ERROR_INVALID_ARGUMENT;
+  WGPURenderPassDepthStencilAttachment depth_attachment =
+      WGPU_RENDER_PASS_DEPTH_STENCIL_ATTACHMENT_INIT;
+  if (depth_target != 0) {
+    if (depth_view == state.texture_views.end())
+      return GRANIT_ERROR_INVALID_HANDLE;
+    const auto depth_texture = state.textures.find(depth_view->second.texture);
+    if (depth_texture == state.textures.end() ||
+        depth_texture->second.format != GRANIT_BACKEND_PLUGIN_TEXTURE_FORMAT_D32_FLOAT ||
+        (depth_texture->second.usage & GRANIT_BACKEND_PLUGIN_TEXTURE_USAGE_RENDER_ATTACHMENT_BIT) ==
+            0) {
+      return GRANIT_ERROR_INVALID_ARGUMENT;
+    }
+    depth_attachment.view = depth_view->second.view;
+    depth_attachment.depthLoadOp = depth_load_operation == GRANIT_BACKEND_PLUGIN_LOAD_OPERATION_LOAD
+                                       ? WGPULoadOp_Load
+                                       : WGPULoadOp_Clear;
+    depth_attachment.depthStoreOp =
+        depth_store_operation == GRANIT_BACKEND_PLUGIN_STORE_OPERATION_STORE ? WGPUStoreOp_Store
+                                                                             : WGPUStoreOp_Discard;
+    depth_attachment.depthClearValue = clear_depth;
+    depth_attachment.depthReadOnly = false;
+    depth_attachment.stencilLoadOp = WGPULoadOp_Undefined;
+    depth_attachment.stencilStoreOp = WGPUStoreOp_Undefined;
+    depth_attachment.stencilReadOnly = true;
   }
   WGPURenderPassColorAttachment color = WGPU_RENDER_PASS_COLOR_ATTACHMENT_INIT;
-  color.view = view_found->second.view;
-  color.loadOp = WGPULoadOp_Clear;
-  color.storeOp = WGPUStoreOp_Store;
-  color.clearValue = {0.0, 0.0, 0.0, 1.0};
+  color.view = view->second.view;
+  color.loadOp = load_operation == GRANIT_BACKEND_PLUGIN_LOAD_OPERATION_LOAD ? WGPULoadOp_Load
+                                                                             : WGPULoadOp_Clear;
+  color.storeOp = store_operation == GRANIT_BACKEND_PLUGIN_STORE_OPERATION_STORE
+                      ? WGPUStoreOp_Store
+                      : WGPUStoreOp_Discard;
+  color.clearValue = {clear_r, clear_g, clear_b, clear_a};
   WGPURenderPassDescriptor descriptor = WGPU_RENDER_PASS_DESCRIPTOR_INIT;
   descriptor.colorAttachmentCount = 1;
   descriptor.colorAttachments = &color;
-  const auto pass = wgpuCommandEncoderBeginRenderPass(recorder_found->second.encoder, &descriptor);
-  if (pass == nullptr)
+  descriptor.depthStencilAttachment = depth_target == 0 ? nullptr : &depth_attachment;
+  command->second.pass = wgpuCommandEncoderBeginRenderPass(command->second.encoder, &descriptor);
+  if (command->second.pass == nullptr)
     return GRANIT_ERROR_INITIALIZATION_FAILED;
-  wgpuRenderPassEncoderSetPipeline(pass, pipeline_found->second.render_pipeline);
-  if (bind_group != 0)
-    wgpuRenderPassEncoderSetBindGroup(pass, 0, group_found->second.bind_group, 0, nullptr);
-  wgpuRenderPassEncoderDraw(pass, 3, 1, 0, 0);
-  wgpuRenderPassEncoderEnd(pass);
-  wgpuRenderPassEncoderRelease(pass);
+  command->second.pipeline_bound = false;
+  command->second.index_available = 0;
+  command->second.index_element_size = 0;
+  return GRANIT_SUCCESS;
+}
+
+granit_result recorder_bind_pipeline(granit_backend_plugin_instance instance,
+                                     granit_backend_plugin_command_recorder recorder,
+                                     granit_backend_plugin_render_pipeline pipeline) noexcept {
+  if (instance == 0 || recorder == 0 || pipeline == 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  const std::scoped_lock lock{instances_mutex};
+  const auto found = instances.find(instance);
+  if (found == instances.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  auto& state = *found->second;
+  const auto command = state.command_recorders.find(recorder);
+  const auto native = state.render_pipelines.find(pipeline);
+  if (command == state.command_recorders.end() || native == state.render_pipelines.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  if (command->second.pass == nullptr || command->second.finished)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  wgpuRenderPassEncoderSetPipeline(command->second.pass, native->second.render_pipeline);
+  command->second.pipeline_bound = true;
+  return GRANIT_SUCCESS;
+}
+
+granit_result recorder_bind_graphics_groups(
+    granit_backend_plugin_instance instance, granit_backend_plugin_command_recorder recorder,
+    granit_backend_plugin_pipeline_layout pipeline_layout, std::uint32_t first_group,
+    const granit_backend_plugin_bind_group* groups, std::uint32_t group_count,
+    const std::uint32_t* dynamic_offsets, std::uint32_t dynamic_offset_count) noexcept {
+  if (instance == 0 || recorder == 0 || pipeline_layout == 0 || group_count == 0 ||
+      groups == nullptr || first_group > UINT32_MAX - group_count ||
+      (dynamic_offset_count != 0 && dynamic_offsets == nullptr))
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  const std::scoped_lock lock{instances_mutex};
+  const auto found = instances.find(instance);
+  if (found == instances.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  auto& state = *found->second;
+  const auto command = state.command_recorders.find(recorder);
+  const auto layout = state.pipeline_layouts.find(pipeline_layout);
+  if (command == state.command_recorders.end() || layout == state.pipeline_layouts.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  if (command->second.pass == nullptr || command->second.finished ||
+      first_group > layout->second.bind_group_layouts.size() ||
+      group_count > layout->second.bind_group_layouts.size() - first_group)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+
+  std::uint32_t offset_index = 0;
+  for (std::uint32_t group_index = 0; group_index < group_count; ++group_index) {
+    const auto group = state.bind_groups.find(groups[group_index]);
+    if (group == state.bind_groups.end())
+      return GRANIT_ERROR_INVALID_HANDLE;
+    if (group->second.layout != layout->second.bind_group_layouts[first_group + group_index])
+      return GRANIT_ERROR_INVALID_ARGUMENT;
+    const auto declarations = state.bind_group_layouts.find(group->second.layout);
+    if (declarations == state.bind_group_layouts.end())
+      return GRANIT_ERROR_INVALID_HANDLE;
+    for (const auto& declaration : declarations->second.entries) {
+      if (declaration.type != GRANIT_BACKEND_PLUGIN_BINDING_TYPE_DYNAMIC_UNIFORM_BUFFER)
+        continue;
+      if (offset_index >= dynamic_offset_count)
+        return GRANIT_ERROR_INVALID_ARGUMENT;
+      const auto write =
+          std::find_if(group->second.entries.begin(), group->second.entries.end(),
+                       [&](const auto& entry) { return entry.binding == declaration.binding; });
+      if (write == group->second.entries.end())
+        return GRANIT_ERROR_INVALID_ARGUMENT;
+      const auto buffer = state.buffers.find(write->buffer);
+      const auto dynamic_offset = static_cast<std::uint64_t>(dynamic_offsets[offset_index++]);
+      if (buffer == state.buffers.end())
+        return GRANIT_ERROR_INVALID_HANDLE;
+      if ((state.capabilities.uniform_buffer_offset_alignment != 0 &&
+           dynamic_offset % state.capabilities.uniform_buffer_offset_alignment != 0) ||
+          write->offset > buffer->second.size ||
+          dynamic_offset > buffer->second.size - write->offset ||
+          write->size > buffer->second.size - write->offset - dynamic_offset)
+        return GRANIT_ERROR_INVALID_ARGUMENT;
+    }
+  }
+  if (offset_index != dynamic_offset_count)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+
+  offset_index = 0;
+  for (std::uint32_t group_index = 0; group_index < group_count; ++group_index) {
+    const auto& group = state.bind_groups.find(groups[group_index])->second;
+    const auto& declarations = state.bind_group_layouts.find(group.layout)->second.entries;
+    const auto count = static_cast<std::uint32_t>(
+        std::count_if(declarations.begin(), declarations.end(), [](const auto& declaration) {
+          return declaration.type == GRANIT_BACKEND_PLUGIN_BINDING_TYPE_DYNAMIC_UNIFORM_BUFFER;
+        }));
+    wgpuRenderPassEncoderSetBindGroup(command->second.pass, first_group + group_index,
+                                      group.bind_group, count,
+                                      count == 0 ? nullptr : dynamic_offsets + offset_index);
+    offset_index += count;
+  }
+  return GRANIT_SUCCESS;
+}
+
+granit_result
+recorder_bind_vertex_buffers(granit_backend_plugin_instance instance,
+                             granit_backend_plugin_command_recorder recorder, std::uint32_t first,
+                             const granit_backend_plugin_vertex_buffer_binding* bindings,
+                             std::uint32_t count) noexcept {
+  if (instance == 0 || recorder == 0 || count == 0 || bindings == nullptr ||
+      first > UINT32_MAX - count)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  const std::scoped_lock lock{instances_mutex};
+  const auto found = instances.find(instance);
+  if (found == instances.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  auto& state = *found->second;
+  const auto command = state.command_recorders.find(recorder);
+  if (command == state.command_recorders.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  if (command->second.pass == nullptr || command->second.finished)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  for (std::uint32_t index = 0; index < count; ++index) {
+    const auto buffer = state.buffers.find(bindings[index].buffer);
+    if (buffer == state.buffers.end())
+      return GRANIT_ERROR_INVALID_HANDLE;
+    if ((buffer->second.usage & GRANIT_BACKEND_PLUGIN_BUFFER_USAGE_VERTEX_BIT) == 0 ||
+        bindings[index].offset >= buffer->second.size)
+      return GRANIT_ERROR_INVALID_ARGUMENT;
+  }
+  for (std::uint32_t index = 0; index < count; ++index) {
+    const auto& binding = bindings[index];
+    const auto& buffer = state.buffers.find(binding.buffer)->second;
+    wgpuRenderPassEncoderSetVertexBuffer(command->second.pass, first + index, buffer.buffer,
+                                         binding.offset, buffer.size - binding.offset);
+  }
+  return GRANIT_SUCCESS;
+}
+
+granit_result recorder_bind_index_buffer(granit_backend_plugin_instance instance,
+                                         granit_backend_plugin_command_recorder recorder,
+                                         granit_backend_plugin_buffer buffer, std::uint64_t offset,
+                                         granit_backend_plugin_index_format format) noexcept {
+  if (instance == 0 || recorder == 0 || buffer == 0 ||
+      (format != GRANIT_BACKEND_PLUGIN_INDEX_FORMAT_UINT16 &&
+       format != GRANIT_BACKEND_PLUGIN_INDEX_FORMAT_UINT32))
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  const std::scoped_lock lock{instances_mutex};
+  const auto found = instances.find(instance);
+  if (found == instances.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  auto& state = *found->second;
+  const auto command = state.command_recorders.find(recorder);
+  const auto native = state.buffers.find(buffer);
+  if (command == state.command_recorders.end() || native == state.buffers.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  const auto element_size = format == GRANIT_BACKEND_PLUGIN_INDEX_FORMAT_UINT16 ? 2U : 4U;
+  if (command->second.pass == nullptr || command->second.finished ||
+      (native->second.usage & GRANIT_BACKEND_PLUGIN_BUFFER_USAGE_INDEX_BIT) == 0 ||
+      offset >= native->second.size || offset % element_size != 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  wgpuRenderPassEncoderSetIndexBuffer(command->second.pass, native->second.buffer,
+                                      format == GRANIT_BACKEND_PLUGIN_INDEX_FORMAT_UINT16
+                                          ? WGPUIndexFormat_Uint16
+                                          : WGPUIndexFormat_Uint32,
+                                      offset, native->second.size - offset);
+  command->second.index_available = native->second.size - offset;
+  command->second.index_element_size = element_size;
+  return GRANIT_SUCCESS;
+}
+
+granit_result recorder_set_viewports(granit_backend_plugin_instance instance,
+                                     granit_backend_plugin_command_recorder recorder,
+                                     std::uint32_t first,
+                                     const granit_backend_plugin_viewport* viewports,
+                                     std::uint32_t count) noexcept {
+  if (instance == 0 || recorder == 0 || first != 0 || viewports == nullptr || count != 1)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  const auto& viewport = viewports[0];
+  if (viewport.width <= 0.0F || viewport.height <= 0.0F || viewport.min_depth < 0.0F ||
+      viewport.max_depth > 1.0F || viewport.min_depth > viewport.max_depth)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  const std::scoped_lock lock{instances_mutex};
+  const auto found = instances.find(instance);
+  if (found == instances.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  const auto command = found->second->command_recorders.find(recorder);
+  if (command == found->second->command_recorders.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  if (command->second.pass == nullptr || command->second.finished)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  wgpuRenderPassEncoderSetViewport(command->second.pass, viewport.x, viewport.y, viewport.width,
+                                   viewport.height, viewport.min_depth, viewport.max_depth);
+  return GRANIT_SUCCESS;
+}
+
+granit_result recorder_set_scissors(granit_backend_plugin_instance instance,
+                                    granit_backend_plugin_command_recorder recorder,
+                                    std::uint32_t first,
+                                    const granit_backend_plugin_scissor* scissors,
+                                    std::uint32_t count) noexcept {
+  if (instance == 0 || recorder == 0 || first != 0 || scissors == nullptr || count != 1 ||
+      scissors[0].width == 0 || scissors[0].height == 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  const std::scoped_lock lock{instances_mutex};
+  const auto found = instances.find(instance);
+  if (found == instances.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  const auto command = found->second->command_recorders.find(recorder);
+  if (command == found->second->command_recorders.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  if (command->second.pass == nullptr || command->second.finished)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  const auto& scissor = scissors[0];
+  wgpuRenderPassEncoderSetScissorRect(command->second.pass, scissor.x, scissor.y, scissor.width,
+                                      scissor.height);
+  return GRANIT_SUCCESS;
+}
+
+granit_result recorder_draw_vertices(granit_backend_plugin_instance instance,
+                                     granit_backend_plugin_command_recorder recorder,
+                                     std::uint32_t vertex_count, std::uint32_t instance_count,
+                                     std::uint32_t first_vertex,
+                                     std::uint32_t first_instance) noexcept {
+  if (instance == 0 || recorder == 0 || vertex_count == 0 || instance_count == 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  const std::scoped_lock lock{instances_mutex};
+  const auto found = instances.find(instance);
+  if (found == instances.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  const auto command = found->second->command_recorders.find(recorder);
+  if (command == found->second->command_recorders.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  if (command->second.pass == nullptr || !command->second.pipeline_bound ||
+      command->second.finished)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  wgpuRenderPassEncoderDraw(command->second.pass, vertex_count, instance_count, first_vertex,
+                            first_instance);
+  return GRANIT_SUCCESS;
+}
+
+granit_result recorder_draw_indices(granit_backend_plugin_instance instance,
+                                    granit_backend_plugin_command_recorder recorder,
+                                    std::uint32_t index_count, std::uint32_t instance_count,
+                                    std::uint32_t first_index, std::int32_t vertex_offset,
+                                    std::uint32_t first_instance) noexcept {
+  if (instance == 0 || recorder == 0 || index_count == 0 || instance_count == 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  const std::scoped_lock lock{instances_mutex};
+  const auto found = instances.find(instance);
+  if (found == instances.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  const auto command = found->second->command_recorders.find(recorder);
+  if (command == found->second->command_recorders.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  const auto first_byte =
+      static_cast<std::uint64_t>(first_index) * command->second.index_element_size;
+  const auto draw_size =
+      static_cast<std::uint64_t>(index_count) * command->second.index_element_size;
+  if (command->second.pass == nullptr || !command->second.pipeline_bound ||
+      command->second.finished || command->second.index_element_size == 0 ||
+      first_byte > command->second.index_available ||
+      draw_size > command->second.index_available - first_byte)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  wgpuRenderPassEncoderDrawIndexed(command->second.pass, index_count, instance_count, first_index,
+                                   vertex_offset, first_instance);
+  return GRANIT_SUCCESS;
+}
+
+granit_result recorder_end_rendering(granit_backend_plugin_instance instance,
+                                     granit_backend_plugin_command_recorder recorder) noexcept {
+  if (instance == 0 || recorder == 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  const std::scoped_lock lock{instances_mutex};
+  const auto found = instances.find(instance);
+  if (found == instances.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  const auto command = found->second->command_recorders.find(recorder);
+  if (command == found->second->command_recorders.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  if (command->second.pass == nullptr || command->second.finished)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  wgpuRenderPassEncoderEnd(command->second.pass);
+  wgpuRenderPassEncoderRelease(command->second.pass);
+  command->second.pass = nullptr;
+  command->second.pipeline_bound = false;
+  command->second.index_available = 0;
+  command->second.index_element_size = 0;
+  return GRANIT_SUCCESS;
+}
+
+granit_result recorder_begin_compute(granit_backend_plugin_instance instance,
+                                     granit_backend_plugin_command_recorder recorder) noexcept {
+  if (instance == 0 || recorder == 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  const std::scoped_lock lock{instances_mutex};
+  const auto found = instances.find(instance);
+  if (found == instances.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  const auto command = found->second->command_recorders.find(recorder);
+  if (command == found->second->command_recorders.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  if (command->second.finished || command->second.pass != nullptr ||
+      command->second.compute_pass != nullptr)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  WGPUComputePassDescriptor descriptor = WGPU_COMPUTE_PASS_DESCRIPTOR_INIT;
+  command->second.compute_pass =
+      wgpuCommandEncoderBeginComputePass(command->second.encoder, &descriptor);
+  if (command->second.compute_pass == nullptr)
+    return GRANIT_ERROR_INITIALIZATION_FAILED;
+  command->second.compute_pipeline_bound = false;
+  return GRANIT_SUCCESS;
+}
+
+granit_result
+recorder_bind_compute_pipeline(granit_backend_plugin_instance instance,
+                               granit_backend_plugin_command_recorder recorder,
+                               granit_backend_plugin_compute_pipeline pipeline) noexcept {
+  if (instance == 0 || recorder == 0 || pipeline == 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  const std::scoped_lock lock{instances_mutex};
+  const auto found = instances.find(instance);
+  if (found == instances.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  auto& state = *found->second;
+  const auto command = state.command_recorders.find(recorder);
+  const auto native = state.compute_pipelines.find(pipeline);
+  if (command == state.command_recorders.end() || native == state.compute_pipelines.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  if (command->second.finished || command->second.compute_pass == nullptr)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  wgpuComputePassEncoderSetPipeline(command->second.compute_pass, native->second.compute_pipeline);
+  command->second.compute_pipeline_bound = true;
+  return GRANIT_SUCCESS;
+}
+
+granit_result recorder_bind_compute_groups(
+    granit_backend_plugin_instance instance, granit_backend_plugin_command_recorder recorder,
+    granit_backend_plugin_pipeline_layout pipeline_layout, std::uint32_t first_group,
+    const granit_backend_plugin_bind_group* groups, std::uint32_t group_count,
+    const std::uint32_t* dynamic_offsets, std::uint32_t dynamic_offset_count) noexcept {
+  if (instance == 0 || recorder == 0 || pipeline_layout == 0 || groups == nullptr ||
+      group_count == 0 || (dynamic_offset_count != 0 && dynamic_offsets == nullptr))
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  const std::scoped_lock lock{instances_mutex};
+  const auto found = instances.find(instance);
+  if (found == instances.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  auto& state = *found->second;
+  const auto command = state.command_recorders.find(recorder);
+  const auto layout = state.pipeline_layouts.find(pipeline_layout);
+  if (command == state.command_recorders.end() || layout == state.pipeline_layouts.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  if (command->second.finished || command->second.compute_pass == nullptr ||
+      first_group > layout->second.bind_group_layouts.size() ||
+      group_count > layout->second.bind_group_layouts.size() - first_group)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  std::uint32_t offset_index{};
+  for (std::uint32_t index = 0; index < group_count; ++index) {
+    const auto group = state.bind_groups.find(groups[index]);
+    if (group == state.bind_groups.end())
+      return GRANIT_ERROR_INVALID_HANDLE;
+    if (group->second.layout != layout->second.bind_group_layouts[first_group + index])
+      return GRANIT_ERROR_INVALID_ARGUMENT;
+    const auto& declarations = state.bind_group_layouts.find(group->second.layout)->second.entries;
+    const auto group_offset_begin = offset_index;
+    for (const auto& declaration : declarations) {
+      if (declaration.type != GRANIT_BACKEND_PLUGIN_BINDING_TYPE_DYNAMIC_UNIFORM_BUFFER)
+        continue;
+      if (offset_index >= dynamic_offset_count)
+        return GRANIT_ERROR_INVALID_ARGUMENT;
+      const auto write =
+          std::find_if(group->second.entries.begin(), group->second.entries.end(),
+                       [&](const auto& entry) { return entry.binding == declaration.binding; });
+      if (write == group->second.entries.end())
+        return GRANIT_ERROR_INVALID_ARGUMENT;
+      const auto buffer = state.buffers.find(write->buffer);
+      const auto dynamic_offset = static_cast<std::uint64_t>(dynamic_offsets[offset_index++]);
+      if (buffer == state.buffers.end())
+        return GRANIT_ERROR_INVALID_HANDLE;
+      if ((state.capabilities.uniform_buffer_offset_alignment != 0 &&
+           dynamic_offset % state.capabilities.uniform_buffer_offset_alignment != 0) ||
+          write->offset > buffer->second.size ||
+          dynamic_offset > buffer->second.size - write->offset ||
+          write->size > buffer->second.size - write->offset - dynamic_offset)
+        return GRANIT_ERROR_INVALID_ARGUMENT;
+    }
+    const auto count = offset_index - group_offset_begin;
+    wgpuComputePassEncoderSetBindGroup(command->second.compute_pass, first_group + index,
+                                       group->second.bind_group, count,
+                                       count == 0 ? nullptr : dynamic_offsets + group_offset_begin);
+  }
+  return offset_index == dynamic_offset_count ? GRANIT_SUCCESS : GRANIT_ERROR_INVALID_ARGUMENT;
+}
+
+granit_result recorder_dispatch(granit_backend_plugin_instance instance,
+                                granit_backend_plugin_command_recorder recorder, std::uint32_t x,
+                                std::uint32_t y, std::uint32_t z) noexcept {
+  if (instance == 0 || recorder == 0 || x == 0 || y == 0 || z == 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  const std::scoped_lock lock{instances_mutex};
+  const auto found = instances.find(instance);
+  if (found == instances.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  const auto command = found->second->command_recorders.find(recorder);
+  if (command == found->second->command_recorders.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  if (command->second.finished || command->second.compute_pass == nullptr ||
+      !command->second.compute_pipeline_bound)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  wgpuComputePassEncoderDispatchWorkgroups(command->second.compute_pass, x, y, z);
+  return GRANIT_SUCCESS;
+}
+
+granit_result recorder_end_compute(granit_backend_plugin_instance instance,
+                                   granit_backend_plugin_command_recorder recorder) noexcept {
+  if (instance == 0 || recorder == 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  const std::scoped_lock lock{instances_mutex};
+  const auto found = instances.find(instance);
+  if (found == instances.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  const auto command = found->second->command_recorders.find(recorder);
+  if (command == found->second->command_recorders.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  if (command->second.finished || command->second.compute_pass == nullptr)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  wgpuComputePassEncoderEnd(command->second.compute_pass);
+  wgpuComputePassEncoderRelease(command->second.compute_pass);
+  command->second.compute_pass = nullptr;
+  command->second.compute_pipeline_bound = false;
   return GRANIT_SUCCESS;
 }
 
@@ -1663,7 +2775,8 @@ granit_result recorder_copy_texture_to_buffer(granit_backend_plugin_instance ins
       buffer_found == state.buffers.end()) {
     return GRANIT_ERROR_INVALID_HANDLE;
   }
-  if (recorder_found->second.finished)
+  if (recorder_found->second.finished || recorder_found->second.pass != nullptr ||
+      recorder_found->second.compute_pass != nullptr)
     return GRANIT_ERROR_INVALID_ARGUMENT;
   const auto required_size = static_cast<std::uint64_t>(bytes_per_row) * (height - 1) +
                              static_cast<std::uint64_t>(width) * 4;
@@ -1704,7 +2817,8 @@ finish_command_recorder(granit_backend_plugin_instance instance,
   const auto recorder_found = state.command_recorders.find(recorder);
   if (recorder_found == state.command_recorders.end())
     return GRANIT_ERROR_INVALID_HANDLE;
-  if (recorder_found->second.finished)
+  if (recorder_found->second.finished || recorder_found->second.pass != nullptr ||
+      recorder_found->second.compute_pass != nullptr)
     return GRANIT_ERROR_INVALID_ARGUMENT;
   WGPUCommandBufferDescriptor descriptor = WGPU_COMMAND_BUFFER_DESCRIPTOR_INIT;
   const auto native = wgpuCommandEncoderFinish(recorder_found->second.encoder, &descriptor);
@@ -1762,6 +2876,92 @@ granit_result submit_command_buffer(granit_backend_plugin_instance instance,
   wgpuCommandBufferRelease(buffer_found->second);
   found->second->command_buffers.erase(buffer_found);
   return GRANIT_SUCCESS;
+}
+
+template <typename NativeDesc>
+granit_result create_native_surface(granit_backend_plugin_instance instance, NativeDesc source,
+                                    granit_backend_plugin_surface* surface) noexcept {
+  const std::scoped_lock lock{instances_mutex};
+  const auto found = instances.find(instance);
+  if (found == instances.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  if (const auto ready = require_ready(*found->second); ready != GRANIT_SUCCESS)
+    return ready;
+  WGPUSurfaceDescriptor native_desc{};
+  native_desc.nextInChain = &source.chain;
+  const auto native_surface = wgpuInstanceCreateSurface(found->second->instance, &native_desc);
+  if (native_surface == nullptr)
+    return GRANIT_ERROR_INITIALIZATION_FAILED;
+  const auto handle = next_handle<granit_backend_plugin_surface>(next_surface);
+  try {
+    found->second->surfaces.emplace(handle, webgpu_instance::surface_record{native_surface, {}});
+  } catch (const std::bad_alloc&) {
+    wgpuSurfaceRelease(native_surface);
+    return GRANIT_ERROR_OUT_OF_MEMORY;
+  } catch (...) {
+    wgpuSurfaceRelease(native_surface);
+    return GRANIT_ERROR_INTERNAL;
+  }
+  *surface = handle;
+  return GRANIT_SUCCESS;
+}
+
+granit_result create_win32_surface(granit_backend_plugin_instance instance,
+                                   const granit_backend_plugin_win32_surface_desc* desc,
+                                   granit_backend_plugin_surface* surface) noexcept {
+  if (surface != nullptr)
+    *surface = 0;
+  if (instance == 0 || desc == nullptr || surface == nullptr || desc->struct_size < sizeof(*desc) ||
+      desc->reserved != 0 || desc->instance == nullptr || desc->window == nullptr)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+#if (defined(_WIN32) && !defined(__EMSCRIPTEN__)) || defined(GRANIT_WEBGPU_NATIVE_SURFACE_TEST)
+  WGPUSurfaceSourceWindowsHWND source{};
+  source.chain.sType = WGPUSType_SurfaceSourceWindowsHWND;
+  source.hinstance = desc->instance;
+  source.hwnd = desc->window;
+  return create_native_surface(instance, source, surface);
+#else
+  return GRANIT_ERROR_UNSUPPORTED;
+#endif
+}
+
+granit_result create_xcb_surface(granit_backend_plugin_instance instance,
+                                 const granit_backend_plugin_xcb_surface_desc* desc,
+                                 granit_backend_plugin_surface* surface) noexcept {
+  if (surface != nullptr)
+    *surface = 0;
+  if (instance == 0 || desc == nullptr || surface == nullptr || desc->struct_size < sizeof(*desc) ||
+      desc->reserved != 0 || desc->reserved_2 != 0 || desc->connection == nullptr ||
+      desc->window == 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+#if (defined(__linux__) && !defined(__EMSCRIPTEN__)) || defined(GRANIT_WEBGPU_NATIVE_SURFACE_TEST)
+  WGPUSurfaceSourceXCBWindow source{};
+  source.chain.sType = WGPUSType_SurfaceSourceXCBWindow;
+  source.connection = desc->connection;
+  source.window = desc->window;
+  return create_native_surface(instance, source, surface);
+#else
+  return GRANIT_ERROR_UNSUPPORTED;
+#endif
+}
+
+granit_result create_wayland_surface(granit_backend_plugin_instance instance,
+                                     const granit_backend_plugin_wayland_surface_desc* desc,
+                                     granit_backend_plugin_surface* surface) noexcept {
+  if (surface != nullptr)
+    *surface = 0;
+  if (instance == 0 || desc == nullptr || surface == nullptr || desc->struct_size < sizeof(*desc) ||
+      desc->reserved != 0 || desc->display == nullptr || desc->surface == nullptr)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+#if (defined(__linux__) && !defined(__EMSCRIPTEN__)) || defined(GRANIT_WEBGPU_NATIVE_SURFACE_TEST)
+  WGPUSurfaceSourceWaylandSurface source{};
+  source.chain.sType = WGPUSType_SurfaceSourceWaylandSurface;
+  source.display = desc->display;
+  source.surface = desc->surface;
+  return create_native_surface(instance, source, surface);
+#else
+  return GRANIT_ERROR_UNSUPPORTED;
+#endif
 }
 
 granit_result create_canvas_surface(granit_backend_plugin_instance instance,
@@ -1824,9 +3024,7 @@ granit_result destroy_surface(granit_backend_plugin_instance instance,
   if (std::any_of(found->second->swapchains.begin(), found->second->swapchains.end(),
                   [surface](const auto& entry) { return entry.second.surface == surface; }))
     return GRANIT_ERROR_INVALID_ARGUMENT;
-#if defined(__EMSCRIPTEN__) || defined(GRANIT_WEBGPU_CANVAS_SURFACE_TEST)
   wgpuSurfaceRelease(static_cast<WGPUSurface>(surface_found->second.surface));
-#endif
   found->second->surfaces.erase(surface_found);
   return GRANIT_SUCCESS;
 }
@@ -2006,7 +3204,7 @@ granit_result acquire_swapchain(granit_backend_plugin_instance instance,
     found->second->textures.emplace(
         texture, webgpu_instance::texture_record{
                      acquired.texture, swapchain_found->second.info.width,
-                     swapchain_found->second.info.height,
+                     swapchain_found->second.info.height, swapchain_found->second.info.format, 1,
                      GRANIT_BACKEND_PLUGIN_TEXTURE_USAGE_RENDER_ATTACHMENT_BIT, true});
     found->second->texture_views.emplace(
         view, webgpu_instance::texture_view_record{native_view, texture, true});
@@ -2105,6 +3303,7 @@ constexpr granit_backend_plugin_instance_api instance_api{
     read_buffer,
     create_texture,
     destroy_texture,
+    write_texture,
     create_texture_view,
     destroy_texture_view,
     create_sampler,
@@ -2122,13 +3321,15 @@ constexpr granit_backend_plugin_instance_api instance_api{
     create_command_recorder,
     destroy_command_recorder,
     recorder_copy_buffer_to_texture,
-    recorder_draw,
     finish_command_recorder,
     destroy_command_buffer,
     submit_command_buffer,
     recorder_copy_texture_to_buffer,
     get_instance_status,
     process_events,
+    create_win32_surface,
+    create_xcb_surface,
+    create_wayland_surface,
     create_canvas_surface,
     destroy_surface,
     create_swapchain,
@@ -2137,7 +3338,25 @@ constexpr granit_backend_plugin_instance_api instance_api{
     acquire_swapchain,
     present_swapchain,
     cancel_swapchain,
-    destroy_swapchain};
+    destroy_swapchain,
+    recorder_begin_rendering,
+    recorder_bind_pipeline,
+    recorder_bind_graphics_groups,
+    recorder_bind_vertex_buffers,
+    recorder_bind_index_buffer,
+    recorder_draw_vertices,
+    recorder_draw_indices,
+    recorder_end_rendering,
+    write_upload_batch,
+    create_compute_pipeline,
+    destroy_compute_pipeline,
+    recorder_begin_compute,
+    recorder_bind_compute_pipeline,
+    recorder_bind_compute_groups,
+    recorder_dispatch,
+    recorder_end_compute,
+    recorder_set_viewports,
+    recorder_set_scissors};
 constexpr granit_backend_plugin_api plugin_api{sizeof(granit_backend_plugin_api),
                                                GRANIT_BACKEND_PLUGIN_ABI_VERSION,
                                                GRANIT_BACKEND_PLUGIN_KIND_WEBGPU,
