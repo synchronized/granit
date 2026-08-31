@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cmath>
 #include <cstring>
 #include <vector>
 
@@ -56,6 +57,10 @@ struct WGPUBindGroupLayoutImpl {
 struct WGPUBindGroupImpl {
   std::vector<unsigned char> uniform_bytes;
   std::array<unsigned char, 4> sampled_color{255, 255, 255, 255};
+  std::array<unsigned char, 4> normal_color{128, 128, 255, 255};
+  std::array<unsigned char, 4> metallic_roughness_color{};
+  bool sampled_color_is_srgb{};
+  bool has_material_textures{};
   unsigned long long offset{};
   bool has_dynamic_uniform{};
 };
@@ -388,8 +393,16 @@ extern "C" WGPUBindGroup wgpuDeviceCreateBindGroup(WGPUDevice,
       result->offset = entry.offset;
     } else if (entry.textureView != nullptr && entry.textureView->texture != nullptr &&
                entry.textureView->texture->bytes.size() >= result->sampled_color.size()) {
-      std::copy_n(entry.textureView->texture->bytes.begin(), result->sampled_color.size(),
-                  result->sampled_color.begin());
+      auto* destination = &result->sampled_color;
+      if (entry.binding == 3)
+        destination = &result->normal_color;
+      else if (entry.binding == 4)
+        destination = &result->metallic_roughness_color;
+      std::copy_n(entry.textureView->texture->bytes.begin(), destination->size(),
+                  destination->begin());
+      result->sampled_color_is_srgb |= entry.binding == 1 && entry.textureView->texture->format ==
+                                                                 WGPUTextureFormat_RGBA8UnormSrgb;
+      result->has_material_textures |= entry.binding == 3 || entry.binding == 4;
     }
   }
   return result;
@@ -509,10 +522,29 @@ extern "C" void wgpuRenderPassEncoderDraw(WGPURenderPassEncoder pass, unsigned i
       use_uniform = values[7] > 0.0F;
       if (use_uniform) {
         translation_x = values[0];
+        float material_scale = 1.0F;
+        if (group->has_material_textures) {
+          const auto decode_normal = [](unsigned char value) {
+            return static_cast<float>(value) / 255.0F * 2.0F - 1.0F;
+          };
+          const auto normal_x = decode_normal(group->normal_color[0]);
+          const auto normal_y = decode_normal(group->normal_color[1]);
+          const auto normal_z = decode_normal(group->normal_color[2]);
+          const auto normal_length =
+              std::sqrt(normal_x * normal_x + normal_y * normal_y + normal_z * normal_z);
+          const auto normal_factor = normal_length == 0.0F ? 0.0F : normal_z / normal_length;
+          const auto metallic = static_cast<float>(group->metallic_roughness_color[2]) / 255.0F;
+          material_scale = 0.5F + 0.25F * std::max(normal_factor, 0.0F) + 0.25F * metallic;
+        }
         for (std::size_t channel = 0; channel < color.size(); ++channel) {
           const auto tint = std::clamp(values[4 + channel], 0.0F, 1.0F);
+          auto sampled = static_cast<float>(group->sampled_color[channel]) / 255.0F;
+          if (channel < 3 && group->sampled_color_is_srgb) {
+            sampled = sampled <= 0.04045F ? sampled / 12.92F
+                                          : std::pow((sampled + 0.055F) / 1.055F, 2.4F);
+          }
           color[channel] = static_cast<unsigned char>(
-              tint * static_cast<float>(group->sampled_color[channel]) + 0.5F);
+              std::clamp(tint * sampled * material_scale, 0.0F, 1.0F) * 255.0F + 0.5F);
         }
       }
     }

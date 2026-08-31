@@ -333,6 +333,12 @@ TEST_CASE("跨后端索引纹理 Fixture 使用动态 Uniform 绘制两个对象
                                       .visibility = granit::shader_stage_flags::fragment},
       granit::bind_group_layout_entry{.binding = 2,
                                       .type = granit::binding_type::sampler,
+                                      .visibility = granit::shader_stage_flags::fragment},
+      granit::bind_group_layout_entry{.binding = 3,
+                                      .type = granit::binding_type::sampled_texture,
+                                      .visibility = granit::shader_stage_flags::fragment},
+      granit::bind_group_layout_entry{.binding = 4,
+                                      .type = granit::binding_type::sampled_texture,
                                       .visibility = granit::shader_stage_flags::fragment}};
   granit::bind_group_layout group_layout;
   REQUIRE(group_layout.initialize(renderer.native_handle(), declarations) ==
@@ -346,9 +352,11 @@ TEST_CASE("跨后端索引纹理 Fixture 使用动态 Uniform 绘制两个对象
   const std::array vertex_attributes{
       granit::vertex_attribute{.location = 0, .format = granit::vertex_format::float32x2},
       granit::vertex_attribute{
-          .location = 1, .format = granit::vertex_format::float32x2, .offset = sizeof(float) * 2}};
+          .location = 1, .format = granit::vertex_format::float32x2, .offset = sizeof(float) * 2},
+      granit::vertex_attribute{
+          .location = 2, .format = granit::vertex_format::float32x3, .offset = sizeof(float) * 4}};
   const std::array vertex_layouts{
-      granit::vertex_buffer_layout{.stride = sizeof(float) * 4, .attributes = vertex_attributes}};
+      granit::vertex_buffer_layout{.stride = sizeof(float) * 7, .attributes = vertex_attributes}};
   granit::graphics_pipeline pipeline;
   REQUIRE(pipeline.initialize(renderer.native_handle(),
                               {.layout = pipeline_layout.native_handle(),
@@ -376,7 +384,7 @@ TEST_CASE("跨后端索引纹理 Fixture 使用动态 Uniform 绘制两个对象
                .usage = granit::buffer_usage::uniform | granit::buffer_usage::transfer_destination},
               uniform_data) == granit::result::success);
   granit_texture_desc base_color_desc = GRANIT_TEXTURE_DESC_INIT;
-  base_color_desc.format = GRANIT_TEXTURE_FORMAT_RGBA8_UNORM;
+  base_color_desc.format = GRANIT_TEXTURE_FORMAT_RGBA8_SRGB;
   base_color_desc.usage =
       GRANIT_TEXTURE_USAGE_SAMPLED_BIT | GRANIT_TEXTURE_USAGE_TRANSFER_DESTINATION_BIT;
   base_color_desc.width = 2;
@@ -402,20 +410,45 @@ TEST_CASE("跨后端索引纹理 Fixture 使用动态 Uniform 绘制两个对象
   REQUIRE(granit_texture_write(renderer.native_handle(), base_color, base_color_pixels.data(),
                                base_color_pixels.size(), &base_color_layout,
                                &base_color_region) == GRANIT_SUCCESS);
+  granit_texture normal = GRANIT_NULL_HANDLE;
+  granit_texture_view normal_view = GRANIT_NULL_HANDLE;
+  auto material_texture_desc = base_color_desc;
+  material_texture_desc.format = GRANIT_TEXTURE_FORMAT_RGBA8_UNORM;
+  REQUIRE(granit_texture_create_with_default_view(renderer.native_handle(), &material_texture_desc,
+                                                  &normal, &normal_view) == GRANIT_SUCCESS);
+  constexpr std::array<std::uint8_t, 16> normal_pixels{
+      128, 128, 255, 255, 128, 128, 255, 255, 128, 128, 255, 255, 128, 128, 255, 255,
+  };
+  REQUIRE(granit_texture_write(renderer.native_handle(), normal, normal_pixels.data(),
+                               normal_pixels.size(), &base_color_layout,
+                               &base_color_region) == GRANIT_SUCCESS);
+  granit_texture metallic_roughness = GRANIT_NULL_HANDLE;
+  granit_texture_view metallic_roughness_view = GRANIT_NULL_HANDLE;
+  REQUIRE(granit_texture_create_with_default_view(renderer.native_handle(), &material_texture_desc,
+                                                  &metallic_roughness,
+                                                  &metallic_roughness_view) == GRANIT_SUCCESS);
+  constexpr std::array<std::uint8_t, 16> metallic_roughness_pixels{
+      0, 128, 128, 255, 0, 128, 128, 255, 0, 128, 128, 255, 0, 128, 128, 255,
+  };
+  REQUIRE(granit_texture_write(renderer.native_handle(), metallic_roughness,
+                               metallic_roughness_pixels.data(), metallic_roughness_pixels.size(),
+                               &base_color_layout, &base_color_region) == GRANIT_SUCCESS);
   granit::sampler base_color_sampler;
   REQUIRE(base_color_sampler.initialize(renderer.native_handle()) == granit::result::success);
   const std::array entries{
       granit::bind_group_entry{
           .binding = 0, .resource = uniform.native_handle(), .offset = 0, .size = 32},
       granit::bind_group_entry{.binding = 1, .resource = base_color_view},
-      granit::bind_group_entry{.binding = 2, .resource = base_color_sampler.native_handle()}};
+      granit::bind_group_entry{.binding = 2, .resource = base_color_sampler.native_handle()},
+      granit::bind_group_entry{.binding = 3, .resource = normal_view},
+      granit::bind_group_entry{.binding = 4, .resource = metallic_roughness_view}};
   granit::bind_group group;
   REQUIRE(group.initialize(renderer.native_handle(), group_layout.native_handle(), entries) ==
           granit::result::success);
 
-  constexpr std::array<float, 16> vertices{
-      -0.22F, -0.30F, 0.0F, 0.0F, 0.22F,  -0.30F, 1.0F, 0.0F,
-      0.22F,  0.30F,  1.0F, 1.0F, -0.22F, 0.30F,  0.0F, 1.0F,
+  constexpr std::array<float, 28> vertices{
+      -0.22F, -0.30F, 0.0F, 0.0F, 0.0F, 0.0F, 1.0F, 0.22F,  -0.30F, 1.0F, 0.0F, 0.0F, 0.0F, 1.0F,
+      0.22F,  0.30F,  1.0F, 1.0F, 0.0F, 0.0F, 1.0F, -0.22F, 0.30F,  0.0F, 1.0F, 0.0F, 0.0F, 1.0F,
   };
   constexpr std::array<std::uint16_t, 6> indices{0, 1, 2, 2, 3, 0};
   granit::buffer vertex_buffer;
@@ -504,11 +537,13 @@ TEST_CASE("跨后端索引纹理 Fixture 使用动态 Uniform 绘制两个对象
   const auto* pixels = static_cast<const std::uint8_t*>(mapped);
   const auto* left = pixels + (height / 2 * width + width / 4) * 4;
   const auto* right = pixels + (height / 2 * width + width * 3 / 4) * 4;
-  CHECK(left[0] >= 198);
+  CHECK(left[0] >= 127);
+  CHECK(left[0] <= 131);
   CHECK(left[1] < 16);
   CHECK(left[2] < 16);
   CHECK(right[0] < 16);
-  CHECK(right[1] >= 158);
+  CHECK(right[1] >= 77);
+  CHECK(right[1] <= 81);
   CHECK(right[2] < 16);
   REQUIRE(readback.unmap() == granit::result::success);
   CHECK(validation_errors.load(std::memory_order_relaxed) == 0);
@@ -517,6 +552,11 @@ TEST_CASE("跨后端索引纹理 Fixture 使用动态 Uniform 绘制两个对象
   REQUIRE(readback.reset() == granit::result::success);
   REQUIRE(group.reset() == granit::result::success);
   REQUIRE(base_color_sampler.reset() == granit::result::success);
+  REQUIRE(granit_texture_view_destroy(renderer.native_handle(), metallic_roughness_view) ==
+          GRANIT_SUCCESS);
+  REQUIRE(granit_texture_destroy(renderer.native_handle(), metallic_roughness) == GRANIT_SUCCESS);
+  REQUIRE(granit_texture_view_destroy(renderer.native_handle(), normal_view) == GRANIT_SUCCESS);
+  REQUIRE(granit_texture_destroy(renderer.native_handle(), normal) == GRANIT_SUCCESS);
   REQUIRE(granit_texture_view_destroy(renderer.native_handle(), base_color_view) == GRANIT_SUCCESS);
   REQUIRE(granit_texture_destroy(renderer.native_handle(), base_color) == GRANIT_SUCCESS);
   REQUIRE(index_buffer.reset() == granit::result::success);

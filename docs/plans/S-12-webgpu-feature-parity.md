@@ -275,12 +275,12 @@ WebGPU 命令适配器暂存这些状态，并在 Provider 打开 Render Pass �
 不在每个子提交中递增版本号；S-12 完成前统一审查并确定最终版本号。
 
 跨后端基础 Fixture 已经落地：Vulkan 与 WebGPU Mock 通过相同测试正文、Shader Asset 和命令顺序，
-使用交错 Position/UV Vertex Buffer、`uint16` Index Buffer、Base Color Texture 与 Sampler，
-再从同一个 Uniform Buffer 使用两个动态 Offset 完成两次 Indexed Draw，并以 RGBA8 回读探针验证
-纹理与实例颜色组合结果。测试同时固定资源销毁路径；WebGPU 依赖命令对象持有已编码资源的引用，
-因此公共资源记录退出后可立即释放应用侧 Provider 引用，不需要复制 Vulkan 的提交序列延迟回收
-队列。法线与 Metallic-Roughness Texture、遮挡探针、失败图像产物，以及桌面 Dawn 和浏览器实机
-执行仍属于 S-12F 后续工作。
+使用交错 Position/UV/Normal Vertex Buffer、`uint16` Index Buffer、sRGB Base Color Texture、线性
+Normal 与 Metallic-Roughness Texture，以及共享 Sampler，再从同一个 Uniform Buffer 使用两个动态
+Offset 完成两次 Indexed Draw，并以 RGBA8 回读探针验证纹理、法线、材质参数与实例颜色组合结果。
+测试同时固定资源销毁路径；WebGPU 依赖命令对象持有已编码资源的引用，因此公共资源记录退出后可
+立即释放应用侧 Provider 引用，不需要复制 Vulkan 的提交序列延迟回收队列。遮挡探针、失败图像
+产物，以及桌面 Dawn 和浏览器实机执行仍属于 S-12F 后续工作。
 
 - Vulkan、桌面 Dawn 与 Emscripten 调用同一 Fixture 函数；只在 Renderer 创建参数中选择
   后端，测试正文不含后端条件分支。
@@ -310,9 +310,9 @@ WebGPU 命令适配器暂存这些状态，并在 Provider 打开 Render Pass �
    Bind Group，以及空布局和多 Bind Group Pipeline Layout。
 5. **S-12E 每帧数据（已完成）**：已将动态 Uniform Offset、对齐限制、混合 Upload Batch 和
    Compute 命令路径映射到两个后端。
-6. **S-12F 跨后端 Fixture（进行中）**：带 Base Color Texture 的索引几何和动态 Uniform
-   离屏 Fixture 已在 Vulkan 与 WebGPU Mock 共用；下一步补齐材质纹理与诊断产物，并接入桌面
-   WebGPU 和浏览器 WebGPU 执行。
+6. **S-12F 跨后端 Fixture（进行中）**：带 Base Color、Normal 和 Metallic-Roughness Texture
+   的索引几何及动态 Uniform 离屏 Fixture 已在 Vulkan 与 WebGPU Mock 共用；下一步补齐遮挡探针
+   与诊断产物，并接入桌面 WebGPU 和浏览器 WebGPU 执行。
 7. **S-12G 验收**：验证公共头、共享/静态安装 Consumer、错误路径、截图结果和平台矩阵。
 
 ## 测试与验收
