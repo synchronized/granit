@@ -584,6 +584,21 @@ TEST_CASE("WebGPU 插件绑定与 Pipeline 遵守依赖生命周期", "[backend]
                        GRANIT_BACKEND_PLUGIN_BUFFER_USAGE_COPY_DST_BIT;
   granit_backend_plugin_buffer uniform_buffer{};
   REQUIRE(loader.create_buffer(first, &uniform_desc, &uniform_buffer) == GRANIT_SUCCESS);
+  const std::array<std::byte, 16> batch_data{};
+  std::array<granit_backend_plugin_upload_operation, 2> upload_operations{};
+  for (std::size_t index = 0; index < upload_operations.size(); ++index) {
+    auto& operation = upload_operations[index];
+    operation.struct_size = sizeof(operation);
+    operation.type = GRANIT_BACKEND_PLUGIN_UPLOAD_TYPE_BUFFER;
+    operation.buffer = uniform_buffer;
+    operation.destination_offset = index * batch_data.size();
+    operation.data = batch_data.data();
+    operation.size = batch_data.size();
+  }
+  REQUIRE(loader.write_upload_batch(first, upload_operations) == GRANIT_SUCCESS);
+  upload_operations[1].destination_offset = 1;
+  CHECK(loader.write_upload_batch(first, upload_operations) == GRANIT_ERROR_INVALID_ARGUMENT);
+  upload_operations[1].destination_offset = batch_data.size();
 
   const granit_backend_plugin_bind_group_layout_entry layout_entries[]{
       {0, GRANIT_BACKEND_PLUGIN_BINDING_TYPE_SAMPLED_TEXTURE,

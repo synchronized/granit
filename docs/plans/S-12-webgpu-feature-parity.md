@@ -223,7 +223,7 @@ Texture View 子资源和 Renderer 归属。Bind Group 保留 Layout 与所有�
 类型错误、缺失项、跨 Renderer 句柄与不支持数组。Provider ABI 直接升级，不保留
 旧的固定 Texture/Sampler 分支。
 
-S-12D 已完成：Provider ABI v19 接收显式格式、mip 数量、
+S-12D 已完成：Provider ABI v20 接收显式格式、mip 数量、
 View mip 范围、写入区域、Sampler 状态和由 Layout 驱动的绑定数组，
 公共 Renderer 已接通上述五种必需格式的二维、单层、单采样 Texture 创建、子 View 创建，以及
 指定 mip、矩形区域和显式行跨度上传。Sampler 已接通过滤、寻址、LOD 范围和整数倍
@@ -257,9 +257,9 @@ Registry 契约测试，Provider Mock 只验证后端参数映射。
 当前已完成图形命令的动态 Uniform Offset 路径：公共 Registry 校验后，WebGPU HAL 将多个
 Bind Group 与动态偏移批量传给 Provider；Provider 按 Pipeline Layout 中的组顺序及 Layout 中
 递增的 binding 顺序切分偏移，并再次校验数量、设备对齐、Buffer 范围、句柄归属和录制状态。
-Upload Batch 已支持在同一批次混合 Buffer 与二维单层 Texture 写入，并保留成功后统一释放 Host
-副本的公共语义。将整批写入压缩为单次 Provider ABI 调用，以及 Compute Bind Group，仍属于本阶段
-后续工作。
+Upload Batch 已支持在同一批次混合 Buffer 与二维单层 Texture 写入，并通过一次 Provider ABI 调用
+提交；Provider 在执行任何 Queue Write 前完整校验整批描述，公共 Registry 只在成功后统一释放 Host
+副本。Compute Bind Group 仍属于本阶段后续工作。
 
 ### S-12F 跨后端 Fixture 契约
 

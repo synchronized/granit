@@ -15,8 +15,8 @@ bool is_compatible(const granit_backend_plugin_api* api,
   constexpr std::size_t minimum_size = offsetof(granit_backend_plugin_api, instance_api) +
                                        sizeof(const granit_backend_plugin_instance_api*);
   constexpr std::size_t minimum_instance_api_size =
-      offsetof(granit_backend_plugin_instance_api, recorder_end_rendering) +
-      sizeof(granit_backend_plugin_recorder_end_rendering_fn);
+      offsetof(granit_backend_plugin_instance_api, write_upload_batch) +
+      sizeof(granit_backend_plugin_write_upload_batch_fn);
   return api != nullptr && api->struct_size >= minimum_size &&
          api->abi_version == GRANIT_BACKEND_PLUGIN_ABI_VERSION && api->kind == expected_kind &&
          api->reserved == 0 && api->name != nullptr && api->name_length != 0 &&
@@ -71,7 +71,8 @@ bool is_compatible(const granit_backend_plugin_api* api,
          api->instance_api->recorder_bind_index_buffer != nullptr &&
          api->instance_api->recorder_draw_vertices != nullptr &&
          api->instance_api->recorder_draw_indices != nullptr &&
-         api->instance_api->recorder_end_rendering != nullptr;
+         api->instance_api->recorder_end_rendering != nullptr &&
+         api->instance_api->write_upload_batch != nullptr;
 }
 
 bool is_valid_host(const granit_backend_plugin_host_api* host) noexcept {
@@ -531,6 +532,21 @@ backend_plugin_loader::write_texture(granit_backend_plugin_instance instance,
     return GRANIT_ERROR_INVALID_HANDLE;
   try {
     return api_->instance_api->write_texture(instance, texture, desc, data, size);
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+granit_result backend_plugin_loader::write_upload_batch(
+    granit_backend_plugin_instance instance,
+    std::span<const granit_backend_plugin_upload_operation> operations) noexcept {
+  if (api_ == nullptr || instance == 0 || operations.empty() || operations.size() > UINT32_MAX)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  if (std::find(instances_.begin(), instances_.end(), instance) == instances_.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  try {
+    return api_->instance_api->write_upload_batch(instance, operations.data(),
+                                                  static_cast<std::uint32_t>(operations.size()));
   } catch (...) {
     return GRANIT_ERROR_INTERNAL;
   }

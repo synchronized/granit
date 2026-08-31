@@ -1134,6 +1134,100 @@ granit_result write_texture(granit_backend_plugin_instance instance,
   return GRANIT_SUCCESS;
 }
 
+granit_result write_upload_batch(granit_backend_plugin_instance instance,
+                                 const granit_backend_plugin_upload_operation* operations,
+                                 std::uint32_t operation_count) noexcept {
+  if (instance == 0 || operations == nullptr || operation_count == 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  const std::scoped_lock lock{instances_mutex};
+  const auto found = instances.find(instance);
+  if (found == instances.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  if (const auto ready = require_ready(*found->second); ready != GRANIT_SUCCESS)
+    return ready;
+  auto& state = *found->second;
+
+  for (std::uint32_t index = 0; index < operation_count; ++index) {
+    const auto& operation = operations[index];
+    if (operation.struct_size < sizeof(granit_backend_plugin_upload_operation) ||
+        operation.data == nullptr || operation.size == 0 || operation.reserved != 0 ||
+        operation.size > static_cast<std::uint64_t>(SIZE_MAX))
+      return GRANIT_ERROR_INVALID_ARGUMENT;
+    if (operation.type == GRANIT_BACKEND_PLUGIN_UPLOAD_TYPE_BUFFER) {
+      if (operation.buffer == 0 || operation.texture != 0 ||
+          operation.texture_write.struct_size != 0 || operation.destination_offset % 4 != 0 ||
+          operation.size % 4 != 0)
+        return GRANIT_ERROR_INVALID_ARGUMENT;
+      const auto buffer = state.buffers.find(operation.buffer);
+      if (buffer == state.buffers.end())
+        return GRANIT_ERROR_INVALID_HANDLE;
+      if ((buffer->second.usage & GRANIT_BACKEND_PLUGIN_BUFFER_USAGE_COPY_DST_BIT) == 0 ||
+          operation.destination_offset > buffer->second.size ||
+          operation.size > buffer->second.size - operation.destination_offset)
+        return GRANIT_ERROR_INVALID_ARGUMENT;
+      continue;
+    }
+    if (operation.type != GRANIT_BACKEND_PLUGIN_UPLOAD_TYPE_TEXTURE || operation.buffer != 0 ||
+        operation.texture == 0 || operation.destination_offset != 0)
+      return GRANIT_ERROR_INVALID_ARGUMENT;
+    const auto& desc = operation.texture_write;
+    if (desc.struct_size < sizeof(granit_backend_plugin_texture_write_desc) ||
+        desc.reserved[0] != 0 || desc.reserved[1] != 0 || desc.width == 0 || desc.height == 0)
+      return GRANIT_ERROR_INVALID_ARGUMENT;
+    const auto texture = state.textures.find(operation.texture);
+    if (texture == state.textures.end())
+      return GRANIT_ERROR_INVALID_HANDLE;
+    const auto& record = texture->second;
+    if (record.borrowed || (record.usage & GRANIT_BACKEND_PLUGIN_TEXTURE_USAGE_COPY_DST_BIT) == 0 ||
+        desc.mip_level >= record.mip_level_count)
+      return GRANIT_ERROR_INVALID_ARGUMENT;
+    const auto mip_width = std::max(UINT32_C(1), record.width >> desc.mip_level);
+    const auto mip_height = std::max(UINT32_C(1), record.height >> desc.mip_level);
+    if (desc.x >= mip_width || desc.width > mip_width - desc.x || desc.y >= mip_height ||
+        desc.height > mip_height - desc.y)
+      return GRANIT_ERROR_INVALID_ARGUMENT;
+    const std::uint64_t tight_row =
+        std::uint64_t{desc.width} * texture_bytes_per_pixel(record.format);
+    const std::uint64_t row_pitch = desc.bytes_per_row == 0 ? tight_row : desc.bytes_per_row;
+    const std::uint64_t rows = desc.rows_per_image == 0 ? desc.height : desc.rows_per_image;
+    if (row_pitch < tight_row || rows < desc.height ||
+        row_pitch > std::numeric_limits<std::uint32_t>::max())
+      return GRANIT_ERROR_INVALID_ARGUMENT;
+    const std::uint64_t required = (std::uint64_t{desc.height} - 1) * row_pitch + tight_row;
+    if (required > operation.size)
+      return GRANIT_ERROR_INVALID_ARGUMENT;
+  }
+
+  for (std::uint32_t index = 0; index < operation_count; ++index) {
+    const auto& operation = operations[index];
+    if (operation.type == GRANIT_BACKEND_PLUGIN_UPLOAD_TYPE_BUFFER) {
+      const auto& buffer = state.buffers.find(operation.buffer)->second;
+      wgpuQueueWriteBuffer(state.queue, buffer.buffer, operation.destination_offset, operation.data,
+                           static_cast<std::size_t>(operation.size));
+      continue;
+    }
+    const auto& desc = operation.texture_write;
+    const auto& texture = state.textures.find(operation.texture)->second;
+    const std::uint64_t tight_row =
+        std::uint64_t{desc.width} * texture_bytes_per_pixel(texture.format);
+    const auto row_pitch =
+        static_cast<std::uint32_t>(desc.bytes_per_row == 0 ? tight_row : desc.bytes_per_row);
+    const auto rows = desc.rows_per_image == 0 ? desc.height : desc.rows_per_image;
+    WGPUTexelCopyTextureInfo destination = WGPU_TEXEL_COPY_TEXTURE_INFO_INIT;
+    destination.texture = texture.texture;
+    destination.mipLevel = desc.mip_level;
+    destination.origin = {desc.x, desc.y, 0};
+    destination.aspect = WGPUTextureAspect_All;
+    WGPUTexelCopyBufferLayout layout{};
+    layout.bytesPerRow = row_pitch;
+    layout.rowsPerImage = rows;
+    const WGPUExtent3D extent{desc.width, desc.height, 1};
+    wgpuQueueWriteTexture(state.queue, &destination, operation.data,
+                          static_cast<std::size_t>(operation.size), &layout, &extent);
+  }
+  return GRANIT_SUCCESS;
+}
+
 granit_result create_texture_view(granit_backend_plugin_instance instance,
                                   granit_backend_plugin_texture texture,
                                   const granit_backend_plugin_texture_view_desc* desc,
@@ -2892,7 +2986,8 @@ constexpr granit_backend_plugin_instance_api instance_api{
     recorder_bind_index_buffer,
     recorder_draw_vertices,
     recorder_draw_indices,
-    recorder_end_rendering};
+    recorder_end_rendering,
+    write_upload_batch};
 constexpr granit_backend_plugin_api plugin_api{sizeof(granit_backend_plugin_api),
                                                GRANIT_BACKEND_PLUGIN_ABI_VERSION,
                                                GRANIT_BACKEND_PLUGIN_KIND_WEBGPU,

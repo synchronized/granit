@@ -104,6 +104,9 @@ public:
                                             const granit_backend_plugin_texture_write_desc* desc,
                                             const void* data, std::uint64_t size) noexcept;
   [[nodiscard]] granit_result
+  write_upload_batch(granit_backend_plugin_instance instance,
+                     std::span<const granit_backend_plugin_upload_operation> operations) noexcept;
+  [[nodiscard]] granit_result
   create_texture_view(granit_backend_plugin_instance instance,
                       granit_backend_plugin_texture texture,
                       const granit_backend_plugin_texture_view_desc* desc,

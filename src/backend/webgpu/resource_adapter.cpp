@@ -254,50 +254,59 @@ granit_result webgpu_resource_adapter::upload_batch(
     std::span<const backend_upload_operation> uploads) const noexcept {
   if (uploads.empty())
     return GRANIT_ERROR_INVALID_ARGUMENT;
-  for (const auto& upload : uploads) {
-    if (upload.data == nullptr || upload.size == 0)
-      return GRANIT_ERROR_INVALID_ARGUMENT;
-    if (upload.type == backend_upload_type::buffer) {
-      if (upload.buffer == nullptr || as_buffer(*upload.buffer) == nullptr)
+  try {
+    std::vector<granit_backend_plugin_upload_operation> operations;
+    operations.reserve(uploads.size());
+    for (const auto& upload : uploads) {
+      if (upload.data == nullptr || upload.size == 0)
         return GRANIT_ERROR_INVALID_ARGUMENT;
-      continue;
+      granit_backend_plugin_upload_operation operation{};
+      operation.struct_size = sizeof(operation);
+      operation.data = upload.data;
+      operation.size = upload.size;
+      if (upload.type == backend_upload_type::buffer) {
+        const auto* buffer = upload.buffer == nullptr ? nullptr : as_buffer(*upload.buffer);
+        if (buffer == nullptr)
+          return GRANIT_ERROR_INVALID_ARGUMENT;
+        operation.type = GRANIT_BACKEND_PLUGIN_UPLOAD_TYPE_BUFFER;
+        operation.buffer = buffer->handle_;
+        operation.destination_offset = upload.destination_offset;
+      } else if (upload.type == backend_upload_type::texture) {
+        const auto* texture = upload.texture == nullptr
+                                  ? nullptr
+                                  : dynamic_cast<const webgpu_texture_resource*>(upload.texture);
+        if (texture == nullptr)
+          return GRANIT_ERROR_INVALID_ARGUMENT;
+        const auto& copy = upload.texture_copy;
+        const auto pixel_size = bytes_per_pixel(texture->format_);
+        if (pixel_size == 0 || copy.aspect != GRANIT_TEXTURE_ASPECT_COLOR_BIT ||
+            copy.base_array_layer != 0 || copy.array_layer_count != 1 || copy.z != 0 ||
+            copy.depth != 1 || copy.x < 0 || copy.y < 0 ||
+            (copy.buffer_row_length != 0 && copy.buffer_row_length > UINT32_MAX / pixel_size))
+          return GRANIT_ERROR_UNSUPPORTED;
+        operation.type = GRANIT_BACKEND_PLUGIN_UPLOAD_TYPE_TEXTURE;
+        operation.texture = texture->handle_;
+        operation.texture_write = {
+            sizeof(granit_backend_plugin_texture_write_desc),
+            copy.mip_level,
+            static_cast<std::uint32_t>(copy.x),
+            static_cast<std::uint32_t>(copy.y),
+            copy.width,
+            copy.height,
+            copy.buffer_row_length == 0 ? 0 : copy.buffer_row_length * pixel_size,
+            copy.buffer_image_height,
+            {0, 0}};
+      } else {
+        return GRANIT_ERROR_INVALID_ARGUMENT;
+      }
+      operations.push_back(operation);
     }
-    if (upload.type != backend_upload_type::texture || upload.texture == nullptr ||
-        dynamic_cast<const webgpu_texture_resource*>(upload.texture) == nullptr)
-      return GRANIT_ERROR_INVALID_ARGUMENT;
+    return context_->loader->write_upload_batch(context_->instance, operations);
+  } catch (const std::bad_alloc&) {
+    return GRANIT_ERROR_OUT_OF_MEMORY;
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
   }
-  for (const auto& upload : uploads) {
-    granit_result result{};
-    if (upload.type == backend_upload_type::buffer) {
-      const auto* buffer = as_buffer(*upload.buffer);
-      result = context_->loader->write_buffer(context_->instance, buffer->handle_,
-                                              upload.destination_offset, upload.data, upload.size);
-    } else {
-      const auto* texture = dynamic_cast<const webgpu_texture_resource*>(upload.texture);
-      const auto& copy = upload.texture_copy;
-      const auto pixel_size = bytes_per_pixel(texture->format_);
-      if (pixel_size == 0 || copy.aspect != GRANIT_TEXTURE_ASPECT_COLOR_BIT ||
-          copy.base_array_layer != 0 || copy.array_layer_count != 1 || copy.z != 0 ||
-          copy.depth != 1 || copy.x < 0 || copy.y < 0 ||
-          (copy.buffer_row_length != 0 && copy.buffer_row_length > UINT32_MAX / pixel_size))
-        return GRANIT_ERROR_UNSUPPORTED;
-      const granit_backend_plugin_texture_write_desc desc{
-          sizeof(granit_backend_plugin_texture_write_desc),
-          copy.mip_level,
-          static_cast<std::uint32_t>(copy.x),
-          static_cast<std::uint32_t>(copy.y),
-          copy.width,
-          copy.height,
-          copy.buffer_row_length == 0 ? 0 : copy.buffer_row_length * pixel_size,
-          copy.buffer_image_height,
-          {0, 0}};
-      result = context_->loader->write_texture(context_->instance, texture->handle_, &desc,
-                                               upload.data, upload.size);
-    }
-    if (result != GRANIT_SUCCESS)
-      return result;
-  }
-  return GRANIT_SUCCESS;
 }
 
 granit_backend_plugin_buffer

@@ -9,7 +9,7 @@
 #include <granit/core/diagnostic.h>
 #include <granit/core/result.h>
 
-#define GRANIT_BACKEND_PLUGIN_ABI_VERSION UINT32_C(19)
+#define GRANIT_BACKEND_PLUGIN_ABI_VERSION UINT32_C(20)
 #define GRANIT_BACKEND_PLUGIN_KIND_WEBGPU UINT32_C(1)
 #define GRANIT_BACKEND_PLUGIN_QUERY_SYMBOL "granit_backend_plugin_query"
 #define GRANIT_BACKEND_PLUGIN_SURFACE_TYPE_WIN32_BIT UINT32_C(0x00000001)
@@ -123,6 +123,23 @@ typedef struct granit_backend_plugin_texture_write_desc {
   uint32_t rows_per_image;
   uint32_t reserved[2];
 } granit_backend_plugin_texture_write_desc;
+
+typedef uint32_t granit_backend_plugin_upload_type;
+#define GRANIT_BACKEND_PLUGIN_UPLOAD_TYPE_BUFFER UINT32_C(1)
+#define GRANIT_BACKEND_PLUGIN_UPLOAD_TYPE_TEXTURE UINT32_C(2)
+
+/** 批量上传调用期间借用 data；未使用的资源句柄和字段必须为零。 */
+typedef struct granit_backend_plugin_upload_operation {
+  uint32_t struct_size;
+  granit_backend_plugin_upload_type type;
+  granit_backend_plugin_buffer buffer;
+  granit_backend_plugin_texture texture;
+  uint64_t destination_offset;
+  granit_backend_plugin_texture_write_desc texture_write;
+  const void* data;
+  uint64_t size;
+  uint64_t reserved;
+} granit_backend_plugin_upload_operation;
 
 typedef uint32_t granit_backend_plugin_filter;
 #define GRANIT_BACKEND_PLUGIN_FILTER_NEAREST UINT32_C(1)
@@ -389,6 +406,9 @@ typedef granit_result (*granit_backend_plugin_destroy_texture_fn)(
 typedef granit_result (*granit_backend_plugin_write_texture_fn)(
     granit_backend_plugin_instance instance, granit_backend_plugin_texture texture,
     const granit_backend_plugin_texture_write_desc* desc, const void* data, uint64_t size);
+typedef granit_result (*granit_backend_plugin_write_upload_batch_fn)(
+    granit_backend_plugin_instance instance,
+    const granit_backend_plugin_upload_operation* operations, uint32_t operation_count);
 typedef granit_result (*granit_backend_plugin_create_texture_view_fn)(
     granit_backend_plugin_instance instance, granit_backend_plugin_texture texture,
     const granit_backend_plugin_texture_view_desc* desc, granit_backend_plugin_texture_view* view);
@@ -579,6 +599,7 @@ typedef struct granit_backend_plugin_instance_api {
   granit_backend_plugin_recorder_draw_vertices_fn recorder_draw_vertices;
   granit_backend_plugin_recorder_draw_indices_fn recorder_draw_indices;
   granit_backend_plugin_recorder_end_rendering_fn recorder_end_rendering;
+  granit_backend_plugin_write_upload_batch_fn write_upload_batch;
 } granit_backend_plugin_instance_api;
 
 /** 后端插件入口返回的只读描述；字符串在插件卸载前有效。 */
