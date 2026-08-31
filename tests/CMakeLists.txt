@@ -556,6 +556,7 @@ target_link_libraries(
     Catch2::Catch2WithMain
     $<$<PLATFORM_ID:Windows>:user32>
 )
+target_include_directories(granit_renderer_test PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
 target_compile_definitions(
   granit_renderer_test
   PRIVATE

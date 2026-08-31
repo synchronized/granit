@@ -286,7 +286,9 @@ Offset 完成四次 Indexed Draw，并以 RGBA8 回读探针验证纹理、法�
 注入同一 Renderer Fixture，并在构建 Dawn SDK 的同一工具链和软件适配器环境中执行。
 Emscripten 5.0.6 浏览器 Smoke 已使用 D32 Float 深度附件按近、远顺序绘制重叠三角形，Chromium
 像素探针确认后绘制的远端黄色片元不会覆盖近端蓝色片元；完整索引纹理 Fixture 的公共主体仍需
-从原生测试中抽取后复用到浏览器入口。
+从原生测试中抽取后复用到浏览器入口。Fixture 的尺寸、交错顶点、`uint16` 索引、四组动态 Uniform、
+三张材质纹理像素和语义探针已集中到 `tests/support/renderer_fixture.h`，原生测试不再持有这些常量
+的副本；下一步让浏览器执行层消费该契约和同一组 WGSL Shader Asset。
 
 当前测试已增加背景、两个实例和深度遮挡区域的语义探针。探针失败时在构建目录的
 `test-artifacts` 中写出实际图、按语义探针修正的期望图、绝对差异图和 Renderer/Adapter 元数据；

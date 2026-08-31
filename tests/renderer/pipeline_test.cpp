@@ -9,6 +9,8 @@
 #include <granit/renderer/shader.hpp>
 #include <granit/renderer/texture.h>
 
+#include "support/renderer_fixture.h"
+
 #include <catch2/catch_all.hpp>
 
 #include <array>
@@ -101,12 +103,7 @@ void count_validation_errors(granit_diagnostic_severity severity,
   }
 }
 
-struct pixel_probe {
-  std::uint32_t x{};
-  std::uint32_t y{};
-  std::array<std::uint8_t, 3> expected{};
-  std::uint8_t tolerance{};
-};
+using pixel_probe = granit::test::renderer_fixture::semantic_probe;
 
 bool pixel_matches(const std::uint8_t* pixels, std::uint32_t width, const pixel_probe& probe) {
   const auto* actual = pixels + (static_cast<std::size_t>(probe.y) * width + probe.x) * 4;
@@ -367,10 +364,10 @@ TEST_CASE("跨后端索引纹理 Fixture 使用动态 Uniform 绘制两个对象
     std::string_view library_path;
   };
 #if defined(GRANIT_WEBGPU_BACKEND_PLUGIN_PATH)
-  const auto backend = GENERATE(
-      backend_case{granit::renderer_backend::vulkan, {}},
-      backend_case{granit::renderer_backend::webgpu, GRANIT_FAKE_BACKEND_PLUGIN_PATH},
-      backend_case{granit::renderer_backend::webgpu, GRANIT_WEBGPU_BACKEND_PLUGIN_PATH});
+  const auto backend =
+      GENERATE(backend_case{granit::renderer_backend::vulkan, {}},
+               backend_case{granit::renderer_backend::webgpu, GRANIT_FAKE_BACKEND_PLUGIN_PATH},
+               backend_case{granit::renderer_backend::webgpu, GRANIT_WEBGPU_BACKEND_PLUGIN_PATH});
 #else
   const auto backend =
       GENERATE(backend_case{granit::renderer_backend::vulkan, {}},
@@ -457,18 +454,7 @@ TEST_CASE("跨后端索引纹理 Fixture 使用动态 Uniform 绘制两个对象
                .color_blends = {},
                .depth_bias = std::nullopt}) == granit::result::success);
 
-  std::array<std::byte, 1024> uniform_data{};
-  const auto write_vec4 = [&uniform_data](std::size_t offset, const std::array<float, 4>& value) {
-    std::memcpy(uniform_data.data() + offset, value.data(), sizeof(value));
-  };
-  write_vec4(0, {-0.5F, 0.0F, 0.0F, 0.0F});
-  write_vec4(16, {1.0F, 0.0F, 0.0F, 1.0F});
-  write_vec4(256, {0.5F, 0.0F, 0.0F, 0.0F});
-  write_vec4(272, {0.0F, 1.0F, 0.0F, 1.0F});
-  write_vec4(512, {0.0F, 0.0F, 0.2F, 0.0F});
-  write_vec4(528, {0.0F, 0.0F, 1.0F, 1.0F});
-  write_vec4(768, {0.0F, 0.0F, 0.8F, 0.0F});
-  write_vec4(784, {1.0F, 1.0F, 0.0F, 1.0F});
+  const auto uniform_data = granit::test::renderer_fixture::make_uniform_data();
   granit::buffer uniform;
   REQUIRE(uniform.initialize(
               renderer.native_handle(),
@@ -485,9 +471,7 @@ TEST_CASE("跨后端索引纹理 Fixture 使用动态 Uniform 绘制两个对象
   granit_texture_view base_color_view = GRANIT_NULL_HANDLE;
   REQUIRE(granit_texture_create_with_default_view(renderer.native_handle(), &base_color_desc,
                                                   &base_color, &base_color_view) == GRANIT_SUCCESS);
-  constexpr std::array<std::uint8_t, 16> base_color_pixels{
-      200, 160, 120, 255, 200, 160, 120, 255, 200, 160, 120, 255, 200, 160, 120, 255,
-  };
+  constexpr auto& base_color_pixels = granit::test::renderer_fixture::base_color_pixels;
   const granit_texture_data_layout base_color_layout{};
   const granit_texture_write_region base_color_region{.mip_level = 0,
                                                       .base_array_layer = 0,
@@ -508,9 +492,7 @@ TEST_CASE("跨后端索引纹理 Fixture 使用动态 Uniform 绘制两个对象
   material_texture_desc.format = GRANIT_TEXTURE_FORMAT_RGBA8_UNORM;
   REQUIRE(granit_texture_create_with_default_view(renderer.native_handle(), &material_texture_desc,
                                                   &normal, &normal_view) == GRANIT_SUCCESS);
-  constexpr std::array<std::uint8_t, 16> normal_pixels{
-      128, 128, 255, 255, 128, 128, 255, 255, 128, 128, 255, 255, 128, 128, 255, 255,
-  };
+  constexpr auto& normal_pixels = granit::test::renderer_fixture::normal_pixels;
   REQUIRE(granit_texture_write(renderer.native_handle(), normal, normal_pixels.data(),
                                normal_pixels.size(), &base_color_layout,
                                &base_color_region) == GRANIT_SUCCESS);
@@ -519,9 +501,8 @@ TEST_CASE("跨后端索引纹理 Fixture 使用动态 Uniform 绘制两个对象
   REQUIRE(granit_texture_create_with_default_view(renderer.native_handle(), &material_texture_desc,
                                                   &metallic_roughness,
                                                   &metallic_roughness_view) == GRANIT_SUCCESS);
-  constexpr std::array<std::uint8_t, 16> metallic_roughness_pixels{
-      0, 128, 128, 255, 0, 128, 128, 255, 0, 128, 128, 255, 0, 128, 128, 255,
-  };
+  constexpr auto& metallic_roughness_pixels =
+      granit::test::renderer_fixture::metallic_roughness_pixels;
   REQUIRE(granit_texture_write(renderer.native_handle(), metallic_roughness,
                                metallic_roughness_pixels.data(), metallic_roughness_pixels.size(),
                                &base_color_layout, &base_color_region) == GRANIT_SUCCESS);
@@ -538,11 +519,8 @@ TEST_CASE("跨后端索引纹理 Fixture 使用动态 Uniform 绘制两个对象
   REQUIRE(group.initialize(renderer.native_handle(), group_layout.native_handle(), entries) ==
           granit::result::success);
 
-  constexpr std::array<float, 28> vertices{
-      -0.22F, -0.30F, 0.0F, 0.0F, 0.0F, 0.0F, 1.0F, 0.22F,  -0.30F, 1.0F, 0.0F, 0.0F, 0.0F, 1.0F,
-      0.22F,  0.30F,  1.0F, 1.0F, 0.0F, 0.0F, 1.0F, -0.22F, 0.30F,  0.0F, 1.0F, 0.0F, 0.0F, 1.0F,
-  };
-  constexpr std::array<std::uint16_t, 6> indices{0, 1, 2, 2, 3, 0};
+  constexpr auto& vertices = granit::test::renderer_fixture::vertices;
+  constexpr auto& indices = granit::test::renderer_fixture::indices;
   granit::buffer vertex_buffer;
   REQUIRE(vertex_buffer.initialize(
               renderer.native_handle(),
@@ -556,8 +534,8 @@ TEST_CASE("跨后端索引纹理 Fixture 使用动态 Uniform 绘制两个对象
                .usage = granit::buffer_usage::index | granit::buffer_usage::transfer_destination},
               std::as_bytes(std::span{indices})) == granit::result::success);
 
-  constexpr std::uint32_t width = 64;
-  constexpr std::uint32_t height = 32;
+  constexpr auto width = granit::test::renderer_fixture::width;
+  constexpr auto height = granit::test::renderer_fixture::height;
   granit_texture_desc target_desc = GRANIT_TEXTURE_DESC_INIT;
   target_desc.format = GRANIT_TEXTURE_FORMAT_RGBA8_UNORM;
   target_desc.usage =
@@ -650,12 +628,7 @@ TEST_CASE("跨后端索引纹理 Fixture 使用动态 Uniform 绘制两个对象
   void* mapped = nullptr;
   REQUIRE(readback.map(0, width * height * 4, &mapped) == granit::result::success);
   const auto* pixels = static_cast<const std::uint8_t*>(mapped);
-  const std::array probes{
-      pixel_probe{0, 0, {0, 0, 0}, 0},
-      pixel_probe{width / 2, height / 2, {0, 0, 42}, 2},
-      pixel_probe{width / 4, height / 2, {129, 0, 0}, 2},
-      pixel_probe{width * 3 / 4, height / 2, {0, 79, 0}, 2},
-  };
+  constexpr auto& probes = granit::test::renderer_fixture::semantic_probes;
   const auto image = std::span{pixels, static_cast<std::size_t>(width) * height * 4};
   const auto matches = std::all_of(probes.begin(), probes.end(), [&](const auto& probe) {
     return pixel_matches(pixels, width, probe);
