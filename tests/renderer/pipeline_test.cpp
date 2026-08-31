@@ -364,10 +364,17 @@ TEST_CASE("跨后端索引纹理 Fixture 使用动态 Uniform 绘制两个对象
     std::string_view library_path;
   };
 #if defined(GRANIT_WEBGPU_BACKEND_PLUGIN_PATH)
+#if defined(_WIN32)
+  // 托管 Windows Runner 没有 Vulkan ICD；真实 Vulkan Fixture 由 Linux Lavapipe 矩阵执行。
+  const auto backend =
+      GENERATE(backend_case{granit::renderer_backend::webgpu, GRANIT_FAKE_BACKEND_PLUGIN_PATH},
+               backend_case{granit::renderer_backend::webgpu, GRANIT_WEBGPU_BACKEND_PLUGIN_PATH});
+#else
   const auto backend =
       GENERATE(backend_case{granit::renderer_backend::vulkan, {}},
                backend_case{granit::renderer_backend::webgpu, GRANIT_FAKE_BACKEND_PLUGIN_PATH},
                backend_case{granit::renderer_backend::webgpu, GRANIT_WEBGPU_BACKEND_PLUGIN_PATH});
+#endif
 #else
   const auto backend =
       GENERATE(backend_case{granit::renderer_backend::vulkan, {}},

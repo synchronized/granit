@@ -308,8 +308,10 @@ Pipeline 与 Command Recorder API 运行完整场景；Chromium 截图同时验�
 ### S-12G 验收门槛
 
 - Registry 契约测试在无 GPU 环境全部通过，WebGPU Provider Mock 覆盖全部新 ABI 操作。
-- Windows 手动 Actions 运行 MSVC/Clang、Vulkan Fixture 与 Dawn Fixture；Linux 运行
-  GCC/Clang、Vulkan Fixture 与 Dawn Fixture；Emscripten 在 Chromium WebGPU 中运行同一 Fixture。
+- Windows 手动 Actions 运行 MSVC/Clang CPU 测试，并在 Dawn 工作流运行 WebGPU Mock 与真实 Dawn
+  Fixture；托管 Windows Runner 没有 Vulkan ICD，因此 Vulkan Fixture 由 Linux Lavapipe 运行。Linux
+  同时验证 GCC/Clang、Vulkan、WebGPU Mock 与真实 Dawn；Emscripten 在 Chromium WebGPU 中运行同一
+  Fixture 契约。
 - 共享/静态安装 Consumer、C11/C++20 公共头、ABI 布局、插件版本拒绝和安装包
   不泄漏 Dawn/Vulkan 依赖全部通过，才可将 S-12 标记完成并启动 S-13。
 
