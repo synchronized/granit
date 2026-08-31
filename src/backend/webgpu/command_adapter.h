@@ -59,6 +59,11 @@ public:
   [[nodiscard]] granit_result
   set_scissors(backend_command_recorder_resource& resource, std::uint32_t first,
                std::span<const granit_backend_plugin_scissor> scissors) const noexcept;
+  [[nodiscard]] granit_result copy_texture_to_buffer(backend_command_recorder_resource& resource,
+                                                     granit_backend_plugin_texture texture,
+                                                     granit_backend_plugin_buffer buffer,
+                                                     std::uint32_t width, std::uint32_t height,
+                                                     std::uint32_t bytes_per_row) const noexcept;
   [[nodiscard]] granit_result draw(backend_command_recorder_resource& resource,
                                    std::uint32_t vertex_count, std::uint32_t instance_count,
                                    std::uint32_t first_vertex,

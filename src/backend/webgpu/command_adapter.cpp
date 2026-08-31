@@ -4,6 +4,7 @@
 #include "backend/webgpu/command_adapter.h"
 
 #include <utility>
+#include <vector>
 
 namespace granit::detail {
 
@@ -33,6 +34,27 @@ public:
   granit_backend_plugin_command_recorder recorder_{};
   granit_backend_plugin_command_buffer command_buffer_{};
   bool compute_open_{};
+  bool render_open_{};
+  granit_backend_plugin_render_pipeline pipeline_{};
+  struct group_binding {
+    granit_backend_plugin_pipeline_layout layout{};
+    std::uint32_t first{};
+    std::vector<granit_backend_plugin_bind_group> groups;
+    std::vector<std::uint32_t> dynamic_offsets;
+  };
+  struct vertex_binding {
+    std::uint32_t first{};
+    std::vector<granit_backend_plugin_vertex_buffer_binding> bindings;
+  };
+  std::vector<group_binding> groups_;
+  std::vector<vertex_binding> vertex_buffers_;
+  granit_backend_plugin_buffer index_buffer_{};
+  std::uint64_t index_offset_{};
+  granit_backend_plugin_index_format index_format_{};
+  std::uint32_t viewport_first_{};
+  std::vector<granit_backend_plugin_viewport> viewports_;
+  std::uint32_t scissor_first_{};
+  std::vector<granit_backend_plugin_scissor> scissors_;
 };
 
 webgpu_command_recorder_resource* as_recorder(backend_command_recorder_resource& resource) {
@@ -68,8 +90,47 @@ granit_result webgpu_command_adapter::begin_rendering(backend_command_recorder_r
   if (recorder == nullptr || recorder->recorder_ == 0 || recorder->command_buffer_ != 0 ||
       target == 0)
     return GRANIT_ERROR_INVALID_ARGUMENT;
-  return context_->loader->recorder_begin_rendering(context_->instance, recorder->recorder_, target,
-                                                    load, store, clear);
+  auto result = context_->loader->recorder_begin_rendering(context_->instance, recorder->recorder_,
+                                                           target, load, store, clear);
+  if (result != GRANIT_SUCCESS)
+    return result;
+  recorder->render_open_ = true;
+  const auto replay = [&](granit_result next) {
+    if (result == GRANIT_SUCCESS)
+      result = next;
+  };
+  if (recorder->pipeline_ != 0) {
+    replay(context_->loader->recorder_bind_pipeline(context_->instance, recorder->recorder_,
+                                                    recorder->pipeline_));
+  }
+  for (const auto& binding : recorder->groups_) {
+    replay(context_->loader->recorder_bind_graphics_groups(
+        context_->instance, recorder->recorder_, binding.layout, binding.first, binding.groups,
+        binding.dynamic_offsets));
+  }
+  for (const auto& binding : recorder->vertex_buffers_) {
+    replay(context_->loader->recorder_bind_vertex_buffers(context_->instance, recorder->recorder_,
+                                                          binding.first, binding.bindings));
+  }
+  if (recorder->index_buffer_ != 0) {
+    replay(context_->loader->recorder_bind_index_buffer(
+        context_->instance, recorder->recorder_, recorder->index_buffer_, recorder->index_offset_,
+        recorder->index_format_));
+  }
+  if (!recorder->viewports_.empty()) {
+    replay(context_->loader->recorder_set_viewports(
+        context_->instance, recorder->recorder_, recorder->viewport_first_, recorder->viewports_));
+  }
+  if (!recorder->scissors_.empty()) {
+    replay(context_->loader->recorder_set_scissors(context_->instance, recorder->recorder_,
+                                                   recorder->scissor_first_, recorder->scissors_));
+  }
+  if (result != GRANIT_SUCCESS) {
+    static_cast<void>(
+        context_->loader->recorder_end_rendering(context_->instance, recorder->recorder_));
+    recorder->render_open_ = false;
+  }
+  return result;
 }
 
 granit_result webgpu_command_adapter::bind_pipeline(
@@ -79,8 +140,14 @@ granit_result webgpu_command_adapter::bind_pipeline(
   if (recorder == nullptr || recorder->recorder_ == 0 || recorder->command_buffer_ != 0 ||
       pipeline == 0)
     return GRANIT_ERROR_INVALID_ARGUMENT;
-  return context_->loader->recorder_bind_pipeline(context_->instance, recorder->recorder_,
-                                                  pipeline);
+  if (recorder->render_open_) {
+    const auto result =
+        context_->loader->recorder_bind_pipeline(context_->instance, recorder->recorder_, pipeline);
+    if (result != GRANIT_SUCCESS)
+      return result;
+  }
+  recorder->pipeline_ = pipeline;
+  return GRANIT_SUCCESS;
 }
 
 granit_result webgpu_command_adapter::bind_graphics_groups(
@@ -91,8 +158,25 @@ granit_result webgpu_command_adapter::bind_graphics_groups(
   if (recorder == nullptr || recorder->recorder_ == 0 || recorder->command_buffer_ != 0 ||
       layout == 0 || groups.empty())
     return GRANIT_ERROR_INVALID_ARGUMENT;
-  return context_->loader->recorder_bind_graphics_groups(
-      context_->instance, recorder->recorder_, layout, first_group, groups, dynamic_offsets);
+  try {
+    webgpu_command_recorder_resource::group_binding binding{
+        layout,
+        first_group,
+        {groups.begin(), groups.end()},
+        {dynamic_offsets.begin(), dynamic_offsets.end()}};
+    if (recorder->render_open_) {
+      const auto result = context_->loader->recorder_bind_graphics_groups(
+          context_->instance, recorder->recorder_, layout, first_group, groups, dynamic_offsets);
+      if (result != GRANIT_SUCCESS)
+        return result;
+    }
+    recorder->groups_.push_back(std::move(binding));
+    return GRANIT_SUCCESS;
+  } catch (const std::bad_alloc&) {
+    return GRANIT_ERROR_OUT_OF_MEMORY;
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
 }
 
 granit_result
@@ -156,8 +240,22 @@ granit_result webgpu_command_adapter::bind_vertex_buffers(
   if (recorder == nullptr || recorder->recorder_ == 0 || recorder->command_buffer_ != 0 ||
       bindings.empty())
     return GRANIT_ERROR_INVALID_ARGUMENT;
-  return context_->loader->recorder_bind_vertex_buffers(context_->instance, recorder->recorder_,
-                                                        first, bindings);
+  try {
+    webgpu_command_recorder_resource::vertex_binding binding{first,
+                                                             {bindings.begin(), bindings.end()}};
+    if (recorder->render_open_) {
+      const auto result = context_->loader->recorder_bind_vertex_buffers(
+          context_->instance, recorder->recorder_, first, bindings);
+      if (result != GRANIT_SUCCESS)
+        return result;
+    }
+    recorder->vertex_buffers_.push_back(std::move(binding));
+    return GRANIT_SUCCESS;
+  } catch (const std::bad_alloc&) {
+    return GRANIT_ERROR_OUT_OF_MEMORY;
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
 }
 
 granit_result webgpu_command_adapter::bind_index_buffer(
@@ -169,26 +267,75 @@ granit_result webgpu_command_adapter::bind_index_buffer(
       (format != GRANIT_BACKEND_PLUGIN_INDEX_FORMAT_UINT16 &&
        format != GRANIT_BACKEND_PLUGIN_INDEX_FORMAT_UINT32))
     return GRANIT_ERROR_INVALID_ARGUMENT;
-  return context_->loader->recorder_bind_index_buffer(context_->instance, recorder->recorder_,
-                                                      buffer, offset, format);
+  if (recorder->render_open_) {
+    const auto result = context_->loader->recorder_bind_index_buffer(
+        context_->instance, recorder->recorder_, buffer, offset, format);
+    if (result != GRANIT_SUCCESS)
+      return result;
+  }
+  recorder->index_buffer_ = buffer;
+  recorder->index_offset_ = offset;
+  recorder->index_format_ = format;
+  return GRANIT_SUCCESS;
 }
 
 granit_result webgpu_command_adapter::set_viewports(
     backend_command_recorder_resource& resource, std::uint32_t first,
     std::span<const granit_backend_plugin_viewport> viewports) const noexcept {
   auto* recorder = as_recorder(resource);
-  return recorder == nullptr ? GRANIT_ERROR_INVALID_ARGUMENT
-                             : context_->loader->recorder_set_viewports(
-                                   context_->instance, recorder->recorder_, first, viewports);
+  if (recorder == nullptr || viewports.empty())
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  try {
+    std::vector<granit_backend_plugin_viewport> pending{viewports.begin(), viewports.end()};
+    if (recorder->render_open_) {
+      const auto result = context_->loader->recorder_set_viewports(
+          context_->instance, recorder->recorder_, first, viewports);
+      if (result != GRANIT_SUCCESS)
+        return result;
+    }
+    recorder->viewport_first_ = first;
+    recorder->viewports_ = std::move(pending);
+    return GRANIT_SUCCESS;
+  } catch (const std::bad_alloc&) {
+    return GRANIT_ERROR_OUT_OF_MEMORY;
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
 }
 
 granit_result webgpu_command_adapter::set_scissors(
     backend_command_recorder_resource& resource, std::uint32_t first,
     std::span<const granit_backend_plugin_scissor> scissors) const noexcept {
   auto* recorder = as_recorder(resource);
-  return recorder == nullptr ? GRANIT_ERROR_INVALID_ARGUMENT
-                             : context_->loader->recorder_set_scissors(
-                                   context_->instance, recorder->recorder_, first, scissors);
+  if (recorder == nullptr || scissors.empty())
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  try {
+    std::vector<granit_backend_plugin_scissor> pending{scissors.begin(), scissors.end()};
+    if (recorder->render_open_) {
+      const auto result = context_->loader->recorder_set_scissors(
+          context_->instance, recorder->recorder_, first, scissors);
+      if (result != GRANIT_SUCCESS)
+        return result;
+    }
+    recorder->scissor_first_ = first;
+    recorder->scissors_ = std::move(pending);
+    return GRANIT_SUCCESS;
+  } catch (const std::bad_alloc&) {
+    return GRANIT_ERROR_OUT_OF_MEMORY;
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+granit_result webgpu_command_adapter::copy_texture_to_buffer(
+    backend_command_recorder_resource& resource, granit_backend_plugin_texture texture,
+    granit_backend_plugin_buffer buffer, std::uint32_t width, std::uint32_t height,
+    std::uint32_t bytes_per_row) const noexcept {
+  auto* recorder = as_recorder(resource);
+  if (recorder == nullptr || recorder->render_open_ || texture == 0 || buffer == 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  return context_->loader->recorder_copy_texture_to_buffer(
+      context_->instance, recorder->recorder_, texture, buffer, width, height, bytes_per_row);
 }
 
 granit_result webgpu_command_adapter::draw(backend_command_recorder_resource& resource,
@@ -222,7 +369,11 @@ webgpu_command_adapter::end_rendering(backend_command_recorder_resource& resourc
   auto* recorder = as_recorder(resource);
   if (recorder == nullptr || recorder->recorder_ == 0 || recorder->command_buffer_ != 0)
     return GRANIT_ERROR_INVALID_ARGUMENT;
-  return context_->loader->recorder_end_rendering(context_->instance, recorder->recorder_);
+  const auto result =
+      context_->loader->recorder_end_rendering(context_->instance, recorder->recorder_);
+  if (result == GRANIT_SUCCESS)
+    recorder->render_open_ = false;
+  return result;
 }
 
 bool webgpu_command_adapter::is_recording(
@@ -279,6 +430,15 @@ webgpu_command_adapter::reset(backend_command_recorder_resource& resource) const
     recorder->recorder_ = 0;
   }
   recorder->compute_open_ = false;
+  recorder->render_open_ = false;
+  recorder->pipeline_ = 0;
+  recorder->groups_.clear();
+  recorder->vertex_buffers_.clear();
+  recorder->index_buffer_ = 0;
+  recorder->index_offset_ = 0;
+  recorder->index_format_ = 0;
+  recorder->viewports_.clear();
+  recorder->scissors_.clear();
   return GRANIT_SUCCESS;
 }
 

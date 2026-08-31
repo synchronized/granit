@@ -19,6 +19,7 @@
 #include "backend/rendering.h"
 #include "backend/resource_management.h"
 #include "backend/shader.h"
+#include "backend/transfer.h"
 #include "backend/webgpu/command_adapter.h"
 #include "backend/webgpu/pipeline_adapter.h"
 #include "backend/webgpu/presentation_adapter.h"
@@ -35,6 +36,7 @@ class webgpu_renderer_state final : public backend_renderer,
                                     public backend_graphics_command_renderer,
                                     public backend_compute_command_renderer,
                                     public backend_resource_renderer,
+                                    public backend_transfer_command_renderer,
                                     public backend_shader_renderer,
                                     public backend_pipeline_layout_renderer,
                                     public backend_pipeline_renderer {
@@ -163,6 +165,31 @@ public:
   [[nodiscard]] granit_result
   set_scissors(backend_command_recorder_resource& recorder, std::uint32_t first,
                std::span<const granit_scissor> scissors) noexcept override;
+  [[nodiscard]] granit_result copy_buffer(backend_command_recorder_resource&,
+                                          backend_buffer_resource&, backend_buffer_resource&,
+                                          std::span<const granit_buffer_copy_region>) override;
+  [[nodiscard]] granit_result
+  copy_texture_to_buffer(backend_command_recorder_resource& recorder,
+                         backend_texture_resource& source, backend_buffer_resource& destination,
+                         granit_texture_format format, const granit_texture_data_layout& layout,
+                         const granit_texture_write_region& region) override;
+  [[nodiscard]] granit_result copy_buffer_to_texture(backend_command_recorder_resource&,
+                                                     backend_buffer_resource&,
+                                                     backend_texture_resource&,
+                                                     granit_texture_format,
+                                                     const granit_texture_data_layout&,
+                                                     const granit_texture_write_region&) override;
+  [[nodiscard]] granit_result copy_texture(backend_command_recorder_resource&,
+                                           backend_texture_resource&, backend_texture_resource&,
+                                           const granit_texture_copy_region&) override;
+  [[nodiscard]] bool texture_supports_linear_blit(granit_texture_format) const noexcept override;
+  [[nodiscard]] granit_result generate_mipmaps(backend_command_recorder_resource&,
+                                               backend_texture_resource&,
+                                               const granit_texture_desc&,
+                                               const granit_texture_mipmap_range&) override;
+  [[nodiscard]] granit_result fill_buffer(backend_command_recorder_resource&,
+                                          backend_buffer_resource&, std::uint64_t, std::uint64_t,
+                                          std::uint32_t) override;
   [[nodiscard]] granit_result draw(backend_command_recorder_resource& recorder,
                                    backend_texture_view_resource* target,
                                    backend_graphics_pipeline_resource* pipeline,

@@ -35,6 +35,8 @@ public:
   [[nodiscard]] std::unique_ptr<backend_texture_resource> allocate_texture() const;
   [[nodiscard]] granit_result create_texture(const granit_texture_desc& desc,
                                              backend_texture_resource& resource) const noexcept;
+  [[nodiscard]] granit_backend_plugin_texture
+  native_texture(backend_texture_resource& resource) const noexcept;
   [[nodiscard]] granit_result
   upload_texture(backend_texture_resource& resource, const void* data, std::uint64_t size,
                  const granit_texture_data_layout& layout,
@@ -44,6 +46,8 @@ public:
   create_texture_view(backend_texture_resource& texture, const granit_texture_desc& texture_desc,
                       const granit_texture_view_desc& desc,
                       backend_texture_view_resource& resource) const noexcept;
+  [[nodiscard]] granit_backend_plugin_texture_view
+  native_texture_view(backend_texture_view_resource& resource) const noexcept;
   [[nodiscard]] std::unique_ptr<backend_sampler_resource> allocate_sampler() const;
   [[nodiscard]] granit_result create_sampler(const granit_sampler_desc& desc,
                                              backend_sampler_resource& resource) const noexcept;

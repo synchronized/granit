@@ -338,6 +338,12 @@ webgpu_resource_adapter::create_texture(const granit_texture_desc& desc,
   return result;
 }
 
+granit_backend_plugin_texture
+webgpu_resource_adapter::native_texture(backend_texture_resource& resource) const noexcept {
+  const auto* texture = dynamic_cast<webgpu_texture_resource*>(&resource);
+  return texture == nullptr ? 0 : texture->handle_;
+}
+
 granit_result
 webgpu_resource_adapter::upload_texture(backend_texture_resource& resource, const void* data,
                                         std::uint64_t size,
@@ -382,6 +388,12 @@ granit_result webgpu_resource_adapter::create_texture_view(
       sizeof(plugin_desc), format, desc.range.base_mip_level, mip_count, {0, 0}};
   return context_->loader->create_texture_view(context_->instance, native_texture->handle_,
                                                &plugin_desc, &view->handle_);
+}
+
+granit_backend_plugin_texture_view webgpu_resource_adapter::native_texture_view(
+    backend_texture_view_resource& resource) const noexcept {
+  const auto* view = dynamic_cast<webgpu_texture_view_resource*>(&resource);
+  return view == nullptr ? 0 : view->handle_;
 }
 
 std::unique_ptr<backend_sampler_resource> webgpu_resource_adapter::allocate_sampler() const {
