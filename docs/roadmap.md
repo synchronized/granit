@@ -203,7 +203,7 @@
 
 ## 十一、跨后端模型查看器
 
-**状态：S-12 已完成，S-13 待开始。**
+**状态：S-12 已完成，S-13A 进行中。**
 
 - **[S-12](plans/S-12-webgpu-feature-parity.md) / P1**：补齐公共后端选择，以及模型绘制需要的
   Vertex/Index Buffer、Texture、Sampler、Bind Group、动态 Uniform、Indexed Draw 和上传能力；

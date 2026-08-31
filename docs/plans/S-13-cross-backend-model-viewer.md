@@ -5,7 +5,7 @@
 
 ## 状态
 
-- 实现状态：已确认，待开始
+- 实现状态：进行中；当前实施 S-13A
 - 前置依赖：S-12
 - 可并行准备：示例级 glTF 解析与测试 Fixture
 - 优先级：P1
@@ -48,10 +48,16 @@ glTF 首阶段只是示例输入格式，加载代码位于 `examples/common/glt
 两者均以确切 Git commit 和 SHA-256 锁定，由 `granit_example_gltf_support` 私有编译；
 不安装头文件、不导出 CMake Target，不向 `granit` 传递 Include 目录或编译定义。
 
+- `cgltf` 锁定提交 `360db1a95480fe102ae9c69b27c5d101167ff5ba`，源码归档 SHA-256 为
+  `445d135cf793232ae6a585ca1404e4ff28d4f4dbca070689034fe780370ac84a`。
+- `stb_image` 锁定首次标记 2.30 的提交 `013ac3beddff3dbffafd5177e7972067cd2b5083`，源码归档
+  SHA-256 为 `b01aa93e1a968aed55f43e072c98ee401d2f20e897aabdb1a166c7166886ed11`。
+
 - `cgltf` 采用 MIT 许可；`stb_image` 按其 MIT 选项纳入第三方通知，并仅开启
   PNG/JPEG 解码以收窄攻击面与产物大小。
-- 完整示例资产采用 Khronos glTF Sample Assets 的 `FlightHelmet` GLB 变体，许可为
-  CC0-1.0。仓库记录上游提交、原始 URL、SHA-256 和许可文本。
+- 完整示例资产采用 Khronos glTF Sample Assets 的 `FlightHelmet` glTF 变体，许可为
+  CC0-1.0。上游没有提供该模型的 GLB 变体；仓库记录上游提交、原始 URL、逐文件
+  SHA-256 和许可文本。
 - 完整头盔不进入默认 Git 工作树；通过显式 CMake 选项或辅助脚本下载到构建
   缓存，校验 SHA-256 后使用。离线构建可指向已验证的本地资产路径。
 - 一个仓库内 CC0 小型 GLB Fixture 用于解析、错误语义和 Smoke Test；手动下载失败
@@ -61,6 +67,8 @@ glTF 首阶段只是示例输入格式，加载代码位于 `examples/common/glt
 
 S-13A 的交付物包含依赖锁定记录、第三方通知、资产 manifest、可重入的获取
 脚本和离线路径验证。没有通过哈希与许可校验时，不得开始将完整资产接入查看器。
+资产清单位于 `examples/assets/FlightHelmet.manifest.json`，获取入口为
+`cmake/fetch_flight_helmet.cmake`；默认构建不会调用该脚本或访问网络。
 
 ### S-13B CPU Scene 与加载契约
 
@@ -80,9 +88,10 @@ CPU Scene 包含以下所有权对象：
   语义决定，不固化在可能被多处引用的 Image 上。
 - `sampler`：保存 glTF Filter 与 U/V Wrap；转换为 Granit Sampler 由 S-13C 负责。
 
-加载入口接受只读字节 Span 并填充输出 Scene，不直接访问文件系统；因此桌面文件、
-浏览器 Fetch 和内嵌 Fixture 可复用同一解析路径。首轮只接受 GLB 与其内嵌 Buffer/Image，
-外部 URI、Data URI 和网络获取不进入解析器。
+加载入口接受主文档字节 Span 和只读资源解析回调并填充输出 Scene，不直接访问文件系统；因此桌面
+文件、浏览器 Fetch 和内嵌 Fixture 可复用同一解析路径。首轮接受 GLB 内嵌 Buffer/Image，以及
+`.gltf` 中不含 Scheme、查询、Fragment、绝对路径或父目录跳转的相对 URI。Data URI 和网络获取
+不进入解析器；资源层必须在调用 Loader 前完成获取，并由回调按规范化 URI 返回只读字节。
 
 - 坐标保持 glTF 右手、Y 向上语义；矩阵转为 Granit 列主序数值，不翻转顶点、
   索引绕序或纹理 V 坐标。剪裁空间差异由 Renderer/Shader 契约处理。
