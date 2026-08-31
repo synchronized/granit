@@ -147,8 +147,11 @@ extern "C" void wgpuSurfaceGetCurrentTexture(WGPUSurface surface,
     return;
   }
   surface->current = new WGPUTextureImpl{
-      surface->width, surface->height, WGPUTextureUsage_RenderAttachment,
-      surface->format, 1,
+      surface->width,
+      surface->height,
+      WGPUTextureUsage_RenderAttachment,
+      surface->format,
+      1,
       std::vector<unsigned char>(static_cast<std::size_t>(surface->width) * surface->height * 4)};
   surface_texture->texture = surface->current;
   surface_texture->status = WGPUSurfaceGetCurrentTextureStatus_SuccessOptimal;
@@ -249,16 +252,16 @@ extern "C" void wgpuQueueWriteBuffer(WGPUQueue, WGPUBuffer buffer, unsigned long
 }
 
 extern "C" void wgpuQueueWriteTexture(WGPUQueue, const WGPUTexelCopyTextureInfo* destination,
-                                       const void* data, size_t data_size,
-                                       const WGPUTexelCopyBufferLayout* layout,
-                                       const WGPUExtent3D* write_size) {
+                                      const void* data, size_t data_size,
+                                      const WGPUTexelCopyBufferLayout* layout,
+                                      const WGPUExtent3D* write_size) {
   if (destination == nullptr || destination->texture == nullptr || data == nullptr ||
       layout == nullptr || write_size == nullptr)
     return;
   auto* texture = destination->texture;
-  const auto bytes_per_pixel = texture->format == WGPUTextureFormat_R8Unorm
-                                   ? 1U
-                                   : texture->format == WGPUTextureFormat_RG8Unorm ? 2U : 4U;
+  const auto bytes_per_pixel = texture->format == WGPUTextureFormat_R8Unorm    ? 1U
+                               : texture->format == WGPUTextureFormat_RG8Unorm ? 2U
+                                                                               : 4U;
   std::size_t mip_offset{};
   for (unsigned int mip = 0; mip < destination->mipLevel; ++mip) {
     mip_offset += static_cast<std::size_t>(std::max(1U, texture->width >> mip)) *
@@ -305,26 +308,26 @@ extern "C" void wgpuBufferUnmap(WGPUBuffer buffer) { buffer->mapped = false; }
 
 extern "C" WGPUTexture wgpuDeviceCreateTexture(WGPUDevice,
                                                const WGPUTextureDescriptor* descriptor) {
-  const auto supported_format = descriptor != nullptr &&
-                                (descriptor->format == WGPUTextureFormat_R8Unorm ||
-                                 descriptor->format == WGPUTextureFormat_RG8Unorm ||
-                                 descriptor->format == WGPUTextureFormat_RGBA8Unorm ||
-                                 descriptor->format == WGPUTextureFormat_RGBA8UnormSrgb ||
-                                 descriptor->format == WGPUTextureFormat_Depth32Float);
+  const auto supported_format =
+      descriptor != nullptr && (descriptor->format == WGPUTextureFormat_R8Unorm ||
+                                descriptor->format == WGPUTextureFormat_RG8Unorm ||
+                                descriptor->format == WGPUTextureFormat_RGBA8Unorm ||
+                                descriptor->format == WGPUTextureFormat_RGBA8UnormSrgb ||
+                                descriptor->format == WGPUTextureFormat_Depth32Float);
   if (descriptor == nullptr || descriptor->size.width == 0 || descriptor->size.height == 0 ||
       descriptor->mipLevelCount == 0 || !supported_format) {
     return nullptr;
   }
-  const auto bytes_per_pixel = descriptor->format == WGPUTextureFormat_R8Unorm
-                                   ? 1U
-                                   : descriptor->format == WGPUTextureFormat_RG8Unorm ? 2U : 4U;
+  const auto bytes_per_pixel = descriptor->format == WGPUTextureFormat_R8Unorm    ? 1U
+                               : descriptor->format == WGPUTextureFormat_RG8Unorm ? 2U
+                                                                                  : 4U;
   std::size_t byte_count{};
   for (unsigned int mip = 0; mip < descriptor->mipLevelCount; ++mip)
     byte_count += static_cast<std::size_t>(std::max(1U, descriptor->size.width >> mip)) *
                   std::max(1U, descriptor->size.height >> mip) * bytes_per_pixel;
-  return new WGPUTextureImpl{descriptor->size.width, descriptor->size.height, descriptor->usage,
-                             descriptor->format, descriptor->mipLevelCount,
-                             std::vector<unsigned char>(byte_count)};
+  return new WGPUTextureImpl{descriptor->size.width,    descriptor->size.height,
+                             descriptor->usage,         descriptor->format,
+                             descriptor->mipLevelCount, std::vector<unsigned char>(byte_count)};
 }
 
 extern "C" void wgpuTextureRelease(WGPUTexture texture) { delete texture; }
@@ -341,31 +344,23 @@ extern "C" WGPUSampler wgpuDeviceCreateSampler(WGPUDevice,
   if (descriptor == nullptr) {
     return nullptr;
   }
-  return new WGPUSamplerImpl{descriptor->minFilter,
-                             descriptor->magFilter,
-                             descriptor->mipmapFilter,
-                             descriptor->addressModeU,
-                             descriptor->addressModeV,
-                             descriptor->addressModeW,
-                             descriptor->compare,
-                             descriptor->maxAnisotropy,
-                             descriptor->lodMinClamp,
-                             descriptor->lodMaxClamp};
+  return new WGPUSamplerImpl{descriptor->minFilter,    descriptor->magFilter,
+                             descriptor->mipmapFilter, descriptor->addressModeU,
+                             descriptor->addressModeV, descriptor->addressModeW,
+                             descriptor->compare,      descriptor->maxAnisotropy,
+                             descriptor->lodMinClamp,  descriptor->lodMaxClamp};
 }
 
 extern "C" void wgpuSamplerRelease(WGPUSampler sampler) { delete sampler; }
 
 extern "C" WGPUBindGroupLayout
 wgpuDeviceCreateBindGroupLayout(WGPUDevice, const WGPUBindGroupLayoutDescriptor* descriptor) {
-  return descriptor != nullptr && descriptor->entryCount == 2 ? new WGPUBindGroupLayoutImpl
-                                                              : nullptr;
+  return descriptor != nullptr ? new WGPUBindGroupLayoutImpl : nullptr;
 }
 extern "C" void wgpuBindGroupLayoutRelease(WGPUBindGroupLayout layout) { delete layout; }
 extern "C" WGPUBindGroup wgpuDeviceCreateBindGroup(WGPUDevice,
                                                    const WGPUBindGroupDescriptor* descriptor) {
-  return descriptor != nullptr && descriptor->layout != nullptr && descriptor->entryCount == 2
-             ? new WGPUBindGroupImpl
-             : nullptr;
+  return descriptor != nullptr && descriptor->layout != nullptr ? new WGPUBindGroupImpl : nullptr;
 }
 extern "C" void wgpuBindGroupRelease(WGPUBindGroup bind_group) { delete bind_group; }
 extern "C" WGPUPipelineLayout

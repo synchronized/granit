@@ -89,8 +89,7 @@ granit_result webgpu_renderer_state::create_texture(const granit_texture_desc& d
 
 granit_result webgpu_renderer_state::upload_texture(
     backend_texture_resource& texture, granit_texture_format, const void* data, std::uint64_t size,
-    const granit_texture_data_layout& layout,
-    const granit_texture_write_region& region) noexcept {
+    const granit_texture_data_layout& layout, const granit_texture_write_region& region) noexcept {
   return resources_ ? resources_->upload_texture(texture, data, size, layout, region)
                     : GRANIT_ERROR_NOT_READY;
 }
@@ -118,23 +117,25 @@ granit_result webgpu_renderer_state::create_sampler(const granit_sampler_desc& d
 
 std::unique_ptr<backend_bind_group_layout_resource>
 webgpu_renderer_state::allocate_bind_group_layout_resource() {
-  return std::make_unique<backend_bind_group_layout_resource>();
+  return resources_ ? resources_->allocate_bind_group_layout() : nullptr;
 }
 
-granit_result
-webgpu_renderer_state::create_bind_group_layout(std::span<const granit_bind_group_layout_entry>,
-                                                backend_bind_group_layout_resource&) noexcept {
-  return GRANIT_ERROR_UNSUPPORTED;
+granit_result webgpu_renderer_state::create_bind_group_layout(
+    std::span<const granit_bind_group_layout_entry> entries,
+    backend_bind_group_layout_resource& layout) noexcept {
+  return resources_ ? resources_->create_bind_group_layout(entries, layout)
+                    : GRANIT_ERROR_NOT_READY;
 }
 
 std::unique_ptr<backend_bind_group_resource> webgpu_renderer_state::allocate_bind_group_resource() {
-  return std::make_unique<backend_bind_group_resource>();
+  return resources_ ? resources_->allocate_bind_group() : nullptr;
 }
 
-granit_result webgpu_renderer_state::create_bind_group(backend_bind_group_layout_resource&,
-                                                       std::span<const backend_bind_group_write>,
-                                                       backend_bind_group_resource&) noexcept {
-  return GRANIT_ERROR_UNSUPPORTED;
+granit_result
+webgpu_renderer_state::create_bind_group(backend_bind_group_layout_resource& layout,
+                                         std::span<const backend_bind_group_write> writes,
+                                         backend_bind_group_resource& group) noexcept {
+  return resources_ ? resources_->create_bind_group(layout, writes, group) : GRANIT_ERROR_NOT_READY;
 }
 
 std::unique_ptr<backend_compute_pipeline_resource>

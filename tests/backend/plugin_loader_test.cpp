@@ -476,7 +476,10 @@ TEST_CASE("WebGPU 插件 Texture、View 与 Sampler 遵守所有权契约", "[ba
   granit_backend_plugin_texture_view view{};
   const granit_backend_plugin_texture_view_desc view_desc{
       sizeof(granit_backend_plugin_texture_view_desc),
-      GRANIT_BACKEND_PLUGIN_TEXTURE_FORMAT_RGBA8_UNORM, 0, 1, {0, 0}};
+      GRANIT_BACKEND_PLUGIN_TEXTURE_FORMAT_RGBA8_UNORM,
+      0,
+      1,
+      {0, 0}};
   REQUIRE(loader.create_texture_view(first, texture, &view_desc, &view) == GRANIT_SUCCESS);
   REQUIRE(view != 0);
   granit_backend_plugin_texture_view foreign_view = 123;
@@ -556,7 +559,10 @@ TEST_CASE("WebGPU 插件绑定与 Pipeline 遵守依赖生命周期", "[backend]
   granit_backend_plugin_texture_view view{};
   const granit_backend_plugin_texture_view_desc view_desc{
       sizeof(granit_backend_plugin_texture_view_desc),
-      GRANIT_BACKEND_PLUGIN_TEXTURE_FORMAT_RGBA8_UNORM, 0, 1, {0, 0}};
+      GRANIT_BACKEND_PLUGIN_TEXTURE_FORMAT_RGBA8_UNORM,
+      0,
+      1,
+      {0, 0}};
   REQUIRE(loader.create_texture(first, &texture_desc, &texture) == GRANIT_SUCCESS);
   REQUIRE(loader.create_texture_view(first, texture, &view_desc, &view) == GRANIT_SUCCESS);
   granit_backend_plugin_sampler_desc sampler_desc{};
@@ -571,13 +577,24 @@ TEST_CASE("WebGPU 插件绑定与 Pipeline 遵守依赖生命周期", "[backend]
   granit_backend_plugin_sampler sampler{};
   REQUIRE(loader.create_sampler(first, &sampler_desc, &sampler) == GRANIT_SUCCESS);
 
+  const granit_backend_plugin_bind_group_layout_entry layout_entries[]{
+      {0, GRANIT_BACKEND_PLUGIN_BINDING_TYPE_SAMPLED_TEXTURE,
+       GRANIT_BACKEND_PLUGIN_SHADER_STAGE_FRAGMENT, 1},
+      {1, GRANIT_BACKEND_PLUGIN_BINDING_TYPE_SAMPLER, GRANIT_BACKEND_PLUGIN_SHADER_STAGE_FRAGMENT,
+       1}};
+  const granit_backend_plugin_bind_group_layout_desc layout_desc{
+      sizeof(granit_backend_plugin_bind_group_layout_desc), 2, layout_entries, 0};
   granit_backend_plugin_bind_group_layout bind_group_layout{};
-  REQUIRE(loader.create_bind_group_layout(first, &bind_group_layout) == GRANIT_SUCCESS);
+  REQUIRE(loader.create_bind_group_layout(first, &layout_desc, &bind_group_layout) ==
+          GRANIT_SUCCESS);
+  const granit_backend_plugin_bind_group_entry group_entries[]{
+      {0, GRANIT_BACKEND_PLUGIN_BINDING_TYPE_SAMPLED_TEXTURE, 0, view, 0, 0, 0},
+      {1, GRANIT_BACKEND_PLUGIN_BINDING_TYPE_SAMPLER, 0, 0, sampler, 0, 0}};
   granit_backend_plugin_bind_group_desc bind_group_desc{};
   bind_group_desc.struct_size = sizeof(bind_group_desc);
+  bind_group_desc.entry_count = 2;
   bind_group_desc.layout = bind_group_layout;
-  bind_group_desc.texture_view = view;
-  bind_group_desc.sampler = sampler;
+  bind_group_desc.entries = group_entries;
   granit_backend_plugin_bind_group bind_group{};
   REQUIRE(loader.create_bind_group(first, &bind_group_desc, &bind_group) == GRANIT_SUCCESS);
   granit_backend_plugin_bind_group foreign_bind_group = 123;
@@ -746,7 +763,8 @@ TEST_CASE("WebGPU 插件绑定与 Pipeline 遵守依赖生命周期", "[backend]
   REQUIRE(loader.destroy_texture_view(first, view) == GRANIT_SUCCESS);
   REQUIRE(loader.destroy_texture(first, texture) == GRANIT_SUCCESS);
 
-  REQUIRE(loader.create_bind_group_layout(first, &bind_group_layout) == GRANIT_SUCCESS);
+  REQUIRE(loader.create_bind_group_layout(first, &layout_desc, &bind_group_layout) ==
+          GRANIT_SUCCESS);
   REQUIRE(loader.create_pipeline_layout(first, bind_group_layout, &pipeline_layout) ==
           GRANIT_SUCCESS);
   REQUIRE(loader.create_shader(first, &vertex_desc, &vertex_shader) == GRANIT_SUCCESS);

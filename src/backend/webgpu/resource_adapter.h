@@ -47,6 +47,16 @@ public:
   [[nodiscard]] std::unique_ptr<backend_sampler_resource> allocate_sampler() const;
   [[nodiscard]] granit_result create_sampler(const granit_sampler_desc& desc,
                                              backend_sampler_resource& resource) const noexcept;
+  [[nodiscard]] std::unique_ptr<backend_bind_group_layout_resource>
+  allocate_bind_group_layout() const;
+  [[nodiscard]] granit_result
+  create_bind_group_layout(std::span<const granit_bind_group_layout_entry> entries,
+                           backend_bind_group_layout_resource& resource) const noexcept;
+  [[nodiscard]] std::unique_ptr<backend_bind_group_resource> allocate_bind_group() const;
+  [[nodiscard]] granit_result
+  create_bind_group(backend_bind_group_layout_resource& layout,
+                    std::span<const backend_bind_group_write> writes,
+                    backend_bind_group_resource& resource) const noexcept;
 
 private:
   std::shared_ptr<webgpu_resource_context> context_;

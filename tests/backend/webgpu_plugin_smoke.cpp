@@ -115,7 +115,10 @@ int main(int argc, char** argv) {
   texture_desc.mip_level_count = 1;
   const granit_backend_plugin_texture_view_desc texture_view_desc{
       sizeof(granit_backend_plugin_texture_view_desc),
-      GRANIT_BACKEND_PLUGIN_TEXTURE_FORMAT_RGBA8_UNORM, 0, 1, {0, 0}};
+      GRANIT_BACKEND_PLUGIN_TEXTURE_FORMAT_RGBA8_UNORM,
+      0,
+      1,
+      {0, 0}};
   granit_backend_plugin_texture texture{};
   granit_backend_plugin_texture_view view{};
   granit_backend_plugin_sampler_desc sampler_desc{};
@@ -128,6 +131,13 @@ int main(int argc, char** argv) {
   sampler_desc.address_mode_w = GRANIT_BACKEND_PLUGIN_ADDRESS_MODE_REPEAT;
   sampler_desc.max_anisotropy = 1;
   granit_backend_plugin_sampler sampler{};
+  const granit_backend_plugin_bind_group_layout_entry layout_entries[]{
+      {0, GRANIT_BACKEND_PLUGIN_BINDING_TYPE_SAMPLED_TEXTURE,
+       GRANIT_BACKEND_PLUGIN_SHADER_STAGE_FRAGMENT, 1},
+      {1, GRANIT_BACKEND_PLUGIN_BINDING_TYPE_SAMPLER, GRANIT_BACKEND_PLUGIN_SHADER_STAGE_FRAGMENT,
+       1}};
+  const granit_backend_plugin_bind_group_layout_desc layout_desc{
+      sizeof(granit_backend_plugin_bind_group_layout_desc), 2, layout_entries, 0};
   granit_backend_plugin_bind_group_layout bind_group_layout{};
   granit_backend_plugin_bind_group bind_group{};
   granit_backend_plugin_pipeline_layout pipeline_layout{};
@@ -136,18 +146,22 @@ int main(int argc, char** argv) {
   granit_backend_plugin_render_pipeline pipeline{};
   if (loader.create_texture(instance, &texture_desc, &texture) != GRANIT_SUCCESS || texture == 0 ||
       loader.create_texture_view(instance, texture, &texture_view_desc, &view) != GRANIT_SUCCESS ||
-      view == 0 ||
-      loader.create_sampler(instance, &sampler_desc, &sampler) != GRANIT_SUCCESS || sampler == 0 ||
-      loader.create_bind_group_layout(instance, &bind_group_layout) != GRANIT_SUCCESS ||
+      view == 0 || loader.create_sampler(instance, &sampler_desc, &sampler) != GRANIT_SUCCESS ||
+      sampler == 0 ||
+      loader.create_bind_group_layout(instance, &layout_desc, &bind_group_layout) !=
+          GRANIT_SUCCESS ||
       bind_group_layout == 0) {
     std::fprintf(stderr, "WebGPU Texture、View、Sampler 或绑定布局创建失败\n");
     return 5;
   }
   granit_backend_plugin_bind_group_desc bind_group_desc{};
+  const granit_backend_plugin_bind_group_entry group_entries[]{
+      {0, GRANIT_BACKEND_PLUGIN_BINDING_TYPE_SAMPLED_TEXTURE, 0, view, 0, 0, 0},
+      {1, GRANIT_BACKEND_PLUGIN_BINDING_TYPE_SAMPLER, 0, 0, sampler, 0, 0}};
   bind_group_desc.struct_size = sizeof(bind_group_desc);
+  bind_group_desc.entry_count = 2;
   bind_group_desc.layout = bind_group_layout;
-  bind_group_desc.texture_view = view;
-  bind_group_desc.sampler = sampler;
+  bind_group_desc.entries = group_entries;
   granit_backend_plugin_shader_desc vertex_desc{sizeof(granit_backend_plugin_shader_desc),
                                                 GRANIT_BACKEND_PLUGIN_SHADER_STAGE_VERTEX,
                                                 asset.wgsl.data(),

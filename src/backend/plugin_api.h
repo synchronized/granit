@@ -9,7 +9,7 @@
 #include <granit/core/diagnostic.h>
 #include <granit/core/result.h>
 
-#define GRANIT_BACKEND_PLUGIN_ABI_VERSION UINT32_C(16)
+#define GRANIT_BACKEND_PLUGIN_ABI_VERSION UINT32_C(17)
 #define GRANIT_BACKEND_PLUGIN_KIND_WEBGPU UINT32_C(1)
 #define GRANIT_BACKEND_PLUGIN_QUERY_SYMBOL "granit_backend_plugin_query"
 #define GRANIT_BACKEND_PLUGIN_SURFACE_TYPE_WIN32_BIT UINT32_C(0x00000001)
@@ -71,6 +71,8 @@ typedef uint32_t granit_backend_plugin_buffer_usage;
 #define GRANIT_BACKEND_PLUGIN_BUFFER_USAGE_COPY_DST_BIT UINT32_C(0x00000004)
 #define GRANIT_BACKEND_PLUGIN_BUFFER_USAGE_VERTEX_BIT UINT32_C(0x00000008)
 #define GRANIT_BACKEND_PLUGIN_BUFFER_USAGE_INDEX_BIT UINT32_C(0x00000010)
+#define GRANIT_BACKEND_PLUGIN_BUFFER_USAGE_UNIFORM_BIT UINT32_C(0x00000020)
+#define GRANIT_BACKEND_PLUGIN_BUFFER_USAGE_STORAGE_BIT UINT32_C(0x00000040)
 
 /** Buffer 由创建它的插件实例拥有；size 必须非零。 */
 typedef struct granit_backend_plugin_buffer_desc {
@@ -158,13 +160,43 @@ typedef struct granit_backend_plugin_sampler_desc {
   uint32_t reserved_2[2];
 } granit_backend_plugin_sampler_desc;
 
-/** 固定绑定 0 为二维浮点 Texture View，绑定 1 为过滤 Sampler。 */
-typedef struct granit_backend_plugin_bind_group_desc {
+typedef uint32_t granit_backend_plugin_binding_type;
+#define GRANIT_BACKEND_PLUGIN_BINDING_TYPE_UNIFORM_BUFFER UINT32_C(1)
+#define GRANIT_BACKEND_PLUGIN_BINDING_TYPE_DYNAMIC_UNIFORM_BUFFER UINT32_C(2)
+#define GRANIT_BACKEND_PLUGIN_BINDING_TYPE_STORAGE_BUFFER UINT32_C(3)
+#define GRANIT_BACKEND_PLUGIN_BINDING_TYPE_SAMPLED_TEXTURE UINT32_C(4)
+#define GRANIT_BACKEND_PLUGIN_BINDING_TYPE_SAMPLER UINT32_C(5)
+
+typedef struct granit_backend_plugin_bind_group_layout_entry {
+  uint32_t binding;
+  granit_backend_plugin_binding_type type;
+  uint32_t visibility;
+  uint32_t array_count;
+} granit_backend_plugin_bind_group_layout_entry;
+
+typedef struct granit_backend_plugin_bind_group_layout_desc {
   uint32_t struct_size;
-  uint32_t reserved;
-  granit_backend_plugin_bind_group_layout layout;
+  uint32_t entry_count;
+  const granit_backend_plugin_bind_group_layout_entry* entries;
+  uint64_t reserved;
+} granit_backend_plugin_bind_group_layout_desc;
+
+typedef struct granit_backend_plugin_bind_group_entry {
+  uint32_t binding;
+  granit_backend_plugin_binding_type type;
+  granit_backend_plugin_buffer buffer;
   granit_backend_plugin_texture_view texture_view;
   granit_backend_plugin_sampler sampler;
+  uint64_t offset;
+  uint64_t size;
+} granit_backend_plugin_bind_group_entry;
+
+typedef struct granit_backend_plugin_bind_group_desc {
+  uint32_t struct_size;
+  uint32_t entry_count;
+  granit_backend_plugin_bind_group_layout layout;
+  const granit_backend_plugin_bind_group_entry* entries;
+  uint64_t reserved;
 } granit_backend_plugin_bind_group_desc;
 
 typedef uint32_t granit_backend_plugin_shader_stage;
@@ -359,8 +391,7 @@ typedef granit_result (*granit_backend_plugin_write_texture_fn)(
     const granit_backend_plugin_texture_write_desc* desc, const void* data, uint64_t size);
 typedef granit_result (*granit_backend_plugin_create_texture_view_fn)(
     granit_backend_plugin_instance instance, granit_backend_plugin_texture texture,
-    const granit_backend_plugin_texture_view_desc* desc,
-    granit_backend_plugin_texture_view* view);
+    const granit_backend_plugin_texture_view_desc* desc, granit_backend_plugin_texture_view* view);
 typedef granit_result (*granit_backend_plugin_destroy_texture_view_fn)(
     granit_backend_plugin_instance instance, granit_backend_plugin_texture_view view);
 typedef granit_result (*granit_backend_plugin_create_sampler_fn)(
@@ -369,7 +400,9 @@ typedef granit_result (*granit_backend_plugin_create_sampler_fn)(
 typedef granit_result (*granit_backend_plugin_destroy_sampler_fn)(
     granit_backend_plugin_instance instance, granit_backend_plugin_sampler sampler);
 typedef granit_result (*granit_backend_plugin_create_bind_group_layout_fn)(
-    granit_backend_plugin_instance instance, granit_backend_plugin_bind_group_layout* layout);
+    granit_backend_plugin_instance instance,
+    const granit_backend_plugin_bind_group_layout_desc* desc,
+    granit_backend_plugin_bind_group_layout* layout);
 typedef granit_result (*granit_backend_plugin_destroy_bind_group_layout_fn)(
     granit_backend_plugin_instance instance, granit_backend_plugin_bind_group_layout layout);
 typedef granit_result (*granit_backend_plugin_create_bind_group_fn)(

@@ -99,10 +99,10 @@ public:
                                              granit_backend_plugin_texture* texture) noexcept;
   [[nodiscard]] granit_result destroy_texture(granit_backend_plugin_instance instance,
                                               granit_backend_plugin_texture texture) noexcept;
-  [[nodiscard]] granit_result
-  write_texture(granit_backend_plugin_instance instance, granit_backend_plugin_texture texture,
-                const granit_backend_plugin_texture_write_desc* desc, const void* data,
-                std::uint64_t size) noexcept;
+  [[nodiscard]] granit_result write_texture(granit_backend_plugin_instance instance,
+                                            granit_backend_plugin_texture texture,
+                                            const granit_backend_plugin_texture_write_desc* desc,
+                                            const void* data, std::uint64_t size) noexcept;
   [[nodiscard]] granit_result
   create_texture_view(granit_backend_plugin_instance instance,
                       granit_backend_plugin_texture texture,
@@ -118,6 +118,7 @@ public:
                                               granit_backend_plugin_sampler sampler) noexcept;
   [[nodiscard]] granit_result
   create_bind_group_layout(granit_backend_plugin_instance instance,
+                           const granit_backend_plugin_bind_group_layout_desc* desc,
                            granit_backend_plugin_bind_group_layout* layout) noexcept;
   [[nodiscard]] granit_result
   destroy_bind_group_layout(granit_backend_plugin_instance instance,

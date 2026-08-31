@@ -518,10 +518,11 @@ backend_plugin_loader::destroy_texture(granit_backend_plugin_instance instance,
   }
 }
 
-granit_result backend_plugin_loader::write_texture(
-    granit_backend_plugin_instance instance, granit_backend_plugin_texture texture,
-    const granit_backend_plugin_texture_write_desc* desc, const void* data,
-    std::uint64_t size) noexcept {
+granit_result
+backend_plugin_loader::write_texture(granit_backend_plugin_instance instance,
+                                     granit_backend_plugin_texture texture,
+                                     const granit_backend_plugin_texture_write_desc* desc,
+                                     const void* data, std::uint64_t size) noexcept {
   if (api_ == nullptr || instance == 0 || texture == 0 || desc == nullptr || data == nullptr ||
       size == 0)
     return GRANIT_ERROR_INVALID_ARGUMENT;
@@ -635,13 +636,14 @@ backend_plugin_loader::destroy_sampler(granit_backend_plugin_instance instance,
 
 granit_result backend_plugin_loader::create_bind_group_layout(
     granit_backend_plugin_instance instance,
+    const granit_backend_plugin_bind_group_layout_desc* desc,
     granit_backend_plugin_bind_group_layout* layout) noexcept {
-  if (api_ == nullptr || instance == 0 || layout == nullptr)
+  if (api_ == nullptr || instance == 0 || desc == nullptr || layout == nullptr)
     return GRANIT_ERROR_INVALID_ARGUMENT;
   if (std::find(instances_.begin(), instances_.end(), instance) == instances_.end())
     return GRANIT_ERROR_INVALID_HANDLE;
   try {
-    return api_->instance_api->create_bind_group_layout(instance, layout);
+    return api_->instance_api->create_bind_group_layout(instance, desc, layout);
   } catch (...) {
     return GRANIT_ERROR_INTERNAL;
   }

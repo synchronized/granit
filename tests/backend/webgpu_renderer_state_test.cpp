@@ -56,28 +56,27 @@ TEST_CASE("WebGPU Renderer 状态集中管理静态 Provider 生命周期", "[ba
   REQUIRE(texture != nullptr);
   granit_texture_desc texture_desc = GRANIT_TEXTURE_DESC_INIT;
   texture_desc.format = GRANIT_TEXTURE_FORMAT_RGBA8_SRGB;
-  texture_desc.usage = GRANIT_TEXTURE_USAGE_SAMPLED_BIT |
-                       GRANIT_TEXTURE_USAGE_TRANSFER_DESTINATION_BIT;
+  texture_desc.usage =
+      GRANIT_TEXTURE_USAGE_SAMPLED_BIT | GRANIT_TEXTURE_USAGE_TRANSFER_DESTINATION_BIT;
   texture_desc.width = 64;
   texture_desc.height = 32;
   texture_desc.mip_levels = 4;
   REQUIRE(state.create_texture(texture_desc, *texture) == GRANIT_SUCCESS);
   const std::array<std::uint8_t, 32> mip_pixels{};
-  const granit_texture_data_layout mip_layout{.offset = 0,
-                                               .bytes_per_row = 16,
-                                               .rows_per_image = 2};
+  const granit_texture_data_layout mip_layout{
+      .offset = 0, .bytes_per_row = 16, .rows_per_image = 2};
   const granit_texture_write_region mip_region{.mip_level = 1,
-                                                .base_array_layer = 0,
-                                                .array_layer_count = 1,
-                                                .aspect = GRANIT_TEXTURE_ASPECT_COLOR_BIT,
-                                                .x = 2,
-                                                .y = 3,
-                                                .z = 0,
-                                                .width = 3,
-                                                .height = 2,
-                                                .depth = 1};
-  REQUIRE(state.upload_texture(*texture, texture_desc.format, mip_pixels.data(),
-                               mip_pixels.size(), mip_layout, mip_region) == GRANIT_SUCCESS);
+                                               .base_array_layer = 0,
+                                               .array_layer_count = 1,
+                                               .aspect = GRANIT_TEXTURE_ASPECT_COLOR_BIT,
+                                               .x = 2,
+                                               .y = 3,
+                                               .z = 0,
+                                               .width = 3,
+                                               .height = 2,
+                                               .depth = 1};
+  REQUIRE(state.upload_texture(*texture, texture_desc.format, mip_pixels.data(), mip_pixels.size(),
+                               mip_layout, mip_region) == GRANIT_SUCCESS);
 
   auto texture_view = state.allocate_texture_view_resource();
   REQUIRE(texture_view != nullptr);
@@ -93,7 +92,6 @@ TEST_CASE("WebGPU Renderer 状态集中管理静态 Provider 生命周期", "[ba
   granit_sampler_desc sampler_desc = GRANIT_SAMPLER_DESC_INIT;
   sampler_desc.mag_filter = GRANIT_FILTER_NEAREST;
   sampler_desc.address_mode_v = GRANIT_ADDRESS_MODE_MIRRORED_REPEAT;
-  sampler_desc.compare_operation = GRANIT_COMPARE_OPERATION_LESS_EQUAL;
   sampler_desc.min_lod = 1.0F;
   sampler_desc.max_lod = 3.0F;
   REQUIRE(state.create_sampler(sampler_desc, *sampler) == GRANIT_SUCCESS);
@@ -111,6 +109,42 @@ TEST_CASE("WebGPU Renderer 状态集中管理静态 Provider 生命周期", "[ba
   REQUIRE(unsupported_sampler != nullptr);
   sampler_desc.lod_bias = 0.5F;
   CHECK(state.create_sampler(sampler_desc, *unsupported_sampler) == GRANIT_ERROR_UNSUPPORTED);
+  sampler_desc.lod_bias = 0.0F;
+  sampler_desc.compare_operation = GRANIT_COMPARE_OPERATION_LESS_EQUAL;
+  CHECK(state.create_sampler(sampler_desc, *unsupported_sampler) == GRANIT_ERROR_UNSUPPORTED);
+
+  auto uniform_buffer = state.allocate_buffer_resource();
+  REQUIRE(uniform_buffer != nullptr);
+  granit_buffer_desc uniform_desc = GRANIT_BUFFER_DESC_INIT;
+  uniform_desc.size = 256;
+  uniform_desc.usage =
+      GRANIT_BUFFER_USAGE_UNIFORM_BIT | GRANIT_BUFFER_USAGE_TRANSFER_DESTINATION_BIT;
+  REQUIRE(state.create_buffer(uniform_desc, *uniform_buffer) == GRANIT_SUCCESS);
+  const std::array<granit_bind_group_layout_entry, 3> binding_layout{{
+      {7, GRANIT_BINDING_TYPE_UNIFORM_BUFFER, 1, GRANIT_SHADER_STAGE_VERTEX_BIT},
+      {2, GRANIT_BINDING_TYPE_SAMPLED_TEXTURE, 1, GRANIT_SHADER_STAGE_FRAGMENT_BIT},
+      {9, GRANIT_BINDING_TYPE_SAMPLER, 1, GRANIT_SHADER_STAGE_FRAGMENT_BIT},
+  }};
+  auto bind_group_layout = state.allocate_bind_group_layout_resource();
+  REQUIRE(bind_group_layout != nullptr);
+  REQUIRE(state.create_bind_group_layout(binding_layout, *bind_group_layout) == GRANIT_SUCCESS);
+  const std::array<granit::detail::backend_bind_group_write, 3> writes{{
+      {9, 0, granit::detail::backend_binding_type::sampler, nullptr, 0, 0, nullptr, sampler.get()},
+      {7, 0, granit::detail::backend_binding_type::uniform_buffer, uniform_buffer.get(), 64, 128,
+       nullptr, nullptr},
+      {2, 0, granit::detail::backend_binding_type::sampled_texture, nullptr, 0, 0,
+       texture_view.get(), nullptr},
+  }};
+  auto bind_group = state.allocate_bind_group_resource();
+  REQUIRE(bind_group != nullptr);
+  REQUIRE(state.create_bind_group(*bind_group_layout, writes, *bind_group) == GRANIT_SUCCESS);
+
+  auto unsupported_layout = state.allocate_bind_group_layout_resource();
+  REQUIRE(unsupported_layout != nullptr);
+  auto array_layout = binding_layout;
+  array_layout[0].array_count = 2;
+  CHECK(state.create_bind_group_layout(array_layout, *unsupported_layout) ==
+        GRANIT_ERROR_UNSUPPORTED);
 
   auto surface = state.allocate_surface_resource();
   REQUIRE(surface != nullptr);

@@ -46,6 +46,7 @@ typedef unsigned int WGPUAddressMode;
 typedef unsigned int WGPUFilterMode;
 typedef unsigned int WGPUMipmapFilterMode;
 typedef unsigned int WGPUCompareFunction;
+typedef unsigned int WGPUBufferBindingType;
 typedef unsigned long long WGPUShaderStage;
 typedef unsigned int WGPUSamplerBindingType;
 typedef unsigned int WGPUTextureSampleType;
@@ -87,6 +88,8 @@ typedef unsigned int WGPUSurfaceGetCurrentTextureStatus;
 #define WGPUBufferUsage_CopyDst 8
 #define WGPUBufferUsage_Index 16
 #define WGPUBufferUsage_Vertex 32
+#define WGPUBufferUsage_Uniform 64
+#define WGPUBufferUsage_Storage 128
 #define WGPUMapMode_Read 1
 #define WGPUTextureUsage_None 0
 #define WGPUTextureUsage_CopySrc 1
@@ -118,6 +121,10 @@ typedef unsigned int WGPUSurfaceGetCurrentTextureStatus;
 #define WGPUCompareFunction_GreaterEqual 7
 #define WGPUCompareFunction_Always 8
 #define WGPUShaderStage_Fragment 2
+#define WGPUShaderStage_Vertex 1
+#define WGPUShaderStage_Compute 4
+#define WGPUBufferBindingType_Uniform 2
+#define WGPUBufferBindingType_Storage 3
 #define WGPUSamplerBindingType_Filtering 2
 #define WGPUTextureSampleType_Float 2
 #define WGPUTextureViewDimension_2D 2
