@@ -66,8 +66,8 @@ granit_target_compile_warnings(granit_model_viewer_core)
 
 if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
   add_executable(
-    granit_example_model_viewer_support_test application_core_test.cpp gpu_scene_test.cpp orbit_camera_test.cpp
-    performance_history_test.cpp viewer_state_test.cpp
+    granit_example_model_viewer_support_test application_core_test.cpp gpu_scene_test.cpp
+    orbit_camera_test.cpp performance_history_test.cpp viewer_state_test.cpp
   )
   target_link_libraries(
     granit_example_model_viewer_support_test

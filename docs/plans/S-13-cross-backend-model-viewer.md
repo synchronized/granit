@@ -273,7 +273,9 @@ CPU/GPU Scene、Orbit Camera、Viewer State、ImGui 面板与单帧 `tick`。它
 Viewer State 和 Performance History，并以显式状态机约束 Renderer 创建、资产解析、GPU 上传、
 失败诊断及重置流程。后端无关单帧 `tick` 已统一应用状态与相机输入、生成 View/Light Scene
 Snapshot、预填充 Render Pipeline 描述并收集性能样本；平台输出、Frame、Canvas 和 Submit 仍由壳层
-补齐。三个平台壳仍待接入。
+补齐。桌面壳已从 Core 分离为独立目标，并完成 `--backend=auto|vulkan|webgpu`、可选 Provider
+动态库路径、资产路径、Validation 与 Smoke Test 参数的事务式解析；SDL3 窗口与输入仍待接入。
+浏览器平台壳尚未接入。
 
 三个运行配置如下：
 
