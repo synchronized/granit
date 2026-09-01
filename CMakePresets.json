@@ -128,6 +128,7 @@
         "CMAKE_TOOLCHAIN_FILE": "$env{EMSDK}/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake",
         "BUILD_SHARED_LIBS": false,
         "GRANIT_BUILD_EMSCRIPTEN_PLATFORM": true,
+        "GRANIT_FETCH_EXAMPLE_GLTF_DEPENDENCIES": true,
         "GRANIT_BUILD_TESTING": false,
         "GRANIT_BUILD_EXAMPLES": false,
         "GRANIT_BUILD_BENCHMARKS": false,

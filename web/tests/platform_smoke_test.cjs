@@ -13,6 +13,7 @@ const entryName = "granit_webgpu_fixture_example.html";
 
 const contentTypes = new Map([
   [".data", "application/octet-stream"],
+  [".gltf", "model/gltf+json"],
   [".html", "text/html; charset=utf-8"],
   [".js", "text/javascript; charset=utf-8"],
   [".wasm", "application/wasm"],
@@ -112,8 +113,10 @@ function validateCanvasPixels(png) {
 }
 
 function startServer() {
+  const requestedPaths = new Set();
   const server = http.createServer((request, response) => {
     const requestPath = new URL(request.url, "http://127.0.0.1").pathname;
+    requestedPaths.add(requestPath);
     const relativePath = requestPath === "/" ? entryName : requestPath.slice(1);
     const filePath = path.resolve(outputDirectory, relativePath);
     if (!filePath.startsWith(`${outputDirectory}${path.sep}`)) {
@@ -133,12 +136,12 @@ function startServer() {
   });
   return new Promise((resolve, reject) => {
     server.once("error", reject);
-    server.listen(0, "127.0.0.1", () => resolve(server));
+    server.listen(0, "127.0.0.1", () => resolve({ server, requestedPaths }));
   });
 }
 
 async function main() {
-  const server = await startServer();
+  const { server, requestedPaths } = await startServer();
   const address = server.address();
   const browserArguments = ["--enable-unsafe-webgpu", "--no-sandbox"];
   if (process.platform !== "win32") {
@@ -185,6 +188,10 @@ async function main() {
         `WebGPU 生命周期异常，state=${rendererState}, failure=${failureResult}, asset=${assetStatus}`,
       );
     }
+    for (const assetPath of ["/model_viewer_fixture.gltf", "/model_viewer_fixture.bin"]) {
+      if (!requestedPaths.has(assetPath))
+        throw new Error(`浏览器资源加载链路未请求 ${assetPath}`);
+    }
     validateCanvasPixels(await page.locator("#canvas").screenshot({ type: "png" }));
 
     await page.keyboard.press("A");
@@ -197,7 +204,7 @@ async function main() {
       undefined,
       { timeout: 5_000 },
     );
-    console.log("浏览器 WebGPU 共享索引纹理 Fixture 与输入转发验证通过");
+    console.log("浏览器 WebGPU 渲染、两阶段资产 Fetch 与输入转发验证通过");
   } catch (error) {
     console.error(browserMessages.join("\n"));
     throw error;

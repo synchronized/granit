@@ -52,6 +52,11 @@ target_compile_options(granit PRIVATE "--use-port=emdawnwebgpu:cpp_bindings=fals
 target_link_options(granit INTERFACE "--use-port=emdawnwebgpu:cpp_bindings=false")
 granit_target_compile_warnings(granit)
 
+# 浏览器模型查看器复用桌面端同一套 glTF Loader 与锁定依赖，不维护 Web 专用副本。
+add_subdirectory(
+  "${PROJECT_SOURCE_DIR}/examples/common/gltf" "${CMAKE_CURRENT_BINARY_DIR}/gltf"
+)
+
 add_library(
   granit_web_model_viewer_platform STATIC
   model_viewer_fetch.cpp
@@ -69,15 +74,13 @@ target_compile_features(granit_web_model_viewer_platform PUBLIC cxx_std_20)
 target_include_directories(
   granit_web_model_viewer_platform
   PUBLIC "${PROJECT_SOURCE_DIR}/examples/platform/web"
-  PRIVATE "${PROJECT_SOURCE_DIR}/examples/common"
+         "${PROJECT_SOURCE_DIR}/examples/common"
 )
-target_link_libraries(granit_web_model_viewer_platform PUBLIC granit::granit)
+target_link_libraries(
+  granit_web_model_viewer_platform PUBLIC granit::granit granit_example_gltf_support
+)
 target_compile_options(
   granit_web_model_viewer_platform PRIVATE "--use-port=emdawnwebgpu:cpp_bindings=false"
-)
-target_sources(
-  granit_web_model_viewer_platform
-  PRIVATE "${PROJECT_SOURCE_DIR}/examples/common/gltf/resource_uri.cpp"
 )
 granit_target_compile_warnings(granit_web_model_viewer_platform)
 
@@ -111,3 +114,17 @@ set_target_properties(
     FOLDER "Examples/Web"
 )
 granit_target_compile_warnings(granit_web_platform_smoke)
+
+add_custom_command(
+  TARGET granit_web_platform_smoke
+  POST_BUILD
+  COMMAND
+    "${CMAKE_COMMAND}" -E copy_if_different
+    "${CMAKE_CURRENT_SOURCE_DIR}/assets/model_viewer_fixture.gltf"
+    "$<TARGET_FILE_DIR:granit_web_platform_smoke>/model_viewer_fixture.gltf"
+  COMMAND
+    "${CMAKE_COMMAND}" -E copy_if_different
+    "${CMAKE_CURRENT_SOURCE_DIR}/assets/model_viewer_fixture.bin"
+    "$<TARGET_FILE_DIR:granit_web_platform_smoke>/model_viewer_fixture.bin"
+  VERBATIM
+)

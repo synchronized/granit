@@ -4,9 +4,11 @@
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
+#include <memory>
 #include <new>
 #include <span>
 #include <string>
+#include <vector>
 
 #include <emscripten/emscripten.h>
 #include <emscripten/html5.h>
@@ -22,6 +24,8 @@
 #include <granit/renderer/texture.hpp>
 
 #include "model_viewer_fetch.h"
+#include "resource_fetch_batch.h"
+#include "gltf/loader.h"
 #include "support/renderer_fixture.h"
 
 namespace {
@@ -36,6 +40,10 @@ struct web_platform_state {
   unsigned input_event_count{};
   std::shared_ptr<granit::example::model_viewer::web::asset_request> asset_request{
       std::make_shared<granit::example::model_viewer::web::asset_request>()};
+  granit::example::model_viewer::web::resource_fetch_batch resource_batch;
+  granit::example::model_viewer::web::resource_bundle resource_bundle;
+  bool resource_batch_started{};
+  bool asset_ready{};
 };
 
 web_platform_state state;
@@ -503,6 +511,60 @@ void tick(void*) noexcept {
     return;
   }
 
+  try {
+    if (!state.resource_batch_started) {
+      std::vector<std::string> resources;
+      const auto discovery = granit::example::gltf::discover_external_resources(
+          state.asset_request->bytes(), resources);
+      if (!discovery) {
+        fail("asset-discovery", GRANIT_ERROR_INVALID_ARGUMENT);
+        return;
+      }
+      for (const auto& resource : resources) {
+        if (!state.resource_batch.add(resource, resource)) {
+          fail("asset-batch-add", GRANIT_ERROR_INVALID_ARGUMENT);
+          return;
+        }
+      }
+      for (const auto& entry : state.resource_batch.entries()) {
+        if (!granit::example::model_viewer::web::start_fetch(entry.request, entry.url)) {
+          fail("asset-resource-fetch-start");
+          return;
+        }
+      }
+      state.resource_batch_started = true;
+    }
+
+    const auto batch_status = state.resource_batch.status();
+    if (batch_status ==
+        granit::example::model_viewer::web::resource_fetch_batch_status::failed) {
+      fail("asset-resource-fetch");
+      return;
+    }
+    if (batch_status != granit::example::model_viewer::web::resource_fetch_batch_status::ready)
+      return;
+    if (!state.asset_ready) {
+      if (!state.resource_batch.commit(state.resource_bundle)) {
+        fail("asset-bundle-commit", GRANIT_ERROR_INTERNAL);
+        return;
+      }
+      granit::example::gltf::scene scene;
+      const auto loaded = granit::example::gltf::load(state.asset_request->bytes(),
+                                                      &state.resource_bundle, scene);
+      if (!loaded) {
+        fail("asset-load", GRANIT_ERROR_INVALID_ARGUMENT);
+        return;
+      }
+      state.asset_ready = true;
+    }
+  } catch (const std::bad_alloc&) {
+    fail("asset-allocation", GRANIT_ERROR_OUT_OF_MEMORY);
+    return;
+  } catch (...) {
+    fail("asset-exception", GRANIT_ERROR_INTERNAL);
+    return;
+  }
+
   granit_renderer_limits limits = GRANIT_RENDERER_LIMITS_INIT;
   const auto limits_result = granit_renderer_get_limits(state.renderer, &limits);
   if (limits_result != GRANIT_SUCCESS || limits.uniform_buffer_offset_alignment == 0 ||
@@ -544,7 +606,9 @@ extern "C" EMSCRIPTEN_KEEPALIVE unsigned granit_web_input_event_count() noexcept
 }
 
 extern "C" EMSCRIPTEN_KEEPALIVE unsigned granit_web_asset_status() noexcept {
-  return static_cast<unsigned>(state.asset_request->status());
+  if (state.status == startup_status::failed)
+    return 3;
+  return state.asset_ready ? 2U : 1U;
 }
 
 extern "C" EMSCRIPTEN_KEEPALIVE unsigned granit_web_renderer_state() noexcept {
@@ -574,7 +638,7 @@ int main() {
     return 1;
   }
   if (!granit::example::model_viewer::web::start_fetch(state.asset_request,
-                                                       "granit_webgpu_fixture_example.html")) {
+                                                       "model_viewer_fixture.gltf")) {
     fail("asset-fetch-start");
     return 1;
   }

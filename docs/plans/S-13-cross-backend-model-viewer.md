@@ -281,8 +281,9 @@ Emscripten 类型的输入适配与异步资产请求状态；请求 generation 
 Emscripten Fetch 传输已使用共享请求状态保护回调生命周期，并将 HTTP/空响应诊断写回请求状态。
 浏览器资源 Bundle 会规范化并拥有预取的 `.bin` 与纹理字节，再通过现有同步 Resolver 契约交给
 Loader。Loader 支持在不加载资源的情况下先发现并去重 glTF 外部 URI，拒绝不安全路径且在失败时
-保留调用方原列表，为浏览器“两阶段 Fetch”提供单一资源清单来源。真正的 Canvas、模型查看器
-主循环与 ImGui 接入仍待完成。
+保留调用方原列表，为浏览器“两阶段 Fetch”提供单一资源清单来源。Emscripten 构建复用相同的
+Loader 与锁定 `cgltf`/`stb_image` 依赖；浏览器 Fixture 已验证主文档 Fetch、URI 发现、外部资源
+批量 Fetch、Bundle 提交与同步 Loader 的完整链路。真正的模型查看器主循环与 ImGui 接入仍待完成。
 
 SDL3 输入适配已完成第一阶段：平台事件按帧累积为 `viewer_input`，覆盖右键环绕、中键平移、
 滚轮缩放、`F`/`Home`、焦点与指针进出，并在 ImGui 捕获标志进入 Core 前完成标记。窗口、Surface

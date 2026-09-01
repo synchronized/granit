@@ -60,7 +60,8 @@ target_include_directories(
   PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/generated"
 )
 target_link_libraries(
-  granit_model_viewer_core PUBLIC granit_example_gltf_support granit::render_pipeline
+  granit_model_viewer_core
+  PUBLIC granit_example_gltf_support granit::math granit::render_pipeline
 )
 set_target_properties(granit_model_viewer_core PROPERTIES FOLDER "Examples")
 granit_target_compile_warnings(granit_model_viewer_core)

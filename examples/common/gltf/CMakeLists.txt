@@ -85,7 +85,7 @@ target_include_directories(granit_example_gltf_support PUBLIC "${CMAKE_CURRENT_S
 target_link_libraries(
   granit_example_gltf_support
   PRIVATE granit_example_gltf_dependencies
-  PUBLIC granit::math
+  PUBLIC granit::granit
 )
 set_target_properties(granit_example_gltf_support PROPERTIES FOLDER "Examples")
 granit_target_compile_warnings(granit_example_gltf_support)
