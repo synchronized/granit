@@ -2,16 +2,23 @@
 # Copyright (c) 2026 Granit contributors
 
 add_library(granit_model_viewer_desktop_shell STATIC desktop_options.cpp desktop_options.h)
+if(GRANIT_BUILD_INTEGRATION_SDL3)
+  target_sources(granit_model_viewer_desktop_shell PRIVATE sdl3_input.cpp sdl3_input.h)
+  target_link_libraries(granit_model_viewer_desktop_shell PUBLIC "${GRANIT_SDL3_TARGET}")
+endif()
 target_compile_features(granit_model_viewer_desktop_shell PUBLIC cxx_std_20)
 target_include_directories(
   granit_model_viewer_desktop_shell PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}"
 )
-target_link_libraries(granit_model_viewer_desktop_shell PUBLIC granit::granit)
+target_link_libraries(granit_model_viewer_desktop_shell PUBLIC granit_model_viewer_core)
 set_target_properties(granit_model_viewer_desktop_shell PROPERTIES FOLDER "Examples")
 granit_target_compile_warnings(granit_model_viewer_desktop_shell)
 
 if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
   add_executable(granit_model_viewer_desktop_shell_test desktop_options_test.cpp)
+  if(GRANIT_BUILD_INTEGRATION_SDL3)
+    target_sources(granit_model_viewer_desktop_shell_test PRIVATE sdl3_input_test.cpp)
+  endif()
   target_link_libraries(
     granit_model_viewer_desktop_shell_test
     PRIVATE granit_model_viewer_desktop_shell Catch2::Catch2WithMain
