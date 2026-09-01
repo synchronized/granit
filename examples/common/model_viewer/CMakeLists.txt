@@ -3,6 +3,8 @@
 
 set(granit_model_viewer_material_package
     "${CMAKE_CURRENT_BINARY_DIR}/model_viewer_pbr.grmat")
+set(granit_model_viewer_material_include
+    "${CMAKE_CURRENT_BINARY_DIR}/generated/model_viewer_pbr.grmat.inc")
 add_custom_command(
   OUTPUT "${granit_model_viewer_material_package}"
   COMMAND
@@ -19,21 +21,35 @@ add_custom_command(
   COMMENT "生成模型查看器 PBR 材质归档"
   VERBATIM
 )
+add_custom_command(
+  OUTPUT "${granit_model_viewer_material_include}"
+  COMMAND "${CMAKE_COMMAND}" -E make_directory "${CMAKE_CURRENT_BINARY_DIR}/generated"
+  COMMAND
+    "${CMAKE_COMMAND}" "-DINPUT=${granit_model_viewer_material_package}"
+    "-DOUTPUT=${granit_model_viewer_material_include}"
+    -P "${PROJECT_SOURCE_DIR}/cmake/embed_binary.cmake"
+  DEPENDS
+    "${granit_model_viewer_material_package}"
+    "${PROJECT_SOURCE_DIR}/cmake/embed_binary.cmake"
+  COMMENT "内嵌模型查看器 PBR 材质归档"
+  VERBATIM
+)
 
 add_library(
-  granit_example_model_viewer_support STATIC gpu_scene.cpp
-                                              "${granit_model_viewer_material_package}"
+  granit_example_model_viewer_support STATIC
+  gpu_scene.cpp
+  material_archive.cpp
+  material_archive.h
+  "${granit_model_viewer_material_include}"
 )
 target_compile_features(granit_example_model_viewer_support PUBLIC cxx_std_20)
 target_include_directories(
-  granit_example_model_viewer_support PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/.."
+  granit_example_model_viewer_support
+  PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/.."
+  PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/generated"
 )
 target_link_libraries(
   granit_example_model_viewer_support PUBLIC granit_example_gltf_support granit::render_pipeline
-)
-target_compile_definitions(
-  granit_example_model_viewer_support
-  PRIVATE GRANIT_MODEL_VIEWER_MATERIAL_PACKAGE="${granit_model_viewer_material_package}"
 )
 set_target_properties(granit_example_model_viewer_support PROPERTIES FOLDER "Examples")
 granit_target_compile_warnings(granit_example_model_viewer_support)
