@@ -5,6 +5,24 @@ add_library(granit_model_viewer_desktop_shell STATIC desktop_options.cpp desktop
 if(GRANIT_BUILD_INTEGRATION_SDL3)
   target_sources(granit_model_viewer_desktop_shell PRIVATE sdl3_input.cpp sdl3_input.h)
   target_link_libraries(granit_model_viewer_desktop_shell PUBLIC "${GRANIT_SDL3_TARGET}")
+
+  add_executable(granit_model_viewer_example model_viewer_desktop.cpp)
+  target_link_libraries(
+    granit_model_viewer_example
+    PRIVATE granit_model_viewer_desktop_shell granit::integration_sdl3
+  )
+  if(WIN32)
+    add_custom_command(
+      TARGET granit_model_viewer_example
+      POST_BUILD
+      COMMAND
+        "${CMAKE_COMMAND}" -E copy_if_different "$<TARGET_FILE:${GRANIT_SDL3_TARGET}>"
+        "$<TARGET_FILE_DIR:granit_model_viewer_example>"
+      VERBATIM
+    )
+  endif()
+  granit_target_compile_warnings(granit_model_viewer_example)
+  granit_target_output_directories(granit_model_viewer_example)
 endif()
 target_compile_features(granit_model_viewer_desktop_shell PUBLIC cxx_std_20)
 target_include_directories(
