@@ -7,8 +7,11 @@
 #include "model_viewer/material_edit.h"
 #include "model_viewer/viewer_state.h"
 
+#include <imgui.h>
+
 #include <cstdint>
 #include <optional>
+#include <span>
 #include <string_view>
 
 namespace granit::example::model_viewer {
@@ -37,11 +40,22 @@ struct viewer_panel_changes {
   std::optional<material_factor_edit> material;
 };
 
+struct texture_preview {
+  std::uint32_t image{gltf::invalid_index};
+  std::uint32_t sampler{gltf::invalid_index};
+  bool srgb{};
+  ImTextureID texture{ImTextureID_Invalid};
+};
+
+[[nodiscard]] bool find_texture_preview(const gltf::texture_reference& reference, bool srgb,
+                                        std::span<const texture_preview> previews,
+                                        ImTextureID& texture) noexcept;
+
 /** 构建查看器面板，并返回本帧由控件产生的批量状态变更。 */
-[[nodiscard]] viewer_panel_changes draw_viewer_panels(const gltf::scene& scene,
-                                                      const viewer_state& state,
-                                                      const renderer_panel_info& renderer,
-                                                      const performance_panel_info& performance);
+[[nodiscard]] viewer_panel_changes
+draw_viewer_panels(const gltf::scene& scene, const viewer_state& state,
+                   const renderer_panel_info& renderer, const performance_panel_info& performance,
+                   std::span<const texture_preview> previews = {});
 
 } // namespace granit::example::model_viewer
 

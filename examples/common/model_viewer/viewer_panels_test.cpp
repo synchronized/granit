@@ -6,6 +6,8 @@
 #include <catch2/catch_all.hpp>
 #include <imgui.h>
 
+#include <array>
+
 namespace {
 
 struct imgui_context {
@@ -14,6 +16,22 @@ struct imgui_context {
 };
 
 } // namespace
+
+TEST_CASE("材质缩略图按 Image 与颜色空间查找", "[example][model-viewer][imgui][texture]") {
+  using namespace granit::example;
+  const std::array previews{
+      model_viewer::texture_preview{.image = 2, .sampler = 4, .srgb = true, .texture = 11},
+      model_viewer::texture_preview{.image = 2, .sampler = 4, .srgb = false, .texture = 22}};
+  const gltf::texture_reference reference{.image = 2, .sampler = 4};
+  ImTextureID texture = ImTextureID_Invalid;
+  REQUIRE(model_viewer::find_texture_preview(reference, true, previews, texture));
+  CHECK(texture == 11);
+  REQUIRE(model_viewer::find_texture_preview(reference, false, previews, texture));
+  CHECK(texture == 22);
+  const gltf::texture_reference missing{.image = 3};
+  CHECK_FALSE(model_viewer::find_texture_preview(missing, true, previews, texture));
+  CHECK(texture == ImTextureID_Invalid);
+}
 
 TEST_CASE("查看器 ImGui 面板可在无平台后端上下文中构建", "[example][model-viewer][imgui]") {
   imgui_context context;

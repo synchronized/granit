@@ -6,6 +6,7 @@
 #include <imgui.h>
 
 #include <array>
+#include <ranges>
 #include <vector>
 
 namespace granit::example::model_viewer {
@@ -17,6 +18,40 @@ const char* node_name(const gltf::node& node) noexcept {
 
 const char* material_name(const gltf::material& material) noexcept {
   return material.name.empty() ? "Unnamed Material" : material.name.c_str();
+}
+
+const char* filter_name(std::uint32_t filter) noexcept {
+  return filter == 9728 || filter == 9984 || filter == 9986 ? "Nearest" : "Linear";
+}
+
+const char* wrap_name(std::uint32_t wrap) noexcept {
+  if (wrap == 33071)
+    return "Clamp";
+  if (wrap == 33648)
+    return "Mirror";
+  return "Repeat";
+}
+
+void draw_texture_preview(const char* label, const gltf::texture_reference& reference, bool srgb,
+                          const gltf::scene& scene, std::span<const texture_preview> previews) {
+  ImGui::PushID(label);
+  ImGui::TextUnformatted(label);
+  ImTextureID texture = ImTextureID_Invalid;
+  if (find_texture_preview(reference, srgb, previews, texture))
+    ImGui::Image(ImTextureRef{texture}, {64, 64});
+  else
+    ImGui::TextDisabled("No texture");
+  if (reference.image != gltf::invalid_index)
+    ImGui::Text("Image: %u (%s)", reference.image, srgb ? "sRGB" : "Linear");
+  if (reference.sampler < scene.samplers.size()) {
+    const auto& sampler = scene.samplers[reference.sampler];
+    ImGui::Text("Sampler: mag %s, min %s, U %s, V %s", filter_name(sampler.mag_filter),
+                filter_name(sampler.min_filter), wrap_name(sampler.wrap_u),
+                wrap_name(sampler.wrap_v));
+  } else {
+    ImGui::TextDisabled("Sampler: default");
+  }
+  ImGui::PopID();
 }
 
 void draw_scene_node(const gltf::scene& scene, std::uint32_t index, const viewer_state& state,
@@ -58,6 +93,7 @@ void draw_scene_panel(const gltf::scene& scene, const viewer_state& state, viewe
 }
 
 void draw_inspector_panel(const gltf::scene& scene, const viewer_state& state,
+                          std::span<const texture_preview> previews,
                           viewer_panel_changes& changes) {
   if (state.selected_node() >= scene.nodes.size()) {
     ImGui::TextUnformatted("No node selected");
@@ -98,6 +134,13 @@ void draw_inspector_panel(const gltf::scene& scene, const viewer_state& state,
                                 ImGuiColorEditFlags_HDR | ImGuiColorEditFlags_Float);
     if (edited)
       changes.material = edit;
+    ImGui::SeparatorText("Textures");
+    draw_texture_preview("Base Color", material.base_color_texture, true, scene, previews);
+    draw_texture_preview("Metallic / Roughness", material.metallic_roughness_texture, false, scene,
+                         previews);
+    draw_texture_preview("Normal", material.normal_texture, false, scene, previews);
+    draw_texture_preview("Occlusion", material.occlusion_texture, false, scene, previews);
+    draw_texture_preview("Emissive", material.emissive_texture, true, scene, previews);
   }
 }
 
@@ -148,13 +191,31 @@ template <typename Callback> void draw_panel(const char* name, bool& open, Callb
 
 } // namespace
 
+bool find_texture_preview(const gltf::texture_reference& reference, bool srgb,
+                          std::span<const texture_preview> previews,
+                          ImTextureID& texture) noexcept {
+  texture = ImTextureID_Invalid;
+  if (reference.image == gltf::invalid_index)
+    return false;
+  const auto found = std::ranges::find_if(previews, [&](const texture_preview& preview) {
+    return preview.image == reference.image && preview.sampler == reference.sampler &&
+           preview.srgb == srgb && preview.texture != ImTextureID_Invalid;
+  });
+  if (found == previews.end())
+    return false;
+  texture = found->texture;
+  return true;
+}
+
 viewer_panel_changes draw_viewer_panels(const gltf::scene& scene, const viewer_state& state,
                                         const renderer_panel_info& renderer,
-                                        const performance_panel_info& performance) {
+                                        const performance_panel_info& performance,
+                                        std::span<const texture_preview> previews) {
   viewer_panel_changes changes;
   auto panels = state.panels();
   draw_panel("Scene", panels.scene, [&] { draw_scene_panel(scene, state, changes.state); });
-  draw_panel("Inspector", panels.inspector, [&] { draw_inspector_panel(scene, state, changes); });
+  draw_panel("Inspector", panels.inspector,
+             [&] { draw_inspector_panel(scene, state, previews, changes); });
   draw_panel("Lighting", panels.lighting, [&] { draw_lighting_panel(state, changes.state); });
   draw_panel("Renderer", panels.renderer, [&] { draw_renderer_panel(renderer); });
   draw_panel("Performance", panels.performance, [&] { draw_performance_panel(performance); });
