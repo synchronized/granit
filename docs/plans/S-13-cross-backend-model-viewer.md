@@ -5,7 +5,7 @@
 
 ## 状态
 
-- 实现状态：进行中；S-13A 已完成，当前实施 S-13B
+- 实现状态：进行中；S-13A、S-13B 已完成，当前实施 S-13C
 - 前置依赖：S-12
 - 可并行准备：示例级 glTF 解析与测试 Fixture
 - 优先级：P1
@@ -105,6 +105,9 @@ CPU Scene 包含以下所有权对象：
 
 单元测试覆盖 Node 层级、TRS/矩阵、交错 Accessor、索引归一化、材质纹理语义、
 图片解码、AABB 与上述所有错误。测试只使用仓库内小型 Fixture，不下载头盔。
+
+S-13B 已完成：`granit_example_gltf_support` 保持示例私有，固定 GLB Fixture、内存 GLB、
+外部资源与错误矩阵均由 `granit.example.gltf_support` 覆盖，不需要网络或文件系统。
 
 ### S-13C GPU Scene 与逐帧数据契约
 

@@ -115,7 +115,8 @@ const cgltf_accessor* find_attribute(const cgltf_primitive& primitive, cgltf_att
 
 bool supported_float_accessor(const cgltf_accessor& accessor, cgltf_type type,
                               cgltf_attribute_type semantic) {
-  if (accessor.type != type || accessor.is_sparse || accessor.buffer_view == nullptr)
+  if (accessor.type != type || accessor.is_sparse || accessor.buffer_view == nullptr ||
+      accessor.buffer_view->has_meshopt_compression)
     return false;
   if (semantic == cgltf_attribute_type_position)
     return accessor.component_type == cgltf_component_type_r_32f && !accessor.normalized;
@@ -190,6 +191,7 @@ load_result convert_primitive(const cgltf_data& data, const cgltf_primitive& sou
     const auto& indices = *source.indices;
     const bool supported = indices.type == cgltf_type_scalar && !indices.is_sparse &&
                            !indices.normalized && indices.buffer_view != nullptr &&
+                           !indices.buffer_view->has_meshopt_compression &&
                            (indices.component_type == cgltf_component_type_r_8u ||
                             indices.component_type == cgltf_component_type_r_16u ||
                             indices.component_type == cgltf_component_type_r_32u);

@@ -3,6 +3,7 @@
 
 #include <catch2/catch_all.hpp>
 
+#include "gltf/fixtures/minimal_scene_glb.h"
 #include "gltf/loader.h"
 #include "gltf/resource_uri.h"
 
@@ -98,7 +99,8 @@ TEST_CASE("glTF Loader 转换 Node 层级和 TRS", "[example][gltf][loader]") {
     "asset":{"version":"2.0"},
     "scene":0,
     "scenes":[{"nodes":[0]}],
-    "nodes":[{"name":"root","translation":[1,2,3],"children":[1]},{"name":"child"}]
+    "nodes":[{"name":"root","translation":[1,2,3],"children":[1]},
+             {"name":"child","matrix":[1,0,0,0,0,1,0,0,0,0,1,0,4,5,6,1]}]
   })";
   granit::example::gltf::scene scene;
   const auto result = granit::example::gltf::load(bytes(document), nullptr, scene);
@@ -110,6 +112,20 @@ TEST_CASE("glTF Loader 转换 Node 层级和 TRS", "[example][gltf][loader]") {
   CHECK(scene.nodes[0].world_transform[12] == 1.0F);
   CHECK(scene.nodes[0].world_transform[13] == 2.0F);
   CHECK(scene.nodes[0].world_transform[14] == 3.0F);
+  CHECK(scene.nodes[1].local_transform[12] == 4.0F);
+  CHECK(scene.nodes[1].world_transform[12] == 5.0F);
+  CHECK(scene.nodes[1].world_transform[13] == 7.0F);
+  CHECK(scene.nodes[1].world_transform[14] == 9.0F);
+}
+
+TEST_CASE("glTF Loader 读取仓库固定 GLB Fixture", "[example][gltf][loader][fixture]") {
+  const auto& fixture = granit::example::gltf::fixtures::minimal_scene_glb;
+  const std::span document{reinterpret_cast<const std::byte*>(fixture), sizeof(fixture)};
+  granit::example::gltf::scene scene;
+  const auto result = granit::example::gltf::load(document, nullptr, scene);
+  REQUIRE(result);
+  REQUIRE(scene.nodes.size() == 1);
+  CHECK(scene.nodes[0].name == "fixture");
 }
 
 TEST_CASE("glTF Loader 失败时保持输出不变", "[example][gltf][loader]") {
@@ -255,5 +271,15 @@ TEST_CASE("glTF Loader 区分资源和数据错误", "[example][gltf][loader][er
     granit::example::gltf::scene scene;
     CHECK(granit::example::gltf::load(bytes(document), &resolver, scene).error ==
           granit::example::gltf::load_error::image_decode_failed);
+  }
+
+  SECTION("拒绝未支持的材质扩展") {
+    constexpr std::string_view document = R"({
+      "asset":{"version":"2.0"},"extensionsUsed":["KHR_materials_clearcoat"],
+      "materials":[{"extensions":{"KHR_materials_clearcoat":{"clearcoatFactor":1.0}}}]
+    })";
+    granit::example::gltf::scene scene;
+    CHECK(granit::example::gltf::load(bytes(document), nullptr, scene).error ==
+          granit::example::gltf::load_error::unsupported_feature);
   }
 }
