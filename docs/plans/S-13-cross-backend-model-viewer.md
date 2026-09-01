@@ -270,6 +270,10 @@ Present 等待和 GPU 时间的 p50、p95 与最大值；不可用 GPU 样本不
 CPU/GPU Scene、Orbit Camera、Viewer State、ImGui 面板与单帧 `tick`。它不提供 `main`、
 不创建原生窗口，也不包含桌面或浏览器条件编译。
 
+当前已建立该共享静态目标与第一阶段 `application_core`：Core 统一拥有 CPU/GPU Scene、
+Viewer State 和 Performance History，并以显式状态机约束 Renderer 创建、资产解析、GPU 上传、
+失败诊断及重置流程。单帧 `tick` 与三个平台壳仍待接入。
+
 三个运行配置如下：
 
 - **桌面 Vulkan** 与 **桌面 Dawn WebGPU** 共用一个 `granit_model_viewer_example`；

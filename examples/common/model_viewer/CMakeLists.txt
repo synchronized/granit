@@ -36,7 +36,9 @@ add_custom_command(
 )
 
 add_library(
-  granit_example_model_viewer_support STATIC
+  granit_model_viewer_core STATIC
+  application_core.cpp
+  application_core.h
   gpu_scene.cpp
   material_archive.cpp
   material_archive.h
@@ -49,21 +51,22 @@ add_library(
   viewer_state.h
   "${granit_model_viewer_material_include}"
 )
-target_compile_features(granit_example_model_viewer_support PUBLIC cxx_std_20)
+add_library(granit_example_model_viewer_support ALIAS granit_model_viewer_core)
+target_compile_features(granit_model_viewer_core PUBLIC cxx_std_20)
 target_include_directories(
-  granit_example_model_viewer_support
+  granit_model_viewer_core
   PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/.."
   PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/generated"
 )
 target_link_libraries(
-  granit_example_model_viewer_support PUBLIC granit_example_gltf_support granit::render_pipeline
+  granit_model_viewer_core PUBLIC granit_example_gltf_support granit::render_pipeline
 )
-set_target_properties(granit_example_model_viewer_support PROPERTIES FOLDER "Examples")
-granit_target_compile_warnings(granit_example_model_viewer_support)
+set_target_properties(granit_model_viewer_core PROPERTIES FOLDER "Examples")
+granit_target_compile_warnings(granit_model_viewer_core)
 
 if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
   add_executable(
-    granit_example_model_viewer_support_test gpu_scene_test.cpp orbit_camera_test.cpp
+    granit_example_model_viewer_support_test application_core_test.cpp gpu_scene_test.cpp orbit_camera_test.cpp
     performance_history_test.cpp viewer_state_test.cpp
   )
   target_link_libraries(
