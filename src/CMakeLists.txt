@@ -581,76 +581,15 @@ if(GRANIT_BUILD_INTEGRATION_IMGUI)
   endif()
 endif()
 
-add_library(granit_render_graph STATIC)
-add_library(granit::render_graph ALIAS granit_render_graph)
-target_sources(
-  granit_render_graph
-  PRIVATE
-    render_graph/graph_compiler.cpp
-    render_graph/serial_graph.cpp
-  PRIVATE
-    FILE_SET HEADERS
-    BASE_DIRS "${PROJECT_SOURCE_DIR}/src"
-    FILES
-      render_graph/graph_compiler.h
-      render_graph/serial_graph.h
-)
-target_compile_features(granit_render_graph PUBLIC cxx_std_20)
-target_include_directories(granit_render_graph PUBLIC "$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/src>")
-target_link_libraries(granit_render_graph PUBLIC granit::granit)
-granit_target_compile_warnings(granit_render_graph)
-granit_target_output_directories(granit_render_graph)
-set_target_properties(
-  granit_render_graph
-  PROPERTIES FOLDER "Modules" POSITION_INDEPENDENT_CODE ON
-)
-
 include(granit_modules)
+granit_add_render_graph_module()
 granit_add_math_module()
 
 granit_add_material_module()
 
-add_library(granit_pbr STATIC)
-add_library(granit::pbr ALIAS granit_pbr)
-target_sources(
-  granit_pbr
-  PRIVATE material/pbr_render_graph_adapter.cpp
-  PRIVATE
-    FILE_SET HEADERS
-    BASE_DIRS "${PROJECT_SOURCE_DIR}/src"
-    FILES material/pbr_render_graph_adapter.h
-)
-target_compile_features(granit_pbr PUBLIC cxx_std_20)
-target_include_directories(granit_pbr PUBLIC "$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/src>")
-target_link_libraries(granit_pbr PUBLIC granit::material granit::render_graph)
-granit_target_compile_warnings(granit_pbr)
-granit_target_output_directories(granit_pbr)
-set_target_properties(granit_pbr PROPERTIES FOLDER "Modules" POSITION_INDEPENDENT_CODE ON)
+granit_add_pbr_module()
 
-add_library(granit_scene STATIC)
-add_library(granit::scene ALIAS granit_scene)
-target_sources(
-  granit_scene
-  PRIVATE
-    scene/multi_view_submission.cpp
-    scene/scene_pbr_adapter.cpp
-    scene/scene_submission.cpp
-    scene/scene_visibility.cpp
-  PRIVATE
-    FILE_SET HEADERS
-    BASE_DIRS "${PROJECT_SOURCE_DIR}/src"
-    FILES
-      scene/multi_view_submission.h
-      scene/scene_pbr_adapter.h
-      scene/scene_submission.h
-      scene/scene_visibility.h
-)
-target_compile_features(granit_scene PUBLIC cxx_std_20)
-target_include_directories(granit_scene PUBLIC "$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/src>")
-target_link_libraries(granit_scene PUBLIC granit::pbr)
-granit_target_compile_warnings(granit_scene)
-granit_target_output_directories(granit_scene)
-set_target_properties(granit_scene PROPERTIES FOLDER "Modules" POSITION_INDEPENDENT_CODE ON)
+granit_add_scene_module()
 
 add_library(granit_lighting STATIC)
 add_library(granit::lighting ALIAS granit_lighting)
@@ -895,9 +834,6 @@ set_target_properties(
     VISIBILITY_INLINES_HIDDEN YES
 )
 
-set_target_properties(granit_render_graph PROPERTIES EXPORT_NAME detail_render_graph)
-set_target_properties(granit_pbr PROPERTIES EXPORT_NAME detail_pbr)
-set_target_properties(granit_scene PROPERTIES EXPORT_NAME detail_scene)
 set_target_properties(granit_lighting PROPERTIES EXPORT_NAME detail_lighting)
 
 install(

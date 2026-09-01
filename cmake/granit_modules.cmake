@@ -3,6 +3,45 @@
 
 include_guard(GLOBAL)
 
+# 添加 Granit 内部 Render Graph 模块。
+function(granit_add_render_graph_module)
+  if(TARGET granit_render_graph)
+    return()
+  endif()
+  if(NOT TARGET granit::granit)
+    message(FATAL_ERROR "创建 Render Graph 模块前必须先定义 granit::granit")
+  endif()
+
+  add_library(granit_render_graph STATIC)
+  add_library(granit::render_graph ALIAS granit_render_graph)
+  target_sources(
+    granit_render_graph
+    PRIVATE
+      "${PROJECT_SOURCE_DIR}/src/render_graph/graph_compiler.cpp"
+      "${PROJECT_SOURCE_DIR}/src/render_graph/serial_graph.cpp"
+    PRIVATE
+      FILE_SET HEADERS
+      BASE_DIRS "${PROJECT_SOURCE_DIR}/src"
+      FILES
+        "${PROJECT_SOURCE_DIR}/src/render_graph/graph_compiler.h"
+        "${PROJECT_SOURCE_DIR}/src/render_graph/serial_graph.h"
+  )
+  target_compile_features(granit_render_graph PUBLIC cxx_std_20)
+  target_include_directories(
+    granit_render_graph PUBLIC "$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/src>"
+  )
+  target_link_libraries(granit_render_graph PUBLIC granit::granit)
+  granit_target_compile_warnings(granit_render_graph)
+  granit_target_output_directories(granit_render_graph)
+  set_target_properties(
+    granit_render_graph
+    PROPERTIES
+      EXPORT_NAME detail_render_graph
+      FOLDER "Modules"
+      POSITION_INDEPENDENT_CODE ON
+  )
+endfunction()
+
 # 添加 Granit 内部 Math 模块。
 # 调用方必须先定义 granit::granit；重复调用不会创建第二套目标。
 function(granit_add_math_module)
@@ -92,6 +131,81 @@ function(granit_add_material_module)
     granit_material
     PROPERTIES
       EXPORT_NAME detail_material
+      FOLDER "Modules"
+      POSITION_INDEPENDENT_CODE ON
+  )
+endfunction()
+
+# 添加 Granit 内部 PBR 适配模块。
+function(granit_add_pbr_module)
+  if(TARGET granit_pbr)
+    return()
+  endif()
+  granit_add_material_module()
+  granit_add_render_graph_module()
+
+  add_library(granit_pbr STATIC)
+  add_library(granit::pbr ALIAS granit_pbr)
+  target_sources(
+    granit_pbr
+    PRIVATE "${PROJECT_SOURCE_DIR}/src/material/pbr_render_graph_adapter.cpp"
+    PRIVATE
+      FILE_SET HEADERS
+      BASE_DIRS "${PROJECT_SOURCE_DIR}/src"
+      FILES "${PROJECT_SOURCE_DIR}/src/material/pbr_render_graph_adapter.h"
+  )
+  target_compile_features(granit_pbr PUBLIC cxx_std_20)
+  target_include_directories(
+    granit_pbr PUBLIC "$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/src>"
+  )
+  target_link_libraries(granit_pbr PUBLIC granit::material granit::render_graph)
+  granit_target_compile_warnings(granit_pbr)
+  granit_target_output_directories(granit_pbr)
+  set_target_properties(
+    granit_pbr
+    PROPERTIES
+      EXPORT_NAME detail_pbr
+      FOLDER "Modules"
+      POSITION_INDEPENDENT_CODE ON
+  )
+endfunction()
+
+# 添加 Granit 内部 Scene 模块。
+function(granit_add_scene_module)
+  if(TARGET granit_scene)
+    return()
+  endif()
+  granit_add_pbr_module()
+
+  add_library(granit_scene STATIC)
+  add_library(granit::scene ALIAS granit_scene)
+  target_sources(
+    granit_scene
+    PRIVATE
+      "${PROJECT_SOURCE_DIR}/src/scene/multi_view_submission.cpp"
+      "${PROJECT_SOURCE_DIR}/src/scene/scene_pbr_adapter.cpp"
+      "${PROJECT_SOURCE_DIR}/src/scene/scene_submission.cpp"
+      "${PROJECT_SOURCE_DIR}/src/scene/scene_visibility.cpp"
+    PRIVATE
+      FILE_SET HEADERS
+      BASE_DIRS "${PROJECT_SOURCE_DIR}/src"
+      FILES
+        "${PROJECT_SOURCE_DIR}/src/scene/multi_view_submission.h"
+        "${PROJECT_SOURCE_DIR}/src/scene/scene_pbr_adapter.h"
+        "${PROJECT_SOURCE_DIR}/src/scene/scene_submission.h"
+        "${PROJECT_SOURCE_DIR}/src/scene/scene_visibility.h"
+  )
+  target_compile_features(granit_scene PUBLIC cxx_std_20)
+  target_include_directories(
+    granit_scene PUBLIC "$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/src>"
+  )
+  target_link_libraries(granit_scene PUBLIC granit::pbr)
+  granit_target_compile_warnings(granit_scene)
+  granit_target_output_directories(granit_scene)
+  set_target_properties(
+    granit_scene
+    PROPERTIES
+      EXPORT_NAME detail_scene
       FOLDER "Modules"
       POSITION_INDEPENDENT_CODE ON
   )
