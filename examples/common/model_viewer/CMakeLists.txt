@@ -83,7 +83,11 @@ endif()
 
 if(TARGET granit::integration_imgui)
   add_library(
-    granit_example_model_viewer_imgui STATIC viewer_panels.cpp viewer_panels.h
+    granit_example_model_viewer_imgui STATIC
+    texture_registry.cpp
+    texture_registry.h
+    viewer_panels.cpp
+    viewer_panels.h
   )
   target_compile_features(granit_example_model_viewer_imgui PUBLIC cxx_std_20)
   target_include_directories(
@@ -97,7 +101,9 @@ if(TARGET granit::integration_imgui)
   granit_target_compile_warnings(granit_example_model_viewer_imgui)
 
   if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
-    add_executable(granit_example_model_viewer_imgui_test viewer_panels_test.cpp)
+    add_executable(
+      granit_example_model_viewer_imgui_test texture_registry_test.cpp viewer_panels_test.cpp
+    )
     target_link_libraries(
       granit_example_model_viewer_imgui_test
       PRIVATE granit_example_model_viewer_imgui Catch2::Catch2WithMain

@@ -250,7 +250,9 @@ Canvas Draw List。Texture Resolver 只映射字体 Atlas 与已存活的查看�
 Scene 替换时会收敛失效选择。Scene、Inspector、Lighting、Renderer 与 Performance 五个 ImGui
 面板已作为独立可选目标接入，Widget 仅返回批量状态变更。Inspector 的 PBR Factor 编辑通过
 `gpu_scene` 事务式批量更新：GPU 提交成功后才同步 CPU Scene，失败保留上一有效值。
-Texture Resolver、公共性能指标与平台图形 Smoke Test 仍待接入。
+Texture Resolver 已使用 slot + generation 注册表映射字体 Atlas 与查看器纹理，ID 不携带指针，
+注销、清空、未知及陈旧 ID 均拒绝解析。材质缩略图展示、公共性能指标与平台图形 Smoke Test
+仍待接入。
 
 ### S-13F 三端启动与资源流程
 
