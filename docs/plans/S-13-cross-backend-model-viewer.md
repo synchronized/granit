@@ -276,7 +276,8 @@ Viewer State 和 Performance History，并以显式状态机约束 Renderer 创�
 失败诊断及重置流程。后端无关单帧 `tick` 已统一应用状态与相机输入、生成 View/Light Scene
 Snapshot、预填充 Render Pipeline 描述并收集性能样本；平台输出、Frame、Canvas 和 Submit 仍由壳层
 补齐。桌面壳已从 Core 分离为独立目标，并完成 `--backend=auto|vulkan|webgpu`、可选 Provider
-动态库路径、资产路径、Validation 与 Smoke Test 参数的事务式解析。浏览器平台壳尚未接入。
+动态库路径、资产路径、Validation 与 Smoke Test 参数的事务式解析。浏览器平台壳已建立不依赖
+Emscripten 类型的输入适配目标，真正的 Canvas、主循环、资源 Fetch 与 ImGui 接入仍待完成。
 
 SDL3 输入适配已完成第一阶段：平台事件按帧累积为 `viewer_input`，覆盖右键环绕、中键平移、
 滚轮缩放、`F`/`Home`、焦点与指针进出，并在 ImGui 捕获标志进入 Core 前完成标记。窗口、Surface
