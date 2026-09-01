@@ -38,6 +38,10 @@ struct packed_draw {
   std::uint32_t primitive{};
   std::uint32_t material{gltf::invalid_index};
   std::uint32_t node{};
+  math::matrix4 model{math::identity_matrix4};
+  math::matrix4 normal_matrix{math::identity_matrix4};
+  math::float3 bounds_center{};
+  float bounds_radius{};
 };
 
 struct texture_variant {

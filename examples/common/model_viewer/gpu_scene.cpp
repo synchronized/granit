@@ -7,6 +7,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cmath>
 #include <cstddef>
 #include <limits>
 #include <new>
@@ -15,6 +16,62 @@
 
 namespace granit::example::model_viewer {
 namespace {
+
+math::float3 transform_point(const math::matrix4& matrix, const math::float3& point) {
+  return {matrix[0] * point.x + matrix[4] * point.y + matrix[8] * point.z + matrix[12],
+          matrix[1] * point.x + matrix[5] * point.y + matrix[9] * point.z + matrix[13],
+          matrix[2] * point.x + matrix[6] * point.y + matrix[10] * point.z + matrix[14]};
+}
+
+float maximum_axis_scale(const math::matrix4& matrix) {
+  float maximum = 0.0F;
+  for (std::size_t column = 0; column < 3; ++column) {
+    const auto offset = column * 4;
+    const auto length =
+        std::sqrt(matrix[offset] * matrix[offset] + matrix[offset + 1] * matrix[offset + 1] +
+                  matrix[offset + 2] * matrix[offset + 2]);
+    maximum = std::max(maximum, length);
+  }
+  return maximum;
+}
+
+math::matrix4 make_normal_matrix(const math::matrix4& matrix) {
+  const auto a = matrix[0];
+  const auto b = matrix[4];
+  const auto c = matrix[8];
+  const auto d = matrix[1];
+  const auto e = matrix[5];
+  const auto f = matrix[9];
+  const auto g = matrix[2];
+  const auto h = matrix[6];
+  const auto i = matrix[10];
+  const auto determinant = a * (e * i - f * h) - b * (d * i - f * g) + c * (d * h - e * g);
+  if (!std::isfinite(determinant) || std::abs(determinant) <= 1.0e-8F)
+    return math::identity_matrix4;
+  const auto inverse = 1.0F / determinant;
+  return {{(e * i - f * h) * inverse, (b * i - c * h) * -inverse, (b * f - c * e) * inverse, 0,
+           (d * i - f * g) * -inverse, (a * i - c * g) * inverse, (a * f - c * d) * -inverse, 0,
+           (d * h - e * g) * inverse, (a * h - b * g) * -inverse, (a * e - b * d) * inverse, 0, 0,
+           0, 0, 1}};
+}
+
+void append_draw_bounds(const gltf::primitive& primitive, const gltf::node& node,
+                        packed_draw& draw) {
+  draw.model = node.world_transform;
+  draw.normal_matrix = make_normal_matrix(node.world_transform);
+  if (!primitive.local_bounds.valid)
+    return;
+  const math::float3 center{
+      (primitive.local_bounds.minimum.x + primitive.local_bounds.maximum.x) * 0.5F,
+      (primitive.local_bounds.minimum.y + primitive.local_bounds.maximum.y) * 0.5F,
+      (primitive.local_bounds.minimum.z + primitive.local_bounds.maximum.z) * 0.5F};
+  const math::float3 extent{primitive.local_bounds.maximum.x - center.x,
+                            primitive.local_bounds.maximum.y - center.y,
+                            primitive.local_bounds.maximum.z - center.z};
+  draw.bounds_center = transform_point(node.world_transform, center);
+  draw.bounds_radius = std::sqrt(extent.x * extent.x + extent.y * extent.y + extent.z * extent.z) *
+                       maximum_axis_scale(node.world_transform);
+}
 
 void append_texture(std::vector<texture_variant>& output, const gltf::texture_reference& reference,
                     bool srgb) {
@@ -118,11 +175,13 @@ gpu_scene_plan_error build_gpu_scene_plan(const gltf::scene& source, gpu_scene_p
       for (auto primitive_index = first; primitive_index < end; ++primitive_index) {
         if (candidate.draws.size() == std::numeric_limits<std::uint64_t>::max())
           return gpu_scene_plan_error::numeric_overflow;
-        candidate.draws.push_back(
-            {.payload = static_cast<std::uint64_t>(candidate.draws.size()) + 1,
-             .primitive = primitive_index,
-             .material = candidate.primitives[primitive_index].material,
-             .node = node_index});
+        packed_draw draw{.payload = static_cast<std::uint64_t>(candidate.draws.size()) + 1,
+                         .primitive = primitive_index,
+                         .material = candidate.primitives[primitive_index].material,
+                         .node = node_index};
+        append_draw_bounds(source.meshes[node.mesh].primitives[primitive_index - first], node,
+                           draw);
+        candidate.draws.push_back(draw);
       }
     }
     for (const auto& material : source.materials) {

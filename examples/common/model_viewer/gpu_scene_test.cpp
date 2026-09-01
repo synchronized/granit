@@ -7,6 +7,8 @@
 
 #include <granit/renderer/renderer.hpp>
 
+#include <cmath>
+
 TEST_CASE("GPU Scene 计划合并 Primitive 并记录字节 Offset", "[example][model-viewer]") {
   granit::example::gltf::scene source;
   auto& first = source.meshes.emplace_back().primitives.emplace_back();
@@ -106,6 +108,26 @@ TEST_CASE("GPU Scene 计划拒绝越界 Node 与 Material 引用", "[example][mo
   source.nodes.front().mesh = 1;
   CHECK(granit::example::model_viewer::build_gpu_scene_plan(source, plan) ==
         granit::example::model_viewer::gpu_scene_plan_error::invalid_scene);
+}
+
+TEST_CASE("GPU Scene 计划计算世界 Bounds 与法线矩阵", "[example][model-viewer]") {
+  granit::example::gltf::scene source;
+  auto& primitive = source.meshes.emplace_back().primitives.emplace_back();
+  primitive.local_bounds = {.minimum = {-1, -1, -1}, .maximum = {1, 1, 1}, .valid = true};
+  auto& node = source.nodes.emplace_back();
+  node.mesh = 0;
+  node.world_transform = {{2, 0, 0, 0, 0, 2, 0, 0, 0, 0, 2, 0, 4, 5, 6, 1}};
+
+  granit::example::model_viewer::gpu_scene_plan plan;
+  REQUIRE(granit::example::model_viewer::build_gpu_scene_plan(source, plan) ==
+          granit::example::model_viewer::gpu_scene_plan_error::none);
+  REQUIRE(plan.draws.size() == 1);
+  CHECK(plan.draws.front().model == node.world_transform);
+  CHECK(plan.draws.front().normal_matrix[0] == Catch::Approx(0.5F));
+  CHECK(plan.draws.front().normal_matrix[5] == Catch::Approx(0.5F));
+  CHECK(plan.draws.front().normal_matrix[10] == Catch::Approx(0.5F));
+  CHECK(plan.draws.front().bounds_center == granit::math::float3{4, 5, 6});
+  CHECK(plan.draws.front().bounds_radius == Catch::Approx(std::sqrt(12.0F)));
 }
 
 TEST_CASE("GPU Scene 计划失败时保持输出不变", "[example][model-viewer]") {
