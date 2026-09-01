@@ -10,6 +10,7 @@
 #include <bit>
 #include <limits>
 #include <new>
+#include <vector>
 
 namespace granit::pipeline::detail {
 namespace {
@@ -180,12 +181,22 @@ granit_result dynamic_uniform_arena::prepare(const material_draw_state& material
                                                            : GRANIT_ERROR_OUT_OF_MEMORY;
   }
   auto result = ensure_buffer(*current_slot_);
-  if (result == GRANIT_SUCCESS)
-    result =
-        static_cast<granit_result>(current_slot_->buffer.write(frame_allocation.offset, frame));
   if (result == GRANIT_SUCCESS) {
-    result =
-        static_cast<granit_result>(current_slot_->buffer.write(object_allocation.offset, object));
+    try {
+      const auto write_size =
+          object_allocation.offset + object_allocation.size - frame_allocation.offset;
+      std::vector<std::byte> upload(static_cast<std::size_t>(write_size));
+      std::ranges::copy(frame, upload.begin());
+      std::ranges::copy(object,
+                        upload.begin() + static_cast<std::ptrdiff_t>(object_allocation.offset -
+                                                                     frame_allocation.offset));
+      result =
+          static_cast<granit_result>(current_slot_->buffer.write(frame_allocation.offset, upload));
+    } catch (const std::bad_alloc&) {
+      result = GRANIT_ERROR_OUT_OF_MEMORY;
+    } catch (...) {
+      result = GRANIT_ERROR_INTERNAL;
+    }
   }
   group_pair* groups = nullptr;
   if (result == GRANIT_SUCCESS)
