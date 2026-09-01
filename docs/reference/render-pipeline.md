@@ -62,9 +62,11 @@ Overlay 阶段具有以下固定语义：
 `GRANIT_ERROR_UNSUPPORTED`。之后使用 `granit_render_pipeline_get_metrics` 读取最近一次已完成样本；
 尚未产生或完成样本时返回 `GRANIT_ERROR_NOT_READY`，不会伪造零耗时。
 
-`granit_render_pipeline_metrics` 返回递增样本序号，以及 Shadow、Opaque、Tone Mapping 和三者合计
-的 GPU 纳秒数。它不包含 CPU 帧时间、帧槽等待、Present 等待及阶段间空隙，因此不能与 CPU
-墙钟相加，也不等同于端到端 GPU 帧时间。指标回读暂不可用不会把已经提交成功的渲染改判为失败。
+`granit_render_pipeline_metrics` 返回递增样本序号，以及 Shadow、Opaque、Tone Mapping 阶段和从
+首个已测阶段开始到 Tone Mapping 结束的 GPU 纳秒数。它不包含后续 Debug Draw、Canvas、Overlay、
+CPU 帧时间、帧槽等待或 Present 等待，因此不能与 CPU 墙钟相加。Timestamp Query Pool 按真实
+Frame Slot 隔离，只在槽位完成并再次复用后读取；离屏同步路径可在本次执行完成后读取。指标回读
+暂不可用不会把已经提交成功的渲染改判为失败。
 
 ## 生命周期与线程安全
 

@@ -43,6 +43,10 @@ constexpr granit::lighting::light_limits automatic_light_limits{
     .directional = 4, .point = 128, .spot = 64};
 
 struct pipeline_state {
+  struct metrics_slot {
+    granit_timestamp_query_pool pool = GRANIT_NULL_HANDLE;
+    bool pending = false;
+  };
   struct shadow_pipeline_entry {
     granit_pipeline_layout layout = GRANIT_NULL_HANDLE;
     granit_mesh mesh = GRANIT_NULL_HANDLE;
@@ -71,8 +75,9 @@ struct pipeline_state {
   std::vector<draw_binding_entry> opaque_draw_bindings;
   std::vector<draw_binding_entry> shadow_draw_bindings;
   granit::pipeline::detail::dynamic_uniform_arena uniform_arena;
-  granit_timestamp_query_pool metrics_pool = GRANIT_NULL_HANDLE;
+  std::vector<metrics_slot> metrics_slots;
   granit_render_pipeline_metrics metrics = GRANIT_RENDER_PIPELINE_METRICS_INIT;
+  bool metrics_enabled = false;
   bool metrics_available = false;
   float shadow_half_extent = 20.0F;
   bool alive = true;
@@ -583,6 +588,43 @@ granit_result record_shadow_draws(pipeline_state& state, granit_command_recorder
   return result;
 }
 
+granit_result publish_metrics(pipeline_state& state, pipeline_state::metrics_slot& slot) {
+  if (!slot.pending)
+    return GRANIT_ERROR_NOT_READY;
+  std::array<uint64_t, 8> values{};
+  const auto result = granit_timestamp_query_pool_get_results(
+      state.renderer, slot.pool, 0, static_cast<uint32_t>(values.size()), values.data());
+  if (result != GRANIT_SUCCESS)
+    return result;
+  state.metrics.sample_sequence += 1;
+  state.metrics.shadow_gpu_ns = values[1] - values[0];
+  state.metrics.opaque_gpu_ns = values[3] - values[2];
+  state.metrics.tone_mapping_gpu_ns = values[5] - values[4];
+  state.metrics.total_gpu_ns = values[7] - values[6];
+  state.metrics_available = true;
+  slot.pending = false;
+  return GRANIT_SUCCESS;
+}
+
+granit_timestamp_query_pool prepare_metrics_slot(pipeline_state& state, uint32_t frame_slot,
+                                                 uint32_t frame_slot_count) {
+  if (!state.metrics_enabled)
+    return GRANIT_NULL_HANDLE;
+  if (frame_slot_count == 0 || frame_slot >= frame_slot_count)
+    return GRANIT_NULL_HANDLE;
+  if (state.metrics_slots.size() < frame_slot_count)
+    state.metrics_slots.resize(frame_slot_count);
+  auto& slot = state.metrics_slots[frame_slot];
+  if (slot.pool == GRANIT_NULL_HANDLE) {
+    const granit_timestamp_query_pool_desc desc{sizeof(desc), 8, 0};
+    if (granit_timestamp_query_pool_create(state.renderer, &desc, &slot.pool) != GRANIT_SUCCESS)
+      return GRANIT_NULL_HANDLE;
+  }
+  if (slot.pending && publish_metrics(state, slot) != GRANIT_SUCCESS)
+    return GRANIT_NULL_HANDLE;
+  return slot.pool;
+}
+
 granit_result
 render_view(pipeline_state& state, const granit_render_pipeline_render_desc& desc,
             const granit::scene::multi_view_snapshot& snapshot,
@@ -604,6 +646,9 @@ render_view(pipeline_state& state, const granit_render_pipeline_render_desc& des
     if (arena_result != GRANIT_SUCCESS)
       return arena_result;
   }
+  const auto metrics_slot_index = use_uniform_arena ? frame_info.frame_slot : 0U;
+  const auto metrics_slot_count = use_uniform_arena ? frame_info.frame_slot_count : 1U;
+  const auto metrics_pool = prepare_metrics_slot(state, metrics_slot_index, metrics_slot_count);
 
   granit::render_graph::serial_graph graph;
   const auto hdr = graph.create_transient_texture(
@@ -700,21 +745,24 @@ render_view(pipeline_state& state, const granit_render_pipeline_render_desc& des
 
   bool metrics_reset = false;
   const auto measure = [&](granit_command_recorder recorder, uint32_t first, auto&& operation) {
-    if (state.metrics_pool == GRANIT_NULL_HANDLE)
+    if (metrics_pool == GRANIT_NULL_HANDLE)
       return operation();
     auto result = GRANIT_SUCCESS;
     if (!metrics_reset) {
       result = granit_command_recorder_reset_timestamp_queries(state.renderer, recorder,
-                                                               state.metrics_pool, 0, 6);
+                                                               metrics_pool, 0, 8);
       metrics_reset = result == GRANIT_SUCCESS;
+      if (result == GRANIT_SUCCESS)
+        result = granit_command_recorder_write_timestamp(state.renderer, recorder, metrics_pool,
+                                                         GRANIT_TIMESTAMP_STAGE_TOP, 6);
     }
     if (result == GRANIT_SUCCESS)
-      result = granit_command_recorder_write_timestamp(state.renderer, recorder, state.metrics_pool,
+      result = granit_command_recorder_write_timestamp(state.renderer, recorder, metrics_pool,
                                                        GRANIT_TIMESTAMP_STAGE_TOP, first);
     if (result == GRANIT_SUCCESS)
       result = operation();
     if (result == GRANIT_SUCCESS)
-      result = granit_command_recorder_write_timestamp(state.renderer, recorder, state.metrics_pool,
+      result = granit_command_recorder_write_timestamp(state.renderer, recorder, metrics_pool,
                                                        GRANIT_TIMESTAMP_STAGE_BOTTOM, first + 1);
     return result;
   };
@@ -819,7 +867,7 @@ render_view(pipeline_state& state, const granit_render_pipeline_render_desc& des
     };
   }
   callbacks.tone_mapping = [&](auto& context, const auto& constants) {
-    return measure(context.recorder(), 4, [&]() {
+    const auto result = measure(context.recorder(), 4, [&]() {
       auto& pipeline =
           state.tone_mapping_pipelines[tone_mapping_pipeline_index(render_output.format)];
       return record_tone_mapping(pipeline, state.renderer, context.recorder(),
@@ -827,6 +875,10 @@ render_view(pipeline_state& state, const granit_render_pipeline_render_desc& des
                                  render_output.format, render_output.width, render_output.height,
                                  constants);
     });
+    if (result != GRANIT_SUCCESS || metrics_pool == GRANIT_NULL_HANDLE)
+      return result;
+    return granit_command_recorder_write_timestamp(state.renderer, context.recorder(), metrics_pool,
+                                                   GRANIT_TIMESTAMP_STAGE_BOTTOM, 7);
   };
   granit::lighting::reference_pipeline_graph_passes passes;
   if (granit::lighting::add_reference_pipeline_graph(graph, std::move(graph_desc),
@@ -919,20 +971,12 @@ render_view(pipeline_state& state, const granit_render_pipeline_render_desc& des
   if (!execution.succeeded())
     return execution.result;
   const auto destroy_result = granit_command_recorder_destroy(state.renderer, execution.recorder);
-  if (destroy_result != GRANIT_SUCCESS || state.metrics_pool == GRANIT_NULL_HANDLE)
+  if (destroy_result != GRANIT_SUCCESS || metrics_pool == GRANIT_NULL_HANDLE)
     return destroy_result;
-  std::array<uint64_t, 6> values{};
-  const auto metrics_result = granit_timestamp_query_pool_get_results(
-      state.renderer, state.metrics_pool, 0, static_cast<uint32_t>(values.size()), values.data());
-  if (metrics_result == GRANIT_SUCCESS) {
-    state.metrics.sample_sequence += 1;
-    state.metrics.shadow_gpu_ns = values[1] - values[0];
-    state.metrics.opaque_gpu_ns = values[3] - values[2];
-    state.metrics.tone_mapping_gpu_ns = values[5] - values[4];
-    state.metrics.total_gpu_ns = state.metrics.shadow_gpu_ns + state.metrics.opaque_gpu_ns +
-                                 state.metrics.tone_mapping_gpu_ns;
-    state.metrics_available = true;
-  }
+  auto& slot = state.metrics_slots[metrics_slot_index];
+  slot.pending = true;
+  if (!use_uniform_arena)
+    static_cast<void>(publish_metrics(state, slot));
   // 可选指标回读不能改变已经成功提交的渲染结果。
   return GRANIT_SUCCESS;
 }
@@ -1123,13 +1167,15 @@ extern "C" granit_result granit_render_pipeline_destroy(granit_renderer renderer
   };
   reset_draw_bindings(removed->opaque_draw_bindings);
   reset_draw_bindings(removed->shadow_draw_bindings);
-  if (removed->metrics_pool != GRANIT_NULL_HANDLE) {
-    const auto metrics_result =
-        granit_timestamp_query_pool_destroy(renderer, removed->metrics_pool);
+  for (auto& slot : removed->metrics_slots) {
+    if (slot.pool == GRANIT_NULL_HANDLE)
+      continue;
+    const auto metrics_result = granit_timestamp_query_pool_destroy(renderer, slot.pool);
     if (result == GRANIT_SUCCESS)
       result = metrics_result;
-    removed->metrics_pool = GRANIT_NULL_HANDLE;
+    slot.pool = GRANIT_NULL_HANDLE;
   }
+  removed->metrics_slots.clear();
   const auto shadow_view_result = removed->shadow_view.reset();
   if (result == GRANIT_SUCCESS)
     result = static_cast<granit_result>(shadow_view_result);
@@ -1171,10 +1217,24 @@ extern "C" granit_result granit_render_pipeline_metrics_enable(granit_renderer r
   if (!state)
     return GRANIT_ERROR_INVALID_HANDLE;
   std::scoped_lock lock{state->mutex};
-  if (state->metrics_pool != GRANIT_NULL_HANDLE)
+  if (state->metrics_enabled)
     return GRANIT_SUCCESS;
-  const granit_timestamp_query_pool_desc desc{sizeof(desc), 6, 0};
-  return granit_timestamp_query_pool_create(renderer, &desc, &state->metrics_pool);
+  const granit_timestamp_query_pool_desc desc{sizeof(desc), 8, 0};
+  pipeline_state::metrics_slot slot;
+  const auto result = granit_timestamp_query_pool_create(renderer, &desc, &slot.pool);
+  if (result != GRANIT_SUCCESS)
+    return result;
+  try {
+    state->metrics_slots.push_back(slot);
+  } catch (const std::bad_alloc&) {
+    static_cast<void>(granit_timestamp_query_pool_destroy(renderer, slot.pool));
+    return GRANIT_ERROR_OUT_OF_MEMORY;
+  } catch (...) {
+    static_cast<void>(granit_timestamp_query_pool_destroy(renderer, slot.pool));
+    return GRANIT_ERROR_INTERNAL;
+  }
+  state->metrics_enabled = true;
+  return GRANIT_SUCCESS;
 }
 
 extern "C" granit_result
@@ -1187,7 +1247,7 @@ granit_render_pipeline_get_metrics(granit_renderer renderer, granit_render_pipel
   if (!state)
     return GRANIT_ERROR_INVALID_HANDLE;
   std::scoped_lock lock{state->mutex};
-  if (state->metrics_pool == GRANIT_NULL_HANDLE || !state->metrics_available)
+  if (!state->metrics_enabled || !state->metrics_available)
     return GRANIT_ERROR_NOT_READY;
   *metrics = state->metrics;
   return GRANIT_SUCCESS;

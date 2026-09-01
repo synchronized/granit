@@ -759,10 +759,26 @@ TEST_CASE("公共Render Pipeline ABI输出可回读的Tone Mapping像素") {
   granit_render_pipeline_desc automatic_pipeline_desc = GRANIT_RENDER_PIPELINE_DESC_INIT;
   REQUIRE(granit_render_pipeline_create(renderer.native_handle(), &automatic_pipeline_desc,
                                         &pipeline) == GRANIT_SUCCESS);
+  const auto metrics_enable_result =
+      granit_render_pipeline_metrics_enable(renderer.native_handle(), pipeline);
+  REQUIRE((metrics_enable_result == GRANIT_SUCCESS ||
+           metrics_enable_result == GRANIT_ERROR_UNSUPPORTED));
+  granit_render_pipeline_metrics metrics = GRANIT_RENDER_PIPELINE_METRICS_INIT;
+  if (metrics_enable_result == GRANIT_SUCCESS)
+    CHECK(granit_render_pipeline_get_metrics(renderer.native_handle(), pipeline, &metrics) ==
+          GRANIT_ERROR_NOT_READY);
   granit_render_pipeline_draw_binding automatic_binding{91, mesh, material, 0};
   render_desc.draw_bindings = &automatic_binding;
   REQUIRE(granit_render_pipeline_render(renderer.native_handle(), pipeline, &render_desc) ==
           GRANIT_SUCCESS);
+  if (metrics_enable_result == GRANIT_SUCCESS) {
+    REQUIRE(granit_render_pipeline_get_metrics(renderer.native_handle(), pipeline, &metrics) ==
+            GRANIT_SUCCESS);
+    CHECK(metrics.sample_sequence == 1);
+    CHECK(metrics.total_gpu_ns >= metrics.shadow_gpu_ns);
+    CHECK(metrics.total_gpu_ns >= metrics.opaque_gpu_ns);
+    CHECK(metrics.total_gpu_ns >= metrics.tone_mapping_gpu_ns);
+  }
 
   REQUIRE(recorder.begin() == granit::result::success);
   REQUIRE(recorder.copy_texture_to_buffer(output_texture, readback.native_handle(), layout,
