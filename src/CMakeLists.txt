@@ -880,6 +880,8 @@ target_sources(
     pipeline/embedded_shaders.h
     pipeline/default_ibl_resources.cpp
     pipeline/default_ibl_resources.h
+    pipeline/dynamic_uniform_arena.cpp
+    pipeline/dynamic_uniform_arena.h
     pipeline/material_api.cpp
     pipeline/material_access.h
     pipeline/mesh_api.cpp

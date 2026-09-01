@@ -468,6 +468,8 @@ add_executable(
   pipeline/canvas_draw_list_api_test.cpp
   pipeline/canvas_geometry_upload_test.cpp
   pipeline/canvas_pass_test.cpp
+  "${PROJECT_SOURCE_DIR}/src/pipeline/dynamic_uniform_arena.cpp"
+  pipeline/dynamic_uniform_arena_test.cpp
   pipeline/debug_draw_list_api_test.cpp
   pipeline/debug_draw_geometry_test.cpp
   pipeline/text_draw_list_api_test.cpp
