@@ -37,6 +37,11 @@ std::vector<std::uint32_t> load_shader(const char* name) {
   return words;
 }
 
+std::string load_text(const char* name) {
+  std::ifstream stream{std::string{GRANIT_TEST_ASSET_DIR} + "/" + name, std::ios::binary};
+  return {std::istreambuf_iterator<char>{stream}, {}};
+}
+
 granit::material::material_package build_package() {
   using namespace granit::material;
   material_package_desc desc;
@@ -44,10 +49,12 @@ granit::material::material_package build_package() {
                            .features = {},
                            .shaders = {{.stage = package_shader_stage::vertex,
                                         .entry_point = "main",
-                                        .spirv = load_shader("minimal.vert.spv")},
+                                        .spirv = load_shader("minimal.vert.spv"),
+                                        .wgsl = load_text("dynamic_uniform.vert.wgsl")},
                                        {.stage = package_shader_stage::fragment,
                                         .entry_point = "main",
-                                        .spirv = load_shader("minimal.frag.spv")}},
+                                        .spirv = load_shader("minimal.frag.spv"),
+                                        .wgsl = load_text("dynamic_uniform.frag.wgsl")}},
                            .pipeline = {}});
   desc.variants.back().pipeline.vertex_buffers = {
       {.stride = 12,

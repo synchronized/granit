@@ -16,14 +16,14 @@
 
 namespace granit::material {
 
-inline constexpr std::uint32_t material_package_format_version = 2;
+inline constexpr std::uint32_t material_package_format_version = 3;
 
 using material_pass_id = std::uint64_t;
 using material_feature_id = std::uint64_t;
 using material_variant_key = std::uint64_t;
 
 enum class package_target : std::uint8_t {
-  vulkan_1_3,
+  cross_backend,
 };
 
 enum class package_binding_model : std::uint8_t {
@@ -97,6 +97,7 @@ struct material_shader_code {
   package_shader_stage stage = package_shader_stage::vertex;
   std::string entry_point;
   std::vector<std::uint32_t> spirv;
+  std::string wgsl;
 };
 
 struct material_variant_desc {
@@ -108,7 +109,7 @@ struct material_variant_desc {
 
 struct material_package_desc {
   std::uint32_t format_version = material_package_format_version;
-  package_target target = package_target::vulkan_1_3;
+  package_target target = package_target::cross_backend;
   package_binding_model binding_model = package_binding_model::bind_group;
   package_feature_flags required_renderer_features = 0;
   metadata_desc metadata;
@@ -144,7 +145,7 @@ public:
 
 private:
   std::uint32_t format_version_ = material_package_format_version;
-  package_target target_ = package_target::vulkan_1_3;
+  package_target target_ = package_target::cross_backend;
   package_binding_model binding_model_ = package_binding_model::bind_group;
   package_feature_flags required_renderer_features_ = 0;
   material_metadata metadata_;

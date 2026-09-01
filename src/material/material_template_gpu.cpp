@@ -28,9 +28,12 @@ granit_shader_stage native_stage(package_shader_stage stage) noexcept {
 granit_result create_shader(granit_renderer renderer, const material_shader_code& source,
                             granit_shader& shader) noexcept {
   granit_shader_desc desc = GRANIT_SHADER_DESC_INIT;
+  desc.struct_size = GRANIT_SHADER_DESC_VERSION_2_SIZE;
   desc.stage = native_stage(source.stage);
   desc.code = source.spirv.data();
   desc.code_size = source.spirv.size() * sizeof(std::uint32_t);
+  desc.wgsl = source.wgsl.data();
+  desc.wgsl_length = source.wgsl.size();
   desc.entry_point = source.entry_point.data();
   desc.entry_point_length = static_cast<std::uint32_t>(source.entry_point.size());
   return granit_shader_create(renderer, &desc, &shader);

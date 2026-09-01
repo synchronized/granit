@@ -11,8 +11,8 @@
 namespace {
 
 constexpr std::string_view source = R"({
-  "format_version": 2,
-  "target_environment": "vulkan1.3",
+  "format_version": 3,
+  "target_environment": "cross_backend",
   "binding_model": "bind_group",
   "material": {
     "constant_buffer_size": 16,
@@ -37,8 +37,10 @@ constexpr std::string_view source = R"({
         "alpha_operation": "add", "write_mask": 7}
     },
     "shaders": [
-      {"stage": "vertex", "entry_point": "main", "spirv": "minimal.vert.spv"},
-      {"stage": "fragment", "entry_point": "main", "spirv": "minimal.frag.spv"}
+      {"stage": "vertex", "entry_point": "main", "spirv": "minimal.vert.spv",
+       "wgsl": "dynamic_uniform.vert.wgsl"},
+      {"stage": "fragment", "entry_point": "main", "spirv": "minimal.frag.spv",
+       "wgsl": "dynamic_uniform.frag.wgsl"}
     ]
   }]
 })";
@@ -86,6 +88,16 @@ TEST_CASE("材质源 JSON 拒绝缺失的 SPIR-V") {
   std::string invalid{source};
   invalid.replace(invalid.find("minimal.vert.spv"), std::string_view{"minimal.vert.spv"}.size(),
                   "missing.spv");
+  granit::material::material_package package;
+  CHECK(granit::material::parse_material_source_json(
+            invalid, std::filesystem::path{GRANIT_TEST_ASSET_DIR}, package) ==
+        granit::material::source_json_error::referenced_file_error);
+}
+
+TEST_CASE("材质源 JSON 拒绝缺失的 WGSL") {
+  std::string invalid{source};
+  invalid.replace(invalid.find("dynamic_uniform.vert.wgsl"),
+                  std::string_view{"dynamic_uniform.vert.wgsl"}.size(), "missing.wgsl");
   granit::material::material_package package;
   CHECK(granit::material::parse_material_source_json(
             invalid, std::filesystem::path{GRANIT_TEST_ASSET_DIR}, package) ==

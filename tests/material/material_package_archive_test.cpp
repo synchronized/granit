@@ -34,10 +34,13 @@ material_package make_package(bool reverse_parameters) {
                            .features = {{make_feature_id("normal_map"), 1}},
                            .shaders = {{.stage = package_shader_stage::fragment,
                                         .entry_point = "fragment_main",
-                                        .spirv = {spirv_magic, UINT32_C(0x00010600), 0, 1, 0}},
+                                        .spirv = {spirv_magic, UINT32_C(0x00010600), 0, 1, 0},
+                                        .wgsl = "@fragment fn fragment_main() {}"},
                                        {.stage = package_shader_stage::vertex,
                                         .entry_point = "vertex_main",
-                                        .spirv = {spirv_magic, UINT32_C(0x00010600), 0, 1, 0}}},
+                                        .spirv = {spirv_magic, UINT32_C(0x00010600), 0, 1, 0},
+                                        .wgsl = "@vertex fn vertex_main() -> @builtin(position) "
+                                                "vec4f { return vec4f(); }"}},
                            .pipeline = {}});
   desc.variants.back().pipeline.vertex_buffers = {
       {.stride = 24,
@@ -77,7 +80,7 @@ TEST_CASE("材质包语义数据编码到独立归档区段") {
 
   material_archive_layout layout;
   REQUIRE(parse_material_archive_layout(bytes, layout) == archive_error::none);
-  REQUIRE(layout.sections.size() == 8);
+  REQUIRE(layout.sections.size() == 9);
   const auto section = [&](archive_section_type type) -> std::span<const std::byte> {
     const auto found = std::ranges::find(layout.sections, static_cast<std::uint32_t>(type),
                                          &material_archive_section::type);
@@ -90,6 +93,7 @@ TEST_CASE("材质包语义数据编码到独立归档区段") {
   CHECK(read_u32(section(archive_section_type::variant_records), 0) == 1);
   CHECK(read_u32(section(archive_section_type::shader_records), 0) == 2);
   CHECK(section(archive_section_type::spirv_data).size() == 40);
+  CHECK(!section(archive_section_type::wgsl_data).empty());
   CHECK(read_u32(section(archive_section_type::pipeline_states), 0) == 1);
 }
 
@@ -183,6 +187,23 @@ TEST_CASE("材质包解码拒绝非法 UTF-8 字符串") {
   CHECK(decode_material_package_archive(bytes, decoded) == archive_error::invalid_semantic_data);
 }
 
+TEST_CASE("材质包解码拒绝非法 UTF-8 WGSL") {
+  const auto source = make_package(false);
+  std::vector<std::byte> bytes;
+  REQUIRE(encode_material_package_archive(source, bytes) == archive_error::none);
+  material_archive_layout layout;
+  REQUIRE(parse_material_archive_layout(bytes, layout) == archive_error::none);
+  const auto wgsl = std::ranges::find(
+      layout.sections, static_cast<std::uint32_t>(archive_section_type::wgsl_data),
+      &material_archive_section::type);
+  REQUIRE(wgsl != layout.sections.end());
+  bytes[wgsl->offset] = std::byte{0xc0};
+  refresh_hash(bytes);
+
+  material_package decoded;
+  CHECK(decode_material_package_archive(bytes, decoded) == archive_error::invalid_semantic_data);
+}
+
 TEST_CASE("材质包解码在分配前拒绝超限记录数量") {
   const auto source = make_package(false);
   std::vector<std::byte> bytes;
@@ -229,6 +250,7 @@ TEST_CASE("材质包调试 JSON 使用稳定字段与固定宽度标识") {
   CHECK(json.find("\"name\": \"base_color\"") != std::string::npos);
   CHECK(json.find("\"type\": \"texture_view\"") != std::string::npos);
   CHECK(json.find("\"stage\": \"vertex\"") != std::string::npos);
+  CHECK(json.find("\"wgsl_size\":") != std::string::npos);
   CHECK(json.find("\"pipeline\": {\"vertex_buffers\"") != std::string::npos);
   CHECK(json.find("\"format\": \"float32x3\"") != std::string::npos);
   CHECK(json.ends_with("\n}\n"));

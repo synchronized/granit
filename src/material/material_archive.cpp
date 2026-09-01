@@ -18,10 +18,11 @@ constexpr std::array<std::byte, 8> archive_magic{std::byte{'G'}, std::byte{'R'},
                                                  std::byte{0},   std::byte{0}};
 constexpr std::uint32_t first_required_section = 1;
 constexpr std::uint32_t last_required_section = 7;
-constexpr std::uint32_t last_known_section = 10;
+constexpr std::uint32_t last_known_section = 11;
 
 bool required_section(std::uint32_t type) noexcept {
-  return (type >= first_required_section && type <= last_required_section) || type == 10;
+  return (type >= first_required_section && type <= last_required_section) || type == 10 ||
+         type == 11;
 }
 
 std::uint32_t read_u32(std::span<const std::byte> bytes, std::size_t offset) noexcept {
@@ -193,7 +194,7 @@ calculate_material_archive_content_hash(std::span<const std::byte> bytes) noexce
 
 archive_error encode_material_archive(const material_archive_encode_desc& desc,
                                       std::vector<std::byte>& bytes) noexcept {
-  if (desc.target_environment != material_archive_target_vulkan_1_3) {
+  if (desc.target_environment != material_archive_target_cross_backend) {
     return archive_error::unsupported_target;
   }
   if (desc.binding_model != material_archive_binding_model_bind_group) {
@@ -232,6 +233,9 @@ archive_error encode_material_archive(const material_archive_encode_desc& desc,
       }
     }
     if (!seen[static_cast<std::uint32_t>(archive_section_type::pipeline_states)]) {
+      return archive_error::missing_required_section;
+    }
+    if (!seen[static_cast<std::uint32_t>(archive_section_type::wgsl_data)]) {
       return archive_error::missing_required_section;
     }
 
@@ -338,7 +342,7 @@ archive_error parse_material_archive_layout(std::span<const std::byte> bytes,
   parsed.header.target_environment = read_u32(bytes, 48);
   parsed.header.binding_model = read_u32(bytes, 52);
   parsed.header.required_renderer_features = read_u64(bytes, 56);
-  if (parsed.header.target_environment != material_archive_target_vulkan_1_3) {
+  if (parsed.header.target_environment != material_archive_target_cross_backend) {
     return archive_error::unsupported_target;
   }
   if (parsed.header.binding_model != material_archive_binding_model_bind_group) {
@@ -398,6 +402,9 @@ archive_error parse_material_archive_layout(std::span<const std::byte> bytes,
       }
     }
     if (!seen[static_cast<std::uint32_t>(archive_section_type::pipeline_states)]) {
+      return archive_error::missing_required_section;
+    }
+    if (!seen[static_cast<std::uint32_t>(archive_section_type::wgsl_data)]) {
       return archive_error::missing_required_section;
     }
     std::ranges::sort(parsed.sections, {}, &material_archive_section::offset);

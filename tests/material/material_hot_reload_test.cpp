@@ -32,6 +32,11 @@ std::vector<std::uint32_t> load_shader(const char* name) {
   return words;
 }
 
+std::string load_text(const char* name) {
+  std::ifstream stream{std::string{GRANIT_TEST_ASSET_DIR} + "/" + name, std::ios::binary};
+  return {std::istreambuf_iterator<char>{stream}, {}};
+}
+
 granit::material::material_package build_package(std::string parameter_name,
                                                  std::string pass_name = "opaque") {
   using namespace granit::material;
@@ -45,10 +50,12 @@ granit::material::material_package build_package(std::string parameter_name,
                            .features = {},
                            .shaders = {{.stage = package_shader_stage::vertex,
                                         .entry_point = "main",
-                                        .spirv = load_shader("minimal.vert.spv")},
+                                        .spirv = load_shader("minimal.vert.spv"),
+                                        .wgsl = load_text("dynamic_uniform.vert.wgsl")},
                                        {.stage = package_shader_stage::fragment,
                                         .entry_point = "main",
-                                        .spirv = load_shader("minimal.frag.spv")}},
+                                        .spirv = load_shader("minimal.frag.spv"),
+                                        .wgsl = load_text("dynamic_uniform.frag.wgsl")}},
                            .pipeline = {}});
   material_package package;
   REQUIRE(material_package::build(std::move(desc), package) == package_error::none);

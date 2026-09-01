@@ -14,7 +14,8 @@ using namespace granit::material;
 material_shader_code shader(package_shader_stage stage) {
   return {.stage = stage,
           .entry_point = "main",
-          .spirv = {UINT32_C(0x07230203), UINT32_C(0x00010600), 0, 1, 0}};
+          .spirv = {UINT32_C(0x07230203), UINT32_C(0x00010600), 0, 1, 0},
+          .wgsl = "@vertex fn main() -> @builtin(position) vec4f { return vec4f(); }"};
 }
 
 material_variant_desc variant(std::initializer_list<material_feature_value> features) {
@@ -78,6 +79,12 @@ TEST_CASE("材质包拒绝重复特性、重复变体和无效 Shader") {
   desc = {};
   auto invalid = variant({});
   invalid.shaders.front().spirv.clear();
+  desc.variants.push_back(std::move(invalid));
+  CHECK(material_package::build(std::move(desc), package) == package_error::invalid_shader);
+
+  desc = {};
+  invalid = variant({});
+  invalid.shaders.front().wgsl.clear();
   desc.variants.push_back(std::move(invalid));
   CHECK(material_package::build(std::move(desc), package) == package_error::invalid_shader);
 }
