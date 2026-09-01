@@ -605,68 +605,10 @@ set_target_properties(
   PROPERTIES FOLDER "Modules" POSITION_INDEPENDENT_CODE ON
 )
 
-add_library(granit_math STATIC)
-add_library(granit::math ALIAS granit_math)
-target_sources(
-  granit_math
-  PRIVATE math/math.cpp
-  PRIVATE
-    FILE_SET HEADERS
-    BASE_DIRS "${PROJECT_SOURCE_DIR}/src"
-    FILES math/math.h
-)
-target_compile_features(granit_math PUBLIC cxx_std_20)
-target_include_directories(granit_math PUBLIC "$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/src>")
-target_link_libraries(granit_math PUBLIC granit::granit)
-granit_target_compile_warnings(granit_math)
-granit_target_output_directories(granit_math)
-set_target_properties(granit_math PROPERTIES FOLDER "Modules" POSITION_INDEPENDENT_CODE ON)
+include(granit_modules)
+granit_add_math_module()
 
-add_library(granit_material STATIC)
-add_library(granit::material ALIAS granit_material)
-target_sources(
-  granit_material
-  PRIVATE
-    material/material_archive.cpp
-    material/material_gpu_instance.cpp
-    material/material_hot_reload.cpp
-    material/material_metadata.cpp
-    material/material_migration.cpp
-    material/material_package.cpp
-    material/material_package_archive.cpp
-    material/pbr_default_resources.cpp
-    material/pbr_draw_inputs.cpp
-    material/pbr_material_schema.cpp
-    material/pbr_reference.cpp
-    material/material_template_gpu.cpp
-  PRIVATE
-    FILE_SET HEADERS
-    BASE_DIRS "${PROJECT_SOURCE_DIR}/src"
-    FILES
-      material/material_archive.h
-      material/material_gpu_instance.h
-      material/material_hot_reload.h
-      material/material_metadata.h
-      material/material_migration.h
-      material/material_package.h
-      material/material_package_archive.h
-      material/pbr_default_resources.h
-      material/pbr_draw_inputs.h
-      material/pbr_material_schema.h
-      material/pbr_reference.h
-      material/material_template_gpu.h
-)
-target_compile_features(granit_material PUBLIC cxx_std_20)
-target_include_directories(granit_material PUBLIC "$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/src>")
-target_link_libraries(granit_material PUBLIC granit::granit granit::math)
-granit_target_compile_warnings(granit_material)
-granit_target_output_directories(granit_material)
-set_target_properties(
-  granit_material
-  PROPERTIES
-    FOLDER "Modules"
-    POSITION_INDEPENDENT_CODE ON
-)
+granit_add_material_module()
 
 add_library(granit_pbr STATIC)
 add_library(granit::pbr ALIAS granit_pbr)
@@ -954,8 +896,6 @@ set_target_properties(
 )
 
 set_target_properties(granit_render_graph PROPERTIES EXPORT_NAME detail_render_graph)
-set_target_properties(granit_math PROPERTIES EXPORT_NAME detail_math)
-set_target_properties(granit_material PROPERTIES EXPORT_NAME detail_material)
 set_target_properties(granit_pbr PROPERTIES EXPORT_NAME detail_pbr)
 set_target_properties(granit_scene PROPERTIES EXPORT_NAME detail_scene)
 set_target_properties(granit_lighting PROPERTIES EXPORT_NAME detail_lighting)

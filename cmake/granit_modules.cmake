@@ -1,0 +1,98 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Granit contributors
+
+include_guard(GLOBAL)
+
+# 添加 Granit 内部 Math 模块。
+# 调用方必须先定义 granit::granit；重复调用不会创建第二套目标。
+function(granit_add_math_module)
+  if(TARGET granit_math)
+    return()
+  endif()
+  if(NOT TARGET granit::granit)
+    message(FATAL_ERROR "创建 Math 模块前必须先定义 granit::granit")
+  endif()
+
+  add_library(granit_math STATIC)
+  add_library(granit::math ALIAS granit_math)
+  target_sources(
+    granit_math
+    PRIVATE "${PROJECT_SOURCE_DIR}/src/math/math.cpp"
+    PRIVATE
+      FILE_SET HEADERS
+      BASE_DIRS "${PROJECT_SOURCE_DIR}/src"
+      FILES "${PROJECT_SOURCE_DIR}/src/math/math.h"
+  )
+  target_compile_features(granit_math PUBLIC cxx_std_20)
+  target_include_directories(
+    granit_math PUBLIC "$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/src>"
+  )
+  target_link_libraries(granit_math PUBLIC granit::granit)
+  granit_target_compile_warnings(granit_math)
+  granit_target_output_directories(granit_math)
+  set_target_properties(
+    granit_math
+    PROPERTIES
+      EXPORT_NAME detail_math
+      FOLDER "Modules"
+      POSITION_INDEPENDENT_CODE ON
+  )
+endfunction()
+
+# 添加 Granit 内部 Material 模块。
+# 该模块通过函数依赖 Math，调用方不需要关心创建顺序。
+function(granit_add_material_module)
+  if(TARGET granit_material)
+    return()
+  endif()
+  granit_add_math_module()
+
+  add_library(granit_material STATIC)
+  add_library(granit::material ALIAS granit_material)
+  target_sources(
+    granit_material
+    PRIVATE
+      "${PROJECT_SOURCE_DIR}/src/material/material_archive.cpp"
+      "${PROJECT_SOURCE_DIR}/src/material/material_gpu_instance.cpp"
+      "${PROJECT_SOURCE_DIR}/src/material/material_hot_reload.cpp"
+      "${PROJECT_SOURCE_DIR}/src/material/material_metadata.cpp"
+      "${PROJECT_SOURCE_DIR}/src/material/material_migration.cpp"
+      "${PROJECT_SOURCE_DIR}/src/material/material_package.cpp"
+      "${PROJECT_SOURCE_DIR}/src/material/material_package_archive.cpp"
+      "${PROJECT_SOURCE_DIR}/src/material/pbr_default_resources.cpp"
+      "${PROJECT_SOURCE_DIR}/src/material/pbr_draw_inputs.cpp"
+      "${PROJECT_SOURCE_DIR}/src/material/pbr_material_schema.cpp"
+      "${PROJECT_SOURCE_DIR}/src/material/pbr_reference.cpp"
+      "${PROJECT_SOURCE_DIR}/src/material/material_template_gpu.cpp"
+    PRIVATE
+      FILE_SET HEADERS
+      BASE_DIRS "${PROJECT_SOURCE_DIR}/src"
+      FILES
+        "${PROJECT_SOURCE_DIR}/src/material/material_archive.h"
+        "${PROJECT_SOURCE_DIR}/src/material/material_gpu_instance.h"
+        "${PROJECT_SOURCE_DIR}/src/material/material_hot_reload.h"
+        "${PROJECT_SOURCE_DIR}/src/material/material_metadata.h"
+        "${PROJECT_SOURCE_DIR}/src/material/material_migration.h"
+        "${PROJECT_SOURCE_DIR}/src/material/material_package.h"
+        "${PROJECT_SOURCE_DIR}/src/material/material_package_archive.h"
+        "${PROJECT_SOURCE_DIR}/src/material/pbr_default_resources.h"
+        "${PROJECT_SOURCE_DIR}/src/material/pbr_draw_inputs.h"
+        "${PROJECT_SOURCE_DIR}/src/material/pbr_material_schema.h"
+        "${PROJECT_SOURCE_DIR}/src/material/pbr_reference.h"
+        "${PROJECT_SOURCE_DIR}/src/material/material_template_gpu.h"
+  )
+  target_compile_features(granit_material PUBLIC cxx_std_20)
+  target_include_directories(
+    granit_material PUBLIC "$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/src>"
+  )
+  target_link_libraries(granit_material PUBLIC granit::granit granit::math)
+  granit_target_compile_warnings(granit_material)
+  granit_target_output_directories(granit_material)
+  set_target_properties(
+    granit_material
+    PROPERTIES
+      EXPORT_NAME detail_material
+      FOLDER "Modules"
+      POSITION_INDEPENDENT_CODE ON
+  )
+endfunction()

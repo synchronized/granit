@@ -52,6 +52,10 @@ target_compile_options(granit PRIVATE "--use-port=emdawnwebgpu:cpp_bindings=fals
 target_link_options(granit INTERFACE "--use-port=emdawnwebgpu:cpp_bindings=false")
 granit_target_compile_warnings(granit)
 
+# Web 与桌面复用同一 Math 模块目标，为完整 Model Viewer Core 提供一致依赖。
+include(granit_modules)
+granit_add_material_module()
+
 # 浏览器模型查看器复用桌面端同一套 glTF Loader 与锁定依赖，不维护 Web 专用副本。
 add_subdirectory(
   "${PROJECT_SOURCE_DIR}/examples/common/gltf" "${CMAKE_CURRENT_BINARY_DIR}/gltf"
