@@ -1,13 +1,39 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2026 Granit contributors
 
-add_library(granit_example_model_viewer_support STATIC gpu_scene.cpp)
+set(granit_model_viewer_material_package
+    "${CMAKE_CURRENT_BINARY_DIR}/model_viewer_pbr.grmat")
+add_custom_command(
+  OUTPUT "${granit_model_viewer_material_package}"
+  COMMAND
+    granit_material_tool build
+    "${PROJECT_SOURCE_DIR}/examples/assets/model_viewer_pbr.grmat.json"
+    --output "${granit_model_viewer_material_package}"
+  DEPENDS
+    granit_material_tool
+    "${PROJECT_SOURCE_DIR}/examples/assets/model_viewer_pbr.grmat.json"
+    "${PROJECT_SOURCE_DIR}/examples/assets/model_viewer_pbr.vert.spv"
+    "${PROJECT_SOURCE_DIR}/examples/assets/model_viewer_pbr.vert.wgsl"
+    "${PROJECT_SOURCE_DIR}/examples/assets/model_viewer_pbr.frag.spv"
+    "${PROJECT_SOURCE_DIR}/examples/assets/model_viewer_pbr.frag.wgsl"
+  COMMENT "生成模型查看器 PBR 材质归档"
+  VERBATIM
+)
+
+add_library(
+  granit_example_model_viewer_support STATIC gpu_scene.cpp
+                                              "${granit_model_viewer_material_package}"
+)
 target_compile_features(granit_example_model_viewer_support PUBLIC cxx_std_20)
 target_include_directories(
   granit_example_model_viewer_support PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/.."
 )
 target_link_libraries(
   granit_example_model_viewer_support PUBLIC granit_example_gltf_support granit::render_pipeline
+)
+target_compile_definitions(
+  granit_example_model_viewer_support
+  PRIVATE GRANIT_MODEL_VIEWER_MATERIAL_PACKAGE="${granit_model_viewer_material_package}"
 )
 set_target_properties(granit_example_model_viewer_support PROPERTIES FOLDER "Examples")
 granit_target_compile_warnings(granit_example_model_viewer_support)
