@@ -592,6 +592,13 @@ target_compile_definitions(
     GRANIT_FAKE_BACKEND_PLUGIN_PATH="$<TARGET_FILE:granit_fake_backend_plugin>"
 )
 add_dependencies(granit_renderer_test granit_fake_backend_plugin)
+if(TARGET granit_example_model_viewer_support_test)
+  target_compile_definitions(
+    granit_example_model_viewer_support_test
+    PRIVATE GRANIT_FAKE_BACKEND_PLUGIN_PATH="$<TARGET_FILE:granit_fake_backend_plugin>"
+  )
+  add_dependencies(granit_example_model_viewer_support_test granit_fake_backend_plugin)
+endif()
 if(GRANIT_BUILD_BACKEND_WEBGPU)
   target_compile_definitions(
     granit_renderer_test

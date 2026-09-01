@@ -153,6 +153,8 @@ Uniform Binding，带 Swapchain Frame 的路径按真实帧槽复用 Arena Buffe
 提交暂时保留独立 Buffer 兼容路径。Opaque 与 Shadow 阶段分别预打包全部常量并各执行一次连续
 Buffer 写入，不额外引入同步 Queue Submit。专项测试已覆盖多帧槽隔离、超过初始容量的批量增长、
 失败回滚、槽复用与 Reset 后资源归零；跨 Renderer 图形 Smoke Test 仍属于本阶段后续工作。
+同一 CPU Scene 已在测试中同时为 Vulkan 与 WebGPU Mock 创建独立 GPU Scene，并验证销毁一端不
+影响另一端；真实 Dawn/Vulkan 绘制与像素回读仍由后续跨 Renderer 图形 Smoke Test 完成。
 
 #### S-13C1 双后端材质归档前置
 

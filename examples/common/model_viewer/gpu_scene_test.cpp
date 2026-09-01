@@ -206,3 +206,52 @@ TEST_CASE("GPU Scene 创建失败时保留原 Scene", "[example][model-viewer][t
   CHECK(scene.initialize(GRANIT_NULL_HANDLE, source) == granit::result::invalid_handle);
   CHECK_FALSE(scene.valid());
 }
+
+#if defined(GRANIT_FAKE_BACKEND_PLUGIN_PATH)
+TEST_CASE("同一 CPU Scene 为 Vulkan 与 WebGPU 创建独立 GPU Scene",
+          "[example][model-viewer][cross-renderer][gpu]") {
+  granit::renderer vulkan;
+  const auto vulkan_result = vulkan.initialize(
+      {.application_name = "Model Viewer Vulkan", .backend = granit::renderer_backend::vulkan});
+  if (granit::failed(vulkan_result))
+    SKIP("当前环境没有可用 Vulkan Renderer");
+
+  granit::renderer webgpu;
+  REQUIRE(webgpu.initialize({.application_name = "Model Viewer WebGPU",
+                             .backend = granit::renderer_backend::webgpu,
+                             .backend_library_path = GRANIT_FAKE_BACKEND_PLUGIN_PATH}) ==
+          granit::result::success);
+  REQUIRE(webgpu.process_events() == granit::result::success);
+
+  granit::example::gltf::scene source;
+  auto& primitive = source.meshes.emplace_back().primitives.emplace_back();
+  primitive.positions = {{0, 0, 0}, {1, 0, 0}, {0, 1, 0}};
+  primitive.normals = {{0, 0, 1}, {0, 0, 1}, {0, 0, 1}};
+  primitive.indices = {0, 1, 2};
+  source.nodes.emplace_back().mesh = 0;
+
+  granit::example::model_viewer::gpu_scene vulkan_scene;
+  granit::example::model_viewer::gpu_scene webgpu_scene;
+  REQUIRE(vulkan_scene.initialize(vulkan.native_handle(), source) == granit::result::success);
+  REQUIRE(webgpu_scene.initialize(webgpu.native_handle(), source) == granit::result::success);
+  REQUIRE(vulkan_scene.draw_bindings().size() == 1);
+  REQUIRE(webgpu_scene.draw_bindings().size() == 1);
+  CHECK(vulkan_scene.draw_bindings().front().mesh != webgpu_scene.draw_bindings().front().mesh);
+  CHECK(vulkan_scene.draw_bindings().front().material !=
+        webgpu_scene.draw_bindings().front().material);
+
+  vulkan_scene.reset();
+  CHECK_FALSE(vulkan_scene.valid());
+  CHECK(webgpu_scene.valid());
+  const granit_scene_view view{.view = granit::math::identity_matrix4,
+                               .projection = granit::math::identity_matrix4,
+                               .view_projection = granit::math::identity_matrix4,
+                               .camera_position = {0, 0, 2},
+                               .viewport_width = 64,
+                               .viewport_height = 64,
+                               .layer_mask = std::numeric_limits<std::uint64_t>::max()};
+  granit::scene_snapshot snapshot;
+  REQUIRE(webgpu_scene.create_snapshot(std::span{&view, 1}, {}, {}, {}, snapshot) ==
+          granit::result::success);
+}
+#endif
