@@ -33,6 +33,35 @@ private:
   std::string path_;
 };
 
+TEST_CASE("发现 glTF 外部资源并去重") {
+  constexpr std::string_view document = R"({
+    "asset":{"version":"2.0"},
+    "buffers":[{"uri":"./scene.bin","byteLength":4}],
+    "images":[
+      {"uri":"textures/base.png"},
+      {"uri":"textures/base.png"},
+      {"uri":"data:image/png;base64,AA=="}
+    ]
+  })";
+  std::vector<std::string> resources;
+  const auto result = granit::example::gltf::discover_external_resources(bytes(document), resources);
+  REQUIRE(result);
+  REQUIRE(resources.size() == 2);
+  CHECK(resources[0] == "scene.bin");
+  CHECK(resources[1] == "textures/base.png");
+}
+
+TEST_CASE("发现外部资源失败时保留原输出") {
+  constexpr std::string_view document =
+      R"({"asset":{"version":"2.0"},"buffers":[{"uri":"../scene.bin","byteLength":4}]})";
+  std::vector<std::string> resources{"keep.bin"};
+  const auto result = granit::example::gltf::discover_external_resources(bytes(document), resources);
+  CHECK_FALSE(result);
+  CHECK(result.error == granit::example::gltf::load_error::invalid_resource_uri);
+  REQUIRE(resources.size() == 1);
+  CHECK(resources.front() == "keep.bin");
+}
+
 template <typename Value> void append(std::vector<std::byte>& output, const Value& value) {
   const auto offset = output.size();
   output.resize(offset + sizeof(value));

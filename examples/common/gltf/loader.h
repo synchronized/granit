@@ -46,6 +46,10 @@ struct load_result {
   [[nodiscard]] explicit operator bool() const noexcept { return error == load_error::none; }
 };
 
+/** 解析文档引用的安全外部资源 URI；失败时 output 保持不变。 */
+[[nodiscard]] load_result discover_external_resources(std::span<const std::byte> document,
+                                                      std::vector<std::string>& output);
+
 /** 解析 GLB 或 glTF；失败时 output 保持不变。 */
 [[nodiscard]] load_result load(std::span<const std::byte> document,
                                const resource_resolver* resolver, scene& output);
