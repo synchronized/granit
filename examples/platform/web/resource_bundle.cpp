@@ -36,4 +36,6 @@ bool resource_bundle::resolve(std::string_view path, std::vector<std::byte>& byt
 
 void resource_bundle::clear() noexcept { resources_.clear(); }
 
+void resource_bundle::swap(resource_bundle& other) noexcept { resources_.swap(other.resources_); }
+
 } // namespace granit::example::model_viewer::web

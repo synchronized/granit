@@ -21,6 +21,7 @@ public:
   [[nodiscard]] bool contains(std::string_view path) const;
   [[nodiscard]] bool resolve(std::string_view path, std::vector<std::byte>& bytes) const override;
   void clear() noexcept;
+  void swap(resource_bundle& other) noexcept;
   [[nodiscard]] std::size_t size() const noexcept { return resources_.size(); }
 
 private:

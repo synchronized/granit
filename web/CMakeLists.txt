@@ -60,6 +60,8 @@ add_library(
   "${PROJECT_SOURCE_DIR}/examples/platform/web/asset_request.h"
   "${PROJECT_SOURCE_DIR}/examples/platform/web/resource_bundle.cpp"
   "${PROJECT_SOURCE_DIR}/examples/platform/web/resource_bundle.h"
+  "${PROJECT_SOURCE_DIR}/examples/platform/web/resource_fetch_batch.cpp"
+  "${PROJECT_SOURCE_DIR}/examples/platform/web/resource_fetch_batch.h"
   "${PROJECT_SOURCE_DIR}/examples/platform/web/web_input.cpp"
   "${PROJECT_SOURCE_DIR}/examples/platform/web/web_input.h"
 )

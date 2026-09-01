@@ -7,6 +7,8 @@ add_library(
   asset_request.h
   resource_bundle.cpp
   resource_bundle.h
+  resource_fetch_batch.cpp
+  resource_fetch_batch.h
   web_input.cpp
   web_input.h
 )
@@ -21,6 +23,7 @@ if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
     granit_model_viewer_web_shell_test
     asset_request_test.cpp
     resource_bundle_test.cpp
+    resource_fetch_batch_test.cpp
     web_input_test.cpp
   )
   target_link_libraries(

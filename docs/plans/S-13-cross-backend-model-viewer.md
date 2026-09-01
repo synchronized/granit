@@ -305,7 +305,9 @@ Device Lost 明确终止并保留错误结果。真实 Dawn 验收仍待匹配 S
 
 资源来源抽象为只读字节请求，完成后才调用 S-13B Loader：桌面壳异步读取
 `--asset=<path>`；浏览器壳通过 Fetch 读取 URL。小型 Smoke Fixture 可预加载，
-完整 FlightHelmet 作为独立缓存资源提供，不嵌入 Wasm/JS 或桌面可执行文件。
+完整 FlightHelmet 作为独立缓存资源提供，不嵌入 Wasm/JS 或桌面可执行文件。浏览器资源批次
+统一跟踪主文档引用的 `.bin` 与纹理请求；只有全部成功后才原子提交到只读 Resource Bundle，
+任一请求失败或仍在进行时均不会把不完整资源交给同步 Loader。
 
 启动是显式状态机：`platform_ready`、`renderer_pending`、`asset_loading`、
 `gpu_upload`、`ready`、`failed`。WebGPU 设备异步创建期间不进入 Scene 上传；失败页面/窗口
