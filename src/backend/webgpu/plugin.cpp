@@ -1976,7 +1976,8 @@ create_render_pipeline(granit_backend_plugin_instance instance,
       desc->vertex_shader == 0 || desc->fragment_shader == 0 ||
       (desc->vertex_buffer_layout_count != 0 && desc->vertex_buffer_layouts == nullptr) ||
       (desc->color_format != GRANIT_BACKEND_PLUGIN_TEXTURE_FORMAT_RGBA8_UNORM &&
-       desc->color_format != GRANIT_BACKEND_PLUGIN_TEXTURE_FORMAT_BGRA8_UNORM) ||
+       desc->color_format != GRANIT_BACKEND_PLUGIN_TEXTURE_FORMAT_BGRA8_UNORM &&
+       desc->color_format != GRANIT_BACKEND_PLUGIN_TEXTURE_FORMAT_RGBA16_FLOAT) ||
       (desc->depth_stencil_format != 0 &&
        desc->depth_stencil_format != GRANIT_BACKEND_PLUGIN_TEXTURE_FORMAT_D32_FLOAT) ||
       desc->depth_test_enabled > 1 || desc->depth_write_enabled > 1 ||
@@ -2084,6 +2085,9 @@ create_render_pipeline(granit_backend_plugin_instance instance,
     depth.depthCompare = desc->depth_test_enabled != 0
                              ? to_native_compare_operation(desc->depth_compare)
                              : WGPUCompareFunction_Always;
+    depth.depthBias = desc->depth_bias_constant;
+    depth.depthBiasSlopeScale = desc->depth_bias_slope_scale;
+    depth.depthBiasClamp = desc->depth_bias_clamp;
     descriptor.depthStencil = &depth;
   }
   const auto native = wgpuDeviceCreateRenderPipeline(state.device, &descriptor);

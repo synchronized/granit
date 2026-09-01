@@ -44,7 +44,8 @@ TEST_CASE("发现 glTF 外部资源并去重") {
     ]
   })";
   std::vector<std::string> resources;
-  const auto result = granit::example::gltf::discover_external_resources(bytes(document), resources);
+  const auto result =
+      granit::example::gltf::discover_external_resources(bytes(document), resources);
   REQUIRE(result);
   REQUIRE(resources.size() == 2);
   CHECK(resources[0] == "scene.bin");
@@ -55,7 +56,8 @@ TEST_CASE("发现外部资源失败时保留原输出") {
   constexpr std::string_view document =
       R"({"asset":{"version":"2.0"},"buffers":[{"uri":"../scene.bin","byteLength":4}]})";
   std::vector<std::string> resources{"keep.bin"};
-  const auto result = granit::example::gltf::discover_external_resources(bytes(document), resources);
+  const auto result =
+      granit::example::gltf::discover_external_resources(bytes(document), resources);
   CHECK_FALSE(result);
   CHECK(result.error == granit::example::gltf::load_error::invalid_resource_uri);
   REQUIRE(resources.size() == 1);
@@ -218,6 +220,23 @@ TEST_CASE("glTF Loader 读取 GLB 内嵌 BIN", "[example][gltf][loader][glb]") {
   REQUIRE(result);
   REQUIRE(scene.meshes.size() == 1);
   CHECK(scene.meshes[0].primitives[0].indices == std::vector<std::uint32_t>{0, 1, 2});
+}
+
+TEST_CASE("glTF Loader 读取 Base64 Data URI Buffer", "[example][gltf][loader][data-uri]") {
+  constexpr std::string_view document = R"({
+    "asset":{"version":"2.0"},
+    "buffers":[{"uri":"data:application/octet-stream;base64,AAAAAAAAAAAAAAAAAACAPwAAAAAAAAAAAAAAAAAAgD8AAAAA","byteLength":36}],
+    "bufferViews":[{"buffer":0,"byteLength":36}],
+    "accessors":[{"bufferView":0,"componentType":5126,"count":3,"type":"VEC3"}],
+    "meshes":[{"primitives":[{"attributes":{"POSITION":0,"NORMAL":0}}]}],
+    "nodes":[{"mesh":0}],"scenes":[{"nodes":[0]}],"scene":0
+  })";
+  granit::example::gltf::scene scene;
+  const auto result = granit::example::gltf::load(bytes(document), nullptr, scene);
+  INFO(result.diagnostic);
+  REQUIRE(result);
+  REQUIRE(scene.meshes.size() == 1);
+  CHECK(scene.meshes[0].primitives[0].positions.size() == 3);
 }
 
 TEST_CASE("glTF Loader 解码 PBR Material 图片与 Sampler", "[example][gltf][loader]") {

@@ -314,6 +314,13 @@ Provider 已补齐 Cube、Array Layer、分层写入与 `RGBA16_FLOAT`，公共 
 仅 Vulkan 支持的 Pipeline Cache 导出校验 Renderer，现已改为后端无关的 Renderer 状态查询；浏览器
 Smoke 会持续覆盖该路径。下一步接入浏览器帧循环，不能以 Web 专用 2D IBL 绕过 PBR 绑定契约。
 
+帧循环预检进一步清理了同类跨后端假设：Scene Snapshot、Canvas、Debug Draw、Text Atlas 与 Text
+Draw List 不再依赖 Pipeline Cache 能力；Wasm32 的 Scene Snapshot V1 尾字段尺寸也已修正。glTF
+Loader 现支持标准 Base64 Data URI Buffer，浏览器 Fixture 已升级为带节点、材质和真实三角形的场景，
+同时保留外部 `.bin` 请求验证两阶段 Fetch。WebGPU Pipeline 已补齐 `RGBA16_FLOAT` Render Target 与
+Depth Bias 传递；共享 Core 的 `tick` 和 Scene Snapshot 已能进入真实首帧，剩余阻塞位于后续 PBR
+Render 命令能力，待补齐后再永久启用浏览器逐帧 Render/Present smoke。
+
 SDL3 输入适配已完成第一阶段：平台事件按帧累积为 `viewer_input`，覆盖右键环绕、中键平移、
 滚轮缩放、`F`/`Home`、焦点与指针进出，并在 ImGui 捕获标志进入 Core 前完成标记。窗口、Surface
 和 Swapchain 生命周期已接入统一 `granit_model_viewer_example`：同一入口根据启动参数创建 Vulkan

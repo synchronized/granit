@@ -749,9 +749,32 @@ TEST_CASE("WebGPU 插件绑定与 Pipeline 遵守依赖生命周期", "[backend]
       0,
       0,
       0,
-      GRANIT_BACKEND_PLUGIN_COMPARE_OPERATION_ALWAYS};
+      GRANIT_BACKEND_PLUGIN_COMPARE_OPERATION_ALWAYS,
+      0,
+      0.0F,
+      0.0F};
   granit_backend_plugin_render_pipeline pipeline{};
   REQUIRE(loader.create_render_pipeline(first, &pipeline_desc, &pipeline) == GRANIT_SUCCESS);
+  pipeline_desc.color_format = GRANIT_BACKEND_PLUGIN_TEXTURE_FORMAT_RGBA16_FLOAT;
+  pipeline_desc.depth_stencil_format = GRANIT_BACKEND_PLUGIN_TEXTURE_FORMAT_D32_FLOAT;
+  pipeline_desc.depth_test_enabled = 1;
+  pipeline_desc.depth_write_enabled = 1;
+  pipeline_desc.depth_compare = GRANIT_BACKEND_PLUGIN_COMPARE_OPERATION_LESS_EQUAL;
+  pipeline_desc.depth_bias_constant = 2;
+  pipeline_desc.depth_bias_slope_scale = 1.75F;
+  pipeline_desc.depth_bias_clamp = 0.5F;
+  granit_backend_plugin_render_pipeline depth_bias_pipeline{};
+  REQUIRE(loader.create_render_pipeline(first, &pipeline_desc, &depth_bias_pipeline) ==
+          GRANIT_SUCCESS);
+  REQUIRE(loader.destroy_render_pipeline(first, depth_bias_pipeline) == GRANIT_SUCCESS);
+  pipeline_desc.color_format = GRANIT_BACKEND_PLUGIN_TEXTURE_FORMAT_RGBA8_UNORM;
+  pipeline_desc.depth_stencil_format = 0;
+  pipeline_desc.depth_test_enabled = 0;
+  pipeline_desc.depth_write_enabled = 0;
+  pipeline_desc.depth_compare = GRANIT_BACKEND_PLUGIN_COMPARE_OPERATION_ALWAYS;
+  pipeline_desc.depth_bias_constant = 0;
+  pipeline_desc.depth_bias_slope_scale = 0.0F;
+  pipeline_desc.depth_bias_clamp = 0.0F;
   const granit_backend_plugin_vertex_attribute vertex_attributes[]{
       {0, GRANIT_BACKEND_PLUGIN_VERTEX_FORMAT_FLOAT32X3, 0, 0},
       {1, GRANIT_BACKEND_PLUGIN_VERTEX_FORMAT_FLOAT32X2, 12, 0}};

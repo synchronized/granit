@@ -198,7 +198,10 @@ int main(int argc, char** argv) {
       0,
       0,
       0,
-      GRANIT_BACKEND_PLUGIN_COMPARE_OPERATION_ALWAYS};
+      GRANIT_BACKEND_PLUGIN_COMPARE_OPERATION_ALWAYS,
+      0,
+      0.0F,
+      0.0F};
   if (loader.create_render_pipeline(instance, &pipeline_desc, &pipeline) != GRANIT_SUCCESS ||
       pipeline == 0) {
     std::fprintf(stderr, "WebGPU 绑定或 Render Pipeline 生命周期验证失败\n");

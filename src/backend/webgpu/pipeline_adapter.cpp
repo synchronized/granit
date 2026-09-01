@@ -3,6 +3,8 @@
 
 #include "backend/webgpu/pipeline_adapter.h"
 
+#include <algorithm>
+#include <cmath>
 #include <limits>
 #include <utility>
 #include <vector>
@@ -70,6 +72,8 @@ std::uint32_t to_plugin_format(granit_texture_format format) noexcept {
     return GRANIT_BACKEND_PLUGIN_TEXTURE_FORMAT_BGRA8_UNORM;
   case GRANIT_TEXTURE_FORMAT_D32_FLOAT:
     return GRANIT_BACKEND_PLUGIN_TEXTURE_FORMAT_D32_FLOAT;
+  case GRANIT_TEXTURE_FORMAT_RGBA16_FLOAT:
+    return GRANIT_BACKEND_PLUGIN_TEXTURE_FORMAT_RGBA16_FLOAT;
   default:
     return 0;
   }
@@ -99,15 +103,18 @@ webgpu_pipeline_adapter::allocate_compute_pipeline() const {
 
 granit_result webgpu_pipeline_adapter::validate_graphics_pipeline(
     const granit_graphics_pipeline_desc& desc) const noexcept {
+  const auto default_color_blend = desc.color_blend_count == 0 ||
+                                   (desc.color_blend_count == 1 && desc.color_blends != nullptr &&
+                                    desc.color_blends[0].enabled == 0 &&
+                                    desc.color_blends[0].write_mask == GRANIT_COLOR_WRITE_ALL_BITS);
   if (desc.color_format_count != 1 ||
       (desc.color_formats[0] != GRANIT_TEXTURE_FORMAT_RGBA8_UNORM &&
-       desc.color_formats[0] != GRANIT_TEXTURE_FORMAT_BGRA8_UNORM) ||
+       desc.color_formats[0] != GRANIT_TEXTURE_FORMAT_BGRA8_UNORM &&
+       desc.color_formats[0] != GRANIT_TEXTURE_FORMAT_RGBA16_FLOAT) ||
       (desc.depth_stencil_format != GRANIT_TEXTURE_FORMAT_UNDEFINED &&
        desc.depth_stencil_format != GRANIT_TEXTURE_FORMAT_D32_FLOAT) ||
       desc.sample_count != 1 ||
-      (desc.struct_size >= GRANIT_GRAPHICS_PIPELINE_DESC_VERSION_4_SIZE &&
-       desc.color_blend_count != 0) ||
-      (desc.struct_size >= GRANIT_GRAPHICS_PIPELINE_DESC_VERSION_5_SIZE && desc.depth_bias)) {
+      (desc.struct_size >= GRANIT_GRAPHICS_PIPELINE_DESC_VERSION_4_SIZE && !default_color_blend)) {
     return GRANIT_ERROR_UNSUPPORTED;
   }
   return GRANIT_SUCCESS;
@@ -152,7 +159,8 @@ granit_result webgpu_pipeline_adapter::create_graphics_pipeline(
     backend_graphics_pipeline_resource& resource, backend_pipeline_layout_resource& layout_resource,
     granit_backend_plugin_shader vertex_shader, granit_backend_plugin_shader fragment_shader,
     std::span<const granit_vertex_buffer_layout> vertex_buffers, granit_texture_format color_format,
-    granit_texture_format depth_stencil_format, const granit_depth_state& depth) const noexcept {
+    granit_texture_format depth_stencil_format, const granit_depth_state& depth,
+    const granit_depth_bias_state* depth_bias) const noexcept {
   auto* pipeline = as_pipeline(resource);
   auto* layout = as_layout(layout_resource);
   const auto plugin_format = to_plugin_format(color_format);
@@ -182,6 +190,11 @@ granit_result webgpu_pipeline_adapter::create_graphics_pipeline(
       layouts.push_back({source.stride, source.step_mode, source.attribute_count, source.reserved,
                          attributes.data() + first});
     }
+    const auto rounded_bias =
+        depth_bias == nullptr ? 0.0 : std::round(static_cast<double>(depth_bias->constant_factor));
+    const auto constant_bias = static_cast<std::int32_t>(
+        std::clamp(rounded_bias, static_cast<double>(std::numeric_limits<std::int32_t>::min()),
+                   static_cast<double>(std::numeric_limits<std::int32_t>::max())));
     const granit_backend_plugin_render_pipeline_desc desc{
         sizeof(desc),
         0,
@@ -194,7 +207,10 @@ granit_result webgpu_pipeline_adapter::create_graphics_pipeline(
         to_plugin_format(depth_stencil_format),
         depth.test_enabled,
         depth.write_enabled,
-        depth.compare};
+        depth.compare,
+        constant_bias,
+        depth_bias == nullptr ? 0.0F : depth_bias->slope_factor,
+        depth_bias == nullptr ? 0.0F : depth_bias->clamp};
     return context_->loader->create_render_pipeline(context_->instance, &desc, &pipeline->handle_);
   } catch (const std::bad_alloc&) {
     return GRANIT_ERROR_OUT_OF_MEMORY;

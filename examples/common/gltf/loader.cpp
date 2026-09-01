@@ -36,6 +36,53 @@ load_result map_parse_error(cgltf_result result) {
 
 bool is_embedded_data_uri(std::string_view uri) { return uri.starts_with("data:"); }
 
+int decode_base64_character(char value) noexcept {
+  if (value >= 'A' && value <= 'Z')
+    return value - 'A';
+  if (value >= 'a' && value <= 'z')
+    return value - 'a' + 26;
+  if (value >= '0' && value <= '9')
+    return value - '0' + 52;
+  if (value == '+')
+    return 62;
+  if (value == '/')
+    return 63;
+  return -1;
+}
+
+bool decode_data_uri(std::string_view uri, std::vector<std::byte>& output) {
+  const auto separator = uri.find(',');
+  if (separator == std::string_view::npos || !uri.substr(0, separator).ends_with(";base64")) {
+    return false;
+  }
+  const auto encoded = uri.substr(separator + 1);
+  if (encoded.empty() || encoded.size() % 4 != 0)
+    return false;
+  output.clear();
+  output.reserve(encoded.size() / 4 * 3);
+  for (std::size_t offset = 0; offset < encoded.size(); offset += 4) {
+    const auto final_group = offset + 4 == encoded.size();
+    const auto padding = encoded[offset + 3] == '=' ? (encoded[offset + 2] == '=' ? 2U : 1U) : 0U;
+    if ((!final_group && padding != 0) || encoded[offset] == '=' || encoded[offset + 1] == '=')
+      return false;
+    const int first = decode_base64_character(encoded[offset]);
+    const int second = decode_base64_character(encoded[offset + 1]);
+    const int third = padding == 2 ? 0 : decode_base64_character(encoded[offset + 2]);
+    const int fourth = padding != 0 ? 0 : decode_base64_character(encoded[offset + 3]);
+    if (first < 0 || second < 0 || third < 0 || fourth < 0)
+      return false;
+    const auto packed =
+        (static_cast<std::uint32_t>(first) << 18U) | (static_cast<std::uint32_t>(second) << 12U) |
+        (static_cast<std::uint32_t>(third) << 6U) | static_cast<std::uint32_t>(fourth);
+    output.push_back(static_cast<std::byte>((packed >> 16U) & 0xffU));
+    if (padding < 2)
+      output.push_back(static_cast<std::byte>((packed >> 8U) & 0xffU));
+    if (padding == 0)
+      output.push_back(static_cast<std::byte>(packed & 0xffU));
+  }
+  return true;
+}
+
 load_result append_external_uri(const char* uri, std::vector<std::string>& resources) {
   if (uri == nullptr || is_embedded_data_uri(uri))
     return {};
@@ -73,7 +120,18 @@ load_result load_external_buffers(cgltf_data& data, const resource_resolver* res
       buffer.data = const_cast<void*>(data.bin);
       continue;
     }
-    if (buffer.uri == nullptr || resolver == nullptr)
+    if (buffer.uri == nullptr)
+      return failure(load_error::missing_resource, "glTF 外部 Buffer 缺失");
+    if (is_embedded_data_uri(buffer.uri)) {
+      storage.emplace_back();
+      if (!decode_data_uri(buffer.uri, storage.back()))
+        return failure(load_error::invalid_document, "glTF Data URI Buffer 编码无效");
+      if (storage.back().size() < buffer.size)
+        return failure(load_error::truncated_data, "glTF Data URI Buffer 被截断");
+      buffer.data = storage.back().data();
+      continue;
+    }
+    if (resolver == nullptr)
       return failure(load_error::missing_resource, "glTF 外部 Buffer 缺失");
     std::string path;
     if (!normalize_resource_uri(buffer.uri, path))

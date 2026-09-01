@@ -302,6 +302,9 @@ typedef struct granit_backend_plugin_render_pipeline_desc {
   uint32_t depth_test_enabled;
   uint32_t depth_write_enabled;
   granit_backend_plugin_compare_operation depth_compare;
+  int32_t depth_bias_constant;
+  float depth_bias_slope_scale;
+  float depth_bias_clamp;
 } granit_backend_plugin_render_pipeline_desc;
 
 /** Canvas selector 仅在调用期间有效；插件必须复制后续需要的内容。 */
