@@ -56,6 +56,12 @@ struct dynamic_uniform_binding {
   std::uint32_t object_offset{};
 };
 
+struct dynamic_uniform_request {
+  const material_draw_state* material{};
+  std::span<const std::byte> frame;
+  std::span<const std::byte> object;
+};
+
 /** 按真实 Frame Slot 复用 Buffer，并按材质布局缓存动态 Bind Group。 */
 class dynamic_uniform_arena {
 public:
@@ -66,6 +72,8 @@ public:
                                       std::span<const std::byte> frame,
                                       std::span<const std::byte> object,
                                       dynamic_uniform_binding& output) noexcept;
+  [[nodiscard]] granit_result prepare_batch(std::span<const dynamic_uniform_request> requests,
+                                            std::span<dynamic_uniform_binding> outputs) noexcept;
   [[nodiscard]] granit_result reset() noexcept;
 
 private:

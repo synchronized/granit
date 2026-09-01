@@ -164,50 +164,75 @@ granit_result dynamic_uniform_arena::prepare(const material_draw_state& material
                                              std::span<const std::byte> frame,
                                              std::span<const std::byte> object,
                                              dynamic_uniform_binding& output) noexcept {
-  if (current_slot_ == nullptr || material.frame_layout == GRANIT_NULL_HANDLE ||
-      material.object_layout == GRANIT_NULL_HANDLE ||
-      frame.size() != sizeof(granit::material::pbr_frame_constants) ||
-      object.size() != sizeof(granit::material::pbr_object_constants))
+  const dynamic_uniform_request request{&material, frame, object};
+  return prepare_batch(std::span{&request, 1}, std::span{&output, 1});
+}
+
+granit_result
+dynamic_uniform_arena::prepare_batch(std::span<const dynamic_uniform_request> requests,
+                                     std::span<dynamic_uniform_binding> outputs) noexcept {
+  if (current_slot_ == nullptr || requests.empty() || requests.size() != outputs.size())
     return GRANIT_ERROR_INVALID_ARGUMENT;
-  uniform_arena_allocation frame_allocation;
-  uniform_arena_allocation object_allocation;
-  auto error = current_slot_->plan.allocate(frame.size(), frame_allocation);
-  if (error == uniform_arena_error::none)
-    error = current_slot_->plan.allocate(object.size(), object_allocation);
-  if (error != uniform_arena_error::none ||
-      frame_allocation.offset > std::numeric_limits<std::uint32_t>::max() ||
-      object_allocation.offset > std::numeric_limits<std::uint32_t>::max()) {
-    return error == uniform_arena_error::binding_too_large ? GRANIT_ERROR_UNSUPPORTED
-                                                           : GRANIT_ERROR_OUT_OF_MEMORY;
-  }
-  auto result = ensure_buffer(*current_slot_);
-  if (result == GRANIT_SUCCESS) {
-    try {
-      const auto write_size =
-          object_allocation.offset + object_allocation.size - frame_allocation.offset;
-      std::vector<std::byte> upload(static_cast<std::size_t>(write_size));
-      std::ranges::copy(frame, upload.begin());
-      std::ranges::copy(object,
-                        upload.begin() + static_cast<std::ptrdiff_t>(object_allocation.offset -
-                                                                     frame_allocation.offset));
-      result =
-          static_cast<granit_result>(current_slot_->buffer.write(frame_allocation.offset, upload));
-    } catch (const std::bad_alloc&) {
-      result = GRANIT_ERROR_OUT_OF_MEMORY;
-    } catch (...) {
-      result = GRANIT_ERROR_INTERNAL;
+  try {
+    const auto previous_plan = current_slot_->plan;
+    auto candidate_plan = previous_plan;
+    std::vector<uniform_arena_allocation> allocations(requests.size() * 2);
+    for (std::size_t index = 0; index < requests.size(); ++index) {
+      const auto& request = requests[index];
+      if (request.material == nullptr || request.material->frame_layout == GRANIT_NULL_HANDLE ||
+          request.material->object_layout == GRANIT_NULL_HANDLE ||
+          request.frame.size() != sizeof(granit::material::pbr_frame_constants) ||
+          request.object.size() != sizeof(granit::material::pbr_object_constants)) {
+        return GRANIT_ERROR_INVALID_ARGUMENT;
+      }
+      auto error = candidate_plan.allocate(request.frame.size(), allocations[index * 2]);
+      if (error == uniform_arena_error::none)
+        error = candidate_plan.allocate(request.object.size(), allocations[index * 2 + 1]);
+      if (error != uniform_arena_error::none)
+        return error == uniform_arena_error::binding_too_large ? GRANIT_ERROR_UNSUPPORTED
+                                                               : GRANIT_ERROR_OUT_OF_MEMORY;
     }
+    if (allocations.back().offset > std::numeric_limits<std::uint32_t>::max())
+      return GRANIT_ERROR_OUT_OF_MEMORY;
+
+    const auto write_offset = allocations.front().offset;
+    const auto write_end = allocations.back().offset + allocations.back().size;
+    std::vector<std::byte> upload(static_cast<std::size_t>(write_end - write_offset));
+    for (std::size_t index = 0; index < requests.size(); ++index) {
+      const auto frame_offset = allocations[index * 2].offset - write_offset;
+      const auto object_offset = allocations[index * 2 + 1].offset - write_offset;
+      std::ranges::copy(requests[index].frame,
+                        upload.begin() + static_cast<std::ptrdiff_t>(frame_offset));
+      std::ranges::copy(requests[index].object,
+                        upload.begin() + static_cast<std::ptrdiff_t>(object_offset));
+    }
+
+    current_slot_->plan = candidate_plan;
+    auto result = ensure_buffer(*current_slot_);
+    if (result == GRANIT_SUCCESS)
+      result = static_cast<granit_result>(current_slot_->buffer.write(write_offset, upload));
+    std::vector<dynamic_uniform_binding> candidates(requests.size());
+    for (std::size_t index = 0; result == GRANIT_SUCCESS && index < requests.size(); ++index) {
+      group_pair* groups = nullptr;
+      result = acquire_groups(*current_slot_, *requests[index].material, groups);
+      if (result == GRANIT_SUCCESS) {
+        candidates[index] = {
+            .frame_group = groups->frame_group.native_handle(),
+            .object_group = groups->object_group.native_handle(),
+            .frame_offset = static_cast<std::uint32_t>(allocations[index * 2].offset),
+            .object_offset = static_cast<std::uint32_t>(allocations[index * 2 + 1].offset)};
+      }
+    }
+    if (result == GRANIT_SUCCESS)
+      std::ranges::copy(candidates, outputs.begin());
+    else
+      current_slot_->plan = previous_plan;
+    return result;
+  } catch (const std::bad_alloc&) {
+    return GRANIT_ERROR_OUT_OF_MEMORY;
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
   }
-  group_pair* groups = nullptr;
-  if (result == GRANIT_SUCCESS)
-    result = acquire_groups(*current_slot_, material, groups);
-  if (result == GRANIT_SUCCESS) {
-    output = {.frame_group = groups->frame_group.native_handle(),
-              .object_group = groups->object_group.native_handle(),
-              .frame_offset = static_cast<std::uint32_t>(frame_allocation.offset),
-              .object_offset = static_cast<std::uint32_t>(object_allocation.offset)};
-  }
-  return result;
 }
 
 granit_result dynamic_uniform_arena::reset() noexcept {

@@ -223,15 +223,46 @@ granit_result record_opaque_draws(
   auto result = GRANIT_SUCCESS;
   const granit_viewport viewport{0, 0, static_cast<float>(width), static_cast<float>(height), 0, 1};
   const granit_scissor scissor{0, 0, width, height};
+  std::vector<granit::pipeline::detail::material_draw_state> arena_materials;
+  std::vector<granit::pipeline::detail::dynamic_uniform_binding> arena_bindings;
+  if (use_uniform_arena) {
+    try {
+      arena_materials.resize(draws.size());
+      arena_bindings.resize(draws.size());
+      std::vector<granit::pipeline::detail::dynamic_uniform_request> requests;
+      requests.reserve(draws.size());
+      for (std::size_t index = 0; index < draws.size(); ++index) {
+        result = granit::pipeline::detail::acquire_material_draw_state(
+            state.renderer, draws[index].material,
+            {.pass = granit::material::make_feature_id("opaque"),
+             .variant = 0,
+             .color_format = GRANIT_TEXTURE_FORMAT_RGBA16_FLOAT,
+             .depth_stencil_format = GRANIT_TEXTURE_FORMAT_D32_FLOAT},
+            arena_materials[index]);
+        if (result != GRANIT_SUCCESS)
+          break;
+        requests.push_back({.material = &arena_materials[index],
+                            .frame = std::as_bytes(std::span{&frame, 1}),
+                            .object = std::as_bytes(std::span{&objects[index], 1})});
+      }
+      if (result == GRANIT_SUCCESS)
+        result = state.uniform_arena.prepare_batch(requests, arena_bindings);
+    } catch (const std::bad_alloc&) {
+      result = GRANIT_ERROR_OUT_OF_MEMORY;
+    }
+  }
   for (size_t index = 0; result == GRANIT_SUCCESS && index < draws.size(); ++index) {
-    granit::pipeline::detail::material_draw_state material;
-    result = granit::pipeline::detail::acquire_material_draw_state(
-        state.renderer, draws[index].material,
-        {.pass = granit::material::make_feature_id("opaque"),
-         .variant = 0,
-         .color_format = GRANIT_TEXTURE_FORMAT_RGBA16_FLOAT,
-         .depth_stencil_format = GRANIT_TEXTURE_FORMAT_D32_FLOAT},
-        material);
+    auto material = use_uniform_arena ? arena_materials[index]
+                                      : granit::pipeline::detail::material_draw_state{};
+    if (!use_uniform_arena) {
+      result = granit::pipeline::detail::acquire_material_draw_state(
+          state.renderer, draws[index].material,
+          {.pass = granit::material::make_feature_id("opaque"),
+           .variant = 0,
+           .color_format = GRANIT_TEXTURE_FORMAT_RGBA16_FLOAT,
+           .depth_stencil_format = GRANIT_TEXTURE_FORMAT_D32_FLOAT},
+          material);
+    }
     if (index == state.opaque_draw_bindings.size())
       state.opaque_draw_bindings.emplace_back();
     auto& cached = state.opaque_draw_bindings[index];
@@ -264,12 +295,9 @@ granit_result record_opaque_draws(
     if (result == GRANIT_SUCCESS)
       result = granit_command_recorder_bind_graphics_pipeline(state.renderer, recorder,
                                                               material.pipeline);
-    granit::pipeline::detail::dynamic_uniform_binding arena_binding;
-    if (result == GRANIT_SUCCESS && use_uniform_arena) {
-      result =
-          state.uniform_arena.prepare(material, std::as_bytes(std::span{&frame, 1}),
-                                      std::as_bytes(std::span{&objects[index], 1}), arena_binding);
-    }
+    const auto arena_binding = use_uniform_arena
+                                   ? arena_bindings[index]
+                                   : granit::pipeline::detail::dynamic_uniform_binding{};
     const std::array groups{
         use_uniform_arena ? arena_binding.frame_group : cached.bindings.frame_group(),
         material.material_group,
@@ -379,21 +407,58 @@ granit_result record_shadow_draws(pipeline_state& state, granit_command_recorder
   const granit_viewport viewport{0, 0, 1024, 1024, 0, 1};
   const granit_scissor scissor{0, 0, 1024, 1024};
   const granit::material::pbr_frame_constants unused_frame{};
+  std::vector<granit::pipeline::detail::material_draw_state> arena_materials;
+  std::vector<granit::material::pbr_object_constants> arena_objects;
+  std::vector<granit::pipeline::detail::dynamic_uniform_binding> arena_bindings;
+  if (use_uniform_arena) {
+    try {
+      arena_materials.resize(draws.size());
+      arena_objects.reserve(draws.size());
+      arena_bindings.resize(draws.size());
+      std::vector<granit::pipeline::detail::dynamic_uniform_request> requests;
+      requests.reserve(draws.size());
+      for (std::size_t index = 0; index < draws.size(); ++index) {
+        result = granit::pipeline::detail::acquire_material_draw_state(
+            state.renderer, draws[index].material,
+            {.pass = granit::material::make_feature_id("opaque"),
+             .variant = 0,
+             .color_format = GRANIT_TEXTURE_FORMAT_RGBA16_FLOAT,
+             .depth_stencil_format = GRANIT_TEXTURE_FORMAT_D32_FLOAT},
+            arena_materials[index]);
+        if (result != GRANIT_SUCCESS)
+          break;
+        arena_objects.push_back({.model = casters[index].model,
+                                 .normal_matrix = granit::math::identity_matrix4,
+                                 .object_id = {casters[index].object_id, 0, 0, 0}});
+        requests.push_back({.material = &arena_materials[index],
+                            .frame = std::as_bytes(std::span{&unused_frame, 1}),
+                            .object = std::as_bytes(std::span{&arena_objects.back(), 1})});
+      }
+      if (result == GRANIT_SUCCESS)
+        result = state.uniform_arena.prepare_batch(requests, arena_bindings);
+    } catch (const std::bad_alloc&) {
+      result = GRANIT_ERROR_OUT_OF_MEMORY;
+    }
+  }
   for (size_t index = 0; result == GRANIT_SUCCESS && index < draws.size(); ++index) {
-    granit::pipeline::detail::material_draw_state material;
-    result = granit::pipeline::detail::acquire_material_draw_state(
-        state.renderer, draws[index].material,
-        {.pass = granit::material::make_feature_id("opaque"),
-         .variant = 0,
-         .color_format = GRANIT_TEXTURE_FORMAT_RGBA16_FLOAT,
-         .depth_stencil_format = GRANIT_TEXTURE_FORMAT_D32_FLOAT},
-        material);
+    auto material = use_uniform_arena ? arena_materials[index]
+                                      : granit::pipeline::detail::material_draw_state{};
+    if (!use_uniform_arena) {
+      result = granit::pipeline::detail::acquire_material_draw_state(
+          state.renderer, draws[index].material,
+          {.pass = granit::material::make_feature_id("opaque"),
+           .variant = 0,
+           .color_format = GRANIT_TEXTURE_FORMAT_RGBA16_FLOAT,
+           .depth_stencil_format = GRANIT_TEXTURE_FORMAT_D32_FLOAT},
+          material);
+    }
     if (result != GRANIT_SUCCESS)
       break;
-    const granit::material::pbr_object_constants object{
-        .model = casters[index].model,
-        .normal_matrix = granit::math::identity_matrix4,
-        .object_id = {casters[index].object_id, 0, 0, 0}};
+    const auto object = use_uniform_arena ? arena_objects[index]
+                                          : granit::material::pbr_object_constants{
+                                                .model = casters[index].model,
+                                                .normal_matrix = granit::math::identity_matrix4,
+                                                .object_id = {casters[index].object_id, 0, 0, 0}};
     if (index == state.shadow_draw_bindings.size())
       state.shadow_draw_bindings.emplace_back();
     auto& cached = state.shadow_draw_bindings[index];
@@ -435,11 +500,9 @@ granit_result record_shadow_draws(pipeline_state& state, granit_command_recorder
       result = granit_command_recorder_bind_graphics_pipeline(state.renderer, recorder, pipeline);
     if (result != GRANIT_SUCCESS)
       break;
-    granit::pipeline::detail::dynamic_uniform_binding arena_binding;
-    if (result == GRANIT_SUCCESS && use_uniform_arena) {
-      result = state.uniform_arena.prepare(material, std::as_bytes(std::span{&unused_frame, 1}),
-                                           std::as_bytes(std::span{&object, 1}), arena_binding);
-    }
+    const auto arena_binding = use_uniform_arena
+                                   ? arena_bindings[index]
+                                   : granit::pipeline::detail::dynamic_uniform_binding{};
     const std::array groups{use_uniform_arena ? arena_binding.object_group
                                               : cached.bindings.object_group(),
                             cached.lighting.group()};
