@@ -38,6 +38,30 @@ template <typename Value> void append(std::vector<std::byte>& output, const Valu
   std::memcpy(output.data() + offset, &value, sizeof(value));
 }
 
+void append_u32(std::vector<std::byte>& output, std::uint32_t value) { append(output, value); }
+
+std::vector<std::byte> make_glb(std::string json, std::vector<std::byte> binary) {
+  while (json.size() % 4 != 0)
+    json.push_back(' ');
+  while (binary.size() % 4 != 0)
+    binary.push_back(std::byte{});
+  const auto total_size = 12U + 8U + static_cast<std::uint32_t>(json.size()) + 8U +
+                          static_cast<std::uint32_t>(binary.size());
+  std::vector<std::byte> output;
+  append_u32(output, 0x46546c67U);
+  append_u32(output, 2U);
+  append_u32(output, total_size);
+  append_u32(output, static_cast<std::uint32_t>(json.size()));
+  append_u32(output, 0x4e4f534aU);
+  const auto json_offset = output.size();
+  output.resize(json_offset + json.size());
+  std::memcpy(output.data() + json_offset, json.data(), json.size());
+  append_u32(output, static_cast<std::uint32_t>(binary.size()));
+  append_u32(output, 0x004e4942U);
+  output.insert(output.end(), binary.begin(), binary.end());
+  return output;
+}
+
 } // namespace
 
 static_assert(!std::is_copy_constructible_v<granit::example::gltf::resource_resolver>);
@@ -103,22 +127,20 @@ TEST_CASE("glTF Loader 读取 Primitive、索引和 AABB", "[example][gltf][load
     "asset":{"version":"2.0"},
     "buffers":[{"uri":"scene.bin","byteLength":78}],
     "bufferViews":[
-      {"buffer":0,"byteOffset":0,"byteLength":36},
-      {"buffer":0,"byteOffset":36,"byteLength":36},
+      {"buffer":0,"byteOffset":0,"byteLength":72,"byteStride":24},
       {"buffer":0,"byteOffset":72,"byteLength":6}
     ],
     "accessors":[
-      {"bufferView":0,"componentType":5126,"count":3,"type":"VEC3"},
-      {"bufferView":1,"componentType":5126,"count":3,"type":"VEC3"},
-      {"bufferView":2,"componentType":5123,"count":3,"type":"SCALAR"}
+      {"bufferView":0,"byteOffset":0,"componentType":5126,"count":3,"type":"VEC3"},
+      {"bufferView":0,"byteOffset":12,"componentType":5126,"count":3,"type":"VEC3"},
+      {"bufferView":1,"componentType":5123,"count":3,"type":"SCALAR"}
     ],
     "meshes":[{"primitives":[{"attributes":{"POSITION":0,"NORMAL":1},"indices":2}]}],
     "nodes":[{"mesh":0}],"scenes":[{"nodes":[0]}],"scene":0
   })";
   std::vector<std::byte> buffer;
-  for (const float value : {-1.0F, -2.0F, 0.0F, 3.0F, 0.0F, 1.0F, 0.0F, 4.0F, -1.0F})
-    append(buffer, value);
-  for (const float value : {0.0F, 0.0F, 1.0F, 0.0F, 0.0F, 1.0F, 0.0F, 0.0F, 1.0F})
+  for (const float value : {-1.0F, -2.0F, 0.0F, 0.0F, 0.0F, 1.0F, 3.0F, 0.0F, 1.0F, 0.0F, 0.0F,
+                            1.0F, 0.0F, 4.0F, -1.0F, 0.0F, 0.0F, 1.0F})
     append(buffer, value);
   for (const std::uint16_t value : {0, 1, 2})
     append(buffer, value);
@@ -134,6 +156,23 @@ TEST_CASE("glTF Loader 读取 Primitive、索引和 AABB", "[example][gltf][load
   CHECK(primitive.normals.size() == 3);
   CHECK(primitive.local_bounds.minimum == granit::math::float3{-1, -2, -1});
   CHECK(primitive.local_bounds.maximum == granit::math::float3{3, 4, 1});
+}
+
+TEST_CASE("glTF Loader 读取 GLB 内嵌 BIN", "[example][gltf][loader][glb]") {
+  std::vector<std::byte> binary;
+  for (const float value : {0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 1.0F, 1.0F, 0.0F, 0.0F, 0.0F, 0.0F, 1.0F,
+                            0.0F, 1.0F, 0.0F, 0.0F, 0.0F, 1.0F})
+    append(binary, value);
+  const auto glb = make_glb(
+      R"({"asset":{"version":"2.0"},"buffers":[{"byteLength":72}],"bufferViews":[{"buffer":0,"byteLength":72,"byteStride":24}],"accessors":[{"bufferView":0,"componentType":5126,"count":3,"type":"VEC3"},{"bufferView":0,"byteOffset":12,"componentType":5126,"count":3,"type":"VEC3"}],"meshes":[{"primitives":[{"attributes":{"POSITION":0,"NORMAL":1}}]}],"nodes":[{"mesh":0}],"scenes":[{"nodes":[0]}],"scene":0})",
+      std::move(binary));
+
+  granit::example::gltf::scene scene;
+  const auto result = granit::example::gltf::load(glb, nullptr, scene);
+  INFO(result.diagnostic);
+  REQUIRE(result);
+  REQUIRE(scene.meshes.size() == 1);
+  CHECK(scene.meshes[0].primitives[0].indices == std::vector<std::uint32_t>{0, 1, 2});
 }
 
 TEST_CASE("glTF Loader 解码 PBR Material 图片与 Sampler", "[example][gltf][loader]") {
@@ -174,4 +213,47 @@ TEST_CASE("glTF Loader 解码 PBR Material 图片与 Sampler", "[example][gltf][
   CHECK(scene.materials[0].base_color_texture.sampler == 0);
   REQUIRE(scene.samplers.size() == 1);
   CHECK(scene.samplers[0].wrap_v == 33071);
+}
+
+TEST_CASE("glTF Loader 区分资源和数据错误", "[example][gltf][loader][error]") {
+  SECTION("拒绝不安全 URI") {
+    constexpr std::string_view document =
+        R"({"asset":{"version":"2.0"},"buffers":[{"uri":"../scene.bin","byteLength":1}]})";
+    const memory_resolver resolver({std::byte{1}});
+    granit::example::gltf::scene scene;
+    const auto result = granit::example::gltf::load(bytes(document), &resolver, scene);
+    CHECK(result.error == granit::example::gltf::load_error::invalid_resource_uri);
+  }
+
+  SECTION("区分资源缺失和截断") {
+    constexpr std::string_view document =
+        R"({"asset":{"version":"2.0"},"buffers":[{"uri":"scene.bin","byteLength":4}]})";
+    granit::example::gltf::scene scene;
+    CHECK(granit::example::gltf::load(bytes(document), nullptr, scene).error ==
+          granit::example::gltf::load_error::missing_resource);
+    const memory_resolver resolver({std::byte{1}});
+    CHECK(granit::example::gltf::load(bytes(document), &resolver, scene).error ==
+          granit::example::gltf::load_error::truncated_data);
+  }
+
+  SECTION("区分 Accessor 越界") {
+    constexpr std::string_view document = R"({
+      "asset":{"version":"2.0"},"buffers":[{"uri":"scene.bin","byteLength":12}],
+      "bufferViews":[{"buffer":0,"byteLength":12}],
+      "accessors":[{"bufferView":0,"componentType":5126,"count":2,"type":"VEC3"}]
+    })";
+    const memory_resolver resolver(std::vector<std::byte>(12));
+    granit::example::gltf::scene scene;
+    CHECK(granit::example::gltf::load(bytes(document), &resolver, scene).error ==
+          granit::example::gltf::load_error::accessor_out_of_bounds);
+  }
+
+  SECTION("区分图片解码失败") {
+    constexpr std::string_view document =
+        R"({"asset":{"version":"2.0"},"images":[{"uri":"bad.png"}]})";
+    const memory_resolver resolver({std::byte{1}, std::byte{2}}, "bad.png");
+    granit::example::gltf::scene scene;
+    CHECK(granit::example::gltf::load(bytes(document), &resolver, scene).error ==
+          granit::example::gltf::load_error::image_decode_failed);
+  }
 }

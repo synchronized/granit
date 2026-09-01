@@ -55,6 +55,11 @@ load_result load_external_buffers(cgltf_data& data, const resource_resolver* res
     auto& buffer = data.buffers[index];
     if (buffer.data != nullptr)
       continue;
+    if (buffer.uri == nullptr && index == 0 && data.bin != nullptr &&
+        buffer.size <= data.bin_size) {
+      buffer.data = const_cast<void*>(data.bin);
+      continue;
+    }
     if (buffer.uri == nullptr || resolver == nullptr)
       return failure(load_error::missing_resource, "glTF 外部 Buffer 缺失");
     std::string path;
@@ -66,6 +71,34 @@ load_result load_external_buffers(cgltf_data& data, const resource_resolver* res
     if (storage.back().size() < buffer.size)
       return failure(load_error::truncated_data, "glTF 外部 Buffer 被截断");
     buffer.data = storage.back().data();
+  }
+  return {};
+}
+
+bool range_fits(std::size_t offset, std::size_t size, std::size_t available) {
+  return offset <= available && size <= available - offset;
+}
+
+load_result validate_buffer_ranges(const cgltf_data& data) {
+  for (cgltf_size index = 0; index < data.buffer_views_count; ++index) {
+    const auto& view = data.buffer_views[index];
+    if (view.buffer == nullptr || view.buffer->data == nullptr ||
+        !range_fits(view.offset, view.size, view.buffer->size))
+      return failure(load_error::accessor_out_of_bounds, "BufferView 超出 Buffer 范围");
+  }
+  for (cgltf_size index = 0; index < data.accessors_count; ++index) {
+    const auto& accessor = data.accessors[index];
+    if (accessor.buffer_view == nullptr || accessor.is_sparse)
+      continue;
+    const auto element_size = cgltf_calc_size(accessor.type, accessor.component_type);
+    if (element_size == 0 || accessor.stride < element_size ||
+        !range_fits(accessor.offset, element_size, accessor.buffer_view->size))
+      return failure(load_error::accessor_out_of_bounds, "Accessor 起始范围无效");
+    if (accessor.count > 1) {
+      const auto remaining = accessor.buffer_view->size - accessor.offset - element_size;
+      if (accessor.count - 1 > remaining / accessor.stride)
+        return failure(load_error::accessor_out_of_bounds, "Accessor 末尾超出 BufferView");
+    }
   }
   return {};
 }
@@ -426,6 +459,8 @@ load_result load(std::span<const std::byte> document, const resource_resolver* r
 
     std::vector<std::vector<std::byte>> external_buffers;
     if (auto result = load_external_buffers(*data, resolver, external_buffers); !result)
+      return result;
+    if (auto result = validate_buffer_ranges(*data); !result)
       return result;
     const auto validation = cgltf_validate(data.get());
     if (validation != cgltf_result_success)
