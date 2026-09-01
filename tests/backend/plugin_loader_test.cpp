@@ -536,6 +536,22 @@ TEST_CASE("WebGPU 插件 Texture、View 与 Sampler 遵守所有权契约", "[ba
       6};
   granit_backend_plugin_texture_view cube_view{};
   REQUIRE(loader.create_texture_view(first, cube, &cube_view_desc, &cube_view) == GRANIT_SUCCESS);
+  const granit_backend_plugin_bind_group_layout_entry cube_layout_entry{
+      0, GRANIT_BACKEND_PLUGIN_BINDING_TYPE_SAMPLED_TEXTURE_CUBE,
+      GRANIT_BACKEND_PLUGIN_SHADER_STAGE_FRAGMENT, 1};
+  const granit_backend_plugin_bind_group_layout_desc cube_layout_desc{
+      sizeof(granit_backend_plugin_bind_group_layout_desc), 1, &cube_layout_entry, 0};
+  granit_backend_plugin_bind_group_layout cube_layout{};
+  REQUIRE(loader.create_bind_group_layout(first, &cube_layout_desc, &cube_layout) ==
+          GRANIT_SUCCESS);
+  const granit_backend_plugin_bind_group_entry cube_group_entry{
+      0, GRANIT_BACKEND_PLUGIN_BINDING_TYPE_SAMPLED_TEXTURE_CUBE, 0, cube_view, 0, 0, 0};
+  const granit_backend_plugin_bind_group_desc cube_group_desc{
+      sizeof(granit_backend_plugin_bind_group_desc), 1, cube_layout, &cube_group_entry, 0};
+  granit_backend_plugin_bind_group cube_group{};
+  REQUIRE(loader.create_bind_group(first, &cube_group_desc, &cube_group) == GRANIT_SUCCESS);
+  REQUIRE(loader.destroy_bind_group(first, cube_group) == GRANIT_SUCCESS);
+  REQUIRE(loader.destroy_bind_group_layout(first, cube_layout) == GRANIT_SUCCESS);
   REQUIRE(loader.destroy_texture_view(first, cube_view) == GRANIT_SUCCESS);
   REQUIRE(loader.destroy_texture(first, cube) == GRANIT_SUCCESS);
   cube_desc.array_layer_count = 5;

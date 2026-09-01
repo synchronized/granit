@@ -1561,6 +1561,10 @@ create_bind_group_layout(granit_backend_plugin_instance instance,
         entry.texture.sampleType = WGPUTextureSampleType_Float;
         entry.texture.viewDimension = WGPUTextureViewDimension_2D;
         break;
+      case GRANIT_BACKEND_PLUGIN_BINDING_TYPE_SAMPLED_TEXTURE_CUBE:
+        entry.texture.sampleType = WGPUTextureSampleType_Float;
+        entry.texture.viewDimension = WGPUTextureViewDimension_Cube;
+        break;
       case GRANIT_BACKEND_PLUGIN_BINDING_TYPE_SAMPLER:
         entry.sampler.type = WGPUSamplerBindingType_Filtering;
         break;
@@ -1684,7 +1688,8 @@ granit_result create_bind_group(granit_backend_plugin_instance instance,
         entry.offset = source.offset;
         entry.size = source.size;
         record.buffers.push_back(source.buffer);
-      } else if (source.type == GRANIT_BACKEND_PLUGIN_BINDING_TYPE_SAMPLED_TEXTURE) {
+      } else if (source.type == GRANIT_BACKEND_PLUGIN_BINDING_TYPE_SAMPLED_TEXTURE ||
+                 source.type == GRANIT_BACKEND_PLUGIN_BINDING_TYPE_SAMPLED_TEXTURE_CUBE) {
         const auto view = state.texture_views.find(source.texture_view);
         if (view == state.texture_views.end())
           return GRANIT_ERROR_INVALID_HANDLE;

@@ -473,6 +473,9 @@ granit_result webgpu_resource_adapter::create_bind_group_layout(
       case GRANIT_BINDING_TYPE_SAMPLED_TEXTURE:
         type = GRANIT_BACKEND_PLUGIN_BINDING_TYPE_SAMPLED_TEXTURE;
         break;
+      case GRANIT_BINDING_TYPE_SAMPLED_TEXTURE_CUBE:
+        type = GRANIT_BACKEND_PLUGIN_BINDING_TYPE_SAMPLED_TEXTURE_CUBE;
+        break;
       case GRANIT_BINDING_TYPE_SAMPLER:
         type = GRANIT_BACKEND_PLUGIN_BINDING_TYPE_SAMPLER;
         break;
@@ -527,11 +530,14 @@ webgpu_resource_adapter::create_bind_group(backend_bind_group_layout_resource& l
         entry.type = GRANIT_BACKEND_PLUGIN_BINDING_TYPE_STORAGE_BUFFER;
         entry.buffer = native_buffer(*write.buffer);
         break;
-      case backend_binding_type::sampled_texture: {
+      case backend_binding_type::sampled_texture:
+      case backend_binding_type::sampled_texture_cube: {
         const auto* view = dynamic_cast<webgpu_texture_view_resource*>(write.texture_view);
         if (view == nullptr)
           return GRANIT_ERROR_INVALID_ARGUMENT;
-        entry.type = GRANIT_BACKEND_PLUGIN_BINDING_TYPE_SAMPLED_TEXTURE;
+        entry.type = write.type == backend_binding_type::sampled_texture_cube
+                         ? GRANIT_BACKEND_PLUGIN_BINDING_TYPE_SAMPLED_TEXTURE_CUBE
+                         : GRANIT_BACKEND_PLUGIN_BINDING_TYPE_SAMPLED_TEXTURE;
         entry.texture_view = view->handle_;
         break;
       }

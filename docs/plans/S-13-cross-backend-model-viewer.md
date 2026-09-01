@@ -308,9 +308,10 @@ Loader 与锁定 `cgltf`/`stb_image` 依赖；浏览器 Fixture 已验证主文�
 共享 Render Pipeline 首次参与浏览器完整链接时已补齐 Frame Slot 与 Timestamp Query 公共 API
 源集，并为阴影 Pass 同时提供 SPIR-V 与 WGSL。下一项阻塞是 WebGPU HAL 的 Texture 与 Texture View
 原先只接受 2D 单层资源，而默认 IBL 使用 Cube Texture/View。Backend Plugin 契约和 WebGPU
-Provider 已补齐 Cube、Array Layer、分层写入与 `RGBA16_FLOAT`；浏览器真实 Pipeline 创建仍返回
-`UNSUPPORTED`，下一步应对默认 IBL、阴影资源和 Uniform Arena 分阶段诊断，再切换浏览器帧循环，
-不能以 Web 专用 2D IBL 绕过 PBR 绑定契约。
+Provider 已补齐 Cube、Array Layer、分层写入与 `RGBA16_FLOAT`，公共 Pipeline Binding 也新增
+`sampled_texture_cube`，在 Vulkan 中继续映射为 Sampled Image，在 WebGPU 中显式映射为 Cube View。
+真实 Chrome 已验证默认 IBL 与 GPU Scene 上传；完整 Pipeline 创建仍有另一项 `UNSUPPORTED`，
+下一步继续分段定位创建路径，再切换浏览器帧循环，不能以 Web 专用 2D IBL 绕过 PBR 绑定契约。
 
 SDL3 输入适配已完成第一阶段：平台事件按帧累积为 `viewer_input`，覆盖右键环绕、中键平移、
 滚轮缩放、`F`/`Home`、焦点与指针进出，并在 ImGui 捕获标志进入 Core 前完成标记。窗口、Surface

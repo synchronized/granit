@@ -329,14 +329,17 @@ granit_result renderer_registry::create_bind_group(granit_renderer renderer,
           if (found == texture_views_.end() || found->second->owner != state || entry.offset != 0 ||
               entry.size != GRANIT_WHOLE_SIZE)
             return GRANIT_ERROR_INVALID_ARGUMENT;
-          const auto required_usage = declaration->type == GRANIT_BINDING_TYPE_SAMPLED_TEXTURE
+          const bool sampled = declaration->type == GRANIT_BINDING_TYPE_SAMPLED_TEXTURE ||
+                               declaration->type == GRANIT_BINDING_TYPE_SAMPLED_TEXTURE_CUBE;
+          const auto required_usage = sampled
                                           ? GRANIT_TEXTURE_USAGE_SAMPLED_BIT
                                           : GRANIT_TEXTURE_USAGE_STORAGE_BIT;
           if ((found->second->texture->desc.usage & required_usage) == 0)
             return GRANIT_ERROR_INVALID_ARGUMENT;
-          write.type = declaration->type == GRANIT_BINDING_TYPE_SAMPLED_TEXTURE
-                           ? backend_binding_type::sampled_texture
-                           : backend_binding_type::storage_texture;
+          write.type = declaration->type == GRANIT_BINDING_TYPE_SAMPLED_TEXTURE_CUBE
+                           ? backend_binding_type::sampled_texture_cube
+                       : sampled ? backend_binding_type::sampled_texture
+                                 : backend_binding_type::storage_texture;
           write.texture_view = found->second->native.get();
           record->resources.push_back(found->second);
           const auto make_access = [&] {
