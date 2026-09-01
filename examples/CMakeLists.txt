@@ -3,6 +3,7 @@
 
 if(GRANIT_BUILD_MODEL_VIEWER_EXAMPLE)
   add_subdirectory(common/gltf)
+  add_subdirectory(common/model_viewer)
 endif()
 
 add_executable(granit_version_example version.cpp)
