@@ -62,7 +62,7 @@ TEST_CASE("查看器 ImGui 面板可在无平台后端上下文中构建", "[exa
                                                                     .height = 720,
                                                                     .frame_slots = 3};
   const granit::example::model_viewer::performance_panel_info performance{
-      .frames_per_second = 60.0F, .cpu_frame_ms = 2.0F};
+      .frames_per_second = 60.0F, .cpu_frame_ms = 2.0F, .history = {}};
   ImGui::NewFrame();
   static_cast<void>(
       granit::example::model_viewer::draw_viewer_panels(scene, state, renderer, performance));

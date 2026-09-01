@@ -179,6 +179,19 @@ void draw_performance_panel(const performance_panel_info& info) {
     ImGui::Text("GPU frame: %.3f ms", info.gpu_frame_ms);
   else
     ImGui::TextUnformatted("GPU frame: unavailable");
+  const auto draw_summary = [](const char* label, const metric_summary& summary) {
+    if (summary.sample_count == 0) {
+      ImGui::TextDisabled("%s: unavailable", label);
+      return;
+    }
+    ImGui::Text("%s p50 %.3f | p95 %.3f | max %.3f", label, summary.p50, summary.p95,
+                summary.maximum);
+  };
+  ImGui::SeparatorText("240-frame history");
+  draw_summary("CPU ms", info.history.cpu_frame_ms);
+  draw_summary("Slot wait ms", info.history.frame_slot_wait_ms);
+  draw_summary("Present wait ms", info.history.present_wait_ms);
+  draw_summary("GPU ms", info.history.gpu_frame_ms);
 }
 
 template <typename Callback> void draw_panel(const char* name, bool& open, Callback&& callback) {

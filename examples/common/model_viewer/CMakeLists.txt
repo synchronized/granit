@@ -43,6 +43,8 @@ add_library(
   material_edit.h
   orbit_camera.cpp
   orbit_camera.h
+  performance_history.cpp
+  performance_history.h
   viewer_state.cpp
   viewer_state.h
   "${granit_model_viewer_material_include}"
@@ -62,7 +64,7 @@ granit_target_compile_warnings(granit_example_model_viewer_support)
 if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
   add_executable(
     granit_example_model_viewer_support_test gpu_scene_test.cpp orbit_camera_test.cpp
-    viewer_state_test.cpp
+    performance_history_test.cpp viewer_state_test.cpp
   )
   target_link_libraries(
     granit_example_model_viewer_support_test

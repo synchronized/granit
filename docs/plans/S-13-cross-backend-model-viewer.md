@@ -261,6 +261,9 @@ Texture Resolver 已使用 slot + generation 注册表映射字体 Atlas 与查�
 独立起止 Timestamp 覆盖首个已测阶段至 Tone Mapping 结束的完整区间。后续 Debug Draw、Canvas、
 Overlay 仍按契约排除在该 GPU 区间之外。
 
+Performance 面板统计层现使用固定 240 帧环形窗口，分别报告 FPS、CPU 帧时间、帧槽等待、
+Present 等待和 GPU 时间的 p50、p95 与最大值；不可用 GPU 样本不会作为零值进入统计。
+
 ### S-13F 三端启动与资源流程
 
 共享应用核心构建为不安装的 `granit_model_viewer_core` 静态目标，拥有 Loader、

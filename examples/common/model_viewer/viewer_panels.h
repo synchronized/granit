@@ -5,6 +5,7 @@
 #define GRANIT_EXAMPLES_COMMON_MODEL_VIEWER_VIEWER_PANELS_H_
 
 #include "model_viewer/material_edit.h"
+#include "model_viewer/performance_history.h"
 #include "model_viewer/viewer_state.h"
 
 #include <imgui.h>
@@ -33,6 +34,7 @@ struct performance_panel_info {
   float present_wait_ms{};
   float gpu_frame_ms{};
   bool gpu_timing_available{};
+  performance_summary history;
 };
 
 struct viewer_panel_changes {
