@@ -160,19 +160,36 @@ TEST_CASE("GPU Scene 事务式创建合并 Buffer 与 Mesh", "[example][model-vi
   primitive.positions = {{0, 0, 0}, {1, 0, 0}, {0, 1, 0}};
   primitive.normals = {{0, 0, 1}, {0, 0, 1}, {0, 0, 1}};
   primitive.indices = {0, 1, 2};
+  primitive.material = 0;
+  source.materials.emplace_back();
   source.nodes.emplace_back().mesh = 0;
 
   granit::example::model_viewer::gpu_scene scene;
   REQUIRE(scene.initialize(renderer.native_handle(), source) == granit::result::success);
   CHECK(scene.valid());
   CHECK(scene.meshes().size() == 1);
-  CHECK(scene.materials().size() == 1);
+  CHECK(scene.materials().size() == 2);
   REQUIRE(scene.draw_bindings().size() == 1);
   CHECK(scene.draw_bindings().front().payload == 1);
   CHECK(scene.draw_bindings().front().mesh == scene.meshes().front().native_handle());
   CHECK(scene.draw_bindings().front().material == scene.materials().front().native_handle());
   REQUIRE(scene.renderables().size() == 1);
   CHECK(scene.renderables().front().payload == scene.draw_bindings().front().payload);
+
+  const granit::example::model_viewer::material_factor_edit edit{
+      .base_color = {0.2F, 0.3F, 0.4F, 1.0F},
+      .metallic = 0.5F,
+      .roughness = 0.6F,
+      .normal_scale = 0.7F,
+      .occlusion_strength = 0.8F,
+      .emissive = {1.0F, 2.0F, 3.0F}};
+  REQUIRE(scene.update_material_factors(source, 0, edit) == granit::result::success);
+  CHECK(source.materials[0].base_color == edit.base_color);
+  CHECK(source.materials[0].metallic == edit.metallic);
+  auto invalid_edit = edit;
+  invalid_edit.roughness = std::numeric_limits<float>::infinity();
+  CHECK(scene.update_material_factors(source, 0, invalid_edit) == granit::result::invalid_argument);
+  CHECK(source.materials[0].roughness == edit.roughness);
 
   const granit_scene_view view{.view = granit::math::identity_matrix4,
                                .projection = granit::math::identity_matrix4,
@@ -205,6 +222,16 @@ TEST_CASE("GPU Scene 创建失败时保留原 Scene", "[example][model-viewer][t
   granit::example::gltf::scene source;
   CHECK(scene.initialize(GRANIT_NULL_HANDLE, source) == granit::result::invalid_handle);
   CHECK_FALSE(scene.valid());
+}
+
+TEST_CASE("材质 GPU 更新失败时保留 CPU Factor", "[example][model-viewer][transaction]") {
+  granit::example::model_viewer::gpu_scene gpu;
+  granit::example::gltf::scene source;
+  source.materials.emplace_back().roughness = 0.4F;
+  granit::example::model_viewer::material_factor_edit edit;
+  edit.roughness = 0.8F;
+  CHECK(gpu.update_material_factors(source, 0, edit) == granit::result::invalid_handle);
+  CHECK(source.materials.front().roughness == 0.4F);
 }
 
 #if defined(GRANIT_FAKE_BACKEND_PLUGIN_PATH)

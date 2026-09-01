@@ -40,6 +40,7 @@ add_library(
   gpu_scene.cpp
   material_archive.cpp
   material_archive.h
+  material_edit.h
   orbit_camera.cpp
   orbit_camera.h
   viewer_state.cpp

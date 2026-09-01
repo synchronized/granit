@@ -58,7 +58,7 @@ void draw_scene_panel(const gltf::scene& scene, const viewer_state& state, viewe
 }
 
 void draw_inspector_panel(const gltf::scene& scene, const viewer_state& state,
-                          viewer_change& change) {
+                          viewer_panel_changes& changes) {
   if (state.selected_node() >= scene.nodes.size()) {
     ImGui::TextUnformatted("No node selected");
   } else {
@@ -72,19 +72,32 @@ void draw_inspector_panel(const gltf::scene& scene, const viewer_state& state,
                            : "None";
   if (ImGui::BeginCombo("Material", preview)) {
     if (ImGui::Selectable("None", state.selected_material() == gltf::invalid_index))
-      change.selected_material = gltf::invalid_index;
+      changes.state.selected_material = gltf::invalid_index;
     for (std::uint32_t index = 0; index < scene.materials.size(); ++index) {
       if (ImGui::Selectable(material_name(scene.materials[index]),
                             state.selected_material() == index))
-        change.selected_material = index;
+        changes.state.selected_material = index;
     }
     ImGui::EndCombo();
   }
 
   if (state.selected_material() < scene.materials.size()) {
     const auto& material = scene.materials[state.selected_material()];
-    ImGui::Text("Metallic: %.3f", material.metallic);
-    ImGui::Text("Roughness: %.3f", material.roughness);
+    material_factor_edit edit{.base_color = material.base_color,
+                              .metallic = material.metallic,
+                              .roughness = material.roughness,
+                              .normal_scale = material.normal_scale,
+                              .occlusion_strength = material.occlusion_strength,
+                              .emissive = material.emissive};
+    bool edited = ImGui::ColorEdit4("Base Color", &edit.base_color.x);
+    edited |= ImGui::SliderFloat("Metallic", &edit.metallic, 0.0F, 1.0F);
+    edited |= ImGui::SliderFloat("Roughness", &edit.roughness, 0.0F, 1.0F);
+    edited |= ImGui::SliderFloat("Normal Scale", &edit.normal_scale, 0.0F, 10.0F);
+    edited |= ImGui::SliderFloat("Occlusion", &edit.occlusion_strength, 0.0F, 1.0F);
+    edited |= ImGui::ColorEdit3("Emissive", &edit.emissive.x,
+                                ImGuiColorEditFlags_HDR | ImGuiColorEditFlags_Float);
+    if (edited)
+      changes.material = edit;
   }
 }
 
@@ -135,21 +148,21 @@ template <typename Callback> void draw_panel(const char* name, bool& open, Callb
 
 } // namespace
 
-viewer_change draw_viewer_panels(const gltf::scene& scene, const viewer_state& state,
-                                 const renderer_panel_info& renderer,
-                                 const performance_panel_info& performance) {
-  viewer_change change;
+viewer_panel_changes draw_viewer_panels(const gltf::scene& scene, const viewer_state& state,
+                                        const renderer_panel_info& renderer,
+                                        const performance_panel_info& performance) {
+  viewer_panel_changes changes;
   auto panels = state.panels();
-  draw_panel("Scene", panels.scene, [&] { draw_scene_panel(scene, state, change); });
-  draw_panel("Inspector", panels.inspector, [&] { draw_inspector_panel(scene, state, change); });
-  draw_panel("Lighting", panels.lighting, [&] { draw_lighting_panel(state, change); });
+  draw_panel("Scene", panels.scene, [&] { draw_scene_panel(scene, state, changes.state); });
+  draw_panel("Inspector", panels.inspector, [&] { draw_inspector_panel(scene, state, changes); });
+  draw_panel("Lighting", panels.lighting, [&] { draw_lighting_panel(state, changes.state); });
   draw_panel("Renderer", panels.renderer, [&] { draw_renderer_panel(renderer); });
   draw_panel("Performance", panels.performance, [&] { draw_performance_panel(performance); });
   if (panels.scene != state.panels().scene || panels.inspector != state.panels().inspector ||
       panels.lighting != state.panels().lighting || panels.renderer != state.panels().renderer ||
       panels.performance != state.panels().performance)
-    change.panels = panels;
-  return change;
+    changes.state.panels = panels;
+  return changes;
 }
 
 } // namespace granit::example::model_viewer

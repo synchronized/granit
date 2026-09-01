@@ -437,6 +437,53 @@ gpu_scene::create_snapshot(std::span<const granit_scene_view> views,
   return output.initialize(renderer_, desc);
 }
 
+granit::result gpu_scene::update_material_factors(gltf::scene& source, std::uint32_t material_index,
+                                                  const material_factor_edit& edit) noexcept {
+  const auto finite = [](float value) { return std::isfinite(value); };
+  const auto unit = [&](float value) { return finite(value) && value >= 0.0F && value <= 1.0F; };
+  if (!valid() || material_index >= source.materials.size() || material_index >= materials_.size())
+    return valid() ? granit::result::invalid_argument : granit::result::invalid_handle;
+  if (!unit(edit.base_color.x) || !unit(edit.base_color.y) || !unit(edit.base_color.z) ||
+      !unit(edit.base_color.w) || !unit(edit.metallic) || !unit(edit.roughness) ||
+      !finite(edit.normal_scale) || edit.normal_scale < 0.0F || edit.normal_scale > 10.0F ||
+      !unit(edit.occlusion_strength) || !finite(edit.emissive.x) || !finite(edit.emissive.y) ||
+      !finite(edit.emissive.z) || edit.emissive.x < 0.0F || edit.emissive.y < 0.0F ||
+      edit.emissive.z < 0.0F)
+    return granit::result::invalid_argument;
+
+  const std::array updates{
+      granit_material_parameter_update{granit::material_parameter_id("base_color"),
+                                       GRANIT_MATERIAL_PARAMETER_FLOAT4, 0, &edit.base_color,
+                                       sizeof(edit.base_color), 0},
+      granit_material_parameter_update{granit::material_parameter_id("metallic"),
+                                       GRANIT_MATERIAL_PARAMETER_FLOAT32, 0, &edit.metallic,
+                                       sizeof(edit.metallic), 0},
+      granit_material_parameter_update{granit::material_parameter_id("perceptual_roughness"),
+                                       GRANIT_MATERIAL_PARAMETER_FLOAT32, 0, &edit.roughness,
+                                       sizeof(edit.roughness), 0},
+      granit_material_parameter_update{granit::material_parameter_id("normal_scale"),
+                                       GRANIT_MATERIAL_PARAMETER_FLOAT32, 0, &edit.normal_scale,
+                                       sizeof(edit.normal_scale), 0},
+      granit_material_parameter_update{
+          granit::material_parameter_id("occlusion_strength"), GRANIT_MATERIAL_PARAMETER_FLOAT32, 0,
+          &edit.occlusion_strength, sizeof(edit.occlusion_strength), 0},
+      granit_material_parameter_update{granit::material_parameter_id("emissive"),
+                                       GRANIT_MATERIAL_PARAMETER_FLOAT3, 0, &edit.emissive,
+                                       sizeof(edit.emissive), 0},
+  };
+  const auto result = materials_[material_index].update(updates);
+  if (granit::failed(result))
+    return result;
+  auto& material = source.materials[material_index];
+  material.base_color = edit.base_color;
+  material.metallic = edit.metallic;
+  material.roughness = edit.roughness;
+  material.normal_scale = edit.normal_scale;
+  material.occlusion_strength = edit.occlusion_strength;
+  material.emissive = edit.emissive;
+  return granit::result::success;
+}
+
 granit::result gpu_scene::create(granit_renderer renderer, const gltf::scene& source) {
   if (renderer == GRANIT_NULL_HANDLE)
     return granit::result::invalid_handle;

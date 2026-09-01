@@ -248,8 +248,9 @@ Canvas Draw List。Texture Resolver 只映射字体 Atlas 与已存活的查看�
 当前进度：后端无关 `viewer_state` 已集中管理 Node/Material 选择、Node 可见性、轨道相机、
 方向光、曝光、调试显示和面板开关；有类型的批量变更会先完整校验再提交，失败不产生部分修改，
 Scene 替换时会收敛失效选择。Scene、Inspector、Lighting、Renderer 与 Performance 五个 ImGui
-面板已作为独立可选目标接入，Widget 仅返回批量状态变更。材质编辑回滚、Texture Resolver、
-公共性能指标与平台图形 Smoke Test 仍待接入。
+面板已作为独立可选目标接入，Widget 仅返回批量状态变更。Inspector 的 PBR Factor 编辑通过
+`gpu_scene` 事务式批量更新：GPU 提交成功后才同步 CPU Scene，失败保留上一有效值。
+Texture Resolver、公共性能指标与平台图形 Smoke Test 仍待接入。
 
 ### S-13F 三端启动与资源流程
 

@@ -5,6 +5,7 @@
 #define GRANIT_EXAMPLES_COMMON_MODEL_VIEWER_GPU_SCENE_H_
 
 #include "gltf/scene.h"
+#include "model_viewer/material_edit.h"
 
 #include <granit/core/result.hpp>
 #include <granit/pipeline/material.hpp>
@@ -132,6 +133,11 @@ public:
                   std::span<const granit_scene_point_light> point_lights,
                   std::span<const granit_scene_spot_light> spot_lights,
                   granit::scene_snapshot& output) const noexcept;
+
+  /** 事务式更新 GPU 参数；成功后才同步修改 CPU Scene。 */
+  [[nodiscard]] granit::result update_material_factors(gltf::scene& source,
+                                                       std::uint32_t material_index,
+                                                       const material_factor_edit& edit) noexcept;
 
 private:
   [[nodiscard]] granit::result create(granit_renderer renderer, const gltf::scene& source);

@@ -56,5 +56,6 @@ TEST_CASE("查看器 ImGui 面板可在无平台后端上下文中构建", "[exa
   ImGui::Render();
   REQUIRE(ImGui::GetDrawData() != nullptr);
   CHECK(ImGui::GetDrawData()->Valid);
-  CHECK_FALSE(change.selected_node.has_value());
+  CHECK_FALSE(change.state.selected_node.has_value());
+  CHECK_FALSE(change.material.has_value());
 }
