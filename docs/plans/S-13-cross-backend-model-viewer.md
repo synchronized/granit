@@ -285,6 +285,18 @@ Loader。Loader 支持在不加载资源的情况下先发现并去重 glTF 外�
 Loader 与锁定 `cgltf`/`stb_image` 依赖；浏览器 Fixture 已验证主文档 Fetch、URI 发现、外部资源
 批量 Fetch、Bundle 提交与同步 Loader 的完整链路。真正的模型查看器主循环与 ImGui 接入仍待完成。
 
+浏览器接入完整 `application_core` 前先统一共享模块构建，禁止仅编译 Core 的 CPU 方法并依赖链接器
+丢弃缺失的 GPU 方法，也禁止通过不析构 Core 绕过资源生命周期。实施顺序固定为：
+
+1. 将 Math、Material、Scene 与 Render Pipeline 的目标定义提取为桌面/Web 可复用的内部 CMake
+   构建单元，源文件和生成资产清单只维护一份。
+2. Emscripten 使用现有静态 `granit` Renderer 目标实例化相同模块，并验证所有公共句柄的创建、
+   延迟回收与销毁路径，不提供 Web 专用 Material 或 Scene 实现。
+3. Web 壳链接完整 `granit_model_viewer_core`，依次调用 `begin_renderer`、`renderer_ready`、
+   `load_asset` 和 `upload`；只有 Core 进入 `ready` 才创建查看器帧循环。
+4. 用外部 Buffer Fixture 验证 CPU Scene 与 GPU Scene，再切换到锁定 FlightHelmet 资产执行
+   纹理、Material、Scene Snapshot 和 Render Pipeline 验收。
+
 SDL3 输入适配已完成第一阶段：平台事件按帧累积为 `viewer_input`，覆盖右键环绕、中键平移、
 滚轮缩放、`F`/`Home`、焦点与指针进出，并在 ImGui 捕获标志进入 Core 前完成标记。窗口、Surface
 和 Swapchain 生命周期已接入统一 `granit_model_viewer_example`：同一入口根据启动参数创建 Vulkan
