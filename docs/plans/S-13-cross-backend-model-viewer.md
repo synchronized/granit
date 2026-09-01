@@ -121,8 +121,8 @@ Vulkan、Dawn 或 Emscripten 类型。
   对应 Offset 和 Draw 范围，不为每个 Primitive 执行独立 GPU 分配。
 - 每个唯一 Image/颜色空间组合对应 Texture 与默认 View；同一 Image 同时作为
   sRGB 和线性资源时创建两个显式格式资源，不在 Shader 中补偿。
-- Sampler 按规范化后的 Filter/Wrap 去重；材质使用 `granit::material_instance`、内置
-  PBR 材质归档及批量初始参数，缺失纹理使用 Granit 的 PBR 默认资源。
+- Sampler 按规范化后的 Filter/Wrap 去重；材质使用 `granit::material_instance`、构建期生成的
+  双后端 PBR 材质归档及批量初始参数，缺失纹理使用 Granit 的 PBR 默认资源。
 - 每个 Node/Primitive 实例生成稳定 payload，映射到 `granit_mesh` 与 `granit_material`；
   世界矩阵、法线矩阵与世界空间 Bounds 通过 `granit::scene_snapshot` 提交。
 
@@ -145,6 +145,28 @@ Sampler、View、Texture、Buffer 的依赖逆序销毁候选资源，原 Scene 
 测试覆盖打包 Offset、去重、线性/sRGB 分裂、完整 mip 上传、事务回滚、销毁顺序、
 跨 Renderer 拒绝、帧槽重用、对齐/溢出和 Arena 增长。同一 CPU Scene 必须可在两个
 Renderer 上分别创建独立 GPU Scene，不共享任何 GPU 句柄。
+
+#### S-13C1 双后端材质归档前置
+
+现有材质归档 v2 只保存 SPIR-V。虽然公共 Shader 描述已经能同时携带 SPIR-V 与 WGSL，
+`material_template_gpu` 仍只能从归档创建 Vulkan Shader。模型查看器不能复用该归档在 WebGPU
+运行，也不能包含 `src/pipeline` 的嵌入材质或为不同后端绕过 Material/Render Pipeline。
+
+S-13C 先完成一次聚焦的材质资产升级：
+
+- 材质 Shader 记录同时保存 SPIR-V 与 WGSL，运行时继续通过同一公共 Shader 描述交给所选后端；
+  Material API、句柄和调用方式不变，不增加后端条件分支。
+- 材质源 JSON 的每个 Shader 显式引用锁定的 `.spv` 与 `.wgsl` 文件；构建工具校验阶段、入口点、
+  空数据、大小和重复记录，归档不在运行时调用 Tint 或读取源文件。
+- 归档格式只提升一次并同步工具、调试 JSON、Fixture、示例与格式测试；项目仍处于早期设计阶段，
+  不在运行时保留只含 SPIR-V 的旧格式分支。
+- 模型查看器 PBR Shader 以 WGSL 为权威输入，由锁定 Tint 在构建期生成匹配 SPIR-V；生成物和
+  材质归档只属于示例构建，不安装为 Granit 公共资源。
+- Vulkan、WebGPU Mock 与真实 Dawn 至少各验证一次同一归档；普通 Granit 构建不启用模型查看器时
+  不下载 Tint、不生成示例归档。
+
+该前置只扩展内部材质资产，不修改 C ABI 版本。完成后 `gpu_scene` 才创建
+`material_instance`、稳定 Payload 和 `scene_snapshot`。
 
 ### S-13D 查看器交互契约
 
