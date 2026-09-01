@@ -58,6 +58,8 @@ add_library(
   model_viewer_fetch.h
   "${PROJECT_SOURCE_DIR}/examples/platform/web/asset_request.cpp"
   "${PROJECT_SOURCE_DIR}/examples/platform/web/asset_request.h"
+  "${PROJECT_SOURCE_DIR}/examples/platform/web/resource_bundle.cpp"
+  "${PROJECT_SOURCE_DIR}/examples/platform/web/resource_bundle.h"
   "${PROJECT_SOURCE_DIR}/examples/platform/web/web_input.cpp"
   "${PROJECT_SOURCE_DIR}/examples/platform/web/web_input.h"
 )
@@ -67,8 +69,13 @@ target_include_directories(
   PUBLIC "${PROJECT_SOURCE_DIR}/examples/platform/web"
   PRIVATE "${PROJECT_SOURCE_DIR}/examples/common"
 )
+target_link_libraries(granit_web_model_viewer_platform PUBLIC granit::granit)
 target_compile_options(
   granit_web_model_viewer_platform PRIVATE "--use-port=emdawnwebgpu:cpp_bindings=false"
+)
+target_sources(
+  granit_web_model_viewer_platform
+  PRIVATE "${PROJECT_SOURCE_DIR}/examples/common/gltf/resource_uri.cpp"
 )
 granit_target_compile_warnings(granit_web_model_viewer_platform)
 
