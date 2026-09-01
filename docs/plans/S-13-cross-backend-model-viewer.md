@@ -278,7 +278,8 @@ Snapshot、预填充 Render Pipeline 描述并收集性能样本；平台输出�
 补齐。桌面壳已从 Core 分离为独立目标，并完成 `--backend=auto|vulkan|webgpu`、可选 Provider
 动态库路径、资产路径、Validation 与 Smoke Test 参数的事务式解析。浏览器平台壳已建立不依赖
 Emscripten 类型的输入适配与异步资产请求状态；请求 generation 会拒绝取消或重载后的迟到回调。
-真正的 Canvas、主循环、Fetch 传输与 ImGui 接入仍待完成。
+Emscripten Fetch 传输已使用共享请求状态保护回调生命周期，并将 HTTP/空响应诊断写回请求状态。
+真正的 Canvas、模型查看器主循环与 ImGui 接入仍待完成。
 
 SDL3 输入适配已完成第一阶段：平台事件按帧累积为 `viewer_input`，覆盖右键环绕、中键平移、
 滚轮缩放、`F`/`Home`、焦点与指针进出，并在 ImGui 捕获标志进入 Core 前完成标记。窗口、Surface

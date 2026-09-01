@@ -21,6 +21,7 @@
 #include <granit/renderer/swapchain.h>
 #include <granit/renderer/texture.hpp>
 
+#include "model_viewer_fetch.h"
 #include "support/renderer_fixture.h"
 
 namespace {
@@ -33,6 +34,8 @@ struct web_platform_state {
   granit_swapchain swapchain{};
   startup_status status{startup_status::starting};
   unsigned input_event_count{};
+  std::shared_ptr<granit::example::model_viewer::web::asset_request> asset_request{
+      std::make_shared<granit::example::model_viewer::web::asset_request>()};
 };
 
 web_platform_state state;
@@ -490,6 +493,15 @@ void tick(void*) noexcept {
   if (renderer_status.state != GRANIT_RENDERER_STATE_READY) {
     return;
   }
+  if (state.asset_request->status() ==
+      granit::example::model_viewer::web::asset_request_status::failed) {
+    fail("asset-fetch");
+    return;
+  }
+  if (state.asset_request->status() !=
+      granit::example::model_viewer::web::asset_request_status::ready) {
+    return;
+  }
 
   granit_renderer_limits limits = GRANIT_RENDERER_LIMITS_INIT;
   const auto limits_result = granit_renderer_get_limits(state.renderer, &limits);
@@ -531,6 +543,10 @@ extern "C" EMSCRIPTEN_KEEPALIVE unsigned granit_web_input_event_count() noexcept
   return state.input_event_count;
 }
 
+extern "C" EMSCRIPTEN_KEEPALIVE unsigned granit_web_asset_status() noexcept {
+  return static_cast<unsigned>(state.asset_request->status());
+}
+
 extern "C" EMSCRIPTEN_KEEPALIVE unsigned granit_web_renderer_state() noexcept {
   granit_renderer_status status = GRANIT_RENDERER_STATUS_INIT;
   return granit_renderer_get_status(state.renderer, &status) == GRANIT_SUCCESS ? status.state : 0;
@@ -555,6 +571,11 @@ int main() {
   const auto result = granit_renderer_create(&desc, &state.renderer);
   if (result != GRANIT_SUCCESS) {
     fail("provider-open", result);
+    return 1;
+  }
+  if (!granit::example::model_viewer::web::start_fetch(state.asset_request,
+                                                       "granit_webgpu_fixture_example.html")) {
+    fail("asset-fetch-start");
     return 1;
   }
   static_cast<void>(emscripten_set_keydown_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, &state,

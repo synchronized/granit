@@ -52,6 +52,26 @@ target_compile_options(granit PRIVATE "--use-port=emdawnwebgpu:cpp_bindings=fals
 target_link_options(granit INTERFACE "--use-port=emdawnwebgpu:cpp_bindings=false")
 granit_target_compile_warnings(granit)
 
+add_library(
+  granit_web_model_viewer_platform STATIC
+  model_viewer_fetch.cpp
+  model_viewer_fetch.h
+  "${PROJECT_SOURCE_DIR}/examples/platform/web/asset_request.cpp"
+  "${PROJECT_SOURCE_DIR}/examples/platform/web/asset_request.h"
+  "${PROJECT_SOURCE_DIR}/examples/platform/web/web_input.cpp"
+  "${PROJECT_SOURCE_DIR}/examples/platform/web/web_input.h"
+)
+target_compile_features(granit_web_model_viewer_platform PUBLIC cxx_std_20)
+target_include_directories(
+  granit_web_model_viewer_platform
+  PUBLIC "${PROJECT_SOURCE_DIR}/examples/platform/web"
+  PRIVATE "${PROJECT_SOURCE_DIR}/examples/common"
+)
+target_compile_options(
+  granit_web_model_viewer_platform PRIVATE "--use-port=emdawnwebgpu:cpp_bindings=false"
+)
+granit_target_compile_warnings(granit_web_model_viewer_platform)
+
 add_executable(granit_web_platform_smoke platform_smoke.cpp)
 target_compile_features(granit_web_platform_smoke PRIVATE cxx_std_20)
 target_link_libraries(granit_web_platform_smoke PRIVATE granit::granit)
@@ -69,9 +89,11 @@ target_link_options(
     "--preload-file=${PROJECT_SOURCE_DIR}/tests/assets/dynamic_uniform.frag.wgsl@/assets/dynamic_uniform.frag.wgsl"
     "-sALLOW_MEMORY_GROWTH=1"
     "-sNO_EXIT_RUNTIME=1"
+    "-sFETCH=1"
     "$<$<CONFIG:Debug>:-sASSERTIONS=1>"
     "$<$<CONFIG:Release>:--closure=1>"
 )
+target_link_libraries(granit_web_platform_smoke PRIVATE granit_web_model_viewer_platform)
 set_target_properties(
   granit_web_platform_smoke
   PROPERTIES

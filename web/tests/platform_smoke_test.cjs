@@ -177,10 +177,12 @@ async function main() {
     }
     const rendererState = await page.evaluate(() => Module._granit_web_renderer_state());
     const failureResult = await page.evaluate(() => Module._granit_web_renderer_failure_result());
+    const assetStatus = await page.evaluate(() => Module._granit_web_asset_status());
     // GRANIT_RENDERER_STATE_READY 的公共 ABI 数值为 2。
-    if (rendererState !== 2 || failureResult !== 0) {
+    // asset_request_status::ready 的内部测试契约数值为 2。
+    if (rendererState !== 2 || failureResult !== 0 || assetStatus !== 2) {
       throw new Error(
-        `WebGPU Renderer 生命周期异常，state=${rendererState}, failure=${failureResult}`,
+        `WebGPU 生命周期异常，state=${rendererState}, failure=${failureResult}, asset=${assetStatus}`,
       );
     }
     validateCanvasPixels(await page.locator("#canvas").screenshot({ type: "png" }));

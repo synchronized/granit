@@ -49,6 +49,7 @@ add_library(
   performance_history.h
   viewer_state.cpp
   viewer_state.h
+  viewer_input.h
   "${granit_model_viewer_material_include}"
 )
 add_library(granit_example_model_viewer_support ALIAS granit_model_viewer_core)

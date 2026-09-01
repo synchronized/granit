@@ -4,7 +4,7 @@
 #ifndef GRANIT_EXAMPLES_PLATFORM_DESKTOP_SDL3_INPUT_H_
 #define GRANIT_EXAMPLES_PLATFORM_DESKTOP_SDL3_INPUT_H_
 
-#include "model_viewer/orbit_camera.h"
+#include "model_viewer/viewer_input.h"
 
 #include <SDL3/SDL_events.h>
 
