@@ -10,11 +10,13 @@
 #include <granit/pipeline/material.hpp>
 #include <granit/pipeline/mesh.hpp>
 #include <granit/pipeline/render_pipeline.h>
+#include <granit/pipeline/scene.hpp>
 #include <granit/renderer/buffer.hpp>
 #include <granit/renderer/sampler.hpp>
 #include <granit/renderer/texture.hpp>
 
 #include <cstdint>
+#include <span>
 #include <vector>
 
 namespace granit::example::model_viewer {
@@ -69,6 +71,7 @@ struct gpu_scene_plan {
   std::vector<std::uint32_t> indices;
   std::vector<packed_primitive> primitives;
   std::vector<packed_draw> draws;
+  std::vector<granit_scene_renderable> renderables;
   std::vector<texture_variant> textures;
   std::vector<sampler_key> samplers;
   std::vector<std::uint32_t> source_sampler_to_plan;
@@ -118,6 +121,17 @@ public:
   draw_bindings() const noexcept {
     return draw_bindings_;
   }
+  [[nodiscard]] std::span<const granit_scene_renderable> renderables() const noexcept {
+    return plan_.renderables;
+  }
+
+  /** 使用当前稳定 Renderable 与调用方逐帧 View/Light 创建不可变场景快照。 */
+  [[nodiscard]] granit::result
+  create_snapshot(std::span<const granit_scene_view> views,
+                  std::span<const granit_scene_directional_light> directional_lights,
+                  std::span<const granit_scene_point_light> point_lights,
+                  std::span<const granit_scene_spot_light> spot_lights,
+                  granit::scene_snapshot& output) const noexcept;
 
 private:
   [[nodiscard]] granit::result create(granit_renderer renderer, const gltf::scene& source);

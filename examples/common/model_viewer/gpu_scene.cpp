@@ -311,7 +311,7 @@ gpu_scene_plan_error build_gpu_scene_plan(const gltf::scene& source, gpu_scene_p
       const auto first = mesh_primitive_starts[node.mesh];
       const auto end = mesh_primitive_starts[node.mesh + 1];
       for (auto primitive_index = first; primitive_index < end; ++primitive_index) {
-        if (candidate.draws.size() == std::numeric_limits<std::uint64_t>::max())
+        if (candidate.draws.size() >= std::numeric_limits<std::uint32_t>::max())
           return gpu_scene_plan_error::numeric_overflow;
         packed_draw draw{.payload = static_cast<std::uint64_t>(candidate.draws.size()) + 1,
                          .primitive = primitive_index,
@@ -320,6 +320,16 @@ gpu_scene_plan_error build_gpu_scene_plan(const gltf::scene& source, gpu_scene_p
         append_draw_bounds(source.meshes[node.mesh].primitives[primitive_index - first], node,
                            draw);
         candidate.draws.push_back(draw);
+        candidate.renderables.push_back(
+            {.model = draw.model,
+             .normal_matrix = draw.normal_matrix,
+             .bounds_center = draw.bounds_center,
+             .bounds_radius = draw.bounds_radius,
+             .layer_mask = std::numeric_limits<std::uint64_t>::max(),
+             .sort_key = (static_cast<std::uint64_t>(draw.material) << 32U) | draw.primitive,
+             .payload = draw.payload,
+             .object_id = static_cast<std::uint32_t>(candidate.draws.size()),
+             .reserved = 0});
       }
     }
     for (const auto& material : source.materials) {
@@ -397,6 +407,34 @@ void gpu_scene::reset() noexcept {
   if (!valid())
     return;
   [[maybe_unused]] gpu_scene retired(std::move(*this));
+}
+
+granit::result
+gpu_scene::create_snapshot(std::span<const granit_scene_view> views,
+                           std::span<const granit_scene_directional_light> directional_lights,
+                           std::span<const granit_scene_point_light> point_lights,
+                           std::span<const granit_scene_spot_light> spot_lights,
+                           granit::scene_snapshot& output) const noexcept {
+  if (!valid())
+    return granit::result::invalid_handle;
+  if (views.size() > std::numeric_limits<std::uint32_t>::max() ||
+      plan_.renderables.size() > std::numeric_limits<std::uint32_t>::max() ||
+      directional_lights.size() > std::numeric_limits<std::uint32_t>::max() ||
+      point_lights.size() > std::numeric_limits<std::uint32_t>::max() ||
+      spot_lights.size() > std::numeric_limits<std::uint32_t>::max())
+    return granit::result::invalid_argument;
+  granit_scene_snapshot_desc desc = GRANIT_SCENE_SNAPSHOT_DESC_INIT;
+  desc.views = views.data();
+  desc.view_count = static_cast<std::uint32_t>(views.size());
+  desc.renderables = plan_.renderables.data();
+  desc.renderable_count = static_cast<std::uint32_t>(plan_.renderables.size());
+  desc.directional_lights = directional_lights.data();
+  desc.directional_light_count = static_cast<std::uint32_t>(directional_lights.size());
+  desc.point_lights = point_lights.data();
+  desc.point_light_count = static_cast<std::uint32_t>(point_lights.size());
+  desc.spot_lights = spot_lights.data();
+  desc.spot_light_count = static_cast<std::uint32_t>(spot_lights.size());
+  return output.initialize(renderer_, desc);
 }
 
 granit::result gpu_scene::create(granit_renderer renderer, const gltf::scene& source) {

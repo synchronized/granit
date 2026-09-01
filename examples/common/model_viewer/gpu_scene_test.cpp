@@ -8,6 +8,7 @@
 #include <granit/renderer/renderer.hpp>
 
 #include <cmath>
+#include <limits>
 
 TEST_CASE("GPU Scene 计划合并 Primitive 并记录字节 Offset", "[example][model-viewer]") {
   granit::example::gltf::scene source;
@@ -92,6 +93,12 @@ TEST_CASE("GPU Scene 计划按 Node 稳定展开 Primitive Payload", "[example][
   CHECK(plan.draws[1].node == 2);
   CHECK(plan.draws[2].payload == 3);
   CHECK(plan.draws[2].primitive == 1);
+  REQUIRE(plan.renderables.size() == plan.draws.size());
+  CHECK(plan.renderables[0].payload == plan.draws[0].payload);
+  CHECK(plan.renderables[0].object_id == 1);
+  CHECK(plan.renderables[1].object_id == 2);
+  CHECK(plan.renderables[2].object_id == 3);
+  CHECK(plan.renderables[0].layer_mask == std::numeric_limits<std::uint64_t>::max());
 }
 
 TEST_CASE("GPU Scene 计划拒绝越界 Node 与 Material 引用", "[example][model-viewer]") {
@@ -164,6 +171,22 @@ TEST_CASE("GPU Scene 事务式创建合并 Buffer 与 Mesh", "[example][model-vi
   CHECK(scene.draw_bindings().front().payload == 1);
   CHECK(scene.draw_bindings().front().mesh == scene.meshes().front().native_handle());
   CHECK(scene.draw_bindings().front().material == scene.materials().front().native_handle());
+  REQUIRE(scene.renderables().size() == 1);
+  CHECK(scene.renderables().front().payload == scene.draw_bindings().front().payload);
+
+  const granit_scene_view view{.view = granit::math::identity_matrix4,
+                               .projection = granit::math::identity_matrix4,
+                               .view_projection = granit::math::identity_matrix4,
+                               .camera_position = {0, 0, 2},
+                               .viewport_x = 0,
+                               .viewport_y = 0,
+                               .viewport_width = 640,
+                               .viewport_height = 480,
+                               .layer_mask = std::numeric_limits<std::uint64_t>::max()};
+  granit::scene_snapshot snapshot;
+  REQUIRE(scene.create_snapshot(std::span{&view, 1}, {}, {}, {}, snapshot) ==
+          granit::result::success);
+  CHECK(snapshot.valid());
 
   granit::example::gltf::scene invalid_source;
   auto& invalid = invalid_source.meshes.emplace_back().primitives.emplace_back();

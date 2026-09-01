@@ -146,6 +146,11 @@ Sampler、View、Texture、Buffer 的依赖逆序销毁候选资源，原 Scene 
 跨 Renderer 拒绝、帧槽重用、对齐/溢出和 Arena 增长。同一 CPU Scene 必须可在两个
 Renderer 上分别创建独立 GPU Scene，不共享任何 GPU 句柄。
 
+当前进度：GPU Scene 已完成合并 Vertex/Index Buffer、纹理颜色空间拆分、Sampler 去重、
+单变体 PBR 材质实例、默认纹理、稳定 Draw Binding 与 Renderable 打包；调用方可使用逐帧
+View/Light 创建不可变 `scene_snapshot`。动态 Uniform Arena 与跨 Renderer 图形 Smoke Test
+仍属于本阶段后续工作。
+
 #### S-13C1 双后端材质归档前置
 
 状态：已完成。
