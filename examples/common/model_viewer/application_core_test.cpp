@@ -4,6 +4,7 @@
 #include "model_viewer/application_core.h"
 
 #include <catch2/catch_all.hpp>
+#include <granit/renderer/renderer.hpp>
 
 #include <array>
 
@@ -34,4 +35,46 @@ TEST_CASE("模型查看器 Core 保留资产解析诊断", "[example][model-view
   CHECK(core.load_asset(invalid, nullptr) == granit::result::invalid_argument);
   CHECK(core.phase() == application_phase::failed);
   CHECK_FALSE(core.diagnostic().empty());
+}
+
+TEST_CASE("模型查看器 Core 生成后端无关单帧描述", "[example][model-viewer][core][gpu]") {
+  using namespace granit::example::model_viewer;
+  granit::renderer renderer;
+  const auto renderer_result = renderer.initialize({.application_name = "Model Viewer Core Test"});
+  if (granit::failed(renderer_result))
+    SKIP("当前环境没有可用 Renderer");
+
+  granit::example::gltf::scene scene;
+  auto& primitive = scene.meshes.emplace_back().primitives.emplace_back();
+  primitive.positions = {{-1, -1, 0}, {1, -1, 0}, {0, 1, 0}};
+  primitive.normals = {{0, 0, 1}, {0, 0, 1}, {0, 0, 1}};
+  primitive.indices = {0, 1, 2};
+  primitive.material = 0;
+  primitive.local_bounds = {.minimum = {-1, -1, 0}, .maximum = {1, 1, 0}, .valid = true};
+  scene.materials.emplace_back();
+  scene.nodes.emplace_back().mesh = 0;
+
+  application_core core;
+  REQUIRE(core.begin_renderer() == granit::result::success);
+  REQUIRE(core.renderer_ready() == granit::result::success);
+  REQUIRE(core.accept_scene(std::move(scene)) == granit::result::success);
+  REQUIRE(core.upload(renderer.native_handle()) == granit::result::success);
+
+  application_tick_output output;
+  application_tick_input zero_sized;
+  zero_sized.height = 480;
+  CHECK(core.tick(zero_sized, output) == granit::result::not_ready);
+  const performance_sample sample{.frames_per_second = 60.0F, .cpu_frame_ms = 2.0F};
+  application_tick_input input;
+  input.width = 640;
+  input.height = 480;
+  input.performance = sample;
+  REQUIRE(core.tick(input, output) == granit::result::success);
+  CHECK(output.snapshot.valid());
+  CHECK(output.render.scene == output.snapshot.native_handle());
+  CHECK(output.render.width == 640);
+  CHECK(output.render.height == 480);
+  CHECK(output.render.draw_binding_count == 1);
+  CHECK(output.render.draw_bindings == core.scene_gpu().draw_bindings().data());
+  CHECK(core.performance().size() == 1);
 }

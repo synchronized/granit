@@ -9,6 +9,7 @@
 #include "model_viewer/performance_history.h"
 #include "model_viewer/viewer_state.h"
 
+#include <optional>
 #include <span>
 #include <string>
 
@@ -23,6 +24,21 @@ enum class application_phase {
   failed,
 };
 
+/** 平台壳在一帧开始时提交的后端无关输入。 */
+struct application_tick_input {
+  viewer_input input;
+  viewer_change change;
+  std::uint32_t width{};
+  std::uint32_t height{};
+  std::optional<performance_sample> performance;
+};
+
+/** Core 生成的单帧不可变 Scene 与待补齐平台输出的渲染描述。 */
+struct application_tick_output {
+  granit::scene_snapshot snapshot;
+  granit_render_pipeline_render_desc render = GRANIT_RENDER_PIPELINE_RENDER_DESC_INIT;
+};
+
 class application_core {
 public:
   [[nodiscard]] granit::result begin_renderer() noexcept;
@@ -31,6 +47,8 @@ public:
                                           const gltf::resource_resolver* resolver);
   [[nodiscard]] granit::result accept_scene(gltf::scene scene);
   [[nodiscard]] granit::result upload(granit_renderer renderer);
+  [[nodiscard]] granit::result tick(const application_tick_input& input,
+                                    application_tick_output& output);
   void fail(granit::result result, std::string diagnostic);
   void reset() noexcept;
 
@@ -51,6 +69,7 @@ private:
   gpu_scene gpu_scene_;
   viewer_state state_;
   performance_history performance_;
+  bool camera_initialized_{};
 };
 
 } // namespace granit::example::model_viewer

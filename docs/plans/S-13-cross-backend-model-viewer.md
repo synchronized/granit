@@ -5,7 +5,7 @@
 
 ## 状态
 
-- 实现状态：进行中；S-13A、S-13B 已完成，当前实施 S-13C
+- 实现状态：进行中；S-13A～S-13E 已完成，当前实施 S-13F
 - 前置依赖：S-12
 - 可并行准备：示例级 glTF 解析与测试 Fixture
 - 优先级：P1
@@ -252,8 +252,7 @@ Scene 替换时会收敛失效选择。Scene、Inspector、Lighting、Renderer �
 `gpu_scene` 事务式批量更新：GPU 提交成功后才同步 CPU Scene，失败保留上一有效值。
 Texture Resolver 已使用 slot + generation 注册表映射字体 Atlas 与查看器纹理，ID 不携带指针，
 注销、清空、未知及陈旧 ID 均拒绝解析。Inspector 已按 Image、Sampler 与颜色空间查找并显示
-五类 PBR 纹理缩略图，同时展示实际 glTF Sampler 参数。公共性能指标与平台图形 Smoke Test
-仍待接入。
+五类 PBR 纹理缩略图，同时展示实际 glTF Sampler 参数。平台图形 Smoke Test 仍待接入。
 
 公共指标第一阶段已将原私有 GPU 计时提升为 `render_pipeline.h/.hpp` 的稳定 C/C++ 查询接口，
 加入可扩展结构、样本序号和严格的 `NOT_READY/UNSUPPORTED` 语义，并保证延迟回读不改变成功渲染
@@ -272,7 +271,9 @@ CPU/GPU Scene、Orbit Camera、Viewer State、ImGui 面板与单帧 `tick`。它
 
 当前已建立该共享静态目标与第一阶段 `application_core`：Core 统一拥有 CPU/GPU Scene、
 Viewer State 和 Performance History，并以显式状态机约束 Renderer 创建、资产解析、GPU 上传、
-失败诊断及重置流程。单帧 `tick` 与三个平台壳仍待接入。
+失败诊断及重置流程。后端无关单帧 `tick` 已统一应用状态与相机输入、生成 View/Light Scene
+Snapshot、预填充 Render Pipeline 描述并收集性能样本；平台输出、Frame、Canvas 和 Submit 仍由壳层
+补齐。三个平台壳仍待接入。
 
 三个运行配置如下：
 
