@@ -7,7 +7,9 @@
 #include "gltf/scene.h"
 
 #include <granit/core/result.hpp>
+#include <granit/pipeline/material.hpp>
 #include <granit/pipeline/mesh.hpp>
+#include <granit/pipeline/render_pipeline.h>
 #include <granit/renderer/buffer.hpp>
 #include <granit/renderer/sampler.hpp>
 #include <granit/renderer/texture.hpp>
@@ -84,6 +86,12 @@ struct gpu_texture {
   granit::texture_view view;
 };
 
+struct default_material_textures {
+  gpu_texture white_srgb;
+  gpu_texture white_linear;
+  gpu_texture normal_linear;
+};
+
 /** 与单个 Renderer 绑定的事务式 GPU Scene 资源集合。 */
 class gpu_scene {
 public:
@@ -103,6 +111,13 @@ public:
   [[nodiscard]] const std::vector<gpu_texture>& textures() const noexcept { return textures_; }
   [[nodiscard]] const std::vector<granit::mesh>& meshes() const noexcept { return meshes_; }
   [[nodiscard]] const std::vector<granit::sampler>& samplers() const noexcept { return samplers_; }
+  [[nodiscard]] const std::vector<granit::material_instance>& materials() const noexcept {
+    return materials_;
+  }
+  [[nodiscard]] const std::vector<granit_render_pipeline_draw_binding>&
+  draw_bindings() const noexcept {
+    return draw_bindings_;
+  }
 
 private:
   [[nodiscard]] granit::result create(granit_renderer renderer, const gltf::scene& source);
@@ -114,6 +129,10 @@ private:
   std::vector<gpu_texture> textures_;
   std::vector<granit::sampler> samplers_;
   std::vector<granit::mesh> meshes_;
+  default_material_textures default_textures_;
+  granit::sampler default_sampler_;
+  std::vector<granit::material_instance> materials_;
+  std::vector<granit_render_pipeline_draw_binding> draw_bindings_;
 };
 
 } // namespace granit::example::model_viewer

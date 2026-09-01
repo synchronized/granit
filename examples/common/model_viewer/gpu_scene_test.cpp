@@ -153,11 +153,17 @@ TEST_CASE("GPU Scene 事务式创建合并 Buffer 与 Mesh", "[example][model-vi
   primitive.positions = {{0, 0, 0}, {1, 0, 0}, {0, 1, 0}};
   primitive.normals = {{0, 0, 1}, {0, 0, 1}, {0, 0, 1}};
   primitive.indices = {0, 1, 2};
+  source.nodes.emplace_back().mesh = 0;
 
   granit::example::model_viewer::gpu_scene scene;
   REQUIRE(scene.initialize(renderer.native_handle(), source) == granit::result::success);
   CHECK(scene.valid());
   CHECK(scene.meshes().size() == 1);
+  CHECK(scene.materials().size() == 1);
+  REQUIRE(scene.draw_bindings().size() == 1);
+  CHECK(scene.draw_bindings().front().payload == 1);
+  CHECK(scene.draw_bindings().front().mesh == scene.meshes().front().native_handle());
+  CHECK(scene.draw_bindings().front().material == scene.materials().front().native_handle());
 
   granit::example::gltf::scene invalid_source;
   auto& invalid = invalid_source.meshes.emplace_back().primitives.emplace_back();
