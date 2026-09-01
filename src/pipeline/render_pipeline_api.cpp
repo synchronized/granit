@@ -201,6 +201,30 @@ granit_result record_tone_mapping(granit::lighting::tone_mapping_pipeline_resour
   return result == GRANIT_SUCCESS ? reset_result : result;
 }
 
+granit_result release_legacy_uniform_bindings(auto& entries) {
+  auto result = GRANIT_SUCCESS;
+  for (auto& entry : entries) {
+    const auto reset_result = entry.bindings.reset();
+    if (result == GRANIT_SUCCESS)
+      result = reset_result;
+  }
+  return result;
+}
+
+granit_result trim_draw_binding_cache(auto& entries, std::size_t retained_count) {
+  auto result = GRANIT_SUCCESS;
+  while (entries.size() > retained_count) {
+    const auto binding_result = entries.back().bindings.reset();
+    if (result == GRANIT_SUCCESS)
+      result = binding_result;
+    const auto lighting_result = entries.back().lighting.reset();
+    if (result == GRANIT_SUCCESS)
+      result = lighting_result;
+    entries.pop_back();
+  }
+  return result;
+}
+
 granit_result record_opaque_draws(
     pipeline_state& state, granit_command_recorder recorder, granit_texture_view color,
     granit_texture_view depth, granit_texture_view shadow, uint32_t width, uint32_t height,
@@ -226,6 +250,9 @@ granit_result record_opaque_draws(
   std::vector<granit::pipeline::detail::material_draw_state> arena_materials;
   std::vector<granit::pipeline::detail::dynamic_uniform_binding> arena_bindings;
   if (use_uniform_arena) {
+    result = release_legacy_uniform_bindings(state.opaque_draw_bindings);
+    if (result != GRANIT_SUCCESS)
+      return result;
     try {
       arena_materials.resize(draws.size());
       arena_bindings.resize(draws.size());
@@ -266,7 +293,8 @@ granit_result record_opaque_draws(
     if (index == state.opaque_draw_bindings.size())
       state.opaque_draw_bindings.emplace_back();
     auto& cached = state.opaque_draw_bindings[index];
-    if (result == GRANIT_SUCCESS && cached.material != draws[index].material) {
+    if (result == GRANIT_SUCCESS && (cached.material != draws[index].material ||
+                                     (!use_uniform_arena && !cached.bindings.initialized()))) {
       result = cached.bindings.reset();
       if (result == GRANIT_SUCCESS)
         result = cached.lighting.reset();
@@ -337,6 +365,8 @@ granit_result record_opaque_draws(
       }
     }
   }
+  if (result == GRANIT_SUCCESS)
+    result = trim_draw_binding_cache(state.opaque_draw_bindings, draws.size());
   return result;
 }
 
@@ -411,6 +441,9 @@ granit_result record_shadow_draws(pipeline_state& state, granit_command_recorder
   std::vector<granit::material::pbr_object_constants> arena_objects;
   std::vector<granit::pipeline::detail::dynamic_uniform_binding> arena_bindings;
   if (use_uniform_arena) {
+    result = release_legacy_uniform_bindings(state.shadow_draw_bindings);
+    if (result != GRANIT_SUCCESS)
+      return result;
     try {
       arena_materials.resize(draws.size());
       arena_objects.reserve(draws.size());
@@ -462,7 +495,8 @@ granit_result record_shadow_draws(pipeline_state& state, granit_command_recorder
     if (index == state.shadow_draw_bindings.size())
       state.shadow_draw_bindings.emplace_back();
     auto& cached = state.shadow_draw_bindings[index];
-    if (result == GRANIT_SUCCESS && cached.material != draws[index].material) {
+    if (result == GRANIT_SUCCESS && (cached.material != draws[index].material ||
+                                     (!use_uniform_arena && !cached.bindings.initialized()))) {
       result = cached.bindings.reset();
       if (result == GRANIT_SUCCESS)
         result = cached.lighting.reset();
@@ -543,6 +577,8 @@ granit_result record_shadow_draws(pipeline_state& state, granit_command_recorder
       }
     }
   }
+  if (result == GRANIT_SUCCESS)
+    result = trim_draw_binding_cache(state.shadow_draw_bindings, draws.size());
   return result;
 }
 
