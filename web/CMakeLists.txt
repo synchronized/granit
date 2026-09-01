@@ -54,7 +54,7 @@ granit_target_compile_warnings(granit)
 
 # Web 与桌面复用同一 Math 模块目标，为完整 Model Viewer Core 提供一致依赖。
 include(granit_modules)
-granit_add_lighting_module()
+granit_add_render_pipeline_module()
 
 # 浏览器模型查看器复用桌面端同一套 glTF Loader 与锁定依赖，不维护 Web 专用副本。
 add_subdirectory(

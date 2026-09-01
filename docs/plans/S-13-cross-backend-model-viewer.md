@@ -297,8 +297,11 @@ Loader 与锁定 `cgltf`/`stb_image` 依赖；浏览器 Fixture 已验证主文�
 4. 用外部 Buffer Fixture 验证 CPU Scene 与 GPU Scene，再切换到锁定 FlightHelmet 资产执行
    纹理、Material、Scene Snapshot 和 Render Pipeline 验收。
 
-当前 Math、Material、Render Graph、PBR、Scene 与 Lighting 目标已迁移到共享内部 CMake 构建
-单元，并分别通过桌面 Clang 与 Emscripten 编译；下一步迁移包含生成资产的 Render Pipeline。
+当前 Math、Material、Render Graph、PBR、Scene、Lighting 与 Render Pipeline 目标均已迁移到共享
+内部 CMake 构建单元，并分别通过桌面 Clang 与 Emscripten 编译。Wasm32 同时修正了 Canvas 上传中
+对 `size_t` 与 `uint64_t` 的恒假范围比较。Web 接入完整 Core 前剩余的构建问题是材质归档由宿主
+`granit_material_tool` 生成，交叉编译时必须导入宿主工具或使用由同一输入确定性生成的锁定产物，
+不能尝试运行 Wasm 工具。
 
 SDL3 输入适配已完成第一阶段：平台事件按帧累积为 `viewer_input`，覆盖右键环绕、中键平移、
 滚轮缩放、`F`/`Home`、焦点与指针进出，并在 ImGui 捕获标志进入 Core 前完成标记。窗口、Surface

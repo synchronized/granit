@@ -3,6 +3,8 @@
 
 include_guard(GLOBAL)
 
+include("${CMAKE_CURRENT_LIST_DIR}/granit_render_pipeline_module.cmake")
+
 # 添加 Granit 内部 Render Graph 模块。
 function(granit_add_render_graph_module)
   if(TARGET granit_render_graph)

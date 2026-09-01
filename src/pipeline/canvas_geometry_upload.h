@@ -53,9 +53,11 @@ public:
       index_count_ = 0;
       return GRANIT_SUCCESS;
     }
-    if (vertex_bytes > std::numeric_limits<std::uint64_t>::max() ||
-        index_bytes > std::numeric_limits<std::uint64_t>::max()) {
-      return GRANIT_ERROR_OUT_OF_MEMORY;
+    if constexpr (sizeof(std::size_t) > sizeof(std::uint64_t)) {
+      if (vertex_bytes > std::numeric_limits<std::uint64_t>::max() ||
+          index_bytes > std::numeric_limits<std::uint64_t>::max()) {
+        return GRANIT_ERROR_OUT_OF_MEMORY;
+      }
     }
     // 先记录所属 Renderer，保证部分创建失败后析构仍能回收已经创建的 Buffer。
     renderer_ = renderer;
