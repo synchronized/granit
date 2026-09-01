@@ -245,6 +245,10 @@ Canvas Draw List。Texture Resolver 只映射字体 Atlas 与已存活的查看�
 `NOT_READY/UNSUPPORTED` 和样本统计。图形 Smoke Test 只检查面板可见与 Draw Data 非空，
 不依赖字体光栅的逐像素结果。
 
+当前进度：后端无关 `viewer_state` 已集中管理 Node/Material 选择、Node 可见性、轨道相机、
+方向光、曝光、调试显示和面板开关；有类型的批量变更会先完整校验再提交，失败不产生部分修改，
+Scene 替换时会收敛失效选择。ImGui 面板、材质编辑回滚、Texture Resolver 与公共性能指标仍待接入。
+
 ### S-13F 三端启动与资源流程
 
 共享应用核心构建为不安装的 `granit_model_viewer_core` 静态目标，拥有 Loader、
