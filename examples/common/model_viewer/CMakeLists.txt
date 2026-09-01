@@ -40,6 +40,8 @@ add_library(
   gpu_scene.cpp
   material_archive.cpp
   material_archive.h
+  orbit_camera.cpp
+  orbit_camera.h
   "${granit_model_viewer_material_include}"
 )
 target_compile_features(granit_example_model_viewer_support PUBLIC cxx_std_20)
@@ -55,7 +57,9 @@ set_target_properties(granit_example_model_viewer_support PROPERTIES FOLDER "Exa
 granit_target_compile_warnings(granit_example_model_viewer_support)
 
 if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
-  add_executable(granit_example_model_viewer_support_test gpu_scene_test.cpp)
+  add_executable(
+    granit_example_model_viewer_support_test gpu_scene_test.cpp orbit_camera_test.cpp
+  )
   target_link_libraries(
     granit_example_model_viewer_support_test
     PRIVATE granit_example_model_viewer_support Catch2::Catch2WithMain

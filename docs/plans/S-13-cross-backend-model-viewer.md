@@ -206,6 +206,10 @@ Distance、Near/Far 由模型尺度推导并保持严格有效。
 限制、高 DPI 等价、ImGui 捕获、焦点丢失和零尺寸恢复。Smoke Test 需在调整
 窗口前后验证模型仍位于视野内，且不依赖绝对屏幕坐标。
 
+当前进度：后端无关 `orbit_camera`、规范化 `viewer_input`、Bounds 聚焦、环绕、平移、指数缩放、
+Home 恢复和 View/Projection 输出已完成，并由上述固定输入单元测试覆盖。SDL3/浏览器事件转换及
+调整窗口后的交互 Smoke Test 留到 S-13F 平台壳接入时完成。
+
 ### S-13E ImGui 与性能指标契约
 
 `viewer_state` 是示例唯一的可编辑状态，拥有选中 Node/Material 索引、相机、
