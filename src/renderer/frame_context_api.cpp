@@ -3,6 +3,7 @@
 
 #include <granit/renderer/frame_context.h>
 
+#include <algorithm>
 #include <new>
 
 #include "renderer/renderer_registry.h"
@@ -25,6 +26,17 @@ extern "C" granit_result granit_frame_context_create(granit_renderer renderer,
   } catch (...) {
     return GRANIT_ERROR_INTERNAL;
   }
+}
+
+extern "C" granit_result granit_frame_get_slot_info(granit_renderer renderer, granit_frame frame,
+                                                    granit_frame_info* info) {
+  if (info == nullptr || info->struct_size < GRANIT_FRAME_INFO_VERSION_1_SIZE ||
+      std::ranges::any_of(info->reserved, [](uint32_t value) { return value != 0; }))
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  info->frame_slot = 0;
+  info->frame_slot_count = 0;
+  return granit::detail::renderer_registry::instance().get_frame_slot(
+      renderer, frame, info->frame_slot, info->frame_slot_count);
 }
 
 extern "C" granit_result granit_frame_context_begin(granit_renderer renderer,

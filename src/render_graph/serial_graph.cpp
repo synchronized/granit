@@ -27,9 +27,10 @@ void destroy_recorder(granit_renderer renderer, granit_command_recorder recorder
 } // namespace
 
 pass_context::pass_context(granit_renderer renderer, granit_command_recorder recorder,
-                           std::span<const resource_access> accesses,
+                           std::uint32_t frame_slot, std::span<const resource_access> accesses,
                            std::span<const imported_resource> resources) noexcept
-    : renderer_(renderer), recorder_(recorder), accesses_(accesses), resources_(resources) {}
+    : renderer_(renderer), recorder_(recorder), frame_slot_(frame_slot), accesses_(accesses),
+      resources_(resources) {}
 
 const imported_resource* pass_context::resolve(resource_id resource,
                                                imported_resource_type type) const noexcept {
@@ -102,14 +103,21 @@ bool serial_graph::add_dependency(pass_id before, pass_id after) {
 }
 
 execution_result serial_graph::execute(granit_renderer renderer) const {
-  return execute_internal(renderer, GRANIT_NULL_HANDLE);
+  return execute_internal(renderer, GRANIT_NULL_HANDLE, UINT32_MAX);
 }
 
 execution_result serial_graph::execute_frame(granit_renderer renderer, granit_frame frame) const {
   if (frame == GRANIT_NULL_HANDLE) {
     return fail(GRANIT_ERROR_INVALID_HANDLE, execution_phase::submit);
   }
-  return execute_internal(renderer, frame);
+  return execute_internal(renderer, frame, UINT32_MAX);
+}
+
+execution_result serial_graph::execute_frame(granit_renderer renderer, granit_frame frame,
+                                             std::uint32_t frame_slot) const {
+  if (frame == GRANIT_NULL_HANDLE || frame_slot == UINT32_MAX)
+    return fail(GRANIT_ERROR_INVALID_ARGUMENT, execution_phase::submit);
+  return execute_internal(renderer, frame, frame_slot);
 }
 
 diagnostic_graph serial_graph::diagnostics() const {
@@ -118,8 +126,8 @@ diagnostic_graph serial_graph::diagnostics() const {
           .resource_names = resource_names_};
 }
 
-execution_result serial_graph::execute_internal(granit_renderer renderer,
-                                                granit_frame frame) const {
+execution_result serial_graph::execute_internal(granit_renderer renderer, granit_frame frame,
+                                                std::uint32_t frame_slot) const {
   if (renderer == GRANIT_NULL_HANDLE) {
     return fail(GRANIT_ERROR_INVALID_HANDLE, execution_phase::create_recorder);
   }
@@ -228,7 +236,7 @@ execution_result serial_graph::execute_internal(granit_renderer renderer,
       static_cast<void>(destroy_resources());
       return fail_at(GRANIT_ERROR_INVALID_ARGUMENT, execution_phase::record_pass, pass);
     }
-    pass_context context(renderer, recorder, passes_[pass].accesses, resources);
+    pass_context context(renderer, recorder, frame_slot, passes_[pass].accesses, resources);
     try {
       result = callbacks_[pass](context);
     } catch (const std::bad_alloc&) {

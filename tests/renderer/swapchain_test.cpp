@@ -115,6 +115,11 @@ TEST_CASE("Swapchain 支持创建、查询、重建和销毁", "[swapchain][win3
   REQUIRE(frame.query_info(frame_info) == granit::result::success);
   CHECK(frame_info.frame_slot < frame_info.frame_slot_count);
   CHECK(frame_info.frame_slot_count == GRANIT_DEFAULT_FRAMES_IN_FLIGHT);
+  granit_frame_info slot_info = GRANIT_FRAME_INFO_INIT;
+  REQUIRE(granit_frame_get_slot_info(renderer.native_handle(), frame.handle, &slot_info) ==
+          GRANIT_SUCCESS);
+  CHECK(slot_info.frame_slot == frame_info.frame_slot);
+  CHECK(slot_info.frame_slot_count == frame_info.frame_slot_count);
   granit_frame_info native_frame_info = GRANIT_FRAME_INFO_INIT;
   native_frame_info.reserved[0] = 1;
   REQUIRE(granit_frame_get_info(renderer.native_handle(), swapchain.native_handle(), frame.handle,
@@ -208,9 +213,8 @@ TEST_CASE("Swapchain 支持创建、查询、重建和销毁", "[swapchain][win3
   REQUIRE(swapchain.backbuffer(cpp_frame.image_index, frame_texture, frame_view) ==
           granit::result::success);
   const granit::color_attachment_desc cpp_color{.view = frame_view};
-  const granit::rendering_desc cpp_rendering{
-      .color_attachments = std::span{&cpp_color, 1},
-      .area = {.width = info.width, .height = info.height}};
+  const granit::rendering_desc cpp_rendering{.color_attachments = std::span{&cpp_color, 1},
+                                             .area = {.width = info.width, .height = info.height}};
   REQUIRE(cpp_recording.recorder().begin_rendering(cpp_rendering) == granit::result::success);
   REQUIRE(cpp_recording.recorder().end_rendering() == granit::result::success);
   REQUIRE(cpp_recording.submit() == granit::result::success);

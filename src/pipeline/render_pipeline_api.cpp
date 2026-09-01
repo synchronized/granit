@@ -16,6 +16,7 @@
 #include "pipeline/render_pipeline_metrics.h"
 #include "pipeline/scene_access.h"
 
+#include <granit/renderer/frame_context.h>
 #include <granit/renderer/render_target.h>
 #include <granit/renderer/shader.hpp>
 #include <granit/renderer/texture.hpp>
@@ -768,8 +769,16 @@ render_view(pipeline_state& state, const granit_render_pipeline_render_desc& des
       return GRANIT_ERROR_INTERNAL;
     }
   }
-  const auto execution = frame == GRANIT_NULL_HANDLE ? graph.execute(state.renderer)
-                                                     : graph.execute_frame(state.renderer, frame);
+  granit::render_graph::execution_result execution;
+  if (frame == GRANIT_NULL_HANDLE) {
+    execution = graph.execute(state.renderer);
+  } else {
+    granit_frame_info frame_info = GRANIT_FRAME_INFO_INIT;
+    const auto slot_result = granit_frame_get_slot_info(state.renderer, frame, &frame_info);
+    if (slot_result != GRANIT_SUCCESS)
+      return slot_result;
+    execution = graph.execute_frame(state.renderer, frame, frame_info.frame_slot);
+  }
   if (!execution.succeeded())
     return execution.result;
   const auto destroy_result = granit_command_recorder_destroy(state.renderer, execution.recorder);
