@@ -272,9 +272,10 @@ load_result convert_materials(const cgltf_data& data, scene& output) {
   output.materials.reserve(data.materials_count);
   for (cgltf_size index = 0; index < data.materials_count; ++index) {
     const auto& source = data.materials[index];
-    if (source.has_pbr_specular_glossiness || source.has_clearcoat || source.has_transmission ||
-        source.has_volume || source.has_sheen || source.has_iridescence ||
-        source.has_diffuse_transmission || source.has_anisotropy || source.has_dispersion)
+    // FlightHelmet 将 Transmission 声明为可选扩展；首版使用核心 Metallic/Roughness 回退。
+    if (source.has_pbr_specular_glossiness || source.has_clearcoat || source.has_volume ||
+        source.has_sheen || source.has_iridescence || source.has_diffuse_transmission ||
+        source.has_anisotropy || source.has_dispersion)
       return failure(load_error::unsupported_feature, "Material 使用了首版不支持的 PBR 扩展");
     material target;
     if (source.name != nullptr)
@@ -458,6 +459,13 @@ load_result load(std::span<const std::byte> document, const resource_resolver* r
     if (parse_result != cgltf_result_success)
       return map_parse_error(parse_result);
     data_owner data(raw_data, &cgltf_free);
+
+    for (cgltf_size index = 0; index < data->extensions_required_count; ++index) {
+      if (std::string_view(data->extensions_required[index]) == "KHR_materials_transmission") {
+        return failure(load_error::unsupported_feature,
+                       "KHR_materials_transmission 为必需扩展，首版无法降级");
+      }
+    }
 
     std::vector<std::vector<std::byte>> external_buffers;
     if (auto result = load_external_buffers(*data, resolver, external_buffers); !result)

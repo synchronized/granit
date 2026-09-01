@@ -99,6 +99,8 @@ CPU Scene 包含以下所有权对象：
   顶点分量类型；Sparse Accessor、Draco/Meshopt、UV1、Skin、Animation 与 Morph 明确拒绝。
 - Position 与 Normal 必须存在；使用任意 Texture 时必须存在 UV0，使用 Normal Texture
   时必须存在 Tangent。首轮不在加载期自动生成法线或切线。
+- 未列入首版范围的可选材质扩展忽略其扩展字段，并保留核心 Metallic/Roughness 回退；同一扩展
+  若出现在 `extensionsRequired` 中则明确拒绝，避免静默生成错误画面。
 - 解析成功后 Scene 不借用输入 Span 或第三方内存；失败保持输出不变。
 - 错误由示例私有 `load_error` 与可选诊断文本返回，区分非法 GLB、截断数据、
   越界 Accessor、不支持 Feature、图片解码失败、数值溢出与内存不足。

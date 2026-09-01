@@ -133,6 +133,18 @@ if(GRANIT_BUILD_BACKEND_WEBGPU)
   if(NOT GRANIT_DAWN_LIBRARY_TYPE STREQUAL "STATIC_LIBRARY")
     message(FATAL_ERROR "WebGPU 插件要求 dawn::webgpu_dawn 为静态库")
   endif()
+  if(WIN32 AND CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND
+     CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "GNU")
+    get_target_property(granit_dawn_link_libraries dawn::webgpu_dawn INTERFACE_LINK_LIBRARIES)
+    if(granit_dawn_link_libraries)
+      # Dawn 的 Windows 静态包可能导出 MSVC/LINK 专用选项，GNU 风格 Clang 无法解析。
+      list(REMOVE_ITEM granit_dawn_link_libraries "$<LINK_ONLY:-ignore:4221>")
+      set_property(
+        TARGET dawn::webgpu_dawn PROPERTY INTERFACE_LINK_LIBRARIES
+                                            "${granit_dawn_link_libraries}"
+      )
+    endif()
+  endif()
 endif()
 
 if(GRANIT_BUILD_INTEGRATION_SDL3)

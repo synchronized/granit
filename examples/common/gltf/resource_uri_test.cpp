@@ -282,4 +282,29 @@ TEST_CASE("glTF Loader 区分资源和数据错误", "[example][gltf][loader][er
     CHECK(granit::example::gltf::load(bytes(document), nullptr, scene).error ==
           granit::example::gltf::load_error::unsupported_feature);
   }
+
+  SECTION("可选 Transmission 使用核心 PBR 回退") {
+    constexpr std::string_view document = R"({
+      "asset":{"version":"2.0"},"extensionsUsed":["KHR_materials_transmission"],
+      "materials":[{"extensions":{"KHR_materials_transmission":{"transmissionFactor":1.0}},
+                    "pbrMetallicRoughness":{"metallicFactor":0.2}}]
+    })";
+    granit::example::gltf::scene scene;
+    const auto result = granit::example::gltf::load(bytes(document), nullptr, scene);
+    REQUIRE(result);
+    REQUIRE(scene.materials.size() == 1);
+    CHECK(scene.materials.front().metallic == Catch::Approx(0.2F));
+  }
+
+  SECTION("拒绝必需 Transmission") {
+    constexpr std::string_view document = R"({
+      "asset":{"version":"2.0"},
+      "extensionsUsed":["KHR_materials_transmission"],
+      "extensionsRequired":["KHR_materials_transmission"],
+      "materials":[{"extensions":{"KHR_materials_transmission":{"transmissionFactor":1.0}}}]
+    })";
+    granit::example::gltf::scene scene;
+    CHECK(granit::example::gltf::load(bytes(document), nullptr, scene).error ==
+          granit::example::gltf::load_error::unsupported_feature);
+  }
 }
