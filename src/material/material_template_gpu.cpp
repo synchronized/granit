@@ -74,9 +74,9 @@ material_template_gpu::initialize(granit_renderer renderer, const material_packa
     return GRANIT_ERROR_OUT_OF_MEMORY;
   }
 
-  const granit_bind_group_layout_entry frame_entry{
-      0, GRANIT_BINDING_TYPE_UNIFORM_BUFFER, 1,
-      GRANIT_SHADER_STAGE_VERTEX_BIT | GRANIT_SHADER_STAGE_FRAGMENT_BIT};
+  const granit_bind_group_layout_entry frame_entry{0, GRANIT_BINDING_TYPE_DYNAMIC_UNIFORM_BUFFER, 1,
+                                                   GRANIT_SHADER_STAGE_VERTEX_BIT |
+                                                       GRANIT_SHADER_STAGE_FRAGMENT_BIT};
   granit_bind_group_layout_desc frame_desc = GRANIT_BIND_GROUP_LAYOUT_DESC_INIT;
   frame_desc.entry_count = 1;
   frame_desc.entries = &frame_entry;

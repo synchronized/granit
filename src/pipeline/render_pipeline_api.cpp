@@ -265,10 +265,14 @@ record_opaque_draws(pipeline_state& state, granit_command_recorder recorder,
                                                               material.pipeline);
     const std::array groups{cached.bindings.frame_group(), material.material_group,
                             cached.bindings.object_group(), cached.lighting.group()};
+    constexpr std::array<uint32_t, 2> dynamic_offsets{0, 0};
     if (result == GRANIT_SUCCESS) {
-      const granit_bind_groups_desc bind_desc{
-          GRANIT_BIND_GROUPS_DESC_VERSION_1_SIZE, 0, groups.data(),
-          static_cast<uint32_t>(groups.size()),   0, nullptr};
+      const granit_bind_groups_desc bind_desc{GRANIT_BIND_GROUPS_DESC_VERSION_1_SIZE,
+                                              0,
+                                              groups.data(),
+                                              static_cast<uint32_t>(groups.size()),
+                                              static_cast<uint32_t>(dynamic_offsets.size()),
+                                              dynamic_offsets.data()};
       result = granit_command_recorder_bind_graphics_groups(state.renderer, recorder,
                                                             material.pipeline_layout, &bind_desc);
     }
@@ -420,10 +424,14 @@ granit_result record_shadow_draws(pipeline_state& state, granit_command_recorder
     if (result != GRANIT_SUCCESS)
       break;
     const std::array groups{cached.bindings.object_group(), cached.lighting.group()};
+    constexpr std::array<uint32_t, 1> dynamic_offsets{0};
     if (result == GRANIT_SUCCESS) {
-      const granit_bind_groups_desc bind_desc{
-          GRANIT_BIND_GROUPS_DESC_VERSION_1_SIZE, 2, groups.data(),
-          static_cast<uint32_t>(groups.size()),   0, nullptr};
+      const granit_bind_groups_desc bind_desc{GRANIT_BIND_GROUPS_DESC_VERSION_1_SIZE,
+                                              2,
+                                              groups.data(),
+                                              static_cast<uint32_t>(groups.size()),
+                                              static_cast<uint32_t>(dynamic_offsets.size()),
+                                              dynamic_offsets.data()};
       result = granit_command_recorder_bind_graphics_groups(state.renderer, recorder,
                                                             material.pipeline_layout, &bind_desc);
     }

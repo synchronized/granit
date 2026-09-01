@@ -83,10 +83,14 @@ granit_result record_canvas_pass(granit_renderer renderer, granit_command_record
   const auto first_material_group =
       batch_material_groups.empty() ? GRANIT_NULL_HANDLE : batch_material_groups.front();
   const std::array groups{bindings.frame_group(), first_material_group, bindings.object_group()};
+  constexpr std::array<std::uint32_t, 2> dynamic_offsets{0, 0};
   if (result == GRANIT_SUCCESS) {
-    const granit_bind_groups_desc bind_desc{
-        GRANIT_BIND_GROUPS_DESC_VERSION_1_SIZE,    0, groups.data(),
-        static_cast<std::uint32_t>(groups.size()), 0, nullptr};
+    const granit_bind_groups_desc bind_desc{GRANIT_BIND_GROUPS_DESC_VERSION_1_SIZE,
+                                            0,
+                                            groups.data(),
+                                            static_cast<std::uint32_t>(groups.size()),
+                                            static_cast<std::uint32_t>(dynamic_offsets.size()),
+                                            dynamic_offsets.data()};
     result = granit_command_recorder_bind_graphics_groups(renderer, recorder,
                                                           material.pipeline_layout, &bind_desc);
   }
