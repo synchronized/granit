@@ -121,8 +121,8 @@ std::shared_ptr<pipeline_state> find_pipeline(granit_renderer renderer,
 granit_result validate_renderer(granit_renderer renderer) {
   if (renderer == GRANIT_NULL_HANDLE)
     return GRANIT_ERROR_INVALID_HANDLE;
-  uint64_t size = 0;
-  return granit_renderer_pipeline_cache_export(renderer, nullptr, &size);
+  granit_renderer_status status = GRANIT_RENDERER_STATUS_INIT;
+  return granit_renderer_get_status(renderer, &status);
 }
 
 granit_texture_desc make_depth_desc(uint32_t width, uint32_t height) {

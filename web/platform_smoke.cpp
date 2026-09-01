@@ -13,6 +13,7 @@
 #include <emscripten/emscripten.h>
 #include <emscripten/html5.h>
 
+#include <granit/pipeline/render_pipeline.h>
 #include <granit/renderer/buffer.hpp>
 #include <granit/renderer/command_recorder.hpp>
 #include <granit/renderer/pipeline.hpp>
@@ -23,9 +24,9 @@
 #include <granit/renderer/swapchain.h>
 #include <granit/renderer/texture.hpp>
 
+#include "model_viewer/application_core.h"
 #include "model_viewer_fetch.h"
 #include "resource_fetch_batch.h"
-#include "model_viewer/application_core.h"
 #include "support/renderer_fixture.h"
 
 namespace {
@@ -546,8 +547,7 @@ void tick(void*) noexcept {
     }
 
     const auto batch_status = state.resource_batch.status();
-    if (batch_status ==
-        granit::example::model_viewer::web::resource_fetch_batch_status::failed) {
+    if (batch_status == granit::example::model_viewer::web::resource_fetch_batch_status::failed) {
       fail("asset-resource-fetch");
       return;
     }
@@ -596,6 +596,19 @@ void tick(void*) noexcept {
     return;
   }
   try {
+    granit_render_pipeline pipeline{};
+    const granit_render_pipeline_desc pipeline_desc = GRANIT_RENDER_PIPELINE_DESC_INIT;
+    const auto pipeline_result =
+        granit_render_pipeline_create(state.renderer, &pipeline_desc, &pipeline);
+    if (pipeline_result != GRANIT_SUCCESS) {
+      fail("pipeline-create", pipeline_result);
+      return;
+    }
+    const auto pipeline_destroy_result = granit_render_pipeline_destroy(state.renderer, pipeline);
+    if (pipeline_destroy_result != GRANIT_SUCCESS) {
+      fail("pipeline-destroy", pipeline_destroy_result);
+      return;
+    }
     const auto result = create_presentation_resources();
     if (result != GRANIT_SUCCESS) {
       fail("presentation-create", result);
