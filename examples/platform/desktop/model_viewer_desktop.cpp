@@ -18,6 +18,7 @@
 #include <granit/pipeline/canvas_draw_list.hpp>
 #include <granit/pipeline/render_pipeline.hpp>
 
+#include <chrono>
 #include <cstddef>
 #include <cstdint>
 #include <filesystem>
@@ -215,6 +216,14 @@ int main(int argc, char** argv) {
   const granit_render_pipeline_desc pipeline_desc = GRANIT_RENDER_PIPELINE_DESC_INIT;
   if (granit::succeeded(result))
     result = pipeline.initialize(renderer.native_handle(), pipeline_desc);
+  bool gpu_metrics_enabled = false;
+  if (granit::succeeded(result)) {
+    const auto metrics_result = pipeline.enable_metrics();
+    if (metrics_result == granit::result::success)
+      gpu_metrics_enabled = true;
+    else if (metrics_result != granit::result::unsupported)
+      result = metrics_result;
+  }
   if (granit::succeeded(result))
     result = upload_font_atlas(renderer.native_handle(), font_texture, font_view, font_sampler);
   ImTextureID font_texture_id = ImTextureID_Invalid;
@@ -274,7 +283,10 @@ int main(int argc, char** argv) {
   bool running = true;
   bool recreate = false;
   std::uint32_t rendered_frames = 0;
+  performance_sample latest_sample;
+  bool has_pending_sample = false;
   while (running) {
+    const auto cpu_begin = std::chrono::steady_clock::now();
     input_adapter.begin_frame();
     SDL_Event event{};
     while (SDL_PollEvent(&event)) {
@@ -315,8 +327,14 @@ int main(int argc, char** argv) {
         .width = swapchain_info.width,
         .height = swapchain_info.height,
         .frame_slots = GRANIT_DEFAULT_FRAMES_IN_FLIGHT};
-    const performance_panel_info panel_performance{.frames_per_second = ImGui::GetIO().Framerate,
-                                                   .history = core.performance().summarize()};
+    const performance_panel_info panel_performance{
+        .frames_per_second = latest_sample.frames_per_second,
+        .cpu_frame_ms = latest_sample.cpu_frame_ms,
+        .frame_slot_wait_ms = latest_sample.frame_slot_wait_ms,
+        .present_wait_ms = latest_sample.present_wait_ms,
+        .gpu_frame_ms = latest_sample.gpu_frame_ms,
+        .gpu_timing_available = latest_sample.gpu_timing_available,
+        .history = core.performance().summarize()};
     const auto changes = draw_viewer_panels(core.cpu_scene(), core.state(), panel_renderer,
                                             panel_performance, previews);
     ImGui::Render();
@@ -329,7 +347,11 @@ int main(int argc, char** argv) {
       break;
 
     granit::acquired_frame frame;
+    const auto acquire_begin = std::chrono::steady_clock::now();
     result = swapchain.acquire(frame);
+    const auto acquire_ms =
+        std::chrono::duration<float, std::milli>(std::chrono::steady_clock::now() - acquire_begin)
+            .count();
     if (result == granit::result::out_of_date) {
       result = granit::result::success;
       recreate = true;
@@ -348,6 +370,8 @@ int main(int argc, char** argv) {
     tick_input.change = changes.state;
     tick_input.width = swapchain_info.width;
     tick_input.height = swapchain_info.height;
+    if (has_pending_sample)
+      tick_input.performance = latest_sample;
     if (granit::succeeded(result))
       result = core.tick(tick_input, tick_output);
     if (granit::succeeded(result)) {
@@ -364,8 +388,12 @@ int main(int argc, char** argv) {
       tick_output.render.canvas = canvas.native_handle();
       result = pipeline.render(tick_output.render);
     }
+    const auto present_begin = std::chrono::steady_clock::now();
     if (granit::succeeded(result))
       result = swapchain.present(frame);
+    const auto present_ms =
+        std::chrono::duration<float, std::milli>(std::chrono::steady_clock::now() - present_begin)
+            .count();
     recreate = recreate || frame.needs_recreate;
     if (result == granit::result::out_of_date) {
       result = granit::result::success;
@@ -374,6 +402,28 @@ int main(int argc, char** argv) {
     }
     if (granit::failed(result))
       break;
+    float gpu_frame_ms = 0.0F;
+    bool gpu_timing_available = false;
+    if (gpu_metrics_enabled) {
+      granit_render_pipeline_metrics metrics = GRANIT_RENDER_PIPELINE_METRICS_INIT;
+      const auto metrics_result = pipeline.get_metrics(metrics);
+      if (metrics_result == granit::result::success) {
+        gpu_frame_ms = static_cast<float>(metrics.total_gpu_ns) / 1'000'000.0F;
+        gpu_timing_available = true;
+      } else if (metrics_result == granit::result::unsupported) {
+        gpu_metrics_enabled = false;
+      }
+    }
+    const auto cpu_ms =
+        std::chrono::duration<float, std::milli>(std::chrono::steady_clock::now() - cpu_begin)
+            .count();
+    latest_sample = {.frames_per_second = cpu_ms > 0.0F ? 1000.0F / cpu_ms : 0.0F,
+                     .cpu_frame_ms = cpu_ms,
+                     .frame_slot_wait_ms = acquire_ms,
+                     .present_wait_ms = present_ms,
+                     .gpu_frame_ms = gpu_frame_ms,
+                     .gpu_timing_available = gpu_timing_available};
+    has_pending_sample = true;
     ++rendered_frames;
     if (options.smoke_test && rendered_frames >= 3)
       break;

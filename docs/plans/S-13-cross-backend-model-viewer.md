@@ -284,7 +284,9 @@ SDL3 输入适配已完成第一阶段：平台事件按帧累积为 `viewer_inp
 完成帧循环和 Out Of Date 重建。桌面入口已叠加 ImGui 五类面板、字体 Atlas、Canvas Draw Data
 转换、捕获标志和事务式材质修改；Texture ID 继续经过 generation 注册表解析，不向 Draw Data
 暴露 GPU 句柄。材质纹理缩略图已按 Image、Sampler 与 sRGB/线性变体查询 GPU Scene 的实际绑定，
-再注册为安全 Texture ID。Surface Lost/Device Lost 专项恢复及真实资产 Smoke 仍待接入。
+再注册为安全 Texture ID。桌面帧循环已采集 CPU 整帧、Acquire/帧槽等待、Present 等待，并读取
+Render Pipeline 延迟 GPU Timestamp；`NOT_READY/UNSUPPORTED` 不会伪造零值或中断渲染。
+Surface Lost/Device Lost 专项恢复及真实资产 Smoke 仍待接入。
 
 三个运行配置如下：
 
