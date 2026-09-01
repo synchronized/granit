@@ -55,6 +55,7 @@ struct webgpu_instance {
     std::uint32_t height;
     granit_backend_plugin_texture_format format;
     std::uint32_t mip_level_count;
+    std::uint32_t array_layer_count;
     granit_backend_plugin_texture_usage usage;
     bool borrowed;
   };
@@ -985,6 +986,8 @@ WGPUTextureFormat to_native_texture_format(granit_backend_plugin_texture_format 
     return WGPUTextureFormat_RGBA8UnormSrgb;
   case GRANIT_BACKEND_PLUGIN_TEXTURE_FORMAT_D32_FLOAT:
     return WGPUTextureFormat_Depth32Float;
+  case GRANIT_BACKEND_PLUGIN_TEXTURE_FORMAT_RGBA16_FLOAT:
+    return WGPUTextureFormat_RGBA16Float;
   default:
     return WGPUTextureFormat_Undefined;
   }
@@ -1024,6 +1027,8 @@ std::uint32_t texture_bytes_per_pixel(granit_backend_plugin_texture_format forma
   case GRANIT_BACKEND_PLUGIN_TEXTURE_FORMAT_RGBA8_SRGB:
   case GRANIT_BACKEND_PLUGIN_TEXTURE_FORMAT_D32_FLOAT:
     return 4;
+  case GRANIT_BACKEND_PLUGIN_TEXTURE_FORMAT_RGBA16_FLOAT:
+    return 8;
   default:
     return 0;
   }
@@ -1039,10 +1044,18 @@ granit_result create_texture(granit_backend_plugin_instance instance,
   if (out_texture != nullptr) {
     *out_texture = 0;
   }
+  const auto dimension = desc != nullptr && desc->dimension != 0
+                             ? desc->dimension
+                             : GRANIT_BACKEND_PLUGIN_TEXTURE_DIMENSION_2D;
+  const auto array_layer_count =
+      desc != nullptr && desc->array_layer_count != 0 ? desc->array_layer_count : 1;
   if (instance == 0 || desc == nullptr || out_texture == nullptr ||
       desc->struct_size < sizeof(granit_backend_plugin_texture_desc) || desc->reserved != 0 ||
-      desc->reserved_flags != 0 || desc->width == 0 || desc->height == 0 || desc->usage == 0 ||
-      desc->mip_level_count == 0 ||
+      desc->width == 0 || desc->height == 0 || desc->usage == 0 || desc->mip_level_count == 0 ||
+      (dimension != GRANIT_BACKEND_PLUGIN_TEXTURE_DIMENSION_2D &&
+       dimension != GRANIT_BACKEND_PLUGIN_TEXTURE_DIMENSION_CUBE) ||
+      (dimension == GRANIT_BACKEND_PLUGIN_TEXTURE_DIMENSION_CUBE &&
+       (desc->width != desc->height || array_layer_count != 6)) ||
       to_native_texture_format(desc->format) == WGPUTextureFormat_Undefined ||
       (desc->usage & ~known_usage) != 0) {
     return GRANIT_ERROR_INVALID_ARGUMENT;
@@ -1071,7 +1084,7 @@ granit_result create_texture(granit_backend_plugin_instance instance,
   WGPUTextureDescriptor descriptor = WGPU_TEXTURE_DESCRIPTOR_INIT;
   descriptor.usage = usage;
   descriptor.dimension = WGPUTextureDimension_2D;
-  descriptor.size = {desc->width, desc->height, 1};
+  descriptor.size = {desc->width, desc->height, array_layer_count};
   descriptor.format = to_native_texture_format(desc->format);
   descriptor.mipLevelCount = desc->mip_level_count;
   descriptor.sampleCount = 1;
@@ -1084,7 +1097,8 @@ granit_result create_texture(granit_backend_plugin_instance instance,
     if (!state.textures
              .emplace(handle, webgpu_instance::texture_record{native, desc->width, desc->height,
                                                               desc->format, desc->mip_level_count,
-                                                              desc->usage, false})
+                                                              array_layer_count, desc->usage,
+                                                              false})
              .second) {
       wgpuTextureRelease(native);
       return GRANIT_ERROR_INTERNAL;
@@ -1127,9 +1141,11 @@ granit_result write_texture(granit_backend_plugin_instance instance,
                             granit_backend_plugin_texture texture,
                             const granit_backend_plugin_texture_write_desc* desc, const void* data,
                             std::uint64_t size) noexcept {
+  const auto array_layer_count =
+      desc != nullptr && desc->array_layer_count != 0 ? desc->array_layer_count : 1;
   if (instance == 0 || texture == 0 || desc == nullptr || data == nullptr || size == 0 ||
       desc->struct_size < sizeof(granit_backend_plugin_texture_write_desc) ||
-      desc->reserved[0] != 0 || desc->reserved[1] != 0 || desc->width == 0 || desc->height == 0)
+      desc->width == 0 || desc->height == 0)
     return GRANIT_ERROR_INVALID_ARGUMENT;
   const std::scoped_lock lock{instances_mutex};
   const auto found = instances.find(instance);
@@ -1143,7 +1159,9 @@ granit_result write_texture(granit_backend_plugin_instance instance,
   const auto& record = texture_found->second;
   if (record.borrowed || (record.usage & GRANIT_BACKEND_PLUGIN_TEXTURE_USAGE_COPY_DST_BIT) == 0)
     return GRANIT_ERROR_INVALID_ARGUMENT;
-  if (desc->mip_level >= record.mip_level_count)
+  if (desc->mip_level >= record.mip_level_count ||
+      desc->base_array_layer >= record.array_layer_count ||
+      array_layer_count > record.array_layer_count - desc->base_array_layer)
     return GRANIT_ERROR_INVALID_ARGUMENT;
   const auto mip_width = std::max(UINT32_C(1), record.width >> desc->mip_level);
   const auto mip_height = std::max(UINT32_C(1), record.height >> desc->mip_level);
@@ -1157,19 +1175,22 @@ granit_result write_texture(granit_backend_plugin_instance instance,
   if (row_pitch < tight_row || rows < desc->height ||
       row_pitch > std::numeric_limits<std::uint32_t>::max())
     return GRANIT_ERROR_INVALID_ARGUMENT;
-  const std::uint64_t required = (std::uint64_t{desc->height} - 1) * row_pitch + tight_row;
+  const std::uint64_t image_pitch = rows * row_pitch;
+  const std::uint64_t required =
+      (std::uint64_t{array_layer_count} - 1) * image_pitch +
+      (std::uint64_t{desc->height} - 1) * row_pitch + tight_row;
   if (required > size || size > std::numeric_limits<std::size_t>::max())
     return GRANIT_ERROR_INVALID_ARGUMENT;
   WGPUTexelCopyTextureInfo destination = WGPU_TEXEL_COPY_TEXTURE_INFO_INIT;
   destination.texture = record.texture;
   destination.mipLevel = desc->mip_level;
-  destination.origin = {desc->x, desc->y, 0};
+  destination.origin = {desc->x, desc->y, desc->base_array_layer};
   destination.aspect = WGPUTextureAspect_All;
   WGPUTexelCopyBufferLayout layout{};
   layout.offset = 0;
   layout.bytesPerRow = static_cast<std::uint32_t>(row_pitch);
   layout.rowsPerImage = static_cast<std::uint32_t>(rows);
-  const WGPUExtent3D extent{desc->width, desc->height, 1};
+  const WGPUExtent3D extent{desc->width, desc->height, array_layer_count};
   wgpuQueueWriteTexture(found->second->queue, &destination, data, static_cast<std::size_t>(size),
                         &layout, &extent);
   return GRANIT_SUCCESS;
@@ -1213,14 +1234,17 @@ granit_result write_upload_batch(granit_backend_plugin_instance instance,
       return GRANIT_ERROR_INVALID_ARGUMENT;
     const auto& desc = operation.texture_write;
     if (desc.struct_size < sizeof(granit_backend_plugin_texture_write_desc) ||
-        desc.reserved[0] != 0 || desc.reserved[1] != 0 || desc.width == 0 || desc.height == 0)
+        desc.width == 0 || desc.height == 0)
       return GRANIT_ERROR_INVALID_ARGUMENT;
     const auto texture = state.textures.find(operation.texture);
     if (texture == state.textures.end())
       return GRANIT_ERROR_INVALID_HANDLE;
     const auto& record = texture->second;
+    const auto array_layer_count = desc.array_layer_count == 0 ? 1 : desc.array_layer_count;
     if (record.borrowed || (record.usage & GRANIT_BACKEND_PLUGIN_TEXTURE_USAGE_COPY_DST_BIT) == 0 ||
-        desc.mip_level >= record.mip_level_count)
+        desc.mip_level >= record.mip_level_count ||
+        desc.base_array_layer >= record.array_layer_count ||
+        array_layer_count > record.array_layer_count - desc.base_array_layer)
       return GRANIT_ERROR_INVALID_ARGUMENT;
     const auto mip_width = std::max(UINT32_C(1), record.width >> desc.mip_level);
     const auto mip_height = std::max(UINT32_C(1), record.height >> desc.mip_level);
@@ -1234,7 +1258,10 @@ granit_result write_upload_batch(granit_backend_plugin_instance instance,
     if (row_pitch < tight_row || rows < desc.height ||
         row_pitch > std::numeric_limits<std::uint32_t>::max())
       return GRANIT_ERROR_INVALID_ARGUMENT;
-    const std::uint64_t required = (std::uint64_t{desc.height} - 1) * row_pitch + tight_row;
+    const std::uint64_t image_pitch = rows * row_pitch;
+    const std::uint64_t required =
+        (std::uint64_t{array_layer_count} - 1) * image_pitch +
+        (std::uint64_t{desc.height} - 1) * row_pitch + tight_row;
     if (required > operation.size)
       return GRANIT_ERROR_INVALID_ARGUMENT;
   }
@@ -1254,15 +1281,16 @@ granit_result write_upload_batch(granit_backend_plugin_instance instance,
     const auto row_pitch =
         static_cast<std::uint32_t>(desc.bytes_per_row == 0 ? tight_row : desc.bytes_per_row);
     const auto rows = desc.rows_per_image == 0 ? desc.height : desc.rows_per_image;
+    const auto array_layer_count = desc.array_layer_count == 0 ? 1 : desc.array_layer_count;
     WGPUTexelCopyTextureInfo destination = WGPU_TEXEL_COPY_TEXTURE_INFO_INIT;
     destination.texture = texture.texture;
     destination.mipLevel = desc.mip_level;
-    destination.origin = {desc.x, desc.y, 0};
+    destination.origin = {desc.x, desc.y, desc.base_array_layer};
     destination.aspect = WGPUTextureAspect_All;
     WGPUTexelCopyBufferLayout layout{};
     layout.bytesPerRow = row_pitch;
     layout.rowsPerImage = rows;
-    const WGPUExtent3D extent{desc.width, desc.height, 1};
+    const WGPUExtent3D extent{desc.width, desc.height, array_layer_count};
     wgpuQueueWriteTexture(state.queue, &destination, operation.data,
                           static_cast<std::size_t>(operation.size), &layout, &extent);
   }
@@ -1275,9 +1303,16 @@ granit_result create_texture_view(granit_backend_plugin_instance instance,
                                   granit_backend_plugin_texture_view* out_view) noexcept {
   if (out_view != nullptr)
     *out_view = 0;
+  const auto dimension = desc != nullptr && desc->dimension != 0
+                             ? desc->dimension
+                             : GRANIT_BACKEND_PLUGIN_TEXTURE_DIMENSION_2D;
+  const auto array_layer_count =
+      desc != nullptr && desc->array_layer_count != 0 ? desc->array_layer_count : 1;
   if (instance == 0 || texture == 0 || desc == nullptr || out_view == nullptr ||
       desc->struct_size < sizeof(granit_backend_plugin_texture_view_desc) ||
-      desc->reserved[0] != 0 || desc->reserved[1] != 0 || desc->mip_level_count == 0)
+      desc->mip_level_count == 0 ||
+      (dimension != GRANIT_BACKEND_PLUGIN_TEXTURE_DIMENSION_2D &&
+       dimension != GRANIT_BACKEND_PLUGIN_TEXTURE_DIMENSION_CUBE))
     return GRANIT_ERROR_INVALID_ARGUMENT;
   const std::scoped_lock lock{instances_mutex};
   const auto found = instances.find(instance);
@@ -1291,15 +1326,21 @@ granit_result create_texture_view(granit_backend_plugin_instance instance,
     return GRANIT_ERROR_INVALID_HANDLE;
   if (desc->format != texture_found->second.format ||
       desc->base_mip_level >= texture_found->second.mip_level_count ||
-      desc->mip_level_count > texture_found->second.mip_level_count - desc->base_mip_level)
+      desc->mip_level_count > texture_found->second.mip_level_count - desc->base_mip_level ||
+      desc->base_array_layer >= texture_found->second.array_layer_count ||
+      array_layer_count >
+          texture_found->second.array_layer_count - desc->base_array_layer ||
+      (dimension == GRANIT_BACKEND_PLUGIN_TEXTURE_DIMENSION_CUBE && array_layer_count != 6))
     return GRANIT_ERROR_INVALID_ARGUMENT;
   WGPUTextureViewDescriptor descriptor = WGPU_TEXTURE_VIEW_DESCRIPTOR_INIT;
   descriptor.format = to_native_texture_format(desc->format);
-  descriptor.dimension = WGPUTextureViewDimension_2D;
+  descriptor.dimension = dimension == GRANIT_BACKEND_PLUGIN_TEXTURE_DIMENSION_CUBE
+                             ? WGPUTextureViewDimension_Cube
+                             : WGPUTextureViewDimension_2D;
   descriptor.baseMipLevel = desc->base_mip_level;
   descriptor.mipLevelCount = desc->mip_level_count;
-  descriptor.baseArrayLayer = 0;
-  descriptor.arrayLayerCount = 1;
+  descriptor.baseArrayLayer = desc->base_array_layer;
+  descriptor.arrayLayerCount = array_layer_count;
   descriptor.aspect = WGPUTextureAspect_All;
   const auto native = wgpuTextureCreateView(texture_found->second.texture, &descriptor);
   if (native == nullptr)
@@ -3204,7 +3245,7 @@ granit_result acquire_swapchain(granit_backend_plugin_instance instance,
     found->second->textures.emplace(
         texture, webgpu_instance::texture_record{
                      acquired.texture, swapchain_found->second.info.width,
-                     swapchain_found->second.info.height, swapchain_found->second.info.format, 1,
+                     swapchain_found->second.info.height, swapchain_found->second.info.format, 1, 1,
                      GRANIT_BACKEND_PLUGIN_TEXTURE_USAGE_RENDER_ATTACHMENT_BIT, true});
     found->second->texture_views.emplace(
         view, webgpu_instance::texture_view_record{native_view, texture, true});

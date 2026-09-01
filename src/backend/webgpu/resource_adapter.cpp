@@ -118,6 +118,8 @@ granit_backend_plugin_texture_format to_format(granit_texture_format format) noe
     return GRANIT_BACKEND_PLUGIN_TEXTURE_FORMAT_RGBA8_UNORM;
   case GRANIT_TEXTURE_FORMAT_RGBA8_SRGB:
     return GRANIT_BACKEND_PLUGIN_TEXTURE_FORMAT_RGBA8_SRGB;
+  case GRANIT_TEXTURE_FORMAT_RGBA16_FLOAT:
+    return GRANIT_BACKEND_PLUGIN_TEXTURE_FORMAT_RGBA16_FLOAT;
   case GRANIT_TEXTURE_FORMAT_D32_FLOAT:
     return GRANIT_BACKEND_PLUGIN_TEXTURE_FORMAT_D32_FLOAT;
   default:
@@ -135,6 +137,8 @@ std::uint32_t bytes_per_pixel(granit_texture_format format) noexcept {
   case GRANIT_TEXTURE_FORMAT_RGBA8_SRGB:
   case GRANIT_TEXTURE_FORMAT_D32_FLOAT:
     return 4;
+  case GRANIT_TEXTURE_FORMAT_RGBA16_FLOAT:
+    return 8;
   default:
     return 0;
   }
@@ -295,7 +299,8 @@ granit_result webgpu_resource_adapter::upload_batch(
             copy.height,
             copy.buffer_row_length == 0 ? 0 : copy.buffer_row_length * pixel_size,
             copy.buffer_image_height,
-            {0, 0}};
+            copy.base_array_layer,
+            copy.array_layer_count};
       } else {
         return GRANIT_ERROR_INVALID_ARGUMENT;
       }
@@ -326,11 +331,16 @@ webgpu_resource_adapter::create_texture(const granit_texture_desc& desc,
   const auto format = to_format(desc.format);
   const auto usage = to_usage(desc.usage);
   if (texture == nullptr || texture->handle_ != 0 || format == 0 || usage == 0 ||
-      desc.dimension != GRANIT_TEXTURE_DIMENSION_2D || desc.depth != 1 || desc.array_layers != 1 ||
-      desc.sample_count != GRANIT_SAMPLE_COUNT_1)
+      (desc.dimension != GRANIT_TEXTURE_DIMENSION_2D &&
+       desc.dimension != GRANIT_TEXTURE_DIMENSION_CUBE) ||
+      desc.depth != 1 || desc.sample_count != GRANIT_SAMPLE_COUNT_1)
     return GRANIT_ERROR_UNSUPPORTED;
   const granit_backend_plugin_texture_desc plugin_desc{
-      sizeof(plugin_desc), 0, desc.width, desc.height, usage, format, desc.mip_levels, 0};
+      sizeof(plugin_desc), 0, desc.width, desc.height, usage, format, desc.mip_levels,
+      desc.dimension == GRANIT_TEXTURE_DIMENSION_CUBE
+          ? GRANIT_BACKEND_PLUGIN_TEXTURE_DIMENSION_CUBE
+          : GRANIT_BACKEND_PLUGIN_TEXTURE_DIMENSION_2D,
+      desc.array_layers};
   const auto result =
       context_->loader->create_texture(context_->instance, &plugin_desc, &texture->handle_);
   if (result == GRANIT_SUCCESS)
@@ -361,7 +371,8 @@ webgpu_resource_adapter::upload_texture(backend_texture_resource& resource, cons
       region.height,
       layout.bytes_per_row,
       layout.rows_per_image,
-      {0, 0}};
+      region.base_array_layer,
+      region.array_layer_count};
   return context_->loader->write_texture(context_->instance, texture->handle_, &desc, data, size);
 }
 
@@ -381,11 +392,15 @@ granit_result webgpu_resource_adapter::create_texture_view(
                              ? texture_desc.mip_levels - desc.range.base_mip_level
                              : desc.range.mip_level_count;
   if (native_texture == nullptr || view == nullptr || view->handle_ != 0 || format == 0 ||
-      desc.dimension != GRANIT_TEXTURE_DIMENSION_2D || desc.range.base_array_layer != 0 ||
-      desc.range.array_layer_count != 1)
+      (desc.dimension != GRANIT_TEXTURE_DIMENSION_2D &&
+       desc.dimension != GRANIT_TEXTURE_DIMENSION_CUBE))
     return GRANIT_ERROR_UNSUPPORTED;
   const granit_backend_plugin_texture_view_desc plugin_desc{
-      sizeof(plugin_desc), format, desc.range.base_mip_level, mip_count, {0, 0}};
+      sizeof(plugin_desc), format, desc.range.base_mip_level, mip_count,
+      desc.dimension == GRANIT_TEXTURE_DIMENSION_CUBE
+          ? GRANIT_BACKEND_PLUGIN_TEXTURE_DIMENSION_CUBE
+          : GRANIT_BACKEND_PLUGIN_TEXTURE_DIMENSION_2D,
+      desc.range.base_array_layer, desc.range.array_layer_count};
   return context_->loader->create_texture_view(context_->instance, native_texture->handle_,
                                                &plugin_desc, &view->handle_);
 }

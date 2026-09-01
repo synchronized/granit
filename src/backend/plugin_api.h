@@ -108,7 +108,10 @@ typedef uint32_t granit_backend_plugin_texture_usage;
 
 typedef uint32_t granit_backend_plugin_texture_format;
 
-/** S-12D 首轮支持二维、单层、单采样纹理及多个 mip。 */
+typedef uint32_t granit_backend_plugin_texture_dimension;
+#define GRANIT_BACKEND_PLUGIN_TEXTURE_DIMENSION_2D UINT32_C(1)
+#define GRANIT_BACKEND_PLUGIN_TEXTURE_DIMENSION_CUBE UINT32_C(2)
+
 typedef struct granit_backend_plugin_texture_desc {
   uint32_t struct_size;
   uint32_t reserved;
@@ -117,7 +120,8 @@ typedef struct granit_backend_plugin_texture_desc {
   granit_backend_plugin_texture_usage usage;
   granit_backend_plugin_texture_format format;
   uint32_t mip_level_count;
-  uint32_t reserved_flags;
+  granit_backend_plugin_texture_dimension dimension;
+  uint32_t array_layer_count;
 } granit_backend_plugin_texture_desc;
 
 typedef struct granit_backend_plugin_texture_view_desc {
@@ -125,7 +129,9 @@ typedef struct granit_backend_plugin_texture_view_desc {
   granit_backend_plugin_texture_format format;
   uint32_t base_mip_level;
   uint32_t mip_level_count;
-  uint32_t reserved[2];
+  granit_backend_plugin_texture_dimension dimension;
+  uint32_t base_array_layer;
+  uint32_t array_layer_count;
 } granit_backend_plugin_texture_view_desc;
 
 /** 数据指针从首个有效字节开始；行跨度为零表示按写入宽度紧密排列。 */
@@ -138,7 +144,8 @@ typedef struct granit_backend_plugin_texture_write_desc {
   uint32_t height;
   uint32_t bytes_per_row;
   uint32_t rows_per_image;
-  uint32_t reserved[2];
+  uint32_t base_array_layer;
+  uint32_t array_layer_count;
 } granit_backend_plugin_texture_write_desc;
 
 typedef uint32_t granit_backend_plugin_upload_type;
@@ -337,6 +344,7 @@ typedef uint32_t granit_backend_plugin_present_mode;
 #define GRANIT_BACKEND_PLUGIN_TEXTURE_FORMAT_RG8_UNORM UINT32_C(4)
 #define GRANIT_BACKEND_PLUGIN_TEXTURE_FORMAT_RGBA8_SRGB UINT32_C(5)
 #define GRANIT_BACKEND_PLUGIN_TEXTURE_FORMAT_D32_FLOAT UINT32_C(6)
+#define GRANIT_BACKEND_PLUGIN_TEXTURE_FORMAT_RGBA16_FLOAT UINT32_C(7)
 
 typedef struct granit_backend_plugin_swapchain_desc {
   uint32_t struct_size;

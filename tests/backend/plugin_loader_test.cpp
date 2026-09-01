@@ -465,7 +465,7 @@ TEST_CASE("WebGPU 插件 Texture、View 与 Sampler 遵守所有权契约", "[ba
   REQUIRE(loader.create_texture(first, &texture_desc, &texture) == GRANIT_SUCCESS);
   REQUIRE(texture != 0);
   const granit_backend_plugin_texture_write_desc write_desc{
-      sizeof(granit_backend_plugin_texture_write_desc), 0, 2, 3, 3, 2, 16, 2, {0, 0}};
+      sizeof(granit_backend_plugin_texture_write_desc), 0, 2, 3, 3, 2, 16, 2, 0, 1};
   const std::array<std::uint8_t, 32> pixels{};
   REQUIRE(loader.write_texture(first, texture, &write_desc, pixels.data(), pixels.size()) ==
           GRANIT_SUCCESS);
@@ -480,7 +480,9 @@ TEST_CASE("WebGPU 插件 Texture、View 与 Sampler 遵守所有权契约", "[ba
       GRANIT_BACKEND_PLUGIN_TEXTURE_FORMAT_RGBA8_UNORM,
       0,
       1,
-      {0, 0}};
+      GRANIT_BACKEND_PLUGIN_TEXTURE_DIMENSION_2D,
+      0,
+      1};
   REQUIRE(loader.create_texture_view(first, texture, &view_desc, &view) == GRANIT_SUCCESS);
   REQUIRE(view != 0);
   granit_backend_plugin_texture_view foreign_view = 123;
@@ -511,6 +513,33 @@ TEST_CASE("WebGPU 插件 Texture、View 与 Sampler 遵守所有权契约", "[ba
   CHECK(loader.destroy_texture_view(first, view) == GRANIT_ERROR_INVALID_HANDLE);
   REQUIRE(loader.destroy_texture(first, texture) == GRANIT_SUCCESS);
   CHECK(loader.destroy_texture(first, texture) == GRANIT_ERROR_INVALID_HANDLE);
+
+  auto cube_desc = texture_desc;
+  cube_desc.width = 4;
+  cube_desc.height = 4;
+  cube_desc.dimension = GRANIT_BACKEND_PLUGIN_TEXTURE_DIMENSION_CUBE;
+  cube_desc.array_layer_count = 6;
+  granit_backend_plugin_texture cube{};
+  REQUIRE(loader.create_texture(first, &cube_desc, &cube) == GRANIT_SUCCESS);
+  const granit_backend_plugin_texture_write_desc cube_write{
+      sizeof(granit_backend_plugin_texture_write_desc), 0, 0, 0, 4, 4, 16, 4, 0, 6};
+  const std::array<std::uint8_t, 4 * 4 * 4 * 6> cube_pixels{};
+  REQUIRE(loader.write_texture(first, cube, &cube_write, cube_pixels.data(), cube_pixels.size()) ==
+          GRANIT_SUCCESS);
+  const granit_backend_plugin_texture_view_desc cube_view_desc{
+      sizeof(granit_backend_plugin_texture_view_desc),
+      GRANIT_BACKEND_PLUGIN_TEXTURE_FORMAT_RGBA8_UNORM,
+      0,
+      1,
+      GRANIT_BACKEND_PLUGIN_TEXTURE_DIMENSION_CUBE,
+      0,
+      6};
+  granit_backend_plugin_texture_view cube_view{};
+  REQUIRE(loader.create_texture_view(first, cube, &cube_view_desc, &cube_view) == GRANIT_SUCCESS);
+  REQUIRE(loader.destroy_texture_view(first, cube_view) == GRANIT_SUCCESS);
+  REQUIRE(loader.destroy_texture(first, cube) == GRANIT_SUCCESS);
+  cube_desc.array_layer_count = 5;
+  CHECK(loader.create_texture(first, &cube_desc, &cube) == GRANIT_ERROR_INVALID_ARGUMENT);
 
   auto invalid_texture = texture_desc;
   invalid_texture.width = 0;
@@ -563,7 +592,9 @@ TEST_CASE("WebGPU 插件绑定与 Pipeline 遵守依赖生命周期", "[backend]
       GRANIT_BACKEND_PLUGIN_TEXTURE_FORMAT_RGBA8_UNORM,
       0,
       1,
-      {0, 0}};
+      GRANIT_BACKEND_PLUGIN_TEXTURE_DIMENSION_2D,
+      0,
+      1};
   REQUIRE(loader.create_texture(first, &texture_desc, &texture) == GRANIT_SUCCESS);
   REQUIRE(loader.create_texture_view(first, texture, &view_desc, &view) == GRANIT_SUCCESS);
   granit_backend_plugin_sampler_desc sampler_desc{};

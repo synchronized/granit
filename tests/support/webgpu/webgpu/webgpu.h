@@ -107,6 +107,7 @@ typedef unsigned int WGPUSurfaceGetCurrentTextureStatus;
 #define WGPUTextureFormat_RGBA8UnormSrgb 19
 #define WGPUTextureFormat_BGRA8Unorm 23
 #define WGPUTextureFormat_Depth32Float 40
+#define WGPUTextureFormat_RGBA16Float 41
 #define WGPUAddressMode_ClampToEdge 1
 #define WGPUAddressMode_Repeat 2
 #define WGPUAddressMode_MirrorRepeat 3
@@ -134,6 +135,7 @@ typedef unsigned int WGPUSurfaceGetCurrentTextureStatus;
 #define WGPUSamplerBindingType_Filtering 2
 #define WGPUTextureSampleType_Float 2
 #define WGPUTextureViewDimension_2D 2
+#define WGPUTextureViewDimension_Cube 5
 #define WGPUSType_ShaderSourceWGSL 6
 #define WGPUColorWriteMask_All 15
 #define WGPUPrimitiveTopology_TriangleList 4
