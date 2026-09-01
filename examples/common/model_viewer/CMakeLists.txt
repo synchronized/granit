@@ -22,4 +22,11 @@ if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
   add_test(
     NAME granit.example.model_viewer_support COMMAND granit_example_model_viewer_support_test
   )
+  if(WIN32)
+    set_tests_properties(
+      granit.example.model_viewer_support
+      PROPERTIES ENVIRONMENT_MODIFICATION
+                 "PATH=path_list_prepend:$<TARGET_FILE_DIR:granit::render_pipeline>"
+    )
+  endif()
 endif()
