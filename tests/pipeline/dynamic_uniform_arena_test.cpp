@@ -5,10 +5,19 @@
 
 #include <catch2/catch_all.hpp>
 
+#include <granit/renderer/renderer.hpp>
+
+#include <array>
 #include <cstdint>
 #include <limits>
+#include <span>
+#include <vector>
 
+using granit::pipeline::detail::dynamic_uniform_arena;
 using granit::pipeline::detail::dynamic_uniform_arena_plan;
+using granit::pipeline::detail::dynamic_uniform_binding;
+using granit::pipeline::detail::dynamic_uniform_request;
+using granit::pipeline::detail::material_draw_state;
 using granit::pipeline::detail::uniform_arena_allocation;
 using granit::pipeline::detail::uniform_arena_error;
 
@@ -60,4 +69,90 @@ TEST_CASE("动态 Uniform Arena 拒绝非法限制和溢出", "[pipeline][unifor
   REQUIRE(arena.allocate(1, unchanged) == uniform_arena_error::none);
   REQUIRE(arena.allocate(1, unchanged) == uniform_arena_error::none);
   CHECK(arena.allocate(1, unchanged) == uniform_arena_error::numeric_overflow);
+}
+
+TEST_CASE("动态 Uniform Arena 隔离帧槽并按批次增长", "[pipeline][uniform-arena][gpu]") {
+  granit::renderer renderer;
+  REQUIRE(renderer.initialize({.application_name = "Granit Uniform Arena Test"}) ==
+          granit::result::success);
+
+  const std::array frame_entries{granit::bind_group_layout_entry{
+      .binding = 0,
+      .type = granit::binding_type::dynamic_uniform_buffer,
+      .array_count = 1,
+      .visibility = granit::shader_stage_flags::vertex | granit::shader_stage_flags::fragment}};
+  const std::array object_entries{
+      granit::bind_group_layout_entry{.binding = 0,
+                                      .type = granit::binding_type::dynamic_uniform_buffer,
+                                      .array_count = 1,
+                                      .visibility = granit::shader_stage_flags::vertex}};
+  granit::bind_group_layout frame_layout;
+  granit::bind_group_layout object_layout;
+  REQUIRE(frame_layout.initialize(renderer.native_handle(), frame_entries) ==
+          granit::result::success);
+  REQUIRE(object_layout.initialize(renderer.native_handle(), object_entries) ==
+          granit::result::success);
+  material_draw_state material;
+  material.frame_layout = frame_layout.native_handle();
+  material.object_layout = object_layout.native_handle();
+  const granit::material::pbr_frame_constants frame{};
+  const granit::material::pbr_object_constants object{};
+
+  dynamic_uniform_arena arena;
+  REQUIRE(arena.initialize(renderer.native_handle()) == GRANIT_SUCCESS);
+  REQUIRE(arena.begin_frame(0, 2) == GRANIT_SUCCESS);
+  std::vector<dynamic_uniform_request> requests(300);
+  std::vector<dynamic_uniform_binding> bindings(requests.size());
+  for (auto& request : requests) {
+    request = {.material = &material,
+               .frame = std::as_bytes(std::span{&frame, 1}),
+               .object = std::as_bytes(std::span{&object, 1})};
+  }
+  REQUIRE(arena.prepare_batch(requests, bindings) == GRANIT_SUCCESS);
+  CHECK(bindings.front().frame_offset == 0);
+  CHECK(bindings.back().object_offset > 64 * 1024);
+
+  granit::renderer_resource_stats first_stats;
+  REQUIRE(renderer.get_resource_stats(first_stats) == granit::result::success);
+  CHECK(first_stats.buffer_count == 1);
+  CHECK(first_stats.bind_group_count == 2);
+
+  REQUIRE(arena.begin_frame(1, 2) == GRANIT_SUCCESS);
+  dynamic_uniform_binding second_slot;
+  REQUIRE(arena.prepare(material, std::as_bytes(std::span{&frame, 1}),
+                        std::as_bytes(std::span{&object, 1}), second_slot) == GRANIT_SUCCESS);
+  CHECK(second_slot.frame_offset == 0);
+  granit::renderer_resource_stats second_stats;
+  REQUIRE(renderer.get_resource_stats(second_stats) == granit::result::success);
+  CHECK(second_stats.buffer_count == 2);
+  CHECK(second_stats.bind_group_count == 4);
+
+  REQUIRE(arena.begin_frame(0, 2) == GRANIT_SUCCESS);
+  dynamic_uniform_binding reused;
+  REQUIRE(arena.prepare(material, std::as_bytes(std::span{&frame, 1}),
+                        std::as_bytes(std::span{&object, 1}), reused) == GRANIT_SUCCESS);
+  CHECK(reused.frame_offset == 0);
+  CHECK(reused.frame_group == bindings.front().frame_group);
+
+  REQUIRE(arena.begin_frame(0, 2) == GRANIT_SUCCESS);
+  const dynamic_uniform_request invalid_request{.material = nullptr,
+                                                .frame = std::as_bytes(std::span{&frame, 1}),
+                                                .object = std::as_bytes(std::span{&object, 1})};
+  dynamic_uniform_binding unchanged{
+      .frame_group = 7, .object_group = 8, .frame_offset = 9, .object_offset = 10};
+  CHECK(arena.prepare_batch(std::span{&invalid_request, 1}, std::span{&unchanged, 1}) ==
+        GRANIT_ERROR_INVALID_ARGUMENT);
+  CHECK(unchanged.frame_group == 7);
+  CHECK(unchanged.object_group == 8);
+  CHECK(unchanged.frame_offset == 9);
+  CHECK(unchanged.object_offset == 10);
+  REQUIRE(arena.prepare(material, std::as_bytes(std::span{&frame, 1}),
+                        std::as_bytes(std::span{&object, 1}), reused) == GRANIT_SUCCESS);
+  CHECK(reused.frame_offset == 0);
+
+  REQUIRE(arena.reset() == GRANIT_SUCCESS);
+  granit::renderer_resource_stats reset_stats;
+  REQUIRE(renderer.get_resource_stats(reset_stats) == granit::result::success);
+  CHECK(reset_stats.buffer_count == 0);
+  CHECK(reset_stats.bind_group_count == 0);
 }
