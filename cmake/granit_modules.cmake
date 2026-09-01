@@ -210,3 +210,62 @@ function(granit_add_scene_module)
       POSITION_INDEPENDENT_CODE ON
   )
 endfunction()
+
+# 添加 Granit 内部 Lighting 模块。
+function(granit_add_lighting_module)
+  if(TARGET granit_lighting)
+    return()
+  endif()
+  granit_add_scene_module()
+
+  add_library(granit_lighting STATIC)
+  add_library(granit::lighting ALIAS granit_lighting)
+  target_sources(
+    granit_lighting
+    PRIVATE
+      "${PROJECT_SOURCE_DIR}/src/lighting/directional_shadow.cpp"
+      "${PROJECT_SOURCE_DIR}/src/lighting/ibl_reference.cpp"
+      "${PROJECT_SOURCE_DIR}/src/lighting/ibl_resources.cpp"
+      "${PROJECT_SOURCE_DIR}/src/lighting/light_buffers.cpp"
+      "${PROJECT_SOURCE_DIR}/src/lighting/light_data.cpp"
+      "${PROJECT_SOURCE_DIR}/src/lighting/lighting_reference.cpp"
+      "${PROJECT_SOURCE_DIR}/src/lighting/reference_pipeline_graph.cpp"
+      "${PROJECT_SOURCE_DIR}/src/lighting/shadow_resources.cpp"
+      "${PROJECT_SOURCE_DIR}/src/lighting/shadow_ibl_resources.cpp"
+      "${PROJECT_SOURCE_DIR}/src/lighting/shadow_reference.cpp"
+      "${PROJECT_SOURCE_DIR}/src/lighting/tone_mapping_reference.cpp"
+      "${PROJECT_SOURCE_DIR}/src/lighting/tone_mapping_pass.cpp"
+      "${PROJECT_SOURCE_DIR}/src/lighting/tone_mapping_resources.cpp"
+    PRIVATE
+      FILE_SET HEADERS
+      BASE_DIRS "${PROJECT_SOURCE_DIR}/src"
+      FILES
+        "${PROJECT_SOURCE_DIR}/src/lighting/directional_shadow.h"
+        "${PROJECT_SOURCE_DIR}/src/lighting/ibl_reference.h"
+        "${PROJECT_SOURCE_DIR}/src/lighting/ibl_resources.h"
+        "${PROJECT_SOURCE_DIR}/src/lighting/light_buffers.h"
+        "${PROJECT_SOURCE_DIR}/src/lighting/light_data.h"
+        "${PROJECT_SOURCE_DIR}/src/lighting/lighting_reference.h"
+        "${PROJECT_SOURCE_DIR}/src/lighting/reference_pipeline_graph.h"
+        "${PROJECT_SOURCE_DIR}/src/lighting/shadow_resources.h"
+        "${PROJECT_SOURCE_DIR}/src/lighting/shadow_ibl_resources.h"
+        "${PROJECT_SOURCE_DIR}/src/lighting/shadow_reference.h"
+        "${PROJECT_SOURCE_DIR}/src/lighting/tone_mapping_reference.h"
+        "${PROJECT_SOURCE_DIR}/src/lighting/tone_mapping_pass.h"
+        "${PROJECT_SOURCE_DIR}/src/lighting/tone_mapping_resources.h"
+  )
+  target_compile_features(granit_lighting PUBLIC cxx_std_20)
+  target_include_directories(
+    granit_lighting PUBLIC "$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/src>"
+  )
+  target_link_libraries(granit_lighting PUBLIC granit::scene)
+  granit_target_compile_warnings(granit_lighting)
+  granit_target_output_directories(granit_lighting)
+  set_target_properties(
+    granit_lighting
+    PROPERTIES
+      EXPORT_NAME detail_lighting
+      FOLDER "Modules"
+      POSITION_INDEPENDENT_CODE ON
+  )
+endfunction()

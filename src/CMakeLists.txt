@@ -591,48 +591,7 @@ granit_add_pbr_module()
 
 granit_add_scene_module()
 
-add_library(granit_lighting STATIC)
-add_library(granit::lighting ALIAS granit_lighting)
-target_sources(
-  granit_lighting
-  PRIVATE
-    lighting/directional_shadow.cpp
-    lighting/ibl_reference.cpp
-    lighting/ibl_resources.cpp
-    lighting/light_buffers.cpp
-    lighting/light_data.cpp
-    lighting/lighting_reference.cpp
-    lighting/reference_pipeline_graph.cpp
-    lighting/shadow_resources.cpp
-    lighting/shadow_ibl_resources.cpp
-    lighting/shadow_reference.cpp
-    lighting/tone_mapping_reference.cpp
-    lighting/tone_mapping_pass.cpp
-    lighting/tone_mapping_resources.cpp
-  PRIVATE
-    FILE_SET HEADERS
-    BASE_DIRS "${PROJECT_SOURCE_DIR}/src"
-    FILES
-      lighting/directional_shadow.h
-      lighting/ibl_reference.h
-      lighting/ibl_resources.h
-      lighting/light_buffers.h
-      lighting/light_data.h
-      lighting/lighting_reference.h
-      lighting/reference_pipeline_graph.h
-      lighting/shadow_resources.h
-      lighting/shadow_ibl_resources.h
-      lighting/shadow_reference.h
-      lighting/tone_mapping_reference.h
-      lighting/tone_mapping_pass.h
-      lighting/tone_mapping_resources.h
-)
-target_compile_features(granit_lighting PUBLIC cxx_std_20)
-target_include_directories(granit_lighting PUBLIC "$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/src>")
-target_link_libraries(granit_lighting PUBLIC granit::scene)
-granit_target_compile_warnings(granit_lighting)
-granit_target_output_directories(granit_lighting)
-set_target_properties(granit_lighting PROPERTIES FOLDER "Modules" POSITION_INDEPENDENT_CODE ON)
+granit_add_lighting_module()
 
 add_library(granit_render_pipeline)
 add_library(granit::render_pipeline ALIAS granit_render_pipeline)
@@ -834,7 +793,6 @@ set_target_properties(
     VISIBILITY_INLINES_HIDDEN YES
 )
 
-set_target_properties(granit_lighting PROPERTIES EXPORT_NAME detail_lighting)
 
 install(
   TARGETS
