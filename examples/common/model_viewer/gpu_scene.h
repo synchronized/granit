@@ -32,6 +32,14 @@ struct packed_primitive {
   std::uint32_t material{gltf::invalid_index};
 };
 
+/** Node 展开后的稳定绘制身份；payload 零值保留为无效。 */
+struct packed_draw {
+  std::uint64_t payload{};
+  std::uint32_t primitive{};
+  std::uint32_t material{gltf::invalid_index};
+  std::uint32_t node{};
+};
+
 struct texture_variant {
   std::uint32_t image{gltf::invalid_index};
   bool srgb{};
@@ -54,6 +62,7 @@ struct gpu_scene_plan {
   std::vector<packed_vertex> vertices;
   std::vector<std::uint32_t> indices;
   std::vector<packed_primitive> primitives;
+  std::vector<packed_draw> draws;
   std::vector<texture_variant> textures;
   std::vector<sampler_key> samplers;
   std::vector<std::uint32_t> source_sampler_to_plan;

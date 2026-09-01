@@ -64,6 +64,50 @@ TEST_CASE("GPU Scene 计划规范化并去重 Sampler", "[example][model-viewer]
   CHECK(plan.samplers[1].address_u == granit::address_mode::mirrored_repeat);
 }
 
+TEST_CASE("GPU Scene 计划按 Node 稳定展开 Primitive Payload", "[example][model-viewer]") {
+  granit::example::gltf::scene source;
+  source.materials.resize(2);
+  source.meshes.resize(2);
+  source.meshes[0].primitives.resize(2);
+  source.meshes[0].primitives[0].material = 1;
+  source.meshes[1].primitives.resize(1);
+  source.meshes[1].primitives[0].material = 0;
+  source.nodes.resize(3);
+  source.nodes[0].mesh = 1;
+  source.nodes[2].mesh = 0;
+
+  granit::example::model_viewer::gpu_scene_plan plan;
+  REQUIRE(granit::example::model_viewer::build_gpu_scene_plan(source, plan) ==
+          granit::example::model_viewer::gpu_scene_plan_error::none);
+  REQUIRE(plan.draws.size() == 3);
+  CHECK(plan.draws[0].payload == 1);
+  CHECK(plan.draws[0].primitive == 2);
+  CHECK(plan.draws[0].material == 0);
+  CHECK(plan.draws[0].node == 0);
+  CHECK(plan.draws[1].payload == 2);
+  CHECK(plan.draws[1].primitive == 0);
+  CHECK(plan.draws[1].material == 1);
+  CHECK(plan.draws[1].node == 2);
+  CHECK(plan.draws[2].payload == 3);
+  CHECK(plan.draws[2].primitive == 1);
+}
+
+TEST_CASE("GPU Scene 计划拒绝越界 Node 与 Material 引用", "[example][model-viewer]") {
+  granit::example::gltf::scene source;
+  source.meshes.resize(1);
+  source.meshes.front().primitives.resize(1);
+  source.meshes.front().primitives.front().material = 0;
+  granit::example::model_viewer::gpu_scene_plan plan;
+  CHECK(granit::example::model_viewer::build_gpu_scene_plan(source, plan) ==
+        granit::example::model_viewer::gpu_scene_plan_error::invalid_scene);
+
+  source.materials.resize(1);
+  source.nodes.resize(1);
+  source.nodes.front().mesh = 1;
+  CHECK(granit::example::model_viewer::build_gpu_scene_plan(source, plan) ==
+        granit::example::model_viewer::gpu_scene_plan_error::invalid_scene);
+}
+
 TEST_CASE("GPU Scene 计划失败时保持输出不变", "[example][model-viewer]") {
   granit::example::gltf::scene source;
   auto& primitive = source.meshes.emplace_back().primitives.emplace_back();

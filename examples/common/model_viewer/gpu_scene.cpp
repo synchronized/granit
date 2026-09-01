@@ -89,11 +89,40 @@ gpu_scene_plan_error append_primitive(const gltf::primitive& source, gpu_scene_p
 gpu_scene_plan_error build_gpu_scene_plan(const gltf::scene& source, gpu_scene_plan& output) {
   try {
     gpu_scene_plan candidate;
+    std::vector<std::uint32_t> mesh_primitive_starts;
+    mesh_primitive_starts.reserve(source.meshes.size() + 1);
     for (const auto& mesh : source.meshes) {
+      if (candidate.primitives.size() > std::numeric_limits<std::uint32_t>::max())
+        return gpu_scene_plan_error::numeric_overflow;
+      mesh_primitive_starts.push_back(static_cast<std::uint32_t>(candidate.primitives.size()));
       for (const auto& primitive : mesh.primitives) {
+        if (primitive.material != gltf::invalid_index &&
+            primitive.material >= source.materials.size())
+          return gpu_scene_plan_error::invalid_scene;
         if (const auto result = append_primitive(primitive, candidate);
             result != gpu_scene_plan_error::none)
           return result;
+      }
+    }
+    if (candidate.primitives.size() > std::numeric_limits<std::uint32_t>::max())
+      return gpu_scene_plan_error::numeric_overflow;
+    mesh_primitive_starts.push_back(static_cast<std::uint32_t>(candidate.primitives.size()));
+    for (std::uint32_t node_index = 0; node_index < source.nodes.size(); ++node_index) {
+      const auto& node = source.nodes[node_index];
+      if (node.mesh == gltf::invalid_index)
+        continue;
+      if (node.mesh >= source.meshes.size())
+        return gpu_scene_plan_error::invalid_scene;
+      const auto first = mesh_primitive_starts[node.mesh];
+      const auto end = mesh_primitive_starts[node.mesh + 1];
+      for (auto primitive_index = first; primitive_index < end; ++primitive_index) {
+        if (candidate.draws.size() == std::numeric_limits<std::uint64_t>::max())
+          return gpu_scene_plan_error::numeric_overflow;
+        candidate.draws.push_back(
+            {.payload = static_cast<std::uint64_t>(candidate.draws.size()) + 1,
+             .primitive = primitive_index,
+             .material = candidate.primitives[primitive_index].material,
+             .node = node_index});
       }
     }
     for (const auto& material : source.materials) {
