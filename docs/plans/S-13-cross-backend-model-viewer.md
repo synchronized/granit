@@ -281,8 +281,9 @@ SDL3 输入适配已完成第一阶段：平台事件按帧累积为 `viewer_inp
 滚轮缩放、`F`/`Home`、焦点与指针进出，并在 ImGui 捕获标志进入 Core 前完成标记。窗口、Surface
 和 Swapchain 生命周期已接入统一 `granit_model_viewer_example`：同一入口根据启动参数创建 Vulkan
 或桌面 Dawn WebGPU Renderer，读取 glTF/GLB、上传 GPU Scene 并通过共享 Core 与 Render Pipeline
-完成帧循环和 Out Of Date 重建。ImGui Canvas、Surface Lost/Device Lost 专项恢复及真实资产 Smoke
-仍待接入。
+完成帧循环和 Out Of Date 重建。桌面入口已叠加 ImGui 五类面板、字体 Atlas、Canvas Draw Data
+转换、捕获标志和事务式材质修改；Texture ID 继续经过 generation 注册表解析，不向 Draw Data
+暴露 GPU 句柄。材质纹理缩略图、Surface Lost/Device Lost 专项恢复及真实资产 Smoke 仍待接入。
 
 三个运行配置如下：
 
