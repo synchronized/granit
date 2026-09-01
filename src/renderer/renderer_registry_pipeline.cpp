@@ -30,7 +30,7 @@ granit_result renderer_registry::create_shader_from_desc(granit_renderer rendere
     const auto validation = validate_shader_wgsl(&desc);
     if (validation != GRANIT_SUCCESS)
       return validation;
-    return create_wgsl_shader(
+    return create_shader_from_wgsl(
         renderer, desc.stage, {desc.wgsl, static_cast<std::size_t>(desc.wgsl_length)},
         {desc.entry_point, static_cast<std::size_t>(desc.entry_point_length)}, shader);
   }
@@ -86,11 +86,11 @@ granit_result renderer_registry::create_shader(granit_renderer renderer, granit_
   }
 }
 
-granit_result renderer_registry::create_wgsl_shader(granit_renderer renderer,
-                                                    granit_shader_stage stage,
-                                                    std::string_view source,
-                                                    std::string_view entry_point,
-                                                    granit_shader& shader) {
+granit_result renderer_registry::create_shader_from_wgsl(granit_renderer renderer,
+                                                         granit_shader_stage stage,
+                                                         std::string_view source,
+                                                         std::string_view entry_point,
+                                                         granit_shader& shader) {
   try {
     auto owner = acquire_backend(renderer);
     auto shaders = std::dynamic_pointer_cast<backend_shader_renderer>(owner);
@@ -601,73 +601,6 @@ granit_result renderer_registry::create_graphics_pipeline(granit_renderer render
       static_cast<void>(handles_.erase(handle, resource_type::pipeline, state->domain()));
       throw;
     }
-    pipeline = handle;
-    return GRANIT_SUCCESS;
-  } catch (const std::bad_alloc&) {
-    return GRANIT_ERROR_OUT_OF_MEMORY;
-  } catch (...) {
-    return GRANIT_ERROR_INTERNAL;
-  }
-}
-
-granit_result renderer_registry::create_webgpu_graphics_pipeline(
-    granit_renderer renderer, granit_pipeline_layout layout_handle, granit_shader vertex_shader,
-    granit_shader fragment_shader, granit_texture_format color_format,
-    granit_graphics_pipeline& pipeline) {
-  try {
-    auto owner = acquire_backend(renderer);
-    auto pipelines = std::dynamic_pointer_cast<backend_pipeline_renderer>(owner);
-    if (!owner || !pipelines)
-      return GRANIT_ERROR_INVALID_HANDLE;
-    std::shared_ptr<pipeline_layout_record> layout;
-    std::shared_ptr<shader_record> vertex;
-    std::shared_ptr<shader_record> fragment;
-    {
-      std::lock_guard lock{mutex_};
-      const auto layout_found = pipeline_layouts_.find(layout_handle);
-      const auto vertex_found = shaders_.find(vertex_shader);
-      const auto fragment_found = shaders_.find(fragment_shader);
-      if (layout_found == pipeline_layouts_.end() || vertex_found == shaders_.end() ||
-          fragment_found == shaders_.end() || layout_found->second->owner != owner ||
-          vertex_found->second->owner != owner || fragment_found->second->owner != owner)
-        return GRANIT_ERROR_INVALID_HANDLE;
-      layout = layout_found->second;
-      vertex = vertex_found->second;
-      fragment = fragment_found->second;
-    }
-    auto record = std::make_shared<graphics_pipeline_record>();
-    record->owner = owner;
-    record->pipelines = pipelines;
-    record->retirement = std::dynamic_pointer_cast<backend_retirement_renderer>(owner);
-    record->layout = layout;
-    record->vertex_shader = vertex;
-    record->fragment_shader = fragment;
-    record->native = pipelines->allocate_graphics_pipeline_resource();
-    if (!record->native)
-      return GRANIT_ERROR_OUT_OF_MEMORY;
-    const backend_graphics_pipeline_create_info info{
-        *layout->native,
-        *vertex->native,
-        vertex->entry_point.c_str(),
-        *fragment->native,
-        fragment->entry_point.c_str(),
-        {},
-        {GRANIT_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST, GRANIT_FRONT_FACE_COUNTER_CLOCKWISE,
-         GRANIT_CULL_MODE_NONE, GRANIT_POLYGON_MODE_FILL},
-        {},
-        nullptr,
-        {},
-        {&color_format, 1},
-        GRANIT_TEXTURE_FORMAT_UNDEFINED,
-        GRANIT_SAMPLE_COUNT_1};
-    const auto result = pipelines->create_graphics_pipeline(info, *record->native);
-    if (result != GRANIT_SUCCESS)
-      return result;
-    std::lock_guard lock{mutex_};
-    const auto handle = handles_.insert(record.get(), resource_type::pipeline, owner->domain());
-    if (handle == GRANIT_NULL_HANDLE)
-      return GRANIT_ERROR_OUT_OF_MEMORY;
-    graphics_pipelines_.emplace(handle, std::move(record));
     pipeline = handle;
     return GRANIT_SUCCESS;
   } catch (const std::bad_alloc&) {

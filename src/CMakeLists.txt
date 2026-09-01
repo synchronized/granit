@@ -14,6 +14,7 @@ add_library(
   backend/webgpu/pipeline_adapter.h
   backend/webgpu/renderer_state.cpp
   backend/webgpu/renderer_state.h
+  backend/webgpu/renderer_factory.h
   backend/webgpu/resource_adapter.cpp
   backend/webgpu/resource_adapter.h
   backend/webgpu/shader_adapter.cpp

@@ -2,6 +2,13 @@
 # Copyright (c) 2026 Granit contributors
 
 add_test(
+  NAME granit.backend.native_boundaries
+  COMMAND
+    "${CMAKE_COMMAND}" "-DSOURCE_DIR=${PROJECT_SOURCE_DIR}"
+    -P "${PROJECT_SOURCE_DIR}/cmake/check_backend_native_boundaries.cmake"
+)
+
+add_test(
   NAME granit.documentation
   COMMAND
     "${CMAKE_COMMAND}"
