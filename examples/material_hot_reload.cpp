@@ -28,6 +28,12 @@ std::vector<std::uint32_t> load_shader(std::string_view name) {
   return words;
 }
 
+std::string load_shader_text(std::string_view name) {
+  const auto path = std::string{GRANIT_EXAMPLE_ASSET_DIR} + "/" + std::string{name};
+  std::ifstream stream{path, std::ios::binary};
+  return {std::istreambuf_iterator<char>{stream}, {}};
+}
+
 bool make_package(std::string_view pass_name, granit::material::material_package& package) {
   using namespace granit::material;
   material_package_desc desc;
@@ -35,10 +41,12 @@ bool make_package(std::string_view pass_name, granit::material::material_package
                            .features = {},
                            .shaders = {{.stage = package_shader_stage::vertex,
                                         .entry_point = "main",
-                                        .spirv = load_shader("triangle.vert.spv")},
+                                        .spirv = load_shader("triangle.vert.spv"),
+                                        .wgsl = load_shader_text("triangle.vert.wgsl")},
                                        {.stage = package_shader_stage::fragment,
                                         .entry_point = "main",
-                                        .spirv = load_shader("triangle.frag.spv")}},
+                                        .spirv = load_shader("triangle.frag.spv"),
+                                        .wgsl = load_shader_text("triangle.frag.wgsl")}},
                            .pipeline = {}});
   return material_package::build(std::move(desc), package) == package_error::none;
 }

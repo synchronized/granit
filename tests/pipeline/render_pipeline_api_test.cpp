@@ -47,10 +47,13 @@ std::vector<std::byte> build_material_archive() {
                            .features = {},
                            .shaders = {{.stage = package_shader_stage::vertex,
                                         .entry_point = "main",
-                                        .spirv = {spirv.begin(), spirv.end()}},
+                                        .spirv = {spirv.begin(), spirv.end()},
+                                        .wgsl = "@vertex fn main() -> @builtin(position) vec4f { "
+                                                "return vec4f(); }"},
                                        {.stage = package_shader_stage::fragment,
                                         .entry_point = "main",
-                                        .spirv = {spirv.begin(), spirv.end()}}},
+                                        .spirv = {spirv.begin(), spirv.end()},
+                                        .wgsl = "@fragment fn main() {}"}},
                            .pipeline = {}});
   material_package package;
   REQUIRE(material_package::build(std::move(desc), package) == package_error::none);
@@ -67,6 +70,11 @@ std::vector<std::uint32_t> load_pipeline_shader(const char* name) {
   std::vector<std::uint32_t> words(bytes.size() / sizeof(std::uint32_t));
   std::memcpy(words.data(), bytes.data(), bytes.size());
   return words;
+}
+
+std::string load_pipeline_shader_text(const char* name) {
+  std::ifstream stream{std::string{GRANIT_PIPELINE_ASSET_DIR} + "/" + name, std::ios::binary};
+  return {std::istreambuf_iterator<char>{stream}, {}};
 }
 
 std::vector<std::uint32_t> load_tone_mapping_shader(const char* name) {
@@ -104,10 +112,14 @@ std::vector<std::byte> build_automatic_material_archive() {
                                 .features = {{make_feature_id("pbr_texture_mask"), 0}},
                                 .shaders = {{.stage = package_shader_stage::vertex,
                                              .entry_point = "vertex_main",
-                                             .spirv = vertex},
+                                             .spirv = vertex,
+                                             .wgsl = load_pipeline_shader_text(
+                                                 "pbr_shadow_ibl_lights.vert.wgsl")},
                                             {.stage = package_shader_stage::fragment,
                                              .entry_point = "fragment_main",
-                                             .spirv = fragment}},
+                                             .spirv = fragment,
+                                             .wgsl = load_pipeline_shader_text(
+                                                 "pbr_shadow_ibl_lights_untextured.frag.wgsl")}},
                                 .pipeline = {}};
   variant.pipeline.primitive.front_face = GRANIT_FRONT_FACE_CLOCKWISE;
   variant.pipeline.primitive.cull_mode = GRANIT_CULL_MODE_BACK;

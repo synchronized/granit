@@ -35,6 +35,13 @@ std::vector<std::uint32_t> load_shader(std::string_view name) {
   return words;
 }
 
+std::string load_shader_text(std::string_view name) {
+  const auto directory =
+      name.starts_with("tone_mapping") ? GRANIT_PIPELINE_SHADER_DIR : GRANIT_PBR_SHADER_DIR;
+  std::ifstream stream{std::string{directory} + "/" + std::string{name}, std::ios::binary};
+  return {std::istreambuf_iterator<char>{stream}, {}};
+}
+
 LRESULT CALLBACK window_proc(HWND window, UINT message, WPARAM word, LPARAM value) {
   if (message == WM_DESTROY) {
     PostQuitMessage(0);
@@ -243,6 +250,9 @@ int main(int argument_count, char** arguments) {
   const auto tone_fragment = load_shader("tone_mapping.frag.spv");
   const auto pbr_vertex = load_shader("pbr_shadow_ibl_lights.vert.spv");
   const auto pbr_fragment = load_shader("pbr_shadow_ibl_lights_untextured.frag.spv");
+  const auto pbr_vertex_wgsl = load_shader_text("pbr_shadow_ibl_lights.vert.wgsl");
+  const auto pbr_fragment_wgsl =
+      load_shader_text("pbr_shadow_ibl_lights_untextured.frag.wgsl");
   if (granit::succeeded(result) && (tone_vertex.empty() || tone_fragment.empty() ||
                                     pbr_vertex.empty() || pbr_fragment.empty())) {
     result = granit::result::initialization_failed;
@@ -250,7 +260,8 @@ int main(int argument_count, char** arguments) {
 
   granit::material::material_package pbr_package;
   if (granit::succeeded(result) &&
-      !granit::examples::build_pbr_package(pbr_package, pbr_vertex, pbr_fragment)) {
+      !granit::examples::build_pbr_package(pbr_package, pbr_vertex, pbr_vertex_wgsl,
+                                           pbr_fragment, pbr_fragment_wgsl)) {
     result = granit::result::initialization_failed;
   }
   granit::examples::pbr_lighting_resources pbr_lighting;

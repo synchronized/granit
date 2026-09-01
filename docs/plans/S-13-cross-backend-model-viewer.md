@@ -148,6 +148,8 @@ Renderer 上分别创建独立 GPU Scene，不共享任何 GPU 句柄。
 
 #### S-13C1 双后端材质归档前置
 
+状态：已完成。
+
 现有材质归档 v2 只保存 SPIR-V。虽然公共 Shader 描述已经能同时携带 SPIR-V 与 WGSL，
 `material_template_gpu` 仍只能从归档创建 Vulkan Shader。模型查看器不能复用该归档在 WebGPU
 运行，也不能包含 `src/pipeline` 的嵌入材质或为不同后端绕过 Material/Render Pipeline。

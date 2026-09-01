@@ -127,6 +127,13 @@ std::vector<std::uint32_t> load_shader(std::string_view name) {
   return words;
 }
 
+std::string load_shader_text(std::string_view name) {
+  const auto directory =
+      name.starts_with("tone_mapping") ? GRANIT_PIPELINE_SHADER_DIR : GRANIT_PBR_SHADER_DIR;
+  std::ifstream stream{std::string{directory} + "/" + std::string{name}, std::ios::binary};
+  return {std::istreambuf_iterator<char>{stream}, {}};
+}
+
 std::uint8_t quantize_unorm(float value) {
   return static_cast<std::uint8_t>(std::lround(std::clamp(value, 0.0F, 1.0F) * 255.0F));
 }
@@ -160,15 +167,25 @@ int main(int argc, char** argv) {
   granit::material::material_package full_package;
   const auto packages_ready =
       granit::examples::build_pbr_package(direct_package, load_shader("pbr_lights.vert.spv"),
-                                          load_shader("pbr_lights_untextured.frag.spv")) &&
+                                          load_shader_text("pbr_lights.vert.wgsl"),
+                                          load_shader("pbr_lights_untextured.frag.spv"),
+                                          load_shader_text("pbr_lights_untextured.frag.wgsl")) &&
       granit::examples::build_pbr_package(ibl_package, load_shader("pbr_lights.vert.spv"),
-                                          load_shader("pbr_ibl_lights_untextured.frag.spv")) &&
+                                          load_shader_text("pbr_lights.vert.wgsl"),
+                                          load_shader("pbr_ibl_lights_untextured.frag.spv"),
+                                          load_shader_text("pbr_ibl_lights_untextured.frag.wgsl")) &&
       granit::examples::build_pbr_package(shadow_package,
                                           load_shader("pbr_shadow_ibl_lights.vert.spv"),
-                                          load_shader("pbr_shadow_lights_untextured.frag.spv")) &&
+                                          load_shader_text("pbr_shadow_ibl_lights.vert.wgsl"),
+                                          load_shader("pbr_shadow_lights_untextured.frag.spv"),
+                                          load_shader_text(
+                                              "pbr_shadow_lights_untextured.frag.wgsl")) &&
       granit::examples::build_pbr_package(full_package,
                                           load_shader("pbr_shadow_ibl_lights.vert.spv"),
-                                          load_shader("pbr_shadow_ibl_lights_untextured.frag.spv"));
+                                          load_shader_text("pbr_shadow_ibl_lights.vert.wgsl"),
+                                          load_shader("pbr_shadow_ibl_lights_untextured.frag.spv"),
+                                          load_shader_text(
+                                              "pbr_shadow_ibl_lights_untextured.frag.wgsl"));
   if (granit::failed(result) || !packages_ready) {
     std::cerr << "无法初始化 Renderer 或构建 PBR 材质包\n";
     return 1;

@@ -13,6 +13,7 @@
 #include <granit/core/result.hpp>
 
 #include <span>
+#include <string_view>
 
 namespace granit::examples {
 
@@ -43,7 +44,9 @@ private:
 
 [[nodiscard]] bool build_pbr_package(material::material_package& package,
                                      std::span<const std::uint32_t> vertex_shader,
-                                     std::span<const std::uint32_t> fragment_shader);
+                                     std::string_view vertex_wgsl,
+                                     std::span<const std::uint32_t> fragment_shader,
+                                     std::string_view fragment_wgsl);
 
 [[nodiscard]] result initialize_pbr_instance(granit_renderer renderer,
                                              material::material_template_gpu& material_template,
