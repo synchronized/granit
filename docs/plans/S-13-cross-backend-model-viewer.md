@@ -305,6 +305,12 @@ Loader 与锁定 `cgltf`/`stb_image` 依赖；浏览器 Fixture 已验证主文�
 直接内嵌锁定产物，不运行 Wasm 工具。浏览器 Fixture 已在真实 Chrome WebGPU 中完成外部 Buffer
 加载、CPU Scene 接收和 GPU Scene 上传。
 
+共享 Render Pipeline 首次参与浏览器完整链接时已补齐 Frame Slot 与 Timestamp Query 公共 API
+源集，并为阴影 Pass 同时提供 SPIR-V 与 WGSL。下一项阻塞是 WebGPU HAL 的 Texture 与 Texture View
+仍只接受 2D 单层资源，而默认 IBL 使用 Cube Texture/View；应先在通用 Backend Plugin 契约和
+WebGPU Provider 中补齐 Cube 与 Array Layer 语义，再切换浏览器帧循环，不能以 Web 专用 2D IBL
+绕过 PBR 绑定契约。
+
 SDL3 输入适配已完成第一阶段：平台事件按帧累积为 `viewer_input`，覆盖右键环绕、中键平移、
 滚轮缩放、`F`/`Home`、焦点与指针进出，并在 ImGui 捕获标志进入 Core 前完成标记。窗口、Surface
 和 Swapchain 生命周期已接入统一 `granit_model_viewer_example`：同一入口根据启动参数创建 Vulkan

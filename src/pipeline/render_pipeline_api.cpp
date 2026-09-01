@@ -1019,15 +1019,17 @@ extern "C" granit_result granit_render_pipeline_create(granit_renderer renderer,
         state->shadow_view.initialize(renderer, state->shadow_texture.native_handle());
     if (granit::failed(resource_result))
       return static_cast<granit_result>(resource_result);
-    resource_result = state->shadow_vertex_shader.initialize(
+    resource_result = state->shadow_vertex_shader.initialize_asset(
         renderer, {.stage = granit::shader_stage::vertex,
-                   .code = granit::pipeline::detail::shadow_depth_vertex_shader(),
+                   .spirv = granit::pipeline::detail::shadow_depth_vertex_shader(),
+                   .wgsl = granit::pipeline::detail::shadow_depth_vertex_wgsl(),
                    .entry_point = "vertex_main"});
     if (granit::failed(resource_result))
       return static_cast<granit_result>(resource_result);
-    resource_result = state->shadow_fragment_shader.initialize(
+    resource_result = state->shadow_fragment_shader.initialize_asset(
         renderer, {.stage = granit::shader_stage::fragment,
-                   .code = granit::pipeline::detail::shadow_depth_fragment_shader(),
+                   .spirv = granit::pipeline::detail::shadow_depth_fragment_shader(),
+                   .wgsl = granit::pipeline::detail::shadow_depth_fragment_wgsl(),
                    .entry_point = "fragment_main"});
     if (granit::failed(resource_result))
       return static_cast<granit_result>(resource_result);

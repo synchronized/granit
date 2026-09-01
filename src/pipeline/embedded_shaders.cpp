@@ -24,6 +24,34 @@ alignas(std::uint32_t) constexpr std::uint8_t shadow_depth_fragment_bytes[]{
 #include "granit_pipeline_shadow_depth.frag.inc"
 };
 
+constexpr std::string_view shadow_depth_vertex_wgsl_source = R"(
+struct ObjectConstants {
+  model: mat4x4<f32>,
+  normal_matrix: mat4x4<f32>,
+  object_id: vec4<u32>,
+};
+
+struct ShadowConstants {
+  light_view_projection: mat4x4<f32>,
+  shadow_depth_bias: f32,
+  shadow_normal_bias: f32,
+  shadow_texel_size: vec2<f32>,
+};
+
+@group(2) @binding(0) var<uniform> object: ObjectConstants;
+@group(3) @binding(0) var<uniform> shadow: ShadowConstants;
+
+@vertex
+fn vertex_main(@location(0) position: vec3<f32>) -> @builtin(position) vec4<f32> {
+  return shadow.light_view_projection * object.model * vec4<f32>(position, 1.0);
+}
+)";
+
+constexpr std::string_view shadow_depth_fragment_wgsl_source = R"(
+@fragment
+fn fragment_main() {}
+)";
+
 alignas(std::uint32_t) constexpr std::uint8_t canvas_material_bytes[]{
 #include "granit_pipeline_canvas.grmat.inc"
 };
@@ -60,6 +88,12 @@ std::span<const std::byte> shadow_depth_vertex_shader() noexcept {
 std::span<const std::byte> shadow_depth_fragment_shader() noexcept {
   return {reinterpret_cast<const std::byte*>(shadow_depth_fragment_bytes),
           sizeof(shadow_depth_fragment_bytes)};
+}
+
+std::string_view shadow_depth_vertex_wgsl() noexcept { return shadow_depth_vertex_wgsl_source; }
+
+std::string_view shadow_depth_fragment_wgsl() noexcept {
+  return shadow_depth_fragment_wgsl_source;
 }
 
 std::span<const std::byte> canvas_material_package() noexcept {
