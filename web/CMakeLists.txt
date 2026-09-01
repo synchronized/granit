@@ -60,6 +60,10 @@ granit_add_render_pipeline_module()
 add_subdirectory(
   "${PROJECT_SOURCE_DIR}/examples/common/gltf" "${CMAKE_CURRENT_BINARY_DIR}/gltf"
 )
+add_subdirectory(
+  "${PROJECT_SOURCE_DIR}/examples/common/model_viewer"
+  "${CMAKE_CURRENT_BINARY_DIR}/model_viewer"
+)
 
 add_library(
   granit_web_model_viewer_platform STATIC
@@ -81,7 +85,8 @@ target_include_directories(
          "${PROJECT_SOURCE_DIR}/examples/common"
 )
 target_link_libraries(
-  granit_web_model_viewer_platform PUBLIC granit::granit granit_example_gltf_support
+  granit_web_model_viewer_platform
+  PUBLIC granit::granit granit_example_model_viewer_support
 )
 target_compile_options(
   granit_web_model_viewer_platform PRIVATE "--use-port=emdawnwebgpu:cpp_bindings=false"

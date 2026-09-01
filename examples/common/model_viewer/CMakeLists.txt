@@ -5,22 +5,34 @@ set(granit_model_viewer_material_package
     "${CMAKE_CURRENT_BINARY_DIR}/model_viewer_pbr.grmat")
 set(granit_model_viewer_material_include
     "${CMAKE_CURRENT_BINARY_DIR}/generated/model_viewer_pbr.grmat.inc")
-add_custom_command(
-  OUTPUT "${granit_model_viewer_material_package}"
-  COMMAND
-    granit_material_tool build
-    "${PROJECT_SOURCE_DIR}/examples/assets/model_viewer_pbr.grmat.json"
-    --output "${granit_model_viewer_material_package}"
-  DEPENDS
-    granit_material_tool
-    "${PROJECT_SOURCE_DIR}/examples/assets/model_viewer_pbr.grmat.json"
-    "${PROJECT_SOURCE_DIR}/examples/assets/model_viewer_pbr.vert.spv"
-    "${PROJECT_SOURCE_DIR}/examples/assets/model_viewer_pbr.vert.wgsl"
-    "${PROJECT_SOURCE_DIR}/examples/assets/model_viewer_pbr.frag.spv"
-    "${PROJECT_SOURCE_DIR}/examples/assets/model_viewer_pbr.frag.wgsl"
-  COMMENT "生成模型查看器 PBR 材质归档"
-  VERBATIM
-)
+if(CMAKE_CROSSCOMPILING)
+  set(
+    granit_model_viewer_material_package
+    "${PROJECT_SOURCE_DIR}/examples/assets/model_viewer_pbr.grmat"
+  )
+else()
+  add_custom_command(
+    OUTPUT "${granit_model_viewer_material_package}"
+    COMMAND
+      granit_material_tool build
+      "${PROJECT_SOURCE_DIR}/examples/assets/model_viewer_pbr.grmat.json"
+      --output "${granit_model_viewer_material_package}"
+    COMMAND
+      "${CMAKE_COMMAND}" -E compare_files
+      "${granit_model_viewer_material_package}"
+      "${PROJECT_SOURCE_DIR}/examples/assets/model_viewer_pbr.grmat"
+    DEPENDS
+      granit_material_tool
+      "${PROJECT_SOURCE_DIR}/examples/assets/model_viewer_pbr.grmat.json"
+      "${PROJECT_SOURCE_DIR}/examples/assets/model_viewer_pbr.vert.spv"
+      "${PROJECT_SOURCE_DIR}/examples/assets/model_viewer_pbr.vert.wgsl"
+      "${PROJECT_SOURCE_DIR}/examples/assets/model_viewer_pbr.frag.spv"
+      "${PROJECT_SOURCE_DIR}/examples/assets/model_viewer_pbr.frag.wgsl"
+      "${PROJECT_SOURCE_DIR}/examples/assets/model_viewer_pbr.grmat"
+    COMMENT "生成模型查看器 PBR 材质归档"
+    VERBATIM
+  )
+endif()
 add_custom_command(
   OUTPUT "${granit_model_viewer_material_include}"
   COMMAND "${CMAKE_COMMAND}" -E make_directory "${CMAKE_CURRENT_BINARY_DIR}/generated"

@@ -255,9 +255,13 @@ gpu_scene_plan_error append_primitive(const gltf::primitive& source, gpu_scene_p
       source.indices.size() > output.indices.max_size() - output.indices.size() ||
       output.primitives.size() == output.primitives.max_size())
     return gpu_scene_plan_error::numeric_overflow;
-  if (output.vertices.size() > std::numeric_limits<std::uint64_t>::max() / sizeof(packed_vertex) ||
-      output.indices.size() > std::numeric_limits<std::uint64_t>::max() / sizeof(std::uint32_t))
-    return gpu_scene_plan_error::numeric_overflow;
+  if constexpr (sizeof(std::size_t) > sizeof(std::uint64_t)) {
+    if (output.vertices.size() >
+            std::numeric_limits<std::uint64_t>::max() / sizeof(packed_vertex) ||
+        output.indices.size() >
+            std::numeric_limits<std::uint64_t>::max() / sizeof(std::uint32_t))
+      return gpu_scene_plan_error::numeric_overflow;
+  }
 
   packed_primitive primitive{.vertex_offset = output.vertices.size() * sizeof(packed_vertex),
                              .index_offset = output.indices.size() * sizeof(std::uint32_t),

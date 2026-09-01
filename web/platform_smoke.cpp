@@ -25,7 +25,7 @@
 
 #include "model_viewer_fetch.h"
 #include "resource_fetch_batch.h"
-#include "gltf/loader.h"
+#include "model_viewer/application_core.h"
 #include "support/renderer_fixture.h"
 
 namespace {
@@ -42,6 +42,8 @@ struct web_platform_state {
       std::make_shared<granit::example::model_viewer::web::asset_request>()};
   granit::example::model_viewer::web::resource_fetch_batch resource_batch;
   granit::example::model_viewer::web::resource_bundle resource_bundle;
+  granit::example::model_viewer::application_core core;
+  bool core_renderer_ready{};
   bool resource_batch_started{};
   bool asset_ready{};
 };
@@ -501,6 +503,14 @@ void tick(void*) noexcept {
   if (renderer_status.state != GRANIT_RENDERER_STATE_READY) {
     return;
   }
+  if (!state.core_renderer_ready) {
+    const auto result = state.core.renderer_ready();
+    if (result != granit::result::success) {
+      fail("core-renderer-ready", granit::to_native(result));
+      return;
+    }
+    state.core_renderer_ready = true;
+  }
   if (state.asset_request->status() ==
       granit::example::model_viewer::web::asset_request_status::failed) {
     fail("asset-fetch");
@@ -548,11 +558,18 @@ void tick(void*) noexcept {
         fail("asset-bundle-commit", GRANIT_ERROR_INTERNAL);
         return;
       }
-      granit::example::gltf::scene scene;
-      const auto loaded = granit::example::gltf::load(state.asset_request->bytes(),
-                                                      &state.resource_bundle, scene);
-      if (!loaded) {
-        fail("asset-load", GRANIT_ERROR_INVALID_ARGUMENT);
+      auto result = state.core.load_asset(state.asset_request->bytes(), &state.resource_bundle);
+      if (result != granit::result::success) {
+        fail("asset-load", granit::to_native(result));
+        return;
+      }
+      result = state.core.upload(state.renderer);
+      if (result != granit::result::success) {
+        fail("asset-upload", granit::to_native(result));
+        return;
+      }
+      if (state.core.phase() != granit::example::model_viewer::application_phase::ready) {
+        fail("asset-core-phase", GRANIT_ERROR_INTERNAL);
         return;
       }
       state.asset_ready = true;
@@ -635,6 +652,11 @@ int main() {
   const auto result = granit_renderer_create(&desc, &state.renderer);
   if (result != GRANIT_SUCCESS) {
     fail("provider-open", result);
+    return 1;
+  }
+  const auto core_result = state.core.begin_renderer();
+  if (core_result != granit::result::success) {
+    fail("core-renderer-begin", granit::to_native(core_result));
     return 1;
   }
   if (!granit::example::model_viewer::web::start_fetch(state.asset_request,
