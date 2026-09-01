@@ -126,6 +126,11 @@ public:
     return plan_.renderables;
   }
 
+  /** 查询 Inspector 缩略图使用的实际纹理绑定，不转移资源所有权。 */
+  [[nodiscard]] granit::result texture_binding(const gltf::texture_reference& reference, bool srgb,
+                                               granit_texture_view& view,
+                                               granit_sampler& sampler) const noexcept;
+
   /** 使用当前稳定 Renderable 与调用方逐帧 View/Light 创建不可变场景快照。 */
   [[nodiscard]] granit::result
   create_snapshot(std::span<const granit_scene_view> views,

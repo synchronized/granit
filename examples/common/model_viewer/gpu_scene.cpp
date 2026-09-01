@@ -409,6 +409,30 @@ void gpu_scene::reset() noexcept {
   [[maybe_unused]] gpu_scene retired(std::move(*this));
 }
 
+granit::result gpu_scene::texture_binding(const gltf::texture_reference& reference, bool srgb,
+                                          granit_texture_view& view,
+                                          granit_sampler& sampler) const noexcept {
+  view = GRANIT_NULL_HANDLE;
+  sampler = GRANIT_NULL_HANDLE;
+  if (!valid())
+    return granit::result::invalid_handle;
+  const auto* texture = find_texture(textures_, reference.image, srgb);
+  if (texture == nullptr)
+    return granit::result::invalid_argument;
+  const granit::sampler* selected_sampler = &default_sampler_;
+  if (reference.sampler != gltf::invalid_index) {
+    if (reference.sampler >= plan_.source_sampler_to_plan.size())
+      return granit::result::invalid_argument;
+    const auto mapped = plan_.source_sampler_to_plan[reference.sampler];
+    if (mapped >= samplers_.size())
+      return granit::result::invalid_argument;
+    selected_sampler = &samplers_[mapped];
+  }
+  view = texture->view.native_handle();
+  sampler = selected_sampler->native_handle();
+  return granit::result::success;
+}
+
 granit::result
 gpu_scene::create_snapshot(std::span<const granit_scene_view> views,
                            std::span<const granit_scene_directional_light> directional_lights,

@@ -228,6 +228,34 @@ int main(int argc, char** argv) {
     granit_canvas_draw_list_desc canvas_desc = GRANIT_CANVAS_DRAW_LIST_DESC_INIT;
     result = canvas.initialize(renderer.native_handle(), canvas_desc);
   }
+  std::vector<texture_preview> previews;
+  const auto register_preview = [&](const granit::example::gltf::texture_reference& reference,
+                                    bool srgb) {
+    if (reference.image == granit::example::gltf::invalid_index)
+      return granit::result::success;
+    ImTextureID existing = ImTextureID_Invalid;
+    if (find_texture_preview(reference, srgb, previews, existing))
+      return granit::result::success;
+    granit_texture_view view = GRANIT_NULL_HANDLE;
+    granit_sampler sampler = GRANIT_NULL_HANDLE;
+    auto preview_result = core.scene_gpu().texture_binding(reference, srgb, view, sampler);
+    ImTextureID texture = ImTextureID_Invalid;
+    if (granit::succeeded(preview_result))
+      preview_result = textures.register_texture(view, sampler, texture);
+    if (granit::succeeded(preview_result))
+      previews.push_back({reference.image, reference.sampler, srgb, texture});
+    return preview_result;
+  };
+  if (granit::succeeded(result)) {
+    for (const auto& material : core.cpu_scene().materials) {
+      if (granit::failed(result = register_preview(material.base_color_texture, true)) ||
+          granit::failed(result = register_preview(material.emissive_texture, true)) ||
+          granit::failed(result = register_preview(material.metallic_roughness_texture, false)) ||
+          granit::failed(result = register_preview(material.normal_texture, false)) ||
+          granit::failed(result = register_preview(material.occlusion_texture, false)))
+        break;
+    }
+  }
 
   if (granit::failed(result)) {
     std::cerr << "模型查看器初始化失败：" << granit::result_message(result);
@@ -289,8 +317,8 @@ int main(int argc, char** argv) {
         .frame_slots = GRANIT_DEFAULT_FRAMES_IN_FLIGHT};
     const performance_panel_info panel_performance{.frames_per_second = ImGui::GetIO().Framerate,
                                                    .history = core.performance().summarize()};
-    const auto changes =
-        draw_viewer_panels(core.cpu_scene(), core.state(), panel_renderer, panel_performance);
+    const auto changes = draw_viewer_panels(core.cpu_scene(), core.state(), panel_renderer,
+                                            panel_performance, previews);
     ImGui::Render();
     result = canvas.clear();
     if (granit::succeeded(result)) {

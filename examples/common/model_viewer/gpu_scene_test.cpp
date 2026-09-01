@@ -222,6 +222,11 @@ TEST_CASE("GPU Scene 创建失败时保留原 Scene", "[example][model-viewer][t
   granit::example::gltf::scene source;
   CHECK(scene.initialize(GRANIT_NULL_HANDLE, source) == granit::result::invalid_handle);
   CHECK_FALSE(scene.valid());
+  granit_texture_view view = 1;
+  granit_sampler sampler = 1;
+  CHECK(scene.texture_binding({}, false, view, sampler) == granit::result::invalid_handle);
+  CHECK(view == GRANIT_NULL_HANDLE);
+  CHECK(sampler == GRANIT_NULL_HANDLE);
 }
 
 TEST_CASE("材质 GPU 更新失败时保留 CPU Factor", "[example][model-viewer][transaction]") {
