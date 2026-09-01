@@ -517,8 +517,7 @@ int main(int argc, char** argv) {
       !run_benchmark("minimal_no_light_end_to_end", callback_pipeline, no_light_scene)) {
     return 1;
   }
-  if (!check(granit_render_pipeline_gpu_metrics_enable(native_renderer, pipeline),
-             "启用 GPU 阶段测量"))
+  if (!check(granit_render_pipeline_metrics_enable(native_renderer, pipeline), "启用 GPU 阶段测量"))
     return 1;
   std::array<std::vector<double>, 3> gpu_samples;
   for (auto& values : gpu_samples)
@@ -528,13 +527,13 @@ int main(int argc, char** argv) {
     for (std::uint32_t iteration = 0; iteration < benchmark.iterations; ++iteration) {
       if (!check(render_once(pipeline, scene), "GPU 基准渲染"))
         return 1;
-      granit_render_pipeline_gpu_metrics metrics{};
-      if (!check(granit_render_pipeline_gpu_metrics_get(native_renderer, pipeline, &metrics),
+      granit_render_pipeline_metrics metrics = GRANIT_RENDER_PIPELINE_METRICS_INIT;
+      if (!check(granit_render_pipeline_get_metrics(native_renderer, pipeline, &metrics),
                  "读取 GPU 阶段测量"))
         return 1;
-      totals[0] += static_cast<double>(metrics.shadow_ns);
-      totals[1] += static_cast<double>(metrics.opaque_ns);
-      totals[2] += static_cast<double>(metrics.tone_mapping_ns);
+      totals[0] += static_cast<double>(metrics.shadow_gpu_ns);
+      totals[1] += static_cast<double>(metrics.opaque_gpu_ns);
+      totals[2] += static_cast<double>(metrics.tone_mapping_gpu_ns);
     }
     for (std::size_t index = 0; index < totals.size(); ++index)
       gpu_samples[index].push_back(totals[index] / benchmark.iterations);

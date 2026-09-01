@@ -21,11 +21,17 @@ typedef char
                                                 GRANIT_RENDER_PIPELINE_RENDER_DESC_VERSION_1_SIZE
                                             ? 1
                                             : -1];
+typedef char granit_pipeline_metrics_v1_size[sizeof(granit_render_pipeline_metrics) ==
+                                                     GRANIT_RENDER_PIPELINE_METRICS_VERSION_1_SIZE
+                                                 ? 1
+                                                 : -1];
 
 static granit_render_pipeline_output output = GRANIT_RENDER_PIPELINE_OUTPUT_INIT;
 static granit_render_pipeline_render_desc render = GRANIT_RENDER_PIPELINE_RENDER_DESC_INIT;
+static granit_render_pipeline_metrics metrics = GRANIT_RENDER_PIPELINE_METRICS_INIT;
 
 void granit_pipeline_render_pipeline_h_compile(void) {
   (void)output;
   (void)render;
+  (void)metrics;
 }

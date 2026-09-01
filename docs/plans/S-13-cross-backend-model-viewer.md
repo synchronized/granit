@@ -255,6 +255,11 @@ Texture Resolver 已使用 slot + generation 注册表映射字体 Atlas 与查�
 五类 PBR 纹理缩略图，同时展示实际 glTF Sampler 参数。公共性能指标与平台图形 Smoke Test
 仍待接入。
 
+公共指标第一阶段已将原私有 GPU 计时提升为 `render_pipeline.h/.hpp` 的稳定 C/C++ 查询接口，
+加入可扩展结构、样本序号和严格的 `NOT_READY/UNSUPPORTED` 语义，并保证延迟回读不改变成功渲染
+结果。当前 `total_gpu_ns` 是三个已测阶段的合计；按真实 Frame Slot 隔离 Query Pool 与覆盖阶段间
+空隙的端到端 GPU 时间仍是本阶段下一项工作。
+
 ### S-13F 三端启动与资源流程
 
 共享应用核心构建为不安装的 `granit_model_viewer_core` 静态目标，拥有 Loader、

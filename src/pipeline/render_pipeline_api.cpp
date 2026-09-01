@@ -72,7 +72,8 @@ struct pipeline_state {
   std::vector<draw_binding_entry> shadow_draw_bindings;
   granit::pipeline::detail::dynamic_uniform_arena uniform_arena;
   granit_timestamp_query_pool metrics_pool = GRANIT_NULL_HANDLE;
-  granit_render_pipeline_gpu_metrics metrics{};
+  granit_render_pipeline_metrics metrics = GRANIT_RENDER_PIPELINE_METRICS_INIT;
+  bool metrics_available = false;
   float shadow_half_extent = 20.0F;
   bool alive = true;
 };
@@ -924,11 +925,16 @@ render_view(pipeline_state& state, const granit_render_pipeline_render_desc& des
   const auto metrics_result = granit_timestamp_query_pool_get_results(
       state.renderer, state.metrics_pool, 0, static_cast<uint32_t>(values.size()), values.data());
   if (metrics_result == GRANIT_SUCCESS) {
-    state.metrics = {.shadow_ns = values[1] - values[0],
-                     .opaque_ns = values[3] - values[2],
-                     .tone_mapping_ns = values[5] - values[4]};
+    state.metrics.sample_sequence += 1;
+    state.metrics.shadow_gpu_ns = values[1] - values[0];
+    state.metrics.opaque_gpu_ns = values[3] - values[2];
+    state.metrics.tone_mapping_gpu_ns = values[5] - values[4];
+    state.metrics.total_gpu_ns = state.metrics.shadow_gpu_ns + state.metrics.opaque_gpu_ns +
+                                 state.metrics.tone_mapping_gpu_ns;
+    state.metrics_available = true;
   }
-  return metrics_result;
+  // 可选指标回读不能改变已经成功提交的渲染结果。
+  return GRANIT_SUCCESS;
 }
 
 } // namespace
@@ -1159,9 +1165,8 @@ extern "C" granit_result granit_render_pipeline_destroy(granit_renderer renderer
   return result;
 }
 
-extern "C" granit_result
-granit_render_pipeline_gpu_metrics_enable(granit_renderer renderer,
-                                          granit_render_pipeline pipeline) {
+extern "C" granit_result granit_render_pipeline_metrics_enable(granit_renderer renderer,
+                                                               granit_render_pipeline pipeline) {
   const auto state = find_pipeline(renderer, pipeline);
   if (!state)
     return GRANIT_ERROR_INVALID_HANDLE;
@@ -1173,15 +1178,16 @@ granit_render_pipeline_gpu_metrics_enable(granit_renderer renderer,
 }
 
 extern "C" granit_result
-granit_render_pipeline_gpu_metrics_get(granit_renderer renderer, granit_render_pipeline pipeline,
-                                       granit_render_pipeline_gpu_metrics* metrics) {
-  if (metrics == nullptr)
+granit_render_pipeline_get_metrics(granit_renderer renderer, granit_render_pipeline pipeline,
+                                   granit_render_pipeline_metrics* metrics) {
+  if (metrics == nullptr || metrics->struct_size < GRANIT_RENDER_PIPELINE_METRICS_VERSION_1_SIZE ||
+      metrics->reserved != 0)
     return GRANIT_ERROR_INVALID_ARGUMENT;
   const auto state = find_pipeline(renderer, pipeline);
   if (!state)
     return GRANIT_ERROR_INVALID_HANDLE;
   std::scoped_lock lock{state->mutex};
-  if (state->metrics_pool == GRANIT_NULL_HANDLE)
+  if (state->metrics_pool == GRANIT_NULL_HANDLE || !state->metrics_available)
     return GRANIT_ERROR_NOT_READY;
   *metrics = state->metrics;
   return GRANIT_SUCCESS;

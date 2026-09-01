@@ -56,6 +56,16 @@ Overlay 阶段具有以下固定语义：
 - `encode_srgb` 为 1 时，UNORM 输出需要由 Shader 编码 sRGB；为 0 时由 sRGB Attachment 完成编码。
 - 每个 View 分别调用一次；离屏提交和 Swapchain Frame 共用相同的 Render Graph 构建路径。
 
+## GPU 阶段指标
+
+调用 `granit_render_pipeline_metrics_enable` 可启用可选 GPU Timestamp Query。后端不支持时返回
+`GRANIT_ERROR_UNSUPPORTED`。之后使用 `granit_render_pipeline_get_metrics` 读取最近一次已完成样本；
+尚未产生或完成样本时返回 `GRANIT_ERROR_NOT_READY`，不会伪造零耗时。
+
+`granit_render_pipeline_metrics` 返回递增样本序号，以及 Shadow、Opaque、Tone Mapping 和三者合计
+的 GPU 纳秒数。它不包含 CPU 帧时间、帧槽等待、Present 等待及阶段间空隙，因此不能与 CPU
+墙钟相加，也不等同于端到端 GPU 帧时间。指标回读暂不可用不会把已经提交成功的渲染改判为失败。
+
 ## 生命周期与线程安全
 
 - Pipeline 借用 Renderer，并拥有默认 IBL、内建 Shader 和跨帧缓存。

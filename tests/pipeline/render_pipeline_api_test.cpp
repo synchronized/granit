@@ -108,19 +108,19 @@ std::vector<std::byte> build_automatic_material_archive() {
        .offset = 28,
        .default_value = {}},
       {.name = "emissive", .type = parameter_type::float3, .offset = 32, .default_value = {}}};
-  material_variant_desc variant{.pass = make_feature_id("opaque"),
-                                .features = {{make_feature_id("pbr_texture_mask"), 0}},
-                                .shaders = {{.stage = package_shader_stage::vertex,
-                                             .entry_point = "vertex_main",
-                                             .spirv = vertex,
-                                             .wgsl = load_pipeline_shader_text(
-                                                 "pbr_shadow_ibl_lights.vert.wgsl")},
-                                            {.stage = package_shader_stage::fragment,
-                                             .entry_point = "fragment_main",
-                                             .spirv = fragment,
-                                             .wgsl = load_pipeline_shader_text(
-                                                 "pbr_shadow_ibl_lights_untextured.frag.wgsl")}},
-                                .pipeline = {}};
+  material_variant_desc variant{
+      .pass = make_feature_id("opaque"),
+      .features = {{make_feature_id("pbr_texture_mask"), 0}},
+      .shaders = {{.stage = package_shader_stage::vertex,
+                   .entry_point = "vertex_main",
+                   .spirv = vertex,
+                   .wgsl = load_pipeline_shader_text("pbr_shadow_ibl_lights.vert.wgsl")},
+                  {.stage = package_shader_stage::fragment,
+                   .entry_point = "fragment_main",
+                   .spirv = fragment,
+                   .wgsl =
+                       load_pipeline_shader_text("pbr_shadow_ibl_lights_untextured.frag.wgsl")}},
+      .pipeline = {}};
   variant.pipeline.primitive.front_face = GRANIT_FRONT_FACE_CLOCKWISE;
   variant.pipeline.primitive.cull_mode = GRANIT_CULL_MODE_BACK;
   variant.pipeline.depth.test_enabled = 1;
@@ -238,6 +238,19 @@ void initialize_test_mesh(granit_renderer renderer, granit::buffer& vertex_buffe
 }
 
 } // namespace
+
+TEST_CASE("Render Pipeline 指标 API 校验参数和样本状态", "[pipeline][metrics]") {
+  granit_render_pipeline_metrics metrics = GRANIT_RENDER_PIPELINE_METRICS_INIT;
+  CHECK(granit_render_pipeline_metrics_enable(GRANIT_NULL_HANDLE, GRANIT_NULL_HANDLE) ==
+        GRANIT_ERROR_INVALID_HANDLE);
+  CHECK(granit_render_pipeline_get_metrics(GRANIT_NULL_HANDLE, GRANIT_NULL_HANDLE, &metrics) ==
+        GRANIT_ERROR_INVALID_HANDLE);
+  metrics.struct_size = 0;
+  CHECK(granit_render_pipeline_get_metrics(GRANIT_NULL_HANDLE, GRANIT_NULL_HANDLE, &metrics) ==
+        GRANIT_ERROR_INVALID_ARGUMENT);
+  CHECK(granit_render_pipeline_get_metrics(GRANIT_NULL_HANDLE, GRANIT_NULL_HANDLE, nullptr) ==
+        GRANIT_ERROR_INVALID_ARGUMENT);
+}
 
 TEST_CASE("RenderPipeline component把空Renderer归类为无效句柄") {
   const granit_render_pipeline_desc desc = GRANIT_RENDER_PIPELINE_DESC_INIT;
