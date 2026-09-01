@@ -276,8 +276,7 @@ Viewer State 和 Performance History，并以显式状态机约束 Renderer 创�
 失败诊断及重置流程。后端无关单帧 `tick` 已统一应用状态与相机输入、生成 View/Light Scene
 Snapshot、预填充 Render Pipeline 描述并收集性能样本；平台输出、Frame、Canvas 和 Submit 仍由壳层
 补齐。桌面壳已从 Core 分离为独立目标，并完成 `--backend=auto|vulkan|webgpu`、可选 Provider
-动态库路径、资产路径、Validation 与 Smoke Test 参数的事务式解析；SDL3 窗口仍待接入。
-浏览器平台壳尚未接入。
+动态库路径、资产路径、Validation 与 Smoke Test 参数的事务式解析。浏览器平台壳尚未接入。
 
 SDL3 输入适配已完成第一阶段：平台事件按帧累积为 `viewer_input`，覆盖右键环绕、中键平移、
 滚轮缩放、`F`/`Home`、焦点与指针进出，并在 ImGui 捕获标志进入 Core 前完成标记。窗口、Surface
@@ -288,7 +287,8 @@ SDL3 输入适配已完成第一阶段：平台事件按帧累积为 `viewer_inp
 暴露 GPU 句柄。材质纹理缩略图已按 Image、Sampler 与 sRGB/线性变体查询 GPU Scene 的实际绑定，
 再注册为安全 Texture ID。桌面帧循环已采集 CPU 整帧、Acquire/帧槽等待、Present 等待，并读取
 Render Pipeline 延迟 GPU Timestamp；`NOT_READY/UNSUPPORTED` 不会伪造零值或中断渲染。
-Surface Lost/Device Lost 专项恢复及真实资产 Smoke 仍待接入。
+真实 FlightHelmet 已通过桌面 Vulkan Smoke；Surface Lost 现在重建 Surface 与 Swapchain，
+Device Lost 明确终止并保留错误结果。真实 Dawn 验收仍待匹配 SDK 工具链的手动 Actions 完成。
 
 三个运行配置如下：
 

@@ -2,6 +2,7 @@
 // Copyright (c) 2026 Granit contributors
 
 #include "desktop_options.h"
+#include "presentation_policy.h"
 #include "sdl3_input.h"
 
 #include "model_viewer/application_core.h"
@@ -282,6 +283,7 @@ int main(int argc, char** argv) {
   desktop::sdl3_input input_adapter;
   bool running = true;
   bool recreate = false;
+  bool recreate_surface = false;
   std::uint32_t rendered_frames = 0;
   performance_sample latest_sample;
   bool has_pending_sample = false;
@@ -305,6 +307,20 @@ int main(int argc, char** argv) {
     if (pixel_width <= 0 || pixel_height <= 0) {
       SDL_Delay(16);
       continue;
+    }
+    if (recreate_surface) {
+      if (granit::failed(result = swapchain.reset()) || granit::failed(result = surface.reset()) ||
+          granit::failed(result = granit::integration::sdl3::create_surface(
+                             renderer.native_handle(), window.get(), surface)) ||
+          granit::failed(result = swapchain.initialize(
+                             renderer.native_handle(), surface.native_handle(),
+                             {.width = static_cast<std::uint32_t>(pixel_width),
+                              .height = static_cast<std::uint32_t>(pixel_height)})) ||
+          granit::failed(result = swapchain.query_info(swapchain_info))) {
+        break;
+      }
+      recreate_surface = false;
+      recreate = false;
     }
     if (recreate) {
       result = swapchain.recreate({.width = static_cast<std::uint32_t>(pixel_width),
@@ -352,12 +368,22 @@ int main(int argc, char** argv) {
     const auto acquire_ms =
         std::chrono::duration<float, std::milli>(std::chrono::steady_clock::now() - acquire_begin)
             .count();
-    if (result == granit::result::out_of_date) {
+    const auto acquire_action = desktop::classify_presentation_result(result);
+    if (acquire_action == desktop::presentation_action::retry) {
+      result = granit::result::success;
+      continue;
+    }
+    if (acquire_action == desktop::presentation_action::recreate_swapchain) {
       result = granit::result::success;
       recreate = true;
       continue;
     }
-    if (granit::failed(result))
+    if (acquire_action == desktop::presentation_action::recreate_surface) {
+      result = granit::result::success;
+      recreate_surface = true;
+      continue;
+    }
+    if (acquire_action == desktop::presentation_action::stop)
       break;
     recreate = frame.needs_recreate;
     granit_texture backbuffer = GRANIT_NULL_HANDLE;
@@ -388,19 +414,34 @@ int main(int argc, char** argv) {
       tick_output.render.canvas = canvas.native_handle();
       result = pipeline.render(tick_output.render);
     }
+    if (granit::failed(result)) {
+      const auto frame_result = result;
+      static_cast<void>(swapchain.cancel(frame));
+      result = frame_result;
+      break;
+    }
     const auto present_begin = std::chrono::steady_clock::now();
-    if (granit::succeeded(result))
-      result = swapchain.present(frame);
+    result = swapchain.present(frame);
     const auto present_ms =
         std::chrono::duration<float, std::milli>(std::chrono::steady_clock::now() - present_begin)
             .count();
     recreate = recreate || frame.needs_recreate;
-    if (result == granit::result::out_of_date) {
+    const auto present_action = desktop::classify_presentation_result(result);
+    if (present_action == desktop::presentation_action::retry) {
+      result = granit::result::success;
+      continue;
+    }
+    if (present_action == desktop::presentation_action::recreate_swapchain) {
       result = granit::result::success;
       recreate = true;
       continue;
     }
-    if (granit::failed(result))
+    if (present_action == desktop::presentation_action::recreate_surface) {
+      result = granit::result::success;
+      recreate_surface = true;
+      continue;
+    }
+    if (present_action == desktop::presentation_action::stop)
       break;
     float gpu_frame_ms = 0.0F;
     bool gpu_timing_available = false;
