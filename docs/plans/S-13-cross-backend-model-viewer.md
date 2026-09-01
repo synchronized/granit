@@ -148,8 +148,10 @@ Renderer 上分别创建独立 GPU Scene，不共享任何 GPU 句柄。
 
 当前进度：GPU Scene 已完成合并 Vertex/Index Buffer、纹理颜色空间拆分、Sampler 去重、
 单变体 PBR 材质实例、默认纹理、稳定 Draw Binding 与 Renderable 打包；调用方可使用逐帧
-View/Light 创建不可变 `scene_snapshot`。动态 Uniform Arena 与跨 Renderer 图形 Smoke Test
-仍属于本阶段后续工作。
+View/Light 创建不可变 `scene_snapshot`。Render Pipeline 的 Frame/Object 布局已切换为动态
+Uniform Binding，带 Swapchain Frame 的路径按真实帧槽复用 Arena Buffer 与 Bind Group；普通离屏
+提交暂时保留独立 Buffer 兼容路径。批量上传、增长/延迟回收专项测试与跨 Renderer 图形 Smoke
+Test 仍属于本阶段后续工作。
 
 #### S-13C1 双后端材质归档前置
 

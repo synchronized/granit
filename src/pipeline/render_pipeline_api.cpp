@@ -9,6 +9,7 @@
 #include "lighting/tone_mapping_resources.h"
 #include "material/material_package.h"
 #include "pipeline/default_ibl_resources.h"
+#include "pipeline/dynamic_uniform_arena.h"
 #include "pipeline/embedded_shaders.h"
 #include "pipeline/material_access.h"
 #include "pipeline/mesh_access.h"
@@ -69,6 +70,7 @@ struct pipeline_state {
   std::vector<shadow_pipeline_entry> shadow_pipelines;
   std::vector<draw_binding_entry> opaque_draw_bindings;
   std::vector<draw_binding_entry> shadow_draw_bindings;
+  granit::pipeline::detail::dynamic_uniform_arena uniform_arena;
   granit_timestamp_query_pool metrics_pool = GRANIT_NULL_HANDLE;
   granit_render_pipeline_gpu_metrics metrics{};
   float shadow_half_extent = 20.0F;
@@ -199,15 +201,14 @@ granit_result record_tone_mapping(granit::lighting::tone_mapping_pipeline_resour
   return result == GRANIT_SUCCESS ? reset_result : result;
 }
 
-granit_result
-record_opaque_draws(pipeline_state& state, granit_command_recorder recorder,
-                    granit_texture_view color, granit_texture_view depth,
-                    granit_texture_view shadow, uint32_t width, uint32_t height,
-                    const granit::material::pbr_frame_constants& frame,
-                    std::span<const granit::material::pbr_object_constants> objects,
-                    std::span<const granit_render_pipeline_draw_binding> draws,
-                    const granit::lighting::packed_view_lights& lights,
-                    const granit::lighting::shadow_sampling_constants& shadow_constants) {
+granit_result record_opaque_draws(
+    pipeline_state& state, granit_command_recorder recorder, granit_texture_view color,
+    granit_texture_view depth, granit_texture_view shadow, uint32_t width, uint32_t height,
+    const granit::material::pbr_frame_constants& frame,
+    std::span<const granit::material::pbr_object_constants> objects,
+    std::span<const granit_render_pipeline_draw_binding> draws,
+    const granit::lighting::packed_view_lights& lights,
+    const granit::lighting::shadow_sampling_constants& shadow_constants, bool use_uniform_arena) {
   if (shadow == GRANIT_NULL_HANDLE || objects.size() != draws.size())
     return GRANIT_ERROR_NOT_READY;
   granit_color_attachment_desc color_attachment = GRANIT_COLOR_ATTACHMENT_DESC_INIT;
@@ -238,7 +239,7 @@ record_opaque_draws(pipeline_state& state, granit_command_recorder recorder,
       result = cached.bindings.reset();
       if (result == GRANIT_SUCCESS)
         result = cached.lighting.reset();
-      if (result == GRANIT_SUCCESS) {
+      if (result == GRANIT_SUCCESS && !use_uniform_arena) {
         result = cached.bindings.initialize(state.renderer, material, frame, objects[index]);
       }
       if (result == GRANIT_SUCCESS) {
@@ -253,19 +254,30 @@ record_opaque_draws(pipeline_state& state, granit_command_recorder recorder,
       }
       if (result == GRANIT_SUCCESS)
         cached.material = draws[index].material;
-    } else if (result == GRANIT_SUCCESS) {
+    } else if (result == GRANIT_SUCCESS && !use_uniform_arena) {
       result = cached.bindings.update(frame, objects[index]);
-      if (result == GRANIT_SUCCESS)
-        result = cached.lighting.update_shadow(shadow_constants);
     }
+    if (result == GRANIT_SUCCESS)
+      result = cached.lighting.update_shadow(shadow_constants);
     if (result == GRANIT_SUCCESS)
       result = cached.lighting.update_lights(lights);
     if (result == GRANIT_SUCCESS)
       result = granit_command_recorder_bind_graphics_pipeline(state.renderer, recorder,
                                                               material.pipeline);
-    const std::array groups{cached.bindings.frame_group(), material.material_group,
-                            cached.bindings.object_group(), cached.lighting.group()};
-    constexpr std::array<uint32_t, 2> dynamic_offsets{0, 0};
+    granit::pipeline::detail::dynamic_uniform_binding arena_binding;
+    if (result == GRANIT_SUCCESS && use_uniform_arena) {
+      result =
+          state.uniform_arena.prepare(material, std::as_bytes(std::span{&frame, 1}),
+                                      std::as_bytes(std::span{&objects[index], 1}), arena_binding);
+    }
+    const std::array groups{
+        use_uniform_arena ? arena_binding.frame_group : cached.bindings.frame_group(),
+        material.material_group,
+        use_uniform_arena ? arena_binding.object_group : cached.bindings.object_group(),
+        cached.lighting.group()};
+    const std::array<uint32_t, 2> dynamic_offsets{
+        use_uniform_arena ? arena_binding.frame_offset : 0,
+        use_uniform_arena ? arena_binding.object_offset : 0};
     if (result == GRANIT_SUCCESS) {
       const granit_bind_groups_desc bind_desc{GRANIT_BIND_GROUPS_DESC_VERSION_1_SIZE,
                                               0,
@@ -354,7 +366,8 @@ granit_result record_shadow_draws(pipeline_state& state, granit_command_recorder
                                   granit_texture_view depth,
                                   const granit::lighting::shadow_frame_constants& frame,
                                   std::span<const granit::lighting::shadow_caster> casters,
-                                  std::span<const granit_render_pipeline_draw_binding> draws) {
+                                  std::span<const granit_render_pipeline_draw_binding> draws,
+                                  bool use_uniform_arena) {
   if (casters.size() != draws.size())
     return GRANIT_ERROR_INVALID_ARGUMENT;
   granit_depth_stencil_attachment_desc depth_attachment = GRANIT_DEPTH_STENCIL_ATTACHMENT_DESC_INIT;
@@ -388,7 +401,7 @@ granit_result record_shadow_draws(pipeline_state& state, granit_command_recorder
       result = cached.bindings.reset();
       if (result == GRANIT_SUCCESS)
         result = cached.lighting.reset();
-      if (result == GRANIT_SUCCESS) {
+      if (result == GRANIT_SUCCESS && !use_uniform_arena) {
         result = cached.bindings.initialize(state.renderer, material, unused_frame, object);
       }
       if (result == GRANIT_SUCCESS) {
@@ -404,13 +417,12 @@ granit_result record_shadow_draws(pipeline_state& state, granit_command_recorder
       }
       if (result == GRANIT_SUCCESS)
         cached.material = draws[index].material;
-    } else if (result == GRANIT_SUCCESS) {
+    } else if (result == GRANIT_SUCCESS && !use_uniform_arena) {
       result = cached.bindings.update(unused_frame, object);
-      if (result == GRANIT_SUCCESS) {
-        result =
-            cached.lighting.update_shadow({.light_view_projection = frame.light_view_projection,
-                                           .texel_size = {1.0F / 1024.0F, 1.0F / 1024.0F}});
-      }
+    }
+    if (result == GRANIT_SUCCESS) {
+      result = cached.lighting.update_shadow({.light_view_projection = frame.light_view_projection,
+                                              .texel_size = {1.0F / 1024.0F, 1.0F / 1024.0F}});
     }
     if (result != GRANIT_SUCCESS)
       break;
@@ -423,8 +435,16 @@ granit_result record_shadow_draws(pipeline_state& state, granit_command_recorder
       result = granit_command_recorder_bind_graphics_pipeline(state.renderer, recorder, pipeline);
     if (result != GRANIT_SUCCESS)
       break;
-    const std::array groups{cached.bindings.object_group(), cached.lighting.group()};
-    constexpr std::array<uint32_t, 1> dynamic_offsets{0};
+    granit::pipeline::detail::dynamic_uniform_binding arena_binding;
+    if (result == GRANIT_SUCCESS && use_uniform_arena) {
+      result = state.uniform_arena.prepare(material, std::as_bytes(std::span{&unused_frame, 1}),
+                                           std::as_bytes(std::span{&object, 1}), arena_binding);
+    }
+    const std::array groups{use_uniform_arena ? arena_binding.object_group
+                                              : cached.bindings.object_group(),
+                            cached.lighting.group()};
+    const std::array<uint32_t, 1> dynamic_offsets{use_uniform_arena ? arena_binding.object_offset
+                                                                    : 0};
     if (result == GRANIT_SUCCESS) {
       const granit_bind_groups_desc bind_desc{GRANIT_BIND_GROUPS_DESC_VERSION_1_SIZE,
                                               2,
@@ -472,6 +492,18 @@ render_view(pipeline_state& state, const granit_render_pipeline_render_desc& des
   const auto& visible = snapshot.views()[view_index];
   if (visible.renderables.indices().empty())
     return GRANIT_ERROR_NOT_READY;
+
+  granit_frame_info frame_info = GRANIT_FRAME_INFO_INIT;
+  const bool use_uniform_arena = frame != GRANIT_NULL_HANDLE;
+  if (use_uniform_arena) {
+    const auto slot_result = granit_frame_get_slot_info(state.renderer, frame, &frame_info);
+    if (slot_result != GRANIT_SUCCESS)
+      return slot_result;
+    const auto arena_result =
+        state.uniform_arena.begin_frame(frame_info.frame_slot, frame_info.frame_slot_count);
+    if (arena_result != GRANIT_SUCCESS)
+      return arena_result;
+  }
 
   granit::render_graph::serial_graph graph;
   const auto hdr = graph.create_transient_texture(
@@ -597,10 +629,11 @@ render_view(pipeline_state& state, const granit_render_pipeline_render_desc& des
             granit::lighting::light_pack_error::none) {
           return GRANIT_ERROR_INVALID_ARGUMENT;
         }
-        return record_opaque_draws(
-            state, context.recorder(), context.texture_view(hdr), context.texture_view(depth),
-            shadow ? context.texture_view(*shadow) : GRANIT_NULL_HANDLE, render_output.width,
-            render_output.height, frame, objects, draw_bindings, lights, shadow_constants);
+        return record_opaque_draws(state, context.recorder(), context.texture_view(hdr),
+                                   context.texture_view(depth),
+                                   shadow ? context.texture_view(*shadow) : GRANIT_NULL_HANDLE,
+                                   render_output.width, render_output.height, frame, objects,
+                                   draw_bindings, lights, shadow_constants, use_uniform_arena);
       }
       const granit_render_pipeline_record_info info{
           .struct_size = sizeof(granit_render_pipeline_record_info),
@@ -656,7 +689,7 @@ render_view(pipeline_state& state, const granit_render_pipeline_render_desc& des
         }
         if (state.record == nullptr) {
           return record_shadow_draws(state, context.recorder(), context.texture_view(*shadow),
-                                     frame, casters, shadow_bindings);
+                                     frame, casters, shadow_bindings, use_uniform_arena);
         }
         const granit_render_pipeline_record_info info{
             .struct_size = sizeof(granit_render_pipeline_record_info),
@@ -781,10 +814,6 @@ render_view(pipeline_state& state, const granit_render_pipeline_render_desc& des
   if (frame == GRANIT_NULL_HANDLE) {
     execution = graph.execute(state.renderer);
   } else {
-    granit_frame_info frame_info = GRANIT_FRAME_INFO_INIT;
-    const auto slot_result = granit_frame_get_slot_info(state.renderer, frame, &frame_info);
-    if (slot_result != GRANIT_SUCCESS)
-      return slot_result;
     execution = graph.execute_frame(state.renderer, frame, frame_info.frame_slot);
   }
   if (!execution.succeeded())
@@ -823,6 +852,9 @@ extern "C" granit_result granit_render_pipeline_create(granit_renderer renderer,
     state->renderer = renderer;
     state->record = desc->record;
     state->user_data = desc->user_data;
+    const auto arena_result = state->uniform_arena.initialize(renderer);
+    if (arena_result != GRANIT_SUCCESS)
+      return arena_result;
     const auto ibl_result = state->default_ibl.initialize(renderer);
     if (ibl_result != GRANIT_SUCCESS)
       return ibl_result;
