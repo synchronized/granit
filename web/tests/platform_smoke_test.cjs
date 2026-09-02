@@ -106,9 +106,14 @@ function validateModelViewerPixels(png) {
 
 function startServer() {
   const requestedPaths = new Set();
+  let externalBufferAvailable = true;
   const server = http.createServer((request, response) => {
     const requestPath = new URL(request.url, "http://127.0.0.1").pathname;
     requestedPaths.add(requestPath);
+    if (!externalBufferAvailable && requestPath === "/model_viewer_fixture.bin") {
+      response.writeHead(404, { "Cache-Control": "no-store" }).end();
+      return;
+    }
     const relativePath = requestPath === "/" ? entryName : requestPath.slice(1);
     const filePath = path.resolve(outputDirectory, relativePath);
     if (!filePath.startsWith(`${outputDirectory}${path.sep}`)) {
@@ -121,6 +126,7 @@ function startServer() {
         return;
       }
       response.writeHead(200, {
+        "Cache-Control": "no-store",
         "Content-Type": contentTypes.get(path.extname(filePath)) ?? "application/octet-stream",
       });
       response.end(content);
@@ -128,12 +134,20 @@ function startServer() {
   });
   return new Promise((resolve, reject) => {
     server.once("error", reject);
-    server.listen(0, "127.0.0.1", () => resolve({ server, requestedPaths }));
+    server.listen(0, "127.0.0.1", () =>
+      resolve({
+        server,
+        requestedPaths,
+        rejectExternalBuffer() {
+          externalBufferAvailable = false;
+        },
+      }),
+    );
   });
 }
 
 async function main() {
-  const { server, requestedPaths } = await startServer();
+  const { server, requestedPaths, rejectExternalBuffer } = await startServer();
   const address = server.address();
   const browserArguments = ["--enable-unsafe-webgpu", "--no-sandbox"];
   if (process.platform !== "win32") {
@@ -183,7 +197,7 @@ async function main() {
     await page.waitForFunction(
       () =>
         typeof Module._granit_web_rendered_frame_count === "function" &&
-        Module._granit_web_rendered_frame_count() >= 3,
+        Module._granit_web_rendered_frame_count() >= 60,
       undefined,
       { timeout: 10_000 },
     );
@@ -255,6 +269,31 @@ async function main() {
       );
     }
     console.log("浏览器 WebGPU 多帧渲染、输入、Resize、资产 Fetch 与资源释放验证通过");
+
+    rejectExternalBuffer();
+    const failurePage = await browser.newPage();
+    const failureMessages = [];
+    failurePage.on("console", (message) =>
+      failureMessages.push(`${message.type()}: ${message.text()}`),
+    );
+    failurePage.on("pageerror", (error) => failureMessages.push(`pageerror: ${error.message}`));
+    await failurePage.goto(
+      `http://127.0.0.1:${address.port}/${entryName}?missing-external-buffer=1`,
+      { waitUntil: "load" },
+    );
+    await failurePage.waitForFunction(
+      () => document.querySelector("#granit-status")?.dataset.status === "failed",
+      undefined,
+      { timeout: 30_000 },
+    );
+    const failureText = await failurePage.locator("#granit-status").textContent();
+    if (!failureText?.startsWith("failed:asset-resource-fetch:")) {
+      throw new Error(
+        `外部 Buffer 缺失未进入预期失败路径：${failureText}\n${failureMessages.join("\n")}`,
+      );
+    }
+    await failurePage.close();
+    console.log("浏览器 WebGPU 外部 Buffer 缺失诊断验证通过");
   } catch (error) {
     console.error(browserMessages.join("\n"));
     throw error;
