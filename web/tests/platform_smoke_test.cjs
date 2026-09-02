@@ -100,7 +100,14 @@ function validateModelViewerPixels(png) {
   }
   if (center[0] < 40 || center[1] < 40 || center[2] < 40)
     throw new Error(`WebGPU 模型查看器中心未绘制模型：${center.join(",")}`);
-  if (!(corner[0] <= 40 && corner[1] <= 40 && corner[2] <= 40))
+  // 默认摄影棚背景经过交换链颜色空间转换后约为 (33, 49, 73)。这里保留量化与
+  // 浏览器实现差异的容差，同时要求蓝色分量明显高于红色，避免纯黑清屏误通过。
+  if (
+    Math.abs(corner[0] - 33) > 8 ||
+    Math.abs(corner[1] - 49) > 8 ||
+    Math.abs(corner[2] - 73) > 8 ||
+    corner[2] <= corner[0] + 20
+  )
     throw new Error(`WebGPU 模型查看器背景像素异常：${corner.join(",")}`);
 }
 

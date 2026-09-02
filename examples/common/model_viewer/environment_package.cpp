@@ -114,16 +114,18 @@ environment_package_error parse_environment_package(std::span<const std::byte> b
 
   try {
     std::size_t offset = header_size;
-    const auto irradiance_size = static_cast<std::size_t>(irradiance_resolution) *
-                                 irradiance_resolution * cube_face_count * bytes_per_pixel;
+    const auto irradiance_size =
+        static_cast<std::size_t>(static_cast<std::uint64_t>(irradiance_resolution) *
+                                 irradiance_resolution * cube_face_count * bytes_per_pixel);
     package.irradiance_resolution = irradiance_resolution;
     package.irradiance_pixels = bytes.subspan(offset, irradiance_size);
     offset += irradiance_size;
     mip_resolution = prefiltered_resolution;
     package.prefiltered_mips.reserve(mip_count);
     for (std::uint32_t mip = 0; mip < mip_count; ++mip) {
-      const auto mip_size = static_cast<std::size_t>(mip_resolution) * mip_resolution *
-                            cube_face_count * bytes_per_pixel;
+      const auto mip_size =
+          static_cast<std::size_t>(static_cast<std::uint64_t>(mip_resolution) * mip_resolution *
+                                   cube_face_count * bytes_per_pixel);
       package.prefiltered_mips.push_back(
           {.resolution = mip_resolution, .pixels = bytes.subspan(offset, mip_size)});
       offset += mip_size;
