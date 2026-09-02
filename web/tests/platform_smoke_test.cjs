@@ -90,26 +90,18 @@ function pixelAt(image, x, y) {
   return Array.from(image.pixels.subarray(offset, offset + image.channels));
 }
 
-function validateCanvasPixels(png) {
+function validateModelViewerPixels(png) {
   const image = decodePng(png);
   const center = pixelAt(image, Math.floor(image.width / 2), Math.floor(image.height / 2));
-  const left = pixelAt(image, Math.floor(image.width / 4), Math.floor(image.height / 2));
-  const right = pixelAt(image, Math.floor((image.width * 3) / 4), Math.floor(image.height / 2));
   const corner = pixelAt(image, 4, 4);
   if (process.platform === "linux" && center[3] === 0) {
     console.warn("Linux 无头 Chrome 未暴露 WebGPU Canvas 合成像素，跳过截图颜色断言");
     return;
   }
-  const matches = (actual, expected, tolerance = 4) =>
-    expected.every((value, index) => Math.abs(actual[index] - value) <= tolerance);
-  if (!matches(center, [0, 0, 42]))
-    throw new Error(`WebGPU Fixture 深度遮挡中心像素异常：${center.join(",")}`);
-  if (!matches(left, [129, 0, 0]))
-    throw new Error(`WebGPU Fixture 左侧实例像素异常：${left.join(",")}`);
-  if (!matches(right, [0, 79, 0]))
-    throw new Error(`WebGPU Fixture 右侧实例像素异常：${right.join(",")}`);
+  if (center[0] < 40 || center[1] < 40 || center[2] < 40)
+    throw new Error(`WebGPU 模型查看器中心未绘制模型：${center.join(",")}`);
   if (!(corner[0] <= 40 && corner[1] <= 40 && corner[2] <= 40))
-    throw new Error(`WebGPU 清屏角落像素异常：${corner.join(",")}`);
+    throw new Error(`WebGPU 模型查看器背景像素异常：${corner.join(",")}`);
 }
 
 function startServer() {
@@ -188,11 +180,18 @@ async function main() {
         `WebGPU 生命周期异常，state=${rendererState}, failure=${failureResult}, asset=${assetStatus}`,
       );
     }
+    await page.waitForFunction(
+      () =>
+        typeof Module._granit_web_rendered_frame_count === "function" &&
+        Module._granit_web_rendered_frame_count() >= 3,
+      undefined,
+      { timeout: 10_000 },
+    );
     for (const assetPath of ["/model_viewer_fixture.gltf", "/model_viewer_fixture.bin"]) {
       if (!requestedPaths.has(assetPath))
         throw new Error(`浏览器资源加载链路未请求 ${assetPath}`);
     }
-    validateCanvasPixels(await page.locator("#canvas").screenshot({ type: "png" }));
+    validateModelViewerPixels(await page.locator("#canvas").screenshot({ type: "png" }));
 
     await page.keyboard.press("A");
     await page.locator("#canvas").click({ position: { x: 16, y: 16 } });
@@ -204,7 +203,7 @@ async function main() {
       undefined,
       { timeout: 5_000 },
     );
-    console.log("浏览器 WebGPU 渲染、两阶段资产 Fetch 与输入转发验证通过");
+    console.log("浏览器 WebGPU 多帧渲染、两阶段资产 Fetch 与输入转发验证通过");
   } catch (error) {
     console.error(browserMessages.join("\n"));
     throw error;

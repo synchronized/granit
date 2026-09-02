@@ -337,7 +337,8 @@ granit_result renderer_registry::create_bind_group(granit_renderer renderer,
               entry.size != GRANIT_WHOLE_SIZE)
             return GRANIT_ERROR_INVALID_ARGUMENT;
           const bool sampled = declaration->type == GRANIT_BINDING_TYPE_SAMPLED_TEXTURE ||
-                               declaration->type == GRANIT_BINDING_TYPE_SAMPLED_TEXTURE_CUBE;
+                               declaration->type == GRANIT_BINDING_TYPE_SAMPLED_TEXTURE_CUBE ||
+                               declaration->type == GRANIT_BINDING_TYPE_SAMPLED_DEPTH_TEXTURE;
           const auto required_usage = sampled
                                           ? GRANIT_TEXTURE_USAGE_SAMPLED_BIT
                                           : GRANIT_TEXTURE_USAGE_STORAGE_BIT;
@@ -345,6 +346,8 @@ granit_result renderer_registry::create_bind_group(granit_renderer renderer,
             return GRANIT_ERROR_INVALID_ARGUMENT;
           write.type = declaration->type == GRANIT_BINDING_TYPE_SAMPLED_TEXTURE_CUBE
                            ? backend_binding_type::sampled_texture_cube
+                       : declaration->type == GRANIT_BINDING_TYPE_SAMPLED_DEPTH_TEXTURE
+                           ? backend_binding_type::sampled_depth_texture
                        : sampled ? backend_binding_type::sampled_texture
                                  : backend_binding_type::storage_texture;
           write.texture_view = found->second->native.get();

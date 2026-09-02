@@ -16,6 +16,7 @@ enum class backend_binding_type : std::uint8_t {
   storage_buffer,
   sampled_texture,
   sampled_texture_cube,
+  sampled_depth_texture,
   storage_texture,
   sampler,
   comparison_sampler,

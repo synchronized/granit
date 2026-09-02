@@ -37,8 +37,10 @@ struct web_platform_state {
   granit_renderer renderer{};
   granit_surface surface{};
   granit_swapchain swapchain{};
+  granit_render_pipeline pipeline{};
   startup_status status{startup_status::starting};
   unsigned input_event_count{};
+  unsigned rendered_frame_count{};
   std::shared_ptr<granit::example::model_viewer::web::asset_request> asset_request{
       std::make_shared<granit::example::model_viewer::web::asset_request>()};
   granit::example::model_viewer::web::resource_fetch_batch resource_batch;
@@ -480,7 +482,7 @@ granit_result create_presentation_resources() {
   return GRANIT_SUCCESS;
 }
 
-granit_result render_model_viewer_probe(granit_render_pipeline pipeline) {
+granit_result render_model_viewer_frame() {
   granit_swapchain_info info = GRANIT_SWAPCHAIN_INFO_INIT;
   auto result = granit_swapchain_get_info(state.renderer, state.swapchain, &info);
   granit_frame frame{};
@@ -505,7 +507,7 @@ granit_result render_model_viewer_probe(granit_render_pipeline pipeline) {
     output.render.output = backbuffer_view;
     output.render.output_format = info.format;
     output.render.frame = frame;
-    result = granit_render_pipeline_render(state.renderer, pipeline, &output.render);
+    result = granit_render_pipeline_render(state.renderer, state.pipeline, &output.render);
   }
   if (result != GRANIT_SUCCESS) {
     if (frame != GRANIT_NULL_HANDLE)
@@ -513,13 +515,24 @@ granit_result render_model_viewer_probe(granit_render_pipeline pipeline) {
           granit_frame_cancel(state.renderer, state.swapchain, frame, &needs_recreate));
     return result;
   }
-  return granit_swapchain_present(state.renderer, state.swapchain, frame, &needs_recreate);
+  result = granit_swapchain_present(state.renderer, state.swapchain, frame, &needs_recreate);
+  if (result == GRANIT_SUCCESS)
+    ++state.rendered_frame_count;
+  return result;
 }
 
 void tick(void*) noexcept {
-  if (state.status != startup_status::provider_pending) {
+  if (state.status == startup_status::failed) {
     return;
   }
+  if (state.status == startup_status::ready) {
+    const auto result = render_model_viewer_frame();
+    if (result != GRANIT_SUCCESS)
+      fail("model-viewer-frame", result);
+    return;
+  }
+  if (state.status != startup_status::provider_pending)
+    return;
   const auto process_result = granit_renderer_process_events(state.renderer);
   if (process_result != GRANIT_SUCCESS) {
     fail("provider-events", process_result);
@@ -632,29 +645,25 @@ void tick(void*) noexcept {
     return;
   }
   try {
-    granit_render_pipeline pipeline{};
     const granit_render_pipeline_desc pipeline_desc = GRANIT_RENDER_PIPELINE_DESC_INIT;
     const auto pipeline_result =
-        granit_render_pipeline_create(state.renderer, &pipeline_desc, &pipeline);
+        granit_render_pipeline_create(state.renderer, &pipeline_desc, &state.pipeline);
     if (pipeline_result != GRANIT_SUCCESS) {
       fail("pipeline-create", pipeline_result);
       return;
     }
     const auto result = create_presentation_resources();
     if (result != GRANIT_SUCCESS) {
-      static_cast<void>(granit_render_pipeline_destroy(state.renderer, pipeline));
+      static_cast<void>(granit_render_pipeline_destroy(state.renderer, state.pipeline));
+      state.pipeline = GRANIT_NULL_HANDLE;
       fail("presentation-create", result);
       return;
     }
-    const auto render_result = render_model_viewer_probe(pipeline);
+    const auto render_result = render_model_viewer_frame();
     if (render_result != GRANIT_SUCCESS) {
-      static_cast<void>(granit_render_pipeline_destroy(state.renderer, pipeline));
+      static_cast<void>(granit_render_pipeline_destroy(state.renderer, state.pipeline));
+      state.pipeline = GRANIT_NULL_HANDLE;
       fail("model-viewer-render", render_result);
-      return;
-    }
-    const auto pipeline_destroy_result = granit_render_pipeline_destroy(state.renderer, pipeline);
-    if (pipeline_destroy_result != GRANIT_SUCCESS) {
-      fail("pipeline-destroy", pipeline_destroy_result);
       return;
     }
   } catch (const std::bad_alloc&) {
@@ -676,6 +685,10 @@ extern "C" EMSCRIPTEN_KEEPALIVE int granit_web_platform_status() noexcept {
 
 extern "C" EMSCRIPTEN_KEEPALIVE unsigned granit_web_input_event_count() noexcept {
   return state.input_event_count;
+}
+
+extern "C" EMSCRIPTEN_KEEPALIVE unsigned granit_web_rendered_frame_count() noexcept {
+  return state.rendered_frame_count;
 }
 
 extern "C" EMSCRIPTEN_KEEPALIVE unsigned granit_web_asset_status() noexcept {

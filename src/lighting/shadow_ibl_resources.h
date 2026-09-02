@@ -17,8 +17,9 @@ inline constexpr std::array standard_lighting_layout_entries{
     granit::bind_group_layout_entry{
         shadow_binding_constants, granit::binding_type::uniform_buffer, 1,
         granit::shader_stage_flags::vertex | granit::shader_stage_flags::fragment},
-    granit::bind_group_layout_entry{shadow_binding_texture, granit::binding_type::sampled_texture,
-                                    1, granit::shader_stage_flags::fragment},
+    granit::bind_group_layout_entry{shadow_binding_texture,
+                                    granit::binding_type::sampled_depth_texture, 1,
+                                    granit::shader_stage_flags::fragment},
     granit::bind_group_layout_entry{shadow_binding_sampler,
                                     granit::binding_type::comparison_sampler, 1,
                                     granit::shader_stage_flags::fragment},

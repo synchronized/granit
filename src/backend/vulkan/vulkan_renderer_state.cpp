@@ -1287,7 +1287,8 @@ granit_result vulkan_renderer_state::create_native_bind_group_layout(
     else if (entry.type == GRANIT_BINDING_TYPE_STORAGE_BUFFER)
       type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
     else if (entry.type == GRANIT_BINDING_TYPE_SAMPLED_TEXTURE ||
-             entry.type == GRANIT_BINDING_TYPE_SAMPLED_TEXTURE_CUBE)
+             entry.type == GRANIT_BINDING_TYPE_SAMPLED_TEXTURE_CUBE ||
+             entry.type == GRANIT_BINDING_TYPE_SAMPLED_DEPTH_TEXTURE)
       type = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
     else if (entry.type == GRANIT_BINDING_TYPE_STORAGE_TEXTURE)
       type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
@@ -1338,6 +1339,7 @@ granit_result vulkan_renderer_state::create_native_bind_group(
       return VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
     case backend_binding_type::sampled_texture:
     case backend_binding_type::sampled_texture_cube:
+    case backend_binding_type::sampled_depth_texture:
       return VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
     case backend_binding_type::storage_texture:
       return VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;

@@ -56,7 +56,7 @@ extern "C" granit_result granit_bind_group_layout_create(granit_renderer rendere
   for (uint32_t index = 0; index < desc->entry_count; ++index) {
     const auto& entry = desc->entries[index];
     if (entry.type < GRANIT_BINDING_TYPE_UNIFORM_BUFFER ||
-        entry.type > GRANIT_BINDING_TYPE_COMPARISON_SAMPLER || entry.array_count == 0 ||
+        entry.type > GRANIT_BINDING_TYPE_SAMPLED_DEPTH_TEXTURE || entry.array_count == 0 ||
         entry.visibility == 0 || (entry.visibility & ~valid_stages) != 0)
       return GRANIT_ERROR_INVALID_ARGUMENT;
     if (entry.type == GRANIT_BINDING_TYPE_DYNAMIC_UNIFORM_BUFFER && entry.array_count != 1)

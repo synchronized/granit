@@ -544,14 +544,18 @@ granit_result record_shadow_draws(pipeline_state& state, granit_command_recorder
     const auto arena_binding = use_uniform_arena
                                    ? arena_bindings[index]
                                    : granit::pipeline::detail::dynamic_uniform_binding{};
-    const std::array groups{use_uniform_arena ? arena_binding.object_group
+    const std::array groups{use_uniform_arena ? arena_binding.frame_group
+                                              : cached.bindings.frame_group(),
+                            material.material_group,
+                            use_uniform_arena ? arena_binding.object_group
                                               : cached.bindings.object_group(),
                             cached.lighting.group()};
-    const std::array<uint32_t, 1> dynamic_offsets{use_uniform_arena ? arena_binding.object_offset
-                                                                    : 0};
+    const std::array<uint32_t, 2> dynamic_offsets{
+        use_uniform_arena ? arena_binding.frame_offset : 0,
+        use_uniform_arena ? arena_binding.object_offset : 0};
     if (result == GRANIT_SUCCESS) {
       const granit_bind_groups_desc bind_desc{GRANIT_BIND_GROUPS_DESC_VERSION_1_SIZE,
-                                              2,
+                                              0,
                                               groups.data(),
                                               static_cast<uint32_t>(groups.size()),
                                               static_cast<uint32_t>(dynamic_offsets.size()),

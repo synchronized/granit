@@ -54,7 +54,7 @@ granit_result shadow_resources::initialize(granit_renderer renderer,
                                       .visibility = granit::shader_stage_flags::vertex |
                                                     granit::shader_stage_flags::fragment},
       granit::bind_group_layout_entry{.binding = shadow_binding_texture,
-                                      .type = granit::binding_type::sampled_texture,
+                                      .type = granit::binding_type::sampled_depth_texture,
                                       .array_count = 1,
                                       .visibility = granit::shader_stage_flags::fragment},
       granit::bind_group_layout_entry{.binding = shadow_binding_sampler,
