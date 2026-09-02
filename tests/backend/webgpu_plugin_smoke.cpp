@@ -113,12 +113,16 @@ int main(int argc, char** argv) {
                        GRANIT_BACKEND_PLUGIN_TEXTURE_USAGE_COPY_DST_BIT;
   texture_desc.format = GRANIT_BACKEND_PLUGIN_TEXTURE_FORMAT_RGBA8_UNORM;
   texture_desc.mip_level_count = 1;
+  texture_desc.dimension = GRANIT_BACKEND_PLUGIN_TEXTURE_DIMENSION_2D;
+  texture_desc.array_layer_count = 1;
   const granit_backend_plugin_texture_view_desc texture_view_desc{
       sizeof(granit_backend_plugin_texture_view_desc),
       GRANIT_BACKEND_PLUGIN_TEXTURE_FORMAT_RGBA8_UNORM,
       0,
       1,
-      {0, 0}};
+      GRANIT_BACKEND_PLUGIN_TEXTURE_DIMENSION_2D,
+      0,
+      1};
   granit_backend_plugin_texture texture{};
   granit_backend_plugin_texture_view view{};
   granit_backend_plugin_sampler_desc sampler_desc{};
