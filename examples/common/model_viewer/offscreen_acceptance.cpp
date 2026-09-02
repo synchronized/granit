@@ -34,14 +34,35 @@ struct options {
   std::filesystem::path environment;
   std::filesystem::path output;
   std::filesystem::path expected;
+  granit::example::model_viewer::debug_display_mode debug_display{
+      granit::example::model_viewer::debug_display_mode::shaded};
   bool validation{};
 };
 
 void print_usage() {
   std::cerr << "用法：granit_model_viewer_offscreen_acceptance --asset <文件> --output <文件.rgba> "
                "[--environment <文件.grenv>] [--expected <文件.rgba>] "
+               "[--debug-display=shaded|base-color|normals|metallic|roughness] "
                "[--backend=auto|vulkan|webgpu] "
                "[--backend-library <文件>] [--validation]\n";
+}
+
+bool parse_debug_display(std::string_view value,
+                         granit::example::model_viewer::debug_display_mode& mode) {
+  using enum granit::example::model_viewer::debug_display_mode;
+  if (value == "shaded")
+    mode = shaded;
+  else if (value == "base-color")
+    mode = base_color;
+  else if (value == "normals")
+    mode = normals;
+  else if (value == "metallic")
+    mode = metallic;
+  else if (value == "roughness")
+    mode = roughness;
+  else
+    return false;
+  return true;
 }
 
 bool parse_backend(std::string_view value, granit::renderer_backend& backend) {
@@ -61,8 +82,13 @@ bool parse_options(int argc, char** argv, options& output) {
   for (int index = 1; index < argc; ++index) {
     const std::string_view argument{argv[index]};
     constexpr std::string_view backend_prefix = "--backend=";
+    constexpr std::string_view debug_display_prefix = "--debug-display=";
     if (argument.starts_with(backend_prefix)) {
       if (!parse_backend(argument.substr(backend_prefix.size()), candidate.backend))
+        return false;
+    } else if (argument.starts_with(debug_display_prefix)) {
+      if (!parse_debug_display(argument.substr(debug_display_prefix.size()),
+                               candidate.debug_display))
         return false;
     } else if (argument == "--asset" && index + 1 < argc) {
       candidate.asset = argv[++index];
@@ -298,11 +324,17 @@ int main(int argc, char** argv) {
     result = pipeline.initialize(renderer.native_handle(), pipeline_desc);
   }
 
+  granit::example::model_viewer::viewer_change diagnostic_change{};
+  diagnostic_change.debug_display = arguments.debug_display;
   for (std::uint32_t frame = 0; frame < 3 && granit::succeeded(result); ++frame) {
     granit::example::model_viewer::application_tick_output tick;
     stage = "更新固定相机场景";
     result = core.tick(
-        {.input = {}, .change = {}, .width = render_size, .height = render_size, .performance = {}},
+        {.input = {},
+         .change = diagnostic_change,
+         .width = render_size,
+         .height = render_size,
+         .performance = {}},
         tick);
     if (granit::succeeded(result)) {
       stage = "渲染离屏帧";

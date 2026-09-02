@@ -180,6 +180,24 @@ jobs:
             --backend-library "$build/lib/granit_backend_webgpu.dll" `
             --validation 2>&1 | Tee-Object "$output/acceptance.log"
           if ($LASTEXITCODE -ne 0) { throw "Windows Dawn FlightHelmet 截图验收失败" }
+      - name: 生成 Windows Dawn 分层诊断图
+        if: ${{ failure() && steps.integration.outcome == 'success' }}
+        continue-on-error: true
+        shell: pwsh
+        run: |
+          $build = "$env:RUNNER_TEMP/granit-webgpu-build"
+          $assets = "$env:RUNNER_TEMP/granit-flight-helmet"
+          $output = "$build/test-artifacts/s13-model-viewer"
+          foreach ($mode in @("base-color", "normals", "metallic", "roughness")) {
+            & "$build/bin/granit_model_viewer_offscreen_acceptance.exe" `
+              --asset "$assets/glTF/FlightHelmet.gltf" `
+              --environment "$PWD/examples/assets/StudioSmall03.grenv" `
+              --output "$output/flight-helmet-windows-webgpu-$mode.rgba" `
+              --debug-display=$mode `
+              --backend=webgpu `
+              --backend-library "$build/lib/granit_backend_webgpu.dll" `
+              --validation
+          }
       - name: 采集 Windows Dawn 模型查看器性能
         if: ${{ always() && steps.integration.outcome == 'success' }}
         shell: pwsh
@@ -346,6 +364,26 @@ jobs:
               --backend=webgpu \
               --backend-library "$build/lib/libgranit_backend_webgpu.so" \
               --validation 2>&1 | tee "$output/acceptance.log"
+      - name: 生成 Linux Dawn 分层诊断图
+        if: ${{ failure() && steps.integration.outcome == 'success' }}
+        continue-on-error: true
+        shell: bash
+        run: |
+          build="$RUNNER_TEMP/granit-webgpu-build"
+          assets="$RUNNER_TEMP/granit-flight-helmet"
+          output="$build/test-artifacts/s13-model-viewer"
+          lvp_icd="$(find /usr/share/vulkan/icd.d -type f -name 'lvp_icd*.json' -print -quit)"
+          for mode in base-color normals metallic roughness; do
+            VK_DRIVER_FILES="$lvp_icd" LIBGL_ALWAYS_SOFTWARE=1 \
+              "$build/bin/granit_model_viewer_offscreen_acceptance" \
+                --asset "$assets/glTF/FlightHelmet.gltf" \
+                --environment "$PWD/examples/assets/StudioSmall03.grenv" \
+                --output "$output/flight-helmet-linux-webgpu-$mode.rgba" \
+                --debug-display="$mode" \
+                --backend=webgpu \
+                --backend-library "$build/lib/libgranit_backend_webgpu.so" \
+                --validation || true
+          done
       - name: 采集 Linux Dawn 模型查看器性能
         if: ${{ always() && steps.integration.outcome == 'success' }}
         shell: bash
