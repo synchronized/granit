@@ -66,6 +66,7 @@ typedef unsigned int WGPUTextureAspect;
 typedef unsigned int WGPULoadOp;
 typedef unsigned int WGPUStoreOp;
 typedef unsigned int WGPUDeviceLostReason;
+typedef unsigned int WGPUErrorType;
 typedef unsigned int WGPUPresentMode;
 typedef unsigned int WGPUCompositeAlphaMode;
 typedef unsigned int WGPUSurfaceGetCurrentTextureStatus;
@@ -695,6 +696,8 @@ typedef void (*WGPURequestDeviceCallback)(WGPURequestDeviceStatus, WGPUDevice, W
                                           void*, void*);
 typedef void (*WGPUDeviceLostCallback)(const WGPUDevice*, WGPUDeviceLostReason, WGPUStringView,
                                        void*, void*);
+typedef void (*WGPUUncapturedErrorCallback)(const WGPUDevice*, WGPUErrorType, WGPUStringView, void*,
+                                            void*);
 typedef void (*WGPUBufferMapCallback)(WGPUMapAsyncStatus, WGPUStringView, void*, void*);
 
 typedef struct WGPURequestAdapterCallbackInfo {
@@ -721,6 +724,13 @@ typedef struct WGPUDeviceLostCallbackInfo {
   void* userdata2;
 } WGPUDeviceLostCallbackInfo;
 
+typedef struct WGPUUncapturedErrorCallbackInfo {
+  void* nextInChain;
+  WGPUUncapturedErrorCallback callback;
+  void* userdata1;
+  void* userdata2;
+} WGPUUncapturedErrorCallbackInfo;
+
 typedef struct WGPUDeviceDescriptor {
   void* nextInChain;
   WGPUStringView label;
@@ -729,7 +739,7 @@ typedef struct WGPUDeviceDescriptor {
   const WGPULimits* requiredLimits;
   char defaultQueue[32];
   WGPUDeviceLostCallbackInfo deviceLostCallbackInfo;
-  char uncapturedErrorCallbackInfo[40];
+  WGPUUncapturedErrorCallbackInfo uncapturedErrorCallbackInfo;
 } WGPUDeviceDescriptor;
 #define WGPU_DEVICE_DESCRIPTOR_INIT                                                                \
   {                                                                                                \

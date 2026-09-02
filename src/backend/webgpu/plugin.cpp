@@ -370,6 +370,12 @@ void receive_device_lost(const WGPUDevice*, WGPUDeviceLostReason reason, WGPUStr
   }));
 }
 
+void receive_uncaptured_error(const WGPUDevice*, WGPUErrorType, WGPUStringView message, void* data,
+                              void*) noexcept {
+  const auto& state = *static_cast<const webgpu_instance*>(data);
+  emit_dawn_message(&state.host, message);
+}
+
 #if !defined(__EMSCRIPTEN__)
 void receive_adapter(WGPURequestAdapterStatus status, WGPUAdapter adapter, WGPUStringView message,
                      void* data, void*) noexcept {
@@ -447,6 +453,8 @@ void receive_adapter_async(WGPURequestAdapterStatus status, WGPUAdapter adapter,
     descriptor.deviceLostCallbackInfo.mode = WGPUCallbackMode_AllowSpontaneous;
     descriptor.deviceLostCallbackInfo.callback = receive_device_lost;
     descriptor.deviceLostCallbackInfo.userdata1 = &state;
+    descriptor.uncapturedErrorCallbackInfo.callback = receive_uncaptured_error;
+    descriptor.uncapturedErrorCallbackInfo.userdata1 = &state;
     WGPURequestDeviceCallbackInfo callback = WGPU_REQUEST_DEVICE_CALLBACK_INFO_INIT;
     callback.mode = WGPUCallbackMode_AllowSpontaneous;
     callback.callback = receive_device_async;
@@ -603,6 +611,8 @@ granit_result create_backend(const granit_backend_plugin_host_api* host,
   device_descriptor.deviceLostCallbackInfo.mode = WGPUCallbackMode_AllowSpontaneous;
   device_descriptor.deviceLostCallbackInfo.callback = receive_device_lost;
   device_descriptor.deviceLostCallbackInfo.userdata1 = state;
+  device_descriptor.uncapturedErrorCallbackInfo.callback = receive_uncaptured_error;
+  device_descriptor.uncapturedErrorCallbackInfo.userdata1 = state;
   const WGPURequestDeviceCallbackInfo device_callback{nullptr, WGPUCallbackMode_WaitAnyOnly,
                                                       receive_device, &device, nullptr};
   const auto device_future =

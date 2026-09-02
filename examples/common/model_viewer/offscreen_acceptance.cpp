@@ -230,8 +230,15 @@ int main(int argc, char** argv) {
 
   granit::renderer renderer;
   std::string_view stage = "创建 Renderer";
+  const auto diagnostics = [](granit_diagnostic_severity, granit_diagnostic_category,
+                              const char* message, std::uint32_t message_length,
+                              void*) noexcept {
+    if (message != nullptr && message_length != 0)
+      std::cerr << "[granit] " << std::string_view{message, message_length} << '\n';
+  };
   auto result = renderer.initialize({.application_name = "Granit Model Viewer Acceptance",
                                      .enable_validation = arguments.validation,
+                                     .diagnostics = diagnostics,
                                      .backend = arguments.backend,
                                      .backend_library_path = arguments.backend_library});
   granit::renderer_info renderer_details;
