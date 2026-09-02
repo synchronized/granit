@@ -982,6 +982,8 @@ WGPUTextureFormat to_native_texture_format(granit_backend_plugin_texture_format 
     return WGPUTextureFormat_RG8Unorm;
   case GRANIT_BACKEND_PLUGIN_TEXTURE_FORMAT_RGBA8_UNORM:
     return WGPUTextureFormat_RGBA8Unorm;
+  case GRANIT_BACKEND_PLUGIN_TEXTURE_FORMAT_BGRA8_UNORM:
+    return WGPUTextureFormat_BGRA8Unorm;
   case GRANIT_BACKEND_PLUGIN_TEXTURE_FORMAT_RGBA8_SRGB:
     return WGPUTextureFormat_RGBA8UnormSrgb;
   case GRANIT_BACKEND_PLUGIN_TEXTURE_FORMAT_D32_FLOAT:
@@ -990,6 +992,51 @@ WGPUTextureFormat to_native_texture_format(granit_backend_plugin_texture_format 
     return WGPUTextureFormat_RGBA16Float;
   default:
     return WGPUTextureFormat_Undefined;
+  }
+}
+
+WGPUBlendFactor to_native_blend_factor(granit_backend_plugin_blend_factor factor) noexcept {
+  switch (factor) {
+  case GRANIT_BACKEND_PLUGIN_BLEND_FACTOR_ZERO:
+    return WGPUBlendFactor_Zero;
+  case GRANIT_BACKEND_PLUGIN_BLEND_FACTOR_ONE:
+    return WGPUBlendFactor_One;
+  case GRANIT_BACKEND_PLUGIN_BLEND_FACTOR_SOURCE_COLOR:
+    return WGPUBlendFactor_Src;
+  case GRANIT_BACKEND_PLUGIN_BLEND_FACTOR_ONE_MINUS_SOURCE_COLOR:
+    return WGPUBlendFactor_OneMinusSrc;
+  case GRANIT_BACKEND_PLUGIN_BLEND_FACTOR_SOURCE_ALPHA:
+    return WGPUBlendFactor_SrcAlpha;
+  case GRANIT_BACKEND_PLUGIN_BLEND_FACTOR_ONE_MINUS_SOURCE_ALPHA:
+    return WGPUBlendFactor_OneMinusSrcAlpha;
+  case GRANIT_BACKEND_PLUGIN_BLEND_FACTOR_DESTINATION_COLOR:
+    return WGPUBlendFactor_Dst;
+  case GRANIT_BACKEND_PLUGIN_BLEND_FACTOR_ONE_MINUS_DESTINATION_COLOR:
+    return WGPUBlendFactor_OneMinusDst;
+  case GRANIT_BACKEND_PLUGIN_BLEND_FACTOR_DESTINATION_ALPHA:
+    return WGPUBlendFactor_DstAlpha;
+  case GRANIT_BACKEND_PLUGIN_BLEND_FACTOR_ONE_MINUS_DESTINATION_ALPHA:
+    return WGPUBlendFactor_OneMinusDstAlpha;
+  default:
+    return WGPUBlendFactor_Undefined;
+  }
+}
+
+WGPUBlendOperation
+to_native_blend_operation(granit_backend_plugin_blend_operation operation) noexcept {
+  switch (operation) {
+  case GRANIT_BACKEND_PLUGIN_BLEND_OPERATION_ADD:
+    return WGPUBlendOperation_Add;
+  case GRANIT_BACKEND_PLUGIN_BLEND_OPERATION_SUBTRACT:
+    return WGPUBlendOperation_Subtract;
+  case GRANIT_BACKEND_PLUGIN_BLEND_OPERATION_REVERSE_SUBTRACT:
+    return WGPUBlendOperation_ReverseSubtract;
+  case GRANIT_BACKEND_PLUGIN_BLEND_OPERATION_MIN:
+    return WGPUBlendOperation_Min;
+  case GRANIT_BACKEND_PLUGIN_BLEND_OPERATION_MAX:
+    return WGPUBlendOperation_Max;
+  default:
+    return WGPUBlendOperation_Undefined;
   }
 }
 
@@ -1988,7 +2035,15 @@ create_render_pipeline(granit_backend_plugin_instance instance,
       (desc->color_format == 0 && desc->depth_stencil_format == 0) ||
       (desc->depth_stencil_format != 0 &&
        desc->depth_stencil_format != GRANIT_BACKEND_PLUGIN_TEXTURE_FORMAT_D32_FLOAT) ||
-      desc->depth_test_enabled > 1 || desc->depth_write_enabled > 1 ||
+      desc->depth_test_enabled > 1 || desc->depth_write_enabled > 1 || desc->blend_enabled > 1 ||
+      (desc->color_write_mask & ~GRANIT_BACKEND_PLUGIN_COLOR_WRITE_ALL_BITS) != 0 ||
+      (desc->blend_enabled != 0 &&
+       (to_native_blend_factor(desc->source_color_factor) == WGPUBlendFactor_Undefined ||
+        to_native_blend_factor(desc->destination_color_factor) == WGPUBlendFactor_Undefined ||
+        to_native_blend_operation(desc->color_operation) == WGPUBlendOperation_Undefined ||
+        to_native_blend_factor(desc->source_alpha_factor) == WGPUBlendFactor_Undefined ||
+        to_native_blend_factor(desc->destination_alpha_factor) == WGPUBlendFactor_Undefined ||
+        to_native_blend_operation(desc->alpha_operation) == WGPUBlendOperation_Undefined)) ||
       (desc->depth_stencil_format == 0 &&
        (desc->depth_test_enabled != 0 || desc->depth_write_enabled != 0)) ||
       (desc->depth_test_enabled != 0 &&
@@ -2065,7 +2120,17 @@ create_render_pipeline(granit_backend_plugin_instance instance,
   }
   WGPUColorTargetState target = WGPU_COLOR_TARGET_STATE_INIT;
   target.format = to_native_texture_format(desc->color_format);
-  target.writeMask = WGPUColorWriteMask_All;
+  target.writeMask = static_cast<WGPUColorWriteMask>(desc->color_write_mask);
+  WGPUBlendState blend = WGPU_BLEND_STATE_INIT;
+  if (desc->blend_enabled != 0) {
+    blend.color.srcFactor = to_native_blend_factor(desc->source_color_factor);
+    blend.color.dstFactor = to_native_blend_factor(desc->destination_color_factor);
+    blend.color.operation = to_native_blend_operation(desc->color_operation);
+    blend.alpha.srcFactor = to_native_blend_factor(desc->source_alpha_factor);
+    blend.alpha.dstFactor = to_native_blend_factor(desc->destination_alpha_factor);
+    blend.alpha.operation = to_native_blend_operation(desc->alpha_operation);
+    target.blend = &blend;
+  }
   WGPUFragmentState fragment = WGPU_FRAGMENT_STATE_INIT;
   fragment.module = fragment_shader->second.shader;
   fragment.entryPoint = {fragment_shader->second.entry_point.data(),
@@ -2337,10 +2402,9 @@ granit_result recorder_begin_rendering(
       target == 0 ? state.textures.end() : state.textures.find(view->second.texture);
   if (command->second.finished || command->second.pass != nullptr ||
       command->second.compute_pass != nullptr ||
-      (target != 0 &&
-       (texture == state.textures.end() ||
-        (texture->second.usage & GRANIT_BACKEND_PLUGIN_TEXTURE_USAGE_RENDER_ATTACHMENT_BIT) ==
-            0))) {
+      (target != 0 && (texture == state.textures.end() ||
+                       (texture->second.usage &
+                        GRANIT_BACKEND_PLUGIN_TEXTURE_USAGE_RENDER_ATTACHMENT_BIT) == 0))) {
     return GRANIT_ERROR_INVALID_ARGUMENT;
   }
   WGPURenderPassDepthStencilAttachment depth_attachment =
@@ -3111,6 +3175,14 @@ granit_result configure_swapchain(webgpu_instance& state, WGPUSurface surface,
       break;
     }
   }
+  if (format == WGPUTextureFormat_Undefined) {
+    for (std::size_t index = 0; index < capabilities.formatCount; ++index) {
+      if (capabilities.formats[index] == WGPUTextureFormat_BGRA8Unorm) {
+        format = capabilities.formats[index];
+        break;
+      }
+    }
+  }
   if (format == 0) {
     release_capabilities();
     return GRANIT_ERROR_UNSUPPORTED;
@@ -3137,15 +3209,16 @@ granit_result configure_swapchain(webgpu_instance& state, WGPUSurface surface,
   configuration.alphaMode = WGPUCompositeAlphaMode_Auto;
   wgpuSurfaceConfigure(surface, &configuration);
   release_capabilities();
-  info = {sizeof(granit_backend_plugin_swapchain_info),
-          desc.width,
-          desc.height,
-          1,
-          selected_mode == WGPUPresentMode_Mailbox ? GRANIT_BACKEND_PLUGIN_PRESENT_MODE_MAILBOX
-          : selected_mode == WGPUPresentMode_Immediate
-              ? GRANIT_BACKEND_PLUGIN_PRESENT_MODE_IMMEDIATE
-              : GRANIT_BACKEND_PLUGIN_PRESENT_MODE_FIFO,
-          GRANIT_BACKEND_PLUGIN_TEXTURE_FORMAT_RGBA8_UNORM};
+  info = {
+      sizeof(granit_backend_plugin_swapchain_info),
+      desc.width,
+      desc.height,
+      1,
+      selected_mode == WGPUPresentMode_Mailbox     ? GRANIT_BACKEND_PLUGIN_PRESENT_MODE_MAILBOX
+      : selected_mode == WGPUPresentMode_Immediate ? GRANIT_BACKEND_PLUGIN_PRESENT_MODE_IMMEDIATE
+                                                   : GRANIT_BACKEND_PLUGIN_PRESENT_MODE_FIFO,
+      format == WGPUTextureFormat_BGRA8Unorm ? GRANIT_BACKEND_PLUGIN_TEXTURE_FORMAT_BGRA8_UNORM
+                                             : GRANIT_BACKEND_PLUGIN_TEXTURE_FORMAT_RGBA8_UNORM};
   return GRANIT_SUCCESS;
 }
 

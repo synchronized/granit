@@ -752,9 +752,36 @@ TEST_CASE("WebGPU 插件绑定与 Pipeline 遵守依赖生命周期", "[backend]
       GRANIT_BACKEND_PLUGIN_COMPARE_OPERATION_ALWAYS,
       0,
       0.0F,
-      0.0F};
+      0.0F,
+      0,
+      GRANIT_BACKEND_PLUGIN_BLEND_FACTOR_ONE,
+      GRANIT_BACKEND_PLUGIN_BLEND_FACTOR_ZERO,
+      GRANIT_BACKEND_PLUGIN_BLEND_OPERATION_ADD,
+      GRANIT_BACKEND_PLUGIN_BLEND_FACTOR_ONE,
+      GRANIT_BACKEND_PLUGIN_BLEND_FACTOR_ZERO,
+      GRANIT_BACKEND_PLUGIN_BLEND_OPERATION_ADD,
+      GRANIT_BACKEND_PLUGIN_COLOR_WRITE_ALL_BITS};
   granit_backend_plugin_render_pipeline pipeline{};
   REQUIRE(loader.create_render_pipeline(first, &pipeline_desc, &pipeline) == GRANIT_SUCCESS);
+  pipeline_desc.blend_enabled = 1;
+  pipeline_desc.source_color_factor = GRANIT_BACKEND_PLUGIN_BLEND_FACTOR_SOURCE_ALPHA;
+  pipeline_desc.destination_color_factor =
+      GRANIT_BACKEND_PLUGIN_BLEND_FACTOR_ONE_MINUS_SOURCE_ALPHA;
+  pipeline_desc.source_alpha_factor = GRANIT_BACKEND_PLUGIN_BLEND_FACTOR_ONE;
+  pipeline_desc.destination_alpha_factor =
+      GRANIT_BACKEND_PLUGIN_BLEND_FACTOR_ONE_MINUS_SOURCE_ALPHA;
+  granit_backend_plugin_render_pipeline blend_pipeline{};
+  REQUIRE(loader.create_render_pipeline(first, &pipeline_desc, &blend_pipeline) == GRANIT_SUCCESS);
+  REQUIRE(loader.destroy_render_pipeline(first, blend_pipeline) == GRANIT_SUCCESS);
+  pipeline_desc.source_color_factor = 0;
+  granit_backend_plugin_render_pipeline invalid_blend_pipeline = 123;
+  CHECK(loader.create_render_pipeline(first, &pipeline_desc, &invalid_blend_pipeline) ==
+        GRANIT_ERROR_INVALID_ARGUMENT);
+  CHECK(invalid_blend_pipeline == 0);
+  pipeline_desc.blend_enabled = 0;
+  pipeline_desc.source_color_factor = GRANIT_BACKEND_PLUGIN_BLEND_FACTOR_ONE;
+  pipeline_desc.destination_color_factor = GRANIT_BACKEND_PLUGIN_BLEND_FACTOR_ZERO;
+  pipeline_desc.destination_alpha_factor = GRANIT_BACKEND_PLUGIN_BLEND_FACTOR_ZERO;
   pipeline_desc.color_format = GRANIT_BACKEND_PLUGIN_TEXTURE_FORMAT_RGBA16_FLOAT;
   pipeline_desc.depth_stencil_format = GRANIT_BACKEND_PLUGIN_TEXTURE_FORMAT_D32_FLOAT;
   pipeline_desc.depth_test_enabled = 1;

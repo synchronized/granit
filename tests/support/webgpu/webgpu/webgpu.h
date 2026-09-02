@@ -56,6 +56,8 @@ typedef unsigned int WGPUTextureSampleType;
 typedef unsigned int WGPUTextureViewDimension;
 typedef unsigned int WGPUSType;
 typedef unsigned long long WGPUColorWriteMask;
+typedef unsigned int WGPUBlendFactor;
+typedef unsigned int WGPUBlendOperation;
 typedef unsigned int WGPUPrimitiveTopology;
 typedef unsigned int WGPUVertexFormat;
 typedef unsigned int WGPUIndexFormat;
@@ -140,6 +142,23 @@ typedef unsigned int WGPUSurfaceGetCurrentTextureStatus;
 #define WGPUTextureViewDimension_Cube 5
 #define WGPUSType_ShaderSourceWGSL 6
 #define WGPUColorWriteMask_All 15
+#define WGPUBlendFactor_Undefined 0
+#define WGPUBlendFactor_Zero 1
+#define WGPUBlendFactor_One 2
+#define WGPUBlendFactor_Src 3
+#define WGPUBlendFactor_OneMinusSrc 4
+#define WGPUBlendFactor_SrcAlpha 5
+#define WGPUBlendFactor_OneMinusSrcAlpha 6
+#define WGPUBlendFactor_Dst 7
+#define WGPUBlendFactor_OneMinusDst 8
+#define WGPUBlendFactor_DstAlpha 9
+#define WGPUBlendFactor_OneMinusDstAlpha 10
+#define WGPUBlendOperation_Undefined 0
+#define WGPUBlendOperation_Add 1
+#define WGPUBlendOperation_Subtract 2
+#define WGPUBlendOperation_ReverseSubtract 3
+#define WGPUBlendOperation_Min 4
+#define WGPUBlendOperation_Max 5
 #define WGPUPrimitiveTopology_TriangleList 4
 #define WGPUVertexStepMode_Vertex 1
 #define WGPUVertexStepMode_Instance 2
@@ -440,10 +459,22 @@ typedef struct WGPUShaderModuleDescriptor {
 typedef struct WGPUColorTargetState {
   void* nextInChain;
   WGPUTextureFormat format;
-  const void* blend;
+  const struct WGPUBlendState* blend;
   WGPUColorWriteMask writeMask;
 } WGPUColorTargetState;
 #define WGPU_COLOR_TARGET_STATE_INIT                                                               \
+  {                                                                                                \
+  }
+typedef struct WGPUBlendComponent {
+  WGPUBlendOperation operation;
+  WGPUBlendFactor srcFactor;
+  WGPUBlendFactor dstFactor;
+} WGPUBlendComponent;
+typedef struct WGPUBlendState {
+  WGPUBlendComponent color;
+  WGPUBlendComponent alpha;
+} WGPUBlendState;
+#define WGPU_BLEND_STATE_INIT                                                                      \
   {                                                                                                \
   }
 typedef struct WGPUVertexAttribute {

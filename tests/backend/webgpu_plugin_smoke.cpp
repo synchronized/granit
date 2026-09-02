@@ -205,7 +205,15 @@ int main(int argc, char** argv) {
       GRANIT_BACKEND_PLUGIN_COMPARE_OPERATION_ALWAYS,
       0,
       0.0F,
-      0.0F};
+      0.0F,
+      0,
+      GRANIT_BACKEND_PLUGIN_BLEND_FACTOR_ONE,
+      GRANIT_BACKEND_PLUGIN_BLEND_FACTOR_ZERO,
+      GRANIT_BACKEND_PLUGIN_BLEND_OPERATION_ADD,
+      GRANIT_BACKEND_PLUGIN_BLEND_FACTOR_ONE,
+      GRANIT_BACKEND_PLUGIN_BLEND_FACTOR_ZERO,
+      GRANIT_BACKEND_PLUGIN_BLEND_OPERATION_ADD,
+      GRANIT_BACKEND_PLUGIN_COLOR_WRITE_ALL_BITS};
   if (loader.create_render_pipeline(instance, &pipeline_desc, &pipeline) != GRANIT_SUCCESS ||
       pipeline == 0) {
     std::fprintf(stderr, "WebGPU 绑定或 Render Pipeline 生命周期验证失败\n");

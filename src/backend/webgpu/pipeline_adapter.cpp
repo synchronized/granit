@@ -79,6 +79,64 @@ std::uint32_t to_plugin_format(granit_texture_format format) noexcept {
   }
 }
 
+granit_backend_plugin_blend_factor to_plugin_blend_factor(granit_blend_factor factor) noexcept {
+  switch (factor) {
+  case GRANIT_BLEND_FACTOR_ZERO:
+    return GRANIT_BACKEND_PLUGIN_BLEND_FACTOR_ZERO;
+  case GRANIT_BLEND_FACTOR_ONE:
+    return GRANIT_BACKEND_PLUGIN_BLEND_FACTOR_ONE;
+  case GRANIT_BLEND_FACTOR_SOURCE_COLOR:
+    return GRANIT_BACKEND_PLUGIN_BLEND_FACTOR_SOURCE_COLOR;
+  case GRANIT_BLEND_FACTOR_ONE_MINUS_SOURCE_COLOR:
+    return GRANIT_BACKEND_PLUGIN_BLEND_FACTOR_ONE_MINUS_SOURCE_COLOR;
+  case GRANIT_BLEND_FACTOR_SOURCE_ALPHA:
+    return GRANIT_BACKEND_PLUGIN_BLEND_FACTOR_SOURCE_ALPHA;
+  case GRANIT_BLEND_FACTOR_ONE_MINUS_SOURCE_ALPHA:
+    return GRANIT_BACKEND_PLUGIN_BLEND_FACTOR_ONE_MINUS_SOURCE_ALPHA;
+  case GRANIT_BLEND_FACTOR_DESTINATION_COLOR:
+    return GRANIT_BACKEND_PLUGIN_BLEND_FACTOR_DESTINATION_COLOR;
+  case GRANIT_BLEND_FACTOR_ONE_MINUS_DESTINATION_COLOR:
+    return GRANIT_BACKEND_PLUGIN_BLEND_FACTOR_ONE_MINUS_DESTINATION_COLOR;
+  case GRANIT_BLEND_FACTOR_DESTINATION_ALPHA:
+    return GRANIT_BACKEND_PLUGIN_BLEND_FACTOR_DESTINATION_ALPHA;
+  case GRANIT_BLEND_FACTOR_ONE_MINUS_DESTINATION_ALPHA:
+    return GRANIT_BACKEND_PLUGIN_BLEND_FACTOR_ONE_MINUS_DESTINATION_ALPHA;
+  default:
+    return 0;
+  }
+}
+
+granit_backend_plugin_blend_operation
+to_plugin_blend_operation(granit_blend_operation operation) noexcept {
+  switch (operation) {
+  case GRANIT_BLEND_OPERATION_ADD:
+    return GRANIT_BACKEND_PLUGIN_BLEND_OPERATION_ADD;
+  case GRANIT_BLEND_OPERATION_SUBTRACT:
+    return GRANIT_BACKEND_PLUGIN_BLEND_OPERATION_SUBTRACT;
+  case GRANIT_BLEND_OPERATION_REVERSE_SUBTRACT:
+    return GRANIT_BACKEND_PLUGIN_BLEND_OPERATION_REVERSE_SUBTRACT;
+  case GRANIT_BLEND_OPERATION_MIN:
+    return GRANIT_BACKEND_PLUGIN_BLEND_OPERATION_MIN;
+  case GRANIT_BLEND_OPERATION_MAX:
+    return GRANIT_BACKEND_PLUGIN_BLEND_OPERATION_MAX;
+  default:
+    return 0;
+  }
+}
+
+std::uint32_t to_plugin_color_write_mask(granit_color_write_mask mask) noexcept {
+  std::uint32_t result{};
+  if ((mask & GRANIT_COLOR_WRITE_RED_BIT) != 0)
+    result |= GRANIT_BACKEND_PLUGIN_COLOR_WRITE_RED_BIT;
+  if ((mask & GRANIT_COLOR_WRITE_GREEN_BIT) != 0)
+    result |= GRANIT_BACKEND_PLUGIN_COLOR_WRITE_GREEN_BIT;
+  if ((mask & GRANIT_COLOR_WRITE_BLUE_BIT) != 0)
+    result |= GRANIT_BACKEND_PLUGIN_COLOR_WRITE_BLUE_BIT;
+  if ((mask & GRANIT_COLOR_WRITE_ALPHA_BIT) != 0)
+    result |= GRANIT_BACKEND_PLUGIN_COLOR_WRITE_ALPHA_BIT;
+  return result;
+}
+
 } // namespace
 
 webgpu_pipeline_adapter::webgpu_pipeline_adapter(backend_plugin_loader& loader,
@@ -103,10 +161,6 @@ webgpu_pipeline_adapter::allocate_compute_pipeline() const {
 
 granit_result webgpu_pipeline_adapter::validate_graphics_pipeline(
     const granit_graphics_pipeline_desc& desc) const noexcept {
-  const auto default_color_blend = desc.color_blend_count == 0 ||
-                                   (desc.color_blend_count == 1 && desc.color_blends != nullptr &&
-                                    desc.color_blends[0].enabled == 0 &&
-                                    desc.color_blends[0].write_mask == GRANIT_COLOR_WRITE_ALL_BITS);
   if (desc.color_format_count > 1 ||
       (desc.color_format_count == 0 &&
        desc.depth_stencil_format == GRANIT_TEXTURE_FORMAT_UNDEFINED) ||
@@ -115,8 +169,7 @@ granit_result webgpu_pipeline_adapter::validate_graphics_pipeline(
        desc.color_formats[0] != GRANIT_TEXTURE_FORMAT_RGBA16_FLOAT) ||
       (desc.depth_stencil_format != GRANIT_TEXTURE_FORMAT_UNDEFINED &&
        desc.depth_stencil_format != GRANIT_TEXTURE_FORMAT_D32_FLOAT) ||
-      desc.sample_count != 1 ||
-      (desc.struct_size >= GRANIT_GRAPHICS_PIPELINE_DESC_VERSION_4_SIZE && !default_color_blend)) {
+      desc.sample_count != 1) {
     return GRANIT_ERROR_UNSUPPORTED;
   }
   return GRANIT_SUCCESS;
@@ -162,7 +215,8 @@ granit_result webgpu_pipeline_adapter::create_graphics_pipeline(
     granit_backend_plugin_shader vertex_shader, granit_backend_plugin_shader fragment_shader,
     std::span<const granit_vertex_buffer_layout> vertex_buffers, granit_texture_format color_format,
     granit_texture_format depth_stencil_format, const granit_depth_state& depth,
-    const granit_depth_bias_state* depth_bias) const noexcept {
+    const granit_depth_bias_state* depth_bias,
+    const granit_color_blend_state& color_blend) const noexcept {
   auto* pipeline = as_pipeline(resource);
   auto* layout = as_layout(layout_resource);
   const auto plugin_format = to_plugin_format(color_format);
@@ -213,7 +267,15 @@ granit_result webgpu_pipeline_adapter::create_graphics_pipeline(
         depth.compare,
         constant_bias,
         depth_bias == nullptr ? 0.0F : depth_bias->slope_factor,
-        depth_bias == nullptr ? 0.0F : depth_bias->clamp};
+        depth_bias == nullptr ? 0.0F : depth_bias->clamp,
+        color_blend.enabled,
+        to_plugin_blend_factor(color_blend.source_color_factor),
+        to_plugin_blend_factor(color_blend.destination_color_factor),
+        to_plugin_blend_operation(color_blend.color_operation),
+        to_plugin_blend_factor(color_blend.source_alpha_factor),
+        to_plugin_blend_factor(color_blend.destination_alpha_factor),
+        to_plugin_blend_operation(color_blend.alpha_operation),
+        to_plugin_color_write_mask(color_blend.write_mask)};
     return context_->loader->create_render_pipeline(context_->instance, &desc, &pipeline->handle_);
   } catch (const std::bad_alloc&) {
     return GRANIT_ERROR_OUT_OF_MEMORY;

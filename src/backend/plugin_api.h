@@ -291,6 +291,33 @@ typedef struct granit_backend_plugin_vertex_buffer_layout {
   const granit_backend_plugin_vertex_attribute* attributes;
 } granit_backend_plugin_vertex_buffer_layout;
 
+typedef uint32_t granit_backend_plugin_blend_factor;
+#define GRANIT_BACKEND_PLUGIN_BLEND_FACTOR_ZERO UINT32_C(1)
+#define GRANIT_BACKEND_PLUGIN_BLEND_FACTOR_ONE UINT32_C(2)
+#define GRANIT_BACKEND_PLUGIN_BLEND_FACTOR_SOURCE_COLOR UINT32_C(3)
+#define GRANIT_BACKEND_PLUGIN_BLEND_FACTOR_ONE_MINUS_SOURCE_COLOR UINT32_C(4)
+#define GRANIT_BACKEND_PLUGIN_BLEND_FACTOR_SOURCE_ALPHA UINT32_C(5)
+#define GRANIT_BACKEND_PLUGIN_BLEND_FACTOR_ONE_MINUS_SOURCE_ALPHA UINT32_C(6)
+#define GRANIT_BACKEND_PLUGIN_BLEND_FACTOR_DESTINATION_COLOR UINT32_C(7)
+#define GRANIT_BACKEND_PLUGIN_BLEND_FACTOR_ONE_MINUS_DESTINATION_COLOR UINT32_C(8)
+#define GRANIT_BACKEND_PLUGIN_BLEND_FACTOR_DESTINATION_ALPHA UINT32_C(9)
+#define GRANIT_BACKEND_PLUGIN_BLEND_FACTOR_ONE_MINUS_DESTINATION_ALPHA UINT32_C(10)
+
+typedef uint32_t granit_backend_plugin_blend_operation;
+#define GRANIT_BACKEND_PLUGIN_BLEND_OPERATION_ADD UINT32_C(1)
+#define GRANIT_BACKEND_PLUGIN_BLEND_OPERATION_SUBTRACT UINT32_C(2)
+#define GRANIT_BACKEND_PLUGIN_BLEND_OPERATION_REVERSE_SUBTRACT UINT32_C(3)
+#define GRANIT_BACKEND_PLUGIN_BLEND_OPERATION_MIN UINT32_C(4)
+#define GRANIT_BACKEND_PLUGIN_BLEND_OPERATION_MAX UINT32_C(5)
+
+#define GRANIT_BACKEND_PLUGIN_COLOR_WRITE_RED_BIT (UINT32_C(1) << 0)
+#define GRANIT_BACKEND_PLUGIN_COLOR_WRITE_GREEN_BIT (UINT32_C(1) << 1)
+#define GRANIT_BACKEND_PLUGIN_COLOR_WRITE_BLUE_BIT (UINT32_C(1) << 2)
+#define GRANIT_BACKEND_PLUGIN_COLOR_WRITE_ALPHA_BIT (UINT32_C(1) << 3)
+#define GRANIT_BACKEND_PLUGIN_COLOR_WRITE_ALL_BITS                                                 \
+  (GRANIT_BACKEND_PLUGIN_COLOR_WRITE_RED_BIT | GRANIT_BACKEND_PLUGIN_COLOR_WRITE_GREEN_BIT |       \
+   GRANIT_BACKEND_PLUGIN_COLOR_WRITE_BLUE_BIT | GRANIT_BACKEND_PLUGIN_COLOR_WRITE_ALPHA_BIT)
+
 typedef struct granit_backend_plugin_render_pipeline_desc {
   uint32_t struct_size;
   uint32_t reserved;
@@ -307,6 +334,14 @@ typedef struct granit_backend_plugin_render_pipeline_desc {
   int32_t depth_bias_constant;
   float depth_bias_slope_scale;
   float depth_bias_clamp;
+  uint32_t blend_enabled;
+  granit_backend_plugin_blend_factor source_color_factor;
+  granit_backend_plugin_blend_factor destination_color_factor;
+  granit_backend_plugin_blend_operation color_operation;
+  granit_backend_plugin_blend_factor source_alpha_factor;
+  granit_backend_plugin_blend_factor destination_alpha_factor;
+  granit_backend_plugin_blend_operation alpha_operation;
+  uint32_t color_write_mask;
 } granit_backend_plugin_render_pipeline_desc;
 
 /** Canvas selector 仅在调用期间有效；插件必须复制后续需要的内容。 */

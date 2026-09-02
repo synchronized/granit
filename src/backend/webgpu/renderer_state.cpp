@@ -533,10 +533,12 @@ granit_result webgpu_renderer_state::create_graphics_pipeline(
     return GRANIT_ERROR_UNSUPPORTED;
   const auto color_format =
       info.color_formats.empty() ? GRANIT_TEXTURE_FORMAT_UNDEFINED : info.color_formats.front();
+  const granit_color_blend_state default_blend = GRANIT_COLOR_BLEND_STATE_INIT;
+  const auto& color_blend = info.color_blends.empty() ? default_blend : info.color_blends.front();
   return pipelines_->create_graphics_pipeline(
       pipeline, info.layout, shaders_->native_handle(info.vertex_shader),
       shaders_->native_handle(info.fragment_shader), info.vertex_buffers, color_format,
-      info.depth_stencil_format, info.depth, info.depth_bias);
+      info.depth_stencil_format, info.depth, info.depth_bias, color_blend);
 }
 
 void* webgpu_renderer_state::allocate(std::uint64_t size, std::uint64_t alignment, void*) noexcept {
