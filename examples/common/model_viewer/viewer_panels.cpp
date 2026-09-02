@@ -146,6 +146,10 @@ void draw_inspector_panel(const gltf::scene& scene, const viewer_state& state,
 }
 
 void draw_lighting_panel(const viewer_state& state, viewer_change& change) {
+  // ImGui 默认控件宽度会与较长标签争用同一行，窄侧栏中会截断环境光字段名。
+  // 统一为最长标签预留空间，使窗口缩放后仍能完整辨认控件含义。
+  const auto label_width = ImGui::CalcTextSize("Environment Rotation").x;
+  ImGui::PushItemWidth(-label_width - ImGui::GetStyle().ItemInnerSpacing.x);
   auto light = state.directional_light();
   auto exposure = state.exposure_ev();
   bool changed = ImGui::DragFloat3("Direction", &light.direction.x, 0.01F, -1.0F, 1.0F);
@@ -168,6 +172,7 @@ void draw_lighting_panel(const viewer_state& state, viewer_change& change) {
   auto mode = static_cast<int>(state.debug_display());
   if (ImGui::Combo("Debug Display", &mode, modes.data(), static_cast<int>(modes.size())))
     change.debug_display = static_cast<debug_display_mode>(mode);
+  ImGui::PopItemWidth();
 }
 
 void draw_renderer_panel(const renderer_panel_info& info) {
