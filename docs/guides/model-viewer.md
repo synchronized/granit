@@ -89,6 +89,33 @@ Linux 的插件文件通常为 `libgranit_backend_webgpu.so`。省略 `--backend
 查看器支持右键环绕、中键平移、滚轮缩放、`F` 聚焦选择和 `Home` 恢复视图。窗口标题显示实际
 后端与 Adapter；Renderer、场景、材质、灯光和性能信息位于 ImGui 面板。
 
+## 生成固定验收截图
+
+原生构建还会生成无窗口验收程序。它使用固定相机和 512×512 RGBA8 输出，预热三帧后将紧密
+原始像素写入文件：
+
+```powershell
+build/model-viewer/bin/granit_model_viewer_offscreen_acceptance.exe `
+  --asset build/assets/FlightHelmet/glTF/FlightHelmet.gltf `
+  --output build/acceptance/flight-helmet-vulkan.rgba `
+  --backend=vulkan --validation
+```
+
+传入 `--expected` 时，程序会按轮廓边缘容差、非边缘颜色 MAE 和异常像素比例比较期望图；比较
+失败仍保留实际图，供 Actions 上传。桌面 Dawn 使用相同程序，只需切换后端与插件路径：
+
+```powershell
+build/model-viewer-webgpu/bin/granit_model_viewer_offscreen_acceptance.exe `
+  --asset build/assets/FlightHelmet/glTF/FlightHelmet.gltf `
+  --output build/acceptance/flight-helmet-webgpu.rgba `
+  --expected build/acceptance/flight-helmet-vulkan.rgba `
+  --backend=webgpu `
+  --backend-library build/model-viewer-webgpu/bin/granit_backend_webgpu.dll
+```
+
+`.rgba` 文件固定为 1,048,576 字节，不含行填充或文件头。当前阶段以 Vulkan 基准比较 Dawn；
+基准更新必须随 Renderer、Adapter、模型 manifest 和变更原因一起评审。
+
 ## 浏览器验证
 
 Emscripten 版本目前是自动化 Fixture，而不是面向用户发布的完整网页查看器。它通过同一个

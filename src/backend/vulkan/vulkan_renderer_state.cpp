@@ -1359,11 +1359,13 @@ granit_result vulkan_renderer_state::create_native_bind_group(
     else if (write.type == backend_binding_type::storage_buffer)
       index = 2;
     else if (write.type == backend_binding_type::sampled_texture ||
-             write.type == backend_binding_type::sampled_texture_cube)
+             write.type == backend_binding_type::sampled_texture_cube ||
+             write.type == backend_binding_type::sampled_depth_texture)
       index = 3;
     else if (write.type == backend_binding_type::storage_texture)
       index = 4;
-    else if (write.type == backend_binding_type::sampler)
+    else if (write.type == backend_binding_type::sampler ||
+             write.type == backend_binding_type::comparison_sampler)
       index = 5;
     ++counts[index];
   }

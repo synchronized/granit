@@ -80,6 +80,18 @@ target_link_libraries(
 set_target_properties(granit_model_viewer_core PROPERTIES FOLDER "Examples")
 granit_target_compile_warnings(granit_model_viewer_core)
 
+if(NOT CMAKE_CROSSCOMPILING)
+  add_executable(granit_model_viewer_offscreen_acceptance offscreen_acceptance.cpp)
+  target_link_libraries(
+    granit_model_viewer_offscreen_acceptance PRIVATE granit_example_model_viewer_support
+  )
+  set_target_properties(
+    granit_model_viewer_offscreen_acceptance PROPERTIES FOLDER "Examples/Acceptance"
+  )
+  granit_target_output_directories(granit_model_viewer_offscreen_acceptance)
+  granit_target_compile_warnings(granit_model_viewer_offscreen_acceptance)
+endif()
+
 if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
   add_executable(
     granit_example_model_viewer_support_test application_core_test.cpp gpu_scene_test.cpp

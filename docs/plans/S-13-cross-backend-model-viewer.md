@@ -391,8 +391,10 @@ Emscripten 预设构建。两者都不进入 Granit 安装导出，且不复制�
 背景/轮廓遮罩允许一像素边缘容差，深度先验证前后关系，再对非边缘颜色统计
 平均绝对误差与超阈值像素比例。不使用整图精确哈希，也不通过扩大阈值掩盖
 稳定的材质、法线、sRGB 或深度差异。示例私有的纯 CPU 比较器已实现上述轮廓、颜色和深度
-统计，并覆盖边缘容差、颜色/深度失败及事务式参数错误；下一步将桌面离屏回读和失败产物接入
-该比较器。
+统计，并覆盖边缘容差、颜色/深度失败及事务式参数错误。原生离屏验收程序现已固定 512×512
+输出、预热三帧、写出紧密 RGBA8，并可用相同
+命令切换 Vulkan 与桌面 Dawn；本机 Vulkan 已通过重复渲染自比较。剩余工作是 Actions 失败差异图
+和完整 FlightHelmet 跨后端基准。
 
 - Windows 手动 Actions 覆盖 MSVC/Clang、Vulkan 与 Dawn D3D12；Linux 覆盖 GCC/Clang、
   Vulkan 与 Dawn Vulkan，并复用 X11/Wayland Integration Runtime；Emscripten 使用锁定
