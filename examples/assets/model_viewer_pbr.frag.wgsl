@@ -93,8 +93,8 @@ fn fragment_main(input: FragmentInput) -> @location(0) vec4f {
   // 避免金属材质在只有单盏方向光时退化为近乎全黑。
   let environment_fresnel = fresnel_schlick(normal_dot_view, reflectance);
   let environment_diffuse = (vec3f(1.0) - environment_fresnel) * (1.0 - metallic) *
-                            base_color.rgb * 0.25;
-  let environment_specular = environment_fresnel * mix(0.45, 0.12, roughness);
+                            base_color.rgb * 0.08;
+  let environment_specular = environment_fresnel * mix(0.12, 0.04, roughness);
   let ambient = (environment_diffuse + environment_specular) * occlusion;
   let color = ambient + (diffuse + specular) * frame.light_radiance.rgb * normal_dot_light +
               emissive;
