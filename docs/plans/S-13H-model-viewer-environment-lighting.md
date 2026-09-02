@@ -29,6 +29,8 @@ FlightHelmet 的 Base Color、法线、金属度和粗糙度纹理已经正确�
 - 首个环境源锁定 Poly Haven `Studio Small 03` 1K HDR，作者 Greg Zaal，许可证 CC0-1.0；
   manifest 固定来源元数据、字节数和 SHA-256，原始文件不进入默认工作树。
 - glTF IBL Sampler 仅作为 Apache-2.0 离线生成工具；运行时不链接它，也不增加 KTX 依赖。
+- 离线转换器只接受 IBL Sampler 输出的未压缩 `R16G16B16A16_SFLOAT` KTX2 Cube；受限解析器
+  拒绝 Supercompression、非六面纹理、数组纹理、错误 Mip 尺寸、重叠与越界 Level。
 - Base Color、Normals、Metallic 和 Roughness 模式保持不受环境光影响，作为分层诊断入口。
 
 ## 运行时环境包
@@ -43,10 +45,11 @@ Texture 与 Texture View。该格式不是 Granit 公共资产格式，不进入
 1. 为 Render Pipeline 增加后端无关的可选环境纹理与采样参数输入。（已完成）
 2. 锁定 CC0 摄影棚 HDRI 和来源校验清单。（已完成）
 3. 定义并验证运行时环境包解析及 GPU 上传。（已完成）
-4. 生成漫反射 Cube、带 Mip 的 GGX 预过滤 Cube 与 BRDF LUT，并加入可复现校验。
-5. 扩展 model-viewer Shader 的 Group 3 声明和 split-sum IBL 计算，移除临时摄影棚常量补光。
-6. 增加环境强度与旋转控件，并同步桌面及浏览器入口。
-7. 更新 Vulkan 参考图，验证桌面 Dawn 和 Emscripten WebGPU 的颜色、轮廓与深度容差。
+4. 增加受限 KTX2 Cube 输入解析。（已完成）
+5. 生成漫反射 Cube、带 Mip 的 GGX 预过滤 Cube 与 BRDF LUT，并加入可复现校验。
+6. 扩展 model-viewer Shader 的 Group 3 声明和 split-sum IBL 计算，移除临时摄影棚常量补光。
+7. 增加环境强度与旋转控件，并同步桌面及浏览器入口。
+8. 更新 Vulkan 参考图，验证桌面 Dawn 和 Emscripten WebGPU 的颜色、轮廓与深度容差。
 
 ## 测试与验收
 

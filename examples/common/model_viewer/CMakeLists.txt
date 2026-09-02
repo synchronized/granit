@@ -53,6 +53,8 @@ add_library(
   application_core.h
   environment_package.cpp
   environment_package.h
+  environment_ktx2.cpp
+  environment_ktx2.h
   environment_resources.cpp
   environment_resources.h
   gpu_scene.cpp
@@ -101,6 +103,7 @@ if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
     granit_example_model_viewer_support_test
     application_core_test.cpp
     environment_package_test.cpp
+    environment_ktx2_test.cpp
     gpu_scene_test.cpp
     orbit_camera_test.cpp
     performance_history_test.cpp
