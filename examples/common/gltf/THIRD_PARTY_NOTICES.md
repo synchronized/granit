@@ -23,5 +23,5 @@
 FlightHelmet 的元数据文档使用 CC-BY-4.0；下载脚本保存的 `LICENSE.md` 是上游生成的完整模型
 许可说明。模型文件本身为 CC0-1.0，且不进入默认 Git 工作树。
 
-Studio Small 03 由 Greg Zaal 创作并由 Poly Haven 以 CC0-1.0 发布。仓库只保存来源和校验清单；
-原始 HDR 与后续预处理产物均不进入 Granit 安装包。
+Studio Small 03 由 Greg Zaal 创作并由 Poly Haven 以 CC0-1.0 发布。仓库保存来源清单和预处理的
+GRENV 环境包；原始 HDR、中间 KTX2 与 GRENV 均不进入 Granit 安装包。

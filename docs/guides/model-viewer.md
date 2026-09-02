@@ -81,6 +81,8 @@ build/windows-clang-debug/bin/granit_model_viewer_environment_tool.exe build `
 
 打包工具只接受未压缩 RGBA16F 六面 KTX2；GGX 输入必须包含一直到 1×1 的完整 Mip 链。
 BRDF LUT PNG 会被确定性转换为 RGBA16F。工具不属于安装 SDK，也不会成为应用运行时依赖。
+仓库已提交同一参数生成的 `examples/assets/StudioSmall03.grenv`；其大小、SHA-256、采样参数和
+glTF IBL Sampler 修订号记录在 manifest 中。
 
 查看器省略 `--environment` 时会创建一个低分辨率内置摄影棚环境，保证离线首次运行时金属与暗部
 仍然可读；传入 GRENV v1 则使用预处理的高质量环境进行跨后端图像验收。
@@ -96,7 +98,7 @@ BRDF LUT PNG 会被确定性转换为 RGBA16F。工具不属于安装 SDK，也�
 ```powershell
 build/model-viewer/bin/granit_model_viewer_example.exe `
   --asset build/assets/FlightHelmet/glTF/FlightHelmet.gltf `
-  --environment build/assets/StudioSmall03/StudioSmall03.grenv `
+  --environment examples/assets/StudioSmall03.grenv `
   --backend=vulkan --validation
 ```
 

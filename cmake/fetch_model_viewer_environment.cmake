@@ -47,4 +47,18 @@ foreach(index RANGE 0 ${last_file})
   endif()
 endforeach()
 
+string(JSON generated_path GET "${manifest}" generated path)
+string(JSON generated_size GET "${manifest}" generated size)
+string(JSON generated_sha256 GET "${manifest}" generated sha256)
+set(generated_asset "${GRANIT_SOURCE_DIR}/examples/assets/${generated_path}")
+if(NOT EXISTS "${generated_asset}")
+  message(FATAL_ERROR "缺少锁定的模型查看器环境包：${generated_asset}")
+endif()
+file(SIZE "${generated_asset}" actual_generated_size)
+file(SHA256 "${generated_asset}" actual_generated_sha256)
+if(NOT actual_generated_size EQUAL generated_size OR
+   NOT actual_generated_sha256 STREQUAL generated_sha256)
+  message(FATAL_ERROR "模型查看器环境包校验失败：${generated_asset}")
+endif()
+
 message(STATUS "模型查看器环境源已验证到 ${GRANIT_MODEL_VIEWER_ENVIRONMENT_OUTPUT_DIR}")
