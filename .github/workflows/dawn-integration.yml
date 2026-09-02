@@ -113,6 +113,7 @@ jobs:
           name: s13-model-viewer-reference
           path: ${{ runner.temp }}/model-viewer-reference
       - name: 构建并运行 Windows WebGPU 集成测试
+        id: integration
         shell: pwsh
         run: |
           $stage = "$PWD/stage/granit-dawn-static-$env:DAWN_VERSION-windows-x64"
@@ -174,17 +175,18 @@ jobs:
             --output "$output/flight-helmet-windows-webgpu.rgba" `
             --expected "$env:RUNNER_TEMP/model-viewer-reference/flight-helmet-vulkan.rgba" `
             --backend=webgpu `
-            --backend-library "$build/bin/granit_backend_webgpu.dll" `
+            --backend-library "$build/lib/granit_backend_webgpu.dll" `
             --validation 2>&1 | Tee-Object "$output/acceptance.log"
           if ($LASTEXITCODE -ne 0) { throw "Windows Dawn FlightHelmet 截图验收失败" }
       - name: 采集 Windows Dawn 模型查看器性能
+        if: ${{ always() && steps.integration.outcome == 'success' }}
         shell: pwsh
         run: |
           $build = "$env:RUNNER_TEMP/granit-webgpu-build"
           $assets = "$env:RUNNER_TEMP/granit-flight-helmet"
           $output = "$build/test-artifacts/s13-model-viewer/performance"
           $executable = "$build/bin/granit_model_viewer_example.exe"
-          $plugin = "$build/bin/granit_backend_webgpu.dll"
+          $plugin = "$build/lib/granit_backend_webgpu.dll"
           New-Item -ItemType Directory -Force -Path $output | Out-Null
           "| 平台 | 呈现模式 | UI | CPU p50 (ms) | CPU p95 (ms) | GPU p50 (ms) |" |
             Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
@@ -215,6 +217,7 @@ jobs:
             }
           }
       - name: 上传 Windows 模型查看器性能报告
+        if: ${{ always() && steps.integration.outcome == 'success' }}
         uses: actions/upload-artifact@v6
         with:
           name: s13-model-viewer-windows-webgpu-performance
@@ -262,6 +265,7 @@ jobs:
           name: s13-model-viewer-reference
           path: ${{ runner.temp }}/model-viewer-reference
       - name: 构建并运行 Linux WebGPU 集成测试
+        id: integration
         shell: bash
         run: |
           stage="$PWD/stage/granit-dawn-static-$DAWN_VERSION-linux-x64"
@@ -326,6 +330,7 @@ jobs:
               --backend-library "$build/lib/libgranit_backend_webgpu.so" \
               --validation 2>&1 | tee "$output/acceptance.log"
       - name: 采集 Linux Dawn 模型查看器性能
+        if: ${{ always() && steps.integration.outcome == 'success' }}
         shell: bash
         run: |
           build="$RUNNER_TEMP/granit-webgpu-build"
@@ -364,6 +369,7 @@ jobs:
             done
           done
       - name: 上传 Linux 模型查看器性能报告
+        if: ${{ always() && steps.integration.outcome == 'success' }}
         uses: actions/upload-artifact@v6
         with:
           name: s13-model-viewer-linux-webgpu-performance
