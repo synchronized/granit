@@ -56,6 +56,14 @@ Overlay 阶段具有以下固定语义：
 - `encode_srgb` 为 1 时，UNORM 输出需要由 Shader 编码 sRGB；为 0 时由 sRGB Attachment 完成编码。
 - 每个 View 分别调用一次；离屏提交和 Swapchain Frame 共用相同的 Render Graph 构建路径。
 
+## 场景背景
+
+`granit_render_pipeline_render_desc::clear_color` 设置 HDR 场景目标的背景清屏色，随后与场景一起经过
+曝光和 Tone Mapping。Version 1 描述以及未显式赋值的 Version 2 描述保持不透明黑色，因此已有
+调用不改变行为。颜色分量必须为有限值；多 View 简写和输出数组共用本次渲染描述中的背景色。
+
+该字段只负责稳定纯色背景，不代表天空盒、HDRI 或环境光来源；环境贴图切换仍不在当前公共范围内。
+
 ## GPU 阶段指标
 
 调用 `granit_render_pipeline_metrics_enable` 可启用可选 GPU Timestamp Query。后端不支持时返回

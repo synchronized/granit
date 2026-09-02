@@ -291,6 +291,7 @@ int main(int argc, char** argv) {
       stage = "渲染离屏帧";
       tick.render.output = output_view.native_handle();
       tick.render.output_format = GRANIT_TEXTURE_FORMAT_RGBA8_UNORM;
+      tick.render.clear_color = {0.0F, 0.0F, 0.0F, 1.0F};
       result = pipeline.render(tick.render);
     }
   }

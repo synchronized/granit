@@ -153,6 +153,9 @@ void draw_lighting_panel(const viewer_state& state, viewer_change& change) {
     change.directional_light = light;
   if (ImGui::SliderFloat("Exposure EV", &exposure, -24.0F, 24.0F))
     change.exposure_ev = exposure;
+  auto background = state.background_color();
+  if (ImGui::ColorEdit3("Background", &background.x))
+    change.background_color = background;
 
   static constexpr std::array modes{"Shaded", "Base Color", "Normals", "Metallic", "Roughness"};
   auto mode = static_cast<int>(state.debug_display());

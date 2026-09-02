@@ -38,6 +38,7 @@ void viewer_state::reset(const gltf::scene& scene) {
   camera_ = {};
   directional_light_ = {};
   exposure_ev_ = 0.0F;
+  background_color_ = {0.025F, 0.04F, 0.065F};
   debug_display_ = debug_display_mode::shaded;
   panels_ = {};
 }
@@ -54,6 +55,12 @@ viewer_state_error viewer_state::apply(const gltf::scene& scene, const viewer_ch
   if (change.exposure_ev && (!std::isfinite(*change.exposure_ev) || *change.exposure_ev < -24.0F ||
                              *change.exposure_ev > 24.0F))
     return viewer_state_error::invalid_exposure;
+  if (change.background_color &&
+      (!valid_vector(*change.background_color) || change.background_color->x < 0.0F ||
+       change.background_color->x > 1.0F || change.background_color->y < 0.0F ||
+       change.background_color->y > 1.0F || change.background_color->z < 0.0F ||
+       change.background_color->z > 1.0F))
+    return viewer_state_error::invalid_background;
   if (change.debug_display && !valid_debug_display(*change.debug_display))
     return viewer_state_error::invalid_debug_display;
 
@@ -74,6 +81,8 @@ viewer_state_error viewer_state::apply(const gltf::scene& scene, const viewer_ch
     directional_light_ = *change.directional_light;
   if (change.exposure_ev)
     exposure_ev_ = *change.exposure_ev;
+  if (change.background_color)
+    background_color_ = *change.background_color;
   if (change.debug_display)
     debug_display_ = *change.debug_display;
   if (change.panels)

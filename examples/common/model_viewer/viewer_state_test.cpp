@@ -25,6 +25,7 @@ TEST_CASE("查看器状态集中管理选择和可见性", "[example][model-view
   CHECK(state.selected_material() == 0U);
   CHECK_FALSE(state.node_visible(0));
   CHECK(state.node_visible(1));
+  CHECK(state.background_color() == granit::math::float3{0.025F, 0.04F, 0.065F});
 }
 
 TEST_CASE("查看器状态拒绝无效批次且保留旧状态", "[example][model-viewer][state]") {
@@ -43,6 +44,11 @@ TEST_CASE("查看器状态拒绝无效批次且保留旧状态", "[example][mode
   CHECK(state.apply(scene, invalid_batch) == model_viewer::viewer_state_error::invalid_exposure);
   CHECK(state.node_visible(0));
   CHECK(state.exposure_ev() == 2.0F);
+
+  model_viewer::viewer_change invalid_background;
+  invalid_background.background_color = {0.1F, -0.1F, 0.2F};
+  CHECK(state.apply(scene, invalid_background) ==
+        model_viewer::viewer_state_error::invalid_background);
 
   model_viewer::viewer_change invalid_selection;
   invalid_selection.selected_node = 4U;

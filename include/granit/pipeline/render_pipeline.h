@@ -155,11 +155,15 @@ typedef struct granit_render_pipeline_render_desc {
   granit_canvas_draw_list canvas;
   /** 单 View 简写路径的可选世界 Debug Draw List；多 View 使用各 output 的 debug_draw。 */
   granit_debug_draw_list debug_draw;
+  /** HDR 场景背景清屏色；旧版描述保持不透明黑色。 */
+  granit_clear_color_value clear_color;
 } granit_render_pipeline_render_desc;
 
 #define GRANIT_RENDER_PIPELINE_RENDER_DESC_VERSION_1_SIZE                                          \
-  ((uint32_t)(offsetof(granit_render_pipeline_render_desc, debug_draw) +                           \
-              sizeof(granit_debug_draw_list)))
+  ((uint32_t)offsetof(granit_render_pipeline_render_desc, clear_color))
+#define GRANIT_RENDER_PIPELINE_RENDER_DESC_VERSION_2_SIZE                                          \
+  ((uint32_t)(offsetof(granit_render_pipeline_render_desc, clear_color) +                          \
+              sizeof(granit_clear_color_value)))
 
 #define GRANIT_RENDER_PIPELINE_RENDER_DESC_INIT                                                    \
   {(uint32_t)sizeof(granit_render_pipeline_render_desc),                                           \
@@ -179,7 +183,8 @@ typedef struct granit_render_pipeline_render_desc {
    GRANIT_NULL_HANDLE,                                                                             \
    UINT32_C(0),                                                                                    \
    GRANIT_NULL_HANDLE,                                                                             \
-   GRANIT_NULL_HANDLE}
+   GRANIT_NULL_HANDLE,                                                                             \
+   {0.0F, 0.0F, 0.0F, 1.0F}}
 
 #ifdef __cplusplus
 extern "C" {

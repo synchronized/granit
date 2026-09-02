@@ -17,8 +17,8 @@ typedef char granit_pipeline_output_v1_size[sizeof(granit_render_pipeline_output
                                                 ? 1
                                                 : -1];
 typedef char
-    granit_pipeline_render_desc_v1_size[sizeof(granit_render_pipeline_render_desc) ==
-                                                GRANIT_RENDER_PIPELINE_RENDER_DESC_VERSION_1_SIZE
+    granit_pipeline_render_desc_v2_size[sizeof(granit_render_pipeline_render_desc) ==
+                                                GRANIT_RENDER_PIPELINE_RENDER_DESC_VERSION_2_SIZE
                                             ? 1
                                             : -1];
 typedef char granit_pipeline_metrics_v1_size[sizeof(granit_render_pipeline_metrics) ==
