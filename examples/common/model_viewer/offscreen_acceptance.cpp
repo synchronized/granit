@@ -8,13 +8,16 @@
 #include <granit/granit.hpp>
 #include <granit/pipeline/render_pipeline.hpp>
 
+#include <algorithm>
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
 #include <filesystem>
 #include <fstream>
+#include <iomanip>
 #include <iostream>
 #include <span>
+#include <sstream>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -108,6 +111,24 @@ bool write_file(const std::filesystem::path& path, std::span<const std::uint8_t>
   return static_cast<bool>(output);
 }
 
+bool write_text(const std::filesystem::path& path, std::string_view text) {
+  std::error_code directory_error;
+  if (path.has_parent_path())
+    std::filesystem::create_directories(path.parent_path(), directory_error);
+  if (directory_error)
+    return false;
+  std::ofstream output(path);
+  output << text;
+  return static_cast<bool>(output);
+}
+
+std::filesystem::path sidecar_path(const std::filesystem::path& output, std::string_view suffix) {
+  auto result = output;
+  result.replace_extension();
+  result += suffix;
+  return result;
+}
+
 class file_resolver final : public granit::example::gltf::resource_resolver {
 public:
   explicit file_resolver(std::filesystem::path base) : base_(std::move(base)) {}
@@ -120,7 +141,8 @@ private:
   std::filesystem::path base_;
 };
 
-bool compare_expected(const options& arguments, std::span<const std::uint8_t> actual) {
+bool compare_expected(const options& arguments, const granit::renderer_info& renderer,
+                      std::span<const std::uint8_t> actual) {
   if (arguments.expected.empty())
     return true;
   std::vector<std::byte> expected_bytes;
@@ -130,9 +152,11 @@ bool compare_expected(const options& arguments, std::span<const std::uint8_t> ac
   }
   const auto expected = std::span{reinterpret_cast<const std::uint8_t*>(expected_bytes.data()),
                                   expected_bytes.size()};
+  const granit::example::model_viewer::screenshot_comparison_options comparison_options;
   granit::example::model_viewer::screenshot_comparison_report report;
   const auto error = granit::example::model_viewer::compare_screenshots(
-      {render_size, render_size, expected, {}}, {render_size, render_size, actual, {}}, {}, report);
+      {render_size, render_size, expected, {}}, {render_size, render_size, actual, {}},
+      comparison_options, report);
   if (error != granit::example::model_viewer::screenshot_comparison_error::none) {
     std::cerr << "截图比较参数无效：" << static_cast<int>(error) << '\n';
     return false;
@@ -140,7 +164,52 @@ bool compare_expected(const options& arguments, std::span<const std::uint8_t> ac
   std::cout << "截图比较：轮廓错误=" << report.silhouette_mismatch_count
             << "，颜色 MAE=" << report.color_mean_absolute_error
             << "，颜色异常比例=" << report.color_outlier_ratio << '\n';
-  return report.passed;
+  if (report.passed)
+    return true;
+
+  std::vector<std::uint8_t> difference(rgba_size);
+  for (std::size_t pixel = 0; pixel < rgba_size / 4; ++pixel) {
+    for (std::size_t channel = 0; channel < 3; ++channel) {
+      const auto offset = pixel * 4 + channel;
+      const auto absolute = std::abs(static_cast<int>(expected[offset]) - actual[offset]);
+      difference[offset] = static_cast<std::uint8_t>(std::min(absolute * 4, 255));
+    }
+    difference[pixel * 4 + 3] = 255;
+  }
+  const auto difference_path = sidecar_path(arguments.output, ".diff.rgba");
+  const auto report_path = sidecar_path(arguments.output, ".report.json");
+  const auto backend = renderer.backend == granit::renderer_backend::webgpu ? "webgpu" : "vulkan";
+  std::ostringstream json;
+  json << "{\n"
+       << "  \"schema_version\": 1,\n"
+       << "  \"passed\": false,\n"
+       << "  \"backend\": " << std::quoted(backend) << ",\n"
+       << "  \"adapter\": " << std::quoted(renderer.adapter_name) << ",\n"
+       << "  \"asset\": " << std::quoted(arguments.asset.generic_string()) << ",\n"
+       << "  \"expected\": " << std::quoted(arguments.expected.generic_string()) << ",\n"
+       << "  \"actual\": " << std::quoted(arguments.output.generic_string()) << ",\n"
+       << "  \"difference\": " << std::quoted(difference_path.generic_string()) << ",\n"
+       << "  \"width\": " << render_size << ",\n"
+       << "  \"height\": " << render_size << ",\n"
+       << "  \"edge_tolerance_pixels\": "
+       << static_cast<unsigned>(comparison_options.edge_tolerance_pixels) << ",\n"
+       << "  \"color_channel_threshold\": "
+       << static_cast<unsigned>(comparison_options.color_channel_threshold) << ",\n"
+       << "  \"max_color_mean_absolute_error\": "
+       << comparison_options.max_color_mean_absolute_error << ",\n"
+       << "  \"max_color_outlier_ratio\": " << comparison_options.max_color_outlier_ratio << ",\n"
+       << "  \"silhouette_mismatch_count\": " << report.silhouette_mismatch_count << ",\n"
+       << "  \"compared_color_pixel_count\": " << report.compared_color_pixel_count << ",\n"
+       << "  \"color_mean_absolute_error\": " << report.color_mean_absolute_error << ",\n"
+       << "  \"color_outlier_count\": " << report.color_outlier_count << ",\n"
+       << "  \"color_outlier_ratio\": " << report.color_outlier_ratio << "\n"
+       << "}\n";
+  if (!write_file(difference_path, difference) || !write_text(report_path, json.str())) {
+    std::cerr << "写入截图差异产物失败\n";
+  } else {
+    std::cerr << "截图差异图：" << difference_path << "\n诊断报告：" << report_path << '\n';
+  }
+  return false;
 }
 
 } // namespace
@@ -158,6 +227,11 @@ int main(int argc, char** argv) {
                                      .enable_validation = arguments.validation,
                                      .backend = arguments.backend,
                                      .backend_library_path = arguments.backend_library});
+  granit::renderer_info renderer_details;
+  if (granit::succeeded(result)) {
+    stage = "查询 Renderer 信息";
+    result = renderer.get_info(renderer_details);
+  }
   granit::example::model_viewer::application_core core;
   if (granit::succeeded(result)) {
     stage = "启动应用 Core";
@@ -247,7 +321,7 @@ int main(int argc, char** argv) {
     std::cerr << "写入实际截图失败：" << arguments.output << '\n';
     return 1;
   }
-  if (!compare_expected(arguments, rgba)) {
+  if (!compare_expected(arguments, renderer_details, rgba)) {
     std::cerr << "固定截图回归失败，实际图已写入：" << arguments.output << '\n';
     return 1;
   }

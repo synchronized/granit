@@ -101,8 +101,10 @@ build/model-viewer/bin/granit_model_viewer_offscreen_acceptance.exe `
   --backend=vulkan --validation
 ```
 
-传入 `--expected` 时，程序会按轮廓边缘容差、非边缘颜色 MAE 和异常像素比例比较期望图；比较
-失败仍保留实际图，供 Actions 上传。桌面 Dawn 使用相同程序，只需切换后端与插件路径：
+传入 `--expected` 时，程序会按轮廓边缘容差、非边缘颜色 MAE 和异常像素比例比较期望图。失败时
+保留实际图，并在同一目录生成 `<输出名>.diff.rgba` 和 `<输出名>.report.json`；报告包含实际后端、
+Adapter、资产路径及量化统计，供 Actions 一并上传。桌面 Dawn 使用相同程序，只需切换后端与
+插件路径：
 
 ```powershell
 build/model-viewer-webgpu/bin/granit_model_viewer_offscreen_acceptance.exe `
