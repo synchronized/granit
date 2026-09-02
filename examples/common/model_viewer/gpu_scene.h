@@ -144,6 +144,9 @@ public:
                                                        std::uint32_t material_index,
                                                        const material_factor_edit& edit) noexcept;
 
+  /** 更新所有材质的调试显示模式。 */
+  [[nodiscard]] granit::result update_debug_display(std::uint32_t mode) noexcept;
+
 private:
   [[nodiscard]] granit::result create(granit_renderer renderer, const gltf::scene& source);
 

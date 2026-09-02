@@ -17,7 +17,7 @@ struct MaterialConstants {
   normal_scale: f32,
   occlusion_strength: f32,
   emissive: vec3f,
-  reserved_value: f32,
+  debug_display: u32,
 }
 
 struct FragmentInput {
@@ -89,6 +89,18 @@ fn fragment_main(input: FragmentInput) -> @location(0) vec4f {
   let occlusion = mix(1.0, occlusion_sample, material.occlusion_strength);
   let emissive = material.emissive * textureSample(emissive_texture, pbr_sampler,
                                                    input.texture_coordinate).rgb;
+  if (material.debug_display == 1u) {
+    return vec4f(base_color.rgb, base_color.a);
+  }
+  if (material.debug_display == 2u) {
+    return vec4f(normal * 0.5 + vec3f(0.5), 1.0);
+  }
+  if (material.debug_display == 3u) {
+    return vec4f(vec3f(metallic), 1.0);
+  }
+  if (material.debug_display == 4u) {
+    return vec4f(vec3f(roughness), 1.0);
+  }
   // 模型查看器尚未加载真实 HDRI，以中性摄影棚环境近似漫反射与金属反射，
   // 避免金属材质在只有单盏方向光时退化为近乎全黑。
   let environment_fresnel = fresnel_schlick(normal_dot_view, reflectance);

@@ -258,8 +258,7 @@ gpu_scene_plan_error append_primitive(const gltf::primitive& source, gpu_scene_p
   if constexpr (sizeof(std::size_t) > sizeof(std::uint64_t)) {
     if (output.vertices.size() >
             std::numeric_limits<std::uint64_t>::max() / sizeof(packed_vertex) ||
-        output.indices.size() >
-            std::numeric_limits<std::uint64_t>::max() / sizeof(std::uint32_t))
+        output.indices.size() > std::numeric_limits<std::uint64_t>::max() / sizeof(std::uint32_t))
       return gpu_scene_plan_error::numeric_overflow;
   }
 
@@ -509,6 +508,24 @@ granit::result gpu_scene::update_material_factors(gltf::scene& source, std::uint
   material.normal_scale = edit.normal_scale;
   material.occlusion_strength = edit.occlusion_strength;
   material.emissive = edit.emissive;
+  return granit::result::success;
+}
+
+granit::result gpu_scene::update_debug_display(std::uint32_t mode) noexcept {
+  if (!valid())
+    return granit::result::invalid_handle;
+  if (mode > 4)
+    return granit::result::invalid_argument;
+  const granit_material_parameter_update update{granit::material_parameter_id("debug_display"),
+                                                GRANIT_MATERIAL_PARAMETER_UINT32,
+                                                0,
+                                                &mode,
+                                                sizeof(mode),
+                                                0};
+  for (auto& material : materials_) {
+    if (const auto result = material.update(std::span{&update, 1}); granit::failed(result))
+      return result;
+  }
   return granit::result::success;
 }
 

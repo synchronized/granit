@@ -100,6 +100,12 @@ granit::result application_core::tick(const application_tick_input& input,
     return granit::result::not_ready;
   if (state_.apply(cpu_scene_, input.change) != viewer_state_error::none)
     return granit::result::invalid_argument;
+  if (input.change.debug_display) {
+    const auto debug_result =
+        gpu_scene_.update_debug_display(static_cast<std::uint32_t>(*input.change.debug_display));
+    if (granit::failed(debug_result))
+      return debug_result;
+  }
 
   const auto whole_scene_bounds = scene_bounds(gpu_scene_.plan(), gltf::invalid_index);
   if (!camera_initialized_) {
