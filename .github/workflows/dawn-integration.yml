@@ -34,8 +34,60 @@ env:
   DAWN_SDK_TAG: dawn-sdk-v20260720.160313-0bc38adde72b
 
 jobs:
+  model-viewer-reference:
+    if: ${{ inputs.run_windows || inputs.run_linux }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - name: 安装 Vulkan 参考渲染依赖
+        shell: bash
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y \
+            clang libvulkan-dev mesa-vulkan-drivers ninja-build vulkan-validationlayers
+      - name: 构建模型查看器离屏验收程序
+        shell: bash
+        run: |
+          build="$RUNNER_TEMP/granit-model-viewer-reference"
+          CC=clang CXX=clang++ cmake -S . -B "$build" -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DGRANIT_BUILD_MODEL_VIEWER_EXAMPLE=ON \
+            -DGRANIT_FETCH_EXAMPLE_GLTF_DEPENDENCIES=ON \
+            -DGRANIT_BUILD_TESTING=OFF \
+            -DGRANIT_ENABLE_XCB=OFF \
+            -DGRANIT_ENABLE_WAYLAND=OFF
+          cmake --build "$build" --target granit_model_viewer_offscreen_acceptance
+      - name: 生成 FlightHelmet Vulkan 参考图
+        shell: bash
+        run: |
+          build="$RUNNER_TEMP/granit-model-viewer-reference"
+          assets="$RUNNER_TEMP/granit-flight-helmet"
+          output="$RUNNER_TEMP/model-viewer-reference"
+          cmake -DGRANIT_SOURCE_DIR="$PWD" \
+            -DGRANIT_FLIGHT_HELMET_OUTPUT_DIR="$assets" \
+            -P cmake/fetch_flight_helmet.cmake
+          mkdir -p "$output"
+          lvp_icd="$(find /usr/share/vulkan/icd.d -type f -name 'lvp_icd*.json' -print -quit)"
+          [[ -n "$lvp_icd" ]]
+          VK_DRIVER_FILES="$lvp_icd" LIBGL_ALWAYS_SOFTWARE=1 \
+            "$build/bin/granit_model_viewer_offscreen_acceptance" \
+              --asset "$assets/glTF/FlightHelmet.gltf" \
+              --output "$output/flight-helmet-vulkan.rgba" \
+              --backend=vulkan --validation 2>&1 | tee "$output/reference.log"
+          cp examples/assets/FlightHelmet.manifest.json "$output/"
+          sha256sum "$output/flight-helmet-vulkan.rgba" > "$output/flight-helmet-vulkan.sha256"
+      - name: 上传 FlightHelmet Vulkan 参考图
+        uses: actions/upload-artifact@v6
+        with:
+          name: s13-model-viewer-reference
+          path: ${{ runner.temp }}/model-viewer-reference
+          if-no-files-found: error
+          retention-days: 3
+
   windows:
     if: ${{ inputs.run_windows }}
+    needs: model-viewer-reference
     runs-on: windows-2022
     timeout-minutes: 20
     steps:
@@ -55,6 +107,11 @@ jobs:
           $actual = (Get-FileHash "$name.zip" -Algorithm SHA256).Hash.ToLowerInvariant()
           if ($actual -ne $expected) { throw "Windows Dawn SDK SHA-256 不匹配" }
           Expand-Archive -LiteralPath "$name.zip" -DestinationPath stage
+      - name: 下载 FlightHelmet Vulkan 参考图
+        uses: actions/download-artifact@v6
+        with:
+          name: s13-model-viewer-reference
+          path: ${{ runner.temp }}/model-viewer-reference
       - name: 构建并运行 Windows WebGPU 集成测试
         shell: pwsh
         run: |
@@ -69,11 +126,13 @@ jobs:
             "-DGRANIT_DAWN_ROOT=$stage" `
             "-DGRANIT_S10C_VERTEX_SHADER_ASSET=$vertexAsset" `
             "-DGRANIT_S10C_FRAGMENT_SHADER_ASSET=$fragmentAsset" `
-            -DGRANIT_BUILD_EXAMPLES=OFF `
+            -DGRANIT_BUILD_EXAMPLES=ON `
+            -DGRANIT_BUILD_MODEL_VIEWER_EXAMPLE=ON `
+            -DGRANIT_FETCH_EXAMPLE_GLTF_DEPENDENCIES=ON `
             -DGRANIT_BUILD_TOOLS=ON `
             -DGRANIT_BUILD_TESTING=ON
           cmake --build $build --target granit_webgpu_plugin_smoke `
-            granit_renderer_test granit_shader_tool
+            granit_renderer_test granit_shader_tool granit_model_viewer_offscreen_acceptance
           $shaderTool = "$build/bin/granit_shader_tool.exe"
           & $shaderTool compile --tint "$stage/bin/tint.exe" `
             --input "$PWD/tests/fixtures/shaders/s10c_triangle.wgsl" --entry vs_main `
@@ -95,9 +154,37 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw "Windows WebGPU 插件 smoke test 失败" }
           & "$build/bin/granit_renderer_test.exe" "[pipeline][bind-group][smoke]"
           if ($LASTEXITCODE -ne 0) { throw "Windows 跨后端 Renderer Fixture 失败" }
+      - name: 验证 Windows Dawn FlightHelmet 截图
+        shell: pwsh
+        run: |
+          $build = "$env:RUNNER_TEMP/granit-webgpu-build"
+          $assets = "$env:RUNNER_TEMP/granit-flight-helmet"
+          $output = "$build/test-artifacts/s13-model-viewer"
+          cmake "-DGRANIT_SOURCE_DIR=$PWD" `
+            "-DGRANIT_FLIGHT_HELMET_OUTPUT_DIR=$assets" `
+            -P cmake/fetch_flight_helmet.cmake
+          New-Item -ItemType Directory -Force -Path $output | Out-Null
+          Copy-Item examples/assets/FlightHelmet.manifest.json $output
+          & "$build/bin/granit_model_viewer_offscreen_acceptance.exe" `
+            --asset "$assets/glTF/FlightHelmet.gltf" `
+            --output "$output/flight-helmet-windows-webgpu.rgba" `
+            --expected "$env:RUNNER_TEMP/model-viewer-reference/flight-helmet-vulkan.rgba" `
+            --backend=webgpu `
+            --backend-library "$build/bin/granit_backend_webgpu.dll" `
+            --validation 2>&1 | Tee-Object "$output/acceptance.log"
+          if ($LASTEXITCODE -ne 0) { throw "Windows Dawn FlightHelmet 截图验收失败" }
+      - name: 上传 Windows 模型查看器失败产物
+        if: failure()
+        uses: actions/upload-artifact@v6
+        with:
+          name: s13-model-viewer-windows-webgpu
+          path: ${{ runner.temp }}/granit-webgpu-build/test-artifacts/s13-model-viewer
+          if-no-files-found: ignore
+          retention-days: 7
 
   linux:
     if: ${{ inputs.run_linux }}
+    needs: model-viewer-reference
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
@@ -119,6 +206,11 @@ jobs:
           sha256sum --check "$name.tar.gz.sha256"
           mkdir -p stage
           tar -xzf "$name.tar.gz" -C stage
+      - name: 下载 FlightHelmet Vulkan 参考图
+        uses: actions/download-artifact@v6
+        with:
+          name: s13-model-viewer-reference
+          path: ${{ runner.temp }}/model-viewer-reference
       - name: 构建并运行 Linux WebGPU 集成测试
         shell: bash
         run: |
@@ -133,13 +225,15 @@ jobs:
             -DGRANIT_DAWN_ROOT="$stage" \
             -DGRANIT_S10C_VERTEX_SHADER_ASSET="$vertex_asset" \
             -DGRANIT_S10C_FRAGMENT_SHADER_ASSET="$fragment_asset" \
-            -DGRANIT_BUILD_EXAMPLES=OFF \
+            -DGRANIT_BUILD_EXAMPLES=ON \
+            -DGRANIT_BUILD_MODEL_VIEWER_EXAMPLE=ON \
+            -DGRANIT_FETCH_EXAMPLE_GLTF_DEPENDENCIES=ON \
             -DGRANIT_BUILD_TOOLS=ON \
             -DGRANIT_BUILD_TESTING=ON \
             -DGRANIT_ENABLE_XCB=OFF \
             -DGRANIT_ENABLE_WAYLAND=OFF
           cmake --build "$build" --target granit_webgpu_plugin_smoke \
-            granit_renderer_test granit_shader_tool
+            granit_renderer_test granit_shader_tool granit_model_viewer_offscreen_acceptance
           shader_tool="$build/bin/granit_shader_tool"
           "$shader_tool" compile --tint "$stage/bin/tint" \
             --input "$PWD/tests/fixtures/shaders/s10c_triangle.wgsl" --entry vs_main \
@@ -156,3 +250,32 @@ jobs:
               --verbose --output-on-failure
           VK_DRIVER_FILES="$lvp_icd" LIBGL_ALWAYS_SOFTWARE=1 \
             "$build/bin/granit_renderer_test" '[pipeline][bind-group][smoke]'
+      - name: 验证 Linux Dawn FlightHelmet 截图
+        shell: bash
+        run: |
+          build="$RUNNER_TEMP/granit-webgpu-build"
+          assets="$RUNNER_TEMP/granit-flight-helmet"
+          output="$build/test-artifacts/s13-model-viewer"
+          cmake -DGRANIT_SOURCE_DIR="$PWD" \
+            -DGRANIT_FLIGHT_HELMET_OUTPUT_DIR="$assets" \
+            -P cmake/fetch_flight_helmet.cmake
+          mkdir -p "$output"
+          cp examples/assets/FlightHelmet.manifest.json "$output/"
+          lvp_icd="$(find /usr/share/vulkan/icd.d -type f -name 'lvp_icd*.json' -print -quit)"
+          [[ -n "$lvp_icd" ]]
+          VK_DRIVER_FILES="$lvp_icd" LIBGL_ALWAYS_SOFTWARE=1 \
+            "$build/bin/granit_model_viewer_offscreen_acceptance" \
+              --asset "$assets/glTF/FlightHelmet.gltf" \
+              --output "$output/flight-helmet-linux-webgpu.rgba" \
+              --expected "$RUNNER_TEMP/model-viewer-reference/flight-helmet-vulkan.rgba" \
+              --backend=webgpu \
+              --backend-library "$build/lib/libgranit_backend_webgpu.so" \
+              --validation 2>&1 | tee "$output/acceptance.log"
+      - name: 上传 Linux 模型查看器失败产物
+        if: failure()
+        uses: actions/upload-artifact@v6
+        with:
+          name: s13-model-viewer-linux-webgpu
+          path: ${{ runner.temp }}/granit-webgpu-build/test-artifacts/s13-model-viewer
+          if-no-files-found: ignore
+          retention-days: 7

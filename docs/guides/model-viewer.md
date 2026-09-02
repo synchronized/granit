@@ -118,6 +118,11 @@ build/model-viewer-webgpu/bin/granit_model_viewer_offscreen_acceptance.exe `
 `.rgba` 文件固定为 1,048,576 字节，不含行填充或文件头。当前阶段以 Vulkan 基准比较 Dawn；
 基准更新必须随 Renderer、Adapter、模型 manifest 和变更原因一起评审。
 
+维护者可手动运行 `Dawn Integration` Actions。工作流先在 Linux Lavapipe 生成并校验 Vulkan
+参考图，再让 Windows Dawn D3D12 和 Linux Dawn Vulkan 下载同一参考图执行分层比较。成功时只保留
+三天的跨 Job 参考图；失败时额外上传实际图、差异图、JSON 报告、运行日志和 FlightHelmet
+manifest，保留七天供定位。该工作流不会由提交或合并自动触发。
+
 ## 浏览器验证
 
 Emscripten 版本目前是自动化 Fixture，而不是面向用户发布的完整网页查看器。它通过同一个
