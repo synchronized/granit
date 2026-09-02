@@ -38,7 +38,7 @@ void viewer_state::reset(const gltf::scene& scene) {
   camera_ = {};
   directional_light_ = {};
   exposure_ev_ = 0.0F;
-  environment_intensity_ = 1.0F;
+  environment_intensity_ = 0.15F;
   environment_rotation_radians_ = 0.0F;
   background_color_ = {0.025F, 0.04F, 0.065F};
   debug_display_ = debug_display_mode::shaded;

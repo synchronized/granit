@@ -34,6 +34,8 @@ FlightHelmet 的 Base Color、法线、金属度和粗糙度纹理已经正确�
 - Base Color、Normals、Metallic 和 Roughness 模式保持不受环境光影响，作为分层诊断入口。
 - model-viewer 默认创建无需下载资产的低分辨率摄影棚环境，保证离线首次运行可读；锁定的
   `Studio Small 03` GRENV 仍作为高质量参考环境和跨后端验收输入。
+- 查看器默认主光从相机侧照向模型正面，外部 HDR 环境强度默认为 `0.15`。较低的环境默认值用于
+  保留 FlightHelmet 的 Base Color 和材质层次，用户仍可在 Lighting 面板中提高强度。
 
 ## 运行时环境包
 
