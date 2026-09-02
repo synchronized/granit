@@ -35,6 +35,8 @@ TEST_CASE("查看器状态拒绝无效批次且保留旧状态", "[example][mode
   state.reset(scene);
   model_viewer::viewer_change valid;
   valid.exposure_ev = 2.0F;
+  valid.environment_intensity = 1.5F;
+  valid.environment_rotation_radians = 0.75F;
   REQUIRE(state.apply(scene, valid) == model_viewer::viewer_state_error::none);
 
   model_viewer::viewer_change invalid_batch;
@@ -44,11 +46,18 @@ TEST_CASE("查看器状态拒绝无效批次且保留旧状态", "[example][mode
   CHECK(state.apply(scene, invalid_batch) == model_viewer::viewer_state_error::invalid_exposure);
   CHECK(state.node_visible(0));
   CHECK(state.exposure_ev() == 2.0F);
+  CHECK(state.environment_intensity() == 1.5F);
+  CHECK(state.environment_rotation_radians() == 0.75F);
 
   model_viewer::viewer_change invalid_background;
   invalid_background.background_color = {0.1F, -0.1F, 0.2F};
   CHECK(state.apply(scene, invalid_background) ==
         model_viewer::viewer_state_error::invalid_background);
+
+  model_viewer::viewer_change invalid_environment;
+  invalid_environment.environment_intensity = -1.0F;
+  CHECK(state.apply(scene, invalid_environment) ==
+        model_viewer::viewer_state_error::invalid_environment);
 
   model_viewer::viewer_change invalid_selection;
   invalid_selection.selected_node = 4U;

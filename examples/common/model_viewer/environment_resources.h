@@ -26,6 +26,7 @@ public:
   [[nodiscard]] const granit_render_pipeline_environment& environment() const noexcept {
     return environment_;
   }
+  [[nodiscard]] granit_render_pipeline_environment& environment() noexcept { return environment_; }
 
 private:
   granit::texture irradiance_texture_;

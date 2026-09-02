@@ -41,6 +41,8 @@ struct viewer_change {
   std::optional<bool> visible;
   std::optional<directional_light_state> directional_light;
   std::optional<float> exposure_ev;
+  std::optional<float> environment_intensity;
+  std::optional<float> environment_rotation_radians;
   std::optional<math::float3> background_color;
   std::optional<debug_display_mode> debug_display;
   std::optional<viewer_panels> panels;
@@ -52,6 +54,7 @@ enum class viewer_state_error {
   invalid_visibility_change,
   invalid_light,
   invalid_exposure,
+  invalid_environment,
   invalid_background,
   invalid_debug_display,
 };
@@ -73,6 +76,10 @@ public:
     return directional_light_;
   }
   [[nodiscard]] float exposure_ev() const noexcept { return exposure_ev_; }
+  [[nodiscard]] float environment_intensity() const noexcept { return environment_intensity_; }
+  [[nodiscard]] float environment_rotation_radians() const noexcept {
+    return environment_rotation_radians_;
+  }
   [[nodiscard]] math::float3 background_color() const noexcept { return background_color_; }
   [[nodiscard]] debug_display_mode debug_display() const noexcept { return debug_display_; }
   [[nodiscard]] const viewer_panels& panels() const noexcept { return panels_; }
@@ -84,6 +91,8 @@ private:
   orbit_camera camera_;
   directional_light_state directional_light_;
   float exposure_ev_{};
+  float environment_intensity_{1.0F};
+  float environment_rotation_radians_{};
   math::float3 background_color_{0.025F, 0.04F, 0.065F};
   debug_display_mode debug_display_{debug_display_mode::shaded};
   viewer_panels panels_;

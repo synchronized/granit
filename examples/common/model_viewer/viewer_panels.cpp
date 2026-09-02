@@ -154,6 +154,12 @@ void draw_lighting_panel(const viewer_state& state, viewer_change& change) {
     change.directional_light = light;
   if (ImGui::SliderFloat("Exposure EV", &exposure, -24.0F, 24.0F))
     change.exposure_ev = exposure;
+  auto environment_intensity = state.environment_intensity();
+  if (ImGui::SliderFloat("Environment Intensity", &environment_intensity, 0.0F, 8.0F))
+    change.environment_intensity = environment_intensity;
+  auto environment_rotation = state.environment_rotation_radians();
+  if (ImGui::SliderAngle("Environment Rotation", &environment_rotation, -180.0F, 180.0F))
+    change.environment_rotation_radians = environment_rotation;
   auto background = state.background_color();
   if (ImGui::ColorEdit3("Background", &background.x))
     change.background_color = background;

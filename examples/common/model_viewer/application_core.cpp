@@ -153,6 +153,8 @@ granit::result application_core::tick(const application_tick_input& input,
   candidate.render.exposure_ev = state_.exposure_ev();
   const auto background = state_.background_color();
   candidate.render.clear_color = {background.x, background.y, background.z, 1.0F};
+  environment_.environment().intensity = state_.environment_intensity();
+  environment_.environment().rotation_radians = state_.environment_rotation_radians();
   candidate.render.environment = &environment_.environment();
   candidate.render.draw_binding_count =
       static_cast<std::uint32_t>(gpu_scene_.draw_bindings().size());

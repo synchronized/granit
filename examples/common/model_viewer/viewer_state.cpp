@@ -38,6 +38,8 @@ void viewer_state::reset(const gltf::scene& scene) {
   camera_ = {};
   directional_light_ = {};
   exposure_ev_ = 0.0F;
+  environment_intensity_ = 1.0F;
+  environment_rotation_radians_ = 0.0F;
   background_color_ = {0.025F, 0.04F, 0.065F};
   debug_display_ = debug_display_mode::shaded;
   panels_ = {};
@@ -55,6 +57,11 @@ viewer_state_error viewer_state::apply(const gltf::scene& scene, const viewer_ch
   if (change.exposure_ev && (!std::isfinite(*change.exposure_ev) || *change.exposure_ev < -24.0F ||
                              *change.exposure_ev > 24.0F))
     return viewer_state_error::invalid_exposure;
+  if ((change.environment_intensity &&
+       (!std::isfinite(*change.environment_intensity) || *change.environment_intensity < 0.0F ||
+        *change.environment_intensity > 100.0F)) ||
+      (change.environment_rotation_radians && !std::isfinite(*change.environment_rotation_radians)))
+    return viewer_state_error::invalid_environment;
   if (change.background_color &&
       (!valid_vector(*change.background_color) || change.background_color->x < 0.0F ||
        change.background_color->x > 1.0F || change.background_color->y < 0.0F ||
@@ -81,6 +88,10 @@ viewer_state_error viewer_state::apply(const gltf::scene& scene, const viewer_ch
     directional_light_ = *change.directional_light;
   if (change.exposure_ev)
     exposure_ev_ = *change.exposure_ev;
+  if (change.environment_intensity)
+    environment_intensity_ = *change.environment_intensity;
+  if (change.environment_rotation_radians)
+    environment_rotation_radians_ = *change.environment_rotation_radians;
   if (change.background_color)
     background_color_ = *change.background_color;
   if (change.debug_display)
