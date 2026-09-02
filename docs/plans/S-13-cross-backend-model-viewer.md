@@ -412,7 +412,8 @@ manifest。完整 FlightHelmet 已在本机 Vulkan Validation 下完成 512×512
   桌面查看器现已提供严格呈现模式与分辨率检查、UI 开关和 JSON 导出；本机 Vulkan Release
   已完成 Vulkan 的四组 1000 帧采样，结果见
   [S-13G 模型查看器性能基线](../records/2026-09-02-s13g-model-viewer-performance.md)。桌面 Dawn
-  矩阵仍需在手动验收环境中补齐。首份数据建立基线而非不经复测的硬性 FPS 门槛。
+  四组矩阵已接入手动 `Dawn Integration`，会校验 JSON 并上传报告；远端数值仍须在该工作流
+  运行后写入验收记录。首份数据建立基线而非不经复测的硬性 FPS 门槛。
 
 S-13 只在上述手动 Actions 全部通过，公共头/安装 Consumer 通过，并完成示例指南、
 依赖/资产许可参考与带日期的验收 Record 后标记完成。验收结果再决定是否启动
