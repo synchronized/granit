@@ -193,17 +193,38 @@ async function main() {
     }
     validateModelViewerPixels(await page.locator("#canvas").screenshot({ type: "png" }));
 
-    await page.keyboard.press("A");
-    await page.locator("#canvas").click({ position: { x: 16, y: 16 } });
-    await page.mouse.move(32, 32);
+    await page.keyboard.press("F");
+    const canvas = page.locator("#canvas");
+    const box = await canvas.boundingBox();
+    if (!box) throw new Error("无法获取 Canvas 布局范围");
+    await page.mouse.move(box.x + 32, box.y + 32);
+    await page.mouse.down({ button: "right" });
+    await page.mouse.move(box.x + 80, box.y + 56);
+    await page.mouse.up({ button: "right" });
+    await page.mouse.wheel(0, -120);
     await page.waitForFunction(
       () =>
         typeof Module._granit_web_input_event_count === "function" &&
-        Module._granit_web_input_event_count() >= 2,
+        Module._granit_web_input_event_count() >= 4 &&
+        typeof Module._granit_web_applied_input_count === "function" &&
+        Module._granit_web_applied_input_count() >= 1,
       undefined,
       { timeout: 5_000 },
     );
-    console.log("浏览器 WebGPU 多帧渲染、两阶段资产 Fetch 与输入转发验证通过");
+    await page.evaluate(() => {
+      const canvas = document.querySelector("#canvas");
+      canvas.width = 800;
+      canvas.height = 450;
+    });
+    await page.waitForFunction(
+      () =>
+        typeof Module._granit_web_resize_count === "function" &&
+        Module._granit_web_resize_count() >= 1,
+      undefined,
+      { timeout: 10_000 },
+    );
+    validateModelViewerPixels(await canvas.screenshot({ type: "png" }));
+    console.log("浏览器 WebGPU 多帧渲染、输入转换、Resize 与资产 Fetch 验证通过");
   } catch (error) {
     console.error(browserMessages.join("\n"));
     throw error;

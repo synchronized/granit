@@ -323,7 +323,9 @@ Render 命令能力。现已补齐比较采样器、零颜色附件的 Depth-onl
 Tone Mapping 的跨后端 WGSL；真实 Chrome 已通过阴影、PBR 不透明绘制、Tone Mapping、交换链呈现
 和两阶段资产 Fetch。浏览器壳现已通过 Emscripten 主循环持续驱动共享 Core，Smoke 至少等待三个
 已呈现帧并验证模型中心与背景像素；多帧验证同时补齐了深度纹理 Sample Type 以及 WebGPU 阴影
-Pipeline 的完整 Bind Group 绑定。下一步补齐浏览器规范化输入、Resize 与资源释放 Smoke。
+Pipeline 的完整 Bind Group 绑定。浏览器 Keyboard、Pointer、Button、Wheel、Focus 与 Pointer Presence
+事件现复用共享 `web_input` 适配器，右键环绕、滚轮缩放和 `F` 聚焦已验证进入 Core；Canvas 像素
+尺寸变化会在帧边界仅重建 Swapchain，并在 800×450 下继续呈现。下一步补齐浏览器资源释放 Smoke。
 
 SDL3 输入适配已完成第一阶段：平台事件按帧累积为 `viewer_input`，覆盖右键环绕、中键平移、
 滚轮缩放、`F`/`Home`、焦点与指针进出，并在 ImGui 捕获标志进入 Core 前完成标记。窗口、Surface

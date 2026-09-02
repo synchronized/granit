@@ -28,6 +28,7 @@
 #include "model_viewer_fetch.h"
 #include "resource_fetch_batch.h"
 #include "support/renderer_fixture.h"
+#include "web_input.h"
 
 namespace {
 
@@ -40,7 +41,10 @@ struct web_platform_state {
   granit_render_pipeline pipeline{};
   startup_status status{startup_status::starting};
   unsigned input_event_count{};
+  unsigned applied_input_count{};
   unsigned rendered_frame_count{};
+  unsigned resize_count{};
+  granit::example::model_viewer::web::web_input input;
   std::shared_ptr<granit::example::model_viewer::web::asset_request> asset_request{
       std::make_shared<granit::example::model_viewer::web::asset_request>()};
   granit::example::model_viewer::web::resource_fetch_batch resource_batch;
@@ -392,13 +396,57 @@ void diagnose(granit_diagnostic_severity, granit_diagnostic_category, const char
   std::fprintf(stderr, "GRANIT_DIAGNOSTIC:%.*s\n", static_cast<int>(message_length), message);
 }
 
-EM_BOOL receive_keyboard(int, const EmscriptenKeyboardEvent*, void* user_data) noexcept {
-  ++static_cast<web_platform_state*>(user_data)->input_event_count;
+EM_BOOL receive_keyboard(int event_type, const EmscriptenKeyboardEvent* event,
+                         void* user_data) noexcept {
+  auto& platform = *static_cast<web_platform_state*>(user_data);
+  ++platform.input_event_count;
+  if (event_type == EMSCRIPTEN_EVENT_KEYDOWN) {
+    using granit::example::model_viewer::web::shortcut_key;
+    auto key = shortcut_key::other;
+    if (std::strcmp(event->key, "f") == 0 || std::strcmp(event->key, "F") == 0)
+      key = shortcut_key::focus;
+    else if (std::strcmp(event->key, "Home") == 0)
+      key = shortcut_key::home;
+    platform.input.key_pressed(key, event->repeat != 0);
+  }
   return EM_FALSE;
 }
 
-EM_BOOL receive_mouse(int, const EmscriptenMouseEvent*, void* user_data) noexcept {
-  ++static_cast<web_platform_state*>(user_data)->input_event_count;
+EM_BOOL receive_mouse(int event_type, const EmscriptenMouseEvent* event,
+                      void* user_data) noexcept {
+  auto& platform = *static_cast<web_platform_state*>(user_data);
+  ++platform.input_event_count;
+  using granit::example::model_viewer::web::pointer_button;
+  if (event_type == EMSCRIPTEN_EVENT_MOUSEMOVE) {
+    platform.input.pointer_motion(static_cast<float>(event->movementX),
+                                  static_cast<float>(event->movementY));
+  } else if (event_type == EMSCRIPTEN_EVENT_MOUSEDOWN ||
+             event_type == EMSCRIPTEN_EVENT_MOUSEUP) {
+    auto button = pointer_button::primary;
+    if (event->button == 1)
+      button = pointer_button::middle;
+    else if (event->button == 2)
+      button = pointer_button::secondary;
+    platform.input.pointer_button_changed(button, event_type == EMSCRIPTEN_EVENT_MOUSEDOWN);
+  } else if (event_type == EMSCRIPTEN_EVENT_MOUSEENTER) {
+    platform.input.pointer_presence_changed(true);
+  } else if (event_type == EMSCRIPTEN_EVENT_MOUSELEAVE) {
+    platform.input.pointer_presence_changed(false);
+  }
+  return EM_FALSE;
+}
+
+EM_BOOL receive_wheel(int, const EmscriptenWheelEvent* event, void* user_data) noexcept {
+  auto& platform = *static_cast<web_platform_state*>(user_data);
+  ++platform.input_event_count;
+  platform.input.wheel(static_cast<float>(event->deltaY));
+  return EM_TRUE;
+}
+
+EM_BOOL receive_focus(int event_type, const EmscriptenFocusEvent*, void* user_data) noexcept {
+  auto& platform = *static_cast<web_platform_state*>(user_data);
+  ++platform.input_event_count;
+  platform.input.focus_changed(event_type == EMSCRIPTEN_EVENT_FOCUS);
   return EM_FALSE;
 }
 
@@ -482,9 +530,40 @@ granit_result create_presentation_resources() {
   return GRANIT_SUCCESS;
 }
 
-granit_result render_model_viewer_frame() {
+granit_result resize_swapchain_if_needed() {
+  int width{};
+  int height{};
+  if (emscripten_get_canvas_element_size("#canvas", &width, &height) != EMSCRIPTEN_RESULT_SUCCESS ||
+      width <= 0 || height <= 0) {
+    return GRANIT_ERROR_INITIALIZATION_FAILED;
+  }
   granit_swapchain_info info = GRANIT_SWAPCHAIN_INFO_INIT;
   auto result = granit_swapchain_get_info(state.renderer, state.swapchain, &info);
+  if (result != GRANIT_SUCCESS ||
+      (info.width == static_cast<std::uint32_t>(width) &&
+       info.height == static_cast<std::uint32_t>(height))) {
+    return result;
+  }
+  result = granit_swapchain_destroy(state.renderer, state.swapchain);
+  if (result != GRANIT_SUCCESS)
+    return result;
+  state.swapchain = GRANIT_NULL_HANDLE;
+  granit_swapchain_desc desc = GRANIT_SWAPCHAIN_DESC_INIT;
+  desc.width = static_cast<std::uint32_t>(width);
+  desc.height = static_cast<std::uint32_t>(height);
+  desc.minimum_image_count = 2;
+  result = granit_swapchain_create(state.renderer, state.surface, &desc, &state.swapchain);
+  if (result == GRANIT_SUCCESS)
+    ++state.resize_count;
+  return result;
+}
+
+granit_result render_model_viewer_frame() {
+  auto result = resize_swapchain_if_needed();
+  if (result != GRANIT_SUCCESS)
+    return result;
+  granit_swapchain_info info = GRANIT_SWAPCHAIN_INFO_INIT;
+  result = granit_swapchain_get_info(state.renderer, state.swapchain, &info);
   granit_frame frame{};
   std::uint32_t image_index{};
   std::uint32_t needs_recreate{};
@@ -499,6 +578,11 @@ granit_result render_model_viewer_frame() {
   }
   granit::example::model_viewer::application_tick_output output;
   granit::example::model_viewer::application_tick_input input;
+  input.input = state.input.finish(false, false);
+  if (input.input.pointer_delta_x != 0.0F || input.input.pointer_delta_y != 0.0F ||
+      input.input.wheel_delta != 0.0F || input.input.focus_requested || input.input.home_requested)
+    ++state.applied_input_count;
+  state.input.begin_frame();
   input.width = info.width;
   input.height = info.height;
   if (result == GRANIT_SUCCESS)
@@ -691,6 +775,14 @@ extern "C" EMSCRIPTEN_KEEPALIVE unsigned granit_web_rendered_frame_count() noexc
   return state.rendered_frame_count;
 }
 
+extern "C" EMSCRIPTEN_KEEPALIVE unsigned granit_web_applied_input_count() noexcept {
+  return state.applied_input_count;
+}
+
+extern "C" EMSCRIPTEN_KEEPALIVE unsigned granit_web_resize_count() noexcept {
+  return state.resize_count;
+}
+
 extern "C" EMSCRIPTEN_KEEPALIVE unsigned granit_web_asset_status() noexcept {
   if (state.status == startup_status::failed)
     return 3;
@@ -736,7 +828,16 @@ int main() {
   static_cast<void>(emscripten_set_keydown_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, &state,
                                                     EM_FALSE, receive_keyboard));
   static_cast<void>(emscripten_set_mousedown_callback("#canvas", &state, EM_FALSE, receive_mouse));
+  static_cast<void>(emscripten_set_mouseup_callback("#canvas", &state, EM_FALSE, receive_mouse));
   static_cast<void>(emscripten_set_mousemove_callback("#canvas", &state, EM_FALSE, receive_mouse));
+  static_cast<void>(emscripten_set_mouseenter_callback("#canvas", &state, EM_FALSE, receive_mouse));
+  static_cast<void>(emscripten_set_mouseleave_callback("#canvas", &state, EM_FALSE, receive_mouse));
+  static_cast<void>(emscripten_set_wheel_callback("#canvas", &state, EM_FALSE, receive_wheel));
+  static_cast<void>(emscripten_set_focus_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, &state, EM_FALSE,
+                                                 receive_focus));
+  static_cast<void>(emscripten_set_blur_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, &state, EM_FALSE,
+                                                receive_focus));
+  state.input.focus_changed(true);
 
   state.status = startup_status::provider_pending;
   emscripten_set_main_loop_arg(tick, &state, 0, EM_FALSE);
