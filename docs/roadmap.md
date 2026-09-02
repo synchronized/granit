@@ -203,7 +203,7 @@
 
 ## 十一、跨后端模型查看器
 
-**状态：S-12、S-13 已完成。**
+**状态：S-12、S-13 已完成；S-13H 实施中。**
 
 - **[S-12](plans/S-12-webgpu-feature-parity.md) / P1**：补齐公共后端选择，以及模型绘制需要的
   Vertex/Index Buffer、Texture、Sampler、Bind Group、动态 Uniform、Indexed Draw 和上传能力；
@@ -211,6 +211,8 @@
 - **[S-13](plans/S-13-cross-backend-model-viewer.md) / P1**：增加编辑器式模型查看器；glTF 加载器
   首阶段只放在 `examples/common/gltf`，以许可适合再分发的头盔模型验证 PBR、轨道相机、ImGui
   和三个运行目标。
+- **[S-13H](plans/S-13H-model-viewer-environment-lighting.md) / P1**：复用已有 Group 3 IBL 布局，
+  为模型查看器接入许可明确、离线预处理的摄影棚环境光，并恢复金属材质的环境反射。
 - **S-14 / P2 / 条件性**：仅当至少两个非示例 Consumer 需要复用，且 S-13 已验证 CPU 数据模型后，
   再将示例加载器提升为可安装的 `granit::integration_gltf`；此前不承诺公共 glTF SDK。
 

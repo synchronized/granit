@@ -132,6 +132,8 @@ D-03-graphics-pipeline.md
   所需资源与命令，以及 Vulkan、桌面 WebGPU 和浏览器 WebGPU 共同 Fixture 均已验收。
 - [S-13：跨后端模型查看器](S-13-cross-backend-model-viewer.md)——已完成；示例私有 glTF 加载器、
   PBR 头盔、轨道相机、ImGui、三个运行目标及跨后端截图/性能验收均已闭合。
+- [S-13H：模型查看器环境光照](S-13H-model-viewer-environment-lighting.md)——实施中；复用 Group 3
+  IBL 布局，为模型查看器补齐可再分发的摄影棚环境与跨后端验收。
 
 ## 状态
 
