@@ -104,16 +104,18 @@ if(GRANIT_BUILD_SHADER_TOOLS OR GRANIT_BUILD_TOOLS OR (GRANIT_BUILD_TESTING AND 
   )
 endif()
 
-add_executable(granit_shader_tool shader_tool_main.cpp)
-target_compile_features(granit_shader_tool PRIVATE cxx_std_20)
-target_link_libraries(granit_shader_tool PRIVATE granit::shader_tools)
-target_compile_options(
-  granit_shader_tool
-  PRIVATE $<$<COMPILE_LANG_AND_ID:CXX,MSVC>:/utf-8>
-)
-granit_target_compile_warnings(granit_shader_tool)
-granit_target_output_directories(granit_shader_tool)
-set_target_properties(granit_shader_tool PROPERTIES FOLDER "Tools")
+if(TARGET granit_shader_tools)
+  add_executable(granit_shader_tool shader_tool_main.cpp)
+  target_compile_features(granit_shader_tool PRIVATE cxx_std_20)
+  target_link_libraries(granit_shader_tool PRIVATE granit::shader_tools)
+  target_compile_options(
+    granit_shader_tool
+    PRIVATE $<$<COMPILE_LANG_AND_ID:CXX,MSVC>:/utf-8>
+  )
+  granit_target_compile_warnings(granit_shader_tool)
+  granit_target_output_directories(granit_shader_tool)
+  set_target_properties(granit_shader_tool PROPERTIES FOLDER "Tools")
+endif()
 
 add_executable(
   granit_material_tool
