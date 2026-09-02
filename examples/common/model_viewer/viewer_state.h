@@ -21,6 +21,8 @@ enum class debug_display_mode : std::uint32_t {
   roughness,
   geometric_normals,
   sampled_normals,
+  vertex_normals,
+  vertex_tangents,
 };
 
 struct viewer_panels {

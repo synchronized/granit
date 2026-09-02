@@ -32,6 +32,8 @@ struct FragmentInput {
   @location(1) world_normal: vec3f,
   @location(2) world_tangent: vec4f,
   @location(3) texture_coordinate: vec2f,
+  @location(4) vertex_normal: vec3f,
+  @location(5) vertex_tangent: vec3f,
 }
 
 @group(0) @binding(0) var<uniform> frame: FrameConstants;
@@ -132,6 +134,12 @@ fn fragment_main(input: FragmentInput) -> @location(0) vec4f {
   }
   if (material.debug_display == 6u) {
     return vec4f(sampled_normal * 0.5 + vec3f(0.5), 1.0);
+  }
+  if (material.debug_display == 7u) {
+    return vec4f(normalize(input.vertex_normal) * 0.5 + vec3f(0.5), 1.0);
+  }
+  if (material.debug_display == 8u) {
+    return vec4f(normalize(input.vertex_tangent) * 0.5 + vec3f(0.5), 1.0);
   }
   let environment_fresnel = fresnel_schlick_roughness(normal_dot_view, reflectance,
                                                        roughness);

@@ -20,6 +20,8 @@ struct VertexOutput {
   @location(1) world_normal: vec3f,
   @location(2) world_tangent: vec4f,
   @location(3) texture_coordinate: vec2f,
+  @location(4) vertex_normal: vec3f,
+  @location(5) vertex_tangent: vec3f,
 }
 
 @group(0) @binding(0) var<uniform> frame: FrameConstants;
@@ -41,5 +43,7 @@ fn vertex_main(
   output.world_tangent = vec4f(
       normalize((object.model * vec4f(tangent.xyz, 0.0)).xyz), tangent.w);
   output.texture_coordinate = texture_coordinate;
+  output.vertex_normal = normal;
+  output.vertex_tangent = tangent.xyz;
   return output;
 }

@@ -76,7 +76,8 @@ jobs:
               --environment "$PWD/examples/assets/StudioSmall03.grenv" \
               --output "$output/flight-helmet-vulkan.rgba" \
               --backend=vulkan --validation 2>&1 | tee "$output/reference.log"
-          for mode in base-color normals metallic roughness geometric-normals sampled-normals; do
+          for mode in base-color normals metallic roughness geometric-normals sampled-normals \
+            vertex-normals vertex-tangents; do
             VK_DRIVER_FILES="$lvp_icd" LIBGL_ALWAYS_SOFTWARE=1 \
               "$build/bin/granit_model_viewer_offscreen_acceptance" \
                 --asset "$assets/glTF/FlightHelmet.gltf" \
@@ -198,7 +199,8 @@ jobs:
           $assets = "$env:RUNNER_TEMP/granit-flight-helmet"
           $output = "$build/test-artifacts/s13-model-viewer"
           foreach ($mode in @("base-color", "normals", "metallic", "roughness", `
-                              "geometric-normals", "sampled-normals")) {
+                              "geometric-normals", "sampled-normals", "vertex-normals", `
+                              "vertex-tangents")) {
             & "$build/bin/granit_model_viewer_offscreen_acceptance.exe" `
               --asset "$assets/glTF/FlightHelmet.gltf" `
               --environment "$PWD/examples/assets/StudioSmall03.grenv" `
@@ -383,7 +385,8 @@ jobs:
           assets="$RUNNER_TEMP/granit-flight-helmet"
           output="$build/test-artifacts/s13-model-viewer"
           lvp_icd="$(find /usr/share/vulkan/icd.d -type f -name 'lvp_icd*.json' -print -quit)"
-          for mode in base-color normals metallic roughness geometric-normals sampled-normals; do
+          for mode in base-color normals metallic roughness geometric-normals sampled-normals \
+            vertex-normals vertex-tangents; do
             VK_DRIVER_FILES="$lvp_icd" LIBGL_ALWAYS_SOFTWARE=1 \
               "$build/bin/granit_model_viewer_offscreen_acceptance" \
                 --asset "$assets/glTF/FlightHelmet.gltf" \

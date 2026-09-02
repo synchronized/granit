@@ -515,7 +515,7 @@ granit::result gpu_scene::update_material_factors(gltf::scene& source, std::uint
 granit::result gpu_scene::update_debug_display(std::uint32_t mode) noexcept {
   if (!valid())
     return granit::result::invalid_handle;
-  if (mode > static_cast<std::uint32_t>(debug_display_mode::sampled_normals))
+  if (mode > static_cast<std::uint32_t>(debug_display_mode::vertex_tangents))
     return granit::result::invalid_argument;
   const granit_material_parameter_update update{granit::material_parameter_id("debug_display"),
                                                 GRANIT_MATERIAL_PARAMETER_UINT32,
