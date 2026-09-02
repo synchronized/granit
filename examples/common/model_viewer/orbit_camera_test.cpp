@@ -31,6 +31,17 @@ TEST_CASE("轨道相机根据 Bounds 和宽高比自动聚焦", "[example][model
   CHECK(granit::math::is_finite(matrices.view_projection));
 }
 
+TEST_CASE("轨道相机输出Vulkan裁剪空间方向", "[example][model-viewer][camera]") {
+  granit::example::model_viewer::orbit_camera camera;
+  granit::example::model_viewer::camera_matrices matrices;
+  REQUIRE(camera.matrices(800, 600, matrices));
+
+  granit::math::float3 projected_up;
+  REQUIRE(granit::math::transform_point(matrices.view_projection, {0, 1, 0}, projected_up));
+  CHECK(matrices.projection[5] < 0.0F);
+  CHECK(projected_up.y < 0.0F);
+}
+
 TEST_CASE("轨道相机限制 Pitch 和缩放距离", "[example][model-viewer][camera]") {
   granit::example::model_viewer::orbit_camera camera;
   REQUIRE(camera.focus({.radius = 1}, 800, 600));

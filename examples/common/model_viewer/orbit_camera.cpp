@@ -115,6 +115,8 @@ bool orbit_camera::matrices(std::uint32_t width, std::uint32_t height,
                                far_plane_, candidate.projection)) {
     return false;
   }
+  // 公共 Shader 以 Vulkan Clip Space 为基准；窗口坐标原点位于左上角，因此在投影边界翻转 Y。
+  candidate.projection[5] = -candidate.projection[5];
   candidate.view_projection = math::multiply(candidate.projection, candidate.view);
   output = candidate;
   return true;
