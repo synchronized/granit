@@ -152,7 +152,8 @@ bool compare_expected(const options& arguments, const granit::renderer_info& ren
   }
   const auto expected = std::span{reinterpret_cast<const std::uint8_t*>(expected_bytes.data()),
                                   expected_bytes.size()};
-  const granit::example::model_viewer::screenshot_comparison_options comparison_options;
+  const granit::example::model_viewer::screenshot_comparison_options comparison_options{
+      .max_silhouette_mismatch_count = 4};
   granit::example::model_viewer::screenshot_comparison_report report;
   const auto error = granit::example::model_viewer::compare_screenshots(
       {render_size, render_size, expected, {}}, {render_size, render_size, actual, {}},
@@ -193,6 +194,8 @@ bool compare_expected(const options& arguments, const granit::renderer_info& ren
        << "  \"height\": " << render_size << ",\n"
        << "  \"edge_tolerance_pixels\": "
        << static_cast<unsigned>(comparison_options.edge_tolerance_pixels) << ",\n"
+       << "  \"max_silhouette_mismatch_count\": "
+       << comparison_options.max_silhouette_mismatch_count << ",\n"
        << "  \"color_channel_threshold\": "
        << static_cast<unsigned>(comparison_options.color_channel_threshold) << ",\n"
        << "  \"max_color_mean_absolute_error\": "

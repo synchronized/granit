@@ -139,7 +139,8 @@ screenshot_comparison_error compare_screenshots(screenshot_view expected, screen
     candidate.depth_outlier_ratio =
         static_cast<double>(candidate.depth_outlier_count) / candidate.compared_depth_pixel_count;
   }
-  candidate.passed = candidate.silhouette_mismatch_count == 0 &&
+  candidate.passed =
+      candidate.silhouette_mismatch_count <= options.max_silhouette_mismatch_count &&
                      candidate.compared_color_pixel_count != 0 &&
                      (expected.depth.empty() || candidate.compared_depth_pixel_count != 0) &&
                      candidate.color_mean_absolute_error <= options.max_color_mean_absolute_error &&

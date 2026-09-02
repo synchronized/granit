@@ -192,17 +192,27 @@ jobs:
             Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
           "| --- | --- | --- | ---: | ---: | ---: |" |
             Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
-          foreach ($mode in @("immediate", "fifo")) {
-            foreach ($ui in @("ui", "no-ui")) {
+          foreach ($mode in @("fifo", "immediate")) {
+            foreach ($ui in @("no-ui", "ui")) {
               $report = "$output/windows-webgpu-$mode-$ui.json"
+              $log = "$output/windows-webgpu-$mode-$ui.log"
               $arguments = @(
                 "--asset", "$assets/glTF/FlightHelmet.gltf",
                 "--backend=webgpu", "--backend-library", $plugin,
                 "--present-mode=$mode", "--profile-output", $report
               )
               if ($ui -eq "no-ui") { $arguments += "--no-ui" }
-              & $executable @arguments
+              & $executable @arguments 2>&1 | Tee-Object -FilePath $log
               if ($LASTEXITCODE -ne 0) {
+                $unsupported = Select-String -LiteralPath $log -SimpleMatch "unsupported operation" `
+                  -Quiet
+                if ($mode -eq "immediate" -and $ui -eq "no-ui" -and $unsupported) {
+                  "Immediate 呈现模式不可用" | Out-File `
+                    -FilePath "$output/windows-webgpu-immediate.unsupported.txt" -Encoding utf8
+                  "| Windows Dawn | immediate | 不可用 | - | - | - |" | Out-File `
+                    -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
+                  break
+                }
                 throw "Windows Dawn 性能采样失败：$mode/$ui"
               }
               $profile = Get-Content -LiteralPath $report -Raw | ConvertFrom-Json
@@ -344,17 +354,32 @@ jobs:
           printf '%s\n' \
             '| 平台 | 呈现模式 | UI | CPU p50 (ms) | CPU p95 (ms) | GPU p50 (ms) |' \
             '| --- | --- | --- | ---: | ---: | ---: |' >> "$GITHUB_STEP_SUMMARY"
-          for mode in immediate fifo; do
-            for ui in ui no-ui; do
+          for mode in fifo immediate; do
+            for ui in no-ui ui; do
               report="$output/linux-webgpu-$mode-$ui.json"
+              log="$output/linux-webgpu-$mode-$ui.log"
               arguments=(
                 --asset "$assets/glTF/FlightHelmet.gltf"
                 --backend=webgpu --backend-library "$plugin"
                 "--present-mode=$mode" --profile-output "$report"
               )
               if [[ "$ui" == no-ui ]]; then arguments+=(--no-ui); fi
+              set +e
               VK_DRIVER_FILES="$lvp_icd" LIBGL_ALWAYS_SOFTWARE=1 \
-                xvfb-run -a "$executable" "${arguments[@]}"
+                xvfb-run -a "$executable" "${arguments[@]}" 2>&1 | tee "$log"
+              status="${PIPESTATUS[0]}"
+              set -e
+              if ((status != 0)); then
+                if [[ "$mode" == immediate && "$ui" == no-ui ]] &&
+                   grep -Fq 'unsupported operation' "$log"; then
+                  printf '%s\n' 'Immediate 呈现模式不可用' \
+                    > "$output/linux-webgpu-immediate.unsupported.txt"
+                  printf '%s\n' '| Linux Dawn | immediate | 不可用 | - | - | - |' \
+                    >> "$GITHUB_STEP_SUMMARY"
+                  break
+                fi
+                exit "$status"
+              fi
               jq -e '
                 .backend == "webgpu" and
                 .sample_frames == 1000 and

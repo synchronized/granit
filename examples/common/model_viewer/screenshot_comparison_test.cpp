@@ -69,6 +69,20 @@ TEST_CASE("截图比较报告颜色和深度差异", "[example][model-viewer][sc
   CHECK(report.depth_outlier_count == 1);
 }
 
+TEST_CASE("截图比较可限制少量孤立轮廓像素", "[example][model-viewer][screenshot]") {
+  constexpr std::array<std::uint8_t, 8> expected{0, 0, 0, 255, 0, 0, 0, 255};
+  constexpr std::array<std::uint8_t, 8> actual{255, 255, 255, 255, 0, 0, 0, 255};
+  auto options = model_viewer::screenshot_comparison_options{};
+  options.edge_tolerance_pixels = 0;
+  options.max_silhouette_mismatch_count = 1;
+  model_viewer::screenshot_comparison_report report;
+  REQUIRE(model_viewer::compare_screenshots({2, 1, expected, {}}, {2, 1, actual, {}}, options,
+                                            report) ==
+          model_viewer::screenshot_comparison_error::none);
+  CHECK(report.passed);
+  CHECK(report.silhouette_mismatch_count == 1);
+}
+
 TEST_CASE("截图比较参数错误时保留旧报告", "[example][model-viewer][screenshot]") {
   constexpr std::array<std::uint8_t, 4> pixel{0, 0, 0, 255};
   model_viewer::screenshot_comparison_report report{.passed = true};

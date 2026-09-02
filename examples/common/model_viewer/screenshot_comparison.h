@@ -22,6 +22,7 @@ struct screenshot_comparison_options {
   std::array<std::uint8_t, 4> background{0, 0, 0, 255};
   std::uint8_t background_tolerance{4};
   std::uint8_t edge_tolerance_pixels{1};
+  std::size_t max_silhouette_mismatch_count{};
   std::uint8_t color_channel_threshold{12};
   double max_color_mean_absolute_error{3.0};
   double max_color_outlier_ratio{0.01};
