@@ -59,6 +59,8 @@ add_library(
   orbit_camera.h
   performance_history.cpp
   performance_history.h
+  screenshot_comparison.cpp
+  screenshot_comparison.h
   viewer_state.cpp
   viewer_state.h
   viewer_input.h
@@ -81,7 +83,8 @@ granit_target_compile_warnings(granit_model_viewer_core)
 if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
   add_executable(
     granit_example_model_viewer_support_test application_core_test.cpp gpu_scene_test.cpp
-    orbit_camera_test.cpp performance_history_test.cpp viewer_state_test.cpp
+    orbit_camera_test.cpp performance_history_test.cpp screenshot_comparison_test.cpp
+    viewer_state_test.cpp
   )
   target_link_libraries(
     granit_example_model_viewer_support_test
