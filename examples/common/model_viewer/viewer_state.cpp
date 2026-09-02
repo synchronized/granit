@@ -26,7 +26,7 @@ bool valid_light(const directional_light_state& light) noexcept {
 }
 
 bool valid_debug_display(debug_display_mode mode) noexcept {
-  return mode >= debug_display_mode::shaded && mode <= debug_display_mode::roughness;
+  return mode >= debug_display_mode::shaded && mode <= debug_display_mode::sampled_normals;
 }
 
 } // namespace

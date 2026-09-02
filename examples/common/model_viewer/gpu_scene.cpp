@@ -2,6 +2,7 @@
 // Copyright (c) 2026 Granit contributors
 
 #include "model_viewer/gpu_scene.h"
+#include "model_viewer/viewer_state.h"
 #include "model_viewer/material_archive.h"
 
 #include <granit/renderer/upload_batch.hpp>
@@ -514,7 +515,7 @@ granit::result gpu_scene::update_material_factors(gltf::scene& source, std::uint
 granit::result gpu_scene::update_debug_display(std::uint32_t mode) noexcept {
   if (!valid())
     return granit::result::invalid_handle;
-  if (mode > 4)
+  if (mode > static_cast<std::uint32_t>(debug_display_mode::sampled_normals))
     return granit::result::invalid_argument;
   const granit_material_parameter_update update{granit::material_parameter_id("debug_display"),
                                                 GRANIT_MATERIAL_PARAMETER_UINT32,

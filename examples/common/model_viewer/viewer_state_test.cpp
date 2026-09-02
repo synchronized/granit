@@ -83,6 +83,11 @@ TEST_CASE("查看器状态校验灯光、调试模式和成对可见性参数", 
       model_viewer::directional_light_state{.direction = {}, .radiance = {1, 1, 1}};
   CHECK(state.apply(scene, invalid_light) == model_viewer::viewer_state_error::invalid_light);
 
+  model_viewer::viewer_change sampled_normals;
+  sampled_normals.debug_display = model_viewer::debug_display_mode::sampled_normals;
+  REQUIRE(state.apply(scene, sampled_normals) == model_viewer::viewer_state_error::none);
+  CHECK(state.debug_display() == model_viewer::debug_display_mode::sampled_normals);
+
   model_viewer::viewer_change invalid_debug;
   invalid_debug.debug_display = static_cast<model_viewer::debug_display_mode>(100);
   CHECK(state.apply(scene, invalid_debug) ==

@@ -19,6 +19,8 @@ enum class debug_display_mode : std::uint32_t {
   normals,
   metallic,
   roughness,
+  geometric_normals,
+  sampled_normals,
 };
 
 struct viewer_panels {

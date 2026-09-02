@@ -57,8 +57,9 @@ Texture 与 Texture View。该格式不是 Granit 公共资产格式，不进入
    （已完成）
 8. 增加环境强度与旋转控件，并同步桌面及浏览器入口。（已完成）
 9. 更新 Vulkan 参考图，验证桌面 Dawn 和 Emscripten WebGPU 的颜色、轮廓与深度容差。
-   桌面 Dawn 验收同时保留 Vulkan 与 WebGPU 的 Base Color、Normals、Metallic 和 Roughness
-   分层图，用于区分资产绑定、几何变换和最终光照差异。（进行中）
+   桌面 Dawn 验收同时保留 Vulkan 与 WebGPU 的 Base Color、最终法线、几何法线、采样法线、
+   Metallic 和 Roughness 分层图，用于区分资产绑定、几何变换、TBN 和最终光照差异。
+   （进行中）
 
 ## 测试与验收
 

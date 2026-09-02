@@ -42,7 +42,8 @@ struct options {
 void print_usage() {
   std::cerr << "用法：granit_model_viewer_offscreen_acceptance --asset <文件> --output <文件.rgba> "
                "[--environment <文件.grenv>] [--expected <文件.rgba>] "
-               "[--debug-display=shaded|base-color|normals|metallic|roughness] "
+               "[--debug-display=shaded|base-color|normals|metallic|roughness|"
+               "geometric-normals|sampled-normals] "
                "[--backend=auto|vulkan|webgpu] "
                "[--backend-library <文件>] [--validation]\n";
 }
@@ -60,6 +61,10 @@ bool parse_debug_display(std::string_view value,
     mode = metallic;
   else if (value == "roughness")
     mode = roughness;
+  else if (value == "geometric-normals")
+    mode = geometric_normals;
+  else if (value == "sampled-normals")
+    mode = sampled_normals;
   else
     return false;
   return true;

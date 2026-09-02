@@ -168,7 +168,9 @@ void draw_lighting_panel(const viewer_state& state, viewer_change& change) {
   if (ImGui::ColorEdit3("Background", &background.x))
     change.background_color = background;
 
-  static constexpr std::array modes{"Shaded", "Base Color", "Normals", "Metallic", "Roughness"};
+  static constexpr std::array modes{"Shaded",          "Base Color",       "Normals",
+                                    "Metallic",        "Roughness",        "Geometric Normals",
+                                    "Sampled Normals"};
   auto mode = static_cast<int>(state.debug_display());
   if (ImGui::Combo("Debug Display", &mode, modes.data(), static_cast<int>(modes.size())))
     change.debug_display = static_cast<debug_display_mode>(mode);

@@ -127,6 +127,12 @@ fn fragment_main(input: FragmentInput) -> @location(0) vec4f {
   if (material.debug_display == 4u) {
     return vec4f(vec3f(roughness), 1.0);
   }
+  if (material.debug_display == 5u) {
+    return vec4f(geometric_normal * 0.5 + vec3f(0.5), 1.0);
+  }
+  if (material.debug_display == 6u) {
+    return vec4f(sampled_normal * 0.5 + vec3f(0.5), 1.0);
+  }
   let environment_fresnel = fresnel_schlick_roughness(normal_dot_view, reflectance,
                                                        roughness);
   let environment_diffuse = textureSample(irradiance_texture, environment_sampler,
