@@ -138,7 +138,7 @@ TEST_CASE("WebGPU Renderer 状态集中管理静态 Provider 生命周期", "[ba
   CHECK(state.create_sampler(sampler_desc, *unsupported_sampler) == GRANIT_ERROR_UNSUPPORTED);
   sampler_desc.lod_bias = 0.0F;
   sampler_desc.compare_operation = GRANIT_COMPARE_OPERATION_LESS_EQUAL;
-  CHECK(state.create_sampler(sampler_desc, *unsupported_sampler) == GRANIT_ERROR_UNSUPPORTED);
+  CHECK(state.create_sampler(sampler_desc, *unsupported_sampler) == GRANIT_SUCCESS);
 
   auto uniform_buffer = state.allocate_buffer_resource();
   REQUIRE(uniform_buffer != nullptr);

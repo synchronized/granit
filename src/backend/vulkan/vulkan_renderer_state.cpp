@@ -1291,7 +1291,8 @@ granit_result vulkan_renderer_state::create_native_bind_group_layout(
       type = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
     else if (entry.type == GRANIT_BINDING_TYPE_STORAGE_TEXTURE)
       type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-    else if (entry.type == GRANIT_BINDING_TYPE_SAMPLER)
+    else if (entry.type == GRANIT_BINDING_TYPE_SAMPLER ||
+             entry.type == GRANIT_BINDING_TYPE_COMPARISON_SAMPLER)
       type = VK_DESCRIPTOR_TYPE_SAMPLER;
     VkShaderStageFlags stages{};
     if ((entry.visibility & GRANIT_SHADER_STAGE_VERTEX_BIT) != 0)
@@ -1341,6 +1342,7 @@ granit_result vulkan_renderer_state::create_native_bind_group(
     case backend_binding_type::storage_texture:
       return VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
     case backend_binding_type::sampler:
+    case backend_binding_type::comparison_sampler:
       return VK_DESCRIPTOR_TYPE_SAMPLER;
     case backend_binding_type::uniform_buffer:
     default:

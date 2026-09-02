@@ -133,6 +133,7 @@ typedef unsigned int WGPUSurfaceGetCurrentTextureStatus;
 #define WGPUBufferBindingType_Uniform 2
 #define WGPUBufferBindingType_Storage 3
 #define WGPUSamplerBindingType_Filtering 2
+#define WGPUSamplerBindingType_Comparison 3
 #define WGPUTextureSampleType_Float 2
 #define WGPUTextureViewDimension_2D 2
 #define WGPUTextureViewDimension_Cube 5

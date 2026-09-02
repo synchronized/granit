@@ -316,12 +316,19 @@ granit_result renderer_registry::create_bind_group(granit_renderer renderer,
                                 : backend_buffer_access_type::storage_read_write,
             });
           }
-        } else if (declaration->type == GRANIT_BINDING_TYPE_SAMPLER) {
+        } else if (declaration->type == GRANIT_BINDING_TYPE_SAMPLER ||
+                   declaration->type == GRANIT_BINDING_TYPE_COMPARISON_SAMPLER) {
           const auto found = samplers_.find(entry.resource);
           if (found == samplers_.end() || found->second->owner != state || entry.offset != 0 ||
               entry.size != GRANIT_WHOLE_SIZE)
             return GRANIT_ERROR_INVALID_ARGUMENT;
-          write.type = backend_binding_type::sampler;
+          const auto comparison = declaration->type == GRANIT_BINDING_TYPE_COMPARISON_SAMPLER;
+          if (comparison !=
+              (found->second->compare_operation != GRANIT_COMPARE_OPERATION_DISABLED))
+            return GRANIT_ERROR_INVALID_ARGUMENT;
+          write.type = declaration->type == GRANIT_BINDING_TYPE_COMPARISON_SAMPLER
+                           ? backend_binding_type::comparison_sampler
+                           : backend_binding_type::sampler;
           write.sampler = found->second->native.get();
           record->resources.push_back(found->second);
         } else {

@@ -208,6 +208,7 @@ typedef uint32_t granit_backend_plugin_binding_type;
 #define GRANIT_BACKEND_PLUGIN_BINDING_TYPE_SAMPLED_TEXTURE UINT32_C(4)
 #define GRANIT_BACKEND_PLUGIN_BINDING_TYPE_SAMPLED_TEXTURE_CUBE UINT32_C(6)
 #define GRANIT_BACKEND_PLUGIN_BINDING_TYPE_SAMPLER UINT32_C(5)
+#define GRANIT_BACKEND_PLUGIN_BINDING_TYPE_COMPARISON_SAMPLER UINT32_C(7)
 
 typedef struct granit_backend_plugin_bind_group_layout_entry {
   uint32_t binding;

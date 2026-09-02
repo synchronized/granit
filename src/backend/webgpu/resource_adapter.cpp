@@ -421,7 +421,7 @@ webgpu_resource_adapter::create_sampler(const granit_sampler_desc& desc,
   auto* sampler = dynamic_cast<webgpu_sampler_resource*>(&resource);
   if (sampler == nullptr || sampler->handle_ != 0)
     return GRANIT_ERROR_INVALID_ARGUMENT;
-  if (desc.lod_bias != 0.0F || desc.compare_operation != GRANIT_COMPARE_OPERATION_DISABLED ||
+  if (desc.lod_bias != 0.0F ||
       desc.max_anisotropy > UINT16_MAX || std::floor(desc.max_anisotropy) != desc.max_anisotropy ||
       (desc.max_anisotropy > 1.0F &&
        (desc.min_filter != GRANIT_FILTER_LINEAR || desc.mag_filter != GRANIT_FILTER_LINEAR ||
@@ -478,6 +478,9 @@ granit_result webgpu_resource_adapter::create_bind_group_layout(
         break;
       case GRANIT_BINDING_TYPE_SAMPLER:
         type = GRANIT_BACKEND_PLUGIN_BINDING_TYPE_SAMPLER;
+        break;
+      case GRANIT_BINDING_TYPE_COMPARISON_SAMPLER:
+        type = GRANIT_BACKEND_PLUGIN_BINDING_TYPE_COMPARISON_SAMPLER;
         break;
       default:
         return GRANIT_ERROR_UNSUPPORTED;
@@ -541,11 +544,14 @@ webgpu_resource_adapter::create_bind_group(backend_bind_group_layout_resource& l
         entry.texture_view = view->handle_;
         break;
       }
-      case backend_binding_type::sampler: {
+      case backend_binding_type::sampler:
+      case backend_binding_type::comparison_sampler: {
         const auto* sampler = dynamic_cast<webgpu_sampler_resource*>(write.sampler);
         if (sampler == nullptr)
           return GRANIT_ERROR_INVALID_ARGUMENT;
-        entry.type = GRANIT_BACKEND_PLUGIN_BINDING_TYPE_SAMPLER;
+        entry.type = write.type == backend_binding_type::comparison_sampler
+                         ? GRANIT_BACKEND_PLUGIN_BINDING_TYPE_COMPARISON_SAMPLER
+                         : GRANIT_BACKEND_PLUGIN_BINDING_TYPE_SAMPLER;
         entry.sampler = sampler->handle_;
         break;
       }

@@ -168,7 +168,8 @@ granit_result record_tone_mapping(granit::lighting::tone_mapping_pipeline_resour
     const auto initialize =
         pipeline.initialize(renderer, static_cast<granit::texture_format>(output_format),
                             granit::pipeline::detail::tone_mapping_vertex_shader(),
-                            granit::pipeline::detail::tone_mapping_fragment_shader());
+                            granit::pipeline::detail::tone_mapping_fragment_shader(),
+                            granit::pipeline::detail::tone_mapping_wgsl());
     if (initialize != GRANIT_SUCCESS)
       return initialize;
   }
@@ -777,11 +778,12 @@ render_view(pipeline_state& state, const granit_render_pipeline_render_desc& des
             granit::lighting::light_pack_error::none) {
           return GRANIT_ERROR_INVALID_ARGUMENT;
         }
-        return record_opaque_draws(state, context.recorder(), context.texture_view(hdr),
-                                   context.texture_view(depth),
-                                   shadow ? context.texture_view(*shadow) : GRANIT_NULL_HANDLE,
-                                   render_output.width, render_output.height, frame, objects,
-                                   draw_bindings, lights, shadow_constants, use_uniform_arena);
+        const auto opaque_result = record_opaque_draws(
+            state, context.recorder(), context.texture_view(hdr), context.texture_view(depth),
+            shadow ? context.texture_view(*shadow) : GRANIT_NULL_HANDLE, render_output.width,
+            render_output.height, frame, objects, draw_bindings, lights, shadow_constants,
+            use_uniform_arena);
+        return opaque_result;
       }
       const granit_render_pipeline_record_info info{
           .struct_size = sizeof(granit_render_pipeline_record_info),
@@ -836,8 +838,10 @@ render_view(pipeline_state& state, const granit_render_pipeline_render_desc& des
                                         .reserved = 0});
         }
         if (state.record == nullptr) {
-          return record_shadow_draws(state, context.recorder(), context.texture_view(*shadow),
-                                     frame, casters, shadow_bindings, use_uniform_arena);
+          const auto shadow_result = record_shadow_draws(
+              state, context.recorder(), context.texture_view(*shadow), frame, casters,
+              shadow_bindings, use_uniform_arena);
+          return shadow_result;
         }
         const granit_render_pipeline_record_info info{
             .struct_size = sizeof(granit_render_pipeline_record_info),
@@ -870,10 +874,11 @@ render_view(pipeline_state& state, const granit_render_pipeline_render_desc& des
     const auto result = measure(context.recorder(), 4, [&]() {
       auto& pipeline =
           state.tone_mapping_pipelines[tone_mapping_pipeline_index(render_output.format)];
-      return record_tone_mapping(pipeline, state.renderer, context.recorder(),
-                                 context.texture_view(hdr), context.texture_view(output),
-                                 render_output.format, render_output.width, render_output.height,
-                                 constants);
+      const auto tone_result = record_tone_mapping(
+          pipeline, state.renderer, context.recorder(), context.texture_view(hdr),
+          context.texture_view(output), render_output.format, render_output.width,
+          render_output.height, constants);
+      return tone_result;
     });
     if (result != GRANIT_SUCCESS || metrics_pool == GRANIT_NULL_HANDLE)
       return result;

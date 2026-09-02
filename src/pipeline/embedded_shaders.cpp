@@ -16,6 +16,57 @@ alignas(std::uint32_t) constexpr std::uint8_t tone_mapping_fragment_bytes[]{
 #include "granit_pipeline_tone_mapping.frag.inc"
 };
 
+constexpr std::string_view tone_mapping_wgsl_source = R"(
+struct ToneMappingConstants {
+  exposure_scale: f32,
+  encode_srgb: u32,
+  reserved_values: vec2<u32>,
+};
+
+struct VertexOutput {
+  @builtin(position) position: vec4<f32>,
+  @location(0) uv: vec2<f32>,
+};
+
+@group(0) @binding(0) var<uniform> tone: ToneMappingConstants;
+@group(0) @binding(1) var hdr_color: texture_2d<f32>;
+@group(0) @binding(2) var hdr_sampler: sampler;
+
+@vertex
+fn vertex_main(@builtin(vertex_index) vertex_id: u32) -> VertexOutput {
+  var positions = array<vec2<f32>, 3>(
+      vec2<f32>(-1.0, -1.0), vec2<f32>(3.0, -1.0), vec2<f32>(-1.0, 3.0));
+  var output: VertexOutput;
+  output.position = vec4<f32>(positions[vertex_id], 0.5, 1.0);
+  output.uv = positions[vertex_id] * vec2<f32>(0.5, -0.5) + vec2<f32>(0.5);
+  return output;
+}
+
+fn aces_fitted(input: vec3<f32>) -> vec3<f32> {
+  let color = max(input, vec3<f32>(0.0));
+  return clamp(color * (2.51 * color + vec3<f32>(0.03)) /
+                   (color * (2.43 * color + vec3<f32>(0.59)) + vec3<f32>(0.14)),
+               vec3<f32>(0.0), vec3<f32>(1.0));
+}
+
+fn linear_to_srgb(input: vec3<f32>) -> vec3<f32> {
+  let color = clamp(input, vec3<f32>(0.0), vec3<f32>(1.0));
+  let low = color * 12.92;
+  let high = 1.055 * pow(color, vec3<f32>(1.0 / 2.4)) - vec3<f32>(0.055);
+  return select(high, low, color <= vec3<f32>(0.0031308));
+}
+
+@fragment
+fn fragment_main(input: VertexOutput) -> @location(0) vec4<f32> {
+  var color = aces_fitted(textureSample(hdr_color, hdr_sampler, input.uv).rgb *
+                          tone.exposure_scale);
+  if (tone.encode_srgb != 0u) {
+    color = linear_to_srgb(color);
+  }
+  return vec4<f32>(color, 1.0);
+}
+)";
+
 alignas(std::uint32_t) constexpr std::uint8_t shadow_depth_vertex_bytes[]{
 #include "granit_pipeline_shadow_depth.vert.inc"
 };
@@ -79,6 +130,8 @@ std::span<const std::byte> tone_mapping_fragment_shader() noexcept {
   return {reinterpret_cast<const std::byte*>(tone_mapping_fragment_bytes),
           sizeof(tone_mapping_fragment_bytes)};
 }
+
+std::string_view tone_mapping_wgsl() noexcept { return tone_mapping_wgsl_source; }
 
 std::span<const std::byte> shadow_depth_vertex_shader() noexcept {
   return {reinterpret_cast<const std::byte*>(shadow_depth_vertex_bytes),

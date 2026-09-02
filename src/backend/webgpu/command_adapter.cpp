@@ -3,6 +3,7 @@
 
 #include "backend/webgpu/command_adapter.h"
 
+
 #include <utility>
 #include <vector>
 
@@ -99,7 +100,7 @@ granit_result webgpu_command_adapter::begin_rendering(
     granit_backend_plugin_store_operation depth_store, float clear_depth) const noexcept {
   auto* recorder = as_recorder(resource);
   if (recorder == nullptr || recorder->recorder_ == 0 || recorder->command_buffer_ != 0 ||
-      target == 0)
+      (target == 0 && depth_target == 0))
     return GRANIT_ERROR_INVALID_ARGUMENT;
   if (const auto result = end_compute_if_open(*context_, *recorder); result != GRANIT_SUCCESS)
     return result;

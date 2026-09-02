@@ -371,6 +371,7 @@ granit_result renderer_registry::create_sampler(granit_renderer renderer,
     record->owner = owner;
     record->resource_api = resource_api;
     record->retirement = std::dynamic_pointer_cast<backend_retirement_renderer>(owner);
+    record->compare_operation = desc.compare_operation;
     record->native = record->resource_api->allocate_sampler_resource();
     const auto result = record->resource_api->create_sampler(desc, *record->native);
     if (result != GRANIT_SUCCESS)

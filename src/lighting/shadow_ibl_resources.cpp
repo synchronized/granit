@@ -108,7 +108,7 @@ granit_result shadow_ibl_resources::initialize(
       layout_entries.push_back(
           {shadow_binding_texture, granit::binding_type::sampled_texture, 1, fragment});
       layout_entries.push_back(
-          {shadow_binding_sampler, granit::binding_type::sampler, 1, fragment});
+          {shadow_binding_sampler, granit::binding_type::comparison_sampler, 1, fragment});
     }
     if (features.ibl) {
       layout_entries.push_back(

@@ -107,8 +107,10 @@ granit_result webgpu_pipeline_adapter::validate_graphics_pipeline(
                                    (desc.color_blend_count == 1 && desc.color_blends != nullptr &&
                                     desc.color_blends[0].enabled == 0 &&
                                     desc.color_blends[0].write_mask == GRANIT_COLOR_WRITE_ALL_BITS);
-  if (desc.color_format_count != 1 ||
-      (desc.color_formats[0] != GRANIT_TEXTURE_FORMAT_RGBA8_UNORM &&
+  if (desc.color_format_count > 1 ||
+      (desc.color_format_count == 0 &&
+       desc.depth_stencil_format == GRANIT_TEXTURE_FORMAT_UNDEFINED) ||
+      (desc.color_format_count == 1 && desc.color_formats[0] != GRANIT_TEXTURE_FORMAT_RGBA8_UNORM &&
        desc.color_formats[0] != GRANIT_TEXTURE_FORMAT_BGRA8_UNORM &&
        desc.color_formats[0] != GRANIT_TEXTURE_FORMAT_RGBA16_FLOAT) ||
       (desc.depth_stencil_format != GRANIT_TEXTURE_FORMAT_UNDEFINED &&
@@ -165,7 +167,8 @@ granit_result webgpu_pipeline_adapter::create_graphics_pipeline(
   auto* layout = as_layout(layout_resource);
   const auto plugin_format = to_plugin_format(color_format);
   if (pipeline == nullptr || pipeline->handle_ != 0 || layout == nullptr || layout->handle_ == 0 ||
-      vertex_shader == 0 || fragment_shader == 0 || plugin_format == 0) {
+      vertex_shader == 0 || fragment_shader == 0 ||
+      (color_format != GRANIT_TEXTURE_FORMAT_UNDEFINED && plugin_format == 0)) {
     return GRANIT_ERROR_INVALID_ARGUMENT;
   }
   try {

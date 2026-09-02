@@ -480,6 +480,42 @@ granit_result create_presentation_resources() {
   return GRANIT_SUCCESS;
 }
 
+granit_result render_model_viewer_probe(granit_render_pipeline pipeline) {
+  granit_swapchain_info info = GRANIT_SWAPCHAIN_INFO_INIT;
+  auto result = granit_swapchain_get_info(state.renderer, state.swapchain, &info);
+  granit_frame frame{};
+  std::uint32_t image_index{};
+  std::uint32_t needs_recreate{};
+  if (result == GRANIT_SUCCESS)
+    result = granit_swapchain_acquire(state.renderer, state.swapchain, &frame, &image_index,
+                                      &needs_recreate);
+  granit_texture backbuffer{};
+  granit_texture_view backbuffer_view{};
+  if (result == GRANIT_SUCCESS) {
+    result = granit_swapchain_get_backbuffer(state.renderer, state.swapchain, image_index,
+                                             &backbuffer, &backbuffer_view);
+  }
+  granit::example::model_viewer::application_tick_output output;
+  granit::example::model_viewer::application_tick_input input;
+  input.width = info.width;
+  input.height = info.height;
+  if (result == GRANIT_SUCCESS)
+    result = granit::to_native(state.core.tick(input, output));
+  if (result == GRANIT_SUCCESS) {
+    output.render.output = backbuffer_view;
+    output.render.output_format = info.format;
+    output.render.frame = frame;
+    result = granit_render_pipeline_render(state.renderer, pipeline, &output.render);
+  }
+  if (result != GRANIT_SUCCESS) {
+    if (frame != GRANIT_NULL_HANDLE)
+      static_cast<void>(
+          granit_frame_cancel(state.renderer, state.swapchain, frame, &needs_recreate));
+    return result;
+  }
+  return granit_swapchain_present(state.renderer, state.swapchain, frame, &needs_recreate);
+}
+
 void tick(void*) noexcept {
   if (state.status != startup_status::provider_pending) {
     return;
@@ -604,14 +640,21 @@ void tick(void*) noexcept {
       fail("pipeline-create", pipeline_result);
       return;
     }
+    const auto result = create_presentation_resources();
+    if (result != GRANIT_SUCCESS) {
+      static_cast<void>(granit_render_pipeline_destroy(state.renderer, pipeline));
+      fail("presentation-create", result);
+      return;
+    }
+    const auto render_result = render_model_viewer_probe(pipeline);
+    if (render_result != GRANIT_SUCCESS) {
+      static_cast<void>(granit_render_pipeline_destroy(state.renderer, pipeline));
+      fail("model-viewer-render", render_result);
+      return;
+    }
     const auto pipeline_destroy_result = granit_render_pipeline_destroy(state.renderer, pipeline);
     if (pipeline_destroy_result != GRANIT_SUCCESS) {
       fail("pipeline-destroy", pipeline_destroy_result);
-      return;
-    }
-    const auto result = create_presentation_resources();
-    if (result != GRANIT_SUCCESS) {
-      fail("presentation-create", result);
       return;
     }
   } catch (const std::bad_alloc&) {

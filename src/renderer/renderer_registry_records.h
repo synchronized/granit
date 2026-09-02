@@ -70,6 +70,7 @@ struct renderer_registry::sampler_record {
   std::shared_ptr<backend_resource_renderer> resource_api;
   std::shared_ptr<backend_retirement_renderer> retirement;
   std::unique_ptr<backend_sampler_resource> native;
+  granit_compare_operation compare_operation{};
 };
 struct renderer_registry::shader_record {
   resource_metadata metadata;

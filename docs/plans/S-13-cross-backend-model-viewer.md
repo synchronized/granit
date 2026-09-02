@@ -319,7 +319,10 @@ Draw List 不再依赖 Pipeline Cache 能力；Wasm32 的 Scene Snapshot V1 尾�
 Loader 现支持标准 Base64 Data URI Buffer，浏览器 Fixture 已升级为带节点、材质和真实三角形的场景，
 同时保留外部 `.bin` 请求验证两阶段 Fetch。WebGPU Pipeline 已补齐 `RGBA16_FLOAT` Render Target 与
 Depth Bias 传递；共享 Core 的 `tick` 和 Scene Snapshot 已能进入真实首帧，剩余阻塞位于后续 PBR
-Render 命令能力，待补齐后再永久启用浏览器逐帧 Render/Present smoke。
+Render 命令能力。现已补齐比较采样器、零颜色附件的 Depth-only Pipeline/Render Pass，以及
+Tone Mapping 的跨后端 WGSL；真实 Chrome 已通过阴影、PBR 不透明绘制、Tone Mapping、交换链呈现
+和两阶段资产 Fetch 的完整首帧。下一步将该首帧路径接入 `requestAnimationFrame`，并补齐浏览器
+输入、Resize 与多帧资源生命周期 Smoke。
 
 SDL3 输入适配已完成第一阶段：平台事件按帧累积为 `viewer_input`，覆盖右键环绕、中键平移、
 滚轮缩放、`F`/`Home`、焦点与指针进出，并在 ImGui 捕获标志进入 Core 前完成标记。窗口、Surface
