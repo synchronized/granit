@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "name": "Studio Small 03",
+  "source_page": "https://polyhaven.com/a/studio_small_03",
+  "author": "Greg Zaal",
+  "license": "CC0-1.0",
+  "files_hash": "d69ec09a43016714fd0dda163b3b0c585c968f56",
+  "files": [
+    {
+      "path": "studio_small_03_1k.hdr",
+      "url": "https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/1k/studio_small_03_1k.hdr",
+      "size": 1686299,
+      "sha256": "30933d55e45f0795daf49f3cbefbe0e5ebcb821ee04fb0a2818c02ffc3938817"
+    }
+  ]
+}

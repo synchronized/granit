@@ -26,12 +26,15 @@ FlightHelmet 的 Base Color、法线、金属度和粗糙度纹理已经正确�
 - model-viewer PBR Shader 直接消费该后端无关布局，不出现 Vulkan 或 WebGPU 类型。
 - 环境资源离线生成并锁定；源 HDRI 必须允许再分发，记录来源、版本、许可证与校验值。
 - 首个环境使用中性摄影棚光，UI 后续只控制旋转和强度；方向光继续作为可调主光。
+- 首个环境源锁定 Poly Haven `Studio Small 03` 1K HDR，作者 Greg Zaal，许可证 CC0-1.0；
+  manifest 固定来源元数据、字节数和 SHA-256，原始文件不进入默认工作树。
+- glTF IBL Sampler 仅作为 Apache-2.0 离线生成工具；运行时不链接它，也不增加 KTX 依赖。
 - Base Color、Normals、Metallic 和 Roughness 模式保持不受环境光影响，作为分层诊断入口。
 
 ## 实施顺序
 
 1. 为 Render Pipeline 增加后端无关的可选环境纹理与采样参数输入。（已完成）
-2. 锁定 CC0 摄影棚 HDRI 和离线预处理参数。
+2. 锁定 CC0 摄影棚 HDRI 和来源校验清单。（已完成）
 3. 生成漫反射 Cube、带 Mip 的 GGX 预过滤 Cube 与 BRDF LUT，并加入可复现校验。
 4. 扩展 model-viewer Shader 的 Group 3 声明和 split-sum IBL 计算，移除临时摄影棚常量补光。
 5. 增加环境强度与旋转控件，并同步桌面及浏览器入口。

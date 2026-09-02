@@ -52,6 +52,19 @@ cmake `
   -P cmake/fetch_flight_helmet.cmake
 ```
 
+环境光源也采用独立清单下载，不进入默认 Git 工作树：
+
+```powershell
+cmake `
+  -DGRANIT_MODEL_VIEWER_ENVIRONMENT_OUTPUT_DIR="$PWD/build/assets/StudioSmall03" `
+  -P cmake/fetch_model_viewer_environment.cmake
+```
+
+该命令获取 Poly Haven 以 CC0-1.0 发布的 `Studio Small 03` 1K HDR，并同时校验文件大小和
+SHA-256。来源和固定校验值见
+[`StudioSmall03.manifest.json`](../../examples/assets/StudioSmall03.manifest.json)。当前文件是后续
+离线预处理的输入，不是 model-viewer 可直接加载的运行时环境包。
+
 资产来自 Khronos glTF Sample Assets，模型使用 CC0-1.0。锁定版本和第三方通知见
 [`FlightHelmet.manifest.json`](../../examples/assets/FlightHelmet.manifest.json) 与
 [`THIRD_PARTY_NOTICES.md`](../../examples/common/gltf/THIRD_PARTY_NOTICES.md)。
