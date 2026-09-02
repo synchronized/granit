@@ -37,6 +37,25 @@ TEST_CASE("模型查看器 Core 保留资产解析诊断", "[example][model-view
   CHECK_FALSE(core.diagnostic().empty());
 }
 
+TEST_CASE("模型查看器 Core 拒绝无效环境包", "[example][model-viewer][core][gpu]") {
+  using namespace granit::example::model_viewer;
+  granit::renderer renderer;
+  const auto renderer_result = renderer.initialize({.application_name = "Environment Test"});
+  if (granit::failed(renderer_result))
+    SKIP("当前环境没有可用 Renderer");
+
+  granit::example::gltf::scene scene;
+  scene.nodes.emplace_back();
+  application_core core;
+  REQUIRE(core.begin_renderer() == granit::result::success);
+  REQUIRE(core.renderer_ready() == granit::result::success);
+  REQUIRE(core.accept_scene(std::move(scene)) == granit::result::success);
+  const std::array invalid{std::byte{1}};
+  CHECK(core.upload(renderer.native_handle(), invalid) == granit::result::invalid_argument);
+  CHECK(core.phase() == application_phase::failed);
+  CHECK_FALSE(core.diagnostic().empty());
+}
+
 TEST_CASE("模型查看器 Core 生成后端无关单帧描述", "[example][model-viewer][core][gpu]") {
   using namespace granit::example::model_viewer;
   granit::renderer renderer;

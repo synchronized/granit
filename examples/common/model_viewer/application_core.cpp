@@ -80,7 +80,8 @@ granit::result application_core::accept_scene(gltf::scene scene) {
   }
 }
 
-granit::result application_core::upload(granit_renderer renderer) {
+granit::result application_core::upload(granit_renderer renderer,
+                                        std::span<const std::byte> environment_bytes) {
   if (phase_ != application_phase::gpu_upload)
     return granit::result::invalid_argument;
   const auto result = gpu_scene_.initialize(renderer, cpu_scene_);
@@ -88,7 +89,18 @@ granit::result application_core::upload(granit_renderer renderer) {
     fail(result, "模型查看器 GPU Scene 上传失败");
     return result;
   }
-  const auto environment_result = environment_.initialize_builtin_studio(renderer);
+  granit::result environment_result;
+  if (environment_bytes.empty()) {
+    environment_result = environment_.initialize_builtin_studio(renderer);
+  } else {
+    environment_package package;
+    if (parse_environment_package(environment_bytes, package) != environment_package_error::none) {
+      gpu_scene_.reset();
+      fail(granit::result::invalid_argument, "模型查看器环境包解析失败");
+      return granit::result::invalid_argument;
+    }
+    environment_result = environment_.initialize(renderer, package);
+  }
   if (granit::failed(environment_result)) {
     gpu_scene_.reset();
     fail(environment_result, "模型查看器内建环境上传失败");

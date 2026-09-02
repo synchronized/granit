@@ -52,6 +52,10 @@ granit::result parse_options(std::span<const std::string_view> arguments, option
         candidate.asset_path = arguments[++index];
         if (candidate.asset_path.empty())
           return granit::result::invalid_argument;
+      } else if (argument == "--environment" && index + 1 < arguments.size()) {
+        candidate.environment_path = arguments[++index];
+        if (candidate.environment_path.empty())
+          return granit::result::invalid_argument;
       } else if (argument == "--validation") {
         candidate.enable_validation = true;
       } else if (argument == "--smoke-test") {

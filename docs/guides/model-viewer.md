@@ -82,8 +82,8 @@ build/windows-clang-debug/bin/granit_model_viewer_environment_tool.exe build `
 打包工具只接受未压缩 RGBA16F 六面 KTX2；GGX 输入必须包含一直到 1×1 的完整 Mip 链。
 BRDF LUT PNG 会被确定性转换为 RGBA16F。工具不属于安装 SDK，也不会成为应用运行时依赖。
 
-当前查看器会创建一个低分辨率内置摄影棚环境，保证离线首次运行时金属与暗部仍然可读。它用于
-默认回退和开发检查；上述锁定的高质量 GRENV 环境将在后续跨后端图像验收入口接入。
+查看器省略 `--environment` 时会创建一个低分辨率内置摄影棚环境，保证离线首次运行时金属与暗部
+仍然可读；传入 GRENV v1 则使用预处理的高质量环境进行跨后端图像验收。
 
 资产来自 Khronos glTF Sample Assets，模型使用 CC0-1.0。锁定版本和第三方通知见
 [`FlightHelmet.manifest.json`](../../examples/assets/FlightHelmet.manifest.json) 与
@@ -96,6 +96,7 @@ BRDF LUT PNG 会被确定性转换为 RGBA16F。工具不属于安装 SDK，也�
 ```powershell
 build/model-viewer/bin/granit_model_viewer_example.exe `
   --asset build/assets/FlightHelmet/glTF/FlightHelmet.gltf `
+  --environment build/assets/StudioSmall03/StudioSmall03.grenv `
   --backend=vulkan --validation
 ```
 
@@ -116,6 +117,7 @@ Linux 的插件文件通常为 `libgranit_backend_webgpu.so`。省略 `--backend
 | 参数 | 作用 |
 | --- | --- |
 | `--asset <文件>` | 必填；指定 `.gltf` 或 `.glb` 主文件 |
+| `--environment <文件>` | 可选；指定 GRENV v1 环境包，省略时使用内置低分辨率环境 |
 | `--backend=auto\|vulkan\|webgpu` | 选择 Renderer 后端 |
 | `--backend-library <文件>` | 指定后端插件动态库 |
 | `--validation` | 启用可用的后端验证层 |

@@ -17,6 +17,7 @@ struct options {
   granit::renderer_backend backend{granit::renderer_backend::automatic};
   std::string backend_library_path;
   std::string asset_path;
+  std::string environment_path;
   std::string profile_output_path;
   granit::present_mode presentation{granit::present_mode::mailbox};
   bool enable_validation{};
@@ -26,7 +27,7 @@ struct options {
 
 /**
  * 解析桌面查看器参数。参数错误时返回 invalid_argument，并保留 output 原值。
- * 支持后端、资产、验证、Smoke、UI、呈现模式和固定性能采样参数。
+ * 支持后端、资产、环境、验证、Smoke、UI、呈现模式和固定性能采样参数。
  */
 [[nodiscard]] granit::result parse_options(std::span<const std::string_view> arguments,
                                            options& output);

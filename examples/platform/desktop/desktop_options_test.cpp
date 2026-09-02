@@ -12,7 +12,8 @@ TEST_CASE("模型查看器桌面参数显式选择 Renderer 后端", "[example][
   const std::array arguments{
       std::string_view{"--backend=webgpu"},  std::string_view{"--backend-library"},
       std::string_view{"dawn.dll"},          std::string_view{"--asset"},
-      std::string_view{"FlightHelmet.gltf"}, std::string_view{"--validation"},
+      std::string_view{"FlightHelmet.gltf"}, std::string_view{"--environment"},
+      std::string_view{"studio.grenv"},      std::string_view{"--validation"},
       std::string_view{"--no-ui"},           std::string_view{"--present-mode=immediate"},
       std::string_view{"--profile-output"},  std::string_view{"profile.json"}};
   options parsed;
@@ -20,6 +21,7 @@ TEST_CASE("模型查看器桌面参数显式选择 Renderer 后端", "[example][
   CHECK(parsed.backend == granit::renderer_backend::webgpu);
   CHECK(parsed.backend_library_path == "dawn.dll");
   CHECK(parsed.asset_path == "FlightHelmet.gltf");
+  CHECK(parsed.environment_path == "studio.grenv");
   CHECK(parsed.enable_validation);
   CHECK_FALSE(parsed.smoke_test);
   CHECK_FALSE(parsed.show_ui);
@@ -36,6 +38,9 @@ TEST_CASE("模型查看器桌面参数拒绝未知呈现模式和空性能路径
   const std::array empty_output{std::string_view{"--asset"}, std::string_view{"model.glb"},
                                 std::string_view{"--profile-output"}, std::string_view{}};
   CHECK(parse_options(empty_output, parsed) == granit::result::invalid_argument);
+  const std::array empty_environment{std::string_view{"--asset"}, std::string_view{"model.glb"},
+                                     std::string_view{"--environment"}, std::string_view{}};
+  CHECK(parse_options(empty_environment, parsed) == granit::result::invalid_argument);
   const std::array conflicting_modes{
       std::string_view{"--asset"}, std::string_view{"model.glb"}, std::string_view{"--smoke-test"},
       std::string_view{"--profile-output"}, std::string_view{"profile.json"}};

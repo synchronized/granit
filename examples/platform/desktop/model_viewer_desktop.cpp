@@ -227,6 +227,7 @@ bool write_profile(const std::filesystem::path& path, const granit::renderer_inf
 
 void print_usage() {
   std::cerr << "用法：granit_model_viewer_example --asset <文件> "
+               "[--environment <文件.grenv>] "
                "[--backend=auto|vulkan|webgpu] [--backend-library <文件>] "
                "[--validation] [--smoke-test] [--no-ui] "
                "[--present-mode=fifo|immediate] [--profile-output <文件.json>]\n";
@@ -335,8 +336,14 @@ int main(int argc, char** argv) {
   file_resolver resolver(asset_path.parent_path());
   if (granit::succeeded(result))
     result = core.load_asset(asset_bytes, &resolver);
+  std::vector<std::byte> environment_bytes;
+  if (granit::succeeded(result) && !options.environment_path.empty() &&
+      !read_file(options.environment_path, environment_bytes)) {
+    std::cerr << "无法读取环境包：" << options.environment_path << '\n';
+    result = granit::result::invalid_argument;
+  }
   if (granit::succeeded(result))
-    result = core.upload(renderer.native_handle());
+    result = core.upload(renderer.native_handle(), environment_bytes);
   const granit_render_pipeline_desc pipeline_desc = GRANIT_RENDER_PIPELINE_DESC_INIT;
   if (granit::succeeded(result))
     result = pipeline.initialize(renderer.native_handle(), pipeline_desc);

@@ -49,7 +49,8 @@ Texture 与 Texture View。该格式不是 Granit 公共资产格式，不进入
 3. 定义并验证运行时环境包解析及 GPU 上传。（已完成）
 4. 增加受限 KTX2 Cube 输入解析。（已完成）
 5. 增加 KTX2、BRDF LUT 到确定性 GRENV 的打包工具。（已完成）
-6. 生成漫反射 Cube、带 Mip 的 GGX 预过滤 Cube 与 BRDF LUT，并加入可复现校验。
+6. 生成漫反射 Cube、带 Mip 的 GGX 预过滤 Cube 与 BRDF LUT，并加入可复现校验；桌面入口已支持
+   通过 `--environment` 加载生成的 GRENV，正式参考资产仍待生成。
 7. 扩展 model-viewer Shader 的 Group 3 声明和 split-sum IBL 计算，移除临时摄影棚常量补光。
    （已完成）
 8. 增加环境强度与旋转控件，并同步桌面及浏览器入口。（已完成）
