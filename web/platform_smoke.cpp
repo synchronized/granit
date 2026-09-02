@@ -32,7 +32,7 @@
 
 namespace {
 
-enum class startup_status : int { failed = -1, starting, provider_pending, ready };
+enum class startup_status : int { failed = -1, starting, provider_pending, ready, stopped };
 
 struct web_platform_state {
   granit_renderer renderer{};
@@ -44,6 +44,8 @@ struct web_platform_state {
   unsigned applied_input_count{};
   unsigned rendered_frame_count{};
   unsigned resize_count{};
+  std::uint64_t shutdown_live_resource_count{};
+  std::uint64_t shutdown_pending_retirement_count{};
   granit::example::model_viewer::web::web_input input;
   std::shared_ptr<granit::example::model_viewer::web::asset_request> asset_request{
       std::make_shared<granit::example::model_viewer::web::asset_request>()};
@@ -781,6 +783,62 @@ extern "C" EMSCRIPTEN_KEEPALIVE unsigned granit_web_applied_input_count() noexce
 
 extern "C" EMSCRIPTEN_KEEPALIVE unsigned granit_web_resize_count() noexcept {
   return state.resize_count;
+}
+
+extern "C" EMSCRIPTEN_KEEPALIVE unsigned long long
+granit_web_shutdown_live_resource_count() noexcept {
+  return state.shutdown_live_resource_count;
+}
+
+extern "C" EMSCRIPTEN_KEEPALIVE unsigned long long
+granit_web_shutdown_pending_retirement_count() noexcept {
+  return state.shutdown_pending_retirement_count;
+}
+
+extern "C" EMSCRIPTEN_KEEPALIVE int granit_web_shutdown() noexcept {
+  if (state.status == startup_status::stopped)
+    return GRANIT_SUCCESS;
+  emscripten_cancel_main_loop();
+  state.asset_request->cancel();
+  for (const auto& entry : state.resource_batch.entries())
+    entry.request->cancel();
+  state.resource_batch.clear();
+  granit::example::model_viewer::web::resource_bundle empty_bundle;
+  state.resource_bundle.swap(empty_bundle);
+  state.core.reset();
+
+  auto first_error = GRANIT_SUCCESS;
+  const auto capture = [&](granit_result result) {
+    if (first_error == GRANIT_SUCCESS && result != GRANIT_SUCCESS)
+      first_error = result;
+  };
+  if (state.pipeline != GRANIT_NULL_HANDLE) {
+    capture(granit_render_pipeline_destroy(state.renderer, state.pipeline));
+    state.pipeline = GRANIT_NULL_HANDLE;
+  }
+  if (state.swapchain != GRANIT_NULL_HANDLE) {
+    capture(granit_swapchain_destroy(state.renderer, state.swapchain));
+    state.swapchain = GRANIT_NULL_HANDLE;
+  }
+  if (state.surface != GRANIT_NULL_HANDLE) {
+    capture(granit_surface_destroy(state.renderer, state.surface));
+    state.surface = GRANIT_NULL_HANDLE;
+  }
+  if (state.renderer != GRANIT_NULL_HANDLE) {
+    granit_renderer_resource_stats stats = GRANIT_RENDERER_RESOURCE_STATS_INIT;
+    const auto stats_result = granit_renderer_get_resource_stats(state.renderer, &stats);
+    capture(stats_result);
+    if (stats_result == GRANIT_SUCCESS) {
+      state.shutdown_live_resource_count = stats.total_live_count;
+      state.shutdown_pending_retirement_count = stats.pending_retirement_count;
+      if (stats.total_live_count != 0)
+        capture(GRANIT_ERROR_INTERNAL);
+    }
+    capture(granit_renderer_destroy(state.renderer));
+    state.renderer = GRANIT_NULL_HANDLE;
+  }
+  state.status = startup_status::stopped;
+  return first_error;
 }
 
 extern "C" EMSCRIPTEN_KEEPALIVE unsigned granit_web_asset_status() noexcept {

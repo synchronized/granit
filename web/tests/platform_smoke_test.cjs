@@ -224,7 +224,37 @@ async function main() {
       { timeout: 10_000 },
     );
     validateModelViewerPixels(await canvas.screenshot({ type: "png" }));
-    console.log("浏览器 WebGPU 多帧渲染、输入转换、Resize 与资产 Fetch 验证通过");
+    const framesBeforeShutdown = await page.evaluate(() =>
+      Module._granit_web_rendered_frame_count(),
+    );
+    const shutdownResult = await page.evaluate(() => Module._granit_web_shutdown());
+    const repeatedShutdownResult = await page.evaluate(() => Module._granit_web_shutdown());
+    const shutdownStatus = await page.evaluate(() => Module._granit_web_platform_status());
+    const liveResources = await page.evaluate(() =>
+      Number(Module._granit_web_shutdown_live_resource_count()),
+    );
+    const pendingRetirements = await page.evaluate(() =>
+      Number(Module._granit_web_shutdown_pending_retirement_count()),
+    );
+    await page.waitForTimeout(100);
+    const framesAfterShutdown = await page.evaluate(() =>
+      Module._granit_web_rendered_frame_count(),
+    );
+    if (
+      shutdownResult !== 0 ||
+      repeatedShutdownResult !== 0 ||
+      shutdownStatus !== 3 ||
+      liveResources !== 0 ||
+      pendingRetirements !== 0 ||
+      framesAfterShutdown !== framesBeforeShutdown
+    ) {
+      throw new Error(
+        `浏览器资源释放异常：result=${shutdownResult}, repeated=${repeatedShutdownResult}, ` +
+          `status=${shutdownStatus}, live=${liveResources}, pending=${pendingRetirements}, ` +
+          `frames=${framesBeforeShutdown}->${framesAfterShutdown}`,
+      );
+    }
+    console.log("浏览器 WebGPU 多帧渲染、输入、Resize、资产 Fetch 与资源释放验证通过");
   } catch (error) {
     console.error(browserMessages.join("\n"));
     throw error;

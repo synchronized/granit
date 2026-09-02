@@ -325,7 +325,10 @@ Tone Mapping 的跨后端 WGSL；真实 Chrome 已通过阴影、PBR 不透明�
 已呈现帧并验证模型中心与背景像素；多帧验证同时补齐了深度纹理 Sample Type 以及 WebGPU 阴影
 Pipeline 的完整 Bind Group 绑定。浏览器 Keyboard、Pointer、Button、Wheel、Focus 与 Pointer Presence
 事件现复用共享 `web_input` 适配器，右键环绕、滚轮缩放和 `F` 聚焦已验证进入 Core；Canvas 像素
-尺寸变化会在帧边界仅重建 Swapchain，并在 800×450 下继续呈现。下一步补齐浏览器资源释放 Smoke。
+尺寸变化会在帧边界仅重建 Swapchain，并在 800×450 下继续呈现。浏览器 Shutdown Smoke 会先停止
+主循环和资产请求，再依次释放 Core/GPU Scene、Render Pipeline、Swapchain、Surface 与 Renderer；
+重复关闭保持成功，关闭前的公开子资源与延迟回收计数均须归零。浏览器平台壳的 S-13F 契约至此
+完成，剩余工作是桌面 Dawn 手动验收及 S-13G 完整回归。
 
 SDL3 输入适配已完成第一阶段：平台事件按帧累积为 `viewer_input`，覆盖右键环绕、中键平移、
 滚轮缩放、`F`/`Home`、焦点与指针进出，并在 ImGui 捕获标志进入 Core 前完成标记。窗口、Surface
