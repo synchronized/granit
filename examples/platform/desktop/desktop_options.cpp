@@ -21,6 +21,16 @@ bool parse_backend(std::string_view value, granit::renderer_backend& backend) no
   return true;
 }
 
+bool parse_present_mode(std::string_view value, granit::present_mode& presentation) noexcept {
+  if (value == "fifo")
+    presentation = granit::present_mode::fifo;
+  else if (value == "immediate")
+    presentation = granit::present_mode::immediate;
+  else
+    return false;
+  return true;
+}
+
 } // namespace
 
 granit::result parse_options(std::span<const std::string_view> arguments, options& output) {
@@ -44,11 +54,24 @@ granit::result parse_options(std::span<const std::string_view> arguments, option
         candidate.enable_validation = true;
       } else if (argument == "--smoke-test") {
         candidate.smoke_test = true;
+      } else if (argument == "--no-ui") {
+        candidate.show_ui = false;
+      } else if (argument == "--profile-output" && index + 1 < arguments.size()) {
+        candidate.profile_output_path = arguments[++index];
+        if (candidate.profile_output_path.empty())
+          return granit::result::invalid_argument;
       } else {
-        return granit::result::invalid_argument;
+        constexpr std::string_view presentation_prefix = "--present-mode=";
+        if (!argument.starts_with(presentation_prefix) ||
+            !parse_present_mode(argument.substr(presentation_prefix.size()),
+                                candidate.presentation)) {
+          return granit::result::invalid_argument;
+        }
       }
     }
     if (candidate.asset_path.empty())
+      return granit::result::invalid_argument;
+    if (candidate.smoke_test && !candidate.profile_output_path.empty())
       return granit::result::invalid_argument;
     output = std::move(candidate);
     return granit::result::success;

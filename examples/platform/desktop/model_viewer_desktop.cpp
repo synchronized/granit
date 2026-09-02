@@ -19,15 +19,19 @@
 #include <granit/pipeline/canvas_draw_list.hpp>
 #include <granit/pipeline/render_pipeline.hpp>
 
+#include <algorithm>
 #include <chrono>
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <filesystem>
 #include <fstream>
+#include <iomanip>
 #include <iostream>
 #include <limits>
 #include <memory>
 #include <span>
+#include <sstream>
 #include <string_view>
 #include <vector>
 
@@ -118,10 +122,95 @@ private:
   std::filesystem::path base_;
 };
 
+struct profile_metric {
+  float p50{};
+  float p95{};
+  float p99{};
+  std::size_t count{};
+};
+
+template <typename Selector, typename Filter>
+profile_metric
+summarize_profile(std::span<const granit::example::model_viewer::performance_sample> samples,
+                  Selector selector, Filter filter) {
+  std::vector<float> values;
+  values.reserve(samples.size());
+  for (const auto& sample : samples) {
+    const auto value = selector(sample);
+    if (filter(sample) && std::isfinite(value) && value >= 0.0F)
+      values.push_back(value);
+  }
+  if (values.empty())
+    return {};
+  std::sort(values.begin(), values.end());
+  const auto percentile = [&](std::size_t numerator) {
+    const auto index = ((values.size() - 1) * numerator + 99) / 100;
+    return values[index];
+  };
+  return {
+      .p50 = percentile(50), .p95 = percentile(95), .p99 = percentile(99), .count = values.size()};
+}
+
+bool write_profile(const std::filesystem::path& path, const granit::renderer_info& renderer,
+                   const granit::swapchain_info& swapchain, const std::filesystem::path& asset,
+                   bool validation, bool ui,
+                   std::span<const granit::example::model_viewer::performance_sample> samples) {
+  const auto all = [](const auto&) { return true; };
+  const auto gpu = [](const auto& sample) { return sample.gpu_timing_available; };
+  const auto cpu =
+      summarize_profile(samples, [](const auto& sample) { return sample.cpu_frame_ms; }, all);
+  const auto slot =
+      summarize_profile(samples, [](const auto& sample) { return sample.frame_slot_wait_ms; }, all);
+  const auto present =
+      summarize_profile(samples, [](const auto& sample) { return sample.present_wait_ms; }, all);
+  const auto gpu_time =
+      summarize_profile(samples, [](const auto& sample) { return sample.gpu_frame_ms; }, gpu);
+  const auto write_metric = [](std::ostringstream& output, std::string_view name,
+                               const profile_metric& metric, bool comma) {
+    output << "    \"" << name << "\": {\"p50\": " << metric.p50 << ", \"p95\": " << metric.p95
+           << ", \"p99\": " << metric.p99 << ", \"sample_count\": " << metric.count << '}'
+           << (comma ? "," : "") << '\n';
+  };
+  std::ostringstream json;
+  json << "{\n"
+       << "  \"schema_version\": 1,\n"
+       << "  \"backend\": "
+       << std::quoted(renderer.backend == granit::renderer_backend::webgpu ? "webgpu" : "vulkan")
+       << ",\n"
+       << "  \"adapter\": " << std::quoted(renderer.adapter_name) << ",\n"
+       << "  \"asset\": " << std::quoted(asset.generic_string()) << ",\n"
+       << "  \"validation\": " << (validation ? "true" : "false") << ",\n"
+       << "  \"width\": " << swapchain.width << ",\n"
+       << "  \"height\": " << swapchain.height << ",\n"
+       << "  \"present_mode\": "
+       << std::quoted(swapchain.presentation == granit::present_mode::immediate ? "immediate"
+                                                                                : "fifo")
+       << ",\n"
+       << "  \"ui\": " << (ui ? "true" : "false") << ",\n"
+       << "  \"warmup_frames\": 300,\n"
+       << "  \"sample_frames\": " << samples.size() << ",\n"
+       << "  \"milliseconds\": {\n";
+  write_metric(json, "cpu_frame", cpu, true);
+  write_metric(json, "frame_slot_wait", slot, true);
+  write_metric(json, "present_wait", present, true);
+  write_metric(json, "gpu_frame", gpu_time, false);
+  json << "  }\n}\n";
+
+  std::error_code directory_error;
+  if (path.has_parent_path())
+    std::filesystem::create_directories(path.parent_path(), directory_error);
+  if (directory_error)
+    return false;
+  std::ofstream output(path);
+  output << json.str();
+  return static_cast<bool>(output);
+}
+
 void print_usage() {
   std::cerr << "用法：granit_model_viewer_example --asset <文件> "
                "[--backend=auto|vulkan|webgpu] [--backend-library <文件>] "
-               "[--validation] [--smoke-test]\n";
+               "[--validation] [--smoke-test] [--no-ui] "
+               "[--present-mode=fifo|immediate] [--profile-output <文件.json>]\n";
 }
 
 } // namespace
@@ -144,8 +233,11 @@ int main(int argc, char** argv) {
     return 1;
   }
   sdl_quit quit;
-  std::unique_ptr<SDL_Window, window_deleter> window(SDL_CreateWindow(
-      "Granit Model Viewer", 1280, 720, SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY));
+  const auto initial_width = options.profile_output_path.empty() ? 1280 : 1920;
+  const auto initial_height = options.profile_output_path.empty() ? 720 : 1080;
+  std::unique_ptr<SDL_Window, window_deleter> window(
+      SDL_CreateWindow("Granit Model Viewer", initial_width, initial_height,
+                       SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY));
   if (!window) {
     std::cerr << "SDL3 窗口创建失败：" << SDL_GetError() << '\n';
     return 1;
@@ -196,14 +288,26 @@ int main(int argc, char** argv) {
       !SDL_GetWindowSizeInPixels(window.get(), &pixel_width, &pixel_height)) {
     result = granit::result::backend_unavailable;
   }
+  if (granit::succeeded(result) && !options.profile_output_path.empty() &&
+      (pixel_width != 1920 || pixel_height != 1080)) {
+    std::cerr << "性能采样要求窗口像素尺寸为 1920x1080，实际为 " << pixel_width << 'x'
+              << pixel_height << '\n';
+    result = granit::result::invalid_argument;
+  }
   if (granit::succeeded(result)) {
     result = swapchain.initialize(renderer.native_handle(), surface.native_handle(),
                                   {.width = static_cast<std::uint32_t>(pixel_width),
-                                   .height = static_cast<std::uint32_t>(pixel_height)});
+                                   .height = static_cast<std::uint32_t>(pixel_height),
+                                   .presentation = options.presentation});
   }
   granit::swapchain_info swapchain_info;
   if (granit::succeeded(result))
     result = swapchain.query_info(swapchain_info);
+  if (granit::succeeded(result) && !options.profile_output_path.empty() &&
+      swapchain_info.presentation != options.presentation) {
+    std::cerr << "性能采样要求的呈现模式不可用，后端回退到了其他模式\n";
+    result = granit::result::unsupported;
+  }
 
   const std::filesystem::path asset_path(options.asset_path);
   std::vector<std::byte> asset_bytes;
@@ -225,14 +329,14 @@ int main(int argc, char** argv) {
     else if (metrics_result != granit::result::unsupported)
       result = metrics_result;
   }
-  if (granit::succeeded(result))
+  if (granit::succeeded(result) && options.show_ui)
     result = upload_font_atlas(renderer.native_handle(), font_texture, font_view, font_sampler);
   ImTextureID font_texture_id = ImTextureID_Invalid;
-  if (granit::succeeded(result)) {
+  if (granit::succeeded(result) && options.show_ui) {
     result = textures.register_texture(font_view.native_handle(), font_sampler.native_handle(),
                                        font_texture_id);
   }
-  if (granit::succeeded(result)) {
+  if (granit::succeeded(result) && options.show_ui) {
     ImGui::GetIO().Fonts->SetTexID(font_texture_id);
     ImGui::GetIO().Fonts->TexRef._TexData->SetStatus(ImTextureStatus_OK);
     granit_canvas_draw_list_desc canvas_desc = GRANIT_CANVAS_DRAW_LIST_DESC_INIT;
@@ -256,7 +360,7 @@ int main(int argc, char** argv) {
       previews.push_back({reference.image, reference.sampler, srgb, texture});
     return preview_result;
   };
-  if (granit::succeeded(result)) {
+  if (granit::succeeded(result) && options.show_ui) {
     for (const auto& material : core.cpu_scene().materials) {
       if (granit::failed(result = register_preview(material.base_color_texture, true)) ||
           granit::failed(result = register_preview(material.emissive_texture, true)) ||
@@ -285,6 +389,9 @@ int main(int argc, char** argv) {
   bool recreate = false;
   bool recreate_surface = false;
   std::uint32_t rendered_frames = 0;
+  std::vector<performance_sample> profile_samples;
+  if (!options.profile_output_path.empty())
+    profile_samples.reserve(1000);
   performance_sample latest_sample;
   bool has_pending_sample = false;
   while (running) {
@@ -312,10 +419,11 @@ int main(int argc, char** argv) {
       if (granit::failed(result = swapchain.reset()) || granit::failed(result = surface.reset()) ||
           granit::failed(result = granit::integration::sdl3::create_surface(
                              renderer.native_handle(), window.get(), surface)) ||
-          granit::failed(result = swapchain.initialize(
-                             renderer.native_handle(), surface.native_handle(),
-                             {.width = static_cast<std::uint32_t>(pixel_width),
-                              .height = static_cast<std::uint32_t>(pixel_height)})) ||
+          granit::failed(
+              result = swapchain.initialize(renderer.native_handle(), surface.native_handle(),
+                                            {.width = static_cast<std::uint32_t>(pixel_width),
+                                             .height = static_cast<std::uint32_t>(pixel_height),
+                                             .presentation = options.presentation})) ||
           granit::failed(result = swapchain.query_info(swapchain_info))) {
         break;
       }
@@ -324,7 +432,8 @@ int main(int argc, char** argv) {
     }
     if (recreate) {
       result = swapchain.recreate({.width = static_cast<std::uint32_t>(pixel_width),
-                                   .height = static_cast<std::uint32_t>(pixel_height)});
+                                   .height = static_cast<std::uint32_t>(pixel_height),
+                                   .presentation = options.presentation});
       if (result == granit::result::not_ready)
         continue;
       if (granit::failed(result) || granit::failed(result = swapchain.query_info(swapchain_info)))
@@ -332,32 +441,35 @@ int main(int argc, char** argv) {
       recreate = false;
     }
 
-    ImGui_ImplSDL3_NewFrame();
-    ImGui::NewFrame();
-    const renderer_panel_info panel_renderer{
-        .backend = backend_name,
-        .adapter = renderer_info.adapter_name,
-        .swapchain_format = "Swapchain",
-        .present_mode =
-            swapchain_info.presentation == granit::present_mode::immediate ? "Immediate" : "FIFO",
-        .width = swapchain_info.width,
-        .height = swapchain_info.height,
-        .frame_slots = GRANIT_DEFAULT_FRAMES_IN_FLIGHT};
-    const performance_panel_info panel_performance{
-        .frames_per_second = latest_sample.frames_per_second,
-        .cpu_frame_ms = latest_sample.cpu_frame_ms,
-        .frame_slot_wait_ms = latest_sample.frame_slot_wait_ms,
-        .present_wait_ms = latest_sample.present_wait_ms,
-        .gpu_frame_ms = latest_sample.gpu_frame_ms,
-        .gpu_timing_available = latest_sample.gpu_timing_available,
-        .history = core.performance().summarize()};
-    const auto changes = draw_viewer_panels(core.cpu_scene(), core.state(), panel_renderer,
-                                            panel_performance, previews);
-    ImGui::Render();
-    result = canvas.clear();
-    if (granit::succeeded(result)) {
-      result = granit::integration::imgui::append_draw_data(ImGui::GetDrawData(), canvas,
-                                                            texture_registry::resolver, &textures);
+    viewer_panel_changes changes;
+    if (options.show_ui) {
+      ImGui_ImplSDL3_NewFrame();
+      ImGui::NewFrame();
+      const renderer_panel_info panel_renderer{
+          .backend = backend_name,
+          .adapter = renderer_info.adapter_name,
+          .swapchain_format = "Swapchain",
+          .present_mode =
+              swapchain_info.presentation == granit::present_mode::immediate ? "Immediate" : "FIFO",
+          .width = swapchain_info.width,
+          .height = swapchain_info.height,
+          .frame_slots = GRANIT_DEFAULT_FRAMES_IN_FLIGHT};
+      const performance_panel_info panel_performance{
+          .frames_per_second = latest_sample.frames_per_second,
+          .cpu_frame_ms = latest_sample.cpu_frame_ms,
+          .frame_slot_wait_ms = latest_sample.frame_slot_wait_ms,
+          .present_wait_ms = latest_sample.present_wait_ms,
+          .gpu_frame_ms = latest_sample.gpu_frame_ms,
+          .gpu_timing_available = latest_sample.gpu_timing_available,
+          .history = core.performance().summarize()};
+      changes = draw_viewer_panels(core.cpu_scene(), core.state(), panel_renderer,
+                                   panel_performance, previews);
+      ImGui::Render();
+      result = canvas.clear();
+      if (granit::succeeded(result)) {
+        result = granit::integration::imgui::append_draw_data(
+            ImGui::GetDrawData(), canvas, texture_registry::resolver, &textures);
+      }
     }
     if (granit::failed(result))
       break;
@@ -391,8 +503,8 @@ int main(int argc, char** argv) {
     result = swapchain.backbuffer(frame.image_index, backbuffer, backbuffer_view);
     application_tick_output tick_output;
     application_tick_input tick_input;
-    tick_input.input =
-        input_adapter.finish(ImGui::GetIO().WantCaptureMouse, ImGui::GetIO().WantCaptureKeyboard);
+    tick_input.input = input_adapter.finish(options.show_ui && ImGui::GetIO().WantCaptureMouse,
+                                            options.show_ui && ImGui::GetIO().WantCaptureKeyboard);
     tick_input.change = changes.state;
     tick_input.width = swapchain_info.width;
     tick_input.height = swapchain_info.height;
@@ -411,7 +523,7 @@ int main(int argc, char** argv) {
       tick_output.render.output = backbuffer_view;
       tick_output.render.output_format = static_cast<granit_texture_format>(swapchain_info.format);
       tick_output.render.frame = frame.handle;
-      tick_output.render.canvas = canvas.native_handle();
+      tick_output.render.canvas = options.show_ui ? canvas.native_handle() : GRANIT_NULL_HANDLE;
       result = pipeline.render(tick_output.render);
     }
     if (granit::failed(result)) {
@@ -465,12 +577,27 @@ int main(int argc, char** argv) {
                      .gpu_frame_ms = gpu_frame_ms,
                      .gpu_timing_available = gpu_timing_available};
     has_pending_sample = true;
+    if (!options.profile_output_path.empty() && rendered_frames >= 300)
+      profile_samples.push_back(latest_sample);
     ++rendered_frames;
-    if (options.smoke_test && rendered_frames >= 3)
+    if (!options.profile_output_path.empty() && profile_samples.size() >= 1000)
+      break;
+    if (options.profile_output_path.empty() && options.smoke_test && rendered_frames >= 3)
       break;
   }
 
   if (granit::failed(result))
     std::cerr << "模型查看器帧循环失败：" << granit::result_message(result) << '\n';
+  if (granit::succeeded(result) && !options.profile_output_path.empty()) {
+    if (profile_samples.size() != 1000 ||
+        !write_profile(options.profile_output_path, renderer_info, swapchain_info,
+                       options.asset_path, options.enable_validation, options.show_ui,
+                       profile_samples)) {
+      std::cerr << "写入模型查看器性能基线失败\n";
+      result = granit::result::internal;
+    } else {
+      std::cout << "模型查看器性能基线已写入：" << options.profile_output_path << '\n';
+    }
+  }
   return granit::failed(result) ? 1 : 0;
 }

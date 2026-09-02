@@ -203,7 +203,7 @@
 
 ## 十一、跨后端模型查看器
 
-**状态：S-12、S-13A～S-13E 已完成，S-13F 三端接入进行中。**
+**状态：S-12、S-13A～S-13F 已完成，S-13G 验收进行中。**
 
 - **[S-12](plans/S-12-webgpu-feature-parity.md) / P1**：补齐公共后端选择，以及模型绘制需要的
   Vertex/Index Buffer、Texture、Sampler、Bind Group、动态 Uniform、Indexed Draw 和上传能力；
@@ -216,7 +216,7 @@
 
 ## 近期执行顺序
 
-1. S-12、S-13A～S-13E 已完成；当前为共享 Core 接入桌面与浏览器平台壳。
+1. S-12、S-13A～S-13F 已完成；当前补齐跨后端截图与 Release 性能验收记录。
 2. S-14 只在复用条件成立后启动；不要为当前单个示例提前稳定 glTF 公共 API。
 3. S-06D 最终验收等待稳定版本与 component 范围决策；不在 0.x 阶段提前宣布稳定。
 4. H-09 的透明 PBR、CSM、Clustered Forward 与 Bindless 只在各自重新评估条件满足后独立恢复，

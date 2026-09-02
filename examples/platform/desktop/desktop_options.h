@@ -5,6 +5,7 @@
 #define GRANIT_EXAMPLES_PLATFORM_DESKTOP_DESKTOP_OPTIONS_H_
 
 #include <granit/renderer/renderer.hpp>
+#include <granit/renderer/swapchain.hpp>
 
 #include <span>
 #include <string>
@@ -16,14 +17,16 @@ struct options {
   granit::renderer_backend backend{granit::renderer_backend::automatic};
   std::string backend_library_path;
   std::string asset_path;
+  std::string profile_output_path;
+  granit::present_mode presentation{granit::present_mode::fifo};
   bool enable_validation{};
   bool smoke_test{};
+  bool show_ui{true};
 };
 
 /**
  * 解析桌面查看器参数。参数错误时返回 invalid_argument，并保留 output 原值。
- * 支持 --backend=auto|vulkan|webgpu、--backend-library、--asset、--validation 和
- * --smoke-test。
+ * 支持后端、资产、验证、Smoke、UI、呈现模式和固定性能采样参数。
  */
 [[nodiscard]] granit::result parse_options(std::span<const std::string_view> arguments,
                                            options& output);

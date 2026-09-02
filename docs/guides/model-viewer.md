@@ -18,7 +18,8 @@ cmake -S . -B build/model-viewer -G Ninja `
   -DGRANIT_BUILD_MODEL_VIEWER_EXAMPLE=ON `
   -DGRANIT_BUILD_INTEGRATION_SDL3=ON `
   -DGRANIT_BUILD_INTEGRATION_IMGUI=ON `
-  -DGRANIT_FETCH_INTEGRATION_DEPENDENCIES=ON
+  -DGRANIT_FETCH_INTEGRATION_DEPENDENCIES=ON `
+  -DGRANIT_FETCH_EXAMPLE_GLTF_DEPENDENCIES=ON
 cmake --build build/model-viewer --target granit_model_viewer_example
 ```
 
@@ -32,6 +33,7 @@ cmake -S . -B build/model-viewer-webgpu -G Ninja `
   -DGRANIT_BUILD_INTEGRATION_SDL3=ON `
   -DGRANIT_BUILD_INTEGRATION_IMGUI=ON `
   -DGRANIT_FETCH_INTEGRATION_DEPENDENCIES=ON `
+  -DGRANIT_FETCH_EXAMPLE_GLTF_DEPENDENCIES=ON `
   -DGRANIT_BUILD_BACKEND_WEBGPU=ON `
   -DGRANIT_DAWN_ROOT=D:/path/to/dawn-sdk
 cmake --build build/model-viewer-webgpu --target granit_model_viewer_example
@@ -85,9 +87,36 @@ Linux 的插件文件通常为 `libgranit_backend_webgpu.so`。省略 `--backend
 | `--backend-library <文件>` | 指定后端插件动态库 |
 | `--validation` | 启用可用的后端验证层 |
 | `--smoke-test` | 渲染少量帧后自动退出 |
+| `--no-ui` | 不创建或绘制 ImGui 资源，用于测量纯场景渲染 |
+| `--present-mode=fifo\|immediate` | 指定呈现模式；不可用时性能采样会明确失败 |
+| `--profile-output <文件.json>` | 固定运行 300 帧预热和 1000 帧采样并写出性能报告 |
 
 查看器支持右键环绕、中键平移、滚轮缩放、`F` 聚焦选择和 `Home` 恢复视图。窗口标题显示实际
 后端与 Adapter；Renderer、场景、材质、灯光和性能信息位于 ImGui 面板。
+
+`--smoke-test` 与 `--profile-output` 用途不同，不能同时使用。
+
+## 采集 Release 性能基线
+
+性能模式固定窗口像素尺寸为 1920×1080，并使用当前模型查看器的固定初始相机。正式数据应使用
+Release、关闭 Validation，并分别采集 UI 开/关及 Immediate/FIFO。以下命令采集 Vulkan、
+Immediate、无 UI 的基线：
+
+```powershell
+build/model-viewer/bin/granit_model_viewer_example.exe `
+  --asset build/assets/FlightHelmet/glTF/FlightHelmet.gltf `
+  --backend=vulkan --present-mode=immediate --no-ui `
+  --profile-output build/results/vulkan-immediate-no-ui.json
+```
+
+删除 `--no-ui` 可测量完整 ImGui 路径，将呈现模式改为 `fifo` 可测量垂直同步路径。桌面 Dawn 使用
+相同参数，只需按前文切换后端和插件路径。若驱动不支持请求的呈现模式或窗口像素尺寸不是
+1920×1080，程序会失败而不会把回退结果混入基线。
+
+JSON 记录资产、实际后端、Adapter、呈现模式、UI 和 Validation 状态，并分别报告 CPU 帧时间、
+帧槽等待、Present 等待与 GPU 时间戳的 p50/p95/p99 和有效样本数。GPU Timestamp 不可用时对应
+样本数为零；各项时间不得相加解释为总帧时间。首份结果用于建立可复现基线，不作为跨硬件 FPS
+门槛。
 
 ## 生成固定验收截图
 

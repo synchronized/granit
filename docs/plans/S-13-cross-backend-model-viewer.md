@@ -409,7 +409,10 @@ manifest。完整 FlightHelmet 已在本机 Vulkan Validation 下完成 512×512
   信息和诊断日志；成功时仅保留简短汇总，不重复上传大资产。
 - Release 性能基线固定 1920×1080、相机和 FlightHelmet，分别测量 UI 开/关与
   Immediate/FIFO；预热 300 帧、采样 1000 帧，报告 CPU/GPU/等待的 p50/p95/p99。
-  首份数据建立基线而非不经复测的硬性 FPS 门槛。
+  桌面查看器现已提供严格呈现模式与分辨率检查、UI 开关和 JSON 导出；本机 Vulkan Release
+  已完成 Vulkan 的四组 1000 帧采样，结果见
+  [S-13G 模型查看器性能基线](../records/2026-09-02-s13g-model-viewer-performance.md)。桌面 Dawn
+  矩阵仍需在手动验收环境中补齐。首份数据建立基线而非不经复测的硬性 FPS 门槛。
 
 S-13 只在上述手动 Actions 全部通过，公共头/安装 Consumer 通过，并完成示例指南、
 依赖/资产许可参考与带日期的验收 Record 后标记完成。验收结果再决定是否启动
