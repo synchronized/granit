@@ -88,6 +88,12 @@ granit::result application_core::upload(granit_renderer renderer) {
     fail(result, "模型查看器 GPU Scene 上传失败");
     return result;
   }
+  const auto environment_result = environment_.initialize_builtin_studio(renderer);
+  if (granit::failed(environment_result)) {
+    gpu_scene_.reset();
+    fail(environment_result, "模型查看器内建环境上传失败");
+    return environment_result;
+  }
   phase_ = application_phase::ready;
   return granit::result::success;
 }
@@ -147,6 +153,7 @@ granit::result application_core::tick(const application_tick_input& input,
   candidate.render.exposure_ev = state_.exposure_ev();
   const auto background = state_.background_color();
   candidate.render.clear_color = {background.x, background.y, background.z, 1.0F};
+  candidate.render.environment = &environment_.environment();
   candidate.render.draw_binding_count =
       static_cast<std::uint32_t>(gpu_scene_.draw_bindings().size());
   candidate.render.draw_bindings = gpu_scene_.draw_bindings().data();
@@ -165,6 +172,7 @@ void application_core::fail(granit::result result, std::string diagnostic) {
 
 void application_core::reset() noexcept {
   gpu_scene_.reset();
+  environment_.reset();
   cpu_scene_ = {};
   state_ = {};
   performance_.clear();

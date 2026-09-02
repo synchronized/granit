@@ -16,6 +16,8 @@ class environment_resources {
 public:
   [[nodiscard]] granit::result initialize(granit_renderer renderer,
                                           const environment_package& package) noexcept;
+  /** 创建无需外部资产的低分辨率中性摄影棚环境。 */
+  [[nodiscard]] granit::result initialize_builtin_studio(granit_renderer renderer) noexcept;
   void reset() noexcept;
 
   [[nodiscard]] bool valid() const noexcept {

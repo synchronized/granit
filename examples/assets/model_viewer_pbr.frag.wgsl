@@ -20,6 +20,13 @@ struct MaterialConstants {
   debug_display: u32,
 }
 
+struct IblConstants {
+  environment_rotation_cos: f32,
+  environment_rotation_sin: f32,
+  environment_intensity: f32,
+  prefiltered_environment_max_mip: f32,
+}
+
 struct FragmentInput {
   @location(0) world_position: vec3f,
   @location(1) world_normal: vec3f,
@@ -35,6 +42,11 @@ struct FragmentInput {
 @group(1) @binding(4) var occlusion_texture: texture_2d<f32>;
 @group(1) @binding(5) var emissive_texture: texture_2d<f32>;
 @group(1) @binding(6) var pbr_sampler: sampler;
+@group(3) @binding(3) var<uniform> ibl: IblConstants;
+@group(3) @binding(4) var irradiance_texture: texture_cube<f32>;
+@group(3) @binding(5) var prefiltered_environment_texture: texture_cube<f32>;
+@group(3) @binding(6) var brdf_lut_texture: texture_2d<f32>;
+@group(3) @binding(7) var environment_sampler: sampler;
 
 fn distribution_ggx(normal: vec3f, halfway: vec3f, roughness: f32) -> f32 {
   let alpha = roughness * roughness;
@@ -51,6 +63,20 @@ fn geometry_schlick_ggx(normal_dot_direction: f32, roughness: f32) -> f32 {
 
 fn fresnel_schlick(cosine: f32, reflectance: vec3f) -> vec3f {
   return reflectance + (vec3f(1.0) - reflectance) * pow(1.0 - cosine, 5.0);
+}
+
+fn fresnel_schlick_roughness(cosine: f32, reflectance: vec3f,
+                             roughness: f32) -> vec3f {
+  return reflectance + (max(vec3f(1.0 - roughness), reflectance) - reflectance) *
+                       pow(1.0 - cosine, 5.0);
+}
+
+fn rotate_environment(direction: vec3f) -> vec3f {
+  return vec3f(ibl.environment_rotation_cos * direction.x +
+                   ibl.environment_rotation_sin * direction.z,
+               direction.y,
+               -ibl.environment_rotation_sin * direction.x +
+                   ibl.environment_rotation_cos * direction.z);
 }
 
 @fragment
@@ -101,16 +127,20 @@ fn fragment_main(input: FragmentInput) -> @location(0) vec4f {
   if (material.debug_display == 4u) {
     return vec4f(vec3f(roughness), 1.0);
   }
-  // 模型查看器尚未加载真实 HDRI，以中性摄影棚环境近似漫反射与金属反射，
-  // 避免金属材质在只有单盏方向光时退化为近乎全黑。
-  let environment_fresnel = fresnel_schlick(normal_dot_view, reflectance);
-  let environment_diffuse = (vec3f(1.0) - environment_fresnel) * (1.0 - metallic) *
-                            base_color.rgb * 0.08;
-  let environment_specular = environment_fresnel * mix(0.12, 0.04, roughness);
-  // 无 HDRI 时补充低能量、保留材质色的摄影棚填充光；它只保证资产可读性，
-  // 不替代后续真实环境贴图的漫反射卷积与镜面预过滤。
-  let studio_fill = base_color.rgb * 0.10;
-  let ambient = (environment_diffuse + environment_specular + studio_fill) * occlusion;
+  let environment_fresnel = fresnel_schlick_roughness(normal_dot_view, reflectance,
+                                                       roughness);
+  let environment_diffuse = textureSample(irradiance_texture, environment_sampler,
+                                          rotate_environment(normal)).rgb;
+  let reflection = reflect(-view_direction, normal);
+  let environment_specular = textureSampleLevel(
+      prefiltered_environment_texture, environment_sampler,
+      rotate_environment(reflection), roughness * ibl.prefiltered_environment_max_mip).rgb;
+  let brdf = textureSample(brdf_lut_texture, environment_sampler,
+                           vec2f(normal_dot_view, roughness)).rg;
+  let ambient = (((vec3f(1.0) - environment_fresnel) * (1.0 - metallic) *
+                  base_color.rgb * environment_diffuse / pi) +
+                 environment_specular * (environment_fresnel * brdf.x + brdf.y)) *
+                ibl.environment_intensity * occlusion;
   let color = ambient + (diffuse + specular) * frame.light_radiance.rgb * normal_dot_light +
               emissive;
   return vec4f(color, base_color.a);

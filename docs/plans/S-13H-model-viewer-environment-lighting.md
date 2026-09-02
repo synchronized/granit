@@ -32,6 +32,8 @@ FlightHelmet 的 Base Color、法线、金属度和粗糙度纹理已经正确�
 - 离线转换器只接受 IBL Sampler 输出的未压缩 `R16G16B16A16_SFLOAT` KTX2 Cube；受限解析器
   拒绝 Supercompression、非六面纹理、数组纹理、错误 Mip 尺寸、重叠与越界 Level。
 - Base Color、Normals、Metallic 和 Roughness 模式保持不受环境光影响，作为分层诊断入口。
+- model-viewer 默认创建无需下载资产的低分辨率摄影棚环境，保证离线首次运行可读；锁定的
+  `Studio Small 03` GRENV 仍作为高质量参考环境和跨后端验收输入。
 
 ## 运行时环境包
 
@@ -49,6 +51,7 @@ Texture 与 Texture View。该格式不是 Granit 公共资产格式，不进入
 5. 增加 KTX2、BRDF LUT 到确定性 GRENV 的打包工具。（已完成）
 6. 生成漫反射 Cube、带 Mip 的 GGX 预过滤 Cube 与 BRDF LUT，并加入可复现校验。
 7. 扩展 model-viewer Shader 的 Group 3 声明和 split-sum IBL 计算，移除临时摄影棚常量补光。
+   （已完成）
 8. 增加环境强度与旋转控件，并同步桌面及浏览器入口。
 9. 更新 Vulkan 参考图，验证桌面 Dawn 和 Emscripten WebGPU 的颜色、轮廓与深度容差。
 

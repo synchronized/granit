@@ -79,5 +79,9 @@ TEST_CASE("模型查看器 Core 生成后端无关单帧描述", "[example][mode
   CHECK(output.render.clear_color.blue == Catch::Approx(0.065F));
   CHECK(output.render.draw_binding_count == 1);
   CHECK(output.render.draw_bindings == core.scene_gpu().draw_bindings().data());
+  REQUIRE(output.render.environment != nullptr);
+  CHECK(output.render.environment->irradiance != GRANIT_NULL_HANDLE);
+  CHECK(output.render.environment->prefiltered_environment != GRANIT_NULL_HANDLE);
+  CHECK(output.render.environment->brdf_lut != GRANIT_NULL_HANDLE);
   CHECK(core.performance().size() == 1);
 }

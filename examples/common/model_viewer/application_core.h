@@ -5,6 +5,7 @@
 #define GRANIT_EXAMPLES_COMMON_MODEL_VIEWER_APPLICATION_CORE_H_
 
 #include "gltf/loader.h"
+#include "model_viewer/environment_resources.h"
 #include "model_viewer/gpu_scene.h"
 #include "model_viewer/performance_history.h"
 #include "model_viewer/viewer_state.h"
@@ -67,6 +68,7 @@ private:
   std::string diagnostic_;
   gltf::scene cpu_scene_;
   gpu_scene gpu_scene_;
+  environment_resources environment_;
   viewer_state state_;
   performance_history performance_;
   bool camera_initialized_{};

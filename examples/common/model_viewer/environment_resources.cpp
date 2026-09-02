@@ -3,6 +3,8 @@
 
 #include "model_viewer/environment_resources.h"
 
+#include <array>
+
 namespace granit::example::model_viewer {
 namespace {
 
@@ -91,6 +93,28 @@ granit::result environment_resources::initialize(granit_renderer renderer,
   environment_.brdf_lut = brdf_view_.native_handle();
   environment_.prefiltered_max_mip = static_cast<float>(package.prefiltered_mips.size() - 1U);
   return granit::result::success;
+}
+
+granit::result environment_resources::initialize_builtin_studio(granit_renderer renderer) noexcept {
+  // 六个面分别提供暖主光、冷填充、顶部柔光、地面暗部和前后轮廓光。
+  constexpr std::array<std::uint16_t, 24> irradiance{
+      0x3266, 0x319a, 0x30cd, 0x3c00, 0x2e66, 0x2f5c, 0x30cd, 0x3c00,
+      0x359a, 0x3571, 0x351f, 0x3c00, 0x291f, 0x291f, 0x2a66, 0x3c00,
+      0x2fae, 0x307b, 0x311f, 0x3c00, 0x2e66, 0x2d1f, 0x2c7b, 0x3c00};
+  constexpr std::array<std::uint16_t, 24> prefiltered{
+      0x38cd, 0x3866, 0x3800, 0x3c00, 0x3400, 0x34cd, 0x35ae, 0x3c00,
+      0x399a, 0x3971, 0x391f, 0x3c00, 0x2e66, 0x2e66, 0x2fae, 0x3c00,
+      0x35ae, 0x3666, 0x3733, 0x3c00, 0x3400, 0x3266, 0x319a, 0x3c00};
+  constexpr std::array<std::uint16_t, 4> brdf_lut{0x3800, 0x2e66, 0x0000, 0x3c00};
+  const environment_mip prefiltered_mip{1, std::as_bytes(std::span{prefiltered})};
+  environment_package package;
+  package.irradiance_resolution = 1;
+  package.irradiance_pixels = std::as_bytes(std::span{irradiance});
+  package.prefiltered_mips = {prefiltered_mip};
+  package.brdf_width = 1;
+  package.brdf_height = 1;
+  package.brdf_pixels = std::as_bytes(std::span{brdf_lut});
+  return initialize(renderer, package);
 }
 
 void environment_resources::reset() noexcept {

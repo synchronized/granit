@@ -82,6 +82,9 @@ build/windows-clang-debug/bin/granit_model_viewer_environment_tool.exe build `
 打包工具只接受未压缩 RGBA16F 六面 KTX2；GGX 输入必须包含一直到 1×1 的完整 Mip 链。
 BRDF LUT PNG 会被确定性转换为 RGBA16F。工具不属于安装 SDK，也不会成为应用运行时依赖。
 
+当前查看器会创建一个低分辨率内置摄影棚环境，保证离线首次运行时金属与暗部仍然可读。它用于
+默认回退和开发检查；上述锁定的高质量 GRENV 环境将在后续跨后端图像验收入口接入。
+
 资产来自 Khronos glTF Sample Assets，模型使用 CC0-1.0。锁定版本和第三方通知见
 [`FlightHelmet.manifest.json`](../../examples/assets/FlightHelmet.manifest.json) 与
 [`THIRD_PARTY_NOTICES.md`](../../examples/common/gltf/THIRD_PARTY_NOTICES.md)。
