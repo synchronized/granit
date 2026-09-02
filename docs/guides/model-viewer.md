@@ -163,6 +163,7 @@ JSON 记录资产、实际后端、Adapter、呈现模式、UI 和 Validation �
 ```powershell
 build/model-viewer/bin/granit_model_viewer_offscreen_acceptance.exe `
   --asset build/assets/FlightHelmet/glTF/FlightHelmet.gltf `
+  --environment examples/assets/StudioSmall03.grenv `
   --output build/acceptance/flight-helmet-vulkan.rgba `
   --backend=vulkan --validation
 ```
@@ -177,6 +178,7 @@ Adapter、资产路径及量化统计，供 Actions 一并上传。桌面 Dawn �
 ```powershell
 build/model-viewer-webgpu/bin/granit_model_viewer_offscreen_acceptance.exe `
   --asset build/assets/FlightHelmet/glTF/FlightHelmet.gltf `
+  --environment examples/assets/StudioSmall03.grenv `
   --output build/acceptance/flight-helmet-webgpu.rgba `
   --expected build/acceptance/flight-helmet-vulkan.rgba `
   --backend=webgpu `

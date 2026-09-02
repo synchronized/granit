@@ -31,6 +31,7 @@ struct options {
   granit::renderer_backend backend{granit::renderer_backend::automatic};
   std::string backend_library;
   std::filesystem::path asset;
+  std::filesystem::path environment;
   std::filesystem::path output;
   std::filesystem::path expected;
   bool validation{};
@@ -38,7 +39,8 @@ struct options {
 
 void print_usage() {
   std::cerr << "用法：granit_model_viewer_offscreen_acceptance --asset <文件> --output <文件.rgba> "
-               "[--expected <文件.rgba>] [--backend=auto|vulkan|webgpu] "
+               "[--environment <文件.grenv>] [--expected <文件.rgba>] "
+               "[--backend=auto|vulkan|webgpu] "
                "[--backend-library <文件>] [--validation]\n";
 }
 
@@ -64,6 +66,8 @@ bool parse_options(int argc, char** argv, options& output) {
         return false;
     } else if (argument == "--asset" && index + 1 < argc) {
       candidate.asset = argv[++index];
+    } else if (argument == "--environment" && index + 1 < argc) {
+      candidate.environment = argv[++index];
     } else if (argument == "--output" && index + 1 < argc) {
       candidate.output = argv[++index];
     } else if (argument == "--expected" && index + 1 < argc) {
@@ -256,7 +260,13 @@ int main(int argc, char** argv) {
   }
   if (granit::succeeded(result)) {
     stage = "上传 GPU Scene";
-    result = core.upload(renderer.native_handle());
+    std::vector<std::byte> environment_bytes;
+    if (!arguments.environment.empty() && !read_file(arguments.environment, environment_bytes)) {
+      stage = "读取环境包";
+      result = granit::result::invalid_argument;
+    } else {
+      result = core.upload(renderer.native_handle(), environment_bytes);
+    }
   }
 
   granit::texture output_texture;

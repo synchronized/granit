@@ -73,6 +73,7 @@ jobs:
           VK_DRIVER_FILES="$lvp_icd" LIBGL_ALWAYS_SOFTWARE=1 \
             "$build/bin/granit_model_viewer_offscreen_acceptance" \
               --asset "$assets/glTF/FlightHelmet.gltf" \
+              --environment "$PWD/examples/assets/StudioSmall03.grenv" \
               --output "$output/flight-helmet-vulkan.rgba" \
               --backend=vulkan --validation 2>&1 | tee "$output/reference.log"
           cp examples/assets/FlightHelmet.manifest.json "$output/"
@@ -172,6 +173,7 @@ jobs:
           Copy-Item examples/assets/FlightHelmet.manifest.json $output
           & "$build/bin/granit_model_viewer_offscreen_acceptance.exe" `
             --asset "$assets/glTF/FlightHelmet.gltf" `
+            --environment "$PWD/examples/assets/StudioSmall03.grenv" `
             --output "$output/flight-helmet-windows-webgpu.rgba" `
             --expected "$env:RUNNER_TEMP/model-viewer-reference/flight-helmet-vulkan.rgba" `
             --backend=webgpu `
@@ -198,6 +200,7 @@ jobs:
               $log = "$output/windows-webgpu-$mode-$ui.log"
               $arguments = @(
                 "--asset", "$assets/glTF/FlightHelmet.gltf",
+                "--environment", "$PWD/examples/assets/StudioSmall03.grenv",
                 "--backend=webgpu", "--backend-library", $plugin,
                 "--present-mode=$mode", "--profile-output", $report
               )
@@ -337,6 +340,7 @@ jobs:
           VK_DRIVER_FILES="$lvp_icd" LIBGL_ALWAYS_SOFTWARE=1 \
             "$build/bin/granit_model_viewer_offscreen_acceptance" \
               --asset "$assets/glTF/FlightHelmet.gltf" \
+              --environment "$PWD/examples/assets/StudioSmall03.grenv" \
               --output "$output/flight-helmet-linux-webgpu.rgba" \
               --expected "$RUNNER_TEMP/model-viewer-reference/flight-helmet-vulkan.rgba" \
               --backend=webgpu \
@@ -376,6 +380,7 @@ jobs:
               log="$output/linux-webgpu-$mode-$ui.log"
               arguments=(
                 --asset "$assets/glTF/FlightHelmet.gltf"
+                --environment "$PWD/examples/assets/StudioSmall03.grenv"
                 --backend=webgpu --backend-library "$plugin"
                 "--present-mode=$mode" --profile-output "$report"
               )
