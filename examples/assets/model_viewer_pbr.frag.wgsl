@@ -107,7 +107,10 @@ fn fragment_main(input: FragmentInput) -> @location(0) vec4f {
   let environment_diffuse = (vec3f(1.0) - environment_fresnel) * (1.0 - metallic) *
                             base_color.rgb * 0.08;
   let environment_specular = environment_fresnel * mix(0.12, 0.04, roughness);
-  let ambient = (environment_diffuse + environment_specular) * occlusion;
+  // 无 HDRI 时补充低能量、保留材质色的摄影棚填充光；它只保证资产可读性，
+  // 不替代后续真实环境贴图的漫反射卷积与镜面预过滤。
+  let studio_fill = base_color.rgb * 0.10;
+  let ambient = (environment_diffuse + environment_specular + studio_fill) * occlusion;
   let color = ambient + (diffuse + specular) * frame.light_radiance.rgb * normal_dot_light +
               emissive;
   return vec4f(color, base_color.a);
