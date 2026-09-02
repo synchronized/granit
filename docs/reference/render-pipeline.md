@@ -25,6 +25,7 @@ Render Pipeline 是可选的高级参考渲染入口。当前实现组织 Direct
 - 每个 View 的输出 Texture View、格式和尺寸。
 - 单 View 的可选 `canvas`，或多 View 中每个输出各自的 `canvas`。
 - 曝光值，以及可选的 Swapchain Frame。
+- 可选的环境光纹理和采样参数。
 
 每个可见 Renderable 的 `payload` 必须唯一映射到一个 Draw Binding。绑定中的 Mesh、Material、
 Scene Snapshot 和输出资源必须属于同一 Renderer，并在调用期间保持有效。
@@ -62,7 +63,21 @@ Overlay 阶段具有以下固定语义：
 曝光和 Tone Mapping。Version 1 描述以及未显式赋值的 Version 2 描述保持不透明黑色，因此已有
 调用不改变行为。颜色分量必须为有限值；多 View 简写和输出数组共用本次渲染描述中的背景色。
 
-该字段只负责稳定纯色背景，不代表天空盒、HDRI 或环境光来源；环境贴图切换仍不在当前公共范围内。
+该字段只负责稳定纯色背景，不代表天空盒或 HDRI 本身。
+
+## 环境光
+
+Version 3 渲染描述可以通过 `environment` 借用一组预处理环境资源：漫反射 Irradiance Cube、
+带 Mip 的 GGX 预过滤 Cube 和二维 BRDF LUT。三个 Texture View 必须同时非零、属于当前 Renderer，
+并保持有效直到下一次渲染改用不同环境或 Pipeline 被销毁；Pipeline 不接管其所有权。
+`rotation_radians` 必须为有限值，
+`intensity` 和 `prefiltered_max_mip` 必须为有限非负值。
+
+该输入由无录制回调的自动 PBR 路径消费。自定义录制回调继续通过 Record Info 接收 Pipeline 的默认
+IBL 资源，避免外部纹理句柄与默认 `ibl_group` 不一致；自定义路径应自行管理环境 Bind Group。
+
+环境为空时保留旧行为：内部占位纹理绑定有效，但 IBL 强度为零。公共接口只接收 GPU 资源，不规定
+HDRI 文件格式、资产系统或离线卷积工具；这些仍由应用决定。
 
 ## GPU 阶段指标
 
@@ -94,7 +109,7 @@ Upload 环形分配。
 - 阴影目标固定为 1024×1024；尚不支持 CSM、多阴影光源或可配置阴影质量。
 - 不包含透明 PBR、Bindless、Clustered Forward 或 Deferred。
 - Overlay 路径依次支持世界 Debug Draw、Canvas Draw List，并保留用户回调作为最终自定义扩展点。
-- 默认 IBL 由 Pipeline 内部持有；外部环境切换尚未进入公共接口。
+- 默认 IBL 占位资源由 Pipeline 内部持有；调用者可按次覆盖预处理环境资源。
 - 同一 Pipeline 不支持并发渲染，多 View 仍按独立输出顺序执行。
 
 更底层的自定义渲染流程可直接使用 [Command Recorder](command-recorder.md) 和

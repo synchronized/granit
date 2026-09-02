@@ -30,11 +30,12 @@ FlightHelmet 的 Base Color、法线、金属度和粗糙度纹理已经正确�
 
 ## 实施顺序
 
-1. 锁定 CC0 摄影棚 HDRI 和离线预处理参数。
-2. 生成漫反射 Cube、带 Mip 的 GGX 预过滤 Cube 与 BRDF LUT，并加入可复现校验。
-3. 扩展 model-viewer Shader 的 Group 3 声明和 split-sum IBL 计算，移除临时摄影棚常量补光。
-4. 增加环境强度与旋转控件，并同步桌面及浏览器入口。
-5. 更新 Vulkan 参考图，验证桌面 Dawn 和 Emscripten WebGPU 的颜色、轮廓与深度容差。
+1. 为 Render Pipeline 增加后端无关的可选环境纹理与采样参数输入。（已完成）
+2. 锁定 CC0 摄影棚 HDRI 和离线预处理参数。
+3. 生成漫反射 Cube、带 Mip 的 GGX 预过滤 Cube 与 BRDF LUT，并加入可复现校验。
+4. 扩展 model-viewer Shader 的 Group 3 声明和 split-sum IBL 计算，移除临时摄影棚常量补光。
+5. 增加环境强度与旋转控件，并同步桌面及浏览器入口。
+6. 更新 Vulkan 参考图，验证桌面 Dawn 和 Emscripten WebGPU 的颜色、轮廓与深度容差。
 
 ## 测试与验收
 

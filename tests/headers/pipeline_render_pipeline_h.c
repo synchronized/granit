@@ -17,8 +17,13 @@ typedef char granit_pipeline_output_v1_size[sizeof(granit_render_pipeline_output
                                                 ? 1
                                                 : -1];
 typedef char
-    granit_pipeline_render_desc_v2_size[sizeof(granit_render_pipeline_render_desc) ==
-                                                GRANIT_RENDER_PIPELINE_RENDER_DESC_VERSION_2_SIZE
+    granit_pipeline_render_desc_v3_size[sizeof(granit_render_pipeline_render_desc) ==
+                                                GRANIT_RENDER_PIPELINE_RENDER_DESC_VERSION_3_SIZE
+                                            ? 1
+                                            : -1];
+typedef char
+    granit_pipeline_environment_v1_size[sizeof(granit_render_pipeline_environment) ==
+                                                GRANIT_RENDER_PIPELINE_ENVIRONMENT_VERSION_1_SIZE
                                             ? 1
                                             : -1];
 typedef char granit_pipeline_metrics_v1_size[sizeof(granit_render_pipeline_metrics) ==
@@ -28,10 +33,12 @@ typedef char granit_pipeline_metrics_v1_size[sizeof(granit_render_pipeline_metri
 
 static granit_render_pipeline_output output = GRANIT_RENDER_PIPELINE_OUTPUT_INIT;
 static granit_render_pipeline_render_desc render = GRANIT_RENDER_PIPELINE_RENDER_DESC_INIT;
+static granit_render_pipeline_environment environment = GRANIT_RENDER_PIPELINE_ENVIRONMENT_INIT;
 static granit_render_pipeline_metrics metrics = GRANIT_RENDER_PIPELINE_METRICS_INIT;
 
 void granit_pipeline_render_pipeline_h_compile(void) {
   (void)output;
   (void)render;
+  (void)environment;
   (void)metrics;
 }

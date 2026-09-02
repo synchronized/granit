@@ -392,6 +392,18 @@ TEST_CASE("统一Render Pipeline按固定阶段消费Scene Snapshot") {
                                                          material.native_handle(), 0};
   render_desc.draw_binding_count = 1;
   render_desc.draw_bindings = &draw_binding;
+  granit_render_pipeline_environment environment = GRANIT_RENDER_PIPELINE_ENVIRONMENT_INIT;
+  render_desc.environment = &environment;
+  CHECK(pipeline.render(render_desc) == granit::result::invalid_argument);
+  environment.irradiance = output_view.native_handle();
+  environment.prefiltered_environment = output_view.native_handle();
+  environment.brdf_lut = output_view.native_handle();
+  environment.intensity = -1.0F;
+  CHECK(pipeline.render(render_desc) == granit::result::invalid_argument);
+  environment.intensity = 1.0F;
+  environment.rotation_radians = std::numeric_limits<float>::quiet_NaN();
+  CHECK(pipeline.render(render_desc) == granit::result::invalid_argument);
+  render_desc.environment = nullptr;
   render_desc.clear_color.red = std::numeric_limits<float>::infinity();
   CHECK(pipeline.render(render_desc) == granit::result::invalid_argument);
   render_desc.clear_color = {0.02F, 0.04F, 0.06F, 1.0F};

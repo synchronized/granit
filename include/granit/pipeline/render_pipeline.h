@@ -157,13 +157,44 @@ typedef struct granit_render_pipeline_render_desc {
   granit_debug_draw_list debug_draw;
   /** HDR 场景背景清屏色；旧版描述保持不透明黑色。 */
   granit_clear_color_value clear_color;
+  /** 可选环境光；为空时关闭 IBL，非空资源须保持至下一次更换环境或销毁 Pipeline。 */
+  const struct granit_render_pipeline_environment* environment;
 } granit_render_pipeline_render_desc;
+
+/** PBR 环境光输入；三个 Texture View 必须同时有效并属于当前 Renderer。 */
+typedef struct granit_render_pipeline_environment {
+  uint32_t struct_size;
+  uint32_t reserved;
+  granit_texture_view irradiance;
+  granit_texture_view prefiltered_environment;
+  granit_texture_view brdf_lut;
+  float rotation_radians;
+  float intensity;
+  float prefiltered_max_mip;
+  uint32_t reserved_tail;
+} granit_render_pipeline_environment;
+
+#define GRANIT_RENDER_PIPELINE_ENVIRONMENT_VERSION_1_SIZE                                          \
+  ((uint32_t)sizeof(granit_render_pipeline_environment))
+#define GRANIT_RENDER_PIPELINE_ENVIRONMENT_INIT                                                    \
+  {(uint32_t)sizeof(granit_render_pipeline_environment),                                           \
+   UINT32_C(0),                                                                                    \
+   GRANIT_NULL_HANDLE,                                                                             \
+   GRANIT_NULL_HANDLE,                                                                             \
+   GRANIT_NULL_HANDLE,                                                                             \
+   0.0F,                                                                                           \
+   1.0F,                                                                                           \
+   0.0F,                                                                                           \
+   UINT32_C(0)}
 
 #define GRANIT_RENDER_PIPELINE_RENDER_DESC_VERSION_1_SIZE                                          \
   ((uint32_t)offsetof(granit_render_pipeline_render_desc, clear_color))
 #define GRANIT_RENDER_PIPELINE_RENDER_DESC_VERSION_2_SIZE                                          \
   ((uint32_t)(offsetof(granit_render_pipeline_render_desc, clear_color) +                          \
               sizeof(granit_clear_color_value)))
+#define GRANIT_RENDER_PIPELINE_RENDER_DESC_VERSION_3_SIZE                                          \
+  ((uint32_t)(offsetof(granit_render_pipeline_render_desc, environment) +                          \
+              sizeof(const granit_render_pipeline_environment*)))
 
 #define GRANIT_RENDER_PIPELINE_RENDER_DESC_INIT                                                    \
   {(uint32_t)sizeof(granit_render_pipeline_render_desc),                                           \
@@ -184,7 +215,8 @@ typedef struct granit_render_pipeline_render_desc {
    UINT32_C(0),                                                                                    \
    GRANIT_NULL_HANDLE,                                                                             \
    GRANIT_NULL_HANDLE,                                                                             \
-   {0.0F, 0.0F, 0.0F, 1.0F}}
+   {0.0F, 0.0F, 0.0F, 1.0F},                                                                       \
+   0}
 
 #ifdef __cplusplus
 extern "C" {
