@@ -76,6 +76,15 @@ jobs:
               --environment "$PWD/examples/assets/StudioSmall03.grenv" \
               --output "$output/flight-helmet-vulkan.rgba" \
               --backend=vulkan --validation 2>&1 | tee "$output/reference.log"
+          for mode in base-color normals metallic roughness; do
+            VK_DRIVER_FILES="$lvp_icd" LIBGL_ALWAYS_SOFTWARE=1 \
+              "$build/bin/granit_model_viewer_offscreen_acceptance" \
+                --asset "$assets/glTF/FlightHelmet.gltf" \
+                --environment "$PWD/examples/assets/StudioSmall03.grenv" \
+                --output "$output/flight-helmet-vulkan-$mode.rgba" \
+                --debug-display="$mode" \
+                --backend=vulkan --validation
+          done
           cp examples/assets/FlightHelmet.manifest.json "$output/"
           sha256sum "$output/flight-helmet-vulkan.rgba" > "$output/flight-helmet-vulkan.sha256"
       - name: 上传 FlightHelmet Vulkan 参考图
