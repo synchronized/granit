@@ -87,6 +87,24 @@ set_target_properties(granit_model_viewer_core PROPERTIES FOLDER "Examples")
 granit_target_compile_warnings(granit_model_viewer_core)
 
 if(NOT CMAKE_CROSSCOMPILING)
+  add_executable(granit_model_viewer_environment_tool environment_tool_main.cpp)
+  target_link_libraries(
+    granit_model_viewer_environment_tool
+    PRIVATE granit_example_model_viewer_support granit_example_gltf_dependencies
+  )
+  set_target_properties(
+    granit_model_viewer_environment_tool PROPERTIES FOLDER "Examples/Tools"
+  )
+  granit_target_output_directories(granit_model_viewer_environment_tool)
+  granit_target_compile_warnings(granit_model_viewer_environment_tool)
+  if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
+    add_test(NAME granit.example.model_viewer_environment_tool.usage
+             COMMAND granit_model_viewer_environment_tool)
+    set_tests_properties(
+      granit.example.model_viewer_environment_tool.usage PROPERTIES WILL_FAIL TRUE
+    )
+  endif()
+
   add_executable(granit_model_viewer_offscreen_acceptance offscreen_acceptance.cpp)
   target_link_libraries(
     granit_model_viewer_offscreen_acceptance PRIVATE granit_example_model_viewer_support

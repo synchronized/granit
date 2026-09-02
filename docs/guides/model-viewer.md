@@ -65,6 +65,23 @@ SHA-256。来源和固定校验值见
 [`StudioSmall03.manifest.json`](../../examples/assets/StudioSmall03.manifest.json)。当前文件是后续
 离线预处理的输入，不是 model-viewer 可直接加载的运行时环境包。
 
+使用 glTF IBL Sampler 生成未压缩 RGBA16F 输入后，通过仓库工具打包：
+
+```powershell
+<ibl-sampler> -inputPath studio_small_03_1k.hdr -outCubeMap diffuse.ktx2 `
+  -distribution Lambertian -sampleCount 1024 -cubeMapResolution 32 `
+  -targetFormat R16G16B16A16_SFLOAT
+<ibl-sampler> -inputPath studio_small_03_1k.hdr -outCubeMap specular.ktx2 `
+  -outLUT brdf_lut.png -distribution GGX -sampleCount 1024 -cubeMapResolution 128 `
+  -mipLevelCount 8 -targetFormat R16G16B16A16_SFLOAT
+build/windows-clang-debug/bin/granit_model_viewer_environment_tool.exe build `
+  --irradiance diffuse.ktx2 --prefiltered specular.ktx2 `
+  --brdf-lut brdf_lut.png --output StudioSmall03.grenv
+```
+
+打包工具只接受未压缩 RGBA16F 六面 KTX2；GGX 输入必须包含一直到 1×1 的完整 Mip 链。
+BRDF LUT PNG 会被确定性转换为 RGBA16F。工具不属于安装 SDK，也不会成为应用运行时依赖。
+
 资产来自 Khronos glTF Sample Assets，模型使用 CC0-1.0。锁定版本和第三方通知见
 [`FlightHelmet.manifest.json`](../../examples/assets/FlightHelmet.manifest.json) 与
 [`THIRD_PARTY_NOTICES.md`](../../examples/common/gltf/THIRD_PARTY_NOTICES.md)。

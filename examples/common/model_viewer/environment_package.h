@@ -39,6 +39,10 @@ struct environment_package {
 [[nodiscard]] environment_package_error parse_environment_package(std::span<const std::byte> bytes,
                                                                   environment_package& package);
 
+/** 将已验证的 RGBA16F 像素编码为确定性的 GRENV v1；失败时 output 保持不变。 */
+[[nodiscard]] environment_package_error
+encode_environment_package(const environment_package& package, std::vector<std::byte>& output);
+
 } // namespace granit::example::model_viewer
 
 #endif

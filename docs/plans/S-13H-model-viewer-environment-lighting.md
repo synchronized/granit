@@ -46,10 +46,11 @@ Texture 与 Texture View。该格式不是 Granit 公共资产格式，不进入
 2. 锁定 CC0 摄影棚 HDRI 和来源校验清单。（已完成）
 3. 定义并验证运行时环境包解析及 GPU 上传。（已完成）
 4. 增加受限 KTX2 Cube 输入解析。（已完成）
-5. 生成漫反射 Cube、带 Mip 的 GGX 预过滤 Cube 与 BRDF LUT，并加入可复现校验。
-6. 扩展 model-viewer Shader 的 Group 3 声明和 split-sum IBL 计算，移除临时摄影棚常量补光。
-7. 增加环境强度与旋转控件，并同步桌面及浏览器入口。
-8. 更新 Vulkan 参考图，验证桌面 Dawn 和 Emscripten WebGPU 的颜色、轮廓与深度容差。
+5. 增加 KTX2、BRDF LUT 到确定性 GRENV 的打包工具。（已完成）
+6. 生成漫反射 Cube、带 Mip 的 GGX 预过滤 Cube 与 BRDF LUT，并加入可复现校验。
+7. 扩展 model-viewer Shader 的 Group 3 声明和 split-sum IBL 计算，移除临时摄影棚常量补光。
+8. 增加环境强度与旋转控件，并同步桌面及浏览器入口。
+9. 更新 Vulkan 参考图，验证桌面 Dawn 和 Emscripten WebGPU 的颜色、轮廓与深度容差。
 
 ## 测试与验收
 

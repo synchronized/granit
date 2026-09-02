@@ -33,6 +33,16 @@ std::uint64_t read_u64(std::span<const std::byte> bytes, std::size_t offset) noe
   return value;
 }
 
+void write_u32(std::vector<std::byte>& bytes, std::size_t offset, std::uint32_t value) noexcept {
+  for (std::size_t index = 0; index < 4; ++index)
+    bytes[offset + index] = static_cast<std::byte>((value >> (index * 8U)) & 0xffU);
+}
+
+void write_u64(std::vector<std::byte>& bytes, std::size_t offset, std::uint64_t value) noexcept {
+  for (std::size_t index = 0; index < 8; ++index)
+    bytes[offset + index] = static_cast<std::byte>((value >> (index * 8U)) & 0xffU);
+}
+
 bool valid_resolution(std::uint32_t value) noexcept {
   return value != 0 && value <= maximum_resolution && (value & (value - 1U)) == 0;
 }
@@ -125,6 +135,63 @@ environment_package_error parse_environment_package(std::span<const std::byte> b
     return environment_package_error::none;
   } catch (const std::bad_alloc&) {
     package = {};
+    return environment_package_error::size_overflow;
+  }
+}
+
+environment_package_error encode_environment_package(const environment_package& package,
+                                                     std::vector<std::byte>& output) {
+  if (!valid_resolution(package.irradiance_resolution) || package.prefiltered_mips.empty() ||
+      !valid_resolution(package.prefiltered_mips.front().resolution) ||
+      !valid_resolution(package.brdf_width) || !valid_resolution(package.brdf_height) ||
+      package.prefiltered_mips.size() > 13) {
+    return environment_package_error::invalid_layout;
+  }
+
+  std::uint64_t payload_size = 0;
+  if (!append_size(payload_size, package.irradiance_resolution, package.irradiance_resolution,
+                   cube_face_count) ||
+      package.irradiance_pixels.size() != payload_size) {
+    return environment_package_error::invalid_layout;
+  }
+  auto resolution = package.prefiltered_mips.front().resolution;
+  for (const auto& mip : package.prefiltered_mips) {
+    const auto before = payload_size;
+    if (mip.resolution != resolution ||
+        !append_size(payload_size, resolution, resolution, cube_face_count) ||
+        mip.pixels.size() != payload_size - before) {
+      return environment_package_error::invalid_layout;
+    }
+    resolution = std::max(resolution / 2U, 1U);
+  }
+  const auto before_brdf = payload_size;
+  if (!append_size(payload_size, package.brdf_width, package.brdf_height, 1) ||
+      package.brdf_pixels.size() != payload_size - before_brdf ||
+      payload_size > std::numeric_limits<std::size_t>::max() - header_size) {
+    return environment_package_error::invalid_layout;
+  }
+
+  try {
+    std::vector<std::byte> candidate(header_size + static_cast<std::size_t>(payload_size));
+    for (std::size_t index = 0; index < magic.size(); ++index)
+      candidate[index] = static_cast<std::byte>(magic[index]);
+    write_u32(candidate, 8, version);
+    write_u32(candidate, 12, static_cast<std::uint32_t>(header_size));
+    write_u32(candidate, 16, rgba16_float);
+    write_u32(candidate, 20, package.irradiance_resolution);
+    write_u32(candidate, 24, package.prefiltered_mips.front().resolution);
+    write_u32(candidate, 28, static_cast<std::uint32_t>(package.prefiltered_mips.size()));
+    write_u32(candidate, 32, package.brdf_width);
+    write_u32(candidate, 36, package.brdf_height);
+    write_u64(candidate, 40, payload_size);
+    auto destination = candidate.begin() + static_cast<std::ptrdiff_t>(header_size);
+    destination = std::ranges::copy(package.irradiance_pixels, destination).out;
+    for (const auto& mip : package.prefiltered_mips)
+      destination = std::ranges::copy(mip.pixels, destination).out;
+    std::ranges::copy(package.brdf_pixels, destination);
+    output = std::move(candidate);
+    return environment_package_error::none;
+  } catch (const std::bad_alloc&) {
     return environment_package_error::size_overflow;
   }
 }

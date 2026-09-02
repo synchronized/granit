@@ -55,6 +55,10 @@ TEST_CASE("GRENV v1严格解析预处理环境布局", "[example][model-viewer][
   CHECK(package.brdf_width == 4);
   CHECK(package.brdf_pixels.size() == 4 * 4 * 8);
 
+  std::vector<std::byte> encoded;
+  REQUIRE(encode_environment_package(package, encoded) == environment_package_error::none);
+  CHECK(encoded == valid_package());
+
   bytes[0] = std::byte{0};
   CHECK(parse_environment_package(bytes, package) == environment_package_error::invalid_magic);
   bytes = valid_package();
