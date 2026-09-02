@@ -89,7 +89,13 @@ fn fragment_main(input: FragmentInput) -> @location(0) vec4f {
   let occlusion = mix(1.0, occlusion_sample, material.occlusion_strength);
   let emissive = material.emissive * textureSample(emissive_texture, pbr_sampler,
                                                    input.texture_coordinate).rgb;
-  let ambient = base_color.rgb * 0.03 * occlusion;
+  // 模型查看器尚未加载真实 HDRI，以中性摄影棚环境近似漫反射与金属反射，
+  // 避免金属材质在只有单盏方向光时退化为近乎全黑。
+  let environment_fresnel = fresnel_schlick(normal_dot_view, reflectance);
+  let environment_diffuse = (vec3f(1.0) - environment_fresnel) * (1.0 - metallic) *
+                            base_color.rgb * 0.25;
+  let environment_specular = environment_fresnel * mix(0.45, 0.12, roughness);
+  let ambient = (environment_diffuse + environment_specular) * occlusion;
   let color = ambient + (diffuse + specular) * frame.light_radiance.rgb * normal_dot_light +
               emissive;
   return vec4f(color, base_color.a);
