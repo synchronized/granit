@@ -258,7 +258,7 @@ jobs:
             clang libvulkan-dev mesa-vulkan-drivers ninja-build vulkan-validationlayers \
             libx11-dev libx11-xcb-dev libxcursor-dev libxext-dev libxfixes-dev libxi-dev \
             libxrandr-dev \
-            jq libxss-dev libxtst-dev xauth xvfb
+            jq libwayland-dev libxss-dev libxtst-dev weston xauth xvfb
       - name: 下载并校验 Linux Dawn SDK
         shell: bash
         env:
@@ -299,7 +299,7 @@ jobs:
             -DGRANIT_BUILD_TOOLS=ON \
             -DGRANIT_BUILD_TESTING=ON \
             -DGRANIT_ENABLE_XCB=OFF \
-            -DGRANIT_ENABLE_WAYLAND=OFF
+            -DGRANIT_ENABLE_WAYLAND=ON
           cmake --build "$build" --target granit_webgpu_plugin_smoke \
             granit_renderer_test granit_shader_tool granit_model_viewer_offscreen_acceptance \
             granit_model_viewer_example
@@ -352,6 +352,19 @@ jobs:
           mkdir -p "$output"
           lvp_icd="$(find /usr/share/vulkan/icd.d -type f -name 'lvp_icd*.json' -print -quit)"
           [[ -n "$lvp_icd" ]]
+          runtime="$RUNNER_TEMP/granit-wayland-runtime"
+          socket="wayland-granit"
+          mkdir -p "$runtime"
+          chmod 700 "$runtime"
+          XDG_RUNTIME_DIR="$runtime" weston --backend=headless-backend.so \
+            --socket="$socket" --idle-time=0 --log="$output/weston.log" &
+          weston_pid=$!
+          trap 'kill "$weston_pid" 2>/dev/null || true' EXIT
+          for _ in {1..50}; do
+            [[ -S "$runtime/$socket" ]] && break
+            sleep 0.1
+          done
+          [[ -S "$runtime/$socket" ]]
           printf '%s\n' \
             '| 平台 | 呈现模式 | UI | CPU p50 (ms) | CPU p95 (ms) | GPU p50 (ms) |' \
             '| --- | --- | --- | ---: | ---: | ---: |' >> "$GITHUB_STEP_SUMMARY"
@@ -366,8 +379,9 @@ jobs:
               )
               if [[ "$ui" == no-ui ]]; then arguments+=(--no-ui); fi
               set +e
-              VK_DRIVER_FILES="$lvp_icd" LIBGL_ALWAYS_SOFTWARE=1 \
-                xvfb-run -a "$executable" "${arguments[@]}" 2>&1 | tee "$log"
+              XDG_RUNTIME_DIR="$runtime" WAYLAND_DISPLAY="$socket" SDL_VIDEODRIVER=wayland \
+                VK_DRIVER_FILES="$lvp_icd" LIBGL_ALWAYS_SOFTWARE=1 \
+                "$executable" "${arguments[@]}" 2>&1 | tee "$log"
               status="${PIPESTATUS[0]}"
               set -e
               if ((status != 0)); then
