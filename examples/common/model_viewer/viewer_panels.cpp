@@ -5,6 +5,7 @@
 
 #include <imgui.h>
 
+#include <algorithm>
 #include <array>
 #include <ranges>
 #include <vector>
@@ -197,12 +198,53 @@ void draw_performance_panel(const performance_panel_info& info) {
   draw_summary("GPU ms", info.history.gpu_frame_ms);
 }
 
-template <typename Callback> void draw_panel(const char* name, bool& open, Callback&& callback) {
+struct panel_placement {
+  ImVec2 position;
+  ImVec2 size;
+};
+
+template <typename Callback>
+void draw_panel(const char* name, bool& open, panel_placement placement, Callback&& callback) {
   if (!open)
     return;
+  ImGui::SetNextWindowPos(placement.position, ImGuiCond_FirstUseEver);
+  ImGui::SetNextWindowSize(placement.size, ImGuiCond_FirstUseEver);
   if (ImGui::Begin(name, &open))
     callback();
   ImGui::End();
+}
+
+struct viewer_panel_layout {
+  panel_placement scene;
+  panel_placement inspector;
+  panel_placement lighting;
+  panel_placement renderer;
+  panel_placement performance;
+};
+
+viewer_panel_layout default_panel_layout() noexcept {
+  const auto* viewport = ImGui::GetMainViewport();
+  const auto origin = viewport->WorkPos;
+  const auto extent = viewport->WorkSize;
+  constexpr float gap = 8.0F;
+  const auto left_width = std::clamp(extent.x * 0.24F, 220.0F, 320.0F);
+  const auto right_width = std::clamp(extent.x * 0.29F, 280.0F, 380.0F);
+  const auto scene_height = std::clamp(extent.y * 0.34F, 160.0F, 260.0F);
+  const auto renderer_height = std::clamp(extent.y * 0.22F, 130.0F, 170.0F);
+  const auto performance_height = std::clamp(extent.y * 0.34F, 190.0F, 260.0F);
+  const auto inspector_height = std::max(160.0F, extent.y - scene_height - gap);
+  const auto lighting_height =
+      std::max(140.0F, extent.y - renderer_height - performance_height - gap * 2.0F);
+  const auto right_x = origin.x + extent.x - right_width;
+  return {
+      .scene = {{origin.x, origin.y}, {left_width, scene_height}},
+      .inspector = {{origin.x, origin.y + scene_height + gap}, {left_width, inspector_height}},
+      .lighting = {{right_x, origin.y + renderer_height + performance_height + gap * 2.0F},
+                   {right_width, lighting_height}},
+      .renderer = {{right_x, origin.y}, {right_width, renderer_height}},
+      .performance = {{right_x, origin.y + renderer_height + gap},
+                      {right_width, performance_height}},
+  };
 }
 
 } // namespace
@@ -229,12 +271,16 @@ viewer_panel_changes draw_viewer_panels(const gltf::scene& scene, const viewer_s
                                         std::span<const texture_preview> previews) {
   viewer_panel_changes changes;
   auto panels = state.panels();
-  draw_panel("Scene", panels.scene, [&] { draw_scene_panel(scene, state, changes.state); });
-  draw_panel("Inspector", panels.inspector,
+  const auto layout = default_panel_layout();
+  draw_panel("Scene", panels.scene, layout.scene,
+             [&] { draw_scene_panel(scene, state, changes.state); });
+  draw_panel("Inspector", panels.inspector, layout.inspector,
              [&] { draw_inspector_panel(scene, state, previews, changes); });
-  draw_panel("Lighting", panels.lighting, [&] { draw_lighting_panel(state, changes.state); });
-  draw_panel("Renderer", panels.renderer, [&] { draw_renderer_panel(renderer); });
-  draw_panel("Performance", panels.performance, [&] { draw_performance_panel(performance); });
+  draw_panel("Lighting", panels.lighting, layout.lighting,
+             [&] { draw_lighting_panel(state, changes.state); });
+  draw_panel("Renderer", panels.renderer, layout.renderer, [&] { draw_renderer_panel(renderer); });
+  draw_panel("Performance", panels.performance, layout.performance,
+             [&] { draw_performance_panel(performance); });
   if (panels.scene != state.panels().scene || panels.inspector != state.panels().inspector ||
       panels.lighting != state.panels().lighting || panels.renderer != state.panels().renderer ||
       panels.performance != state.panels().performance)
