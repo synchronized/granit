@@ -27,16 +27,27 @@ granit_result default_ibl_resources::initialize(granit_renderer renderer) noexce
         {.format = granit::texture_format::rgba16_float,
          .usage = granit::texture_usage::sampled | granit::texture_usage::transfer_destination});
   }
-  constexpr std::array<std::uint16_t, 24> black_cube{};
-  // 黑环境使 IBL 能量为零；BRDF LUT 保留一个有效中性近似值，便于后续替换环境纹理。
+  constexpr auto make_cube = [](std::uint16_t value) {
+    std::array<std::uint16_t, 24> pixels{};
+    for (std::size_t face = 0; face < 6; ++face) {
+      pixels[face * 4 + 0] = value;
+      pixels[face * 4 + 1] = value;
+      pixels[face * 4 + 2] = value;
+      pixels[face * 4 + 3] = 0x3c00;
+    }
+    return pixels;
+  };
+  // 默认中性环境保证金属材质仍有可见反射；后续可由真实 HDRI 替换。
+  constexpr auto irradiance_cube = make_cube(0x3000);
+  constexpr auto prefiltered_cube = make_cube(0x3800);
   constexpr std::array<std::uint16_t, 4> neutral_lut{0x3800, 0x2e66, 0x0000, 0x3c00};
   if (granit::succeeded(result)) {
-    result = irradiance_texture_.write(std::as_bytes(std::span{black_cube}),
+    result = irradiance_texture_.write(std::as_bytes(std::span{irradiance_cube}),
                                        {.bytes_per_row = 8, .rows_per_image = 1},
                                        {.array_layer_count = 6});
   }
   if (granit::succeeded(result)) {
-    result = prefiltered_texture_.write(std::as_bytes(std::span{black_cube}),
+    result = prefiltered_texture_.write(std::as_bytes(std::span{prefiltered_cube}),
                                         {.bytes_per_row = 8, .rows_per_image = 1},
                                         {.array_layer_count = 6});
   }
@@ -61,7 +72,7 @@ granit_result default_ibl_resources::initialize(granit_renderer renderer) noexce
                               {.irradiance = irradiance_view_.native_handle(),
                                .prefiltered_environment = prefiltered_view_.native_handle(),
                                .brdf_lut = brdf_lut_view_.native_handle()},
-                              {.intensity = 0.0F}));
+                              {.intensity = 1.0F}));
   }
   if (granit::failed(result))
     static_cast<void>(reset());

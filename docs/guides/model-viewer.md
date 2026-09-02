@@ -88,7 +88,7 @@ Linux 的插件文件通常为 `libgranit_backend_webgpu.so`。省略 `--backend
 | `--validation` | 启用可用的后端验证层 |
 | `--smoke-test` | 渲染少量帧后自动退出 |
 | `--no-ui` | 不创建或绘制 ImGui 资源，用于测量纯场景渲染 |
-| `--present-mode=fifo\|immediate` | 指定呈现模式；不可用时性能采样会明确失败 |
+| `--present-mode=fifo\|mailbox\|immediate` | 指定呈现模式；默认 Mailbox，不可用时后端可回退 FIFO；性能采样会拒绝回退 |
 | `--profile-output <文件.json>` | 固定运行 300 帧预热和 1000 帧采样并写出性能报告 |
 
 查看器支持右键环绕、中键平移、滚轮缩放、`F` 聚焦选择和 `Home` 恢复视图。窗口标题显示实际

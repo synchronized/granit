@@ -52,6 +52,28 @@ struct imgui_quit {
   }
 };
 
+constexpr std::string_view present_mode_name(granit::present_mode mode) noexcept {
+  switch (mode) {
+  case granit::present_mode::mailbox:
+    return "mailbox";
+  case granit::present_mode::immediate:
+    return "immediate";
+  default:
+    return "fifo";
+  }
+}
+
+constexpr std::string_view present_mode_label(granit::present_mode mode) noexcept {
+  switch (mode) {
+  case granit::present_mode::mailbox:
+    return "Mailbox";
+  case granit::present_mode::immediate:
+    return "Immediate";
+  default:
+    return "FIFO";
+  }
+}
+
 granit::result upload_font_atlas(granit_renderer renderer, granit::texture& texture,
                                  granit::texture_view& view, granit::sampler& sampler) {
   unsigned char* pixels = nullptr;
@@ -182,10 +204,7 @@ bool write_profile(const std::filesystem::path& path, const granit::renderer_inf
        << "  \"validation\": " << (validation ? "true" : "false") << ",\n"
        << "  \"width\": " << swapchain.width << ",\n"
        << "  \"height\": " << swapchain.height << ",\n"
-       << "  \"present_mode\": "
-       << std::quoted(swapchain.presentation == granit::present_mode::immediate ? "immediate"
-                                                                                : "fifo")
-       << ",\n"
+       << "  \"present_mode\": " << std::quoted(present_mode_name(swapchain.presentation)) << ",\n"
        << "  \"ui\": " << (ui ? "true" : "false") << ",\n"
        << "  \"warmup_frames\": 300,\n"
        << "  \"sample_frames\": " << samples.size() << ",\n"
@@ -445,15 +464,14 @@ int main(int argc, char** argv) {
     if (options.show_ui) {
       ImGui_ImplSDL3_NewFrame();
       ImGui::NewFrame();
-      const renderer_panel_info panel_renderer{
-          .backend = backend_name,
-          .adapter = renderer_info.adapter_name,
-          .swapchain_format = "Swapchain",
-          .present_mode =
-              swapchain_info.presentation == granit::present_mode::immediate ? "Immediate" : "FIFO",
-          .width = swapchain_info.width,
-          .height = swapchain_info.height,
-          .frame_slots = GRANIT_DEFAULT_FRAMES_IN_FLIGHT};
+      const renderer_panel_info panel_renderer{.backend = backend_name,
+                                               .adapter = renderer_info.adapter_name,
+                                               .swapchain_format = "Swapchain",
+                                               .present_mode =
+                                                   present_mode_label(swapchain_info.presentation),
+                                               .width = swapchain_info.width,
+                                               .height = swapchain_info.height,
+                                               .frame_slots = GRANIT_DEFAULT_FRAMES_IN_FLIGHT};
       const performance_panel_info panel_performance{
           .frames_per_second = latest_sample.frames_per_second,
           .cpu_frame_ms = latest_sample.cpu_frame_ms,

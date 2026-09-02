@@ -31,7 +31,7 @@ TEST_CASE("模型查看器桌面参数拒绝未知呈现模式和空性能路径
   using namespace granit::example::model_viewer::desktop;
   options parsed;
   const std::array invalid_mode{std::string_view{"--asset"}, std::string_view{"model.glb"},
-                                std::string_view{"--present-mode=mailbox"}};
+                                std::string_view{"--present-mode=relaxed"}};
   CHECK(parse_options(invalid_mode, parsed) == granit::result::invalid_argument);
   const std::array empty_output{std::string_view{"--asset"}, std::string_view{"model.glb"},
                                 std::string_view{"--profile-output"}, std::string_view{}};
@@ -40,6 +40,19 @@ TEST_CASE("模型查看器桌面参数拒绝未知呈现模式和空性能路径
       std::string_view{"--asset"}, std::string_view{"model.glb"}, std::string_view{"--smoke-test"},
       std::string_view{"--profile-output"}, std::string_view{"profile.json"}};
   CHECK(parse_options(conflicting_modes, parsed) == granit::result::invalid_argument);
+}
+
+TEST_CASE("模型查看器默认使用 Mailbox 并支持显式选择", "[example][model-viewer][desktop]") {
+  using namespace granit::example::model_viewer::desktop;
+  options parsed;
+  const std::array defaults{std::string_view{"--asset"}, std::string_view{"model.glb"}};
+  REQUIRE(parse_options(defaults, parsed) == granit::result::success);
+  CHECK(parsed.presentation == granit::present_mode::mailbox);
+
+  const std::array mailbox{std::string_view{"--asset"}, std::string_view{"model.glb"},
+                           std::string_view{"--present-mode=mailbox"}};
+  REQUIRE(parse_options(mailbox, parsed) == granit::result::success);
+  CHECK(parsed.presentation == granit::present_mode::mailbox);
 }
 
 TEST_CASE("模型查看器桌面参数拒绝未知后端且不修改输出", "[example][model-viewer][desktop]") {

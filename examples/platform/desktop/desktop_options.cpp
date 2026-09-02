@@ -24,6 +24,8 @@ bool parse_backend(std::string_view value, granit::renderer_backend& backend) no
 bool parse_present_mode(std::string_view value, granit::present_mode& presentation) noexcept {
   if (value == "fifo")
     presentation = granit::present_mode::fifo;
+  else if (value == "mailbox")
+    presentation = granit::present_mode::mailbox;
   else if (value == "immediate")
     presentation = granit::present_mode::immediate;
   else

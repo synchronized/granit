@@ -18,7 +18,7 @@ struct options {
   std::string backend_library_path;
   std::string asset_path;
   std::string profile_output_path;
-  granit::present_mode presentation{granit::present_mode::fifo};
+  granit::present_mode presentation{granit::present_mode::mailbox};
   bool enable_validation{};
   bool smoke_test{};
   bool show_ui{true};
