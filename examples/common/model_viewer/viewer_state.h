@@ -95,7 +95,7 @@ private:
   orbit_camera camera_;
   directional_light_state directional_light_;
   float exposure_ev_{};
-  float environment_intensity_{0.15F};
+  float environment_intensity_{0.4F};
   float environment_rotation_radians_{};
   math::float3 background_color_{0.025F, 0.04F, 0.065F};
   debug_display_mode debug_display_{debug_display_mode::shaded};
