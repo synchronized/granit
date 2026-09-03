@@ -82,11 +82,13 @@ granit::result application_core::accept_scene(gltf::scene scene) {
 
 granit::result application_core::upload(granit_renderer renderer,
                                         std::span<const std::byte> environment_bytes,
-                                        float sampler_anisotropy, bool generate_mipmaps) {
+                                        float sampler_anisotropy, bool generate_mipmaps,
+                                        bool upload_model_textures) {
   if (phase_ != application_phase::gpu_upload)
     return granit::result::invalid_argument;
   const auto result =
-      gpu_scene_.initialize(renderer, cpu_scene_, sampler_anisotropy, generate_mipmaps);
+      gpu_scene_.initialize(renderer, cpu_scene_, sampler_anisotropy, generate_mipmaps,
+                            upload_model_textures);
   if (granit::failed(result)) {
     fail(result, "模型查看器 GPU Scene 上传失败");
     return result;

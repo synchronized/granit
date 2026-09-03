@@ -42,6 +42,7 @@ struct options {
   bool enable_fxaa{true};
   bool enable_specular_aa{true};
   bool generate_mipmaps{true};
+  bool upload_model_textures{true};
   bool validation{};
 };
 
@@ -53,6 +54,7 @@ void print_usage() {
                "[--backend=auto|vulkan|webgpu] "
                "[--backend-library <文件>] [--msaa=1|4] [--fxaa=on|off] "
                "[--specular-aa=on|off] [--mipmaps=on|off] "
+               "[--model-textures=on|off] "
                "[--anisotropy=1|2|4|8|16] [--validation]\n";
 }
 
@@ -124,6 +126,7 @@ bool parse_options(int argc, char** argv, options& output) {
     constexpr std::string_view fxaa_prefix = "--fxaa=";
     constexpr std::string_view specular_aa_prefix = "--specular-aa=";
     constexpr std::string_view mipmaps_prefix = "--mipmaps=";
+    constexpr std::string_view model_textures_prefix = "--model-textures=";
     constexpr std::string_view anisotropy_prefix = "--anisotropy=";
     if (argument.starts_with(backend_prefix)) {
       if (!parse_backend(argument.substr(backend_prefix.size()), candidate.backend))
@@ -148,6 +151,10 @@ bool parse_options(int argc, char** argv, options& output) {
         return false;
     } else if (argument.starts_with(mipmaps_prefix)) {
       if (!parse_switch(argument.substr(mipmaps_prefix.size()), candidate.generate_mipmaps))
+        return false;
+    } else if (argument.starts_with(model_textures_prefix)) {
+      if (!parse_switch(argument.substr(model_textures_prefix.size()),
+                        candidate.upload_model_textures))
         return false;
     } else if (argument.starts_with(anisotropy_prefix)) {
       if (!parse_anisotropy(argument.substr(anisotropy_prefix.size()),
@@ -375,7 +382,8 @@ int main(int argc, char** argv) {
       result = granit::result::invalid_argument;
     } else {
       result = core.upload(renderer.native_handle(), environment_bytes,
-                           arguments.sampler_anisotropy, arguments.generate_mipmaps);
+                           arguments.sampler_anisotropy, arguments.generate_mipmaps,
+                           arguments.upload_model_textures);
     }
   }
 

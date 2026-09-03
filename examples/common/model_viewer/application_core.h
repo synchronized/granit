@@ -51,7 +51,8 @@ public:
   [[nodiscard]] granit::result upload(granit_renderer renderer,
                                       std::span<const std::byte> environment_bytes = {},
                                       float sampler_anisotropy = 8.0F,
-                                      bool generate_mipmaps = true);
+                                      bool generate_mipmaps = true,
+                                      bool upload_model_textures = true);
   /** 按新采样质量事务式重建 GPU Scene；环境资源与查看器状态保持不变。 */
   [[nodiscard]] granit::result reupload_scene(granit_renderer renderer, float sampler_anisotropy);
   [[nodiscard]] granit::result tick(const application_tick_input& input,
