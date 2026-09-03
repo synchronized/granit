@@ -63,6 +63,14 @@ TEST_CASE("轨道相机使用帧缓冲高度归一化拖动", "[example][model-v
   CHECK(close(first.pitch(), second.pitch()));
 }
 
+TEST_CASE("轨道相机的视角跟随右键拖拽方向", "[example][model-viewer][camera]") {
+  granit::example::model_viewer::orbit_camera camera;
+  REQUIRE(camera.update(
+      {.pointer_delta_x = 100, .pointer_delta_y = 50, .orbiting = true}, 800, 1000));
+  CHECK(camera.yaw() > 0.0F);
+  CHECK(camera.pitch() > 0.0F);
+}
+
 TEST_CASE("轨道相机尊重 UI 捕获、失焦和 Home", "[example][model-viewer][camera]") {
   granit::example::model_viewer::orbit_camera camera;
   REQUIRE(camera.focus({.center = {2, 0, 0}, .radius = 1}, 640, 480));
