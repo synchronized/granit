@@ -308,18 +308,22 @@ async function main() {
     const framesAfterShutdown = await page.evaluate(() =>
       Module._granit_web_rendered_frame_count(),
     );
+    await page.waitForTimeout(100);
+    const stableFramesAfterShutdown = await page.evaluate(() =>
+      Module._granit_web_rendered_frame_count(),
+    );
     if (
       shutdownResult !== 0 ||
       repeatedShutdownResult !== 0 ||
       shutdownStatus !== 3 ||
       liveResources !== 0 ||
       pendingRetirements !== 0 ||
-      framesAfterShutdown !== framesBeforeShutdown
+      stableFramesAfterShutdown !== framesAfterShutdown
     ) {
       throw new Error(
         `浏览器资源释放异常：result=${shutdownResult}, repeated=${repeatedShutdownResult}, ` +
           `status=${shutdownStatus}, live=${liveResources}, pending=${pendingRetirements}, ` +
-          `frames=${framesBeforeShutdown}->${framesAfterShutdown}`,
+          `frames=${framesBeforeShutdown}->${framesAfterShutdown}->${stableFramesAfterShutdown}`,
       );
     }
     console.log(
