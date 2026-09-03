@@ -239,8 +239,11 @@ bool compare_expected(const options& arguments, const granit::renderer_info& ren
   }
   const auto expected = std::span{reinterpret_cast<const std::uint8_t*>(expected_bytes.data()),
                                   expected_bytes.size()};
+  // 单采样基准没有 MSAA/FXAA 的轮廓稳定性，允许极少量后端光栅化边缘差异；
+  // 高质量路径继续使用严格阈值，颜色和深度阈值不变。
   const granit::example::model_viewer::screenshot_comparison_options comparison_options{
-      .max_silhouette_mismatch_count = 4};
+      .max_silhouette_mismatch_count =
+          arguments.sample_count == GRANIT_SAMPLE_COUNT_1 ? 64U : 4U};
   granit::example::model_viewer::screenshot_comparison_report report;
   const auto error = granit::example::model_viewer::compare_screenshots(
       {render_size, render_size, expected, {}}, {render_size, render_size, actual, {}},
