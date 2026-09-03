@@ -8,6 +8,8 @@
 
 ## Unreleased
 
+## 0.4.0 - 2026-09-03
+
 ### 新增
 
 - Core Renderer 新增 Vulkan、桌面 Dawn WebGPU 与 Emscripten WebGPU 的统一后端选择、能力查询和
