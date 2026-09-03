@@ -195,7 +195,7 @@ jobs:
             --expected "$env:RUNNER_TEMP/model-viewer-reference/flight-helmet-vulkan-quality-low.rgba" `
             --backend=webgpu `
             --backend-library "$build/lib/granit_backend_webgpu.dll" `
-            --msaa=1 --fxaa=off --specular-aa=off --anisotropy=1 --validation
+            --msaa=1 --fxaa=off --specular-aa=off --mipmaps=off --anisotropy=1 --validation
           if ($LASTEXITCODE -ne 0) { throw "Windows Dawn 低质量组合验收失败" }
           & "$build/bin/granit_model_viewer_offscreen_acceptance.exe" `
             --asset "$assets/glTF/FlightHelmet.gltf" `

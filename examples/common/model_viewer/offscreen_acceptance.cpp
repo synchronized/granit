@@ -41,6 +41,7 @@ struct options {
   float sampler_anisotropy{8.0F};
   bool enable_fxaa{true};
   bool enable_specular_aa{true};
+  bool generate_mipmaps{true};
   bool validation{};
 };
 
@@ -51,7 +52,8 @@ void print_usage() {
                "geometric-normals|sampled-normals|vertex-normals|vertex-tangents] "
                "[--backend=auto|vulkan|webgpu] "
                "[--backend-library <文件>] [--msaa=1|4] [--fxaa=on|off] "
-               "[--specular-aa=on|off] [--anisotropy=1|2|4|8|16] [--validation]\n";
+               "[--specular-aa=on|off] [--mipmaps=on|off] "
+               "[--anisotropy=1|2|4|8|16] [--validation]\n";
 }
 
 bool parse_switch(std::string_view value, bool& output) {
@@ -121,6 +123,7 @@ bool parse_options(int argc, char** argv, options& output) {
     constexpr std::string_view msaa_prefix = "--msaa=";
     constexpr std::string_view fxaa_prefix = "--fxaa=";
     constexpr std::string_view specular_aa_prefix = "--specular-aa=";
+    constexpr std::string_view mipmaps_prefix = "--mipmaps=";
     constexpr std::string_view anisotropy_prefix = "--anisotropy=";
     if (argument.starts_with(backend_prefix)) {
       if (!parse_backend(argument.substr(backend_prefix.size()), candidate.backend))
@@ -142,6 +145,9 @@ bool parse_options(int argc, char** argv, options& output) {
         return false;
     } else if (argument.starts_with(specular_aa_prefix)) {
       if (!parse_switch(argument.substr(specular_aa_prefix.size()), candidate.enable_specular_aa))
+        return false;
+    } else if (argument.starts_with(mipmaps_prefix)) {
+      if (!parse_switch(argument.substr(mipmaps_prefix.size()), candidate.generate_mipmaps))
         return false;
     } else if (argument.starts_with(anisotropy_prefix)) {
       if (!parse_anisotropy(argument.substr(anisotropy_prefix.size()),
@@ -368,8 +374,8 @@ int main(int argc, char** argv) {
       stage = "读取环境包";
       result = granit::result::invalid_argument;
     } else {
-      result =
-          core.upload(renderer.native_handle(), environment_bytes, arguments.sampler_anisotropy);
+      result = core.upload(renderer.native_handle(), environment_bytes,
+                           arguments.sampler_anisotropy, arguments.generate_mipmaps);
     }
   }
 

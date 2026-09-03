@@ -482,9 +482,9 @@ gpu_scene& gpu_scene::operator=(gpu_scene&& other) noexcept {
 }
 
 granit::result gpu_scene::initialize(granit_renderer renderer, const gltf::scene& source,
-                                     float sampler_anisotropy) {
+                                     float sampler_anisotropy, bool generate_mipmaps) {
   gpu_scene candidate;
-  const auto result = candidate.create(renderer, source, sampler_anisotropy);
+  const auto result = candidate.create(renderer, source, sampler_anisotropy, generate_mipmaps);
   if (granit::failed(result))
     return result;
   *this = std::move(candidate);
@@ -615,7 +615,7 @@ granit::result gpu_scene::update_debug_display(std::uint32_t mode) noexcept {
 }
 
 granit::result gpu_scene::create(granit_renderer renderer, const gltf::scene& source,
-                                 float sampler_anisotropy) {
+                                 float sampler_anisotropy, bool generate_mipmaps) {
   if (renderer == GRANIT_NULL_HANDLE)
     return granit::result::invalid_handle;
   if (!std::isfinite(sampler_anisotropy) || sampler_anisotropy < 1.0F)
@@ -667,7 +667,7 @@ granit::result gpu_scene::create(granit_renderer renderer, const gltf::scene& so
     const auto& base_mip = source_image.mips.front();
     std::vector<std::byte> generated_pixels;
     std::vector<gltf::image_mip> generated_mips;
-    const auto generate_mips = source_image.mips.size() == 1 &&
+    const auto generate_mips = generate_mipmaps && source_image.mips.size() == 1 &&
                                full_mip_count(base_mip.width, base_mip.height) > 1;
     if (generate_mips &&
         !build_rgba8_mip_chain(source_image, variant.srgb, generated_pixels, generated_mips))
