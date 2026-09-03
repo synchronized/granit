@@ -168,16 +168,17 @@ void draw_lighting_panel(const viewer_state& state, viewer_change& change) {
   if (ImGui::ColorEdit3("Background", &background.x))
     change.background_color = background;
 
-  static constexpr std::array modes{"Shaded",          "Base Color",       "Normals",
-                                    "Metallic",        "Roughness",        "Geometric Normals",
-                                    "Sampled Normals", "Vertex Normals",   "Vertex Tangents"};
+  static constexpr std::array modes{"Shaded",          "Base Color",     "Normals",
+                                    "Metallic",        "Roughness",      "Geometric Normals",
+                                    "Sampled Normals", "Vertex Normals", "Vertex Tangents"};
   auto mode = static_cast<int>(state.debug_display());
   if (ImGui::Combo("Debug Display", &mode, modes.data(), static_cast<int>(modes.size())))
     change.debug_display = static_cast<debug_display_mode>(mode);
   ImGui::PopItemWidth();
 }
 
-void draw_renderer_panel(const renderer_panel_info& info) {
+void draw_renderer_panel(const renderer_panel_info& info, const render_quality_config& quality,
+                         viewer_panel_changes& changes) {
   ImGui::Text("Backend: %.*s", static_cast<int>(info.backend.size()), info.backend.data());
   ImGui::Text("Adapter: %.*s", static_cast<int>(info.adapter.size()), info.adapter.data());
   ImGui::Text("Swapchain: %u x %u, %.*s", info.width, info.height,
@@ -185,6 +186,25 @@ void draw_renderer_panel(const renderer_panel_info& info) {
   ImGui::Text("Present: %.*s", static_cast<int>(info.present_mode.size()),
               info.present_mode.data());
   ImGui::Text("Frame slots: %u", info.frame_slots);
+  ImGui::SeparatorText("Quality");
+  auto edited = quality;
+  const std::array sample_labels{"1x", "4x"};
+  int sample_index = quality.sample_count == GRANIT_SAMPLE_COUNT_4 ? 1 : 0;
+  if (ImGui::Combo("MSAA", &sample_index, sample_labels.data(),
+                   static_cast<int>(sample_labels.size()))) {
+    const auto requested = sample_index == 1 ? GRANIT_SAMPLE_COUNT_4 : GRANIT_SAMPLE_COUNT_1;
+    if ((info.supported_sample_counts & requested) != 0)
+      edited.sample_count = requested;
+  }
+  if ((info.supported_sample_counts & GRANIT_SAMPLE_COUNT_4) == 0)
+    ImGui::TextDisabled("4x MSAA unsupported; using 1x");
+  ImGui::Checkbox("FXAA", &edited.enable_fxaa);
+  ImGui::Checkbox("Specular AA", &edited.enable_specular_aa);
+  ImGui::Text("Anisotropy: %.0fx / device %.0fx", quality.sampler_anisotropy,
+              info.max_sampler_anisotropy);
+  if (edited.sample_count != quality.sample_count || edited.enable_fxaa != quality.enable_fxaa ||
+      edited.enable_specular_aa != quality.enable_specular_aa)
+    changes.quality = edited;
 }
 
 void draw_performance_panel(const performance_panel_info& info) {
@@ -281,6 +301,7 @@ bool find_texture_preview(const gltf::texture_reference& reference, bool srgb,
 viewer_panel_changes draw_viewer_panels(const gltf::scene& scene, const viewer_state& state,
                                         const renderer_panel_info& renderer,
                                         const performance_panel_info& performance,
+                                        const render_quality_config& quality,
                                         std::span<const texture_preview> previews) {
   viewer_panel_changes changes;
   auto panels = state.panels();
@@ -291,7 +312,8 @@ viewer_panel_changes draw_viewer_panels(const gltf::scene& scene, const viewer_s
              [&] { draw_inspector_panel(scene, state, previews, changes); });
   draw_panel("Lighting", panels.lighting, layout.lighting,
              [&] { draw_lighting_panel(state, changes.state); });
-  draw_panel("Renderer", panels.renderer, layout.renderer, [&] { draw_renderer_panel(renderer); });
+  draw_panel("Renderer", panels.renderer, layout.renderer,
+             [&] { draw_renderer_panel(renderer, quality, changes); });
   draw_panel("Performance", panels.performance, layout.performance,
              [&] { draw_performance_panel(performance); });
   if (panels.scene != state.panels().scene || panels.inspector != state.panels().inspector ||

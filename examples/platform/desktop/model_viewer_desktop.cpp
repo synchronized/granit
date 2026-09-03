@@ -296,6 +296,9 @@ int main(int argc, char** argv) {
   granit::renderer_info renderer_info;
   if (granit::succeeded(result))
     result = renderer.get_info(renderer_info);
+  granit::renderer_limits renderer_limits;
+  if (granit::succeeded(result))
+    result = renderer.get_limits(renderer_limits);
   if (granit::succeeded(result))
     result = core.renderer_ready();
 
@@ -344,8 +347,17 @@ int main(int argc, char** argv) {
   }
   if (granit::succeeded(result))
     result = core.upload(renderer.native_handle(), environment_bytes);
+  render_quality_config render_quality{
+      .sample_count = renderer_limits.supports_sample_count(granit::sample_count::four)
+                          ? GRANIT_SAMPLE_COUNT_4
+                          : GRANIT_SAMPLE_COUNT_1,
+      .enable_fxaa = true,
+      .enable_specular_aa = true,
+      .sampler_anisotropy = renderer_limits.max_sampler_anisotropy >= 8.0F ? 8.0F : 1.0F};
   granit_render_pipeline_desc pipeline_desc = GRANIT_RENDER_PIPELINE_DESC_INIT;
-  pipeline_desc.sample_count = GRANIT_SAMPLE_COUNT_4;
+  pipeline_desc.sample_count = render_quality.sample_count;
+  pipeline_desc.enable_fxaa = render_quality.enable_fxaa;
+  pipeline_desc.enable_specular_aa = render_quality.enable_specular_aa;
   if (granit::succeeded(result))
     result = pipeline.initialize(renderer.native_handle(), pipeline_desc);
   bool gpu_metrics_enabled = false;
@@ -472,14 +484,16 @@ int main(int argc, char** argv) {
     if (options.show_ui) {
       ImGui_ImplSDL3_NewFrame();
       ImGui::NewFrame();
-      const renderer_panel_info panel_renderer{.backend = backend_name,
-                                               .adapter = renderer_info.adapter_name,
-                                               .swapchain_format = "Swapchain",
-                                               .present_mode =
-                                                   present_mode_label(swapchain_info.presentation),
-                                               .width = swapchain_info.width,
-                                               .height = swapchain_info.height,
-                                               .frame_slots = GRANIT_DEFAULT_FRAMES_IN_FLIGHT};
+      const renderer_panel_info panel_renderer{
+          .backend = backend_name,
+          .adapter = renderer_info.adapter_name,
+          .swapchain_format = "Swapchain",
+          .present_mode = present_mode_label(swapchain_info.presentation),
+          .width = swapchain_info.width,
+          .height = swapchain_info.height,
+          .frame_slots = GRANIT_DEFAULT_FRAMES_IN_FLIGHT,
+          .supported_sample_counts = renderer_limits.framebuffer_sample_counts,
+          .max_sampler_anisotropy = renderer_limits.max_sampler_anisotropy};
       const performance_panel_info panel_performance{
           .frames_per_second = latest_sample.frames_per_second,
           .cpu_frame_ms = latest_sample.cpu_frame_ms,
@@ -489,12 +503,36 @@ int main(int argc, char** argv) {
           .gpu_timing_available = latest_sample.gpu_timing_available,
           .history = core.performance().summarize()};
       changes = draw_viewer_panels(core.cpu_scene(), core.state(), panel_renderer,
-                                   panel_performance, previews);
+                                   panel_performance, render_quality, previews);
       ImGui::Render();
       result = canvas.clear();
       if (granit::succeeded(result)) {
         result = granit::integration::imgui::append_draw_data(
             ImGui::GetDrawData(), canvas, texture_registry::resolver, &textures);
+      }
+    }
+    if (granit::failed(result))
+      break;
+
+    if (changes.quality) {
+      granit_render_pipeline_desc replacement_desc = GRANIT_RENDER_PIPELINE_DESC_INIT;
+      replacement_desc.sample_count = changes.quality->sample_count;
+      replacement_desc.enable_fxaa = changes.quality->enable_fxaa;
+      replacement_desc.enable_specular_aa = changes.quality->enable_specular_aa;
+      granit::render_pipeline replacement;
+      result = replacement.initialize(renderer.native_handle(), replacement_desc);
+      bool replacement_metrics_enabled = false;
+      if (granit::succeeded(result)) {
+        const auto metrics_result = replacement.enable_metrics();
+        if (metrics_result == granit::result::success)
+          replacement_metrics_enabled = true;
+        else if (metrics_result != granit::result::unsupported)
+          result = metrics_result;
+      }
+      if (granit::succeeded(result)) {
+        pipeline = std::move(replacement);
+        render_quality = *changes.quality;
+        gpu_metrics_enabled = replacement_metrics_enabled;
       }
     }
     if (granit::failed(result))

@@ -63,17 +63,23 @@ TEST_CASE("查看器 ImGui 面板可在无平台后端上下文中构建", "[exa
                                                                     .frame_slots = 3};
   const granit::example::model_viewer::performance_panel_info performance{
       .frames_per_second = 60.0F, .cpu_frame_ms = 2.0F, .history = {}};
+  const granit::example::model_viewer::render_quality_config quality{.sample_count =
+                                                                         GRANIT_SAMPLE_COUNT_4,
+                                                                     .enable_fxaa = true,
+                                                                     .enable_specular_aa = true,
+                                                                     .sampler_anisotropy = 8.0F};
   ImGui::NewFrame();
-  static_cast<void>(
-      granit::example::model_viewer::draw_viewer_panels(scene, state, renderer, performance));
+  static_cast<void>(granit::example::model_viewer::draw_viewer_panels(scene, state, renderer,
+                                                                      performance, quality));
   ImGui::Render();
 
   ImGui::NewFrame();
-  const auto change =
-      granit::example::model_viewer::draw_viewer_panels(scene, state, renderer, performance);
+  const auto change = granit::example::model_viewer::draw_viewer_panels(scene, state, renderer,
+                                                                        performance, quality);
   ImGui::Render();
   REQUIRE(ImGui::GetDrawData() != nullptr);
   CHECK(ImGui::GetDrawData()->Valid);
   CHECK_FALSE(change.state.selected_node.has_value());
   CHECK_FALSE(change.material.has_value());
+  CHECK_FALSE(change.quality.has_value());
 }

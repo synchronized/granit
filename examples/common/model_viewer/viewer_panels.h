@@ -8,6 +8,7 @@
 #include "model_viewer/performance_history.h"
 #include "model_viewer/viewer_state.h"
 
+#include <granit/renderer/resource_types.h>
 #include <imgui.h>
 
 #include <cstdint>
@@ -25,6 +26,15 @@ struct renderer_panel_info {
   std::uint32_t width{};
   std::uint32_t height{};
   std::uint32_t frame_slots{};
+  std::uint32_t supported_sample_counts{GRANIT_SAMPLE_COUNT_1};
+  float max_sampler_anisotropy{1.0F};
+};
+
+struct render_quality_config {
+  granit_sample_count sample_count{GRANIT_SAMPLE_COUNT_1};
+  bool enable_fxaa{true};
+  bool enable_specular_aa{true};
+  float sampler_anisotropy{1.0F};
 };
 
 struct performance_panel_info {
@@ -40,6 +50,7 @@ struct performance_panel_info {
 struct viewer_panel_changes {
   viewer_change state;
   std::optional<material_factor_edit> material;
+  std::optional<render_quality_config> quality;
 };
 
 struct texture_preview {
@@ -57,6 +68,7 @@ struct texture_preview {
 [[nodiscard]] viewer_panel_changes
 draw_viewer_panels(const gltf::scene& scene, const viewer_state& state,
                    const renderer_panel_info& renderer, const performance_panel_info& performance,
+                   const render_quality_config& quality,
                    std::span<const texture_preview> previews = {});
 
 } // namespace granit::example::model_viewer

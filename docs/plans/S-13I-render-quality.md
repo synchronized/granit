@@ -59,6 +59,7 @@ Render Pipeline 创建描述直接包含样本数和两个布尔策略字段，�
 3. 通过后端无关的每帧常量把策略传入自动 PBR 和 Tone Mapping 路径，避免为布尔组合创建 Shader
    变体，同时禁止运行时后端分支泄漏到公共层。（已完成）
 4. 为 Model Viewer 增加 MSAA、FXAA、Specular AA 和各向异性控件，显示实际生效配置。
+   （MSAA、FXAA、Specular AA 运行时控制及各向异性状态显示已完成；各向异性运行时重建待完成）
 5. 补充公共头、ABI、错误、回退、像素和三后端组合测试。
 6. 完成手动 Actions 验收后更新 Reference、Guide 和带日期的验收记录。
 
