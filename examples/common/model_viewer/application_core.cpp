@@ -84,21 +84,6 @@ granit::result application_core::upload(granit_renderer renderer,
                                         std::span<const std::byte> environment_bytes) {
   if (phase_ != application_phase::gpu_upload)
     return granit::result::invalid_argument;
-  granit_renderer_info renderer_info = GRANIT_RENDERER_INFO_INIT;
-  const auto info_result = granit_renderer_get_info(renderer, &renderer_info);
-  if (info_result != GRANIT_SUCCESS) {
-    const auto result = granit::from_native(info_result);
-    fail(result, "模型查看器 Renderer 信息查询失败");
-    return result;
-  }
-  if (renderer_info.backend == GRANIT_RENDERER_BACKEND_VULKAN) {
-    clip_space_ = camera_clip_space::vulkan;
-  } else if (renderer_info.backend == GRANIT_RENDERER_BACKEND_WEBGPU) {
-    clip_space_ = camera_clip_space::webgpu;
-  } else {
-    fail(granit::result::unsupported, "模型查看器不支持当前 Renderer 后端");
-    return granit::result::unsupported;
-  }
   const auto result = gpu_scene_.initialize(renderer, cpu_scene_);
   if (granit::failed(result)) {
     fail(result, "模型查看器 GPU Scene 上传失败");
@@ -151,7 +136,7 @@ granit::result application_core::tick(const application_tick_input& input,
     return granit::result::invalid_argument;
 
   camera_matrices matrices;
-  if (!state_.camera().matrices(input.width, input.height, clip_space_, matrices))
+  if (!state_.camera().matrices(input.width, input.height, matrices))
     return granit::result::invalid_argument;
   const granit_scene_view view{.view = matrices.view,
                                .projection = matrices.projection,
@@ -205,7 +190,6 @@ void application_core::reset() noexcept {
   cpu_scene_ = {};
   state_ = {};
   performance_.clear();
-  clip_space_ = camera_clip_space::vulkan;
   camera_initialized_ = false;
   diagnostic_.clear();
   failure_result_ = granit::result::success;

@@ -102,7 +102,6 @@ bool orbit_camera::update(const viewer_input& input, std::uint32_t width, std::u
 }
 
 bool orbit_camera::matrices(std::uint32_t width, std::uint32_t height,
-                            camera_clip_space clip_space,
                             camera_matrices& output) const noexcept {
   if (!valid_extent(width, height))
     return false;
@@ -116,9 +115,6 @@ bool orbit_camera::matrices(std::uint32_t width, std::uint32_t height,
                                far_plane_, candidate.projection)) {
     return false;
   }
-  // 两种后端都使用左上角窗口原点，但 NDC Y 映射相反；差异在相机边界一次性收敛。
-  if (clip_space == camera_clip_space::vulkan)
-    candidate.projection[5] = -candidate.projection[5];
   candidate.view_projection = math::multiply(candidate.projection, candidate.view);
   output = candidate;
   return true;
