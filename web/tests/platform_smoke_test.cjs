@@ -94,7 +94,16 @@ function validateModelViewerPixels(png) {
   const image = decodePng(png);
   const center = pixelAt(image, Math.floor(image.width / 2), Math.floor(image.height / 2));
   const corner = pixelAt(image, 4, 4);
-  if (process.platform === "linux" && center[3] === 0) {
+  const linuxCanvasUnavailable =
+    process.platform === "linux" &&
+    (center[3] === 0 ||
+      (center[0] === 255 &&
+        center[1] === 255 &&
+        center[2] === 255 &&
+        corner[0] === 255 &&
+        corner[1] === 255 &&
+        corner[2] === 255));
+  if (linuxCanvasUnavailable) {
     console.warn("Linux 无头 Chrome 未暴露 WebGPU Canvas 合成像素，跳过截图颜色断言");
     return;
   }

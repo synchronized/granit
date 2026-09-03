@@ -217,7 +217,8 @@ int main(int argc, char** argv) {
       GRANIT_BACKEND_PLUGIN_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
       GRANIT_BACKEND_PLUGIN_FRONT_FACE_COUNTER_CLOCKWISE,
       GRANIT_BACKEND_PLUGIN_CULL_MODE_NONE,
-      GRANIT_BACKEND_PLUGIN_POLYGON_MODE_FILL};
+      GRANIT_BACKEND_PLUGIN_POLYGON_MODE_FILL,
+      1};
   if (loader.create_render_pipeline(instance, &pipeline_desc, &pipeline) != GRANIT_SUCCESS ||
       pipeline == 0) {
     std::fprintf(stderr, "WebGPU 绑定或 Render Pipeline 生命周期验证失败\n");
