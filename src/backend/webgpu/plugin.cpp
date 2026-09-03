@@ -1360,6 +1360,9 @@ granit_result write_upload_batch(granit_backend_plugin_instance instance,
     wgpuQueueWriteTexture(state.queue, &destination, operation.data,
                           static_cast<std::size_t>(operation.size), &layout, &extent);
   }
+  // Queue Write 可能由 Dawn 累积在内部上传命令中。以空提交结束批次，避免大型纹理批次与
+  // 下一帧渲染继续争用 D3D12 命令分配器；该提交仍保持 Upload Batch 的异步语义。
+  wgpuQueueSubmit(state.queue, 0, nullptr);
   return GRANIT_SUCCESS;
 }
 
