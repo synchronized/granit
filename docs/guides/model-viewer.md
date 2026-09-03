@@ -211,7 +211,9 @@ Runner 使用软件回退 Adapter，因此数据用于验证采样路径和同�
 
 Emscripten 版本目前是自动化 Fixture，而不是面向用户发布的完整网页查看器。它通过同一个
 Application Core 验证模型 Fetch、PBR 绘制、60 帧循环、输入、Resize、错误资产诊断和退出时
-资源归零。构建与运行测试：
+资源归零。Fixture 的 glTF 是用于确定性测试的三角模型，因此页面显示三角形并不表示回退到了
+旧的独立三角示例。自动化测试还会依次切换 1×/全关闭与 4×/FXAA/Specular AA 配置，并按设备
+上限验证各向异性重建。构建与运行测试：
 
 ```powershell
 cmake --preset emscripten-release

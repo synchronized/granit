@@ -214,6 +214,44 @@ async function main() {
     }
     validateModelViewerPixels(await page.locator("#canvas").screenshot({ type: "png" }));
 
+    const qualityGeneration = await page.evaluate(() => Module._granit_web_quality_generation());
+    const invalidQualityResult = await page.evaluate(() =>
+      Module._granit_web_configure_render_quality(2, 0, 0, 1),
+    );
+    if (invalidQualityResult !== -2)
+      throw new Error(`无效浏览器质量参数未被拒绝：${invalidQualityResult}`);
+    const lowQualityResult = await page.evaluate(() =>
+      Module._granit_web_configure_render_quality(1, 0, 0, 1),
+    );
+    if (lowQualityResult !== 0)
+      throw new Error(`浏览器低质量配置失败：${lowQualityResult}`);
+    const framesBeforeHighQuality = await page.evaluate(() =>
+      Module._granit_web_rendered_frame_count(),
+    );
+    await page.waitForFunction(
+      (previous) => Module._granit_web_rendered_frame_count() > previous,
+      framesBeforeHighQuality,
+      { timeout: 10_000 },
+    );
+    const anisotropy = await page.evaluate(() =>
+      Math.min(8, Module._granit_web_max_sampler_anisotropy()),
+    );
+    if (anisotropy < 1)
+      throw new Error(`浏览器未报告有效的各向异性上限：${anisotropy}`);
+    const highQualityResult = await page.evaluate((value) =>
+      Module._granit_web_configure_render_quality(4, 1, 1, value), anisotropy,
+    );
+    if (highQualityResult !== 0)
+      throw new Error(`浏览器高质量配置失败：${highQualityResult}`);
+    await page.waitForFunction(
+      (previous) =>
+        Module._granit_web_quality_generation() === previous + 2 &&
+        Module._granit_web_rendered_frame_count() > 60,
+      qualityGeneration,
+      { timeout: 10_000 },
+    );
+    validateModelViewerPixels(await page.locator("#canvas").screenshot({ type: "png" }));
+
     await page.keyboard.press("F");
     const canvas = page.locator("#canvas");
     const box = await canvas.boundingBox();
@@ -275,7 +313,9 @@ async function main() {
           `frames=${framesBeforeShutdown}->${framesAfterShutdown}`,
       );
     }
-    console.log("浏览器 WebGPU 多帧渲染、输入、Resize、资产 Fetch 与资源释放验证通过");
+    console.log(
+      "浏览器 WebGPU 多帧渲染、质量切换、输入、Resize、资产 Fetch 与资源释放验证通过",
+    );
 
     rejectExternalBuffer();
     const failurePage = await browser.newPage();

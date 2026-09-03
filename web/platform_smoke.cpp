@@ -44,6 +44,11 @@ struct web_platform_state {
   unsigned applied_input_count{};
   unsigned rendered_frame_count{};
   unsigned resize_count{};
+  unsigned quality_generation{};
+  granit_sample_count sample_count{GRANIT_SAMPLE_COUNT_1};
+  unsigned enable_fxaa{1};
+  unsigned enable_specular_aa{1};
+  unsigned sampler_anisotropy{1};
   std::uint64_t shutdown_live_resource_count{};
   std::uint64_t shutdown_pending_retirement_count{};
   granit::example::model_viewer::web::web_input input;
@@ -414,16 +419,14 @@ EM_BOOL receive_keyboard(int event_type, const EmscriptenKeyboardEvent* event,
   return EM_FALSE;
 }
 
-EM_BOOL receive_mouse(int event_type, const EmscriptenMouseEvent* event,
-                      void* user_data) noexcept {
+EM_BOOL receive_mouse(int event_type, const EmscriptenMouseEvent* event, void* user_data) noexcept {
   auto& platform = *static_cast<web_platform_state*>(user_data);
   ++platform.input_event_count;
   using granit::example::model_viewer::web::pointer_button;
   if (event_type == EMSCRIPTEN_EVENT_MOUSEMOVE) {
     platform.input.pointer_motion(static_cast<float>(event->movementX),
                                   static_cast<float>(event->movementY));
-  } else if (event_type == EMSCRIPTEN_EVENT_MOUSEDOWN ||
-             event_type == EMSCRIPTEN_EVENT_MOUSEUP) {
+  } else if (event_type == EMSCRIPTEN_EVENT_MOUSEDOWN || event_type == EMSCRIPTEN_EVENT_MOUSEUP) {
     auto button = pointer_button::primary;
     if (event->button == 1)
       button = pointer_button::middle;
@@ -541,9 +544,8 @@ granit_result resize_swapchain_if_needed() {
   }
   granit_swapchain_info info = GRANIT_SWAPCHAIN_INFO_INIT;
   auto result = granit_swapchain_get_info(state.renderer, state.swapchain, &info);
-  if (result != GRANIT_SUCCESS ||
-      (info.width == static_cast<std::uint32_t>(width) &&
-       info.height == static_cast<std::uint32_t>(height))) {
+  if (result != GRANIT_SUCCESS || (info.width == static_cast<std::uint32_t>(width) &&
+                                   info.height == static_cast<std::uint32_t>(height))) {
     return result;
   }
   result = granit_swapchain_destroy(state.renderer, state.swapchain);
@@ -605,6 +607,53 @@ granit_result render_model_viewer_frame() {
   if (result == GRANIT_SUCCESS)
     ++state.rendered_frame_count;
   return result;
+}
+
+granit_result configure_render_quality(granit_sample_count sample_count, unsigned enable_fxaa,
+                                       unsigned enable_specular_aa, unsigned sampler_anisotropy) {
+  if (state.status != startup_status::ready || state.renderer == GRANIT_NULL_HANDLE ||
+      state.pipeline == GRANIT_NULL_HANDLE)
+    return GRANIT_ERROR_NOT_READY;
+  if ((sample_count != GRANIT_SAMPLE_COUNT_1 && sample_count != GRANIT_SAMPLE_COUNT_4) ||
+      enable_fxaa > 1 || enable_specular_aa > 1 || sampler_anisotropy == 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+
+  granit_renderer_limits limits = GRANIT_RENDERER_LIMITS_INIT;
+  auto result = granit_renderer_get_limits(state.renderer, &limits);
+  if (result != GRANIT_SUCCESS)
+    return result;
+  if ((limits.framebuffer_sample_counts & sample_count) == 0 ||
+      static_cast<float>(sampler_anisotropy) > limits.max_sampler_anisotropy)
+    return GRANIT_ERROR_UNSUPPORTED;
+
+  granit_render_pipeline_desc desc = GRANIT_RENDER_PIPELINE_DESC_INIT;
+  desc.sample_count = sample_count;
+  desc.enable_fxaa = enable_fxaa;
+  desc.enable_specular_aa = enable_specular_aa;
+  granit_render_pipeline replacement{};
+  result = granit_render_pipeline_create(state.renderer, &desc, &replacement);
+  if (result != GRANIT_SUCCESS)
+    return result;
+  if (sampler_anisotropy != state.sampler_anisotropy) {
+    result = granit::to_native(
+        state.core.reupload_scene(state.renderer, static_cast<float>(sampler_anisotropy)));
+    if (result != GRANIT_SUCCESS) {
+      static_cast<void>(granit_render_pipeline_destroy(state.renderer, replacement));
+      return result;
+    }
+  }
+  result = granit_render_pipeline_destroy(state.renderer, state.pipeline);
+  if (result != GRANIT_SUCCESS) {
+    static_cast<void>(granit_render_pipeline_destroy(state.renderer, replacement));
+    return result;
+  }
+  state.pipeline = replacement;
+  state.sample_count = sample_count;
+  state.enable_fxaa = enable_fxaa;
+  state.enable_specular_aa = enable_specular_aa;
+  state.sampler_anisotropy = sampler_anisotropy;
+  ++state.quality_generation;
+  return GRANIT_SUCCESS;
 }
 
 void tick(void*) noexcept {
@@ -785,6 +834,33 @@ extern "C" EMSCRIPTEN_KEEPALIVE unsigned granit_web_resize_count() noexcept {
   return state.resize_count;
 }
 
+extern "C" EMSCRIPTEN_KEEPALIVE int
+granit_web_configure_render_quality(unsigned sample_count, unsigned enable_fxaa,
+                                    unsigned enable_specular_aa,
+                                    unsigned sampler_anisotropy) noexcept {
+  try {
+    return configure_render_quality(static_cast<granit_sample_count>(sample_count), enable_fxaa,
+                                    enable_specular_aa, sampler_anisotropy);
+  } catch (const std::bad_alloc&) {
+    return GRANIT_ERROR_OUT_OF_MEMORY;
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+extern "C" EMSCRIPTEN_KEEPALIVE unsigned granit_web_quality_generation() noexcept {
+  return state.quality_generation;
+}
+
+extern "C" EMSCRIPTEN_KEEPALIVE unsigned granit_web_max_sampler_anisotropy() noexcept {
+  if (state.renderer == GRANIT_NULL_HANDLE)
+    return 0;
+  granit_renderer_limits limits = GRANIT_RENDERER_LIMITS_INIT;
+  if (granit_renderer_get_limits(state.renderer, &limits) != GRANIT_SUCCESS)
+    return 0;
+  return static_cast<unsigned>(limits.max_sampler_anisotropy);
+}
+
 extern "C" EMSCRIPTEN_KEEPALIVE unsigned long long
 granit_web_shutdown_live_resource_count() noexcept {
   return state.shutdown_live_resource_count;
@@ -892,9 +968,9 @@ int main() {
   static_cast<void>(emscripten_set_mouseleave_callback("#canvas", &state, EM_FALSE, receive_mouse));
   static_cast<void>(emscripten_set_wheel_callback("#canvas", &state, EM_FALSE, receive_wheel));
   static_cast<void>(emscripten_set_focus_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, &state, EM_FALSE,
-                                                 receive_focus));
+                                                  receive_focus));
   static_cast<void>(emscripten_set_blur_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, &state, EM_FALSE,
-                                                receive_focus));
+                                                 receive_focus));
   state.input.focus_changed(true);
 
   state.status = startup_status::provider_pending;
