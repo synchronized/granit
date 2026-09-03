@@ -40,6 +40,11 @@ int main() {
   if (runtime.major != GRANIT_VERSION_MAJOR || runtime.minor != GRANIT_VERSION_MINOR ||
       runtime.patch != GRANIT_VERSION_PATCH)
     return 2;
+  if (!granit::result::success || granit::result::invalid_argument ||
+      !granit::result::invalid_argument.failed() ||
+      granit::result::not_ready.native() != GRANIT_ERROR_NOT_READY ||
+      granit::result::invalid_handle.message() != "invalid handle")
+    return 12;
 
   diagnostic_capture diagnostics;
   granit::renderer renderer;
@@ -49,7 +54,7 @@ int main() {
       renderer_result == granit::result::incompatible_driver ||
       renderer_result == granit::result::no_suitable_device)
     return renderer.valid() ? 3 : 0;
-  if (granit::failed(renderer_result))
+  if (renderer_result.failed())
     return 4;
 
   granit::renderer_limits limits;
