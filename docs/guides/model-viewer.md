@@ -198,14 +198,15 @@ build/model-viewer-webgpu/bin/granit_model_viewer_offscreen_acceptance.exe `
 基准更新必须随 Renderer、Adapter、模型 manifest 和变更原因一起评审。
 
 维护者可手动运行 `Dawn Integration` Actions。工作流先在 Linux Lavapipe 生成并校验 Vulkan
-参考图，再让 Windows Dawn D3D12 和 Linux Dawn Vulkan 下载同一参考图执行分层比较。成功时只保留
-三天的跨 Job 参考图；失败时额外上传实际图、差异图、JSON 报告、运行日志和 FlightHelmet
-manifest，保留七天供定位。该工作流不会由提交或合并自动触发。
+参考图，再由 Linux Dawn Vulkan 下载同一参考图执行分层比较。成功时只保留三天的跨 Job 参考图；
+失败时额外上传实际图、差异图、JSON 报告、运行日志和 FlightHelmet manifest，保留七天供定位。
+Windows Job 仍验证 Dawn 插件、Shader、Pipeline、Bind Group 和 Model Viewer 构建；GitHub 托管
+Runner 的 D3D12 环境在 IBL 路径会发生 Device Lost，因此完整 Windows Dawn 图像验收应在真实
+GPU 上手动执行。该工作流不会由提交或合并自动触发。
 
-同一工作流还会在 Windows Dawn D3D12 与 Linux Dawn Vulkan 上分别执行 UI 开/关、
-Immediate/FIFO 四组 Release 采样，校验每份 JSON 的后端与 1000 个 CPU 样本，并把摘要写入
-Actions Job Summary。完整 JSON 作为七天产物保存；失败时由对应诊断产物继续保留。GitHub 托管
-Runner 使用软件回退 Adapter，因此数据用于验证采样路径和同环境回归，不替代真实 GPU 基线。
+同一工作流会在 Linux Dawn Vulkan 上执行 UI 开/关、Immediate/FIFO 四组 Release 采样，校验
+每份 JSON 的后端与 1000 个 CPU 样本，并把摘要写入 Actions Job Summary。Windows Dawn 性能
+数据应在真实 GPU 上另行采集。完整 JSON 作为七天产物保存；失败时由对应诊断产物继续保留。
 
 ## 浏览器验证
 

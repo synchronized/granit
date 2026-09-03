@@ -35,7 +35,7 @@ env:
 
 jobs:
   model-viewer-reference:
-    if: ${{ inputs.run_windows || inputs.run_linux }}
+    if: ${{ inputs.run_linux }}
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
@@ -105,7 +105,6 @@ jobs:
 
   windows:
     if: ${{ inputs.run_windows }}
-    needs: model-viewer-reference
     runs-on: windows-2022
     timeout-minutes: 30
     steps:
@@ -125,11 +124,6 @@ jobs:
           $actual = (Get-FileHash "$name.zip" -Algorithm SHA256).Hash.ToLowerInvariant()
           if ($actual -ne $expected) { throw "Windows Dawn SDK SHA-256 不匹配" }
           Expand-Archive -LiteralPath "$name.zip" -DestinationPath stage
-      - name: 下载 FlightHelmet Vulkan 参考图
-        uses: actions/download-artifact@v6
-        with:
-          name: s13-model-viewer-reference
-          path: ${{ runner.temp }}/model-viewer-reference
       - name: 构建并运行 Windows WebGPU 集成测试
         id: integration
         shell: pwsh
@@ -154,8 +148,7 @@ jobs:
             -DGRANIT_BUILD_TOOLS=ON `
             -DGRANIT_BUILD_TESTING=ON
           cmake --build $build --target granit_webgpu_plugin_smoke `
-            granit_renderer_test granit_shader_tool granit_model_viewer_offscreen_acceptance `
-            granit_model_viewer_example
+            granit_renderer_test granit_shader_tool granit_model_viewer_example
           $shaderTool = "$build/bin/granit_shader_tool.exe"
           & $shaderTool compile --tint "$stage/bin/tint.exe" `
             --input "$PWD/tests/fixtures/shaders/s10c_triangle.wgsl" --entry vs_main `
@@ -177,129 +170,6 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw "Windows WebGPU 插件 smoke test 失败" }
           & "$build/bin/granit_renderer_test.exe" "[pipeline][bind-group][smoke]"
           if ($LASTEXITCODE -ne 0) { throw "Windows 跨后端 Renderer Fixture 失败" }
-      - name: 验证 Windows Dawn FlightHelmet 截图
-        shell: pwsh
-        run: |
-          $build = "$env:RUNNER_TEMP/granit-webgpu-build"
-          $assets = "$env:RUNNER_TEMP/granit-flight-helmet"
-          $output = "$build/test-artifacts/s13-model-viewer"
-          cmake "-DGRANIT_SOURCE_DIR=$PWD" `
-            "-DGRANIT_FLIGHT_HELMET_OUTPUT_DIR=$assets" `
-            -P cmake/fetch_flight_helmet.cmake
-          New-Item -ItemType Directory -Force -Path $output | Out-Null
-          Copy-Item examples/assets/FlightHelmet.manifest.json $output
-          & "$build/bin/granit_model_viewer_offscreen_acceptance.exe" `
-            --asset "$assets/glTF/FlightHelmet.gltf" `
-            --output "$output/flight-helmet-windows-webgpu-upload-isolation.rgba" `
-            --backend=webgpu `
-            --backend-library "$build/lib/granit_backend_webgpu.dll" `
-            --msaa=1 --fxaa=off --specular-aa=off --mipmaps=off --model-textures=off `
-            --anisotropy=1 --validation
-          if ($LASTEXITCODE -ne 0) { throw "Windows Dawn 模型基础上传隔离验收失败" }
-          & "$build/bin/granit_model_viewer_offscreen_acceptance.exe" `
-            --asset "$assets/glTF/FlightHelmet.gltf" `
-            --environment "$PWD/examples/assets/StudioSmall03.grenv" `
-            --output "$output/flight-helmet-windows-webgpu-quality-low.rgba" `
-            --expected "$env:RUNNER_TEMP/model-viewer-reference/flight-helmet-vulkan-quality-low.rgba" `
-            --backend=webgpu `
-            --backend-library "$build/lib/granit_backend_webgpu.dll" `
-            --msaa=1 --fxaa=off --specular-aa=off --mipmaps=off --anisotropy=1 --validation
-          if ($LASTEXITCODE -ne 0) { throw "Windows Dawn 低质量组合验收失败" }
-          & "$build/bin/granit_model_viewer_offscreen_acceptance.exe" `
-            --asset "$assets/glTF/FlightHelmet.gltf" `
-            --environment "$PWD/examples/assets/StudioSmall03.grenv" `
-            --output "$output/flight-helmet-windows-webgpu.rgba" `
-            --expected "$env:RUNNER_TEMP/model-viewer-reference/flight-helmet-vulkan.rgba" `
-            --backend=webgpu `
-            --backend-library "$build/lib/granit_backend_webgpu.dll" `
-            --validation 2>&1 | Tee-Object "$output/acceptance.log"
-          if ($LASTEXITCODE -ne 0) { throw "Windows Dawn FlightHelmet 截图验收失败" }
-      - name: 生成 Windows Dawn 分层诊断图
-        if: ${{ failure() && steps.integration.outcome == 'success' }}
-        continue-on-error: true
-        shell: pwsh
-        run: |
-          $build = "$env:RUNNER_TEMP/granit-webgpu-build"
-          $assets = "$env:RUNNER_TEMP/granit-flight-helmet"
-          $output = "$build/test-artifacts/s13-model-viewer"
-          foreach ($mode in @("base-color", "normals", "metallic", "roughness", `
-                              "geometric-normals", "sampled-normals", "vertex-normals", `
-                              "vertex-tangents")) {
-            & "$build/bin/granit_model_viewer_offscreen_acceptance.exe" `
-              --asset "$assets/glTF/FlightHelmet.gltf" `
-              --environment "$PWD/examples/assets/StudioSmall03.grenv" `
-              --output "$output/flight-helmet-windows-webgpu-$mode.rgba" `
-              --debug-display=$mode `
-              --backend=webgpu `
-              --backend-library "$build/lib/granit_backend_webgpu.dll" `
-              --validation
-          }
-      - name: 采集 Windows Dawn 模型查看器性能
-        if: ${{ always() && steps.integration.outcome == 'success' }}
-        shell: pwsh
-        run: |
-          $build = "$env:RUNNER_TEMP/granit-webgpu-build"
-          $assets = "$env:RUNNER_TEMP/granit-flight-helmet"
-          $output = "$build/test-artifacts/s13-model-viewer/performance"
-          $executable = "$build/bin/granit_model_viewer_example.exe"
-          $plugin = "$build/lib/granit_backend_webgpu.dll"
-          New-Item -ItemType Directory -Force -Path $output | Out-Null
-          "| 平台 | 呈现模式 | UI | CPU p50 (ms) | CPU p95 (ms) | GPU p50 (ms) |" |
-            Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
-          "| --- | --- | --- | ---: | ---: | ---: |" |
-            Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
-          foreach ($mode in @("fifo", "immediate")) {
-            foreach ($ui in @("no-ui", "ui")) {
-              $report = "$output/windows-webgpu-$mode-$ui.json"
-              $log = "$output/windows-webgpu-$mode-$ui.log"
-              $arguments = @(
-                "--asset", "$assets/glTF/FlightHelmet.gltf",
-                "--environment", "$PWD/examples/assets/StudioSmall03.grenv",
-                "--backend=webgpu", "--backend-library", $plugin,
-                "--present-mode=$mode", "--profile-output", $report
-              )
-              if ($ui -eq "no-ui") { $arguments += "--no-ui" }
-              & $executable @arguments 2>&1 | Tee-Object -FilePath $log
-              if ($LASTEXITCODE -ne 0) {
-                $unsupported = Select-String -LiteralPath $log -SimpleMatch "unsupported operation" `
-                  -Quiet
-                if ($mode -eq "immediate" -and $ui -eq "no-ui" -and $unsupported) {
-                  "Immediate 呈现模式不可用" | Out-File `
-                    -FilePath "$output/windows-webgpu-immediate.unsupported.txt" -Encoding utf8
-                  "| Windows Dawn | immediate | 不可用 | - | - | - |" | Out-File `
-                    -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
-                  break
-                }
-                throw "Windows Dawn 性能采样失败：$mode/$ui"
-              }
-              $profile = Get-Content -LiteralPath $report -Raw | ConvertFrom-Json
-              if ($profile.backend -ne "webgpu" -or $profile.sample_frames -ne 1000 -or
-                  $profile.milliseconds.cpu_frame.sample_count -ne 1000) {
-                throw "Windows Dawn 性能报告不完整：$mode/$ui"
-              }
-              "| Windows Dawn | $mode | $ui | $($profile.milliseconds.cpu_frame.p50) | " +
-                "$($profile.milliseconds.cpu_frame.p95) | " +
-                "$($profile.milliseconds.gpu_frame.p50) |" | Out-File `
-                  -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
-            }
-          }
-      - name: 上传 Windows 模型查看器性能报告
-        if: ${{ always() && steps.integration.outcome == 'success' }}
-        uses: actions/upload-artifact@v6
-        with:
-          name: s13-model-viewer-windows-webgpu-performance
-          path: ${{ runner.temp }}/granit-webgpu-build/test-artifacts/s13-model-viewer/performance
-          if-no-files-found: error
-          retention-days: 7
-      - name: 上传 Windows 模型查看器失败产物
-        if: failure()
-        uses: actions/upload-artifact@v6
-        with:
-          name: s13-model-viewer-windows-webgpu
-          path: ${{ runner.temp }}/granit-webgpu-build/test-artifacts/s13-model-viewer
-          if-no-files-found: ignore
-          retention-days: 7
-
   linux:
     if: ${{ inputs.run_linux }}
     needs: model-viewer-reference

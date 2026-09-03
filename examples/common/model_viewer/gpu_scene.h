@@ -108,9 +108,7 @@ public:
 
   /** 成功后替换现有资源；失败时当前对象保持不变。 */
   [[nodiscard]] granit::result initialize(granit_renderer renderer, const gltf::scene& source,
-                                          float sampler_anisotropy = 8.0F,
-                                          bool generate_mipmaps = true,
-                                          bool upload_model_textures = true);
+                                          float sampler_anisotropy = 8.0F);
   void reset() noexcept;
 
   [[nodiscard]] bool valid() const noexcept { return renderer_ != GRANIT_NULL_HANDLE; }
@@ -152,8 +150,7 @@ public:
 
 private:
   [[nodiscard]] granit::result create(granit_renderer renderer, const gltf::scene& source,
-                                      float sampler_anisotropy, bool generate_mipmaps,
-                                      bool upload_model_textures);
+                                      float sampler_anisotropy);
 
   granit_renderer renderer_{GRANIT_NULL_HANDLE};
   gpu_scene_plan plan_;

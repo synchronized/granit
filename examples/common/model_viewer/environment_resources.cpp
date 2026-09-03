@@ -16,8 +16,7 @@ granit::result upload_cube_mip(granit::texture& texture, std::span<const std::by
       std::size_t{resolution} * resolution * rgba16_bytes_per_pixel;
   if (pixels.size() != face_size * 6)
     return granit::result::invalid_argument;
-  // Dawn D3D12 对 QueueWriteTexture 的多层 Cube 写入不稳定；逐面上传也消除了
-  // rows_per_image 与数组层跨度之间的后端差异。
+  // 逐面上传让每次写入的行跨度与层范围完全独立，避免后端解释数组层跨度的差异。
   for (std::uint32_t face = 0; face < 6; ++face) {
     const auto result = texture.write(
         pixels.subspan(std::size_t{face} * face_size, face_size),

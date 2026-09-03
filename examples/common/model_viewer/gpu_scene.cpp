@@ -482,11 +482,9 @@ gpu_scene& gpu_scene::operator=(gpu_scene&& other) noexcept {
 }
 
 granit::result gpu_scene::initialize(granit_renderer renderer, const gltf::scene& source,
-                                     float sampler_anisotropy, bool generate_mipmaps,
-                                     bool upload_model_textures) {
+                                     float sampler_anisotropy) {
   gpu_scene candidate;
-  const auto result = candidate.create(renderer, source, sampler_anisotropy, generate_mipmaps,
-                                       upload_model_textures);
+  const auto result = candidate.create(renderer, source, sampler_anisotropy);
   if (granit::failed(result))
     return result;
   *this = std::move(candidate);
@@ -617,8 +615,7 @@ granit::result gpu_scene::update_debug_display(std::uint32_t mode) noexcept {
 }
 
 granit::result gpu_scene::create(granit_renderer renderer, const gltf::scene& source,
-                                 float sampler_anisotropy, bool generate_mipmaps,
-                                 bool upload_model_textures) {
+                                 float sampler_anisotropy) {
   if (renderer == GRANIT_NULL_HANDLE)
     return granit::result::invalid_handle;
   if (!std::isfinite(sampler_anisotropy) || sampler_anisotropy < 1.0F)
@@ -667,20 +664,10 @@ granit::result gpu_scene::create(granit_renderer renderer, const gltf::scene& so
       return granit::result::invalid_argument;
     gpu_texture target;
     target.variant = variant;
-    if (!upload_model_textures) {
-      const auto pixel = variant.srgb ? std::span<const std::byte, 4>{white_pixel}
-                                      : std::span<const std::byte, 4>{normal_pixel};
-      if (const auto result = create_default_texture(renderer, uploads, variant.srgb, pixel, target);
-          granit::failed(result))
-        return result;
-      target.variant = variant;
-      textures_.push_back(std::move(target));
-      continue;
-    }
     const auto& base_mip = source_image.mips.front();
     std::vector<std::byte> generated_pixels;
     std::vector<gltf::image_mip> generated_mips;
-    const auto generate_mips = generate_mipmaps && source_image.mips.size() == 1 &&
+    const auto generate_mips = source_image.mips.size() == 1 &&
                                full_mip_count(base_mip.width, base_mip.height) > 1;
     if (generate_mips &&
         !build_rgba8_mip_chain(source_image, variant.srgb, generated_pixels, generated_mips))
