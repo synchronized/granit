@@ -538,7 +538,7 @@ granit_result webgpu_renderer_state::create_graphics_pipeline(
   return pipelines_->create_graphics_pipeline(
       pipeline, info.layout, shaders_->native_handle(info.vertex_shader),
       shaders_->native_handle(info.fragment_shader), info.vertex_buffers, color_format,
-      info.depth_stencil_format, info.depth, info.depth_bias, color_blend);
+      info.depth_stencil_format, info.primitive, info.depth, info.depth_bias, color_blend);
 }
 
 void* webgpu_renderer_state::allocate(std::uint64_t size, std::uint64_t alignment, void*) noexcept {

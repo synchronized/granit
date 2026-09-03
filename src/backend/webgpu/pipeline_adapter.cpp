@@ -169,7 +169,10 @@ granit_result webgpu_pipeline_adapter::validate_graphics_pipeline(
        desc.color_formats[0] != GRANIT_TEXTURE_FORMAT_RGBA16_FLOAT) ||
       (desc.depth_stencil_format != GRANIT_TEXTURE_FORMAT_UNDEFINED &&
        desc.depth_stencil_format != GRANIT_TEXTURE_FORMAT_D32_FLOAT) ||
-      desc.sample_count != 1) {
+      desc.sample_count != 1 ||
+      desc.primitive.topology != GRANIT_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST ||
+      desc.primitive.cull_mode == GRANIT_CULL_MODE_FRONT_AND_BACK ||
+      desc.primitive.polygon_mode != GRANIT_POLYGON_MODE_FILL) {
     return GRANIT_ERROR_UNSUPPORTED;
   }
   return GRANIT_SUCCESS;
@@ -214,8 +217,8 @@ granit_result webgpu_pipeline_adapter::create_graphics_pipeline(
     backend_graphics_pipeline_resource& resource, backend_pipeline_layout_resource& layout_resource,
     granit_backend_plugin_shader vertex_shader, granit_backend_plugin_shader fragment_shader,
     std::span<const granit_vertex_buffer_layout> vertex_buffers, granit_texture_format color_format,
-    granit_texture_format depth_stencil_format, const granit_depth_state& depth,
-    const granit_depth_bias_state* depth_bias,
+    granit_texture_format depth_stencil_format, const granit_primitive_state& primitive,
+    const granit_depth_state& depth, const granit_depth_bias_state* depth_bias,
     const granit_color_blend_state& color_blend) const noexcept {
   auto* pipeline = as_pipeline(resource);
   auto* layout = as_layout(layout_resource);
@@ -275,7 +278,17 @@ granit_result webgpu_pipeline_adapter::create_graphics_pipeline(
         to_plugin_blend_factor(color_blend.source_alpha_factor),
         to_plugin_blend_factor(color_blend.destination_alpha_factor),
         to_plugin_blend_operation(color_blend.alpha_operation),
-        to_plugin_color_write_mask(color_blend.write_mask)};
+        to_plugin_color_write_mask(color_blend.write_mask),
+        GRANIT_BACKEND_PLUGIN_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
+        primitive.front_face == GRANIT_FRONT_FACE_COUNTER_CLOCKWISE
+            ? GRANIT_BACKEND_PLUGIN_FRONT_FACE_COUNTER_CLOCKWISE
+            : GRANIT_BACKEND_PLUGIN_FRONT_FACE_CLOCKWISE,
+        primitive.cull_mode == GRANIT_CULL_MODE_NONE
+            ? GRANIT_BACKEND_PLUGIN_CULL_MODE_NONE
+            : (primitive.cull_mode == GRANIT_CULL_MODE_FRONT
+                   ? GRANIT_BACKEND_PLUGIN_CULL_MODE_FRONT
+                   : GRANIT_BACKEND_PLUGIN_CULL_MODE_BACK),
+        GRANIT_BACKEND_PLUGIN_POLYGON_MODE_FILL};
     return context_->loader->create_render_pipeline(context_->instance, &desc, &pipeline->handle_);
   } catch (const std::bad_alloc&) {
     return GRANIT_ERROR_OUT_OF_MEMORY;

@@ -59,6 +59,8 @@ typedef unsigned long long WGPUColorWriteMask;
 typedef unsigned int WGPUBlendFactor;
 typedef unsigned int WGPUBlendOperation;
 typedef unsigned int WGPUPrimitiveTopology;
+typedef unsigned int WGPUFrontFace;
+typedef unsigned int WGPUCullMode;
 typedef unsigned int WGPUVertexFormat;
 typedef unsigned int WGPUIndexFormat;
 typedef unsigned int WGPUVertexStepMode;
@@ -161,6 +163,11 @@ typedef unsigned int WGPUSurfaceGetCurrentTextureStatus;
 #define WGPUBlendOperation_Min 4
 #define WGPUBlendOperation_Max 5
 #define WGPUPrimitiveTopology_TriangleList 4
+#define WGPUFrontFace_CCW 1
+#define WGPUFrontFace_CW 2
+#define WGPUCullMode_None 1
+#define WGPUCullMode_Front 2
+#define WGPUCullMode_Back 3
 #define WGPUVertexStepMode_Vertex 1
 #define WGPUVertexStepMode_Instance 2
 #define WGPUVertexFormat_Undefined 0
@@ -536,8 +543,8 @@ typedef struct WGPUPrimitiveState {
   void* nextInChain;
   WGPUPrimitiveTopology topology;
   unsigned int stripIndexFormat;
-  unsigned int frontFace;
-  unsigned int cullMode;
+  WGPUFrontFace frontFace;
+  WGPUCullMode cullMode;
   WGPUBool unclippedDepth;
 } WGPUPrimitiveState;
 typedef struct WGPUMultisampleState {

@@ -760,9 +760,25 @@ TEST_CASE("WebGPU 插件绑定与 Pipeline 遵守依赖生命周期", "[backend]
       GRANIT_BACKEND_PLUGIN_BLEND_FACTOR_ONE,
       GRANIT_BACKEND_PLUGIN_BLEND_FACTOR_ZERO,
       GRANIT_BACKEND_PLUGIN_BLEND_OPERATION_ADD,
-      GRANIT_BACKEND_PLUGIN_COLOR_WRITE_ALL_BITS};
+      GRANIT_BACKEND_PLUGIN_COLOR_WRITE_ALL_BITS,
+      GRANIT_BACKEND_PLUGIN_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
+      GRANIT_BACKEND_PLUGIN_FRONT_FACE_COUNTER_CLOCKWISE,
+      GRANIT_BACKEND_PLUGIN_CULL_MODE_NONE,
+      GRANIT_BACKEND_PLUGIN_POLYGON_MODE_FILL};
   granit_backend_plugin_render_pipeline pipeline{};
   REQUIRE(loader.create_render_pipeline(first, &pipeline_desc, &pipeline) == GRANIT_SUCCESS);
+  pipeline_desc.front_face = GRANIT_BACKEND_PLUGIN_FRONT_FACE_CLOCKWISE;
+  pipeline_desc.cull_mode = GRANIT_BACKEND_PLUGIN_CULL_MODE_BACK;
+  granit_backend_plugin_render_pipeline culled_pipeline{};
+  REQUIRE(loader.create_render_pipeline(first, &pipeline_desc, &culled_pipeline) == GRANIT_SUCCESS);
+  REQUIRE(loader.destroy_render_pipeline(first, culled_pipeline) == GRANIT_SUCCESS);
+  pipeline_desc.cull_mode = UINT32_MAX;
+  granit_backend_plugin_render_pipeline invalid_primitive_pipeline = 123;
+  CHECK(loader.create_render_pipeline(first, &pipeline_desc, &invalid_primitive_pipeline) ==
+        GRANIT_ERROR_INVALID_ARGUMENT);
+  CHECK(invalid_primitive_pipeline == 0);
+  pipeline_desc.front_face = GRANIT_BACKEND_PLUGIN_FRONT_FACE_COUNTER_CLOCKWISE;
+  pipeline_desc.cull_mode = GRANIT_BACKEND_PLUGIN_CULL_MODE_NONE;
   pipeline_desc.blend_enabled = 1;
   pipeline_desc.source_color_factor = GRANIT_BACKEND_PLUGIN_BLEND_FACTOR_SOURCE_ALPHA;
   pipeline_desc.destination_color_factor =

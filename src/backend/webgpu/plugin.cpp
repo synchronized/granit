@@ -2008,6 +2008,18 @@ WGPUVertexFormat to_vertex_format(granit_backend_plugin_vertex_format format) no
   }
 }
 
+WGPUFrontFace to_native_front_face(granit_backend_plugin_front_face front_face) noexcept {
+  return front_face == GRANIT_BACKEND_PLUGIN_FRONT_FACE_COUNTER_CLOCKWISE ? WGPUFrontFace_CCW
+                                                                          : WGPUFrontFace_CW;
+}
+
+WGPUCullMode to_native_cull_mode(granit_backend_plugin_cull_mode cull_mode) noexcept {
+  if (cull_mode == GRANIT_BACKEND_PLUGIN_CULL_MODE_NONE)
+    return WGPUCullMode_None;
+  return cull_mode == GRANIT_BACKEND_PLUGIN_CULL_MODE_FRONT ? WGPUCullMode_Front
+                                                            : WGPUCullMode_Back;
+}
+
 std::uint32_t vertex_format_size(granit_backend_plugin_vertex_format format) noexcept {
   if (format == GRANIT_BACKEND_PLUGIN_VERTEX_FORMAT_FLOAT32 ||
       format == GRANIT_BACKEND_PLUGIN_VERTEX_FORMAT_UINT32 ||
@@ -2057,7 +2069,14 @@ create_render_pipeline(granit_backend_plugin_instance instance,
       (desc->depth_stencil_format == 0 &&
        (desc->depth_test_enabled != 0 || desc->depth_write_enabled != 0)) ||
       (desc->depth_test_enabled != 0 &&
-       to_native_compare_operation(desc->depth_compare) == WGPUCompareFunction_Undefined))
+       to_native_compare_operation(desc->depth_compare) == WGPUCompareFunction_Undefined) ||
+      desc->topology != GRANIT_BACKEND_PLUGIN_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST ||
+      (desc->front_face != GRANIT_BACKEND_PLUGIN_FRONT_FACE_COUNTER_CLOCKWISE &&
+       desc->front_face != GRANIT_BACKEND_PLUGIN_FRONT_FACE_CLOCKWISE) ||
+      (desc->cull_mode != GRANIT_BACKEND_PLUGIN_CULL_MODE_NONE &&
+       desc->cull_mode != GRANIT_BACKEND_PLUGIN_CULL_MODE_FRONT &&
+       desc->cull_mode != GRANIT_BACKEND_PLUGIN_CULL_MODE_BACK) ||
+      desc->polygon_mode != GRANIT_BACKEND_PLUGIN_POLYGON_MODE_FILL)
     return GRANIT_ERROR_INVALID_ARGUMENT;
   const std::scoped_lock lock{instances_mutex};
   const auto found = instances.find(instance);
@@ -2155,6 +2174,8 @@ create_render_pipeline(granit_backend_plugin_instance instance,
   descriptor.vertex.bufferCount = vertex_buffers.size();
   descriptor.vertex.buffers = vertex_buffers.data();
   descriptor.primitive.topology = WGPUPrimitiveTopology_TriangleList;
+  descriptor.primitive.frontFace = to_native_front_face(desc->front_face);
+  descriptor.primitive.cullMode = to_native_cull_mode(desc->cull_mode);
   descriptor.multisample.count = 1;
   descriptor.multisample.mask = UINT32_MAX;
   descriptor.fragment = &fragment;

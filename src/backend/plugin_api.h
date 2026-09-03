@@ -9,7 +9,7 @@
 #include <granit/core/diagnostic.h>
 #include <granit/core/result.h>
 
-#define GRANIT_BACKEND_PLUGIN_ABI_VERSION UINT32_C(23)
+#define GRANIT_BACKEND_PLUGIN_ABI_VERSION UINT32_C(24)
 #define GRANIT_BACKEND_PLUGIN_KIND_WEBGPU UINT32_C(1)
 #define GRANIT_BACKEND_PLUGIN_QUERY_SYMBOL "granit_backend_plugin_query"
 #define GRANIT_BACKEND_PLUGIN_SURFACE_TYPE_WIN32_BIT UINT32_C(0x00000001)
@@ -318,6 +318,21 @@ typedef uint32_t granit_backend_plugin_blend_operation;
   (GRANIT_BACKEND_PLUGIN_COLOR_WRITE_RED_BIT | GRANIT_BACKEND_PLUGIN_COLOR_WRITE_GREEN_BIT |       \
    GRANIT_BACKEND_PLUGIN_COLOR_WRITE_BLUE_BIT | GRANIT_BACKEND_PLUGIN_COLOR_WRITE_ALPHA_BIT)
 
+typedef uint32_t granit_backend_plugin_primitive_topology;
+#define GRANIT_BACKEND_PLUGIN_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST UINT32_C(1)
+
+typedef uint32_t granit_backend_plugin_front_face;
+#define GRANIT_BACKEND_PLUGIN_FRONT_FACE_COUNTER_CLOCKWISE UINT32_C(1)
+#define GRANIT_BACKEND_PLUGIN_FRONT_FACE_CLOCKWISE UINT32_C(2)
+
+typedef uint32_t granit_backend_plugin_cull_mode;
+#define GRANIT_BACKEND_PLUGIN_CULL_MODE_NONE UINT32_C(1)
+#define GRANIT_BACKEND_PLUGIN_CULL_MODE_FRONT UINT32_C(2)
+#define GRANIT_BACKEND_PLUGIN_CULL_MODE_BACK UINT32_C(3)
+
+typedef uint32_t granit_backend_plugin_polygon_mode;
+#define GRANIT_BACKEND_PLUGIN_POLYGON_MODE_FILL UINT32_C(1)
+
 typedef struct granit_backend_plugin_render_pipeline_desc {
   uint32_t struct_size;
   uint32_t reserved;
@@ -342,6 +357,10 @@ typedef struct granit_backend_plugin_render_pipeline_desc {
   granit_backend_plugin_blend_factor destination_alpha_factor;
   granit_backend_plugin_blend_operation alpha_operation;
   uint32_t color_write_mask;
+  granit_backend_plugin_primitive_topology topology;
+  granit_backend_plugin_front_face front_face;
+  granit_backend_plugin_cull_mode cull_mode;
+  granit_backend_plugin_polygon_mode polygon_mode;
 } granit_backend_plugin_render_pipeline_desc;
 
 /** Canvas selector 仅在调用期间有效；插件必须复制后续需要的内容。 */
