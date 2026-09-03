@@ -632,15 +632,27 @@ granit::result gpu_scene::create(granit_renderer renderer, const gltf::scene& so
   samplers_.reserve(plan_.samplers.size());
   for (const auto& key : plan_.samplers) {
     samplers_.emplace_back();
-    if (const auto result =
-            samplers_.back().initialize(renderer, {.mag_filter = key.mag_filter,
-                                                   .min_filter = key.min_filter,
-                                                   .mip_filter = key.mip_filter,
-                                                   .address_u = key.address_u,
-                                                   .address_v = key.address_v,
-                                                   .address_w = granit::address_mode::repeat,
-                                                   .max_lod = 1000.0F});
-        granit::failed(result))
+    const bool use_anisotropy = key.mag_filter == granit::filter::linear &&
+                                key.min_filter == granit::filter::linear &&
+                                key.mip_filter == granit::mipmap_filter::linear;
+    const granit::sampler_desc desc{.mag_filter = key.mag_filter,
+                                    .min_filter = key.min_filter,
+                                    .mip_filter = key.mip_filter,
+                                    .address_u = key.address_u,
+                                    .address_v = key.address_v,
+                                    .address_w = granit::address_mode::repeat,
+                                    .anisotropy_enabled = use_anisotropy,
+                                    .max_anisotropy = use_anisotropy ? 8.0F : 1.0F,
+                                    .max_lod = 1000.0F};
+    auto result = samplers_.back().initialize(renderer, desc);
+    // 各向异性是画质增强项；设备限制较低时保留三线性采样，不阻止场景加载。
+    if (result == granit::result::unsupported && use_anisotropy) {
+      auto fallback = desc;
+      fallback.anisotropy_enabled = false;
+      fallback.max_anisotropy = 1.0F;
+      result = samplers_.back().initialize(renderer, fallback);
+    }
+    if (granit::failed(result))
       return result;
   }
 
