@@ -670,8 +670,7 @@ render_view(pipeline_state& state, const granit_render_pipeline_render_desc& des
                                                     state.default_ibl.prefiltered_environment(),
                                                 .brdf_lut = state.default_ibl.brdf_lut()};
   granit::lighting::ibl_sampling_constants ibl_constants{.intensity = 0.0F};
-  if (desc.struct_size >= GRANIT_RENDER_PIPELINE_RENDER_DESC_VERSION_3_SIZE &&
-      desc.environment != nullptr) {
+  if (desc.environment != nullptr) {
     const auto& environment = *desc.environment;
     ibl_views = {.irradiance = environment.irradiance,
                  .prefiltered_environment = environment.prefiltered_environment,
@@ -843,10 +842,7 @@ render_view(pipeline_state& state, const granit_render_pipeline_render_desc& des
             use_msaa ? context.texture_view(hdr) : GRANIT_NULL_HANDLE, context.texture_view(depth),
             shadow ? context.texture_view(*shadow) : GRANIT_NULL_HANDLE, render_output.width,
             render_output.height, configured_frame, objects, draw_bindings, lights,
-            shadow_constants, ibl_views, ibl_constants, use_uniform_arena,
-            desc.struct_size >= GRANIT_RENDER_PIPELINE_RENDER_DESC_VERSION_2_SIZE
-                ? desc.clear_color
-                : granit_clear_color_value{0.0F, 0.0F, 0.0F, 1.0F});
+            shadow_constants, ibl_views, ibl_constants, use_uniform_arena, desc.clear_color);
         return opaque_result;
       }
       const granit_render_pipeline_record_info info{
@@ -1058,7 +1054,7 @@ extern "C" granit_result granit_render_pipeline_create(granit_renderer renderer,
   if (pipeline == nullptr)
     return GRANIT_ERROR_INVALID_ARGUMENT;
   *pipeline = GRANIT_NULL_HANDLE;
-  if (desc == nullptr || desc->struct_size < GRANIT_RENDER_PIPELINE_DESC_VERSION_2_SIZE ||
+  if (desc == nullptr || desc->struct_size < GRANIT_RENDER_PIPELINE_DESC_VERSION_1_SIZE ||
       desc->reserved != 0 || desc->enable_fxaa > 1 || desc->enable_specular_aa > 1) {
     return GRANIT_ERROR_INVALID_ARGUMENT;
   }
@@ -1163,10 +1159,7 @@ granit_render_pipeline_render(granit_renderer renderer, granit_render_pipeline p
       (desc->output_count != 0 &&
        (desc->output_count != desc->view_count || desc->outputs == nullptr)) ||
       (desc->draw_binding_count != 0 && desc->draw_bindings == nullptr) ||
-      (desc->struct_size >= GRANIT_RENDER_PIPELINE_RENDER_DESC_VERSION_2_SIZE &&
-       !valid_clear_color(desc->clear_color)) ||
-      (desc->struct_size >= GRANIT_RENDER_PIPELINE_RENDER_DESC_VERSION_3_SIZE &&
-       !valid_environment(desc->environment))) {
+      !valid_clear_color(desc->clear_color) || !valid_environment(desc->environment)) {
     return GRANIT_ERROR_INVALID_ARGUMENT;
   }
   const granit_render_pipeline_output legacy_output{sizeof(granit_render_pipeline_output),

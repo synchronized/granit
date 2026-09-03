@@ -60,10 +60,8 @@ granit_result renderer_registry::get_limits(granit_renderer renderer,
   limits.reserved = 0;
   limits.uniform_buffer_offset_alignment = capabilities.uniform_buffer_offset_alignment;
   limits.max_uniform_buffer_binding_size = capabilities.max_uniform_buffer_binding_size;
-  if (limits.struct_size >= GRANIT_RENDERER_LIMITS_VERSION_2_SIZE) {
-    limits.framebuffer_sample_counts = capabilities.framebuffer_sample_counts;
-    limits.max_sampler_anisotropy = capabilities.max_sampler_anisotropy;
-  }
+  limits.framebuffer_sample_counts = capabilities.framebuffer_sample_counts;
+  limits.max_sampler_anisotropy = capabilities.max_sampler_anisotropy;
   return GRANIT_SUCCESS;
 }
 

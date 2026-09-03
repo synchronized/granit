@@ -105,7 +105,7 @@ typedef struct granit_render_pipeline_desc {
   uint32_t reserved_2;
 } granit_render_pipeline_desc;
 
-#define GRANIT_RENDER_PIPELINE_DESC_VERSION_2_SIZE                                                 \
+#define GRANIT_RENDER_PIPELINE_DESC_VERSION_1_SIZE                                                 \
   ((uint32_t)(offsetof(granit_render_pipeline_desc, reserved_2) + sizeof(uint32_t)))
 
 #define GRANIT_RENDER_PIPELINE_DESC_INIT                                                           \
@@ -169,7 +169,7 @@ typedef struct granit_render_pipeline_render_desc {
   granit_canvas_draw_list canvas;
   /** 单 View 简写路径的可选世界 Debug Draw List；多 View 使用各 output 的 debug_draw。 */
   granit_debug_draw_list debug_draw;
-  /** HDR 场景背景清屏色；旧版描述保持不透明黑色。 */
+  /** HDR 场景背景清屏色。 */
   granit_clear_color_value clear_color;
   /** 可选环境光；为空时关闭 IBL，非空资源须保持至下一次更换环境或销毁 Pipeline。 */
   const struct granit_render_pipeline_environment* environment;
@@ -202,11 +202,6 @@ typedef struct granit_render_pipeline_environment {
    UINT32_C(0)}
 
 #define GRANIT_RENDER_PIPELINE_RENDER_DESC_VERSION_1_SIZE                                          \
-  ((uint32_t)offsetof(granit_render_pipeline_render_desc, clear_color))
-#define GRANIT_RENDER_PIPELINE_RENDER_DESC_VERSION_2_SIZE                                          \
-  ((uint32_t)(offsetof(granit_render_pipeline_render_desc, clear_color) +                          \
-              sizeof(granit_clear_color_value)))
-#define GRANIT_RENDER_PIPELINE_RENDER_DESC_VERSION_3_SIZE                                          \
   ((uint32_t)(offsetof(granit_render_pipeline_render_desc, environment) +                          \
               sizeof(const granit_render_pipeline_environment*)))
 

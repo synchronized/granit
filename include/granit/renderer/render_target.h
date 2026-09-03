@@ -51,8 +51,7 @@ typedef struct granit_color_attachment_desc {
   /** 可选的单采样解析目标；仅用于多采样颜色附件。 */
   granit_texture_view resolve_view;
 } granit_color_attachment_desc;
-#define GRANIT_COLOR_ATTACHMENT_DESC_VERSION_1_SIZE UINT32_C(48)
-#define GRANIT_COLOR_ATTACHMENT_DESC_VERSION_2_SIZE                                                \
+#define GRANIT_COLOR_ATTACHMENT_DESC_VERSION_1_SIZE                                                \
   ((uint32_t)(offsetof(granit_color_attachment_desc, resolve_view) + sizeof(granit_texture_view)))
 #define GRANIT_COLOR_ATTACHMENT_DESC_INIT                                                          \
   {(uint32_t)sizeof(granit_color_attachment_desc),                                                 \

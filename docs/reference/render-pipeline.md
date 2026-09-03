@@ -69,14 +69,14 @@ Overlay 阶段具有以下固定语义：
 ## 场景背景
 
 `granit_render_pipeline_render_desc::clear_color` 设置 HDR 场景目标的背景清屏色，随后与场景一起经过
-曝光和 Tone Mapping。Version 1 描述以及未显式赋值的 Version 2 描述保持不透明黑色，因此已有
-调用不改变行为。颜色分量必须为有限值；多 View 简写和输出数组共用本次渲染描述中的背景色。
+曝光和 Tone Mapping。初始化宏默认使用不透明黑色；颜色分量必须为有限值。多 View 简写和输出
+数组共用本次渲染描述中的背景色。
 
 该字段只负责稳定纯色背景，不代表天空盒或 HDRI 本身。
 
 ## 环境光
 
-Version 3 渲染描述可以通过 `environment` 借用一组预处理环境资源：漫反射 Irradiance Cube、
+渲染描述可以通过 `environment` 借用一组预处理环境资源：漫反射 Irradiance Cube、
 带 Mip 的 GGX 预过滤 Cube 和二维 BRDF LUT。三个 Texture View 必须同时非零、属于当前 Renderer，
 并保持有效直到下一次渲染改用不同环境或 Pipeline 被销毁；Pipeline 不接管其所有权。
 `rotation_radians` 必须为有限值，

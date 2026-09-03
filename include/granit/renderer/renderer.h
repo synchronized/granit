@@ -66,8 +66,6 @@ typedef struct granit_renderer_limits {
 } granit_renderer_limits;
 
 #define GRANIT_RENDERER_LIMITS_VERSION_1_SIZE                                                      \
-  ((uint32_t)(offsetof(granit_renderer_limits, max_uniform_buffer_binding_size) + sizeof(uint64_t)))
-#define GRANIT_RENDERER_LIMITS_VERSION_2_SIZE                                                      \
   ((uint32_t)(offsetof(granit_renderer_limits, max_sampler_anisotropy) + sizeof(float)))
 
 #define GRANIT_RENDERER_LIMITS_INIT                                                                \

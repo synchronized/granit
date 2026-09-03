@@ -331,10 +331,7 @@ granit_result renderer_registry::begin_rendering(granit_renderer renderer,
       if (!view)
         return GRANIT_ERROR_INVALID_HANDLE;
       views.push_back(std::move(view));
-      const auto resolve_view =
-          desc.color_attachments[index].struct_size >= GRANIT_COLOR_ATTACHMENT_DESC_VERSION_2_SIZE
-              ? desc.color_attachments[index].resolve_view
-              : GRANIT_NULL_HANDLE;
+      const auto resolve_view = desc.color_attachments[index].resolve_view;
       if (resolve_view != GRANIT_NULL_HANDLE) {
         resolve_views[index] = acquire_view(resolve_view);
         if (!resolve_views[index])

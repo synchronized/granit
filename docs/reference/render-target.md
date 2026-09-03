@@ -38,8 +38,8 @@ granit_depth_stencil_attachment_desc depth =
 depth.view = depth_view;
 ```
 
-两个描述的第一版 ABI 大小均为 48 字节；颜色附件 Version 2 在结构尾部追加
-`resolve_view`。调用者必须使用初始化宏或正确填写 `struct_size`，保留字段必须为零。
+调用者必须使用当前初始化宏或正确填写完整 `struct_size`，保留字段必须为零。颜色附件的
+`resolve_view` 是当前描述的一部分；项目尚未发布，不保留缺少该字段的旧尺寸分支。
 
 ## Load 与 Store
 

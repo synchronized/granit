@@ -11,14 +11,14 @@ typedef char
                                             ? 1
                                             : -1];
 typedef char granit_pipeline_desc_v1_size
-    [sizeof(granit_render_pipeline_desc) == GRANIT_RENDER_PIPELINE_DESC_VERSION_2_SIZE ? 1 : -1];
+    [sizeof(granit_render_pipeline_desc) == GRANIT_RENDER_PIPELINE_DESC_VERSION_1_SIZE ? 1 : -1];
 typedef char granit_pipeline_output_v1_size[sizeof(granit_render_pipeline_output) ==
                                                     GRANIT_RENDER_PIPELINE_OUTPUT_VERSION_1_SIZE
                                                 ? 1
                                                 : -1];
 typedef char
-    granit_pipeline_render_desc_v3_size[sizeof(granit_render_pipeline_render_desc) ==
-                                                GRANIT_RENDER_PIPELINE_RENDER_DESC_VERSION_3_SIZE
+    granit_pipeline_render_desc_v1_size[sizeof(granit_render_pipeline_render_desc) ==
+                                                GRANIT_RENDER_PIPELINE_RENDER_DESC_VERSION_1_SIZE
                                             ? 1
                                             : -1];
 typedef char
