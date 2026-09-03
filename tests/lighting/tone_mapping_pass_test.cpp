@@ -28,12 +28,13 @@ TEST_CASE("HDR Attachment使用RGBA16_FLOAT并支持采样") {
 
 TEST_CASE("Tone Mapping Pass声明HDR读和最终目标写") {
   granit::render_graph::serial_graph graph;
-  const auto hdr = graph.create_transient_texture(
-      granit::lighting::make_hdr_attachment_desc(4, 4), "HDR Color");
+  const auto hdr =
+      graph.create_transient_texture(granit::lighting::make_hdr_attachment_desc(4, 4), "HDR Color");
   const auto output = graph.import_texture_view(101, true, "Output");
-  REQUIRE(graph.add_pass({.accesses = {{hdr, granit::render_graph::access_type::write}}},
-                         [](granit::render_graph::pass_context&) { return GRANIT_SUCCESS; },
-                         "HDR Producer") != granit::render_graph::invalid_pass_id);
+  REQUIRE(graph.add_pass(
+              {.accesses = {{hdr, granit::render_graph::access_type::write}}},
+              [](granit::render_graph::pass_context&) { return GRANIT_SUCCESS; },
+              "HDR Producer") != granit::render_graph::invalid_pass_id);
   bool called = false;
   const auto pass = granit::lighting::add_tone_mapping_graph_pass(
       graph,
@@ -42,7 +43,8 @@ TEST_CASE("Tone Mapping Pass声明HDR读和最终目标写") {
        .output_format = granit::texture_format::rgba8_unorm,
        .tone_mapping = {.exposure_ev = 1.0F,
                         .output_transfer =
-                            granit::lighting::tone_mapping_output_transfer::shader_srgb}},
+                            granit::lighting::tone_mapping_output_transfer::shader_srgb,
+                        .enable_fxaa = false}},
       [&](granit::render_graph::pass_context& context,
           const granit::lighting::tone_mapping_constants& constants) {
         called = true;
@@ -50,6 +52,7 @@ TEST_CASE("Tone Mapping Pass声明HDR读和最终目标写") {
         CHECK(context.texture_view(output) == 101);
         CHECK(constants.exposure_scale == 2.0F);
         CHECK(constants.encode_srgb == 1);
+        CHECK(constants.enable_fxaa == 0);
         return GRANIT_SUCCESS;
       });
   REQUIRE(pass != granit::render_graph::invalid_pass_id);

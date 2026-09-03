@@ -17,7 +17,8 @@ bool valid(const tone_mapping_constants& value) noexcept {
   return std::isfinite(value.exposure_scale) && value.exposure_scale > 0.0F &&
          value.encode_srgb <= 1 && std::isfinite(value.inverse_width) &&
          std::isfinite(value.inverse_height) && value.inverse_width >= 0.0F &&
-         value.inverse_height >= 0.0F;
+         value.inverse_height >= 0.0F && value.enable_fxaa <= 1 && value.reserved[0] == 0 &&
+         value.reserved[1] == 0 && value.reserved[2] == 0;
 }
 
 bool compatible_output(granit::texture_format format,
@@ -29,10 +30,11 @@ bool compatible_output(granit::texture_format format,
 
 } // namespace
 
-granit_result tone_mapping_pipeline_resources::initialize(
-    granit_renderer renderer, granit::texture_format output_format,
-    std::span<const std::byte> vertex_code, std::span<const std::byte> fragment_code,
-    std::string_view wgsl) noexcept {
+granit_result tone_mapping_pipeline_resources::initialize(granit_renderer renderer,
+                                                          granit::texture_format output_format,
+                                                          std::span<const std::byte> vertex_code,
+                                                          std::span<const std::byte> fragment_code,
+                                                          std::string_view wgsl) noexcept {
   if (renderer == GRANIT_NULL_HANDLE || initialized() ||
       output_format == granit::texture_format::undefined || vertex_code.empty() ||
       fragment_code.empty()) {
@@ -67,22 +69,21 @@ granit_result tone_mapping_pipeline_resources::initialize(
                  ? vertex_shader_.initialize(renderer, {.stage = granit::shader_stage::vertex,
                                                         .code = vertex_code,
                                                         .entry_point = "vertex_main"})
-                 : vertex_shader_.initialize_asset(
-                       renderer, {.stage = granit::shader_stage::vertex,
-                                  .spirv = vertex_code,
-                                  .wgsl = wgsl,
-                                  .entry_point = "vertex_main"});
+                 : vertex_shader_.initialize_asset(renderer, {.stage = granit::shader_stage::vertex,
+                                                              .spirv = vertex_code,
+                                                              .wgsl = wgsl,
+                                                              .entry_point = "vertex_main"});
   }
   if (granit::succeeded(result)) {
-    result = wgsl.empty()
-                 ? fragment_shader_.initialize(renderer, {.stage = granit::shader_stage::fragment,
-                                                          .code = fragment_code,
-                                                          .entry_point = "fragment_main"})
-                 : fragment_shader_.initialize_asset(
-                       renderer, {.stage = granit::shader_stage::fragment,
-                                  .spirv = fragment_code,
-                                  .wgsl = wgsl,
-                                  .entry_point = "fragment_main"});
+    result =
+        wgsl.empty()
+            ? fragment_shader_.initialize(renderer, {.stage = granit::shader_stage::fragment,
+                                                     .code = fragment_code,
+                                                     .entry_point = "fragment_main"})
+            : fragment_shader_.initialize_asset(renderer, {.stage = granit::shader_stage::fragment,
+                                                           .spirv = fragment_code,
+                                                           .wgsl = wgsl,
+                                                           .entry_point = "fragment_main"});
   }
   if (granit::succeeded(result)) {
     result = pipeline_.initialize(

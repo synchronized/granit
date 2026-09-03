@@ -261,6 +261,18 @@ TEST_CASE("RenderPipeline component把空Renderer归类为无效句柄") {
         GRANIT_ERROR_INVALID_ARGUMENT);
   CHECK(pipeline == GRANIT_NULL_HANDLE);
   desc.sample_count = GRANIT_SAMPLE_COUNT_1;
+  desc.enable_fxaa = 2;
+  pipeline = UINT64_C(1);
+  CHECK(granit_render_pipeline_create(GRANIT_NULL_HANDLE, &desc, &pipeline) ==
+        GRANIT_ERROR_INVALID_ARGUMENT);
+  CHECK(pipeline == GRANIT_NULL_HANDLE);
+  desc.enable_fxaa = 1;
+  desc.enable_specular_aa = 2;
+  pipeline = UINT64_C(1);
+  CHECK(granit_render_pipeline_create(GRANIT_NULL_HANDLE, &desc, &pipeline) ==
+        GRANIT_ERROR_INVALID_ARGUMENT);
+  CHECK(pipeline == GRANIT_NULL_HANDLE);
+  desc.enable_specular_aa = 1;
   pipeline = UINT64_C(1);
   CHECK(granit_render_pipeline_create(GRANIT_NULL_HANDLE, &desc, &pipeline) ==
         GRANIT_ERROR_INVALID_HANDLE);

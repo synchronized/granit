@@ -16,9 +16,14 @@ Render Pipeline 是可选的高级参考渲染入口。当前实现组织 Direct
 创建描述使用 `GRANIT_RENDER_PIPELINE_DESC_INIT` 初始化。未提供录制回调时使用完整自动路径；
 提供回调时可以覆盖 Shadow 和 Opaque 阶段的 Draw 录制，并在 Tone Mapping 后接收 Overlay 阶段。
 
-Version 2 创建描述的 `sample_count` 控制自动 PBR 路径的采样数，当前接受 1 或 4。选择 4 时，
+创建描述的 `sample_count` 控制自动 PBR 路径的采样数，当前接受 1 或 4。选择 4 时，
 HDR 颜色和深度先写入四倍多采样附件，颜色在 PBR 阶段结束时解析到单采样 HDR 目标，再进入
 Tone Mapping。自定义录制回调仍使用单采样契约，避免回调在未声明支持时收到多采样目标。
+
+`enable_fxaa` 和 `enable_specular_aa` 分别控制 Tone Mapping 阶段的 FXAA 与自动 PBR 路径的
+镜面高光抗锯齿，初始化宏默认都启用。两个字段只接受 0 或 1；它们通过后端无关的每帧常量生效，
+不会生成四种 Shader/Pipeline 组合。FXAA 位于场景 Tone Mapping 中，后续 UI 和 Overlay 不会被
+模糊；Specular AA 关闭时使用材质原始感知粗糙度。
 
 ## 每帧输入
 
@@ -116,6 +121,7 @@ Upload 环形分配。
 - 默认 IBL 占位资源由 Pipeline 内部持有；调用者可按次覆盖预处理环境资源。
 - 自动 PBR 路径支持 1× 或 4× MSAA；MSAA 只处理几何边缘，不替代纹理 Mipmap、各向异性过滤
   或 Shader 内的高光抗锯齿。
+- FXAA 和 Specular AA 可以独立关闭；关闭仅改变相应高级渲染策略，不改变底层 Renderer 能力。
 - 同一 Pipeline 不支持并发渲染，多 View 仍按独立输出顺序执行。
 
 更底层的自定义渲染流程可直接使用 [Command Recorder](command-recorder.md) 和

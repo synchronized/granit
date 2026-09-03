@@ -82,6 +82,8 @@ struct pipeline_state {
   bool metrics_available = false;
   float shadow_half_extent = 20.0F;
   granit_sample_count sample_count = GRANIT_SAMPLE_COUNT_1;
+  bool enable_fxaa = true;
+  bool enable_specular_aa = true;
   bool alive = true;
 };
 
@@ -794,6 +796,7 @@ render_view(pipeline_state& state, const granit_render_pipeline_render_desc& des
   graph_desc.tone_mapping.output = output;
   graph_desc.tone_mapping.output_format = static_cast<granit::texture_format>(render_output.format);
   graph_desc.tone_mapping.tone_mapping.exposure_ev = desc.exposure_ev;
+  graph_desc.tone_mapping.tone_mapping.enable_fxaa = state.enable_fxaa;
   graph_desc.tone_mapping.tone_mapping.output_transfer =
       is_srgb_output(render_output.format)
           ? granit::lighting::tone_mapping_output_transfer::attachment_srgb
@@ -826,6 +829,8 @@ render_view(pipeline_state& state, const granit_render_pipeline_render_desc& des
   callbacks.pbr = [&](auto& context, const auto& frame, auto objects) {
     return measure(context.recorder(), 2, [&]() {
       if (state.record == nullptr) {
+        auto configured_frame = frame;
+        configured_frame.render_options[0] = state.enable_specular_aa ? UINT32_C(1) : UINT32_C(0);
         granit::lighting::packed_view_lights lights;
         granit::lighting::light_requirements requirements;
         if (granit::lighting::pack_view_lights(snapshot, view_index, automatic_light_limits, lights,
@@ -837,8 +842,8 @@ render_view(pipeline_state& state, const granit_render_pipeline_render_desc& des
             state, context.recorder(), context.texture_view(use_msaa ? msaa_color : hdr),
             use_msaa ? context.texture_view(hdr) : GRANIT_NULL_HANDLE, context.texture_view(depth),
             shadow ? context.texture_view(*shadow) : GRANIT_NULL_HANDLE, render_output.width,
-            render_output.height, frame, objects, draw_bindings, lights, shadow_constants,
-            ibl_views, ibl_constants, use_uniform_arena,
+            render_output.height, configured_frame, objects, draw_bindings, lights,
+            shadow_constants, ibl_views, ibl_constants, use_uniform_arena,
             desc.struct_size >= GRANIT_RENDER_PIPELINE_RENDER_DESC_VERSION_2_SIZE
                 ? desc.clear_color
                 : granit_clear_color_value{0.0F, 0.0F, 0.0F, 1.0F});
@@ -1053,14 +1058,13 @@ extern "C" granit_result granit_render_pipeline_create(granit_renderer renderer,
   if (pipeline == nullptr)
     return GRANIT_ERROR_INVALID_ARGUMENT;
   *pipeline = GRANIT_NULL_HANDLE;
-  if (desc == nullptr || desc->struct_size < GRANIT_RENDER_PIPELINE_DESC_VERSION_1_SIZE ||
-      desc->reserved != 0) {
+  if (desc == nullptr || desc->struct_size < GRANIT_RENDER_PIPELINE_DESC_VERSION_2_SIZE ||
+      desc->reserved != 0 || desc->enable_fxaa > 1 || desc->enable_specular_aa > 1) {
     return GRANIT_ERROR_INVALID_ARGUMENT;
   }
-  if (desc->struct_size >= GRANIT_RENDER_PIPELINE_DESC_VERSION_2_SIZE &&
-      ((desc->sample_count != GRANIT_SAMPLE_COUNT_1 &&
-        desc->sample_count != GRANIT_SAMPLE_COUNT_4) ||
-       desc->reserved_2 != 0)) {
+  if ((desc->sample_count != GRANIT_SAMPLE_COUNT_1 &&
+       desc->sample_count != GRANIT_SAMPLE_COUNT_4) ||
+      desc->reserved_2 != 0) {
     return GRANIT_ERROR_INVALID_ARGUMENT;
   }
   const auto renderer_result = validate_renderer(renderer);
@@ -1071,8 +1075,9 @@ extern "C" granit_result granit_render_pipeline_create(granit_renderer renderer,
     state->renderer = renderer;
     state->record = desc->record;
     state->user_data = desc->user_data;
-    if (desc->struct_size >= GRANIT_RENDER_PIPELINE_DESC_VERSION_2_SIZE)
-      state->sample_count = desc->sample_count;
+    state->sample_count = desc->sample_count;
+    state->enable_fxaa = desc->enable_fxaa != 0;
+    state->enable_specular_aa = desc->enable_specular_aa != 0;
     const auto arena_result = state->uniform_arena.initialize(renderer);
     if (arena_result != GRANIT_SUCCESS)
       return arena_result;

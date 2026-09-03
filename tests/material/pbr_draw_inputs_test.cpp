@@ -28,6 +28,7 @@ TEST_CASE("PBR 显式 Draw 输入规范化方向光并打包固定布局") {
   CHECK(frame.camera_position == std::array{1.0F, 2.0F, 3.0F, 0.0F});
   CHECK(frame.direction_to_light == std::array{0.0F, 0.0F, 1.0F, 0.0F});
   CHECK(frame.light_radiance == std::array{4.0F, 3.0F, 2.0F, 0.0F});
+  CHECK(frame.render_options == std::array<std::uint32_t, 4>{0, 0, 0, 0});
   CHECK(object_constants.object_id == std::array<std::uint32_t, 4>{42, 0, 0, 0});
 }
 

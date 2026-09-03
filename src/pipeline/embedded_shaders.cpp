@@ -22,6 +22,10 @@ struct ToneMappingConstants {
   encode_srgb: u32,
   inverse_width: f32,
   inverse_height: f32,
+  enable_fxaa: u32,
+  reserved_0: u32,
+  reserved_1: u32,
+  reserved_2: u32,
 };
 
 struct VertexOutput {
@@ -75,7 +79,8 @@ fn fragment_main(input: VertexOutput) -> @location(0) vec4<f32> {
   let filtered = (north + south + west + east) * 0.25;
   let threshold = max(0.0312, maximum_luma * 0.125);
   let blend = 0.5 * clamp((contrast - threshold) / max(contrast, 0.0001), 0.0, 1.0);
-  var color = aces_fitted(mix(center, filtered, blend) * tone.exposure_scale);
+  let antialiased = select(center, mix(center, filtered, blend), tone.enable_fxaa != 0u);
+  var color = aces_fitted(antialiased * tone.exposure_scale);
   if (tone.encode_srgb != 0u) {
     color = linear_to_srgb(color);
   }
@@ -161,9 +166,7 @@ std::span<const std::byte> shadow_depth_fragment_shader() noexcept {
 
 std::string_view shadow_depth_vertex_wgsl() noexcept { return shadow_depth_vertex_wgsl_source; }
 
-std::string_view shadow_depth_fragment_wgsl() noexcept {
-  return shadow_depth_fragment_wgsl_source;
-}
+std::string_view shadow_depth_fragment_wgsl() noexcept { return shadow_depth_fragment_wgsl_source; }
 
 std::span<const std::byte> canvas_material_package() noexcept {
   return {reinterpret_cast<const std::byte*>(canvas_material_bytes), sizeof(canvas_material_bytes)};

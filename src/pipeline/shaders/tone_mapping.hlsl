@@ -11,6 +11,8 @@ struct vertex_output {
   uint encode_srgb;
   float inverse_width;
   float inverse_height;
+  uint enable_fxaa;
+  uint3 reserved;
 };
 [[vk::binding(1, 0)]] Texture2D<float4> hdr_color;
 [[vk::binding(2, 0)]] SamplerState hdr_sampler;
@@ -53,7 +55,8 @@ float4 fragment_main(vertex_output input) : SV_Target0 {
   const float3 filtered = (north + south + west + east) * 0.25;
   const float threshold = max(0.0312, maximum_luma * 0.125);
   const float blend = 0.5 * saturate((contrast - threshold) / max(contrast, 0.0001));
-  float3 color = aces_fitted(lerp(center, filtered, blend) * exposure_scale);
+  const float3 antialiased = enable_fxaa != 0 ? lerp(center, filtered, blend) : center;
+  float3 color = aces_fitted(antialiased * exposure_scale);
   if (encode_srgb != 0)
     color = linear_to_srgb(color);
   return float4(color, 1.0);

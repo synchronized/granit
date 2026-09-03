@@ -8,6 +8,7 @@ struct FrameConstants {
   camera_position: vec4f,
   direction_to_light: vec4f,
   light_radiance: vec4f,
+  render_options: vec4u,
 }
 
 struct MaterialConstants {
@@ -99,12 +100,15 @@ fn fragment_main(input: FragmentInput) -> @location(0) vec4f {
                                      input.texture_coordinate).xyz * 2.0 - vec3f(1.0);
   let scaled_normal = vec3f(sampled_normal.xy * material.normal_scale, sampled_normal.z);
   let normal = normalize(mat3x3<f32>(tangent, bitangent, geometric_normal) * scaled_normal);
-  let normal_dx = dpdx(normal);
-  let normal_dy = dpdy(normal);
-  let normal_variance = max(dot(normal_dx, normal_dx), dot(normal_dy, normal_dy));
-  // 提高法线变化剧烈区域的微表面粗糙度，压制运动中的高光闪烁。
-  let roughness = clamp(sqrt(sampled_roughness * sampled_roughness +
-                             min(normal_variance, 0.2)), 0.045, 1.0);
+  var roughness = sampled_roughness;
+  if (frame.render_options.x != 0u) {
+    let normal_dx = dpdx(normal);
+    let normal_dy = dpdy(normal);
+    let normal_variance = max(dot(normal_dx, normal_dx), dot(normal_dy, normal_dy));
+    // 提高法线变化剧烈区域的微表面粗糙度，压制运动中的高光闪烁。
+    roughness = clamp(sqrt(sampled_roughness * sampled_roughness +
+                           min(normal_variance, 0.2)), 0.045, 1.0);
+  }
 
   let view_direction = normalize(frame.camera_position.xyz - input.world_position);
   let light_direction = normalize(frame.direction_to_light.xyz);

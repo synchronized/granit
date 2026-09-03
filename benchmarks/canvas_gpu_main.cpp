@@ -165,7 +165,8 @@ int main() {
   const granit::material::pbr_frame_constants frame{.view_projection = identity(),
                                                     .camera_position = {},
                                                     .direction_to_light = {},
-                                                    .light_radiance = {}};
+                                                    .light_radiance = {},
+                                                    .render_options = {}};
   const granit::material::pbr_object_constants object{
       .model = identity(), .normal_matrix = identity(), .object_id = {}};
 
