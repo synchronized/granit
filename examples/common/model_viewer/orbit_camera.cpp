@@ -78,7 +78,7 @@ bool orbit_camera::update(const viewer_input& input, std::uint32_t width, std::u
     return true;
   const auto inverse_height = 1.0F / static_cast<float>(height);
   if (input.orbiting) {
-    yaw_ += input.pointer_delta_x * inverse_height * std::numbers::pi_v<float>;
+    yaw_ -= input.pointer_delta_x * inverse_height * std::numbers::pi_v<float>;
     pitch_ += input.pointer_delta_y * inverse_height * std::numbers::pi_v<float>;
     const auto limit = std::numbers::pi_v<float> * 0.5F - minimum_pitch_margin;
     pitch_ = std::clamp(pitch_, -limit, limit);
