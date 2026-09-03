@@ -190,6 +190,13 @@ jobs:
           Copy-Item examples/assets/FlightHelmet.manifest.json $output
           & "$build/bin/granit_model_viewer_offscreen_acceptance.exe" `
             --asset "$assets/glTF/FlightHelmet.gltf" `
+            --output "$output/flight-helmet-windows-webgpu-upload-isolation.rgba" `
+            --backend=webgpu `
+            --backend-library "$build/lib/granit_backend_webgpu.dll" `
+            --msaa=1 --fxaa=off --specular-aa=off --mipmaps=off --anisotropy=1 --validation
+          if ($LASTEXITCODE -ne 0) { throw "Windows Dawn 模型基础上传隔离验收失败" }
+          & "$build/bin/granit_model_viewer_offscreen_acceptance.exe" `
+            --asset "$assets/glTF/FlightHelmet.gltf" `
             --environment "$PWD/examples/assets/StudioSmall03.grenv" `
             --output "$output/flight-helmet-windows-webgpu-quality-low.rgba" `
             --expected "$env:RUNNER_TEMP/model-viewer-reference/flight-helmet-vulkan-quality-low.rgba" `
