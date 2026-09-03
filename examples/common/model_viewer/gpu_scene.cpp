@@ -5,13 +5,13 @@
 #include "model_viewer/material_archive.h"
 #include "model_viewer/viewer_state.h"
 
-#include <granit/renderer/command_recorder.hpp>
 #include <granit/renderer/upload_batch.hpp>
 
 #include <algorithm>
 #include <array>
 #include <cmath>
 #include <cstddef>
+#include <cstdint>
 #include <limits>
 #include <new>
 #include <stdexcept>
@@ -30,6 +30,79 @@ std::uint32_t full_mip_count(std::uint32_t width, std::uint32_t height) noexcept
   for (auto extent = std::max(width, height); extent > 1; extent /= 2)
     ++count;
   return count;
+}
+
+float srgb_to_linear(std::uint8_t value) noexcept {
+  const auto normalized = static_cast<float>(value) / 255.0F;
+  return normalized <= 0.04045F ? normalized / 12.92F
+                                : std::pow((normalized + 0.055F) / 1.055F, 2.4F);
+}
+
+std::uint8_t linear_to_srgb(float value) noexcept {
+  const auto encoded = value <= 0.0031308F ? value * 12.92F
+                                           : 1.055F * std::pow(value, 1.0F / 2.4F) - 0.055F;
+  return static_cast<std::uint8_t>(std::lround(std::clamp(encoded, 0.0F, 1.0F) * 255.0F));
+}
+
+bool build_rgba8_mip_chain(const gltf::image& source, bool srgb, std::vector<std::byte>& pixels,
+                           std::vector<gltf::image_mip>& mips) {
+  if (source.mips.size() != 1)
+    return false;
+  const auto& base = source.mips.front();
+  const auto base_size = std::uint64_t{base.width} * base.height * 4;
+  if (base.width == 0 || base.height == 0 || base.offset > source.rgba8_pixels.size() ||
+      base_size > std::numeric_limits<std::size_t>::max() ||
+      base.size != static_cast<std::size_t>(base_size) ||
+      base.size > source.rgba8_pixels.size() - base.offset)
+    return false;
+
+  const auto base_bytes = std::span{source.rgba8_pixels}.subspan(base.offset, base.size);
+  pixels.assign(base_bytes.begin(), base_bytes.end());
+  mips.push_back({base.width, base.height, 0, base.size});
+  auto width = base.width;
+  auto height = base.height;
+  while (width > 1 || height > 1) {
+    const auto next_width = std::max(UINT32_C(1), width / 2);
+    const auto next_height = std::max(UINT32_C(1), height / 2);
+    const auto offset = pixels.size();
+    pixels.resize(offset + std::size_t{next_width} * next_height * 4);
+    const auto previous_offset = mips.back().offset;
+    for (std::uint32_t y = 0; y < next_height; ++y) {
+      for (std::uint32_t x = 0; x < next_width; ++x) {
+        const auto destination = offset + (std::size_t{y} * next_width + x) * 4;
+        for (std::uint32_t channel = 0; channel < 4; ++channel) {
+          float sum{};
+          std::uint32_t count{};
+          for (std::uint32_t dy = 0; dy < 2; ++dy) {
+            const auto source_y = y * 2 + dy;
+            if (source_y >= height)
+              continue;
+            for (std::uint32_t dx = 0; dx < 2; ++dx) {
+              const auto source_x = x * 2 + dx;
+              if (source_x >= width)
+                continue;
+              const auto source_index =
+                  previous_offset + (std::size_t{source_y} * width + source_x) * 4 + channel;
+              const auto value = std::to_integer<std::uint8_t>(pixels[source_index]);
+              sum += srgb && channel < 3 ? srgb_to_linear(value)
+                                         : static_cast<float>(value) / 255.0F;
+              ++count;
+            }
+          }
+          const auto average = sum / static_cast<float>(count);
+          pixels[destination + channel] =
+              static_cast<std::byte>(srgb && channel < 3
+                                         ? linear_to_srgb(average)
+                                         : static_cast<std::uint8_t>(std::lround(average * 255.0F)));
+        }
+      }
+    }
+    const auto size = std::size_t{next_width} * next_height * 4;
+    mips.push_back({next_width, next_height, offset, size});
+    width = next_width;
+    height = next_height;
+  }
+  return true;
 }
 
 granit::result create_default_texture(granit_renderer renderer, granit::upload_batch& uploads,
@@ -583,8 +656,6 @@ granit::result gpu_scene::create(granit_renderer renderer, const gltf::scene& so
   }
 
   textures_.reserve(plan_.textures.size());
-  std::vector<std::pair<granit_texture, std::uint32_t>> generated_mips;
-  generated_mips.reserve(plan_.textures.size());
   for (const auto variant : plan_.textures) {
     const auto& source_image = source.images[variant.image];
     if (source_image.mips.empty())
@@ -592,14 +663,21 @@ granit::result gpu_scene::create(granit_renderer renderer, const gltf::scene& so
     gpu_texture target;
     target.variant = variant;
     const auto& base_mip = source_image.mips.front();
-    const auto mip_levels = source_image.mips.size() == 1
-                                ? full_mip_count(base_mip.width, base_mip.height)
-                                : static_cast<std::uint32_t>(source_image.mips.size());
+    std::vector<std::byte> generated_pixels;
+    std::vector<gltf::image_mip> generated_mips;
+    const auto generate_mips = source_image.mips.size() == 1 &&
+                               full_mip_count(base_mip.width, base_mip.height) > 1;
+    if (generate_mips &&
+        !build_rgba8_mip_chain(source_image, variant.srgb, generated_pixels, generated_mips))
+      return granit::result::invalid_argument;
+    const auto& pixels = generate_mips ? generated_pixels : source_image.rgba8_pixels;
+    const auto& mips = generate_mips ? generated_mips : source_image.mips;
+    const auto mip_levels = static_cast<std::uint32_t>(mips.size());
     if (const auto result = target.texture.initialize(
             renderer,
             {.format = variant.srgb ? granit::texture_format::rgba8_srgb
                                     : granit::texture_format::rgba8_unorm,
-             .usage = granit::texture_usage::sampled | granit::texture_usage::transfer_source |
+             .usage = granit::texture_usage::sampled |
                       granit::texture_usage::transfer_destination,
              .location = granit::memory_location::device,
              .width = base_mip.width,
@@ -614,13 +692,12 @@ granit::result gpu_scene::create(granit_renderer renderer, const gltf::scene& so
                                     .mip_level_count = mip_levels});
         granit::failed(result))
       return result;
-    for (std::uint32_t mip_index = 0; mip_index < source_image.mips.size(); ++mip_index) {
-      const auto& mip = source_image.mips[mip_index];
+    for (std::uint32_t mip_index = 0; mip_index < mips.size(); ++mip_index) {
+      const auto& mip = mips[mip_index];
       if (mip.width > std::numeric_limits<std::uint32_t>::max() / 4 ||
-          mip.offset > source_image.rgba8_pixels.size() ||
-          mip.size > source_image.rgba8_pixels.size() - mip.offset)
+          mip.offset > pixels.size() || mip.size > pixels.size() - mip.offset)
         return granit::result::invalid_argument;
-      const auto bytes = std::span{source_image.rgba8_pixels}.subspan(mip.offset, mip.size);
+      const auto bytes = std::span{pixels}.subspan(mip.offset, mip.size);
       if (const auto result = uploads.write_texture(
               target.texture.native_handle(), bytes,
               {.bytes_per_row = mip.width * 4, .rows_per_image = mip.height},
@@ -628,8 +705,6 @@ granit::result gpu_scene::create(granit_renderer renderer, const gltf::scene& so
           granit::failed(result))
         return result;
     }
-    if (source_image.mips.size() == 1 && mip_levels > 1)
-      generated_mips.emplace_back(target.texture.native_handle(), mip_levels);
     textures_.push_back(std::move(target));
   }
 
@@ -710,26 +785,6 @@ granit::result gpu_scene::create(granit_renderer renderer, const gltf::scene& so
   }
   if (const auto result = uploads.submit(); granit::failed(result))
     return result;
-  if (!generated_mips.empty()) {
-    granit::command_recorder recorder;
-    if (const auto result = recorder.initialize(renderer); granit::failed(result))
-      return result;
-    if (const auto result = recorder.begin(); granit::failed(result))
-      return result;
-    for (const auto [texture, levels] : generated_mips) {
-      const granit::texture_mipmap_range range{.base_mip_level = 0,
-                                               .level_count = levels,
-                                               .base_array_layer = 0,
-                                               .array_layer_count = 1};
-      if (const auto result = recorder.generate_mipmaps(texture, range); granit::failed(result))
-        return result;
-    }
-    if (const auto result = recorder.end(); granit::failed(result))
-      return result;
-    if (const auto result = recorder.submit(); granit::failed(result))
-      return result;
-  }
-
   materials_.reserve(source.materials.size() + 1);
   for (const auto& source_material : source.materials) {
     materials_.emplace_back();

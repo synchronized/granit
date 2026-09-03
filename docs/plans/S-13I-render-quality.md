@@ -32,6 +32,8 @@
 
 - MSAA 的 Texture 样本数、Graphics Pipeline 样本数和颜色 Resolve 属于底层公共 Renderer API。
 - Mipmap 层、生成命令和 Sampler 各向异性属于底层公共资源 API。
+- Model Viewer 在 CPU 端生成完整 RGBA8 Mipmap 链，再通过通用上传接口提交；这样 Vulkan、
+  桌面 Dawn 和浏览器 WebGPU 不依赖后端专有的纹理 Blit 能力，并对 sRGB 颜色纹理在线性空间滤波。
 - FXAA 与 Specular AA 属于可选的高级 Render Pipeline 策略。
 - Render Pipeline 分别保存 `sample_count`、`enable_fxaa` 和 `enable_specular_aa`，不定义
   `MSAA_4X_FXAA` 一类组合枚举。
