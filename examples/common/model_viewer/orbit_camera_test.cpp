@@ -27,19 +27,32 @@ TEST_CASE("轨道相机根据 Bounds 和宽高比自动聚焦", "[example][model
   REQUIRE(narrow.focus({.radius = 2}, 200, 1000));
   CHECK(narrow.distance() > camera.distance());
   granit::example::model_viewer::camera_matrices matrices;
-  REQUIRE(narrow.matrices(1, 8192, matrices));
+  REQUIRE(narrow.matrices(1, 8192,
+                          granit::example::model_viewer::camera_clip_space::vulkan, matrices));
   CHECK(granit::math::is_finite(matrices.view_projection));
 }
 
 TEST_CASE("轨道相机输出Vulkan裁剪空间方向", "[example][model-viewer][camera]") {
   granit::example::model_viewer::orbit_camera camera;
   granit::example::model_viewer::camera_matrices matrices;
-  REQUIRE(camera.matrices(800, 600, matrices));
+  REQUIRE(camera.matrices(800, 600, granit::example::model_viewer::camera_clip_space::vulkan,
+                          matrices));
 
   granit::math::float3 projected_up;
   REQUIRE(granit::math::transform_point(matrices.view_projection, {0, 1, 0}, projected_up));
   CHECK(matrices.projection[5] < 0.0F);
   CHECK(projected_up.y < 0.0F);
+}
+
+TEST_CASE("轨道相机在后端边界适配裁剪空间方向", "[example][model-viewer][camera]") {
+  using granit::example::model_viewer::camera_clip_space;
+  granit::example::model_viewer::orbit_camera camera;
+  granit::example::model_viewer::camera_matrices vulkan;
+  granit::example::model_viewer::camera_matrices webgpu;
+  REQUIRE(camera.matrices(800, 600, camera_clip_space::vulkan, vulkan));
+  REQUIRE(camera.matrices(800, 600, camera_clip_space::webgpu, webgpu));
+  CHECK(vulkan.projection[5] == -webgpu.projection[5]);
+  CHECK(vulkan.projection[0] == webgpu.projection[0]);
 }
 
 TEST_CASE("轨道相机限制 Pitch 和缩放距离", "[example][model-viewer][camera]") {
@@ -85,7 +98,9 @@ TEST_CASE("轨道相机零尺寸暂停且恢复时不累积移动", "[example][m
   CHECK(camera.yaw() == 0.0F);
   granit::example::model_viewer::camera_matrices unchanged;
   unchanged.position = {7, 8, 9};
-  CHECK_FALSE(camera.matrices(0, 480, unchanged));
+  CHECK_FALSE(camera.matrices(0, 480,
+                              granit::example::model_viewer::camera_clip_space::vulkan,
+                              unchanged));
   CHECK(unchanged.position == granit::math::float3{7, 8, 9});
   REQUIRE(camera.update({}, 640, 480));
   CHECK(camera.yaw() == 0.0F);
@@ -95,7 +110,8 @@ TEST_CASE("轨道相机为空场景提供有限默认状态并支持平移后重
           "[example][model-viewer][camera]") {
   granit::example::model_viewer::orbit_camera camera;
   granit::example::model_viewer::camera_matrices defaults;
-  REQUIRE(camera.matrices(1280, 720, defaults));
+  REQUIRE(camera.matrices(1280, 720,
+                          granit::example::model_viewer::camera_clip_space::vulkan, defaults));
   CHECK(granit::math::is_finite(defaults.view_projection));
 
   REQUIRE(

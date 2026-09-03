@@ -73,6 +73,7 @@ private:
   environment_resources environment_;
   viewer_state state_;
   performance_history performance_;
+  camera_clip_space clip_space_{camera_clip_space::vulkan};
   bool camera_initialized_{};
 };
 

@@ -24,6 +24,11 @@ struct camera_matrices {
   math::float3 position{};
 };
 
+enum class camera_clip_space {
+  vulkan,
+  webgpu,
+};
+
 class orbit_camera {
 public:
   orbit_camera() noexcept;
@@ -33,6 +38,7 @@ public:
   [[nodiscard]] bool update(const viewer_input& input, std::uint32_t width, std::uint32_t height,
                             const camera_bounds* focus_bounds = nullptr) noexcept;
   [[nodiscard]] bool matrices(std::uint32_t width, std::uint32_t height,
+                              camera_clip_space clip_space,
                               camera_matrices& output) const noexcept;
 
   [[nodiscard]] math::float3 target() const noexcept { return target_; }

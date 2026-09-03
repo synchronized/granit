@@ -94,7 +94,8 @@ CPU Scene 包含以下所有权对象：
 不进入解析器；资源层必须在调用 Loader 前完成获取，并由回调按规范化 URI 返回只读字节。
 
 - 坐标保持 glTF 右手、Y 向上语义；矩阵转为 Granit 列主序数值，不翻转顶点、
-  索引绕序或纹理 V 坐标。剪裁空间差异由 Renderer/Shader 契约处理。
+  索引绕序或纹理 V 坐标。模型查看器根据实际 Renderer 后端在相机投影边界适配剪裁空间 Y，
+  WGSL 与由其生成的 SPIR-V 不包含后端专用分支。
 - 只支持 Triangle Primitive、UV0、`uint8/uint16/uint32` 索引与 glTF 允许的对应
   顶点分量类型；Sparse Accessor、Draco/Meshopt、UV1、Skin、Animation 与 Morph 明确拒绝。
 - Position 与 Normal 必须存在；使用任意 Texture 时必须存在 UV0，使用 Normal Texture

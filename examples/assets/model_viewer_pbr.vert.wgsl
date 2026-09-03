@@ -36,8 +36,6 @@ fn vertex_main(
   let world_position = object.model * vec4f(position, 1.0);
   var output: VertexOutput;
   output.position = frame.view_projection * world_position;
-  // Granit 以 Vulkan Clip Space 为公共约定，WGSL 需要显式翻转 Y。
-  output.position.y = -output.position.y;
   output.world_position = world_position.xyz;
   output.world_normal = normalize((object.normal_matrix * vec4f(normal, 0.0)).xyz);
   output.world_tangent = vec4f(
