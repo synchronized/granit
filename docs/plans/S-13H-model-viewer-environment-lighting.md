@@ -5,7 +5,9 @@
 
 ## 状态
 
-实施中。
+已完成。Vulkan、桌面 Dawn WebGPU 与浏览器 Emscripten WebGPU 已使用共同环境资源和
+PBR 绑定完成验收；结果见
+[2026-09-03 S-13H/S-13I 跨后端验收](../records/2026-09-03-s13hi-cross-backend-acceptance.md)。
 
 ## 背景与目标
 
@@ -60,7 +62,7 @@ Texture 与 Texture View。该格式不是 Granit 公共资产格式，不进入
    桌面 Dawn 验收同时保留 Vulkan 与 WebGPU 的 Base Color、最终法线、几何法线、采样法线、
    原始顶点法线/切线、Metallic 和 Roughness 分层图，用于区分资产绑定、顶点布局、几何变换、
    TBN 和最终光照差异。
-   （进行中）
+   （已完成）
 
 ## 测试与验收
 
@@ -71,5 +73,6 @@ Texture 与 Texture View。该格式不是 Granit 公共资产格式，不进入
 
 ## 风险与未决问题
 
-- 当前 Texture API 对 Cube Mip 上传和 RGBA16F 已具备基础能力，但 Emscripten 实机仍需验证。
+- GitHub 托管 Windows Runner 的 D3D12 环境在完整 IBL 路径中会发生 Device Lost；该环境只承担
+  基础 Dawn 集成验证，Windows 完整 IBL 图像与性能需要在真实 GPU 上验收。
 - 若环境资源体积过大，优先降低 Cube 分辨率，不在普通构建中在线下载。

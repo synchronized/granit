@@ -5,9 +5,9 @@
 
 ## 状态
 
-实现中。4× MSAA/Resolve、PBR Specular AA、Mipmap、各向异性过滤、FXAA、设备能力查询、
-高级管线质量开关和查看器控制已经存在；三后端组合已进入自动或手动验收，尚待完整 Actions
-结果收尾。
+已完成。4× MSAA/Resolve、PBR Specular AA、Mipmap、各向异性过滤、FXAA、设备能力查询、
+高级管线质量开关和查看器控制均已落地，三后端组合验收已通过；结果见
+[2026-09-03 S-13H/S-13I 跨后端验收](../records/2026-09-03-s13hi-cross-backend-acceptance.md)。
 
 ## 背景与目标
 
@@ -64,11 +64,9 @@ Render Pipeline 创建描述直接包含样本数和两个布尔策略字段，�
 4. 为 Model Viewer 增加 MSAA、FXAA、Specular AA 和各向异性控件，显示实际生效配置。
    （已完成）
 5. 补充公共头、ABI、错误、回退、像素和三后端组合测试。
-   （公共头、参数错误、设备能力回退及 1×/4× 与四种策略组合创建测试已完成；Vulkan、Windows
-   Dawn 和 Linux Dawn 的高低质量像素组合已进入手动集成工作流；浏览器 Fixture 会在真实 Chrome
-   WebGPU 中依次重建 1×/全关闭与 4×/全开启配置，按设备上限启用各向异性，并验证继续呈现及
-   退出资源归零）
-6. 完成手动 Actions 验收后更新 Reference、Guide 和带日期的验收记录。
+   （已完成；浏览器 Fixture 会在真实 Chrome WebGPU 中依次重建 1×/全关闭与 4×/全开启配置，
+   按设备上限启用各向异性，并验证继续呈现及退出资源归零）
+6. 完成手动 Actions 验收后更新 Reference、Guide 和带日期的验收记录。（已完成）
 
 ## 测试与验收
 
@@ -81,8 +79,7 @@ Render Pipeline 创建描述直接包含样本数和两个布尔策略字段，�
 
 ## 风险与未决问题
 
-- 样本数支持可能依格式而异；首轮能力位掩码是否表示通用颜色/深度交集，需要在实现前根据两个
-  后端可查询范围确定，不能给出过度承诺。
-- 浏览器 WebGPU 的设备能力和原生 Dawn 可能不同，验收不能只覆盖桌面 Provider。
-- 质量开关由每帧常量控制，不增加 Shader/Pipeline 变体；仍需通过像素测试确认关闭路径不会残留
-  对应滤波效果。
+- 样本数能力表示后端可供公共自动渲染路径使用的颜色/深度交集，不承诺任意格式组合。
+- 浏览器 WebGPU 的能力仍可能不同于原生 Dawn，应用必须继续依据实际 Renderer Limits 回退。
+- GitHub 托管 Windows Runner 不承担完整 IBL 图像和性能验收；真实 Windows GPU 结果不能由托管
+  环境外推。
