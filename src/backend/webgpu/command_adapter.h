@@ -23,8 +23,9 @@ public:
   [[nodiscard]] granit_result begin(backend_command_recorder_resource& resource) const noexcept;
   [[nodiscard]] granit_result begin_rendering(
       backend_command_recorder_resource& resource, granit_backend_plugin_texture_view target,
-      granit_backend_plugin_load_operation load, granit_backend_plugin_store_operation store,
-      const float clear[4], granit_backend_plugin_texture_view depth_target,
+      granit_backend_plugin_texture_view resolve_target, granit_backend_plugin_load_operation load,
+      granit_backend_plugin_store_operation store, const float clear[4],
+      granit_backend_plugin_texture_view depth_target,
       granit_backend_plugin_load_operation depth_load,
       granit_backend_plugin_store_operation depth_store, float clear_depth) const noexcept;
   [[nodiscard]] granit_result

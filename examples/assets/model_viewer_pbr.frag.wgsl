@@ -89,7 +89,8 @@ fn fragment_main(input: FragmentInput) -> @location(0) vec4f {
   let metallic_roughness = textureSample(metallic_roughness_texture, pbr_sampler,
                                          input.texture_coordinate);
   let metallic = clamp(material.metallic * metallic_roughness.b, 0.0, 1.0);
-  let roughness = clamp(material.perceptual_roughness * metallic_roughness.g, 0.045, 1.0);
+  let sampled_roughness =
+      clamp(material.perceptual_roughness * metallic_roughness.g, 0.045, 1.0);
 
   let tangent = normalize(input.world_tangent.xyz);
   let geometric_normal = normalize(input.world_normal);
@@ -98,6 +99,12 @@ fn fragment_main(input: FragmentInput) -> @location(0) vec4f {
                                      input.texture_coordinate).xyz * 2.0 - vec3f(1.0);
   let scaled_normal = vec3f(sampled_normal.xy * material.normal_scale, sampled_normal.z);
   let normal = normalize(mat3x3<f32>(tangent, bitangent, geometric_normal) * scaled_normal);
+  let normal_dx = dpdx(normal);
+  let normal_dy = dpdy(normal);
+  let normal_variance = max(dot(normal_dx, normal_dx), dot(normal_dy, normal_dy));
+  // 提高法线变化剧烈区域的微表面粗糙度，压制运动中的高光闪烁。
+  let roughness = clamp(sqrt(sampled_roughness * sampled_roughness +
+                             min(normal_variance, 0.2)), 0.045, 1.0);
 
   let view_direction = normalize(frame.camera_position.xyz - input.world_position);
   let light_direction = normalize(frame.direction_to_light.xyz);

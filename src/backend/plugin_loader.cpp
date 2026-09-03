@@ -827,16 +827,17 @@ granit_result backend_plugin_loader::recorder_begin_rendering(
     granit_backend_plugin_instance instance, granit_backend_plugin_command_recorder recorder,
     granit_backend_plugin_texture_view target, granit_backend_plugin_load_operation load,
     granit_backend_plugin_store_operation store, const float clear[4],
+    granit_backend_plugin_texture_view resolve_target,
     granit_backend_plugin_texture_view depth_target,
     granit_backend_plugin_load_operation depth_load,
     granit_backend_plugin_store_operation depth_store, float clear_depth) noexcept {
-  if (api_ == nullptr || instance == 0 || recorder == 0 ||
-      (target == 0 && depth_target == 0) || clear == nullptr)
+  if (api_ == nullptr || instance == 0 || recorder == 0 || (target == 0 && depth_target == 0) ||
+      clear == nullptr)
     return GRANIT_ERROR_INVALID_ARGUMENT;
   try {
     return api_->instance_api->recorder_begin_rendering(
-        instance, recorder, target, load, store, clear[0], clear[1], clear[2], clear[3],
-        depth_target, depth_load, depth_store, clear_depth);
+        instance, recorder, target, resolve_target, load, store, clear[0], clear[1], clear[2],
+        clear[3], depth_target, depth_load, depth_store, clear_depth);
   } catch (...) {
     return GRANIT_ERROR_INTERNAL;
   }

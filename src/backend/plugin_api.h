@@ -9,7 +9,7 @@
 #include <granit/core/diagnostic.h>
 #include <granit/core/result.h>
 
-#define GRANIT_BACKEND_PLUGIN_ABI_VERSION UINT32_C(24)
+#define GRANIT_BACKEND_PLUGIN_ABI_VERSION UINT32_C(25)
 #define GRANIT_BACKEND_PLUGIN_KIND_WEBGPU UINT32_C(1)
 #define GRANIT_BACKEND_PLUGIN_QUERY_SYMBOL "granit_backend_plugin_query"
 #define GRANIT_BACKEND_PLUGIN_SURFACE_TYPE_WIN32_BIT UINT32_C(0x00000001)
@@ -122,6 +122,7 @@ typedef struct granit_backend_plugin_texture_desc {
   uint32_t mip_level_count;
   granit_backend_plugin_texture_dimension dimension;
   uint32_t array_layer_count;
+  uint32_t sample_count;
 } granit_backend_plugin_texture_desc;
 
 typedef struct granit_backend_plugin_texture_view_desc {
@@ -361,6 +362,7 @@ typedef struct granit_backend_plugin_render_pipeline_desc {
   granit_backend_plugin_front_face front_face;
   granit_backend_plugin_cull_mode cull_mode;
   granit_backend_plugin_polygon_mode polygon_mode;
+  uint32_t sample_count;
 } granit_backend_plugin_render_pipeline_desc;
 
 /** Canvas selector 仅在调用期间有效；插件必须复制后续需要的内容。 */
@@ -585,7 +587,8 @@ typedef granit_result (*granit_backend_plugin_recorder_copy_buffer_to_texture_fn
     uint32_t height, uint32_t bytes_per_row);
 typedef granit_result (*granit_backend_plugin_recorder_begin_rendering_fn)(
     granit_backend_plugin_instance instance, granit_backend_plugin_command_recorder recorder,
-    granit_backend_plugin_texture_view target, granit_backend_plugin_load_operation load_operation,
+    granit_backend_plugin_texture_view target, granit_backend_plugin_texture_view resolve_target,
+    granit_backend_plugin_load_operation load_operation,
     granit_backend_plugin_store_operation store_operation, float clear_r, float clear_g,
     float clear_b, float clear_a, granit_backend_plugin_texture_view depth_target,
     granit_backend_plugin_load_operation depth_load_operation,

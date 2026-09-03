@@ -1037,7 +1037,7 @@ vulkan_renderer_state::create_native_texture(const granit_texture_desc& desc,
   info.extent = {desc.width, desc.height, desc.depth};
   info.mipLevels = desc.mip_levels;
   info.arrayLayers = desc.array_layers;
-  info.samples = VK_SAMPLE_COUNT_1_BIT;
+  info.samples = static_cast<VkSampleCountFlagBits>(desc.sample_count);
   info.tiling = VK_IMAGE_TILING_OPTIMAL;
   info.usage = map_texture_usage(desc.usage);
   info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
@@ -2130,6 +2130,12 @@ granit_result vulkan_renderer_state::begin_rendering(
       target.storeOp = map_attachment_store(source.store_operation);
       target.clearValue.color = {{source.clear_value.red, source.clear_value.green,
                                   source.clear_value.blue, source.clear_value.alpha}};
+      if (source.resolve_view != nullptr) {
+        target.resolveMode = VK_RESOLVE_MODE_AVERAGE_BIT;
+        target.resolveImageView =
+            static_cast<vulkan_texture_view_resource&>(*source.resolve_view).native();
+        target.resolveImageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+      }
       native_colors.push_back(target);
       image_accesses.push_back({
           .image = static_cast<vulkan_texture_resource&>(*source.texture).native().image,
@@ -2145,6 +2151,22 @@ granit_result vulkan_renderer_state::begin_rendering(
           .access = VK_ACCESS_2_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
           .preserve_content = source.load_operation == GRANIT_ATTACHMENT_LOAD_OPERATION_LOAD,
       });
+      if (source.resolve_texture != nullptr && source.resolve_view != nullptr) {
+        image_accesses.push_back({
+            .image = static_cast<vulkan_texture_resource&>(*source.resolve_texture).native().image,
+            .range = {.aspectMask = source.resolve_range.aspect == GRANIT_TEXTURE_ASPECT_AUTOMATIC
+                                        ? default_aspect(source.format)
+                                        : map_texture_aspect(source.resolve_range.aspect),
+                      .baseMipLevel = source.resolve_range.base_mip_level,
+                      .levelCount = source.resolve_range.mip_level_count,
+                      .baseArrayLayer = source.resolve_range.base_array_layer,
+                      .layerCount = source.resolve_range.array_layer_count},
+            .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+            .stages = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+            .access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
+            .preserve_content = false,
+        });
+      }
     }
 
     VkRenderingAttachmentInfo depth{}, stencil{};

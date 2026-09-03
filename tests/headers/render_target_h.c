@@ -4,7 +4,7 @@
 #include <granit/renderer/render_target.h>
 
 typedef char granit_color_attachment_size_check
-    [sizeof(granit_color_attachment_desc) == GRANIT_COLOR_ATTACHMENT_DESC_VERSION_1_SIZE ? 1 : -1];
+    [sizeof(granit_color_attachment_desc) == GRANIT_COLOR_ATTACHMENT_DESC_VERSION_2_SIZE ? 1 : -1];
 typedef char granit_depth_stencil_attachment_size_check
     [sizeof(granit_depth_stencil_attachment_desc) ==
              GRANIT_DEPTH_STENCIL_ATTACHMENT_DESC_VERSION_1_SIZE

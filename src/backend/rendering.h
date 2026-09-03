@@ -26,6 +26,9 @@ struct backend_color_attachment {
   granit_attachment_load_operation load_operation{};
   granit_attachment_store_operation store_operation{};
   granit_clear_color_value clear_value{};
+  backend_texture_resource* resolve_texture{};
+  backend_texture_view_resource* resolve_view{};
+  granit_subresource_range resolve_range{};
 };
 
 struct backend_depth_stencil_attachment {

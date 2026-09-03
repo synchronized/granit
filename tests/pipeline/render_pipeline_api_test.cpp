@@ -254,8 +254,14 @@ TEST_CASE("Render Pipeline 指标 API 校验参数和样本状态", "[pipeline][
 }
 
 TEST_CASE("RenderPipeline component把空Renderer归类为无效句柄") {
-  const granit_render_pipeline_desc desc = GRANIT_RENDER_PIPELINE_DESC_INIT;
+  granit_render_pipeline_desc desc = GRANIT_RENDER_PIPELINE_DESC_INIT;
   granit_render_pipeline pipeline = UINT64_C(1);
+  desc.sample_count = GRANIT_SAMPLE_COUNT_2;
+  CHECK(granit_render_pipeline_create(GRANIT_NULL_HANDLE, &desc, &pipeline) ==
+        GRANIT_ERROR_INVALID_ARGUMENT);
+  CHECK(pipeline == GRANIT_NULL_HANDLE);
+  desc.sample_count = GRANIT_SAMPLE_COUNT_1;
+  pipeline = UINT64_C(1);
   CHECK(granit_render_pipeline_create(GRANIT_NULL_HANDLE, &desc, &pipeline) ==
         GRANIT_ERROR_INVALID_HANDLE);
   CHECK(pipeline == GRANIT_NULL_HANDLE);

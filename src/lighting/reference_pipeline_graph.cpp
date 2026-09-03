@@ -19,7 +19,10 @@ add_reference_pipeline_graph(render_graph::serial_graph& graph, reference_pipeli
   }
   if (!callbacks.pbr || !callbacks.tone_mapping || (desc.shadow && !callbacks.shadow))
     return reference_pipeline_graph_error::invalid_callback;
-  if (desc.pbr.color != desc.tone_mapping.hdr_color)
+  const auto pbr_output = desc.pbr.resolve_color == render_graph::invalid_resource_id
+                              ? desc.pbr.color
+                              : desc.pbr.resolve_color;
+  if (pbr_output != desc.tone_mapping.hdr_color)
     return reference_pipeline_graph_error::inconsistent_resource;
   if (desc.shadow &&
       (desc.shadow->depth == invalid_resource || desc.pbr.shadow != desc.shadow->depth)) {

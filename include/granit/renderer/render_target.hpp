@@ -38,19 +38,21 @@ struct clear_depth_stencil_value {
 
 struct color_attachment_desc {
   granit_texture_view view{GRANIT_NULL_HANDLE};
+  granit_texture_view resolve_view{GRANIT_NULL_HANDLE};
   attachment_load_operation load_operation{attachment_load_operation::clear};
   attachment_store_operation store_operation{attachment_store_operation::store};
   clear_color_value clear_value{};
 
   [[nodiscard]] constexpr granit_color_attachment_desc native() const noexcept {
     return {
-        .struct_size = GRANIT_COLOR_ATTACHMENT_DESC_VERSION_1_SIZE,
+        .struct_size = GRANIT_COLOR_ATTACHMENT_DESC_VERSION_2_SIZE,
         .load_operation = static_cast<granit_attachment_load_operation>(load_operation),
         .store_operation = static_cast<granit_attachment_store_operation>(store_operation),
         .reserved = 0,
         .view = view,
         .clear_value = {clear_value.red, clear_value.green, clear_value.blue, clear_value.alpha},
-        .reserved_2 = 0};
+        .reserved_2 = 0,
+        .resolve_view = resolve_view};
   }
 };
 
@@ -94,7 +96,7 @@ struct rendering_desc {
   std::uint32_t layer_count{1};
 };
 
-static_assert(sizeof(granit_color_attachment_desc) == GRANIT_COLOR_ATTACHMENT_DESC_VERSION_1_SIZE);
+static_assert(sizeof(granit_color_attachment_desc) == GRANIT_COLOR_ATTACHMENT_DESC_VERSION_2_SIZE);
 static_assert(sizeof(granit_depth_stencil_attachment_desc) ==
               GRANIT_DEPTH_STENCIL_ATTACHMENT_DESC_VERSION_1_SIZE);
 static_assert(sizeof(granit_rendering_desc) == GRANIT_RENDERING_DESC_VERSION_1_SIZE);

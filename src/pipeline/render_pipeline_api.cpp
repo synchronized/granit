@@ -81,6 +81,7 @@ struct pipeline_state {
   bool metrics_enabled = false;
   bool metrics_available = false;
   float shadow_half_extent = 20.0F;
+  granit_sample_count sample_count = GRANIT_SAMPLE_COUNT_1;
   bool alive = true;
 };
 
@@ -126,12 +127,14 @@ granit_result validate_renderer(granit_renderer renderer) {
   return granit_renderer_get_status(renderer, &status);
 }
 
-granit_texture_desc make_depth_desc(uint32_t width, uint32_t height) {
+granit_texture_desc make_depth_desc(uint32_t width, uint32_t height,
+                                    granit_sample_count samples = GRANIT_SAMPLE_COUNT_1) {
   granit_texture_desc desc = GRANIT_TEXTURE_DESC_INIT;
   desc.format = GRANIT_TEXTURE_FORMAT_D32_FLOAT;
   desc.usage = GRANIT_TEXTURE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
   desc.width = width;
   desc.height = height;
+  desc.sample_count = samples;
   return desc;
 }
 
@@ -238,9 +241,9 @@ granit_result trim_draw_binding_cache(auto& entries, std::size_t retained_count)
 
 granit_result
 record_opaque_draws(pipeline_state& state, granit_command_recorder recorder,
-                    granit_texture_view color, granit_texture_view depth,
-                    granit_texture_view shadow, uint32_t width, uint32_t height,
-                    const granit::material::pbr_frame_constants& frame,
+                    granit_texture_view color, granit_texture_view resolve_color,
+                    granit_texture_view depth, granit_texture_view shadow, uint32_t width,
+                    uint32_t height, const granit::material::pbr_frame_constants& frame,
                     std::span<const granit::material::pbr_object_constants> objects,
                     std::span<const granit_render_pipeline_draw_binding> draws,
                     const granit::lighting::packed_view_lights& lights,
@@ -280,7 +283,9 @@ record_opaque_draws(pipeline_state& state, granit_command_recorder recorder,
             {.pass = granit::material::make_feature_id("opaque"),
              .variant = 0,
              .color_format = GRANIT_TEXTURE_FORMAT_RGBA16_FLOAT,
-             .depth_stencil_format = GRANIT_TEXTURE_FORMAT_D32_FLOAT},
+             .depth_stencil_format = GRANIT_TEXTURE_FORMAT_D32_FLOAT,
+             .sample_count = resolve_color == GRANIT_NULL_HANDLE ? GRANIT_SAMPLE_COUNT_1
+                                                                 : GRANIT_SAMPLE_COUNT_4},
             arena_materials[index]);
         if (result != GRANIT_SUCCESS)
           break;
@@ -303,7 +308,9 @@ record_opaque_draws(pipeline_state& state, granit_command_recorder recorder,
           {.pass = granit::material::make_feature_id("opaque"),
            .variant = 0,
            .color_format = GRANIT_TEXTURE_FORMAT_RGBA16_FLOAT,
-           .depth_stencil_format = GRANIT_TEXTURE_FORMAT_D32_FLOAT},
+           .depth_stencil_format = GRANIT_TEXTURE_FORMAT_D32_FLOAT,
+           .sample_count =
+               resolve_color == GRANIT_NULL_HANDLE ? GRANIT_SAMPLE_COUNT_1 : GRANIT_SAMPLE_COUNT_4},
           material);
     }
     if (index == state.opaque_draw_bindings.size())
@@ -371,6 +378,11 @@ record_opaque_draws(pipeline_state& state, granit_command_recorder recorder,
       result =
           granit::pipeline::detail::bind_mesh_buffers(state.renderer, recorder, draws[index].mesh);
     if (result == GRANIT_SUCCESS) {
+      const bool final_draw = index + 1 == draws.size();
+      color_attachment.resolve_view = final_draw ? resolve_color : GRANIT_NULL_HANDLE;
+      color_attachment.store_operation = final_draw && resolve_color != GRANIT_NULL_HANDLE
+                                             ? GRANIT_ATTACHMENT_STORE_OPERATION_DISCARD
+                                             : GRANIT_ATTACHMENT_STORE_OPERATION_STORE;
       if (index != 0) {
         color_attachment.load_operation = GRANIT_ATTACHMENT_LOAD_OPERATION_LOAD;
         depth_attachment.depth_load_operation = GRANIT_ATTACHMENT_LOAD_OPERATION_LOAD;
@@ -684,18 +696,29 @@ render_view(pipeline_state& state, const granit_render_pipeline_render_desc& des
   const auto metrics_pool = prepare_metrics_slot(state, metrics_slot_index, metrics_slot_count);
 
   granit::render_graph::serial_graph graph;
+  const bool use_msaa = state.record == nullptr && state.sample_count == GRANIT_SAMPLE_COUNT_4;
   const auto hdr = graph.create_transient_texture(
       granit::lighting::make_hdr_attachment_desc(render_output.width, render_output.height),
       "Reference HDR");
+  auto msaa_color_desc =
+      granit::lighting::make_hdr_attachment_desc(render_output.width, render_output.height);
+  msaa_color_desc.sample_count = GRANIT_SAMPLE_COUNT_4;
+  msaa_color_desc.usage = GRANIT_TEXTURE_USAGE_COLOR_ATTACHMENT_BIT;
+  const auto msaa_color =
+      use_msaa ? graph.create_transient_texture(msaa_color_desc, "Reference HDR MSAA")
+               : granit::render_graph::invalid_resource_id;
   const auto depth = graph.create_transient_texture(
-      make_depth_desc(render_output.width, render_output.height), "Reference Depth");
+      make_depth_desc(render_output.width, render_output.height,
+                      use_msaa ? GRANIT_SAMPLE_COUNT_4 : GRANIT_SAMPLE_COUNT_1),
+      "Reference Depth");
   const auto output = graph.import_texture_view(render_output.view, true, "Reference Output");
 
   std::optional<granit::render_graph::resource_id> shadow = graph.import_texture_view(
       state.shadow_view.native_handle(), false, "Reference Directional Shadow");
 
   granit::lighting::reference_pipeline_graph_desc graph_desc;
-  graph_desc.pbr.color = hdr;
+  graph_desc.pbr.color = use_msaa ? msaa_color : hdr;
+  graph_desc.pbr.resolve_color = use_msaa ? hdr : granit::render_graph::invalid_resource_id;
   graph_desc.pbr.depth = depth;
   graph_desc.pbr.shadow = *shadow;
   graph_desc.pbr.view.view_projection = visible.view.view_projection;
@@ -811,7 +834,8 @@ render_view(pipeline_state& state, const granit_render_pipeline_render_desc& des
           return GRANIT_ERROR_INVALID_ARGUMENT;
         }
         const auto opaque_result = record_opaque_draws(
-            state, context.recorder(), context.texture_view(hdr), context.texture_view(depth),
+            state, context.recorder(), context.texture_view(use_msaa ? msaa_color : hdr),
+            use_msaa ? context.texture_view(hdr) : GRANIT_NULL_HANDLE, context.texture_view(depth),
             shadow ? context.texture_view(*shadow) : GRANIT_NULL_HANDLE, render_output.width,
             render_output.height, frame, objects, draw_bindings, lights, shadow_constants,
             ibl_views, ibl_constants, use_uniform_arena,
@@ -1033,6 +1057,12 @@ extern "C" granit_result granit_render_pipeline_create(granit_renderer renderer,
       desc->reserved != 0) {
     return GRANIT_ERROR_INVALID_ARGUMENT;
   }
+  if (desc->struct_size >= GRANIT_RENDER_PIPELINE_DESC_VERSION_2_SIZE &&
+      ((desc->sample_count != GRANIT_SAMPLE_COUNT_1 &&
+        desc->sample_count != GRANIT_SAMPLE_COUNT_4) ||
+       desc->reserved_2 != 0)) {
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  }
   const auto renderer_result = validate_renderer(renderer);
   if (renderer_result != GRANIT_SUCCESS)
     return renderer_result;
@@ -1041,6 +1071,8 @@ extern "C" granit_result granit_render_pipeline_create(granit_renderer renderer,
     state->renderer = renderer;
     state->record = desc->record;
     state->user_data = desc->user_data;
+    if (desc->struct_size >= GRANIT_RENDER_PIPELINE_DESC_VERSION_2_SIZE)
+      state->sample_count = desc->sample_count;
     const auto arena_result = state->uniform_arena.initialize(renderer);
     if (arena_result != GRANIT_SUCCESS)
       return arena_result;

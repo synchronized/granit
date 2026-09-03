@@ -315,6 +315,7 @@ granit_result renderer_registry::begin_rendering(granit_renderer renderer,
     return GRANIT_ERROR_INVALID_HANDLE;
   std::vector<std::shared_ptr<texture_view_record>> views;
   views.reserve(desc.color_attachment_count + (desc.depth_stencil_attachment ? 1U : 0U));
+  std::vector<std::shared_ptr<texture_view_record>> resolve_views(desc.color_attachment_count);
   {
     std::lock_guard lock{mutex_};
     const auto acquire_view = [&](granit_texture_view handle) {
@@ -330,6 +331,15 @@ granit_result renderer_registry::begin_rendering(granit_renderer renderer,
       if (!view)
         return GRANIT_ERROR_INVALID_HANDLE;
       views.push_back(std::move(view));
+      const auto resolve_view =
+          desc.color_attachments[index].struct_size >= GRANIT_COLOR_ATTACHMENT_DESC_VERSION_2_SIZE
+              ? desc.color_attachments[index].resolve_view
+              : GRANIT_NULL_HANDLE;
+      if (resolve_view != GRANIT_NULL_HANDLE) {
+        resolve_views[index] = acquire_view(resolve_view);
+        if (!resolve_views[index])
+          return GRANIT_ERROR_INVALID_HANDLE;
+      }
     }
     if (desc.depth_stencil_attachment) {
       auto view = acquire_view(desc.depth_stencil_attachment->view);
@@ -359,6 +369,18 @@ granit_result renderer_registry::begin_rendering(granit_renderer renderer,
                   views[index]) != views.begin() + static_cast<std::ptrdiff_t>(index))
       return GRANIT_ERROR_INVALID_ARGUMENT;
   }
+  for (std::uint32_t index = 0; index < desc.color_attachment_count; ++index) {
+    if (!resolve_views[index])
+      continue;
+    const auto& source = views[index]->texture->desc;
+    const auto& target = resolve_views[index]->texture->desc;
+    if (source.sample_count == GRANIT_SAMPLE_COUNT_1 ||
+        target.sample_count != GRANIT_SAMPLE_COUNT_1 || source.width != target.width ||
+        source.height != target.height || source.format != target.format ||
+        (target.usage & GRANIT_TEXTURE_USAGE_COLOR_ATTACHMENT_BIT) == 0 ||
+        resolve_views[index] == views[index])
+      return GRANIT_ERROR_INVALID_ARGUMENT;
+  }
   if (desc.area.x > width || desc.area.width > width - desc.area.x || desc.area.y > height ||
       desc.area.height > height - desc.area.y)
     return GRANIT_ERROR_INVALID_ARGUMENT;
@@ -376,6 +398,11 @@ granit_result renderer_registry::begin_rendering(granit_renderer renderer,
         .load_operation = source.load_operation,
         .store_operation = source.store_operation,
         .clear_value = source.clear_value,
+        .resolve_texture =
+            resolve_views[index] ? resolve_views[index]->texture->native.get() : nullptr,
+        .resolve_view = resolve_views[index] ? resolve_views[index]->native.get() : nullptr,
+        .resolve_range =
+            resolve_views[index] ? resolve_views[index]->desc.range : granit_subresource_range{},
     });
   }
   backend_depth_stencil_attachment depth_stencil{};
@@ -404,6 +431,10 @@ granit_result renderer_registry::begin_rendering(granit_renderer renderer,
   std::lock_guard command_lock{command->mutex};
   for (const auto& view : views)
     retain_resource(command->retained_resources, view, view->metadata);
+  for (const auto& view : resolve_views) {
+    if (view)
+      retain_resource(command->retained_resources, view, view->metadata);
+  }
   return command->graphics->begin_rendering(*command->native, desc.area, colors, depth_stencil_ptr,
                                             desc.layer_count);
 }

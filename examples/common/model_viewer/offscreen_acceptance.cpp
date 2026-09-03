@@ -266,8 +266,7 @@ int main(int argc, char** argv) {
   granit::renderer renderer;
   std::string_view stage = "创建 Renderer";
   const auto diagnostics = [](granit_diagnostic_severity, granit_diagnostic_category,
-                              const char* message, std::uint32_t message_length,
-                              void*) noexcept {
+                              const char* message, std::uint32_t message_length, void*) noexcept {
     if (message != nullptr && message_length != 0)
       std::cerr << "[granit] " << std::string_view{message, message_length} << '\n';
   };
@@ -329,7 +328,8 @@ int main(int argc, char** argv) {
   granit::render_pipeline pipeline;
   if (granit::succeeded(result)) {
     stage = "创建 Render Pipeline";
-    const granit_render_pipeline_desc pipeline_desc = GRANIT_RENDER_PIPELINE_DESC_INIT;
+    granit_render_pipeline_desc pipeline_desc = GRANIT_RENDER_PIPELINE_DESC_INIT;
+    pipeline_desc.sample_count = GRANIT_SAMPLE_COUNT_4;
     result = pipeline.initialize(renderer.native_handle(), pipeline_desc);
   }
 
@@ -338,13 +338,12 @@ int main(int argc, char** argv) {
   for (std::uint32_t frame = 0; frame < 3 && granit::succeeded(result); ++frame) {
     granit::example::model_viewer::application_tick_output tick;
     stage = "更新固定相机场景";
-    result = core.tick(
-        {.input = {},
-         .change = diagnostic_change,
-         .width = render_size,
-         .height = render_size,
-         .performance = {}},
-        tick);
+    result = core.tick({.input = {},
+                        .change = diagnostic_change,
+                        .width = render_size,
+                        .height = render_size,
+                        .performance = {}},
+                       tick);
     if (granit::succeeded(result)) {
       stage = "渲染离屏帧";
       tick.render.output = output_view.native_handle();

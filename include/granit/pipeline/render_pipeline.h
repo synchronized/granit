@@ -96,13 +96,23 @@ typedef struct granit_render_pipeline_desc {
   uint32_t reserved;
   granit_render_pipeline_record_callback record;
   void* user_data;
+  /** 自动 PBR 路径的样本数；当前支持 1 或 4。 */
+  granit_sample_count sample_count;
+  uint32_t reserved_2;
 } granit_render_pipeline_desc;
 
 #define GRANIT_RENDER_PIPELINE_DESC_VERSION_1_SIZE                                                 \
   ((uint32_t)(offsetof(granit_render_pipeline_desc, user_data) + sizeof(void*)))
+#define GRANIT_RENDER_PIPELINE_DESC_VERSION_2_SIZE                                                 \
+  ((uint32_t)(offsetof(granit_render_pipeline_desc, reserved_2) + sizeof(uint32_t)))
 
 #define GRANIT_RENDER_PIPELINE_DESC_INIT                                                           \
-  {(uint32_t)sizeof(granit_render_pipeline_desc), UINT32_C(0), 0, 0}
+  {(uint32_t)sizeof(granit_render_pipeline_desc),                                                  \
+   UINT32_C(0),                                                                                    \
+   0,                                                                                              \
+   0,                                                                                              \
+   GRANIT_SAMPLE_COUNT_1,                                                                          \
+   UINT32_C(0)}
 
 /** 多 View 渲染中单个 View 的独立输出。 */
 typedef struct granit_render_pipeline_output {

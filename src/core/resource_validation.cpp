@@ -90,7 +90,13 @@ granit_result validate_texture_desc(const granit_texture_desc& desc) noexcept {
   const auto supported_cube = desc.dimension == GRANIT_TEXTURE_DIMENSION_CUBE && desc.depth == 1 &&
                               desc.width == desc.height && desc.array_layers == 6 &&
                               desc.mip_levels <= maximum_mips;
-  if ((!supported_2d && !supported_cube) || desc.sample_count != GRANIT_SAMPLE_COUNT_1 ||
+  const auto multisample_usage =
+      GRANIT_TEXTURE_USAGE_COLOR_ATTACHMENT_BIT | GRANIT_TEXTURE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+  const bool supported_multisample = desc.sample_count != GRANIT_SAMPLE_COUNT_1 && supported_2d &&
+                                     desc.mip_levels == 1 && (desc.usage & multisample_usage) != 0;
+  if ((!supported_2d && !supported_cube) ||
+      (desc.sample_count != GRANIT_SAMPLE_COUNT_1 && !supported_multisample) ||
+      (supported_cube && desc.sample_count != GRANIT_SAMPLE_COUNT_1) ||
       desc.memory_location == GRANIT_MEMORY_LOCATION_UPLOAD ||
       desc.memory_location == GRANIT_MEMORY_LOCATION_READBACK) {
     return GRANIT_ERROR_UNSUPPORTED;

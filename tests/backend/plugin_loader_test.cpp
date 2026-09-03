@@ -764,7 +764,8 @@ TEST_CASE("WebGPU 插件绑定与 Pipeline 遵守依赖生命周期", "[backend]
       GRANIT_BACKEND_PLUGIN_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
       GRANIT_BACKEND_PLUGIN_FRONT_FACE_COUNTER_CLOCKWISE,
       GRANIT_BACKEND_PLUGIN_CULL_MODE_NONE,
-      GRANIT_BACKEND_PLUGIN_POLYGON_MODE_FILL};
+      GRANIT_BACKEND_PLUGIN_POLYGON_MODE_FILL,
+      1};
   granit_backend_plugin_render_pipeline pipeline{};
   REQUIRE(loader.create_render_pipeline(first, &pipeline_desc, &pipeline) == GRANIT_SUCCESS);
   pipeline_desc.front_face = GRANIT_BACKEND_PLUGIN_FRONT_FACE_CLOCKWISE;

@@ -424,6 +424,7 @@ granit_result webgpu_renderer_state::begin_rendering(
   auto store = GRANIT_BACKEND_PLUGIN_STORE_OPERATION_DISCARD;
   float clear[]{0.0F, 0.0F, 0.0F, 0.0F};
   granit_backend_plugin_texture_view native_view{};
+  granit_backend_plugin_texture_view native_resolve_view{};
   if (!color_attachments.empty()) {
     const auto& attachment = color_attachments.front();
     if (attachment.load_operation == GRANIT_ATTACHMENT_LOAD_OPERATION_DISCARD)
@@ -441,6 +442,13 @@ granit_result webgpu_renderer_state::begin_rendering(
     native_view = resources_->native_texture_view(*attachment.view);
     if (native_view == 0)
       native_view = presentation_->native_view(*attachment.view);
+    if (attachment.resolve_view != nullptr) {
+      native_resolve_view = resources_->native_texture_view(*attachment.resolve_view);
+      if (native_resolve_view == 0)
+        native_resolve_view = presentation_->native_view(*attachment.resolve_view);
+      if (native_resolve_view == 0)
+        return GRANIT_ERROR_INVALID_HANDLE;
+    }
   }
   granit_backend_plugin_texture_view native_depth_view{};
   auto depth_load = GRANIT_BACKEND_PLUGIN_LOAD_OPERATION_CLEAR;
@@ -465,8 +473,8 @@ granit_result webgpu_renderer_state::begin_rendering(
                       : GRANIT_BACKEND_PLUGIN_STORE_OPERATION_DISCARD;
     clear_depth = depth.clear_value.depth;
   }
-  return commands_->begin_rendering(recorder, native_view, load, store, clear, native_depth_view,
-                                    depth_load, depth_store, clear_depth);
+  return commands_->begin_rendering(recorder, native_view, native_resolve_view, load, store, clear,
+                                    native_depth_view, depth_load, depth_store, clear_depth);
 }
 
 granit_result
@@ -538,7 +546,8 @@ granit_result webgpu_renderer_state::create_graphics_pipeline(
   return pipelines_->create_graphics_pipeline(
       pipeline, info.layout, shaders_->native_handle(info.vertex_shader),
       shaders_->native_handle(info.fragment_shader), info.vertex_buffers, color_format,
-      info.depth_stencil_format, info.primitive, info.depth, info.depth_bias, color_blend);
+      info.depth_stencil_format, info.sample_count, info.primitive, info.depth, info.depth_bias,
+      color_blend);
 }
 
 void* webgpu_renderer_state::allocate(std::uint64_t size, std::uint64_t alignment, void*) noexcept {

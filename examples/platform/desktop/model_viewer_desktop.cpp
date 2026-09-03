@@ -344,7 +344,8 @@ int main(int argc, char** argv) {
   }
   if (granit::succeeded(result))
     result = core.upload(renderer.native_handle(), environment_bytes);
-  const granit_render_pipeline_desc pipeline_desc = GRANIT_RENDER_PIPELINE_DESC_INIT;
+  granit_render_pipeline_desc pipeline_desc = GRANIT_RENDER_PIPELINE_DESC_INIT;
+  pipeline_desc.sample_count = GRANIT_SAMPLE_COUNT_4;
   if (granit::succeeded(result))
     result = pipeline.initialize(renderer.native_handle(), pipeline_desc);
   bool gpu_metrics_enabled = false;

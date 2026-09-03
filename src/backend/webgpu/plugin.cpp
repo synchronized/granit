@@ -56,6 +56,7 @@ struct webgpu_instance {
     granit_backend_plugin_texture_format format;
     std::uint32_t mip_level_count;
     std::uint32_t array_layer_count;
+    std::uint32_t sample_count;
     granit_backend_plugin_texture_usage usage;
     bool borrowed;
   };
@@ -1106,6 +1107,7 @@ granit_result create_texture(granit_backend_plugin_instance instance,
                              : GRANIT_BACKEND_PLUGIN_TEXTURE_DIMENSION_2D;
   const auto array_layer_count =
       desc != nullptr && desc->array_layer_count != 0 ? desc->array_layer_count : 1;
+  const auto sample_count = desc != nullptr && desc->sample_count != 0 ? desc->sample_count : 1;
   if (instance == 0 || desc == nullptr || out_texture == nullptr ||
       desc->struct_size < sizeof(granit_backend_plugin_texture_desc) || desc->reserved != 0 ||
       desc->width == 0 || desc->height == 0 || desc->usage == 0 || desc->mip_level_count == 0 ||
@@ -1113,6 +1115,11 @@ granit_result create_texture(granit_backend_plugin_instance instance,
        dimension != GRANIT_BACKEND_PLUGIN_TEXTURE_DIMENSION_CUBE) ||
       (dimension == GRANIT_BACKEND_PLUGIN_TEXTURE_DIMENSION_CUBE &&
        (desc->width != desc->height || array_layer_count != 6)) ||
+      (sample_count != 1 && sample_count != 4) ||
+      (sample_count > 1 &&
+       (desc->mip_level_count != 1 || array_layer_count != 1 ||
+        dimension != GRANIT_BACKEND_PLUGIN_TEXTURE_DIMENSION_2D ||
+        (desc->usage & GRANIT_BACKEND_PLUGIN_TEXTURE_USAGE_RENDER_ATTACHMENT_BIT) == 0)) ||
       to_native_texture_format(desc->format) == WGPUTextureFormat_Undefined ||
       (desc->usage & ~known_usage) != 0) {
     return GRANIT_ERROR_INVALID_ARGUMENT;
@@ -1144,7 +1151,7 @@ granit_result create_texture(granit_backend_plugin_instance instance,
   descriptor.size = {desc->width, desc->height, array_layer_count};
   descriptor.format = to_native_texture_format(desc->format);
   descriptor.mipLevelCount = desc->mip_level_count;
-  descriptor.sampleCount = 1;
+  descriptor.sampleCount = sample_count;
   const auto native = wgpuDeviceCreateTexture(state.device, &descriptor);
   if (native == nullptr) {
     return GRANIT_ERROR_OUT_OF_MEMORY;
@@ -1152,10 +1159,10 @@ granit_result create_texture(granit_backend_plugin_instance instance,
   const auto handle = next_handle<granit_backend_plugin_texture>(next_texture);
   try {
     if (!state.textures
-             .emplace(handle,
-                      webgpu_instance::texture_record{native, desc->width, desc->height,
-                                                      desc->format, desc->mip_level_count,
-                                                      array_layer_count, desc->usage, false})
+             .emplace(handle, webgpu_instance::texture_record{native, desc->width, desc->height,
+                                                              desc->format, desc->mip_level_count,
+                                                              array_layer_count, sample_count,
+                                                              desc->usage, false})
              .second) {
       wgpuTextureRelease(native);
       return GRANIT_ERROR_INTERNAL;
@@ -2077,7 +2084,8 @@ create_render_pipeline(granit_backend_plugin_instance instance,
       (desc->cull_mode != GRANIT_BACKEND_PLUGIN_CULL_MODE_NONE &&
        desc->cull_mode != GRANIT_BACKEND_PLUGIN_CULL_MODE_FRONT &&
        desc->cull_mode != GRANIT_BACKEND_PLUGIN_CULL_MODE_BACK) ||
-      desc->polygon_mode != GRANIT_BACKEND_PLUGIN_POLYGON_MODE_FILL)
+      desc->polygon_mode != GRANIT_BACKEND_PLUGIN_POLYGON_MODE_FILL ||
+      (desc->sample_count != 1 && desc->sample_count != 4))
     return GRANIT_ERROR_INVALID_ARGUMENT;
   const std::scoped_lock lock{instances_mutex};
   const auto found = instances.find(instance);
@@ -2177,7 +2185,7 @@ create_render_pipeline(granit_backend_plugin_instance instance,
   descriptor.primitive.topology = WGPUPrimitiveTopology_TriangleList;
   descriptor.primitive.frontFace = to_native_front_face(desc->front_face);
   descriptor.primitive.cullMode = to_native_cull_mode(desc->cull_mode);
-  descriptor.multisample.count = 1;
+  descriptor.multisample.count = desc->sample_count;
   descriptor.multisample.mask = UINT32_MAX;
   descriptor.fragment = &fragment;
   WGPUDepthStencilState depth = WGPU_DEPTH_STENCIL_STATE_INIT;
@@ -2399,12 +2407,14 @@ granit_result recorder_copy_buffer_to_texture(granit_backend_plugin_instance ins
 
 granit_result recorder_begin_rendering(
     granit_backend_plugin_instance instance, granit_backend_plugin_command_recorder recorder,
-    granit_backend_plugin_texture_view target, granit_backend_plugin_load_operation load_operation,
+    granit_backend_plugin_texture_view target, granit_backend_plugin_texture_view resolve_target,
+    granit_backend_plugin_load_operation load_operation,
     granit_backend_plugin_store_operation store_operation, float clear_r, float clear_g,
     float clear_b, float clear_a, granit_backend_plugin_texture_view depth_target,
     granit_backend_plugin_load_operation depth_load_operation,
     granit_backend_plugin_store_operation depth_store_operation, float clear_depth) noexcept {
   if (instance == 0 || recorder == 0 || (target == 0 && depth_target == 0) ||
+      (resolve_target != 0 && target == 0) ||
       (target != 0 && ((load_operation != GRANIT_BACKEND_PLUGIN_LOAD_OPERATION_LOAD &&
                         load_operation != GRANIT_BACKEND_PLUGIN_LOAD_OPERATION_CLEAR) ||
                        (store_operation != GRANIT_BACKEND_PLUGIN_STORE_OPERATION_STORE &&
@@ -2425,18 +2435,31 @@ granit_result recorder_begin_rendering(
   auto& state = *found->second;
   const auto command = state.command_recorders.find(recorder);
   const auto view = state.texture_views.find(target);
+  const auto resolve_view = state.texture_views.find(resolve_target);
   const auto depth_view = state.texture_views.find(depth_target);
   if (command == state.command_recorders.end() ||
-      (target != 0 && view == state.texture_views.end())) {
+      (target != 0 && view == state.texture_views.end()) ||
+      (resolve_target != 0 && resolve_view == state.texture_views.end())) {
     return GRANIT_ERROR_INVALID_HANDLE;
   }
   const auto texture =
       target == 0 ? state.textures.end() : state.textures.find(view->second.texture);
+  const auto resolve_texture = resolve_target == 0
+                                   ? state.textures.end()
+                                   : state.textures.find(resolve_view->second.texture);
   if (command->second.finished || command->second.pass != nullptr ||
       command->second.compute_pass != nullptr ||
       (target != 0 && (texture == state.textures.end() ||
                        (texture->second.usage &
-                        GRANIT_BACKEND_PLUGIN_TEXTURE_USAGE_RENDER_ATTACHMENT_BIT) == 0))) {
+                        GRANIT_BACKEND_PLUGIN_TEXTURE_USAGE_RENDER_ATTACHMENT_BIT) == 0)) ||
+      (resolve_target != 0 &&
+       (resolve_texture == state.textures.end() || texture->second.sample_count != 4 ||
+        resolve_texture->second.sample_count != 1 ||
+        texture->second.format != resolve_texture->second.format ||
+        texture->second.width != resolve_texture->second.width ||
+        texture->second.height != resolve_texture->second.height ||
+        (resolve_texture->second.usage &
+         GRANIT_BACKEND_PLUGIN_TEXTURE_USAGE_RENDER_ATTACHMENT_BIT) == 0))) {
     return GRANIT_ERROR_INVALID_ARGUMENT;
   }
   WGPURenderPassDepthStencilAttachment depth_attachment =
@@ -2468,6 +2491,7 @@ granit_result recorder_begin_rendering(
   WGPURenderPassColorAttachment color = WGPU_RENDER_PASS_COLOR_ATTACHMENT_INIT;
   if (target != 0) {
     color.view = view->second.view;
+    color.resolveTarget = resolve_target == 0 ? nullptr : resolve_view->second.view;
     color.loadOp = load_operation == GRANIT_BACKEND_PLUGIN_LOAD_OPERATION_LOAD ? WGPULoadOp_Load
                                                                                : WGPULoadOp_Clear;
     color.storeOp = store_operation == GRANIT_BACKEND_PLUGIN_STORE_OPERATION_STORE
@@ -3376,7 +3400,7 @@ granit_result acquire_swapchain(granit_backend_plugin_instance instance,
         texture, webgpu_instance::texture_record{
                      acquired.texture, swapchain_found->second.info.width,
                      swapchain_found->second.info.height, swapchain_found->second.info.format, 1, 1,
-                     GRANIT_BACKEND_PLUGIN_TEXTURE_USAGE_RENDER_ATTACHMENT_BIT, true});
+                     1, GRANIT_BACKEND_PLUGIN_TEXTURE_USAGE_RENDER_ATTACHMENT_BIT, true});
     found->second->texture_views.emplace(
         view, webgpu_instance::texture_view_record{native_view, texture, true});
   } catch (...) {

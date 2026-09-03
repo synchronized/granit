@@ -16,6 +16,10 @@ Render Pipeline 是可选的高级参考渲染入口。当前实现组织 Direct
 创建描述使用 `GRANIT_RENDER_PIPELINE_DESC_INIT` 初始化。未提供录制回调时使用完整自动路径；
 提供回调时可以覆盖 Shadow 和 Opaque 阶段的 Draw 录制，并在 Tone Mapping 后接收 Overlay 阶段。
 
+Version 2 创建描述的 `sample_count` 控制自动 PBR 路径的采样数，当前接受 1 或 4。选择 4 时，
+HDR 颜色和深度先写入四倍多采样附件，颜色在 PBR 阶段结束时解析到单采样 HDR 目标，再进入
+Tone Mapping。自定义录制回调仍使用单采样契约，避免回调在未声明支持时收到多采样目标。
+
 ## 每帧输入
 
 渲染描述使用 `GRANIT_RENDER_PIPELINE_RENDER_DESC_INIT` 初始化，主要包含：
@@ -110,6 +114,8 @@ Upload 环形分配。
 - 不包含透明 PBR、Bindless、Clustered Forward 或 Deferred。
 - Overlay 路径依次支持世界 Debug Draw、Canvas Draw List，并保留用户回调作为最终自定义扩展点。
 - 默认 IBL 占位资源由 Pipeline 内部持有；调用者可按次覆盖预处理环境资源。
+- 自动 PBR 路径支持 1× 或 4× MSAA；MSAA 只处理几何边缘，不替代纹理 Mipmap、各向异性过滤
+  或 Shader 内的高光抗锯齿。
 - 同一 Pipeline 不支持并发渲染，多 View 仍按独立输出顺序执行。
 
 更底层的自定义渲染流程可直接使用 [Command Recorder](command-recorder.md) 和

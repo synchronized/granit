@@ -192,6 +192,7 @@ public:
       granit_backend_plugin_instance instance, granit_backend_plugin_command_recorder recorder,
       granit_backend_plugin_texture_view target, granit_backend_plugin_load_operation load,
       granit_backend_plugin_store_operation store, const float clear[4],
+      granit_backend_plugin_texture_view resolve_target = 0,
       granit_backend_plugin_texture_view depth_target = 0,
       granit_backend_plugin_load_operation depth_load = GRANIT_BACKEND_PLUGIN_LOAD_OPERATION_CLEAR,
       granit_backend_plugin_store_operation depth_store =
