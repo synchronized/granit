@@ -86,7 +86,7 @@ granit::result application_core::upload(granit_renderer renderer,
   if (phase_ != application_phase::gpu_upload)
     return granit::result::invalid_argument;
   const auto result = gpu_scene_.initialize(renderer, cpu_scene_, sampler_anisotropy);
-  if (granit::failed(result)) {
+  if (result.failed()) {
     fail(result, "模型查看器 GPU Scene 上传失败");
     return result;
   }
@@ -102,7 +102,7 @@ granit::result application_core::upload(granit_renderer renderer,
     }
     environment_result = environment_.initialize(renderer, package);
   }
-  if (granit::failed(environment_result)) {
+  if (environment_result.failed()) {
     gpu_scene_.reset();
     fail(environment_result, "模型查看器内建环境上传失败");
     return environment_result;
@@ -129,7 +129,7 @@ granit::result application_core::tick(const application_tick_input& input,
   if (input.change.debug_display) {
     const auto debug_result =
         gpu_scene_.update_debug_display(static_cast<std::uint32_t>(*input.change.debug_display));
-    if (granit::failed(debug_result))
+    if (debug_result.failed())
       return debug_result;
   }
 
@@ -172,7 +172,7 @@ granit::result application_core::tick(const application_tick_input& input,
   application_tick_output candidate;
   const auto snapshot_result = gpu_scene_.create_snapshot(std::span{&view, 1}, std::span{&light, 1},
                                                           {}, {}, candidate.snapshot);
-  if (granit::failed(snapshot_result))
+  if (snapshot_result.failed())
     return snapshot_result;
   candidate.render.scene = candidate.snapshot.native_handle();
   candidate.render.width = input.width;

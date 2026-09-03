@@ -93,25 +93,25 @@ int main(int argument_count, char** arguments) {
                                      .enable_validation = true,
                                      .surface_types = granit::surface_type::win32});
   granit::surface surface;
-  if (granit::succeeded(result))
+  if (result.ok())
     result = surface.initialize_win32(renderer.native_handle(),
                                       {.instance = instance, .window = window});
   RECT client{};
   GetClientRect(window, &client);
   granit::swapchain swapchain;
-  if (granit::succeeded(result)) {
+  if (result.ok()) {
     result = swapchain.initialize(renderer.native_handle(), surface.native_handle(),
                                   {.width = static_cast<std::uint32_t>(client.right),
                                    .height = static_cast<std::uint32_t>(client.bottom)});
   }
   granit::swapchain_info info;
-  if (granit::succeeded(result))
+  if (result.ok())
     result = swapchain.query_info(info);
 
   constexpr std::array<float, 9> positions{-0.65F, -0.65F, 0.5F,  0.65F, -0.65F,
                                            0.5F,   0.0F,   0.65F, 0.5F};
   granit::buffer vertex_buffer;
-  if (granit::succeeded(result)) {
+  if (result.ok()) {
     result =
         vertex_buffer.initialize(renderer.native_handle(),
                                  {.size = sizeof(positions), .usage = granit::buffer_usage::vertex},
@@ -125,7 +125,7 @@ int main(int argument_count, char** arguments) {
   mesh_desc.vertex_buffer_count = 1;
   mesh_desc.vertex_count = 3;
   granit_mesh mesh = GRANIT_NULL_HANDLE;
-  if (granit::succeeded(result))
+  if (result.ok())
     result = granit::from_native(granit_mesh_create(renderer.native_handle(), &mesh_desc, &mesh));
 
   const auto archive = load_package();
@@ -142,7 +142,7 @@ int main(int argument_count, char** arguments) {
   material_desc.initial_updates = &update;
   material_desc.initial_update_count = 1;
   granit_material material = GRANIT_NULL_HANDLE;
-  if (granit::succeeded(result) && !archive.empty()) {
+  if (result.ok() && !archive.empty()) {
     result = granit::from_native(
         granit_material_create(renderer.native_handle(), &material_desc, &material));
   } else if (archive.empty()) {
@@ -150,16 +150,16 @@ int main(int argument_count, char** arguments) {
   }
   granit_render_pipeline pipeline = GRANIT_NULL_HANDLE;
   const granit_render_pipeline_desc pipeline_desc = GRANIT_RENDER_PIPELINE_DESC_INIT;
-  if (granit::succeeded(result)) {
+  if (result.ok()) {
     result = granit::from_native(
         granit_render_pipeline_create(renderer.native_handle(), &pipeline_desc, &pipeline));
   }
   granit_scene_snapshot scene = GRANIT_NULL_HANDLE;
-  if (granit::succeeded(result)) {
+  if (result.ok()) {
     result = granit::from_native(
         create_scene(renderer.native_handle(), info.width, info.height, &scene));
   }
-  if (granit::failed(result)) {
+  if (result.failed()) {
     std::cerr << "初始化失败：" << granit::result_message(result) << '\n';
     DestroyWindow(window);
     return 1;
@@ -191,10 +191,10 @@ int main(int argument_count, char** arguments) {
       result = swapchain.recreate({.width = width, .height = height});
       if (result == granit::result::not_ready)
         continue;
-      if (granit::failed(result))
+      if (result.failed())
         break;
       result = swapchain.query_info(info);
-      if (granit::failed(result))
+      if (result.failed())
         break;
       static_cast<void>(granit_scene_snapshot_destroy(renderer.native_handle(), scene));
       scene = GRANIT_NULL_HANDLE;
@@ -202,7 +202,7 @@ int main(int argument_count, char** arguments) {
           create_scene(renderer.native_handle(), info.width, info.height, &scene));
       recreate = false;
       ++completed_recreates;
-      if (granit::failed(result))
+      if (result.failed())
         break;
     }
 
@@ -212,13 +212,13 @@ int main(int argument_count, char** arguments) {
       recreate = true;
       continue;
     }
-    if (granit::failed(result))
+    if (result.failed())
       break;
     recreate = frame.needs_recreate;
     granit_texture backbuffer = GRANIT_NULL_HANDLE;
     granit_texture_view backbuffer_view = GRANIT_NULL_HANDLE;
     result = swapchain.backbuffer(frame.image_index, backbuffer, backbuffer_view);
-    if (granit::succeeded(result)) {
+    if (result.ok()) {
       granit_render_pipeline_render_desc desc = GRANIT_RENDER_PIPELINE_RENDER_DESC_INIT;
       desc.scene = scene;
       desc.output = backbuffer_view;
@@ -231,10 +231,10 @@ int main(int argument_count, char** arguments) {
       result = granit::from_native(
           granit_render_pipeline_render(renderer.native_handle(), pipeline, &desc));
     }
-    if (granit::succeeded(result))
+    if (result.ok())
       result = swapchain.present(frame);
     recreate = recreate || frame.needs_recreate;
-    if (granit::failed(result))
+    if (result.failed())
       break;
     ++rendered_frames;
     if (smoke_test && rendered_frames == 1) {
@@ -252,11 +252,11 @@ int main(int argument_count, char** arguments) {
   static_cast<void>(granit_mesh_destroy(renderer.native_handle(), mesh));
   if (IsWindow(window) != FALSE)
     DestroyWindow(window);
-  if (granit::failed(result))
+  if (result.failed())
     std::cerr << "渲染失败：" << granit::result_message(result) << '\n';
   if (smoke_test && completed_recreates < 2) {
     std::cerr << "窗口烟雾测试未完成两次尺寸重建\n";
     return 1;
   }
-  return granit::failed(result) ? 1 : 0;
+  return result.failed() ? 1 : 0;
 }

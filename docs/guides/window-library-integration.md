@@ -53,7 +53,7 @@ auto result = renderer.initialize({
     .surface_types = granit::surface_type::win32,
 });
 granit::surface surface;
-if (granit::succeeded(result))
+if (result.ok())
   result = surface.initialize_win32(renderer.native_handle(), {instance, hwnd});
 ```
 
@@ -72,7 +72,7 @@ auto result = renderer.initialize({
     .surface_types = granit::surface_type::wayland,
 });
 granit::surface surface;
-if (granit::succeeded(result))
+if (result.ok())
   result = surface.initialize_wayland(renderer.native_handle(), {display, wl_surface});
 ```
 
@@ -100,7 +100,7 @@ auto result = renderer.initialize({
     .surface_types = granit::surface_type::xcb,
 });
 granit::surface surface;
-if (granit::succeeded(result)) {
+if (result.ok()) {
   result = surface.initialize_xcb(
       renderer.native_handle(),
       {connection, static_cast<std::uint32_t>(x11_window)});

@@ -35,7 +35,7 @@ public:
     if (valid())
       return result::invalid_argument;
     const auto value = from_native(granit_scene_snapshot_create(renderer, &desc, &handle_));
-    if (succeeded(value))
+    if (value.ok())
       renderer_ = renderer;
     return value;
   }

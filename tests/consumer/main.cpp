@@ -58,7 +58,7 @@ int main() {
     return 4;
 
   granit::renderer_limits limits;
-  if (granit::failed(renderer.get_limits(limits)) || limits.uniform_buffer_offset_alignment == 0 ||
+  if ((renderer.get_limits(limits)).failed() || limits.uniform_buffer_offset_alignment == 0 ||
       limits.max_uniform_buffer_binding_size == 0)
     return 5;
 
@@ -70,20 +70,20 @@ int main() {
     return 10;
 
   granit::buffer buffer;
-  if (granit::failed(buffer.initialize(renderer.native_handle(),
+  if ((buffer.initialize(renderer.native_handle(),
                                        {.size = 64,
                                         .usage = granit::buffer_usage::transfer_source,
-                                        .location = granit::memory_location::upload})))
+                                        .location = granit::memory_location::upload})).failed())
     return 6;
   granit::buffer moved = std::move(buffer);
   if (buffer.valid() || !moved.valid())
     return 7;
-  if (granit::failed(moved.reset()) || granit::failed(moved.reset()))
+  if ((moved.reset()).failed() || (moved.reset()).failed())
     return 8;
   granit::renderer moved_renderer = std::move(renderer);
   if (renderer.valid() || !moved_renderer.valid())
     return 9;
-  if (granit::failed(moved_renderer.reset()) || granit::failed(moved_renderer.reset()))
+  if ((moved_renderer.reset()).failed() || (moved_renderer.reset()).failed())
     return 11;
   return 0;
 }

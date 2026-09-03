@@ -152,7 +152,7 @@ TEST_CASE("GPU Scene 计划失败时保持输出不变", "[example][model-viewer
 TEST_CASE("GPU Scene 事务式创建合并 Buffer 与 Mesh", "[example][model-viewer][gpu]") {
   granit::renderer renderer;
   const auto renderer_result = renderer.initialize({.application_name = "Model Viewer GPU Test"});
-  if (granit::failed(renderer_result))
+  if (renderer_result.failed())
     SKIP("当前环境没有可用 Renderer");
 
   granit::example::gltf::scene source;
@@ -249,7 +249,7 @@ TEST_CASE("同一 CPU Scene 为 Vulkan 与 WebGPU 创建独立 GPU Scene",
   granit::renderer vulkan;
   const auto vulkan_result = vulkan.initialize(
       {.application_name = "Model Viewer Vulkan", .backend = granit::renderer_backend::vulkan});
-  if (granit::failed(vulkan_result))
+  if (vulkan_result.failed())
     SKIP("当前环境没有可用 Vulkan Renderer");
 
   granit::renderer webgpu;

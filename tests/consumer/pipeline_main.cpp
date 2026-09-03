@@ -72,12 +72,12 @@ int main() {
       renderer_result == granit::result::incompatible_driver ||
       renderer_result == granit::result::no_suitable_device)
     return renderer.valid() ? 3 : 0;
-  if (granit::failed(renderer_result))
+  if (renderer_result.failed())
     return 4;
   auto native_renderer = renderer.native_handle();
   desc.record = record_stage;
   desc.user_data = &native_renderer;
-  if (granit::failed(pipeline.initialize(renderer.native_handle(), desc)))
+  if ((pipeline.initialize(renderer.native_handle(), desc)).failed())
     return 5;
 
   constexpr std::uint32_t size = 4;
@@ -103,7 +103,7 @@ int main() {
   granit_scene_snapshot_desc scene_desc = GRANIT_SCENE_SNAPSHOT_DESC_INIT;
   scene_desc.views = &view;
   scene_desc.view_count = 1;
-  if (granit::failed(scene.initialize(renderer.native_handle(), scene_desc)))
+  if ((scene.initialize(renderer.native_handle(), scene_desc)).failed())
     return 7;
 
   granit_render_pipeline_render_desc render_desc = GRANIT_RENDER_PIPELINE_RENDER_DESC_INIT;
@@ -113,7 +113,7 @@ int main() {
   render_desc.width = size;
   render_desc.height = size;
   const auto render_result = pipeline.render(render_desc);
-  if (granit::failed(render_result) && render_result != granit::result::not_ready) {
+  if (render_result.failed() && render_result != granit::result::not_ready) {
     std::cerr << "RenderPipeline实际渲染失败：" << static_cast<granit_result>(render_result)
               << '\n';
     return 8;
@@ -125,9 +125,9 @@ int main() {
   granit::render_pipeline moved = std::move(pipeline);
   if (pipeline.valid() || !moved.valid())
     return 10;
-  if (granit::failed(scene.reset()))
+  if ((scene.reset()).failed())
     return 11;
-  if (granit::failed(moved.reset()) || granit::failed(moved.reset()))
+  if ((moved.reset()).failed() || (moved.reset()).failed())
     return 12;
-  return granit::failed(renderer.reset()) ? 13 : 0;
+  return (renderer.reset()).failed() ? 13 : 0;
 }

@@ -124,7 +124,7 @@ Wayland 和 Canvas；实际可用集合取决于所选后端、平台及 Provide
 ```cpp
 granit::renderer renderer;
 const auto result = renderer.initialize({.application_name = "example"});
-if (granit::failed(result)) {
+if (result.failed()) {
   // 处理错误
 }
 ```

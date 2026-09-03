@@ -1086,35 +1086,35 @@ extern "C" granit_result granit_render_pipeline_create(granit_renderer renderer,
          .usage = granit::texture_usage::depth_stencil_attachment | granit::texture_usage::sampled,
          .width = 1024,
          .height = 1024});
-    if (granit::failed(resource_result))
+    if (resource_result.failed())
       return static_cast<granit_result>(resource_result);
     resource_result =
         state->shadow_view.initialize(renderer, state->shadow_texture.native_handle());
-    if (granit::failed(resource_result))
+    if (resource_result.failed())
       return static_cast<granit_result>(resource_result);
     resource_result = state->shadow_vertex_shader.initialize_asset(
         renderer, {.stage = granit::shader_stage::vertex,
                    .spirv = granit::pipeline::detail::shadow_depth_vertex_shader(),
                    .wgsl = granit::pipeline::detail::shadow_depth_vertex_wgsl(),
                    .entry_point = "vertex_main"});
-    if (granit::failed(resource_result))
+    if (resource_result.failed())
       return static_cast<granit_result>(resource_result);
     resource_result = state->shadow_fragment_shader.initialize_asset(
         renderer, {.stage = granit::shader_stage::fragment,
                    .spirv = granit::pipeline::detail::shadow_depth_fragment_shader(),
                    .wgsl = granit::pipeline::detail::shadow_depth_fragment_wgsl(),
                    .entry_point = "fragment_main"});
-    if (granit::failed(resource_result))
+    if (resource_result.failed())
       return static_cast<granit_result>(resource_result);
     resource_result = state->shadow_placeholder_texture.initialize(
         renderer, {.format = granit::texture_format::d32_float,
                    .usage = granit::texture_usage::sampled |
                             granit::texture_usage::depth_stencil_attachment});
-    if (granit::failed(resource_result))
+    if (resource_result.failed())
       return static_cast<granit_result>(resource_result);
     resource_result = state->shadow_placeholder_view.initialize(
         renderer, state->shadow_placeholder_texture.native_handle());
-    if (granit::failed(resource_result))
+    if (resource_result.failed())
       return static_cast<granit_result>(resource_result);
     std::scoped_lock lock{registry_mutex};
     size_t index = 0;

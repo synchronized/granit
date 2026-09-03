@@ -25,9 +25,9 @@ TEST_CASE("结果码保持定宽 C ABI", "[result]") {
   STATIC_CHECK(granit::from_native(GRANIT_ERROR_INVALID_HANDLE) ==
                granit::result::invalid_handle);
   STATIC_CHECK(granit::from_native(INT32_C(-999)).native() == INT32_C(-999));
-  CHECK(granit::succeeded(granit::result::success));
-  CHECK_FALSE(granit::failed(granit::result::success));
-  CHECK(granit::failed(granit::result::invalid_argument));
+  CHECK(granit::result::success.ok());
+  CHECK_FALSE(granit::result::success.failed());
+  CHECK(granit::result::invalid_argument.failed());
   CHECK(granit::result_message(granit::result::invalid_handle) == "invalid handle");
   CHECK(granit::result::invalid_handle.message() == "invalid handle");
   CHECK(

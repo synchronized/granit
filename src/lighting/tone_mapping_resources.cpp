@@ -59,12 +59,12 @@ granit_result tone_mapping_pipeline_resources::initialize(granit_renderer render
                                       .type = granit::binding_type::sampler,
                                       .array_count = 1,
                                       .visibility = fragment}};
-  if (granit::succeeded(result))
+  if (result.ok())
     result = group_layout_.initialize(renderer, layout_entries);
   const std::array layouts{group_layout_.native_handle()};
-  if (granit::succeeded(result))
+  if (result.ok())
     result = pipeline_layout_.initialize(renderer, layouts);
-  if (granit::succeeded(result)) {
+  if (result.ok()) {
     result = wgsl.empty()
                  ? vertex_shader_.initialize(renderer, {.stage = granit::shader_stage::vertex,
                                                         .code = vertex_code,
@@ -74,7 +74,7 @@ granit_result tone_mapping_pipeline_resources::initialize(granit_renderer render
                                                               .wgsl = wgsl,
                                                               .entry_point = "vertex_main"});
   }
-  if (granit::succeeded(result)) {
+  if (result.ok()) {
     result =
         wgsl.empty()
             ? fragment_shader_.initialize(renderer, {.stage = granit::shader_stage::fragment,
@@ -85,7 +85,7 @@ granit_result tone_mapping_pipeline_resources::initialize(granit_renderer render
                                                            .wgsl = wgsl,
                                                            .entry_point = "fragment_main"});
   }
-  if (granit::succeeded(result)) {
+  if (result.ok()) {
     result = pipeline_.initialize(
         renderer, {.layout = pipeline_layout_.native_handle(),
                    .vertex_shader = vertex_shader_.native_handle(),
@@ -101,7 +101,7 @@ granit_result tone_mapping_pipeline_resources::initialize(granit_renderer render
                    .color_blends = {},
                    .depth_bias = std::nullopt});
   }
-  if (granit::failed(result)) {
+  if (result.failed()) {
     static_cast<void>(reset());
     return static_cast<granit_result>(result);
   }
@@ -113,7 +113,7 @@ granit_result tone_mapping_pipeline_resources::initialize(granit_renderer render
 granit_result tone_mapping_pipeline_resources::reset() noexcept {
   granit_result first = GRANIT_SUCCESS;
   const auto capture = [&](granit::result value) {
-    if (first == GRANIT_SUCCESS && granit::failed(value))
+    if (first == GRANIT_SUCCESS && value.failed())
       first = static_cast<granit_result>(value);
   };
   capture(pipeline_.reset());
@@ -147,9 +147,9 @@ tone_mapping_binding_resources::initialize(const tone_mapping_pipeline_resources
                                                     .size = sizeof(values)},
                            granit::bind_group_entry{.binding = 1, .resource = hdr_view},
                            granit::bind_group_entry{.binding = 2, .resource = pipeline.sampler()}};
-  if (granit::succeeded(result))
+  if (result.ok())
     result = group_.initialize(pipeline.renderer(), pipeline.group_layout(), entries);
-  if (granit::failed(result)) {
+  if (result.failed()) {
     static_cast<void>(reset());
     return static_cast<granit_result>(result);
   }

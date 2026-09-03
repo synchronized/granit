@@ -72,46 +72,46 @@ granit::result render_frame(granit::swapchain& swapchain, granit::frame_context&
                             std::uint32_t width, std::uint32_t height, bool& needs_recreate) {
   granit::acquired_frame frame;
   auto result = swapchain.acquire(frame);
-  if (granit::failed(result))
+  if (result.failed())
     return result;
   needs_recreate = frame.needs_recreate;
 
   granit_texture texture = GRANIT_NULL_HANDLE;
   granit_texture_view view = GRANIT_NULL_HANDLE;
-  if (granit::succeeded(result))
+  if (result.ok())
     result = swapchain.backbuffer(frame.image_index, texture, view);
   granit::frame_recording recording;
-  if (granit::succeeded(result))
+  if (result.ok())
     result = context.begin(frame, recording);
   auto& recorder = recording.recorder();
-  if (granit::succeeded(result))
+  if (result.ok())
     result = recorder.bind_graphics_pipeline(pipeline.native_handle());
   const granit::viewport viewport{0, 0, static_cast<float>(width), static_cast<float>(height),
                                   0, 1};
   const granit::scissor scissor{0, 0, width, height};
-  if (granit::succeeded(result))
+  if (result.ok())
     result = recorder.set_viewports(0, std::span{&viewport, 1});
-  if (granit::succeeded(result))
+  if (result.ok())
     result = recorder.set_scissors(0, std::span{&scissor, 1});
   const granit::vertex_buffer_binding binding{vertex_buffer.native_handle(), 0};
-  if (granit::succeeded(result))
+  if (result.ok())
     result = recorder.bind_vertex_buffers(0, std::span{&binding, 1});
   const granit::color_attachment_desc color{
       .view = view, .clear_value = {.red = 0.025F, .green = 0.035F, .blue = 0.06F, .alpha = 1.0F}};
   const granit::rendering_desc rendering{.color_attachments = std::span{&color, 1},
                                          .area = {0, 0, width, height}};
-  if (granit::succeeded(result))
+  if (result.ok())
     result = recorder.begin_rendering(rendering);
-  if (granit::succeeded(result))
+  if (result.ok())
     result = recorder.draw(3);
-  if (granit::succeeded(result))
+  if (result.ok())
     result = recorder.end_rendering();
-  if (granit::succeeded(result))
+  if (result.ok())
     result = recording.submit();
-  if (granit::succeeded(result))
+  if (result.ok())
     result = swapchain.present(frame);
   needs_recreate = needs_recreate || frame.needs_recreate;
-  if (granit::failed(result)) {
+  if (result.failed()) {
     if (recording.valid())
       static_cast<void>(recording.abort());
     if (frame.valid())
@@ -150,39 +150,39 @@ int main(int argument_count, char** arguments) {
                                      .enable_validation = true,
                                      .surface_types = granit::surface_type::win32});
   granit::surface surface;
-  if (granit::succeeded(result))
+  if (result.ok())
     result = surface.initialize_win32(renderer.native_handle(),
                                       {.instance = instance, .window = window});
   RECT client{};
   GetClientRect(window, &client);
   granit::swapchain swapchain;
-  if (granit::succeeded(result))
+  if (result.ok())
     result = swapchain.initialize(renderer.native_handle(), surface.native_handle(),
                                   {.width = static_cast<std::uint32_t>(client.right),
                                    .height = static_cast<std::uint32_t>(client.bottom)});
   granit::swapchain_info swapchain_info;
-  if (granit::succeeded(result))
+  if (result.ok())
     result = swapchain.query_info(swapchain_info);
 
   const auto vertex_code = load_shader("window_triangle.vert.spv");
   const auto fragment_code = load_shader("window_triangle.frag.spv");
-  if (granit::succeeded(result) && (vertex_code.empty() || fragment_code.empty())) {
+  if (result.ok() && (vertex_code.empty() || fragment_code.empty())) {
     std::cerr << "无法读取窗口三角形 Shader\n";
     result = granit::result::initialization_failed;
   }
   granit::shader vertex_shader;
   granit::shader fragment_shader;
-  if (granit::succeeded(result))
+  if (result.ok())
     result = vertex_shader.initialize(renderer.native_handle(),
                                       {.stage = granit::shader_stage::vertex, .code = vertex_code});
-  if (granit::succeeded(result))
+  if (result.ok())
     result = fragment_shader.initialize(
         renderer.native_handle(), {.stage = granit::shader_stage::fragment, .code = fragment_code});
   granit::pipeline_layout layout;
-  if (granit::succeeded(result))
+  if (result.ok())
     result = layout.initialize(renderer.native_handle());
   granit::graphics_pipeline pipeline;
-  if (granit::succeeded(result))
+  if (result.ok())
     result = initialize_pipeline(renderer.native_handle(), layout, vertex_shader, fragment_shader,
                                  swapchain_info.format, pipeline);
 
@@ -192,14 +192,14 @@ int main(int argument_count, char** arguments) {
       vertex{-0.65F, 0.55F, 0.15F, 0.3F, 1.0F},
   };
   granit::buffer vertex_buffer;
-  if (granit::succeeded(result))
+  if (result.ok())
     result = vertex_buffer.initialize(
         renderer.native_handle(), {.size = sizeof(vertices), .usage = granit::buffer_usage::vertex},
         std::as_bytes(std::span{vertices}));
   granit::frame_context frame_context;
-  if (granit::succeeded(result))
+  if (result.ok())
     result = frame_context.initialize(renderer.native_handle());
-  if (granit::failed(result)) {
+  if (result.failed()) {
     std::cerr << "初始化失败：" << granit::result_message(result) << '\n';
     DestroyWindow(window);
     return 1;
@@ -232,18 +232,18 @@ int main(int argument_count, char** arguments) {
       result = swapchain.recreate({.width = next_width, .height = next_height});
       if (result == granit::result::not_ready)
         continue;
-      if (granit::failed(result))
+      if (result.failed())
         break;
       granit::swapchain_info next_info;
       result = swapchain.query_info(next_info);
-      if (granit::failed(result))
+      if (result.failed())
         break;
       if (next_info.format != swapchain_info.format) {
         result = pipeline.reset();
-        if (granit::succeeded(result))
+        if (result.ok())
           result = initialize_pipeline(renderer.native_handle(), layout, vertex_shader,
                                        fragment_shader, next_info.format, pipeline);
-        if (granit::failed(result))
+        if (result.failed())
           break;
       }
       swapchain_info = next_info;
@@ -257,7 +257,7 @@ int main(int argument_count, char** arguments) {
       recreate = true;
       continue;
     }
-    if (granit::failed(result))
+    if (result.failed())
       break;
     ++rendered_frames;
     if (smoke_test && rendered_frames == 3)
@@ -265,9 +265,9 @@ int main(int argument_count, char** arguments) {
   }
   if (IsWindow(window) != FALSE)
     DestroyWindow(window);
-  if (granit::failed(result))
+  if (result.failed())
     std::cerr << "渲染失败：" << granit::result_message(result) << '\n';
   else
     std::cout << "示例已正常退出。\n";
-  return granit::failed(result) ? 1 : 0;
+  return result.failed() ? 1 : 0;
 }

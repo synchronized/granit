@@ -246,11 +246,11 @@ granit::result upload_checker_texture(granit_renderer renderer, granit::texture&
                                                        granit::texture_usage::transfer_destination,
                                               .width = 2,
                                               .height = 2});
-  if (granit::succeeded(result)) {
+  if (result.ok()) {
     result = texture.write(std::as_bytes(std::span{pixels}),
                            {.bytes_per_row = 8, .rows_per_image = 2}, {.width = 2, .height = 2});
   }
-  if (granit::succeeded(result))
+  if (result.ok())
     result = view.initialize(renderer, texture.native_handle());
   return result;
 }
@@ -280,21 +280,21 @@ granit::result upload_font_atlas(granit_renderer renderer, granit::texture& text
                                                        granit::texture_usage::transfer_destination,
                                               .width = static_cast<std::uint32_t>(width),
                                               .height = static_cast<std::uint32_t>(height)});
-  if (granit::succeeded(result)) {
+  if (result.ok()) {
     const granit::texture_data_layout layout{.bytes_per_row = static_cast<std::uint32_t>(width) * 4,
                                              .rows_per_image = static_cast<std::uint32_t>(height)};
     const granit::texture_write_region region{.width = static_cast<std::uint32_t>(width),
                                               .height = static_cast<std::uint32_t>(height)};
     result = texture.write(premultiplied_pixels, layout, region);
   }
-  if (granit::succeeded(result))
+  if (result.ok())
     result = view.initialize(renderer, texture.native_handle());
-  if (granit::succeeded(result)) {
+  if (result.ok()) {
     result = sampler.initialize(renderer, {.address_u = granit::address_mode::clamp_to_edge,
                                            .address_v = granit::address_mode::clamp_to_edge,
                                            .address_w = granit::address_mode::clamp_to_edge});
   }
-  if (granit::succeeded(result)) {
+  if (result.ok()) {
     ImGui::GetIO().Fonts->SetTexID(font_texture_id);
     ImGui::GetIO().Fonts->TexRef._TexData->SetStatus(ImTextureStatus_OK);
   }
@@ -316,7 +316,7 @@ granit::result render_frame(granit::swapchain& swapchain, granit::frame_context&
                             double& gpu_ms, frame_sample& sample) {
   granit_canvas_draw_list_stats stats = GRANIT_CANVAS_DRAW_LIST_STATS_INIT;
   auto result = canvas.get_stats(stats);
-  if (granit::failed(result))
+  if (result.failed())
     return result;
   const char* operation = "acquire";
   granit::acquired_frame frame;
@@ -325,7 +325,7 @@ granit::result render_frame(granit::swapchain& swapchain, granit::frame_context&
   sample.acquire_ms =
       std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - acquire_begin)
           .count();
-  if (granit::failed(result))
+  if (result.failed())
     return result;
   needs_recreate = frame.needs_recreate;
 
@@ -334,7 +334,7 @@ granit::result render_frame(granit::swapchain& swapchain, granit::frame_context&
   operation = "backbuffer";
   result = swapchain.backbuffer(frame.image_index, texture, view);
   granit::frame_recording recording;
-  if (granit::succeeded(result)) {
+  if (result.ok()) {
     operation = "frame_context.begin";
     const auto slot_begin = std::chrono::steady_clock::now();
     result = frame_context.begin(frame, recording);
@@ -343,11 +343,11 @@ granit::result render_frame(granit::swapchain& swapchain, granit::frame_context&
             .count();
   }
   const auto slot_index = recording.frame_slot();
-  if (granit::succeeded(result) && timestamps_enabled && timestamp_valid[slot_index]) {
+  if (result.ok() && timestamps_enabled && timestamp_valid[slot_index]) {
     std::array<std::uint64_t, 2> gpu_timestamps{};
     operation = "timestamps.results";
     result = timestamps.get_results(slot_index * 2, gpu_timestamps);
-    if (granit::succeeded(result)) {
+    if (result.ok()) {
       const auto completed_gpu_ms =
           static_cast<double>(gpu_timestamps[1] - gpu_timestamps[0]) / 1'000'000.0;
       smooth(gpu_ms, completed_gpu_ms);
@@ -360,26 +360,26 @@ granit::result render_frame(granit::swapchain& swapchain, granit::frame_context&
   }
   auto& recorder = recording.recorder();
   const auto first_query = slot_index * 2;
-  if (granit::succeeded(result) && timestamps_enabled) {
+  if (result.ok() && timestamps_enabled) {
     operation = "timestamps.reset";
     result = recorder.reset_timestamp_queries(timestamps.native_handle(), first_query, 2);
   }
-  if (granit::succeeded(result) && timestamps_enabled) {
+  if (result.ok() && timestamps_enabled) {
     operation = "timestamps.begin";
     result = recorder.write_timestamp(timestamps.native_handle(), GRANIT_TIMESTAMP_STAGE_TOP,
                                       first_query);
   }
-  if (granit::succeeded(result) && stats.item_count == 0) {
+  if (result.ok() && stats.item_count == 0) {
     const granit::color_attachment_desc color{.view = view};
     const granit::rendering_desc rendering{.color_attachments = std::span{&color, 1},
                                            .area = {0, 0, info.width, info.height}};
     operation = "recorder.begin_rendering";
     result = recorder.begin_rendering(rendering);
-    if (granit::succeeded(result)) {
+    if (result.ok()) {
       operation = "recorder.end_rendering";
       result = recorder.end_rendering();
     }
-  } else if (granit::succeeded(result)) {
+  } else if (result.ok()) {
     granit_canvas_record_desc record = GRANIT_CANVAS_RECORD_DESC_INIT;
     record.color = view;
     record.color_format = static_cast<granit_texture_format>(info.format);
@@ -395,25 +395,25 @@ granit::result render_frame(granit::swapchain& swapchain, granit::frame_context&
         std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - canvas_begin)
             .count();
   }
-  if (granit::succeeded(result) && timestamps_enabled) {
+  if (result.ok() && timestamps_enabled) {
     operation = "timestamps.end";
     result = recorder.write_timestamp(timestamps.native_handle(), GRANIT_TIMESTAMP_STAGE_BOTTOM,
                                       first_query + 1);
   }
-  if (granit::succeeded(result)) {
+  if (result.ok()) {
     operation = "frame_context.submit";
     const auto submit_begin = std::chrono::steady_clock::now();
     result = recording.submit();
     sample.submit_ms =
         std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - submit_begin)
             .count();
-    if (granit::succeeded(result) && timestamps_enabled) {
+    if (result.ok() && timestamps_enabled) {
       timestamp_valid[slot_index] = true;
       pending_samples[slot_index] = current_sample;
     }
-    submitted = granit::succeeded(result);
+    submitted = result.ok();
   }
-  if (granit::succeeded(result)) {
+  if (result.ok()) {
     operation = "swapchain.present";
     const auto present_begin = std::chrono::steady_clock::now();
     result = swapchain.present(frame);
@@ -422,7 +422,7 @@ granit::result render_frame(granit::swapchain& swapchain, granit::frame_context&
             .count();
   }
   needs_recreate = needs_recreate || frame.needs_recreate;
-  if (granit::failed(result)) {
+  if (result.failed()) {
     if (recording.valid())
       static_cast<void>(recording.abort());
     if (frame.valid())
@@ -511,7 +511,7 @@ int main(int argc, char** argv) {
   granit::surface_type surface_type{};
   auto result = granit::integration::sdl3::query_surface_type(window.get(), surface_type);
   granit::renderer renderer;
-  if (granit::succeeded(result)) {
+  if (result.ok()) {
     result =
         renderer.initialize({.application_name = "Granit SDL3 ImGui",
                              .enable_validation = validation_enabled,
@@ -519,39 +519,39 @@ int main(int argc, char** argv) {
                              .frames_in_flight = static_cast<std::uint32_t>(frame_slot_count)});
   }
   granit::surface surface;
-  if (granit::succeeded(result)) {
+  if (result.ok()) {
     result =
         granit::integration::sdl3::create_surface(renderer.native_handle(), window.get(), surface);
   }
 
   int pixel_width = 0;
   int pixel_height = 0;
-  if (granit::succeeded(result) &&
+  if (result.ok() &&
       !SDL_GetWindowSizeInPixels(window.get(), &pixel_width, &pixel_height)) {
     result = granit::result::backend_unavailable;
   }
   granit::swapchain swapchain;
-  if (granit::succeeded(result)) {
+  if (result.ok()) {
     result = swapchain.initialize(renderer.native_handle(), surface.native_handle(),
                                   {.width = static_cast<std::uint32_t>(pixel_width),
                                    .height = static_cast<std::uint32_t>(pixel_height),
                                    .presentation = presentation});
   }
   granit::swapchain_info swapchain_info;
-  if (granit::succeeded(result))
+  if (result.ok())
     result = swapchain.query_info(swapchain_info);
   granit::frame_context frame_context;
-  if (granit::succeeded(result))
+  if (result.ok())
     result = frame_context.initialize(renderer.native_handle());
   granit::timestamp_query_pool timestamps;
-  if (granit::succeeded(result) && timestamps_enabled) {
+  if (result.ok() && timestamps_enabled) {
     result = timestamps.initialize(renderer.native_handle(),
                                    static_cast<std::uint32_t>(frame_slot_count * 2));
   }
   granit::canvas_draw_list canvas;
   granit_canvas_draw_list_desc canvas_desc = GRANIT_CANVAS_DRAW_LIST_DESC_INIT;
   canvas_desc.frame_slot_count = static_cast<std::uint32_t>(frame_slot_count);
-  if (granit::succeeded(result))
+  if (result.ok())
     result = canvas.initialize(renderer.native_handle(), canvas_desc);
 
   granit::texture font_texture;
@@ -559,18 +559,18 @@ int main(int argc, char** argv) {
   granit::texture checker_texture;
   granit::texture_view checker_view;
   granit::sampler font_sampler;
-  if (granit::succeeded(result)) {
+  if (result.ok()) {
     result = upload_font_atlas(renderer.native_handle(), font_texture, font_view, font_sampler);
   }
-  if (granit::succeeded(result))
+  if (result.ok())
     result = upload_checker_texture(renderer.native_handle(), checker_texture, checker_view);
-  if (granit::failed(result))
+  if (result.failed())
     std::cerr << "SDL3 + ImGui 初始化失败，Granit 结果码：" << static_cast<int>(result) << '\n';
   texture_bindings bindings{
       .font = {font_view.native_handle(), font_sampler.native_handle()},
       .checker = {checker_view.native_handle(), font_sampler.native_handle()}};
 
-  bool running = granit::succeeded(result);
+  bool running = result.ok();
   bool recreate = false;
   bool show_demo_window = demo_enabled;
   bool validation_overlay = true;
@@ -613,7 +613,7 @@ int main(int argc, char** argv) {
                                    .presentation = presentation});
       if (result == granit::result::not_ready)
         continue;
-      if (granit::failed(result) || granit::failed(result = swapchain.query_info(swapchain_info))) {
+      if (result.failed() || (result = swapchain.query_info(swapchain_info)).failed()) {
         break;
       }
       recreate = false;
@@ -665,10 +665,10 @@ int main(int argc, char** argv) {
     }
     const auto convert_begin = std::chrono::steady_clock::now();
     result = canvas.clear();
-    if (granit::succeeded(result)) {
+    if (result.ok()) {
       result = granit::integration::imgui::append_draw_data(ImGui::GetDrawData(), canvas,
                                                             resolve_texture, &bindings);
-      if (granit::failed(result))
+      if (result.failed())
         std::cerr << "ImGui Draw Data 转换失败，Granit 结果码：" << static_cast<int>(result)
                   << '\n';
     }
@@ -678,7 +678,7 @@ int main(int argc, char** argv) {
     smooth(timings.convert_ms, sample.convert_ms);
     const auto collecting = profile.enabled() && rendered_frames >= profile.warmup_frames;
     bool submitted = false;
-    if (granit::succeeded(result)) {
+    if (result.ok()) {
       const auto render_begin = std::chrono::steady_clock::now();
       const auto current_sample = collecting ? samples.size() : invalid_sample_index;
       if (collecting)
@@ -698,7 +698,7 @@ int main(int argc, char** argv) {
       smooth(timings.canvas_record_ms, sample.canvas_record_ms);
       smooth(timings.submit_ms, sample.submit_ms);
       smooth(timings.present_ms, sample.present_ms);
-      if (granit::failed(result) && result != granit::result::out_of_date)
+      if (result.failed() && result != granit::result::out_of_date)
         std::cerr << "ImGui Canvas 录制或呈现失败，Granit 结果码：" << static_cast<int>(result)
                   << '\n';
     }
@@ -727,7 +727,7 @@ int main(int argc, char** argv) {
         break;
       continue;
     }
-    if (granit::failed(result))
+    if (result.failed())
       break;
     finalize_sample();
     ++rendered_frames;
@@ -735,7 +735,7 @@ int main(int argc, char** argv) {
       break;
   }
 
-  if (profile.enabled() && granit::succeeded(result)) {
+  if (profile.enabled() && result.ok()) {
     const profile_metadata metadata{.width = swapchain_info.width,
                                     .height = swapchain_info.height,
                                     .frame_slots = frame_slot_count,
@@ -752,7 +752,7 @@ int main(int argc, char** argv) {
     }
   }
 
-  if (frame_limit != 0 && granit::succeeded(result)) {
+  if (frame_limit != 0 && result.ok()) {
     std::cout << "完成 " << rendered_frames << " 帧（槽数 " << frame_slot_count << "）：CPU "
               << timings.cpu_ms << " ms，ImGui " << timings.imgui_ms << " ms，转换 "
               << timings.convert_ms << " ms，渲染 " << timings.render_ms << " ms，GPU "
@@ -762,7 +762,7 @@ int main(int argc, char** argv) {
               << timings.submit_ms << " ms\n";
   }
 
-  if (granit::failed(result))
+  if (result.failed())
     std::cerr << "SDL3 + ImGui 帧循环失败，Granit 结果码：" << static_cast<int>(result) << '\n';
-  return granit::failed(result) ? 1 : 0;
+  return result.failed() ? 1 : 0;
 }

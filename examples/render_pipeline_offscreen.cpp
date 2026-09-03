@@ -171,7 +171,7 @@ int main(int argc, char** argv) {
   static_cast<void>(argv);
 #endif
   granit::renderer renderer;
-  if (granit::failed(renderer.initialize({.application_name = "Granit Render Pipeline"}))) {
+  if ((renderer.initialize({.application_name = "Granit Render Pipeline"})).failed()) {
     std::cerr << "当前环境无法创建 Vulkan Renderer\n";
     return 1;
   }
@@ -195,11 +195,11 @@ int main(int argc, char** argv) {
   constexpr std::array<float, 9> positions{-0.65F, -0.65F, 0.5F,  0.65F, -0.65F,
                                            0.5F,   0.0F,   0.65F, 0.5F};
   granit::buffer vertex_buffer;
-  if (granit::failed(vertex_buffer.initialize(native_renderer,
+  if ((vertex_buffer.initialize(native_renderer,
                                               {.size = sizeof(positions),
                                                .usage = granit::buffer_usage::vertex,
                                                .location = granit::memory_location::device},
-                                              std::as_bytes(std::span{positions})))) {
+                                              std::as_bytes(std::span{positions}))).failed()) {
     std::cerr << "创建顶点缓冲失败\n";
     return 1;
   }
@@ -228,9 +228,9 @@ int main(int argc, char** argv) {
     const granit::texture_desc texture_desc{.format = granit::texture_format::rgba8_unorm,
                                             .usage = granit::texture_usage::sampled |
                                                      granit::texture_usage::transfer_destination};
-    if (granit::failed(workload_textures[index].initialize(native_renderer, texture_desc)) ||
-        granit::failed(workload_texture_views[index].initialize(
-            native_renderer, workload_textures[index].native_handle()))) {
+    if ((workload_textures[index].initialize(native_renderer, texture_desc)).failed() ||
+        (workload_texture_views[index].initialize(
+            native_renderer, workload_textures[index].native_handle())).failed()) {
       std::cerr << "创建纹理组失败\n";
       return 1;
     }
@@ -238,13 +238,13 @@ int main(int argc, char** argv) {
                                          std::byte{static_cast<std::uint8_t>((index * 53U) % 256U)},
                                          std::byte{static_cast<std::uint8_t>((index * 71U) % 256U)},
                                          std::byte{255}};
-    if (granit::failed(workload_textures[index].write(pixel, {}, {}))) {
+    if ((workload_textures[index].write(pixel, {}, {})).failed()) {
       std::cerr << "写入纹理组失败\n";
       return 1;
     }
   }
   granit::sampler workload_sampler;
-  if (granit::failed(workload_sampler.initialize(native_renderer))) {
+  if ((workload_sampler.initialize(native_renderer)).failed()) {
     std::cerr << "创建纹理组采样器失败\n";
     return 1;
   }
@@ -563,15 +563,15 @@ int main(int argc, char** argv) {
       readback.initialize(native_renderer, {.size = size * size * 4,
                                             .usage = granit::buffer_usage::transfer_destination,
                                             .location = granit::memory_location::readback});
-  if (granit::succeeded(result)) {
+  if (result.ok()) {
     readback_stage = "创建 Command Recorder";
     result = recorder.initialize(native_renderer);
   }
-  if (granit::succeeded(result)) {
+  if (result.ok()) {
     readback_stage = "开始回读命令";
     result = recorder.begin();
   }
-  if (granit::succeeded(result)) {
+  if (result.ok()) {
     readback_stage = "录制纹理回读";
     const granit_texture_data_layout layout{};
     const granit_texture_write_region region{.mip_level = 0,
@@ -586,30 +586,30 @@ int main(int argc, char** argv) {
                                              .depth = 1};
     result = recorder.copy_texture_to_buffer(output, readback.native_handle(), layout, region);
   }
-  if (granit::succeeded(result)) {
+  if (result.ok()) {
     readback_stage = "结束回读命令";
     result = recorder.end();
   }
-  if (granit::succeeded(result)) {
+  if (result.ok()) {
     readback_stage = "提交回读命令";
     result = recorder.submit();
   }
-  if (granit::succeeded(result)) {
+  if (result.ok()) {
     readback_stage = "重置回读命令";
     result = recorder.reset();
   }
-  if (granit::failed(result)) {
+  if (result.failed()) {
     std::cerr << readback_stage << "失败：" << static_cast<granit_result>(result) << '\n';
     return 1;
   }
   void* mapped = nullptr;
   result = readback.map(0, size * size * 4, &mapped);
   const auto* pixel = static_cast<const std::uint8_t*>(mapped) + (size / 2 * size + size / 2) * 4;
-  const std::array<std::uint8_t, 3> center{granit::succeeded(result) ? pixel[0] : std::uint8_t{0},
-                                           granit::succeeded(result) ? pixel[1] : std::uint8_t{0},
-                                           granit::succeeded(result) ? pixel[2] : std::uint8_t{0}};
+  const std::array<std::uint8_t, 3> center{result.ok() ? pixel[0] : std::uint8_t{0},
+                                           result.ok() ? pixel[1] : std::uint8_t{0},
+                                           result.ok() ? pixel[2] : std::uint8_t{0}};
   const bool rendered = center[0] != 0 || center[1] != 0 || center[2] != 0;
-  if (granit::succeeded(result))
+  if (result.ok())
     result = readback.unmap();
 
 #ifdef GRANIT_RENDER_PIPELINE_CPU_BENCHMARK
@@ -623,7 +623,7 @@ int main(int argc, char** argv) {
   static_cast<void>(granit_mesh_destroy(native_renderer, mesh));
   static_cast<void>(granit_texture_view_destroy(native_renderer, output_view));
   static_cast<void>(granit_texture_destroy(native_renderer, output));
-  if (!rendered || granit::failed(result)) {
+  if (!rendered || result.failed()) {
     std::cerr << "中心像素未被自动渲染路径覆盖\n";
     return 1;
   }

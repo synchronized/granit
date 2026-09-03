@@ -11,7 +11,8 @@
 ### 变更
 
 - C++ `granit::result` 改为轻量值结构，新增 `ok()`、`failed()`、`native()`、`message()` 和显式
-  `operator bool()`；布尔上下文中的 `true` 表示成功，C ABI `granit_result` 保持不变。
+  `operator bool()`，并移除 `succeeded()`、`failed()` 自由函数；布尔上下文中的 `true` 表示成功，
+  C ABI `granit_result` 保持不变。
 
 ## 0.4.0 - 2026-09-03
 

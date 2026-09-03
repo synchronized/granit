@@ -41,7 +41,7 @@ TEST_CASE("模型查看器 Core 拒绝无效环境包", "[example][model-viewer]
   using namespace granit::example::model_viewer;
   granit::renderer renderer;
   const auto renderer_result = renderer.initialize({.application_name = "Environment Test"});
-  if (granit::failed(renderer_result))
+  if (renderer_result.failed())
     SKIP("当前环境没有可用 Renderer");
 
   granit::example::gltf::scene scene;
@@ -60,7 +60,7 @@ TEST_CASE("模型查看器 Core 生成后端无关单帧描述", "[example][mode
   using namespace granit::example::model_viewer;
   granit::renderer renderer;
   const auto renderer_result = renderer.initialize({.application_name = "Model Viewer Core Test"});
-  if (granit::failed(renderer_result))
+  if (renderer_result.failed())
     SKIP("当前环境没有可用 Renderer");
 
   granit::example::gltf::scene scene;

@@ -70,12 +70,6 @@ inline constexpr result result::not_ready{GRANIT_ERROR_NOT_READY};
   return result{value};
 }
 
-[[nodiscard]] constexpr bool succeeded(result value) noexcept {
-  return value.ok();
-}
-
-[[nodiscard]] constexpr bool failed(result value) noexcept { return value.failed(); }
-
 [[nodiscard]] inline std::string_view result_message(result value) noexcept {
   return value.message();
 }

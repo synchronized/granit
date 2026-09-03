@@ -327,41 +327,41 @@ int main(int argc, char** argv) {
                                      .backend = arguments.backend,
                                      .backend_library_path = arguments.backend_library});
   granit::renderer_info renderer_details;
-  if (granit::succeeded(result)) {
+  if (result.ok()) {
     stage = "查询 Renderer 信息";
     result = renderer.get_info(renderer_details);
   }
   granit::renderer_limits renderer_limits;
-  if (granit::succeeded(result)) {
+  if (result.ok()) {
     stage = "查询 Renderer 限制";
     result = renderer.get_limits(renderer_limits);
   }
-  if (granit::succeeded(result) &&
+  if (result.ok() &&
       ((renderer_limits.framebuffer_sample_counts & arguments.sample_count) == 0 ||
        arguments.sampler_anisotropy > renderer_limits.max_sampler_anisotropy)) {
     stage = "校验质量配置";
     result = granit::result::unsupported;
   }
   granit::example::model_viewer::application_core core;
-  if (granit::succeeded(result)) {
+  if (result.ok()) {
     stage = "启动应用 Core";
     result = core.begin_renderer();
   }
-  if (granit::succeeded(result)) {
+  if (result.ok()) {
     stage = "确认 Renderer 就绪";
     result = core.renderer_ready();
   }
 
   std::vector<std::byte> asset_bytes;
   stage = "读取模型主文件";
-  if (granit::succeeded(result) && !read_file(arguments.asset, asset_bytes))
+  if (result.ok() && !read_file(arguments.asset, asset_bytes))
     result = granit::result::invalid_argument;
   file_resolver resolver(arguments.asset.parent_path());
-  if (granit::succeeded(result)) {
+  if (result.ok()) {
     stage = "解析模型资产";
     result = core.load_asset(asset_bytes, &resolver);
   }
-  if (granit::succeeded(result)) {
+  if (result.ok()) {
     stage = "上传 GPU Scene";
     std::vector<std::byte> environment_bytes;
     if (!arguments.environment.empty() && !read_file(arguments.environment, environment_bytes)) {
@@ -375,7 +375,7 @@ int main(int argc, char** argv) {
 
   granit::texture output_texture;
   granit::texture_view output_view;
-  if (granit::succeeded(result)) {
+  if (result.ok()) {
     stage = "创建离屏颜色纹理";
     result = output_texture.initialize(
         renderer.native_handle(),
@@ -384,12 +384,12 @@ int main(int argc, char** argv) {
          .width = render_size,
          .height = render_size});
   }
-  if (granit::succeeded(result)) {
+  if (result.ok()) {
     stage = "创建离屏颜色视图";
     result = output_view.initialize(renderer.native_handle(), output_texture.native_handle());
   }
   granit::render_pipeline pipeline;
-  if (granit::succeeded(result)) {
+  if (result.ok()) {
     stage = "创建 Render Pipeline";
     granit_render_pipeline_desc pipeline_desc = GRANIT_RENDER_PIPELINE_DESC_INIT;
     pipeline_desc.sample_count = arguments.sample_count;
@@ -400,7 +400,7 @@ int main(int argc, char** argv) {
 
   granit::example::model_viewer::viewer_change diagnostic_change{};
   diagnostic_change.debug_display = arguments.debug_display;
-  for (std::uint32_t frame = 0; frame < 3 && granit::succeeded(result); ++frame) {
+  for (std::uint32_t frame = 0; frame < 3 && result.ok(); ++frame) {
     granit::example::model_viewer::application_tick_output tick;
     stage = "更新固定相机场景";
     result = core.tick({.input = {},
@@ -409,7 +409,7 @@ int main(int argc, char** argv) {
                         .height = render_size,
                         .performance = {}},
                        tick);
-    if (granit::succeeded(result)) {
+    if (result.ok()) {
       stage = "渲染离屏帧";
       tick.render.output = output_view.native_handle();
       tick.render.output_format = GRANIT_TEXTURE_FORMAT_RGBA8_UNORM;
@@ -417,7 +417,7 @@ int main(int argc, char** argv) {
       result = pipeline.render(tick.render);
     }
   }
-  if (granit::failed(result)) {
+  if (result.failed()) {
     std::cerr << stage << "失败：" << granit::result_message(result);
     if (!core.diagnostic().empty())
       std::cerr << "（" << core.diagnostic() << "）";
@@ -429,9 +429,9 @@ int main(int argc, char** argv) {
   granit::texture_readback_info info;
   result = output_texture.query_readback(region, info);
   std::vector<std::byte> padded(static_cast<std::size_t>(info.required_size));
-  if (granit::succeeded(result))
+  if (result.ok())
     result = output_texture.read(padded, region, info);
-  if (granit::failed(result)) {
+  if (result.failed()) {
     std::cerr << "回读模型截图失败：" << granit::result_message(result) << '\n';
     return 1;
   }

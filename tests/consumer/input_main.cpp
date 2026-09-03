@@ -10,15 +10,15 @@ int main() {
   if (window_result == granit::result::unsupported ||
       window_result == granit::result::backend_unavailable)
     return 0;
-  if (granit::failed(window_result))
+  if (window_result.failed())
     return 1;
 
   granit::input_system input;
-  if (granit::failed(input.initialize(windows.native_handle())))
+  if ((input.initialize(windows.native_handle())).failed())
     return 2;
-  if (granit::failed(input.reset()) || granit::failed(input.reset()))
+  if ((input.reset()).failed() || (input.reset()).failed())
     return 3;
-  if (granit::failed(windows.reset()) || granit::failed(windows.reset()))
+  if ((windows.reset()).failed() || (windows.reset()).failed())
     return 4;
   return 0;
 }
