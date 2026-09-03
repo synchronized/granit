@@ -324,6 +324,36 @@ TEST_CASE("RenderPipeline component把空Renderer归类为无效句柄") {
   CHECK(mesh == GRANIT_NULL_HANDLE);
 }
 
+TEST_CASE("Render Pipeline接受独立质量开关组合", "[pipeline][quality]") {
+  granit::renderer renderer;
+  const auto initialized = renderer.initialize({.application_name = "granit-pipeline-quality"});
+  if (environment_unavailable(initialized))
+    SKIP("当前运行环境没有满足要求的 Vulkan 设备");
+  REQUIRE(initialized == granit::result::success);
+
+  granit::renderer_limits limits;
+  REQUIRE(renderer.get_limits(limits) == granit::result::success);
+  std::array sample_counts{GRANIT_SAMPLE_COUNT_1, GRANIT_SAMPLE_COUNT_4};
+  for (const auto sample_count : sample_counts) {
+    if ((limits.framebuffer_sample_counts & sample_count) == 0)
+      continue;
+    for (std::uint32_t fxaa = 0; fxaa <= 1; ++fxaa) {
+      for (std::uint32_t specular_aa = 0; specular_aa <= 1; ++specular_aa) {
+        granit_render_pipeline_desc desc = GRANIT_RENDER_PIPELINE_DESC_INIT;
+        desc.sample_count = sample_count;
+        desc.enable_fxaa = fxaa;
+        desc.enable_specular_aa = specular_aa;
+        granit_render_pipeline pipeline = GRANIT_NULL_HANDLE;
+        REQUIRE(granit_render_pipeline_create(renderer.native_handle(), &desc, &pipeline) ==
+                GRANIT_SUCCESS);
+        REQUIRE(pipeline != GRANIT_NULL_HANDLE);
+        REQUIRE(granit_render_pipeline_destroy(renderer.native_handle(), pipeline) ==
+                GRANIT_SUCCESS);
+      }
+    }
+  }
+}
+
 TEST_CASE("统一Render Pipeline按固定阶段消费Scene Snapshot") {
   granit::renderer renderer;
   const auto initialized = renderer.initialize({.application_name = "granit-public-pipeline"});
