@@ -1,6 +1,6 @@
 {
-  "format_version": 2,
-  "target_environment": "vulkan1.3",
+  "format_version": 3,
+  "target_environment": "cross_backend",
   "binding_model": "bind_group",
   "material": {
     "constant_buffer_size": 48,
@@ -35,8 +35,8 @@
         "color_blend": {"enabled": false}
       },
       "shaders": [
-        {"stage": "vertex", "entry_point": "vertex_main", "spirv": "../../assets/shaders/pbr/pbr_untextured.vert.spv"},
-        {"stage": "fragment", "entry_point": "fragment_main", "spirv": "../../assets/shaders/pbr/pbr_untextured.frag.spv"}
+        {"stage": "vertex", "entry_point": "vertex_main", "spirv": "../../assets/shaders/pbr/pbr_untextured.vert.spv", "wgsl": "../../assets/shaders/pbr/pbr_untextured.vert.wgsl"},
+        {"stage": "fragment", "entry_point": "fragment_main", "spirv": "../../assets/shaders/pbr/pbr_untextured.frag.spv", "wgsl": "../../assets/shaders/pbr/pbr_untextured.frag.wgsl"}
       ]
     },
     {
@@ -54,8 +54,8 @@
         "color_blend": {"enabled": false}
       },
       "shaders": [
-        {"stage": "vertex", "entry_point": "vertex_main", "spirv": "../../assets/shaders/pbr/pbr_untextured.vert.spv"},
-        {"stage": "fragment", "entry_point": "fragment_main", "spirv": "../../assets/shaders/pbr/pbr_textured.frag.spv"}
+        {"stage": "vertex", "entry_point": "vertex_main", "spirv": "../../assets/shaders/pbr/pbr_untextured.vert.spv", "wgsl": "../../assets/shaders/pbr/pbr_untextured.vert.wgsl"},
+        {"stage": "fragment", "entry_point": "fragment_main", "spirv": "../../assets/shaders/pbr/pbr_textured.frag.spv", "wgsl": "../../assets/shaders/pbr/pbr_textured.frag.wgsl"}
       ]
     }
   ]

@@ -189,6 +189,8 @@ TEST_CASE("后端插件 Loader 完成版本化握手", "[backend][plugin]") {
   CHECK(capabilities.max_texture_dimension_2d == 8192);
   CHECK(capabilities.max_bind_groups == 4);
   CHECK(capabilities.max_color_attachments == 8);
+  CHECK(capabilities.framebuffer_sample_counts == (1U | 4U));
+  CHECK(capabilities.max_sampler_anisotropy == 16.0F);
 
   capabilities.struct_size = 0;
   CHECK(loader.get_capabilities(instance, &capabilities) == GRANIT_ERROR_INVALID_ARGUMENT);
@@ -465,7 +467,7 @@ TEST_CASE("WebGPU 插件 Texture、View 与 Sampler 遵守所有权契约", "[ba
   REQUIRE(loader.create_texture(first, &texture_desc, &texture) == GRANIT_SUCCESS);
   REQUIRE(texture != 0);
   const granit_backend_plugin_texture_write_desc write_desc{
-      sizeof(granit_backend_plugin_texture_write_desc), 0, 2, 3, 3, 2, 16, 2, {0, 0}};
+      sizeof(granit_backend_plugin_texture_write_desc), 0, 2, 3, 3, 2, 16, 2, 0, 1};
   const std::array<std::uint8_t, 32> pixels{};
   REQUIRE(loader.write_texture(first, texture, &write_desc, pixels.data(), pixels.size()) ==
           GRANIT_SUCCESS);
@@ -480,7 +482,9 @@ TEST_CASE("WebGPU 插件 Texture、View 与 Sampler 遵守所有权契约", "[ba
       GRANIT_BACKEND_PLUGIN_TEXTURE_FORMAT_RGBA8_UNORM,
       0,
       1,
-      {0, 0}};
+      GRANIT_BACKEND_PLUGIN_TEXTURE_DIMENSION_2D,
+      0,
+      1};
   REQUIRE(loader.create_texture_view(first, texture, &view_desc, &view) == GRANIT_SUCCESS);
   REQUIRE(view != 0);
   granit_backend_plugin_texture_view foreign_view = 123;
@@ -511,6 +515,49 @@ TEST_CASE("WebGPU 插件 Texture、View 与 Sampler 遵守所有权契约", "[ba
   CHECK(loader.destroy_texture_view(first, view) == GRANIT_ERROR_INVALID_HANDLE);
   REQUIRE(loader.destroy_texture(first, texture) == GRANIT_SUCCESS);
   CHECK(loader.destroy_texture(first, texture) == GRANIT_ERROR_INVALID_HANDLE);
+
+  auto cube_desc = texture_desc;
+  cube_desc.width = 4;
+  cube_desc.height = 4;
+  cube_desc.dimension = GRANIT_BACKEND_PLUGIN_TEXTURE_DIMENSION_CUBE;
+  cube_desc.array_layer_count = 6;
+  granit_backend_plugin_texture cube{};
+  REQUIRE(loader.create_texture(first, &cube_desc, &cube) == GRANIT_SUCCESS);
+  const granit_backend_plugin_texture_write_desc cube_write{
+      sizeof(granit_backend_plugin_texture_write_desc), 0, 0, 0, 4, 4, 16, 4, 0, 6};
+  const std::array<std::uint8_t, 4 * 4 * 4 * 6> cube_pixels{};
+  REQUIRE(loader.write_texture(first, cube, &cube_write, cube_pixels.data(), cube_pixels.size()) ==
+          GRANIT_SUCCESS);
+  const granit_backend_plugin_texture_view_desc cube_view_desc{
+      sizeof(granit_backend_plugin_texture_view_desc),
+      GRANIT_BACKEND_PLUGIN_TEXTURE_FORMAT_RGBA8_UNORM,
+      0,
+      1,
+      GRANIT_BACKEND_PLUGIN_TEXTURE_DIMENSION_CUBE,
+      0,
+      6};
+  granit_backend_plugin_texture_view cube_view{};
+  REQUIRE(loader.create_texture_view(first, cube, &cube_view_desc, &cube_view) == GRANIT_SUCCESS);
+  const granit_backend_plugin_bind_group_layout_entry cube_layout_entry{
+      0, GRANIT_BACKEND_PLUGIN_BINDING_TYPE_SAMPLED_TEXTURE_CUBE,
+      GRANIT_BACKEND_PLUGIN_SHADER_STAGE_FRAGMENT, 1};
+  const granit_backend_plugin_bind_group_layout_desc cube_layout_desc{
+      sizeof(granit_backend_plugin_bind_group_layout_desc), 1, &cube_layout_entry, 0};
+  granit_backend_plugin_bind_group_layout cube_layout{};
+  REQUIRE(loader.create_bind_group_layout(first, &cube_layout_desc, &cube_layout) ==
+          GRANIT_SUCCESS);
+  const granit_backend_plugin_bind_group_entry cube_group_entry{
+      0, GRANIT_BACKEND_PLUGIN_BINDING_TYPE_SAMPLED_TEXTURE_CUBE, 0, cube_view, 0, 0, 0};
+  const granit_backend_plugin_bind_group_desc cube_group_desc{
+      sizeof(granit_backend_plugin_bind_group_desc), 1, cube_layout, &cube_group_entry, 0};
+  granit_backend_plugin_bind_group cube_group{};
+  REQUIRE(loader.create_bind_group(first, &cube_group_desc, &cube_group) == GRANIT_SUCCESS);
+  REQUIRE(loader.destroy_bind_group(first, cube_group) == GRANIT_SUCCESS);
+  REQUIRE(loader.destroy_bind_group_layout(first, cube_layout) == GRANIT_SUCCESS);
+  REQUIRE(loader.destroy_texture_view(first, cube_view) == GRANIT_SUCCESS);
+  REQUIRE(loader.destroy_texture(first, cube) == GRANIT_SUCCESS);
+  cube_desc.array_layer_count = 5;
+  CHECK(loader.create_texture(first, &cube_desc, &cube) == GRANIT_ERROR_INVALID_ARGUMENT);
 
   auto invalid_texture = texture_desc;
   invalid_texture.width = 0;
@@ -563,7 +610,9 @@ TEST_CASE("WebGPU 插件绑定与 Pipeline 遵守依赖生命周期", "[backend]
       GRANIT_BACKEND_PLUGIN_TEXTURE_FORMAT_RGBA8_UNORM,
       0,
       1,
-      {0, 0}};
+      GRANIT_BACKEND_PLUGIN_TEXTURE_DIMENSION_2D,
+      0,
+      1};
   REQUIRE(loader.create_texture(first, &texture_desc, &texture) == GRANIT_SUCCESS);
   REQUIRE(loader.create_texture_view(first, texture, &view_desc, &view) == GRANIT_SUCCESS);
   granit_backend_plugin_sampler_desc sampler_desc{};
@@ -702,9 +751,76 @@ TEST_CASE("WebGPU 插件绑定与 Pipeline 遵守依赖生命周期", "[backend]
       0,
       0,
       0,
-      GRANIT_BACKEND_PLUGIN_COMPARE_OPERATION_ALWAYS};
+      GRANIT_BACKEND_PLUGIN_COMPARE_OPERATION_ALWAYS,
+      0,
+      0.0F,
+      0.0F,
+      0,
+      GRANIT_BACKEND_PLUGIN_BLEND_FACTOR_ONE,
+      GRANIT_BACKEND_PLUGIN_BLEND_FACTOR_ZERO,
+      GRANIT_BACKEND_PLUGIN_BLEND_OPERATION_ADD,
+      GRANIT_BACKEND_PLUGIN_BLEND_FACTOR_ONE,
+      GRANIT_BACKEND_PLUGIN_BLEND_FACTOR_ZERO,
+      GRANIT_BACKEND_PLUGIN_BLEND_OPERATION_ADD,
+      GRANIT_BACKEND_PLUGIN_COLOR_WRITE_ALL_BITS,
+      GRANIT_BACKEND_PLUGIN_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
+      GRANIT_BACKEND_PLUGIN_FRONT_FACE_COUNTER_CLOCKWISE,
+      GRANIT_BACKEND_PLUGIN_CULL_MODE_NONE,
+      GRANIT_BACKEND_PLUGIN_POLYGON_MODE_FILL,
+      1};
   granit_backend_plugin_render_pipeline pipeline{};
   REQUIRE(loader.create_render_pipeline(first, &pipeline_desc, &pipeline) == GRANIT_SUCCESS);
+  pipeline_desc.front_face = GRANIT_BACKEND_PLUGIN_FRONT_FACE_CLOCKWISE;
+  pipeline_desc.cull_mode = GRANIT_BACKEND_PLUGIN_CULL_MODE_BACK;
+  granit_backend_plugin_render_pipeline culled_pipeline{};
+  REQUIRE(loader.create_render_pipeline(first, &pipeline_desc, &culled_pipeline) == GRANIT_SUCCESS);
+  REQUIRE(loader.destroy_render_pipeline(first, culled_pipeline) == GRANIT_SUCCESS);
+  pipeline_desc.cull_mode = UINT32_MAX;
+  granit_backend_plugin_render_pipeline invalid_primitive_pipeline = 123;
+  CHECK(loader.create_render_pipeline(first, &pipeline_desc, &invalid_primitive_pipeline) ==
+        GRANIT_ERROR_INVALID_ARGUMENT);
+  CHECK(invalid_primitive_pipeline == 0);
+  pipeline_desc.front_face = GRANIT_BACKEND_PLUGIN_FRONT_FACE_COUNTER_CLOCKWISE;
+  pipeline_desc.cull_mode = GRANIT_BACKEND_PLUGIN_CULL_MODE_NONE;
+  pipeline_desc.blend_enabled = 1;
+  pipeline_desc.source_color_factor = GRANIT_BACKEND_PLUGIN_BLEND_FACTOR_SOURCE_ALPHA;
+  pipeline_desc.destination_color_factor =
+      GRANIT_BACKEND_PLUGIN_BLEND_FACTOR_ONE_MINUS_SOURCE_ALPHA;
+  pipeline_desc.source_alpha_factor = GRANIT_BACKEND_PLUGIN_BLEND_FACTOR_ONE;
+  pipeline_desc.destination_alpha_factor =
+      GRANIT_BACKEND_PLUGIN_BLEND_FACTOR_ONE_MINUS_SOURCE_ALPHA;
+  granit_backend_plugin_render_pipeline blend_pipeline{};
+  REQUIRE(loader.create_render_pipeline(first, &pipeline_desc, &blend_pipeline) == GRANIT_SUCCESS);
+  REQUIRE(loader.destroy_render_pipeline(first, blend_pipeline) == GRANIT_SUCCESS);
+  pipeline_desc.source_color_factor = 0;
+  granit_backend_plugin_render_pipeline invalid_blend_pipeline = 123;
+  CHECK(loader.create_render_pipeline(first, &pipeline_desc, &invalid_blend_pipeline) ==
+        GRANIT_ERROR_INVALID_ARGUMENT);
+  CHECK(invalid_blend_pipeline == 0);
+  pipeline_desc.blend_enabled = 0;
+  pipeline_desc.source_color_factor = GRANIT_BACKEND_PLUGIN_BLEND_FACTOR_ONE;
+  pipeline_desc.destination_color_factor = GRANIT_BACKEND_PLUGIN_BLEND_FACTOR_ZERO;
+  pipeline_desc.destination_alpha_factor = GRANIT_BACKEND_PLUGIN_BLEND_FACTOR_ZERO;
+  pipeline_desc.color_format = GRANIT_BACKEND_PLUGIN_TEXTURE_FORMAT_RGBA16_FLOAT;
+  pipeline_desc.depth_stencil_format = GRANIT_BACKEND_PLUGIN_TEXTURE_FORMAT_D32_FLOAT;
+  pipeline_desc.depth_test_enabled = 1;
+  pipeline_desc.depth_write_enabled = 1;
+  pipeline_desc.depth_compare = GRANIT_BACKEND_PLUGIN_COMPARE_OPERATION_LESS_EQUAL;
+  pipeline_desc.depth_bias_constant = 2;
+  pipeline_desc.depth_bias_slope_scale = 1.75F;
+  pipeline_desc.depth_bias_clamp = 0.5F;
+  granit_backend_plugin_render_pipeline depth_bias_pipeline{};
+  REQUIRE(loader.create_render_pipeline(first, &pipeline_desc, &depth_bias_pipeline) ==
+          GRANIT_SUCCESS);
+  REQUIRE(loader.destroy_render_pipeline(first, depth_bias_pipeline) == GRANIT_SUCCESS);
+  pipeline_desc.color_format = GRANIT_BACKEND_PLUGIN_TEXTURE_FORMAT_RGBA8_UNORM;
+  pipeline_desc.depth_stencil_format = 0;
+  pipeline_desc.depth_test_enabled = 0;
+  pipeline_desc.depth_write_enabled = 0;
+  pipeline_desc.depth_compare = GRANIT_BACKEND_PLUGIN_COMPARE_OPERATION_ALWAYS;
+  pipeline_desc.depth_bias_constant = 0;
+  pipeline_desc.depth_bias_slope_scale = 0.0F;
+  pipeline_desc.depth_bias_clamp = 0.0F;
   const granit_backend_plugin_vertex_attribute vertex_attributes[]{
       {0, GRANIT_BACKEND_PLUGIN_VERTEX_FORMAT_FLOAT32X3, 0, 0},
       {1, GRANIT_BACKEND_PLUGIN_VERTEX_FORMAT_FLOAT32X2, 12, 0}};

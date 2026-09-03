@@ -47,6 +47,9 @@ Win32 窗口示例在 Windows 构建；检测到 XCB 开发包时，Linux 额外
   Canvas、Resize 与 Present。`--smoke-test` 渲染少量帧后自动退出；`--frames-in-flight 1..4`
   选择帧槽数，`--no-validation` 关闭 Validation，`--no-custom-texture` 提供单字体性能对照；
   `--present-mode immediate|fifo` 选择呈现模式。
+- `granit_model_viewer_example`：显式启用模型查看器、SDL3 与 ImGui Integration 时构建；使用同一
+  应用核心选择 Vulkan 或桌面 Dawn WebGPU，加载 glTF/GLB、显示 PBR 模型并提供编辑器式面板。
+  构建、资产获取、参数和排错见[跨后端模型查看器指南](model-viewer.md)。
 
 SDL3 + ImGui 示例也能在预热后将逐帧原始数据一次性写为 CSV，采样期间不会逐帧格式化或访问
 磁盘：

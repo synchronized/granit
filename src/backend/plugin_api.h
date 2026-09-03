@@ -9,7 +9,7 @@
 #include <granit/core/diagnostic.h>
 #include <granit/core/result.h>
 
-#define GRANIT_BACKEND_PLUGIN_ABI_VERSION UINT32_C(22)
+#define GRANIT_BACKEND_PLUGIN_ABI_VERSION UINT32_C(26)
 #define GRANIT_BACKEND_PLUGIN_KIND_WEBGPU UINT32_C(1)
 #define GRANIT_BACKEND_PLUGIN_QUERY_SYMBOL "granit_backend_plugin_query"
 #define GRANIT_BACKEND_PLUGIN_SURFACE_TYPE_WIN32_BIT UINT32_C(0x00000001)
@@ -108,7 +108,10 @@ typedef uint32_t granit_backend_plugin_texture_usage;
 
 typedef uint32_t granit_backend_plugin_texture_format;
 
-/** S-12D 首轮支持二维、单层、单采样纹理及多个 mip。 */
+typedef uint32_t granit_backend_plugin_texture_dimension;
+#define GRANIT_BACKEND_PLUGIN_TEXTURE_DIMENSION_2D UINT32_C(1)
+#define GRANIT_BACKEND_PLUGIN_TEXTURE_DIMENSION_CUBE UINT32_C(2)
+
 typedef struct granit_backend_plugin_texture_desc {
   uint32_t struct_size;
   uint32_t reserved;
@@ -117,7 +120,9 @@ typedef struct granit_backend_plugin_texture_desc {
   granit_backend_plugin_texture_usage usage;
   granit_backend_plugin_texture_format format;
   uint32_t mip_level_count;
-  uint32_t reserved_flags;
+  granit_backend_plugin_texture_dimension dimension;
+  uint32_t array_layer_count;
+  uint32_t sample_count;
 } granit_backend_plugin_texture_desc;
 
 typedef struct granit_backend_plugin_texture_view_desc {
@@ -125,7 +130,9 @@ typedef struct granit_backend_plugin_texture_view_desc {
   granit_backend_plugin_texture_format format;
   uint32_t base_mip_level;
   uint32_t mip_level_count;
-  uint32_t reserved[2];
+  granit_backend_plugin_texture_dimension dimension;
+  uint32_t base_array_layer;
+  uint32_t array_layer_count;
 } granit_backend_plugin_texture_view_desc;
 
 /** 数据指针从首个有效字节开始；行跨度为零表示按写入宽度紧密排列。 */
@@ -138,7 +145,8 @@ typedef struct granit_backend_plugin_texture_write_desc {
   uint32_t height;
   uint32_t bytes_per_row;
   uint32_t rows_per_image;
-  uint32_t reserved[2];
+  uint32_t base_array_layer;
+  uint32_t array_layer_count;
 } granit_backend_plugin_texture_write_desc;
 
 typedef uint32_t granit_backend_plugin_upload_type;
@@ -199,7 +207,10 @@ typedef uint32_t granit_backend_plugin_binding_type;
 #define GRANIT_BACKEND_PLUGIN_BINDING_TYPE_DYNAMIC_UNIFORM_BUFFER UINT32_C(2)
 #define GRANIT_BACKEND_PLUGIN_BINDING_TYPE_STORAGE_BUFFER UINT32_C(3)
 #define GRANIT_BACKEND_PLUGIN_BINDING_TYPE_SAMPLED_TEXTURE UINT32_C(4)
+#define GRANIT_BACKEND_PLUGIN_BINDING_TYPE_SAMPLED_TEXTURE_CUBE UINT32_C(6)
 #define GRANIT_BACKEND_PLUGIN_BINDING_TYPE_SAMPLER UINT32_C(5)
+#define GRANIT_BACKEND_PLUGIN_BINDING_TYPE_COMPARISON_SAMPLER UINT32_C(7)
+#define GRANIT_BACKEND_PLUGIN_BINDING_TYPE_SAMPLED_DEPTH_TEXTURE UINT32_C(8)
 
 typedef struct granit_backend_plugin_bind_group_layout_entry {
   uint32_t binding;
@@ -281,6 +292,48 @@ typedef struct granit_backend_plugin_vertex_buffer_layout {
   const granit_backend_plugin_vertex_attribute* attributes;
 } granit_backend_plugin_vertex_buffer_layout;
 
+typedef uint32_t granit_backend_plugin_blend_factor;
+#define GRANIT_BACKEND_PLUGIN_BLEND_FACTOR_ZERO UINT32_C(1)
+#define GRANIT_BACKEND_PLUGIN_BLEND_FACTOR_ONE UINT32_C(2)
+#define GRANIT_BACKEND_PLUGIN_BLEND_FACTOR_SOURCE_COLOR UINT32_C(3)
+#define GRANIT_BACKEND_PLUGIN_BLEND_FACTOR_ONE_MINUS_SOURCE_COLOR UINT32_C(4)
+#define GRANIT_BACKEND_PLUGIN_BLEND_FACTOR_SOURCE_ALPHA UINT32_C(5)
+#define GRANIT_BACKEND_PLUGIN_BLEND_FACTOR_ONE_MINUS_SOURCE_ALPHA UINT32_C(6)
+#define GRANIT_BACKEND_PLUGIN_BLEND_FACTOR_DESTINATION_COLOR UINT32_C(7)
+#define GRANIT_BACKEND_PLUGIN_BLEND_FACTOR_ONE_MINUS_DESTINATION_COLOR UINT32_C(8)
+#define GRANIT_BACKEND_PLUGIN_BLEND_FACTOR_DESTINATION_ALPHA UINT32_C(9)
+#define GRANIT_BACKEND_PLUGIN_BLEND_FACTOR_ONE_MINUS_DESTINATION_ALPHA UINT32_C(10)
+
+typedef uint32_t granit_backend_plugin_blend_operation;
+#define GRANIT_BACKEND_PLUGIN_BLEND_OPERATION_ADD UINT32_C(1)
+#define GRANIT_BACKEND_PLUGIN_BLEND_OPERATION_SUBTRACT UINT32_C(2)
+#define GRANIT_BACKEND_PLUGIN_BLEND_OPERATION_REVERSE_SUBTRACT UINT32_C(3)
+#define GRANIT_BACKEND_PLUGIN_BLEND_OPERATION_MIN UINT32_C(4)
+#define GRANIT_BACKEND_PLUGIN_BLEND_OPERATION_MAX UINT32_C(5)
+
+#define GRANIT_BACKEND_PLUGIN_COLOR_WRITE_RED_BIT (UINT32_C(1) << 0)
+#define GRANIT_BACKEND_PLUGIN_COLOR_WRITE_GREEN_BIT (UINT32_C(1) << 1)
+#define GRANIT_BACKEND_PLUGIN_COLOR_WRITE_BLUE_BIT (UINT32_C(1) << 2)
+#define GRANIT_BACKEND_PLUGIN_COLOR_WRITE_ALPHA_BIT (UINT32_C(1) << 3)
+#define GRANIT_BACKEND_PLUGIN_COLOR_WRITE_ALL_BITS                                                 \
+  (GRANIT_BACKEND_PLUGIN_COLOR_WRITE_RED_BIT | GRANIT_BACKEND_PLUGIN_COLOR_WRITE_GREEN_BIT |       \
+   GRANIT_BACKEND_PLUGIN_COLOR_WRITE_BLUE_BIT | GRANIT_BACKEND_PLUGIN_COLOR_WRITE_ALPHA_BIT)
+
+typedef uint32_t granit_backend_plugin_primitive_topology;
+#define GRANIT_BACKEND_PLUGIN_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST UINT32_C(1)
+
+typedef uint32_t granit_backend_plugin_front_face;
+#define GRANIT_BACKEND_PLUGIN_FRONT_FACE_COUNTER_CLOCKWISE UINT32_C(1)
+#define GRANIT_BACKEND_PLUGIN_FRONT_FACE_CLOCKWISE UINT32_C(2)
+
+typedef uint32_t granit_backend_plugin_cull_mode;
+#define GRANIT_BACKEND_PLUGIN_CULL_MODE_NONE UINT32_C(1)
+#define GRANIT_BACKEND_PLUGIN_CULL_MODE_FRONT UINT32_C(2)
+#define GRANIT_BACKEND_PLUGIN_CULL_MODE_BACK UINT32_C(3)
+
+typedef uint32_t granit_backend_plugin_polygon_mode;
+#define GRANIT_BACKEND_PLUGIN_POLYGON_MODE_FILL UINT32_C(1)
+
 typedef struct granit_backend_plugin_render_pipeline_desc {
   uint32_t struct_size;
   uint32_t reserved;
@@ -294,6 +347,22 @@ typedef struct granit_backend_plugin_render_pipeline_desc {
   uint32_t depth_test_enabled;
   uint32_t depth_write_enabled;
   granit_backend_plugin_compare_operation depth_compare;
+  int32_t depth_bias_constant;
+  float depth_bias_slope_scale;
+  float depth_bias_clamp;
+  uint32_t blend_enabled;
+  granit_backend_plugin_blend_factor source_color_factor;
+  granit_backend_plugin_blend_factor destination_color_factor;
+  granit_backend_plugin_blend_operation color_operation;
+  granit_backend_plugin_blend_factor source_alpha_factor;
+  granit_backend_plugin_blend_factor destination_alpha_factor;
+  granit_backend_plugin_blend_operation alpha_operation;
+  uint32_t color_write_mask;
+  granit_backend_plugin_primitive_topology topology;
+  granit_backend_plugin_front_face front_face;
+  granit_backend_plugin_cull_mode cull_mode;
+  granit_backend_plugin_polygon_mode polygon_mode;
+  uint32_t sample_count;
 } granit_backend_plugin_render_pipeline_desc;
 
 /** Canvas selector 仅在调用期间有效；插件必须复制后续需要的内容。 */
@@ -337,6 +406,7 @@ typedef uint32_t granit_backend_plugin_present_mode;
 #define GRANIT_BACKEND_PLUGIN_TEXTURE_FORMAT_RG8_UNORM UINT32_C(4)
 #define GRANIT_BACKEND_PLUGIN_TEXTURE_FORMAT_RGBA8_SRGB UINT32_C(5)
 #define GRANIT_BACKEND_PLUGIN_TEXTURE_FORMAT_D32_FLOAT UINT32_C(6)
+#define GRANIT_BACKEND_PLUGIN_TEXTURE_FORMAT_RGBA16_FLOAT UINT32_C(7)
 
 typedef struct granit_backend_plugin_swapchain_desc {
   uint32_t struct_size;
@@ -380,6 +450,8 @@ typedef struct granit_backend_plugin_capabilities {
   uint32_t max_color_attachments;
   uint32_t surface_types;
   uint32_t reserved_2;
+  uint32_t framebuffer_sample_counts;
+  float max_sampler_anisotropy;
 } granit_backend_plugin_capabilities;
 
 typedef void* (*granit_backend_plugin_allocate_fn)(uint64_t size, uint64_t alignment,
@@ -517,7 +589,8 @@ typedef granit_result (*granit_backend_plugin_recorder_copy_buffer_to_texture_fn
     uint32_t height, uint32_t bytes_per_row);
 typedef granit_result (*granit_backend_plugin_recorder_begin_rendering_fn)(
     granit_backend_plugin_instance instance, granit_backend_plugin_command_recorder recorder,
-    granit_backend_plugin_texture_view target, granit_backend_plugin_load_operation load_operation,
+    granit_backend_plugin_texture_view target, granit_backend_plugin_texture_view resolve_target,
+    granit_backend_plugin_load_operation load_operation,
     granit_backend_plugin_store_operation store_operation, float clear_r, float clear_g,
     float clear_b, float clear_a, granit_backend_plugin_texture_view depth_target,
     granit_backend_plugin_load_operation depth_load_operation,

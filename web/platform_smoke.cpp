@@ -4,13 +4,16 @@
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
+#include <memory>
 #include <new>
 #include <span>
 #include <string>
+#include <vector>
 
 #include <emscripten/emscripten.h>
 #include <emscripten/html5.h>
 
+#include <granit/pipeline/render_pipeline.h>
 #include <granit/renderer/buffer.hpp>
 #include <granit/renderer/command_recorder.hpp>
 #include <granit/renderer/pipeline.hpp>
@@ -21,18 +24,42 @@
 #include <granit/renderer/swapchain.h>
 #include <granit/renderer/texture.hpp>
 
+#include "model_viewer/application_core.h"
+#include "model_viewer_fetch.h"
+#include "resource_fetch_batch.h"
 #include "support/renderer_fixture.h"
+#include "web_input.h"
 
 namespace {
 
-enum class startup_status : int { failed = -1, starting, provider_pending, ready };
+enum class startup_status : int { failed = -1, starting, provider_pending, ready, stopped };
 
 struct web_platform_state {
   granit_renderer renderer{};
   granit_surface surface{};
   granit_swapchain swapchain{};
+  granit_render_pipeline pipeline{};
   startup_status status{startup_status::starting};
   unsigned input_event_count{};
+  unsigned applied_input_count{};
+  unsigned rendered_frame_count{};
+  unsigned resize_count{};
+  unsigned quality_generation{};
+  granit_sample_count sample_count{GRANIT_SAMPLE_COUNT_1};
+  unsigned enable_fxaa{1};
+  unsigned enable_specular_aa{1};
+  unsigned sampler_anisotropy{1};
+  std::uint64_t shutdown_live_resource_count{};
+  std::uint64_t shutdown_pending_retirement_count{};
+  granit::example::model_viewer::web::web_input input;
+  std::shared_ptr<granit::example::model_viewer::web::asset_request> asset_request{
+      std::make_shared<granit::example::model_viewer::web::asset_request>()};
+  granit::example::model_viewer::web::resource_fetch_batch resource_batch;
+  granit::example::model_viewer::web::resource_bundle resource_bundle;
+  granit::example::model_viewer::application_core core;
+  bool core_renderer_ready{};
+  bool resource_batch_started{};
+  bool asset_ready{};
 };
 
 web_platform_state state;
@@ -376,13 +403,55 @@ void diagnose(granit_diagnostic_severity, granit_diagnostic_category, const char
   std::fprintf(stderr, "GRANIT_DIAGNOSTIC:%.*s\n", static_cast<int>(message_length), message);
 }
 
-EM_BOOL receive_keyboard(int, const EmscriptenKeyboardEvent*, void* user_data) noexcept {
-  ++static_cast<web_platform_state*>(user_data)->input_event_count;
+EM_BOOL receive_keyboard(int event_type, const EmscriptenKeyboardEvent* event,
+                         void* user_data) noexcept {
+  auto& platform = *static_cast<web_platform_state*>(user_data);
+  ++platform.input_event_count;
+  if (event_type == EMSCRIPTEN_EVENT_KEYDOWN) {
+    using granit::example::model_viewer::web::shortcut_key;
+    auto key = shortcut_key::other;
+    if (std::strcmp(event->key, "f") == 0 || std::strcmp(event->key, "F") == 0)
+      key = shortcut_key::focus;
+    else if (std::strcmp(event->key, "Home") == 0)
+      key = shortcut_key::home;
+    platform.input.key_pressed(key, event->repeat != 0);
+  }
   return EM_FALSE;
 }
 
-EM_BOOL receive_mouse(int, const EmscriptenMouseEvent*, void* user_data) noexcept {
-  ++static_cast<web_platform_state*>(user_data)->input_event_count;
+EM_BOOL receive_mouse(int event_type, const EmscriptenMouseEvent* event, void* user_data) noexcept {
+  auto& platform = *static_cast<web_platform_state*>(user_data);
+  ++platform.input_event_count;
+  using granit::example::model_viewer::web::pointer_button;
+  if (event_type == EMSCRIPTEN_EVENT_MOUSEMOVE) {
+    platform.input.pointer_motion(static_cast<float>(event->movementX),
+                                  static_cast<float>(event->movementY));
+  } else if (event_type == EMSCRIPTEN_EVENT_MOUSEDOWN || event_type == EMSCRIPTEN_EVENT_MOUSEUP) {
+    auto button = pointer_button::primary;
+    if (event->button == 1)
+      button = pointer_button::middle;
+    else if (event->button == 2)
+      button = pointer_button::secondary;
+    platform.input.pointer_button_changed(button, event_type == EMSCRIPTEN_EVENT_MOUSEDOWN);
+  } else if (event_type == EMSCRIPTEN_EVENT_MOUSEENTER) {
+    platform.input.pointer_presence_changed(true);
+  } else if (event_type == EMSCRIPTEN_EVENT_MOUSELEAVE) {
+    platform.input.pointer_presence_changed(false);
+  }
+  return EM_FALSE;
+}
+
+EM_BOOL receive_wheel(int, const EmscriptenWheelEvent* event, void* user_data) noexcept {
+  auto& platform = *static_cast<web_platform_state*>(user_data);
+  ++platform.input_event_count;
+  platform.input.wheel(static_cast<float>(event->deltaY));
+  return EM_TRUE;
+}
+
+EM_BOOL receive_focus(int event_type, const EmscriptenFocusEvent*, void* user_data) noexcept {
+  auto& platform = *static_cast<web_platform_state*>(user_data);
+  ++platform.input_event_count;
+  platform.input.focus_changed(event_type == EMSCRIPTEN_EVENT_FOCUS);
   return EM_FALSE;
 }
 
@@ -466,10 +535,139 @@ granit_result create_presentation_resources() {
   return GRANIT_SUCCESS;
 }
 
+granit_result resize_swapchain_if_needed() {
+  int width{};
+  int height{};
+  if (emscripten_get_canvas_element_size("#canvas", &width, &height) != EMSCRIPTEN_RESULT_SUCCESS ||
+      width <= 0 || height <= 0) {
+    return GRANIT_ERROR_INITIALIZATION_FAILED;
+  }
+  granit_swapchain_info info = GRANIT_SWAPCHAIN_INFO_INIT;
+  auto result = granit_swapchain_get_info(state.renderer, state.swapchain, &info);
+  if (result != GRANIT_SUCCESS || (info.width == static_cast<std::uint32_t>(width) &&
+                                   info.height == static_cast<std::uint32_t>(height))) {
+    return result;
+  }
+  result = granit_swapchain_destroy(state.renderer, state.swapchain);
+  if (result != GRANIT_SUCCESS)
+    return result;
+  state.swapchain = GRANIT_NULL_HANDLE;
+  granit_swapchain_desc desc = GRANIT_SWAPCHAIN_DESC_INIT;
+  desc.width = static_cast<std::uint32_t>(width);
+  desc.height = static_cast<std::uint32_t>(height);
+  desc.minimum_image_count = 2;
+  result = granit_swapchain_create(state.renderer, state.surface, &desc, &state.swapchain);
+  if (result == GRANIT_SUCCESS)
+    ++state.resize_count;
+  return result;
+}
+
+granit_result render_model_viewer_frame() {
+  auto result = resize_swapchain_if_needed();
+  if (result != GRANIT_SUCCESS)
+    return result;
+  granit_swapchain_info info = GRANIT_SWAPCHAIN_INFO_INIT;
+  result = granit_swapchain_get_info(state.renderer, state.swapchain, &info);
+  granit_frame frame{};
+  std::uint32_t image_index{};
+  std::uint32_t needs_recreate{};
+  if (result == GRANIT_SUCCESS)
+    result = granit_swapchain_acquire(state.renderer, state.swapchain, &frame, &image_index,
+                                      &needs_recreate);
+  granit_texture backbuffer{};
+  granit_texture_view backbuffer_view{};
+  if (result == GRANIT_SUCCESS) {
+    result = granit_swapchain_get_backbuffer(state.renderer, state.swapchain, image_index,
+                                             &backbuffer, &backbuffer_view);
+  }
+  granit::example::model_viewer::application_tick_output output;
+  granit::example::model_viewer::application_tick_input input;
+  input.input = state.input.finish(false, false);
+  if (input.input.pointer_delta_x != 0.0F || input.input.pointer_delta_y != 0.0F ||
+      input.input.wheel_delta != 0.0F || input.input.focus_requested || input.input.home_requested)
+    ++state.applied_input_count;
+  state.input.begin_frame();
+  input.width = info.width;
+  input.height = info.height;
+  if (result == GRANIT_SUCCESS)
+    result = granit::to_native(state.core.tick(input, output));
+  if (result == GRANIT_SUCCESS) {
+    output.render.output = backbuffer_view;
+    output.render.output_format = info.format;
+    output.render.frame = frame;
+    result = granit_render_pipeline_render(state.renderer, state.pipeline, &output.render);
+  }
+  if (result != GRANIT_SUCCESS) {
+    if (frame != GRANIT_NULL_HANDLE)
+      static_cast<void>(
+          granit_frame_cancel(state.renderer, state.swapchain, frame, &needs_recreate));
+    return result;
+  }
+  result = granit_swapchain_present(state.renderer, state.swapchain, frame, &needs_recreate);
+  if (result == GRANIT_SUCCESS)
+    ++state.rendered_frame_count;
+  return result;
+}
+
+granit_result configure_render_quality(granit_sample_count sample_count, unsigned enable_fxaa,
+                                       unsigned enable_specular_aa, unsigned sampler_anisotropy) {
+  if (state.status != startup_status::ready || state.renderer == GRANIT_NULL_HANDLE ||
+      state.pipeline == GRANIT_NULL_HANDLE)
+    return GRANIT_ERROR_NOT_READY;
+  if ((sample_count != GRANIT_SAMPLE_COUNT_1 && sample_count != GRANIT_SAMPLE_COUNT_4) ||
+      enable_fxaa > 1 || enable_specular_aa > 1 || sampler_anisotropy == 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+
+  granit_renderer_limits limits = GRANIT_RENDERER_LIMITS_INIT;
+  auto result = granit_renderer_get_limits(state.renderer, &limits);
+  if (result != GRANIT_SUCCESS)
+    return result;
+  if ((limits.framebuffer_sample_counts & sample_count) == 0 ||
+      static_cast<float>(sampler_anisotropy) > limits.max_sampler_anisotropy)
+    return GRANIT_ERROR_UNSUPPORTED;
+
+  granit_render_pipeline_desc desc = GRANIT_RENDER_PIPELINE_DESC_INIT;
+  desc.sample_count = sample_count;
+  desc.enable_fxaa = enable_fxaa;
+  desc.enable_specular_aa = enable_specular_aa;
+  granit_render_pipeline replacement{};
+  result = granit_render_pipeline_create(state.renderer, &desc, &replacement);
+  if (result != GRANIT_SUCCESS)
+    return result;
+  if (sampler_anisotropy != state.sampler_anisotropy) {
+    result = granit::to_native(
+        state.core.reupload_scene(state.renderer, static_cast<float>(sampler_anisotropy)));
+    if (result != GRANIT_SUCCESS) {
+      static_cast<void>(granit_render_pipeline_destroy(state.renderer, replacement));
+      return result;
+    }
+  }
+  result = granit_render_pipeline_destroy(state.renderer, state.pipeline);
+  if (result != GRANIT_SUCCESS) {
+    static_cast<void>(granit_render_pipeline_destroy(state.renderer, replacement));
+    return result;
+  }
+  state.pipeline = replacement;
+  state.sample_count = sample_count;
+  state.enable_fxaa = enable_fxaa;
+  state.enable_specular_aa = enable_specular_aa;
+  state.sampler_anisotropy = sampler_anisotropy;
+  ++state.quality_generation;
+  return GRANIT_SUCCESS;
+}
+
 void tick(void*) noexcept {
-  if (state.status != startup_status::provider_pending) {
+  if (state.status == startup_status::failed) {
     return;
   }
+  if (state.status == startup_status::ready) {
+    const auto result = render_model_viewer_frame();
+    if (result != GRANIT_SUCCESS)
+      fail("model-viewer-frame", result);
+    return;
+  }
+  if (state.status != startup_status::provider_pending)
+    return;
   const auto process_result = granit_renderer_process_events(state.renderer);
   if (process_result != GRANIT_SUCCESS) {
     fail("provider-events", process_result);
@@ -490,6 +688,83 @@ void tick(void*) noexcept {
   if (renderer_status.state != GRANIT_RENDERER_STATE_READY) {
     return;
   }
+  if (!state.core_renderer_ready) {
+    const auto result = state.core.renderer_ready();
+    if (result != granit::result::success) {
+      fail("core-renderer-ready", granit::to_native(result));
+      return;
+    }
+    state.core_renderer_ready = true;
+  }
+  if (state.asset_request->status() ==
+      granit::example::model_viewer::web::asset_request_status::failed) {
+    fail("asset-fetch");
+    return;
+  }
+  if (state.asset_request->status() !=
+      granit::example::model_viewer::web::asset_request_status::ready) {
+    return;
+  }
+
+  try {
+    if (!state.resource_batch_started) {
+      std::vector<std::string> resources;
+      const auto discovery = granit::example::gltf::discover_external_resources(
+          state.asset_request->bytes(), resources);
+      if (!discovery) {
+        fail("asset-discovery", GRANIT_ERROR_INVALID_ARGUMENT);
+        return;
+      }
+      for (const auto& resource : resources) {
+        if (!state.resource_batch.add(resource, resource)) {
+          fail("asset-batch-add", GRANIT_ERROR_INVALID_ARGUMENT);
+          return;
+        }
+      }
+      for (const auto& entry : state.resource_batch.entries()) {
+        if (!granit::example::model_viewer::web::start_fetch(entry.request, entry.url)) {
+          fail("asset-resource-fetch-start");
+          return;
+        }
+      }
+      state.resource_batch_started = true;
+    }
+
+    const auto batch_status = state.resource_batch.status();
+    if (batch_status == granit::example::model_viewer::web::resource_fetch_batch_status::failed) {
+      fail("asset-resource-fetch");
+      return;
+    }
+    if (batch_status != granit::example::model_viewer::web::resource_fetch_batch_status::ready)
+      return;
+    if (!state.asset_ready) {
+      if (!state.resource_batch.commit(state.resource_bundle)) {
+        fail("asset-bundle-commit", GRANIT_ERROR_INTERNAL);
+        return;
+      }
+      auto result = state.core.load_asset(state.asset_request->bytes(), &state.resource_bundle);
+      if (result != granit::result::success) {
+        fail("asset-load", granit::to_native(result));
+        return;
+      }
+      result = state.core.upload(state.renderer);
+      if (result != granit::result::success) {
+        fail("asset-upload", granit::to_native(result));
+        return;
+      }
+      if (state.core.phase() != granit::example::model_viewer::application_phase::ready) {
+        fail("asset-core-phase", GRANIT_ERROR_INTERNAL);
+        return;
+      }
+      state.asset_ready = true;
+    }
+  } catch (const std::bad_alloc&) {
+    fail("asset-allocation", GRANIT_ERROR_OUT_OF_MEMORY);
+    return;
+  } catch (...) {
+    fail("asset-exception", GRANIT_ERROR_INTERNAL);
+    return;
+  }
 
   granit_renderer_limits limits = GRANIT_RENDERER_LIMITS_INIT;
   const auto limits_result = granit_renderer_get_limits(state.renderer, &limits);
@@ -505,9 +780,25 @@ void tick(void*) noexcept {
     return;
   }
   try {
+    const granit_render_pipeline_desc pipeline_desc = GRANIT_RENDER_PIPELINE_DESC_INIT;
+    const auto pipeline_result =
+        granit_render_pipeline_create(state.renderer, &pipeline_desc, &state.pipeline);
+    if (pipeline_result != GRANIT_SUCCESS) {
+      fail("pipeline-create", pipeline_result);
+      return;
+    }
     const auto result = create_presentation_resources();
     if (result != GRANIT_SUCCESS) {
+      static_cast<void>(granit_render_pipeline_destroy(state.renderer, state.pipeline));
+      state.pipeline = GRANIT_NULL_HANDLE;
       fail("presentation-create", result);
+      return;
+    }
+    const auto render_result = render_model_viewer_frame();
+    if (render_result != GRANIT_SUCCESS) {
+      static_cast<void>(granit_render_pipeline_destroy(state.renderer, state.pipeline));
+      state.pipeline = GRANIT_NULL_HANDLE;
+      fail("model-viewer-render", render_result);
       return;
     }
   } catch (const std::bad_alloc&) {
@@ -529,6 +820,107 @@ extern "C" EMSCRIPTEN_KEEPALIVE int granit_web_platform_status() noexcept {
 
 extern "C" EMSCRIPTEN_KEEPALIVE unsigned granit_web_input_event_count() noexcept {
   return state.input_event_count;
+}
+
+extern "C" EMSCRIPTEN_KEEPALIVE unsigned granit_web_rendered_frame_count() noexcept {
+  return state.rendered_frame_count;
+}
+
+extern "C" EMSCRIPTEN_KEEPALIVE unsigned granit_web_applied_input_count() noexcept {
+  return state.applied_input_count;
+}
+
+extern "C" EMSCRIPTEN_KEEPALIVE unsigned granit_web_resize_count() noexcept {
+  return state.resize_count;
+}
+
+extern "C" EMSCRIPTEN_KEEPALIVE int
+granit_web_configure_render_quality(unsigned sample_count, unsigned enable_fxaa,
+                                    unsigned enable_specular_aa,
+                                    unsigned sampler_anisotropy) noexcept {
+  try {
+    return configure_render_quality(static_cast<granit_sample_count>(sample_count), enable_fxaa,
+                                    enable_specular_aa, sampler_anisotropy);
+  } catch (const std::bad_alloc&) {
+    return GRANIT_ERROR_OUT_OF_MEMORY;
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+extern "C" EMSCRIPTEN_KEEPALIVE unsigned granit_web_quality_generation() noexcept {
+  return state.quality_generation;
+}
+
+extern "C" EMSCRIPTEN_KEEPALIVE unsigned granit_web_max_sampler_anisotropy() noexcept {
+  if (state.renderer == GRANIT_NULL_HANDLE)
+    return 0;
+  granit_renderer_limits limits = GRANIT_RENDERER_LIMITS_INIT;
+  if (granit_renderer_get_limits(state.renderer, &limits) != GRANIT_SUCCESS)
+    return 0;
+  return static_cast<unsigned>(limits.max_sampler_anisotropy);
+}
+
+extern "C" EMSCRIPTEN_KEEPALIVE unsigned long long
+granit_web_shutdown_live_resource_count() noexcept {
+  return state.shutdown_live_resource_count;
+}
+
+extern "C" EMSCRIPTEN_KEEPALIVE unsigned long long
+granit_web_shutdown_pending_retirement_count() noexcept {
+  return state.shutdown_pending_retirement_count;
+}
+
+extern "C" EMSCRIPTEN_KEEPALIVE int granit_web_shutdown() noexcept {
+  if (state.status == startup_status::stopped)
+    return GRANIT_SUCCESS;
+  emscripten_cancel_main_loop();
+  state.asset_request->cancel();
+  for (const auto& entry : state.resource_batch.entries())
+    entry.request->cancel();
+  state.resource_batch.clear();
+  granit::example::model_viewer::web::resource_bundle empty_bundle;
+  state.resource_bundle.swap(empty_bundle);
+  state.core.reset();
+
+  auto first_error = GRANIT_SUCCESS;
+  const auto capture = [&](granit_result result) {
+    if (first_error == GRANIT_SUCCESS && result != GRANIT_SUCCESS)
+      first_error = result;
+  };
+  if (state.pipeline != GRANIT_NULL_HANDLE) {
+    capture(granit_render_pipeline_destroy(state.renderer, state.pipeline));
+    state.pipeline = GRANIT_NULL_HANDLE;
+  }
+  if (state.swapchain != GRANIT_NULL_HANDLE) {
+    capture(granit_swapchain_destroy(state.renderer, state.swapchain));
+    state.swapchain = GRANIT_NULL_HANDLE;
+  }
+  if (state.surface != GRANIT_NULL_HANDLE) {
+    capture(granit_surface_destroy(state.renderer, state.surface));
+    state.surface = GRANIT_NULL_HANDLE;
+  }
+  if (state.renderer != GRANIT_NULL_HANDLE) {
+    granit_renderer_resource_stats stats = GRANIT_RENDERER_RESOURCE_STATS_INIT;
+    const auto stats_result = granit_renderer_get_resource_stats(state.renderer, &stats);
+    capture(stats_result);
+    if (stats_result == GRANIT_SUCCESS) {
+      state.shutdown_live_resource_count = stats.total_live_count;
+      state.shutdown_pending_retirement_count = stats.pending_retirement_count;
+      if (stats.total_live_count != 0)
+        capture(GRANIT_ERROR_INTERNAL);
+    }
+    capture(granit_renderer_destroy(state.renderer));
+    state.renderer = GRANIT_NULL_HANDLE;
+  }
+  state.status = startup_status::stopped;
+  return first_error;
+}
+
+extern "C" EMSCRIPTEN_KEEPALIVE unsigned granit_web_asset_status() noexcept {
+  if (state.status == startup_status::failed)
+    return 3;
+  return state.asset_ready ? 2U : 1U;
 }
 
 extern "C" EMSCRIPTEN_KEEPALIVE unsigned granit_web_renderer_state() noexcept {
@@ -557,10 +949,29 @@ int main() {
     fail("provider-open", result);
     return 1;
   }
+  const auto core_result = state.core.begin_renderer();
+  if (core_result != granit::result::success) {
+    fail("core-renderer-begin", granit::to_native(core_result));
+    return 1;
+  }
+  if (!granit::example::model_viewer::web::start_fetch(state.asset_request,
+                                                       "model_viewer_fixture.gltf")) {
+    fail("asset-fetch-start");
+    return 1;
+  }
   static_cast<void>(emscripten_set_keydown_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, &state,
                                                     EM_FALSE, receive_keyboard));
   static_cast<void>(emscripten_set_mousedown_callback("#canvas", &state, EM_FALSE, receive_mouse));
+  static_cast<void>(emscripten_set_mouseup_callback("#canvas", &state, EM_FALSE, receive_mouse));
   static_cast<void>(emscripten_set_mousemove_callback("#canvas", &state, EM_FALSE, receive_mouse));
+  static_cast<void>(emscripten_set_mouseenter_callback("#canvas", &state, EM_FALSE, receive_mouse));
+  static_cast<void>(emscripten_set_mouseleave_callback("#canvas", &state, EM_FALSE, receive_mouse));
+  static_cast<void>(emscripten_set_wheel_callback("#canvas", &state, EM_FALSE, receive_wheel));
+  static_cast<void>(emscripten_set_focus_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, &state, EM_FALSE,
+                                                  receive_focus));
+  static_cast<void>(emscripten_set_blur_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, &state, EM_FALSE,
+                                                 receive_focus));
+  state.input.focus_changed(true);
 
   state.status = startup_status::provider_pending;
   emscripten_set_main_loop_arg(tick, &state, 0, EM_FALSE);

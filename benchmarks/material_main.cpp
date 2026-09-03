@@ -131,6 +131,12 @@ std::vector<std::uint32_t> load_shader(std::string_view name) {
   return words;
 }
 
+std::string load_shader_text(std::string_view name) {
+  const auto path = std::string{GRANIT_BENCHMARK_ASSET_DIR} + "/" + std::string{name};
+  std::ifstream stream{path, std::ios::binary};
+  return {std::istreambuf_iterator<char>{stream}, {}};
+}
+
 bool make_metadata(granit::material::material_metadata& metadata) {
   granit::material::metadata_desc desc;
   desc.constant_buffer_size = 16;
@@ -146,7 +152,9 @@ bool make_package(std::uint32_t variant_count, granit::material::material_packag
   using namespace granit::material;
   const auto vertex = load_shader("triangle.vert.spv");
   const auto fragment = load_shader("triangle.frag.spv");
-  if (vertex.empty() || fragment.empty())
+  const auto vertex_wgsl = load_shader_text("triangle.vert.wgsl");
+  const auto fragment_wgsl = load_shader_text("triangle.frag.wgsl");
+  if (vertex.empty() || fragment.empty() || vertex_wgsl.empty() || fragment_wgsl.empty())
     return false;
   material_package_desc desc;
   desc.variants.reserve(variant_count);
@@ -155,8 +163,14 @@ bool make_package(std::uint32_t variant_count, granit::material::material_packag
         {.pass = make_feature_id("opaque"),
          .features = {{make_feature_id("mode"), value}},
          .shaders =
-             {{.stage = package_shader_stage::vertex, .entry_point = "main", .spirv = vertex},
-              {.stage = package_shader_stage::fragment, .entry_point = "main", .spirv = fragment}},
+             {{.stage = package_shader_stage::vertex,
+               .entry_point = "main",
+               .spirv = vertex,
+               .wgsl = vertex_wgsl},
+              {.stage = package_shader_stage::fragment,
+               .entry_point = "main",
+               .spirv = fragment,
+               .wgsl = fragment_wgsl}},
          .pipeline = {}});
   }
   return material_package::build(std::move(desc), package) == package_error::none;

@@ -15,6 +15,7 @@
 #include <granit/core/diagnostic.hpp>
 #include <granit/core/result.hpp>
 #include <granit/renderer/renderer.h>
+#include <granit/renderer/resource_types.hpp>
 
 namespace granit {
 
@@ -58,6 +59,13 @@ struct renderer_info {
 struct renderer_limits {
   std::uint64_t uniform_buffer_offset_alignment{};
   std::uint64_t max_uniform_buffer_binding_size{};
+  std::uint32_t framebuffer_sample_counts{};
+  float max_sampler_anisotropy{1.0F};
+
+  [[nodiscard]] constexpr bool supports_sample_count(sample_count samples) const noexcept {
+    const auto value = static_cast<std::uint32_t>(samples);
+    return (framebuffer_sample_counts & value) == value;
+  }
 };
 
 struct renderer_resource_stats {
@@ -183,6 +191,8 @@ public:
     limits = {
         .uniform_buffer_offset_alignment = native.uniform_buffer_offset_alignment,
         .max_uniform_buffer_binding_size = native.max_uniform_buffer_binding_size,
+        .framebuffer_sample_counts = native.framebuffer_sample_counts,
+        .max_sampler_anisotropy = native.max_sampler_anisotropy,
     };
     return result::success;
   }

@@ -201,9 +201,8 @@ extern "C" granit_result granit_text_atlas_create(granit_renderer renderer,
   }
   if (renderer == GRANIT_NULL_HANDLE)
     return GRANIT_ERROR_INVALID_HANDLE;
-  uint64_t cache_size = 0;
-  const auto renderer_result =
-      granit_renderer_pipeline_cache_export(renderer, nullptr, &cache_size);
+  granit_renderer_status status = GRANIT_RENDERER_STATUS_INIT;
+  const auto renderer_result = granit_renderer_get_status(renderer, &status);
   if (renderer_result != GRANIT_SUCCESS)
     return renderer_result;
   try {

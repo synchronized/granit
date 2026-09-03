@@ -14,6 +14,16 @@
 
 namespace granit {
 
+/** 不借用 Swapchain 查询已获取 Frame 的真实槽位。 */
+[[nodiscard]] inline result get_frame_slot_info(granit_renderer renderer,
+                                                const acquired_frame& frame,
+                                                granit_frame_info& info) noexcept {
+  if (!frame.valid())
+    return result::invalid_handle;
+  info = GRANIT_FRAME_INFO_INIT;
+  return from_native(granit_frame_get_slot_info(renderer, frame.handle, &info));
+}
+
 class frame_recording {
 public:
   frame_recording() = default;

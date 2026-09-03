@@ -35,13 +35,14 @@ class pass_context {
 public:
   [[nodiscard]] granit_renderer renderer() const noexcept { return renderer_; }
   [[nodiscard]] granit_command_recorder recorder() const noexcept { return recorder_; }
+  [[nodiscard]] std::uint32_t frame_slot() const noexcept { return frame_slot_; }
   [[nodiscard]] granit_buffer buffer(resource_id resource) const noexcept;
   [[nodiscard]] granit_texture_view texture_view(resource_id resource) const noexcept;
 
 private:
   friend class serial_graph;
 
-  pass_context(granit_renderer renderer, granit_command_recorder recorder,
+  pass_context(granit_renderer renderer, granit_command_recorder recorder, std::uint32_t frame_slot,
                std::span<const resource_access> accesses,
                std::span<const imported_resource> resources) noexcept;
   [[nodiscard]] const imported_resource* resolve(resource_id resource,
@@ -49,6 +50,7 @@ private:
 
   granit_renderer renderer_ = GRANIT_NULL_HANDLE;
   granit_command_recorder recorder_ = GRANIT_NULL_HANDLE;
+  std::uint32_t frame_slot_ = UINT32_MAX;
   std::span<const resource_access> accesses_;
   std::span<const imported_resource> resources_;
 };
@@ -100,11 +102,13 @@ public:
   [[nodiscard]] bool add_dependency(pass_id before, pass_id after);
   [[nodiscard]] execution_result execute(granit_renderer renderer) const;
   [[nodiscard]] execution_result execute_frame(granit_renderer renderer, granit_frame frame) const;
+  [[nodiscard]] execution_result execute_frame(granit_renderer renderer, granit_frame frame,
+                                               std::uint32_t frame_slot) const;
   [[nodiscard]] diagnostic_graph diagnostics() const;
 
 private:
-  [[nodiscard]] execution_result execute_internal(granit_renderer renderer,
-                                                  granit_frame frame) const;
+  [[nodiscard]] execution_result execute_internal(granit_renderer renderer, granit_frame frame,
+                                                  std::uint32_t frame_slot) const;
 
   graph_compiler compiler_;
   std::vector<imported_resource> resources_;

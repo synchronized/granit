@@ -158,9 +158,8 @@ extern "C" granit_result granit_canvas_draw_list_create(granit_renderer renderer
   }
   if (renderer == GRANIT_NULL_HANDLE)
     return GRANIT_ERROR_INVALID_HANDLE;
-  uint64_t pipeline_cache_size = 0;
-  const auto renderer_result =
-      granit_renderer_pipeline_cache_export(renderer, nullptr, &pipeline_cache_size);
+  granit_renderer_status status = GRANIT_RENDERER_STATUS_INIT;
+  const auto renderer_result = granit_renderer_get_status(renderer, &status);
   if (renderer_result != GRANIT_SUCCESS)
     return renderer_result;
   try {
@@ -326,7 +325,8 @@ extern "C" granit_result granit_canvas_draw_list_record(granit_renderer renderer
                                                         pixel_projection(desc->width, desc->height),
                                                     .camera_position = {},
                                                     .direction_to_light = {},
-                                                    .light_radiance = {}};
+                                                    .light_radiance = {},
+                                                    .render_options = {}};
   const granit::material::pbr_object_constants object{
       .model = identity_matrix(), .normal_matrix = identity_matrix(), .object_id = {}};
   if (result == GRANIT_SUCCESS) {

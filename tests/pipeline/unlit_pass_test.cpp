@@ -125,7 +125,8 @@ TEST_CASE("Unlit Opaque与Alpha Cutoff产生预期像素") {
         granit::material::pbr_frame_constants frame{.view_projection = identity(),
                                                     .camera_position = {},
                                                     .direction_to_light = {},
-                                                    .light_radiance = {}};
+                                                    .light_radiance = {},
+                                                    .render_options = {}};
         granit::material::pbr_object_constants object{
             .model = identity(), .normal_matrix = identity(), .object_id = {}};
         REQUIRE(granit::pipeline::detail::record_unlit_pass(

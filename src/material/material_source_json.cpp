@@ -265,6 +265,22 @@ bool read_spirv(const std::filesystem::path& path, std::vector<std::uint32_t>& w
   return words.front() == UINT32_C(0x07230203);
 }
 
+bool read_wgsl(const std::filesystem::path& path, std::string& text) {
+  constexpr std::uint64_t maximum_size = UINT64_C(16) * 1024 * 1024;
+  std::ifstream stream(path, std::ios::binary | std::ios::ate);
+  if (!stream) {
+    return false;
+  }
+  const auto length = stream.tellg();
+  if (length <= 0 || static_cast<std::uint64_t>(length) > maximum_size) {
+    return false;
+  }
+  text.resize(static_cast<std::size_t>(length));
+  stream.seekg(0);
+  stream.read(text.data(), length);
+  return stream.good() && text.find('\0') == std::string::npos;
+}
+
 bool parse_parameter(const json_value& value, parameter_desc& parameter) {
   const auto* object = as<json_value::object>(&value);
   const auto* name = object == nullptr ? nullptr : as<std::string>(member(*object, "name"));
@@ -519,8 +535,11 @@ source_json_error parse_variant(const json_value& value, const std::filesystem::
     const auto* stage = shader == nullptr ? nullptr : as<std::string>(member(*shader, "stage"));
     const auto* entry =
         shader == nullptr ? nullptr : as<std::string>(member(*shader, "entry_point"));
-    const auto* path = shader == nullptr ? nullptr : as<std::string>(member(*shader, "spirv"));
-    if (stage == nullptr || entry == nullptr || path == nullptr) {
+    const auto* spirv_path =
+        shader == nullptr ? nullptr : as<std::string>(member(*shader, "spirv"));
+    const auto* wgsl_path =
+        shader == nullptr ? nullptr : as<std::string>(member(*shader, "wgsl"));
+    if (stage == nullptr || entry == nullptr || spirv_path == nullptr || wgsl_path == nullptr) {
       return source_json_error::invalid_schema;
     }
     material_shader_code code;
@@ -532,7 +551,8 @@ source_json_error parse_variant(const json_value& value, const std::filesystem::
       return source_json_error::unsupported_value;
     }
     code.entry_point = *entry;
-    if (!read_spirv(directory / std::filesystem::path{*path}, code.spirv)) {
+    if (!read_spirv(directory / std::filesystem::path{*spirv_path}, code.spirv) ||
+        !read_wgsl(directory / std::filesystem::path{*wgsl_path}, code.wgsl)) {
       return source_json_error::referenced_file_error;
     }
     variant.shaders.push_back(std::move(code));
@@ -567,7 +587,7 @@ source_json_error parse_material_source_json(std::string_view json,
         target == nullptr || binding == nullptr || material == nullptr || variants == nullptr) {
       return source_json_error::invalid_schema;
     }
-    if (version != material_package_format_version || *target != "vulkan1.3" ||
+    if (version != material_package_format_version || *target != "cross_backend" ||
         *binding != "bind_group") {
       return source_json_error::unsupported_value;
     }

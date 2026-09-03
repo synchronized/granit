@@ -143,7 +143,7 @@ package_error material_package::build(material_package_desc desc, material_packa
   if (desc.format_version != material_package_format_version) {
     return package_error::unsupported_version;
   }
-  if (desc.target != package_target::vulkan_1_3) {
+  if (desc.target != package_target::cross_backend) {
     return package_error::unsupported_target;
   }
   if (desc.binding_model != package_binding_model::bind_group) {
@@ -181,7 +181,8 @@ package_error material_package::build(material_package_desc desc, material_packa
     std::array<bool, 2> stages{};
     for (const auto& shader : source.shaders) {
       const auto stage_index = static_cast<std::size_t>(shader.stage);
-      if (stage_index >= stages.size() || shader.entry_point.empty() || !is_spirv(shader.spirv)) {
+      if (stage_index >= stages.size() || shader.entry_point.empty() || !is_spirv(shader.spirv) ||
+          shader.wgsl.empty() || shader.wgsl.find('\0') != std::string::npos) {
         return package_error::invalid_shader;
       }
       if (stages[stage_index]) {

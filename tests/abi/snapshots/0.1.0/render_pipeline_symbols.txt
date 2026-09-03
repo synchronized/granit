@@ -22,6 +22,8 @@ granit_mesh_create
 granit_mesh_destroy
 granit_render_pipeline_create
 granit_render_pipeline_destroy
+granit_render_pipeline_get_metrics
+granit_render_pipeline_metrics_enable
 granit_render_pipeline_render
 granit_scene_snapshot_create
 granit_scene_snapshot_destroy

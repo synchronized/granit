@@ -11,6 +11,7 @@ constexpr granit::color_attachment_desc color{
 };
 constexpr auto native_color = color.native();
 static_assert(native_color.view == UINT64_C(7));
+static_assert(native_color.resolve_view == GRANIT_NULL_HANDLE);
 static_assert(native_color.load_operation == GRANIT_ATTACHMENT_LOAD_OPERATION_CLEAR);
 
 constexpr granit::depth_stencil_attachment_desc depth{.view = UINT64_C(9)};

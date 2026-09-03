@@ -48,16 +48,20 @@ typedef struct granit_color_attachment_desc {
   granit_texture_view view;
   granit_clear_color_value clear_value;
   uint64_t reserved_2;
+  /** 可选的单采样解析目标；仅用于多采样颜色附件。 */
+  granit_texture_view resolve_view;
 } granit_color_attachment_desc;
-#define GRANIT_COLOR_ATTACHMENT_DESC_VERSION_1_SIZE UINT32_C(48)
+#define GRANIT_COLOR_ATTACHMENT_DESC_VERSION_1_SIZE                                                \
+  ((uint32_t)(offsetof(granit_color_attachment_desc, resolve_view) + sizeof(granit_texture_view)))
 #define GRANIT_COLOR_ATTACHMENT_DESC_INIT                                                          \
-  {GRANIT_COLOR_ATTACHMENT_DESC_VERSION_1_SIZE,                                                    \
+  {(uint32_t)sizeof(granit_color_attachment_desc),                                                 \
    GRANIT_ATTACHMENT_LOAD_OPERATION_CLEAR,                                                         \
    GRANIT_ATTACHMENT_STORE_OPERATION_STORE,                                                        \
    UINT32_C(0),                                                                                    \
    GRANIT_NULL_HANDLE,                                                                             \
    {0.0F, 0.0F, 0.0F, 1.0F},                                                                       \
-   UINT64_C(0)}
+   UINT64_C(0),                                                                                    \
+   GRANIT_NULL_HANDLE}
 
 /** 单个深度/模板 Texture View 的渲染行为。 */
 typedef struct granit_depth_stencil_attachment_desc {
@@ -101,7 +105,7 @@ typedef struct granit_rendering_desc {
   uint32_t reserved;
   uint64_t reserved_2;
 } granit_rendering_desc;
-#define GRANIT_RENDERING_DESC_VERSION_1_SIZE                                                    \
+#define GRANIT_RENDERING_DESC_VERSION_1_SIZE                                                       \
   ((uint32_t)(offsetof(granit_rendering_desc, reserved_2) + sizeof(uint64_t)))
 #define GRANIT_RENDERING_DESC_INIT                                                                 \
   {GRANIT_RENDERING_DESC_VERSION_1_SIZE,                                                           \

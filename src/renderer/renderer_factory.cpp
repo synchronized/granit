@@ -3,6 +3,7 @@
 
 #include "renderer/renderer_factory.h"
 
+#include "backend/webgpu/renderer_factory.h"
 #include "renderer/renderer_registry.h"
 
 #include "core/diagnostic_sink.h"
@@ -53,15 +54,15 @@ void emit_backend_attempt(const diagnostic_sink& diagnostics, std::string_view b
   }
 }
 
-granit_result create_webgpu(renderer_registry& registry, std::string_view requested_path,
-                            std::uint32_t surface_types, granit_diagnostic_callback callback,
-                            void* user_data, granit_renderer& renderer) {
+granit_result create_webgpu(std::string_view requested_path, std::uint32_t surface_types,
+                            granit_diagnostic_callback callback, void* user_data,
+                            granit_renderer& renderer) {
   if (!requested_path.empty())
-    return registry.create_webgpu_dynamic(requested_path, surface_types, callback, user_data,
+    return create_webgpu_renderer_dynamic(requested_path, surface_types, callback, user_data,
                                           renderer);
   granit_result result = GRANIT_ERROR_BACKEND_UNAVAILABLE;
   for (const auto& path : default_webgpu_paths()) {
-    result = registry.create_webgpu_dynamic(path, surface_types, callback, user_data, renderer);
+    result = create_webgpu_renderer_dynamic(path, surface_types, callback, user_data, renderer);
     if (result == GRANIT_SUCCESS || result == GRANIT_ERROR_INCOMPATIBLE_DRIVER)
       return result;
   }
@@ -97,7 +98,7 @@ granit_result create_default_renderer(const granit_renderer_desc& desc, granit_r
   auto& registry = renderer_registry::instance();
   const diagnostic_sink diagnostics{diagnostic_callback, diagnostic_user_data};
   if (backend == GRANIT_RENDERER_BACKEND_WEBGPU) {
-    const auto result = create_webgpu(registry, backend_path, surface_types, diagnostic_callback,
+    const auto result = create_webgpu(backend_path, surface_types, diagnostic_callback,
                                       diagnostic_user_data, renderer);
     if (result != GRANIT_SUCCESS)
       emit_backend_attempt(diagnostics, "WebGPU", result);
@@ -115,8 +116,8 @@ granit_result create_default_renderer(const granit_renderer_desc& desc, granit_r
     return vulkan_result;
   }
   emit_backend_attempt(diagnostics, "Vulkan", vulkan_result);
-  const auto webgpu_result = create_webgpu(registry, backend_path, surface_types,
-                                           diagnostic_callback, diagnostic_user_data, renderer);
+  const auto webgpu_result = create_webgpu(backend_path, surface_types, diagnostic_callback,
+                                           diagnostic_user_data, renderer);
   if (webgpu_result != GRANIT_SUCCESS)
     emit_backend_attempt(diagnostics, "WebGPU", webgpu_result);
   return webgpu_result == GRANIT_SUCCESS ? GRANIT_SUCCESS : vulkan_result;

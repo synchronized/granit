@@ -59,13 +59,22 @@ typedef struct granit_renderer_limits {
   uint32_t reserved;
   uint64_t uniform_buffer_offset_alignment;
   uint64_t max_uniform_buffer_binding_size;
+  /** 通用颜色与深度附件共同支持的样本数位集合。 */
+  uint32_t framebuffer_sample_counts;
+  /** Sampler 支持的最大各向异性；1 表示不支持各向异性。 */
+  float max_sampler_anisotropy;
 } granit_renderer_limits;
 
 #define GRANIT_RENDERER_LIMITS_VERSION_1_SIZE                                                      \
-  ((uint32_t)(offsetof(granit_renderer_limits, max_uniform_buffer_binding_size) + sizeof(uint64_t)))
+  ((uint32_t)(offsetof(granit_renderer_limits, max_sampler_anisotropy) + sizeof(float)))
 
 #define GRANIT_RENDERER_LIMITS_INIT                                                                \
-  {(uint32_t)sizeof(granit_renderer_limits), UINT32_C(0), UINT64_C(0), UINT64_C(0)}
+  {(uint32_t)sizeof(granit_renderer_limits),                                                       \
+   UINT32_C(0),                                                                                    \
+   UINT64_C(0),                                                                                    \
+   UINT64_C(0),                                                                                    \
+   UINT32_C(0),                                                                                    \
+   1.0F}
 
 /** Renderer 当前存活的公开子资源及后端待回收资源快照。 */
 typedef struct granit_renderer_resource_stats {

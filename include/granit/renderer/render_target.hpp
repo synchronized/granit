@@ -38,6 +38,7 @@ struct clear_depth_stencil_value {
 
 struct color_attachment_desc {
   granit_texture_view view{GRANIT_NULL_HANDLE};
+  granit_texture_view resolve_view{GRANIT_NULL_HANDLE};
   attachment_load_operation load_operation{attachment_load_operation::clear};
   attachment_store_operation store_operation{attachment_store_operation::store};
   clear_color_value clear_value{};
@@ -50,7 +51,8 @@ struct color_attachment_desc {
         .reserved = 0,
         .view = view,
         .clear_value = {clear_value.red, clear_value.green, clear_value.blue, clear_value.alpha},
-        .reserved_2 = 0};
+        .reserved_2 = 0,
+        .resolve_view = resolve_view};
   }
 };
 

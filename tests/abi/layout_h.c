@@ -140,11 +140,13 @@ GRANIT_ABI_ASSERT(granit_abi_clear_color_size, sizeof(granit_clear_color_value) 
 GRANIT_ABI_ASSERT(granit_abi_clear_depth_stencil_size,
                   sizeof(granit_clear_depth_stencil_value) == 8);
 GRANIT_ABI_ASSERT(granit_abi_color_attachment_desc_size,
-                  sizeof(granit_color_attachment_desc) == 48);
+                  sizeof(granit_color_attachment_desc) == 56);
 GRANIT_ABI_ASSERT(granit_abi_color_attachment_desc_view,
                   offsetof(granit_color_attachment_desc, view) == 16);
 GRANIT_ABI_ASSERT(granit_abi_color_attachment_desc_clear,
                   offsetof(granit_color_attachment_desc, clear_value) == 24);
+GRANIT_ABI_ASSERT(granit_abi_color_attachment_desc_resolve,
+                  offsetof(granit_color_attachment_desc, resolve_view) == 48);
 GRANIT_ABI_ASSERT(granit_abi_depth_attachment_desc_size,
                   sizeof(granit_depth_stencil_attachment_desc) == 48);
 GRANIT_ABI_ASSERT(granit_abi_depth_attachment_desc_view,

@@ -13,6 +13,8 @@ project(
 option(BUILD_SHARED_LIBS "构建共享库" ON)
 option(GRANIT_BUILD_TESTING "构建 Granit 测试" ON)
 option(GRANIT_BUILD_EXAMPLES "构建 Granit 示例" ${PROJECT_IS_TOP_LEVEL})
+option(GRANIT_BUILD_MODEL_VIEWER_EXAMPLE "构建跨后端模型查看器示例" OFF)
+option(GRANIT_FETCH_EXAMPLE_GLTF_DEPENDENCIES "下载模型查看器锁定的 glTF 私有依赖" OFF)
 option(GRANIT_BUILD_BENCHMARKS "构建 Granit benchmark 程序" OFF)
 option(GRANIT_BUILD_TOOLS "构建 Granit 离线工具" OFF)
 option(GRANIT_BUILD_SHADER_TOOLS "构建并安装 ShaderTools SDK" OFF)
@@ -130,6 +132,18 @@ if(GRANIT_BUILD_BACKEND_WEBGPU)
   get_target_property(GRANIT_DAWN_LIBRARY_TYPE dawn::webgpu_dawn TYPE)
   if(NOT GRANIT_DAWN_LIBRARY_TYPE STREQUAL "STATIC_LIBRARY")
     message(FATAL_ERROR "WebGPU 插件要求 dawn::webgpu_dawn 为静态库")
+  endif()
+  if(WIN32 AND CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND
+     CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "GNU")
+    get_target_property(granit_dawn_link_libraries dawn::webgpu_dawn INTERFACE_LINK_LIBRARIES)
+    if(granit_dawn_link_libraries)
+      # Dawn 的 Windows 静态包可能导出 MSVC/LINK 专用选项，GNU 风格 Clang 无法解析。
+      list(REMOVE_ITEM granit_dawn_link_libraries "$<LINK_ONLY:-ignore:4221>")
+      set_property(
+        TARGET dawn::webgpu_dawn PROPERTY INTERFACE_LINK_LIBRARIES
+                                            "${granit_dawn_link_libraries}"
+      )
+    endif()
   endif()
 endif()
 

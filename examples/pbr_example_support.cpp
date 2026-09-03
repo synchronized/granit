@@ -122,17 +122,21 @@ result pbr_lighting_resources::reset() {
 
 bool build_pbr_package(material::material_package& package,
                        std::span<const std::uint32_t> vertex_shader,
-                       std::span<const std::uint32_t> fragment_shader) {
+                       std::string_view vertex_wgsl,
+                       std::span<const std::uint32_t> fragment_shader,
+                       std::string_view fragment_wgsl) {
   using namespace material;
   material_variant_desc variant{
       .pass = make_feature_id("opaque"),
       .features = {{make_feature_id(pbr_texture_feature_name), 0}},
       .shaders = {{.stage = package_shader_stage::vertex,
                    .entry_point = "vertex_main",
-                   .spirv = {vertex_shader.begin(), vertex_shader.end()}},
+                   .spirv = {vertex_shader.begin(), vertex_shader.end()},
+                   .wgsl = std::string{vertex_wgsl}},
                   {.stage = package_shader_stage::fragment,
                    .entry_point = "fragment_main",
-                   .spirv = {fragment_shader.begin(), fragment_shader.end()}}},
+                   .spirv = {fragment_shader.begin(), fragment_shader.end()},
+                   .wgsl = std::string{fragment_wgsl}}},
       .pipeline = {}};
   variant.pipeline.primitive.cull_mode = GRANIT_CULL_MODE_BACK;
   variant.pipeline.primitive.front_face = GRANIT_FRONT_FACE_CLOCKWISE;

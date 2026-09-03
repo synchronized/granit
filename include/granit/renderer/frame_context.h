@@ -33,6 +33,9 @@ extern "C" {
 GRANIT_API granit_result granit_frame_context_create(granit_renderer renderer,
                                                      const granit_frame_context_desc* desc,
                                                      granit_frame_context* context);
+/** 不依赖 Swapchain 句柄查询 Frame 槽位；供拥有 Frame 但不拥有 Swapchain 的子系统使用。 */
+GRANIT_API granit_result granit_frame_get_slot_info(granit_renderer renderer, granit_frame frame,
+                                                    granit_frame_info* info);
 /** 为 Frame 的真实槽位开始录制；返回的 Recorder 由 Context 拥有，只能借用。 */
 GRANIT_API granit_result granit_frame_context_begin(granit_renderer renderer,
                                                     granit_frame_context context,

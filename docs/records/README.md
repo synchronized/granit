@@ -19,6 +19,8 @@
 
 ## 稳定化与跨平台
 
+- [2026-09-03 S-13H/S-13I 跨后端验收](2026-09-03-s13hi-cross-backend-acceptance.md)
+- [2026-09-02 S-13G 模型查看器性能基线](2026-09-02-s13g-model-viewer-performance.md)
 - [2026-08-28 S-10E WebGPU Renderer 验收](2026-08-28-s10e-webgpu-renderer-acceptance.md)
 - [2026-08-27 D-10 动态 Uniform Buffer Offset 验收](2026-08-27-d10-dynamic-uniform-offsets.md)
 - [2026-08-27 S-10C WGSL Shader 工具链验收](2026-08-27-s10c-wgsl-toolchain-acceptance.md)

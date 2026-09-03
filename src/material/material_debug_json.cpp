@@ -34,6 +34,8 @@ const char* section_name(std::uint32_t type) noexcept {
     return "dependency_metadata";
   case archive_section_type::pipeline_states:
     return "pipeline_states";
+  case archive_section_type::wgsl_data:
+    return "wgsl_data";
   }
   return "unknown";
 }
@@ -284,7 +286,7 @@ archive_error export_material_archive_debug_json(std::span<const std::byte> byte
            << ",\n    \"version_minor\": " << layout.header.version_minor
            << ",\n    \"file_size\": " << layout.header.file_size << ",\n    \"content_hash\": ";
     write_hash(stream, layout.header.content_hash);
-    stream << "\n  },\n  \"requirements\": {\n    \"target_environment\": \"vulkan1.3\",\n"
+    stream << "\n  },\n  \"requirements\": {\n    \"target_environment\": \"cross_backend\",\n"
               "    \"binding_model\": \"bind_group\",\n    \"renderer_features\": []\n  },\n"
               "  \"sections\": [";
     for (std::size_t index = 0; index < layout.sections.size(); ++index) {
@@ -335,7 +337,8 @@ archive_error export_material_archive_debug_json(std::span<const std::byte> byte
         write_json_string(stream, shader_stage_name(shader.stage));
         stream << ", \"entry_point\": ";
         write_json_string(stream, shader.entry_point);
-        stream << ", \"spirv_size\": " << shader.spirv.size() * sizeof(std::uint32_t) << '}';
+        stream << ", \"spirv_size\": " << shader.spirv.size() * sizeof(std::uint32_t)
+               << ", \"wgsl_size\": " << shader.wgsl.size() << '}';
       }
       stream << "], \"pipeline\": {\"vertex_buffers\": [";
       for (std::size_t buffer_index = 0; buffer_index < variant.pipeline.vertex_buffers.size();

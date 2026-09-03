@@ -24,6 +24,31 @@ renderer_registry& renderer_registry::instance() {
   return registry;
 }
 
+granit_result renderer_registry::register_backend(std::shared_ptr<backend_renderer> backend,
+                                                  granit_renderer& renderer) {
+  if (!backend)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  try {
+    std::lock_guard lock{mutex_};
+    backend->set_domain(allocate_domain());
+    const auto handle = handles_.insert(backend.get(), resource_type::renderer, 0);
+    if (handle == GRANIT_NULL_HANDLE)
+      return GRANIT_ERROR_OUT_OF_MEMORY;
+    try {
+      backend_renderers_.emplace(handle, std::move(backend));
+    } catch (...) {
+      static_cast<void>(handles_.erase(handle, resource_type::renderer, 0));
+      throw;
+    }
+    renderer = handle;
+    return GRANIT_SUCCESS;
+  } catch (const std::bad_alloc&) {
+    return GRANIT_ERROR_OUT_OF_MEMORY;
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
 granit_result renderer_registry::get_limits(granit_renderer renderer,
                                             granit_renderer_limits& limits) {
   const auto state = acquire_backend(renderer);
@@ -35,6 +60,8 @@ granit_result renderer_registry::get_limits(granit_renderer renderer,
   limits.reserved = 0;
   limits.uniform_buffer_offset_alignment = capabilities.uniform_buffer_offset_alignment;
   limits.max_uniform_buffer_binding_size = capabilities.max_uniform_buffer_binding_size;
+  limits.framebuffer_sample_counts = capabilities.framebuffer_sample_counts;
+  limits.max_sampler_anisotropy = capabilities.max_sampler_anisotropy;
   return GRANIT_SUCCESS;
 }
 

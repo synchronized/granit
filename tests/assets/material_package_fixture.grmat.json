@@ -1,6 +1,6 @@
 {
-  "format_version": 2,
-  "target_environment": "vulkan1.3",
+  "format_version": 3,
+  "target_environment": "cross_backend",
   "binding_model": "bind_group",
   "material": {
     "constant_buffer_size": 16,
@@ -39,8 +39,10 @@
         "color_blend": {"enabled": false}
       },
       "shaders": [
-        {"stage": "vertex", "entry_point": "main", "spirv": "minimal.vert.spv"},
-        {"stage": "fragment", "entry_point": "main", "spirv": "minimal.frag.spv"}
+        {"stage": "vertex", "entry_point": "main", "spirv": "minimal.vert.spv",
+         "wgsl": "dynamic_uniform.vert.wgsl"},
+        {"stage": "fragment", "entry_point": "main", "spirv": "minimal.frag.spv",
+         "wgsl": "dynamic_uniform.frag.wgsl"}
       ]
     }
   ]

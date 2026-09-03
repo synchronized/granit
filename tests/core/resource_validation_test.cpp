@@ -96,6 +96,13 @@ TEST_CASE("Texture 描述区分非法组合和未实现能力", "[resource][vali
       .reserved = 0,
   };
   CHECK(validate_texture_desc(desc) == GRANIT_SUCCESS);
+  desc.usage = GRANIT_TEXTURE_USAGE_COLOR_ATTACHMENT_BIT;
+  desc.mip_levels = 1;
+  desc.sample_count = GRANIT_SAMPLE_COUNT_4;
+  CHECK(validate_texture_desc(desc) == GRANIT_SUCCESS);
+  desc.mip_levels = 2;
+  CHECK(validate_texture_desc(desc) == GRANIT_ERROR_UNSUPPORTED);
+  desc.sample_count = GRANIT_SAMPLE_COUNT_1;
   desc.usage = GRANIT_TEXTURE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
   CHECK(validate_texture_desc(desc) == GRANIT_ERROR_INVALID_ARGUMENT);
   desc.usage = GRANIT_TEXTURE_USAGE_SAMPLED_BIT;
@@ -166,6 +173,11 @@ TEST_CASE("Render Target Attachment 拒绝未初始化操作和非法清除值",
   granit_color_attachment_desc color = GRANIT_COLOR_ATTACHMENT_DESC_INIT;
   color.view = UINT64_C(1);
   CHECK(validate_color_attachment_desc(color) == GRANIT_SUCCESS);
+  color.resolve_view = UINT64_C(2);
+  CHECK(validate_color_attachment_desc(color) == GRANIT_SUCCESS);
+  color.reserved_2 = 1;
+  CHECK(validate_color_attachment_desc(color) == GRANIT_ERROR_INVALID_ARGUMENT);
+  color.reserved_2 = 0;
   color.load_operation = GRANIT_ATTACHMENT_LOAD_OPERATION_UNDEFINED;
   CHECK(validate_color_attachment_desc(color) == GRANIT_ERROR_INVALID_ARGUMENT);
   color.load_operation = GRANIT_ATTACHMENT_LOAD_OPERATION_DISCARD;

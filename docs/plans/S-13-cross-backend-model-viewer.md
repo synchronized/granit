@@ -5,7 +5,7 @@
 
 ## 状态
 
-- 实现状态：已确认，待开始
+- 实现状态：已完成；S-13A～S-13G 已验收
 - 前置依赖：S-12
 - 可并行准备：示例级 glTF 解析与测试 Fixture
 - 优先级：P1
@@ -48,10 +48,16 @@ glTF 首阶段只是示例输入格式，加载代码位于 `examples/common/glt
 两者均以确切 Git commit 和 SHA-256 锁定，由 `granit_example_gltf_support` 私有编译；
 不安装头文件、不导出 CMake Target，不向 `granit` 传递 Include 目录或编译定义。
 
+- `cgltf` 锁定提交 `360db1a95480fe102ae9c69b27c5d101167ff5ba`，源码归档 SHA-256 为
+  `445d135cf793232ae6a585ca1404e4ff28d4f4dbca070689034fe780370ac84a`。
+- `stb_image` 锁定首次标记 2.30 的提交 `013ac3beddff3dbffafd5177e7972067cd2b5083`，源码归档
+  SHA-256 为 `b01aa93e1a968aed55f43e072c98ee401d2f20e897aabdb1a166c7166886ed11`。
+
 - `cgltf` 采用 MIT 许可；`stb_image` 按其 MIT 选项纳入第三方通知，并仅开启
   PNG/JPEG 解码以收窄攻击面与产物大小。
-- 完整示例资产采用 Khronos glTF Sample Assets 的 `FlightHelmet` GLB 变体，许可为
-  CC0-1.0。仓库记录上游提交、原始 URL、SHA-256 和许可文本。
+- 完整示例资产采用 Khronos glTF Sample Assets 的 `FlightHelmet` glTF 变体，许可为
+  CC0-1.0。上游没有提供该模型的 GLB 变体；仓库记录上游提交、原始 URL、逐文件
+  SHA-256 和许可文本。
 - 完整头盔不进入默认 Git 工作树；通过显式 CMake 选项或辅助脚本下载到构建
   缓存，校验 SHA-256 后使用。离线构建可指向已验证的本地资产路径。
 - 一个仓库内 CC0 小型 GLB Fixture 用于解析、错误语义和 Smoke Test；手动下载失败
@@ -61,6 +67,8 @@ glTF 首阶段只是示例输入格式，加载代码位于 `examples/common/glt
 
 S-13A 的交付物包含依赖锁定记录、第三方通知、资产 manifest、可重入的获取
 脚本和离线路径验证。没有通过哈希与许可校验时，不得开始将完整资产接入查看器。
+资产清单位于 `examples/assets/FlightHelmet.manifest.json`，获取入口为
+`cmake/fetch_flight_helmet.cmake`；默认构建不会调用该脚本或访问网络。
 
 ### S-13B CPU Scene 与加载契约
 
@@ -80,22 +88,29 @@ CPU Scene 包含以下所有权对象：
   语义决定，不固化在可能被多处引用的 Image 上。
 - `sampler`：保存 glTF Filter 与 U/V Wrap；转换为 Granit Sampler 由 S-13C 负责。
 
-加载入口接受只读字节 Span 并填充输出 Scene，不直接访问文件系统；因此桌面文件、
-浏览器 Fetch 和内嵌 Fixture 可复用同一解析路径。首轮只接受 GLB 与其内嵌 Buffer/Image，
-外部 URI、Data URI 和网络获取不进入解析器。
+加载入口接受主文档字节 Span 和只读资源解析回调并填充输出 Scene，不直接访问文件系统；因此桌面
+文件、浏览器 Fetch 和内嵌 Fixture 可复用同一解析路径。首轮接受 GLB 内嵌 Buffer/Image，以及
+`.gltf` 中不含 Scheme、查询、Fragment、绝对路径或父目录跳转的相对 URI。Data URI 和网络获取
+不进入解析器；资源层必须在调用 Loader 前完成获取，并由回调按规范化 URI 返回只读字节。
 
 - 坐标保持 glTF 右手、Y 向上语义；矩阵转为 Granit 列主序数值，不翻转顶点、
-  索引绕序或纹理 V 坐标。剪裁空间差异由 Renderer/Shader 契约处理。
+  索引绕序或纹理 V 坐标。剪裁空间差异由 Renderer/HAL 收敛，模型查看器的矩阵、WGSL 与由其
+  生成的 SPIR-V 均不包含后端专用分支。
 - 只支持 Triangle Primitive、UV0、`uint8/uint16/uint32` 索引与 glTF 允许的对应
   顶点分量类型；Sparse Accessor、Draco/Meshopt、UV1、Skin、Animation 与 Morph 明确拒绝。
 - Position 与 Normal 必须存在；使用任意 Texture 时必须存在 UV0，使用 Normal Texture
   时必须存在 Tangent。首轮不在加载期自动生成法线或切线。
+- 未列入首版范围的可选材质扩展忽略其扩展字段，并保留核心 Metallic/Roughness 回退；同一扩展
+  若出现在 `extensionsRequired` 中则明确拒绝，避免静默生成错误画面。
 - 解析成功后 Scene 不借用输入 Span 或第三方内存；失败保持输出不变。
 - 错误由示例私有 `load_error` 与可选诊断文本返回，区分非法 GLB、截断数据、
   越界 Accessor、不支持 Feature、图片解码失败、数值溢出与内存不足。
 
 单元测试覆盖 Node 层级、TRS/矩阵、交错 Accessor、索引归一化、材质纹理语义、
 图片解码、AABB 与上述所有错误。测试只使用仓库内小型 Fixture，不下载头盔。
+
+S-13B 已完成：`granit_example_gltf_support` 保持示例私有，固定 GLB Fixture、内存 GLB、
+外部资源与错误矩阵均由 `granit.example.gltf_support` 覆盖，不需要网络或文件系统。
 
 ### S-13C GPU Scene 与逐帧数据契约
 
@@ -109,8 +124,8 @@ Vulkan、Dawn 或 Emscripten 类型。
   对应 Offset 和 Draw 范围，不为每个 Primitive 执行独立 GPU 分配。
 - 每个唯一 Image/颜色空间组合对应 Texture 与默认 View；同一 Image 同时作为
   sRGB 和线性资源时创建两个显式格式资源，不在 Shader 中补偿。
-- Sampler 按规范化后的 Filter/Wrap 去重；材质使用 `granit::material_instance`、内置
-  PBR 材质归档及批量初始参数，缺失纹理使用 Granit 的 PBR 默认资源。
+- Sampler 按规范化后的 Filter/Wrap 去重；材质使用 `granit::material_instance`、构建期生成的
+  双后端 PBR 材质归档及批量初始参数，缺失纹理使用 Granit 的 PBR 默认资源。
 - 每个 Node/Primitive 实例生成稳定 payload，映射到 `granit_mesh` 与 `granit_material`；
   世界矩阵、法线矩阵与世界空间 Bounds 通过 `granit::scene_snapshot` 提交。
 
@@ -133,6 +148,41 @@ Sampler、View、Texture、Buffer 的依赖逆序销毁候选资源，原 Scene 
 测试覆盖打包 Offset、去重、线性/sRGB 分裂、完整 mip 上传、事务回滚、销毁顺序、
 跨 Renderer 拒绝、帧槽重用、对齐/溢出和 Arena 增长。同一 CPU Scene 必须可在两个
 Renderer 上分别创建独立 GPU Scene，不共享任何 GPU 句柄。
+
+当前进度：GPU Scene 已完成合并 Vertex/Index Buffer、纹理颜色空间拆分、Sampler 去重、
+单变体 PBR 材质实例、默认纹理、稳定 Draw Binding 与 Renderable 打包；调用方可使用逐帧
+View/Light 创建不可变 `scene_snapshot`。Render Pipeline 的 Frame/Object 布局已切换为动态
+Uniform Binding，带 Swapchain Frame 的路径按真实帧槽复用 Arena Buffer 与 Bind Group；普通离屏
+提交暂时保留独立 Buffer 兼容路径。Opaque 与 Shadow 阶段分别预打包全部常量并各执行一次连续
+Buffer 写入，不额外引入同步 Queue Submit。专项测试已覆盖多帧槽隔离、超过初始容量的批量增长、
+失败回滚、槽复用与 Reset 后资源归零；跨 Renderer 图形 Smoke Test 仍属于本阶段后续工作。
+同一 CPU Scene 已在测试中同时为 Vulkan 与 WebGPU Mock 创建独立 GPU Scene，并验证销毁一端不
+影响另一端；动态 Arena 的 Vulkan 窗口路径已通过包含两次 Swapchain 重建的五帧 Smoke Test。
+真实 Dawn/Vulkan 模型绘制与像素回读仍由后续跨 Renderer 图形 Smoke Test 完成。
+
+#### S-13C1 双后端材质归档前置
+
+状态：已完成。
+
+现有材质归档 v2 只保存 SPIR-V。虽然公共 Shader 描述已经能同时携带 SPIR-V 与 WGSL，
+`material_template_gpu` 仍只能从归档创建 Vulkan Shader。模型查看器不能复用该归档在 WebGPU
+运行，也不能包含 `src/pipeline` 的嵌入材质或为不同后端绕过 Material/Render Pipeline。
+
+S-13C 先完成一次聚焦的材质资产升级：
+
+- 材质 Shader 记录同时保存 SPIR-V 与 WGSL，运行时继续通过同一公共 Shader 描述交给所选后端；
+  Material API、句柄和调用方式不变，不增加后端条件分支。
+- 材质源 JSON 的每个 Shader 显式引用锁定的 `.spv` 与 `.wgsl` 文件；构建工具校验阶段、入口点、
+  空数据、大小和重复记录，归档不在运行时调用 Tint 或读取源文件。
+- 归档格式只提升一次并同步工具、调试 JSON、Fixture、示例与格式测试；项目仍处于早期设计阶段，
+  不在运行时保留只含 SPIR-V 的旧格式分支。
+- 模型查看器 PBR Shader 以 WGSL 为权威输入，由锁定 Tint 在构建期生成匹配 SPIR-V；生成物和
+  材质归档只属于示例构建，不安装为 Granit 公共资源。
+- Vulkan、WebGPU Mock 与真实 Dawn 至少各验证一次同一归档；普通 Granit 构建不启用模型查看器时
+  不下载 Tint、不生成示例归档。
+
+该前置只扩展内部材质资产，不修改 C ABI 版本。完成后 `gpu_scene` 才创建
+`material_instance`、稳定 Payload 和 `scene_snapshot`。
 
 ### S-13D 查看器交互契约
 
@@ -158,6 +208,10 @@ Distance、Near/Far 由模型尺度推导并保持严格有效。
 相机单元测试使用固定输入序列，覆盖 Bounds 聚焦、空 Scene、极端 Aspect、Pitch/Distance
 限制、高 DPI 等价、ImGui 捕获、焦点丢失和零尺寸恢复。Smoke Test 需在调整
 窗口前后验证模型仍位于视野内，且不依赖绝对屏幕坐标。
+
+当前进度：后端无关 `orbit_camera`、规范化 `viewer_input`、Bounds 聚焦、环绕、平移、指数缩放、
+Home 恢复和 View/Projection 输出已完成，并由上述固定输入单元测试覆盖。SDL3/浏览器事件转换及
+调整窗口后的交互 Smoke Test 留到 S-13F 平台壳接入时完成。
 
 ### S-13E ImGui 与性能指标契约
 
@@ -194,11 +248,101 @@ Canvas Draw List。Texture Resolver 只映射字体 Atlas 与已存活的查看�
 `NOT_READY/UNSUPPORTED` 和样本统计。图形 Smoke Test 只检查面板可见与 Draw Data 非空，
 不依赖字体光栅的逐像素结果。
 
+当前进度：后端无关 `viewer_state` 已集中管理 Node/Material 选择、Node 可见性、轨道相机、
+方向光、曝光、调试显示和面板开关；有类型的批量变更会先完整校验再提交，失败不产生部分修改，
+Scene 替换时会收敛失效选择。Scene、Inspector、Lighting、Renderer 与 Performance 五个 ImGui
+面板已作为独立可选目标接入，Widget 仅返回批量状态变更。Inspector 的 PBR Factor 编辑通过
+`gpu_scene` 事务式批量更新：GPU 提交成功后才同步 CPU Scene，失败保留上一有效值。
+Texture Resolver 已使用 slot + generation 注册表映射字体 Atlas 与查看器纹理，ID 不携带指针，
+注销、清空、未知及陈旧 ID 均拒绝解析。Inspector 已按 Image、Sampler 与颜色空间查找并显示
+五类 PBR 纹理缩略图，同时展示实际 glTF Sampler 参数。平台图形 Smoke Test 仍待接入。
+
+公共指标第一阶段已将原私有 GPU 计时提升为 `render_pipeline.h/.hpp` 的稳定 C/C++ 查询接口，
+加入可扩展结构、样本序号和严格的 `NOT_READY/UNSUPPORTED` 语义，并保证延迟回读不改变成功渲染
+结果。Query Pool 现已按真实 Frame Slot 隔离，并在槽位完成后读取上一样本；`total_gpu_ns` 使用
+独立起止 Timestamp 覆盖首个已测阶段至 Tone Mapping 结束的完整区间。后续 Debug Draw、Canvas、
+Overlay 仍按契约排除在该 GPU 区间之外。
+
+Performance 面板统计层现使用固定 240 帧环形窗口，分别报告 FPS、CPU 帧时间、帧槽等待、
+Present 等待和 GPU 时间的 p50、p95 与最大值；不可用 GPU 样本不会作为零值进入统计。
+
 ### S-13F 三端启动与资源流程
 
 共享应用核心构建为不安装的 `granit_model_viewer_core` 静态目标，拥有 Loader、
 CPU/GPU Scene、Orbit Camera、Viewer State、ImGui 面板与单帧 `tick`。它不提供 `main`、
 不创建原生窗口，也不包含桌面或浏览器条件编译。
+
+当前已建立该共享静态目标与第一阶段 `application_core`：Core 统一拥有 CPU/GPU Scene、
+Viewer State 和 Performance History，并以显式状态机约束 Renderer 创建、资产解析、GPU 上传、
+失败诊断及重置流程。后端无关单帧 `tick` 已统一应用状态与相机输入、生成 View/Light Scene
+Snapshot、预填充 Render Pipeline 描述并收集性能样本；平台输出、Frame、Canvas 和 Submit 仍由壳层
+补齐。桌面壳已从 Core 分离为独立目标，并完成 `--backend=auto|vulkan|webgpu`、可选 Provider
+动态库路径、资产路径、Validation 与 Smoke Test 参数的事务式解析。浏览器平台壳已建立不依赖
+Emscripten 类型的输入适配与异步资产请求状态；请求 generation 会拒绝取消或重载后的迟到回调。
+Emscripten Fetch 传输已使用共享请求状态保护回调生命周期，并将 HTTP/空响应诊断写回请求状态。
+浏览器资源 Bundle 会规范化并拥有预取的 `.bin` 与纹理字节，再通过现有同步 Resolver 契约交给
+Loader。Loader 支持在不加载资源的情况下先发现并去重 glTF 外部 URI，拒绝不安全路径且在失败时
+保留调用方原列表，为浏览器“两阶段 Fetch”提供单一资源清单来源。Emscripten 构建复用相同的
+Loader 与锁定 `cgltf`/`stb_image` 依赖；浏览器 Fixture 已验证主文档 Fetch、URI 发现、外部资源
+批量 Fetch、Bundle 提交与同步 Loader 的完整链路。Web 壳现已链接完整 Core，并在 Renderer 就绪后
+通过相同状态机完成资产解析与 GPU Scene 上传；真正的模型查看器帧循环与 ImGui 接入仍待完成。
+
+浏览器接入完整 `application_core` 前先统一共享模块构建，禁止仅编译 Core 的 CPU 方法并依赖链接器
+丢弃缺失的 GPU 方法，也禁止通过不析构 Core 绕过资源生命周期。实施顺序固定为：
+
+1. 将 Math、Material、Scene 与 Render Pipeline 的目标定义提取为桌面/Web 可复用的内部 CMake
+   构建单元，源文件和生成资产清单只维护一份。
+2. Emscripten 使用现有静态 `granit` Renderer 目标实例化相同模块，并验证所有公共句柄的创建、
+   延迟回收与销毁路径，不提供 Web 专用 Material 或 Scene 实现。
+3. Web 壳链接完整 `granit_model_viewer_core`，依次调用 `begin_renderer`、`renderer_ready`、
+   `load_asset` 和 `upload`；只有 Core 进入 `ready` 才创建查看器帧循环。
+4. 用外部 Buffer Fixture 验证 CPU Scene 与 GPU Scene，再切换到锁定 FlightHelmet 资产执行
+   纹理、Material、Scene Snapshot 和 Render Pipeline 验收。
+
+当前 Math、Material、Render Graph、PBR、Scene、Lighting 与 Render Pipeline 目标均已迁移到共享
+内部 CMake 构建单元，并分别通过桌面 Clang 与 Emscripten 编译。Wasm32 同时修正了 Canvas 上传中
+对 `size_t` 与 `uint64_t` 的恒假范围比较。模型查看器 PBR 材质归档已作为确定性产物锁定在仓库：
+原生构建仍由 `granit_material_tool` 从同一 JSON、SPIR-V 与 WGSL 输入生成并校验产物一致，交叉构建
+直接内嵌锁定产物，不运行 Wasm 工具。浏览器 Fixture 已在真实 Chrome WebGPU 中完成外部 Buffer
+加载、CPU Scene 接收和 GPU Scene 上传。
+
+共享 Render Pipeline 首次参与浏览器完整链接时已补齐 Frame Slot 与 Timestamp Query 公共 API
+源集，并为阴影 Pass 同时提供 SPIR-V 与 WGSL。下一项阻塞是 WebGPU HAL 的 Texture 与 Texture View
+原先只接受 2D 单层资源，而默认 IBL 使用 Cube Texture/View。Backend Plugin 契约和 WebGPU
+Provider 已补齐 Cube、Array Layer、分层写入与 `RGBA16_FLOAT`，公共 Pipeline Binding 也新增
+`sampled_texture_cube`，在 Vulkan 中继续映射为 Sampled Image，在 WebGPU 中显式映射为 Cube View。
+真实 Chrome 已验证默认 IBL、GPU Scene 上传及完整 Render Pipeline 创建和销毁。创建入口原先误用
+仅 Vulkan 支持的 Pipeline Cache 导出校验 Renderer，现已改为后端无关的 Renderer 状态查询；浏览器
+Smoke 会持续覆盖该路径。下一步接入浏览器帧循环，不能以 Web 专用 2D IBL 绕过 PBR 绑定契约。
+
+帧循环预检进一步清理了同类跨后端假设：Scene Snapshot、Canvas、Debug Draw、Text Atlas 与 Text
+Draw List 不再依赖 Pipeline Cache 能力；Wasm32 的 Scene Snapshot V1 尾字段尺寸也已修正。glTF
+Loader 现支持标准 Base64 Data URI Buffer，浏览器 Fixture 已升级为带节点、材质和真实三角形的场景，
+同时保留外部 `.bin` 请求验证两阶段 Fetch。WebGPU Pipeline 已补齐 `RGBA16_FLOAT` Render Target 与
+Depth Bias 传递；共享 Core 的 `tick` 和 Scene Snapshot 已能进入真实首帧，剩余阻塞位于后续 PBR
+Render 命令能力。现已补齐比较采样器、零颜色附件的 Depth-only Pipeline/Render Pass，以及
+Tone Mapping 的跨后端 WGSL；真实 Chrome 已通过阴影、PBR 不透明绘制、Tone Mapping、交换链呈现
+和两阶段资产 Fetch。浏览器壳现已通过 Emscripten 主循环持续驱动共享 Core，Smoke 至少等待 60 个
+已呈现帧并验证模型中心与背景像素；多帧验证同时补齐了深度纹理 Sample Type 以及 WebGPU 阴影
+Pipeline 的完整 Bind Group 绑定。浏览器 Keyboard、Pointer、Button、Wheel、Focus 与 Pointer Presence
+事件现复用共享 `web_input` 适配器，右键环绕、滚轮缩放和 `F` 聚焦已验证进入 Core；Canvas 像素
+尺寸变化会在帧边界仅重建 Swapchain，并在 800×450 下继续呈现。浏览器 Shutdown Smoke 会先停止
+主循环和资产请求，再依次释放 Core/GPU Scene、Render Pipeline、Swapchain、Surface 与 Renderer；
+重复关闭保持成功，关闭前的公开子资源与延迟回收计数均须归零。浏览器平台壳的 S-13F 契约至此
+完成。S-13G 浏览器回归还会模拟外部 Buffer 返回 404，要求进入明确的
+`asset-resource-fetch` 失败路径；剩余工作是桌面 Dawn 手动验收、完整截图与性能记录。
+
+SDL3 输入适配已完成第一阶段：平台事件按帧累积为 `viewer_input`，覆盖右键环绕、中键平移、
+滚轮缩放、`F`/`Home`、焦点与指针进出，并在 ImGui 捕获标志进入 Core 前完成标记。窗口、Surface
+和 Swapchain 生命周期已接入统一 `granit_model_viewer_example`：同一入口根据启动参数创建 Vulkan
+或桌面 Dawn WebGPU Renderer，读取 glTF/GLB、上传 GPU Scene 并通过共享 Core 与 Render Pipeline
+完成帧循环和 Out Of Date 重建。桌面入口已叠加 ImGui 五类面板、字体 Atlas、Canvas Draw Data
+转换、捕获标志和事务式材质修改；Texture ID 继续经过 generation 注册表解析，不向 Draw Data
+暴露 GPU 句柄。材质纹理缩略图已按 Image、Sampler 与 sRGB/线性变体查询 GPU Scene 的实际绑定，
+再注册为安全 Texture ID。桌面帧循环已采集 CPU 整帧、Acquire/帧槽等待、Present 等待，并读取
+Render Pipeline 延迟 GPU Timestamp；`NOT_READY/UNSUPPORTED` 不会伪造零值或中断渲染。
+真实 FlightHelmet 已通过桌面 Vulkan Smoke；Surface Lost 现在重建 Surface 与 Swapchain，
+Device Lost 明确终止并保留错误结果。真实 Dawn 验收仍待匹配 SDK 工具链的手动 Actions 完成。
 
 三个运行配置如下：
 
@@ -211,7 +355,9 @@ CPU/GPU Scene、Orbit Camera、Viewer State、ImGui 面板与单帧 `tick`。它
 
 资源来源抽象为只读字节请求，完成后才调用 S-13B Loader：桌面壳异步读取
 `--asset=<path>`；浏览器壳通过 Fetch 读取 URL。小型 Smoke Fixture 可预加载，
-完整 FlightHelmet 作为独立缓存资源提供，不嵌入 Wasm/JS 或桌面可执行文件。
+完整 FlightHelmet 作为独立缓存资源提供，不嵌入 Wasm/JS 或桌面可执行文件。浏览器资源批次
+统一跟踪主文档引用的 `.bin` 与纹理请求；只有全部成功后才原子提交到只读 Resource Bundle，
+任一请求失败或仍在进行时均不会把不完整资源交给同步 Loader。
 
 启动是显式状态机：`platform_ready`、`renderer_pending`、`asset_loading`、
 `gpu_upload`、`ready`、`failed`。WebGPU 设备异步创建期间不进入 Scene 上传；失败页面/窗口
@@ -245,7 +391,19 @@ Emscripten 预设构建。两者都不进入 Granit 安装导出，且不复制�
 固定截图使用 512×512 RGBA8 输出，在资源上传后预热至少三帧再回读。比较分层进行：
 背景/轮廓遮罩允许一像素边缘容差，深度先验证前后关系，再对非边缘颜色统计
 平均绝对误差与超阈值像素比例。不使用整图精确哈希，也不通过扩大阈值掩盖
-稳定的材质、法线、sRGB 或深度差异。
+稳定的材质、法线、sRGB 或深度差异。完整资产验收额外允许最多四个孤立轮廓残差，以覆盖
+不同 Rasterizer 的边界采样规则，但不容许连续轮廓偏移。示例私有的纯 CPU 比较器已实现上述
+轮廓、颜色和深度
+统计，并覆盖边缘容差、颜色/深度失败及事务式参数错误。原生离屏验收程序现已固定 512×512
+输出、预热三帧、写出紧密 RGBA8，并可用相同命令切换 Vulkan 与桌面 Dawn；本机 Vulkan 已通过
+重复渲染自比较。失败路径会保留实际 RGBA，生成增强可见度的绝对差异 RGBA
+及包含 Renderer、Adapter、资产路径和比较统计的 JSON 报告；本机已用破坏的期望图验证退出码与
+三份产物。
+
+手动 `Dawn Integration` 已接入完整资产截图矩阵：Linux Lavapipe 先生成 Vulkan 参考图，Windows
+Dawn D3D12 与 Linux Dawn Vulkan 下载同一参考图比较；失败时上传实际图、差异图、JSON、日志和
+manifest。完整 FlightHelmet 已在本机 Vulkan Validation 下完成 512×512 回读；Windows Dawn
+D3D12 与 Linux Dawn Vulkan 也已通过同一参考图验收，Linux 仅有 2 个允许范围内的孤立轮廓残差。
 
 - Windows 手动 Actions 覆盖 MSVC/Clang、Vulkan 与 Dawn D3D12；Linux 覆盖 GCC/Clang、
   Vulkan 与 Dawn Vulkan，并复用 X11/Wayland Integration Runtime；Emscripten 使用锁定
@@ -254,7 +412,11 @@ Emscripten 预设构建。两者都不进入 Granit 安装导出，且不复制�
   信息和诊断日志；成功时仅保留简短汇总，不重复上传大资产。
 - Release 性能基线固定 1920×1080、相机和 FlightHelmet，分别测量 UI 开/关与
   Immediate/FIFO；预热 300 帧、采样 1000 帧，报告 CPU/GPU/等待的 p50/p95/p99。
-  首份数据建立基线而非不经复测的硬性 FPS 门槛。
+  桌面查看器现已提供严格呈现模式与分辨率检查、UI 开关和 JSON 导出；本机 Vulkan Release
+  已完成 Vulkan 的四组 1000 帧采样，结果见
+  [S-13G 模型查看器性能基线](../records/2026-09-02-s13g-model-viewer-performance.md)。桌面 Dawn
+  四组矩阵已在手动 `Dawn Integration` 通过并写入验收记录；Dawn 环境未提供 GPU Timestamp，
+  因此只报告有效的 CPU 与等待样本。首份数据建立基线而非不经复测的硬性 FPS 门槛。
 
 S-13 只在上述手动 Actions 全部通过，公共头/安装 Consumer 通过，并完成示例指南、
 依赖/资产许可参考与带日期的验收 Record 后标记完成。验收结果再决定是否启动

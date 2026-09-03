@@ -20,7 +20,8 @@ public:
   [[nodiscard]] granit_result initialize(granit_renderer renderer,
                                          granit::texture_format output_format,
                                          std::span<const std::byte> vertex_shader,
-                                         std::span<const std::byte> fragment_shader) noexcept;
+                                         std::span<const std::byte> fragment_shader,
+                                         std::string_view wgsl = {}) noexcept;
   [[nodiscard]] granit_result reset() noexcept;
   [[nodiscard]] bool initialized() const noexcept { return pipeline_.valid(); }
   [[nodiscard]] granit_graphics_pipeline pipeline() const noexcept {

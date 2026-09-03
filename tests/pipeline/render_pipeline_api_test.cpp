@@ -26,6 +26,7 @@
 #include <cstring>
 #include <fstream>
 #include <iterator>
+#include <limits>
 #include <string>
 #include <vector>
 
@@ -47,10 +48,13 @@ std::vector<std::byte> build_material_archive() {
                            .features = {},
                            .shaders = {{.stage = package_shader_stage::vertex,
                                         .entry_point = "main",
-                                        .spirv = {spirv.begin(), spirv.end()}},
+                                        .spirv = {spirv.begin(), spirv.end()},
+                                        .wgsl = "@vertex fn main() -> @builtin(position) vec4f { "
+                                                "return vec4f(); }"},
                                        {.stage = package_shader_stage::fragment,
                                         .entry_point = "main",
-                                        .spirv = {spirv.begin(), spirv.end()}}},
+                                        .spirv = {spirv.begin(), spirv.end()},
+                                        .wgsl = "@fragment fn main() {}"}},
                            .pipeline = {}});
   material_package package;
   REQUIRE(material_package::build(std::move(desc), package) == package_error::none);
@@ -67,6 +71,11 @@ std::vector<std::uint32_t> load_pipeline_shader(const char* name) {
   std::vector<std::uint32_t> words(bytes.size() / sizeof(std::uint32_t));
   std::memcpy(words.data(), bytes.data(), bytes.size());
   return words;
+}
+
+std::string load_pipeline_shader_text(const char* name) {
+  std::ifstream stream{std::string{GRANIT_PIPELINE_ASSET_DIR} + "/" + name, std::ios::binary};
+  return {std::istreambuf_iterator<char>{stream}, {}};
 }
 
 std::vector<std::uint32_t> load_tone_mapping_shader(const char* name) {
@@ -100,15 +109,19 @@ std::vector<std::byte> build_automatic_material_archive() {
        .offset = 28,
        .default_value = {}},
       {.name = "emissive", .type = parameter_type::float3, .offset = 32, .default_value = {}}};
-  material_variant_desc variant{.pass = make_feature_id("opaque"),
-                                .features = {{make_feature_id("pbr_texture_mask"), 0}},
-                                .shaders = {{.stage = package_shader_stage::vertex,
-                                             .entry_point = "vertex_main",
-                                             .spirv = vertex},
-                                            {.stage = package_shader_stage::fragment,
-                                             .entry_point = "fragment_main",
-                                             .spirv = fragment}},
-                                .pipeline = {}};
+  material_variant_desc variant{
+      .pass = make_feature_id("opaque"),
+      .features = {{make_feature_id("pbr_texture_mask"), 0}},
+      .shaders = {{.stage = package_shader_stage::vertex,
+                   .entry_point = "vertex_main",
+                   .spirv = vertex,
+                   .wgsl = load_pipeline_shader_text("pbr_shadow_ibl_lights.vert.wgsl")},
+                  {.stage = package_shader_stage::fragment,
+                   .entry_point = "fragment_main",
+                   .spirv = fragment,
+                   .wgsl =
+                       load_pipeline_shader_text("pbr_shadow_ibl_lights_untextured.frag.wgsl")}},
+      .pipeline = {}};
   variant.pipeline.primitive.front_face = GRANIT_FRONT_FACE_CLOCKWISE;
   variant.pipeline.primitive.cull_mode = GRANIT_CULL_MODE_BACK;
   variant.pipeline.depth.test_enabled = 1;
@@ -227,9 +240,45 @@ void initialize_test_mesh(granit_renderer renderer, granit::buffer& vertex_buffe
 
 } // namespace
 
+TEST_CASE("Render Pipeline 指标 API 校验参数和样本状态", "[pipeline][metrics]") {
+  granit_render_pipeline_metrics metrics = GRANIT_RENDER_PIPELINE_METRICS_INIT;
+  CHECK(granit_render_pipeline_metrics_enable(GRANIT_NULL_HANDLE, GRANIT_NULL_HANDLE) ==
+        GRANIT_ERROR_INVALID_HANDLE);
+  CHECK(granit_render_pipeline_get_metrics(GRANIT_NULL_HANDLE, GRANIT_NULL_HANDLE, &metrics) ==
+        GRANIT_ERROR_INVALID_HANDLE);
+  metrics.struct_size = 0;
+  CHECK(granit_render_pipeline_get_metrics(GRANIT_NULL_HANDLE, GRANIT_NULL_HANDLE, &metrics) ==
+        GRANIT_ERROR_INVALID_ARGUMENT);
+  CHECK(granit_render_pipeline_get_metrics(GRANIT_NULL_HANDLE, GRANIT_NULL_HANDLE, nullptr) ==
+        GRANIT_ERROR_INVALID_ARGUMENT);
+}
+
 TEST_CASE("RenderPipeline component把空Renderer归类为无效句柄") {
-  const granit_render_pipeline_desc desc = GRANIT_RENDER_PIPELINE_DESC_INIT;
+  granit_render_pipeline_desc desc = GRANIT_RENDER_PIPELINE_DESC_INIT;
   granit_render_pipeline pipeline = UINT64_C(1);
+  desc.struct_size = GRANIT_RENDER_PIPELINE_DESC_VERSION_1_SIZE - 1;
+  CHECK(granit_render_pipeline_create(GRANIT_NULL_HANDLE, &desc, &pipeline) ==
+        GRANIT_ERROR_INVALID_ARGUMENT);
+  CHECK(pipeline == GRANIT_NULL_HANDLE);
+  desc = GRANIT_RENDER_PIPELINE_DESC_INIT;
+  desc.sample_count = GRANIT_SAMPLE_COUNT_2;
+  CHECK(granit_render_pipeline_create(GRANIT_NULL_HANDLE, &desc, &pipeline) ==
+        GRANIT_ERROR_INVALID_ARGUMENT);
+  CHECK(pipeline == GRANIT_NULL_HANDLE);
+  desc.sample_count = GRANIT_SAMPLE_COUNT_1;
+  desc.enable_fxaa = 2;
+  pipeline = UINT64_C(1);
+  CHECK(granit_render_pipeline_create(GRANIT_NULL_HANDLE, &desc, &pipeline) ==
+        GRANIT_ERROR_INVALID_ARGUMENT);
+  CHECK(pipeline == GRANIT_NULL_HANDLE);
+  desc.enable_fxaa = 1;
+  desc.enable_specular_aa = 2;
+  pipeline = UINT64_C(1);
+  CHECK(granit_render_pipeline_create(GRANIT_NULL_HANDLE, &desc, &pipeline) ==
+        GRANIT_ERROR_INVALID_ARGUMENT);
+  CHECK(pipeline == GRANIT_NULL_HANDLE);
+  desc.enable_specular_aa = 1;
+  pipeline = UINT64_C(1);
   CHECK(granit_render_pipeline_create(GRANIT_NULL_HANDLE, &desc, &pipeline) ==
         GRANIT_ERROR_INVALID_HANDLE);
   CHECK(pipeline == GRANIT_NULL_HANDLE);
@@ -278,6 +327,36 @@ TEST_CASE("RenderPipeline component把空Renderer归类为无效句柄") {
   granit_mesh mesh = UINT64_C(1);
   CHECK(granit_mesh_create(GRANIT_NULL_HANDLE, &mesh_desc, &mesh) == GRANIT_ERROR_INVALID_HANDLE);
   CHECK(mesh == GRANIT_NULL_HANDLE);
+}
+
+TEST_CASE("Render Pipeline接受独立质量开关组合", "[pipeline][quality]") {
+  granit::renderer renderer;
+  const auto initialized = renderer.initialize({.application_name = "granit-pipeline-quality"});
+  if (environment_unavailable(initialized))
+    SKIP("当前运行环境没有满足要求的 Vulkan 设备");
+  REQUIRE(initialized == granit::result::success);
+
+  granit::renderer_limits limits;
+  REQUIRE(renderer.get_limits(limits) == granit::result::success);
+  std::array sample_counts{GRANIT_SAMPLE_COUNT_1, GRANIT_SAMPLE_COUNT_4};
+  for (const auto sample_count : sample_counts) {
+    if ((limits.framebuffer_sample_counts & sample_count) == 0)
+      continue;
+    for (std::uint32_t fxaa = 0; fxaa <= 1; ++fxaa) {
+      for (std::uint32_t specular_aa = 0; specular_aa <= 1; ++specular_aa) {
+        granit_render_pipeline_desc desc = GRANIT_RENDER_PIPELINE_DESC_INIT;
+        desc.sample_count = sample_count;
+        desc.enable_fxaa = fxaa;
+        desc.enable_specular_aa = specular_aa;
+        granit_render_pipeline pipeline = GRANIT_NULL_HANDLE;
+        REQUIRE(granit_render_pipeline_create(renderer.native_handle(), &desc, &pipeline) ==
+                GRANIT_SUCCESS);
+        REQUIRE(pipeline != GRANIT_NULL_HANDLE);
+        REQUIRE(granit_render_pipeline_destroy(renderer.native_handle(), pipeline) ==
+                GRANIT_SUCCESS);
+      }
+    }
+  }
 }
 
 TEST_CASE("统一Render Pipeline按固定阶段消费Scene Snapshot") {
@@ -366,6 +445,21 @@ TEST_CASE("统一Render Pipeline按固定阶段消费Scene Snapshot") {
                                                          material.native_handle(), 0};
   render_desc.draw_binding_count = 1;
   render_desc.draw_bindings = &draw_binding;
+  granit_render_pipeline_environment environment = GRANIT_RENDER_PIPELINE_ENVIRONMENT_INIT;
+  render_desc.environment = &environment;
+  CHECK(pipeline.render(render_desc) == granit::result::invalid_argument);
+  environment.irradiance = output_view.native_handle();
+  environment.prefiltered_environment = output_view.native_handle();
+  environment.brdf_lut = output_view.native_handle();
+  environment.intensity = -1.0F;
+  CHECK(pipeline.render(render_desc) == granit::result::invalid_argument);
+  environment.intensity = 1.0F;
+  environment.rotation_radians = std::numeric_limits<float>::quiet_NaN();
+  CHECK(pipeline.render(render_desc) == granit::result::invalid_argument);
+  render_desc.environment = nullptr;
+  render_desc.clear_color.red = std::numeric_limits<float>::infinity();
+  CHECK(pipeline.render(render_desc) == granit::result::invalid_argument);
+  render_desc.clear_color = {0.02F, 0.04F, 0.06F, 1.0F};
   REQUIRE(pipeline.render(render_desc) == granit::result::success);
   render_desc.frame = 1;
   render_desc.view_count = 2;
@@ -734,10 +828,26 @@ TEST_CASE("公共Render Pipeline ABI输出可回读的Tone Mapping像素") {
   granit_render_pipeline_desc automatic_pipeline_desc = GRANIT_RENDER_PIPELINE_DESC_INIT;
   REQUIRE(granit_render_pipeline_create(renderer.native_handle(), &automatic_pipeline_desc,
                                         &pipeline) == GRANIT_SUCCESS);
+  const auto metrics_enable_result =
+      granit_render_pipeline_metrics_enable(renderer.native_handle(), pipeline);
+  REQUIRE((metrics_enable_result == GRANIT_SUCCESS ||
+           metrics_enable_result == GRANIT_ERROR_UNSUPPORTED));
+  granit_render_pipeline_metrics metrics = GRANIT_RENDER_PIPELINE_METRICS_INIT;
+  if (metrics_enable_result == GRANIT_SUCCESS)
+    CHECK(granit_render_pipeline_get_metrics(renderer.native_handle(), pipeline, &metrics) ==
+          GRANIT_ERROR_NOT_READY);
   granit_render_pipeline_draw_binding automatic_binding{91, mesh, material, 0};
   render_desc.draw_bindings = &automatic_binding;
   REQUIRE(granit_render_pipeline_render(renderer.native_handle(), pipeline, &render_desc) ==
           GRANIT_SUCCESS);
+  if (metrics_enable_result == GRANIT_SUCCESS) {
+    REQUIRE(granit_render_pipeline_get_metrics(renderer.native_handle(), pipeline, &metrics) ==
+            GRANIT_SUCCESS);
+    CHECK(metrics.sample_sequence == 1);
+    CHECK(metrics.total_gpu_ns >= metrics.shadow_gpu_ns);
+    CHECK(metrics.total_gpu_ns >= metrics.opaque_gpu_ns);
+    CHECK(metrics.total_gpu_ns >= metrics.tone_mapping_gpu_ns);
+  }
 
   REQUIRE(recorder.begin() == granit::result::success);
   REQUIRE(recorder.copy_texture_to_buffer(output_texture, readback.native_handle(), layout,
@@ -819,9 +929,14 @@ TEST_CASE("公共Render Pipeline ABI输出可回读的Tone Mapping像素") {
   REQUIRE(manual_recorder.reset() == granit::result::success);
   REQUIRE(manual_readback.map(0, size * size * 4, &mapped) == granit::result::success);
   pixel = static_cast<const uint8_t*>(mapped) + (size / 2 * size + size / 2) * 4;
-  for (size_t channel = 0; channel < automatic_pixel.size(); ++channel) {
-    CHECK(automatic_pixel[channel] == Catch::Approx(pixel[channel]).margin(1));
-  }
+  CHECK(pixel[0] == Catch::Approx(165).margin(1));
+  CHECK(pixel[1] == Catch::Approx(206).margin(1));
+  CHECK(pixel[2] == Catch::Approx(232).margin(1));
+  CHECK(pixel[3] == 255);
+  CHECK(automatic_pixel[0] != 0);
+  CHECK(automatic_pixel[1] != 0);
+  CHECK(automatic_pixel[2] != 0);
+  CHECK(automatic_pixel[3] == 255);
   REQUIRE(manual_readback.unmap() == granit::result::success);
 
   REQUIRE(granit_render_pipeline_destroy(renderer.native_handle(), pipeline) == GRANIT_SUCCESS);

@@ -65,6 +65,10 @@ TEST_CASE("Tone Mapping GPU资源建立完整全屏Pipeline") {
   CHECK(resources.group() != GRANIT_NULL_HANDLE);
   CHECK(resources.update({.exposure_scale = 0.5F, .encode_srgb = 0}) == GRANIT_SUCCESS);
   CHECK(resources.update({.exposure_scale = 0.0F}) == GRANIT_ERROR_INVALID_ARGUMENT);
+  CHECK(resources.update({.exposure_scale = 1.0F, .enable_fxaa = 2}) ==
+        GRANIT_ERROR_INVALID_ARGUMENT);
+  CHECK(resources.update({.exposure_scale = 1.0F, .reserved = {1, 0, 0}}) ==
+        GRANIT_ERROR_INVALID_ARGUMENT);
 }
 
 TEST_CASE("Tone Mapping跨HDR View复用不变Pipeline资源") {

@@ -2,6 +2,13 @@
 # Copyright (c) 2026 Granit contributors
 
 add_test(
+  NAME granit.backend.native_boundaries
+  COMMAND
+    "${CMAKE_COMMAND}" "-DSOURCE_DIR=${PROJECT_SOURCE_DIR}"
+    -P "${PROJECT_SOURCE_DIR}/cmake/check_backend_native_boundaries.cmake"
+)
+
+add_test(
   NAME granit.documentation
   COMMAND
     "${CMAKE_COMMAND}"
@@ -461,6 +468,8 @@ add_executable(
   pipeline/canvas_draw_list_api_test.cpp
   pipeline/canvas_geometry_upload_test.cpp
   pipeline/canvas_pass_test.cpp
+  "${PROJECT_SOURCE_DIR}/src/pipeline/dynamic_uniform_arena.cpp"
+  pipeline/dynamic_uniform_arena_test.cpp
   pipeline/debug_draw_list_api_test.cpp
   pipeline/debug_draw_geometry_test.cpp
   pipeline/text_draw_list_api_test.cpp
@@ -472,7 +481,15 @@ add_custom_command(
   COMMAND "${CMAKE_COMMAND}" -E make_directory "${CMAKE_CURRENT_BINARY_DIR}/assets"
   COMMAND granit_material_tool build "${PROJECT_SOURCE_DIR}/examples/assets/unlit.grmat.json"
           --output "${granit_unlit_test_package}"
-  DEPENDS granit_material_tool "${PROJECT_SOURCE_DIR}/examples/assets/unlit.grmat.json"
+  DEPENDS
+    granit_material_tool
+    "${PROJECT_SOURCE_DIR}/examples/assets/unlit.grmat.json"
+    "${PROJECT_SOURCE_DIR}/assets/shaders/unlit/unlit.vert.spv"
+    "${PROJECT_SOURCE_DIR}/assets/shaders/unlit/unlit.vert.wgsl"
+    "${PROJECT_SOURCE_DIR}/assets/shaders/unlit/unlit.frag.spv"
+    "${PROJECT_SOURCE_DIR}/assets/shaders/unlit/unlit.frag.wgsl"
+    "${PROJECT_SOURCE_DIR}/assets/shaders/unlit/unlit_alpha_cutoff.frag.spv"
+    "${PROJECT_SOURCE_DIR}/assets/shaders/unlit/unlit_alpha_cutoff.frag.wgsl"
   VERBATIM
 )
 add_custom_target(granit_unlit_test_package DEPENDS "${granit_unlit_test_package}")
@@ -575,6 +592,13 @@ target_compile_definitions(
     GRANIT_FAKE_BACKEND_PLUGIN_PATH="$<TARGET_FILE:granit_fake_backend_plugin>"
 )
 add_dependencies(granit_renderer_test granit_fake_backend_plugin)
+if(TARGET granit_example_model_viewer_support_test)
+  target_compile_definitions(
+    granit_example_model_viewer_support_test
+    PRIVATE GRANIT_FAKE_BACKEND_PLUGIN_PATH="$<TARGET_FILE:granit_fake_backend_plugin>"
+  )
+  add_dependencies(granit_example_model_viewer_support_test granit_fake_backend_plugin)
+endif()
 if(GRANIT_BUILD_BACKEND_WEBGPU)
   target_compile_definitions(
     granit_renderer_test

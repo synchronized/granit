@@ -5,6 +5,7 @@ add_library(
   granit STATIC
   "${PROJECT_SOURCE_DIR}/src/renderer/buffer_api.cpp"
   "${PROJECT_SOURCE_DIR}/src/renderer/command_recorder_api.cpp"
+  "${PROJECT_SOURCE_DIR}/src/renderer/frame_context_api.cpp"
   "${PROJECT_SOURCE_DIR}/src/renderer/pipeline_api.cpp"
   "${PROJECT_SOURCE_DIR}/src/renderer/renderer_api.cpp"
   renderer_factory.cpp
@@ -23,6 +24,7 @@ add_library(
   "${PROJECT_SOURCE_DIR}/src/renderer/surface_api.cpp"
   "${PROJECT_SOURCE_DIR}/src/renderer/swapchain_api.cpp"
   "${PROJECT_SOURCE_DIR}/src/renderer/texture_api.cpp"
+  "${PROJECT_SOURCE_DIR}/src/renderer/timestamp_query_api.cpp"
   "${PROJECT_SOURCE_DIR}/src/renderer/upload_batch_api.cpp"
   "${PROJECT_SOURCE_DIR}/src/backend/plugin_loader.cpp"
   "${PROJECT_SOURCE_DIR}/src/backend/webgpu/plugin.cpp"
@@ -52,6 +54,47 @@ target_compile_options(granit PRIVATE "--use-port=emdawnwebgpu:cpp_bindings=fals
 target_link_options(granit INTERFACE "--use-port=emdawnwebgpu:cpp_bindings=false")
 granit_target_compile_warnings(granit)
 
+# Web 与桌面复用同一 Math 模块目标，为完整 Model Viewer Core 提供一致依赖。
+include(granit_modules)
+granit_add_render_pipeline_module()
+
+# 浏览器模型查看器复用桌面端同一套 glTF Loader 与锁定依赖，不维护 Web 专用副本。
+add_subdirectory(
+  "${PROJECT_SOURCE_DIR}/examples/common/gltf" "${CMAKE_CURRENT_BINARY_DIR}/gltf"
+)
+add_subdirectory(
+  "${PROJECT_SOURCE_DIR}/examples/common/model_viewer"
+  "${CMAKE_CURRENT_BINARY_DIR}/model_viewer"
+)
+
+add_library(
+  granit_web_model_viewer_platform STATIC
+  model_viewer_fetch.cpp
+  model_viewer_fetch.h
+  "${PROJECT_SOURCE_DIR}/examples/platform/web/asset_request.cpp"
+  "${PROJECT_SOURCE_DIR}/examples/platform/web/asset_request.h"
+  "${PROJECT_SOURCE_DIR}/examples/platform/web/resource_bundle.cpp"
+  "${PROJECT_SOURCE_DIR}/examples/platform/web/resource_bundle.h"
+  "${PROJECT_SOURCE_DIR}/examples/platform/web/resource_fetch_batch.cpp"
+  "${PROJECT_SOURCE_DIR}/examples/platform/web/resource_fetch_batch.h"
+  "${PROJECT_SOURCE_DIR}/examples/platform/web/web_input.cpp"
+  "${PROJECT_SOURCE_DIR}/examples/platform/web/web_input.h"
+)
+target_compile_features(granit_web_model_viewer_platform PUBLIC cxx_std_20)
+target_include_directories(
+  granit_web_model_viewer_platform
+  PUBLIC "${PROJECT_SOURCE_DIR}/examples/platform/web"
+         "${PROJECT_SOURCE_DIR}/examples/common"
+)
+target_link_libraries(
+  granit_web_model_viewer_platform
+  PUBLIC granit::granit granit_example_model_viewer_support
+)
+target_compile_options(
+  granit_web_model_viewer_platform PRIVATE "--use-port=emdawnwebgpu:cpp_bindings=false"
+)
+granit_target_compile_warnings(granit_web_model_viewer_platform)
+
 add_executable(granit_web_platform_smoke platform_smoke.cpp)
 target_compile_features(granit_web_platform_smoke PRIVATE cxx_std_20)
 target_link_libraries(granit_web_platform_smoke PRIVATE granit::granit)
@@ -69,9 +112,11 @@ target_link_options(
     "--preload-file=${PROJECT_SOURCE_DIR}/tests/assets/dynamic_uniform.frag.wgsl@/assets/dynamic_uniform.frag.wgsl"
     "-sALLOW_MEMORY_GROWTH=1"
     "-sNO_EXIT_RUNTIME=1"
+    "-sFETCH=1"
     "$<$<CONFIG:Debug>:-sASSERTIONS=1>"
     "$<$<CONFIG:Release>:--closure=1>"
 )
+target_link_libraries(granit_web_platform_smoke PRIVATE granit_web_model_viewer_platform)
 set_target_properties(
   granit_web_platform_smoke
   PROPERTIES
@@ -80,3 +125,17 @@ set_target_properties(
     FOLDER "Examples/Web"
 )
 granit_target_compile_warnings(granit_web_platform_smoke)
+
+add_custom_command(
+  TARGET granit_web_platform_smoke
+  POST_BUILD
+  COMMAND
+    "${CMAKE_COMMAND}" -E copy_if_different
+    "${CMAKE_CURRENT_SOURCE_DIR}/assets/model_viewer_fixture.gltf"
+    "$<TARGET_FILE_DIR:granit_web_platform_smoke>/model_viewer_fixture.gltf"
+  COMMAND
+    "${CMAKE_COMMAND}" -E copy_if_different
+    "${CMAKE_CURRENT_SOURCE_DIR}/assets/model_viewer_fixture.bin"
+    "$<TARGET_FILE_DIR:granit_web_platform_smoke>/model_viewer_fixture.bin"
+  VERBATIM
+)

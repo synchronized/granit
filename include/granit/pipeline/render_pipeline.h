@@ -23,6 +23,29 @@
 /** 统一参考渲染管线句柄。零值无效。 */
 typedef granit_handle granit_render_pipeline;
 
+/** 最近一次已完成的 Render Pipeline GPU 阶段计时；所有时间均为纳秒。 */
+typedef struct granit_render_pipeline_metrics {
+  uint32_t struct_size;
+  uint32_t reserved;
+  uint64_t sample_sequence;
+  uint64_t shadow_gpu_ns;
+  uint64_t opaque_gpu_ns;
+  uint64_t tone_mapping_gpu_ns;
+  uint64_t total_gpu_ns;
+  uint64_t reserved_tail[3];
+} granit_render_pipeline_metrics;
+
+#define GRANIT_RENDER_PIPELINE_METRICS_VERSION_1_SIZE                                              \
+  ((uint32_t)(offsetof(granit_render_pipeline_metrics, reserved_tail) + sizeof(uint64_t[3])))
+
+#define GRANIT_RENDER_PIPELINE_METRICS_INIT                                                        \
+  {                                                                                                \
+    (uint32_t)sizeof(granit_render_pipeline_metrics), UINT32_C(0), UINT64_C(0), UINT64_C(0),       \
+        UINT64_C(0), UINT64_C(0), UINT64_C(0), {                                                   \
+      UINT64_C(0), UINT64_C(0), UINT64_C(0)                                                        \
+    }                                                                                              \
+  }
+
 typedef uint32_t granit_render_pipeline_stage;
 #define GRANIT_RENDER_PIPELINE_STAGE_OPAQUE UINT32_C(0)
 #define GRANIT_RENDER_PIPELINE_STAGE_SHADOW UINT32_C(1)
@@ -73,13 +96,27 @@ typedef struct granit_render_pipeline_desc {
   uint32_t reserved;
   granit_render_pipeline_record_callback record;
   void* user_data;
+  /** 自动 PBR 路径的样本数；当前支持 1 或 4。 */
+  granit_sample_count sample_count;
+  /** 是否在 Tone Mapping 阶段启用 FXAA。 */
+  uint32_t enable_fxaa;
+  /** 是否在自动 PBR 路径启用镜面高光抗锯齿。 */
+  uint32_t enable_specular_aa;
+  uint32_t reserved_2;
 } granit_render_pipeline_desc;
 
 #define GRANIT_RENDER_PIPELINE_DESC_VERSION_1_SIZE                                                 \
-  ((uint32_t)(offsetof(granit_render_pipeline_desc, user_data) + sizeof(void*)))
+  ((uint32_t)(offsetof(granit_render_pipeline_desc, reserved_2) + sizeof(uint32_t)))
 
 #define GRANIT_RENDER_PIPELINE_DESC_INIT                                                           \
-  {(uint32_t)sizeof(granit_render_pipeline_desc), UINT32_C(0), 0, 0}
+  {(uint32_t)sizeof(granit_render_pipeline_desc),                                                  \
+   UINT32_C(0),                                                                                    \
+   0,                                                                                              \
+   0,                                                                                              \
+   GRANIT_SAMPLE_COUNT_1,                                                                          \
+   UINT32_C(1),                                                                                    \
+   UINT32_C(1),                                                                                    \
+   UINT32_C(0)}
 
 /** 多 View 渲染中单个 View 的独立输出。 */
 typedef struct granit_render_pipeline_output {
@@ -132,11 +169,41 @@ typedef struct granit_render_pipeline_render_desc {
   granit_canvas_draw_list canvas;
   /** 单 View 简写路径的可选世界 Debug Draw List；多 View 使用各 output 的 debug_draw。 */
   granit_debug_draw_list debug_draw;
+  /** HDR 场景背景清屏色。 */
+  granit_clear_color_value clear_color;
+  /** 可选环境光；为空时关闭 IBL，非空资源须保持至下一次更换环境或销毁 Pipeline。 */
+  const struct granit_render_pipeline_environment* environment;
 } granit_render_pipeline_render_desc;
 
+/** PBR 环境光输入；三个 Texture View 必须同时有效并属于当前 Renderer。 */
+typedef struct granit_render_pipeline_environment {
+  uint32_t struct_size;
+  uint32_t reserved;
+  granit_texture_view irradiance;
+  granit_texture_view prefiltered_environment;
+  granit_texture_view brdf_lut;
+  float rotation_radians;
+  float intensity;
+  float prefiltered_max_mip;
+  uint32_t reserved_tail;
+} granit_render_pipeline_environment;
+
+#define GRANIT_RENDER_PIPELINE_ENVIRONMENT_VERSION_1_SIZE                                          \
+  ((uint32_t)sizeof(granit_render_pipeline_environment))
+#define GRANIT_RENDER_PIPELINE_ENVIRONMENT_INIT                                                    \
+  {(uint32_t)sizeof(granit_render_pipeline_environment),                                           \
+   UINT32_C(0),                                                                                    \
+   GRANIT_NULL_HANDLE,                                                                             \
+   GRANIT_NULL_HANDLE,                                                                             \
+   GRANIT_NULL_HANDLE,                                                                             \
+   0.0F,                                                                                           \
+   1.0F,                                                                                           \
+   0.0F,                                                                                           \
+   UINT32_C(0)}
+
 #define GRANIT_RENDER_PIPELINE_RENDER_DESC_VERSION_1_SIZE                                          \
-  ((uint32_t)(offsetof(granit_render_pipeline_render_desc, debug_draw) +                           \
-              sizeof(granit_debug_draw_list)))
+  ((uint32_t)(offsetof(granit_render_pipeline_render_desc, environment) +                          \
+              sizeof(const granit_render_pipeline_environment*)))
 
 #define GRANIT_RENDER_PIPELINE_RENDER_DESC_INIT                                                    \
   {(uint32_t)sizeof(granit_render_pipeline_render_desc),                                           \
@@ -156,7 +223,9 @@ typedef struct granit_render_pipeline_render_desc {
    GRANIT_NULL_HANDLE,                                                                             \
    UINT32_C(0),                                                                                    \
    GRANIT_NULL_HANDLE,                                                                             \
-   GRANIT_NULL_HANDLE}
+   GRANIT_NULL_HANDLE,                                                                             \
+   {0.0F, 0.0F, 0.0F, 1.0F},                                                                       \
+   0}
 
 #ifdef __cplusplus
 extern "C" {
@@ -182,6 +251,15 @@ granit_render_pipeline_create(granit_renderer renderer, const granit_render_pipe
 GRANIT_RENDER_PIPELINE_API granit_result
 granit_render_pipeline_render(granit_renderer renderer, granit_render_pipeline pipeline,
                               const granit_render_pipeline_render_desc* desc);
+
+/** 启用 GPU 阶段计时；后端不支持 Timestamp Query 时返回 UNSUPPORTED。 */
+GRANIT_RENDER_PIPELINE_API granit_result
+granit_render_pipeline_metrics_enable(granit_renderer renderer, granit_render_pipeline pipeline);
+
+/** 查询最近一个已完成样本；尚无已完成样本时返回 NOT_READY。 */
+GRANIT_RENDER_PIPELINE_API granit_result
+granit_render_pipeline_get_metrics(granit_renderer renderer, granit_render_pipeline pipeline,
+                                   granit_render_pipeline_metrics* metrics);
 
 /** 销毁管线并使旧句柄立即失效；不得与 render 并发。 */
 GRANIT_RENDER_PIPELINE_API granit_result

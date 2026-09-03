@@ -9,7 +9,10 @@ struct vertex_output {
 [[vk::binding(0, 0)]] cbuffer ToneMappingConstants {
   float exposure_scale;
   uint encode_srgb;
-  uint2 reserved_values;
+  float inverse_width;
+  float inverse_height;
+  uint enable_fxaa;
+  uint3 reserved;
 };
 [[vk::binding(1, 0)]] Texture2D<float4> hdr_color;
 [[vk::binding(2, 0)]] SamplerState hdr_sampler;
@@ -36,7 +39,24 @@ float3 linear_to_srgb(float3 color) {
 }
 
 float4 fragment_main(vertex_output input) : SV_Target0 {
-  float3 color = aces_fitted(hdr_color.Sample(hdr_sampler, input.uv).rgb * exposure_scale);
+  const float2 texel = float2(inverse_width, inverse_height);
+  const float3 center = hdr_color.Sample(hdr_sampler, input.uv).rgb;
+  const float3 north = hdr_color.Sample(hdr_sampler, input.uv + float2(0.0, -texel.y)).rgb;
+  const float3 south = hdr_color.Sample(hdr_sampler, input.uv + float2(0.0, texel.y)).rgb;
+  const float3 west = hdr_color.Sample(hdr_sampler, input.uv + float2(-texel.x, 0.0)).rgb;
+  const float3 east = hdr_color.Sample(hdr_sampler, input.uv + float2(texel.x, 0.0)).rgb;
+  const float3 luma = float3(0.299, 0.587, 0.114);
+  const float center_luma = dot(center, luma);
+  const float minimum_luma = min(center_luma, min(min(dot(north, luma), dot(south, luma)),
+                                                   min(dot(west, luma), dot(east, luma))));
+  const float maximum_luma = max(center_luma, max(max(dot(north, luma), dot(south, luma)),
+                                                   max(dot(west, luma), dot(east, luma))));
+  const float contrast = maximum_luma - minimum_luma;
+  const float3 filtered = (north + south + west + east) * 0.25;
+  const float threshold = max(0.0312, maximum_luma * 0.125);
+  const float blend = 0.5 * saturate((contrast - threshold) / max(contrast, 0.0001));
+  const float3 antialiased = enable_fxaa != 0 ? lerp(center, filtered, blend) : center;
+  float3 color = aces_fitted(antialiased * exposure_scale);
   if (encode_srgb != 0)
     color = linear_to_srgb(color);
   return float4(color, 1.0);

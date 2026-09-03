@@ -19,8 +19,11 @@ enum class binding_type : std::uint32_t {
   uniform_buffer = GRANIT_BINDING_TYPE_UNIFORM_BUFFER,
   storage_buffer = GRANIT_BINDING_TYPE_STORAGE_BUFFER,
   sampled_texture = GRANIT_BINDING_TYPE_SAMPLED_TEXTURE,
+  sampled_texture_cube = GRANIT_BINDING_TYPE_SAMPLED_TEXTURE_CUBE,
   storage_texture = GRANIT_BINDING_TYPE_STORAGE_TEXTURE,
   sampler = GRANIT_BINDING_TYPE_SAMPLER,
+  comparison_sampler = GRANIT_BINDING_TYPE_COMPARISON_SAMPLER,
+  sampled_depth_texture = GRANIT_BINDING_TYPE_SAMPLED_DEPTH_TEXTURE,
   dynamic_uniform_buffer = GRANIT_BINDING_TYPE_DYNAMIC_UNIFORM_BUFFER,
 };
 

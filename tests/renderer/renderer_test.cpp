@@ -72,7 +72,7 @@ TEST_CASE("Renderer 状态查询校验参数", "[renderer][status][c_api]") {
   CHECK(granit_renderer_process_events(GRANIT_NULL_HANDLE) == GRANIT_ERROR_INVALID_HANDLE);
 }
 
-TEST_CASE("Renderer 公开查询 Uniform Buffer 限制", "[renderer][limits][c_api]") {
+TEST_CASE("Renderer 公开查询设备限制", "[renderer][limits][c_api]") {
   granit_renderer_limits limits = GRANIT_RENDERER_LIMITS_INIT;
   CHECK(granit_renderer_get_limits(GRANIT_NULL_HANDLE, nullptr) == GRANIT_ERROR_INVALID_ARGUMENT);
 
@@ -97,6 +97,15 @@ TEST_CASE("Renderer 公开查询 Uniform Buffer 限制", "[renderer][limits][c_a
   CHECK(limits.reserved == 0);
   CHECK(limits.uniform_buffer_offset_alignment > 0);
   CHECK(limits.max_uniform_buffer_binding_size > 0);
+  CHECK((limits.framebuffer_sample_counts & GRANIT_SAMPLE_COUNT_1) != 0);
+  CHECK(limits.max_sampler_anisotropy >= 1.0F);
+
+  limits.struct_size = GRANIT_RENDERER_LIMITS_VERSION_1_SIZE;
+  limits.framebuffer_sample_counts = UINT32_MAX;
+  limits.max_sampler_anisotropy = -1.0F;
+  REQUIRE(granit_renderer_get_limits(renderer, &limits) == GRANIT_SUCCESS);
+  CHECK((limits.framebuffer_sample_counts & GRANIT_SAMPLE_COUNT_1) != 0);
+  CHECK(limits.max_sampler_anisotropy >= 1.0F);
 
   limits.struct_size = static_cast<std::uint32_t>(sizeof(granit_renderer_limits) + 64);
   REQUIRE(granit_renderer_get_limits(renderer, &limits) == GRANIT_SUCCESS);
@@ -410,6 +419,8 @@ TEST_CASE("C++ renderer 提供 move-only RAII", "[renderer][cpp_api]") {
 
   granit::renderer_limits limits;
   REQUIRE(renderer.get_limits(limits) == granit::result::success);
+  CHECK(limits.supports_sample_count(granit::sample_count::one));
+  CHECK(limits.max_sampler_anisotropy >= 1.0F);
   CHECK(limits.uniform_buffer_offset_alignment > 0);
   granit::renderer_resource_stats stats;
   REQUIRE(renderer.get_resource_stats(stats) == granit::result::success);

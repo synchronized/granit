@@ -12,7 +12,7 @@
 
 namespace granit::material {
 
-inline constexpr std::uint32_t material_archive_version_major = 2;
+inline constexpr std::uint32_t material_archive_version_major = 3;
 inline constexpr std::uint32_t material_archive_version_minor = 0;
 inline constexpr std::uint32_t material_archive_endian_tag = UINT32_C(0x01020304);
 inline constexpr std::uint32_t material_archive_header_size = 96;
@@ -20,7 +20,7 @@ inline constexpr std::uint32_t material_archive_section_record_size = 40;
 inline constexpr std::uint32_t material_archive_max_sections = 64;
 inline constexpr std::uint32_t material_archive_max_alignment = 4096;
 inline constexpr std::uint64_t material_archive_max_file_size = UINT64_C(1024) * 1024 * 1024;
-inline constexpr std::uint32_t material_archive_target_vulkan_1_3 = 1;
+inline constexpr std::uint32_t material_archive_target_cross_backend = 2;
 inline constexpr std::uint32_t material_archive_binding_model_bind_group = 1;
 
 enum class archive_section_type : std::uint32_t {
@@ -34,6 +34,7 @@ enum class archive_section_type : std::uint32_t {
   build_metadata = 8,
   dependency_metadata = 9,
   pipeline_states = 10,
+  wgsl_data = 11,
 };
 
 using archive_section_flags = std::uint32_t;
@@ -99,7 +100,7 @@ struct material_archive_section_source {
 };
 
 struct material_archive_encode_desc {
-  std::uint32_t target_environment = material_archive_target_vulkan_1_3;
+  std::uint32_t target_environment = material_archive_target_cross_backend;
   std::uint32_t binding_model = material_archive_binding_model_bind_group;
   std::uint64_t required_renderer_features = 0;
   std::span<const material_archive_section_source> sections;

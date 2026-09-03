@@ -287,7 +287,7 @@ extern "C" granit_result granit_material_create(granit_renderer renderer,
       return result;
     const std::array object_entries{
         granit::bind_group_layout_entry{.binding = 0,
-                                        .type = granit::binding_type::uniform_buffer,
+                                        .type = granit::binding_type::dynamic_uniform_buffer,
                                         .array_count = 1,
                                         .visibility = granit::shader_stage_flags::vertex}};
     const auto object_result = state->object_layout.initialize(renderer, object_entries);

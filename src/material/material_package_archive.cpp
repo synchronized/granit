@@ -217,8 +217,9 @@ archive_error encode_material_package_archive(const material_package& package,
     append_u32(variant_records, 0);
     std::vector<std::byte> shader_records;
     std::vector<std::byte> spirv_data;
+    std::vector<std::byte> wgsl_data;
     append_u32(shader_records, 0);
-    append_u32(shader_records, 32);
+    append_u32(shader_records, 48);
     std::uint32_t feature_cursor = 0;
     std::uint32_t shader_cursor = 0;
     for (const auto& variant : package.variants()) {
@@ -251,9 +252,13 @@ archive_error encode_material_package_archive(const material_package& package,
         append_u32(shader_records, 0);
         append_u64(shader_records, spirv_data.size());
         append_u64(shader_records, shader->spirv.size() * sizeof(std::uint32_t));
+        append_u64(shader_records, wgsl_data.size());
+        append_u64(shader_records, shader->wgsl.size());
         for (const auto word : shader->spirv) {
           append_u32(spirv_data, word);
         }
+        const auto* wgsl = reinterpret_cast<const std::byte*>(shader->wgsl.data());
+        append_bytes(wgsl_data, {wgsl, shader->wgsl.size()});
       }
       shader_cursor += static_cast<std::uint32_t>(shaders.size());
     }
@@ -337,9 +342,11 @@ archive_error encode_material_package_archive(const material_package& package,
                                         archive_section_required, 8, shader_records},
         material_archive_section_source{archive_section_type::spirv_data, archive_section_required,
                                         4, spirv_data},
+        material_archive_section_source{archive_section_type::wgsl_data, archive_section_required,
+                                        1, wgsl_data},
         material_archive_section_source{archive_section_type::pipeline_states,
                                         archive_section_required, 8, pipeline_states}};
-    return encode_material_archive({.target_environment = material_archive_target_vulkan_1_3,
+    return encode_material_archive({.target_environment = material_archive_target_cross_backend,
                                     .binding_model = material_archive_binding_model_bind_group,
                                     .required_renderer_features = 0,
                                     .sections = sections},
@@ -365,6 +372,7 @@ archive_error decode_material_package_archive(std::span<const std::byte> bytes,
     constexpr std::uint32_t max_variants = 65536;
     constexpr std::uint32_t max_shaders = 131072;
     constexpr std::uint64_t max_spirv_size = UINT64_C(16) * 1024 * 1024;
+    constexpr std::uint64_t max_wgsl_size = UINT64_C(16) * 1024 * 1024;
 
     const auto strings = find_section(bytes, layout, archive_section_type::string_table);
     const auto metadata = find_section(bytes, layout, archive_section_type::material_metadata);
@@ -375,9 +383,11 @@ archive_error decode_material_package_archive(std::span<const std::byte> bytes,
     const auto variant_records = find_section(bytes, layout, archive_section_type::variant_records);
     const auto shader_records = find_section(bytes, layout, archive_section_type::shader_records);
     const auto spirv_data = find_section(bytes, layout, archive_section_type::spirv_data);
+    const auto wgsl_data = find_section(bytes, layout, archive_section_type::wgsl_data);
     const auto pipeline_states = find_section(bytes, layout, archive_section_type::pipeline_states);
 
-    if (!utf8_valid(strings) || metadata.size() < 16 || feature_definitions.size() < 8 ||
+    if (!utf8_valid(strings) || !utf8_valid(wgsl_data) || metadata.size() < 16 ||
+        feature_definitions.size() < 8 ||
         pass_definitions.size() < 8 || variant_records.size() < 16 || shader_records.size() < 8 ||
         pipeline_states.size() < 24) {
       return archive_error::invalid_semantic_data;
@@ -385,7 +395,7 @@ archive_error decode_material_package_archive(std::span<const std::byte> bytes,
 
     material_package_desc desc;
     desc.format_version = material_package_format_version;
-    desc.target = package_target::vulkan_1_3;
+    desc.target = package_target::cross_backend;
     desc.binding_model = package_binding_model::bind_group;
     desc.required_renderer_features = 0;
 
@@ -441,7 +451,7 @@ archive_error decode_material_package_archive(std::span<const std::byte> bytes,
 
     const auto shader_count = read_u32(shader_records, 0);
     const auto shader_record_size = read_u32(shader_records, 4);
-    if (shader_count > max_shaders || shader_record_size != 32 ||
+    if (shader_count > max_shaders || shader_record_size != 48 ||
         !record_range_valid(shader_count, shader_record_size, 8, shader_records.size())) {
       return archive_error::invalid_semantic_data;
     }
@@ -454,17 +464,23 @@ archive_error decode_material_package_archive(std::span<const std::byte> bytes,
       const auto name_length = read_u32(shader_records, record + 8);
       const auto spirv_offset = read_u64(shader_records, record + 16);
       const auto spirv_size = read_u64(shader_records, record + 24);
+      const auto wgsl_offset = read_u64(shader_records, record + 32);
+      const auto wgsl_size = read_u64(shader_records, record + 40);
       if (stage > static_cast<std::uint32_t>(package_shader_stage::fragment) ||
           !string_valid(strings, name_offset, name_length) ||
           read_u32(shader_records, record + 12) != 0 || spirv_size == 0 ||
           spirv_size > max_spirv_size || spirv_size % sizeof(std::uint32_t) != 0 ||
           spirv_offset % sizeof(std::uint32_t) != 0 || spirv_offset > spirv_data.size() ||
-          spirv_size > spirv_data.size() - spirv_offset) {
+          spirv_size > spirv_data.size() - spirv_offset || wgsl_size == 0 ||
+          wgsl_size > max_wgsl_size || wgsl_offset > wgsl_data.size() ||
+          wgsl_size > wgsl_data.size() - wgsl_offset) {
         return archive_error::invalid_semantic_data;
       }
       material_shader_code shader{.stage = static_cast<package_shader_stage>(stage),
                                   .entry_point = read_string(strings, name_offset, name_length),
-                                  .spirv = {}};
+                                  .spirv = {},
+                                  .wgsl = read_string(wgsl_data, static_cast<std::uint32_t>(wgsl_offset),
+                                                      static_cast<std::uint32_t>(wgsl_size))};
       shader.spirv.reserve(static_cast<std::size_t>(spirv_size / sizeof(std::uint32_t)));
       for (std::uint64_t offset = 0; offset < spirv_size; offset += sizeof(std::uint32_t)) {
         shader.spirv.push_back(

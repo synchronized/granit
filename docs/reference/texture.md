@@ -6,8 +6,10 @@
 Texture 拥有图像存储，Texture View 描述如何访问其子资源。两者都是属于 Renderer 的独立 64 位
 句柄。
 
-当前支持单采样 2D Texture 和六面 Cube Texture，以及不超过完整链的多个 mip。Cube Array、普通
-2D Array、1D、3D、多采样和格式重解释仍返回 `GRANIT_ERROR_UNSUPPORTED`。
+当前支持单采样 2D Texture 和六面 Cube Texture，以及不超过完整链的多个 mip。2D 颜色或深度附件
+还支持后端提供的多采样；多采样 Texture 必须只有一个 mip、一个数组层，且不能走 CPU 写入、读取、
+复制或 Mipmap 生成路径。Cube Array、普通 2D Array、1D、3D 和格式重解释仍返回
+`GRANIT_ERROR_UNSUPPORTED`。
 
 `granit_texture_create_with_default_view` 可以原子创建 Texture 和完整范围 View。默认 View 继承
 Texture 格式，并根据颜色、深度或深度模板格式自动选择 aspect。

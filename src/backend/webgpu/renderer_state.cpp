@@ -417,22 +417,39 @@ granit_result webgpu_renderer_state::begin_rendering(
     backend_command_recorder_resource& recorder, granit_rendering_area,
     std::span<const backend_color_attachment> color_attachments,
     const backend_depth_stencil_attachment* depth_stencil_attachment, std::uint32_t layer_count) {
-  if (!commands_ || !presentation_ || color_attachments.size() != 1 || layer_count != 1)
+  if (!commands_ || !presentation_ || color_attachments.size() > 1 || layer_count != 1 ||
+      (color_attachments.empty() && depth_stencil_attachment == nullptr))
     return GRANIT_ERROR_UNSUPPORTED;
-  const auto& attachment = color_attachments.front();
-  if (attachment.load_operation == GRANIT_ATTACHMENT_LOAD_OPERATION_DISCARD)
-    return GRANIT_ERROR_UNSUPPORTED;
-  const auto load = attachment.load_operation == GRANIT_ATTACHMENT_LOAD_OPERATION_LOAD
-                        ? GRANIT_BACKEND_PLUGIN_LOAD_OPERATION_LOAD
-                        : GRANIT_BACKEND_PLUGIN_LOAD_OPERATION_CLEAR;
-  const auto store = attachment.store_operation == GRANIT_ATTACHMENT_STORE_OPERATION_STORE
-                         ? GRANIT_BACKEND_PLUGIN_STORE_OPERATION_STORE
-                         : GRANIT_BACKEND_PLUGIN_STORE_OPERATION_DISCARD;
-  const float clear[]{attachment.clear_value.red, attachment.clear_value.green,
-                      attachment.clear_value.blue, attachment.clear_value.alpha};
-  auto native_view = resources_->native_texture_view(*attachment.view);
-  if (native_view == 0)
-    native_view = presentation_->native_view(*attachment.view);
+  auto load = GRANIT_BACKEND_PLUGIN_LOAD_OPERATION_CLEAR;
+  auto store = GRANIT_BACKEND_PLUGIN_STORE_OPERATION_DISCARD;
+  float clear[]{0.0F, 0.0F, 0.0F, 0.0F};
+  granit_backend_plugin_texture_view native_view{};
+  granit_backend_plugin_texture_view native_resolve_view{};
+  if (!color_attachments.empty()) {
+    const auto& attachment = color_attachments.front();
+    if (attachment.load_operation == GRANIT_ATTACHMENT_LOAD_OPERATION_DISCARD)
+      return GRANIT_ERROR_UNSUPPORTED;
+    load = attachment.load_operation == GRANIT_ATTACHMENT_LOAD_OPERATION_LOAD
+               ? GRANIT_BACKEND_PLUGIN_LOAD_OPERATION_LOAD
+               : GRANIT_BACKEND_PLUGIN_LOAD_OPERATION_CLEAR;
+    store = attachment.store_operation == GRANIT_ATTACHMENT_STORE_OPERATION_STORE
+                ? GRANIT_BACKEND_PLUGIN_STORE_OPERATION_STORE
+                : GRANIT_BACKEND_PLUGIN_STORE_OPERATION_DISCARD;
+    clear[0] = attachment.clear_value.red;
+    clear[1] = attachment.clear_value.green;
+    clear[2] = attachment.clear_value.blue;
+    clear[3] = attachment.clear_value.alpha;
+    native_view = resources_->native_texture_view(*attachment.view);
+    if (native_view == 0)
+      native_view = presentation_->native_view(*attachment.view);
+    if (attachment.resolve_view != nullptr) {
+      native_resolve_view = resources_->native_texture_view(*attachment.resolve_view);
+      if (native_resolve_view == 0)
+        native_resolve_view = presentation_->native_view(*attachment.resolve_view);
+      if (native_resolve_view == 0)
+        return GRANIT_ERROR_INVALID_HANDLE;
+    }
+  }
   granit_backend_plugin_texture_view native_depth_view{};
   auto depth_load = GRANIT_BACKEND_PLUGIN_LOAD_OPERATION_CLEAR;
   auto depth_store = GRANIT_BACKEND_PLUGIN_STORE_OPERATION_DISCARD;
@@ -456,8 +473,8 @@ granit_result webgpu_renderer_state::begin_rendering(
                       : GRANIT_BACKEND_PLUGIN_STORE_OPERATION_DISCARD;
     clear_depth = depth.clear_value.depth;
   }
-  return commands_->begin_rendering(recorder, native_view, load, store, clear, native_depth_view,
-                                    depth_load, depth_store, clear_depth);
+  return commands_->begin_rendering(recorder, native_view, native_resolve_view, load, store, clear,
+                                    native_depth_view, depth_load, depth_store, clear_depth);
 }
 
 granit_result
@@ -520,12 +537,17 @@ granit_result webgpu_renderer_state::validate_graphics_pipeline(
 granit_result webgpu_renderer_state::create_graphics_pipeline(
     const backend_graphics_pipeline_create_info& info,
     backend_graphics_pipeline_resource& pipeline) noexcept {
-  if (!pipelines_ || !shaders_ || info.color_formats.size() != 1)
+  if (!pipelines_ || !shaders_ || info.color_formats.size() > 1)
     return GRANIT_ERROR_UNSUPPORTED;
+  const auto color_format =
+      info.color_formats.empty() ? GRANIT_TEXTURE_FORMAT_UNDEFINED : info.color_formats.front();
+  const granit_color_blend_state default_blend = GRANIT_COLOR_BLEND_STATE_INIT;
+  const auto& color_blend = info.color_blends.empty() ? default_blend : info.color_blends.front();
   return pipelines_->create_graphics_pipeline(
       pipeline, info.layout, shaders_->native_handle(info.vertex_shader),
-      shaders_->native_handle(info.fragment_shader), info.vertex_buffers,
-      info.color_formats.front(), info.depth_stencil_format, info.depth);
+      shaders_->native_handle(info.fragment_shader), info.vertex_buffers, color_format,
+      info.depth_stencil_format, info.sample_count, info.primitive, info.depth, info.depth_bias,
+      color_blend);
 }
 
 void* webgpu_renderer_state::allocate(std::uint64_t size, std::uint64_t alignment, void*) noexcept {
@@ -660,10 +682,9 @@ granit_result webgpu_renderer_state::refresh_state() noexcept {
       return capabilities_result;
     }
     capabilities_ = {
-        capabilities.uniform_buffer_offset_alignment,
-        capabilities.storage_buffer_offset_alignment,
-        capabilities.max_uniform_buffer_binding_size,
-        capabilities.max_storage_buffer_binding_size,
+        capabilities.uniform_buffer_offset_alignment, capabilities.storage_buffer_offset_alignment,
+        capabilities.max_uniform_buffer_binding_size, capabilities.max_storage_buffer_binding_size,
+        capabilities.framebuffer_sample_counts,       capabilities.max_sampler_anisotropy,
     };
     provider_surface_types_ = capabilities.surface_types;
     if ((to_plugin_surface_types(surface_types_) & ~provider_surface_types_) != 0) {

@@ -42,6 +42,8 @@ struct alignas(16) pbr_frame_constants {
   std::array<float, 4> camera_position;
   std::array<float, 4> direction_to_light;
   std::array<float, 4> light_radiance;
+  /** x 为 Specular AA 开关，其余字段保留。 */
+  std::array<std::uint32_t, 4> render_options;
 };
 
 struct alignas(16) pbr_object_constants {
@@ -55,7 +57,7 @@ pack_pbr_draw_inputs(const pbr_view_input& view, const pbr_object_input& object,
                      const pbr_directional_light_input& light, pbr_frame_constants& frame_constants,
                      pbr_object_constants& object_constants) noexcept;
 
-static_assert(sizeof(pbr_frame_constants) == 112);
+static_assert(sizeof(pbr_frame_constants) == 128);
 static_assert(sizeof(pbr_object_constants) == 144);
 
 } // namespace granit::material

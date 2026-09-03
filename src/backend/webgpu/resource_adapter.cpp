@@ -118,6 +118,8 @@ granit_backend_plugin_texture_format to_format(granit_texture_format format) noe
     return GRANIT_BACKEND_PLUGIN_TEXTURE_FORMAT_RGBA8_UNORM;
   case GRANIT_TEXTURE_FORMAT_RGBA8_SRGB:
     return GRANIT_BACKEND_PLUGIN_TEXTURE_FORMAT_RGBA8_SRGB;
+  case GRANIT_TEXTURE_FORMAT_RGBA16_FLOAT:
+    return GRANIT_BACKEND_PLUGIN_TEXTURE_FORMAT_RGBA16_FLOAT;
   case GRANIT_TEXTURE_FORMAT_D32_FLOAT:
     return GRANIT_BACKEND_PLUGIN_TEXTURE_FORMAT_D32_FLOAT;
   default:
@@ -135,6 +137,8 @@ std::uint32_t bytes_per_pixel(granit_texture_format format) noexcept {
   case GRANIT_TEXTURE_FORMAT_RGBA8_SRGB:
   case GRANIT_TEXTURE_FORMAT_D32_FLOAT:
     return 4;
+  case GRANIT_TEXTURE_FORMAT_RGBA16_FLOAT:
+    return 8;
   default:
     return 0;
   }
@@ -295,7 +299,8 @@ granit_result webgpu_resource_adapter::upload_batch(
             copy.height,
             copy.buffer_row_length == 0 ? 0 : copy.buffer_row_length * pixel_size,
             copy.buffer_image_height,
-            {0, 0}};
+            copy.base_array_layer,
+            copy.array_layer_count};
       } else {
         return GRANIT_ERROR_INVALID_ARGUMENT;
       }
@@ -326,11 +331,23 @@ webgpu_resource_adapter::create_texture(const granit_texture_desc& desc,
   const auto format = to_format(desc.format);
   const auto usage = to_usage(desc.usage);
   if (texture == nullptr || texture->handle_ != 0 || format == 0 || usage == 0 ||
-      desc.dimension != GRANIT_TEXTURE_DIMENSION_2D || desc.depth != 1 || desc.array_layers != 1 ||
-      desc.sample_count != GRANIT_SAMPLE_COUNT_1)
+      (desc.dimension != GRANIT_TEXTURE_DIMENSION_2D &&
+       desc.dimension != GRANIT_TEXTURE_DIMENSION_CUBE) ||
+      desc.depth != 1 ||
+      (desc.sample_count != GRANIT_SAMPLE_COUNT_1 && desc.sample_count != GRANIT_SAMPLE_COUNT_4))
     return GRANIT_ERROR_UNSUPPORTED;
   const granit_backend_plugin_texture_desc plugin_desc{
-      sizeof(plugin_desc), 0, desc.width, desc.height, usage, format, desc.mip_levels, 0};
+      sizeof(plugin_desc),
+      0,
+      desc.width,
+      desc.height,
+      usage,
+      format,
+      desc.mip_levels,
+      desc.dimension == GRANIT_TEXTURE_DIMENSION_CUBE ? GRANIT_BACKEND_PLUGIN_TEXTURE_DIMENSION_CUBE
+                                                      : GRANIT_BACKEND_PLUGIN_TEXTURE_DIMENSION_2D,
+      desc.array_layers,
+      desc.sample_count};
   const auto result =
       context_->loader->create_texture(context_->instance, &plugin_desc, &texture->handle_);
   if (result == GRANIT_SUCCESS)
@@ -361,7 +378,8 @@ webgpu_resource_adapter::upload_texture(backend_texture_resource& resource, cons
       region.height,
       layout.bytes_per_row,
       layout.rows_per_image,
-      {0, 0}};
+      region.base_array_layer,
+      region.array_layer_count};
   return context_->loader->write_texture(context_->instance, texture->handle_, &desc, data, size);
 }
 
@@ -381,11 +399,18 @@ granit_result webgpu_resource_adapter::create_texture_view(
                              ? texture_desc.mip_levels - desc.range.base_mip_level
                              : desc.range.mip_level_count;
   if (native_texture == nullptr || view == nullptr || view->handle_ != 0 || format == 0 ||
-      desc.dimension != GRANIT_TEXTURE_DIMENSION_2D || desc.range.base_array_layer != 0 ||
-      desc.range.array_layer_count != 1)
+      (desc.dimension != GRANIT_TEXTURE_DIMENSION_2D &&
+       desc.dimension != GRANIT_TEXTURE_DIMENSION_CUBE))
     return GRANIT_ERROR_UNSUPPORTED;
   const granit_backend_plugin_texture_view_desc plugin_desc{
-      sizeof(plugin_desc), format, desc.range.base_mip_level, mip_count, {0, 0}};
+      sizeof(plugin_desc),
+      format,
+      desc.range.base_mip_level,
+      mip_count,
+      desc.dimension == GRANIT_TEXTURE_DIMENSION_CUBE ? GRANIT_BACKEND_PLUGIN_TEXTURE_DIMENSION_CUBE
+                                                      : GRANIT_BACKEND_PLUGIN_TEXTURE_DIMENSION_2D,
+      desc.range.base_array_layer,
+      desc.range.array_layer_count};
   return context_->loader->create_texture_view(context_->instance, native_texture->handle_,
                                                &plugin_desc, &view->handle_);
 }
@@ -406,8 +431,8 @@ webgpu_resource_adapter::create_sampler(const granit_sampler_desc& desc,
   auto* sampler = dynamic_cast<webgpu_sampler_resource*>(&resource);
   if (sampler == nullptr || sampler->handle_ != 0)
     return GRANIT_ERROR_INVALID_ARGUMENT;
-  if (desc.lod_bias != 0.0F || desc.compare_operation != GRANIT_COMPARE_OPERATION_DISABLED ||
-      desc.max_anisotropy > UINT16_MAX || std::floor(desc.max_anisotropy) != desc.max_anisotropy ||
+  if (desc.lod_bias != 0.0F || desc.max_anisotropy > UINT16_MAX ||
+      std::floor(desc.max_anisotropy) != desc.max_anisotropy ||
       (desc.max_anisotropy > 1.0F &&
        (desc.min_filter != GRANIT_FILTER_LINEAR || desc.mag_filter != GRANIT_FILTER_LINEAR ||
         desc.mipmap_filter != GRANIT_MIPMAP_FILTER_LINEAR)))
@@ -458,8 +483,17 @@ granit_result webgpu_resource_adapter::create_bind_group_layout(
       case GRANIT_BINDING_TYPE_SAMPLED_TEXTURE:
         type = GRANIT_BACKEND_PLUGIN_BINDING_TYPE_SAMPLED_TEXTURE;
         break;
+      case GRANIT_BINDING_TYPE_SAMPLED_TEXTURE_CUBE:
+        type = GRANIT_BACKEND_PLUGIN_BINDING_TYPE_SAMPLED_TEXTURE_CUBE;
+        break;
+      case GRANIT_BINDING_TYPE_SAMPLED_DEPTH_TEXTURE:
+        type = GRANIT_BACKEND_PLUGIN_BINDING_TYPE_SAMPLED_DEPTH_TEXTURE;
+        break;
       case GRANIT_BINDING_TYPE_SAMPLER:
         type = GRANIT_BACKEND_PLUGIN_BINDING_TYPE_SAMPLER;
+        break;
+      case GRANIT_BINDING_TYPE_COMPARISON_SAMPLER:
+        type = GRANIT_BACKEND_PLUGIN_BINDING_TYPE_COMPARISON_SAMPLER;
         break;
       default:
         return GRANIT_ERROR_UNSUPPORTED;
@@ -512,19 +546,28 @@ webgpu_resource_adapter::create_bind_group(backend_bind_group_layout_resource& l
         entry.type = GRANIT_BACKEND_PLUGIN_BINDING_TYPE_STORAGE_BUFFER;
         entry.buffer = native_buffer(*write.buffer);
         break;
-      case backend_binding_type::sampled_texture: {
+      case backend_binding_type::sampled_texture:
+      case backend_binding_type::sampled_texture_cube:
+      case backend_binding_type::sampled_depth_texture: {
         const auto* view = dynamic_cast<webgpu_texture_view_resource*>(write.texture_view);
         if (view == nullptr)
           return GRANIT_ERROR_INVALID_ARGUMENT;
-        entry.type = GRANIT_BACKEND_PLUGIN_BINDING_TYPE_SAMPLED_TEXTURE;
+        entry.type = write.type == backend_binding_type::sampled_texture_cube
+                         ? GRANIT_BACKEND_PLUGIN_BINDING_TYPE_SAMPLED_TEXTURE_CUBE
+                     : write.type == backend_binding_type::sampled_depth_texture
+                         ? GRANIT_BACKEND_PLUGIN_BINDING_TYPE_SAMPLED_DEPTH_TEXTURE
+                         : GRANIT_BACKEND_PLUGIN_BINDING_TYPE_SAMPLED_TEXTURE;
         entry.texture_view = view->handle_;
         break;
       }
-      case backend_binding_type::sampler: {
+      case backend_binding_type::sampler:
+      case backend_binding_type::comparison_sampler: {
         const auto* sampler = dynamic_cast<webgpu_sampler_resource*>(write.sampler);
         if (sampler == nullptr)
           return GRANIT_ERROR_INVALID_ARGUMENT;
-        entry.type = GRANIT_BACKEND_PLUGIN_BINDING_TYPE_SAMPLER;
+        entry.type = write.type == backend_binding_type::comparison_sampler
+                         ? GRANIT_BACKEND_PLUGIN_BINDING_TYPE_COMPARISON_SAMPLER
+                         : GRANIT_BACKEND_PLUGIN_BINDING_TYPE_SAMPLER;
         entry.sampler = sampler->handle_;
         break;
       }

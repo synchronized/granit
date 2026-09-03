@@ -16,9 +16,10 @@ struct backend_capabilities {
   std::uint64_t storage_buffer_offset_alignment{1};
   std::uint64_t max_uniform_buffer_binding_size{};
   std::uint64_t max_storage_buffer_binding_size{};
+  std::uint32_t framebuffer_sample_counts{1};
+  float max_sampler_anisotropy{1.0F};
 
-  [[nodiscard]] bool supports_buffer_binding(backend_buffer_binding_type type,
-                                             std::uint64_t offset,
+  [[nodiscard]] bool supports_buffer_binding(backend_buffer_binding_type type, std::uint64_t offset,
                                              std::uint64_t size) const noexcept {
     const auto alignment = type == backend_buffer_binding_type::uniform
                                ? uniform_buffer_offset_alignment

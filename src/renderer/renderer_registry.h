@@ -59,16 +59,8 @@ public:
                                      std::uint32_t surface_types, std::uint32_t frames_in_flight,
                                      granit_diagnostic_callback diagnostic_callback,
                                      void* diagnostic_user_data, granit_renderer& renderer);
-  [[nodiscard]] granit_result create_webgpu_static(const granit_backend_plugin_api* api,
-                                                   std::uint32_t surface_types,
-                                                   granit_diagnostic_callback diagnostic_callback,
-                                                   void* diagnostic_user_data,
-                                                   granit_renderer& renderer);
-  [[nodiscard]] granit_result create_webgpu_dynamic(std::string_view library_path,
-                                                    std::uint32_t surface_types,
-                                                    granit_diagnostic_callback diagnostic_callback,
-                                                    void* diagnostic_user_data,
-                                                    granit_renderer& renderer);
+  [[nodiscard]] granit_result register_backend(std::shared_ptr<backend_renderer> backend,
+                                               granit_renderer& renderer);
   [[nodiscard]] granit_result destroy(granit_renderer renderer);
   [[nodiscard]] granit_result get_limits(granit_renderer renderer, granit_renderer_limits& limits);
   [[nodiscard]] granit_result get_info(granit_renderer renderer, granit_renderer_info& info);
@@ -116,6 +108,10 @@ public:
   [[nodiscard]] granit_result get_frame_info(granit_renderer renderer, granit_swapchain swapchain,
                                              granit_frame frame, std::uint32_t& frame_slot,
                                              std::uint32_t& frame_slot_count);
+  /** 内部渲染子系统查询 Frame 槽；不形成公共 ABI。 */
+  [[nodiscard]] granit_result get_frame_slot(granit_renderer renderer, granit_frame frame,
+                                             std::uint32_t& frame_slot,
+                                             std::uint32_t& frame_slot_count);
   [[nodiscard]] granit_result present_swapchain_frame(granit_renderer renderer,
                                                       granit_swapchain swapchain,
                                                       granit_frame frame, bool& needs_recreate);
@@ -162,10 +158,11 @@ public:
   [[nodiscard]] granit_result create_shader_from_desc(granit_renderer renderer,
                                                       const granit_shader_desc& desc,
                                                       granit_shader& shader);
-  [[nodiscard]] granit_result create_wgsl_shader(granit_renderer renderer,
-                                                 granit_shader_stage stage, std::string_view source,
-                                                 std::string_view entry_point,
-                                                 granit_shader& shader);
+  [[nodiscard]] granit_result create_shader_from_wgsl(granit_renderer renderer,
+                                                      granit_shader_stage stage,
+                                                      std::string_view source,
+                                                      std::string_view entry_point,
+                                                      granit_shader& shader);
   [[nodiscard]] granit_result destroy_shader(granit_renderer renderer, granit_shader shader);
   [[nodiscard]] granit_result
   create_bind_group_layout(granit_renderer renderer,
@@ -187,12 +184,6 @@ public:
   [[nodiscard]] granit_result create_graphics_pipeline(granit_renderer renderer,
                                                        const granit_graphics_pipeline_desc& desc,
                                                        granit_graphics_pipeline& pipeline);
-  [[nodiscard]] granit_result create_webgpu_graphics_pipeline(granit_renderer renderer,
-                                                              granit_pipeline_layout layout,
-                                                              granit_shader vertex_shader,
-                                                              granit_shader fragment_shader,
-                                                              granit_texture_format color_format,
-                                                              granit_graphics_pipeline& pipeline);
   [[nodiscard]] granit_result destroy_graphics_pipeline(granit_renderer renderer,
                                                         granit_graphics_pipeline pipeline);
   [[nodiscard]] granit_result create_compute_pipeline(granit_renderer renderer,

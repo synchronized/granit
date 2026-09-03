@@ -56,7 +56,11 @@ typedef unsigned int WGPUTextureSampleType;
 typedef unsigned int WGPUTextureViewDimension;
 typedef unsigned int WGPUSType;
 typedef unsigned long long WGPUColorWriteMask;
+typedef unsigned int WGPUBlendFactor;
+typedef unsigned int WGPUBlendOperation;
 typedef unsigned int WGPUPrimitiveTopology;
+typedef unsigned int WGPUFrontFace;
+typedef unsigned int WGPUCullMode;
 typedef unsigned int WGPUVertexFormat;
 typedef unsigned int WGPUIndexFormat;
 typedef unsigned int WGPUVertexStepMode;
@@ -64,6 +68,7 @@ typedef unsigned int WGPUTextureAspect;
 typedef unsigned int WGPULoadOp;
 typedef unsigned int WGPUStoreOp;
 typedef unsigned int WGPUDeviceLostReason;
+typedef unsigned int WGPUErrorType;
 typedef unsigned int WGPUPresentMode;
 typedef unsigned int WGPUCompositeAlphaMode;
 typedef unsigned int WGPUSurfaceGetCurrentTextureStatus;
@@ -107,6 +112,7 @@ typedef unsigned int WGPUSurfaceGetCurrentTextureStatus;
 #define WGPUTextureFormat_RGBA8UnormSrgb 19
 #define WGPUTextureFormat_BGRA8Unorm 23
 #define WGPUTextureFormat_Depth32Float 40
+#define WGPUTextureFormat_RGBA16Float 41
 #define WGPUAddressMode_ClampToEdge 1
 #define WGPUAddressMode_Repeat 2
 #define WGPUAddressMode_MirrorRepeat 3
@@ -132,11 +138,36 @@ typedef unsigned int WGPUSurfaceGetCurrentTextureStatus;
 #define WGPUBufferBindingType_Uniform 2
 #define WGPUBufferBindingType_Storage 3
 #define WGPUSamplerBindingType_Filtering 2
+#define WGPUSamplerBindingType_Comparison 3
 #define WGPUTextureSampleType_Float 2
+#define WGPUTextureSampleType_Depth 3
 #define WGPUTextureViewDimension_2D 2
+#define WGPUTextureViewDimension_Cube 5
 #define WGPUSType_ShaderSourceWGSL 6
 #define WGPUColorWriteMask_All 15
+#define WGPUBlendFactor_Undefined 0
+#define WGPUBlendFactor_Zero 1
+#define WGPUBlendFactor_One 2
+#define WGPUBlendFactor_Src 3
+#define WGPUBlendFactor_OneMinusSrc 4
+#define WGPUBlendFactor_SrcAlpha 5
+#define WGPUBlendFactor_OneMinusSrcAlpha 6
+#define WGPUBlendFactor_Dst 7
+#define WGPUBlendFactor_OneMinusDst 8
+#define WGPUBlendFactor_DstAlpha 9
+#define WGPUBlendFactor_OneMinusDstAlpha 10
+#define WGPUBlendOperation_Undefined 0
+#define WGPUBlendOperation_Add 1
+#define WGPUBlendOperation_Subtract 2
+#define WGPUBlendOperation_ReverseSubtract 3
+#define WGPUBlendOperation_Min 4
+#define WGPUBlendOperation_Max 5
 #define WGPUPrimitiveTopology_TriangleList 4
+#define WGPUFrontFace_CCW 1
+#define WGPUFrontFace_CW 2
+#define WGPUCullMode_None 1
+#define WGPUCullMode_Front 2
+#define WGPUCullMode_Back 3
 #define WGPUVertexStepMode_Vertex 1
 #define WGPUVertexStepMode_Instance 2
 #define WGPUVertexFormat_Undefined 0
@@ -436,10 +467,22 @@ typedef struct WGPUShaderModuleDescriptor {
 typedef struct WGPUColorTargetState {
   void* nextInChain;
   WGPUTextureFormat format;
-  const void* blend;
+  const struct WGPUBlendState* blend;
   WGPUColorWriteMask writeMask;
 } WGPUColorTargetState;
 #define WGPU_COLOR_TARGET_STATE_INIT                                                               \
+  {                                                                                                \
+  }
+typedef struct WGPUBlendComponent {
+  WGPUBlendOperation operation;
+  WGPUBlendFactor srcFactor;
+  WGPUBlendFactor dstFactor;
+} WGPUBlendComponent;
+typedef struct WGPUBlendState {
+  WGPUBlendComponent color;
+  WGPUBlendComponent alpha;
+} WGPUBlendState;
+#define WGPU_BLEND_STATE_INIT                                                                      \
   {                                                                                                \
   }
 typedef struct WGPUVertexAttribute {
@@ -500,8 +543,8 @@ typedef struct WGPUPrimitiveState {
   void* nextInChain;
   WGPUPrimitiveTopology topology;
   unsigned int stripIndexFormat;
-  unsigned int frontFace;
-  unsigned int cullMode;
+  WGPUFrontFace frontFace;
+  WGPUCullMode cullMode;
   WGPUBool unclippedDepth;
 } WGPUPrimitiveState;
 typedef struct WGPUMultisampleState {
@@ -660,6 +703,8 @@ typedef void (*WGPURequestDeviceCallback)(WGPURequestDeviceStatus, WGPUDevice, W
                                           void*, void*);
 typedef void (*WGPUDeviceLostCallback)(const WGPUDevice*, WGPUDeviceLostReason, WGPUStringView,
                                        void*, void*);
+typedef void (*WGPUUncapturedErrorCallback)(const WGPUDevice*, WGPUErrorType, WGPUStringView, void*,
+                                            void*);
 typedef void (*WGPUBufferMapCallback)(WGPUMapAsyncStatus, WGPUStringView, void*, void*);
 
 typedef struct WGPURequestAdapterCallbackInfo {
@@ -686,6 +731,13 @@ typedef struct WGPUDeviceLostCallbackInfo {
   void* userdata2;
 } WGPUDeviceLostCallbackInfo;
 
+typedef struct WGPUUncapturedErrorCallbackInfo {
+  void* nextInChain;
+  WGPUUncapturedErrorCallback callback;
+  void* userdata1;
+  void* userdata2;
+} WGPUUncapturedErrorCallbackInfo;
+
 typedef struct WGPUDeviceDescriptor {
   void* nextInChain;
   WGPUStringView label;
@@ -694,7 +746,7 @@ typedef struct WGPUDeviceDescriptor {
   const WGPULimits* requiredLimits;
   char defaultQueue[32];
   WGPUDeviceLostCallbackInfo deviceLostCallbackInfo;
-  char uncapturedErrorCallbackInfo[40];
+  WGPUUncapturedErrorCallbackInfo uncapturedErrorCallbackInfo;
 } WGPUDeviceDescriptor;
 #define WGPU_DEVICE_DESCRIPTOR_INIT                                                                \
   {                                                                                                \

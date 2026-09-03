@@ -45,10 +45,13 @@ std::vector<std::byte> build_archive(bool include_resources = true) {
                            .features = {},
                            .shaders = {{.stage = package_shader_stage::vertex,
                                         .entry_point = "main",
-                                        .spirv = {spirv.begin(), spirv.end()}},
+                                        .spirv = {spirv.begin(), spirv.end()},
+                                        .wgsl = "@vertex fn main() -> @builtin(position) vec4f { "
+                                                "return vec4f(); }"},
                                        {.stage = package_shader_stage::fragment,
                                         .entry_point = "main",
-                                        .spirv = {spirv.begin(), spirv.end()}}},
+                                        .spirv = {spirv.begin(), spirv.end()},
+                                        .wgsl = "@fragment fn main() {}"}},
                            .pipeline = {}});
   material_package package;
   REQUIRE(material_package::build(std::move(desc), package) == package_error::none);

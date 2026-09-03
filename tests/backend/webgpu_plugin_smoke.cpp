@@ -113,12 +113,16 @@ int main(int argc, char** argv) {
                        GRANIT_BACKEND_PLUGIN_TEXTURE_USAGE_COPY_DST_BIT;
   texture_desc.format = GRANIT_BACKEND_PLUGIN_TEXTURE_FORMAT_RGBA8_UNORM;
   texture_desc.mip_level_count = 1;
+  texture_desc.dimension = GRANIT_BACKEND_PLUGIN_TEXTURE_DIMENSION_2D;
+  texture_desc.array_layer_count = 1;
   const granit_backend_plugin_texture_view_desc texture_view_desc{
       sizeof(granit_backend_plugin_texture_view_desc),
       GRANIT_BACKEND_PLUGIN_TEXTURE_FORMAT_RGBA8_UNORM,
       0,
       1,
-      {0, 0}};
+      GRANIT_BACKEND_PLUGIN_TEXTURE_DIMENSION_2D,
+      0,
+      1};
   granit_backend_plugin_texture texture{};
   granit_backend_plugin_texture_view view{};
   granit_backend_plugin_sampler_desc sampler_desc{};
@@ -198,7 +202,23 @@ int main(int argc, char** argv) {
       0,
       0,
       0,
-      GRANIT_BACKEND_PLUGIN_COMPARE_OPERATION_ALWAYS};
+      GRANIT_BACKEND_PLUGIN_COMPARE_OPERATION_ALWAYS,
+      0,
+      0.0F,
+      0.0F,
+      0,
+      GRANIT_BACKEND_PLUGIN_BLEND_FACTOR_ONE,
+      GRANIT_BACKEND_PLUGIN_BLEND_FACTOR_ZERO,
+      GRANIT_BACKEND_PLUGIN_BLEND_OPERATION_ADD,
+      GRANIT_BACKEND_PLUGIN_BLEND_FACTOR_ONE,
+      GRANIT_BACKEND_PLUGIN_BLEND_FACTOR_ZERO,
+      GRANIT_BACKEND_PLUGIN_BLEND_OPERATION_ADD,
+      GRANIT_BACKEND_PLUGIN_COLOR_WRITE_ALL_BITS,
+      GRANIT_BACKEND_PLUGIN_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
+      GRANIT_BACKEND_PLUGIN_FRONT_FACE_COUNTER_CLOCKWISE,
+      GRANIT_BACKEND_PLUGIN_CULL_MODE_NONE,
+      GRANIT_BACKEND_PLUGIN_POLYGON_MODE_FILL,
+      1};
   if (loader.create_render_pipeline(instance, &pipeline_desc, &pipeline) != GRANIT_SUCCESS ||
       pipeline == 0) {
     std::fprintf(stderr, "WebGPU 绑定或 Render Pipeline 生命周期验证失败\n");

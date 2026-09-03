@@ -48,6 +48,13 @@ std::vector<std::uint32_t> load_shader(std::string_view name) {
   return words;
 }
 
+std::string load_shader_text(std::string_view name) {
+  const auto directory = name.starts_with("tone_mapping") ? GRANIT_PIPELINE_SHADER_DIR
+                                                           : GRANIT_PBR_SHADER_DIR;
+  std::ifstream stream{std::string{directory} + "/" + std::string{name}, std::ios::binary};
+  return {std::istreambuf_iterator<char>{stream}, {}};
+}
+
 } // namespace
 
 TEST_CASE("两个View执行独立PBR与Tone Mapping") {
@@ -94,6 +101,8 @@ TEST_CASE("两个View执行独立PBR与Tone Mapping") {
 
   const auto vertex = load_shader("pbr_lights.vert.spv");
   const auto fragment = load_shader("pbr_lights_untextured.frag.spv");
+  const auto vertex_wgsl = load_shader_text("pbr_lights.vert.wgsl");
+  const auto fragment_wgsl = load_shader_text("pbr_lights_untextured.frag.wgsl");
   REQUIRE_FALSE(vertex.empty());
   REQUIRE_FALSE(fragment.empty());
   std::array<granit::material::material_package, 2> packages;
@@ -105,7 +114,8 @@ TEST_CASE("两个View执行独立PBR与Tone Mapping") {
   granit::bind_group_layout object_layout;
   REQUIRE(object_layout.initialize(renderer.native_handle(), {}) == granit::result::success);
   for (std::size_t index = 0; index < materials.size(); ++index) {
-    REQUIRE(granit::examples::build_pbr_package(packages[index], vertex, fragment));
+    REQUIRE(granit::examples::build_pbr_package(packages[index], vertex, vertex_wgsl, fragment,
+                                                fragment_wgsl));
     const std::array layouts{object_layout.native_handle(), lights[index].layout()};
     REQUIRE(materials[index].initialize(renderer.native_handle(), packages[index], layouts) ==
             GRANIT_SUCCESS);

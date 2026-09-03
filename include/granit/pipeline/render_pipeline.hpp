@@ -42,6 +42,12 @@ public:
   [[nodiscard]] result render(const granit_render_pipeline_render_desc& desc) noexcept {
     return from_native(granit_render_pipeline_render(renderer_, handle_, &desc));
   }
+  [[nodiscard]] result enable_metrics() noexcept {
+    return from_native(granit_render_pipeline_metrics_enable(renderer_, handle_));
+  }
+  [[nodiscard]] result get_metrics(granit_render_pipeline_metrics& metrics) const noexcept {
+    return from_native(granit_render_pipeline_get_metrics(renderer_, handle_, &metrics));
+  }
   [[nodiscard]] result reset() noexcept {
     if (!valid())
       return result::success;

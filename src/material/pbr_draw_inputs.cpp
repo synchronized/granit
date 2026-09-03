@@ -38,14 +38,14 @@ pbr_draw_input_error pack_pbr_draw_inputs(const pbr_view_input& view,
     return pbr_draw_input_error::negative_light_radiance;
 
   const auto inverse_length = 1.0F / std::sqrt(length_squared);
-  frame_constants = {
-      .view_projection = view.view_projection,
-      .camera_position = {view.camera_position.x, view.camera_position.y, view.camera_position.z,
-                          0.0F},
-      .direction_to_light = {light.direction_to_light.x * inverse_length,
-                             light.direction_to_light.y * inverse_length,
-                             light.direction_to_light.z * inverse_length, 0.0F},
-      .light_radiance = {light.radiance.x, light.radiance.y, light.radiance.z, 0.0F}};
+  frame_constants = {.view_projection = view.view_projection,
+                     .camera_position = {view.camera_position.x, view.camera_position.y,
+                                         view.camera_position.z, 0.0F},
+                     .direction_to_light = {light.direction_to_light.x * inverse_length,
+                                            light.direction_to_light.y * inverse_length,
+                                            light.direction_to_light.z * inverse_length, 0.0F},
+                     .light_radiance = {light.radiance.x, light.radiance.y, light.radiance.z, 0.0F},
+                     .render_options = {0, 0, 0, 0}};
   object_constants = {.model = object.model,
                       .normal_matrix = object.normal_matrix,
                       .object_id = {object.object_id, 0, 0, 0}};

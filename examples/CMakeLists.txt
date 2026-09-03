@@ -1,6 +1,13 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2026 Granit contributors
 
+if(GRANIT_BUILD_MODEL_VIEWER_EXAMPLE)
+  add_subdirectory(common/gltf)
+  add_subdirectory(common/model_viewer)
+  add_subdirectory(platform/desktop)
+  add_subdirectory(platform/web)
+endif()
+
 add_executable(granit_version_example version.cpp)
 target_link_libraries(granit_version_example PRIVATE granit::granit)
 granit_target_compile_warnings(granit_version_example)
@@ -70,7 +77,9 @@ add_custom_command(
     granit_material_tool
     "${CMAKE_CURRENT_SOURCE_DIR}/assets/render_pipeline_untextured.grmat.json"
     "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/pbr_shadow_ibl_lights.vert.spv"
+    "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/pbr_shadow_ibl_lights.vert.wgsl"
     "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/pbr_shadow_ibl_lights_untextured.frag.spv"
+    "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/pbr_shadow_ibl_lights_untextured.frag.wgsl"
   VERBATIM
 )
 add_executable(granit_render_pipeline_offscreen_example render_pipeline_offscreen.cpp)

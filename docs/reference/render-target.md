@@ -23,6 +23,13 @@ color.clear_value.green = 0.2f;
 color.clear_value.blue = 0.3f;
 ```
 
+需要解析多采样颜色附件时，在同一描述中提供单采样目标：
+
+```c
+color.view = multisampled_color_view;
+color.resolve_view = resolved_color_view;
+```
+
 深度/模板附件默认清除深度为 `1.0` 并保存深度；模板默认 discard：
 
 ```c
@@ -31,8 +38,8 @@ granit_depth_stencil_attachment_desc depth =
 depth.view = depth_view;
 ```
 
-两个描述的第一版 ABI 大小均为 48 字节。调用者必须使用初始化宏或正确填写 `struct_size`，
-保留字段必须为零。
+调用者必须使用当前初始化宏或正确填写完整 `struct_size`，保留字段必须为零。颜色附件的
+`resolve_view` 是当前描述的一部分；项目尚未发布，不保留缺少该字段的旧尺寸分支。
 
 ## Load 与 Store
 
@@ -69,7 +76,8 @@ Store 支持：
 - NaN 或无穷清除值。
 - 小于 `0` 或大于 `1` 的深度清除值。
 
-View 的 Renderer domain、格式、Texture usage、尺寸、样本数和附件间一致性需要访问 Registry，
-将在 F-02 的命令入口校验。
+命令入口还会校验 View 的 Renderer domain、格式、Texture usage、尺寸和样本数。非空
+`resolve_view` 要求源颜色附件为多采样、解析目标为单采样，且二者格式和尺寸相同；解析目标也必须
+具有颜色附件用途。当前后端统一支持平均解析模式，公开描述暂不允许选择其他解析模式。
 
 详细设计见 [R-09 计划](../plans/R-09-render-target-attachment.md)。

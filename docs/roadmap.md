@@ -203,7 +203,7 @@
 
 ## 十一、跨后端模型查看器
 
-**状态：S-12 已完成，S-13 待开始。**
+**状态：S-12、S-13、S-13H、S-13I 已完成。**
 
 - **[S-12](plans/S-12-webgpu-feature-parity.md) / P1**：补齐公共后端选择，以及模型绘制需要的
   Vertex/Index Buffer、Texture、Sampler、Bind Group、动态 Uniform、Indexed Draw 和上传能力；
@@ -211,15 +211,18 @@
 - **[S-13](plans/S-13-cross-backend-model-viewer.md) / P1**：增加编辑器式模型查看器；glTF 加载器
   首阶段只放在 `examples/common/gltf`，以许可适合再分发的头盔模型验证 PBR、轨道相机、ImGui
   和三个运行目标。
+- **[S-13H](plans/S-13H-model-viewer-environment-lighting.md) / P1**：复用已有 Group 3 IBL 布局，
+  为模型查看器接入许可明确、离线预处理的摄影棚环境光，并恢复金属材质的环境反射。
+- **[S-13I](plans/S-13I-render-quality.md) / P1**：统一 MSAA、FXAA、Specular AA、Mipmap 与各向异性
+  过滤的能力查询、公开质量选项、查看器控制和三后端组合验收。
 - **S-14 / P2 / 条件性**：仅当至少两个非示例 Consumer 需要复用，且 S-13 已验证 CPU 数据模型后，
   再将示例加载器提升为可安装的 `granit::integration_gltf`；此前不承诺公共 glTF SDK。
 
 ## 近期执行顺序
 
-1. S-12 已完成；下一步实施 S-13A/S-13B 的资产、示例加载器和三端模型查看器。
-2. S-14 只在复用条件成立后启动；不要为当前单个示例提前稳定 glTF 公共 API。
-3. S-06D 最终验收等待稳定版本与 component 范围决策；不在 0.x 阶段提前宣布稳定。
-4. H-09 的透明 PBR、CSM、Clustered Forward 与 Bindless 只在各自重新评估条件满足后独立恢复，
+1. S-14 只在复用条件成立后启动；不要为当前单个示例提前稳定 glTF 公共 API。
+2. S-06D 最终验收等待稳定版本与 component 范围决策；不在 0.x 阶段提前宣布稳定。
+3. H-09 的透明 PBR、CSM、Clustered Forward 与 Bindless 只在各自重新评估条件满足后独立恢复，
    不作为当前稳定化工作的前置项。
 
 若前置抽象不足，应先更新对应 Plan 和本路线图状态，再扩大公共 API。

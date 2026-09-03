@@ -4,7 +4,7 @@
 #include "renderer/renderer_factory.h"
 
 #include "backend/plugin_api.h"
-#include "renderer/renderer_registry.h"
+#include "backend/webgpu/renderer_factory.h"
 
 extern "C" const granit_backend_plugin_api*
 granit_backend_plugin_query(uint32_t requested_abi) noexcept;
@@ -30,7 +30,7 @@ granit_result create_default_renderer(const granit_renderer_desc& desc, granit_r
       desc.struct_size >= GRANIT_RENDERER_DESC_VERSION_4_SIZE ? desc.diagnostic_callback : nullptr;
   auto* diagnostic_user_data =
       desc.struct_size >= GRANIT_RENDERER_DESC_VERSION_4_SIZE ? desc.diagnostic_user_data : nullptr;
-  return renderer_registry::instance().create_webgpu_static(
+  return create_webgpu_renderer_static(
       granit_backend_plugin_query(GRANIT_BACKEND_PLUGIN_ABI_VERSION), surface_types,
       diagnostic_callback, diagnostic_user_data, renderer);
 }
