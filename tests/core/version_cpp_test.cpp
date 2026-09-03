@@ -5,6 +5,8 @@
 
 #include <catch2/catch_all.hpp>
 
+#include <type_traits>
+
 TEST_CASE("C++ 包装返回编译期版本", "[version]") {
   const auto version = granit::library_version();
 
@@ -15,6 +17,11 @@ TEST_CASE("C++ 包装返回编译期版本", "[version]") {
 
 TEST_CASE("结果码保持定宽 C ABI", "[result]") {
   STATIC_CHECK(sizeof(granit::result) == sizeof(std::int32_t));
+  STATIC_CHECK(std::is_trivially_copyable_v<granit::result>);
+  STATIC_CHECK(std::is_standard_layout_v<granit::result>);
+  STATIC_CHECK_FALSE(std::is_convertible_v<granit::result, bool>);
+  STATIC_CHECK_FALSE(std::is_convertible_v<granit::result, granit_result>);
+  STATIC_CHECK(std::is_constructible_v<granit::result, granit_result>);
   STATIC_CHECK(granit::result::success.ok());
   STATIC_CHECK(granit::result::invalid_argument.failed());
   STATIC_CHECK(static_cast<bool>(granit::result::success));
