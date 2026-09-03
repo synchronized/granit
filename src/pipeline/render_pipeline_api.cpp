@@ -165,6 +165,9 @@ granit_result record_tone_mapping(granit::lighting::tone_mapping_pipeline_resour
                                   granit_texture_format output_format, uint32_t width,
                                   uint32_t height,
                                   const granit::lighting::tone_mapping_constants& constants) {
+  auto sampling_constants = constants;
+  sampling_constants.inverse_width = 1.0F / static_cast<float>(width);
+  sampling_constants.inverse_height = 1.0F / static_cast<float>(height);
   if (!pipeline.initialized()) {
     const auto initialize =
         pipeline.initialize(renderer, static_cast<granit::texture_format>(output_format),
@@ -175,7 +178,7 @@ granit_result record_tone_mapping(granit::lighting::tone_mapping_pipeline_resour
       return initialize;
   }
   granit::lighting::tone_mapping_binding_resources binding;
-  auto result = binding.initialize(pipeline, hdr_view, constants);
+  auto result = binding.initialize(pipeline, hdr_view, sampling_constants);
   if (result == GRANIT_SUCCESS) {
     result =
         granit_command_recorder_bind_graphics_pipeline(renderer, recorder, pipeline.pipeline());

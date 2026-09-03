@@ -15,7 +15,9 @@ std::span<const std::byte> bytes(const tone_mapping_constants& value) noexcept {
 
 bool valid(const tone_mapping_constants& value) noexcept {
   return std::isfinite(value.exposure_scale) && value.exposure_scale > 0.0F &&
-         value.encode_srgb <= 1;
+         value.encode_srgb <= 1 && std::isfinite(value.inverse_width) &&
+         std::isfinite(value.inverse_height) && value.inverse_width >= 0.0F &&
+         value.inverse_height >= 0.0F;
 }
 
 bool compatible_output(granit::texture_format format,

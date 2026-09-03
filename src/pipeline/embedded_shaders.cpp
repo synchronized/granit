@@ -20,7 +20,8 @@ constexpr std::string_view tone_mapping_wgsl_source = R"(
 struct ToneMappingConstants {
   exposure_scale: f32,
   encode_srgb: u32,
-  reserved_values: vec2<u32>,
+  inverse_width: f32,
+  inverse_height: f32,
 };
 
 struct VertexOutput {
@@ -58,8 +59,22 @@ fn linear_to_srgb(input: vec3<f32>) -> vec3<f32> {
 
 @fragment
 fn fragment_main(input: VertexOutput) -> @location(0) vec4<f32> {
-  var color = aces_fitted(textureSample(hdr_color, hdr_sampler, input.uv).rgb *
-                          tone.exposure_scale);
+  let texel = vec2<f32>(tone.inverse_width, tone.inverse_height);
+  let center = textureSample(hdr_color, hdr_sampler, input.uv).rgb;
+  let north = textureSample(hdr_color, hdr_sampler, input.uv + vec2<f32>(0.0, -texel.y)).rgb;
+  let south = textureSample(hdr_color, hdr_sampler, input.uv + vec2<f32>(0.0, texel.y)).rgb;
+  let west = textureSample(hdr_color, hdr_sampler, input.uv + vec2<f32>(-texel.x, 0.0)).rgb;
+  let east = textureSample(hdr_color, hdr_sampler, input.uv + vec2<f32>(texel.x, 0.0)).rgb;
+  let luma = vec3<f32>(0.299, 0.587, 0.114);
+  let center_luma = dot(center, luma);
+  let minimum_luma = min(center_luma, min(min(dot(north, luma), dot(south, luma)),
+                                           min(dot(west, luma), dot(east, luma))));
+  let maximum_luma = max(center_luma, max(max(dot(north, luma), dot(south, luma)),
+                                           max(dot(west, luma), dot(east, luma))));
+  let contrast = maximum_luma - minimum_luma;
+  let filtered = (north + south + west + east) * 0.25;
+  let blend = select(0.0, 0.5, contrast >= max(0.0312, maximum_luma * 0.125));
+  var color = aces_fitted(mix(center, filtered, blend) * tone.exposure_scale);
   if (tone.encode_srgb != 0u) {
     color = linear_to_srgb(color);
   }

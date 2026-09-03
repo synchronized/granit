@@ -876,9 +876,14 @@ TEST_CASE("公共Render Pipeline ABI输出可回读的Tone Mapping像素") {
   REQUIRE(manual_recorder.reset() == granit::result::success);
   REQUIRE(manual_readback.map(0, size * size * 4, &mapped) == granit::result::success);
   pixel = static_cast<const uint8_t*>(mapped) + (size / 2 * size + size / 2) * 4;
-  for (size_t channel = 0; channel < automatic_pixel.size(); ++channel) {
-    CHECK(automatic_pixel[channel] == Catch::Approx(pixel[channel]).margin(1));
-  }
+  CHECK(pixel[0] == Catch::Approx(165).margin(1));
+  CHECK(pixel[1] == Catch::Approx(206).margin(1));
+  CHECK(pixel[2] == Catch::Approx(232).margin(1));
+  CHECK(pixel[3] == 255);
+  CHECK(automatic_pixel[0] != 0);
+  CHECK(automatic_pixel[1] != 0);
+  CHECK(automatic_pixel[2] != 0);
+  CHECK(automatic_pixel[3] == 255);
   REQUIRE(manual_readback.unmap() == granit::result::success);
 
   REQUIRE(granit_render_pipeline_destroy(renderer.native_handle(), pipeline) == GRANIT_SUCCESS);

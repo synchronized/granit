@@ -15,7 +15,8 @@ namespace granit::lighting {
 struct alignas(16) tone_mapping_constants {
   float exposure_scale = 1.0F;
   std::uint32_t encode_srgb = 0;
-  std::uint32_t reserved[2]{};
+  float inverse_width{};
+  float inverse_height{};
 };
 
 static_assert(sizeof(tone_mapping_constants) == 16);
