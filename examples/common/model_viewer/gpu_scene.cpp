@@ -406,9 +406,10 @@ gpu_scene& gpu_scene::operator=(gpu_scene&& other) noexcept {
   return *this;
 }
 
-granit::result gpu_scene::initialize(granit_renderer renderer, const gltf::scene& source) {
+granit::result gpu_scene::initialize(granit_renderer renderer, const gltf::scene& source,
+                                     float sampler_anisotropy) {
   gpu_scene candidate;
-  const auto result = candidate.create(renderer, source);
+  const auto result = candidate.create(renderer, source, sampler_anisotropy);
   if (granit::failed(result))
     return result;
   *this = std::move(candidate);
@@ -538,9 +539,12 @@ granit::result gpu_scene::update_debug_display(std::uint32_t mode) noexcept {
   return granit::result::success;
 }
 
-granit::result gpu_scene::create(granit_renderer renderer, const gltf::scene& source) {
+granit::result gpu_scene::create(granit_renderer renderer, const gltf::scene& source,
+                                 float sampler_anisotropy) {
   if (renderer == GRANIT_NULL_HANDLE)
     return granit::result::invalid_handle;
+  if (!std::isfinite(sampler_anisotropy) || sampler_anisotropy < 1.0F)
+    return granit::result::invalid_argument;
   const auto plan_result = build_gpu_scene_plan(source, plan_);
   if (plan_result != gpu_scene_plan_error::none)
     return plan_result == gpu_scene_plan_error::out_of_memory ? granit::result::out_of_memory
@@ -641,8 +645,9 @@ granit::result gpu_scene::create(granit_renderer renderer, const gltf::scene& so
                                     .address_u = key.address_u,
                                     .address_v = key.address_v,
                                     .address_w = granit::address_mode::repeat,
-                                    .anisotropy_enabled = use_anisotropy,
-                                    .max_anisotropy = use_anisotropy ? 8.0F : 1.0F,
+                                    .anisotropy_enabled =
+                                        use_anisotropy && sampler_anisotropy > 1.0F,
+                                    .max_anisotropy = use_anisotropy ? sampler_anisotropy : 1.0F,
                                     .max_lod = 1000.0F};
     auto result = samplers_.back().initialize(renderer, desc);
     // 各向异性是画质增强项；设备限制较低时保留三线性采样，不阻止场景加载。

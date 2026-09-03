@@ -81,10 +81,11 @@ granit::result application_core::accept_scene(gltf::scene scene) {
 }
 
 granit::result application_core::upload(granit_renderer renderer,
-                                        std::span<const std::byte> environment_bytes) {
+                                        std::span<const std::byte> environment_bytes,
+                                        float sampler_anisotropy) {
   if (phase_ != application_phase::gpu_upload)
     return granit::result::invalid_argument;
-  const auto result = gpu_scene_.initialize(renderer, cpu_scene_);
+  const auto result = gpu_scene_.initialize(renderer, cpu_scene_, sampler_anisotropy);
   if (granit::failed(result)) {
     fail(result, "模型查看器 GPU Scene 上传失败");
     return result;
@@ -108,6 +109,13 @@ granit::result application_core::upload(granit_renderer renderer,
   }
   phase_ = application_phase::ready;
   return granit::result::success;
+}
+
+granit::result application_core::reupload_scene(granit_renderer renderer,
+                                                float sampler_anisotropy) {
+  if (phase_ != application_phase::ready)
+    return granit::result::invalid_argument;
+  return gpu_scene_.initialize(renderer, cpu_scene_, sampler_anisotropy);
 }
 
 granit::result application_core::tick(const application_tick_input& input,
@@ -148,14 +156,14 @@ granit::result application_core::tick(const application_tick_input& input,
                                .viewport_height = static_cast<float>(input.height),
                                .layer_mask = std::numeric_limits<std::uint64_t>::max()};
   const auto& light_state = state_.directional_light();
-  const auto camera_forward = math::normalize(math::subtract(state_.camera().target(),
-                                                              matrices.position));
+  const auto camera_forward =
+      math::normalize(math::subtract(state_.camera().target(), matrices.position));
   const auto camera_right = math::normalize(math::cross(camera_forward, {0.0F, 1.0F, 0.0F}));
   const auto camera_up = math::cross(camera_right, camera_forward);
-  const auto light_direction = math::normalize(math::add(
-      math::add(math::multiply(camera_right, light_state.direction.x),
-                math::multiply(camera_up, light_state.direction.y)),
-      math::multiply(camera_forward, light_state.direction.z)));
+  const auto light_direction =
+      math::normalize(math::add(math::add(math::multiply(camera_right, light_state.direction.x),
+                                          math::multiply(camera_up, light_state.direction.y)),
+                                math::multiply(camera_forward, light_state.direction.z)));
   const granit_scene_directional_light light{
       .direction_to_light = {-light_direction.x, -light_direction.y, -light_direction.z},
       .radiance = light_state.radiance,

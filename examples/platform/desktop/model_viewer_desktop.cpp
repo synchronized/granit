@@ -299,6 +299,13 @@ int main(int argc, char** argv) {
   granit::renderer_limits renderer_limits;
   if (granit::succeeded(result))
     result = renderer.get_limits(renderer_limits);
+  render_quality_config render_quality{
+      .sample_count = renderer_limits.supports_sample_count(granit::sample_count::four)
+                          ? GRANIT_SAMPLE_COUNT_4
+                          : GRANIT_SAMPLE_COUNT_1,
+      .enable_fxaa = true,
+      .enable_specular_aa = true,
+      .sampler_anisotropy = renderer_limits.max_sampler_anisotropy >= 8.0F ? 8.0F : 1.0F};
   if (granit::succeeded(result))
     result = core.renderer_ready();
 
@@ -346,14 +353,8 @@ int main(int argc, char** argv) {
     result = granit::result::invalid_argument;
   }
   if (granit::succeeded(result))
-    result = core.upload(renderer.native_handle(), environment_bytes);
-  render_quality_config render_quality{
-      .sample_count = renderer_limits.supports_sample_count(granit::sample_count::four)
-                          ? GRANIT_SAMPLE_COUNT_4
-                          : GRANIT_SAMPLE_COUNT_1,
-      .enable_fxaa = true,
-      .enable_specular_aa = true,
-      .sampler_anisotropy = renderer_limits.max_sampler_anisotropy >= 8.0F ? 8.0F : 1.0F};
+    result =
+        core.upload(renderer.native_handle(), environment_bytes, render_quality.sampler_anisotropy);
   granit_render_pipeline_desc pipeline_desc = GRANIT_RENDER_PIPELINE_DESC_INIT;
   pipeline_desc.sample_count = render_quality.sample_count;
   pipeline_desc.enable_fxaa = render_quality.enable_fxaa;
@@ -399,16 +400,24 @@ int main(int argc, char** argv) {
       previews.push_back({reference.image, reference.sampler, srgb, texture});
     return preview_result;
   };
-  if (granit::succeeded(result) && options.show_ui) {
+  const auto rebuild_previews = [&]() {
+    for (const auto& preview : previews)
+      static_cast<void>(textures.unregister_texture(preview.texture));
+    previews.clear();
     for (const auto& material : core.cpu_scene().materials) {
-      if (granit::failed(result = register_preview(material.base_color_texture, true)) ||
-          granit::failed(result = register_preview(material.emissive_texture, true)) ||
-          granit::failed(result = register_preview(material.metallic_roughness_texture, false)) ||
-          granit::failed(result = register_preview(material.normal_texture, false)) ||
-          granit::failed(result = register_preview(material.occlusion_texture, false)))
-        break;
+      granit::result preview_result;
+      if (granit::failed(preview_result = register_preview(material.base_color_texture, true)) ||
+          granit::failed(preview_result = register_preview(material.emissive_texture, true)) ||
+          granit::failed(preview_result =
+                             register_preview(material.metallic_roughness_texture, false)) ||
+          granit::failed(preview_result = register_preview(material.normal_texture, false)) ||
+          granit::failed(preview_result = register_preview(material.occlusion_texture, false)))
+        return preview_result;
     }
-  }
+    return granit::result::success;
+  };
+  if (granit::succeeded(result) && options.show_ui)
+    result = rebuild_previews();
 
   if (granit::failed(result)) {
     std::cerr << "模型查看器初始化失败：" << granit::result_message(result);
@@ -528,6 +537,12 @@ int main(int argc, char** argv) {
           replacement_metrics_enabled = true;
         else if (metrics_result != granit::result::unsupported)
           result = metrics_result;
+      }
+      if (granit::succeeded(result) &&
+          changes.quality->sampler_anisotropy != render_quality.sampler_anisotropy) {
+        result = core.reupload_scene(renderer.native_handle(), changes.quality->sampler_anisotropy);
+        if (granit::succeeded(result) && options.show_ui)
+          result = rebuild_previews();
       }
       if (granit::succeeded(result)) {
         pipeline = std::move(replacement);

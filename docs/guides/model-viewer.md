@@ -130,8 +130,9 @@ Linux 的插件文件通常为 `libgranit_backend_webgpu.so`。省略 `--backend
 
 查看器支持右键环绕、中键平移、滚轮缩放、`F` 聚焦选择和 `Home` 恢复视图。窗口标题显示实际
 后端与 Adapter；Renderer、场景、材质、灯光和性能信息位于 ImGui 面板。Renderer 面板允许在
-运行时切换 1×/4× MSAA、FXAA 和 Specular AA；修改会事务式创建新 Render Pipeline，失败时
-保留原配置。面板同时显示设备支持的 MSAA 回退结果和当前 Sampler 各向异性倍率。
+运行时切换 1×/4× MSAA、FXAA、Specular AA 和 1×～16× 各向异性；超过设备上限的倍率不会
+生效。管线选项会事务式创建新 Render Pipeline，各向异性变化会事务式重建 GPU Scene 中的
+Sampler 和材质绑定；创建失败时保留原配置。
 
 `--smoke-test` 与 `--profile-output` 用途不同，不能同时使用。
 

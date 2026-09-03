@@ -175,6 +175,10 @@ TEST_CASE("GPU Scene 事务式创建合并 Buffer 与 Mesh", "[example][model-vi
   CHECK(scene.draw_bindings().front().material == scene.materials().front().native_handle());
   REQUIRE(scene.renderables().size() == 1);
   CHECK(scene.renderables().front().payload == scene.draw_bindings().front().payload);
+  const auto original_mesh = scene.meshes().front().native_handle();
+  CHECK(scene.initialize(renderer.native_handle(), source, 0.0F) ==
+        granit::result::invalid_argument);
+  CHECK(scene.meshes().front().native_handle() == original_mesh);
 
   const granit::example::model_viewer::material_factor_edit edit{
       .base_color = {0.2F, 0.3F, 0.4F, 1.0F},

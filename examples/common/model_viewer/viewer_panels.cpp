@@ -200,10 +200,21 @@ void draw_renderer_panel(const renderer_panel_info& info, const render_quality_c
     ImGui::TextDisabled("4x MSAA unsupported; using 1x");
   ImGui::Checkbox("FXAA", &edited.enable_fxaa);
   ImGui::Checkbox("Specular AA", &edited.enable_specular_aa);
-  ImGui::Text("Anisotropy: %.0fx / device %.0fx", quality.sampler_anisotropy,
-              info.max_sampler_anisotropy);
+  constexpr std::array anisotropy_values{1.0F, 2.0F, 4.0F, 8.0F, 16.0F};
+  constexpr std::array anisotropy_labels{"1x", "2x", "4x", "8x", "16x"};
+  const auto selected_anisotropy = std::ranges::find(anisotropy_values, quality.sampler_anisotropy);
+  int anisotropy_index = selected_anisotropy == anisotropy_values.end()
+                             ? 0
+                             : static_cast<int>(selected_anisotropy - anisotropy_values.begin());
+  if (ImGui::Combo("Anisotropy", &anisotropy_index, anisotropy_labels.data(),
+                   static_cast<int>(anisotropy_labels.size())) &&
+      anisotropy_values[anisotropy_index] <= info.max_sampler_anisotropy) {
+    edited.sampler_anisotropy = anisotropy_values[anisotropy_index];
+  }
+  ImGui::Text("Device limit: %.0fx", info.max_sampler_anisotropy);
   if (edited.sample_count != quality.sample_count || edited.enable_fxaa != quality.enable_fxaa ||
-      edited.enable_specular_aa != quality.enable_specular_aa)
+      edited.enable_specular_aa != quality.enable_specular_aa ||
+      edited.sampler_anisotropy != quality.sampler_anisotropy)
     changes.quality = edited;
 }
 
