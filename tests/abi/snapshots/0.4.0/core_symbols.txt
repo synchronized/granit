@@ -48,6 +48,7 @@ granit_frame_context_create
 granit_frame_context_destroy
 granit_frame_context_submit
 granit_frame_get_info
+granit_frame_get_slot_info
 granit_graphics_pipeline_create
 granit_graphics_pipeline_destroy
 granit_pipeline_layout_create
