@@ -149,14 +149,14 @@ public:
   [[nodiscard]] result get_info(renderer_info& info) const {
     granit_renderer_info native = GRANIT_RENDERER_INFO_INIT;
     auto query_result = from_native(granit_renderer_get_info(handle_, &native));
-    if (failed(query_result))
+    if (query_result.failed())
       return query_result;
     std::string adapter(native.adapter_name_length, '\0');
     if (!adapter.empty()) {
       native.adapter_name = adapter.data();
       native.adapter_name_capacity = static_cast<std::uint32_t>(adapter.size() + 1);
       query_result = from_native(granit_renderer_get_info(handle_, &native));
-      if (failed(query_result))
+      if (query_result.failed())
         return query_result;
     }
     info = {.backend = static_cast<renderer_backend>(native.backend),
@@ -185,7 +185,7 @@ public:
   [[nodiscard]] result get_limits(renderer_limits& limits) const noexcept {
     granit_renderer_limits native = GRANIT_RENDERER_LIMITS_INIT;
     const auto query_result = from_native(granit_renderer_get_limits(handle_, &native));
-    if (failed(query_result)) {
+    if (query_result.failed()) {
       return query_result;
     }
     limits = {
@@ -200,7 +200,7 @@ public:
   [[nodiscard]] result get_status(renderer_status& status) const noexcept {
     granit_renderer_status native = GRANIT_RENDERER_STATUS_INIT;
     const auto query_result = from_native(granit_renderer_get_status(handle_, &native));
-    if (failed(query_result)) {
+    if (query_result.failed()) {
       return query_result;
     }
     status = {.state = static_cast<renderer_state>(native.state),
@@ -211,7 +211,7 @@ public:
   [[nodiscard]] result get_resource_stats(renderer_resource_stats& stats) const noexcept {
     granit_renderer_resource_stats native = GRANIT_RENDERER_RESOURCE_STATS_INIT;
     const auto query_result = from_native(granit_renderer_get_resource_stats(handle_, &native));
-    if (failed(query_result)) {
+    if (query_result.failed()) {
       return query_result;
     }
     stats = {.total_live_count = native.total_live_count,

@@ -35,16 +35,16 @@ granit::result environment_resources::initialize(granit_renderer renderer,
        .width = package.irradiance_resolution,
        .height = package.irradiance_resolution,
        .array_layers = 6});
-  if (granit::succeeded(result)) {
+  if (result.ok()) {
     result = upload_cube_mip(irradiance_texture_, package.irradiance_pixels,
                              package.irradiance_resolution, 0);
   }
-  if (granit::succeeded(result)) {
+  if (result.ok()) {
     result = irradiance_view_.initialize(
         renderer, irradiance_texture_.native_handle(),
         {.dimension = granit::texture_dimension::cube, .array_layer_count = 6});
   }
-  if (granit::succeeded(result)) {
+  if (result.ok()) {
     result = prefiltered_texture_.initialize(
         renderer,
         {.dimension = granit::texture_dimension::cube,
@@ -55,20 +55,20 @@ granit::result environment_resources::initialize(granit_renderer renderer,
          .mip_levels = static_cast<std::uint32_t>(package.prefiltered_mips.size()),
          .array_layers = 6});
   }
-  for (std::size_t mip = 0; granit::succeeded(result) && mip < package.prefiltered_mips.size();
+  for (std::size_t mip = 0; result.ok() && mip < package.prefiltered_mips.size();
        ++mip) {
     result =
         upload_cube_mip(prefiltered_texture_, package.prefiltered_mips[mip].pixels,
                         package.prefiltered_mips[mip].resolution, static_cast<std::uint32_t>(mip));
   }
-  if (granit::succeeded(result)) {
+  if (result.ok()) {
     result = prefiltered_view_.initialize(
         renderer, prefiltered_texture_.native_handle(),
         {.dimension = granit::texture_dimension::cube,
          .mip_level_count = static_cast<std::uint32_t>(package.prefiltered_mips.size()),
          .array_layer_count = 6});
   }
-  if (granit::succeeded(result)) {
+  if (result.ok()) {
     result =
         brdf_texture_.initialize(renderer, {.format = granit::texture_format::rgba16_float,
                                             .usage = granit::texture_usage::sampled |
@@ -76,14 +76,14 @@ granit::result environment_resources::initialize(granit_renderer renderer,
                                             .width = package.brdf_width,
                                             .height = package.brdf_height});
   }
-  if (granit::succeeded(result)) {
+  if (result.ok()) {
     result = brdf_texture_.write(package.brdf_pixels,
                                  {.bytes_per_row = package.brdf_width * rgba16_bytes_per_pixel},
                                  {.width = package.brdf_width, .height = package.brdf_height});
   }
-  if (granit::succeeded(result))
+  if (result.ok())
     result = brdf_view_.initialize(renderer, brdf_texture_.native_handle());
-  if (granit::failed(result)) {
+  if (result.failed()) {
     reset();
     return result;
   }

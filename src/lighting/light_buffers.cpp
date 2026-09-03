@@ -42,24 +42,24 @@ granit_result light_buffers::initialize(granit_renderer renderer, const light_li
        .usage = granit::buffer_usage::uniform | granit::buffer_usage::transfer_destination,
        .location = memory_location},
       bytes(zero_counts));
-  if (granit::succeeded(result)) {
+  if (result.ok()) {
     result = directional_.initialize(
         renderer, {.size = allocation_size<gpu_directional_light>(capacities.directional),
                    .usage = usage,
                    .location = memory_location});
   }
-  if (granit::succeeded(result)) {
+  if (result.ok()) {
     result =
         point_.initialize(renderer, {.size = allocation_size<gpu_point_light>(capacities.point),
                                      .usage = usage,
                                      .location = memory_location});
   }
-  if (granit::succeeded(result)) {
+  if (result.ok()) {
     result = spot_.initialize(renderer, {.size = allocation_size<gpu_spot_light>(capacities.spot),
                                          .usage = usage,
                                          .location = memory_location});
   }
-  if (granit::failed(result)) {
+  if (result.failed()) {
     static_cast<void>(reset());
     return static_cast<granit_result>(result);
   }
@@ -82,12 +82,12 @@ granit_result light_buffers::update(const packed_view_lights& lights) noexcept {
   auto result = granit::result::success;
   if (!lights.directional.empty())
     result = directional_.write(0, bytes(std::span{lights.directional}));
-  if (granit::succeeded(result) && !lights.point.empty())
+  if (result.ok() && !lights.point.empty())
     result = point_.write(0, bytes(std::span{lights.point}));
-  if (granit::succeeded(result) && !lights.spot.empty())
+  if (result.ok() && !lights.spot.empty())
     result = spot_.write(0, bytes(std::span{lights.spot}));
   // 最后公布计数，避免 Shader 在成功更新前读取尚未写完的新数组范围。
-  if (granit::succeeded(result))
+  if (result.ok())
     result = counts_.write(0, bytes(counts));
   return static_cast<granit_result>(result);
 }
@@ -95,7 +95,7 @@ granit_result light_buffers::update(const packed_view_lights& lights) noexcept {
 granit_result light_buffers::reset() noexcept {
   granit_result first = GRANIT_SUCCESS;
   const auto capture = [&](granit::result value) {
-    if (first == GRANIT_SUCCESS && granit::failed(value))
+    if (first == GRANIT_SUCCESS && value.failed())
       first = static_cast<granit_result>(value);
   };
   capture(spot_.reset());

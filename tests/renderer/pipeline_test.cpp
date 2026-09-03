@@ -1371,43 +1371,43 @@ TEST_CASE("Graphics 与 Compute 工作负载支持并行录制", "[pipeline][com
     workers.emplace_back([&, index] {
       start.arrive_and_wait();
       auto worker_result = recorders[index].initialize(renderer.native_handle());
-      if (granit::succeeded(worker_result))
+      if (worker_result.ok())
         worker_result = recorders[index].begin();
       if (index < graphics_count) {
-        if (granit::succeeded(worker_result))
+        if (worker_result.ok())
           worker_result =
               recorders[index].bind_graphics_pipeline(graphics_pipeline.native_handle());
         const granit::viewport viewport{0, 0, 32, 32, 0, 1};
         const granit::scissor scissor{0, 0, 32, 32};
-        if (granit::succeeded(worker_result))
+        if (worker_result.ok())
           worker_result = recorders[index].set_viewports(0, std::span{&viewport, 1});
-        if (granit::succeeded(worker_result))
+        if (worker_result.ok())
           worker_result = recorders[index].set_scissors(0, std::span{&scissor, 1});
         const granit::color_attachment_desc color{
             .view = views[index],
             .clear_value = {.red = 0.1F, .green = 0.2F, .blue = 0.3F, .alpha = 1.0F}};
         const granit::rendering_desc rendering{.color_attachments = std::span{&color, 1},
                                                .area = {.width = 32, .height = 32}};
-        if (granit::succeeded(worker_result))
+        if (worker_result.ok())
           worker_result = recorders[index].begin_rendering(rendering);
-        if (granit::succeeded(worker_result))
+        if (worker_result.ok())
           worker_result = recorders[index].draw(3);
-        if (granit::succeeded(worker_result))
+        if (worker_result.ok())
           worker_result = recorders[index].end_rendering();
       } else {
         const auto compute_index = index - graphics_count;
-        if (granit::succeeded(worker_result))
+        if (worker_result.ok())
           worker_result = recorders[index].bind_compute_pipeline(compute_pipeline.native_handle());
         const auto group = compute_groups[compute_index].native_handle();
-        if (granit::succeeded(worker_result))
+        if (worker_result.ok())
           worker_result = recorders[index].bind_compute_groups(compute_layout.native_handle(), 0,
                                                                std::span{&group, 1});
-        if (granit::succeeded(worker_result))
+        if (worker_result.ok())
           worker_result = recorders[index].dispatch(16);
       }
-      if (granit::succeeded(worker_result))
+      if (worker_result.ok())
         worker_result = recorders[index].end();
-      if (granit::failed(worker_result))
+      if (worker_result.failed())
         ++failures;
     });
   }

@@ -25,7 +25,7 @@ granit::result render_frame(granit::swapchain& swapchain, granit::frame_context&
                             std::uint32_t width, std::uint32_t height, bool& needs_recreate) {
   granit::acquired_frame frame;
   auto result = swapchain.acquire(frame);
-  if (granit::failed(result))
+  if (result.failed())
     return result;
   needs_recreate = frame.needs_recreate;
 
@@ -33,23 +33,23 @@ granit::result render_frame(granit::swapchain& swapchain, granit::frame_context&
   granit_texture_view view = GRANIT_NULL_HANDLE;
   result = swapchain.backbuffer(frame.image_index, texture, view);
   granit::frame_recording recording;
-  if (granit::succeeded(result))
+  if (result.ok())
     result = context.begin(frame, recording);
   auto& recorder = recording.recorder();
   const granit::color_attachment_desc color{
       .view = view, .clear_value = {.red = 0.04F, .green = 0.12F, .blue = 0.22F, .alpha = 1.0F}};
   const granit::rendering_desc rendering{.color_attachments = std::span{&color, 1},
                                          .area = {0, 0, width, height}};
-  if (granit::succeeded(result))
+  if (result.ok())
     result = recorder.begin_rendering(rendering);
-  if (granit::succeeded(result))
+  if (result.ok())
     result = recorder.end_rendering();
-  if (granit::succeeded(result))
+  if (result.ok())
     result = recording.submit();
-  if (granit::succeeded(result))
+  if (result.ok())
     result = swapchain.present(frame);
   needs_recreate = needs_recreate || frame.needs_recreate;
-  if (granit::failed(result)) {
+  if (result.failed()) {
     if (recording.valid())
       static_cast<void>(recording.abort());
     if (frame.valid())
@@ -73,34 +73,34 @@ int main(int argc, char** argv) {
   granit::surface_type surface_type{};
   auto result = granit::integration::sdl3::query_surface_type(window.get(), surface_type);
   granit::renderer renderer;
-  if (granit::succeeded(result)) {
+  if (result.ok()) {
     result = renderer.initialize({.application_name = "Granit SDL3 Window Clear",
                                   .enable_validation = true,
                                   .surface_types = surface_type});
   }
   granit::surface surface;
-  if (granit::succeeded(result)) {
+  if (result.ok()) {
     result =
         granit::integration::sdl3::create_surface(renderer.native_handle(), window.get(), surface);
   }
 
   int pixel_width = 0;
   int pixel_height = 0;
-  if (granit::succeeded(result) &&
+  if (result.ok() &&
       !SDL_GetWindowSizeInPixels(window.get(), &pixel_width, &pixel_height)) {
     result = granit::result::backend_unavailable;
   }
   granit::swapchain swapchain;
-  if (granit::succeeded(result)) {
+  if (result.ok()) {
     result = swapchain.initialize(renderer.native_handle(), surface.native_handle(),
                                   {.width = static_cast<std::uint32_t>(pixel_width),
                                    .height = static_cast<std::uint32_t>(pixel_height)});
   }
   granit::frame_context frame_context;
-  if (granit::succeeded(result))
+  if (result.ok())
     result = frame_context.initialize(renderer.native_handle());
 
-  bool running = granit::succeeded(result);
+  bool running = result.ok();
   bool recreate = false;
   std::uint32_t rendered_frames = 0;
   while (running) {
@@ -123,7 +123,7 @@ int main(int argc, char** argv) {
                                    .height = static_cast<std::uint32_t>(pixel_height)});
       if (result == granit::result::not_ready)
         continue;
-      if (granit::failed(result))
+      if (result.failed())
         break;
       recreate = false;
     }
@@ -135,12 +135,12 @@ int main(int argc, char** argv) {
       recreate = true;
       continue;
     }
-    if (granit::failed(result))
+    if (result.failed())
       break;
     ++rendered_frames;
     if (smoke_test && rendered_frames >= 3)
       break;
   }
 
-  return granit::failed(result) ? 1 : 0;
+  return result.failed() ? 1 : 0;
 }

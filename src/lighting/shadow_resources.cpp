@@ -35,14 +35,14 @@ granit_result shadow_resources::initialize(granit_renderer renderer,
        .usage = granit::buffer_usage::uniform | granit::buffer_usage::transfer_destination,
        .location = granit::memory_location::automatic},
       bytes(values));
-  if (granit::failed(result))
+  if (result.failed())
     return static_cast<granit_result>(result);
 
   result = sampler_.initialize(renderer, {.address_u = granit::address_mode::clamp_to_edge,
                                           .address_v = granit::address_mode::clamp_to_edge,
                                           .address_w = granit::address_mode::clamp_to_edge,
                                           .compare = granit::compare_operation::less_equal});
-  if (granit::failed(result)) {
+  if (result.failed()) {
     static_cast<void>(reset());
     return static_cast<granit_result>(result);
   }
@@ -62,7 +62,7 @@ granit_result shadow_resources::initialize(granit_renderer renderer,
                                       .array_count = 1,
                                       .visibility = granit::shader_stage_flags::fragment}};
   result = layout_.initialize(renderer, layout_entries);
-  if (granit::failed(result)) {
+  if (result.failed()) {
     static_cast<void>(reset());
     return static_cast<granit_result>(result);
   }
@@ -76,7 +76,7 @@ granit_result shadow_resources::initialize(granit_renderer renderer,
       granit::bind_group_entry{.binding = shadow_binding_sampler,
                                .resource = sampler_.native_handle()}};
   result = group_.initialize(renderer, layout_.native_handle(), group_entries);
-  if (granit::failed(result)) {
+  if (result.failed()) {
     static_cast<void>(reset());
     return static_cast<granit_result>(result);
   }
@@ -92,7 +92,7 @@ granit_result shadow_resources::update(const shadow_sampling_constants& values) 
 granit_result shadow_resources::reset() noexcept {
   granit_result first = GRANIT_SUCCESS;
   const auto capture = [&](granit::result value) {
-    if (first == GRANIT_SUCCESS && granit::failed(value))
+    if (first == GRANIT_SUCCESS && value.failed())
       first = static_cast<granit_result>(value);
   };
   capture(group_.reset());

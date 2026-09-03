@@ -38,6 +38,26 @@
 - 除专门定义为“容量输入/实际大小输出”的查询参数外，调用者只能在返回成功后读取输出值。
 - `granit_result_message` 仅用于诊断；程序逻辑应比较结果码，不应解析消息文本。
 
+### C++ 结果值
+
+C++ 包装使用单个 32 位 `granit::result` 值结构，不建立额外运行时状态。既可以继续与
+`granit::result::success` 等命名结果比较，也可以使用成员函数：
+
+```cpp
+const granit::result status = operation();
+if (status) {
+  // 成功路径
+}
+
+if (status.failed()) {
+  log(status.message());
+}
+```
+
+`ok()` 和显式 `operator bool()` 都在结果非负时返回 `true`，`failed()` 表示相反含义。显式布尔
+转换不会让结果值隐式参与整数运算；与 C API 交互时使用 `native()`、`to_native()` 或
+`from_native()`。默认构造的结果为 `unknown` 失败，避免未赋值状态被误认为成功。
+
 ## 描述结构扩展
 
 - 可扩展描述以 `struct_size` 开头。调用者应使用 `*_DESC_INIT` 或填写其理解的

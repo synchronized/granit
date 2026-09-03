@@ -57,7 +57,7 @@ int main() {
   granit::renderer renderer;
   const auto initialized =
       renderer.initialize({.application_name = "Granit Material Hot Reload Example"});
-  if (granit::failed(initialized)) {
+  if (initialized.failed()) {
     std::cerr << "创建 Renderer 失败：" << granit::result_message(initialized) << '\n';
     return 1;
   }

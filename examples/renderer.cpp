@@ -8,8 +8,8 @@
 int main() {
   granit::renderer renderer;
   const auto result = renderer.initialize({.application_name = "Granit Renderer Example"});
-  if (granit::failed(result)) {
-    std::cerr << "创建 renderer 失败: " << granit::result_message(result) << '\n';
+  if (!result) {
+    std::cerr << "创建 renderer 失败: " << result.message() << '\n';
     return 1;
   }
 

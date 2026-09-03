@@ -31,23 +31,23 @@ granit_result pbr_default_resources::initialize(granit_renderer renderer) noexce
         renderer,
         {.format = formats[index],
          .usage = granit::texture_usage::sampled | granit::texture_usage::transfer_destination});
-    if (granit::failed(result)) {
+    if (result.failed()) {
       static_cast<void>(reset());
       return static_cast<granit_result>(result);
     }
     result = textures_[index].write(pixels[index], {}, {});
-    if (granit::failed(result)) {
+    if (result.failed()) {
       static_cast<void>(reset());
       return static_cast<granit_result>(result);
     }
     result = views_[index].initialize(renderer, textures_[index].native_handle());
-    if (granit::failed(result)) {
+    if (result.failed()) {
       static_cast<void>(reset());
       return static_cast<granit_result>(result);
     }
   }
   const auto result = sampler_.initialize(renderer);
-  if (granit::failed(result)) {
+  if (result.failed()) {
     static_cast<void>(reset());
     return static_cast<granit_result>(result);
   }

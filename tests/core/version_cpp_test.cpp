@@ -5,6 +5,8 @@
 
 #include <catch2/catch_all.hpp>
 
+#include <type_traits>
+
 TEST_CASE("C++ 包装返回编译期版本", "[version]") {
   const auto version = granit::library_version();
 
@@ -15,10 +17,26 @@ TEST_CASE("C++ 包装返回编译期版本", "[version]") {
 
 TEST_CASE("结果码保持定宽 C ABI", "[result]") {
   STATIC_CHECK(sizeof(granit::result) == sizeof(std::int32_t));
-  CHECK(granit::succeeded(granit::result::success));
-  CHECK_FALSE(granit::failed(granit::result::success));
-  CHECK(granit::failed(granit::result::invalid_argument));
+  STATIC_CHECK(std::is_trivially_copyable_v<granit::result>);
+  STATIC_CHECK(std::is_standard_layout_v<granit::result>);
+  STATIC_CHECK_FALSE(std::is_convertible_v<granit::result, bool>);
+  STATIC_CHECK_FALSE(std::is_convertible_v<granit::result, granit_result>);
+  STATIC_CHECK(std::is_constructible_v<granit::result, granit_result>);
+  STATIC_CHECK(granit::result::success.ok());
+  STATIC_CHECK(granit::result::invalid_argument.failed());
+  STATIC_CHECK(static_cast<bool>(granit::result::success));
+  STATIC_CHECK_FALSE(static_cast<bool>(granit::result::invalid_argument));
+  STATIC_CHECK(granit::result{}.failed());
+  STATIC_CHECK(granit::result::not_ready.native() == GRANIT_ERROR_NOT_READY);
+  STATIC_CHECK(granit::to_native(granit::result::success) == GRANIT_SUCCESS);
+  STATIC_CHECK(granit::from_native(GRANIT_ERROR_INVALID_HANDLE) ==
+               granit::result::invalid_handle);
+  STATIC_CHECK(granit::from_native(INT32_C(-999)).native() == INT32_C(-999));
+  CHECK(granit::result::success.ok());
+  CHECK_FALSE(granit::result::success.failed());
+  CHECK(granit::result::invalid_argument.failed());
   CHECK(granit::result_message(granit::result::invalid_handle) == "invalid handle");
+  CHECK(granit::result::invalid_handle.message() == "invalid handle");
   CHECK(
     granit::result_message(granit::result::backend_unavailable) ==
     "rendering backend unavailable");

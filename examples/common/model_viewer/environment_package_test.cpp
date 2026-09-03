@@ -80,7 +80,7 @@ TEST_CASE("GRENV环境资源上传为Render Pipeline输入", "[example][model-vi
   using namespace granit::example::model_viewer;
   granit::renderer renderer;
   const auto renderer_result = renderer.initialize({.application_name = "GRENV Test"});
-  if (granit::failed(renderer_result))
+  if (renderer_result.failed())
     SKIP("当前环境没有可用 Renderer");
 
   const auto bytes = valid_package();

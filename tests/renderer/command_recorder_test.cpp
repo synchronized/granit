@@ -903,16 +903,16 @@ TEST_CASE("独立 Recorder 支持并行资源上传与命令录制", "[command][
                                               granit::buffer_usage::transfer_destination,
                                      .location = granit::memory_location::device},
                                     initial_data);
-      if (granit::succeeded(worker_result))
+      if (worker_result.ok())
         worker_result = recorders[index].initialize(renderer.native_handle());
-      if (granit::succeeded(worker_result))
+      if (worker_result.ok())
         worker_result = recorders[index].begin();
-      if (granit::succeeded(worker_result))
+      if (worker_result.ok())
         worker_result = recorders[index].fill_buffer(buffers[index].native_handle(), 0, buffer_size,
                                                      static_cast<std::uint32_t>(index));
-      if (granit::succeeded(worker_result))
+      if (worker_result.ok())
         worker_result = recorders[index].end();
-      if (granit::failed(worker_result))
+      if (worker_result.failed())
         ++failures;
     });
   }
@@ -953,9 +953,9 @@ TEST_CASE("独立 Texture 支持并行创建与颜色附件录制", "[command][c
       desc.height = 32;
       auto worker_result = granit::from_native(granit_texture_create_with_default_view(
           renderer.native_handle(), &desc, &textures[index], &views[index]));
-      if (granit::succeeded(worker_result))
+      if (worker_result.ok())
         worker_result = recorders[index].initialize(renderer.native_handle());
-      if (granit::succeeded(worker_result))
+      if (worker_result.ok())
         worker_result = recorders[index].begin();
       const granit::color_attachment_desc color{
           .view = views[index],
@@ -965,13 +965,13 @@ TEST_CASE("独立 Texture 支持并行创建与颜色附件录制", "[command][c
                           .alpha = 1.0F}};
       const granit::rendering_desc rendering{.color_attachments = std::span{&color, 1},
                                              .area = {.width = 32, .height = 32}};
-      if (granit::succeeded(worker_result))
+      if (worker_result.ok())
         worker_result = recorders[index].begin_rendering(rendering);
-      if (granit::succeeded(worker_result))
+      if (worker_result.ok())
         worker_result = recorders[index].end_rendering();
-      if (granit::succeeded(worker_result))
+      if (worker_result.ok())
         worker_result = recorders[index].end();
-      if (granit::failed(worker_result))
+      if (worker_result.failed())
         ++failures;
     });
   }

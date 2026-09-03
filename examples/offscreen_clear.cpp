@@ -10,7 +10,7 @@ int main() {
   granit::renderer renderer;
   auto result = renderer.initialize(
       {.application_name = "Granit Offscreen Clear", .enable_validation = true});
-  if (granit::failed(result)) {
+  if (result.failed()) {
     std::cerr << "创建 Renderer 失败：" << granit::result_message(result) << '\n';
     return 1;
   }
@@ -24,32 +24,32 @@ int main() {
   granit_texture_view view = GRANIT_NULL_HANDLE;
   result = granit::from_native(granit_texture_create_with_default_view(
       renderer.native_handle(), &texture_desc, &texture, &view));
-  if (granit::failed(result)) {
+  if (result.failed()) {
     std::cerr << "创建离屏纹理失败：" << granit::result_message(result) << '\n';
     return 1;
   }
 
   granit::command_recorder recorder;
   result = recorder.initialize(renderer.native_handle());
-  if (granit::succeeded(result))
+  if (result.ok())
     result = recorder.begin();
   const granit::color_attachment_desc color{
       .view = view, .clear_value = {.red = 0.08F, .green = 0.16F, .blue = 0.3F, .alpha = 1.0F}};
   const granit::rendering_desc rendering{.color_attachments = std::span{&color, 1},
                                          .area = {0, 0, 256, 256}};
-  if (granit::succeeded(result))
+  if (result.ok())
     result = recorder.begin_rendering(rendering);
-  if (granit::succeeded(result))
+  if (result.ok())
     result = recorder.end_rendering();
-  if (granit::succeeded(result))
+  if (result.ok())
     result = recorder.end();
-  if (granit::succeeded(result))
+  if (result.ok())
     result = recorder.submit();
-  if (granit::succeeded(result))
+  if (result.ok())
     result = recorder.reset();
   static_cast<void>(granit_texture_view_destroy(renderer.native_handle(), view));
   static_cast<void>(granit_texture_destroy(renderer.native_handle(), texture));
-  if (granit::failed(result)) {
+  if (result.failed()) {
     std::cerr << "离屏清屏失败：" << granit::result_message(result) << '\n';
     return 1;
   }

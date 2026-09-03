@@ -33,7 +33,7 @@ bool near_byte(std::uint8_t value, std::uint8_t expected) {
 }
 
 bool report_failure(granit::result result, const char* stage) {
-  if (granit::succeeded(result))
+  if (result.ok())
     return false;
   std::cerr << stage << "失败：" << granit::result_message(result) << "（"
             << static_cast<granit_result>(result) << "）\n";
@@ -64,7 +64,7 @@ int main(int argc, char** argv) {
 
   granit::renderer renderer;
   auto result = renderer.initialize({.application_name = "Granit S-10C6 Vulkan Smoke"});
-  if (granit::failed(result)) {
+  if (result.failed()) {
     std::cerr << "创建 Vulkan Renderer 失败：" << granit::result_message(result) << '\n';
     return 2;
   }
@@ -77,15 +77,15 @@ int main(int argc, char** argv) {
                              {.stage = granit::shader_stage::vertex,
                               .code = vertex_asset.spirv,
                               .entry_point = "vs_main"});
-  if (granit::succeeded(result))
+  if (result.ok())
     result = fragment.initialize(renderer.native_handle(),
                                  {.stage = granit::shader_stage::fragment,
                                   .code = fragment_asset.spirv,
                                   .entry_point = "fs_main"});
-  if (granit::succeeded(result))
+  if (result.ok())
     result = layout.initialize(renderer.native_handle());
   const granit::texture_format format = granit::texture_format::rgba8_unorm;
-  if (granit::succeeded(result)) {
+  if (result.ok()) {
     result = pipeline.initialize(renderer.native_handle(),
                                  {.layout = layout.native_handle(),
                                   .vertex_shader = vertex.native_handle(),
@@ -108,39 +108,39 @@ int main(int argc, char** argv) {
   texture_desc.height = render_size;
   granit_texture texture = GRANIT_NULL_HANDLE;
   granit_texture_view view = GRANIT_NULL_HANDLE;
-  if (granit::succeeded(result)) {
+  if (result.ok()) {
     result = granit::from_native(granit_texture_create_with_default_view(
         renderer.native_handle(), &texture_desc, &texture, &view));
   }
 
   granit::command_recorder recorder;
-  if (granit::succeeded(result))
+  if (result.ok())
     result = recorder.initialize(renderer.native_handle());
-  if (granit::succeeded(result))
+  if (result.ok())
     result = recorder.begin();
-  if (granit::succeeded(result))
+  if (result.ok())
     result = recorder.bind_graphics_pipeline(pipeline.native_handle());
   const granit::viewport viewport{0, 0, render_size, render_size, 0, 1};
   const granit::scissor scissor{0, 0, render_size, render_size};
-  if (granit::succeeded(result))
+  if (result.ok())
     result = recorder.set_viewports(0, std::span{&viewport, 1});
-  if (granit::succeeded(result))
+  if (result.ok())
     result = recorder.set_scissors(0, std::span{&scissor, 1});
   const granit::color_attachment_desc color{.view = view,
                                              .clear_value = {0, 0, 0, 1}};
   const granit::rendering_desc rendering{.color_attachments = std::span{&color, 1},
                                          .area = {0, 0, render_size, render_size}};
-  if (granit::succeeded(result))
+  if (result.ok())
     result = recorder.begin_rendering(rendering);
-  if (granit::succeeded(result))
+  if (result.ok())
     result = recorder.draw(3);
-  if (granit::succeeded(result))
+  if (result.ok())
     result = recorder.end_rendering();
-  if (granit::succeeded(result))
+  if (result.ok())
     result = recorder.end();
-  if (granit::succeeded(result))
+  if (result.ok())
     result = recorder.submit();
-  if (granit::succeeded(result))
+  if (result.ok())
     result = recorder.reset();
   if (report_failure(result, "录制并提交 Vulkan 三角形"))
     return 3;
@@ -148,15 +148,15 @@ int main(int argc, char** argv) {
   constexpr std::uint64_t readback_size = render_size * render_size * 4;
   granit::buffer readback;
   granit::command_recorder copy_recorder;
-  if (granit::succeeded(result)) {
+  if (result.ok()) {
     result = readback.initialize(renderer.native_handle(),
                                  {.size = readback_size,
                                   .usage = granit::buffer_usage::transfer_destination,
                                   .location = granit::memory_location::readback});
   }
-  if (granit::succeeded(result))
+  if (result.ok())
     result = copy_recorder.initialize(renderer.native_handle());
-  if (granit::succeeded(result))
+  if (result.ok())
     result = copy_recorder.begin();
   const granit_texture_data_layout data_layout{};
   const granit_texture_write_region region{.mip_level = 0,
@@ -169,25 +169,25 @@ int main(int argc, char** argv) {
                                             .width = render_size,
                                             .height = render_size,
                                             .depth = 1};
-  if (granit::succeeded(result)) {
+  if (result.ok()) {
     result = copy_recorder.copy_texture_to_buffer(texture, readback.native_handle(), data_layout,
                                                   region);
   }
-  if (granit::succeeded(result))
+  if (result.ok())
     result = copy_recorder.end();
-  if (granit::succeeded(result))
+  if (result.ok())
     result = copy_recorder.submit();
-  if (granit::succeeded(result))
+  if (result.ok())
     result = copy_recorder.reset();
   if (report_failure(result, "复制 Vulkan 渲染目标"))
     return 3;
 
   void* mapped = nullptr;
-  if (granit::succeeded(result))
+  if (result.ok())
     result = readback.map(0, readback_size, &mapped);
   std::array<std::uint8_t, 4> corner{};
   std::array<std::uint8_t, 4> center{};
-  if (granit::succeeded(result)) {
+  if (result.ok()) {
     const auto* pixels = static_cast<const std::uint8_t*>(mapped);
     std::memcpy(corner.data(), pixels, corner.size());
     std::memcpy(center.data(), pixels + (render_size / 2 * render_size + render_size / 2) * 4,

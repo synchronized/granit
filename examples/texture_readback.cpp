@@ -43,7 +43,7 @@ int main(int argc, char** argv) {
   granit::renderer renderer;
   auto result = renderer.initialize(
       {.application_name = "Granit Texture Readback", .enable_validation = true});
-  if (granit::failed(result)) {
+  if (result.failed()) {
     std::cerr << "创建 Renderer 失败：" << granit::result_message(result) << '\n';
     return 1;
   }
@@ -56,29 +56,29 @@ int main(int argc, char** argv) {
                                .width = k_width,
                                .height = k_height});
   granit::texture_view view;
-  if (granit::succeeded(result))
+  if (result.ok())
     result = view.initialize(renderer.native_handle(), texture.native_handle());
 
   granit::command_recorder recorder;
-  if (granit::succeeded(result))
+  if (result.ok())
     result = recorder.initialize(renderer.native_handle());
-  if (granit::succeeded(result))
+  if (result.ok())
     result = recorder.begin();
   const granit::color_attachment_desc color{
       .view = view.native_handle(), .clear_value = {1.0F, 0.5F, 0.0F, 1.0F}};
   const granit::rendering_desc rendering{.color_attachments = std::span{&color, 1},
                                          .area = {0, 0, k_width, k_height}};
-  if (granit::succeeded(result))
+  if (result.ok())
     result = recorder.begin_rendering(rendering);
-  if (granit::succeeded(result))
+  if (result.ok())
     result = recorder.end_rendering();
-  if (granit::succeeded(result))
+  if (result.ok())
     result = recorder.end();
-  if (granit::succeeded(result))
+  if (result.ok())
     result = recorder.submit();
-  if (granit::succeeded(result))
+  if (result.ok())
     result = recorder.reset();
-  if (granit::failed(result)) {
+  if (result.failed()) {
     std::cerr << "离屏清屏失败：" << granit::result_message(result) << '\n';
     return 1;
   }
@@ -87,9 +87,9 @@ int main(int argc, char** argv) {
   granit::texture_readback_info info;
   result = texture.query_readback(region, info);
   std::vector<std::byte> pixels(static_cast<std::size_t>(info.required_size));
-  if (granit::succeeded(result))
+  if (result.ok())
     result = texture.read(pixels, region, info);
-  if (granit::failed(result)) {
+  if (result.failed()) {
     std::cerr << "读取纹理失败：" << granit::result_message(result) << '\n';
     return 1;
   }

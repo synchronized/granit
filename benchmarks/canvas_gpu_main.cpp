@@ -217,13 +217,13 @@ int main() {
       double reset_total = 0;
       for (std::uint32_t iteration = 0; iteration < iterations; ++iteration) {
         auto result = recorder.begin();
-        if (granit::succeeded(result))
+        if (result.ok())
           result = recorder.reset_timestamp_queries(timestamps.native_handle(), 0, 2);
-        if (granit::succeeded(result)) {
+        if (result.ok()) {
           result =
               recorder.write_timestamp(timestamps.native_handle(), GRANIT_TIMESTAMP_STAGE_TOP, 0);
         }
-        if (granit::succeeded(result)) {
+        if (result.ok()) {
           const auto record_begin = std::chrono::steady_clock::now();
           result = list.items().empty()
                        ? record_clear(native, recorder.native_handle(), output_view.native_handle(),
@@ -243,20 +243,20 @@ int main() {
                               std::chrono::steady_clock::now() - record_begin)
                               .count();
         }
-        if (granit::succeeded(result)) {
+        if (result.ok()) {
           result = recorder.write_timestamp(timestamps.native_handle(),
                                             GRANIT_TIMESTAMP_STAGE_BOTTOM, 1);
         }
-        if (granit::succeeded(result))
+        if (result.ok())
           result = recorder.end();
-        if (granit::succeeded(result)) {
+        if (result.ok()) {
           const auto submit_begin = std::chrono::steady_clock::now();
           result = recorder.submit();
           submit_total += std::chrono::duration<double, std::nano>(
                               std::chrono::steady_clock::now() - submit_begin)
                               .count();
         }
-        if (granit::succeeded(result)) {
+        if (result.ok()) {
           const auto reset_begin = std::chrono::steady_clock::now();
           result = recorder.reset();
           reset_total += std::chrono::duration<double, std::nano>(std::chrono::steady_clock::now() -
@@ -264,9 +264,9 @@ int main() {
                              .count();
         }
         std::array<std::uint64_t, 2> values{};
-        if (granit::succeeded(result))
+        if (result.ok())
           result = timestamps.get_results(0, values);
-        if (granit::failed(result) || values[1] < values[0]) {
+        if (result.failed() || values[1] < values[0]) {
           succeeded = false;
           break;
         }

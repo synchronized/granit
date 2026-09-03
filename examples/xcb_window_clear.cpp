@@ -27,7 +27,7 @@ granit::result render_frame(granit::swapchain& swapchain, granit::frame_context&
                             std::uint32_t width, std::uint32_t height, bool& needs_recreate) {
   granit::acquired_frame frame;
   auto result = swapchain.acquire(frame);
-  if (granit::failed(result))
+  if (result.failed())
     return result;
   needs_recreate = frame.needs_recreate;
 
@@ -35,23 +35,23 @@ granit::result render_frame(granit::swapchain& swapchain, granit::frame_context&
   granit_texture_view view = GRANIT_NULL_HANDLE;
   result = swapchain.backbuffer(frame.image_index, texture, view);
   granit::frame_recording recording;
-  if (granit::succeeded(result))
+  if (result.ok())
     result = context.begin(frame, recording);
   auto& recorder = recording.recorder();
   const granit::color_attachment_desc color{
       .view = view, .clear_value = {.red = 0.04F, .green = 0.12F, .blue = 0.22F, .alpha = 1.0F}};
   const granit::rendering_desc rendering{.color_attachments = std::span{&color, 1},
                                          .area = {0, 0, width, height}};
-  if (granit::succeeded(result))
+  if (result.ok())
     result = recorder.begin_rendering(rendering);
-  if (granit::succeeded(result))
+  if (result.ok())
     result = recorder.end_rendering();
-  if (granit::succeeded(result))
+  if (result.ok())
     result = recording.submit();
-  if (granit::succeeded(result))
+  if (result.ok())
     result = swapchain.present(frame);
   needs_recreate = needs_recreate || frame.needs_recreate;
-  if (granit::failed(result)) {
+  if (result.failed()) {
     if (recording.valid())
       static_cast<void>(recording.abort());
     if (frame.valid())
@@ -105,22 +105,22 @@ int main(int argc, char** argv) {
                                      .enable_validation = true,
                                      .surface_types = granit::surface_type::xcb});
   granit::surface surface;
-  if (granit::succeeded(result))
+  if (result.ok())
     result = surface.initialize_xcb(renderer.native_handle(),
                                     {.connection = connection, .window = window});
 
   std::uint32_t width = 800;
   std::uint32_t height = 600;
   granit::swapchain swapchain;
-  if (granit::succeeded(result)) {
+  if (result.ok()) {
     result = swapchain.initialize(renderer.native_handle(), surface.native_handle(),
                                   {.width = width, .height = height});
   }
   granit::frame_context frame_context;
-  if (granit::succeeded(result))
+  if (result.ok())
     result = frame_context.initialize(renderer.native_handle());
 
-  bool running = granit::succeeded(result);
+  bool running = result.ok();
   bool recreate = false;
   std::uint32_t rendered_frames = 0;
   while (running) {
@@ -156,7 +156,7 @@ int main(int argc, char** argv) {
       result = swapchain.recreate({.width = width, .height = height});
       if (result == granit::result::not_ready)
         continue;
-      if (granit::failed(result))
+      if (result.failed())
         break;
       recreate = false;
     }
@@ -166,7 +166,7 @@ int main(int argc, char** argv) {
       recreate = true;
       continue;
     }
-    if (granit::failed(result))
+    if (result.failed())
       break;
     ++rendered_frames;
     if (smoke_test && rendered_frames >= 3)
@@ -175,7 +175,7 @@ int main(int argc, char** argv) {
 
   const auto reset_resource = [&result](auto& resource) {
     const auto reset_result = resource.reset();
-    if (granit::succeeded(result) && granit::failed(reset_result))
+    if (result.ok() && reset_result.failed())
       result = reset_result;
   };
   reset_resource(frame_context);
@@ -184,5 +184,5 @@ int main(int argc, char** argv) {
   reset_resource(renderer);
   xcb_destroy_window(connection, window);
   xcb_disconnect(connection);
-  return granit::failed(result) ? 1 : 0;
+  return result.failed() ? 1 : 0;
 }

@@ -114,8 +114,8 @@ build/windows-clang-debug/bin/granit_offscreen_clear_example.exe
 int main() {
   granit::renderer renderer;
   const auto result = renderer.initialize({.application_name = "My Granit App"});
-  if (granit::failed(result)) {
-    std::cerr << "创建 Renderer 失败: " << granit::result_message(result) << '\n';
+  if (!result) {
+    std::cerr << "创建 Renderer 失败: " << result.message() << '\n';
     return 1;
   }
 

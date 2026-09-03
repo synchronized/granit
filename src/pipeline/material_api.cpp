@@ -291,11 +291,11 @@ extern "C" granit_result granit_material_create(granit_renderer renderer,
                                         .array_count = 1,
                                         .visibility = granit::shader_stage_flags::vertex}};
     const auto object_result = state->object_layout.initialize(renderer, object_entries);
-    if (granit::failed(object_result))
+    if (object_result.failed())
       return static_cast<granit_result>(object_result);
     const auto lighting_result = state->lighting_layout.initialize(
         renderer, granit::lighting::standard_lighting_layout_entries);
-    if (granit::failed(lighting_result))
+    if (lighting_result.failed())
       return static_cast<granit_result>(lighting_result);
     const std::array additional_layouts{state->object_layout.native_handle(),
                                         state->lighting_layout.native_handle()};

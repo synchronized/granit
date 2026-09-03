@@ -28,7 +28,7 @@ int main() {
   granit::renderer renderer;
   auto result = renderer.initialize(
       {.application_name = "Granit Offscreen Triangle", .enable_validation = true});
-  if (granit::failed(result)) {
+  if (result.failed()) {
     std::cerr << "创建 Renderer 失败：" << granit::result_message(result) << '\n';
     return 1;
   }
@@ -43,15 +43,15 @@ int main() {
   granit::shader fragment;
   result = vertex.initialize(renderer.native_handle(),
                              {.stage = granit::shader_stage::vertex, .code = vertex_code});
-  if (granit::succeeded(result))
+  if (result.ok())
     result = fragment.initialize(renderer.native_handle(),
                                  {.stage = granit::shader_stage::fragment, .code = fragment_code});
   granit::pipeline_layout layout;
-  if (granit::succeeded(result))
+  if (result.ok())
     result = layout.initialize(renderer.native_handle());
   const granit::texture_format format = granit::texture_format::rgba8_unorm;
   granit::graphics_pipeline pipeline;
-  if (granit::succeeded(result)) {
+  if (result.ok()) {
     result =
         pipeline.initialize(renderer.native_handle(), {.layout = layout.native_handle(),
                                                        .vertex_shader = vertex.native_handle(),
@@ -71,45 +71,45 @@ int main() {
   texture_desc.height = 256;
   granit_texture texture = GRANIT_NULL_HANDLE;
   granit_texture_view view = GRANIT_NULL_HANDLE;
-  if (granit::succeeded(result)) {
+  if (result.ok()) {
     result = granit::from_native(granit_texture_create_with_default_view(
         renderer.native_handle(), &texture_desc, &texture, &view));
   }
 
   granit::command_recorder recorder;
-  if (granit::succeeded(result))
+  if (result.ok())
     result = recorder.initialize(renderer.native_handle());
-  if (granit::succeeded(result))
+  if (result.ok())
     result = recorder.begin();
-  if (granit::succeeded(result))
+  if (result.ok())
     result = recorder.bind_graphics_pipeline(pipeline.native_handle());
   const granit::viewport viewport{0, 0, 256, 256, 0, 1};
   const granit::scissor scissor{0, 0, 256, 256};
-  if (granit::succeeded(result))
+  if (result.ok())
     result = recorder.set_viewports(0, std::span{&viewport, 1});
-  if (granit::succeeded(result))
+  if (result.ok())
     result = recorder.set_scissors(0, std::span{&scissor, 1});
   const granit::color_attachment_desc color{
       .view = view, .clear_value = {.red = 0.03F, .green = 0.03F, .blue = 0.05F, .alpha = 1.0F}};
   const granit::rendering_desc rendering{.color_attachments = std::span{&color, 1},
                                          .area = {0, 0, 256, 256}};
-  if (granit::succeeded(result))
+  if (result.ok())
     result = recorder.begin_rendering(rendering);
-  if (granit::succeeded(result))
+  if (result.ok())
     result = recorder.draw(3);
-  if (granit::succeeded(result))
+  if (result.ok())
     result = recorder.end_rendering();
-  if (granit::succeeded(result))
+  if (result.ok())
     result = recorder.end();
-  if (granit::succeeded(result))
+  if (result.ok())
     result = recorder.submit();
-  if (granit::succeeded(result))
+  if (result.ok())
     result = recorder.reset();
   if (view != GRANIT_NULL_HANDLE)
     static_cast<void>(granit_texture_view_destroy(renderer.native_handle(), view));
   if (texture != GRANIT_NULL_HANDLE)
     static_cast<void>(granit_texture_destroy(renderer.native_handle(), texture));
-  if (granit::failed(result)) {
+  if (result.failed()) {
     std::cerr << "离屏三角形失败：" << granit::result_message(result) << '\n';
     return 1;
   }

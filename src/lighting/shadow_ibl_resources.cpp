@@ -70,16 +70,16 @@ granit_result shadow_ibl_resources::initialize(
   auto result = granit::result::success;
   if (features.shadows)
     result = make_constants(shadow_constants_, shadow_values);
-  if (granit::succeeded(result) && features.ibl)
+  if (result.ok() && features.ibl)
     result = make_constants(ibl_constants_, ibl_values);
-  if (granit::succeeded(result) && features.shadows) {
+  if (result.ok() && features.shadows) {
     result =
         shadow_sampler_.initialize(renderer, {.address_u = granit::address_mode::clamp_to_edge,
                                               .address_v = granit::address_mode::clamp_to_edge,
                                               .address_w = granit::address_mode::clamp_to_edge,
                                               .compare = granit::compare_operation::less_equal});
   }
-  if (granit::succeeded(result) && features.ibl) {
+  if (result.ok() && features.ibl) {
     result = ibl_sampler_.initialize(renderer, {.mag_filter = granit::filter::linear,
                                                 .min_filter = granit::filter::linear,
                                                 .mip_filter = granit::mipmap_filter::linear,
@@ -88,9 +88,9 @@ granit_result shadow_ibl_resources::initialize(
                                                 .address_w = granit::address_mode::clamp_to_edge,
                                                 .max_lod = 1000.0F});
   }
-  if (granit::succeeded(result))
+  if (result.ok())
     result = granit::from_native(lights_.initialize(renderer, light_capacities, memory_location));
-  if (granit::failed(result)) {
+  if (result.failed()) {
     static_cast<void>(reset());
     return static_cast<granit_result>(result);
   }
@@ -132,7 +132,7 @@ granit_result shadow_ibl_resources::initialize(
   }
   if (external_layout == GRANIT_NULL_HANDLE) {
     result = layout_.initialize(renderer, layout_entries);
-    if (granit::failed(result)) {
+    if (result.failed()) {
       static_cast<void>(reset());
       return static_cast<granit_result>(result);
     }
@@ -189,7 +189,7 @@ granit_result shadow_ibl_resources::initialize(
                                        light_buffer_size<gpu_spot_light>(light_capacities.spot)},
       });
   result = group_.initialize(renderer, layout_handle_, group_entries);
-  if (granit::failed(result)) {
+  if (result.failed()) {
     static_cast<void>(reset());
     return static_cast<granit_result>(result);
   }
@@ -218,7 +218,7 @@ granit_result shadow_ibl_resources::update_lights(const packed_view_lights& ligh
 granit_result shadow_ibl_resources::reset() noexcept {
   granit_result first = GRANIT_SUCCESS;
   const auto capture = [&](granit::result value) {
-    if (first == GRANIT_SUCCESS && granit::failed(value))
+    if (first == GRANIT_SUCCESS && value.failed())
       first = static_cast<granit_result>(value);
   };
   capture(group_.reset());

@@ -40,6 +40,11 @@ int main() {
   if (runtime.major != GRANIT_VERSION_MAJOR || runtime.minor != GRANIT_VERSION_MINOR ||
       runtime.patch != GRANIT_VERSION_PATCH)
     return 2;
+  if (!granit::result::success || granit::result::invalid_argument ||
+      !granit::result::invalid_argument.failed() ||
+      granit::result::not_ready.native() != GRANIT_ERROR_NOT_READY ||
+      granit::result::invalid_handle.message() != "invalid handle")
+    return 12;
 
   diagnostic_capture diagnostics;
   granit::renderer renderer;
@@ -49,11 +54,11 @@ int main() {
       renderer_result == granit::result::incompatible_driver ||
       renderer_result == granit::result::no_suitable_device)
     return renderer.valid() ? 3 : 0;
-  if (granit::failed(renderer_result))
+  if (renderer_result.failed())
     return 4;
 
   granit::renderer_limits limits;
-  if (granit::failed(renderer.get_limits(limits)) || limits.uniform_buffer_offset_alignment == 0 ||
+  if ((renderer.get_limits(limits)).failed() || limits.uniform_buffer_offset_alignment == 0 ||
       limits.max_uniform_buffer_binding_size == 0)
     return 5;
 
@@ -65,20 +70,20 @@ int main() {
     return 10;
 
   granit::buffer buffer;
-  if (granit::failed(buffer.initialize(renderer.native_handle(),
+  if ((buffer.initialize(renderer.native_handle(),
                                        {.size = 64,
                                         .usage = granit::buffer_usage::transfer_source,
-                                        .location = granit::memory_location::upload})))
+                                        .location = granit::memory_location::upload})).failed())
     return 6;
   granit::buffer moved = std::move(buffer);
   if (buffer.valid() || !moved.valid())
     return 7;
-  if (granit::failed(moved.reset()) || granit::failed(moved.reset()))
+  if ((moved.reset()).failed() || (moved.reset()).failed())
     return 8;
   granit::renderer moved_renderer = std::move(renderer);
   if (renderer.valid() || !moved_renderer.valid())
     return 9;
-  if (granit::failed(moved_renderer.reset()) || granit::failed(moved_renderer.reset()))
+  if ((moved_renderer.reset()).failed() || (moved_renderer.reset()).failed())
     return 11;
   return 0;
 }

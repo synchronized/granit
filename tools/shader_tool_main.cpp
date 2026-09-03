@@ -60,7 +60,7 @@ int compile_shader(int argc, char** argv) {
     cache.compile_options = compile_options.data();
     cache.compile_options_length = compile_options.size();
     const auto [cache_status, cache_hit] = granit::shader_tools::restore_asset_cache(cache);
-    if (cache_status != GRANIT_SUCCESS) {
+    if (cache_status.failed()) {
       std::cerr << "Shader 资产缓存查询失败\n";
       return 1;
     }
@@ -84,7 +84,7 @@ int compile_shader(int argc, char** argv) {
   const auto info = result.info();
   std::cout << info.output;
   std::cerr << info.diagnostic;
-  if (status == GRANIT_SUCCESS && asset) {
+  if (status.ok() && asset) {
     granit_shader_tools_asset_desc asset_desc{};
     asset_desc.struct_size = sizeof(asset_desc);
     asset_desc.wgsl_path = input->data();
@@ -100,14 +100,14 @@ int compile_shader(int argc, char** argv) {
     asset_desc.compile_options = compile_options.data();
     asset_desc.compile_options_length = compile_options.size();
     const auto [asset_status, cache_hit] = result.write_asset(asset_desc);
-    if (asset_status != GRANIT_SUCCESS) {
+    if (asset_status.failed()) {
       std::cerr << "Shader 资产写入失败\n";
       return 1;
     }
     std::cout << (cache_hit ? "Shader 资产缓存命中：" : "已生成 Shader 资产：") << *asset
               << '\n';
   }
-  return status == GRANIT_SUCCESS ? 0 : 1;
+  return status.ok() ? 0 : 1;
 }
 
 std::string json_string(std::string_view value) {
@@ -202,7 +202,7 @@ void print_json(const granit::shader_tools::result& result,
             << ",\n  \"stage\": " << json_string(stage) << ",\n  \"bindings\": [";
   for (uint64_t index = 0; index < result.binding_count(); ++index) {
     const auto [status, binding] = result.binding(index);
-    if (status != GRANIT_SUCCESS)
+    if (status.failed())
       continue;
     std::cout << (index == 0 ? "\n" : ",\n") << "    {\"group\": " << binding.group
               << ", \"binding\": " << binding.binding
@@ -215,7 +215,7 @@ void print_json(const granit::shader_tools::result& result,
   std::cout << (result.binding_count() == 0 ? "" : "\n") << "  ],\n  \"vertex_inputs\": [";
   for (uint64_t index = 0; index < result.vertex_input_count(); ++index) {
     const auto [status, input] = result.vertex_input(index);
-    if (status != GRANIT_SUCCESS)
+    if (status.failed())
       continue;
     std::cout << (index == 0 ? "\n    " : ",\n    ");
     print_interface_variable(input);
@@ -223,7 +223,7 @@ void print_json(const granit::shader_tools::result& result,
   std::cout << (result.vertex_input_count() == 0 ? "" : "\n") << "  ],\n  \"fragment_outputs\": [";
   for (uint64_t index = 0; index < result.fragment_output_count(); ++index) {
     const auto [status, output] = result.fragment_output(index);
-    if (status != GRANIT_SUCCESS)
+    if (status.failed())
       continue;
     std::cout << (index == 0 ? "\n    " : ",\n    ");
     print_interface_variable(output);
@@ -234,7 +234,7 @@ void print_json(const granit::shader_tools::result& result,
             << ", \"z\": " << workgroup.z << "},\n  \"overrides\": [";
   for (uint64_t index = 0; index < result.override_count(); ++index) {
     const auto [status, override_info] = result.override_at(index);
-    if (status != GRANIT_SUCCESS)
+    if (status.failed())
       continue;
     std::cout << (index == 0 ? "\n" : ",\n") << "    {\"id\": " << override_info.id
               << ", \"scalar_type\": " << json_string(scalar_type_name(override_info.scalar_type))
@@ -257,14 +257,14 @@ int inspect_shader(const char* path, bool verify, bool json = false) {
                      : info.stage == GRANIT_SHADER_TOOLS_STAGE_FRAGMENT ? "fragment"
                      : info.stage == GRANIT_SHADER_TOOLS_STAGE_COMPUTE  ? "compute"
                                                                         : "unsupported";
-  if (json && status == GRANIT_SUCCESS)
+  if (json && status.ok())
     print_json(result, info, stage);
-  else if (verify && status == GRANIT_SUCCESS)
+  else if (verify && status.ok())
     std::cout << "SPIR-V 结构验证通过（" << info.entry_point << ", " << stage << "）\n";
   else
     std::cout << info.output;
   std::cerr << info.diagnostic;
-  return status == GRANIT_SUCCESS ? 0 : 1;
+  return status.ok() ? 0 : 1;
 }
 
 void print_usage() {

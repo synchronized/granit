@@ -28,7 +28,7 @@ result pbr_lighting_resources::initialize(granit_renderer renderer) {
                  .usage = texture_usage::depth_stencil_attachment | texture_usage::sampled,
                  .width = 1,
                  .height = 1});
-  if (succeeded(value))
+  if (value.ok())
     value = shadow_view_.initialize(renderer, shadow_texture_.native_handle());
   const auto cube_desc =
       texture_desc{.dimension = texture_dimension::cube,
@@ -37,11 +37,11 @@ result pbr_lighting_resources::initialize(granit_renderer renderer) {
                    .width = 1,
                    .height = 1,
                    .array_layers = 6};
-  if (succeeded(value))
+  if (value.ok())
     value = irradiance_texture_.initialize(renderer, cube_desc);
-  if (succeeded(value))
+  if (value.ok())
     value = prefiltered_texture_.initialize(renderer, cube_desc);
-  if (succeeded(value)) {
+  if (value.ok()) {
     value = brdf_lut_texture_.initialize(
         renderer, {.format = texture_format::rgba16_float,
                    .usage = texture_usage::sampled | texture_usage::transfer_destination});
@@ -52,29 +52,29 @@ result pbr_lighting_resources::initialize(granit_renderer renderer) {
       0x3c00, 0x3c00, 0x3c00, 0x3c00, 0x3c00, 0x3c00, 0x3c00, 0x3c00};
   constexpr std::array<std::uint16_t, 4> lut_pixel{0x3800, 0x2e66, 0x0000, 0x3c00};
   const auto cube_bytes = std::as_bytes(std::span{cube_pixels});
-  if (succeeded(value)) {
+  if (value.ok()) {
     value = irradiance_texture_.write(cube_bytes, {.bytes_per_row = 8, .rows_per_image = 1},
                                       {.array_layer_count = 6});
   }
-  if (succeeded(value)) {
+  if (value.ok()) {
     value = prefiltered_texture_.write(cube_bytes, {.bytes_per_row = 8, .rows_per_image = 1},
                                        {.array_layer_count = 6});
   }
-  if (succeeded(value))
+  if (value.ok())
     value = brdf_lut_texture_.write(std::as_bytes(std::span{lut_pixel}), {.bytes_per_row = 8}, {});
   const texture_view_desc cube_view_desc{.dimension = texture_dimension::cube,
                                          .array_layer_count = 6};
-  if (succeeded(value)) {
+  if (value.ok()) {
     value =
         irradiance_view_.initialize(renderer, irradiance_texture_.native_handle(), cube_view_desc);
   }
-  if (succeeded(value)) {
+  if (value.ok()) {
     value = prefiltered_view_.initialize(renderer, prefiltered_texture_.native_handle(),
                                          cube_view_desc);
   }
-  if (succeeded(value))
+  if (value.ok())
     value = brdf_lut_view_.initialize(renderer, brdf_lut_texture_.native_handle());
-  if (succeeded(value)) {
+  if (value.ok()) {
     value = from_native(resources_.initialize(
         renderer,
         {.shadow = shadow_view_.native_handle(),
@@ -84,7 +84,7 @@ result pbr_lighting_resources::initialize(granit_renderer renderer) {
         {.light_view_projection = math::identity_matrix4, .texel_size = {1.0F, 1.0F}},
         {.intensity = 0.25F}, {.directional = 1, .point = 1, .spot = 1}));
   }
-  if (succeeded(value)) {
+  if (value.ok()) {
     lighting::packed_view_lights lights;
     lights.directional.push_back(
         {.direction_to_light = {0.0F, 0.0F, 1.0F}, .radiance = {1.0F, 1.0F, 1.0F}});
@@ -98,7 +98,7 @@ result pbr_lighting_resources::initialize(granit_renderer renderer) {
                            .inner_angle_cosine = std::cos(0.2F)});
     value = from_native(resources_.update_lights(lights));
   }
-  if (failed(value))
+  if (value.failed())
     static_cast<void>(reset());
   return value;
 }
@@ -106,7 +106,7 @@ result pbr_lighting_resources::initialize(granit_renderer renderer) {
 result pbr_lighting_resources::reset() {
   auto value = from_native(resources_.reset());
   const auto capture = [&](result next) {
-    if (succeeded(value))
+    if (value.ok())
       value = next;
   };
   capture(brdf_lut_view_.reset());
@@ -191,9 +191,9 @@ result initialize_pbr_instance(granit_renderer renderer,
                                material::material_gpu_instance& instance) {
   auto value = from_native(
       instance.initialize(renderer, material_template.material_layout(), package.metadata()));
-  if (succeeded(value))
+  if (value.ok())
     value = from_native(defaults.bind(instance));
-  if (succeeded(value) &&
+  if (value.ok() &&
       (!set_parameter(instance, "base_color", material::parameter_type::float4,
                       std::array{0.8F, 0.2F, 0.1F, 1.0F}) ||
        !set_parameter(instance, "metallic", material::parameter_type::float32, std::array{0.5F}) ||
@@ -207,7 +207,7 @@ result initialize_pbr_instance(granit_renderer renderer,
                       std::array{0.0F, 0.0F, 0.0F}))) {
     value = result::invalid_argument;
   }
-  if (succeeded(value))
+  if (value.ok())
     value = from_native(instance.flush());
   return value;
 }

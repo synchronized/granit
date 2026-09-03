@@ -112,7 +112,7 @@ granit_result dynamic_uniform_arena::ensure_buffer(frame_slot_state& slot) noexc
                                          .usage = granit::buffer_usage::uniform |
                                                   granit::buffer_usage::transfer_destination,
                                          .location = granit::memory_location::upload});
-  if (granit::failed(result))
+  if (result.failed())
     return static_cast<granit_result>(result);
   slot.groups.clear();
   slot.buffer = std::move(replacement);
@@ -146,9 +146,9 @@ granit_result dynamic_uniform_arena::acquire_groups(frame_slot_state& slot,
                                  .resource = slot.buffer.native_handle(),
                                  .offset = 0,
                                  .size = sizeof(granit::material::pbr_object_constants)}};
-    if (granit::succeeded(result))
+    if (result.ok())
       result = candidate.object_group.initialize(renderer_, material.object_layout, object_entry);
-    if (granit::failed(result))
+    if (result.failed())
       return static_cast<granit_result>(result);
     slot.groups.push_back(std::move(candidate));
     output = &slot.groups.back();
