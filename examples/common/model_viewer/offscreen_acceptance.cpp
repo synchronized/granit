@@ -9,6 +9,7 @@
 #include <granit/pipeline/render_pipeline.hpp>
 
 #include <algorithm>
+#include <charconv>
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
@@ -36,6 +37,10 @@ struct options {
   std::filesystem::path expected;
   granit::example::model_viewer::debug_display_mode debug_display{
       granit::example::model_viewer::debug_display_mode::shaded};
+  granit_sample_count sample_count{GRANIT_SAMPLE_COUNT_4};
+  float sampler_anisotropy{8.0F};
+  bool enable_fxaa{true};
+  bool enable_specular_aa{true};
   bool validation{};
 };
 
@@ -45,7 +50,28 @@ void print_usage() {
                "[--debug-display=shaded|base-color|normals|metallic|roughness|"
                "geometric-normals|sampled-normals|vertex-normals|vertex-tangents] "
                "[--backend=auto|vulkan|webgpu] "
-               "[--backend-library <文件>] [--validation]\n";
+               "[--backend-library <文件>] [--msaa=1|4] [--fxaa=on|off] "
+               "[--specular-aa=on|off] [--anisotropy=1|2|4|8|16] [--validation]\n";
+}
+
+bool parse_switch(std::string_view value, bool& output) {
+  if (value == "on")
+    output = true;
+  else if (value == "off")
+    output = false;
+  else
+    return false;
+  return true;
+}
+
+bool parse_anisotropy(std::string_view value, float& output) {
+  unsigned parsed = 0;
+  const auto [end, error] = std::from_chars(value.data(), value.data() + value.size(), parsed);
+  if (error != std::errc{} || end != value.data() + value.size() ||
+      (parsed != 1 && parsed != 2 && parsed != 4 && parsed != 8 && parsed != 16))
+    return false;
+  output = static_cast<float>(parsed);
+  return true;
 }
 
 bool parse_debug_display(std::string_view value,
@@ -92,12 +118,34 @@ bool parse_options(int argc, char** argv, options& output) {
     const std::string_view argument{argv[index]};
     constexpr std::string_view backend_prefix = "--backend=";
     constexpr std::string_view debug_display_prefix = "--debug-display=";
+    constexpr std::string_view msaa_prefix = "--msaa=";
+    constexpr std::string_view fxaa_prefix = "--fxaa=";
+    constexpr std::string_view specular_aa_prefix = "--specular-aa=";
+    constexpr std::string_view anisotropy_prefix = "--anisotropy=";
     if (argument.starts_with(backend_prefix)) {
       if (!parse_backend(argument.substr(backend_prefix.size()), candidate.backend))
         return false;
     } else if (argument.starts_with(debug_display_prefix)) {
       if (!parse_debug_display(argument.substr(debug_display_prefix.size()),
                                candidate.debug_display))
+        return false;
+    } else if (argument.starts_with(msaa_prefix)) {
+      const auto value = argument.substr(msaa_prefix.size());
+      if (value == "1")
+        candidate.sample_count = GRANIT_SAMPLE_COUNT_1;
+      else if (value == "4")
+        candidate.sample_count = GRANIT_SAMPLE_COUNT_4;
+      else
+        return false;
+    } else if (argument.starts_with(fxaa_prefix)) {
+      if (!parse_switch(argument.substr(fxaa_prefix.size()), candidate.enable_fxaa))
+        return false;
+    } else if (argument.starts_with(specular_aa_prefix)) {
+      if (!parse_switch(argument.substr(specular_aa_prefix.size()), candidate.enable_specular_aa))
+        return false;
+    } else if (argument.starts_with(anisotropy_prefix)) {
+      if (!parse_anisotropy(argument.substr(anisotropy_prefix.size()),
+                            candidate.sampler_anisotropy))
         return false;
     } else if (argument == "--asset" && index + 1 < argc) {
       candidate.asset = argv[++index];
@@ -280,6 +328,17 @@ int main(int argc, char** argv) {
     stage = "查询 Renderer 信息";
     result = renderer.get_info(renderer_details);
   }
+  granit::renderer_limits renderer_limits;
+  if (granit::succeeded(result)) {
+    stage = "查询 Renderer 限制";
+    result = renderer.get_limits(renderer_limits);
+  }
+  if (granit::succeeded(result) &&
+      ((renderer_limits.framebuffer_sample_counts & arguments.sample_count) == 0 ||
+       arguments.sampler_anisotropy > renderer_limits.max_sampler_anisotropy)) {
+    stage = "校验质量配置";
+    result = granit::result::unsupported;
+  }
   granit::example::model_viewer::application_core core;
   if (granit::succeeded(result)) {
     stage = "启动应用 Core";
@@ -306,7 +365,8 @@ int main(int argc, char** argv) {
       stage = "读取环境包";
       result = granit::result::invalid_argument;
     } else {
-      result = core.upload(renderer.native_handle(), environment_bytes);
+      result =
+          core.upload(renderer.native_handle(), environment_bytes, arguments.sampler_anisotropy);
     }
   }
 
@@ -329,7 +389,9 @@ int main(int argc, char** argv) {
   if (granit::succeeded(result)) {
     stage = "创建 Render Pipeline";
     granit_render_pipeline_desc pipeline_desc = GRANIT_RENDER_PIPELINE_DESC_INIT;
-    pipeline_desc.sample_count = GRANIT_SAMPLE_COUNT_4;
+    pipeline_desc.sample_count = arguments.sample_count;
+    pipeline_desc.enable_fxaa = arguments.enable_fxaa;
+    pipeline_desc.enable_specular_aa = arguments.enable_specular_aa;
     result = pipeline.initialize(renderer.native_handle(), pipeline_desc);
   }
 
@@ -386,6 +448,10 @@ int main(int argc, char** argv) {
     std::cerr << "固定截图回归失败，实际图已写入：" << arguments.output << '\n';
     return 1;
   }
-  std::cout << "固定截图验收通过，实际图已写入：" << arguments.output << '\n';
+  std::cout << "固定截图验收通过：MSAA=" << arguments.sample_count
+            << "x，FXAA=" << (arguments.enable_fxaa ? "on" : "off")
+            << "，Specular AA=" << (arguments.enable_specular_aa ? "on" : "off")
+            << "，Anisotropy=" << arguments.sampler_anisotropy << "x；实际图已写入："
+            << arguments.output << '\n';
   return 0;
 }

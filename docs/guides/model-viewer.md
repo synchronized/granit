@@ -136,6 +136,12 @@ Sampler 和材质绑定；创建失败时保留原配置。
 
 `--smoke-test` 与 `--profile-output` 用途不同，不能同时使用。
 
+离屏验收程序 `granit_model_viewer_offscreen_acceptance` 额外接受 `--msaa=1|4`、
+`--fxaa=on|off`、`--specular-aa=on|off` 和 `--anisotropy=1|2|4|8|16`。它会通过公开的
+Renderer Limits 严格校验请求，不支持的配置直接失败而不会静默回退。Dawn 集成工作流分别比较
+默认高质量组合与全部关闭的 1× 基线组合，确认 Vulkan、Windows Dawn 和 Linux Dawn 使用相同
+公共配置语义。
+
 ## 采集 Release 性能基线
 
 性能模式固定窗口像素尺寸为 1920×1080，并使用当前模型查看器的固定初始相机。正式数据应使用

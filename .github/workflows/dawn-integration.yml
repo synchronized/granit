@@ -76,6 +76,13 @@ jobs:
               --environment "$PWD/examples/assets/StudioSmall03.grenv" \
               --output "$output/flight-helmet-vulkan.rgba" \
               --backend=vulkan --validation 2>&1 | tee "$output/reference.log"
+          VK_DRIVER_FILES="$lvp_icd" LIBGL_ALWAYS_SOFTWARE=1 \
+            "$build/bin/granit_model_viewer_offscreen_acceptance" \
+              --asset "$assets/glTF/FlightHelmet.gltf" \
+              --environment "$PWD/examples/assets/StudioSmall03.grenv" \
+              --output "$output/flight-helmet-vulkan-quality-low.rgba" \
+              --backend=vulkan --msaa=1 --fxaa=off --specular-aa=off --anisotropy=1 \
+              --validation
           for mode in base-color normals metallic roughness geometric-normals sampled-normals \
             vertex-normals vertex-tangents; do
             VK_DRIVER_FILES="$lvp_icd" LIBGL_ALWAYS_SOFTWARE=1 \
@@ -190,6 +197,15 @@ jobs:
             --backend-library "$build/lib/granit_backend_webgpu.dll" `
             --validation 2>&1 | Tee-Object "$output/acceptance.log"
           if ($LASTEXITCODE -ne 0) { throw "Windows Dawn FlightHelmet 截图验收失败" }
+          & "$build/bin/granit_model_viewer_offscreen_acceptance.exe" `
+            --asset "$assets/glTF/FlightHelmet.gltf" `
+            --environment "$PWD/examples/assets/StudioSmall03.grenv" `
+            --output "$output/flight-helmet-windows-webgpu-quality-low.rgba" `
+            --expected "$env:RUNNER_TEMP/model-viewer-reference/flight-helmet-vulkan-quality-low.rgba" `
+            --backend=webgpu `
+            --backend-library "$build/lib/granit_backend_webgpu.dll" `
+            --msaa=1 --fxaa=off --specular-aa=off --anisotropy=1 --validation
+          if ($LASTEXITCODE -ne 0) { throw "Windows Dawn 低质量组合验收失败" }
       - name: 生成 Windows Dawn 分层诊断图
         if: ${{ failure() && steps.integration.outcome == 'success' }}
         continue-on-error: true
@@ -376,6 +392,15 @@ jobs:
               --backend=webgpu \
               --backend-library "$build/lib/libgranit_backend_webgpu.so" \
               --validation 2>&1 | tee "$output/acceptance.log"
+          VK_DRIVER_FILES="$lvp_icd" LIBGL_ALWAYS_SOFTWARE=1 \
+            "$build/bin/granit_model_viewer_offscreen_acceptance" \
+              --asset "$assets/glTF/FlightHelmet.gltf" \
+              --environment "$PWD/examples/assets/StudioSmall03.grenv" \
+              --output "$output/flight-helmet-linux-webgpu-quality-low.rgba" \
+              --expected "$RUNNER_TEMP/model-viewer-reference/flight-helmet-vulkan-quality-low.rgba" \
+              --backend=webgpu \
+              --backend-library "$build/lib/libgranit_backend_webgpu.so" \
+              --msaa=1 --fxaa=off --specular-aa=off --anisotropy=1 --validation
       - name: 生成 Linux Dawn 分层诊断图
         if: ${{ failure() && steps.integration.outcome == 'success' }}
         continue-on-error: true
