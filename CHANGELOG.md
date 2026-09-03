@@ -10,8 +10,26 @@
 
 ### 新增
 
+- Core Renderer 新增 Vulkan、桌面 Dawn WebGPU 与 Emscripten WebGPU 的统一后端选择、能力查询和
+  运行状态接口；内部使用私有 HAL 隔离资源、命令、Queue、呈现与 Provider 生命周期。
+- Shader 工具链以 WGSL 为权威输入，可生成 Vulkan SPIR-V、反射清单和确定性资产，并提供编译、
+  校验与诊断接口。
+- WebGPU 后端补齐 Buffer、Texture、Sampler、Bind Group、Graphics Pipeline、Indexed Draw、
+  上传、回读、Canvas Swapchain 与浏览器帧循环所需能力。
 - Renderer 支持 Dynamic Uniform Buffer Binding，并为 Graphics/Compute Bind Group 绑定增加统一
   的版本化描述、动态 Offset 数组及数量、对齐和范围校验。
+- Render Pipeline 新增设备限制查询、MSAA Render/Resolve、FXAA、Specular AA、Mipmap 与各向异性
+  过滤质量配置。
+- 增加跨后端 Model Viewer，使用示例私有 glTF 加载器、PBR 材质、动态 Uniform Arena、轨道相机、
+  ImGui 面板与离线预处理环境光，覆盖 Vulkan、桌面 Dawn 和浏览器 WebGPU。
+
+### 改进
+
+- Renderer Registry 与资源记录改为后端无关实现，Vulkan/WebGPU 平台差异下沉到私有后端目录和
+  Provider 工厂；公共源文件不再包含原生图形 API 类型。
+- Model Viewer 增加环境光强度与旋转、曝光、质量选项、固定布局、帧时间统计和确定性截图比较。
+- Windows、Linux、Dawn 与 Emscripten 工作流覆盖共享/静态安装 Consumer、真实后端 Smoke Test、
+  浏览器输入与资源归零检查。
 
 ### 兼容性与迁移
 
@@ -19,6 +37,8 @@
   `granit_command_recorder_bind_compute_groups` 改为接收 `granit_bind_groups_desc`；旧参数需要迁移
   到初始化后的描述结构。详见[从 0.3 迁移到 0.4](docs/guides/migrate-0.3-to-0.4.md)。
 - 项目开发版本已提升到 0.4.0；0.3.0 使用者必须重新编译，不承诺二进制兼容。
+- 新增的 WebGPU、Model Viewer、材质资产与示例环境包仍属于 0.x 实验性范围；不承诺原生 WebGPU
+  互操作、glTF 公共 SDK、浏览器多线程渲染或 Android 平台支持。
 
 ## 0.3.0 - 2026-08-26
 

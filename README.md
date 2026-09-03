@@ -4,9 +4,9 @@
 # Granit
 
 [![Windows](https://github.com/synchronized/granit/actions/workflows/windows.yml/badge.svg)](https://github.com/synchronized/granit/actions/workflows/windows.yml) [![Linux](https://github.com/synchronized/granit/actions/workflows/linux.yml/badge.svg)](https://github.com/synchronized/granit/actions/workflows/linux.yml) [![Release](https://img.shields.io/github/v/release/synchronized/granit)](https://github.com/synchronized/granit/releases/latest) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)<br>
-Granit 是一个基于 Vulkan 的 C++20 渲染库，面向游戏引擎、实时应用和图形工具开发。项目通过
-C ABI 隔离动态库边界，并在其上提供现代 C++20 RAII 包装；普通用户无需接触 Vulkan 类型、
-句柄和生命周期管理。
+Granit 是一个支持 Vulkan 与 WebGPU 的 C++20 渲染库，面向游戏引擎、实时应用和图形工具开发。
+项目通过 C ABI 隔离动态库边界，并在其上提供现代 C++20 RAII 包装；普通用户无需接触后端原生
+类型、句柄和生命周期管理。
 
 > **最新发布版本：0.3.0；main 正在开发 0.4.0。** 0.x 不保证 API/ABI 稳定；升级前请阅读
 > [变更记录](CHANGELOG.md)和[兼容策略](docs/reference/compatibility.md)。
@@ -20,7 +20,7 @@ Scene / View / Material
           -> Render Pipeline（默认整帧策略）
           -> 内部 Render Graph（Pass 与资源依赖）
           -> Renderer / Command Recorder（GPU 执行）
-          -> Vulkan（内部后端）
+          -> 私有 HAL -> Vulkan / WebGPU（内部后端）
 ```
 
 使用者可以按需要选择层级：
@@ -34,7 +34,7 @@ Granit 采用“Bring Your Own Engine”边界，不接管使用者的 ECS、Sce
 
 ## 核心特点
 
-- **隐藏 Vulkan**：公共头文件不包含 Vulkan，也不暴露 `Vk*` 类型或句柄。
+- **统一多后端接口**：同一套公共 API 驱动 Vulkan 与 WebGPU，且不暴露后端原生类型或句柄。
 - **C ABI 边界**：`.h` 提供 C11 可表达接口，适合动态库和其他语言绑定。
 - **现代 C++20 包装**：`.hpp` 提供强类型、移动语义和 RAII。
 - **安全资源句柄**：64 位整数句柄带有类型、所属 Renderer 和 generation 校验。
@@ -70,8 +70,9 @@ cmake --build <your-build>
 ## 快速开始
 
 构建需要 CMake 3.23+、支持 C++20 的 MSVC/Clang/GCC，以及 Ninja 或 Visual Studio 2022。
-仓库已内置匹配版本的 Vulkan-Headers 与 Volk；编译不要求完整 Vulkan SDK，运行时仍需可用的
-Vulkan loader 和显卡驱动。
+仓库已内置匹配版本的 Vulkan-Headers 与 Volk；默认 Vulkan 构建不要求完整 Vulkan SDK，运行时
+仍需可用的 Vulkan loader 和显卡驱动。桌面 Dawn 与 Emscripten WebGPU 的依赖和构建方式见
+[构建与安装](docs/guides/build.md)。
 
 查看当前平台可用的 CMake preset：
 
@@ -100,7 +101,8 @@ build/windows-clang-debug/bin/granit_offscreen_clear_example.exe
 ```
 
 完整构建说明见[构建与安装](docs/guides/build.md)，其他程序见[示例程序](docs/guides/examples.md)，
-WebGPU 浏览器三角形的构建与运行见[专门指南](docs/guides/webgpu-browser-example.md)。
+跨后端模型查看器见[Model Viewer 指南](docs/guides/model-viewer.md)，浏览器 WebGPU 基础示例见
+[WebGPU 浏览器指南](docs/guides/webgpu-browser-example.md)。
 
 最小 C++20 程序只需包含聚合头并初始化 Renderer：
 
