@@ -20,7 +20,7 @@ TEST_CASE("轨道相机根据 Bounds 和宽高比自动聚焦", "[example][model
   REQUIRE(camera.focus({.center = {1, 2, 3}, .radius = 2}, 800, 600));
   CHECK(camera.target() == granit::math::float3{1, 2, 3});
   CHECK(camera.distance() > 2.0F);
-  CHECK(camera.near_plane() > 0.0F);
+  CHECK(camera.near_plane() == Catch::Approx(0.1F));
   CHECK(camera.far_plane() > camera.near_plane());
 
   granit::example::model_viewer::orbit_camera narrow;

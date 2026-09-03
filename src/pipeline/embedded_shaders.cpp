@@ -73,7 +73,8 @@ fn fragment_main(input: VertexOutput) -> @location(0) vec4<f32> {
                                            max(dot(west, luma), dot(east, luma))));
   let contrast = maximum_luma - minimum_luma;
   let filtered = (north + south + west + east) * 0.25;
-  let blend = select(0.0, 0.5, contrast >= max(0.0312, maximum_luma * 0.125));
+  let threshold = max(0.0312, maximum_luma * 0.125);
+  let blend = 0.5 * clamp((contrast - threshold) / max(contrast, 0.0001), 0.0, 1.0);
   var color = aces_fitted(mix(center, filtered, blend) * tone.exposure_scale);
   if (tone.encode_srgb != 0u) {
     color = linear_to_srgb(color);

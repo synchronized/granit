@@ -58,7 +58,8 @@ bool orbit_camera::focus(camera_bounds bounds, std::uint32_t width, std::uint32_
     return false;
   target_ = bounds.center;
   distance_ = candidate_distance;
-  near_plane_ = std::max(radius * 0.001F, minimum_distance);
+  // 查看器不需要覆盖极端近距离；收紧深度范围可避免模型近共面零件发生 Z-fighting。
+  near_plane_ = std::max(radius * 0.05F, minimum_distance);
   far_plane_ = std::max(near_plane_ * 2.0F, distance_ + radius * 4.0F);
   save_home();
   return true;
