@@ -2009,8 +2009,9 @@ WGPUVertexFormat to_vertex_format(granit_backend_plugin_vertex_format format) no
 }
 
 WGPUFrontFace to_native_front_face(granit_backend_plugin_front_face front_face) noexcept {
-  return front_face == GRANIT_BACKEND_PLUGIN_FRONT_FACE_COUNTER_CLOCKWISE ? WGPUFrontFace_CCW
-                                                                          : WGPUFrontFace_CW;
+  // Granit 的正面绕序以 Vulkan 正高度 Viewport 为基准；WebGPU 窗口映射的 Y 方向相反。
+  return front_face == GRANIT_BACKEND_PLUGIN_FRONT_FACE_COUNTER_CLOCKWISE ? WGPUFrontFace_CW
+                                                                          : WGPUFrontFace_CCW;
 }
 
 WGPUCullMode to_native_cull_mode(granit_backend_plugin_cull_mode cull_mode) noexcept {
