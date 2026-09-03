@@ -54,6 +54,7 @@ Render Pipeline 创建描述在尾部追加两个布尔策略字段，并保留�
 ## 实施顺序
 
 1. 补齐 Vulkan、Dawn 和 Emscripten 的样本数及各向异性能力查询，并扩展 Renderer Limits ABI。
+   （已完成）
 2. 为 Render Pipeline 增加 FXAA 和 Specular AA 独立开关，保持旧结构大小的确定性行为。
 3. 让自动 PBR 路径根据选项选择 Shader/Pipeline 变体，禁止运行时后端分支泄漏到公共层。
 4. 为 Model Viewer 增加 MSAA、FXAA、Specular AA 和各向异性控件，显示实际生效配置。

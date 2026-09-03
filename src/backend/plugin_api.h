@@ -9,7 +9,7 @@
 #include <granit/core/diagnostic.h>
 #include <granit/core/result.h>
 
-#define GRANIT_BACKEND_PLUGIN_ABI_VERSION UINT32_C(25)
+#define GRANIT_BACKEND_PLUGIN_ABI_VERSION UINT32_C(26)
 #define GRANIT_BACKEND_PLUGIN_KIND_WEBGPU UINT32_C(1)
 #define GRANIT_BACKEND_PLUGIN_QUERY_SYMBOL "granit_backend_plugin_query"
 #define GRANIT_BACKEND_PLUGIN_SURFACE_TYPE_WIN32_BIT UINT32_C(0x00000001)
@@ -450,6 +450,8 @@ typedef struct granit_backend_plugin_capabilities {
   uint32_t max_color_attachments;
   uint32_t surface_types;
   uint32_t reserved_2;
+  uint32_t framebuffer_sample_counts;
+  float max_sampler_anisotropy;
 } granit_backend_plugin_capabilities;
 
 typedef void* (*granit_backend_plugin_allocate_fn)(uint64_t size, uint64_t alignment,

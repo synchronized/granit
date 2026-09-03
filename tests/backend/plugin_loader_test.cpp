@@ -189,6 +189,8 @@ TEST_CASE("后端插件 Loader 完成版本化握手", "[backend][plugin]") {
   CHECK(capabilities.max_texture_dimension_2d == 8192);
   CHECK(capabilities.max_bind_groups == 4);
   CHECK(capabilities.max_color_attachments == 8);
+  CHECK(capabilities.framebuffer_sample_counts == (1U | 4U));
+  CHECK(capabilities.max_sampler_anisotropy == 16.0F);
 
   capabilities.struct_size = 0;
   CHECK(loader.get_capabilities(instance, &capabilities) == GRANIT_ERROR_INVALID_ARGUMENT);

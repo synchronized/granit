@@ -433,6 +433,8 @@ void receive_device_async(WGPURequestDeviceStatus status, WGPUDevice device, WGP
         limits.maxColorAttachments,
         provider_surface_types,
         0,
+        1 | 4,
+        16.0F,
     };
     state.lifecycle.mark_ready();
     constexpr char diagnostic[] = "Emscripten WebGPU adapter and device are ready";
@@ -664,6 +666,8 @@ granit_result create_backend(const granit_backend_plugin_host_api* host,
       device_limits.maxColorAttachments,
       provider_surface_types,
       0,
+      1 | 4,
+      16.0F,
   };
 #if defined(GRANIT_WEBGPU_DEFER_INITIALIZATION_TEST)
   const auto extended_host = host->struct_size > sizeof(granit_backend_plugin_host_api);

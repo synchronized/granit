@@ -682,10 +682,9 @@ granit_result webgpu_renderer_state::refresh_state() noexcept {
       return capabilities_result;
     }
     capabilities_ = {
-        capabilities.uniform_buffer_offset_alignment,
-        capabilities.storage_buffer_offset_alignment,
-        capabilities.max_uniform_buffer_binding_size,
-        capabilities.max_storage_buffer_binding_size,
+        capabilities.uniform_buffer_offset_alignment, capabilities.storage_buffer_offset_alignment,
+        capabilities.max_uniform_buffer_binding_size, capabilities.max_storage_buffer_binding_size,
+        capabilities.framebuffer_sample_counts,       capabilities.max_sampler_anisotropy,
     };
     provider_surface_types_ = capabilities.surface_types;
     if ((to_plugin_surface_types(surface_types_) & ~provider_surface_types_) != 0) {

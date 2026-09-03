@@ -29,6 +29,8 @@ TEST_CASE("WebGPU Renderer 状态集中管理静态 Provider 生命周期", "[ba
   CHECK(backend.capabilities().uniform_buffer_offset_alignment == 256);
   CHECK(backend.capabilities().storage_buffer_offset_alignment == 256);
   CHECK(backend.capabilities().max_uniform_buffer_binding_size == 65536);
+  CHECK(backend.capabilities().framebuffer_sample_counts == (1U | 4U));
+  CHECK(backend.capabilities().max_sampler_anisotropy == 16.0F);
   CHECK(state.presentation() != nullptr);
 
   auto vertex_buffer = state.allocate_buffer_resource();

@@ -45,6 +45,11 @@ granit_result result = granit_renderer_get_limits(renderer, &limits);
 `max_uniform_buffer_binding_size` 是单个 Uniform Buffer Binding Range 的最大字节数。Uniform Arena
 步长可按 `(size + alignment - 1) / alignment * alignment` 向上对齐，计算时需要防止整数溢出。
 
+Version 2 追加 `framebuffer_sample_counts` 和 `max_sampler_anisotropy`。前者是通用颜色与深度附件
+共同支持的样本数位集合，可用 `GRANIT_SAMPLE_COUNT_1/2/4/8` 按位检查；具体格式仍可能施加更严格
+限制，资源或 Pipeline 创建失败时不会静默降低样本数。后者至少为 1；值为 1 表示不能启用
+各向异性过滤。C++ `renderer_limits::supports_sample_count` 提供对应的便捷检查。
+
 调用者必须设置 `struct_size`，当前至少为 `GRANIT_RENDERER_LIMITS_VERSION_1_SIZE`。查询接受更大的
 未来结构并只写当前版本已知字段；结构过小或空指针返回 `GRANIT_ERROR_INVALID_ARGUMENT`，失效
 Renderer 返回 `GRANIT_ERROR_INVALID_HANDLE`。限制来自 Renderer 创建时保存的不可变能力快照，

@@ -323,8 +323,7 @@ granit_result renderer_registry::create_bind_group(granit_renderer renderer,
               entry.size != GRANIT_WHOLE_SIZE)
             return GRANIT_ERROR_INVALID_ARGUMENT;
           const auto comparison = declaration->type == GRANIT_BINDING_TYPE_COMPARISON_SAMPLER;
-          if (comparison !=
-              (found->second->compare_operation != GRANIT_COMPARE_OPERATION_DISABLED))
+          if (comparison != (found->second->compare_operation != GRANIT_COMPARE_OPERATION_DISABLED))
             return GRANIT_ERROR_INVALID_ARGUMENT;
           write.type = declaration->type == GRANIT_BINDING_TYPE_COMPARISON_SAMPLER
                            ? backend_binding_type::comparison_sampler
@@ -339,9 +338,8 @@ granit_result renderer_registry::create_bind_group(granit_renderer renderer,
           const bool sampled = declaration->type == GRANIT_BINDING_TYPE_SAMPLED_TEXTURE ||
                                declaration->type == GRANIT_BINDING_TYPE_SAMPLED_TEXTURE_CUBE ||
                                declaration->type == GRANIT_BINDING_TYPE_SAMPLED_DEPTH_TEXTURE;
-          const auto required_usage = sampled
-                                          ? GRANIT_TEXTURE_USAGE_SAMPLED_BIT
-                                          : GRANIT_TEXTURE_USAGE_STORAGE_BIT;
+          const auto required_usage =
+              sampled ? GRANIT_TEXTURE_USAGE_SAMPLED_BIT : GRANIT_TEXTURE_USAGE_STORAGE_BIT;
           if ((found->second->texture->desc.usage & required_usage) == 0)
             return GRANIT_ERROR_INVALID_ARGUMENT;
           write.type = declaration->type == GRANIT_BINDING_TYPE_SAMPLED_TEXTURE_CUBE
@@ -538,6 +536,8 @@ granit_result renderer_registry::create_graphics_pipeline(granit_renderer render
       vertex = vertex_found->second;
       fragment = fragment_found->second;
     }
+    if ((state->capabilities().framebuffer_sample_counts & desc.sample_count) == 0)
+      return GRANIT_ERROR_UNSUPPORTED;
     auto record = std::make_shared<graphics_pipeline_record>();
     record->owner = state;
     record->pipelines = pipelines;

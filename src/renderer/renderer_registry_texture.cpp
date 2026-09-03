@@ -24,6 +24,8 @@ granit_result renderer_registry::create_texture(granit_renderer renderer,
     auto owner = acquire_backend(renderer);
     if (!owner)
       return GRANIT_ERROR_INVALID_HANDLE;
+    if ((owner->capabilities().framebuffer_sample_counts & desc.sample_count) == 0)
+      return GRANIT_ERROR_UNSUPPORTED;
     auto resource_api = std::dynamic_pointer_cast<backend_resource_renderer>(owner);
     if (!resource_api)
       return GRANIT_ERROR_UNSUPPORTED;
@@ -364,6 +366,9 @@ granit_result renderer_registry::create_sampler(granit_renderer renderer,
     auto owner = acquire_backend(renderer);
     if (!owner)
       return GRANIT_ERROR_INVALID_HANDLE;
+    if (desc.anisotropy_enabled != 0 &&
+        desc.max_anisotropy > owner->capabilities().max_sampler_anisotropy)
+      return GRANIT_ERROR_UNSUPPORTED;
     auto resource_api = std::dynamic_pointer_cast<backend_resource_renderer>(owner);
     if (!resource_api)
       return GRANIT_ERROR_UNSUPPORTED;

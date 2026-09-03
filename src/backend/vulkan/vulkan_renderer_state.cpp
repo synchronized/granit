@@ -280,6 +280,10 @@ granit_result vulkan_renderer_state::initialize(std::string_view application_nam
       .storage_buffer_offset_alignment = limits.minStorageBufferOffsetAlignment,
       .max_uniform_buffer_binding_size = limits.maxUniformBufferRange,
       .max_storage_buffer_binding_size = limits.maxStorageBufferRange,
+      .framebuffer_sample_counts = static_cast<std::uint32_t>(limits.framebufferColorSampleCounts &
+                                                              limits.framebufferDepthSampleCounts),
+      .max_sampler_anisotropy =
+          device_.sampler_anisotropy_supported() ? limits.maxSamplerAnisotropy : 1.0F,
   };
 
   const auto allocator_result = memory_allocator_.initialize(instance_, device_);
