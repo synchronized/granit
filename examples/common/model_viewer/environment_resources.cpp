@@ -12,24 +12,9 @@ constexpr std::uint32_t rgba16_bytes_per_pixel = 8;
 
 granit::result upload_cube_mip(granit::texture& texture, std::span<const std::byte> pixels,
                                std::uint32_t resolution, std::uint32_t mip) noexcept {
-  const auto face_size =
-      std::size_t{resolution} * resolution * rgba16_bytes_per_pixel;
-  if (pixels.size() != face_size * 6)
-    return granit::result::invalid_argument;
-  // 逐面上传让每次写入的行跨度与层范围完全独立，避免后端解释数组层跨度的差异。
-  for (std::uint32_t face = 0; face < 6; ++face) {
-    const auto result = texture.write(
-        pixels.subspan(std::size_t{face} * face_size, face_size),
-        {.bytes_per_row = resolution * rgba16_bytes_per_pixel},
-        {.mip_level = mip,
-         .base_array_layer = face,
-         .array_layer_count = 1,
-         .width = resolution,
-         .height = resolution});
-    if (granit::failed(result))
-      return result;
-  }
-  return granit::result::success;
+  return texture.write(
+      pixels, {.bytes_per_row = resolution * rgba16_bytes_per_pixel, .rows_per_image = resolution},
+      {.mip_level = mip, .array_layer_count = 6, .width = resolution, .height = resolution});
 }
 
 } // namespace
