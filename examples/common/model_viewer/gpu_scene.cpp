@@ -12,6 +12,7 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <cstring>
 #include <limits>
 #include <new>
 #include <stdexcept>
@@ -24,6 +25,7 @@ constexpr std::array<std::byte, 4> white_pixel{std::byte{255}, std::byte{255}, s
                                                std::byte{255}};
 constexpr std::array<std::byte, 4> normal_pixel{std::byte{128}, std::byte{128}, std::byte{255},
                                                 std::byte{255}};
+constexpr std::uint32_t texture_upload_row_alignment = 256;
 
 std::uint32_t full_mip_count(std::uint32_t width, std::uint32_t height) noexcept {
   std::uint32_t count = 1;
@@ -698,9 +700,26 @@ granit::result gpu_scene::create(granit_renderer renderer, const gltf::scene& so
           mip.offset > pixels.size() || mip.size > pixels.size() - mip.offset)
         return granit::result::invalid_argument;
       const auto bytes = std::span{pixels}.subspan(mip.offset, mip.size);
+      const auto tight_row = mip.width * 4;
+      const auto aligned_row =
+          (std::uint64_t{tight_row} + texture_upload_row_alignment - 1) &
+          ~std::uint64_t{texture_upload_row_alignment - 1};
+      if (aligned_row > std::numeric_limits<std::uint32_t>::max())
+        return granit::result::invalid_argument;
+      const auto row_pitch = static_cast<std::uint32_t>(aligned_row);
+      std::vector<std::byte> padded_bytes;
+      auto upload_bytes = bytes;
+      if (row_pitch != tight_row && mip.height > 1) {
+        padded_bytes.resize(std::size_t{row_pitch} * (mip.height - 1) + tight_row);
+        for (std::uint32_t row = 0; row < mip.height; ++row) {
+          std::memcpy(padded_bytes.data() + std::size_t{row} * row_pitch,
+                      bytes.data() + std::size_t{row} * tight_row, tight_row);
+        }
+        upload_bytes = padded_bytes;
+      }
       if (const auto result = uploads.write_texture(
-              target.texture.native_handle(), bytes,
-              {.bytes_per_row = mip.width * 4, .rows_per_image = mip.height},
+              target.texture.native_handle(), upload_bytes,
+              {.bytes_per_row = row_pitch, .rows_per_image = mip.height},
               {.mip_level = mip_index, .width = mip.width, .height = mip.height});
           granit::failed(result))
         return result;
