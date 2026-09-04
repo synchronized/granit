@@ -44,7 +44,6 @@
 #include "backend/contracts/timestamp.h"
 #include "backend/contracts/transfer.h"
 #include "backend/contracts/upload.h"
-#include "backend/webgpu/provider_api.h"
 #include "core/handle_table.h"
 #include "core/lifecycle_validation.h"
 #include "renderer/dynamic_uniform_offsets.h"

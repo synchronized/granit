@@ -226,10 +226,12 @@
 ## 近期执行顺序
 
 1. S-16 删除桌面 Dawn 和动态 Provider，并完成 Vulkan 与浏览器 WebGPU 回归。
-2. S-15 在 S-16 新边界落地后完成最终 HAL 验收。
-3. S-14 只在复用条件成立后启动；不要为当前单个示例提前稳定 glTF 公共 API。
-4. S-06D 最终验收等待稳定版本与 component 范围决策；不在 0.x 阶段提前宣布稳定。
-5. H-09 的透明 PBR、CSM、Clustered Forward 与 Bindless 只在各自重新评估条件满足后独立恢复，
+2. [S-17](plans/S-17-render-pipeline-internal-structure.md) 收敛 Render Pipeline 内部职责，保持
+   公共 API/ABI 与渲染行为不变。
+3. S-15 在 S-16 新边界落地后完成最终 HAL 验收。
+4. S-14 只在复用条件成立后启动；不要为当前单个示例提前稳定 glTF 公共 API。
+5. S-06D 最终验收等待稳定版本与 component 范围决策；不在 0.x 阶段提前宣布稳定。
+6. H-09 的透明 PBR、CSM、Clustered Forward 与 Bindless 只在各自重新评估条件满足后独立恢复，
    不作为当前稳定化工作的前置项。
 
 若前置抽象不足，应先更新对应 Plan 和本路线图状态，再扩大公共 API。
