@@ -101,6 +101,13 @@ granit::result application_core::upload(granit_renderer renderer,
       return granit::result::invalid_argument;
     }
     environment_result = environment_.initialize(renderer, package);
+    if (environment_result) {
+      viewer_change recommended_lighting;
+      recommended_lighting.environment_intensity = package.recommended_environment_intensity;
+      recommended_lighting.exposure_ev = package.recommended_exposure_ev;
+      if (state_.apply(cpu_scene_, recommended_lighting) != viewer_state_error::none)
+        environment_result = granit::result::invalid_argument;
+    }
   }
   if (environment_result.failed()) {
     gpu_scene_.reset();

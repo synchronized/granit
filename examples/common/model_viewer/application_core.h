@@ -47,7 +47,7 @@ public:
   [[nodiscard]] granit::result load_asset(std::span<const std::byte> bytes,
                                           const gltf::resource_resolver* resolver);
   [[nodiscard]] granit::result accept_scene(gltf::scene scene);
-  /** 上传场景；environment_bytes 为空时使用内置摄影棚环境，否则解析 GRENV v1。 */
+  /** 上传场景；environment_bytes 为空时使用内置摄影棚环境，否则解析 GRENV v2。 */
   [[nodiscard]] granit::result upload(granit_renderer renderer,
                                       std::span<const std::byte> environment_bytes = {},
                                       float sampler_anisotropy = 8.0F);

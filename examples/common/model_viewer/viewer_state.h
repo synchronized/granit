@@ -35,7 +35,7 @@ struct viewer_panels {
 
 struct directional_light_state {
   math::float3 direction{0.0F, -1.0F, 1.0F};
-  math::float3 radiance{3.0F, 3.0F, 3.0F};
+  math::float3 radiance{1.5F, 1.5F, 1.5F};
 };
 
 struct viewer_change {
@@ -94,8 +94,8 @@ private:
   std::vector<bool> node_visibility_;
   orbit_camera camera_;
   directional_light_state directional_light_;
-  float exposure_ev_{};
-  float environment_intensity_{0.4F};
+  float exposure_ev_{-0.5F};
+  float environment_intensity_{0.2F};
   float environment_rotation_radians_{};
   math::float3 background_color_{0.025F, 0.04F, 0.065F};
   debug_display_mode debug_display_{debug_display_mode::shaded};
