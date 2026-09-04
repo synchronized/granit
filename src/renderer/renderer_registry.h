@@ -31,6 +31,7 @@
 #include "backend/access.h"
 #include "backend/command.h"
 #include "backend/compute.h"
+#include "backend/interfaces.h"
 #include "backend/pipeline.h"
 #include "backend/plugin_api.h"
 #include "backend/presentation.h"
@@ -77,6 +78,8 @@ public:
   /** 向有效 Renderer 的回调发送公共 API 参数或句柄校验诊断。 */
   void emit_validation_diagnostic(granit_renderer renderer, std::string_view message) noexcept;
   [[nodiscard]] std::shared_ptr<backend_renderer> acquire_backend(granit_renderer renderer);
+  [[nodiscard]] std::shared_ptr<const backend_interfaces>
+  acquire_backend_interfaces(granit_renderer renderer);
   [[nodiscard]] granit_result create_win32_surface(granit_renderer renderer, void* native_instance,
                                                    void* native_window, granit_surface& surface);
   [[nodiscard]] granit_result create_xcb_surface(granit_renderer renderer, void* connection,
@@ -375,6 +378,8 @@ private:
   std::mutex mutex_;
   handle_table handles_;
   std::unordered_map<granit_renderer, std::shared_ptr<backend_renderer>> backend_renderers_;
+  std::unordered_map<granit_renderer, std::shared_ptr<const backend_interfaces>>
+      backend_interfaces_;
 
   std::unordered_map<granit_surface, std::shared_ptr<surface_record>> surfaces_;
   std::unordered_map<granit_swapchain, std::shared_ptr<swapchain_record>> swapchains_;

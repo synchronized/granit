@@ -21,20 +21,7 @@ granit_result renderer_registry::create(std::string_view application_name, bool 
     if (initialize_result != GRANIT_SUCCESS)
       return initialize_result;
 
-    std::lock_guard lock{mutex_};
-    state->set_domain(allocate_domain());
-    const auto handle = handles_.insert(state.get(), resource_type::renderer, 0);
-    if (handle == GRANIT_NULL_HANDLE)
-      return GRANIT_ERROR_OUT_OF_MEMORY;
-    try {
-      backend_renderers_.emplace(handle, state);
-    } catch (...) {
-      backend_renderers_.erase(handle);
-      static_cast<void>(handles_.erase(handle, resource_type::renderer, 0));
-      throw;
-    }
-    renderer = handle;
-    return GRANIT_SUCCESS;
+    return register_backend(std::move(state), renderer);
   } catch (const std::bad_alloc&) {
     return GRANIT_ERROR_OUT_OF_MEMORY;
   } catch (...) {
