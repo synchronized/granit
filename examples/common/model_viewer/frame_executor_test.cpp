@@ -49,6 +49,13 @@ granit::result execute_blocking_frame(granit::example::model_viewer::frame_packe
   return granit::result::success;
 }
 
+granit::result execute_command(void* user_data) {
+  auto& state = *static_cast<blocking_callback_state*>(user_data);
+  std::lock_guard lock(state.mutex);
+  state.executed_widths.push_back(99);
+  return granit::result::success;
+}
+
 } // namespace
 
 TEST_CASE("同步帧执行器完整转发帧包和执行结果") {
@@ -94,10 +101,12 @@ TEST_CASE("线程帧执行器限制待处理队列并回报被替换帧") {
   std::uint64_t second{};
   std::uint64_t third{};
   std::uint64_t fourth{};
+  std::uint64_t command{};
   packet.width = 2;
   REQUIRE(executor.submit(std::move(packet), second).ok());
   packet.width = 3;
   REQUIRE(executor.submit(std::move(packet), third).ok());
+  REQUIRE(executor.submit_command(execute_command, &state, command).ok());
   packet.width = 4;
   REQUIRE(executor.submit(std::move(packet), fourth).ok());
   {
@@ -117,9 +126,24 @@ TEST_CASE("线程帧执行器限制待处理队列并回报被替换帧") {
       std::ranges::find_if(completions, [](const auto& value) { return value.dropped; });
   REQUIRE(dropped != completions.end());
   CHECK(dropped->sequence == third);
-  CHECK(state.executed_widths == std::vector<std::uint32_t>{1, 2, 4});
+  CHECK(state.executed_widths == std::vector<std::uint32_t>{1, 2, 99, 4});
+
+  render_command_completion command_completion;
+  REQUIRE(executor.try_take_command_completion(command_completion));
+  CHECK(command_completion.sequence == command);
+  CHECK(command_completion.status.ok());
+  CHECK_FALSE(executor.try_take_command_completion(command_completion));
 
   executor.stop();
   CHECK_FALSE(executor.running());
   CHECK(executor.submit({}, first) == granit::result::not_ready);
+  CHECK(executor.submit_command(execute_command, &state, command) == granit::result::not_ready);
+}
+
+TEST_CASE("线程帧执行器拒绝空命令") {
+  using namespace granit::example::model_viewer;
+  threaded_frame_executor executor;
+  REQUIRE(executor.initialize(execute_frame, nullptr).ok());
+  std::uint64_t sequence{};
+  CHECK(executor.submit_command(nullptr, nullptr, sequence) == granit::result::invalid_argument);
 }

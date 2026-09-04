@@ -31,6 +31,13 @@ struct frame_completion {
 
 using frame_execute_callback = granit::result (*)(frame_packet&& packet,
                                                   frame_execution_result& output, void* user_data);
+using render_command_callback = granit::result (*)(void* user_data);
+
+/** 不可丢弃命令的完成回执。 */
+struct render_command_completion {
+  std::uint64_t sequence{};
+  granit::result status{granit::result::unknown};
+};
 
 /** 示例私有帧执行边界；实现负责完整消费传入的不可变帧包。 */
 class frame_executor {
@@ -66,7 +73,11 @@ public:
   [[nodiscard]] granit::result initialize(frame_execute_callback callback, void* user_data,
                                           std::size_t maximum_pending_frames = 3) noexcept;
   [[nodiscard]] granit::result submit(frame_packet packet, std::uint64_t& sequence) noexcept;
+  /** 提交资源或控制命令；队列已满时返回 not_ready，不替换已有任务。 */
+  [[nodiscard]] granit::result submit_command(render_command_callback callback, void* user_data,
+                                              std::uint64_t& sequence) noexcept;
   [[nodiscard]] bool try_take_completion(frame_completion& completion) noexcept;
+  [[nodiscard]] bool try_take_command_completion(render_command_completion& completion) noexcept;
   [[nodiscard]] granit::result flush() noexcept;
   void stop() noexcept;
   [[nodiscard]] bool running() const noexcept;

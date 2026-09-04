@@ -3,8 +3,10 @@
 
 #include "model_viewer/frame_executor.h"
 
+#include <algorithm>
 #include <condition_variable>
 #include <deque>
+#include <iterator>
 #include <mutex>
 #include <new>
 #include <thread>
@@ -26,16 +28,22 @@ granit::result inline_frame_executor::submit(frame_packet packet, frame_executio
 granit::result inline_frame_executor::flush() noexcept { return granit::result::success; }
 
 struct threaded_frame_executor::state {
-  struct queued_frame {
+  enum class task_kind { frame, command };
+
+  struct queued_task {
+    task_kind kind{task_kind::frame};
     std::uint64_t sequence{};
     frame_packet packet;
+    render_command_callback command{};
+    void* command_user_data{};
   };
 
   std::mutex mutex;
   std::condition_variable work_ready;
   std::condition_variable idle;
-  std::deque<queued_frame> pending;
+  std::deque<queued_task> pending;
   std::deque<frame_completion> completed;
+  std::deque<render_command_completion> completed_commands;
   std::thread worker;
   frame_execute_callback callback{};
   void* user_data{};
@@ -49,7 +57,7 @@ struct threaded_frame_executor::state {
 
 void threaded_frame_executor::state::run() noexcept {
   for (;;) {
-    queued_frame queued;
+    queued_task queued;
     {
       std::unique_lock lock(mutex);
       work_ready.wait(lock, [&] { return stopping || !pending.empty(); });
@@ -61,15 +69,28 @@ void threaded_frame_executor::state::run() noexcept {
     }
 
     frame_completion completion;
-    completion.sequence = queued.sequence;
-    try {
-      completion.status = callback(std::move(queued.packet), completion.execution, user_data);
-    } catch (...) {
-      completion.status = granit::result::internal;
+    render_command_completion command_completion;
+    if (queued.kind == task_kind::frame) {
+      completion.sequence = queued.sequence;
+      try {
+        completion.status = callback(std::move(queued.packet), completion.execution, user_data);
+      } catch (...) {
+        completion.status = granit::result::internal;
+      }
+    } else {
+      command_completion.sequence = queued.sequence;
+      try {
+        command_completion.status = queued.command(queued.command_user_data);
+      } catch (...) {
+        command_completion.status = granit::result::internal;
+      }
     }
     {
       std::lock_guard lock(mutex);
-      completed.push_back(std::move(completion));
+      if (queued.kind == task_kind::frame)
+        completed.push_back(std::move(completion));
+      else
+        completed_commands.push_back(std::move(command_completion));
       executing = false;
       if (pending.empty())
         idle.notify_all();
@@ -109,15 +130,56 @@ granit::result threaded_frame_executor::submit(frame_packet packet,
     if (state_->stopping)
       return granit::result::not_ready;
     sequence = state_->next_sequence++;
-    if (state_->pending.size() >= state_->maximum_pending_frames) {
-      auto dropped = std::move(state_->pending.back());
-      state_->pending.pop_back();
+    const auto pending_frames = static_cast<std::size_t>(
+        std::ranges::count_if(state_->pending, [](const auto& task) {
+          return task.kind == state::task_kind::frame;
+        }));
+    if (pending_frames >= state_->maximum_pending_frames) {
+      const auto replace = std::ranges::find_if(state_->pending.rbegin(), state_->pending.rend(),
+                                                [](const auto& task) {
+                                                  return task.kind == state::task_kind::frame;
+                                                });
+      auto dropped = std::move(*replace);
+      state_->pending.erase(std::next(replace).base());
       state_->completed.push_back({.sequence = dropped.sequence,
                                    .status = granit::result::not_ready,
                                    .execution = {},
                                    .dropped = true});
     }
-    state_->pending.push_back({sequence, std::move(packet)});
+    state_->pending.push_back({.kind = state::task_kind::frame,
+                               .sequence = sequence,
+                               .packet = std::move(packet),
+                               .command = nullptr,
+                               .command_user_data = nullptr});
+    state_->work_ready.notify_one();
+    return granit::result::success;
+  } catch (const std::bad_alloc&) {
+    return granit::result::out_of_memory;
+  } catch (...) {
+    return granit::result::internal;
+  }
+}
+
+granit::result threaded_frame_executor::submit_command(render_command_callback callback,
+                                                       void* user_data,
+                                                       std::uint64_t& sequence) noexcept {
+  if (!state_)
+    return granit::result::not_ready;
+  if (callback == nullptr)
+    return granit::result::invalid_argument;
+  try {
+    std::lock_guard lock(state_->mutex);
+    if (state_->stopping)
+      return granit::result::not_ready;
+    // 命令不可替换；固定额外余量防止错误生产者无限占用内存。
+    if (state_->pending.size() >= state_->maximum_pending_frames + 8)
+      return granit::result::not_ready;
+    sequence = state_->next_sequence++;
+    state_->pending.push_back({.kind = state::task_kind::command,
+                               .sequence = sequence,
+                               .packet = {},
+                               .command = callback,
+                               .command_user_data = user_data});
     state_->work_ready.notify_one();
     return granit::result::success;
   } catch (const std::bad_alloc&) {
@@ -135,6 +197,18 @@ bool threaded_frame_executor::try_take_completion(frame_completion& completion) 
     return false;
   completion = std::move(state_->completed.front());
   state_->completed.pop_front();
+  return true;
+}
+
+bool threaded_frame_executor::try_take_command_completion(
+    render_command_completion& completion) noexcept {
+  if (!state_)
+    return false;
+  std::lock_guard lock(state_->mutex);
+  if (state_->completed_commands.empty())
+    return false;
+  completion = std::move(state_->completed_commands.front());
+  state_->completed_commands.pop_front();
   return true;
 }
 

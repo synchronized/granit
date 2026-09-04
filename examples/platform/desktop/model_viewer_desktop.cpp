@@ -316,6 +316,14 @@ struct gpu_upload_status {
   std::atomic<bool> cancelled{};
 };
 
+struct gpu_upload_command_context {
+  granit::example::model_viewer::application_core* core{};
+  granit_renderer renderer{GRANIT_NULL_HANDLE};
+  std::span<const std::byte> environment_bytes;
+  float sampler_anisotropy{1.0F};
+  gpu_upload_status* status{};
+};
+
 struct cpu_asset_result {
   granit::result status{granit::result::unknown};
   granit::example::gltf::scene scene;
@@ -331,6 +339,17 @@ bool update_gpu_upload_status(
   status.completed.store(progress.completed, std::memory_order_relaxed);
   status.total.store(progress.total, std::memory_order_release);
   return !status.cancelled.load(std::memory_order_acquire);
+}
+
+granit::result execute_gpu_upload(void* user_data) {
+  const auto& context = *static_cast<gpu_upload_command_context*>(user_data);
+  try {
+    return context.core->upload(context.renderer, context.environment_bytes,
+                                context.sampler_anisotropy, update_gpu_upload_status,
+                                context.status);
+  } catch (const std::bad_alloc&) {
+    return granit::result::out_of_memory;
+  }
 }
 
 struct desktop_frame_execution_context {
@@ -625,20 +644,21 @@ int main(int argc, char** argv) {
   if (result.ok() && options.show_ui)
     result = render_loading_frame(swapchain, swapchain_info, loading_frame_context, canvas,
                                   textures, "Preparing GPU upload...", 0.40F);
+  if (result.ok())
+    result = frame_executor.initialize(execute_desktop_frame, &execution_context);
   gpu_upload_status upload_status;
   bool upload_resize_pending = false;
   if (result.ok()) {
-    // 此处把 Renderer 所有权完整交给上传线程；主线程在 join 前只处理平台事件。
-    auto gpu_upload = std::async(std::launch::async, [&] {
-      try {
-        return core.upload(renderer.native_handle(), environment_bytes,
-                           render_quality.sampler_anisotropy, update_gpu_upload_status,
-                           &upload_status);
-      } catch (const std::bad_alloc&) {
-        return granit::result::out_of_memory;
-      }
-    });
-    while (gpu_upload.wait_for(std::chrono::milliseconds{0}) != std::future_status::ready) {
+    gpu_upload_command_context upload_context{.core = &core,
+                                              .renderer = renderer.native_handle(),
+                                              .environment_bytes = environment_bytes,
+                                              .sampler_anisotropy =
+                                                  render_quality.sampler_anisotropy,
+                                              .status = &upload_status};
+    std::uint64_t upload_sequence{};
+    result = frame_executor.submit_command(execute_gpu_upload, &upload_context, upload_sequence);
+    bool upload_completed = false;
+    while (result.ok() && !upload_completed) {
       SDL_Event event{};
       while (SDL_PollEvent(&event)) {
         ImGui_ImplSDL3_ProcessEvent(&event);
@@ -688,9 +708,16 @@ int main(int argc, char** argv) {
       const auto loading_title =
           "Granit Model Viewer | Uploading GPU resources " + std::to_string(overall_progress) + "%";
       SDL_SetWindowTitle(window.get(), loading_title.c_str());
+      granit::example::model_viewer::render_command_completion completion;
+      if (frame_executor.try_take_command_completion(completion)) {
+        if (completion.sequence != upload_sequence)
+          result = granit::result::internal;
+        else
+          result = completion.status;
+        upload_completed = true;
+      }
       SDL_Delay(16);
     }
-    result = gpu_upload.get();
     if (result.ok() && upload_status.cancelled.load(std::memory_order_acquire))
       result = granit::result::not_ready;
     if (result.ok() && upload_resize_pending && pixel_width > 0 && pixel_height > 0) {
@@ -776,11 +803,6 @@ int main(int argc, char** argv) {
   const auto title =
       std::string("Granit Model Viewer | ") + backend_name + " | " + renderer_info.adapter_name;
   SDL_SetWindowTitle(window.get(), title.c_str());
-  result = frame_executor.initialize(execute_desktop_frame, &execution_context);
-  if (result.failed()) {
-    std::cerr << "模型查看器渲染线程初始化失败：" << granit::result_message(result) << '\n';
-    return 1;
-  }
 
   desktop::sdl3_input input_adapter;
   bool running = true;
