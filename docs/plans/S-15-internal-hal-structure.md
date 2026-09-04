@@ -5,7 +5,7 @@
 
 ## 状态
 
-- 实现状态：已确认；S-15A 实现中
+- 实现状态：实现中；S-15A、S-15B 已完成，下一项为 S-15C
 - 前置依赖：S-10、S-12、S-13
 - 优先级：P1
 
@@ -44,6 +44,8 @@ Granit 已使用 `src/backend` 中的 `backend_*` 契约隔离 Registry 与 Vulk
 
 ### S-15A：能力接口聚合
 
+**状态：已完成。**
+
 1. 增加内部 `backend_interfaces`，集中保存根状态和各职责接口。
 2. Renderer 注册时一次性发现接口并校验所有后端都必须具备的最小集合。
 3. Registry 根表保存聚合对象，逐步移除各编译单元重复的 `dynamic_pointer_cast`。
@@ -51,11 +53,15 @@ Granit 已使用 `src/backend` 中的 `backend_*` 契约隔离 Registry 与 Vulk
 
 ### S-15B：Registry 依赖收敛
 
+**状态：已完成。**
+
 1. 资源记录只保存实际使用的能力接口，不重复执行能力发现。
 2. 命令、呈现、Shader 和 Pipeline 路径统一从聚合对象取得依赖。
 3. 增加静态边界检查，阻止 Registry 引入 Vulkan、WebGPU 或插件原生类型。
 
 ### S-15C：目录职责整理
+
+**状态：待开始。**
 
 将现有内部文件渐进整理为：
 

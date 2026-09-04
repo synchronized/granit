@@ -155,9 +155,24 @@ Registry 只通过 `backend_shader_renderer`、`backend_pipeline_renderer` 和
 支持的 Pipeline 描述范围和格式转换由 Pipeline Adapter 判断；Dawn 与 Emscripten 的 Provider
 差异也不得回流到公共 API 或 Registry。
 
+当前私有 HAL 分为四层，`backend` 一词在各层的含义不能混用：
+
+| 层次 | 位置 | 职责 |
+|---|---|---|
+| Registry 前端 | `src/renderer` | 公共句柄、所有权、公共校验和跨资源关系 |
+| HAL 契约 | `src/backend/*.h` | 后端无关资源对象、能力和值描述，以及粗粒度职责接口 |
+| HAL 实现 | `src/backend/vulkan`、`src/backend/webgpu` | 原生对象、状态转换、同步和描述适配 |
+| Provider 传输边界 | `plugin_api.h`、`plugin_loader.*` | 桌面动态库或 Emscripten 静态 Provider 的 C 函数表传输 |
+
+`backend_interfaces` 在 Renderer 注册时一次性发现并保存能力接口。资源、命令、Pipeline 和呈现
+路径只读取该不可变快照，不在每次调用时通过 RTTI 重新探测。资源、Queue、命令、呈现和延迟回收
+属于正式后端的必需能力；Pipeline Cache、时间戳和调试名称允许后端不实现，并通过既有“不支持”
+结果表达。Provider C 函数表只是跨动态库边界的传输 ABI，不是与 `backend_*` 平行的第二套 HAL。
+
 桌面与 Emscripten 复用同一组 Registry 编译单元，不维护浏览器专用的资源表或命令实现。
 Renderer 创建按后端拆成独立工厂编译单元：桌面默认工厂构造 Vulkan 状态，浏览器工厂静态绑定
-WebGPU Provider；平台选择不进入通用 Registry 实现。
+WebGPU Provider；平台选择不进入通用 Registry 实现。Vulkan 与 WebGPU 工厂最终都调用同一个
+Registry 后端注册入口，由该入口分配 domain、建立能力快照并发布公共 Renderer 句柄。
 
 Vulkan 与 WebGPU 不必提供完全对称的内部能力。共同语义由 Registry 校验，设备差异通过不可变
 能力快照和统一结果码表达；无法安全模拟的能力明确返回不支持。该边界的决策依据见
