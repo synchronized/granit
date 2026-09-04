@@ -13,6 +13,11 @@
 - C++ `granit::result` 改为轻量值结构，新增 `ok()`、`failed()`、`native()`、`message()` 和显式
   `operator bool()`，并移除 `succeeded()`、`failed()` 自由函数；布尔上下文中的 `true` 表示成功，
   C ABI `granit_result` 保持不变。
+- 桌面端移除实验性的 Dawn WebGPU Provider、插件 ABI 与依赖构建流程；桌面继续使用 Vulkan，
+  WebGPU 支持收敛为 Emscripten 浏览器路径。
+- 私有 HAL 集中后端能力发现与 Registry 依赖，并拆分 Render Pipeline 的视图、光照、阴影、
+  Tone Mapping 和 Draw 录制职责；公共 C API 不暴露内部后端类型。
+- 项目开发版本提升到 0.5.0；0.4.0 SDK 使用者升级当前开发版本时必须重新编译。
 
 ## 0.4.0 - 2026-09-03
 
