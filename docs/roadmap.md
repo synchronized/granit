@@ -162,7 +162,7 @@
 
 ## 九、多后端与 Web 平台
 
-**状态：范围调整中；桌面保留 Vulkan，WebGPU 收敛到 Emscripten 浏览器。**
+**状态：已完成；桌面使用 Vulkan，WebGPU 由 Emscripten 浏览器提供。**
 
 - **[S-10](plans/S-10-0.4.0-webgpu-backend.md) / P2**：先定义后端无关的内部设备、资源、命令、
   同步与 Surface 边界，在保持 Vulkan 后端功能和性能的前提下验证桌面 WebGPU 离屏 MVP；随后建立
@@ -209,16 +209,16 @@
 
 - **[S-12](plans/S-12-webgpu-feature-parity.md) / P1**：补齐公共后端选择，以及模型绘制需要的
   Vertex/Index Buffer、Texture、Sampler、Bind Group、动态 Uniform、Indexed Draw 和上传能力；
-  使用共同 Fixture 验证 Vulkan、桌面 Dawn WebGPU 与 Emscripten WebGPU。
+  当前由共同 Fixture 验证桌面 Vulkan 与浏览器 WebGPU；桌面 Dawn 的历史验收已由 S-16 取代。
 - **[S-13](plans/S-13-cross-backend-model-viewer.md) / P1**：增加编辑器式模型查看器；glTF 加载器
   首阶段只放在 `examples/common/gltf`，以许可适合再分发的头盔模型验证 PBR、轨道相机、ImGui
   和三个运行目标。
 - **[S-13H](plans/S-13H-model-viewer-environment-lighting.md) / P1**：复用已有 Group 3 IBL 布局，
   为模型查看器接入许可明确、离线预处理的摄影棚环境光，并恢复金属材质的环境反射。
 - **[S-13I](plans/S-13I-render-quality.md) / P1**：统一 MSAA、FXAA、Specular AA、Mipmap 与各向异性
-  过滤的能力查询、公开质量选项、查看器控制和三后端组合验收。
+  过滤的能力查询、公开质量选项、查看器控制和跨后端验收。
 - **[S-15](plans/S-15-internal-hal-structure.md) / P1**：整理现有私有 HAL；在 Renderer 注册时集中
-  发现能力接口，收敛 Registry 依赖，并明确契约、插件桥和具体后端的目录职责。公共 API/ABI 和
+  发现能力接口，收敛 Registry 依赖，并明确契约和具体后端的目录职责。公共 API/ABI 和
   后端选择行为保持不变。
 - **S-14 / P2 / 条件性**：仅当至少两个非示例 Consumer 需要复用，且 S-13 已验证 CPU 数据模型后，
   再将示例加载器提升为可安装的 `granit::integration_gltf`；此前不承诺公共 glTF SDK。

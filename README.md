@@ -4,7 +4,7 @@
 # Granit
 
 [![Windows](https://github.com/synchronized/granit/actions/workflows/windows.yml/badge.svg)](https://github.com/synchronized/granit/actions/workflows/windows.yml) [![Linux](https://github.com/synchronized/granit/actions/workflows/linux.yml/badge.svg)](https://github.com/synchronized/granit/actions/workflows/linux.yml) [![Release](https://img.shields.io/github/v/release/synchronized/granit)](https://github.com/synchronized/granit/releases/latest) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)<br>
-Granit 是一个支持 Vulkan 与 WebGPU 的 C++20 渲染库，面向游戏引擎、实时应用和图形工具开发。
+Granit 是面向桌面 Vulkan 与浏览器 WebGPU 的 C++20 渲染库，服务游戏引擎与图形工具开发。
 项目通过 C ABI 隔离动态库边界，并在其上提供现代 C++20 RAII 包装；普通用户无需接触后端原生
 类型、句柄和生命周期管理。
 
@@ -34,7 +34,7 @@ Granit 采用“Bring Your Own Engine”边界，不接管使用者的 ECS、Sce
 
 ## 核心特点
 
-- **统一多后端接口**：同一套公共 API 驱动 Vulkan 与 WebGPU，且不暴露后端原生类型或句柄。
+- **统一多后端接口**：同一套公共 API 驱动桌面 Vulkan 与浏览器 WebGPU，不暴露后端原生类型。
 - **C ABI 边界**：`.h` 提供 C11 可表达接口，适合动态库和其他语言绑定。
 - **现代 C++20 包装**：`.hpp` 提供强类型、移动语义和 RAII。
 - **安全资源句柄**：64 位整数句柄带有类型、所属 Renderer 和 generation 校验。

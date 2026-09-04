@@ -124,18 +124,18 @@ D-03-graphics-pipeline.md
   X11/Wayland 共享与静态运行矩阵均已通过，第三方依赖不进入核心。
 - [S-09：0.3.0 公共 SDK 易用性与集成体验](S-09-0.3.0-sdk-usability.md)——已完成；公共使用路径、
   契约、诊断、安装 Consumer、迁移说明和 Release 预验证均已验收。
-- [S-10：0.4.0 多后端与 WebGPU](S-10-0.4.0-webgpu-backend.md)——已完成；桌面 WebGPU、静态
-  SDK Consumer、Emscripten 浏览器闭环、统一 Registry 与私有 HAL 收敛均已通过最终验收。
+- [S-10：0.4.0 多后端与 WebGPU](S-10-0.4.0-webgpu-backend.md)——已完成；统一 Registry、私有
+  HAL 与浏览器闭环均已验收；其中桌面 WebGPU 原型后来由 S-16 移除。
 - [S-10C：WGSL Shader 工具链](S-10C-wgsl-toolchain.md)——已完成；以 WGSL 为源码权威，已形成
   SPIR-V、反射清单、确定性资产、诊断和缓存闭环。
 - [S-12：WebGPU 公共能力补齐](S-12-webgpu-feature-parity.md)——已完成；公共后端选择、模型绘制
-  所需资源与命令，以及 Vulkan、桌面 WebGPU 和浏览器 WebGPU 共同 Fixture 均已验收。
+  所需资源与命令已验收；当前共同 Fixture 覆盖桌面 Vulkan 和浏览器 WebGPU。
 - [S-13：跨后端模型查看器](S-13-cross-backend-model-viewer.md)——已完成；示例私有 glTF 加载器、
   PBR 头盔、轨道相机、ImGui、三个运行目标及跨后端截图/性能验收均已闭合。
 - [S-13H：模型查看器环境光照](S-13H-model-viewer-environment-lighting.md)——已完成；复用 Group 3
   IBL 布局，为模型查看器补齐可再分发的摄影棚环境与跨后端验收。
 - [S-13I：跨后端渲染质量配置](S-13I-render-quality.md)——已完成；统一 MSAA、FXAA、Specular AA、
-  Mipmap 与各向异性过滤的能力查询、公开选项和三后端验收。
+  Mipmap 与各向异性过滤的能力查询、公开选项和跨后端验收。
 - [S-15：私有 HAL 结构整理](S-15-internal-hal-structure.md)——已完成；集中后端能力发现与
   Registry 依赖，并整理 HAL 契约和具体后端目录。
 - [S-16：WebGPU 收敛到 Emscripten 浏览器](S-16-browser-only-webgpu.md)——已完成；删除桌面
