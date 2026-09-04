@@ -7,8 +7,8 @@
 #include <memory>
 #include <span>
 
-#include "backend/plugin/plugin_loader.h"
 #include "backend/contracts/resources.h"
+#include "backend/webgpu/provider_dispatch.h"
 
 namespace granit::detail {
 
@@ -17,53 +17,53 @@ struct webgpu_command_context;
 /** 将公共命令录制契约适配到 WebGPU Provider。 */
 class webgpu_command_adapter {
 public:
-  webgpu_command_adapter(backend_plugin_loader& loader, granit_backend_plugin_instance instance);
+  webgpu_command_adapter(webgpu_provider_dispatch& provider,
+                         granit_webgpu_provider_instance instance);
 
   [[nodiscard]] std::unique_ptr<backend_command_recorder_resource> allocate_recorder() const;
   [[nodiscard]] granit_result begin(backend_command_recorder_resource& resource) const noexcept;
   [[nodiscard]] granit_result begin_rendering(
-      backend_command_recorder_resource& resource, granit_backend_plugin_texture_view target,
-      granit_backend_plugin_texture_view resolve_target, granit_backend_plugin_load_operation load,
-      granit_backend_plugin_store_operation store, const float clear[4],
-      granit_backend_plugin_texture_view depth_target,
-      granit_backend_plugin_load_operation depth_load,
-      granit_backend_plugin_store_operation depth_store, float clear_depth) const noexcept;
+      backend_command_recorder_resource& resource, granit_webgpu_provider_texture_view target,
+      granit_webgpu_provider_texture_view resolve_target,
+      granit_webgpu_provider_load_operation load, granit_webgpu_provider_store_operation store,
+      const float clear[4], granit_webgpu_provider_texture_view depth_target,
+      granit_webgpu_provider_load_operation depth_load,
+      granit_webgpu_provider_store_operation depth_store, float clear_depth) const noexcept;
   [[nodiscard]] granit_result
   bind_pipeline(backend_command_recorder_resource& resource,
-                granit_backend_plugin_render_pipeline pipeline) const noexcept;
+                granit_webgpu_provider_render_pipeline pipeline) const noexcept;
   [[nodiscard]] granit_result
   bind_graphics_groups(backend_command_recorder_resource& resource,
-                       granit_backend_plugin_pipeline_layout layout, std::uint32_t first_group,
-                       std::span<const granit_backend_plugin_bind_group> groups,
+                       granit_webgpu_provider_pipeline_layout layout, std::uint32_t first_group,
+                       std::span<const granit_webgpu_provider_bind_group> groups,
                        std::span<const std::uint32_t> dynamic_offsets) const noexcept;
   [[nodiscard]] granit_result begin_compute(backend_command_recorder_resource&) const noexcept;
   [[nodiscard]] granit_result
   bind_compute_pipeline(backend_command_recorder_resource&,
-                        granit_backend_plugin_compute_pipeline) const noexcept;
-  [[nodiscard]] granit_result bind_compute_groups(backend_command_recorder_resource&,
-                                                  granit_backend_plugin_pipeline_layout,
-                                                  std::uint32_t,
-                                                  std::span<const granit_backend_plugin_bind_group>,
-                                                  std::span<const std::uint32_t>) const noexcept;
+                        granit_webgpu_provider_compute_pipeline) const noexcept;
+  [[nodiscard]] granit_result
+  bind_compute_groups(backend_command_recorder_resource&, granit_webgpu_provider_pipeline_layout,
+                      std::uint32_t, std::span<const granit_webgpu_provider_bind_group>,
+                      std::span<const std::uint32_t>) const noexcept;
   [[nodiscard]] granit_result dispatch(backend_command_recorder_resource&, std::uint32_t,
                                        std::uint32_t, std::uint32_t) const noexcept;
   [[nodiscard]] granit_result end_compute(backend_command_recorder_resource&) const noexcept;
   [[nodiscard]] granit_result bind_vertex_buffers(
       backend_command_recorder_resource& resource, std::uint32_t first,
-      std::span<const granit_backend_plugin_vertex_buffer_binding> bindings) const noexcept;
+      std::span<const granit_webgpu_provider_vertex_buffer_binding> bindings) const noexcept;
   [[nodiscard]] granit_result
   bind_index_buffer(backend_command_recorder_resource& resource,
-                    granit_backend_plugin_buffer buffer, std::uint64_t offset,
-                    granit_backend_plugin_index_format format) const noexcept;
+                    granit_webgpu_provider_buffer buffer, std::uint64_t offset,
+                    granit_webgpu_provider_index_format format) const noexcept;
   [[nodiscard]] granit_result
   set_viewports(backend_command_recorder_resource& resource, std::uint32_t first,
-                std::span<const granit_backend_plugin_viewport> viewports) const noexcept;
+                std::span<const granit_webgpu_provider_viewport> viewports) const noexcept;
   [[nodiscard]] granit_result
   set_scissors(backend_command_recorder_resource& resource, std::uint32_t first,
-               std::span<const granit_backend_plugin_scissor> scissors) const noexcept;
+               std::span<const granit_webgpu_provider_scissor> scissors) const noexcept;
   [[nodiscard]] granit_result copy_texture_to_buffer(backend_command_recorder_resource& resource,
-                                                     granit_backend_plugin_texture texture,
-                                                     granit_backend_plugin_buffer buffer,
+                                                     granit_webgpu_provider_texture texture,
+                                                     granit_webgpu_provider_buffer buffer,
                                                      std::uint32_t width, std::uint32_t height,
                                                      std::uint32_t bytes_per_row) const noexcept;
   [[nodiscard]] granit_result draw(backend_command_recorder_resource& resource,

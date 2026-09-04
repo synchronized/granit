@@ -13,19 +13,6 @@ namespace granit::detail {
 
 inline constexpr std::uint32_t maximum_renderer_application_name_length = 4096;
 inline constexpr std::uint32_t maximum_renderer_object_name_length = 4096;
-inline constexpr std::uint32_t maximum_renderer_backend_path_length = 32768;
-
-[[nodiscard]] inline bool is_absolute_backend_path(const char* path,
-                                                   std::uint32_t length) noexcept {
-#if defined(_WIN32)
-  return length >= 3 &&
-         ((path[0] >= 'A' && path[0] <= 'Z') || (path[0] >= 'a' && path[0] <= 'z')) &&
-         path[1] == ':' && (path[2] == '\\' || path[2] == '/');
-#else
-  return length >= 1 && path[0] == '/';
-#endif
-}
-
 [[nodiscard]] inline granit_result
 validate_renderer_desc(const granit_renderer_desc& desc) noexcept {
   constexpr std::uint32_t supported_flags = GRANIT_RENDERER_ENABLE_VALIDATION_BIT;
@@ -51,17 +38,9 @@ validate_renderer_desc(const granit_renderer_desc& desc) noexcept {
       desc.diagnostic_callback == nullptr && desc.diagnostic_user_data != nullptr) {
     return GRANIT_ERROR_INVALID_ARGUMENT;
   }
-  if (desc.struct_size >= GRANIT_RENDERER_DESC_VERSION_5_SIZE) {
-    if (desc.backend > GRANIT_RENDERER_BACKEND_WEBGPU ||
-        desc.backend_library_path_length > maximum_renderer_backend_path_length ||
-        (desc.backend_library_path == nullptr) != (desc.backend_library_path_length == 0) ||
-        (desc.backend_library_path != nullptr &&
-         (std::memchr(desc.backend_library_path, '\0', desc.backend_library_path_length) !=
-              nullptr ||
-          !is_absolute_backend_path(desc.backend_library_path,
-                                    desc.backend_library_path_length)))) {
-      return GRANIT_ERROR_INVALID_ARGUMENT;
-    }
+  if (desc.struct_size >= GRANIT_RENDERER_DESC_VERSION_5_SIZE &&
+      desc.backend > GRANIT_RENDERER_BACKEND_WEBGPU) {
+    return GRANIT_ERROR_INVALID_ARGUMENT;
   }
   if (desc.application_name == nullptr) {
     return desc.application_name_length == 0 ? GRANIT_SUCCESS : GRANIT_ERROR_INVALID_ARGUMENT;

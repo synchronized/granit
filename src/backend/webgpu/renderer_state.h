@@ -13,7 +13,6 @@
 #include "backend/contracts/compute.h"
 #include "backend/contracts/lifecycle.h"
 #include "backend/contracts/pipeline.h"
-#include "backend/plugin/plugin_loader.h"
 #include "backend/contracts/queue.h"
 #include "backend/contracts/renderer.h"
 #include "backend/contracts/rendering.h"
@@ -24,6 +23,7 @@
 #include "backend/webgpu/command_adapter.h"
 #include "backend/webgpu/pipeline_adapter.h"
 #include "backend/webgpu/presentation_adapter.h"
+#include "backend/webgpu/provider_dispatch.h"
 #include "backend/webgpu/resource_adapter.h"
 #include "backend/webgpu/shader_adapter.h"
 
@@ -49,14 +49,10 @@ public:
   webgpu_renderer_state(const webgpu_renderer_state&) = delete;
   webgpu_renderer_state& operator=(const webgpu_renderer_state&) = delete;
 
-  [[nodiscard]] granit_result initialize_static(const granit_backend_plugin_api* api,
+  [[nodiscard]] granit_result initialize_static(const granit_webgpu_provider_api* api,
                                                 std::uint32_t surface_types,
                                                 granit_diagnostic_callback diagnostic_callback,
                                                 void* diagnostic_user_data) noexcept;
-  [[nodiscard]] granit_result initialize_dynamic(std::string_view library_path,
-                                                 std::uint32_t surface_types,
-                                                 granit_diagnostic_callback diagnostic_callback,
-                                                 void* diagnostic_user_data) noexcept;
   [[nodiscard]] granit_result process_backend_events() noexcept override;
   [[nodiscard]] granit_renderer_backend backend() const noexcept override {
     return GRANIT_RENDERER_BACKEND_WEBGPU;
@@ -292,8 +288,8 @@ private:
   [[nodiscard]] granit_result refresh_state() noexcept;
   [[nodiscard]] granit_result finish_initialization() noexcept;
 
-  backend_plugin_loader loader_;
-  granit_backend_plugin_instance instance_{};
+  webgpu_provider_dispatch provider_;
+  granit_webgpu_provider_instance instance_{};
   granit_diagnostic_callback diagnostic_callback_{};
   void* diagnostic_user_data_{};
   backend_lifecycle_status lifecycle_{};

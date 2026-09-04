@@ -35,7 +35,7 @@ GRANIT_ABI_ASSERT(granit_abi_d32s8_format, GRANIT_TEXTURE_FORMAT_D32_FLOAT_S8_UI
 
 /* 当前受支持平台为 64 位；含指针的结构在此建立独立数字基线。 */
 #if UINTPTR_MAX == UINT64_MAX
-GRANIT_ABI_ASSERT(granit_abi_renderer_desc_size, sizeof(granit_renderer_desc) == 72);
+GRANIT_ABI_ASSERT(granit_abi_renderer_desc_size, sizeof(granit_renderer_desc) == 64);
 GRANIT_ABI_ASSERT(granit_abi_renderer_desc_application_name,
                   offsetof(granit_renderer_desc, application_name) == 8);
 GRANIT_ABI_ASSERT(granit_abi_renderer_desc_flags, offsetof(granit_renderer_desc, flags) == 20);
@@ -50,9 +50,7 @@ GRANIT_ABI_ASSERT(granit_abi_renderer_desc_user_data,
                   offsetof(granit_renderer_desc, diagnostic_user_data) == 48);
 GRANIT_ABI_ASSERT(granit_abi_renderer_desc_v4, GRANIT_RENDERER_DESC_VERSION_4_SIZE == 56);
 GRANIT_ABI_ASSERT(granit_abi_renderer_desc_backend, offsetof(granit_renderer_desc, backend) == 56);
-GRANIT_ABI_ASSERT(granit_abi_renderer_desc_backend_path,
-                  offsetof(granit_renderer_desc, backend_library_path) == 64);
-GRANIT_ABI_ASSERT(granit_abi_renderer_desc_v5, GRANIT_RENDERER_DESC_VERSION_5_SIZE == 72);
+GRANIT_ABI_ASSERT(granit_abi_renderer_desc_v5, GRANIT_RENDERER_DESC_VERSION_5_SIZE == 60);
 GRANIT_ABI_ASSERT(granit_abi_renderer_info_size, sizeof(granit_renderer_info) == 40);
 GRANIT_ABI_ASSERT(granit_abi_renderer_info_v1, GRANIT_RENDERER_INFO_VERSION_1_SIZE == 40);
 

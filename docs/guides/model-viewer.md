@@ -107,9 +107,8 @@ Sampler 和材质绑定；创建失败时保留原配置。
 
 离屏验收程序 `granit_model_viewer_offscreen_acceptance` 额外接受 `--msaa=1|4`、
 `--fxaa=on|off`、`--specular-aa=on|off` 和 `--anisotropy=1|2|4|8|16`。它会通过公开的
-Renderer Limits 严格校验请求，不支持的配置直接失败而不会静默回退。Dawn 集成工作流分别比较
-默认高质量组合与全部关闭的 1× 基线组合，确认 Vulkan、Windows Dawn 和 Linux Dawn 使用相同
-公共配置语义。
+Renderer Limits 严格校验请求，不支持的配置直接失败而不会静默回退。桌面 Vulkan 与浏览器
+WebGPU 使用相同的公共配置语义。
 
 ## 采集 Release 性能基线
 
@@ -124,9 +123,8 @@ build/model-viewer/bin/granit_model_viewer_example.exe `
   --profile-output build/results/vulkan-immediate-no-ui.json
 ```
 
-删除 `--no-ui` 可测量完整 ImGui 路径，将呈现模式改为 `fifo` 可测量垂直同步路径。桌面 Dawn 使用
-相同参数，只需按前文切换后端和插件路径。若驱动不支持请求的呈现模式或窗口像素尺寸不是
-1920×1080，程序会失败而不会把回退结果混入基线。
+删除 `--no-ui` 可测量完整 ImGui 路径，将呈现模式改为 `fifo` 可测量垂直同步路径。若驱动不支持
+请求的呈现模式或窗口像素尺寸不是 1920×1080，程序会失败而不会把回退结果混入基线。
 
 JSON 记录资产、实际后端、Adapter、呈现模式、UI 和 Validation 状态，并分别报告 CPU 帧时间、
 帧槽等待、Present 等待与 GPU 时间戳的 p50/p95/p99 和有效样本数。GPU Timestamp 不可用时对应

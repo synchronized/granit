@@ -1,43 +1,6 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2026 Granit contributors
 
-add_library(
-  granit_backend_plugin OBJECT
-  backend/plugin/plugin_api.h
-  backend/plugin/plugin_loader.cpp
-  backend/plugin/plugin_loader.h
-  backend/webgpu/command_adapter.cpp
-  backend/webgpu/command_adapter.h
-  backend/webgpu/presentation_adapter.cpp
-  backend/webgpu/presentation_adapter.h
-  backend/webgpu/pipeline_adapter.cpp
-  backend/webgpu/pipeline_adapter.h
-  backend/webgpu/renderer_state.cpp
-  backend/webgpu/renderer_state.h
-  backend/webgpu/renderer_factory.h
-  backend/webgpu/resource_adapter.cpp
-  backend/webgpu/resource_adapter.h
-  backend/webgpu/shader_adapter.cpp
-  backend/webgpu/shader_adapter.h
-  platform/shared_library.cpp
-  platform/shared_library.h
-  $<$<PLATFORM_ID:Windows>:platform/win32/shared_library_backend.cpp>
-  $<$<NOT:$<PLATFORM_ID:Windows>>:platform/posix/shared_library_backend.cpp>
-)
-target_compile_features(granit_backend_plugin PRIVATE cxx_std_20)
-target_include_directories(
-  granit_backend_plugin PRIVATE "${PROJECT_SOURCE_DIR}/include" "${PROJECT_SOURCE_DIR}/src"
-)
-granit_target_compile_warnings(granit_backend_plugin)
-set_target_properties(
-  granit_backend_plugin
-  PROPERTIES
-    CXX_VISIBILITY_PRESET hidden
-    POSITION_INDEPENDENT_CODE ON
-    VISIBILITY_INLINES_HIDDEN YES
-    FOLDER "Backends"
-)
-
 add_library(granit)
 add_library(granit::granit ALIAS granit)
 granit_target_output_directories(granit)
@@ -57,7 +20,6 @@ target_sources(
   granit
   PRIVATE
     $<TARGET_OBJECTS:granit_volk>
-    $<TARGET_OBJECTS:granit_backend_plugin>
     backend/contracts/access.h
     backend/contracts/binding.h
     backend/contracts/capabilities.h
@@ -127,7 +89,6 @@ target_sources(
     renderer/frame_context_api.cpp
     renderer/renderer_registry.cpp
     backend/vulkan/renderer_factory.cpp
-    backend/webgpu/renderer_factory.cpp
     renderer/renderer_registry_buffer.cpp
     renderer/renderer_registry_command.cpp
     renderer/renderer_registry.h

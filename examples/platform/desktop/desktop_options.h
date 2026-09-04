@@ -15,7 +15,6 @@ namespace granit::example::model_viewer::desktop {
 
 struct options {
   granit::renderer_backend backend{granit::renderer_backend::automatic};
-  std::string backend_library_path;
   std::string asset_path;
   std::string environment_path;
   std::string profile_output_path;

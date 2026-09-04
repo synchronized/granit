@@ -152,22 +152,22 @@ Registry 不保存 `Vk*` 或 `WGPU*` 类型，不负责后端同步和描述转�
 
 Registry 只通过 `backend_shader_renderer`、`backend_pipeline_renderer` 和
 `backend_presentation_renderer` 等职责接口访问 WebGPU，不直接取得 WebGPU Adapter 对象。WebGPU
-支持的 Pipeline 描述范围和格式转换由 Pipeline Adapter 判断；Dawn 与 Emscripten 的 Provider
-差异也不得回流到公共 API 或 Registry。
+支持的 Pipeline 描述范围和格式转换由 Pipeline Adapter 判断；Emscripten WebGPU 的内部实现细节
+不得回流到公共 API 或 Registry。
 
-当前私有 HAL 分为四层，`backend` 一词在各层的含义不能混用：
+当前 Renderer 内部边界分为三层，`backend` 一词在各层的含义不能混用：
 
 | 层次 | 位置 | 职责 |
 |---|---|---|
 | Registry 前端 | `src/renderer` | 公共句柄、所有权、公共校验和跨资源关系 |
 | HAL 契约 | `src/backend/contracts/` | 后端无关资源对象、能力和值描述，以及粗粒度职责接口 |
 | HAL 实现 | `src/backend/vulkan`、`src/backend/webgpu` | 原生对象、状态转换、同步和描述适配 |
-| Provider 传输边界 | `src/backend/plugin` | 桌面动态库或 Emscripten 静态 Provider 的 C 函数表传输 |
 
 `backend_interfaces` 在 Renderer 注册时一次性发现并保存能力接口。资源、命令、Pipeline 和呈现
 路径只读取该不可变快照，不在每次调用时通过 RTTI 重新探测。资源、Queue、命令、呈现和延迟回收
 属于正式后端的必需能力；Pipeline Cache、时间戳和调试名称允许后端不实现，并通过既有“不支持”
-结果表达。Provider C 函数表只是跨动态库边界的传输 ABI，不是与 `backend_*` 平行的第二套 HAL。
+结果表达。Emscripten WebGPU Provider 及其静态分发表只属于 WebGPU 实现目录，不是插件 ABI，
+也不是与 `backend_*` 平行的第二套 HAL。
 
 桌面与 Emscripten 复用同一组 Registry 编译单元，不维护浏览器专用的资源表或命令实现。
 Renderer 创建按后端拆成独立工厂编译单元：桌面默认工厂构造 Vulkan 状态，浏览器工厂静态绑定
@@ -183,8 +183,7 @@ Vulkan 与 WebGPU 不必提供完全对称的内部能力。共同语义由 Regi
 `src/platform` 集中保存操作系统和原生窗口系统实现。Window Registry 只管理公共句柄、线程规则、
 事件队列和后端分派；Win32、XCB 与 Wayland 的原生窗口生命周期及事件泵分别位于对应平台编译单元。
 `src/input` 只保留公共 Input 状态、UTF-8 处理和事件分派，统一平台输入门面再调用对应平台解码器。
-动态库外观与所有权位于 `platform/shared_library.*`，`LoadLibrary` 和 `dlopen` 实现分别位于 Win32
-与 POSIX 编译单元，避免通用实现文件包含系统 Loader 头文件。
+平台相关代码通过独立编译单元进入对应目标，避免通用实现文件包含系统窗口或输入头文件。
 
 `src/integrations` 不承担操作系统抽象，只保存 SDL3、ImGui 等第三方库与 Granit 公共接口之间的
 可选适配。平台层不得依赖这些集成目标；集成层可以调用 Granit 的 Window、Input 或 Renderer

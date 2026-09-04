@@ -46,7 +46,6 @@ struct renderer_desc {
   diagnostic_callback diagnostics{};
   void* diagnostic_user_data{};
   renderer_backend backend{renderer_backend::automatic};
-  std::string_view backend_library_path{};
 };
 
 struct renderer_info {
@@ -122,8 +121,7 @@ public:
   }
 
   [[nodiscard]] result initialize(const renderer_desc& desc = {}) noexcept {
-    if (valid() || desc.application_name.size() > std::numeric_limits<std::uint32_t>::max() ||
-        desc.backend_library_path.size() > std::numeric_limits<std::uint32_t>::max()) {
+    if (valid() || desc.application_name.size() > std::numeric_limits<std::uint32_t>::max()) {
       return result::invalid_argument;
     }
 
@@ -139,9 +137,6 @@ public:
         .diagnostic_callback = desc.diagnostics,
         .diagnostic_user_data = desc.diagnostic_user_data,
         .backend = static_cast<granit_renderer_backend>(desc.backend),
-        .backend_library_path_length = static_cast<std::uint32_t>(desc.backend_library_path.size()),
-        .backend_library_path =
-            desc.backend_library_path.empty() ? nullptr : desc.backend_library_path.data(),
     };
     return from_native(granit_renderer_create(&native_desc, &handle_));
   }

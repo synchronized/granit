@@ -8,8 +8,8 @@
 namespace granit::detail {
 
 struct webgpu_shader_context {
-  backend_plugin_loader* loader{};
-  granit_backend_plugin_instance instance{};
+  webgpu_provider_dispatch* provider{};
+  granit_webgpu_provider_instance instance{};
 };
 
 namespace {
@@ -21,12 +21,12 @@ public:
 
   ~webgpu_shader_resource() override {
     if (handle_ != 0) {
-      static_cast<void>(context_->loader->destroy_shader(context_->instance, handle_));
+      static_cast<void>(context_->provider->destroy_shader(context_->instance, handle_));
     }
   }
 
   std::shared_ptr<webgpu_shader_context> context_;
-  granit_backend_plugin_shader handle_{};
+  granit_webgpu_provider_shader handle_{};
 };
 
 webgpu_shader_resource* as_shader(backend_shader_resource& resource) {
@@ -35,9 +35,10 @@ webgpu_shader_resource* as_shader(backend_shader_resource& resource) {
 
 } // namespace
 
-webgpu_shader_adapter::webgpu_shader_adapter(backend_plugin_loader& loader,
-                                             granit_backend_plugin_instance instance)
-    : context_(std::make_shared<webgpu_shader_context>(webgpu_shader_context{&loader, instance})) {}
+webgpu_shader_adapter::webgpu_shader_adapter(webgpu_provider_dispatch& provider,
+                                             granit_webgpu_provider_instance instance)
+    : context_(
+          std::make_shared<webgpu_shader_context>(webgpu_shader_context{&provider, instance})) {}
 
 std::unique_ptr<backend_shader_resource> webgpu_shader_adapter::allocate_shader() const {
   return std::make_unique<webgpu_shader_resource>(context_);
@@ -52,12 +53,12 @@ webgpu_shader_adapter::create_shader(backend_shader_resource& resource, std::uin
   if (shader == nullptr || shader->handle_ != 0) {
     return GRANIT_ERROR_INVALID_ARGUMENT;
   }
-  const granit_backend_plugin_shader_desc desc{sizeof(desc), stage,       wgsl,
-                                               wgsl_length,  entry_point, entry_point_length};
-  return context_->loader->create_shader(context_->instance, &desc, &shader->handle_);
+  const granit_webgpu_provider_shader_desc desc{sizeof(desc), stage,       wgsl,
+                                                wgsl_length,  entry_point, entry_point_length};
+  return context_->provider->create_shader(context_->instance, &desc, &shader->handle_);
 }
 
-granit_backend_plugin_shader
+granit_webgpu_provider_shader
 webgpu_shader_adapter::native_handle(backend_shader_resource& resource) const noexcept {
   const auto* shader = as_shader(resource);
   return shader == nullptr ? 0 : shader->handle_;

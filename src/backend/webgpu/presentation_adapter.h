@@ -8,18 +8,18 @@
 
 #include <granit/core/result.h>
 
-#include "backend/plugin/plugin_loader.h"
 #include "backend/contracts/presentation.h"
+#include "backend/webgpu/provider_dispatch.h"
 
 namespace granit::detail {
 
 struct webgpu_presentation_context;
 
-/** 将 WebGPU 插件呈现 ABI 适配为 Renderer 使用的内部资源对象。 */
+/** 将 WebGPU Provider 呈现接口适配为 Renderer 使用的内部资源对象。 */
 class webgpu_presentation_adapter {
 public:
-  webgpu_presentation_adapter(backend_plugin_loader& loader,
-                              granit_backend_plugin_instance instance);
+  webgpu_presentation_adapter(webgpu_provider_dispatch& provider,
+                              granit_webgpu_provider_instance instance);
 
   [[nodiscard]] std::unique_ptr<backend_surface_resource> allocate_surface() const;
   [[nodiscard]] std::unique_ptr<backend_swapchain_resource> allocate_swapchain() const;
@@ -48,7 +48,7 @@ public:
                                                 bool& needs_recreate) const noexcept;
   [[nodiscard]] granit_result cancel_swapchain(backend_swapchain_resource& swapchain,
                                                bool& needs_recreate) const noexcept;
-  [[nodiscard]] granit_backend_plugin_texture_view
+  [[nodiscard]] granit_webgpu_provider_texture_view
   native_view(backend_texture_view_resource& view) const noexcept;
 
 private:

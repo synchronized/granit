@@ -359,36 +359,13 @@ TEST_CASE("动态 Offset 按 Bind Group 顺序跳过普通 Uniform", "[pipeline]
 }
 
 TEST_CASE("跨后端索引纹理 Fixture 使用动态 Uniform 绘制两个对象", "[pipeline][bind-group][smoke]") {
-  struct backend_case {
-    granit::renderer_backend backend;
-    std::string_view library_path;
-  };
-#if defined(GRANIT_WEBGPU_BACKEND_PLUGIN_PATH)
-#if defined(_WIN32)
-  // 托管 Windows Runner 没有 Vulkan ICD；真实 Vulkan Fixture 由 Linux Lavapipe 矩阵执行。
-  const auto backend =
-      GENERATE(backend_case{granit::renderer_backend::webgpu, GRANIT_FAKE_BACKEND_PLUGIN_PATH},
-               backend_case{granit::renderer_backend::webgpu, GRANIT_WEBGPU_BACKEND_PLUGIN_PATH});
-#else
-  const auto backend =
-      GENERATE(backend_case{granit::renderer_backend::vulkan, {}},
-               backend_case{granit::renderer_backend::webgpu, GRANIT_FAKE_BACKEND_PLUGIN_PATH},
-               backend_case{granit::renderer_backend::webgpu, GRANIT_WEBGPU_BACKEND_PLUGIN_PATH});
-#endif
-#else
-  const auto backend =
-      GENERATE(backend_case{granit::renderer_backend::vulkan, {}},
-               backend_case{granit::renderer_backend::webgpu, GRANIT_FAKE_BACKEND_PLUGIN_PATH});
-#endif
-  CAPTURE(backend.backend);
   std::atomic_uint32_t validation_errors{};
   granit::renderer renderer;
   const auto result = renderer.initialize({.application_name = "granit-dynamic-uniform-smoke",
                                            .enable_validation = true,
                                            .diagnostics = count_validation_errors,
                                            .diagnostic_user_data = &validation_errors,
-                                           .backend = backend.backend,
-                                           .backend_library_path = backend.library_path});
+                                           .backend = granit::renderer_backend::vulkan});
   if (environment_unavailable(result) || result == granit::result::unsupported)
     SKIP("当前运行环境不支持验证层或没有满足要求的 Vulkan 设备");
   REQUIRE(result == granit::result::success);
