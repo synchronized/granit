@@ -249,10 +249,10 @@ bool loading_needs_srgb_encoding(granit::texture_format format) noexcept {
          format == granit::texture_format::bgra8_unorm;
 }
 
-granit::result capture_loading_frame(
-    const granit::swapchain_info& swapchain_info,
-    granit::example::model_viewer::texture_registry& textures, const char* stage, float progress,
-    granit::example::model_viewer::frame_canvas_data& output) {
+granit::result capture_loading_frame(const granit::swapchain_info& swapchain_info,
+                                     granit::example::model_viewer::texture_registry& textures,
+                                     const char* stage, float progress,
+                                     granit::example::model_viewer::frame_canvas_data& output) {
   ImGui_ImplSDL3_NewFrame();
   ImGui::NewFrame();
   const ImVec2 panel_size{420.0F, 118.0F};
@@ -273,10 +273,11 @@ granit::result capture_loading_frame(
       output);
 }
 
-granit::result render_loading_frame_data(
-    granit::swapchain& swapchain, const granit::swapchain_info& swapchain_info,
-    granit::frame_context& frame_context, granit::canvas_draw_list& canvas,
-    const granit::example::model_viewer::frame_canvas_data& data) {
+granit::result
+render_loading_frame_data(granit::swapchain& swapchain,
+                          const granit::swapchain_info& swapchain_info,
+                          granit::frame_context& frame_context, granit::canvas_draw_list& canvas,
+                          const granit::example::model_viewer::frame_canvas_data& data) {
   auto result = canvas.clear();
   if (result.ok())
     result = data.append_to(canvas);
@@ -337,11 +338,10 @@ struct gpu_upload_status {
 
 unsigned gpu_upload_percentage(
     const granit::example::model_viewer::gpu_scene_upload_progress& progress) noexcept {
-  const auto local =
-      progress.total == 0
-          ? 0U
-          : static_cast<unsigned>(std::min<std::uint64_t>(
-                100, std::uint64_t{progress.completed} * 100 / progress.total));
+  const auto local = progress.total == 0
+                         ? 0U
+                         : static_cast<unsigned>(std::min<std::uint64_t>(
+                               100, std::uint64_t{progress.completed} * 100 / progress.total));
   unsigned base = 40;
   unsigned span = 2;
   using enum granit::example::model_viewer::gpu_scene_upload_stage;
@@ -405,9 +405,9 @@ bool update_gpu_upload_status(
     return false;
   if (context.progress_frames != nullptr) {
     const auto percentage = gpu_upload_percentage(progress);
-    context.render_result = render_loading_frame_data(
-        *context.swapchain, *context.swapchain_info, *context.frame_context, *context.canvas,
-        (*context.progress_frames)[percentage]);
+    context.render_result = render_loading_frame_data(*context.swapchain, *context.swapchain_info,
+                                                      *context.frame_context, *context.canvas,
+                                                      (*context.progress_frames)[percentage]);
     if (context.render_result.failed())
       return false;
   }
@@ -417,15 +417,145 @@ bool update_gpu_upload_status(
 granit::result execute_gpu_upload(void* user_data) {
   const auto& context = *static_cast<gpu_upload_command_context*>(user_data);
   try {
-    const auto result = context.core->upload(context.renderer, context.environment_bytes,
-                                             context.sampler_anisotropy, update_gpu_upload_status,
-                                             user_data);
+    const auto result =
+        context.core->upload(context.renderer, context.environment_bytes,
+                             context.sampler_anisotropy, update_gpu_upload_status, user_data);
     return result == granit::result::not_ready && context.render_result.failed()
                ? context.render_result
                : result;
   } catch (const std::bad_alloc&) {
     return granit::result::out_of_memory;
   }
+}
+
+granit::result run_render_command(granit::example::model_viewer::threaded_frame_executor& executor,
+                                  granit::example::model_viewer::render_command_callback callback,
+                                  void* user_data) {
+  std::uint64_t sequence{};
+  auto result = executor.submit_command(callback, user_data, sequence);
+  if (result.failed())
+    return result;
+  result = executor.flush();
+  if (result.failed())
+    return result;
+  granit::example::model_viewer::render_command_completion completion;
+  while (executor.try_take_command_completion(completion)) {
+    if (completion.sequence == sequence)
+      return completion.status;
+  }
+  return granit::result::internal;
+}
+
+struct swapchain_recreate_context {
+  granit::swapchain* swapchain{};
+  granit::swapchain_info* info{};
+  granit::swapchain_desc desc;
+};
+
+granit::result execute_swapchain_recreate(void* user_data) {
+  auto& context = *static_cast<swapchain_recreate_context*>(user_data);
+  auto result = context.swapchain->recreate(context.desc);
+  if (result.ok())
+    result = context.swapchain->query_info(*context.info);
+  return result;
+}
+
+struct pipeline_initialize_context {
+  granit_renderer renderer{GRANIT_NULL_HANDLE};
+  granit::render_pipeline* pipeline{};
+  granit_render_pipeline_desc desc = GRANIT_RENDER_PIPELINE_DESC_INIT;
+  bool metrics_enabled{};
+};
+
+granit::result execute_pipeline_initialize(void* user_data) {
+  auto& context = *static_cast<pipeline_initialize_context*>(user_data);
+  granit::render_pipeline candidate;
+  auto result = candidate.initialize(context.renderer, context.desc);
+  if (result.failed())
+    return result;
+  const auto metrics_result = candidate.enable_metrics();
+  if (metrics_result == granit::result::success)
+    context.metrics_enabled = true;
+  else if (metrics_result != granit::result::unsupported)
+    return metrics_result;
+  *context.pipeline = std::move(candidate);
+  return granit::result::success;
+}
+
+struct quality_change_context {
+  granit_renderer renderer{GRANIT_NULL_HANDLE};
+  granit::example::model_viewer::application_core* core{};
+  granit::render_pipeline* pipeline{};
+  granit_render_pipeline_desc desc = GRANIT_RENDER_PIPELINE_DESC_INIT;
+  float sampler_anisotropy{1.0F};
+  bool reupload_scene{};
+  bool metrics_enabled{};
+};
+
+granit::result execute_quality_change(void* user_data) {
+  auto& context = *static_cast<quality_change_context*>(user_data);
+  granit::render_pipeline replacement;
+  auto result = replacement.initialize(context.renderer, context.desc);
+  if (result.failed())
+    return result;
+  const auto metrics_result = replacement.enable_metrics();
+  if (metrics_result == granit::result::success)
+    context.metrics_enabled = true;
+  else if (metrics_result != granit::result::unsupported)
+    return metrics_result;
+  if (context.reupload_scene) {
+    result = context.core->reupload_scene(context.renderer, context.sampler_anisotropy);
+    if (result.failed())
+      return result;
+  }
+  *context.pipeline = std::move(replacement);
+  return granit::result::success;
+}
+
+struct material_update_context {
+  granit::example::model_viewer::application_core* core{};
+  std::uint32_t material_index{granit::example::gltf::invalid_index};
+  granit::example::model_viewer::material_factor_edit edit;
+};
+
+granit::result execute_material_update(void* user_data) {
+  auto& context = *static_cast<material_update_context*>(user_data);
+  return context.core->scene_gpu().update_material_factors(context.core->cpu_scene(),
+                                                           context.material_index, context.edit);
+}
+
+struct renderer_shutdown_context {
+  granit::renderer* renderer{};
+  granit::surface* surface{};
+  granit::swapchain* swapchain{};
+  granit::render_pipeline* pipeline{};
+  granit::texture* font_texture{};
+  granit::texture_view* font_view{};
+  granit::sampler* font_sampler{};
+  granit::canvas_draw_list* loading_canvas{};
+  std::array<granit::canvas_draw_list, 3>* frame_canvases{};
+  granit::example::model_viewer::application_core* core{};
+};
+
+granit::result execute_renderer_shutdown(void* user_data) {
+  auto& context = *static_cast<renderer_shutdown_context*>(user_data);
+  granit::result first_failure = granit::result::success;
+  const auto collect = [&](granit::result value) {
+    if (first_failure.ok() && value.failed())
+      first_failure = value;
+  };
+  collect(context.pipeline->reset());
+  context.core->reset();
+  for (auto& canvas : *context.frame_canvases)
+    collect(canvas.destroy());
+  collect(context.loading_canvas->destroy());
+  collect(context.font_sampler->reset());
+  collect(context.font_view->reset());
+  collect(context.font_texture->reset());
+  collect(context.swapchain->reset());
+  collect(context.surface->reset());
+  collect(context.renderer->reset());
+  return first_failure;
 }
 
 struct desktop_frame_execution_context {
@@ -657,12 +787,13 @@ int main(int argc, char** argv) {
         output.diagnostic = loaded.diagnostic;
         return output;
       }
-      const auto planned = granit::example::model_viewer::build_gpu_scene_plan(output.scene,
-                                                                               output.gpu_plan);
+      const auto planned =
+          granit::example::model_viewer::build_gpu_scene_plan(output.scene, output.gpu_plan);
       if (planned != granit::example::model_viewer::gpu_scene_plan_error::none) {
-        output.status = planned == granit::example::model_viewer::gpu_scene_plan_error::out_of_memory
-                            ? granit::result::out_of_memory
-                            : granit::result::invalid_argument;
+        output.status =
+            planned == granit::example::model_viewer::gpu_scene_plan_error::out_of_memory
+                ? granit::result::out_of_memory
+                : granit::result::invalid_argument;
         output.diagnostic = "生成 GPU Scene 计划失败";
         return output;
       }
@@ -723,9 +854,9 @@ int main(int argc, char** argv) {
   std::array<frame_canvas_data, 101> gpu_progress_frames;
   if (result.ok() && options.show_ui) {
     for (std::size_t percentage = 0; percentage < gpu_progress_frames.size(); ++percentage) {
-      result = capture_loading_frame(
-          swapchain_info, textures, "Uploading GPU resources...",
-          static_cast<float>(percentage) / 100.0F, gpu_progress_frames[percentage]);
+      result = capture_loading_frame(swapchain_info, textures, "Uploading GPU resources...",
+                                     static_cast<float>(percentage) / 100.0F,
+                                     gpu_progress_frames[percentage]);
       if (result.failed())
         break;
     }
@@ -735,18 +866,17 @@ int main(int argc, char** argv) {
   gpu_upload_status upload_status;
   bool upload_resize_pending = false;
   if (result.ok()) {
-    gpu_upload_command_context upload_context{.core = &core,
-                                              .renderer = renderer.native_handle(),
-                                              .environment_bytes = environment_bytes,
-                                              .sampler_anisotropy =
-                                                  render_quality.sampler_anisotropy,
-                                              .status = &upload_status,
-                                              .swapchain = &swapchain,
-                                              .swapchain_info = &swapchain_info,
-                                              .frame_context = &loading_frame_context,
-                                              .canvas = &canvas,
-                                              .progress_frames =
-                                                  options.show_ui ? &gpu_progress_frames : nullptr};
+    gpu_upload_command_context upload_context{
+        .core = &core,
+        .renderer = renderer.native_handle(),
+        .environment_bytes = environment_bytes,
+        .sampler_anisotropy = render_quality.sampler_anisotropy,
+        .status = &upload_status,
+        .swapchain = &swapchain,
+        .swapchain_info = &swapchain_info,
+        .frame_context = &loading_frame_context,
+        .canvas = &canvas,
+        .progress_frames = options.show_ui ? &gpu_progress_frames : nullptr};
     std::uint64_t upload_sequence{};
     result = frame_executor.submit_command(execute_gpu_upload, &upload_context, upload_sequence);
     bool upload_completed = false;
@@ -783,11 +913,13 @@ int main(int argc, char** argv) {
     if (result.ok() && upload_status.cancelled.load(std::memory_order_acquire))
       result = granit::result::not_ready;
     if (result.ok() && upload_resize_pending && pixel_width > 0 && pixel_height > 0) {
-      result = swapchain.recreate({.width = static_cast<std::uint32_t>(pixel_width),
-                                   .height = static_cast<std::uint32_t>(pixel_height),
-                                   .presentation = options.presentation});
-      if (result.ok())
-        result = swapchain.query_info(swapchain_info);
+      swapchain_recreate_context resize_context{
+          .swapchain = &swapchain,
+          .info = &swapchain_info,
+          .desc = {.width = static_cast<std::uint32_t>(pixel_width),
+                   .height = static_cast<std::uint32_t>(pixel_height),
+                   .presentation = options.presentation}};
+      result = run_render_command(frame_executor, execute_swapchain_recreate, &resize_context);
     }
   }
   if (result.ok() && options.show_ui)
@@ -797,16 +929,11 @@ int main(int argc, char** argv) {
   pipeline_desc.sample_count = render_quality.sample_count;
   pipeline_desc.enable_fxaa = render_quality.enable_fxaa;
   pipeline_desc.enable_specular_aa = render_quality.enable_specular_aa;
+  pipeline_initialize_context pipeline_context{
+      .renderer = renderer.native_handle(), .pipeline = &pipeline, .desc = pipeline_desc};
   if (result.ok())
-    result = pipeline.initialize(renderer.native_handle(), pipeline_desc);
-  bool gpu_metrics_enabled = false;
-  if (result.ok()) {
-    const auto metrics_result = pipeline.enable_metrics();
-    if (metrics_result == granit::result::success)
-      gpu_metrics_enabled = true;
-    else if (metrics_result != granit::result::unsupported)
-      result = metrics_result;
-  }
+    result = run_render_command(frame_executor, execute_pipeline_initialize, &pipeline_context);
+  bool gpu_metrics_enabled = pipeline_context.metrics_enabled;
   execution_context.metrics_enabled = gpu_metrics_enabled;
   std::vector<texture_preview> previews;
   const auto register_preview = [&](const granit::example::gltf::texture_reference& reference,
@@ -902,9 +1029,9 @@ int main(int argc, char** argv) {
         continue;
       latest_sample = {.frames_per_second =
                            producer_frame_ms > 0.0F ? 1000.0F / producer_frame_ms : 0.0F,
-                        .cpu_frame_ms = producer_frame_ms,
-                        .render_queue_wait_ms = completed.execution.queue_wait_ms,
-                        .frame_slot_wait_ms = completed.execution.acquire_wait_ms,
+                       .cpu_frame_ms = producer_frame_ms,
+                       .render_queue_wait_ms = completed.execution.queue_wait_ms,
+                       .frame_slot_wait_ms = completed.execution.acquire_wait_ms,
                        .present_wait_ms = completed.execution.present_wait_ms,
                        .gpu_frame_ms = completed.execution.gpu_frame_ms,
                        .gpu_timing_available = completed.execution.gpu_timing_available};
@@ -954,15 +1081,16 @@ int main(int argc, char** argv) {
       recreate = false;
     }
     if (recreate) {
-      result = frame_executor.flush();
-      if (result.failed())
-        break;
-      result = swapchain.recreate({.width = static_cast<std::uint32_t>(pixel_width),
-                                   .height = static_cast<std::uint32_t>(pixel_height),
-                                   .presentation = options.presentation});
+      swapchain_recreate_context resize_context{
+          .swapchain = &swapchain,
+          .info = &swapchain_info,
+          .desc = {.width = static_cast<std::uint32_t>(pixel_width),
+                   .height = static_cast<std::uint32_t>(pixel_height),
+                   .presentation = options.presentation}};
+      result = run_render_command(frame_executor, execute_swapchain_recreate, &resize_context);
       if (result == granit::result::not_ready)
         continue;
-      if (result.failed() || (result = swapchain.query_info(swapchain_info)).failed())
+      if (result.failed())
         break;
       recreate = false;
     }
@@ -1004,34 +1132,28 @@ int main(int argc, char** argv) {
       break;
 
     if (changes.quality) {
-      result = frame_executor.flush();
-      if (result.failed())
-        break;
       granit_render_pipeline_desc replacement_desc = GRANIT_RENDER_PIPELINE_DESC_INIT;
       replacement_desc.sample_count = changes.quality->sample_count;
       replacement_desc.enable_fxaa = changes.quality->enable_fxaa;
       replacement_desc.enable_specular_aa = changes.quality->enable_specular_aa;
-      granit::render_pipeline replacement;
-      result = replacement.initialize(renderer.native_handle(), replacement_desc);
-      bool replacement_metrics_enabled = false;
-      if (result.ok()) {
-        const auto metrics_result = replacement.enable_metrics();
-        if (metrics_result == granit::result::success)
-          replacement_metrics_enabled = true;
-        else if (metrics_result != granit::result::unsupported)
-          result = metrics_result;
-      }
-      if (result.ok() && changes.quality->sampler_anisotropy != render_quality.sampler_anisotropy) {
-        result = core.reupload_scene(renderer.native_handle(), changes.quality->sampler_anisotropy);
+      quality_change_context quality_context{
+          .renderer = renderer.native_handle(),
+          .core = &core,
+          .pipeline = &pipeline,
+          .desc = replacement_desc,
+          .sampler_anisotropy = changes.quality->sampler_anisotropy,
+          .reupload_scene =
+              changes.quality->sampler_anisotropy != render_quality.sampler_anisotropy};
+      result = run_render_command(frame_executor, execute_quality_change, &quality_context);
+      if (result.ok() && quality_context.reupload_scene) {
         if (result.ok() && options.show_ui)
           result = rebuild_previews();
         ui_frame.clear();
       }
       if (result.ok()) {
-        pipeline = std::move(replacement);
         render_quality = *changes.quality;
-        gpu_metrics_enabled = replacement_metrics_enabled;
-        execution_context.metrics_enabled = replacement_metrics_enabled;
+        gpu_metrics_enabled = quality_context.metrics_enabled;
+        execution_context.metrics_enabled = quality_context.metrics_enabled;
       }
     }
     if (result.failed())
@@ -1053,11 +1175,10 @@ int main(int argc, char** argv) {
     if (result.ok()) {
       if (changes.material &&
           core.state().selected_material() != granit::example::gltf::invalid_index) {
-        result = frame_executor.flush();
-        if (result.failed())
-          break;
-        result = core.scene_gpu().update_material_factors(
-            core.cpu_scene(), core.state().selected_material(), *changes.material);
+        material_update_context material_context{.core = &core,
+                                                 .material_index = core.state().selected_material(),
+                                                 .edit = *changes.material};
+        result = run_render_command(frame_executor, execute_material_update, &material_context);
       }
     }
     if (result.failed())
@@ -1076,9 +1197,21 @@ int main(int argc, char** argv) {
   }
 
   if (frame_executor.running()) {
-    const auto flush_result = frame_executor.flush();
+    textures.clear();
+    renderer_shutdown_context shutdown_context{.renderer = &renderer,
+                                               .surface = &surface,
+                                               .swapchain = &swapchain,
+                                               .pipeline = &pipeline,
+                                               .font_texture = &font_texture,
+                                               .font_view = &font_view,
+                                               .font_sampler = &font_sampler,
+                                               .loading_canvas = &canvas,
+                                               .frame_canvases = &frame_canvases,
+                                               .core = &core};
+    const auto shutdown_result =
+        run_render_command(frame_executor, execute_renderer_shutdown, &shutdown_context);
     if (result.ok())
-      result = flush_result;
+      result = shutdown_result;
     frame_executor.stop();
   }
 
