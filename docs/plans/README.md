@@ -142,10 +142,10 @@ D-03-graphics-pipeline.md
   Dawn、动态 Provider 与 SDK/CI 成本，保留统一 HAL 和浏览器 WebGPU。
 - [S-17：Render Pipeline 内部职责收敛](S-17-render-pipeline-internal-structure.md)——已完成；
   拆分提交数据、Forward/Shadow/Tone Mapping 录制与 GPU 指标管理，公共 API/ABI 保持不变。
-- [S-18：0.5.0 平台扩展与上游集成](S-18-0.5.0-platform-upstream-integration.md)——已确认；以真实
-  Consumer 接入问题完善现有平台的宿主边界、资源契约、诊断和 SDK 验收，暂不接入 Android。
-- [S-19：Model Viewer 渲染线程](S-19-model-viewer-render-thread.md)——实现中；先建立示例私有的
-  不可变 Frame Packet，再增加桌面线程执行器，浏览器保持同步执行。
+- [S-18：0.5.0 平台扩展与上游集成](S-18-0.5.0-platform-upstream-integration.md)——已完成；真实
+  Consumer 基线、窗口状态、资源契约和 SDK 验收均已闭环，Android 延期。
+- [S-19：Model Viewer 渲染线程](S-19-model-viewer-render-thread.md)——已完成；桌面使用有界渲染
+  线程和异步上传，浏览器保持同步执行。
 
 ## 状态
 

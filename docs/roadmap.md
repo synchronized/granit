@@ -28,7 +28,8 @@
 | 八、稳定化与跨平台 | 持续进行 | ABI 策略、诊断和更多平台 Surface 待后续推进 |
 | 九、多后端与 Web 平台 | 已完成 | 桌面 Vulkan、浏览器 WebGPU 与私有 HAL 收敛已验收 |
 | 十、Android 移动平台 | 待开始 | 多后端边界已完成，等待规划 NDK、Surface 与移动生命周期 |
-| 十二、0.5.0 平台扩展与上游集成 | 进行中 | Gneiss 基线完成，下一步补窗口当前状态查询 |
+| 十一、跨后端模型查看器 | 已完成 | PBR、环境光、质量选项与桌面渲染线程已验收 |
+| 十二、0.5.0 平台扩展与上游集成 | 已完成 | 功能截止完成，等待完整发布矩阵验收 |
 
 ## 一、工程与 ABI 基础
 
@@ -222,24 +223,24 @@
   发现能力接口，收敛 Registry 依赖，并明确契约和具体后端的目录职责。公共 API/ABI 和
   后端选择行为保持不变。
 - **[S-19](plans/S-19-model-viewer-render-thread.md) / P1**：为 Model Viewer 建立自有数据的
-  Frame Packet 和私有执行器；桌面 Vulkan 后续使用有界渲染线程，浏览器保持同步执行。
+  Frame Packet 和私有执行器；桌面 Vulkan 使用有界渲染线程，浏览器保持同步执行。任务已完成。
 - **S-14 / P2 / 条件性**：仅当至少两个非示例 Consumer 需要复用，且 S-13 已验证 CPU 数据模型后，
   再将示例加载器提升为可安装的 `granit::integration_gltf`；此前不承诺公共 glTF SDK。
 
 ## 十二、0.5.0 平台扩展与上游集成
 
-**状态：进行中；S-18A 已完成，Android 明确延期。**
+**状态：已完成；S-18A、S-18B1、S-18C 与 S-18E 已验收，Android 明确延期。**
 
 - **[S-18](plans/S-18-0.5.0-platform-upstream-integration.md) / P1**：以 Gneiss 等真实 Consumer 的
   接入问题为输入，完善现有桌面与浏览器平台的宿主循环、Surface、输入、资源生命周期、诊断和
-  安装 SDK 契约；首个确认缺口是窗口创建后的当前尺寸与内容缩放查询。
+  安装 SDK 契约；窗口当前状态查询和本地 SDK 验收已经完成。
 - Android 继续保留为独立 S-11，不属于 0.5.0 当前范围；glTF Integration 和高级渲染功能仍遵守
   各自的需求触发条件。
 
 ## 近期执行顺序
 
-1. [S-18](plans/S-18-0.5.0-platform-upstream-integration.md) 先建立真实上游接入基线，再按最小复现
-   补齐现有平台嵌入、资源生命周期、诊断和安装 Consumer；0.5.0 暂不接入 Android。
+1. 完成 0.5.0 的 Windows、Linux 与 Emscripten 发布矩阵验收，确认变更记录和
+   [迁移指南](guides/migrate-0.4-to-0.5.md)后再发布。
 2. S-14 只在复用条件成立后启动；不要为当前单个示例提前稳定 glTF 公共 API。
 3. S-06D 最终验收等待稳定版本与 component 范围决策；不在 0.x 阶段提前宣布稳定。
 4. H-09 的透明 PBR、CSM、Clustered Forward 与 Bindless 只在各自重新评估条件满足后独立恢复，
