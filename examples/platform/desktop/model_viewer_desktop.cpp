@@ -40,6 +40,7 @@
 #include <sstream>
 #include <string>
 #include <string_view>
+#include <thread>
 #include <unordered_map>
 #include <vector>
 
@@ -384,6 +385,7 @@ struct gpu_upload_command_context {
   granit::canvas_draw_list* canvas{};
   const std::array<granit::example::model_viewer::frame_canvas_data, 101>* progress_frames{};
   granit::result render_result{granit::result::success};
+  unsigned displayed_percentage{40};
 };
 
 struct cpu_asset_result {
@@ -404,12 +406,17 @@ bool update_gpu_upload_status(
   if (status.cancelled.load(std::memory_order_acquire))
     return false;
   if (context.progress_frames != nullptr) {
-    const auto percentage = gpu_upload_percentage(progress);
-    context.render_result = render_loading_frame_data(*context.swapchain, *context.swapchain_info,
-                                                      *context.frame_context, *context.canvas,
-                                                      (*context.progress_frames)[percentage]);
-    if (context.render_result.failed())
-      return false;
+    const auto target_percentage = gpu_upload_percentage(progress);
+    while (context.displayed_percentage < target_percentage) {
+      ++context.displayed_percentage;
+      context.render_result = render_loading_frame_data(
+          *context.swapchain, *context.swapchain_info, *context.frame_context, *context.canvas,
+          (*context.progress_frames)[context.displayed_percentage]);
+      if (context.render_result.failed() || status.cancelled.load(std::memory_order_acquire))
+        return false;
+      // Immediate 模式下 Present 可能不节流，保留最小展示时间避免进度瞬间跳过。
+      std::this_thread::sleep_for(std::chrono::milliseconds{4});
+    }
   }
   return true;
 }
