@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include "lighting/ibl_reference.h"
+#include "reference/lighting/ibl_reference.h"
 
 #include <algorithm>
 #include <cmath>
@@ -50,9 +50,8 @@ material::pbr_float3 rotate_environment_direction(material::pbr_float3 direction
           -sine * normalized.x + cosine * normalized.z};
 }
 
-material::pbr_float3 evaluate_pbr_ibl(
-    const material::pbr_material_parameters& material_parameters,
-    const ibl_reference_input& input) noexcept {
+material::pbr_float3 evaluate_pbr_ibl(const material::pbr_material_parameters& material_parameters,
+                                      const ibl_reference_input& input) noexcept {
   const auto normal = math::normalize(input.normal);
   const auto view = math::normalize(input.view_direction);
   const auto normal_dot_view = saturate(math::dot(normal, view));
@@ -61,28 +60,26 @@ material::pbr_float3 evaluate_pbr_ibl(
 
   const auto metallic = saturate(material_parameters.metallic);
   const auto roughness = saturate(material_parameters.perceptual_roughness);
-  const auto base_color = material::pbr_float3{
-      std::max(material_parameters.base_color.x, 0.0F),
-      std::max(material_parameters.base_color.y, 0.0F),
-      std::max(material_parameters.base_color.z, 0.0F)};
+  const auto base_color = material::pbr_float3{std::max(material_parameters.base_color.x, 0.0F),
+                                               std::max(material_parameters.base_color.y, 0.0F),
+                                               std::max(material_parameters.base_color.z, 0.0F)};
   const auto reflectance =
-      mix({material::pbr_dielectric_f0, material::pbr_dielectric_f0,
-           material::pbr_dielectric_f0},
+      mix({material::pbr_dielectric_f0, material::pbr_dielectric_f0, material::pbr_dielectric_f0},
           base_color, metallic);
   const auto fresnel = fresnel_schlick_roughness(normal_dot_view, reflectance, roughness);
   const auto diffuse_weight = material::pbr_float3{(1.0F - fresnel.x) * (1.0F - metallic),
-                                                    (1.0F - fresnel.y) * (1.0F - metallic),
-                                                    (1.0F - fresnel.z) * (1.0F - metallic)};
+                                                   (1.0F - fresnel.y) * (1.0F - metallic),
+                                                   (1.0F - fresnel.z) * (1.0F - metallic)};
   const auto diffuse = math::multiply(
       multiply_components(multiply_components(diffuse_weight, base_color), input.irradiance),
       1.0F / std::numbers::pi_v<float>);
-  const auto specular_factor = material::pbr_float3{
-      fresnel.x * input.brdf_lut.x + input.brdf_lut.y,
-      fresnel.y * input.brdf_lut.x + input.brdf_lut.y,
-      fresnel.z * input.brdf_lut.x + input.brdf_lut.y};
+  const auto specular_factor =
+      material::pbr_float3{fresnel.x * input.brdf_lut.x + input.brdf_lut.y,
+                           fresnel.y * input.brdf_lut.x + input.brdf_lut.y,
+                           fresnel.z * input.brdf_lut.x + input.brdf_lut.y};
   const auto specular = multiply_components(input.prefiltered_radiance, specular_factor);
-  const auto scale = std::max(input.environment_intensity, 0.0F) *
-                     saturate(input.ambient_occlusion);
+  const auto scale =
+      std::max(input.environment_intensity, 0.0F) * saturate(input.ambient_occlusion);
   return math::multiply(math::add(diffuse, specular), scale);
 }
 

@@ -51,7 +51,16 @@ target_compile_definitions(
 )
 granit_target_compile_warnings(granit_material_hot_reload_example)
 
-add_executable(granit_pbr_offscreen_example pbr_offscreen.cpp pbr_example_support.cpp)
+add_executable(
+  granit_pbr_offscreen_example
+  pbr_offscreen.cpp
+  pbr_example_support.cpp
+  "${PROJECT_SOURCE_DIR}/tests/reference/lighting/ibl_reference.cpp"
+  "${PROJECT_SOURCE_DIR}/tests/reference/lighting/lighting_reference.cpp"
+  "${PROJECT_SOURCE_DIR}/tests/reference/lighting/tone_mapping_reference.cpp"
+  "${PROJECT_SOURCE_DIR}/tests/reference/material/pbr_reference.cpp"
+)
+target_include_directories(granit_pbr_offscreen_example PRIVATE "${PROJECT_SOURCE_DIR}/tests")
 target_link_libraries(granit_pbr_offscreen_example PRIVATE granit::lighting)
 target_compile_definitions(
   granit_pbr_offscreen_example

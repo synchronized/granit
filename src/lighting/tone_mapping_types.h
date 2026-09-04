@@ -1,10 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#ifndef GRANIT_LIGHTING_TONE_MAPPING_REFERENCE_H
-#define GRANIT_LIGHTING_TONE_MAPPING_REFERENCE_H
-
-#include "math/math.h"
+#ifndef GRANIT_LIGHTING_TONE_MAPPING_TYPES_H
+#define GRANIT_LIGHTING_TONE_MAPPING_TYPES_H
 
 #include <granit/renderer/resource_types.hpp>
 
@@ -39,17 +37,6 @@ inline constexpr float tone_mapping_max_exposure_ev = 24.0F;
 [[nodiscard]] tone_mapping_error
 validate_tone_mapping_output(granit::texture_format format,
                              tone_mapping_output_transfer transfer) noexcept;
-
-/** 对非负线性 HDR 单通道应用 ACES fitted 近似并限制到 [0, 1]。 */
-[[nodiscard]] float aces_fitted(float value) noexcept;
-
-/** 将 [0, 1] 线性显示值转换为精确分段 sRGB 值。 */
-[[nodiscard]] float linear_to_srgb(float value) noexcept;
-
-/** 应用曝光和 Tone Mapping；失败时不修改 output。 */
-[[nodiscard]] tone_mapping_error evaluate_tone_mapping(math::float3 hdr_color,
-                                                       const tone_mapping_desc& desc,
-                                                       math::float3& output) noexcept;
 
 } // namespace granit::lighting
 

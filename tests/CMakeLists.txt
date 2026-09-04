@@ -302,6 +302,11 @@ add_test(NAME granit.scene COMMAND granit_scene_test)
 
 add_executable(
   granit_lighting_test
+  reference/lighting/ibl_reference.cpp
+  reference/lighting/lighting_reference.cpp
+  reference/lighting/shadow_reference.cpp
+  reference/lighting/tone_mapping_reference.cpp
+  reference/material/pbr_reference.cpp
   lighting/directional_shadow_test.cpp
   lighting/ibl_reference_test.cpp
   lighting/ibl_resources_test.cpp
@@ -320,7 +325,10 @@ add_executable(
 )
 target_include_directories(
   granit_lighting_test
-  PRIVATE "${PROJECT_SOURCE_DIR}/src" "${PROJECT_SOURCE_DIR}/examples"
+  PRIVATE
+    "${PROJECT_SOURCE_DIR}/src"
+    "${PROJECT_SOURCE_DIR}/tests"
+    "${PROJECT_SOURCE_DIR}/examples"
 )
 target_link_libraries(granit_lighting_test PRIVATE granit::lighting Catch2::Catch2WithMain)
 target_compile_options(granit_lighting_test PRIVATE $<$<COMPILE_LANG_AND_ID:CXX,MSVC>:/utf-8>)
@@ -395,6 +403,7 @@ add_test(NAME granit.pipeline COMMAND granit_pipeline_test)
 
 add_executable(
   granit_material_test
+  reference/material/pbr_reference.cpp
   material/material_gpu_instance_test.cpp
   material/material_hot_reload_test.cpp
   material/material_archive_test.cpp
@@ -410,7 +419,9 @@ add_executable(
   "${PROJECT_SOURCE_DIR}/src/material/material_debug_json.cpp"
   "${PROJECT_SOURCE_DIR}/src/material/material_source_json.cpp"
 )
-target_include_directories(granit_material_test PRIVATE "${PROJECT_SOURCE_DIR}/src")
+target_include_directories(
+  granit_material_test PRIVATE "${PROJECT_SOURCE_DIR}/src" "${PROJECT_SOURCE_DIR}/tests"
+)
 target_link_libraries(granit_material_test PRIVATE granit::material Catch2::Catch2WithMain)
 target_compile_options(
   granit_material_test

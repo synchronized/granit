@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include "material/pbr_reference.h"
+#include "reference/material/pbr_reference.h"
 
 #include <algorithm>
 #include <cmath>

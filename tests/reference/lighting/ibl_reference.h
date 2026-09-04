@@ -4,7 +4,7 @@
 #ifndef GRANIT_LIGHTING_IBL_REFERENCE_H
 #define GRANIT_LIGHTING_IBL_REFERENCE_H
 
-#include "material/pbr_reference.h"
+#include "reference/material/pbr_reference.h"
 
 namespace granit::lighting {
 
@@ -22,17 +22,16 @@ struct ibl_reference_input {
 };
 
 /** 将感知粗糙度映射到预过滤环境贴图 mip；max_mip_level 是最大 mip 索引。 */
-[[nodiscard]] float ibl_prefilter_mip(float perceptual_roughness,
-                                      float max_mip_level) noexcept;
+[[nodiscard]] float ibl_prefilter_mip(float perceptual_roughness, float max_mip_level) noexcept;
 
 /** 绕世界 Y 轴旋转环境查询方向；非法或零方向返回零向量。 */
-[[nodiscard]] material::pbr_float3 rotate_environment_direction(
-    material::pbr_float3 direction, float rotation_radians) noexcept;
+[[nodiscard]] material::pbr_float3 rotate_environment_direction(material::pbr_float3 direction,
+                                                                float rotation_radians) noexcept;
 
 /** 计算 split-sum IBL 的线性 RGB 间接光；不包含直接光和自发光。 */
-[[nodiscard]] material::pbr_float3 evaluate_pbr_ibl(
-    const material::pbr_material_parameters& material_parameters,
-    const ibl_reference_input& input) noexcept;
+[[nodiscard]] material::pbr_float3
+evaluate_pbr_ibl(const material::pbr_material_parameters& material_parameters,
+                 const ibl_reference_input& input) noexcept;
 
 } // namespace granit::lighting
 
