@@ -255,11 +255,11 @@ granit::result render_loading_frame(granit::swapchain& swapchain,
   ImGui::SetNextWindowSize(panel_size);
   constexpr auto flags = ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize |
                          ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoSavedSettings;
-  ImGui::Begin("正在加载模型", nullptr, flags);
+  ImGui::Begin("Loading Model", nullptr, flags);
   ImGui::TextUnformatted(stage);
   ImGui::Spacing();
   ImGui::ProgressBar(progress, {-1.0F, 0.0F});
-  ImGui::TextDisabled("窗口仍可响应；大型纹理的解码可能需要一些时间");
+  ImGui::TextDisabled("The window remains responsive while large textures are decoded.");
   ImGui::End();
   ImGui::Render();
 
@@ -344,30 +344,30 @@ bool update_gpu_upload_ui(const granit::example::model_viewer::gpu_scene_upload_
   const auto fraction = progress.total == 0 ? 1.0F
                                             : static_cast<float>(progress.completed) /
                                                   static_cast<float>(progress.total);
-  const char* label = "正在准备 GPU 资源……";
+  const char* label = "Preparing GPU resources...";
   float value = 0.40F;
   switch (progress.stage) {
   case planning:
     value = 0.42F;
     break;
   case geometry:
-    label = "正在上传顶点与索引……";
+    label = "Uploading vertices and indices...";
     value = 0.48F;
     break;
   case textures:
-    label = "正在分批上传纹理……";
+    label = "Uploading textures in batches...";
     value = 0.48F + fraction * 0.28F;
     break;
   case samplers:
-    label = "正在创建采样器……";
+    label = "Creating samplers...";
     value = 0.76F + fraction * 0.04F;
     break;
   case meshes:
-    label = "正在创建 Mesh……";
+    label = "Creating meshes...";
     value = 0.80F + fraction * 0.06F;
     break;
   case materials:
-    label = "正在创建材质……";
+    label = "Creating materials...";
     value = 0.86F + fraction * 0.08F;
     break;
   }
@@ -543,9 +543,9 @@ int main(int argc, char** argv) {
     if (result.failed() || loading_cancelled || !options.show_ui)
       break;
     const auto stage = loading_stage.load(std::memory_order_acquire);
-    const char* label = stage <= 1   ? "正在读取模型文件……"
-                        : stage == 2 ? "正在读取环境资源……"
-                                     : "正在解析 glTF 并解码纹理……";
+    const char* label = stage <= 1   ? "Reading model file..."
+                        : stage == 2 ? "Reading environment resources..."
+                                     : "Parsing glTF and decoding textures...";
     const auto progress = stage <= 1 ? 0.10F : stage == 2 ? 0.20F : 0.35F;
     result = render_loading_frame(swapchain, swapchain_info, loading_frame_context, canvas,
                                   textures, label, progress);
@@ -562,7 +562,7 @@ int main(int argc, char** argv) {
     result = granit::result::not_ready;
   if (result.ok() && options.show_ui)
     result = render_loading_frame(swapchain, swapchain_info, loading_frame_context, canvas,
-                                  textures, "正在准备 GPU 上传……", 0.40F);
+                                  textures, "Preparing GPU upload...", 0.40F);
   gpu_upload_ui_context upload_ui{.swapchain = &swapchain,
                                   .swapchain_info = &swapchain_info,
                                   .frame_context = &loading_frame_context,
@@ -580,7 +580,7 @@ int main(int argc, char** argv) {
   }
   if (result.ok() && options.show_ui)
     result = render_loading_frame(swapchain, swapchain_info, loading_frame_context, canvas,
-                                  textures, "正在创建渲染管线……", 0.96F);
+                                  textures, "Creating render pipeline...", 0.96F);
   granit_render_pipeline_desc pipeline_desc = GRANIT_RENDER_PIPELINE_DESC_INIT;
   pipeline_desc.sample_count = render_quality.sample_count;
   pipeline_desc.enable_fxaa = render_quality.enable_fxaa;
@@ -633,7 +633,7 @@ int main(int argc, char** argv) {
     result = rebuild_previews();
   if (result.ok() && options.show_ui)
     result = render_loading_frame(swapchain, swapchain_info, loading_frame_context, canvas,
-                                  textures, "模型加载完成", 1.0F);
+                                  textures, "Loading complete", 1.0F);
   if (loading_frame_context.valid()) {
     const auto reset_result = loading_frame_context.reset();
     if (result.ok())
