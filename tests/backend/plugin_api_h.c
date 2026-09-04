@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include "backend/plugin_api.h"
+#include "backend/plugin/plugin_api.h"
 
 static granit_backend_plugin_api granit_test_plugin_api = {sizeof(granit_backend_plugin_api),
                                                            GRANIT_BACKEND_PLUGIN_ABI_VERSION,

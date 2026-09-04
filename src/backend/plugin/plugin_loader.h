@@ -10,7 +10,7 @@
 
 #include <granit/core/result.h>
 
-#include "backend/plugin_api.h"
+#include "backend/plugin/plugin_api.h"
 #include "platform/shared_library.h"
 
 namespace granit::detail {

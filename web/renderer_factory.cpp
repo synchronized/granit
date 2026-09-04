@@ -3,7 +3,7 @@
 
 #include "renderer/renderer_factory.h"
 
-#include "backend/plugin_api.h"
+#include "backend/plugin/plugin_api.h"
 #include "backend/webgpu/renderer_factory.h"
 
 extern "C" const granit_backend_plugin_api*

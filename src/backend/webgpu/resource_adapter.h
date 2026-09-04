@@ -6,7 +6,7 @@
 
 #include <memory>
 
-#include "backend/plugin_loader.h"
+#include "backend/plugin/plugin_loader.h"
 #include "backend/resource_management.h"
 
 namespace granit::detail {

@@ -3,9 +3,9 @@
 
 add_library(
   granit_backend_plugin OBJECT
-  backend/plugin_api.h
-  backend/plugin_loader.cpp
-  backend/plugin_loader.h
+  backend/plugin/plugin_api.h
+  backend/plugin/plugin_loader.cpp
+  backend/plugin/plugin_loader.h
   backend/webgpu/command_adapter.cpp
   backend/webgpu/command_adapter.h
   backend/webgpu/presentation_adapter.cpp

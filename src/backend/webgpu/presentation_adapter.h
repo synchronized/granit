@@ -8,7 +8,7 @@
 
 #include <granit/core/result.h>
 
-#include "backend/plugin_loader.h"
+#include "backend/plugin/plugin_loader.h"
 #include "backend/presentation.h"
 
 namespace granit::detail {

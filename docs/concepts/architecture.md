@@ -162,7 +162,7 @@ Registry 只通过 `backend_shader_renderer`、`backend_pipeline_renderer` 和
 | Registry 前端 | `src/renderer` | 公共句柄、所有权、公共校验和跨资源关系 |
 | HAL 契约 | `src/backend/*.h` | 后端无关资源对象、能力和值描述，以及粗粒度职责接口 |
 | HAL 实现 | `src/backend/vulkan`、`src/backend/webgpu` | 原生对象、状态转换、同步和描述适配 |
-| Provider 传输边界 | `plugin_api.h`、`plugin_loader.*` | 桌面动态库或 Emscripten 静态 Provider 的 C 函数表传输 |
+| Provider 传输边界 | `src/backend/plugin` | 桌面动态库或 Emscripten 静态 Provider 的 C 函数表传输 |
 
 `backend_interfaces` 在 Renderer 注册时一次性发现并保存能力接口。资源、命令、Pipeline 和呈现
 路径只读取该不可变快照，不在每次调用时通过 RTTI 重新探测。资源、Queue、命令、呈现和延迟回收

@@ -3,7 +3,7 @@
 
 #include "backend/callback_lifetime.h"
 #include "backend/lifecycle.h"
-#include "backend/plugin_api.h"
+#include "backend/plugin/plugin_api.h"
 
 #include <algorithm>
 #include <atomic>

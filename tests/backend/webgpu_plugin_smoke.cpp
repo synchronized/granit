@@ -11,7 +11,7 @@
 #include <string_view>
 #include <vector>
 
-#include "backend/plugin_loader.h"
+#include "backend/plugin/plugin_loader.h"
 #include "shader_asset.h"
 
 namespace {

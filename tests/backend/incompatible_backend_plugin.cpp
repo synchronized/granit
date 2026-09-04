@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include "backend/plugin_api.h"
+#include "backend/plugin/plugin_api.h"
 
 #if defined(_WIN32)
 #define GRANIT_TEST_PLUGIN_EXPORT __declspec(dllexport)

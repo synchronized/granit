@@ -5,7 +5,7 @@
 
 #include <catch2/catch_all.hpp>
 
-#include "backend/plugin_api.h"
+#include "backend/plugin/plugin_api.h"
 #include "platform/shared_library.h"
 
 TEST_CASE("平台动态库只加载显式绝对路径", "[platform][shared_library]") {

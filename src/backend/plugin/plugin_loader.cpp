@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include "backend/plugin_loader.h"
+#include "backend/plugin/plugin_loader.h"
 
 #include <algorithm>
 #include <cstddef>

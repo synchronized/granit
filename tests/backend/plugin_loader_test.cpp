@@ -9,7 +9,7 @@
 
 #include <catch2/catch_all.hpp>
 
-#include "backend/plugin_loader.h"
+#include "backend/plugin/plugin_loader.h"
 
 namespace {
 

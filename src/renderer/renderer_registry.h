@@ -33,7 +33,7 @@
 #include "backend/compute.h"
 #include "backend/interfaces.h"
 #include "backend/pipeline.h"
-#include "backend/plugin_api.h"
+#include "backend/plugin/plugin_api.h"
 #include "backend/presentation.h"
 #include "backend/queue.h"
 #include "backend/renderer.h"

@@ -13,7 +13,7 @@
 #include "backend/compute.h"
 #include "backend/lifecycle.h"
 #include "backend/pipeline.h"
-#include "backend/plugin_loader.h"
+#include "backend/plugin/plugin_loader.h"
 #include "backend/queue.h"
 #include "backend/renderer.h"
 #include "backend/rendering.h"

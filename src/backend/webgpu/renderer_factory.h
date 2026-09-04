@@ -4,7 +4,7 @@
 #ifndef GRANIT_BACKEND_WEBGPU_RENDERER_FACTORY_H_
 #define GRANIT_BACKEND_WEBGPU_RENDERER_FACTORY_H_
 
-#include "backend/plugin_api.h"
+#include "backend/plugin/plugin_api.h"
 
 #include <granit/core/diagnostic.h>
 #include <granit/core/result.h>
