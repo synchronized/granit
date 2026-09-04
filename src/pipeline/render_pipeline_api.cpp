@@ -271,7 +271,7 @@ render_view(pipeline_state& state, const granit_render_pipeline_render_desc& des
             shadow ? context.texture_view(*shadow) : GRANIT_NULL_HANDLE, render_output.width,
             render_output.height, configured_frame, objects, view_submission.draw_bindings,
             lighting_submission.lights, shadow_constants, lighting_submission.ibl_views,
-            lighting_submission.ibl_constants, use_uniform_arena, desc.clear_color);
+            lighting_submission.ibl_constants(), use_uniform_arena, desc.clear_color);
         return opaque_result;
       }
       const granit_render_pipeline_record_info info{

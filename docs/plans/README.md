@@ -140,7 +140,7 @@ D-03-graphics-pipeline.md
   Registry 依赖，再整理 HAL 契约、插件桥和具体后端目录。
 - [S-16：WebGPU 收敛到 Emscripten 浏览器](S-16-browser-only-webgpu.md)——实现中；删除桌面
   Dawn、动态 Provider 与 SDK/CI 成本，保留统一 HAL 和浏览器 WebGPU。
-- [S-17：Render Pipeline 内部职责收敛](S-17-render-pipeline-internal-structure.md)——实现中；
+- [S-17：Render Pipeline 内部职责收敛](S-17-render-pipeline-internal-structure.md)——已完成；
   拆分提交数据、Forward/Shadow/Tone Mapping 录制与 GPU 指标管理，公共 API/ABI 保持不变。
 
 ## 状态

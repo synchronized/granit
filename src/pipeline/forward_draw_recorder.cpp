@@ -2,6 +2,7 @@
 // Copyright (c) 2026 Granit contributors
 #include "pipeline/forward_draw_recorder.h"
 #include "material/material_package.h"
+#include "pipeline/draw_binding_cache.h"
 #include "pipeline/material_access.h"
 #include "pipeline/mesh_access.h"
 #include <array>
@@ -11,30 +12,7 @@
 namespace granit::pipeline::detail {
 namespace {
 constexpr lighting::light_limits automatic_light_limits{.directional = 4, .point = 128, .spot = 64};
-template <typename Entries> granit_result release_legacy_uniform_bindings(Entries& entries) {
-  auto result = GRANIT_SUCCESS;
-  for (auto& entry : entries) {
-    const auto reset_result = entry.bindings.reset();
-    if (result == GRANIT_SUCCESS)
-      result = reset_result;
-  }
-  return result;
-}
-template <typename Entries>
-granit_result trim_draw_binding_cache(Entries& entries, std::size_t retained_count) {
-  auto result = GRANIT_SUCCESS;
-  while (entries.size() > retained_count) {
-    const auto binding_result = entries.back().bindings.reset();
-    if (result == GRANIT_SUCCESS)
-      result = binding_result;
-    const auto lighting_result = entries.back().lighting.reset();
-    if (result == GRANIT_SUCCESS)
-      result = lighting_result;
-    entries.pop_back();
-  }
-  return result;
-}
-}
+} // namespace
 granit_result
 record_opaque_draws(render_pipeline_state& state, granit_command_recorder recorder,
                     granit_texture_view color, granit_texture_view resolve_color,

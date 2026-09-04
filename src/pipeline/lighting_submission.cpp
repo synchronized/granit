@@ -19,10 +19,10 @@ granit_result build_lighting_submission(const scene::multi_view_snapshot& snapsh
     result.ibl_views = {.irradiance = environment->irradiance,
                         .prefiltered_environment = environment->prefiltered_environment,
                         .brdf_lut = environment->brdf_lut};
-    result.ibl_constants = {.rotation_cos = std::cos(environment->rotation_radians),
-                            .rotation_sin = std::sin(environment->rotation_radians),
-                            .intensity = environment->intensity,
-                            .prefiltered_max_mip = environment->prefiltered_max_mip};
+    result.ibl_rotation_cos = std::cos(environment->rotation_radians);
+    result.ibl_rotation_sin = std::sin(environment->rotation_radians);
+    result.ibl_intensity = environment->intensity;
+    result.ibl_prefiltered_max_mip = environment->prefiltered_max_mip;
   }
   if (lighting::pack_view_lights(snapshot, view_index, limits, result.lights,
                                  result.requirements) != lighting::light_pack_error::none) {

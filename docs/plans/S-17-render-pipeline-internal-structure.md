@@ -5,7 +5,7 @@
 
 ## 状态
 
-- 实现状态：实现中
+- 实现状态：已完成
 - 前置依赖：H-07、S-13、S-15
 - 优先级：P1
 
@@ -37,7 +37,7 @@ API、ABI 与渲染结果的前提下，让入口只负责校验、生命周期�
 2. **S-17B：Registry 边界修正**——移除通用 Registry 对 WebGPU Provider 头的依赖。（已完成）
 3. **S-17C：Draw Recorder 拆分**——分别提取 Forward PBR 与 Shadow Draw 录制。（已完成）
 4. **S-17D：后处理与指标拆分**——提取 Tone Mapping 录制与 Timestamp 槽管理。（已完成）
-5. **S-17E：验收**——确认入口仅保留参数校验、句柄生命周期、Render Graph 和回调编排。
+5. **S-17E：验收**——入口仅保留参数校验、句柄生命周期、Render Graph 和回调编排。（已完成）
 
 ## 测试与验收
 
@@ -52,3 +52,11 @@ API、ABI 与渲染结果的前提下，让入口只负责校验、生命周期�
 - Recorder 会共享 Renderer、缓存和 Uniform Arena 生命周期，拆分时必须避免复制运行时状态。
 - 本轮只移动既有行为；每 View 共享 Lighting Bind Group 等资源优化需要独立测量后实施。
 - Vulkan/WebGPU 大文件按能力域对称拆分，待本任务完成后另行排期。
+
+## 完成结果
+
+- `render_pipeline_api.cpp` 已从约 1,277 行降至约 758 行。
+- Windows Clang、MSVC `/WX` 和 Emscripten WebGPU Release 构建通过；Clang 全量测试 64/64 通过。
+- Documentation、Lighting、Pipeline 与两个离屏示例测试通过。
+- 浏览器 WebGPU 多帧、质量切换、输入、Resize、资产获取和资源释放冒烟测试通过。
+- 公共头文件与 ABI 未发生变化。

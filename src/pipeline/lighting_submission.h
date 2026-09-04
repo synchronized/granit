@@ -17,7 +17,17 @@ struct lighting_submission {
   lighting::packed_view_lights lights;
   lighting::light_requirements requirements{};
   lighting::ibl_texture_views ibl_views{};
-  lighting::ibl_sampling_constants ibl_constants{.intensity = 0.0F};
+  float ibl_rotation_cos = 1.0F;
+  float ibl_rotation_sin = 0.0F;
+  float ibl_intensity = 0.0F;
+  float ibl_prefiltered_max_mip = 0.0F;
+
+  [[nodiscard]] lighting::ibl_sampling_constants ibl_constants() const noexcept {
+    return {.rotation_cos = ibl_rotation_cos,
+            .rotation_sin = ibl_rotation_sin,
+            .intensity = ibl_intensity,
+            .prefiltered_max_mip = ibl_prefiltered_max_mip};
+  }
 };
 
 /** 准备当前 View 的光源与环境输入，失败时不修改 output。 */

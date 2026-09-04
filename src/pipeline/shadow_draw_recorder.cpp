@@ -2,6 +2,7 @@
 // Copyright (c) 2026 Granit contributors
 #include "pipeline/shadow_draw_recorder.h"
 #include "material/material_package.h"
+#include "pipeline/draw_binding_cache.h"
 #include "pipeline/material_access.h"
 #include "pipeline/mesh_access.h"
 #include <algorithm>
@@ -10,31 +11,6 @@
 #include <new>
 #include <vector>
 namespace granit::pipeline::detail {
-namespace {
-template <typename Entries> granit_result release_legacy_uniform_bindings(Entries& entries) {
-  auto result = GRANIT_SUCCESS;
-  for (auto& entry : entries) {
-    const auto reset_result = entry.bindings.reset();
-    if (result == GRANIT_SUCCESS)
-      result = reset_result;
-  }
-  return result;
-}
-template <typename Entries>
-granit_result trim_draw_binding_cache(Entries& entries, std::size_t retained_count) {
-  auto result = GRANIT_SUCCESS;
-  while (entries.size() > retained_count) {
-    const auto binding_result = entries.back().bindings.reset();
-    if (result == GRANIT_SUCCESS)
-      result = binding_result;
-    const auto lighting_result = entries.back().lighting.reset();
-    if (result == GRANIT_SUCCESS)
-      result = lighting_result;
-    entries.pop_back();
-  }
-  return result;
-}
-}
 granit_result acquire_shadow_pipeline(render_pipeline_state& state,
                                       const granit::pipeline::detail::material_draw_state& material,
                                       granit_mesh mesh, granit_graphics_pipeline& pipeline) {

@@ -139,6 +139,7 @@ function(granit_add_render_pipeline_module)
       "${PROJECT_SOURCE_DIR}/src/pipeline/default_ibl_resources.h"
       "${PROJECT_SOURCE_DIR}/src/pipeline/dynamic_uniform_arena.cpp"
       "${PROJECT_SOURCE_DIR}/src/pipeline/dynamic_uniform_arena.h"
+      "${PROJECT_SOURCE_DIR}/src/pipeline/draw_binding_cache.h"
       "${PROJECT_SOURCE_DIR}/src/pipeline/material_api.cpp"
       "${PROJECT_SOURCE_DIR}/src/pipeline/material_access.h"
       "${PROJECT_SOURCE_DIR}/src/pipeline/lighting_submission.cpp"
