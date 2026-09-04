@@ -11,10 +11,12 @@
 #include "pipeline/default_ibl_resources.h"
 #include "pipeline/dynamic_uniform_arena.h"
 #include "pipeline/embedded_shaders.h"
+#include "pipeline/lighting_submission.h"
 #include "pipeline/material_access.h"
 #include "pipeline/mesh_access.h"
 #include "pipeline/pbr_draw_bindings.h"
 #include "pipeline/render_pipeline_metrics.h"
+#include "pipeline/render_view_submission.h"
 #include "pipeline/scene_access.h"
 
 #include <granit/renderer/frame_context.h>
@@ -25,7 +27,6 @@
 
 #include <algorithm>
 #include <array>
-#include <cmath>
 #include <memory>
 #include <mutex>
 #include <optional>
@@ -662,23 +663,21 @@ render_view(pipeline_state& state, const granit_render_pipeline_render_desc& des
             uint32_t view_index, const granit_render_pipeline_output& render_output,
             granit_frame frame) {
   const auto& visible = snapshot.views()[view_index];
-  if (visible.renderables.indices().empty())
-    return GRANIT_ERROR_NOT_READY;
-
-  granit::lighting::ibl_texture_views ibl_views{.irradiance = state.default_ibl.irradiance(),
-                                                .prefiltered_environment =
-                                                    state.default_ibl.prefiltered_environment(),
-                                                .brdf_lut = state.default_ibl.brdf_lut()};
-  granit::lighting::ibl_sampling_constants ibl_constants{.intensity = 0.0F};
-  if (desc.environment != nullptr) {
-    const auto& environment = *desc.environment;
-    ibl_views = {.irradiance = environment.irradiance,
-                 .prefiltered_environment = environment.prefiltered_environment,
-                 .brdf_lut = environment.brdf_lut};
-    ibl_constants = {.rotation_cos = std::cos(environment.rotation_radians),
-                     .rotation_sin = std::sin(environment.rotation_radians),
-                     .intensity = environment.intensity,
-                     .prefiltered_max_mip = environment.prefiltered_max_mip};
+  granit::pipeline::detail::render_view_submission view_submission;
+  auto result = granit::pipeline::detail::build_render_view_submission(snapshot, view_index,
+                                                                       bindings, view_submission);
+  if (result != GRANIT_SUCCESS)
+    return result;
+  granit::pipeline::detail::lighting_submission lighting_submission;
+  if (state.record == nullptr) {
+    result = granit::pipeline::detail::build_lighting_submission(
+        snapshot, view_index, automatic_light_limits,
+        {.irradiance = state.default_ibl.irradiance(),
+         .prefiltered_environment = state.default_ibl.prefiltered_environment(),
+         .brdf_lut = state.default_ibl.brdf_lut()},
+        desc.environment, lighting_submission);
+    if (result != GRANIT_SUCCESS)
+      return result;
   }
 
   granit_frame_info frame_info = GRANIT_FRAME_INFO_INIT;
@@ -724,6 +723,7 @@ render_view(pipeline_state& state, const granit_render_pipeline_render_desc& des
   graph_desc.pbr.shadow = *shadow;
   graph_desc.pbr.view.view_projection = visible.view.view_projection;
   graph_desc.pbr.view.camera_position = visible.view.camera_position;
+  graph_desc.pbr.objects = view_submission.pbr_objects;
   granit::lighting::shadow_sampling_constants shadow_constants{
       .light_view_projection = granit::math::identity_matrix4, .texel_size = {1.0F, 1.0F}};
   if (!visible.directional_lights.empty()) {
@@ -755,42 +755,6 @@ render_view(pipeline_state& state, const granit_render_pipeline_render_desc& des
       shadow.reset();
     }
   }
-  std::vector<uint64_t> payloads;
-  std::vector<granit_render_pipeline_draw_binding> draw_bindings;
-  std::vector<granit_scene_renderable> renderables;
-  payloads.reserve(visible.renderables.indices().size());
-  draw_bindings.reserve(visible.renderables.indices().size());
-  renderables.reserve(visible.renderables.indices().size());
-  graph_desc.pbr.objects.reserve(visible.renderables.indices().size());
-  for (const auto index : visible.renderables.indices()) {
-    const auto& source = snapshot.renderables()[index];
-    graph_desc.pbr.objects.push_back({.model = source.model,
-                                      .normal_matrix = source.normal_matrix,
-                                      .object_id = source.object_id});
-    payloads.push_back(source.payload);
-    const auto binding = bindings.find(source.payload);
-    if (binding == bindings.end())
-      return GRANIT_ERROR_INVALID_ARGUMENT;
-    draw_bindings.push_back(binding->second);
-    renderables.push_back({.model = convert(source.model),
-                           .normal_matrix = convert(source.normal_matrix),
-                           .bounds_center = convert(source.bounds.center),
-                           .bounds_radius = source.bounds.radius,
-                           .layer_mask = source.layer_mask,
-                           .sort_key = source.sort_key,
-                           .payload = source.payload,
-                           .object_id = source.object_id,
-                           .reserved = 0});
-  }
-  const granit_scene_view public_view{.view = convert(visible.view.view),
-                                      .projection = convert(visible.view.projection),
-                                      .view_projection = convert(visible.view.view_projection),
-                                      .camera_position = convert(visible.view.camera_position),
-                                      .viewport_x = visible.view.area.x,
-                                      .viewport_y = visible.view.area.y,
-                                      .viewport_width = visible.view.area.width,
-                                      .viewport_height = visible.view.area.height,
-                                      .layer_mask = visible.view.layer_mask};
   graph_desc.tone_mapping.hdr_color = hdr;
   graph_desc.tone_mapping.output = output;
   graph_desc.tone_mapping.output_format = static_cast<granit::texture_format>(render_output.format);
@@ -830,19 +794,13 @@ render_view(pipeline_state& state, const granit_render_pipeline_render_desc& des
       if (state.record == nullptr) {
         auto configured_frame = frame;
         configured_frame.render_options[0] = state.enable_specular_aa ? UINT32_C(1) : UINT32_C(0);
-        granit::lighting::packed_view_lights lights;
-        granit::lighting::light_requirements requirements;
-        if (granit::lighting::pack_view_lights(snapshot, view_index, automatic_light_limits, lights,
-                                               requirements) !=
-            granit::lighting::light_pack_error::none) {
-          return GRANIT_ERROR_INVALID_ARGUMENT;
-        }
         const auto opaque_result = record_opaque_draws(
             state, context.recorder(), context.texture_view(use_msaa ? msaa_color : hdr),
             use_msaa ? context.texture_view(hdr) : GRANIT_NULL_HANDLE, context.texture_view(depth),
             shadow ? context.texture_view(*shadow) : GRANIT_NULL_HANDLE, render_output.width,
-            render_output.height, configured_frame, objects, draw_bindings, lights,
-            shadow_constants, ibl_views, ibl_constants, use_uniform_arena, desc.clear_color);
+            render_output.height, configured_frame, objects, view_submission.draw_bindings,
+            lighting_submission.lights, shadow_constants, lighting_submission.ibl_views,
+            lighting_submission.ibl_constants, use_uniform_arena, desc.clear_color);
         return opaque_result;
       }
       const granit_render_pipeline_record_info info{
@@ -859,11 +817,11 @@ render_view(pipeline_state& state, const granit_render_pipeline_render_desc& des
           .ibl_layout = state.default_ibl.layout(),
           .ibl_group = state.default_ibl.group(),
           .view_index = view_index,
-          .payload_count = static_cast<uint32_t>(payloads.size()),
-          .payloads = payloads.data(),
-          .draw_bindings = draw_bindings.data(),
-          .view = &public_view,
-          .renderables = renderables.data(),
+          .payload_count = static_cast<uint32_t>(view_submission.payloads.size()),
+          .payloads = view_submission.payloads.data(),
+          .draw_bindings = view_submission.draw_bindings.data(),
+          .view = &view_submission.view,
+          .renderables = view_submission.renderables.data(),
           .light_view_projection = {},
           .exposure_scale = 1.0F,
           .encode_srgb = 0,
@@ -920,7 +878,7 @@ render_view(pipeline_state& state, const granit_render_pipeline_render_desc& des
             .payload_count = static_cast<uint32_t>(shadow_payloads.size()),
             .payloads = shadow_payloads.data(),
             .draw_bindings = shadow_bindings.data(),
-            .view = &public_view,
+            .view = &view_submission.view,
             .renderables = shadow_renderables.data(),
             .light_view_projection = convert(frame.light_view_projection),
             .exposure_scale = 1.0F,
@@ -965,7 +923,7 @@ render_view(pipeline_state& state, const granit_render_pipeline_render_desc& des
           debug_desc.depth_format = GRANIT_TEXTURE_FORMAT_D32_FLOAT;
           debug_desc.width = render_output.width;
           debug_desc.height = render_output.height;
-          debug_desc.view_projection = public_view.view_projection;
+          debug_desc.view_projection = view_submission.view.view_projection;
           debug_desc.encode_srgb = is_srgb_output(render_output.format) ? 0U : 1U;
           return granit_debug_draw_list_record_world(state.renderer, context.recorder(),
                                                      render_output.debug_draw, &debug_desc);
@@ -1013,7 +971,7 @@ render_view(pipeline_state& state, const granit_render_pipeline_render_desc& des
               .payload_count = 0,
               .payloads = nullptr,
               .draw_bindings = nullptr,
-              .view = &public_view,
+              .view = &view_submission.view,
               .renderables = nullptr,
               .light_view_projection = {},
               .exposure_scale = 1.0F,
