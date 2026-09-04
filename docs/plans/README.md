@@ -138,6 +138,8 @@ D-03-graphics-pipeline.md
   Mipmap 与各向异性过滤的能力查询、公开选项和三后端验收。
 - [S-15：私有 HAL 结构整理](S-15-internal-hal-structure.md)——已确认；先集中后端能力发现与
   Registry 依赖，再整理 HAL 契约、插件桥和具体后端目录。
+- [S-16：WebGPU 收敛到 Emscripten 浏览器](S-16-browser-only-webgpu.md)——实现中；删除桌面
+  Dawn、动态 Provider 与 SDK/CI 成本，保留统一 HAL 和浏览器 WebGPU。
 
 ## 状态
 
