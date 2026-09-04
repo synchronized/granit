@@ -35,6 +35,7 @@
 #include <iostream>
 #include <limits>
 #include <memory>
+#include <new>
 #include <span>
 #include <sstream>
 #include <string>
@@ -307,17 +308,12 @@ granit::result render_loading_frame(granit::swapchain& swapchain,
   return result;
 }
 
-struct gpu_upload_ui_context {
-  granit::swapchain* swapchain{};
-  granit::swapchain_info* swapchain_info{};
-  granit::frame_context* frame_context{};
-  granit::canvas_draw_list* canvas{};
-  granit::example::model_viewer::texture_registry* textures{};
-  granit::present_mode presentation{};
-  int* pixel_width{};
-  int* pixel_height{};
-  granit::result result{granit::result::success};
-  bool cancelled{};
+struct gpu_upload_status {
+  std::atomic<granit::example::model_viewer::gpu_scene_upload_stage> stage{
+      granit::example::model_viewer::gpu_scene_upload_stage::planning};
+  std::atomic<std::uint32_t> completed{};
+  std::atomic<std::uint32_t> total{};
+  std::atomic<bool> cancelled{};
 };
 
 struct cpu_asset_result {
@@ -328,65 +324,13 @@ struct cpu_asset_result {
   std::string diagnostic;
 };
 
-bool update_gpu_upload_ui(const granit::example::model_viewer::gpu_scene_upload_progress& progress,
-                          void* user_data) {
-  auto& context = *static_cast<gpu_upload_ui_context*>(user_data);
-  SDL_Event event{};
-  while (SDL_PollEvent(&event)) {
-    ImGui_ImplSDL3_ProcessEvent(&event);
-    if (event.type == SDL_EVENT_QUIT || event.type == SDL_EVENT_WINDOW_CLOSE_REQUESTED) {
-      context.cancelled = true;
-    } else if (event.type == SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED) {
-      *context.pixel_width = event.window.data1;
-      *context.pixel_height = event.window.data2;
-      if (*context.pixel_width > 0 && *context.pixel_height > 0) {
-        context.result = context.swapchain->recreate(
-            {.width = static_cast<std::uint32_t>(*context.pixel_width),
-             .height = static_cast<std::uint32_t>(*context.pixel_height),
-             .presentation = context.presentation});
-        if (context.result.ok())
-          context.result = context.swapchain->query_info(*context.swapchain_info);
-      }
-    }
-  }
-  if (context.cancelled || context.result.failed())
-    return false;
-
-  using enum granit::example::model_viewer::gpu_scene_upload_stage;
-  const auto fraction = progress.total == 0 ? 1.0F
-                                            : static_cast<float>(progress.completed) /
-                                                  static_cast<float>(progress.total);
-  const char* label = "Preparing GPU resources...";
-  float value = 0.40F;
-  switch (progress.stage) {
-  case planning:
-    value = 0.42F;
-    break;
-  case geometry:
-    label = "Uploading vertices and indices...";
-    value = 0.48F;
-    break;
-  case textures:
-    label = "Uploading textures in batches...";
-    value = 0.48F + fraction * 0.28F;
-    break;
-  case samplers:
-    label = "Creating samplers...";
-    value = 0.76F + fraction * 0.04F;
-    break;
-  case meshes:
-    label = "Creating meshes...";
-    value = 0.80F + fraction * 0.06F;
-    break;
-  case materials:
-    label = "Creating materials...";
-    value = 0.86F + fraction * 0.08F;
-    break;
-  }
-  context.result =
-      render_loading_frame(*context.swapchain, *context.swapchain_info, *context.frame_context,
-                           *context.canvas, *context.textures, label, value);
-  return context.result.ok();
+bool update_gpu_upload_status(
+    const granit::example::model_viewer::gpu_scene_upload_progress& progress, void* user_data) {
+  auto& status = *static_cast<gpu_upload_status*>(user_data);
+  status.stage.store(progress.stage, std::memory_order_relaxed);
+  status.completed.store(progress.completed, std::memory_order_relaxed);
+  status.total.store(progress.total, std::memory_order_release);
+  return !status.cancelled.load(std::memory_order_acquire);
 }
 
 struct desktop_frame_execution_context {
@@ -681,20 +625,81 @@ int main(int argc, char** argv) {
   if (result.ok() && options.show_ui)
     result = render_loading_frame(swapchain, swapchain_info, loading_frame_context, canvas,
                                   textures, "Preparing GPU upload...", 0.40F);
-  gpu_upload_ui_context upload_ui{.swapchain = &swapchain,
-                                  .swapchain_info = &swapchain_info,
-                                  .frame_context = &loading_frame_context,
-                                  .canvas = &canvas,
-                                  .textures = &textures,
-                                  .presentation = options.presentation,
-                                  .pixel_width = &pixel_width,
-                                  .pixel_height = &pixel_height};
+  gpu_upload_status upload_status;
+  bool upload_resize_pending = false;
   if (result.ok()) {
-    result = core.upload(
-        renderer.native_handle(), environment_bytes, render_quality.sampler_anisotropy,
-        options.show_ui ? update_gpu_upload_ui : nullptr, options.show_ui ? &upload_ui : nullptr);
-    if (result == granit::result::not_ready && upload_ui.result.failed())
-      result = upload_ui.result;
+    // 此处把 Renderer 所有权完整交给上传线程；主线程在 join 前只处理平台事件。
+    auto gpu_upload = std::async(std::launch::async, [&] {
+      try {
+        return core.upload(renderer.native_handle(), environment_bytes,
+                           render_quality.sampler_anisotropy, update_gpu_upload_status,
+                           &upload_status);
+      } catch (const std::bad_alloc&) {
+        return granit::result::out_of_memory;
+      }
+    });
+    while (gpu_upload.wait_for(std::chrono::milliseconds{0}) != std::future_status::ready) {
+      SDL_Event event{};
+      while (SDL_PollEvent(&event)) {
+        ImGui_ImplSDL3_ProcessEvent(&event);
+        if (event.type == SDL_EVENT_QUIT || event.type == SDL_EVENT_WINDOW_CLOSE_REQUESTED) {
+          upload_status.cancelled.store(true, std::memory_order_release);
+        } else if (event.type == SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED) {
+          pixel_width = event.window.data1;
+          pixel_height = event.window.data2;
+          upload_resize_pending = true;
+        }
+      }
+      const auto completed = upload_status.completed.load(std::memory_order_relaxed);
+      const auto total = upload_status.total.load(std::memory_order_acquire);
+      const auto local_progress =
+          total == 0 ? 0U
+                     : static_cast<unsigned>(std::min<std::uint64_t>(
+                           100, std::uint64_t{completed} * 100 / total));
+      const auto stage = upload_status.stage.load(std::memory_order_relaxed);
+      unsigned stage_base = 40;
+      unsigned stage_span = 2;
+      using enum granit::example::model_viewer::gpu_scene_upload_stage;
+      switch (stage) {
+      case planning:
+        break;
+      case geometry:
+        stage_base = 42;
+        stage_span = 6;
+        break;
+      case textures:
+        stage_base = 48;
+        stage_span = 28;
+        break;
+      case samplers:
+        stage_base = 76;
+        stage_span = 4;
+        break;
+      case meshes:
+        stage_base = 80;
+        stage_span = 6;
+        break;
+      case materials:
+        stage_base = 86;
+        stage_span = 8;
+        break;
+      }
+      const auto overall_progress = stage_base + stage_span * local_progress / 100;
+      const auto loading_title =
+          "Granit Model Viewer | Uploading GPU resources " + std::to_string(overall_progress) + "%";
+      SDL_SetWindowTitle(window.get(), loading_title.c_str());
+      SDL_Delay(16);
+    }
+    result = gpu_upload.get();
+    if (result.ok() && upload_status.cancelled.load(std::memory_order_acquire))
+      result = granit::result::not_ready;
+    if (result.ok() && upload_resize_pending && pixel_width > 0 && pixel_height > 0) {
+      result = swapchain.recreate({.width = static_cast<std::uint32_t>(pixel_width),
+                                   .height = static_cast<std::uint32_t>(pixel_height),
+                                   .presentation = options.presentation});
+      if (result.ok())
+        result = swapchain.query_info(swapchain_info);
+    }
   }
   if (result.ok() && options.show_ui)
     result = render_loading_frame(swapchain, swapchain_info, loading_frame_context, canvas,
