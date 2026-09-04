@@ -8,6 +8,7 @@
 #include <new>
 #include <span>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include <emscripten/emscripten.h>
@@ -25,6 +26,7 @@
 #include <granit/renderer/texture.hpp>
 
 #include "model_viewer/application_core.h"
+#include "model_viewer/frame_executor.h"
 #include "model_viewer_fetch.h"
 #include "resource_fetch_batch.h"
 #include "support/renderer_fixture.h"
@@ -562,25 +564,50 @@ granit_result resize_swapchain_if_needed() {
   return result;
 }
 
+struct web_frame_execution_context {
+  const granit_swapchain_info* swapchain_info{};
+};
+
+granit::result execute_web_frame(granit::example::model_viewer::frame_packet&& packet,
+                                 granit::example::model_viewer::frame_execution_result& output,
+                                 void* user_data) {
+  const auto& context = *static_cast<web_frame_execution_context*>(user_data);
+  granit_frame frame{};
+  std::uint32_t image_index{};
+  std::uint32_t needs_recreate{};
+  auto result = granit_swapchain_acquire(state.renderer, state.swapchain, &frame, &image_index,
+                                         &needs_recreate);
+  output.needs_recreate = needs_recreate != 0;
+  granit_texture backbuffer{};
+  granit_texture_view backbuffer_view{};
+  if (result == GRANIT_SUCCESS) {
+    result = granit_swapchain_get_backbuffer(state.renderer, state.swapchain, image_index,
+                                              &backbuffer, &backbuffer_view);
+  }
+  if (result == GRANIT_SUCCESS) {
+    const auto render = packet.render_desc(backbuffer_view, context.swapchain_info->format, frame);
+    result = granit_render_pipeline_render(state.renderer, state.pipeline, &render);
+  }
+  if (result != GRANIT_SUCCESS) {
+    if (frame != GRANIT_NULL_HANDLE) {
+      static_cast<void>(
+          granit_frame_cancel(state.renderer, state.swapchain, frame, &needs_recreate));
+      output.needs_recreate = output.needs_recreate || needs_recreate != 0;
+    }
+    return granit::from_native(result);
+  }
+  result = granit_swapchain_present(state.renderer, state.swapchain, frame, &needs_recreate);
+  output.needs_recreate = output.needs_recreate || needs_recreate != 0;
+  return granit::from_native(result);
+}
+
 granit_result render_model_viewer_frame() {
   auto result = resize_swapchain_if_needed();
   if (result != GRANIT_SUCCESS)
     return result;
   granit_swapchain_info info = GRANIT_SWAPCHAIN_INFO_INIT;
   result = granit_swapchain_get_info(state.renderer, state.swapchain, &info);
-  granit_frame frame{};
-  std::uint32_t image_index{};
-  std::uint32_t needs_recreate{};
-  if (result == GRANIT_SUCCESS)
-    result = granit_swapchain_acquire(state.renderer, state.swapchain, &frame, &image_index,
-                                      &needs_recreate);
-  granit_texture backbuffer{};
-  granit_texture_view backbuffer_view{};
-  if (result == GRANIT_SUCCESS) {
-    result = granit_swapchain_get_backbuffer(state.renderer, state.swapchain, image_index,
-                                             &backbuffer, &backbuffer_view);
-  }
-  granit::example::model_viewer::application_tick_output output;
+  granit::example::model_viewer::frame_packet output;
   granit::example::model_viewer::application_tick_input input;
   input.input = state.input.finish(false, false);
   if (input.input.pointer_delta_x != 0.0F || input.input.pointer_delta_y != 0.0F ||
@@ -592,18 +619,12 @@ granit_result render_model_viewer_frame() {
   if (result == GRANIT_SUCCESS)
     result = granit::to_native(state.core.tick(input, output));
   if (result == GRANIT_SUCCESS) {
-    output.render.output = backbuffer_view;
-    output.render.output_format = info.format;
-    output.render.frame = frame;
-    result = granit_render_pipeline_render(state.renderer, state.pipeline, &output.render);
+    web_frame_execution_context execution_context{&info};
+    granit::example::model_viewer::inline_frame_executor executor(execute_web_frame,
+                                                                   &execution_context);
+    granit::example::model_viewer::frame_execution_result execution;
+    result = granit::to_native(executor.submit(std::move(output), execution));
   }
-  if (result != GRANIT_SUCCESS) {
-    if (frame != GRANIT_NULL_HANDLE)
-      static_cast<void>(
-          granit_frame_cancel(state.renderer, state.swapchain, frame, &needs_recreate));
-    return result;
-  }
-  result = granit_swapchain_present(state.renderer, state.swapchain, frame, &needs_recreate);
   if (result == GRANIT_SUCCESS)
     ++state.rendered_frame_count;
   return result;

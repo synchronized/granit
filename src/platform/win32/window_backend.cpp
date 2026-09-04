@@ -6,6 +6,7 @@
 #include <windows.h>
 #include <windowsx.h>
 
+#include <cmath>
 #include <memory>
 #include <mutex>
 #include <string>
@@ -61,6 +62,12 @@ LRESULT CALLBACK window_proc(HWND hwnd, UINT message, WPARAM word, LPARAM value)
     enqueue_event(system, record->handle, GRANIT_WINDOW_EVENT_CLOSE_REQUESTED);
     return 0;
   case WM_SIZE: {
+    record->framebuffer_width = static_cast<std::uint32_t>(LOWORD(value));
+    record->framebuffer_height = static_cast<std::uint32_t>(HIWORD(value));
+    record->width = static_cast<std::uint32_t>(std::lround(
+        static_cast<float>(record->framebuffer_width) / record->content_scale_horizontal));
+    record->height = static_cast<std::uint32_t>(std::lround(
+        static_cast<float>(record->framebuffer_height) / record->content_scale_vertical));
     granit_window_event event = GRANIT_WINDOW_EVENT_INIT;
     event.type = GRANIT_WINDOW_EVENT_RESIZED;
     event.window = record->handle;
@@ -91,14 +98,22 @@ LRESULT CALLBACK window_proc(HWND hwnd, UINT message, WPARAM word, LPARAM value)
     }
     RECT client{};
     GetClientRect(hwnd, &client);
+    record->content_scale_horizontal = static_cast<float>(LOWORD(word)) / 96.0F;
+    record->content_scale_vertical = static_cast<float>(HIWORD(word)) / 96.0F;
+    record->framebuffer_width = static_cast<std::uint32_t>(client.right - client.left);
+    record->framebuffer_height = static_cast<std::uint32_t>(client.bottom - client.top);
+    record->width = static_cast<std::uint32_t>(std::lround(
+        static_cast<float>(record->framebuffer_width) / record->content_scale_horizontal));
+    record->height = static_cast<std::uint32_t>(std::lround(
+        static_cast<float>(record->framebuffer_height) / record->content_scale_vertical));
     granit_window_event event = GRANIT_WINDOW_EVENT_INIT;
     event.type = GRANIT_WINDOW_EVENT_SCALE_CHANGED;
     event.window = record->handle;
     event.timestamp_ns = timestamp_ns();
-    event.data.scale.horizontal = static_cast<float>(LOWORD(word)) / 96.0F;
-    event.data.scale.vertical = static_cast<float>(HIWORD(word)) / 96.0F;
-    event.data.scale.width = static_cast<std::uint32_t>(client.right - client.left);
-    event.data.scale.height = static_cast<std::uint32_t>(client.bottom - client.top);
+    event.data.scale.horizontal = record->content_scale_horizontal;
+    event.data.scale.vertical = record->content_scale_vertical;
+    event.data.scale.width = record->framebuffer_width;
+    event.data.scale.height = record->framebuffer_height;
     system->events.push_back(event);
     return 0;
   }
@@ -218,6 +233,20 @@ granit_result create_win32_window(const std::shared_ptr<window_system_record>& s
       SetThreadDpiAwarenessContext(previous_dpi_context);
     if (record->window == nullptr)
       return GRANIT_ERROR_BACKEND_UNAVAILABLE;
+    RECT client{};
+    if (GetClientRect(static_cast<HWND>(record->window), &client) == FALSE) {
+      DestroyWindow(static_cast<HWND>(record->window));
+      return GRANIT_ERROR_BACKEND_UNAVAILABLE;
+    }
+    const auto dpi = GetDpiForWindow(static_cast<HWND>(record->window));
+    record->content_scale_horizontal = static_cast<float>(dpi) / 96.0F;
+    record->content_scale_vertical = record->content_scale_horizontal;
+    record->framebuffer_width = static_cast<std::uint32_t>(client.right - client.left);
+    record->framebuffer_height = static_cast<std::uint32_t>(client.bottom - client.top);
+    record->width = static_cast<std::uint32_t>(std::lround(
+        static_cast<float>(record->framebuffer_width) / record->content_scale_horizontal));
+    record->height = static_cast<std::uint32_t>(std::lround(
+        static_cast<float>(record->framebuffer_height) / record->content_scale_vertical));
     system->windows.emplace(record->handle, record);
     if ((desc->flags & GRANIT_WINDOW_VISIBLE_BIT) != 0)
       ShowWindow(static_cast<HWND>(record->window), SW_SHOW);

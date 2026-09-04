@@ -94,15 +94,15 @@ ctest --preset windows-vs2022-debug
 cmake --install build/<preset-name> --prefix build/install
 ```
 
-顶层构建默认同时生成示例。Windows Clang 配置完成后可运行最小离屏清屏示例：
+顶层构建默认同时生成示例和测试。Windows Clang 配置完成后可运行内部离屏清屏 Smoke：
 
 ```powershell
-build/windows-clang-debug/bin/granit_offscreen_clear_example.exe
+build/windows-clang-debug/bin/granit_offscreen_clear_smoke.exe
 ```
 
 完整构建说明见[构建与安装](docs/guides/build.md)，其他程序见[示例程序](docs/guides/examples.md)，
-跨后端模型查看器见[Model Viewer 指南](docs/guides/model-viewer.md)，浏览器 WebGPU 基础示例见
-[WebGPU 浏览器指南](docs/guides/webgpu-browser-example.md)。
+跨后端模型查看器见[Model Viewer 指南](docs/guides/model-viewer.md)，浏览器自动验证入口见
+[WebGPU 平台 Smoke 指南](docs/guides/webgpu-browser-example.md)。
 
 最小 C++20 程序只需包含聚合头并初始化 Renderer：
 

@@ -27,7 +27,9 @@
 | 七、可选高层渲染 | 已完成 | H-02～H-08 路线闭合，参考管线与公共 UI/Text 已验证 |
 | 八、稳定化与跨平台 | 持续进行 | ABI 策略、诊断和更多平台 Surface 待后续推进 |
 | 九、多后端与 Web 平台 | 已完成 | 桌面 Vulkan、浏览器 WebGPU 与私有 HAL 收敛已验收 |
-| 十、Android 移动平台 | 待开始 | 0.4.0 多后端边界完成后规划 NDK、Surface 与移动生命周期 |
+| 十、Android 移动平台 | 待开始 | 多后端边界已完成，等待规划 NDK、Surface 与移动生命周期 |
+| 十一、跨后端模型查看器 | 已完成 | PBR、环境光、质量选项与桌面渲染线程已验收 |
+| 十二、0.5.0 平台扩展与上游集成 | 已完成 | 功能截止完成，等待完整发布矩阵验收 |
 
 ## 一、工程与 ABI 基础
 
@@ -195,13 +197,13 @@
 
 ## 十、Android 移动平台
 
-**状态：待开始；不属于 0.4.0 交付范围。**
+**状态：待开始；不属于已发布的 0.4.0 交付范围。**
 
 - **S-11 / P2**：在多后端契约与 Emscripten 路径稳定后增加 Android 支持。首轮以 Android NDK
   `arm64-v8a` 为基线，接入 `ANativeWindow`、应用暂停/恢复、Surface 重建、旋转与基础触控输入，
   并只验证 Vulkan 后端；Android WebGPU 若产生明确需求，另行决策。
 - Android 交付需要独立规划 Gradle/Prefab 或 AAR 集成、按 ABI 打包、真机与模拟器测试以及移动端
-  GPU 能力降级。具体版本和任务拆分在 S-10 验收后确定，不阻塞当前 0.4.0。
+  GPU 能力降级。S-10 已完成；Android 的目标版本和任务拆分仍需单独确定。
 
 ## 十一、跨后端模型查看器
 
@@ -220,18 +222,28 @@
 - **[S-15](plans/S-15-internal-hal-structure.md) / P1**：整理现有私有 HAL；在 Renderer 注册时集中
   发现能力接口，收敛 Registry 依赖，并明确契约和具体后端的目录职责。公共 API/ABI 和
   后端选择行为保持不变。
+- **[S-19](plans/S-19-model-viewer-render-thread.md) / P1**：为 Model Viewer 建立自有数据的
+  Frame Packet 和私有执行器；桌面 Vulkan 使用有界渲染线程，浏览器保持同步执行。任务已完成。
 - **S-14 / P2 / 条件性**：仅当至少两个非示例 Consumer 需要复用，且 S-13 已验证 CPU 数据模型后，
   再将示例加载器提升为可安装的 `granit::integration_gltf`；此前不承诺公共 glTF SDK。
 
+## 十二、0.5.0 平台扩展与上游集成
+
+**状态：已完成；S-18A、S-18B1、S-18C 与 S-18E 已验收，Android 明确延期。**
+
+- **[S-18](plans/S-18-0.5.0-platform-upstream-integration.md) / P1**：以 Gneiss 等真实 Consumer 的
+  接入问题为输入，完善现有桌面与浏览器平台的宿主循环、Surface、输入、资源生命周期、诊断和
+  安装 SDK 契约；窗口当前状态查询和本地 SDK 验收已经完成。
+- Android 继续保留为独立 S-11，不属于 0.5.0 当前范围；glTF Integration 和高级渲染功能仍遵守
+  各自的需求触发条件。
+
 ## 近期执行顺序
 
-1. S-16 已完成桌面 Dawn 和动态 Provider 删除，以及 Vulkan 与浏览器 WebGPU 回归。
-2. [S-17](plans/S-17-render-pipeline-internal-structure.md) 已完成 Render Pipeline 内部职责收敛，
-   公共 API/ABI 与渲染行为保持不变。
-3. S-15 已按 S-16 新边界完成 HAL 实现与跨平台验收。
-4. S-14 只在复用条件成立后启动；不要为当前单个示例提前稳定 glTF 公共 API。
-5. S-06D 最终验收等待稳定版本与 component 范围决策；不在 0.x 阶段提前宣布稳定。
-6. H-09 的透明 PBR、CSM、Clustered Forward 与 Bindless 只在各自重新评估条件满足后独立恢复，
+1. 完成 0.5.0 的 Windows、Linux 与 Emscripten 发布矩阵验收，确认变更记录和
+   [迁移指南](guides/migrate-0.4-to-0.5.md)后再发布。
+2. S-14 只在复用条件成立后启动；不要为当前单个示例提前稳定 glTF 公共 API。
+3. S-06D 最终验收等待稳定版本与 component 范围决策；不在 0.x 阶段提前宣布稳定。
+4. H-09 的透明 PBR、CSM、Clustered Forward 与 Bindless 只在各自重新评估条件满足后独立恢复，
    不作为当前稳定化工作的前置项。
 
 若前置抽象不足，应先更新对应 Plan 和本路线图状态，再扩大公共 API。

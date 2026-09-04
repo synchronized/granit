@@ -36,7 +36,7 @@ constexpr std::uint32_t k_height = 16;
 
 int main(int argc, char** argv) {
   if (argc > 2) {
-    std::cerr << "用法：granit_texture_readback_example [输出文件.rgba]\n";
+    std::cerr << "用法：granit_texture_readback_smoke [输出文件.rgba]\n";
     return 2;
   }
 

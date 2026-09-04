@@ -39,6 +39,25 @@ camera_bounds scene_bounds(const gpu_scene_plan& plan, std::uint32_t selected_no
 
 } // namespace
 
+granit_render_pipeline_render_desc
+frame_packet::render_desc(granit_texture_view output, granit_texture_format output_format,
+                          granit_frame frame, granit_canvas_draw_list canvas_list) const noexcept {
+  granit_render_pipeline_render_desc desc = GRANIT_RENDER_PIPELINE_RENDER_DESC_INIT;
+  desc.scene = snapshot.native_handle();
+  desc.output = output;
+  desc.output_format = output_format;
+  desc.width = width;
+  desc.height = height;
+  desc.exposure_ev = exposure_ev;
+  desc.draw_binding_count = static_cast<std::uint32_t>(draw_bindings.size());
+  desc.draw_bindings = draw_bindings.data();
+  desc.frame = frame;
+  desc.canvas = canvas_list;
+  desc.clear_color = clear_color;
+  desc.environment = &environment;
+  return desc;
+}
+
 granit::result application_core::begin_renderer() noexcept {
   if (phase_ != application_phase::platform_ready)
     return granit::result::invalid_argument;
@@ -69,9 +88,25 @@ granit::result application_core::load_asset(std::span<const std::byte> bytes,
 granit::result application_core::accept_scene(gltf::scene scene) {
   if (phase_ != application_phase::asset_loading)
     return granit::result::invalid_argument;
+  gpu_scene_plan plan;
+  const auto plan_result = build_gpu_scene_plan(scene, plan);
+  if (plan_result != gpu_scene_plan_error::none) {
+    const auto result = plan_result == gpu_scene_plan_error::out_of_memory
+                            ? granit::result::out_of_memory
+                            : granit::result::invalid_argument;
+    fail(result, "模型查看器 GPU Scene 计划生成失败");
+    return result;
+  }
+  return accept_scene(std::move(scene), std::move(plan));
+}
+
+granit::result application_core::accept_scene(gltf::scene scene, gpu_scene_plan plan) {
+  if (phase_ != application_phase::asset_loading)
+    return granit::result::invalid_argument;
   try {
     state_.reset(scene);
     cpu_scene_ = std::move(scene);
+    gpu_plan_ = std::move(plan);
     phase_ = application_phase::gpu_upload;
     return granit::result::success;
   } catch (const std::bad_alloc&) {
@@ -82,10 +117,13 @@ granit::result application_core::accept_scene(gltf::scene scene) {
 
 granit::result application_core::upload(granit_renderer renderer,
                                         std::span<const std::byte> environment_bytes,
-                                        float sampler_anisotropy) {
+                                        float sampler_anisotropy,
+                                        gpu_scene_upload_callback progress,
+                                        void* progress_user_data) {
   if (phase_ != application_phase::gpu_upload)
     return granit::result::invalid_argument;
-  const auto result = gpu_scene_.initialize(renderer, cpu_scene_, sampler_anisotropy);
+  const auto result = gpu_scene_.initialize(renderer, cpu_scene_, std::move(gpu_plan_),
+                                            sampler_anisotropy, progress, progress_user_data);
   if (result.failed()) {
     fail(result, "模型查看器 GPU Scene 上传失败");
     return result;
@@ -101,6 +139,13 @@ granit::result application_core::upload(granit_renderer renderer,
       return granit::result::invalid_argument;
     }
     environment_result = environment_.initialize(renderer, package);
+    if (environment_result) {
+      viewer_change recommended_lighting;
+      recommended_lighting.environment_intensity = package.recommended_environment_intensity;
+      recommended_lighting.exposure_ev = package.recommended_exposure_ev;
+      if (state_.apply(cpu_scene_, recommended_lighting) != viewer_state_error::none)
+        environment_result = granit::result::invalid_argument;
+    }
   }
   if (environment_result.failed()) {
     gpu_scene_.reset();
@@ -118,8 +163,7 @@ granit::result application_core::reupload_scene(granit_renderer renderer,
   return gpu_scene_.initialize(renderer, cpu_scene_, sampler_anisotropy);
 }
 
-granit::result application_core::tick(const application_tick_input& input,
-                                      application_tick_output& output) {
+granit::result application_core::tick(const application_tick_input& input, frame_packet& output) {
   if (phase_ != application_phase::ready)
     return granit::result::invalid_argument;
   if (input.width == 0 || input.height == 0)
@@ -169,23 +213,24 @@ granit::result application_core::tick(const application_tick_input& input,
       .radiance = light_state.radiance,
       .layer_mask = std::numeric_limits<std::uint64_t>::max()};
 
-  application_tick_output candidate;
+  frame_packet candidate;
   const auto snapshot_result = gpu_scene_.create_snapshot(std::span{&view, 1}, std::span{&light, 1},
                                                           {}, {}, candidate.snapshot);
   if (snapshot_result.failed())
     return snapshot_result;
-  candidate.render.scene = candidate.snapshot.native_handle();
-  candidate.render.width = input.width;
-  candidate.render.height = input.height;
-  candidate.render.exposure_ev = state_.exposure_ev();
+  candidate.width = input.width;
+  candidate.height = input.height;
+  candidate.exposure_ev = state_.exposure_ev();
   const auto background = state_.background_color();
-  candidate.render.clear_color = {background.x, background.y, background.z, 1.0F};
+  candidate.clear_color = {background.x, background.y, background.z, 1.0F};
   environment_.environment().intensity = state_.environment_intensity();
   environment_.environment().rotation_radians = state_.environment_rotation_radians();
-  candidate.render.environment = &environment_.environment();
-  candidate.render.draw_binding_count =
-      static_cast<std::uint32_t>(gpu_scene_.draw_bindings().size());
-  candidate.render.draw_bindings = gpu_scene_.draw_bindings().data();
+  candidate.environment = environment_.environment();
+  try {
+    candidate.draw_bindings = gpu_scene_.draw_bindings();
+  } catch (const std::bad_alloc&) {
+    return granit::result::out_of_memory;
+  }
   if (input.performance)
     performance_.push(*input.performance);
   output = std::move(candidate);
@@ -203,6 +248,7 @@ void application_core::reset() noexcept {
   gpu_scene_.reset();
   environment_.reset();
   cpu_scene_ = {};
+  gpu_plan_ = {};
   state_ = {};
   performance_.clear();
   camera_initialized_ = false;

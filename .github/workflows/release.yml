@@ -55,8 +55,13 @@ jobs:
         run: |
           cmake --preset '${{ steps.package.outputs.preset }}'
           cmake --build --preset '${{ steps.package.outputs.preset }}'
-          ctest --preset '${{ steps.package.outputs.preset }}' `
-            -E 'granit\.renderer\.lifecycle_diagnostic|granit\.window_renderer|granit\.example\.'
+          $exclude = @(
+            'granit\.renderer\.lifecycle_diagnostic'
+            'granit\.window_renderer'
+            'granit\.example\.'
+            'granit\.smoke\.'
+          ) -join '|'
+          ctest --preset '${{ steps.package.outputs.preset }}' -E $exclude
       - name: 安装并打包
         shell: pwsh
         run: |

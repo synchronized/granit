@@ -55,6 +55,8 @@ performance_summary performance_history::summarize() const noexcept {
           samples_, size_, [](const auto& s) { return s.frames_per_second; }, all),
       .cpu_frame_ms = summarize_metric(
           samples_, size_, [](const auto& s) { return s.cpu_frame_ms; }, all),
+      .render_queue_wait_ms = summarize_metric(
+          samples_, size_, [](const auto& s) { return s.render_queue_wait_ms; }, all),
       .frame_slot_wait_ms = summarize_metric(
           samples_, size_, [](const auto& s) { return s.frame_slot_wait_ms; }, all),
       .present_wait_ms = summarize_metric(

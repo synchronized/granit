@@ -6,6 +6,7 @@
 
 #include "gltf/loader.h"
 #include "model_viewer/environment_resources.h"
+#include "model_viewer/frame_canvas_data.h"
 #include "model_viewer/gpu_scene.h"
 #include "model_viewer/performance_history.h"
 #include "model_viewer/viewer_state.h"
@@ -13,6 +14,7 @@
 #include <optional>
 #include <span>
 #include <string>
+#include <vector>
 
 namespace granit::example::model_viewer {
 
@@ -34,10 +36,22 @@ struct application_tick_input {
   std::optional<performance_sample> performance;
 };
 
-/** Core 生成的单帧不可变 Scene 与待补齐平台输出的渲染描述。 */
-struct application_tick_output {
+/** Core 生成的单帧不可变提交包；其数组和环境数据不借用下一帧可变状态。 */
+struct frame_packet {
+  frame_canvas_data canvas;
   granit::scene_snapshot snapshot;
-  granit_render_pipeline_render_desc render = GRANIT_RENDER_PIPELINE_RENDER_DESC_INIT;
+  granit_render_pipeline_environment environment = GRANIT_RENDER_PIPELINE_ENVIRONMENT_INIT;
+  std::vector<granit_render_pipeline_draw_binding> draw_bindings;
+  std::uint32_t width{};
+  std::uint32_t height{};
+  float exposure_ev{};
+  granit_clear_color_value clear_color{0.0F, 0.0F, 0.0F, 1.0F};
+
+  /** 在消费线程生成只借用当前提交包的渲染描述。 */
+  [[nodiscard]] granit_render_pipeline_render_desc
+  render_desc(granit_texture_view output, granit_texture_format output_format,
+              granit_frame frame = GRANIT_NULL_HANDLE,
+              granit_canvas_draw_list canvas_list = GRANIT_NULL_HANDLE) const noexcept;
 };
 
 class application_core {
@@ -47,14 +61,17 @@ public:
   [[nodiscard]] granit::result load_asset(std::span<const std::byte> bytes,
                                           const gltf::resource_resolver* resolver);
   [[nodiscard]] granit::result accept_scene(gltf::scene scene);
-  /** 上传场景；environment_bytes 为空时使用内置摄影棚环境，否则解析 GRENV v1。 */
+  /** 接收已经在资产线程完成打包的 CPU Scene 与 GPU 创建计划。 */
+  [[nodiscard]] granit::result accept_scene(gltf::scene scene, gpu_scene_plan plan);
+  /** 上传场景；environment_bytes 为空时使用内置摄影棚环境，否则解析 GRENV v2。 */
   [[nodiscard]] granit::result upload(granit_renderer renderer,
                                       std::span<const std::byte> environment_bytes = {},
-                                      float sampler_anisotropy = 8.0F);
+                                      float sampler_anisotropy = 8.0F,
+                                      gpu_scene_upload_callback progress = nullptr,
+                                      void* progress_user_data = nullptr);
   /** 按新采样质量事务式重建 GPU Scene；环境资源与查看器状态保持不变。 */
   [[nodiscard]] granit::result reupload_scene(granit_renderer renderer, float sampler_anisotropy);
-  [[nodiscard]] granit::result tick(const application_tick_input& input,
-                                    application_tick_output& output);
+  [[nodiscard]] granit::result tick(const application_tick_input& input, frame_packet& output);
   void fail(granit::result result, std::string diagnostic);
   void reset() noexcept;
 
@@ -72,6 +89,7 @@ private:
   granit::result failure_result_{granit::result::success};
   std::string diagnostic_;
   gltf::scene cpu_scene_;
+  gpu_scene_plan gpu_plan_;
   gpu_scene gpu_scene_;
   environment_resources environment_;
   viewer_state state_;

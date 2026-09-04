@@ -57,6 +57,10 @@ add_library(
   environment_ktx2.h
   environment_resources.cpp
   environment_resources.h
+  frame_canvas_data.cpp
+  frame_canvas_data.h
+  frame_executor.cpp
+  frame_executor.h
   gpu_scene.cpp
   material_archive.cpp
   material_archive.h
@@ -122,6 +126,7 @@ if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
     application_core_test.cpp
     environment_package_test.cpp
     environment_ktx2_test.cpp
+    frame_executor_test.cpp
     gpu_scene_test.cpp
     orbit_camera_test.cpp
     performance_history_test.cpp
@@ -148,6 +153,8 @@ endif()
 if(TARGET granit::integration_imgui)
   add_library(
     granit_example_model_viewer_imgui STATIC
+    imgui_frame_capture.cpp
+    imgui_frame_capture.h
     texture_registry.cpp
     texture_registry.h
     viewer_panels.cpp
@@ -166,7 +173,8 @@ if(TARGET granit::integration_imgui)
 
   if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
     add_executable(
-      granit_example_model_viewer_imgui_test texture_registry_test.cpp viewer_panels_test.cpp
+    granit_example_model_viewer_imgui_test texture_registry_test.cpp viewer_panels_test.cpp
+                                           imgui_frame_capture_test.cpp
     )
     target_link_libraries(
       granit_example_model_viewer_imgui_test
@@ -176,5 +184,12 @@ if(TARGET granit::integration_imgui)
     add_test(
       NAME granit.example.model_viewer_imgui COMMAND granit_example_model_viewer_imgui_test
     )
+    if(WIN32)
+      set_tests_properties(
+        granit.example.model_viewer_imgui
+        PROPERTIES ENVIRONMENT_MODIFICATION
+                   "PATH=path_list_prepend:$<TARGET_FILE_DIR:granit::integration_imgui>"
+      )
+    endif()
   endif()
 endif()

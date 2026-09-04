@@ -89,6 +89,10 @@ granit_result create_xcb_window(const std::shared_ptr<window_system_record>& sys
     auto record = std::make_shared<window_record>();
     record->handle = allocate_handle();
     record->system = system;
+    record->width = desc->width;
+    record->height = desc->height;
+    record->framebuffer_width = desc->width;
+    record->framebuffer_height = desc->height;
     record->window = xcb_generate_id(system->connection);
     const std::uint32_t values[] = {
         system->screen->black_pixel,
@@ -187,9 +191,17 @@ void pump_xcb_events(const std::shared_ptr<window_system_record>& system) {
     }
     if (type == XCB_CONFIGURE_NOTIFY) {
       const auto* configured = reinterpret_cast<const xcb_configure_notify_event_t*>(event.get());
+      const auto handle = public_handle(configured->window);
+      const auto found = system->windows.find(handle);
+      if (found != system->windows.end()) {
+        found->second->width = configured->width;
+        found->second->height = configured->height;
+        found->second->framebuffer_width = configured->width;
+        found->second->framebuffer_height = configured->height;
+      }
       granit_window_event output = GRANIT_WINDOW_EVENT_INIT;
       output.type = GRANIT_WINDOW_EVENT_RESIZED;
-      output.window = public_handle(configured->window);
+      output.window = handle;
       output.timestamp_ns = timestamp_ns();
       output.data.resized.width = configured->width;
       output.data.resized.height = configured->height;

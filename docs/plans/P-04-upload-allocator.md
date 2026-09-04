@@ -139,6 +139,11 @@ granit_result granit_upload_batch_destroy(granit_renderer renderer,
 只有同步批量基准证明 Fence wait 仍是主要瓶颈，并且存在明确的资产流送或逐帧异步需求时，才进入
 P-04B2。届时单独设计 Async Upload Context 和 completion token，不改变同步 Batch 的完成语义。
 
+model-viewer 的大型 glTF 加载已形成明确的响应性需求。0.5.0 阶段先由上层将同步 Upload Batch
+切成有界纹理批次，并在资源边界刷新事件与进度；该方案不改变公共 ABI，也不承诺任意线程可操作
+同一资源。专用 Upload 线程、异步提交、`poll`/`wait` 和 completion token 仍作为 P-04B2 独立设计，
+不得通过把现有同步 `submit` 直接移入临时工作线程来绕过生命周期与 Queue 顺序契约。
+
 C++20 包装提供 move-only `upload_batch` 和 `std::span<const std::byte>`，不建立第二套运行时状态。
 批量提交必须直接走内部批量路径，不能循环调用现有同步写入 API。
 

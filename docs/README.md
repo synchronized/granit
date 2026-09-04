@@ -29,6 +29,7 @@
 2. [路线图](roadmap.md)
 3. [Render Graph 边界](plans/P-06-render-graph-boundary.md)
 4. [高级参考渲染套件](plans/H-07-reference-render-pipeline.md)
+5. [Model Viewer 渲染线程计划](plans/S-19-model-viewer-render-thread.md)
 
 ### 参与开发
 
@@ -43,9 +44,10 @@
 - [发布验收](guides/release.md)
 - [从 0.2 迁移到 0.3](guides/migrate-0.2-to-0.3.md)
 - [从 0.3 迁移到 0.4](guides/migrate-0.3-to-0.4.md)
+- [从 0.4 迁移到 0.5](guides/migrate-0.4-to-0.5.md)
 - [示例程序及运行方式](guides/examples.md)
 - [运行跨后端模型查看器](guides/model-viewer.md)
-- [运行 WebGPU 浏览器三角形示例](guides/webgpu-browser-example.md)
+- [运行浏览器 WebGPU 平台 Smoke](guides/webgpu-browser-example.md)
 - [同步批量上传](guides/upload-batch.md)
 - [纹理同步回读](guides/texture-readback.md)
 - [第三方 UI 与字体适配](guides/third-party-ui-adapters.md)

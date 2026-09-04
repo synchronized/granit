@@ -3,7 +3,7 @@
 
 #include "lighting/tone_mapping_resources.h"
 #include "material/pbr_material_schema.h"
-#include "pbr_example_support.h"
+#include "pbr_test_support.h"
 
 #include <granit/granit.hpp>
 
@@ -260,11 +260,11 @@ int main(int argument_count, char** arguments) {
 
   granit::material::material_package pbr_package;
   if (result.ok() &&
-      !granit::examples::build_pbr_package(pbr_package, pbr_vertex, pbr_vertex_wgsl,
+      !granit::test::build_pbr_package(pbr_package, pbr_vertex, pbr_vertex_wgsl,
                                            pbr_fragment, pbr_fragment_wgsl)) {
     result = granit::result::initialization_failed;
   }
-  granit::examples::pbr_lighting_resources pbr_lighting;
+  granit::test::pbr_lighting_resources pbr_lighting;
   if (result.ok())
     result = pbr_lighting.initialize(renderer.native_handle());
   granit::bind_group_layout object_layout;
@@ -292,7 +292,7 @@ int main(int argument_count, char** arguments) {
   if (result.ok())
     result = granit::from_native(pbr_defaults.initialize(renderer.native_handle()));
   if (result.ok()) {
-    result = granit::examples::initialize_pbr_instance(renderer.native_handle(), pbr_material,
+    result = granit::test::initialize_pbr_instance(renderer.native_handle(), pbr_material,
                                                        pbr_package, pbr_defaults, pbr_instance);
   }
   window_hdr_resources resources;

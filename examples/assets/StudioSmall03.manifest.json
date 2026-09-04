@@ -7,14 +7,16 @@
   "files_hash": "d69ec09a43016714fd0dda163b3b0c585c968f56",
   "generated": {
     "path": "StudioSmall03.grenv",
-    "size": 1228840,
-    "sha256": "4de0714ff983d13ec8d6bdcdabf22bea65f6e4cb1192f6b72d079d237f8ff589",
+    "size": 1228848,
+    "sha256": "8d556730faf055eaed74e93b3ba42f10900325beb2d06acf4a640e60445068d3",
     "gltf_ibl_sampler_revision": "08fa12250f6f5f5969c1846aaa266e6eea887731",
     "irradiance_resolution": 32,
     "prefiltered_resolution": 128,
     "prefiltered_mip_count": 8,
     "sample_count": 1024,
-    "target_format": "R16G16B16A16_SFLOAT"
+    "target_format": "R16G16B16A16_SFLOAT",
+    "recommended_environment_intensity": 0.12,
+    "recommended_exposure_ev": -0.5
   },
   "files": [
     {

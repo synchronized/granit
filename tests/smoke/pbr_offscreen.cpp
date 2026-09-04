@@ -8,7 +8,7 @@
 #include "material/material_template_gpu.h"
 #include "material/pbr_default_resources.h"
 #include "material/pbr_material_schema.h"
-#include "pbr_example_support.h"
+#include "pbr_test_support.h"
 #include "reference/lighting/ibl_reference.h"
 #include "reference/lighting/lighting_reference.h"
 #include "reference/lighting/tone_mapping_reference.h"
@@ -166,21 +166,21 @@ int main(int argc, char** argv) {
   granit::material::material_package shadow_package;
   granit::material::material_package full_package;
   const auto packages_ready =
-      granit::examples::build_pbr_package(direct_package, load_shader("pbr_lights.vert.spv"),
+      granit::test::build_pbr_package(direct_package, load_shader("pbr_lights.vert.spv"),
                                           load_shader_text("pbr_lights.vert.wgsl"),
                                           load_shader("pbr_lights_untextured.frag.spv"),
                                           load_shader_text("pbr_lights_untextured.frag.wgsl")) &&
-      granit::examples::build_pbr_package(ibl_package, load_shader("pbr_lights.vert.spv"),
+      granit::test::build_pbr_package(ibl_package, load_shader("pbr_lights.vert.spv"),
                                           load_shader_text("pbr_lights.vert.wgsl"),
                                           load_shader("pbr_ibl_lights_untextured.frag.spv"),
                                           load_shader_text("pbr_ibl_lights_untextured.frag.wgsl")) &&
-      granit::examples::build_pbr_package(shadow_package,
+      granit::test::build_pbr_package(shadow_package,
                                           load_shader("pbr_shadow_ibl_lights.vert.spv"),
                                           load_shader_text("pbr_shadow_ibl_lights.vert.wgsl"),
                                           load_shader("pbr_shadow_lights_untextured.frag.spv"),
                                           load_shader_text(
                                               "pbr_shadow_lights_untextured.frag.wgsl")) &&
-      granit::examples::build_pbr_package(full_package,
+      granit::test::build_pbr_package(full_package,
                                           load_shader("pbr_shadow_ibl_lights.vert.spv"),
                                           load_shader_text("pbr_shadow_ibl_lights.vert.wgsl"),
                                           load_shader("pbr_shadow_ibl_lights_untextured.frag.spv"),
@@ -381,19 +381,19 @@ int main(int argc, char** argv) {
   if (result.ok())
     result = granit::from_native(defaults.initialize(renderer.native_handle()));
   if (result.ok()) {
-    result = granit::examples::initialize_pbr_instance(renderer.native_handle(), direct_material,
+    result = granit::test::initialize_pbr_instance(renderer.native_handle(), direct_material,
                                                        direct_package, defaults, direct_instance);
   }
   if (result.ok()) {
-    result = granit::examples::initialize_pbr_instance(renderer.native_handle(), ibl_material,
+    result = granit::test::initialize_pbr_instance(renderer.native_handle(), ibl_material,
                                                        ibl_package, defaults, ibl_instance);
   }
   if (result.ok()) {
-    result = granit::examples::initialize_pbr_instance(renderer.native_handle(), shadow_material,
+    result = granit::test::initialize_pbr_instance(renderer.native_handle(), shadow_material,
                                                        shadow_package, defaults, shadow_instance);
   }
   if (result.ok()) {
-    result = granit::examples::initialize_pbr_instance(renderer.native_handle(), material,
+    result = granit::test::initialize_pbr_instance(renderer.native_handle(), material,
                                                        full_package, defaults, instance);
   }
 

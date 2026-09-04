@@ -32,6 +32,7 @@ struct window_desc {
 };
 
 using window_event = granit_window_event;
+using window_state = granit_window_state;
 
 class window_system {
 public:
@@ -123,6 +124,11 @@ public:
   }
   [[nodiscard]] result native_win32(void*& instance, void*& native_window) const noexcept {
     return from_native(granit_window_get_win32(system_, handle_, &instance, &native_window));
+  }
+
+  [[nodiscard]] result get_state(window_state& state) const noexcept {
+    state = GRANIT_WINDOW_STATE_INIT;
+    return from_native(granit_window_get_state(system_, handle_, &state));
   }
 
   [[nodiscard]] result native_xcb(void*& connection, std::uint32_t& native_window) const noexcept {

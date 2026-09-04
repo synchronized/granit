@@ -10,6 +10,7 @@ TEST_CASE("性能历史限制为 240 帧并计算分位数", "[example][model-vi
   for (int value = 1; value <= 300; ++value)
     history.push({.frames_per_second = static_cast<float>(value),
                   .cpu_frame_ms = static_cast<float>(value),
+                  .render_queue_wait_ms = static_cast<float>(value) / 10.0F,
                   .gpu_frame_ms = static_cast<float>(value),
                   .gpu_timing_available = value % 2 == 0});
   REQUIRE(history.size() == 240);
@@ -17,6 +18,8 @@ TEST_CASE("性能历史限制为 240 帧并计算分位数", "[example][model-vi
   CHECK(summary.cpu_frame_ms.sample_count == 240);
   CHECK(summary.cpu_frame_ms.maximum == 300.0F);
   CHECK(summary.cpu_frame_ms.p50 == 181.0F);
+  CHECK(summary.render_queue_wait_ms.sample_count == 240);
+  CHECK(summary.render_queue_wait_ms.maximum == 30.0F);
   CHECK(summary.gpu_frame_ms.sample_count == 120);
   CHECK(summary.gpu_frame_ms.maximum == 300.0F);
 }

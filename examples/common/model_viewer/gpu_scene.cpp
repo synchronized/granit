@@ -482,9 +482,24 @@ gpu_scene& gpu_scene::operator=(gpu_scene&& other) noexcept {
 }
 
 granit::result gpu_scene::initialize(granit_renderer renderer, const gltf::scene& source,
-                                     float sampler_anisotropy) {
+                                     float sampler_anisotropy, gpu_scene_upload_callback progress,
+                                     void* progress_user_data) {
+  gpu_scene_plan plan;
+  const auto plan_result = build_gpu_scene_plan(source, plan);
+  if (plan_result != gpu_scene_plan_error::none)
+    return plan_result == gpu_scene_plan_error::out_of_memory ? granit::result::out_of_memory
+                                                              : granit::result::invalid_argument;
+  return initialize(renderer, source, std::move(plan), sampler_anisotropy, progress,
+                    progress_user_data);
+}
+
+granit::result gpu_scene::initialize(granit_renderer renderer, const gltf::scene& source,
+                                     gpu_scene_plan plan, float sampler_anisotropy,
+                                     gpu_scene_upload_callback progress,
+                                     void* progress_user_data) {
   gpu_scene candidate;
-  const auto result = candidate.create(renderer, source, sampler_anisotropy);
+  const auto result = candidate.create(renderer, source, std::move(plan), sampler_anisotropy,
+                                       progress, progress_user_data);
   if (result.failed())
     return result;
   *this = std::move(candidate);
@@ -615,15 +630,25 @@ granit::result gpu_scene::update_debug_display(std::uint32_t mode) noexcept {
 }
 
 granit::result gpu_scene::create(granit_renderer renderer, const gltf::scene& source,
-                                 float sampler_anisotropy) {
+                                 gpu_scene_plan plan, float sampler_anisotropy,
+                                 gpu_scene_upload_callback progress, void* progress_user_data) {
+  const auto report = [&](gpu_scene_upload_stage stage, std::size_t completed, std::size_t total) {
+    if (progress == nullptr)
+      return true;
+    if (completed > std::numeric_limits<std::uint32_t>::max() ||
+        total > std::numeric_limits<std::uint32_t>::max())
+      return false;
+    return progress(
+        {stage, static_cast<std::uint32_t>(completed), static_cast<std::uint32_t>(total)},
+        progress_user_data);
+  };
   if (renderer == GRANIT_NULL_HANDLE)
     return granit::result::invalid_handle;
   if (!std::isfinite(sampler_anisotropy) || sampler_anisotropy < 1.0F)
     return granit::result::invalid_argument;
-  const auto plan_result = build_gpu_scene_plan(source, plan_);
-  if (plan_result != gpu_scene_plan_error::none)
-    return plan_result == gpu_scene_plan_error::out_of_memory ? granit::result::out_of_memory
-                                                              : granit::result::invalid_argument;
+  plan_ = std::move(plan);
+  if (!report(gpu_scene_upload_stage::planning, 1, 1))
+    return granit::result::not_ready;
 
   granit::upload_batch uploads;
   if (const auto result = uploads.initialize(renderer); result.failed())
@@ -656,9 +681,13 @@ granit::result gpu_scene::create(granit_renderer renderer, const gltf::scene& so
         result.failed())
       return result;
   }
+  if (!report(gpu_scene_upload_stage::geometry, 1, 1))
+    return granit::result::not_ready;
 
   textures_.reserve(plan_.textures.size());
-  for (const auto variant : plan_.textures) {
+  std::size_t textures_in_batch = 0;
+  for (std::size_t texture_index = 0; texture_index < plan_.textures.size(); ++texture_index) {
+    const auto variant = plan_.textures[texture_index];
     const auto& source_image = source.images[variant.image];
     if (source_image.mips.empty())
       return granit::result::invalid_argument;
@@ -725,10 +754,19 @@ granit::result gpu_scene::create(granit_renderer renderer, const gltf::scene& so
         return result;
     }
     textures_.push_back(std::move(target));
+    ++textures_in_batch;
+    if (textures_in_batch == 2) {
+      if (const auto result = uploads.submit(); result.failed())
+        return result;
+      textures_in_batch = 0;
+    }
+    if (!report(gpu_scene_upload_stage::textures, texture_index + 1, plan_.textures.size()))
+      return granit::result::not_ready;
   }
 
   samplers_.reserve(plan_.samplers.size());
-  for (const auto& key : plan_.samplers) {
+  for (std::size_t sampler_index = 0; sampler_index < plan_.samplers.size(); ++sampler_index) {
+    const auto& key = plan_.samplers[sampler_index];
     samplers_.emplace_back();
     const bool use_anisotropy = key.mag_filter == granit::filter::linear &&
                                 key.min_filter == granit::filter::linear &&
@@ -753,7 +791,11 @@ granit::result gpu_scene::create(granit_renderer renderer, const gltf::scene& so
     }
     if (result.failed())
       return result;
+    if (!report(gpu_scene_upload_stage::samplers, sampler_index + 1, plan_.samplers.size()))
+      return granit::result::not_ready;
   }
+  if (plan_.samplers.empty() && !report(gpu_scene_upload_stage::samplers, 0, 0))
+    return granit::result::not_ready;
 
   if (const auto result = default_sampler_.initialize(renderer, {.max_lod = 1000.0F});
       result.failed())
@@ -786,7 +828,9 @@ granit::result gpu_scene::create(granit_renderer renderer, const gltf::scene& so
                                            static_cast<std::uint32_t>(attributes.size()), 0,
                                            attributes.data()};
   meshes_.reserve(plan_.primitives.size());
-  for (const auto& primitive : plan_.primitives) {
+  for (std::size_t primitive_index = 0; primitive_index < plan_.primitives.size();
+       ++primitive_index) {
+    const auto& primitive = plan_.primitives[primitive_index];
     const granit_mesh_vertex_buffer binding{vertex_buffer_.native_handle(), primitive.vertex_offset,
                                             layout};
     granit_mesh_desc desc = GRANIT_MESH_DESC_INIT;
@@ -801,22 +845,32 @@ granit::result gpu_scene::create(granit_renderer renderer, const gltf::scene& so
     meshes_.emplace_back();
     if (const auto result = meshes_.back().initialize(renderer, desc); result.failed())
       return result;
+    if (!report(gpu_scene_upload_stage::meshes, primitive_index + 1, plan_.primitives.size()))
+      return granit::result::not_ready;
   }
+  if (plan_.primitives.empty() && !report(gpu_scene_upload_stage::meshes, 0, 0))
+    return granit::result::not_ready;
   if (const auto result = uploads.submit(); result.failed())
     return result;
   materials_.reserve(source.materials.size() + 1);
-  for (const auto& source_material : source.materials) {
+  for (std::size_t material_index = 0; material_index < source.materials.size(); ++material_index) {
+    const auto& source_material = source.materials[material_index];
     materials_.emplace_back();
     if (const auto result = create_material(renderer, source_material, plan_, textures_, samplers_,
                                             default_textures_, default_sampler_, materials_.back());
         result.failed())
       return result;
+    if (!report(gpu_scene_upload_stage::materials, material_index + 1, source.materials.size() + 1))
+      return granit::result::not_ready;
   }
   materials_.emplace_back();
   if (const auto result = create_material(renderer, {}, plan_, textures_, samplers_,
                                           default_textures_, default_sampler_, materials_.back());
       result.failed())
     return result;
+  if (!report(gpu_scene_upload_stage::materials, source.materials.size() + 1,
+              source.materials.size() + 1))
+    return granit::result::not_ready;
 
   draw_bindings_.reserve(plan_.draws.size());
   for (const auto& draw : plan_.draws) {

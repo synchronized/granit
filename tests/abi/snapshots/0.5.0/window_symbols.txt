@@ -1,0 +1,9 @@
+granit_window_create
+granit_window_destroy
+granit_window_get_state
+granit_window_get_wayland
+granit_window_get_win32
+granit_window_get_xcb
+granit_window_poll_event
+granit_window_system_create
+granit_window_system_destroy

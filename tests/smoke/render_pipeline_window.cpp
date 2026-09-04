@@ -36,7 +36,7 @@ granit_matrix4 identity() {
 }
 
 std::vector<char> load_package() {
-  std::ifstream stream{GRANIT_RENDER_PIPELINE_EXAMPLE_PACKAGE, std::ios::binary};
+  std::ifstream stream{GRANIT_RENDER_PIPELINE_SMOKE_PACKAGE, std::ios::binary};
   return {std::istreambuf_iterator<char>{stream}, {}};
 }
 

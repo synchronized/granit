@@ -6,6 +6,8 @@
 #include "model_viewer/environment_package.h"
 
 #include <bit>
+#include <charconv>
+#include <cmath>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -75,13 +77,20 @@ std::vector<std::byte> convert_lut(const granit::example::gltf::image& image) {
 void print_usage() {
   std::cerr << "用法：granit_model_viewer_environment_tool build "
                "--irradiance <diffuse.ktx2> --prefiltered <specular.ktx2> "
-               "--brdf-lut <lut.png> --output <environment.grenv>\n";
+               "--brdf-lut <lut.png> --output <environment.grenv> "
+               "[--intensity <强度>] [--exposure <EV>]\n";
+}
+
+bool parse_float(std::string_view text, float& value) noexcept {
+  const auto result = std::from_chars(text.data(), text.data() + text.size(), value);
+  return result.ec == std::errc{} && result.ptr == text.data() + text.size() &&
+         std::isfinite(value);
 }
 
 } // namespace
 
 int main(int argc, char** argv) {
-  if (argc != 10 || std::string_view{argv[1]} != "build") {
+  if (argc < 10 || argc % 2 != 0 || std::string_view{argv[1]} != "build") {
     print_usage();
     return 2;
   }
@@ -89,6 +98,8 @@ int main(int argc, char** argv) {
   std::filesystem::path prefiltered_path;
   std::filesystem::path lut_path;
   std::filesystem::path output_path;
+  float recommended_intensity = 0.12F;
+  float recommended_exposure = -0.5F;
   for (int index = 2; index < argc; index += 2) {
     const std::string_view option{argv[index]};
     if (option == "--irradiance")
@@ -99,7 +110,18 @@ int main(int argc, char** argv) {
       lut_path = argv[index + 1];
     else if (option == "--output")
       output_path = argv[index + 1];
-    else {
+    else if (option == "--intensity") {
+      if (!parse_float(argv[index + 1], recommended_intensity) || recommended_intensity < 0.0F) {
+        print_usage();
+        return 2;
+      }
+    } else if (option == "--exposure") {
+      if (!parse_float(argv[index + 1], recommended_exposure) || recommended_exposure < -24.0F ||
+          recommended_exposure > 24.0F) {
+        print_usage();
+        return 2;
+      }
+    } else {
       print_usage();
       return 2;
     }
@@ -131,6 +153,8 @@ int main(int argc, char** argv) {
 
   auto lut_half = convert_lut(lut);
   granit::example::model_viewer::environment_package package;
+  package.recommended_environment_intensity = recommended_intensity;
+  package.recommended_exposure_ev = recommended_exposure;
   package.irradiance_resolution = irradiance.levels.front().resolution;
   package.irradiance_pixels = irradiance.levels.front().pixels;
   package.prefiltered_mips.reserve(prefiltered.levels.size());

@@ -14,7 +14,7 @@
 namespace {
 
 std::vector<std::byte> load_shader(const char* name) {
-  std::ifstream stream{std::string{GRANIT_EXAMPLE_ASSET_DIR} + "/" + name, std::ios::binary};
+  std::ifstream stream{std::string{GRANIT_SMOKE_ASSET_DIR} + "/" + name, std::ios::binary};
   const std::vector<char> bytes{std::istreambuf_iterator<char>{stream}, {}};
   std::vector<std::byte> result(bytes.size());
   for (std::size_t index = 0; index < bytes.size(); ++index)
@@ -36,7 +36,7 @@ int main() {
   const auto vertex_code = load_shader("triangle.vert.spv");
   const auto fragment_code = load_shader("triangle.frag.spv");
   if (vertex_code.empty() || fragment_code.empty()) {
-    std::cerr << "无法读取示例 Shader\n";
+    std::cerr << "无法读取 Smoke Shader\n";
     return 1;
   }
   granit::shader vertex;

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include "pbr_example_support.h"
+#include "pbr_test_support.h"
 
 #include "material/pbr_material_schema.h"
 
@@ -9,7 +9,7 @@
 #include <bit>
 #include <cmath>
 
-namespace granit::examples {
+namespace granit::test {
 namespace {
 
 template <std::size_t Size>
@@ -212,4 +212,4 @@ result initialize_pbr_instance(granit_renderer renderer,
   return value;
 }
 
-} // namespace granit::examples
+} // namespace granit::test

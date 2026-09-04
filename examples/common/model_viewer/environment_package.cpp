@@ -5,15 +5,17 @@
 
 #include <algorithm>
 #include <array>
+#include <bit>
+#include <cmath>
 #include <limits>
 #include <new>
 
 namespace granit::example::model_viewer {
 namespace {
 
-constexpr std::array magic{'G', 'R', 'E', 'N', 'V', '0', '1', '\0'};
-constexpr std::size_t header_size = 56;
-constexpr std::uint32_t version = 1;
+constexpr std::array magic{'G', 'R', 'E', 'N', 'V', '0', '2', '\0'};
+constexpr std::size_t header_size = 64;
+constexpr std::uint32_t version = 2;
 constexpr std::uint32_t rgba16_float = 1;
 constexpr std::uint64_t bytes_per_pixel = 8;
 constexpr std::uint64_t cube_face_count = 6;
@@ -41,6 +43,14 @@ void write_u32(std::vector<std::byte>& bytes, std::size_t offset, std::uint32_t 
 void write_u64(std::vector<std::byte>& bytes, std::size_t offset, std::uint64_t value) noexcept {
   for (std::size_t index = 0; index < 8; ++index)
     bytes[offset + index] = static_cast<std::byte>((value >> (index * 8U)) & 0xffU);
+}
+
+float read_f32(std::span<const std::byte> bytes, std::size_t offset) noexcept {
+  return std::bit_cast<float>(read_u32(bytes, offset));
+}
+
+void write_f32(std::vector<std::byte>& bytes, std::size_t offset, float value) noexcept {
+  write_u32(bytes, offset, std::bit_cast<std::uint32_t>(value));
 }
 
 bool valid_resolution(std::uint32_t value) noexcept {
@@ -75,7 +85,7 @@ environment_package_error parse_environment_package(std::span<const std::byte> b
   if (read_u32(bytes, 8) != version)
     return environment_package_error::unsupported_version;
   if (read_u32(bytes, 12) != header_size || read_u32(bytes, 16) != rgba16_float ||
-      read_u32(bytes, 48) != 0 || read_u32(bytes, 52) != 0) {
+      read_u32(bytes, 56) != 0 || read_u32(bytes, 60) != 0) {
     return environment_package_error::invalid_layout;
   }
 
@@ -84,9 +94,13 @@ environment_package_error parse_environment_package(std::span<const std::byte> b
   const auto mip_count = read_u32(bytes, 28);
   const auto brdf_width = read_u32(bytes, 32);
   const auto brdf_height = read_u32(bytes, 36);
+  const auto recommended_environment_intensity = read_f32(bytes, 48);
+  const auto recommended_exposure_ev = read_f32(bytes, 52);
   if (!valid_resolution(irradiance_resolution) || !valid_resolution(prefiltered_resolution) ||
       !valid_resolution(brdf_width) || !valid_resolution(brdf_height) || mip_count == 0 ||
-      mip_count > 13) {
+      mip_count > 13 || !std::isfinite(recommended_environment_intensity) ||
+      recommended_environment_intensity < 0.0F || !std::isfinite(recommended_exposure_ev) ||
+      recommended_exposure_ev < -24.0F || recommended_exposure_ev > 24.0F) {
     return environment_package_error::invalid_layout;
   }
   std::uint32_t maximum_mip_count = 1;
@@ -118,6 +132,8 @@ environment_package_error parse_environment_package(std::span<const std::byte> b
         static_cast<std::size_t>(static_cast<std::uint64_t>(irradiance_resolution) *
                                  irradiance_resolution * cube_face_count * bytes_per_pixel);
     package.irradiance_resolution = irradiance_resolution;
+    package.recommended_environment_intensity = recommended_environment_intensity;
+    package.recommended_exposure_ev = recommended_exposure_ev;
     package.irradiance_pixels = bytes.subspan(offset, irradiance_size);
     offset += irradiance_size;
     mip_resolution = prefiltered_resolution;
@@ -146,7 +162,11 @@ environment_package_error encode_environment_package(const environment_package& 
   if (!valid_resolution(package.irradiance_resolution) || package.prefiltered_mips.empty() ||
       !valid_resolution(package.prefiltered_mips.front().resolution) ||
       !valid_resolution(package.brdf_width) || !valid_resolution(package.brdf_height) ||
-      package.prefiltered_mips.size() > 13) {
+      package.prefiltered_mips.size() > 13 ||
+      !std::isfinite(package.recommended_environment_intensity) ||
+      package.recommended_environment_intensity < 0.0F ||
+      !std::isfinite(package.recommended_exposure_ev) || package.recommended_exposure_ev < -24.0F ||
+      package.recommended_exposure_ev > 24.0F) {
     return environment_package_error::invalid_layout;
   }
 
@@ -186,6 +206,8 @@ environment_package_error encode_environment_package(const environment_package& 
     write_u32(candidate, 32, package.brdf_width);
     write_u32(candidate, 36, package.brdf_height);
     write_u64(candidate, 40, payload_size);
+    write_f32(candidate, 48, package.recommended_environment_intensity);
+    write_f32(candidate, 52, package.recommended_exposure_ev);
     auto destination = candidate.begin() + static_cast<std::ptrdiff_t>(header_size);
     destination = std::ranges::copy(package.irradiance_pixels, destination).out;
     for (const auto& mip : package.prefiltered_mips)

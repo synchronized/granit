@@ -6,7 +6,7 @@
 #include "lighting/tone_mapping_resources.h"
 #include "material/material_template_gpu.h"
 #include "material/pbr_material_schema.h"
-#include "pbr_example_support.h"
+#include "pbr_test_support.h"
 
 #include <granit/granit.hpp>
 
@@ -114,7 +114,7 @@ TEST_CASE("两个View执行独立PBR与Tone Mapping") {
   granit::bind_group_layout object_layout;
   REQUIRE(object_layout.initialize(renderer.native_handle(), {}) == granit::result::success);
   for (std::size_t index = 0; index < materials.size(); ++index) {
-    REQUIRE(granit::examples::build_pbr_package(packages[index], vertex, vertex_wgsl, fragment,
+    REQUIRE(granit::test::build_pbr_package(packages[index], vertex, vertex_wgsl, fragment,
                                                 fragment_wgsl));
     const std::array layouts{object_layout.native_handle(), lights[index].layout()};
     REQUIRE(materials[index].initialize(renderer.native_handle(), packages[index], layouts) ==
@@ -127,7 +127,7 @@ TEST_CASE("两个View执行独立PBR与Tone Mapping") {
                                            .color_format = GRANIT_TEXTURE_FORMAT_RGBA16_FLOAT,
                                            .depth_stencil_format = GRANIT_TEXTURE_FORMAT_D32_FLOAT},
                                           pipelines[index]) == GRANIT_SUCCESS);
-    REQUIRE(granit::examples::initialize_pbr_instance(renderer.native_handle(), materials[index],
+    REQUIRE(granit::test::initialize_pbr_instance(renderer.native_handle(), materials[index],
                                                       packages[index], defaults,
                                                       instances[index]) == granit::result::success);
   }

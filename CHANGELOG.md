@@ -6,13 +6,29 @@
 本文件记录面向使用者的公共接口、行为、构建和兼容性变化。项目当前仍处于 0.x；`Unreleased`
 内容不代表已经发布。版本兼容规则见[版本与兼容策略](docs/reference/compatibility.md)。
 
-## Unreleased
+## 0.5.0 - 2026-09-05
+
+### 新增
+
+- Window 新增后端无关的当前状态查询，返回最近已知的内容尺寸、Framebuffer 尺寸与内容缩放，
+  便于宿主在首个缩放事件前初始化 UI 和呈现状态。
 
 ### 变更
 
 - C++ `granit::result` 改为轻量值结构，新增 `ok()`、`failed()`、`native()`、`message()` 和显式
   `operator bool()`，并移除 `succeeded()`、`failed()` 自由函数；布尔上下文中的 `true` 表示成功，
   C ABI `granit_result` 保持不变。
+- 桌面端移除实验性的 Dawn WebGPU Provider、插件 ABI 与依赖构建流程；桌面继续使用 Vulkan，
+  WebGPU 支持收敛为 Emscripten 浏览器路径。
+- 私有 HAL 集中后端能力发现与 Registry 依赖，并拆分 Render Pipeline 的视图、光照、阴影、
+  Tone Mapping 和 Draw 录制职责；公共 C API 不暴露内部后端类型。
+- 项目开发版本提升到 0.5.0；0.4.0 SDK 使用者升级当前开发版本时必须重新编译。
+
+### 兼容性与迁移
+
+- 0.5.0 功能范围已经截止；完整平台发布矩阵通过后建立版本标签。
+- C++ Result、描述结构大小宏和桌面 WebGPU 配置存在源码迁移要求，详见
+  [从 0.4 迁移到 0.5](docs/guides/migrate-0.4-to-0.5.md)。
 
 ## 0.4.0 - 2026-09-03
 
