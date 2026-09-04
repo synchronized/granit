@@ -125,8 +125,8 @@ TEST_CASE("线程帧执行器限制待处理队列并回报被替换帧") {
   const auto dropped =
       std::ranges::find_if(completions, [](const auto& value) { return value.dropped; });
   REQUIRE(dropped != completions.end());
-  CHECK(dropped->sequence == third);
-  CHECK(state.executed_widths == std::vector<std::uint32_t>{1, 2, 99, 4});
+  CHECK(dropped->sequence == second);
+  CHECK(state.executed_widths == std::vector<std::uint32_t>{1, 3, 99, 4});
   const auto queue_stats = executor.query_queue_stats();
   CHECK(queue_stats.pending_high_watermark == 3);
   CHECK(queue_stats.replaced_frames == 1);

@@ -7,7 +7,6 @@
 #include <chrono>
 #include <condition_variable>
 #include <deque>
-#include <iterator>
 #include <mutex>
 #include <new>
 #include <thread>
@@ -142,12 +141,11 @@ granit::result threaded_frame_executor::submit(frame_packet packet,
           return task.kind == state::task_kind::frame;
         }));
     if (pending_frames >= state_->maximum_pending_frames) {
-      const auto replace = std::ranges::find_if(state_->pending.rbegin(), state_->pending.rend(),
-                                                [](const auto& task) {
-                                                  return task.kind == state::task_kind::frame;
-                                                });
+      const auto replace = std::ranges::find_if(state_->pending, [](const auto& task) {
+        return task.kind == state::task_kind::frame;
+      });
       auto dropped = std::move(*replace);
-      state_->pending.erase(std::next(replace).base());
+      state_->pending.erase(replace);
       state_->completed.push_back({.sequence = dropped.sequence,
                                    .status = granit::result::not_ready,
                                    .execution = {},
