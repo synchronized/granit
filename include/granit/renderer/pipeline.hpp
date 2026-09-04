@@ -479,7 +479,7 @@ inline result graphics_pipeline::initialize(granit_renderer renderer,
   }
   const auto* formats = reinterpret_cast<const granit_texture_format*>(desc.color_formats.data());
   const granit_graphics_pipeline_desc native{
-      .struct_size = GRANIT_GRAPHICS_PIPELINE_DESC_VERSION_5_SIZE,
+      .struct_size = GRANIT_GRAPHICS_PIPELINE_DESC_SIZE,
       .reserved = 0,
       .layout = desc.layout,
       .vertex_shader = desc.vertex_shader,

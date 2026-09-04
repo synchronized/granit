@@ -19,26 +19,13 @@ validate_renderer_desc(const granit_renderer_desc& desc) noexcept {
   constexpr std::uint32_t supported_surface_types =
       GRANIT_SURFACE_TYPE_WIN32_BIT | GRANIT_SURFACE_TYPE_XCB_BIT |
       GRANIT_SURFACE_TYPE_WAYLAND_BIT | GRANIT_SURFACE_TYPE_CANVAS_BIT;
-  if (desc.struct_size < GRANIT_RENDERER_DESC_VERSION_1_SIZE ||
+  if (desc.struct_size < GRANIT_RENDERER_DESC_SIZE ||
       desc.api_version != GRANIT_RENDERER_API_VERSION_CURRENT ||
       (desc.flags & ~supported_flags) != 0 ||
-      desc.application_name_length > maximum_renderer_application_name_length) {
-    return GRANIT_ERROR_INVALID_ARGUMENT;
-  }
-  if (desc.struct_size >= GRANIT_RENDERER_DESC_VERSION_2_SIZE &&
-      (desc.surface_types & ~supported_surface_types) != 0) {
-    return GRANIT_ERROR_INVALID_ARGUMENT;
-  }
-  if (desc.struct_size >= GRANIT_RENDERER_DESC_VERSION_3_SIZE &&
-      (desc.reserved != 0 || desc.frames_in_flight == 0 ||
-       desc.frames_in_flight > GRANIT_MAX_FRAMES_IN_FLIGHT)) {
-    return GRANIT_ERROR_INVALID_ARGUMENT;
-  }
-  if (desc.struct_size >= GRANIT_RENDERER_DESC_VERSION_4_SIZE &&
-      desc.diagnostic_callback == nullptr && desc.diagnostic_user_data != nullptr) {
-    return GRANIT_ERROR_INVALID_ARGUMENT;
-  }
-  if (desc.struct_size >= GRANIT_RENDERER_DESC_VERSION_5_SIZE &&
+      desc.application_name_length > maximum_renderer_application_name_length ||
+      (desc.surface_types & ~supported_surface_types) != 0 || desc.reserved != 0 ||
+      desc.frames_in_flight == 0 || desc.frames_in_flight > GRANIT_MAX_FRAMES_IN_FLIGHT ||
+      (desc.diagnostic_callback == nullptr && desc.diagnostic_user_data != nullptr) ||
       desc.backend > GRANIT_RENDERER_BACKEND_WEBGPU) {
     return GRANIT_ERROR_INVALID_ARGUMENT;
   }

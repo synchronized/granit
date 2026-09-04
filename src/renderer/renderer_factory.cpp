@@ -34,18 +34,11 @@ granit_result create_default_renderer(const granit_renderer_desc& desc, granit_r
           ? default_application_name
           : std::string_view{desc.application_name, desc.application_name_length};
   const auto validation_enabled = (desc.flags & GRANIT_RENDERER_ENABLE_VALIDATION_BIT) != 0;
-  const auto surface_types =
-      desc.struct_size >= GRANIT_RENDERER_DESC_VERSION_2_SIZE ? desc.surface_types : UINT32_C(0);
-  const auto frames_in_flight = desc.struct_size >= GRANIT_RENDERER_DESC_VERSION_3_SIZE
-                                    ? desc.frames_in_flight
-                                    : GRANIT_DEFAULT_FRAMES_IN_FLIGHT;
-  const auto diagnostic_callback =
-      desc.struct_size >= GRANIT_RENDERER_DESC_VERSION_4_SIZE ? desc.diagnostic_callback : nullptr;
-  auto* diagnostic_user_data =
-      desc.struct_size >= GRANIT_RENDERER_DESC_VERSION_4_SIZE ? desc.diagnostic_user_data : nullptr;
-  const auto backend = desc.struct_size >= GRANIT_RENDERER_DESC_VERSION_5_SIZE
-                           ? desc.backend
-                           : GRANIT_RENDERER_BACKEND_AUTO;
+  const auto surface_types = desc.surface_types;
+  const auto frames_in_flight = desc.frames_in_flight;
+  const auto diagnostic_callback = desc.diagnostic_callback;
+  auto* diagnostic_user_data = desc.diagnostic_user_data;
+  const auto backend = desc.backend;
   auto& registry = renderer_registry::instance();
   const diagnostic_sink diagnostics{diagnostic_callback, diagnostic_user_data};
   if (backend == GRANIT_RENDERER_BACKEND_WEBGPU) {

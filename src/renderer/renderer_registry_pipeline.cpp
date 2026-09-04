@@ -20,8 +20,7 @@ granit_result renderer_registry::create_shader_from_desc(granit_renderer rendere
                                                          granit_shader& shader) {
   const auto interfaces = acquire_backend_interfaces(renderer);
   if (!interfaces) {
-    const auto validation = desc.struct_size >= GRANIT_SHADER_DESC_VERSION_2_SIZE &&
-                                    (desc.wgsl != nullptr || desc.wgsl_length != 0)
+    const auto validation = desc.wgsl != nullptr || desc.wgsl_length != 0
                                 ? validate_shader_wgsl(&desc)
                                 : validate_shader_spirv(&desc);
     return validation == GRANIT_SUCCESS ? GRANIT_ERROR_INVALID_HANDLE : validation;
@@ -571,11 +570,8 @@ granit_result renderer_registry::create_graphics_pipeline(granit_renderer render
     const auto validation = pipelines->validate_graphics_pipeline(desc);
     if (validation != GRANIT_SUCCESS)
       return validation;
-    const auto vertex_buffers =
-        desc.struct_size >= GRANIT_GRAPHICS_PIPELINE_DESC_VERSION_2_SIZE
-            ? std::span<const granit_vertex_buffer_layout>{desc.vertex_buffer_layouts,
-                                                           desc.vertex_buffer_layout_count}
-            : std::span<const granit_vertex_buffer_layout>{};
+    const std::span<const granit_vertex_buffer_layout> vertex_buffers{
+        desc.vertex_buffer_layouts, desc.vertex_buffer_layout_count};
     granit_depth_state depth{desc.depth_stencil_format != GRANIT_TEXTURE_FORMAT_UNDEFINED,
                              desc.depth_stencil_format != GRANIT_TEXTURE_FORMAT_UNDEFINED,
                              GRANIT_COMPARE_OPERATION_LESS_EQUAL, 0};
@@ -591,12 +587,10 @@ granit_result renderer_registry::create_graphics_pipeline(granit_renderer render
                                GRANIT_COLOR_WRITE_ALL_BITS};
     std::span<const granit_color_blend_state> color_blends{default_blends.data(),
                                                            desc.color_format_count};
-    if (desc.struct_size >= GRANIT_GRAPHICS_PIPELINE_DESC_VERSION_4_SIZE) {
-      if (desc.depth)
-        depth = *desc.depth;
-      if (desc.color_blend_count != 0)
-        color_blends = {desc.color_blends, desc.color_blend_count};
-    }
+    if (desc.depth)
+      depth = *desc.depth;
+    if (desc.color_blend_count != 0)
+      color_blends = {desc.color_blends, desc.color_blend_count};
     const backend_graphics_pipeline_create_info info{
         *layout->native,
         *vertex->native,
@@ -604,14 +598,9 @@ granit_result renderer_registry::create_graphics_pipeline(granit_renderer render
         *fragment->native,
         fragment->entry_point.c_str(),
         vertex_buffers,
-        desc.struct_size >= GRANIT_GRAPHICS_PIPELINE_DESC_VERSION_3_SIZE
-            ? desc.primitive
-            : granit_primitive_state{GRANIT_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
-                                     GRANIT_FRONT_FACE_COUNTER_CLOCKWISE, GRANIT_CULL_MODE_NONE,
-                                     GRANIT_POLYGON_MODE_FILL},
+        desc.primitive,
         depth,
-        desc.struct_size >= GRANIT_GRAPHICS_PIPELINE_DESC_VERSION_5_SIZE ? desc.depth_bias
-                                                                         : nullptr,
+        desc.depth_bias,
         color_blends,
         {desc.color_formats, static_cast<std::size_t>(desc.color_format_count)},
         desc.depth_stencil_format,

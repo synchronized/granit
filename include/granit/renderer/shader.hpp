@@ -58,7 +58,7 @@ public:
       return result::invalid_argument;
     if (renderer == GRANIT_NULL_HANDLE)
       return result::invalid_handle;
-    const granit_shader_desc native{.struct_size = GRANIT_SHADER_DESC_VERSION_1_SIZE,
+    const granit_shader_desc native{.struct_size = GRANIT_SHADER_DESC_SIZE,
                                     .stage = static_cast<granit_shader_stage>(desc.stage),
                                     .code = desc.code.data(),
                                     .code_size = desc.code.size(),
@@ -77,7 +77,7 @@ public:
       return result::invalid_argument;
     if (renderer == GRANIT_NULL_HANDLE)
       return result::invalid_handle;
-    const granit_shader_desc native{.struct_size = GRANIT_SHADER_DESC_VERSION_2_SIZE,
+    const granit_shader_desc native{.struct_size = GRANIT_SHADER_DESC_SIZE,
                                     .stage = static_cast<granit_shader_stage>(desc.stage),
                                     .code = desc.spirv.data(),
                                     .code_size = desc.spirv.size(),

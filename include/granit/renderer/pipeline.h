@@ -244,15 +244,7 @@ typedef struct granit_graphics_pipeline_desc {
   const granit_color_blend_state* color_blends;
   const granit_depth_bias_state* depth_bias;
 } granit_graphics_pipeline_desc;
-#define GRANIT_GRAPHICS_PIPELINE_DESC_VERSION_1_SIZE                                               \
-  ((uint32_t)(offsetof(granit_graphics_pipeline_desc, reserved_2) + sizeof(uint32_t)))
-#define GRANIT_GRAPHICS_PIPELINE_DESC_VERSION_2_SIZE                                               \
-  ((uint32_t)(offsetof(granit_graphics_pipeline_desc, vertex_buffer_layouts) + sizeof(void*)))
-#define GRANIT_GRAPHICS_PIPELINE_DESC_VERSION_3_SIZE                                               \
-  ((uint32_t)(offsetof(granit_graphics_pipeline_desc, primitive) + sizeof(granit_primitive_state)))
-#define GRANIT_GRAPHICS_PIPELINE_DESC_VERSION_4_SIZE                                               \
-  ((uint32_t)(offsetof(granit_graphics_pipeline_desc, color_blends) + sizeof(void*)))
-#define GRANIT_GRAPHICS_PIPELINE_DESC_VERSION_5_SIZE                                               \
+#define GRANIT_GRAPHICS_PIPELINE_DESC_SIZE                                                         \
   ((uint32_t)(offsetof(granit_graphics_pipeline_desc, depth_bias) + sizeof(void*)))
 #define GRANIT_GRAPHICS_PIPELINE_DESC_INIT                                                         \
   {(uint32_t)sizeof(granit_graphics_pipeline_desc),                                                \

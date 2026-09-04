@@ -794,7 +794,7 @@ TEST_CASE("Graphics Pipeline 在进入后端前校验描述", "[pipeline][valida
         GRANIT_ERROR_INVALID_ARGUMENT);
 }
 
-TEST_CASE("Graphics Pipeline 按 struct_size 读取版本字段", "[pipeline][abi]") {
+TEST_CASE("Graphics Pipeline 只接受当前描述尺寸", "[pipeline][abi]") {
   granit_graphics_pipeline pipeline = GRANIT_NULL_HANDLE;
   granit_graphics_pipeline_desc desc = GRANIT_GRAPHICS_PIPELINE_DESC_INIT;
   desc.layout = UINT64_C(1);
@@ -802,32 +802,22 @@ TEST_CASE("Graphics Pipeline 按 struct_size 读取版本字段", "[pipeline][ab
   desc.fragment_shader = UINT64_C(3);
   desc.depth_stencil_format = GRANIT_TEXTURE_FORMAT_D32_FLOAT;
 
-  desc.struct_size = GRANIT_GRAPHICS_PIPELINE_DESC_VERSION_1_SIZE - 1;
+  desc.struct_size = GRANIT_GRAPHICS_PIPELINE_DESC_SIZE - 1;
   CHECK(granit_graphics_pipeline_create(UINT64_C(1), &desc, &pipeline) ==
         GRANIT_ERROR_INVALID_ARGUMENT);
 
   desc.vertex_buffer_layout_count = UINT32_MAX;
-  desc.struct_size = GRANIT_GRAPHICS_PIPELINE_DESC_VERSION_1_SIZE;
-  CHECK(granit_graphics_pipeline_create(UINT64_C(1), &desc, &pipeline) ==
-        GRANIT_ERROR_INVALID_HANDLE);
-  desc.struct_size = GRANIT_GRAPHICS_PIPELINE_DESC_VERSION_2_SIZE;
+  desc.struct_size = GRANIT_GRAPHICS_PIPELINE_DESC_SIZE;
   CHECK(granit_graphics_pipeline_create(UINT64_C(1), &desc, &pipeline) ==
         GRANIT_ERROR_INVALID_ARGUMENT);
   desc.vertex_buffer_layout_count = 0;
 
   desc.primitive.topology = UINT32_MAX;
   CHECK(granit_graphics_pipeline_create(UINT64_C(1), &desc, &pipeline) ==
-        GRANIT_ERROR_INVALID_HANDLE);
-  desc.struct_size = GRANIT_GRAPHICS_PIPELINE_DESC_VERSION_3_SIZE;
-  CHECK(granit_graphics_pipeline_create(UINT64_C(1), &desc, &pipeline) ==
         GRANIT_ERROR_INVALID_ARGUMENT);
   desc.primitive.topology = GRANIT_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 
   desc.color_blend_count = 1;
-  desc.struct_size = GRANIT_GRAPHICS_PIPELINE_DESC_VERSION_3_SIZE;
-  CHECK(granit_graphics_pipeline_create(UINT64_C(1), &desc, &pipeline) ==
-        GRANIT_ERROR_INVALID_HANDLE);
-  desc.struct_size = GRANIT_GRAPHICS_PIPELINE_DESC_VERSION_4_SIZE;
   CHECK(granit_graphics_pipeline_create(UINT64_C(1), &desc, &pipeline) ==
         GRANIT_ERROR_INVALID_ARGUMENT);
   desc.color_blend_count = 0;
@@ -835,9 +825,6 @@ TEST_CASE("Graphics Pipeline 按 struct_size 读取版本字段", "[pipeline][ab
   granit_depth_bias_state depth_bias = GRANIT_DEPTH_BIAS_STATE_INIT;
   depth_bias.clamp = -1.0F;
   desc.depth_bias = &depth_bias;
-  CHECK(granit_graphics_pipeline_create(UINT64_C(1), &desc, &pipeline) ==
-        GRANIT_ERROR_INVALID_HANDLE);
-  desc.struct_size = GRANIT_GRAPHICS_PIPELINE_DESC_VERSION_5_SIZE;
   CHECK(granit_graphics_pipeline_create(UINT64_C(1), &desc, &pipeline) ==
         GRANIT_ERROR_INVALID_ARGUMENT);
 

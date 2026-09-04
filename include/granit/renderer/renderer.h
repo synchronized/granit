@@ -142,15 +142,7 @@ typedef struct granit_renderer_desc {
   granit_renderer_backend backend;
 } granit_renderer_desc;
 
-#define GRANIT_RENDERER_DESC_VERSION_1_SIZE                                                        \
-  ((uint32_t)(offsetof(granit_renderer_desc, flags) + sizeof(uint32_t)))
-#define GRANIT_RENDERER_DESC_VERSION_2_SIZE                                                        \
-  ((uint32_t)(offsetof(granit_renderer_desc, surface_types) + sizeof(uint32_t)))
-#define GRANIT_RENDERER_DESC_VERSION_3_SIZE                                                        \
-  ((uint32_t)(offsetof(granit_renderer_desc, reserved) + sizeof(uint32_t)))
-#define GRANIT_RENDERER_DESC_VERSION_4_SIZE                                                        \
-  ((uint32_t)(offsetof(granit_renderer_desc, diagnostic_user_data) + sizeof(void*)))
-#define GRANIT_RENDERER_DESC_VERSION_5_SIZE                                                        \
+#define GRANIT_RENDERER_DESC_SIZE                                                                  \
   ((uint32_t)(offsetof(granit_renderer_desc, backend) + sizeof(granit_renderer_backend)))
 
 #define GRANIT_RENDERER_DESC_INIT                                                                  \

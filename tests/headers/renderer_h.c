@@ -3,8 +3,9 @@
 
 #include <granit/renderer/renderer.h>
 
-typedef char granit_renderer_desc_size_check
-    [sizeof(granit_renderer_desc) >= GRANIT_RENDERER_DESC_VERSION_5_SIZE ? 1 : -1];
+typedef char
+    granit_renderer_desc_size_check[sizeof(granit_renderer_desc) >= GRANIT_RENDERER_DESC_SIZE ? 1
+                                                                                              : -1];
 typedef char granit_renderer_info_size_check
     [sizeof(granit_renderer_info) >= GRANIT_RENDERER_INFO_VERSION_1_SIZE ? 1 : -1];
 typedef char granit_renderer_limits_size_check

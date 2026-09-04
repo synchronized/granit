@@ -41,16 +41,12 @@ GRANIT_ABI_ASSERT(granit_abi_renderer_desc_application_name,
 GRANIT_ABI_ASSERT(granit_abi_renderer_desc_flags, offsetof(granit_renderer_desc, flags) == 20);
 GRANIT_ABI_ASSERT(granit_abi_renderer_desc_reserved,
                   offsetof(granit_renderer_desc, reserved) == 32);
-GRANIT_ABI_ASSERT(granit_abi_renderer_desc_v1, GRANIT_RENDERER_DESC_VERSION_1_SIZE == 24);
-GRANIT_ABI_ASSERT(granit_abi_renderer_desc_v2, GRANIT_RENDERER_DESC_VERSION_2_SIZE == 28);
-GRANIT_ABI_ASSERT(granit_abi_renderer_desc_v3, GRANIT_RENDERER_DESC_VERSION_3_SIZE == 36);
 GRANIT_ABI_ASSERT(granit_abi_renderer_desc_callback,
                   offsetof(granit_renderer_desc, diagnostic_callback) == 40);
 GRANIT_ABI_ASSERT(granit_abi_renderer_desc_user_data,
                   offsetof(granit_renderer_desc, diagnostic_user_data) == 48);
-GRANIT_ABI_ASSERT(granit_abi_renderer_desc_v4, GRANIT_RENDERER_DESC_VERSION_4_SIZE == 56);
 GRANIT_ABI_ASSERT(granit_abi_renderer_desc_backend, offsetof(granit_renderer_desc, backend) == 56);
-GRANIT_ABI_ASSERT(granit_abi_renderer_desc_v5, GRANIT_RENDERER_DESC_VERSION_5_SIZE == 60);
+GRANIT_ABI_ASSERT(granit_abi_renderer_desc_current, GRANIT_RENDERER_DESC_SIZE == 60);
 GRANIT_ABI_ASSERT(granit_abi_renderer_info_size, sizeof(granit_renderer_info) == 40);
 GRANIT_ABI_ASSERT(granit_abi_renderer_info_v1, GRANIT_RENDERER_INFO_VERSION_1_SIZE == 40);
 
@@ -109,16 +105,8 @@ GRANIT_ABI_ASSERT(granit_abi_graphics_pipeline_desc_blends,
                   offsetof(granit_graphics_pipeline_desc, color_blends) == 112);
 GRANIT_ABI_ASSERT(granit_abi_graphics_pipeline_desc_depth_bias,
                   offsetof(granit_graphics_pipeline_desc, depth_bias) == 120);
-GRANIT_ABI_ASSERT(granit_abi_graphics_pipeline_desc_v1,
-                  GRANIT_GRAPHICS_PIPELINE_DESC_VERSION_1_SIZE == 60);
-GRANIT_ABI_ASSERT(granit_abi_graphics_pipeline_desc_v2,
-                  GRANIT_GRAPHICS_PIPELINE_DESC_VERSION_2_SIZE == 80);
-GRANIT_ABI_ASSERT(granit_abi_graphics_pipeline_desc_v3,
-                  GRANIT_GRAPHICS_PIPELINE_DESC_VERSION_3_SIZE == 96);
-GRANIT_ABI_ASSERT(granit_abi_graphics_pipeline_desc_v4,
-                  GRANIT_GRAPHICS_PIPELINE_DESC_VERSION_4_SIZE == 120);
-GRANIT_ABI_ASSERT(granit_abi_graphics_pipeline_desc_v5,
-                  GRANIT_GRAPHICS_PIPELINE_DESC_VERSION_5_SIZE == 128);
+GRANIT_ABI_ASSERT(granit_abi_graphics_pipeline_desc_current,
+                  GRANIT_GRAPHICS_PIPELINE_DESC_SIZE == 128);
 
 GRANIT_ABI_ASSERT(granit_abi_buffer_copy_region_size, sizeof(granit_buffer_copy_region) == 24);
 GRANIT_ABI_ASSERT(granit_abi_texture_copy_region_size, sizeof(granit_texture_copy_region) == 64);
@@ -181,15 +169,13 @@ GRANIT_ABI_ASSERT(granit_abi_swapchain_desc_present_mode,
                   offsetof(granit_swapchain_desc, present_mode) == 16);
 GRANIT_ABI_ASSERT(granit_abi_swapchain_info_size, sizeof(granit_swapchain_info) == 24);
 GRANIT_ABI_ASSERT(granit_abi_swapchain_info_format, offsetof(granit_swapchain_info, format) == 20);
-GRANIT_ABI_ASSERT(granit_abi_swapchain_info_v1, GRANIT_SWAPCHAIN_INFO_VERSION_1_SIZE == 20);
-GRANIT_ABI_ASSERT(granit_abi_swapchain_info_v2, GRANIT_SWAPCHAIN_INFO_VERSION_2_SIZE == 24);
+GRANIT_ABI_ASSERT(granit_abi_swapchain_info_current, GRANIT_SWAPCHAIN_INFO_SIZE == 24);
 
 GRANIT_ABI_ASSERT(granit_abi_shader_desc_size, sizeof(granit_shader_desc) == 56);
 GRANIT_ABI_ASSERT(granit_abi_shader_desc_code, offsetof(granit_shader_desc, code) == 8);
 GRANIT_ABI_ASSERT(granit_abi_shader_desc_entry, offsetof(granit_shader_desc, entry_point) == 24);
-GRANIT_ABI_ASSERT(granit_abi_shader_desc_v1, GRANIT_SHADER_DESC_VERSION_1_SIZE == 40);
 GRANIT_ABI_ASSERT(granit_abi_shader_desc_wgsl, offsetof(granit_shader_desc, wgsl) == 40);
-GRANIT_ABI_ASSERT(granit_abi_shader_desc_v2, GRANIT_SHADER_DESC_VERSION_2_SIZE == 56);
+GRANIT_ABI_ASSERT(granit_abi_shader_desc_current, GRANIT_SHADER_DESC_SIZE == 56);
 GRANIT_ABI_ASSERT(granit_abi_buffer_initial_data_size, sizeof(granit_buffer_initial_data) == 24);
 GRANIT_ABI_ASSERT(granit_abi_buffer_initial_data_data,
                   offsetof(granit_buffer_initial_data, data) == 8);

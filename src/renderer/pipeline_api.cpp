@@ -141,8 +141,8 @@ extern "C" granit_result granit_graphics_pipeline_create(granit_renderer rendere
   *pipeline = GRANIT_NULL_HANDLE;
   if (renderer == GRANIT_NULL_HANDLE)
     return GRANIT_ERROR_INVALID_HANDLE;
-  if (!desc || desc->struct_size < GRANIT_GRAPHICS_PIPELINE_DESC_VERSION_1_SIZE ||
-      desc->reserved != 0 || desc->reserved_2 != 0 || desc->color_format_count > 8 ||
+  if (!desc || desc->struct_size < GRANIT_GRAPHICS_PIPELINE_DESC_SIZE || desc->reserved != 0 ||
+      desc->reserved_2 != 0 || desc->color_format_count > 8 ||
       (desc->color_format_count != 0 && !desc->color_formats) ||
       (desc->color_format_count == 0 &&
        desc->depth_stencil_format == GRANIT_TEXTURE_FORMAT_UNDEFINED) ||
@@ -160,10 +160,10 @@ extern "C" granit_result granit_graphics_pipeline_create(granit_renderer rendere
         desc->color_formats[index] >= GRANIT_TEXTURE_FORMAT_D16_UNORM)
       return GRANIT_ERROR_INVALID_ARGUMENT;
   }
-  if (desc->struct_size >= GRANIT_GRAPHICS_PIPELINE_DESC_VERSION_2_SIZE) {
-    if (desc->reserved_3 != 0 || desc->vertex_buffer_layout_count > 16 ||
-        (desc->vertex_buffer_layout_count != 0 && !desc->vertex_buffer_layouts))
-      return GRANIT_ERROR_INVALID_ARGUMENT;
+  if (desc->reserved_3 != 0 || desc->vertex_buffer_layout_count > 16 ||
+      (desc->vertex_buffer_layout_count != 0 && !desc->vertex_buffer_layouts))
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  {
     std::array<bool, 32> locations{};
     for (uint32_t binding = 0; binding < desc->vertex_buffer_layout_count; ++binding) {
       const auto& layout = desc->vertex_buffer_layouts[binding];
@@ -182,47 +182,44 @@ extern "C" granit_result granit_graphics_pipeline_create(granit_renderer rendere
       }
     }
   }
-  if (desc->struct_size >= GRANIT_GRAPHICS_PIPELINE_DESC_VERSION_3_SIZE &&
-      (desc->primitive.topology < GRANIT_PRIMITIVE_TOPOLOGY_POINT_LIST ||
-       desc->primitive.topology > GRANIT_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP ||
-       desc->primitive.front_face < GRANIT_FRONT_FACE_COUNTER_CLOCKWISE ||
-       desc->primitive.front_face > GRANIT_FRONT_FACE_CLOCKWISE ||
-       desc->primitive.cull_mode < GRANIT_CULL_MODE_NONE ||
-       desc->primitive.cull_mode > GRANIT_CULL_MODE_FRONT_AND_BACK ||
-       desc->primitive.polygon_mode < GRANIT_POLYGON_MODE_FILL ||
-       desc->primitive.polygon_mode > GRANIT_POLYGON_MODE_POINT))
+  if (desc->primitive.topology < GRANIT_PRIMITIVE_TOPOLOGY_POINT_LIST ||
+      desc->primitive.topology > GRANIT_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP ||
+      desc->primitive.front_face < GRANIT_FRONT_FACE_COUNTER_CLOCKWISE ||
+      desc->primitive.front_face > GRANIT_FRONT_FACE_CLOCKWISE ||
+      desc->primitive.cull_mode < GRANIT_CULL_MODE_NONE ||
+      desc->primitive.cull_mode > GRANIT_CULL_MODE_FRONT_AND_BACK ||
+      desc->primitive.polygon_mode < GRANIT_POLYGON_MODE_FILL ||
+      desc->primitive.polygon_mode > GRANIT_POLYGON_MODE_POINT)
     return GRANIT_ERROR_INVALID_ARGUMENT;
-  if (desc->struct_size >= GRANIT_GRAPHICS_PIPELINE_DESC_VERSION_4_SIZE) {
-    if (desc->reserved_4 != 0 ||
-        (desc->color_blend_count != 0 &&
-         (desc->color_blend_count != desc->color_format_count || !desc->color_blends)))
+  if (desc->reserved_4 != 0 ||
+      (desc->color_blend_count != 0 &&
+       (desc->color_blend_count != desc->color_format_count || !desc->color_blends)))
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  if (desc->depth &&
+      (desc->depth->test_enabled > 1 || desc->depth->write_enabled > 1 ||
+       desc->depth->compare < GRANIT_COMPARE_OPERATION_NEVER ||
+       desc->depth->compare > GRANIT_COMPARE_OPERATION_ALWAYS || desc->depth->reserved != 0 ||
+       (desc->depth_stencil_format == GRANIT_TEXTURE_FORMAT_UNDEFINED &&
+        (desc->depth->test_enabled != 0 || desc->depth->write_enabled != 0))))
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  for (uint32_t index = 0; index < desc->color_blend_count; ++index) {
+    const auto& state = desc->color_blends[index];
+    if (state.enabled > 1 || state.source_color_factor < GRANIT_BLEND_FACTOR_ZERO ||
+        state.source_color_factor > GRANIT_BLEND_FACTOR_ONE_MINUS_DESTINATION_ALPHA ||
+        state.destination_color_factor < GRANIT_BLEND_FACTOR_ZERO ||
+        state.destination_color_factor > GRANIT_BLEND_FACTOR_ONE_MINUS_DESTINATION_ALPHA ||
+        state.source_alpha_factor < GRANIT_BLEND_FACTOR_ZERO ||
+        state.source_alpha_factor > GRANIT_BLEND_FACTOR_ONE_MINUS_DESTINATION_ALPHA ||
+        state.destination_alpha_factor < GRANIT_BLEND_FACTOR_ZERO ||
+        state.destination_alpha_factor > GRANIT_BLEND_FACTOR_ONE_MINUS_DESTINATION_ALPHA ||
+        state.color_operation < GRANIT_BLEND_OPERATION_ADD ||
+        state.color_operation > GRANIT_BLEND_OPERATION_MAX ||
+        state.alpha_operation < GRANIT_BLEND_OPERATION_ADD ||
+        state.alpha_operation > GRANIT_BLEND_OPERATION_MAX ||
+        (state.write_mask & ~GRANIT_COLOR_WRITE_ALL_BITS) != 0)
       return GRANIT_ERROR_INVALID_ARGUMENT;
-    if (desc->depth &&
-        (desc->depth->test_enabled > 1 || desc->depth->write_enabled > 1 ||
-         desc->depth->compare < GRANIT_COMPARE_OPERATION_NEVER ||
-         desc->depth->compare > GRANIT_COMPARE_OPERATION_ALWAYS || desc->depth->reserved != 0 ||
-         (desc->depth_stencil_format == GRANIT_TEXTURE_FORMAT_UNDEFINED &&
-          (desc->depth->test_enabled != 0 || desc->depth->write_enabled != 0))))
-      return GRANIT_ERROR_INVALID_ARGUMENT;
-    for (uint32_t index = 0; index < desc->color_blend_count; ++index) {
-      const auto& state = desc->color_blends[index];
-      if (state.enabled > 1 || state.source_color_factor < GRANIT_BLEND_FACTOR_ZERO ||
-          state.source_color_factor > GRANIT_BLEND_FACTOR_ONE_MINUS_DESTINATION_ALPHA ||
-          state.destination_color_factor < GRANIT_BLEND_FACTOR_ZERO ||
-          state.destination_color_factor > GRANIT_BLEND_FACTOR_ONE_MINUS_DESTINATION_ALPHA ||
-          state.source_alpha_factor < GRANIT_BLEND_FACTOR_ZERO ||
-          state.source_alpha_factor > GRANIT_BLEND_FACTOR_ONE_MINUS_DESTINATION_ALPHA ||
-          state.destination_alpha_factor < GRANIT_BLEND_FACTOR_ZERO ||
-          state.destination_alpha_factor > GRANIT_BLEND_FACTOR_ONE_MINUS_DESTINATION_ALPHA ||
-          state.color_operation < GRANIT_BLEND_OPERATION_ADD ||
-          state.color_operation > GRANIT_BLEND_OPERATION_MAX ||
-          state.alpha_operation < GRANIT_BLEND_OPERATION_ADD ||
-          state.alpha_operation > GRANIT_BLEND_OPERATION_MAX ||
-          (state.write_mask & ~GRANIT_COLOR_WRITE_ALL_BITS) != 0)
-        return GRANIT_ERROR_INVALID_ARGUMENT;
-    }
   }
-  if (desc->struct_size >= GRANIT_GRAPHICS_PIPELINE_DESC_VERSION_5_SIZE && desc->depth_bias &&
+  if (desc->depth_bias &&
       (!std::isfinite(desc->depth_bias->constant_factor) ||
        !std::isfinite(desc->depth_bias->slope_factor) || !std::isfinite(desc->depth_bias->clamp) ||
        desc->depth_bias->clamp < 0.0F || desc->depth_bias->reserved != 0))

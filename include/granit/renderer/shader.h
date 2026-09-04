@@ -33,9 +33,7 @@ typedef struct granit_shader_desc {
   uint64_t wgsl_length;
 } granit_shader_desc;
 
-#define GRANIT_SHADER_DESC_VERSION_1_SIZE                                                          \
-  ((uint32_t)(offsetof(granit_shader_desc, reserved) + sizeof(uint32_t)))
-#define GRANIT_SHADER_DESC_VERSION_2_SIZE                                                          \
+#define GRANIT_SHADER_DESC_SIZE                                                                    \
   ((uint32_t)(offsetof(granit_shader_desc, wgsl_length) + sizeof(uint64_t)))
 
 #define GRANIT_SHADER_DESC_INIT                                                                    \

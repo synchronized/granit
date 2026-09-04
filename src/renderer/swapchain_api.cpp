@@ -51,7 +51,7 @@ extern "C" granit_result granit_swapchain_get_info(granit_renderer renderer,
   if (renderer == GRANIT_NULL_HANDLE || swapchain == GRANIT_NULL_HANDLE) {
     return GRANIT_ERROR_INVALID_HANDLE;
   }
-  if (info == nullptr || info->struct_size < GRANIT_SWAPCHAIN_INFO_VERSION_1_SIZE) {
+  if (info == nullptr || info->struct_size < GRANIT_SWAPCHAIN_INFO_SIZE) {
     return GRANIT_ERROR_INVALID_ARGUMENT;
   }
   try {
@@ -63,8 +63,7 @@ extern "C" granit_result granit_swapchain_get_info(granit_renderer renderer,
       info->height = native_info.height;
       info->image_count = native_info.image_count;
       info->present_mode = native_info.present_mode;
-      if (info->struct_size >= GRANIT_SWAPCHAIN_INFO_VERSION_2_SIZE)
-        info->format = native_info.format;
+      info->format = native_info.format;
     }
     return result;
   } catch (...) {

@@ -28,8 +28,9 @@ if (result == GRANIT_SUCCESS) {
 `application_name` 使用指针和显式长度，调用期间借用；Granit 会在 Vulkan instance 创建前复制。
 空指针和零长度使用默认名称。非空指针必须提供非零长度，且指定范围内不能含嵌入的零字符。
 
-`struct_size` 支持描述结构向后兼容。当前至少要求 `GRANIT_RENDERER_DESC_VERSION_1_SIZE`，未来
-新增字段只能追加到结构末尾；旧库会忽略超出已知范围的尾部字段。
+当前开发版本只接受完整的 `granit_renderer_desc`，`struct_size` 至少为
+`GRANIT_RENDERER_DESC_SIZE`。未来新增字段只能追加到结构末尾；库会忽略超出当前已知范围的尾部
+字段。
 
 ## 设备限制查询
 
@@ -147,7 +148,7 @@ Surface 会报告仍存活的 Swapchain。诊断不会改变销毁结果，子�
 
 ## 诊断回调
 
-`granit_renderer_desc` V4 可以设置 `diagnostic_callback` 和 `diagnostic_user_data`。回调接收稳定的
+`granit_renderer_desc` 可以设置 `diagnostic_callback` 和 `diagnostic_user_data`。回调接收稳定的
 严重级别、消息类别以及不保证零结尾的 UTF-8 文本；文本只在回调期间有效。C++ 的
 `granit::renderer_desc` 对应字段为 `diagnostics` 和 `diagnostic_user_data`。
 
