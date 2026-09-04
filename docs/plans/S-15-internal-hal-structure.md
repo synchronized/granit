@@ -80,9 +80,19 @@ src/backend/
 
 ### S-15D：文档与最终验收
 
+**状态：验收中。**
+
 1. 更新架构 Concept，给出调用方向、必需/可选能力和插件边界。
 2. 保持 ADR-003 的既有决策不变；若实施发现需要改变决策，再新增替代 ADR。
 3. 记录跨后端构建、测试、安装 Consumer、浏览器和模型查看器验收结果。
+
+当前验证记录：
+
+- Windows Clang Debug 的 Granit、能力测试和插件加载测试构建通过。
+- Windows Clang Debug 完整测试 65/65 通过，覆盖文档、ABI 导出、原生边界、Vulkan、
+  ImGui 和模型查看器测试。
+- 相对任务起点，公共头文件和安装配置没有变化。
+- Linux、桌面 Dawn WebGPU、Emscripten WebGPU 与模型查看器参考图仍待对应环境验收。
 
 ## 测试与验收
 
