@@ -16,6 +16,9 @@ if(GRANIT_BUILD_INTEGRATION_SDL3)
       "${granit_imgui_SOURCE_DIR}/backends/imgui_impl_sdl3.cpp"
     )
     target_include_directories(
+      granit_model_viewer_example PRIVATE "${PROJECT_SOURCE_DIR}/examples"
+    )
+    target_include_directories(
       granit_model_viewer_example SYSTEM PRIVATE "${granit_imgui_SOURCE_DIR}"
     )
     target_link_libraries(

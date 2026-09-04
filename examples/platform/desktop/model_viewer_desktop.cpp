@@ -5,6 +5,7 @@
 #include "presentation_policy.h"
 #include "sdl3_input.h"
 
+#include "common/imgui_theme.h"
 #include "model_viewer/application_core.h"
 #include "model_viewer/texture_registry.h"
 #include "model_viewer/viewer_panels.h"
@@ -270,7 +271,7 @@ int main(int argc, char** argv) {
   }
   imgui_quit imgui;
   ImGui::GetIO().IniFilename = nullptr;
-  ImGui::StyleColorsDark();
+  granit::example::apply_imgui_theme();
 
   granit::renderer renderer;
   granit::surface surface;
