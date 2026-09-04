@@ -282,55 +282,6 @@ granit_target_compile_warnings(granit_backend_plugin_loader_test)
 granit_target_output_directories(granit_backend_plugin_loader_test)
 add_test(NAME granit.backend.plugin_loader COMMAND granit_backend_plugin_loader_test)
 
-if(GRANIT_BUILD_BACKEND_WEBGPU)
-  add_executable(
-    granit_webgpu_plugin_smoke
-    backend/webgpu_plugin_smoke.cpp
-    $<TARGET_OBJECTS:granit_backend_plugin>
-    $<TARGET_OBJECTS:granit_shader_asset>
-  )
-  target_compile_features(granit_webgpu_plugin_smoke PRIVATE cxx_std_20)
-  target_include_directories(
-    granit_webgpu_plugin_smoke
-    PRIVATE "${PROJECT_SOURCE_DIR}/include" "${PROJECT_SOURCE_DIR}/src" "${PROJECT_SOURCE_DIR}/tools"
-  )
-  target_compile_definitions(
-    granit_webgpu_plugin_smoke
-    PRIVATE GRANIT_WEBGPU_PLUGIN_PATH="$<TARGET_FILE:granit_backend_webgpu>"
-  )
-  target_link_libraries(granit_webgpu_plugin_smoke PRIVATE ${CMAKE_DL_LIBS})
-  add_dependencies(granit_webgpu_plugin_smoke granit_backend_webgpu)
-  granit_target_compile_warnings(granit_webgpu_plugin_smoke)
-  granit_target_output_directories(granit_webgpu_plugin_smoke)
-  if(NOT GRANIT_S10C_VERTEX_SHADER_ASSET OR NOT GRANIT_S10C_FRAGMENT_SHADER_ASSET)
-    message(FATAL_ERROR "S-10C6 smoke test 需要设置 Vertex 和 Fragment Shader 资产")
-  endif()
-  add_test(
-    NAME granit.backend.webgpu_plugin_smoke
-    COMMAND granit_webgpu_plugin_smoke "${GRANIT_S10C_VERTEX_SHADER_ASSET}"
-  )
-
-  add_executable(
-    granit_shader_asset_vulkan_smoke
-    backend/shader_asset_vulkan_smoke.cpp
-    $<TARGET_OBJECTS:granit_shader_asset>
-  )
-  target_compile_features(granit_shader_asset_vulkan_smoke PRIVATE cxx_std_20)
-  target_include_directories(
-    granit_shader_asset_vulkan_smoke PRIVATE "${PROJECT_SOURCE_DIR}/tools"
-  )
-  target_link_libraries(granit_shader_asset_vulkan_smoke PRIVATE granit::granit)
-  granit_target_compile_warnings(granit_shader_asset_vulkan_smoke)
-  granit_target_output_directories(granit_shader_asset_vulkan_smoke)
-  add_test(
-    NAME granit.backend.shader_asset_vulkan_smoke
-    COMMAND
-      granit_shader_asset_vulkan_smoke
-      "${GRANIT_S10C_VERTEX_SHADER_ASSET}"
-      "${GRANIT_S10C_FRAGMENT_SHADER_ASSET}"
-  )
-endif()
-
 add_executable(
   granit_lifecycle_validation_test
   core/diagnostic_sink_test.cpp
@@ -598,13 +549,6 @@ if(TARGET granit_example_model_viewer_support_test)
     PRIVATE GRANIT_FAKE_BACKEND_PLUGIN_PATH="$<TARGET_FILE:granit_fake_backend_plugin>"
   )
   add_dependencies(granit_example_model_viewer_support_test granit_fake_backend_plugin)
-endif()
-if(GRANIT_BUILD_BACKEND_WEBGPU)
-  target_compile_definitions(
-    granit_renderer_test
-    PRIVATE GRANIT_WEBGPU_BACKEND_PLUGIN_PATH="$<TARGET_FILE:granit_backend_webgpu>"
-  )
-  add_dependencies(granit_renderer_test granit_backend_webgpu)
 endif()
 granit_target_compile_warnings(granit_renderer_test)
 add_test(NAME granit.renderer COMMAND granit_renderer_test)

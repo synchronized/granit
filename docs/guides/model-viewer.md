@@ -3,9 +3,9 @@
 
 # 运行跨后端模型查看器
 
-模型查看器使用同一套 CPU Scene、GPU Scene 和 Render Pipeline，通过 Vulkan 或桌面 Dawn
-WebGPU 显示 glTF 2.0 模型，并叠加 ImGui 调试面板。它是仓库内示例，不属于 Granit 安装包，
-其中的 glTF 加载器也不是公共 SDK。
+模型查看器使用同一套 CPU Scene、GPU Scene 和 Render Pipeline，在桌面 Vulkan 与浏览器
+Emscripten WebGPU 上显示 glTF 2.0 模型。桌面目标叠加 ImGui 调试面板；该示例及其 glTF 加载器
+不属于 Granit 安装 SDK。
 
 ## 构建桌面查看器
 
@@ -22,24 +22,6 @@ cmake -S . -B build/model-viewer -G Ninja `
   -DGRANIT_FETCH_EXAMPLE_GLTF_DEPENDENCIES=ON
 cmake --build build/model-viewer --target granit_model_viewer_example
 ```
-
-默认构建包含 Vulkan 后端。若还要使用桌面 Dawn WebGPU，应额外提供与当前平台和工具链匹配的
-锁定 Dawn SDK：
-
-```powershell
-cmake -S . -B build/model-viewer-webgpu -G Ninja `
-  -DCMAKE_BUILD_TYPE=Release `
-  -DGRANIT_BUILD_MODEL_VIEWER_EXAMPLE=ON `
-  -DGRANIT_BUILD_INTEGRATION_SDL3=ON `
-  -DGRANIT_BUILD_INTEGRATION_IMGUI=ON `
-  -DGRANIT_FETCH_INTEGRATION_DEPENDENCIES=ON `
-  -DGRANIT_FETCH_EXAMPLE_GLTF_DEPENDENCIES=ON `
-  -DGRANIT_BUILD_BACKEND_WEBGPU=ON `
-  -DGRANIT_DAWN_ROOT=D:/path/to/dawn-sdk
-cmake --build build/model-viewer-webgpu --target granit_model_viewer_example
-```
-
-Dawn SDK 的获取、工具链兼容性和插件位置见[构建与安装](build.md#实验性-webgpu-插件)。
 
 ## 获取验收模型
 
@@ -102,26 +84,13 @@ build/model-viewer/bin/granit_model_viewer_example.exe `
   --backend=vulkan --validation
 ```
 
-使用桌面 Dawn WebGPU：
-
-```powershell
-build/model-viewer-webgpu/bin/granit_model_viewer_example.exe `
-  --asset build/assets/FlightHelmet/glTF/FlightHelmet.gltf `
-  --backend=webgpu `
-  --backend-library build/model-viewer-webgpu/bin/granit_backend_webgpu.dll
-```
-
-Linux 的插件文件通常为 `libgranit_backend_webgpu.so`。省略 `--backend-library` 时，Registry 按
-默认插件搜索规则加载后端；开发构建推荐传入明确路径，避免误用系统中的旧插件。
-
 可用参数如下：
 
 | 参数 | 作用 |
 | --- | --- |
 | `--asset <文件>` | 必填；指定 `.gltf` 或 `.glb` 主文件 |
 | `--environment <文件>` | 可选；指定 GRENV v1 环境包，省略时使用内置低分辨率环境 |
-| `--backend=auto\|vulkan\|webgpu` | 选择 Renderer 后端 |
-| `--backend-library <文件>` | 指定后端插件动态库 |
+| `--backend=auto\|vulkan` | 选择桌面 Renderer 后端 |
 | `--validation` | 启用可用的后端验证层 |
 | `--smoke-test` | 渲染少量帧后自动退出 |
 | `--no-ui` | 不创建或绘制 ImGui 资源，用于测量纯场景渲染 |
@@ -181,32 +150,8 @@ build/model-viewer/bin/granit_model_viewer_offscreen_acceptance.exe `
 和异常像素比例比较期望图。该孤立像素上限用于吸收不同 Rasterizer 的边界覆盖规则，不允许
 整段轮廓偏移。失败时
 保留实际图，并在同一目录生成 `<输出名>.diff.rgba` 和 `<输出名>.report.json`；报告包含实际后端、
-Adapter、资产路径及量化统计，供 Actions 一并上传。桌面 Dawn 使用相同程序，只需切换后端与
-插件路径：
-
-```powershell
-build/model-viewer-webgpu/bin/granit_model_viewer_offscreen_acceptance.exe `
-  --asset build/assets/FlightHelmet/glTF/FlightHelmet.gltf `
-  --environment examples/assets/StudioSmall03.grenv `
-  --output build/acceptance/flight-helmet-webgpu.rgba `
-  --expected build/acceptance/flight-helmet-vulkan.rgba `
-  --backend=webgpu `
-  --backend-library build/model-viewer-webgpu/bin/granit_backend_webgpu.dll
-```
-
-`.rgba` 文件固定为 1,048,576 字节，不含行填充或文件头。当前阶段以 Vulkan 基准比较 Dawn；
-基准更新必须随 Renderer、Adapter、模型 manifest 和变更原因一起评审。
-
-维护者可手动运行 `Dawn Integration` Actions。工作流先在 Linux Lavapipe 生成并校验 Vulkan
-参考图，再由 Linux Dawn Vulkan 下载同一参考图执行分层比较。成功时只保留三天的跨 Job 参考图；
-失败时额外上传实际图、差异图、JSON 报告、运行日志和 FlightHelmet manifest，保留七天供定位。
-Windows Job 仍验证 Dawn 插件、Shader、Pipeline、Bind Group 和 Model Viewer 构建；GitHub 托管
-Runner 的 D3D12 环境在 IBL 路径会发生 Device Lost，因此完整 Windows Dawn 图像验收应在真实
-GPU 上手动执行。该工作流不会由提交或合并自动触发。
-
-同一工作流会在 Linux Dawn Vulkan 上执行 UI 开/关、Immediate/FIFO 四组 Release 采样，校验
-每份 JSON 的后端与 1000 个 CPU 样本，并把摘要写入 Actions Job Summary。Windows Dawn 性能
-数据应在真实 GPU 上另行采集。完整 JSON 作为七天产物保存；失败时由对应诊断产物继续保留。
+Adapter、资产路径及量化统计，供 Actions 一并上传。`.rgba` 文件固定为 1,048,576 字节，不含
+行填充或文件头；基准更新必须随 Renderer、Adapter、模型 manifest 和变更原因一起评审。
 
 ## 浏览器验证
 
@@ -228,7 +173,7 @@ npm test -- ../../build/emscripten-release/web
 ## 常见问题
 
 - 没有生成桌面可执行文件：确认模型查看器、SDL3、ImGui 和依赖获取四个选项均已启用。
-- WebGPU 后端不可用：确认 Dawn SDK 与平台、架构、编译器和运行库匹配，并显式传入插件路径。
+- 浏览器 WebGPU 不可用：确认使用锁定 emsdk 构建，并检查浏览器 WebGPU 支持与控制台诊断。
 - 模型加载失败：保持 `.gltf` 与其 `.bin`、纹理的相对目录结构；当前加载器拒绝绝对 URI、父目录
   跳转、网络 URI 和不支持的 glTF 扩展。
 - 页面不能直接打开：浏览器产物必须通过 HTTP 服务访问；自动化测试会自行启动本地服务器。

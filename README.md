@@ -71,7 +71,7 @@ cmake --build <your-build>
 
 构建需要 CMake 3.23+、支持 C++20 的 MSVC/Clang/GCC，以及 Ninja 或 Visual Studio 2022。
 仓库已内置匹配版本的 Vulkan-Headers 与 Volk；默认 Vulkan 构建不要求完整 Vulkan SDK，运行时
-仍需可用的 Vulkan loader 和显卡驱动。桌面 Dawn 与 Emscripten WebGPU 的依赖和构建方式见
+仍需可用的 Vulkan loader 和显卡驱动。Emscripten WebGPU 的依赖和构建方式见
 [构建与安装](docs/guides/build.md)。
 
 查看当前平台可用的 CMake preset：
