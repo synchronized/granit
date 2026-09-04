@@ -1,13 +1,13 @@
 <!-- SPDX-License-Identifier: MIT -->
 <!-- Copyright (c) 2026 Granit contributors -->
 
-# 2026-09-04 S-18E 本地 SDK 验收
+# 2026-09-04 S-18E SDK 验收
 
 ## 结论
 
-0.5.0 开发分支已通过 Windows Clang 共享与静态 SDK、本地安装 Consumer，以及 Emscripten
-Debug/Release 浏览器 WebGPU 验收。Linux 和 Gneiss 独立分支升级仍待后续验证，因此本记录不代表
-S-18E 已全部完成。
+0.5.0 开发分支已通过 Windows Clang 共享与静态 SDK、本地安装 Consumer、Emscripten
+Debug/Release 浏览器 WebGPU，以及 Linux Clang/GCC 共享与静态 SDK 验收。Granit 侧 S-18E 已完成；
+Gneiss 的依赖升级与接入验证由其项目独立执行，不作为 Granit 的完成门槛。
 
 ## Windows
 
@@ -23,11 +23,18 @@ S-18E 已全部完成。
 - Chrome 无头测试验证多帧渲染、质量切换、输入、Resize、资产 Fetch 与资源释放。
 - 外部 glTF Buffer 缺失时的诊断路径验证通过。
 
-## 待完成
+## Linux
 
-- 手动运行 Linux Actions，覆盖 Clang/GCC、共享/静态以及 XCB/Wayland 路径。
-- 在不混入 Gneiss 现有 `feat/ver022-asset-hot-reload` 分支的前提下建立独立 0.5.0 接入分支，
-  使用窗口状态查询初始化尺寸与缩放，并完成 Package/Fetch 验收。
+- 手动运行 [Linux Actions 33847579149](https://github.com/synchronized/granit/actions/runs/33847579149)，
+  六个 Job 全部通过。
+- Clang/GCC 的共享与静态构建、测试及安装 Consumer 全部通过。
+- SDL3 与 ImGui 的 X11、Wayland 共享/静态运行时验证全部通过。
+
+## Consumer 后续
+
+- Gneiss 可在自身分支升级到 Granit 0.5.0，并使用窗口状态查询初始化逻辑尺寸、Framebuffer 尺寸
+  与内容缩放。
+- Granit 不修改或接管 Gneiss 的依赖分支、场景、资产与渲染服务实现。
 
 当前实施范围与剩余工作以
 [S-18 计划](../plans/S-18-0.5.0-platform-upstream-integration.md)为准。
