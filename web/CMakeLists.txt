@@ -118,9 +118,9 @@ target_link_libraries(granit_web_platform_smoke PRIVATE granit_web_model_viewer_
 set_target_properties(
   granit_web_platform_smoke
   PROPERTIES
-    OUTPUT_NAME granit_webgpu_fixture_example
+    OUTPUT_NAME granit_web_platform_smoke
     SUFFIX ".html"
-    FOLDER "Examples/Web"
+    FOLDER "Tests/Smoke"
 )
 granit_target_compile_warnings(granit_web_platform_smoke)
 

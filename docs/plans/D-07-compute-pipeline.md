@@ -83,7 +83,7 @@ Vulkan stage/access/layout。未来可在 Bind Group Layout 增加只读 Storage
 - Recorder 在每次 Dispatch 前准备 Compute Shader 访问，后续 Copy 等命令会自动生成跨阶段屏障。
 - Storage Buffer 使用 Shader Storage Read/Write；Storage Texture 使用 GENERAL Layout。
 - Sampled Texture 和 Uniform Buffer 保持只读访问。
-- `granit_compute_example` 在 GPU 写入 16 个整数，复制至 Readback Buffer 后输出并验证结果。
+- `granit_compute_smoke` 在 GPU 写入 16 个整数，复制至 Readback Buffer 后输出并验证结果。
 
 ## 测试与验收
 

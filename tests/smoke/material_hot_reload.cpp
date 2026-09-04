@@ -17,7 +17,7 @@
 namespace {
 
 std::vector<std::uint32_t> load_shader(std::string_view name) {
-  const auto path = std::string{GRANIT_EXAMPLE_ASSET_DIR} + "/" + std::string{name};
+  const auto path = std::string{GRANIT_SMOKE_ASSET_DIR} + "/" + std::string{name};
   std::ifstream stream{path, std::ios::binary};
   const std::vector<char> bytes{std::istreambuf_iterator<char>{stream}, {}};
   if (bytes.empty() || bytes.size() % sizeof(std::uint32_t) != 0) {
@@ -29,7 +29,7 @@ std::vector<std::uint32_t> load_shader(std::string_view name) {
 }
 
 std::string load_shader_text(std::string_view name) {
-  const auto path = std::string{GRANIT_EXAMPLE_ASSET_DIR} + "/" + std::string{name};
+  const auto path = std::string{GRANIT_SMOKE_ASSET_DIR} + "/" + std::string{name};
   std::ifstream stream{path, std::ios::binary};
   return {std::istreambuf_iterator<char>{stream}, {}};
 }

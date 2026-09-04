@@ -44,7 +44,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          output="build/emscripten-release/web/granit_webgpu_fixture_example"
+          output="build/emscripten-release/web/granit_web_platform_smoke"
           test -s "${output}.html"
           test -s "${output}.js"
           test -s "${output}.wasm"

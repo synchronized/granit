@@ -52,7 +52,7 @@ target_compile_options(
 target_compile_definitions(
   granit_renderer_benchmarks
   PRIVATE
-    GRANIT_BENCHMARK_ASSET_DIR="${PROJECT_SOURCE_DIR}/examples/assets"
+    GRANIT_BENCHMARK_ASSET_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/smoke"
     GRANIT_BENCHMARK_COMPILER="${CMAKE_CXX_COMPILER_ID}-${CMAKE_CXX_COMPILER_VERSION}"
     GRANIT_BENCHMARK_LINK_MODE="$<IF:$<BOOL:${BUILD_SHARED_LIBS}>,shared,static>"
     GRANIT_BENCHMARK_REVISION="${granit_benchmark_revision}"
@@ -95,7 +95,7 @@ target_compile_options(
 target_compile_definitions(
   granit_material_benchmarks
   PRIVATE
-    GRANIT_BENCHMARK_ASSET_DIR="${PROJECT_SOURCE_DIR}/examples/assets"
+    GRANIT_BENCHMARK_ASSET_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/smoke"
     GRANIT_BENCHMARK_COMPILER="${CMAKE_CXX_COMPILER_ID}-${CMAKE_CXX_COMPILER_VERSION}"
     GRANIT_BENCHMARK_LINK_MODE="$<IF:$<BOOL:${BUILD_SHARED_LIBS}>,shared,static>"
     GRANIT_BENCHMARK_REVISION="${granit_benchmark_revision}"
@@ -189,9 +189,13 @@ set(granit_canvas_benchmark_package "${CMAKE_CURRENT_BINARY_DIR}/assets/unlit_ca
 add_custom_command(
   OUTPUT "${granit_canvas_benchmark_package}"
   COMMAND "${CMAKE_COMMAND}" -E make_directory "${CMAKE_CURRENT_BINARY_DIR}/assets"
-  COMMAND granit_material_tool build "${PROJECT_SOURCE_DIR}/examples/assets/unlit_canvas.grmat.json"
-          --output "${granit_canvas_benchmark_package}"
-  DEPENDS granit_material_tool "${PROJECT_SOURCE_DIR}/examples/assets/unlit_canvas.grmat.json"
+  COMMAND
+    granit_material_tool build
+    "${PROJECT_SOURCE_DIR}/tests/fixtures/smoke/unlit_canvas.grmat.json"
+    --output "${granit_canvas_benchmark_package}"
+  DEPENDS
+    granit_material_tool
+    "${PROJECT_SOURCE_DIR}/tests/fixtures/smoke/unlit_canvas.grmat.json"
   VERBATIM
 )
 add_executable(granit_canvas_gpu_benchmarks canvas_gpu_main.cpp "${granit_canvas_benchmark_package}")
@@ -236,8 +240,8 @@ set_target_properties(granit_lighting_benchmarks PROPERTIES FOLDER "Benchmarks")
 
 add_executable(
   granit_lighting_gpu_benchmarks
-  "${PROJECT_SOURCE_DIR}/examples/pbr_offscreen.cpp"
-  "${PROJECT_SOURCE_DIR}/examples/pbr_example_support.cpp"
+  "${PROJECT_SOURCE_DIR}/tests/smoke/pbr_offscreen.cpp"
+  "${PROJECT_SOURCE_DIR}/tests/smoke/pbr_test_support.cpp"
   "${PROJECT_SOURCE_DIR}/tests/reference/lighting/ibl_reference.cpp"
   "${PROJECT_SOURCE_DIR}/tests/reference/lighting/lighting_reference.cpp"
   "${PROJECT_SOURCE_DIR}/tests/reference/lighting/tone_mapping_reference.cpp"
@@ -272,18 +276,18 @@ add_custom_command(
   COMMAND "${CMAKE_COMMAND}" -E make_directory "${CMAKE_CURRENT_BINARY_DIR}/assets"
   COMMAND
     granit_material_tool build
-    "${PROJECT_SOURCE_DIR}/examples/assets/render_pipeline_workload.grmat.json"
+    "${PROJECT_SOURCE_DIR}/tests/fixtures/smoke/render_pipeline_workload.grmat.json"
     --output "${granit_render_pipeline_benchmark_package}"
   DEPENDS
     granit_material_tool
-    "${PROJECT_SOURCE_DIR}/examples/assets/render_pipeline_workload.grmat.json"
+    "${PROJECT_SOURCE_DIR}/tests/fixtures/smoke/render_pipeline_workload.grmat.json"
     "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/pbr_shadow_ibl_lights.vert.spv"
     "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/pbr_shadow_ibl_lights_untextured.frag.spv"
   VERBATIM
 )
 add_executable(
   granit_render_pipeline_benchmarks
-  "${PROJECT_SOURCE_DIR}/examples/render_pipeline_offscreen.cpp"
+  "${PROJECT_SOURCE_DIR}/tests/smoke/render_pipeline_offscreen.cpp"
 )
 target_compile_features(granit_render_pipeline_benchmarks PRIVATE cxx_std_20)
 target_compile_options(

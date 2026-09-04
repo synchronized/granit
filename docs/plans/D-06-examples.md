@@ -12,18 +12,18 @@
 - 前置依赖：D-02、D-03、D-04、D-05、F-06、F-07
 - 后续依赖：D-07
 
-## 已实现示例
+## 已实现验证程序
 
-- `granit_offscreen_clear_example`：创建 Renderer、离屏 Texture 及默认 View，通过 Dynamic
+- `granit_offscreen_clear_smoke`：创建 Renderer、离屏 Texture 及默认 View，通过 Dynamic
   Rendering 清除颜色附件并提交。
-- `granit_offscreen_triangle_example`：加载仓库预编译 SPIR-V，创建 Shader、Pipeline Layout
+- `granit_offscreen_triangle_smoke`：加载仓库预编译 SPIR-V，创建 Shader、Pipeline Layout
   与 Graphics Pipeline，使用 `gl_VertexIndex` 绘制三色三角形。
-- `granit_window_clear_example`：在 Win32 窗口中完成 Surface、Swapchain、acquire、清屏、提交、
+- `granit_window_clear_smoke`：在 Win32 窗口中完成 Surface、Swapchain、acquire、清屏、提交、
   present 和窗口尺寸变化后的重建。
 
-所有示例只包含 `granit/granit.hpp` 和必要的标准库或平台窗口头，不包含 Vulkan 头文件，也不
-访问 Granit 内部目标。仅供基础示例使用的着色器源码与预编译 SPIR-V 放在
-`examples/assets`；普通构建不依赖 Vulkan SDK 或运行时 Shader 编译器。正式 Pipeline 内置
+这些初期示例在 0.5.0 开发阶段转为 `tests/smoke` 内部验证程序，只包含 `granit/granit.hpp` 和
+必要的标准库或平台窗口头，不包含 Vulkan 头文件。对应着色器源码与预编译 SPIR-V 放在
+`tests/fixtures/smoke`；普通构建不依赖运行时 Shader 编译器。正式 Pipeline 内置
 Shader 和跨示例共享的 PBR 参考 Shader 分别归入 `src/pipeline/shaders` 与
 `assets/shaders/pbr`。
 

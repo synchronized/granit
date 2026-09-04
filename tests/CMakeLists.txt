@@ -1,6 +1,8 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2026 Granit contributors
 
+add_subdirectory(smoke)
+
 add_test(
   NAME granit.backend.native_boundaries
   COMMAND
@@ -329,14 +331,14 @@ add_executable(
   lighting/tone_mapping_reference_test.cpp
   lighting/tone_mapping_pass_test.cpp
   lighting/tone_mapping_resources_test.cpp
-  "${PROJECT_SOURCE_DIR}/examples/pbr_example_support.cpp"
+  "${PROJECT_SOURCE_DIR}/tests/smoke/pbr_test_support.cpp"
 )
 target_include_directories(
   granit_lighting_test
   PRIVATE
     "${PROJECT_SOURCE_DIR}/src"
     "${PROJECT_SOURCE_DIR}/tests"
-    "${PROJECT_SOURCE_DIR}/examples"
+    "${PROJECT_SOURCE_DIR}/tests/smoke"
 )
 target_link_libraries(granit_lighting_test PRIVATE granit::lighting Catch2::Catch2WithMain)
 target_compile_options(granit_lighting_test PRIVATE $<$<COMPILE_LANG_AND_ID:CXX,MSVC>:/utf-8>)
@@ -372,11 +374,11 @@ set(granit_unlit_test_package "${CMAKE_CURRENT_BINARY_DIR}/assets/unlit.grmat")
 add_custom_command(
   OUTPUT "${granit_unlit_test_package}"
   COMMAND "${CMAKE_COMMAND}" -E make_directory "${CMAKE_CURRENT_BINARY_DIR}/assets"
-  COMMAND granit_material_tool build "${PROJECT_SOURCE_DIR}/examples/assets/unlit.grmat.json"
+  COMMAND granit_material_tool build "${PROJECT_SOURCE_DIR}/tests/fixtures/smoke/unlit.grmat.json"
           --output "${granit_unlit_test_package}"
   DEPENDS
     granit_material_tool
-    "${PROJECT_SOURCE_DIR}/examples/assets/unlit.grmat.json"
+    "${PROJECT_SOURCE_DIR}/tests/fixtures/smoke/unlit.grmat.json"
     "${PROJECT_SOURCE_DIR}/assets/shaders/unlit/unlit.vert.spv"
     "${PROJECT_SOURCE_DIR}/assets/shaders/unlit/unlit.vert.wgsl"
     "${PROJECT_SOURCE_DIR}/assets/shaders/unlit/unlit.frag.spv"

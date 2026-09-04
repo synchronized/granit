@@ -338,7 +338,7 @@ if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
   add_test(
     NAME granit.material_tool.unlit_build
     COMMAND
-      granit_material_tool build "${PROJECT_SOURCE_DIR}/examples/assets/unlit.grmat.json"
+      granit_material_tool build "${PROJECT_SOURCE_DIR}/tests/fixtures/smoke/unlit.grmat.json"
       --output "${GRANIT_UNLIT_PACKAGE_FIXTURE}"
   )
   set_tests_properties(granit.material_tool.unlit_build PROPERTIES FIXTURES_SETUP granit_unlit)

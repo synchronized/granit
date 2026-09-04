@@ -6,7 +6,7 @@
 #include "lighting/tone_mapping_resources.h"
 #include "material/material_template_gpu.h"
 #include "material/pbr_material_schema.h"
-#include "pbr_example_support.h"
+#include "pbr_test_support.h"
 
 #include <granit/granit.hpp>
 

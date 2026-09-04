@@ -20,7 +20,7 @@ Text 输入，第三方库不成为 Renderer 的传递依赖。
 不要直接 `reinterpret_cast` 第三方顶点数组，也不要把指针强制转换成 Granit 句柄。Texture ID 的
 含义、注册和失效由适配器管理；被借用的 View 与 Sampler 至少存活到 Canvas 完成录制。
 
-仓库中的 `granit_immediate_ui_adapter_example` 使用一个仿立即式 UI Draw Data 结构验证上述转换，
+仓库中的 `granit_immediate_ui_adapter_smoke` 使用一个仿立即式 UI Draw Data 结构验证上述转换，
 不要求安装 ImGui、Nuklear 或其他 UI 库。接入具体库时只需在应用层实现相同映射。
 
 不要为每条命令重新截取和编号顶点。顶点在整帧转换中只复制一次，Draw Command 只保存纹理、

@@ -160,7 +160,7 @@ jobs:
         shell: bash
         run: |
           xvfb-run -a env SDL_VIDEODRIVER=x11 \
-            "build/${{ steps.preset.outputs.name }}/bin/granit_sdl3_window_clear_example" \
+            "build/${{ steps.preset.outputs.name }}/bin/granit_sdl3_window_clear_smoke" \
             --smoke-test
           xvfb-run -a env SDL_VIDEODRIVER=x11 \
             "build/${{ steps.preset.outputs.name }}/bin/granit_sdl3_imgui_example" --smoke-test
@@ -183,7 +183,7 @@ jobs:
             exit 1
           }
           SDL_VIDEODRIVER=wayland \
-            "build/${{ steps.preset.outputs.name }}/bin/granit_sdl3_window_clear_example" \
+            "build/${{ steps.preset.outputs.name }}/bin/granit_sdl3_window_clear_smoke" \
             --smoke-test
           SDL_VIDEODRIVER=wayland \
             "build/${{ steps.preset.outputs.name }}/bin/granit_sdl3_imgui_example" --smoke-test

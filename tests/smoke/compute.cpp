@@ -15,7 +15,7 @@
 namespace {
 
 std::vector<std::byte> load_shader() {
-  std::ifstream stream{std::string{GRANIT_EXAMPLE_ASSET_DIR} + "/compute.comp.spv",
+  std::ifstream stream{std::string{GRANIT_SMOKE_ASSET_DIR} + "/compute.comp.spv",
                        std::ios::binary};
   const std::vector<char> bytes{std::istreambuf_iterator<char>{stream}, {}};
   std::vector<std::byte> result(bytes.size());

@@ -94,10 +94,10 @@ ctest --preset windows-vs2022-debug
 cmake --install build/<preset-name> --prefix build/install
 ```
 
-顶层构建默认同时生成示例。Windows Clang 配置完成后可运行最小离屏清屏示例：
+顶层构建默认同时生成示例和测试。Windows Clang 配置完成后可运行内部离屏清屏 Smoke：
 
 ```powershell
-build/windows-clang-debug/bin/granit_offscreen_clear_example.exe
+build/windows-clang-debug/bin/granit_offscreen_clear_smoke.exe
 ```
 
 完整构建说明见[构建与安装](docs/guides/build.md)，其他程序见[示例程序](docs/guides/examples.md)，

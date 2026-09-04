@@ -290,7 +290,7 @@ Shader Asset。Emscripten 5.0.6 浏览器 Smoke 已通过公共 Buffer、Texture
 Pipeline 与 Command Recorder API 运行完整场景；Chromium 截图同时验证左右材质实例、中心近远遮挡
 和清屏背景。包含指针的 Bind Group 绑定与 Rendering 描述已改用实际布局计算 `struct_size`，因此
 公共 `command_recorder.hpp` 也能由 wasm32 C++20 使用，同时保持桌面 64 位 ABI 数值不变。浏览器
-产物统一命名为 `granit_webgpu_fixture_example`，避免继续将完整场景误称为三角形示例。Linux
+产物统一命名为 `granit_web_platform_smoke`，明确其为浏览器平台自动验证而非公开示例。Linux
 Lavapipe、Windows/Linux 真实 Dawn 与 Chromium 平台矩阵均已通过，S-12F 已完成。
 
 当前测试已增加背景、两个实例和深度遮挡区域的语义探针。探针失败时在构建目录的
