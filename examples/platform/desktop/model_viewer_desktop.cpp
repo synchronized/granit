@@ -303,6 +303,80 @@ granit::result render_loading_frame(granit::swapchain& swapchain,
   return result;
 }
 
+struct gpu_upload_ui_context {
+  granit::swapchain* swapchain{};
+  granit::swapchain_info* swapchain_info{};
+  granit::frame_context* frame_context{};
+  granit::canvas_draw_list* canvas{};
+  granit::example::model_viewer::texture_registry* textures{};
+  granit::present_mode presentation{};
+  int* pixel_width{};
+  int* pixel_height{};
+  granit::result result{granit::result::success};
+  bool cancelled{};
+};
+
+bool update_gpu_upload_ui(const granit::example::model_viewer::gpu_scene_upload_progress& progress,
+                          void* user_data) {
+  auto& context = *static_cast<gpu_upload_ui_context*>(user_data);
+  SDL_Event event{};
+  while (SDL_PollEvent(&event)) {
+    ImGui_ImplSDL3_ProcessEvent(&event);
+    if (event.type == SDL_EVENT_QUIT || event.type == SDL_EVENT_WINDOW_CLOSE_REQUESTED) {
+      context.cancelled = true;
+    } else if (event.type == SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED) {
+      *context.pixel_width = event.window.data1;
+      *context.pixel_height = event.window.data2;
+      if (*context.pixel_width > 0 && *context.pixel_height > 0) {
+        context.result = context.swapchain->recreate(
+            {.width = static_cast<std::uint32_t>(*context.pixel_width),
+             .height = static_cast<std::uint32_t>(*context.pixel_height),
+             .presentation = context.presentation});
+        if (context.result.ok())
+          context.result = context.swapchain->query_info(*context.swapchain_info);
+      }
+    }
+  }
+  if (context.cancelled || context.result.failed())
+    return false;
+
+  using enum granit::example::model_viewer::gpu_scene_upload_stage;
+  const auto fraction = progress.total == 0 ? 1.0F
+                                            : static_cast<float>(progress.completed) /
+                                                  static_cast<float>(progress.total);
+  const char* label = "正在准备 GPU 资源……";
+  float value = 0.40F;
+  switch (progress.stage) {
+  case planning:
+    value = 0.42F;
+    break;
+  case geometry:
+    label = "正在上传顶点与索引……";
+    value = 0.48F;
+    break;
+  case textures:
+    label = "正在分批上传纹理……";
+    value = 0.48F + fraction * 0.28F;
+    break;
+  case samplers:
+    label = "正在创建采样器……";
+    value = 0.76F + fraction * 0.04F;
+    break;
+  case meshes:
+    label = "正在创建 Mesh……";
+    value = 0.80F + fraction * 0.06F;
+    break;
+  case materials:
+    label = "正在创建材质……";
+    value = 0.86F + fraction * 0.08F;
+    break;
+  }
+  context.result =
+      render_loading_frame(*context.swapchain, *context.swapchain_info, *context.frame_context,
+                           *context.canvas, *context.textures, label, value);
+  return context.result.ok();
+}
+
 } // namespace
 
 int main(int argc, char** argv) {
@@ -488,13 +562,25 @@ int main(int argc, char** argv) {
     result = granit::result::not_ready;
   if (result.ok() && options.show_ui)
     result = render_loading_frame(swapchain, swapchain_info, loading_frame_context, canvas,
-                                  textures, "正在上传 Mesh、纹理与材质……", 0.72F);
-  if (result.ok())
-    result =
-        core.upload(renderer.native_handle(), environment_bytes, render_quality.sampler_anisotropy);
+                                  textures, "正在准备 GPU 上传……", 0.40F);
+  gpu_upload_ui_context upload_ui{.swapchain = &swapchain,
+                                  .swapchain_info = &swapchain_info,
+                                  .frame_context = &loading_frame_context,
+                                  .canvas = &canvas,
+                                  .textures = &textures,
+                                  .presentation = options.presentation,
+                                  .pixel_width = &pixel_width,
+                                  .pixel_height = &pixel_height};
+  if (result.ok()) {
+    result = core.upload(
+        renderer.native_handle(), environment_bytes, render_quality.sampler_anisotropy,
+        options.show_ui ? update_gpu_upload_ui : nullptr, options.show_ui ? &upload_ui : nullptr);
+    if (result == granit::result::not_ready && upload_ui.result.failed())
+      result = upload_ui.result;
+  }
   if (result.ok() && options.show_ui)
     result = render_loading_frame(swapchain, swapchain_info, loading_frame_context, canvas,
-                                  textures, "正在创建渲染管线……", 0.90F);
+                                  textures, "正在创建渲染管线……", 0.96F);
   granit_render_pipeline_desc pipeline_desc = GRANIT_RENDER_PIPELINE_DESC_INIT;
   pipeline_desc.sample_count = render_quality.sample_count;
   pipeline_desc.enable_fxaa = render_quality.enable_fxaa;

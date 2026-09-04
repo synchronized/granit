@@ -50,7 +50,9 @@ public:
   /** 上传场景；environment_bytes 为空时使用内置摄影棚环境，否则解析 GRENV v2。 */
   [[nodiscard]] granit::result upload(granit_renderer renderer,
                                       std::span<const std::byte> environment_bytes = {},
-                                      float sampler_anisotropy = 8.0F);
+                                      float sampler_anisotropy = 8.0F,
+                                      gpu_scene_upload_callback progress = nullptr,
+                                      void* progress_user_data = nullptr);
   /** 按新采样质量事务式重建 GPU Scene；环境资源与查看器状态保持不变。 */
   [[nodiscard]] granit::result reupload_scene(granit_renderer renderer, float sampler_anisotropy);
   [[nodiscard]] granit::result tick(const application_tick_input& input,

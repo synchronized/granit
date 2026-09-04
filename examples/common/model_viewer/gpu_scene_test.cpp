@@ -10,6 +10,23 @@
 #include <cmath>
 #include <limits>
 
+namespace {
+
+struct upload_progress_log {
+  std::vector<granit::example::model_viewer::gpu_scene_upload_stage> stages;
+  bool cancel_at_geometry{};
+};
+
+bool record_upload_progress(
+    const granit::example::model_viewer::gpu_scene_upload_progress& progress, void* user_data) {
+  auto& log = *static_cast<upload_progress_log*>(user_data);
+  log.stages.push_back(progress.stage);
+  return !log.cancel_at_geometry ||
+         progress.stage != granit::example::model_viewer::gpu_scene_upload_stage::geometry;
+}
+
+} // namespace
+
 TEST_CASE("GPU Scene 计划合并 Primitive 并记录字节 Offset", "[example][model-viewer]") {
   granit::example::gltf::scene source;
   auto& first = source.meshes.emplace_back().primitives.emplace_back();
@@ -165,7 +182,12 @@ TEST_CASE("GPU Scene 事务式创建合并 Buffer 与 Mesh", "[example][model-vi
   source.nodes.emplace_back().mesh = 0;
 
   granit::example::model_viewer::gpu_scene scene;
-  REQUIRE(scene.initialize(renderer.native_handle(), source) == granit::result::success);
+  upload_progress_log progress;
+  REQUIRE(scene.initialize(renderer.native_handle(), source, 8.0F, record_upload_progress,
+                           &progress) == granit::result::success);
+  CHECK_FALSE(progress.stages.empty());
+  CHECK(progress.stages.front() == granit::example::model_viewer::gpu_scene_upload_stage::planning);
+  CHECK(progress.stages.back() == granit::example::model_viewer::gpu_scene_upload_stage::materials);
   CHECK(scene.valid());
   CHECK(scene.meshes().size() == 1);
   CHECK(scene.materials().size() == 2);
@@ -176,6 +198,11 @@ TEST_CASE("GPU Scene 事务式创建合并 Buffer 与 Mesh", "[example][model-vi
   REQUIRE(scene.renderables().size() == 1);
   CHECK(scene.renderables().front().payload == scene.draw_bindings().front().payload);
   const auto original_mesh = scene.meshes().front().native_handle();
+  upload_progress_log cancelled;
+  cancelled.cancel_at_geometry = true;
+  CHECK(scene.initialize(renderer.native_handle(), source, 8.0F, record_upload_progress,
+                         &cancelled) == granit::result::not_ready);
+  CHECK(scene.meshes().front().native_handle() == original_mesh);
   CHECK(scene.initialize(renderer.native_handle(), source, 0.0F) ==
         granit::result::invalid_argument);
   CHECK(scene.meshes().front().native_handle() == original_mesh);

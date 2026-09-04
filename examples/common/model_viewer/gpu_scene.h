@@ -80,6 +80,25 @@ struct gpu_scene_plan {
 
 enum class gpu_scene_plan_error { none, invalid_scene, numeric_overflow, out_of_memory };
 
+enum class gpu_scene_upload_stage {
+  planning,
+  geometry,
+  textures,
+  samplers,
+  meshes,
+  materials,
+};
+
+struct gpu_scene_upload_progress {
+  gpu_scene_upload_stage stage{gpu_scene_upload_stage::planning};
+  std::uint32_t completed{};
+  std::uint32_t total{};
+};
+
+/** 返回 false 可在资源边界取消上传；正在执行的单次后端提交不会被中断。 */
+using gpu_scene_upload_callback = bool (*)(const gpu_scene_upload_progress& progress,
+                                           void* user_data);
+
 /** 生成合并 Buffer 与纹理格式计划；失败时 output 保持不变。 */
 [[nodiscard]] gpu_scene_plan_error build_gpu_scene_plan(const gltf::scene& source,
                                                         gpu_scene_plan& output);
@@ -108,7 +127,9 @@ public:
 
   /** 成功后替换现有资源；失败时当前对象保持不变。 */
   [[nodiscard]] granit::result initialize(granit_renderer renderer, const gltf::scene& source,
-                                          float sampler_anisotropy = 8.0F);
+                                          float sampler_anisotropy = 8.0F,
+                                          gpu_scene_upload_callback progress = nullptr,
+                                          void* progress_user_data = nullptr);
   void reset() noexcept;
 
   [[nodiscard]] bool valid() const noexcept { return renderer_ != GRANIT_NULL_HANDLE; }
@@ -150,7 +171,8 @@ public:
 
 private:
   [[nodiscard]] granit::result create(granit_renderer renderer, const gltf::scene& source,
-                                      float sampler_anisotropy);
+                                      float sampler_anisotropy, gpu_scene_upload_callback progress,
+                                      void* progress_user_data);
 
   granit_renderer renderer_{GRANIT_NULL_HANDLE};
   gpu_scene_plan plan_;
