@@ -5,6 +5,10 @@
 
 #include <catch2/catch_all.hpp>
 
+#include <condition_variable>
+#include <mutex>
+#include <vector>
+
 namespace {
 
 struct callback_state {
@@ -21,6 +25,28 @@ granit::result execute_frame(granit::example::model_viewer::frame_packet&& packe
   output.needs_recreate = true;
   output.acquire_wait_ms = 2.0F;
   return granit::result::not_ready;
+}
+
+struct blocking_callback_state {
+  std::mutex mutex;
+  std::condition_variable condition;
+  std::vector<std::uint32_t> executed_widths;
+  bool first_started{};
+  bool release_first{};
+};
+
+granit::result execute_blocking_frame(granit::example::model_viewer::frame_packet&& packet,
+                                      granit::example::model_viewer::frame_execution_result&,
+                                      void* user_data) {
+  auto& state = *static_cast<blocking_callback_state*>(user_data);
+  std::unique_lock lock(state.mutex);
+  state.executed_widths.push_back(packet.width);
+  if (packet.width == 1) {
+    state.first_started = true;
+    state.condition.notify_all();
+    state.condition.wait(lock, [&] { return state.release_first; });
+  }
+  return granit::result::success;
 }
 
 } // namespace
@@ -47,4 +73,53 @@ TEST_CASE("同步帧执行器拒绝空回调") {
 
   CHECK(executor.submit({}, output) == granit::result::invalid_argument);
   CHECK_FALSE(output.needs_recreate);
+}
+
+TEST_CASE("线程帧执行器限制待处理队列并回报被替换帧") {
+  using namespace granit::example::model_viewer;
+  blocking_callback_state state;
+  threaded_frame_executor executor;
+  REQUIRE(executor.initialize(execute_blocking_frame, &state, 2).ok());
+  CHECK(executor.running());
+
+  std::uint64_t first{};
+  frame_packet packet;
+  packet.width = 1;
+  REQUIRE(executor.submit(std::move(packet), first).ok());
+  {
+    std::unique_lock lock(state.mutex);
+    state.condition.wait(lock, [&] { return state.first_started; });
+  }
+
+  std::uint64_t second{};
+  std::uint64_t third{};
+  std::uint64_t fourth{};
+  packet.width = 2;
+  REQUIRE(executor.submit(std::move(packet), second).ok());
+  packet.width = 3;
+  REQUIRE(executor.submit(std::move(packet), third).ok());
+  packet.width = 4;
+  REQUIRE(executor.submit(std::move(packet), fourth).ok());
+  {
+    std::lock_guard lock(state.mutex);
+    state.release_first = true;
+    state.condition.notify_all();
+  }
+  REQUIRE(executor.flush().ok());
+
+  std::vector<frame_completion> completions;
+  frame_completion completion;
+  while (executor.try_take_completion(completion))
+    completions.push_back(completion);
+  REQUIRE(completions.size() == 4);
+  CHECK(std::ranges::count_if(completions, [](const auto& value) { return value.dropped; }) == 1);
+  const auto dropped =
+      std::ranges::find_if(completions, [](const auto& value) { return value.dropped; });
+  REQUIRE(dropped != completions.end());
+  CHECK(dropped->sequence == third);
+  CHECK(state.executed_widths == std::vector<std::uint32_t>{1, 2, 4});
+
+  executor.stop();
+  CHECK_FALSE(executor.running());
+  CHECK(executor.submit({}, first) == granit::result::not_ready);
 }
