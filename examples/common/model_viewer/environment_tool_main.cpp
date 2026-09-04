@@ -98,7 +98,7 @@ int main(int argc, char** argv) {
   std::filesystem::path prefiltered_path;
   std::filesystem::path lut_path;
   std::filesystem::path output_path;
-  float recommended_intensity = 0.4F;
+  float recommended_intensity = 0.12F;
   float recommended_exposure = -0.5F;
   for (int index = 2; index < argc; index += 2) {
     const std::string_view option{argv[index]};

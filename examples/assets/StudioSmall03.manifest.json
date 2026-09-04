@@ -8,14 +8,14 @@
   "generated": {
     "path": "StudioSmall03.grenv",
     "size": 1228848,
-    "sha256": "2dcb0f58812436b900ee7883d2575ffac3aabc947f3bdd16d14cd965d98b8d9e",
+    "sha256": "8d556730faf055eaed74e93b3ba42f10900325beb2d06acf4a640e60445068d3",
     "gltf_ibl_sampler_revision": "08fa12250f6f5f5969c1846aaa266e6eea887731",
     "irradiance_resolution": 32,
     "prefiltered_resolution": 128,
     "prefiltered_mip_count": 8,
     "sample_count": 1024,
     "target_format": "R16G16B16A16_SFLOAT",
-    "recommended_environment_intensity": 0.4,
+    "recommended_environment_intensity": 0.12,
     "recommended_exposure_ev": -0.5
   },
   "files": [

@@ -38,7 +38,7 @@ std::vector<std::byte> valid_package() {
   write_u32(bytes, 32, 4);
   write_u32(bytes, 36, 4);
   write_u64(bytes, 40, payload_size);
-  write_u32(bytes, 48, 0x3ecccccdU);
+  write_u32(bytes, 48, 0x3df5c28fU);
   write_u32(bytes, 52, 0xbf000000U);
   return bytes;
 }
@@ -51,7 +51,7 @@ TEST_CASE("GRENV v2严格解析预处理环境布局和推荐光照", "[example]
   environment_package package;
   REQUIRE(parse_environment_package(bytes, package) == environment_package_error::none);
   CHECK(package.irradiance_resolution == 2);
-  CHECK(package.recommended_environment_intensity == Catch::Approx(0.4F));
+  CHECK(package.recommended_environment_intensity == Catch::Approx(0.12F));
   CHECK(package.recommended_exposure_ev == Catch::Approx(-0.5F));
   REQUIRE(package.prefiltered_mips.size() == 3);
   CHECK(package.prefiltered_mips[0].resolution == 4);
