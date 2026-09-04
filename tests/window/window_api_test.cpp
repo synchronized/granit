@@ -53,6 +53,19 @@ TEST_CASE("Window 组件骨架保持确定的失败与输出语义", "[window]")
   CHECK(first != nullptr);
   CHECK(second != nullptr);
 
+  granit_window_state state = GRANIT_WINDOW_STATE_INIT;
+  REQUIRE(granit_window_get_state(system, window, &state) == GRANIT_SUCCESS);
+  CHECK(state.width > 0);
+  CHECK(state.height > 0);
+  CHECK(state.framebuffer_width > 0);
+  CHECK(state.framebuffer_height > 0);
+  CHECK(state.content_scale_horizontal > 0.0F);
+  CHECK(state.content_scale_vertical > 0.0F);
+  CHECK(granit_window_get_state(system, window, nullptr) == GRANIT_ERROR_INVALID_ARGUMENT);
+  state = GRANIT_WINDOW_STATE_INIT;
+  state.struct_size = GRANIT_WINDOW_STATE_VERSION_1_SIZE - 1;
+  CHECK(granit_window_get_state(system, window, &state) == GRANIT_ERROR_INVALID_ARGUMENT);
+
   granit_window_event event = GRANIT_WINDOW_EVENT_INIT;
   while (granit_window_poll_event(system, &event) == GRANIT_SUCCESS) {
     event = GRANIT_WINDOW_EVENT_INIT;
@@ -83,6 +96,12 @@ TEST_CASE("Window 组件骨架保持确定的失败与输出语义", "[window]")
     }
   }
   CHECK(saw_scale);
+  state = GRANIT_WINDOW_STATE_INIT;
+  REQUIRE(granit_window_get_state(system, window, &state) == GRANIT_SUCCESS);
+  CHECK(state.content_scale_horizontal == Catch::Approx(1.5F));
+  CHECK(state.content_scale_vertical == Catch::Approx(1.5F));
+  CHECK(state.framebuffer_width > 0);
+  CHECK(state.framebuffer_height > 0);
 
   SendMessageW(static_cast<HWND>(second), WM_CLOSE, 0, 0);
   event = GRANIT_WINDOW_EVENT_INIT;
@@ -93,6 +112,10 @@ TEST_CASE("Window 组件骨架保持确定的失败与输出语义", "[window]")
   CHECK(granit_window_get_xcb(system, window, &first, &xcb_window) == GRANIT_ERROR_UNSUPPORTED);
   CHECK(first == nullptr);
   CHECK(xcb_window == 0);
+
+  state = GRANIT_WINDOW_STATE_INIT;
+  CHECK(granit_window_get_state(system, GRANIT_NULL_HANDLE, &state) == GRANIT_ERROR_INVALID_HANDLE);
+  CHECK(state.width == 0);
 
   REQUIRE(granit_window_destroy(system, window) == GRANIT_SUCCESS);
   CHECK(granit_window_destroy(system, window) == GRANIT_ERROR_INVALID_HANDLE);
@@ -134,6 +157,14 @@ TEST_CASE("Window 组件骨架保持确定的失败与输出语义", "[window]")
       saw_resize = event.type == GRANIT_WINDOW_EVENT_RESIZED && event.window == window;
   }
   CHECK(saw_resize);
+  granit_window_state state = GRANIT_WINDOW_STATE_INIT;
+  REQUIRE(granit_window_get_state(system, window, &state) == GRANIT_SUCCESS);
+  CHECK(state.width == 128);
+  CHECK(state.height == 96);
+  CHECK(state.framebuffer_width == 128);
+  CHECK(state.framebuffer_height == 96);
+  CHECK(state.content_scale_horizontal == Catch::Approx(1.0F));
+  CHECK(state.content_scale_vertical == Catch::Approx(1.0F));
   REQUIRE(granit_window_destroy(system, window) == GRANIT_SUCCESS);
   REQUIRE(granit_window_system_destroy(system) == GRANIT_SUCCESS);
 #else
@@ -166,6 +197,14 @@ TEST_CASE("Wayland Window 提供配置后的原生 Surface", "[window][wayland]"
   REQUIRE(granit_window_get_wayland(system, window, &display, &surface) == GRANIT_SUCCESS);
   REQUIRE(display != nullptr);
   REQUIRE(surface != nullptr);
+  granit_window_state state = GRANIT_WINDOW_STATE_INIT;
+  REQUIRE(granit_window_get_state(system, window, &state) == GRANIT_SUCCESS);
+  CHECK(state.width > 0);
+  CHECK(state.height > 0);
+  CHECK(state.framebuffer_width == state.width);
+  CHECK(state.framebuffer_height == state.height);
+  CHECK(state.content_scale_horizontal == Catch::Approx(1.0F));
+  CHECK(state.content_scale_vertical == Catch::Approx(1.0F));
   uint32_t xcb_window = UINT32_C(42);
   REQUIRE(granit_window_get_xcb(system, window, &display, &xcb_window) == GRANIT_ERROR_UNSUPPORTED);
   CHECK(display == nullptr);

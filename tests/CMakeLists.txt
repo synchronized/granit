@@ -99,7 +99,7 @@ if(BUILD_SHARED_LIBS)
       GRANIT_ABI_INPUT_LIBRARY_PATH="$<TARGET_FILE:granit_input>"
       GRANIT_ABI_CORE_SYMBOLS_PATH="${CMAKE_CURRENT_SOURCE_DIR}/abi/snapshots/0.4.0/core_symbols.txt"
       GRANIT_ABI_RENDER_PIPELINE_SYMBOLS_PATH="${CMAKE_CURRENT_SOURCE_DIR}/abi/snapshots/0.1.0/render_pipeline_symbols.txt"
-      GRANIT_ABI_WINDOW_SYMBOLS_PATH="${CMAKE_CURRENT_SOURCE_DIR}/abi/snapshots/0.1.0/window_symbols.txt"
+      GRANIT_ABI_WINDOW_SYMBOLS_PATH="${CMAKE_CURRENT_SOURCE_DIR}/abi/snapshots/0.5.0/window_symbols.txt"
       GRANIT_ABI_INPUT_SYMBOLS_PATH="${CMAKE_CURRENT_SOURCE_DIR}/abi/snapshots/0.1.0/input_symbols.txt"
   )
   target_include_directories(
@@ -156,9 +156,17 @@ if(BUILD_SHARED_LIBS)
       render_pipeline granit_render_pipeline render_pipeline_symbols.txt
       "${CMAKE_CURRENT_SOURCE_DIR}/abi/snapshots/0.1.0/render_pipeline_private_symbols.txt"
     )
-    granit_add_abi_export_snapshot_test(
-      window granit_window window_symbols.txt
-      "${CMAKE_CURRENT_SOURCE_DIR}/abi/snapshots/0.1.0/window_private_symbols.txt"
+    add_test(
+      NAME granit.abi.exports.window
+      COMMAND
+        "${CMAKE_COMMAND}"
+        "-DGRANIT_ABI_COMPONENT=window"
+        "-DGRANIT_ABI_LIBRARY=$<TARGET_FILE:granit_window>"
+        "-DGRANIT_ABI_SNAPSHOT=${CMAKE_CURRENT_SOURCE_DIR}/abi/snapshots/0.5.0/window_symbols.txt"
+        "-DGRANIT_ABI_EXPORT_TOOL=${granit_abi_export_tool}"
+        "-DGRANIT_ABI_EXPORT_TOOL_KIND=${granit_abi_export_tool_kind}"
+        "-DGRANIT_ABI_PRIVATE_EXPORTS=${CMAKE_CURRENT_SOURCE_DIR}/abi/snapshots/0.1.0/window_private_symbols.txt"
+        -P "${CMAKE_CURRENT_SOURCE_DIR}/abi/check_exported_symbols.cmake"
     )
     granit_add_abi_export_snapshot_test(input granit_input input_symbols.txt)
   endif()

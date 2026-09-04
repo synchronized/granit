@@ -173,6 +173,10 @@ void wayland_toplevel_configure(void* data, xdg_toplevel*, std::int32_t width, s
        window.configured_height != static_cast<std::uint32_t>(height))) {
     window.configured_width = static_cast<std::uint32_t>(width);
     window.configured_height = static_cast<std::uint32_t>(height);
+    window.width = window.configured_width;
+    window.height = window.configured_height;
+    window.framebuffer_width = window.configured_width;
+    window.framebuffer_height = window.configured_height;
     granit_window_event event = GRANIT_WINDOW_EVENT_INIT;
     event.type = GRANIT_WINDOW_EVENT_RESIZED;
     event.window = window.handle;
@@ -390,6 +394,10 @@ granit_result create_wayland_window(const std::shared_ptr<window_system_record>&
     record->system = system;
     record->configured_width = desc->width;
     record->configured_height = desc->height;
+    record->width = desc->width;
+    record->height = desc->height;
+    record->framebuffer_width = desc->width;
+    record->framebuffer_height = desc->height;
     record->wayland_surface = wl_compositor_create_surface(system->compositor);
     if (record->wayland_surface == nullptr)
       return GRANIT_ERROR_BACKEND_UNAVAILABLE;

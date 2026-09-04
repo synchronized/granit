@@ -16,7 +16,8 @@
 
 - Window System 拥有其创建的 Window；单独销毁 Window 会使句柄立即失效，销毁 Window System
   会级联销毁剩余 Window。
-- 原生窗口、Display、Connection 和 Surface 查询只借出值，不转移所有权。
+- 窗口状态查询只复制尺寸与缩放值；原生窗口、Display、Connection 和 Surface 查询只借出值，
+  不转移所有权。
 - 一个 Input System 借用并独占附着一个 Window System。Input System 必须先于 Window System
   销毁；单个 Window 可以在 Input System 前后销毁。仍附着 Input 时销毁 Window System 返回
   `GRANIT_ERROR_INVALID_ARGUMENT`。
@@ -30,8 +31,8 @@
 - 请求与当前平台或已选后端不匹配的原生值返回 `GRANIT_ERROR_UNSUPPORTED`，输出值清零。
 - 平台连接不可用返回 `GRANIT_ERROR_BACKEND_UNAVAILABLE`；事件队列为空返回
   `GRANIT_ERROR_NOT_READY`。
-- 创建失败时输出句柄为零。事件和状态查询在失败时返回已清零的已知字段，调用者只应在成功时
-  使用业务数据。
+- 创建失败时输出句柄为零。事件、窗口状态和输入状态查询在失败时返回已清零的已知字段，调用者
+  只应在成功时使用业务数据。
 
 ## `struct_size` 与输出容量
 

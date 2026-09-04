@@ -222,6 +222,30 @@ extern "C" granit_result granit_window_destroy(granit_window_system system_handl
 #endif
 }
 
+extern "C" granit_result granit_window_get_state(granit_window_system system_handle,
+                                                 granit_window window_handle,
+                                                 granit_window_state* state) {
+  if (state == nullptr || state->struct_size < GRANIT_WINDOW_STATE_VERSION_1_SIZE)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  *state = GRANIT_WINDOW_STATE_INIT;
+  auto system = acquire_system(system_handle);
+  if (!system)
+    return GRANIT_ERROR_INVALID_HANDLE;
+  if (!on_owner_thread(*system))
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  const auto found = system->windows.find(window_handle);
+  if (found == system->windows.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  const auto& window = *found->second;
+  state->width = window.width;
+  state->height = window.height;
+  state->framebuffer_width = window.framebuffer_width;
+  state->framebuffer_height = window.framebuffer_height;
+  state->content_scale_horizontal = window.content_scale_horizontal;
+  state->content_scale_vertical = window.content_scale_vertical;
+  return GRANIT_SUCCESS;
+}
+
 extern "C" granit_result
 granit_window_internal_attach_input(granit_window_system handle, void* user_data,
                                     granit_window_input_window_callback window_destroyed,

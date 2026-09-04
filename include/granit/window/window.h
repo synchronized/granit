@@ -97,6 +97,23 @@ typedef struct granit_window_event {
 #define GRANIT_WINDOW_EVENT_INIT                                                                   \
   {(uint32_t)sizeof(granit_window_event), UINT32_C(0), GRANIT_NULL_HANDLE, UINT64_C(0), {{0, 0}}}
 
+/** 窗口最近已知的尺寸与内容缩放状态。 */
+typedef struct granit_window_state {
+  uint32_t struct_size;
+  uint32_t reserved;
+  uint32_t width;
+  uint32_t height;
+  uint32_t framebuffer_width;
+  uint32_t framebuffer_height;
+  float content_scale_horizontal;
+  float content_scale_vertical;
+} granit_window_state;
+
+#define GRANIT_WINDOW_STATE_VERSION_1_SIZE ((uint32_t)sizeof(granit_window_state))
+#define GRANIT_WINDOW_STATE_INIT                                                                   \
+  {(uint32_t)sizeof(granit_window_state), UINT32_C(0), UINT32_C(0), UINT32_C(0), UINT32_C(0),       \
+   UINT32_C(0), 1.0F, 1.0F}
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -111,6 +128,10 @@ GRANIT_WINDOW_API granit_result granit_window_create(granit_window_system window
                                                      granit_window* window);
 GRANIT_WINDOW_API granit_result granit_window_destroy(granit_window_system window_system,
                                                       granit_window window);
+/** 查询最近一次平台事件处理后的窗口状态；必须在 Window System 创建线程调用。 */
+GRANIT_WINDOW_API granit_result granit_window_get_state(granit_window_system window_system,
+                                                        granit_window window,
+                                                        granit_window_state* state);
 GRANIT_WINDOW_API granit_result granit_window_get_win32(granit_window_system window_system,
                                                         granit_window window, void** instance,
                                                         void** native_window);

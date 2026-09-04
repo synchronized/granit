@@ -8,6 +8,11 @@
 
 ## Unreleased
 
+### 新增
+
+- Window 新增后端无关的当前状态查询，返回最近已知的内容尺寸、Framebuffer 尺寸与内容缩放，
+  便于宿主在首个缩放事件前初始化 UI 和呈现状态。
+
 ### 变更
 
 - C++ `granit::result` 改为轻量值结构，新增 `ok()`、`failed()`、`native()`、`message()` 和显式

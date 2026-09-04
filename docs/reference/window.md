@@ -6,7 +6,7 @@
 ## 当前状态
 
 Window 是独立可选 component，CMake 使用者目标为 `granit::window`。当前已实现 Win32、XCB 与
-Wayland Window System、顶层窗口、轮询事件和原生句柄查询。
+Wayland Window System、顶层窗口、轮询事件、当前状态和原生句柄查询。
 
 Window 不依赖 Renderer 或 Vulkan。应用可以只使用 Window，也可以把查询到的原生值交给
 Renderer Surface。
@@ -38,6 +38,20 @@ Win32 高 DPI 窗口创建期间临时使用 Per-Monitor V2 线程上下文，�
 XCB 后端接受高 DPI 标志，但在桌面缩放协议明确前不产生 Scale 事件。
 
 C++20 提供 move-only `granit::window_system` 和 `granit::window` RAII 包装，析构时调用对应 C API。
+
+## 当前状态查询
+
+`granit_window_get_state` 返回最近一次平台事件处理后的窗口状态：
+
+- `width`、`height`：平台窗口内容坐标中的当前尺寸。
+- `framebuffer_width`、`framebuffer_height`：创建或重建 Swapchain 时使用的像素尺寸。
+- `content_scale_horizontal`、`content_scale_vertical`：平台内容相对基础坐标的缩放比例。
+
+查询可以紧接窗口创建执行，不需要等待首个 Resize 或 Scale 事件。Win32 从当前窗口 DPI 初始化缩放；
+XCB 和未启用缩放协议的 Wayland 返回 1.0，内容尺寸与 Framebuffer 尺寸相同。应用仍应持续处理
+Resize 和 Scale 事件；查询反映最近一次已由 Granit 处理的平台状态，不主动阻塞等待新事件。
+
+C++ 使用 `granit::window::get_state`，输出类型为 `granit::window_state`。
 
 ## 事件轮询
 
@@ -89,5 +103,5 @@ Wayland Window 可通过 `granit_window_get_wayland` 借用 `wl_display*` 和 `w
 
 ## 线程约束
 
-Window System 记录创建线程。窗口创建、销毁、事件轮询和原生值查询必须在该线程执行；跨线程
+Window System 记录创建线程。窗口创建、销毁、事件轮询、状态和原生值查询必须在该线程执行；跨线程
 调用返回 `GRANIT_ERROR_INVALID_ARGUMENT`。销毁 Window System 会级联销毁仍存活的窗口。

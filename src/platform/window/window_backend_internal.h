@@ -32,6 +32,12 @@ struct window_system_record;
 struct window_record {
   granit_window handle{};
   std::weak_ptr<window_system_record> system;
+  std::uint32_t width{};
+  std::uint32_t height{};
+  std::uint32_t framebuffer_width{};
+  std::uint32_t framebuffer_height{};
+  float content_scale_horizontal{1.0F};
+  float content_scale_vertical{1.0F};
 #if defined(_WIN32)
   void* instance{};
   void* window{};
