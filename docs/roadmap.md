@@ -28,6 +28,7 @@
 | 八、稳定化与跨平台 | 持续进行 | ABI 策略、诊断和更多平台 Surface 待后续推进 |
 | 九、多后端与 Web 平台 | 已完成 | 桌面 Vulkan、浏览器 WebGPU 与私有 HAL 收敛已验收 |
 | 十、Android 移动平台 | 待开始 | 多后端边界已完成，等待规划 NDK、Surface 与移动生命周期 |
+| 十二、0.5.0 平台扩展与上游集成 | 待开始 | 完善现有平台嵌入边界与真实 Consumer 闭环 |
 
 ## 一、工程与 ABI 基础
 
@@ -223,15 +224,23 @@
 - **S-14 / P2 / 条件性**：仅当至少两个非示例 Consumer 需要复用，且 S-13 已验证 CPU 数据模型后，
   再将示例加载器提升为可安装的 `granit::integration_gltf`；此前不承诺公共 glTF SDK。
 
+## 十二、0.5.0 平台扩展与上游集成
+
+**状态：待开始；Android 明确延期。**
+
+- **[S-18](plans/S-18-0.5.0-platform-upstream-integration.md) / P1**：以 Gneiss 等真实 Consumer 的
+  接入问题为输入，完善现有桌面与浏览器平台的宿主循环、Surface、输入、资源生命周期、诊断和
+  安装 SDK 契约；只沉淀后端无关的通用能力。
+- Android 继续保留为独立 S-11，不属于 0.5.0 当前范围；glTF Integration 和高级渲染功能仍遵守
+  各自的需求触发条件。
+
 ## 近期执行顺序
 
-1. S-16 已完成桌面 Dawn 和动态 Provider 删除，以及 Vulkan 与浏览器 WebGPU 回归。
-2. [S-17](plans/S-17-render-pipeline-internal-structure.md) 已完成 Render Pipeline 内部职责收敛，
-   公共 API/ABI 与渲染行为保持不变。
-3. S-15 已按 S-16 新边界完成 HAL 实现与跨平台验收。
-4. S-14 只在复用条件成立后启动；不要为当前单个示例提前稳定 glTF 公共 API。
-5. S-06D 最终验收等待稳定版本与 component 范围决策；不在 0.x 阶段提前宣布稳定。
-6. H-09 的透明 PBR、CSM、Clustered Forward 与 Bindless 只在各自重新评估条件满足后独立恢复，
+1. [S-18](plans/S-18-0.5.0-platform-upstream-integration.md) 先建立真实上游接入基线，再按最小复现
+   补齐现有平台嵌入、资源生命周期、诊断和安装 Consumer；0.5.0 暂不接入 Android。
+2. S-14 只在复用条件成立后启动；不要为当前单个示例提前稳定 glTF 公共 API。
+3. S-06D 最终验收等待稳定版本与 component 范围决策；不在 0.x 阶段提前宣布稳定。
+4. H-09 的透明 PBR、CSM、Clustered Forward 与 Bindless 只在各自重新评估条件满足后独立恢复，
    不作为当前稳定化工作的前置项。
 
 若前置抽象不足，应先更新对应 Plan 和本路线图状态，再扩大公共 API。
