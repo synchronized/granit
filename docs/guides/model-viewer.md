@@ -73,6 +73,9 @@ glTF IBL Sampler 修订号记录在 manifest 中。
 仍然可读；传入 GRENV v2 则使用预处理的高质量环境及其推荐光照参数进行跨后端图像验收。
 查看器默认使用方向光作为主光，并以低强度环境光补充暗部和金属反射；两者均可在 Lighting 面板调整。
 
+桌面查看器会在后台读取和解析 glTF、解码纹理，并在主线程持续显示阶段进度和处理窗口事件。
+GPU 资源上传仍在主线程执行，加载页会在上传开始前显示当前阶段；`--no-ui` 模式保持同步等待行为。
+
 资产来自 Khronos glTF Sample Assets，模型使用 CC0-1.0。锁定版本和第三方通知见
 [`FlightHelmet.manifest.json`](../../examples/assets/FlightHelmet.manifest.json) 与
 [`THIRD_PARTY_NOTICES.md`](../../examples/common/gltf/THIRD_PARTY_NOTICES.md)。

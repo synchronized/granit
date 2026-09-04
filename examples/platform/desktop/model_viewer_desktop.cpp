@@ -21,12 +21,14 @@
 #include <granit/pipeline/render_pipeline.hpp>
 
 #include <algorithm>
+#include <atomic>
 #include <chrono>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <filesystem>
 #include <fstream>
+#include <future>
 #include <iomanip>
 #include <iostream>
 #include <limits>
@@ -234,6 +236,73 @@ void print_usage() {
                "[--present-mode=fifo|immediate] [--profile-output <文件.json>]\n";
 }
 
+bool loading_needs_srgb_encoding(granit::texture_format format) noexcept {
+  return format == granit::texture_format::rgba8_unorm ||
+         format == granit::texture_format::bgra8_unorm;
+}
+
+granit::result render_loading_frame(granit::swapchain& swapchain,
+                                    const granit::swapchain_info& swapchain_info,
+                                    granit::frame_context& frame_context,
+                                    granit::canvas_draw_list& canvas,
+                                    granit::example::model_viewer::texture_registry& textures,
+                                    const char* stage, float progress) {
+  ImGui_ImplSDL3_NewFrame();
+  ImGui::NewFrame();
+  const ImVec2 panel_size{420.0F, 118.0F};
+  ImGui::SetNextWindowPos({(static_cast<float>(swapchain_info.width) - panel_size.x) * 0.5F,
+                           (static_cast<float>(swapchain_info.height) - panel_size.y) * 0.5F});
+  ImGui::SetNextWindowSize(panel_size);
+  constexpr auto flags = ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize |
+                         ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoSavedSettings;
+  ImGui::Begin("正在加载模型", nullptr, flags);
+  ImGui::TextUnformatted(stage);
+  ImGui::Spacing();
+  ImGui::ProgressBar(progress, {-1.0F, 0.0F});
+  ImGui::TextDisabled("窗口仍可响应；大型纹理的解码可能需要一些时间");
+  ImGui::End();
+  ImGui::Render();
+
+  auto result = canvas.clear();
+  if (result.ok()) {
+    result = granit::integration::imgui::append_draw_data(
+        ImGui::GetDrawData(), canvas, granit::example::model_viewer::texture_registry::resolver,
+        &textures);
+  }
+  granit::acquired_frame frame;
+  if (result.ok())
+    result = swapchain.acquire(frame);
+  granit_texture backbuffer = GRANIT_NULL_HANDLE;
+  granit_texture_view backbuffer_view = GRANIT_NULL_HANDLE;
+  if (result.ok())
+    result = swapchain.backbuffer(frame.image_index, backbuffer, backbuffer_view);
+  granit::frame_recording recording;
+  if (result.ok())
+    result = frame_context.begin(frame, recording);
+  if (result.ok()) {
+    granit_canvas_record_desc record = GRANIT_CANVAS_RECORD_DESC_INIT;
+    record.color = backbuffer_view;
+    record.color_format = static_cast<granit_texture_format>(swapchain_info.format);
+    record.width = swapchain_info.width;
+    record.height = swapchain_info.height;
+    record.load_operation = GRANIT_ATTACHMENT_LOAD_OPERATION_CLEAR;
+    record.encode_srgb = loading_needs_srgb_encoding(swapchain_info.format) ? 1U : 0U;
+    record.frame_slot = recording.frame_slot();
+    result = canvas.record(recording.recorder().native_handle(), record);
+  }
+  if (result.ok())
+    result = recording.submit();
+  if (result.ok())
+    result = swapchain.present(frame);
+  if (result.failed()) {
+    if (recording.valid())
+      static_cast<void>(recording.abort());
+    if (frame.valid())
+      static_cast<void>(swapchain.cancel(frame));
+  }
+  return result;
+}
+
 } // namespace
 
 int main(int argc, char** argv) {
@@ -338,22 +407,94 @@ int main(int argc, char** argv) {
     result = granit::result::unsupported;
   }
 
-  const std::filesystem::path asset_path(options.asset_path);
-  std::vector<std::byte> asset_bytes;
-  if (result.ok() && !read_file(asset_path, asset_bytes))
-    result = granit::result::invalid_argument;
-  file_resolver resolver(asset_path.parent_path());
-  if (result.ok())
-    result = core.load_asset(asset_bytes, &resolver);
-  std::vector<std::byte> environment_bytes;
-  if (result.ok() && !options.environment_path.empty() &&
-      !read_file(options.environment_path, environment_bytes)) {
-    std::cerr << "无法读取环境包：" << options.environment_path << '\n';
-    result = granit::result::invalid_argument;
+  granit::frame_context loading_frame_context;
+  if (result.ok() && options.show_ui)
+    result = loading_frame_context.initialize(renderer.native_handle());
+  if (result.ok() && options.show_ui)
+    result = upload_font_atlas(renderer.native_handle(), font_texture, font_view, font_sampler);
+  ImTextureID font_texture_id = ImTextureID_Invalid;
+  if (result.ok() && options.show_ui) {
+    result = textures.register_texture(font_view.native_handle(), font_sampler.native_handle(),
+                                       font_texture_id);
   }
+  if (result.ok() && options.show_ui) {
+    ImGui::GetIO().Fonts->SetTexID(font_texture_id);
+    ImGui::GetIO().Fonts->TexRef._TexData->SetStatus(ImTextureStatus_OK);
+    granit_canvas_draw_list_desc canvas_desc = GRANIT_CANVAS_DRAW_LIST_DESC_INIT;
+    result = canvas.initialize(renderer.native_handle(), canvas_desc);
+  }
+
+  const std::filesystem::path asset_path(options.asset_path);
+  std::vector<std::byte> environment_bytes;
+  std::atomic<unsigned> loading_stage{0};
+  std::future<granit::result> cpu_loading;
+  if (result.ok()) {
+    cpu_loading = std::async(std::launch::async, [&] {
+      loading_stage.store(1, std::memory_order_release);
+      std::vector<std::byte> asset_bytes;
+      if (!read_file(asset_path, asset_bytes))
+        return granit::result::invalid_argument;
+      loading_stage.store(2, std::memory_order_release);
+      if (!options.environment_path.empty() &&
+          !read_file(options.environment_path, environment_bytes)) {
+        return granit::result::invalid_argument;
+      }
+      loading_stage.store(3, std::memory_order_release);
+      file_resolver resolver(asset_path.parent_path());
+      const auto load_result = core.load_asset(asset_bytes, &resolver);
+      loading_stage.store(4, std::memory_order_release);
+      return load_result;
+    });
+  }
+  bool loading_cancelled = false;
+  while (result.ok() && cpu_loading.valid() &&
+         cpu_loading.wait_for(std::chrono::milliseconds{0}) != std::future_status::ready) {
+    SDL_Event event{};
+    while (SDL_PollEvent(&event)) {
+      ImGui_ImplSDL3_ProcessEvent(&event);
+      if (event.type == SDL_EVENT_QUIT || event.type == SDL_EVENT_WINDOW_CLOSE_REQUESTED)
+        loading_cancelled = true;
+      else if (event.type == SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED) {
+        pixel_width = event.window.data1;
+        pixel_height = event.window.data2;
+        if (pixel_width > 0 && pixel_height > 0) {
+          result = swapchain.recreate({.width = static_cast<std::uint32_t>(pixel_width),
+                                       .height = static_cast<std::uint32_t>(pixel_height),
+                                       .presentation = options.presentation});
+          if (result.ok())
+            result = swapchain.query_info(swapchain_info);
+        }
+      }
+    }
+    if (result.failed() || loading_cancelled || !options.show_ui)
+      break;
+    const auto stage = loading_stage.load(std::memory_order_acquire);
+    const char* label = stage <= 1   ? "正在读取模型文件……"
+                        : stage == 2 ? "正在读取环境资源……"
+                                     : "正在解析 glTF 并解码纹理……";
+    const auto progress = stage <= 1 ? 0.10F : stage == 2 ? 0.20F : 0.35F;
+    result = render_loading_frame(swapchain, swapchain_info, loading_frame_context, canvas,
+                                  textures, label, progress);
+    if (result == granit::result::out_of_date)
+      result = granit::result::success;
+    SDL_Delay(16);
+  }
+  if (cpu_loading.valid()) {
+    const auto load_result = cpu_loading.get();
+    if (result.ok())
+      result = load_result;
+  }
+  if (result.ok() && loading_cancelled)
+    result = granit::result::not_ready;
+  if (result.ok() && options.show_ui)
+    result = render_loading_frame(swapchain, swapchain_info, loading_frame_context, canvas,
+                                  textures, "正在上传 Mesh、纹理与材质……", 0.72F);
   if (result.ok())
     result =
         core.upload(renderer.native_handle(), environment_bytes, render_quality.sampler_anisotropy);
+  if (result.ok() && options.show_ui)
+    result = render_loading_frame(swapchain, swapchain_info, loading_frame_context, canvas,
+                                  textures, "正在创建渲染管线……", 0.90F);
   granit_render_pipeline_desc pipeline_desc = GRANIT_RENDER_PIPELINE_DESC_INIT;
   pipeline_desc.sample_count = render_quality.sample_count;
   pipeline_desc.enable_fxaa = render_quality.enable_fxaa;
@@ -367,19 +508,6 @@ int main(int argc, char** argv) {
       gpu_metrics_enabled = true;
     else if (metrics_result != granit::result::unsupported)
       result = metrics_result;
-  }
-  if (result.ok() && options.show_ui)
-    result = upload_font_atlas(renderer.native_handle(), font_texture, font_view, font_sampler);
-  ImTextureID font_texture_id = ImTextureID_Invalid;
-  if (result.ok() && options.show_ui) {
-    result = textures.register_texture(font_view.native_handle(), font_sampler.native_handle(),
-                                       font_texture_id);
-  }
-  if (result.ok() && options.show_ui) {
-    ImGui::GetIO().Fonts->SetTexID(font_texture_id);
-    ImGui::GetIO().Fonts->TexRef._TexData->SetStatus(ImTextureStatus_OK);
-    granit_canvas_draw_list_desc canvas_desc = GRANIT_CANVAS_DRAW_LIST_DESC_INIT;
-    result = canvas.initialize(renderer.native_handle(), canvas_desc);
   }
   std::vector<texture_preview> previews;
   const auto register_preview = [&](const granit::example::gltf::texture_reference& reference,
@@ -417,6 +545,14 @@ int main(int argc, char** argv) {
   };
   if (result.ok() && options.show_ui)
     result = rebuild_previews();
+  if (result.ok() && options.show_ui)
+    result = render_loading_frame(swapchain, swapchain_info, loading_frame_context, canvas,
+                                  textures, "模型加载完成", 1.0F);
+  if (loading_frame_context.valid()) {
+    const auto reset_result = loading_frame_context.reset();
+    if (result.ok())
+      result = reset_result;
+  }
 
   if (result.failed()) {
     std::cerr << "模型查看器初始化失败：" << granit::result_message(result);
