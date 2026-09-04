@@ -221,6 +221,8 @@
 - **[S-15](plans/S-15-internal-hal-structure.md) / P1**：整理现有私有 HAL；在 Renderer 注册时集中
   发现能力接口，收敛 Registry 依赖，并明确契约和具体后端的目录职责。公共 API/ABI 和
   后端选择行为保持不变。
+- **[S-19](plans/S-19-model-viewer-render-thread.md) / P1**：为 Model Viewer 建立自有数据的
+  Frame Packet 和私有执行器；桌面 Vulkan 后续使用有界渲染线程，浏览器保持同步执行。
 - **S-14 / P2 / 条件性**：仅当至少两个非示例 Consumer 需要复用，且 S-13 已验证 CPU 数据模型后，
   再将示例加载器提升为可安装的 `granit::integration_gltf`；此前不承诺公共 glTF SDK。
 

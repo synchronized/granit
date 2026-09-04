@@ -39,6 +39,25 @@ camera_bounds scene_bounds(const gpu_scene_plan& plan, std::uint32_t selected_no
 
 } // namespace
 
+granit_render_pipeline_render_desc
+frame_packet::render_desc(granit_texture_view output, granit_texture_format output_format,
+                          granit_frame frame, granit_canvas_draw_list canvas) const noexcept {
+  granit_render_pipeline_render_desc desc = GRANIT_RENDER_PIPELINE_RENDER_DESC_INIT;
+  desc.scene = snapshot.native_handle();
+  desc.output = output;
+  desc.output_format = output_format;
+  desc.width = width;
+  desc.height = height;
+  desc.exposure_ev = exposure_ev;
+  desc.draw_binding_count = static_cast<std::uint32_t>(draw_bindings.size());
+  desc.draw_bindings = draw_bindings.data();
+  desc.frame = frame;
+  desc.canvas = canvas;
+  desc.clear_color = clear_color;
+  desc.environment = &environment;
+  return desc;
+}
+
 granit::result application_core::begin_renderer() noexcept {
   if (phase_ != application_phase::platform_ready)
     return granit::result::invalid_argument;
@@ -128,8 +147,7 @@ granit::result application_core::reupload_scene(granit_renderer renderer,
   return gpu_scene_.initialize(renderer, cpu_scene_, sampler_anisotropy);
 }
 
-granit::result application_core::tick(const application_tick_input& input,
-                                      application_tick_output& output) {
+granit::result application_core::tick(const application_tick_input& input, frame_packet& output) {
   if (phase_ != application_phase::ready)
     return granit::result::invalid_argument;
   if (input.width == 0 || input.height == 0)
@@ -179,23 +197,24 @@ granit::result application_core::tick(const application_tick_input& input,
       .radiance = light_state.radiance,
       .layer_mask = std::numeric_limits<std::uint64_t>::max()};
 
-  application_tick_output candidate;
+  frame_packet candidate;
   const auto snapshot_result = gpu_scene_.create_snapshot(std::span{&view, 1}, std::span{&light, 1},
                                                           {}, {}, candidate.snapshot);
   if (snapshot_result.failed())
     return snapshot_result;
-  candidate.render.scene = candidate.snapshot.native_handle();
-  candidate.render.width = input.width;
-  candidate.render.height = input.height;
-  candidate.render.exposure_ev = state_.exposure_ev();
+  candidate.width = input.width;
+  candidate.height = input.height;
+  candidate.exposure_ev = state_.exposure_ev();
   const auto background = state_.background_color();
-  candidate.render.clear_color = {background.x, background.y, background.z, 1.0F};
+  candidate.clear_color = {background.x, background.y, background.z, 1.0F};
   environment_.environment().intensity = state_.environment_intensity();
   environment_.environment().rotation_radians = state_.environment_rotation_radians();
-  candidate.render.environment = &environment_.environment();
-  candidate.render.draw_binding_count =
-      static_cast<std::uint32_t>(gpu_scene_.draw_bindings().size());
-  candidate.render.draw_bindings = gpu_scene_.draw_bindings().data();
+  candidate.environment = environment_.environment();
+  try {
+    candidate.draw_bindings = gpu_scene_.draw_bindings();
+  } catch (const std::bad_alloc&) {
+    return granit::result::out_of_memory;
+  }
   if (input.performance)
     performance_.push(*input.performance);
   output = std::move(candidate);

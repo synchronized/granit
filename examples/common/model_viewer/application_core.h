@@ -13,6 +13,7 @@
 #include <optional>
 #include <span>
 #include <string>
+#include <vector>
 
 namespace granit::example::model_viewer {
 
@@ -34,10 +35,21 @@ struct application_tick_input {
   std::optional<performance_sample> performance;
 };
 
-/** Core 生成的单帧不可变 Scene 与待补齐平台输出的渲染描述。 */
-struct application_tick_output {
+/** Core 生成的单帧不可变提交包；其数组和环境数据不借用下一帧可变状态。 */
+struct frame_packet {
   granit::scene_snapshot snapshot;
-  granit_render_pipeline_render_desc render = GRANIT_RENDER_PIPELINE_RENDER_DESC_INIT;
+  granit_render_pipeline_environment environment = GRANIT_RENDER_PIPELINE_ENVIRONMENT_INIT;
+  std::vector<granit_render_pipeline_draw_binding> draw_bindings;
+  std::uint32_t width{};
+  std::uint32_t height{};
+  float exposure_ev{};
+  granit_clear_color_value clear_color{0.0F, 0.0F, 0.0F, 1.0F};
+
+  /** 在消费线程生成只借用当前提交包的渲染描述。 */
+  [[nodiscard]] granit_render_pipeline_render_desc
+  render_desc(granit_texture_view output, granit_texture_format output_format,
+              granit_frame frame = GRANIT_NULL_HANDLE,
+              granit_canvas_draw_list canvas = GRANIT_NULL_HANDLE) const noexcept;
 };
 
 class application_core {
@@ -55,8 +67,7 @@ public:
                                       void* progress_user_data = nullptr);
   /** 按新采样质量事务式重建 GPU Scene；环境资源与查看器状态保持不变。 */
   [[nodiscard]] granit::result reupload_scene(granit_renderer renderer, float sampler_anisotropy);
-  [[nodiscard]] granit::result tick(const application_tick_input& input,
-                                    application_tick_output& output);
+  [[nodiscard]] granit::result tick(const application_tick_input& input, frame_packet& output);
   void fail(granit::result result, std::string diagnostic);
   void reset() noexcept;
 

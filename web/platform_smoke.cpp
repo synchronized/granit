@@ -580,7 +580,7 @@ granit_result render_model_viewer_frame() {
     result = granit_swapchain_get_backbuffer(state.renderer, state.swapchain, image_index,
                                              &backbuffer, &backbuffer_view);
   }
-  granit::example::model_viewer::application_tick_output output;
+  granit::example::model_viewer::frame_packet output;
   granit::example::model_viewer::application_tick_input input;
   input.input = state.input.finish(false, false);
   if (input.input.pointer_delta_x != 0.0F || input.input.pointer_delta_y != 0.0F ||
@@ -592,10 +592,8 @@ granit_result render_model_viewer_frame() {
   if (result == GRANIT_SUCCESS)
     result = granit::to_native(state.core.tick(input, output));
   if (result == GRANIT_SUCCESS) {
-    output.render.output = backbuffer_view;
-    output.render.output_format = info.format;
-    output.render.frame = frame;
-    result = granit_render_pipeline_render(state.renderer, state.pipeline, &output.render);
+    const auto render = output.render_desc(backbuffer_view, info.format, frame);
+    result = granit_render_pipeline_render(state.renderer, state.pipeline, &render);
   }
   if (result != GRANIT_SUCCESS) {
     if (frame != GRANIT_NULL_HANDLE)

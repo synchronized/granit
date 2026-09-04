@@ -801,7 +801,7 @@ int main(int argc, char** argv) {
     granit_texture backbuffer = GRANIT_NULL_HANDLE;
     granit_texture_view backbuffer_view = GRANIT_NULL_HANDLE;
     result = swapchain.backbuffer(frame.image_index, backbuffer, backbuffer_view);
-    application_tick_output tick_output;
+    frame_packet tick_output;
     application_tick_input tick_input;
     tick_input.input = input_adapter.finish(options.show_ui && ImGui::GetIO().WantCaptureMouse,
                                             options.show_ui && ImGui::GetIO().WantCaptureKeyboard);
@@ -820,11 +820,10 @@ int main(int argc, char** argv) {
       }
     }
     if (result.ok()) {
-      tick_output.render.output = backbuffer_view;
-      tick_output.render.output_format = static_cast<granit_texture_format>(swapchain_info.format);
-      tick_output.render.frame = frame.handle;
-      tick_output.render.canvas = options.show_ui ? canvas.native_handle() : GRANIT_NULL_HANDLE;
-      result = pipeline.render(tick_output.render);
+      const auto render = tick_output.render_desc(
+          backbuffer_view, static_cast<granit_texture_format>(swapchain_info.format), frame.handle,
+          options.show_ui ? canvas.native_handle() : GRANIT_NULL_HANDLE);
+      result = pipeline.render(render);
     }
     if (result.failed()) {
       const auto frame_result = result;

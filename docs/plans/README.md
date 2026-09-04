@@ -144,6 +144,8 @@ D-03-graphics-pipeline.md
   拆分提交数据、Forward/Shadow/Tone Mapping 录制与 GPU 指标管理，公共 API/ABI 保持不变。
 - [S-18：0.5.0 平台扩展与上游集成](S-18-0.5.0-platform-upstream-integration.md)——已确认；以真实
   Consumer 接入问题完善现有平台的宿主边界、资源契约、诊断和 SDK 验收，暂不接入 Android。
+- [S-19：Model Viewer 渲染线程](S-19-model-viewer-render-thread.md)——实现中；先建立示例私有的
+  不可变 Frame Packet，再增加桌面线程执行器，浏览器保持同步执行。
 
 ## 状态
 

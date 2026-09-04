@@ -29,6 +29,7 @@
 2. [路线图](roadmap.md)
 3. [Render Graph 边界](plans/P-06-render-graph-boundary.md)
 4. [高级参考渲染套件](plans/H-07-reference-render-pipeline.md)
+5. [Model Viewer 渲染线程计划](plans/S-19-model-viewer-render-thread.md)
 
 ### 参与开发
 

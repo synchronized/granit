@@ -85,7 +85,7 @@ TEST_CASE("模型查看器 Core 生成后端无关单帧描述", "[example][mode
   CHECK(core.reupload_scene(renderer.native_handle(), 0.0F) == granit::result::invalid_argument);
   CHECK(core.scene_gpu().meshes().front().native_handle() == rebuilt_mesh);
 
-  application_tick_output output;
+  frame_packet output;
   application_tick_input zero_sized;
   zero_sized.height = 480;
   CHECK(core.tick(zero_sized, output) == granit::result::not_ready);
@@ -96,19 +96,24 @@ TEST_CASE("模型查看器 Core 生成后端无关单帧描述", "[example][mode
   input.performance = sample;
   REQUIRE(core.tick(input, output) == granit::result::success);
   CHECK(output.snapshot.valid());
-  CHECK(output.render.scene == output.snapshot.native_handle());
-  CHECK(output.render.width == 640);
-  CHECK(output.render.height == 480);
-  CHECK(output.render.clear_color.red == Catch::Approx(0.025F));
-  CHECK(output.render.clear_color.green == Catch::Approx(0.04F));
-  CHECK(output.render.clear_color.blue == Catch::Approx(0.065F));
-  CHECK(output.render.draw_binding_count == 1);
-  CHECK(output.render.draw_bindings == core.scene_gpu().draw_bindings().data());
-  REQUIRE(output.render.environment != nullptr);
-  CHECK(output.render.environment->irradiance != GRANIT_NULL_HANDLE);
-  CHECK(output.render.environment->prefiltered_environment != GRANIT_NULL_HANDLE);
-  CHECK(output.render.environment->brdf_lut != GRANIT_NULL_HANDLE);
-  CHECK(output.render.environment->intensity == Catch::Approx(0.12F));
-  CHECK(output.render.environment->rotation_radians == Catch::Approx(0.0F));
+  const auto render = output.render_desc(11, GRANIT_TEXTURE_FORMAT_RGBA8_UNORM, 12, 13);
+  CHECK(render.scene == output.snapshot.native_handle());
+  CHECK(render.output == 11);
+  CHECK(render.frame == 12);
+  CHECK(render.canvas == 13);
+  CHECK(render.width == 640);
+  CHECK(render.height == 480);
+  CHECK(render.clear_color.red == Catch::Approx(0.025F));
+  CHECK(render.clear_color.green == Catch::Approx(0.04F));
+  CHECK(render.clear_color.blue == Catch::Approx(0.065F));
+  CHECK(render.draw_binding_count == 1);
+  CHECK(render.draw_bindings == output.draw_bindings.data());
+  CHECK(render.draw_bindings != core.scene_gpu().draw_bindings().data());
+  REQUIRE(render.environment == &output.environment);
+  CHECK(render.environment->irradiance != GRANIT_NULL_HANDLE);
+  CHECK(render.environment->prefiltered_environment != GRANIT_NULL_HANDLE);
+  CHECK(render.environment->brdf_lut != GRANIT_NULL_HANDLE);
+  CHECK(render.environment->intensity == Catch::Approx(0.12F));
+  CHECK(render.environment->rotation_radians == Catch::Approx(0.0F));
   CHECK(core.performance().size() == 1);
 }

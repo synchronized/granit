@@ -392,7 +392,7 @@ int main(int argc, char** argv) {
   granit::example::model_viewer::viewer_change diagnostic_change{};
   diagnostic_change.debug_display = arguments.debug_display;
   for (std::uint32_t frame = 0; frame < 3 && result.ok(); ++frame) {
-    granit::example::model_viewer::application_tick_output tick;
+    granit::example::model_viewer::frame_packet tick;
     stage = "更新固定相机场景";
     result = core.tick({.input = {},
                         .change = diagnostic_change,
@@ -402,10 +402,10 @@ int main(int argc, char** argv) {
                        tick);
     if (result.ok()) {
       stage = "渲染离屏帧";
-      tick.render.output = output_view.native_handle();
-      tick.render.output_format = GRANIT_TEXTURE_FORMAT_RGBA8_UNORM;
-      tick.render.clear_color = {0.0F, 0.0F, 0.0F, 1.0F};
-      result = pipeline.render(tick.render);
+      tick.clear_color = {0.0F, 0.0F, 0.0F, 1.0F};
+      const auto render =
+          tick.render_desc(output_view.native_handle(), GRANIT_TEXTURE_FORMAT_RGBA8_UNORM);
+      result = pipeline.render(render);
     }
   }
   if (result.failed()) {
