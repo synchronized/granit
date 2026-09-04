@@ -215,14 +215,18 @@
   为模型查看器接入许可明确、离线预处理的摄影棚环境光，并恢复金属材质的环境反射。
 - **[S-13I](plans/S-13I-render-quality.md) / P1**：统一 MSAA、FXAA、Specular AA、Mipmap 与各向异性
   过滤的能力查询、公开质量选项、查看器控制和三后端组合验收。
+- **[S-15](plans/S-15-internal-hal-structure.md) / P1**：整理现有私有 HAL；在 Renderer 注册时集中
+  发现能力接口，收敛 Registry 依赖，并明确契约、插件桥和具体后端的目录职责。公共 API/ABI 和
+  后端选择行为保持不变。
 - **S-14 / P2 / 条件性**：仅当至少两个非示例 Consumer 需要复用，且 S-13 已验证 CPU 数据模型后，
   再将示例加载器提升为可安装的 `granit::integration_gltf`；此前不承诺公共 glTF SDK。
 
 ## 近期执行顺序
 
-1. S-14 只在复用条件成立后启动；不要为当前单个示例提前稳定 glTF 公共 API。
-2. S-06D 最终验收等待稳定版本与 component 范围决策；不在 0.x 阶段提前宣布稳定。
-3. H-09 的透明 PBR、CSM、Clustered Forward 与 Bindless 只在各自重新评估条件满足后独立恢复，
+1. S-15 先完成 HAL 能力聚合、Registry 依赖收敛和内部目录整理，不改变公共 API/ABI。
+2. S-14 只在复用条件成立后启动；不要为当前单个示例提前稳定 glTF 公共 API。
+3. S-06D 最终验收等待稳定版本与 component 范围决策；不在 0.x 阶段提前宣布稳定。
+4. H-09 的透明 PBR、CSM、Clustered Forward 与 Bindless 只在各自重新评估条件满足后独立恢复，
    不作为当前稳定化工作的前置项。
 
 若前置抽象不足，应先更新对应 Plan 和本路线图状态，再扩大公共 API。

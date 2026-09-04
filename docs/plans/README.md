@@ -136,6 +136,8 @@ D-03-graphics-pipeline.md
   IBL 布局，为模型查看器补齐可再分发的摄影棚环境与跨后端验收。
 - [S-13I：跨后端渲染质量配置](S-13I-render-quality.md)——已完成；统一 MSAA、FXAA、Specular AA、
   Mipmap 与各向异性过滤的能力查询、公开选项和三后端验收。
+- [S-15：私有 HAL 结构整理](S-15-internal-hal-structure.md)——已确认；先集中后端能力发现与
+  Registry 依赖，再整理 HAL 契约、插件桥和具体后端目录。
 
 ## 状态
 
