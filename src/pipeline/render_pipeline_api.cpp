@@ -3,8 +3,8 @@
 
 #include <granit/pipeline/render_pipeline.h>
 
+#include "lighting/forward_pipeline_graph.h"
 #include "lighting/light_data.h"
-#include "lighting/reference_pipeline_graph.h"
 #include "lighting/shadow_ibl_resources.h"
 #include "lighting/tone_mapping_resources.h"
 #include "material/material_package.h"
@@ -717,7 +717,7 @@ render_view(pipeline_state& state, const granit_render_pipeline_render_desc& des
   std::optional<granit::render_graph::resource_id> shadow = graph.import_texture_view(
       state.shadow_view.native_handle(), false, "Reference Directional Shadow");
 
-  granit::lighting::reference_pipeline_graph_desc graph_desc;
+  granit::lighting::forward_pipeline_graph_desc graph_desc;
   graph_desc.pbr.color = use_msaa ? msaa_color : hdr;
   graph_desc.pbr.resolve_color = use_msaa ? hdr : granit::render_graph::invalid_resource_id;
   graph_desc.pbr.depth = depth;
@@ -824,7 +824,7 @@ render_view(pipeline_state& state, const granit_render_pipeline_render_desc& des
                                                        GRANIT_TIMESTAMP_STAGE_BOTTOM, first + 1);
     return result;
   };
-  granit::lighting::reference_pipeline_graph_callbacks callbacks;
+  granit::lighting::forward_pipeline_graph_callbacks callbacks;
   callbacks.pbr = [&](auto& context, const auto& frame, auto objects) {
     return measure(context.recorder(), 2, [&]() {
       if (state.record == nullptr) {
@@ -945,10 +945,10 @@ render_view(pipeline_state& state, const granit_render_pipeline_render_desc& des
     return granit_command_recorder_write_timestamp(state.renderer, context.recorder(), metrics_pool,
                                                    GRANIT_TIMESTAMP_STAGE_BOTTOM, 7);
   };
-  granit::lighting::reference_pipeline_graph_passes passes;
-  if (granit::lighting::add_reference_pipeline_graph(graph, std::move(graph_desc),
-                                                     std::move(callbacks), passes) !=
-      granit::lighting::reference_pipeline_graph_error::none) {
+  granit::lighting::forward_pipeline_graph_passes passes;
+  if (granit::lighting::add_forward_pipeline_graph(graph, std::move(graph_desc),
+                                                   std::move(callbacks), passes) !=
+      granit::lighting::forward_pipeline_graph_error::none) {
     return GRANIT_ERROR_INVALID_ARGUMENT;
   }
   auto overlay_dependency = passes.tone_mapping;

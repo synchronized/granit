@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include "lighting/reference_pipeline_graph.h"
+#include "lighting/forward_pipeline_graph.h"
 
 #include <granit/renderer/renderer.hpp>
 
@@ -30,7 +30,7 @@ bool environment_unavailable(granit::result value) {
 
 } // namespace
 
-TEST_CASE("参考管线Graph按Shadow PBR Tone Mapping排序") {
+TEST_CASE("前向管线图按Shadow PBR Tone Mapping排序") {
   granit::render_graph::serial_graph graph;
   const auto shadow = graph.create_transient_texture(
       texture_desc(GRANIT_TEXTURE_FORMAT_D32_FLOAT,
@@ -49,7 +49,7 @@ TEST_CASE("参考管线Graph按Shadow PBR Tone Mapping排序") {
       texture_desc(GRANIT_TEXTURE_FORMAT_RGBA8_UNORM, GRANIT_TEXTURE_USAGE_COLOR_ATTACHMENT_BIT),
       "Output");
 
-  granit::lighting::reference_pipeline_graph_desc desc;
+  granit::lighting::forward_pipeline_graph_desc desc;
   granit::lighting::directional_shadow_pass_desc shadow_desc;
   shadow_desc.depth = shadow;
   shadow_desc.casters.push_back({});
@@ -69,26 +69,26 @@ TEST_CASE("参考管线Graph按Shadow PBR Tone Mapping排序") {
       .tone_mapping = {.output_transfer =
                            granit::lighting::tone_mapping_output_transfer::shader_srgb}};
   std::vector<std::string> recorded;
-  granit::lighting::reference_pipeline_graph_callbacks callbacks{
-      .shadow =
-          [&](auto&, const auto&, auto) {
-            recorded.emplace_back("shadow");
-            return GRANIT_SUCCESS;
-          },
-      .pbr =
-          [&](auto&, const auto&, auto) {
-            recorded.emplace_back("pbr");
-            return GRANIT_SUCCESS;
-          },
-      .tone_mapping =
-          [&](auto&, const auto&) {
-            recorded.emplace_back("tone");
-            return GRANIT_SUCCESS;
-          }};
-  granit::lighting::reference_pipeline_graph_passes passes;
-  REQUIRE(granit::lighting::add_reference_pipeline_graph(graph, std::move(desc),
-                                                         std::move(callbacks), passes) ==
-          granit::lighting::reference_pipeline_graph_error::none);
+  granit::lighting::forward_pipeline_graph_callbacks callbacks{.shadow =
+                                                                   [&](auto&, const auto&, auto) {
+                                                                     recorded.emplace_back(
+                                                                         "shadow");
+                                                                     return GRANIT_SUCCESS;
+                                                                   },
+                                                               .pbr =
+                                                                   [&](auto&, const auto&, auto) {
+                                                                     recorded.emplace_back("pbr");
+                                                                     return GRANIT_SUCCESS;
+                                                                   },
+                                                               .tone_mapping =
+                                                                   [&](auto&, const auto&) {
+                                                                     recorded.emplace_back("tone");
+                                                                     return GRANIT_SUCCESS;
+                                                                   }};
+  granit::lighting::forward_pipeline_graph_passes passes;
+  REQUIRE(granit::lighting::add_forward_pipeline_graph(graph, std::move(desc), std::move(callbacks),
+                                                       passes) ==
+          granit::lighting::forward_pipeline_graph_error::none);
   CHECK(passes.shadow != granit::render_graph::invalid_pass_id);
   CHECK(passes.pbr != granit::render_graph::invalid_pass_id);
   CHECK(passes.tone_mapping != granit::render_graph::invalid_pass_id);
@@ -102,7 +102,7 @@ TEST_CASE("参考管线Graph按Shadow PBR Tone Mapping排序") {
       diagnostics.pass_names[diagnostics.compilation.execution_order[2]].ends_with("Tone Mapping"));
 
   granit::renderer renderer;
-  const auto initialized = renderer.initialize({.application_name = "granit-reference-graph"});
+  const auto initialized = renderer.initialize({.application_name = "granit-forward-graph"});
   if (environment_unavailable(initialized))
     SKIP("当前运行环境没有满足要求的 Vulkan 设备");
   REQUIRE(initialized == granit::result::success);
@@ -116,7 +116,7 @@ TEST_CASE("参考管线Graph按Shadow PBR Tone Mapping排序") {
   CHECK(recorded == std::vector<std::string>{expected.begin(), expected.end()});
 }
 
-TEST_CASE("参考管线Graph允许PBR读取外部Shadow而不创建Shadow Pass") {
+TEST_CASE("前向管线图允许PBR读取外部Shadow而不创建Shadow Pass") {
   granit::render_graph::serial_graph graph;
   const auto shadow = graph.import_texture_view(1, false, "External Shadow");
   const auto hdr = graph.create_transient_texture(
@@ -130,7 +130,7 @@ TEST_CASE("参考管线Graph允许PBR读取外部Shadow而不创建Shadow Pass")
   const auto output = graph.create_transient_texture(
       texture_desc(GRANIT_TEXTURE_FORMAT_RGBA8_UNORM, GRANIT_TEXTURE_USAGE_COLOR_ATTACHMENT_BIT),
       "Output");
-  granit::lighting::reference_pipeline_graph_desc desc;
+  granit::lighting::forward_pipeline_graph_desc desc;
   desc.pbr.color = hdr;
   desc.pbr.depth = depth;
   desc.pbr.shadow = shadow;
@@ -142,18 +142,18 @@ TEST_CASE("参考管线Graph允许PBR读取外部Shadow而不创建Shadow Pass")
   desc.tone_mapping.output_format = granit::texture_format::rgba8_unorm;
   desc.tone_mapping.tone_mapping.output_transfer =
       granit::lighting::tone_mapping_output_transfer::shader_srgb;
-  granit::lighting::reference_pipeline_graph_callbacks callbacks;
+  granit::lighting::forward_pipeline_graph_callbacks callbacks;
   callbacks.pbr = [](auto&, const auto&, auto) { return GRANIT_SUCCESS; };
   callbacks.tone_mapping = [](auto&, const auto&) { return GRANIT_SUCCESS; };
-  granit::lighting::reference_pipeline_graph_passes passes;
-  REQUIRE(granit::lighting::add_reference_pipeline_graph(graph, std::move(desc),
-                                                         std::move(callbacks), passes) ==
-          granit::lighting::reference_pipeline_graph_error::none);
+  granit::lighting::forward_pipeline_graph_passes passes;
+  REQUIRE(granit::lighting::add_forward_pipeline_graph(graph, std::move(desc), std::move(callbacks),
+                                                       passes) ==
+          granit::lighting::forward_pipeline_graph_error::none);
   CHECK(passes.shadow == granit::render_graph::invalid_pass_id);
   CHECK(graph.diagnostics().compilation.succeeded());
 }
 
-TEST_CASE("参考管线Graph拒绝不一致资源且不修改输出") {
+TEST_CASE("前向管线图拒绝不一致资源且不修改输出") {
   granit::render_graph::serial_graph graph;
   const auto first = graph.create_transient_texture(
       texture_desc(GRANIT_TEXTURE_FORMAT_RGBA16_FLOAT, GRANIT_TEXTURE_USAGE_COLOR_ATTACHMENT_BIT),
@@ -167,11 +167,11 @@ TEST_CASE("参考管线Graph拒绝不一致资源且不修改输出") {
   const auto output = graph.create_transient_texture(
       texture_desc(GRANIT_TEXTURE_FORMAT_RGBA8_UNORM, GRANIT_TEXTURE_USAGE_COLOR_ATTACHMENT_BIT),
       "Output");
-  granit::lighting::reference_pipeline_graph_passes passes{.pbr = 42};
-  granit::lighting::reference_pipeline_graph_callbacks callbacks;
+  granit::lighting::forward_pipeline_graph_passes passes{.pbr = 42};
+  granit::lighting::forward_pipeline_graph_callbacks callbacks;
   callbacks.pbr = [](auto&, const auto&, auto) { return GRANIT_SUCCESS; };
   callbacks.tone_mapping = [](auto&, const auto&) { return GRANIT_SUCCESS; };
-  granit::lighting::reference_pipeline_graph_desc desc;
+  granit::lighting::forward_pipeline_graph_desc desc;
   desc.pbr.color = first;
   desc.pbr.depth = depth;
   desc.tone_mapping.hdr_color = second;
@@ -179,17 +179,17 @@ TEST_CASE("参考管线Graph拒绝不一致资源且不修改输出") {
   desc.tone_mapping.output_format = granit::texture_format::rgba8_unorm;
   desc.tone_mapping.tone_mapping.output_transfer =
       granit::lighting::tone_mapping_output_transfer::shader_srgb;
-  CHECK(granit::lighting::add_reference_pipeline_graph(graph, std::move(desc), std::move(callbacks),
-                                                       passes) ==
-        granit::lighting::reference_pipeline_graph_error::inconsistent_resource);
+  CHECK(granit::lighting::add_forward_pipeline_graph(graph, std::move(desc), std::move(callbacks),
+                                                     passes) ==
+        granit::lighting::forward_pipeline_graph_error::inconsistent_resource);
   CHECK(passes.pbr == 42);
   CHECK(graph.diagnostics().compilation.execution_order.empty());
 }
 
-TEST_CASE("参考管线Graph连续两千帧回收瞬态资源") {
+TEST_CASE("前向管线图连续两千帧回收瞬态资源") {
   granit::renderer renderer;
   const auto initialized = renderer.initialize(
-      {.application_name = "granit-reference-graph-stress", .enable_validation = true});
+      {.application_name = "granit-forward-graph-stress", .enable_validation = true});
   if (environment_unavailable(initialized))
     SKIP("当前运行环境没有满足要求的 Vulkan 设备");
   REQUIRE(initialized == granit::result::success);
@@ -218,7 +218,7 @@ TEST_CASE("参考管线Graph连续两千帧回收瞬态资源") {
     const auto depth = graph.create_transient_texture(depth_desc, "Depth");
     const auto output = graph.create_transient_texture(output_desc, "Output");
 
-    granit::lighting::reference_pipeline_graph_desc desc;
+    granit::lighting::forward_pipeline_graph_desc desc;
     desc.pbr.color = hdr;
     desc.pbr.depth = depth;
     desc.pbr.view.view_projection = {1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1};
@@ -232,7 +232,7 @@ TEST_CASE("参考管线Graph连续两千帧回收瞬态资源") {
     desc.tone_mapping.tone_mapping.exposure_ev = static_cast<float>(frame % 5) - 2.0F;
     desc.tone_mapping.tone_mapping.output_transfer =
         granit::lighting::tone_mapping_output_transfer::shader_srgb;
-    granit::lighting::reference_pipeline_graph_callbacks callbacks;
+    granit::lighting::forward_pipeline_graph_callbacks callbacks;
     callbacks.pbr = [&](auto&, const auto&, auto) {
       ++pbr_calls;
       return GRANIT_SUCCESS;
@@ -241,10 +241,10 @@ TEST_CASE("参考管线Graph连续两千帧回收瞬态资源") {
       ++tone_calls;
       return GRANIT_SUCCESS;
     };
-    granit::lighting::reference_pipeline_graph_passes passes;
-    REQUIRE(granit::lighting::add_reference_pipeline_graph(graph, std::move(desc),
-                                                           std::move(callbacks), passes) ==
-            granit::lighting::reference_pipeline_graph_error::none);
+    granit::lighting::forward_pipeline_graph_passes passes;
+    REQUIRE(granit::lighting::add_forward_pipeline_graph(graph, std::move(desc),
+                                                         std::move(callbacks), passes) ==
+            granit::lighting::forward_pipeline_graph_error::none);
     const auto result = graph.execute(renderer.native_handle());
     REQUIRE(result.succeeded());
     REQUIRE(granit_command_recorder_destroy(renderer.native_handle(), result.recorder) ==

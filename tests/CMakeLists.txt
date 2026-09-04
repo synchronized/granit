@@ -314,7 +314,7 @@ add_executable(
   lighting/light_data_test.cpp
   lighting/lighting_reference_test.cpp
   lighting/multi_view_gpu_test.cpp
-  lighting/reference_pipeline_graph_test.cpp
+  lighting/forward_pipeline_graph_test.cpp
   lighting/shadow_resources_test.cpp
   lighting/shadow_ibl_resources_test.cpp
   lighting/shadow_reference_test.cpp
