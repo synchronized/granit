@@ -5,7 +5,7 @@
 
 ## 状态
 
-- 实现状态：实现中
+- 实现状态：已完成
 - 前置依赖：S-10、S-12、S-15
 - 优先级：P1
 
@@ -48,7 +48,7 @@ Registry、Shader 资产与浏览器模型查看器。
 
 ### S-16C：验收
 
-**状态：进行中；Windows 与浏览器已完成，Linux 待手动 Actions。**
+**状态：已完成。**
 
 1. Windows/Linux Vulkan 完整构建、测试和安装 Consumer 通过。
 2. Emscripten 浏览器 Fixture、输入和 model-viewer 测试通过。
@@ -61,6 +61,8 @@ Registry、Shader 资产与浏览器模型查看器。
 - Emscripten Release 构建通过；Chrome WebGPU 多帧渲染、质量切换、输入、Resize、资产 Fetch、
   资源释放和失败诊断通过。
 - 边界检查已锁定桌面 CMake 不得重新引入 WebGPU Provider，并要求浏览器目标保留静态实现。
+- Linux GCC/Clang 的共享与静态构建、完整测试、安装 Consumer，以及 SDL3/ImGui 的 X11/Wayland
+  集成测试均通过（Actions #33838960004）。
 
 ## 测试与验收
 

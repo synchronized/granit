@@ -5,7 +5,7 @@
 
 ## 状态
 
-- 实现状态：实现完成；最终 Linux 验收随 S-16 手动 Actions 统一执行
+- 实现状态：已完成
 - 前置依赖：S-10、S-12、S-13
 - 优先级：P1
 
@@ -80,7 +80,7 @@ src/backend/
 
 ### S-15D：文档与最终验收
 
-**状态：实现完成；Linux 待随 S-16 手动 Actions 验收。**
+**状态：已完成。**
 
 1. 更新架构 Concept，给出调用方向、必需/可选能力和插件边界。
 2. 保持 ADR-003 的既有决策不变；若实施发现需要改变决策，再新增替代 ADR。
@@ -95,7 +95,8 @@ src/backend/
 - Emscripten Release 构建、浏览器 WebGPU Fixture、输入、模型查看器与资源释放测试通过。
 - 静态边界检查覆盖 WebGPU 原生符号，并单独禁止 `src/renderer` 出现 Vulkan 原生符号。
 - 相对任务起点，公共头文件、ABI 和安装配置没有变化。
-- Linux 共享/静态 Vulkan 与安装 Consumer 待随 S-16 手动 Actions 统一验收。
+- Linux GCC/Clang 的共享与静态 Vulkan、安装 Consumer，以及 SDL3/ImGui 的 X11/Wayland 集成测试
+  均通过（Actions #33838960004）。
 
 ## 测试与验收
 
