@@ -21,18 +21,19 @@ granit_result renderer_registry::create_texture(granit_renderer renderer,
                                                 const granit_texture_desc& desc,
                                                 granit_texture& texture) {
   try {
-    auto owner = acquire_backend(renderer);
-    if (!owner)
+    const auto interfaces = acquire_backend_interfaces(renderer);
+    if (!interfaces)
       return GRANIT_ERROR_INVALID_HANDLE;
+    const auto& owner = interfaces->renderer;
     if ((owner->capabilities().framebuffer_sample_counts & desc.sample_count) == 0)
       return GRANIT_ERROR_UNSUPPORTED;
-    auto resource_api = std::dynamic_pointer_cast<backend_resource_renderer>(owner);
+    const auto& resource_api = interfaces->resources;
     if (!resource_api)
       return GRANIT_ERROR_UNSUPPORTED;
     auto record = std::make_shared<texture_record>();
     record->owner = owner;
     record->resource_api = resource_api;
-    record->retirement = std::dynamic_pointer_cast<backend_retirement_renderer>(owner);
+    record->retirement = interfaces->retirement;
     record->desc = desc;
     record->native = resource_api->allocate_texture_resource();
     const auto result = resource_api->create_texture(desc, *record->native);
@@ -199,7 +200,10 @@ granit_result renderer_registry::create_texture_view(granit_renderer renderer,
         return GRANIT_ERROR_INVALID_HANDLE;
       }
       owner = renderer_found->second;
-      resource_api = std::dynamic_pointer_cast<backend_resource_renderer>(owner);
+      const auto interfaces_found = backend_interfaces_.find(renderer);
+      if (interfaces_found == backend_interfaces_.end())
+        return GRANIT_ERROR_INTERNAL;
+      resource_api = interfaces_found->second->resources;
       if (!resource_api)
         return GRANIT_ERROR_UNSUPPORTED;
       if (handles_.find(texture, resource_type::texture, owner->domain()) == nullptr) {
@@ -236,7 +240,10 @@ granit_result renderer_registry::create_texture_view(granit_renderer renderer,
     auto record = std::make_shared<texture_view_record>();
     record->owner = owner;
     record->resource_api = resource_api;
-    record->retirement = std::dynamic_pointer_cast<backend_retirement_renderer>(owner);
+    const auto interfaces = acquire_backend_interfaces(renderer);
+    if (!interfaces || interfaces->renderer != owner)
+      return GRANIT_ERROR_INVALID_HANDLE;
+    record->retirement = interfaces->retirement;
     record->texture = parent;
     record->desc = desc;
     record->native = resource_api->allocate_texture_view_resource();
@@ -313,7 +320,10 @@ granit_result renderer_registry::destroy_texture(granit_renderer renderer, grani
         handles_.find(renderer, resource_type::renderer, 0) == nullptr)
       return GRANIT_ERROR_INVALID_HANDLE;
     const auto& owner = renderer_found->second;
-    diagnostics = std::dynamic_pointer_cast<backend_diagnostic_renderer>(owner);
+    const auto interfaces_found = backend_interfaces_.find(renderer);
+    if (interfaces_found == backend_interfaces_.end())
+      return GRANIT_ERROR_INTERNAL;
+    diagnostics = interfaces_found->second->diagnostics;
     if (handles_.find(texture, resource_type::texture, owner->domain()) == nullptr)
       return GRANIT_ERROR_INVALID_HANDLE;
     const auto found = textures_.find(texture);
@@ -363,19 +373,20 @@ granit_result renderer_registry::create_sampler(granit_renderer renderer,
                                                 const granit_sampler_desc& desc,
                                                 granit_sampler& sampler) {
   try {
-    auto owner = acquire_backend(renderer);
-    if (!owner)
+    const auto interfaces = acquire_backend_interfaces(renderer);
+    if (!interfaces)
       return GRANIT_ERROR_INVALID_HANDLE;
+    const auto& owner = interfaces->renderer;
     if (desc.anisotropy_enabled != 0 &&
         desc.max_anisotropy > owner->capabilities().max_sampler_anisotropy)
       return GRANIT_ERROR_UNSUPPORTED;
-    auto resource_api = std::dynamic_pointer_cast<backend_resource_renderer>(owner);
+    const auto& resource_api = interfaces->resources;
     if (!resource_api)
       return GRANIT_ERROR_UNSUPPORTED;
     auto record = std::make_shared<sampler_record>();
     record->owner = owner;
     record->resource_api = resource_api;
-    record->retirement = std::dynamic_pointer_cast<backend_retirement_renderer>(owner);
+    record->retirement = interfaces->retirement;
     record->compare_operation = desc.compare_operation;
     record->native = record->resource_api->allocate_sampler_resource();
     const auto result = record->resource_api->create_sampler(desc, *record->native);
