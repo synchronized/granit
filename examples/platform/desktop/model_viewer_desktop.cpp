@@ -38,6 +38,7 @@
 #include <span>
 #include <sstream>
 #include <string_view>
+#include <unordered_map>
 #include <vector>
 
 namespace {
@@ -385,6 +386,7 @@ struct desktop_frame_execution_context {
   granit::render_pipeline* pipeline{};
   std::array<granit::canvas_draw_list, 3>* canvases{};
   std::size_t next_canvas{};
+  bool metrics_enabled{};
 };
 
 granit::result execute_desktop_frame(granit::example::model_viewer::frame_packet&& packet,
@@ -436,6 +438,16 @@ granit::result execute_desktop_frame(granit::example::model_viewer::frame_packet
       std::chrono::duration<float, std::milli>(std::chrono::steady_clock::now() - present_begin)
           .count();
   output.needs_recreate = output.needs_recreate || frame.needs_recreate;
+  if (context.metrics_enabled) {
+    granit_render_pipeline_metrics metrics = GRANIT_RENDER_PIPELINE_METRICS_INIT;
+    const auto metrics_result = context.pipeline->get_metrics(metrics);
+    if (metrics_result.ok()) {
+      output.gpu_frame_ms = static_cast<float>(metrics.total_gpu_ns) / 1'000'000.0F;
+      output.gpu_timing_available = true;
+    } else if (metrics_result == granit::result::unsupported) {
+      context.metrics_enabled = false;
+    }
+  }
   return result;
 }
 
@@ -540,7 +552,7 @@ int main(int argc, char** argv) {
     result = swapchain.query_info(swapchain_info);
   desktop_frame_execution_context execution_context{&swapchain, &swapchain_info, &pipeline,
                                                     &frame_canvases};
-  inline_frame_executor frame_executor(execute_desktop_frame, &execution_context);
+  threaded_frame_executor frame_executor;
   if (result.ok() && !options.profile_output_path.empty() &&
       swapchain_info.presentation != options.presentation) {
     std::cerr << "性能采样要求的呈现模式不可用，后端回退到了其他模式\n";
@@ -665,6 +677,7 @@ int main(int argc, char** argv) {
     else if (metrics_result != granit::result::unsupported)
       result = metrics_result;
   }
+  execution_context.metrics_enabled = gpu_metrics_enabled;
   std::vector<texture_preview> previews;
   const auto register_preview = [&](const granit::example::gltf::texture_reference& reference,
                                     bool srgb) {
@@ -722,6 +735,11 @@ int main(int argc, char** argv) {
   const auto title =
       std::string("Granit Model Viewer | ") + backend_name + " | " + renderer_info.adapter_name;
   SDL_SetWindowTitle(window.get(), title.c_str());
+  result = frame_executor.initialize(execute_desktop_frame, &execution_context);
+  if (result.failed()) {
+    std::cerr << "模型查看器渲染线程初始化失败：" << granit::result_message(result) << '\n';
+    return 1;
+  }
 
   desktop::sdl3_input input_adapter;
   bool running = true;
@@ -733,8 +751,44 @@ int main(int argc, char** argv) {
     profile_samples.reserve(1000);
   performance_sample latest_sample;
   bool has_pending_sample = false;
+  std::unordered_map<std::uint64_t, float> producer_frame_times;
   while (running) {
     const auto cpu_begin = std::chrono::steady_clock::now();
+    frame_completion completed;
+    while (frame_executor.try_take_completion(completed)) {
+      const auto timing = producer_frame_times.find(completed.sequence);
+      const auto producer_frame_ms = timing == producer_frame_times.end() ? 0.0F : timing->second;
+      if (timing != producer_frame_times.end())
+        producer_frame_times.erase(timing);
+      if (completed.dropped)
+        continue;
+      recreate = recreate || completed.execution.needs_recreate;
+      const auto action = desktop::classify_presentation_result(completed.status);
+      if (action == desktop::presentation_action::recreate_swapchain)
+        recreate = true;
+      else if (action == desktop::presentation_action::recreate_surface)
+        recreate_surface = true;
+      else if (action == desktop::presentation_action::stop) {
+        result = completed.status;
+        running = false;
+        break;
+      }
+      if (action != desktop::presentation_action::proceed)
+        continue;
+      latest_sample = {.frames_per_second =
+                           producer_frame_ms > 0.0F ? 1000.0F / producer_frame_ms : 0.0F,
+                       .cpu_frame_ms = producer_frame_ms,
+                       .frame_slot_wait_ms = completed.execution.acquire_wait_ms,
+                       .present_wait_ms = completed.execution.present_wait_ms,
+                       .gpu_frame_ms = completed.execution.gpu_frame_ms,
+                       .gpu_timing_available = completed.execution.gpu_timing_available};
+      has_pending_sample = true;
+      if (!options.profile_output_path.empty() && rendered_frames >= 300)
+        profile_samples.push_back(latest_sample);
+      ++rendered_frames;
+    }
+    if (!running)
+      break;
     input_adapter.begin_frame();
     SDL_Event event{};
     while (SDL_PollEvent(&event)) {
@@ -755,6 +809,9 @@ int main(int argc, char** argv) {
       continue;
     }
     if (recreate_surface) {
+      result = frame_executor.flush();
+      if (result.failed())
+        break;
       if ((result = swapchain.reset()).failed() || (result = surface.reset()).failed() ||
           (result = granit::integration::sdl3::create_surface(renderer.native_handle(),
                                                               window.get(), surface))
@@ -771,6 +828,9 @@ int main(int argc, char** argv) {
       recreate = false;
     }
     if (recreate) {
+      result = frame_executor.flush();
+      if (result.failed())
+        break;
       result = swapchain.recreate({.width = static_cast<std::uint32_t>(pixel_width),
                                    .height = static_cast<std::uint32_t>(pixel_height),
                                    .presentation = options.presentation});
@@ -814,6 +874,9 @@ int main(int argc, char** argv) {
       break;
 
     if (changes.quality) {
+      result = frame_executor.flush();
+      if (result.failed())
+        break;
       granit_render_pipeline_desc replacement_desc = GRANIT_RENDER_PIPELINE_DESC_INIT;
       replacement_desc.sample_count = changes.quality->sample_count;
       replacement_desc.enable_fxaa = changes.quality->enable_fxaa;
@@ -832,11 +895,13 @@ int main(int argc, char** argv) {
         result = core.reupload_scene(renderer.native_handle(), changes.quality->sampler_anisotropy);
         if (result.ok() && options.show_ui)
           result = rebuild_previews();
+        ui_frame.clear();
       }
       if (result.ok()) {
         pipeline = std::move(replacement);
         render_quality = *changes.quality;
         gpu_metrics_enabled = replacement_metrics_enabled;
+        execution_context.metrics_enabled = replacement_metrics_enabled;
       }
     }
     if (result.failed())
@@ -858,61 +923,33 @@ int main(int argc, char** argv) {
     if (result.ok()) {
       if (changes.material &&
           core.state().selected_material() != granit::example::gltf::invalid_index) {
+        result = frame_executor.flush();
+        if (result.failed())
+          break;
         result = core.scene_gpu().update_material_factors(
             core.cpu_scene(), core.state().selected_material(), *changes.material);
       }
     }
     if (result.failed())
       break;
-    frame_execution_result execution;
-    result = frame_executor.submit(std::move(tick_output), execution);
-    recreate = recreate || execution.needs_recreate;
-    const auto execution_action = desktop::classify_presentation_result(result);
-    if (execution_action == desktop::presentation_action::retry) {
-      result = granit::result::success;
-      continue;
-    }
-    if (execution_action == desktop::presentation_action::recreate_swapchain) {
-      result = granit::result::success;
-      recreate = true;
-      continue;
-    }
-    if (execution_action == desktop::presentation_action::recreate_surface) {
-      result = granit::result::success;
-      recreate_surface = true;
-      continue;
-    }
-    if (execution_action == desktop::presentation_action::stop)
-      break;
-    float gpu_frame_ms = 0.0F;
-    bool gpu_timing_available = false;
-    if (gpu_metrics_enabled) {
-      granit_render_pipeline_metrics metrics = GRANIT_RENDER_PIPELINE_METRICS_INIT;
-      const auto metrics_result = pipeline.get_metrics(metrics);
-      if (metrics_result == granit::result::success) {
-        gpu_frame_ms = static_cast<float>(metrics.total_gpu_ns) / 1'000'000.0F;
-        gpu_timing_available = true;
-      } else if (metrics_result == granit::result::unsupported) {
-        gpu_metrics_enabled = false;
-      }
-    }
-    const auto cpu_ms =
+    [[maybe_unused]] std::uint64_t submitted_sequence{};
+    result = frame_executor.submit(std::move(tick_output), submitted_sequence);
+    const auto producer_frame_ms =
         std::chrono::duration<float, std::milli>(std::chrono::steady_clock::now() - cpu_begin)
             .count();
-    latest_sample = {.frames_per_second = cpu_ms > 0.0F ? 1000.0F / cpu_ms : 0.0F,
-                     .cpu_frame_ms = cpu_ms,
-                     .frame_slot_wait_ms = execution.acquire_wait_ms,
-                     .present_wait_ms = execution.present_wait_ms,
-                     .gpu_frame_ms = gpu_frame_ms,
-                     .gpu_timing_available = gpu_timing_available};
-    has_pending_sample = true;
-    if (!options.profile_output_path.empty() && rendered_frames >= 300)
-      profile_samples.push_back(latest_sample);
-    ++rendered_frames;
+    if (result.ok())
+      producer_frame_times.emplace(submitted_sequence, producer_frame_ms);
     if (!options.profile_output_path.empty() && profile_samples.size() >= 1000)
       break;
     if (options.profile_output_path.empty() && options.smoke_test && rendered_frames >= 3)
       break;
+  }
+
+  if (frame_executor.running()) {
+    const auto flush_result = frame_executor.flush();
+    if (result.ok())
+      result = flush_result;
+    frame_executor.stop();
   }
 
   if (result.failed())

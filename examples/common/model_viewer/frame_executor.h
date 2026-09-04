@@ -17,6 +17,8 @@ struct frame_execution_result {
   bool needs_recreate{};
   float acquire_wait_ms{};
   float present_wait_ms{};
+  float gpu_frame_ms{};
+  bool gpu_timing_available{};
 };
 
 /** 异步帧执行完成回执。dropped 表示帧在开始执行前被更新帧替换。 */
