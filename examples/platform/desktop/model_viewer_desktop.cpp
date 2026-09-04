@@ -17,12 +17,12 @@
 #include <imgui.h>
 
 #include <granit/granit.hpp>
-#include <granit/integrations/imgui/renderer.hpp>
 #include <granit/integrations/sdl3/surface.hpp>
 #include <granit/pipeline/canvas_draw_list.hpp>
 #include <granit/pipeline/render_pipeline.hpp>
 
 #include <algorithm>
+#include <array>
 #include <atomic>
 #include <chrono>
 #include <cmath>
@@ -249,12 +249,10 @@ bool loading_needs_srgb_encoding(granit::texture_format format) noexcept {
          format == granit::texture_format::bgra8_unorm;
 }
 
-granit::result render_loading_frame(granit::swapchain& swapchain,
-                                    const granit::swapchain_info& swapchain_info,
-                                    granit::frame_context& frame_context,
-                                    granit::canvas_draw_list& canvas,
-                                    granit::example::model_viewer::texture_registry& textures,
-                                    const char* stage, float progress) {
+granit::result capture_loading_frame(
+    const granit::swapchain_info& swapchain_info,
+    granit::example::model_viewer::texture_registry& textures, const char* stage, float progress,
+    granit::example::model_viewer::frame_canvas_data& output) {
   ImGui_ImplSDL3_NewFrame();
   ImGui::NewFrame();
   const ImVec2 panel_size{420.0F, 118.0F};
@@ -270,13 +268,18 @@ granit::result render_loading_frame(granit::swapchain& swapchain,
   ImGui::TextDisabled("The window remains responsive while large textures are decoded.");
   ImGui::End();
   ImGui::Render();
+  return granit::example::model_viewer::capture_imgui_frame(
+      ImGui::GetDrawData(), granit::example::model_viewer::texture_registry::resolver, &textures,
+      output);
+}
 
+granit::result render_loading_frame_data(
+    granit::swapchain& swapchain, const granit::swapchain_info& swapchain_info,
+    granit::frame_context& frame_context, granit::canvas_draw_list& canvas,
+    const granit::example::model_viewer::frame_canvas_data& data) {
   auto result = canvas.clear();
-  if (result.ok()) {
-    result = granit::integration::imgui::append_draw_data(
-        ImGui::GetDrawData(), canvas, granit::example::model_viewer::texture_registry::resolver,
-        &textures);
-  }
+  if (result.ok())
+    result = data.append_to(canvas);
   granit::acquired_frame frame;
   if (result.ok())
     result = swapchain.acquire(frame);
@@ -311,6 +314,19 @@ granit::result render_loading_frame(granit::swapchain& swapchain,
   return result;
 }
 
+granit::result render_loading_frame(granit::swapchain& swapchain,
+                                    const granit::swapchain_info& swapchain_info,
+                                    granit::frame_context& frame_context,
+                                    granit::canvas_draw_list& canvas,
+                                    granit::example::model_viewer::texture_registry& textures,
+                                    const char* stage, float progress) {
+  granit::example::model_viewer::frame_canvas_data data;
+  auto result = capture_loading_frame(swapchain_info, textures, stage, progress, data);
+  if (result.ok())
+    result = render_loading_frame_data(swapchain, swapchain_info, frame_context, canvas, data);
+  return result;
+}
+
 struct gpu_upload_status {
   std::atomic<granit::example::model_viewer::gpu_scene_upload_stage> stage{
       granit::example::model_viewer::gpu_scene_upload_stage::planning};
@@ -319,12 +335,55 @@ struct gpu_upload_status {
   std::atomic<bool> cancelled{};
 };
 
+unsigned gpu_upload_percentage(
+    const granit::example::model_viewer::gpu_scene_upload_progress& progress) noexcept {
+  const auto local =
+      progress.total == 0
+          ? 0U
+          : static_cast<unsigned>(std::min<std::uint64_t>(
+                100, std::uint64_t{progress.completed} * 100 / progress.total));
+  unsigned base = 40;
+  unsigned span = 2;
+  using enum granit::example::model_viewer::gpu_scene_upload_stage;
+  switch (progress.stage) {
+  case planning:
+    break;
+  case geometry:
+    base = 42;
+    span = 6;
+    break;
+  case textures:
+    base = 48;
+    span = 28;
+    break;
+  case samplers:
+    base = 76;
+    span = 4;
+    break;
+  case meshes:
+    base = 80;
+    span = 6;
+    break;
+  case materials:
+    base = 86;
+    span = 8;
+    break;
+  }
+  return base + span * local / 100;
+}
+
 struct gpu_upload_command_context {
   granit::example::model_viewer::application_core* core{};
   granit_renderer renderer{GRANIT_NULL_HANDLE};
   std::span<const std::byte> environment_bytes;
   float sampler_anisotropy{1.0F};
   gpu_upload_status* status{};
+  granit::swapchain* swapchain{};
+  const granit::swapchain_info* swapchain_info{};
+  granit::frame_context* frame_context{};
+  granit::canvas_draw_list* canvas{};
+  const std::array<granit::example::model_viewer::frame_canvas_data, 101>* progress_frames{};
+  granit::result render_result{granit::result::success};
 };
 
 struct cpu_asset_result {
@@ -337,19 +396,33 @@ struct cpu_asset_result {
 
 bool update_gpu_upload_status(
     const granit::example::model_viewer::gpu_scene_upload_progress& progress, void* user_data) {
-  auto& status = *static_cast<gpu_upload_status*>(user_data);
+  auto& context = *static_cast<gpu_upload_command_context*>(user_data);
+  auto& status = *context.status;
   status.stage.store(progress.stage, std::memory_order_relaxed);
   status.completed.store(progress.completed, std::memory_order_relaxed);
   status.total.store(progress.total, std::memory_order_release);
-  return !status.cancelled.load(std::memory_order_acquire);
+  if (status.cancelled.load(std::memory_order_acquire))
+    return false;
+  if (context.progress_frames != nullptr) {
+    const auto percentage = gpu_upload_percentage(progress);
+    context.render_result = render_loading_frame_data(
+        *context.swapchain, *context.swapchain_info, *context.frame_context, *context.canvas,
+        (*context.progress_frames)[percentage]);
+    if (context.render_result.failed())
+      return false;
+  }
+  return true;
 }
 
 granit::result execute_gpu_upload(void* user_data) {
   const auto& context = *static_cast<gpu_upload_command_context*>(user_data);
   try {
-    return context.core->upload(context.renderer, context.environment_bytes,
-                                context.sampler_anisotropy, update_gpu_upload_status,
-                                context.status);
+    const auto result = context.core->upload(context.renderer, context.environment_bytes,
+                                             context.sampler_anisotropy, update_gpu_upload_status,
+                                             user_data);
+    return result == granit::result::not_ready && context.render_result.failed()
+               ? context.render_result
+               : result;
   } catch (const std::bad_alloc&) {
     return granit::result::out_of_memory;
   }
@@ -647,6 +720,16 @@ int main(int argc, char** argv) {
   if (result.ok() && options.show_ui)
     result = render_loading_frame(swapchain, swapchain_info, loading_frame_context, canvas,
                                   textures, "Preparing GPU upload...", 0.40F);
+  std::array<frame_canvas_data, 101> gpu_progress_frames;
+  if (result.ok() && options.show_ui) {
+    for (std::size_t percentage = 0; percentage < gpu_progress_frames.size(); ++percentage) {
+      result = capture_loading_frame(
+          swapchain_info, textures, "Uploading GPU resources...",
+          static_cast<float>(percentage) / 100.0F, gpu_progress_frames[percentage]);
+      if (result.failed())
+        break;
+    }
+  }
   if (result.ok())
     result = frame_executor.initialize(execute_desktop_frame, &execution_context);
   gpu_upload_status upload_status;
@@ -657,7 +740,13 @@ int main(int argc, char** argv) {
                                               .environment_bytes = environment_bytes,
                                               .sampler_anisotropy =
                                                   render_quality.sampler_anisotropy,
-                                              .status = &upload_status};
+                                              .status = &upload_status,
+                                              .swapchain = &swapchain,
+                                              .swapchain_info = &swapchain_info,
+                                              .frame_context = &loading_frame_context,
+                                              .canvas = &canvas,
+                                              .progress_frames =
+                                                  options.show_ui ? &gpu_progress_frames : nullptr};
     std::uint64_t upload_sequence{};
     result = frame_executor.submit_command(execute_gpu_upload, &upload_context, upload_sequence);
     bool upload_completed = false;
@@ -673,41 +762,11 @@ int main(int argc, char** argv) {
           upload_resize_pending = true;
         }
       }
-      const auto completed = upload_status.completed.load(std::memory_order_relaxed);
-      const auto total = upload_status.total.load(std::memory_order_acquire);
-      const auto local_progress =
-          total == 0 ? 0U
-                     : static_cast<unsigned>(std::min<std::uint64_t>(
-                           100, std::uint64_t{completed} * 100 / total));
-      const auto stage = upload_status.stage.load(std::memory_order_relaxed);
-      unsigned stage_base = 40;
-      unsigned stage_span = 2;
-      using enum granit::example::model_viewer::gpu_scene_upload_stage;
-      switch (stage) {
-      case planning:
-        break;
-      case geometry:
-        stage_base = 42;
-        stage_span = 6;
-        break;
-      case textures:
-        stage_base = 48;
-        stage_span = 28;
-        break;
-      case samplers:
-        stage_base = 76;
-        stage_span = 4;
-        break;
-      case meshes:
-        stage_base = 80;
-        stage_span = 6;
-        break;
-      case materials:
-        stage_base = 86;
-        stage_span = 8;
-        break;
-      }
-      const auto overall_progress = stage_base + stage_span * local_progress / 100;
+      const auto progress = granit::example::model_viewer::gpu_scene_upload_progress{
+          .stage = upload_status.stage.load(std::memory_order_relaxed),
+          .completed = upload_status.completed.load(std::memory_order_relaxed),
+          .total = upload_status.total.load(std::memory_order_acquire)};
+      const auto overall_progress = gpu_upload_percentage(progress);
       const auto loading_title =
           "Granit Model Viewer | Uploading GPU resources " + std::to_string(overall_progress) + "%";
       SDL_SetWindowTitle(window.get(), loading_title.c_str());
