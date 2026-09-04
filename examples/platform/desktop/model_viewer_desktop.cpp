@@ -323,6 +323,7 @@ struct gpu_upload_ui_context {
 struct cpu_asset_result {
   granit::result status{granit::result::unknown};
   granit::example::gltf::scene scene;
+  granit::example::model_viewer::gpu_scene_plan gpu_plan;
   std::vector<std::byte> environment_bytes;
   std::string diagnostic;
 };
@@ -617,6 +618,15 @@ int main(int argc, char** argv) {
         output.diagnostic = loaded.diagnostic;
         return output;
       }
+      const auto planned = granit::example::model_viewer::build_gpu_scene_plan(output.scene,
+                                                                               output.gpu_plan);
+      if (planned != granit::example::model_viewer::gpu_scene_plan_error::none) {
+        output.status = planned == granit::example::model_viewer::gpu_scene_plan_error::out_of_memory
+                            ? granit::result::out_of_memory
+                            : granit::result::invalid_argument;
+        output.diagnostic = "生成 GPU Scene 计划失败";
+        return output;
+      }
       output.status = granit::result::success;
       loading_stage.store(4, std::memory_order_release);
       return output;
@@ -662,7 +672,7 @@ int main(int argc, char** argv) {
       result = loaded.status;
     }
     if (result.ok())
-      result = core.accept_scene(std::move(loaded.scene));
+      result = core.accept_scene(std::move(loaded.scene), std::move(loaded.gpu_plan));
     if (result.ok())
       environment_bytes = std::move(loaded.environment_bytes);
   }

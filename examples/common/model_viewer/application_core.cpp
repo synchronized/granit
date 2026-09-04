@@ -88,9 +88,25 @@ granit::result application_core::load_asset(std::span<const std::byte> bytes,
 granit::result application_core::accept_scene(gltf::scene scene) {
   if (phase_ != application_phase::asset_loading)
     return granit::result::invalid_argument;
+  gpu_scene_plan plan;
+  const auto plan_result = build_gpu_scene_plan(scene, plan);
+  if (plan_result != gpu_scene_plan_error::none) {
+    const auto result = plan_result == gpu_scene_plan_error::out_of_memory
+                            ? granit::result::out_of_memory
+                            : granit::result::invalid_argument;
+    fail(result, "模型查看器 GPU Scene 计划生成失败");
+    return result;
+  }
+  return accept_scene(std::move(scene), std::move(plan));
+}
+
+granit::result application_core::accept_scene(gltf::scene scene, gpu_scene_plan plan) {
+  if (phase_ != application_phase::asset_loading)
+    return granit::result::invalid_argument;
   try {
     state_.reset(scene);
     cpu_scene_ = std::move(scene);
+    gpu_plan_ = std::move(plan);
     phase_ = application_phase::gpu_upload;
     return granit::result::success;
   } catch (const std::bad_alloc&) {
@@ -106,8 +122,8 @@ granit::result application_core::upload(granit_renderer renderer,
                                         void* progress_user_data) {
   if (phase_ != application_phase::gpu_upload)
     return granit::result::invalid_argument;
-  const auto result =
-      gpu_scene_.initialize(renderer, cpu_scene_, sampler_anisotropy, progress, progress_user_data);
+  const auto result = gpu_scene_.initialize(renderer, cpu_scene_, std::move(gpu_plan_),
+                                            sampler_anisotropy, progress, progress_user_data);
   if (result.failed()) {
     fail(result, "模型查看器 GPU Scene 上传失败");
     return result;
@@ -232,6 +248,7 @@ void application_core::reset() noexcept {
   gpu_scene_.reset();
   environment_.reset();
   cpu_scene_ = {};
+  gpu_plan_ = {};
   state_ = {};
   performance_.clear();
   camera_initialized_ = false;

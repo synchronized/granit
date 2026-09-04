@@ -484,9 +484,22 @@ gpu_scene& gpu_scene::operator=(gpu_scene&& other) noexcept {
 granit::result gpu_scene::initialize(granit_renderer renderer, const gltf::scene& source,
                                      float sampler_anisotropy, gpu_scene_upload_callback progress,
                                      void* progress_user_data) {
+  gpu_scene_plan plan;
+  const auto plan_result = build_gpu_scene_plan(source, plan);
+  if (plan_result != gpu_scene_plan_error::none)
+    return plan_result == gpu_scene_plan_error::out_of_memory ? granit::result::out_of_memory
+                                                              : granit::result::invalid_argument;
+  return initialize(renderer, source, std::move(plan), sampler_anisotropy, progress,
+                    progress_user_data);
+}
+
+granit::result gpu_scene::initialize(granit_renderer renderer, const gltf::scene& source,
+                                     gpu_scene_plan plan, float sampler_anisotropy,
+                                     gpu_scene_upload_callback progress,
+                                     void* progress_user_data) {
   gpu_scene candidate;
-  const auto result =
-      candidate.create(renderer, source, sampler_anisotropy, progress, progress_user_data);
+  const auto result = candidate.create(renderer, source, std::move(plan), sampler_anisotropy,
+                                       progress, progress_user_data);
   if (result.failed())
     return result;
   *this = std::move(candidate);
@@ -617,8 +630,8 @@ granit::result gpu_scene::update_debug_display(std::uint32_t mode) noexcept {
 }
 
 granit::result gpu_scene::create(granit_renderer renderer, const gltf::scene& source,
-                                 float sampler_anisotropy, gpu_scene_upload_callback progress,
-                                 void* progress_user_data) {
+                                 gpu_scene_plan plan, float sampler_anisotropy,
+                                 gpu_scene_upload_callback progress, void* progress_user_data) {
   const auto report = [&](gpu_scene_upload_stage stage, std::size_t completed, std::size_t total) {
     if (progress == nullptr)
       return true;
@@ -633,10 +646,7 @@ granit::result gpu_scene::create(granit_renderer renderer, const gltf::scene& so
     return granit::result::invalid_handle;
   if (!std::isfinite(sampler_anisotropy) || sampler_anisotropy < 1.0F)
     return granit::result::invalid_argument;
-  const auto plan_result = build_gpu_scene_plan(source, plan_);
-  if (plan_result != gpu_scene_plan_error::none)
-    return plan_result == gpu_scene_plan_error::out_of_memory ? granit::result::out_of_memory
-                                                              : granit::result::invalid_argument;
+  plan_ = std::move(plan);
   if (!report(gpu_scene_upload_stage::planning, 1, 1))
     return granit::result::not_ready;
 

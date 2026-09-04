@@ -130,6 +130,11 @@ public:
                                           float sampler_anisotropy = 8.0F,
                                           gpu_scene_upload_callback progress = nullptr,
                                           void* progress_user_data = nullptr);
+  /** 使用工作线程预先生成的计划创建资源；plan 在失败时仍会被消费。 */
+  [[nodiscard]] granit::result initialize(granit_renderer renderer, const gltf::scene& source,
+                                          gpu_scene_plan plan, float sampler_anisotropy = 8.0F,
+                                          gpu_scene_upload_callback progress = nullptr,
+                                          void* progress_user_data = nullptr);
   void reset() noexcept;
 
   [[nodiscard]] bool valid() const noexcept { return renderer_ != GRANIT_NULL_HANDLE; }
@@ -171,8 +176,8 @@ public:
 
 private:
   [[nodiscard]] granit::result create(granit_renderer renderer, const gltf::scene& source,
-                                      float sampler_anisotropy, gpu_scene_upload_callback progress,
-                                      void* progress_user_data);
+                                      gpu_scene_plan plan, float sampler_anisotropy,
+                                      gpu_scene_upload_callback progress, void* progress_user_data);
 
   granit_renderer renderer_{GRANIT_NULL_HANDLE};
   gpu_scene_plan plan_;

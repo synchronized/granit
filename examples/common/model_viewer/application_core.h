@@ -61,6 +61,8 @@ public:
   [[nodiscard]] granit::result load_asset(std::span<const std::byte> bytes,
                                           const gltf::resource_resolver* resolver);
   [[nodiscard]] granit::result accept_scene(gltf::scene scene);
+  /** 接收已经在资产线程完成打包的 CPU Scene 与 GPU 创建计划。 */
+  [[nodiscard]] granit::result accept_scene(gltf::scene scene, gpu_scene_plan plan);
   /** 上传场景；environment_bytes 为空时使用内置摄影棚环境，否则解析 GRENV v2。 */
   [[nodiscard]] granit::result upload(granit_renderer renderer,
                                       std::span<const std::byte> environment_bytes = {},
@@ -87,6 +89,7 @@ private:
   granit::result failure_result_{granit::result::success};
   std::string diagnostic_;
   gltf::scene cpu_scene_;
+  gpu_scene_plan gpu_plan_;
   gpu_scene gpu_scene_;
   environment_resources environment_;
   viewer_state state_;
