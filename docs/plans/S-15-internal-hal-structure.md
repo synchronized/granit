@@ -5,7 +5,7 @@
 
 ## 状态
 
-- 实现状态：实现中；S-15A、S-15B、S-15C 已完成，下一项为 S-15D
+- 实现状态：实现完成；最终 Linux 验收随 S-16 手动 Actions 统一执行
 - 前置依赖：S-10、S-12、S-13
 - 优先级：P1
 
@@ -19,7 +19,7 @@ Granit 已使用 `src/backend` 中的 `backend_*` 契约隔离 Registry 与 Vulk
 
 - 在 Renderer 注册时一次性发现并保存后端能力接口，集中表达必需能力与可选能力。
 - 让 Registry 从明确的能力集合取得资源、命令、Queue、呈现和诊断接口。
-- 区分 HAL 契约、插件 ABI/Loader、Vulkan 实现和 WebGPU Adapter 的目录职责。
+- 区分 HAL 契约、Vulkan 实现和浏览器 WebGPU Adapter 的目录职责。
 - 保持公共 C/C++ API、句柄语义、命令批量粒度和运行时行为不变。
 
 ## 非目标
@@ -27,7 +27,7 @@ Granit 已使用 `src/backend` 中的 `backend_*` 契约隔离 Registry 与 Vulk
 - 不公开 HAL，不为其提供 ABI 稳定承诺。
 - 不修改公共 Renderer、资源、Pipeline 或命令接口。
 - 不强制 Vulkan 与 WebGPU 支持完全相同的可选能力。
-- 不移除桌面 WebGPU 动态 Provider 或 Emscripten 静态 Provider。
+- 不移除 Emscripten 浏览器所需的静态 WebGPU Provider 分发表。
 - 不把每条 Draw、Dispatch 或资源访问改成独立虚函数或插件调用。
 
 ## 已确认决策
@@ -37,7 +37,8 @@ Granit 已使用 `src/backend` 中的 `backend_*` 契约隔离 Registry 与 Vulk
 - 能力集合在 Renderer 注册时形成不可变快照。根 Renderer、资源、命令等必需接口缺失时注册失败；
   Pipeline Cache、时间戳和调试名称等可选接口允许为空，并返回既有“不支持”结果。
 - 能力集合持有 `shared_ptr`，保证异步命令、延迟回收和资源记录的生命周期不短于后端状态。
-- `plugin_api.h` 仅表示跨动态库边界的 C 传输 ABI；WebGPU Adapter 负责将其转换为 HAL 契约。
+- 根据后续 [ADR-005](../decisions/ADR-005-browser-only-webgpu.md)，桌面动态插件边界已经删除；
+  Emscripten WebGPU 的静态分发表只作为后端内部原生 API 隔离层。
 - 目录迁移只改变内部包含路径和构建源集，不改变安装内容或目标名称。
 
 ## 实施顺序
@@ -63,24 +64,23 @@ Granit 已使用 `src/backend` 中的 `backend_*` 契约隔离 Registry 与 Vulk
 
 **状态：已完成。**
 
-后端无关契约已集中到 `src/backend/contracts/`，插件 ABI 与动态加载传输代码已集中到
-`src/backend/plugin/`；Vulkan 与 WebGPU 实现继续分别位于各自后端目录。
+后端无关契约已集中到 `src/backend/contracts/`；Vulkan 与 WebGPU 实现分别位于各自后端目录。
+任务早期规划的插件目录已被 S-16 和 ADR-005 取代，不再属于当前结构。
 
 将现有内部文件渐进整理为：
 
 ```text
 src/backend/
 ├─ contracts/  # backend_* HAL 接口、描述和值类型
-├─ plugin/     # 插件 C ABI、动态库 Loader 与传输桥
 ├─ vulkan/     # Vulkan HAL 实现
-└─ webgpu/     # WebGPU HAL Adapter 与 Provider 实现
+└─ webgpu/     # Emscripten WebGPU HAL Adapter 与静态 Provider 实现
 ```
 
 先更新构建源集和内部 include，再删除旧路径；不同时进行接口语义重写。
 
 ### S-15D：文档与最终验收
 
-**状态：验收中。**
+**状态：实现完成；Linux 待随 S-16 手动 Actions 验收。**
 
 1. 更新架构 Concept，给出调用方向、必需/可选能力和插件边界。
 2. 保持 ADR-003 的既有决策不变；若实施发现需要改变决策，再新增替代 ADR。
@@ -88,17 +88,20 @@ src/backend/
 
 当前验证记录：
 
-- Windows Clang Debug 的 Granit、能力测试和插件加载测试构建通过。
-- Windows Clang Debug 完整测试 65/65 通过，覆盖文档、ABI 导出、原生边界、Vulkan、
+- Windows Clang Debug 的 Granit 与能力测试构建通过。
+- Windows Clang Debug 完整测试 64/64 通过，覆盖文档、ABI 导出、原生边界、Vulkan、
   ImGui 和模型查看器测试。
-- 相对任务起点，公共头文件和安装配置没有变化。
-- Linux、桌面 Dawn WebGPU、Emscripten WebGPU 与模型查看器参考图仍待对应环境验收。
+- MSVC `/WX` 构建及相关测试通过。
+- Emscripten Release 构建、浏览器 WebGPU Fixture、输入、模型查看器与资源释放测试通过。
+- 静态边界检查覆盖 WebGPU 原生符号，并单独禁止 `src/renderer` 出现 Vulkan 原生符号。
+- 相对任务起点，公共头文件、ABI 和安装配置没有变化。
+- Linux 共享/静态 Vulkan 与安装 Consumer 待随 S-16 手动 Actions 统一验收。
 
 ## 测试与验收
 
 - Windows/Linux 的共享与静态 Vulkan 构建及完整测试通过。
-- 桌面 Dawn WebGPU 和 Emscripten WebGPU 集成测试通过。
-- Vulkan、桌面 WebGPU 和浏览器模型查看器参考截图保持在既有阈值内。
+- Emscripten WebGPU 集成测试通过。
+- Vulkan 与浏览器 WebGPU 模型查看器保持既有行为。
 - 测试替身证明缺失必需能力会在注册阶段失败，缺失可选能力仍可创建 Renderer。
 - `src/renderer` 不包含 Vulkan、WebGPU、Dawn 或平台插件原生类型。
 - 公共头文件、导出符号、安装清单和 C ABI 快照不发生变化。

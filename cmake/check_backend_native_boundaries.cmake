@@ -24,6 +24,10 @@ foreach(source_file IN LISTS source_files)
   if(content MATCHES "(^|[^A-Za-z0-9_])(WGPU[A-Za-z0-9_]*|wgpu[A-Za-z0-9_]+)")
     message(FATAL_ERROR "WebGPU 原生符号越过 Backend 边界：${source_file}")
   endif()
+  if(normalized_file MATCHES "/src/renderer/" AND
+     content MATCHES "(^|[^A-Za-z0-9_])(Vk[A-Z][A-Za-z0-9_]*|VK_[A-Z0-9_]+)")
+    message(FATAL_ERROR "Vulkan 原生符号越过 Renderer/Backend 边界：${source_file}")
+  endif()
 endforeach()
 
 # 桌面核心目标只允许编译 Vulkan；浏览器 WebGPU 源码由 web/CMakeLists.txt 独立选择。
