@@ -48,9 +48,19 @@ Registry、Shader 资产与浏览器模型查看器。
 
 ### S-16C：验收
 
+**状态：进行中；Windows 与浏览器已完成，Linux 待手动 Actions。**
+
 1. Windows/Linux Vulkan 完整构建、测试和安装 Consumer 通过。
 2. Emscripten 浏览器 Fixture、输入和 model-viewer 测试通过。
 3. 静态边界检查确认桌面目标不再包含 Dawn、WebGPU Plugin 或 Provider Loader。
+
+本地已完成以下验收：
+
+- Windows Clang 共享构建 64/64 测试通过，安装包审计与 7/7 独立 Consumer 通过。
+- Windows Clang 静态构建 54/54 测试通过，安装包审计与 7/7 独立 Consumer 通过。
+- Emscripten Release 构建通过；Chrome WebGPU 多帧渲染、质量切换、输入、Resize、资产 Fetch、
+  资源释放和失败诊断通过。
+- 边界检查已锁定桌面 CMake 不得重新引入 WebGPU Provider，并要求浏览器目标保留静态实现。
 
 ## 测试与验收
 
