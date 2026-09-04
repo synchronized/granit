@@ -37,6 +37,7 @@
 #include <memory>
 #include <span>
 #include <sstream>
+#include <string>
 #include <string_view>
 #include <unordered_map>
 #include <vector>
@@ -319,6 +320,13 @@ struct gpu_upload_ui_context {
   bool cancelled{};
 };
 
+struct cpu_asset_result {
+  granit::result status{granit::result::unknown};
+  granit::example::gltf::scene scene;
+  std::vector<std::byte> environment_bytes;
+  std::string diagnostic;
+};
+
 bool update_gpu_upload_ui(const granit::example::model_viewer::gpu_scene_upload_progress& progress,
                           void* user_data) {
   auto& context = *static_cast<gpu_upload_ui_context*>(user_data);
@@ -583,23 +591,35 @@ int main(int argc, char** argv) {
   const std::filesystem::path asset_path(options.asset_path);
   std::vector<std::byte> environment_bytes;
   std::atomic<unsigned> loading_stage{0};
-  std::future<granit::result> cpu_loading;
+  std::future<cpu_asset_result> cpu_loading;
   if (result.ok()) {
     cpu_loading = std::async(std::launch::async, [&] {
+      cpu_asset_result output;
       loading_stage.store(1, std::memory_order_release);
       std::vector<std::byte> asset_bytes;
-      if (!read_file(asset_path, asset_bytes))
-        return granit::result::invalid_argument;
+      if (!read_file(asset_path, asset_bytes)) {
+        output.status = granit::result::invalid_argument;
+        output.diagnostic = "读取模型文件失败";
+        return output;
+      }
       loading_stage.store(2, std::memory_order_release);
       if (!options.environment_path.empty() &&
-          !read_file(options.environment_path, environment_bytes)) {
-        return granit::result::invalid_argument;
+          !read_file(options.environment_path, output.environment_bytes)) {
+        output.status = granit::result::invalid_argument;
+        output.diagnostic = "读取环境资源失败";
+        return output;
       }
       loading_stage.store(3, std::memory_order_release);
       file_resolver resolver(asset_path.parent_path());
-      const auto load_result = core.load_asset(asset_bytes, &resolver);
+      const auto loaded = granit::example::gltf::load(asset_bytes, &resolver, output.scene);
+      if (!loaded) {
+        output.status = granit::result::invalid_argument;
+        output.diagnostic = loaded.diagnostic;
+        return output;
+      }
+      output.status = granit::result::success;
       loading_stage.store(4, std::memory_order_release);
-      return load_result;
+      return output;
     });
   }
   bool loading_cancelled = false;
@@ -636,9 +656,15 @@ int main(int argc, char** argv) {
     SDL_Delay(16);
   }
   if (cpu_loading.valid()) {
-    const auto load_result = cpu_loading.get();
+    auto loaded = cpu_loading.get();
+    if (result.ok() && loaded.status.failed()) {
+      core.fail(loaded.status, std::move(loaded.diagnostic));
+      result = loaded.status;
+    }
     if (result.ok())
-      result = load_result;
+      result = core.accept_scene(std::move(loaded.scene));
+    if (result.ok())
+      environment_bytes = std::move(loaded.environment_bytes);
   }
   if (result.ok() && loading_cancelled)
     result = granit::result::not_ready;
