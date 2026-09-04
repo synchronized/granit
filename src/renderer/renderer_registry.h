@@ -28,22 +28,22 @@
 #include <granit/renderer/timestamp_query.h>
 #include <granit/renderer/upload_batch.h>
 
-#include "backend/access.h"
-#include "backend/command.h"
-#include "backend/compute.h"
-#include "backend/pipeline.h"
-#include "backend/plugin_api.h"
-#include "backend/presentation.h"
-#include "backend/queue.h"
-#include "backend/renderer.h"
-#include "backend/rendering.h"
-#include "backend/resource_management.h"
-#include "backend/resources.h"
-#include "backend/retirement.h"
-#include "backend/shader.h"
-#include "backend/timestamp.h"
-#include "backend/transfer.h"
-#include "backend/upload.h"
+#include "backend/contracts/access.h"
+#include "backend/contracts/command.h"
+#include "backend/contracts/compute.h"
+#include "backend/contracts/interfaces.h"
+#include "backend/contracts/pipeline.h"
+#include "backend/contracts/presentation.h"
+#include "backend/contracts/queue.h"
+#include "backend/contracts/renderer.h"
+#include "backend/contracts/rendering.h"
+#include "backend/contracts/resource_management.h"
+#include "backend/contracts/resources.h"
+#include "backend/contracts/retirement.h"
+#include "backend/contracts/shader.h"
+#include "backend/contracts/timestamp.h"
+#include "backend/contracts/transfer.h"
+#include "backend/contracts/upload.h"
 #include "core/handle_table.h"
 #include "core/lifecycle_validation.h"
 #include "renderer/dynamic_uniform_offsets.h"
@@ -77,6 +77,8 @@ public:
   /** 向有效 Renderer 的回调发送公共 API 参数或句柄校验诊断。 */
   void emit_validation_diagnostic(granit_renderer renderer, std::string_view message) noexcept;
   [[nodiscard]] std::shared_ptr<backend_renderer> acquire_backend(granit_renderer renderer);
+  [[nodiscard]] std::shared_ptr<const backend_interfaces>
+  acquire_backend_interfaces(granit_renderer renderer);
   [[nodiscard]] granit_result create_win32_surface(granit_renderer renderer, void* native_instance,
                                                    void* native_window, granit_surface& surface);
   [[nodiscard]] granit_result create_xcb_surface(granit_renderer renderer, void* connection,
@@ -152,9 +154,11 @@ public:
                                              const granit_sampler_desc& desc,
                                              granit_sampler& sampler);
   [[nodiscard]] granit_result destroy_sampler(granit_renderer renderer, granit_sampler sampler);
-  [[nodiscard]] granit_result create_shader(granit_renderer renderer, granit_shader_stage stage,
-                                            std::span<const std::uint32_t> code,
-                                            std::string_view entry_point, granit_shader& shader);
+  [[nodiscard]] granit_result create_shader_from_spirv(granit_renderer renderer,
+                                                       granit_shader_stage stage,
+                                                       std::span<const std::uint32_t> code,
+                                                       std::string_view entry_point,
+                                                       granit_shader& shader);
   [[nodiscard]] granit_result create_shader_from_desc(granit_renderer renderer,
                                                       const granit_shader_desc& desc,
                                                       granit_shader& shader);
@@ -375,6 +379,8 @@ private:
   std::mutex mutex_;
   handle_table handles_;
   std::unordered_map<granit_renderer, std::shared_ptr<backend_renderer>> backend_renderers_;
+  std::unordered_map<granit_renderer, std::shared_ptr<const backend_interfaces>>
+      backend_interfaces_;
 
   std::unordered_map<granit_surface, std::shared_ptr<surface_record>> surfaces_;
   std::unordered_map<granit_swapchain, std::shared_ptr<swapchain_record>> swapchains_;

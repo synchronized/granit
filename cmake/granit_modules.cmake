@@ -103,7 +103,6 @@ function(granit_add_material_module)
       "${PROJECT_SOURCE_DIR}/src/material/pbr_default_resources.cpp"
       "${PROJECT_SOURCE_DIR}/src/material/pbr_draw_inputs.cpp"
       "${PROJECT_SOURCE_DIR}/src/material/pbr_material_schema.cpp"
-      "${PROJECT_SOURCE_DIR}/src/material/pbr_reference.cpp"
       "${PROJECT_SOURCE_DIR}/src/material/material_template_gpu.cpp"
     PRIVATE
       FILE_SET HEADERS
@@ -119,7 +118,7 @@ function(granit_add_material_module)
         "${PROJECT_SOURCE_DIR}/src/material/pbr_default_resources.h"
         "${PROJECT_SOURCE_DIR}/src/material/pbr_draw_inputs.h"
         "${PROJECT_SOURCE_DIR}/src/material/pbr_material_schema.h"
-        "${PROJECT_SOURCE_DIR}/src/material/pbr_reference.h"
+        "${PROJECT_SOURCE_DIR}/src/material/pbr_types.h"
         "${PROJECT_SOURCE_DIR}/src/material/material_template_gpu.h"
   )
   target_compile_features(granit_material PUBLIC cxx_std_20)
@@ -226,34 +225,28 @@ function(granit_add_lighting_module)
     granit_lighting
     PRIVATE
       "${PROJECT_SOURCE_DIR}/src/lighting/directional_shadow.cpp"
-      "${PROJECT_SOURCE_DIR}/src/lighting/ibl_reference.cpp"
       "${PROJECT_SOURCE_DIR}/src/lighting/ibl_resources.cpp"
       "${PROJECT_SOURCE_DIR}/src/lighting/light_buffers.cpp"
       "${PROJECT_SOURCE_DIR}/src/lighting/light_data.cpp"
-      "${PROJECT_SOURCE_DIR}/src/lighting/lighting_reference.cpp"
-      "${PROJECT_SOURCE_DIR}/src/lighting/reference_pipeline_graph.cpp"
+      "${PROJECT_SOURCE_DIR}/src/lighting/forward_pipeline_graph.cpp"
       "${PROJECT_SOURCE_DIR}/src/lighting/shadow_resources.cpp"
       "${PROJECT_SOURCE_DIR}/src/lighting/shadow_ibl_resources.cpp"
-      "${PROJECT_SOURCE_DIR}/src/lighting/shadow_reference.cpp"
-      "${PROJECT_SOURCE_DIR}/src/lighting/tone_mapping_reference.cpp"
       "${PROJECT_SOURCE_DIR}/src/lighting/tone_mapping_pass.cpp"
+      "${PROJECT_SOURCE_DIR}/src/lighting/tone_mapping_types.cpp"
       "${PROJECT_SOURCE_DIR}/src/lighting/tone_mapping_resources.cpp"
     PRIVATE
       FILE_SET HEADERS
       BASE_DIRS "${PROJECT_SOURCE_DIR}/src"
       FILES
         "${PROJECT_SOURCE_DIR}/src/lighting/directional_shadow.h"
-        "${PROJECT_SOURCE_DIR}/src/lighting/ibl_reference.h"
         "${PROJECT_SOURCE_DIR}/src/lighting/ibl_resources.h"
         "${PROJECT_SOURCE_DIR}/src/lighting/light_buffers.h"
         "${PROJECT_SOURCE_DIR}/src/lighting/light_data.h"
-        "${PROJECT_SOURCE_DIR}/src/lighting/lighting_reference.h"
-        "${PROJECT_SOURCE_DIR}/src/lighting/reference_pipeline_graph.h"
+        "${PROJECT_SOURCE_DIR}/src/lighting/forward_pipeline_graph.h"
         "${PROJECT_SOURCE_DIR}/src/lighting/shadow_resources.h"
         "${PROJECT_SOURCE_DIR}/src/lighting/shadow_ibl_resources.h"
-        "${PROJECT_SOURCE_DIR}/src/lighting/shadow_reference.h"
-        "${PROJECT_SOURCE_DIR}/src/lighting/tone_mapping_reference.h"
         "${PROJECT_SOURCE_DIR}/src/lighting/tone_mapping_pass.h"
+        "${PROJECT_SOURCE_DIR}/src/lighting/tone_mapping_types.h"
         "${PROJECT_SOURCE_DIR}/src/lighting/tone_mapping_resources.h"
   )
   target_compile_features(granit_lighting PUBLIC cxx_std_20)

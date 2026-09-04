@@ -66,9 +66,7 @@ typedef struct granit_frame_info {
     }                                                                                              \
   }
 
-#define GRANIT_SWAPCHAIN_INFO_VERSION_1_SIZE                                                       \
-  ((uint32_t)(offsetof(granit_swapchain_info, present_mode) + sizeof(granit_present_mode)))
-#define GRANIT_SWAPCHAIN_INFO_VERSION_2_SIZE                                                       \
+#define GRANIT_SWAPCHAIN_INFO_SIZE                                                                 \
   ((uint32_t)(offsetof(granit_swapchain_info, format) + sizeof(granit_texture_format)))
 
 #define GRANIT_SWAPCHAIN_INFO_INIT                                                                 \

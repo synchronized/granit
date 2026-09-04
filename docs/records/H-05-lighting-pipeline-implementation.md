@@ -532,7 +532,7 @@ H-05E9～H-05E11 已完成统一 Render Graph 组合、数千帧生命周期压�
 
 ## H-05E9 实现记录
 
-新增内部 `reference_pipeline_graph` 适配器，统一验证并串联可选 Directional Shadow、PBR HDR 和
+新增内部 `forward_pipeline_graph` 适配器，统一验证并串联可选 Directional Shadow、PBR HDR 和
 Tone Mapping。适配器只组合资源 ID、Pass 描述和录制回调，不拥有 Texture、材质、Mesh 或 Scene，
 也不绕过 Command Recorder；无阴影路径必须显式使用无阴影 PBR 描述，不创建伪造阴影资源。
 

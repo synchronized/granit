@@ -26,8 +26,8 @@ add_library(
   "${PROJECT_SOURCE_DIR}/src/renderer/texture_api.cpp"
   "${PROJECT_SOURCE_DIR}/src/renderer/timestamp_query_api.cpp"
   "${PROJECT_SOURCE_DIR}/src/renderer/upload_batch_api.cpp"
-  "${PROJECT_SOURCE_DIR}/src/backend/plugin_loader.cpp"
-  "${PROJECT_SOURCE_DIR}/src/backend/webgpu/plugin.cpp"
+  "${PROJECT_SOURCE_DIR}/src/backend/webgpu/provider_dispatch.cpp"
+  "${PROJECT_SOURCE_DIR}/src/backend/webgpu/provider.cpp"
   "${PROJECT_SOURCE_DIR}/src/backend/webgpu/command_adapter.cpp"
   "${PROJECT_SOURCE_DIR}/src/backend/webgpu/presentation_adapter.cpp"
   "${PROJECT_SOURCE_DIR}/src/backend/webgpu/pipeline_adapter.cpp"
@@ -39,8 +39,6 @@ add_library(
   "${PROJECT_SOURCE_DIR}/src/core/lifecycle_validation.cpp"
   "${PROJECT_SOURCE_DIR}/src/core/retirement_queue.cpp"
   "${PROJECT_SOURCE_DIR}/src/core/resource_validation.cpp"
-  "${PROJECT_SOURCE_DIR}/src/platform/shared_library.cpp"
-  "${PROJECT_SOURCE_DIR}/src/platform/emscripten/shared_library_backend.cpp"
 )
 add_library(granit::granit ALIAS granit)
 target_compile_features(granit PUBLIC cxx_std_20)

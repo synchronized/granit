@@ -18,17 +18,18 @@ granit_result renderer_registry::create_buffer(granit_renderer renderer,
                                                const granit_buffer_desc& desc,
                                                granit_buffer& buffer) {
   try {
-    auto owner = acquire_backend(renderer);
-    if (!owner) {
+    const auto interfaces = acquire_backend_interfaces(renderer);
+    if (!interfaces) {
       return GRANIT_ERROR_INVALID_HANDLE;
     }
-    auto resource_api = std::dynamic_pointer_cast<backend_resource_renderer>(owner);
+    const auto& owner = interfaces->renderer;
+    const auto& resource_api = interfaces->resources;
     if (!resource_api)
       return GRANIT_ERROR_UNSUPPORTED;
     auto record = std::make_shared<buffer_record>();
     record->owner = owner;
     record->resource_api = resource_api;
-    record->retirement = std::dynamic_pointer_cast<backend_retirement_renderer>(owner);
+    record->retirement = interfaces->retirement;
     record->desc = desc;
     record->native = resource_api->allocate_buffer_resource();
     const auto create_result = resource_api->create_buffer(desc, *record->native);
@@ -273,10 +274,11 @@ granit_result renderer_registry::write_buffer(granit_renderer renderer, granit_b
 granit_result renderer_registry::create_upload_batch(granit_renderer renderer,
                                                      granit_upload_batch& batch) {
   try {
-    auto owner = acquire_backend(renderer);
-    if (!owner)
+    const auto interfaces = acquire_backend_interfaces(renderer);
+    if (!interfaces)
       return GRANIT_ERROR_INVALID_HANDLE;
-    auto resource_api = std::dynamic_pointer_cast<backend_resource_renderer>(owner);
+    const auto& owner = interfaces->renderer;
+    const auto& resource_api = interfaces->resources;
     if (!resource_api)
       return GRANIT_ERROR_UNSUPPORTED;
     auto record = std::make_shared<upload_batch_record>();

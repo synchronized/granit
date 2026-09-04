@@ -4,7 +4,7 @@
 #include "renderer/renderer_registry.h"
 #include "renderer/renderer_registry_records.h"
 
-#include "backend/diagnostics.h"
+#include "backend/contracts/diagnostics.h"
 #include "core/diagnostic_sink.h"
 #include "core/texture_format.h"
 #include "renderer/renderer_registry_helpers.h"
@@ -29,14 +29,21 @@ granit_result renderer_registry::register_backend(std::shared_ptr<backend_render
   if (!backend)
     return GRANIT_ERROR_INVALID_ARGUMENT;
   try {
+    auto interfaces =
+        std::make_shared<const backend_interfaces>(discover_backend_interfaces(backend));
+    if (!interfaces->has_required_capabilities())
+      return GRANIT_ERROR_UNSUPPORTED;
     std::lock_guard lock{mutex_};
     backend->set_domain(allocate_domain());
     const auto handle = handles_.insert(backend.get(), resource_type::renderer, 0);
     if (handle == GRANIT_NULL_HANDLE)
       return GRANIT_ERROR_OUT_OF_MEMORY;
     try {
+      backend_interfaces_.emplace(handle, std::move(interfaces));
       backend_renderers_.emplace(handle, std::move(backend));
     } catch (...) {
+      backend_interfaces_.erase(handle);
+      backend_renderers_.erase(handle);
       static_cast<void>(handles_.erase(handle, resource_type::renderer, 0));
       throw;
     }
@@ -133,7 +140,8 @@ granit_result renderer_registry::get_resource_stats(granit_renderer renderer,
         stats.surface_count + stats.swapchain_count + stats.command_recorder_count +
         stats.frame_context_count + stats.frame_count + stats.timestamp_query_pool_count +
         stats.upload_batch_count;
-    retirement = std::dynamic_pointer_cast<backend_retirement_renderer>(owner);
+    const auto interfaces = backend_interfaces_.find(renderer);
+    retirement = interfaces == backend_interfaces_.end() ? nullptr : interfaces->second->retirement;
   }
   stats.pending_retirement_count = retirement ? retirement->pending_retirement_count() : 0;
   return GRANIT_SUCCESS;
@@ -175,7 +183,8 @@ granit_result renderer_registry::import_pipeline_cache(granit_renderer renderer,
   const auto owner = acquire_backend(renderer);
   if (!owner)
     return GRANIT_ERROR_INVALID_HANDLE;
-  const auto cache = std::dynamic_pointer_cast<backend_pipeline_cache_renderer>(owner);
+  const auto interfaces = acquire_backend_interfaces(renderer);
+  const auto cache = interfaces ? interfaces->pipeline_cache : nullptr;
   return cache ? cache->import_pipeline_cache(data, size) : GRANIT_ERROR_UNSUPPORTED;
 }
 
@@ -184,7 +193,8 @@ granit_result renderer_registry::export_pipeline_cache(granit_renderer renderer,
   const auto owner = acquire_backend(renderer);
   if (!owner)
     return GRANIT_ERROR_INVALID_HANDLE;
-  const auto cache = std::dynamic_pointer_cast<backend_pipeline_cache_renderer>(owner);
+  const auto interfaces = acquire_backend_interfaces(renderer);
+  const auto cache = interfaces ? interfaces->pipeline_cache : nullptr;
   return cache ? cache->export_pipeline_cache(data, size) : GRANIT_ERROR_UNSUPPORTED;
 }
 
@@ -195,7 +205,9 @@ granit_result renderer_registry::set_object_name(granit_renderer renderer, grani
   if (renderer_it == backend_renderers_.end())
     return GRANIT_ERROR_INVALID_HANDLE;
   const auto owner = renderer_it->second;
-  const auto diagnostics = std::dynamic_pointer_cast<backend_diagnostic_renderer>(owner);
+  const auto interfaces = backend_interfaces_.find(renderer);
+  const auto diagnostics =
+      interfaces == backend_interfaces_.end() ? nullptr : interfaces->second->diagnostics;
   if (!diagnostics)
     return GRANIT_ERROR_UNSUPPORTED;
 
@@ -239,8 +251,8 @@ granit_result renderer_registry::set_object_name(granit_renderer renderer, grani
 
 void renderer_registry::emit_validation_diagnostic(granit_renderer renderer,
                                                    std::string_view message) noexcept {
-  const auto diagnostics =
-      std::dynamic_pointer_cast<backend_diagnostic_renderer>(acquire_backend(renderer));
+  const auto interfaces = acquire_backend_interfaces(renderer);
+  const auto diagnostics = interfaces ? interfaces->diagnostics : nullptr;
   if (diagnostics) {
     diagnostics->diagnostics().emit(diagnostic_severity::error, diagnostic_category::validation,
                                     message);
@@ -279,10 +291,15 @@ granit_result renderer_registry::destroy(granit_renderer renderer) {
       return GRANIT_ERROR_INTERNAL;
     }
     state = backend_found->second;
-    diagnostics = std::dynamic_pointer_cast<backend_diagnostic_renderer>(state);
-    presentation = std::dynamic_pointer_cast<backend_presentation_renderer>(state);
-    queue = std::dynamic_pointer_cast<backend_queue>(state);
-    retirement = std::dynamic_pointer_cast<backend_retirement_renderer>(state);
+    const auto interfaces_found = backend_interfaces_.find(renderer);
+    if (interfaces_found == backend_interfaces_.end())
+      return GRANIT_ERROR_INTERNAL;
+    const auto& interfaces = *interfaces_found->second;
+    diagnostics = interfaces.diagnostics;
+    presentation = interfaces.presentation;
+    queue = interfaces.queue;
+    retirement = interfaces.retirement;
+    backend_interfaces_.erase(interfaces_found);
     backend_renderers_.erase(renderer);
     if (diagnostics && diagnostics->validation_enabled()) {
       for (const auto& [handle, record] : frame_contexts_) {
@@ -597,6 +614,16 @@ std::shared_ptr<backend_renderer> renderer_registry::acquire_backend(granit_rend
   }
   const auto found = backend_renderers_.find(renderer);
   return found == backend_renderers_.end() ? std::shared_ptr<backend_renderer>{} : found->second;
+}
+
+std::shared_ptr<const backend_interfaces>
+renderer_registry::acquire_backend_interfaces(granit_renderer renderer) {
+  std::lock_guard lock{mutex_};
+  if (handles_.find(renderer, resource_type::renderer, 0) == nullptr)
+    return {};
+  const auto found = backend_interfaces_.find(renderer);
+  return found == backend_interfaces_.end() ? std::shared_ptr<const backend_interfaces>{}
+                                            : found->second;
 }
 
 std::uint32_t renderer_registry::allocate_domain() noexcept {

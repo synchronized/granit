@@ -22,7 +22,6 @@
 | `GRANIT_BUILD_BENCHMARKS` | `OFF` | 构建独立性能基准程序 |
 | `GRANIT_BUILD_TOOLS` | `OFF` | 单独构建离线工具；示例或 benchmark 会自动构建所需工具 |
 | `GRANIT_BUILD_SHADER_TOOLS` | `OFF` | 构建并安装可供编辑器链接的 ShaderTools SDK |
-| `GRANIT_BUILD_BACKEND_WEBGPU` | `OFF` | 构建实验性 WebGPU 后端插件；需要锁定 Dawn 静态包 |
 | `GRANIT_ENABLE_XCB` | Linux 上 `ON` | 找到 XCB 开发头时启用私有 XCB Surface 后端 |
 | `GRANIT_ENABLE_WAYLAND` | Linux 上 `ON` | 找到 Wayland 协议工具时启用 Wayland 后端 |
 | `GRANIT_ENABLE_WARNINGS` | `ON` | 为 Granit 自有目标启用编译警告 |
@@ -37,45 +36,8 @@ Wayland Window 需要 `wayland-client`、`wayland-scanner` 和 `wayland-protocol
 Window 仍可构建。上述库均不进入 Granit 公共头文件；静态链接 Input 时最终应用仍需链接系统
 `libxkbcommon`。
 
-实验性 WebGPU 插件不会由普通 Vulkan 构建自动启用或下载依赖。构建时必须提供由 Granit 锁定流程
-生成、且与插件工具链匹配的 Dawn 静态安装包：
-
-```sh
-cmake -S . -B build-webgpu \
-  -DGRANIT_BUILD_BACKEND_WEBGPU=ON \
-  -DGRANIT_DAWN_ROOT=/path/to/locked/dawn
-cmake --build build-webgpu --target granit_backend_webgpu
-```
-
-配置会要求 Dawn 包导出静态的 `dawn::webgpu_dawn`；共享目标或未显式指定的系统 Dawn 会被拒绝。
-维护者可在无 GPU 的验证环境中额外设置 `GRANIT_WEBGPU_FORCE_FALLBACK_ADAPTER=ON`，优先请求
-Dawn 软件 fallback adapter；若当前平台未暴露 fallback adapter，插件会记录警告并自动重试普通
-adapter。该选项仅用于可复现 smoke test，普通插件构建保持关闭。
-
-项目维护者通过手动 `Dawn SDK Build` 工作流生成锁定版本的 Windows 和 Linux SDK。
-普通构建只保留短期 Actions Artifact；选择“发布 SDK”后，工作流仅在两个平台的静态库、符号
-检查和真实 WebGPU 插件 smoke test 全部通过时，将压缩包及 SHA-256 清单发布为长期保存的 GitHub
-预发布版本。smoke test 优先使用 fallback adapter，并验证 64×64 离屏绘制、像素回读、资源销毁
-和插件卸载；fallback 不可用时自动重试普通 adapter。日志同时记录 Queue Submit 调用耗时与总耗时。
-SDK 标签同时包含 Dawn 版本和修订短
-哈希，升级 Dawn 或工具链时应生成新标签，不能覆盖不兼容版本。
-
-日常 Granit 变更使用手动 `Dawn Integration` 工作流验证。它直接下载、校验并解压上述固定版本
-SDK，只重新构建 WebGPU 插件、Shader 工具和跨后端 Fixture，不重复获取或编译 Dawn。只有升级
-Dawn 修订、SDK 工具链或打包配置时才运行 `Dawn SDK Build`。
-
-安装包可以使用 GitHub CLI 下载并校验，例如：
-
-```sh
-gh release download dawn-sdk-v20260720.160313-0bc38adde72b \
-  --pattern "granit-dawn-static-v20260720.160313-<平台>-x64.*"
-```
-
-解压后将 `GRANIT_DAWN_ROOT` 指向 SDK 根目录。Windows 与 Linux 包不能交叉使用，Windows 包还必须
-与插件使用兼容的 MSVC 工具集和运行库。Linux 构建镜像属于后续加速项；版本化 SDK 是本地开发、
-CI 和未来镜像共同使用的权威二进制输入。
-插件安装到 `lib/granit/backends`，不进入核心 Granit 链接接口。该入口目前只用于 0.4.0 原型，尚未
-构成稳定的安装 component 或公共后端选择 API。
+桌面平台只构建 Vulkan 后端，不需要 Dawn SDK。浏览器 WebGPU 由 Emscripten 构建静态接入，
+其环境和运行方法见[浏览器 WebGPU 示例](webgpu-browser-example.md)。
 
 ## 测试依赖
 

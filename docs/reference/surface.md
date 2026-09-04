@@ -6,7 +6,7 @@
 ## 定位
 
 Surface 表示 Renderer 与原生窗口系统之间的输出连接。公开接口只接收平台窗口句柄并返回
-Granit 64 位整数句柄，不暴露 Vulkan 或 WebGPU 类型。Vulkan 与桌面 Dawn WebGPU 均通过相同的
+Granit 64 位整数句柄，不暴露 Vulkan 或 WebGPU 类型。桌面 Vulkan 与浏览器 WebGPU 均通过相同的
 Win32、Linux XCB 和 Wayland 公共入口创建 Surface；实际可用性取决于所选后端、平台开发包、
 运行时扩展及 Provider 能力。
 

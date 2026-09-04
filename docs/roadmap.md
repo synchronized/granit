@@ -26,7 +26,7 @@
 | 六、多线程与性能 | 已完成 | 压力测试、基线、批量提交与上传批处理已完成 |
 | 七、可选高层渲染 | 已完成 | H-02～H-08 路线闭合，参考管线与公共 UI/Text 已验证 |
 | 八、稳定化与跨平台 | 持续进行 | ABI 策略、诊断和更多平台 Surface 待后续推进 |
-| 九、多后端与 Web 平台 | 已完成 | 桌面 WebGPU、浏览器闭环与私有 HAL 收敛已验收 |
+| 九、多后端与 Web 平台 | 已完成 | 桌面 Vulkan、浏览器 WebGPU 与私有 HAL 收敛已验收 |
 | 十、Android 移动平台 | 待开始 | 0.4.0 多后端边界完成后规划 NDK、Surface 与移动生命周期 |
 
 ## 一、工程与 ABI 基础
@@ -162,7 +162,7 @@
 
 ## 九、多后端与 Web 平台
 
-**状态：已完成；桌面 WebGPU、Emscripten 浏览器闭环与私有 HAL 收敛已通过最终验收。**
+**状态：范围调整中；桌面保留 Vulkan，WebGPU 收敛到 Emscripten 浏览器。**
 
 - **[S-10](plans/S-10-0.4.0-webgpu-backend.md) / P2**：先定义后端无关的内部设备、资源、命令、
   同步与 Surface 边界，在保持 Vulkan 后端功能和性能的前提下验证桌面 WebGPU 离屏 MVP；随后建立
@@ -190,14 +190,16 @@
   记录也不再持有 Vulkan `renderer_state` 具体视图。最终 Windows、Linux 与 Emscripten 手动
   Actions 矩阵全部通过，S-10 已完成。详细结果见
   [S-10E WebGPU Renderer 阶段验收](records/2026-08-28-s10e-webgpu-renderer-acceptance.md)。
+- **[S-16](plans/S-16-browser-only-webgpu.md) / P1**：依据 ADR-005 删除桌面 Dawn、动态插件和
+  SDK 工作流；保留统一私有 HAL，并让 Emscripten WebGPU 静态后端直接服务浏览器目标。
 
 ## 十、Android 移动平台
 
 **状态：待开始；不属于 0.4.0 交付范围。**
 
-- **S-11 / P2**：在 S-10 多后端契约、桌面 WebGPU 和 Emscripten 路径稳定后增加 Android 支持。
-  首轮以 Android NDK `arm64-v8a` 为基线，接入 `ANativeWindow`、应用暂停/恢复、Surface 重建、
-  旋转与基础触控输入；同时验证 Vulkan 后端和静态接入 Dawn 的 WebGPU 后端。
+- **S-11 / P2**：在多后端契约与 Emscripten 路径稳定后增加 Android 支持。首轮以 Android NDK
+  `arm64-v8a` 为基线，接入 `ANativeWindow`、应用暂停/恢复、Surface 重建、旋转与基础触控输入，
+  并只验证 Vulkan 后端；Android WebGPU 若产生明确需求，另行决策。
 - Android 交付需要独立规划 Gradle/Prefab 或 AAR 集成、按 ABI 打包、真机与模拟器测试以及移动端
   GPU 能力降级。具体版本和任务拆分在 S-10 验收后确定，不阻塞当前 0.4.0。
 
@@ -215,14 +217,21 @@
   为模型查看器接入许可明确、离线预处理的摄影棚环境光，并恢复金属材质的环境反射。
 - **[S-13I](plans/S-13I-render-quality.md) / P1**：统一 MSAA、FXAA、Specular AA、Mipmap 与各向异性
   过滤的能力查询、公开质量选项、查看器控制和三后端组合验收。
+- **[S-15](plans/S-15-internal-hal-structure.md) / P1**：整理现有私有 HAL；在 Renderer 注册时集中
+  发现能力接口，收敛 Registry 依赖，并明确契约、插件桥和具体后端的目录职责。公共 API/ABI 和
+  后端选择行为保持不变。
 - **S-14 / P2 / 条件性**：仅当至少两个非示例 Consumer 需要复用，且 S-13 已验证 CPU 数据模型后，
   再将示例加载器提升为可安装的 `granit::integration_gltf`；此前不承诺公共 glTF SDK。
 
 ## 近期执行顺序
 
-1. S-14 只在复用条件成立后启动；不要为当前单个示例提前稳定 glTF 公共 API。
-2. S-06D 最终验收等待稳定版本与 component 范围决策；不在 0.x 阶段提前宣布稳定。
-3. H-09 的透明 PBR、CSM、Clustered Forward 与 Bindless 只在各自重新评估条件满足后独立恢复，
+1. S-16 已完成桌面 Dawn 和动态 Provider 删除，以及 Vulkan 与浏览器 WebGPU 回归。
+2. [S-17](plans/S-17-render-pipeline-internal-structure.md) 已完成 Render Pipeline 内部职责收敛，
+   公共 API/ABI 与渲染行为保持不变。
+3. S-15 已按 S-16 新边界完成 HAL 实现与跨平台验收。
+4. S-14 只在复用条件成立后启动；不要为当前单个示例提前稳定 glTF 公共 API。
+5. S-06D 最终验收等待稳定版本与 component 范围决策；不在 0.x 阶段提前宣布稳定。
+6. H-09 的透明 PBR、CSM、Clustered Forward 与 Bindless 只在各自重新评估条件满足后独立恢复，
    不作为当前稳定化工作的前置项。
 
 若前置抽象不足，应先更新对应 Plan 和本路线图状态，再扩大公共 API。

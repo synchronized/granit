@@ -4,7 +4,7 @@
 #ifndef GRANIT_MATERIAL_PBR_DRAW_INPUTS_H
 #define GRANIT_MATERIAL_PBR_DRAW_INPUTS_H
 
-#include "material/pbr_reference.h"
+#include "material/pbr_types.h"
 
 #include <array>
 #include <cstdint>

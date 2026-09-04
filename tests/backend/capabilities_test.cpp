@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include "backend/callback_lifetime.h"
-#include "backend/capabilities.h"
-#include "backend/lifecycle.h"
+#include "backend/contracts/callback_lifetime.h"
+#include "backend/contracts/capabilities.h"
+#include "backend/contracts/interfaces.h"
+#include "backend/contracts/lifecycle.h"
 #include "renderer/dynamic_uniform_offsets.h"
 
 #include <catch2/catch_all.hpp>
@@ -11,6 +12,48 @@
 #include <array>
 #include <atomic>
 #include <future>
+#include <memory>
+
+namespace {
+
+class root_only_backend final : public granit::detail::backend_renderer {
+public:
+  [[nodiscard]] granit::detail::backend_lifecycle_status
+  lifecycle_status() const noexcept override {
+    return {granit::detail::backend_lifecycle_state::ready, GRANIT_SUCCESS};
+  }
+
+  [[nodiscard]] granit_result process_backend_events() noexcept override { return GRANIT_SUCCESS; }
+  [[nodiscard]] const granit::detail::backend_capabilities& capabilities() const noexcept override {
+    return capabilities_;
+  }
+  [[nodiscard]] granit_renderer_backend backend() const noexcept override {
+    return GRANIT_RENDERER_BACKEND_AUTO;
+  }
+  [[nodiscard]] std::string_view adapter_name() const noexcept override { return "test"; }
+  [[nodiscard]] std::uint32_t adapter_vendor_id() const noexcept override { return 0; }
+  [[nodiscard]] std::uint32_t adapter_device_id() const noexcept override { return 0; }
+  [[nodiscard]] std::uint32_t domain() const noexcept override { return domain_; }
+  void set_domain(std::uint32_t domain) noexcept override { domain_ = domain; }
+
+private:
+  granit::detail::backend_capabilities capabilities_{};
+  std::uint32_t domain_{};
+};
+
+} // namespace
+
+TEST_CASE("HAL 能力接口在 Renderer 注册前集中发现", "[backend][interfaces]") {
+  const auto backend = std::make_shared<root_only_backend>();
+  const auto interfaces = granit::detail::discover_backend_interfaces(backend);
+
+  CHECK(interfaces.renderer == backend);
+  CHECK_FALSE(interfaces.resources);
+  CHECK_FALSE(interfaces.commands);
+  CHECK_FALSE(interfaces.pipeline_cache);
+  CHECK_FALSE(interfaces.timestamps);
+  CHECK_FALSE(interfaces.has_required_capabilities());
+}
 
 TEST_CASE("后端能力快照统一校验 Buffer 绑定限制", "[backend][capabilities]") {
   const granit::detail::backend_capabilities capabilities{

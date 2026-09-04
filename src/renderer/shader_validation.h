@@ -17,7 +17,7 @@ inline constexpr std::uint32_t maximum_shader_entry_point_length = UINT32_C(255)
 
 [[nodiscard]] inline granit_result
 validate_shader_desc_common(const granit_shader_desc* desc) noexcept {
-  if (desc == nullptr || desc->struct_size < GRANIT_SHADER_DESC_VERSION_1_SIZE ||
+  if (desc == nullptr || desc->struct_size < GRANIT_SHADER_DESC_SIZE ||
       desc->entry_point == nullptr || desc->entry_point_length == 0 ||
       desc->entry_point_length > maximum_shader_entry_point_length || desc->reserved != 0 ||
       desc->stage < GRANIT_SHADER_STAGE_VERTEX || desc->stage > GRANIT_SHADER_STAGE_COMPUTE ||
@@ -46,8 +46,7 @@ validate_shader_desc_common(const granit_shader_desc* desc) noexcept {
   if (common != GRANIT_SUCCESS) {
     return common;
   }
-  if (desc->struct_size < GRANIT_SHADER_DESC_VERSION_2_SIZE || desc->wgsl == nullptr ||
-      desc->wgsl_length == 0 || desc->wgsl_length > maximum_shader_size ||
+  if (desc->wgsl == nullptr || desc->wgsl_length == 0 || desc->wgsl_length > maximum_shader_size ||
       std::memchr(desc->wgsl, '\0', static_cast<std::size_t>(desc->wgsl_length)) != nullptr ||
       desc->stage == GRANIT_SHADER_STAGE_COMPUTE) {
     return GRANIT_ERROR_INVALID_ARGUMENT;

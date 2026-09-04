@@ -14,19 +14,20 @@ namespace granit::detail {
 granit_result renderer_registry::create_command_recorder(granit_renderer renderer,
                                                          granit_command_recorder& recorder) {
   try {
-    auto owner = acquire_backend(renderer);
-    if (!owner) {
+    const auto interfaces = acquire_backend_interfaces(renderer);
+    if (!interfaces) {
       return GRANIT_ERROR_INVALID_HANDLE;
     }
+    const auto& owner = interfaces->renderer;
     auto record = std::make_shared<command_recorder_record>();
     record->owner = owner;
-    record->queue = std::dynamic_pointer_cast<backend_queue>(owner);
-    record->commands = std::dynamic_pointer_cast<backend_command_renderer>(owner);
-    record->compute = std::dynamic_pointer_cast<backend_compute_command_renderer>(owner);
-    record->graphics = std::dynamic_pointer_cast<backend_graphics_command_renderer>(owner);
-    record->retirement = std::dynamic_pointer_cast<backend_retirement_renderer>(owner);
-    record->timestamps = std::dynamic_pointer_cast<backend_timestamp_renderer>(owner);
-    record->transfers = std::dynamic_pointer_cast<backend_transfer_command_renderer>(owner);
+    record->queue = interfaces->queue;
+    record->commands = interfaces->commands;
+    record->compute = interfaces->compute;
+    record->graphics = interfaces->graphics;
+    record->retirement = interfaces->retirement;
+    record->timestamps = interfaces->timestamps;
+    record->transfers = interfaces->transfer;
     if (!record->queue || !record->commands || !record->graphics)
       return GRANIT_ERROR_INTERNAL;
     record->native = record->commands->allocate_command_recorder_resource();
@@ -167,10 +168,11 @@ granit_result renderer_registry::reset_command_recorder(granit_renderer renderer
 
 granit_result renderer_registry::create_frame_context(granit_renderer renderer,
                                                       granit_frame_context& context) {
-  auto owner = acquire_backend(renderer);
-  if (!owner)
+  const auto interfaces = acquire_backend_interfaces(renderer);
+  if (!interfaces)
     return GRANIT_ERROR_INVALID_HANDLE;
-  auto presentation = std::dynamic_pointer_cast<backend_presentation_renderer>(owner);
+  const auto& owner = interfaces->renderer;
+  const auto& presentation = interfaces->presentation;
   if (!presentation)
     return GRANIT_ERROR_UNSUPPORTED;
   auto record = std::make_shared<frame_context_record>();

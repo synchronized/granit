@@ -28,8 +28,9 @@ if (result == GRANIT_SUCCESS) {
 `application_name` 使用指针和显式长度，调用期间借用；Granit 会在 Vulkan instance 创建前复制。
 空指针和零长度使用默认名称。非空指针必须提供非零长度，且指定范围内不能含嵌入的零字符。
 
-`struct_size` 支持描述结构向后兼容。当前至少要求 `GRANIT_RENDERER_DESC_VERSION_1_SIZE`，未来
-新增字段只能追加到结构末尾；旧库会忽略超出已知范围的尾部字段。
+当前开发版本只接受完整的 `granit_renderer_desc`，`struct_size` 至少为
+`GRANIT_RENDERER_DESC_SIZE`。未来新增字段只能追加到结构末尾；库会忽略超出当前已知范围的尾部
+字段。
 
 ## 设备限制查询
 
@@ -58,14 +59,8 @@ Renderer 返回 `GRANIT_ERROR_INVALID_HANDLE`。限制来自 Renderer 创建时�
 ## 后端选择与信息
 
 `granit_renderer_desc::backend` 可设置 `AUTO`、`VULKAN` 或 `WEBGPU`。显式选择不会回退到
-另一后端；桌面 WebGPU 可通过 `backend_library_path` 指定 Granit WebGPU Provider 的绝对路径。
-路径只在创建调用期间借用，拒绝相对路径。路径为空时只检查 Granit Core 模块旁及安装布局中固定
-的 `granit/backends` 位置，不扫描当前工作目录或系统 `PATH`。静态链接应用若没有把 Provider
-放在这些固定相对位置，应显式传入打包后的绝对路径。旧版描述不含这些尾部字段时保持 `AUTO`。
-
-桌面 `AUTO` 先尝试 Vulkan；仅当结果为后端不可用、驱动不兼容、没有合适设备或请求能力不支持时
-尝试 WebGPU。内存不足、参数错误和内部错误不会触发回退。两次尝试均失败时返回 Vulkan 的结果，
-并通过 Diagnostic Callback 记录各候选失败原因。显式选择只尝试指定后端。
+另一后端。桌面构建只提供 Vulkan；WebGPU 仅在 Emscripten 浏览器构建中可用。
+桌面 `AUTO` 等价于 Vulkan；显式选择 WebGPU 返回 `GRANIT_ERROR_BACKEND_UNAVAILABLE`。
 
 创建成功后使用 `granit_renderer_get_info` 查询实际后端。Adapter 名称采用两次查询：第一次将
 `adapter_name` 和容量设为零以取得所需字节数，第二次提供包含结尾零字符的缓冲区。名称长度不含
@@ -73,7 +68,7 @@ Renderer 返回 `GRANIT_ERROR_INVALID_HANDLE`。限制来自 Renderer 创建时�
 不应作为渲染行为分支条件。C++ 包装通过 `renderer::get_info(renderer_info&)` 完成缓冲区管理。
 
 Emscripten 使用静态 WebGPU Provider，`AUTO` 与 `WEBGPU` 都选择该后端；显式 Vulkan 返回
-`GRANIT_ERROR_BACKEND_UNAVAILABLE`，任何动态库路径均返回 `GRANIT_ERROR_INVALID_ARGUMENT`。
+`GRANIT_ERROR_BACKEND_UNAVAILABLE`。Renderer 描述不接受后端动态库路径。
 
 ## 资源统计
 
@@ -153,7 +148,7 @@ Surface 会报告仍存活的 Swapchain。诊断不会改变销毁结果，子�
 
 ## 诊断回调
 
-`granit_renderer_desc` V4 可以设置 `diagnostic_callback` 和 `diagnostic_user_data`。回调接收稳定的
+`granit_renderer_desc` 可以设置 `diagnostic_callback` 和 `diagnostic_user_data`。回调接收稳定的
 严重级别、消息类别以及不保证零结尾的 UTF-8 文本；文本只在回调期间有效。C++ 的
 `granit::renderer_desc` 对应字段为 `diagnostics` 和 `diagnostic_user_data`。
 

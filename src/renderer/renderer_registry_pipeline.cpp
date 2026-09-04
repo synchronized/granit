@@ -18,15 +18,14 @@ namespace granit::detail {
 granit_result renderer_registry::create_shader_from_desc(granit_renderer renderer,
                                                          const granit_shader_desc& desc,
                                                          granit_shader& shader) {
-  const auto owner = acquire_backend(renderer);
-  if (!owner) {
-    const auto validation = desc.struct_size >= GRANIT_SHADER_DESC_VERSION_2_SIZE &&
-                                    (desc.wgsl != nullptr || desc.wgsl_length != 0)
+  const auto interfaces = acquire_backend_interfaces(renderer);
+  if (!interfaces) {
+    const auto validation = desc.wgsl != nullptr || desc.wgsl_length != 0
                                 ? validate_shader_wgsl(&desc)
                                 : validate_shader_spirv(&desc);
     return validation == GRANIT_SUCCESS ? GRANIT_ERROR_INVALID_HANDLE : validation;
   }
-  if (std::dynamic_pointer_cast<backend_shader_renderer>(owner)) {
+  if (interfaces->wgsl_shaders) {
     const auto validation = validate_shader_wgsl(&desc);
     if (validation != GRANIT_SUCCESS)
       return validation;
@@ -39,24 +38,27 @@ granit_result renderer_registry::create_shader_from_desc(granit_renderer rendere
     return validation;
   std::vector<std::uint32_t> code(static_cast<std::size_t>(desc.code_size) / sizeof(std::uint32_t));
   std::memcpy(code.data(), desc.code, static_cast<std::size_t>(desc.code_size));
-  return create_shader(renderer, desc.stage, code,
-                       std::string_view{desc.entry_point, desc.entry_point_length}, shader);
+  return create_shader_from_spirv(renderer, desc.stage, code,
+                                  std::string_view{desc.entry_point, desc.entry_point_length},
+                                  shader);
 }
 
-granit_result renderer_registry::create_shader(granit_renderer renderer, granit_shader_stage stage,
-                                               std::span<const std::uint32_t> code,
-                                               std::string_view entry_point,
-                                               granit_shader& shader) {
+granit_result renderer_registry::create_shader_from_spirv(granit_renderer renderer,
+                                                          granit_shader_stage stage,
+                                                          std::span<const std::uint32_t> code,
+                                                          std::string_view entry_point,
+                                                          granit_shader& shader) {
   try {
-    auto owner = acquire_backend(renderer);
-    if (!owner)
+    const auto interfaces = acquire_backend_interfaces(renderer);
+    if (!interfaces)
       return GRANIT_ERROR_INVALID_HANDLE;
-    auto shaders = std::dynamic_pointer_cast<backend_spirv_shader_renderer>(owner);
+    const auto& owner = interfaces->renderer;
+    const auto& shaders = interfaces->spirv_shaders;
     if (!shaders)
       return GRANIT_ERROR_UNSUPPORTED;
     auto record = std::make_shared<shader_record>();
     record->owner = owner;
-    record->retirement = std::dynamic_pointer_cast<backend_retirement_renderer>(owner);
+    record->retirement = interfaces->retirement;
     record->stage = stage;
     record->entry_point.assign(entry_point);
     record->native = shaders->allocate_shader_resource();
@@ -92,13 +94,16 @@ granit_result renderer_registry::create_shader_from_wgsl(granit_renderer rendere
                                                          std::string_view entry_point,
                                                          granit_shader& shader) {
   try {
-    auto owner = acquire_backend(renderer);
-    auto shaders = std::dynamic_pointer_cast<backend_shader_renderer>(owner);
-    if (!owner || !shaders)
+    const auto interfaces = acquire_backend_interfaces(renderer);
+    if (!interfaces)
       return GRANIT_ERROR_INVALID_HANDLE;
+    const auto& owner = interfaces->renderer;
+    const auto& shaders = interfaces->wgsl_shaders;
+    if (!shaders)
+      return GRANIT_ERROR_UNSUPPORTED;
     auto record = std::make_shared<shader_record>();
     record->owner = owner;
-    record->retirement = std::dynamic_pointer_cast<backend_retirement_renderer>(owner);
+    record->retirement = interfaces->retirement;
     record->stage = stage;
     record->entry_point.assign(entry_point);
     record->native = shaders->allocate_shader_resource();
@@ -163,16 +168,17 @@ renderer_registry::create_bind_group_layout(granit_renderer renderer,
                                             std::span<const granit_bind_group_layout_entry> entries,
                                             granit_bind_group_layout& layout) {
   try {
-    auto owner = acquire_backend(renderer);
-    if (!owner)
+    const auto interfaces = acquire_backend_interfaces(renderer);
+    if (!interfaces)
       return GRANIT_ERROR_INVALID_HANDLE;
-    auto resource_api = std::dynamic_pointer_cast<backend_resource_renderer>(owner);
+    const auto& owner = interfaces->renderer;
+    const auto& resource_api = interfaces->resources;
     if (!resource_api)
       return GRANIT_ERROR_UNSUPPORTED;
     auto record = std::make_shared<bind_group_layout_record>();
     record->owner = owner;
     record->resource_api = resource_api;
-    record->retirement = std::dynamic_pointer_cast<backend_retirement_renderer>(owner);
+    record->retirement = interfaces->retirement;
     record->entries.assign(entries.begin(), entries.end());
     record->native = record->resource_api->allocate_bind_group_layout_resource();
     const auto result = record->resource_api->create_bind_group_layout(entries, *record->native);
@@ -244,7 +250,10 @@ granit_result renderer_registry::create_bind_group(granit_renderer renderer,
           layout_found->second->owner != renderer_found->second)
         return GRANIT_ERROR_INVALID_HANDLE;
       state = renderer_found->second;
-      resource_api = std::dynamic_pointer_cast<backend_resource_renderer>(state);
+      const auto interfaces_found = backend_interfaces_.find(renderer);
+      if (interfaces_found == backend_interfaces_.end())
+        return GRANIT_ERROR_INTERNAL;
+      resource_api = interfaces_found->second->resources;
       if (!resource_api)
         return GRANIT_ERROR_UNSUPPORTED;
       layout = layout_found->second;
@@ -374,7 +383,10 @@ granit_result renderer_registry::create_bind_group(granit_renderer renderer,
     }
     record->owner = state;
     record->resource_api = resource_api;
-    record->retirement = std::dynamic_pointer_cast<backend_retirement_renderer>(state);
+    const auto interfaces = acquire_backend_interfaces(renderer);
+    if (!interfaces || interfaces->renderer != state)
+      return GRANIT_ERROR_INVALID_HANDLE;
+    record->retirement = interfaces->retirement;
     record->layout = layout;
     record->native = record->resource_api->allocate_bind_group_resource();
     const auto result =
@@ -431,16 +443,17 @@ granit_result renderer_registry::create_pipeline_layout(
     granit_renderer renderer, std::span<const granit_bind_group_layout> bind_group_layouts,
     granit_pipeline_layout& layout) {
   try {
-    auto owner = acquire_backend(renderer);
-    if (!owner)
+    const auto interfaces = acquire_backend_interfaces(renderer);
+    if (!interfaces)
       return GRANIT_ERROR_INVALID_HANDLE;
-    auto pipelines = std::dynamic_pointer_cast<backend_pipeline_layout_renderer>(owner);
+    const auto& owner = interfaces->renderer;
+    const auto& pipelines = interfaces->pipeline_layouts;
     if (!pipelines)
       return GRANIT_ERROR_UNSUPPORTED;
     auto record = std::make_shared<pipeline_layout_record>();
     record->owner = owner;
     record->pipelines = pipelines;
-    record->retirement = std::dynamic_pointer_cast<backend_retirement_renderer>(owner);
+    record->retirement = interfaces->retirement;
     std::vector<backend_bind_group_layout_resource*> native_layouts;
     {
       std::lock_guard lock{mutex_};
@@ -520,7 +533,10 @@ granit_result renderer_registry::create_graphics_pipeline(granit_renderer render
       if (found == backend_renderers_.end())
         return GRANIT_ERROR_INVALID_HANDLE;
       state = found->second;
-      pipelines = std::dynamic_pointer_cast<backend_pipeline_renderer>(state);
+      const auto interfaces_found = backend_interfaces_.find(renderer);
+      if (interfaces_found == backend_interfaces_.end())
+        return GRANIT_ERROR_INTERNAL;
+      pipelines = interfaces_found->second->pipelines;
       if (!pipelines)
         return GRANIT_ERROR_UNSUPPORTED;
       const auto layout_found = pipeline_layouts_.find(desc.layout);
@@ -541,7 +557,10 @@ granit_result renderer_registry::create_graphics_pipeline(granit_renderer render
     auto record = std::make_shared<graphics_pipeline_record>();
     record->owner = state;
     record->pipelines = pipelines;
-    record->retirement = std::dynamic_pointer_cast<backend_retirement_renderer>(state);
+    const auto interfaces = acquire_backend_interfaces(renderer);
+    if (!interfaces || interfaces->renderer != state)
+      return GRANIT_ERROR_INVALID_HANDLE;
+    record->retirement = interfaces->retirement;
     record->layout = layout;
     record->vertex_shader = vertex;
     record->fragment_shader = fragment;
@@ -551,11 +570,8 @@ granit_result renderer_registry::create_graphics_pipeline(granit_renderer render
     const auto validation = pipelines->validate_graphics_pipeline(desc);
     if (validation != GRANIT_SUCCESS)
       return validation;
-    const auto vertex_buffers =
-        desc.struct_size >= GRANIT_GRAPHICS_PIPELINE_DESC_VERSION_2_SIZE
-            ? std::span<const granit_vertex_buffer_layout>{desc.vertex_buffer_layouts,
-                                                           desc.vertex_buffer_layout_count}
-            : std::span<const granit_vertex_buffer_layout>{};
+    const std::span<const granit_vertex_buffer_layout> vertex_buffers{
+        desc.vertex_buffer_layouts, desc.vertex_buffer_layout_count};
     granit_depth_state depth{desc.depth_stencil_format != GRANIT_TEXTURE_FORMAT_UNDEFINED,
                              desc.depth_stencil_format != GRANIT_TEXTURE_FORMAT_UNDEFINED,
                              GRANIT_COMPARE_OPERATION_LESS_EQUAL, 0};
@@ -571,12 +587,10 @@ granit_result renderer_registry::create_graphics_pipeline(granit_renderer render
                                GRANIT_COLOR_WRITE_ALL_BITS};
     std::span<const granit_color_blend_state> color_blends{default_blends.data(),
                                                            desc.color_format_count};
-    if (desc.struct_size >= GRANIT_GRAPHICS_PIPELINE_DESC_VERSION_4_SIZE) {
-      if (desc.depth)
-        depth = *desc.depth;
-      if (desc.color_blend_count != 0)
-        color_blends = {desc.color_blends, desc.color_blend_count};
-    }
+    if (desc.depth)
+      depth = *desc.depth;
+    if (desc.color_blend_count != 0)
+      color_blends = {desc.color_blends, desc.color_blend_count};
     const backend_graphics_pipeline_create_info info{
         *layout->native,
         *vertex->native,
@@ -584,14 +598,9 @@ granit_result renderer_registry::create_graphics_pipeline(granit_renderer render
         *fragment->native,
         fragment->entry_point.c_str(),
         vertex_buffers,
-        desc.struct_size >= GRANIT_GRAPHICS_PIPELINE_DESC_VERSION_3_SIZE
-            ? desc.primitive
-            : granit_primitive_state{GRANIT_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
-                                     GRANIT_FRONT_FACE_COUNTER_CLOCKWISE, GRANIT_CULL_MODE_NONE,
-                                     GRANIT_POLYGON_MODE_FILL},
+        desc.primitive,
         depth,
-        desc.struct_size >= GRANIT_GRAPHICS_PIPELINE_DESC_VERSION_5_SIZE ? desc.depth_bias
-                                                                         : nullptr,
+        desc.depth_bias,
         color_blends,
         {desc.color_formats, static_cast<std::size_t>(desc.color_format_count)},
         desc.depth_stencil_format,
@@ -662,7 +671,10 @@ granit_result renderer_registry::create_compute_pipeline(granit_renderer rendere
       if (found == backend_renderers_.end())
         return GRANIT_ERROR_INVALID_HANDLE;
       state = found->second;
-      resource_api = std::dynamic_pointer_cast<backend_resource_renderer>(state);
+      const auto interfaces_found = backend_interfaces_.find(renderer);
+      if (interfaces_found == backend_interfaces_.end())
+        return GRANIT_ERROR_INTERNAL;
+      resource_api = interfaces_found->second->resources;
       if (!resource_api)
         return GRANIT_ERROR_UNSUPPORTED;
       const auto layout_found = pipeline_layouts_.find(desc.layout);
@@ -677,7 +689,10 @@ granit_result renderer_registry::create_compute_pipeline(granit_renderer rendere
     auto record = std::make_shared<compute_pipeline_record>();
     record->owner = state;
     record->resource_api = resource_api;
-    record->retirement = std::dynamic_pointer_cast<backend_retirement_renderer>(state);
+    const auto interfaces = acquire_backend_interfaces(renderer);
+    if (!interfaces || interfaces->renderer != state)
+      return GRANIT_ERROR_INVALID_HANDLE;
+    record->retirement = interfaces->retirement;
     record->layout = layout;
     record->compute_shader = compute;
     record->native = record->resource_api->allocate_compute_pipeline_resource();

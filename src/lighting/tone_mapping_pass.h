@@ -4,7 +4,7 @@
 #ifndef GRANIT_LIGHTING_TONE_MAPPING_PASS_H
 #define GRANIT_LIGHTING_TONE_MAPPING_PASS_H
 
-#include "lighting/tone_mapping_reference.h"
+#include "lighting/tone_mapping_types.h"
 #include "render_graph/serial_graph.h"
 
 #include <array>

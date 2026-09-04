@@ -208,129 +208,6 @@ target_link_libraries(
 granit_target_compile_warnings(granit_backend_resources_test)
 add_test(NAME granit.backend_resources COMMAND granit_backend_resources_test)
 
-add_library(granit_backend_plugin_c_header_test OBJECT backend/plugin_api_h.c)
-target_compile_features(granit_backend_plugin_c_header_test PRIVATE c_std_11)
-target_include_directories(
-  granit_backend_plugin_c_header_test
-  PRIVATE "${PROJECT_SOURCE_DIR}/include" "${PROJECT_SOURCE_DIR}/src"
-)
-granit_target_compile_warnings(granit_backend_plugin_c_header_test)
-
-add_library(
-  granit_fake_backend_plugin SHARED
-  "${PROJECT_SOURCE_DIR}/src/backend/webgpu/plugin.cpp"
-  backend/webgpu_mock.cpp
-)
-add_library(granit_incompatible_backend_plugin SHARED backend/incompatible_backend_plugin.cpp)
-target_compile_features(granit_fake_backend_plugin PRIVATE cxx_std_20)
-target_compile_definitions(
-  granit_fake_backend_plugin
-  PRIVATE GRANIT_WEBGPU_FORCE_FALLBACK_ADAPTER GRANIT_WEBGPU_DEFER_INITIALIZATION_TEST
-          GRANIT_WEBGPU_CANVAS_SURFACE_TEST GRANIT_WEBGPU_NATIVE_SURFACE_TEST
-)
-target_compile_features(granit_incompatible_backend_plugin PRIVATE cxx_std_20)
-set_target_properties(
-  granit_fake_backend_plugin granit_incompatible_backend_plugin
-  PROPERTIES
-    CXX_VISIBILITY_PRESET hidden
-    VISIBILITY_INLINES_HIDDEN YES
-    FOLDER "Tests/WebGPU"
-)
-target_include_directories(
-  granit_fake_backend_plugin
-  PRIVATE
-    "${CMAKE_CURRENT_SOURCE_DIR}/support/webgpu"
-    "${PROJECT_SOURCE_DIR}/include"
-    "${PROJECT_SOURCE_DIR}/src"
-)
-target_include_directories(
-  granit_incompatible_backend_plugin
-  PRIVATE "${PROJECT_SOURCE_DIR}/include" "${PROJECT_SOURCE_DIR}/src"
-)
-granit_target_output_directories(granit_fake_backend_plugin)
-granit_target_output_directories(granit_incompatible_backend_plugin)
-granit_target_compile_warnings(granit_fake_backend_plugin)
-granit_target_compile_warnings(granit_incompatible_backend_plugin)
-
-add_executable(
-  granit_backend_plugin_loader_test
-  backend/plugin_loader_test.cpp
-  backend/webgpu_presentation_adapter_test.cpp
-  backend/webgpu_renderer_state_test.cpp
-  platform/shared_library_test.cpp
-  $<TARGET_OBJECTS:granit_backend_plugin>
-)
-target_include_directories(
-  granit_backend_plugin_loader_test
-  PRIVATE "${PROJECT_SOURCE_DIR}/include" "${PROJECT_SOURCE_DIR}/src"
-)
-target_compile_definitions(
-  granit_backend_plugin_loader_test
-  PRIVATE
-    GRANIT_FAKE_BACKEND_PLUGIN_PATH="$<TARGET_FILE:granit_fake_backend_plugin>"
-    GRANIT_INCOMPATIBLE_BACKEND_PLUGIN_PATH="$<TARGET_FILE:granit_incompatible_backend_plugin>"
-    GRANIT_MISSING_BACKEND_PLUGIN_PATH="${CMAKE_CURRENT_BINARY_DIR}/missing-plugin"
-)
-target_link_libraries(
-  granit_backend_plugin_loader_test PRIVATE Catch2::Catch2WithMain ${CMAKE_DL_LIBS}
-)
-add_dependencies(
-  granit_backend_plugin_loader_test granit_fake_backend_plugin
-  granit_incompatible_backend_plugin
-)
-granit_target_compile_warnings(granit_backend_plugin_loader_test)
-granit_target_output_directories(granit_backend_plugin_loader_test)
-add_test(NAME granit.backend.plugin_loader COMMAND granit_backend_plugin_loader_test)
-
-if(GRANIT_BUILD_BACKEND_WEBGPU)
-  add_executable(
-    granit_webgpu_plugin_smoke
-    backend/webgpu_plugin_smoke.cpp
-    $<TARGET_OBJECTS:granit_backend_plugin>
-    $<TARGET_OBJECTS:granit_shader_asset>
-  )
-  target_compile_features(granit_webgpu_plugin_smoke PRIVATE cxx_std_20)
-  target_include_directories(
-    granit_webgpu_plugin_smoke
-    PRIVATE "${PROJECT_SOURCE_DIR}/include" "${PROJECT_SOURCE_DIR}/src" "${PROJECT_SOURCE_DIR}/tools"
-  )
-  target_compile_definitions(
-    granit_webgpu_plugin_smoke
-    PRIVATE GRANIT_WEBGPU_PLUGIN_PATH="$<TARGET_FILE:granit_backend_webgpu>"
-  )
-  target_link_libraries(granit_webgpu_plugin_smoke PRIVATE ${CMAKE_DL_LIBS})
-  add_dependencies(granit_webgpu_plugin_smoke granit_backend_webgpu)
-  granit_target_compile_warnings(granit_webgpu_plugin_smoke)
-  granit_target_output_directories(granit_webgpu_plugin_smoke)
-  if(NOT GRANIT_S10C_VERTEX_SHADER_ASSET OR NOT GRANIT_S10C_FRAGMENT_SHADER_ASSET)
-    message(FATAL_ERROR "S-10C6 smoke test 需要设置 Vertex 和 Fragment Shader 资产")
-  endif()
-  add_test(
-    NAME granit.backend.webgpu_plugin_smoke
-    COMMAND granit_webgpu_plugin_smoke "${GRANIT_S10C_VERTEX_SHADER_ASSET}"
-  )
-
-  add_executable(
-    granit_shader_asset_vulkan_smoke
-    backend/shader_asset_vulkan_smoke.cpp
-    $<TARGET_OBJECTS:granit_shader_asset>
-  )
-  target_compile_features(granit_shader_asset_vulkan_smoke PRIVATE cxx_std_20)
-  target_include_directories(
-    granit_shader_asset_vulkan_smoke PRIVATE "${PROJECT_SOURCE_DIR}/tools"
-  )
-  target_link_libraries(granit_shader_asset_vulkan_smoke PRIVATE granit::granit)
-  granit_target_compile_warnings(granit_shader_asset_vulkan_smoke)
-  granit_target_output_directories(granit_shader_asset_vulkan_smoke)
-  add_test(
-    NAME granit.backend.shader_asset_vulkan_smoke
-    COMMAND
-      granit_shader_asset_vulkan_smoke
-      "${GRANIT_S10C_VERTEX_SHADER_ASSET}"
-      "${GRANIT_S10C_FRAGMENT_SHADER_ASSET}"
-  )
-endif()
-
 add_executable(
   granit_lifecycle_validation_test
   core/diagnostic_sink_test.cpp
@@ -425,6 +302,11 @@ add_test(NAME granit.scene COMMAND granit_scene_test)
 
 add_executable(
   granit_lighting_test
+  reference/lighting/ibl_reference.cpp
+  reference/lighting/lighting_reference.cpp
+  reference/lighting/shadow_reference.cpp
+  reference/lighting/tone_mapping_reference.cpp
+  reference/material/pbr_reference.cpp
   lighting/directional_shadow_test.cpp
   lighting/ibl_reference_test.cpp
   lighting/ibl_resources_test.cpp
@@ -432,7 +314,7 @@ add_executable(
   lighting/light_data_test.cpp
   lighting/lighting_reference_test.cpp
   lighting/multi_view_gpu_test.cpp
-  lighting/reference_pipeline_graph_test.cpp
+  lighting/forward_pipeline_graph_test.cpp
   lighting/shadow_resources_test.cpp
   lighting/shadow_ibl_resources_test.cpp
   lighting/shadow_reference_test.cpp
@@ -443,7 +325,10 @@ add_executable(
 )
 target_include_directories(
   granit_lighting_test
-  PRIVATE "${PROJECT_SOURCE_DIR}/src" "${PROJECT_SOURCE_DIR}/examples"
+  PRIVATE
+    "${PROJECT_SOURCE_DIR}/src"
+    "${PROJECT_SOURCE_DIR}/tests"
+    "${PROJECT_SOURCE_DIR}/examples"
 )
 target_link_libraries(granit_lighting_test PRIVATE granit::lighting Catch2::Catch2WithMain)
 target_compile_options(granit_lighting_test PRIVATE $<$<COMPILE_LANG_AND_ID:CXX,MSVC>:/utf-8>)
@@ -518,6 +403,7 @@ add_test(NAME granit.pipeline COMMAND granit_pipeline_test)
 
 add_executable(
   granit_material_test
+  reference/material/pbr_reference.cpp
   material/material_gpu_instance_test.cpp
   material/material_hot_reload_test.cpp
   material/material_archive_test.cpp
@@ -533,7 +419,9 @@ add_executable(
   "${PROJECT_SOURCE_DIR}/src/material/material_debug_json.cpp"
   "${PROJECT_SOURCE_DIR}/src/material/material_source_json.cpp"
 )
-target_include_directories(granit_material_test PRIVATE "${PROJECT_SOURCE_DIR}/src")
+target_include_directories(
+  granit_material_test PRIVATE "${PROJECT_SOURCE_DIR}/src" "${PROJECT_SOURCE_DIR}/tests"
+)
 target_link_libraries(granit_material_test PRIVATE granit::material Catch2::Catch2WithMain)
 target_compile_options(
   granit_material_test
@@ -589,23 +477,7 @@ target_compile_definitions(
   PRIVATE
     GRANIT_TEST_ASSET_DIR="${PROJECT_SOURCE_DIR}/tests/assets"
     GRANIT_TEST_ARTIFACT_DIR="${CMAKE_BINARY_DIR}/test-artifacts"
-    GRANIT_FAKE_BACKEND_PLUGIN_PATH="$<TARGET_FILE:granit_fake_backend_plugin>"
 )
-add_dependencies(granit_renderer_test granit_fake_backend_plugin)
-if(TARGET granit_example_model_viewer_support_test)
-  target_compile_definitions(
-    granit_example_model_viewer_support_test
-    PRIVATE GRANIT_FAKE_BACKEND_PLUGIN_PATH="$<TARGET_FILE:granit_fake_backend_plugin>"
-  )
-  add_dependencies(granit_example_model_viewer_support_test granit_fake_backend_plugin)
-endif()
-if(GRANIT_BUILD_BACKEND_WEBGPU)
-  target_compile_definitions(
-    granit_renderer_test
-    PRIVATE GRANIT_WEBGPU_BACKEND_PLUGIN_PATH="$<TARGET_FILE:granit_backend_webgpu>"
-  )
-  add_dependencies(granit_renderer_test granit_backend_webgpu)
-endif()
 granit_target_compile_warnings(granit_renderer_test)
 add_test(NAME granit.renderer COMMAND granit_renderer_test)
 add_test(

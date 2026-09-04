@@ -20,7 +20,6 @@ option(GRANIT_BUILD_TOOLS "构建 Granit 离线工具" OFF)
 option(GRANIT_BUILD_SHADER_TOOLS "构建并安装 ShaderTools SDK" OFF)
 option(GRANIT_BUILD_INTEGRATION_SDL3 "构建 SDL3 可选集成组件" OFF)
 option(GRANIT_BUILD_INTEGRATION_IMGUI "构建 ImGui 可选集成组件" OFF)
-option(GRANIT_BUILD_BACKEND_WEBGPU "构建静态链接 Dawn 的 WebGPU 后端插件" OFF)
 option(GRANIT_BUILD_EMSCRIPTEN_PLATFORM "构建 S-10D Emscripten 平台验证目标" OFF)
 set(GRANIT_S10C_VERTEX_SHADER_ASSET "" CACHE FILEPATH "S-10C6 Vertex Shader 资产")
 set(GRANIT_S10C_FRAGMENT_SHADER_ASSET "" CACHE FILEPATH "S-10C6 Fragment Shader 资产")
@@ -113,39 +112,6 @@ set(
   CACHE STRING
   "Granit CMake 包配置安装目录"
 )
-
-if(GRANIT_BUILD_BACKEND_WEBGPU)
-  option(
-    GRANIT_WEBGPU_FORCE_FALLBACK_ADAPTER
-    "WebGPU 插件强制使用软件 fallback adapter，仅用于可复现验证"
-    OFF
-  )
-  set(GRANIT_DAWN_ROOT "" CACHE PATH "锁定 Dawn 静态安装包根目录")
-  if(NOT GRANIT_DAWN_ROOT)
-    message(FATAL_ERROR "已启用 WebGPU 后端插件，但未设置 GRANIT_DAWN_ROOT")
-  endif()
-  find_package(Threads REQUIRED)
-  find_package(Dawn CONFIG REQUIRED PATHS "${GRANIT_DAWN_ROOT}" NO_DEFAULT_PATH)
-  if(NOT TARGET dawn::webgpu_dawn)
-    message(FATAL_ERROR "Dawn 包未提供 dawn::webgpu_dawn")
-  endif()
-  get_target_property(GRANIT_DAWN_LIBRARY_TYPE dawn::webgpu_dawn TYPE)
-  if(NOT GRANIT_DAWN_LIBRARY_TYPE STREQUAL "STATIC_LIBRARY")
-    message(FATAL_ERROR "WebGPU 插件要求 dawn::webgpu_dawn 为静态库")
-  endif()
-  if(WIN32 AND CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND
-     CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "GNU")
-    get_target_property(granit_dawn_link_libraries dawn::webgpu_dawn INTERFACE_LINK_LIBRARIES)
-    if(granit_dawn_link_libraries)
-      # Dawn 的 Windows 静态包可能导出 MSVC/LINK 专用选项，GNU 风格 Clang 无法解析。
-      list(REMOVE_ITEM granit_dawn_link_libraries "$<LINK_ONLY:-ignore:4221>")
-      set_property(
-        TARGET dawn::webgpu_dawn PROPERTY INTERFACE_LINK_LIBRARIES
-                                            "${granit_dawn_link_libraries}"
-      )
-    endif()
-  endif()
-endif()
 
 if(GRANIT_BUILD_INTEGRATION_SDL3)
   if(NOT TARGET SDL3::SDL3)

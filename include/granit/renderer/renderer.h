@@ -140,20 +140,10 @@ typedef struct granit_renderer_desc {
   granit_diagnostic_callback diagnostic_callback;
   void* diagnostic_user_data;
   granit_renderer_backend backend;
-  uint32_t backend_library_path_length;
-  const char* backend_library_path;
 } granit_renderer_desc;
 
-#define GRANIT_RENDERER_DESC_VERSION_1_SIZE                                                        \
-  ((uint32_t)(offsetof(granit_renderer_desc, flags) + sizeof(uint32_t)))
-#define GRANIT_RENDERER_DESC_VERSION_2_SIZE                                                        \
-  ((uint32_t)(offsetof(granit_renderer_desc, surface_types) + sizeof(uint32_t)))
-#define GRANIT_RENDERER_DESC_VERSION_3_SIZE                                                        \
-  ((uint32_t)(offsetof(granit_renderer_desc, reserved) + sizeof(uint32_t)))
-#define GRANIT_RENDERER_DESC_VERSION_4_SIZE                                                        \
-  ((uint32_t)(offsetof(granit_renderer_desc, diagnostic_user_data) + sizeof(void*)))
-#define GRANIT_RENDERER_DESC_VERSION_5_SIZE                                                        \
-  ((uint32_t)(offsetof(granit_renderer_desc, backend_library_path) + sizeof(const char*)))
+#define GRANIT_RENDERER_DESC_SIZE                                                                  \
+  ((uint32_t)(offsetof(granit_renderer_desc, backend) + sizeof(granit_renderer_backend)))
 
 #define GRANIT_RENDERER_DESC_INIT                                                                  \
   {(uint32_t)sizeof(granit_renderer_desc),                                                         \
@@ -166,9 +156,7 @@ typedef struct granit_renderer_desc {
    UINT32_C(0),                                                                                    \
    0,                                                                                              \
    0,                                                                                              \
-   GRANIT_RENDERER_BACKEND_AUTO,                                                                   \
-   UINT32_C(0),                                                                                    \
-   0}
+   GRANIT_RENDERER_BACKEND_AUTO}
 
 /** Renderer 实际后端与只用于诊断的 Adapter 元数据。 */
 typedef struct granit_renderer_info {

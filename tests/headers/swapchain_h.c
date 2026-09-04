@@ -7,7 +7,7 @@ static granit_swapchain_desc granit_test_swapchain_desc = GRANIT_SWAPCHAIN_DESC_
 static granit_swapchain_info granit_test_swapchain_info = GRANIT_SWAPCHAIN_INFO_INIT;
 static granit_frame_info granit_test_frame_info = GRANIT_FRAME_INFO_INIT;
 typedef char granit_swapchain_info_size_check
-    [sizeof(granit_swapchain_info) >= GRANIT_SWAPCHAIN_INFO_VERSION_2_SIZE ? 1 : -1];
+    [sizeof(granit_swapchain_info) >= GRANIT_SWAPCHAIN_INFO_SIZE ? 1 : -1];
 typedef char granit_frame_info_size_check
     [sizeof(granit_frame_info) == GRANIT_FRAME_INFO_VERSION_1_SIZE ? 1 : -1];
 

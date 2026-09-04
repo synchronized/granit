@@ -228,7 +228,7 @@ bool write_profile(const std::filesystem::path& path, const granit::renderer_inf
 void print_usage() {
   std::cerr << "用法：granit_model_viewer_example --asset <文件> "
                "[--environment <文件.grenv>] "
-               "[--backend=auto|vulkan|webgpu] [--backend-library <文件>] "
+               "[--backend=auto|vulkan] "
                "[--validation] [--smoke-test] [--no-ui] "
                "[--present-mode=fifo|immediate] [--profile-output <文件.json>]\n";
 }
@@ -290,8 +290,7 @@ int main(int argc, char** argv) {
     result = renderer.initialize({.application_name = "Granit Model Viewer",
                                   .enable_validation = options.enable_validation,
                                   .surface_types = surface_type,
-                                  .backend = options.backend,
-                                  .backend_library_path = options.backend_library_path});
+                                  .backend = options.backend});
   }
   granit::renderer_info renderer_info;
   if (result.ok())
@@ -314,8 +313,7 @@ int main(int argc, char** argv) {
         granit::integration::sdl3::create_surface(renderer.native_handle(), window.get(), surface);
   int pixel_width = 0;
   int pixel_height = 0;
-  if (result.ok() &&
-      !SDL_GetWindowSizeInPixels(window.get(), &pixel_width, &pixel_height)) {
+  if (result.ok() && !SDL_GetWindowSizeInPixels(window.get(), &pixel_width, &pixel_height)) {
     result = granit::result::backend_unavailable;
   }
   if (result.ok() && !options.profile_output_path.empty() &&
@@ -408,8 +406,8 @@ int main(int argc, char** argv) {
       granit::result preview_result;
       if ((preview_result = register_preview(material.base_color_texture, true)).failed() ||
           (preview_result = register_preview(material.emissive_texture, true)).failed() ||
-          (preview_result =
-                             register_preview(material.metallic_roughness_texture, false)).failed() ||
+          (preview_result = register_preview(material.metallic_roughness_texture, false))
+              .failed() ||
           (preview_result = register_preview(material.normal_texture, false)).failed() ||
           (preview_result = register_preview(material.occlusion_texture, false)).failed())
         return preview_result;
@@ -465,13 +463,14 @@ int main(int argc, char** argv) {
     }
     if (recreate_surface) {
       if ((result = swapchain.reset()).failed() || (result = surface.reset()).failed() ||
-          (result = granit::integration::sdl3::create_surface(
-                             renderer.native_handle(), window.get(), surface)).failed() ||
-          (
-              result = swapchain.initialize(renderer.native_handle(), surface.native_handle(),
-                                            {.width = static_cast<std::uint32_t>(pixel_width),
-                                             .height = static_cast<std::uint32_t>(pixel_height),
-                                             .presentation = options.presentation})).failed() ||
+          (result = granit::integration::sdl3::create_surface(renderer.native_handle(),
+                                                              window.get(), surface))
+              .failed() ||
+          (result = swapchain.initialize(renderer.native_handle(), surface.native_handle(),
+                                         {.width = static_cast<std::uint32_t>(pixel_width),
+                                          .height = static_cast<std::uint32_t>(pixel_height),
+                                          .presentation = options.presentation}))
+              .failed() ||
           (result = swapchain.query_info(swapchain_info)).failed()) {
         break;
       }
@@ -538,8 +537,7 @@ int main(int argc, char** argv) {
         else if (metrics_result != granit::result::unsupported)
           result = metrics_result;
       }
-      if (result.ok() &&
-          changes.quality->sampler_anisotropy != render_quality.sampler_anisotropy) {
+      if (result.ok() && changes.quality->sampler_anisotropy != render_quality.sampler_anisotropy) {
         result = core.reupload_scene(renderer.native_handle(), changes.quality->sampler_anisotropy);
         if (result.ok() && options.show_ui)
           result = rebuild_previews();

@@ -15,16 +15,17 @@ granit_result renderer_registry::create_timestamp_query_pool(granit_renderer ren
                                                              std::uint32_t query_count,
                                                              granit_timestamp_query_pool& pool) {
   try {
-    auto owner = acquire_backend(renderer);
-    if (!owner)
+    const auto interfaces = acquire_backend_interfaces(renderer);
+    if (!interfaces)
       return GRANIT_ERROR_INVALID_HANDLE;
-    auto timestamps = std::dynamic_pointer_cast<backend_timestamp_renderer>(owner);
+    const auto& owner = interfaces->renderer;
+    const auto& timestamps = interfaces->timestamps;
     if (!timestamps)
       return GRANIT_ERROR_UNSUPPORTED;
     auto record = std::make_shared<timestamp_query_pool_record>();
     record->owner = owner;
     record->timestamps = timestamps;
-    record->retirement = std::dynamic_pointer_cast<backend_retirement_renderer>(owner);
+    record->retirement = interfaces->retirement;
     const auto result = timestamps->create_timestamp_query_pool(query_count, record->native);
     if (result != GRANIT_SUCCESS)
       return result;

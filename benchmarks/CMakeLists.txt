@@ -238,7 +238,12 @@ add_executable(
   granit_lighting_gpu_benchmarks
   "${PROJECT_SOURCE_DIR}/examples/pbr_offscreen.cpp"
   "${PROJECT_SOURCE_DIR}/examples/pbr_example_support.cpp"
+  "${PROJECT_SOURCE_DIR}/tests/reference/lighting/ibl_reference.cpp"
+  "${PROJECT_SOURCE_DIR}/tests/reference/lighting/lighting_reference.cpp"
+  "${PROJECT_SOURCE_DIR}/tests/reference/lighting/tone_mapping_reference.cpp"
+  "${PROJECT_SOURCE_DIR}/tests/reference/material/pbr_reference.cpp"
 )
+target_include_directories(granit_lighting_gpu_benchmarks PRIVATE "${PROJECT_SOURCE_DIR}/tests")
 target_compile_features(granit_lighting_gpu_benchmarks PRIVATE cxx_std_20)
 target_compile_options(
   granit_lighting_gpu_benchmarks

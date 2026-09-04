@@ -136,6 +136,12 @@ D-03-graphics-pipeline.md
   IBL 布局，为模型查看器补齐可再分发的摄影棚环境与跨后端验收。
 - [S-13I：跨后端渲染质量配置](S-13I-render-quality.md)——已完成；统一 MSAA、FXAA、Specular AA、
   Mipmap 与各向异性过滤的能力查询、公开选项和三后端验收。
+- [S-15：私有 HAL 结构整理](S-15-internal-hal-structure.md)——已完成；集中后端能力发现与
+  Registry 依赖，并整理 HAL 契约和具体后端目录。
+- [S-16：WebGPU 收敛到 Emscripten 浏览器](S-16-browser-only-webgpu.md)——已完成；删除桌面
+  Dawn、动态 Provider 与 SDK/CI 成本，保留统一 HAL 和浏览器 WebGPU。
+- [S-17：Render Pipeline 内部职责收敛](S-17-render-pipeline-internal-structure.md)——已完成；
+  拆分提交数据、Forward/Shadow/Tone Mapping 录制与 GPU 指标管理，公共 API/ABI 保持不变。
 
 ## 状态
 

@@ -4,7 +4,7 @@
 #include "renderer/renderer_registry.h"
 #include "renderer/renderer_registry_records.h"
 
-#include "backend/diagnostics.h"
+#include "backend/contracts/diagnostics.h"
 #include "renderer/renderer_registry_helpers.h"
 
 #include <algorithm>
@@ -18,11 +18,12 @@ granit_result renderer_registry::create_win32_surface(granit_renderer renderer,
                                                       void* native_instance, void* native_window,
                                                       granit_surface& surface) {
   try {
-    auto owner = acquire_backend(renderer);
-    auto state = std::dynamic_pointer_cast<backend_presentation_renderer>(owner);
-    if (!owner || !state) {
+    const auto interfaces = acquire_backend_interfaces(renderer);
+    if (!interfaces) {
       return GRANIT_ERROR_INVALID_HANDLE;
     }
+    const auto& owner = interfaces->renderer;
+    const auto& state = interfaces->presentation;
 
     auto record = std::make_shared<surface_record>();
     record->owner = owner;
@@ -62,10 +63,11 @@ granit_result renderer_registry::create_win32_surface(granit_renderer renderer,
 granit_result renderer_registry::create_xcb_surface(granit_renderer renderer, void* connection,
                                                     std::uint32_t window, granit_surface& surface) {
   try {
-    auto owner = acquire_backend(renderer);
-    auto state = std::dynamic_pointer_cast<backend_presentation_renderer>(owner);
-    if (!owner || !state)
+    const auto interfaces = acquire_backend_interfaces(renderer);
+    if (!interfaces)
       return GRANIT_ERROR_INVALID_HANDLE;
+    const auto& owner = interfaces->renderer;
+    const auto& state = interfaces->presentation;
 
     auto record = std::make_shared<surface_record>();
     record->owner = owner;
@@ -102,10 +104,11 @@ granit_result renderer_registry::create_wayland_surface(granit_renderer renderer
                                                         void* native_surface,
                                                         granit_surface& surface) {
   try {
-    auto owner = acquire_backend(renderer);
-    auto state = std::dynamic_pointer_cast<backend_presentation_renderer>(owner);
-    if (!owner || !state)
+    const auto interfaces = acquire_backend_interfaces(renderer);
+    if (!interfaces)
       return GRANIT_ERROR_INVALID_HANDLE;
+    const auto& owner = interfaces->renderer;
+    const auto& state = interfaces->presentation;
 
     auto record = std::make_shared<surface_record>();
     record->owner = owner;
@@ -143,10 +146,11 @@ granit_result renderer_registry::create_canvas_surface(granit_renderer renderer,
                                                        std::string_view selector,
                                                        granit_surface& surface) {
   try {
-    auto owner = acquire_backend(renderer);
-    auto state = std::dynamic_pointer_cast<backend_presentation_renderer>(owner);
-    if (!owner || !state)
+    const auto interfaces = acquire_backend_interfaces(renderer);
+    if (!interfaces)
       return GRANIT_ERROR_INVALID_HANDLE;
+    const auto& owner = interfaces->renderer;
+    const auto& state = interfaces->presentation;
 
     auto record = std::make_shared<surface_record>();
     record->owner = owner;
@@ -196,8 +200,11 @@ granit_result renderer_registry::destroy_surface(granit_renderer renderer, grani
       return GRANIT_ERROR_INVALID_HANDLE;
     }
     owner = renderer_found->second;
-    presentation = std::dynamic_pointer_cast<backend_presentation_renderer>(owner);
-    diagnostics = std::dynamic_pointer_cast<backend_diagnostic_renderer>(owner);
+    const auto interfaces_found = backend_interfaces_.find(renderer);
+    if (interfaces_found == backend_interfaces_.end())
+      return GRANIT_ERROR_INTERNAL;
+    presentation = interfaces_found->second->presentation;
+    diagnostics = interfaces_found->second->diagnostics;
     if (!presentation)
       return GRANIT_ERROR_UNSUPPORTED;
     if (handles_.find(surface, resource_type::surface, owner->domain()) == nullptr) {
@@ -291,7 +298,10 @@ granit_result renderer_registry::create_swapchain(granit_renderer renderer, gran
         return GRANIT_ERROR_INVALID_HANDLE;
       }
       owner = renderer_found->second;
-      state = std::dynamic_pointer_cast<backend_presentation_renderer>(owner);
+      const auto interfaces_found = backend_interfaces_.find(renderer);
+      if (interfaces_found == backend_interfaces_.end())
+        return GRANIT_ERROR_INTERNAL;
+      state = interfaces_found->second->presentation;
       if (!state || handles_.find(surface, resource_type::surface, owner->domain()) == nullptr) {
         return GRANIT_ERROR_INVALID_HANDLE;
       }
@@ -570,7 +580,8 @@ granit_result renderer_registry::acquire_swapchain_frame(granit_renderer rendere
   auto record = std::make_shared<frame_record>();
   record->owner = swapchain_record_state->owner;
   record->presentation = swapchain_record_state->presentation;
-  record->queue = std::dynamic_pointer_cast<backend_queue>(swapchain_record_state->owner);
+  const auto interfaces = acquire_backend_interfaces(renderer);
+  record->queue = interfaces ? interfaces->queue : nullptr;
   if (!record->queue)
     return GRANIT_ERROR_INTERNAL;
   record->swapchain = swapchain_record_state;

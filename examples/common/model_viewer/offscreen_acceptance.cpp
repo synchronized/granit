@@ -30,7 +30,6 @@ constexpr std::size_t rgba_size = static_cast<std::size_t>(render_size) * render
 
 struct options {
   granit::renderer_backend backend{granit::renderer_backend::automatic};
-  std::string backend_library;
   std::filesystem::path asset;
   std::filesystem::path environment;
   std::filesystem::path output;
@@ -49,8 +48,7 @@ void print_usage() {
                "[--environment <文件.grenv>] [--expected <文件.rgba>] "
                "[--debug-display=shaded|base-color|normals|metallic|roughness|"
                "geometric-normals|sampled-normals|vertex-normals|vertex-tangents] "
-               "[--backend=auto|vulkan|webgpu] "
-               "[--backend-library <文件>] [--msaa=1|4] [--fxaa=on|off] "
+               "[--backend=auto|vulkan] [--msaa=1|4] [--fxaa=on|off] "
                "[--specular-aa=on|off] [--anisotropy=1|2|4|8|16] [--validation]\n";
 }
 
@@ -105,8 +103,6 @@ bool parse_backend(std::string_view value, granit::renderer_backend& backend) {
     backend = granit::renderer_backend::automatic;
   else if (value == "vulkan")
     backend = granit::renderer_backend::vulkan;
-  else if (value == "webgpu")
-    backend = granit::renderer_backend::webgpu;
   else
     return false;
   return true;
@@ -155,8 +151,6 @@ bool parse_options(int argc, char** argv, options& output) {
       candidate.output = argv[++index];
     } else if (argument == "--expected" && index + 1 < argc) {
       candidate.expected = argv[++index];
-    } else if (argument == "--backend-library" && index + 1 < argc) {
-      candidate.backend_library = argv[++index];
     } else if (argument == "--validation") {
       candidate.validation = true;
     } else {
@@ -242,8 +236,7 @@ bool compare_expected(const options& arguments, const granit::renderer_info& ren
   // 单采样基准没有 MSAA/FXAA 的轮廓稳定性，允许极少量后端光栅化边缘差异；
   // 高质量路径继续使用严格阈值，颜色和深度阈值不变。
   const granit::example::model_viewer::screenshot_comparison_options comparison_options{
-      .max_silhouette_mismatch_count =
-          arguments.sample_count == GRANIT_SAMPLE_COUNT_1 ? 64U : 4U};
+      .max_silhouette_mismatch_count = arguments.sample_count == GRANIT_SAMPLE_COUNT_1 ? 64U : 4U};
   granit::example::model_viewer::screenshot_comparison_report report;
   const auto error = granit::example::model_viewer::compare_screenshots(
       {render_size, render_size, expected, {}}, {render_size, render_size, actual, {}},
@@ -324,8 +317,7 @@ int main(int argc, char** argv) {
   auto result = renderer.initialize({.application_name = "Granit Model Viewer Acceptance",
                                      .enable_validation = arguments.validation,
                                      .diagnostics = diagnostics,
-                                     .backend = arguments.backend,
-                                     .backend_library_path = arguments.backend_library});
+                                     .backend = arguments.backend});
   granit::renderer_info renderer_details;
   if (result.ok()) {
     stage = "查询 Renderer 信息";
@@ -336,9 +328,8 @@ int main(int argc, char** argv) {
     stage = "查询 Renderer 限制";
     result = renderer.get_limits(renderer_limits);
   }
-  if (result.ok() &&
-      ((renderer_limits.framebuffer_sample_counts & arguments.sample_count) == 0 ||
-       arguments.sampler_anisotropy > renderer_limits.max_sampler_anisotropy)) {
+  if (result.ok() && ((renderer_limits.framebuffer_sample_counts & arguments.sample_count) == 0 ||
+                      arguments.sampler_anisotropy > renderer_limits.max_sampler_anisotropy)) {
     stage = "校验质量配置";
     result = granit::result::unsupported;
   }

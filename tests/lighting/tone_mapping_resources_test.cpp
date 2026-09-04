@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include "lighting/tone_mapping_reference.h"
 #include "lighting/tone_mapping_resources.h"
+#include "reference/lighting/tone_mapping_reference.h"
 
 #include <granit/granit.hpp>
 

@@ -8,22 +8,22 @@
 
 #include <granit/core/diagnostic.h>
 
-#include "backend/capabilities.h"
-#include "backend/command.h"
-#include "backend/compute.h"
-#include "backend/lifecycle.h"
-#include "backend/pipeline.h"
-#include "backend/plugin_loader.h"
-#include "backend/queue.h"
-#include "backend/renderer.h"
-#include "backend/rendering.h"
-#include "backend/resource_management.h"
-#include "backend/retirement.h"
-#include "backend/shader.h"
-#include "backend/transfer.h"
+#include "backend/contracts/capabilities.h"
+#include "backend/contracts/command.h"
+#include "backend/contracts/compute.h"
+#include "backend/contracts/lifecycle.h"
+#include "backend/contracts/pipeline.h"
+#include "backend/contracts/queue.h"
+#include "backend/contracts/renderer.h"
+#include "backend/contracts/rendering.h"
+#include "backend/contracts/resource_management.h"
+#include "backend/contracts/retirement.h"
+#include "backend/contracts/shader.h"
+#include "backend/contracts/transfer.h"
 #include "backend/webgpu/command_adapter.h"
 #include "backend/webgpu/pipeline_adapter.h"
 #include "backend/webgpu/presentation_adapter.h"
+#include "backend/webgpu/provider_dispatch.h"
 #include "backend/webgpu/resource_adapter.h"
 #include "backend/webgpu/shader_adapter.h"
 
@@ -39,7 +39,7 @@ class webgpu_renderer_state final : public backend_renderer,
                                     public backend_resource_renderer,
                                     public backend_transfer_command_renderer,
                                     public backend_retirement_renderer,
-                                    public backend_shader_renderer,
+                                    public backend_wgsl_shader_renderer,
                                     public backend_pipeline_layout_renderer,
                                     public backend_pipeline_renderer {
 public:
@@ -49,14 +49,10 @@ public:
   webgpu_renderer_state(const webgpu_renderer_state&) = delete;
   webgpu_renderer_state& operator=(const webgpu_renderer_state&) = delete;
 
-  [[nodiscard]] granit_result initialize_static(const granit_backend_plugin_api* api,
+  [[nodiscard]] granit_result initialize_static(const granit_webgpu_provider_api* api,
                                                 std::uint32_t surface_types,
                                                 granit_diagnostic_callback diagnostic_callback,
                                                 void* diagnostic_user_data) noexcept;
-  [[nodiscard]] granit_result initialize_dynamic(std::string_view library_path,
-                                                 std::uint32_t surface_types,
-                                                 granit_diagnostic_callback diagnostic_callback,
-                                                 void* diagnostic_user_data) noexcept;
   [[nodiscard]] granit_result process_backend_events() noexcept override;
   [[nodiscard]] granit_renderer_backend backend() const noexcept override {
     return GRANIT_RENDERER_BACKEND_WEBGPU;
@@ -292,8 +288,8 @@ private:
   [[nodiscard]] granit_result refresh_state() noexcept;
   [[nodiscard]] granit_result finish_initialization() noexcept;
 
-  backend_plugin_loader loader_;
-  granit_backend_plugin_instance instance_{};
+  webgpu_provider_dispatch provider_;
+  granit_webgpu_provider_instance instance_{};
   granit_diagnostic_callback diagnostic_callback_{};
   void* diagnostic_user_data_{};
   backend_lifecycle_status lifecycle_{};

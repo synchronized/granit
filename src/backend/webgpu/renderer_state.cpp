@@ -10,16 +10,16 @@
 namespace granit::detail {
 namespace {
 
-std::uint32_t to_plugin_surface_types(std::uint32_t surface_types) noexcept {
+std::uint32_t to_provider_surface_types(std::uint32_t surface_types) noexcept {
   std::uint32_t result{};
   if ((surface_types & GRANIT_SURFACE_TYPE_WIN32_BIT) != 0)
-    result |= GRANIT_BACKEND_PLUGIN_SURFACE_TYPE_WIN32_BIT;
+    result |= GRANIT_WEBGPU_PROVIDER_SURFACE_TYPE_WIN32_BIT;
   if ((surface_types & GRANIT_SURFACE_TYPE_XCB_BIT) != 0)
-    result |= GRANIT_BACKEND_PLUGIN_SURFACE_TYPE_XCB_BIT;
+    result |= GRANIT_WEBGPU_PROVIDER_SURFACE_TYPE_XCB_BIT;
   if ((surface_types & GRANIT_SURFACE_TYPE_WAYLAND_BIT) != 0)
-    result |= GRANIT_BACKEND_PLUGIN_SURFACE_TYPE_WAYLAND_BIT;
+    result |= GRANIT_WEBGPU_PROVIDER_SURFACE_TYPE_WAYLAND_BIT;
   if ((surface_types & GRANIT_SURFACE_TYPE_CANVAS_BIT) != 0)
-    result |= GRANIT_BACKEND_PLUGIN_SURFACE_TYPE_CANVAS_BIT;
+    result |= GRANIT_WEBGPU_PROVIDER_SURFACE_TYPE_CANVAS_BIT;
   return result;
 }
 
@@ -32,10 +32,10 @@ webgpu_renderer_state::~webgpu_renderer_state() {
   pipelines_.reset();
   shaders_.reset();
   if (instance_ != 0) {
-    static_cast<void>(loader_.destroy_instance(instance_));
+    static_cast<void>(provider_.destroy_instance(instance_));
     instance_ = 0;
   }
-  loader_.close();
+  provider_.close();
 }
 
 std::unique_ptr<backend_command_recorder_resource>
@@ -169,7 +169,7 @@ granit_result webgpu_renderer_state::bind_compute_groups(
   if (!commands_ || !resources_ || !pipelines_ || bind_groups.empty())
     return GRANIT_ERROR_INVALID_ARGUMENT;
   try {
-    std::vector<granit_backend_plugin_bind_group> native_groups;
+    std::vector<granit_webgpu_provider_bind_group> native_groups;
     native_groups.reserve(bind_groups.size());
     for (auto* group : bind_groups) {
       if (group == nullptr)
@@ -241,7 +241,7 @@ granit_result webgpu_renderer_state::bind_graphics_groups(
   if (!commands_ || !resources_ || !pipelines_ || bind_groups.empty())
     return GRANIT_ERROR_INVALID_ARGUMENT;
   try {
-    std::vector<granit_backend_plugin_bind_group> native_groups;
+    std::vector<granit_webgpu_provider_bind_group> native_groups;
     native_groups.reserve(bind_groups.size());
     for (auto* bind_group : bind_groups) {
       if (bind_group == nullptr)
@@ -268,7 +268,7 @@ granit_result webgpu_renderer_state::bind_vertex_buffers(
     std::span<backend_buffer_resource* const> buffers, std::span<const std::uint64_t> offsets) {
   if (!commands_ || !resources_ || buffers.empty() || buffers.size() != offsets.size())
     return GRANIT_ERROR_INVALID_ARGUMENT;
-  std::vector<granit_backend_plugin_vertex_buffer_binding> bindings;
+  std::vector<granit_webgpu_provider_vertex_buffer_binding> bindings;
   try {
     bindings.reserve(buffers.size());
     for (std::size_t index = 0; index < buffers.size(); ++index) {
@@ -294,8 +294,8 @@ granit_result webgpu_renderer_state::bind_index_buffer(backend_command_recorder_
   const auto native = resources_->native_buffer(buffer);
   if (native == 0)
     return GRANIT_ERROR_INVALID_ARGUMENT;
-  const auto format = type == GRANIT_INDEX_TYPE_UINT16 ? GRANIT_BACKEND_PLUGIN_INDEX_FORMAT_UINT16
-                                                       : GRANIT_BACKEND_PLUGIN_INDEX_FORMAT_UINT32;
+  const auto format = type == GRANIT_INDEX_TYPE_UINT16 ? GRANIT_WEBGPU_PROVIDER_INDEX_FORMAT_UINT16
+                                                       : GRANIT_WEBGPU_PROVIDER_INDEX_FORMAT_UINT32;
   return commands_->bind_index_buffer(recorder, native, offset, format);
 }
 
@@ -306,7 +306,7 @@ webgpu_renderer_state::set_viewports(backend_command_recorder_resource& recorder
   if (!commands_ || viewports.empty())
     return GRANIT_ERROR_INVALID_ARGUMENT;
   try {
-    std::vector<granit_backend_plugin_viewport> native;
+    std::vector<granit_webgpu_provider_viewport> native;
     native.reserve(viewports.size());
     for (const auto& viewport : viewports) {
       native.push_back({viewport.x, viewport.y, viewport.width, viewport.height, viewport.min_depth,
@@ -327,7 +327,7 @@ webgpu_renderer_state::set_scissors(backend_command_recorder_resource& recorder,
   if (!commands_ || scissors.empty())
     return GRANIT_ERROR_INVALID_ARGUMENT;
   try {
-    std::vector<granit_backend_plugin_scissor> native;
+    std::vector<granit_webgpu_provider_scissor> native;
     native.reserve(scissors.size());
     for (const auto& scissor : scissors) {
       native.push_back({static_cast<std::uint32_t>(scissor.x),
@@ -420,21 +420,21 @@ granit_result webgpu_renderer_state::begin_rendering(
   if (!commands_ || !presentation_ || color_attachments.size() > 1 || layer_count != 1 ||
       (color_attachments.empty() && depth_stencil_attachment == nullptr))
     return GRANIT_ERROR_UNSUPPORTED;
-  auto load = GRANIT_BACKEND_PLUGIN_LOAD_OPERATION_CLEAR;
-  auto store = GRANIT_BACKEND_PLUGIN_STORE_OPERATION_DISCARD;
+  auto load = GRANIT_WEBGPU_PROVIDER_LOAD_OPERATION_CLEAR;
+  auto store = GRANIT_WEBGPU_PROVIDER_STORE_OPERATION_DISCARD;
   float clear[]{0.0F, 0.0F, 0.0F, 0.0F};
-  granit_backend_plugin_texture_view native_view{};
-  granit_backend_plugin_texture_view native_resolve_view{};
+  granit_webgpu_provider_texture_view native_view{};
+  granit_webgpu_provider_texture_view native_resolve_view{};
   if (!color_attachments.empty()) {
     const auto& attachment = color_attachments.front();
     if (attachment.load_operation == GRANIT_ATTACHMENT_LOAD_OPERATION_DISCARD)
       return GRANIT_ERROR_UNSUPPORTED;
     load = attachment.load_operation == GRANIT_ATTACHMENT_LOAD_OPERATION_LOAD
-               ? GRANIT_BACKEND_PLUGIN_LOAD_OPERATION_LOAD
-               : GRANIT_BACKEND_PLUGIN_LOAD_OPERATION_CLEAR;
+               ? GRANIT_WEBGPU_PROVIDER_LOAD_OPERATION_LOAD
+               : GRANIT_WEBGPU_PROVIDER_LOAD_OPERATION_CLEAR;
     store = attachment.store_operation == GRANIT_ATTACHMENT_STORE_OPERATION_STORE
-                ? GRANIT_BACKEND_PLUGIN_STORE_OPERATION_STORE
-                : GRANIT_BACKEND_PLUGIN_STORE_OPERATION_DISCARD;
+                ? GRANIT_WEBGPU_PROVIDER_STORE_OPERATION_STORE
+                : GRANIT_WEBGPU_PROVIDER_STORE_OPERATION_DISCARD;
     clear[0] = attachment.clear_value.red;
     clear[1] = attachment.clear_value.green;
     clear[2] = attachment.clear_value.blue;
@@ -450,9 +450,9 @@ granit_result webgpu_renderer_state::begin_rendering(
         return GRANIT_ERROR_INVALID_HANDLE;
     }
   }
-  granit_backend_plugin_texture_view native_depth_view{};
-  auto depth_load = GRANIT_BACKEND_PLUGIN_LOAD_OPERATION_CLEAR;
-  auto depth_store = GRANIT_BACKEND_PLUGIN_STORE_OPERATION_DISCARD;
+  granit_webgpu_provider_texture_view native_depth_view{};
+  auto depth_load = GRANIT_WEBGPU_PROVIDER_LOAD_OPERATION_CLEAR;
+  auto depth_store = GRANIT_WEBGPU_PROVIDER_STORE_OPERATION_DISCARD;
   float clear_depth = 1.0F;
   if (depth_stencil_attachment != nullptr) {
     const auto& depth = *depth_stencil_attachment;
@@ -466,11 +466,11 @@ granit_result webgpu_renderer_state::begin_rendering(
     if (native_depth_view == 0)
       return GRANIT_ERROR_INVALID_HANDLE;
     depth_load = depth.depth_load_operation == GRANIT_ATTACHMENT_LOAD_OPERATION_LOAD
-                     ? GRANIT_BACKEND_PLUGIN_LOAD_OPERATION_LOAD
-                     : GRANIT_BACKEND_PLUGIN_LOAD_OPERATION_CLEAR;
+                     ? GRANIT_WEBGPU_PROVIDER_LOAD_OPERATION_LOAD
+                     : GRANIT_WEBGPU_PROVIDER_LOAD_OPERATION_CLEAR;
     depth_store = depth.depth_store_operation == GRANIT_ATTACHMENT_STORE_OPERATION_STORE
-                      ? GRANIT_BACKEND_PLUGIN_STORE_OPERATION_STORE
-                      : GRANIT_BACKEND_PLUGIN_STORE_OPERATION_DISCARD;
+                      ? GRANIT_WEBGPU_PROVIDER_STORE_OPERATION_STORE
+                      : GRANIT_WEBGPU_PROVIDER_STORE_OPERATION_DISCARD;
     clear_depth = depth.clear_value.depth;
   }
   return commands_->begin_rendering(recorder, native_view, native_resolve_view, load, store, clear,
@@ -490,8 +490,8 @@ granit_result webgpu_renderer_state::create_wgsl_shader(backend_shader_resource&
                                                         granit_shader_stage stage,
                                                         std::string_view source,
                                                         std::string_view entry_point) noexcept {
-  return shaders_ ? shaders_->create_shader(shader, stage, source.data(), source.size(),
-                                            entry_point.data(), entry_point.size())
+  return shaders_ ? shaders_->create_wgsl_shader(shader, stage, source.data(), source.size(),
+                                                 entry_point.data(), entry_point.size())
                   : GRANIT_ERROR_UNSUPPORTED;
 }
 
@@ -506,7 +506,7 @@ granit_result webgpu_renderer_state::create_pipeline_layout(
   if (!pipelines_ || !resources_)
     return GRANIT_ERROR_UNSUPPORTED;
   try {
-    std::vector<granit_backend_plugin_bind_group_layout> native_layouts;
+    std::vector<granit_webgpu_provider_bind_group_layout> native_layouts;
     native_layouts.reserve(bind_group_layouts.size());
     for (auto* bind_group_layout : bind_group_layouts) {
       if (bind_group_layout == nullptr)
@@ -578,15 +578,15 @@ void webgpu_renderer_state::diagnose(granit_diagnostic_severity severity,
 }
 
 granit_result webgpu_renderer_state::initialize_static(
-    const granit_backend_plugin_api* api, std::uint32_t surface_types,
+    const granit_webgpu_provider_api* api, std::uint32_t surface_types,
     granit_diagnostic_callback diagnostic_callback, void* diagnostic_user_data) noexcept {
-  if (instance_ != 0 || loader_.is_open()) {
+  if (instance_ != 0 || provider_.is_open()) {
     return GRANIT_ERROR_INVALID_ARGUMENT;
   }
   diagnostic_callback_ = diagnostic_callback;
   diagnostic_user_data_ = diagnostic_user_data;
   surface_types_ = surface_types;
-  auto result = loader_.open_static(api, GRANIT_BACKEND_PLUGIN_KIND_WEBGPU);
+  auto result = provider_.connect(api);
   if (result != GRANIT_SUCCESS) {
     lifecycle_ = {backend_lifecycle_state::failed, result};
     return result;
@@ -594,36 +594,13 @@ granit_result webgpu_renderer_state::initialize_static(
   return finish_initialization();
 }
 
-granit_result webgpu_renderer_state::initialize_dynamic(
-    std::string_view library_path, std::uint32_t surface_types,
-    granit_diagnostic_callback diagnostic_callback, void* diagnostic_user_data) noexcept {
-  if (instance_ != 0 || loader_.is_open() || library_path.empty())
-    return GRANIT_ERROR_INVALID_ARGUMENT;
-  diagnostic_callback_ = diagnostic_callback;
-  diagnostic_user_data_ = diagnostic_user_data;
-  surface_types_ = surface_types;
-  try {
-    const std::string path{library_path};
-    const auto result = loader_.open(path.c_str(), GRANIT_BACKEND_PLUGIN_KIND_WEBGPU);
-    if (result != GRANIT_SUCCESS) {
-      lifecycle_ = {backend_lifecycle_state::failed, result};
-      return result;
-    }
-  } catch (const std::bad_alloc&) {
-    return GRANIT_ERROR_OUT_OF_MEMORY;
-  } catch (...) {
-    return GRANIT_ERROR_INTERNAL;
-  }
-  return finish_initialization();
-}
-
 granit_result webgpu_renderer_state::finish_initialization() noexcept {
-  granit_backend_plugin_host_api host{sizeof(host), 0,          diagnose, this,
-                                      allocate,     deallocate, nullptr};
-  auto result = loader_.create_instance(&host, &instance_);
+  granit_webgpu_provider_host_api host{sizeof(host), 0,          diagnose, this,
+                                       allocate,     deallocate, nullptr};
+  auto result = provider_.create_instance(&host, &instance_);
   if (result != GRANIT_SUCCESS) {
     lifecycle_ = {backend_lifecycle_state::failed, result};
-    loader_.close();
+    provider_.close();
     return result;
   }
   const auto refresh_result = refresh_state();
@@ -634,7 +611,7 @@ granit_result webgpu_renderer_state::process_backend_events() noexcept {
   if (instance_ == 0) {
     return GRANIT_ERROR_INVALID_HANDLE;
   }
-  const auto result = loader_.process_events(instance_);
+  const auto result = provider_.process_events(instance_);
   if (result != GRANIT_SUCCESS && result != GRANIT_ERROR_NOT_READY &&
       result != GRANIT_ERROR_DEVICE_LOST) {
     return result;
@@ -648,24 +625,24 @@ backend_lifecycle_status webgpu_renderer_state::lifecycle_status() const noexcep
 }
 
 granit_result webgpu_renderer_state::refresh_state() noexcept {
-  granit_backend_plugin_instance_status status{};
+  granit_webgpu_provider_instance_status status{};
   status.struct_size = sizeof(status);
-  const auto status_result = loader_.get_instance_status(instance_, &status);
+  const auto status_result = provider_.get_instance_status(instance_, &status);
   if (status_result != GRANIT_SUCCESS) {
     lifecycle_ = {backend_lifecycle_state::failed, status_result};
     return status_result;
   }
   switch (status.state) {
-  case GRANIT_BACKEND_PLUGIN_INSTANCE_STATE_INITIALIZING:
+  case GRANIT_WEBGPU_PROVIDER_INSTANCE_STATE_INITIALIZING:
     lifecycle_ = {backend_lifecycle_state::initializing, GRANIT_SUCCESS};
     return GRANIT_ERROR_NOT_READY;
-  case GRANIT_BACKEND_PLUGIN_INSTANCE_STATE_FAILED:
+  case GRANIT_WEBGPU_PROVIDER_INSTANCE_STATE_FAILED:
     lifecycle_ = {backend_lifecycle_state::failed, status.failure_result};
     return status.failure_result;
-  case GRANIT_BACKEND_PLUGIN_INSTANCE_STATE_DEVICE_LOST:
+  case GRANIT_WEBGPU_PROVIDER_INSTANCE_STATE_DEVICE_LOST:
     lifecycle_ = {backend_lifecycle_state::device_lost, status.failure_result};
     return status.failure_result;
-  case GRANIT_BACKEND_PLUGIN_INSTANCE_STATE_READY:
+  case GRANIT_WEBGPU_PROVIDER_INSTANCE_STATE_READY:
     break;
   default:
     lifecycle_ = {backend_lifecycle_state::failed, GRANIT_ERROR_INTERNAL};
@@ -674,9 +651,9 @@ granit_result webgpu_renderer_state::refresh_state() noexcept {
 
   if (presentation_ == nullptr || resources_ == nullptr || shaders_ == nullptr ||
       pipelines_ == nullptr || commands_ == nullptr) {
-    granit_backend_plugin_capabilities capabilities{};
+    granit_webgpu_provider_capabilities capabilities{};
     capabilities.struct_size = sizeof(capabilities);
-    const auto capabilities_result = loader_.get_capabilities(instance_, &capabilities);
+    const auto capabilities_result = provider_.get_capabilities(instance_, &capabilities);
     if (capabilities_result != GRANIT_SUCCESS) {
       lifecycle_ = {backend_lifecycle_state::failed, capabilities_result};
       return capabilities_result;
@@ -687,16 +664,16 @@ granit_result webgpu_renderer_state::refresh_state() noexcept {
         capabilities.framebuffer_sample_counts,       capabilities.max_sampler_anisotropy,
     };
     provider_surface_types_ = capabilities.surface_types;
-    if ((to_plugin_surface_types(surface_types_) & ~provider_surface_types_) != 0) {
+    if ((to_provider_surface_types(surface_types_) & ~provider_surface_types_) != 0) {
       lifecycle_ = {backend_lifecycle_state::failed, GRANIT_ERROR_UNSUPPORTED};
       return GRANIT_ERROR_UNSUPPORTED;
     }
     try {
-      auto presentation = std::make_unique<webgpu_presentation_adapter>(loader_, instance_);
-      auto resources = std::make_unique<webgpu_resource_adapter>(loader_, instance_);
-      auto shaders = std::make_unique<webgpu_shader_adapter>(loader_, instance_);
-      auto pipelines = std::make_unique<webgpu_pipeline_adapter>(loader_, instance_);
-      auto commands = std::make_unique<webgpu_command_adapter>(loader_, instance_);
+      auto presentation = std::make_unique<webgpu_presentation_adapter>(provider_, instance_);
+      auto resources = std::make_unique<webgpu_resource_adapter>(provider_, instance_);
+      auto shaders = std::make_unique<webgpu_shader_adapter>(provider_, instance_);
+      auto pipelines = std::make_unique<webgpu_pipeline_adapter>(provider_, instance_);
+      auto commands = std::make_unique<webgpu_command_adapter>(provider_, instance_);
       presentation_ = std::move(presentation);
       resources_ = std::move(resources);
       shaders_ = std::move(shaders);
@@ -726,7 +703,7 @@ granit_result
 webgpu_renderer_state::create_win32_surface(void* instance, void* window,
                                             backend_surface_resource& surface) noexcept {
   if ((surface_types_ & GRANIT_SURFACE_TYPE_WIN32_BIT) == 0 ||
-      (provider_surface_types_ & GRANIT_BACKEND_PLUGIN_SURFACE_TYPE_WIN32_BIT) == 0)
+      (provider_surface_types_ & GRANIT_WEBGPU_PROVIDER_SURFACE_TYPE_WIN32_BIT) == 0)
     return GRANIT_ERROR_UNSUPPORTED;
   return presentation_ != nullptr ? presentation_->create_win32_surface(surface, instance, window)
                                   : GRANIT_ERROR_NOT_READY;
@@ -736,7 +713,7 @@ granit_result
 webgpu_renderer_state::create_xcb_surface(void* connection, std::uint32_t window,
                                           backend_surface_resource& surface) noexcept {
   if ((surface_types_ & GRANIT_SURFACE_TYPE_XCB_BIT) == 0 ||
-      (provider_surface_types_ & GRANIT_BACKEND_PLUGIN_SURFACE_TYPE_XCB_BIT) == 0)
+      (provider_surface_types_ & GRANIT_WEBGPU_PROVIDER_SURFACE_TYPE_XCB_BIT) == 0)
     return GRANIT_ERROR_UNSUPPORTED;
   return presentation_ != nullptr ? presentation_->create_xcb_surface(surface, connection, window)
                                   : GRANIT_ERROR_NOT_READY;
@@ -746,7 +723,7 @@ granit_result
 webgpu_renderer_state::create_wayland_surface(void* display, void* native_surface,
                                               backend_surface_resource& surface) noexcept {
   if ((surface_types_ & GRANIT_SURFACE_TYPE_WAYLAND_BIT) == 0 ||
-      (provider_surface_types_ & GRANIT_BACKEND_PLUGIN_SURFACE_TYPE_WAYLAND_BIT) == 0)
+      (provider_surface_types_ & GRANIT_WEBGPU_PROVIDER_SURFACE_TYPE_WAYLAND_BIT) == 0)
     return GRANIT_ERROR_UNSUPPORTED;
   return presentation_ != nullptr
              ? presentation_->create_wayland_surface(surface, display, native_surface)
@@ -757,7 +734,7 @@ granit_result
 webgpu_renderer_state::create_canvas_surface(std::string_view selector,
                                              backend_surface_resource& surface) noexcept {
   if ((surface_types_ & GRANIT_SURFACE_TYPE_CANVAS_BIT) == 0 ||
-      (provider_surface_types_ & GRANIT_BACKEND_PLUGIN_SURFACE_TYPE_CANVAS_BIT) == 0)
+      (provider_surface_types_ & GRANIT_WEBGPU_PROVIDER_SURFACE_TYPE_CANVAS_BIT) == 0)
     return GRANIT_ERROR_UNSUPPORTED;
   if (presentation_ == nullptr)
     return GRANIT_ERROR_NOT_READY;

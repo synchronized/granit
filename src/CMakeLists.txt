@@ -1,70 +1,6 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2026 Granit contributors
 
-add_library(
-  granit_backend_plugin OBJECT
-  backend/plugin_api.h
-  backend/plugin_loader.cpp
-  backend/plugin_loader.h
-  backend/webgpu/command_adapter.cpp
-  backend/webgpu/command_adapter.h
-  backend/webgpu/presentation_adapter.cpp
-  backend/webgpu/presentation_adapter.h
-  backend/webgpu/pipeline_adapter.cpp
-  backend/webgpu/pipeline_adapter.h
-  backend/webgpu/renderer_state.cpp
-  backend/webgpu/renderer_state.h
-  backend/webgpu/renderer_factory.h
-  backend/webgpu/resource_adapter.cpp
-  backend/webgpu/resource_adapter.h
-  backend/webgpu/shader_adapter.cpp
-  backend/webgpu/shader_adapter.h
-  platform/shared_library.cpp
-  platform/shared_library.h
-  $<$<PLATFORM_ID:Windows>:platform/win32/shared_library_backend.cpp>
-  $<$<NOT:$<PLATFORM_ID:Windows>>:platform/posix/shared_library_backend.cpp>
-)
-target_compile_features(granit_backend_plugin PRIVATE cxx_std_20)
-target_include_directories(
-  granit_backend_plugin PRIVATE "${PROJECT_SOURCE_DIR}/include" "${PROJECT_SOURCE_DIR}/src"
-)
-granit_target_compile_warnings(granit_backend_plugin)
-set_target_properties(
-  granit_backend_plugin
-  PROPERTIES
-    CXX_VISIBILITY_PRESET hidden
-    POSITION_INDEPENDENT_CODE ON
-    VISIBILITY_INLINES_HIDDEN YES
-    FOLDER "Backends"
-)
-
-if(GRANIT_BUILD_BACKEND_WEBGPU)
-  add_library(granit_backend_webgpu MODULE backend/webgpu/plugin.cpp)
-  target_compile_features(granit_backend_webgpu PRIVATE cxx_std_20)
-  target_include_directories(
-    granit_backend_webgpu PRIVATE "${PROJECT_SOURCE_DIR}/include" "${PROJECT_SOURCE_DIR}/src"
-  )
-  target_link_libraries(granit_backend_webgpu PRIVATE dawn::webgpu_dawn)
-  if(GRANIT_WEBGPU_FORCE_FALLBACK_ADAPTER)
-    target_compile_definitions(granit_backend_webgpu PRIVATE GRANIT_WEBGPU_FORCE_FALLBACK_ADAPTER)
-  endif()
-  granit_target_compile_warnings(granit_backend_webgpu)
-  granit_target_output_directories(granit_backend_webgpu)
-  set_target_properties(
-    granit_backend_webgpu
-    PROPERTIES
-      CXX_VISIBILITY_PRESET hidden
-      VISIBILITY_INLINES_HIDDEN YES
-      FOLDER "Backends/WebGPU"
-  )
-  install(
-    TARGETS granit_backend_webgpu
-    LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}/granit/backends"
-    RUNTIME DESTINATION "${CMAKE_INSTALL_LIBDIR}/granit/backends"
-    COMPONENT BackendWebGPU
-  )
-endif()
-
 add_library(granit)
 add_library(granit::granit ALIAS granit)
 granit_target_output_directories(granit)
@@ -84,25 +20,24 @@ target_sources(
   granit
   PRIVATE
     $<TARGET_OBJECTS:granit_volk>
-    $<TARGET_OBJECTS:granit_backend_plugin>
-    backend/access.h
-    backend/binding.h
-    backend/capabilities.h
-    backend/command.h
-    backend/compute.h
-    backend/diagnostics.h
-    backend/pipeline.h
-    backend/presentation.h
-    backend/queue.h
-    backend/rendering.h
-    backend/retirement.h
-    backend/resource_management.h
-    backend/transfer.h
-    backend/renderer.h
-    backend/resources.h
-    backend/shader.h
-    backend/timestamp.h
-    backend/upload.h
+    backend/contracts/access.h
+    backend/contracts/binding.h
+    backend/contracts/capabilities.h
+    backend/contracts/command.h
+    backend/contracts/compute.h
+    backend/contracts/diagnostics.h
+    backend/contracts/pipeline.h
+    backend/contracts/presentation.h
+    backend/contracts/queue.h
+    backend/contracts/rendering.h
+    backend/contracts/retirement.h
+    backend/contracts/resource_management.h
+    backend/contracts/transfer.h
+    backend/contracts/renderer.h
+    backend/contracts/resources.h
+    backend/contracts/shader.h
+    backend/contracts/timestamp.h
+    backend/contracts/upload.h
     backend/vulkan/device.cpp
     backend/vulkan/device.h
     backend/vulkan/frame_context.cpp
@@ -131,8 +66,8 @@ target_sources(
     backend/vulkan/upload_context.h
     backend/vulkan/version_check.cpp
     backend/vulkan/vma_implementation.cpp
-    backend/callback_lifetime.h
-    backend/lifecycle.h
+    backend/contracts/callback_lifetime.h
+    backend/contracts/lifecycle.h
     core/handle_table.cpp
     core/handle_table.h
     core/diagnostic_sink.cpp
@@ -154,7 +89,6 @@ target_sources(
     renderer/frame_context_api.cpp
     renderer/renderer_registry.cpp
     backend/vulkan/renderer_factory.cpp
-    backend/webgpu/renderer_factory.cpp
     renderer/renderer_registry_buffer.cpp
     renderer/renderer_registry_command.cpp
     renderer/renderer_registry.h
