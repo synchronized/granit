@@ -6,7 +6,7 @@
 
 #include <cstdint>
 
-#include "backend/resources.h"
+#include "backend/contracts/resources.h"
 
 namespace granit::detail {
 

@@ -85,24 +85,24 @@ target_sources(
   PRIVATE
     $<TARGET_OBJECTS:granit_volk>
     $<TARGET_OBJECTS:granit_backend_plugin>
-    backend/access.h
-    backend/binding.h
-    backend/capabilities.h
-    backend/command.h
-    backend/compute.h
-    backend/diagnostics.h
-    backend/pipeline.h
-    backend/presentation.h
-    backend/queue.h
-    backend/rendering.h
-    backend/retirement.h
-    backend/resource_management.h
-    backend/transfer.h
-    backend/renderer.h
-    backend/resources.h
-    backend/shader.h
-    backend/timestamp.h
-    backend/upload.h
+    backend/contracts/access.h
+    backend/contracts/binding.h
+    backend/contracts/capabilities.h
+    backend/contracts/command.h
+    backend/contracts/compute.h
+    backend/contracts/diagnostics.h
+    backend/contracts/pipeline.h
+    backend/contracts/presentation.h
+    backend/contracts/queue.h
+    backend/contracts/rendering.h
+    backend/contracts/retirement.h
+    backend/contracts/resource_management.h
+    backend/contracts/transfer.h
+    backend/contracts/renderer.h
+    backend/contracts/resources.h
+    backend/contracts/shader.h
+    backend/contracts/timestamp.h
+    backend/contracts/upload.h
     backend/vulkan/device.cpp
     backend/vulkan/device.h
     backend/vulkan/frame_context.cpp
@@ -131,8 +131,8 @@ target_sources(
     backend/vulkan/upload_context.h
     backend/vulkan/version_check.cpp
     backend/vulkan/vma_implementation.cpp
-    backend/callback_lifetime.h
-    backend/lifecycle.h
+    backend/contracts/callback_lifetime.h
+    backend/contracts/lifecycle.h
     core/handle_table.cpp
     core/handle_table.h
     core/diagnostic_sink.cpp

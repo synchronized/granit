@@ -10,8 +10,8 @@
 #include <granit/core/result.h>
 #include <granit/renderer/renderer.h>
 
-#include "backend/capabilities.h"
-#include "backend/lifecycle.h"
+#include "backend/contracts/capabilities.h"
+#include "backend/contracts/lifecycle.h"
 
 namespace granit::detail {
 

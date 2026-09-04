@@ -8,7 +8,7 @@
 #include <span>
 
 #include "backend/plugin/plugin_loader.h"
-#include "backend/resources.h"
+#include "backend/contracts/resources.h"
 
 namespace granit::detail {
 

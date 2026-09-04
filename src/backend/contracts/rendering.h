@@ -12,9 +12,9 @@
 #include <granit/renderer/render_target.h>
 #include <granit/renderer/resource_types.h>
 
-#include "backend/access.h"
-#include "backend/binding.h"
-#include "backend/resources.h"
+#include "backend/contracts/access.h"
+#include "backend/contracts/binding.h"
+#include "backend/contracts/resources.h"
 
 namespace granit::detail {
 

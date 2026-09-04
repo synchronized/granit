@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include "backend/callback_lifetime.h"
-#include "backend/capabilities.h"
-#include "backend/interfaces.h"
-#include "backend/lifecycle.h"
+#include "backend/contracts/callback_lifetime.h"
+#include "backend/contracts/capabilities.h"
+#include "backend/contracts/interfaces.h"
+#include "backend/contracts/lifecycle.h"
 #include "renderer/dynamic_uniform_offsets.h"
 
 #include <catch2/catch_all.hpp>

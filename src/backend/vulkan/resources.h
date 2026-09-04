@@ -7,7 +7,7 @@
 #include <memory>
 #include <volk.h>
 
-#include "backend/resources.h"
+#include "backend/contracts/resources.h"
 #include "backend/vulkan/command_recorder.h"
 #include "backend/vulkan/memory_allocator.h"
 #include "backend/vulkan/swapchain.h"

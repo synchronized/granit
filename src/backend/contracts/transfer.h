@@ -11,7 +11,7 @@
 #include <granit/renderer/command_recorder.h>
 #include <granit/renderer/resource_types.h>
 
-#include "backend/resources.h"
+#include "backend/contracts/resources.h"
 
 namespace granit::detail {
 

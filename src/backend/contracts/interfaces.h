@@ -6,19 +6,19 @@
 
 #include <memory>
 
-#include "backend/command.h"
-#include "backend/compute.h"
-#include "backend/diagnostics.h"
-#include "backend/pipeline.h"
-#include "backend/presentation.h"
-#include "backend/queue.h"
-#include "backend/renderer.h"
-#include "backend/rendering.h"
-#include "backend/resource_management.h"
-#include "backend/retirement.h"
-#include "backend/shader.h"
-#include "backend/timestamp.h"
-#include "backend/transfer.h"
+#include "backend/contracts/command.h"
+#include "backend/contracts/compute.h"
+#include "backend/contracts/diagnostics.h"
+#include "backend/contracts/pipeline.h"
+#include "backend/contracts/presentation.h"
+#include "backend/contracts/queue.h"
+#include "backend/contracts/renderer.h"
+#include "backend/contracts/rendering.h"
+#include "backend/contracts/resource_management.h"
+#include "backend/contracts/retirement.h"
+#include "backend/contracts/shader.h"
+#include "backend/contracts/timestamp.h"
+#include "backend/contracts/transfer.h"
 
 namespace granit::detail {
 

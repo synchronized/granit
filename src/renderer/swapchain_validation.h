@@ -6,7 +6,7 @@
 
 #include <granit/renderer/swapchain.h>
 
-#include "backend/presentation.h"
+#include "backend/contracts/presentation.h"
 
 namespace granit::detail {
 

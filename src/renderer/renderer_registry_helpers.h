@@ -8,7 +8,7 @@
 
 #include <granit/renderer/texture.h>
 
-#include "backend/queue.h"
+#include "backend/contracts/queue.h"
 
 namespace granit::detail {
 

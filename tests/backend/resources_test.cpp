@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include "backend/access.h"
-#include "backend/queue.h"
-#include "backend/resources.h"
-#include "backend/upload.h"
+#include "backend/contracts/access.h"
+#include "backend/contracts/queue.h"
+#include "backend/contracts/resources.h"
+#include "backend/contracts/upload.h"
 
 #include <catch2/catch_all.hpp>
 

@@ -8,7 +8,7 @@
 
 #include <granit/core/result.h>
 
-#include "backend/resources.h"
+#include "backend/contracts/resources.h"
 #include "core/retirement_queue.h"
 
 namespace granit::detail {

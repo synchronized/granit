@@ -7,7 +7,7 @@
 #include <cstddef>
 #include <memory>
 
-#include "backend/queue.h"
+#include "backend/contracts/queue.h"
 #include "core/retirement_queue.h"
 
 namespace granit::detail {

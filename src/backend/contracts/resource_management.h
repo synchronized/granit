@@ -14,9 +14,9 @@
 #include <granit/renderer/sampler.h>
 #include <granit/renderer/texture.h>
 
-#include "backend/binding.h"
-#include "backend/resources.h"
-#include "backend/upload.h"
+#include "backend/contracts/binding.h"
+#include "backend/contracts/resources.h"
+#include "backend/contracts/upload.h"
 
 namespace granit::detail {
 

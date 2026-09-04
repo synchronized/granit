@@ -9,8 +9,8 @@
 
 #include <granit/core/result.h>
 
-#include "backend/access.h"
-#include "backend/resources.h"
+#include "backend/contracts/access.h"
+#include "backend/contracts/resources.h"
 
 namespace granit::detail {
 

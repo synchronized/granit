@@ -4,7 +4,7 @@
 #include "renderer/renderer_registry.h"
 #include "renderer/renderer_registry_records.h"
 
-#include "backend/diagnostics.h"
+#include "backend/contracts/diagnostics.h"
 #include "core/texture_format.h"
 #include "renderer/renderer_registry_helpers.h"
 

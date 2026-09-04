@@ -9,7 +9,7 @@
 
 #include <granit/renderer/pipeline.h>
 
-#include "backend/resources.h"
+#include "backend/contracts/resources.h"
 
 namespace granit::detail {
 
