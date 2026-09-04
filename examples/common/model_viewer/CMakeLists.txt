@@ -57,6 +57,8 @@ add_library(
   environment_ktx2.h
   environment_resources.cpp
   environment_resources.h
+  frame_executor.cpp
+  frame_executor.h
   gpu_scene.cpp
   material_archive.cpp
   material_archive.h
@@ -122,6 +124,7 @@ if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
     application_core_test.cpp
     environment_package_test.cpp
     environment_ktx2_test.cpp
+    frame_executor_test.cpp
     gpu_scene_test.cpp
     orbit_camera_test.cpp
     performance_history_test.cpp

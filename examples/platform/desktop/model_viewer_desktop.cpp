@@ -7,6 +7,7 @@
 
 #include "common/imgui_theme.h"
 #include "model_viewer/application_core.h"
+#include "model_viewer/frame_executor.h"
 #include "model_viewer/texture_registry.h"
 #include "model_viewer/viewer_panels.h"
 
@@ -377,6 +378,51 @@ bool update_gpu_upload_ui(const granit::example::model_viewer::gpu_scene_upload_
   return context.result.ok();
 }
 
+struct desktop_frame_execution_context {
+  granit::swapchain* swapchain{};
+  granit::swapchain_info* swapchain_info{};
+  granit::render_pipeline* pipeline{};
+  granit_canvas_draw_list canvas{GRANIT_NULL_HANDLE};
+};
+
+granit::result execute_desktop_frame(
+    granit::example::model_viewer::frame_packet&& packet,
+    granit::example::model_viewer::frame_execution_result& output, void* user_data) {
+  auto& context = *static_cast<desktop_frame_execution_context*>(user_data);
+  granit::acquired_frame frame;
+  const auto acquire_begin = std::chrono::steady_clock::now();
+  auto result = context.swapchain->acquire(frame);
+  output.acquire_wait_ms =
+      std::chrono::duration<float, std::milli>(std::chrono::steady_clock::now() - acquire_begin)
+          .count();
+  if (result.failed())
+    return result;
+
+  output.needs_recreate = frame.needs_recreate;
+  granit_texture backbuffer = GRANIT_NULL_HANDLE;
+  granit_texture_view backbuffer_view = GRANIT_NULL_HANDLE;
+  result = context.swapchain->backbuffer(frame.image_index, backbuffer, backbuffer_view);
+  if (result.ok()) {
+    const auto render = packet.render_desc(
+        backbuffer_view, static_cast<granit_texture_format>(context.swapchain_info->format),
+        frame.handle, context.canvas);
+    result = context.pipeline->render(render);
+  }
+  if (result.failed()) {
+    const auto frame_result = result;
+    static_cast<void>(context.swapchain->cancel(frame));
+    return frame_result;
+  }
+
+  const auto present_begin = std::chrono::steady_clock::now();
+  result = context.swapchain->present(frame);
+  output.present_wait_ms =
+      std::chrono::duration<float, std::milli>(std::chrono::steady_clock::now() - present_begin)
+          .count();
+  output.needs_recreate = output.needs_recreate || frame.needs_recreate;
+  return result;
+}
+
 } // namespace
 
 int main(int argc, char** argv) {
@@ -475,6 +521,8 @@ int main(int argc, char** argv) {
   granit::swapchain_info swapchain_info;
   if (result.ok())
     result = swapchain.query_info(swapchain_info);
+  desktop_frame_execution_context execution_context{&swapchain, &swapchain_info, &pipeline};
+  inline_frame_executor frame_executor(execute_desktop_frame, &execution_context);
   if (result.ok() && !options.profile_output_path.empty() &&
       swapchain_info.presentation != options.presentation) {
     std::cerr << "性能采样要求的呈现模式不可用，后端回退到了其他模式\n";
@@ -774,33 +822,6 @@ int main(int argc, char** argv) {
     if (result.failed())
       break;
 
-    granit::acquired_frame frame;
-    const auto acquire_begin = std::chrono::steady_clock::now();
-    result = swapchain.acquire(frame);
-    const auto acquire_ms =
-        std::chrono::duration<float, std::milli>(std::chrono::steady_clock::now() - acquire_begin)
-            .count();
-    const auto acquire_action = desktop::classify_presentation_result(result);
-    if (acquire_action == desktop::presentation_action::retry) {
-      result = granit::result::success;
-      continue;
-    }
-    if (acquire_action == desktop::presentation_action::recreate_swapchain) {
-      result = granit::result::success;
-      recreate = true;
-      continue;
-    }
-    if (acquire_action == desktop::presentation_action::recreate_surface) {
-      result = granit::result::success;
-      recreate_surface = true;
-      continue;
-    }
-    if (acquire_action == desktop::presentation_action::stop)
-      break;
-    recreate = frame.needs_recreate;
-    granit_texture backbuffer = GRANIT_NULL_HANDLE;
-    granit_texture_view backbuffer_view = GRANIT_NULL_HANDLE;
-    result = swapchain.backbuffer(frame.image_index, backbuffer, backbuffer_view);
     frame_packet tick_output;
     application_tick_input tick_input;
     tick_input.input = input_adapter.finish(options.show_ui && ImGui::GetIO().WantCaptureMouse,
@@ -819,40 +840,29 @@ int main(int argc, char** argv) {
             core.cpu_scene(), core.state().selected_material(), *changes.material);
       }
     }
-    if (result.ok()) {
-      const auto render = tick_output.render_desc(
-          backbuffer_view, static_cast<granit_texture_format>(swapchain_info.format), frame.handle,
-          options.show_ui ? canvas.native_handle() : GRANIT_NULL_HANDLE);
-      result = pipeline.render(render);
-    }
-    if (result.failed()) {
-      const auto frame_result = result;
-      static_cast<void>(swapchain.cancel(frame));
-      result = frame_result;
+    if (result.failed())
       break;
-    }
-    const auto present_begin = std::chrono::steady_clock::now();
-    result = swapchain.present(frame);
-    const auto present_ms =
-        std::chrono::duration<float, std::milli>(std::chrono::steady_clock::now() - present_begin)
-            .count();
-    recreate = recreate || frame.needs_recreate;
-    const auto present_action = desktop::classify_presentation_result(result);
-    if (present_action == desktop::presentation_action::retry) {
+    execution_context.canvas =
+        options.show_ui ? canvas.native_handle() : GRANIT_NULL_HANDLE;
+    frame_execution_result execution;
+    result = frame_executor.submit(std::move(tick_output), execution);
+    recreate = recreate || execution.needs_recreate;
+    const auto execution_action = desktop::classify_presentation_result(result);
+    if (execution_action == desktop::presentation_action::retry) {
       result = granit::result::success;
       continue;
     }
-    if (present_action == desktop::presentation_action::recreate_swapchain) {
+    if (execution_action == desktop::presentation_action::recreate_swapchain) {
       result = granit::result::success;
       recreate = true;
       continue;
     }
-    if (present_action == desktop::presentation_action::recreate_surface) {
+    if (execution_action == desktop::presentation_action::recreate_surface) {
       result = granit::result::success;
       recreate_surface = true;
       continue;
     }
-    if (present_action == desktop::presentation_action::stop)
+    if (execution_action == desktop::presentation_action::stop)
       break;
     float gpu_frame_ms = 0.0F;
     bool gpu_timing_available = false;
@@ -871,8 +881,8 @@ int main(int argc, char** argv) {
             .count();
     latest_sample = {.frames_per_second = cpu_ms > 0.0F ? 1000.0F / cpu_ms : 0.0F,
                      .cpu_frame_ms = cpu_ms,
-                     .frame_slot_wait_ms = acquire_ms,
-                     .present_wait_ms = present_ms,
+                     .frame_slot_wait_ms = execution.acquire_wait_ms,
+                     .present_wait_ms = execution.present_wait_ms,
                      .gpu_frame_ms = gpu_frame_ms,
                      .gpu_timing_available = gpu_timing_available};
     has_pending_sample = true;
