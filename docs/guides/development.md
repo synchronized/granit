@@ -49,10 +49,10 @@
 ```text
 cmake/       CMake package 和辅助模块
 docs/        设计及使用文档
-examples/    可独立运行的最小示例
+examples/    面向使用者的完整应用示例
 include/     C 与 C++ 公共头文件
 src/         内部实现，包括未来的 Vulkan 后端
-tests/       自动化测试
+tests/       自动化测试、Smoke 程序及固定输入
 ```
 
 Vulkan 相关声明只能位于 `src/` 内部目录，不能通过公共头文件间接泄漏。

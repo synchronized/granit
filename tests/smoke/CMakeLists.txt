@@ -93,7 +93,7 @@ granit_add_smoke_target(granit_render_pipeline_offscreen_smoke render_pipeline_o
 target_link_libraries(granit_render_pipeline_offscreen_smoke PRIVATE granit::render_pipeline)
 target_compile_definitions(
   granit_render_pipeline_offscreen_smoke
-  PRIVATE GRANIT_RENDER_PIPELINE_EXAMPLE_PACKAGE="${granit_render_pipeline_smoke_package}"
+  PRIVATE GRANIT_RENDER_PIPELINE_SMOKE_PACKAGE="${granit_render_pipeline_smoke_package}"
 )
 add_dependencies(granit_render_pipeline_offscreen_smoke granit_material_tool)
 target_sources(
@@ -135,7 +135,7 @@ if(WIN32)
   target_link_libraries(granit_render_pipeline_window_smoke PRIVATE granit::render_pipeline user32)
   target_compile_definitions(
     granit_render_pipeline_window_smoke
-    PRIVATE GRANIT_RENDER_PIPELINE_EXAMPLE_PACKAGE="${granit_render_pipeline_smoke_package}"
+    PRIVATE GRANIT_RENDER_PIPELINE_SMOKE_PACKAGE="${granit_render_pipeline_smoke_package}"
   )
   add_dependencies(granit_render_pipeline_window_smoke granit_material_tool)
   target_sources(

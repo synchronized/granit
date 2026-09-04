@@ -36,7 +36,7 @@ int main() {
   const auto vertex_code = load_shader("triangle.vert.spv");
   const auto fragment_code = load_shader("triangle.frag.spv");
   if (vertex_code.empty() || fragment_code.empty()) {
-    std::cerr << "无法读取示例 Shader\n";
+    std::cerr << "无法读取 Smoke Shader\n";
     return 1;
   }
   granit::shader vertex;

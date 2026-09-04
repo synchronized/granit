@@ -35,7 +35,7 @@ Swapchain 图像。
 
 ## 验收
 
-- Clang 共享库、Visual Studio 共享库和 Clang 静态库均能构建全部适用示例。
+- Clang 共享库、Visual Studio 共享库和 Clang 静态库均能构建全部适用 Smoke。
 - 离屏清屏与最小三角形示例能在 Vulkan Validation Layer 下运行完成。
 - Win32 窗口示例能完成真实 acquire、清屏、submit 和 present。
 - 示例源文件不出现 Vulkan 类型、函数或头文件。

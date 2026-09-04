@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#ifndef GRANIT_EXAMPLES_PBR_EXAMPLE_SUPPORT_H
-#define GRANIT_EXAMPLES_PBR_EXAMPLE_SUPPORT_H
+#ifndef GRANIT_TESTS_SMOKE_PBR_TEST_SUPPORT_H
+#define GRANIT_TESTS_SMOKE_PBR_TEST_SUPPORT_H
 
 #include "lighting/shadow_ibl_resources.h"
 #include "material/material_gpu_instance.h"
@@ -15,7 +15,7 @@
 #include <span>
 #include <string_view>
 
-namespace granit::examples {
+namespace granit::test {
 
 class pbr_lighting_resources {
 public:
@@ -54,6 +54,6 @@ private:
                                              material::pbr_default_resources& defaults,
                                              material::material_gpu_instance& instance);
 
-} // namespace granit::examples
+} // namespace granit::test
 
 #endif

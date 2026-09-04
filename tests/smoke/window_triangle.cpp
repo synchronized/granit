@@ -125,7 +125,7 @@ granit::result render_frame(granit::swapchain& swapchain, granit::frame_context&
 int main(int argument_count, char** arguments) {
   SetConsoleOutputCP(CP_UTF8);
   const bool smoke_test = argument_count == 2 && std::string_view{arguments[1]} == "--smoke-test";
-  std::cout << "Granit 窗口三角形示例正在启动……\n";
+  std::cout << "Granit 窗口三角形 Smoke 正在启动……\n";
   const auto instance = GetModuleHandleW(nullptr);
   constexpr wchar_t class_name[] = L"GranitWindowTriangleExample";
   WNDCLASSW window_class{};
@@ -268,6 +268,6 @@ int main(int argument_count, char** arguments) {
   if (result.failed())
     std::cerr << "渲染失败：" << granit::result_message(result) << '\n';
   else
-    std::cout << "示例已正常退出。\n";
+    std::cout << "Smoke 已正常退出。\n";
   return result.failed() ? 1 : 0;
 }

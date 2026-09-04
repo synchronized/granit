@@ -67,7 +67,7 @@ int main() {
   granit::material::material_package replacement_package;
   if (!make_package("opaque", fallback_package) || !make_package("shadow", initial_package) ||
       !make_package("opaque", replacement_package)) {
-    std::cerr << "无法读取示例 SPIR-V 或构建材质包\n";
+    std::cerr << "无法读取 Smoke SPIR-V 或构建材质包\n";
     return 1;
   }
 

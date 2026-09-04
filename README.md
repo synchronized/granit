@@ -101,8 +101,8 @@ build/windows-clang-debug/bin/granit_offscreen_clear_smoke.exe
 ```
 
 完整构建说明见[构建与安装](docs/guides/build.md)，其他程序见[示例程序](docs/guides/examples.md)，
-跨后端模型查看器见[Model Viewer 指南](docs/guides/model-viewer.md)，浏览器 WebGPU 基础示例见
-[WebGPU 浏览器指南](docs/guides/webgpu-browser-example.md)。
+跨后端模型查看器见[Model Viewer 指南](docs/guides/model-viewer.md)，浏览器自动验证入口见
+[WebGPU 平台 Smoke 指南](docs/guides/webgpu-browser-example.md)。
 
 最小 C++20 程序只需包含聚合头并初始化 Renderer：
 

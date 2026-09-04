@@ -302,7 +302,7 @@ target_compile_definitions(
     GRANIT_BENCHMARK_REVISION="${granit_benchmark_revision}"
     GRANIT_BENCHMARK_SYSTEM="${CMAKE_SYSTEM_NAME}-${CMAKE_SYSTEM_PROCESSOR}"
     GRANIT_RENDER_PIPELINE_CPU_BENCHMARK
-    GRANIT_RENDER_PIPELINE_EXAMPLE_PACKAGE="${granit_render_pipeline_benchmark_package}"
+    GRANIT_RENDER_PIPELINE_SMOKE_PACKAGE="${granit_render_pipeline_benchmark_package}"
 )
 target_link_libraries(granit_render_pipeline_benchmarks PRIVATE granit::render_pipeline)
 target_include_directories(granit_render_pipeline_benchmarks PRIVATE "${PROJECT_SOURCE_DIR}/src")

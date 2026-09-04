@@ -121,7 +121,7 @@ int main() {
     result = readback.unmap();
   }
   if (result.failed()) {
-    std::cerr << "Compute 示例失败：" << granit::result_message(result) << '\n';
+    std::cerr << "Compute Smoke 失败：" << granit::result_message(result) << '\n';
     return 1;
   }
   return 0;
