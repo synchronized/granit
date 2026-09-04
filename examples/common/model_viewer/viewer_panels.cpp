@@ -221,12 +221,15 @@ void draw_renderer_panel(const renderer_panel_info& info, const render_quality_c
 void draw_performance_panel(const performance_panel_info& info) {
   ImGui::Text("FPS: %.1f", info.frames_per_second);
   ImGui::Text("CPU frame: %.3f ms", info.cpu_frame_ms);
+  ImGui::Text("Render queue wait: %.3f ms", info.render_queue_wait_ms);
   ImGui::Text("Frame-slot wait: %.3f ms", info.frame_slot_wait_ms);
   ImGui::Text("Present wait: %.3f ms", info.present_wait_ms);
   if (info.gpu_timing_available)
     ImGui::Text("GPU frame: %.3f ms", info.gpu_frame_ms);
   else
     ImGui::TextUnformatted("GPU frame: unavailable");
+  ImGui::Text("Queue high watermark: %zu", info.queue_high_watermark);
+  ImGui::Text("Replaced frames: %llu", static_cast<unsigned long long>(info.replaced_frames));
   const auto draw_summary = [](const char* label, const metric_summary& summary) {
     if (summary.sample_count == 0) {
       ImGui::TextDisabled("%s: unavailable", label);
@@ -237,6 +240,7 @@ void draw_performance_panel(const performance_panel_info& info) {
   };
   ImGui::SeparatorText("240-frame history");
   draw_summary("CPU ms", info.history.cpu_frame_ms);
+  draw_summary("Queue wait ms", info.history.render_queue_wait_ms);
   draw_summary("Slot wait ms", info.history.frame_slot_wait_ms);
   draw_summary("Present wait ms", info.history.present_wait_ms);
   draw_summary("GPU ms", info.history.gpu_frame_ms);

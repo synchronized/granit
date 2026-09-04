@@ -189,6 +189,8 @@ bool write_profile(const std::filesystem::path& path, const granit::renderer_inf
   const auto gpu = [](const auto& sample) { return sample.gpu_timing_available; };
   const auto cpu =
       summarize_profile(samples, [](const auto& sample) { return sample.cpu_frame_ms; }, all);
+  const auto queue = summarize_profile(
+      samples, [](const auto& sample) { return sample.render_queue_wait_ms; }, all);
   const auto slot =
       summarize_profile(samples, [](const auto& sample) { return sample.frame_slot_wait_ms; }, all);
   const auto present =
@@ -218,6 +220,7 @@ bool write_profile(const std::filesystem::path& path, const granit::renderer_inf
        << "  \"sample_frames\": " << samples.size() << ",\n"
        << "  \"milliseconds\": {\n";
   write_metric(json, "cpu_frame", cpu, true);
+  write_metric(json, "render_queue_wait", queue, true);
   write_metric(json, "frame_slot_wait", slot, true);
   write_metric(json, "present_wait", present, true);
   write_metric(json, "gpu_frame", gpu_time, false);
@@ -840,8 +843,9 @@ int main(int argc, char** argv) {
         continue;
       latest_sample = {.frames_per_second =
                            producer_frame_ms > 0.0F ? 1000.0F / producer_frame_ms : 0.0F,
-                       .cpu_frame_ms = producer_frame_ms,
-                       .frame_slot_wait_ms = completed.execution.acquire_wait_ms,
+                        .cpu_frame_ms = producer_frame_ms,
+                        .render_queue_wait_ms = completed.execution.queue_wait_ms,
+                        .frame_slot_wait_ms = completed.execution.acquire_wait_ms,
                        .present_wait_ms = completed.execution.present_wait_ms,
                        .gpu_frame_ms = completed.execution.gpu_frame_ms,
                        .gpu_timing_available = completed.execution.gpu_timing_available};
@@ -919,13 +923,17 @@ int main(int argc, char** argv) {
           .frame_slots = GRANIT_DEFAULT_FRAMES_IN_FLIGHT,
           .supported_sample_counts = renderer_limits.framebuffer_sample_counts,
           .max_sampler_anisotropy = renderer_limits.max_sampler_anisotropy};
+      const auto queue_stats = frame_executor.query_queue_stats();
       const performance_panel_info panel_performance{
           .frames_per_second = latest_sample.frames_per_second,
           .cpu_frame_ms = latest_sample.cpu_frame_ms,
+          .render_queue_wait_ms = latest_sample.render_queue_wait_ms,
           .frame_slot_wait_ms = latest_sample.frame_slot_wait_ms,
           .present_wait_ms = latest_sample.present_wait_ms,
           .gpu_frame_ms = latest_sample.gpu_frame_ms,
           .gpu_timing_available = latest_sample.gpu_timing_available,
+          .queue_high_watermark = queue_stats.pending_high_watermark,
+          .replaced_frames = queue_stats.replaced_frames,
           .history = core.performance().summarize()};
       changes = draw_viewer_panels(core.cpu_scene(), core.state(), panel_renderer,
                                    panel_performance, render_quality, previews);

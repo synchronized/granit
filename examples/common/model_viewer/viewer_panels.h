@@ -11,6 +11,7 @@
 #include <granit/renderer/resource_types.h>
 #include <imgui.h>
 
+#include <cstddef>
 #include <cstdint>
 #include <optional>
 #include <span>
@@ -40,10 +41,13 @@ struct render_quality_config {
 struct performance_panel_info {
   float frames_per_second{};
   float cpu_frame_ms{};
+  float render_queue_wait_ms{};
   float frame_slot_wait_ms{};
   float present_wait_ms{};
   float gpu_frame_ms{};
   bool gpu_timing_available{};
+  std::size_t queue_high_watermark{};
+  std::uint64_t replaced_frames{};
   performance_summary history;
 };
 

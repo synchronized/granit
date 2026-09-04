@@ -127,6 +127,10 @@ TEST_CASE("线程帧执行器限制待处理队列并回报被替换帧") {
   REQUIRE(dropped != completions.end());
   CHECK(dropped->sequence == third);
   CHECK(state.executed_widths == std::vector<std::uint32_t>{1, 2, 99, 4});
+  const auto queue_stats = executor.query_queue_stats();
+  CHECK(queue_stats.pending_high_watermark == 3);
+  CHECK(queue_stats.replaced_frames == 1);
+  CHECK(completions.front().execution.queue_wait_ms >= 0.0F);
 
   render_command_completion command_completion;
   REQUIRE(executor.try_take_command_completion(command_completion));
@@ -136,6 +140,7 @@ TEST_CASE("线程帧执行器限制待处理队列并回报被替换帧") {
 
   executor.stop();
   CHECK_FALSE(executor.running());
+  CHECK(executor.query_queue_stats().pending_high_watermark == 0);
   CHECK(executor.submit({}, first) == granit::result::not_ready);
   CHECK(executor.submit_command(execute_command, &state, command) == granit::result::not_ready);
 }

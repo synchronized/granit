@@ -4,6 +4,7 @@
 #include "model_viewer/frame_executor.h"
 
 #include <algorithm>
+#include <chrono>
 #include <condition_variable>
 #include <deque>
 #include <iterator>
@@ -36,6 +37,7 @@ struct threaded_frame_executor::state {
     frame_packet packet;
     render_command_callback command{};
     void* command_user_data{};
+    std::chrono::steady_clock::time_point enqueued_at{};
   };
 
   std::mutex mutex;
@@ -51,6 +53,7 @@ struct threaded_frame_executor::state {
   std::uint64_t next_sequence{1};
   bool executing{};
   bool stopping{};
+  render_task_queue_stats stats;
 
   void run() noexcept;
 };
@@ -72,6 +75,10 @@ void threaded_frame_executor::state::run() noexcept {
     render_command_completion command_completion;
     if (queued.kind == task_kind::frame) {
       completion.sequence = queued.sequence;
+      completion.execution.queue_wait_ms =
+          std::chrono::duration<float, std::milli>(std::chrono::steady_clock::now() -
+                                                   queued.enqueued_at)
+              .count();
       try {
         completion.status = callback(std::move(queued.packet), completion.execution, user_data);
       } catch (...) {
@@ -145,12 +152,16 @@ granit::result threaded_frame_executor::submit(frame_packet packet,
                                    .status = granit::result::not_ready,
                                    .execution = {},
                                    .dropped = true});
+      ++state_->stats.replaced_frames;
     }
     state_->pending.push_back({.kind = state::task_kind::frame,
                                .sequence = sequence,
                                .packet = std::move(packet),
                                .command = nullptr,
-                               .command_user_data = nullptr});
+                               .command_user_data = nullptr,
+                               .enqueued_at = std::chrono::steady_clock::now()});
+    state_->stats.pending_high_watermark =
+        std::max(state_->stats.pending_high_watermark, state_->pending.size());
     state_->work_ready.notify_one();
     return granit::result::success;
   } catch (const std::bad_alloc&) {
@@ -179,7 +190,10 @@ granit::result threaded_frame_executor::submit_command(render_command_callback c
                                .sequence = sequence,
                                .packet = {},
                                .command = callback,
-                               .command_user_data = user_data});
+                               .command_user_data = user_data,
+                               .enqueued_at = std::chrono::steady_clock::now()});
+    state_->stats.pending_high_watermark =
+        std::max(state_->stats.pending_high_watermark, state_->pending.size());
     state_->work_ready.notify_one();
     return granit::result::success;
   } catch (const std::bad_alloc&) {
@@ -210,6 +224,13 @@ bool threaded_frame_executor::try_take_command_completion(
   completion = std::move(state_->completed_commands.front());
   state_->completed_commands.pop_front();
   return true;
+}
+
+render_task_queue_stats threaded_frame_executor::query_queue_stats() const noexcept {
+  if (!state_)
+    return {};
+  std::lock_guard lock(state_->mutex);
+  return state_->stats;
 }
 
 granit::result threaded_frame_executor::flush() noexcept {

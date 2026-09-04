@@ -12,6 +12,7 @@ namespace granit::example::model_viewer {
 struct performance_sample {
   float frames_per_second{};
   float cpu_frame_ms{};
+  float render_queue_wait_ms{};
   float frame_slot_wait_ms{};
   float present_wait_ms{};
   float gpu_frame_ms{};
@@ -28,6 +29,7 @@ struct metric_summary {
 struct performance_summary {
   metric_summary frames_per_second;
   metric_summary cpu_frame_ms;
+  metric_summary render_queue_wait_ms;
   metric_summary frame_slot_wait_ms;
   metric_summary present_wait_ms;
   metric_summary gpu_frame_ms;

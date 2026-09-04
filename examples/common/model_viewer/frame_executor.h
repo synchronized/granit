@@ -15,6 +15,7 @@ namespace granit::example::model_viewer {
 /** 单帧执行完成后返回给平台主循环的数据。 */
 struct frame_execution_result {
   bool needs_recreate{};
+  float queue_wait_ms{};
   float acquire_wait_ms{};
   float present_wait_ms{};
   float gpu_frame_ms{};
@@ -37,6 +38,11 @@ using render_command_callback = granit::result (*)(void* user_data);
 struct render_command_completion {
   std::uint64_t sequence{};
   granit::result status{granit::result::unknown};
+};
+
+struct render_task_queue_stats {
+  std::size_t pending_high_watermark{};
+  std::uint64_t replaced_frames{};
 };
 
 /** 示例私有帧执行边界；实现负责完整消费传入的不可变帧包。 */
@@ -78,6 +84,7 @@ public:
                                               std::uint64_t& sequence) noexcept;
   [[nodiscard]] bool try_take_completion(frame_completion& completion) noexcept;
   [[nodiscard]] bool try_take_command_completion(render_command_completion& completion) noexcept;
+  [[nodiscard]] render_task_queue_stats query_queue_stats() const noexcept;
   [[nodiscard]] granit::result flush() noexcept;
   void stop() noexcept;
   [[nodiscard]] bool running() const noexcept;
