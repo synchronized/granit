@@ -59,7 +59,7 @@ SHA-256。来源和固定校验值见
 build/windows-clang-debug/bin/granit_model_viewer_environment_tool.exe build `
   --irradiance diffuse.ktx2 --prefiltered specular.ktx2 `
   --brdf-lut brdf_lut.png --output StudioSmall03.grenv `
-  --intensity 0.2 --exposure -0.5
+  --intensity 0.4 --exposure -0.5
 ```
 
 打包工具只接受未压缩 RGBA16F 六面 KTX2；GGX 输入必须包含一直到 1×1 的完整 Mip 链。
@@ -71,6 +71,7 @@ glTF IBL Sampler 修订号记录在 manifest 中。
 
 查看器省略 `--environment` 时会创建一个低分辨率内置摄影棚环境，保证离线首次运行时金属与暗部
 仍然可读；传入 GRENV v2 则使用预处理的高质量环境及其推荐光照参数进行跨后端图像验收。
+查看器默认仅使用环境光，方向光初始强度为零；需要检查直接光照或阴影时可在 Lighting 面板启用。
 
 资产来自 Khronos glTF Sample Assets，模型使用 CC0-1.0。锁定版本和第三方通知见
 [`FlightHelmet.manifest.json`](../../examples/assets/FlightHelmet.manifest.json) 与

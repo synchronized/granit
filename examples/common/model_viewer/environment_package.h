@@ -27,7 +27,7 @@ struct environment_mip {
 
 /** 借用 GRENV 文件字节；调用方必须保证源数据在使用期间保持有效。 */
 struct environment_package {
-  float recommended_environment_intensity{0.2F};
+  float recommended_environment_intensity{0.4F};
   float recommended_exposure_ev{-0.5F};
   std::uint32_t irradiance_resolution{};
   std::span<const std::byte> irradiance_pixels;

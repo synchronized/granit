@@ -27,9 +27,9 @@ TEST_CASE("查看器状态集中管理选择和可见性", "[example][model-view
   CHECK(state.node_visible(1));
   CHECK(state.background_color() == granit::math::float3{0.025F, 0.04F, 0.065F});
   CHECK(state.directional_light().direction == granit::math::float3{0.0F, -1.0F, 1.0F});
-  CHECK(state.environment_intensity() == 0.2F);
+  CHECK(state.environment_intensity() == 0.4F);
   CHECK(state.exposure_ev() == -0.5F);
-  CHECK(state.directional_light().radiance.x == 1.5F);
+  CHECK(state.directional_light().radiance.x == 0.0F);
 }
 
 TEST_CASE("查看器状态拒绝无效批次且保留旧状态", "[example][model-viewer][state]") {
