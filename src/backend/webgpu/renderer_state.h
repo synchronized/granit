@@ -39,7 +39,7 @@ class webgpu_renderer_state final : public backend_renderer,
                                     public backend_resource_renderer,
                                     public backend_transfer_command_renderer,
                                     public backend_retirement_renderer,
-                                    public backend_shader_renderer,
+                                    public backend_wgsl_shader_renderer,
                                     public backend_pipeline_layout_renderer,
                                     public backend_pipeline_renderer {
 public:

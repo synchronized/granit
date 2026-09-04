@@ -45,10 +45,10 @@ std::unique_ptr<backend_shader_resource> webgpu_shader_adapter::allocate_shader(
 }
 
 granit_result
-webgpu_shader_adapter::create_shader(backend_shader_resource& resource, std::uint32_t stage,
-                                     const char* wgsl, std::uint64_t wgsl_length,
-                                     const char* entry_point,
-                                     std::uint64_t entry_point_length) const noexcept {
+webgpu_shader_adapter::create_wgsl_shader(backend_shader_resource& resource, std::uint32_t stage,
+                                          const char* wgsl, std::uint64_t wgsl_length,
+                                          const char* entry_point,
+                                          std::uint64_t entry_point_length) const noexcept {
   auto* shader = as_shader(resource);
   if (shader == nullptr || shader->handle_ != 0) {
     return GRANIT_ERROR_INVALID_ARGUMENT;

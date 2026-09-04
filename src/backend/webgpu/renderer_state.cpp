@@ -490,8 +490,8 @@ granit_result webgpu_renderer_state::create_wgsl_shader(backend_shader_resource&
                                                         granit_shader_stage stage,
                                                         std::string_view source,
                                                         std::string_view entry_point) noexcept {
-  return shaders_ ? shaders_->create_shader(shader, stage, source.data(), source.size(),
-                                            entry_point.data(), entry_point.size())
+  return shaders_ ? shaders_->create_wgsl_shader(shader, stage, source.data(), source.size(),
+                                                 entry_point.data(), entry_point.size())
                   : GRANIT_ERROR_UNSUPPORTED;
 }
 

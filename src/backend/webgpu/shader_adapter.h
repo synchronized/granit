@@ -20,10 +20,10 @@ public:
                         granit_webgpu_provider_instance instance);
 
   [[nodiscard]] std::unique_ptr<backend_shader_resource> allocate_shader() const;
-  [[nodiscard]] granit_result create_shader(backend_shader_resource& resource, std::uint32_t stage,
-                                            const char* wgsl, std::uint64_t wgsl_length,
-                                            const char* entry_point,
-                                            std::uint64_t entry_point_length) const noexcept;
+  [[nodiscard]] granit_result create_wgsl_shader(backend_shader_resource& resource,
+                                                 std::uint32_t stage, const char* wgsl,
+                                                 std::uint64_t wgsl_length, const char* entry_point,
+                                                 std::uint64_t entry_point_length) const noexcept;
   [[nodiscard]] granit_webgpu_provider_shader
   native_handle(backend_shader_resource& resource) const noexcept;
 

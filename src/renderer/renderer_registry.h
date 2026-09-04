@@ -155,9 +155,11 @@ public:
                                              const granit_sampler_desc& desc,
                                              granit_sampler& sampler);
   [[nodiscard]] granit_result destroy_sampler(granit_renderer renderer, granit_sampler sampler);
-  [[nodiscard]] granit_result create_shader(granit_renderer renderer, granit_shader_stage stage,
-                                            std::span<const std::uint32_t> code,
-                                            std::string_view entry_point, granit_shader& shader);
+  [[nodiscard]] granit_result create_shader_from_spirv(granit_renderer renderer,
+                                                       granit_shader_stage stage,
+                                                       std::span<const std::uint32_t> code,
+                                                       std::string_view entry_point,
+                                                       granit_shader& shader);
   [[nodiscard]] granit_result create_shader_from_desc(granit_renderer renderer,
                                                       const granit_shader_desc& desc,
                                                       granit_shader& shader);

@@ -26,7 +26,7 @@ granit_result renderer_registry::create_shader_from_desc(granit_renderer rendere
                                 : validate_shader_spirv(&desc);
     return validation == GRANIT_SUCCESS ? GRANIT_ERROR_INVALID_HANDLE : validation;
   }
-  if (interfaces->shaders) {
+  if (interfaces->wgsl_shaders) {
     const auto validation = validate_shader_wgsl(&desc);
     if (validation != GRANIT_SUCCESS)
       return validation;
@@ -39,14 +39,16 @@ granit_result renderer_registry::create_shader_from_desc(granit_renderer rendere
     return validation;
   std::vector<std::uint32_t> code(static_cast<std::size_t>(desc.code_size) / sizeof(std::uint32_t));
   std::memcpy(code.data(), desc.code, static_cast<std::size_t>(desc.code_size));
-  return create_shader(renderer, desc.stage, code,
-                       std::string_view{desc.entry_point, desc.entry_point_length}, shader);
+  return create_shader_from_spirv(renderer, desc.stage, code,
+                                  std::string_view{desc.entry_point, desc.entry_point_length},
+                                  shader);
 }
 
-granit_result renderer_registry::create_shader(granit_renderer renderer, granit_shader_stage stage,
-                                               std::span<const std::uint32_t> code,
-                                               std::string_view entry_point,
-                                               granit_shader& shader) {
+granit_result renderer_registry::create_shader_from_spirv(granit_renderer renderer,
+                                                          granit_shader_stage stage,
+                                                          std::span<const std::uint32_t> code,
+                                                          std::string_view entry_point,
+                                                          granit_shader& shader) {
   try {
     const auto interfaces = acquire_backend_interfaces(renderer);
     if (!interfaces)
@@ -97,7 +99,7 @@ granit_result renderer_registry::create_shader_from_wgsl(granit_renderer rendere
     if (!interfaces)
       return GRANIT_ERROR_INVALID_HANDLE;
     const auto& owner = interfaces->renderer;
-    const auto& shaders = interfaces->shaders;
+    const auto& shaders = interfaces->wgsl_shaders;
     if (!shaders)
       return GRANIT_ERROR_UNSUPPORTED;
     auto record = std::make_shared<shader_record>();
