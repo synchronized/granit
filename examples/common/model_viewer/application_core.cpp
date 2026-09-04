@@ -41,7 +41,7 @@ camera_bounds scene_bounds(const gpu_scene_plan& plan, std::uint32_t selected_no
 
 granit_render_pipeline_render_desc
 frame_packet::render_desc(granit_texture_view output, granit_texture_format output_format,
-                          granit_frame frame, granit_canvas_draw_list canvas) const noexcept {
+                          granit_frame frame, granit_canvas_draw_list canvas_list) const noexcept {
   granit_render_pipeline_render_desc desc = GRANIT_RENDER_PIPELINE_RENDER_DESC_INIT;
   desc.scene = snapshot.native_handle();
   desc.output = output;
@@ -52,7 +52,7 @@ frame_packet::render_desc(granit_texture_view output, granit_texture_format outp
   desc.draw_binding_count = static_cast<std::uint32_t>(draw_bindings.size());
   desc.draw_bindings = draw_bindings.data();
   desc.frame = frame;
-  desc.canvas = canvas;
+  desc.canvas = canvas_list;
   desc.clear_color = clear_color;
   desc.environment = &environment;
   return desc;

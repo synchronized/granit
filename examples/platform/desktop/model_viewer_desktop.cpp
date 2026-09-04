@@ -8,6 +8,7 @@
 #include "common/imgui_theme.h"
 #include "model_viewer/application_core.h"
 #include "model_viewer/frame_executor.h"
+#include "model_viewer/imgui_frame_capture.h"
 #include "model_viewer/texture_registry.h"
 #include "model_viewer/viewer_panels.h"
 
@@ -382,12 +383,13 @@ struct desktop_frame_execution_context {
   granit::swapchain* swapchain{};
   granit::swapchain_info* swapchain_info{};
   granit::render_pipeline* pipeline{};
-  granit_canvas_draw_list canvas{GRANIT_NULL_HANDLE};
+  std::array<granit::canvas_draw_list, 3>* canvases{};
+  std::size_t next_canvas{};
 };
 
-granit::result execute_desktop_frame(
-    granit::example::model_viewer::frame_packet&& packet,
-    granit::example::model_viewer::frame_execution_result& output, void* user_data) {
+granit::result execute_desktop_frame(granit::example::model_viewer::frame_packet&& packet,
+                                     granit::example::model_viewer::frame_execution_result& output,
+                                     void* user_data) {
   auto& context = *static_cast<desktop_frame_execution_context*>(user_data);
   granit::acquired_frame frame;
   const auto acquire_begin = std::chrono::steady_clock::now();
@@ -403,9 +405,23 @@ granit::result execute_desktop_frame(
   granit_texture_view backbuffer_view = GRANIT_NULL_HANDLE;
   result = context.swapchain->backbuffer(frame.image_index, backbuffer, backbuffer_view);
   if (result.ok()) {
+    granit_canvas_draw_list canvas = GRANIT_NULL_HANDLE;
+    if (!packet.canvas.empty()) {
+      auto& canvas_slot = (*context.canvases)[context.next_canvas];
+      context.next_canvas = (context.next_canvas + 1) % context.canvases->size();
+      result = canvas_slot.clear();
+      if (result.ok())
+        result = packet.canvas.append_to(canvas_slot);
+      if (result.ok())
+        canvas = canvas_slot.native_handle();
+    }
+    if (result.failed()) {
+      static_cast<void>(context.swapchain->cancel(frame));
+      return result;
+    }
     const auto render = packet.render_desc(
         backbuffer_view, static_cast<granit_texture_format>(context.swapchain_info->format),
-        frame.handle, context.canvas);
+        frame.handle, canvas);
     result = context.pipeline->render(render);
   }
   if (result.failed()) {
@@ -470,6 +486,7 @@ int main(int argc, char** argv) {
   granit::texture_view font_view;
   granit::sampler font_sampler;
   granit::canvas_draw_list canvas;
+  std::array<granit::canvas_draw_list, 3> frame_canvases;
   texture_registry textures;
   application_core core;
   result = core.begin_renderer();
@@ -521,7 +538,8 @@ int main(int argc, char** argv) {
   granit::swapchain_info swapchain_info;
   if (result.ok())
     result = swapchain.query_info(swapchain_info);
-  desktop_frame_execution_context execution_context{&swapchain, &swapchain_info, &pipeline};
+  desktop_frame_execution_context execution_context{&swapchain, &swapchain_info, &pipeline,
+                                                    &frame_canvases};
   inline_frame_executor frame_executor(execute_desktop_frame, &execution_context);
   if (result.ok() && !options.profile_output_path.empty() &&
       swapchain_info.presentation != options.presentation) {
@@ -544,6 +562,10 @@ int main(int argc, char** argv) {
     ImGui::GetIO().Fonts->TexRef._TexData->SetStatus(ImTextureStatus_OK);
     granit_canvas_draw_list_desc canvas_desc = GRANIT_CANVAS_DRAW_LIST_DESC_INIT;
     result = canvas.initialize(renderer.native_handle(), canvas_desc);
+    for (auto& frame_canvas : frame_canvases) {
+      if (result.ok())
+        result = frame_canvas.initialize(renderer.native_handle(), canvas_desc);
+    }
   }
 
   const std::filesystem::path asset_path(options.asset_path);
@@ -760,6 +782,7 @@ int main(int argc, char** argv) {
     }
 
     viewer_panel_changes changes;
+    frame_canvas_data ui_frame;
     if (options.show_ui) {
       ImGui_ImplSDL3_NewFrame();
       ImGui::NewFrame();
@@ -784,11 +807,8 @@ int main(int argc, char** argv) {
       changes = draw_viewer_panels(core.cpu_scene(), core.state(), panel_renderer,
                                    panel_performance, render_quality, previews);
       ImGui::Render();
-      result = canvas.clear();
-      if (result.ok()) {
-        result = granit::integration::imgui::append_draw_data(
-            ImGui::GetDrawData(), canvas, texture_registry::resolver, &textures);
-      }
+      result = capture_imgui_frame(ImGui::GetDrawData(), texture_registry::resolver, &textures,
+                                   ui_frame);
     }
     if (result.failed())
       break;
@@ -833,6 +853,8 @@ int main(int argc, char** argv) {
       tick_input.performance = latest_sample;
     if (result.ok())
       result = core.tick(tick_input, tick_output);
+    if (result.ok())
+      tick_output.canvas = std::move(ui_frame);
     if (result.ok()) {
       if (changes.material &&
           core.state().selected_material() != granit::example::gltf::invalid_index) {
@@ -842,8 +864,6 @@ int main(int argc, char** argv) {
     }
     if (result.failed())
       break;
-    execution_context.canvas =
-        options.show_ui ? canvas.native_handle() : GRANIT_NULL_HANDLE;
     frame_execution_result execution;
     result = frame_executor.submit(std::move(tick_output), execution);
     recreate = recreate || execution.needs_recreate;
