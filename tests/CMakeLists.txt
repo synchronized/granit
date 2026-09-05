@@ -431,6 +431,7 @@ add_executable(
   material/pbr_material_schema_test.cpp
   material/pbr_draw_inputs_test.cpp
   material/pbr_reference_test.cpp
+  material/public_pbr_asset_test.cpp
   material/material_source_json_test.cpp
   material/material_template_gpu_test.cpp
   "${PROJECT_SOURCE_DIR}/src/material/material_debug_json.cpp"
@@ -447,7 +448,9 @@ target_compile_options(
 )
 target_compile_definitions(
   granit_material_test
-  PRIVATE GRANIT_TEST_ASSET_DIR="${PROJECT_SOURCE_DIR}/tests/assets"
+  PRIVATE
+    GRANIT_TEST_ASSET_DIR="${PROJECT_SOURCE_DIR}/tests/assets"
+    GRANIT_PBR_ASSET_DIR="${PROJECT_SOURCE_DIR}/assets/shaders/pbr"
 )
 granit_target_compile_warnings(granit_material_test)
 add_test(NAME granit.material COMMAND granit_material_test)
