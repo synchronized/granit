@@ -37,7 +37,7 @@
 2. [项目文档规范](../DOCUMENTATION_GUIDE.md)
 3. [开发计划索引](plans/README.md)
 4. [第三方依赖](../3rd/README.md)
-5. [0.9.0 公共 PBR 与渲染资产收敛计划](plans/S-24-0.9.0-public-pbr-assets.md)
+5. [0.10.0 环境资源与帧构造背压计划](plans/S-25-0.10.0-environment-and-frame-backpressure.md)
 
 ## 操作指南
 

@@ -156,6 +156,8 @@ D-03-graphics-pipeline.md
   `.grshader` 已进入 Core，`.grmat` 已引用同一 Shader Asset 身份，发布矩阵与产物预验证均已通过。
 - [S-24：0.9.0 公共 PBR 与渲染资产收敛](S-24-0.9.0-public-pbr-assets.md)——已完成；
   公共 PBR Shader、四组 Binding、安装资产与 Model Viewer Consumer 已统一。
+- [S-25：0.10.0 环境资源与帧构造背压](S-25-0.10.0-environment-and-frame-backpressure.md)——
+  已确认，待实施；公共化 Environment Map，并让 Model Viewer 在构造昂贵 Frame Packet 前背压。
 
 ## 状态
 
