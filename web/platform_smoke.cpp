@@ -936,7 +936,8 @@ void tick(void*) noexcept {
   granit_renderer_limits limits = GRANIT_RENDERER_LIMITS_INIT;
   const auto limits_result = granit_renderer_get_limits(state.renderer, &limits);
   if (limits_result != GRANIT_SUCCESS || limits.uniform_buffer_offset_alignment == 0 ||
-      limits.max_uniform_buffer_binding_size == 0) {
+      limits.max_uniform_buffer_binding_size == 0 ||
+      (limits.supported_features & GRANIT_RENDERER_FEATURE_TIMESTAMP_QUERY_BIT) != 0) {
     fail("renderer-limits",
          limits_result == GRANIT_SUCCESS ? GRANIT_ERROR_INTERNAL : limits_result);
     return;

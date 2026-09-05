@@ -99,6 +99,7 @@ TEST_CASE("Renderer 公开查询设备限制", "[renderer][limits][c_api]") {
   CHECK(limits.max_uniform_buffer_binding_size > 0);
   CHECK((limits.framebuffer_sample_counts & GRANIT_SAMPLE_COUNT_1) != 0);
   CHECK(limits.max_sampler_anisotropy >= 1.0F);
+  CHECK((limits.supported_features & GRANIT_RENDERER_FEATURE_TIMESTAMP_QUERY_BIT) != 0);
 
   limits.struct_size = GRANIT_RENDERER_LIMITS_VERSION_1_SIZE;
   limits.framebuffer_sample_counts = UINT32_MAX;
@@ -450,6 +451,7 @@ TEST_CASE("C++ renderer 提供 move-only RAII", "[renderer][cpp_api]") {
   granit::renderer_limits limits;
   REQUIRE(renderer.get_limits(limits) == granit::result::success);
   CHECK(limits.supports_sample_count(granit::sample_count::one));
+  CHECK(limits.supports_timestamp_queries());
   CHECK(limits.max_sampler_anisotropy >= 1.0F);
   CHECK(limits.uniform_buffer_offset_alignment > 0);
   granit::renderer_shader_capabilities shader_capabilities;
