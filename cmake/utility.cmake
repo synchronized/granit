@@ -39,7 +39,9 @@ function(granit_target_compile_warnings target)
     target_compile_options(${target} PRIVATE $<$<COMPILE_LANGUAGE:C>:/utf-8>)
   endif()
   if(CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC")
-    target_compile_options(${target} PRIVATE $<$<COMPILE_LANGUAGE:CXX>:/utf-8>)
+    # MSVC 不会为 Ninja 目标自动启用标准 C++ 异常展开；标准库容器和 Granit 的
+    # 工具实现均依赖该语义，显式声明可避免 Release + /WX 产生 C4530。
+    target_compile_options(${target} PRIVATE $<$<COMPILE_LANGUAGE:CXX>:/utf-8 /EHsc>)
   endif()
 
   if(NOT GRANIT_ENABLE_WARNINGS)
