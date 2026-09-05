@@ -19,6 +19,7 @@
 
 ## 稳定化与跨平台
 
+- [2026-09-05 Granit 0.6.0 发布验收](2026-09-05-v0.6.0-release-acceptance.md)
 - [2026-09-05 Granit 0.5.0 发布验收](2026-09-05-v0.5.0-release-acceptance.md)
 - [2026-09-04 S-18E SDK 验收](2026-09-04-s18e-local-sdk-acceptance.md)
 - [2026-09-04 S-18A Gneiss 接入基线](2026-09-04-s18a-gneiss-integration-baseline.md)
