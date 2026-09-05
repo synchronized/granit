@@ -128,6 +128,13 @@ jobs:
           & "$stage/bin/dxc.exe" --version
           & "$stage/bin/glslangValidator.exe" --version
           & "$stage/bin/tint.exe" --version
+          $validation = "$env:RUNNER_TEMP/shader-tools-validation"
+          cmake -S . -B $validation -G Ninja -DCMAKE_BUILD_TYPE=Release `
+            -DGRANIT_BUILD_EXAMPLES=OFF -DGRANIT_BUILD_TESTING=ON -DGRANIT_BUILD_TOOLS=ON `
+            -DGRANIT_SHADER_TOOLCHAIN_ROOT="$stage" -DGRANIT_SHADER_TOOLCHAIN_POLICY=locked `
+            -DGRANIT_TINT_REVISION="$env:TINT_REVISION"
+          cmake --build $validation --target granit_shader_hlsl_api_test granit_shader_glsl_api_test
+          ctest --test-dir $validation -R "granit.shader_tools.(hlsl|glsl)_api" --output-on-failure
           Compress-Archive -Path $stage -DestinationPath "$name.zip"
           $hash = (Get-FileHash "$name.zip" -Algorithm SHA256).Hash.ToLowerInvariant()
           "$hash  $name.zip" | Set-Content -Encoding ascii "$name.zip.sha256"
@@ -231,6 +238,20 @@ jobs:
           LD_LIBRARY_PATH="$stage/lib" "$stage/bin/dxc" --version
           "$stage/bin/glslangValidator" --version
           "$stage/bin/tint" --version
+          export LD_LIBRARY_PATH="$stage/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+          validation="$RUNNER_TEMP/shader-tools-validation"
+          CC=clang CXX=clang++ cmake -S . -B "$validation" -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DGRANIT_BUILD_EXAMPLES=OFF \
+            -DGRANIT_BUILD_TESTING=ON \
+            -DGRANIT_BUILD_TOOLS=ON \
+            -DGRANIT_SHADER_TOOLCHAIN_ROOT="$stage" \
+            -DGRANIT_SHADER_TOOLCHAIN_POLICY=locked \
+            -DGRANIT_TINT_REVISION="$TINT_REVISION"
+          cmake --build "$validation" --target \
+            granit_shader_hlsl_api_test granit_shader_glsl_api_test
+          ctest --test-dir "$validation" -R 'granit.shader_tools.(hlsl|glsl)_api' \
+            --output-on-failure
           tar -C stage -czf "$name.tar.gz" "$name"
           sha256sum "$name.tar.gz" > "$name.tar.gz.sha256"
           echo "name=$name" >> "$GITHUB_OUTPUT"
