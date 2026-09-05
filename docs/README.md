@@ -37,7 +37,7 @@
 2. [项目文档规范](../DOCUMENTATION_GUIDE.md)
 3. [开发计划索引](plans/README.md)
 4. [第三方依赖](../3rd/README.md)
-5. [0.10.0 环境资源与帧构造背压计划](plans/S-25-0.10.0-environment-and-frame-backpressure.md)
+5. [0.11.0 WebGPU 能力与浏览器 Model Viewer 计划](plans/S-26-0.11.0-webgpu-parity-and-web-model-viewer.md)
 
 ## 操作指南
 

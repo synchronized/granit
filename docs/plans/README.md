@@ -158,6 +158,8 @@ D-03-graphics-pipeline.md
   公共 PBR Shader、四组 Binding、安装资产与 Model Viewer Consumer 已统一。
 - [S-25：0.10.0 环境资源与帧构造背压](S-25-0.10.0-environment-and-frame-backpressure.md)——
   已完成；Environment Map、GRENV v3、Model Viewer 迁移与构造前背压已通过发布验收。
+- [S-26：0.11.0 WebGPU 能力对齐与浏览器 Model Viewer](S-26-0.11.0-webgpu-parity-and-web-model-viewer.md)——
+  已确认；将补齐可移植传输、Mipmap、Timestamp，并交付正式浏览器 Model Viewer。
 
 ## 状态
 

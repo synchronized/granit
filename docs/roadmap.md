@@ -33,8 +33,9 @@
 | 十三、0.6.0 Shader 资产与变体 | 已发布 | S-20、S-21 与发布验收均已完成 |
 | 十四、0.7.0 SDK 稳定化与上游集成 | 已发布 | component 契约与上游集成门禁已随 0.7.0 完成 |
 | 十五、0.8.0 运行时 Shader 与材质资产 | 已发布 | 运行时资产契约已随 0.8.0 发布 |
-| 十六、0.9.0 公共 PBR 与渲染资产收敛 | 已完成 | 公共 PBR、Binding、Model Viewer 与安装资产已收敛 |
-| 十七、0.10.0 环境资源与帧构造背压 | 待开始 | 公共 Environment Map 与 Model Viewer 构造前背压 |
+| 十六、0.9.0 公共 PBR 与渲染资产收敛 | 已发布 | 公共 PBR、Binding、Model Viewer 与安装资产已收敛 |
+| 十七、0.10.0 环境资源与帧构造背压 | 已发布 | Environment Map 与帧构造背压已随 0.10.0 发布 |
+| 十八、0.11.0 WebGPU 能力与 Web Model Viewer | 待开始 | 补齐可移植能力并交付正式浏览器示例 |
 
 ## 一、工程与 ABI 基础
 
@@ -293,12 +294,25 @@
   迁移为公共 Environment Map 的 Consumer。
 - 公共执行器、glTF SDK、Android、TAA 和高级渲染能力不属于 0.10.0。
 
+## 十八、0.11.0 WebGPU 能力对齐与浏览器 Model Viewer
+
+**状态：已确认，待开始。**
+
+- **[S-26](plans/S-26-0.11.0-webgpu-parity-and-web-model-viewer.md) / P1**：以公共 API 为边界建立
+  Vulkan/WebGPU 能力矩阵，补齐可移植的资源传输、Mipmap 和可选 Timestamp Query。
+- 保留快速浏览器 Smoke，并新增加载正式模型、环境和 ImGui 的用户级 Web Model Viewer。
+- Vulkan 专属同步、持久映射、Pipeline Cache 和原生互操作不做 WebGPU 模拟，通过能力查询和稳定
+  错误明确表达差异。
+- 桌面 Dawn、公共 glTF SDK、公共执行器、Android、TAA 和其他高级渲染能力不属于本版本。
+
 ## 近期执行顺序
 
-1. 规划下一版本前先收集 Granit 与 Gneiss 的真实集成反馈，不提前扩大公共执行器或场景 API。
-2. S-14 只在复用条件成立后启动；不要为当前单个示例提前稳定 glTF 公共 API。
-3. S-06D 最终验收等待稳定版本与 component 范围决策；不在 0.x 阶段提前宣布稳定。
-4. H-09 的透明 PBR、CSM、Clustered Forward 与 Bindless 只在各自重新评估条件满足后独立恢复，
+1. **[S-26](plans/S-26-0.11.0-webgpu-parity-and-web-model-viewer.md) / P1**：先审计并补齐
+   Vulkan/WebGPU 可移植公共能力，再把浏览器 Smoke 提升为正式 Model Viewer。
+2. 公共执行器与场景 API 继续等待 Granit 与 Gneiss 的第二个真实复用证据，不纳入 S-26。
+3. S-14 只在复用条件成立后启动；不要为当前单个示例提前稳定 glTF 公共 API。
+4. S-06D 最终验收等待稳定版本与 component 范围决策；不在 0.x 阶段提前宣布稳定。
+5. H-09 的透明 PBR、CSM、Clustered Forward 与 Bindless 只在各自重新评估条件满足后独立恢复，
    不作为当前稳定化工作的前置项。
 
 若前置抽象不足，应先更新对应 Plan 和本路线图状态，再扩大公共 API。
