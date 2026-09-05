@@ -167,15 +167,10 @@ async function main() {
   const address = server.address();
   const browserArguments = ["--enable-unsafe-webgpu", "--no-sandbox"];
   if (process.platform !== "win32") {
-    // CI 没有物理 GPU，必须同时锁定 ANGLE、Vulkan 与 WebGPU 的 SwiftShader 路径，避免 Chrome
-    // 在不同软件适配器之间选择后丢失 Device。
     browserArguments.push(
-      "--disable-dev-shm-usage",
       "--enable-unsafe-swiftshader",
       "--enable-features=Vulkan",
-      "--use-angle=vulkan",
-      "--use-vulkan=swiftshader",
-      "--use-webgpu-adapter=swiftshader",
+      "--use-angle=swiftshader",
       "--disable-vulkan-surface",
     );
   }

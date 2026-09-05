@@ -56,4 +56,17 @@ jobs:
         working-directory: web/tests
         env:
           CHROME_PATH: /usr/bin/google-chrome
-        run: npm test -- ../../build/emscripten-release/web
+        shell: bash
+        run: |
+          set -o pipefail
+          for attempt in 1 2 3; do
+            log="$RUNNER_TEMP/granit-webgpu-attempt-${attempt}.log"
+            if npm test -- ../../build/emscripten-release/web 2>&1 | tee "$log"; then
+              exit 0
+            fi
+            if ! grep -q "A valid external Instance reference no longer exists" "$log"; then
+              exit 1
+            fi
+            echo "无头 Chrome 丢失 WebGPU 设备，重启浏览器测试（${attempt}/3）"
+          done
+          exit 1
