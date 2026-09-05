@@ -62,7 +62,7 @@ jobs:
           "VULKAN_SDK_ROOT=$root" >> $env:GITHUB_ENV
       - name: 恢复锁定 Tint 产物
         id: tint-cache
-        uses: actions/cache@v5
+        uses: actions/cache/restore@v5
         with:
           path: ${{ runner.temp }}/granit-tint-cache
           key: shader-tint-v1-windows-x64-msvc2022-${{ env.TINT_REVISION }}
@@ -120,6 +120,12 @@ jobs:
           cmake -DROOT="$env:RUNNER_TEMP/dawn" `
             -DOUTPUT="$cache/licenses/Dawn-THIRD-PARTY-LICENSES.txt" `
             -DCOMPONENT=Dawn-Tint -P cmake/collect_license_bundle.cmake
+      - name: 保存锁定 Tint 产物
+        if: steps.tint-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v5
+        with:
+          path: ${{ runner.temp }}/granit-tint-cache
+          key: shader-tint-v1-windows-x64-msvc2022-${{ env.TINT_REVISION }}
       - name: 设置 Tint 产物路径
         shell: pwsh
         run: |
@@ -203,7 +209,7 @@ jobs:
           echo "VULKAN_SDK_SOURCE_ROOT=$root/$VULKAN_SDK_VERSION" >> "$GITHUB_ENV"
       - name: 恢复锁定 Tint 产物
         id: tint-cache
-        uses: actions/cache@v5
+        uses: actions/cache/restore@v5
         with:
           path: ${{ runner.temp }}/granit-tint-cache
           key: shader-tint-v1-linux-x64-clang18-${{ env.TINT_REVISION }}
@@ -259,6 +265,12 @@ jobs:
           cmake -DROOT="$RUNNER_TEMP/dawn" \
             -DOUTPUT="$cache/licenses/Dawn-THIRD-PARTY-LICENSES.txt" \
             -DCOMPONENT=Dawn-Tint -P cmake/collect_license_bundle.cmake
+      - name: 保存锁定 Tint 产物
+        if: steps.tint-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v5
+        with:
+          path: ${{ runner.temp }}/granit-tint-cache
+          key: shader-tint-v1-linux-x64-clang18-${{ env.TINT_REVISION }}
       - name: 设置 Tint 产物路径
         shell: bash
         run: |
