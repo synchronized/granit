@@ -505,4 +505,14 @@ if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
       -DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/shader-toolchain-manifest-test -P
       "${PROJECT_SOURCE_DIR}/cmake/check_shader_toolchain_manifest.cmake"
   )
+  add_test(
+    NAME granit.shader_toolchain.package
+    COMMAND
+      "${CMAKE_COMMAND}"
+      -DPACKAGER=${PROJECT_SOURCE_DIR}/cmake/package_shader_toolchain.cmake
+      -DGENERATOR=${PROJECT_SOURCE_DIR}/cmake/generate_shader_toolchain_manifest.cmake
+      -DVERIFIER=${PROJECT_SOURCE_DIR}/cmake/verify_shader_toolchain_manifest.cmake
+      -DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/shader-toolchain-package-test -P
+      "${PROJECT_SOURCE_DIR}/cmake/check_package_shader_toolchain.cmake"
+  )
 endif()
