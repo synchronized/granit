@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
+#include <array>
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
@@ -169,6 +170,89 @@ granit_result validate_public_pipeline() {
     return result == GRANIT_SUCCESS ? GRANIT_ERROR_INTERNAL : result;
   }
   return GRANIT_SUCCESS;
+}
+
+granit_result validate_public_transfers() {
+  constexpr std::array<std::uint8_t, 16> pixels{1, 2,  3,  4,  5,  6,  7,  8,
+                                                9, 10, 11, 12, 13, 14, 15, 16};
+  granit::buffer upload;
+  auto result = upload.initialize(
+      state.renderer,
+      {.size = pixels.size(),
+       .usage = granit::buffer_usage::transfer_source | granit::buffer_usage::transfer_destination,
+       .location = granit::memory_location::upload},
+      std::as_bytes(std::span{pixels}));
+  if (result != granit::result::success)
+    return granit::to_native(result);
+
+  granit::buffer readback;
+  result = readback.initialize(state.renderer, {.size = pixels.size(),
+                                                .usage = granit::buffer_usage::transfer_destination,
+                                                .location = granit::memory_location::readback});
+  if (result != granit::result::success)
+    return granit::to_native(result);
+
+  constexpr auto texture_usage =
+      granit::texture_usage::transfer_source | granit::texture_usage::transfer_destination;
+  granit::texture source_texture;
+  result = source_texture.initialize(state.renderer, {.format = granit::texture_format::rgba8_unorm,
+                                                      .usage = texture_usage,
+                                                      .width = 2,
+                                                      .height = 2});
+  if (result != granit::result::success)
+    return granit::to_native(result);
+  granit::texture destination_texture;
+  result =
+      destination_texture.initialize(state.renderer, {.format = granit::texture_format::rgba8_unorm,
+                                                      .usage = texture_usage,
+                                                      .width = 2,
+                                                      .height = 2});
+  if (result != granit::result::success)
+    return granit::to_native(result);
+
+  granit::command_recorder recorder;
+  result = recorder.initialize(state.renderer);
+  if (result != granit::result::success)
+    return granit::to_native(result);
+  if ((result = recorder.begin()) != granit::result::success)
+    return granit::to_native(result);
+
+  constexpr granit::buffer_copy_region buffer_region{
+      .source_offset = 0, .destination_offset = 0, .size = pixels.size()};
+  constexpr granit_texture_data_layout layout{};
+  granit_texture_write_region texture_region{};
+  texture_region.array_layer_count = 1;
+  texture_region.aspect = GRANIT_TEXTURE_ASPECT_COLOR_BIT;
+  texture_region.width = 2;
+  texture_region.height = 2;
+  texture_region.depth = 1;
+  granit::texture_copy_region copy_region{};
+  copy_region.array_layer_count = 1;
+  copy_region.aspect = GRANIT_TEXTURE_ASPECT_COLOR_BIT;
+  copy_region.width = 2;
+  copy_region.height = 2;
+  copy_region.depth = 1;
+
+  result = recorder.copy_buffer(upload.native_handle(), readback.native_handle(),
+                                std::span{&buffer_region, 1});
+  if (result == granit::result::success)
+    result = recorder.fill_buffer(upload.native_handle(), 0, pixels.size(), UINT32_C(0x40302010));
+  if (result == granit::result::success)
+    result = recorder.copy_buffer_to_texture(upload.native_handle(), source_texture.native_handle(),
+                                             layout, texture_region);
+  if (result == granit::result::success)
+    result = recorder.copy_texture(source_texture.native_handle(),
+                                   destination_texture.native_handle(), copy_region);
+  if (result == granit::result::success)
+    result = recorder.copy_texture_to_buffer(destination_texture.native_handle(),
+                                             readback.native_handle(), layout, texture_region);
+  if (result == granit::result::success)
+    result = recorder.end();
+  if (result == granit::result::success)
+    result = recorder.submit();
+  if (result == granit::result::success)
+    result = recorder.reset();
+  return granit::to_native(result);
 }
 
 granit_result draw_shared_fixture(granit_frame frame, granit_texture_view target_view,
@@ -582,7 +666,7 @@ granit::result execute_web_frame(granit::example::model_viewer::frame_packet&& p
   granit_texture_view backbuffer_view{};
   if (result == GRANIT_SUCCESS) {
     result = granit_swapchain_get_backbuffer(state.renderer, state.swapchain, image_index,
-                                              &backbuffer, &backbuffer_view);
+                                             &backbuffer, &backbuffer_view);
   }
   if (result == GRANIT_SUCCESS) {
     const auto render = packet.render_desc(backbuffer_view, context.swapchain_info->format, frame);
@@ -621,7 +705,7 @@ granit_result render_model_viewer_frame() {
   if (result == GRANIT_SUCCESS) {
     web_frame_execution_context execution_context{&info};
     granit::example::model_viewer::inline_frame_executor executor(execute_web_frame,
-                                                                   &execution_context);
+                                                                  &execution_context);
     granit::example::model_viewer::frame_execution_result execution;
     result = granit::to_native(executor.submit(std::move(output), execution));
   }
@@ -798,6 +882,11 @@ void tick(void*) noexcept {
   const auto pipeline_result = validate_public_pipeline();
   if (pipeline_result != GRANIT_SUCCESS) {
     fail("renderer-pipeline", pipeline_result);
+    return;
+  }
+  const auto transfer_result = validate_public_transfers();
+  if (transfer_result != GRANIT_SUCCESS) {
+    fail("renderer-transfers", transfer_result);
     return;
   }
   try {

@@ -15,8 +15,8 @@ bool is_compatible(const granit_webgpu_provider_api* api,
   constexpr std::size_t minimum_size = offsetof(granit_webgpu_provider_api, instance_api) +
                                        sizeof(const granit_webgpu_provider_instance_api*);
   constexpr std::size_t minimum_instance_api_size =
-      offsetof(granit_webgpu_provider_instance_api, recorder_set_scissors) +
-      sizeof(granit_webgpu_provider_recorder_set_scissors_fn);
+      offsetof(granit_webgpu_provider_instance_api, recorder_fill_buffer) +
+      sizeof(granit_webgpu_provider_recorder_fill_buffer_fn);
   return api != nullptr && api->struct_size >= minimum_size &&
          api->abi_version == GRANIT_WEBGPU_PROVIDER_ABI_VERSION && api->kind == expected_kind &&
          api->reserved == 0 && api->name != nullptr && api->name_length != 0 &&
@@ -81,7 +81,12 @@ bool is_compatible(const granit_webgpu_provider_api* api,
          api->instance_api->recorder_dispatch != nullptr &&
          api->instance_api->recorder_end_compute != nullptr &&
          api->instance_api->recorder_set_viewports != nullptr &&
-         api->instance_api->recorder_set_scissors != nullptr;
+         api->instance_api->recorder_set_scissors != nullptr &&
+         api->instance_api->recorder_copy_buffer != nullptr &&
+         api->instance_api->recorder_copy_buffer_to_texture_v2 != nullptr &&
+         api->instance_api->recorder_copy_texture_to_buffer_v2 != nullptr &&
+         api->instance_api->recorder_copy_texture != nullptr &&
+         api->instance_api->recorder_fill_buffer != nullptr;
 }
 
 bool is_valid_host(const granit_webgpu_provider_host_api* host) noexcept {
@@ -977,6 +982,80 @@ granit_result webgpu_provider_dispatch::recorder_copy_texture_to_buffer(
   try {
     return api_->instance_api->recorder_copy_texture_to_buffer(instance, recorder, texture, buffer,
                                                                width, height, bytes_per_row);
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+granit_result webgpu_provider_dispatch::recorder_copy_buffer(
+    granit_webgpu_provider_instance instance, granit_webgpu_provider_command_recorder recorder,
+    granit_webgpu_provider_buffer source, granit_webgpu_provider_buffer destination,
+    std::span<const granit_webgpu_provider_buffer_copy_region> regions) noexcept {
+  if (api_ == nullptr || instance == 0 || recorder == 0 || source == 0 || destination == 0 ||
+      regions.empty() || regions.size() > UINT32_MAX)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  if (std::find(instances_.begin(), instances_.end(), instance) == instances_.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  try {
+    return api_->instance_api->recorder_copy_buffer(instance, recorder, source, destination,
+                                                    regions.data(),
+                                                    static_cast<std::uint32_t>(regions.size()));
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+granit_result webgpu_provider_dispatch::recorder_copy_buffer_to_texture_v2(
+    granit_webgpu_provider_instance instance, granit_webgpu_provider_command_recorder recorder,
+    granit_webgpu_provider_buffer source, granit_webgpu_provider_texture destination,
+    const granit_webgpu_provider_texture_buffer_copy& region) noexcept {
+  if (api_ == nullptr || instance == 0 || recorder == 0 || source == 0 || destination == 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  try {
+    return api_->instance_api->recorder_copy_buffer_to_texture_v2(instance, recorder, source,
+                                                                  destination, &region);
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+granit_result webgpu_provider_dispatch::recorder_copy_texture_to_buffer_v2(
+    granit_webgpu_provider_instance instance, granit_webgpu_provider_command_recorder recorder,
+    granit_webgpu_provider_texture source, granit_webgpu_provider_buffer destination,
+    const granit_webgpu_provider_texture_buffer_copy& region) noexcept {
+  if (api_ == nullptr || instance == 0 || recorder == 0 || source == 0 || destination == 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  try {
+    return api_->instance_api->recorder_copy_texture_to_buffer_v2(instance, recorder, source,
+                                                                  destination, &region);
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+granit_result webgpu_provider_dispatch::recorder_copy_texture(
+    granit_webgpu_provider_instance instance, granit_webgpu_provider_command_recorder recorder,
+    granit_webgpu_provider_texture source, granit_webgpu_provider_texture destination,
+    const granit_webgpu_provider_texture_copy_region& region) noexcept {
+  if (api_ == nullptr || instance == 0 || recorder == 0 || source == 0 || destination == 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  try {
+    return api_->instance_api->recorder_copy_texture(instance, recorder, source, destination,
+                                                     &region);
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+granit_result webgpu_provider_dispatch::recorder_fill_buffer(
+    granit_webgpu_provider_instance instance, granit_webgpu_provider_command_recorder recorder,
+    granit_webgpu_provider_buffer buffer, std::uint64_t offset, std::uint64_t size,
+    std::uint32_t value) noexcept {
+  if (api_ == nullptr || instance == 0 || recorder == 0 || buffer == 0 || size == 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  try {
+    return api_->instance_api->recorder_fill_buffer(instance, recorder, buffer, offset, size,
+                                                    value);
   } catch (...) {
     return GRANIT_ERROR_INTERNAL;
   }

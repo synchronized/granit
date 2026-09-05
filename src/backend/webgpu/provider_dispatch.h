@@ -250,6 +250,27 @@ public:
       granit_webgpu_provider_instance instance, granit_webgpu_provider_command_recorder recorder,
       granit_webgpu_provider_texture texture, granit_webgpu_provider_buffer buffer,
       std::uint32_t width, std::uint32_t height, std::uint32_t bytes_per_row) noexcept;
+  [[nodiscard]] granit_result recorder_copy_buffer(
+      granit_webgpu_provider_instance instance, granit_webgpu_provider_command_recorder recorder,
+      granit_webgpu_provider_buffer source, granit_webgpu_provider_buffer destination,
+      std::span<const granit_webgpu_provider_buffer_copy_region> regions) noexcept;
+  [[nodiscard]] granit_result recorder_copy_buffer_to_texture_v2(
+      granit_webgpu_provider_instance instance, granit_webgpu_provider_command_recorder recorder,
+      granit_webgpu_provider_buffer source, granit_webgpu_provider_texture destination,
+      const granit_webgpu_provider_texture_buffer_copy& region) noexcept;
+  [[nodiscard]] granit_result recorder_copy_texture_to_buffer_v2(
+      granit_webgpu_provider_instance instance, granit_webgpu_provider_command_recorder recorder,
+      granit_webgpu_provider_texture source, granit_webgpu_provider_buffer destination,
+      const granit_webgpu_provider_texture_buffer_copy& region) noexcept;
+  [[nodiscard]] granit_result recorder_copy_texture(
+      granit_webgpu_provider_instance instance, granit_webgpu_provider_command_recorder recorder,
+      granit_webgpu_provider_texture source, granit_webgpu_provider_texture destination,
+      const granit_webgpu_provider_texture_copy_region& region) noexcept;
+  [[nodiscard]] granit_result recorder_fill_buffer(granit_webgpu_provider_instance instance,
+                                                   granit_webgpu_provider_command_recorder recorder,
+                                                   granit_webgpu_provider_buffer buffer,
+                                                   std::uint64_t offset, std::uint64_t size,
+                                                   std::uint32_t value) noexcept;
   void close() noexcept;
 
   [[nodiscard]] bool is_open() const noexcept { return api_ != nullptr; }

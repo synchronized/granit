@@ -9,7 +9,7 @@
 #include <granit/core/diagnostic.h>
 #include <granit/core/result.h>
 
-#define GRANIT_WEBGPU_PROVIDER_ABI_VERSION UINT32_C(26)
+#define GRANIT_WEBGPU_PROVIDER_ABI_VERSION UINT32_C(27)
 #define GRANIT_WEBGPU_PROVIDER_KIND_WEBGPU UINT32_C(1)
 #define GRANIT_WEBGPU_PROVIDER_QUERY_SYMBOL "granit_webgpu_provider_query"
 #define GRANIT_WEBGPU_PROVIDER_SURFACE_TYPE_WIN32_BIT UINT32_C(0x00000001)
@@ -677,6 +677,72 @@ typedef granit_result (*granit_webgpu_provider_cancel_swapchain_fn)(
 typedef granit_result (*granit_webgpu_provider_destroy_swapchain_fn)(
     granit_webgpu_provider_instance instance, granit_webgpu_provider_swapchain swapchain);
 
+typedef uint32_t granit_webgpu_provider_texture_aspect;
+#define GRANIT_WEBGPU_PROVIDER_TEXTURE_ASPECT_ALL UINT32_C(0)
+#define GRANIT_WEBGPU_PROVIDER_TEXTURE_ASPECT_DEPTH UINT32_C(1)
+#define GRANIT_WEBGPU_PROVIDER_TEXTURE_ASPECT_STENCIL UINT32_C(2)
+
+typedef struct granit_webgpu_provider_buffer_copy_region {
+  uint64_t source_offset;
+  uint64_t destination_offset;
+  uint64_t size;
+} granit_webgpu_provider_buffer_copy_region;
+
+/** Buffer 与 Texture 复制区域；布局偏移相对于 Buffer 起始位置。 */
+typedef struct granit_webgpu_provider_texture_buffer_copy {
+  uint64_t buffer_offset;
+  uint32_t bytes_per_row;
+  uint32_t rows_per_image;
+  uint32_t mip_level;
+  uint32_t base_array_layer;
+  uint32_t array_layer_count;
+  granit_webgpu_provider_texture_aspect aspect;
+  uint32_t x;
+  uint32_t y;
+  uint32_t z;
+  uint32_t width;
+  uint32_t height;
+  uint32_t depth;
+} granit_webgpu_provider_texture_buffer_copy;
+
+typedef struct granit_webgpu_provider_texture_copy_region {
+  uint32_t source_mip_level;
+  uint32_t source_base_array_layer;
+  uint32_t destination_mip_level;
+  uint32_t destination_base_array_layer;
+  uint32_t array_layer_count;
+  granit_webgpu_provider_texture_aspect aspect;
+  uint32_t source_x;
+  uint32_t source_y;
+  uint32_t source_z;
+  uint32_t destination_x;
+  uint32_t destination_y;
+  uint32_t destination_z;
+  uint32_t width;
+  uint32_t height;
+  uint32_t depth;
+} granit_webgpu_provider_texture_copy_region;
+
+typedef granit_result (*granit_webgpu_provider_recorder_copy_buffer_fn)(
+    granit_webgpu_provider_instance instance, granit_webgpu_provider_command_recorder recorder,
+    granit_webgpu_provider_buffer source, granit_webgpu_provider_buffer destination,
+    const granit_webgpu_provider_buffer_copy_region* regions, uint32_t region_count);
+typedef granit_result (*granit_webgpu_provider_recorder_copy_buffer_to_texture_v2_fn)(
+    granit_webgpu_provider_instance instance, granit_webgpu_provider_command_recorder recorder,
+    granit_webgpu_provider_buffer source, granit_webgpu_provider_texture destination,
+    const granit_webgpu_provider_texture_buffer_copy* region);
+typedef granit_result (*granit_webgpu_provider_recorder_copy_texture_to_buffer_v2_fn)(
+    granit_webgpu_provider_instance instance, granit_webgpu_provider_command_recorder recorder,
+    granit_webgpu_provider_texture source, granit_webgpu_provider_buffer destination,
+    const granit_webgpu_provider_texture_buffer_copy* region);
+typedef granit_result (*granit_webgpu_provider_recorder_copy_texture_fn)(
+    granit_webgpu_provider_instance instance, granit_webgpu_provider_command_recorder recorder,
+    granit_webgpu_provider_texture source, granit_webgpu_provider_texture destination,
+    const granit_webgpu_provider_texture_copy_region* region);
+typedef granit_result (*granit_webgpu_provider_recorder_fill_buffer_fn)(
+    granit_webgpu_provider_instance instance, granit_webgpu_provider_command_recorder recorder,
+    granit_webgpu_provider_buffer buffer, uint64_t offset, uint64_t size, uint32_t value);
+
 /**
  * 实例操作表由 Provider 拥有，在Provider 销毁前保持有效。
  *
@@ -747,6 +813,11 @@ typedef struct granit_webgpu_provider_instance_api {
   granit_webgpu_provider_recorder_end_compute_fn recorder_end_compute;
   granit_webgpu_provider_recorder_set_viewports_fn recorder_set_viewports;
   granit_webgpu_provider_recorder_set_scissors_fn recorder_set_scissors;
+  granit_webgpu_provider_recorder_copy_buffer_fn recorder_copy_buffer;
+  granit_webgpu_provider_recorder_copy_buffer_to_texture_v2_fn recorder_copy_buffer_to_texture_v2;
+  granit_webgpu_provider_recorder_copy_texture_to_buffer_v2_fn recorder_copy_texture_to_buffer_v2;
+  granit_webgpu_provider_recorder_copy_texture_fn recorder_copy_texture;
+  granit_webgpu_provider_recorder_fill_buffer_fn recorder_fill_buffer;
 } granit_webgpu_provider_instance_api;
 
 /** 静态 Provider 入口返回的只读描述；字符串在Provider 销毁前有效。 */
