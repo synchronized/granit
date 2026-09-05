@@ -2,6 +2,7 @@
 // Copyright (c) 2026 Granit contributors
 
 #include "pipeline/unlit_pass.h"
+#include "support/shader_asset_store.h"
 
 #include <granit/granit.hpp>
 
@@ -10,6 +11,7 @@
 #include <array>
 #include <fstream>
 #include <iterator>
+#include <string>
 #include <vector>
 
 namespace {
@@ -19,6 +21,16 @@ granit::math::matrix4 identity() { return {1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0
 std::vector<char> load_package() {
   std::ifstream stream{GRANIT_UNLIT_TEST_PACKAGE, std::ios::binary};
   return {std::istreambuf_iterator<char>{stream}, {}};
+}
+
+granit::tests::shader_asset_store& shader_assets() {
+  static granit::tests::shader_asset_store store;
+  static const bool loaded =
+      store.add(std::string{GRANIT_UNLIT_SHADER_DIR} + "/unlit.vert.grshader") &&
+      store.add(std::string{GRANIT_UNLIT_SHADER_DIR} + "/unlit.frag.grshader") &&
+      store.add(std::string{GRANIT_UNLIT_SHADER_DIR} + "/unlit_alpha_cutoff.frag.grshader");
+  REQUIRE(loaded);
+  return store;
 }
 
 } // namespace
@@ -117,6 +129,8 @@ TEST_CASE("Unlit Opaque与Alpha Cutoff产生预期像素") {
         material_desc.archive_size = archive.size();
         material_desc.initial_updates = updates.data();
         material_desc.initial_update_count = static_cast<uint32_t>(updates.size());
+        material_desc.shader_resolver = granit::tests::shader_asset_store::resolve;
+        material_desc.shader_resolver_user_data = &shader_assets();
         granit_material material = GRANIT_NULL_HANDLE;
         REQUIRE(granit_material_create(native, &material_desc, &material) == GRANIT_SUCCESS);
         granit::command_recorder recorder;

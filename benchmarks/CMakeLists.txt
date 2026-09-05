@@ -281,8 +281,12 @@ add_custom_command(
   DEPENDS
     granit_material_tool
     "${PROJECT_SOURCE_DIR}/tests/fixtures/smoke/render_pipeline_workload.grmat.json"
-    "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/pbr_shadow_ibl_lights.vert.spv"
-    "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/pbr_shadow_ibl_lights_untextured.frag.spv"
+    "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/pbr_shadow_ibl_lights.vert.grshader"
+    "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/pbr_shadow_ibl_lights.vert.grshader.spv"
+    "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/pbr_shadow_ibl_lights.vert.grshader.wgsl"
+    "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/pbr_shadow_ibl_lights_untextured.frag.grshader"
+    "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/pbr_shadow_ibl_lights_untextured.frag.grshader.spv"
+    "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/pbr_shadow_ibl_lights_untextured.frag.grshader.wgsl"
   VERBATIM
 )
 add_executable(
@@ -303,12 +307,18 @@ target_compile_definitions(
     GRANIT_BENCHMARK_SYSTEM="${CMAKE_SYSTEM_NAME}-${CMAKE_SYSTEM_PROCESSOR}"
     GRANIT_RENDER_PIPELINE_CPU_BENCHMARK
     GRANIT_RENDER_PIPELINE_SMOKE_PACKAGE="${granit_render_pipeline_benchmark_package}"
+    GRANIT_PIPELINE_ASSET_DIR="${PROJECT_SOURCE_DIR}/assets/shaders/pbr"
 )
 target_link_libraries(granit_render_pipeline_benchmarks PRIVATE granit::render_pipeline)
-target_include_directories(granit_render_pipeline_benchmarks PRIVATE "${PROJECT_SOURCE_DIR}/src")
+target_include_directories(
+  granit_render_pipeline_benchmarks PRIVATE "${PROJECT_SOURCE_DIR}/src"
+                                             "${PROJECT_SOURCE_DIR}/tests"
+)
 add_dependencies(granit_render_pipeline_benchmarks granit_material_tool)
 target_sources(
-  granit_render_pipeline_benchmarks PRIVATE "${granit_render_pipeline_benchmark_package}"
+  granit_render_pipeline_benchmarks
+  PRIVATE "${granit_render_pipeline_benchmark_package}"
+          $<TARGET_OBJECTS:granit_shader_asset_format>
 )
 granit_target_compile_warnings(granit_render_pipeline_benchmarks)
 granit_target_output_directories(granit_render_pipeline_benchmarks)

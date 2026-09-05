@@ -118,6 +118,7 @@ granit_result ensure_material(canvas_draw_list_state& state) {
   desc.archive_size = archive.size();
   desc.initial_updates = updates.data();
   desc.initial_update_count = static_cast<uint32_t>(updates.size());
+  desc.shader_resolver = granit::pipeline::detail::resolve_canvas_shader;
   return granit_material_create(state.renderer, &desc, &state.material);
 }
 

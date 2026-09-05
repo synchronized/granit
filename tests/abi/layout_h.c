@@ -176,6 +176,13 @@ GRANIT_ABI_ASSERT(granit_abi_shader_desc_code, offsetof(granit_shader_desc, code
 GRANIT_ABI_ASSERT(granit_abi_shader_desc_entry, offsetof(granit_shader_desc, entry_point) == 24);
 GRANIT_ABI_ASSERT(granit_abi_shader_desc_wgsl, offsetof(granit_shader_desc, wgsl) == 40);
 GRANIT_ABI_ASSERT(granit_abi_shader_desc_current, GRANIT_SHADER_DESC_SIZE == 56);
+GRANIT_ABI_ASSERT(granit_abi_shader_asset_desc_size, sizeof(granit_shader_asset_desc) == 40);
+GRANIT_ABI_ASSERT(granit_abi_shader_asset_desc_manifest,
+                  offsetof(granit_shader_asset_desc, manifest_data) == 8);
+GRANIT_ABI_ASSERT(granit_abi_shader_asset_desc_sidecar,
+                  offsetof(granit_shader_asset_desc, sidecar_data) == 24);
+GRANIT_ABI_ASSERT(granit_abi_shader_asset_desc_current,
+                  GRANIT_SHADER_ASSET_DESC_SIZE == 40);
 GRANIT_ABI_ASSERT(granit_abi_buffer_initial_data_size, sizeof(granit_buffer_initial_data) == 24);
 GRANIT_ABI_ASSERT(granit_abi_buffer_initial_data_data,
                   offsetof(granit_buffer_initial_data, data) == 8);

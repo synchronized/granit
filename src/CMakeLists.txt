@@ -20,6 +20,7 @@ target_sources(
   granit
   PRIVATE
     $<TARGET_OBJECTS:granit_volk>
+    $<TARGET_OBJECTS:granit_shader_asset_format>
     backend/contracts/access.h
     backend/contracts/binding.h
     backend/contracts/capabilities.h

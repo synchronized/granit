@@ -35,6 +35,12 @@ struct shader_asset_desc {
   std::string_view entry_point{"main"};
 };
 
+/** 由 ShaderTools 生成的清单及当前后端 sidecar 字节。 */
+struct packaged_shader_asset_desc {
+  std::span<const std::byte> manifest;
+  std::span<const std::byte> sidecar;
+};
+
 class shader {
 public:
   shader() = default;
@@ -88,6 +94,24 @@ public:
                                     .wgsl = desc.wgsl.data(),
                                     .wgsl_length = desc.wgsl.size()};
     return initialize_native(renderer, native);
+  }
+
+  [[nodiscard]] result initialize_packaged_asset(
+      granit_renderer renderer, const packaged_shader_asset_desc& desc) noexcept {
+    if (valid() || desc.manifest.empty() || desc.sidecar.empty())
+      return result::invalid_argument;
+    if (renderer == GRANIT_NULL_HANDLE)
+      return result::invalid_handle;
+    const granit_shader_asset_desc native{.struct_size = GRANIT_SHADER_ASSET_DESC_SIZE,
+                                          .reserved = 0,
+                                          .manifest_data = desc.manifest.data(),
+                                          .manifest_size = desc.manifest.size(),
+                                          .sidecar_data = desc.sidecar.data(),
+                                          .sidecar_size = desc.sidecar.size()};
+    const auto value = from_native(granit_shader_create_from_asset(renderer, &native, &handle_));
+    if (value.ok())
+      renderer_ = renderer;
+    return value;
   }
 
   [[nodiscard]] result reset() noexcept {

@@ -5,7 +5,7 @@ cmake_minimum_required(VERSION 3.23)
 
 project(
   granit
-  VERSION 0.7.0
+  VERSION 0.8.0
   DESCRIPTION "Vulkan-based C++20 rendering library"
   LANGUAGES C CXX
 )
@@ -32,6 +32,7 @@ include(CMakePackageConfigHelpers)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 include(utility)
+include(granit_shader_asset_format)
 
 if(GRANIT_BUILD_EMSCRIPTEN_PLATFORM)
   if(NOT EMSCRIPTEN)
@@ -217,6 +218,18 @@ if(GRANIT_HAS_WAYLAND_SHELL)
                                            "${granit_wayland_protocol_dir}"
   )
 endif()
+
+granit_add_shader_asset_format()
+
+add_library(granit_shader_asset_storage OBJECT tools/shader_asset.cpp tools/shader_asset.h)
+target_compile_features(granit_shader_asset_storage PUBLIC cxx_std_20)
+target_include_directories(
+  granit_shader_asset_storage PUBLIC "${PROJECT_SOURCE_DIR}/tools" "${PROJECT_SOURCE_DIR}/src"
+)
+granit_target_compile_warnings(granit_shader_asset_storage)
+set_target_properties(
+  granit_shader_asset_storage PROPERTIES FOLDER "Tools" POSITION_INDEPENDENT_CODE YES
+)
 
 add_subdirectory(src)
 

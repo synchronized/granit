@@ -47,6 +47,20 @@ typedef struct granit_shader_desc {
    0,                                                                                              \
    UINT64_C(0)}
 
+/** Shader Asset 的内存输入；只需提供当前 Renderer 后端对应的 sidecar。 */
+typedef struct granit_shader_asset_desc {
+  uint32_t struct_size;
+  uint32_t reserved;
+  const void* manifest_data;
+  uint64_t manifest_size;
+  const void* sidecar_data;
+  uint64_t sidecar_size;
+} granit_shader_asset_desc;
+
+#define GRANIT_SHADER_ASSET_DESC_SIZE ((uint32_t)sizeof(granit_shader_asset_desc))
+#define GRANIT_SHADER_ASSET_DESC_INIT                                                               \
+  {(uint32_t)sizeof(granit_shader_asset_desc), UINT32_C(0), 0, UINT64_C(0), 0, UINT64_C(0)}
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -55,6 +69,10 @@ extern "C" {
 GRANIT_API granit_result granit_shader_create(granit_renderer renderer,
                                               const granit_shader_desc* desc,
                                               granit_shader* shader);
+/** 验证 Shader Asset，并按 Renderer 实际能力选择 sidecar 创建 Shader。 */
+GRANIT_API granit_result granit_shader_create_from_asset(granit_renderer renderer,
+                                                         const granit_shader_asset_desc* desc,
+                                                         granit_shader* shader);
 /** 销毁 Shader 并立即使公开句柄失效。 */
 GRANIT_API granit_result granit_shader_destroy(granit_renderer renderer, granit_shader shader);
 

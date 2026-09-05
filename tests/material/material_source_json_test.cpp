@@ -11,7 +11,7 @@
 namespace {
 
 constexpr std::string_view source = R"({
-  "format_version": 3,
+  "format_version": 4,
   "target_environment": "cross_backend",
   "binding_model": "bind_group",
   "material": {
@@ -37,17 +37,15 @@ constexpr std::string_view source = R"({
         "alpha_operation": "add", "write_mask": 7}
     },
     "shaders": [
-      {"stage": "vertex", "entry_point": "main", "spirv": "minimal.vert.spv",
-       "wgsl": "dynamic_uniform.vert.wgsl"},
-      {"stage": "fragment", "entry_point": "main", "spirv": "minimal.frag.spv",
-       "wgsl": "dynamic_uniform.frag.wgsl"}
+      {"asset": "minimal.vert.grshader"},
+      {"asset": "minimal.frag.grshader"}
     ]
   }]
 })";
 
 } // namespace
 
-TEST_CASE("材质源 JSON 构建内存包并解析相对 SPIR-V 路径") {
+TEST_CASE("材质源 JSON 构建内存包并解析相对 Shader Asset 路径") {
   granit::material::material_package package;
   REQUIRE(granit::material::parse_material_source_json(
               source, std::filesystem::path{GRANIT_TEST_ASSET_DIR}, package) ==
@@ -84,20 +82,10 @@ TEST_CASE("材质源 JSON 拒绝不支持的绑定模型") {
         granit::material::source_json_error::unsupported_value);
 }
 
-TEST_CASE("材质源 JSON 拒绝缺失的 SPIR-V") {
+TEST_CASE("材质源 JSON 拒绝缺失的 Shader Asset") {
   std::string invalid{source};
-  invalid.replace(invalid.find("minimal.vert.spv"), std::string_view{"minimal.vert.spv"}.size(),
-                  "missing.spv");
-  granit::material::material_package package;
-  CHECK(granit::material::parse_material_source_json(
-            invalid, std::filesystem::path{GRANIT_TEST_ASSET_DIR}, package) ==
-        granit::material::source_json_error::referenced_file_error);
-}
-
-TEST_CASE("材质源 JSON 拒绝缺失的 WGSL") {
-  std::string invalid{source};
-  invalid.replace(invalid.find("dynamic_uniform.vert.wgsl"),
-                  std::string_view{"dynamic_uniform.vert.wgsl"}.size(), "missing.wgsl");
+  invalid.replace(invalid.find("minimal.vert.grshader"),
+                  std::string_view{"minimal.vert.grshader"}.size(), "missing.grshader");
   granit::material::material_package package;
   CHECK(granit::material::parse_material_source_json(
             invalid, std::filesystem::path{GRANIT_TEST_ASSET_DIR}, package) ==

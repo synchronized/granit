@@ -15,18 +15,6 @@ set_target_properties(granit_spirv_reflect PROPERTIES FOLDER "ThirdParty/SPIRV-R
 find_package(Threads REQUIRED)
 
 add_library(
-  granit_shader_asset OBJECT
-  shader_asset.cpp
-  shader_asset.h
-)
-target_compile_features(granit_shader_asset PUBLIC cxx_std_20)
-target_include_directories(granit_shader_asset PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
-granit_target_compile_warnings(granit_shader_asset)
-set_target_properties(
-  granit_shader_asset PROPERTIES FOLDER "Tools" POSITION_INDEPENDENT_CODE YES
-)
-
-add_library(
   granit_shader_tools_core OBJECT
   shader_tools_core.cpp
   shader_tools_core.h
@@ -63,12 +51,15 @@ if(GRANIT_BUILD_SHADER_TOOLS OR GRANIT_BUILD_TOOLS OR (GRANIT_BUILD_TESTING AND 
   )
   target_compile_features(granit_shader_tools PUBLIC cxx_std_20)
   target_include_directories(
-    granit_shader_tools PUBLIC "$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>"
+    granit_shader_tools
+    PRIVATE "${PROJECT_SOURCE_DIR}/src"
+    PUBLIC "$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>"
   )
   target_sources(
     granit_shader_tools
     PRIVATE
-      $<TARGET_OBJECTS:granit_shader_asset>
+      $<TARGET_OBJECTS:granit_shader_asset_storage>
+      $<TARGET_OBJECTS:granit_shader_asset_format>
       $<TARGET_OBJECTS:granit_shader_tools_core>
       $<TARGET_OBJECTS:granit_spirv_reflect>
   )
@@ -106,7 +97,14 @@ endif()
 
 if(TARGET granit_shader_tools)
   add_executable(granit_shader_tool shader_tool_main.cpp)
+  target_sources(
+    granit_shader_tool PRIVATE $<TARGET_OBJECTS:granit_shader_asset_storage>
+                               $<TARGET_OBJECTS:granit_shader_asset_format>
+  )
   target_compile_features(granit_shader_tool PRIVATE cxx_std_20)
+  target_include_directories(
+    granit_shader_tool PRIVATE "${PROJECT_SOURCE_DIR}/src" "${PROJECT_SOURCE_DIR}/tools"
+  )
   target_link_libraries(granit_shader_tool PRIVATE granit::shader_tools)
   target_compile_options(
     granit_shader_tool
@@ -138,12 +136,15 @@ if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
   add_executable(
     granit_shader_asset_test
     "${PROJECT_SOURCE_DIR}/tests/tools/shader_asset_test.cpp"
-    $<TARGET_OBJECTS:granit_shader_asset>
+    $<TARGET_OBJECTS:granit_shader_asset_storage>
+    $<TARGET_OBJECTS:granit_shader_asset_format>
     $<TARGET_OBJECTS:granit_shader_tools_core>
     $<TARGET_OBJECTS:granit_spirv_reflect>
   )
   target_compile_features(granit_shader_asset_test PRIVATE cxx_std_20)
-  target_include_directories(granit_shader_asset_test PRIVATE "${PROJECT_SOURCE_DIR}/tools")
+  target_include_directories(
+    granit_shader_asset_test PRIVATE "${PROJECT_SOURCE_DIR}/tools" "${PROJECT_SOURCE_DIR}/src"
+  )
   target_link_libraries(granit_shader_asset_test PRIVATE Threads::Threads)
   granit_target_compile_warnings(granit_shader_asset_test)
   granit_target_output_directories(granit_shader_asset_test)
@@ -227,6 +228,20 @@ if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
   set_tests_properties(
     granit.shader_tool.verify
     PROPERTIES PASS_REGULAR_EXPRESSION "SPIR-V 结构验证通过.*fragment_main.*fragment"
+  )
+  add_test(
+    NAME granit.shader_tool.pack
+    COMMAND
+      granit_shader_tool pack
+      --spirv "${PROJECT_SOURCE_DIR}/tests/assets/minimal.vert.spv"
+      --wgsl "${PROJECT_SOURCE_DIR}/tests/assets/minimal.vert.grshader.wgsl"
+      --entry main
+      --stage vertex
+      --asset "${CMAKE_CURRENT_BINARY_DIR}/pack-test/minimal.vert.grshader"
+  )
+  set_tests_properties(
+    granit.shader_tool.pack
+    PROPERTIES PASS_REGULAR_EXPRESSION "Shader 资产"
   )
   add_test(
     NAME granit.shader_tool.compile_diagnostic

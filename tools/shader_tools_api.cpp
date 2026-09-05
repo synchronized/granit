@@ -662,7 +662,8 @@ granit_result granit_shader_tools_result_write_asset(granit_shader_tools_result 
          tint_revision, target, options, desc->required_features});
     std::vector<std::byte> asset;
     if (granit::tools::encode_shader_asset(
-            {wgsl, spirv, value->reflection_json, key, desc->backend_mask, desc->required_features},
+            {wgsl, spirv, value->reflection_json, key, desc->backend_mask, desc->required_features,
+             value->stage, value->entry_point},
             asset) != granit::tools::shader_asset_error::success)
       return GRANIT_ERROR_INVALID_ARGUMENT;
     bool hit = false;

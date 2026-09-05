@@ -17,6 +17,7 @@
 
 #include "lighting/tone_mapping_resources.h"
 #include "material/material_package_archive.h"
+#include "support/shader_asset_store.h"
 
 #include <catch2/catch_all.hpp>
 
@@ -40,42 +41,35 @@ bool environment_unavailable(granit::result value) {
 
 granit_matrix4 identity() { return {{1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1}}; }
 
+granit::tests::shader_asset_store& shader_assets() {
+  static granit::tests::shader_asset_store store;
+  static const bool loaded =
+      store.add(std::string{GRANIT_TEST_ASSET_DIR} + "/minimal.vert.grshader") &&
+      store.add(std::string{GRANIT_TEST_ASSET_DIR} + "/minimal.frag.grshader") &&
+      store.add(std::string{GRANIT_PIPELINE_ASSET_DIR} +
+                "/pbr_shadow_ibl_lights.vert.grshader") &&
+      store.add(std::string{GRANIT_PIPELINE_ASSET_DIR} +
+                "/pbr_shadow_ibl_lights_untextured.frag.grshader");
+  REQUIRE(loaded);
+  return store;
+}
+
 std::vector<std::byte> build_material_archive() {
   using namespace granit::material;
   material_package_desc desc;
-  constexpr std::array spirv{UINT32_C(0x07230203), UINT32_C(0x00010600), 0U, 1U, 0U};
   desc.variants.push_back({.pass = make_feature_id("opaque"),
                            .features = {},
-                           .shaders = {{.stage = package_shader_stage::vertex,
-                                        .entry_point = "main",
-                                        .spirv = {spirv.begin(), spirv.end()},
-                                        .wgsl = "@vertex fn main() -> @builtin(position) vec4f { "
-                                                "return vec4f(); }"},
-                                       {.stage = package_shader_stage::fragment,
-                                        .entry_point = "main",
-                                        .spirv = {spirv.begin(), spirv.end()},
-                                        .wgsl = "@fragment fn main() {}"}},
+                           .shaders = {
+                               shader_assets().reference(std::string{GRANIT_TEST_ASSET_DIR} +
+                                                         "/minimal.vert.grshader"),
+                               shader_assets().reference(std::string{GRANIT_TEST_ASSET_DIR} +
+                                                         "/minimal.frag.grshader")},
                            .pipeline = {}});
   material_package package;
   REQUIRE(material_package::build(std::move(desc), package) == package_error::none);
   std::vector<std::byte> archive;
   REQUIRE(encode_material_package_archive(package, archive) == archive_error::none);
   return archive;
-}
-
-std::vector<std::uint32_t> load_pipeline_shader(const char* name) {
-  std::ifstream stream{std::string{GRANIT_PIPELINE_ASSET_DIR} + "/" + name, std::ios::binary};
-  const std::vector<char> bytes{std::istreambuf_iterator<char>{stream}, {}};
-  if (bytes.empty() || bytes.size() % sizeof(std::uint32_t) != 0)
-    return {};
-  std::vector<std::uint32_t> words(bytes.size() / sizeof(std::uint32_t));
-  std::memcpy(words.data(), bytes.data(), bytes.size());
-  return words;
-}
-
-std::string load_pipeline_shader_text(const char* name) {
-  std::ifstream stream{std::string{GRANIT_PIPELINE_ASSET_DIR} + "/" + name, std::ios::binary};
-  return {std::istreambuf_iterator<char>{stream}, {}};
 }
 
 std::vector<std::uint32_t> load_tone_mapping_shader(const char* name) {
@@ -90,10 +84,6 @@ std::vector<std::uint32_t> load_tone_mapping_shader(const char* name) {
 
 std::vector<std::byte> build_automatic_material_archive() {
   using namespace granit::material;
-  const auto vertex = load_pipeline_shader("pbr_shadow_ibl_lights.vert.spv");
-  const auto fragment = load_pipeline_shader("pbr_shadow_ibl_lights_untextured.frag.spv");
-  REQUIRE_FALSE(vertex.empty());
-  REQUIRE_FALSE(fragment.empty());
   material_package_desc desc;
   desc.metadata.constant_buffer_size = 48;
   desc.metadata.parameters = {
@@ -112,15 +102,11 @@ std::vector<std::byte> build_automatic_material_archive() {
   material_variant_desc variant{
       .pass = make_feature_id("opaque"),
       .features = {{make_feature_id("pbr_texture_mask"), 0}},
-      .shaders = {{.stage = package_shader_stage::vertex,
-                   .entry_point = "vertex_main",
-                   .spirv = vertex,
-                   .wgsl = load_pipeline_shader_text("pbr_shadow_ibl_lights.vert.wgsl")},
-                  {.stage = package_shader_stage::fragment,
-                   .entry_point = "fragment_main",
-                   .spirv = fragment,
-                   .wgsl =
-                       load_pipeline_shader_text("pbr_shadow_ibl_lights_untextured.frag.wgsl")}},
+      .shaders = {
+          shader_assets().reference(std::string{GRANIT_PIPELINE_ASSET_DIR} +
+                                    "/pbr_shadow_ibl_lights.vert.grshader"),
+          shader_assets().reference(std::string{GRANIT_PIPELINE_ASSET_DIR} +
+                                    "/pbr_shadow_ibl_lights_untextured.frag.grshader")},
       .pipeline = {}};
   variant.pipeline.primitive.front_face = GRANIT_FRONT_FACE_CLOCKWISE;
   variant.pipeline.primitive.cull_mode = GRANIT_CULL_MODE_BACK;
@@ -420,6 +406,8 @@ TEST_CASE("统一Render Pipeline按固定阶段消费Scene Snapshot") {
   granit_material_desc material_desc = GRANIT_MATERIAL_DESC_INIT;
   material_desc.archive_data = archive.data();
   material_desc.archive_size = archive.size();
+  material_desc.shader_resolver = granit::tests::shader_asset_store::resolve;
+  material_desc.shader_resolver_user_data = &shader_assets();
   granit::material_instance material;
   REQUIRE(material.initialize(renderer.native_handle(), material_desc) == granit::result::success);
 
@@ -717,6 +705,8 @@ TEST_CASE("公共Render Pipeline ABI输出可回读的Tone Mapping像素") {
   granit_material_desc material_desc = GRANIT_MATERIAL_DESC_INIT;
   material_desc.archive_data = archive.data();
   material_desc.archive_size = archive.size();
+  material_desc.shader_resolver = granit::tests::shader_asset_store::resolve;
+  material_desc.shader_resolver_user_data = &shader_assets();
   granit_material material = GRANIT_NULL_HANDLE;
   REQUIRE(granit_material_create(renderer.native_handle(), &material_desc, &material) ==
           GRANIT_SUCCESS);

@@ -8,6 +8,27 @@
 
 ## Unreleased
 
+## 0.8.0 - 2026-09-05
+
+### 新增
+
+- Core 新增后端无关的运行时 Shader Asset 创建入口；调用方提供 `.grshader` 清单和当前后端
+  sidecar 的内存字节，Renderer 负责能力匹配、摘要验证与 Shader 创建，不接管文件 I/O。
+- `.grshader` schema 4 自描述 Shader 阶段、入口点和稳定内容 ID；ShaderTools 新增 `pack`，可将
+  已验证的 SPIR-V/WGSL 载荷打包为统一资产。
+
+### 变更
+
+- `.grmat` 升级至 v4，改为保存 Shader Asset ID，并通过同步 resolver 获取资产；材质包不再内嵌
+  一套独立的 SPIR-V/WGSL 双载荷。
+- 内置 Canvas、Model Viewer、Smoke Fixture 与相关测试统一消费 `.grshader` 资产，桌面 Vulkan
+  与浏览器 WebGPU 共用相同清单并只部署各自需要的 sidecar。
+
+### 兼容性与迁移
+
+- 本版本修改公共 C ABI 和持久化 Shader/材质格式；0.7 Consumer 必须重新编译，旧资产必须重新
+  打包。完整步骤见[从 0.7 迁移到 0.8](docs/guides/migrate-0.7-to-0.8.md)。
+
 ## 0.7.0 - 2026-09-05
 
 ### 变更

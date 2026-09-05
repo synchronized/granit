@@ -11,6 +11,7 @@
 #include <granit/core/types.h>
 #include <granit/pipeline/export.h>
 #include <granit/renderer/renderer.h>
+#include <granit/renderer/shader.h>
 
 /** 已加载材质包及其 GPU 实例的句柄。零值无效。 */
 typedef granit_handle granit_material;
@@ -37,6 +38,18 @@ typedef struct granit_material_parameter_update {
   granit_handle resource;
 } granit_material_parameter_update;
 
+/**
+ * 按稳定内容 ID 解析 Shader Asset。
+ *
+ * 回调由 Granit 同步调用且不会重入；输出内存只需保持到本次回调返回后的创建操作结束。
+ * user_data 及其资产存储必须至少存活到材质销毁，调用者应自行提供并发读取保护。
+ */
+typedef granit_result (*granit_material_shader_resolver)(void* user_data,
+                                                         const uint8_t asset_id[32],
+                                                         granit_renderer_backend backend,
+                                                         uint32_t profile,
+                                                         granit_shader_asset_desc* asset);
+
 typedef struct granit_material_desc {
   uint32_t struct_size;
   uint32_t reserved;
@@ -45,13 +58,16 @@ typedef struct granit_material_desc {
   const granit_material_parameter_update* initial_updates;
   uint32_t initial_update_count;
   uint32_t reserved_tail;
+  granit_material_shader_resolver shader_resolver;
+  void* shader_resolver_user_data;
 } granit_material_desc;
 
 #define GRANIT_MATERIAL_DESC_VERSION_1_SIZE                                                        \
-  ((uint32_t)(offsetof(granit_material_desc, reserved_tail) + sizeof(uint32_t)))
+  ((uint32_t)sizeof(granit_material_desc))
 
 #define GRANIT_MATERIAL_DESC_INIT                                                                  \
-  {(uint32_t)sizeof(granit_material_desc), UINT32_C(0), 0, UINT64_C(0), 0, UINT32_C(0), UINT32_C(0)}
+  {(uint32_t)sizeof(granit_material_desc), UINT32_C(0), 0, UINT64_C(0), 0, UINT32_C(0),           \
+   UINT32_C(0), 0, 0}
 
 #ifdef __cplusplus
 extern "C" {

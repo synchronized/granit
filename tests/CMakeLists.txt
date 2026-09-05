@@ -99,7 +99,7 @@ if(BUILD_SHARED_LIBS)
       GRANIT_ABI_RENDER_PIPELINE_LIBRARY_PATH="$<TARGET_FILE:granit_render_pipeline>"
       GRANIT_ABI_WINDOW_LIBRARY_PATH="$<TARGET_FILE:granit_window>"
       GRANIT_ABI_INPUT_LIBRARY_PATH="$<TARGET_FILE:granit_input>"
-      GRANIT_ABI_CORE_SYMBOLS_PATH="${CMAKE_CURRENT_SOURCE_DIR}/abi/snapshots/0.6.0/core_symbols.txt"
+      GRANIT_ABI_CORE_SYMBOLS_PATH="${CMAKE_CURRENT_SOURCE_DIR}/abi/snapshots/0.8.0/core_symbols.txt"
       GRANIT_ABI_RENDER_PIPELINE_SYMBOLS_PATH="${CMAKE_CURRENT_SOURCE_DIR}/abi/snapshots/0.1.0/render_pipeline_symbols.txt"
       GRANIT_ABI_WINDOW_SYMBOLS_PATH="${CMAKE_CURRENT_SOURCE_DIR}/abi/snapshots/0.5.0/window_symbols.txt"
       GRANIT_ABI_INPUT_SYMBOLS_PATH="${CMAKE_CURRENT_SOURCE_DIR}/abi/snapshots/0.1.0/input_symbols.txt"
@@ -149,7 +149,7 @@ if(BUILD_SHARED_LIBS)
         "${CMAKE_COMMAND}"
         "-DGRANIT_ABI_COMPONENT=core"
         "-DGRANIT_ABI_LIBRARY=$<TARGET_FILE:granit>"
-        "-DGRANIT_ABI_SNAPSHOT=${CMAKE_CURRENT_SOURCE_DIR}/abi/snapshots/0.6.0/core_symbols.txt"
+        "-DGRANIT_ABI_SNAPSHOT=${CMAKE_CURRENT_SOURCE_DIR}/abi/snapshots/0.8.0/core_symbols.txt"
         "-DGRANIT_ABI_EXPORT_TOOL=${granit_abi_export_tool}"
         "-DGRANIT_ABI_EXPORT_TOOL_KIND=${granit_abi_export_tool_kind}"
         -P "${CMAKE_CURRENT_SOURCE_DIR}/abi/check_exported_symbols.cmake"
@@ -379,17 +379,22 @@ add_custom_command(
   DEPENDS
     granit_material_tool
     "${PROJECT_SOURCE_DIR}/tests/fixtures/smoke/unlit.grmat.json"
-    "${PROJECT_SOURCE_DIR}/assets/shaders/unlit/unlit.vert.spv"
-    "${PROJECT_SOURCE_DIR}/assets/shaders/unlit/unlit.vert.wgsl"
-    "${PROJECT_SOURCE_DIR}/assets/shaders/unlit/unlit.frag.spv"
-    "${PROJECT_SOURCE_DIR}/assets/shaders/unlit/unlit.frag.wgsl"
-    "${PROJECT_SOURCE_DIR}/assets/shaders/unlit/unlit_alpha_cutoff.frag.spv"
-    "${PROJECT_SOURCE_DIR}/assets/shaders/unlit/unlit_alpha_cutoff.frag.wgsl"
+    "${PROJECT_SOURCE_DIR}/assets/shaders/unlit/unlit.vert.grshader"
+    "${PROJECT_SOURCE_DIR}/assets/shaders/unlit/unlit.frag.grshader"
+    "${PROJECT_SOURCE_DIR}/assets/shaders/unlit/unlit_alpha_cutoff.frag.grshader"
+    "${PROJECT_SOURCE_DIR}/assets/shaders/unlit/unlit.vert.grshader.spv"
+    "${PROJECT_SOURCE_DIR}/assets/shaders/unlit/unlit.vert.grshader.wgsl"
+    "${PROJECT_SOURCE_DIR}/assets/shaders/unlit/unlit.frag.grshader.spv"
+    "${PROJECT_SOURCE_DIR}/assets/shaders/unlit/unlit.frag.grshader.wgsl"
+    "${PROJECT_SOURCE_DIR}/assets/shaders/unlit/unlit_alpha_cutoff.frag.grshader.spv"
+    "${PROJECT_SOURCE_DIR}/assets/shaders/unlit/unlit_alpha_cutoff.frag.grshader.wgsl"
   VERBATIM
 )
 add_custom_target(granit_unlit_test_package DEPENDS "${granit_unlit_test_package}")
 add_dependencies(granit_pipeline_test granit_unlit_test_package)
-target_include_directories(granit_pipeline_test PRIVATE "${PROJECT_SOURCE_DIR}/src")
+target_include_directories(
+  granit_pipeline_test PRIVATE "${PROJECT_SOURCE_DIR}/src" "${PROJECT_SOURCE_DIR}/tests"
+)
 target_link_libraries(
   granit_pipeline_test
   PRIVATE
@@ -404,8 +409,10 @@ target_compile_definitions(
   granit_pipeline_test
   PRIVATE
     GRANIT_PIPELINE_ASSET_DIR="${PROJECT_SOURCE_DIR}/assets/shaders/pbr"
+    GRANIT_TEST_ASSET_DIR="${PROJECT_SOURCE_DIR}/tests/assets"
     GRANIT_PIPELINE_SHADER_DIR="${PROJECT_SOURCE_DIR}/src/pipeline/shaders"
     GRANIT_UNLIT_TEST_PACKAGE="${granit_unlit_test_package}"
+    GRANIT_UNLIT_SHADER_DIR="${PROJECT_SOURCE_DIR}/assets/shaders/unlit"
 )
 granit_target_compile_warnings(granit_pipeline_test)
 granit_target_output_directories(granit_pipeline_test)
@@ -433,6 +440,7 @@ target_include_directories(
   granit_material_test PRIVATE "${PROJECT_SOURCE_DIR}/src" "${PROJECT_SOURCE_DIR}/tests"
 )
 target_link_libraries(granit_material_test PRIVATE granit::material Catch2::Catch2WithMain)
+target_sources(granit_material_test PRIVATE $<TARGET_OBJECTS:granit_shader_asset_format>)
 target_compile_options(
   granit_material_test
   PRIVATE $<$<COMPILE_LANG_AND_ID:CXX,MSVC>:/utf-8>
@@ -479,9 +487,17 @@ target_link_libraries(
   PRIVATE
     granit::granit
     Catch2::Catch2WithMain
+    $<TARGET_OBJECTS:granit_shader_asset_storage>
+    $<TARGET_OBJECTS:granit_shader_asset_format>
     $<$<PLATFORM_ID:Windows>:user32>
 )
-target_include_directories(granit_renderer_test PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
+target_include_directories(
+  granit_renderer_test
+  PRIVATE
+    "${CMAKE_CURRENT_SOURCE_DIR}"
+    "${PROJECT_SOURCE_DIR}/tools"
+    "${PROJECT_SOURCE_DIR}/src"
+)
 target_compile_definitions(
   granit_renderer_test
   PRIVATE

@@ -93,6 +93,7 @@ function(granit_add_material_module)
   target_sources(
     granit_material
     PRIVATE
+      $<TARGET_OBJECTS:granit_shader_asset_format>
       "${PROJECT_SOURCE_DIR}/src/material/material_archive.cpp"
       "${PROJECT_SOURCE_DIR}/src/material/material_gpu_instance.cpp"
       "${PROJECT_SOURCE_DIR}/src/material/material_hot_reload.cpp"

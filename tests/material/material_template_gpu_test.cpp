@@ -2,6 +2,7 @@
 // Copyright (c) 2026 Granit contributors
 
 #include "material/material_template_gpu.h"
+#include "support/shader_asset_store.h"
 
 #include <granit/renderer/pipeline.hpp>
 #include <granit/renderer/renderer.hpp>
@@ -61,6 +62,27 @@ granit::material::material_package build_package() {
        .step_mode = GRANIT_VERTEX_STEP_MODE_VERTEX,
        .attributes = {{0, GRANIT_VERTEX_FORMAT_FLOAT32X3, 0}}}};
   desc.variants.back().pipeline.primitive.cull_mode = GRANIT_CULL_MODE_BACK;
+  material_package package;
+  REQUIRE(material_package::build(std::move(desc), package) == package_error::none);
+  return package;
+}
+
+granit::material::material_package build_asset_package() {
+  using namespace granit::material;
+  const auto asset_dir = std::string{GRANIT_TEST_ASSET_DIR};
+  material_package_desc desc;
+  granit::tests::shader_asset_store store;
+  REQUIRE(store.add(asset_dir + "/minimal.vert.grshader"));
+  REQUIRE(store.add(asset_dir + "/minimal.frag.grshader"));
+  desc.variants.push_back({.pass = make_feature_id("opaque"),
+                           .features = {},
+                           .shaders = {store.reference(asset_dir + "/minimal.vert.grshader"),
+                                       store.reference(asset_dir + "/minimal.frag.grshader")},
+                           .pipeline = {}});
+  desc.variants.back().pipeline.vertex_buffers = {
+      {.stride = 12,
+       .step_mode = GRANIT_VERTEX_STEP_MODE_VERTEX,
+       .attributes = {{0, GRANIT_VERTEX_FORMAT_FLOAT32X3, 0}}}};
   material_package package;
   REQUIRE(material_package::build(std::move(desc), package) == package_error::none);
   return package;
@@ -149,4 +171,25 @@ TEST_CASE("材质模板在Group0和1后追加高层布局") {
   const std::array<granit_bind_group_layout, 1> null_layout{GRANIT_NULL_HANDLE};
   CHECK(invalid.initialize(renderer.native_handle(), package, null_layout) ==
         GRANIT_ERROR_INVALID_ARGUMENT);
+}
+
+TEST_CASE("外部Shader Asset缺少解析器时保持事务性") {
+  granit::renderer renderer;
+  const auto initialized = renderer.initialize({.application_name = "granit-material-assets"});
+  if (environment_unavailable(initialized))
+    SKIP("当前运行环境没有满足要求的 Vulkan 设备");
+  REQUIRE(initialized == granit::result::success);
+
+  const auto package = build_asset_package();
+  granit::material::material_template_gpu material;
+  REQUIRE(material.initialize(renderer.native_handle(), package) == GRANIT_SUCCESS);
+  const granit::material::material_pipeline_request request{
+      .pass = granit::material::make_feature_id("opaque"),
+      .variant = granit::material::make_variant_key({}),
+      .color_format = GRANIT_TEXTURE_FORMAT_RGBA8_UNORM};
+  granit_graphics_pipeline pipeline = GRANIT_NULL_HANDLE;
+  CHECK(material.acquire_pipeline(request, pipeline) == GRANIT_ERROR_NOT_READY);
+  CHECK(pipeline == GRANIT_NULL_HANDLE);
+  CHECK(material.cached_pipeline_count() == 0);
+  CHECK(material.reset() == GRANIT_SUCCESS);
 }

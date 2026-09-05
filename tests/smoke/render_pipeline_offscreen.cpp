@@ -3,6 +3,7 @@
 
 #include <granit/granit.hpp>
 #include <granit/pipeline/render_pipeline.h>
+#include "../support/shader_asset_store.h"
 #ifdef GRANIT_RENDER_PIPELINE_CPU_BENCHMARK
 #include "pipeline/render_pipeline_metrics.h"
 #endif
@@ -14,11 +15,13 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <cstdlib>
 #include <fstream>
 #include <iomanip>
 #include <iostream>
 #include <iterator>
 #include <numeric>
+#include <string>
 #include <string_view>
 #include <vector>
 
@@ -30,6 +33,18 @@
 #endif
 
 namespace {
+
+granit::tests::shader_asset_store& shader_assets() {
+  static granit::tests::shader_asset_store store;
+  static const bool loaded =
+      store.add(std::string{GRANIT_PIPELINE_ASSET_DIR} +
+                "/pbr_shadow_ibl_lights.vert.grshader") &&
+      store.add(std::string{GRANIT_PIPELINE_ASSET_DIR} +
+                "/pbr_shadow_ibl_lights_untextured.frag.grshader");
+  if (!loaded)
+    std::abort();
+  return store;
+}
 
 granit_matrix4 identity() {
   granit_matrix4 value{};
@@ -252,6 +267,8 @@ int main(int argc, char** argv) {
   granit_material_desc material_desc = GRANIT_MATERIAL_DESC_INIT;
   material_desc.archive_data = archive.data();
   material_desc.archive_size = archive.size();
+  material_desc.shader_resolver = granit::tests::shader_asset_store::resolve;
+  material_desc.shader_resolver_user_data = &shader_assets();
 #ifdef GRANIT_RENDER_PIPELINE_CPU_BENCHMARK
   material_desc.initial_update_count = 3;
 #else

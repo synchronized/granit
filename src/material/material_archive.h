@@ -12,7 +12,7 @@
 
 namespace granit::material {
 
-inline constexpr std::uint32_t material_archive_version_major = 3;
+inline constexpr std::uint32_t material_archive_version_major = 4;
 inline constexpr std::uint32_t material_archive_version_minor = 0;
 inline constexpr std::uint32_t material_archive_endian_tag = UINT32_C(0x01020304);
 inline constexpr std::uint32_t material_archive_header_size = 96;
