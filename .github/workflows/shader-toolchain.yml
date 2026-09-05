@@ -4,6 +4,10 @@
 name: Shader Toolchain Packages
 
 on:
+  # 新工作流合并到默认分支前无法手动触发；完成分支验证后移除此入口。
+  push:
+    branches:
+      - feat/shader-asset-variants
   workflow_dispatch:
     inputs:
       run_windows:
@@ -26,13 +30,19 @@ env:
   VULKAN_SDK_LINUX_SHA256: f22a3625bd4d7a32e7a0d926ace16d5278c149e938dac63cecc00537626cbf73
   DXC_VERSION: 1.8.0.4973
   GLSLANG_VERSION: 15.3.0
+  DXC_LICENSE_URL: https://raw.githubusercontent.com/microsoft/DirectXShaderCompiler/v1.8.2505/LICENSE.TXT
+  DXC_LICENSE_SHA256: 27a49e35d1da96eba18fba54bc882667ff0ff8c0254f16f2b6e165d605ba7df8
+  DXC_NOTICES_URL: https://raw.githubusercontent.com/microsoft/DirectXShaderCompiler/v1.8.2505/ThirdPartyNotices.txt
+  DXC_NOTICES_SHA256: 19512a5d0a015ef16d167272c164da49a604614a786206212a80ad486ed0be6d
+  GLSLANG_LICENSE_URL: https://raw.githubusercontent.com/KhronosGroup/glslang/15.3.0/LICENSE.txt
+  GLSLANG_LICENSE_SHA256: adb783e734e906d1f46db5df29991dbde84bdb0ceab502ac2febb44fe3c2b5f4
   DAWN_VERSION: v20260720.160313
   TINT_REVISION: 0bc38adde72b79013536f8ce354b639ae19ae195
   SCCACHE_GHA_ENABLED: "true"
 
 jobs:
   windows:
-    if: ${{ inputs.run_windows }}
+    if: ${{ github.event_name == 'push' || inputs.run_windows }}
     runs-on: windows-2022
     timeout-minutes: 120
     steps:
@@ -57,6 +67,23 @@ jobs:
           & $installer --root $root --accept-licenses --default-answer --confirm-command install
           if ($LASTEXITCODE -ne 0) { throw "Vulkan SDK 安装失败" }
           "VULKAN_SDK_ROOT=$root" >> $env:GITHUB_ENV
+      - name: 下载并校验工具许可证
+        shell: pwsh
+        run: |
+          $root = "$env:RUNNER_TEMP/shader-tool-licenses"
+          New-Item -ItemType Directory -Force -Path $root | Out-Null
+          $items = @(
+            @($env:DXC_LICENSE_URL, $env:DXC_LICENSE_SHA256, "$root/DXC-LICENSE.txt"),
+            @($env:DXC_NOTICES_URL, $env:DXC_NOTICES_SHA256, "$root/DXC-NOTICES.txt"),
+            @($env:GLSLANG_LICENSE_URL, $env:GLSLANG_LICENSE_SHA256, "$root/glslang-LICENSE.txt")
+          )
+          foreach ($item in $items) {
+            Invoke-WebRequest -Uri $item[0] -OutFile $item[2]
+            $actual = (Get-FileHash $item[2] -Algorithm SHA256).Hash.ToLowerInvariant()
+            if ($actual -ne $item[1]) { throw "工具许可证 SHA-256 不匹配：$($item[2])" }
+          }
+          "DXC_LICENSE_FILES=$root/DXC-LICENSE.txt;$root/DXC-NOTICES.txt" >> $env:GITHUB_ENV
+          "GLSLANG_LICENSE_FILES=$root/glslang-LICENSE.txt" >> $env:GITHUB_ENV
       - name: 恢复锁定 Tint 产物
         id: tint-cache
         uses: actions/cache/restore@v5
@@ -138,10 +165,6 @@ jobs:
         id: package
         shell: pwsh
         run: |
-          $sdkLicense = "$env:VULKAN_SDK_ROOT/Licenses/LICENSE.txt"
-          if (-not (Test-Path -LiteralPath $sdkLicense -PathType Leaf)) {
-            throw "Vulkan SDK 许可证文件不存在"
-          }
           $name = "granit-shader-toolchain-$env:DAWN_VERSION-windows-x64"
           $stage = "$PWD/stage/$name"
           cmake -DSTAGE="$stage" -DGENERATOR="$PWD/cmake/generate_shader_toolchain_manifest.cmake" `
@@ -149,8 +172,9 @@ jobs:
             -DGLSLANG="$env:VULKAN_SDK_ROOT/Bin/glslangValidator.exe" `
             -DTINT="$env:TINT_EXECUTABLE" -DDXC_VERSION="$env:DXC_VERSION" `
             -DGLSLANG_VERSION="$env:GLSLANG_VERSION" -DDAWN_VERSION="$env:DAWN_VERSION" `
-            -DTINT_REVISION="$env:TINT_REVISION" -DDXC_LICENSE_FILES="$sdkLicense" `
-            -DGLSLANG_LICENSE_FILES="$sdkLicense" `
+            -DTINT_REVISION="$env:TINT_REVISION" `
+            -DDXC_LICENSE_FILES="$env:DXC_LICENSE_FILES" `
+            -DGLSLANG_LICENSE_FILES="$env:GLSLANG_LICENSE_FILES" `
             -DDAWN_LICENSE_FILES="$env:TINT_LICENSE" `
             -DRUNTIME_FILES="$env:VULKAN_SDK_ROOT/Bin/dxcompiler.dll" `
             -P cmake/package_shader_toolchain.cmake
@@ -179,12 +203,13 @@ jobs:
           if-no-files-found: error
 
   linux:
-    if: ${{ inputs.run_linux }}
+    if: ${{ github.event_name == 'push' || inputs.run_linux }}
     runs-on: ubuntu-24.04
     timeout-minutes: 120
     env:
       DXC_VERSION: 4973-8f559587
       GLSLANG_VERSION: 15.4.0
+      GLSLANG_LICENSE_URL: https://raw.githubusercontent.com/KhronosGroup/glslang/15.4.0/LICENSE.txt
     steps:
       - uses: actions/checkout@v5
       - name: 安装构建依赖
@@ -203,7 +228,20 @@ jobs:
           mkdir -p "$root"
           tar -xf "$archive" -C "$root"
           echo "VULKAN_SDK_ROOT=$root/$VULKAN_SDK_VERSION/x86_64" >> "$GITHUB_ENV"
-          echo "VULKAN_SDK_SOURCE_ROOT=$root/$VULKAN_SDK_VERSION" >> "$GITHUB_ENV"
+      - name: 下载并校验工具许可证
+        shell: bash
+        run: |
+          root="$RUNNER_TEMP/shader-tool-licenses"
+          mkdir -p "$root"
+          curl --fail --location --retry 3 "$DXC_LICENSE_URL" --output "$root/DXC-LICENSE.txt"
+          curl --fail --location --retry 3 "$DXC_NOTICES_URL" --output "$root/DXC-NOTICES.txt"
+          curl --fail --location --retry 3 "$GLSLANG_LICENSE_URL" \
+            --output "$root/glslang-LICENSE.txt"
+          echo "$DXC_LICENSE_SHA256  $root/DXC-LICENSE.txt" | sha256sum --check
+          echo "$DXC_NOTICES_SHA256  $root/DXC-NOTICES.txt" | sha256sum --check
+          echo "$GLSLANG_LICENSE_SHA256  $root/glslang-LICENSE.txt" | sha256sum --check
+          echo "DXC_LICENSE_FILES=$root/DXC-LICENSE.txt;$root/DXC-NOTICES.txt" >> "$GITHUB_ENV"
+          echo "GLSLANG_LICENSE_FILES=$root/glslang-LICENSE.txt" >> "$GITHUB_ENV"
       - name: 恢复锁定 Tint 产物
         id: tint-cache
         uses: actions/cache/restore@v5
@@ -280,9 +318,6 @@ jobs:
         id: package
         shell: bash
         run: |
-          sdk_license="$(find "$VULKAN_SDK_SOURCE_ROOT" -maxdepth 2 -type f \
-            -iname 'LICENSE.txt' -print -quit)"
-          [[ -n "$sdk_license" ]]
           name="granit-shader-toolchain-$DAWN_VERSION-linux-x64"
           stage="$PWD/stage/$name"
           runtime="$VULKAN_SDK_ROOT/lib/libdxcompiler.so"
@@ -291,8 +326,8 @@ jobs:
             -DGLSLANG="$VULKAN_SDK_ROOT/bin/glslangValidator" \
             -DTINT="$TINT_EXECUTABLE" -DDXC_VERSION="$DXC_VERSION" \
             -DGLSLANG_VERSION="$GLSLANG_VERSION" -DDAWN_VERSION="$DAWN_VERSION" \
-            -DTINT_REVISION="$TINT_REVISION" -DDXC_LICENSE_FILES="$sdk_license" \
-            -DGLSLANG_LICENSE_FILES="$sdk_license" \
+            -DTINT_REVISION="$TINT_REVISION" -DDXC_LICENSE_FILES="$DXC_LICENSE_FILES" \
+            -DGLSLANG_LICENSE_FILES="$GLSLANG_LICENSE_FILES" \
             -DDAWN_LICENSE_FILES="$TINT_LICENSE" \
             -DRUNTIME_FILES="$runtime" -P cmake/package_shader_toolchain.cmake
           cmake -DSTAGE="$stage" -DMANIFEST="$stage/shader-toolchain.json" \
