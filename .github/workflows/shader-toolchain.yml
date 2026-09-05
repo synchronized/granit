@@ -4,6 +4,9 @@
 name: Shader Toolchain Packages
 
 on:
+  push:
+    branches:
+      - feat/shader-asset-variants
   workflow_dispatch:
     inputs:
       run_windows:
