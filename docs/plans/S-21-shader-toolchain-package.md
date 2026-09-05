@@ -39,7 +39,8 @@ ShaderTools 可使用系统 DXC、glslangValidator 和 Tint，但官方 CI 与 R
 5. 已发布独立预发行工具包，并从公开 Release 地址重新下载及校验 Windows/Linux 归档摘要。
 6. 已增加锁定下载辅助脚本，按宿主选择归档、验证发布摘要和包内清单，并输出统一工具链根目录
    与 Tint 修订号。
-7. 在 ShaderTools 完整测试通过后，将官方 CI 切换为 `locked`。
+7. 已为官方 Windows/Linux CI 增加独立的 ShaderTools 严格锁定任务，避免普通构建矩阵重复下载
+   工具包。
 
 ## 测试与验收
 
