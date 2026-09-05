@@ -19,6 +19,7 @@
 
 ## 稳定化与跨平台
 
+- [2026-09-05 Granit 0.7.0 发布验收](2026-09-05-v0.7.0-release-acceptance.md)
 - [2026-09-05 S-22C/S-22D SDK 边界审计](2026-09-05-s22cd-sdk-boundary-audit.md)
 - [2026-09-05 Granit 0.6.0 发布验收](2026-09-05-v0.6.0-release-acceptance.md)
 - [2026-09-05 Granit 0.5.0 发布验收](2026-09-05-v0.5.0-release-acceptance.md)
