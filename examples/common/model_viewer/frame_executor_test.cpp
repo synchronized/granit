@@ -106,6 +106,8 @@ TEST_CASE("线程帧执行器限制待处理队列并回报被替换帧") {
   REQUIRE(executor.submit(std::move(packet), second).ok());
   packet.width = 3;
   REQUIRE(executor.submit(std::move(packet), third).ok());
+  CHECK_FALSE(executor.can_submit_frame());
+  executor.record_skipped_frame_build();
   REQUIRE(executor.submit_command(execute_command, &state, command).ok());
   packet.width = 4;
   REQUIRE(executor.submit(std::move(packet), fourth).ok());
@@ -130,6 +132,7 @@ TEST_CASE("线程帧执行器限制待处理队列并回报被替换帧") {
   const auto queue_stats = executor.query_queue_stats();
   CHECK(queue_stats.pending_high_watermark == 3);
   CHECK(queue_stats.replaced_frames == 1);
+  CHECK(queue_stats.skipped_frame_builds == 1);
   CHECK(completions.front().execution.queue_wait_ms >= 0.0F);
 
   render_command_completion command_completion;
@@ -140,6 +143,7 @@ TEST_CASE("线程帧执行器限制待处理队列并回报被替换帧") {
 
   executor.stop();
   CHECK_FALSE(executor.running());
+  CHECK_FALSE(executor.can_submit_frame());
   CHECK(executor.query_queue_stats().pending_high_watermark == 0);
   CHECK(executor.submit({}, first) == granit::result::not_ready);
   CHECK(executor.submit_command(execute_command, &state, command) == granit::result::not_ready);

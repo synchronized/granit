@@ -230,6 +230,8 @@ void draw_performance_panel(const performance_panel_info& info) {
     ImGui::TextUnformatted("GPU frame: unavailable");
   ImGui::Text("Queue high watermark: %zu", info.queue_high_watermark);
   ImGui::Text("Replaced frames: %llu", static_cast<unsigned long long>(info.replaced_frames));
+  ImGui::Text("Skipped frame builds: %llu",
+              static_cast<unsigned long long>(info.skipped_frame_builds));
   const auto draw_summary = [](const char* label, const metric_summary& summary) {
     if (summary.sample_count == 0) {
       ImGui::TextDisabled("%s: unavailable", label);

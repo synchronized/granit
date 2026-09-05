@@ -136,14 +136,11 @@ granit::result threaded_frame_executor::submit(frame_packet packet,
     if (state_->stopping)
       return granit::result::not_ready;
     sequence = state_->next_sequence++;
-    const auto pending_frames = static_cast<std::size_t>(
-        std::ranges::count_if(state_->pending, [](const auto& task) {
-          return task.kind == state::task_kind::frame;
-        }));
+    const auto pending_frames = static_cast<std::size_t>(std::ranges::count_if(
+        state_->pending, [](const auto& task) { return task.kind == state::task_kind::frame; }));
     if (pending_frames >= state_->maximum_pending_frames) {
-      const auto replace = std::ranges::find_if(state_->pending, [](const auto& task) {
-        return task.kind == state::task_kind::frame;
-      });
+      const auto replace = std::ranges::find_if(
+          state_->pending, [](const auto& task) { return task.kind == state::task_kind::frame; });
       auto dropped = std::move(*replace);
       state_->pending.erase(replace);
       state_->completed.push_back({.sequence = dropped.sequence,
@@ -199,6 +196,25 @@ granit::result threaded_frame_executor::submit_command(render_command_callback c
   } catch (...) {
     return granit::result::internal;
   }
+}
+
+bool threaded_frame_executor::can_submit_frame() const noexcept {
+  if (!state_)
+    return false;
+  std::lock_guard lock(state_->mutex);
+  if (state_->stopping)
+    return false;
+  const auto pending_frames = std::ranges::count_if(
+      state_->pending, [](const auto& task) { return task.kind == state::task_kind::frame; });
+  return static_cast<std::size_t>(pending_frames) < state_->maximum_pending_frames;
+}
+
+void threaded_frame_executor::record_skipped_frame_build() noexcept {
+  if (!state_)
+    return;
+  std::lock_guard lock(state_->mutex);
+  if (!state_->stopping)
+    ++state_->stats.skipped_frame_builds;
 }
 
 bool threaded_frame_executor::try_take_completion(frame_completion& completion) noexcept {
