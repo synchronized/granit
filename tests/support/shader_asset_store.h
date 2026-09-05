@@ -54,7 +54,9 @@ public:
                          ? granit::material::package_shader_stage::vertex
                          : granit::material::package_shader_stage::fragment,
             .entry_point = std::string{view.entry_point},
-            .asset_id = view.content_id};
+            .asset_id = view.content_id,
+            .spirv = {},
+            .wgsl = {}};
   }
 
   static granit_result resolve(void* user_data, const std::uint8_t asset_id[32],
