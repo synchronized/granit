@@ -35,6 +35,10 @@
 
 namespace {
 
+#ifndef GRANIT_WEB_MODEL_VIEWER_DEFAULT_MODEL_URL
+#define GRANIT_WEB_MODEL_VIEWER_DEFAULT_MODEL_URL "model_viewer_fixture.gltf"
+#endif
+
 enum class startup_status : int { failed = -1, starting, provider_pending, ready, stopped };
 
 struct web_platform_state {
@@ -59,6 +63,7 @@ struct web_platform_state {
       std::make_shared<granit::example::model_viewer::web::asset_request>()};
   granit::example::model_viewer::web::resource_fetch_batch resource_batch;
   granit::example::model_viewer::web::resource_bundle resource_bundle;
+  std::string asset_url;
   granit::example::model_viewer::application_core core;
   bool core_renderer_ready{};
   bool resource_batch_started{};
@@ -103,6 +108,26 @@ bool validate_fixture_assets() {
          granit::test::renderer_fixture::vertices.size() == 4 * 7 &&
          granit::test::renderer_fixture::indices.size() == 6 &&
          granit::test::renderer_fixture::make_uniform_data().size() == 4 * 256;
+}
+
+std::string selected_model_url() {
+  const auto* selected =
+      emscripten_run_script_string("new URLSearchParams(globalThis.location.search).get('model') "
+                                   "|| '" GRANIT_WEB_MODEL_VIEWER_DEFAULT_MODEL_URL "'");
+  return selected == nullptr ? std::string{GRANIT_WEB_MODEL_VIEWER_DEFAULT_MODEL_URL}
+                             : std::string{selected};
+}
+
+std::string resolve_resource_url(std::string_view model_url, std::string_view resource) {
+  if (resource.starts_with("http://") || resource.starts_with("https://") ||
+      resource.starts_with('/'))
+    return std::string{resource};
+  const auto separator = model_url.find_last_of('/');
+  if (separator == std::string_view::npos)
+    return std::string{resource};
+  auto result = std::string{model_url.substr(0, separator + 1)};
+  result.append(resource);
+  return result;
 }
 
 granit_result validate_public_pipeline() {
@@ -858,7 +883,7 @@ void tick(void*) noexcept {
         return;
       }
       for (const auto& resource : resources) {
-        if (!state.resource_batch.add(resource, resource)) {
+        if (!state.resource_batch.add(resource, resolve_resource_url(state.asset_url, resource))) {
           fail("asset-batch-add", GRANIT_ERROR_INVALID_ARGUMENT);
           return;
         }
@@ -1101,8 +1126,8 @@ int main() {
     fail("core-renderer-begin", granit::to_native(core_result));
     return 1;
   }
-  if (!granit::example::model_viewer::web::start_fetch(state.asset_request,
-                                                       "model_viewer_fixture.gltf")) {
+  state.asset_url = selected_model_url();
+  if (!granit::example::model_viewer::web::start_fetch(state.asset_request, state.asset_url)) {
     fail("asset-fetch-start");
     return 1;
   }

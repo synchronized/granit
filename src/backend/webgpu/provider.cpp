@@ -2547,12 +2547,14 @@ granit_result recorder_copy_buffer_to_texture_v2(
       !valid_texture_buffer_copy(texture->second, buffer->second, *region, true))
     return GRANIT_ERROR_INVALID_ARGUMENT;
   const auto encode = [&](std::uint64_t offset, std::uint32_t y, std::uint32_t layer,
-                          std::uint32_t height, std::uint32_t layers) {
+                          std::uint32_t height, std::uint32_t layers, bool omit_strides) {
     WGPUTexelCopyBufferInfo native_source = WGPU_TEXEL_COPY_BUFFER_INFO_INIT;
     native_source.buffer = buffer->second.buffer;
     native_source.layout.offset = offset;
-    native_source.layout.bytesPerRow = region->bytes_per_row;
-    native_source.layout.rowsPerImage = region->rows_per_image;
+    native_source.layout.bytesPerRow =
+        omit_strides ? WGPU_COPY_STRIDE_UNDEFINED : region->bytes_per_row;
+    native_source.layout.rowsPerImage =
+        omit_strides ? WGPU_COPY_STRIDE_UNDEFINED : region->rows_per_image;
     WGPUTexelCopyTextureInfo native_destination = WGPU_TEXEL_COPY_TEXTURE_INFO_INIT;
     native_destination.texture = texture->second.texture;
     native_destination.mipLevel = region->mip_level;
@@ -2562,16 +2564,16 @@ granit_result recorder_copy_buffer_to_texture_v2(
     wgpuCommandEncoderCopyBufferToTexture(command->second.encoder, &native_source,
                                           &native_destination, &extent);
   };
-  if ((region->height == 1 && region->array_layer_count == 1) || region->bytes_per_row % 256 == 0) {
+  if (region->bytes_per_row % 256 == 0) {
     encode(region->buffer_offset, region->y, region->base_array_layer, region->height,
-           region->array_layer_count);
+           region->array_layer_count, false);
   } else {
     const auto image_pitch = std::uint64_t{region->rows_per_image} * region->bytes_per_row;
     for (std::uint32_t layer = 0; layer < region->array_layer_count; ++layer) {
       for (std::uint32_t row = 0; row < region->height; ++row) {
         encode(region->buffer_offset + std::uint64_t{layer} * image_pitch +
                    std::uint64_t{row} * region->bytes_per_row,
-               region->y + row, region->base_array_layer + layer, 1, 1);
+               region->y + row, region->base_array_layer + layer, 1, 1, true);
       }
     }
   }
@@ -2601,7 +2603,7 @@ granit_result recorder_copy_texture_to_buffer_v2(
       !valid_texture_buffer_copy(texture->second, buffer->second, *region, false))
     return GRANIT_ERROR_INVALID_ARGUMENT;
   const auto encode = [&](std::uint64_t offset, std::uint32_t y, std::uint32_t layer,
-                          std::uint32_t height, std::uint32_t layers) {
+                          std::uint32_t height, std::uint32_t layers, bool omit_strides) {
     WGPUTexelCopyTextureInfo native_source = WGPU_TEXEL_COPY_TEXTURE_INFO_INIT;
     native_source.texture = texture->second.texture;
     native_source.mipLevel = region->mip_level;
@@ -2610,22 +2612,24 @@ granit_result recorder_copy_texture_to_buffer_v2(
     WGPUTexelCopyBufferInfo native_destination = WGPU_TEXEL_COPY_BUFFER_INFO_INIT;
     native_destination.buffer = buffer->second.buffer;
     native_destination.layout.offset = offset;
-    native_destination.layout.bytesPerRow = region->bytes_per_row;
-    native_destination.layout.rowsPerImage = region->rows_per_image;
+    native_destination.layout.bytesPerRow =
+        omit_strides ? WGPU_COPY_STRIDE_UNDEFINED : region->bytes_per_row;
+    native_destination.layout.rowsPerImage =
+        omit_strides ? WGPU_COPY_STRIDE_UNDEFINED : region->rows_per_image;
     const WGPUExtent3D extent{region->width, height, layers};
     wgpuCommandEncoderCopyTextureToBuffer(command->second.encoder, &native_source,
                                           &native_destination, &extent);
   };
-  if ((region->height == 1 && region->array_layer_count == 1) || region->bytes_per_row % 256 == 0) {
+  if (region->bytes_per_row % 256 == 0) {
     encode(region->buffer_offset, region->y, region->base_array_layer, region->height,
-           region->array_layer_count);
+           region->array_layer_count, false);
   } else {
     const auto image_pitch = std::uint64_t{region->rows_per_image} * region->bytes_per_row;
     for (std::uint32_t layer = 0; layer < region->array_layer_count; ++layer) {
       for (std::uint32_t row = 0; row < region->height; ++row) {
         encode(region->buffer_offset + std::uint64_t{layer} * image_pitch +
                    std::uint64_t{row} * region->bytes_per_row,
-               region->y + row, region->base_array_layer + layer, 1, 1);
+               region->y + row, region->base_array_layer + layer, 1, 1, true);
       }
     }
   }

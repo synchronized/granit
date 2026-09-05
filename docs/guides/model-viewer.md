@@ -159,13 +159,17 @@ build/model-viewer/bin/granit_model_viewer_offscreen_acceptance.exe `
 Adapter、资产路径及量化统计，供 Actions 一并上传。`.rgba` 文件固定为 1,048,576 字节，不含
 行填充或文件头；基准更新必须随 Renderer、Adapter、模型 manifest 和变更原因一起评审。
 
-## 浏览器验证
+## 浏览器运行与验证
 
-Emscripten 版本目前是自动化 Fixture，而不是面向用户发布的完整网页查看器。它通过同一个
-Application Core 验证模型 Fetch、PBR 绘制、60 帧循环、输入、Resize、错误资产诊断和退出时
-资源归零。Fixture 的 glTF 是用于确定性测试的三角模型，因此页面显示三角形并不表示回退到了
-旧的独立三角示例。自动化测试还会依次切换 1×/全关闭与 4×/FXAA/Specular AA 配置，并按设备
-上限验证各向异性重建。构建与运行测试：
+Emscripten 构建生成面向使用者的 `granit_model_viewer_web.html`，默认通过网络加载 Khronos
+Flight Helmet；`?model=<URL>` 可以覆盖模型地址。它与桌面目标复用同一个 Application Core、
+CPU/GPU Scene、PBR 和 Environment Map。详细构建及 URL 用法见
+[浏览器 WebGPU 示例](webgpu-browser-example.md)。
+
+`granit_web_platform_smoke.html` 保留为自动化 Fixture。它验证模型 Fetch、PBR 绘制、60 帧循环、
+输入、Resize、错误资产诊断和退出时资源归零，并覆盖 WebGPU 资源传输与 Mipmap。Fixture 的 glTF
+是用于确定性测试的三角模型，因此 Smoke 页面显示三角形不表示正式查看器回退。自动化测试还会
+依次切换 1×/全关闭与 4×/FXAA/Specular AA 配置，并按设备上限验证各向异性重建：
 
 ```powershell
 cmake --preset emscripten-release
@@ -180,6 +184,6 @@ npm test -- ../../build/emscripten-release/web
 
 - 没有生成桌面可执行文件：确认模型查看器、SDL3、ImGui 和依赖获取四个选项均已启用。
 - 浏览器 WebGPU 不可用：确认使用锁定 emsdk 构建，并检查浏览器 WebGPU 支持与控制台诊断。
-- 模型加载失败：保持 `.gltf` 与其 `.bin`、纹理的相对目录结构；当前加载器拒绝绝对 URI、父目录
-  跳转、网络 URI 和不支持的 glTF 扩展。
+- 模型加载失败：保持 `.gltf` 与其 `.bin`、纹理的相对目录结构；远程模型及依赖资源必须允许跨域
+  访问。加载器仍会拒绝父目录跳转和不支持的 glTF 扩展。
 - 页面不能直接打开：浏览器产物必须通过 HTTP 服务访问；自动化测试会自行启动本地服务器。

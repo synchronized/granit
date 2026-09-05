@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Granit WebGPU Model Viewer</title>
+    <style>
+      html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; background: #17263b; }
+      body { color: #e5e7eb; font-family: system-ui, sans-serif; }
+      main { width: 100%; height: 100%; position: relative; }
+      canvas { width: 100%; height: 100%; display: block; outline: none; }
+      output {
+        position: absolute; left: 50%; bottom: 24px; transform: translateX(-50%);
+        padding: 8px 14px; border-radius: 6px; background: rgb(17 24 39 / 82%);
+      }
+      output[data-status="ready"] { display: none; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <canvas id="canvas" width="1280" height="720" tabindex="0"></canvas>
+      <output id="granit-status" data-status="starting">Loading WebGPU renderer…</output>
+    </main>
+    <script>
+      const canvas = document.getElementById("canvas");
+      const statusElement = document.getElementById("granit-status");
+      function resizeCanvas() {
+        const ratio = Math.max(1, window.devicePixelRatio || 1);
+        canvas.width = Math.max(1, Math.round(canvas.clientWidth * ratio));
+        canvas.height = Math.max(1, Math.round(canvas.clientHeight * ratio));
+      }
+      function updateStatus(text) {
+        if (!text.startsWith("GRANIT_STATUS:")) return;
+        const status = text.slice("GRANIT_STATUS:".length);
+        statusElement.dataset.status = status.startsWith("failed:") ? "failed" : status;
+        statusElement.textContent = status;
+      }
+      resizeCanvas();
+      window.addEventListener("resize", resizeCanvas);
+      var Module = {
+        canvas,
+        print(text) { console.log(text); updateStatus(text); },
+        printErr(text) { console.error(text); updateStatus(text); },
+      };
+    </script>
+    {{{ SCRIPT }}}
+  </body>
+</html>

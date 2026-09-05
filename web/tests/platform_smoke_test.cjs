@@ -9,7 +9,10 @@ const { chromium } = require("playwright-core");
 
 const outputDirectory = path.resolve(process.argv[2] ?? "build/emscripten-release/web");
 const chromePath = process.env.CHROME_PATH ?? "/usr/bin/google-chrome";
-const entryName = "granit_web_platform_smoke.html";
+const entryName = process.argv[3] ?? "granit_web_platform_smoke.html";
+const modelQuery = process.argv[4] ? `?model=${encodeURIComponent(process.argv[4])}` : "";
+const usesLocalFixture = entryName === "granit_web_platform_smoke.html" || Boolean(process.argv[4]);
+const startupTimeout = usesLocalFixture ? 30_000 : 120_000;
 
 const contentTypes = new Map([
   [".data", "application/octet-stream"],
@@ -185,7 +188,7 @@ async function main() {
   page.on("pageerror", (error) => browserMessages.push(`pageerror: ${error.message}`));
 
   try {
-    await page.goto(`http://127.0.0.1:${address.port}/${entryName}`, {
+    await page.goto(`http://127.0.0.1:${address.port}/${entryName}${modelQuery}`, {
       waitUntil: "load",
     });
     await page.waitForFunction(
@@ -194,7 +197,7 @@ async function main() {
         return status === "ready" || status === "failed";
       },
       undefined,
-      { timeout: 30_000 },
+      { timeout: startupTimeout },
     );
     const status = await page.locator("#granit-status").getAttribute("data-status");
     if (status !== "ready") {
@@ -217,9 +220,11 @@ async function main() {
       undefined,
       { timeout: 10_000 },
     );
-    for (const assetPath of ["/model_viewer_fixture.gltf", "/model_viewer_fixture.bin"]) {
-      if (!requestedPaths.has(assetPath))
-        throw new Error(`浏览器资源加载链路未请求 ${assetPath}`);
+    if (usesLocalFixture) {
+      for (const assetPath of ["/model_viewer_fixture.gltf", "/model_viewer_fixture.bin"]) {
+        if (!requestedPaths.has(assetPath))
+          throw new Error(`浏览器资源加载链路未请求 ${assetPath}`);
+      }
     }
     validateModelViewerPixels(await page.locator("#canvas").screenshot({ type: "png" }));
 
@@ -291,7 +296,8 @@ async function main() {
       undefined,
       { timeout: 10_000 },
     );
-    validateModelViewerPixels(await canvas.screenshot({ type: "png" }));
+    if (usesLocalFixture)
+      validateModelViewerPixels(await canvas.screenshot({ type: "png" }));
     const framesBeforeShutdown = await page.evaluate(() =>
       Module._granit_web_rendered_frame_count(),
     );
@@ -335,6 +341,7 @@ async function main() {
     if (validationErrors.length !== 0)
       throw new Error(`浏览器 WebGPU 验证层报告错误：\n${validationErrors.join("\n")}`);
 
+    if (!usesLocalFixture) return;
     rejectExternalBuffer();
     const failurePage = await browser.newPage();
     const failureMessages = [];
@@ -342,10 +349,11 @@ async function main() {
       failureMessages.push(`${message.type()}: ${message.text()}`),
     );
     failurePage.on("pageerror", (error) => failureMessages.push(`pageerror: ${error.message}`));
-    await failurePage.goto(
-      `http://127.0.0.1:${address.port}/${entryName}?missing-external-buffer=1`,
-      { waitUntil: "load" },
-    );
+    const failureQuery = new URLSearchParams({ "missing-external-buffer": "1" });
+    if (process.argv[4]) failureQuery.set("model", process.argv[4]);
+    await failurePage.goto(`http://127.0.0.1:${address.port}/${entryName}?${failureQuery}`, {
+      waitUntil: "load",
+    });
     await failurePage.waitForFunction(
       () => document.querySelector("#granit-status")?.dataset.status === "failed",
       undefined,
