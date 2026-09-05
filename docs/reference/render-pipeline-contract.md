@@ -33,6 +33,9 @@ pbr_standard.frag.grshader.wgsl
 变量只负责定位安装资产，不改变 Core 的资源边界；应用仍负责读取、嵌入或通过自己的资产系统
 提供相应字节。
 
+`environments` 子目录同时提供 GRENV v3 环境资产。其所有权、完整性校验和逐帧借用规则见
+[Environment Map](environment-map.md)。
+
 ## 对象所有权
 
 | 对象 | 自身拥有 | 借用及调用方责任 |

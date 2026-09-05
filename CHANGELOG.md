@@ -8,6 +8,27 @@
 
 ## Unreleased
 
+## 0.10.0 - 2026-09-05
+
+### 新增
+
+- RenderPipeline 新增后端无关的 `granit_environment_map` C API 与 move-only C++20 RAII 包装，
+  统一拥有 Irradiance Cube、Prefiltered Cube 和 BRDF LUT，并提供确定性内建降级环境。
+- 正式发布 GRENV v3 环境资产格式，固定 RGBA16F 布局、推荐强度/曝光与 payload SHA-256；安装包
+  在 `environments` 目录提供经过锁定的 Studio Small 03 资产及来源清单。
+- Model Viewer 渲染执行器新增构造前容量提示和 `skipped_frame_builds` 统计。
+
+### 变更
+
+- Model Viewer 删除私有环境资源实现，桌面 Vulkan 与浏览器 WebGPU 统一消费公共 Environment Map。
+- 桌面主线程在渲染队列满载时继续处理事件和控制状态，但跳过 Scene Snapshot、Draw Binding、
+  ImGui Capture 与 Frame Packet 的昂贵构造。
+
+### 兼容性与迁移
+
+- RenderPipeline C ABI 兼容新增 Environment Map 导出；GRENV v2 不再受支持，环境资产必须重新生成
+  为带 SHA-256 的 v3。完整步骤见[从 0.9 迁移到 0.10](docs/guides/migrate-0.9-to-0.10.md)。
+
 ## 0.9.0 - 2026-09-05
 
 ### 新增

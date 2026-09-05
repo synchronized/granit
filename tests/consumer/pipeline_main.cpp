@@ -2,6 +2,7 @@
 // Copyright (c) 2026 Granit contributors
 
 #include <granit/pipeline/material.hpp>
+#include <granit/pipeline/environment_map.hpp>
 #include <granit/pipeline/mesh.hpp>
 #include <granit/pipeline/render_pipeline.hpp>
 #include <granit/pipeline/scene.hpp>
@@ -129,5 +130,14 @@ int main() {
     return 11;
   if ((moved.reset()).failed() || (moved.reset()).failed())
     return 12;
-  return (renderer.reset()).failed() ? 13 : 0;
+  granit::environment_map environment;
+  if (environment.initialize_builtin(renderer.native_handle()).failed())
+    return 13;
+  granit_environment_map_info environment_info = GRANIT_ENVIRONMENT_MAP_INFO_INIT;
+  if (environment.get_info(environment_info).failed() ||
+      environment_info.environment.irradiance == GRANIT_NULL_HANDLE)
+    return 14;
+  if (environment.reset().failed())
+    return 15;
+  return (renderer.reset()).failed() ? 16 : 0;
 }
