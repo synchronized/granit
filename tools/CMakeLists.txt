@@ -51,12 +51,15 @@ if(GRANIT_BUILD_SHADER_TOOLS OR GRANIT_BUILD_TOOLS OR (GRANIT_BUILD_TESTING AND 
   )
   target_compile_features(granit_shader_tools PUBLIC cxx_std_20)
   target_include_directories(
-    granit_shader_tools PUBLIC "$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>"
+    granit_shader_tools
+    PRIVATE "${PROJECT_SOURCE_DIR}/src"
+    PUBLIC "$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>"
   )
   target_sources(
     granit_shader_tools
     PRIVATE
-      $<TARGET_OBJECTS:granit_shader_asset>
+      $<TARGET_OBJECTS:granit_shader_asset_storage>
+      $<TARGET_OBJECTS:granit_shader_asset_format>
       $<TARGET_OBJECTS:granit_shader_tools_core>
       $<TARGET_OBJECTS:granit_spirv_reflect>
   )
@@ -126,12 +129,15 @@ if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
   add_executable(
     granit_shader_asset_test
     "${PROJECT_SOURCE_DIR}/tests/tools/shader_asset_test.cpp"
-    $<TARGET_OBJECTS:granit_shader_asset>
+    $<TARGET_OBJECTS:granit_shader_asset_storage>
+    $<TARGET_OBJECTS:granit_shader_asset_format>
     $<TARGET_OBJECTS:granit_shader_tools_core>
     $<TARGET_OBJECTS:granit_spirv_reflect>
   )
   target_compile_features(granit_shader_asset_test PRIVATE cxx_std_20)
-  target_include_directories(granit_shader_asset_test PRIVATE "${PROJECT_SOURCE_DIR}/tools")
+  target_include_directories(
+    granit_shader_asset_test PRIVATE "${PROJECT_SOURCE_DIR}/tools" "${PROJECT_SOURCE_DIR}/src"
+  )
   target_link_libraries(granit_shader_asset_test PRIVATE Threads::Threads)
   granit_target_compile_warnings(granit_shader_asset_test)
   granit_target_output_directories(granit_shader_asset_test)

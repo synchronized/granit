@@ -479,11 +479,16 @@ target_link_libraries(
   PRIVATE
     granit::granit
     Catch2::Catch2WithMain
-    $<TARGET_OBJECTS:granit_shader_asset>
+    $<TARGET_OBJECTS:granit_shader_asset_storage>
+    $<TARGET_OBJECTS:granit_shader_asset_format>
     $<$<PLATFORM_ID:Windows>:user32>
 )
 target_include_directories(
-  granit_renderer_test PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}" "${PROJECT_SOURCE_DIR}/tools"
+  granit_renderer_test
+  PRIVATE
+    "${CMAKE_CURRENT_SOURCE_DIR}"
+    "${PROJECT_SOURCE_DIR}/tools"
+    "${PROJECT_SOURCE_DIR}/src"
 )
 target_compile_definitions(
   granit_renderer_test

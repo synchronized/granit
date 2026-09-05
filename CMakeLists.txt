@@ -218,12 +218,26 @@ if(GRANIT_HAS_WAYLAND_SHELL)
   )
 endif()
 
-add_library(granit_shader_asset OBJECT tools/shader_asset.cpp tools/shader_asset.h)
-target_compile_features(granit_shader_asset PUBLIC cxx_std_20)
-target_include_directories(granit_shader_asset PUBLIC "${PROJECT_SOURCE_DIR}/tools")
-granit_target_compile_warnings(granit_shader_asset)
+add_library(
+  granit_shader_asset_format OBJECT
+  src/assets/shader_asset.cpp
+  src/assets/shader_asset.h
+)
+target_compile_features(granit_shader_asset_format PUBLIC cxx_std_20)
+target_include_directories(granit_shader_asset_format PUBLIC "${PROJECT_SOURCE_DIR}/src")
+granit_target_compile_warnings(granit_shader_asset_format)
 set_target_properties(
-  granit_shader_asset PROPERTIES FOLDER "Tools" POSITION_INDEPENDENT_CODE YES
+  granit_shader_asset_format PROPERTIES FOLDER "Core" POSITION_INDEPENDENT_CODE YES
+)
+
+add_library(granit_shader_asset_storage OBJECT tools/shader_asset.cpp tools/shader_asset.h)
+target_compile_features(granit_shader_asset_storage PUBLIC cxx_std_20)
+target_include_directories(
+  granit_shader_asset_storage PUBLIC "${PROJECT_SOURCE_DIR}/tools" "${PROJECT_SOURCE_DIR}/src"
+)
+granit_target_compile_warnings(granit_shader_asset_storage)
+set_target_properties(
+  granit_shader_asset_storage PROPERTIES FOLDER "Tools" POSITION_INDEPENDENT_CODE YES
 )
 
 add_subdirectory(src)

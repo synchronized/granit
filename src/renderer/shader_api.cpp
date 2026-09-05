@@ -4,7 +4,7 @@
 #include <granit/renderer/shader.h>
 
 #include "renderer/renderer_registry.h"
-#include "shader_asset.h"
+#include "assets/shader_asset.h"
 #include <limits>
 #include <new>
 
