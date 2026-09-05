@@ -63,6 +63,10 @@ foreach(relative_path IN LISTS package_files)
 endforeach()
 
 foreach(metadata DXC_VERSION GLSLANG_VERSION DAWN_VERSION TINT_REVISION)
+  list(LENGTH ${metadata} metadata_length)
+  if(NOT metadata_length EQUAL 1)
+    message(FATAL_ERROR "${metadata} 必须是单个不含分号的版本标识")
+  endif()
   granit_json_escape("${${metadata}}" escaped_${metadata})
 endforeach()
 

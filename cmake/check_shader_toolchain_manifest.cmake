@@ -30,6 +30,20 @@ if(NOT generate_result EQUAL 0)
 endif()
 
 execute_process(
+  COMMAND
+    "${CMAKE_COMMAND}" -DSTAGE=${WORK_DIR} -DOUTPUT=${WORK_DIR}/invalid.json
+    "-DDXC_VERSION=first;second" -DGLSLANG_VERSION=fixture -DDAWN_VERSION=fixture
+    -DTINT_REVISION=fixture "-DTOOL_FILES=bin/dxc;bin/glslangValidator;bin/tint"
+    -DLICENSE_FILES=licenses/THIRD_PARTY.txt -P "${GENERATOR}"
+  RESULT_VARIABLE invalid_metadata_result
+  OUTPUT_QUIET
+  ERROR_QUIET
+)
+if(invalid_metadata_result EQUAL 0)
+  message(FATAL_ERROR "含分号的版本标识意外通过清单生成")
+endif()
+
+execute_process(
   COMMAND "${CMAKE_COMMAND}" -DSTAGE=${WORK_DIR} -DMANIFEST=${manifest} -P "${VERIFIER}"
   RESULT_VARIABLE verify_result
   OUTPUT_VARIABLE verify_output
