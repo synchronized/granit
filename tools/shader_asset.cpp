@@ -25,11 +25,12 @@ namespace {
 constexpr std::array magic{std::byte{'G'}, std::byte{'R'}, std::byte{'N'}, std::byte{'S'},
                            std::byte{'H'}, std::byte{'D'}, std::byte{'R'}, std::byte{0}};
 constexpr std::uint32_t schema = 3;
-constexpr std::size_t header_size = 176;
+constexpr std::size_t variant_offset = 112;
+constexpr std::size_t variant_size = 64;
+constexpr std::size_t maximum_variant_count = 2;
+constexpr std::size_t header_size = variant_offset + variant_size * maximum_variant_count;
 constexpr std::size_t digest_offset = 48;
 constexpr std::size_t cache_key_offset = 80;
-constexpr std::size_t wgsl_digest_offset = 112;
-constexpr std::size_t spirv_digest_offset = 144;
 
 std::uint32_t read_u32(std::span<const std::byte> bytes, std::size_t offset) noexcept {
   std::uint32_t value = 0;
@@ -251,6 +252,35 @@ std::filesystem::path sidecar_path(const std::filesystem::path& manifest, std::s
   return result;
 }
 
+void write_variant(std::span<std::byte> bytes, std::size_t index,
+                   const shader_asset_variant& variant) noexcept {
+  const auto offset = variant_offset + variant_size * index;
+  write_u32(bytes, offset, static_cast<std::uint32_t>(variant.backend));
+  write_u32(bytes, offset + 4, static_cast<std::uint32_t>(variant.code_format));
+  write_u32(bytes, offset + 8, static_cast<std::uint32_t>(variant.profile));
+  write_u32(bytes, offset + 12, 0);
+  write_u64(bytes, offset + 16, variant.required_features);
+  write_u64(bytes, offset + 24, variant.byte_size);
+  std::ranges::copy(variant.digest, bytes.begin() + static_cast<std::ptrdiff_t>(offset + 32));
+}
+
+bool read_variant(std::span<const std::byte> bytes, std::size_t index,
+                  shader_asset_variant& variant) noexcept {
+  const auto offset = variant_offset + variant_size * index;
+  variant.backend = static_cast<shader_asset_backend>(read_u32(bytes, offset));
+  variant.code_format = static_cast<shader_asset_code_format>(read_u32(bytes, offset + 4));
+  variant.profile = static_cast<shader_asset_profile>(read_u32(bytes, offset + 8));
+  variant.required_features = read_u64(bytes, offset + 16);
+  variant.byte_size = read_u64(bytes, offset + 24);
+  std::ranges::copy(bytes.subspan(offset + 32, variant.digest.size()), variant.digest.begin());
+  const auto valid_backend = variant.backend == shader_asset_backend::webgpu ||
+                             variant.backend == shader_asset_backend::vulkan;
+  const auto valid_format = variant.code_format == shader_asset_code_format::wgsl ||
+                            variant.code_format == shader_asset_code_format::spirv;
+  return valid_backend && valid_format && variant.profile == shader_asset_profile::portable &&
+         variant.byte_size != 0 && read_u32(bytes, offset + 12) == 0;
+}
+
 } // namespace
 
 shader_cache_key make_shader_cache_key(const shader_cache_context& context) noexcept {
@@ -269,7 +299,8 @@ shader_cache_key make_shader_cache_key(const shader_cache_context& context) noex
 shader_asset_error encode_shader_asset(const shader_asset_source& source,
                                        std::vector<std::byte>& output) noexcept {
   if (source.wgsl.empty() || source.spirv.empty() || source.spirv.size() % 4 != 0 ||
-      source.reflection_json.empty())
+      source.reflection_json.empty() || source.backend_mask == 0 ||
+      (source.backend_mask & ~UINT32_C(3)) != 0)
     return shader_asset_error::invalid_argument;
   const auto maximum = std::numeric_limits<std::size_t>::max() - header_size;
   if (source.reflection_json.size() > maximum)
@@ -281,15 +312,29 @@ shader_asset_error encode_shader_asset(const shader_asset_source& source,
     write_u32(output, 8, schema);
     write_u32(output, 12, static_cast<std::uint32_t>(header_size));
     write_u64(output, 16, output.size());
-    write_u64(output, 24, source.wgsl.size());
-    write_u64(output, 32, source.spirv.size());
-    write_u64(output, 40, source.reflection_json.size());
+    write_u64(output, 24, source.reflection_json.size());
+    const auto variant_count = static_cast<std::uint32_t>(std::popcount(source.backend_mask));
+    write_u32(output, 32, variant_count);
     std::ranges::copy(source.cache_key, output.begin() + cache_key_offset);
-    const auto wgsl_hash = payload_digest(
-        {reinterpret_cast<const std::byte*>(source.wgsl.data()), source.wgsl.size()});
-    const auto spirv_hash = payload_digest(source.spirv);
-    std::ranges::copy(wgsl_hash, output.begin() + wgsl_digest_offset);
-    std::ranges::copy(spirv_hash, output.begin() + spirv_digest_offset);
+    const auto wgsl_bytes =
+        std::span{reinterpret_cast<const std::byte*>(source.wgsl.data()), source.wgsl.size()};
+    std::size_t variant_index = 0;
+    if ((source.backend_mask & UINT32_C(2)) != 0) {
+      write_variant(output, variant_index++,
+                    {.backend = shader_asset_backend::webgpu,
+                     .code_format = shader_asset_code_format::wgsl,
+                     .profile = shader_asset_profile::portable,
+                     .byte_size = source.wgsl.size(),
+                     .digest = payload_digest(wgsl_bytes)});
+    }
+    if ((source.backend_mask & UINT32_C(1)) != 0) {
+      write_variant(output, variant_index,
+                    {.backend = shader_asset_backend::vulkan,
+                     .code_format = shader_asset_code_format::spirv,
+                     .profile = shader_asset_profile::portable,
+                     .byte_size = source.spirv.size(),
+                     .digest = payload_digest(source.spirv)});
+    }
     std::memcpy(output.data() + reflection_offset, source.reflection_json.data(),
                 source.reflection_json.size());
     const auto hash = digest(output);
@@ -312,11 +357,10 @@ shader_asset_error decode_shader_asset(std::span<const std::byte> bytes,
     return shader_asset_error::unsupported_schema;
   if (read_u32(bytes, 12) != header_size || read_u64(bytes, 16) != bytes.size())
     return shader_asset_error::invalid_layout;
-  const auto wgsl_size = read_u64(bytes, 24);
-  const auto spirv_size = read_u64(bytes, 32);
-  const auto reflection_size = read_u64(bytes, 40);
+  const auto reflection_size = read_u64(bytes, 24);
+  const auto variant_count = read_u32(bytes, 32);
   const auto reflection_offset = static_cast<std::uint64_t>(header_size);
-  if (wgsl_size == 0 || spirv_size == 0 || spirv_size % 4 != 0 ||
+  if (variant_count == 0 || variant_count > maximum_variant_count ||
       !valid_section(reflection_offset, reflection_size, bytes.size()) ||
       reflection_offset + reflection_size != bytes.size())
     return shader_asset_error::invalid_layout;
@@ -327,23 +371,45 @@ shader_asset_error decode_shader_asset(std::span<const std::byte> bytes,
                             static_cast<std::size_t>(reflection_size)};
   std::ranges::copy(bytes.subspan(cache_key_offset, output.cache_key.size()),
                     output.cache_key.begin());
-  std::ranges::copy(bytes.subspan(wgsl_digest_offset, output.wgsl_digest.size()),
-                    output.wgsl_digest.begin());
-  std::ranges::copy(bytes.subspan(spirv_digest_offset, output.spirv_digest.size()),
-                    output.spirv_digest.begin());
-  output.wgsl_size = wgsl_size;
-  output.spirv_size = spirv_size;
+  output.variant_count = variant_count;
+  for (std::uint32_t index = 0; index < variant_count; ++index) {
+    if (!read_variant(bytes, index, output.variants[index]))
+      return shader_asset_error::invalid_layout;
+    for (std::uint32_t previous = 0; previous < index; ++previous) {
+      if (output.variants[previous].backend == output.variants[index].backend &&
+          output.variants[previous].profile == output.variants[index].profile)
+        return shader_asset_error::invalid_layout;
+    }
+  }
   return shader_asset_error::success;
+}
+
+const shader_asset_variant* find_shader_asset_variant(const shader_asset_view& asset,
+                                                      shader_asset_backend backend,
+                                                      shader_asset_profile profile) noexcept {
+  for (std::uint32_t index = 0; index < asset.variant_count; ++index) {
+    if (asset.variants[index].backend == backend && asset.variants[index].profile == profile)
+      return &asset.variants[index];
+  }
+  return nullptr;
 }
 
 shader_asset_error validate_shader_asset_payloads(const shader_asset_view& asset,
                                                   std::string_view wgsl,
                                                   std::span<const std::byte> spirv) noexcept {
-  if (wgsl.size() != asset.wgsl_size || spirv.size() != asset.spirv_size)
+  const auto* wgsl_variant = find_shader_asset_variant(asset, shader_asset_backend::webgpu,
+                                                       shader_asset_profile::portable);
+  const auto* spirv_variant = find_shader_asset_variant(asset, shader_asset_backend::vulkan,
+                                                        shader_asset_profile::portable);
+  if ((wgsl_variant != nullptr && (wgsl_variant->code_format != shader_asset_code_format::wgsl ||
+                                   wgsl.size() != wgsl_variant->byte_size)) ||
+      (spirv_variant != nullptr &&
+       (spirv_variant->code_format != shader_asset_code_format::spirv ||
+        spirv.size() != spirv_variant->byte_size || spirv.size() % 4 != 0)))
     return shader_asset_error::invalid_layout;
   const auto wgsl_bytes = std::span{reinterpret_cast<const std::byte*>(wgsl.data()), wgsl.size()};
-  return payload_digest(wgsl_bytes) == asset.wgsl_digest &&
-                 payload_digest(spirv) == asset.spirv_digest
+  return (wgsl_variant == nullptr || payload_digest(wgsl_bytes) == wgsl_variant->digest) &&
+                 (spirv_variant == nullptr || payload_digest(spirv) == spirv_variant->digest)
              ? shader_asset_error::success
              : shader_asset_error::digest_mismatch;
 }
@@ -360,9 +426,15 @@ shader_asset_error store_shader_asset(const std::filesystem::path& path,
     const auto wgsl_path = sidecar_path(path, ".wgsl");
     const auto spirv_path = sidecar_path(path, ".spv");
     const auto wgsl_bytes = std::span{reinterpret_cast<const std::byte*>(wgsl.data()), wgsl.size()};
+    const auto has_wgsl = find_shader_asset_variant(view, shader_asset_backend::webgpu,
+                                                    shader_asset_profile::portable) != nullptr;
+    const auto has_spirv = find_shader_asset_variant(view, shader_asset_backend::vulkan,
+                                                     shader_asset_profile::portable) != nullptr;
     if (std::ranges::equal(read_file(path), manifest) &&
-        std::ranges::equal(read_file(wgsl_path), wgsl_bytes) &&
-        std::ranges::equal(read_file(spirv_path), spirv)) {
+        (!has_wgsl || std::ranges::equal(read_file(wgsl_path), wgsl_bytes)) &&
+        (!has_spirv || std::ranges::equal(read_file(spirv_path), spirv)) &&
+        (has_wgsl || !std::filesystem::exists(wgsl_path)) &&
+        (has_spirv || !std::filesystem::exists(spirv_path))) {
       cache_hit = true;
       return shader_asset_error::success;
     }
@@ -372,8 +444,14 @@ shader_asset_error store_shader_asset(const std::filesystem::path& path,
     if (error)
       return shader_asset_error::invalid_argument;
     // 清单最后替换；中途失败时旧清单不会错误匹配新旧混合载荷。
-    if (!write_file_atomically(wgsl_path, wgsl_bytes) ||
-        !write_file_atomically(spirv_path, spirv) || !write_file_atomically(path, manifest))
+    if ((has_wgsl && !write_file_atomically(wgsl_path, wgsl_bytes)) ||
+        (has_spirv && !write_file_atomically(spirv_path, spirv)))
+      return shader_asset_error::invalid_argument;
+    if (!has_wgsl)
+      std::filesystem::remove(wgsl_path, error);
+    if (!has_spirv)
+      std::filesystem::remove(spirv_path, error);
+    if (error || !write_file_atomically(path, manifest))
       return shader_asset_error::invalid_argument;
     return shader_asset_error::success;
   } catch (...) {

@@ -34,20 +34,42 @@ enum class shader_asset_error {
   digest_mismatch,
 };
 
+enum class shader_asset_backend : std::uint32_t {
+  webgpu = 1,
+  vulkan = 2,
+};
+
+enum class shader_asset_code_format : std::uint32_t {
+  wgsl = 1,
+  spirv = 2,
+};
+
+enum class shader_asset_profile : std::uint32_t {
+  portable = 1,
+};
+
+struct shader_asset_variant {
+  shader_asset_backend backend{};
+  shader_asset_code_format code_format{};
+  shader_asset_profile profile{};
+  std::uint64_t required_features = 0;
+  std::uint64_t byte_size = 0;
+  shader_cache_key digest{};
+};
+
 struct shader_asset_source {
   std::string_view wgsl;
   std::span<const std::byte> spirv;
   std::string_view reflection_json;
   shader_cache_key cache_key{};
+  std::uint32_t backend_mask = 3;
 };
 
 struct shader_asset_view {
   std::string_view reflection_json;
   shader_cache_key cache_key{};
-  shader_cache_key wgsl_digest{};
-  shader_cache_key spirv_digest{};
-  std::uint64_t wgsl_size = 0;
-  std::uint64_t spirv_size = 0;
+  std::array<shader_asset_variant, 2> variants{};
+  std::uint32_t variant_count = 0;
 };
 
 shader_cache_key make_shader_cache_key(const shader_cache_context& context) noexcept;
@@ -55,6 +77,9 @@ shader_asset_error encode_shader_asset(const shader_asset_source& source,
                                        std::vector<std::byte>& output) noexcept;
 shader_asset_error decode_shader_asset(std::span<const std::byte> bytes,
                                        shader_asset_view& output) noexcept;
+const shader_asset_variant* find_shader_asset_variant(const shader_asset_view& asset,
+                                                      shader_asset_backend backend,
+                                                      shader_asset_profile profile) noexcept;
 shader_asset_error validate_shader_asset_payloads(const shader_asset_view& asset,
                                                   std::string_view wgsl,
                                                   std::span<const std::byte> spirv) noexcept;

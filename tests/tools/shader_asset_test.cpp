@@ -29,8 +29,29 @@ int main(int argc, char** argv) {
   shader_asset_view view;
   if (decode_shader_asset(first, view) != shader_asset_error::success ||
       validate_shader_asset_payloads(view, wgsl, spirv) != shader_asset_error::success ||
-      view.reflection_json != reflection || view.cache_key != cache_key)
+      view.reflection_json != reflection || view.cache_key != cache_key || view.variant_count != 2)
     return 2;
+  const auto* webgpu =
+      find_shader_asset_variant(view, shader_asset_backend::webgpu, shader_asset_profile::portable);
+  const auto* vulkan =
+      find_shader_asset_variant(view, shader_asset_backend::vulkan, shader_asset_profile::portable);
+  if (webgpu == nullptr || webgpu->code_format != shader_asset_code_format::wgsl ||
+      webgpu->required_features != 0 || webgpu->byte_size != wgsl.size() || vulkan == nullptr ||
+      vulkan->code_format != shader_asset_code_format::spirv || vulkan->required_features != 0 ||
+      vulkan->byte_size != spirv.size())
+    return 17;
+  std::vector<std::byte> webgpu_only;
+  if (encode_shader_asset({wgsl, spirv, reflection, cache_key, 2}, webgpu_only) !=
+      shader_asset_error::success)
+    return 19;
+  shader_asset_view webgpu_view;
+  if (decode_shader_asset(webgpu_only, webgpu_view) != shader_asset_error::success ||
+      webgpu_view.variant_count != 1 ||
+      find_shader_asset_variant(webgpu_view, shader_asset_backend::webgpu,
+                                shader_asset_profile::portable) == nullptr ||
+      find_shader_asset_variant(webgpu_view, shader_asset_backend::vulkan,
+                                shader_asset_profile::portable) != nullptr)
+    return 20;
   const auto same_from_other_directory =
       make_shader_cache_key({wgsl, "main", "compute", "tint-r1", "vulkan1.3", "--use-ir"});
   if (same_from_other_directory != cache_key)
@@ -62,6 +83,10 @@ int main(int argc, char** argv) {
   corrupted[12] = std::byte{0};
   if (decode_shader_asset(corrupted, view) != shader_asset_error::invalid_layout)
     return 12;
+  corrupted = first;
+  corrupted[112] = std::byte{2};
+  if (decode_shader_asset(corrupted, view) != shader_asset_error::digest_mismatch)
+    return 18;
   const auto cache_path = std::filesystem::path{argv[1]} / "fixture.granit-shader";
   std::error_code error;
   std::filesystem::remove_all(cache_path.parent_path(), error);

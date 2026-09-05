@@ -20,7 +20,8 @@ granit_shader_tool compile --tint path/to/tint --input shader.wgsl `
   --entry fragment_main --stage fragment --output shader.spv
 granit_shader_tool compile --tint path/to/tint --input shader.wgsl `
   --entry fragment_main --stage fragment --output shader.spv `
-  --asset shader.granit-shader --tint-revision dawn-v20260720.160313
+  --asset shader.granit-shader --tint-revision dawn-v20260720.160313 `
+  --asset-backend all
 ```
 
 `inspect` 按稳定顺序输出入口和资源绑定元数据；`inspect --json` 额外输出描述符、阶段接口、
@@ -29,6 +30,8 @@ Compute Workgroup 和 Override 常量的结构化调试视图；`verify` 执行�
 Tint 的 `--validate` 和可选 `spirv-val` 负责。指定 `--asset` 时还需要提供锁定的
 `--tint-revision`。工具会将稳定反射清单写入指定路径，并生成同名 `.wgsl` 与 `.spv` sidecar；
 目标环境默认记录为 `vulkan1.3`。工具不进入 Granit 核心动态库及安装导出。
+`--asset-backend` 可取 `all`、`vulkan` 或 `webgpu`，默认 `all`；未选择的同名 sidecar 会被删除，
+清单不会声明未随包交付的变体。
 ShaderTools SDK 还可接收调用方从 WGSL 前端取得的预期 Group/Binding 集合，并与最终 SPIR-V
 严格比较；当前 CLI 尚未自行提取该集合。
 所有调用都必须使用显式子命令；早期原型的单参数入口不再保留。

@@ -28,11 +28,15 @@ int compile_shader(int argc, char** argv) {
   const auto asset = option_value(argc, argv, "--asset");
   const auto tint_revision = option_value(argc, argv, "--tint-revision");
   const auto target_environment = option_value(argc, argv, "--target-environment");
+  const auto asset_backend = option_value(argc, argv, "--asset-backend");
   if (!tint || !input || !entry || !stage || !output ||
       (*stage != "vertex" && *stage != "fragment" && *stage != "compute") ||
-      (asset && !tint_revision)) {
+      (asset && !tint_revision) || (asset_backend && !asset) ||
+      (asset_backend && *asset_backend != "all" && *asset_backend != "vulkan" &&
+       *asset_backend != "webgpu")) {
     std::cerr << "compile 需要 --tint、--input、--entry、--stage 和 --output\n";
-    std::cerr << "使用 --asset 时还需要 --tint-revision；可选 --target-environment\n";
+    std::cerr << "使用 --asset 时还需要 --tint-revision；可选 --target-environment 和 "
+                 "--asset-backend <all|vulkan|webgpu>\n";
     return 2;
   }
   const auto stage_value = *stage == "vertex"     ? GRANIT_SHADER_TOOLS_STAGE_VERTEX
@@ -41,6 +45,10 @@ int compile_shader(int argc, char** argv) {
   constexpr std::string_view default_target = "vulkan1.3";
   constexpr std::string_view compile_options = "format=spirv;validate=1";
   const auto target = target_environment ? std::string_view{*target_environment} : default_target;
+  const auto backend_mask = !asset_backend || *asset_backend == "all"
+                                ? GRANIT_SHADER_TOOLS_ASSET_BACKEND_ALL
+                            : *asset_backend == "vulkan" ? GRANIT_SHADER_TOOLS_ASSET_BACKEND_VULKAN
+                                                         : GRANIT_SHADER_TOOLS_ASSET_BACKEND_WEBGPU;
   if (asset) {
     granit_shader_tools_cache_desc cache{};
     cache.struct_size = sizeof(cache);
@@ -59,6 +67,7 @@ int compile_shader(int argc, char** argv) {
     cache.target_environment_length = target.size();
     cache.compile_options = compile_options.data();
     cache.compile_options_length = compile_options.size();
+    cache.backend_mask = backend_mask;
     const auto [cache_status, cache_hit] = granit::shader_tools::restore_asset_cache(cache);
     if (cache_status.failed()) {
       std::cerr << "Shader 资产缓存查询失败\n";
@@ -99,13 +108,13 @@ int compile_shader(int argc, char** argv) {
     asset_desc.target_environment_length = target.size();
     asset_desc.compile_options = compile_options.data();
     asset_desc.compile_options_length = compile_options.size();
+    asset_desc.backend_mask = backend_mask;
     const auto [asset_status, cache_hit] = result.write_asset(asset_desc);
     if (asset_status.failed()) {
       std::cerr << "Shader 资产写入失败\n";
       return 1;
     }
-    std::cout << (cache_hit ? "Shader 资产缓存命中：" : "已生成 Shader 资产：") << *asset
-              << '\n';
+    std::cout << (cache_hit ? "Shader 资产缓存命中：" : "已生成 Shader 资产：") << *asset << '\n';
   }
   return status.ok() ? 0 : 1;
 }
@@ -274,7 +283,8 @@ void print_usage() {
                "  granit_shader_tool verify <shader.spv>\n"
                "  granit_shader_tool compile --tint <path> --input <shader.wgsl> "
                "--entry <name> --stage <vertex|fragment|compute> --output <shader.spv> "
-               "[--asset <shader.granit-shader> --tint-revision <revision>]\n";
+               "[--asset <shader.granit-shader> --tint-revision <revision> "
+               "--asset-backend <all|vulkan|webgpu>]\n";
 }
 
 } // namespace

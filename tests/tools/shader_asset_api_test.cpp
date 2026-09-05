@@ -41,6 +41,7 @@ int main(int argc, char** argv) {
   asset.target_environment_length = target.size();
   asset.compile_options = options.data();
   asset.compile_options_length = options.size();
+  asset.backend_mask = GRANIT_SHADER_TOOLS_ASSET_BACKEND_ALL;
 
   auto [status, cache_hit] = result.write_asset(asset);
   if (status.failed() || cache_hit)
@@ -67,6 +68,7 @@ int main(int argc, char** argv) {
   cache.target_environment_length = target.size();
   cache.compile_options = options.data();
   cache.compile_options_length = options.size();
+  cache.backend_mask = GRANIT_SHADER_TOOLS_ASSET_BACKEND_ALL;
   auto [restore_status, restored_hit] = granit::shader_tools::restore_asset_cache(cache);
   if (restore_status.failed())
     return 51;
@@ -116,6 +118,26 @@ int main(int argc, char** argv) {
   std::tie(restore_status, restored_hit) = granit::shader_tools::restore_asset_cache(cache);
   if (restore_status.failed() || restored_hit)
     return 9;
+  asset.compile_options = options.data();
+  asset.compile_options_length = options.size();
+  asset.backend_mask = GRANIT_SHADER_TOOLS_ASSET_BACKEND_WEBGPU;
+  cache.backend_mask = GRANIT_SHADER_TOOLS_ASSET_BACKEND_WEBGPU;
+  std::tie(status, cache_hit) = result.write_asset(asset);
+  if (status.failed() || cache_hit || !std::filesystem::exists(output + ".wgsl") ||
+      std::filesystem::exists(output + ".spv"))
+    return 10;
+  std::tie(restore_status, restored_hit) = granit::shader_tools::restore_asset_cache(cache);
+  if (restore_status.failed() || restored_hit)
+    return 11;
+  asset.backend_mask = GRANIT_SHADER_TOOLS_ASSET_BACKEND_VULKAN;
+  cache.backend_mask = GRANIT_SHADER_TOOLS_ASSET_BACKEND_VULKAN;
+  std::tie(status, cache_hit) = result.write_asset(asset);
+  if (status.failed() || cache_hit || std::filesystem::exists(output + ".wgsl") ||
+      !std::filesystem::exists(output + ".spv"))
+    return 12;
+  std::tie(restore_status, restored_hit) = granit::shader_tools::restore_asset_cache(cache);
+  if (restore_status.failed() || !restored_hit)
+    return 13;
   std::filesystem::remove_all(argv[3], error);
   return 0;
 }

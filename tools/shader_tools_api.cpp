@@ -490,7 +490,8 @@ granit_result granit_shader_tools_result_write_asset(granit_shader_tools_result 
       !valid_string(desc->compile_options, desc->compile_options_length) ||
       desc->wgsl_path_length == 0 || desc->spirv_path_length == 0 ||
       desc->output_path_length == 0 || desc->tint_revision_length == 0 ||
-      desc->target_environment_length == 0)
+      desc->target_environment_length == 0 || desc->backend_mask == 0 ||
+      (desc->backend_mask & ~GRANIT_SHADER_TOOLS_ASSET_BACKEND_ALL) != 0)
     return GRANIT_ERROR_INVALID_ARGUMENT;
   if (value->status != GRANIT_SUCCESS || value->reflection_json.empty())
     return GRANIT_ERROR_INITIALIZATION_FAILED;
@@ -517,7 +518,8 @@ granit_result granit_shader_tools_result_write_asset(granit_shader_tools_result 
     const auto key = granit::tools::make_shader_cache_key(
         {wgsl, value->entry_point, stage, tint_revision, target, options});
     std::vector<std::byte> asset;
-    if (granit::tools::encode_shader_asset({wgsl, spirv, value->reflection_json, key}, asset) !=
+    if (granit::tools::encode_shader_asset(
+            {wgsl, spirv, value->reflection_json, key, desc->backend_mask}, asset) !=
         granit::tools::shader_asset_error::success)
       return GRANIT_ERROR_INVALID_ARGUMENT;
     bool hit = false;
@@ -551,6 +553,8 @@ granit_result granit_shader_tools_restore_asset_cache(const granit_shader_tools_
       desc->asset_path_length == 0 || desc->entry_point_length == 0 ||
       desc->tint_revision_length == 0 || desc->target_environment_length == 0)
     return GRANIT_ERROR_INVALID_ARGUMENT;
+  if (desc->backend_mask == 0 || (desc->backend_mask & ~GRANIT_SHADER_TOOLS_ASSET_BACKEND_ALL) != 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
   const auto stage = stage_name(desc->stage);
   if (stage == nullptr)
     return GRANIT_ERROR_INVALID_ARGUMENT;
@@ -564,6 +568,17 @@ granit_result granit_shader_tools_restore_asset_cache(const granit_shader_tools_
     if (granit::tools::decode_shader_asset(asset_bytes, asset) !=
         granit::tools::shader_asset_error::success)
       return GRANIT_SUCCESS;
+    uint32_t packaged_backends = 0;
+    if (granit::tools::find_shader_asset_variant(asset, granit::tools::shader_asset_backend::vulkan,
+                                                 granit::tools::shader_asset_profile::portable) !=
+        nullptr)
+      packaged_backends |= GRANIT_SHADER_TOOLS_ASSET_BACKEND_VULKAN;
+    if (granit::tools::find_shader_asset_variant(asset, granit::tools::shader_asset_backend::webgpu,
+                                                 granit::tools::shader_asset_profile::portable) !=
+        nullptr)
+      packaged_backends |= GRANIT_SHADER_TOOLS_ASSET_BACKEND_WEBGPU;
+    if (packaged_backends != desc->backend_mask)
+      return GRANIT_SUCCESS;
     const auto key = granit::tools::make_shader_cache_key(
         {wgsl, copy_string(desc->entry_point, desc->entry_point_length), stage,
          copy_string(desc->tint_revision, desc->tint_revision_length),
@@ -571,15 +586,24 @@ granit_result granit_shader_tools_restore_asset_cache(const granit_shader_tools_
          copy_string(desc->compile_options, desc->compile_options_length)});
     if (key != asset.cache_key)
       return GRANIT_SUCCESS;
+    const auto* variant =
+        granit::tools::find_shader_asset_variant(asset, granit::tools::shader_asset_backend::vulkan,
+                                                 granit::tools::shader_asset_profile::portable);
+    if (variant == nullptr ||
+        variant->code_format != granit::tools::shader_asset_code_format::spirv)
+      return GRANIT_SUCCESS;
     auto wgsl_sidecar_path = asset_path;
     wgsl_sidecar_path += ".wgsl";
     auto spirv_sidecar_path = asset_path;
     spirv_sidecar_path += ".spv";
-    const auto packaged_wgsl = read_text_file(wgsl_sidecar_path);
+    const auto* webgpu_variant =
+        granit::tools::find_shader_asset_variant(asset, granit::tools::shader_asset_backend::webgpu,
+                                                 granit::tools::shader_asset_profile::portable);
+    const auto packaged_wgsl = webgpu_variant == nullptr ? wgsl : read_text_file(wgsl_sidecar_path);
     const auto packaged_spirv = read_binary_file(spirv_sidecar_path);
     if (granit::tools::validate_shader_asset_payloads(asset, packaged_wgsl, packaged_spirv) !=
             granit::tools::shader_asset_error::success ||
-        packaged_wgsl != wgsl)
+        (webgpu_variant != nullptr && packaged_wgsl != wgsl))
       return GRANIT_SUCCESS;
     if (!write_binary_file(copy_path(desc->spirv_output_path, desc->spirv_output_path_length),
                            packaged_spirv))

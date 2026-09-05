@@ -37,6 +37,10 @@ typedef struct granit_shader_tools_expected_binding {
 #define GRANIT_SHADER_TOOLS_SCALAR_SINT UINT32_C(2)
 #define GRANIT_SHADER_TOOLS_SCALAR_UINT UINT32_C(3)
 
+#define GRANIT_SHADER_TOOLS_ASSET_BACKEND_VULKAN UINT32_C(1)
+#define GRANIT_SHADER_TOOLS_ASSET_BACKEND_WEBGPU UINT32_C(2)
+#define GRANIT_SHADER_TOOLS_ASSET_BACKEND_ALL UINT32_C(3)
+
 /** WGSL 编译描述。所有字符串均为 UTF-8，调用期间有效且无需以零结尾。 */
 typedef struct granit_shader_tools_compile_desc {
   uint32_t struct_size;
@@ -92,6 +96,8 @@ typedef struct granit_shader_tools_asset_desc {
   uint64_t target_environment_length;
   const char* compile_options;
   uint64_t compile_options_length;
+  /** 要写入清单的后端位集合；必须是 GRANIT_SHADER_TOOLS_ASSET_BACKEND_* 的非零组合。 */
+  uint32_t backend_mask;
 } granit_shader_tools_asset_desc;
 
 /** Shader 资产缓存恢复描述。所有路径和字符串均在调用期间有效。 */
@@ -112,6 +118,8 @@ typedef struct granit_shader_tools_cache_desc {
   uint64_t target_environment_length;
   const char* compile_options;
   uint64_t compile_options_length;
+  /** 期望资产包含的精确后端位集合；语义与 granit_shader_tools_asset_desc 相同。 */
+  uint32_t backend_mask;
 } granit_shader_tools_cache_desc;
 
 /** 单个描述符绑定的后端无关反射记录。名称视图在结果销毁前有效。 */

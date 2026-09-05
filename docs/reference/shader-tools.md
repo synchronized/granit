@@ -28,7 +28,10 @@ target_link_libraries(editor PRIVATE granit::shader_tools)
 - `granit_shader_tools_result_write_asset` 将稳定反射和载荷摘要写入 `.granit-shader` 清单，并将
   WGSL、SPIR-V 写入同名 `.wgsl`、`.spv` sidecar。只有三个文件均逐字节相同时才报告缓存命中。
 - 当前 sidecar 分别代表 WebGPU portable WGSL 和 Vulkan portable SPIR-V。资产按后端打包裁剪和
-  多能力档位选择属于 [S-20](../plans/S-20-shader-asset-variants.md) 的后续阶段。
+  多能力档位选择属于 [S-20](../plans/S-20-shader-asset-variants.md)。
+- `granit_shader_tools_asset_desc.backend_mask` 必须选择 Vulkan、WebGPU 或二者；写入时会删除同名
+  的未选后端 sidecar，清单仅记录实际保留的变体。缓存描述的 `backend_mask` 表示期望的精确
+  变体集合，清单集合不同也会正常未命中；两个字段均不能为零。
 - `granit_shader_tools_result_get_binding_count` 和 `granit_shader_tools_result_get_binding` 按
   Group、Binding 数字顺序返回结构化绑定。记录包含资源类型、访问模式、数组数量和 Buffer
   最小绑定尺寸。
