@@ -2,6 +2,7 @@
 // Copyright (c) 2026 Granit contributors
 
 #include "material/material_source_json.h"
+#include "assets/shader_asset.h"
 
 #include <algorithm>
 #include <array>
@@ -239,46 +240,34 @@ bool u32(const json_value* value, std::uint32_t& result) {
   return true;
 }
 
-bool read_spirv(const std::filesystem::path& path, std::vector<std::uint32_t>& words) {
+bool read_shader_asset(const std::filesystem::path& path, material_shader_code& code) {
   constexpr std::uint64_t maximum_size = UINT64_C(16) * 1024 * 1024;
   std::ifstream stream(path, std::ios::binary | std::ios::ate);
-  if (!stream) {
+  if (!stream)
     return false;
-  }
   const auto length = stream.tellg();
-  if (length <= 0 || static_cast<std::uint64_t>(length) > maximum_size || length % 4 != 0) {
+  if (length <= 0 || static_cast<std::uint64_t>(length) > maximum_size)
     return false;
-  }
-  std::vector<unsigned char> bytes(static_cast<std::size_t>(length));
+  std::vector<std::byte> bytes(static_cast<std::size_t>(length));
   stream.seekg(0);
   stream.read(reinterpret_cast<char*>(bytes.data()), length);
-  if (!stream) {
+  if (!stream)
+    return false;
+  granit::tools::shader_asset_view asset;
+  if (granit::tools::decode_shader_asset(bytes, asset) !=
+      granit::tools::shader_asset_error::success) {
     return false;
   }
-  words.resize(bytes.size() / 4);
-  for (std::size_t index = 0; index < words.size(); ++index) {
-    words[index] = static_cast<std::uint32_t>(bytes[index * 4]) |
-                   (static_cast<std::uint32_t>(bytes[index * 4 + 1]) << 8U) |
-                   (static_cast<std::uint32_t>(bytes[index * 4 + 2]) << 16U) |
-                   (static_cast<std::uint32_t>(bytes[index * 4 + 3]) << 24U);
-  }
-  return words.front() == UINT32_C(0x07230203);
-}
-
-bool read_wgsl(const std::filesystem::path& path, std::string& text) {
-  constexpr std::uint64_t maximum_size = UINT64_C(16) * 1024 * 1024;
-  std::ifstream stream(path, std::ios::binary | std::ios::ate);
-  if (!stream) {
+  if (asset.stage == GRANIT_SHADER_STAGE_VERTEX) {
+    code.stage = package_shader_stage::vertex;
+  } else if (asset.stage == GRANIT_SHADER_STAGE_FRAGMENT) {
+    code.stage = package_shader_stage::fragment;
+  } else {
     return false;
   }
-  const auto length = stream.tellg();
-  if (length <= 0 || static_cast<std::uint64_t>(length) > maximum_size) {
-    return false;
-  }
-  text.resize(static_cast<std::size_t>(length));
-  stream.seekg(0);
-  stream.read(text.data(), length);
-  return stream.good() && text.find('\0') == std::string::npos;
+  code.entry_point = asset.entry_point;
+  code.asset_id = asset.content_id;
+  return true;
 }
 
 bool parse_parameter(const json_value& value, parameter_desc& parameter) {
@@ -532,27 +521,13 @@ source_json_error parse_variant(const json_value& value, const std::filesystem::
   }
   for (const auto& shader_value : *shaders) {
     const auto* shader = as<json_value::object>(&shader_value);
-    const auto* stage = shader == nullptr ? nullptr : as<std::string>(member(*shader, "stage"));
-    const auto* entry =
-        shader == nullptr ? nullptr : as<std::string>(member(*shader, "entry_point"));
-    const auto* spirv_path =
-        shader == nullptr ? nullptr : as<std::string>(member(*shader, "spirv"));
-    const auto* wgsl_path =
-        shader == nullptr ? nullptr : as<std::string>(member(*shader, "wgsl"));
-    if (stage == nullptr || entry == nullptr || spirv_path == nullptr || wgsl_path == nullptr) {
+    const auto* asset_path =
+        shader == nullptr ? nullptr : as<std::string>(member(*shader, "asset"));
+    if (asset_path == nullptr) {
       return source_json_error::invalid_schema;
     }
     material_shader_code code;
-    if (*stage == "vertex") {
-      code.stage = package_shader_stage::vertex;
-    } else if (*stage == "fragment") {
-      code.stage = package_shader_stage::fragment;
-    } else {
-      return source_json_error::unsupported_value;
-    }
-    code.entry_point = *entry;
-    if (!read_spirv(directory / std::filesystem::path{*spirv_path}, code.spirv) ||
-        !read_wgsl(directory / std::filesystem::path{*wgsl_path}, code.wgsl)) {
+    if (!read_shader_asset(directory / std::filesystem::path{*asset_path}, code)) {
       return source_json_error::referenced_file_error;
     }
     variant.shaders.push_back(std::move(code));

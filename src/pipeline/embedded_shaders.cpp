@@ -3,7 +3,9 @@
 
 #include "pipeline/embedded_shaders.h"
 
+#include <array>
 #include <cstdint>
+#include <cstring>
 
 namespace granit::pipeline::detail {
 namespace {
@@ -128,6 +130,45 @@ alignas(std::uint32_t) constexpr std::uint8_t canvas_material_bytes[]{
 #include "granit_pipeline_canvas.grmat.inc"
 };
 
+alignas(std::uint32_t) constexpr std::uint8_t canvas_vertex_manifest[]{
+#include "unlit_canvas.vert.grshader.inc"
+};
+alignas(std::uint32_t) constexpr std::uint8_t canvas_vertex_spirv[]{
+#include "unlit_canvas.vert.grshader.spv.inc"
+};
+alignas(std::uint32_t) constexpr std::uint8_t canvas_vertex_wgsl[]{
+#include "unlit_canvas.vert.grshader.wgsl.inc"
+};
+alignas(std::uint32_t) constexpr std::uint8_t canvas_fragment_manifest[]{
+#include "unlit_canvas.frag.grshader.inc"
+};
+alignas(std::uint32_t) constexpr std::uint8_t canvas_fragment_spirv[]{
+#include "unlit_canvas.frag.grshader.spv.inc"
+};
+alignas(std::uint32_t) constexpr std::uint8_t canvas_fragment_wgsl[]{
+#include "unlit_canvas.frag.grshader.wgsl.inc"
+};
+alignas(std::uint32_t) constexpr std::uint8_t canvas_srgb_manifest[]{
+#include "unlit_canvas_encode_srgb.frag.grshader.inc"
+};
+alignas(std::uint32_t) constexpr std::uint8_t canvas_srgb_spirv[]{
+#include "unlit_canvas_encode_srgb.frag.grshader.spv.inc"
+};
+alignas(std::uint32_t) constexpr std::uint8_t canvas_srgb_wgsl[]{
+#include "unlit_canvas_encode_srgb.frag.grshader.wgsl.inc"
+};
+
+struct embedded_shader_asset {
+  std::span<const std::uint8_t> manifest;
+  std::span<const std::uint8_t> spirv;
+  std::span<const std::uint8_t> wgsl;
+};
+
+constexpr std::array canvas_shader_assets{
+    embedded_shader_asset{canvas_vertex_manifest, canvas_vertex_spirv, canvas_vertex_wgsl},
+    embedded_shader_asset{canvas_fragment_manifest, canvas_fragment_spirv, canvas_fragment_wgsl},
+    embedded_shader_asset{canvas_srgb_manifest, canvas_srgb_spirv, canvas_srgb_wgsl}};
+
 alignas(std::uint32_t) constexpr std::uint8_t debug_world_vertex_bytes[]{
 #include "granit_pipeline_debug_world.vert.inc"
 };
@@ -170,6 +211,33 @@ std::string_view shadow_depth_fragment_wgsl() noexcept { return shadow_depth_fra
 
 std::span<const std::byte> canvas_material_package() noexcept {
   return {reinterpret_cast<const std::byte*>(canvas_material_bytes), sizeof(canvas_material_bytes)};
+}
+
+granit_result resolve_canvas_shader(void*, const std::uint8_t asset_id[32],
+                                    granit_renderer_backend backend, std::uint32_t profile,
+                                    granit_shader_asset_desc* asset) noexcept {
+  if (asset_id == nullptr || asset == nullptr || profile != GRANIT_SHADER_PROFILE_PORTABLE)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  for (const auto& candidate : canvas_shader_assets) {
+    constexpr std::size_t content_id_offset = 48;
+    if (candidate.manifest.size() < content_id_offset + 32 ||
+        std::memcmp(candidate.manifest.data() + content_id_offset, asset_id, 32) != 0) {
+      continue;
+    }
+    const auto sidecar = backend == GRANIT_RENDERER_BACKEND_VULKAN
+                             ? candidate.spirv
+                             : backend == GRANIT_RENDERER_BACKEND_WEBGPU ? candidate.wgsl
+                                                                         : std::span<const std::uint8_t>{};
+    if (sidecar.empty())
+      return GRANIT_ERROR_UNSUPPORTED;
+    *asset = GRANIT_SHADER_ASSET_DESC_INIT;
+    asset->manifest_data = candidate.manifest.data();
+    asset->manifest_size = candidate.manifest.size();
+    asset->sidecar_data = sidecar.data();
+    asset->sidecar_size = sidecar.size();
+    return GRANIT_SUCCESS;
+  }
+  return GRANIT_ERROR_NOT_READY;
 }
 
 std::span<const std::byte> debug_world_vertex_shader() noexcept {

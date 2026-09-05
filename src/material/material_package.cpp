@@ -26,8 +26,7 @@ void hash_u64(std::uint64_t& hash, std::uint64_t value) noexcept {
 }
 
 bool is_spirv(const std::vector<std::uint32_t>& code) noexcept {
-  constexpr std::uint32_t spirv_magic = UINT32_C(0x07230203);
-  return code.size() >= 5 && code.front() == spirv_magic;
+  return code.size() >= 5 && code.front() == UINT32_C(0x07230203);
 }
 
 std::uint32_t vertex_format_size(granit_vertex_format format) noexcept {
@@ -181,8 +180,12 @@ package_error material_package::build(material_package_desc desc, material_packa
     std::array<bool, 2> stages{};
     for (const auto& shader : source.shaders) {
       const auto stage_index = static_cast<std::size_t>(shader.stage);
-      if (stage_index >= stages.size() || shader.entry_point.empty() || !is_spirv(shader.spirv) ||
-          shader.wgsl.empty() || shader.wgsl.find('\0') != std::string::npos) {
+      const auto has_asset = !std::ranges::all_of(
+          shader.asset_id, [](std::byte value) { return value == std::byte{}; });
+      const auto has_internal_code = is_spirv(shader.spirv) && !shader.wgsl.empty() &&
+                                     shader.wgsl.find('\0') == std::string::npos;
+      if (stage_index >= stages.size() || shader.entry_point.empty() ||
+          shader.entry_point.find('\0') != std::string::npos || (!has_asset && !has_internal_code)) {
         return package_error::invalid_shader;
       }
       if (stages[stage_index]) {

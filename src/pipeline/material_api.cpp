@@ -299,7 +299,9 @@ extern "C" granit_result granit_material_create(granit_renderer renderer,
       return static_cast<granit_result>(lighting_result);
     const std::array additional_layouts{state->object_layout.native_handle(),
                                         state->lighting_layout.native_handle()};
-    result = state->material_template.initialize(renderer, state->package, additional_layouts);
+    result = state->material_template.initialize(renderer, state->package, additional_layouts,
+                                                 desc->shader_resolver,
+                                                 desc->shader_resolver_user_data);
     if (result != GRANIT_SUCCESS)
       return result;
     result = state->instance.initialize(renderer, state->material_template.material_layout(),

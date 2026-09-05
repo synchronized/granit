@@ -82,10 +82,12 @@ add_custom_command(
   DEPENDS
     granit_material_tool
     "${granit_smoke_asset_dir}/render_pipeline_untextured.grmat.json"
-    "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/pbr_shadow_ibl_lights.vert.spv"
-    "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/pbr_shadow_ibl_lights.vert.wgsl"
-    "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/pbr_shadow_ibl_lights_untextured.frag.spv"
-    "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/pbr_shadow_ibl_lights_untextured.frag.wgsl"
+    "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/pbr_shadow_ibl_lights.vert.grshader"
+    "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/pbr_shadow_ibl_lights_untextured.frag.grshader"
+    "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/pbr_shadow_ibl_lights.vert.grshader.spv"
+    "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/pbr_shadow_ibl_lights.vert.grshader.wgsl"
+    "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/pbr_shadow_ibl_lights_untextured.frag.grshader.spv"
+    "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/pbr_shadow_ibl_lights_untextured.frag.grshader.wgsl"
   VERBATIM
 )
 
@@ -94,10 +96,17 @@ target_link_libraries(granit_render_pipeline_offscreen_smoke PRIVATE granit::ren
 target_compile_definitions(
   granit_render_pipeline_offscreen_smoke
   PRIVATE GRANIT_RENDER_PIPELINE_SMOKE_PACKAGE="${granit_render_pipeline_smoke_package}"
+          GRANIT_PIPELINE_ASSET_DIR="${PROJECT_SOURCE_DIR}/assets/shaders/pbr"
+)
+target_include_directories(
+  granit_render_pipeline_offscreen_smoke PRIVATE "${PROJECT_SOURCE_DIR}/tests"
+                                                   "${PROJECT_SOURCE_DIR}/src"
 )
 add_dependencies(granit_render_pipeline_offscreen_smoke granit_material_tool)
 target_sources(
-  granit_render_pipeline_offscreen_smoke PRIVATE "${granit_render_pipeline_smoke_package}"
+  granit_render_pipeline_offscreen_smoke
+  PRIVATE "${granit_render_pipeline_smoke_package}"
+          $<TARGET_OBJECTS:granit_shader_asset_format>
 )
 add_test(
   NAME granit.smoke.render_pipeline_offscreen
@@ -136,10 +145,17 @@ if(WIN32)
   target_compile_definitions(
     granit_render_pipeline_window_smoke
     PRIVATE GRANIT_RENDER_PIPELINE_SMOKE_PACKAGE="${granit_render_pipeline_smoke_package}"
+            GRANIT_PIPELINE_ASSET_DIR="${PROJECT_SOURCE_DIR}/assets/shaders/pbr"
+  )
+  target_include_directories(
+    granit_render_pipeline_window_smoke PRIVATE "${PROJECT_SOURCE_DIR}/tests"
+                                                "${PROJECT_SOURCE_DIR}/src"
   )
   add_dependencies(granit_render_pipeline_window_smoke granit_material_tool)
   target_sources(
-    granit_render_pipeline_window_smoke PRIVATE "${granit_render_pipeline_smoke_package}"
+    granit_render_pipeline_window_smoke
+    PRIVATE "${granit_render_pipeline_smoke_package}"
+            $<TARGET_OBJECTS:granit_shader_asset_format>
   )
   add_test(
     NAME granit.smoke.render_pipeline_window

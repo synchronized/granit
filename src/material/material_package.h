@@ -8,6 +8,7 @@
 
 #include <granit/renderer/pipeline.h>
 
+#include <array>
 #include <cstdint>
 #include <span>
 #include <string>
@@ -16,7 +17,7 @@
 
 namespace granit::material {
 
-inline constexpr std::uint32_t material_package_format_version = 3;
+inline constexpr std::uint32_t material_package_format_version = 4;
 
 using material_pass_id = std::uint64_t;
 using material_feature_id = std::uint64_t;
@@ -96,6 +97,8 @@ struct material_feature_value {
 struct material_shader_code {
   package_shader_stage stage = package_shader_stage::vertex;
   std::string entry_point;
+  std::array<std::byte, 32> asset_id{};
+  // 仅供内部测试与程序化模板使用；归档不会序列化这两项。
   std::vector<std::uint32_t> spirv;
   std::string wgsl;
 };

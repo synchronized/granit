@@ -236,6 +236,7 @@ granit::result create_material(granit_renderer renderer, const gltf::material& s
   desc.archive_size = archive.size();
   desc.initial_updates = updates.data();
   desc.initial_update_count = static_cast<std::uint32_t>(updates.size());
+  desc.shader_resolver = resolve_model_viewer_shader;
   return output.initialize(renderer, desc);
 }
 

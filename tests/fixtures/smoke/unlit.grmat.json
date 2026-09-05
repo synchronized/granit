@@ -1,5 +1,5 @@
 {
-  "format_version": 3,
+  "format_version": 4,
   "target_environment": "cross_backend",
   "binding_model": "bind_group",
   "material": {
@@ -19,8 +19,8 @@
         "color_blend": {"enabled": false}
       },
       "shaders": [
-        {"stage": "vertex", "entry_point": "vertex_main", "spirv": "../../../assets/shaders/unlit/unlit.vert.spv", "wgsl": "../../../assets/shaders/unlit/unlit.vert.wgsl"},
-        {"stage": "fragment", "entry_point": "fragment_main", "spirv": "../../../assets/shaders/unlit/unlit.frag.spv", "wgsl": "../../../assets/shaders/unlit/unlit.frag.wgsl"}
+        {"asset": "../../../assets/shaders/unlit/unlit.vert.grshader"},
+        {"asset": "../../../assets/shaders/unlit/unlit.frag.grshader"}
       ]
     },
     {
@@ -33,8 +33,8 @@
         "color_blend": {"enabled": false}
       },
       "shaders": [
-        {"stage": "vertex", "entry_point": "vertex_main", "spirv": "../../../assets/shaders/unlit/unlit.vert.spv", "wgsl": "../../../assets/shaders/unlit/unlit.vert.wgsl"},
-        {"stage": "fragment", "entry_point": "fragment_main", "spirv": "../../../assets/shaders/unlit/unlit_alpha_cutoff.frag.spv", "wgsl": "../../../assets/shaders/unlit/unlit_alpha_cutoff.frag.wgsl"}
+        {"asset": "../../../assets/shaders/unlit/unlit.vert.grshader"},
+        {"asset": "../../../assets/shaders/unlit/unlit_alpha_cutoff.frag.grshader"}
       ]
     },
     {
@@ -52,8 +52,8 @@
         }
       },
       "shaders": [
-        {"stage": "vertex", "entry_point": "vertex_main", "spirv": "../../../assets/shaders/unlit/unlit.vert.spv", "wgsl": "../../../assets/shaders/unlit/unlit.vert.wgsl"},
-        {"stage": "fragment", "entry_point": "fragment_main", "spirv": "../../../assets/shaders/unlit/unlit.frag.spv", "wgsl": "../../../assets/shaders/unlit/unlit.frag.wgsl"}
+        {"asset": "../../../assets/shaders/unlit/unlit.vert.grshader"},
+        {"asset": "../../../assets/shaders/unlit/unlit.frag.grshader"}
       ]
     }
   ]

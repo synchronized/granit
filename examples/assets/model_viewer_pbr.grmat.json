@@ -1,5 +1,5 @@
 {
-  "format_version": 3,
+  "format_version": 4,
   "target_environment": "cross_backend",
   "binding_model": "bind_group",
   "material": {
@@ -47,8 +47,8 @@
         "color_blend": {"enabled": false}
       },
       "shaders": [
-        {"stage": "vertex", "entry_point": "vertex_main", "spirv": "model_viewer_pbr.vert.spv", "wgsl": "model_viewer_pbr.vert.wgsl"},
-        {"stage": "fragment", "entry_point": "fragment_main", "spirv": "model_viewer_pbr.frag.spv", "wgsl": "model_viewer_pbr.frag.wgsl"}
+        {"asset": "model_viewer_pbr.vert.grshader"},
+        {"asset": "model_viewer_pbr.frag.grshader"}
       ]
     }
   ]

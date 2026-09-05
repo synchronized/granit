@@ -17,12 +17,10 @@ constexpr std::array<std::byte, 8> archive_magic{std::byte{'G'}, std::byte{'R'},
                                                  std::byte{'A'}, std::byte{'T'}, std::byte{0},
                                                  std::byte{0},   std::byte{0}};
 constexpr std::uint32_t first_required_section = 1;
-constexpr std::uint32_t last_required_section = 7;
 constexpr std::uint32_t last_known_section = 11;
 
 bool required_section(std::uint32_t type) noexcept {
-  return (type >= first_required_section && type <= last_required_section) || type == 10 ||
-         type == 11;
+  return (type >= first_required_section && type <= 6) || type == 10;
 }
 
 std::uint32_t read_u32(std::span<const std::byte> bytes, std::size_t offset) noexcept {
@@ -227,15 +225,12 @@ archive_error encode_material_archive(const material_archive_encode_desc& desc,
         return archive_error::invalid_section;
       }
     }
-    for (std::uint32_t type = first_required_section; type <= last_required_section; ++type) {
+    for (std::uint32_t type = first_required_section; type <= 6; ++type) {
       if (!seen[type]) {
         return archive_error::missing_required_section;
       }
     }
     if (!seen[static_cast<std::uint32_t>(archive_section_type::pipeline_states)]) {
-      return archive_error::missing_required_section;
-    }
-    if (!seen[static_cast<std::uint32_t>(archive_section_type::wgsl_data)]) {
       return archive_error::missing_required_section;
     }
 
@@ -396,15 +391,12 @@ archive_error parse_material_archive_layout(std::span<const std::byte> bytes,
       }
       parsed.sections.push_back(section);
     }
-    for (std::uint32_t type = first_required_section; type <= last_required_section; ++type) {
+    for (std::uint32_t type = first_required_section; type <= 6; ++type) {
       if (!seen[type]) {
         return archive_error::missing_required_section;
       }
     }
     if (!seen[static_cast<std::uint32_t>(archive_section_type::pipeline_states)]) {
-      return archive_error::missing_required_section;
-    }
-    if (!seen[static_cast<std::uint32_t>(archive_section_type::wgsl_data)]) {
       return archive_error::missing_required_section;
     }
     std::ranges::sort(parsed.sections, {}, &material_archive_section::offset);

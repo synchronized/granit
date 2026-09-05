@@ -3,20 +3,35 @@
 
 #include <granit/granit.hpp>
 #include <granit/pipeline/render_pipeline.h>
+#include "../support/shader_asset_store.h"
 
 #include <windows.h>
 
 #include <array>
 #include <cstddef>
 #include <cstdint>
+#include <cstdlib>
 #include <fstream>
 #include <iostream>
 #include <iterator>
 #include <span>
+#include <string>
 #include <string_view>
 #include <vector>
 
 namespace {
+
+granit::tests::shader_asset_store& shader_assets() {
+  static granit::tests::shader_asset_store store;
+  static const bool loaded =
+      store.add(std::string{GRANIT_PIPELINE_ASSET_DIR} +
+                "/pbr_shadow_ibl_lights.vert.grshader") &&
+      store.add(std::string{GRANIT_PIPELINE_ASSET_DIR} +
+                "/pbr_shadow_ibl_lights_untextured.frag.grshader");
+  if (!loaded)
+    std::abort();
+  return store;
+}
 
 LRESULT CALLBACK window_proc(HWND window, UINT message, WPARAM word, LPARAM value) {
   if (message == WM_DESTROY) {
@@ -141,6 +156,8 @@ int main(int argument_count, char** arguments) {
   material_desc.archive_size = archive.size();
   material_desc.initial_updates = &update;
   material_desc.initial_update_count = 1;
+  material_desc.shader_resolver = granit::tests::shader_asset_store::resolve;
+  material_desc.shader_resolver_user_data = &shader_assets();
   granit_material material = GRANIT_NULL_HANDLE;
   if (result.ok() && !archive.empty()) {
     result = granit::from_native(

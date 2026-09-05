@@ -2,14 +2,93 @@
 // Copyright (c) 2026 Granit contributors
 
 #include <granit/tools/shader_tools.hpp>
+#include "shader_asset.h"
 
+#include <cstring>
+#include <filesystem>
+#include <fstream>
 #include <iostream>
+#include <iterator>
 #include <optional>
 #include <sstream>
 #include <string>
 #include <string_view>
+#include <vector>
 
 namespace {
+
+std::optional<std::string> option_value(int argc, char** argv, std::string_view name);
+
+std::vector<std::byte> read_bytes(const std::filesystem::path& path) {
+  std::ifstream stream{path, std::ios::binary};
+  const std::vector<char> bytes{std::istreambuf_iterator<char>{stream}, {}};
+  std::vector<std::byte> output(bytes.size());
+  if (!bytes.empty())
+    std::memcpy(output.data(), bytes.data(), bytes.size());
+  return output;
+}
+
+int pack_shader_asset(int argc, char** argv) {
+  const auto spirv_path = option_value(argc, argv, "--spirv");
+  const auto wgsl_path = option_value(argc, argv, "--wgsl");
+  const auto entry = option_value(argc, argv, "--entry");
+  const auto stage = option_value(argc, argv, "--stage");
+  const auto asset_path = option_value(argc, argv, "--asset");
+  if (!spirv_path || !wgsl_path || !entry || !stage || !asset_path ||
+      (*stage != "vertex" && *stage != "fragment" && *stage != "compute")) {
+    std::cerr << "pack 需要 --spirv、--wgsl、--entry、--stage 和 --asset\n";
+    return 2;
+  }
+  const auto spirv = read_bytes(*spirv_path);
+  const auto wgsl_bytes = read_bytes(*wgsl_path);
+  if (spirv.empty() || wgsl_bytes.empty()) {
+    std::cerr << "无法读取 Shader 输入\n";
+    return 1;
+  }
+  granit_shader_tools_inspect_desc inspect_desc{};
+  inspect_desc.struct_size = sizeof(inspect_desc);
+  inspect_desc.input_path = spirv_path->data();
+  inspect_desc.input_path_length = spirv_path->size();
+  auto [inspect_status, inspect_result] = granit::shader_tools::inspect_spirv(inspect_desc);
+  const auto inspected = inspect_result.info();
+  const auto stage_value = *stage == "vertex" ? GRANIT_SHADER_TOOLS_STAGE_VERTEX
+                           : *stage == "fragment" ? GRANIT_SHADER_TOOLS_STAGE_FRAGMENT
+                                                   : GRANIT_SHADER_TOOLS_STAGE_COMPUTE;
+  if (inspect_status.failed() || inspected.stage != stage_value || inspected.entry_point != *entry) {
+    std::cerr << "SPIR-V 的阶段或入口与 pack 参数不一致\n" << inspected.diagnostic;
+    return 1;
+  }
+  const std::string reflection_json{inspect_result.reflection_json()};
+  if (reflection_json.empty()) {
+    std::cerr << "无法提取 SPIR-V 反射信息\n";
+    return 1;
+  }
+  const std::string_view wgsl{reinterpret_cast<const char*>(wgsl_bytes.data()), wgsl_bytes.size()};
+  granit::tools::shader_asset_source source{
+      .wgsl = wgsl,
+      .spirv = spirv,
+      .reflection_json = reflection_json,
+      .cache_key = granit::tools::shader_bytes_sha256(spirv),
+      .backend_mask = 3,
+      .required_features = 0,
+      .stage = stage_value,
+      .entry_point = *entry};
+  std::vector<std::byte> manifest;
+  if (granit::tools::encode_shader_asset(source, manifest) !=
+      granit::tools::shader_asset_error::success) {
+    std::cerr << "无法编码 Shader Asset\n";
+    return 1;
+  }
+  bool cache_hit = false;
+  if (granit::tools::store_shader_asset(*asset_path, manifest, wgsl, spirv, cache_hit) !=
+      granit::tools::shader_asset_error::success) {
+    std::cerr << "无法写入 Shader Asset\n";
+    return 1;
+  }
+  std::cout << (cache_hit ? "Shader 资产未变化：" : "已打包 Shader 资产：") << *asset_path
+            << '\n';
+  return 0;
+}
 
 std::optional<std::string> option_value(int argc, char** argv, std::string_view name) {
   for (int index = 2; index + 1 < argc; ++index) {
@@ -575,6 +654,8 @@ void print_usage() {
                "  granit_shader_tool verify <shader.spv>\n"
                "  granit_shader_tool targets\n"
                "  granit_shader_tool capabilities --target <vulkan-portable|webgpu-portable>\n"
+               "  granit_shader_tool pack --spirv <shader.spv> --wgsl <shader.wgsl> "
+               "--entry <name> --stage <vertex|fragment|compute> --asset <shader.grshader>\n"
                "  granit_shader_tool compile --tint <path> --input <shader.wgsl> "
                "--entry <name> --stage <vertex|fragment|compute> --output <shader.spv> "
                "[--asset <shader.granit-shader> [--tint-revision <revision>] "
@@ -619,6 +700,8 @@ int main(int argc, char** argv) {
   }
   if (argc >= 2 && std::string_view{argv[1]} == "compile")
     return compile_shader(argc, argv);
+  if (argc >= 2 && std::string_view{argv[1]} == "pack")
+    return pack_shader_asset(argc, argv);
   if (argc >= 2 && std::string_view{argv[1]} == "compile-hlsl")
     return compile_hlsl_shader(argc, argv);
   if (argc >= 2 && std::string_view{argv[1]} == "compile-glsl")

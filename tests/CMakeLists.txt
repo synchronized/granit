@@ -379,17 +379,22 @@ add_custom_command(
   DEPENDS
     granit_material_tool
     "${PROJECT_SOURCE_DIR}/tests/fixtures/smoke/unlit.grmat.json"
-    "${PROJECT_SOURCE_DIR}/assets/shaders/unlit/unlit.vert.spv"
-    "${PROJECT_SOURCE_DIR}/assets/shaders/unlit/unlit.vert.wgsl"
-    "${PROJECT_SOURCE_DIR}/assets/shaders/unlit/unlit.frag.spv"
-    "${PROJECT_SOURCE_DIR}/assets/shaders/unlit/unlit.frag.wgsl"
-    "${PROJECT_SOURCE_DIR}/assets/shaders/unlit/unlit_alpha_cutoff.frag.spv"
-    "${PROJECT_SOURCE_DIR}/assets/shaders/unlit/unlit_alpha_cutoff.frag.wgsl"
+    "${PROJECT_SOURCE_DIR}/assets/shaders/unlit/unlit.vert.grshader"
+    "${PROJECT_SOURCE_DIR}/assets/shaders/unlit/unlit.frag.grshader"
+    "${PROJECT_SOURCE_DIR}/assets/shaders/unlit/unlit_alpha_cutoff.frag.grshader"
+    "${PROJECT_SOURCE_DIR}/assets/shaders/unlit/unlit.vert.grshader.spv"
+    "${PROJECT_SOURCE_DIR}/assets/shaders/unlit/unlit.vert.grshader.wgsl"
+    "${PROJECT_SOURCE_DIR}/assets/shaders/unlit/unlit.frag.grshader.spv"
+    "${PROJECT_SOURCE_DIR}/assets/shaders/unlit/unlit.frag.grshader.wgsl"
+    "${PROJECT_SOURCE_DIR}/assets/shaders/unlit/unlit_alpha_cutoff.frag.grshader.spv"
+    "${PROJECT_SOURCE_DIR}/assets/shaders/unlit/unlit_alpha_cutoff.frag.grshader.wgsl"
   VERBATIM
 )
 add_custom_target(granit_unlit_test_package DEPENDS "${granit_unlit_test_package}")
 add_dependencies(granit_pipeline_test granit_unlit_test_package)
-target_include_directories(granit_pipeline_test PRIVATE "${PROJECT_SOURCE_DIR}/src")
+target_include_directories(
+  granit_pipeline_test PRIVATE "${PROJECT_SOURCE_DIR}/src" "${PROJECT_SOURCE_DIR}/tests"
+)
 target_link_libraries(
   granit_pipeline_test
   PRIVATE
@@ -404,8 +409,10 @@ target_compile_definitions(
   granit_pipeline_test
   PRIVATE
     GRANIT_PIPELINE_ASSET_DIR="${PROJECT_SOURCE_DIR}/assets/shaders/pbr"
+    GRANIT_TEST_ASSET_DIR="${PROJECT_SOURCE_DIR}/tests/assets"
     GRANIT_PIPELINE_SHADER_DIR="${PROJECT_SOURCE_DIR}/src/pipeline/shaders"
     GRANIT_UNLIT_TEST_PACKAGE="${granit_unlit_test_package}"
+    GRANIT_UNLIT_SHADER_DIR="${PROJECT_SOURCE_DIR}/assets/shaders/unlit"
 )
 granit_target_compile_warnings(granit_pipeline_test)
 granit_target_output_directories(granit_pipeline_test)
@@ -433,6 +440,7 @@ target_include_directories(
   granit_material_test PRIVATE "${PROJECT_SOURCE_DIR}/src" "${PROJECT_SOURCE_DIR}/tests"
 )
 target_link_libraries(granit_material_test PRIVATE granit::material Catch2::Catch2WithMain)
+target_sources(granit_material_test PRIVATE $<TARGET_OBJECTS:granit_shader_asset_format>)
 target_compile_options(
   granit_material_test
   PRIVATE $<$<COMPILE_LANG_AND_ID:CXX,MSVC>:/utf-8>

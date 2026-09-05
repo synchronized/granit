@@ -7,6 +7,7 @@
 #include "material/material_package.h"
 
 #include <granit/core/result.h>
+#include <granit/pipeline/material.h>
 #include <granit/renderer/pipeline.h>
 
 #include <mutex>
@@ -33,7 +34,9 @@ public:
   /** additional_layouts 从 Group 2 起追加，调用期间借用。 */
   [[nodiscard]] granit_result
   initialize(granit_renderer renderer, const material_package& package,
-             std::span<const granit_bind_group_layout> additional_layouts = {});
+             std::span<const granit_bind_group_layout> additional_layouts = {},
+             granit_material_shader_resolver shader_resolver = nullptr,
+             void* shader_resolver_user_data = nullptr);
   [[nodiscard]] granit_result reset() noexcept;
   [[nodiscard]] granit_result acquire_pipeline(const material_pipeline_request& request,
                                                granit_graphics_pipeline& pipeline);
@@ -58,6 +61,8 @@ private:
   granit_bind_group_layout frame_layout_ = GRANIT_NULL_HANDLE;
   granit_bind_group_layout material_layout_ = GRANIT_NULL_HANDLE;
   granit_pipeline_layout pipeline_layout_ = GRANIT_NULL_HANDLE;
+  granit_material_shader_resolver shader_resolver_ = nullptr;
+  void* shader_resolver_user_data_ = nullptr;
   mutable std::mutex mutex_;
   std::vector<cache_entry> cache_;
 };

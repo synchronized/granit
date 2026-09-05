@@ -5,6 +5,29 @@ set(granit_model_viewer_material_package
     "${CMAKE_CURRENT_BINARY_DIR}/model_viewer_pbr.grmat")
 set(granit_model_viewer_material_include
     "${CMAKE_CURRENT_BINARY_DIR}/generated/model_viewer_pbr.grmat.inc")
+set(granit_model_viewer_shader_assets
+    model_viewer_pbr.vert.grshader
+    model_viewer_pbr.vert.grshader.spv
+    model_viewer_pbr.vert.grshader.wgsl
+    model_viewer_pbr.frag.grshader
+    model_viewer_pbr.frag.grshader.spv
+    model_viewer_pbr.frag.grshader.wgsl
+)
+set(granit_model_viewer_shader_includes)
+foreach(asset IN LISTS granit_model_viewer_shader_assets)
+  set(source "${PROJECT_SOURCE_DIR}/examples/assets/${asset}")
+  set(output "${CMAKE_CURRENT_BINARY_DIR}/generated/${asset}.inc")
+  add_custom_command(
+    OUTPUT "${output}"
+    COMMAND "${CMAKE_COMMAND}" -E make_directory "${CMAKE_CURRENT_BINARY_DIR}/generated"
+    COMMAND "${CMAKE_COMMAND}" "-DINPUT=${source}" "-DOUTPUT=${output}"
+            -P "${PROJECT_SOURCE_DIR}/cmake/embed_binary.cmake"
+    DEPENDS "${source}" "${PROJECT_SOURCE_DIR}/cmake/embed_binary.cmake"
+    COMMENT "内嵌模型查看器 Shader 资产 ${asset}"
+    VERBATIM
+  )
+  list(APPEND granit_model_viewer_shader_includes "${output}")
+endforeach()
 if(CMAKE_CROSSCOMPILING)
   set(
     granit_model_viewer_material_package
@@ -24,6 +47,8 @@ else()
     DEPENDS
       granit_material_tool
       "${PROJECT_SOURCE_DIR}/examples/assets/model_viewer_pbr.grmat.json"
+      "${PROJECT_SOURCE_DIR}/examples/assets/model_viewer_pbr.vert.grshader"
+      "${PROJECT_SOURCE_DIR}/examples/assets/model_viewer_pbr.frag.grshader"
       "${PROJECT_SOURCE_DIR}/examples/assets/model_viewer_pbr.vert.spv"
       "${PROJECT_SOURCE_DIR}/examples/assets/model_viewer_pbr.vert.wgsl"
       "${PROJECT_SOURCE_DIR}/examples/assets/model_viewer_pbr.frag.spv"
@@ -75,6 +100,7 @@ add_library(
   viewer_state.h
   viewer_input.h
   "${granit_model_viewer_material_include}"
+  ${granit_model_viewer_shader_includes}
 )
 add_library(granit_example_model_viewer_support ALIAS granit_model_viewer_core)
 target_compile_features(granit_model_viewer_core PUBLIC cxx_std_20)

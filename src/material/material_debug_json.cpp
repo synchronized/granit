@@ -337,8 +337,9 @@ archive_error export_material_archive_debug_json(std::span<const std::byte> byte
         write_json_string(stream, shader_stage_name(shader.stage));
         stream << ", \"entry_point\": ";
         write_json_string(stream, shader.entry_point);
-        stream << ", \"spirv_size\": " << shader.spirv.size() * sizeof(std::uint32_t)
-               << ", \"wgsl_size\": " << shader.wgsl.size() << '}';
+        stream << ", \"asset_id\": ";
+        write_hash(stream, shader.asset_id);
+        stream << '}';
       }
       stream << "], \"pipeline\": {\"vertex_buffers\": [";
       for (std::size_t buffer_index = 0; buffer_index < variant.pipeline.vertex_buffers.size();

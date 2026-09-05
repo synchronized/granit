@@ -31,6 +31,28 @@ function(granit_add_render_pipeline_module)
     granit_pipeline_canvas_material
     "${granit_pipeline_generated_dir}/granit_pipeline_canvas.grmat.inc"
   )
+  set(granit_pipeline_canvas_shader_includes)
+  foreach(asset IN ITEMS
+      unlit_canvas.vert.grshader
+      unlit_canvas.vert.grshader.spv
+      unlit_canvas.vert.grshader.wgsl
+      unlit_canvas.frag.grshader
+      unlit_canvas.frag.grshader.spv
+      unlit_canvas.frag.grshader.wgsl
+      unlit_canvas_encode_srgb.frag.grshader
+      unlit_canvas_encode_srgb.frag.grshader.spv
+      unlit_canvas_encode_srgb.frag.grshader.wgsl)
+    set(input "${PROJECT_SOURCE_DIR}/assets/shaders/unlit/${asset}")
+    set(output "${granit_pipeline_generated_dir}/${asset}.inc")
+    add_custom_command(
+      OUTPUT "${output}"
+      COMMAND "${CMAKE_COMMAND}" -E make_directory "${granit_pipeline_generated_dir}"
+      COMMAND "${CMAKE_COMMAND}" "-DINPUT=${input}" "-DOUTPUT=${output}"
+              -P "${PROJECT_SOURCE_DIR}/cmake/embed_binary.cmake"
+      DEPENDS "${input}" "${PROJECT_SOURCE_DIR}/cmake/embed_binary.cmake"
+      VERBATIM)
+    list(APPEND granit_pipeline_canvas_shader_includes "${output}")
+  endforeach()
   set(granit_pipeline_debug_world_vertex
       "${granit_pipeline_generated_dir}/granit_pipeline_debug_world.vert.inc")
   set(granit_pipeline_debug_world_fragment
@@ -128,6 +150,7 @@ function(granit_add_render_pipeline_module)
       "${granit_pipeline_shadow_vertex}"
       "${granit_pipeline_shadow_fragment}"
       "${granit_pipeline_canvas_material}"
+      ${granit_pipeline_canvas_shader_includes}
       "${granit_pipeline_debug_world_vertex}"
       "${granit_pipeline_debug_world_fragment}"
       "${granit_pipeline_debug_world_srgb_fragment}"
