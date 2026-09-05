@@ -8,6 +8,24 @@
 
 ## Unreleased
 
+## 0.7.0 - 2026-09-05
+
+### 变更
+
+- CMake 包的 0.x 兼容选择由“相同主版本”收紧为“相同次版本”；请求 0.6 的 Consumer 不再静默
+  接受 0.7 SDK，调用方必须完成迁移并更新 `find_package` 请求版本。
+- 安装包门禁新增 Core-only 隔离以及 RenderPipeline、Window、Input、ShaderTools 的独立请求、
+  依赖闭包和缺失 component 检查。
+- 明确各可安装 component 的职责、直接依赖和 0.x 成熟度；Core 与高层 RenderPipeline 继续保持
+  可组合边界，不把上游场景、任务系统或示例 glTF 加载器纳入公共 SDK。
+
+### 兼容性与迁移
+
+- 公共 C ABI、C++ API 和持久化 Shader/材质格式相对 0.6.0 没有变化，仍要求重新编译 0.x
+  Consumer。
+- 0.6 Consumer 必须将 CMake 请求版本更新为 0.7；完整步骤见
+  [从 0.6 迁移到 0.7](docs/guides/migrate-0.6-to-0.7.md)。
+
 ## 0.6.0 - 2026-09-05
 
 ### 变更

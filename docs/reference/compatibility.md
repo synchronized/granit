@@ -29,11 +29,32 @@ Input 继续使用 0.1.0 快照。历史快照保持不可变，新版本通过�
 所有 component 使用统一的 Granit 包版本，但“核心稳定”不自动表示尚未宣布稳定的可选 component
 同时冻结。稳定等级必须在发布说明和对应参考文档中明确标注。
 
+## 可安装 component 当前等级
+
+下表描述 0.7.0 开发版本的当前事实。所有项目仍处于 0.x 未冻结状态；“候选”只表示该边界已进入
+优先收敛与验证范围，不构成稳定兼容承诺。
+
+| CMake component | 导入目标 | 直接依赖 | 当前等级 | 0.7.0 方向 |
+|---|---|---|---|---|
+| Core（默认） | `granit::granit` | 无可选 Granit component | 稳定候选 | 优先收敛 C ABI、资源与提交契约 |
+| `RenderPipeline` | `granit::render_pipeline` | Core | 稳定候选 | 收敛材质、场景提交和参考管线边界 |
+| `Window` | `granit::window` | Core | 稳定候选 | 验证平台后端与宿主循环契约 |
+| `Input` | `granit::input` | Core、Window | 稳定候选 | 验证事件、文本输入与线程契约 |
+| `ShaderTools` | `granit::shader_tools` | Threads、离线工具链 | 实验性 | 稳定工具发现、版本与缓存身份 |
+| `IntegrationSDL3` | `granit::integration_sdl3` | Core、SDL3 | 实验性 | 保持可选适配层，不进入 Core |
+| `IntegrationImGui` | `granit::integration_imgui` | Core、RenderPipeline、ImGui | 实验性 | 保持可选适配层，不承诺第三方 ABI |
+
+component 名、依赖和当前等级是安装 SDK 契约的一部分；底层 Vulkan/WebGPU 实现、示例私有代码、
+测试目标和 `src/` 内部模块不属于可安装 component。0.7.0 的实施与验收范围见
+[S-22 计划](../plans/S-22-0.7.0-sdk-stabilization.md)。
+
 ## 版本规则
 
 版本采用 `主版本.次版本.修订版本`：
 
 - 0.x 阶段的次版本可以包含有记录的破坏性变更，修订版本只用于兼容修复。
+- CMake 版本选择在 0.x 阶段只接受相同次版本；例如请求 `0.6` 不会接受 `0.7`，调用方必须先完成
+  迁移并更新请求版本。相同次版本内可以选择不低于请求版本的修订版本。
 - 首个稳定版本发布后，同一主版本内只允许兼容扩展和缺陷修复。
 - 追加结构尾部字段必须保留旧 `*_VERSION_N_SIZE`，旧调用方继续按其 `struct_size` 工作。
 - 新函数、枚举值和标志位只能使用新名称或此前保留的数值，不重解释已发布值。

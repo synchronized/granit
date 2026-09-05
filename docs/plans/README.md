@@ -150,6 +150,8 @@ D-03-graphics-pipeline.md
   WGSL/HLSL/GLSL portable 前端已形成闭环。
 - [S-21：可复现 Shader Toolchain 包](S-21-shader-toolchain-package.md)——已完成；发布带版本、许可
   和 SHA-256 清单的离线编译工具包，并让官方 CI 使用严格锁定策略。
+- [S-22：0.7.0 SDK 稳定化与上游集成](S-22-0.7.0-sdk-stabilization.md)——S-22A component 契约
+  清单、安装 SDK 门禁、上游边界审计和发布候选验收均已完成。
 
 ## 状态
 

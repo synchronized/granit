@@ -5,7 +5,7 @@ cmake_minimum_required(VERSION 3.23)
 
 project(
   granit
-  VERSION 0.6.0
+  VERSION 0.7.0
   DESCRIPTION "Vulkan-based C++20 rendering library"
   LANGUAGES C CXX
 )
@@ -246,7 +246,7 @@ configure_package_config_file(
 write_basic_package_version_file(
   "${CMAKE_CURRENT_BINARY_DIR}/granitConfigVersion.cmake"
   VERSION "${PROJECT_VERSION}"
-  COMPATIBILITY SameMajorVersion
+  COMPATIBILITY SameMinorVersion
 )
 
 install(
