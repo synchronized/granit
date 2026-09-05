@@ -301,6 +301,25 @@ shader_cache_key make_shader_cache_key(const shader_cache_context& context) noex
   return hash.finish();
 }
 
+std::string shader_file_sha256(const std::filesystem::path& path) noexcept {
+  try {
+    const auto bytes = read_file(path);
+    if (bytes.empty())
+      return {};
+    const auto hash = payload_digest(bytes);
+    constexpr char digits[] = "0123456789abcdef";
+    std::string result(hash.size() * 2, '0');
+    for (std::size_t index = 0; index < hash.size(); ++index) {
+      const auto value = std::to_integer<unsigned char>(hash[index]);
+      result[index * 2] = digits[value >> 4U];
+      result[index * 2 + 1] = digits[value & 0x0fU];
+    }
+    return result;
+  } catch (...) {
+    return {};
+  }
+}
+
 shader_asset_error encode_shader_asset(const shader_asset_source& source,
                                        std::vector<std::byte>& output) noexcept {
   if (source.wgsl.empty() || source.spirv.empty() || source.spirv.size() % 4 != 0 ||

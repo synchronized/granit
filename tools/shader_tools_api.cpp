@@ -376,6 +376,33 @@ granit_result granit_shader_tools_compile_glsl(const granit_shader_tools_glsl_co
   }
 }
 
+granit_result granit_shader_tools_get_tool_identity(const char* path, uint64_t path_length,
+                                                    char* identity, uint64_t* identity_length) {
+  if (identity_length == nullptr || !valid_string(path, path_length) || path_length == 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  try {
+    const auto digest = granit::tools::shader_file_sha256(copy_path(path, path_length));
+    if (digest.empty())
+      return GRANIT_ERROR_INVALID_ARGUMENT;
+    const auto required = static_cast<uint64_t>(digest.size());
+    if (identity == nullptr) {
+      *identity_length = required;
+      return GRANIT_SUCCESS;
+    }
+    if (*identity_length < required) {
+      *identity_length = required;
+      return GRANIT_ERROR_INVALID_ARGUMENT;
+    }
+    std::memcpy(identity, digest.data(), digest.size());
+    *identity_length = required;
+    return GRANIT_SUCCESS;
+  } catch (const std::bad_alloc&) {
+    return GRANIT_ERROR_OUT_OF_MEMORY;
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
 granit_result granit_shader_tools_inspect_spirv(const granit_shader_tools_inspect_desc* desc,
                                                 granit_shader_tools_result* result) {
   if (result == nullptr)

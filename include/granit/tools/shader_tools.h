@@ -256,6 +256,14 @@ GRANIT_SHADER_TOOLS_API granit_result granit_shader_tools_compile_hlsl(
 GRANIT_SHADER_TOOLS_API granit_result granit_shader_tools_compile_glsl(
     const granit_shader_tools_glsl_compile_desc* desc, granit_shader_tools_result* result);
 
+/**
+ * 查询工具二进制的稳定 SHA-256 身份。
+ *
+ * identity 为 NULL 时仅返回所需字节数；缓冲区不足时返回 GRANIT_ERROR_INVALID_ARGUMENT 并更新长度。
+ */
+GRANIT_SHADER_TOOLS_API granit_result granit_shader_tools_get_tool_identity(
+    const char* path, uint64_t path_length, char* identity, uint64_t* identity_length);
+
 /** 检查 SPIR-V 并返回入口点、阶段和反射文本。该函数线程安全。 */
 GRANIT_SHADER_TOOLS_API granit_result granit_shader_tools_inspect_spirv(
     const granit_shader_tools_inspect_desc* desc, granit_shader_tools_result* result);

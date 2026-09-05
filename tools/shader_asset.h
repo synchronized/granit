@@ -9,6 +9,7 @@
 #include <cstdint>
 #include <filesystem>
 #include <span>
+#include <string>
 #include <string_view>
 #include <vector>
 
@@ -76,6 +77,7 @@ struct shader_asset_view {
 };
 
 shader_cache_key make_shader_cache_key(const shader_cache_context& context) noexcept;
+std::string shader_file_sha256(const std::filesystem::path& path) noexcept;
 shader_asset_error encode_shader_asset(const shader_asset_source& source,
                                        std::vector<std::byte>& output) noexcept;
 shader_asset_error decode_shader_asset(std::span<const std::byte> bytes,

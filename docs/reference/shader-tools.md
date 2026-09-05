@@ -27,8 +27,21 @@ Tint 从 PATH 查找。配置阶段会检查锁定版本及 Tint 所需转换能
 端到端测试。
 
 当前工具链契约锁定 DXC `1.8.0.4973`、glslang `15.3.0`、Dawn/Tint `v20260720.160313`（修订
-`0bc38adde72b79013536f8ce354b639ae19ae195`）。资产仍需显式记录真实工具修订号，使缓存身份不依赖
-开发机路径。工具链是离线依赖，不进入 `granit::granit` 的安装导出或传递依赖。
+`0bc38adde72b79013536f8ce354b639ae19ae195`）。资产会记录真实工具身份，使缓存身份不依赖开发机
+路径。工具链是离线依赖，不进入 `granit::granit` 的安装导出或传递依赖。
+
+`GRANIT_SHADER_TOOLCHAIN_POLICY` 控制配置期接受规则：
+
+- `compatible` 是默认值。锁定版本直接接受，其他可启动版本发出警告并继续执行真实编译能力探测；
+  只有能力探测失败才禁用工具。
+- `locked` 用于官方 CI 和发布构建。DXC、glslang 必须匹配锁定版本，Tint 还必须通过
+  `GRANIT_TINT_REVISION` 提供匹配的源码修订，否则配置失败。
+- `unchecked` 只用于适配新工具链，跳过版本和配置期编译能力约束；真实资产编译仍可能失败。
+
+`granit_shader_tools_get_tool_identity` 返回指定工具二进制的 SHA-256。CLI 在未提供
+`--dxc-revision`、`--glslang-revision` 或 `--tint-revision` 时自动使用该身份构造缓存键，因此路径
+相同但二进制升级后不会复用旧产物。显式修订号仍适用于可复现构建，以及编译器暂时不可用但需要
+从已有资产恢复 sidecar 的流程。
 
 ## 接口与生命周期
 

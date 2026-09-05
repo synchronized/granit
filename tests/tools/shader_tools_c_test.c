@@ -18,8 +18,22 @@ int main(int argc, char** argv) {
   granit_shader_tools_expected_binding expected[3];
   const char* reflection_json = NULL;
   uint64_t reflection_json_length = 0;
+  uint64_t tool_identity_length = 0;
+  char tool_identity[64];
   if (argc != 2)
     return 1;
+  if (granit_shader_tools_get_tool_identity(argv[1], (uint64_t)strlen(argv[1]), NULL,
+                                            &tool_identity_length) != GRANIT_SUCCESS ||
+      tool_identity_length != sizeof(tool_identity))
+    return 14;
+  tool_identity_length = 1;
+  if (granit_shader_tools_get_tool_identity(argv[1], (uint64_t)strlen(argv[1]), tool_identity,
+                                            &tool_identity_length) !=
+          GRANIT_ERROR_INVALID_ARGUMENT ||
+      tool_identity_length != sizeof(tool_identity) ||
+      granit_shader_tools_get_tool_identity(argv[1], (uint64_t)strlen(argv[1]), tool_identity,
+                                            &tool_identity_length) != GRANIT_SUCCESS)
+    return 14;
   memset(&desc, 0, sizeof(desc));
   desc.struct_size = (uint32_t)sizeof(desc);
   desc.input_path = argv[1];

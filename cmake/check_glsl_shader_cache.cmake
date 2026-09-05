@@ -26,6 +26,22 @@ if(NOT build_result EQUAL 0)
   message(FATAL_ERROR "GLSL 资产首次生成失败：${build_output}${build_error}")
 endif()
 
+execute_process(
+  COMMAND
+    "${TOOL}" compile-glsl --glslang "${GLSLANG}" --tint "${TINT}" --input "${INPUT}"
+    --entry main --stage fragment --spirv-output "${OUTPUT_DIR}/auto.spv" --wgsl-output
+    "${OUTPUT_DIR}/auto.wgsl" --asset "${OUTPUT_DIR}/auto.granit-shader"
+  RESULT_VARIABLE automatic_identity_result
+  OUTPUT_VARIABLE automatic_identity_output
+  ERROR_VARIABLE automatic_identity_error
+)
+if(NOT automatic_identity_result EQUAL 0)
+  message(
+    FATAL_ERROR
+    "GLSL 资产无法自动记录工具身份：${automatic_identity_output}${automatic_identity_error}"
+  )
+endif()
+
 file(REMOVE "${spirv}" "${wgsl}")
 execute_process(
   COMMAND

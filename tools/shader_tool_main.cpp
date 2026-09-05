@@ -19,6 +19,16 @@ std::optional<std::string> option_value(int argc, char** argv, std::string_view 
   return std::nullopt;
 }
 
+std::optional<std::string> resolve_tool_identity(std::string_view path,
+                                                 const std::optional<std::string>& supplied) {
+  if (supplied)
+    return supplied;
+  auto [status, digest] = granit::shader_tools::tool_identity(path);
+  if (status.failed())
+    return std::nullopt;
+  return "sha256=" + digest;
+}
+
 int compile_shader(int argc, char** argv) {
   const auto tint = option_value(argc, argv, "--tint");
   const auto input = option_value(argc, argv, "--input");
@@ -32,12 +42,12 @@ int compile_shader(int argc, char** argv) {
   const auto features = option_value(argc, argv, "--features");
   if (!tint || !input || !entry || !stage || !output ||
       (*stage != "vertex" && *stage != "fragment" && *stage != "compute") ||
-      (asset && !tint_revision) || (asset_backend && !asset) || (features && !asset) ||
+      (asset_backend && !asset) || (features && !asset) ||
       (asset_backend && *asset_backend != "all" && *asset_backend != "vulkan" &&
        *asset_backend != "webgpu") ||
       (features && *features != "none" && *features != "float16" && *features != "subgroup")) {
     std::cerr << "compile 需要 --tint、--input、--entry、--stage 和 --output\n";
-    std::cerr << "使用 --asset 时还需要 --tint-revision；可选 --target-environment 和 "
+    std::cerr << "可选 --tint-revision、--target-environment、"
                  "--asset-backend <all|vulkan|webgpu> 和 --features <none|float16|subgroup>\n";
     return 2;
   }
@@ -58,6 +68,12 @@ int compile_shader(int argc, char** argv) {
     std::cerr << "目标 portable 档位不支持必需特性：" << *features << '\n';
     return 1;
   }
+  const auto tint_identity =
+      asset ? resolve_tool_identity(*tint, tint_revision) : std::optional<std::string>{""};
+  if (!tint_identity) {
+    std::cerr << "无法读取 Tint 工具身份\n";
+    return 1;
+  }
   if (asset) {
     granit_shader_tools_cache_desc cache{};
     cache.struct_size = sizeof(cache);
@@ -71,8 +87,8 @@ int compile_shader(int argc, char** argv) {
     cache.entry_point = entry->data();
     cache.entry_point_length = entry->size();
     cache.stage = stage_value;
-    cache.tint_revision = tint_revision->data();
-    cache.tint_revision_length = tint_revision->size();
+    cache.tint_revision = tint_identity->data();
+    cache.tint_revision_length = tint_identity->size();
     cache.target_environment = target.data();
     cache.target_environment_length = target.size();
     cache.compile_options = compile_options.data();
@@ -116,8 +132,8 @@ int compile_shader(int argc, char** argv) {
     asset_desc.spirv_path_length = output->size();
     asset_desc.output_path = asset->data();
     asset_desc.output_path_length = asset->size();
-    asset_desc.tint_revision = tint_revision->data();
-    asset_desc.tint_revision_length = tint_revision->size();
+    asset_desc.tint_revision = tint_identity->data();
+    asset_desc.tint_revision_length = tint_identity->size();
     asset_desc.target_environment = target.data();
     asset_desc.target_environment_length = target.size();
     asset_desc.compile_options = compile_options.data();
@@ -148,12 +164,12 @@ int compile_hlsl_shader(int argc, char** argv) {
   const auto asset_backend = option_value(argc, argv, "--asset-backend");
   if (!dxc || !tint || !input || !entry || !stage || !spirv_output || !wgsl_output ||
       (*stage != "vertex" && *stage != "fragment" && *stage != "compute") ||
-      (asset && (!dxc_revision || !tint_revision)) || (asset_backend && !asset) ||
+      (asset_backend && !asset) ||
       (asset_backend && *asset_backend != "all" && *asset_backend != "vulkan" &&
        *asset_backend != "webgpu")) {
     std::cerr << "compile-hlsl 需要 --dxc、--tint、--input、--entry、--stage、"
                  "--spirv-output 和 --wgsl-output\n";
-    std::cerr << "使用 --asset 时还需要 --dxc-revision 与 --tint-revision\n";
+    std::cerr << "可选 --dxc-revision 与 --tint-revision 可覆盖自动二进制身份\n";
     return 2;
   }
   const auto stage_value = *stage == "vertex"     ? GRANIT_SHADER_TOOLS_STAGE_VERTEX
@@ -163,7 +179,15 @@ int compile_hlsl_shader(int argc, char** argv) {
                                 ? GRANIT_SHADER_TOOLS_ASSET_BACKEND_ALL
                             : *asset_backend == "vulkan" ? GRANIT_SHADER_TOOLS_ASSET_BACKEND_VULKAN
                                                          : GRANIT_SHADER_TOOLS_ASSET_BACKEND_WEBGPU;
-  const std::string revisions = asset ? "dxc=" + *dxc_revision + ";tint=" + *tint_revision : "";
+  const auto dxc_identity =
+      asset ? resolve_tool_identity(*dxc, dxc_revision) : std::optional<std::string>{""};
+  const auto tint_identity =
+      asset ? resolve_tool_identity(*tint, tint_revision) : std::optional<std::string>{""};
+  if (!dxc_identity || !tint_identity) {
+    std::cerr << "无法读取 DXC 或 Tint 工具身份\n";
+    return 1;
+  }
+  const std::string revisions = "dxc=" + *dxc_identity + ";tint=" + *tint_identity;
   constexpr std::string_view target = "vulkan1.3+webgpu-portable";
   constexpr std::string_view options = "source=hlsl;spirv=vulkan1.3;bridge=spirv1.3";
   if (asset && backend_mask == GRANIT_SHADER_TOOLS_ASSET_BACKEND_ALL) {
@@ -262,12 +286,12 @@ int compile_glsl_shader(int argc, char** argv) {
   const auto asset_backend = option_value(argc, argv, "--asset-backend");
   if (!glslang || !tint || !input || !entry || !stage || !spirv_output || !wgsl_output ||
       (*stage != "vertex" && *stage != "fragment" && *stage != "compute") ||
-      (asset && (!glslang_revision || !tint_revision)) || (asset_backend && !asset) ||
+      (asset_backend && !asset) ||
       (asset_backend && *asset_backend != "all" && *asset_backend != "vulkan" &&
        *asset_backend != "webgpu")) {
     std::cerr << "compile-glsl 需要 --glslang、--tint、--input、--entry、--stage、"
                  "--spirv-output 和 --wgsl-output\n";
-    std::cerr << "使用 --asset 时还需要 --glslang-revision 与 --tint-revision\n";
+    std::cerr << "可选 --glslang-revision 与 --tint-revision 可覆盖自动二进制身份\n";
     return 2;
   }
   const auto stage_value = *stage == "vertex"     ? GRANIT_SHADER_TOOLS_STAGE_VERTEX
@@ -277,8 +301,15 @@ int compile_glsl_shader(int argc, char** argv) {
                                 ? GRANIT_SHADER_TOOLS_ASSET_BACKEND_ALL
                             : *asset_backend == "vulkan" ? GRANIT_SHADER_TOOLS_ASSET_BACKEND_VULKAN
                                                          : GRANIT_SHADER_TOOLS_ASSET_BACKEND_WEBGPU;
-  const std::string revisions =
-      asset ? "glslang=" + *glslang_revision + ";tint=" + *tint_revision : "";
+  const auto glslang_identity =
+      asset ? resolve_tool_identity(*glslang, glslang_revision) : std::optional<std::string>{""};
+  const auto tint_identity =
+      asset ? resolve_tool_identity(*tint, tint_revision) : std::optional<std::string>{""};
+  if (!glslang_identity || !tint_identity) {
+    std::cerr << "无法读取 glslang 或 Tint 工具身份\n";
+    return 1;
+  }
+  const std::string revisions = "glslang=" + *glslang_identity + ";tint=" + *tint_identity;
   constexpr std::string_view target = "vulkan1.3+webgpu-portable";
   constexpr std::string_view options = "source=glsl;spirv=vulkan1.3;bridge=spirv1.3";
   if (asset && backend_mask == GRANIT_SHADER_TOOLS_ASSET_BACKEND_ALL) {
@@ -546,19 +577,19 @@ void print_usage() {
                "  granit_shader_tool capabilities --target <vulkan-portable|webgpu-portable>\n"
                "  granit_shader_tool compile --tint <path> --input <shader.wgsl> "
                "--entry <name> --stage <vertex|fragment|compute> --output <shader.spv> "
-               "[--asset <shader.granit-shader> --tint-revision <revision> "
+               "[--asset <shader.granit-shader> [--tint-revision <revision>] "
                "--asset-backend <all|vulkan|webgpu> "
                "--features <none|float16|subgroup>]\n";
   std::cerr << "  granit_shader_tool compile-hlsl --dxc <path> --tint <path> "
                "--input <shader.hlsl> --entry <name> --stage <vertex|fragment|compute> "
                "--spirv-output <shader.spv> --wgsl-output <shader.wgsl> "
-               "[--asset <shader.granit-shader> --dxc-revision <revision> "
-               "--tint-revision <revision> --asset-backend <all|vulkan|webgpu>]\n";
+               "[--asset <shader.granit-shader> [--dxc-revision <revision>] "
+               "[--tint-revision <revision>] --asset-backend <all|vulkan|webgpu>]\n";
   std::cerr << "  granit_shader_tool compile-glsl --glslang <path> --tint <path> "
                "--input <shader.glsl> --entry <name> --stage <vertex|fragment|compute> "
                "--spirv-output <shader.spv> --wgsl-output <shader.wgsl> "
-               "[--asset <shader.granit-shader> --glslang-revision <revision> "
-               "--tint-revision <revision> --asset-backend <all|vulkan|webgpu>]\n";
+               "[--asset <shader.granit-shader> [--glslang-revision <revision>] "
+               "[--tint-revision <revision>] --asset-backend <all|vulkan|webgpu>]\n";
 }
 
 } // namespace

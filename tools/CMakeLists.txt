@@ -356,7 +356,23 @@ endif()
 
 include(granit_shader_toolchain)
 granit_find_shader_toolchain()
-if(GRANIT_DXC_EXECUTABLE)
+if(GRANIT_GLSLANG_EXECUTABLE AND NOT GRANIT_SHADER_TOOLCHAIN_POLICY STREQUAL "unchecked")
+  set(GRANIT_GLSLANG_PROBE_OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/glslang_probe.spv")
+  execute_process(
+    COMMAND
+      "${GRANIT_GLSLANG_EXECUTABLE}" -V --target-env vulkan1.3 -S frag -e main -o
+      "${GRANIT_GLSLANG_PROBE_OUTPUT}" "${PROJECT_SOURCE_DIR}/tests/assets/material_fixture.glsl"
+    RESULT_VARIABLE GRANIT_GLSLANG_PROBE_RESULT
+    OUTPUT_QUIET
+    ERROR_QUIET
+  )
+  file(REMOVE "${GRANIT_GLSLANG_PROBE_OUTPUT}")
+  if(NOT GRANIT_GLSLANG_PROBE_RESULT EQUAL 0)
+    message(STATUS "检测到的 glslang 无法生成 Vulkan 1.3 SPIR-V，跳过相关测试")
+    set(GRANIT_GLSLANG_EXECUTABLE "" CACHE FILEPATH "glslangValidator 可执行文件" FORCE)
+  endif()
+endif()
+if(GRANIT_DXC_EXECUTABLE AND NOT GRANIT_SHADER_TOOLCHAIN_POLICY STREQUAL "unchecked")
   set(GRANIT_DXC_PROBE_OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/dxc_spirv_probe.spv")
   execute_process(
     COMMAND

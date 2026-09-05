@@ -7,6 +7,7 @@
 #include <granit/core/result.hpp>
 #include <granit/tools/shader_tools.h>
 
+#include <string>
 #include <string_view>
 #include <utility>
 
@@ -211,6 +212,19 @@ compile_glsl(const granit_shader_tools_glsl_compile_desc& desc) noexcept {
   granit_shader_tools_result handle = 0;
   const auto status = granit_shader_tools_compile_glsl(&desc, &handle);
   return {::granit::from_native(status), result{handle}};
+}
+
+inline std::pair<::granit::result, std::string> tool_identity(std::string_view path) noexcept {
+  uint64_t size = 0;
+  auto status = granit_shader_tools_get_tool_identity(path.data(), path.size(), nullptr, &size);
+  if (status != GRANIT_SUCCESS)
+    return {::granit::from_native(status), {}};
+  std::string identity(static_cast<std::size_t>(size), '\0');
+  status = granit_shader_tools_get_tool_identity(path.data(), path.size(), identity.data(), &size);
+  if (status != GRANIT_SUCCESS)
+    return {::granit::from_native(status), {}};
+  identity.resize(static_cast<std::size_t>(size));
+  return {::granit::result::success, std::move(identity)};
 }
 
 inline std::pair<::granit::result, result>
