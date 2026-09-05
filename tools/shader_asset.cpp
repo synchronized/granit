@@ -457,6 +457,23 @@ shader_asset_error validate_shader_asset_payloads(const shader_asset_view& asset
              : shader_asset_error::digest_mismatch;
 }
 
+shader_asset_error validate_shader_asset_payload(const shader_asset_view& asset,
+                                                 shader_asset_backend backend,
+                                                 std::span<const std::byte> payload) noexcept {
+  const auto* variant = find_shader_asset_variant(asset, backend, shader_asset_profile::portable);
+  if (variant == nullptr)
+    return shader_asset_error::invalid_argument;
+  const auto expected_format = backend == shader_asset_backend::vulkan
+                                   ? shader_asset_code_format::spirv
+                                   : shader_asset_code_format::wgsl;
+  if (variant->code_format != expected_format || payload.empty() ||
+      payload.size() != variant->byte_size ||
+      (expected_format == shader_asset_code_format::spirv && payload.size() % 4 != 0))
+    return shader_asset_error::invalid_layout;
+  return payload_digest(payload) == variant->digest ? shader_asset_error::success
+                                                    : shader_asset_error::digest_mismatch;
+}
+
 shader_asset_error store_shader_asset(const std::filesystem::path& path,
                                       std::span<const std::byte> manifest, std::string_view wgsl,
                                       std::span<const std::byte> spirv, bool& cache_hit) noexcept {

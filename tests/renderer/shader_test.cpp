@@ -4,8 +4,12 @@
 #include <granit/renderer/renderer.hpp>
 #include <granit/renderer/shader.hpp>
 
+#include "shader_asset.h"
+
 #include <array>
 #include <span>
+#include <string_view>
+#include <vector>
 
 #include <catch2/catch_all.hpp>
 
@@ -110,6 +114,39 @@ TEST_CASE("Shader 校验 SPIR-V、入口点和 Renderer domain", "[shader][valid
   REQUIRE(granit_shader_create(first.native_handle(), &desc, &shader) == GRANIT_SUCCESS);
   CHECK(granit_shader_destroy(second.native_handle(), shader) == GRANIT_ERROR_INVALID_HANDLE);
   CHECK(granit_shader_destroy(first.native_handle(), shader) == GRANIT_SUCCESS);
+}
+
+TEST_CASE("Shader Asset 按 Renderer 后端验证并创建 Shader", "[shader][asset]") {
+  const auto spirv = std::as_bytes(std::span{vertex_spirv});
+  constexpr std::string_view wgsl =
+      "@vertex fn main() -> @builtin(position) vec4f { return vec4f(); }";
+  std::vector<std::byte> manifest;
+  REQUIRE(granit::tools::encode_shader_asset(
+              {wgsl, spirv, "{}", {}, 1, 0, GRANIT_SHADER_STAGE_VERTEX, "main"}, manifest) ==
+          granit::tools::shader_asset_error::success);
+
+  granit::shader invalid;
+  CHECK(invalid.initialize_packaged_asset(
+            GRANIT_NULL_HANDLE, {.manifest = manifest, .sidecar = spirv}) ==
+        granit::result::invalid_handle);
+
+  granit::renderer renderer;
+  const auto renderer_result = renderer.initialize({.application_name = "granit-shader-asset"});
+  if (shader_environment_unavailable(renderer_result))
+    SKIP("当前运行环境没有满足要求的 Vulkan 设备");
+  REQUIRE(renderer_result == granit::result::success);
+
+  granit::shader shader;
+  REQUIRE(shader.initialize_packaged_asset(renderer.native_handle(),
+                                           {.manifest = manifest, .sidecar = spirv}) ==
+          granit::result::success);
+  REQUIRE(shader.reset() == granit::result::success);
+
+  auto damaged = std::vector<std::byte>{spirv.begin(), spirv.end()};
+  damaged.front() ^= std::byte{1};
+  CHECK(shader.initialize_packaged_asset(renderer.native_handle(),
+                                         {.manifest = manifest, .sidecar = damaged}) ==
+        granit::result::invalid_argument);
 }
 
 } // namespace

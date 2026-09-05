@@ -15,18 +15,6 @@ set_target_properties(granit_spirv_reflect PROPERTIES FOLDER "ThirdParty/SPIRV-R
 find_package(Threads REQUIRED)
 
 add_library(
-  granit_shader_asset OBJECT
-  shader_asset.cpp
-  shader_asset.h
-)
-target_compile_features(granit_shader_asset PUBLIC cxx_std_20)
-target_include_directories(granit_shader_asset PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
-granit_target_compile_warnings(granit_shader_asset)
-set_target_properties(
-  granit_shader_asset PROPERTIES FOLDER "Tools" POSITION_INDEPENDENT_CODE YES
-)
-
-add_library(
   granit_shader_tools_core OBJECT
   shader_tools_core.cpp
   shader_tools_core.h

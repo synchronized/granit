@@ -218,6 +218,14 @@ if(GRANIT_HAS_WAYLAND_SHELL)
   )
 endif()
 
+add_library(granit_shader_asset OBJECT tools/shader_asset.cpp tools/shader_asset.h)
+target_compile_features(granit_shader_asset PUBLIC cxx_std_20)
+target_include_directories(granit_shader_asset PUBLIC "${PROJECT_SOURCE_DIR}/tools")
+granit_target_compile_warnings(granit_shader_asset)
+set_target_properties(
+  granit_shader_asset PROPERTIES FOLDER "Tools" POSITION_INDEPENDENT_CODE YES
+)
+
 add_subdirectory(src)
 
 if(GRANIT_BUILD_TOOLS OR GRANIT_BUILD_SHADER_TOOLS OR GRANIT_BUILD_EXAMPLES OR

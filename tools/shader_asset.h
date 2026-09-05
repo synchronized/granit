@@ -93,6 +93,9 @@ const shader_asset_variant* find_shader_asset_variant(const shader_asset_view& a
 shader_asset_error validate_shader_asset_payloads(const shader_asset_view& asset,
                                                   std::string_view wgsl,
                                                   std::span<const std::byte> spirv) noexcept;
+shader_asset_error validate_shader_asset_payload(const shader_asset_view& asset,
+                                                 shader_asset_backend backend,
+                                                 std::span<const std::byte> payload) noexcept;
 shader_asset_error store_shader_asset(const std::filesystem::path& path,
                                       std::span<const std::byte> manifest, std::string_view wgsl,
                                       std::span<const std::byte> spirv, bool& cache_hit) noexcept;

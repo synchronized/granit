@@ -20,6 +20,7 @@ target_sources(
   granit
   PRIVATE
     $<TARGET_OBJECTS:granit_volk>
+    $<TARGET_OBJECTS:granit_shader_asset>
     backend/contracts/access.h
     backend/contracts/binding.h
     backend/contracts/capabilities.h
@@ -168,7 +169,7 @@ target_compile_features(granit PUBLIC cxx_std_20)
 granit_target_compile_warnings(granit)
 target_include_directories(
   granit
-  PRIVATE "${PROJECT_SOURCE_DIR}/src"
+  PRIVATE "${PROJECT_SOURCE_DIR}/src" "${PROJECT_SOURCE_DIR}/tools"
   PUBLIC
     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
     $<BUILD_INTERFACE:${GRANIT_GENERATED_INCLUDE_DIR}>
