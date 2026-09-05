@@ -1209,6 +1209,13 @@ granit_result create_texture(granit_webgpu_provider_instance instance,
     usage |= WGPUTextureUsage_TextureBinding;
   if ((desc->usage & GRANIT_WEBGPU_PROVIDER_TEXTURE_USAGE_RENDER_ATTACHMENT_BIT) != 0)
     usage |= WGPUTextureUsage_RenderAttachment;
+  if (desc->mip_level_count > 1 && sample_count == 1 &&
+      (desc->usage & GRANIT_WEBGPU_PROVIDER_TEXTURE_USAGE_COPY_SRC_BIT) != 0 &&
+      (desc->usage & GRANIT_WEBGPU_PROVIDER_TEXTURE_USAGE_COPY_DST_BIT) != 0 &&
+      desc->format != GRANIT_WEBGPU_PROVIDER_TEXTURE_FORMAT_D32_FLOAT) {
+    // 公共契约用 Transfer usage 表达 Mipmap；内部补充渲染采样 usage，避免泄漏 WebGPU 实现路径。
+    usage |= WGPUTextureUsage_TextureBinding | WGPUTextureUsage_RenderAttachment;
+  }
   WGPUTextureDescriptor descriptor = WGPU_TEXTURE_DESCRIPTOR_INIT;
   descriptor.usage = usage;
   descriptor.dimension = WGPUTextureDimension_2D;
@@ -2750,6 +2757,184 @@ granit_result recorder_fill_buffer(granit_webgpu_provider_instance instance,
   return GRANIT_SUCCESS;
 }
 
+granit_result
+recorder_generate_mipmaps(granit_webgpu_provider_instance instance,
+                          granit_webgpu_provider_command_recorder recorder,
+                          granit_webgpu_provider_texture texture,
+                          const granit_webgpu_provider_texture_mipmap_range* range) noexcept {
+  if (instance == 0 || recorder == 0 || texture == 0 || range == nullptr ||
+      range->level_count < 2 || range->array_layer_count == 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  const std::scoped_lock lock{instances_mutex};
+  const auto found = instances.find(instance);
+  if (found == instances.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  if (const auto ready = require_ready(*found->second); ready != GRANIT_SUCCESS)
+    return ready;
+  auto& state = *found->second;
+  const auto command = state.command_recorders.find(recorder);
+  const auto texture_found = state.textures.find(texture);
+  if (command == state.command_recorders.end() || texture_found == state.textures.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  const auto& record = texture_found->second;
+  if (!valid_transfer_recorder(command->second) || record.borrowed || record.sample_count != 1 ||
+      record.format == GRANIT_WEBGPU_PROVIDER_TEXTURE_FORMAT_D32_FLOAT ||
+      range->base_mip_level >= record.mip_level_count ||
+      range->level_count > record.mip_level_count - range->base_mip_level ||
+      range->base_array_layer >= record.array_layer_count ||
+      range->array_layer_count > record.array_layer_count - range->base_array_layer ||
+      (record.usage & GRANIT_WEBGPU_PROVIDER_TEXTURE_USAGE_COPY_SRC_BIT) == 0 ||
+      (record.usage & GRANIT_WEBGPU_PROVIDER_TEXTURE_USAGE_COPY_DST_BIT) == 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+
+  constexpr char mipmap_wgsl[] = R"(
+struct vertex_output {
+  @builtin(position) position: vec4f,
+  @location(0) uv: vec2f,
+};
+@group(0) @binding(0) var source_texture: texture_2d<f32>;
+@group(0) @binding(1) var source_sampler: sampler;
+@vertex fn vs_main(@builtin(vertex_index) index: u32) -> vertex_output {
+  let positions = array<vec2f, 3>(vec2f(-1.0, -1.0), vec2f(3.0, -1.0), vec2f(-1.0, 3.0));
+  let coordinates = array<vec2f, 3>(vec2f(0.0, 1.0), vec2f(2.0, 1.0), vec2f(0.0, -1.0));
+  var output: vertex_output;
+  output.position = vec4f(positions[index], 0.0, 1.0);
+  output.uv = coordinates[index];
+  return output;
+}
+@fragment fn fs_main(input: vertex_output) -> @location(0) vec4f {
+  return textureSampleLevel(source_texture, source_sampler, input.uv, 0.0);
+})";
+  WGPUShaderSourceWGSL source = WGPU_SHADER_SOURCE_WGSL_INIT;
+  source.code = {mipmap_wgsl, sizeof(mipmap_wgsl) - 1};
+  WGPUShaderModuleDescriptor shader_desc = WGPU_SHADER_MODULE_DESCRIPTOR_INIT;
+  shader_desc.nextInChain = &source.chain;
+  const auto shader = wgpuDeviceCreateShaderModule(state.device, &shader_desc);
+  if (shader == nullptr)
+    return GRANIT_ERROR_INITIALIZATION_FAILED;
+
+  WGPUColorTargetState target = WGPU_COLOR_TARGET_STATE_INIT;
+  target.format = to_native_texture_format(record.format);
+  target.writeMask = WGPUColorWriteMask_All;
+  WGPUFragmentState fragment = WGPU_FRAGMENT_STATE_INIT;
+  fragment.module = shader;
+  fragment.entryPoint = {"fs_main", 7};
+  fragment.targetCount = 1;
+  fragment.targets = &target;
+  WGPURenderPipelineDescriptor pipeline_desc = WGPU_RENDER_PIPELINE_DESCRIPTOR_INIT;
+  pipeline_desc.vertex.module = shader;
+  pipeline_desc.vertex.entryPoint = {"vs_main", 7};
+  pipeline_desc.primitive.topology = WGPUPrimitiveTopology_TriangleList;
+  pipeline_desc.primitive.frontFace = WGPUFrontFace_CCW;
+  pipeline_desc.primitive.cullMode = WGPUCullMode_None;
+  pipeline_desc.multisample.count = 1;
+  pipeline_desc.multisample.mask = UINT32_MAX;
+  pipeline_desc.fragment = &fragment;
+  const auto pipeline = wgpuDeviceCreateRenderPipeline(state.device, &pipeline_desc);
+  if (pipeline == nullptr) {
+    wgpuShaderModuleRelease(shader);
+    return GRANIT_ERROR_INITIALIZATION_FAILED;
+  }
+  const auto bind_group_layout = wgpuRenderPipelineGetBindGroupLayout(pipeline, 0);
+  WGPUSamplerDescriptor sampler_desc = WGPU_SAMPLER_DESCRIPTOR_INIT;
+  sampler_desc.addressModeU = WGPUAddressMode_ClampToEdge;
+  sampler_desc.addressModeV = WGPUAddressMode_ClampToEdge;
+  sampler_desc.addressModeW = WGPUAddressMode_ClampToEdge;
+  sampler_desc.magFilter = WGPUFilterMode_Linear;
+  sampler_desc.minFilter = WGPUFilterMode_Linear;
+  sampler_desc.mipmapFilter = WGPUMipmapFilterMode_Nearest;
+  const auto sampler = wgpuDeviceCreateSampler(state.device, &sampler_desc);
+  if (bind_group_layout == nullptr || sampler == nullptr) {
+    if (sampler != nullptr)
+      wgpuSamplerRelease(sampler);
+    if (bind_group_layout != nullptr)
+      wgpuBindGroupLayoutRelease(bind_group_layout);
+    wgpuRenderPipelineRelease(pipeline);
+    wgpuShaderModuleRelease(shader);
+    return GRANIT_ERROR_INITIALIZATION_FAILED;
+  }
+
+  for (std::uint32_t layer = range->base_array_layer;
+       layer < range->base_array_layer + range->array_layer_count; ++layer) {
+    for (std::uint32_t level = range->base_mip_level + 1;
+         level < range->base_mip_level + range->level_count; ++level) {
+      WGPUTextureViewDescriptor source_view_desc = WGPU_TEXTURE_VIEW_DESCRIPTOR_INIT;
+      source_view_desc.format = target.format;
+      source_view_desc.dimension = WGPUTextureViewDimension_2D;
+      source_view_desc.baseMipLevel = level - 1;
+      source_view_desc.mipLevelCount = 1;
+      source_view_desc.baseArrayLayer = layer;
+      source_view_desc.arrayLayerCount = 1;
+      source_view_desc.aspect = WGPUTextureAspect_All;
+      WGPUTextureViewDescriptor destination_view_desc = source_view_desc;
+      destination_view_desc.baseMipLevel = level;
+      const auto source_view = wgpuTextureCreateView(record.texture, &source_view_desc);
+      const auto destination_view = wgpuTextureCreateView(record.texture, &destination_view_desc);
+      if (source_view == nullptr || destination_view == nullptr) {
+        if (source_view != nullptr)
+          wgpuTextureViewRelease(source_view);
+        if (destination_view != nullptr)
+          wgpuTextureViewRelease(destination_view);
+        wgpuSamplerRelease(sampler);
+        wgpuBindGroupLayoutRelease(bind_group_layout);
+        wgpuRenderPipelineRelease(pipeline);
+        wgpuShaderModuleRelease(shader);
+        return GRANIT_ERROR_OUT_OF_MEMORY;
+      }
+      WGPUBindGroupEntry entries[2]{};
+      entries[0].binding = 0;
+      entries[0].textureView = source_view;
+      entries[1].binding = 1;
+      entries[1].sampler = sampler;
+      WGPUBindGroupDescriptor bind_group_desc = WGPU_BIND_GROUP_DESCRIPTOR_INIT;
+      bind_group_desc.layout = bind_group_layout;
+      bind_group_desc.entryCount = 2;
+      bind_group_desc.entries = entries;
+      const auto bind_group = wgpuDeviceCreateBindGroup(state.device, &bind_group_desc);
+      if (bind_group == nullptr) {
+        wgpuTextureViewRelease(destination_view);
+        wgpuTextureViewRelease(source_view);
+        wgpuSamplerRelease(sampler);
+        wgpuBindGroupLayoutRelease(bind_group_layout);
+        wgpuRenderPipelineRelease(pipeline);
+        wgpuShaderModuleRelease(shader);
+        return GRANIT_ERROR_INITIALIZATION_FAILED;
+      }
+      WGPURenderPassColorAttachment color = WGPU_RENDER_PASS_COLOR_ATTACHMENT_INIT;
+      color.view = destination_view;
+      color.loadOp = WGPULoadOp_Clear;
+      color.storeOp = WGPUStoreOp_Store;
+      WGPURenderPassDescriptor pass_desc = WGPU_RENDER_PASS_DESCRIPTOR_INIT;
+      pass_desc.colorAttachmentCount = 1;
+      pass_desc.colorAttachments = &color;
+      const auto pass = wgpuCommandEncoderBeginRenderPass(command->second.encoder, &pass_desc);
+      if (pass == nullptr) {
+        wgpuBindGroupRelease(bind_group);
+        wgpuTextureViewRelease(destination_view);
+        wgpuTextureViewRelease(source_view);
+        wgpuSamplerRelease(sampler);
+        wgpuBindGroupLayoutRelease(bind_group_layout);
+        wgpuRenderPipelineRelease(pipeline);
+        wgpuShaderModuleRelease(shader);
+        return GRANIT_ERROR_INITIALIZATION_FAILED;
+      }
+      wgpuRenderPassEncoderSetPipeline(pass, pipeline);
+      wgpuRenderPassEncoderSetBindGroup(pass, 0, bind_group, 0, nullptr);
+      wgpuRenderPassEncoderDraw(pass, 3, 1, 0, 0);
+      wgpuRenderPassEncoderEnd(pass);
+      wgpuRenderPassEncoderRelease(pass);
+      wgpuBindGroupRelease(bind_group);
+      wgpuTextureViewRelease(destination_view);
+      wgpuTextureViewRelease(source_view);
+    }
+  }
+  wgpuSamplerRelease(sampler);
+  wgpuBindGroupLayoutRelease(bind_group_layout);
+  wgpuRenderPipelineRelease(pipeline);
+  wgpuShaderModuleRelease(shader);
+  return GRANIT_SUCCESS;
+}
+
 granit_result recorder_begin_rendering(
     granit_webgpu_provider_instance instance, granit_webgpu_provider_command_recorder recorder,
     granit_webgpu_provider_texture_view target, granit_webgpu_provider_texture_view resolve_target,
@@ -3905,7 +4090,8 @@ constexpr granit_webgpu_provider_instance_api instance_api{
     recorder_copy_buffer_to_texture_v2,
     recorder_copy_texture_to_buffer_v2,
     recorder_copy_texture,
-    recorder_fill_buffer};
+    recorder_fill_buffer,
+    recorder_generate_mipmaps};
 constexpr granit_webgpu_provider_api provider_api{sizeof(granit_webgpu_provider_api),
                                                   GRANIT_WEBGPU_PROVIDER_ABI_VERSION,
                                                   GRANIT_WEBGPU_PROVIDER_KIND_WEBGPU,

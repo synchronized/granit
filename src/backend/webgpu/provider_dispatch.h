@@ -271,6 +271,11 @@ public:
                                                    granit_webgpu_provider_buffer buffer,
                                                    std::uint64_t offset, std::uint64_t size,
                                                    std::uint32_t value) noexcept;
+  [[nodiscard]] granit_result
+  recorder_generate_mipmaps(granit_webgpu_provider_instance instance,
+                            granit_webgpu_provider_command_recorder recorder,
+                            granit_webgpu_provider_texture texture,
+                            const granit_webgpu_provider_texture_mipmap_range& range) noexcept;
   void close() noexcept;
 
   [[nodiscard]] bool is_open() const noexcept { return api_ != nullptr; }

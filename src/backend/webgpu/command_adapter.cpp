@@ -426,6 +426,18 @@ granit_result webgpu_command_adapter::fill_buffer(backend_command_recorder_resou
                                                   offset, size, value);
 }
 
+granit_result webgpu_command_adapter::generate_mipmaps(
+    backend_command_recorder_resource& resource, granit_webgpu_provider_texture texture,
+    const granit_webgpu_provider_texture_mipmap_range& range) const noexcept {
+  auto* recorder = as_recorder(resource);
+  if (recorder == nullptr || recorder->render_open_ || texture == 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  if (const auto result = end_compute_if_open(*context_, *recorder); result != GRANIT_SUCCESS)
+    return result;
+  return context_->provider->recorder_generate_mipmaps(context_->instance, recorder->recorder_,
+                                                       texture, range);
+}
+
 granit_result webgpu_command_adapter::draw(backend_command_recorder_resource& resource,
                                            std::uint32_t vertex_count, std::uint32_t instance_count,
                                            std::uint32_t first_vertex,

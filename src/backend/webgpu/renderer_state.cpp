@@ -468,15 +468,24 @@ granit_result webgpu_renderer_state::copy_texture(backend_command_recorder_resou
                                  resources_->native_texture(destination), native);
 }
 
-bool webgpu_renderer_state::texture_supports_linear_blit(granit_texture_format) const noexcept {
-  return false;
+bool webgpu_renderer_state::texture_supports_linear_blit(
+    granit_texture_format format) const noexcept {
+  return format == GRANIT_TEXTURE_FORMAT_R8_UNORM || format == GRANIT_TEXTURE_FORMAT_RG8_UNORM ||
+         format == GRANIT_TEXTURE_FORMAT_RGBA8_UNORM ||
+         format == GRANIT_TEXTURE_FORMAT_RGBA8_SRGB ||
+         format == GRANIT_TEXTURE_FORMAT_BGRA8_UNORM ||
+         format == GRANIT_TEXTURE_FORMAT_RGBA16_FLOAT;
 }
 
-granit_result webgpu_renderer_state::generate_mipmaps(backend_command_recorder_resource&,
-                                                      backend_texture_resource&,
+granit_result webgpu_renderer_state::generate_mipmaps(backend_command_recorder_resource& recorder,
+                                                      backend_texture_resource& texture,
                                                       const granit_texture_desc&,
-                                                      const granit_texture_mipmap_range&) {
-  return GRANIT_ERROR_UNSUPPORTED;
+                                                      const granit_texture_mipmap_range& range) {
+  if (!commands_ || !resources_)
+    return GRANIT_ERROR_NOT_READY;
+  const granit_webgpu_provider_texture_mipmap_range native{
+      range.base_mip_level, range.level_count, range.base_array_layer, range.array_layer_count};
+  return commands_->generate_mipmaps(recorder, resources_->native_texture(texture), native);
 }
 
 granit_result webgpu_renderer_state::fill_buffer(backend_command_recorder_resource& recorder,

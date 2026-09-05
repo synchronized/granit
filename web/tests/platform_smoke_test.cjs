@@ -329,6 +329,11 @@ async function main() {
     console.log(
       "浏览器 WebGPU 多帧渲染、质量切换、输入、Resize、资产 Fetch 与资源释放验证通过",
     );
+    const validationErrors = browserMessages.filter((message) =>
+      /validation error|webgpu.*error/i.test(message),
+    );
+    if (validationErrors.length !== 0)
+      throw new Error(`浏览器 WebGPU 验证层报告错误：\n${validationErrors.join("\n")}`);
 
     rejectExternalBuffer();
     const failurePage = await browser.newPage();

@@ -88,6 +88,10 @@ public:
                                           granit_webgpu_provider_buffer buffer,
                                           std::uint64_t offset, std::uint64_t size,
                                           std::uint32_t value) const noexcept;
+  [[nodiscard]] granit_result
+  generate_mipmaps(backend_command_recorder_resource& resource,
+                   granit_webgpu_provider_texture texture,
+                   const granit_webgpu_provider_texture_mipmap_range& range) const noexcept;
   [[nodiscard]] granit_result draw(backend_command_recorder_resource& resource,
                                    std::uint32_t vertex_count, std::uint32_t instance_count,
                                    std::uint32_t first_vertex,

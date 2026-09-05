@@ -175,6 +175,8 @@ granit_result validate_public_pipeline() {
 granit_result validate_public_transfers() {
   constexpr std::array<std::uint8_t, 16> pixels{1, 2,  3,  4,  5,  6,  7,  8,
                                                 9, 10, 11, 12, 13, 14, 15, 16};
+  constexpr auto texture_usage =
+      granit::texture_usage::transfer_source | granit::texture_usage::transfer_destination;
   granit::buffer upload;
   auto result = upload.initialize(
       state.renderer,
@@ -185,6 +187,27 @@ granit_result validate_public_transfers() {
   if (result != granit::result::success)
     return granit::to_native(result);
 
+  granit::texture non_power_of_two_texture;
+  result = non_power_of_two_texture.initialize(state.renderer,
+                                               {.format = granit::texture_format::rgba8_srgb,
+                                                .usage = texture_usage,
+                                                .width = 7,
+                                                .height = 5,
+                                                .mip_levels = 3,
+                                                .array_layers = 1});
+  if (result != granit::result::success)
+    return granit::to_native(result);
+  granit::texture cube_texture;
+  result = cube_texture.initialize(state.renderer, {.dimension = granit::texture_dimension::cube,
+                                                    .format = granit::texture_format::rgba8_unorm,
+                                                    .usage = texture_usage,
+                                                    .width = 7,
+                                                    .height = 7,
+                                                    .mip_levels = 3,
+                                                    .array_layers = 6});
+  if (result != granit::result::success)
+    return granit::to_native(result);
+
   granit::buffer readback;
   result = readback.initialize(state.renderer, {.size = pixels.size(),
                                                 .usage = granit::buffer_usage::transfer_destination,
@@ -192,13 +215,12 @@ granit_result validate_public_transfers() {
   if (result != granit::result::success)
     return granit::to_native(result);
 
-  constexpr auto texture_usage =
-      granit::texture_usage::transfer_source | granit::texture_usage::transfer_destination;
   granit::texture source_texture;
   result = source_texture.initialize(state.renderer, {.format = granit::texture_format::rgba8_unorm,
                                                       .usage = texture_usage,
                                                       .width = 2,
-                                                      .height = 2});
+                                                      .height = 2,
+                                                      .mip_levels = 2});
   if (result != granit::result::success)
     return granit::to_native(result);
   granit::texture destination_texture;
@@ -240,6 +262,21 @@ granit_result validate_public_transfers() {
   if (result == granit::result::success)
     result = recorder.copy_buffer_to_texture(upload.native_handle(), source_texture.native_handle(),
                                              layout, texture_region);
+  if (result == granit::result::success) {
+    const granit::texture_mipmap_range mipmap_range{
+        .base_mip_level = 0, .level_count = 2, .base_array_layer = 0, .array_layer_count = 1};
+    result = recorder.generate_mipmaps(source_texture.native_handle(), mipmap_range);
+  }
+  if (result == granit::result::success) {
+    const granit::texture_mipmap_range mipmap_range{
+        .base_mip_level = 0, .level_count = 3, .base_array_layer = 0, .array_layer_count = 1};
+    result = recorder.generate_mipmaps(non_power_of_two_texture.native_handle(), mipmap_range);
+  }
+  if (result == granit::result::success) {
+    const granit::texture_mipmap_range mipmap_range{
+        .base_mip_level = 0, .level_count = 3, .base_array_layer = 0, .array_layer_count = 6};
+    result = recorder.generate_mipmaps(cube_texture.native_handle(), mipmap_range);
+  }
   if (result == granit::result::success)
     result = recorder.copy_texture(source_texture.native_handle(),
                                    destination_texture.native_handle(), copy_region);

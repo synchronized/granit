@@ -9,7 +9,7 @@
 #include <granit/core/diagnostic.h>
 #include <granit/core/result.h>
 
-#define GRANIT_WEBGPU_PROVIDER_ABI_VERSION UINT32_C(27)
+#define GRANIT_WEBGPU_PROVIDER_ABI_VERSION UINT32_C(28)
 #define GRANIT_WEBGPU_PROVIDER_KIND_WEBGPU UINT32_C(1)
 #define GRANIT_WEBGPU_PROVIDER_QUERY_SYMBOL "granit_webgpu_provider_query"
 #define GRANIT_WEBGPU_PROVIDER_SURFACE_TYPE_WIN32_BIT UINT32_C(0x00000001)
@@ -723,6 +723,13 @@ typedef struct granit_webgpu_provider_texture_copy_region {
   uint32_t depth;
 } granit_webgpu_provider_texture_copy_region;
 
+typedef struct granit_webgpu_provider_texture_mipmap_range {
+  uint32_t base_mip_level;
+  uint32_t level_count;
+  uint32_t base_array_layer;
+  uint32_t array_layer_count;
+} granit_webgpu_provider_texture_mipmap_range;
+
 typedef granit_result (*granit_webgpu_provider_recorder_copy_buffer_fn)(
     granit_webgpu_provider_instance instance, granit_webgpu_provider_command_recorder recorder,
     granit_webgpu_provider_buffer source, granit_webgpu_provider_buffer destination,
@@ -742,6 +749,10 @@ typedef granit_result (*granit_webgpu_provider_recorder_copy_texture_fn)(
 typedef granit_result (*granit_webgpu_provider_recorder_fill_buffer_fn)(
     granit_webgpu_provider_instance instance, granit_webgpu_provider_command_recorder recorder,
     granit_webgpu_provider_buffer buffer, uint64_t offset, uint64_t size, uint32_t value);
+typedef granit_result (*granit_webgpu_provider_recorder_generate_mipmaps_fn)(
+    granit_webgpu_provider_instance instance, granit_webgpu_provider_command_recorder recorder,
+    granit_webgpu_provider_texture texture,
+    const granit_webgpu_provider_texture_mipmap_range* range);
 
 /**
  * 实例操作表由 Provider 拥有，在Provider 销毁前保持有效。
@@ -818,6 +829,7 @@ typedef struct granit_webgpu_provider_instance_api {
   granit_webgpu_provider_recorder_copy_texture_to_buffer_v2_fn recorder_copy_texture_to_buffer_v2;
   granit_webgpu_provider_recorder_copy_texture_fn recorder_copy_texture;
   granit_webgpu_provider_recorder_fill_buffer_fn recorder_fill_buffer;
+  granit_webgpu_provider_recorder_generate_mipmaps_fn recorder_generate_mipmaps;
 } granit_webgpu_provider_instance_api;
 
 /** 静态 Provider 入口返回的只读描述；字符串在Provider 销毁前有效。 */

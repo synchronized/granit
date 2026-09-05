@@ -15,8 +15,8 @@ bool is_compatible(const granit_webgpu_provider_api* api,
   constexpr std::size_t minimum_size = offsetof(granit_webgpu_provider_api, instance_api) +
                                        sizeof(const granit_webgpu_provider_instance_api*);
   constexpr std::size_t minimum_instance_api_size =
-      offsetof(granit_webgpu_provider_instance_api, recorder_fill_buffer) +
-      sizeof(granit_webgpu_provider_recorder_fill_buffer_fn);
+      offsetof(granit_webgpu_provider_instance_api, recorder_generate_mipmaps) +
+      sizeof(granit_webgpu_provider_recorder_generate_mipmaps_fn);
   return api != nullptr && api->struct_size >= minimum_size &&
          api->abi_version == GRANIT_WEBGPU_PROVIDER_ABI_VERSION && api->kind == expected_kind &&
          api->reserved == 0 && api->name != nullptr && api->name_length != 0 &&
@@ -86,7 +86,8 @@ bool is_compatible(const granit_webgpu_provider_api* api,
          api->instance_api->recorder_copy_buffer_to_texture_v2 != nullptr &&
          api->instance_api->recorder_copy_texture_to_buffer_v2 != nullptr &&
          api->instance_api->recorder_copy_texture != nullptr &&
-         api->instance_api->recorder_fill_buffer != nullptr;
+         api->instance_api->recorder_fill_buffer != nullptr &&
+         api->instance_api->recorder_generate_mipmaps != nullptr;
 }
 
 bool is_valid_host(const granit_webgpu_provider_host_api* host) noexcept {
@@ -1056,6 +1057,19 @@ granit_result webgpu_provider_dispatch::recorder_fill_buffer(
   try {
     return api_->instance_api->recorder_fill_buffer(instance, recorder, buffer, offset, size,
                                                     value);
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+granit_result webgpu_provider_dispatch::recorder_generate_mipmaps(
+    granit_webgpu_provider_instance instance, granit_webgpu_provider_command_recorder recorder,
+    granit_webgpu_provider_texture texture,
+    const granit_webgpu_provider_texture_mipmap_range& range) noexcept {
+  if (api_ == nullptr || instance == 0 || recorder == 0 || texture == 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  try {
+    return api_->instance_api->recorder_generate_mipmaps(instance, recorder, texture, &range);
   } catch (...) {
     return GRANIT_ERROR_INTERNAL;
   }
