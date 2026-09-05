@@ -146,8 +146,10 @@ D-03-graphics-pipeline.md
   Consumer 基线、窗口状态、资源契约和 SDK 验收均已闭环，Android 延期。
 - [S-19：Model Viewer 渲染线程](S-19-model-viewer-render-thread.md)——已完成；桌面使用有界渲染
   线程和异步上传，浏览器保持同步执行。
-- [S-20：Shader Asset 后端变体](S-20-shader-asset-variants.md)——实现中；先把内嵌式资产改为
-  后端无关清单与可裁剪 WGSL/SPIR-V sidecar，再扩展变体选择和可选源码前端。
+- [S-20：Shader Asset 后端变体](S-20-shader-asset-variants.md)——已完成；后端 sidecar、能力选择和
+  WGSL/HLSL/GLSL portable 前端已形成闭环。
+- [S-21：可复现 Shader Toolchain 包](S-21-shader-toolchain-package.md)——已确认；发布带版本、许可
+  和 SHA-256 清单的离线编译工具包，并让官方 CI 使用严格锁定策略。
 
 ## 状态
 
