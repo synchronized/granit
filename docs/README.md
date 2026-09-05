@@ -37,7 +37,7 @@
 2. [项目文档规范](../DOCUMENTATION_GUIDE.md)
 3. [开发计划索引](plans/README.md)
 4. [第三方依赖](../3rd/README.md)
-5. [0.8.0 运行时 Shader 与材质资产计划](plans/S-23-0.8.0-runtime-shader-assets.md)
+5. [0.9.0 公共 PBR 与渲染资产收敛计划](plans/S-24-0.9.0-public-pbr-assets.md)
 
 ## 操作指南
 
