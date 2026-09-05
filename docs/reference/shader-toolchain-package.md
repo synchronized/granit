@@ -104,8 +104,8 @@ cmake \
 仓库的 `Shader Toolchain Packages` 手动 Actions 工作流固定 Vulkan SDK 下载地址、归档 SHA-256、
 Dawn 修订和全部工具版本。Windows 与 Linux 分别构建 Tint、组装精简目录、执行包内清单校验，
 再以 `locked` 策略运行 HLSL/GLSL 双后端 ShaderTools 测试，最后上传带独立 SHA-256 文件的临时
-Artifact。该工作流目前不会自动创建 Release；首次两平台远端验证通过并完成人工许可证复核后，
-才进入预发行发布阶段。
+Artifact。当前锁定产物已作为独立预发行版本发布；后续工具升级仍须先完成两平台远端验证和
+许可证复核，再发布新标签，不能覆盖已有归档。
 
 工作流分别缓存 Dawn 第三方源码、编译目标和最终 Tint/许可证产物。最终产物缓存键包含平台、
 架构、编译器契约版本及 Tint 修订；命中时不再获取或编译 Dawn。该缓存只用于加速，组包后仍执行
