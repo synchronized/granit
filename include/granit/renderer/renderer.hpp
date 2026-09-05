@@ -67,6 +67,22 @@ struct renderer_limits {
   }
 };
 
+enum class shader_feature : std::uint64_t {
+  float16 = GRANIT_SHADER_FEATURE_FLOAT16_BIT,
+  subgroup = GRANIT_SHADER_FEATURE_SUBGROUP_BIT,
+};
+
+struct renderer_shader_capabilities {
+  renderer_backend backend{renderer_backend::automatic};
+  std::uint32_t profile{GRANIT_SHADER_PROFILE_PORTABLE};
+  std::uint64_t supported_features{};
+
+  [[nodiscard]] constexpr bool supports(shader_feature feature) const noexcept {
+    const auto bit = static_cast<std::uint64_t>(feature);
+    return (supported_features & bit) == bit;
+  }
+};
+
 struct renderer_resource_stats {
   std::uint64_t total_live_count{};
   std::uint64_t buffer_count{};
@@ -188,6 +204,21 @@ public:
         .max_uniform_buffer_binding_size = native.max_uniform_buffer_binding_size,
         .framebuffer_sample_counts = native.framebuffer_sample_counts,
         .max_sampler_anisotropy = native.max_sampler_anisotropy,
+    };
+    return result::success;
+  }
+
+  [[nodiscard]] result
+  get_shader_capabilities(renderer_shader_capabilities& capabilities) const noexcept {
+    granit_renderer_shader_capabilities native = GRANIT_RENDERER_SHADER_CAPABILITIES_INIT;
+    const auto query_result =
+        from_native(granit_renderer_get_shader_capabilities(handle_, &native));
+    if (query_result.failed())
+      return query_result;
+    capabilities = {
+        .backend = static_cast<renderer_backend>(native.backend),
+        .profile = native.profile,
+        .supported_features = native.supported_features,
     };
     return result::success;
   }

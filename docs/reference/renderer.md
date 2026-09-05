@@ -51,6 +51,17 @@ granit_result result = granit_renderer_get_limits(renderer, &limits);
 时不会静默降低样本数。`max_sampler_anisotropy` 至少为 1；值为 1 表示不能启用各向异性过滤。
 C++ `renderer_limits::supports_sample_count` 提供对应的便捷检查。
 
+## Shader 能力
+
+`granit_renderer_get_shader_capabilities` 返回当前 Renderer 的实际后端、Shader 能力档位和已验证的
+可选特性位。首个档位为 `GRANIT_SHADER_PROFILE_PORTABLE`；portable 基线能力不重复占用特性位。
+当前 Vulkan 与浏览器 WebGPU 均不公开额外可选 Shader 特性，因此 `supported_features` 为零。
+
+`GRANIT_SHADER_FEATURE_FLOAT16_BIT` 和 `GRANIT_SHADER_FEATURE_SUBGROUP_BIT` 是后续变体契约的稳定
+位定义，不表示当前设备必然支持。调用方必须查询后再使用；C++ 可通过
+`renderer_shader_capabilities::supports` 检查。数值限制仍由 `granit_renderer_get_limits` 返回，
+不要把操作系统名称作为 Shader 能力判断条件。
+
 调用者必须设置 `struct_size`，当前至少为 `GRANIT_RENDERER_LIMITS_VERSION_1_SIZE`。查询接受更大的
 未来结构并只写当前版本已知字段；结构过小或空指针返回 `GRANIT_ERROR_INVALID_ARGUMENT`，失效
 Renderer 返回 `GRANIT_ERROR_INVALID_HANDLE`。限制来自 Renderer 创建时保存的不可变能力快照，

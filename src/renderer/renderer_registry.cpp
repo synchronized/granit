@@ -72,6 +72,20 @@ granit_result renderer_registry::get_limits(granit_renderer renderer,
   return GRANIT_SUCCESS;
 }
 
+granit_result
+renderer_registry::get_shader_capabilities(granit_renderer renderer,
+                                           granit_renderer_shader_capabilities& capabilities) {
+  const auto state = acquire_backend(renderer);
+  if (!state)
+    return GRANIT_ERROR_INVALID_HANDLE;
+  const auto& backend_capabilities = state->capabilities();
+  capabilities.backend = state->backend();
+  capabilities.profile = backend_capabilities.shader_profile;
+  capabilities.reserved = 0;
+  capabilities.supported_features = backend_capabilities.shader_features;
+  return GRANIT_SUCCESS;
+}
+
 granit_result renderer_registry::get_info(granit_renderer renderer, granit_renderer_info& info) {
   const auto state = acquire_backend(renderer);
   if (!state)

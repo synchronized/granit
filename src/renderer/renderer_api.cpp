@@ -57,6 +57,23 @@ extern "C" granit_result granit_renderer_get_limits(granit_renderer renderer,
   }
 }
 
+extern "C" granit_result
+granit_renderer_get_shader_capabilities(granit_renderer renderer,
+                                        granit_renderer_shader_capabilities* capabilities) {
+  if (capabilities == nullptr ||
+      capabilities->struct_size < GRANIT_RENDERER_SHADER_CAPABILITIES_SIZE ||
+      capabilities->reserved != 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  if (renderer == GRANIT_NULL_HANDLE)
+    return GRANIT_ERROR_INVALID_HANDLE;
+  try {
+    return granit::detail::renderer_registry::instance().get_shader_capabilities(renderer,
+                                                                                 *capabilities);
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
 extern "C" granit_result granit_renderer_get_info(granit_renderer renderer,
                                                   granit_renderer_info* info) {
   if (info == nullptr || info->struct_size < GRANIT_RENDERER_INFO_VERSION_1_SIZE ||
