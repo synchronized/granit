@@ -49,10 +49,10 @@ else()
       "${PROJECT_SOURCE_DIR}/examples/assets/model_viewer_pbr.grmat.json"
       "${PROJECT_SOURCE_DIR}/examples/assets/model_viewer_pbr.vert.grshader"
       "${PROJECT_SOURCE_DIR}/examples/assets/model_viewer_pbr.frag.grshader"
-      "${PROJECT_SOURCE_DIR}/examples/assets/model_viewer_pbr.vert.spv"
-      "${PROJECT_SOURCE_DIR}/examples/assets/model_viewer_pbr.vert.wgsl"
-      "${PROJECT_SOURCE_DIR}/examples/assets/model_viewer_pbr.frag.spv"
-      "${PROJECT_SOURCE_DIR}/examples/assets/model_viewer_pbr.frag.wgsl"
+      "${PROJECT_SOURCE_DIR}/examples/assets/model_viewer_pbr.vert.grshader.spv"
+      "${PROJECT_SOURCE_DIR}/examples/assets/model_viewer_pbr.vert.grshader.wgsl"
+      "${PROJECT_SOURCE_DIR}/examples/assets/model_viewer_pbr.frag.grshader.spv"
+      "${PROJECT_SOURCE_DIR}/examples/assets/model_viewer_pbr.frag.grshader.wgsl"
       "${PROJECT_SOURCE_DIR}/examples/assets/model_viewer_pbr.grmat"
     COMMENT "生成模型查看器 PBR 材质归档"
     VERBATIM
@@ -101,13 +101,14 @@ add_library(
   viewer_input.h
   "${granit_model_viewer_material_include}"
   ${granit_model_viewer_shader_includes}
+  $<TARGET_OBJECTS:granit_shader_asset_format>
 )
 add_library(granit_example_model_viewer_support ALIAS granit_model_viewer_core)
 target_compile_features(granit_model_viewer_core PUBLIC cxx_std_20)
 target_include_directories(
   granit_model_viewer_core
   PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/.."
-  PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/generated"
+  PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/generated" "${PROJECT_SOURCE_DIR}/src"
 )
 target_link_libraries(
   granit_model_viewer_core

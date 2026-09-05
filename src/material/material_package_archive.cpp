@@ -450,7 +450,9 @@ archive_error decode_material_package_archive(std::span<const std::byte> bytes,
       }
       material_shader_code shader{.stage = static_cast<package_shader_stage>(stage),
                                   .entry_point = read_string(strings, name_offset, name_length),
-                                  .asset_id = {}};
+                                  .asset_id = {},
+                                  .spirv = {},
+                                  .wgsl = {}};
       std::ranges::copy(shader_records.subspan(record + 16, shader.asset_id.size()),
                         shader.asset_id.begin());
       shaders.push_back(std::move(shader));

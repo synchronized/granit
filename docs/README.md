@@ -48,6 +48,7 @@
 - [从 0.4 迁移到 0.5](guides/migrate-0.4-to-0.5.md)
 - [从 0.5 迁移到 0.6](guides/migrate-0.5-to-0.6.md)
 - [从 0.6 迁移到 0.7](guides/migrate-0.6-to-0.7.md)
+- [从 0.7 迁移到 0.8](guides/migrate-0.7-to-0.8.md)
 - [示例程序及运行方式](guides/examples.md)
 - [运行跨后端模型查看器](guides/model-viewer.md)
 - [运行浏览器 WebGPU 平台 Smoke](guides/webgpu-browser-example.md)

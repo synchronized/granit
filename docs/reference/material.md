@@ -19,6 +19,8 @@ Render Pipeline component，不取代核心 Renderer 的 Shader、Pipeline 或 B
 
 - 使用 `GRANIT_MATERIAL_DESC_INIT` 初始化创建描述。
 - `archive_data` 及其长度描述材质归档；数据只需在创建调用期间有效。
+- v4 归档只保存 Shader Asset 内容 ID。`shader_resolver` 在首次需要对应 Pipeline 时同步取得
+  `.grshader` 清单和当前后端 sidecar；缺少解析器或依赖返回 `GRANIT_ERROR_NOT_READY`。
 - `initial_updates` 在创建时整体应用；任何一步失败都不会产生 Material 句柄。
 - `granit_material_update` 批量更新参数。整批更新具有事务性：失败时保留原状态。
 - 空更新批次合法，可用于显式刷新或保持统一调用路径。
@@ -30,6 +32,8 @@ Render Pipeline component，不取代核心 Renderer 的 Shader、Pipeline 或 B
 
 - Material 拥有自身的参数状态和 GPU 实例。
 - Material 不拥有更新中引用的 Texture View 或 Sampler。
+- Material 不拥有 resolver 返回的字节。字节只借用至一次 Shader 创建结束，但 resolver 的
+  `user_data` 和资产存储必须存活到 Material 销毁，因为 Pipeline 按需延迟创建。
 - 销毁后句柄立即失效；重复销毁、跨 Renderer 使用或更新旧句柄返回无效句柄错误。
 
 ## 线程安全
@@ -37,3 +41,4 @@ Render Pipeline component，不取代核心 Renderer 的 Shader、Pipeline 或 B
 不同 Material 可以并发更新。同一 Material 的更新不能彼此并发，也不能与销毁并发。渲染正在
 读取 Material 时，不应更新或销毁该 Material。
 
+resolver 由 Granit 同步调用且不会重入。若资产存储可能同时写入，调用方必须提供读取同步。

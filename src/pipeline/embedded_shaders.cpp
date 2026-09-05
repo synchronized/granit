@@ -2,6 +2,7 @@
 // Copyright (c) 2026 Granit contributors
 
 #include "pipeline/embedded_shaders.h"
+#include "assets/shader_asset.h"
 
 #include <array>
 #include <cstdint>
@@ -219,9 +220,11 @@ granit_result resolve_canvas_shader(void*, const std::uint8_t asset_id[32],
   if (asset_id == nullptr || asset == nullptr || profile != GRANIT_SHADER_PROFILE_PORTABLE)
     return GRANIT_ERROR_INVALID_ARGUMENT;
   for (const auto& candidate : canvas_shader_assets) {
-    constexpr std::size_t content_id_offset = 48;
-    if (candidate.manifest.size() < content_id_offset + 32 ||
-        std::memcmp(candidate.manifest.data() + content_id_offset, asset_id, 32) != 0) {
+    granit::tools::shader_asset_view view;
+    const auto manifest = std::as_bytes(candidate.manifest);
+    if (granit::tools::decode_shader_asset(manifest, view) !=
+            granit::tools::shader_asset_error::success ||
+        std::memcmp(view.content_id.data(), asset_id, view.content_id.size()) != 0) {
       continue;
     }
     const auto sidecar = backend == GRANIT_RENDERER_BACKEND_VULKAN

@@ -32,6 +32,7 @@ include(CMakePackageConfigHelpers)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 include(utility)
+include(granit_shader_asset_format)
 
 if(GRANIT_BUILD_EMSCRIPTEN_PLATFORM)
   if(NOT EMSCRIPTEN)
@@ -218,17 +219,7 @@ if(GRANIT_HAS_WAYLAND_SHELL)
   )
 endif()
 
-add_library(
-  granit_shader_asset_format OBJECT
-  src/assets/shader_asset.cpp
-  src/assets/shader_asset.h
-)
-target_compile_features(granit_shader_asset_format PUBLIC cxx_std_20)
-target_include_directories(granit_shader_asset_format PUBLIC "${PROJECT_SOURCE_DIR}/src")
-granit_target_compile_warnings(granit_shader_asset_format)
-set_target_properties(
-  granit_shader_asset_format PROPERTIES FOLDER "Core" POSITION_INDEPENDENT_CODE YES
-)
+granit_add_shader_asset_format()
 
 add_library(granit_shader_asset_storage OBJECT tools/shader_asset.cpp tools/shader_asset.h)
 target_compile_features(granit_shader_asset_storage PUBLIC cxx_std_20)

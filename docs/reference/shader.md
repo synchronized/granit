@@ -11,6 +11,25 @@ Shader 是离线生成的阶段入口。跨后端资产同时保存 SPIR-V 与 W
 
 ## C API
 
+发布资产优先使用 `.grshader`：调用方负责读取清单和当前平台 sidecar，Core 根据实际 Renderer
+能力选择变体并校验内容摘要，不执行文件 I/O。
+
+```c
+granit_shader_asset_desc asset = GRANIT_SHADER_ASSET_DESC_INIT;
+asset.manifest_data = manifest_bytes;
+asset.manifest_size = manifest_size;
+asset.sidecar_data = sidecar_bytes;
+asset.sidecar_size = sidecar_size;
+
+granit_shader shader = GRANIT_NULL_HANDLE;
+granit_result result = granit_shader_create_from_asset(renderer, &asset, &shader);
+```
+
+Vulkan 提供同名 `.grshader.spv`，浏览器 WebGPU 提供 `.grshader.wgsl`。清单损坏、缺少匹配变体、
+能力不足或摘要不一致都会明确失败。成功返回后不再引用输入字节。
+
+直接描述入口仍适合内建 Shader、测试和自行管理载荷的调用方：
+
 ```c
 granit_shader_desc desc = GRANIT_SHADER_DESC_INIT;
 desc.stage = GRANIT_SHADER_STAGE_VERTEX;
@@ -54,4 +73,5 @@ const auto result = shader.initialize_asset(
 - 当前 Shader 只能用于后续 Pipeline，尚未提供独立执行或原生 Vulkan 互操作。
 - 公开句柄会校验类型、generation 和 Renderer domain。
 
-详细设计见 [D-01](../plans/D-01-shader-input.md) 和 [D-02](../plans/D-02-shader-module.md)。
+详细设计见 [D-01](../plans/D-01-shader-input.md)、[D-02](../plans/D-02-shader-module.md)和
+[S-23](../plans/S-23-0.8.0-runtime-shader-assets.md)。

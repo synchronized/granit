@@ -43,8 +43,6 @@ Feature Definitions
 Pass Definitions
 Variant Records
 Shader Records
-SPIR-V Data
-WGSL Data
 Pipeline States
 Build Metadata（可选）
 Dependency Metadata（可选）
@@ -103,12 +101,12 @@ STL 容器。记录之间只使用定宽索引和相对文件起点的 64 位 of
 - Variant 保存规范化 feature 列表、变体键、顶点输入要求及 Shader 记录范围。
 - 读取器必须重新计算变体键，不能盲目信任文件中的缓存值。
 
-### Shader 双载荷
+### Shader Asset 引用
 
-格式 v3 的 Shader 记录保存阶段、入口名称引用，以及 SPIR-V、WGSL 各自的 offset 和长度。
-SPIR-V 数据保持 4 字节对齐且长度必须是 4 的倍数；WGSL 是非空 UTF-8 字节且不保存零结尾。
-两个载荷均为必需数据，并在创建 Shader 前执行与公开 Shader v2 描述一致的基础校验。运行库根据
-Renderer 后端选择载荷，不在加载时转换 Shader，也不保留只含 SPIR-V 的旧格式分支。
+格式 v4 的 Shader 记录保存阶段、入口名称引用和 32 字节 Shader Asset 内容 ID，不再内嵌
+SPIR-V/WGSL。创建 Pipeline 时，RenderPipeline 通过调用方提供的同步 resolver 按内容 ID、实际
+Renderer 后端和 portable 档位取得 `.grshader` 清单及对应 sidecar；随后统一验证内容 ID、阶段、
+入口、能力要求和载荷摘要。格式 v3 不再读取，旧包必须离线重新构建。
 
 ### Pipeline States
 
@@ -146,7 +144,7 @@ Renderer 后端选择载荷，不在加载时转换 Shader，也不保留只含 
 
 ```json
 {
-  "format_version": 3,
+  "format_version": 4,
   "target_environment": "cross_backend",
   "binding_model": "bind_group",
   "material": {
@@ -186,18 +184,8 @@ Renderer 后端选择载荷，不在加载时转换 Shader，也不保留只含 
         "color_blend": {"enabled": false}
       },
       "shaders": [
-        {
-          "stage": "vertex",
-          "entry_point": "main",
-          "spirv": "standard.vert.spv",
-          "wgsl": "standard.vert.wgsl"
-        },
-        {
-          "stage": "fragment",
-          "entry_point": "main",
-          "spirv": "standard.frag.spv",
-          "wgsl": "standard.frag.wgsl"
-        }
+        {"asset": "standard.vert.grshader"},
+        {"asset": "standard.frag.grshader"}
       ]
     }
   ]
@@ -205,11 +193,12 @@ Renderer 后端选择载荷，不在加载时转换 Shader，也不保留只含 
 ```
 
 `default_bytes` 直接描述常量块中的小端字节，可省略；资源参数使用 `binding`，不使用 `offset`。
-数组参数可增加 `array_count` 和 `array_stride`。当前只接受非负整数、跨后端双载荷、传统 Bind
-Group 以及 Vertex/Fragment Shader。`pipeline` 可省略并使用 Renderer 默认值；出现子对象时，其必需字段
+数组参数可增加 `array_count` 和 `array_stride`。当前只接受非负整数、Shader Asset 引用、传统
+Bind Group 以及 Vertex/Fragment Shader。构建器只读取清单以记录内容 ID、阶段和入口，不复制
+sidecar。`pipeline` 可省略并使用 Renderer 默认值；出现子对象时，其必需字段
 必须完整。颜色混合因子与操作使用可读名称，除 `enabled` 外的字段可省略并保留默认值，`write_mask`
 使用 RGBA 位掩码。更友好的带类型默认值语法留待后续扩展。源 JSON 最大 16 MiB、嵌套深度最大
-64 层，单个 SPIR-V 或 WGSL 最大 16 MiB；解析器在写出前复用运行时包的全部语义校验。
+64 层；解析器在写出前复用运行时包的全部语义校验。
 
 构建时可显式生成伴随文件：
 
@@ -232,8 +221,8 @@ granit_material_tool inspect standard.grmat --json --output standard.grmat.debug
 非零退出码，诊断写入标准错误；指定输出文件时采用临时文件加原子替换，不能留下看似有效的半文件。
 
 调试 JSON 使用固定字段顺序和缩进，参数按 ID、Pass 按 ID、Variant 按键、Shader 按阶段排序。
-ID 和哈希输出为固定宽度小写十六进制字符串。Shader 只输出 SPIR-V 与 WGSL 的长度等诊断元数据，
-不把二进制转换为 Base64，也不嵌入 WGSL 正文。输出不得包含时间戳、绝对路径或其他不可复现字段。
+ID 和哈希输出为固定宽度小写十六进制字符串。Shader 输出阶段、入口和 Shader Asset 内容 ID，
+不嵌入清单或 sidecar。输出不得包含时间戳、绝对路径或其他不可复现字段。
 
 首版命令行只实现：
 
@@ -256,6 +245,8 @@ ID 和哈希输出为固定宽度小写十六进制字符串。Shader 只输出 
    上限和逐字节损坏测试，并拒绝未声明尾随数据。
 6. **S-13C1（已完成）**：归档升级到 v3，Shader 记录、源 JSON、调试 JSON、运行时创建路径、
    Fixture 和示例统一迁移到 SPIR-V/WGSL 双载荷，且不修改公共 C ABI。
+7. **S-23D（已完成）**：归档升级到 v4，Shader 记录改为稳定 Asset ID，运行时由受限 resolver
+   提供 `.grshader` 清单和目标 sidecar，删除包内重复载荷。
 
 ## 验收标准
 

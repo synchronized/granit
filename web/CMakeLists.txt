@@ -53,6 +53,7 @@ target_link_options(granit INTERFACE "--use-port=emdawnwebgpu:cpp_bindings=false
 granit_target_compile_warnings(granit)
 
 # Web 与桌面复用同一 Math 模块目标，为完整 Model Viewer Core 提供一致依赖。
+granit_add_shader_asset_format()
 include(granit_modules)
 granit_add_render_pipeline_module()
 

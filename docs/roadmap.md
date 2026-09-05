@@ -261,7 +261,7 @@
 
 ## 十五、0.8.0 运行时 Shader 与材质资产
 
-**状态：已确认，待实施。**
+**状态：实现完成，正在执行 0.8.0 发布验收。**
 
 - **[S-23](plans/S-23-0.8.0-runtime-shader-assets.md) / P1**：让 Core 从调用方提供的
   `.grshader` 清单和 sidecar 字节选择并创建后端 Shader；让 `.grmat` 通过稳定内容 ID 引用同一
