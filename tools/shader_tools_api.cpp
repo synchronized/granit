@@ -268,6 +268,53 @@ granit_result granit_shader_tools_compile_wgsl(const granit_shader_tools_compile
   }
 }
 
+granit_result granit_shader_tools_compile_hlsl(const granit_shader_tools_hlsl_compile_desc* desc,
+                                               granit_shader_tools_result* result) {
+  if (result == nullptr)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  *result = 0;
+  if (desc == nullptr || desc->struct_size < sizeof(*desc) ||
+      !valid_string(desc->dxc_path, desc->dxc_path_length) ||
+      !valid_string(desc->tint_path, desc->tint_path_length) ||
+      !valid_string(desc->input_path, desc->input_path_length) ||
+      !valid_string(desc->entry_point, desc->entry_point_length) ||
+      !valid_string(desc->spirv_output_path, desc->spirv_output_path_length) ||
+      !valid_string(desc->wgsl_output_path, desc->wgsl_output_path_length) ||
+      desc->dxc_path_length == 0 || desc->tint_path_length == 0 || desc->input_path_length == 0 ||
+      desc->entry_point_length == 0 || desc->spirv_output_path_length == 0 ||
+      desc->wgsl_output_path_length == 0 || stage_name(desc->stage) == nullptr)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  try {
+    auto value = std::make_shared<stored_result>();
+    std::ostringstream output;
+    std::ostringstream diagnostic;
+    granit::tools::hlsl_compile_options options{
+        copy_path(desc->dxc_path, desc->dxc_path_length),
+        copy_path(desc->tint_path, desc->tint_path_length),
+        copy_path(desc->input_path, desc->input_path_length),
+        copy_string(desc->entry_point, desc->entry_point_length),
+        stage_name(desc->stage),
+        copy_path(desc->spirv_output_path, desc->spirv_output_path_length),
+        copy_path(desc->wgsl_output_path, desc->wgsl_output_path_length),
+    };
+    granit::tools::shader_info info;
+    const auto exit_code = granit::tools::compile_hlsl_shader(options, info, output, diagnostic);
+    value->status = exit_code == 0 ? GRANIT_SUCCESS : GRANIT_ERROR_INITIALIZATION_FAILED;
+    value->entry_point = options.entry_point;
+    value->stage = desc->stage;
+    store_reflection(*value, info);
+    value->output = std::move(output).str();
+    value->diagnostic = std::move(diagnostic).str();
+    const auto status = value->status;
+    *result = store(std::move(value));
+    return status;
+  } catch (const std::bad_alloc&) {
+    return GRANIT_ERROR_OUT_OF_MEMORY;
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
 granit_result granit_shader_tools_inspect_spirv(const granit_shader_tools_inspect_desc* desc,
                                                 granit_shader_tools_result* result) {
   if (result == nullptr)

@@ -72,6 +72,24 @@ typedef struct granit_shader_tools_compile_desc {
   uint64_t expected_binding_count;
 } granit_shader_tools_compile_desc;
 
+/** HLSL portable 双后端编译描述；DXC 生成 SPIR-V，Tint 从该产物生成 WGSL。 */
+typedef struct granit_shader_tools_hlsl_compile_desc {
+  uint32_t struct_size;
+  const char* dxc_path;
+  uint64_t dxc_path_length;
+  const char* tint_path;
+  uint64_t tint_path_length;
+  const char* input_path;
+  uint64_t input_path_length;
+  const char* entry_point;
+  uint64_t entry_point_length;
+  uint32_t stage;
+  const char* spirv_output_path;
+  uint64_t spirv_output_path_length;
+  const char* wgsl_output_path;
+  uint64_t wgsl_output_path_length;
+} granit_shader_tools_hlsl_compile_desc;
+
 /** SPIR-V 检查描述。路径为 UTF-8，调用期间有效且无需以零结尾。 */
 typedef struct granit_shader_tools_inspect_desc {
   uint32_t struct_size;
@@ -197,6 +215,10 @@ extern "C" {
  */
 GRANIT_SHADER_TOOLS_API granit_result granit_shader_tools_compile_wgsl(
     const granit_shader_tools_compile_desc* desc, granit_shader_tools_result* result);
+
+/** 使用显式 DXC 与 Tint 生成 portable SPIR-V/WGSL，并严格检查入口点和阶段。 */
+GRANIT_SHADER_TOOLS_API granit_result granit_shader_tools_compile_hlsl(
+    const granit_shader_tools_hlsl_compile_desc* desc, granit_shader_tools_result* result);
 
 /** 检查 SPIR-V 并返回入口点、阶段和反射文本。该函数线程安全。 */
 GRANIT_SHADER_TOOLS_API granit_result granit_shader_tools_inspect_spirv(

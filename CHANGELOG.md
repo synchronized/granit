@@ -20,6 +20,9 @@
   其静态特性契约，查询结果不依赖构建机 GPU。
 - Shader 资产生成描述可声明必需特性；特性进入缓存键和变体记录，所选目标档位不支持时会在
   写入前返回 `unsupported`。CLI 通过 `--features` 提供相同门禁。
+- ShaderTools 新增 HLSL portable 双产物编译入口，通过调用方指定的 DXC 生成 Vulkan 1.3 SPIR-V，
+  并以独立的 portable 中间 SPIR-V 经锁定 Tint 生成 WGSL；转换失败时返回完整工具诊断并清理
+  不完整产物。
 
 ## 0.5.0 - 2026-09-05
 

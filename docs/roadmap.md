@@ -240,7 +240,7 @@
 
 ## 十三、0.6.0 Shader 资产与变体
 
-**状态：进行中。**
+**状态：进行中；资产拆分、裁剪、能力查询和首版自动选择已完成，正在接入可选源码前端。**
 
 - **[S-20](plans/S-20-shader-asset-variants.md) / P1**：把 Shader 构建产物拆为后端无关清单与
   可裁剪 WGSL/SPIR-V sidecar，再补齐按后端及能力档位选择、打包失败语义和可选源码前端。
@@ -248,8 +248,8 @@
 
 ## 近期执行顺序
 
-1. 完成 [S-20](plans/S-20-shader-asset-variants.md) 的清单与 sidecar，再建立后端和能力档位选择；
-   HLSL、GLSL 前端不得先于该契约接入。
+1. 完成 [S-20](plans/S-20-shader-asset-variants.md) 的 HLSL CLI/缓存闭环，再评估 GLSL 前端；资产
+   清单、sidecar、后端裁剪、能力查询和首版运行时选择已经完成。
 2. S-14 只在复用条件成立后启动；不要为当前单个示例提前稳定 glTF 公共 API。
 3. S-06D 最终验收等待稳定版本与 component 范围决策；不在 0.x 阶段提前宣布稳定。
 4. H-09 的透明 PBR、CSM、Clustered Forward 与 Bindless 只在各自重新评估条件满足后独立恢复，

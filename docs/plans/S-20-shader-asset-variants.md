@@ -58,8 +58,10 @@ example.granit-shader.spv   # Vulkan portable 变体
 3. **S-20F 工具目标能力（首版已完成）**：ShaderTools C/C++ API 与 CLI 已能列出、查询内置
    portable 目标；生成请求会校验必需特性，未知特性返回 `invalid_argument`，目标不支持则返回
    `unsupported`。目标能力来自发布契约，不能读取构建机 GPU 后假定部署设备相同。
-4. **S-20G 可选源码前端**：先评估 HLSL，再评估 GLSL；前端只改变离线输入，不改变运行时变体
-   选择和后端载荷格式。
+4. **S-20G 可选源码前端（HLSL 首段已完成）**：ShaderTools 已可通过显式 DXC 生成 Vulkan 1.3
+   SPIR-V，同时以独立的 portable 中间 SPIR-V 经锁定 Tint 生成 WGSL，并校验两条路径的反射契约
+   一致；任一步不支持源代码能力都会明确失败且不保留不完整双产物。CLI 接入、资产缓存上下文和
+   GLSL/glslang 前端仍待完成；前端只改变离线输入，不改变运行时变体选择和后端载荷格式。
 
 ## 测试与验收
 
@@ -74,5 +76,7 @@ example.granit-shader.spv   # Vulkan portable 变体
 - 多入口、多能力档位的命名和优先级将在 S-20B 固化，S-20A 不提前扩张公共结构。
 - portable 是无可选特性要求的最低档位；`float16`、subgroup 等只有在具体后端完成启用和跨后端
   测试后才能进入 `supported_features`，不能根据 API 理论能力直接宣称支持。
+- HLSL 的 Vulkan 产物保持 Vulkan 1.3；仅 Tint 转换桥使用 SPIR-V 1.3。提升桥接版本前必须先确认
+  锁定 Tint 的 Reader 支持，不能让该限制反向降低 Vulkan sidecar 的目标版本。
 - 跨多个文件的更新无法形成文件系统事务；清单最后提交和摘要校验负责把残留状态降级为安全失败。
 - `.grmat` 是否改为引用 Shader Asset，等待 S-20B 的真实复用结果，不在本任务前半段耦合修改。

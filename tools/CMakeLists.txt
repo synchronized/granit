@@ -354,6 +354,7 @@ if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
   )
 endif()
 
+find_program(GRANIT_TINT_EXECUTABLE NAMES tint)
 find_program(
   GRANIT_DXC_EXECUTABLE
   NAMES dxc
@@ -397,6 +398,24 @@ if(GRANIT_BUILD_TESTING AND BUILD_TESTING AND GRANIT_DXC_EXECUTABLE)
   )
   add_custom_target(granit_material_shader_fixture DEPENDS "${GRANIT_MATERIAL_FIXTURE}")
   add_dependencies(granit_shader_tool granit_material_shader_fixture)
+
+  if(GRANIT_TINT_EXECUTABLE)
+    add_executable(
+      granit_shader_hlsl_api_test
+      "${PROJECT_SOURCE_DIR}/tests/tools/shader_hlsl_api_test.cpp"
+    )
+    target_compile_features(granit_shader_hlsl_api_test PRIVATE cxx_std_20)
+    target_link_libraries(granit_shader_hlsl_api_test PRIVATE granit::shader_tools)
+    granit_target_compile_warnings(granit_shader_hlsl_api_test)
+    granit_target_output_directories(granit_shader_hlsl_api_test)
+    add_test(
+      NAME granit.shader_tools.hlsl_api
+      COMMAND
+        granit_shader_hlsl_api_test "${GRANIT_DXC_EXECUTABLE}" "${GRANIT_TINT_EXECUTABLE}"
+        "${PROJECT_SOURCE_DIR}/tests/assets/material_fixture.hlsl"
+        "${CMAKE_CURRENT_BINARY_DIR}/shader-hlsl-api-test"
+    )
+  endif()
 
   if(GRANIT_SPIRV_VAL_EXECUTABLE)
     add_test(
