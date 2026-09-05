@@ -60,23 +60,34 @@ jobs:
           & $installer --root $root --accept-licenses --default-answer --confirm-command install
           if ($LASTEXITCODE -ne 0) { throw "Vulkan SDK 安装失败" }
           "VULKAN_SDK_ROOT=$root" >> $env:GITHUB_ENV
+      - name: 恢复锁定 Tint 产物
+        id: tint-cache
+        uses: actions/cache@v5
+        with:
+          path: ${{ runner.temp }}/granit-tint-cache
+          key: shader-tint-v1-windows-x64-msvc2022-${{ env.TINT_REVISION }}
       - name: 获取锁定的 Dawn 源码
+        if: steps.tint-cache.outputs.cache-hit != 'true'
         shell: pwsh
         run: |
-          git clone --filter=blob:none --no-checkout `
-            https://dawn.googlesource.com/dawn "$env:RUNNER_TEMP/dawn"
+          New-Item -ItemType Directory -Force -Path "$env:RUNNER_TEMP/dawn" | Out-Null
+          git -C "$env:RUNNER_TEMP/dawn" init
+          git -C "$env:RUNNER_TEMP/dawn" remote add origin https://dawn.googlesource.com/dawn
           git -C "$env:RUNNER_TEMP/dawn" fetch --depth=1 origin $env:TINT_REVISION
           git -C "$env:RUNNER_TEMP/dawn" checkout --detach FETCH_HEAD
       - name: 恢复 Dawn 第三方依赖
+        if: steps.tint-cache.outputs.cache-hit != 'true'
         uses: actions/cache@v5
         with:
           path: ${{ runner.temp }}/dawn/third_party
           key: shader-toolchain-dawn-windows-${{ env.TINT_REVISION }}
       - name: 获取 Dawn 第三方源码
+        if: steps.tint-cache.outputs.cache-hit != 'true'
         shell: pwsh
         working-directory: ${{ runner.temp }}/dawn
         run: python tools/fetch_dawn_dependencies.py
       - name: 构建 Tint
+        if: steps.tint-cache.outputs.cache-hit != 'true'
         shell: pwsh
         run: |
           $source = "$env:RUNNER_TEMP/dawn"
@@ -101,15 +112,27 @@ jobs:
           cmake --build $build --target tint_cmd_tint_cmd
           $tools = @(Get-ChildItem -LiteralPath $build -Recurse -File -Filter tint.exe)
           if ($tools.Count -ne 1) { throw "预期恰好一个 tint.exe，实际为 $($tools.Count)" }
-          "TINT_EXECUTABLE=$($tools[0].FullName)" >> $env:GITHUB_ENV
+          $cache = "$env:RUNNER_TEMP/granit-tint-cache"
+          New-Item -ItemType Directory -Force -Path "$cache/bin", "$cache/licenses" | Out-Null
+          Copy-Item -LiteralPath $tools[0].FullName -Destination "$cache/bin/tint.exe"
+          cmake -DROOT="$env:RUNNER_TEMP/dawn" `
+            -DOUTPUT="$cache/licenses/Dawn-THIRD-PARTY-LICENSES.txt" `
+            -DCOMPONENT=Dawn-Tint -P cmake/collect_license_bundle.cmake
+      - name: 设置 Tint 产物路径
+        shell: pwsh
+        run: |
+          $tint = "$env:RUNNER_TEMP/granit-tint-cache/bin/tint.exe"
+          $license = "$env:RUNNER_TEMP/granit-tint-cache/licenses/Dawn-THIRD-PARTY-LICENSES.txt"
+          if (-not (Test-Path -LiteralPath $tint -PathType Leaf) -or
+              -not (Test-Path -LiteralPath $license -PathType Leaf)) {
+            throw "Tint 产物缓存不完整"
+          }
+          "TINT_EXECUTABLE=$tint" >> $env:GITHUB_ENV
+          "TINT_LICENSE=$license" >> $env:GITHUB_ENV
       - name: 收集许可证并组装工具链包
         id: package
         shell: pwsh
         run: |
-          $licenses = "$env:RUNNER_TEMP/licenses"
-          cmake -DROOT="$env:RUNNER_TEMP/dawn" `
-            -DOUTPUT="$licenses/Dawn-THIRD-PARTY-LICENSES.txt" `
-            -DCOMPONENT=Dawn-Tint -P cmake/collect_license_bundle.cmake
           $sdkLicense = "$env:VULKAN_SDK_ROOT/Licenses/LICENSE.txt"
           if (-not (Test-Path -LiteralPath $sdkLicense -PathType Leaf)) {
             throw "Vulkan SDK 许可证文件不存在"
@@ -123,7 +146,7 @@ jobs:
             -DGLSLANG_VERSION="$env:GLSLANG_VERSION" -DDAWN_VERSION="$env:DAWN_VERSION" `
             -DTINT_REVISION="$env:TINT_REVISION" -DDXC_LICENSE_FILES="$sdkLicense" `
             -DGLSLANG_LICENSE_FILES="$sdkLicense" `
-            -DDAWN_LICENSE_FILES="$licenses/Dawn-THIRD-PARTY-LICENSES.txt" `
+            -DDAWN_LICENSE_FILES="$env:TINT_LICENSE" `
             -DRUNTIME_FILES="$env:VULKAN_SDK_ROOT/Bin/dxcompiler.dll" `
             -P cmake/package_shader_toolchain.cmake
           cmake -DSTAGE="$stage" -DMANIFEST="$stage/shader-toolchain.json" `
@@ -173,22 +196,33 @@ jobs:
           tar -xf "$archive" -C "$root"
           echo "VULKAN_SDK_ROOT=$root/$VULKAN_SDK_VERSION/x86_64" >> "$GITHUB_ENV"
           echo "VULKAN_SDK_SOURCE_ROOT=$root/$VULKAN_SDK_VERSION" >> "$GITHUB_ENV"
+      - name: 恢复锁定 Tint 产物
+        id: tint-cache
+        uses: actions/cache@v5
+        with:
+          path: ${{ runner.temp }}/granit-tint-cache
+          key: shader-tint-v1-linux-x64-clang18-${{ env.TINT_REVISION }}
       - name: 获取锁定的 Dawn 源码
+        if: steps.tint-cache.outputs.cache-hit != 'true'
         shell: bash
         run: |
-          git clone --filter=blob:none --no-checkout \
-            https://dawn.googlesource.com/dawn "$RUNNER_TEMP/dawn"
+          mkdir -p "$RUNNER_TEMP/dawn"
+          git -C "$RUNNER_TEMP/dawn" init
+          git -C "$RUNNER_TEMP/dawn" remote add origin https://dawn.googlesource.com/dawn
           git -C "$RUNNER_TEMP/dawn" fetch --depth=1 origin "$TINT_REVISION"
           git -C "$RUNNER_TEMP/dawn" checkout --detach FETCH_HEAD
       - name: 恢复 Dawn 第三方依赖
+        if: steps.tint-cache.outputs.cache-hit != 'true'
         uses: actions/cache@v5
         with:
           path: ${{ runner.temp }}/dawn/third_party
           key: shader-toolchain-dawn-linux-${{ env.TINT_REVISION }}
       - name: 获取 Dawn 第三方源码
+        if: steps.tint-cache.outputs.cache-hit != 'true'
         working-directory: ${{ runner.temp }}/dawn
         run: python3 tools/fetch_dawn_dependencies.py
       - name: 构建 Tint
+        if: steps.tint-cache.outputs.cache-hit != 'true'
         shell: bash
         run: |
           CC=clang CXX=clang++ cmake -S "$RUNNER_TEMP/dawn" -B "$RUNNER_TEMP/tint-build" \
@@ -212,15 +246,23 @@ jobs:
           cmake --build "$RUNNER_TEMP/tint-build" --target tint_cmd_tint_cmd
           mapfile -t tools < <(find "$RUNNER_TEMP/tint-build" -type f -name tint -perm -u+x)
           [[ "${#tools[@]}" -eq 1 ]]
-          echo "TINT_EXECUTABLE=${tools[0]}" >> "$GITHUB_ENV"
+          cache="$RUNNER_TEMP/granit-tint-cache"
+          install -Dm755 "${tools[0]}" "$cache/bin/tint"
+          cmake -DROOT="$RUNNER_TEMP/dawn" \
+            -DOUTPUT="$cache/licenses/Dawn-THIRD-PARTY-LICENSES.txt" \
+            -DCOMPONENT=Dawn-Tint -P cmake/collect_license_bundle.cmake
+      - name: 设置 Tint 产物路径
+        shell: bash
+        run: |
+          tint="$RUNNER_TEMP/granit-tint-cache/bin/tint"
+          license="$RUNNER_TEMP/granit-tint-cache/licenses/Dawn-THIRD-PARTY-LICENSES.txt"
+          [[ -x "$tint" && -f "$license" ]]
+          echo "TINT_EXECUTABLE=$tint" >> "$GITHUB_ENV"
+          echo "TINT_LICENSE=$license" >> "$GITHUB_ENV"
       - name: 收集许可证并组装工具链包
         id: package
         shell: bash
         run: |
-          licenses="$RUNNER_TEMP/licenses"
-          cmake -DROOT="$RUNNER_TEMP/dawn" \
-            -DOUTPUT="$licenses/Dawn-THIRD-PARTY-LICENSES.txt" \
-            -DCOMPONENT=Dawn-Tint -P cmake/collect_license_bundle.cmake
           sdk_license="$(find "$VULKAN_SDK_SOURCE_ROOT" -maxdepth 2 -type f \
             -iname 'LICENSE.txt' -print -quit)"
           [[ -n "$sdk_license" ]]
@@ -234,7 +276,7 @@ jobs:
             -DGLSLANG_VERSION="$GLSLANG_VERSION" -DDAWN_VERSION="$DAWN_VERSION" \
             -DTINT_REVISION="$TINT_REVISION" -DDXC_LICENSE_FILES="$sdk_license" \
             -DGLSLANG_LICENSE_FILES="$sdk_license" \
-            -DDAWN_LICENSE_FILES="$licenses/Dawn-THIRD-PARTY-LICENSES.txt" \
+            -DDAWN_LICENSE_FILES="$TINT_LICENSE" \
             -DRUNTIME_FILES="$runtime" -P cmake/package_shader_toolchain.cmake
           cmake -DSTAGE="$stage" -DMANIFEST="$stage/shader-toolchain.json" \
             -P cmake/verify_shader_toolchain_manifest.cmake

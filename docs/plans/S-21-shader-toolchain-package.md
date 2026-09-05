@@ -35,7 +35,7 @@ ShaderTools 可使用系统 DXC、glslangValidator 和 Tint，但官方 CI 与 R
 3. 已建立确定性的源码许可证汇总器；继续核对 DXC、glslang 与 Dawn/Tint 的再分发许可和运行库
    闭包。
 4. 已建立手动触发的 Windows/Linux Tint 构建、包内验证、ShaderTools 双前端能力测试与归档
-   工作流；等待首次远端运行确认实际 Runner 依赖闭包。
+   工作流，并缓存最终 Tint 与许可证产物；等待首次远端运行确认实际 Runner 依赖闭包。
 5. 发布预发行工具包，记录归档 SHA-256，并用干净环境验证下载和解包。
 6. 为 CI 增加锁定下载辅助脚本，设置统一工具链根目录与 Tint 修订号。
 7. 在 ShaderTools 完整测试通过后，将官方 CI 切换为 `locked`。
