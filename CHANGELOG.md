@@ -6,6 +6,13 @@
 本文件记录面向使用者的公共接口、行为、构建和兼容性变化。项目当前仍处于 0.x；`Unreleased`
 内容不代表已经发布。版本兼容规则见[版本与兼容策略](docs/reference/compatibility.md)。
 
+## Unreleased
+
+### 变更
+
+- ShaderTools 的确定性资产改为 `.granit-shader` 反射清单及同名 `.wgsl`、`.spv` 后端载荷；
+  缓存恢复会校验三个文件的长度和 SHA-256，旧的单文件内嵌格式不再读取。
+
 ## 0.5.0 - 2026-09-05
 
 ### 新增

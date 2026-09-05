@@ -5,6 +5,7 @@
 
 #include <cstring>
 #include <filesystem>
+#include <fstream>
 #include <string>
 #include <tuple>
 
@@ -47,6 +48,8 @@ int main(int argc, char** argv) {
   const auto first = std::filesystem::file_size(output, error);
   if (error || first == 0)
     return 4;
+  if (!std::filesystem::exists(output + ".wgsl") || !std::filesystem::exists(output + ".spv"))
+    return 41;
   granit_shader_tools_cache_desc cache{};
   cache.struct_size = sizeof(cache);
   cache.wgsl_path = argv[2];
@@ -80,6 +83,26 @@ int main(int argc, char** argv) {
   std::tie(status, cache_hit) = result.write_asset(asset);
   if (status.failed() || cache_hit || std::filesystem::file_size(output, error) != first)
     return 7;
+  {
+    auto stream = std::ofstream{output + ".spv", std::ios::binary | std::ios::trunc};
+    stream.put('\0');
+  }
+  std::filesystem::remove(restored, error);
+  cache.compile_options = options.data();
+  cache.compile_options_length = options.size();
+  std::tie(restore_status, restored_hit) = granit::shader_tools::restore_asset_cache(cache);
+  if (restore_status.failed() || restored_hit)
+    return 71;
+  std::tie(status, cache_hit) = result.write_asset(asset);
+  if (status.failed() || cache_hit)
+    return 72;
+  std::filesystem::remove(output + ".wgsl", error);
+  std::tie(restore_status, restored_hit) = granit::shader_tools::restore_asset_cache(cache);
+  if (restore_status.failed() || restored_hit)
+    return 73;
+  std::tie(status, cache_hit) = result.write_asset(asset);
+  if (status.failed() || cache_hit)
+    return 74;
   std::filesystem::remove(restored, error);
   cache.compile_options = options.data();
   cache.compile_options_length = options.size();

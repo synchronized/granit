@@ -522,7 +522,8 @@ granit_result granit_shader_tools_result_write_asset(granit_shader_tools_result 
       return GRANIT_ERROR_INVALID_ARGUMENT;
     bool hit = false;
     if (granit::tools::store_shader_asset(copy_path(desc->output_path, desc->output_path_length),
-                                          asset, hit) != granit::tools::shader_asset_error::success)
+                                          asset, wgsl, spirv,
+                                          hit) != granit::tools::shader_asset_error::success)
       return GRANIT_ERROR_INITIALIZATION_FAILED;
     *cache_hit = hit ? 1U : 0U;
     return GRANIT_SUCCESS;
@@ -533,8 +534,8 @@ granit_result granit_shader_tools_result_write_asset(granit_shader_tools_result 
   }
 }
 
-granit_result granit_shader_tools_restore_asset_cache(
-    const granit_shader_tools_cache_desc* desc, uint32_t* cache_hit) {
+granit_result granit_shader_tools_restore_asset_cache(const granit_shader_tools_cache_desc* desc,
+                                                      uint32_t* cache_hit) {
   if (cache_hit == nullptr)
     return GRANIT_ERROR_INVALID_ARGUMENT;
   *cache_hit = 0;
@@ -557,22 +558,31 @@ granit_result granit_shader_tools_restore_asset_cache(
     const auto wgsl = read_text_file(copy_path(desc->wgsl_path, desc->wgsl_path_length));
     if (wgsl.empty())
       return GRANIT_ERROR_INVALID_ARGUMENT;
-    const auto asset_bytes = read_binary_file(copy_path(desc->asset_path, desc->asset_path_length));
+    const auto asset_path = copy_path(desc->asset_path, desc->asset_path_length);
+    const auto asset_bytes = read_binary_file(asset_path);
     granit::tools::shader_asset_view asset;
     if (granit::tools::decode_shader_asset(asset_bytes, asset) !=
         granit::tools::shader_asset_error::success)
       return GRANIT_SUCCESS;
     const auto key = granit::tools::make_shader_cache_key(
-        {wgsl,
-         copy_string(desc->entry_point, desc->entry_point_length),
-         stage,
+        {wgsl, copy_string(desc->entry_point, desc->entry_point_length), stage,
          copy_string(desc->tint_revision, desc->tint_revision_length),
          copy_string(desc->target_environment, desc->target_environment_length),
          copy_string(desc->compile_options, desc->compile_options_length)});
     if (key != asset.cache_key)
       return GRANIT_SUCCESS;
+    auto wgsl_sidecar_path = asset_path;
+    wgsl_sidecar_path += ".wgsl";
+    auto spirv_sidecar_path = asset_path;
+    spirv_sidecar_path += ".spv";
+    const auto packaged_wgsl = read_text_file(wgsl_sidecar_path);
+    const auto packaged_spirv = read_binary_file(spirv_sidecar_path);
+    if (granit::tools::validate_shader_asset_payloads(asset, packaged_wgsl, packaged_spirv) !=
+            granit::tools::shader_asset_error::success ||
+        packaged_wgsl != wgsl)
+      return GRANIT_SUCCESS;
     if (!write_binary_file(copy_path(desc->spirv_output_path, desc->spirv_output_path_length),
-                           asset.spirv))
+                           packaged_spirv))
       return GRANIT_ERROR_INITIALIZATION_FAILED;
     *cache_hit = 1;
     return GRANIT_SUCCESS;

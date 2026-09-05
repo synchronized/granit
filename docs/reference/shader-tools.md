@@ -24,9 +24,11 @@ target_link_libraries(editor PRIVATE granit::shader_tools)
 - C11 入口位于 `<granit/tools/shader_tools.h>`；C++20 RAII 包装位于对应 `.hpp`。
 - `granit_shader_tools_compile_wgsl` 编译 WGSL；`granit_shader_tools_inspect_spirv` 检查 SPIR-V。
 - `granit_shader_tools_restore_asset_cache` 在启动 Tint 前校验输入、编译上下文和资产摘要；命中时
-  直接恢复 SPIR-V，资产不存在、损坏或缓存键变化均作为正常未命中处理。
-- `granit_shader_tools_result_write_asset` 将成功结果对应的 WGSL、SPIR-V 和稳定反射 JSON 写入
-  私有 `.granit-shader` 资产，并报告目标文件是否已经逐字节命中。
+  从 `.spv` sidecar 恢复 SPIR-V；清单或任一 sidecar 不存在、损坏及缓存键变化均作为正常未命中。
+- `granit_shader_tools_result_write_asset` 将稳定反射和载荷摘要写入 `.granit-shader` 清单，并将
+  WGSL、SPIR-V 写入同名 `.wgsl`、`.spv` sidecar。只有三个文件均逐字节相同时才报告缓存命中。
+- 当前 sidecar 分别代表 WebGPU portable WGSL 和 Vulkan portable SPIR-V。资产按后端打包裁剪和
+  多能力档位选择属于 [S-20](../plans/S-20-shader-asset-variants.md) 的后续阶段。
 - `granit_shader_tools_result_get_binding_count` 和 `granit_shader_tools_result_get_binding` 按
   Group、Binding 数字顺序返回结构化绑定。记录包含资源类型、访问模式、数组数量和 Buffer
   最小绑定尺寸。

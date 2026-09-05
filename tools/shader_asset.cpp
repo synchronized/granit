@@ -24,10 +24,12 @@ namespace {
 
 constexpr std::array magic{std::byte{'G'}, std::byte{'R'}, std::byte{'N'}, std::byte{'S'},
                            std::byte{'H'}, std::byte{'D'}, std::byte{'R'}, std::byte{0}};
-constexpr std::uint32_t schema = 2;
-constexpr std::size_t header_size = 112;
+constexpr std::uint32_t schema = 3;
+constexpr std::size_t header_size = 176;
 constexpr std::size_t digest_offset = 48;
 constexpr std::size_t cache_key_offset = 80;
+constexpr std::size_t wgsl_digest_offset = 112;
+constexpr std::size_t spirv_digest_offset = 144;
 
 std::uint32_t read_u32(std::span<const std::byte> bytes, std::size_t offset) noexcept {
   std::uint32_t value = 0;
@@ -169,6 +171,12 @@ std::array<std::byte, 32> digest(std::span<const std::byte> bytes) noexcept {
   return context.finish();
 }
 
+std::array<std::byte, 32> payload_digest(std::span<const std::byte> bytes) noexcept {
+  sha256_context context;
+  context.update(bytes);
+  return context.finish();
+}
+
 void update_cache_field(sha256_context& context, std::string_view value) noexcept {
   std::array<std::byte, 8> size{};
   const auto field_size = static_cast<std::uint64_t>(value.size());
@@ -206,11 +214,48 @@ bool replace_file(const std::filesystem::path& source, const std::filesystem::pa
 #endif
 }
 
+bool write_file_atomically(const std::filesystem::path& path, std::span<const std::byte> bytes) {
+  static std::atomic<std::uint64_t> sequence{0};
+#if defined(_WIN32)
+  const auto process_id = static_cast<std::uint64_t>(_getpid());
+#else
+  const auto process_id = static_cast<std::uint64_t>(getpid());
+#endif
+  auto temporary = path;
+  temporary += ".tmp." + std::to_string(process_id) + "." +
+               std::to_string(sequence.fetch_add(1, std::memory_order_relaxed));
+  {
+    std::ofstream stream(temporary, std::ios::binary | std::ios::trunc);
+    if (!stream)
+      return false;
+    stream.write(reinterpret_cast<const char*>(bytes.data()),
+                 static_cast<std::streamsize>(bytes.size()));
+    stream.flush();
+    if (!stream) {
+      stream.close();
+      std::error_code error;
+      std::filesystem::remove(temporary, error);
+      return false;
+    }
+  }
+  if (replace_file(temporary, path))
+    return true;
+  std::error_code error;
+  std::filesystem::remove(temporary, error);
+  return std::ranges::equal(read_file(path), bytes);
+}
+
+std::filesystem::path sidecar_path(const std::filesystem::path& manifest, std::string_view suffix) {
+  auto result = manifest;
+  result += suffix;
+  return result;
+}
+
 } // namespace
 
 shader_cache_key make_shader_cache_key(const shader_cache_context& context) noexcept {
   sha256_context hash;
-  constexpr std::string_view domain = "granit-shader-cache-v1";
+  constexpr std::string_view domain = "granit-shader-cache-v2";
   update_cache_field(hash, domain);
   update_cache_field(hash, context.wgsl);
   update_cache_field(hash, context.entry_point);
@@ -227,13 +272,10 @@ shader_asset_error encode_shader_asset(const shader_asset_source& source,
       source.reflection_json.empty())
     return shader_asset_error::invalid_argument;
   const auto maximum = std::numeric_limits<std::size_t>::max() - header_size;
-  if (source.wgsl.size() > maximum || source.spirv.size() > maximum - source.wgsl.size() ||
-      source.reflection_json.size() > maximum - source.wgsl.size() - source.spirv.size())
+  if (source.reflection_json.size() > maximum)
     return shader_asset_error::invalid_argument;
   try {
-    const auto wgsl_offset = header_size;
-    const auto spirv_offset = wgsl_offset + source.wgsl.size();
-    const auto reflection_offset = spirv_offset + source.spirv.size();
+    const auto reflection_offset = header_size;
     output.assign(reflection_offset + source.reflection_json.size(), std::byte{0});
     std::ranges::copy(magic, output.begin());
     write_u32(output, 8, schema);
@@ -243,8 +285,11 @@ shader_asset_error encode_shader_asset(const shader_asset_source& source,
     write_u64(output, 32, source.spirv.size());
     write_u64(output, 40, source.reflection_json.size());
     std::ranges::copy(source.cache_key, output.begin() + cache_key_offset);
-    std::memcpy(output.data() + wgsl_offset, source.wgsl.data(), source.wgsl.size());
-    std::memcpy(output.data() + spirv_offset, source.spirv.data(), source.spirv.size());
+    const auto wgsl_hash = payload_digest(
+        {reinterpret_cast<const std::byte*>(source.wgsl.data()), source.wgsl.size()});
+    const auto spirv_hash = payload_digest(source.spirv);
+    std::ranges::copy(wgsl_hash, output.begin() + wgsl_digest_offset);
+    std::ranges::copy(spirv_hash, output.begin() + spirv_digest_offset);
     std::memcpy(output.data() + reflection_offset, source.reflection_json.data(),
                 source.reflection_json.size());
     const auto hash = digest(output);
@@ -270,37 +315,54 @@ shader_asset_error decode_shader_asset(std::span<const std::byte> bytes,
   const auto wgsl_size = read_u64(bytes, 24);
   const auto spirv_size = read_u64(bytes, 32);
   const auto reflection_size = read_u64(bytes, 40);
-  const auto wgsl_offset = static_cast<std::uint64_t>(header_size);
-  const auto spirv_offset = wgsl_offset + wgsl_size;
-  const auto reflection_offset = spirv_offset + spirv_size;
-  if (!valid_section(wgsl_offset, wgsl_size, bytes.size()) || spirv_size % 4 != 0 ||
-      !valid_section(spirv_offset, spirv_size, bytes.size()) ||
+  const auto reflection_offset = static_cast<std::uint64_t>(header_size);
+  if (wgsl_size == 0 || spirv_size == 0 || spirv_size % 4 != 0 ||
       !valid_section(reflection_offset, reflection_size, bytes.size()) ||
       reflection_offset + reflection_size != bytes.size())
     return shader_asset_error::invalid_layout;
   const auto expected = digest(bytes);
   if (!std::ranges::equal(expected, bytes.subspan(digest_offset, expected.size())))
     return shader_asset_error::digest_mismatch;
-  output.wgsl = {reinterpret_cast<const char*>(bytes.data() + wgsl_offset),
-                 static_cast<std::size_t>(wgsl_size)};
-  output.spirv =
-      bytes.subspan(static_cast<std::size_t>(spirv_offset), static_cast<std::size_t>(spirv_size));
   output.reflection_json = {reinterpret_cast<const char*>(bytes.data() + reflection_offset),
                             static_cast<std::size_t>(reflection_size)};
   std::ranges::copy(bytes.subspan(cache_key_offset, output.cache_key.size()),
                     output.cache_key.begin());
+  std::ranges::copy(bytes.subspan(wgsl_digest_offset, output.wgsl_digest.size()),
+                    output.wgsl_digest.begin());
+  std::ranges::copy(bytes.subspan(spirv_digest_offset, output.spirv_digest.size()),
+                    output.spirv_digest.begin());
+  output.wgsl_size = wgsl_size;
+  output.spirv_size = spirv_size;
   return shader_asset_error::success;
 }
 
+shader_asset_error validate_shader_asset_payloads(const shader_asset_view& asset,
+                                                  std::string_view wgsl,
+                                                  std::span<const std::byte> spirv) noexcept {
+  if (wgsl.size() != asset.wgsl_size || spirv.size() != asset.spirv_size)
+    return shader_asset_error::invalid_layout;
+  const auto wgsl_bytes = std::span{reinterpret_cast<const std::byte*>(wgsl.data()), wgsl.size()};
+  return payload_digest(wgsl_bytes) == asset.wgsl_digest &&
+                 payload_digest(spirv) == asset.spirv_digest
+             ? shader_asset_error::success
+             : shader_asset_error::digest_mismatch;
+}
+
 shader_asset_error store_shader_asset(const std::filesystem::path& path,
-                                      std::span<const std::byte> bytes, bool& cache_hit) noexcept {
+                                      std::span<const std::byte> manifest, std::string_view wgsl,
+                                      std::span<const std::byte> spirv, bool& cache_hit) noexcept {
   cache_hit = false;
   shader_asset_view view;
-  if (decode_shader_asset(bytes, view) != shader_asset_error::success)
+  if (decode_shader_asset(manifest, view) != shader_asset_error::success ||
+      validate_shader_asset_payloads(view, wgsl, spirv) != shader_asset_error::success)
     return shader_asset_error::invalid_argument;
   try {
-    const auto existing = read_file(path);
-    if (std::ranges::equal(existing, bytes)) {
+    const auto wgsl_path = sidecar_path(path, ".wgsl");
+    const auto spirv_path = sidecar_path(path, ".spv");
+    const auto wgsl_bytes = std::span{reinterpret_cast<const std::byte*>(wgsl.data()), wgsl.size()};
+    if (std::ranges::equal(read_file(path), manifest) &&
+        std::ranges::equal(read_file(wgsl_path), wgsl_bytes) &&
+        std::ranges::equal(read_file(spirv_path), spirv)) {
       cache_hit = true;
       return shader_asset_error::success;
     }
@@ -309,36 +371,10 @@ shader_asset_error store_shader_asset(const std::filesystem::path& path,
       std::filesystem::create_directories(path.parent_path(), error);
     if (error)
       return shader_asset_error::invalid_argument;
-    static std::atomic<std::uint64_t> sequence{0};
-#if defined(_WIN32)
-    const auto process_id = static_cast<std::uint64_t>(_getpid());
-#else
-    const auto process_id = static_cast<std::uint64_t>(getpid());
-#endif
-    auto temporary = path;
-    temporary += ".tmp." + std::to_string(process_id) + "." +
-                 std::to_string(sequence.fetch_add(1, std::memory_order_relaxed));
-    {
-      std::ofstream stream(temporary, std::ios::binary | std::ios::trunc);
-      if (!stream)
-        return shader_asset_error::invalid_argument;
-      stream.write(reinterpret_cast<const char*>(bytes.data()),
-                   static_cast<std::streamsize>(bytes.size()));
-      stream.flush();
-      if (!stream) {
-        stream.close();
-        std::filesystem::remove(temporary, error);
-        return shader_asset_error::invalid_argument;
-      }
-    }
-    if (!replace_file(temporary, path)) {
-      std::filesystem::remove(temporary, error);
-      if (std::ranges::equal(read_file(path), bytes)) {
-        cache_hit = true;
-        return shader_asset_error::success;
-      }
+    // 清单最后替换；中途失败时旧清单不会错误匹配新旧混合载荷。
+    if (!write_file_atomically(wgsl_path, wgsl_bytes) ||
+        !write_file_atomically(spirv_path, spirv) || !write_file_atomically(path, manifest))
       return shader_asset_error::invalid_argument;
-    }
     return shader_asset_error::success;
   } catch (...) {
     return shader_asset_error::invalid_argument;

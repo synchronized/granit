@@ -27,9 +27,9 @@ int main(int argc, char** argv) {
       first != second)
     return 1;
   shader_asset_view view;
-  if (decode_shader_asset(first, view) != shader_asset_error::success || view.wgsl != wgsl ||
-      !std::ranges::equal(view.spirv, spirv) || view.reflection_json != reflection ||
-      view.cache_key != cache_key)
+  if (decode_shader_asset(first, view) != shader_asset_error::success ||
+      validate_shader_asset_payloads(view, wgsl, spirv) != shader_asset_error::success ||
+      view.reflection_json != reflection || view.cache_key != cache_key)
     return 2;
   const auto same_from_other_directory =
       make_shader_cache_key({wgsl, "main", "compute", "tint-r1", "vulkan1.3", "--use-ir"});
@@ -55,7 +55,7 @@ int main(int argc, char** argv) {
   if (decode_shader_asset(corrupted, view) != shader_asset_error::invalid_magic)
     return 4;
   corrupted = first;
-  corrupted[8] = std::byte{3};
+  corrupted[8] = std::byte{4};
   if (decode_shader_asset(corrupted, view) != shader_asset_error::unsupported_schema)
     return 11;
   corrupted = first;
@@ -66,18 +66,34 @@ int main(int argc, char** argv) {
   std::error_code error;
   std::filesystem::remove_all(cache_path.parent_path(), error);
   bool cache_hit = true;
-  if (store_shader_asset(cache_path, second, cache_hit) != shader_asset_error::success || cache_hit)
+  if (store_shader_asset(cache_path, second, wgsl, spirv, cache_hit) !=
+          shader_asset_error::success ||
+      cache_hit)
     return 5;
-  if (store_shader_asset(cache_path, second, cache_hit) != shader_asset_error::success ||
+  if (store_shader_asset(cache_path, second, wgsl, spirv, cache_hit) !=
+          shader_asset_error::success ||
       !cache_hit)
     return 6;
   auto changed = second;
   changed.back() ^= std::byte{1};
-  if (store_shader_asset(cache_path, changed, cache_hit) != shader_asset_error::invalid_argument)
+  if (store_shader_asset(cache_path, changed, wgsl, spirv, cache_hit) !=
+      shader_asset_error::invalid_argument)
     return 7;
   const auto loaded_size = std::filesystem::file_size(cache_path, error);
   if (error || loaded_size != second.size())
     return 8;
+  const auto wgsl_sidecar = std::filesystem::path{cache_path.string() + ".wgsl"};
+  const auto spirv_sidecar = std::filesystem::path{cache_path.string() + ".spv"};
+  if (std::filesystem::file_size(wgsl_sidecar, error) != wgsl.size() || error ||
+      std::filesystem::file_size(spirv_sidecar, error) != spirv.size() || error)
+    return 14;
+  if (decode_shader_asset(second, view) != shader_asset_error::success)
+    return 16;
+  auto damaged_spirv = spirv;
+  damaged_spirv[0] ^= std::byte{1};
+  if (validate_shader_asset_payloads(view, wgsl, damaged_spirv) !=
+      shader_asset_error::digest_mismatch)
+    return 15;
   std::filesystem::remove_all(cache_path.parent_path(), error);
   return 0;
 }

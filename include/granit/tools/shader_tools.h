@@ -224,8 +224,8 @@ GRANIT_SHADER_TOOLS_API granit_result granit_shader_tools_result_get_reflection_
     granit_shader_tools_result result, const char** json, uint64_t* length);
 
 /**
- * 将成功结果对应的 WGSL、SPIR-V 和稳定反射 JSON 写入确定性 Shader 资产。
- * cache_hit 在目标文件已经逐字节相同时写为 1，否则写为 0。
+ * 将稳定反射清单写入 output_path，并将 WGSL、SPIR-V 分别写入同名 .wgsl、.spv sidecar。
+ * cache_hit 仅在清单和两个 sidecar 均逐字节相同时写为 1，否则写为 0。
  */
 GRANIT_SHADER_TOOLS_API granit_result granit_shader_tools_result_write_asset(
     granit_shader_tools_result result, const granit_shader_tools_asset_desc* desc,
@@ -234,8 +234,8 @@ GRANIT_SHADER_TOOLS_API granit_result granit_shader_tools_result_write_asset(
 /**
  * 在运行 Tint 前尝试恢复确定性 Shader 资产。
  *
- * 有效缓存命中时将 SPIR-V 写入 spirv_output_path，并把 cache_hit 写为 1；资产不存在、损坏或
- * 缓存键不匹配均作为正常未命中返回 GRANIT_SUCCESS 和 0。
+ * 有效缓存命中时校验清单和两个 sidecar，将 SPIR-V 写入 spirv_output_path，并把 cache_hit
+ * 写为 1；任一文件不存在、损坏或缓存键不匹配均作为正常未命中返回 GRANIT_SUCCESS 和 0。
  */
 GRANIT_SHADER_TOOLS_API granit_result granit_shader_tools_restore_asset_cache(
     const granit_shader_tools_cache_desc* desc, uint32_t* cache_hit);

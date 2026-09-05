@@ -42,10 +42,12 @@ struct shader_asset_source {
 };
 
 struct shader_asset_view {
-  std::string_view wgsl;
-  std::span<const std::byte> spirv;
   std::string_view reflection_json;
   shader_cache_key cache_key{};
+  shader_cache_key wgsl_digest{};
+  shader_cache_key spirv_digest{};
+  std::uint64_t wgsl_size = 0;
+  std::uint64_t spirv_size = 0;
 };
 
 shader_cache_key make_shader_cache_key(const shader_cache_context& context) noexcept;
@@ -53,8 +55,12 @@ shader_asset_error encode_shader_asset(const shader_asset_source& source,
                                        std::vector<std::byte>& output) noexcept;
 shader_asset_error decode_shader_asset(std::span<const std::byte> bytes,
                                        shader_asset_view& output) noexcept;
+shader_asset_error validate_shader_asset_payloads(const shader_asset_view& asset,
+                                                  std::string_view wgsl,
+                                                  std::span<const std::byte> spirv) noexcept;
 shader_asset_error store_shader_asset(const std::filesystem::path& path,
-                                      std::span<const std::byte> bytes, bool& cache_hit) noexcept;
+                                      std::span<const std::byte> manifest, std::string_view wgsl,
+                                      std::span<const std::byte> spirv, bool& cache_hit) noexcept;
 
 } // namespace granit::tools
 
