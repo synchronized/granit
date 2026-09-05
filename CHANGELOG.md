@@ -8,6 +8,25 @@
 
 ## Unreleased
 
+## 0.9.0 - 2026-09-05
+
+### 新增
+
+- RenderPipeline component 随安装包提供标准 PBR 顶点、片元 `.grshader` 清单及 Vulkan SPIR-V、
+  WebGPU WGSL sidecar；CMake package 通过 `granit_RENDER_PIPELINE_ASSET_DIR` 暴露稳定资产目录。
+- 增加标准 PBR 资产反射契约测试，固定逐帧、材质、对象和光照四组 Binding 以及 Buffer 最小尺寸。
+
+### 变更
+
+- Model Viewer 删除示例私有 PBR Shader，改为直接消费公共标准 PBR 资产；材质包继续通过稳定内容
+  ID 引用同一 Shader Asset。
+- 标准 PBR 顶点资产补齐逐帧渲染选项字段，使 CPU 常量布局、WGSL 和 SPIR-V 反射保持一致。
+
+### 兼容性与迁移
+
+- 公共 C/C++ API 和 Shader/材质持久化格式相对 0.8.0 没有变化；0.x Consumer 仍应重新编译并把
+  CMake 请求版本更新为 0.9。完整步骤见[从 0.8 迁移到 0.9](docs/guides/migrate-0.8-to-0.9.md)。
+
 ## 0.8.0 - 2026-09-05
 
 ### 新增

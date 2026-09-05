@@ -33,7 +33,7 @@
 | 十三、0.6.0 Shader 资产与变体 | 已发布 | S-20、S-21 与发布验收均已完成 |
 | 十四、0.7.0 SDK 稳定化与上游集成 | 已发布 | component 契约与上游集成门禁已随 0.7.0 完成 |
 | 十五、0.8.0 运行时 Shader 与材质资产 | 已发布 | 运行时资产契约已随 0.8.0 发布 |
-| 十六、0.9.0 公共 PBR 与渲染资产收敛 | 待开始 | 统一公共 PBR、Binding、Model Viewer 与安装资产 |
+| 十六、0.9.0 公共 PBR 与渲染资产收敛 | 已完成 | 公共 PBR、Binding、Model Viewer 与安装资产已收敛 |
 
 ## 一、工程与 ABI 基础
 
@@ -273,7 +273,7 @@
 
 ## 十六、0.9.0 公共 PBR 与渲染资产收敛
 
-**状态：已确认，待实施。**
+**状态：已完成。**
 
 - **[S-24](plans/S-24-0.9.0-public-pbr-assets.md) / P1**：把 Model Viewer 已验证的完整纹理、方向光、
   IBL、Specular AA 和调试能力收敛到公共 PBR Shader，统一四组 Binding 与离线变体规则。
@@ -284,11 +284,9 @@
 
 ## 近期执行顺序
 
-1. 先执行 S-24A 契约审计，再实现公共 PBR 变体；不直接移动或复制 Model Viewer Shader。
-2. S-24B 验证完成后迁移 Model Viewer，并在同一阶段删除示例私有 PBR 资产。
-3. S-14 只在复用条件成立后启动；不要为当前单个示例提前稳定 glTF 公共 API。
-4. S-06D 最终验收等待稳定版本与 component 范围决策；不在 0.x 阶段提前宣布稳定。
-5. H-09 的透明 PBR、CSM、Clustered Forward 与 Bindless 只在各自重新评估条件满足后独立恢复，
+1. S-14 只在复用条件成立后启动；不要为当前单个示例提前稳定 glTF 公共 API。
+2. S-06D 最终验收等待稳定版本与 component 范围决策；不在 0.x 阶段提前宣布稳定。
+3. H-09 的透明 PBR、CSM、Clustered Forward 与 Bindless 只在各自重新评估条件满足后独立恢复，
    不作为当前稳定化工作的前置项。
 
 若前置抽象不足，应先更新对应 Plan 和本路线图状态，再扩大公共 API。
