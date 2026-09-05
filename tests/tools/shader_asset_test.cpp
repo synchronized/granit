@@ -17,7 +17,7 @@ int main(int argc, char** argv) {
   constexpr std::array spirv{std::byte{3}, std::byte{2}, std::byte{35}, std::byte{7}};
   constexpr std::string_view reflection = "{\"schema\":1}\n";
   const auto cache_key =
-      make_shader_cache_key({wgsl, "main", "compute", "tint-r1", "vulkan1.3", "--use-ir"});
+      make_shader_cache_key({wgsl, "wgsl", "main", "compute", "tint-r1", "vulkan1.3", "--use-ir"});
   std::vector<std::byte> first;
   std::vector<std::byte> second;
   if (encode_shader_asset({wgsl, spirv, reflection, cache_key}, first) !=
@@ -60,17 +60,19 @@ int main(int argc, char** argv) {
                                 shader_asset_profile::portable) != nullptr)
     return 20;
   const auto same_from_other_directory =
-      make_shader_cache_key({wgsl, "main", "compute", "tint-r1", "vulkan1.3", "--use-ir"});
+      make_shader_cache_key({wgsl, "wgsl", "main", "compute", "tint-r1", "vulkan1.3", "--use-ir"});
   if (same_from_other_directory != cache_key)
     return 9;
   const std::array changed_contexts{
-      make_shader_cache_key({"@compute @workgroup_size(2) fn main() {}\n", "main", "compute",
-                             "tint-r1", "vulkan1.3", "--use-ir"}),
-      make_shader_cache_key({wgsl, "other", "compute", "tint-r1", "vulkan1.3", "--use-ir"}),
-      make_shader_cache_key({wgsl, "main", "fragment", "tint-r1", "vulkan1.3", "--use-ir"}),
-      make_shader_cache_key({wgsl, "main", "compute", "tint-r2", "vulkan1.3", "--use-ir"}),
-      make_shader_cache_key({wgsl, "main", "compute", "tint-r1", "webgpu", "--use-ir"}),
-      make_shader_cache_key({wgsl, "main", "compute", "tint-r1", "vulkan1.3", "--no-use-ir"})};
+      make_shader_cache_key({wgsl, "hlsl", "main", "compute", "tint-r1", "vulkan1.3", "--use-ir"}),
+      make_shader_cache_key({"@compute @workgroup_size(2) fn main() {}\n", "wgsl", "main",
+                             "compute", "tint-r1", "vulkan1.3", "--use-ir"}),
+      make_shader_cache_key({wgsl, "wgsl", "other", "compute", "tint-r1", "vulkan1.3", "--use-ir"}),
+      make_shader_cache_key({wgsl, "wgsl", "main", "fragment", "tint-r1", "vulkan1.3", "--use-ir"}),
+      make_shader_cache_key({wgsl, "wgsl", "main", "compute", "tint-r2", "vulkan1.3", "--use-ir"}),
+      make_shader_cache_key({wgsl, "wgsl", "main", "compute", "tint-r1", "webgpu", "--use-ir"}),
+      make_shader_cache_key(
+          {wgsl, "wgsl", "main", "compute", "tint-r1", "vulkan1.3", "--no-use-ir"})};
   if (std::ranges::any_of(changed_contexts,
                           [&](const auto& changed_key) { return changed_key == cache_key; }))
     return 13;

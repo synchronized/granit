@@ -285,9 +285,10 @@ bool read_variant(std::span<const std::byte> bytes, std::size_t index,
 
 shader_cache_key make_shader_cache_key(const shader_cache_context& context) noexcept {
   sha256_context hash;
-  constexpr std::string_view domain = "granit-shader-cache-v2";
+  constexpr std::string_view domain = "granit-shader-cache-v3";
   update_cache_field(hash, domain);
-  update_cache_field(hash, context.wgsl);
+  update_cache_field(hash, context.source_language);
+  update_cache_field(hash, context.source);
   update_cache_field(hash, context.entry_point);
   update_cache_field(hash, context.stage);
   update_cache_field(hash, context.tint_revision);

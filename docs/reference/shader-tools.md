@@ -25,7 +25,7 @@ target_link_libraries(editor PRIVATE granit::shader_tools)
 - `granit_shader_tools_compile_wgsl` 编译 WGSL；`granit_shader_tools_compile_hlsl` 通过调用方指定的
   DXC 和 Tint 生成 portable SPIR-V/WGSL 双产物；`granit_shader_tools_inspect_spirv` 检查 SPIR-V。
 - `granit_shader_tools_restore_asset_cache` 在启动 Tint 前校验输入、编译上下文和资产摘要；命中时
-  从 `.spv` sidecar 恢复 SPIR-V；清单或任一 sidecar 不存在、损坏及缓存键变化均作为正常未命中。
+  从 sidecar 恢复所需产物；清单或任一 sidecar 不存在、损坏及缓存键变化均作为正常未命中。
 - `granit_shader_tools_result_write_asset` 将稳定反射和载荷摘要写入 `.granit-shader` 清单，并将
   WGSL、SPIR-V 写入同名 `.wgsl`、`.spv` sidecar。只有三个文件均逐字节相同时才报告缓存命中。
 - 当前 sidecar 分别代表 WebGPU portable WGSL 和 Vulkan portable SPIR-V。资产按后端打包裁剪和
@@ -36,7 +36,10 @@ target_link_libraries(editor PRIVATE granit::shader_tools)
   `initialization_failed`、保留工具诊断并删除不完整产物，不会降低 Vulkan sidecar 的目标版本，
   也不会静默降级为仅 Vulkan 资产。
 - 命令行 `compile-hlsl` 暴露相同路径，并可直接写入、裁剪 `.granit-shader` 资产。写资产时必须
-  显式记录 DXC 与 Tint 修订号；当前仍在完整编译后判断内容是否变化。
+  显式记录 DXC 与 Tint 修订号。全后端资产缓存命中时会在启动两个编译器前直接恢复 SPIR-V 和
+  WGSL；单后端裁剪目前仍执行完整编译，避免声称恢复了未被资产保存的另一后端产物。
+- 缓存键基于原始源码语言、原始源码内容、入口点、阶段、工具修订号、目标、选项和必需特性。
+  因此相同文本分别作为 WGSL、HLSL 或未来 GLSL 输入时不会错误共享缓存。
 - `granit_shader_tools_asset_desc.backend_mask` 必须选择 Vulkan、WebGPU 或二者；写入时会删除同名
   的未选后端 sidecar，清单仅记录实际保留的变体。缓存描述的 `backend_mask` 表示期望的精确
   变体集合，清单集合不同也会正常未命中；两个字段均不能为零。

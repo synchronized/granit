@@ -40,6 +40,9 @@ int main(int argc, char** argv) {
   std::string options = "format=spirv;validate=1";
   granit_shader_tools_asset_desc asset{};
   asset.struct_size = sizeof(asset);
+  asset.source_path = argv[2];
+  asset.source_path_length = std::strlen(argv[2]);
+  asset.source_language = GRANIT_SHADER_TOOLS_SOURCE_WGSL;
   asset.wgsl_path = argv[2];
   asset.wgsl_path_length = std::strlen(argv[2]);
   asset.spirv_path = argv[1];
@@ -69,8 +72,9 @@ int main(int argc, char** argv) {
     return 41;
   granit_shader_tools_cache_desc cache{};
   cache.struct_size = sizeof(cache);
-  cache.wgsl_path = argv[2];
-  cache.wgsl_path_length = std::strlen(argv[2]);
+  cache.source_path = argv[2];
+  cache.source_path_length = std::strlen(argv[2]);
+  cache.source_language = GRANIT_SHADER_TOOLS_SOURCE_WGSL;
   cache.spirv_output_path = restored.data();
   cache.spirv_output_path_length = restored.size();
   cache.asset_path = output.data();

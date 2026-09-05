@@ -42,6 +42,10 @@ typedef struct granit_shader_tools_expected_binding {
 #define GRANIT_SHADER_TOOLS_ASSET_BACKEND_WEBGPU UINT32_C(2)
 #define GRANIT_SHADER_TOOLS_ASSET_BACKEND_ALL UINT32_C(3)
 
+#define GRANIT_SHADER_TOOLS_SOURCE_WGSL UINT32_C(1)
+#define GRANIT_SHADER_TOOLS_SOURCE_HLSL UINT32_C(2)
+#define GRANIT_SHADER_TOOLS_SOURCE_GLSL UINT32_C(3)
+
 /** ShaderTools 内置目标档位的静态能力；与构建机 GPU 无关。 */
 typedef struct granit_shader_tools_target_capabilities {
   uint32_t struct_size;
@@ -116,6 +120,11 @@ typedef struct granit_shader_tools_result_info {
 /** Shader 资产写入描述。路径和字符串均为 UTF-8，调用期间有效且无需以零结尾。 */
 typedef struct granit_shader_tools_asset_desc {
   uint32_t struct_size;
+  /** 用于缓存身份的原始源码；不作为 sidecar 写入。 */
+  const char* source_path;
+  uint64_t source_path_length;
+  uint32_t source_language;
+  /** 已生成的 WebGPU WGSL 载荷。 */
   const char* wgsl_path;
   uint64_t wgsl_path_length;
   const char* spirv_path;
@@ -137,8 +146,13 @@ typedef struct granit_shader_tools_asset_desc {
 /** Shader 资产缓存恢复描述。所有路径和字符串均在调用期间有效。 */
 typedef struct granit_shader_tools_cache_desc {
   uint32_t struct_size;
-  const char* wgsl_path;
-  uint64_t wgsl_path_length;
+  /** 用于重新计算缓存键的原始源码。 */
+  const char* source_path;
+  uint64_t source_path_length;
+  uint32_t source_language;
+  /** 非 WGSL 前端命中缓存时恢复 WGSL 的目标；WGSL 前端可留空。 */
+  const char* wgsl_output_path;
+  uint64_t wgsl_output_path_length;
   const char* spirv_output_path;
   uint64_t spirv_output_path_length;
   const char* asset_path;
@@ -282,8 +296,8 @@ GRANIT_SHADER_TOOLS_API granit_result granit_shader_tools_result_write_asset(
 /**
  * 在运行 Tint 前尝试恢复确定性 Shader 资产。
  *
- * 有效缓存命中时校验清单和两个 sidecar，将 SPIR-V 写入 spirv_output_path，并把 cache_hit
- * 写为 1；任一文件不存在、损坏或缓存键不匹配均作为正常未命中返回 GRANIT_SUCCESS 和 0。
+ * 有效缓存命中时校验清单和 sidecar，恢复描述要求的 SPIR-V/WGSL，并把 cache_hit 写为 1；
+ * 任一文件不存在、损坏或缓存键不匹配均作为正常未命中返回 GRANIT_SUCCESS 和 0。
  */
 GRANIT_SHADER_TOOLS_API granit_result granit_shader_tools_restore_asset_cache(
     const granit_shader_tools_cache_desc* desc, uint32_t* cache_hit);

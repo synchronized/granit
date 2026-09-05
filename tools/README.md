@@ -48,8 +48,9 @@ ShaderTools SDK 还可接收调用方从 WGSL 前端取得的预期 Group/Bindin
 不读取构建机 GPU；当前两个 portable 目标都只包含基线能力，因此可选特性为 `none`。
 
 `compile-hlsl` 调用显式提供的 DXC 与 Tint，同时生成 Vulkan 1.3 SPIR-V 和 WebGPU portable WGSL。
-使用 `--asset` 时必须记录两项工具版本；`--asset-backend` 可按发布目标裁剪 sidecar。当前该命令会
-执行完整编译后再判断资产内容是否变化；基于原始 HLSL 的编译前缓存恢复将在 S-20G 后续完成。
+使用 `--asset` 时必须记录两项工具版本；`--asset-backend` 可按发布目标裁剪 sidecar。全后端资产
+缓存以原始 HLSL 和完整编译上下文为身份，命中时会在启动 DXC/Tint 前恢复两个产物；单后端裁剪
+暂不执行编译前恢复，因为资产未保存另一后端的输出。
 
 `granit_material_tool inspect <package.grmat> --json` 验证最终二进制材质包并把稳定诊断 JSON 输出
 到标准输出。使用 `--output <path>` 可以写入文件；Renderer 不读取该 JSON。

@@ -418,17 +418,11 @@ if(GRANIT_BUILD_TESTING AND BUILD_TESTING AND GRANIT_DXC_EXECUTABLE)
     add_test(
       NAME granit.shader_tool.hlsl_asset
       COMMAND
-        granit_shader_tool compile-hlsl --dxc "${GRANIT_DXC_EXECUTABLE}" --tint
-        "${GRANIT_TINT_EXECUTABLE}" --input
-        "${PROJECT_SOURCE_DIR}/tests/assets/material_fixture.hlsl" --entry fragment_main --stage
-        fragment --spirv-output "${CMAKE_CURRENT_BINARY_DIR}/hlsl-cli.spv" --wgsl-output
-        "${CMAKE_CURRENT_BINARY_DIR}/hlsl-cli.wgsl" --asset
-        "${CMAKE_CURRENT_BINARY_DIR}/hlsl-cli.granit-shader" --dxc-revision test-dxc
-        --tint-revision test-tint --asset-backend all
-    )
-    set_tests_properties(
-      granit.shader_tool.hlsl_asset
-      PROPERTIES PASS_REGULAR_EXPRESSION "已生成 Shader 资产|Shader 资产内容未变化"
+        "${CMAKE_COMMAND}" -DTOOL=$<TARGET_FILE:granit_shader_tool>
+        -DDXC=${GRANIT_DXC_EXECUTABLE} -DTINT=${GRANIT_TINT_EXECUTABLE}
+        -DINPUT=${PROJECT_SOURCE_DIR}/tests/assets/material_fixture.hlsl
+        -DOUTPUT_DIR=${CMAKE_CURRENT_BINARY_DIR}/shader-hlsl-cli-test -P
+        "${PROJECT_SOURCE_DIR}/cmake/check_hlsl_shader_cache.cmake"
     )
   endif()
 

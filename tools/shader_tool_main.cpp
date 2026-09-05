@@ -61,8 +61,9 @@ int compile_shader(int argc, char** argv) {
   if (asset) {
     granit_shader_tools_cache_desc cache{};
     cache.struct_size = sizeof(cache);
-    cache.wgsl_path = input->data();
-    cache.wgsl_path_length = input->size();
+    cache.source_path = input->data();
+    cache.source_path_length = input->size();
+    cache.source_language = GRANIT_SHADER_TOOLS_SOURCE_WGSL;
     cache.spirv_output_path = output->data();
     cache.spirv_output_path_length = output->size();
     cache.asset_path = asset->data();
@@ -106,6 +107,9 @@ int compile_shader(int argc, char** argv) {
   if (status.ok() && asset) {
     granit_shader_tools_asset_desc asset_desc{};
     asset_desc.struct_size = sizeof(asset_desc);
+    asset_desc.source_path = input->data();
+    asset_desc.source_path_length = input->size();
+    asset_desc.source_language = GRANIT_SHADER_TOOLS_SOURCE_WGSL;
     asset_desc.wgsl_path = input->data();
     asset_desc.wgsl_path_length = input->size();
     asset_desc.spirv_path = output->data();
@@ -155,6 +159,46 @@ int compile_hlsl_shader(int argc, char** argv) {
   const auto stage_value = *stage == "vertex"     ? GRANIT_SHADER_TOOLS_STAGE_VERTEX
                            : *stage == "fragment" ? GRANIT_SHADER_TOOLS_STAGE_FRAGMENT
                                                   : GRANIT_SHADER_TOOLS_STAGE_COMPUTE;
+  const auto backend_mask = !asset_backend || *asset_backend == "all"
+                                ? GRANIT_SHADER_TOOLS_ASSET_BACKEND_ALL
+                            : *asset_backend == "vulkan" ? GRANIT_SHADER_TOOLS_ASSET_BACKEND_VULKAN
+                                                         : GRANIT_SHADER_TOOLS_ASSET_BACKEND_WEBGPU;
+  const std::string revisions = asset ? "dxc=" + *dxc_revision + ";tint=" + *tint_revision : "";
+  constexpr std::string_view target = "vulkan1.3+webgpu-portable";
+  constexpr std::string_view options = "source=hlsl;spirv=vulkan1.3;bridge=spirv1.3";
+  if (asset && backend_mask == GRANIT_SHADER_TOOLS_ASSET_BACKEND_ALL) {
+    granit_shader_tools_cache_desc cache{};
+    cache.struct_size = sizeof(cache);
+    cache.source_path = input->data();
+    cache.source_path_length = input->size();
+    cache.source_language = GRANIT_SHADER_TOOLS_SOURCE_HLSL;
+    cache.wgsl_output_path = wgsl_output->data();
+    cache.wgsl_output_path_length = wgsl_output->size();
+    cache.spirv_output_path = spirv_output->data();
+    cache.spirv_output_path_length = spirv_output->size();
+    cache.asset_path = asset->data();
+    cache.asset_path_length = asset->size();
+    cache.entry_point = entry->data();
+    cache.entry_point_length = entry->size();
+    cache.stage = stage_value;
+    cache.tint_revision = revisions.data();
+    cache.tint_revision_length = revisions.size();
+    cache.target_environment = target.data();
+    cache.target_environment_length = target.size();
+    cache.compile_options = options.data();
+    cache.compile_options_length = options.size();
+    cache.backend_mask = backend_mask;
+    const auto [cache_status, cache_hit] = granit::shader_tools::restore_asset_cache(cache);
+    if (cache_status.failed()) {
+      std::cerr << "HLSL Shader 资产缓存查询失败\n";
+      return 1;
+    }
+    if (cache_hit) {
+      std::cout << "Shader 资产缓存命中：" << *asset << '\n';
+      return 0;
+    }
+  }
+
   granit_shader_tools_hlsl_compile_desc desc{};
   desc.struct_size = sizeof(desc);
   desc.dxc_path = dxc->data();
@@ -177,15 +221,11 @@ int compile_hlsl_shader(int argc, char** argv) {
   if (status.failed() || !asset)
     return status.ok() ? 0 : 1;
 
-  const auto backend_mask = !asset_backend || *asset_backend == "all"
-                                ? GRANIT_SHADER_TOOLS_ASSET_BACKEND_ALL
-                            : *asset_backend == "vulkan" ? GRANIT_SHADER_TOOLS_ASSET_BACKEND_VULKAN
-                                                         : GRANIT_SHADER_TOOLS_ASSET_BACKEND_WEBGPU;
-  const std::string revisions = "dxc=" + *dxc_revision + ";tint=" + *tint_revision;
-  constexpr std::string_view target = "vulkan1.3+webgpu-portable";
-  constexpr std::string_view options = "source=hlsl;spirv=vulkan1.3;bridge=spirv1.3";
   granit_shader_tools_asset_desc asset_desc{};
   asset_desc.struct_size = sizeof(asset_desc);
+  asset_desc.source_path = input->data();
+  asset_desc.source_path_length = input->size();
+  asset_desc.source_language = GRANIT_SHADER_TOOLS_SOURCE_HLSL;
   asset_desc.wgsl_path = wgsl_output->data();
   asset_desc.wgsl_path_length = wgsl_output->size();
   asset_desc.spirv_path = spirv_output->data();

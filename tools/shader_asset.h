@@ -17,7 +17,8 @@ namespace granit::tools {
 using shader_cache_key = std::array<std::byte, 32>;
 
 struct shader_cache_context {
-  std::string_view wgsl;
+  std::string_view source;
+  std::string_view source_language;
   std::string_view entry_point;
   std::string_view stage;
   std::string_view tint_revision;
