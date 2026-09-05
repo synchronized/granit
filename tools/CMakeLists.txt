@@ -494,3 +494,15 @@ if(GRANIT_BUILD_TESTING AND BUILD_TESTING AND GRANIT_GLSLANG_EXECUTABLE AND
       "${PROJECT_SOURCE_DIR}/cmake/check_glsl_shader_cache.cmake"
   )
 endif()
+
+if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
+  add_test(
+    NAME granit.shader_toolchain.manifest
+    COMMAND
+      "${CMAKE_COMMAND}"
+      -DGENERATOR=${PROJECT_SOURCE_DIR}/cmake/generate_shader_toolchain_manifest.cmake
+      -DVERIFIER=${PROJECT_SOURCE_DIR}/cmake/verify_shader_toolchain_manifest.cmake
+      -DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/shader-toolchain-manifest-test -P
+      "${PROJECT_SOURCE_DIR}/cmake/check_shader_toolchain_manifest.cmake"
+  )
+endif()
