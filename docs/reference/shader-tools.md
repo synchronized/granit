@@ -19,21 +19,23 @@ target_link_libraries(editor PRIVATE granit::shader_tools)
 `GRANIT_BUILD_TOOLS=ON` 也会构建该 SDK，因为 `granit_shader_tool` 是它的命令行薄适配层。Tint
 可执行文件仍是编译调用的显式输入，不会成为公共链接依赖。
 
-HLSL portable 路径需要资产构建机安装 DXC 与 Tint，但应用运行时和 Granit 核心 SDK 均不需要
-它们。配置时优先设置 `GRANIT_SHADER_TOOLCHAIN_ROOT`，其 `bin` 目录应同时包含 `dxc` 和 `tint`；
-也可分别设置 `GRANIT_DXC_EXECUTABLE`、`GRANIT_TINT_EXECUTABLE`。未设置统一根目录时，DXC 还会
-从 `VULKAN_SDK` 和 PATH 查找，Tint 从 PATH 查找。配置阶段会检查锁定的 DXC 版本以及 Tint 所需的
-WGSL/SPIR-V 转换能力，不符合契约的工具不会用于端到端测试。
+HLSL/GLSL portable 路径需要资产构建机安装 DXC、glslangValidator 与 Tint，但应用运行时和
+Granit 核心 SDK 均不需要它们。配置时优先设置 `GRANIT_SHADER_TOOLCHAIN_ROOT`，其 `bin` 目录应
+包含三个工具；也可分别设置 `GRANIT_DXC_EXECUTABLE`、`GRANIT_GLSLANG_EXECUTABLE`、
+`GRANIT_TINT_EXECUTABLE`。未设置统一根目录时，DXC 与 glslang 还会从 `VULKAN_SDK` 和 PATH 查找，
+Tint 从 PATH 查找。配置阶段会检查锁定版本及 Tint 所需转换能力，不符合契约的工具不会用于
+端到端测试。
 
-当前工具链契约锁定 DXC `1.8.0.4973`、Dawn/Tint `v20260720.160313`（修订
+当前工具链契约锁定 DXC `1.8.0.4973`、glslang `15.3.0`、Dawn/Tint `v20260720.160313`（修订
 `0bc38adde72b79013536f8ce354b639ae19ae195`）。资产仍需显式记录真实工具修订号，使缓存身份不依赖
 开发机路径。工具链是离线依赖，不进入 `granit::granit` 的安装导出或传递依赖。
 
 ## 接口与生命周期
 
 - C11 入口位于 `<granit/tools/shader_tools.h>`；C++20 RAII 包装位于对应 `.hpp`。
-- `granit_shader_tools_compile_wgsl` 编译 WGSL；`granit_shader_tools_compile_hlsl` 通过调用方指定的
-  DXC 和 Tint 生成 portable SPIR-V/WGSL 双产物；`granit_shader_tools_inspect_spirv` 检查 SPIR-V。
+- `granit_shader_tools_compile_wgsl` 编译 WGSL；`granit_shader_tools_compile_hlsl` 和
+  `granit_shader_tools_compile_glsl` 分别通过调用方指定的 DXC、glslang 与 Tint 生成 portable
+  SPIR-V/WGSL 双产物；`granit_shader_tools_inspect_spirv` 检查 SPIR-V。
 - `granit_shader_tools_restore_asset_cache` 在启动 Tint 前校验输入、编译上下文和资产摘要；命中时
   从 sidecar 恢复所需产物；清单或任一 sidecar 不存在、损坏及缓存键变化均作为正常未命中。
 - `granit_shader_tools_result_write_asset` 将稳定反射和载荷摘要写入 `.granit-shader` 清单，并将
@@ -45,6 +47,9 @@ WGSL/SPIR-V 转换能力，不符合契约的工具不会用于端到端测试�
   一致。临时文件不会进入资产。DXC 或 Tint 拒绝源代码及其能力时，调用返回
   `initialization_failed`、保留工具诊断并删除不完整产物，不会降低 Vulkan sidecar 的目标版本，
   也不会静默降级为仅 Vulkan 资产。
+- GLSL portable 路径具有相同产物与失败语义，由 glslangValidator 生成最终和桥接 SPIR-V，再由
+  Tint 生成 WGSL。GLSL 源码必须显式使用 Vulkan 资源布局；工具不隐式分配 Set、Binding 或
+  Location。
 - 命令行 `compile-hlsl` 暴露相同路径，并可直接写入、裁剪 `.granit-shader` 资产。写资产时必须
   显式记录 DXC 与 Tint 修订号。全后端资产缓存命中时会在启动两个编译器前直接恢复 SPIR-V 和
   WGSL；单后端裁剪目前仍执行完整编译，避免声称恢复了未被资产保存的另一后端产物。

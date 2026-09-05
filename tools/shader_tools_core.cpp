@@ -519,4 +519,96 @@ int compile_hlsl_shader(const hlsl_compile_options& options, shader_info& info,
   return 0;
 }
 
+int compile_glsl_shader(const glsl_compile_options& options, shader_info& info,
+                        std::ostream& output, std::ostream& error) {
+  std::error_code filesystem_error;
+  auto tint_input = options.spirv_output;
+  tint_input += ".tint-input.spv";
+  std::filesystem::remove(options.spirv_output, filesystem_error);
+  std::filesystem::remove(options.wgsl_output, filesystem_error);
+  std::filesystem::remove(tint_input, filesystem_error);
+  const auto stage = options.stage == "vertex"     ? "vert"
+                     : options.stage == "fragment" ? "frag"
+                     : options.stage == "compute"  ? "comp"
+                                                   : nullptr;
+  if (stage == nullptr) {
+    error << "不支持的 GLSL Shader 阶段：" << options.stage << '\n';
+    return 1;
+  }
+
+  const auto compile_spirv = [&](std::string_view target, const std::filesystem::path& path,
+                                 std::string_view description) {
+    process_result process;
+    const std::vector<std::string> arguments{
+        options.glslang.string(), "-V", "--target-env", std::string{target},    "-S", stage, "-e",
+        options.entry_point,      "-o", path.string(),  options.input.string(),
+    };
+    if (!run_process(arguments, process)) {
+      error << "无法启动 glslangValidator：" << options.glslang.string() << '\n';
+      return false;
+    }
+    output << process.standard_output;
+    error << process.standard_error;
+    if (process.exit_code != 0) {
+      std::filesystem::remove(path, filesystem_error);
+      error << description << "编译失败，退出码：" << process.exit_code << '\n';
+      return false;
+    }
+    return true;
+  };
+
+  if (!compile_spirv("vulkan1.3", options.spirv_output, "glslang Vulkan 1.3 ") ||
+      !compile_spirv("vulkan1.1", tint_input, "glslang portable 中间产物")) {
+    std::filesystem::remove(options.spirv_output, filesystem_error);
+    std::filesystem::remove(tint_input, filesystem_error);
+    return 1;
+  }
+
+  shader_info bridge_info;
+  if (!inspect_shader(options.spirv_output, false, info, output, error) ||
+      !inspect_shader(tint_input, false, bridge_info, output, error) ||
+      serialize_shader_info_json(info) != serialize_shader_info_json(bridge_info)) {
+    std::filesystem::remove(options.spirv_output, filesystem_error);
+    std::filesystem::remove(tint_input, filesystem_error);
+    error << "Vulkan 与 WebGPU 中间产物的反射契约不一致\n";
+    return 1;
+  }
+
+  process_result tint_process;
+  const std::vector<std::string> tint_arguments{
+      options.tint.string(),
+      "--input-format",
+      "spirv",
+      "--format",
+      "wgsl",
+      "--entry-point",
+      options.entry_point,
+      "--output-name",
+      options.wgsl_output.string(),
+      "--validate",
+      tint_input.string(),
+  };
+  if (!run_process(tint_arguments, tint_process)) {
+    error << "无法启动 Tint：" << options.tint.string() << '\n';
+    std::filesystem::remove(options.spirv_output, filesystem_error);
+    std::filesystem::remove(tint_input, filesystem_error);
+    return 1;
+  }
+  output << tint_process.standard_output;
+  error << tint_process.standard_error;
+  const auto wgsl_size = std::filesystem::file_size(options.wgsl_output, filesystem_error);
+  if (tint_process.exit_code != 0 || filesystem_error || wgsl_size == 0 ||
+      info.entry_point != options.entry_point || info.stage != options.stage) {
+    std::filesystem::remove(options.spirv_output, filesystem_error);
+    std::filesystem::remove(options.wgsl_output, filesystem_error);
+    std::filesystem::remove(tint_input, filesystem_error);
+    error << "GLSL portable 双后端产物生成或契约检查失败\n";
+    return 1;
+  }
+  std::filesystem::remove(tint_input, filesystem_error);
+  output << "已生成 " << options.spirv_output.string() << " 和 " << options.wgsl_output.string()
+         << "（" << info.entry_point << ", " << info.stage << "）\n";
+  return 0;
+}
+
 } // namespace granit::tools

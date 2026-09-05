@@ -58,13 +58,14 @@ example.granit-shader.spv   # Vulkan portable 变体
 3. **S-20F 工具目标能力（首版已完成）**：ShaderTools C/C++ API 与 CLI 已能列出、查询内置
    portable 目标；生成请求会校验必需特性，未知特性返回 `invalid_argument`，目标不支持则返回
    `unsupported`。目标能力来自发布契约，不能读取构建机 GPU 后假定部署设备相同。
-4. **S-20G 可选源码前端（HLSL 首段已完成）**：ShaderTools 已可通过显式 DXC 生成 Vulkan 1.3
+4. **S-20G 可选源码前端（portable 首版已完成）**：ShaderTools 已可通过显式 DXC 生成 Vulkan 1.3
    SPIR-V，同时以独立的 portable 中间 SPIR-V 经锁定 Tint 生成 WGSL，并校验两条路径的反射契约
    一致；任一步不支持源代码能力都会明确失败且不保留不完整双产物。CLI 已可生成并按后端裁剪
    HLSL 资产；全后端资产已可按原始 HLSL、源码语言和完整编译上下文在启动编译器前恢复双产物。
-   GLSL/glslang 前端仍待完成。前端只改变离线输入，不改变运行时变体选择和后端载荷格式。DXC
-   与 Tint 的统一发现、锁定版本和配置期能力探测已经收敛到可选 Shader Toolchain 契约；可下载
-   工具链包及其归档 SHA-256 要在产物实际发布后补齐，不能预写不存在的摘要。
+   GLSL/glslang 前端也已复用相同的双产物、反射一致性、打包裁剪和原始源码缓存流程。前端只改变
+   离线输入，不改变运行时变体选择和后端载荷格式。DXC、glslang 与 Tint 的统一发现、锁定版本和
+   配置期能力探测已经收敛到可选 Shader Toolchain 契约；可下载工具链包及其归档 SHA-256 要在
+   产物实际发布后补齐，不能预写不存在的摘要。
 
 ## 测试与验收
 

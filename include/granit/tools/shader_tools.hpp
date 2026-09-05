@@ -207,6 +207,13 @@ compile_hlsl(const granit_shader_tools_hlsl_compile_desc& desc) noexcept {
 }
 
 inline std::pair<::granit::result, result>
+compile_glsl(const granit_shader_tools_glsl_compile_desc& desc) noexcept {
+  granit_shader_tools_result handle = 0;
+  const auto status = granit_shader_tools_compile_glsl(&desc, &handle);
+  return {::granit::from_native(status), result{handle}};
+}
+
+inline std::pair<::granit::result, result>
 inspect_spirv(const granit_shader_tools_inspect_desc& desc) noexcept {
   granit_shader_tools_result handle = 0;
   const auto status = granit_shader_tools_inspect_spirv(&desc, &handle);

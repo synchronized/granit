@@ -5,15 +5,17 @@
 set(GRANIT_SHADER_TOOLCHAIN_DAWN_VERSION "v20260720.160313")
 set(GRANIT_SHADER_TOOLCHAIN_TINT_REVISION "0bc38adde72b79013536f8ce354b639ae19ae195")
 set(GRANIT_SHADER_TOOLCHAIN_DXC_VERSION "1.8.0.4973")
+set(GRANIT_SHADER_TOOLCHAIN_GLSLANG_VERSION "15.3.0")
 
 set(
   GRANIT_SHADER_TOOLCHAIN_ROOT
   ""
   CACHE PATH
-  "包含 bin/dxc 和 bin/tint 的 Granit Shader 工具链根目录"
+  "包含 bin/dxc、bin/glslangValidator 和 bin/tint 的 Granit Shader 工具链根目录"
 )
 set(GRANIT_DXC_EXECUTABLE "" CACHE FILEPATH "DXC 可执行文件")
 set(GRANIT_TINT_EXECUTABLE "" CACHE FILEPATH "Tint 可执行文件")
+set(GRANIT_GLSLANG_EXECUTABLE "" CACHE FILEPATH "glslangValidator 可执行文件")
 
 function(granit_find_shader_toolchain)
   if(GRANIT_SHADER_TOOLCHAIN_ROOT)
@@ -22,19 +24,41 @@ function(granit_find_shader_toolchain)
 
   if(NOT GRANIT_DXC_EXECUTABLE)
     find_program(
-      GRANIT_DXC_EXECUTABLE
+      granit_dxc_executable
       NAMES dxc
       HINTS
         "${granit_shader_toolchain_bin}"
         "$ENV{VULKAN_SDK}/Bin"
         "$ENV{VULKAN_SDK}/bin"
+      NO_CACHE
     )
+    set(GRANIT_DXC_EXECUTABLE "${granit_dxc_executable}" CACHE FILEPATH "DXC 可执行文件" FORCE)
   endif()
   if(NOT GRANIT_TINT_EXECUTABLE)
     find_program(
-      GRANIT_TINT_EXECUTABLE
+      granit_tint_executable
       NAMES tint
       HINTS "${granit_shader_toolchain_bin}"
+      NO_CACHE
+    )
+    set(GRANIT_TINT_EXECUTABLE "${granit_tint_executable}" CACHE FILEPATH "Tint 可执行文件" FORCE)
+  endif()
+  if(NOT GRANIT_GLSLANG_EXECUTABLE)
+    find_program(
+      granit_glslang_executable
+      NAMES glslangValidator
+      HINTS
+        "${granit_shader_toolchain_bin}"
+        "$ENV{VULKAN_SDK}/Bin"
+        "$ENV{VULKAN_SDK}/bin"
+      NO_CACHE
+    )
+    set(
+      GRANIT_GLSLANG_EXECUTABLE
+      "${granit_glslang_executable}"
+      CACHE FILEPATH
+      "glslangValidator 可执行文件"
+      FORCE
     )
   endif()
 
@@ -90,13 +114,43 @@ function(granit_find_shader_toolchain)
     endif()
   endif()
 
+  set(granit_glslang_usable OFF)
+  if(GRANIT_GLSLANG_EXECUTABLE)
+    execute_process(
+      COMMAND "${GRANIT_GLSLANG_EXECUTABLE}" --version
+      RESULT_VARIABLE granit_glslang_version_result
+      OUTPUT_VARIABLE granit_glslang_version_output
+      ERROR_VARIABLE granit_glslang_version_error
+    )
+    string(
+      FIND
+      "${granit_glslang_version_output}${granit_glslang_version_error}"
+      "${GRANIT_SHADER_TOOLCHAIN_GLSLANG_VERSION}"
+      granit_glslang_version_offset
+    )
+    if(granit_glslang_version_result EQUAL 0 AND
+       NOT granit_glslang_version_offset EQUAL -1)
+      set(granit_glslang_usable ON)
+      message(STATUS "Granit Shader Toolchain: glslang ${GRANIT_SHADER_TOOLCHAIN_GLSLANG_VERSION}")
+    else()
+      message(
+        STATUS
+        "Granit Shader Toolchain: glslang 不匹配锁定版本 ${GRANIT_SHADER_TOOLCHAIN_GLSLANG_VERSION}"
+      )
+    endif()
+  endif()
+
   if(NOT granit_dxc_usable)
     set(GRANIT_DXC_EXECUTABLE "" CACHE FILEPATH "DXC 可执行文件" FORCE)
   endif()
   if(NOT granit_tint_usable)
     set(GRANIT_TINT_EXECUTABLE "" CACHE FILEPATH "Tint 可执行文件" FORCE)
   endif()
+  if(NOT granit_glslang_usable)
+    set(GRANIT_GLSLANG_EXECUTABLE "" CACHE FILEPATH "glslangValidator 可执行文件" FORCE)
+  endif()
 
   set(GRANIT_DXC_EXECUTABLE "${GRANIT_DXC_EXECUTABLE}" PARENT_SCOPE)
   set(GRANIT_TINT_EXECUTABLE "${GRANIT_TINT_EXECUTABLE}" PARENT_SCOPE)
+  set(GRANIT_GLSLANG_EXECUTABLE "${GRANIT_GLSLANG_EXECUTABLE}" PARENT_SCOPE)
 endfunction()

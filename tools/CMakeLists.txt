@@ -420,6 +420,7 @@ if(GRANIT_BUILD_TESTING AND BUILD_TESTING AND GRANIT_DXC_EXECUTABLE)
         -DOUTPUT_DIR=${CMAKE_CURRENT_BINARY_DIR}/shader-hlsl-cli-test -P
         "${PROJECT_SOURCE_DIR}/cmake/check_hlsl_shader_cache.cmake"
     )
+
   endif()
 
   if(GRANIT_SPIRV_VAL_EXECUTABLE)
@@ -448,4 +449,32 @@ if(GRANIT_BUILD_TESTING AND BUILD_TESTING AND GRANIT_DXC_EXECUTABLE)
   )
 elseif(GRANIT_BUILD_TESTING AND BUILD_TESTING)
   message(WARNING "未找到 dxc，跳过 Granit Shader 工具端到端测试")
+endif()
+
+if(GRANIT_BUILD_TESTING AND BUILD_TESTING AND GRANIT_GLSLANG_EXECUTABLE AND
+   GRANIT_TINT_EXECUTABLE)
+  add_executable(
+    granit_shader_glsl_api_test
+    "${PROJECT_SOURCE_DIR}/tests/tools/shader_glsl_api_test.cpp"
+  )
+  target_compile_features(granit_shader_glsl_api_test PRIVATE cxx_std_20)
+  target_link_libraries(granit_shader_glsl_api_test PRIVATE granit::shader_tools)
+  granit_target_compile_warnings(granit_shader_glsl_api_test)
+  granit_target_output_directories(granit_shader_glsl_api_test)
+  add_test(
+    NAME granit.shader_tools.glsl_api
+    COMMAND
+      granit_shader_glsl_api_test "${GRANIT_GLSLANG_EXECUTABLE}" "${GRANIT_TINT_EXECUTABLE}"
+      "${PROJECT_SOURCE_DIR}/tests/assets/material_fixture.glsl"
+      "${CMAKE_CURRENT_BINARY_DIR}/shader-glsl-api-test"
+  )
+  add_test(
+    NAME granit.shader_tool.glsl_asset
+    COMMAND
+      "${CMAKE_COMMAND}" -DTOOL=$<TARGET_FILE:granit_shader_tool>
+      -DGLSLANG=${GRANIT_GLSLANG_EXECUTABLE} -DTINT=${GRANIT_TINT_EXECUTABLE}
+      -DINPUT=${PROJECT_SOURCE_DIR}/tests/assets/material_fixture.glsl
+      -DOUTPUT_DIR=${CMAKE_CURRENT_BINARY_DIR}/shader-glsl-cli-test -P
+      "${PROJECT_SOURCE_DIR}/cmake/check_glsl_shader_cache.cmake"
+  )
 endif()
