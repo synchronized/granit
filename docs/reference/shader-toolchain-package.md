@@ -110,3 +110,24 @@ Artifact。该工作流目前不会自动创建 Release；首次两平台远端�
 工作流分别缓存 Dawn 第三方源码、编译目标和最终 Tint/许可证产物。最终产物缓存键包含平台、
 架构、编译器契约版本及 Tint 修订；命中时不再获取或编译 Dawn。该缓存只用于加速，组包后仍执行
 清单和真实编译能力验证，不能替代可发布归档及其 SHA-256。
+
+## 下载锁定工具链
+
+Windows x64 与 Linux x64 可以显式运行下载脚本。脚本选择当前宿主归档、校验发布级 SHA-256，
+原子解包并验证包内清单；已有目录只有再次通过校验才会复用：
+
+```sh
+cmake -DDESTINATION=<缓存目录> -P cmake/download_shader_toolchain.cmake
+```
+
+随后使用脚本输出的目录配置 ShaderTools，并同时声明锁定的 Tint 修订：
+
+```sh
+cmake -S . -B build \
+  -DGRANIT_SHADER_TOOLCHAIN_ROOT=<缓存目录>/<脚本输出的工具链目录> \
+  -DGRANIT_SHADER_TOOLCHAIN_POLICY=locked \
+  -DGRANIT_TINT_REVISION=0bc38adde72b79013536f8ce354b639ae19ae195
+```
+
+工具链发布页为
+[Shader Toolchain v20260720.160313](https://github.com/synchronized/granit/releases/tag/shader-toolchain-v20260720.160313-0bc38adde72b)。
