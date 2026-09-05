@@ -8,6 +8,27 @@
 
 ## Unreleased
 
+## 0.11.0 - 2026-09-06
+
+### 新增
+
+- 浏览器 WebGPU 补齐 Buffer/Texture 双向复制、Texture 复制、Buffer 填充和运行时 Mipmap；紧密
+  行跨度由后端内部适配，不向公共 API 泄漏 256 字节编码约束。
+- Emscripten 构建新增正式 `granit_model_viewer_web`，默认加载 Khronos Flight Helmet，支持通过
+  URL 参数覆盖模型，并提供浏览器质量面板。
+- Renderer Limits 新增 Timestamp Query 能力位和 C++ 便捷查询。
+
+### 变更
+
+- 浏览器 WebGPU 明确报告不支持现有同步 Timestamp Query 契约；Vulkan 报告支持。调用方不再需要
+  通过后端名称猜测能力。
+- 浏览器自动化扩展到真实传输、线性及 sRGB Mipmap、非二次幂、部分范围和 Cube 六面回归。
+
+### 兼容性与迁移
+
+- `granit_renderer_limits` 追加 `supported_features`。Granit 仍处于 0.x，Consumer 应重新编译并将
+  CMake 请求版本更新为 0.11。完整步骤见[从 0.10 迁移到 0.11](docs/guides/migrate-0.10-to-0.11.md)。
+
 ## 0.10.0 - 2026-09-05
 
 ### 新增
