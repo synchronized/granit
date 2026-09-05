@@ -98,3 +98,8 @@ cmake \
 
 验证成功只说明解包后的文件与清单一致。发布系统仍须校验归档摘要，官方 CI 仍须使用
 `GRANIT_SHADER_TOOLCHAIN_POLICY=locked` 完成真实编译能力测试。
+
+仓库的 `Shader Toolchain Packages` 手动 Actions 工作流固定 Vulkan SDK 下载地址、归档 SHA-256、
+Dawn 修订和全部工具版本。Windows 与 Linux 分别构建 Tint、组装精简目录、执行包内清单校验和
+工具启动检查，再上传带独立 SHA-256 文件的临时 Artifact。该工作流目前不会自动创建 Release；
+首次两平台远端验证通过并完成人工许可证复核后，才进入预发行发布阶段。

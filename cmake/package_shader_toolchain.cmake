@@ -38,6 +38,13 @@ foreach(tool_name dxc glslangValidator tint)
   endif()
   set(relative_path "bin/${tool_name}${executable_suffix}")
   file(COPY_FILE "${source}" "${working_stage}/${relative_path}")
+  if(NOT CMAKE_HOST_WIN32)
+    file(
+      CHMOD "${working_stage}/${relative_path}"
+      PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ
+                  WORLD_EXECUTE
+    )
+  endif()
   list(APPEND tool_files "${relative_path}")
 endforeach()
 

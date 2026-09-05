@@ -1,0 +1,243 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Granit contributors
+
+name: Shader Toolchain Packages
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_windows:
+        description: "构建 Windows x64 工具链包"
+        required: true
+        default: true
+        type: boolean
+      run_linux:
+        description: "构建 Linux x64 工具链包"
+        required: true
+        default: true
+        type: boolean
+
+permissions:
+  contents: read
+
+env:
+  VULKAN_SDK_VERSION: 1.4.321.1
+  VULKAN_SDK_WINDOWS_SHA256: baaa4f7ca11ed3d82aa1c102b21208915485bbaa473068c763daa425cca468bd
+  VULKAN_SDK_LINUX_SHA256: f22a3625bd4d7a32e7a0d926ace16d5278c149e938dac63cecc00537626cbf73
+  DXC_VERSION: 1.8.0.4973
+  GLSLANG_VERSION: 15.3.0
+  DAWN_VERSION: v20260720.160313
+  TINT_REVISION: 0bc38adde72b79013536f8ce354b639ae19ae195
+  SCCACHE_GHA_ENABLED: "true"
+
+jobs:
+  windows:
+    if: ${{ inputs.run_windows }}
+    runs-on: windows-2022
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/setup-msvc
+        with:
+          arch: x64
+      - name: 启用编译缓存
+        uses: mozilla-actions/sccache-action@v0.0.11
+      - name: 下载并校验 Vulkan SDK
+        shell: pwsh
+        run: |
+          $url = "https://sdk.lunarg.com/sdk/download/$env:VULKAN_SDK_VERSION/windows/" +
+            "vulkansdk-windows-X64-$env:VULKAN_SDK_VERSION.exe"
+          $installer = "$env:RUNNER_TEMP/vulkan-sdk.exe"
+          Invoke-WebRequest -Uri $url -OutFile $installer
+          $actual = (Get-FileHash $installer -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($actual -ne $env:VULKAN_SDK_WINDOWS_SHA256) {
+            throw "Vulkan SDK SHA-256 不匹配：$actual"
+          }
+          $root = "$env:RUNNER_TEMP/vulkan-sdk"
+          & $installer --root $root --accept-licenses --default-answer --confirm-command install
+          if ($LASTEXITCODE -ne 0) { throw "Vulkan SDK 安装失败" }
+          "VULKAN_SDK_ROOT=$root" >> $env:GITHUB_ENV
+      - name: 获取锁定的 Dawn 源码
+        shell: pwsh
+        run: |
+          git clone --filter=blob:none --no-checkout `
+            https://dawn.googlesource.com/dawn "$env:RUNNER_TEMP/dawn"
+          git -C "$env:RUNNER_TEMP/dawn" fetch --depth=1 origin $env:TINT_REVISION
+          git -C "$env:RUNNER_TEMP/dawn" checkout --detach FETCH_HEAD
+      - name: 恢复 Dawn 第三方依赖
+        uses: actions/cache@v5
+        with:
+          path: ${{ runner.temp }}/dawn/third_party
+          key: shader-toolchain-dawn-windows-${{ env.TINT_REVISION }}
+      - name: 获取 Dawn 第三方源码
+        shell: pwsh
+        working-directory: ${{ runner.temp }}/dawn
+        run: python tools/fetch_dawn_dependencies.py
+      - name: 构建 Tint
+        shell: pwsh
+        run: |
+          $source = "$env:RUNNER_TEMP/dawn"
+          $build = "$env:RUNNER_TEMP/tint-build"
+          cmake -S $source -B $build -G Ninja `
+            -DCMAKE_BUILD_TYPE=Release `
+            -DCMAKE_C_COMPILER_LAUNCHER=sccache `
+            -DCMAKE_CXX_COMPILER_LAUNCHER=sccache `
+            -DDAWN_BUILD_SAMPLES=OFF `
+            -DDAWN_BUILD_TESTS=OFF `
+            -DDAWN_BUILD_NODE_BINDINGS=OFF `
+            -DDAWN_FETCH_DEPENDENCIES=OFF `
+            -DDAWN_ENABLE_D3D11=OFF `
+            -DDAWN_ENABLE_D3D12=ON `
+            -DDAWN_ENABLE_VULKAN=ON `
+            -DDAWN_ENABLE_DESKTOP_GL=OFF `
+            -DDAWN_ENABLE_OPENGLES=OFF `
+            -DDAWN_ENABLE_NULL=OFF `
+            -DTINT_BUILD_CMD_TOOLS=ON `
+            -DTINT_BUILD_TESTS=OFF `
+            -DTINT_BUILD_SPV_READER=ON
+          cmake --build $build --target tint_cmd_tint_cmd
+          $tools = @(Get-ChildItem -LiteralPath $build -Recurse -File -Filter tint.exe)
+          if ($tools.Count -ne 1) { throw "预期恰好一个 tint.exe，实际为 $($tools.Count)" }
+          "TINT_EXECUTABLE=$($tools[0].FullName)" >> $env:GITHUB_ENV
+      - name: 收集许可证并组装工具链包
+        id: package
+        shell: pwsh
+        run: |
+          $licenses = "$env:RUNNER_TEMP/licenses"
+          cmake -DROOT="$env:RUNNER_TEMP/dawn" `
+            -DOUTPUT="$licenses/Dawn-THIRD-PARTY-LICENSES.txt" `
+            -DCOMPONENT=Dawn-Tint -P cmake/collect_license_bundle.cmake
+          $sdkLicense = "$env:VULKAN_SDK_ROOT/Licenses/LICENSE.txt"
+          if (-not (Test-Path -LiteralPath $sdkLicense -PathType Leaf)) {
+            throw "Vulkan SDK 许可证文件不存在"
+          }
+          $name = "granit-shader-toolchain-$env:DAWN_VERSION-windows-x64"
+          $stage = "$PWD/stage/$name"
+          cmake -DSTAGE="$stage" -DGENERATOR="$PWD/cmake/generate_shader_toolchain_manifest.cmake" `
+            -DDXC="$env:VULKAN_SDK_ROOT/Bin/dxc.exe" `
+            -DGLSLANG="$env:VULKAN_SDK_ROOT/Bin/glslangValidator.exe" `
+            -DTINT="$env:TINT_EXECUTABLE" -DDXC_VERSION="$env:DXC_VERSION" `
+            -DGLSLANG_VERSION="$env:GLSLANG_VERSION" -DDAWN_VERSION="$env:DAWN_VERSION" `
+            -DTINT_REVISION="$env:TINT_REVISION" -DDXC_LICENSE_FILES="$sdkLicense" `
+            -DGLSLANG_LICENSE_FILES="$sdkLicense" `
+            -DDAWN_LICENSE_FILES="$licenses/Dawn-THIRD-PARTY-LICENSES.txt" `
+            -DRUNTIME_FILES="$env:VULKAN_SDK_ROOT/Bin/dxcompiler.dll" `
+            -P cmake/package_shader_toolchain.cmake
+          cmake -DSTAGE="$stage" -DMANIFEST="$stage/shader-toolchain.json" `
+            -P cmake/verify_shader_toolchain_manifest.cmake
+          & "$stage/bin/dxc.exe" --version
+          & "$stage/bin/glslangValidator.exe" --version
+          & "$stage/bin/tint.exe" --version
+          Compress-Archive -Path $stage -DestinationPath "$name.zip"
+          $hash = (Get-FileHash "$name.zip" -Algorithm SHA256).Hash.ToLowerInvariant()
+          "$hash  $name.zip" | Set-Content -Encoding ascii "$name.zip.sha256"
+          "name=$name" >> $env:GITHUB_OUTPUT
+      - uses: actions/upload-artifact@v6
+        with:
+          name: ${{ steps.package.outputs.name }}
+          path: |
+            ${{ steps.package.outputs.name }}.zip
+            ${{ steps.package.outputs.name }}.zip.sha256
+          if-no-files-found: error
+
+  linux:
+    if: ${{ inputs.run_linux }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v5
+      - name: 安装构建依赖
+        run: sudo apt-get update && sudo apt-get install --no-install-recommends -y clang ninja-build
+      - name: 启用编译缓存
+        uses: mozilla-actions/sccache-action@v0.0.11
+      - name: 下载并校验 Vulkan SDK
+        shell: bash
+        run: |
+          archive="$RUNNER_TEMP/vulkan-sdk.tar.xz"
+          url="https://sdk.lunarg.com/sdk/download/$VULKAN_SDK_VERSION/linux/"
+          url+="vulkansdk-linux-x86_64-$VULKAN_SDK_VERSION.tar.xz"
+          curl --fail --location --retry 3 "$url" --output "$archive"
+          echo "$VULKAN_SDK_LINUX_SHA256  $archive" | sha256sum --check
+          root="$RUNNER_TEMP/vulkan-sdk"
+          mkdir -p "$root"
+          tar -xf "$archive" -C "$root"
+          echo "VULKAN_SDK_ROOT=$root/$VULKAN_SDK_VERSION/x86_64" >> "$GITHUB_ENV"
+          echo "VULKAN_SDK_SOURCE_ROOT=$root/$VULKAN_SDK_VERSION" >> "$GITHUB_ENV"
+      - name: 获取锁定的 Dawn 源码
+        shell: bash
+        run: |
+          git clone --filter=blob:none --no-checkout \
+            https://dawn.googlesource.com/dawn "$RUNNER_TEMP/dawn"
+          git -C "$RUNNER_TEMP/dawn" fetch --depth=1 origin "$TINT_REVISION"
+          git -C "$RUNNER_TEMP/dawn" checkout --detach FETCH_HEAD
+      - name: 恢复 Dawn 第三方依赖
+        uses: actions/cache@v5
+        with:
+          path: ${{ runner.temp }}/dawn/third_party
+          key: shader-toolchain-dawn-linux-${{ env.TINT_REVISION }}
+      - name: 获取 Dawn 第三方源码
+        working-directory: ${{ runner.temp }}/dawn
+        run: python3 tools/fetch_dawn_dependencies.py
+      - name: 构建 Tint
+        shell: bash
+        run: |
+          CC=clang CXX=clang++ cmake -S "$RUNNER_TEMP/dawn" -B "$RUNNER_TEMP/tint-build" \
+            -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_C_COMPILER_LAUNCHER=sccache \
+            -DCMAKE_CXX_COMPILER_LAUNCHER=sccache \
+            -DDAWN_BUILD_SAMPLES=OFF \
+            -DDAWN_BUILD_TESTS=OFF \
+            -DDAWN_BUILD_NODE_BINDINGS=OFF \
+            -DDAWN_FETCH_DEPENDENCIES=OFF \
+            -DDAWN_ENABLE_D3D11=OFF \
+            -DDAWN_ENABLE_D3D12=OFF \
+            -DDAWN_ENABLE_VULKAN=ON \
+            -DDAWN_ENABLE_DESKTOP_GL=OFF \
+            -DDAWN_ENABLE_OPENGLES=OFF \
+            -DDAWN_ENABLE_NULL=OFF \
+            -DTINT_BUILD_CMD_TOOLS=ON \
+            -DTINT_BUILD_TESTS=OFF \
+            -DTINT_BUILD_SPV_READER=ON
+          cmake --build "$RUNNER_TEMP/tint-build" --target tint_cmd_tint_cmd
+          mapfile -t tools < <(find "$RUNNER_TEMP/tint-build" -type f -name tint -perm -u+x)
+          [[ "${#tools[@]}" -eq 1 ]]
+          echo "TINT_EXECUTABLE=${tools[0]}" >> "$GITHUB_ENV"
+      - name: 收集许可证并组装工具链包
+        id: package
+        shell: bash
+        run: |
+          licenses="$RUNNER_TEMP/licenses"
+          cmake -DROOT="$RUNNER_TEMP/dawn" \
+            -DOUTPUT="$licenses/Dawn-THIRD-PARTY-LICENSES.txt" \
+            -DCOMPONENT=Dawn-Tint -P cmake/collect_license_bundle.cmake
+          sdk_license="$(find "$VULKAN_SDK_SOURCE_ROOT" -maxdepth 2 -type f \
+            -iname 'LICENSE.txt' -print -quit)"
+          [[ -n "$sdk_license" ]]
+          name="granit-shader-toolchain-$DAWN_VERSION-linux-x64"
+          stage="$PWD/stage/$name"
+          runtime="$VULKAN_SDK_ROOT/lib/libdxcompiler.so"
+          cmake -DSTAGE="$stage" -DGENERATOR="$PWD/cmake/generate_shader_toolchain_manifest.cmake" \
+            -DDXC="$VULKAN_SDK_ROOT/bin/dxc" \
+            -DGLSLANG="$VULKAN_SDK_ROOT/bin/glslangValidator" \
+            -DTINT="$TINT_EXECUTABLE" -DDXC_VERSION="$DXC_VERSION" \
+            -DGLSLANG_VERSION="$GLSLANG_VERSION" -DDAWN_VERSION="$DAWN_VERSION" \
+            -DTINT_REVISION="$TINT_REVISION" -DDXC_LICENSE_FILES="$sdk_license" \
+            -DGLSLANG_LICENSE_FILES="$sdk_license" \
+            -DDAWN_LICENSE_FILES="$licenses/Dawn-THIRD-PARTY-LICENSES.txt" \
+            -DRUNTIME_FILES="$runtime" -P cmake/package_shader_toolchain.cmake
+          cmake -DSTAGE="$stage" -DMANIFEST="$stage/shader-toolchain.json" \
+            -P cmake/verify_shader_toolchain_manifest.cmake
+          LD_LIBRARY_PATH="$stage/lib" "$stage/bin/dxc" --version
+          "$stage/bin/glslangValidator" --version
+          "$stage/bin/tint" --version
+          tar -C stage -czf "$name.tar.gz" "$name"
+          sha256sum "$name.tar.gz" > "$name.tar.gz.sha256"
+          echo "name=$name" >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@v6
+        with:
+          name: ${{ steps.package.outputs.name }}
+          path: |
+            ${{ steps.package.outputs.name }}.tar.gz
+            ${{ steps.package.outputs.name }}.tar.gz.sha256
+          if-no-files-found: error
