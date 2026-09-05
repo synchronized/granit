@@ -26,13 +26,27 @@ function(granit_check_package name expected_success)
   endif()
 endfunction()
 
-granit_check_package(compatible TRUE -DGRANIT_REQUEST_VERSION=0.3)
-granit_check_package(compatible_older_minor TRUE -DGRANIT_REQUEST_VERSION=0.2)
-granit_check_package(compatible_older_minor TRUE -DGRANIT_REQUEST_VERSION=0.1)
+granit_check_package(core_only TRUE -DGRANIT_REQUEST_VERSION=0.3)
+granit_check_package(render_pipeline TRUE -DGRANIT_REQUEST_VERSION=0.3
+                     -DGRANIT_REQUEST_COMPONENT=RenderPipeline)
+granit_check_package(window TRUE -DGRANIT_REQUEST_VERSION=0.3
+                     -DGRANIT_REQUEST_COMPONENT=Window)
+granit_check_package(input TRUE -DGRANIT_REQUEST_VERSION=0.3
+                     -DGRANIT_REQUEST_COMPONENT=Input)
+if(EXISTS "${GRANIT_INSTALL_PREFIX}/lib/cmake/granit/granitShaderToolsTargets.cmake")
+  granit_check_package(shader_tools TRUE -DGRANIT_REQUEST_VERSION=0.3
+                       -DGRANIT_REQUEST_COMPONENT=ShaderTools)
+else()
+  granit_check_package(shader_tools_unavailable FALSE -DGRANIT_REQUEST_VERSION=0.3
+                       -DGRANIT_REQUEST_COMPONENT=ShaderTools)
+endif()
+granit_check_package(compatible_0_2 TRUE -DGRANIT_REQUEST_VERSION=0.2)
+granit_check_package(compatible_0_1 TRUE -DGRANIT_REQUEST_VERSION=0.1)
 granit_check_package(compatible_0_4 TRUE -DGRANIT_REQUEST_VERSION=0.4)
 granit_check_package(exact TRUE -DGRANIT_REQUEST_VERSION=0.6.0 -DGRANIT_REQUEST_EXACT=ON)
 granit_check_package(newer_minor FALSE -DGRANIT_REQUEST_VERSION=0.7)
 granit_check_package(incompatible_major FALSE -DGRANIT_REQUEST_VERSION=1.0)
 granit_check_package(unknown_component FALSE -DGRANIT_REQUEST_COMPONENT=Unknown)
 
-message(STATUS "安装包选包检查通过：兼容与精确版本成功，错误主版本和未知 component 被拒绝")
+message(STATUS
+        "安装包选包检查通过：Core 隔离、独立 component、版本选择和未知 component 均符合预期")
