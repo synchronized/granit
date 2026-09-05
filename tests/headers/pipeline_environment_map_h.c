@@ -3,5 +3,9 @@
 
 #include <granit/pipeline/environment_map.h>
 
-static granit_environment_map_asset_desc asset_desc = GRANIT_ENVIRONMENT_MAP_ASSET_DESC_INIT;
-static granit_environment_map_info environment_info = GRANIT_ENVIRONMENT_MAP_INFO_INIT;
+typedef char granit_environment_map_asset_desc_v1_size
+    [sizeof(granit_environment_map_asset_desc) == GRANIT_ENVIRONMENT_MAP_ASSET_DESC_VERSION_1_SIZE
+         ? 1
+         : -1];
+typedef char granit_environment_map_info_v1_size
+    [sizeof(granit_environment_map_info) == GRANIT_ENVIRONMENT_MAP_INFO_VERSION_1_SIZE ? 1 : -1];
