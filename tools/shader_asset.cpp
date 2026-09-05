@@ -24,7 +24,7 @@ namespace {
 
 constexpr std::array magic{std::byte{'G'}, std::byte{'R'}, std::byte{'N'}, std::byte{'S'},
                            std::byte{'H'}, std::byte{'D'}, std::byte{'R'}, std::byte{0}};
-constexpr std::uint32_t schema = 3;
+constexpr std::uint32_t schema = 4;
 constexpr std::size_t variant_offset = 112;
 constexpr std::size_t variant_size = 64;
 constexpr std::size_t maximum_variant_count = 2;
@@ -324,14 +324,17 @@ shader_asset_error encode_shader_asset(const shader_asset_source& source,
                                        std::vector<std::byte>& output) noexcept {
   if (source.wgsl.empty() || source.spirv.empty() || source.spirv.size() % 4 != 0 ||
       source.reflection_json.empty() || source.backend_mask == 0 ||
-      (source.backend_mask & ~UINT32_C(3)) != 0)
+      (source.backend_mask & ~UINT32_C(3)) != 0 || source.stage < 1 || source.stage > 3 ||
+      source.entry_point.empty() || source.entry_point.size() > UINT32_MAX)
     return shader_asset_error::invalid_argument;
   const auto maximum = std::numeric_limits<std::size_t>::max() - header_size;
-  if (source.reflection_json.size() > maximum)
+  if (source.reflection_json.size() > maximum ||
+      source.entry_point.size() > maximum - source.reflection_json.size())
     return shader_asset_error::invalid_argument;
   try {
     const auto reflection_offset = header_size;
-    output.assign(reflection_offset + source.reflection_json.size(), std::byte{0});
+    const auto entry_point_offset = reflection_offset + source.reflection_json.size();
+    output.assign(entry_point_offset + source.entry_point.size(), std::byte{0});
     std::ranges::copy(magic, output.begin());
     write_u32(output, 8, schema);
     write_u32(output, 12, static_cast<std::uint32_t>(header_size));
@@ -339,6 +342,8 @@ shader_asset_error encode_shader_asset(const shader_asset_source& source,
     write_u64(output, 24, source.reflection_json.size());
     const auto variant_count = static_cast<std::uint32_t>(std::popcount(source.backend_mask));
     write_u32(output, 32, variant_count);
+    write_u32(output, 36, source.stage);
+    write_u32(output, 40, static_cast<std::uint32_t>(source.entry_point.size()));
     std::ranges::copy(source.cache_key, output.begin() + cache_key_offset);
     const auto wgsl_bytes =
         std::span{reinterpret_cast<const std::byte*>(source.wgsl.data()), source.wgsl.size()};
@@ -363,6 +368,8 @@ shader_asset_error encode_shader_asset(const shader_asset_source& source,
     }
     std::memcpy(output.data() + reflection_offset, source.reflection_json.data(),
                 source.reflection_json.size());
+    std::memcpy(output.data() + entry_point_offset, source.entry_point.data(),
+                source.entry_point.size());
     const auto hash = digest(output);
     std::ranges::copy(hash, output.begin() + digest_offset);
     return shader_asset_error::success;
@@ -385,16 +392,26 @@ shader_asset_error decode_shader_asset(std::span<const std::byte> bytes,
     return shader_asset_error::invalid_layout;
   const auto reflection_size = read_u64(bytes, 24);
   const auto variant_count = read_u32(bytes, 32);
+  const auto stage = read_u32(bytes, 36);
+  const auto entry_point_size = read_u32(bytes, 40);
   const auto reflection_offset = static_cast<std::uint64_t>(header_size);
-  if (variant_count == 0 || variant_count > maximum_variant_count ||
+  const auto entry_point_offset = reflection_offset + reflection_size;
+  if (variant_count == 0 || variant_count > maximum_variant_count || stage < 1 || stage > 3 ||
+      entry_point_size == 0 ||
       !valid_section(reflection_offset, reflection_size, bytes.size()) ||
-      reflection_offset + reflection_size != bytes.size())
+      !valid_section(entry_point_offset, entry_point_size, bytes.size()) ||
+      entry_point_offset + entry_point_size != bytes.size())
     return shader_asset_error::invalid_layout;
   const auto expected = digest(bytes);
   if (!std::ranges::equal(expected, bytes.subspan(digest_offset, expected.size())))
     return shader_asset_error::digest_mismatch;
   output.reflection_json = {reinterpret_cast<const char*>(bytes.data() + reflection_offset),
                             static_cast<std::size_t>(reflection_size)};
+  output.stage = stage;
+  output.entry_point = {reinterpret_cast<const char*>(bytes.data() + entry_point_offset),
+                        entry_point_size};
+  std::ranges::copy(bytes.subspan(digest_offset, output.content_id.size()),
+                    output.content_id.begin());
   std::ranges::copy(bytes.subspan(cache_key_offset, output.cache_key.size()),
                     output.cache_key.begin());
   output.variant_count = variant_count;

@@ -67,11 +67,16 @@ struct shader_asset_source {
   shader_cache_key cache_key{};
   std::uint32_t backend_mask = 3;
   std::uint64_t required_features = 0;
+  std::uint32_t stage = 1;
+  std::string_view entry_point = "main";
 };
 
 struct shader_asset_view {
   std::string_view reflection_json;
   shader_cache_key cache_key{};
+  shader_cache_key content_id{};
+  std::uint32_t stage = 0;
+  std::string_view entry_point;
   std::array<shader_asset_variant, 2> variants{};
   std::uint32_t variant_count = 0;
 };

@@ -20,16 +20,19 @@ int main(int argc, char** argv) {
       make_shader_cache_key({wgsl, "wgsl", "main", "compute", "tint-r1", "vulkan1.3", "--use-ir"});
   std::vector<std::byte> first;
   std::vector<std::byte> second;
-  if (encode_shader_asset({wgsl, spirv, reflection, cache_key}, first) !=
+  if (encode_shader_asset({wgsl, spirv, reflection, cache_key, 3, 0, 3, "main"}, first) !=
           shader_asset_error::success ||
-      encode_shader_asset({wgsl, spirv, reflection, cache_key}, second) !=
+      encode_shader_asset({wgsl, spirv, reflection, cache_key, 3, 0, 3, "main"}, second) !=
           shader_asset_error::success ||
       first != second)
     return 1;
   shader_asset_view view;
+  const shader_cache_key empty_id{};
   if (decode_shader_asset(first, view) != shader_asset_error::success ||
       validate_shader_asset_payloads(view, wgsl, spirv) != shader_asset_error::success ||
-      view.reflection_json != reflection || view.cache_key != cache_key || view.variant_count != 2)
+      view.reflection_json != reflection || view.cache_key != cache_key ||
+      view.content_id == empty_id || view.stage != 3 || view.entry_point != "main" ||
+      view.variant_count != 2)
     return 2;
   const auto* webgpu =
       find_shader_asset_variant(view, shader_asset_backend::webgpu, shader_asset_profile::portable);
@@ -41,14 +44,15 @@ int main(int argc, char** argv) {
       vulkan->byte_size != spirv.size())
     return 17;
   std::vector<std::byte> feature_asset;
-  if (encode_shader_asset({wgsl, spirv, reflection, cache_key, 3, UINT64_C(1)}, feature_asset) !=
+  if (encode_shader_asset(
+          {wgsl, spirv, reflection, cache_key, 3, UINT64_C(1), 3, "main"}, feature_asset) !=
           shader_asset_error::success ||
       decode_shader_asset(feature_asset, view) != shader_asset_error::success ||
       view.variants[0].required_features != UINT64_C(1) ||
       view.variants[1].required_features != UINT64_C(1))
     return 21;
   std::vector<std::byte> webgpu_only;
-  if (encode_shader_asset({wgsl, spirv, reflection, cache_key, 2}, webgpu_only) !=
+  if (encode_shader_asset({wgsl, spirv, reflection, cache_key, 2, 0, 3, "main"}, webgpu_only) !=
       shader_asset_error::success)
     return 19;
   shader_asset_view webgpu_view;
@@ -63,6 +67,13 @@ int main(int argc, char** argv) {
       make_shader_cache_key({wgsl, "wgsl", "main", "compute", "tint-r1", "vulkan1.3", "--use-ir"});
   if (same_from_other_directory != cache_key)
     return 9;
+  std::vector<std::byte> other_entry;
+  if (encode_shader_asset({wgsl, spirv, reflection, cache_key, 3, 0, 3, "other"}, other_entry) !=
+          shader_asset_error::success ||
+      other_entry == first || encode_shader_asset({wgsl, spirv, reflection, cache_key, 3, 0, 0},
+                                                  other_entry) !=
+                                shader_asset_error::invalid_argument)
+    return 22;
   const std::array changed_contexts{
       make_shader_cache_key({wgsl, "hlsl", "main", "compute", "tint-r1", "vulkan1.3", "--use-ir"}),
       make_shader_cache_key({"@compute @workgroup_size(2) fn main() {}\n", "wgsl", "main",
@@ -85,7 +96,7 @@ int main(int argc, char** argv) {
   if (decode_shader_asset(corrupted, view) != shader_asset_error::invalid_magic)
     return 4;
   corrupted = first;
-  corrupted[8] = std::byte{4};
+  corrupted[8] = std::byte{5};
   if (decode_shader_asset(corrupted, view) != shader_asset_error::unsupported_schema)
     return 11;
   corrupted = first;
