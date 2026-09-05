@@ -1102,6 +1102,14 @@ int main(int argc, char** argv) {
       recreate = false;
     }
 
+    if (!frame_executor.can_submit_frame()) {
+      frame_executor.record_skipped_frame_build();
+      static_cast<void>(
+          input_adapter.finish(options.show_ui && ImGui::GetIO().WantCaptureMouse,
+                               options.show_ui && ImGui::GetIO().WantCaptureKeyboard));
+      continue;
+    }
+
     viewer_panel_changes changes;
     frame_canvas_data ui_frame;
     if (options.show_ui) {
@@ -1128,6 +1136,7 @@ int main(int argc, char** argv) {
           .gpu_timing_available = latest_sample.gpu_timing_available,
           .queue_high_watermark = queue_stats.pending_high_watermark,
           .replaced_frames = queue_stats.replaced_frames,
+          .skipped_frame_builds = queue_stats.skipped_frame_builds,
           .history = core.performance().summarize()};
       changes = draw_viewer_panels(core.cpu_scene(), core.state(), panel_renderer,
                                    panel_performance, render_quality, previews);

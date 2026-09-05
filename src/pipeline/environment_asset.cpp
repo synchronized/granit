@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include "model_viewer/environment_package.h"
+#include "pipeline/environment_asset.h"
+
+#include "assets/shader_asset.h"
 
 #include <algorithm>
 #include <array>
@@ -10,12 +12,12 @@
 #include <limits>
 #include <new>
 
-namespace granit::example::model_viewer {
+namespace granit::pipeline::detail {
 namespace {
 
-constexpr std::array magic{'G', 'R', 'E', 'N', 'V', '0', '2', '\0'};
-constexpr std::size_t header_size = 64;
-constexpr std::uint32_t version = 2;
+constexpr std::array magic{'G', 'R', 'E', 'N', 'V', '0', '3', '\0'};
+constexpr std::size_t header_size = 96;
+constexpr std::uint32_t version = 3;
 constexpr std::uint32_t rgba16_float = 1;
 constexpr std::uint64_t bytes_per_pixel = 8;
 constexpr std::uint64_t cube_face_count = 6;
@@ -125,6 +127,9 @@ environment_package_error parse_environment_package(std::span<const std::byte> b
   if (read_u64(bytes, 40) != expected_payload || expected_payload != bytes.size() - header_size) {
     return environment_package_error::invalid_layout;
   }
+  const auto digest = granit::tools::shader_bytes_sha256(bytes.subspan(header_size));
+  if (!std::ranges::equal(digest, bytes.subspan(64, digest.size())))
+    return environment_package_error::digest_mismatch;
 
   try {
     std::size_t offset = header_size;
@@ -213,6 +218,9 @@ environment_package_error encode_environment_package(const environment_package& 
     for (const auto& mip : package.prefiltered_mips)
       destination = std::ranges::copy(mip.pixels, destination).out;
     std::ranges::copy(package.brdf_pixels, destination);
+    const auto digest = granit::tools::shader_bytes_sha256(
+        std::span<const std::byte>{candidate}.subspan(header_size));
+    std::ranges::copy(digest, candidate.begin() + 64);
     output = std::move(candidate);
     return environment_package_error::none;
   } catch (const std::bad_alloc&) {
@@ -220,4 +228,4 @@ environment_package_error encode_environment_package(const environment_package& 
   }
 }
 
-} // namespace granit::example::model_viewer
+} // namespace granit::pipeline::detail

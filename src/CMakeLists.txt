@@ -570,3 +570,10 @@ install(
   DESTINATION "${CMAKE_INSTALL_DATADIR}/granit/assets/shaders/pbr"
   COMPONENT RenderPipeline
 )
+install(
+  FILES
+    "${PROJECT_SOURCE_DIR}/assets/environments/studio_small_03.grenv"
+    "${PROJECT_SOURCE_DIR}/assets/environments/studio_small_03.manifest.json"
+  DESTINATION "${CMAKE_INSTALL_DATADIR}/granit/assets/environments"
+  COMPONENT RenderPipeline
+)

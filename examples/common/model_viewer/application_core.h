@@ -5,11 +5,12 @@
 #define GRANIT_EXAMPLES_COMMON_MODEL_VIEWER_APPLICATION_CORE_H_
 
 #include "gltf/loader.h"
-#include "model_viewer/environment_resources.h"
 #include "model_viewer/frame_canvas_data.h"
 #include "model_viewer/gpu_scene.h"
 #include "model_viewer/performance_history.h"
 #include "model_viewer/viewer_state.h"
+
+#include <granit/pipeline/environment_map.hpp>
 
 #include <optional>
 #include <span>
@@ -63,7 +64,7 @@ public:
   [[nodiscard]] granit::result accept_scene(gltf::scene scene);
   /** 接收已经在资产线程完成打包的 CPU Scene 与 GPU 创建计划。 */
   [[nodiscard]] granit::result accept_scene(gltf::scene scene, gpu_scene_plan plan);
-  /** 上传场景；environment_bytes 为空时使用内置摄影棚环境，否则解析 GRENV v2。 */
+  /** 上传场景；environment_bytes 为空时使用内置摄影棚环境，否则加载 GRENV 资产。 */
   [[nodiscard]] granit::result upload(granit_renderer renderer,
                                       std::span<const std::byte> environment_bytes = {},
                                       float sampler_anisotropy = 8.0F,
@@ -91,7 +92,8 @@ private:
   gltf::scene cpu_scene_;
   gpu_scene_plan gpu_plan_;
   gpu_scene gpu_scene_;
-  environment_resources environment_;
+  granit::environment_map environment_;
+  granit_environment_map_info environment_info_ = GRANIT_ENVIRONMENT_MAP_INFO_INIT;
   viewer_state state_;
   performance_history performance_;
   bool camera_initialized_{};

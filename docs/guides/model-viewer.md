@@ -44,7 +44,7 @@ cmake `
 
 该命令获取 Poly Haven 以 CC0-1.0 发布的 `Studio Small 03` 1K HDR，并同时校验文件大小和
 SHA-256。来源和固定校验值见
-[`StudioSmall03.manifest.json`](../../examples/assets/StudioSmall03.manifest.json)。当前文件是后续
+[`studio_small_03.manifest.json`](../../assets/environments/studio_small_03.manifest.json)。当前文件是后续
 离线预处理的输入，不是 model-viewer 可直接加载的运行时环境包。
 
 使用 glTF IBL Sampler 生成未压缩 RGBA16F 输入后，通过仓库工具打包：
@@ -66,7 +66,7 @@ build/windows-clang-debug/bin/granit_model_viewer_environment_tool.exe build `
 BRDF LUT PNG 会被确定性转换为 RGBA16F。`--intensity` 和 `--exposure` 写入该环境推荐的初始
 光照参数；查看器加载后采用这些值，用户仍可在 Lighting 面板继续调整。工具不属于安装 SDK，
 也不会成为应用运行时依赖。
-仓库已提交同一参数生成的 `examples/assets/StudioSmall03.grenv`；其大小、SHA-256、采样参数和
+仓库已提交同一参数生成的 `assets/environments/studio_small_03.grenv`；其大小、SHA-256、采样参数和
 glTF IBL Sampler 修订号记录在 manifest 中。
 
 查看器省略 `--environment` 时会创建一个低分辨率内置摄影棚环境，保证离线首次运行时金属与暗部
@@ -88,7 +88,7 @@ Material 资源边界刷新进度与处理窗口事件。`--no-ui` 模式保持�
 ```powershell
 build/model-viewer/bin/granit_model_viewer_example.exe `
   --asset build/assets/FlightHelmet/glTF/FlightHelmet.gltf `
-  --environment examples/assets/StudioSmall03.grenv `
+  --environment assets/environments/studio_small_03.grenv `
   --backend=vulkan --validation
 ```
 
@@ -147,7 +147,7 @@ JSON 记录资产、实际后端、Adapter、呈现模式、UI 和 Validation �
 ```powershell
 build/model-viewer/bin/granit_model_viewer_offscreen_acceptance.exe `
   --asset build/assets/FlightHelmet/glTF/FlightHelmet.gltf `
-  --environment examples/assets/StudioSmall03.grenv `
+  --environment assets/environments/studio_small_03.grenv `
   --output build/acceptance/flight-helmet-vulkan.rgba `
   --backend=vulkan --validation
 ```

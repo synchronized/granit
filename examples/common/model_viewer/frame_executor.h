@@ -43,6 +43,7 @@ struct render_command_completion {
 struct render_task_queue_stats {
   std::size_t pending_high_watermark{};
   std::uint64_t replaced_frames{};
+  std::uint64_t skipped_frame_builds{};
 };
 
 /** 示例私有帧执行边界；实现负责完整消费传入的不可变帧包。 */
@@ -82,6 +83,10 @@ public:
   /** 提交资源或控制命令；队列已满时返回 not_ready，不替换已有任务。 */
   [[nodiscard]] granit::result submit_command(render_command_callback callback, void* user_data,
                                               std::uint64_t& sequence) noexcept;
+  /** 返回当前是否有待处理帧容量；单生产者仍须处理 submit 的最终结果。 */
+  [[nodiscard]] bool can_submit_frame() const noexcept;
+  /** 记录调用方因容量不足而在构造前跳过的帧。 */
+  void record_skipped_frame_build() noexcept;
   [[nodiscard]] bool try_take_completion(frame_completion& completion) noexcept;
   [[nodiscard]] bool try_take_command_completion(render_command_completion& completion) noexcept;
   [[nodiscard]] render_task_queue_stats query_queue_stats() const noexcept;

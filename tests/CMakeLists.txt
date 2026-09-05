@@ -71,7 +71,8 @@ add_library(
     headers/pipeline_render_pipeline_h.c
     headers/pipeline_scene_h.c
       headers/pipeline_canvas_draw_list_h.c
-      headers/pipeline_debug_draw_list_h.c
+    headers/pipeline_debug_draw_list_h.c
+    headers/pipeline_environment_map_h.c
       headers/pipeline_text_draw_list_h.c
       headers/pipeline_text_atlas_h.c
 )
@@ -100,7 +101,7 @@ if(BUILD_SHARED_LIBS)
       GRANIT_ABI_WINDOW_LIBRARY_PATH="$<TARGET_FILE:granit_window>"
       GRANIT_ABI_INPUT_LIBRARY_PATH="$<TARGET_FILE:granit_input>"
       GRANIT_ABI_CORE_SYMBOLS_PATH="${CMAKE_CURRENT_SOURCE_DIR}/abi/snapshots/0.8.0/core_symbols.txt"
-      GRANIT_ABI_RENDER_PIPELINE_SYMBOLS_PATH="${CMAKE_CURRENT_SOURCE_DIR}/abi/snapshots/0.1.0/render_pipeline_symbols.txt"
+      GRANIT_ABI_RENDER_PIPELINE_SYMBOLS_PATH="${CMAKE_CURRENT_SOURCE_DIR}/abi/snapshots/0.10.0/render_pipeline_symbols.txt"
       GRANIT_ABI_WINDOW_SYMBOLS_PATH="${CMAKE_CURRENT_SOURCE_DIR}/abi/snapshots/0.5.0/window_symbols.txt"
       GRANIT_ABI_INPUT_SYMBOLS_PATH="${CMAKE_CURRENT_SOURCE_DIR}/abi/snapshots/0.1.0/input_symbols.txt"
   )
@@ -129,13 +130,17 @@ if(BUILD_SHARED_LIBS)
 
   if(granit_abi_export_tool)
     function(granit_add_abi_export_snapshot_test component target snapshot)
+      set(snapshot_version 0.1.0)
+      if(component STREQUAL "render_pipeline")
+        set(snapshot_version 0.10.0)
+      endif()
       add_test(
         NAME "granit.abi.exports.${component}"
         COMMAND
           "${CMAKE_COMMAND}"
           "-DGRANIT_ABI_COMPONENT=${component}"
           "-DGRANIT_ABI_LIBRARY=$<TARGET_FILE:${target}>"
-          "-DGRANIT_ABI_SNAPSHOT=${CMAKE_CURRENT_SOURCE_DIR}/abi/snapshots/0.1.0/${snapshot}"
+          "-DGRANIT_ABI_SNAPSHOT=${CMAKE_CURRENT_SOURCE_DIR}/abi/snapshots/${snapshot_version}/${snapshot}"
           "-DGRANIT_ABI_EXPORT_TOOL=${granit_abi_export_tool}"
           "-DGRANIT_ABI_EXPORT_TOOL_KIND=${granit_abi_export_tool_kind}"
           "-DGRANIT_ABI_PRIVATE_EXPORTS=${ARGN}"
@@ -355,6 +360,10 @@ add_test(NAME granit.lighting COMMAND granit_lighting_test)
 add_executable(
   granit_pipeline_test
   pipeline/material_api_test.cpp
+  pipeline/environment_map_api_test.cpp
+  pipeline/environment_asset_test.cpp
+  "${PROJECT_SOURCE_DIR}/src/pipeline/environment_asset.cpp"
+  $<TARGET_OBJECTS:granit_shader_asset_format>
   pipeline/mesh_api_test.cpp
   pipeline/render_pipeline_api_test.cpp
   pipeline/scene_api_test.cpp
@@ -589,6 +598,7 @@ add_library(
     headers/pipeline_material_hpp.cpp
     headers/pipeline_mesh_hpp.cpp
     headers/pipeline_render_pipeline_hpp.cpp
+    headers/pipeline_environment_map_hpp.cpp
     headers/pipeline_scene_hpp.cpp
       headers/pipeline_canvas_draw_list_hpp.cpp
       headers/pipeline_debug_draw_list_hpp.cpp

@@ -3,7 +3,7 @@
 
 #include "gltf/image_decoder.h"
 #include "model_viewer/environment_ktx2.h"
-#include "model_viewer/environment_package.h"
+#include "pipeline/environment_asset.h"
 
 #include <bit>
 #include <charconv>
@@ -152,7 +152,7 @@ int main(int argc, char** argv) {
   }
 
   auto lut_half = convert_lut(lut);
-  granit::example::model_viewer::environment_package package;
+  granit::pipeline::detail::environment_package package;
   package.recommended_environment_intensity = recommended_intensity;
   package.recommended_exposure_ev = recommended_exposure;
   package.irradiance_resolution = irradiance.levels.front().resolution;
@@ -164,8 +164,8 @@ int main(int argc, char** argv) {
   package.brdf_height = lut.mips.front().height;
   package.brdf_pixels = lut_half;
   std::vector<std::byte> encoded;
-  if (granit::example::model_viewer::encode_environment_package(package, encoded) !=
-          granit::example::model_viewer::environment_package_error::none ||
+  if (granit::pipeline::detail::encode_environment_package(package, encoded) !=
+          granit::pipeline::detail::environment_package_error::none ||
       !write_file(output_path, encoded)) {
     std::cerr << "无法编码或写入 GRENV\n";
     return 1;

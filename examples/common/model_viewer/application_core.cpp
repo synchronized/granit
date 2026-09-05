@@ -130,22 +130,18 @@ granit::result application_core::upload(granit_renderer renderer,
   }
   granit::result environment_result;
   if (environment_bytes.empty()) {
-    environment_result = environment_.initialize_builtin_studio(renderer);
+    environment_result = environment_.initialize_builtin(renderer);
   } else {
-    environment_package package;
-    if (parse_environment_package(environment_bytes, package) != environment_package_error::none) {
-      gpu_scene_.reset();
-      fail(granit::result::invalid_argument, "模型查看器环境包解析失败");
-      return granit::result::invalid_argument;
-    }
-    environment_result = environment_.initialize(renderer, package);
-    if (environment_result) {
-      viewer_change recommended_lighting;
-      recommended_lighting.environment_intensity = package.recommended_environment_intensity;
-      recommended_lighting.exposure_ev = package.recommended_exposure_ev;
-      if (state_.apply(cpu_scene_, recommended_lighting) != viewer_state_error::none)
-        environment_result = granit::result::invalid_argument;
-    }
+    environment_result = environment_.initialize(renderer, environment_bytes);
+  }
+  if (environment_result.ok())
+    environment_result = environment_.get_info(environment_info_);
+  if (environment_result.ok() && !environment_bytes.empty()) {
+    viewer_change recommended_lighting;
+    recommended_lighting.environment_intensity = environment_info_.environment.intensity;
+    recommended_lighting.exposure_ev = environment_info_.recommended_exposure_ev;
+    if (state_.apply(cpu_scene_, recommended_lighting) != viewer_state_error::none)
+      environment_result = granit::result::invalid_argument;
   }
   if (environment_result.failed()) {
     gpu_scene_.reset();
@@ -223,9 +219,9 @@ granit::result application_core::tick(const application_tick_input& input, frame
   candidate.exposure_ev = state_.exposure_ev();
   const auto background = state_.background_color();
   candidate.clear_color = {background.x, background.y, background.z, 1.0F};
-  environment_.environment().intensity = state_.environment_intensity();
-  environment_.environment().rotation_radians = state_.environment_rotation_radians();
-  candidate.environment = environment_.environment();
+  candidate.environment = environment_info_.environment;
+  candidate.environment.intensity = state_.environment_intensity();
+  candidate.environment.rotation_radians = state_.environment_rotation_radians();
   try {
     candidate.draw_bindings = gpu_scene_.draw_bindings();
   } catch (const std::bad_alloc&) {
@@ -246,7 +242,8 @@ void application_core::fail(granit::result result, std::string diagnostic) {
 
 void application_core::reset() noexcept {
   gpu_scene_.reset();
-  environment_.reset();
+  static_cast<void>(environment_.reset());
+  environment_info_ = GRANIT_ENVIRONMENT_MAP_INFO_INIT;
   cpu_scene_ = {};
   gpu_plan_ = {};
   state_ = {};

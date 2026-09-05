@@ -34,6 +34,7 @@
 | 十四、0.7.0 SDK 稳定化与上游集成 | 已发布 | component 契约与上游集成门禁已随 0.7.0 完成 |
 | 十五、0.8.0 运行时 Shader 与材质资产 | 已发布 | 运行时资产契约已随 0.8.0 发布 |
 | 十六、0.9.0 公共 PBR 与渲染资产收敛 | 已完成 | 公共 PBR、Binding、Model Viewer 与安装资产已收敛 |
+| 十七、0.10.0 环境资源与帧构造背压 | 待开始 | 公共 Environment Map 与 Model Viewer 构造前背压 |
 
 ## 一、工程与 ABI 基础
 
@@ -282,11 +283,22 @@
   验证；Core 继续只消费调用方提供的内存字节。
 - Android、公共 glTF SDK、TAA 和无真实需求依据的高级渲染能力不属于本版本。
 
+## 十七、0.10.0 环境资源与帧构造背压
+
+**状态：已完成。**
+
+- **[S-25](plans/S-25-0.10.0-environment-and-frame-backpressure.md) / P1**：让 Model Viewer 在昂贵
+  Frame Packet 构造前实施队列背压，并区分主动跳过与队列替换统计。
+- 将已验证的 IBL 纹理聚合、正式环境资产和默认环境收敛到 RenderPipeline component；Model Viewer
+  迁移为公共 Environment Map 的 Consumer。
+- 公共执行器、glTF SDK、Android、TAA 和高级渲染能力不属于 0.10.0。
+
 ## 近期执行顺序
 
-1. S-14 只在复用条件成立后启动；不要为当前单个示例提前稳定 glTF 公共 API。
-2. S-06D 最终验收等待稳定版本与 component 范围决策；不在 0.x 阶段提前宣布稳定。
-3. H-09 的透明 PBR、CSM、Clustered Forward 与 Bindless 只在各自重新评估条件满足后独立恢复，
+1. 规划下一版本前先收集 Granit 与 Gneiss 的真实集成反馈，不提前扩大公共执行器或场景 API。
+2. S-14 只在复用条件成立后启动；不要为当前单个示例提前稳定 glTF 公共 API。
+3. S-06D 最终验收等待稳定版本与 component 范围决策；不在 0.x 阶段提前宣布稳定。
+4. H-09 的透明 PBR、CSM、Clustered Forward 与 Bindless 只在各自重新评估条件满足后独立恢复，
    不作为当前稳定化工作的前置项。
 
 若前置抽象不足，应先更新对应 Plan 和本路线图状态，再扩大公共 API。

@@ -37,7 +37,7 @@
 2. [项目文档规范](../DOCUMENTATION_GUIDE.md)
 3. [开发计划索引](plans/README.md)
 4. [第三方依赖](../3rd/README.md)
-5. [0.9.0 公共 PBR 与渲染资产收敛计划](plans/S-24-0.9.0-public-pbr-assets.md)
+5. [0.10.0 环境资源与帧构造背压计划](plans/S-25-0.10.0-environment-and-frame-backpressure.md)
 
 ## 操作指南
 
@@ -49,6 +49,7 @@
 - [从 0.5 迁移到 0.6](guides/migrate-0.5-to-0.6.md)
 - [从 0.6 迁移到 0.7](guides/migrate-0.6-to-0.7.md)
 - [从 0.7 迁移到 0.8](guides/migrate-0.7-to-0.8.md)
+- [从 0.9 迁移到 0.10](guides/migrate-0.9-to-0.10.md)
 - [从 0.8 迁移到 0.9](guides/migrate-0.8-to-0.9.md)
 - [示例程序及运行方式](guides/examples.md)
 - [运行跨后端模型查看器](guides/model-viewer.md)
@@ -91,6 +92,7 @@
 ### 高级 Render Pipeline component
 
 - [RenderPipeline component 契约](reference/render-pipeline-contract.md)
+- [Environment Map 与 GRENV v3](reference/environment-map.md)
 - [Mesh](reference/mesh.md)
 - [Material](reference/material.md)
 - [Scene Snapshot](reference/scene-snapshot.md)

@@ -76,12 +76,8 @@ add_library(
   granit_model_viewer_core STATIC
   application_core.cpp
   application_core.h
-  environment_package.cpp
-  environment_package.h
   environment_ktx2.cpp
   environment_ktx2.h
-  environment_resources.cpp
-  environment_resources.h
   frame_canvas_data.cpp
   frame_canvas_data.h
   frame_executor.cpp
@@ -118,7 +114,15 @@ set_target_properties(granit_model_viewer_core PROPERTIES FOLDER "Examples")
 granit_target_compile_warnings(granit_model_viewer_core)
 
 if(NOT CMAKE_CROSSCOMPILING)
-  add_executable(granit_model_viewer_environment_tool environment_tool_main.cpp)
+  add_executable(
+    granit_model_viewer_environment_tool
+    environment_tool_main.cpp
+    "${PROJECT_SOURCE_DIR}/src/pipeline/environment_asset.cpp"
+    $<TARGET_OBJECTS:granit_shader_asset_format>
+  )
+  target_include_directories(
+    granit_model_viewer_environment_tool PRIVATE "${PROJECT_SOURCE_DIR}/src"
+  )
   target_link_libraries(
     granit_model_viewer_environment_tool
     PRIVATE granit_example_model_viewer_support granit_example_gltf_dependencies
@@ -151,7 +155,6 @@ if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
   add_executable(
     granit_example_model_viewer_support_test
     application_core_test.cpp
-    environment_package_test.cpp
     environment_ktx2_test.cpp
     frame_executor_test.cpp
     gpu_scene_test.cpp

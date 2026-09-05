@@ -48,6 +48,7 @@ struct performance_panel_info {
   bool gpu_timing_available{};
   std::size_t queue_high_watermark{};
   std::uint64_t replaced_frames{};
+  std::uint64_t skipped_frame_builds{};
   performance_summary history;
 };
 

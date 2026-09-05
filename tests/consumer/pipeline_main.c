@@ -2,6 +2,7 @@
 // Copyright (c) 2026 Granit contributors
 
 #include <granit/pipeline/material.h>
+#include <granit/pipeline/environment_map.h>
 #include <granit/pipeline/mesh.h>
 #include <granit/pipeline/render_pipeline.h>
 #include <granit/pipeline/scene.h>
@@ -39,5 +40,14 @@ int main(void) {
     return 6;
   if (granit_render_pipeline_destroy(renderer, handle) != GRANIT_ERROR_INVALID_HANDLE)
     return 7;
-  return granit_renderer_destroy(renderer) == GRANIT_SUCCESS ? 0 : 8;
+  granit_environment_map environment = GRANIT_NULL_HANDLE;
+  if (granit_environment_map_create_builtin(renderer, &environment) != GRANIT_SUCCESS)
+    return 8;
+  granit_environment_map_info environment_info = GRANIT_ENVIRONMENT_MAP_INFO_INIT;
+  if (granit_environment_map_get_info(renderer, environment, &environment_info) != GRANIT_SUCCESS ||
+      environment_info.environment.irradiance == GRANIT_NULL_HANDLE)
+    return 9;
+  if (granit_environment_map_destroy(renderer, environment) != GRANIT_SUCCESS)
+    return 10;
+  return granit_renderer_destroy(renderer) == GRANIT_SUCCESS ? 0 : 11;
 }
