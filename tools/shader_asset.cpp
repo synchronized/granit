@@ -293,6 +293,10 @@ shader_cache_key make_shader_cache_key(const shader_cache_context& context) noex
   update_cache_field(hash, context.tint_revision);
   update_cache_field(hash, context.target_environment);
   update_cache_field(hash, context.compile_options);
+  std::array<std::byte, 8> features{};
+  for (std::uint32_t index = 0; index < features.size(); ++index)
+    features[index] = static_cast<std::byte>(context.required_features >> (index * 8U));
+  hash.update(features);
   return hash.finish();
 }
 
@@ -324,6 +328,7 @@ shader_asset_error encode_shader_asset(const shader_asset_source& source,
                     {.backend = shader_asset_backend::webgpu,
                      .code_format = shader_asset_code_format::wgsl,
                      .profile = shader_asset_profile::portable,
+                     .required_features = source.required_features,
                      .byte_size = source.wgsl.size(),
                      .digest = payload_digest(wgsl_bytes)});
     }
@@ -332,6 +337,7 @@ shader_asset_error encode_shader_asset(const shader_asset_source& source,
                     {.backend = shader_asset_backend::vulkan,
                      .code_format = shader_asset_code_format::spirv,
                      .profile = shader_asset_profile::portable,
+                     .required_features = source.required_features,
                      .byte_size = source.spirv.size(),
                      .digest = payload_digest(source.spirv)});
     }

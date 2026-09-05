@@ -35,6 +35,8 @@ Tint 的 `--validate` 和可选 `spirv-val` 负责。指定 `--asset` 时还需�
 目标环境默认记录为 `vulkan1.3`。工具不进入 Granit 核心动态库及安装导出。
 `--asset-backend` 可取 `all`、`vulkan` 或 `webgpu`，默认 `all`；未选择的同名 sidecar 会被删除，
 清单不会声明未随包交付的变体。
+`--features` 可声明 `none`、`float16` 或 `subgroup`。当前 portable 目标只接受 `none`；请求其他
+特性会在启动编译器前失败并指出缺失特性。
 ShaderTools SDK 还可接收调用方从 WGSL 前端取得的预期 Group/Binding 集合，并与最终 SPIR-V
 严格比较；当前 CLI 尚未自行提取该集合。
 所有调用都必须使用显式子命令；早期原型的单参数入口不再保留。

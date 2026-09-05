@@ -53,6 +53,11 @@ int main(int argc, char** argv) {
   asset.compile_options = options.data();
   asset.compile_options_length = options.size();
   asset.backend_mask = GRANIT_SHADER_TOOLS_ASSET_BACKEND_ALL;
+  asset.required_features = GRANIT_SHADER_FEATURE_FLOAT16_BIT;
+  auto [unsupported_status, unsupported_hit] = result.write_asset(asset);
+  if (unsupported_status != granit::result::unsupported || unsupported_hit)
+    return 16;
+  asset.required_features = 0;
 
   auto [status, cache_hit] = result.write_asset(asset);
   if (status.failed() || cache_hit)
@@ -80,6 +85,7 @@ int main(int argc, char** argv) {
   cache.compile_options = options.data();
   cache.compile_options_length = options.size();
   cache.backend_mask = GRANIT_SHADER_TOOLS_ASSET_BACKEND_ALL;
+  cache.required_features = 0;
   auto [restore_status, restored_hit] = granit::shader_tools::restore_asset_cache(cache);
   if (restore_status.failed())
     return 51;

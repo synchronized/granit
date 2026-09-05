@@ -18,6 +18,8 @@
   为后续自动变体选择提供统一输入。
 - ShaderTools 新增内置目标档位能力查询；CLI 可列出 `vulkan-portable`、`webgpu-portable` 并查询
   其静态特性契约，查询结果不依赖构建机 GPU。
+- Shader 资产生成描述可声明必需特性；特性进入缓存键和变体记录，所选目标档位不支持时会在
+  写入前返回 `unsupported`。CLI 通过 `--features` 提供相同门禁。
 
 ## 0.5.0 - 2026-09-05
 

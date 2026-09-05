@@ -35,6 +35,8 @@ target_link_libraries(editor PRIVATE granit::shader_tools)
 - `granit_shader_tools_get_target_capabilities` 查询工具内置目标档位的静态契约，不读取构建机 GPU。
   CLI 的 `targets` 列出目标，`capabilities --target <name>` 查询对应能力。当前提供
   `vulkan-portable` 和 `webgpu-portable`，二者均不声明额外可选特性。
+- 资产和缓存描述的 `required_features` 会进入缓存键和变体记录。未知特性位返回
+  `invalid_argument`；任一所选目标档位不支持必需特性时，写入返回 `unsupported` 且不修改资产。
 - `granit_shader_tools_result_get_binding_count` 和 `granit_shader_tools_result_get_binding` 按
   Group、Binding 数字顺序返回结构化绑定。记录包含资源类型、访问模式、数组数量和 Buffer
   最小绑定尺寸。

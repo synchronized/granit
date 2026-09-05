@@ -112,6 +112,8 @@ typedef struct granit_shader_tools_asset_desc {
   uint64_t compile_options_length;
   /** 要写入清单的后端位集合；必须是 GRANIT_SHADER_TOOLS_ASSET_BACKEND_* 的非零组合。 */
   uint32_t backend_mask;
+  /** 所有导出变体必须支持的 GRANIT_SHADER_FEATURE_* 位集合。 */
+  granit_shader_feature_flags required_features;
 } granit_shader_tools_asset_desc;
 
 /** Shader 资产缓存恢复描述。所有路径和字符串均在调用期间有效。 */
@@ -134,6 +136,8 @@ typedef struct granit_shader_tools_cache_desc {
   uint64_t compile_options_length;
   /** 期望资产包含的精确后端位集合；语义与 granit_shader_tools_asset_desc 相同。 */
   uint32_t backend_mask;
+  /** 期望资产使用的精确特性位集合。 */
+  granit_shader_feature_flags required_features;
 } granit_shader_tools_cache_desc;
 
 /** 单个描述符绑定的后端无关反射记录。名称视图在结果销毁前有效。 */

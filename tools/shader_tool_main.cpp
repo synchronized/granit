@@ -29,14 +29,16 @@ int compile_shader(int argc, char** argv) {
   const auto tint_revision = option_value(argc, argv, "--tint-revision");
   const auto target_environment = option_value(argc, argv, "--target-environment");
   const auto asset_backend = option_value(argc, argv, "--asset-backend");
+  const auto features = option_value(argc, argv, "--features");
   if (!tint || !input || !entry || !stage || !output ||
       (*stage != "vertex" && *stage != "fragment" && *stage != "compute") ||
-      (asset && !tint_revision) || (asset_backend && !asset) ||
+      (asset && !tint_revision) || (asset_backend && !asset) || (features && !asset) ||
       (asset_backend && *asset_backend != "all" && *asset_backend != "vulkan" &&
-       *asset_backend != "webgpu")) {
+       *asset_backend != "webgpu") ||
+      (features && *features != "none" && *features != "float16" && *features != "subgroup")) {
     std::cerr << "compile 需要 --tint、--input、--entry、--stage 和 --output\n";
     std::cerr << "使用 --asset 时还需要 --tint-revision；可选 --target-environment 和 "
-                 "--asset-backend <all|vulkan|webgpu>\n";
+                 "--asset-backend <all|vulkan|webgpu> 和 --features <none|float16|subgroup>\n";
     return 2;
   }
   const auto stage_value = *stage == "vertex"     ? GRANIT_SHADER_TOOLS_STAGE_VERTEX
@@ -49,6 +51,13 @@ int compile_shader(int argc, char** argv) {
                                 ? GRANIT_SHADER_TOOLS_ASSET_BACKEND_ALL
                             : *asset_backend == "vulkan" ? GRANIT_SHADER_TOOLS_ASSET_BACKEND_VULKAN
                                                          : GRANIT_SHADER_TOOLS_ASSET_BACKEND_WEBGPU;
+  const auto required_features = !features || *features == "none" ? UINT64_C(0)
+                                 : *features == "float16" ? GRANIT_SHADER_FEATURE_FLOAT16_BIT
+                                                          : GRANIT_SHADER_FEATURE_SUBGROUP_BIT;
+  if (required_features != 0) {
+    std::cerr << "目标 portable 档位不支持必需特性：" << *features << '\n';
+    return 1;
+  }
   if (asset) {
     granit_shader_tools_cache_desc cache{};
     cache.struct_size = sizeof(cache);
@@ -68,6 +77,7 @@ int compile_shader(int argc, char** argv) {
     cache.compile_options = compile_options.data();
     cache.compile_options_length = compile_options.size();
     cache.backend_mask = backend_mask;
+    cache.required_features = required_features;
     const auto [cache_status, cache_hit] = granit::shader_tools::restore_asset_cache(cache);
     if (cache_status.failed()) {
       std::cerr << "Shader 资产缓存查询失败\n";
@@ -109,6 +119,7 @@ int compile_shader(int argc, char** argv) {
     asset_desc.compile_options = compile_options.data();
     asset_desc.compile_options_length = compile_options.size();
     asset_desc.backend_mask = backend_mask;
+    asset_desc.required_features = required_features;
     const auto [asset_status, cache_hit] = result.write_asset(asset_desc);
     if (asset_status.failed()) {
       std::cerr << "Shader 资产写入失败\n";
@@ -303,7 +314,8 @@ void print_usage() {
                "  granit_shader_tool compile --tint <path> --input <shader.wgsl> "
                "--entry <name> --stage <vertex|fragment|compute> --output <shader.spv> "
                "[--asset <shader.granit-shader> --tint-revision <revision> "
-               "--asset-backend <all|vulkan|webgpu>]\n";
+               "--asset-backend <all|vulkan|webgpu> "
+               "--features <none|float16|subgroup>]\n";
 }
 
 } // namespace

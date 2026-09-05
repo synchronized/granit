@@ -23,6 +23,7 @@ struct shader_cache_context {
   std::string_view tint_revision;
   std::string_view target_environment;
   std::string_view compile_options;
+  std::uint64_t required_features = 0;
 };
 
 enum class shader_asset_error {
@@ -63,6 +64,7 @@ struct shader_asset_source {
   std::string_view reflection_json;
   shader_cache_key cache_key{};
   std::uint32_t backend_mask = 3;
+  std::uint64_t required_features = 0;
 };
 
 struct shader_asset_view {

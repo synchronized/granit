@@ -40,6 +40,13 @@ int main(int argc, char** argv) {
       vulkan->code_format != shader_asset_code_format::spirv || vulkan->required_features != 0 ||
       vulkan->byte_size != spirv.size())
     return 17;
+  std::vector<std::byte> feature_asset;
+  if (encode_shader_asset({wgsl, spirv, reflection, cache_key, 3, UINT64_C(1)}, feature_asset) !=
+          shader_asset_error::success ||
+      decode_shader_asset(feature_asset, view) != shader_asset_error::success ||
+      view.variants[0].required_features != UINT64_C(1) ||
+      view.variants[1].required_features != UINT64_C(1))
+    return 21;
   std::vector<std::byte> webgpu_only;
   if (encode_shader_asset({wgsl, spirv, reflection, cache_key, 2}, webgpu_only) !=
       shader_asset_error::success)
