@@ -559,3 +559,14 @@ install(
   DESTINATION "${GRANIT_INSTALL_CMAKEDIR}"
   COMPONENT RenderPipeline
 )
+install(
+  FILES
+    "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/pbr_standard.vert.grshader"
+    "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/pbr_standard.vert.grshader.spv"
+    "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/pbr_standard.vert.grshader.wgsl"
+    "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/pbr_standard.frag.grshader"
+    "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/pbr_standard.frag.grshader.spv"
+    "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/pbr_standard.frag.grshader.wgsl"
+  DESTINATION "${CMAKE_INSTALL_DATADIR}/granit/assets/shaders/pbr"
+  COMPONENT RenderPipeline
+)

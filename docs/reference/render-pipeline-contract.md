@@ -14,6 +14,25 @@
 - 公共 C ABI 位于 `granit/pipeline/*.h`，使用 `GRANIT_RENDER_PIPELINE_API` 从独立动态库导出。
 - RenderPipeline 的稳定等级独立于 Core；当前 0.x 接口可检测但尚未冻结。
 
+## 公共渲染资产
+
+安装 `RenderPipeline` component 时会同时安装公共渲染资产。CMake 包配置变量
+`granit_RENDER_PIPELINE_ASSET_DIR` 指向资产根目录；标准 PBR Shader 位于其
+`shaders/pbr` 子目录。当前标准资产包含：
+
+```text
+pbr_standard.vert.grshader
+pbr_standard.vert.grshader.spv
+pbr_standard.vert.grshader.wgsl
+pbr_standard.frag.grshader
+pbr_standard.frag.grshader.spv
+pbr_standard.frag.grshader.wgsl
+```
+
+`.grshader` 是公共清单，Vulkan 使用 `.spv` sidecar，浏览器 WebGPU 使用 `.wgsl` sidecar。
+变量只负责定位安装资产，不改变 Core 的资源边界；应用仍负责读取、嵌入或通过自己的资产系统
+提供相应字节。
+
 ## 对象所有权
 
 | 对象 | 自身拥有 | 借用及调用方责任 |
