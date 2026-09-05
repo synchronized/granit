@@ -7,6 +7,7 @@
 #include "gltf/loader.h"
 #include "gltf/resource_uri.h"
 
+#include <array>
 #include <cstring>
 #include <type_traits>
 
@@ -189,7 +190,7 @@ TEST_CASE("glTF Loader 读取 Primitive、索引和 AABB", "[example][gltf][load
   for (const float value : {-1.0F, -2.0F, 0.0F, 0.0F, 0.0F, 1.0F, 3.0F, 0.0F, 1.0F, 0.0F, 0.0F,
                             1.0F, 0.0F, 4.0F, -1.0F, 0.0F, 0.0F, 1.0F})
     append(buffer, value);
-  for (const std::uint16_t value : {0, 1, 2})
+  for (const std::uint16_t value : std::array<std::uint16_t, 3>{0, 1, 2})
     append(buffer, value);
 
   const memory_resolver resolver(std::move(buffer));
