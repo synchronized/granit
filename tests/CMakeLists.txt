@@ -71,7 +71,8 @@ add_library(
     headers/pipeline_render_pipeline_h.c
     headers/pipeline_scene_h.c
       headers/pipeline_canvas_draw_list_h.c
-      headers/pipeline_debug_draw_list_h.c
+    headers/pipeline_debug_draw_list_h.c
+    headers/pipeline_environment_map_h.c
       headers/pipeline_text_draw_list_h.c
       headers/pipeline_text_atlas_h.c
 )
@@ -355,6 +356,10 @@ add_test(NAME granit.lighting COMMAND granit_lighting_test)
 add_executable(
   granit_pipeline_test
   pipeline/material_api_test.cpp
+  pipeline/environment_map_api_test.cpp
+  pipeline/environment_asset_test.cpp
+  "${PROJECT_SOURCE_DIR}/src/pipeline/environment_asset.cpp"
+  $<TARGET_OBJECTS:granit_shader_asset_format>
   pipeline/mesh_api_test.cpp
   pipeline/render_pipeline_api_test.cpp
   pipeline/scene_api_test.cpp
@@ -589,6 +594,7 @@ add_library(
     headers/pipeline_material_hpp.cpp
     headers/pipeline_mesh_hpp.cpp
     headers/pipeline_render_pipeline_hpp.cpp
+    headers/pipeline_environment_map_hpp.cpp
     headers/pipeline_scene_hpp.cpp
       headers/pipeline_canvas_draw_list_hpp.cpp
       headers/pipeline_debug_draw_list_hpp.cpp

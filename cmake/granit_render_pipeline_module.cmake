@@ -163,6 +163,10 @@ function(granit_add_render_pipeline_module)
       "${PROJECT_SOURCE_DIR}/src/pipeline/dynamic_uniform_arena.cpp"
       "${PROJECT_SOURCE_DIR}/src/pipeline/dynamic_uniform_arena.h"
       "${PROJECT_SOURCE_DIR}/src/pipeline/draw_binding_cache.h"
+      "${PROJECT_SOURCE_DIR}/src/pipeline/environment_asset.cpp"
+      "${PROJECT_SOURCE_DIR}/src/pipeline/environment_asset.h"
+      "${PROJECT_SOURCE_DIR}/src/pipeline/environment_map_api.cpp"
+      $<TARGET_OBJECTS:granit_shader_asset_format>
       "${PROJECT_SOURCE_DIR}/src/pipeline/material_api.cpp"
       "${PROJECT_SOURCE_DIR}/src/pipeline/material_access.h"
       "${PROJECT_SOURCE_DIR}/src/pipeline/lighting_submission.cpp"
@@ -202,6 +206,8 @@ function(granit_add_render_pipeline_module)
       BASE_DIRS "${PROJECT_SOURCE_DIR}/include"
       FILES
         "${PROJECT_SOURCE_DIR}/include/granit/pipeline/export.h"
+        "${PROJECT_SOURCE_DIR}/include/granit/pipeline/environment_map.h"
+        "${PROJECT_SOURCE_DIR}/include/granit/pipeline/environment_map.hpp"
         "${PROJECT_SOURCE_DIR}/include/granit/pipeline/material.h"
         "${PROJECT_SOURCE_DIR}/include/granit/pipeline/material.hpp"
         "${PROJECT_SOURCE_DIR}/include/granit/pipeline/mesh.h"

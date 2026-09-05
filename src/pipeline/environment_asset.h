@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#ifndef GRANIT_EXAMPLES_COMMON_MODEL_VIEWER_ENVIRONMENT_PACKAGE_H_
-#define GRANIT_EXAMPLES_COMMON_MODEL_VIEWER_ENVIRONMENT_PACKAGE_H_
+#ifndef GRANIT_PIPELINE_ENVIRONMENT_ASSET_H_
+#define GRANIT_PIPELINE_ENVIRONMENT_ASSET_H_
 
 #include <cstddef>
 #include <cstdint>
 #include <span>
 #include <vector>
 
-namespace granit::example::model_viewer {
+namespace granit::pipeline::detail {
 
 enum class environment_package_error {
   none,
@@ -17,6 +17,7 @@ enum class environment_package_error {
   invalid_magic,
   unsupported_version,
   invalid_layout,
+  digest_mismatch,
   size_overflow,
 };
 
@@ -37,7 +38,7 @@ struct environment_package {
   std::span<const std::byte> brdf_pixels;
 };
 
-/** 解析 example 私有 GRENV v2；像素固定为紧密排列的 RGBA16F。 */
+/** 解析 GRENV v2；像素固定为紧密排列的 RGBA16F。 */
 [[nodiscard]] environment_package_error parse_environment_package(std::span<const std::byte> bytes,
                                                                   environment_package& package);
 
@@ -45,6 +46,6 @@ struct environment_package {
 [[nodiscard]] environment_package_error
 encode_environment_package(const environment_package& package, std::vector<std::byte>& output);
 
-} // namespace granit::example::model_viewer
+} // namespace granit::pipeline::detail
 
 #endif

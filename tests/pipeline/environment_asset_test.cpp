@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include "model_viewer/environment_package.h"
-#include "model_viewer/environment_resources.h"
+#include "assets/shader_asset.h"
+#include "pipeline/environment_asset.h"
 
 #include <catch2/catch_all.hpp>
+#include <granit/pipeline/environment_map.hpp>
 #include <granit/renderer/renderer.hpp>
 
 #include <array>
@@ -23,14 +24,14 @@ void write_u64(std::vector<std::byte>& bytes, std::size_t offset, std::uint64_t 
 }
 
 std::vector<std::byte> valid_package() {
-  constexpr std::array magic{'G', 'R', 'E', 'N', 'V', '0', '2', '\0'};
+  constexpr std::array magic{'G', 'R', 'E', 'N', 'V', '0', '3', '\0'};
   constexpr std::uint64_t payload_size =
       2 * 2 * 6 * 8 + 4 * 4 * 6 * 8 + 2 * 2 * 6 * 8 + 1 * 1 * 6 * 8 + 4 * 4 * 8;
-  std::vector<std::byte> bytes(64 + payload_size);
+  std::vector<std::byte> bytes(96 + payload_size);
   for (std::size_t index = 0; index < magic.size(); ++index)
     bytes[index] = static_cast<std::byte>(magic[index]);
-  write_u32(bytes, 8, 2);
-  write_u32(bytes, 12, 64);
+  write_u32(bytes, 8, 3);
+  write_u32(bytes, 12, 96);
   write_u32(bytes, 16, 1);
   write_u32(bytes, 20, 2);
   write_u32(bytes, 24, 4);
@@ -40,13 +41,15 @@ std::vector<std::byte> valid_package() {
   write_u64(bytes, 40, payload_size);
   write_u32(bytes, 48, 0x3df5c28fU);
   write_u32(bytes, 52, 0xbf000000U);
+  const auto digest = granit::tools::shader_bytes_sha256(std::span{bytes}.subspan(96));
+  std::ranges::copy(digest, bytes.begin() + 64);
   return bytes;
 }
 
 } // namespace
 
-TEST_CASE("GRENV v2严格解析预处理环境布局和推荐光照", "[example][model-viewer][environment]") {
-  using namespace granit::example::model_viewer;
+TEST_CASE("GRENV v3 严格解析预处理环境布局和推荐光照", "[pipeline][environment]") {
+  using namespace granit::pipeline::detail;
   auto bytes = valid_package();
   environment_package package;
   REQUIRE(parse_environment_package(bytes, package) == environment_package_error::none);
@@ -66,6 +69,9 @@ TEST_CASE("GRENV v2严格解析预处理环境布局和推荐光照", "[example]
   bytes[0] = std::byte{0};
   CHECK(parse_environment_package(bytes, package) == environment_package_error::invalid_magic);
   bytes = valid_package();
+  bytes.back() = std::byte{1};
+  CHECK(parse_environment_package(bytes, package) == environment_package_error::digest_mismatch);
+  bytes = valid_package();
   write_u32(bytes, 8, 1);
   CHECK(parse_environment_package(bytes, package) ==
         environment_package_error::unsupported_version);
@@ -84,22 +90,22 @@ TEST_CASE("GRENV v2严格解析预处理环境布局和推荐光照", "[example]
 }
 
 TEST_CASE("GRENV环境资源上传为Render Pipeline输入", "[example][model-viewer][environment][gpu]") {
-  using namespace granit::example::model_viewer;
+  using namespace granit::pipeline::detail;
   granit::renderer renderer;
   const auto renderer_result = renderer.initialize({.application_name = "GRENV Test"});
   if (renderer_result.failed())
     SKIP("当前环境没有可用 Renderer");
 
   const auto bytes = valid_package();
-  environment_package package;
-  REQUIRE(parse_environment_package(bytes, package) == environment_package_error::none);
-  environment_resources resources;
-  REQUIRE(resources.initialize(renderer.native_handle(), package) == granit::result::success);
-  CHECK(resources.valid());
-  CHECK(resources.environment().irradiance != GRANIT_NULL_HANDLE);
-  CHECK(resources.environment().prefiltered_environment != GRANIT_NULL_HANDLE);
-  CHECK(resources.environment().brdf_lut != GRANIT_NULL_HANDLE);
-  CHECK(resources.environment().prefiltered_max_mip == 2.0F);
-  resources.reset();
-  CHECK_FALSE(resources.valid());
+  granit::environment_map environment;
+  REQUIRE(environment.initialize(renderer.native_handle(), bytes) == granit::result::success);
+  CHECK(environment.valid());
+  granit_environment_map_info info = GRANIT_ENVIRONMENT_MAP_INFO_INIT;
+  REQUIRE(environment.get_info(info).ok());
+  CHECK(info.environment.irradiance != GRANIT_NULL_HANDLE);
+  CHECK(info.environment.prefiltered_environment != GRANIT_NULL_HANDLE);
+  CHECK(info.environment.brdf_lut != GRANIT_NULL_HANDLE);
+  CHECK(info.environment.prefiltered_max_mip == 2.0F);
+  REQUIRE(environment.reset().ok());
+  CHECK_FALSE(environment.valid());
 }
