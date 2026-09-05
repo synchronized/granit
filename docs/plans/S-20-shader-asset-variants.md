@@ -26,7 +26,7 @@ example.granit-shader.spv   # Vulkan portable 变体
 
 ## 非目标
 
-- 本阶段不引入 HLSL、GLSL 前端或新的编译器依赖。
+- 编译器只作为可选离线工具，不进入核心运行时依赖或公共 Renderer ABI。
 - 不修改 `.grmat` 材质包和 Renderer 的 `granit_shader_desc`。
 - 不按 Windows、Linux 等操作系统命名变体；选择依据是后端与能力档位。
 - 不承诺 `.granit-shader` 为长期稳定的跨版本交换格式。
@@ -62,7 +62,9 @@ example.granit-shader.spv   # Vulkan portable 变体
    SPIR-V，同时以独立的 portable 中间 SPIR-V 经锁定 Tint 生成 WGSL，并校验两条路径的反射契约
    一致；任一步不支持源代码能力都会明确失败且不保留不完整双产物。CLI 已可生成并按后端裁剪
    HLSL 资产；全后端资产已可按原始 HLSL、源码语言和完整编译上下文在启动编译器前恢复双产物。
-   GLSL/glslang 前端仍待完成。前端只改变离线输入，不改变运行时变体选择和后端载荷格式。
+   GLSL/glslang 前端仍待完成。前端只改变离线输入，不改变运行时变体选择和后端载荷格式。DXC
+   与 Tint 的统一发现、锁定版本和配置期能力探测已经收敛到可选 Shader Toolchain 契约；可下载
+   工具链包及其归档 SHA-256 要在产物实际发布后补齐，不能预写不存在的摘要。
 
 ## 测试与验收
 

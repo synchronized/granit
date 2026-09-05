@@ -6,9 +6,14 @@
 使用 `GRANIT_BUILD_TOOLS=ON` 构建可选离线工具：
 
 ```powershell
-cmake --preset windows-clang-debug -DGRANIT_BUILD_TOOLS=ON
+cmake --preset windows-clang-debug -DGRANIT_BUILD_TOOLS=ON `
+  -DGRANIT_SHADER_TOOLCHAIN_ROOT=path/to/shader-toolchain
 cmake --build --preset windows-clang-debug --target granit_shader_tool
 ```
+
+统一工具链根目录的 `bin` 应包含锁定版本的 `dxc` 和 `tint`。也可以分别传入
+`GRANIT_DXC_EXECUTABLE` 与 `GRANIT_TINT_EXECUTABLE`；这些程序只用于离线资产构建，不是应用
+运行时依赖。
 
 `granit_shader_tool` 提供以下入口：
 
@@ -55,6 +60,6 @@ ShaderTools SDK 还可接收调用方从 WGSL 前端取得的预期 Group/Bindin
 `granit_material_tool inspect <package.grmat> --json` 验证最终二进制材质包并把稳定诊断 JSON 输出
 到标准输出。使用 `--output <path>` 可以写入文件；Renderer 不读取该 JSON。
 
-测试需要可执行的 `dxc`；若存在 `VULKAN_SDK`，CMake 会优先在其 `Bin` 目录查找 `dxc` 和
-`spirv-val`。固定测试流程为 HLSL 经 DXC 编译到 Vulkan 1.3 SPIR-V、可选 `spirv-val` 校验，再由
-SPIRV-Reflect 检查材质 Group 1 布局。
+HLSL 双后端测试需要符合锁定契约的 `dxc` 和 `tint`；若存在 `VULKAN_SDK`，CMake 也会从其
+`Bin` 目录查找 `dxc` 和 `spirv-val`。固定测试流程为 HLSL 经 DXC 编译到 Vulkan 1.3 SPIR-V、
+可选 `spirv-val` 校验，并经 Tint 产生 WebGPU WGSL，最后检查两条路径的反射契约一致。

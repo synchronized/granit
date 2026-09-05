@@ -19,6 +19,16 @@ target_link_libraries(editor PRIVATE granit::shader_tools)
 `GRANIT_BUILD_TOOLS=ON` 也会构建该 SDK，因为 `granit_shader_tool` 是它的命令行薄适配层。Tint
 可执行文件仍是编译调用的显式输入，不会成为公共链接依赖。
 
+HLSL portable 路径需要资产构建机安装 DXC 与 Tint，但应用运行时和 Granit 核心 SDK 均不需要
+它们。配置时优先设置 `GRANIT_SHADER_TOOLCHAIN_ROOT`，其 `bin` 目录应同时包含 `dxc` 和 `tint`；
+也可分别设置 `GRANIT_DXC_EXECUTABLE`、`GRANIT_TINT_EXECUTABLE`。未设置统一根目录时，DXC 还会
+从 `VULKAN_SDK` 和 PATH 查找，Tint 从 PATH 查找。配置阶段会检查锁定的 DXC 版本以及 Tint 所需的
+WGSL/SPIR-V 转换能力，不符合契约的工具不会用于端到端测试。
+
+当前工具链契约锁定 DXC `1.8.0.4973`、Dawn/Tint `v20260720.160313`（修订
+`0bc38adde72b79013536f8ce354b639ae19ae195`）。资产仍需显式记录真实工具修订号，使缓存身份不依赖
+开发机路径。工具链是离线依赖，不进入 `granit::granit` 的安装导出或传递依赖。
+
 ## 接口与生命周期
 
 - C11 入口位于 `<granit/tools/shader_tools.h>`；C++20 RAII 包装位于对应 `.hpp`。

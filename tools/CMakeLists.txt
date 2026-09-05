@@ -354,12 +354,8 @@ if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
   )
 endif()
 
-find_program(GRANIT_TINT_EXECUTABLE NAMES tint)
-find_program(
-  GRANIT_DXC_EXECUTABLE
-  NAMES dxc
-  HINTS "$ENV{VULKAN_SDK}/Bin" "$ENV{VULKAN_SDK}/bin"
-)
+include(granit_shader_toolchain)
+granit_find_shader_toolchain()
 if(GRANIT_DXC_EXECUTABLE)
   set(GRANIT_DXC_PROBE_OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/dxc_spirv_probe.spv")
   execute_process(

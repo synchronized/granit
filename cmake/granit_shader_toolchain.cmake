@@ -1,0 +1,102 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Granit contributors
+
+# Shader 前端工具只在资产构建阶段使用，不应成为 granit 核心目标的链接或安装依赖。
+set(GRANIT_SHADER_TOOLCHAIN_DAWN_VERSION "v20260720.160313")
+set(GRANIT_SHADER_TOOLCHAIN_TINT_REVISION "0bc38adde72b79013536f8ce354b639ae19ae195")
+set(GRANIT_SHADER_TOOLCHAIN_DXC_VERSION "1.8.0.4973")
+
+set(
+  GRANIT_SHADER_TOOLCHAIN_ROOT
+  ""
+  CACHE PATH
+  "包含 bin/dxc 和 bin/tint 的 Granit Shader 工具链根目录"
+)
+set(GRANIT_DXC_EXECUTABLE "" CACHE FILEPATH "DXC 可执行文件")
+set(GRANIT_TINT_EXECUTABLE "" CACHE FILEPATH "Tint 可执行文件")
+
+function(granit_find_shader_toolchain)
+  if(GRANIT_SHADER_TOOLCHAIN_ROOT)
+    set(granit_shader_toolchain_bin "${GRANIT_SHADER_TOOLCHAIN_ROOT}/bin")
+  endif()
+
+  if(NOT GRANIT_DXC_EXECUTABLE)
+    find_program(
+      GRANIT_DXC_EXECUTABLE
+      NAMES dxc
+      HINTS
+        "${granit_shader_toolchain_bin}"
+        "$ENV{VULKAN_SDK}/Bin"
+        "$ENV{VULKAN_SDK}/bin"
+    )
+  endif()
+  if(NOT GRANIT_TINT_EXECUTABLE)
+    find_program(
+      GRANIT_TINT_EXECUTABLE
+      NAMES tint
+      HINTS "${granit_shader_toolchain_bin}"
+    )
+  endif()
+
+  set(granit_dxc_usable OFF)
+  if(GRANIT_DXC_EXECUTABLE)
+    execute_process(
+      COMMAND "${GRANIT_DXC_EXECUTABLE}" --version
+      RESULT_VARIABLE granit_dxc_version_result
+      OUTPUT_VARIABLE granit_dxc_version_output
+      ERROR_VARIABLE granit_dxc_version_error
+      OUTPUT_STRIP_TRAILING_WHITESPACE
+      ERROR_STRIP_TRAILING_WHITESPACE
+    )
+    string(
+      FIND
+      "${granit_dxc_version_output}"
+      "${GRANIT_SHADER_TOOLCHAIN_DXC_VERSION}"
+      granit_dxc_version_offset
+    )
+    if(granit_dxc_version_result EQUAL 0 AND
+       NOT granit_dxc_version_offset EQUAL -1)
+      set(granit_dxc_usable ON)
+      message(STATUS "Granit Shader Toolchain: DXC ${GRANIT_SHADER_TOOLCHAIN_DXC_VERSION}")
+    else()
+      message(
+        STATUS
+        "Granit Shader Toolchain: DXC 不匹配锁定版本 ${GRANIT_SHADER_TOOLCHAIN_DXC_VERSION}"
+      )
+    endif()
+  endif()
+
+  set(granit_tint_usable OFF)
+  if(GRANIT_TINT_EXECUTABLE)
+    execute_process(
+      COMMAND "${GRANIT_TINT_EXECUTABLE}" --help
+      RESULT_VARIABLE granit_tint_probe_result
+      OUTPUT_VARIABLE granit_tint_probe_output
+      ERROR_VARIABLE granit_tint_probe_error
+    )
+    set(granit_tint_probe_text "${granit_tint_probe_output}${granit_tint_probe_error}")
+    # 当前锁定 Tint 的帮助命令会返回 1；能力文本比该退出码更适合作为兼容性探针。
+    if(granit_tint_probe_text MATCHES "--input-format" AND
+       granit_tint_probe_text MATCHES "wgsl" AND
+       granit_tint_probe_text MATCHES "spirv" AND
+       granit_tint_probe_text MATCHES "--format")
+      set(granit_tint_usable ON)
+      message(
+        STATUS
+        "Granit Shader Toolchain: Tint ${GRANIT_SHADER_TOOLCHAIN_DAWN_VERSION} 能力可用"
+      )
+    else()
+      message(STATUS "Granit Shader Toolchain: Tint 缺少锁定工作流要求的转换能力")
+    endif()
+  endif()
+
+  if(NOT granit_dxc_usable)
+    set(GRANIT_DXC_EXECUTABLE "" CACHE FILEPATH "DXC 可执行文件" FORCE)
+  endif()
+  if(NOT granit_tint_usable)
+    set(GRANIT_TINT_EXECUTABLE "" CACHE FILEPATH "Tint 可执行文件" FORCE)
+  endif()
+
+  set(GRANIT_DXC_EXECUTABLE "${GRANIT_DXC_EXECUTABLE}" PARENT_SCOPE)
+  set(GRANIT_TINT_EXECUTABLE "${GRANIT_TINT_EXECUTABLE}" PARENT_SCOPE)
+endfunction()
