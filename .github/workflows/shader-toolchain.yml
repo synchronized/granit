@@ -179,6 +179,9 @@ jobs:
     if: ${{ github.event_name == 'push' || inputs.run_linux }}
     runs-on: ubuntu-24.04
     timeout-minutes: 120
+    env:
+      DXC_VERSION: 1.9(dev;4973-8f559587)
+      GLSLANG_VERSION: 15.4.0
     steps:
       - uses: actions/checkout@v5
       - name: 安装构建依赖
@@ -287,7 +290,9 @@ jobs:
             -P cmake/verify_shader_toolchain_manifest.cmake
           LD_LIBRARY_PATH="$stage/lib" "$stage/bin/dxc" --version
           "$stage/bin/glslangValidator" --version
-          "$stage/bin/tint" --version
+          # 当前锁定的 Tint 没有版本参数，以能力帮助文本和源码修订共同确认身份。
+          tint_help="$("$stage/bin/tint" --help 2>&1 || true)"
+          [[ "$tint_help" == *"--input-format"* && "$tint_help" == *"spirv"* ]]
           export LD_LIBRARY_PATH="$stage/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
           validation="$RUNNER_TEMP/shader-tools-validation"
           CC=clang CXX=clang++ cmake -S . -B "$validation" -G Ninja \
