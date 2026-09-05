@@ -149,6 +149,67 @@ TEST_CASE("Renderer 公开查询 Shader 能力", "[renderer][shader-capabilities
         GRANIT_ERROR_INVALID_HANDLE);
 }
 
+TEST_CASE("Renderer 按设备能力选择 Shader 变体", "[renderer][shader-variant][c_api]") {
+  std::uint32_t selected = 0;
+  granit_shader_variant_requirement invalid = GRANIT_SHADER_VARIANT_REQUIREMENT_INIT;
+  CHECK(granit_renderer_select_shader_variant(GRANIT_NULL_HANDLE, nullptr, 0, &selected) ==
+        GRANIT_ERROR_INVALID_ARGUMENT);
+  CHECK(selected == UINT32_MAX);
+  CHECK(granit_renderer_select_shader_variant(GRANIT_NULL_HANDLE, &invalid, 1, nullptr) ==
+        GRANIT_ERROR_INVALID_ARGUMENT);
+  invalid.struct_size = sizeof(invalid) - 1;
+  CHECK(granit_renderer_select_shader_variant(GRANIT_NULL_HANDLE, &invalid, 1, &selected) ==
+        GRANIT_ERROR_INVALID_ARGUMENT);
+  invalid = GRANIT_SHADER_VARIANT_REQUIREMENT_INIT;
+  CHECK(granit_renderer_select_shader_variant(GRANIT_NULL_HANDLE, &invalid, 1, &selected) ==
+        GRANIT_ERROR_INVALID_ARGUMENT);
+  invalid.backend = GRANIT_RENDERER_BACKEND_VULKAN;
+  invalid.required_features = GRANIT_SHADER_FEATURE_ALL_BITS << 1;
+  CHECK(granit_renderer_select_shader_variant(GRANIT_NULL_HANDLE, &invalid, 1, &selected) ==
+        GRANIT_ERROR_INVALID_ARGUMENT);
+
+  granit_renderer_desc desc = GRANIT_RENDERER_DESC_INIT;
+  desc.backend = GRANIT_RENDERER_BACKEND_VULKAN;
+  granit_renderer renderer = GRANIT_NULL_HANDLE;
+  const auto create_result = granit_renderer_create(&desc, &renderer);
+  if (environment_unavailable(create_result))
+    SKIP("当前运行环境没有满足要求的 Vulkan 设备");
+  REQUIRE(create_result == GRANIT_SUCCESS);
+
+  std::array variants{
+      granit_shader_variant_requirement{sizeof(granit_shader_variant_requirement),
+                                        GRANIT_RENDERER_BACKEND_WEBGPU,
+                                        GRANIT_SHADER_PROFILE_PORTABLE, 100, 0},
+      granit_shader_variant_requirement{
+          sizeof(granit_shader_variant_requirement), GRANIT_RENDERER_BACKEND_VULKAN,
+          GRANIT_SHADER_PROFILE_PORTABLE, 20, GRANIT_SHADER_FEATURE_FLOAT16_BIT},
+      granit_shader_variant_requirement{sizeof(granit_shader_variant_requirement),
+                                        GRANIT_RENDERER_BACKEND_VULKAN,
+                                        GRANIT_SHADER_PROFILE_PORTABLE, 10, 0},
+      granit_shader_variant_requirement{sizeof(granit_shader_variant_requirement),
+                                        GRANIT_RENDERER_BACKEND_VULKAN,
+                                        GRANIT_SHADER_PROFILE_PORTABLE, 5, 0},
+  };
+  REQUIRE(granit_renderer_select_shader_variant(renderer, variants.data(),
+                                                static_cast<std::uint32_t>(variants.size()),
+                                                &selected) == GRANIT_SUCCESS);
+  CHECK(selected == 2);
+
+  variants[3].priority = variants[2].priority;
+  REQUIRE(granit_renderer_select_shader_variant(renderer, variants.data(),
+                                                static_cast<std::uint32_t>(variants.size()),
+                                                &selected) == GRANIT_SUCCESS);
+  CHECK(selected == 2);
+
+  REQUIRE(granit_renderer_select_shader_variant(renderer, &variants[1], 1, &selected) ==
+          GRANIT_ERROR_UNSUPPORTED);
+  CHECK(selected == UINT32_MAX);
+  REQUIRE(granit_renderer_destroy(renderer) == GRANIT_SUCCESS);
+  CHECK(granit_renderer_select_shader_variant(renderer, variants.data(),
+                                              static_cast<std::uint32_t>(variants.size()),
+                                              &selected) == GRANIT_ERROR_INVALID_HANDLE);
+}
+
 TEST_CASE("Renderer 查询实际后端与 Adapter 信息", "[renderer][info][c_api]") {
   granit_renderer_info info = GRANIT_RENDERER_INFO_INIT;
   CHECK(granit_renderer_get_info(GRANIT_NULL_HANDLE, nullptr) == GRANIT_ERROR_INVALID_ARGUMENT);
@@ -396,6 +457,15 @@ TEST_CASE("C++ renderer 提供 move-only RAII", "[renderer][cpp_api]") {
   CHECK(shader_capabilities.backend == granit::renderer_backend::vulkan);
   CHECK(shader_capabilities.profile == GRANIT_SHADER_PROFILE_PORTABLE);
   CHECK_FALSE(shader_capabilities.supports(granit::shader_feature::float16));
+  const std::array shader_variants{
+      granit::shader_variant_requirement{.backend = granit::renderer_backend::webgpu,
+                                         .priority = 100},
+      granit::shader_variant_requirement{.backend = granit::renderer_backend::vulkan,
+                                         .priority = 10},
+  };
+  const auto [variant_result, variant_index] = renderer.select_shader_variant(shader_variants);
+  REQUIRE(variant_result == granit::result::success);
+  CHECK(variant_index == 1);
   granit::renderer_resource_stats stats;
   REQUIRE(renderer.get_resource_stats(stats) == granit::result::success);
   CHECK(stats.total_live_count == 0);

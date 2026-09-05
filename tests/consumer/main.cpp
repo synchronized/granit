@@ -5,6 +5,7 @@
 
 #include "linkage_check.h"
 
+#include <array>
 #include <atomic>
 #include <string>
 #include <string_view>
@@ -66,6 +67,11 @@ int main() {
       shader_capabilities.backend != granit::renderer_backend::vulkan ||
       shader_capabilities.profile != GRANIT_SHADER_PROFILE_PORTABLE)
     return 11;
+  const std::array shader_variants{
+      granit::shader_variant_requirement{.backend = granit::renderer_backend::vulkan}};
+  const auto [variant_result, variant_index] = renderer.select_shader_variant(shader_variants);
+  if (variant_result.failed() || variant_index != 0)
+    return 13;
 
   granit_buffer_desc invalid_desc = GRANIT_BUFFER_DESC_INIT;
   granit_buffer invalid_buffer = GRANIT_NULL_HANDLE;

@@ -5,8 +5,8 @@
 
 ## 状态
 
-**实现中。** S-20A、S-20B 的首个 portable 档位和 S-20C 的按后端裁剪已经完成；不保留旧格式
-读取或迁移代码。
+**实现中。** S-20A、S-20B 的首个 portable 档位、S-20C 的按后端裁剪及 S-20D 至 S-20F 的
+首版能力闭环已经完成；不保留旧格式读取或迁移代码。
 
 ## 背景与目标
 
@@ -52,8 +52,9 @@ example.granit-shader.spv   # Vulkan portable 变体
 
 1. **S-20D 设备 Shader 能力（首版已完成）**：公共 Renderer 返回实际后端、portable 档位和已验证的
    可选 Shader 特性位；数值限制继续由 `granit_renderer_get_limits` 负责。
-2. **S-20E 自动变体选择**：以 Renderer 能力筛选后端、档位、特性位和数值要求，按确定性优先级
-   选择最合适变体；没有候选时返回 `unsupported` 和结构化诊断。
+2. **S-20E 自动变体选择（首版已完成）**：Renderer 可按实际后端、portable 档位和特性位筛选
+   调用方提供的变体元数据，并以确定性优先级返回索引；没有候选时返回 `unsupported`。数值要求
+   和更细粒度结构化诊断留待对应特性实际启用时扩展。
 3. **S-20F 工具目标能力（首版已完成）**：ShaderTools C/C++ API 与 CLI 已能列出、查询内置
    portable 目标；生成请求会校验必需特性，未知特性返回 `invalid_argument`，目标不支持则返回
    `unsupported`。目标能力来自发布契约，不能读取构建机 GPU 后假定部署设备相同。

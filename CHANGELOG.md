@@ -15,7 +15,7 @@
 - Shader 资产清单新增后端、代码格式、能力档位和特性位变体表；ShaderTools 和命令行可导出
   全量、仅 Vulkan 或仅 WebGPU 载荷，清单只声明实际发布的变体。
 - Renderer 新增后端无关的 Shader 能力快照，公开实际后端、portable 档位和已验证的可选特性位，
-  为后续自动变体选择提供统一输入。
+  并可按后端、档位、必需特性和确定性优先级为调用方选择兼容 Shader 变体。
 - ShaderTools 新增内置目标档位能力查询；CLI 可列出 `vulkan-portable`、`webgpu-portable` 并查询
   其静态特性契约，查询结果不依赖构建机 GPU。
 - Shader 资产生成描述可声明必需特性；特性进入缓存键和变体记录，所选目标档位不支持时会在

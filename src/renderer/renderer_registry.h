@@ -66,6 +66,10 @@ public:
   [[nodiscard]] granit_result
   get_shader_capabilities(granit_renderer renderer,
                           granit_renderer_shader_capabilities& capabilities);
+  [[nodiscard]] granit_result
+  select_shader_variant(granit_renderer renderer,
+                        std::span<const granit_shader_variant_requirement> variants,
+                        std::uint32_t& selected_index);
   [[nodiscard]] granit_result get_info(granit_renderer renderer, granit_renderer_info& info);
   [[nodiscard]] granit_result get_resource_stats(granit_renderer renderer,
                                                  granit_renderer_resource_stats& stats);

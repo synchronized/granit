@@ -62,6 +62,17 @@ C++ `renderer_limits::supports_sample_count` 提供对应的便捷检查。
 `renderer_shader_capabilities::supports` 检查。数值限制仍由 `granit_renderer_get_limits` 返回，
 不要把操作系统名称作为 Shader 能力判断条件。
 
+调用方从 Shader Asset 清单取得变体要求后，可通过
+`granit_renderer_select_shader_variant` 统一选择。每个候选项声明后端、能力档位、必需特性位和
+优先级；Renderer 先排除后端或档位不符、设备特性不足的候选，再选择优先级最大的项。优先级相同
+时保持清单中的第一个候选，保证结果确定。成功返回原数组索引；没有兼容项返回
+`GRANIT_ERROR_UNSUPPORTED`，并将索引写为 `UINT32_MAX`。
+
+候选数组及其结构体只在调用期间借用。空数组、未知后端、未知档位、未知特性位或过小结构均返回
+`GRANIT_ERROR_INVALID_ARGUMENT`。当前只定义 portable 档位，具体 Shader 文件读取及摘要校验仍由
+资产层负责，Renderer 不持有文件路径或 ShaderTools 状态。C++ 包装为
+`renderer::select_shader_variant`，返回结果码和候选索引。
+
 调用者必须设置 `struct_size`，当前至少为 `GRANIT_RENDERER_LIMITS_VERSION_1_SIZE`。查询接受更大的
 未来结构并只写当前版本已知字段；结构过小或空指针返回 `GRANIT_ERROR_INVALID_ARGUMENT`，失效
 Renderer 返回 `GRANIT_ERROR_INVALID_HANDLE`。限制来自 Renderer 创建时保存的不可变能力快照，

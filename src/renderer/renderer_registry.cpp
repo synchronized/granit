@@ -86,6 +86,31 @@ renderer_registry::get_shader_capabilities(granit_renderer renderer,
   return GRANIT_SUCCESS;
 }
 
+granit_result renderer_registry::select_shader_variant(
+    granit_renderer renderer, std::span<const granit_shader_variant_requirement> variants,
+    std::uint32_t& selected_index) {
+  const auto state = acquire_backend(renderer);
+  if (!state)
+    return GRANIT_ERROR_INVALID_HANDLE;
+
+  const auto& capabilities = state->capabilities();
+  const auto backend = state->backend();
+  bool found = false;
+  std::uint32_t best_priority = 0;
+  for (std::size_t index = 0; index < variants.size(); ++index) {
+    const auto& variant = variants[index];
+    if (variant.backend != backend || variant.profile != capabilities.shader_profile ||
+        (variant.required_features & ~capabilities.shader_features) != 0)
+      continue;
+    if (!found || variant.priority > best_priority) {
+      found = true;
+      best_priority = variant.priority;
+      selected_index = static_cast<std::uint32_t>(index);
+    }
+  }
+  return found ? GRANIT_SUCCESS : GRANIT_ERROR_UNSUPPORTED;
+}
+
 granit_result renderer_registry::get_info(granit_renderer renderer, granit_renderer_info& info) {
   const auto state = acquire_backend(renderer);
   if (!state)
