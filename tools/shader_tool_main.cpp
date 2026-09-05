@@ -130,6 +130,84 @@ int compile_shader(int argc, char** argv) {
   return status.ok() ? 0 : 1;
 }
 
+int compile_hlsl_shader(int argc, char** argv) {
+  const auto dxc = option_value(argc, argv, "--dxc");
+  const auto tint = option_value(argc, argv, "--tint");
+  const auto input = option_value(argc, argv, "--input");
+  const auto entry = option_value(argc, argv, "--entry");
+  const auto stage = option_value(argc, argv, "--stage");
+  const auto spirv_output = option_value(argc, argv, "--spirv-output");
+  const auto wgsl_output = option_value(argc, argv, "--wgsl-output");
+  const auto asset = option_value(argc, argv, "--asset");
+  const auto dxc_revision = option_value(argc, argv, "--dxc-revision");
+  const auto tint_revision = option_value(argc, argv, "--tint-revision");
+  const auto asset_backend = option_value(argc, argv, "--asset-backend");
+  if (!dxc || !tint || !input || !entry || !stage || !spirv_output || !wgsl_output ||
+      (*stage != "vertex" && *stage != "fragment" && *stage != "compute") ||
+      (asset && (!dxc_revision || !tint_revision)) || (asset_backend && !asset) ||
+      (asset_backend && *asset_backend != "all" && *asset_backend != "vulkan" &&
+       *asset_backend != "webgpu")) {
+    std::cerr << "compile-hlsl 需要 --dxc、--tint、--input、--entry、--stage、"
+                 "--spirv-output 和 --wgsl-output\n";
+    std::cerr << "使用 --asset 时还需要 --dxc-revision 与 --tint-revision\n";
+    return 2;
+  }
+  const auto stage_value = *stage == "vertex"     ? GRANIT_SHADER_TOOLS_STAGE_VERTEX
+                           : *stage == "fragment" ? GRANIT_SHADER_TOOLS_STAGE_FRAGMENT
+                                                  : GRANIT_SHADER_TOOLS_STAGE_COMPUTE;
+  granit_shader_tools_hlsl_compile_desc desc{};
+  desc.struct_size = sizeof(desc);
+  desc.dxc_path = dxc->data();
+  desc.dxc_path_length = dxc->size();
+  desc.tint_path = tint->data();
+  desc.tint_path_length = tint->size();
+  desc.input_path = input->data();
+  desc.input_path_length = input->size();
+  desc.entry_point = entry->data();
+  desc.entry_point_length = entry->size();
+  desc.stage = stage_value;
+  desc.spirv_output_path = spirv_output->data();
+  desc.spirv_output_path_length = spirv_output->size();
+  desc.wgsl_output_path = wgsl_output->data();
+  desc.wgsl_output_path_length = wgsl_output->size();
+  auto [status, result] = granit::shader_tools::compile_hlsl(desc);
+  const auto info = result.info();
+  std::cout << info.output;
+  std::cerr << info.diagnostic;
+  if (status.failed() || !asset)
+    return status.ok() ? 0 : 1;
+
+  const auto backend_mask = !asset_backend || *asset_backend == "all"
+                                ? GRANIT_SHADER_TOOLS_ASSET_BACKEND_ALL
+                            : *asset_backend == "vulkan" ? GRANIT_SHADER_TOOLS_ASSET_BACKEND_VULKAN
+                                                         : GRANIT_SHADER_TOOLS_ASSET_BACKEND_WEBGPU;
+  const std::string revisions = "dxc=" + *dxc_revision + ";tint=" + *tint_revision;
+  constexpr std::string_view target = "vulkan1.3+webgpu-portable";
+  constexpr std::string_view options = "source=hlsl;spirv=vulkan1.3;bridge=spirv1.3";
+  granit_shader_tools_asset_desc asset_desc{};
+  asset_desc.struct_size = sizeof(asset_desc);
+  asset_desc.wgsl_path = wgsl_output->data();
+  asset_desc.wgsl_path_length = wgsl_output->size();
+  asset_desc.spirv_path = spirv_output->data();
+  asset_desc.spirv_path_length = spirv_output->size();
+  asset_desc.output_path = asset->data();
+  asset_desc.output_path_length = asset->size();
+  asset_desc.tint_revision = revisions.data();
+  asset_desc.tint_revision_length = revisions.size();
+  asset_desc.target_environment = target.data();
+  asset_desc.target_environment_length = target.size();
+  asset_desc.compile_options = options.data();
+  asset_desc.compile_options_length = options.size();
+  asset_desc.backend_mask = backend_mask;
+  const auto [asset_status, cache_hit] = result.write_asset(asset_desc);
+  if (asset_status.failed()) {
+    std::cerr << "HLSL Shader 资产写入失败\n";
+    return 1;
+  }
+  std::cout << (cache_hit ? "Shader 资产内容未变化：" : "已生成 Shader 资产：") << *asset << '\n';
+  return 0;
+}
+
 std::string json_string(std::string_view value) {
   std::ostringstream output;
   output << '"';
@@ -316,6 +394,11 @@ void print_usage() {
                "[--asset <shader.granit-shader> --tint-revision <revision> "
                "--asset-backend <all|vulkan|webgpu> "
                "--features <none|float16|subgroup>]\n";
+  std::cerr << "  granit_shader_tool compile-hlsl --dxc <path> --tint <path> "
+               "--input <shader.hlsl> --entry <name> --stage <vertex|fragment|compute> "
+               "--spirv-output <shader.spv> --wgsl-output <shader.wgsl> "
+               "[--asset <shader.granit-shader> --dxc-revision <revision> "
+               "--tint-revision <revision> --asset-backend <all|vulkan|webgpu>]\n";
 }
 
 } // namespace
@@ -345,6 +428,8 @@ int main(int argc, char** argv) {
   }
   if (argc >= 2 && std::string_view{argv[1]} == "compile")
     return compile_shader(argc, argv);
+  if (argc >= 2 && std::string_view{argv[1]} == "compile-hlsl")
+    return compile_hlsl_shader(argc, argv);
   print_usage();
   return 2;
 }

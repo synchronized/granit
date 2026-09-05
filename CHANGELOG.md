@@ -22,7 +22,7 @@
   写入前返回 `unsupported`。CLI 通过 `--features` 提供相同门禁。
 - ShaderTools 新增 HLSL portable 双产物编译入口，通过调用方指定的 DXC 生成 Vulkan 1.3 SPIR-V，
   并以独立的 portable 中间 SPIR-V 经锁定 Tint 生成 WGSL；转换失败时返回完整工具诊断并清理
-  不完整产物。
+  不完整产物。命令行 `compile-hlsl` 可生成并按发布后端裁剪对应资产。
 
 ## 0.5.0 - 2026-09-05
 

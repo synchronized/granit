@@ -25,6 +25,10 @@ granit_shader_tool compile --tint path/to/tint --input shader.wgsl `
   --entry fragment_main --stage fragment --output shader.spv `
   --asset shader.granit-shader --tint-revision dawn-v20260720.160313 `
   --asset-backend all
+granit_shader_tool compile-hlsl --dxc path/to/dxc --tint path/to/tint `
+  --input shader.hlsl --entry fragment_main --stage fragment `
+  --spirv-output shader.spv --wgsl-output shader.wgsl `
+  --asset shader.granit-shader --dxc-revision <revision> --tint-revision <revision>
 ```
 
 `inspect` 按稳定顺序输出入口和资源绑定元数据；`inspect --json` 额外输出描述符、阶段接口、
@@ -42,6 +46,10 @@ ShaderTools SDK 还可接收调用方从 WGSL 前端取得的预期 Group/Bindin
 所有调用都必须使用显式子命令；早期原型的单参数入口不再保留。
 `targets` 列出工具内置的目标契约，`capabilities` 查询目标档位允许的可选特性。结果描述发布目标，
 不读取构建机 GPU；当前两个 portable 目标都只包含基线能力，因此可选特性为 `none`。
+
+`compile-hlsl` 调用显式提供的 DXC 与 Tint，同时生成 Vulkan 1.3 SPIR-V 和 WebGPU portable WGSL。
+使用 `--asset` 时必须记录两项工具版本；`--asset-backend` 可按发布目标裁剪 sidecar。当前该命令会
+执行完整编译后再判断资产内容是否变化；基于原始 HLSL 的编译前缓存恢复将在 S-20G 后续完成。
 
 `granit_material_tool inspect <package.grmat> --json` 验证最终二进制材质包并把稳定诊断 JSON 输出
 到标准输出。使用 `--output <path>` 可以写入文件；Renderer 不读取该 JSON。

@@ -35,6 +35,8 @@ target_link_libraries(editor PRIVATE granit::shader_tools)
   一致。临时文件不会进入资产。DXC 或 Tint 拒绝源代码及其能力时，调用返回
   `initialization_failed`、保留工具诊断并删除不完整产物，不会降低 Vulkan sidecar 的目标版本，
   也不会静默降级为仅 Vulkan 资产。
+- 命令行 `compile-hlsl` 暴露相同路径，并可直接写入、裁剪 `.granit-shader` 资产。写资产时必须
+  显式记录 DXC 与 Tint 修订号；当前仍在完整编译后判断内容是否变化。
 - `granit_shader_tools_asset_desc.backend_mask` 必须选择 Vulkan、WebGPU 或二者；写入时会删除同名
   的未选后端 sidecar，清单仅记录实际保留的变体。缓存描述的 `backend_mask` 表示期望的精确
   变体集合，清单集合不同也会正常未命中；两个字段均不能为零。

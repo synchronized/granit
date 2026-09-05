@@ -60,8 +60,9 @@ example.granit-shader.spv   # Vulkan portable 变体
    `unsupported`。目标能力来自发布契约，不能读取构建机 GPU 后假定部署设备相同。
 4. **S-20G 可选源码前端（HLSL 首段已完成）**：ShaderTools 已可通过显式 DXC 生成 Vulkan 1.3
    SPIR-V，同时以独立的 portable 中间 SPIR-V 经锁定 Tint 生成 WGSL，并校验两条路径的反射契约
-   一致；任一步不支持源代码能力都会明确失败且不保留不完整双产物。CLI 接入、资产缓存上下文和
-   GLSL/glslang 前端仍待完成；前端只改变离线输入，不改变运行时变体选择和后端载荷格式。
+   一致；任一步不支持源代码能力都会明确失败且不保留不完整双产物。CLI 已可生成并按后端裁剪
+   HLSL 资产；基于原始 HLSL 的编译前缓存恢复和 GLSL/glslang 前端仍待完成。前端只改变离线
+   输入，不改变运行时变体选择和后端载荷格式。
 
 ## 测试与验收
 
