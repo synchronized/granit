@@ -102,3 +102,4 @@ granit_upload_batch_write_texture
 granit_version_major
 granit_version_minor
 granit_version_patch
+
