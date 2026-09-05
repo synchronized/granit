@@ -51,6 +51,12 @@ granit_result result = granit_renderer_get_limits(renderer, &limits);
 时不会静默降低样本数。`max_sampler_anisotropy` 至少为 1；值为 1 表示不能启用各向异性过滤。
 C++ `renderer_limits::supports_sample_count` 提供对应的便捷检查。
 
+`supported_features` 是可选 Renderer 能力位。当前 Vulkan 提供
+`GRANIT_RENDERER_FEATURE_TIMESTAMP_QUERY_BIT`；浏览器 WebGPU 不提供该位，创建 Timestamp Query
+Pool 会一致地返回 `GRANIT_ERROR_UNSUPPORTED`。C++ 可通过
+`renderer_limits::supports_timestamp_queries()` 判断。浏览器查询结果不能同步阻塞主线程，因此在
+公共查询契约改为异步前，不用零值或 CPU 时间模拟 GPU Timestamp。
+
 ## Shader 能力
 
 `granit_renderer_get_shader_capabilities` 返回当前 Renderer 的实际后端、Shader 能力档位和已验证的

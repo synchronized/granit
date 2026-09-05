@@ -138,3 +138,52 @@ add_custom_command(
     "$<TARGET_FILE_DIR:granit_web_platform_smoke>/model_viewer_fixture.bin"
   VERBATIM
 )
+
+# 面向使用者的浏览器模型查看器默认加载 Khronos Flight Helmet；`?model=<URL>` 可覆盖资产。
+add_executable(granit_model_viewer_web platform_smoke.cpp)
+target_compile_features(granit_model_viewer_web PRIVATE cxx_std_20)
+target_compile_definitions(
+  granit_model_viewer_web
+  PRIVATE
+    GRANIT_WEB_MODEL_VIEWER_DEFAULT_MODEL_URL="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/FlightHelmet/glTF/FlightHelmet.gltf"
+)
+target_include_directories(
+  granit_model_viewer_web PRIVATE "${PROJECT_SOURCE_DIR}/include" "${PROJECT_SOURCE_DIR}/tests"
+)
+target_link_libraries(
+  granit_model_viewer_web PRIVATE granit::granit granit_web_model_viewer_platform
+)
+target_link_options(
+  granit_model_viewer_web
+  PRIVATE
+    "--use-port=emdawnwebgpu:cpp_bindings=false"
+    "--shell-file=${CMAKE_CURRENT_SOURCE_DIR}/model_viewer_shell.html"
+    "--preload-file=${CMAKE_CURRENT_SOURCE_DIR}/assets/s10d_startup.txt@/assets/s10d_startup.txt"
+    "--preload-file=${PROJECT_SOURCE_DIR}/tests/assets/dynamic_uniform.vert.wgsl@/assets/dynamic_uniform.vert.wgsl"
+    "--preload-file=${PROJECT_SOURCE_DIR}/tests/assets/dynamic_uniform.frag.wgsl@/assets/dynamic_uniform.frag.wgsl"
+    "-sALLOW_MEMORY_GROWTH=1"
+    "-sNO_EXIT_RUNTIME=1"
+    "-sFETCH=1"
+    "$<$<CONFIG:Debug>:-sASSERTIONS=1>"
+    "$<$<CONFIG:Release>:--closure=1>"
+)
+set_target_properties(
+  granit_model_viewer_web
+  PROPERTIES OUTPUT_NAME granit_model_viewer_web SUFFIX ".html" FOLDER "Examples"
+)
+granit_target_compile_warnings(granit_model_viewer_web)
+
+# 自动化可以用本地 Fixture 覆盖默认网络资产，正式产物本身不嵌入大模型。
+add_custom_command(
+  TARGET granit_model_viewer_web
+  POST_BUILD
+  COMMAND
+    "${CMAKE_COMMAND}" -E copy_if_different
+    "${CMAKE_CURRENT_SOURCE_DIR}/assets/model_viewer_fixture.gltf"
+    "$<TARGET_FILE_DIR:granit_model_viewer_web>/model_viewer_fixture.gltf"
+  COMMAND
+    "${CMAKE_COMMAND}" -E copy_if_different
+    "${CMAKE_CURRENT_SOURCE_DIR}/assets/model_viewer_fixture.bin"
+    "$<TARGET_FILE_DIR:granit_model_viewer_web>/model_viewer_fixture.bin"
+  VERBATIM
+)

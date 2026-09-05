@@ -360,6 +360,84 @@ granit_result webgpu_command_adapter::copy_texture_to_buffer(
       context_->instance, recorder->recorder_, texture, buffer, width, height, bytes_per_row);
 }
 
+granit_result webgpu_command_adapter::copy_buffer(
+    backend_command_recorder_resource& resource, granit_webgpu_provider_buffer source,
+    granit_webgpu_provider_buffer destination,
+    std::span<const granit_webgpu_provider_buffer_copy_region> regions) const noexcept {
+  auto* recorder = as_recorder(resource);
+  if (recorder == nullptr || recorder->render_open_ || source == 0 || destination == 0 ||
+      regions.empty())
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  if (const auto result = end_compute_if_open(*context_, *recorder); result != GRANIT_SUCCESS)
+    return result;
+  return context_->provider->recorder_copy_buffer(context_->instance, recorder->recorder_, source,
+                                                  destination, regions);
+}
+
+granit_result webgpu_command_adapter::copy_buffer_to_texture(
+    backend_command_recorder_resource& resource, granit_webgpu_provider_buffer source,
+    granit_webgpu_provider_texture destination,
+    const granit_webgpu_provider_texture_buffer_copy& region) const noexcept {
+  auto* recorder = as_recorder(resource);
+  if (recorder == nullptr || recorder->render_open_ || source == 0 || destination == 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  if (const auto result = end_compute_if_open(*context_, *recorder); result != GRANIT_SUCCESS)
+    return result;
+  return context_->provider->recorder_copy_buffer_to_texture_v2(
+      context_->instance, recorder->recorder_, source, destination, region);
+}
+
+granit_result webgpu_command_adapter::copy_texture_to_buffer(
+    backend_command_recorder_resource& resource, granit_webgpu_provider_texture source,
+    granit_webgpu_provider_buffer destination,
+    const granit_webgpu_provider_texture_buffer_copy& region) const noexcept {
+  auto* recorder = as_recorder(resource);
+  if (recorder == nullptr || recorder->render_open_ || source == 0 || destination == 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  if (const auto result = end_compute_if_open(*context_, *recorder); result != GRANIT_SUCCESS)
+    return result;
+  return context_->provider->recorder_copy_texture_to_buffer_v2(
+      context_->instance, recorder->recorder_, source, destination, region);
+}
+
+granit_result webgpu_command_adapter::copy_texture(
+    backend_command_recorder_resource& resource, granit_webgpu_provider_texture source,
+    granit_webgpu_provider_texture destination,
+    const granit_webgpu_provider_texture_copy_region& region) const noexcept {
+  auto* recorder = as_recorder(resource);
+  if (recorder == nullptr || recorder->render_open_ || source == 0 || destination == 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  if (const auto result = end_compute_if_open(*context_, *recorder); result != GRANIT_SUCCESS)
+    return result;
+  return context_->provider->recorder_copy_texture(context_->instance, recorder->recorder_, source,
+                                                   destination, region);
+}
+
+granit_result webgpu_command_adapter::fill_buffer(backend_command_recorder_resource& resource,
+                                                  granit_webgpu_provider_buffer buffer,
+                                                  std::uint64_t offset, std::uint64_t size,
+                                                  std::uint32_t value) const noexcept {
+  auto* recorder = as_recorder(resource);
+  if (recorder == nullptr || recorder->render_open_ || buffer == 0 || size == 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  if (const auto result = end_compute_if_open(*context_, *recorder); result != GRANIT_SUCCESS)
+    return result;
+  return context_->provider->recorder_fill_buffer(context_->instance, recorder->recorder_, buffer,
+                                                  offset, size, value);
+}
+
+granit_result webgpu_command_adapter::generate_mipmaps(
+    backend_command_recorder_resource& resource, granit_webgpu_provider_texture texture,
+    const granit_webgpu_provider_texture_mipmap_range& range) const noexcept {
+  auto* recorder = as_recorder(resource);
+  if (recorder == nullptr || recorder->render_open_ || texture == 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  if (const auto result = end_compute_if_open(*context_, *recorder); result != GRANIT_SUCCESS)
+    return result;
+  return context_->provider->recorder_generate_mipmaps(context_->instance, recorder->recorder_,
+                                                       texture, range);
+}
+
 granit_result webgpu_command_adapter::draw(backend_command_recorder_resource& resource,
                                            std::uint32_t vertex_count, std::uint32_t instance_count,
                                            std::uint32_t first_vertex,

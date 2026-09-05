@@ -54,6 +54,9 @@ typedef struct granit_renderer_status {
 #define GRANIT_DEFAULT_FRAMES_IN_FLIGHT UINT32_C(2)
 #define GRANIT_MAX_FRAMES_IN_FLIGHT UINT32_C(4)
 
+typedef uint64_t granit_renderer_feature_flags;
+#define GRANIT_RENDERER_FEATURE_TIMESTAMP_QUERY_BIT (UINT64_C(1) << 0)
+
 /** Renderer 对应设备的公开限制快照。 */
 typedef struct granit_renderer_limits {
   uint32_t struct_size;
@@ -64,10 +67,13 @@ typedef struct granit_renderer_limits {
   uint32_t framebuffer_sample_counts;
   /** Sampler 支持的最大各向异性；1 表示不支持各向异性。 */
   float max_sampler_anisotropy;
+  /** 当前设备可用的可选 Renderer 能力位。 */
+  granit_renderer_feature_flags supported_features;
 } granit_renderer_limits;
 
 #define GRANIT_RENDERER_LIMITS_VERSION_1_SIZE                                                      \
-  ((uint32_t)(offsetof(granit_renderer_limits, max_sampler_anisotropy) + sizeof(float)))
+  ((uint32_t)(offsetof(granit_renderer_limits, supported_features) +                         \
+              sizeof(granit_renderer_feature_flags)))
 
 #define GRANIT_RENDERER_LIMITS_INIT                                                                \
   {(uint32_t)sizeof(granit_renderer_limits),                                                       \
@@ -75,7 +81,8 @@ typedef struct granit_renderer_limits {
    UINT64_C(0),                                                                                    \
    UINT64_C(0),                                                                                    \
    UINT32_C(0),                                                                                    \
-   1.0F}
+   1.0F,                                                                                         \
+   UINT64_C(0)}
 
 /** Renderer 对应设备可用于 Shader 变体选择的后端无关能力快照。 */
 typedef struct granit_renderer_shader_capabilities {

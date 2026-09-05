@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
+#include <array>
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
@@ -34,6 +35,10 @@
 
 namespace {
 
+#ifndef GRANIT_WEB_MODEL_VIEWER_DEFAULT_MODEL_URL
+#define GRANIT_WEB_MODEL_VIEWER_DEFAULT_MODEL_URL "model_viewer_fixture.gltf"
+#endif
+
 enum class startup_status : int { failed = -1, starting, provider_pending, ready, stopped };
 
 struct web_platform_state {
@@ -58,6 +63,7 @@ struct web_platform_state {
       std::make_shared<granit::example::model_viewer::web::asset_request>()};
   granit::example::model_viewer::web::resource_fetch_batch resource_batch;
   granit::example::model_viewer::web::resource_bundle resource_bundle;
+  std::string asset_url;
   granit::example::model_viewer::application_core core;
   bool core_renderer_ready{};
   bool resource_batch_started{};
@@ -102,6 +108,26 @@ bool validate_fixture_assets() {
          granit::test::renderer_fixture::vertices.size() == 4 * 7 &&
          granit::test::renderer_fixture::indices.size() == 6 &&
          granit::test::renderer_fixture::make_uniform_data().size() == 4 * 256;
+}
+
+std::string selected_model_url() {
+  const auto* selected =
+      emscripten_run_script_string("new URLSearchParams(globalThis.location.search).get('model') "
+                                   "|| '" GRANIT_WEB_MODEL_VIEWER_DEFAULT_MODEL_URL "'");
+  return selected == nullptr ? std::string{GRANIT_WEB_MODEL_VIEWER_DEFAULT_MODEL_URL}
+                             : std::string{selected};
+}
+
+std::string resolve_resource_url(std::string_view model_url, std::string_view resource) {
+  if (resource.starts_with("http://") || resource.starts_with("https://") ||
+      resource.starts_with('/'))
+    return std::string{resource};
+  const auto separator = model_url.find_last_of('/');
+  if (separator == std::string_view::npos)
+    return std::string{resource};
+  auto result = std::string{model_url.substr(0, separator + 1)};
+  result.append(resource);
+  return result;
 }
 
 granit_result validate_public_pipeline() {
@@ -169,6 +195,126 @@ granit_result validate_public_pipeline() {
     return result == GRANIT_SUCCESS ? GRANIT_ERROR_INTERNAL : result;
   }
   return GRANIT_SUCCESS;
+}
+
+granit_result validate_public_transfers() {
+  constexpr std::array<std::uint8_t, 16> pixels{1, 2,  3,  4,  5,  6,  7,  8,
+                                                9, 10, 11, 12, 13, 14, 15, 16};
+  constexpr auto texture_usage =
+      granit::texture_usage::transfer_source | granit::texture_usage::transfer_destination;
+  granit::buffer upload;
+  auto result = upload.initialize(
+      state.renderer,
+      {.size = pixels.size(),
+       .usage = granit::buffer_usage::transfer_source | granit::buffer_usage::transfer_destination,
+       .location = granit::memory_location::upload},
+      std::as_bytes(std::span{pixels}));
+  if (result != granit::result::success)
+    return granit::to_native(result);
+
+  granit::texture non_power_of_two_texture;
+  result = non_power_of_two_texture.initialize(state.renderer,
+                                               {.format = granit::texture_format::rgba8_srgb,
+                                                .usage = texture_usage,
+                                                .width = 7,
+                                                .height = 5,
+                                                .mip_levels = 3,
+                                                .array_layers = 1});
+  if (result != granit::result::success)
+    return granit::to_native(result);
+  granit::texture cube_texture;
+  result = cube_texture.initialize(state.renderer, {.dimension = granit::texture_dimension::cube,
+                                                    .format = granit::texture_format::rgba8_unorm,
+                                                    .usage = texture_usage,
+                                                    .width = 7,
+                                                    .height = 7,
+                                                    .mip_levels = 3,
+                                                    .array_layers = 6});
+  if (result != granit::result::success)
+    return granit::to_native(result);
+
+  granit::buffer readback;
+  result = readback.initialize(state.renderer, {.size = pixels.size(),
+                                                .usage = granit::buffer_usage::transfer_destination,
+                                                .location = granit::memory_location::readback});
+  if (result != granit::result::success)
+    return granit::to_native(result);
+
+  granit::texture source_texture;
+  result = source_texture.initialize(state.renderer, {.format = granit::texture_format::rgba8_unorm,
+                                                      .usage = texture_usage,
+                                                      .width = 2,
+                                                      .height = 2,
+                                                      .mip_levels = 2});
+  if (result != granit::result::success)
+    return granit::to_native(result);
+  granit::texture destination_texture;
+  result =
+      destination_texture.initialize(state.renderer, {.format = granit::texture_format::rgba8_unorm,
+                                                      .usage = texture_usage,
+                                                      .width = 2,
+                                                      .height = 2});
+  if (result != granit::result::success)
+    return granit::to_native(result);
+
+  granit::command_recorder recorder;
+  result = recorder.initialize(state.renderer);
+  if (result != granit::result::success)
+    return granit::to_native(result);
+  if ((result = recorder.begin()) != granit::result::success)
+    return granit::to_native(result);
+
+  constexpr granit::buffer_copy_region buffer_region{
+      .source_offset = 0, .destination_offset = 0, .size = pixels.size()};
+  constexpr granit_texture_data_layout layout{};
+  granit_texture_write_region texture_region{};
+  texture_region.array_layer_count = 1;
+  texture_region.aspect = GRANIT_TEXTURE_ASPECT_COLOR_BIT;
+  texture_region.width = 2;
+  texture_region.height = 2;
+  texture_region.depth = 1;
+  granit::texture_copy_region copy_region{};
+  copy_region.array_layer_count = 1;
+  copy_region.aspect = GRANIT_TEXTURE_ASPECT_COLOR_BIT;
+  copy_region.width = 2;
+  copy_region.height = 2;
+  copy_region.depth = 1;
+
+  result = recorder.copy_buffer(upload.native_handle(), readback.native_handle(),
+                                std::span{&buffer_region, 1});
+  if (result == granit::result::success)
+    result = recorder.fill_buffer(upload.native_handle(), 0, pixels.size(), UINT32_C(0x40302010));
+  if (result == granit::result::success)
+    result = recorder.copy_buffer_to_texture(upload.native_handle(), source_texture.native_handle(),
+                                             layout, texture_region);
+  if (result == granit::result::success) {
+    const granit::texture_mipmap_range mipmap_range{
+        .base_mip_level = 0, .level_count = 2, .base_array_layer = 0, .array_layer_count = 1};
+    result = recorder.generate_mipmaps(source_texture.native_handle(), mipmap_range);
+  }
+  if (result == granit::result::success) {
+    const granit::texture_mipmap_range mipmap_range{
+        .base_mip_level = 0, .level_count = 3, .base_array_layer = 0, .array_layer_count = 1};
+    result = recorder.generate_mipmaps(non_power_of_two_texture.native_handle(), mipmap_range);
+  }
+  if (result == granit::result::success) {
+    const granit::texture_mipmap_range mipmap_range{
+        .base_mip_level = 0, .level_count = 3, .base_array_layer = 0, .array_layer_count = 6};
+    result = recorder.generate_mipmaps(cube_texture.native_handle(), mipmap_range);
+  }
+  if (result == granit::result::success)
+    result = recorder.copy_texture(source_texture.native_handle(),
+                                   destination_texture.native_handle(), copy_region);
+  if (result == granit::result::success)
+    result = recorder.copy_texture_to_buffer(destination_texture.native_handle(),
+                                             readback.native_handle(), layout, texture_region);
+  if (result == granit::result::success)
+    result = recorder.end();
+  if (result == granit::result::success)
+    result = recorder.submit();
+  if (result == granit::result::success)
+    result = recorder.reset();
+  return granit::to_native(result);
 }
 
 granit_result draw_shared_fixture(granit_frame frame, granit_texture_view target_view,
@@ -582,7 +728,7 @@ granit::result execute_web_frame(granit::example::model_viewer::frame_packet&& p
   granit_texture_view backbuffer_view{};
   if (result == GRANIT_SUCCESS) {
     result = granit_swapchain_get_backbuffer(state.renderer, state.swapchain, image_index,
-                                              &backbuffer, &backbuffer_view);
+                                             &backbuffer, &backbuffer_view);
   }
   if (result == GRANIT_SUCCESS) {
     const auto render = packet.render_desc(backbuffer_view, context.swapchain_info->format, frame);
@@ -621,7 +767,7 @@ granit_result render_model_viewer_frame() {
   if (result == GRANIT_SUCCESS) {
     web_frame_execution_context execution_context{&info};
     granit::example::model_viewer::inline_frame_executor executor(execute_web_frame,
-                                                                   &execution_context);
+                                                                  &execution_context);
     granit::example::model_viewer::frame_execution_result execution;
     result = granit::to_native(executor.submit(std::move(output), execution));
   }
@@ -737,7 +883,7 @@ void tick(void*) noexcept {
         return;
       }
       for (const auto& resource : resources) {
-        if (!state.resource_batch.add(resource, resource)) {
+        if (!state.resource_batch.add(resource, resolve_resource_url(state.asset_url, resource))) {
           fail("asset-batch-add", GRANIT_ERROR_INVALID_ARGUMENT);
           return;
         }
@@ -790,7 +936,8 @@ void tick(void*) noexcept {
   granit_renderer_limits limits = GRANIT_RENDERER_LIMITS_INIT;
   const auto limits_result = granit_renderer_get_limits(state.renderer, &limits);
   if (limits_result != GRANIT_SUCCESS || limits.uniform_buffer_offset_alignment == 0 ||
-      limits.max_uniform_buffer_binding_size == 0) {
+      limits.max_uniform_buffer_binding_size == 0 ||
+      (limits.supported_features & GRANIT_RENDERER_FEATURE_TIMESTAMP_QUERY_BIT) != 0) {
     fail("renderer-limits",
          limits_result == GRANIT_SUCCESS ? GRANIT_ERROR_INTERNAL : limits_result);
     return;
@@ -798,6 +945,11 @@ void tick(void*) noexcept {
   const auto pipeline_result = validate_public_pipeline();
   if (pipeline_result != GRANIT_SUCCESS) {
     fail("renderer-pipeline", pipeline_result);
+    return;
+  }
+  const auto transfer_result = validate_public_transfers();
+  if (transfer_result != GRANIT_SUCCESS) {
+    fail("renderer-transfers", transfer_result);
     return;
   }
   try {
@@ -975,8 +1127,8 @@ int main() {
     fail("core-renderer-begin", granit::to_native(core_result));
     return 1;
   }
-  if (!granit::example::model_viewer::web::start_fetch(state.asset_request,
-                                                       "model_viewer_fixture.gltf")) {
+  state.asset_url = selected_model_url();
+  if (!granit::example::model_viewer::web::start_fetch(state.asset_request, state.asset_url)) {
     fail("asset-fetch-start");
     return 1;
   }

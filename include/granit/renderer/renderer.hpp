@@ -61,10 +61,15 @@ struct renderer_limits {
   std::uint64_t max_uniform_buffer_binding_size{};
   std::uint32_t framebuffer_sample_counts{};
   float max_sampler_anisotropy{1.0F};
+  std::uint64_t supported_features{};
 
   [[nodiscard]] constexpr bool supports_sample_count(sample_count samples) const noexcept {
     const auto value = static_cast<std::uint32_t>(samples);
     return (framebuffer_sample_counts & value) == value;
+  }
+
+  [[nodiscard]] constexpr bool supports_timestamp_queries() const noexcept {
+    return (supported_features & GRANIT_RENDERER_FEATURE_TIMESTAMP_QUERY_BIT) != 0;
   }
 };
 
@@ -212,6 +217,7 @@ public:
         .max_uniform_buffer_binding_size = native.max_uniform_buffer_binding_size,
         .framebuffer_sample_counts = native.framebuffer_sample_counts,
         .max_sampler_anisotropy = native.max_sampler_anisotropy,
+        .supported_features = native.supported_features,
     };
     return result::success;
   }

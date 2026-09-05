@@ -23,6 +23,34 @@ std::uint32_t to_provider_surface_types(std::uint32_t surface_types) noexcept {
   return result;
 }
 
+granit_webgpu_provider_texture_aspect to_provider_aspect(granit_texture_aspect aspect) noexcept {
+  switch (aspect) {
+  case GRANIT_TEXTURE_ASPECT_DEPTH_BIT:
+    return GRANIT_WEBGPU_PROVIDER_TEXTURE_ASPECT_DEPTH;
+  case GRANIT_TEXTURE_ASPECT_STENCIL_BIT:
+    return GRANIT_WEBGPU_PROVIDER_TEXTURE_ASPECT_STENCIL;
+  default:
+    return GRANIT_WEBGPU_PROVIDER_TEXTURE_ASPECT_ALL;
+  }
+}
+
+std::uint32_t texture_pixel_size(granit_texture_format format) noexcept {
+  switch (format) {
+  case GRANIT_TEXTURE_FORMAT_R8_UNORM:
+    return 1;
+  case GRANIT_TEXTURE_FORMAT_RG8_UNORM:
+    return 2;
+  case GRANIT_TEXTURE_FORMAT_RGBA8_UNORM:
+  case GRANIT_TEXTURE_FORMAT_RGBA8_SRGB:
+  case GRANIT_TEXTURE_FORMAT_D32_FLOAT:
+    return 4;
+  case GRANIT_TEXTURE_FORMAT_RGBA16_FLOAT:
+    return 8;
+  default:
+    return 0;
+  }
+}
+
 } // namespace
 
 webgpu_renderer_state::~webgpu_renderer_state() {
@@ -341,55 +369,132 @@ webgpu_renderer_state::set_scissors(backend_command_recorder_resource& recorder,
   }
 }
 
-granit_result webgpu_renderer_state::copy_buffer(backend_command_recorder_resource&,
-                                                 backend_buffer_resource&, backend_buffer_resource&,
-                                                 std::span<const granit_buffer_copy_region>) {
-  return GRANIT_ERROR_UNSUPPORTED;
+granit_result webgpu_renderer_state::copy_buffer(
+    backend_command_recorder_resource& recorder, backend_buffer_resource& source,
+    backend_buffer_resource& destination, std::span<const granit_buffer_copy_region> regions) {
+  if (!commands_ || !resources_)
+    return GRANIT_ERROR_NOT_READY;
+  try {
+    std::vector<granit_webgpu_provider_buffer_copy_region> native;
+    native.reserve(regions.size());
+    for (const auto& region : regions)
+      native.push_back({region.source_offset, region.destination_offset, region.size});
+    return commands_->copy_buffer(recorder, resources_->native_buffer(source),
+                                  resources_->native_buffer(destination), native);
+  } catch (const std::bad_alloc&) {
+    return GRANIT_ERROR_OUT_OF_MEMORY;
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
 }
 
 granit_result webgpu_renderer_state::copy_texture_to_buffer(
     backend_command_recorder_resource& recorder, backend_texture_resource& source,
     backend_buffer_resource& destination, granit_texture_format format,
     const granit_texture_data_layout& layout, const granit_texture_write_region& region) {
-  if (!commands_ || !resources_ || format != GRANIT_TEXTURE_FORMAT_RGBA8_UNORM ||
-      region.mip_level != 0 || region.base_array_layer != 0 || region.array_layer_count != 1 ||
-      region.x != 0 || region.y != 0 || region.z != 0 || region.depth != 1)
+  if (!commands_ || !resources_)
+    return GRANIT_ERROR_NOT_READY;
+  const auto pixel_size = texture_pixel_size(format);
+  if (pixel_size == 0)
     return GRANIT_ERROR_UNSUPPORTED;
-  const auto texture = resources_->native_texture(source);
-  const auto buffer = resources_->native_buffer(destination);
-  const auto bytes_per_row = layout.bytes_per_row == 0 ? region.width * 4 : layout.bytes_per_row;
-  return commands_->copy_texture_to_buffer(recorder, texture, buffer, region.width, region.height,
-                                           bytes_per_row);
+  const granit_webgpu_provider_texture_buffer_copy native{
+      layout.offset,
+      layout.bytes_per_row == 0 ? region.width * pixel_size : layout.bytes_per_row,
+      layout.rows_per_image == 0 ? region.height : layout.rows_per_image,
+      region.mip_level,
+      region.base_array_layer,
+      region.array_layer_count,
+      to_provider_aspect(region.aspect),
+      region.x,
+      region.y,
+      region.z,
+      region.width,
+      region.height,
+      region.depth};
+  return commands_->copy_texture_to_buffer(recorder, resources_->native_texture(source),
+                                           resources_->native_buffer(destination), native);
 }
 
 granit_result webgpu_renderer_state::copy_buffer_to_texture(
-    backend_command_recorder_resource&, backend_buffer_resource&, backend_texture_resource&,
-    granit_texture_format, const granit_texture_data_layout&, const granit_texture_write_region&) {
-  return GRANIT_ERROR_UNSUPPORTED;
+    backend_command_recorder_resource& recorder, backend_buffer_resource& source,
+    backend_texture_resource& destination, granit_texture_format format,
+    const granit_texture_data_layout& layout, const granit_texture_write_region& region) {
+  if (!commands_ || !resources_)
+    return GRANIT_ERROR_NOT_READY;
+  const auto pixel_size = texture_pixel_size(format);
+  if (pixel_size == 0)
+    return GRANIT_ERROR_UNSUPPORTED;
+  const granit_webgpu_provider_texture_buffer_copy native{
+      layout.offset,
+      layout.bytes_per_row == 0 ? region.width * pixel_size : layout.bytes_per_row,
+      layout.rows_per_image == 0 ? region.height : layout.rows_per_image,
+      region.mip_level,
+      region.base_array_layer,
+      region.array_layer_count,
+      to_provider_aspect(region.aspect),
+      region.x,
+      region.y,
+      region.z,
+      region.width,
+      region.height,
+      region.depth};
+  return commands_->copy_buffer_to_texture(recorder, resources_->native_buffer(source),
+                                           resources_->native_texture(destination), native);
 }
 
-granit_result webgpu_renderer_state::copy_texture(backend_command_recorder_resource&,
-                                                  backend_texture_resource&,
-                                                  backend_texture_resource&,
-                                                  const granit_texture_copy_region&) {
-  return GRANIT_ERROR_UNSUPPORTED;
+granit_result webgpu_renderer_state::copy_texture(backend_command_recorder_resource& recorder,
+                                                  backend_texture_resource& source,
+                                                  backend_texture_resource& destination,
+                                                  const granit_texture_copy_region& region) {
+  if (!commands_ || !resources_)
+    return GRANIT_ERROR_NOT_READY;
+  const granit_webgpu_provider_texture_copy_region native{
+      region.source_mip_level,
+      region.source_base_array_layer,
+      region.destination_mip_level,
+      region.destination_base_array_layer,
+      region.array_layer_count,
+      to_provider_aspect(static_cast<granit_texture_aspect>(region.aspect)),
+      region.source_x,
+      region.source_y,
+      region.source_z,
+      region.destination_x,
+      region.destination_y,
+      region.destination_z,
+      region.width,
+      region.height,
+      region.depth};
+  return commands_->copy_texture(recorder, resources_->native_texture(source),
+                                 resources_->native_texture(destination), native);
 }
 
-bool webgpu_renderer_state::texture_supports_linear_blit(granit_texture_format) const noexcept {
-  return false;
+bool webgpu_renderer_state::texture_supports_linear_blit(
+    granit_texture_format format) const noexcept {
+  return format == GRANIT_TEXTURE_FORMAT_R8_UNORM || format == GRANIT_TEXTURE_FORMAT_RG8_UNORM ||
+         format == GRANIT_TEXTURE_FORMAT_RGBA8_UNORM ||
+         format == GRANIT_TEXTURE_FORMAT_RGBA8_SRGB ||
+         format == GRANIT_TEXTURE_FORMAT_BGRA8_UNORM ||
+         format == GRANIT_TEXTURE_FORMAT_RGBA16_FLOAT;
 }
 
-granit_result webgpu_renderer_state::generate_mipmaps(backend_command_recorder_resource&,
-                                                      backend_texture_resource&,
+granit_result webgpu_renderer_state::generate_mipmaps(backend_command_recorder_resource& recorder,
+                                                      backend_texture_resource& texture,
                                                       const granit_texture_desc&,
-                                                      const granit_texture_mipmap_range&) {
-  return GRANIT_ERROR_UNSUPPORTED;
+                                                      const granit_texture_mipmap_range& range) {
+  if (!commands_ || !resources_)
+    return GRANIT_ERROR_NOT_READY;
+  const granit_webgpu_provider_texture_mipmap_range native{
+      range.base_mip_level, range.level_count, range.base_array_layer, range.array_layer_count};
+  return commands_->generate_mipmaps(recorder, resources_->native_texture(texture), native);
 }
 
-granit_result webgpu_renderer_state::fill_buffer(backend_command_recorder_resource&,
-                                                 backend_buffer_resource&, std::uint64_t,
-                                                 std::uint64_t, std::uint32_t) {
-  return GRANIT_ERROR_UNSUPPORTED;
+granit_result webgpu_renderer_state::fill_buffer(backend_command_recorder_resource& recorder,
+                                                 backend_buffer_resource& buffer,
+                                                 std::uint64_t offset, std::uint64_t size,
+                                                 std::uint32_t value) {
+  if (!commands_ || !resources_)
+    return GRANIT_ERROR_NOT_READY;
+  return commands_->fill_buffer(recorder, resources_->native_buffer(buffer), offset, size, value);
 }
 
 granit_result webgpu_renderer_state::draw(backend_command_recorder_resource& recorder,

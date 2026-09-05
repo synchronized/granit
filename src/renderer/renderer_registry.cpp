@@ -69,6 +69,7 @@ granit_result renderer_registry::get_limits(granit_renderer renderer,
   limits.max_uniform_buffer_binding_size = capabilities.max_uniform_buffer_binding_size;
   limits.framebuffer_sample_counts = capabilities.framebuffer_sample_counts;
   limits.max_sampler_anisotropy = capabilities.max_sampler_anisotropy;
+  limits.supported_features = capabilities.renderer_features;
   return GRANIT_SUCCESS;
 }
 

@@ -66,6 +66,32 @@ public:
                                                      granit_webgpu_provider_buffer buffer,
                                                      std::uint32_t width, std::uint32_t height,
                                                      std::uint32_t bytes_per_row) const noexcept;
+  [[nodiscard]] granit_result
+  copy_buffer(backend_command_recorder_resource& resource, granit_webgpu_provider_buffer source,
+              granit_webgpu_provider_buffer destination,
+              std::span<const granit_webgpu_provider_buffer_copy_region> regions) const noexcept;
+  [[nodiscard]] granit_result
+  copy_buffer_to_texture(backend_command_recorder_resource& resource,
+                         granit_webgpu_provider_buffer source,
+                         granit_webgpu_provider_texture destination,
+                         const granit_webgpu_provider_texture_buffer_copy& region) const noexcept;
+  [[nodiscard]] granit_result
+  copy_texture_to_buffer(backend_command_recorder_resource& resource,
+                         granit_webgpu_provider_texture source,
+                         granit_webgpu_provider_buffer destination,
+                         const granit_webgpu_provider_texture_buffer_copy& region) const noexcept;
+  [[nodiscard]] granit_result
+  copy_texture(backend_command_recorder_resource& resource, granit_webgpu_provider_texture source,
+               granit_webgpu_provider_texture destination,
+               const granit_webgpu_provider_texture_copy_region& region) const noexcept;
+  [[nodiscard]] granit_result fill_buffer(backend_command_recorder_resource& resource,
+                                          granit_webgpu_provider_buffer buffer,
+                                          std::uint64_t offset, std::uint64_t size,
+                                          std::uint32_t value) const noexcept;
+  [[nodiscard]] granit_result
+  generate_mipmaps(backend_command_recorder_resource& resource,
+                   granit_webgpu_provider_texture texture,
+                   const granit_webgpu_provider_texture_mipmap_range& range) const noexcept;
   [[nodiscard]] granit_result draw(backend_command_recorder_resource& resource,
                                    std::uint32_t vertex_count, std::uint32_t instance_count,
                                    std::uint32_t first_vertex,

@@ -106,6 +106,7 @@ struct webgpu_instance {
     bool compute_pipeline_bound;
     std::uint64_t index_available;
     std::uint32_t index_element_size;
+    std::vector<WGPUBuffer> temporary_buffers;
   };
   struct surface_record {
     void* surface;
@@ -267,6 +268,8 @@ void release_resources(webgpu_instance& state) noexcept {
       wgpuRenderPassEncoderRelease(recorder.pass);
     if (recorder.compute_pass != nullptr)
       wgpuComputePassEncoderRelease(recorder.compute_pass);
+    for (const auto buffer : recorder.temporary_buffers)
+      wgpuBufferRelease(buffer);
     wgpuCommandEncoderRelease(recorder.encoder);
   }
   state.command_recorders.clear();
@@ -1096,6 +1099,63 @@ std::uint32_t texture_bytes_per_pixel(granit_webgpu_provider_texture_format form
   }
 }
 
+WGPUTextureAspect map_texture_aspect(granit_webgpu_provider_texture_aspect aspect) noexcept {
+  switch (aspect) {
+  case GRANIT_WEBGPU_PROVIDER_TEXTURE_ASPECT_ALL:
+    return WGPUTextureAspect_All;
+  case GRANIT_WEBGPU_PROVIDER_TEXTURE_ASPECT_DEPTH:
+    return WGPUTextureAspect_DepthOnly;
+  case GRANIT_WEBGPU_PROVIDER_TEXTURE_ASPECT_STENCIL:
+    return WGPUTextureAspect_StencilOnly;
+  default:
+    return WGPUTextureAspect_Undefined;
+  }
+}
+
+bool valid_transfer_recorder(const webgpu_instance::command_recorder_record& recorder) noexcept {
+  return !recorder.finished && recorder.pass == nullptr && recorder.compute_pass == nullptr;
+}
+
+bool valid_texture_buffer_copy(const webgpu_instance::texture_record& texture,
+                               const webgpu_instance::buffer_record& buffer,
+                               const granit_webgpu_provider_texture_buffer_copy& region,
+                               bool buffer_is_source) noexcept {
+  if (region.width == 0 || region.height == 0 || region.depth == 0 ||
+      region.array_layer_count == 0 || region.mip_level >= texture.mip_level_count ||
+      region.base_array_layer >= texture.array_layer_count ||
+      region.array_layer_count > texture.array_layer_count - region.base_array_layer ||
+      map_texture_aspect(region.aspect) == WGPUTextureAspect_Undefined)
+    return false;
+  const auto mip_width = (std::max)(UINT32_C(1), texture.width >> region.mip_level);
+  const auto mip_height = (std::max)(UINT32_C(1), texture.height >> region.mip_level);
+  if (region.x >= mip_width || region.width > mip_width - region.x || region.y >= mip_height ||
+      region.height > mip_height - region.y || region.z != 0 || region.depth != 1)
+    return false;
+  const auto pixel_size = texture_bytes_per_pixel(texture.format);
+  const std::uint64_t tight_row = std::uint64_t{region.width} * pixel_size;
+  if (pixel_size == 0 || region.bytes_per_row < tight_row || region.rows_per_image < region.height)
+    return false;
+  const auto max = (std::numeric_limits<std::uint64_t>::max)();
+  if (region.rows_per_image > max / region.bytes_per_row)
+    return false;
+  const auto image_pitch = std::uint64_t{region.rows_per_image} * region.bytes_per_row;
+  if (region.array_layer_count - 1 > max / image_pitch ||
+      region.height - 1 > max / region.bytes_per_row)
+    return false;
+  const auto required = std::uint64_t{region.array_layer_count - 1} * image_pitch +
+                        std::uint64_t{region.height - 1} * region.bytes_per_row + tight_row;
+  if (region.buffer_offset > buffer.size || required > buffer.size - region.buffer_offset)
+    return false;
+  const auto required_buffer_usage = buffer_is_source
+                                         ? GRANIT_WEBGPU_PROVIDER_BUFFER_USAGE_COPY_SRC_BIT
+                                         : GRANIT_WEBGPU_PROVIDER_BUFFER_USAGE_COPY_DST_BIT;
+  const auto required_texture_usage = buffer_is_source
+                                          ? GRANIT_WEBGPU_PROVIDER_TEXTURE_USAGE_COPY_DST_BIT
+                                          : GRANIT_WEBGPU_PROVIDER_TEXTURE_USAGE_COPY_SRC_BIT;
+  return (buffer.usage & required_buffer_usage) != 0 &&
+         (texture.usage & required_texture_usage) != 0;
+}
+
 granit_result create_texture(granit_webgpu_provider_instance instance,
                              const granit_webgpu_provider_texture_desc* desc,
                              granit_webgpu_provider_texture* out_texture) noexcept {
@@ -1149,6 +1209,13 @@ granit_result create_texture(granit_webgpu_provider_instance instance,
     usage |= WGPUTextureUsage_TextureBinding;
   if ((desc->usage & GRANIT_WEBGPU_PROVIDER_TEXTURE_USAGE_RENDER_ATTACHMENT_BIT) != 0)
     usage |= WGPUTextureUsage_RenderAttachment;
+  if (desc->mip_level_count > 1 && sample_count == 1 &&
+      (desc->usage & GRANIT_WEBGPU_PROVIDER_TEXTURE_USAGE_COPY_SRC_BIT) != 0 &&
+      (desc->usage & GRANIT_WEBGPU_PROVIDER_TEXTURE_USAGE_COPY_DST_BIT) != 0 &&
+      desc->format != GRANIT_WEBGPU_PROVIDER_TEXTURE_FORMAT_D32_FLOAT) {
+    // 公共契约用 Transfer usage 表达 Mipmap；内部补充渲染采样 usage，避免泄漏 WebGPU 实现路径。
+    usage |= WGPUTextureUsage_TextureBinding | WGPUTextureUsage_RenderAttachment;
+  }
   WGPUTextureDescriptor descriptor = WGPU_TEXTURE_DESCRIPTOR_INIT;
   descriptor.usage = usage;
   descriptor.dimension = WGPUTextureDimension_2D;
@@ -2326,8 +2393,8 @@ create_command_recorder(granit_webgpu_provider_instance instance,
     return GRANIT_ERROR_OUT_OF_MEMORY;
   const auto handle = next_handle<granit_webgpu_provider_command_recorder>(next_command_recorder);
   try {
-    const auto record = webgpu_instance::command_recorder_record{native, nullptr, nullptr, false,
-                                                                 false,  false,   0,       0};
+    const auto record = webgpu_instance::command_recorder_record{
+        native, nullptr, nullptr, false, false, false, 0, 0, {}};
     if (!found->second->command_recorders.emplace(handle, record).second) {
       wgpuCommandEncoderRelease(native);
       return GRANIT_ERROR_INTERNAL;
@@ -2358,6 +2425,8 @@ granit_result destroy_command_recorder(granit_webgpu_provider_instance instance,
     wgpuRenderPassEncoderRelease(recorder_found->second.pass);
   if (recorder_found->second.compute_pass != nullptr)
     wgpuComputePassEncoderRelease(recorder_found->second.compute_pass);
+  for (const auto buffer : recorder_found->second.temporary_buffers)
+    wgpuBufferRelease(buffer);
   wgpuCommandEncoderRelease(recorder_found->second.encoder);
   found->second->command_recorders.erase(recorder_found);
   return GRANIT_SUCCESS;
@@ -2408,6 +2477,465 @@ granit_result recorder_copy_buffer_to_texture(granit_webgpu_provider_instance in
   const WGPUExtent3D extent{width, height, 1};
   wgpuCommandEncoderCopyBufferToTexture(recorder_found->second.encoder, &source, &destination,
                                         &extent);
+  return GRANIT_SUCCESS;
+}
+
+granit_result recorder_copy_buffer(granit_webgpu_provider_instance instance,
+                                   granit_webgpu_provider_command_recorder recorder,
+                                   granit_webgpu_provider_buffer source,
+                                   granit_webgpu_provider_buffer destination,
+                                   const granit_webgpu_provider_buffer_copy_region* regions,
+                                   std::uint32_t region_count) noexcept {
+  if (instance == 0 || recorder == 0 || source == 0 || destination == 0 || regions == nullptr ||
+      region_count == 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  const std::scoped_lock lock{instances_mutex};
+  const auto found = instances.find(instance);
+  if (found == instances.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  if (const auto ready = require_ready(*found->second); ready != GRANIT_SUCCESS)
+    return ready;
+  auto& state = *found->second;
+  const auto command = state.command_recorders.find(recorder);
+  const auto source_buffer = state.buffers.find(source);
+  const auto destination_buffer = state.buffers.find(destination);
+  if (command == state.command_recorders.end() || source_buffer == state.buffers.end() ||
+      destination_buffer == state.buffers.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  if (!valid_transfer_recorder(command->second) ||
+      (source_buffer->second.usage & GRANIT_WEBGPU_PROVIDER_BUFFER_USAGE_COPY_SRC_BIT) == 0 ||
+      (destination_buffer->second.usage & GRANIT_WEBGPU_PROVIDER_BUFFER_USAGE_COPY_DST_BIT) == 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  for (std::uint32_t index = 0; index < region_count; ++index) {
+    const auto& region = regions[index];
+    if (region.size == 0 || region.source_offset % 4 != 0 || region.destination_offset % 4 != 0 ||
+        region.size % 4 != 0 || region.source_offset > source_buffer->second.size ||
+        region.size > source_buffer->second.size - region.source_offset ||
+        region.destination_offset > destination_buffer->second.size ||
+        region.size > destination_buffer->second.size - region.destination_offset)
+      return GRANIT_ERROR_INVALID_ARGUMENT;
+  }
+  for (std::uint32_t index = 0; index < region_count; ++index) {
+    const auto& region = regions[index];
+    wgpuCommandEncoderCopyBufferToBuffer(command->second.encoder, source_buffer->second.buffer,
+                                         region.source_offset, destination_buffer->second.buffer,
+                                         region.destination_offset, region.size);
+  }
+  return GRANIT_SUCCESS;
+}
+
+granit_result recorder_copy_buffer_to_texture_v2(
+    granit_webgpu_provider_instance instance, granit_webgpu_provider_command_recorder recorder,
+    granit_webgpu_provider_buffer source, granit_webgpu_provider_texture destination,
+    const granit_webgpu_provider_texture_buffer_copy* region) noexcept {
+  if (instance == 0 || recorder == 0 || source == 0 || destination == 0 || region == nullptr)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  const std::scoped_lock lock{instances_mutex};
+  const auto found = instances.find(instance);
+  if (found == instances.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  if (const auto ready = require_ready(*found->second); ready != GRANIT_SUCCESS)
+    return ready;
+  auto& state = *found->second;
+  const auto command = state.command_recorders.find(recorder);
+  const auto buffer = state.buffers.find(source);
+  const auto texture = state.textures.find(destination);
+  if (command == state.command_recorders.end() || buffer == state.buffers.end() ||
+      texture == state.textures.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  if (!valid_transfer_recorder(command->second) ||
+      !valid_texture_buffer_copy(texture->second, buffer->second, *region, true))
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  const auto encode = [&](std::uint64_t offset, std::uint32_t y, std::uint32_t layer,
+                          std::uint32_t height, std::uint32_t layers, bool omit_strides) {
+    WGPUTexelCopyBufferInfo native_source = WGPU_TEXEL_COPY_BUFFER_INFO_INIT;
+    native_source.buffer = buffer->second.buffer;
+    native_source.layout.offset = offset;
+    native_source.layout.bytesPerRow =
+        omit_strides ? WGPU_COPY_STRIDE_UNDEFINED : region->bytes_per_row;
+    native_source.layout.rowsPerImage =
+        omit_strides ? WGPU_COPY_STRIDE_UNDEFINED : region->rows_per_image;
+    WGPUTexelCopyTextureInfo native_destination = WGPU_TEXEL_COPY_TEXTURE_INFO_INIT;
+    native_destination.texture = texture->second.texture;
+    native_destination.mipLevel = region->mip_level;
+    native_destination.origin = {region->x, y, layer};
+    native_destination.aspect = map_texture_aspect(region->aspect);
+    const WGPUExtent3D extent{region->width, height, layers};
+    wgpuCommandEncoderCopyBufferToTexture(command->second.encoder, &native_source,
+                                          &native_destination, &extent);
+  };
+  if (region->bytes_per_row % 256 == 0) {
+    encode(region->buffer_offset, region->y, region->base_array_layer, region->height,
+           region->array_layer_count, false);
+  } else {
+    const auto image_pitch = std::uint64_t{region->rows_per_image} * region->bytes_per_row;
+    for (std::uint32_t layer = 0; layer < region->array_layer_count; ++layer) {
+      for (std::uint32_t row = 0; row < region->height; ++row) {
+        encode(region->buffer_offset + std::uint64_t{layer} * image_pitch +
+                   std::uint64_t{row} * region->bytes_per_row,
+               region->y + row, region->base_array_layer + layer, 1, 1, true);
+      }
+    }
+  }
+  return GRANIT_SUCCESS;
+}
+
+granit_result recorder_copy_texture_to_buffer_v2(
+    granit_webgpu_provider_instance instance, granit_webgpu_provider_command_recorder recorder,
+    granit_webgpu_provider_texture source, granit_webgpu_provider_buffer destination,
+    const granit_webgpu_provider_texture_buffer_copy* region) noexcept {
+  if (instance == 0 || recorder == 0 || source == 0 || destination == 0 || region == nullptr)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  const std::scoped_lock lock{instances_mutex};
+  const auto found = instances.find(instance);
+  if (found == instances.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  if (const auto ready = require_ready(*found->second); ready != GRANIT_SUCCESS)
+    return ready;
+  auto& state = *found->second;
+  const auto command = state.command_recorders.find(recorder);
+  const auto texture = state.textures.find(source);
+  const auto buffer = state.buffers.find(destination);
+  if (command == state.command_recorders.end() || texture == state.textures.end() ||
+      buffer == state.buffers.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  if (!valid_transfer_recorder(command->second) ||
+      !valid_texture_buffer_copy(texture->second, buffer->second, *region, false))
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  const auto encode = [&](std::uint64_t offset, std::uint32_t y, std::uint32_t layer,
+                          std::uint32_t height, std::uint32_t layers, bool omit_strides) {
+    WGPUTexelCopyTextureInfo native_source = WGPU_TEXEL_COPY_TEXTURE_INFO_INIT;
+    native_source.texture = texture->second.texture;
+    native_source.mipLevel = region->mip_level;
+    native_source.origin = {region->x, y, layer};
+    native_source.aspect = map_texture_aspect(region->aspect);
+    WGPUTexelCopyBufferInfo native_destination = WGPU_TEXEL_COPY_BUFFER_INFO_INIT;
+    native_destination.buffer = buffer->second.buffer;
+    native_destination.layout.offset = offset;
+    native_destination.layout.bytesPerRow =
+        omit_strides ? WGPU_COPY_STRIDE_UNDEFINED : region->bytes_per_row;
+    native_destination.layout.rowsPerImage =
+        omit_strides ? WGPU_COPY_STRIDE_UNDEFINED : region->rows_per_image;
+    const WGPUExtent3D extent{region->width, height, layers};
+    wgpuCommandEncoderCopyTextureToBuffer(command->second.encoder, &native_source,
+                                          &native_destination, &extent);
+  };
+  if (region->bytes_per_row % 256 == 0) {
+    encode(region->buffer_offset, region->y, region->base_array_layer, region->height,
+           region->array_layer_count, false);
+  } else {
+    const auto image_pitch = std::uint64_t{region->rows_per_image} * region->bytes_per_row;
+    for (std::uint32_t layer = 0; layer < region->array_layer_count; ++layer) {
+      for (std::uint32_t row = 0; row < region->height; ++row) {
+        encode(region->buffer_offset + std::uint64_t{layer} * image_pitch +
+                   std::uint64_t{row} * region->bytes_per_row,
+               region->y + row, region->base_array_layer + layer, 1, 1, true);
+      }
+    }
+  }
+  return GRANIT_SUCCESS;
+}
+
+granit_result recorder_copy_texture(
+    granit_webgpu_provider_instance instance, granit_webgpu_provider_command_recorder recorder,
+    granit_webgpu_provider_texture source, granit_webgpu_provider_texture destination,
+    const granit_webgpu_provider_texture_copy_region* region) noexcept {
+  if (instance == 0 || recorder == 0 || source == 0 || destination == 0 || region == nullptr ||
+      region->width == 0 || region->height == 0 || region->depth == 0 ||
+      region->array_layer_count == 0 ||
+      map_texture_aspect(region->aspect) == WGPUTextureAspect_Undefined)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  const std::scoped_lock lock{instances_mutex};
+  const auto found = instances.find(instance);
+  if (found == instances.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  if (const auto ready = require_ready(*found->second); ready != GRANIT_SUCCESS)
+    return ready;
+  auto& state = *found->second;
+  const auto command = state.command_recorders.find(recorder);
+  const auto source_texture = state.textures.find(source);
+  const auto destination_texture = state.textures.find(destination);
+  if (command == state.command_recorders.end() || source_texture == state.textures.end() ||
+      destination_texture == state.textures.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  const auto& source_desc = source_texture->second;
+  const auto& destination_desc = destination_texture->second;
+  if (!valid_transfer_recorder(command->second) || source_desc.format != destination_desc.format ||
+      (source_desc.usage & GRANIT_WEBGPU_PROVIDER_TEXTURE_USAGE_COPY_SRC_BIT) == 0 ||
+      (destination_desc.usage & GRANIT_WEBGPU_PROVIDER_TEXTURE_USAGE_COPY_DST_BIT) == 0 ||
+      region->source_mip_level >= source_desc.mip_level_count ||
+      region->destination_mip_level >= destination_desc.mip_level_count ||
+      region->source_base_array_layer >= source_desc.array_layer_count ||
+      region->array_layer_count > source_desc.array_layer_count - region->source_base_array_layer ||
+      region->destination_base_array_layer >= destination_desc.array_layer_count ||
+      region->array_layer_count >
+          destination_desc.array_layer_count - region->destination_base_array_layer)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  const auto source_width = (std::max)(UINT32_C(1), source_desc.width >> region->source_mip_level);
+  const auto source_height =
+      (std::max)(UINT32_C(1), source_desc.height >> region->source_mip_level);
+  const auto destination_width =
+      (std::max)(UINT32_C(1), destination_desc.width >> region->destination_mip_level);
+  const auto destination_height =
+      (std::max)(UINT32_C(1), destination_desc.height >> region->destination_mip_level);
+  if (region->source_x >= source_width || region->width > source_width - region->source_x ||
+      region->source_y >= source_height || region->height > source_height - region->source_y ||
+      region->destination_x >= destination_width ||
+      region->width > destination_width - region->destination_x ||
+      region->destination_y >= destination_height ||
+      region->height > destination_height - region->destination_y || region->source_z != 0 ||
+      region->destination_z != 0 || region->depth != 1)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  WGPUTexelCopyTextureInfo native_source = WGPU_TEXEL_COPY_TEXTURE_INFO_INIT;
+  native_source.texture = source_desc.texture;
+  native_source.mipLevel = region->source_mip_level;
+  native_source.origin = {region->source_x, region->source_y, region->source_base_array_layer};
+  native_source.aspect = map_texture_aspect(region->aspect);
+  WGPUTexelCopyTextureInfo native_destination = WGPU_TEXEL_COPY_TEXTURE_INFO_INIT;
+  native_destination.texture = destination_desc.texture;
+  native_destination.mipLevel = region->destination_mip_level;
+  native_destination.origin = {region->destination_x, region->destination_y,
+                               region->destination_base_array_layer};
+  native_destination.aspect = map_texture_aspect(region->aspect);
+  const WGPUExtent3D extent{region->width, region->height, region->array_layer_count};
+  wgpuCommandEncoderCopyTextureToTexture(command->second.encoder, &native_source,
+                                         &native_destination, &extent);
+  return GRANIT_SUCCESS;
+}
+
+granit_result recorder_fill_buffer(granit_webgpu_provider_instance instance,
+                                   granit_webgpu_provider_command_recorder recorder,
+                                   granit_webgpu_provider_buffer buffer, std::uint64_t offset,
+                                   std::uint64_t size, std::uint32_t value) noexcept {
+  if (instance == 0 || recorder == 0 || buffer == 0 || size == 0 || offset % 4 != 0 ||
+      size % 4 != 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  const std::scoped_lock lock{instances_mutex};
+  const auto found = instances.find(instance);
+  if (found == instances.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  if (const auto ready = require_ready(*found->second); ready != GRANIT_SUCCESS)
+    return ready;
+  auto& state = *found->second;
+  const auto command = state.command_recorders.find(recorder);
+  const auto destination = state.buffers.find(buffer);
+  if (command == state.command_recorders.end() || destination == state.buffers.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  if (!valid_transfer_recorder(command->second) || offset > destination->second.size ||
+      size > destination->second.size - offset ||
+      (destination->second.usage & GRANIT_WEBGPU_PROVIDER_BUFFER_USAGE_COPY_DST_BIT) == 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  if (value == 0) {
+    wgpuCommandEncoderClearBuffer(command->second.encoder, destination->second.buffer, offset,
+                                  size);
+    return GRANIT_SUCCESS;
+  }
+  if (size > (std::numeric_limits<std::size_t>::max)())
+    return GRANIT_ERROR_UNSUPPORTED;
+  WGPUBufferDescriptor descriptor = WGPU_BUFFER_DESCRIPTOR_INIT;
+  descriptor.usage = WGPUBufferUsage_CopySrc;
+  descriptor.size = size;
+  descriptor.mappedAtCreation = true;
+  const auto staging = wgpuDeviceCreateBuffer(state.device, &descriptor);
+  if (staging == nullptr)
+    return GRANIT_ERROR_OUT_OF_MEMORY;
+  auto* words = static_cast<std::uint32_t*>(
+      wgpuBufferGetMappedRange(staging, 0, static_cast<std::size_t>(size)));
+  if (words == nullptr) {
+    wgpuBufferRelease(staging);
+    return GRANIT_ERROR_OUT_OF_MEMORY;
+  }
+  std::fill_n(words, static_cast<std::size_t>(size / 4), value);
+  wgpuBufferUnmap(staging);
+  try {
+    command->second.temporary_buffers.push_back(staging);
+  } catch (const std::bad_alloc&) {
+    wgpuBufferRelease(staging);
+    return GRANIT_ERROR_OUT_OF_MEMORY;
+  } catch (...) {
+    wgpuBufferRelease(staging);
+    return GRANIT_ERROR_INTERNAL;
+  }
+  wgpuCommandEncoderCopyBufferToBuffer(command->second.encoder, staging, 0,
+                                       destination->second.buffer, offset, size);
+  return GRANIT_SUCCESS;
+}
+
+granit_result
+recorder_generate_mipmaps(granit_webgpu_provider_instance instance,
+                          granit_webgpu_provider_command_recorder recorder,
+                          granit_webgpu_provider_texture texture,
+                          const granit_webgpu_provider_texture_mipmap_range* range) noexcept {
+  if (instance == 0 || recorder == 0 || texture == 0 || range == nullptr ||
+      range->level_count < 2 || range->array_layer_count == 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  const std::scoped_lock lock{instances_mutex};
+  const auto found = instances.find(instance);
+  if (found == instances.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  if (const auto ready = require_ready(*found->second); ready != GRANIT_SUCCESS)
+    return ready;
+  auto& state = *found->second;
+  const auto command = state.command_recorders.find(recorder);
+  const auto texture_found = state.textures.find(texture);
+  if (command == state.command_recorders.end() || texture_found == state.textures.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  const auto& record = texture_found->second;
+  if (!valid_transfer_recorder(command->second) || record.borrowed || record.sample_count != 1 ||
+      record.format == GRANIT_WEBGPU_PROVIDER_TEXTURE_FORMAT_D32_FLOAT ||
+      range->base_mip_level >= record.mip_level_count ||
+      range->level_count > record.mip_level_count - range->base_mip_level ||
+      range->base_array_layer >= record.array_layer_count ||
+      range->array_layer_count > record.array_layer_count - range->base_array_layer ||
+      (record.usage & GRANIT_WEBGPU_PROVIDER_TEXTURE_USAGE_COPY_SRC_BIT) == 0 ||
+      (record.usage & GRANIT_WEBGPU_PROVIDER_TEXTURE_USAGE_COPY_DST_BIT) == 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+
+  constexpr char mipmap_wgsl[] = R"(
+struct vertex_output {
+  @builtin(position) position: vec4f,
+  @location(0) uv: vec2f,
+};
+@group(0) @binding(0) var source_texture: texture_2d<f32>;
+@group(0) @binding(1) var source_sampler: sampler;
+@vertex fn vs_main(@builtin(vertex_index) index: u32) -> vertex_output {
+  let positions = array<vec2f, 3>(vec2f(-1.0, -1.0), vec2f(3.0, -1.0), vec2f(-1.0, 3.0));
+  let coordinates = array<vec2f, 3>(vec2f(0.0, 1.0), vec2f(2.0, 1.0), vec2f(0.0, -1.0));
+  var output: vertex_output;
+  output.position = vec4f(positions[index], 0.0, 1.0);
+  output.uv = coordinates[index];
+  return output;
+}
+@fragment fn fs_main(input: vertex_output) -> @location(0) vec4f {
+  return textureSampleLevel(source_texture, source_sampler, input.uv, 0.0);
+})";
+  WGPUShaderSourceWGSL source = WGPU_SHADER_SOURCE_WGSL_INIT;
+  source.code = {mipmap_wgsl, sizeof(mipmap_wgsl) - 1};
+  WGPUShaderModuleDescriptor shader_desc = WGPU_SHADER_MODULE_DESCRIPTOR_INIT;
+  shader_desc.nextInChain = &source.chain;
+  const auto shader = wgpuDeviceCreateShaderModule(state.device, &shader_desc);
+  if (shader == nullptr)
+    return GRANIT_ERROR_INITIALIZATION_FAILED;
+
+  WGPUColorTargetState target = WGPU_COLOR_TARGET_STATE_INIT;
+  target.format = to_native_texture_format(record.format);
+  target.writeMask = WGPUColorWriteMask_All;
+  WGPUFragmentState fragment = WGPU_FRAGMENT_STATE_INIT;
+  fragment.module = shader;
+  fragment.entryPoint = {"fs_main", 7};
+  fragment.targetCount = 1;
+  fragment.targets = &target;
+  WGPURenderPipelineDescriptor pipeline_desc = WGPU_RENDER_PIPELINE_DESCRIPTOR_INIT;
+  pipeline_desc.vertex.module = shader;
+  pipeline_desc.vertex.entryPoint = {"vs_main", 7};
+  pipeline_desc.primitive.topology = WGPUPrimitiveTopology_TriangleList;
+  pipeline_desc.primitive.frontFace = WGPUFrontFace_CCW;
+  pipeline_desc.primitive.cullMode = WGPUCullMode_None;
+  pipeline_desc.multisample.count = 1;
+  pipeline_desc.multisample.mask = UINT32_MAX;
+  pipeline_desc.fragment = &fragment;
+  const auto pipeline = wgpuDeviceCreateRenderPipeline(state.device, &pipeline_desc);
+  if (pipeline == nullptr) {
+    wgpuShaderModuleRelease(shader);
+    return GRANIT_ERROR_INITIALIZATION_FAILED;
+  }
+  const auto bind_group_layout = wgpuRenderPipelineGetBindGroupLayout(pipeline, 0);
+  WGPUSamplerDescriptor sampler_desc = WGPU_SAMPLER_DESCRIPTOR_INIT;
+  sampler_desc.addressModeU = WGPUAddressMode_ClampToEdge;
+  sampler_desc.addressModeV = WGPUAddressMode_ClampToEdge;
+  sampler_desc.addressModeW = WGPUAddressMode_ClampToEdge;
+  sampler_desc.magFilter = WGPUFilterMode_Linear;
+  sampler_desc.minFilter = WGPUFilterMode_Linear;
+  sampler_desc.mipmapFilter = WGPUMipmapFilterMode_Nearest;
+  const auto sampler = wgpuDeviceCreateSampler(state.device, &sampler_desc);
+  if (bind_group_layout == nullptr || sampler == nullptr) {
+    if (sampler != nullptr)
+      wgpuSamplerRelease(sampler);
+    if (bind_group_layout != nullptr)
+      wgpuBindGroupLayoutRelease(bind_group_layout);
+    wgpuRenderPipelineRelease(pipeline);
+    wgpuShaderModuleRelease(shader);
+    return GRANIT_ERROR_INITIALIZATION_FAILED;
+  }
+
+  for (std::uint32_t layer = range->base_array_layer;
+       layer < range->base_array_layer + range->array_layer_count; ++layer) {
+    for (std::uint32_t level = range->base_mip_level + 1;
+         level < range->base_mip_level + range->level_count; ++level) {
+      WGPUTextureViewDescriptor source_view_desc = WGPU_TEXTURE_VIEW_DESCRIPTOR_INIT;
+      source_view_desc.format = target.format;
+      source_view_desc.dimension = WGPUTextureViewDimension_2D;
+      source_view_desc.baseMipLevel = level - 1;
+      source_view_desc.mipLevelCount = 1;
+      source_view_desc.baseArrayLayer = layer;
+      source_view_desc.arrayLayerCount = 1;
+      source_view_desc.aspect = WGPUTextureAspect_All;
+      WGPUTextureViewDescriptor destination_view_desc = source_view_desc;
+      destination_view_desc.baseMipLevel = level;
+      const auto source_view = wgpuTextureCreateView(record.texture, &source_view_desc);
+      const auto destination_view = wgpuTextureCreateView(record.texture, &destination_view_desc);
+      if (source_view == nullptr || destination_view == nullptr) {
+        if (source_view != nullptr)
+          wgpuTextureViewRelease(source_view);
+        if (destination_view != nullptr)
+          wgpuTextureViewRelease(destination_view);
+        wgpuSamplerRelease(sampler);
+        wgpuBindGroupLayoutRelease(bind_group_layout);
+        wgpuRenderPipelineRelease(pipeline);
+        wgpuShaderModuleRelease(shader);
+        return GRANIT_ERROR_OUT_OF_MEMORY;
+      }
+      WGPUBindGroupEntry entries[2]{};
+      entries[0].binding = 0;
+      entries[0].textureView = source_view;
+      entries[1].binding = 1;
+      entries[1].sampler = sampler;
+      WGPUBindGroupDescriptor bind_group_desc = WGPU_BIND_GROUP_DESCRIPTOR_INIT;
+      bind_group_desc.layout = bind_group_layout;
+      bind_group_desc.entryCount = 2;
+      bind_group_desc.entries = entries;
+      const auto bind_group = wgpuDeviceCreateBindGroup(state.device, &bind_group_desc);
+      if (bind_group == nullptr) {
+        wgpuTextureViewRelease(destination_view);
+        wgpuTextureViewRelease(source_view);
+        wgpuSamplerRelease(sampler);
+        wgpuBindGroupLayoutRelease(bind_group_layout);
+        wgpuRenderPipelineRelease(pipeline);
+        wgpuShaderModuleRelease(shader);
+        return GRANIT_ERROR_INITIALIZATION_FAILED;
+      }
+      WGPURenderPassColorAttachment color = WGPU_RENDER_PASS_COLOR_ATTACHMENT_INIT;
+      color.view = destination_view;
+      color.loadOp = WGPULoadOp_Clear;
+      color.storeOp = WGPUStoreOp_Store;
+      WGPURenderPassDescriptor pass_desc = WGPU_RENDER_PASS_DESCRIPTOR_INIT;
+      pass_desc.colorAttachmentCount = 1;
+      pass_desc.colorAttachments = &color;
+      const auto pass = wgpuCommandEncoderBeginRenderPass(command->second.encoder, &pass_desc);
+      if (pass == nullptr) {
+        wgpuBindGroupRelease(bind_group);
+        wgpuTextureViewRelease(destination_view);
+        wgpuTextureViewRelease(source_view);
+        wgpuSamplerRelease(sampler);
+        wgpuBindGroupLayoutRelease(bind_group_layout);
+        wgpuRenderPipelineRelease(pipeline);
+        wgpuShaderModuleRelease(shader);
+        return GRANIT_ERROR_INITIALIZATION_FAILED;
+      }
+      wgpuRenderPassEncoderSetPipeline(pass, pipeline);
+      wgpuRenderPassEncoderSetBindGroup(pass, 0, bind_group, 0, nullptr);
+      wgpuRenderPassEncoderDraw(pass, 3, 1, 0, 0);
+      wgpuRenderPassEncoderEnd(pass);
+      wgpuRenderPassEncoderRelease(pass);
+      wgpuBindGroupRelease(bind_group);
+      wgpuTextureViewRelease(destination_view);
+      wgpuTextureViewRelease(source_view);
+    }
+  }
+  wgpuSamplerRelease(sampler);
+  wgpuBindGroupLayoutRelease(bind_group_layout);
+  wgpuRenderPipelineRelease(pipeline);
+  wgpuShaderModuleRelease(shader);
   return GRANIT_SUCCESS;
 }
 
@@ -3016,6 +3544,9 @@ finish_command_recorder(granit_webgpu_provider_instance instance,
   const auto native = wgpuCommandEncoderFinish(recorder_found->second.encoder, &descriptor);
   if (native == nullptr)
     return GRANIT_ERROR_INITIALIZATION_FAILED;
+  for (const auto buffer : recorder_found->second.temporary_buffers)
+    wgpuBufferRelease(buffer);
+  recorder_found->second.temporary_buffers.clear();
   const auto handle = next_handle<granit_webgpu_provider_command_buffer>(next_command_buffer);
   try {
     if (!state.command_buffers.emplace(handle, native).second) {
@@ -3558,7 +4089,13 @@ constexpr granit_webgpu_provider_instance_api instance_api{
     recorder_dispatch,
     recorder_end_compute,
     recorder_set_viewports,
-    recorder_set_scissors};
+    recorder_set_scissors,
+    recorder_copy_buffer,
+    recorder_copy_buffer_to_texture_v2,
+    recorder_copy_texture_to_buffer_v2,
+    recorder_copy_texture,
+    recorder_fill_buffer,
+    recorder_generate_mipmaps};
 constexpr granit_webgpu_provider_api provider_api{sizeof(granit_webgpu_provider_api),
                                                   GRANIT_WEBGPU_PROVIDER_ABI_VERSION,
                                                   GRANIT_WEBGPU_PROVIDER_KIND_WEBGPU,
