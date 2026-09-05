@@ -35,7 +35,7 @@
 | 十五、0.8.0 运行时 Shader 与材质资产 | 已发布 | 运行时资产契约已随 0.8.0 发布 |
 | 十六、0.9.0 公共 PBR 与渲染资产收敛 | 已发布 | 公共 PBR、Binding、Model Viewer 与安装资产已收敛 |
 | 十七、0.10.0 环境资源与帧构造背压 | 已发布 | Environment Map 与帧构造背压已随 0.10.0 发布 |
-| 十八、0.11.0 WebGPU 能力与 Web Model Viewer | 待开始 | 补齐可移植能力并交付正式浏览器示例 |
+| 十八、0.11.0 WebGPU 能力与 Web Model Viewer | 进行中 | S-26A 已完成，开始补齐通用传输 |
 
 ## 一、工程与 ABI 基础
 
@@ -296,7 +296,7 @@
 
 ## 十八、0.11.0 WebGPU 能力对齐与浏览器 Model Viewer
 
-**状态：已确认，待开始。**
+**状态：进行中；S-26A 已完成。**
 
 - **[S-26](plans/S-26-0.11.0-webgpu-parity-and-web-model-viewer.md) / P1**：以公共 API 为边界建立
   Vulkan/WebGPU 能力矩阵，补齐可移植的资源传输、Mipmap 和可选 Timestamp Query。
