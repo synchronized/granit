@@ -515,4 +515,12 @@ if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
       -DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/shader-toolchain-package-test -P
       "${PROJECT_SOURCE_DIR}/cmake/check_package_shader_toolchain.cmake"
   )
+  add_test(
+    NAME granit.shader_toolchain.licenses
+    COMMAND
+      "${CMAKE_COMMAND}"
+      -DCOLLECTOR=${PROJECT_SOURCE_DIR}/cmake/collect_license_bundle.cmake
+      -DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/shader-toolchain-license-test -P
+      "${PROJECT_SOURCE_DIR}/cmake/check_collect_license_bundle.cmake"
+  )
 endif()

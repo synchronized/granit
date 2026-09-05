@@ -51,6 +51,19 @@ cmake \
 运行库也放入 `bin/`。目标目录必须尚不存在；组包在临时目录完成后才原子重命名，失败不会留下
 可被误认为成功产物的目标目录。
 
+Dawn/Tint 从源码静态构建时，还应先汇总其源码及已获取第三方依赖中的许可证：
+
+```cmake
+cmake \
+  -DROOT=<Dawn 源码根目录> \
+  -DOUTPUT=<临时目录>/Dawn-THIRD-PARTY-LICENSES.txt \
+  -DCOMPONENT=Dawn-Tint \
+  -P cmake/collect_license_bundle.cmake
+```
+
+汇总器递归收集 `LICENSE*`、`COPYING*` 和 `NOTICE*`，按相对路径稳定排序并保留来源标记。该机制
+保证构建时实际存在的许可证材料进入归档，但不能代替工具升级时对上游再分发要求的人工复核。
+
 如果发布流程已经自行准备好完整目录，也可直接调用底层清单生成器：
 
 ```cmake
