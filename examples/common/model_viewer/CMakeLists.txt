@@ -6,16 +6,16 @@ set(granit_model_viewer_material_package
 set(granit_model_viewer_material_include
     "${CMAKE_CURRENT_BINARY_DIR}/generated/model_viewer_pbr.grmat.inc")
 set(granit_model_viewer_shader_assets
-    model_viewer_pbr.vert.grshader
-    model_viewer_pbr.vert.grshader.spv
-    model_viewer_pbr.vert.grshader.wgsl
-    model_viewer_pbr.frag.grshader
-    model_viewer_pbr.frag.grshader.spv
-    model_viewer_pbr.frag.grshader.wgsl
+    pbr_standard.vert.grshader
+    pbr_standard.vert.grshader.spv
+    pbr_standard.vert.grshader.wgsl
+    pbr_standard.frag.grshader
+    pbr_standard.frag.grshader.spv
+    pbr_standard.frag.grshader.wgsl
 )
 set(granit_model_viewer_shader_includes)
 foreach(asset IN LISTS granit_model_viewer_shader_assets)
-  set(source "${PROJECT_SOURCE_DIR}/examples/assets/${asset}")
+  set(source "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/${asset}")
   set(output "${CMAKE_CURRENT_BINARY_DIR}/generated/${asset}.inc")
   add_custom_command(
     OUTPUT "${output}"
@@ -47,12 +47,12 @@ else()
     DEPENDS
       granit_material_tool
       "${PROJECT_SOURCE_DIR}/examples/assets/model_viewer_pbr.grmat.json"
-      "${PROJECT_SOURCE_DIR}/examples/assets/model_viewer_pbr.vert.grshader"
-      "${PROJECT_SOURCE_DIR}/examples/assets/model_viewer_pbr.frag.grshader"
-      "${PROJECT_SOURCE_DIR}/examples/assets/model_viewer_pbr.vert.grshader.spv"
-      "${PROJECT_SOURCE_DIR}/examples/assets/model_viewer_pbr.vert.grshader.wgsl"
-      "${PROJECT_SOURCE_DIR}/examples/assets/model_viewer_pbr.frag.grshader.spv"
-      "${PROJECT_SOURCE_DIR}/examples/assets/model_viewer_pbr.frag.grshader.wgsl"
+      "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/pbr_standard.vert.grshader"
+      "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/pbr_standard.frag.grshader"
+      "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/pbr_standard.vert.grshader.spv"
+      "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/pbr_standard.vert.grshader.wgsl"
+      "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/pbr_standard.frag.grshader.spv"
+      "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/pbr_standard.frag.grshader.wgsl"
       "${PROJECT_SOURCE_DIR}/examples/assets/model_viewer_pbr.grmat"
     COMMENT "生成模型查看器 PBR 材质归档"
     VERBATIM
