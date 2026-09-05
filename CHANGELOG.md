@@ -16,6 +16,8 @@
   全量、仅 Vulkan 或仅 WebGPU 载荷，清单只声明实际发布的变体。
 - Renderer 新增后端无关的 Shader 能力快照，公开实际后端、portable 档位和已验证的可选特性位，
   为后续自动变体选择提供统一输入。
+- ShaderTools 新增内置目标档位能力查询；CLI 可列出 `vulkan-portable`、`webgpu-portable` 并查询
+  其静态特性契约，查询结果不依赖构建机 GPU。
 
 ## 0.5.0 - 2026-09-05
 

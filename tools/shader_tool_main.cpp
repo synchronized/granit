@@ -276,11 +276,30 @@ int inspect_shader(const char* path, bool verify, bool json = false) {
   return status.ok() ? 0 : 1;
 }
 
+const char* asset_backend_name(uint32_t backend) {
+  return backend == GRANIT_SHADER_TOOLS_ASSET_BACKEND_VULKAN ? "vulkan" : "webgpu";
+}
+
+int print_target_capabilities(uint32_t backend) {
+  const auto [status, capabilities] = granit::shader_tools::target_capabilities(backend);
+  if (status.failed()) {
+    std::cerr << "不支持请求的 Shader 目标档位\n";
+    return 1;
+  }
+  std::cout << "target=" << asset_backend_name(capabilities.backend) << "-portable\n"
+            << "backend=" << asset_backend_name(capabilities.backend) << '\n'
+            << "profile=portable\n"
+            << "features=none\n";
+  return 0;
+}
+
 void print_usage() {
   std::cerr << "用法：\n"
                "  granit_shader_tool inspect <shader.spv>\n"
                "  granit_shader_tool inspect --json <shader.spv>\n"
                "  granit_shader_tool verify <shader.spv>\n"
+               "  granit_shader_tool targets\n"
+               "  granit_shader_tool capabilities --target <vulkan-portable|webgpu-portable>\n"
                "  granit_shader_tool compile --tint <path> --input <shader.wgsl> "
                "--entry <name> --stage <vertex|fragment|compute> --output <shader.spv> "
                "[--asset <shader.granit-shader> --tint-revision <revision> "
@@ -290,6 +309,20 @@ void print_usage() {
 } // namespace
 
 int main(int argc, char** argv) {
+  if (argc == 2 && std::string_view{argv[1]} == "targets") {
+    std::cout << "vulkan-portable\nwebgpu-portable\n";
+    return 0;
+  }
+  if (argc == 4 && std::string_view{argv[1]} == "capabilities" &&
+      std::string_view{argv[2]} == "--target") {
+    const std::string_view target{argv[3]};
+    if (target == "vulkan-portable")
+      return print_target_capabilities(GRANIT_SHADER_TOOLS_ASSET_BACKEND_VULKAN);
+    if (target == "webgpu-portable")
+      return print_target_capabilities(GRANIT_SHADER_TOOLS_ASSET_BACKEND_WEBGPU);
+    std::cerr << "未知 Shader 目标：" << target << '\n';
+    return 2;
+  }
   if (argc == 3 && std::string_view{argv[1]} == "inspect") {
     return inspect_shader(argv[2], false);
   }

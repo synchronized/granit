@@ -12,6 +12,17 @@
 int main(int argc, char** argv) {
   if (argc != 4)
     return 1;
+  auto [target_status, target_capabilities] =
+      granit::shader_tools::target_capabilities(GRANIT_SHADER_TOOLS_ASSET_BACKEND_VULKAN);
+  if (target_status.failed() ||
+      target_capabilities.backend != GRANIT_SHADER_TOOLS_ASSET_BACKEND_VULKAN ||
+      target_capabilities.profile != GRANIT_SHADER_PROFILE_PORTABLE ||
+      target_capabilities.supported_features != 0)
+    return 14;
+  std::tie(target_status, target_capabilities) =
+      granit::shader_tools::target_capabilities(GRANIT_SHADER_TOOLS_ASSET_BACKEND_ALL);
+  if (target_status != granit::result::unsupported)
+    return 15;
   granit_shader_tools_inspect_desc inspect{};
   inspect.struct_size = sizeof(inspect);
   inspect.input_path = argv[1];

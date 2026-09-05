@@ -16,6 +16,9 @@ cmake --build --preset windows-clang-debug --target granit_shader_tool
 granit_shader_tool inspect shader.spv
 granit_shader_tool inspect --json shader.spv
 granit_shader_tool verify shader.spv
+granit_shader_tool targets
+granit_shader_tool capabilities --target vulkan-portable
+granit_shader_tool capabilities --target webgpu-portable
 granit_shader_tool compile --tint path/to/tint --input shader.wgsl `
   --entry fragment_main --stage fragment --output shader.spv
 granit_shader_tool compile --tint path/to/tint --input shader.wgsl `
@@ -35,6 +38,8 @@ Tint 的 `--validate` 和可选 `spirv-val` 负责。指定 `--asset` 时还需�
 ShaderTools SDK 还可接收调用方从 WGSL 前端取得的预期 Group/Binding 集合，并与最终 SPIR-V
 严格比较；当前 CLI 尚未自行提取该集合。
 所有调用都必须使用显式子命令；早期原型的单参数入口不再保留。
+`targets` 列出工具内置的目标契约，`capabilities` 查询目标档位允许的可选特性。结果描述发布目标，
+不读取构建机 GPU；当前两个 portable 目标都只包含基线能力，因此可选特性为 `none`。
 
 `granit_material_tool inspect <package.grmat> --json` 验证最终二进制材质包并把稳定诊断 JSON 输出
 到标准输出。使用 `--output <path>` 可以写入文件；Renderer 不读取该 JSON。

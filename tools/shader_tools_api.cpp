@@ -617,6 +617,24 @@ granit_result granit_shader_tools_restore_asset_cache(const granit_shader_tools_
   }
 }
 
+granit_result
+granit_shader_tools_get_target_capabilities(uint32_t backend, uint32_t profile,
+                                            granit_shader_tools_target_capabilities* capabilities) {
+  if (capabilities == nullptr ||
+      capabilities->struct_size < sizeof(granit_shader_tools_target_capabilities) ||
+      capabilities->reserved != 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  if ((backend != GRANIT_SHADER_TOOLS_ASSET_BACKEND_VULKAN &&
+       backend != GRANIT_SHADER_TOOLS_ASSET_BACKEND_WEBGPU) ||
+      profile != GRANIT_SHADER_PROFILE_PORTABLE)
+    return GRANIT_ERROR_UNSUPPORTED;
+  capabilities->backend = backend;
+  capabilities->profile = profile;
+  capabilities->reserved = 0;
+  capabilities->supported_features = 0;
+  return GRANIT_SUCCESS;
+}
+
 granit_result granit_shader_tools_result_destroy(granit_shader_tools_result result) {
   std::lock_guard lock{results_mutex};
   return results.erase(result) == 1 ? GRANIT_SUCCESS : GRANIT_ERROR_INVALID_HANDLE;

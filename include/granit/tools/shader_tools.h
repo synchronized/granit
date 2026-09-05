@@ -7,6 +7,7 @@
 #include <stdint.h>
 
 #include <granit/core/result.h>
+#include <granit/core/shader_features.h>
 #include <granit/tools/shader_tools_export.h>
 
 /** ShaderTools 操作结果句柄。零值无效。 */
@@ -40,6 +41,19 @@ typedef struct granit_shader_tools_expected_binding {
 #define GRANIT_SHADER_TOOLS_ASSET_BACKEND_VULKAN UINT32_C(1)
 #define GRANIT_SHADER_TOOLS_ASSET_BACKEND_WEBGPU UINT32_C(2)
 #define GRANIT_SHADER_TOOLS_ASSET_BACKEND_ALL UINT32_C(3)
+
+/** ShaderTools 内置目标档位的静态能力；与构建机 GPU 无关。 */
+typedef struct granit_shader_tools_target_capabilities {
+  uint32_t struct_size;
+  uint32_t backend;
+  uint32_t profile;
+  uint32_t reserved;
+  granit_shader_feature_flags supported_features;
+} granit_shader_tools_target_capabilities;
+
+#define GRANIT_SHADER_TOOLS_TARGET_CAPABILITIES_INIT                                               \
+  {(uint32_t)sizeof(granit_shader_tools_target_capabilities), UINT32_C(0),                         \
+   GRANIT_SHADER_PROFILE_PORTABLE, UINT32_C(0), UINT64_C(0)}
 
 /** WGSL 编译描述。所有字符串均为 UTF-8，调用期间有效且无需以零结尾。 */
 typedef struct granit_shader_tools_compile_desc {
@@ -247,6 +261,10 @@ GRANIT_SHADER_TOOLS_API granit_result granit_shader_tools_result_write_asset(
  */
 GRANIT_SHADER_TOOLS_API granit_result granit_shader_tools_restore_asset_cache(
     const granit_shader_tools_cache_desc* desc, uint32_t* cache_hit);
+
+/** 查询内置目标档位支持的静态特性；当前 backend 使用 ASSET_BACKEND 单值。 */
+GRANIT_SHADER_TOOLS_API granit_result granit_shader_tools_get_target_capabilities(
+    uint32_t backend, uint32_t profile, granit_shader_tools_target_capabilities* capabilities);
 
 /** 销毁结果句柄。零值和已经销毁的句柄返回 GRANIT_ERROR_INVALID_HANDLE。 */
 GRANIT_SHADER_TOOLS_API granit_result

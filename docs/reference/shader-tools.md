@@ -32,6 +32,9 @@ target_link_libraries(editor PRIVATE granit::shader_tools)
 - `granit_shader_tools_asset_desc.backend_mask` 必须选择 Vulkan、WebGPU 或二者；写入时会删除同名
   的未选后端 sidecar，清单仅记录实际保留的变体。缓存描述的 `backend_mask` 表示期望的精确
   变体集合，清单集合不同也会正常未命中；两个字段均不能为零。
+- `granit_shader_tools_get_target_capabilities` 查询工具内置目标档位的静态契约，不读取构建机 GPU。
+  CLI 的 `targets` 列出目标，`capabilities --target <name>` 查询对应能力。当前提供
+  `vulkan-portable` 和 `webgpu-portable`，二者均不声明额外可选特性。
 - `granit_shader_tools_result_get_binding_count` 和 `granit_shader_tools_result_get_binding` 按
   Group、Binding 数字顺序返回结构化绑定。记录包含资源类型、访问模式、数组数量和 Buffer
   最小绑定尺寸。

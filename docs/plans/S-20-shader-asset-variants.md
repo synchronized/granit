@@ -54,8 +54,9 @@ example.granit-shader.spv   # Vulkan portable 变体
    可选 Shader 特性位；数值限制继续由 `granit_renderer_get_limits` 负责。
 2. **S-20E 自动变体选择**：以 Renderer 能力筛选后端、档位、特性位和数值要求，按确定性优先级
    选择最合适变体；没有候选时返回 `unsupported` 和结构化诊断。
-3. **S-20F 工具目标能力**：ShaderTools 列出内置目标档位并验证生成请求。目标能力来自发布契约或
-   调用方提供的设备快照，不能读取构建机 GPU 后假定部署设备相同。
+3. **S-20F 工具目标能力（查询已完成）**：ShaderTools C/C++ API 与 CLI 已能列出、查询内置
+   portable 目标；生成请求的特性验证仍待接入。目标能力来自发布契约或调用方提供的设备快照，
+   不能读取构建机 GPU 后假定部署设备相同。
 4. **S-20G 可选源码前端**：先评估 HLSL，再评估 GLSL；前端只改变离线输入，不改变运行时变体
    选择和后端载荷格式。
 

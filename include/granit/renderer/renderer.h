@@ -10,6 +10,7 @@
 #include <granit/core/diagnostic.h>
 #include <granit/core/export.h>
 #include <granit/core/result.h>
+#include <granit/core/shader_features.h>
 #include <granit/core/types.h>
 
 /** Renderer 对象句柄。零值无效。 */
@@ -19,12 +20,6 @@ typedef uint32_t granit_renderer_backend;
 #define GRANIT_RENDERER_BACKEND_AUTO UINT32_C(0)
 #define GRANIT_RENDERER_BACKEND_VULKAN UINT32_C(1)
 #define GRANIT_RENDERER_BACKEND_WEBGPU UINT32_C(2)
-
-typedef uint64_t granit_shader_feature_flags;
-#define GRANIT_SHADER_FEATURE_FLOAT16_BIT (UINT64_C(1) << 0)
-#define GRANIT_SHADER_FEATURE_SUBGROUP_BIT (UINT64_C(1) << 1)
-
-#define GRANIT_SHADER_PROFILE_PORTABLE UINT32_C(1)
 
 typedef uint32_t granit_renderer_state;
 #define GRANIT_RENDERER_STATE_INITIALIZING UINT32_C(1)
