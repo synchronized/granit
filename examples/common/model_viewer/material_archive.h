@@ -5,8 +5,10 @@
 #define GRANIT_EXAMPLES_COMMON_MODEL_VIEWER_MATERIAL_ARCHIVE_H_
 
 #include <cstddef>
-#include <granit/pipeline/material.h>
+#include <cstdint>
 #include <span>
+
+#include <granit/pipeline/material.h>
 
 namespace granit::example::model_viewer {
 

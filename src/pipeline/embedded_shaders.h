@@ -5,9 +5,11 @@
 #define GRANIT_PIPELINE_EMBEDDED_SHADERS_H
 
 #include <cstddef>
-#include <granit/pipeline/material.h>
+#include <cstdint>
 #include <span>
 #include <string_view>
+
+#include <granit/pipeline/material.h>
 
 namespace granit::pipeline::detail {
 
