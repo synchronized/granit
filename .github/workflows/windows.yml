@@ -10,6 +10,29 @@ env:
   SCCACHE_GHA_ENABLED: "true"
 
 jobs:
+  shader-toolchain:
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/setup-msvc
+        with:
+          arch: x64
+      - name: 下载并校验锁定 Shader 工具链
+        shell: pwsh
+        run: cmake -DDESTINATION=build/toolchains -P cmake/download_shader_toolchain.cmake
+      - name: 验证锁定 Shader 工具链
+        shell: pwsh
+        run: |
+          $root = "$PWD/build/toolchains/granit-shader-toolchain-v20260720.160313-windows-x64"
+          cmake -S . -B build/shader-toolchain-test -G Ninja -DCMAKE_BUILD_TYPE=Release `
+            -DGRANIT_BUILD_EXAMPLES=OFF -DGRANIT_BUILD_TESTING=ON -DGRANIT_BUILD_TOOLS=ON `
+            -DGRANIT_SHADER_TOOLCHAIN_ROOT="$root" -DGRANIT_SHADER_TOOLCHAIN_POLICY=locked `
+            -DGRANIT_TINT_REVISION=0bc38adde72b79013536f8ce354b639ae19ae195
+          cmake --build build/shader-toolchain-test --target `
+            granit_shader_hlsl_api_test granit_shader_glsl_api_test
+          ctest --test-dir build/shader-toolchain-test `
+            -R 'granit\.shader_tools\.(hlsl|glsl)_api' --output-on-failure
+
   msvc-install-consumer:
     runs-on: windows-2022
     strategy:

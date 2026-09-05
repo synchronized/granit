@@ -1,0 +1,61 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Granit contributors
+
+foreach(required STAGE MANIFEST)
+  if(NOT DEFINED ${required} OR "${${required}}" STREQUAL "")
+    message(FATAL_ERROR "缺少 ${required}")
+  endif()
+endforeach()
+
+cmake_path(ABSOLUTE_PATH STAGE NORMALIZE OUTPUT_VARIABLE stage_absolute)
+cmake_path(ABSOLUTE_PATH MANIFEST NORMALIZE OUTPUT_VARIABLE manifest_absolute)
+cmake_path(IS_PREFIX stage_absolute "${manifest_absolute}" NORMALIZE manifest_is_in_stage)
+if(NOT IS_DIRECTORY "${stage_absolute}" OR NOT manifest_is_in_stage OR
+   NOT EXISTS "${manifest_absolute}")
+  message(FATAL_ERROR "工具包目录或清单无效")
+endif()
+
+file(READ "${manifest_absolute}" manifest)
+string(JSON schema ERROR_VARIABLE json_error GET "${manifest}" schema)
+if(json_error OR NOT schema EQUAL 1)
+  message(FATAL_ERROR "工具包清单 schema 无效：${json_error}")
+endif()
+string(JSON file_count ERROR_VARIABLE json_error LENGTH "${manifest}" files)
+if(json_error OR file_count EQUAL 0)
+  message(FATAL_ERROR "工具包清单没有文件记录：${json_error}")
+endif()
+
+set(recorded_paths "")
+math(EXPR last_index "${file_count} - 1")
+foreach(index RANGE ${last_index})
+  string(JSON relative_path GET "${manifest}" files ${index} path)
+  string(JSON expected_size GET "${manifest}" files ${index} size)
+  string(JSON expected_sha256 GET "${manifest}" files ${index} sha256)
+  string(JSON role GET "${manifest}" files ${index} role)
+  if(NOT role STREQUAL "tool" AND NOT role STREQUAL "license" AND NOT role STREQUAL "runtime")
+    message(FATAL_ERROR "工具包文件角色无效：${relative_path}")
+  endif()
+  cmake_path(ABSOLUTE_PATH relative_path BASE_DIRECTORY "${stage_absolute}" NORMALIZE
+             OUTPUT_VARIABLE absolute_path)
+  cmake_path(IS_PREFIX stage_absolute "${absolute_path}" NORMALIZE path_is_in_stage)
+  if(NOT path_is_in_stage OR NOT EXISTS "${absolute_path}" OR IS_DIRECTORY "${absolute_path}")
+    message(FATAL_ERROR "工具包文件缺失：${relative_path}")
+  endif()
+  file(SIZE "${absolute_path}" actual_size)
+  file(SHA256 "${absolute_path}" actual_sha256)
+  if(NOT actual_size EQUAL expected_size OR NOT actual_sha256 STREQUAL expected_sha256)
+    message(FATAL_ERROR "工具包文件摘要不匹配：${relative_path}")
+  endif()
+  list(APPEND recorded_paths "${relative_path}")
+endforeach()
+
+file(GLOB_RECURSE package_files LIST_DIRECTORIES false RELATIVE "${stage_absolute}"
+     "${stage_absolute}/*")
+cmake_path(RELATIVE_PATH manifest_absolute BASE_DIRECTORY "${stage_absolute}"
+           OUTPUT_VARIABLE manifest_relative)
+list(REMOVE_ITEM package_files "${manifest_relative}")
+list(SORT package_files)
+list(SORT recorded_paths)
+if(NOT "${package_files}" STREQUAL "${recorded_paths}")
+  message(FATAL_ERROR "工具包包含未登记文件或重复清单记录")
+endif()

@@ -5,12 +5,24 @@
 
 #include <cstring>
 #include <filesystem>
+#include <fstream>
 #include <string>
 #include <tuple>
 
 int main(int argc, char** argv) {
   if (argc != 4)
     return 1;
+  auto [target_status, target_capabilities] =
+      granit::shader_tools::target_capabilities(GRANIT_SHADER_TOOLS_ASSET_BACKEND_VULKAN);
+  if (target_status.failed() ||
+      target_capabilities.backend != GRANIT_SHADER_TOOLS_ASSET_BACKEND_VULKAN ||
+      target_capabilities.profile != GRANIT_SHADER_PROFILE_PORTABLE ||
+      target_capabilities.supported_features != 0)
+    return 14;
+  std::tie(target_status, target_capabilities) =
+      granit::shader_tools::target_capabilities(GRANIT_SHADER_TOOLS_ASSET_BACKEND_ALL);
+  if (target_status != granit::result::unsupported)
+    return 15;
   granit_shader_tools_inspect_desc inspect{};
   inspect.struct_size = sizeof(inspect);
   inspect.input_path = argv[1];
@@ -28,6 +40,9 @@ int main(int argc, char** argv) {
   std::string options = "format=spirv;validate=1";
   granit_shader_tools_asset_desc asset{};
   asset.struct_size = sizeof(asset);
+  asset.source_path = argv[2];
+  asset.source_path_length = std::strlen(argv[2]);
+  asset.source_language = GRANIT_SHADER_TOOLS_SOURCE_WGSL;
   asset.wgsl_path = argv[2];
   asset.wgsl_path_length = std::strlen(argv[2]);
   asset.spirv_path = argv[1];
@@ -40,6 +55,12 @@ int main(int argc, char** argv) {
   asset.target_environment_length = target.size();
   asset.compile_options = options.data();
   asset.compile_options_length = options.size();
+  asset.backend_mask = GRANIT_SHADER_TOOLS_ASSET_BACKEND_ALL;
+  asset.required_features = GRANIT_SHADER_FEATURE_FLOAT16_BIT;
+  auto [unsupported_status, unsupported_hit] = result.write_asset(asset);
+  if (unsupported_status != granit::result::unsupported || unsupported_hit)
+    return 16;
+  asset.required_features = 0;
 
   auto [status, cache_hit] = result.write_asset(asset);
   if (status.failed() || cache_hit)
@@ -47,10 +68,13 @@ int main(int argc, char** argv) {
   const auto first = std::filesystem::file_size(output, error);
   if (error || first == 0)
     return 4;
+  if (!std::filesystem::exists(output + ".wgsl") || !std::filesystem::exists(output + ".spv"))
+    return 41;
   granit_shader_tools_cache_desc cache{};
   cache.struct_size = sizeof(cache);
-  cache.wgsl_path = argv[2];
-  cache.wgsl_path_length = std::strlen(argv[2]);
+  cache.source_path = argv[2];
+  cache.source_path_length = std::strlen(argv[2]);
+  cache.source_language = GRANIT_SHADER_TOOLS_SOURCE_WGSL;
   cache.spirv_output_path = restored.data();
   cache.spirv_output_path_length = restored.size();
   cache.asset_path = output.data();
@@ -64,6 +88,8 @@ int main(int argc, char** argv) {
   cache.target_environment_length = target.size();
   cache.compile_options = options.data();
   cache.compile_options_length = options.size();
+  cache.backend_mask = GRANIT_SHADER_TOOLS_ASSET_BACKEND_ALL;
+  cache.required_features = 0;
   auto [restore_status, restored_hit] = granit::shader_tools::restore_asset_cache(cache);
   if (restore_status.failed())
     return 51;
@@ -80,6 +106,26 @@ int main(int argc, char** argv) {
   std::tie(status, cache_hit) = result.write_asset(asset);
   if (status.failed() || cache_hit || std::filesystem::file_size(output, error) != first)
     return 7;
+  {
+    auto stream = std::ofstream{output + ".spv", std::ios::binary | std::ios::trunc};
+    stream.put('\0');
+  }
+  std::filesystem::remove(restored, error);
+  cache.compile_options = options.data();
+  cache.compile_options_length = options.size();
+  std::tie(restore_status, restored_hit) = granit::shader_tools::restore_asset_cache(cache);
+  if (restore_status.failed() || restored_hit)
+    return 71;
+  std::tie(status, cache_hit) = result.write_asset(asset);
+  if (status.failed() || cache_hit)
+    return 72;
+  std::filesystem::remove(output + ".wgsl", error);
+  std::tie(restore_status, restored_hit) = granit::shader_tools::restore_asset_cache(cache);
+  if (restore_status.failed() || restored_hit)
+    return 73;
+  std::tie(status, cache_hit) = result.write_asset(asset);
+  if (status.failed() || cache_hit)
+    return 74;
   std::filesystem::remove(restored, error);
   cache.compile_options = options.data();
   cache.compile_options_length = options.size();
@@ -93,6 +139,26 @@ int main(int argc, char** argv) {
   std::tie(restore_status, restored_hit) = granit::shader_tools::restore_asset_cache(cache);
   if (restore_status.failed() || restored_hit)
     return 9;
+  asset.compile_options = options.data();
+  asset.compile_options_length = options.size();
+  asset.backend_mask = GRANIT_SHADER_TOOLS_ASSET_BACKEND_WEBGPU;
+  cache.backend_mask = GRANIT_SHADER_TOOLS_ASSET_BACKEND_WEBGPU;
+  std::tie(status, cache_hit) = result.write_asset(asset);
+  if (status.failed() || cache_hit || !std::filesystem::exists(output + ".wgsl") ||
+      std::filesystem::exists(output + ".spv"))
+    return 10;
+  std::tie(restore_status, restored_hit) = granit::shader_tools::restore_asset_cache(cache);
+  if (restore_status.failed() || restored_hit)
+    return 11;
+  asset.backend_mask = GRANIT_SHADER_TOOLS_ASSET_BACKEND_VULKAN;
+  cache.backend_mask = GRANIT_SHADER_TOOLS_ASSET_BACKEND_VULKAN;
+  std::tie(status, cache_hit) = result.write_asset(asset);
+  if (status.failed() || cache_hit || std::filesystem::exists(output + ".wgsl") ||
+      !std::filesystem::exists(output + ".spv"))
+    return 12;
+  std::tie(restore_status, restored_hit) = granit::shader_tools::restore_asset_cache(cache);
+  if (restore_status.failed() || !restored_hit)
+    return 13;
   std::filesystem::remove_all(argv[3], error);
   return 0;
 }

@@ -10,6 +10,7 @@
 #include <granit/core/diagnostic.h>
 #include <granit/core/export.h>
 #include <granit/core/result.h>
+#include <granit/core/shader_features.h>
 #include <granit/core/types.h>
 
 /** Renderer 对象句柄。零值无效。 */
@@ -75,6 +76,34 @@ typedef struct granit_renderer_limits {
    UINT64_C(0),                                                                                    \
    UINT32_C(0),                                                                                    \
    1.0F}
+
+/** Renderer 对应设备可用于 Shader 变体选择的后端无关能力快照。 */
+typedef struct granit_renderer_shader_capabilities {
+  uint32_t struct_size;
+  granit_renderer_backend backend;
+  uint32_t profile;
+  uint32_t reserved;
+  granit_shader_feature_flags supported_features;
+} granit_renderer_shader_capabilities;
+
+/** 可供 Renderer 匹配的单个 Shader 变体要求。priority 越大越优先。 */
+typedef struct granit_shader_variant_requirement {
+  uint32_t struct_size;
+  granit_renderer_backend backend;
+  uint32_t profile;
+  uint32_t priority;
+  granit_shader_feature_flags required_features;
+} granit_shader_variant_requirement;
+
+#define GRANIT_SHADER_VARIANT_REQUIREMENT_INIT                                                     \
+  {(uint32_t)sizeof(granit_shader_variant_requirement), GRANIT_RENDERER_BACKEND_AUTO,              \
+   GRANIT_SHADER_PROFILE_PORTABLE, UINT32_C(0), UINT64_C(0)}
+
+#define GRANIT_RENDERER_SHADER_CAPABILITIES_SIZE                                                   \
+  ((uint32_t)sizeof(granit_renderer_shader_capabilities))
+#define GRANIT_RENDERER_SHADER_CAPABILITIES_INIT                                                   \
+  {(uint32_t)sizeof(granit_renderer_shader_capabilities), GRANIT_RENDERER_BACKEND_AUTO,            \
+   GRANIT_SHADER_PROFILE_PORTABLE, UINT32_C(0), UINT64_C(0)}
 
 /** Renderer 当前存活的公开子资源及后端待回收资源快照。 */
 typedef struct granit_renderer_resource_stats {
@@ -194,6 +223,15 @@ GRANIT_API granit_result granit_renderer_destroy(granit_renderer renderer);
 /** 查询 Renderer 对应设备的限制；调用者须先设置 limits->struct_size。 */
 GRANIT_API granit_result granit_renderer_get_limits(granit_renderer renderer,
                                                     granit_renderer_limits* limits);
+
+/** 查询用于 Shader 变体选择的后端、能力档位和可选特性位。 */
+GRANIT_API granit_result granit_renderer_get_shader_capabilities(
+    granit_renderer renderer, granit_renderer_shader_capabilities* capabilities);
+
+/** 按当前设备能力选择优先级最高的兼容变体；失败时 selected_index 写为 UINT32_MAX。 */
+GRANIT_API granit_result granit_renderer_select_shader_variant(
+    granit_renderer renderer, const granit_shader_variant_requirement* variants,
+    uint32_t variant_count, uint32_t* selected_index);
 
 /** 查询实际后端和 Adapter 元数据；名称容量包含结尾零字符。 */
 GRANIT_API granit_result granit_renderer_get_info(granit_renderer renderer,

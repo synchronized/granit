@@ -17,6 +17,36 @@ env:
   CCACHE_MAXSIZE: 500M
 
 jobs:
+  shader-toolchain:
+    runs-on: ubuntu-24.04
+    container:
+      image: >-
+        ghcr.io/synchronized/granit-ci@sha256:6a2d0aba3b2464838958a4259d3a343106205eb35df9f4ad24d060bf98739015
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v5
+      - name: 下载并校验锁定 Shader 工具链
+        run: cmake -DDESTINATION=build/toolchains -P cmake/download_shader_toolchain.cmake
+      - name: 验证锁定 Shader 工具链
+        shell: bash
+        run: |
+          root="$PWD/build/toolchains/granit-shader-toolchain-v20260720.160313-linux-x64"
+          export LD_LIBRARY_PATH="$root/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+          CC=clang CXX=clang++ cmake -S . -B build/shader-toolchain-test -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DGRANIT_BUILD_EXAMPLES=OFF \
+            -DGRANIT_BUILD_TESTING=ON \
+            -DGRANIT_BUILD_TOOLS=ON \
+            -DGRANIT_SHADER_TOOLCHAIN_ROOT="$root" \
+            -DGRANIT_SHADER_TOOLCHAIN_POLICY=locked \
+            -DGRANIT_TINT_REVISION=0bc38adde72b79013536f8ce354b639ae19ae195
+          cmake --build build/shader-toolchain-test --target \
+            granit_shader_hlsl_api_test granit_shader_glsl_api_test
+          ctest --test-dir build/shader-toolchain-test \
+            -R 'granit\.shader_tools\.(hlsl|glsl)_api' --output-on-failure
+
   build-test-consumer:
     runs-on: ubuntu-24.04
     container:

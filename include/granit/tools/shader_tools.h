@@ -7,6 +7,7 @@
 #include <stdint.h>
 
 #include <granit/core/result.h>
+#include <granit/core/shader_features.h>
 #include <granit/tools/shader_tools_export.h>
 
 /** ShaderTools 操作结果句柄。零值无效。 */
@@ -37,6 +38,27 @@ typedef struct granit_shader_tools_expected_binding {
 #define GRANIT_SHADER_TOOLS_SCALAR_SINT UINT32_C(2)
 #define GRANIT_SHADER_TOOLS_SCALAR_UINT UINT32_C(3)
 
+#define GRANIT_SHADER_TOOLS_ASSET_BACKEND_VULKAN UINT32_C(1)
+#define GRANIT_SHADER_TOOLS_ASSET_BACKEND_WEBGPU UINT32_C(2)
+#define GRANIT_SHADER_TOOLS_ASSET_BACKEND_ALL UINT32_C(3)
+
+#define GRANIT_SHADER_TOOLS_SOURCE_WGSL UINT32_C(1)
+#define GRANIT_SHADER_TOOLS_SOURCE_HLSL UINT32_C(2)
+#define GRANIT_SHADER_TOOLS_SOURCE_GLSL UINT32_C(3)
+
+/** ShaderTools 内置目标档位的静态能力；与构建机 GPU 无关。 */
+typedef struct granit_shader_tools_target_capabilities {
+  uint32_t struct_size;
+  uint32_t backend;
+  uint32_t profile;
+  uint32_t reserved;
+  granit_shader_feature_flags supported_features;
+} granit_shader_tools_target_capabilities;
+
+#define GRANIT_SHADER_TOOLS_TARGET_CAPABILITIES_INIT                                               \
+  {(uint32_t)sizeof(granit_shader_tools_target_capabilities), UINT32_C(0),                         \
+   GRANIT_SHADER_PROFILE_PORTABLE, UINT32_C(0), UINT64_C(0)}
+
 /** WGSL 编译描述。所有字符串均为 UTF-8，调用期间有效且无需以零结尾。 */
 typedef struct granit_shader_tools_compile_desc {
   uint32_t struct_size;
@@ -53,6 +75,42 @@ typedef struct granit_shader_tools_compile_desc {
   const granit_shader_tools_expected_binding* expected_bindings;
   uint64_t expected_binding_count;
 } granit_shader_tools_compile_desc;
+
+/** HLSL portable 双后端编译描述；DXC 生成 SPIR-V，Tint 从该产物生成 WGSL。 */
+typedef struct granit_shader_tools_hlsl_compile_desc {
+  uint32_t struct_size;
+  const char* dxc_path;
+  uint64_t dxc_path_length;
+  const char* tint_path;
+  uint64_t tint_path_length;
+  const char* input_path;
+  uint64_t input_path_length;
+  const char* entry_point;
+  uint64_t entry_point_length;
+  uint32_t stage;
+  const char* spirv_output_path;
+  uint64_t spirv_output_path_length;
+  const char* wgsl_output_path;
+  uint64_t wgsl_output_path_length;
+} granit_shader_tools_hlsl_compile_desc;
+
+/** GLSL portable 双后端编译描述；glslang 生成 SPIR-V，Tint 从该产物生成 WGSL。 */
+typedef struct granit_shader_tools_glsl_compile_desc {
+  uint32_t struct_size;
+  const char* glslang_path;
+  uint64_t glslang_path_length;
+  const char* tint_path;
+  uint64_t tint_path_length;
+  const char* input_path;
+  uint64_t input_path_length;
+  const char* entry_point;
+  uint64_t entry_point_length;
+  uint32_t stage;
+  const char* spirv_output_path;
+  uint64_t spirv_output_path_length;
+  const char* wgsl_output_path;
+  uint64_t wgsl_output_path_length;
+} granit_shader_tools_glsl_compile_desc;
 
 /** SPIR-V 检查描述。路径为 UTF-8，调用期间有效且无需以零结尾。 */
 typedef struct granit_shader_tools_inspect_desc {
@@ -80,6 +138,11 @@ typedef struct granit_shader_tools_result_info {
 /** Shader 资产写入描述。路径和字符串均为 UTF-8，调用期间有效且无需以零结尾。 */
 typedef struct granit_shader_tools_asset_desc {
   uint32_t struct_size;
+  /** 用于缓存身份的原始源码；不作为 sidecar 写入。 */
+  const char* source_path;
+  uint64_t source_path_length;
+  uint32_t source_language;
+  /** 已生成的 WebGPU WGSL 载荷。 */
   const char* wgsl_path;
   uint64_t wgsl_path_length;
   const char* spirv_path;
@@ -92,13 +155,22 @@ typedef struct granit_shader_tools_asset_desc {
   uint64_t target_environment_length;
   const char* compile_options;
   uint64_t compile_options_length;
+  /** 要写入清单的后端位集合；必须是 GRANIT_SHADER_TOOLS_ASSET_BACKEND_* 的非零组合。 */
+  uint32_t backend_mask;
+  /** 所有导出变体必须支持的 GRANIT_SHADER_FEATURE_* 位集合。 */
+  granit_shader_feature_flags required_features;
 } granit_shader_tools_asset_desc;
 
 /** Shader 资产缓存恢复描述。所有路径和字符串均在调用期间有效。 */
 typedef struct granit_shader_tools_cache_desc {
   uint32_t struct_size;
-  const char* wgsl_path;
-  uint64_t wgsl_path_length;
+  /** 用于重新计算缓存键的原始源码。 */
+  const char* source_path;
+  uint64_t source_path_length;
+  uint32_t source_language;
+  /** 非 WGSL 前端命中缓存时恢复 WGSL 的目标；WGSL 前端可留空。 */
+  const char* wgsl_output_path;
+  uint64_t wgsl_output_path_length;
   const char* spirv_output_path;
   uint64_t spirv_output_path_length;
   const char* asset_path;
@@ -112,6 +184,10 @@ typedef struct granit_shader_tools_cache_desc {
   uint64_t target_environment_length;
   const char* compile_options;
   uint64_t compile_options_length;
+  /** 期望资产包含的精确后端位集合；语义与 granit_shader_tools_asset_desc 相同。 */
+  uint32_t backend_mask;
+  /** 期望资产使用的精确特性位集合。 */
+  granit_shader_feature_flags required_features;
 } granit_shader_tools_cache_desc;
 
 /** 单个描述符绑定的后端无关反射记录。名称视图在结果销毁前有效。 */
@@ -172,6 +248,22 @@ extern "C" {
 GRANIT_SHADER_TOOLS_API granit_result granit_shader_tools_compile_wgsl(
     const granit_shader_tools_compile_desc* desc, granit_shader_tools_result* result);
 
+/** 使用显式 DXC 与 Tint 生成 portable SPIR-V/WGSL，并严格检查入口点和阶段。 */
+GRANIT_SHADER_TOOLS_API granit_result granit_shader_tools_compile_hlsl(
+    const granit_shader_tools_hlsl_compile_desc* desc, granit_shader_tools_result* result);
+
+/** 使用显式 glslang 与 Tint 生成 portable SPIR-V/WGSL，并严格检查入口点和阶段。 */
+GRANIT_SHADER_TOOLS_API granit_result granit_shader_tools_compile_glsl(
+    const granit_shader_tools_glsl_compile_desc* desc, granit_shader_tools_result* result);
+
+/**
+ * 查询工具二进制的稳定 SHA-256 身份。
+ *
+ * identity 为 NULL 时仅返回所需字节数；缓冲区不足时返回 GRANIT_ERROR_INVALID_ARGUMENT 并更新长度。
+ */
+GRANIT_SHADER_TOOLS_API granit_result granit_shader_tools_get_tool_identity(
+    const char* path, uint64_t path_length, char* identity, uint64_t* identity_length);
+
 /** 检查 SPIR-V 并返回入口点、阶段和反射文本。该函数线程安全。 */
 GRANIT_SHADER_TOOLS_API granit_result granit_shader_tools_inspect_spirv(
     const granit_shader_tools_inspect_desc* desc, granit_shader_tools_result* result);
@@ -224,8 +316,8 @@ GRANIT_SHADER_TOOLS_API granit_result granit_shader_tools_result_get_reflection_
     granit_shader_tools_result result, const char** json, uint64_t* length);
 
 /**
- * 将成功结果对应的 WGSL、SPIR-V 和稳定反射 JSON 写入确定性 Shader 资产。
- * cache_hit 在目标文件已经逐字节相同时写为 1，否则写为 0。
+ * 将稳定反射清单写入 output_path，并将 WGSL、SPIR-V 分别写入同名 .wgsl、.spv sidecar。
+ * cache_hit 仅在清单和两个 sidecar 均逐字节相同时写为 1，否则写为 0。
  */
 GRANIT_SHADER_TOOLS_API granit_result granit_shader_tools_result_write_asset(
     granit_shader_tools_result result, const granit_shader_tools_asset_desc* desc,
@@ -234,11 +326,15 @@ GRANIT_SHADER_TOOLS_API granit_result granit_shader_tools_result_write_asset(
 /**
  * 在运行 Tint 前尝试恢复确定性 Shader 资产。
  *
- * 有效缓存命中时将 SPIR-V 写入 spirv_output_path，并把 cache_hit 写为 1；资产不存在、损坏或
- * 缓存键不匹配均作为正常未命中返回 GRANIT_SUCCESS 和 0。
+ * 有效缓存命中时校验清单和 sidecar，恢复描述要求的 SPIR-V/WGSL，并把 cache_hit 写为 1；
+ * 任一文件不存在、损坏或缓存键不匹配均作为正常未命中返回 GRANIT_SUCCESS 和 0。
  */
 GRANIT_SHADER_TOOLS_API granit_result granit_shader_tools_restore_asset_cache(
     const granit_shader_tools_cache_desc* desc, uint32_t* cache_hit);
+
+/** 查询内置目标档位支持的静态特性；当前 backend 使用 ASSET_BACKEND 单值。 */
+GRANIT_SHADER_TOOLS_API granit_result granit_shader_tools_get_target_capabilities(
+    uint32_t backend, uint32_t profile, granit_shader_tools_target_capabilities* capabilities);
 
 /** 销毁结果句柄。零值和已经销毁的句柄返回 GRANIT_ERROR_INVALID_HANDLE。 */
 GRANIT_SHADER_TOOLS_API granit_result

@@ -5,6 +5,7 @@
 
 #include "linkage_check.h"
 
+#include <array>
 #include <atomic>
 #include <string>
 #include <string_view>
@@ -61,6 +62,16 @@ int main() {
   if ((renderer.get_limits(limits)).failed() || limits.uniform_buffer_offset_alignment == 0 ||
       limits.max_uniform_buffer_binding_size == 0)
     return 5;
+  granit::renderer_shader_capabilities shader_capabilities;
+  if ((renderer.get_shader_capabilities(shader_capabilities)).failed() ||
+      shader_capabilities.backend != granit::renderer_backend::vulkan ||
+      shader_capabilities.profile != GRANIT_SHADER_PROFILE_PORTABLE)
+    return 11;
+  const std::array shader_variants{
+      granit::shader_variant_requirement{.backend = granit::renderer_backend::vulkan}};
+  const auto [variant_result, variant_index] = renderer.select_shader_variant(shader_variants);
+  if (variant_result.failed() || variant_index != 0)
+    return 13;
 
   granit_buffer_desc invalid_desc = GRANIT_BUFFER_DESC_INIT;
   granit_buffer invalid_buffer = GRANIT_NULL_HANDLE;
@@ -70,10 +81,10 @@ int main() {
     return 10;
 
   granit::buffer buffer;
-  if ((buffer.initialize(renderer.native_handle(),
-                                       {.size = 64,
-                                        .usage = granit::buffer_usage::transfer_source,
-                                        .location = granit::memory_location::upload})).failed())
+  if ((buffer.initialize(renderer.native_handle(), {.size = 64,
+                                                    .usage = granit::buffer_usage::transfer_source,
+                                                    .location = granit::memory_location::upload}))
+          .failed())
     return 6;
   granit::buffer moved = std::move(buffer);
   if (buffer.valid() || !moved.valid())

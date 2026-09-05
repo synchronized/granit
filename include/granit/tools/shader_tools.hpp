@@ -7,6 +7,7 @@
 #include <granit/core/result.hpp>
 #include <granit/tools/shader_tools.h>
 
+#include <string>
 #include <string_view>
 #include <utility>
 
@@ -87,8 +88,7 @@ public:
     return granit_shader_tools_result_get_binding_count(handle_, &count) == GRANIT_SUCCESS ? count
                                                                                            : 0;
   }
-  [[nodiscard]] std::pair<::granit::result, binding_info>
-  binding(uint64_t index) const noexcept {
+  [[nodiscard]] std::pair<::granit::result, binding_info> binding(uint64_t index) const noexcept {
     granit_shader_tools_binding_info value{};
     value.struct_size = sizeof(value);
     const auto status = granit_shader_tools_result_get_binding(handle_, index, &value);
@@ -201,6 +201,33 @@ compile_wgsl(const granit_shader_tools_compile_desc& desc) noexcept {
 }
 
 inline std::pair<::granit::result, result>
+compile_hlsl(const granit_shader_tools_hlsl_compile_desc& desc) noexcept {
+  granit_shader_tools_result handle = 0;
+  const auto status = granit_shader_tools_compile_hlsl(&desc, &handle);
+  return {::granit::from_native(status), result{handle}};
+}
+
+inline std::pair<::granit::result, result>
+compile_glsl(const granit_shader_tools_glsl_compile_desc& desc) noexcept {
+  granit_shader_tools_result handle = 0;
+  const auto status = granit_shader_tools_compile_glsl(&desc, &handle);
+  return {::granit::from_native(status), result{handle}};
+}
+
+inline std::pair<::granit::result, std::string> tool_identity(std::string_view path) noexcept {
+  uint64_t size = 0;
+  auto status = granit_shader_tools_get_tool_identity(path.data(), path.size(), nullptr, &size);
+  if (status != GRANIT_SUCCESS)
+    return {::granit::from_native(status), {}};
+  std::string identity(static_cast<std::size_t>(size), '\0');
+  status = granit_shader_tools_get_tool_identity(path.data(), path.size(), identity.data(), &size);
+  if (status != GRANIT_SUCCESS)
+    return {::granit::from_native(status), {}};
+  identity.resize(static_cast<std::size_t>(size));
+  return {::granit::result::success, std::move(identity)};
+}
+
+inline std::pair<::granit::result, result>
 inspect_spirv(const granit_shader_tools_inspect_desc& desc) noexcept {
   granit_shader_tools_result handle = 0;
   const auto status = granit_shader_tools_inspect_spirv(&desc, &handle);
@@ -212,6 +239,14 @@ restore_asset_cache(const granit_shader_tools_cache_desc& desc) noexcept {
   uint32_t cache_hit = 0;
   const auto status = granit_shader_tools_restore_asset_cache(&desc, &cache_hit);
   return {::granit::from_native(status), cache_hit != 0};
+}
+
+inline std::pair<::granit::result, granit_shader_tools_target_capabilities>
+target_capabilities(uint32_t backend, uint32_t profile = GRANIT_SHADER_PROFILE_PORTABLE) noexcept {
+  granit_shader_tools_target_capabilities capabilities =
+      GRANIT_SHADER_TOOLS_TARGET_CAPABILITIES_INIT;
+  const auto status = granit_shader_tools_get_target_capabilities(backend, profile, &capabilities);
+  return {::granit::from_native(status), capabilities};
 }
 
 } // namespace granit::shader_tools

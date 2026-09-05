@@ -9,6 +9,7 @@
 #include <granit/core/diagnostic.h>
 #include <granit/core/export.h>
 #include <granit/core/result.h>
+#include <granit/core/shader_features.h>
 #include <granit/core/types.h>
 #include <granit/core/version.h>
 #include <granit/math/types.h>

@@ -30,6 +30,7 @@
 | 十、Android 移动平台 | 待开始 | 多后端边界已完成，等待规划 NDK、Surface 与移动生命周期 |
 | 十一、跨后端模型查看器 | 已完成 | PBR、环境光、质量选项与桌面渲染线程已验收 |
 | 十二、0.5.0 平台扩展与上游集成 | 已完成 | 功能截止完成，等待完整发布矩阵验收 |
+| 十三、0.6.0 Shader 资产与变体 | 进行中 | 建立可裁剪后端载荷和明确的变体选择契约 |
 
 ## 一、工程与 ABI 基础
 
@@ -237,13 +238,21 @@
 - Android 继续保留为独立 S-11，不属于 0.5.0 当前范围；glTF Integration 和高级渲染功能仍遵守
   各自的需求触发条件。
 
+## 十三、0.6.0 Shader 资产与变体
+
+**状态：S-20 与 S-21 均已完成。**
+
+- **[S-20](plans/S-20-shader-asset-variants.md) / P1**：把 Shader 构建产物拆为后端无关清单与
+  可裁剪 WGSL/SPIR-V sidecar，并完成按后端及能力档位选择、失败语义和三种源码前端。
+- **[S-21](plans/S-21-shader-toolchain-package.md) / P1**：发布可下载、可校验的 Windows/Linux 离线
+  Shader Toolchain，使官方 CI 使用严格锁定策略。
+- 0.6.0 首先稳定资产契约，不同时改造 `.grmat` 或 Renderer Shader 创建接口。
+
 ## 近期执行顺序
 
-1. 完成 0.5.0 的 Windows、Linux 与 Emscripten 发布矩阵验收，确认变更记录和
-   [迁移指南](guides/migrate-0.4-to-0.5.md)后再发布。
-2. S-14 只在复用条件成立后启动；不要为当前单个示例提前稳定 glTF 公共 API。
-3. S-06D 最终验收等待稳定版本与 component 范围决策；不在 0.x 阶段提前宣布稳定。
-4. H-09 的透明 PBR、CSM、Clustered Forward 与 Bindless 只在各自重新评估条件满足后独立恢复，
+1. S-14 只在复用条件成立后启动；不要为当前单个示例提前稳定 glTF 公共 API。
+2. S-06D 最终验收等待稳定版本与 component 范围决策；不在 0.x 阶段提前宣布稳定。
+3. H-09 的透明 PBR、CSM、Clustered Forward 与 Bindless 只在各自重新评估条件满足后独立恢复，
    不作为当前稳定化工作的前置项。
 
 若前置抽象不足，应先更新对应 Plan 和本路线图状态，再扩大公共 API。

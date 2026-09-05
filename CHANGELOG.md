@@ -6,6 +6,26 @@
 本文件记录面向使用者的公共接口、行为、构建和兼容性变化。项目当前仍处于 0.x；`Unreleased`
 内容不代表已经发布。版本兼容规则见[版本与兼容策略](docs/reference/compatibility.md)。
 
+## Unreleased
+
+### 变更
+
+- ShaderTools 的确定性资产改为 `.granit-shader` 反射清单及同名 `.wgsl`、`.spv` 后端载荷；
+  缓存恢复会校验三个文件的长度和 SHA-256，旧的单文件内嵌格式不再读取。
+- Shader 资产清单新增后端、代码格式、能力档位和特性位变体表；ShaderTools 和命令行可导出
+  全量、仅 Vulkan 或仅 WebGPU 载荷，清单只声明实际发布的变体。
+- Renderer 新增后端无关的 Shader 能力快照，公开实际后端、portable 档位和已验证的可选特性位，
+  并可按后端、档位、必需特性和确定性优先级为调用方选择兼容 Shader 变体。
+- ShaderTools 新增内置目标档位能力查询；CLI 可列出 `vulkan-portable`、`webgpu-portable` 并查询
+  其静态特性契约，查询结果不依赖构建机 GPU。
+- Shader 资产生成描述可声明必需特性；特性进入缓存键和变体记录，所选目标档位不支持时会在
+  写入前返回 `unsupported`。CLI 通过 `--features` 提供相同门禁。
+- ShaderTools 新增 HLSL portable 双产物编译入口，通过调用方指定的 DXC 生成 Vulkan 1.3 SPIR-V，
+  并以独立的 portable 中间 SPIR-V 经锁定 Tint 生成 WGSL；转换失败时返回完整工具诊断并清理
+  不完整产物。命令行 `compile-hlsl` 可生成并按发布后端裁剪对应资产。
+- Shader 资产缓存身份新增原始源码语言与内容；HLSL 全后端资产命中时可在启动 DXC/Tint 前恢复
+  Vulkan SPIR-V 和 WebGPU WGSL。
+
 ## 0.5.0 - 2026-09-05
 
 ### 新增

@@ -354,12 +354,25 @@ if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
   )
 endif()
 
-find_program(
-  GRANIT_DXC_EXECUTABLE
-  NAMES dxc
-  HINTS "$ENV{VULKAN_SDK}/Bin" "$ENV{VULKAN_SDK}/bin"
-)
-if(GRANIT_DXC_EXECUTABLE)
+include(granit_shader_toolchain)
+granit_find_shader_toolchain()
+if(GRANIT_GLSLANG_EXECUTABLE AND NOT GRANIT_SHADER_TOOLCHAIN_POLICY STREQUAL "unchecked")
+  set(GRANIT_GLSLANG_PROBE_OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/glslang_probe.spv")
+  execute_process(
+    COMMAND
+      "${GRANIT_GLSLANG_EXECUTABLE}" -V --target-env vulkan1.3 -S frag -e main -o
+      "${GRANIT_GLSLANG_PROBE_OUTPUT}" "${PROJECT_SOURCE_DIR}/tests/assets/material_fixture.glsl"
+    RESULT_VARIABLE GRANIT_GLSLANG_PROBE_RESULT
+    OUTPUT_QUIET
+    ERROR_QUIET
+  )
+  file(REMOVE "${GRANIT_GLSLANG_PROBE_OUTPUT}")
+  if(NOT GRANIT_GLSLANG_PROBE_RESULT EQUAL 0)
+    message(STATUS "检测到的 glslang 无法生成 Vulkan 1.3 SPIR-V，跳过相关测试")
+    set(GRANIT_GLSLANG_EXECUTABLE "" CACHE FILEPATH "glslangValidator 可执行文件" FORCE)
+  endif()
+endif()
+if(GRANIT_DXC_EXECUTABLE AND NOT GRANIT_SHADER_TOOLCHAIN_POLICY STREQUAL "unchecked")
   set(GRANIT_DXC_PROBE_OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/dxc_spirv_probe.spv")
   execute_process(
     COMMAND
@@ -398,6 +411,34 @@ if(GRANIT_BUILD_TESTING AND BUILD_TESTING AND GRANIT_DXC_EXECUTABLE)
   add_custom_target(granit_material_shader_fixture DEPENDS "${GRANIT_MATERIAL_FIXTURE}")
   add_dependencies(granit_shader_tool granit_material_shader_fixture)
 
+  if(GRANIT_TINT_EXECUTABLE)
+    add_executable(
+      granit_shader_hlsl_api_test
+      "${PROJECT_SOURCE_DIR}/tests/tools/shader_hlsl_api_test.cpp"
+    )
+    target_compile_features(granit_shader_hlsl_api_test PRIVATE cxx_std_20)
+    target_link_libraries(granit_shader_hlsl_api_test PRIVATE granit::shader_tools)
+    granit_target_compile_warnings(granit_shader_hlsl_api_test)
+    granit_target_output_directories(granit_shader_hlsl_api_test)
+    add_test(
+      NAME granit.shader_tools.hlsl_api
+      COMMAND
+        granit_shader_hlsl_api_test "${GRANIT_DXC_EXECUTABLE}" "${GRANIT_TINT_EXECUTABLE}"
+        "${PROJECT_SOURCE_DIR}/tests/assets/material_fixture.hlsl"
+        "${CMAKE_CURRENT_BINARY_DIR}/shader-hlsl-api-test"
+    )
+    add_test(
+      NAME granit.shader_tool.hlsl_asset
+      COMMAND
+        "${CMAKE_COMMAND}" -DTOOL=$<TARGET_FILE:granit_shader_tool>
+        -DDXC=${GRANIT_DXC_EXECUTABLE} -DTINT=${GRANIT_TINT_EXECUTABLE}
+        -DINPUT=${PROJECT_SOURCE_DIR}/tests/assets/material_fixture.hlsl
+        -DOUTPUT_DIR=${CMAKE_CURRENT_BINARY_DIR}/shader-hlsl-cli-test -P
+        "${PROJECT_SOURCE_DIR}/cmake/check_hlsl_shader_cache.cmake"
+    )
+
+  endif()
+
   if(GRANIT_SPIRV_VAL_EXECUTABLE)
     add_test(
       NAME granit.shader_tool.validate
@@ -424,4 +465,62 @@ if(GRANIT_BUILD_TESTING AND BUILD_TESTING AND GRANIT_DXC_EXECUTABLE)
   )
 elseif(GRANIT_BUILD_TESTING AND BUILD_TESTING)
   message(WARNING "未找到 dxc，跳过 Granit Shader 工具端到端测试")
+endif()
+
+if(GRANIT_BUILD_TESTING AND BUILD_TESTING AND GRANIT_GLSLANG_EXECUTABLE AND
+   GRANIT_TINT_EXECUTABLE)
+  add_executable(
+    granit_shader_glsl_api_test
+    "${PROJECT_SOURCE_DIR}/tests/tools/shader_glsl_api_test.cpp"
+  )
+  target_compile_features(granit_shader_glsl_api_test PRIVATE cxx_std_20)
+  target_link_libraries(granit_shader_glsl_api_test PRIVATE granit::shader_tools)
+  granit_target_compile_warnings(granit_shader_glsl_api_test)
+  granit_target_output_directories(granit_shader_glsl_api_test)
+  add_test(
+    NAME granit.shader_tools.glsl_api
+    COMMAND
+      granit_shader_glsl_api_test "${GRANIT_GLSLANG_EXECUTABLE}" "${GRANIT_TINT_EXECUTABLE}"
+      "${PROJECT_SOURCE_DIR}/tests/assets/material_fixture.glsl"
+      "${CMAKE_CURRENT_BINARY_DIR}/shader-glsl-api-test"
+  )
+  add_test(
+    NAME granit.shader_tool.glsl_asset
+    COMMAND
+      "${CMAKE_COMMAND}" -DTOOL=$<TARGET_FILE:granit_shader_tool>
+      -DGLSLANG=${GRANIT_GLSLANG_EXECUTABLE} -DTINT=${GRANIT_TINT_EXECUTABLE}
+      -DINPUT=${PROJECT_SOURCE_DIR}/tests/assets/material_fixture.glsl
+      -DOUTPUT_DIR=${CMAKE_CURRENT_BINARY_DIR}/shader-glsl-cli-test -P
+      "${PROJECT_SOURCE_DIR}/cmake/check_glsl_shader_cache.cmake"
+  )
+endif()
+
+if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
+  add_test(
+    NAME granit.shader_toolchain.manifest
+    COMMAND
+      "${CMAKE_COMMAND}"
+      -DGENERATOR=${PROJECT_SOURCE_DIR}/cmake/generate_shader_toolchain_manifest.cmake
+      -DVERIFIER=${PROJECT_SOURCE_DIR}/cmake/verify_shader_toolchain_manifest.cmake
+      -DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/shader-toolchain-manifest-test -P
+      "${PROJECT_SOURCE_DIR}/cmake/check_shader_toolchain_manifest.cmake"
+  )
+  add_test(
+    NAME granit.shader_toolchain.package
+    COMMAND
+      "${CMAKE_COMMAND}"
+      -DPACKAGER=${PROJECT_SOURCE_DIR}/cmake/package_shader_toolchain.cmake
+      -DGENERATOR=${PROJECT_SOURCE_DIR}/cmake/generate_shader_toolchain_manifest.cmake
+      -DVERIFIER=${PROJECT_SOURCE_DIR}/cmake/verify_shader_toolchain_manifest.cmake
+      -DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/shader-toolchain-package-test -P
+      "${PROJECT_SOURCE_DIR}/cmake/check_package_shader_toolchain.cmake"
+  )
+  add_test(
+    NAME granit.shader_toolchain.licenses
+    COMMAND
+      "${CMAKE_COMMAND}"
+      -DCOLLECTOR=${PROJECT_SOURCE_DIR}/cmake/collect_license_bundle.cmake
+      -DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/shader-toolchain-license-test -P
+      "${PROJECT_SOURCE_DIR}/cmake/check_collect_license_bundle.cmake"
+  )
 endif()

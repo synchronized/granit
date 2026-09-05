@@ -39,6 +39,19 @@ int main(void) {
   if (granit_renderer_get_limits(renderer, &limits) != GRANIT_SUCCESS ||
       limits.uniform_buffer_offset_alignment == 0 || limits.max_uniform_buffer_binding_size == 0)
     return 6;
+  granit_renderer_shader_capabilities shader_capabilities =
+      GRANIT_RENDERER_SHADER_CAPABILITIES_INIT;
+  if (granit_renderer_get_shader_capabilities(renderer, &shader_capabilities) != GRANIT_SUCCESS ||
+      shader_capabilities.backend != GRANIT_RENDERER_BACKEND_VULKAN ||
+      shader_capabilities.profile != GRANIT_SHADER_PROFILE_PORTABLE)
+    return 12;
+  granit_shader_variant_requirement shader_variant = GRANIT_SHADER_VARIANT_REQUIREMENT_INIT;
+  shader_variant.backend = GRANIT_RENDERER_BACKEND_VULKAN;
+  uint32_t selected_variant = UINT32_MAX;
+  if (granit_renderer_select_shader_variant(renderer, &shader_variant, 1, &selected_variant) !=
+          GRANIT_SUCCESS ||
+      selected_variant != 0)
+    return 13;
 
   granit_buffer_desc buffer_desc = GRANIT_BUFFER_DESC_INIT;
   buffer_desc.usage = GRANIT_BUFFER_USAGE_TRANSFER_SOURCE_BIT;

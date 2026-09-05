@@ -51,6 +51,28 @@ granit_result result = granit_renderer_get_limits(renderer, &limits);
 时不会静默降低样本数。`max_sampler_anisotropy` 至少为 1；值为 1 表示不能启用各向异性过滤。
 C++ `renderer_limits::supports_sample_count` 提供对应的便捷检查。
 
+## Shader 能力
+
+`granit_renderer_get_shader_capabilities` 返回当前 Renderer 的实际后端、Shader 能力档位和已验证的
+可选特性位。首个档位为 `GRANIT_SHADER_PROFILE_PORTABLE`；portable 基线能力不重复占用特性位。
+当前 Vulkan 与浏览器 WebGPU 均不公开额外可选 Shader 特性，因此 `supported_features` 为零。
+
+`GRANIT_SHADER_FEATURE_FLOAT16_BIT` 和 `GRANIT_SHADER_FEATURE_SUBGROUP_BIT` 是后续变体契约的稳定
+位定义，不表示当前设备必然支持。调用方必须查询后再使用；C++ 可通过
+`renderer_shader_capabilities::supports` 检查。数值限制仍由 `granit_renderer_get_limits` 返回，
+不要把操作系统名称作为 Shader 能力判断条件。
+
+调用方从 Shader Asset 清单取得变体要求后，可通过
+`granit_renderer_select_shader_variant` 统一选择。每个候选项声明后端、能力档位、必需特性位和
+优先级；Renderer 先排除后端或档位不符、设备特性不足的候选，再选择优先级最大的项。优先级相同
+时保持清单中的第一个候选，保证结果确定。成功返回原数组索引；没有兼容项返回
+`GRANIT_ERROR_UNSUPPORTED`，并将索引写为 `UINT32_MAX`。
+
+候选数组及其结构体只在调用期间借用。空数组、未知后端、未知档位、未知特性位或过小结构均返回
+`GRANIT_ERROR_INVALID_ARGUMENT`。当前只定义 portable 档位，具体 Shader 文件读取及摘要校验仍由
+资产层负责，Renderer 不持有文件路径或 ShaderTools 状态。C++ 包装为
+`renderer::select_shader_variant`，返回结果码和候选索引。
+
 调用者必须设置 `struct_size`，当前至少为 `GRANIT_RENDERER_LIMITS_VERSION_1_SIZE`。查询接受更大的
 未来结构并只写当前版本已知字段；结构过小或空指针返回 `GRANIT_ERROR_INVALID_ARGUMENT`，失效
 Renderer 返回 `GRANIT_ERROR_INVALID_HANDLE`。限制来自 Renderer 创建时保存的不可变能力快照，

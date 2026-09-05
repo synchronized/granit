@@ -11,6 +11,7 @@
 #include <string>
 #include <string_view>
 #include <utility>
+#include <vector>
 
 #include <granit/core/diagnostic.hpp>
 #include <granit/core/result.hpp>
@@ -65,6 +66,29 @@ struct renderer_limits {
     const auto value = static_cast<std::uint32_t>(samples);
     return (framebuffer_sample_counts & value) == value;
   }
+};
+
+enum class shader_feature : std::uint64_t {
+  float16 = GRANIT_SHADER_FEATURE_FLOAT16_BIT,
+  subgroup = GRANIT_SHADER_FEATURE_SUBGROUP_BIT,
+};
+
+struct renderer_shader_capabilities {
+  renderer_backend backend{renderer_backend::automatic};
+  std::uint32_t profile{GRANIT_SHADER_PROFILE_PORTABLE};
+  std::uint64_t supported_features{};
+
+  [[nodiscard]] constexpr bool supports(shader_feature feature) const noexcept {
+    const auto bit = static_cast<std::uint64_t>(feature);
+    return (supported_features & bit) == bit;
+  }
+};
+
+struct shader_variant_requirement {
+  renderer_backend backend{renderer_backend::automatic};
+  std::uint32_t profile{GRANIT_SHADER_PROFILE_PORTABLE};
+  std::uint32_t priority{};
+  std::uint64_t required_features{};
 };
 
 struct renderer_resource_stats {
@@ -190,6 +214,44 @@ public:
         .max_sampler_anisotropy = native.max_sampler_anisotropy,
     };
     return result::success;
+  }
+
+  [[nodiscard]] result
+  get_shader_capabilities(renderer_shader_capabilities& capabilities) const noexcept {
+    granit_renderer_shader_capabilities native = GRANIT_RENDERER_SHADER_CAPABILITIES_INIT;
+    const auto query_result =
+        from_native(granit_renderer_get_shader_capabilities(handle_, &native));
+    if (query_result.failed())
+      return query_result;
+    capabilities = {
+        .backend = static_cast<renderer_backend>(native.backend),
+        .profile = native.profile,
+        .supported_features = native.supported_features,
+    };
+    return result::success;
+  }
+
+  [[nodiscard]] std::pair<result, std::uint32_t>
+  select_shader_variant(std::span<const shader_variant_requirement> variants) const noexcept {
+    if (variants.empty() || variants.size() > std::numeric_limits<std::uint32_t>::max())
+      return {result::invalid_argument, UINT32_MAX};
+    std::vector<granit_shader_variant_requirement> native;
+    try {
+      native.reserve(variants.size());
+      for (const auto& variant : variants) {
+        native.push_back({.struct_size = sizeof(granit_shader_variant_requirement),
+                          .backend = static_cast<granit_renderer_backend>(variant.backend),
+                          .profile = variant.profile,
+                          .priority = variant.priority,
+                          .required_features = variant.required_features});
+      }
+    } catch (...) {
+      return {result::out_of_memory, UINT32_MAX};
+    }
+    std::uint32_t index = UINT32_MAX;
+    const auto status = from_native(granit_renderer_select_shader_variant(
+        handle_, native.data(), static_cast<std::uint32_t>(native.size()), &index));
+    return {status, index};
   }
 
   [[nodiscard]] result get_status(renderer_status& status) const noexcept {
