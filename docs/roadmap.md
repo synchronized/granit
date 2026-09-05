@@ -285,7 +285,7 @@
 
 ## 十七、0.10.0 环境资源与帧构造背压
 
-**状态：实施中；功能与 Consumer 迁移已完成，等待发布验收。**
+**状态：已完成。**
 
 - **[S-25](plans/S-25-0.10.0-environment-and-frame-backpressure.md) / P1**：让 Model Viewer 在昂贵
   Frame Packet 构造前实施队列背压，并区分主动跳过与队列替换统计。
@@ -295,7 +295,7 @@
 
 ## 近期执行顺序
 
-1. 完成 S-25E 的安装 Consumer、跨平台矩阵和 0.10.0 发布收尾。
+1. 规划下一版本前先收集 Granit 与 Gneiss 的真实集成反馈，不提前扩大公共执行器或场景 API。
 2. S-14 只在复用条件成立后启动；不要为当前单个示例提前稳定 glTF 公共 API。
 3. S-06D 最终验收等待稳定版本与 component 范围决策；不在 0.x 阶段提前宣布稳定。
 4. H-09 的透明 PBR、CSM、Clustered Forward 与 Bindless 只在各自重新评估条件满足后独立恢复，
