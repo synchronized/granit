@@ -154,6 +154,8 @@ D-03-graphics-pipeline.md
   清单、安装 SDK 门禁、上游边界审计和发布候选验收均已完成。
 - [S-23：0.8.0 运行时 Shader 与材质资产契约](S-23-0.8.0-runtime-shader-assets.md)——已完成；
   `.grshader` 已进入 Core，`.grmat` 已引用同一 Shader Asset 身份，发布矩阵与产物预验证均已通过。
+- [S-24：0.9.0 公共 PBR 与渲染资产收敛](S-24-0.9.0-public-pbr-assets.md)——已完成；
+  公共 PBR Shader、四组 Binding、安装资产与 Model Viewer Consumer 已统一。
 
 ## 状态
 

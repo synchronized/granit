@@ -37,7 +37,7 @@
 2. [项目文档规范](../DOCUMENTATION_GUIDE.md)
 3. [开发计划索引](plans/README.md)
 4. [第三方依赖](../3rd/README.md)
-5. [0.8.0 运行时 Shader 与材质资产计划](plans/S-23-0.8.0-runtime-shader-assets.md)
+5. [0.9.0 公共 PBR 与渲染资产收敛计划](plans/S-24-0.9.0-public-pbr-assets.md)
 
 ## 操作指南
 
@@ -49,6 +49,7 @@
 - [从 0.5 迁移到 0.6](guides/migrate-0.5-to-0.6.md)
 - [从 0.6 迁移到 0.7](guides/migrate-0.6-to-0.7.md)
 - [从 0.7 迁移到 0.8](guides/migrate-0.7-to-0.8.md)
+- [从 0.8 迁移到 0.9](guides/migrate-0.8-to-0.9.md)
 - [示例程序及运行方式](guides/examples.md)
 - [运行跨后端模型查看器](guides/model-viewer.md)
 - [运行浏览器 WebGPU 平台 Smoke](guides/webgpu-browser-example.md)

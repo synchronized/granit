@@ -16,22 +16,22 @@ alignas(std::uint32_t) constexpr std::uint8_t archive_bytes[]{
 };
 
 alignas(std::uint32_t) constexpr std::uint8_t vertex_manifest[]{
-#include "model_viewer_pbr.vert.grshader.inc"
+#include "pbr_standard.vert.grshader.inc"
 };
 alignas(std::uint32_t) constexpr std::uint8_t vertex_spirv[]{
-#include "model_viewer_pbr.vert.grshader.spv.inc"
+#include "pbr_standard.vert.grshader.spv.inc"
 };
 alignas(std::uint32_t) constexpr std::uint8_t vertex_wgsl[]{
-#include "model_viewer_pbr.vert.grshader.wgsl.inc"
+#include "pbr_standard.vert.grshader.wgsl.inc"
 };
 alignas(std::uint32_t) constexpr std::uint8_t fragment_manifest[]{
-#include "model_viewer_pbr.frag.grshader.inc"
+#include "pbr_standard.frag.grshader.inc"
 };
 alignas(std::uint32_t) constexpr std::uint8_t fragment_spirv[]{
-#include "model_viewer_pbr.frag.grshader.spv.inc"
+#include "pbr_standard.frag.grshader.spv.inc"
 };
 alignas(std::uint32_t) constexpr std::uint8_t fragment_wgsl[]{
-#include "model_viewer_pbr.frag.grshader.wgsl.inc"
+#include "pbr_standard.frag.grshader.wgsl.inc"
 };
 
 struct embedded_shader_asset {

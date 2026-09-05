@@ -6,6 +6,7 @@ struct FrameConstants {
   camera_position: vec4f,
   direction_to_light: vec4f,
   light_radiance: vec4f,
+  render_options: vec4u,
 }
 
 struct ObjectConstants {

@@ -26,26 +26,27 @@ function(granit_check_package name expected_success)
   endif()
 endfunction()
 
-granit_check_package(core_only TRUE -DGRANIT_REQUEST_VERSION=0.8)
-granit_check_package(render_pipeline TRUE -DGRANIT_REQUEST_VERSION=0.8
+granit_check_package(core_only TRUE -DGRANIT_REQUEST_VERSION=0.9)
+granit_check_package(render_pipeline TRUE -DGRANIT_REQUEST_VERSION=0.9
                      -DGRANIT_REQUEST_COMPONENT=RenderPipeline)
-granit_check_package(window TRUE -DGRANIT_REQUEST_VERSION=0.8
+granit_check_package(window TRUE -DGRANIT_REQUEST_VERSION=0.9
                      -DGRANIT_REQUEST_COMPONENT=Window)
-granit_check_package(input TRUE -DGRANIT_REQUEST_VERSION=0.8
+granit_check_package(input TRUE -DGRANIT_REQUEST_VERSION=0.9
                      -DGRANIT_REQUEST_COMPONENT=Input)
 if(EXISTS "${GRANIT_INSTALL_PREFIX}/lib/cmake/granit/granitShaderToolsTargets.cmake")
-  granit_check_package(shader_tools TRUE -DGRANIT_REQUEST_VERSION=0.8
+  granit_check_package(shader_tools TRUE -DGRANIT_REQUEST_VERSION=0.9
                        -DGRANIT_REQUEST_COMPONENT=ShaderTools)
 else()
-  granit_check_package(shader_tools_unavailable FALSE -DGRANIT_REQUEST_VERSION=0.8
+  granit_check_package(shader_tools_unavailable FALSE -DGRANIT_REQUEST_VERSION=0.9
                        -DGRANIT_REQUEST_COMPONENT=ShaderTools)
 endif()
 granit_check_package(older_0_7 FALSE -DGRANIT_REQUEST_VERSION=0.7)
+granit_check_package(older_0_8 FALSE -DGRANIT_REQUEST_VERSION=0.8)
 granit_check_package(older_0_6 FALSE -DGRANIT_REQUEST_VERSION=0.6)
 granit_check_package(older_0_4 FALSE -DGRANIT_REQUEST_VERSION=0.4)
 granit_check_package(older_0_1 FALSE -DGRANIT_REQUEST_VERSION=0.1)
-granit_check_package(exact TRUE -DGRANIT_REQUEST_VERSION=0.8.0 -DGRANIT_REQUEST_EXACT=ON)
-granit_check_package(newer_minor FALSE -DGRANIT_REQUEST_VERSION=0.9)
+granit_check_package(exact TRUE -DGRANIT_REQUEST_VERSION=0.9.0 -DGRANIT_REQUEST_EXACT=ON)
+granit_check_package(newer_minor FALSE -DGRANIT_REQUEST_VERSION=0.10)
 granit_check_package(incompatible_major FALSE -DGRANIT_REQUEST_VERSION=1.0)
 granit_check_package(unknown_component FALSE -DGRANIT_REQUEST_COMPONENT=Unknown)
 

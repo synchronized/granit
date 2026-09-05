@@ -47,8 +47,8 @@
         "color_blend": {"enabled": false}
       },
       "shaders": [
-        {"asset": "model_viewer_pbr.vert.grshader"},
-        {"asset": "model_viewer_pbr.frag.grshader"}
+        {"asset": "../../assets/shaders/pbr/pbr_standard.vert.grshader"},
+        {"asset": "../../assets/shaders/pbr/pbr_standard.frag.grshader"}
       ]
     }
   ]
