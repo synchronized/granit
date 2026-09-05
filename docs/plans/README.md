@@ -152,6 +152,8 @@ D-03-graphics-pipeline.md
   和 SHA-256 清单的离线编译工具包，并让官方 CI 使用严格锁定策略。
 - [S-22：0.7.0 SDK 稳定化与上游集成](S-22-0.7.0-sdk-stabilization.md)——S-22A component 契约
   清单、安装 SDK 门禁、上游边界审计和发布候选验收均已完成。
+- [S-23：0.8.0 运行时 Shader 与材质资产契约](S-23-0.8.0-runtime-shader-assets.md)——已确认；
+  让 `.grshader` 进入 Core 运行时选择，并让 `.grmat` 引用同一 Shader Asset 身份。
 
 ## 状态
 
