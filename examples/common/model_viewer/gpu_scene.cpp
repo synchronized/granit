@@ -652,6 +652,14 @@ granit::result gpu_scene::create(granit_renderer renderer, const gltf::scene& so
   granit::upload_batch uploads;
   if (const auto result = uploads.initialize(renderer); result.failed())
     return result;
+  std::vector<granit::async_operation> upload_operations;
+  const auto submit_uploads = [&]() -> granit::result {
+    granit::async_operation operation;
+    if (const auto result = uploads.submit_async(operation); result.failed())
+      return result;
+    upload_operations.push_back(std::move(operation));
+    return granit::result::success;
+  };
   if (!plan_.vertices.empty()) {
     const auto size = plan_.vertices.size() * sizeof(packed_vertex);
     if (const auto result = vertex_buffer_.initialize(
@@ -753,7 +761,7 @@ granit::result gpu_scene::create(granit_renderer renderer, const gltf::scene& so
     textures_.push_back(std::move(target));
     ++textures_in_batch;
     if (textures_in_batch == 2) {
-      if (const auto result = uploads.submit(); result.failed())
+      if (const auto result = submit_uploads(); result.failed())
         return result;
       textures_in_batch = 0;
     }
@@ -849,7 +857,7 @@ granit::result gpu_scene::create(granit_renderer renderer, const gltf::scene& so
   }
   if (plan_.primitives.empty() && !report(gpu_scene_upload_stage::meshes, 0, 0))
     return granit::result::cancelled;
-  if (const auto result = uploads.submit(); result.failed())
+  if (const auto result = submit_uploads(); result.failed())
     return result;
   materials_.reserve(source.materials.size() + 1);
   for (std::size_t material_index = 0; material_index < source.materials.size(); ++material_index) {
