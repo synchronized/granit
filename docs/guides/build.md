@@ -78,6 +78,10 @@ find_package(granit CONFIG REQUIRED COMPONENTS RenderPipeline)
 target_link_libraries(your_target PRIVATE granit::render_pipeline)
 ```
 
+使用 `find_package`、`FetchContent_MakeAvailable(granit)` 或 `add_subdirectory(granit)` 后，均可通过
+`${granit_RENDER_PIPELINE_ASSET_DIR}` 定位同一结构的 `shaders/`、`materials/` 和
+`environments/` 公共资产目录。
+
 `RenderPipeline` component 同时安装 C API 与 C++20 包装，支持共享库和静态库。静态内部依赖由
 CMake 导出自动闭包；使用者不应直接依赖 `granit::detail_*` 目标。
 

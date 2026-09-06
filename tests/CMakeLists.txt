@@ -19,6 +19,14 @@ add_test(
 )
 
 add_test(
+  NAME granit.build_tree_consumers
+  COMMAND
+    "${CMAKE_COMMAND}" "-DGRANIT_SOURCE_DIR=${PROJECT_SOURCE_DIR}"
+    "-DGRANIT_TEST_BINARY_DIR=${CMAKE_CURRENT_BINARY_DIR}/build-tree-consumers"
+    -P "${PROJECT_SOURCE_DIR}/cmake/check_build_tree_consumers.cmake"
+)
+
+add_test(
   NAME granit.release_version
   COMMAND
     "${CMAKE_COMMAND}"

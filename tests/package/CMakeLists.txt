@@ -28,6 +28,9 @@ if(GRANIT_REQUEST_COMPONENT STREQUAL "RenderPipeline")
   if(NOT IS_DIRECTORY "${granit_RENDER_PIPELINE_ASSET_DIR}/shaders/pbr")
     message(FATAL_ERROR "RenderPipeline component 未提供公共 PBR 资产目录")
   endif()
+  if(NOT EXISTS "${granit_RENDER_PIPELINE_ASSET_DIR}/materials/pbr_standard.grmat")
+    message(FATAL_ERROR "RenderPipeline component 缺少标准 PBR 材质模板")
+  endif()
   foreach(asset IN ITEMS
       pbr_standard.vert.grshader
       pbr_standard.vert.grshader.spv

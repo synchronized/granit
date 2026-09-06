@@ -221,6 +221,23 @@ endif()
 
 granit_add_shader_asset_format()
 
+set(granit_build_tree_asset_dir "${CMAKE_CURRENT_BINARY_DIR}/granit-assets")
+file(MAKE_DIRECTORY "${granit_build_tree_asset_dir}")
+file(
+  COPY
+    "${CMAKE_CURRENT_SOURCE_DIR}/assets/shaders"
+    "${CMAKE_CURRENT_SOURCE_DIR}/assets/materials"
+    "${CMAKE_CURRENT_SOURCE_DIR}/assets/environments"
+  DESTINATION "${granit_build_tree_asset_dir}"
+)
+set(
+  granit_RENDER_PIPELINE_ASSET_DIR
+  "${granit_build_tree_asset_dir}"
+  CACHE INTERNAL
+  "Granit 构建树 RenderPipeline 资产根目录"
+  FORCE
+)
+
 add_library(granit_shader_asset_storage OBJECT tools/shader_asset.cpp tools/shader_asset.h)
 target_compile_features(granit_shader_asset_storage PUBLIC cxx_std_20)
 target_include_directories(
