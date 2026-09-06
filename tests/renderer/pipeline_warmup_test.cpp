@@ -97,4 +97,37 @@ TEST_CASE("Compute Pipeline 预热提供稳定键和缓存命中", "[pipeline-wa
   }
 }
 
+TEST_CASE("Pipeline 预热操作保留已经提交的资源", "[pipeline-warmup][lifetime]") {
+  granit::renderer renderer;
+  const auto initialized = renderer.initialize({.application_name = "granit-warmup-lifetime"});
+  if (environment_unavailable(initialized))
+    SKIP("当前运行环境没有满足要求的 Vulkan 设备");
+  REQUIRE(initialized == granit::result::success);
+
+  granit::pipeline_layout layout;
+  REQUIRE(layout.initialize(renderer.native_handle()) == granit::result::success);
+  granit::shader shader;
+  REQUIRE(shader.initialize(renderer.native_handle(),
+                            {.stage = granit::shader_stage::compute,
+                             .code = load_binary("minimal.comp.spv")}) ==
+          granit::result::success);
+  granit_compute_pipeline_desc desc = GRANIT_COMPUTE_PIPELINE_DESC_INIT;
+  desc.layout = layout.native_handle();
+  desc.compute_shader = shader.native_handle();
+  granit::pipeline_warmup_batch batch;
+  REQUIRE(batch.create(renderer.native_handle(), {.max_operation_count = 1}) ==
+          granit::result::success);
+  std::uint32_t index{};
+  REQUIRE(batch.add_compute(desc, index) == granit::result::success);
+  granit::async_operation operation;
+  REQUIRE(batch.submit_async(operation) == granit::result::success);
+
+  REQUIRE(shader.reset() == granit::result::success);
+  REQUIRE(layout.reset() == granit::result::success);
+  await(renderer, operation);
+  granit::pipeline_warmup_result_info info;
+  REQUIRE(granit::get_pipeline_warmup_result(operation, index, info) == granit::result::success);
+  CHECK(info.operation_result == granit::result::success);
+}
+
 } // namespace

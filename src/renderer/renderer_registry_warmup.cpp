@@ -208,34 +208,37 @@ granit_result renderer_registry::make_pipeline_warmup_key(
     const auto& layout_handle = entry.type == GRANIT_PIPELINE_WARMUP_TYPE_GRAPHICS
                                     ? entry.graphics.layout
                                     : entry.compute.layout;
-    const auto layout = pipeline_layouts_.find(layout_handle);
-    if (layout == pipeline_layouts_.end() || layout->second->owner != owner->second)
+    const auto layout = entry.retained_layout ? entry.retained_layout
+                                              : (pipeline_layouts_.contains(layout_handle)
+                                                     ? pipeline_layouts_.at(layout_handle)
+                                                     : nullptr);
+    if (!layout || layout->owner != owner->second)
       return GRANIT_ERROR_INVALID_HANDLE;
-    for (const auto& group : layout->second->bind_group_layouts) {
+    for (const auto& group : layout->bind_group_layouts) {
       append_value(bytes, static_cast<std::uint32_t>(group->entries.size()));
       for (const auto& binding : group->entries)
         append_structure(bytes, binding);
     }
     if (entry.type == GRANIT_PIPELINE_WARMUP_TYPE_GRAPHICS) {
-      const auto vertex = shaders_.find(entry.graphics.vertex_shader);
-      const auto fragment = shaders_.find(entry.graphics.fragment_shader);
-      if (vertex == shaders_.end() || fragment == shaders_.end() ||
-          vertex->second->owner != owner->second || fragment->second->owner != owner->second)
+      const auto vertex = entry.retained_vertex_shader;
+      const auto fragment = entry.retained_fragment_shader;
+      if (!vertex || !fragment || vertex->owner != owner->second ||
+          fragment->owner != owner->second)
         return GRANIT_ERROR_INVALID_HANDLE;
-      bytes.insert(bytes.end(), reinterpret_cast<const std::byte*>(vertex->second->content_id.data()),
-                   reinterpret_cast<const std::byte*>(vertex->second->content_id.data() +
-                                                      vertex->second->content_id.size()));
-      bytes.insert(bytes.end(), reinterpret_cast<const std::byte*>(fragment->second->content_id.data()),
-                   reinterpret_cast<const std::byte*>(fragment->second->content_id.data() +
-                                                      fragment->second->content_id.size()));
-      append_value(bytes, static_cast<std::uint32_t>(vertex->second->entry_point.size()));
-      bytes.insert(bytes.end(), reinterpret_cast<const std::byte*>(vertex->second->entry_point.data()),
-                   reinterpret_cast<const std::byte*>(vertex->second->entry_point.data() +
-                                                      vertex->second->entry_point.size()));
-      append_value(bytes, static_cast<std::uint32_t>(fragment->second->entry_point.size()));
-      bytes.insert(bytes.end(), reinterpret_cast<const std::byte*>(fragment->second->entry_point.data()),
-                   reinterpret_cast<const std::byte*>(fragment->second->entry_point.data() +
-                                                      fragment->second->entry_point.size()));
+      bytes.insert(bytes.end(), reinterpret_cast<const std::byte*>(vertex->content_id.data()),
+                   reinterpret_cast<const std::byte*>(vertex->content_id.data() +
+                                                      vertex->content_id.size()));
+      bytes.insert(bytes.end(), reinterpret_cast<const std::byte*>(fragment->content_id.data()),
+                   reinterpret_cast<const std::byte*>(fragment->content_id.data() +
+                                                      fragment->content_id.size()));
+      append_value(bytes, static_cast<std::uint32_t>(vertex->entry_point.size()));
+      bytes.insert(bytes.end(), reinterpret_cast<const std::byte*>(vertex->entry_point.data()),
+                   reinterpret_cast<const std::byte*>(vertex->entry_point.data() +
+                                                      vertex->entry_point.size()));
+      append_value(bytes, static_cast<std::uint32_t>(fragment->entry_point.size()));
+      bytes.insert(bytes.end(), reinterpret_cast<const std::byte*>(fragment->entry_point.data()),
+                   reinterpret_cast<const std::byte*>(fragment->entry_point.data() +
+                                                      fragment->entry_point.size()));
       append_value(bytes, static_cast<std::uint32_t>(entry.color_formats.size()));
       for (const auto format : entry.color_formats)
         append_value(bytes, format);
@@ -258,16 +261,16 @@ granit_result renderer_registry::make_pipeline_warmup_key(
       for (const auto& blend : entry.color_blends)
         append_structure(bytes, blend);
     } else {
-      const auto compute = shaders_.find(entry.compute.compute_shader);
-      if (compute == shaders_.end() || compute->second->owner != owner->second)
+      const auto compute = entry.retained_compute_shader;
+      if (!compute || compute->owner != owner->second)
         return GRANIT_ERROR_INVALID_HANDLE;
-      bytes.insert(bytes.end(), reinterpret_cast<const std::byte*>(compute->second->content_id.data()),
-                   reinterpret_cast<const std::byte*>(compute->second->content_id.data() +
-                                                      compute->second->content_id.size()));
-      append_value(bytes, static_cast<std::uint32_t>(compute->second->entry_point.size()));
-      bytes.insert(bytes.end(), reinterpret_cast<const std::byte*>(compute->second->entry_point.data()),
-                   reinterpret_cast<const std::byte*>(compute->second->entry_point.data() +
-                                                      compute->second->entry_point.size()));
+      bytes.insert(bytes.end(), reinterpret_cast<const std::byte*>(compute->content_id.data()),
+                   reinterpret_cast<const std::byte*>(compute->content_id.data() +
+                                                      compute->content_id.size()));
+      append_value(bytes, static_cast<std::uint32_t>(compute->entry_point.size()));
+      bytes.insert(bytes.end(), reinterpret_cast<const std::byte*>(compute->entry_point.data()),
+                   reinterpret_cast<const std::byte*>(compute->entry_point.data() +
+                                                      compute->entry_point.size()));
     }
     const auto digest = granit::tools::shader_bytes_sha256(bytes);
     for (std::size_t index = 0; index < digest.size(); ++index)
@@ -306,6 +309,32 @@ granit_result renderer_registry::submit_pipeline_warmup_batch_async(
         entry.result.type = entry.type;
       }
     }
+    {
+      std::lock_guard lock{mutex_};
+      for (auto& entry : payload->entries) {
+        const auto layout_handle = entry.type == GRANIT_PIPELINE_WARMUP_TYPE_GRAPHICS
+                                       ? entry.graphics.layout
+                                       : entry.compute.layout;
+        const auto layout = pipeline_layouts_.find(layout_handle);
+        if (layout == pipeline_layouts_.end() || layout->second->owner != record->owner)
+          return GRANIT_ERROR_INVALID_HANDLE;
+        entry.retained_layout = layout->second;
+        if (entry.type == GRANIT_PIPELINE_WARMUP_TYPE_GRAPHICS) {
+          const auto vertex = shaders_.find(entry.graphics.vertex_shader);
+          const auto fragment = shaders_.find(entry.graphics.fragment_shader);
+          if (vertex == shaders_.end() || fragment == shaders_.end() ||
+              vertex->second->owner != record->owner || fragment->second->owner != record->owner)
+            return GRANIT_ERROR_INVALID_HANDLE;
+          entry.retained_vertex_shader = vertex->second;
+          entry.retained_fragment_shader = fragment->second;
+        } else {
+          const auto compute = shaders_.find(entry.compute.compute_shader);
+          if (compute == shaders_.end() || compute->second->owner != record->owner)
+            return GRANIT_ERROR_INVALID_HANDLE;
+          entry.retained_compute_shader = compute->second;
+        }
+      }
+    }
     auto state = std::make_shared<async_operation_state_machine>();
     if (!state->begin())
       return GRANIT_ERROR_INTERNAL;
@@ -326,10 +355,6 @@ granit_result renderer_registry::submit_pipeline_warmup_batch_async(
         }
         payload->pending.reset();
         payload->pending_owner.reset();
-        payload->pending_layout.reset();
-        payload->pending_vertex_shader.reset();
-        payload->pending_fragment_shader.reset();
-        payload->pending_compute_shader.reset();
         ++payload->next_index;
         if (payload->next_index == payload->entries.size())
           state->complete(GRANIT_SUCCESS);
@@ -369,40 +394,19 @@ granit_result renderer_registry::submit_pipeline_warmup_batch_async(
         if (warmup) {
           payload->pending_cache_key = std::move(cache_key);
           payload->pending_owner = owner;
-          {
-            std::lock_guard lock{mutex_};
-            const auto layout_handle = entry.type == GRANIT_PIPELINE_WARMUP_TYPE_GRAPHICS
-                                           ? entry.graphics.layout
-                                           : entry.compute.layout;
-            const auto layout = pipeline_layouts_.find(layout_handle);
-            if (layout != pipeline_layouts_.end() && layout->second->owner == owner)
-              payload->pending_layout = layout->second;
-            if (entry.type == GRANIT_PIPELINE_WARMUP_TYPE_GRAPHICS) {
-              const auto vertex = shaders_.find(entry.graphics.vertex_shader);
-              const auto fragment = shaders_.find(entry.graphics.fragment_shader);
-              if (vertex != shaders_.end() && vertex->second->owner == owner)
-                payload->pending_vertex_shader = vertex->second;
-              if (fragment != shaders_.end() && fragment->second->owner == owner)
-                payload->pending_fragment_shader = fragment->second;
-            } else {
-              const auto compute = shaders_.find(entry.compute.compute_shader);
-              if (compute != shaders_.end() && compute->second->owner == owner)
-                payload->pending_compute_shader = compute->second;
-            }
-          }
-          if (!payload->pending_layout ||
+          if (!entry.retained_layout ||
               (entry.type == GRANIT_PIPELINE_WARMUP_TYPE_GRAPHICS &&
-               (!payload->pending_vertex_shader || !payload->pending_fragment_shader)) ||
+               (!entry.retained_vertex_shader || !entry.retained_fragment_shader)) ||
               (entry.type == GRANIT_PIPELINE_WARMUP_TYPE_COMPUTE &&
-               !payload->pending_compute_shader)) {
+               !entry.retained_compute_shader)) {
             result = GRANIT_ERROR_INVALID_HANDLE;
           } else if (entry.type == GRANIT_PIPELINE_WARMUP_TYPE_GRAPHICS) {
             const backend_graphics_pipeline_create_info info{
-                *payload->pending_layout->native,
-                *payload->pending_vertex_shader->native,
-                payload->pending_vertex_shader->entry_point.c_str(),
-                *payload->pending_fragment_shader->native,
-                payload->pending_fragment_shader->entry_point.c_str(),
+                *entry.retained_layout->native,
+                *entry.retained_vertex_shader->native,
+                entry.retained_vertex_shader->entry_point.c_str(),
+                *entry.retained_fragment_shader->native,
+                entry.retained_fragment_shader->entry_point.c_str(),
                 {entry.graphics.vertex_buffer_layouts,
                  entry.graphics.vertex_buffer_layout_count},
                 entry.graphics.primitive,
@@ -415,17 +419,13 @@ granit_result renderer_registry::submit_pipeline_warmup_batch_async(
             result = warmup->warmup_graphics_pipeline_async(info, payload->pending);
           } else {
             result = warmup->warmup_compute_pipeline_async(
-                *payload->pending_layout->native, *payload->pending_compute_shader->native,
-                payload->pending_compute_shader->entry_point.c_str(), payload->pending);
+                *entry.retained_layout->native, *entry.retained_compute_shader->native,
+                entry.retained_compute_shader->entry_point.c_str(), payload->pending);
           }
           if (result == GRANIT_SUCCESS && payload->pending)
             return;
           payload->pending.reset();
           payload->pending_owner.reset();
-          payload->pending_layout.reset();
-          payload->pending_vertex_shader.reset();
-          payload->pending_fragment_shader.reset();
-          payload->pending_compute_shader.reset();
           payload->pending_cache_key.clear();
         }
         if (!warmup && entry.type == GRANIT_PIPELINE_WARMUP_TYPE_GRAPHICS) {
