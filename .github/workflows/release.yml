@@ -104,7 +104,7 @@ jobs:
     runs-on: ubuntu-24.04
     container:
       image: >-
-        ghcr.io/synchronized/granit-ci@sha256:def0c91ae33fb0cd7abb8a27fd4cf5318343308635ee871eee67025ba10f410e
+        ghcr.io/synchronized/granit-ci@sha256:6a2d0aba3b2464838958a4259d3a343106205eb35df9f4ad24d060bf98739015
       credentials:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
