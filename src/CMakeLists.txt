@@ -71,6 +71,8 @@ target_sources(
     backend/contracts/lifecycle.h
     core/handle_table.cpp
     core/handle_table.h
+    core/async_operation_state.cpp
+    core/async_operation_state.h
     core/diagnostic_sink.cpp
     core/diagnostic_sink.h
     core/lifecycle_validation.cpp
@@ -82,6 +84,7 @@ target_sources(
     core/retirement_queue.h
     core/device_status.h
     renderer/renderer_api.cpp
+    renderer/async_operation_api.cpp
     renderer/renderer_factory.cpp
     renderer/renderer_factory.h
     renderer/pipeline_api.cpp
@@ -89,6 +92,7 @@ target_sources(
     renderer/command_recorder_api.cpp
     renderer/frame_context_api.cpp
     renderer/renderer_registry.cpp
+    renderer/renderer_registry_async.cpp
     backend/vulkan/renderer_factory.cpp
     renderer/renderer_registry_buffer.cpp
     renderer/renderer_registry_command.cpp
@@ -127,6 +131,8 @@ target_sources(
       "${PROJECT_SOURCE_DIR}/include/granit/core/diagnostic.hpp"
       "${PROJECT_SOURCE_DIR}/include/granit/renderer/buffer.h"
       "${PROJECT_SOURCE_DIR}/include/granit/renderer/buffer.hpp"
+      "${PROJECT_SOURCE_DIR}/include/granit/renderer/async_operation.h"
+      "${PROJECT_SOURCE_DIR}/include/granit/renderer/async_operation.hpp"
       "${PROJECT_SOURCE_DIR}/include/granit/renderer/command_recorder.h"
       "${PROJECT_SOURCE_DIR}/include/granit/renderer/command_recorder.hpp"
       "${PROJECT_SOURCE_DIR}/include/granit/renderer/frame_context.h"

@@ -16,6 +16,7 @@
 #include <vector>
 
 #include <granit/renderer/buffer.h>
+#include <granit/renderer/async_operation.h>
 #include <granit/renderer/command_recorder.h>
 #include <granit/renderer/frame_context.h>
 #include <granit/renderer/pipeline.h>
@@ -50,6 +51,8 @@
 
 namespace granit::detail {
 
+class async_operation_state_machine;
+
 /** 线程安全地管理进程内公开 renderer 句柄。 */
 class renderer_registry {
 public:
@@ -73,6 +76,16 @@ public:
   [[nodiscard]] granit_result get_info(granit_renderer renderer, granit_renderer_info& info);
   [[nodiscard]] granit_result get_resource_stats(granit_renderer renderer,
                                                  granit_renderer_resource_stats& stats);
+  [[nodiscard]] granit_result register_async_operation(
+      granit_renderer renderer, std::shared_ptr<async_operation_state_machine> state,
+      granit_async_operation& operation);
+  [[nodiscard]] granit_result get_async_operation_status(
+      granit_renderer renderer, granit_async_operation operation,
+      granit_async_operation_status& status);
+  [[nodiscard]] granit_result request_async_operation_cancel(
+      granit_renderer renderer, granit_async_operation operation);
+  [[nodiscard]] granit_result destroy_async_operation(granit_renderer renderer,
+                                                      granit_async_operation operation);
   [[nodiscard]] granit_result get_status(granit_renderer renderer, granit_renderer_status& status);
   [[nodiscard]] granit_result process_events(granit_renderer renderer);
   [[nodiscard]] granit_result import_pipeline_cache(granit_renderer renderer, const void* data,
@@ -365,6 +378,7 @@ private:
   struct frame_context_slot;
   struct frame_context_record;
   struct timestamp_query_pool_record;
+  struct async_operation_record;
   struct frame_record;
   struct upload_entry;
   struct upload_batch_record;
@@ -410,6 +424,8 @@ private:
   std::unordered_map<granit_frame_context, std::shared_ptr<frame_context_record>> frame_contexts_;
   std::unordered_map<granit_timestamp_query_pool, std::shared_ptr<timestamp_query_pool_record>>
       timestamp_query_pools_;
+  std::unordered_map<granit_async_operation, std::shared_ptr<async_operation_record>>
+      async_operations_;
   std::unordered_map<granit_frame, std::shared_ptr<frame_record>> frames_;
   std::unordered_map<granit_upload_batch, std::shared_ptr<upload_batch_record>> upload_batches_;
   std::uint32_t next_domain_{1};

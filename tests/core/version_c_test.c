@@ -24,6 +24,28 @@ static void granit_test_result_messages(void) {
   TEST_ASSERT_NOT_NULL(granit_result_message(GRANIT_SUCCESS));
   TEST_ASSERT_NOT_NULL(granit_result_message(GRANIT_ERROR_INVALID_ARGUMENT));
   TEST_ASSERT_NOT_NULL(granit_result_message(GRANIT_ERROR_NOT_READY));
+  TEST_ASSERT_EQUAL_STRING("operation cancelled", granit_result_message(GRANIT_ERROR_CANCELLED));
+}
+
+static void granit_test_async_operation_invalid_arguments(void) {
+  granit_async_operation_status status = GRANIT_ASYNC_OPERATION_STATUS_INIT;
+  TEST_ASSERT_EQUAL_INT32(
+      GRANIT_ERROR_INVALID_ARGUMENT,
+      granit_async_operation_get_status(GRANIT_NULL_HANDLE, GRANIT_NULL_HANDLE, NULL));
+  status.struct_size = 0;
+  TEST_ASSERT_EQUAL_INT32(
+      GRANIT_ERROR_INVALID_ARGUMENT,
+      granit_async_operation_get_status(GRANIT_NULL_HANDLE, GRANIT_NULL_HANDLE, &status));
+  status = (granit_async_operation_status)GRANIT_ASYNC_OPERATION_STATUS_INIT;
+  TEST_ASSERT_EQUAL_INT32(
+      GRANIT_ERROR_INVALID_HANDLE,
+      granit_async_operation_get_status(GRANIT_NULL_HANDLE, GRANIT_NULL_HANDLE, &status));
+  TEST_ASSERT_EQUAL_INT32(
+      GRANIT_ERROR_INVALID_HANDLE,
+      granit_async_operation_request_cancel(GRANIT_NULL_HANDLE, GRANIT_NULL_HANDLE));
+  TEST_ASSERT_EQUAL_INT32(
+      GRANIT_ERROR_INVALID_HANDLE,
+      granit_async_operation_destroy(GRANIT_NULL_HANDLE, GRANIT_NULL_HANDLE));
 }
 
 static void granit_test_renderer_rejects_invalid_arguments(void) {
@@ -179,6 +201,7 @@ int main(void) {
   UNITY_BEGIN();
   RUN_TEST(granit_test_public_types);
   RUN_TEST(granit_test_result_messages);
+  RUN_TEST(granit_test_async_operation_invalid_arguments);
   RUN_TEST(granit_test_renderer_rejects_invalid_arguments);
   RUN_TEST(granit_test_surface_rejects_invalid_arguments);
   RUN_TEST(granit_test_swapchain_rejects_invalid_arguments);

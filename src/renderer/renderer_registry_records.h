@@ -5,6 +5,7 @@
 #define GRANIT_RENDERER_RENDERER_REGISTRY_RECORDS_H_
 
 #include "renderer/renderer_registry.h"
+#include "core/async_operation_state.h"
 
 namespace granit::detail {
 
@@ -163,6 +164,11 @@ struct renderer_registry::timestamp_query_pool_record {
   std::shared_ptr<backend_retirement_renderer> retirement;
   std::unique_ptr<backend_timestamp_query_pool_resource> native;
   std::mutex mutex;
+};
+struct renderer_registry::async_operation_record {
+  resource_metadata metadata;
+  std::shared_ptr<backend_renderer> owner;
+  std::shared_ptr<async_operation_state_machine> state;
 };
 struct renderer_registry::frame_record {
   std::shared_ptr<backend_renderer> owner;

@@ -16,7 +16,7 @@ GRANIT_ABI_ASSERT(granit_abi_result_size, sizeof(granit_result) == 4);
 GRANIT_ABI_ASSERT(granit_abi_null_handle, GRANIT_NULL_HANDLE == UINT64_C(0));
 GRANIT_ABI_ASSERT(granit_abi_success, GRANIT_SUCCESS == INT32_C(0));
 GRANIT_ABI_ASSERT(granit_abi_first_error, GRANIT_ERROR_UNKNOWN == INT32_C(-1));
-GRANIT_ABI_ASSERT(granit_abi_last_error, GRANIT_ERROR_NOT_READY == INT32_C(-14));
+GRANIT_ABI_ASSERT(granit_abi_last_error, GRANIT_ERROR_CANCELLED == INT32_C(-15));
 GRANIT_ABI_ASSERT(granit_abi_renderer_api_version, GRANIT_RENDERER_API_VERSION_CURRENT == 1);
 GRANIT_ABI_ASSERT(granit_abi_renderer_status_size, sizeof(granit_renderer_status) == 16);
 GRANIT_ABI_ASSERT(granit_abi_renderer_status_v1, GRANIT_RENDERER_STATUS_VERSION_1_SIZE == 16);

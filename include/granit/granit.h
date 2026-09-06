@@ -14,6 +14,7 @@
 #include <granit/core/version.h>
 #include <granit/math/types.h>
 #include <granit/renderer/buffer.h>
+#include <granit/renderer/async_operation.h>
 #include <granit/renderer/command_recorder.h>
 #include <granit/renderer/frame_context.h>
 #include <granit/renderer/pipeline.h>

@@ -55,6 +55,7 @@ add_library(
   OBJECT
     abi/layout_h.c
     headers/diagnostic_h.c
+    headers/async_operation_h.c
     headers/command_recorder_h.c
     headers/frame_context_h.c
     headers/math_types_h.c
@@ -200,6 +201,18 @@ target_link_libraries(
 )
 granit_target_compile_warnings(granit_handle_table_test)
 add_test(NAME granit.handle_table COMMAND granit_handle_table_test)
+
+add_executable(
+  granit_async_operation_state_test
+  core/async_operation_state_test.cpp
+  "${PROJECT_SOURCE_DIR}/src/core/async_operation_state.cpp"
+)
+target_include_directories(granit_async_operation_state_test PRIVATE "${PROJECT_SOURCE_DIR}/src")
+target_link_libraries(
+  granit_async_operation_state_test PRIVATE granit::granit Catch2::Catch2WithMain
+)
+granit_target_compile_warnings(granit_async_operation_state_test)
+add_test(NAME granit.async_operation_state COMMAND granit_async_operation_state_test)
 
 add_executable(
   granit_resource_validation_test
@@ -588,6 +601,7 @@ add_library(
   granit_cpp_header_test
   OBJECT
     headers/diagnostic_hpp.cpp
+    headers/async_operation_hpp.cpp
     headers/command_recorder_hpp.cpp
     headers/frame_context_hpp.cpp
     headers/math_types_hpp.cpp
