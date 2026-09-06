@@ -3,6 +3,9 @@
 
 #include "backend/vulkan/vulkan_renderer_state.h"
 
+#include <chrono>
+#include <future>
+
 #include "backend/vulkan/resources.h"
 #include "backend/vulkan/result.h"
 #include "backend/vulkan/surface.h"
@@ -20,6 +23,32 @@
 #include <type_traits>
 
 namespace granit::detail {
+namespace {
+
+class vulkan_pipeline_warmup_completion final : public backend_pipeline_warmup_completion {
+public:
+  explicit vulkan_pipeline_warmup_completion(std::future<granit_result>&& result)
+      : result_(std::move(result)) {}
+
+  granit_result poll() noexcept override {
+    if (!result_.valid())
+      return GRANIT_ERROR_INTERNAL;
+    if (result_.wait_for(std::chrono::seconds{0}) != std::future_status::ready)
+      return GRANIT_ERROR_NOT_READY;
+    try {
+      return result_.get();
+    } catch (const std::bad_alloc&) {
+      return GRANIT_ERROR_OUT_OF_MEMORY;
+    } catch (...) {
+      return GRANIT_ERROR_INTERNAL;
+    }
+  }
+
+private:
+  std::future<granit_result> result_;
+};
+
+} // namespace
 namespace {
 
 class callback_upload_completion final : public backend_upload_completion {
@@ -795,6 +824,49 @@ granit_result vulkan_renderer_state::create_graphics_pipeline(
       info.layout, info.vertex_shader, info.vertex_entry, info.fragment_shader, info.fragment_entry,
       info.vertex_buffers, info.primitive, info.depth, info.depth_bias, info.color_blends,
       info.color_formats, info.depth_stencil_format, info.sample_count, pipeline);
+}
+
+granit_result vulkan_renderer_state::warmup_graphics_pipeline_async(
+    const backend_graphics_pipeline_create_info& info,
+    std::unique_ptr<backend_pipeline_warmup_completion>& completion) noexcept {
+  try {
+    auto owner = shared_from_this();
+    auto future = std::async(std::launch::async, [owner = std::move(owner), info]() {
+      auto pipeline = owner->allocate_graphics_pipeline_resource();
+      if (!pipeline)
+        return GRANIT_ERROR_OUT_OF_MEMORY;
+      return owner->create_graphics_pipeline(info, *pipeline);
+    });
+    completion = std::make_unique<vulkan_pipeline_warmup_completion>(std::move(future));
+    return GRANIT_SUCCESS;
+  } catch (const std::bad_alloc&) {
+    return GRANIT_ERROR_OUT_OF_MEMORY;
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+granit_result vulkan_renderer_state::warmup_compute_pipeline_async(
+    backend_pipeline_layout_resource& layout, backend_shader_resource& shader,
+    const char* entry_point,
+    std::unique_ptr<backend_pipeline_warmup_completion>& completion) noexcept {
+  try {
+    auto owner = shared_from_this();
+    auto future = std::async(std::launch::async,
+                             [owner = std::move(owner), &layout, &shader, entry_point]() {
+                               auto pipeline = owner->allocate_compute_pipeline_resource();
+                               if (!pipeline)
+                                 return GRANIT_ERROR_OUT_OF_MEMORY;
+                               return owner->create_compute_pipeline(layout, shader, entry_point,
+                                                                     *pipeline);
+                             });
+    completion = std::make_unique<vulkan_pipeline_warmup_completion>(std::move(future));
+    return GRANIT_SUCCESS;
+  } catch (const std::bad_alloc&) {
+    return GRANIT_ERROR_OUT_OF_MEMORY;
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
 }
 
 std::unique_ptr<backend_compute_pipeline_resource>

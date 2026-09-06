@@ -62,6 +62,35 @@ public:
                            backend_graphics_pipeline_resource& pipeline) noexcept = 0;
 };
 
+/** 后端异步 Pipeline 预热的完成对象。 */
+class backend_pipeline_warmup_completion {
+public:
+  backend_pipeline_warmup_completion() = default;
+  virtual ~backend_pipeline_warmup_completion() = default;
+  backend_pipeline_warmup_completion(const backend_pipeline_warmup_completion&) = delete;
+  backend_pipeline_warmup_completion& operator=(const backend_pipeline_warmup_completion&) = delete;
+
+  /** 返回 NOT_READY、SUCCESS 或最终失败结果；实现不得阻塞调用线程。 */
+  [[nodiscard]] virtual granit_result poll() noexcept = 0;
+};
+
+/** 提供严格非阻塞的 Pipeline 预热能力。 */
+class backend_pipeline_warmup_renderer {
+public:
+  backend_pipeline_warmup_renderer() = default;
+  virtual ~backend_pipeline_warmup_renderer() = default;
+  backend_pipeline_warmup_renderer(const backend_pipeline_warmup_renderer&) = delete;
+  backend_pipeline_warmup_renderer& operator=(const backend_pipeline_warmup_renderer&) = delete;
+
+  [[nodiscard]] virtual granit_result warmup_graphics_pipeline_async(
+      const backend_graphics_pipeline_create_info& info,
+      std::unique_ptr<backend_pipeline_warmup_completion>& completion) noexcept = 0;
+  [[nodiscard]] virtual granit_result warmup_compute_pipeline_async(
+      backend_pipeline_layout_resource& layout, backend_shader_resource& shader,
+      const char* entry_point,
+      std::unique_ptr<backend_pipeline_warmup_completion>& completion) noexcept = 0;
+};
+
 /** 提供可选的后端 Pipeline Cache 导入与导出能力。 */
 class backend_pipeline_cache_renderer {
 public:

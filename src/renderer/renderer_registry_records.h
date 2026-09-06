@@ -268,9 +268,13 @@ struct renderer_registry::pipeline_warmup_batch_operation {
   granit_renderer renderer{};
   std::vector<pipeline_warmup_entry> entries;
   std::size_t next_index{};
-  std::future<granit_result> pending;
+  std::unique_ptr<backend_pipeline_warmup_completion> pending;
   std::string pending_cache_key;
   std::shared_ptr<backend_renderer> pending_owner;
+  std::shared_ptr<pipeline_layout_record> pending_layout;
+  std::shared_ptr<shader_record> pending_vertex_shader;
+  std::shared_ptr<shader_record> pending_fragment_shader;
+  std::shared_ptr<shader_record> pending_compute_shader;
 };
 
 } // namespace granit::detail

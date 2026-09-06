@@ -96,6 +96,10 @@ granit_result renderer_registry::add_graphics_pipeline_warmup(
       entry.color_formats.assign(desc.color_formats, desc.color_formats + desc.color_format_count);
     if (desc.color_blend_count != 0)
       entry.color_blends.assign(desc.color_blends, desc.color_blends + desc.color_blend_count);
+    else {
+      entry.color_blends.resize(desc.color_format_count, GRANIT_COLOR_BLEND_STATE_INIT);
+      entry.graphics.color_blend_count = desc.color_format_count;
+    }
     if (desc.vertex_buffer_layout_count != 0)
       entry.vertex_buffers.assign(desc.vertex_buffer_layouts,
                                   desc.vertex_buffer_layouts + desc.vertex_buffer_layout_count);
@@ -108,6 +112,9 @@ granit_result renderer_registry::add_graphics_pipeline_warmup(
         entry.vertex_attributes[index].assign(layout.attributes,
                                               layout.attributes + layout.attribute_count);
     }
+    entry.depth = {desc.depth_stencil_format != GRANIT_TEXTURE_FORMAT_UNDEFINED,
+                   desc.depth_stencil_format != GRANIT_TEXTURE_FORMAT_UNDEFINED,
+                   GRANIT_COMPARE_OPERATION_LESS_EQUAL, 0};
     if (desc.depth)
       entry.depth = *desc.depth;
     if (desc.depth_bias)
@@ -307,16 +314,22 @@ granit_result renderer_registry::submit_pipeline_warmup_batch_async(
       const auto status = state->status();
       if (status.state != GRANIT_ASYNC_OPERATION_STATE_RUNNING)
         return;
-      if (payload->pending.valid()) {
-        if (payload->pending.wait_for(std::chrono::seconds{0}) != std::future_status::ready)
+      if (payload->pending) {
+        const auto pending_result = payload->pending->poll();
+        if (pending_result == GRANIT_ERROR_NOT_READY)
           return;
         auto& entry = payload->entries[payload->next_index];
-        entry.result.result = payload->pending.get();
+        entry.result.result = pending_result;
         if (entry.result.result == GRANIT_SUCCESS) {
           std::lock_guard lock{mutex_};
           warmed_pipeline_keys_[std::move(payload->pending_cache_key)] = payload->pending_owner;
         }
+        payload->pending.reset();
         payload->pending_owner.reset();
+        payload->pending_layout.reset();
+        payload->pending_vertex_shader.reset();
+        payload->pending_fragment_shader.reset();
+        payload->pending_compute_shader.reset();
         ++payload->next_index;
         if (payload->next_index == payload->entries.size())
           state->complete(GRANIT_SUCCESS);
@@ -346,49 +359,81 @@ granit_result renderer_registry::submit_pipeline_warmup_batch_async(
           entry.result.cache_hit = 1;
       }
       if (result == GRANIT_SUCCESS && entry.result.cache_hit == 0) {
-        const auto strictly_non_blocking =
-            owner && (owner->capabilities().renderer_features &
-                      GRANIT_RENDERER_FEATURE_NON_BLOCKING_PIPELINE_WARMUP_BIT) != 0;
-        if (strictly_non_blocking) {
+        std::shared_ptr<backend_pipeline_warmup_renderer> warmup;
+        {
+          std::lock_guard lock{mutex_};
+          const auto found = backend_interfaces_.find(payload->renderer);
+          if (found != backend_interfaces_.end())
+            warmup = found->second->pipeline_warmup;
+        }
+        if (warmup) {
           payload->pending_cache_key = std::move(cache_key);
           payload->pending_owner = owner;
-          auto work = entry;
-          try {
-            payload->pending = std::async(std::launch::async,
-                                         [this, renderer = payload->renderer,
-                                          work = std::move(work)]() mutable {
-                                           if (work.type == GRANIT_PIPELINE_WARMUP_TYPE_GRAPHICS) {
-                                             refresh_graphics_pointers(work);
-                                             granit_graphics_pipeline pipeline{};
-                                             auto create_result = create_graphics_pipeline(
-                                                 renderer, work.graphics, pipeline);
-                                             return create_result == GRANIT_SUCCESS
-                                                        ? destroy_graphics_pipeline(renderer,
-                                                                                    pipeline)
-                                                        : create_result;
-                                           }
-                                           granit_compute_pipeline pipeline{};
-                                           auto create_result = create_compute_pipeline(
-                                               renderer, work.compute, pipeline);
-                                           return create_result == GRANIT_SUCCESS
-                                                      ? destroy_compute_pipeline(renderer, pipeline)
-                                                      : create_result;
-                                         });
-            return;
-          } catch (const std::bad_alloc&) {
-            result = GRANIT_ERROR_OUT_OF_MEMORY;
-          } catch (...) {
-            result = GRANIT_ERROR_INTERNAL;
+          {
+            std::lock_guard lock{mutex_};
+            const auto layout_handle = entry.type == GRANIT_PIPELINE_WARMUP_TYPE_GRAPHICS
+                                           ? entry.graphics.layout
+                                           : entry.compute.layout;
+            const auto layout = pipeline_layouts_.find(layout_handle);
+            if (layout != pipeline_layouts_.end() && layout->second->owner == owner)
+              payload->pending_layout = layout->second;
+            if (entry.type == GRANIT_PIPELINE_WARMUP_TYPE_GRAPHICS) {
+              const auto vertex = shaders_.find(entry.graphics.vertex_shader);
+              const auto fragment = shaders_.find(entry.graphics.fragment_shader);
+              if (vertex != shaders_.end() && vertex->second->owner == owner)
+                payload->pending_vertex_shader = vertex->second;
+              if (fragment != shaders_.end() && fragment->second->owner == owner)
+                payload->pending_fragment_shader = fragment->second;
+            } else {
+              const auto compute = shaders_.find(entry.compute.compute_shader);
+              if (compute != shaders_.end() && compute->second->owner == owner)
+                payload->pending_compute_shader = compute->second;
+            }
           }
+          if (!payload->pending_layout ||
+              (entry.type == GRANIT_PIPELINE_WARMUP_TYPE_GRAPHICS &&
+               (!payload->pending_vertex_shader || !payload->pending_fragment_shader)) ||
+              (entry.type == GRANIT_PIPELINE_WARMUP_TYPE_COMPUTE &&
+               !payload->pending_compute_shader)) {
+            result = GRANIT_ERROR_INVALID_HANDLE;
+          } else if (entry.type == GRANIT_PIPELINE_WARMUP_TYPE_GRAPHICS) {
+            const backend_graphics_pipeline_create_info info{
+                *payload->pending_layout->native,
+                *payload->pending_vertex_shader->native,
+                payload->pending_vertex_shader->entry_point.c_str(),
+                *payload->pending_fragment_shader->native,
+                payload->pending_fragment_shader->entry_point.c_str(),
+                {entry.graphics.vertex_buffer_layouts,
+                 entry.graphics.vertex_buffer_layout_count},
+                entry.graphics.primitive,
+                entry.depth,
+                entry.graphics.depth_bias,
+                {entry.graphics.color_blends, entry.graphics.color_blend_count},
+                {entry.graphics.color_formats, entry.graphics.color_format_count},
+                entry.graphics.depth_stencil_format,
+                entry.graphics.sample_count};
+            result = warmup->warmup_graphics_pipeline_async(info, payload->pending);
+          } else {
+            result = warmup->warmup_compute_pipeline_async(
+                *payload->pending_layout->native, *payload->pending_compute_shader->native,
+                payload->pending_compute_shader->entry_point.c_str(), payload->pending);
+          }
+          if (result == GRANIT_SUCCESS && payload->pending)
+            return;
+          payload->pending.reset();
           payload->pending_owner.reset();
+          payload->pending_layout.reset();
+          payload->pending_vertex_shader.reset();
+          payload->pending_fragment_shader.reset();
+          payload->pending_compute_shader.reset();
           payload->pending_cache_key.clear();
         }
-        if (entry.type == GRANIT_PIPELINE_WARMUP_TYPE_GRAPHICS) {
+        if (!warmup && entry.type == GRANIT_PIPELINE_WARMUP_TYPE_GRAPHICS) {
           granit_graphics_pipeline pipeline{};
           result = create_graphics_pipeline(payload->renderer, entry.graphics, pipeline);
           if (result == GRANIT_SUCCESS)
             result = destroy_graphics_pipeline(payload->renderer, pipeline);
-        } else {
+        } else if (!warmup) {
           granit_compute_pipeline pipeline{};
           result = create_compute_pipeline(payload->renderer, entry.compute, pipeline);
           if (result == GRANIT_SUCCESS)
