@@ -178,7 +178,7 @@ async function main() {
   }
   const browser = await chromium.launch({
     executablePath: chromePath,
-    headless: true,
+    headless: process.env.GRANIT_BROWSER_HEADLESS !== "0",
     args: browserArguments,
   });
   const page = await browser.newPage();
