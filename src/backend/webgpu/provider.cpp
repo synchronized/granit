@@ -141,6 +141,7 @@ struct webgpu_instance {
   };
   struct pipeline_warmup_record {
     std::atomic<granit_result> result{GRANIT_ERROR_NOT_READY};
+    WGPUFuture future{};
   };
   struct surface_record {
     void* surface;
@@ -2579,10 +2580,14 @@ create_render_pipeline_common(granit_webgpu_provider_instance instance,
       wgpuInstanceAddRef(state.instance);
       WGPUCreateRenderPipelineAsyncCallbackInfo callback =
           WGPU_CREATE_RENDER_PIPELINE_ASYNC_CALLBACK_INFO_INIT;
+#if defined(__EMSCRIPTEN__)
+      callback.mode = WGPUCallbackMode_WaitAnyOnly;
+#else
       callback.mode = WGPUCallbackMode_AllowSpontaneous;
+#endif
       callback.callback = receive_render_pipeline_warmup;
       callback.userdata1 = request;
-      static_cast<void>(wgpuDeviceCreateRenderPipelineAsync(state.device, &descriptor, callback));
+      record->future = wgpuDeviceCreateRenderPipelineAsync(state.device, &descriptor, callback);
       *out_warmup = handle;
       return GRANIT_SUCCESS;
     } catch (const std::bad_alloc&) {
@@ -2689,10 +2694,14 @@ create_compute_pipeline_common(granit_webgpu_provider_instance instance,
       wgpuInstanceAddRef(state.instance);
       WGPUCreateComputePipelineAsyncCallbackInfo callback =
           WGPU_CREATE_COMPUTE_PIPELINE_ASYNC_CALLBACK_INFO_INIT;
+#if defined(__EMSCRIPTEN__)
+      callback.mode = WGPUCallbackMode_WaitAnyOnly;
+#else
       callback.mode = WGPUCallbackMode_AllowSpontaneous;
+#endif
       callback.callback = receive_compute_pipeline_warmup;
       callback.userdata1 = request;
-      static_cast<void>(wgpuDeviceCreateComputePipelineAsync(state.device, &descriptor, callback));
+      record->future = wgpuDeviceCreateComputePipelineAsync(state.device, &descriptor, callback);
       *out_warmup = handle;
       return GRANIT_SUCCESS;
     } catch (const std::bad_alloc&) {
@@ -2760,6 +2769,12 @@ granit_result poll_pipeline_warmup(granit_webgpu_provider_instance instance,
   const auto operation = found->second->pipeline_warmups.find(warmup);
   if (operation == found->second->pipeline_warmups.end())
     return GRANIT_ERROR_INVALID_HANDLE;
+#if defined(__EMSCRIPTEN__)
+  if (operation->second->result.load(std::memory_order_acquire) == GRANIT_ERROR_NOT_READY) {
+    WGPUFutureWaitInfo wait_info{operation->second->future, WGPU_FALSE};
+    static_cast<void>(wgpuInstanceWaitAny(found->second->instance, 1, &wait_info, 0));
+  }
+#endif
   return operation->second->result.load(std::memory_order_acquire);
 }
 
