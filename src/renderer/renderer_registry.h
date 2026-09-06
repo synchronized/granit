@@ -53,7 +53,7 @@
 namespace granit::detail {
 
 class async_operation_state_machine;
-enum class async_operation_kind : std::uint8_t { unknown, timestamp_results };
+enum class async_operation_kind : std::uint8_t { unknown, timestamp_results, upload_batch };
 
 /** 线程安全地管理进程内公开 renderer 句柄。 */
 class renderer_registry {
@@ -370,12 +370,16 @@ public:
                                                     granit_upload_batch_info& info);
   [[nodiscard]] granit_result submit_upload_batch(granit_renderer renderer,
                                                   granit_upload_batch batch);
+  [[nodiscard]] granit_result submit_upload_batch_async(granit_renderer renderer,
+                                                        granit_upload_batch batch,
+                                                        granit_async_operation& operation);
   [[nodiscard]] granit_result reset_upload_batch(granit_renderer renderer,
                                                  granit_upload_batch batch);
   [[nodiscard]] granit_result destroy_upload_batch(granit_renderer renderer,
                                                    granit_upload_batch batch);
 
 private:
+  void poll_detached_async_operations(const std::shared_ptr<backend_renderer>& owner);
   renderer_registry() = default;
 
   struct resource_metadata;
@@ -402,6 +406,7 @@ private:
   struct frame_record;
   struct upload_entry;
   struct upload_batch_record;
+  struct upload_batch_operation;
 
   [[nodiscard]] std::uint32_t allocate_domain() noexcept;
   [[nodiscard]] granit_result
@@ -446,6 +451,7 @@ private:
       timestamp_query_pools_;
   std::unordered_map<granit_async_operation, std::shared_ptr<async_operation_record>>
       async_operations_;
+  std::vector<std::shared_ptr<async_operation_record>> detached_async_operations_;
   std::unordered_map<granit_frame, std::shared_ptr<frame_record>> frames_;
   std::unordered_map<granit_upload_batch, std::shared_ptr<upload_batch_record>> upload_batches_;
   std::uint32_t next_domain_{1};

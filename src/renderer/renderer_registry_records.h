@@ -209,6 +209,11 @@ struct renderer_registry::upload_batch_record {
   std::uint32_t max_operation_count{};
   bool failed{};
 };
+struct renderer_registry::upload_batch_operation {
+  std::mutex mutex;
+  std::unique_ptr<backend_upload_completion> completion;
+  std::vector<upload_entry> uploads;
+};
 
 } // namespace granit::detail
 

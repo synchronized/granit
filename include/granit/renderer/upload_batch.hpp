@@ -9,6 +9,7 @@
 #include <utility>
 
 #include <granit/core/result.hpp>
+#include <granit/renderer/async_operation.hpp>
 #include <granit/renderer/texture.hpp>
 #include <granit/renderer/upload_batch.h>
 
@@ -86,6 +87,15 @@ public:
   }
   [[nodiscard]] result submit() noexcept {
     return from_native(granit_upload_batch_submit(renderer_, handle_));
+  }
+  [[nodiscard]] result submit_async(async_operation& operation) noexcept {
+    if (operation.valid())
+      return result::invalid_argument;
+    granit_async_operation native = GRANIT_NULL_HANDLE;
+    const auto value = granit_upload_batch_submit_async(renderer_, handle_, &native);
+    if (value == GRANIT_SUCCESS)
+      operation = async_operation{renderer_, native};
+    return from_native(value);
   }
   [[nodiscard]] result get_info(upload_batch_info& info) const noexcept {
     granit_upload_batch_info native = GRANIT_UPLOAD_BATCH_INFO_INIT;

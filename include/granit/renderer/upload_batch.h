@@ -9,6 +9,7 @@
 #include <granit/core/export.h>
 #include <granit/core/result.h>
 #include <granit/core/types.h>
+#include <granit/renderer/async_operation.h>
 #include <granit/renderer/buffer.h>
 #include <granit/renderer/renderer.h>
 #include <granit/renderer/texture.h>
@@ -84,6 +85,10 @@ GRANIT_API granit_result granit_upload_batch_get_info(granit_renderer renderer,
 /** 同步提交全部写入；成功返回时 GPU 复制已经完成，Batch 可立即复用。 */
 GRANIT_API granit_result granit_upload_batch_submit(granit_renderer renderer,
                                                     granit_upload_batch batch);
+/** 非阻塞提交全部写入；操作终态表示后端不再需要 Batch 暂存数据。 */
+GRANIT_API granit_result granit_upload_batch_submit_async(granit_renderer renderer,
+                                                          granit_upload_batch batch,
+                                                          granit_async_operation* operation);
 /** 丢弃尚未提交的全部写入。 */
 GRANIT_API granit_result granit_upload_batch_reset(granit_renderer renderer,
                                                    granit_upload_batch batch);

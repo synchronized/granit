@@ -89,6 +89,20 @@ extern "C" granit_result granit_upload_batch_submit(granit_renderer renderer,
   }
 }
 
+extern "C" granit_result granit_upload_batch_submit_async(granit_renderer renderer,
+                                                          granit_upload_batch batch,
+                                                          granit_async_operation* operation) {
+  if (operation == nullptr)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  *operation = GRANIT_NULL_HANDLE;
+  try {
+    return granit::detail::renderer_registry::instance().submit_upload_batch_async(renderer, batch,
+                                                                                   *operation);
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
 extern "C" granit_result granit_upload_batch_reset(granit_renderer renderer,
                                                    granit_upload_batch batch) {
   try {

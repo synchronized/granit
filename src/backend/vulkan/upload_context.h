@@ -22,7 +22,8 @@ public:
   [[nodiscard]] granit_result begin(const vulkan_device& device) noexcept;
   [[nodiscard]] granit_result end(const vulkan_device& device) noexcept;
   [[nodiscard]] granit_result reset_fence(const vulkan_device& device) noexcept;
-  [[nodiscard]] granit_result wait(const vulkan_device& device) noexcept;
+  [[nodiscard]] granit_result wait(const vulkan_device& device,
+                                   std::uint64_t timeout = UINT64_MAX) noexcept;
   [[nodiscard]] granit_result restore_signaled_fence(const vulkan_device& device) noexcept;
   void destroy(const vulkan_device& device, vulkan_memory_allocator& allocator) noexcept;
 

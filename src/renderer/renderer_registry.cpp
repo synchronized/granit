@@ -215,7 +215,11 @@ granit_result renderer_registry::get_status(granit_renderer renderer,
 
 granit_result renderer_registry::process_events(granit_renderer renderer) {
   const auto state = acquire_backend(renderer);
-  return state ? state->process_backend_events() : GRANIT_ERROR_INVALID_HANDLE;
+  if (!state)
+    return GRANIT_ERROR_INVALID_HANDLE;
+  const auto result = state->process_backend_events();
+  poll_detached_async_operations(state);
+  return result;
 }
 
 granit_result renderer_registry::import_pipeline_cache(granit_renderer renderer, const void* data,
@@ -482,6 +486,15 @@ granit_result renderer_registry::destroy(granit_renderer renderer) {
         static_cast<void>(
             handles_.erase(operation->first, resource_type::async_operation, state->domain()));
         operation = async_operations_.erase(operation);
+      } else {
+        ++operation;
+      }
+    }
+    for (auto operation = detached_async_operations_.begin();
+         operation != detached_async_operations_.end();) {
+      if ((*operation)->owner == state) {
+        native_async_operations.push_back(std::move(*operation));
+        operation = detached_async_operations_.erase(operation);
       } else {
         ++operation;
       }

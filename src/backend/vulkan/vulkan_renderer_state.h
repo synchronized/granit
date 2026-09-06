@@ -161,6 +161,9 @@ public:
                                             const void* data, std::uint64_t size) noexcept override;
   [[nodiscard]] granit_result
   upload_batch(std::span<const backend_upload_operation> uploads) noexcept override;
+  [[nodiscard]] granit_result
+  upload_batch_async(std::span<const backend_upload_operation> uploads,
+                     std::unique_ptr<backend_upload_completion>& completion) noexcept override;
   [[nodiscard]] granit_result create_native_texture(const granit_texture_desc& desc,
                                                     backend_texture_resource& texture) noexcept;
   [[nodiscard]] granit_result create_texture(const granit_texture_desc& desc,
@@ -445,10 +448,15 @@ private:
   struct upload_slot {
     std::unique_ptr<vulkan_upload_context> context;
     bool acquired{};
+    bool submitted{};
+    std::uint64_t generation{};
   };
 
   [[nodiscard]] std::size_t acquire_upload_slot();
   void release_upload_slot(std::size_t index) noexcept;
+  void mark_upload_slot_submitted(std::size_t index) noexcept;
+  [[nodiscard]] granit_result poll_upload_slot(std::size_t index,
+                                               std::uint64_t generation) noexcept;
 
   [[nodiscard]] granit_result complete_frame_slot(frame_slot& slot) noexcept;
   [[nodiscard]] granit_result observe_device_result(

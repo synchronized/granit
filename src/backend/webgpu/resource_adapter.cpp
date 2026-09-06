@@ -11,6 +11,14 @@
 #include <vector>
 
 namespace granit::detail {
+namespace {
+
+class completed_upload final : public backend_upload_completion {
+public:
+  [[nodiscard]] granit_result poll() noexcept override { return GRANIT_SUCCESS; }
+};
+
+} // namespace
 
 struct webgpu_resource_context {
   webgpu_provider_dispatch* provider{};
@@ -308,6 +316,24 @@ granit_result webgpu_resource_adapter::upload_batch(
       operations.push_back(operation);
     }
     return context_->provider->write_upload_batch(context_->instance, operations);
+  } catch (const std::bad_alloc&) {
+    return GRANIT_ERROR_OUT_OF_MEMORY;
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+granit_result webgpu_resource_adapter::upload_batch_async(
+    std::span<const backend_upload_operation> uploads,
+    std::unique_ptr<backend_upload_completion>& completion) const noexcept {
+  completion.reset();
+  try {
+    auto candidate = std::make_unique<completed_upload>();
+    const auto result = upload_batch(uploads);
+    if (result != GRANIT_SUCCESS)
+      return result;
+    completion = std::move(candidate);
+    return result;
   } catch (const std::bad_alloc&) {
     return GRANIT_ERROR_OUT_OF_MEMORY;
   } catch (...) {
