@@ -163,17 +163,7 @@ if(BUILD_SHARED_LIBS)
       )
     endfunction()
 
-    add_test(
-      NAME granit.abi.exports.core
-      COMMAND
-        "${CMAKE_COMMAND}"
-        "-DGRANIT_ABI_COMPONENT=core"
-        "-DGRANIT_ABI_LIBRARY=$<TARGET_FILE:granit>"
-        "-DGRANIT_ABI_SNAPSHOT=${CMAKE_CURRENT_SOURCE_DIR}/abi/snapshots/0.15.0/core_symbols.txt"
-        "-DGRANIT_ABI_EXPORT_TOOL=${granit_abi_export_tool}"
-        "-DGRANIT_ABI_EXPORT_TOOL_KIND=${granit_abi_export_tool_kind}"
-        -P "${CMAKE_CURRENT_SOURCE_DIR}/abi/check_exported_symbols.cmake"
-    )
+    granit_add_abi_export_snapshot_test(core granit core_symbols.txt)
     granit_add_abi_export_snapshot_test(
       render_pipeline granit_render_pipeline render_pipeline_symbols.txt
       "${CMAKE_CURRENT_SOURCE_DIR}/abi/snapshots/0.1.0/render_pipeline_private_symbols.txt"
