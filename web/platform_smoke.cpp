@@ -293,7 +293,10 @@ granit_result validate_public_pipeline(granit_texture_format model_color_format)
   if (result == GRANIT_SUCCESS)
     std::printf("GRANIT_PROGRESS:pipelines:0:%zu\n", material_warmup_indices.size() + 2);
   granit_async_operation_status warmup_status = GRANIT_ASYNC_OPERATION_STATUS_INIT;
-  for (std::uint32_t attempt = 0; result == GRANIT_SUCCESS && attempt < 600; ++attempt) {
+  // 软件 WebGPU 适配器编译完整 PBR 管线可能需要数秒。这里按真实时间等待，避免
+  // emscripten_sleep(0) 的快速轮询在 Promise 完成前耗尽固定次数并提前销毁 Instance。
+  const double warmup_deadline = emscripten_get_now() + 20000.0;
+  while (result == GRANIT_SUCCESS && emscripten_get_now() < warmup_deadline) {
     if (state.upload_cancel_requested)
       static_cast<void>(
           granit_async_operation_request_cancel(state.renderer, warmup_operation));
@@ -302,7 +305,7 @@ granit_result validate_public_pipeline(granit_texture_format model_color_format)
         warmup_status.state != GRANIT_ASYNC_OPERATION_STATE_RUNNING)
       break;
     static_cast<void>(granit_renderer_process_events(state.renderer));
-    emscripten_sleep(0);
+    emscripten_sleep(4);
   }
   granit_pipeline_warmup_result_info warmup_info = GRANIT_PIPELINE_WARMUP_RESULT_INFO_INIT;
   granit_pipeline_warmup_result_info compute_warmup_info =
