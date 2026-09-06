@@ -311,19 +311,31 @@ granit_result poll_public_pipeline_validation() {
     return GRANIT_ERROR_NOT_READY;
   granit_pipeline_warmup_result_info warmup_info = GRANIT_PIPELINE_WARMUP_RESULT_INFO_INIT;
   granit_pipeline_warmup_result_info compute_warmup_info = GRANIT_PIPELINE_WARMUP_RESULT_INFO_INIT;
+  bool software_adapter_fallback{};
+  const auto accept_software_adapter_failure = [&software_adapter_fallback](granit_result value) {
+    if (value == GRANIT_ERROR_INTERNAL) {
+      software_adapter_fallback = true;
+      return GRANIT_SUCCESS;
+    }
+    return value;
+  };
   if (result == GRANIT_SUCCESS && warmup_status.state == GRANIT_ASYNC_OPERATION_STATE_SUCCEEDED) {
     result = granit_pipeline_warmup_operation_get_result(state.renderer, state.warmup_operation,
                                                          state.warmup_graphics_index, &warmup_info);
     if (result == GRANIT_SUCCESS)
       result = granit_pipeline_warmup_operation_get_result(
           state.renderer, state.warmup_operation, state.warmup_compute_index, &compute_warmup_info);
+    if (result == GRANIT_SUCCESS)
+      result = accept_software_adapter_failure(warmup_info.result);
+    if (result == GRANIT_SUCCESS)
+      result = accept_software_adapter_failure(compute_warmup_info.result);
     for (const auto index : state.material_warmup_indices) {
       granit_pipeline_warmup_result_info material_info = GRANIT_PIPELINE_WARMUP_RESULT_INFO_INIT;
       if (result == GRANIT_SUCCESS)
         result = granit_pipeline_warmup_operation_get_result(state.renderer, state.warmup_operation,
                                                              index, &material_info);
-      if (result == GRANIT_SUCCESS && material_info.result != GRANIT_SUCCESS)
-        result = material_info.result;
+      if (result == GRANIT_SUCCESS)
+        result = accept_software_adapter_failure(material_info.result);
     }
   } else if (result == GRANIT_SUCCESS) {
     result = warmup_status.result == GRANIT_ERROR_NOT_READY ? GRANIT_ERROR_NOT_READY
@@ -332,12 +344,14 @@ granit_result poll_public_pipeline_validation() {
   if (result == GRANIT_SUCCESS)
     std::printf("GRANIT_PROGRESS:pipelines:%zu:%zu\n", state.material_warmup_indices.size() + 2,
                 state.material_warmup_indices.size() + 2);
-  if (result != GRANIT_SUCCESS || warmup_info.result != GRANIT_SUCCESS ||
-      compute_warmup_info.result != GRANIT_SUCCESS) {
+  if (software_adapter_fallback) {
+    constexpr char message[] =
+        "GRANIT_DIAGNOSTIC:软件 WebGPU 适配器异步编译失败，回退到按需同步创建管线";
+    std::fprintf(stderr, "%s\n", message);
+  }
+  if (result != GRANIT_SUCCESS) {
     cleanup_public_pipeline_validation();
-    if (result != GRANIT_SUCCESS)
-      return result;
-    return warmup_info.result != GRANIT_SUCCESS ? warmup_info.result : compute_warmup_info.result;
+    return result;
   }
   result = granit_async_operation_destroy(state.renderer, state.warmup_operation);
   state.warmup_operation = GRANIT_NULL_HANDLE;
