@@ -36,6 +36,7 @@
 | 十六、0.9.0 公共 PBR 与渲染资产收敛 | 已发布 | 公共 PBR、Binding、Model Viewer 与安装资产已收敛 |
 | 十七、0.10.0 环境资源与帧构造背压 | 已发布 | Environment Map 与帧构造背压已随 0.10.0 发布 |
 | 十八、0.11.0 WebGPU 能力与 Web Model Viewer | 已完成 | S-26 能力对齐、正式网页查看器与发布验收已完成 |
+| 十九、0.12.0 上游资产与标准材质契约 | 进行中 | S-27 已确认，先实现 Shader Asset 检查接口 |
 
 ## 一、工程与 ABI 基础
 
@@ -299,17 +300,28 @@
 **状态：已完成；能力对齐、正式 Web Model Viewer 与跨平台发布验收均已通过。**
 
 - **[S-26](plans/S-26-0.11.0-webgpu-parity-and-web-model-viewer.md) / P1**：以公共 API 为边界建立
-  Vulkan/WebGPU 能力矩阵，补齐可移植的资源传输、Mipmap 和可选 Timestamp Query。
-- 保留快速浏览器 Smoke，并新增加载正式模型、环境和 ImGui 的用户级 Web Model Viewer。
+  Vulkan/WebGPU 能力矩阵，补齐可移植的资源传输和 Mipmap，并明确 Timestamp Query 能力边界。
+- 保留快速浏览器 Smoke，并新增加载正式模型、环境和浏览器质量面板的用户级 Web Model Viewer。
 - Vulkan 专属同步、持久映射、Pipeline Cache 和原生互操作不做 WebGPU 模拟，通过能力查询和稳定
   错误明确表达差异。
 - 桌面 Dawn、公共 glTF SDK、公共执行器、Android、TAA 和其他高级渲染能力不属于本版本。
 
+## 十九、0.12.0 上游资产与标准材质契约
+
+**状态：进行中；S-27 已确认。**
+
+- **[S-27](plans/S-27-0.12.0-upstream-asset-contracts.md) / P1**：提供公共 Shader Asset 检查接口，
+  将稳定的 PBR Material Schema 与标准模板纳入安装 SDK。
+- 安装包、FetchContent 与 `add_subdirectory` 统一提供 `granit_RENDER_PIPELINE_ASSET_DIR`，让上游不再
+  推导 Granit 源码或二进制格式布局。
+- 通过仓库内独立 Consumer Fixture 验证 Gneiss 所需契约，不在本任务直接修改 Gneiss。
+- 异步 Timestamp、Web Worker、Android、公共 glTF SDK 和高级渲染能力不属于本版本。
+
 ## 近期执行顺序
 
-1. **[S-26](plans/S-26-0.11.0-webgpu-parity-and-web-model-viewer.md) / P1**：先审计并补齐
-   Vulkan/WebGPU 可移植公共能力，再把浏览器 Smoke 提升为正式 Model Viewer。
-2. 公共执行器与场景 API 继续等待 Granit 与 Gneiss 的第二个真实复用证据，不纳入 S-26。
+1. **[S-27](plans/S-27-0.12.0-upstream-asset-contracts.md) / P1**：依次完成 Shader Asset 检查、
+   PBR Schema/模板、统一资产目录和独立 Consumer 回归。
+2. 公共执行器与场景 API 继续等待 Granit 与 Gneiss 的第二个真实复用证据，不纳入 S-27。
 3. S-14 只在复用条件成立后启动；不要为当前单个示例提前稳定 glTF 公共 API。
 4. S-06D 最终验收等待稳定版本与 component 范围决策；不在 0.x 阶段提前宣布稳定。
 5. H-09 的透明 PBR、CSM、Clustered Forward 与 Bindless 只在各自重新评估条件满足后独立恢复，
