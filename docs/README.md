@@ -43,6 +43,7 @@
 8. [0.14.0 异步管线指标与资源流送计划](plans/S-29-0.14.0-async-pipeline-metrics-and-streaming.md)
 9. [0.15.0 异步回读与管线预热计划](plans/S-30-0.15.0-async-readback-and-pipeline-warmup.md)
 10. [0.16.0 严格非阻塞异步调度计划](plans/S-31-0.16.0-nonblocking-async.md)
+11. [0.17.0 WebGPU 原生异步 Pipeline 预热计划](plans/S-32-0.17.0-webgpu-async-pipeline-warmup.md)
 
 ## 操作指南
 

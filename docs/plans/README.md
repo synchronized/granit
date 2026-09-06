@@ -171,6 +171,8 @@ D-03-graphics-pipeline.md
   已完成；有界异步 Readback、稳定键 Pipeline 预热和能力边界已经落地。
 - [S-31：0.16.0 严格非阻塞异步调度](S-31-0.16.0-nonblocking-async.md)——已完成；异步传输
   饱和时立即返回可重试背压，Vulkan Pipeline 冷创建移入私有后台任务。
+- [S-32：0.17.0 WebGPU 原生异步 Pipeline 预热](S-32-0.17.0-webgpu-async-pipeline-warmup.md)——
+  已确认；接入 WebGPU 原生异步创建，并统一 Vulkan/WebGPU 的私有 HAL 预热契约。
 
 ## 状态
 
