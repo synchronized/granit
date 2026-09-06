@@ -60,6 +60,7 @@
 - [从 0.12 迁移到 0.13](guides/migrate-0.12-to-0.13.md)
 - [从 0.13 迁移到 0.14](guides/migrate-0.13-to-0.14.md)
 - [从 0.14 迁移到 0.15](guides/migrate-0.14-to-0.15.md)
+- [从 0.15 迁移到 0.16](guides/migrate-0.15-to-0.16.md)
 - [从 0.8 迁移到 0.9](guides/migrate-0.8-to-0.9.md)
 - [示例程序及运行方式](guides/examples.md)
 - [运行跨后端模型查看器](guides/model-viewer.md)

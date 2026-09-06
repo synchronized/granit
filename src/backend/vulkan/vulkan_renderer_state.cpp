@@ -331,7 +331,8 @@ granit_result vulkan_renderer_state::initialize(std::string_view application_nam
           device_.sampler_anisotropy_supported() ? limits.maxSamplerAnisotropy : 1.0F,
       .renderer_features = GRANIT_RENDERER_FEATURE_TIMESTAMP_QUERY_BIT |
                            GRANIT_RENDERER_FEATURE_ASYNC_READBACK_BIT |
-                           GRANIT_RENDERER_FEATURE_PIPELINE_WARMUP_BIT,
+                           GRANIT_RENDERER_FEATURE_PIPELINE_WARMUP_BIT |
+                           GRANIT_RENDERER_FEATURE_NON_BLOCKING_PIPELINE_WARMUP_BIT,
   };
 
   const auto allocator_result = memory_allocator_.initialize(instance_, device_);
