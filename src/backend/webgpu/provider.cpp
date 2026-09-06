@@ -601,8 +601,18 @@ void receive_render_pipeline_warmup(WGPUCreatePipelineAsyncStatus status,
       static_cast<pipeline_warmup_request*>(data)};
   if (pipeline != nullptr)
     wgpuRenderPipelineRelease(pipeline);
-  if (status != WGPUCreatePipelineAsyncStatus_Success)
+  if (status != WGPUCreatePipelineAsyncStatus_Success) {
     emit_dawn_message(&request->host, message);
+    if (message.length == 0) {
+      char fallback[96]{};
+      const auto length = std::snprintf(fallback, sizeof(fallback),
+                                        "WebGPU render pipeline warmup failed with status %u",
+                                        static_cast<unsigned>(status));
+      if (length > 0)
+        emit(request->host, GRANIT_DIAGNOSTIC_SEVERITY_ERROR, fallback,
+             static_cast<std::uint32_t>(length));
+    }
+  }
   request->warmup->result.store(pipeline_warmup_result(status), std::memory_order_release);
 }
 
@@ -614,8 +624,18 @@ void receive_compute_pipeline_warmup(WGPUCreatePipelineAsyncStatus status,
       static_cast<pipeline_warmup_request*>(data)};
   if (pipeline != nullptr)
     wgpuComputePipelineRelease(pipeline);
-  if (status != WGPUCreatePipelineAsyncStatus_Success)
+  if (status != WGPUCreatePipelineAsyncStatus_Success) {
     emit_dawn_message(&request->host, message);
+    if (message.length == 0) {
+      char fallback[96]{};
+      const auto length = std::snprintf(fallback, sizeof(fallback),
+                                        "WebGPU compute pipeline warmup failed with status %u",
+                                        static_cast<unsigned>(status));
+      if (length > 0)
+        emit(request->host, GRANIT_DIAGNOSTIC_SEVERITY_ERROR, fallback,
+             static_cast<std::uint32_t>(length));
+    }
+  }
   request->warmup->result.store(pipeline_warmup_result(status), std::memory_order_release);
 }
 
