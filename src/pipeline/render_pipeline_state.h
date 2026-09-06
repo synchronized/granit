@@ -12,6 +12,7 @@
 #include "pipeline/pbr_draw_bindings.h"
 
 #include <granit/pipeline/render_pipeline.h>
+#include <granit/renderer/async_operation.h>
 #include <granit/renderer/shader.hpp>
 #include <granit/renderer/texture.hpp>
 #include <granit/renderer/timestamp_query.h>
@@ -27,7 +28,8 @@ namespace granit::pipeline::detail {
 struct render_pipeline_state {
   struct metrics_slot {
     granit_timestamp_query_pool pool = GRANIT_NULL_HANDLE;
-    bool pending = false;
+    granit_async_operation operation = GRANIT_NULL_HANDLE;
+    std::uint64_t submission_sequence = 0;
   };
   struct shadow_pipeline_entry {
     granit_pipeline_layout layout = GRANIT_NULL_HANDLE;
@@ -59,6 +61,8 @@ struct render_pipeline_state {
   dynamic_uniform_arena uniform_arena;
   std::vector<metrics_slot> metrics_slots;
   granit_render_pipeline_metrics metrics = GRANIT_RENDER_PIPELINE_METRICS_INIT;
+  std::uint64_t next_metrics_submission_sequence = 1;
+  std::uint64_t published_metrics_submission_sequence = 0;
   bool metrics_enabled = false;
   bool metrics_available = false;
   float shadow_half_extent = 20.0F;

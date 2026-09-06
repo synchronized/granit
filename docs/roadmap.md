@@ -330,13 +330,25 @@
 - 公共 API 不接管线程池、文件系统、网络或 glTF 解析；取消不承诺撤销已经提交给 GPU 的命令。
 - 桌面 Dawn、Android、公共 glTF SDK、TAA、Bindless 和新的渲染后端不属于本版本。
 
+## 二十一、0.14.0 异步管线指标与资源流送
+
+**状态：已规划；S-29A 为当前最高优先级。**
+
+- **[S-29](plans/S-29-0.14.0-async-pipeline-metrics-and-streaming.md) / P1**：让参考 Render Pipeline
+  内部使用 0.13.0 异步 Timestamp API，同时保持现有指标快照 ABI 和非阻塞查询方式。
+- 以 Gneiss 的真实接入为验收输入，补齐多帧槽乱序完成、失败、取消、关闭和能力降级语义。
+- 在现有 Upload Batch 上建立有界异步上传、回滚与资源切换基础；线程调度、资产解析和缓存仍由
+  上游负责。
+- 公共线程池、场景管理、glTF SDK、Android、TAA、Bindless 和新的渲染后端不属于本版本。
+
 ## 近期执行顺序
 
-1. 根据 Gneiss 的实际接入反馈规划下一个版本，不预先扩张公共异步 API。
-2. 公共执行器与场景 API 继续等待 Granit 与 Gneiss 的第二个真实复用证据。
-3. S-14 只在复用条件成立后启动；不要为当前单个示例提前稳定 glTF 公共 API。
-4. S-06D 最终验收等待稳定版本与 component 范围决策；不在 0.x 阶段提前宣布稳定。
-5. H-09 的透明 PBR、CSM、Clustered Forward 与 Bindless 只在各自重新评估条件满足后独立恢复，
+1. 先完成 S-29A/S-29B，解除 Gneiss 使用异步 Render Pipeline GPU 指标的阻塞。
+2. 再以 Model Viewer 和 Gneiss 的实际上传路径收敛 S-29C/S-29D，不预先扩张公共异步 API。
+3. 公共执行器与场景 API 继续等待 Granit 与 Gneiss 的第二个真实复用证据。
+4. S-14 只在复用条件成立后启动；不要为当前单个示例提前稳定 glTF 公共 API。
+5. S-06D 最终验收等待稳定版本与 component 范围决策；不在 0.x 阶段提前宣布稳定。
+6. H-09 的透明 PBR、CSM、Clustered Forward 与 Bindless 只在各自重新评估条件满足后独立恢复，
    不作为当前稳定化工作的前置项。
 
 若前置抽象不足，应先更新对应 Plan 和本路线图状态，再扩大公共 API。

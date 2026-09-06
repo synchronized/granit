@@ -40,6 +40,7 @@
 5. [0.11.0 WebGPU 能力与浏览器 Model Viewer 计划](plans/S-26-0.11.0-webgpu-parity-and-web-model-viewer.md)
 6. [0.12.0 上游资产与标准材质契约计划](plans/S-27-0.12.0-upstream-asset-contracts.md)
 7. [0.13.0 异步 GPU 操作与 Web 运行时计划](plans/S-28-0.13.0-async-gpu-and-web-runtime.md)
+8. [0.14.0 异步管线指标与资源流送计划](plans/S-29-0.14.0-async-pipeline-metrics-and-streaming.md)
 
 ## 操作指南
 

@@ -10,9 +10,14 @@
 
 namespace granit::pipeline::detail {
 
+void poll_render_pipeline_metrics(render_pipeline_state& state);
+
+void begin_render_pipeline_metrics_read(render_pipeline_state& state,
+                                        render_pipeline_state::metrics_slot& slot);
+
 [[nodiscard]] granit_result
-publish_render_pipeline_metrics(render_pipeline_state& state,
-                                render_pipeline_state::metrics_slot& slot);
+release_render_pipeline_metrics_slot(render_pipeline_state& state,
+                                     render_pipeline_state::metrics_slot& slot);
 
 [[nodiscard]] granit_timestamp_query_pool
 prepare_render_pipeline_metrics_slot(render_pipeline_state& state, std::uint32_t frame_slot,

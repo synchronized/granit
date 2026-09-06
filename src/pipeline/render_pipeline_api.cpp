@@ -469,9 +469,7 @@ render_view(pipeline_state& state, const granit_render_pipeline_render_desc& des
   if (destroy_result != GRANIT_SUCCESS || metrics_pool == GRANIT_NULL_HANDLE)
     return destroy_result;
   auto& slot = state.metrics_slots[metrics_slot_index];
-  slot.pending = true;
-  if (!use_uniform_arena)
-    static_cast<void>(granit::pipeline::detail::publish_render_pipeline_metrics(state, slot));
+  granit::pipeline::detail::begin_render_pipeline_metrics_read(state, slot);
   // 可选指标回读不能改变已经成功提交的渲染结果。
   return GRANIT_SUCCESS;
 }
@@ -690,12 +688,10 @@ extern "C" granit_result granit_render_pipeline_destroy(granit_renderer renderer
   reset_draw_bindings(removed->opaque_draw_bindings);
   reset_draw_bindings(removed->shadow_draw_bindings);
   for (auto& slot : removed->metrics_slots) {
-    if (slot.pool == GRANIT_NULL_HANDLE)
-      continue;
-    const auto metrics_result = granit_timestamp_query_pool_destroy(renderer, slot.pool);
+    const auto metrics_result =
+        granit::pipeline::detail::release_render_pipeline_metrics_slot(*removed, slot);
     if (result == GRANIT_SUCCESS)
       result = metrics_result;
-    slot.pool = GRANIT_NULL_HANDLE;
   }
   removed->metrics_slots.clear();
   const auto shadow_view_result = removed->shadow_view.reset();
@@ -769,6 +765,7 @@ granit_render_pipeline_get_metrics(granit_renderer renderer, granit_render_pipel
   if (!state)
     return GRANIT_ERROR_INVALID_HANDLE;
   std::scoped_lock lock{state->mutex};
+  granit::pipeline::detail::poll_render_pipeline_metrics(*state);
   if (!state->metrics_enabled || !state->metrics_available)
     return GRANIT_ERROR_NOT_READY;
   *metrics = state->metrics;
