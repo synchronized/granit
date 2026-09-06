@@ -572,7 +572,8 @@ vulkan_renderer_state::texture_format_capabilities(granit_texture_format format)
   const auto native = map_texture_format(format);
   if (native == VK_FORMAT_UNDEFINED || !instance_.valid() || !device_.valid())
     return result;
-  VkFormatProperties2 properties{VK_STRUCTURE_TYPE_FORMAT_PROPERTIES_2};
+  VkFormatProperties2 properties{};
+  properties.sType = VK_STRUCTURE_TYPE_FORMAT_PROPERTIES_2;
   instance_.functions().vkGetPhysicalDeviceFormatProperties2(device_.physical_device(), native,
                                                              &properties);
   const auto features = properties.formatProperties.optimalTilingFeatures;
