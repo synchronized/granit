@@ -8,6 +8,7 @@
 #include <utility>
 
 #include <granit/core/result.hpp>
+#include <granit/renderer/async_operation.hpp>
 #include <granit/renderer/timestamp_query.h>
 
 namespace granit {
@@ -53,6 +54,23 @@ public:
     return from_native(granit_timestamp_query_pool_get_results(
         renderer_, handle_, first, static_cast<std::uint32_t>(nanoseconds.size()),
         nanoseconds.data()));
+  }
+  [[nodiscard]] result get_results_async(std::uint32_t first, std::uint32_t count,
+                                         async_operation& operation) noexcept {
+    if (operation.valid())
+      return result::invalid_argument;
+    granit_async_operation handle = GRANIT_NULL_HANDLE;
+    const auto value = granit_timestamp_query_pool_get_results_async(renderer_, handle_, first,
+                                                                      count, &handle);
+    if (value == GRANIT_SUCCESS)
+      operation = async_operation{renderer_, handle};
+    return from_native(value);
+  }
+  [[nodiscard]] result copy_results(const async_operation& operation,
+                                    std::span<std::uint64_t> nanoseconds) noexcept {
+    return from_native(granit_timestamp_query_pool_copy_results(
+        renderer_, handle_, operation.native_handle(), nanoseconds.data(),
+        static_cast<std::uint32_t>(nanoseconds.size())));
   }
   [[nodiscard]] result reset() noexcept {
     if (!valid())

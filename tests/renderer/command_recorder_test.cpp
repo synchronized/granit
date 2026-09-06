@@ -1010,9 +1010,25 @@ TEST_CASE("Command Recorder 写入并读取GPU纳秒时间戳", "[command][times
   REQUIRE(recorder.submit() == granit::result::success);
   REQUIRE(recorder.reset() == granit::result::success);
 
+  granit::async_operation operation;
+  REQUIRE(queries.get_results_async(0, 2, operation) == granit::result::success);
+  granit::async_operation_status operation_status;
+  REQUIRE(operation.get_status(operation_status) == granit::result::success);
+  REQUIRE(operation_status.complete());
+  REQUIRE(operation_status.operation_result == granit::result::success);
   std::array<std::uint64_t, 2> nanoseconds{};
-  REQUIRE(queries.get_results(0, nanoseconds) == granit::result::success);
+  REQUIRE(queries.copy_results(operation, nanoseconds) == granit::result::success);
   CHECK(nanoseconds[1] >= nanoseconds[0]);
+  REQUIRE(operation.reset() == granit::result::success);
+
+  granit::async_operation cancelled;
+  REQUIRE(queries.get_results_async(0, 2, cancelled) == granit::result::success);
+  REQUIRE(cancelled.request_cancel() == granit::result::success);
+  REQUIRE(cancelled.get_status(operation_status) == granit::result::success);
+  CHECK(operation_status.state == granit::async_operation_state::cancelled);
+  CHECK(operation_status.operation_result == granit::result::cancelled);
+  CHECK(queries.copy_results(cancelled, nanoseconds) == granit::result::cancelled);
+  REQUIRE(cancelled.reset() == granit::result::success);
   REQUIRE(recorder.destroy() == granit::result::success);
   REQUIRE(queries.reset() == granit::result::success);
 }

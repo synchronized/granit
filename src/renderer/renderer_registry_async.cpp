@@ -10,7 +10,8 @@ namespace granit::detail {
 
 granit_result renderer_registry::register_async_operation(
     granit_renderer renderer, std::shared_ptr<async_operation_state_machine> state,
-    granit_async_operation& operation) {
+    granit_async_operation& operation, std::function<void()> poll, std::shared_ptr<void> payload,
+    async_operation_kind kind) {
   if (!state)
     return GRANIT_ERROR_INVALID_ARGUMENT;
   try {
@@ -23,6 +24,9 @@ granit_result renderer_registry::register_async_operation(
     record->metadata.creation_sequence = next_creation_sequence_++;
     record->owner = owner->second;
     record->state = std::move(state);
+    record->poll = std::move(poll);
+    record->payload = std::move(payload);
+    record->kind = kind;
     const auto handle =
         handles_.insert(record.get(), resource_type::async_operation, owner->second->domain());
     if (handle == GRANIT_NULL_HANDLE)
@@ -58,6 +62,8 @@ granit_result renderer_registry::get_async_operation_status(
       return GRANIT_ERROR_INVALID_HANDLE;
     record = found->second;
   }
+  if (record->poll)
+    record->poll();
   status = record->state->status();
   return GRANIT_SUCCESS;
 }

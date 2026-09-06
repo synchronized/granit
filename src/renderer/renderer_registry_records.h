@@ -169,6 +169,15 @@ struct renderer_registry::async_operation_record {
   resource_metadata metadata;
   std::shared_ptr<backend_renderer> owner;
   std::shared_ptr<async_operation_state_machine> state;
+  std::function<void()> poll;
+  std::shared_ptr<void> payload;
+  async_operation_kind kind{async_operation_kind::unknown};
+};
+struct renderer_registry::timestamp_result_operation {
+  std::mutex mutex;
+  std::shared_ptr<timestamp_query_pool_record> pool;
+  std::uint32_t first{};
+  std::vector<std::uint64_t> values;
 };
 struct renderer_registry::frame_record {
   std::shared_ptr<backend_renderer> owner;

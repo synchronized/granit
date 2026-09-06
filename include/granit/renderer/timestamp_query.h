@@ -10,6 +10,7 @@
 #include <granit/core/result.h>
 #include <granit/core/types.h>
 #include <granit/renderer/command_recorder.h>
+#include <granit/renderer/async_operation.h>
 #include <granit/renderer/renderer.h>
 
 /** 固定容量的 GPU 时间戳查询池句柄。零值无效。 */
@@ -40,6 +41,14 @@ GRANIT_API granit_result granit_timestamp_query_pool_get_results(granit_renderer
                                                                  uint32_t first_query,
                                                                  uint32_t query_count,
                                                                  uint64_t* nanoseconds);
+/** 发起非阻塞结果读取；完成后通过 copy_results 复制由操作内部持有的结果。 */
+GRANIT_API granit_result granit_timestamp_query_pool_get_results_async(
+    granit_renderer renderer, granit_timestamp_query_pool pool, uint32_t first_query,
+    uint32_t query_count, granit_async_operation* operation);
+/** 复制成功完成的异步 Timestamp 结果。 */
+GRANIT_API granit_result granit_timestamp_query_pool_copy_results(
+    granit_renderer renderer, granit_timestamp_query_pool pool, granit_async_operation operation,
+    uint64_t* nanoseconds, uint32_t query_count);
 GRANIT_API granit_result granit_timestamp_query_pool_destroy(granit_renderer renderer,
                                                              granit_timestamp_query_pool pool);
 GRANIT_API granit_result granit_command_recorder_reset_timestamp_queries(
