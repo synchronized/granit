@@ -95,10 +95,10 @@ TEST_CASE("Readback Batch 异步返回紧密 Texture 内容", "[readback_batch][
   granit::readback_batch batch;
   REQUIRE(batch.create(renderer.native_handle()) == granit::result::success);
   std::uint32_t index{};
-  const granit_texture_write_region region{.mip_level = 0,
+  const granit::texture_write_region region{.mip_level = 0,
                                            .base_array_layer = 0,
                                            .array_layer_count = 1,
-                                           .aspect = GRANIT_TEXTURE_ASPECT_COLOR_BIT,
+                                           .aspect = granit::texture_aspect::color,
                                            .x = 0,
                                            .y = 0,
                                            .z = 0,

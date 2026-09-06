@@ -91,10 +91,20 @@ public:
   }
 
   [[nodiscard]] result read_texture(granit_texture texture,
-                                    const granit_texture_write_region& region,
+                                    const texture_write_region& region,
                                     std::uint32_t& result_index) noexcept {
-    return from_native(
-        granit_readback_batch_read_texture(renderer_, handle_, texture, &region, &result_index));
+    const granit_texture_write_region native{.mip_level = region.mip_level,
+                                             .base_array_layer = region.base_array_layer,
+                                             .array_layer_count = region.array_layer_count,
+                                             .aspect = static_cast<granit_texture_aspect>(region.aspect),
+                                             .x = region.x,
+                                             .y = region.y,
+                                             .z = region.z,
+                                             .width = region.width,
+                                             .height = region.height,
+                                             .depth = region.depth};
+    return from_native(granit_readback_batch_read_texture(renderer_, handle_, texture, &native,
+                                                           &result_index));
   }
 
   [[nodiscard]] result get_info(readback_batch_info& info) const noexcept {

@@ -417,11 +417,31 @@ int main(int argc, char** argv) {
   }
 
   const granit::texture_write_region region{.width = render_size, .height = render_size};
-  granit::texture_readback_info info;
-  result = output_texture.query_readback(region, info);
-  std::vector<std::byte> padded(static_cast<std::size_t>(info.required_size));
+  granit::readback_batch readback;
+  result = readback.create(renderer.native_handle(),
+                           {.texture_layout = granit::readback_layout::tight});
+  std::uint32_t result_index{};
   if (result.ok())
-    result = output_texture.read(padded, region, info);
+    result = readback.read_texture(output_texture.native_handle(), region, result_index);
+  granit::async_operation operation;
+  if (result.ok())
+    result = readback.submit_async(operation);
+  granit::async_operation_status operation_status;
+  while (result.ok()) {
+    result = operation.get_status(operation_status);
+    if (result.failed() || operation_status.complete())
+      break;
+    result = renderer.process_events();
+  }
+  if (result.ok())
+    result = operation_status.operation_result;
+  granit::readback_result_info info;
+  if (result.ok())
+    result = granit::get_readback_result_info(operation, result_index, info);
+  std::vector<std::byte> padded(static_cast<std::size_t>(info.required_size));
+  std::uint64_t required_size{};
+  if (result.ok())
+    result = granit::copy_readback_result(operation, result_index, padded, required_size);
   if (result.failed()) {
     std::cerr << "回读模型截图失败：" << granit::result_message(result) << '\n';
     return 1;
