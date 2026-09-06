@@ -71,6 +71,15 @@ struct renderer_limits {
   [[nodiscard]] constexpr bool supports_timestamp_queries() const noexcept {
     return (supported_features & GRANIT_RENDERER_FEATURE_TIMESTAMP_QUERY_BIT) != 0;
   }
+  [[nodiscard]] constexpr bool supports_async_readback() const noexcept {
+    return (supported_features & GRANIT_RENDERER_FEATURE_ASYNC_READBACK_BIT) != 0;
+  }
+  [[nodiscard]] constexpr bool supports_pipeline_warmup() const noexcept {
+    return (supported_features & GRANIT_RENDERER_FEATURE_PIPELINE_WARMUP_BIT) != 0;
+  }
+  [[nodiscard]] constexpr bool supports_non_blocking_pipeline_warmup() const noexcept {
+    return (supported_features & GRANIT_RENDERER_FEATURE_NON_BLOCKING_PIPELINE_WARMUP_BIT) != 0;
+  }
 };
 
 enum class shader_feature : std::uint64_t {

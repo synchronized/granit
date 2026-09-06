@@ -41,6 +41,14 @@ bool async_operation_state_machine::request_cancel() noexcept {
   return true;
 }
 
+void async_operation_state_machine::acknowledge_cancel() noexcept {
+  std::lock_guard lock{mutex_};
+  if (terminal() || !cancel_requested_)
+    return;
+  state_ = GRANIT_ASYNC_OPERATION_STATE_CANCELLED;
+  result_ = GRANIT_ERROR_CANCELLED;
+}
+
 void async_operation_state_machine::complete(granit_result result) noexcept {
   std::lock_guard lock{mutex_};
   if (terminal())

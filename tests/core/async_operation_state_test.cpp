@@ -47,3 +47,13 @@ TEST_CASE("运行中的取消请求不伪装为 GPU 工作已撤销") {
   CHECK(status.result == GRANIT_ERROR_DEVICE_LOST);
   CHECK_FALSE(operation.request_cancel());
 }
+
+TEST_CASE("运行中的可中止工作可以确认取消") {
+  granit::detail::async_operation_state_machine operation;
+  REQUIRE(operation.begin());
+  REQUIRE(operation.request_cancel());
+  operation.acknowledge_cancel();
+  const auto status = operation.status();
+  CHECK(status.state == GRANIT_ASYNC_OPERATION_STATE_CANCELLED);
+  CHECK(status.result == GRANIT_ERROR_CANCELLED);
+}

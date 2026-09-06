@@ -16,6 +16,8 @@ public:
   [[nodiscard]] granit_async_operation_status status() const noexcept;
   [[nodiscard]] bool begin() noexcept;
   [[nodiscard]] bool request_cancel() noexcept;
+  /** 后端已停止或忽略剩余工作时确认取消。 */
+  void acknowledge_cancel() noexcept;
   void complete(granit_result result) noexcept;
 
 private:

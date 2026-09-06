@@ -831,9 +831,11 @@ granit_result webgpu_renderer_state::refresh_state() noexcept {
         capabilities.max_storage_buffer_binding_size,
         capabilities.framebuffer_sample_counts,
         capabilities.max_sampler_anisotropy,
-        (capabilities.renderer_features & GRANIT_WEBGPU_PROVIDER_FEATURE_TIMESTAMP_QUERY_BIT) != 0
-            ? GRANIT_RENDERER_FEATURE_TIMESTAMP_QUERY_BIT
-            : UINT64_C(0),
+        ((capabilities.renderer_features & GRANIT_WEBGPU_PROVIDER_FEATURE_TIMESTAMP_QUERY_BIT) != 0
+             ? GRANIT_RENDERER_FEATURE_TIMESTAMP_QUERY_BIT
+             : UINT64_C(0)) |
+            GRANIT_RENDERER_FEATURE_ASYNC_READBACK_BIT |
+            GRANIT_RENDERER_FEATURE_PIPELINE_WARMUP_BIT,
     };
     provider_surface_types_ = capabilities.surface_types;
     if ((to_provider_surface_types(surface_types_) & ~provider_surface_types_) != 0) {

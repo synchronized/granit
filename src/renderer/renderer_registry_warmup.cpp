@@ -188,6 +188,16 @@ granit_result renderer_registry::make_pipeline_warmup_key(
     const auto owner = backend_renderers_.find(renderer);
     if (owner == backend_renderers_.end())
       return GRANIT_ERROR_INVALID_HANDLE;
+    const auto& capabilities = owner->second->capabilities();
+    append_value(bytes, owner->second->backend());
+    append_value(bytes, capabilities.uniform_buffer_offset_alignment);
+    append_value(bytes, capabilities.storage_buffer_offset_alignment);
+    append_value(bytes, capabilities.max_uniform_buffer_binding_size);
+    append_value(bytes, capabilities.max_storage_buffer_binding_size);
+    append_value(bytes, capabilities.framebuffer_sample_counts);
+    append_value(bytes, capabilities.renderer_features);
+    append_value(bytes, capabilities.shader_features);
+    append_value(bytes, capabilities.shader_profile);
     const auto& layout_handle = entry.type == GRANIT_PIPELINE_WARMUP_TYPE_GRAPHICS
                                     ? entry.graphics.layout
                                     : entry.compute.layout;
@@ -300,7 +310,7 @@ granit_result renderer_registry::submit_pipeline_warmup_batch_async(
       if (status.cancel_requested != 0) {
         for (; payload->next_index < payload->entries.size(); ++payload->next_index)
           payload->entries[payload->next_index].result.result = GRANIT_ERROR_CANCELLED;
-        state->complete(GRANIT_ERROR_CANCELLED);
+        state->acknowledge_cancel();
         return;
       }
       auto& entry = payload->entries[payload->next_index];
