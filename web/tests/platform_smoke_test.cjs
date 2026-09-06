@@ -169,11 +169,15 @@ async function main() {
   const { server, requestedPaths, rejectExternalBuffer } = await startServer();
   const address = server.address();
   const browserArguments = ["--enable-unsafe-webgpu", "--no-sandbox"];
-  if (process.platform !== "win32") {
+  if (process.platform !== "win32" || process.env.GRANIT_WEBGPU_FORCE_SWIFTSHADER === "1") {
     browserArguments.push(
       "--enable-unsafe-swiftshader",
       "--use-webgpu-adapter=swiftshader",
+      "--enable-dawn-features=allow_unsafe_apis",
+      "--disable-dawn-features=use_dxc",
+      "--enable-webgpu-developer-features",
       "--use-gpu-in-tests",
+      "--enable-accelerated-2d-canvas",
     );
   }
   const browser = await chromium.launch({
