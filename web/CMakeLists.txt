@@ -118,7 +118,6 @@ target_link_options(
     "-sFETCH=1"
     "-sASYNCIFY=1"
     "$<$<CONFIG:Debug>:-sASSERTIONS=1>"
-    "$<$<CONFIG:Release>:--closure=1>"
 )
 target_link_libraries(granit_web_platform_smoke PRIVATE granit_web_model_viewer_platform)
 set_target_properties(
@@ -172,7 +171,6 @@ target_link_options(
     "-sFETCH=1"
     "-sASYNCIFY=1"
     "$<$<CONFIG:Debug>:-sASSERTIONS=1>"
-    "$<$<CONFIG:Release>:--closure=1>"
 )
 set_target_properties(
   granit_model_viewer_web

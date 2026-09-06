@@ -44,11 +44,15 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          output="build/emscripten-release/web/granit_web_platform_smoke"
-          test -s "${output}.html"
-          test -s "${output}.js"
-          test -s "${output}.wasm"
-          test -s "${output}.data"
+          for name in granit_web_platform_smoke granit_model_viewer_web; do
+            output="build/emscripten-release/web/${name}"
+            test -s "${output}.html"
+            test -s "${output}.js"
+            test -s "${output}.wasm"
+            test -s "${output}.data"
+          done
+          test -s build/emscripten-release/web/model_viewer_fixture.gltf
+          test -s build/emscripten-release/web/model_viewer_fixture.bin
       - name: 安装浏览器测试驱动
         working-directory: web/tests
         run: npm ci
@@ -70,3 +74,13 @@ jobs:
             echo "无头 Chrome 丢失 WebGPU 设备，重启浏览器测试（${attempt}/3）"
           done
           exit 1
+      - name: 发布浏览器示例产物
+        uses: actions/upload-artifact@v6
+        with:
+          name: granit-web-examples
+          path: |
+            build/emscripten-release/web/granit_web_platform_smoke.*
+            build/emscripten-release/web/granit_model_viewer_web.*
+            build/emscripten-release/web/model_viewer_fixture.gltf
+            build/emscripten-release/web/model_viewer_fixture.bin
+          if-no-files-found: error
