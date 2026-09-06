@@ -343,7 +343,7 @@
 
 ## 二十二、0.15.0 异步回读与管线预热
 
-**状态：实现完成，等待发布验收。**
+**状态：已完成。**
 
 - **[S-30](plans/S-30-0.15.0-async-readback-and-pipeline-warmup.md) / P1**：为 Buffer 与 Texture
   建立有界批量异步 Readback，复用现有异步状态、取消、诊断和安全生命周期契约。

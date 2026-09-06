@@ -8,6 +8,8 @@
 
 ## Unreleased
 
+## 0.15.0 - 2026-09-06
+
 ### 新增
 
 - Core 新增有界异步 Readback Batch，统一读取 Buffer 与 Texture 多区域，支持紧密或后端原始布局、
