@@ -255,8 +255,13 @@ granit_result validate_public_pipeline() {
   if (result == GRANIT_SUCCESS)
     result = granit_pipeline_warmup_batch_submit_async(state.renderer, warmup_batch,
                                                        &warmup_operation);
+  if (result == GRANIT_SUCCESS)
+    std::printf("GRANIT_PROGRESS:pipelines:0:1\n");
   granit_async_operation_status warmup_status = GRANIT_ASYNC_OPERATION_STATUS_INIT;
   for (std::uint32_t attempt = 0; result == GRANIT_SUCCESS && attempt < 600; ++attempt) {
+    if (state.upload_cancel_requested)
+      static_cast<void>(
+          granit_async_operation_request_cancel(state.renderer, warmup_operation));
     result = granit_async_operation_get_status(state.renderer, warmup_operation, &warmup_status);
     if (result != GRANIT_SUCCESS ||
         warmup_status.state != GRANIT_ASYNC_OPERATION_STATE_RUNNING)
@@ -273,6 +278,8 @@ granit_result validate_public_pipeline() {
     result = warmup_status.result == GRANIT_ERROR_NOT_READY ? GRANIT_ERROR_NOT_READY
                                                             : warmup_status.result;
   }
+  if (result == GRANIT_SUCCESS)
+    std::printf("GRANIT_PROGRESS:pipelines:1:1\n");
   if (warmup_operation != GRANIT_NULL_HANDLE)
     static_cast<void>(granit_async_operation_destroy(state.renderer, warmup_operation));
   if (warmup_batch != GRANIT_NULL_HANDLE)
@@ -1124,7 +1131,10 @@ void tick(void*) noexcept {
     fail("renderer-timestamp", timestamp_result);
     return;
   }
+  state.upload_active = true;
+  state.upload_cancel_requested = false;
   const auto pipeline_result = validate_public_pipeline();
+  state.upload_active = false;
   if (pipeline_result != GRANIT_SUCCESS) {
     fail("renderer-pipeline", pipeline_result);
     return;

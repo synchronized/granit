@@ -216,6 +216,7 @@ async function main() {
     for (const stage of [
       "document", "buffers", "images", "materials", "meshes", "nodes",
       "planning", "geometry", "textures", "samplers",
+      "pipelines",
     ]) {
       if (!browserMessages.some((message) => message.includes(`GRANIT_PROGRESS:${stage}:`)))
         throw new Error(`浏览器分阶段上传未报告 ${stage} 进度`);
