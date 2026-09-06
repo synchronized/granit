@@ -15,6 +15,18 @@ Render Pipeline component，不取代核心 Renderer 的 Shader、Pipeline 或 B
 `granit_material_parameter_id` 根据参数名生成稳定 ID。C++ 用户可以使用
 `granit::material_parameter_id`。参数更新支持标量、向量、矩阵、Texture View 和 Sampler。
 
+## 标准 PBR Schema
+
+`<granit/pipeline/pbr_material.h>` 和对应 C++20 头公开标准 PBR Shader 的稳定消费契约，包括：
+
+- 基础颜色、金属度、感知粗糙度、法线、遮蔽、发光和调试显示的参数名与常量偏移；
+- 五类纹理、Sampler 的 Binding，以及 `pbr_texture_mask` 特性位；
+- Position、Normal、Tangent 和 UV0 的标准 Vertex Location；
+- `granit_pbr_validate_vertex_layout`，用于在创建资产前检查布局是否满足所选纹理变体。
+
+这些值是公共标准 PBR 模板和内置实现共同使用的权威定义。上游仍拥有自己的材质语义和资产身份，
+只需在 GPU 实例边界映射到该 Schema；不需要包含 `src/material` 私有头文件。
+
 ## 创建与更新
 
 - 使用 `GRANIT_MATERIAL_DESC_INIT` 初始化创建描述。
