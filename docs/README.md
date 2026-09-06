@@ -45,6 +45,7 @@
 10. [0.16.0 严格非阻塞异步调度计划](plans/S-31-0.16.0-nonblocking-async.md)
 11. [0.17.0 WebGPU 原生异步 Pipeline 预热计划](plans/S-32-0.17.0-webgpu-async-pipeline-warmup.md)
 12. [开发与发布流水线提速计划](plans/S-33-ci-release-acceleration.md)
+13. [0.18.0 压缩纹理与格式能力契约计划](plans/S-34-0.18.0-compressed-textures.md)
 
 ## 操作指南
 
