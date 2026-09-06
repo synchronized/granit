@@ -234,6 +234,7 @@ struct readback_map_request {
 struct pipeline_warmup_request {
   std::shared_ptr<webgpu_instance::pipeline_warmup_record> warmup;
   granit_webgpu_provider_host_api host{};
+  WGPUInstance instance{};
 };
 
 std::mutex instances_mutex;
@@ -613,6 +614,7 @@ void receive_render_pipeline_warmup(WGPUCreatePipelineAsyncStatus status,
     }
   }
   request->warmup->result.store(pipeline_warmup_result(status), std::memory_order_release);
+  wgpuInstanceRelease(request->instance);
 }
 
 void receive_compute_pipeline_warmup(WGPUCreatePipelineAsyncStatus status,
@@ -634,6 +636,7 @@ void receive_compute_pipeline_warmup(WGPUCreatePipelineAsyncStatus status,
     }
   }
   request->warmup->result.store(pipeline_warmup_result(status), std::memory_order_release);
+  wgpuInstanceRelease(request->instance);
 }
 
 #if !defined(__EMSCRIPTEN__)
@@ -2567,11 +2570,13 @@ create_render_pipeline_common(granit_webgpu_provider_instance instance,
       const auto handle = next_handle<granit_webgpu_provider_pipeline_warmup>(next_pipeline_warmup);
       if (!state.pipeline_warmups.emplace(handle, record).second)
         return GRANIT_ERROR_INTERNAL;
-      auto* request = new (std::nothrow) pipeline_warmup_request{record, state.host};
+      auto* request =
+          new (std::nothrow) pipeline_warmup_request{record, state.host, state.instance};
       if (request == nullptr) {
         state.pipeline_warmups.erase(handle);
         return GRANIT_ERROR_OUT_OF_MEMORY;
       }
+      wgpuInstanceAddRef(state.instance);
       WGPUCreateRenderPipelineAsyncCallbackInfo callback =
           WGPU_CREATE_RENDER_PIPELINE_ASYNC_CALLBACK_INFO_INIT;
       callback.mode = WGPUCallbackMode_AllowSpontaneous;
@@ -2675,11 +2680,13 @@ create_compute_pipeline_common(granit_webgpu_provider_instance instance,
       const auto handle = next_handle<granit_webgpu_provider_pipeline_warmup>(next_pipeline_warmup);
       if (!state.pipeline_warmups.emplace(handle, record).second)
         return GRANIT_ERROR_INTERNAL;
-      auto* request = new (std::nothrow) pipeline_warmup_request{record, state.host};
+      auto* request =
+          new (std::nothrow) pipeline_warmup_request{record, state.host, state.instance};
       if (request == nullptr) {
         state.pipeline_warmups.erase(handle);
         return GRANIT_ERROR_OUT_OF_MEMORY;
       }
+      wgpuInstanceAddRef(state.instance);
       WGPUCreateComputePipelineAsyncCallbackInfo callback =
           WGPU_CREATE_COMPUTE_PIPELINE_ASYNC_CALLBACK_INFO_INIT;
       callback.mode = WGPUCallbackMode_AllowSpontaneous;
