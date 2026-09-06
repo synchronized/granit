@@ -4,8 +4,8 @@
 #ifndef GRANIT_RENDERER_RENDERER_REGISTRY_RECORDS_H_
 #define GRANIT_RENDERER_RENDERER_REGISTRY_RECORDS_H_
 
-#include "renderer/renderer_registry.h"
 #include "core/async_operation_state.h"
+#include "renderer/renderer_registry.h"
 
 namespace granit::detail {
 
@@ -204,6 +204,9 @@ struct renderer_registry::upload_batch_record {
   std::shared_ptr<backend_resource_renderer> resource_api;
   std::mutex mutex;
   std::vector<upload_entry> uploads;
+  std::uint64_t staged_bytes{};
+  std::uint64_t max_staged_bytes{};
+  std::uint32_t max_operation_count{};
   bool failed{};
 };
 

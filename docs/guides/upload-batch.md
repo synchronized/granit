@@ -19,6 +19,11 @@ Upload Batch 将多次 Buffer 和 Texture 写入合并为一次 Vulkan Queue 提
   立即复用。
 - 空 Batch 提交返回 `GRANIT_ERROR_INVALID_ARGUMENT`。
 - `granit_upload_batch_reset` 丢弃尚未提交的写入，不进行 GPU 提交。
+- 创建时可通过 `max_staged_bytes` 和 `max_operation_count` 限制单批排队量。累计写入达到边界时返回
+  `GRANIT_ERROR_NOT_READY`，调用方可以先提交当前批次再重试；单项写入本身超过容量时返回
+  `GRANIT_ERROR_INVALID_ARGUMENT`。
+- `granit_upload_batch_get_info` 在不复制或提交数据的情况下返回当前排队字节数、操作数和容量，适合
+  用于加载进度与背压决策。
 - Batch 会保活已记录的目标 Buffer 和 Texture。记录后销毁公开句柄不会使尚未提交的上传悬空。
 - 同一个 Batch 的调用应由使用者串行发起；不同 Batch 可以由不同线程独立填充和提交。
 

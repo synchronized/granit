@@ -16,8 +16,8 @@
 #include <unordered_map>
 #include <vector>
 
-#include <granit/renderer/buffer.h>
 #include <granit/renderer/async_operation.h>
+#include <granit/renderer/buffer.h>
 #include <granit/renderer/command_recorder.h>
 #include <granit/renderer/frame_context.h>
 #include <granit/renderer/pipeline.h>
@@ -78,16 +78,17 @@ public:
   [[nodiscard]] granit_result get_info(granit_renderer renderer, granit_renderer_info& info);
   [[nodiscard]] granit_result get_resource_stats(granit_renderer renderer,
                                                  granit_renderer_resource_stats& stats);
-  [[nodiscard]] granit_result register_async_operation(
-      granit_renderer renderer, std::shared_ptr<async_operation_state_machine> state,
-      granit_async_operation& operation, std::function<void()> poll = {},
-      std::shared_ptr<void> payload = {},
-      async_operation_kind kind = async_operation_kind::unknown);
-  [[nodiscard]] granit_result get_async_operation_status(
-      granit_renderer renderer, granit_async_operation operation,
-      granit_async_operation_status& status);
-  [[nodiscard]] granit_result request_async_operation_cancel(
-      granit_renderer renderer, granit_async_operation operation);
+  [[nodiscard]] granit_result
+  register_async_operation(granit_renderer renderer,
+                           std::shared_ptr<async_operation_state_machine> state,
+                           granit_async_operation& operation, std::function<void()> poll = {},
+                           std::shared_ptr<void> payload = {},
+                           async_operation_kind kind = async_operation_kind::unknown);
+  [[nodiscard]] granit_result get_async_operation_status(granit_renderer renderer,
+                                                         granit_async_operation operation,
+                                                         granit_async_operation_status& status);
+  [[nodiscard]] granit_result request_async_operation_cancel(granit_renderer renderer,
+                                                             granit_async_operation operation);
   [[nodiscard]] granit_result destroy_async_operation(granit_renderer renderer,
                                                       granit_async_operation operation);
   [[nodiscard]] granit_result get_status(granit_renderer renderer, granit_renderer_status& status);
@@ -331,12 +332,15 @@ public:
                                                           granit_timestamp_query_pool pool,
                                                           std::uint32_t first,
                                                           std::span<std::uint64_t> nanoseconds);
-  [[nodiscard]] granit_result get_timestamp_query_results_async(
-      granit_renderer renderer, granit_timestamp_query_pool pool, std::uint32_t first,
-      std::uint32_t count, granit_async_operation& operation);
-  [[nodiscard]] granit_result copy_timestamp_query_results(
-      granit_renderer renderer, granit_timestamp_query_pool pool,
-      granit_async_operation operation, std::span<std::uint64_t> nanoseconds);
+  [[nodiscard]] granit_result get_timestamp_query_results_async(granit_renderer renderer,
+                                                                granit_timestamp_query_pool pool,
+                                                                std::uint32_t first,
+                                                                std::uint32_t count,
+                                                                granit_async_operation& operation);
+  [[nodiscard]] granit_result copy_timestamp_query_results(granit_renderer renderer,
+                                                           granit_timestamp_query_pool pool,
+                                                           granit_async_operation operation,
+                                                           std::span<std::uint64_t> nanoseconds);
   [[nodiscard]] granit_result destroy_timestamp_query_pool(granit_renderer renderer,
                                                            granit_timestamp_query_pool pool);
   [[nodiscard]] granit_result reset_timestamp_queries(granit_renderer renderer,
@@ -348,6 +352,8 @@ public:
                                               granit_timestamp_query_pool pool,
                                               granit_timestamp_stage stage, std::uint32_t index);
   [[nodiscard]] granit_result create_upload_batch(granit_renderer renderer,
+                                                  std::uint64_t max_staged_bytes,
+                                                  std::uint32_t max_operation_count,
                                                   granit_upload_batch& batch);
   [[nodiscard]] granit_result upload_batch_write_buffer(granit_renderer renderer,
                                                         granit_upload_batch batch,
@@ -359,6 +365,9 @@ public:
                                                          std::uint64_t size,
                                                          const granit_texture_data_layout& layout,
                                                          const granit_texture_write_region& region);
+  [[nodiscard]] granit_result get_upload_batch_info(granit_renderer renderer,
+                                                    granit_upload_batch batch,
+                                                    granit_upload_batch_info& info);
   [[nodiscard]] granit_result submit_upload_batch(granit_renderer renderer,
                                                   granit_upload_batch batch);
   [[nodiscard]] granit_result reset_upload_batch(granit_renderer renderer,

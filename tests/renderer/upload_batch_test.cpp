@@ -57,6 +57,45 @@ TEST_CASE("Upload Batch 合并 Buffer 写入并支持复用", "[upload_batch][bu
   CHECK(batch.submit() == granit::result::invalid_argument);
 }
 
+TEST_CASE("Upload Batch 在复制前执行字节数和操作数背压", "[upload_batch][backpressure]") {
+  granit::renderer renderer;
+  const auto initialized = renderer.initialize({.application_name = "granit-upload-budget"});
+  if (unavailable(initialized))
+    SKIP("当前运行环境没有满足要求的 Vulkan 设备");
+  REQUIRE(initialized == granit::result::success);
+
+  granit::buffer buffer;
+  REQUIRE(buffer.initialize(renderer.native_handle(),
+                            {.size = 64,
+                             .usage = granit::buffer_usage::transfer_destination,
+                             .location = granit::memory_location::device}) ==
+          granit::result::success);
+  granit::upload_batch batch;
+  REQUIRE(batch.initialize(renderer.native_handle(),
+                           {.max_staged_bytes = 16, .max_operation_count = 2}) ==
+          granit::result::success);
+  std::array<std::byte, 8> bytes{};
+  REQUIRE(batch.write_buffer(buffer.native_handle(), 0, bytes) == granit::result::success);
+  REQUIRE(batch.write_buffer(buffer.native_handle(), 8, bytes) == granit::result::success);
+  CHECK(batch.write_buffer(buffer.native_handle(), 16, bytes) == granit::result::not_ready);
+
+  granit::upload_batch_info info;
+  REQUIRE(batch.get_info(info) == granit::result::success);
+  CHECK(info.staged_bytes == 16);
+  CHECK(info.operation_count == 2);
+  CHECK(info.max_staged_bytes == 16);
+  CHECK(info.max_operation_count == 2);
+
+  REQUIRE(batch.submit() == granit::result::success);
+  REQUIRE(batch.get_info(info) == granit::result::success);
+  CHECK(info.staged_bytes == 0);
+  CHECK(info.operation_count == 0);
+
+  std::array<std::byte, 20> oversized{};
+  CHECK(batch.write_buffer(buffer.native_handle(), 0, oversized) ==
+        granit::result::invalid_argument);
+}
+
 TEST_CASE("Upload Batch 在公开 Buffer 句柄销毁后仍保活资源", "[upload_batch][lifetime]") {
   granit::renderer renderer;
   const auto initialized = renderer.initialize({.application_name = "granit-upload-retain"});

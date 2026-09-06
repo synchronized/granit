@@ -181,8 +181,7 @@ GRANIT_ABI_ASSERT(granit_abi_shader_asset_desc_manifest,
                   offsetof(granit_shader_asset_desc, manifest_data) == 8);
 GRANIT_ABI_ASSERT(granit_abi_shader_asset_desc_sidecar,
                   offsetof(granit_shader_asset_desc, sidecar_data) == 24);
-GRANIT_ABI_ASSERT(granit_abi_shader_asset_desc_current,
-                  GRANIT_SHADER_ASSET_DESC_SIZE == 40);
+GRANIT_ABI_ASSERT(granit_abi_shader_asset_desc_current, GRANIT_SHADER_ASSET_DESC_SIZE == 40);
 GRANIT_ABI_ASSERT(granit_abi_buffer_initial_data_size, sizeof(granit_buffer_initial_data) == 24);
 GRANIT_ABI_ASSERT(granit_abi_buffer_initial_data_data,
                   offsetof(granit_buffer_initial_data, data) == 8);
@@ -193,7 +192,8 @@ GRANIT_ABI_ASSERT(granit_abi_texture_readback_required_size,
                   offsetof(granit_texture_readback_info, required_size) == 32);
 GRANIT_ABI_ASSERT(granit_abi_timestamp_query_desc_size,
                   sizeof(granit_timestamp_query_pool_desc) == 16);
-GRANIT_ABI_ASSERT(granit_abi_upload_batch_desc_size, sizeof(granit_upload_batch_desc) == 16);
+GRANIT_ABI_ASSERT(granit_abi_upload_batch_desc_size, sizeof(granit_upload_batch_desc) == 32);
+GRANIT_ABI_ASSERT(granit_abi_upload_batch_info_size, sizeof(granit_upload_batch_info) == 40);
 
 typedef struct granit_abi_renderer_desc_alignment_probe {
   char prefix;
