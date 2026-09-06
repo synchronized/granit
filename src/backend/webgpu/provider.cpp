@@ -233,6 +233,7 @@ struct readback_map_request {
 };
 struct pipeline_warmup_request {
   std::shared_ptr<webgpu_instance::pipeline_warmup_record> warmup;
+  const granit_webgpu_provider_host_api* host{};
 };
 
 std::mutex instances_mutex;
@@ -594,22 +595,27 @@ granit_result pipeline_warmup_result(WGPUCreatePipelineAsyncStatus status) noexc
 }
 
 void receive_render_pipeline_warmup(WGPUCreatePipelineAsyncStatus status,
-                                    WGPURenderPipeline pipeline, WGPUStringView, void* data,
+                                    WGPURenderPipeline pipeline, WGPUStringView message, void* data,
                                     void*) noexcept {
   std::unique_ptr<pipeline_warmup_request> request{
       static_cast<pipeline_warmup_request*>(data)};
   if (pipeline != nullptr)
     wgpuRenderPipelineRelease(pipeline);
+  if (status != WGPUCreatePipelineAsyncStatus_Success)
+    emit_dawn_message(request->host, message);
   request->warmup->result.store(pipeline_warmup_result(status), std::memory_order_release);
 }
 
 void receive_compute_pipeline_warmup(WGPUCreatePipelineAsyncStatus status,
-                                     WGPUComputePipeline pipeline, WGPUStringView, void* data,
+                                     WGPUComputePipeline pipeline, WGPUStringView message,
+                                     void* data,
                                      void*) noexcept {
   std::unique_ptr<pipeline_warmup_request> request{
       static_cast<pipeline_warmup_request*>(data)};
   if (pipeline != nullptr)
     wgpuComputePipelineRelease(pipeline);
+  if (status != WGPUCreatePipelineAsyncStatus_Success)
+    emit_dawn_message(request->host, message);
   request->warmup->result.store(pipeline_warmup_result(status), std::memory_order_release);
 }
 
@@ -2540,7 +2546,7 @@ granit_result create_render_pipeline_common(
           next_handle<granit_webgpu_provider_pipeline_warmup>(next_pipeline_warmup);
       if (!state.pipeline_warmups.emplace(handle, record).second)
         return GRANIT_ERROR_INTERNAL;
-      auto* request = new (std::nothrow) pipeline_warmup_request{record};
+      auto* request = new (std::nothrow) pipeline_warmup_request{record, &state.host};
       if (request == nullptr) {
         state.pipeline_warmups.erase(handle);
         return GRANIT_ERROR_OUT_OF_MEMORY;
@@ -2649,7 +2655,7 @@ granit_result create_compute_pipeline_common(
           next_handle<granit_webgpu_provider_pipeline_warmup>(next_pipeline_warmup);
       if (!state.pipeline_warmups.emplace(handle, record).second)
         return GRANIT_ERROR_INTERNAL;
-      auto* request = new (std::nothrow) pipeline_warmup_request{record};
+      auto* request = new (std::nothrow) pipeline_warmup_request{record, &state.host};
       if (request == nullptr) {
         state.pipeline_warmups.erase(handle);
         return GRANIT_ERROR_OUT_OF_MEMORY;

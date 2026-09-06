@@ -47,8 +47,7 @@ validate_shader_desc_common(const granit_shader_desc* desc) noexcept {
     return common;
   }
   if (desc->wgsl == nullptr || desc->wgsl_length == 0 || desc->wgsl_length > maximum_shader_size ||
-      std::memchr(desc->wgsl, '\0', static_cast<std::size_t>(desc->wgsl_length)) != nullptr ||
-      desc->stage == GRANIT_SHADER_STAGE_COMPUTE) {
+      std::memchr(desc->wgsl, '\0', static_cast<std::size_t>(desc->wgsl_length)) != nullptr) {
     return GRANIT_ERROR_INVALID_ARGUMENT;
   }
   return GRANIT_SUCCESS;
