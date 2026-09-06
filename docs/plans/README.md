@@ -163,7 +163,7 @@ D-03-graphics-pipeline.md
 - [S-27：0.12.0 上游资产与标准材质契约](S-27-0.12.0-upstream-asset-contracts.md)——已完成；
   公共化 Shader Asset 检查、标准 PBR Schema/模板与构建树资产目录，消除上游私有格式依赖。
 - [S-28：0.13.0 异步 GPU 操作与 Web 运行时完善](S-28-0.13.0-async-gpu-and-web-runtime.md)——
-  发布验收中；异步操作、WebGPU Timestamp、浏览器分阶段加载和跨后端一致性测试已经完成。
+  已完成；异步操作、WebGPU Timestamp、浏览器分阶段加载、跨后端一致性与发布验收均已通过。
 
 ## 状态
 
