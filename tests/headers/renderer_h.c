@@ -11,7 +11,7 @@ typedef char granit_renderer_info_size_check
 typedef char granit_renderer_limits_size_check
     [sizeof(granit_renderer_limits) == GRANIT_RENDERER_LIMITS_VERSION_1_SIZE ? 1 : -1];
 typedef char granit_renderer_resource_stats_size_check
-    [sizeof(granit_renderer_resource_stats) == GRANIT_RENDERER_RESOURCE_STATS_VERSION_1_SIZE ? 1
+    [sizeof(granit_renderer_resource_stats) == GRANIT_RENDERER_RESOURCE_STATS_VERSION_2_SIZE ? 1
                                                                                              : -1];
 
 granit_renderer_desc granit_renderer_header_check(void) {

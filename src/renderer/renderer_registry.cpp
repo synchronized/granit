@@ -173,13 +173,16 @@ granit_result renderer_registry::get_resource_stats(granit_renderer renderer,
     stats.frame_count = count_owned(frames_);
     stats.timestamp_query_pool_count = count_owned(timestamp_query_pools_);
     stats.upload_batch_count = count_owned(upload_batches_);
+    const auto async_operation_count = count_owned(async_operations_);
+    if (stats.struct_size >= GRANIT_RENDERER_RESOURCE_STATS_VERSION_2_SIZE)
+      stats.async_operation_count = async_operation_count;
     stats.total_live_count =
         stats.buffer_count + stats.texture_count + stats.texture_view_count + stats.sampler_count +
         stats.shader_count + stats.bind_group_layout_count + stats.bind_group_count +
         stats.pipeline_layout_count + stats.graphics_pipeline_count + stats.compute_pipeline_count +
         stats.surface_count + stats.swapchain_count + stats.command_recorder_count +
         stats.frame_context_count + stats.frame_count + stats.timestamp_query_pool_count +
-        stats.upload_batch_count;
+        stats.upload_batch_count + async_operation_count;
     const auto interfaces = backend_interfaces_.find(renderer);
     retirement = interfaces == backend_interfaces_.end() ? nullptr : interfaces->second->retirement;
   }

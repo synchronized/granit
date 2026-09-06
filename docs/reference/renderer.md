@@ -123,8 +123,9 @@ if (result == GRANIT_SUCCESS && stats.total_live_count != 0) {
 ```
 
 `total_live_count` 汇总 Buffer、Texture、Texture View、Sampler、Shader、布局、Bind Group、
-Pipeline、Surface、Swapchain、Command Recorder、Frame Context、活动 Frame、Timestamp Query Pool
-和 Upload Batch。各字段可用于定位具体类型。Swapchain Backbuffer 的 Texture/View 是借用句柄，
+Pipeline、Surface、Swapchain、Command Recorder、Frame Context、活动 Frame、Timestamp Query Pool、
+Upload Batch 和公开 Async Operation。各字段可用于定位具体类型。Swapchain Backbuffer 的
+Texture/View 是借用句柄，
 不计入公开 Texture/View 数量；因此调用方可用 `total_live_count == 0` 作为关闭前检查，且无需了解
 未来追加的分类字段。
 

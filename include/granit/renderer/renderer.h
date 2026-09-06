@@ -135,14 +135,18 @@ typedef struct granit_renderer_resource_stats {
   uint64_t timestamp_query_pool_count;
   uint64_t upload_batch_count;
   uint64_t pending_retirement_count;
+  uint64_t async_operation_count;
 } granit_renderer_resource_stats;
 
 #define GRANIT_RENDERER_RESOURCE_STATS_VERSION_1_SIZE                                              \
   ((uint32_t)(offsetof(granit_renderer_resource_stats, pending_retirement_count) +                 \
               sizeof(uint64_t)))
+#define GRANIT_RENDERER_RESOURCE_STATS_VERSION_2_SIZE                                              \
+  ((uint32_t)sizeof(granit_renderer_resource_stats))
 #define GRANIT_RENDERER_RESOURCE_STATS_INIT                                                        \
   {(uint32_t)sizeof(granit_renderer_resource_stats),                                               \
    UINT32_C(0),                                                                                    \
+   UINT64_C(0),                                                                                    \
    UINT64_C(0),                                                                                    \
    UINT64_C(0),                                                                                    \
    UINT64_C(0),                                                                                    \

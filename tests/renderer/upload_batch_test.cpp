@@ -117,6 +117,9 @@ TEST_CASE("Upload Batch 异步提交公开非阻塞完成状态", "[upload_batch
 
   granit::async_operation operation;
   REQUIRE(batch.submit_async(operation) == granit::result::success);
+  granit::renderer_resource_stats resource_stats;
+  REQUIRE(renderer.get_resource_stats(resource_stats) == granit::result::success);
+  CHECK(resource_stats.async_operation_count == 1);
   granit::upload_batch_info info;
   REQUIRE(batch.get_info(info) == granit::result::success);
   CHECK(info.staged_bytes == 0);
@@ -135,6 +138,9 @@ TEST_CASE("Upload Batch 异步提交公开非阻塞完成状态", "[upload_batch
   CHECK(status.state == granit::async_operation_state::succeeded);
   CHECK(status.operation_result == granit::result::success);
   CHECK(status.cancel_requested);
+  REQUIRE(operation.reset() == granit::result::success);
+  REQUIRE(renderer.get_resource_stats(resource_stats) == granit::result::success);
+  CHECK(resource_stats.async_operation_count == 0);
 }
 
 TEST_CASE("销毁运行中上传操作仍保活资源并回收后端槽", "[upload_batch][async][lifetime]") {
