@@ -9,10 +9,12 @@
 #include <catch2/catch_all.hpp>
 
 #include <array>
+#include <chrono>
 #include <cstddef>
 #include <fstream>
 #include <iterator>
 #include <string>
+#include <thread>
 #include <vector>
 
 namespace {
@@ -40,6 +42,7 @@ void await(granit::renderer& renderer, granit::async_operation& operation) {
       return;
     REQUIRE(status.state == granit::async_operation_state::running);
     REQUIRE(renderer.process_events() == granit::result::success);
+    std::this_thread::sleep_for(std::chrono::milliseconds{1});
   }
   FAIL("Pipeline 预热操作未在限定轮询次数内完成");
 }
