@@ -4,6 +4,7 @@
 #include <granit/pipeline/pbr_material.h>
 
 #include <array>
+#include <cstdint>
 
 extern "C" granit_pbr_vertex_layout_result
 granit_pbr_validate_vertex_layout(const granit_vertex_buffer_layout* vertex_buffers,
