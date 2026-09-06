@@ -73,6 +73,23 @@ granit_result renderer_registry::get_limits(granit_renderer renderer,
   return GRANIT_SUCCESS;
 }
 
+granit_result renderer_registry::get_texture_format_capabilities(
+    granit_renderer renderer, granit_texture_format format,
+    granit_texture_format_capabilities& capabilities) {
+  const auto state = acquire_backend(renderer);
+  if (!state)
+    return GRANIT_ERROR_INVALID_HANDLE;
+  if (texture_format_block(format).bytes == 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  const auto backend = state->texture_format_capabilities(format);
+  capabilities.format = format;
+  capabilities.supported_usage = backend.supported_usage;
+  capabilities.features = backend.features;
+  capabilities.sample_counts = backend.sample_counts;
+  std::fill(std::begin(capabilities.reserved), std::end(capabilities.reserved), 0);
+  return GRANIT_SUCCESS;
+}
+
 granit_result
 renderer_registry::get_shader_capabilities(granit_renderer renderer,
                                            granit_renderer_shader_capabilities& capabilities) {
@@ -541,12 +558,11 @@ granit_result renderer_registry::destroy(granit_renderer renderer) {
         ++batch;
       }
     }
-    for (auto batch = pipeline_warmup_batches_.begin();
-         batch != pipeline_warmup_batches_.end();) {
+    for (auto batch = pipeline_warmup_batches_.begin(); batch != pipeline_warmup_batches_.end();) {
       if (batch->second->owner == state) {
         native_pipeline_warmup_batches.push_back(std::move(batch->second));
-        static_cast<void>(handles_.erase(batch->first, resource_type::pipeline_warmup_batch,
-                                         state->domain()));
+        static_cast<void>(
+            handles_.erase(batch->first, resource_type::pipeline_warmup_batch, state->domain()));
         batch = pipeline_warmup_batches_.erase(batch);
       } else {
         ++batch;

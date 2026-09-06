@@ -39,6 +39,10 @@ typedef uint32_t granit_texture_usage;
 #define GRANIT_TEXTURE_USAGE_COLOR_ATTACHMENT_BIT (UINT32_C(1) << 4)
 #define GRANIT_TEXTURE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT (UINT32_C(1) << 5)
 
+/** 设备对指定 Texture 格式支持的附加能力。 */
+typedef uint32_t granit_texture_format_feature_flags;
+#define GRANIT_TEXTURE_FORMAT_FEATURE_FILTERABLE_BIT (UINT32_C(1) << 0)
+
 /** 后端无关的像素格式。数值不对应 VkFormat。 */
 typedef uint32_t granit_texture_format;
 #define GRANIT_TEXTURE_FORMAT_UNDEFINED UINT32_C(0)
@@ -53,6 +57,17 @@ typedef uint32_t granit_texture_format;
 #define GRANIT_TEXTURE_FORMAT_D32_FLOAT UINT32_C(9)
 #define GRANIT_TEXTURE_FORMAT_D24_UNORM_S8_UINT UINT32_C(10)
 #define GRANIT_TEXTURE_FORMAT_D32_FLOAT_S8_UINT UINT32_C(11)
+#define GRANIT_TEXTURE_FORMAT_BC1_RGBA_UNORM UINT32_C(12)
+#define GRANIT_TEXTURE_FORMAT_BC1_RGBA_SRGB UINT32_C(13)
+#define GRANIT_TEXTURE_FORMAT_BC3_RGBA_UNORM UINT32_C(14)
+#define GRANIT_TEXTURE_FORMAT_BC3_RGBA_SRGB UINT32_C(15)
+#define GRANIT_TEXTURE_FORMAT_BC5_RG_UNORM UINT32_C(16)
+#define GRANIT_TEXTURE_FORMAT_BC7_RGBA_UNORM UINT32_C(17)
+#define GRANIT_TEXTURE_FORMAT_BC7_RGBA_SRGB UINT32_C(18)
+#define GRANIT_TEXTURE_FORMAT_ETC2_RGBA8_UNORM UINT32_C(19)
+#define GRANIT_TEXTURE_FORMAT_ETC2_RGBA8_SRGB UINT32_C(20)
+#define GRANIT_TEXTURE_FORMAT_ASTC_4X4_UNORM UINT32_C(21)
+#define GRANIT_TEXTURE_FORMAT_ASTC_4X4_SRGB UINT32_C(22)
 
 /** 一个格式块的紧密排列信息；当前非压缩格式的块宽高均为 1。 */
 typedef struct granit_texture_format_footprint {
@@ -63,10 +78,34 @@ typedef struct granit_texture_format_footprint {
   uint32_t reserved[4];
 } granit_texture_format_footprint;
 #define GRANIT_TEXTURE_FORMAT_FOOTPRINT_VERSION_1_SIZE UINT32_C(32)
-#define GRANIT_TEXTURE_FORMAT_FOOTPRINT_INIT                                                   \
-  {GRANIT_TEXTURE_FORMAT_FOOTPRINT_VERSION_1_SIZE, UINT32_C(0), UINT32_C(0), UINT32_C(0), {   \
-    UINT32_C(0), UINT32_C(0), UINT32_C(0), UINT32_C(0)                                        \
-  }}
+#define GRANIT_TEXTURE_FORMAT_FOOTPRINT_INIT                                                       \
+  {                                                                                                \
+    GRANIT_TEXTURE_FORMAT_FOOTPRINT_VERSION_1_SIZE, UINT32_C(0), UINT32_C(0), UINT32_C(0), {       \
+      UINT32_C(0), UINT32_C(0), UINT32_C(0), UINT32_C(0)                                           \
+    }                                                                                              \
+  }
+
+/** 指定范围的后端无关紧密块布局；不包含设备要求的 Buffer 对齐。 */
+typedef struct granit_texture_data_footprint {
+  uint32_t struct_size;
+  uint32_t block_columns;
+  uint32_t block_rows;
+  uint32_t image_count;
+  uint64_t bytes_per_row;
+  uint64_t bytes_per_image;
+  uint64_t required_size;
+  uint64_t reserved;
+} granit_texture_data_footprint;
+#define GRANIT_TEXTURE_DATA_FOOTPRINT_VERSION_1_SIZE UINT32_C(48)
+#define GRANIT_TEXTURE_DATA_FOOTPRINT_INIT                                                         \
+  {GRANIT_TEXTURE_DATA_FOOTPRINT_VERSION_1_SIZE,                                                   \
+   UINT32_C(0),                                                                                    \
+   UINT32_C(0),                                                                                    \
+   UINT32_C(0),                                                                                    \
+   UINT64_C(0),                                                                                    \
+   UINT64_C(0),                                                                                    \
+   UINT64_C(0),                                                                                    \
+   UINT64_C(0)}
 
 /** 每个像素的样本数。 */
 typedef uint32_t granit_sample_count;
@@ -74,6 +113,24 @@ typedef uint32_t granit_sample_count;
 #define GRANIT_SAMPLE_COUNT_2 UINT32_C(2)
 #define GRANIT_SAMPLE_COUNT_4 UINT32_C(4)
 #define GRANIT_SAMPLE_COUNT_8 UINT32_C(8)
+
+/** 当前 Renderer 对指定 Texture 格式的设备能力。 */
+typedef struct granit_texture_format_capabilities {
+  uint32_t struct_size;
+  granit_texture_format format;
+  granit_texture_usage supported_usage;
+  granit_texture_format_feature_flags features;
+  granit_sample_count sample_counts;
+  uint32_t reserved[3];
+} granit_texture_format_capabilities;
+#define GRANIT_TEXTURE_FORMAT_CAPABILITIES_VERSION_1_SIZE UINT32_C(32)
+#define GRANIT_TEXTURE_FORMAT_CAPABILITIES_INIT                                                    \
+  {                                                                                                \
+    GRANIT_TEXTURE_FORMAT_CAPABILITIES_VERSION_1_SIZE, GRANIT_TEXTURE_FORMAT_UNDEFINED,            \
+        UINT32_C(0), UINT32_C(0), UINT32_C(0), {                                                   \
+      UINT32_C(0), UINT32_C(0), UINT32_C(0)                                                        \
+    }                                                                                              \
+  }
 
 /** Texture View 选择的颜色、深度或模板平面。 */
 typedef uint32_t granit_texture_aspect;
@@ -220,13 +277,14 @@ typedef struct granit_texture_view_desc {
 } granit_texture_view_desc;
 #define GRANIT_TEXTURE_VIEW_DESC_VERSION_1_SIZE UINT32_C(52)
 #define GRANIT_TEXTURE_VIEW_DESC_INIT                                                              \
-  {GRANIT_TEXTURE_VIEW_DESC_VERSION_1_SIZE,                                                        \
-   GRANIT_TEXTURE_DIMENSION_2D,                                                                    \
-   GRANIT_TEXTURE_FORMAT_UNDEFINED,                                                                \
-   UINT32_C(0),                                                                                    \
-   {GRANIT_TEXTURE_ASPECT_AUTOMATIC, UINT32_C(0), UINT32_C(1), UINT32_C(0), UINT32_C(1)},          \
-   {GRANIT_COMPONENT_SWIZZLE_IDENTITY, GRANIT_COMPONENT_SWIZZLE_IDENTITY,                          \
-    GRANIT_COMPONENT_SWIZZLE_IDENTITY, GRANIT_COMPONENT_SWIZZLE_IDENTITY}}
+  {                                                                                                \
+    GRANIT_TEXTURE_VIEW_DESC_VERSION_1_SIZE, GRANIT_TEXTURE_DIMENSION_2D,                          \
+        GRANIT_TEXTURE_FORMAT_UNDEFINED, UINT32_C(0),                                              \
+        {GRANIT_TEXTURE_ASPECT_AUTOMATIC, UINT32_C(0), UINT32_C(1), UINT32_C(0), UINT32_C(1)}, {   \
+      GRANIT_COMPONENT_SWIZZLE_IDENTITY, GRANIT_COMPONENT_SWIZZLE_IDENTITY,                        \
+          GRANIT_COMPONENT_SWIZZLE_IDENTITY, GRANIT_COMPONENT_SWIZZLE_IDENTITY                     \
+    }                                                                                              \
+  }
 
 /** 独立 Sampler 状态描述。 */
 typedef struct granit_sampler_desc {

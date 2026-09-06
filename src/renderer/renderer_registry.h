@@ -4,8 +4,8 @@
 #ifndef GRANIT_RENDERER_RENDERER_REGISTRY_H_
 #define GRANIT_RENDERER_RENDERER_REGISTRY_H_
 
-#include <atomic>
 #include <array>
+#include <atomic>
 #include <cstddef>
 #include <cstdint>
 #include <functional>
@@ -60,8 +60,8 @@ enum class async_operation_kind : std::uint8_t {
   unknown,
   timestamp_results,
   upload_batch,
-  readback_batch
-  , pipeline_warmup_batch
+  readback_batch,
+  pipeline_warmup_batch
 };
 
 /** 线程安全地管理进程内公开 renderer 句柄。 */
@@ -77,6 +77,9 @@ public:
                                                granit_renderer& renderer);
   [[nodiscard]] granit_result destroy(granit_renderer renderer);
   [[nodiscard]] granit_result get_limits(granit_renderer renderer, granit_renderer_limits& limits);
+  [[nodiscard]] granit_result
+  get_texture_format_capabilities(granit_renderer renderer, granit_texture_format format,
+                                  granit_texture_format_capabilities& capabilities);
   [[nodiscard]] granit_result
   get_shader_capabilities(granit_renderer renderer,
                           granit_renderer_shader_capabilities& capabilities);
@@ -387,14 +390,18 @@ public:
   [[nodiscard]] granit_result destroy_upload_batch(granit_renderer renderer,
                                                    granit_upload_batch batch);
   [[nodiscard]] granit_result create_readback_batch(granit_renderer renderer,
-                                                     const granit_readback_batch_desc& desc,
-                                                     granit_readback_batch& batch);
-  [[nodiscard]] granit_result readback_batch_read_buffer(
-      granit_renderer renderer, granit_readback_batch batch, granit_buffer buffer,
-      std::uint64_t offset, std::uint64_t size, std::uint32_t& result_index);
-  [[nodiscard]] granit_result readback_batch_read_texture(
-      granit_renderer renderer, granit_readback_batch batch, granit_texture texture,
-      const granit_texture_write_region& region, std::uint32_t& result_index);
+                                                    const granit_readback_batch_desc& desc,
+                                                    granit_readback_batch& batch);
+  [[nodiscard]] granit_result readback_batch_read_buffer(granit_renderer renderer,
+                                                         granit_readback_batch batch,
+                                                         granit_buffer buffer, std::uint64_t offset,
+                                                         std::uint64_t size,
+                                                         std::uint32_t& result_index);
+  [[nodiscard]] granit_result readback_batch_read_texture(granit_renderer renderer,
+                                                          granit_readback_batch batch,
+                                                          granit_texture texture,
+                                                          const granit_texture_write_region& region,
+                                                          std::uint32_t& result_index);
   [[nodiscard]] granit_result get_readback_batch_info(granit_renderer renderer,
                                                       granit_readback_batch batch,
                                                       granit_readback_batch_info& info);
@@ -413,28 +420,32 @@ public:
                                                    granit_readback_batch batch);
   [[nodiscard]] granit_result destroy_readback_batch(granit_renderer renderer,
                                                      granit_readback_batch batch);
-  [[nodiscard]] granit_result create_pipeline_warmup_batch(
-      granit_renderer renderer, const granit_pipeline_warmup_batch_desc& desc,
-      granit_pipeline_warmup_batch& batch);
-  [[nodiscard]] granit_result add_graphics_pipeline_warmup(
-      granit_renderer renderer, granit_pipeline_warmup_batch batch,
-      const granit_graphics_pipeline_desc& desc, std::uint32_t& result_index);
-  [[nodiscard]] granit_result add_compute_pipeline_warmup(
-      granit_renderer renderer, granit_pipeline_warmup_batch batch,
-      const granit_compute_pipeline_desc& desc, std::uint32_t& result_index);
-  [[nodiscard]] granit_result get_pipeline_warmup_batch_info(
-      granit_renderer renderer, granit_pipeline_warmup_batch batch,
-      granit_pipeline_warmup_batch_info& info);
-  [[nodiscard]] granit_result submit_pipeline_warmup_batch_async(
-      granit_renderer renderer, granit_pipeline_warmup_batch batch,
-      granit_async_operation& operation);
-  [[nodiscard]] granit_result get_pipeline_warmup_result(
-      granit_renderer renderer, granit_async_operation operation, std::uint32_t result_index,
-      granit_pipeline_warmup_result_info& info);
-  [[nodiscard]] granit_result reset_pipeline_warmup_batch(
-      granit_renderer renderer, granit_pipeline_warmup_batch batch);
-  [[nodiscard]] granit_result destroy_pipeline_warmup_batch(
-      granit_renderer renderer, granit_pipeline_warmup_batch batch);
+  [[nodiscard]] granit_result
+  create_pipeline_warmup_batch(granit_renderer renderer,
+                               const granit_pipeline_warmup_batch_desc& desc,
+                               granit_pipeline_warmup_batch& batch);
+  [[nodiscard]] granit_result
+  add_graphics_pipeline_warmup(granit_renderer renderer, granit_pipeline_warmup_batch batch,
+                               const granit_graphics_pipeline_desc& desc,
+                               std::uint32_t& result_index);
+  [[nodiscard]] granit_result add_compute_pipeline_warmup(granit_renderer renderer,
+                                                          granit_pipeline_warmup_batch batch,
+                                                          const granit_compute_pipeline_desc& desc,
+                                                          std::uint32_t& result_index);
+  [[nodiscard]] granit_result
+  get_pipeline_warmup_batch_info(granit_renderer renderer, granit_pipeline_warmup_batch batch,
+                                 granit_pipeline_warmup_batch_info& info);
+  [[nodiscard]] granit_result submit_pipeline_warmup_batch_async(granit_renderer renderer,
+                                                                 granit_pipeline_warmup_batch batch,
+                                                                 granit_async_operation& operation);
+  [[nodiscard]] granit_result get_pipeline_warmup_result(granit_renderer renderer,
+                                                         granit_async_operation operation,
+                                                         std::uint32_t result_index,
+                                                         granit_pipeline_warmup_result_info& info);
+  [[nodiscard]] granit_result reset_pipeline_warmup_batch(granit_renderer renderer,
+                                                          granit_pipeline_warmup_batch batch);
+  [[nodiscard]] granit_result destroy_pipeline_warmup_batch(granit_renderer renderer,
+                                                            granit_pipeline_warmup_batch batch);
 
 private:
   void poll_detached_async_operations(const std::shared_ptr<backend_renderer>& owner);
@@ -485,9 +496,9 @@ private:
   void erase_dynamic_backbuffer(swapchain_record& swapchain) noexcept;
   [[nodiscard]] granit_result finish_frame(granit_renderer renderer, granit_swapchain swapchain,
                                            granit_frame frame, bool present, bool& needs_recreate);
-  [[nodiscard]] granit_result make_pipeline_warmup_key(
-      granit_renderer renderer, const pipeline_warmup_entry& entry,
-      std::array<std::uint8_t, GRANIT_PIPELINE_WARMUP_CACHE_KEY_SIZE>& key);
+  [[nodiscard]] granit_result
+  make_pipeline_warmup_key(granit_renderer renderer, const pipeline_warmup_entry& entry,
+                           std::array<std::uint8_t, GRANIT_PIPELINE_WARMUP_CACHE_KEY_SIZE>& key);
 
   std::mutex mutex_;
   handle_table handles_;
@@ -523,8 +534,7 @@ private:
   std::unordered_map<granit_upload_batch, std::shared_ptr<upload_batch_record>> upload_batches_;
   std::unordered_map<granit_readback_batch, std::shared_ptr<readback_batch_record>>
       readback_batches_;
-  std::unordered_map<granit_pipeline_warmup_batch,
-                     std::shared_ptr<pipeline_warmup_batch_record>>
+  std::unordered_map<granit_pipeline_warmup_batch, std::shared_ptr<pipeline_warmup_batch_record>>
       pipeline_warmup_batches_;
   std::unordered_map<std::string, std::weak_ptr<backend_renderer>> warmed_pipeline_keys_;
   std::uint32_t next_domain_{1};

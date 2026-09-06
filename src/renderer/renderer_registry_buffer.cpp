@@ -399,10 +399,10 @@ granit_result renderer_registry::upload_batch_write_texture(
   if (batch_record->failed || size > SIZE_MAX)
     return GRANIT_ERROR_INVALID_ARGUMENT;
   const auto& desc = texture_record->desc;
-  const auto bytes_per_pixel =
+  const auto bytes_per_block =
       depth_format(desc.format) ? 0 : texture_format_bytes_per_block(desc.format);
   if ((desc.usage & GRANIT_TEXTURE_USAGE_TRANSFER_DESTINATION_BIT) == 0 ||
-      desc.sample_count != GRANIT_SAMPLE_COUNT_1 || bytes_per_pixel == 0)
+      desc.sample_count != GRANIT_SAMPLE_COUNT_1 || bytes_per_block == 0)
     return GRANIT_ERROR_UNSUPPORTED;
   if (region.aspect != GRANIT_TEXTURE_ASPECT_COLOR_BIT || region.width == 0 || region.height == 0 ||
       region.depth == 0 || region.array_layer_count == 0 || region.mip_level >= desc.mip_levels ||
@@ -416,21 +416,16 @@ granit_result renderer_registry::upload_batch_write_texture(
       region.height > mip_height - region.y || region.z >= mip_depth ||
       region.depth > mip_depth - region.z)
     return GRANIT_ERROR_INVALID_ARGUMENT;
-
-  const std::uint64_t tight_row = std::uint64_t{region.width} * bytes_per_pixel;
-  const std::uint64_t row_pitch = layout.bytes_per_row == 0 ? tight_row : layout.bytes_per_row;
-  const std::uint64_t image_rows =
-      layout.rows_per_image == 0 ? region.height : layout.rows_per_image;
-  if (row_pitch < tight_row || row_pitch % bytes_per_pixel != 0 || image_rows < region.height)
+  if (!texture_region_has_valid_block_alignment(desc.format, region.x, region.y, region.width,
+                                                region.height, mip_width, mip_height))
     return GRANIT_ERROR_INVALID_ARGUMENT;
   const std::uint64_t image_count =
       desc.dimension == GRANIT_TEXTURE_DIMENSION_3D ? region.depth : region.array_layer_count;
-  const auto max = std::numeric_limits<std::uint64_t>::max();
-  if (image_rows > max / row_pitch || image_count - 1 > max / (image_rows * row_pitch) ||
-      region.height - 1 > max / row_pitch)
+  texture_transfer_footprint transfer{};
+  if (!calculate_texture_transfer_footprint(desc.format, region.width, region.height, image_count,
+                                            layout, transfer))
     return GRANIT_ERROR_INVALID_ARGUMENT;
-  const std::uint64_t required =
-      (image_count - 1) * image_rows * row_pitch + (region.height - 1) * row_pitch + tight_row;
+  const auto required = transfer.required_size;
   if (layout.offset > size || required > size - layout.offset || required > SIZE_MAX)
     return GRANIT_ERROR_INVALID_ARGUMENT;
   if ((batch_record->max_staged_bytes != 0 && required > batch_record->max_staged_bytes) ||
@@ -442,9 +437,15 @@ granit_result renderer_registry::upload_batch_write_texture(
        batch_record->uploads.size() >= batch_record->max_operation_count))
     return GRANIT_ERROR_NOT_READY;
 
+  const auto block = texture_format_block(desc.format);
+  if (layout.bytes_per_row != 0 && layout.bytes_per_row / block.bytes > UINT32_MAX / block.width)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  if (layout.rows_per_image != 0 && layout.rows_per_image > UINT32_MAX / block.height)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
   const backend_texture_copy copy{
-      .buffer_row_length = layout.bytes_per_row == 0 ? 0 : layout.bytes_per_row / bytes_per_pixel,
-      .buffer_image_height = layout.rows_per_image,
+      .buffer_row_length =
+          layout.bytes_per_row == 0 ? 0 : (layout.bytes_per_row / block.bytes) * block.width,
+      .buffer_image_height = layout.rows_per_image == 0 ? 0 : layout.rows_per_image * block.height,
       .aspect = region.aspect,
       .mip_level = region.mip_level,
       .base_array_layer = region.base_array_layer,

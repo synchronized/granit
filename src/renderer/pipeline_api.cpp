@@ -3,6 +3,7 @@
 
 #include <granit/renderer/pipeline.h>
 
+#include "core/texture_format.h"
 #include "renderer/renderer_registry.h"
 
 #include <array>
@@ -11,8 +12,7 @@
 namespace {
 
 bool valid_format(granit_texture_format format) noexcept {
-  return format >= GRANIT_TEXTURE_FORMAT_R8_UNORM &&
-         format <= GRANIT_TEXTURE_FORMAT_D32_FLOAT_S8_UINT;
+  return format >= GRANIT_TEXTURE_FORMAT_R8_UNORM && format <= GRANIT_TEXTURE_FORMAT_ASTC_4X4_SRGB;
 }
 
 uint32_t vertex_format_size(granit_vertex_format format) noexcept {
@@ -148,7 +148,7 @@ extern "C" granit_result granit_graphics_pipeline_create(granit_renderer rendere
        desc->depth_stencil_format == GRANIT_TEXTURE_FORMAT_UNDEFINED) ||
       (desc->depth_stencil_format != GRANIT_TEXTURE_FORMAT_UNDEFINED &&
        (!valid_format(desc->depth_stencil_format) ||
-        desc->depth_stencil_format < GRANIT_TEXTURE_FORMAT_D16_UNORM)) ||
+        !granit::detail::depth_stencil_texture_format(desc->depth_stencil_format))) ||
       (desc->sample_count != 1 && desc->sample_count != 2 && desc->sample_count != 4 &&
        desc->sample_count != 8))
     return GRANIT_ERROR_INVALID_ARGUMENT;
@@ -157,7 +157,7 @@ extern "C" granit_result granit_graphics_pipeline_create(granit_renderer rendere
     return GRANIT_ERROR_INVALID_HANDLE;
   for (uint32_t index = 0; index < desc->color_format_count; ++index) {
     if (!valid_format(desc->color_formats[index]) ||
-        desc->color_formats[index] >= GRANIT_TEXTURE_FORMAT_D16_UNORM)
+        granit::detail::depth_stencil_texture_format(desc->color_formats[index]))
       return GRANIT_ERROR_INVALID_ARGUMENT;
   }
   if (desc->reserved_3 != 0 || desc->vertex_buffer_layout_count > 16 ||

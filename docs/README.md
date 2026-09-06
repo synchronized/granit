@@ -45,6 +45,7 @@
 10. [0.16.0 严格非阻塞异步调度计划](plans/S-31-0.16.0-nonblocking-async.md)
 11. [0.17.0 WebGPU 原生异步 Pipeline 预热计划](plans/S-32-0.17.0-webgpu-async-pipeline-warmup.md)
 12. [开发与发布流水线提速计划](plans/S-33-ci-release-acceleration.md)
+13. [0.18.0 压缩纹理与格式能力契约计划](plans/S-34-0.18.0-compressed-textures.md)
 
 ## 操作指南
 
@@ -64,6 +65,7 @@
 - [从 0.14 迁移到 0.15](guides/migrate-0.14-to-0.15.md)
 - [从 0.15 迁移到 0.16](guides/migrate-0.15-to-0.16.md)
 - [从 0.16 迁移到 0.17](guides/migrate-0.16-to-0.17.md)
+- [从 0.17 迁移到 0.18](guides/migrate-0.17-to-0.18.md)
 - [从 0.8 迁移到 0.9](guides/migrate-0.8-to-0.9.md)
 - [示例程序及运行方式](guides/examples.md)
 - [运行跨后端模型查看器](guides/model-viewer.md)

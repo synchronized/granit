@@ -86,6 +86,8 @@ public:
                                                     std::uint64_t size) noexcept override;
   [[nodiscard]] granit_result export_pipeline_cache(void* data,
                                                     std::uint64_t& size) noexcept override;
+  [[nodiscard]] backend_texture_format_capabilities
+  texture_format_capabilities(granit_texture_format format) const noexcept override;
   [[nodiscard]] granit_result set_object_name(VkObjectType type, std::uint64_t object,
                                               std::string_view name);
   [[nodiscard]] granit_result set_backend_resource_name(backend_resource& resource,

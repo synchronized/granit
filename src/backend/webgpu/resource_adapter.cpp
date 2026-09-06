@@ -3,6 +3,8 @@
 
 #include "backend/webgpu/resource_adapter.h"
 
+#include "core/texture_format.h"
+
 #include <cmath>
 #include <cstddef>
 #include <cstring>
@@ -208,23 +210,28 @@ granit_webgpu_provider_texture_format to_format(granit_texture_format format) no
     return GRANIT_WEBGPU_PROVIDER_TEXTURE_FORMAT_RGBA16_FLOAT;
   case GRANIT_TEXTURE_FORMAT_D32_FLOAT:
     return GRANIT_WEBGPU_PROVIDER_TEXTURE_FORMAT_D32_FLOAT;
-  default:
-    return 0;
-  }
-}
-
-std::uint32_t bytes_per_pixel(granit_texture_format format) noexcept {
-  switch (format) {
-  case GRANIT_TEXTURE_FORMAT_R8_UNORM:
-    return 1;
-  case GRANIT_TEXTURE_FORMAT_RG8_UNORM:
-    return 2;
-  case GRANIT_TEXTURE_FORMAT_RGBA8_UNORM:
-  case GRANIT_TEXTURE_FORMAT_RGBA8_SRGB:
-  case GRANIT_TEXTURE_FORMAT_D32_FLOAT:
-    return 4;
-  case GRANIT_TEXTURE_FORMAT_RGBA16_FLOAT:
-    return 8;
+  case GRANIT_TEXTURE_FORMAT_BC1_RGBA_UNORM:
+    return GRANIT_WEBGPU_PROVIDER_TEXTURE_FORMAT_BC1_RGBA_UNORM;
+  case GRANIT_TEXTURE_FORMAT_BC1_RGBA_SRGB:
+    return GRANIT_WEBGPU_PROVIDER_TEXTURE_FORMAT_BC1_RGBA_SRGB;
+  case GRANIT_TEXTURE_FORMAT_BC3_RGBA_UNORM:
+    return GRANIT_WEBGPU_PROVIDER_TEXTURE_FORMAT_BC3_RGBA_UNORM;
+  case GRANIT_TEXTURE_FORMAT_BC3_RGBA_SRGB:
+    return GRANIT_WEBGPU_PROVIDER_TEXTURE_FORMAT_BC3_RGBA_SRGB;
+  case GRANIT_TEXTURE_FORMAT_BC5_RG_UNORM:
+    return GRANIT_WEBGPU_PROVIDER_TEXTURE_FORMAT_BC5_RG_UNORM;
+  case GRANIT_TEXTURE_FORMAT_BC7_RGBA_UNORM:
+    return GRANIT_WEBGPU_PROVIDER_TEXTURE_FORMAT_BC7_RGBA_UNORM;
+  case GRANIT_TEXTURE_FORMAT_BC7_RGBA_SRGB:
+    return GRANIT_WEBGPU_PROVIDER_TEXTURE_FORMAT_BC7_RGBA_SRGB;
+  case GRANIT_TEXTURE_FORMAT_ETC2_RGBA8_UNORM:
+    return GRANIT_WEBGPU_PROVIDER_TEXTURE_FORMAT_ETC2_RGBA8_UNORM;
+  case GRANIT_TEXTURE_FORMAT_ETC2_RGBA8_SRGB:
+    return GRANIT_WEBGPU_PROVIDER_TEXTURE_FORMAT_ETC2_RGBA8_SRGB;
+  case GRANIT_TEXTURE_FORMAT_ASTC_4X4_UNORM:
+    return GRANIT_WEBGPU_PROVIDER_TEXTURE_FORMAT_ASTC_4X4_UNORM;
+  case GRANIT_TEXTURE_FORMAT_ASTC_4X4_SRGB:
+    return GRANIT_WEBGPU_PROVIDER_TEXTURE_FORMAT_ASTC_4X4_SRGB;
   default:
     return 0;
   }
@@ -372,11 +379,13 @@ granit_result webgpu_resource_adapter::upload_batch(
         if (texture == nullptr)
           return GRANIT_ERROR_INVALID_ARGUMENT;
         const auto& copy = upload.texture_copy;
-        const auto pixel_size = bytes_per_pixel(texture->format_);
-        if (pixel_size == 0 || copy.aspect != GRANIT_TEXTURE_ASPECT_COLOR_BIT ||
-            copy.base_array_layer != 0 || copy.array_layer_count != 1 || copy.z != 0 ||
+        const auto block = texture_format_block(texture->format_);
+        if (block.bytes == 0 || copy.aspect != GRANIT_TEXTURE_ASPECT_COLOR_BIT || copy.z != 0 ||
             copy.depth != 1 || copy.x < 0 || copy.y < 0 ||
-            (copy.buffer_row_length != 0 && copy.buffer_row_length > UINT32_MAX / pixel_size))
+            (copy.buffer_row_length != 0 && copy.buffer_row_length % block.width != 0) ||
+            (copy.buffer_image_height != 0 && copy.buffer_image_height % block.height != 0) ||
+            (copy.buffer_row_length != 0 &&
+             copy.buffer_row_length / block.width > UINT32_MAX / block.bytes))
           return GRANIT_ERROR_UNSUPPORTED;
         operation.type = GRANIT_WEBGPU_PROVIDER_UPLOAD_TYPE_TEXTURE;
         operation.texture = texture->handle_;
@@ -387,8 +396,8 @@ granit_result webgpu_resource_adapter::upload_batch(
             static_cast<std::uint32_t>(copy.y),
             copy.width,
             copy.height,
-            copy.buffer_row_length == 0 ? 0 : copy.buffer_row_length * pixel_size,
-            copy.buffer_image_height,
+            copy.buffer_row_length == 0 ? 0 : copy.buffer_row_length / block.width * block.bytes,
+            copy.buffer_image_height == 0 ? 0 : copy.buffer_image_height / block.height,
             copy.base_array_layer,
             copy.array_layer_count};
       } else {

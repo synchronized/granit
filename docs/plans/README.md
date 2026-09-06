@@ -175,6 +175,8 @@ D-03-graphics-pipeline.md
   已完成；WebGPU 原生异步创建、统一私有 HAL、资源保活与 Web PBR 预热均已落地。
 - [S-33：开发与发布流水线提速](S-33-ci-release-acceleration.md)——已完成；建立快速检查、软件
   WebGPU 降级回归、统一缓存和不可变 Release Candidate 晋级。
+- [S-34：0.18.0 压缩纹理与格式能力契约](S-34-0.18.0-compressed-textures.md)——已完成；增加通用
+  GPU 块压缩格式、布局计算、设备能力查询和跨后端上传契约。
 
 ## 状态
 

@@ -69,6 +69,8 @@ public:
   [[nodiscard]] const backend_capabilities& capabilities() const noexcept override {
     return capabilities_;
   }
+  [[nodiscard]] backend_texture_format_capabilities
+  texture_format_capabilities(granit_texture_format format) const noexcept override;
   [[nodiscard]] std::uint32_t domain() const noexcept override { return domain_; }
   void set_domain(std::uint32_t domain) noexcept override { domain_ = domain; }
   [[nodiscard]] webgpu_presentation_adapter* presentation() noexcept { return presentation_.get(); }

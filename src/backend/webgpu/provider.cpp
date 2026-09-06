@@ -6,6 +6,7 @@
 #include "backend/webgpu/provider_api.h"
 
 #include <algorithm>
+#include <array>
 #include <atomic>
 #include <cmath>
 #include <cstddef>
@@ -28,6 +29,30 @@
 #endif
 
 namespace {
+
+uint32_t texture_compression_features(WGPUDevice device) noexcept {
+  uint32_t result{};
+  if (wgpuDeviceHasFeature(device, WGPUFeatureName_TextureCompressionBC))
+    result |= GRANIT_WEBGPU_PROVIDER_TEXTURE_COMPRESSION_BC_BIT;
+  if (wgpuDeviceHasFeature(device, WGPUFeatureName_TextureCompressionETC2))
+    result |= GRANIT_WEBGPU_PROVIDER_TEXTURE_COMPRESSION_ETC2_BIT;
+  if (wgpuDeviceHasFeature(device, WGPUFeatureName_TextureCompressionASTC))
+    result |= GRANIT_WEBGPU_PROVIDER_TEXTURE_COMPRESSION_ASTC_BIT;
+  return result;
+}
+
+std::size_t collect_optional_features(WGPUAdapter adapter,
+                                      std::array<WGPUFeatureName, 4>& features) noexcept {
+  std::size_t count{};
+  constexpr std::array candidates{
+      WGPUFeatureName_TimestampQuery, WGPUFeatureName_TextureCompressionBC,
+      WGPUFeatureName_TextureCompressionETC2, WGPUFeatureName_TextureCompressionASTC};
+  for (const auto feature : candidates) {
+    if (wgpuAdapterHasFeature(adapter, feature))
+      features[count++] = feature;
+  }
+  return count;
+}
 
 constexpr std::uint32_t provider_surface_types =
 #if defined(GRANIT_WEBGPU_NATIVE_SURFACE_TEST)
@@ -501,6 +526,8 @@ void receive_device_async(WGPURequestDeviceStatus status, WGPUDevice device, WGP
         wgpuDeviceHasFeature(device, WGPUFeatureName_TimestampQuery)
             ? GRANIT_WEBGPU_PROVIDER_FEATURE_TIMESTAMP_QUERY_BIT
             : UINT64_C(0),
+        texture_compression_features(device),
+        0,
     };
     state.lifecycle.mark_ready();
     constexpr char diagnostic[] = "Emscripten WebGPU adapter and device are ready";
@@ -519,11 +546,9 @@ void receive_adapter_async(WGPURequestAdapterStatus status, WGPUAdapter adapter,
     }
     state.adapter = adapter;
     WGPUDeviceDescriptor descriptor = WGPU_DEVICE_DESCRIPTOR_INIT;
-    const WGPUFeatureName timestamp_feature = WGPUFeatureName_TimestampQuery;
-    if (wgpuAdapterHasFeature(adapter, timestamp_feature)) {
-      descriptor.requiredFeatureCount = 1;
-      descriptor.requiredFeatures = &timestamp_feature;
-    }
+    std::array<WGPUFeatureName, 4> features{};
+    descriptor.requiredFeatureCount = collect_optional_features(adapter, features);
+    descriptor.requiredFeatures = descriptor.requiredFeatureCount == 0 ? nullptr : features.data();
     descriptor.deviceLostCallbackInfo.mode = WGPUCallbackMode_AllowSpontaneous;
     descriptor.deviceLostCallbackInfo.callback = receive_device_lost;
     descriptor.deviceLostCallbackInfo.userdata1 = &state;
@@ -772,11 +797,10 @@ granit_result create_backend(const granit_webgpu_provider_host_api* host,
 
   device_request device{host};
   WGPUDeviceDescriptor device_descriptor = WGPU_DEVICE_DESCRIPTOR_INIT;
-  const WGPUFeatureName timestamp_feature = WGPUFeatureName_TimestampQuery;
-  if (wgpuAdapterHasFeature(state->adapter, timestamp_feature)) {
-    device_descriptor.requiredFeatureCount = 1;
-    device_descriptor.requiredFeatures = &timestamp_feature;
-  }
+  std::array<WGPUFeatureName, 4> features{};
+  device_descriptor.requiredFeatureCount = collect_optional_features(state->adapter, features);
+  device_descriptor.requiredFeatures =
+      device_descriptor.requiredFeatureCount == 0 ? nullptr : features.data();
   device_descriptor.deviceLostCallbackInfo.mode = WGPUCallbackMode_AllowSpontaneous;
   device_descriptor.deviceLostCallbackInfo.callback = receive_device_lost;
   device_descriptor.deviceLostCallbackInfo.userdata1 = state;
@@ -837,6 +861,8 @@ granit_result create_backend(const granit_webgpu_provider_host_api* host,
       wgpuDeviceHasFeature(state->device, WGPUFeatureName_TimestampQuery)
           ? GRANIT_WEBGPU_PROVIDER_FEATURE_TIMESTAMP_QUERY_BIT
           : UINT64_C(0),
+      texture_compression_features(state->device),
+      0,
   };
 #if defined(GRANIT_WEBGPU_DEFER_INITIALIZATION_TEST)
   const auto extended_host = host->struct_size > sizeof(granit_webgpu_provider_host_api);
@@ -1290,6 +1316,28 @@ WGPUTextureFormat to_native_texture_format(granit_webgpu_provider_texture_format
     return WGPUTextureFormat_Depth32Float;
   case GRANIT_WEBGPU_PROVIDER_TEXTURE_FORMAT_RGBA16_FLOAT:
     return WGPUTextureFormat_RGBA16Float;
+  case GRANIT_WEBGPU_PROVIDER_TEXTURE_FORMAT_BC1_RGBA_UNORM:
+    return WGPUTextureFormat_BC1RGBAUnorm;
+  case GRANIT_WEBGPU_PROVIDER_TEXTURE_FORMAT_BC1_RGBA_SRGB:
+    return WGPUTextureFormat_BC1RGBAUnormSrgb;
+  case GRANIT_WEBGPU_PROVIDER_TEXTURE_FORMAT_BC3_RGBA_UNORM:
+    return WGPUTextureFormat_BC3RGBAUnorm;
+  case GRANIT_WEBGPU_PROVIDER_TEXTURE_FORMAT_BC3_RGBA_SRGB:
+    return WGPUTextureFormat_BC3RGBAUnormSrgb;
+  case GRANIT_WEBGPU_PROVIDER_TEXTURE_FORMAT_BC5_RG_UNORM:
+    return WGPUTextureFormat_BC5RGUnorm;
+  case GRANIT_WEBGPU_PROVIDER_TEXTURE_FORMAT_BC7_RGBA_UNORM:
+    return WGPUTextureFormat_BC7RGBAUnorm;
+  case GRANIT_WEBGPU_PROVIDER_TEXTURE_FORMAT_BC7_RGBA_SRGB:
+    return WGPUTextureFormat_BC7RGBAUnormSrgb;
+  case GRANIT_WEBGPU_PROVIDER_TEXTURE_FORMAT_ETC2_RGBA8_UNORM:
+    return WGPUTextureFormat_ETC2RGBA8Unorm;
+  case GRANIT_WEBGPU_PROVIDER_TEXTURE_FORMAT_ETC2_RGBA8_SRGB:
+    return WGPUTextureFormat_ETC2RGBA8UnormSrgb;
+  case GRANIT_WEBGPU_PROVIDER_TEXTURE_FORMAT_ASTC_4X4_UNORM:
+    return WGPUTextureFormat_ASTC4x4Unorm;
+  case GRANIT_WEBGPU_PROVIDER_TEXTURE_FORMAT_ASTC_4X4_SRGB:
+    return WGPUTextureFormat_ASTC4x4UnormSrgb;
   default:
     return WGPUTextureFormat_Undefined;
   }
@@ -1364,21 +1412,49 @@ to_native_compare_operation(granit_webgpu_provider_compare_operation operation) 
   }
 }
 
-std::uint32_t texture_bytes_per_pixel(granit_webgpu_provider_texture_format format) noexcept {
+struct texture_block_info {
+  std::uint32_t width;
+  std::uint32_t height;
+  std::uint32_t bytes;
+};
+
+texture_block_info texture_block(granit_webgpu_provider_texture_format format) noexcept {
   switch (format) {
+  case GRANIT_WEBGPU_PROVIDER_TEXTURE_FORMAT_BC1_RGBA_UNORM:
+  case GRANIT_WEBGPU_PROVIDER_TEXTURE_FORMAT_BC1_RGBA_SRGB:
+    return {4, 4, 8};
+  case GRANIT_WEBGPU_PROVIDER_TEXTURE_FORMAT_BC3_RGBA_UNORM:
+  case GRANIT_WEBGPU_PROVIDER_TEXTURE_FORMAT_BC3_RGBA_SRGB:
+  case GRANIT_WEBGPU_PROVIDER_TEXTURE_FORMAT_BC5_RG_UNORM:
+  case GRANIT_WEBGPU_PROVIDER_TEXTURE_FORMAT_BC7_RGBA_UNORM:
+  case GRANIT_WEBGPU_PROVIDER_TEXTURE_FORMAT_BC7_RGBA_SRGB:
+  case GRANIT_WEBGPU_PROVIDER_TEXTURE_FORMAT_ETC2_RGBA8_UNORM:
+  case GRANIT_WEBGPU_PROVIDER_TEXTURE_FORMAT_ETC2_RGBA8_SRGB:
+  case GRANIT_WEBGPU_PROVIDER_TEXTURE_FORMAT_ASTC_4X4_UNORM:
+  case GRANIT_WEBGPU_PROVIDER_TEXTURE_FORMAT_ASTC_4X4_SRGB:
+    return {4, 4, 16};
   case GRANIT_WEBGPU_PROVIDER_TEXTURE_FORMAT_R8_UNORM:
-    return 1;
+    return {1, 1, 1};
   case GRANIT_WEBGPU_PROVIDER_TEXTURE_FORMAT_RG8_UNORM:
-    return 2;
+    return {1, 1, 2};
   case GRANIT_WEBGPU_PROVIDER_TEXTURE_FORMAT_RGBA8_UNORM:
   case GRANIT_WEBGPU_PROVIDER_TEXTURE_FORMAT_RGBA8_SRGB:
   case GRANIT_WEBGPU_PROVIDER_TEXTURE_FORMAT_D32_FLOAT:
-    return 4;
+    return {1, 1, 4};
   case GRANIT_WEBGPU_PROVIDER_TEXTURE_FORMAT_RGBA16_FLOAT:
-    return 8;
+    return {1, 1, 8};
   default:
-    return 0;
+    return {};
   }
+}
+
+bool valid_texture_block_region(granit_webgpu_provider_texture_format format, std::uint32_t x,
+                                std::uint32_t y, std::uint32_t width, std::uint32_t height,
+                                std::uint32_t mip_width, std::uint32_t mip_height) noexcept {
+  const auto block = texture_block(format);
+  return block.bytes != 0 && x % block.width == 0 && y % block.height == 0 &&
+         (width % block.width == 0 || x + width == mip_width) &&
+         (height % block.height == 0 || y + height == mip_height);
 }
 
 WGPUTextureAspect map_texture_aspect(granit_webgpu_provider_texture_aspect aspect) noexcept {
@@ -1413,19 +1489,25 @@ bool valid_texture_buffer_copy(const webgpu_instance::texture_record& texture,
   if (region.x >= mip_width || region.width > mip_width - region.x || region.y >= mip_height ||
       region.height > mip_height - region.y || region.z != 0 || region.depth != 1)
     return false;
-  const auto pixel_size = texture_bytes_per_pixel(texture.format);
-  const std::uint64_t tight_row = std::uint64_t{region.width} * pixel_size;
-  if (pixel_size == 0 || region.bytes_per_row < tight_row || region.rows_per_image < region.height)
+  const auto block = texture_block(texture.format);
+  if (block.bytes == 0)
+    return false;
+  const std::uint64_t columns = (std::uint64_t{region.width} + block.width - 1) / block.width;
+  const std::uint64_t rows = (std::uint64_t{region.height} + block.height - 1) / block.height;
+  const std::uint64_t tight_row = columns * block.bytes;
+  if (!valid_texture_block_region(texture.format, region.x, region.y, region.width, region.height,
+                                  mip_width, mip_height) ||
+      region.bytes_per_row < tight_row || region.bytes_per_row % block.bytes != 0 ||
+      region.rows_per_image < rows)
     return false;
   const auto max = (std::numeric_limits<std::uint64_t>::max)();
   if (region.rows_per_image > max / region.bytes_per_row)
     return false;
   const auto image_pitch = std::uint64_t{region.rows_per_image} * region.bytes_per_row;
-  if (region.array_layer_count - 1 > max / image_pitch ||
-      region.height - 1 > max / region.bytes_per_row)
+  if (region.array_layer_count - 1 > max / image_pitch || rows - 1 > max / region.bytes_per_row)
     return false;
   const auto required = std::uint64_t{region.array_layer_count - 1} * image_pitch +
-                        std::uint64_t{region.height - 1} * region.bytes_per_row + tight_row;
+                        (rows - 1) * region.bytes_per_row + tight_row;
   if (region.buffer_offset > buffer.size || required > buffer.size - region.buffer_offset)
     return false;
   const auto required_buffer_usage = buffer_is_source
@@ -1494,7 +1576,8 @@ granit_result create_texture(granit_webgpu_provider_instance instance,
   if (desc->mip_level_count > 1 && sample_count == 1 &&
       (desc->usage & GRANIT_WEBGPU_PROVIDER_TEXTURE_USAGE_COPY_SRC_BIT) != 0 &&
       (desc->usage & GRANIT_WEBGPU_PROVIDER_TEXTURE_USAGE_COPY_DST_BIT) != 0 &&
-      desc->format != GRANIT_WEBGPU_PROVIDER_TEXTURE_FORMAT_D32_FLOAT) {
+      desc->format != GRANIT_WEBGPU_PROVIDER_TEXTURE_FORMAT_D32_FLOAT &&
+      texture_block(desc->format).width == 1) {
     // 公共契约用 Transfer usage 表达 Mipmap；内部补充渲染采样 usage，避免泄漏 WebGPU 实现路径。
     usage |= WGPUTextureUsage_TextureBinding | WGPUTextureUsage_RenderAttachment;
   }
@@ -1585,16 +1668,22 @@ granit_result write_texture(granit_webgpu_provider_instance instance,
   if (desc->x >= mip_width || desc->width > mip_width - desc->x || desc->y >= mip_height ||
       desc->height > mip_height - desc->y)
     return GRANIT_ERROR_INVALID_ARGUMENT;
+  const auto block = texture_block(record.format);
+  if (!valid_texture_block_region(record.format, desc->x, desc->y, desc->width, desc->height,
+                                  mip_width, mip_height))
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  const std::uint64_t block_rows = (std::uint64_t{desc->height} + block.height - 1) / block.height;
   const std::uint64_t tight_row =
-      std::uint64_t{desc->width} * texture_bytes_per_pixel(record.format);
+      ((std::uint64_t{desc->width} + block.width - 1) / block.width) * block.bytes;
   const std::uint64_t row_pitch = desc->bytes_per_row == 0 ? tight_row : desc->bytes_per_row;
-  const std::uint64_t rows = desc->rows_per_image == 0 ? desc->height : desc->rows_per_image;
-  if (row_pitch < tight_row || rows < desc->height ||
-      row_pitch > std::numeric_limits<std::uint32_t>::max())
+  const std::uint64_t rows = desc->rows_per_image == 0 ? block_rows : desc->rows_per_image;
+  if (row_pitch < tight_row || row_pitch % block.bytes != 0 || rows < block_rows ||
+      row_pitch > std::numeric_limits<std::uint32_t>::max() ||
+      rows > std::numeric_limits<std::uint32_t>::max())
     return GRANIT_ERROR_INVALID_ARGUMENT;
   const std::uint64_t image_pitch = rows * row_pitch;
   const std::uint64_t required = (std::uint64_t{array_layer_count} - 1) * image_pitch +
-                                 (std::uint64_t{desc->height} - 1) * row_pitch + tight_row;
+                                 (block_rows - 1) * row_pitch + tight_row;
   if (required > size || size > std::numeric_limits<std::size_t>::max())
     return GRANIT_ERROR_INVALID_ARGUMENT;
   WGPUTexelCopyTextureInfo destination = WGPU_TEXEL_COPY_TEXTURE_INFO_INIT;
@@ -1668,16 +1757,22 @@ granit_result write_upload_batch(granit_webgpu_provider_instance instance,
     if (desc.x >= mip_width || desc.width > mip_width - desc.x || desc.y >= mip_height ||
         desc.height > mip_height - desc.y)
       return GRANIT_ERROR_INVALID_ARGUMENT;
+    const auto block = texture_block(record.format);
+    if (!valid_texture_block_region(record.format, desc.x, desc.y, desc.width, desc.height,
+                                    mip_width, mip_height))
+      return GRANIT_ERROR_INVALID_ARGUMENT;
+    const std::uint64_t block_rows = (std::uint64_t{desc.height} + block.height - 1) / block.height;
     const std::uint64_t tight_row =
-        std::uint64_t{desc.width} * texture_bytes_per_pixel(record.format);
+        ((std::uint64_t{desc.width} + block.width - 1) / block.width) * block.bytes;
     const std::uint64_t row_pitch = desc.bytes_per_row == 0 ? tight_row : desc.bytes_per_row;
-    const std::uint64_t rows = desc.rows_per_image == 0 ? desc.height : desc.rows_per_image;
-    if (row_pitch < tight_row || rows < desc.height ||
-        row_pitch > std::numeric_limits<std::uint32_t>::max())
+    const std::uint64_t rows = desc.rows_per_image == 0 ? block_rows : desc.rows_per_image;
+    if (row_pitch < tight_row || row_pitch % block.bytes != 0 || rows < block_rows ||
+        row_pitch > std::numeric_limits<std::uint32_t>::max() ||
+        rows > std::numeric_limits<std::uint32_t>::max())
       return GRANIT_ERROR_INVALID_ARGUMENT;
     const std::uint64_t image_pitch = rows * row_pitch;
     const std::uint64_t required = (std::uint64_t{array_layer_count} - 1) * image_pitch +
-                                   (std::uint64_t{desc.height} - 1) * row_pitch + tight_row;
+                                   (block_rows - 1) * row_pitch + tight_row;
     if (required > operation.size)
       return GRANIT_ERROR_INVALID_ARGUMENT;
   }
@@ -1692,11 +1787,13 @@ granit_result write_upload_batch(granit_webgpu_provider_instance instance,
     }
     const auto& desc = operation.texture_write;
     const auto& texture = state.textures.find(operation.texture)->second;
+    const auto block = texture_block(texture.format);
     const std::uint64_t tight_row =
-        std::uint64_t{desc.width} * texture_bytes_per_pixel(texture.format);
+        ((std::uint64_t{desc.width} + block.width - 1) / block.width) * block.bytes;
     const auto row_pitch =
         static_cast<std::uint32_t>(desc.bytes_per_row == 0 ? tight_row : desc.bytes_per_row);
-    const auto rows = desc.rows_per_image == 0 ? desc.height : desc.rows_per_image;
+    const auto rows = desc.rows_per_image == 0 ? (desc.height + block.height - 1) / block.height
+                                               : desc.rows_per_image;
     const auto array_layer_count = desc.array_layer_count == 0 ? 1 : desc.array_layer_count;
     WGPUTexelCopyTextureInfo destination = WGPU_TEXEL_COPY_TEXTURE_INFO_INIT;
     destination.texture = texture.texture;
@@ -2980,12 +3077,16 @@ granit_result recorder_copy_buffer_to_texture_v2(
     encode(region->buffer_offset, region->y, region->base_array_layer, region->height,
            region->array_layer_count, false);
   } else {
+    const auto block = texture_block(texture->second.format);
+    const auto block_rows = (region->height + block.height - 1) / block.height;
     const auto image_pitch = std::uint64_t{region->rows_per_image} * region->bytes_per_row;
     for (std::uint32_t layer = 0; layer < region->array_layer_count; ++layer) {
-      for (std::uint32_t row = 0; row < region->height; ++row) {
+      for (std::uint32_t row = 0; row < block_rows; ++row) {
+        const auto y = region->y + row * block.height;
+        const auto height = (std::min)(block.height, region->y + region->height - y);
         encode(region->buffer_offset + std::uint64_t{layer} * image_pitch +
                    std::uint64_t{row} * region->bytes_per_row,
-               region->y + row, region->base_array_layer + layer, 1, 1, true);
+               y, region->base_array_layer + layer, height, 1, true);
       }
     }
   }
@@ -3036,12 +3137,16 @@ granit_result recorder_copy_texture_to_buffer_v2(
     encode(region->buffer_offset, region->y, region->base_array_layer, region->height,
            region->array_layer_count, false);
   } else {
+    const auto block = texture_block(texture->second.format);
+    const auto block_rows = (region->height + block.height - 1) / block.height;
     const auto image_pitch = std::uint64_t{region->rows_per_image} * region->bytes_per_row;
     for (std::uint32_t layer = 0; layer < region->array_layer_count; ++layer) {
-      for (std::uint32_t row = 0; row < region->height; ++row) {
+      for (std::uint32_t row = 0; row < block_rows; ++row) {
+        const auto y = region->y + row * block.height;
+        const auto height = (std::min)(block.height, region->y + region->height - y);
         encode(region->buffer_offset + std::uint64_t{layer} * image_pitch +
                    std::uint64_t{row} * region->bytes_per_row,
-               region->y + row, region->base_array_layer + layer, 1, 1, true);
+               y, region->base_array_layer + layer, height, 1, true);
       }
     }
   }
