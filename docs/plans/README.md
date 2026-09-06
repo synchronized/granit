@@ -167,6 +167,9 @@ D-03-graphics-pipeline.md
 - [S-29：0.14.0 异步管线指标与资源流送](S-29-0.14.0-async-pipeline-metrics-and-streaming.md)——
   已完成；Render Pipeline 异步指标、有界异步 Upload Batch、Model Viewer 接入和跨后端验收均已
   落地。
+- [S-30：0.15.0 异步回读与管线预热](S-30-0.15.0-async-readback-and-pipeline-warmup.md)——
+  已确认；补齐有界异步 Readback、结果布局和 Pipeline 批量预热，复用既有异步操作而不引入公共
+  线程池。
 
 ## 状态
 
