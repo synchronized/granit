@@ -12,3 +12,7 @@ typedef char granit_material_pipeline_warmup_desc_size
 
 static const granit_material_pipeline_warmup_desc granit_material_warmup_default =
     GRANIT_MATERIAL_PIPELINE_WARMUP_DESC_INIT;
+
+void granit_pipeline_material_h_compiles(void) {
+  (void)granit_material_warmup_default;
+}
