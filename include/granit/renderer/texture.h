@@ -29,11 +29,13 @@ typedef struct granit_texture_readback_info {
   uint32_t reserved[2];
 } granit_texture_readback_info;
 #define GRANIT_TEXTURE_READBACK_INFO_VERSION_1_SIZE UINT32_C(48)
-#define GRANIT_TEXTURE_READBACK_INFO_INIT                                                       \
-  {GRANIT_TEXTURE_READBACK_INFO_VERSION_1_SIZE, GRANIT_TEXTURE_FORMAT_UNDEFINED, UINT32_C(0),  \
-   UINT32_C(0), UINT32_C(0), UINT32_C(0), UINT32_C(0), UINT32_C(0), UINT64_C(0), {             \
-     UINT32_C(0), UINT32_C(0)                                                                  \
-   }}
+#define GRANIT_TEXTURE_READBACK_INFO_INIT                                                          \
+  {                                                                                                \
+    GRANIT_TEXTURE_READBACK_INFO_VERSION_1_SIZE, GRANIT_TEXTURE_FORMAT_UNDEFINED, UINT32_C(0),     \
+        UINT32_C(0), UINT32_C(0), UINT32_C(0), UINT32_C(0), UINT32_C(0), UINT64_C(0), {            \
+      UINT32_C(0), UINT32_C(0)                                                                     \
+    }                                                                                              \
+  }
 
 #ifdef __cplusplus
 extern "C" {
@@ -42,6 +44,11 @@ extern "C" {
 /** 查询格式的紧密排列块信息；结果不包含设备相关的行或 Buffer 对齐。 */
 GRANIT_API granit_result granit_texture_format_get_footprint(
     granit_texture_format format, granit_texture_format_footprint* footprint);
+
+/** 计算指定尺寸和图像数的紧密块布局；尺寸和图像数必须非零。 */
+GRANIT_API granit_result granit_texture_format_calculate_data_footprint(
+    granit_texture_format format, uint32_t width, uint32_t height, uint32_t image_count,
+    granit_texture_data_footprint* footprint);
 
 /** 创建未初始化的 Texture 存储。 */
 GRANIT_API granit_result granit_texture_create(granit_renderer renderer,

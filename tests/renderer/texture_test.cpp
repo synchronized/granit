@@ -45,6 +45,14 @@ TEST_CASE("Texture Format Footprint返回后端无关的紧密块信息", "[text
   CHECK(granit_texture_format_get_footprint(GRANIT_TEXTURE_FORMAT_D32_FLOAT_S8_UINT, &native) ==
         GRANIT_SUCCESS);
   CHECK(native.bytes_per_block == 8);
+  CHECK(granit_texture_format_get_footprint(GRANIT_TEXTURE_FORMAT_BC1_RGBA_SRGB, &native) ==
+        GRANIT_SUCCESS);
+  CHECK(native.block_width == 4);
+  CHECK(native.block_height == 4);
+  CHECK(native.bytes_per_block == 8);
+  CHECK(granit_texture_format_get_footprint(GRANIT_TEXTURE_FORMAT_BC7_RGBA_UNORM, &native) ==
+        GRANIT_SUCCESS);
+  CHECK(native.bytes_per_block == 16);
   CHECK(granit_texture_format_get_footprint(GRANIT_TEXTURE_FORMAT_UNDEFINED, &native) ==
         GRANIT_ERROR_INVALID_ARGUMENT);
   CHECK(granit_texture_format_get_footprint(GRANIT_TEXTURE_FORMAT_R8_UNORM, nullptr) ==
@@ -54,6 +62,27 @@ TEST_CASE("Texture Format Footprint返回后端无关的紧密块信息", "[text
   CHECK(granit::get_texture_format_footprint(granit::texture_format::bgra8_srgb, cpp) ==
         granit::result::success);
   CHECK(cpp.bytes_per_block == 4);
+}
+
+TEST_CASE("Texture Data Footprint处理压缩块和边缘Mip", "[texture][format][compressed]") {
+  granit_texture_data_footprint native = GRANIT_TEXTURE_DATA_FOOTPRINT_INIT;
+  REQUIRE(granit_texture_format_calculate_data_footprint(GRANIT_TEXTURE_FORMAT_BC1_RGBA_UNORM, 7, 5,
+                                                         6, &native) == GRANIT_SUCCESS);
+  CHECK(native.block_columns == 2);
+  CHECK(native.block_rows == 2);
+  CHECK(native.bytes_per_row == 16);
+  CHECK(native.bytes_per_image == 32);
+  CHECK(native.required_size == 192);
+
+  granit::texture_data_footprint cpp{};
+  REQUIRE(granit::calculate_texture_data_footprint(granit::texture_format::astc_4x4_srgb, 1, 1, 1,
+                                                   cpp) == granit::result::success);
+  CHECK(cpp.block_columns == 1);
+  CHECK(cpp.block_rows == 1);
+  CHECK(cpp.required_size == 16);
+  CHECK(granit_texture_format_calculate_data_footprint(GRANIT_TEXTURE_FORMAT_BC7_RGBA_UNORM, 0, 4,
+                                                       1,
+                                                       &native) == GRANIT_ERROR_INVALID_ARGUMENT);
 }
 
 TEST_CASE("Texture同步读取先查询容量再返回紧密原始像素", "[texture][readback]") {
@@ -69,8 +98,7 @@ TEST_CASE("Texture同步读取先查询容量再返回紧密原始像素", "[tex
                                        granit::texture_usage::transfer_destination,
                               .width = 2,
                               .height = 2}) == granit::result::success);
-  constexpr std::array<uint8_t, 16> expected{1,  2,  3,  4,  5,  6,  7,  8,
-                                              9, 10, 11, 12, 13, 14, 15, 16};
+  constexpr std::array<uint8_t, 16> expected{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16};
   REQUIRE(texture.write(std::as_bytes(std::span{expected}), {}, {.width = 2, .height = 2}) ==
           granit::result::success);
   granit::texture_readback_info info;
@@ -90,8 +118,8 @@ TEST_CASE("Texture同步读取先查询容量再返回紧密原始像素", "[tex
   REQUIRE(second.initialize({.application_name = "granit-texture-read-second"}) ==
           granit::result::success);
   granit_texture_readback_info native_info = GRANIT_TEXTURE_READBACK_INFO_INIT;
-  const granit_texture_write_region region{0, 0, 1, GRANIT_TEXTURE_ASPECT_COLOR_BIT,
-                                           0, 0, 0, 2, 2, 1};
+  const granit_texture_write_region region{0, 0, 1, GRANIT_TEXTURE_ASPECT_COLOR_BIT, 0, 0, 0,
+                                           2, 2, 1};
   uint64_t size = 0;
   CHECK(granit_texture_read(second.native_handle(), texture.native_handle(), &region, nullptr,
                             &size, &native_info) == GRANIT_ERROR_INVALID_HANDLE);

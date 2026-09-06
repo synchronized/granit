@@ -3,6 +3,8 @@
 
 #include "core/resource_validation.h"
 
+#include "core/texture_format.h"
+
 #include <algorithm>
 #include <bit>
 #include <cmath>
@@ -30,8 +32,7 @@ bool valid_memory_location(granit_memory_location location) noexcept {
 }
 
 bool valid_texture_format(granit_texture_format format) noexcept {
-  return format >= GRANIT_TEXTURE_FORMAT_R8_UNORM &&
-         format <= GRANIT_TEXTURE_FORMAT_D32_FLOAT_S8_UINT;
+  return format >= GRANIT_TEXTURE_FORMAT_R8_UNORM && format <= GRANIT_TEXTURE_FORMAT_ASTC_4X4_SRGB;
 }
 
 bool valid_texture_dimension(granit_texture_dimension dimension) noexcept {
@@ -44,7 +45,7 @@ bool valid_sample_count(granit_sample_count sample_count) noexcept {
 }
 
 bool depth_stencil_format(granit_texture_format format) noexcept {
-  return format >= GRANIT_TEXTURE_FORMAT_D16_UNORM;
+  return depth_stencil_texture_format(format);
 }
 
 bool valid_load_operation(granit_attachment_load_operation operation) noexcept {

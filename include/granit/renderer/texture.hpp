@@ -21,6 +21,15 @@ struct texture_format_footprint {
   std::uint32_t bytes_per_block{};
 };
 
+struct texture_data_footprint {
+  std::uint32_t block_columns{};
+  std::uint32_t block_rows{};
+  std::uint32_t image_count{};
+  std::uint64_t bytes_per_row{};
+  std::uint64_t bytes_per_image{};
+  std::uint64_t required_size{};
+};
+
 [[nodiscard]] inline result
 get_texture_format_footprint(texture_format format, texture_format_footprint& footprint) noexcept {
   granit_texture_format_footprint native = GRANIT_TEXTURE_FORMAT_FOOTPRINT_INIT;
@@ -28,6 +37,24 @@ get_texture_format_footprint(texture_format format, texture_format_footprint& fo
       granit_texture_format_get_footprint(static_cast<std::uint32_t>(format), &native);
   if (value == GRANIT_SUCCESS) {
     footprint = {native.block_width, native.block_height, native.bytes_per_block};
+  }
+  return from_native(value);
+}
+
+[[nodiscard]] inline result
+calculate_texture_data_footprint(texture_format format, std::uint32_t width, std::uint32_t height,
+                                 std::uint32_t image_count,
+                                 texture_data_footprint& footprint) noexcept {
+  granit_texture_data_footprint native = GRANIT_TEXTURE_DATA_FOOTPRINT_INIT;
+  const auto value = granit_texture_format_calculate_data_footprint(
+      static_cast<std::uint32_t>(format), width, height, image_count, &native);
+  if (value == GRANIT_SUCCESS) {
+    footprint = {.block_columns = native.block_columns,
+                 .block_rows = native.block_rows,
+                 .image_count = native.image_count,
+                 .bytes_per_row = native.bytes_per_row,
+                 .bytes_per_image = native.bytes_per_image,
+                 .required_size = native.required_size};
   }
   return from_native(value);
 }

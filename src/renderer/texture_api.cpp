@@ -9,6 +9,7 @@
 
 #include <algorithm>
 #include <cstring>
+#include <limits>
 
 extern "C" granit_result
 granit_texture_format_get_footprint(granit_texture_format format,
@@ -17,13 +18,46 @@ granit_texture_format_get_footprint(granit_texture_format format,
       footprint->struct_size < GRANIT_TEXTURE_FORMAT_FOOTPRINT_VERSION_1_SIZE) {
     return GRANIT_ERROR_INVALID_ARGUMENT;
   }
-  const auto bytes = granit::detail::texture_format_bytes_per_block(format);
-  if (bytes == 0)
+  const auto block = granit::detail::texture_format_block(format);
+  if (block.bytes == 0)
     return GRANIT_ERROR_INVALID_ARGUMENT;
-  footprint->block_width = 1;
-  footprint->block_height = 1;
-  footprint->bytes_per_block = bytes;
+  footprint->block_width = block.width;
+  footprint->block_height = block.height;
+  footprint->bytes_per_block = block.bytes;
   std::fill(std::begin(footprint->reserved), std::end(footprint->reserved), 0);
+  return GRANIT_SUCCESS;
+}
+
+extern "C" granit_result
+granit_texture_format_calculate_data_footprint(granit_texture_format format, uint32_t width,
+                                               uint32_t height, uint32_t image_count,
+                                               granit_texture_data_footprint* footprint) {
+  if (footprint == nullptr ||
+      footprint->struct_size < GRANIT_TEXTURE_DATA_FOOTPRINT_VERSION_1_SIZE || width == 0 ||
+      height == 0 || image_count == 0) {
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  }
+  const auto block = granit::detail::texture_format_block(format);
+  if (block.bytes == 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  const auto columns = (uint64_t{width} + block.width - 1) / block.width;
+  const auto rows = (uint64_t{height} + block.height - 1) / block.height;
+  const auto maximum = std::numeric_limits<uint64_t>::max();
+  if (columns > UINT32_MAX || rows > UINT32_MAX || columns > maximum / block.bytes)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  const auto bytes_per_row = columns * block.bytes;
+  if (rows > maximum / bytes_per_row)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  const auto bytes_per_image = rows * bytes_per_row;
+  if (image_count > maximum / bytes_per_image)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  footprint->block_columns = static_cast<uint32_t>(columns);
+  footprint->block_rows = static_cast<uint32_t>(rows);
+  footprint->image_count = image_count;
+  footprint->bytes_per_row = bytes_per_row;
+  footprint->bytes_per_image = bytes_per_image;
+  footprint->required_size = bytes_per_image * image_count;
+  footprint->reserved = 0;
   return GRANIT_SUCCESS;
 }
 
