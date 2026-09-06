@@ -256,7 +256,8 @@ granit_result renderer_registry::submit_readback_batch_async(granit_renderer ren
         readbacks, record->texture_layout, record->max_result_bytes, payload->completion);
     if (result != GRANIT_SUCCESS) {
       record->readbacks = std::move(payload->readbacks);
-      record->failed = true;
+      record->failed = result != GRANIT_ERROR_NOT_READY;
+      state->complete(result);
       static_cast<void>(destroy_async_operation(renderer, operation));
       operation = GRANIT_NULL_HANDLE;
       return result;

@@ -514,7 +514,7 @@ granit_result vulkan_renderer_state::initialize(std::string_view application_nam
   return GRANIT_SUCCESS;
 }
 
-std::size_t vulkan_renderer_state::acquire_upload_slot() {
+std::size_t vulkan_renderer_state::acquire_upload_slot(bool wait) {
   std::unique_lock lock{upload_mutex_};
   for (;;) {
     for (auto& slot : upload_slots_) {
@@ -530,6 +530,8 @@ std::size_t vulkan_renderer_state::acquire_upload_slot() {
     }
     if (std::ranges::any_of(upload_slots_, [](const auto& slot) { return !slot.acquired; }))
       break;
+    if (!wait)
+      return SIZE_MAX;
     upload_available_.wait_for(lock, std::chrono::milliseconds(1));
   }
   const auto found =
@@ -573,13 +575,12 @@ granit_result vulkan_renderer_state::poll_upload_slot(std::size_t index,
   return observe_device_result(result);
 }
 
-std::size_t vulkan_renderer_state::acquire_readback_slot() {
-  std::unique_lock lock{readback_mutex_};
-  readback_available_.wait(lock, [&] {
-    return std::ranges::any_of(readback_slots_, [](const auto& slot) { return !slot.acquired; });
-  });
+std::size_t vulkan_renderer_state::try_acquire_readback_slot() {
+  std::lock_guard lock{readback_mutex_};
   const auto found =
       std::ranges::find_if(readback_slots_, [](const auto& slot) { return !slot.acquired; });
+  if (found == readback_slots_.end())
+    return SIZE_MAX;
   found->acquired = true;
   found->submitted = false;
   ++found->generation;
@@ -999,7 +1000,7 @@ granit_result vulkan_renderer_state::upload_buffer(backend_buffer_resource& buff
   if (device_lost())
     return GRANIT_ERROR_DEVICE_LOST;
   const auto& buffer = static_cast<vulkan_buffer_resource&>(buffer_resource).native();
-  const auto slot_index = acquire_upload_slot();
+  const auto slot_index = acquire_upload_slot(true);
   auto& context = *upload_slots_[slot_index].context;
   auto finish = [&](granit_result result) {
     release_upload_slot(slot_index);
@@ -1070,7 +1071,9 @@ granit_result vulkan_renderer_state::upload_batch_async(
     required = aligned + upload.size;
   }
 
-  const auto slot_index = acquire_upload_slot();
+  const auto slot_index = acquire_upload_slot(false);
+  if (slot_index == SIZE_MAX)
+    return GRANIT_ERROR_NOT_READY;
   std::uint64_t slot_generation{};
   {
     std::lock_guard lock{upload_mutex_};
@@ -1273,7 +1276,9 @@ granit_result vulkan_renderer_state::readback_batch_async(
     return GRANIT_ERROR_OUT_OF_MEMORY;
   }
 
-  const auto slot_index = acquire_readback_slot();
+  const auto slot_index = try_acquire_readback_slot();
+  if (slot_index == SIZE_MAX)
+    return GRANIT_ERROR_NOT_READY;
   std::uint64_t slot_generation{};
   {
     std::lock_guard lock{readback_mutex_};
@@ -1471,7 +1476,7 @@ vulkan_renderer_state::upload_texture(backend_texture_resource& resource,
   copy.imageOffset = {static_cast<std::int32_t>(region.x), static_cast<std::int32_t>(region.y),
                       static_cast<std::int32_t>(region.z)};
   copy.imageExtent = {region.width, region.height, region.depth};
-  const auto slot_index = acquire_upload_slot();
+  const auto slot_index = acquire_upload_slot(true);
   auto& context = *upload_slots_[slot_index].context;
   auto finish = [&](granit_result result) {
     release_upload_slot(slot_index);

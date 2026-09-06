@@ -42,6 +42,7 @@
 7. [0.13.0 异步 GPU 操作与 Web 运行时计划](plans/S-28-0.13.0-async-gpu-and-web-runtime.md)
 8. [0.14.0 异步管线指标与资源流送计划](plans/S-29-0.14.0-async-pipeline-metrics-and-streaming.md)
 9. [0.15.0 异步回读与管线预热计划](plans/S-30-0.15.0-async-readback-and-pipeline-warmup.md)
+10. [0.16.0 严格非阻塞异步调度计划](plans/S-31-0.16.0-nonblocking-async.md)
 
 ## 操作指南
 

@@ -168,7 +168,9 @@ D-03-graphics-pipeline.md
   已完成；Render Pipeline 异步指标、有界异步 Upload Batch、Model Viewer 接入和跨后端验收均已
   落地。
 - [S-30：0.15.0 异步回读与管线预热](S-30-0.15.0-async-readback-and-pipeline-warmup.md)——
-  实现完成，等待发布验收；有界异步 Readback、稳定键 Pipeline 预热和能力边界已经落地。
+  已完成；有界异步 Readback、稳定键 Pipeline 预热和能力边界已经落地。
+- [S-31：0.16.0 严格非阻塞异步调度](S-31-0.16.0-nonblocking-async.md)——实现中；移除异步
+  传输槽位等待，并补齐受能力门控的严格非阻塞 Pipeline 预热。
 
 ## 状态
 

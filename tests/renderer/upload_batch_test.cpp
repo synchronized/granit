@@ -162,7 +162,14 @@ TEST_CASE("销毁运行中上传操作仍保活资源并回收后端槽", "[uplo
     std::array<std::byte, 16> bytes{};
     REQUIRE(batch.write_buffer(buffer.native_handle(), 0, bytes) == granit::result::success);
     granit::async_operation operation;
-    REQUIRE(batch.submit_async(operation) == granit::result::success);
+    auto submit_result = batch.submit_async(operation);
+    for (std::uint32_t attempt = 0;
+         submit_result == granit::result::not_ready && attempt < 10000; ++attempt) {
+      REQUIRE(renderer.process_events() == granit::result::success);
+      std::this_thread::yield();
+      submit_result = batch.submit_async(operation);
+    }
+    REQUIRE(submit_result == granit::result::success);
     REQUIRE(operation.reset() == granit::result::success);
     REQUIRE(buffer.reset() == granit::result::success);
     REQUIRE(renderer.process_events() == granit::result::success);
