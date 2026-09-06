@@ -8,6 +8,14 @@
 
 ## Unreleased
 
+### 变更
+
+- 开发工作流新增按改动范围选择的 `Quick Check`，并统一 Emscripten、Shader 工具链及正式打包的
+  编译缓存。
+- Release 改为不可变候选晋级：手动候选构建记录 tag、commit、run ID 与 SHA-256，正式标签只
+  发布完全匹配的已验证产物，不再重复构建四套 SDK。
+- Emscripten Chrome 验收显式覆盖软件 WebGPU 适配器的异步 Pipeline 已知失败与同步创建降级。
+
 ## 0.16.0 - 2026-09-06
 
 ### 变更

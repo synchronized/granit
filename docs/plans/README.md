@@ -173,6 +173,8 @@ D-03-graphics-pipeline.md
   饱和时立即返回可重试背压，Vulkan Pipeline 冷创建移入私有后台任务。
 - [S-32：0.17.0 WebGPU 原生异步 Pipeline 预热](S-32-0.17.0-webgpu-async-pipeline-warmup.md)——
   已完成；WebGPU 原生异步创建、统一私有 HAL、资源保活与 Web PBR 预热均已落地。
+- [S-33：开发与发布流水线提速](S-33-ci-release-acceleration.md)——实现中；建立快速检查、软件
+  WebGPU 降级回归、统一缓存和不可变 Release Candidate 晋级。
 
 ## 状态
 

@@ -1,0 +1,144 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Granit contributors
+
+name: Quick Check
+
+on:
+  workflow_dispatch:
+    inputs:
+      suite:
+        description: "检查范围；auto 根据相对 main 的改动选择"
+        required: true
+        default: auto
+        type: choice
+        options:
+          - auto
+          - documentation
+          - headers
+          - core
+          - webgpu
+
+permissions:
+  contents: read
+  packages: read
+
+env:
+  CCACHE_DIR: ${{ github.workspace }}/.cache/ccache
+  CCACHE_BASEDIR: ${{ github.workspace }}
+  CCACHE_COMPILERCHECK: content
+  CCACHE_MAXSIZE: 500M
+
+jobs:
+  classify:
+    runs-on: ubuntu-24.04
+    outputs:
+      suite: ${{ steps.scope.outputs.suite }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - name: 选择快速检查范围
+        id: scope
+        shell: bash
+        env:
+          REQUESTED_SUITE: ${{ inputs.suite }}
+        run: |
+          set -euo pipefail
+          suite="$REQUESTED_SUITE"
+          if [[ "$suite" == auto ]]; then
+            git fetch --no-tags origin main
+            mapfile -t files < <(git diff --name-only "$(git merge-base HEAD origin/main)" HEAD)
+            if [[ "${#files[@]}" -eq 0 ]]; then
+              suite=core
+            elif printf '%s\n' "${files[@]}" | grep -qE \
+              '^(web/|src/backend/webgpu/|\.github/workflows/emscripten\.yml$)'; then
+              suite=webgpu
+            elif ! printf '%s\n' "${files[@]}" | grep -qEv \
+              '^(docs/|README\.md$|DOCUMENTATION_GUIDE\.md$|CHANGELOG\.md$)'; then
+              suite=documentation
+            elif printf '%s\n' "${files[@]}" | grep -qE \
+              '^(include/|tests/headers/|cmake/|CMakeLists\.txt$)'; then
+              suite=headers
+            else
+              suite=core
+            fi
+          fi
+          echo "suite=$suite" >> "$GITHUB_OUTPUT"
+          echo "选择快速检查范围：$suite"
+
+  documentation:
+    needs: classify
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - name: 检查差异与文档
+        shell: bash
+        run: |
+          git fetch --no-tags origin main
+          git diff --check "$(git merge-base HEAD origin/main)" HEAD
+          cmake -DGRANIT_SOURCE_DIR="$PWD" -P cmake/check_documentation.cmake
+
+  native:
+    if: needs.classify.outputs.suite != 'documentation' && needs.classify.outputs.suite != 'webgpu'
+    needs: classify
+    runs-on: ubuntu-24.04
+    container:
+      image: >-
+        ghcr.io/synchronized/granit-ci@sha256:6a2d0aba3b2464838958a4259d3a343106205eb35df9f4ad24d060bf98739015
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v5
+      - name: 恢复编译缓存
+        uses: actions/cache@v5
+        with:
+          path: .cache/ccache
+          key: quick-linux-ccache-v1-${{ github.sha }}
+          restore-keys: |
+            quick-linux-ccache-v1-
+      - name: 配置并构建快速目标
+        shell: bash
+        run: |
+          cmake --preset linux-clang-release \
+            -DGRANIT_BUILD_EXAMPLES=OFF \
+            -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+          cmake --build --preset linux-clang-release --target \
+            granit_c_header_test granit_cpp_header_test granit_renderer_test granit_pipeline_test
+      - name: 运行核心测试
+        shell: bash
+        run: ctest --preset linux-clang-release -R 'granit\.(renderer|pipeline)$'
+
+  webgpu-compile:
+    if: needs.classify.outputs.suite == 'webgpu'
+    needs: classify
+    runs-on: ubuntu-24.04
+    env:
+      EMSCRIPTEN_VERSION: "5.0.6"
+      EMSDK_DIR: ${{ github.workspace }}/build/emsdk-5.0.6
+    steps:
+      - uses: actions/checkout@v5
+      - name: 恢复 Emscripten 工具链与 Port 缓存
+        uses: actions/cache@v5
+        with:
+          path: ${{ env.EMSDK_DIR }}
+          key: emsdk-${{ runner.os }}-${{ env.EMSCRIPTEN_VERSION }}-v2
+      - name: 安装锁定 Emscripten 工具链
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ ! -x "$EMSDK_DIR/upstream/emscripten/emcc" ]]; then
+            rm -rf "$EMSDK_DIR"
+            git clone --depth 1 https://github.com/emscripten-core/emsdk.git "$EMSDK_DIR"
+            "$EMSDK_DIR/emsdk" install "$EMSCRIPTEN_VERSION"
+          fi
+          "$EMSDK_DIR/emsdk" activate "$EMSCRIPTEN_VERSION"
+      - name: 编译 WebGPU 快速验证目标
+        shell: bash
+        run: |
+          source "$EMSDK_DIR/emsdk_env.sh"
+          cmake --preset emscripten-release
+          cmake --build --preset emscripten-release --target granit_web_platform_smoke

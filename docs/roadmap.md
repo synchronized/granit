@@ -371,12 +371,24 @@
 - Web Model Viewer 在加载阶段预热标准 PBR 变体，提供真实进度、取消和失败详情。
 - 公共线程池、桌面 Dawn、Android、新后端、公共 glTF SDK 和高级渲染特性不属于本版本。
 
+## 二十五、开发与发布流水线提速
+
+**状态：实现中；不绑定公共 SDK 版本。**
+
+- **[S-33](plans/S-33-ci-release-acceleration.md) / P1**：把高频快速检查、后端集成验证和完整
+  发布矩阵分层，固化软件 WebGPU 适配器的 Pipeline 降级回归。
+- 缓存 Emscripten SDK/ports、锁定 Shader 工具链与编译结果；桌面 Dawn 已由 S-16 删除，不重新
+  引入对应依赖或缓存。
+- Release Candidate 构建一次并记录 tag、commit、run ID 和 SHA-256；正式标签只晋级完全匹配的
+  候选字节，不重复构建。
+
 ## 近期执行顺序
 
-1. 公共执行器与场景 API 继续等待 Granit 与 Gneiss 的第二个真实复用证据。
-2. S-14 只在复用条件成立后启动；不要为当前单个示例提前稳定 glTF 公共 API。
-3. S-06D 最终验收等待稳定版本与 component 范围决策；不在 0.x 阶段提前宣布稳定。
-4. H-09 的透明 PBR、CSM、Clustered Forward 与 Bindless 只在各自重新评估条件满足后独立恢复，
+1. 完成 S-33 快速检查、缓存和不可变候选晋级，减少后续版本的重复验证时间。
+2. 公共执行器与场景 API 继续等待 Granit 与 Gneiss 的第二个真实复用证据。
+3. S-14 只在复用条件成立后启动；不要为当前单个示例提前稳定 glTF 公共 API。
+4. S-06D 最终验收等待稳定版本与 component 范围决策；不在 0.x 阶段提前宣布稳定。
+5. H-09 的透明 PBR、CSM、Clustered Forward 与 Bindless 只在各自重新评估条件满足后独立恢复，
    不作为当前稳定化工作的前置项。
 
 若前置抽象不足，应先更新对应 Plan 和本路线图状态，再扩大公共 API。

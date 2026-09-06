@@ -22,7 +22,7 @@ jobs:
         uses: actions/cache@v5
         with:
           path: ${{ env.EMSDK_DIR }}
-          key: emsdk-${{ runner.os }}-${{ env.EMSCRIPTEN_VERSION }}-v1
+          key: emsdk-${{ runner.os }}-${{ env.EMSCRIPTEN_VERSION }}-v2
       - name: 安装锁定 Emscripten 工具链
         shell: bash
         run: |
@@ -60,6 +60,7 @@ jobs:
         working-directory: web/tests
         env:
           CHROME_PATH: /usr/bin/google-chrome
+          GRANIT_EXPECT_SOFTWARE_PIPELINE_FALLBACK: "1"
         shell: bash
         run: |
           set -o pipefail
