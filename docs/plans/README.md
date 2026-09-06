@@ -169,8 +169,8 @@ D-03-graphics-pipeline.md
   落地。
 - [S-30：0.15.0 异步回读与管线预热](S-30-0.15.0-async-readback-and-pipeline-warmup.md)——
   已完成；有界异步 Readback、稳定键 Pipeline 预热和能力边界已经落地。
-- [S-31：0.16.0 严格非阻塞异步调度](S-31-0.16.0-nonblocking-async.md)——实现中；移除异步
-  传输槽位等待，并补齐受能力门控的严格非阻塞 Pipeline 预热。
+- [S-31：0.16.0 严格非阻塞异步调度](S-31-0.16.0-nonblocking-async.md)——已完成；异步传输
+  饱和时立即返回可重试背压，Vulkan Pipeline 冷创建移入私有后台任务。
 
 ## 状态
 
