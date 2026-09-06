@@ -114,6 +114,7 @@ target_link_options(
     "-sALLOW_MEMORY_GROWTH=1"
     "-sNO_EXIT_RUNTIME=1"
     "-sFETCH=1"
+    "-sASYNCIFY=1"
     "$<$<CONFIG:Debug>:-sASSERTIONS=1>"
     "$<$<CONFIG:Release>:--closure=1>"
 )
@@ -124,6 +125,7 @@ set_target_properties(
     OUTPUT_NAME granit_web_platform_smoke
     SUFFIX ".html"
     FOLDER "Tests/Smoke"
+    LINK_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/shell.html"
 )
 granit_target_compile_warnings(granit_web_platform_smoke)
 
@@ -166,12 +168,14 @@ target_link_options(
     "-sALLOW_MEMORY_GROWTH=1"
     "-sNO_EXIT_RUNTIME=1"
     "-sFETCH=1"
+    "-sASYNCIFY=1"
     "$<$<CONFIG:Debug>:-sASSERTIONS=1>"
     "$<$<CONFIG:Release>:--closure=1>"
 )
 set_target_properties(
   granit_model_viewer_web
   PROPERTIES OUTPUT_NAME granit_model_viewer_web SUFFIX ".html" FOLDER "Examples"
+             LINK_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/model_viewer_shell.html"
 )
 granit_target_compile_warnings(granit_model_viewer_web)
 

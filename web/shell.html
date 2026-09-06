@@ -26,6 +26,7 @@
       }
       var Module = {
         canvas: document.getElementById("canvas"),
+        onRuntimeInitialized() { Module.runtimeReady = true; },
         print(text) {
           console.log(text);
           updateStatus(text);

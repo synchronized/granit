@@ -68,9 +68,68 @@ struct web_platform_state {
   bool core_renderer_ready{};
   bool resource_batch_started{};
   bool asset_ready{};
+  bool upload_active{};
+  bool upload_cancel_requested{};
+  granit::example::model_viewer::gpu_scene_upload_progress upload_progress{};
 };
 
 web_platform_state state;
+
+const char*
+upload_stage_name(granit::example::model_viewer::gpu_scene_upload_stage stage) noexcept {
+  using enum granit::example::model_viewer::gpu_scene_upload_stage;
+  switch (stage) {
+  case planning:
+    return "planning";
+  case geometry:
+    return "geometry";
+  case textures:
+    return "textures";
+  case samplers:
+    return "samplers";
+  case meshes:
+    return "meshes";
+  case materials:
+    return "materials";
+  }
+  return "unknown";
+}
+
+bool report_upload_progress(
+    const granit::example::model_viewer::gpu_scene_upload_progress& progress, void*) {
+  state.upload_progress = progress;
+  std::printf("GRANIT_PROGRESS:%s:%u:%u\n", upload_stage_name(progress.stage), progress.completed,
+              progress.total);
+  // Asyncify 在资源边界恢复浏览器事件循环，使页面可以重绘并接收取消操作。
+  emscripten_sleep(0);
+  return !state.upload_cancel_requested;
+}
+
+const char* load_stage_name(granit::example::gltf::load_stage stage) noexcept {
+  using enum granit::example::gltf::load_stage;
+  switch (stage) {
+  case document:
+    return "document";
+  case buffers:
+    return "buffers";
+  case images:
+    return "images";
+  case materials:
+    return "materials";
+  case meshes:
+    return "meshes";
+  case nodes:
+    return "nodes";
+  }
+  return "unknown";
+}
+
+bool report_load_progress(const granit::example::gltf::load_progress& progress, void*) {
+  std::printf("GRANIT_PROGRESS:%s:%u:%u\n", load_stage_name(progress.stage), progress.completed,
+              progress.total);
+  emscripten_sleep(0);
+  return !state.upload_cancel_requested;
+}
 
 void fail(const char* message, granit_result result = GRANIT_ERROR_INITIALIZATION_FAILED) noexcept {
   state.status = startup_status::failed;
@@ -909,12 +968,17 @@ void tick(void*) noexcept {
         fail("asset-bundle-commit", GRANIT_ERROR_INTERNAL);
         return;
       }
-      auto result = state.core.load_asset(state.asset_request->bytes(), &state.resource_bundle);
+      state.upload_active = true;
+      state.upload_cancel_requested = false;
+      auto result = state.core.load_asset(state.asset_request->bytes(), &state.resource_bundle,
+                                          report_load_progress, nullptr);
       if (result != granit::result::success) {
+        state.upload_active = false;
         fail("asset-load", granit::to_native(result));
         return;
       }
-      result = state.core.upload(state.renderer);
+      result = state.core.upload(state.renderer, {}, 8.0F, report_upload_progress, nullptr);
+      state.upload_active = false;
       if (result != granit::result::success) {
         fail("asset-upload", granit::to_native(result));
         return;
@@ -1093,6 +1157,25 @@ extern "C" EMSCRIPTEN_KEEPALIVE unsigned granit_web_asset_status() noexcept {
   if (state.status == startup_status::failed)
     return 3;
   return state.asset_ready ? 2U : 1U;
+}
+
+extern "C" EMSCRIPTEN_KEEPALIVE unsigned granit_web_upload_stage() noexcept {
+  return static_cast<unsigned>(state.upload_progress.stage);
+}
+
+extern "C" EMSCRIPTEN_KEEPALIVE unsigned granit_web_upload_completed() noexcept {
+  return state.upload_progress.completed;
+}
+
+extern "C" EMSCRIPTEN_KEEPALIVE unsigned granit_web_upload_total() noexcept {
+  return state.upload_progress.total;
+}
+
+extern "C" EMSCRIPTEN_KEEPALIVE int granit_web_cancel_loading() noexcept {
+  if (!state.upload_active)
+    return GRANIT_ERROR_NOT_READY;
+  state.upload_cancel_requested = true;
+  return GRANIT_SUCCESS;
 }
 
 extern "C" EMSCRIPTEN_KEEPALIVE unsigned granit_web_renderer_state() noexcept {

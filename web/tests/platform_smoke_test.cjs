@@ -213,6 +213,20 @@ async function main() {
         `WebGPU 生命周期异常，state=${rendererState}, failure=${failureResult}, asset=${assetStatus}`,
       );
     }
+    for (const stage of [
+      "document", "buffers", "images", "materials", "meshes", "nodes",
+      "planning", "geometry", "textures", "samplers",
+    ]) {
+      if (!browserMessages.some((message) => message.includes(`GRANIT_PROGRESS:${stage}:`)))
+        throw new Error(`浏览器分阶段上传未报告 ${stage} 进度`);
+    }
+    const uploadProgress = await page.evaluate(() => ({
+      stage: Module._granit_web_upload_stage(),
+      completed: Module._granit_web_upload_completed(),
+      total: Module._granit_web_upload_total(),
+    }));
+    if (uploadProgress.total === 0 || uploadProgress.completed !== uploadProgress.total)
+      throw new Error(`浏览器上传进度未完成：${JSON.stringify(uploadProgress)}`);
     await page.waitForFunction(
       () =>
         typeof Module._granit_web_rendered_frame_count === "function" &&
@@ -342,6 +356,34 @@ async function main() {
       throw new Error(`浏览器 WebGPU 验证层报告错误：\n${validationErrors.join("\n")}`);
 
     if (!usesLocalFixture) return;
+    const cancelPage = await browser.newPage();
+    await cancelPage.goto(`http://127.0.0.1:${address.port}/${entryName}${modelQuery}`, {
+      waitUntil: "load",
+    });
+    await cancelPage.waitForFunction(() => Module.runtimeReady === true, undefined, {
+      timeout: 30_000,
+    });
+    await cancelPage.waitForFunction(
+      () =>
+        typeof Module._granit_web_cancel_loading === "function" &&
+        Module._granit_web_cancel_loading() === 0,
+      undefined,
+      { timeout: 30_000 },
+    );
+    await cancelPage.waitForFunction(
+      () => document.querySelector("#granit-status")?.dataset.status === "failed",
+      undefined,
+      { timeout: 30_000 },
+    );
+    const cancelledText = await cancelPage.locator("#granit-status").textContent();
+    if (!/^failed:asset-(?:load|upload):-15/.test(cancelledText ?? ""))
+      throw new Error(`浏览器上传取消未返回稳定结果：${cancelledText}`);
+    const cancelledShutdown = await cancelPage.evaluate(() => Module._granit_web_shutdown());
+    if (cancelledShutdown !== 0)
+      throw new Error(`浏览器取消后资源释放失败：${cancelledShutdown}`);
+    await cancelPage.close();
+    console.log("浏览器 WebGPU 上传取消与回滚验证通过");
+
     rejectExternalBuffer();
     const failurePage = await browser.newPage();
     const failureMessages = [];

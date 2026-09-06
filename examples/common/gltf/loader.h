@@ -7,6 +7,7 @@
 #include "gltf/scene.h"
 
 #include <cstddef>
+#include <cstdint>
 #include <span>
 #include <string>
 #include <string_view>
@@ -25,7 +26,19 @@ enum class load_error {
   image_decode_failed,
   numeric_overflow,
   out_of_memory,
+  cancelled,
 };
+
+enum class load_stage { document, buffers, images, materials, meshes, nodes };
+
+struct load_progress {
+  load_stage stage{load_stage::document};
+  std::uint32_t completed{};
+  std::uint32_t total{};
+};
+
+/** 返回 false 可在阶段边界取消加载。 */
+using load_progress_callback = bool (*)(const load_progress& progress, void* user_data);
 
 class resource_resolver {
 public:
@@ -52,7 +65,9 @@ struct load_result {
 
 /** 解析 GLB 或 glTF；失败时 output 保持不变。 */
 [[nodiscard]] load_result load(std::span<const std::byte> document,
-                               const resource_resolver* resolver, scene& output);
+                               const resource_resolver* resolver, scene& output,
+                               load_progress_callback progress = nullptr,
+                               void* progress_user_data = nullptr);
 
 } // namespace granit::example::gltf
 

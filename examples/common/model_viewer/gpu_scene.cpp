@@ -41,8 +41,8 @@ float srgb_to_linear(std::uint8_t value) noexcept {
 }
 
 std::uint8_t linear_to_srgb(float value) noexcept {
-  const auto encoded = value <= 0.0031308F ? value * 12.92F
-                                           : 1.055F * std::pow(value, 1.0F / 2.4F) - 0.055F;
+  const auto encoded =
+      value <= 0.0031308F ? value * 12.92F : 1.055F * std::pow(value, 1.0F / 2.4F) - 0.055F;
   return static_cast<std::uint8_t>(std::lround(std::clamp(encoded, 0.0F, 1.0F) * 255.0F));
 }
 
@@ -86,16 +86,15 @@ bool build_rgba8_mip_chain(const gltf::image& source, bool srgb, std::vector<std
               const auto source_index =
                   previous_offset + (std::size_t{source_y} * width + source_x) * 4 + channel;
               const auto value = std::to_integer<std::uint8_t>(pixels[source_index]);
-              sum += srgb && channel < 3 ? srgb_to_linear(value)
-                                         : static_cast<float>(value) / 255.0F;
+              sum +=
+                  srgb && channel < 3 ? srgb_to_linear(value) : static_cast<float>(value) / 255.0F;
               ++count;
             }
           }
           const auto average = sum / static_cast<float>(count);
-          pixels[destination + channel] =
-              static_cast<std::byte>(srgb && channel < 3
-                                         ? linear_to_srgb(average)
-                                         : static_cast<std::uint8_t>(std::lround(average * 255.0F)));
+          pixels[destination + channel] = static_cast<std::byte>(
+              srgb && channel < 3 ? linear_to_srgb(average)
+                                  : static_cast<std::uint8_t>(std::lround(average * 255.0F)));
         }
       }
     }
@@ -496,8 +495,7 @@ granit::result gpu_scene::initialize(granit_renderer renderer, const gltf::scene
 
 granit::result gpu_scene::initialize(granit_renderer renderer, const gltf::scene& source,
                                      gpu_scene_plan plan, float sampler_anisotropy,
-                                     gpu_scene_upload_callback progress,
-                                     void* progress_user_data) {
+                                     gpu_scene_upload_callback progress, void* progress_user_data) {
   gpu_scene candidate;
   const auto result = candidate.create(renderer, source, std::move(plan), sampler_anisotropy,
                                        progress, progress_user_data);
@@ -649,7 +647,7 @@ granit::result gpu_scene::create(granit_renderer renderer, const gltf::scene& so
     return granit::result::invalid_argument;
   plan_ = std::move(plan);
   if (!report(gpu_scene_upload_stage::planning, 1, 1))
-    return granit::result::not_ready;
+    return granit::result::cancelled;
 
   granit::upload_batch uploads;
   if (const auto result = uploads.initialize(renderer); result.failed())
@@ -683,7 +681,7 @@ granit::result gpu_scene::create(granit_renderer renderer, const gltf::scene& so
       return result;
   }
   if (!report(gpu_scene_upload_stage::geometry, 1, 1))
-    return granit::result::not_ready;
+    return granit::result::cancelled;
 
   textures_.reserve(plan_.textures.size());
   std::size_t textures_in_batch = 0;
@@ -697,8 +695,8 @@ granit::result gpu_scene::create(granit_renderer renderer, const gltf::scene& so
     const auto& base_mip = source_image.mips.front();
     std::vector<std::byte> generated_pixels;
     std::vector<gltf::image_mip> generated_mips;
-    const auto generate_mips = source_image.mips.size() == 1 &&
-                               full_mip_count(base_mip.width, base_mip.height) > 1;
+    const auto generate_mips =
+        source_image.mips.size() == 1 && full_mip_count(base_mip.width, base_mip.height) > 1;
     if (generate_mips &&
         !build_rgba8_mip_chain(source_image, variant.srgb, generated_pixels, generated_mips))
       return granit::result::invalid_argument;
@@ -709,8 +707,7 @@ granit::result gpu_scene::create(granit_renderer renderer, const gltf::scene& so
             renderer,
             {.format = variant.srgb ? granit::texture_format::rgba8_srgb
                                     : granit::texture_format::rgba8_unorm,
-             .usage = granit::texture_usage::sampled |
-                      granit::texture_usage::transfer_destination,
+             .usage = granit::texture_usage::sampled | granit::texture_usage::transfer_destination,
              .location = granit::memory_location::device,
              .width = base_mip.width,
              .height = base_mip.height,
@@ -726,14 +723,13 @@ granit::result gpu_scene::create(granit_renderer renderer, const gltf::scene& so
       return result;
     for (std::uint32_t mip_index = 0; mip_index < mips.size(); ++mip_index) {
       const auto& mip = mips[mip_index];
-      if (mip.width > std::numeric_limits<std::uint32_t>::max() / 4 ||
-          mip.offset > pixels.size() || mip.size > pixels.size() - mip.offset)
+      if (mip.width > std::numeric_limits<std::uint32_t>::max() / 4 || mip.offset > pixels.size() ||
+          mip.size > pixels.size() - mip.offset)
         return granit::result::invalid_argument;
       const auto bytes = std::span{pixels}.subspan(mip.offset, mip.size);
       const auto tight_row = mip.width * 4;
-      const auto aligned_row =
-          (std::uint64_t{tight_row} + texture_upload_row_alignment - 1) &
-          ~std::uint64_t{texture_upload_row_alignment - 1};
+      const auto aligned_row = (std::uint64_t{tight_row} + texture_upload_row_alignment - 1) &
+                               ~std::uint64_t{texture_upload_row_alignment - 1};
       if (aligned_row > std::numeric_limits<std::uint32_t>::max())
         return granit::result::invalid_argument;
       const auto row_pitch = static_cast<std::uint32_t>(aligned_row);
@@ -762,8 +758,10 @@ granit::result gpu_scene::create(granit_renderer renderer, const gltf::scene& so
       textures_in_batch = 0;
     }
     if (!report(gpu_scene_upload_stage::textures, texture_index + 1, plan_.textures.size()))
-      return granit::result::not_ready;
+      return granit::result::cancelled;
   }
+  if (plan_.textures.empty() && !report(gpu_scene_upload_stage::textures, 0, 0))
+    return granit::result::cancelled;
 
   samplers_.reserve(plan_.samplers.size());
   for (std::size_t sampler_index = 0; sampler_index < plan_.samplers.size(); ++sampler_index) {
@@ -793,10 +791,10 @@ granit::result gpu_scene::create(granit_renderer renderer, const gltf::scene& so
     if (result.failed())
       return result;
     if (!report(gpu_scene_upload_stage::samplers, sampler_index + 1, plan_.samplers.size()))
-      return granit::result::not_ready;
+      return granit::result::cancelled;
   }
   if (plan_.samplers.empty() && !report(gpu_scene_upload_stage::samplers, 0, 0))
-    return granit::result::not_ready;
+    return granit::result::cancelled;
 
   if (const auto result = default_sampler_.initialize(renderer, {.max_lod = 1000.0F});
       result.failed())
@@ -847,10 +845,10 @@ granit::result gpu_scene::create(granit_renderer renderer, const gltf::scene& so
     if (const auto result = meshes_.back().initialize(renderer, desc); result.failed())
       return result;
     if (!report(gpu_scene_upload_stage::meshes, primitive_index + 1, plan_.primitives.size()))
-      return granit::result::not_ready;
+      return granit::result::cancelled;
   }
   if (plan_.primitives.empty() && !report(gpu_scene_upload_stage::meshes, 0, 0))
-    return granit::result::not_ready;
+    return granit::result::cancelled;
   if (const auto result = uploads.submit(); result.failed())
     return result;
   materials_.reserve(source.materials.size() + 1);
@@ -862,7 +860,7 @@ granit::result gpu_scene::create(granit_renderer renderer, const gltf::scene& so
         result.failed())
       return result;
     if (!report(gpu_scene_upload_stage::materials, material_index + 1, source.materials.size() + 1))
-      return granit::result::not_ready;
+      return granit::result::cancelled;
   }
   materials_.emplace_back();
   if (const auto result = create_material(renderer, {}, plan_, textures_, samplers_,
@@ -871,7 +869,7 @@ granit::result gpu_scene::create(granit_renderer renderer, const gltf::scene& so
     return result;
   if (!report(gpu_scene_upload_stage::materials, source.materials.size() + 1,
               source.materials.size() + 1))
-    return granit::result::not_ready;
+    return granit::result::cancelled;
 
   draw_bindings_.reserve(plan_.draws.size());
   for (const auto& draw : plan_.draws) {
