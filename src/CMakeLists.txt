@@ -560,6 +560,11 @@ install(
   COMPONENT RenderPipeline
 )
 install(
+  FILES "${PROJECT_SOURCE_DIR}/assets/materials/pbr_standard.grmat"
+  DESTINATION "${CMAKE_INSTALL_DATADIR}/granit/assets/materials"
+  COMPONENT RenderPipeline
+)
+install(
   FILES
     "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/pbr_standard.vert.grshader"
     "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/pbr_standard.vert.grshader.spv"

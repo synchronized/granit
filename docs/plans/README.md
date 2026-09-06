@@ -159,7 +159,9 @@ D-03-graphics-pipeline.md
 - [S-25：0.10.0 环境资源与帧构造背压](S-25-0.10.0-environment-and-frame-backpressure.md)——
   已完成；Environment Map、GRENV v3、Model Viewer 迁移与构造前背压已通过发布验收。
 - [S-26：0.11.0 WebGPU 能力对齐与浏览器 Model Viewer](S-26-0.11.0-webgpu-parity-and-web-model-viewer.md)——
-  已确认；将补齐可移植传输、Mipmap、Timestamp，并交付正式浏览器 Model Viewer。
+  已完成；补齐可移植传输与 Mipmap，交付正式浏览器 Model Viewer，并明确 Timestamp 能力边界。
+- [S-27：0.12.0 上游资产与标准材质契约](S-27-0.12.0-upstream-asset-contracts.md)——已确认；
+  公共化 Shader Asset 检查、标准 PBR Schema/模板与构建树资产目录，消除上游私有格式依赖。
 
 ## 状态
 

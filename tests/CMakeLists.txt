@@ -19,6 +19,14 @@ add_test(
 )
 
 add_test(
+  NAME granit.build_tree_consumers
+  COMMAND
+    "${CMAKE_COMMAND}" "-DGRANIT_SOURCE_DIR=${PROJECT_SOURCE_DIR}"
+    "-DGRANIT_TEST_BINARY_DIR=${CMAKE_CURRENT_BINARY_DIR}/build-tree-consumers"
+    -P "${PROJECT_SOURCE_DIR}/cmake/check_build_tree_consumers.cmake"
+)
+
+add_test(
   NAME granit.release_version
   COMMAND
     "${CMAKE_COMMAND}"
@@ -67,6 +75,7 @@ add_library(
     headers/upload_batch_h.c
     headers/window_h.c
     headers/pipeline_material_h.c
+    headers/pipeline_pbr_material_h.c
     headers/pipeline_mesh_h.c
     headers/pipeline_render_pipeline_h.c
     headers/pipeline_scene_h.c
@@ -100,8 +109,8 @@ if(BUILD_SHARED_LIBS)
       GRANIT_ABI_RENDER_PIPELINE_LIBRARY_PATH="$<TARGET_FILE:granit_render_pipeline>"
       GRANIT_ABI_WINDOW_LIBRARY_PATH="$<TARGET_FILE:granit_window>"
       GRANIT_ABI_INPUT_LIBRARY_PATH="$<TARGET_FILE:granit_input>"
-      GRANIT_ABI_CORE_SYMBOLS_PATH="${CMAKE_CURRENT_SOURCE_DIR}/abi/snapshots/0.8.0/core_symbols.txt"
-      GRANIT_ABI_RENDER_PIPELINE_SYMBOLS_PATH="${CMAKE_CURRENT_SOURCE_DIR}/abi/snapshots/0.10.0/render_pipeline_symbols.txt"
+      GRANIT_ABI_CORE_SYMBOLS_PATH="${CMAKE_CURRENT_SOURCE_DIR}/abi/snapshots/0.12.0/core_symbols.txt"
+      GRANIT_ABI_RENDER_PIPELINE_SYMBOLS_PATH="${CMAKE_CURRENT_SOURCE_DIR}/abi/snapshots/0.12.0/render_pipeline_symbols.txt"
       GRANIT_ABI_WINDOW_SYMBOLS_PATH="${CMAKE_CURRENT_SOURCE_DIR}/abi/snapshots/0.5.0/window_symbols.txt"
       GRANIT_ABI_INPUT_SYMBOLS_PATH="${CMAKE_CURRENT_SOURCE_DIR}/abi/snapshots/0.1.0/input_symbols.txt"
   )
@@ -132,7 +141,7 @@ if(BUILD_SHARED_LIBS)
     function(granit_add_abi_export_snapshot_test component target snapshot)
       set(snapshot_version 0.1.0)
       if(component STREQUAL "render_pipeline")
-        set(snapshot_version 0.10.0)
+        set(snapshot_version 0.12.0)
       endif()
       add_test(
         NAME "granit.abi.exports.${component}"
@@ -154,7 +163,7 @@ if(BUILD_SHARED_LIBS)
         "${CMAKE_COMMAND}"
         "-DGRANIT_ABI_COMPONENT=core"
         "-DGRANIT_ABI_LIBRARY=$<TARGET_FILE:granit>"
-        "-DGRANIT_ABI_SNAPSHOT=${CMAKE_CURRENT_SOURCE_DIR}/abi/snapshots/0.8.0/core_symbols.txt"
+        "-DGRANIT_ABI_SNAPSHOT=${CMAKE_CURRENT_SOURCE_DIR}/abi/snapshots/0.12.0/core_symbols.txt"
         "-DGRANIT_ABI_EXPORT_TOOL=${granit_abi_export_tool}"
         "-DGRANIT_ABI_EXPORT_TOOL_KIND=${granit_abi_export_tool_kind}"
         -P "${CMAKE_CURRENT_SOURCE_DIR}/abi/check_exported_symbols.cmake"
@@ -360,6 +369,7 @@ add_test(NAME granit.lighting COMMAND granit_lighting_test)
 add_executable(
   granit_pipeline_test
   pipeline/material_api_test.cpp
+  pipeline/pbr_material_api_test.cpp
   pipeline/environment_map_api_test.cpp
   pipeline/environment_asset_test.cpp
   "${PROJECT_SOURCE_DIR}/src/pipeline/environment_asset.cpp"
@@ -460,6 +470,7 @@ target_compile_definitions(
   PRIVATE
     GRANIT_TEST_ASSET_DIR="${PROJECT_SOURCE_DIR}/tests/assets"
     GRANIT_PBR_ASSET_DIR="${PROJECT_SOURCE_DIR}/assets/shaders/pbr"
+    GRANIT_PBR_MATERIAL_ASSET="${PROJECT_SOURCE_DIR}/assets/materials/pbr_standard.grmat"
 )
 granit_target_compile_warnings(granit_material_test)
 add_test(NAME granit.material COMMAND granit_material_test)
@@ -596,6 +607,7 @@ add_library(
     headers/types_hpp.cpp
     headers/upload_batch_hpp.cpp
     headers/pipeline_material_hpp.cpp
+    headers/pipeline_pbr_material_hpp.cpp
     headers/pipeline_mesh_hpp.cpp
     headers/pipeline_render_pipeline_hpp.cpp
     headers/pipeline_environment_map_hpp.cpp

@@ -28,6 +28,23 @@ granit_result result = granit_shader_create_from_asset(renderer, &asset, &shader
 Vulkan 提供同名 `.grshader.spv`，浏览器 WebGPU 提供 `.grshader.wgsl`。清单损坏、缺少匹配变体、
 能力不足或摘要不一致都会明确失败。成功返回后不再引用输入字节。
 
+调用方需要建立资产索引或选择变体时，可在不创建 Renderer 和 Shader 的情况下检查清单：
+
+```c
+granit_shader_asset_info info = GRANIT_SHADER_ASSET_INFO_INIT;
+granit_result result = granit_shader_asset_inspect(manifest_bytes, manifest_size, &info);
+if (result == GRANIT_SUCCESS && info.entry_point_length > 0) {
+  char entry_point[64];
+  info.entry_point = entry_point;
+  info.entry_point_capacity = sizeof(entry_point);
+  result = granit_shader_asset_inspect(manifest_bytes, manifest_size, &info);
+}
+```
+
+第一次调用返回内容 ID、缓存键、Stage、入口点长度和至多两个当前格式变体摘要；第二次调用可复制
+入口点。变体包含 Backend、代码格式、Profile、Required Features、载荷大小和摘要。接口完整校验
+清单，不持有输入或输出内存；入口点容量不足返回 `GRANIT_ERROR_INVALID_ARGUMENT`。
+
 直接描述入口仍适合内建 Shader、测试和自行管理载荷的调用方：
 
 ```c
@@ -63,6 +80,9 @@ const auto result = shader.initialize_asset(
 
 `granit::shader` 不可复制、可以移动，析构时自动销毁。若需要可靠处理销毁结果，可显式调用
 `reset()`。
+
+需要拥有检查结果时可使用 `granit::inspect_shader_asset()`。其输出字符串和变体数组由调用方对象
+拥有，不依赖输入清单的生命周期。
 
 ## 校验与限制
 

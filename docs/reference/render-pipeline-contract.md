@@ -16,9 +16,10 @@
 
 ## 公共渲染资产
 
-安装 `RenderPipeline` component 时会同时安装公共渲染资产。CMake 包配置变量
-`granit_RENDER_PIPELINE_ASSET_DIR` 指向资产根目录；标准 PBR Shader 位于其
-`shaders/pbr` 子目录。当前标准资产包含：
+安装 `RenderPipeline` component 时会同时安装公共渲染资产。安装包、`FetchContent` 和
+`add_subdirectory` 三种消费方式都提供同名 CMake 变量 `granit_RENDER_PIPELINE_ASSET_DIR`；它指向
+不依赖 Granit 私有源码目录的资产根目录。标准 PBR Shader 位于 `shaders/pbr`，标准 PBR Material
+位于 `materials/pbr_standard.grmat`。当前标准 Shader 资产包含：
 
 ```text
 pbr_standard.vert.grshader
@@ -30,8 +31,8 @@ pbr_standard.frag.grshader.wgsl
 ```
 
 `.grshader` 是公共清单，Vulkan 使用 `.spv` sidecar，浏览器 WebGPU 使用 `.wgsl` sidecar。
-变量只负责定位安装资产，不改变 Core 的资源边界；应用仍负责读取、嵌入或通过自己的资产系统
-提供相应字节。
+变量只负责定位资产，不改变 Core 的资源边界；应用仍负责读取、嵌入或通过自己的资产系统提供
+相应字节。构建树变量指向 Granit 二进制目录中的资产副本，因此上游不需要推导源码目录。
 
 `environments` 子目录同时提供 GRENV v3 环境资产。其所有权、完整性校验和逐帧借用规则见
 [Environment Map](environment-map.md)。

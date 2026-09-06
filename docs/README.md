@@ -38,6 +38,7 @@
 3. [开发计划索引](plans/README.md)
 4. [第三方依赖](../3rd/README.md)
 5. [0.11.0 WebGPU 能力与浏览器 Model Viewer 计划](plans/S-26-0.11.0-webgpu-parity-and-web-model-viewer.md)
+6. [0.12.0 上游资产与标准材质契约计划](plans/S-27-0.12.0-upstream-asset-contracts.md)
 
 ## 操作指南
 
@@ -51,6 +52,7 @@
 - [从 0.7 迁移到 0.8](guides/migrate-0.7-to-0.8.md)
 - [从 0.9 迁移到 0.10](guides/migrate-0.9-to-0.10.md)
 - [从 0.10 迁移到 0.11](guides/migrate-0.10-to-0.11.md)
+- [从 0.11 迁移到 0.12](guides/migrate-0.11-to-0.12.md)
 - [从 0.8 迁移到 0.9](guides/migrate-0.8-to-0.9.md)
 - [示例程序及运行方式](guides/examples.md)
 - [运行跨后端模型查看器](guides/model-viewer.md)
