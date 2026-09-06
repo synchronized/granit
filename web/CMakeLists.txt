@@ -3,6 +3,7 @@
 
 add_library(
   granit STATIC
+  "${PROJECT_SOURCE_DIR}/src/renderer/async_operation_api.cpp"
   "${PROJECT_SOURCE_DIR}/src/renderer/buffer_api.cpp"
   "${PROJECT_SOURCE_DIR}/src/renderer/command_recorder_api.cpp"
   "${PROJECT_SOURCE_DIR}/src/renderer/frame_context_api.cpp"
@@ -10,6 +11,7 @@ add_library(
   "${PROJECT_SOURCE_DIR}/src/renderer/renderer_api.cpp"
   renderer_factory.cpp
   "${PROJECT_SOURCE_DIR}/src/renderer/renderer_registry.cpp"
+  "${PROJECT_SOURCE_DIR}/src/renderer/renderer_registry_async.cpp"
   "${PROJECT_SOURCE_DIR}/src/backend/webgpu/renderer_factory.cpp"
   "${PROJECT_SOURCE_DIR}/src/renderer/renderer_registry_buffer.cpp"
   "${PROJECT_SOURCE_DIR}/src/renderer/renderer_registry_command.cpp"

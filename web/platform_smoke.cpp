@@ -25,6 +25,7 @@
 #include <granit/renderer/surface.h>
 #include <granit/renderer/swapchain.h>
 #include <granit/renderer/texture.hpp>
+#include <granit/renderer/timestamp_query.h>
 
 #include "model_viewer/application_core.h"
 #include "model_viewer/frame_executor.h"
@@ -254,6 +255,70 @@ granit_result validate_public_pipeline() {
     return result == GRANIT_SUCCESS ? GRANIT_ERROR_INTERNAL : result;
   }
   return GRANIT_SUCCESS;
+}
+
+granit_result validate_public_timestamp(const granit_renderer_limits& limits) {
+  granit_timestamp_query_pool_desc query_desc{sizeof(query_desc), 2, 0};
+  granit_timestamp_query_pool pool{};
+  auto result = granit_timestamp_query_pool_create(state.renderer, &query_desc, &pool);
+  if ((limits.supported_features & GRANIT_RENDERER_FEATURE_TIMESTAMP_QUERY_BIT) == 0)
+    return result == GRANIT_ERROR_UNSUPPORTED ? GRANIT_SUCCESS : GRANIT_ERROR_INTERNAL;
+  if (result != GRANIT_SUCCESS)
+    return result;
+
+  granit_command_recorder recorder{};
+  granit_async_operation operation{};
+  const auto cleanup = [&] {
+    if (operation != GRANIT_NULL_HANDLE)
+      static_cast<void>(granit_async_operation_destroy(state.renderer, operation));
+    if (recorder != GRANIT_NULL_HANDLE)
+      static_cast<void>(granit_command_recorder_destroy(state.renderer, recorder));
+    static_cast<void>(granit_timestamp_query_pool_destroy(state.renderer, pool));
+  };
+  const granit_command_recorder_desc recorder_desc = GRANIT_COMMAND_RECORDER_DESC_INIT;
+  result = granit_command_recorder_create(state.renderer, &recorder_desc, &recorder);
+  if (result == GRANIT_SUCCESS)
+    result = granit_command_recorder_begin(state.renderer, recorder);
+  if (result == GRANIT_SUCCESS)
+    result = granit_command_recorder_reset_timestamp_queries(state.renderer, recorder, pool, 0, 2);
+  if (result == GRANIT_SUCCESS)
+    result = granit_command_recorder_write_timestamp(state.renderer, recorder, pool,
+                                                     GRANIT_TIMESTAMP_STAGE_TOP, 0);
+  if (result == GRANIT_SUCCESS)
+    result = granit_command_recorder_write_timestamp(state.renderer, recorder, pool,
+                                                     GRANIT_TIMESTAMP_STAGE_BOTTOM, 1);
+  if (result == GRANIT_SUCCESS)
+    result = granit_command_recorder_end(state.renderer, recorder);
+  if (result == GRANIT_SUCCESS)
+    result = granit_command_recorder_submit(state.renderer, recorder);
+  if (result == GRANIT_SUCCESS)
+    result = granit_timestamp_query_pool_get_results_async(state.renderer, pool, 0, 2, &operation);
+  if (result != GRANIT_SUCCESS) {
+    cleanup();
+    return result;
+  }
+
+  granit_async_operation_status status = GRANIT_ASYNC_OPERATION_STATUS_INIT;
+  for (std::uint32_t attempt = 0; attempt < 600; ++attempt) {
+    result = granit_async_operation_get_status(state.renderer, operation, &status);
+    if (result != GRANIT_SUCCESS || status.state == GRANIT_ASYNC_OPERATION_STATE_FAILED ||
+        status.state == GRANIT_ASYNC_OPERATION_STATE_CANCELLED)
+      break;
+    if (status.state == GRANIT_ASYNC_OPERATION_STATE_SUCCEEDED)
+      break;
+    emscripten_sleep(0);
+    static_cast<void>(granit_renderer_process_events(state.renderer));
+  }
+  std::array<std::uint64_t, 2> values{};
+  if (result == GRANIT_SUCCESS && status.state == GRANIT_ASYNC_OPERATION_STATE_SUCCEEDED)
+    result = granit_timestamp_query_pool_copy_results(
+        state.renderer, pool, operation, values.data(), static_cast<std::uint32_t>(values.size()));
+  else if (result == GRANIT_SUCCESS)
+    result = status.result == GRANIT_ERROR_NOT_READY ? GRANIT_ERROR_NOT_READY : status.result;
+  if (result == GRANIT_SUCCESS && values[1] < values[0])
+    result = GRANIT_ERROR_INTERNAL;
+  cleanup();
+  return result;
 }
 
 granit_result validate_public_transfers() {
@@ -1003,6 +1068,11 @@ void tick(void*) noexcept {
       limits.max_uniform_buffer_binding_size == 0) {
     fail("renderer-limits",
          limits_result == GRANIT_SUCCESS ? GRANIT_ERROR_INTERNAL : limits_result);
+    return;
+  }
+  const auto timestamp_result = validate_public_timestamp(limits);
+  if (timestamp_result != GRANIT_SUCCESS) {
+    fail("renderer-timestamp", timestamp_result);
     return;
   }
   const auto pipeline_result = validate_public_pipeline();
