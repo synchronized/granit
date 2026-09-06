@@ -99,8 +99,10 @@ renderer_registry::readback_batch_read_buffer(granit_renderer renderer, granit_r
     info.required_size = size;
     batch_record->readbacks.push_back({.type = backend_readback_type::buffer,
                                        .buffer = buffer_record,
+                                       .texture = {},
                                        .offset = offset,
                                        .size = size,
+                                       .texture_region = {},
                                        .result_info = info});
     batch_record->result_bytes += size;
     return GRANIT_SUCCESS;
@@ -162,7 +164,9 @@ granit_result renderer_registry::readback_batch_read_texture(
     info.bytes_per_row = texture_info.bytes_per_row;
     info.rows_per_image = texture_info.rows_per_image;
     batch_record->readbacks.push_back({.type = backend_readback_type::texture,
+                                       .buffer = {},
                                        .texture = texture_record,
+                                       .offset = 0,
                                        .size = size,
                                        .texture_region = region,
                                        .result_info = info});
