@@ -15,8 +15,8 @@ bool is_compatible(const granit_webgpu_provider_api* api,
   constexpr std::size_t minimum_size = offsetof(granit_webgpu_provider_api, instance_api) +
                                        sizeof(const granit_webgpu_provider_instance_api*);
   constexpr std::size_t minimum_instance_api_size =
-      offsetof(granit_webgpu_provider_instance_api, read_timestamp_query_results) +
-      sizeof(granit_webgpu_provider_read_timestamp_query_results_fn);
+      offsetof(granit_webgpu_provider_instance_api, destroy_readback) +
+      sizeof(granit_webgpu_provider_destroy_readback_fn);
   return api != nullptr && api->struct_size >= minimum_size &&
          api->abi_version == GRANIT_WEBGPU_PROVIDER_ABI_VERSION && api->kind == expected_kind &&
          api->reserved == 0 && api->name != nullptr && api->name_length != 0 &&
@@ -26,6 +26,10 @@ bool is_compatible(const granit_webgpu_provider_api* api,
          api->instance_api->create_buffer != nullptr &&
          api->instance_api->destroy_buffer != nullptr &&
          api->instance_api->write_buffer != nullptr && api->instance_api->read_buffer != nullptr &&
+         api->instance_api->begin_readback != nullptr &&
+         api->instance_api->poll_readback != nullptr &&
+         api->instance_api->copy_readback != nullptr &&
+         api->instance_api->destroy_readback != nullptr &&
          api->instance_api->write_texture != nullptr &&
          api->instance_api->create_texture != nullptr &&
          api->instance_api->destroy_texture != nullptr &&
@@ -477,6 +481,63 @@ granit_result webgpu_provider_dispatch::read_buffer(granit_webgpu_provider_insta
   }
   try {
     return api_->instance_api->read_buffer(instance, buffer, offset, data, size);
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+granit_result webgpu_provider_dispatch::begin_readback(
+    granit_webgpu_provider_instance instance, granit_webgpu_provider_buffer buffer,
+    std::uint64_t offset, std::uint64_t size, granit_webgpu_provider_readback* readback) noexcept {
+  if (api_ == nullptr || instance == 0 || buffer == 0 || size == 0 || readback == nullptr)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  if (std::find(instances_.begin(), instances_.end(), instance) == instances_.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  try {
+    return api_->instance_api->begin_readback(instance, buffer, offset, size, readback);
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+granit_result
+webgpu_provider_dispatch::poll_readback(granit_webgpu_provider_instance instance,
+                                        granit_webgpu_provider_readback readback) noexcept {
+  if (api_ == nullptr || instance == 0 || readback == 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  if (std::find(instances_.begin(), instances_.end(), instance) == instances_.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  try {
+    return api_->instance_api->poll_readback(instance, readback);
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+granit_result webgpu_provider_dispatch::copy_readback(granit_webgpu_provider_instance instance,
+                                                      granit_webgpu_provider_readback readback,
+                                                      std::uint64_t offset, void* data,
+                                                      std::uint64_t size) noexcept {
+  if (api_ == nullptr || instance == 0 || readback == 0 || data == nullptr || size == 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  if (std::find(instances_.begin(), instances_.end(), instance) == instances_.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  try {
+    return api_->instance_api->copy_readback(instance, readback, offset, data, size);
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+granit_result
+webgpu_provider_dispatch::destroy_readback(granit_webgpu_provider_instance instance,
+                                           granit_webgpu_provider_readback readback) noexcept {
+  if (api_ == nullptr || instance == 0 || readback == 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  if (std::find(instances_.begin(), instances_.end(), instance) == instances_.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  try {
+    return api_->instance_api->destroy_readback(instance, readback);
   } catch (...) {
     return GRANIT_ERROR_INTERNAL;
   }

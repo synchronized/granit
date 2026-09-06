@@ -167,7 +167,7 @@ public:
                      std::unique_ptr<backend_upload_completion>& completion) noexcept override;
   [[nodiscard]] granit_result
   readback_batch_async(std::span<const backend_readback_operation> readbacks,
-                       granit_readback_layout layout,
+                       granit_readback_layout layout, std::uint64_t max_result_bytes,
                        std::unique_ptr<backend_readback_completion>& completion) noexcept override;
   [[nodiscard]] granit_result create_native_texture(const granit_texture_desc& desc,
                                                     backend_texture_resource& texture) noexcept;

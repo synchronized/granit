@@ -92,6 +92,18 @@ public:
                                           granit_webgpu_provider_buffer buffer,
                                           std::uint64_t offset, void* data,
                                           std::uint64_t size) noexcept;
+  [[nodiscard]] granit_result begin_readback(granit_webgpu_provider_instance instance,
+                                             granit_webgpu_provider_buffer buffer,
+                                             std::uint64_t offset, std::uint64_t size,
+                                             granit_webgpu_provider_readback* readback) noexcept;
+  [[nodiscard]] granit_result poll_readback(granit_webgpu_provider_instance instance,
+                                            granit_webgpu_provider_readback readback) noexcept;
+  [[nodiscard]] granit_result copy_readback(granit_webgpu_provider_instance instance,
+                                            granit_webgpu_provider_readback readback,
+                                            std::uint64_t offset, void* data,
+                                            std::uint64_t size) noexcept;
+  [[nodiscard]] granit_result destroy_readback(granit_webgpu_provider_instance instance,
+                                               granit_webgpu_provider_readback readback) noexcept;
   [[nodiscard]] granit_result create_texture(granit_webgpu_provider_instance instance,
                                              const granit_webgpu_provider_texture_desc* desc,
                                              granit_webgpu_provider_texture* texture) noexcept;

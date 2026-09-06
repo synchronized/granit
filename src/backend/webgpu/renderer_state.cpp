@@ -161,9 +161,11 @@ granit_result webgpu_renderer_state::upload_batch_async(
 
 granit_result webgpu_renderer_state::readback_batch_async(
     std::span<const backend_readback_operation> readbacks, granit_readback_layout layout,
+    std::uint64_t max_result_bytes,
     std::unique_ptr<backend_readback_completion>& completion) noexcept {
-  return resources_ ? resources_->readback_batch_async(readbacks, layout, completion)
-                    : GRANIT_ERROR_NOT_READY;
+  return resources_
+             ? resources_->readback_batch_async(readbacks, layout, max_result_bytes, completion)
+             : GRANIT_ERROR_NOT_READY;
 }
 
 std::unique_ptr<backend_texture_resource> webgpu_renderer_state::allocate_texture_resource() {

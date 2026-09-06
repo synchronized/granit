@@ -127,6 +127,18 @@ struct webgpu_instance {
         wgpuQuerySetRelease(query_set);
     }
   };
+  struct readback_record {
+    WGPUBuffer buffer{};
+    std::uint64_t offset{};
+    std::uint64_t size{};
+    std::atomic_uint32_t state{};
+    std::vector<std::byte> bytes;
+
+    ~readback_record() {
+      if (buffer != nullptr)
+        wgpuBufferRelease(buffer);
+    }
+  };
   struct surface_record {
     void* surface;
     std::string selector;
@@ -173,6 +185,7 @@ struct webgpu_instance {
   std::unordered_map<granit_webgpu_provider_timestamp_query_pool,
                      std::shared_ptr<timestamp_query_record>>
       timestamp_queries;
+  std::unordered_map<granit_webgpu_provider_readback, std::shared_ptr<readback_record>> readbacks;
   std::unordered_map<granit_webgpu_provider_surface, surface_record> surfaces;
   std::unordered_map<granit_webgpu_provider_swapchain, swapchain_record> swapchains;
 
@@ -209,6 +222,10 @@ struct timestamp_map_request {
   std::shared_ptr<webgpu_instance::timestamp_query_record> query;
 };
 
+struct readback_map_request {
+  std::shared_ptr<webgpu_instance::readback_record> readback;
+};
+
 std::mutex instances_mutex;
 std::unordered_map<granit_webgpu_provider_instance, webgpu_instance*> instances;
 std::atomic_uint64_t next_instance{1};
@@ -225,6 +242,7 @@ std::atomic_uint64_t next_compute_pipeline{1};
 std::atomic_uint64_t next_command_recorder{1};
 std::atomic_uint64_t next_command_buffer{1};
 std::atomic_uint64_t next_timestamp_query_pool{1};
+std::atomic_uint64_t next_readback{1};
 std::atomic_uint64_t next_swapchain{1};
 std::atomic_uint64_t next_surface{1};
 #if defined(GRANIT_WEBGPU_DEFER_INITIALIZATION_TEST)
@@ -289,6 +307,7 @@ void release_resources(webgpu_instance& state) noexcept {
     wgpuCommandBufferRelease(command_buffer);
   }
   state.command_buffers.clear();
+  state.readbacks.clear();
   state.timestamp_queries.clear();
   for (const auto& [handle, recorder] : state.command_recorders) {
     static_cast<void>(handle);
@@ -530,6 +549,25 @@ void receive_timestamp_map(WGPUMapAsyncStatus status, WGPUStringView, void* data
   std::memcpy(query.values.data(), mapped, size);
   wgpuBufferUnmap(query.read_buffer);
   query.map_state.store(2, std::memory_order_release);
+}
+
+void receive_readback_map(WGPUMapAsyncStatus status, WGPUStringView, void* data, void*) noexcept {
+  std::unique_ptr<readback_map_request> request{static_cast<readback_map_request*>(data)};
+  auto& readback = *request->readback;
+  if (status != WGPUMapAsyncStatus_Success) {
+    readback.state.store(3, std::memory_order_release);
+    return;
+  }
+  const auto* mapped =
+      wgpuBufferGetConstMappedRange(readback.buffer, static_cast<std::size_t>(readback.offset),
+                                    static_cast<std::size_t>(readback.size));
+  if (mapped == nullptr) {
+    readback.state.store(3, std::memory_order_release);
+    return;
+  }
+  std::memcpy(readback.bytes.data(), mapped, static_cast<std::size_t>(readback.size));
+  wgpuBufferUnmap(readback.buffer);
+  readback.state.store(2, std::memory_order_release);
 }
 
 #if !defined(__EMSCRIPTEN__)
@@ -994,6 +1032,13 @@ granit_result write_buffer(granit_webgpu_provider_instance instance,
   return GRANIT_SUCCESS;
 }
 
+template <typename Handle> Handle next_handle(std::atomic_uint64_t& counter) noexcept {
+  auto handle = counter.fetch_add(1, std::memory_order_relaxed);
+  if (handle == 0)
+    handle = counter.fetch_add(1, std::memory_order_relaxed);
+  return static_cast<Handle>(handle);
+}
+
 granit_result read_buffer(granit_webgpu_provider_instance instance,
                           granit_webgpu_provider_buffer buffer, std::uint64_t offset, void* data,
                           std::uint64_t size) noexcept {
@@ -1046,12 +1091,116 @@ granit_result read_buffer(granit_webgpu_provider_instance instance,
   return GRANIT_SUCCESS;
 }
 
-template <typename Handle> Handle next_handle(std::atomic_uint64_t& counter) noexcept {
-  auto handle = counter.fetch_add(1, std::memory_order_relaxed);
-  if (handle == 0) {
-    handle = counter.fetch_add(1, std::memory_order_relaxed);
+granit_result destroy_readback(granit_webgpu_provider_instance instance,
+                               granit_webgpu_provider_readback readback) noexcept;
+
+granit_result begin_readback(granit_webgpu_provider_instance instance,
+                             granit_webgpu_provider_buffer buffer, std::uint64_t offset,
+                             std::uint64_t size,
+                             granit_webgpu_provider_readback* readback) noexcept {
+  if (instance == 0 || buffer == 0 || readback == nullptr || size == 0 || offset % 8 != 0 ||
+      size % 4 != 0 || size > static_cast<std::uint64_t>(SIZE_MAX))
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  std::shared_ptr<webgpu_instance::readback_record> record;
+  {
+    const std::scoped_lock lock{instances_mutex};
+    const auto found = instances.find(instance);
+    if (found == instances.end())
+      return GRANIT_ERROR_INVALID_HANDLE;
+    if (const auto ready = require_ready(*found->second); ready != GRANIT_SUCCESS)
+      return ready;
+    const auto buffer_found = found->second->buffers.find(buffer);
+    if (buffer_found == found->second->buffers.end())
+      return GRANIT_ERROR_INVALID_HANDLE;
+    const auto& source = buffer_found->second;
+    if ((source.usage & GRANIT_WEBGPU_PROVIDER_BUFFER_USAGE_MAP_READ_BIT) == 0 ||
+        offset > source.size || size > source.size - offset)
+      return GRANIT_ERROR_INVALID_ARGUMENT;
+    try {
+      record = std::make_shared<webgpu_instance::readback_record>();
+      record->bytes.resize(static_cast<std::size_t>(size));
+    } catch (const std::bad_alloc&) {
+      return GRANIT_ERROR_OUT_OF_MEMORY;
+    } catch (...) {
+      return GRANIT_ERROR_INTERNAL;
+    }
+    record->buffer = source.buffer;
+    wgpuBufferAddRef(record->buffer);
+    record->offset = offset;
+    record->size = size;
+    const auto handle = next_handle<granit_webgpu_provider_readback>(next_readback);
+    found->second->readbacks.emplace(handle, record);
+    *readback = handle;
   }
-  return static_cast<Handle>(handle);
+  auto* request = new (std::nothrow) readback_map_request{record};
+  if (request == nullptr) {
+    static_cast<void>(destroy_readback(instance, *readback));
+    *readback = 0;
+    return GRANIT_ERROR_OUT_OF_MEMORY;
+  }
+#if defined(__EMSCRIPTEN__)
+  constexpr auto callback_mode = WGPUCallbackMode_AllowSpontaneous;
+#else
+  constexpr auto callback_mode = WGPUCallbackMode_AllowProcessEvents;
+#endif
+  const WGPUBufferMapCallbackInfo callback{nullptr, callback_mode, receive_readback_map, request,
+                                           nullptr};
+  record->state.store(1, std::memory_order_release);
+  static_cast<void>(wgpuBufferMapAsync(record->buffer, WGPUMapMode_Read,
+                                       static_cast<std::size_t>(offset),
+                                       static_cast<std::size_t>(size), callback));
+  return GRANIT_SUCCESS;
+}
+
+granit_result poll_readback(granit_webgpu_provider_instance instance,
+                            granit_webgpu_provider_readback readback) noexcept {
+  std::shared_ptr<webgpu_instance::readback_record> record;
+  WGPUInstance native{};
+  {
+    const std::scoped_lock lock{instances_mutex};
+    const auto found = instances.find(instance);
+    if (found == instances.end())
+      return GRANIT_ERROR_INVALID_HANDLE;
+    const auto operation = found->second->readbacks.find(readback);
+    if (operation == found->second->readbacks.end())
+      return GRANIT_ERROR_INVALID_HANDLE;
+    record = operation->second;
+    native = found->second->instance;
+  }
+  wgpuInstanceProcessEvents(native);
+  const auto state = record->state.load(std::memory_order_acquire);
+  return state == 2 ? GRANIT_SUCCESS : state == 3 ? GRANIT_ERROR_INTERNAL : GRANIT_ERROR_NOT_READY;
+}
+
+granit_result copy_readback(granit_webgpu_provider_instance instance,
+                            granit_webgpu_provider_readback readback, std::uint64_t offset,
+                            void* data, std::uint64_t size) noexcept {
+  if (data == nullptr || size == 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  const std::scoped_lock lock{instances_mutex};
+  const auto found = instances.find(instance);
+  if (found == instances.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  const auto operation = found->second->readbacks.find(readback);
+  if (operation == found->second->readbacks.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  const auto& record = *operation->second;
+  if (record.state.load(std::memory_order_acquire) != 2)
+    return GRANIT_ERROR_NOT_READY;
+  if (offset > record.size || size > record.size - offset)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  std::memcpy(data, record.bytes.data() + offset, static_cast<std::size_t>(size));
+  return GRANIT_SUCCESS;
+}
+
+granit_result destroy_readback(granit_webgpu_provider_instance instance,
+                               granit_webgpu_provider_readback readback) noexcept {
+  const std::scoped_lock lock{instances_mutex};
+  const auto found = instances.find(instance);
+  if (found == instances.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  return found->second->readbacks.erase(readback) == 1 ? GRANIT_SUCCESS
+                                                       : GRANIT_ERROR_INVALID_HANDLE;
 }
 
 WGPUTextureFormat to_native_texture_format(granit_webgpu_provider_texture_format format) noexcept {
@@ -4357,7 +4506,11 @@ constexpr granit_webgpu_provider_instance_api instance_api{
     destroy_timestamp_query_pool,
     recorder_reset_timestamp_queries,
     recorder_write_timestamp,
-    read_timestamp_query_results};
+    read_timestamp_query_results,
+    begin_readback,
+    poll_readback,
+    copy_readback,
+    destroy_readback};
 constexpr granit_webgpu_provider_api provider_api{sizeof(granit_webgpu_provider_api),
                                                   GRANIT_WEBGPU_PROVIDER_ABI_VERSION,
                                                   GRANIT_WEBGPU_PROVIDER_KIND_WEBGPU,

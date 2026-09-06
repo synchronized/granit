@@ -57,9 +57,10 @@ granit_result renderer_registry::create_readback_batch(granit_renderer renderer,
   }
 }
 
-granit_result renderer_registry::readback_batch_read_buffer(
-    granit_renderer renderer, granit_readback_batch batch, granit_buffer buffer,
-    std::uint64_t offset, std::uint64_t size, std::uint32_t& result_index) {
+granit_result
+renderer_registry::readback_batch_read_buffer(granit_renderer renderer, granit_readback_batch batch,
+                                              granit_buffer buffer, std::uint64_t offset,
+                                              std::uint64_t size, std::uint32_t& result_index) {
   std::shared_ptr<readback_batch_record> batch_record;
   std::shared_ptr<buffer_record> buffer_record;
   {
@@ -97,10 +98,10 @@ granit_result renderer_registry::readback_batch_read_buffer(
     info.type = GRANIT_READBACK_RESULT_TYPE_BUFFER;
     info.required_size = size;
     batch_record->readbacks.push_back({.type = backend_readback_type::buffer,
-                                      .buffer = buffer_record,
-                                      .offset = offset,
-                                      .size = size,
-                                      .result_info = info});
+                                       .buffer = buffer_record,
+                                       .offset = offset,
+                                       .size = size,
+                                       .result_info = info});
     batch_record->result_bytes += size;
     return GRANIT_SUCCESS;
   } catch (const std::bad_alloc&) {
@@ -161,10 +162,10 @@ granit_result renderer_registry::readback_batch_read_texture(
     info.bytes_per_row = texture_info.bytes_per_row;
     info.rows_per_image = texture_info.rows_per_image;
     batch_record->readbacks.push_back({.type = backend_readback_type::texture,
-                                      .texture = texture_record,
-                                      .size = size,
-                                      .texture_region = region,
-                                      .result_info = info});
+                                       .texture = texture_record,
+                                       .size = size,
+                                       .texture_region = region,
+                                       .result_info = info});
     batch_record->result_bytes += size;
     return GRANIT_SUCCESS;
   } catch (const std::bad_alloc&) {
@@ -247,8 +248,8 @@ granit_result renderer_registry::submit_readback_batch_async(granit_renderer ren
       record->readbacks = std::move(payload->readbacks);
       return result;
     }
-    result = record->resource_api->readback_batch_async(readbacks, record->texture_layout,
-                                                        payload->completion);
+    result = record->resource_api->readback_batch_async(
+        readbacks, record->texture_layout, record->max_result_bytes, payload->completion);
     if (result != GRANIT_SUCCESS) {
       record->readbacks = std::move(payload->readbacks);
       record->failed = true;
@@ -283,13 +284,17 @@ granit_result renderer_registry::get_readback_result_info(granit_renderer render
   }
   if (record->poll)
     record->poll();
-  if (record->state->status().state != GRANIT_ASYNC_OPERATION_STATE_SUCCEEDED)
+  const auto status = record->state->status();
+  if (status.state == GRANIT_ASYNC_OPERATION_STATE_FAILED ||
+      status.state == GRANIT_ASYNC_OPERATION_STATE_CANCELLED)
+    return status.result;
+  if (status.state != GRANIT_ASYNC_OPERATION_STATE_SUCCEEDED)
     return GRANIT_ERROR_NOT_READY;
   const auto payload = std::static_pointer_cast<readback_batch_operation>(record->payload);
   if (!payload || result_index >= payload->readbacks.size())
     return GRANIT_ERROR_INVALID_ARGUMENT;
-  info = payload->readbacks[result_index].result_info;
-  return GRANIT_SUCCESS;
+  std::lock_guard lock{payload->mutex};
+  return payload->completion->get_result_info(result_index, info);
 }
 
 granit_result renderer_registry::copy_readback_result(granit_renderer renderer,
@@ -346,8 +351,7 @@ granit_result renderer_registry::destroy_readback_batch(granit_renderer renderer
   if (owner == backend_renderers_.end() || found == readback_batches_.end() ||
       found->second->owner != owner->second)
     return GRANIT_ERROR_INVALID_HANDLE;
-  const auto result =
-      handles_.erase(batch, resource_type::readback_batch, owner->second->domain());
+  const auto result = handles_.erase(batch, resource_type::readback_batch, owner->second->domain());
   if (result == GRANIT_SUCCESS)
     readback_batches_.erase(found);
   return result;

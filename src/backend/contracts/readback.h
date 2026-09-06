@@ -32,6 +32,8 @@ class backend_readback_completion {
 public:
   virtual ~backend_readback_completion() = default;
   [[nodiscard]] virtual granit_result poll() noexcept = 0;
+  [[nodiscard]] virtual granit_result
+  get_result_info(std::uint32_t index, granit_readback_result_info& info) const noexcept = 0;
   [[nodiscard]] virtual granit_result copy_result(std::uint32_t index, void* data,
                                                   std::uint64_t size) noexcept = 0;
 };

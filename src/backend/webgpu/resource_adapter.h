@@ -36,7 +36,7 @@ public:
                      std::unique_ptr<backend_upload_completion>& completion) const noexcept;
   [[nodiscard]] granit_result
   readback_batch_async(std::span<const backend_readback_operation> readbacks,
-                       granit_readback_layout layout,
+                       granit_readback_layout layout, std::uint64_t max_result_bytes,
                        std::unique_ptr<backend_readback_completion>& completion) const noexcept;
   [[nodiscard]] granit_webgpu_provider_buffer
   native_buffer(backend_buffer_resource& resource) const noexcept;

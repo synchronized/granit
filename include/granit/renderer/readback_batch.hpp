@@ -20,6 +20,11 @@ enum class readback_layout : std::uint32_t {
   backend = GRANIT_READBACK_LAYOUT_BACKEND,
 };
 
+enum class readback_result_type : std::uint32_t {
+  buffer = GRANIT_READBACK_RESULT_TYPE_BUFFER,
+  texture = GRANIT_READBACK_RESULT_TYPE_TEXTURE,
+};
+
 struct readback_batch_options {
   std::uint64_t max_result_bytes{};
   std::uint32_t max_operation_count{};
@@ -34,7 +39,7 @@ struct readback_batch_info {
 };
 
 struct readback_result_info {
-  granit_readback_result_type type{};
+  readback_result_type type{readback_result_type::buffer};
   std::uint64_t required_size{};
   granit_texture_format format{GRANIT_TEXTURE_FORMAT_UNDEFINED};
   std::uint32_t width{};
@@ -70,29 +75,26 @@ public:
   [[nodiscard]] result create(granit_renderer renderer,
                               const readback_batch_options& options = {}) noexcept {
     static_cast<void>(reset_handle());
-    const granit_readback_batch_desc desc{GRANIT_READBACK_BATCH_DESC_VERSION_1_SIZE,
-                                          0,
-                                          options.max_result_bytes,
-                                          options.max_operation_count,
-                                          static_cast<granit_readback_layout>(
-                                              options.texture_layout)};
+    const granit_readback_batch_desc desc{
+        GRANIT_READBACK_BATCH_DESC_VERSION_1_SIZE, 0, options.max_result_bytes,
+        options.max_operation_count, static_cast<granit_readback_layout>(options.texture_layout)};
     const auto value = granit_readback_batch_create(renderer, &desc, &handle_);
     if (value == GRANIT_SUCCESS)
       renderer_ = renderer;
     return from_native(value);
   }
 
-  [[nodiscard]] result read_buffer(granit_buffer buffer, std::uint64_t offset,
-                                   std::uint64_t size, std::uint32_t& result_index) noexcept {
-    return from_native(granit_readback_batch_read_buffer(renderer_, handle_, buffer, offset, size,
-                                                          &result_index));
+  [[nodiscard]] result read_buffer(granit_buffer buffer, std::uint64_t offset, std::uint64_t size,
+                                   std::uint32_t& result_index) noexcept {
+    return from_native(
+        granit_readback_batch_read_buffer(renderer_, handle_, buffer, offset, size, &result_index));
   }
 
   [[nodiscard]] result read_texture(granit_texture texture,
                                     const granit_texture_write_region& region,
                                     std::uint32_t& result_index) noexcept {
-    return from_native(granit_readback_batch_read_texture(renderer_, handle_, texture, &region,
-                                                           &result_index));
+    return from_native(
+        granit_readback_batch_read_texture(renderer_, handle_, texture, &region, &result_index));
   }
 
   [[nodiscard]] result get_info(readback_batch_info& info) const noexcept {
@@ -144,7 +146,7 @@ private:
   const auto value = granit_readback_operation_get_result_info(
       operation.native_renderer(), operation.native_handle(), result_index, &native);
   if (value == GRANIT_SUCCESS) {
-    info = {.type = native.type,
+    info = {.type = static_cast<readback_result_type>(native.type),
             .required_size = native.required_size,
             .format = native.format,
             .width = native.width,
@@ -162,9 +164,9 @@ private:
                                                  std::span<std::byte> data,
                                                  std::uint64_t& required_size) noexcept {
   required_size = data.size();
-  return from_native(granit_readback_operation_copy_result(
-      operation.native_renderer(), operation.native_handle(), result_index, data.data(),
-      &required_size));
+  return from_native(granit_readback_operation_copy_result(operation.native_renderer(),
+                                                           operation.native_handle(), result_index,
+                                                           data.data(), &required_size));
 }
 
 } // namespace granit

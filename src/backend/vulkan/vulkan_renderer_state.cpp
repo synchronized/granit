@@ -36,12 +36,19 @@ class vulkan_readback_completion final : public backend_readback_completion {
 public:
   using poll_function = std::function<granit_result()>;
   using copy_function = std::function<granit_result(std::uint32_t, void*, std::uint64_t)>;
+  using info_function = std::function<granit_result(std::uint32_t, granit_readback_result_info&)>;
   using release_function = std::function<void()>;
 
-  vulkan_readback_completion(poll_function poll, copy_function copy, release_function release)
-      : poll_(std::move(poll)), copy_(std::move(copy)), release_(std::move(release)) {}
+  vulkan_readback_completion(poll_function poll, info_function info, copy_function copy,
+                             release_function release)
+      : poll_(std::move(poll)), info_(std::move(info)), copy_(std::move(copy)),
+        release_(std::move(release)) {}
   ~vulkan_readback_completion() override { release_(); }
   [[nodiscard]] granit_result poll() noexcept override { return poll_(); }
+  [[nodiscard]] granit_result
+  get_result_info(std::uint32_t index, granit_readback_result_info& info) const noexcept override {
+    return info_(index, info);
+  }
   [[nodiscard]] granit_result copy_result(std::uint32_t index, void* data,
                                           std::uint64_t size) noexcept override {
     return copy_(index, data, size);
@@ -49,6 +56,7 @@ public:
 
 private:
   poll_function poll_;
+  info_function info_;
   copy_function copy_;
   release_function release_;
 };
@@ -1229,7 +1237,7 @@ vulkan_renderer_state::upload_batch(std::span<const backend_upload_operation> up
 }
 
 granit_result vulkan_renderer_state::readback_batch_async(
-    std::span<const backend_readback_operation> readbacks, granit_readback_layout,
+    std::span<const backend_readback_operation> readbacks, granit_readback_layout, std::uint64_t,
     std::unique_ptr<backend_readback_completion>& completion) noexcept {
   completion.reset();
   if (device_lost())
@@ -1241,9 +1249,11 @@ granit_result vulkan_renderer_state::readback_batch_async(
   VkDeviceSize required{};
   std::vector<VkDeviceSize> offsets;
   std::vector<VkDeviceSize> sizes;
+  std::vector<granit_readback_result_info> infos;
   try {
     offsets.reserve(readbacks.size());
     sizes.reserve(readbacks.size());
+    infos.reserve(readbacks.size());
     for (const auto& readback : readbacks) {
       if (readback.size == 0 ||
           (readback.type == backend_readback_type::buffer && readback.buffer == nullptr) ||
@@ -1254,6 +1264,7 @@ granit_result vulkan_renderer_state::readback_batch_async(
         return GRANIT_ERROR_OUT_OF_MEMORY;
       offsets.push_back(offset);
       sizes.push_back(readback.size);
+      infos.push_back(readback.result_info);
       required = offset + readback.size;
     }
   } catch (const std::bad_alloc&) {
@@ -1299,8 +1310,8 @@ granit_result vulkan_renderer_state::readback_batch_async(
         const VkBufferCopy copy{.srcOffset = readback.source_offset,
                                 .dstOffset = offsets[index],
                                 .size = readback.size};
-        functions.vkCmdCopyBuffer(context.command_buffer(), buffer.buffer,
-                                  context.staging().buffer, 1, &copy);
+        functions.vkCmdCopyBuffer(context.command_buffer(), buffer.buffer, context.staging().buffer,
+                                  1, &copy);
         continue;
       }
       const auto& texture = static_cast<const vulkan_texture_resource&>(*readback.texture).native();
@@ -1311,25 +1322,20 @@ granit_result vulkan_renderer_state::readback_batch_async(
       copy.bufferImageHeight = 0;
       copy.imageSubresource = {map_texture_aspect(region.aspect), region.mip_level,
                                region.base_array_layer, region.array_layer_count};
-      copy.imageOffset = {static_cast<std::int32_t>(region.x),
-                          static_cast<std::int32_t>(region.y),
+      copy.imageOffset = {static_cast<std::int32_t>(region.x), static_cast<std::int32_t>(region.y),
                           static_cast<std::int32_t>(region.z)};
       copy.imageExtent = {region.width, region.height, region.depth};
-      const vulkan_image_access source{.image = texture.image,
-                                       .range = {copy.imageSubresource.aspectMask,
-                                                 copy.imageSubresource.mipLevel, 1,
-                                                 copy.imageSubresource.baseArrayLayer,
-                                                 copy.imageSubresource.layerCount}};
+      const vulkan_image_access source{
+          .image = texture.image,
+          .range = {copy.imageSubresource.aspectMask, copy.imageSubresource.mipLevel, 1,
+                    copy.imageSubresource.baseArrayLayer, copy.imageSubresource.layerCount}};
       const auto pending = find_image_subresource(pending_states, source);
-      const auto previous = pending != pending_states.end()
-                                ? pending
-                                : find_image_subresource(image_states_, source);
-      const bool has_previous =
-          pending != pending_states.end() || previous != image_states_.end();
+      const auto previous =
+          pending != pending_states.end() ? pending : find_image_subresource(image_states_, source);
+      const bool has_previous = pending != pending_states.end() || previous != image_states_.end();
       VkImageMemoryBarrier2 barrier{};
       barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
-      barrier.srcStageMask =
-          has_previous ? previous->stages : VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT;
+      barrier.srcStageMask = has_previous ? previous->stages : VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT;
       barrier.srcAccessMask = has_previous ? previous->access : 0;
       barrier.dstStageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT;
       barrier.dstAccessMask = VK_ACCESS_2_TRANSFER_READ_BIT;
@@ -1381,6 +1387,12 @@ granit_result vulkan_renderer_state::readback_batch_async(
     completion = std::make_unique<vulkan_readback_completion>(
         [this, slot_index, slot_generation] {
           return poll_readback_slot(slot_index, slot_generation);
+        },
+        [infos = std::move(infos)](std::uint32_t index, granit_readback_result_info& info) {
+          if (index >= infos.size())
+            return GRANIT_ERROR_INVALID_ARGUMENT;
+          info = infos[index];
+          return GRANIT_SUCCESS;
         },
         [this, slot_index, slot_generation, offsets = std::move(offsets),
          sizes = std::move(sizes)](std::uint32_t index, void* data, std::uint64_t size) {
