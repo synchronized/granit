@@ -4,6 +4,8 @@
 #ifndef GRANIT_RENDERER_RENDERER_REGISTRY_RECORDS_H_
 #define GRANIT_RENDERER_RENDERER_REGISTRY_RECORDS_H_
 
+#include <future>
+
 #include "core/async_operation_state.h"
 #include "renderer/renderer_registry.h"
 #include "assets/shader_asset.h"
@@ -266,6 +268,9 @@ struct renderer_registry::pipeline_warmup_batch_operation {
   granit_renderer renderer{};
   std::vector<pipeline_warmup_entry> entries;
   std::size_t next_index{};
+  std::future<granit_result> pending;
+  std::string pending_cache_key;
+  std::shared_ptr<backend_renderer> pending_owner;
 };
 
 } // namespace granit::detail

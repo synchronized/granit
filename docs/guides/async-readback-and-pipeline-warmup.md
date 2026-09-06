@@ -28,7 +28,8 @@
 4. 查询每项结果、缓存命中标记和 32 字节稳定键。某项失败不会中止同批其他条目。
 
 稳定键由规范化 Pipeline 状态、Shader 内容 ID、入口、后端和设备能力构成，不包含进程内资源
-句柄。Vulkan 会复用原生 Pipeline Cache；WebGPU 当前使用分步预热，但不声明
+句柄。Vulkan 会复用原生 Pipeline Cache，并在私有后台任务中执行冷创建；WebGPU 当前使用分步
+预热，但不声明
 `NON_BLOCKING_PIPELINE_WARMUP`，调用方应在加载阶段调用而不是在交互帧中首次启动。
 
 ## 能力判断
@@ -40,6 +41,9 @@
 - `supports_non_blocking_pipeline_warmup()`：单次事件推进保证不执行同步 Pipeline 编译。
 
 不应通过 Vulkan/WebGPU 后端名称推断上述能力。
+
+异步 Upload/Readback Batch 返回 `NOT_READY` 表示后端暂时没有空闲槽位。此结果不会清空批次或
+创建残留操作；调用方应继续处理事件，在后续帧重试同一批次，不能把它当作永久失败。
 
 ## 取消与销毁
 

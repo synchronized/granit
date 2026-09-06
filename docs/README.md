@@ -42,6 +42,7 @@
 7. [0.13.0 异步 GPU 操作与 Web 运行时计划](plans/S-28-0.13.0-async-gpu-and-web-runtime.md)
 8. [0.14.0 异步管线指标与资源流送计划](plans/S-29-0.14.0-async-pipeline-metrics-and-streaming.md)
 9. [0.15.0 异步回读与管线预热计划](plans/S-30-0.15.0-async-readback-and-pipeline-warmup.md)
+10. [0.16.0 严格非阻塞异步调度计划](plans/S-31-0.16.0-nonblocking-async.md)
 
 ## 操作指南
 
@@ -59,6 +60,7 @@
 - [从 0.12 迁移到 0.13](guides/migrate-0.12-to-0.13.md)
 - [从 0.13 迁移到 0.14](guides/migrate-0.13-to-0.14.md)
 - [从 0.14 迁移到 0.15](guides/migrate-0.14-to-0.15.md)
+- [从 0.15 迁移到 0.16](guides/migrate-0.15-to-0.16.md)
 - [从 0.8 迁移到 0.9](guides/migrate-0.8-to-0.9.md)
 - [示例程序及运行方式](guides/examples.md)
 - [运行跨后端模型查看器](guides/model-viewer.md)

@@ -464,12 +464,12 @@ private:
     std::uint64_t generation{};
   };
 
-  [[nodiscard]] std::size_t acquire_upload_slot();
+  [[nodiscard]] std::size_t acquire_upload_slot(bool wait);
   void release_upload_slot(std::size_t index) noexcept;
   void mark_upload_slot_submitted(std::size_t index) noexcept;
   [[nodiscard]] granit_result poll_upload_slot(std::size_t index,
                                                std::uint64_t generation) noexcept;
-  [[nodiscard]] std::size_t acquire_readback_slot();
+  [[nodiscard]] std::size_t try_acquire_readback_slot();
   void release_readback_slot(std::size_t index, std::uint64_t generation) noexcept;
   void mark_readback_slot_submitted(std::size_t index) noexcept;
   [[nodiscard]] granit_result poll_readback_slot(std::size_t index,

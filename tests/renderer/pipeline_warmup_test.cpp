@@ -55,6 +55,9 @@ TEST_CASE("Compute Pipeline 预热提供稳定键和缓存命中", "[pipeline-wa
   if (environment_unavailable(initialized))
     SKIP("当前运行环境没有满足要求的 Vulkan 设备");
   REQUIRE(initialized == granit::result::success);
+  granit::renderer_limits limits;
+  REQUIRE(renderer.get_limits(limits) == granit::result::success);
+  REQUIRE(limits.supports_non_blocking_pipeline_warmup());
 
   granit::pipeline_layout layout;
   REQUIRE(layout.initialize(renderer.native_handle()) == granit::result::success);
@@ -78,6 +81,10 @@ TEST_CASE("Compute Pipeline 预热提供稳定键和缓存命中", "[pipeline-wa
     REQUIRE(index == 0);
     granit::async_operation operation;
     REQUIRE(batch.submit_async(operation) == granit::result::success);
+    granit::async_operation_status initial_status;
+    REQUIRE(operation.get_status(initial_status) == granit::result::success);
+    if (pass == 0)
+      REQUIRE(initial_status.state == granit::async_operation_state::running);
     await(renderer, operation);
     granit::pipeline_warmup_result_info info;
     REQUIRE(granit::get_pipeline_warmup_result(operation, 0, info) == granit::result::success);

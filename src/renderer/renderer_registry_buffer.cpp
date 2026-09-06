@@ -596,7 +596,8 @@ granit_result renderer_registry::submit_upload_batch_async(granit_renderer rende
     result = record->resource_api->upload_batch_async(uploads, payload->completion);
     if (result != GRANIT_SUCCESS) {
       record->uploads = std::move(payload->uploads);
-      record->failed = true;
+      record->failed = result != GRANIT_ERROR_NOT_READY;
+      state->complete(result);
       static_cast<void>(destroy_async_operation(renderer, operation));
       operation = GRANIT_NULL_HANDLE;
       return result;
