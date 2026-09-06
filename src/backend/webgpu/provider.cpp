@@ -597,8 +597,7 @@ granit_result pipeline_warmup_result(WGPUCreatePipelineAsyncStatus status) noexc
 void receive_render_pipeline_warmup(WGPUCreatePipelineAsyncStatus status,
                                     WGPURenderPipeline pipeline, WGPUStringView message, void* data,
                                     void*) noexcept {
-  std::unique_ptr<pipeline_warmup_request> request{
-      static_cast<pipeline_warmup_request*>(data)};
+  std::unique_ptr<pipeline_warmup_request> request{static_cast<pipeline_warmup_request*>(data)};
   if (pipeline != nullptr)
     wgpuRenderPipelineRelease(pipeline);
   if (status != WGPUCreatePipelineAsyncStatus_Success) {
@@ -618,10 +617,8 @@ void receive_render_pipeline_warmup(WGPUCreatePipelineAsyncStatus status,
 
 void receive_compute_pipeline_warmup(WGPUCreatePipelineAsyncStatus status,
                                      WGPUComputePipeline pipeline, WGPUStringView message,
-                                     void* data,
-                                     void*) noexcept {
-  std::unique_ptr<pipeline_warmup_request> request{
-      static_cast<pipeline_warmup_request*>(data)};
+                                     void* data, void*) noexcept {
+  std::unique_ptr<pipeline_warmup_request> request{static_cast<pipeline_warmup_request*>(data)};
   if (pipeline != nullptr)
     wgpuComputePipelineRelease(pipeline);
   if (status != WGPUCreatePipelineAsyncStatus_Success) {
@@ -945,7 +942,12 @@ granit_result process_events(granit_webgpu_provider_instance instance) noexcept 
   if (found == instances.end()) {
     return GRANIT_ERROR_INVALID_HANDLE;
   }
+#if defined(__EMSCRIPTEN__)
+  // 浏览器通过事件循环交付 AllowSpontaneous 回调。对 Emdawnwebgpu 调用 ProcessEvents
+  // 会进入仅供原生 Future 使用的 Instance 事件管理路径，并可能取消尚未完成的管线回调。
+#else
   wgpuInstanceProcessEvents(found->second->instance);
+#endif
 #if defined(GRANIT_WEBGPU_DEFER_INITIALIZATION_TEST)
   if (found->second->deferred_initialization_for_test) {
     found->second->deferred_initialization_for_test = false;
@@ -2401,11 +2403,11 @@ std::uint32_t vertex_format_size(granit_webgpu_provider_vertex_format format) no
   return 0;
 }
 
-granit_result create_render_pipeline_common(
-    granit_webgpu_provider_instance instance,
-    const granit_webgpu_provider_render_pipeline_desc* desc,
-    granit_webgpu_provider_render_pipeline* out_render_pipeline,
-    granit_webgpu_provider_pipeline_warmup* out_warmup) noexcept {
+granit_result
+create_render_pipeline_common(granit_webgpu_provider_instance instance,
+                              const granit_webgpu_provider_render_pipeline_desc* desc,
+                              granit_webgpu_provider_render_pipeline* out_render_pipeline,
+                              granit_webgpu_provider_pipeline_warmup* out_warmup) noexcept {
   if (out_render_pipeline != nullptr)
     *out_render_pipeline = 0;
   if (out_warmup != nullptr)
@@ -2562,8 +2564,7 @@ granit_result create_render_pipeline_common(
     std::shared_ptr<webgpu_instance::pipeline_warmup_record> record;
     try {
       record = std::make_shared<webgpu_instance::pipeline_warmup_record>();
-      const auto handle =
-          next_handle<granit_webgpu_provider_pipeline_warmup>(next_pipeline_warmup);
+      const auto handle = next_handle<granit_webgpu_provider_pipeline_warmup>(next_pipeline_warmup);
       if (!state.pipeline_warmups.emplace(handle, record).second)
         return GRANIT_ERROR_INTERNAL;
       auto* request = new (std::nothrow) pipeline_warmup_request{record, state.host};
@@ -2614,10 +2615,10 @@ create_render_pipeline(granit_webgpu_provider_instance instance,
   return create_render_pipeline_common(instance, desc, out_render_pipeline, nullptr);
 }
 
-granit_result begin_render_pipeline_warmup(
-    granit_webgpu_provider_instance instance,
-    const granit_webgpu_provider_render_pipeline_desc* desc,
-    granit_webgpu_provider_pipeline_warmup* warmup) noexcept {
+granit_result
+begin_render_pipeline_warmup(granit_webgpu_provider_instance instance,
+                             const granit_webgpu_provider_render_pipeline_desc* desc,
+                             granit_webgpu_provider_pipeline_warmup* warmup) noexcept {
   return create_render_pipeline_common(instance, desc, nullptr, warmup);
 }
 
@@ -2637,11 +2638,11 @@ granit_result destroy_render_pipeline(granit_webgpu_provider_instance instance,
   return GRANIT_SUCCESS;
 }
 
-granit_result create_compute_pipeline_common(
-    granit_webgpu_provider_instance instance,
-    const granit_webgpu_provider_compute_pipeline_desc* desc,
-    granit_webgpu_provider_compute_pipeline* out_pipeline,
-    granit_webgpu_provider_pipeline_warmup* out_warmup) noexcept {
+granit_result
+create_compute_pipeline_common(granit_webgpu_provider_instance instance,
+                               const granit_webgpu_provider_compute_pipeline_desc* desc,
+                               granit_webgpu_provider_compute_pipeline* out_pipeline,
+                               granit_webgpu_provider_pipeline_warmup* out_warmup) noexcept {
   if (out_pipeline != nullptr)
     *out_pipeline = 0;
   if (out_warmup != nullptr)
@@ -2671,8 +2672,7 @@ granit_result create_compute_pipeline_common(
   if (out_warmup != nullptr) {
     try {
       auto record = std::make_shared<webgpu_instance::pipeline_warmup_record>();
-      const auto handle =
-          next_handle<granit_webgpu_provider_pipeline_warmup>(next_pipeline_warmup);
+      const auto handle = next_handle<granit_webgpu_provider_pipeline_warmup>(next_pipeline_warmup);
       if (!state.pipeline_warmups.emplace(handle, record).second)
         return GRANIT_ERROR_INTERNAL;
       auto* request = new (std::nothrow) pipeline_warmup_request{record, state.host};
@@ -2719,10 +2719,10 @@ create_compute_pipeline(granit_webgpu_provider_instance instance,
   return create_compute_pipeline_common(instance, desc, out_pipeline, nullptr);
 }
 
-granit_result begin_compute_pipeline_warmup(
-    granit_webgpu_provider_instance instance,
-    const granit_webgpu_provider_compute_pipeline_desc* desc,
-    granit_webgpu_provider_pipeline_warmup* warmup) noexcept {
+granit_result
+begin_compute_pipeline_warmup(granit_webgpu_provider_instance instance,
+                              const granit_webgpu_provider_compute_pipeline_desc* desc,
+                              granit_webgpu_provider_pipeline_warmup* warmup) noexcept {
   return create_compute_pipeline_common(instance, desc, nullptr, warmup);
 }
 
