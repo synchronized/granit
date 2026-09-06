@@ -26,18 +26,18 @@ function(granit_check_package name expected_success)
   endif()
 endfunction()
 
-granit_check_package(core_only TRUE -DGRANIT_REQUEST_VERSION=0.17)
-granit_check_package(render_pipeline TRUE -DGRANIT_REQUEST_VERSION=0.17
+granit_check_package(core_only TRUE -DGRANIT_REQUEST_VERSION=0.18)
+granit_check_package(render_pipeline TRUE -DGRANIT_REQUEST_VERSION=0.18
                      -DGRANIT_REQUEST_COMPONENT=RenderPipeline)
-granit_check_package(window TRUE -DGRANIT_REQUEST_VERSION=0.17
+granit_check_package(window TRUE -DGRANIT_REQUEST_VERSION=0.18
                      -DGRANIT_REQUEST_COMPONENT=Window)
-granit_check_package(input TRUE -DGRANIT_REQUEST_VERSION=0.17
+granit_check_package(input TRUE -DGRANIT_REQUEST_VERSION=0.18
                      -DGRANIT_REQUEST_COMPONENT=Input)
 if(EXISTS "${GRANIT_INSTALL_PREFIX}/lib/cmake/granit/granitShaderToolsTargets.cmake")
-  granit_check_package(shader_tools TRUE -DGRANIT_REQUEST_VERSION=0.17
+  granit_check_package(shader_tools TRUE -DGRANIT_REQUEST_VERSION=0.18
                        -DGRANIT_REQUEST_COMPONENT=ShaderTools)
 else()
-  granit_check_package(shader_tools_unavailable FALSE -DGRANIT_REQUEST_VERSION=0.17
+  granit_check_package(shader_tools_unavailable FALSE -DGRANIT_REQUEST_VERSION=0.18
                        -DGRANIT_REQUEST_COMPONENT=ShaderTools)
 endif()
 granit_check_package(older_0_7 FALSE -DGRANIT_REQUEST_VERSION=0.7)
