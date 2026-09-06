@@ -8,6 +8,17 @@
 
 ## Unreleased
 
+## 0.18.0 - 2026-09-07
+
+### 新增
+
+- 新增 BC1、BC3、BC5、BC7、ETC2 RGBA8 与 ASTC 4×4 压缩纹理格式，并提供 UNORM/SRGB
+  颜色空间变体。
+- 新增格式块 Footprint、紧密数据布局计算和设备格式能力查询；上游可依据真实设备支持选择资产
+  变体，无需复制 Granit 私有布局规则。
+- Vulkan 与浏览器 WebGPU 的同步写入、Upload Batch、异步上传和 Command Recorder 复制统一支持
+  压缩块布局、边缘 mip 与数组层跨度。
+
 ### 变更
 
 - 开发工作流新增按改动范围选择的 `Quick Check`，并统一 Emscripten、Shader 工具链及正式打包的
@@ -15,6 +26,11 @@
 - Release 改为不可变候选晋级：手动候选构建记录 tag、commit、run ID 与 SHA-256，正式标签只
   发布完全匹配的已验证产物，不再重复构建四套 SDK。
 - Emscripten Chrome 验收显式覆盖软件 WebGPU 适配器的异步 Pipeline 已知失败与同步创建降级。
+
+### 兼容性与迁移
+
+- Core 新增格式枚举、能力结构和两个 C ABI 导出。项目仍处于 0.x，Consumer 应重新编译并将
+  CMake 请求版本更新为 0.18。压缩纹理读回和运行时 Mipmap 生成暂不支持。
 
 ## 0.16.0 - 2026-09-06
 
