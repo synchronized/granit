@@ -88,6 +88,10 @@ public:
   [[nodiscard]] granit_result
   upload_batch_async(std::span<const backend_upload_operation> uploads,
                      std::unique_ptr<backend_upload_completion>& completion) noexcept override;
+  [[nodiscard]] granit_result
+  readback_batch_async(std::span<const backend_readback_operation> readbacks,
+                       granit_readback_layout layout,
+                       std::unique_ptr<backend_readback_completion>& completion) noexcept override;
   [[nodiscard]] std::unique_ptr<backend_texture_resource> allocate_texture_resource() override;
   [[nodiscard]] granit_result create_texture(const granit_texture_desc&,
                                              backend_texture_resource&) noexcept override;

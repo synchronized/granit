@@ -117,6 +117,7 @@ struct renderer_resource_stats {
   std::uint64_t upload_batch_count{};
   std::uint64_t pending_retirement_count{};
   std::uint64_t async_operation_count{};
+  std::uint64_t readback_batch_count{};
 };
 
 enum class renderer_state : std::uint32_t {
@@ -297,7 +298,8 @@ public:
              .timestamp_query_pool_count = native.timestamp_query_pool_count,
              .upload_batch_count = native.upload_batch_count,
              .pending_retirement_count = native.pending_retirement_count,
-             .async_operation_count = native.async_operation_count};
+             .async_operation_count = native.async_operation_count,
+             .readback_batch_count = native.readback_batch_count};
     return result::success;
   }
 

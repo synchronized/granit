@@ -214,6 +214,32 @@ struct renderer_registry::upload_batch_operation {
   std::unique_ptr<backend_upload_completion> completion;
   std::vector<upload_entry> uploads;
 };
+struct renderer_registry::readback_entry {
+  backend_readback_type type{backend_readback_type::buffer};
+  std::shared_ptr<buffer_record> buffer;
+  std::shared_ptr<texture_record> texture;
+  std::uint64_t offset{};
+  std::uint64_t size{};
+  granit_texture_write_region texture_region{};
+  granit_readback_result_info result_info = GRANIT_READBACK_RESULT_INFO_INIT;
+};
+struct renderer_registry::readback_batch_record {
+  resource_metadata metadata;
+  std::shared_ptr<backend_renderer> owner;
+  std::shared_ptr<backend_resource_renderer> resource_api;
+  std::mutex mutex;
+  std::vector<readback_entry> readbacks;
+  std::uint64_t result_bytes{};
+  std::uint64_t max_result_bytes{};
+  std::uint32_t max_operation_count{};
+  granit_readback_layout texture_layout{GRANIT_READBACK_LAYOUT_TIGHT};
+  bool failed{};
+};
+struct renderer_registry::readback_batch_operation {
+  std::mutex mutex;
+  std::unique_ptr<backend_readback_completion> completion;
+  std::vector<readback_entry> readbacks;
+};
 
 } // namespace granit::detail
 

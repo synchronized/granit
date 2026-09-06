@@ -21,6 +21,7 @@
 #include <granit/renderer/command_recorder.h>
 #include <granit/renderer/frame_context.h>
 #include <granit/renderer/pipeline.h>
+#include <granit/renderer/readback_batch.h>
 #include <granit/renderer/renderer.h>
 #include <granit/renderer/sampler.h>
 #include <granit/renderer/shader.h>
@@ -53,7 +54,12 @@
 namespace granit::detail {
 
 class async_operation_state_machine;
-enum class async_operation_kind : std::uint8_t { unknown, timestamp_results, upload_batch };
+enum class async_operation_kind : std::uint8_t {
+  unknown,
+  timestamp_results,
+  upload_batch,
+  readback_batch
+};
 
 /** 线程安全地管理进程内公开 renderer 句柄。 */
 class renderer_registry {
@@ -377,6 +383,33 @@ public:
                                                  granit_upload_batch batch);
   [[nodiscard]] granit_result destroy_upload_batch(granit_renderer renderer,
                                                    granit_upload_batch batch);
+  [[nodiscard]] granit_result create_readback_batch(granit_renderer renderer,
+                                                     const granit_readback_batch_desc& desc,
+                                                     granit_readback_batch& batch);
+  [[nodiscard]] granit_result readback_batch_read_buffer(
+      granit_renderer renderer, granit_readback_batch batch, granit_buffer buffer,
+      std::uint64_t offset, std::uint64_t size, std::uint32_t& result_index);
+  [[nodiscard]] granit_result readback_batch_read_texture(
+      granit_renderer renderer, granit_readback_batch batch, granit_texture texture,
+      const granit_texture_write_region& region, std::uint32_t& result_index);
+  [[nodiscard]] granit_result get_readback_batch_info(granit_renderer renderer,
+                                                      granit_readback_batch batch,
+                                                      granit_readback_batch_info& info);
+  [[nodiscard]] granit_result submit_readback_batch_async(granit_renderer renderer,
+                                                          granit_readback_batch batch,
+                                                          granit_async_operation& operation);
+  [[nodiscard]] granit_result get_readback_result_info(granit_renderer renderer,
+                                                       granit_async_operation operation,
+                                                       std::uint32_t result_index,
+                                                       granit_readback_result_info& info);
+  [[nodiscard]] granit_result copy_readback_result(granit_renderer renderer,
+                                                   granit_async_operation operation,
+                                                   std::uint32_t result_index, void* data,
+                                                   std::uint64_t& size);
+  [[nodiscard]] granit_result reset_readback_batch(granit_renderer renderer,
+                                                   granit_readback_batch batch);
+  [[nodiscard]] granit_result destroy_readback_batch(granit_renderer renderer,
+                                                     granit_readback_batch batch);
 
 private:
   void poll_detached_async_operations(const std::shared_ptr<backend_renderer>& owner);
@@ -407,6 +440,9 @@ private:
   struct upload_entry;
   struct upload_batch_record;
   struct upload_batch_operation;
+  struct readback_entry;
+  struct readback_batch_record;
+  struct readback_batch_operation;
 
   [[nodiscard]] std::uint32_t allocate_domain() noexcept;
   [[nodiscard]] granit_result
@@ -454,6 +490,8 @@ private:
   std::vector<std::shared_ptr<async_operation_record>> detached_async_operations_;
   std::unordered_map<granit_frame, std::shared_ptr<frame_record>> frames_;
   std::unordered_map<granit_upload_batch, std::shared_ptr<upload_batch_record>> upload_batches_;
+  std::unordered_map<granit_readback_batch, std::shared_ptr<readback_batch_record>>
+      readback_batches_;
   std::uint32_t next_domain_{1};
   std::uint64_t next_creation_sequence_{1};
 };

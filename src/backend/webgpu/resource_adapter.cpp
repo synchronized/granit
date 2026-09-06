@@ -341,6 +341,13 @@ granit_result webgpu_resource_adapter::upload_batch_async(
   }
 }
 
+granit_result webgpu_resource_adapter::readback_batch_async(
+    std::span<const backend_readback_operation>, granit_readback_layout,
+    std::unique_ptr<backend_readback_completion>& completion) const noexcept {
+  completion.reset();
+  return GRANIT_ERROR_UNSUPPORTED;
+}
+
 granit_webgpu_provider_buffer
 webgpu_resource_adapter::native_buffer(backend_buffer_resource& resource) const noexcept {
   const auto* buffer = as_buffer(resource);

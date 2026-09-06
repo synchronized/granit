@@ -57,6 +57,8 @@ target_sources(
     backend/vulkan/result.h
     backend/vulkan/resources.cpp
     backend/vulkan/resources.h
+    backend/vulkan/readback_context.cpp
+    backend/vulkan/readback_context.h
     backend/vulkan/surface.cpp
     backend/vulkan/surface.h
     backend/vulkan/swapchain.cpp
@@ -118,6 +120,8 @@ target_sources(
     renderer/texture_api.cpp
     renderer/timestamp_query_api.cpp
     renderer/upload_batch_api.cpp
+    renderer/readback_batch_api.cpp
+    renderer/renderer_registry_readback.cpp
     result.cpp
     version.cpp
   PUBLIC
@@ -164,6 +168,8 @@ target_sources(
       "${PROJECT_SOURCE_DIR}/include/granit/renderer/timestamp_query.hpp"
       "${PROJECT_SOURCE_DIR}/include/granit/renderer/upload_batch.h"
       "${PROJECT_SOURCE_DIR}/include/granit/renderer/upload_batch.hpp"
+      "${PROJECT_SOURCE_DIR}/include/granit/renderer/readback_batch.h"
+      "${PROJECT_SOURCE_DIR}/include/granit/renderer/readback_batch.hpp"
       "${PROJECT_SOURCE_DIR}/include/granit/renderer/swapchain.h"
       "${PROJECT_SOURCE_DIR}/include/granit/renderer/swapchain.hpp"
       "${PROJECT_SOURCE_DIR}/include/granit/core/types.h"
