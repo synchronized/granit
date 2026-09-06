@@ -19,6 +19,7 @@
 #include <granit/renderer/buffer.hpp>
 #include <granit/renderer/command_recorder.hpp>
 #include <granit/renderer/pipeline.hpp>
+#include <granit/renderer/pipeline_warmup.h>
 #include <granit/renderer/renderer.h>
 #include <granit/renderer/sampler.hpp>
 #include <granit/renderer/shader.hpp>
@@ -234,6 +235,54 @@ granit_result validate_public_pipeline() {
   pipeline_desc.fragment_shader = fragment;
   pipeline_desc.color_format_count = 1;
   pipeline_desc.color_formats = &color_format;
+  granit_renderer_limits limits = GRANIT_RENDERER_LIMITS_INIT;
+  result = granit_renderer_get_limits(state.renderer, &limits);
+  if (result != GRANIT_SUCCESS ||
+      (limits.supported_features & GRANIT_RENDERER_FEATURE_NON_BLOCKING_PIPELINE_WARMUP_BIT) == 0) {
+    result = result == GRANIT_SUCCESS ? GRANIT_ERROR_UNSUPPORTED : result;
+  }
+  granit_pipeline_warmup_batch warmup_batch{};
+  granit_async_operation warmup_operation{};
+  std::uint32_t warmup_index{};
+  if (result == GRANIT_SUCCESS) {
+    const granit_pipeline_warmup_batch_desc warmup_desc =
+        GRANIT_PIPELINE_WARMUP_BATCH_DESC_INIT;
+    result = granit_pipeline_warmup_batch_create(state.renderer, &warmup_desc, &warmup_batch);
+  }
+  if (result == GRANIT_SUCCESS)
+    result = granit_pipeline_warmup_batch_add_graphics(
+        state.renderer, warmup_batch, &pipeline_desc, &warmup_index);
+  if (result == GRANIT_SUCCESS)
+    result = granit_pipeline_warmup_batch_submit_async(state.renderer, warmup_batch,
+                                                       &warmup_operation);
+  granit_async_operation_status warmup_status = GRANIT_ASYNC_OPERATION_STATUS_INIT;
+  for (std::uint32_t attempt = 0; result == GRANIT_SUCCESS && attempt < 600; ++attempt) {
+    result = granit_async_operation_get_status(state.renderer, warmup_operation, &warmup_status);
+    if (result != GRANIT_SUCCESS ||
+        warmup_status.state != GRANIT_ASYNC_OPERATION_STATE_RUNNING)
+      break;
+    static_cast<void>(granit_renderer_process_events(state.renderer));
+    emscripten_sleep(0);
+  }
+  granit_pipeline_warmup_result_info warmup_info = GRANIT_PIPELINE_WARMUP_RESULT_INFO_INIT;
+  if (result == GRANIT_SUCCESS &&
+      warmup_status.state == GRANIT_ASYNC_OPERATION_STATE_SUCCEEDED) {
+    result = granit_pipeline_warmup_operation_get_result(
+        state.renderer, warmup_operation, warmup_index, &warmup_info);
+  } else if (result == GRANIT_SUCCESS) {
+    result = warmup_status.result == GRANIT_ERROR_NOT_READY ? GRANIT_ERROR_NOT_READY
+                                                            : warmup_status.result;
+  }
+  if (warmup_operation != GRANIT_NULL_HANDLE)
+    static_cast<void>(granit_async_operation_destroy(state.renderer, warmup_operation));
+  if (warmup_batch != GRANIT_NULL_HANDLE)
+    static_cast<void>(granit_pipeline_warmup_batch_destroy(state.renderer, warmup_batch));
+  if (result != GRANIT_SUCCESS || warmup_info.result != GRANIT_SUCCESS) {
+    static_cast<void>(granit_pipeline_layout_destroy(state.renderer, layout));
+    static_cast<void>(granit_shader_destroy(state.renderer, fragment));
+    static_cast<void>(granit_shader_destroy(state.renderer, vertex));
+    return result == GRANIT_SUCCESS ? warmup_info.result : result;
+  }
   granit_graphics_pipeline pipeline{};
   result = granit_graphics_pipeline_create(state.renderer, &pipeline_desc, &pipeline);
   if (result != GRANIT_SUCCESS) {

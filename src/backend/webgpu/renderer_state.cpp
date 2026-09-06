@@ -10,6 +10,27 @@
 namespace granit::detail {
 namespace {
 
+class webgpu_pipeline_warmup_completion final : public backend_pipeline_warmup_completion {
+public:
+  webgpu_pipeline_warmup_completion(webgpu_provider_dispatch& provider,
+                                    granit_webgpu_provider_instance instance,
+                                    granit_webgpu_provider_pipeline_warmup warmup) noexcept
+      : provider_(provider), instance_(instance), warmup_(warmup) {}
+  ~webgpu_pipeline_warmup_completion() override {
+    if (warmup_ != 0)
+      static_cast<void>(provider_.destroy_pipeline_warmup(instance_, warmup_));
+  }
+
+  granit_result poll() noexcept override {
+    return provider_.poll_pipeline_warmup(instance_, warmup_);
+  }
+
+private:
+  webgpu_provider_dispatch& provider_;
+  granit_webgpu_provider_instance instance_{};
+  granit_webgpu_provider_pipeline_warmup warmup_{};
+};
+
 std::uint32_t to_provider_surface_types(std::uint32_t surface_types) noexcept {
   std::uint32_t result{};
   if ((surface_types & GRANIT_SURFACE_TYPE_WIN32_BIT) != 0)
@@ -240,6 +261,26 @@ granit_result webgpu_renderer_state::create_compute_pipeline(
     return GRANIT_ERROR_UNSUPPORTED;
   return pipelines_->create_compute_pipeline(pipeline, pipelines_->native_pipeline_layout(layout),
                                              shaders_->native_handle(shader));
+}
+
+granit_result webgpu_renderer_state::warmup_compute_pipeline_async(
+    backend_pipeline_layout_resource& layout, backend_shader_resource& shader, const char*,
+    std::unique_ptr<backend_pipeline_warmup_completion>& completion) noexcept {
+  if (!pipelines_ || !shaders_)
+    return GRANIT_ERROR_UNSUPPORTED;
+  granit_webgpu_provider_pipeline_warmup warmup{};
+  const auto result = pipelines_->begin_compute_pipeline_warmup(
+      pipelines_->native_pipeline_layout(layout), shaders_->native_handle(shader), warmup);
+  if (result != GRANIT_SUCCESS)
+    return result;
+  try {
+    completion =
+        std::make_unique<webgpu_pipeline_warmup_completion>(provider_, instance_, warmup);
+    return GRANIT_SUCCESS;
+  } catch (const std::bad_alloc&) {
+    static_cast<void>(provider_.destroy_pipeline_warmup(instance_, warmup));
+    return GRANIT_ERROR_OUT_OF_MEMORY;
+  }
 }
 
 granit_result
@@ -716,6 +757,33 @@ granit_result webgpu_renderer_state::create_graphics_pipeline(
       color_blend);
 }
 
+granit_result webgpu_renderer_state::warmup_graphics_pipeline_async(
+    const backend_graphics_pipeline_create_info& info,
+    std::unique_ptr<backend_pipeline_warmup_completion>& completion) noexcept {
+  if (!pipelines_ || !shaders_ || info.color_formats.size() > 1)
+    return GRANIT_ERROR_UNSUPPORTED;
+  const auto color_format =
+      info.color_formats.empty() ? GRANIT_TEXTURE_FORMAT_UNDEFINED : info.color_formats.front();
+  const granit_color_blend_state default_blend = GRANIT_COLOR_BLEND_STATE_INIT;
+  const auto& color_blend = info.color_blends.empty() ? default_blend : info.color_blends.front();
+  granit_webgpu_provider_pipeline_warmup warmup{};
+  const auto result = pipelines_->begin_graphics_pipeline_warmup(
+      info.layout, shaders_->native_handle(info.vertex_shader),
+      shaders_->native_handle(info.fragment_shader), info.vertex_buffers, color_format,
+      info.depth_stencil_format, info.sample_count, info.primitive, info.depth, info.depth_bias,
+      color_blend, warmup);
+  if (result != GRANIT_SUCCESS)
+    return result;
+  try {
+    completion =
+        std::make_unique<webgpu_pipeline_warmup_completion>(provider_, instance_, warmup);
+    return GRANIT_SUCCESS;
+  } catch (const std::bad_alloc&) {
+    static_cast<void>(provider_.destroy_pipeline_warmup(instance_, warmup));
+    return GRANIT_ERROR_OUT_OF_MEMORY;
+  }
+}
+
 void* webgpu_renderer_state::allocate(std::uint64_t size, std::uint64_t alignment, void*) noexcept {
   return ::operator new(static_cast<std::size_t>(size),
                         std::align_val_t{static_cast<std::size_t>(alignment)}, std::nothrow);
@@ -835,7 +903,8 @@ granit_result webgpu_renderer_state::refresh_state() noexcept {
              ? GRANIT_RENDERER_FEATURE_TIMESTAMP_QUERY_BIT
              : UINT64_C(0)) |
             GRANIT_RENDERER_FEATURE_ASYNC_READBACK_BIT |
-            GRANIT_RENDERER_FEATURE_PIPELINE_WARMUP_BIT,
+            GRANIT_RENDERER_FEATURE_PIPELINE_WARMUP_BIT |
+            GRANIT_RENDERER_FEATURE_NON_BLOCKING_PIPELINE_WARMUP_BIT,
     };
     provider_surface_types_ = capabilities.surface_types;
     if ((to_provider_surface_types(surface_types_) & ~provider_surface_types_) != 0) {
