@@ -44,6 +44,7 @@ class webgpu_renderer_state final : public backend_renderer,
                                     public backend_wgsl_shader_renderer,
                                     public backend_pipeline_layout_renderer,
                                     public backend_pipeline_renderer,
+                                    public backend_pipeline_warmup_renderer,
                                     public backend_timestamp_renderer {
 public:
   webgpu_renderer_state() = default;
@@ -123,6 +124,13 @@ public:
   [[nodiscard]] granit_result
   create_compute_pipeline(backend_pipeline_layout_resource&, backend_shader_resource&, const char*,
                           backend_compute_pipeline_resource&) noexcept override;
+  [[nodiscard]] granit_result warmup_graphics_pipeline_async(
+      const backend_graphics_pipeline_create_info& info,
+      std::unique_ptr<backend_pipeline_warmup_completion>& completion) noexcept override;
+  [[nodiscard]] granit_result warmup_compute_pipeline_async(
+      backend_pipeline_layout_resource& layout, backend_shader_resource& shader,
+      const char* entry_point,
+      std::unique_ptr<backend_pipeline_warmup_completion>& completion) noexcept override;
   [[nodiscard]] granit_result
   bind_compute_pipeline(backend_command_recorder_resource&,
                         backend_compute_pipeline_resource&) noexcept override;

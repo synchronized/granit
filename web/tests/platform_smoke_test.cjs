@@ -171,15 +171,14 @@ async function main() {
   const browserArguments = ["--enable-unsafe-webgpu", "--no-sandbox"];
   if (process.platform !== "win32") {
     browserArguments.push(
-      "--enable-unsafe-swiftshader",
       "--enable-features=Vulkan",
-      "--use-angle=swiftshader",
+      "--use-angle=vulkan",
       "--disable-vulkan-surface",
     );
   }
   const browser = await chromium.launch({
     executablePath: chromePath,
-    headless: true,
+    headless: process.env.GRANIT_BROWSER_HEADLESS !== "0",
     args: browserArguments,
   });
   const page = await browser.newPage();
@@ -216,6 +215,7 @@ async function main() {
     for (const stage of [
       "document", "buffers", "images", "materials", "meshes", "nodes",
       "planning", "geometry", "textures", "samplers",
+      "pipelines",
     ]) {
       if (!browserMessages.some((message) => message.includes(`GRANIT_PROGRESS:${stage}:`)))
         throw new Error(`浏览器分阶段上传未报告 ${stage} 进度`);

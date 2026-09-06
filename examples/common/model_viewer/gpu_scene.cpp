@@ -368,6 +368,35 @@ gpu_scene_plan_error append_primitive(const gltf::primitive& source, gpu_scene_p
 
 } // namespace
 
+granit::result gpu_scene::add_pipeline_warmups(
+    granit_pipeline_warmup_batch batch, granit_texture_format color_format,
+    granit_sample_count sample_count, std::vector<std::uint32_t>& result_indices) noexcept {
+  result_indices.clear();
+  if (!valid() || batch == GRANIT_NULL_HANDLE || color_format == GRANIT_TEXTURE_FORMAT_UNDEFINED)
+    return granit::result::invalid_argument;
+  try {
+    result_indices.reserve(materials_.size());
+    for (const auto& material : materials_) {
+      granit_material_pipeline_warmup_desc desc = GRANIT_MATERIAL_PIPELINE_WARMUP_DESC_INIT;
+      desc.pass = granit::material_parameter_id("opaque");
+      desc.color_format = color_format;
+      desc.depth_stencil_format = GRANIT_TEXTURE_FORMAT_D32_FLOAT;
+      desc.sample_count = sample_count;
+      std::uint32_t index{};
+      const auto result = material.add_pipeline_warmup(desc, batch, index);
+      if (result.failed()) {
+        result_indices.clear();
+        return result;
+      }
+      result_indices.push_back(index);
+    }
+    return granit::result::success;
+  } catch (const std::bad_alloc&) {
+    result_indices.clear();
+    return granit::result::out_of_memory;
+  }
+}
+
 gpu_scene_plan_error build_gpu_scene_plan(const gltf::scene& source, gpu_scene_plan& output) {
   try {
     gpu_scene_plan candidate;

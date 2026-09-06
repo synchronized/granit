@@ -361,13 +361,22 @@
 - 为具备可靠异步创建能力的后端提供严格非阻塞 Pipeline 预热，并通过能力位表达降级。
 - 公共 API 继续不接管线程池、资产调度和文件系统。
 
+## 二十四、0.17.0 WebGPU 原生异步 Pipeline 预热
+
+**状态：已完成。**
+
+- **[S-32](plans/S-32-0.17.0-webgpu-async-pipeline-warmup.md) / P1**：接入 WebGPU 原生异步
+  Render/Compute Pipeline 创建，并在满足严格语义后报告对应能力。
+- Vulkan 私有后台任务与 WebGPU 回调收敛到同一内部 HAL 完成契约，Registry 只管理公共异步状态。
+- Web Model Viewer 在加载阶段预热标准 PBR 变体，提供真实进度、取消和失败详情。
+- 公共线程池、桌面 Dawn、Android、新后端、公共 glTF SDK 和高级渲染特性不属于本版本。
+
 ## 近期执行顺序
 
-1. S-31 已完成；下个版本优先评估 WebGPU 原生异步 Pipeline 创建与跨平台后台任务边界。
-2. 公共执行器与场景 API 继续等待 Granit 与 Gneiss 的第二个真实复用证据。
-3. S-14 只在复用条件成立后启动；不要为当前单个示例提前稳定 glTF 公共 API。
-4. S-06D 最终验收等待稳定版本与 component 范围决策；不在 0.x 阶段提前宣布稳定。
-5. H-09 的透明 PBR、CSM、Clustered Forward 与 Bindless 只在各自重新评估条件满足后独立恢复，
+1. 公共执行器与场景 API 继续等待 Granit 与 Gneiss 的第二个真实复用证据。
+2. S-14 只在复用条件成立后启动；不要为当前单个示例提前稳定 glTF 公共 API。
+3. S-06D 最终验收等待稳定版本与 component 范围决策；不在 0.x 阶段提前宣布稳定。
+4. H-09 的透明 PBR、CSM、Clustered Forward 与 Bindless 只在各自重新评估条件满足后独立恢复，
    不作为当前稳定化工作的前置项。
 
 若前置抽象不足，应先更新对应 Plan 和本路线图状态，再扩大公共 API。

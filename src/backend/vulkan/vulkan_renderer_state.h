@@ -61,6 +61,7 @@ class vulkan_renderer_state final : public backend_renderer,
                                     public backend_graphics_command_renderer,
                                     public backend_pipeline_layout_renderer,
                                     public backend_pipeline_renderer,
+                                    public backend_pipeline_warmup_renderer,
                                     public backend_pipeline_cache_renderer,
                                     public backend_spirv_shader_renderer,
                                     public backend_retirement_renderer,
@@ -113,6 +114,13 @@ public:
   [[nodiscard]] granit_result
   create_graphics_pipeline(const backend_graphics_pipeline_create_info& info,
                            backend_graphics_pipeline_resource& pipeline) noexcept override;
+  [[nodiscard]] granit_result warmup_graphics_pipeline_async(
+      const backend_graphics_pipeline_create_info& info,
+      std::unique_ptr<backend_pipeline_warmup_completion>& completion) noexcept override;
+  [[nodiscard]] granit_result warmup_compute_pipeline_async(
+      backend_pipeline_layout_resource& layout, backend_shader_resource& shader,
+      const char* entry_point,
+      std::unique_ptr<backend_pipeline_warmup_completion>& completion) noexcept override;
   [[nodiscard]] std::unique_ptr<backend_compute_pipeline_resource>
   allocate_compute_pipeline_resource() override;
   [[nodiscard]] std::unique_ptr<backend_command_recorder_resource>

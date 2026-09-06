@@ -54,6 +54,12 @@ public:
     return from_native(granit_material_update(renderer_, handle_, updates.data(),
                                               static_cast<std::uint32_t>(updates.size())));
   }
+  [[nodiscard]] result add_pipeline_warmup(
+      const granit_material_pipeline_warmup_desc& desc, granit_pipeline_warmup_batch batch,
+      std::uint32_t& result_index) const noexcept {
+    return from_native(
+        granit_material_add_pipeline_warmup(renderer_, handle_, &desc, batch, &result_index));
+  }
   [[nodiscard]] result reset() noexcept {
     if (!valid())
       return result::success;

@@ -15,8 +15,8 @@ bool is_compatible(const granit_webgpu_provider_api* api,
   constexpr std::size_t minimum_size = offsetof(granit_webgpu_provider_api, instance_api) +
                                        sizeof(const granit_webgpu_provider_instance_api*);
   constexpr std::size_t minimum_instance_api_size =
-      offsetof(granit_webgpu_provider_instance_api, destroy_readback) +
-      sizeof(granit_webgpu_provider_destroy_readback_fn);
+      offsetof(granit_webgpu_provider_instance_api, destroy_pipeline_warmup) +
+      sizeof(granit_webgpu_provider_destroy_pipeline_warmup_fn);
   return api != nullptr && api->struct_size >= minimum_size &&
          api->abi_version == GRANIT_WEBGPU_PROVIDER_ABI_VERSION && api->kind == expected_kind &&
          api->reserved == 0 && api->name != nullptr && api->name_length != 0 &&
@@ -30,6 +30,10 @@ bool is_compatible(const granit_webgpu_provider_api* api,
          api->instance_api->poll_readback != nullptr &&
          api->instance_api->copy_readback != nullptr &&
          api->instance_api->destroy_readback != nullptr &&
+         api->instance_api->begin_render_pipeline_warmup != nullptr &&
+         api->instance_api->begin_compute_pipeline_warmup != nullptr &&
+         api->instance_api->poll_pipeline_warmup != nullptr &&
+         api->instance_api->destroy_pipeline_warmup != nullptr &&
          api->instance_api->write_texture != nullptr &&
          api->instance_api->create_texture != nullptr &&
          api->instance_api->destroy_texture != nullptr &&
@@ -767,6 +771,10 @@ GRANIT_PROVIDER_DISPATCH_CREATE_METHOD(create_compute_pipeline, create_compute_p
                                        granit_webgpu_provider_compute_pipeline)
 GRANIT_PROVIDER_DISPATCH_DESTROY_METHOD(destroy_compute_pipeline, destroy_compute_pipeline,
                                         granit_webgpu_provider_compute_pipeline)
+GRANIT_PROVIDER_DISPATCH_CREATE_METHOD(begin_compute_pipeline_warmup,
+                                       begin_compute_pipeline_warmup,
+                                       const granit_webgpu_provider_compute_pipeline_desc*,
+                                       granit_webgpu_provider_pipeline_warmup)
 
 granit_result webgpu_provider_dispatch::recorder_begin_compute(
     granit_webgpu_provider_instance instance,
@@ -838,6 +846,27 @@ GRANIT_PROVIDER_DISPATCH_CREATE_METHOD(create_render_pipeline, create_render_pip
                                        granit_webgpu_provider_render_pipeline)
 GRANIT_PROVIDER_DISPATCH_DESTROY_METHOD(destroy_render_pipeline, destroy_render_pipeline,
                                         granit_webgpu_provider_render_pipeline)
+GRANIT_PROVIDER_DISPATCH_CREATE_METHOD(begin_render_pipeline_warmup,
+                                       begin_render_pipeline_warmup,
+                                       const granit_webgpu_provider_render_pipeline_desc*,
+                                       granit_webgpu_provider_pipeline_warmup)
+
+granit_result webgpu_provider_dispatch::poll_pipeline_warmup(
+    granit_webgpu_provider_instance instance,
+    granit_webgpu_provider_pipeline_warmup warmup) noexcept {
+  if (api_ == nullptr || instance == 0 || warmup == 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  if (std::find(instances_.begin(), instances_.end(), instance) == instances_.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  try {
+    return api_->instance_api->poll_pipeline_warmup(instance, warmup);
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+GRANIT_PROVIDER_DISPATCH_DESTROY_METHOD(destroy_pipeline_warmup, destroy_pipeline_warmup,
+                                        granit_webgpu_provider_pipeline_warmup)
 
 granit_result webgpu_provider_dispatch::create_command_recorder(
     granit_webgpu_provider_instance instance,

@@ -40,6 +40,9 @@ public:
   [[nodiscard]] granit_result reset() noexcept;
   [[nodiscard]] granit_result acquire_pipeline(const material_pipeline_request& request,
                                                granit_graphics_pipeline& pipeline);
+  [[nodiscard]] granit_result add_pipeline_warmup(const material_pipeline_request& request,
+                                                  granit_pipeline_warmup_batch batch,
+                                                  std::uint32_t& result_index);
 
   [[nodiscard]] granit_bind_group_layout material_layout() const noexcept {
     return material_layout_;
@@ -56,6 +59,12 @@ private:
     granit_graphics_pipeline pipeline = GRANIT_NULL_HANDLE;
   };
 
+  struct warmup_entry {
+    material_pipeline_request request;
+    granit_shader vertex_shader = GRANIT_NULL_HANDLE;
+    granit_shader fragment_shader = GRANIT_NULL_HANDLE;
+  };
+
   granit_renderer renderer_ = GRANIT_NULL_HANDLE;
   const material_package* package_ = nullptr;
   granit_bind_group_layout frame_layout_ = GRANIT_NULL_HANDLE;
@@ -65,6 +74,7 @@ private:
   void* shader_resolver_user_data_ = nullptr;
   mutable std::mutex mutex_;
   std::vector<cache_entry> cache_;
+  std::vector<warmup_entry> warmups_;
 };
 
 } // namespace granit::material

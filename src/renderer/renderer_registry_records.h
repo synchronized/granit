@@ -255,6 +255,10 @@ struct renderer_registry::pipeline_warmup_entry {
   granit_depth_bias_state depth_bias{};
   std::vector<granit_color_blend_state> color_blends;
   granit_pipeline_warmup_result_info result = GRANIT_PIPELINE_WARMUP_RESULT_INFO_INIT;
+  std::shared_ptr<pipeline_layout_record> retained_layout;
+  std::shared_ptr<shader_record> retained_vertex_shader;
+  std::shared_ptr<shader_record> retained_fragment_shader;
+  std::shared_ptr<shader_record> retained_compute_shader;
 };
 struct renderer_registry::pipeline_warmup_batch_record {
   resource_metadata metadata;
@@ -268,7 +272,7 @@ struct renderer_registry::pipeline_warmup_batch_operation {
   granit_renderer renderer{};
   std::vector<pipeline_warmup_entry> entries;
   std::size_t next_index{};
-  std::future<granit_result> pending;
+  std::unique_ptr<backend_pipeline_warmup_completion> pending;
   std::string pending_cache_key;
   std::shared_ptr<backend_renderer> pending_owner;
 };

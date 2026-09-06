@@ -208,6 +208,15 @@ granit_result webgpu_pipeline_adapter::create_compute_pipeline(
   return context_->provider->create_compute_pipeline(context_->instance, &desc, &pipeline->handle_);
 }
 
+granit_result webgpu_pipeline_adapter::begin_compute_pipeline_warmup(
+    granit_webgpu_provider_pipeline_layout layout, granit_webgpu_provider_shader shader,
+    granit_webgpu_provider_pipeline_warmup& warmup) const noexcept {
+  if (layout == 0 || shader == 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  const granit_webgpu_provider_compute_pipeline_desc desc{sizeof(desc), 0, layout, shader};
+  return context_->provider->begin_compute_pipeline_warmup(context_->instance, &desc, &warmup);
+}
+
 granit_webgpu_provider_compute_pipeline webgpu_pipeline_adapter::native_compute_pipeline(
     backend_compute_pipeline_resource& resource) const noexcept {
   const auto* pipeline = dynamic_cast<webgpu_compute_pipeline_resource*>(&resource);
@@ -222,10 +231,42 @@ granit_result webgpu_pipeline_adapter::create_graphics_pipeline(
     const granit_primitive_state& primitive, const granit_depth_state& depth,
     const granit_depth_bias_state* depth_bias,
     const granit_color_blend_state& color_blend) const noexcept {
-  auto* pipeline = as_pipeline(resource);
+  return create_graphics_pipeline_impl(
+      &resource, layout_resource, vertex_shader, fragment_shader, vertex_buffers, color_format,
+      depth_stencil_format, sample_count, primitive, depth, depth_bias, color_blend, nullptr);
+}
+
+granit_result webgpu_pipeline_adapter::begin_graphics_pipeline_warmup(
+    backend_pipeline_layout_resource& layout_resource,
+    granit_webgpu_provider_shader vertex_shader,
+    granit_webgpu_provider_shader fragment_shader,
+    std::span<const granit_vertex_buffer_layout> vertex_buffers,
+    granit_texture_format color_format, granit_texture_format depth_stencil_format,
+    granit_sample_count sample_count, const granit_primitive_state& primitive,
+    const granit_depth_state& depth, const granit_depth_bias_state* depth_bias,
+    const granit_color_blend_state& color_blend,
+    granit_webgpu_provider_pipeline_warmup& warmup) const noexcept {
+  return create_graphics_pipeline_impl(
+      nullptr, layout_resource, vertex_shader, fragment_shader, vertex_buffers, color_format,
+      depth_stencil_format, sample_count, primitive, depth, depth_bias, color_blend, &warmup);
+}
+
+granit_result webgpu_pipeline_adapter::create_graphics_pipeline_impl(
+    backend_graphics_pipeline_resource* resource,
+    backend_pipeline_layout_resource& layout_resource,
+    granit_webgpu_provider_shader vertex_shader,
+    granit_webgpu_provider_shader fragment_shader,
+    std::span<const granit_vertex_buffer_layout> vertex_buffers,
+    granit_texture_format color_format, granit_texture_format depth_stencil_format,
+    granit_sample_count sample_count, const granit_primitive_state& primitive,
+    const granit_depth_state& depth, const granit_depth_bias_state* depth_bias,
+    const granit_color_blend_state& color_blend,
+    granit_webgpu_provider_pipeline_warmup* warmup) const noexcept {
+  auto* pipeline = resource == nullptr ? nullptr : as_pipeline(*resource);
   auto* layout = as_layout(layout_resource);
   const auto provider_format = to_provider_format(color_format);
-  if (pipeline == nullptr || pipeline->handle_ != 0 || layout == nullptr || layout->handle_ == 0 ||
+  if ((resource != nullptr && (pipeline == nullptr || pipeline->handle_ != 0)) ||
+      (resource == nullptr && warmup == nullptr) || layout == nullptr || layout->handle_ == 0 ||
       vertex_shader == 0 || fragment_shader == 0 ||
       (color_format != GRANIT_TEXTURE_FORMAT_UNDEFINED && provider_format == 0)) {
     return GRANIT_ERROR_INVALID_ARGUMENT;
@@ -292,8 +333,11 @@ granit_result webgpu_pipeline_adapter::create_graphics_pipeline(
                    : GRANIT_WEBGPU_PROVIDER_CULL_MODE_BACK),
         GRANIT_WEBGPU_PROVIDER_POLYGON_MODE_FILL,
         sample_count};
-    return context_->provider->create_render_pipeline(context_->instance, &desc,
-                                                      &pipeline->handle_);
+    return warmup != nullptr
+               ? context_->provider->begin_render_pipeline_warmup(context_->instance, &desc,
+                                                                   warmup)
+               : context_->provider->create_render_pipeline(context_->instance, &desc,
+                                                             &pipeline->handle_);
   } catch (const std::bad_alloc&) {
     return GRANIT_ERROR_OUT_OF_MEMORY;
   } catch (...) {

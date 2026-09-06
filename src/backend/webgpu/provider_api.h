@@ -9,7 +9,7 @@
 #include <granit/core/diagnostic.h>
 #include <granit/core/result.h>
 
-#define GRANIT_WEBGPU_PROVIDER_ABI_VERSION UINT32_C(30)
+#define GRANIT_WEBGPU_PROVIDER_ABI_VERSION UINT32_C(31)
 #define GRANIT_WEBGPU_PROVIDER_KIND_WEBGPU UINT32_C(1)
 #define GRANIT_WEBGPU_PROVIDER_QUERY_SYMBOL "granit_webgpu_provider_query"
 #define GRANIT_WEBGPU_PROVIDER_SURFACE_TYPE_WIN32_BIT UINT32_C(0x00000001)
@@ -35,6 +35,7 @@ typedef uint64_t granit_webgpu_provider_surface;
 typedef uint64_t granit_webgpu_provider_swapchain;
 typedef uint64_t granit_webgpu_provider_timestamp_query_pool;
 typedef uint64_t granit_webgpu_provider_readback;
+typedef uint64_t granit_webgpu_provider_pipeline_warmup;
 
 #define GRANIT_WEBGPU_PROVIDER_FEATURE_TIMESTAMP_QUERY_BIT (UINT64_C(1) << 0)
 
@@ -568,6 +569,18 @@ typedef granit_result (*granit_webgpu_provider_create_compute_pipeline_fn)(
 typedef granit_result (*granit_webgpu_provider_destroy_compute_pipeline_fn)(
     granit_webgpu_provider_instance instance,
     granit_webgpu_provider_compute_pipeline compute_pipeline);
+typedef granit_result (*granit_webgpu_provider_begin_render_pipeline_warmup_fn)(
+    granit_webgpu_provider_instance instance,
+    const granit_webgpu_provider_render_pipeline_desc* desc,
+    granit_webgpu_provider_pipeline_warmup* warmup);
+typedef granit_result (*granit_webgpu_provider_begin_compute_pipeline_warmup_fn)(
+    granit_webgpu_provider_instance instance,
+    const granit_webgpu_provider_compute_pipeline_desc* desc,
+    granit_webgpu_provider_pipeline_warmup* warmup);
+typedef granit_result (*granit_webgpu_provider_poll_pipeline_warmup_fn)(
+    granit_webgpu_provider_instance instance, granit_webgpu_provider_pipeline_warmup warmup);
+typedef granit_result (*granit_webgpu_provider_destroy_pipeline_warmup_fn)(
+    granit_webgpu_provider_instance instance, granit_webgpu_provider_pipeline_warmup warmup);
 typedef granit_result (*granit_webgpu_provider_recorder_begin_compute_fn)(
     granit_webgpu_provider_instance instance, granit_webgpu_provider_command_recorder recorder);
 typedef granit_result (*granit_webgpu_provider_recorder_bind_compute_pipeline_fn)(
@@ -868,6 +881,10 @@ typedef struct granit_webgpu_provider_instance_api {
   granit_webgpu_provider_poll_readback_fn poll_readback;
   granit_webgpu_provider_copy_readback_fn copy_readback;
   granit_webgpu_provider_destroy_readback_fn destroy_readback;
+  granit_webgpu_provider_begin_render_pipeline_warmup_fn begin_render_pipeline_warmup;
+  granit_webgpu_provider_begin_compute_pipeline_warmup_fn begin_compute_pipeline_warmup;
+  granit_webgpu_provider_poll_pipeline_warmup_fn poll_pipeline_warmup;
+  granit_webgpu_provider_destroy_pipeline_warmup_fn destroy_pipeline_warmup;
 } granit_webgpu_provider_instance_api;
 
 /** 静态 Provider 入口返回的只读描述；字符串在Provider 销毁前有效。 */

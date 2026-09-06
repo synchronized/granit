@@ -65,7 +65,8 @@ jobs:
           set -o pipefail
           for attempt in 1 2 3; do
             log="$RUNNER_TEMP/granit-webgpu-attempt-${attempt}.log"
-            if npm test -- ../../build/emscripten-release/web 2>&1 | tee "$log"; then
+            if xvfb-run -a env GRANIT_BROWSER_HEADLESS=0 \
+              npm test -- ../../build/emscripten-release/web 2>&1 | tee "$log"; then
               exit 0
             fi
             if ! grep -q "A valid external Instance reference no longer exists" "$log"; then

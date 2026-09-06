@@ -162,6 +162,20 @@ public:
   [[nodiscard]] granit_result
   destroy_compute_pipeline(granit_webgpu_provider_instance instance,
                            granit_webgpu_provider_compute_pipeline pipeline) noexcept;
+  [[nodiscard]] granit_result begin_render_pipeline_warmup(
+      granit_webgpu_provider_instance instance,
+      const granit_webgpu_provider_render_pipeline_desc* desc,
+      granit_webgpu_provider_pipeline_warmup* warmup) noexcept;
+  [[nodiscard]] granit_result begin_compute_pipeline_warmup(
+      granit_webgpu_provider_instance instance,
+      const granit_webgpu_provider_compute_pipeline_desc* desc,
+      granit_webgpu_provider_pipeline_warmup* warmup) noexcept;
+  [[nodiscard]] granit_result poll_pipeline_warmup(
+      granit_webgpu_provider_instance instance,
+      granit_webgpu_provider_pipeline_warmup warmup) noexcept;
+  [[nodiscard]] granit_result destroy_pipeline_warmup(
+      granit_webgpu_provider_instance instance,
+      granit_webgpu_provider_pipeline_warmup warmup) noexcept;
   [[nodiscard]] granit_result
   recorder_begin_compute(granit_webgpu_provider_instance instance,
                          granit_webgpu_provider_command_recorder recorder) noexcept;

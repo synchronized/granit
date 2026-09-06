@@ -13,6 +13,7 @@
 #include <granit/pipeline/render_pipeline.h>
 #include <granit/pipeline/scene.hpp>
 #include <granit/renderer/buffer.hpp>
+#include <granit/renderer/pipeline_warmup.h>
 #include <granit/renderer/sampler.hpp>
 #include <granit/renderer/texture.hpp>
 
@@ -152,6 +153,11 @@ public:
   [[nodiscard]] std::span<const granit_scene_renderable> renderables() const noexcept {
     return plan_.renderables;
   }
+
+  /** 将当前场景使用的标准 PBR 变体加入预热批次，返回与条目一一对应的结果索引。 */
+  [[nodiscard]] granit::result add_pipeline_warmups(
+      granit_pipeline_warmup_batch batch, granit_texture_format color_format,
+      granit_sample_count sample_count, std::vector<std::uint32_t>& result_indices) noexcept;
 
   /** 查询 Inspector 缩略图使用的实际纹理绑定，不转移资源所有权。 */
   [[nodiscard]] granit::result texture_binding(const gltf::texture_reference& reference, bool srgb,

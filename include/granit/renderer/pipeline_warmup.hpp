@@ -104,6 +104,7 @@ public:
     handle_ = GRANIT_NULL_HANDLE;
     return from_native(granit_pipeline_warmup_batch_destroy(renderer, handle));
   }
+  [[nodiscard]] granit_pipeline_warmup_batch native_handle() const noexcept { return handle_; }
 
 private:
   granit_renderer renderer_{};

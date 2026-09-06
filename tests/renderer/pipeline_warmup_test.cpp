@@ -9,10 +9,12 @@
 #include <catch2/catch_all.hpp>
 
 #include <array>
+#include <chrono>
 #include <cstddef>
 #include <fstream>
 #include <iterator>
 #include <string>
+#include <thread>
 #include <vector>
 
 namespace {
@@ -40,6 +42,7 @@ void await(granit::renderer& renderer, granit::async_operation& operation) {
       return;
     REQUIRE(status.state == granit::async_operation_state::running);
     REQUIRE(renderer.process_events() == granit::result::success);
+    std::this_thread::sleep_for(std::chrono::milliseconds{1});
   }
   FAIL("Pipeline 预热操作未在限定轮询次数内完成");
 }
@@ -95,6 +98,82 @@ TEST_CASE("Compute Pipeline 预热提供稳定键和缓存命中", "[pipeline-wa
     else
       CHECK(info.cache_key == first_key);
   }
+}
+
+TEST_CASE("Pipeline 预热操作保留已经提交的资源", "[pipeline-warmup][lifetime]") {
+  granit::renderer renderer;
+  const auto initialized = renderer.initialize({.application_name = "granit-warmup-lifetime"});
+  if (environment_unavailable(initialized))
+    SKIP("当前运行环境没有满足要求的 Vulkan 设备");
+  REQUIRE(initialized == granit::result::success);
+
+  granit::pipeline_layout layout;
+  REQUIRE(layout.initialize(renderer.native_handle()) == granit::result::success);
+  granit::shader shader;
+  REQUIRE(shader.initialize(renderer.native_handle(),
+                            {.stage = granit::shader_stage::compute,
+                             .code = load_binary("minimal.comp.spv")}) ==
+          granit::result::success);
+  granit_compute_pipeline_desc desc = GRANIT_COMPUTE_PIPELINE_DESC_INIT;
+  desc.layout = layout.native_handle();
+  desc.compute_shader = shader.native_handle();
+  granit::pipeline_warmup_batch batch;
+  REQUIRE(batch.create(renderer.native_handle(), {.max_operation_count = 1}) ==
+          granit::result::success);
+  std::uint32_t index{};
+  REQUIRE(batch.add_compute(desc, index) == granit::result::success);
+  granit::async_operation operation;
+  REQUIRE(batch.submit_async(operation) == granit::result::success);
+
+  REQUIRE(shader.reset() == granit::result::success);
+  REQUIRE(layout.reset() == granit::result::success);
+  await(renderer, operation);
+  granit::pipeline_warmup_result_info info;
+  REQUIRE(granit::get_pipeline_warmup_result(operation, index, info) == granit::result::success);
+  CHECK(info.operation_result == granit::result::success);
+}
+
+TEST_CASE("Pipeline 预热取消收敛终态并安全释放资源", "[pipeline-warmup][cancel]") {
+  granit::renderer renderer;
+  const auto initialized = renderer.initialize({.application_name = "granit-warmup-cancel"});
+  if (environment_unavailable(initialized))
+    SKIP("当前运行环境没有满足要求的 Vulkan 设备");
+  REQUIRE(initialized == granit::result::success);
+
+  granit::pipeline_layout layout;
+  REQUIRE(layout.initialize(renderer.native_handle()) == granit::result::success);
+  granit::shader shader;
+  REQUIRE(shader.initialize(renderer.native_handle(),
+                            {.stage = granit::shader_stage::compute,
+                             .code = load_binary("minimal.comp.spv")}) ==
+          granit::result::success);
+  granit_compute_pipeline_desc desc = GRANIT_COMPUTE_PIPELINE_DESC_INIT;
+  desc.layout = layout.native_handle();
+  desc.compute_shader = shader.native_handle();
+  granit::pipeline_warmup_batch batch;
+  REQUIRE(batch.create(renderer.native_handle(), {.max_operation_count = 32}) ==
+          granit::result::success);
+  for (std::uint32_t entry = 0; entry < 32; ++entry) {
+    std::uint32_t index{};
+    REQUIRE(batch.add_compute(desc, index) == granit::result::success);
+  }
+  granit::async_operation operation;
+  REQUIRE(batch.submit_async(operation) == granit::result::success);
+  REQUIRE(operation.request_cancel() == granit::result::success);
+  granit::async_operation_status status;
+  for (std::uint32_t iteration = 0; iteration < 1000; ++iteration) {
+    REQUIRE(operation.get_status(status) == granit::result::success);
+    if (status.complete())
+      break;
+    REQUIRE(renderer.process_events() == granit::result::success);
+  }
+  REQUIRE(status.complete());
+  CHECK((status.state == granit::async_operation_state::succeeded ||
+         status.state == granit::async_operation_state::cancelled));
+  REQUIRE(operation.reset() == granit::result::success);
+  REQUIRE(batch.reset_handle() == granit::result::success);
+  REQUIRE(shader.reset() == granit::result::success);
+  REQUIRE(layout.reset() == granit::result::success);
 }
 
 } // namespace

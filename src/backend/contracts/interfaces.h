@@ -35,6 +35,7 @@ struct backend_interfaces {
   std::shared_ptr<backend_transfer_command_renderer> transfer;
   std::shared_ptr<backend_pipeline_layout_renderer> pipeline_layouts;
   std::shared_ptr<backend_pipeline_renderer> pipelines;
+  std::shared_ptr<backend_pipeline_warmup_renderer> pipeline_warmup;
   std::shared_ptr<backend_pipeline_cache_renderer> pipeline_cache;
   std::shared_ptr<backend_wgsl_shader_renderer> wgsl_shaders;
   std::shared_ptr<backend_spirv_shader_renderer> spirv_shaders;
@@ -65,6 +66,8 @@ discover_backend_interfaces(const std::shared_ptr<backend_renderer>& renderer) {
   interfaces.pipeline_layouts =
       std::dynamic_pointer_cast<backend_pipeline_layout_renderer>(renderer);
   interfaces.pipelines = std::dynamic_pointer_cast<backend_pipeline_renderer>(renderer);
+  interfaces.pipeline_warmup =
+      std::dynamic_pointer_cast<backend_pipeline_warmup_renderer>(renderer);
   interfaces.pipeline_cache = std::dynamic_pointer_cast<backend_pipeline_cache_renderer>(renderer);
   interfaces.wgsl_shaders = std::dynamic_pointer_cast<backend_wgsl_shader_renderer>(renderer);
   interfaces.spirv_shaders = std::dynamic_pointer_cast<backend_spirv_shader_renderer>(renderer);

@@ -3,6 +3,7 @@
 
 #include <granit/pipeline/material.hpp>
 #include <granit/renderer/renderer.hpp>
+#include <granit/renderer/pipeline_warmup.hpp>
 #include <granit/renderer/sampler.hpp>
 #include <granit/renderer/texture.hpp>
 
@@ -157,4 +158,32 @@ TEST_CASE("公共Material拒绝跨Renderer操作与损坏归档") {
   CHECK(granit_material_update(first.native_handle(), material, &update, 1) ==
         GRANIT_ERROR_INVALID_HANDLE);
   REQUIRE(granit_material_destroy(first.native_handle(), replacement) == GRANIT_SUCCESS);
+}
+
+TEST_CASE("公共Material预热在Shader Asset缺少解析器时保持事务性") {
+  granit::renderer renderer;
+  const auto initialized = renderer.initialize({.application_name = "granit-material-warmup"});
+  if (environment_unavailable(initialized))
+    SKIP("当前运行环境没有满足要求的 Vulkan 设备");
+  REQUIRE(initialized == granit::result::success);
+
+  const auto archive = build_archive(false);
+  granit_material_desc material_desc = GRANIT_MATERIAL_DESC_INIT;
+  material_desc.archive_data = archive.data();
+  material_desc.archive_size = archive.size();
+  granit::material_instance material;
+  REQUIRE(material.initialize(renderer.native_handle(), material_desc) == granit::result::success);
+
+  granit::pipeline_warmup_batch batch;
+  REQUIRE(batch.create(renderer.native_handle(), {}) == granit::result::success);
+  granit_material_pipeline_warmup_desc warmup_desc =
+      GRANIT_MATERIAL_PIPELINE_WARMUP_DESC_INIT;
+  warmup_desc.pass = granit::material_parameter_id("opaque");
+  warmup_desc.color_format = GRANIT_TEXTURE_FORMAT_RGBA8_UNORM;
+  std::uint32_t result_index{};
+  CHECK(material.add_pipeline_warmup(warmup_desc, batch.native_handle(), result_index) ==
+        granit::result::not_ready);
+  granit::pipeline_warmup_batch_info info;
+  REQUIRE(batch.get_info(info) == granit::result::success);
+  CHECK(info.operation_count == 0);
 }
