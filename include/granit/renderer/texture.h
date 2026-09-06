@@ -50,6 +50,11 @@ GRANIT_API granit_result granit_texture_format_calculate_data_footprint(
     granit_texture_format format, uint32_t width, uint32_t height, uint32_t image_count,
     granit_texture_data_footprint* footprint);
 
+/** 查询当前设备对格式的用途与采样能力；已知但不支持的格式返回零能力。 */
+GRANIT_API granit_result granit_renderer_get_texture_format_capabilities(
+    granit_renderer renderer, granit_texture_format format,
+    granit_texture_format_capabilities* capabilities);
+
 /** 创建未初始化的 Texture 存储。 */
 GRANIT_API granit_result granit_texture_create(granit_renderer renderer,
                                                const granit_texture_desc* desc,

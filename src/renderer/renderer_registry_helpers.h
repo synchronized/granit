@@ -9,6 +9,7 @@
 #include <granit/renderer/texture.h>
 
 #include "backend/contracts/queue.h"
+#include "core/texture_format.h"
 
 namespace granit::detail {
 
@@ -38,7 +39,7 @@ void mark_resources_used(Resources& resources, submission_serial serial) noexcep
 }
 
 [[nodiscard]] inline bool depth_format(granit_texture_format format) noexcept {
-  return format >= GRANIT_TEXTURE_FORMAT_D16_UNORM;
+  return depth_stencil_texture_format(format);
 }
 
 [[nodiscard]] inline bool stencil_format(granit_texture_format format) noexcept {

@@ -213,6 +213,28 @@ VkFormat map_texture_format(granit_texture_format format) noexcept {
     return VK_FORMAT_D24_UNORM_S8_UINT;
   case GRANIT_TEXTURE_FORMAT_D32_FLOAT_S8_UINT:
     return VK_FORMAT_D32_SFLOAT_S8_UINT;
+  case GRANIT_TEXTURE_FORMAT_BC1_RGBA_UNORM:
+    return VK_FORMAT_BC1_RGBA_UNORM_BLOCK;
+  case GRANIT_TEXTURE_FORMAT_BC1_RGBA_SRGB:
+    return VK_FORMAT_BC1_RGBA_SRGB_BLOCK;
+  case GRANIT_TEXTURE_FORMAT_BC3_RGBA_UNORM:
+    return VK_FORMAT_BC3_UNORM_BLOCK;
+  case GRANIT_TEXTURE_FORMAT_BC3_RGBA_SRGB:
+    return VK_FORMAT_BC3_SRGB_BLOCK;
+  case GRANIT_TEXTURE_FORMAT_BC5_RG_UNORM:
+    return VK_FORMAT_BC5_UNORM_BLOCK;
+  case GRANIT_TEXTURE_FORMAT_BC7_RGBA_UNORM:
+    return VK_FORMAT_BC7_UNORM_BLOCK;
+  case GRANIT_TEXTURE_FORMAT_BC7_RGBA_SRGB:
+    return VK_FORMAT_BC7_SRGB_BLOCK;
+  case GRANIT_TEXTURE_FORMAT_ETC2_RGBA8_UNORM:
+    return VK_FORMAT_ETC2_R8G8B8A8_UNORM_BLOCK;
+  case GRANIT_TEXTURE_FORMAT_ETC2_RGBA8_SRGB:
+    return VK_FORMAT_ETC2_R8G8B8A8_SRGB_BLOCK;
+  case GRANIT_TEXTURE_FORMAT_ASTC_4X4_UNORM:
+    return VK_FORMAT_ASTC_4x4_UNORM_BLOCK;
+  case GRANIT_TEXTURE_FORMAT_ASTC_4X4_SRGB:
+    return VK_FORMAT_ASTC_4x4_SRGB_BLOCK;
   default:
     return VK_FORMAT_UNDEFINED;
   }
@@ -254,8 +276,8 @@ VkImageAspectFlags default_aspect(granit_texture_format format) noexcept {
       format == GRANIT_TEXTURE_FORMAT_D32_FLOAT_S8_UINT) {
     return VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
   }
-  return format >= GRANIT_TEXTURE_FORMAT_D16_UNORM ? VK_IMAGE_ASPECT_DEPTH_BIT
-                                                   : VK_IMAGE_ASPECT_COLOR_BIT;
+  return depth_stencil_texture_format(format) ? VK_IMAGE_ASPECT_DEPTH_BIT
+                                              : VK_IMAGE_ASPECT_COLOR_BIT;
 }
 
 VkImageAspectFlags map_texture_aspect(granit_texture_aspect aspect) noexcept {
@@ -542,6 +564,38 @@ granit_result vulkan_renderer_state::initialize(std::string_view application_nam
   surface_types_ = surface_types;
   lifecycle_.mark_ready();
   return GRANIT_SUCCESS;
+}
+
+backend_texture_format_capabilities
+vulkan_renderer_state::texture_format_capabilities(granit_texture_format format) const noexcept {
+  backend_texture_format_capabilities result{};
+  const auto native = map_texture_format(format);
+  if (native == VK_FORMAT_UNDEFINED || !instance_.valid() || !device_.valid())
+    return result;
+  VkFormatProperties2 properties{VK_STRUCTURE_TYPE_FORMAT_PROPERTIES_2};
+  instance_.functions().vkGetPhysicalDeviceFormatProperties2(device_.physical_device(), native,
+                                                             &properties);
+  const auto features = properties.formatProperties.optimalTilingFeatures;
+  if ((features & VK_FORMAT_FEATURE_TRANSFER_SRC_BIT) != 0)
+    result.supported_usage |= GRANIT_TEXTURE_USAGE_TRANSFER_SOURCE_BIT;
+  if ((features & VK_FORMAT_FEATURE_TRANSFER_DST_BIT) != 0)
+    result.supported_usage |= GRANIT_TEXTURE_USAGE_TRANSFER_DESTINATION_BIT;
+  if ((features & VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT) != 0)
+    result.supported_usage |= GRANIT_TEXTURE_USAGE_SAMPLED_BIT;
+  if ((features & VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT) != 0)
+    result.supported_usage |= GRANIT_TEXTURE_USAGE_STORAGE_BIT;
+  if ((features & VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT) != 0)
+    result.supported_usage |= GRANIT_TEXTURE_USAGE_COLOR_ATTACHMENT_BIT;
+  if ((features & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) != 0)
+    result.supported_usage |= GRANIT_TEXTURE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+  if ((features & VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT) != 0)
+    result.features |= GRANIT_TEXTURE_FORMAT_FEATURE_FILTERABLE_BIT;
+  result.sample_counts =
+      (result.supported_usage & (GRANIT_TEXTURE_USAGE_COLOR_ATTACHMENT_BIT |
+                                 GRANIT_TEXTURE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT)) != 0
+          ? capabilities_.framebuffer_sample_counts
+          : GRANIT_SAMPLE_COUNT_1;
+  return result;
 }
 
 std::size_t vulkan_renderer_state::acquire_upload_slot(bool wait) {
@@ -852,14 +906,13 @@ granit_result vulkan_renderer_state::warmup_compute_pipeline_async(
     std::unique_ptr<backend_pipeline_warmup_completion>& completion) noexcept {
   try {
     auto owner = shared_from_this();
-    auto future = std::async(std::launch::async,
-                             [owner = std::move(owner), &layout, &shader, entry_point]() {
-                               auto pipeline = owner->allocate_compute_pipeline_resource();
-                               if (!pipeline)
-                                 return GRANIT_ERROR_OUT_OF_MEMORY;
-                               return owner->create_compute_pipeline(layout, shader, entry_point,
-                                                                     *pipeline);
-                             });
+    auto future =
+        std::async(std::launch::async, [owner = std::move(owner), &layout, &shader, entry_point]() {
+          auto pipeline = owner->allocate_compute_pipeline_resource();
+          if (!pipeline)
+            return GRANIT_ERROR_OUT_OF_MEMORY;
+          return owner->create_compute_pipeline(layout, shader, entry_point, *pipeline);
+        });
     completion = std::make_unique<vulkan_pipeline_warmup_completion>(std::move(future));
     return GRANIT_SUCCESS;
   } catch (const std::bad_alloc&) {
@@ -1538,12 +1591,13 @@ vulkan_renderer_state::upload_texture(backend_texture_resource& resource,
   if (device_lost())
     return GRANIT_ERROR_DEVICE_LOST;
   const auto& texture = static_cast<vulkan_texture_resource&>(resource).native();
-  const auto bytes_per_pixel = texture_format_bytes_per_block(format);
-  if (bytes_per_pixel == 0)
+  const auto block = texture_format_block(format);
+  if (block.bytes == 0)
     return GRANIT_ERROR_INVALID_ARGUMENT;
   VkBufferImageCopy copy{};
-  copy.bufferRowLength = layout.bytes_per_row == 0 ? 0 : layout.bytes_per_row / bytes_per_pixel;
-  copy.bufferImageHeight = layout.rows_per_image;
+  copy.bufferRowLength =
+      layout.bytes_per_row == 0 ? 0 : layout.bytes_per_row / block.bytes * block.width;
+  copy.bufferImageHeight = layout.rows_per_image == 0 ? 0 : layout.rows_per_image * block.height;
   copy.imageSubresource = {map_texture_aspect(region.aspect), region.mip_level,
                            region.base_array_layer, region.array_layer_count};
   copy.imageOffset = {static_cast<std::int32_t>(region.x), static_cast<std::int32_t>(region.y),
@@ -2245,11 +2299,12 @@ granit_result vulkan_renderer_state::copy_texture_to_buffer(
   if (device_lost())
     return GRANIT_ERROR_DEVICE_LOST;
   auto& recorder = static_cast<vulkan_command_recorder_resource&>(recorder_resource).native();
-  const auto bytes_per_pixel = texture_format_bytes_per_block(format);
+  const auto block = texture_format_block(format);
   VkBufferImageCopy copy{};
   copy.bufferOffset = layout.offset;
-  copy.bufferRowLength = layout.bytes_per_row == 0 ? 0 : layout.bytes_per_row / bytes_per_pixel;
-  copy.bufferImageHeight = layout.rows_per_image;
+  copy.bufferRowLength =
+      layout.bytes_per_row == 0 ? 0 : layout.bytes_per_row / block.bytes * block.width;
+  copy.bufferImageHeight = layout.rows_per_image == 0 ? 0 : layout.rows_per_image * block.height;
   copy.imageSubresource = {map_texture_aspect(region.aspect), region.mip_level,
                            region.base_array_layer, region.array_layer_count};
   copy.imageOffset = {static_cast<std::int32_t>(region.x), static_cast<std::int32_t>(region.y),
@@ -2267,11 +2322,12 @@ granit_result vulkan_renderer_state::copy_buffer_to_texture(
   if (device_lost())
     return GRANIT_ERROR_DEVICE_LOST;
   auto& recorder = static_cast<vulkan_command_recorder_resource&>(recorder_resource).native();
-  const auto bytes_per_pixel = texture_format_bytes_per_block(format);
+  const auto block = texture_format_block(format);
   VkBufferImageCopy copy{};
   copy.bufferOffset = layout.offset;
-  copy.bufferRowLength = layout.bytes_per_row == 0 ? 0 : layout.bytes_per_row / bytes_per_pixel;
-  copy.bufferImageHeight = layout.rows_per_image;
+  copy.bufferRowLength =
+      layout.bytes_per_row == 0 ? 0 : layout.bytes_per_row / block.bytes * block.width;
+  copy.bufferImageHeight = layout.rows_per_image == 0 ? 0 : layout.rows_per_image * block.height;
   copy.imageSubresource = {map_texture_aspect(region.aspect), region.mip_level,
                            region.base_array_layer, region.array_layer_count};
   copy.imageOffset = {static_cast<std::int32_t>(region.x), static_cast<std::int32_t>(region.y),

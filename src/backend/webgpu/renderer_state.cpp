@@ -3,11 +3,72 @@
 
 #include "backend/webgpu/renderer_state.h"
 
+#include "core/texture_format.h"
+
 #include <new>
 #include <string>
 #include <vector>
 
 namespace granit::detail {
+
+backend_texture_format_capabilities
+webgpu_renderer_state::texture_format_capabilities(granit_texture_format format) const noexcept {
+  backend_texture_format_capabilities result{};
+  std::uint32_t required_compression{};
+  switch (format) {
+  case GRANIT_TEXTURE_FORMAT_BC1_RGBA_UNORM:
+  case GRANIT_TEXTURE_FORMAT_BC1_RGBA_SRGB:
+  case GRANIT_TEXTURE_FORMAT_BC3_RGBA_UNORM:
+  case GRANIT_TEXTURE_FORMAT_BC3_RGBA_SRGB:
+  case GRANIT_TEXTURE_FORMAT_BC5_RG_UNORM:
+  case GRANIT_TEXTURE_FORMAT_BC7_RGBA_UNORM:
+  case GRANIT_TEXTURE_FORMAT_BC7_RGBA_SRGB:
+    required_compression = GRANIT_WEBGPU_PROVIDER_TEXTURE_COMPRESSION_BC_BIT;
+    break;
+  case GRANIT_TEXTURE_FORMAT_ETC2_RGBA8_UNORM:
+  case GRANIT_TEXTURE_FORMAT_ETC2_RGBA8_SRGB:
+    required_compression = GRANIT_WEBGPU_PROVIDER_TEXTURE_COMPRESSION_ETC2_BIT;
+    break;
+  case GRANIT_TEXTURE_FORMAT_ASTC_4X4_UNORM:
+  case GRANIT_TEXTURE_FORMAT_ASTC_4X4_SRGB:
+    required_compression = GRANIT_WEBGPU_PROVIDER_TEXTURE_COMPRESSION_ASTC_BIT;
+    break;
+  default:
+    break;
+  }
+  if (required_compression != 0) {
+    if ((capabilities_.texture_compression_features & required_compression) == 0)
+      return result;
+    result.supported_usage = GRANIT_TEXTURE_USAGE_TRANSFER_SOURCE_BIT |
+                             GRANIT_TEXTURE_USAGE_TRANSFER_DESTINATION_BIT |
+                             GRANIT_TEXTURE_USAGE_SAMPLED_BIT;
+    result.features = GRANIT_TEXTURE_FORMAT_FEATURE_FILTERABLE_BIT;
+    result.sample_counts = GRANIT_SAMPLE_COUNT_1;
+    return result;
+  }
+  switch (format) {
+  case GRANIT_TEXTURE_FORMAT_R8_UNORM:
+  case GRANIT_TEXTURE_FORMAT_RG8_UNORM:
+  case GRANIT_TEXTURE_FORMAT_RGBA8_UNORM:
+  case GRANIT_TEXTURE_FORMAT_RGBA8_SRGB:
+  case GRANIT_TEXTURE_FORMAT_RGBA16_FLOAT:
+    result.supported_usage =
+        GRANIT_TEXTURE_USAGE_TRANSFER_SOURCE_BIT | GRANIT_TEXTURE_USAGE_TRANSFER_DESTINATION_BIT |
+        GRANIT_TEXTURE_USAGE_SAMPLED_BIT | GRANIT_TEXTURE_USAGE_COLOR_ATTACHMENT_BIT;
+    result.features = GRANIT_TEXTURE_FORMAT_FEATURE_FILTERABLE_BIT;
+    result.sample_counts = capabilities_.framebuffer_sample_counts;
+    break;
+  case GRANIT_TEXTURE_FORMAT_D32_FLOAT:
+    result.supported_usage =
+        GRANIT_TEXTURE_USAGE_TRANSFER_SOURCE_BIT | GRANIT_TEXTURE_USAGE_TRANSFER_DESTINATION_BIT |
+        GRANIT_TEXTURE_USAGE_SAMPLED_BIT | GRANIT_TEXTURE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+    result.sample_counts = capabilities_.framebuffer_sample_counts;
+    break;
+  default:
+    break;
+  }
+  return result;
+}
 namespace {
 
 class webgpu_pipeline_warmup_completion final : public backend_pipeline_warmup_completion {
@@ -52,23 +113,6 @@ granit_webgpu_provider_texture_aspect to_provider_aspect(granit_texture_aspect a
     return GRANIT_WEBGPU_PROVIDER_TEXTURE_ASPECT_STENCIL;
   default:
     return GRANIT_WEBGPU_PROVIDER_TEXTURE_ASPECT_ALL;
-  }
-}
-
-std::uint32_t texture_pixel_size(granit_texture_format format) noexcept {
-  switch (format) {
-  case GRANIT_TEXTURE_FORMAT_R8_UNORM:
-    return 1;
-  case GRANIT_TEXTURE_FORMAT_RG8_UNORM:
-    return 2;
-  case GRANIT_TEXTURE_FORMAT_RGBA8_UNORM:
-  case GRANIT_TEXTURE_FORMAT_RGBA8_SRGB:
-  case GRANIT_TEXTURE_FORMAT_D32_FLOAT:
-    return 4;
-  case GRANIT_TEXTURE_FORMAT_RGBA16_FLOAT:
-    return 8;
-  default:
-    return 0;
   }
 }
 
@@ -274,8 +318,7 @@ granit_result webgpu_renderer_state::warmup_compute_pipeline_async(
   if (result != GRANIT_SUCCESS)
     return result;
   try {
-    completion =
-        std::make_unique<webgpu_pipeline_warmup_completion>(provider_, instance_, warmup);
+    completion = std::make_unique<webgpu_pipeline_warmup_completion>(provider_, instance_, warmup);
     return GRANIT_SUCCESS;
   } catch (const std::bad_alloc&) {
     static_cast<void>(provider_.destroy_pipeline_warmup(instance_, warmup));
@@ -496,13 +539,15 @@ granit_result webgpu_renderer_state::copy_texture_to_buffer(
     const granit_texture_data_layout& layout, const granit_texture_write_region& region) {
   if (!commands_ || !resources_)
     return GRANIT_ERROR_NOT_READY;
-  const auto pixel_size = texture_pixel_size(format);
-  if (pixel_size == 0)
+  const auto block = texture_format_block(format);
+  if (block.bytes == 0)
     return GRANIT_ERROR_UNSUPPORTED;
   const granit_webgpu_provider_texture_buffer_copy native{
       layout.offset,
-      layout.bytes_per_row == 0 ? region.width * pixel_size : layout.bytes_per_row,
-      layout.rows_per_image == 0 ? region.height : layout.rows_per_image,
+      layout.bytes_per_row == 0 ? ((region.width + block.width - 1) / block.width) * block.bytes
+                                : layout.bytes_per_row,
+      layout.rows_per_image == 0 ? (region.height + block.height - 1) / block.height
+                                 : layout.rows_per_image,
       region.mip_level,
       region.base_array_layer,
       region.array_layer_count,
@@ -523,13 +568,15 @@ granit_result webgpu_renderer_state::copy_buffer_to_texture(
     const granit_texture_data_layout& layout, const granit_texture_write_region& region) {
   if (!commands_ || !resources_)
     return GRANIT_ERROR_NOT_READY;
-  const auto pixel_size = texture_pixel_size(format);
-  if (pixel_size == 0)
+  const auto block = texture_format_block(format);
+  if (block.bytes == 0)
     return GRANIT_ERROR_UNSUPPORTED;
   const granit_webgpu_provider_texture_buffer_copy native{
       layout.offset,
-      layout.bytes_per_row == 0 ? region.width * pixel_size : layout.bytes_per_row,
-      layout.rows_per_image == 0 ? region.height : layout.rows_per_image,
+      layout.bytes_per_row == 0 ? ((region.width + block.width - 1) / block.width) * block.bytes
+                                : layout.bytes_per_row,
+      layout.rows_per_image == 0 ? (region.height + block.height - 1) / block.height
+                                 : layout.rows_per_image,
       region.mip_level,
       region.base_array_layer,
       region.array_layer_count,
@@ -775,8 +822,7 @@ granit_result webgpu_renderer_state::warmup_graphics_pipeline_async(
   if (result != GRANIT_SUCCESS)
     return result;
   try {
-    completion =
-        std::make_unique<webgpu_pipeline_warmup_completion>(provider_, instance_, warmup);
+    completion = std::make_unique<webgpu_pipeline_warmup_completion>(provider_, instance_, warmup);
     return GRANIT_SUCCESS;
   } catch (const std::bad_alloc&) {
     static_cast<void>(provider_.destroy_pipeline_warmup(instance_, warmup));
@@ -906,6 +952,7 @@ granit_result webgpu_renderer_state::refresh_state() noexcept {
             GRANIT_RENDERER_FEATURE_PIPELINE_WARMUP_BIT |
             GRANIT_RENDERER_FEATURE_NON_BLOCKING_PIPELINE_WARMUP_BIT,
     };
+    capabilities_.texture_compression_features = capabilities.texture_compression_features;
     provider_surface_types_ = capabilities.surface_types;
     if ((to_provider_surface_types(surface_types_) & ~provider_surface_types_) != 0) {
       lifecycle_ = {backend_lifecycle_state::failed, GRANIT_ERROR_UNSUPPORTED};

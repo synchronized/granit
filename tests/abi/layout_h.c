@@ -192,6 +192,10 @@ GRANIT_ABI_ASSERT(granit_abi_buffer_initial_data_size, sizeof(granit_buffer_init
 GRANIT_ABI_ASSERT(granit_abi_buffer_initial_data_data,
                   offsetof(granit_buffer_initial_data, data) == 8);
 GRANIT_ABI_ASSERT(granit_abi_texture_footprint_size, sizeof(granit_texture_format_footprint) == 32);
+GRANIT_ABI_ASSERT(granit_abi_texture_data_footprint_size,
+                  sizeof(granit_texture_data_footprint) == 48);
+GRANIT_ABI_ASSERT(granit_abi_texture_format_capabilities_size,
+                  sizeof(granit_texture_format_capabilities) == 32);
 GRANIT_ABI_ASSERT(granit_abi_texture_readback_info_size,
                   sizeof(granit_texture_readback_info) == 48);
 GRANIT_ABI_ASSERT(granit_abi_texture_readback_required_size,

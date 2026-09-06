@@ -58,6 +58,34 @@ TEST_CASE("Upload Batch 合并 Buffer 写入并支持复用", "[upload_batch][bu
   CHECK(batch.submit() == granit::result::invalid_argument);
 }
 
+TEST_CASE("Upload Batch支持压缩Texture块数据", "[upload_batch][texture][compressed]") {
+  granit::renderer renderer;
+  const auto initialized = renderer.initialize({.application_name = "granit-compressed-batch"});
+  if (unavailable(initialized))
+    SKIP("当前运行环境没有满足要求的 Vulkan 设备");
+  REQUIRE(initialized == granit::result::success);
+  granit::texture_format_capabilities capabilities{};
+  REQUIRE(granit::get_texture_format_capabilities(renderer.native_handle(),
+                                                  granit::texture_format::bc1_rgba_unorm,
+                                                  capabilities) == granit::result::success);
+  if (!capabilities.supports(granit::texture_usage::transfer_destination))
+    SKIP("当前设备不支持 BC1 上传");
+
+  granit::texture texture;
+  REQUIRE(texture.initialize(renderer.native_handle(),
+                             {.format = granit::texture_format::bc1_rgba_unorm,
+                              .usage = granit::texture_usage::transfer_destination |
+                                       granit::texture_usage::sampled,
+                              .width = 7,
+                              .height = 5}) == granit::result::success);
+  granit::upload_batch batch;
+  REQUIRE(batch.initialize(renderer.native_handle()) == granit::result::success);
+  std::array<std::byte, 32> blocks{};
+  REQUIRE(batch.write_texture(texture.native_handle(), blocks, {}, {.width = 7, .height = 5}) ==
+          granit::result::success);
+  CHECK(batch.submit() == granit::result::success);
+}
+
 TEST_CASE("Upload Batch 在复制前执行字节数和操作数背压", "[upload_batch][backpressure]") {
   granit::renderer renderer;
   const auto initialized = renderer.initialize({.application_name = "granit-upload-budget"});
@@ -163,8 +191,8 @@ TEST_CASE("销毁运行中上传操作仍保活资源并回收后端槽", "[uplo
     REQUIRE(batch.write_buffer(buffer.native_handle(), 0, bytes) == granit::result::success);
     granit::async_operation operation;
     auto submit_result = batch.submit_async(operation);
-    for (std::uint32_t attempt = 0;
-         submit_result == granit::result::not_ready && attempt < 10000; ++attempt) {
+    for (std::uint32_t attempt = 0; submit_result == granit::result::not_ready && attempt < 10000;
+         ++attempt) {
       REQUIRE(renderer.process_events() == granit::result::success);
       std::this_thread::yield();
       submit_result = batch.submit_async(operation);

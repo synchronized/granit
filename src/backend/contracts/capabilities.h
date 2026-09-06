@@ -6,9 +6,17 @@
 
 #include <cstdint>
 
+#include <granit/renderer/resource_types.h>
+
 namespace granit::detail {
 
 enum class backend_buffer_binding_type { uniform, storage };
+
+struct backend_texture_format_capabilities {
+  granit_texture_usage supported_usage{};
+  granit_texture_format_feature_flags features{};
+  granit_sample_count sample_counts{};
+};
 
 /** Renderer 创建后固定的后端无关能力快照。 */
 struct backend_capabilities {
@@ -21,6 +29,7 @@ struct backend_capabilities {
   std::uint64_t renderer_features{};
   std::uint64_t shader_features{};
   std::uint32_t shader_profile{1};
+  std::uint32_t texture_compression_features{};
 
   [[nodiscard]] bool supports_buffer_binding(backend_buffer_binding_type type, std::uint64_t offset,
                                              std::uint64_t size) const noexcept {

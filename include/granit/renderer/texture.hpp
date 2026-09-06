@@ -30,6 +30,21 @@ struct texture_data_footprint {
   std::uint64_t required_size{};
 };
 
+struct texture_format_capabilities {
+  texture_format format{texture_format::undefined};
+  texture_usage supported_usage{};
+  std::uint32_t features{};
+  sample_count sample_counts{};
+
+  [[nodiscard]] constexpr bool supports(texture_usage usage) const noexcept {
+    const auto requested = static_cast<std::uint32_t>(usage);
+    return (static_cast<std::uint32_t>(supported_usage) & requested) == requested;
+  }
+  [[nodiscard]] constexpr bool filterable() const noexcept {
+    return (features & GRANIT_TEXTURE_FORMAT_FEATURE_FILTERABLE_BIT) != 0;
+  }
+};
+
 [[nodiscard]] inline result
 get_texture_format_footprint(texture_format format, texture_format_footprint& footprint) noexcept {
   granit_texture_format_footprint native = GRANIT_TEXTURE_FORMAT_FOOTPRINT_INIT;
@@ -55,6 +70,21 @@ calculate_texture_data_footprint(texture_format format, std::uint32_t width, std
                  .bytes_per_row = native.bytes_per_row,
                  .bytes_per_image = native.bytes_per_image,
                  .required_size = native.required_size};
+  }
+  return from_native(value);
+}
+
+[[nodiscard]] inline result
+get_texture_format_capabilities(granit_renderer renderer, texture_format format,
+                                texture_format_capabilities& capabilities) noexcept {
+  granit_texture_format_capabilities native = GRANIT_TEXTURE_FORMAT_CAPABILITIES_INIT;
+  const auto value = granit_renderer_get_texture_format_capabilities(
+      renderer, static_cast<std::uint32_t>(format), &native);
+  if (value == GRANIT_SUCCESS) {
+    capabilities = {.format = static_cast<texture_format>(native.format),
+                    .supported_usage = static_cast<texture_usage>(native.supported_usage),
+                    .features = native.features,
+                    .sample_counts = static_cast<sample_count>(native.sample_counts)};
   }
   return from_native(value);
 }

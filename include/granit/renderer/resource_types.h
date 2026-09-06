@@ -39,6 +39,10 @@ typedef uint32_t granit_texture_usage;
 #define GRANIT_TEXTURE_USAGE_COLOR_ATTACHMENT_BIT (UINT32_C(1) << 4)
 #define GRANIT_TEXTURE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT (UINT32_C(1) << 5)
 
+/** 设备对指定 Texture 格式支持的附加能力。 */
+typedef uint32_t granit_texture_format_feature_flags;
+#define GRANIT_TEXTURE_FORMAT_FEATURE_FILTERABLE_BIT (UINT32_C(1) << 0)
+
 /** 后端无关的像素格式。数值不对应 VkFormat。 */
 typedef uint32_t granit_texture_format;
 #define GRANIT_TEXTURE_FORMAT_UNDEFINED UINT32_C(0)
@@ -109,6 +113,24 @@ typedef uint32_t granit_sample_count;
 #define GRANIT_SAMPLE_COUNT_2 UINT32_C(2)
 #define GRANIT_SAMPLE_COUNT_4 UINT32_C(4)
 #define GRANIT_SAMPLE_COUNT_8 UINT32_C(8)
+
+/** 当前 Renderer 对指定 Texture 格式的设备能力。 */
+typedef struct granit_texture_format_capabilities {
+  uint32_t struct_size;
+  granit_texture_format format;
+  granit_texture_usage supported_usage;
+  granit_texture_format_feature_flags features;
+  granit_sample_count sample_counts;
+  uint32_t reserved[3];
+} granit_texture_format_capabilities;
+#define GRANIT_TEXTURE_FORMAT_CAPABILITIES_VERSION_1_SIZE UINT32_C(32)
+#define GRANIT_TEXTURE_FORMAT_CAPABILITIES_INIT                                                    \
+  {                                                                                                \
+    GRANIT_TEXTURE_FORMAT_CAPABILITIES_VERSION_1_SIZE, GRANIT_TEXTURE_FORMAT_UNDEFINED,            \
+        UINT32_C(0), UINT32_C(0), UINT32_C(0), {                                                   \
+      UINT32_C(0), UINT32_C(0), UINT32_C(0)                                                        \
+    }                                                                                              \
+  }
 
 /** Texture View 选择的颜色、深度或模板平面。 */
 typedef uint32_t granit_texture_aspect;

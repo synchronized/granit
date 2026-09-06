@@ -61,6 +61,19 @@ granit_texture_format_calculate_data_footprint(granit_texture_format format, uin
   return GRANIT_SUCCESS;
 }
 
+extern "C" granit_result
+granit_renderer_get_texture_format_capabilities(granit_renderer renderer,
+                                                granit_texture_format format,
+                                                granit_texture_format_capabilities* capabilities) {
+  if (renderer == GRANIT_NULL_HANDLE)
+    return GRANIT_ERROR_INVALID_HANDLE;
+  if (capabilities == nullptr ||
+      capabilities->struct_size < GRANIT_TEXTURE_FORMAT_CAPABILITIES_VERSION_1_SIZE)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  return granit::detail::renderer_registry::instance().get_texture_format_capabilities(
+      renderer, format, *capabilities);
+}
+
 extern "C" granit_result granit_texture_create(granit_renderer renderer,
                                                const granit_texture_desc* desc,
                                                granit_texture* texture) {

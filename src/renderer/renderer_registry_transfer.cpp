@@ -14,6 +14,40 @@
 #include <vector>
 
 namespace granit::detail {
+namespace {
+
+granit_result validate_texture_buffer_copy(const granit_texture_desc& desc,
+                                           const granit_texture_data_layout& layout,
+                                           const granit_texture_write_region& region,
+                                           std::uint64_t buffer_size) noexcept {
+  if (depth_format(desc.format) || desc.sample_count != GRANIT_SAMPLE_COUNT_1)
+    return GRANIT_ERROR_UNSUPPORTED;
+  if (region.aspect != GRANIT_TEXTURE_ASPECT_COLOR_BIT || region.width == 0 || region.height == 0 ||
+      region.depth == 0 || region.array_layer_count == 0 || region.mip_level >= desc.mip_levels ||
+      region.base_array_layer >= desc.array_layers ||
+      region.array_layer_count > desc.array_layers - region.base_array_layer ||
+      layout.offset % 4 != 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  const auto mip_width = std::max(UINT32_C(1), desc.width >> region.mip_level);
+  const auto mip_height = std::max(UINT32_C(1), desc.height >> region.mip_level);
+  const auto mip_depth = std::max(UINT32_C(1), desc.depth >> region.mip_level);
+  if (region.x >= mip_width || region.width > mip_width - region.x || region.y >= mip_height ||
+      region.height > mip_height - region.y || region.z >= mip_depth ||
+      region.depth > mip_depth - region.z ||
+      !texture_region_has_valid_block_alignment(desc.format, region.x, region.y, region.width,
+                                                region.height, mip_width, mip_height))
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  const std::uint64_t image_count =
+      desc.dimension == GRANIT_TEXTURE_DIMENSION_3D ? region.depth : region.array_layer_count;
+  texture_transfer_footprint transfer{};
+  if (!calculate_texture_transfer_footprint(desc.format, region.width, region.height, image_count,
+                                            layout, transfer) ||
+      layout.offset > buffer_size || transfer.required_size > buffer_size - layout.offset)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  return GRANIT_SUCCESS;
+}
+
+} // namespace
 
 granit_result renderer_registry::copy_buffer(granit_renderer renderer,
                                              granit_command_recorder recorder, granit_buffer source,
@@ -109,47 +143,14 @@ granit_result renderer_registry::copy_texture_to_buffer(granit_renderer renderer
   }
 
   const auto& desc = source_record->desc;
-  const auto bytes_per_pixel =
-      depth_format(desc.format) ? 0 : texture_format_bytes_per_block(desc.format);
   if ((desc.usage & GRANIT_TEXTURE_USAGE_TRANSFER_SOURCE_BIT) == 0 ||
-      (destination_record->desc.usage & GRANIT_BUFFER_USAGE_TRANSFER_DESTINATION_BIT) == 0 ||
-      desc.sample_count != GRANIT_SAMPLE_COUNT_1 || bytes_per_pixel == 0) {
+      (destination_record->desc.usage & GRANIT_BUFFER_USAGE_TRANSFER_DESTINATION_BIT) == 0) {
     return GRANIT_ERROR_UNSUPPORTED;
   }
-  if (region.aspect != GRANIT_TEXTURE_ASPECT_COLOR_BIT || region.width == 0 || region.height == 0 ||
-      region.depth == 0 || region.array_layer_count == 0 || region.mip_level >= desc.mip_levels ||
-      region.base_array_layer >= desc.array_layers ||
-      region.array_layer_count > desc.array_layers - region.base_array_layer ||
-      layout.offset % 4 != 0) {
-    return GRANIT_ERROR_INVALID_ARGUMENT;
-  }
-  const auto mip_width = std::max(UINT32_C(1), desc.width >> region.mip_level);
-  const auto mip_height = std::max(UINT32_C(1), desc.height >> region.mip_level);
-  const auto mip_depth = std::max(UINT32_C(1), desc.depth >> region.mip_level);
-  if (region.x >= mip_width || region.width > mip_width - region.x || region.y >= mip_height ||
-      region.height > mip_height - region.y || region.z >= mip_depth ||
-      region.depth > mip_depth - region.z) {
-    return GRANIT_ERROR_INVALID_ARGUMENT;
-  }
-  const std::uint64_t tight_row = std::uint64_t{region.width} * bytes_per_pixel;
-  const std::uint64_t row_pitch = layout.bytes_per_row == 0 ? tight_row : layout.bytes_per_row;
-  const std::uint64_t image_rows =
-      layout.rows_per_image == 0 ? region.height : layout.rows_per_image;
-  if (row_pitch < tight_row || row_pitch % bytes_per_pixel != 0 || image_rows < region.height)
-    return GRANIT_ERROR_INVALID_ARGUMENT;
-  const std::uint64_t image_count =
-      desc.dimension == GRANIT_TEXTURE_DIMENSION_3D ? region.depth : region.array_layer_count;
-  const auto max = std::numeric_limits<std::uint64_t>::max();
-  if (image_rows > max / row_pitch || image_count - 1 > max / (image_rows * row_pitch) ||
-      region.height - 1 > max / row_pitch) {
-    return GRANIT_ERROR_INVALID_ARGUMENT;
-  }
-  const std::uint64_t required =
-      (image_count - 1) * image_rows * row_pitch + (region.height - 1) * row_pitch + tight_row;
-  if (layout.offset > destination_record->desc.size ||
-      required > destination_record->desc.size - layout.offset) {
-    return GRANIT_ERROR_INVALID_ARGUMENT;
-  }
+  if (const auto validated =
+          validate_texture_buffer_copy(desc, layout, region, destination_record->desc.size);
+      validated != GRANIT_SUCCESS)
+    return validated;
 
   std::lock_guard record_lock{recorder_record->mutex};
   if (!recorder_record->commands->command_recorder_is_recording(*recorder_record->native))
@@ -194,47 +195,14 @@ granit_result renderer_registry::copy_buffer_to_texture(granit_renderer renderer
   }
 
   const auto& desc = destination_record->desc;
-  const auto bytes_per_pixel =
-      depth_format(desc.format) ? 0 : texture_format_bytes_per_block(desc.format);
   if ((source_record->desc.usage & GRANIT_BUFFER_USAGE_TRANSFER_SOURCE_BIT) == 0 ||
-      (desc.usage & GRANIT_TEXTURE_USAGE_TRANSFER_DESTINATION_BIT) == 0 ||
-      desc.sample_count != GRANIT_SAMPLE_COUNT_1 || bytes_per_pixel == 0) {
+      (desc.usage & GRANIT_TEXTURE_USAGE_TRANSFER_DESTINATION_BIT) == 0) {
     return GRANIT_ERROR_UNSUPPORTED;
   }
-  if (region.aspect != GRANIT_TEXTURE_ASPECT_COLOR_BIT || region.width == 0 || region.height == 0 ||
-      region.depth == 0 || region.array_layer_count == 0 || region.mip_level >= desc.mip_levels ||
-      region.base_array_layer >= desc.array_layers ||
-      region.array_layer_count > desc.array_layers - region.base_array_layer ||
-      layout.offset % 4 != 0) {
-    return GRANIT_ERROR_INVALID_ARGUMENT;
-  }
-  const auto mip_width = std::max(UINT32_C(1), desc.width >> region.mip_level);
-  const auto mip_height = std::max(UINT32_C(1), desc.height >> region.mip_level);
-  const auto mip_depth = std::max(UINT32_C(1), desc.depth >> region.mip_level);
-  if (region.x >= mip_width || region.width > mip_width - region.x || region.y >= mip_height ||
-      region.height > mip_height - region.y || region.z >= mip_depth ||
-      region.depth > mip_depth - region.z) {
-    return GRANIT_ERROR_INVALID_ARGUMENT;
-  }
-  const std::uint64_t tight_row = std::uint64_t{region.width} * bytes_per_pixel;
-  const std::uint64_t row_pitch = layout.bytes_per_row == 0 ? tight_row : layout.bytes_per_row;
-  const std::uint64_t image_rows =
-      layout.rows_per_image == 0 ? region.height : layout.rows_per_image;
-  if (row_pitch < tight_row || row_pitch % bytes_per_pixel != 0 || image_rows < region.height)
-    return GRANIT_ERROR_INVALID_ARGUMENT;
-  const std::uint64_t image_count =
-      desc.dimension == GRANIT_TEXTURE_DIMENSION_3D ? region.depth : region.array_layer_count;
-  const auto max = std::numeric_limits<std::uint64_t>::max();
-  if (image_rows > max / row_pitch || image_count - 1 > max / (image_rows * row_pitch) ||
-      region.height - 1 > max / row_pitch) {
-    return GRANIT_ERROR_INVALID_ARGUMENT;
-  }
-  const std::uint64_t required =
-      (image_count - 1) * image_rows * row_pitch + (region.height - 1) * row_pitch + tight_row;
-  if (layout.offset > source_record->desc.size ||
-      required > source_record->desc.size - layout.offset) {
-    return GRANIT_ERROR_INVALID_ARGUMENT;
-  }
+  if (const auto validated =
+          validate_texture_buffer_copy(desc, layout, region, source_record->desc.size);
+      validated != GRANIT_SUCCESS)
+    return validated;
 
   std::lock_guard record_lock{recorder_record->mutex};
   if (!recorder_record->commands->command_recorder_is_recording(*recorder_record->native))
@@ -344,7 +312,8 @@ granit_result renderer_registry::generate_mipmaps(granit_renderer renderer,
     texture_record_state = found->second;
   }
   const auto& desc = texture_record_state->desc;
-  if (depth_format(desc.format) || desc.sample_count != GRANIT_SAMPLE_COUNT_1 ||
+  if (depth_format(desc.format) || compressed_texture_format(desc.format) ||
+      desc.sample_count != GRANIT_SAMPLE_COUNT_1 ||
       (desc.usage & GRANIT_TEXTURE_USAGE_TRANSFER_SOURCE_BIT) == 0 ||
       (desc.usage & GRANIT_TEXTURE_USAGE_TRANSFER_DESTINATION_BIT) == 0 ||
       !recorder_record->transfers->texture_supports_linear_blit(desc.format)) {
