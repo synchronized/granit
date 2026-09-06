@@ -75,6 +75,7 @@ add_library(
     headers/types_h.c
     headers/upload_batch_h.c
     headers/readback_batch_h.c
+    headers/pipeline_warmup_h.c
     headers/window_h.c
     headers/pipeline_material_h.c
     headers/pipeline_pbr_material_h.c
@@ -502,6 +503,7 @@ add_executable(
   renderer/texture_test.cpp
   renderer/upload_batch_test.cpp
   renderer/readback_batch_test.cpp
+  renderer/pipeline_warmup_test.cpp
 )
 if(GRANIT_HAS_XCB)
   target_sources(granit_renderer_test PRIVATE renderer/xcb_swapchain_test.cpp)
@@ -623,6 +625,7 @@ add_library(
     headers/types_hpp.cpp
     headers/upload_batch_hpp.cpp
     headers/readback_batch_hpp.cpp
+    headers/pipeline_warmup_hpp.cpp
     headers/pipeline_material_hpp.cpp
     headers/pipeline_pbr_material_hpp.cpp
     headers/pipeline_mesh_hpp.cpp

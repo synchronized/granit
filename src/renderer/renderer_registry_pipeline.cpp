@@ -5,6 +5,7 @@
 #include "renderer/renderer_registry_records.h"
 
 #include "renderer/shader_validation.h"
+#include "assets/shader_asset.h"
 
 #include <algorithm>
 #include <cstring>
@@ -61,6 +62,7 @@ granit_result renderer_registry::create_shader_from_spirv(granit_renderer render
     record->retirement = interfaces->retirement;
     record->stage = stage;
     record->entry_point.assign(entry_point);
+    record->content_id = granit::tools::shader_bytes_sha256(std::as_bytes(code));
     record->native = shaders->allocate_shader_resource();
     const auto result = shaders->create_spirv_shader(*record->native, stage, code, entry_point);
     if (result != GRANIT_SUCCESS)
@@ -106,6 +108,8 @@ granit_result renderer_registry::create_shader_from_wgsl(granit_renderer rendere
     record->retirement = interfaces->retirement;
     record->stage = stage;
     record->entry_point.assign(entry_point);
+    record->content_id = granit::tools::shader_bytes_sha256(std::as_bytes(
+        std::span{source.data(), source.size()}));
     record->native = shaders->allocate_shader_resource();
     if (!record->native)
       return GRANIT_ERROR_OUT_OF_MEMORY;

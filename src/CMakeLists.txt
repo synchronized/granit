@@ -122,6 +122,8 @@ target_sources(
     renderer/upload_batch_api.cpp
     renderer/readback_batch_api.cpp
     renderer/renderer_registry_readback.cpp
+    renderer/pipeline_warmup_api.cpp
+    renderer/renderer_registry_warmup.cpp
     result.cpp
     version.cpp
   PUBLIC
@@ -147,6 +149,8 @@ target_sources(
       "${PROJECT_SOURCE_DIR}/include/granit/math/types.hpp"
       "${PROJECT_SOURCE_DIR}/include/granit/renderer/pipeline.h"
       "${PROJECT_SOURCE_DIR}/include/granit/renderer/pipeline.hpp"
+      "${PROJECT_SOURCE_DIR}/include/granit/renderer/pipeline_warmup.h"
+      "${PROJECT_SOURCE_DIR}/include/granit/renderer/pipeline_warmup.hpp"
       "${PROJECT_SOURCE_DIR}/include/granit/renderer/renderer.h"
       "${PROJECT_SOURCE_DIR}/include/granit/renderer/renderer.hpp"
       "${PROJECT_SOURCE_DIR}/include/granit/renderer/render_target.h"

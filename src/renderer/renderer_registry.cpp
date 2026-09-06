@@ -174,6 +174,9 @@ granit_result renderer_registry::get_resource_stats(granit_renderer renderer,
     stats.timestamp_query_pool_count = count_owned(timestamp_query_pools_);
     stats.upload_batch_count = count_owned(upload_batches_);
     stats.readback_batch_count = count_owned(readback_batches_);
+    const auto pipeline_warmup_batch_count = count_owned(pipeline_warmup_batches_);
+    if (stats.struct_size >= GRANIT_RENDERER_RESOURCE_STATS_VERSION_4_SIZE)
+      stats.pipeline_warmup_batch_count = pipeline_warmup_batch_count;
     const auto async_operation_count = count_owned(async_operations_);
     if (stats.struct_size >= GRANIT_RENDERER_RESOURCE_STATS_VERSION_2_SIZE)
       stats.async_operation_count = async_operation_count;
@@ -183,7 +186,8 @@ granit_result renderer_registry::get_resource_stats(granit_renderer renderer,
         stats.pipeline_layout_count + stats.graphics_pipeline_count + stats.compute_pipeline_count +
         stats.surface_count + stats.swapchain_count + stats.command_recorder_count +
         stats.frame_context_count + stats.frame_count + stats.timestamp_query_pool_count +
-        stats.upload_batch_count + stats.readback_batch_count + async_operation_count;
+        stats.upload_batch_count + stats.readback_batch_count + pipeline_warmup_batch_count +
+        async_operation_count;
     const auto interfaces = backend_interfaces_.find(renderer);
     retirement = interfaces == backend_interfaces_.end() ? nullptr : interfaces->second->retirement;
   }
@@ -329,6 +333,7 @@ granit_result renderer_registry::destroy(granit_renderer renderer) {
   std::vector<std::shared_ptr<compute_pipeline_record>> native_compute_pipelines;
   std::vector<std::shared_ptr<upload_batch_record>> native_upload_batches;
   std::vector<std::shared_ptr<readback_batch_record>> native_readback_batches;
+  std::vector<std::shared_ptr<pipeline_warmup_batch_record>> native_pipeline_warmup_batches;
   std::vector<std::shared_ptr<timestamp_query_pool_record>> native_timestamp_query_pools;
   std::vector<std::shared_ptr<async_operation_record>> native_async_operations;
   {
@@ -442,6 +447,12 @@ granit_result renderer_registry::destroy(granit_renderer renderer) {
                         record->metadata.creation_sequence);
         }
       }
+      for (const auto& [handle, record] : pipeline_warmup_batches_) {
+        if (record->owner == state) {
+          lifecycle.add(lifecycle_resource_type::pipeline_warmup_batch, handle,
+                        record->metadata.creation_sequence);
+        }
+      }
       for (const auto& [handle, record] : timestamp_query_pools_) {
         if (record->owner == state)
           lifecycle.add(lifecycle_resource_type::timestamp_query_pool, handle,
@@ -530,6 +541,19 @@ granit_result renderer_registry::destroy(granit_renderer renderer) {
         ++batch;
       }
     }
+    for (auto batch = pipeline_warmup_batches_.begin();
+         batch != pipeline_warmup_batches_.end();) {
+      if (batch->second->owner == state) {
+        native_pipeline_warmup_batches.push_back(std::move(batch->second));
+        static_cast<void>(handles_.erase(batch->first, resource_type::pipeline_warmup_batch,
+                                         state->domain()));
+        batch = pipeline_warmup_batches_.erase(batch);
+      } else {
+        ++batch;
+      }
+    }
+    std::erase_if(warmed_pipeline_keys_,
+                  [&state](const auto& entry) { return entry.second.lock() == state; });
     for (auto sampler = samplers_.begin(); sampler != samplers_.end();) {
       if (sampler->second->owner == state) {
         native_samplers.push_back(std::move(sampler->second));

@@ -18,7 +18,7 @@ constexpr std::array<const char*, static_cast<std::size_t>(lifecycle_resource_ty
                    "Shader",           "PipelineLayout",  "BindGroupLayout", "BindGroup",
                    "GraphicsPipeline", "ComputePipeline", "Surface",         "Swapchain",
                    "CommandRecorder",  "FrameContext",    "UploadBatch",     "ReadbackBatch",
-                   "TimestampQueryPool", "AsyncOperation"};
+                   "PipelineWarmupBatch", "TimestampQueryPool", "AsyncOperation"};
 
 constexpr std::size_t to_index(lifecycle_resource_type type) noexcept {
   return static_cast<std::size_t>(type);

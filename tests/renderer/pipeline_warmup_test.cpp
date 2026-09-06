@@ -1,0 +1,93 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Granit contributors
+
+#include <granit/renderer/pipeline.hpp>
+#include <granit/renderer/pipeline_warmup.hpp>
+#include <granit/renderer/renderer.hpp>
+#include <granit/renderer/shader.hpp>
+
+#include <catch2/catch_all.hpp>
+
+#include <array>
+#include <cstddef>
+#include <fstream>
+#include <iterator>
+#include <string>
+#include <vector>
+
+namespace {
+
+bool environment_unavailable(granit::result value) {
+  return value == granit::result::backend_unavailable ||
+         value == granit::result::incompatible_driver ||
+         value == granit::result::no_suitable_device;
+}
+
+std::vector<std::byte> load_binary(const char* name) {
+  std::ifstream stream{std::string{GRANIT_TEST_ASSET_DIR} + "/" + name, std::ios::binary};
+  const std::vector<char> input{std::istreambuf_iterator<char>{stream}, {}};
+  std::vector<std::byte> output(input.size());
+  for (std::size_t index = 0; index < input.size(); ++index)
+    output[index] = static_cast<std::byte>(input[index]);
+  return output;
+}
+
+void await(granit::renderer& renderer, granit::async_operation& operation) {
+  for (std::uint32_t iteration = 0; iteration < 1000; ++iteration) {
+    granit::async_operation_status status;
+    REQUIRE(operation.get_status(status) == granit::result::success);
+    if (status.state == granit::async_operation_state::succeeded)
+      return;
+    REQUIRE(status.state == granit::async_operation_state::running);
+    REQUIRE(renderer.process_events() == granit::result::success);
+  }
+  FAIL("Pipeline 预热操作未在限定轮询次数内完成");
+}
+
+TEST_CASE("Pipeline 预热批次拒绝空提交和越界", "[pipeline-warmup][contract]") {
+  granit::pipeline_warmup_batch batch;
+  CHECK(batch.create(GRANIT_NULL_HANDLE) == granit::result::invalid_argument);
+}
+
+TEST_CASE("Compute Pipeline 预热提供稳定键和缓存命中", "[pipeline-warmup][compute]") {
+  granit::renderer renderer;
+  const auto initialized = renderer.initialize({.application_name = "granit-pipeline-warmup"});
+  if (environment_unavailable(initialized))
+    SKIP("当前运行环境没有满足要求的 Vulkan 设备");
+  REQUIRE(initialized == granit::result::success);
+
+  granit::pipeline_layout layout;
+  REQUIRE(layout.initialize(renderer.native_handle()) == granit::result::success);
+  const auto spirv = load_binary("minimal.comp.spv");
+  REQUIRE_FALSE(spirv.empty());
+  granit::shader shader;
+  REQUIRE(shader.initialize(renderer.native_handle(),
+                            {.stage = granit::shader_stage::compute, .code = spirv}) ==
+          granit::result::success);
+
+  granit_compute_pipeline_desc desc = GRANIT_COMPUTE_PIPELINE_DESC_INIT;
+  desc.layout = layout.native_handle();
+  desc.compute_shader = shader.native_handle();
+  std::array<std::byte, GRANIT_PIPELINE_WARMUP_CACHE_KEY_SIZE> first_key{};
+  for (int pass = 0; pass < 2; ++pass) {
+    granit::pipeline_warmup_batch batch;
+    REQUIRE(batch.create(renderer.native_handle(), {.max_operation_count = 1}) ==
+            granit::result::success);
+    std::uint32_t index{};
+    REQUIRE(batch.add_compute(desc, index) == granit::result::success);
+    REQUIRE(index == 0);
+    granit::async_operation operation;
+    REQUIRE(batch.submit_async(operation) == granit::result::success);
+    await(renderer, operation);
+    granit::pipeline_warmup_result_info info;
+    REQUIRE(granit::get_pipeline_warmup_result(operation, 0, info) == granit::result::success);
+    CHECK(info.operation_result == granit::result::success);
+    CHECK(info.cache_hit == (pass != 0));
+    if (pass == 0)
+      first_key = info.cache_key;
+    else
+      CHECK(info.cache_key == first_key);
+  }
+}
+
+} // namespace
