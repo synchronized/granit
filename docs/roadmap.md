@@ -317,13 +317,27 @@
 - 通过仓库内独立 Consumer Fixture 验证 Gneiss 所需契约，不在本任务直接修改 Gneiss。
 - 异步 Timestamp、Web Worker、Android、公共 glTF SDK 和高级渲染能力不属于本版本。
 
+## 二十、0.13.0 异步 GPU 操作与 Web 运行时完善
+
+**状态：已规划；S-28A～S-28F 待实施。**
+
+- **[S-28](plans/S-28-0.13.0-async-gpu-and-web-runtime.md) / P1**：建立可轮询、可请求取消且不阻塞
+  浏览器主线程的后端无关异步 GPU 操作契约。
+- 在设备能力允许时补齐 WebGPU Timestamp Query，并使用同一契约验证 Vulkan/WebGPU 的状态、
+  结果码和生命周期一致性。
+- Web Model Viewer 分阶段执行下载、解析、上传和 Mipmap，提供真实进度、取消、错误详情与自托管、
+  相对 URL、CORS 和离线 Release Fixture 支持。
+- 公共 API 不接管线程池、文件系统、网络或 glTF 解析；取消不承诺撤销已经提交给 GPU 的命令。
+- 桌面 Dawn、Android、公共 glTF SDK、TAA、Bindless 和新的渲染后端不属于本版本。
+
 ## 近期执行顺序
 
-1. 规划 0.13.0 前先复核 Gneiss 对 0.12.0 资产契约的实际接入反馈。
-2. 公共执行器与场景 API 继续等待 Granit 与 Gneiss 的第二个真实复用证据。
-3. S-14 只在复用条件成立后启动；不要为当前单个示例提前稳定 glTF 公共 API。
-4. S-06D 最终验收等待稳定版本与 component 范围决策；不在 0.x 阶段提前宣布稳定。
-5. H-09 的透明 PBR、CSM、Clustered Forward 与 Bindless 只在各自重新评估条件满足后独立恢复，
+1. 按 S-28A～S-28F 完成 0.13.0，先冻结异步状态机，再接入两个后端和浏览器加载。
+2. Gneiss 对 0.12.0 资产契约的接入反馈可以并行收集，但不扩大 S-28 的异步 API 范围。
+3. 公共执行器与场景 API 继续等待 Granit 与 Gneiss 的第二个真实复用证据。
+4. S-14 只在复用条件成立后启动；不要为当前单个示例提前稳定 glTF 公共 API。
+5. S-06D 最终验收等待稳定版本与 component 范围决策；不在 0.x 阶段提前宣布稳定。
+6. H-09 的透明 PBR、CSM、Clustered Forward 与 Bindless 只在各自重新评估条件满足后独立恢复，
    不作为当前稳定化工作的前置项。
 
 若前置抽象不足，应先更新对应 Plan 和本路线图状态，再扩大公共 API。
