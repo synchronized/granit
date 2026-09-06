@@ -364,6 +364,39 @@ extern "C" granit_result granit_material_update(granit_renderer renderer, granit
   }
 }
 
+extern "C" granit_result granit_material_add_pipeline_warmup(
+    granit_renderer renderer, granit_material material,
+    const granit_material_pipeline_warmup_desc* desc, granit_pipeline_warmup_batch batch,
+    uint32_t* result_index) {
+  if (result_index == nullptr)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  *result_index = 0;
+  if (desc == nullptr || desc->struct_size < sizeof(granit_material_pipeline_warmup_desc) ||
+      desc->reserved != 0 || desc->reserved_tail != 0 || desc->pass == 0 ||
+      desc->color_format == GRANIT_TEXTURE_FORMAT_UNDEFINED || batch == GRANIT_NULL_HANDLE) {
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  }
+  auto state = find_material(renderer, material);
+  if (state == nullptr)
+    return GRANIT_ERROR_INVALID_HANDLE;
+  try {
+    std::scoped_lock lock{state->mutex};
+    if (!state->alive)
+      return GRANIT_ERROR_INVALID_HANDLE;
+    return state->material_template.add_pipeline_warmup(
+        {.pass = desc->pass,
+         .variant = desc->variant,
+         .color_format = desc->color_format,
+         .depth_stencil_format = desc->depth_stencil_format,
+         .sample_count = desc->sample_count},
+        batch, *result_index);
+  } catch (const std::bad_alloc&) {
+    return GRANIT_ERROR_OUT_OF_MEMORY;
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
 extern "C" granit_result granit_material_destroy(granit_renderer renderer,
                                                  granit_material material) {
   size_t index = 0;

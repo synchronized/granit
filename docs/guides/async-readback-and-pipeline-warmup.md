@@ -22,15 +22,15 @@
 ## Pipeline 预热
 
 1. 创建 `granit::pipeline_warmup_batch` 并设置最大条目数。
-2. 添加现有图形或计算 Pipeline 描述。描述中的数组会被复制，但 Shader 与 Pipeline Layout 句柄
-   必须保持到异步操作结束。
+2. 添加现有图形或计算 Pipeline 描述。提交会复制描述并保留 Shader 与 Pipeline Layout；提交成功
+   后调用方可以销毁原句柄。
 3. 提交后在加载循环中轮询；每次推进至多处理一个尚未命中的条目。
 4. 查询每项结果、缓存命中标记和 32 字节稳定键。某项失败不会中止同批其他条目。
 
 稳定键由规范化 Pipeline 状态、Shader 内容 ID、入口、后端和设备能力构成，不包含进程内资源
-句柄。Vulkan 会复用原生 Pipeline Cache，并在私有后台任务中执行冷创建；WebGPU 当前使用分步
-预热，但不声明
-`NON_BLOCKING_PIPELINE_WARMUP`，调用方应在加载阶段调用而不是在交互帧中首次启动。
+句柄。Vulkan 会复用原生 Pipeline Cache，并在私有后台任务中执行冷创建；浏览器 WebGPU 使用
+原生异步 Render/Compute Pipeline 回调。两者都声明 `NON_BLOCKING_PIPELINE_WARMUP`，提交和单次
+事件推进不会执行同步冷编译。
 
 ## 能力判断
 

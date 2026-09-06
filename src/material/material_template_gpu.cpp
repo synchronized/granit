@@ -174,6 +174,10 @@ granit_result material_template_gpu::reset() noexcept {
     capture(granit_shader_destroy(renderer_, entry.fragment_shader));
     capture(granit_shader_destroy(renderer_, entry.vertex_shader));
   }
+  for (auto& entry : warmups_) {
+    capture(granit_shader_destroy(renderer_, entry.fragment_shader));
+    capture(granit_shader_destroy(renderer_, entry.vertex_shader));
+  }
   if (pipeline_layout_ != GRANIT_NULL_HANDLE) {
     capture(granit_pipeline_layout_destroy(renderer_, pipeline_layout_));
   }
@@ -184,6 +188,7 @@ granit_result material_template_gpu::reset() noexcept {
     capture(granit_bind_group_layout_destroy(renderer_, frame_layout_));
   }
   cache_.clear();
+  warmups_.clear();
   renderer_ = GRANIT_NULL_HANDLE;
   package_ = nullptr;
   frame_layout_ = GRANIT_NULL_HANDLE;
@@ -218,16 +223,25 @@ granit_result material_template_gpu::acquire_pipeline(const material_pipeline_re
                                           &material_shader_code::stage);
 
   cache_entry replacement{.request = request};
-  auto result = create_shader(renderer_, *vertex, shader_resolver_, shader_resolver_user_data_,
-                              replacement.vertex_shader);
-  if (result != GRANIT_SUCCESS) {
-    return result;
-  }
-  result = create_shader(renderer_, *fragment, shader_resolver_, shader_resolver_user_data_,
-                         replacement.fragment_shader);
-  if (result != GRANIT_SUCCESS) {
-    static_cast<void>(granit_shader_destroy(renderer_, replacement.vertex_shader));
-    return result;
+  const auto warmed = std::ranges::find_if(
+      warmups_, [&](const auto& entry) { return same_request(entry.request, request); });
+  granit_result result = GRANIT_SUCCESS;
+  if (warmed != warmups_.end()) {
+    replacement.vertex_shader = warmed->vertex_shader;
+    replacement.fragment_shader = warmed->fragment_shader;
+    warmups_.erase(warmed);
+  } else {
+    result = create_shader(renderer_, *vertex, shader_resolver_, shader_resolver_user_data_,
+                           replacement.vertex_shader);
+    if (result != GRANIT_SUCCESS) {
+      return result;
+    }
+    result = create_shader(renderer_, *fragment, shader_resolver_, shader_resolver_user_data_,
+                           replacement.fragment_shader);
+    if (result != GRANIT_SUCCESS) {
+      static_cast<void>(granit_shader_destroy(renderer_, replacement.vertex_shader));
+      return result;
+    }
   }
   granit_graphics_pipeline_desc desc = GRANIT_GRAPHICS_PIPELINE_DESC_INIT;
   std::vector<std::vector<granit_vertex_attribute>> native_attributes;
@@ -279,6 +293,96 @@ granit_result material_template_gpu::acquire_pipeline(const material_pipeline_re
     return GRANIT_ERROR_OUT_OF_MEMORY;
   }
   pipeline = replacement.pipeline;
+  return GRANIT_SUCCESS;
+}
+
+granit_result material_template_gpu::add_pipeline_warmup(const material_pipeline_request& request,
+                                                         granit_pipeline_warmup_batch batch,
+                                                         std::uint32_t& result_index) {
+  std::lock_guard lock{mutex_};
+  result_index = 0;
+  if (renderer_ == GRANIT_NULL_HANDLE || package_ == nullptr || batch == GRANIT_NULL_HANDLE ||
+      request.pass == 0 || request.color_format == GRANIT_TEXTURE_FORMAT_UNDEFINED) {
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  }
+  auto variant_key = request.variant;
+  const auto* variant = package_->find(request.pass, variant_key);
+  if (variant == nullptr && variant_key == 0) {
+    const auto found = std::ranges::find_if(
+        package_->variants(), [&](const auto& value) { return value.pass == request.pass; });
+    if (found != package_->variants().end()) {
+      variant = &*found;
+      variant_key = found->key;
+    }
+  }
+  if (variant == nullptr)
+    return GRANIT_ERROR_NOT_READY;
+  const auto vertex = std::ranges::find(variant->shaders, package_shader_stage::vertex,
+                                        &material_shader_code::stage);
+  const auto fragment = std::ranges::find(variant->shaders, package_shader_stage::fragment,
+                                          &material_shader_code::stage);
+  const material_pipeline_request resolved{request.pass, variant_key, request.color_format,
+                                           request.depth_stencil_format, request.sample_count};
+  warmup_entry entry{.request = resolved};
+  auto result = create_shader(renderer_, *vertex, shader_resolver_, shader_resolver_user_data_,
+                              entry.vertex_shader);
+  if (result != GRANIT_SUCCESS)
+    return result;
+  result = create_shader(renderer_, *fragment, shader_resolver_, shader_resolver_user_data_,
+                         entry.fragment_shader);
+  if (result != GRANIT_SUCCESS) {
+    static_cast<void>(granit_shader_destroy(renderer_, entry.vertex_shader));
+    return result;
+  }
+  std::vector<std::vector<granit_vertex_attribute>> native_attributes;
+  std::vector<granit_vertex_buffer_layout> native_buffers;
+  try {
+    native_attributes.reserve(variant->pipeline.vertex_buffers.size());
+    native_buffers.reserve(variant->pipeline.vertex_buffers.size());
+    for (const auto& source_buffer : variant->pipeline.vertex_buffers) {
+      auto& attributes = native_attributes.emplace_back();
+      attributes.reserve(source_buffer.attributes.size());
+      for (const auto& source_attribute : source_buffer.attributes) {
+        attributes.push_back(
+            {source_attribute.location, source_attribute.format, source_attribute.offset, 0});
+      }
+      native_buffers.push_back({source_buffer.stride, source_buffer.step_mode,
+                                static_cast<std::uint32_t>(attributes.size()), 0,
+                                attributes.data()});
+    }
+  } catch (const std::bad_alloc&) {
+    static_cast<void>(granit_shader_destroy(renderer_, entry.fragment_shader));
+    static_cast<void>(granit_shader_destroy(renderer_, entry.vertex_shader));
+    return GRANIT_ERROR_OUT_OF_MEMORY;
+  }
+  granit_graphics_pipeline_desc desc = GRANIT_GRAPHICS_PIPELINE_DESC_INIT;
+  desc.layout = pipeline_layout_;
+  desc.vertex_shader = entry.vertex_shader;
+  desc.fragment_shader = entry.fragment_shader;
+  desc.color_format_count = 1;
+  desc.color_formats = &request.color_format;
+  desc.depth_stencil_format = request.depth_stencil_format;
+  desc.sample_count = request.sample_count;
+  desc.vertex_buffer_layout_count = static_cast<std::uint32_t>(native_buffers.size());
+  desc.vertex_buffer_layouts = native_buffers.data();
+  desc.primitive = variant->pipeline.primitive;
+  desc.depth = &variant->pipeline.depth;
+  desc.color_blend_count = 1;
+  desc.color_blends = &variant->pipeline.color_blend;
+  try {
+    warmups_.push_back(entry);
+  } catch (const std::bad_alloc&) {
+    static_cast<void>(granit_shader_destroy(renderer_, entry.fragment_shader));
+    static_cast<void>(granit_shader_destroy(renderer_, entry.vertex_shader));
+    return GRANIT_ERROR_OUT_OF_MEMORY;
+  }
+  result = granit_pipeline_warmup_batch_add_graphics(renderer_, batch, &desc, &result_index);
+  if (result != GRANIT_SUCCESS) {
+    warmups_.pop_back();
+    static_cast<void>(granit_shader_destroy(renderer_, entry.fragment_shader));
+    static_cast<void>(granit_shader_destroy(renderer_, entry.vertex_shader));
+    return result;
+  }
   return GRANIT_SUCCESS;
 }
 

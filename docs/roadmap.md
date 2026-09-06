@@ -363,7 +363,7 @@
 
 ## 二十四、0.17.0 WebGPU 原生异步 Pipeline 预热
 
-**状态：已确认。**
+**状态：已完成。**
 
 - **[S-32](plans/S-32-0.17.0-webgpu-async-pipeline-warmup.md) / P1**：接入 WebGPU 原生异步
   Render/Compute Pipeline 创建，并在满足严格语义后报告对应能力。
@@ -373,12 +373,10 @@
 
 ## 近期执行顺序
 
-1. 先完成 S-32A/S-32B 的 HAL 契约和 WebGPU 原生异步创建，再迁移 Vulkan 实现。
-2. 完成跨后端生命周期测试后再接入 Web Model Viewer，避免示例先依赖未稳定的内部语义。
-3. 公共执行器与场景 API 继续等待 Granit 与 Gneiss 的第二个真实复用证据。
-4. S-14 只在复用条件成立后启动；不要为当前单个示例提前稳定 glTF 公共 API。
-5. S-06D 最终验收等待稳定版本与 component 范围决策；不在 0.x 阶段提前宣布稳定。
-6. H-09 的透明 PBR、CSM、Clustered Forward 与 Bindless 只在各自重新评估条件满足后独立恢复，
+1. 公共执行器与场景 API 继续等待 Granit 与 Gneiss 的第二个真实复用证据。
+2. S-14 只在复用条件成立后启动；不要为当前单个示例提前稳定 glTF 公共 API。
+3. S-06D 最终验收等待稳定版本与 component 范围决策；不在 0.x 阶段提前宣布稳定。
+4. H-09 的透明 PBR、CSM、Clustered Forward 与 Bindless 只在各自重新评估条件满足后独立恢复，
    不作为当前稳定化工作的前置项。
 
 若前置抽象不足，应先更新对应 Plan 和本路线图状态，再扩大公共 API。

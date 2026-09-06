@@ -100,6 +100,16 @@ CPU 帧时间、帧槽等待或 Present 等待，因此不能与 CPU 墙钟相�
 Frame Slot 隔离，只在槽位完成并再次复用后读取；离屏同步路径可在本次执行完成后读取。指标回读
 暂不可用不会把已经提交成功的渲染改判为失败。
 
+## Material Pipeline 预热
+
+`granit_material_add_pipeline_warmup` 根据材质归档中的 Pass、变体和目标格式构造真实 Graphics
+Pipeline 描述，并加入调用方提供的 Pipeline Warmup Batch。`variant` 为零时选择该 Pass 的首个
+变体；材质与批次必须属于同一 Renderer。提交、轮询、取消和逐项结果继续使用统一的 Pipeline
+Warmup 与 Async Operation API。
+
+材质至少保持到批次提交完成。预热创建的 Shader 会在首次实际获取同一 Pipeline 时复用，避免
+Model Viewer 或上游重复维护标准 PBR 的 Binding、顶点布局和着色器描述。
+
 ## 生命周期与线程安全
 
 - Pipeline 借用 Renderer，并拥有默认 IBL、内建 Shader 和跨帧缓存。
