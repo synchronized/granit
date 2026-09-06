@@ -172,9 +172,8 @@ async function main() {
   if (process.platform !== "win32") {
     browserArguments.push(
       "--enable-unsafe-swiftshader",
-      "--enable-features=Vulkan",
-      "--use-angle=swiftshader",
-      "--disable-vulkan-surface",
+      "--use-webgpu-adapter=swiftshader",
+      "--use-gpu-in-tests",
     );
   }
   const browser = await chromium.launch({
