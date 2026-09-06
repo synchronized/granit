@@ -8,6 +8,28 @@
 
 ## Unreleased
 
+## 0.12.0 - 2026-09-06
+
+### 新增
+
+- Core 新增 `granit_shader_asset_inspect` 及 C++20 包装，无需创建 Renderer 即可校验 `.grshader`
+  并取得内容 ID、缓存键、Stage、Entry Point 和后端变体摘要。
+- RenderPipeline 新增公共标准 PBR Schema，稳定公开参数名、常量偏移、纹理特性、Binding、Vertex
+  Location 和布局验证接口。
+- RenderPipeline 安装标准 `materials/pbr_standard.grmat`，并公开模板版本与内容哈希。
+
+### 变更
+
+- Model Viewer 改为复用公共标准 PBR 材质，不再拥有示例私有模板。
+- Package、FetchContent 与 `add_subdirectory` 统一提供 `granit_RENDER_PIPELINE_ASSET_DIR`，构建树
+  Consumer 不再需要推导 Granit 源码目录。
+
+### 兼容性与迁移
+
+- Core 与 RenderPipeline 新增 C ABI 导出和公共头文件，既有函数语义及持久化格式不变。0.x
+  Consumer 应重新编译并将 CMake 请求版本更新为 0.12。完整步骤见
+  [从 0.11 迁移到 0.12](docs/guides/migrate-0.11-to-0.12.md)。
+
 ## 0.11.0 - 2026-09-06
 
 ### 新增

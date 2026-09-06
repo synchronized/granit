@@ -96,7 +96,11 @@ typedef struct granit_shader_asset_info {
 #define GRANIT_SHADER_ASSET_INFO_INIT                                                              \
   {                                                                                                \
     (uint32_t)sizeof(granit_shader_asset_info), UINT32_C(0), {0}, {0}, UINT32_C(0), 0,             \
-        UINT32_C(0), UINT32_C(0), UINT32_C(0), {{0}}                                                    \
+        UINT32_C(0), UINT32_C(0), UINT32_C(0), {                                                   \
+      {                                                                                            \
+        UINT32_C(0), UINT32_C(0), UINT32_C(0), UINT32_C(0), UINT64_C(0), UINT64_C(0), {0}          \
+      }                                                                                            \
+    }                                                                                              \
   }
 
 #ifdef __cplusplus
