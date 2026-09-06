@@ -308,7 +308,7 @@
 
 ## 十九、0.12.0 上游资产与标准材质契约
 
-**状态：发布候选；S-27A 至 S-27D 已完成，正在执行发布验收。**
+**状态：已完成；公共资产检查、标准 PBR 契约、统一资产目录与发布验收均已通过。**
 
 - **[S-27](plans/S-27-0.12.0-upstream-asset-contracts.md) / P1**：提供公共 Shader Asset 检查接口，
   将稳定的 PBR Material Schema 与标准模板纳入安装 SDK。
@@ -319,9 +319,8 @@
 
 ## 近期执行顺序
 
-1. **[S-27](plans/S-27-0.12.0-upstream-asset-contracts.md) / P1**：完成发布验收、迁移说明和 0.12.0
-   Release。
-2. 公共执行器与场景 API 继续等待 Granit 与 Gneiss 的第二个真实复用证据，不纳入 S-27。
+1. 规划 0.13.0 前先复核 Gneiss 对 0.12.0 资产契约的实际接入反馈。
+2. 公共执行器与场景 API 继续等待 Granit 与 Gneiss 的第二个真实复用证据。
 3. S-14 只在复用条件成立后启动；不要为当前单个示例提前稳定 glTF 公共 API。
 4. S-06D 最终验收等待稳定版本与 component 范围决策；不在 0.x 阶段提前宣布稳定。
 5. H-09 的透明 PBR、CSM、Clustered Forward 与 Bindless 只在各自重新评估条件满足后独立恢复，
