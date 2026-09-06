@@ -8,6 +8,27 @@
 
 ## Unreleased
 
+### 新增
+
+- Core 新增有界异步 Readback Batch，统一读取 Buffer 与 Texture 多区域，支持紧密或后端原始布局、
+  结果元数据、显式复制和安全取消。
+- Core 新增 Pipeline Warmup Batch、逐项结果、缓存命中信息及 32 字节稳定键；Vulkan 与 WebGPU
+  通过同一 API 在加载阶段预热图形和计算 Pipeline。
+- Renderer Limits 新增异步回读、Pipeline 预热和严格非阻塞预热能力位；调用方无需根据后端名称
+  猜测行为。
+
+### 变更
+
+- Model Viewer 离屏验收和纹理回读 Smoke 改用异步 Readback，不再通过同步 Texture Readback 阻塞
+  CPU。
+- Renderer 资源统计追加 Readback/Pipeline Warmup Batch，取消后的可中止工作进入明确的
+  `CANCELLED` 终态。
+
+### 兼容性与迁移
+
+- Core 新增 C ABI 导出、资源类型和 Renderer 能力位；资源统计结构尾部追加字段。0.x Consumer 应
+  重新编译。完整步骤见[从 0.14 迁移到 0.15](docs/guides/migrate-0.14-to-0.15.md)。
+
 ## 0.14.0 - 2026-09-06
 
 ### 新增
