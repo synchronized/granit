@@ -330,9 +330,20 @@
 - 公共 API 不接管线程池、文件系统、网络或 glTF 解析；取消不承诺撤销已经提交给 GPU 的命令。
 - 桌面 Dawn、Android、公共 glTF SDK、TAA、Bindless 和新的渲染后端不属于本版本。
 
+## 二十一、0.14.0 异步管线指标与资源流送
+
+**状态：已完成；异步指标、有界异步上传、Model Viewer 接入与跨后端验收均已通过。**
+
+- **[S-29](plans/S-29-0.14.0-async-pipeline-metrics-and-streaming.md) / P1**：让参考 Render Pipeline
+  内部使用 0.13.0 异步 Timestamp API，同时保持现有指标快照 ABI 和非阻塞查询方式。
+- 以 Gneiss 的真实接入为验收输入，补齐多帧槽乱序完成、失败、取消、关闭和能力降级语义。
+- 在现有 Upload Batch 上建立有界异步上传、回滚与资源切换基础；线程调度、资产解析和缓存仍由
+  上游负责。
+- 公共线程池、场景管理、glTF SDK、Android、TAA、Bindless 和新的渲染后端不属于本版本。
+
 ## 近期执行顺序
 
-1. 根据 Gneiss 的实际接入反馈规划下一个版本，不预先扩张公共异步 API。
+1. 以 Granit 与 Gneiss 的真实使用反馈规划 0.15.0，不预先扩张公共线程或场景 API。
 2. 公共执行器与场景 API 继续等待 Granit 与 Gneiss 的第二个真实复用证据。
 3. S-14 只在复用条件成立后启动；不要为当前单个示例提前稳定 glTF 公共 API。
 4. S-06D 最终验收等待稳定版本与 component 范围决策；不在 0.x 阶段提前宣布稳定。

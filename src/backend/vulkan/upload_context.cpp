@@ -82,8 +82,9 @@ granit_result vulkan_upload_context::reset_fence(const vulkan_device& device) no
   return fence_.reset(device);
 }
 
-granit_result vulkan_upload_context::wait(const vulkan_device& device) noexcept {
-  return fence_.wait(device, UINT64_MAX);
+granit_result vulkan_upload_context::wait(const vulkan_device& device,
+                                          std::uint64_t timeout) noexcept {
+  return fence_.wait(device, timeout);
 }
 
 granit_result vulkan_upload_context::restore_signaled_fence(const vulkan_device& device) noexcept {

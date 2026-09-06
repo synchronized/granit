@@ -10,14 +10,27 @@
 
 #include <algorithm>
 #include <array>
+#include <chrono>
 #include <cmath>
 #include <cstdio>
 #include <cstring>
+#include <functional>
 #include <string>
+#include <thread>
 #include <type_traits>
 
 namespace granit::detail {
 namespace {
+
+class callback_upload_completion final : public backend_upload_completion {
+public:
+  explicit callback_upload_completion(std::function<granit_result()> poll)
+      : poll_(std::move(poll)) {}
+  [[nodiscard]] granit_result poll() noexcept override { return poll_(); }
+
+private:
+  std::function<granit_result()> poll_;
+};
 
 template <typename Handle> std::uint64_t object_handle_value(Handle handle) noexcept {
   if constexpr (std::is_pointer_v<Handle>)
@@ -423,12 +436,27 @@ granit_result vulkan_renderer_state::initialize(std::string_view application_nam
 
 std::size_t vulkan_renderer_state::acquire_upload_slot() {
   std::unique_lock lock{upload_mutex_};
-  upload_available_.wait(lock, [this] {
-    return std::ranges::any_of(upload_slots_, [](const auto& slot) { return !slot.acquired; });
-  });
+  for (;;) {
+    for (auto& slot : upload_slots_) {
+      if (!slot.acquired || !slot.submitted)
+        continue;
+      const auto result = slot.context->wait(device_, 0);
+      if (result == GRANIT_SUCCESS) {
+        slot.acquired = false;
+        slot.submitted = false;
+      } else if (result != GRANIT_ERROR_NOT_READY) {
+        static_cast<void>(observe_device_result(result));
+      }
+    }
+    if (std::ranges::any_of(upload_slots_, [](const auto& slot) { return !slot.acquired; }))
+      break;
+    upload_available_.wait_for(lock, std::chrono::milliseconds(1));
+  }
   const auto found =
       std::ranges::find_if(upload_slots_, [](const auto& slot) { return !slot.acquired; });
   found->acquired = true;
+  found->submitted = false;
+  ++found->generation;
   return static_cast<std::size_t>(std::distance(upload_slots_.begin(), found));
 }
 
@@ -436,8 +464,33 @@ void vulkan_renderer_state::release_upload_slot(std::size_t index) noexcept {
   {
     std::lock_guard lock{upload_mutex_};
     upload_slots_[index].acquired = false;
+    upload_slots_[index].submitted = false;
   }
   upload_available_.notify_one();
+}
+
+void vulkan_renderer_state::mark_upload_slot_submitted(std::size_t index) noexcept {
+  std::lock_guard lock{upload_mutex_};
+  upload_slots_[index].submitted = true;
+}
+
+granit_result vulkan_renderer_state::poll_upload_slot(std::size_t index,
+                                                      std::uint64_t generation) noexcept {
+  std::lock_guard lock{upload_mutex_};
+  if (index >= upload_slots_.size())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  auto& slot = upload_slots_[index];
+  if (slot.generation != generation || !slot.acquired)
+    return GRANIT_SUCCESS;
+  if (!slot.submitted)
+    return GRANIT_ERROR_NOT_READY;
+  const auto result = slot.context->wait(device_, 0);
+  if (result == GRANIT_SUCCESS) {
+    slot.acquired = false;
+    slot.submitted = false;
+    upload_available_.notify_one();
+  }
+  return observe_device_result(result);
 }
 
 granit_result vulkan_renderer_state::import_pipeline_cache(const void* data,
@@ -869,8 +922,10 @@ granit_result vulkan_renderer_state::upload_buffer(backend_buffer_resource& buff
   return finish(context.wait(device_));
 }
 
-granit_result
-vulkan_renderer_state::upload_batch(std::span<const backend_upload_operation> uploads) noexcept {
+granit_result vulkan_renderer_state::upload_batch_async(
+    std::span<const backend_upload_operation> uploads,
+    std::unique_ptr<backend_upload_completion>& completion) noexcept {
+  completion.reset();
   if (device_lost())
     return GRANIT_ERROR_DEVICE_LOST;
   if (uploads.empty())
@@ -893,6 +948,23 @@ vulkan_renderer_state::upload_batch(std::span<const backend_upload_operation> up
   }
 
   const auto slot_index = acquire_upload_slot();
+  std::uint64_t slot_generation{};
+  {
+    std::lock_guard lock{upload_mutex_};
+    slot_generation = upload_slots_[slot_index].generation;
+  }
+  std::unique_ptr<backend_upload_completion> candidate;
+  try {
+    candidate = std::make_unique<callback_upload_completion>([this, slot_index, slot_generation] {
+      return poll_upload_slot(slot_index, slot_generation);
+    });
+  } catch (const std::bad_alloc&) {
+    release_upload_slot(slot_index);
+    return GRANIT_ERROR_OUT_OF_MEMORY;
+  } catch (...) {
+    release_upload_slot(slot_index);
+    return GRANIT_ERROR_INTERNAL;
+  }
   auto& context = *upload_slots_[slot_index].context;
   auto finish = [&](granit_result result) {
     release_upload_slot(slot_index);
@@ -1024,7 +1096,23 @@ vulkan_renderer_state::upload_batch(std::span<const backend_upload_operation> up
     static_cast<void>(context.restore_signaled_fence(device_));
     return finish(result);
   }
-  return finish(context.wait(device_));
+  mark_upload_slot_submitted(slot_index);
+  completion = std::move(candidate);
+  return GRANIT_SUCCESS;
+}
+
+granit_result
+vulkan_renderer_state::upload_batch(std::span<const backend_upload_operation> uploads) noexcept {
+  std::unique_ptr<backend_upload_completion> completion;
+  auto result = upload_batch_async(uploads, completion);
+  if (result != GRANIT_SUCCESS)
+    return result;
+  do {
+    result = completion->poll();
+    if (result == GRANIT_ERROR_NOT_READY)
+      std::this_thread::yield();
+  } while (result == GRANIT_ERROR_NOT_READY);
+  return result;
 }
 
 granit_result

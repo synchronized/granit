@@ -40,6 +40,7 @@
 5. [0.11.0 WebGPU 能力与浏览器 Model Viewer 计划](plans/S-26-0.11.0-webgpu-parity-and-web-model-viewer.md)
 6. [0.12.0 上游资产与标准材质契约计划](plans/S-27-0.12.0-upstream-asset-contracts.md)
 7. [0.13.0 异步 GPU 操作与 Web 运行时计划](plans/S-28-0.13.0-async-gpu-and-web-runtime.md)
+8. [0.14.0 异步管线指标与资源流送计划](plans/S-29-0.14.0-async-pipeline-metrics-and-streaming.md)
 
 ## 操作指南
 
@@ -55,11 +56,12 @@
 - [从 0.10 迁移到 0.11](guides/migrate-0.10-to-0.11.md)
 - [从 0.11 迁移到 0.12](guides/migrate-0.11-to-0.12.md)
 - [从 0.12 迁移到 0.13](guides/migrate-0.12-to-0.13.md)
+- [从 0.13 迁移到 0.14](guides/migrate-0.13-to-0.14.md)
 - [从 0.8 迁移到 0.9](guides/migrate-0.8-to-0.9.md)
 - [示例程序及运行方式](guides/examples.md)
 - [运行跨后端模型查看器](guides/model-viewer.md)
 - [运行浏览器 WebGPU 平台 Smoke](guides/webgpu-browser-example.md)
-- [同步批量上传](guides/upload-batch.md)
+- [批量与异步上传](guides/upload-batch.md)
 - [纹理同步回读](guides/texture-readback.md)
 - [第三方 UI 与字体适配](guides/third-party-ui-adapters.md)
 

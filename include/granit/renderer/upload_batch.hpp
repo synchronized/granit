@@ -9,10 +9,23 @@
 #include <utility>
 
 #include <granit/core/result.hpp>
+#include <granit/renderer/async_operation.hpp>
 #include <granit/renderer/texture.hpp>
 #include <granit/renderer/upload_batch.h>
 
 namespace granit {
+
+struct upload_batch_options {
+  std::uint64_t max_staged_bytes{};
+  std::uint32_t max_operation_count{};
+};
+
+struct upload_batch_info {
+  std::uint64_t staged_bytes{};
+  std::uint32_t operation_count{};
+  std::uint64_t max_staged_bytes{};
+  std::uint32_t max_operation_count{};
+};
 
 /** 无异常、move-only 的同步批量上传包装。 */
 class upload_batch {
@@ -33,12 +46,15 @@ public:
     return *this;
   }
 
-  [[nodiscard]] result initialize(granit_renderer renderer) noexcept {
+  [[nodiscard]] result initialize(granit_renderer renderer,
+                                  upload_batch_options options = {}) noexcept {
     if (valid())
       return result::invalid_argument;
     if (renderer == GRANIT_NULL_HANDLE)
       return result::invalid_handle;
-    const granit_upload_batch_desc desc = GRANIT_UPLOAD_BATCH_DESC_INIT;
+    granit_upload_batch_desc desc = GRANIT_UPLOAD_BATCH_DESC_INIT;
+    desc.max_staged_bytes = options.max_staged_bytes;
+    desc.max_operation_count = options.max_operation_count;
     const auto value = granit_upload_batch_create(renderer, &desc, &handle_);
     if (value == GRANIT_SUCCESS)
       renderer_ = renderer;
@@ -71,6 +87,26 @@ public:
   }
   [[nodiscard]] result submit() noexcept {
     return from_native(granit_upload_batch_submit(renderer_, handle_));
+  }
+  [[nodiscard]] result submit_async(async_operation& operation) noexcept {
+    if (operation.valid())
+      return result::invalid_argument;
+    granit_async_operation native = GRANIT_NULL_HANDLE;
+    const auto value = granit_upload_batch_submit_async(renderer_, handle_, &native);
+    if (value == GRANIT_SUCCESS)
+      operation = async_operation{renderer_, native};
+    return from_native(value);
+  }
+  [[nodiscard]] result get_info(upload_batch_info& info) const noexcept {
+    granit_upload_batch_info native = GRANIT_UPLOAD_BATCH_INFO_INIT;
+    const auto value = granit_upload_batch_get_info(renderer_, handle_, &native);
+    if (value == GRANIT_SUCCESS) {
+      info = {.staged_bytes = native.staged_bytes,
+              .operation_count = native.operation_count,
+              .max_staged_bytes = native.max_staged_bytes,
+              .max_operation_count = native.max_operation_count};
+    }
+    return from_native(value);
   }
   [[nodiscard]] result reset() noexcept {
     return from_native(granit_upload_batch_reset(renderer_, handle_));

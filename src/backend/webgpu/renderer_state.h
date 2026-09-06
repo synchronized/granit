@@ -85,6 +85,9 @@ public:
                                             const void* data, std::uint64_t size) noexcept override;
   [[nodiscard]] granit_result
   upload_batch(std::span<const backend_upload_operation> uploads) noexcept override;
+  [[nodiscard]] granit_result
+  upload_batch_async(std::span<const backend_upload_operation> uploads,
+                     std::unique_ptr<backend_upload_completion>& completion) noexcept override;
   [[nodiscard]] std::unique_ptr<backend_texture_resource> allocate_texture_resource() override;
   [[nodiscard]] granit_result create_texture(const granit_texture_desc&,
                                              backend_texture_resource&) noexcept override;

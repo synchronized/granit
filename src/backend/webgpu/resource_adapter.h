@@ -31,6 +31,9 @@ public:
                                      const void* data, std::uint64_t size) const noexcept;
   [[nodiscard]] granit_result
   upload_batch(std::span<const backend_upload_operation> uploads) const noexcept;
+  [[nodiscard]] granit_result
+  upload_batch_async(std::span<const backend_upload_operation> uploads,
+                     std::unique_ptr<backend_upload_completion>& completion) const noexcept;
   [[nodiscard]] granit_webgpu_provider_buffer
   native_buffer(backend_buffer_resource& resource) const noexcept;
   [[nodiscard]] std::unique_ptr<backend_texture_resource> allocate_texture() const;

@@ -5,12 +5,20 @@
 #define GRANIT_BACKEND_UPLOAD_H_
 
 #include <cstdint>
+#include <memory>
 
 #include <granit/renderer/resource_types.h>
 
 #include "backend/contracts/resources.h"
 
 namespace granit::detail {
+
+/** 后端上传提交的非阻塞完成点。 */
+class backend_upload_completion {
+public:
+  virtual ~backend_upload_completion() = default;
+  [[nodiscard]] virtual granit_result poll() noexcept = 0;
+};
 
 enum class backend_upload_type { buffer, texture };
 

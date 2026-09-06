@@ -173,13 +173,16 @@ granit_result renderer_registry::get_resource_stats(granit_renderer renderer,
     stats.frame_count = count_owned(frames_);
     stats.timestamp_query_pool_count = count_owned(timestamp_query_pools_);
     stats.upload_batch_count = count_owned(upload_batches_);
+    const auto async_operation_count = count_owned(async_operations_);
+    if (stats.struct_size >= GRANIT_RENDERER_RESOURCE_STATS_VERSION_2_SIZE)
+      stats.async_operation_count = async_operation_count;
     stats.total_live_count =
         stats.buffer_count + stats.texture_count + stats.texture_view_count + stats.sampler_count +
         stats.shader_count + stats.bind_group_layout_count + stats.bind_group_count +
         stats.pipeline_layout_count + stats.graphics_pipeline_count + stats.compute_pipeline_count +
         stats.surface_count + stats.swapchain_count + stats.command_recorder_count +
         stats.frame_context_count + stats.frame_count + stats.timestamp_query_pool_count +
-        stats.upload_batch_count;
+        stats.upload_batch_count + async_operation_count;
     const auto interfaces = backend_interfaces_.find(renderer);
     retirement = interfaces == backend_interfaces_.end() ? nullptr : interfaces->second->retirement;
   }
@@ -215,7 +218,11 @@ granit_result renderer_registry::get_status(granit_renderer renderer,
 
 granit_result renderer_registry::process_events(granit_renderer renderer) {
   const auto state = acquire_backend(renderer);
-  return state ? state->process_backend_events() : GRANIT_ERROR_INVALID_HANDLE;
+  if (!state)
+    return GRANIT_ERROR_INVALID_HANDLE;
+  const auto result = state->process_backend_events();
+  poll_detached_async_operations(state);
+  return result;
 }
 
 granit_result renderer_registry::import_pipeline_cache(granit_renderer renderer, const void* data,
@@ -482,6 +489,15 @@ granit_result renderer_registry::destroy(granit_renderer renderer) {
         static_cast<void>(
             handles_.erase(operation->first, resource_type::async_operation, state->domain()));
         operation = async_operations_.erase(operation);
+      } else {
+        ++operation;
+      }
+    }
+    for (auto operation = detached_async_operations_.begin();
+         operation != detached_async_operations_.end();) {
+      if ((*operation)->owner == state) {
+        native_async_operations.push_back(std::move(*operation));
+        operation = detached_async_operations_.erase(operation);
       } else {
         ++operation;
       }
