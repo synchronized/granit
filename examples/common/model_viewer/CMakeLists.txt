@@ -31,29 +31,29 @@ endforeach()
 if(CMAKE_CROSSCOMPILING)
   set(
     granit_model_viewer_material_package
-    "${PROJECT_SOURCE_DIR}/examples/assets/model_viewer_pbr.grmat"
+    "${PROJECT_SOURCE_DIR}/assets/materials/pbr_standard.grmat"
   )
 else()
   add_custom_command(
     OUTPUT "${granit_model_viewer_material_package}"
     COMMAND
       granit_material_tool build
-      "${PROJECT_SOURCE_DIR}/examples/assets/model_viewer_pbr.grmat.json"
+      "${PROJECT_SOURCE_DIR}/assets/materials/pbr_standard.grmat.json"
       --output "${granit_model_viewer_material_package}"
     COMMAND
       "${CMAKE_COMMAND}" -E compare_files
       "${granit_model_viewer_material_package}"
-      "${PROJECT_SOURCE_DIR}/examples/assets/model_viewer_pbr.grmat"
+      "${PROJECT_SOURCE_DIR}/assets/materials/pbr_standard.grmat"
     DEPENDS
       granit_material_tool
-      "${PROJECT_SOURCE_DIR}/examples/assets/model_viewer_pbr.grmat.json"
+      "${PROJECT_SOURCE_DIR}/assets/materials/pbr_standard.grmat.json"
       "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/pbr_standard.vert.grshader"
       "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/pbr_standard.frag.grshader"
       "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/pbr_standard.vert.grshader.spv"
       "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/pbr_standard.vert.grshader.wgsl"
       "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/pbr_standard.frag.grshader.spv"
       "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/pbr_standard.frag.grshader.wgsl"
-      "${PROJECT_SOURCE_DIR}/examples/assets/model_viewer_pbr.grmat"
+      "${PROJECT_SOURCE_DIR}/assets/materials/pbr_standard.grmat"
     COMMENT "生成模型查看器 PBR 材质归档"
     VERBATIM
   )

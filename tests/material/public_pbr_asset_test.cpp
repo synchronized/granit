@@ -2,6 +2,9 @@
 // Copyright (c) 2026 Granit contributors
 
 #include "assets/shader_asset.h"
+#include "material/material_archive.h"
+
+#include <granit/pipeline/pbr_material.h>
 
 #include <catch2/catch_all.hpp>
 
@@ -89,4 +92,23 @@ TEST_CASE("公共 PBR 片段资产固定材质和 IBL 契约") {
   for (std::uint32_t binding = 4; binding <= 6; ++binding)
     require_binding(asset.view.reflection_json, 3, binding, "sampled_texture", 0);
   require_binding(asset.view.reflection_json, 3, 7, "sampler", 0);
+}
+
+TEST_CASE("公共 PBR 材质模板具有稳定 Schema 和内容身份") {
+  const auto bytes = read_binary(GRANIT_PBR_MATERIAL_ASSET);
+  granit::material::material_archive_layout layout;
+  REQUIRE(granit::material::parse_material_archive_layout(bytes, layout) ==
+          granit::material::archive_error::none);
+  CHECK(GRANIT_PBR_MATERIAL_TEMPLATE_VERSION == 1);
+
+  constexpr std::string_view hex = GRANIT_PBR_MATERIAL_CONTENT_HASH_HEX;
+  REQUIRE(hex.size() == layout.header.content_hash.size() * 2);
+  constexpr auto nibble = [](char value) {
+    return static_cast<std::uint8_t>(value <= '9' ? value - '0' : value - 'a' + 10);
+  };
+  for (std::size_t index = 0; index < layout.header.content_hash.size(); ++index) {
+    const auto expected =
+        static_cast<std::uint8_t>((nibble(hex[index * 2]) << 4) | nibble(hex[index * 2 + 1]));
+    CHECK(std::to_integer<std::uint8_t>(layout.header.content_hash[index]) == expected);
+  }
 }

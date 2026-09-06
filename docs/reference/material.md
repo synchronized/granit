@@ -27,6 +27,11 @@ Render Pipeline component，不取代核心 Renderer 的 Shader、Pipeline 或 B
 这些值是公共标准 PBR 模板和内置实现共同使用的权威定义。上游仍拥有自己的材质语义和资产身份，
 只需在 GPU 实例边界映射到该 Schema；不需要包含 `src/material` 私有头文件。
 
+RenderPipeline 资产根目录下的 `materials/pbr_standard.grmat` 是对应的标准材质模板。其模板版本由
+`GRANIT_PBR_MATERIAL_TEMPLATE_VERSION` 标识，归档内容身份由
+`GRANIT_PBR_MATERIAL_CONTENT_HASH_HEX` 固定；Shader 引用与同一资产根目录中的标准 PBR Shader
+配套发布。项目内权威源是 `assets/materials/pbr_standard.grmat.json`，Model Viewer 也消费该模板。
+
 ## 创建与更新
 
 - 使用 `GRANIT_MATERIAL_DESC_INIT` 初始化创建描述。
