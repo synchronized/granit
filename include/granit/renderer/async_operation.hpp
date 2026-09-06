@@ -72,6 +72,7 @@ public:
     return from_native(granit_async_operation_destroy(renderer, handle));
   }
   [[nodiscard]] bool valid() const noexcept { return handle_ != GRANIT_NULL_HANDLE; }
+  [[nodiscard]] granit_renderer native_renderer() const noexcept { return renderer_; }
   [[nodiscard]] granit_async_operation native_handle() const noexcept { return handle_; }
 
 private:

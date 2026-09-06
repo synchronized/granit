@@ -42,6 +42,7 @@
 #include "backend/vulkan/frame_context.h"
 #include "backend/vulkan/instance.h"
 #include "backend/vulkan/memory_allocator.h"
+#include "backend/vulkan/readback_context.h"
 #include "backend/vulkan/swapchain.h"
 #include "backend/vulkan/upload_context.h"
 #include "core/device_status.h"
@@ -164,6 +165,10 @@ public:
   [[nodiscard]] granit_result
   upload_batch_async(std::span<const backend_upload_operation> uploads,
                      std::unique_ptr<backend_upload_completion>& completion) noexcept override;
+  [[nodiscard]] granit_result
+  readback_batch_async(std::span<const backend_readback_operation> readbacks,
+                       granit_readback_layout layout, std::uint64_t max_result_bytes,
+                       std::unique_ptr<backend_readback_completion>& completion) noexcept override;
   [[nodiscard]] granit_result create_native_texture(const granit_texture_desc& desc,
                                                     backend_texture_resource& texture) noexcept;
   [[nodiscard]] granit_result create_texture(const granit_texture_desc& desc,
@@ -452,11 +457,23 @@ private:
     std::uint64_t generation{};
   };
 
+  struct readback_slot {
+    std::unique_ptr<vulkan_readback_context> context;
+    bool acquired{};
+    bool submitted{};
+    std::uint64_t generation{};
+  };
+
   [[nodiscard]] std::size_t acquire_upload_slot();
   void release_upload_slot(std::size_t index) noexcept;
   void mark_upload_slot_submitted(std::size_t index) noexcept;
   [[nodiscard]] granit_result poll_upload_slot(std::size_t index,
                                                std::uint64_t generation) noexcept;
+  [[nodiscard]] std::size_t acquire_readback_slot();
+  void release_readback_slot(std::size_t index, std::uint64_t generation) noexcept;
+  void mark_readback_slot_submitted(std::size_t index) noexcept;
+  [[nodiscard]] granit_result poll_readback_slot(std::size_t index,
+                                                 std::uint64_t generation) noexcept;
 
   [[nodiscard]] granit_result complete_frame_slot(frame_slot& slot) noexcept;
   [[nodiscard]] granit_result observe_device_result(
@@ -475,12 +492,15 @@ private:
   std::mutex queue_mutex_;
   std::mutex upload_mutex_;
   std::condition_variable upload_available_;
+  std::mutex readback_mutex_;
+  std::condition_variable readback_available_;
   vulkan_instance instance_;
   vulkan_device device_;
   vulkan_memory_allocator memory_allocator_;
   VkPipelineCache pipeline_cache_{VK_NULL_HANDLE};
   std::vector<frame_slot> frame_slots_;
   std::vector<upload_slot> upload_slots_;
+  std::vector<readback_slot> readback_slots_;
   std::size_t next_frame_slot_{};
   submission_serials submission_serials_;
   mutable std::mutex retirement_mutex_;

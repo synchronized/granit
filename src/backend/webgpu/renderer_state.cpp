@@ -159,6 +159,15 @@ granit_result webgpu_renderer_state::upload_batch_async(
   return resources_ ? resources_->upload_batch_async(uploads, completion) : GRANIT_ERROR_NOT_READY;
 }
 
+granit_result webgpu_renderer_state::readback_batch_async(
+    std::span<const backend_readback_operation> readbacks, granit_readback_layout layout,
+    std::uint64_t max_result_bytes,
+    std::unique_ptr<backend_readback_completion>& completion) noexcept {
+  return resources_
+             ? resources_->readback_batch_async(readbacks, layout, max_result_bytes, completion)
+             : GRANIT_ERROR_NOT_READY;
+}
+
 std::unique_ptr<backend_texture_resource> webgpu_renderer_state::allocate_texture_resource() {
   return resources_ ? resources_->allocate_texture() : nullptr;
 }
@@ -822,9 +831,11 @@ granit_result webgpu_renderer_state::refresh_state() noexcept {
         capabilities.max_storage_buffer_binding_size,
         capabilities.framebuffer_sample_counts,
         capabilities.max_sampler_anisotropy,
-        (capabilities.renderer_features & GRANIT_WEBGPU_PROVIDER_FEATURE_TIMESTAMP_QUERY_BIT) != 0
-            ? GRANIT_RENDERER_FEATURE_TIMESTAMP_QUERY_BIT
-            : UINT64_C(0),
+        ((capabilities.renderer_features & GRANIT_WEBGPU_PROVIDER_FEATURE_TIMESTAMP_QUERY_BIT) != 0
+             ? GRANIT_RENDERER_FEATURE_TIMESTAMP_QUERY_BIT
+             : UINT64_C(0)) |
+            GRANIT_RENDERER_FEATURE_ASYNC_READBACK_BIT |
+            GRANIT_RENDERER_FEATURE_PIPELINE_WARMUP_BIT,
     };
     provider_surface_types_ = capabilities.surface_types;
     if ((to_provider_surface_types(surface_types_) & ~provider_surface_types_) != 0) {

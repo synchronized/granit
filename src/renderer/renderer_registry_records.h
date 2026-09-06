@@ -6,6 +6,7 @@
 
 #include "core/async_operation_state.h"
 #include "renderer/renderer_registry.h"
+#include "assets/shader_asset.h"
 
 namespace granit::detail {
 
@@ -80,6 +81,7 @@ struct renderer_registry::shader_record {
   std::unique_ptr<backend_shader_resource> native;
   granit_shader_stage stage{};
   std::string entry_point;
+  granit::tools::shader_cache_key content_id{};
 };
 struct renderer_registry::bind_group_layout_record {
   resource_metadata metadata;
@@ -213,6 +215,57 @@ struct renderer_registry::upload_batch_operation {
   std::mutex mutex;
   std::unique_ptr<backend_upload_completion> completion;
   std::vector<upload_entry> uploads;
+};
+struct renderer_registry::readback_entry {
+  backend_readback_type type{backend_readback_type::buffer};
+  std::shared_ptr<buffer_record> buffer;
+  std::shared_ptr<texture_record> texture;
+  std::uint64_t offset{};
+  std::uint64_t size{};
+  granit_texture_write_region texture_region{};
+  granit_readback_result_info result_info = GRANIT_READBACK_RESULT_INFO_INIT;
+};
+struct renderer_registry::readback_batch_record {
+  resource_metadata metadata;
+  std::shared_ptr<backend_renderer> owner;
+  std::shared_ptr<backend_resource_renderer> resource_api;
+  std::mutex mutex;
+  std::vector<readback_entry> readbacks;
+  std::uint64_t result_bytes{};
+  std::uint64_t max_result_bytes{};
+  std::uint32_t max_operation_count{};
+  granit_readback_layout texture_layout{GRANIT_READBACK_LAYOUT_TIGHT};
+  bool failed{};
+};
+struct renderer_registry::readback_batch_operation {
+  std::mutex mutex;
+  std::unique_ptr<backend_readback_completion> completion;
+  std::vector<readback_entry> readbacks;
+};
+struct renderer_registry::pipeline_warmup_entry {
+  granit_pipeline_warmup_type type{};
+  granit_graphics_pipeline_desc graphics = GRANIT_GRAPHICS_PIPELINE_DESC_INIT;
+  granit_compute_pipeline_desc compute = GRANIT_COMPUTE_PIPELINE_DESC_INIT;
+  std::vector<granit_texture_format> color_formats;
+  std::vector<granit_vertex_buffer_layout> vertex_buffers;
+  std::vector<std::vector<granit_vertex_attribute>> vertex_attributes;
+  granit_depth_state depth{};
+  granit_depth_bias_state depth_bias{};
+  std::vector<granit_color_blend_state> color_blends;
+  granit_pipeline_warmup_result_info result = GRANIT_PIPELINE_WARMUP_RESULT_INFO_INIT;
+};
+struct renderer_registry::pipeline_warmup_batch_record {
+  resource_metadata metadata;
+  std::shared_ptr<backend_renderer> owner;
+  std::mutex mutex;
+  std::vector<pipeline_warmup_entry> entries;
+  std::uint32_t max_operation_count{};
+};
+struct renderer_registry::pipeline_warmup_batch_operation {
+  std::mutex mutex;
+  granit_renderer renderer{};
+  std::vector<pipeline_warmup_entry> entries;
+  std::size_t next_index{};
 };
 
 } // namespace granit::detail

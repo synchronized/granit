@@ -5,12 +5,19 @@
 
 #include <cmath>
 #include <cstddef>
+#include <cstring>
 #include <limits>
 #include <new>
 #include <utility>
 #include <vector>
 
 namespace granit::detail {
+
+struct webgpu_resource_context {
+  webgpu_provider_dispatch* provider{};
+  granit_webgpu_provider_instance instance{};
+};
+
 namespace {
 
 class completed_upload final : public backend_upload_completion {
@@ -18,12 +25,82 @@ public:
   [[nodiscard]] granit_result poll() noexcept override { return GRANIT_SUCCESS; }
 };
 
-} // namespace
-
-struct webgpu_resource_context {
-  webgpu_provider_dispatch* provider{};
-  granit_webgpu_provider_instance instance{};
+struct webgpu_readback_slice {
+  std::uint64_t source_offset{};
+  std::uint64_t result_size{};
+  std::uint32_t source_bytes_per_row{};
+  std::uint32_t result_bytes_per_row{};
+  std::uint32_t rows{};
+  std::uint32_t layers{};
+  granit_readback_result_info info = GRANIT_READBACK_RESULT_INFO_INIT;
 };
+
+class webgpu_readback_completion final : public backend_readback_completion {
+public:
+  webgpu_readback_completion(std::shared_ptr<webgpu_resource_context> context,
+                             granit_webgpu_provider_buffer buffer,
+                             granit_webgpu_provider_readback readback,
+                             std::vector<webgpu_readback_slice> slices)
+      : context_(std::move(context)), buffer_(buffer), readback_(readback),
+        slices_(std::move(slices)) {}
+  ~webgpu_readback_completion() override {
+    if (readback_ != 0)
+      static_cast<void>(context_->provider->destroy_readback(context_->instance, readback_));
+    if (buffer_ != 0)
+      static_cast<void>(context_->provider->destroy_buffer(context_->instance, buffer_));
+  }
+  [[nodiscard]] granit_result poll() noexcept override {
+    return context_->provider->poll_readback(context_->instance, readback_);
+  }
+  [[nodiscard]] granit_result
+  get_result_info(std::uint32_t index, granit_readback_result_info& info) const noexcept override {
+    if (index >= slices_.size())
+      return GRANIT_ERROR_INVALID_ARGUMENT;
+    info = slices_[index].info;
+    return GRANIT_SUCCESS;
+  }
+  [[nodiscard]] granit_result copy_result(std::uint32_t index, void* data,
+                                          std::uint64_t size) noexcept override {
+    if (index >= slices_.size() || data == nullptr || size != slices_[index].result_size)
+      return GRANIT_ERROR_INVALID_ARGUMENT;
+    const auto& slice = slices_[index];
+    if (slice.source_bytes_per_row == slice.result_bytes_per_row)
+      return context_->provider->copy_readback(context_->instance, readback_, slice.source_offset,
+                                               data, size);
+    try {
+      std::vector<std::byte> padded(static_cast<std::size_t>(slice.source_bytes_per_row) *
+                                    slice.rows * slice.layers);
+      auto result = context_->provider->copy_readback(
+          context_->instance, readback_, slice.source_offset, padded.data(), padded.size());
+      if (result != GRANIT_SUCCESS)
+        return result;
+      auto* destination = static_cast<std::byte*>(data);
+      for (std::uint32_t layer = 0; layer < slice.layers; ++layer) {
+        for (std::uint32_t row = 0; row < slice.rows; ++row) {
+          const auto source_offset =
+              (static_cast<std::uint64_t>(layer) * slice.rows + row) * slice.source_bytes_per_row;
+          const auto destination_offset =
+              (static_cast<std::uint64_t>(layer) * slice.rows + row) * slice.result_bytes_per_row;
+          std::memcpy(destination + destination_offset, padded.data() + source_offset,
+                      slice.result_bytes_per_row);
+        }
+      }
+      return GRANIT_SUCCESS;
+    } catch (const std::bad_alloc&) {
+      return GRANIT_ERROR_OUT_OF_MEMORY;
+    } catch (...) {
+      return GRANIT_ERROR_INTERNAL;
+    }
+  }
+
+private:
+  std::shared_ptr<webgpu_resource_context> context_;
+  granit_webgpu_provider_buffer buffer_{};
+  granit_webgpu_provider_readback readback_{};
+  std::vector<webgpu_readback_slice> slices_;
+};
+
+} // namespace
 
 namespace {
 
@@ -38,6 +115,7 @@ public:
 
   std::shared_ptr<webgpu_resource_context> context_;
   granit_webgpu_provider_buffer handle_{};
+  std::uint64_t size_{};
   granit_memory_location memory_location_{};
   std::vector<std::byte> host_memory_;
 };
@@ -219,11 +297,14 @@ webgpu_resource_adapter::create_buffer(const granit_buffer_desc& desc,
   } catch (...) {
     return GRANIT_ERROR_INTERNAL;
   }
-  granit_webgpu_provider_buffer_desc provider_desc{sizeof(provider_desc), 0, desc.size, usage, 0};
+  const auto native_size = (desc.size + 3) & ~UINT64_C(3);
+  granit_webgpu_provider_buffer_desc provider_desc{sizeof(provider_desc), 0, native_size, usage, 0};
   const auto result =
       context_->provider->create_buffer(context_->instance, &provider_desc, &buffer->handle_);
   if (result == GRANIT_SUCCESS)
     buffer->memory_location_ = desc.memory_location;
+  if (result == GRANIT_SUCCESS)
+    buffer->size_ = desc.size;
   return result;
 }
 
@@ -337,6 +418,148 @@ granit_result webgpu_resource_adapter::upload_batch_async(
   } catch (const std::bad_alloc&) {
     return GRANIT_ERROR_OUT_OF_MEMORY;
   } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+granit_result webgpu_resource_adapter::readback_batch_async(
+    std::span<const backend_readback_operation> readbacks, granit_readback_layout layout,
+    std::uint64_t max_result_bytes,
+    std::unique_ptr<backend_readback_completion>& completion) const noexcept {
+  completion.reset();
+  if (readbacks.empty())
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  granit_webgpu_provider_buffer staging{};
+  granit_webgpu_provider_command_recorder recorder{};
+  granit_webgpu_provider_command_buffer command{};
+  granit_webgpu_provider_readback operation{};
+  auto cleanup = [&] {
+    if (operation != 0)
+      static_cast<void>(context_->provider->destroy_readback(context_->instance, operation));
+    if (command != 0)
+      static_cast<void>(context_->provider->destroy_command_buffer(context_->instance, command));
+    if (recorder != 0)
+      static_cast<void>(context_->provider->destroy_command_recorder(context_->instance, recorder));
+    if (staging != 0)
+      static_cast<void>(context_->provider->destroy_buffer(context_->instance, staging));
+  };
+  try {
+    std::vector<webgpu_readback_slice> slices;
+    slices.reserve(readbacks.size());
+    std::uint64_t required{};
+    std::uint64_t result_bytes{};
+    for (const auto& readback : readbacks) {
+      required = (required + 255) & ~UINT64_C(255);
+      const auto buffer_prefix = readback.source_offset & UINT64_C(3);
+      webgpu_readback_slice slice{.source_offset = required,
+                                  .result_size = readback.size,
+                                  .source_bytes_per_row = static_cast<std::uint32_t>(readback.size),
+                                  .result_bytes_per_row = static_cast<std::uint32_t>(readback.size),
+                                  .rows = 1,
+                                  .layers = 1,
+                                  .info = readback.result_info};
+      if (readback.type == backend_readback_type::texture) {
+        const auto row = readback.result_info.bytes_per_row;
+        const auto padded_row = (row + 255) & ~UINT32_C(255);
+        slice.source_bytes_per_row = padded_row;
+        slice.result_bytes_per_row = layout == GRANIT_READBACK_LAYOUT_TIGHT ? row : padded_row;
+        slice.rows = readback.result_info.rows_per_image;
+        slice.layers = readback.result_info.array_layer_count;
+        slice.result_size =
+            static_cast<std::uint64_t>(slice.result_bytes_per_row) * slice.rows * slice.layers;
+        slice.info.required_size = slice.result_size;
+        slice.info.bytes_per_row = slice.result_bytes_per_row;
+        required += static_cast<std::uint64_t>(padded_row) * slice.rows * slice.layers;
+      } else {
+        slice.source_offset += buffer_prefix;
+        required += (buffer_prefix + readback.size + 3) & ~UINT64_C(3);
+      }
+      if (result_bytes > UINT64_MAX - slice.result_size)
+        return GRANIT_ERROR_OUT_OF_MEMORY;
+      result_bytes += slice.result_size;
+      slices.push_back(slice);
+    }
+    if (max_result_bytes != 0 && result_bytes > max_result_bytes)
+      return GRANIT_ERROR_INVALID_ARGUMENT;
+    granit_webgpu_provider_buffer_desc desc{sizeof(desc), 0, required,
+                                            GRANIT_WEBGPU_PROVIDER_BUFFER_USAGE_MAP_READ_BIT |
+                                                GRANIT_WEBGPU_PROVIDER_BUFFER_USAGE_COPY_DST_BIT,
+                                            0};
+    auto result = context_->provider->create_buffer(context_->instance, &desc, &staging);
+    if (result != GRANIT_SUCCESS)
+      return result;
+    result = context_->provider->create_command_recorder(context_->instance, &recorder);
+    if (result != GRANIT_SUCCESS) {
+      cleanup();
+      return result;
+    }
+    for (std::size_t index = 0; index < readbacks.size(); ++index) {
+      const auto& readback = readbacks[index];
+      if (readback.type == backend_readback_type::buffer) {
+        const auto* source = readback.buffer == nullptr ? nullptr : as_buffer(*readback.buffer);
+        if (source == nullptr) {
+          cleanup();
+          return GRANIT_ERROR_INVALID_ARGUMENT;
+        }
+        const auto source_start = readback.source_offset & ~UINT64_C(3);
+        const auto prefix = readback.source_offset - source_start;
+        const auto copy_size = (prefix + readback.size + 3) & ~UINT64_C(3);
+        granit_webgpu_provider_buffer_copy_region region{source_start, slices[index].source_offset,
+                                                         copy_size};
+        result = context_->provider->recorder_copy_buffer(context_->instance, recorder,
+                                                          source->handle_, staging, {&region, 1});
+      } else {
+        const auto* source = readback.texture == nullptr
+                                 ? nullptr
+                                 : dynamic_cast<const webgpu_texture_resource*>(readback.texture);
+        if (source == nullptr) {
+          cleanup();
+          return GRANIT_ERROR_INVALID_ARGUMENT;
+        }
+        const auto& region = readback.texture_region;
+        granit_webgpu_provider_texture_buffer_copy copy{slices[index].source_offset,
+                                                        slices[index].source_bytes_per_row,
+                                                        slices[index].rows,
+                                                        region.mip_level,
+                                                        region.base_array_layer,
+                                                        region.array_layer_count,
+                                                        GRANIT_WEBGPU_PROVIDER_TEXTURE_ASPECT_ALL,
+                                                        region.x,
+                                                        region.y,
+                                                        region.z,
+                                                        region.width,
+                                                        region.height,
+                                                        region.depth};
+        result = context_->provider->recorder_copy_texture_to_buffer_v2(
+            context_->instance, recorder, source->handle_, staging, copy);
+      }
+      if (result != GRANIT_SUCCESS) {
+        cleanup();
+        return result;
+      }
+    }
+    result = context_->provider->finish_command_recorder(context_->instance, recorder, &command);
+    recorder = 0;
+    if (result == GRANIT_SUCCESS)
+      result = context_->provider->submit_command_buffer(context_->instance, command);
+    command = 0;
+    if (result == GRANIT_SUCCESS)
+      result =
+          context_->provider->begin_readback(context_->instance, staging, 0, required, &operation);
+    if (result != GRANIT_SUCCESS) {
+      cleanup();
+      return result;
+    }
+    completion = std::make_unique<webgpu_readback_completion>(context_, staging, operation,
+                                                              std::move(slices));
+    staging = 0;
+    operation = 0;
+    return GRANIT_SUCCESS;
+  } catch (const std::bad_alloc&) {
+    cleanup();
+    return GRANIT_ERROR_OUT_OF_MEMORY;
+  } catch (...) {
+    cleanup();
     return GRANIT_ERROR_INTERNAL;
   }
 }

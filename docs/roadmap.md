@@ -341,9 +341,20 @@
   上游负责。
 - 公共线程池、场景管理、glTF SDK、Android、TAA、Bindless 和新的渲染后端不属于本版本。
 
+## 二十二、0.15.0 异步回读与管线预热
+
+**状态：已完成。**
+
+- **[S-30](plans/S-30-0.15.0-async-readback-and-pipeline-warmup.md) / P1**：为 Buffer 与 Texture
+  建立有界批量异步 Readback，复用现有异步状态、取消、诊断和安全生命周期契约。
+- 提供批量 Pipeline 预热、逐项结果和稳定缓存键，让 Vulkan 与浏览器 WebGPU 把冷编译移出交互帧；
+  不支持真正异步创建的设备通过能力查询明确表达差异。
+- 截图编码、文件 I/O、任务线程和资产调度继续由上游负责；本版本不引入公共执行器。
+- Renderer 异步初始化、公共 glTF SDK、Android、TAA、Bindless 和新的渲染后端不属于本版本。
+
 ## 近期执行顺序
 
-1. 以 Granit 与 Gneiss 的真实使用反馈规划 0.15.0，不预先扩张公共线程或场景 API。
+1. 按 S-30A～S-30C 先完成异步 Readback，再以测得的冷编译停顿推进 Pipeline 预热。
 2. 公共执行器与场景 API 继续等待 Granit 与 Gneiss 的第二个真实复用证据。
 3. S-14 只在复用条件成立后启动；不要为当前单个示例提前稳定 glTF 公共 API。
 4. S-06D 最终验收等待稳定版本与 component 范围决策；不在 0.x 阶段提前宣布稳定。

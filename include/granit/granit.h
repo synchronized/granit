@@ -15,9 +15,11 @@
 #include <granit/math/types.h>
 #include <granit/renderer/buffer.h>
 #include <granit/renderer/async_operation.h>
+#include <granit/renderer/readback_batch.h>
 #include <granit/renderer/command_recorder.h>
 #include <granit/renderer/frame_context.h>
 #include <granit/renderer/pipeline.h>
+#include <granit/renderer/pipeline_warmup.h>
 #include <granit/renderer/render_target.h>
 #include <granit/renderer/renderer.h>
 #include <granit/renderer/resource_types.h>

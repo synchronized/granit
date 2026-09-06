@@ -71,6 +71,15 @@ struct renderer_limits {
   [[nodiscard]] constexpr bool supports_timestamp_queries() const noexcept {
     return (supported_features & GRANIT_RENDERER_FEATURE_TIMESTAMP_QUERY_BIT) != 0;
   }
+  [[nodiscard]] constexpr bool supports_async_readback() const noexcept {
+    return (supported_features & GRANIT_RENDERER_FEATURE_ASYNC_READBACK_BIT) != 0;
+  }
+  [[nodiscard]] constexpr bool supports_pipeline_warmup() const noexcept {
+    return (supported_features & GRANIT_RENDERER_FEATURE_PIPELINE_WARMUP_BIT) != 0;
+  }
+  [[nodiscard]] constexpr bool supports_non_blocking_pipeline_warmup() const noexcept {
+    return (supported_features & GRANIT_RENDERER_FEATURE_NON_BLOCKING_PIPELINE_WARMUP_BIT) != 0;
+  }
 };
 
 enum class shader_feature : std::uint64_t {
@@ -117,6 +126,7 @@ struct renderer_resource_stats {
   std::uint64_t upload_batch_count{};
   std::uint64_t pending_retirement_count{};
   std::uint64_t async_operation_count{};
+  std::uint64_t readback_batch_count{};
 };
 
 enum class renderer_state : std::uint32_t {
@@ -297,7 +307,8 @@ public:
              .timestamp_query_pool_count = native.timestamp_query_pool_count,
              .upload_batch_count = native.upload_batch_count,
              .pending_retirement_count = native.pending_retirement_count,
-             .async_operation_count = native.async_operation_count};
+             .async_operation_count = native.async_operation_count,
+             .readback_batch_count = native.readback_batch_count};
     return result::success;
   }
 

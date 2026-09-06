@@ -84,11 +84,31 @@ int main(int argc, char** argv) {
   }
 
   const granit::texture_write_region region{.width = k_width, .height = k_height};
-  granit::texture_readback_info info;
-  result = texture.query_readback(region, info);
-  std::vector<std::byte> pixels(static_cast<std::size_t>(info.required_size));
+  granit::readback_batch batch;
   if (result.ok())
-    result = texture.read(pixels, region, info);
+    result = batch.create(renderer.native_handle(), {.texture_layout = granit::readback_layout::tight});
+  std::uint32_t result_index{};
+  if (result.ok())
+    result = batch.read_texture(texture.native_handle(), region, result_index);
+  granit::async_operation operation;
+  if (result.ok())
+    result = batch.submit_async(operation);
+  granit::async_operation_status status;
+  while (result.ok()) {
+    result = operation.get_status(status);
+    if (result.failed() || status.complete())
+      break;
+    result = renderer.process_events();
+  }
+  if (result.ok())
+    result = status.operation_result;
+  granit::readback_result_info info;
+  if (result.ok())
+    result = granit::get_readback_result_info(operation, result_index, info);
+  std::vector<std::byte> pixels(static_cast<std::size_t>(info.required_size));
+  std::uint64_t required_size{};
+  if (result.ok())
+    result = granit::copy_readback_result(operation, result_index, pixels, required_size);
   if (result.failed()) {
     std::cerr << "读取纹理失败：" << granit::result_message(result) << '\n';
     return 1;

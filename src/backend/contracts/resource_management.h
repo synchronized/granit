@@ -15,6 +15,7 @@
 #include <granit/renderer/texture.h>
 
 #include "backend/contracts/binding.h"
+#include "backend/contracts/readback.h"
 #include "backend/contracts/resources.h"
 #include "backend/contracts/upload.h"
 
@@ -46,6 +47,10 @@ public:
   [[nodiscard]] virtual granit_result
   upload_batch_async(std::span<const backend_upload_operation> uploads,
                      std::unique_ptr<backend_upload_completion>& completion) noexcept = 0;
+  [[nodiscard]] virtual granit_result
+  readback_batch_async(std::span<const backend_readback_operation> readbacks,
+                       granit_readback_layout layout, std::uint64_t max_result_bytes,
+                       std::unique_ptr<backend_readback_completion>& completion) noexcept = 0;
   [[nodiscard]] virtual std::unique_ptr<backend_texture_resource> allocate_texture_resource() = 0;
   [[nodiscard]] virtual granit_result
   create_texture(const granit_texture_desc& desc, backend_texture_resource& texture) noexcept = 0;

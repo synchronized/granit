@@ -56,6 +56,10 @@ typedef struct granit_renderer_status {
 
 typedef uint64_t granit_renderer_feature_flags;
 #define GRANIT_RENDERER_FEATURE_TIMESTAMP_QUERY_BIT (UINT64_C(1) << 0)
+#define GRANIT_RENDERER_FEATURE_ASYNC_READBACK_BIT (UINT64_C(1) << 1)
+#define GRANIT_RENDERER_FEATURE_PIPELINE_WARMUP_BIT (UINT64_C(1) << 2)
+/** 后端保证 Pipeline 预热的单次事件推进不会执行同步编译。 */
+#define GRANIT_RENDERER_FEATURE_NON_BLOCKING_PIPELINE_WARMUP_BIT (UINT64_C(1) << 3)
 
 /** Renderer 对应设备的公开限制快照。 */
 typedef struct granit_renderer_limits {
@@ -136,16 +140,24 @@ typedef struct granit_renderer_resource_stats {
   uint64_t upload_batch_count;
   uint64_t pending_retirement_count;
   uint64_t async_operation_count;
+  uint64_t readback_batch_count;
+  uint64_t pipeline_warmup_batch_count;
 } granit_renderer_resource_stats;
 
 #define GRANIT_RENDERER_RESOURCE_STATS_VERSION_1_SIZE                                              \
   ((uint32_t)(offsetof(granit_renderer_resource_stats, pending_retirement_count) +                 \
               sizeof(uint64_t)))
 #define GRANIT_RENDERER_RESOURCE_STATS_VERSION_2_SIZE                                              \
+  ((uint32_t)(offsetof(granit_renderer_resource_stats, async_operation_count) + sizeof(uint64_t)))
+#define GRANIT_RENDERER_RESOURCE_STATS_VERSION_3_SIZE                                              \
+  ((uint32_t)(offsetof(granit_renderer_resource_stats, readback_batch_count) + sizeof(uint64_t)))
+#define GRANIT_RENDERER_RESOURCE_STATS_VERSION_4_SIZE                                              \
   ((uint32_t)sizeof(granit_renderer_resource_stats))
 #define GRANIT_RENDERER_RESOURCE_STATS_INIT                                                        \
   {(uint32_t)sizeof(granit_renderer_resource_stats),                                               \
    UINT32_C(0),                                                                                    \
+   UINT64_C(0),                                                                                    \
+   UINT64_C(0),                                                                                    \
    UINT64_C(0),                                                                                    \
    UINT64_C(0),                                                                                    \
    UINT64_C(0),                                                                                    \

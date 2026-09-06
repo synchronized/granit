@@ -30,6 +30,8 @@ enum class lifecycle_resource_type : std::uint8_t {
   command_recorder,
   frame_context,
   upload_batch,
+  readback_batch,
+  pipeline_warmup_batch,
   timestamp_query_pool,
   async_operation,
   count,
