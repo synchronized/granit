@@ -16,9 +16,15 @@ on:
 
 permissions:
   contents: read
+  actions: read
 
 env:
   RELEASE_TAG: ${{ github.event_name == 'push' && github.ref_name || inputs.tag }}
+  SCCACHE_GHA_ENABLED: "true"
+  CCACHE_DIR: ${{ github.workspace }}/.cache/ccache
+  CCACHE_BASEDIR: ${{ github.workspace }}
+  CCACHE_COMPILERCHECK: content
+  CCACHE_MAXSIZE: 500M
 
 jobs:
   validate:
@@ -31,6 +37,7 @@ jobs:
           -P cmake/check_release_version.cmake
 
   windows-package:
+    if: github.event_name == 'workflow_dispatch'
     needs: validate
     runs-on: windows-2022
     strategy:
@@ -42,6 +49,16 @@ jobs:
       - uses: ./.github/actions/setup-msvc
         with:
           arch: x64
+      - name: 启用 MSVC 编译缓存
+        uses: mozilla-actions/sccache-action@v0.0.11
+      - name: 恢复锁定 Shader 工具链
+        uses: actions/cache@v5
+        with:
+          path: build/toolchains
+          key: >-
+            shader-toolchain-${{ runner.os }}-
+            ${{ hashFiles('cmake/download_shader_toolchain.cmake',
+            'cmake/GranitShaderToolchain.cmake') }}
       - name: 选择 preset 和产物名
         id: package
         shell: pwsh
@@ -53,7 +70,9 @@ jobs:
       - name: 配置、构建与测试
         shell: pwsh
         run: |
-          cmake --preset '${{ steps.package.outputs.preset }}'
+          cmake --preset '${{ steps.package.outputs.preset }}' `
+            -DCMAKE_C_COMPILER_LAUNCHER=sccache `
+            -DCMAKE_CXX_COMPILER_LAUNCHER=sccache
           cmake --build --preset '${{ steps.package.outputs.preset }}'
           $exclude = @(
             'granit\.renderer\.lifecycle_diagnostic'
@@ -80,6 +99,7 @@ jobs:
           if-no-files-found: error
 
   linux-package:
+    if: github.event_name == 'workflow_dispatch'
     needs: validate
     runs-on: ubuntu-24.04
     container:
@@ -94,6 +114,22 @@ jobs:
         linkage: [shared, static]
     steps:
       - uses: actions/checkout@v5
+      - name: 恢复编译缓存
+        uses: actions/cache@v5
+        with:
+          path: .cache/ccache
+          key: >-
+            release-linux-ccache-v1-${{ matrix.linkage }}-${{ github.sha }}
+          restore-keys: |
+            release-linux-ccache-v1-${{ matrix.linkage }}-
+      - name: 恢复锁定 Shader 工具链
+        uses: actions/cache@v5
+        with:
+          path: build/toolchains
+          key: >-
+            shader-toolchain-${{ runner.os }}-
+            ${{ hashFiles('cmake/download_shader_toolchain.cmake',
+            'cmake/GranitShaderToolchain.cmake') }}
       - name: 选择 preset 和产物名
         id: package
         shell: bash
@@ -105,7 +141,10 @@ jobs:
       - name: 配置、构建与测试
         shell: bash
         run: |
-          cmake --preset "${{ steps.package.outputs.preset }}"
+          ccache --zero-stats
+          cmake --preset "${{ steps.package.outputs.preset }}" \
+            -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
           cmake --build --preset "${{ steps.package.outputs.preset }}"
           export XDG_RUNTIME_DIR="$RUNNER_TEMP/granit-release-wayland"
           install -d -m 700 "$XDG_RUNTIME_DIR"
@@ -137,8 +176,13 @@ jobs:
           name: ${{ steps.package.outputs.name }}
           path: ${{ steps.package.outputs.name }}.tar.gz
           if-no-files-found: error
+      - name: 输出编译缓存统计
+        if: always()
+        shell: bash
+        run: ccache --show-stats
 
   checksums:
+    if: github.event_name == 'workflow_dispatch'
     needs: [windows-package, linux-package]
     runs-on: ubuntu-24.04
     steps:
@@ -148,7 +192,16 @@ jobs:
           merge-multiple: true
       - name: 生成 SHA-256 校验文件
         working-directory: dist
-        run: sha256sum granit-* > SHA256SUMS
+        shell: bash
+        run: |
+          set -euo pipefail
+          sha256sum granit-* > SHA256SUMS
+          jq -n \
+            --arg tag "$RELEASE_TAG" \
+            --arg commit "$GITHUB_SHA" \
+            --arg run_id "$GITHUB_RUN_ID" \
+            '{schema_version: 1, tag: $tag, commit: $commit, workflow_run_id: $run_id}' \
+            > release-manifest.json
       - uses: actions/upload-artifact@v6
         with:
           name: release-assets
@@ -157,18 +210,89 @@ jobs:
 
   publish:
     if: github.event_name == 'push'
-    needs: checksums
+    needs: validate
     runs-on: ubuntu-24.04
     permissions:
       contents: write
+      actions: read
     steps:
-      - uses: actions/download-artifact@v6
-        with:
-          name: release-assets
-          path: dist
+      - name: 获取并校验同提交的发布候选产物
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mapfile -t runs < <(
+            gh run list --repo "$GITHUB_REPOSITORY" --workflow Release \
+              --commit "$GITHUB_SHA" --event workflow_dispatch --status success \
+              --limit 20 --json databaseId --jq '.[].databaseId'
+          )
+          for run_id in "${runs[@]}"; do
+            rm -rf candidate
+            if ! gh run download "$run_id" --repo "$GITHUB_REPOSITORY" \
+              --name release-assets --dir candidate 2>/dev/null; then
+              continue
+            fi
+            if [[ -f candidate/release-manifest.json &&
+                  "$(jq -r .schema_version candidate/release-manifest.json)" == "1" &&
+                  "$(jq -r .tag candidate/release-manifest.json)" == "$RELEASE_TAG" &&
+                  "$(jq -r .commit candidate/release-manifest.json)" == "$GITHUB_SHA" &&
+                  "$(jq -r .workflow_run_id candidate/release-manifest.json)" == "$run_id" ]]; then
+              mv candidate dist
+              break
+            fi
+          done
+          test -f dist/release-manifest.json || {
+            echo "找不到标签和提交均匹配的成功 Release Candidate 产物" >&2
+            exit 1
+          }
+          (cd dist && sha256sum --check SHA256SUMS)
+          version="${RELEASE_TAG#v}"
+          for name in \
+            "granit-$version-linux-x64-shared.tar.gz" \
+            "granit-$version-linux-x64-static.tar.gz" \
+            "granit-$version-windows-x64-shared.zip" \
+            "granit-$version-windows-x64-static.zip"; do
+            test -s "dist/$name"
+          done
+          test "$(find dist -maxdepth 1 -type f -name 'granit-*' | wc -l)" -eq 4
       - name: 创建 GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
-        run: >-
-          gh release create "$RELEASE_TAG" dist/* --repo "$GITHUB_REPOSITORY"
-          --title "Granit ${RELEASE_TAG#v}" --generate-notes
+        shell: bash
+        run: |
+          rm dist/release-manifest.json
+          gh release create "$RELEASE_TAG" dist/* --repo "$GITHUB_REPOSITORY" \
+            --title "Granit ${RELEASE_TAG#v}" --generate-notes
+
+  verify-public-release:
+    if: github.event_name == 'push'
+    needs: publish
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - name: 从公开 Release 重新下载并校验产物
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir dist
+          gh release download "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --dir dist
+          (cd dist && sha256sum --check SHA256SUMS)
+          version="${RELEASE_TAG#v}"
+          for name in \
+            "granit-$version-linux-x64-shared.tar.gz" \
+            "granit-$version-linux-x64-static.tar.gz" \
+            "granit-$version-windows-x64-shared.zip" \
+            "granit-$version-windows-x64-static.zip"; do
+            test -s "dist/$name"
+          done
+          test "$(find dist -maxdepth 1 -type f -name 'granit-*' | wc -l)" -eq 4
+          for archive in dist/granit-*.tar.gz; do
+            test "$(tar -tzf "$archive" | cut -d/ -f1 | sort -u | wc -l)" -eq 1
+          done
+          for archive in dist/granit-*.zip; do
+            test "$(unzip -Z1 "$archive" | tr '\\' '/' | cut -d/ -f1 | sort -u | wc -l)" -eq 1
+          done

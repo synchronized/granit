@@ -44,6 +44,7 @@
 9. [0.15.0 异步回读与管线预热计划](plans/S-30-0.15.0-async-readback-and-pipeline-warmup.md)
 10. [0.16.0 严格非阻塞异步调度计划](plans/S-31-0.16.0-nonblocking-async.md)
 11. [0.17.0 WebGPU 原生异步 Pipeline 预热计划](plans/S-32-0.17.0-webgpu-async-pipeline-warmup.md)
+12. [开发与发布流水线提速计划](plans/S-33-ci-release-acceleration.md)
 
 ## 操作指南
 
@@ -141,6 +142,7 @@
 - [开发计划索引](plans/README.md)
 - [架构决策索引](decisions/README.md)
 - [实施记录索引](records/README.md)
+- [版本验收模板](templates/version-acceptance.md)
 - 性能结果位于 [`benchmarks/results`](../benchmarks/results/README.md)。
 
 计划描述未来或实施中的方案，不是当前公共能力的使用参考。已经验证的行为应以对应 API 文档和

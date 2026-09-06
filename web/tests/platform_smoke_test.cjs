@@ -354,6 +354,23 @@ async function main() {
     );
     if (validationErrors.length !== 0)
       throw new Error(`浏览器 WebGPU 验证层报告错误：\n${validationErrors.join("\n")}`);
+    if (
+      process.env.GRANIT_EXPECT_SOFTWARE_PIPELINE_FALLBACK === "1" &&
+      !browserMessages.some((message) =>
+        message.includes("软件 WebGPU 适配器异步编译失败，回退到按需同步创建管线"),
+      )
+    ) {
+      throw new Error("软件 WebGPU 适配器未经过预期的异步 Pipeline 降级路径");
+    }
+    if (
+      browserMessages.some((message) =>
+        message.includes("软件 WebGPU 适配器异步编译失败，回退到按需同步创建管线"),
+      )
+    ) {
+      console.log("软件 WebGPU 异步 Pipeline 降级及同步渲染回归验证通过");
+    } else {
+      console.log("WebGPU 原生异步 Pipeline 创建回归验证通过");
+    }
 
     if (!usesLocalFixture) return;
     const cancelPage = await browser.newPage();

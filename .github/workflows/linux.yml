@@ -27,6 +27,14 @@ jobs:
         password: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - uses: actions/checkout@v5
+      - name: 恢复锁定 Shader 工具链
+        uses: actions/cache@v5
+        with:
+          path: build/toolchains
+          key: >-
+            shader-toolchain-${{ runner.os }}-
+            ${{ hashFiles('cmake/download_shader_toolchain.cmake',
+            'cmake/GranitShaderToolchain.cmake') }}
       - name: 下载并校验锁定 Shader 工具链
         run: cmake -DDESTINATION=build/toolchains -P cmake/download_shader_toolchain.cmake
       - name: 验证锁定 Shader 工具链
