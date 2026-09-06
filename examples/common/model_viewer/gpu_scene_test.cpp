@@ -201,7 +201,7 @@ TEST_CASE("GPU Scene 事务式创建合并 Buffer 与 Mesh", "[example][model-vi
   upload_progress_log cancelled;
   cancelled.cancel_at_geometry = true;
   CHECK(scene.initialize(renderer.native_handle(), source, 8.0F, record_upload_progress,
-                         &cancelled) == granit::result::not_ready);
+                         &cancelled) == granit::result::cancelled);
   CHECK(scene.meshes().front().native_handle() == original_mesh);
   CHECK(scene.initialize(renderer.native_handle(), source, 0.0F) ==
         granit::result::invalid_argument);

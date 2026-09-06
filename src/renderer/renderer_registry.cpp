@@ -321,6 +321,7 @@ granit_result renderer_registry::destroy(granit_renderer renderer) {
   std::vector<std::shared_ptr<compute_pipeline_record>> native_compute_pipelines;
   std::vector<std::shared_ptr<upload_batch_record>> native_upload_batches;
   std::vector<std::shared_ptr<timestamp_query_pool_record>> native_timestamp_query_pools;
+  std::vector<std::shared_ptr<async_operation_record>> native_async_operations;
   {
     std::unique_lock lock{mutex_};
     if (handles_.find(renderer, resource_type::renderer, 0) == nullptr) {
@@ -431,6 +432,11 @@ granit_result renderer_registry::destroy(granit_renderer renderer) {
           lifecycle.add(lifecycle_resource_type::timestamp_query_pool, handle,
                         record->metadata.creation_sequence);
       }
+      for (const auto& [handle, record] : async_operations_) {
+        if (record->owner == state)
+          lifecycle.add(lifecycle_resource_type::async_operation, handle,
+                        record->metadata.creation_sequence);
+      }
     }
     for (auto frame = frames_.begin(); frame != frames_.end();) {
       if (frame->second->owner == state) {
@@ -467,6 +473,17 @@ granit_result renderer_registry::destroy(granit_renderer renderer) {
         query = timestamp_query_pools_.erase(query);
       } else {
         ++query;
+      }
+    }
+    for (auto operation = async_operations_.begin(); operation != async_operations_.end();) {
+      if (operation->second->owner == state) {
+        static_cast<void>(operation->second->state->request_cancel());
+        native_async_operations.push_back(std::move(operation->second));
+        static_cast<void>(
+            handles_.erase(operation->first, resource_type::async_operation, state->domain()));
+        operation = async_operations_.erase(operation);
+      } else {
+        ++operation;
       }
     }
     for (auto batch = upload_batches_.begin(); batch != upload_batches_.end();) {
@@ -607,6 +624,7 @@ granit_result renderer_registry::destroy(granit_renderer renderer) {
     static_cast<void>(queue->wait_for_all_submissions());
   native_command_recorders.clear();
   native_timestamp_query_pools.clear();
+  native_async_operations.clear();
   native_upload_batches.clear();
   if (retirement)
     static_cast<void>(retirement->collect_retired());

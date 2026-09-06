@@ -167,7 +167,9 @@ CPU/GPU Scene、PBR 和 Environment Map。详细构建及 URL 用法见
 [浏览器 WebGPU 示例](webgpu-browser-example.md)。
 
 `granit_web_platform_smoke.html` 保留为自动化 Fixture。它验证模型 Fetch、PBR 绘制、60 帧循环、
-输入、Resize、错误资产诊断和退出时资源归零，并覆盖 WebGPU 资源传输与 Mipmap。Fixture 的 glTF
+输入、Resize、分阶段加载、取消回滚、错误资产诊断和退出时资源归零，并覆盖 WebGPU 资源传输与
+Mipmap。浏览器加载在 CPU 与 GPU 资源边界通过 Asyncify 让出事件循环，进度取自已完成工作项；
+Fixture 的 glTF
 是用于确定性测试的三角模型，因此 Smoke 页面显示三角形不表示正式查看器回退。自动化测试还会
 依次切换 1×/全关闭与 4×/FXAA/Specular AA 配置，并按设备上限验证各向异性重建：
 

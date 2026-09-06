@@ -51,11 +51,23 @@ granit_result result = granit_renderer_get_limits(renderer, &limits);
 时不会静默降低样本数。`max_sampler_anisotropy` 至少为 1；值为 1 表示不能启用各向异性过滤。
 C++ `renderer_limits::supports_sample_count` 提供对应的便捷检查。
 
-`supported_features` 是可选 Renderer 能力位。当前 Vulkan 提供
-`GRANIT_RENDERER_FEATURE_TIMESTAMP_QUERY_BIT`；浏览器 WebGPU 不提供该位，创建 Timestamp Query
-Pool 会一致地返回 `GRANIT_ERROR_UNSUPPORTED`。C++ 可通过
-`renderer_limits::supports_timestamp_queries()` 判断。浏览器查询结果不能同步阻塞主线程，因此在
-公共查询契约改为异步前，不用零值或 CPU 时间模拟 GPU Timestamp。
+`supported_features` 是可选 Renderer 能力位。Vulkan 支持
+`GRANIT_RENDERER_FEATURE_TIMESTAMP_QUERY_BIT`；浏览器 WebGPU 仅在 Adapter 实际暴露并成功启用
+`timestamp-query` 时提供该位，否则创建 Timestamp Query Pool 返回
+`GRANIT_ERROR_UNSUPPORTED`。C++ 可通过 `renderer_limits::supports_timestamp_queries()` 判断。
+浏览器应使用异步结果入口轮询完成状态；Granit 不以零值或 CPU 时间模拟 GPU Timestamp。
+
+## 异步操作
+
+`granit_async_operation` 是 Renderer 所属的 64 位句柄。调用方通过
+`granit_async_operation_get_status` 非阻塞查询 `PENDING`、`RUNNING`、`SUCCEEDED`、`FAILED` 或
+`CANCELLED`；完成前结果码为 `GRANIT_ERROR_NOT_READY`。取消入口只提交请求，不保证撤销已提交的
+GPU 工作。操作完成或不再需要后必须显式销毁，C++ `async_operation` 提供 move-only RAII。
+
+Timestamp 异步读取不会持有调用方结果缓冲区：先创建操作并轮询，成功后再通过
+`granit_timestamp_query_pool_copy_results` 复制结果。操作、Query Pool 和 Renderer 必须属于同一
+资源域；无效、跨 Renderer、类型错误或已经销毁的句柄均返回稳定错误。详细迁移示例见
+[从 0.12 迁移到 0.13](../guides/migrate-0.12-to-0.13.md)。
 
 ## Shader 能力
 

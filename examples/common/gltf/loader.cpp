@@ -299,7 +299,8 @@ load_result convert_primitive(const cgltf_data& data, const cgltf_primitive& sou
   return {};
 }
 
-load_result convert_meshes(const cgltf_data& data, scene& output) {
+load_result convert_meshes(const cgltf_data& data, scene& output, load_progress_callback progress,
+                           void* progress_user_data) {
   output.meshes.reserve(data.meshes_count);
   for (cgltf_size mesh_index = 0; mesh_index < data.meshes_count; ++mesh_index) {
     const auto& source = data.meshes[mesh_index];
@@ -318,6 +319,11 @@ load_result convert_meshes(const cgltf_data& data, scene& output) {
         return result;
     }
     output.meshes.push_back(std::move(target));
+    if (progress != nullptr &&
+        !progress({load_stage::meshes, static_cast<std::uint32_t>(mesh_index + 1),
+                   static_cast<std::uint32_t>(data.meshes_count)},
+                  progress_user_data))
+      return failure(load_error::cancelled, "glTF Mesh 转换已取消");
   }
   return {};
 }
@@ -403,8 +409,8 @@ load_result convert_samplers(const cgltf_data& data, scene& output) {
   return {};
 }
 
-load_result convert_images(const cgltf_data& data, const resource_resolver* resolver,
-                           scene& output) {
+load_result convert_images(const cgltf_data& data, const resource_resolver* resolver, scene& output,
+                           load_progress_callback progress, void* progress_user_data) {
   output.images.reserve(data.images_count);
   for (cgltf_size index = 0; index < data.images_count; ++index) {
     const auto& source = data.images[index];
@@ -442,6 +448,10 @@ load_result convert_images(const cgltf_data& data, const resource_resolver* reso
     if (source.name != nullptr)
       target.name = source.name;
     output.images.push_back(std::move(target));
+    if (progress != nullptr && !progress({load_stage::images, static_cast<std::uint32_t>(index + 1),
+                                          static_cast<std::uint32_t>(data.images_count)},
+                                         progress_user_data))
+      return failure(load_error::cancelled, "glTF Image 解码已取消");
   }
   return {};
 }
@@ -550,7 +560,7 @@ load_result discover_external_resources(std::span<const std::byte> document,
 }
 
 load_result load(std::span<const std::byte> document, const resource_resolver* resolver,
-                 scene& output) {
+                 scene& output, load_progress_callback progress, void* progress_user_data) {
   if (document.empty())
     return failure(load_error::truncated_data, "glTF 文档为空");
   try {
@@ -560,6 +570,14 @@ load_result load(std::span<const std::byte> document, const resource_resolver* r
     if (parse_result != cgltf_result_success)
       return map_parse_error(parse_result);
     data_owner data(raw_data, &cgltf_free);
+    const auto report = [&](load_stage stage, std::uint32_t completed,
+                            std::uint32_t total) -> load_result {
+      return progress == nullptr || progress({stage, completed, total}, progress_user_data)
+                 ? load_result{}
+                 : failure(load_error::cancelled, "glTF 加载已取消");
+    };
+    if (auto result = report(load_stage::document, 1, 1); !result)
+      return result;
 
     for (cgltf_size index = 0; index < data->extensions_required_count; ++index) {
       if (std::string_view(data->extensions_required[index]) == "KHR_materials_transmission") {
@@ -570,6 +588,10 @@ load_result load(std::span<const std::byte> document, const resource_resolver* r
 
     std::vector<std::vector<std::byte>> external_buffers;
     if (auto result = load_external_buffers(*data, resolver, external_buffers); !result)
+      return result;
+    if (auto result = report(load_stage::buffers, static_cast<std::uint32_t>(data->buffers_count),
+                             static_cast<std::uint32_t>(data->buffers_count));
+        !result)
       return result;
     if (auto result = validate_buffer_ranges(*data); !result)
       return result;
@@ -582,13 +604,31 @@ load_result load(std::span<const std::byte> document, const resource_resolver* r
     scene candidate;
     if (auto result = convert_samplers(*data, candidate); !result)
       return result;
-    if (auto result = convert_images(*data, resolver, candidate); !result)
+    if (auto result = convert_images(*data, resolver, candidate, progress, progress_user_data);
+        !result)
       return result;
+    if (data->images_count == 0) {
+      if (auto result = report(load_stage::images, 0, 0); !result)
+        return result;
+    }
     if (auto result = convert_materials(*data, candidate); !result)
       return result;
-    if (auto result = convert_meshes(*data, candidate); !result)
+    if (auto result =
+            report(load_stage::materials, static_cast<std::uint32_t>(data->materials_count),
+                   static_cast<std::uint32_t>(data->materials_count));
+        !result)
       return result;
+    if (auto result = convert_meshes(*data, candidate, progress, progress_user_data); !result)
+      return result;
+    if (data->meshes_count == 0) {
+      if (auto result = report(load_stage::meshes, 0, 0); !result)
+        return result;
+    }
     if (auto result = convert_nodes(*data, candidate); !result)
+      return result;
+    if (auto result = report(load_stage::nodes, static_cast<std::uint32_t>(data->nodes_count),
+                             static_cast<std::uint32_t>(data->nodes_count));
+        !result)
       return result;
     if (auto result = validate_material_inputs(candidate); !result)
       return result;

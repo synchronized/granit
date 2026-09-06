@@ -41,6 +41,7 @@ struct result {
   static const result surface_lost;
   static const result out_of_date;
   static const result not_ready;
+  static const result cancelled;
 
 private:
   granit_result value_ = GRANIT_ERROR_UNKNOWN;
@@ -61,6 +62,7 @@ inline constexpr result result::no_suitable_device{GRANIT_ERROR_NO_SUITABLE_DEVI
 inline constexpr result result::surface_lost{GRANIT_ERROR_SURFACE_LOST};
 inline constexpr result result::out_of_date{GRANIT_ERROR_OUT_OF_DATE};
 inline constexpr result result::not_ready{GRANIT_ERROR_NOT_READY};
+inline constexpr result result::cancelled{GRANIT_ERROR_CANCELLED};
 
 [[nodiscard]] constexpr granit_result to_native(result value) noexcept {
   return value.native();

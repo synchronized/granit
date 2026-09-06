@@ -7,6 +7,7 @@
 #include <atomic>
 #include <cstddef>
 #include <cstdint>
+#include <functional>
 #include <memory>
 #include <mutex>
 #include <span>
@@ -16,6 +17,7 @@
 #include <vector>
 
 #include <granit/renderer/buffer.h>
+#include <granit/renderer/async_operation.h>
 #include <granit/renderer/command_recorder.h>
 #include <granit/renderer/frame_context.h>
 #include <granit/renderer/pipeline.h>
@@ -50,6 +52,9 @@
 
 namespace granit::detail {
 
+class async_operation_state_machine;
+enum class async_operation_kind : std::uint8_t { unknown, timestamp_results };
+
 /** 线程安全地管理进程内公开 renderer 句柄。 */
 class renderer_registry {
 public:
@@ -73,6 +78,18 @@ public:
   [[nodiscard]] granit_result get_info(granit_renderer renderer, granit_renderer_info& info);
   [[nodiscard]] granit_result get_resource_stats(granit_renderer renderer,
                                                  granit_renderer_resource_stats& stats);
+  [[nodiscard]] granit_result register_async_operation(
+      granit_renderer renderer, std::shared_ptr<async_operation_state_machine> state,
+      granit_async_operation& operation, std::function<void()> poll = {},
+      std::shared_ptr<void> payload = {},
+      async_operation_kind kind = async_operation_kind::unknown);
+  [[nodiscard]] granit_result get_async_operation_status(
+      granit_renderer renderer, granit_async_operation operation,
+      granit_async_operation_status& status);
+  [[nodiscard]] granit_result request_async_operation_cancel(
+      granit_renderer renderer, granit_async_operation operation);
+  [[nodiscard]] granit_result destroy_async_operation(granit_renderer renderer,
+                                                      granit_async_operation operation);
   [[nodiscard]] granit_result get_status(granit_renderer renderer, granit_renderer_status& status);
   [[nodiscard]] granit_result process_events(granit_renderer renderer);
   [[nodiscard]] granit_result import_pipeline_cache(granit_renderer renderer, const void* data,
@@ -314,6 +331,12 @@ public:
                                                           granit_timestamp_query_pool pool,
                                                           std::uint32_t first,
                                                           std::span<std::uint64_t> nanoseconds);
+  [[nodiscard]] granit_result get_timestamp_query_results_async(
+      granit_renderer renderer, granit_timestamp_query_pool pool, std::uint32_t first,
+      std::uint32_t count, granit_async_operation& operation);
+  [[nodiscard]] granit_result copy_timestamp_query_results(
+      granit_renderer renderer, granit_timestamp_query_pool pool,
+      granit_async_operation operation, std::span<std::uint64_t> nanoseconds);
   [[nodiscard]] granit_result destroy_timestamp_query_pool(granit_renderer renderer,
                                                            granit_timestamp_query_pool pool);
   [[nodiscard]] granit_result reset_timestamp_queries(granit_renderer renderer,
@@ -365,6 +388,8 @@ private:
   struct frame_context_slot;
   struct frame_context_record;
   struct timestamp_query_pool_record;
+  struct async_operation_record;
+  struct timestamp_result_operation;
   struct frame_record;
   struct upload_entry;
   struct upload_batch_record;
@@ -410,6 +435,8 @@ private:
   std::unordered_map<granit_frame_context, std::shared_ptr<frame_context_record>> frame_contexts_;
   std::unordered_map<granit_timestamp_query_pool, std::shared_ptr<timestamp_query_pool_record>>
       timestamp_query_pools_;
+  std::unordered_map<granit_async_operation, std::shared_ptr<async_operation_record>>
+      async_operations_;
   std::unordered_map<granit_frame, std::shared_ptr<frame_record>> frames_;
   std::unordered_map<granit_upload_batch, std::shared_ptr<upload_batch_record>> upload_batches_;
   std::uint32_t next_domain_{1};

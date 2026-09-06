@@ -12,6 +12,7 @@
 #include <granit/granit.h>
 #include <granit/math/types.hpp>
 #include <granit/renderer/buffer.hpp>
+#include <granit/renderer/async_operation.hpp>
 #include <granit/renderer/command_recorder.hpp>
 #include <granit/renderer/frame_context.hpp>
 #include <granit/renderer/pipeline.hpp>

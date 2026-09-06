@@ -19,6 +19,7 @@
 
 ## 稳定化与跨平台
 
+- [2026-09-06 Granit 0.13.0 发布验收](2026-09-06-v0.13.0-release-acceptance.md)
 - [2026-09-06 Granit 0.11.0 发布验收](2026-09-06-v0.11.0-release-acceptance.md)
 - [2026-09-06 Granit 0.12.0 发布验收](2026-09-06-v0.12.0-release-acceptance.md)
 - [2026-09-06 S-26A WebGPU 能力审计](2026-09-06-s26a-webgpu-capability-audit.md)

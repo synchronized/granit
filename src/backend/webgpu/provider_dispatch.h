@@ -276,6 +276,23 @@ public:
                             granit_webgpu_provider_command_recorder recorder,
                             granit_webgpu_provider_texture texture,
                             const granit_webgpu_provider_texture_mipmap_range& range) noexcept;
+  [[nodiscard]] granit_result
+  create_timestamp_query_pool(granit_webgpu_provider_instance instance, std::uint32_t count,
+                              granit_webgpu_provider_timestamp_query_pool* pool) noexcept;
+  [[nodiscard]] granit_result
+  destroy_timestamp_query_pool(granit_webgpu_provider_instance instance,
+                               granit_webgpu_provider_timestamp_query_pool pool) noexcept;
+  [[nodiscard]] granit_result
+  recorder_reset_timestamp_queries(granit_webgpu_provider_instance instance,
+                                   granit_webgpu_provider_command_recorder recorder,
+                                   granit_webgpu_provider_timestamp_query_pool pool,
+                                   std::uint32_t first, std::uint32_t count) noexcept;
+  [[nodiscard]] granit_result recorder_write_timestamp(
+      granit_webgpu_provider_instance instance, granit_webgpu_provider_command_recorder recorder,
+      granit_webgpu_provider_timestamp_query_pool pool, std::uint32_t index) noexcept;
+  [[nodiscard]] granit_result read_timestamp_query_results(
+      granit_webgpu_provider_instance instance, granit_webgpu_provider_timestamp_query_pool pool,
+      std::uint32_t first, std::uint64_t* values, std::uint32_t count) noexcept;
   void close() noexcept;
 
   [[nodiscard]] bool is_open() const noexcept { return api_ != nullptr; }

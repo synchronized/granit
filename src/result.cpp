@@ -35,6 +35,8 @@ extern "C" const char* granit_result_message(granit_result result) {
     return "swapchain out of date";
   case GRANIT_ERROR_NOT_READY:
     return "operation temporarily not ready";
+  case GRANIT_ERROR_CANCELLED:
+    return "operation cancelled";
   default:
     return "unrecognized result";
   }

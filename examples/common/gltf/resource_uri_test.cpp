@@ -34,6 +34,12 @@ private:
   std::string path_;
 };
 
+bool cancel_load(const granit::example::gltf::load_progress& progress, void* user_data) {
+  auto& calls = *static_cast<std::uint32_t*>(user_data);
+  ++calls;
+  return progress.stage != granit::example::gltf::load_stage::document;
+}
+
 TEST_CASE("发现 glTF 外部资源并去重") {
   constexpr std::string_view document = R"({
     "asset":{"version":"2.0"},
@@ -51,6 +57,18 @@ TEST_CASE("发现 glTF 外部资源并去重") {
   REQUIRE(resources.size() == 2);
   CHECK(resources[0] == "scene.bin");
   CHECK(resources[1] == "textures/base.png");
+}
+
+TEST_CASE("glTF Loader 在阶段边界支持取消且保留输出") {
+  constexpr std::string_view document = R"({"asset":{"version":"2.0"}})";
+  granit::example::gltf::scene scene;
+  scene.nodes.emplace_back();
+  std::uint32_t calls{};
+  const auto result =
+      granit::example::gltf::load(bytes(document), nullptr, scene, cancel_load, &calls);
+  CHECK(result.error == granit::example::gltf::load_error::cancelled);
+  CHECK(calls == 1);
+  CHECK(scene.nodes.size() == 1);
 }
 
 TEST_CASE("发现外部资源失败时保留原输出") {

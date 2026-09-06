@@ -542,4 +542,10 @@ webgpu_command_adapter::reset(backend_command_recorder_resource& resource) const
   return GRANIT_SUCCESS;
 }
 
+granit_webgpu_provider_command_recorder webgpu_command_adapter::native_recorder(
+    backend_command_recorder_resource& resource) const noexcept {
+  const auto* recorder = as_recorder(resource);
+  return recorder != nullptr && recorder->command_buffer_ == 0 ? recorder->recorder_ : 0;
+}
+
 } // namespace granit::detail

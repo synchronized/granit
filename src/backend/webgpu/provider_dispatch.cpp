@@ -15,8 +15,8 @@ bool is_compatible(const granit_webgpu_provider_api* api,
   constexpr std::size_t minimum_size = offsetof(granit_webgpu_provider_api, instance_api) +
                                        sizeof(const granit_webgpu_provider_instance_api*);
   constexpr std::size_t minimum_instance_api_size =
-      offsetof(granit_webgpu_provider_instance_api, recorder_generate_mipmaps) +
-      sizeof(granit_webgpu_provider_recorder_generate_mipmaps_fn);
+      offsetof(granit_webgpu_provider_instance_api, read_timestamp_query_results) +
+      sizeof(granit_webgpu_provider_read_timestamp_query_results_fn);
   return api != nullptr && api->struct_size >= minimum_size &&
          api->abi_version == GRANIT_WEBGPU_PROVIDER_ABI_VERSION && api->kind == expected_kind &&
          api->reserved == 0 && api->name != nullptr && api->name_length != 0 &&
@@ -87,7 +87,12 @@ bool is_compatible(const granit_webgpu_provider_api* api,
          api->instance_api->recorder_copy_texture_to_buffer_v2 != nullptr &&
          api->instance_api->recorder_copy_texture != nullptr &&
          api->instance_api->recorder_fill_buffer != nullptr &&
-         api->instance_api->recorder_generate_mipmaps != nullptr;
+         api->instance_api->recorder_generate_mipmaps != nullptr &&
+         api->instance_api->create_timestamp_query_pool != nullptr &&
+         api->instance_api->destroy_timestamp_query_pool != nullptr &&
+         api->instance_api->recorder_reset_timestamp_queries != nullptr &&
+         api->instance_api->recorder_write_timestamp != nullptr &&
+         api->instance_api->read_timestamp_query_results != nullptr;
 }
 
 bool is_valid_host(const granit_webgpu_provider_host_api* host) noexcept {
@@ -1073,6 +1078,45 @@ granit_result webgpu_provider_dispatch::recorder_generate_mipmaps(
   } catch (...) {
     return GRANIT_ERROR_INTERNAL;
   }
+}
+
+granit_result webgpu_provider_dispatch::create_timestamp_query_pool(
+    granit_webgpu_provider_instance instance, std::uint32_t count,
+    granit_webgpu_provider_timestamp_query_pool* pool) noexcept {
+  return api_ != nullptr ? api_->instance_api->create_timestamp_query_pool(instance, count, pool)
+                         : GRANIT_ERROR_NOT_READY;
+}
+
+granit_result webgpu_provider_dispatch::destroy_timestamp_query_pool(
+    granit_webgpu_provider_instance instance,
+    granit_webgpu_provider_timestamp_query_pool pool) noexcept {
+  return api_ != nullptr ? api_->instance_api->destroy_timestamp_query_pool(instance, pool)
+                         : GRANIT_ERROR_NOT_READY;
+}
+
+granit_result webgpu_provider_dispatch::recorder_reset_timestamp_queries(
+    granit_webgpu_provider_instance instance, granit_webgpu_provider_command_recorder recorder,
+    granit_webgpu_provider_timestamp_query_pool pool, std::uint32_t first,
+    std::uint32_t count) noexcept {
+  return api_ != nullptr ? api_->instance_api->recorder_reset_timestamp_queries(instance, recorder,
+                                                                                pool, first, count)
+                         : GRANIT_ERROR_NOT_READY;
+}
+
+granit_result webgpu_provider_dispatch::recorder_write_timestamp(
+    granit_webgpu_provider_instance instance, granit_webgpu_provider_command_recorder recorder,
+    granit_webgpu_provider_timestamp_query_pool pool, std::uint32_t index) noexcept {
+  return api_ != nullptr
+             ? api_->instance_api->recorder_write_timestamp(instance, recorder, pool, index)
+             : GRANIT_ERROR_NOT_READY;
+}
+
+granit_result webgpu_provider_dispatch::read_timestamp_query_results(
+    granit_webgpu_provider_instance instance, granit_webgpu_provider_timestamp_query_pool pool,
+    std::uint32_t first, std::uint64_t* values, std::uint32_t count) noexcept {
+  return api_ != nullptr ? api_->instance_api->read_timestamp_query_results(instance, pool, first,
+                                                                            values, count)
+                         : GRANIT_ERROR_NOT_READY;
 }
 
 #undef GRANIT_PROVIDER_DISPATCH_CREATE_METHOD

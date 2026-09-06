@@ -28,6 +28,7 @@ TEST_CASE("结果码保持定宽 C ABI", "[result]") {
   STATIC_CHECK_FALSE(static_cast<bool>(granit::result::invalid_argument));
   STATIC_CHECK(granit::result{}.failed());
   STATIC_CHECK(granit::result::not_ready.native() == GRANIT_ERROR_NOT_READY);
+  STATIC_CHECK(granit::result::cancelled.native() == GRANIT_ERROR_CANCELLED);
   STATIC_CHECK(granit::to_native(granit::result::success) == GRANIT_SUCCESS);
   STATIC_CHECK(granit::from_native(GRANIT_ERROR_INVALID_HANDLE) ==
                granit::result::invalid_handle);

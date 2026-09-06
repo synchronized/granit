@@ -35,6 +35,25 @@ extern "C" granit_result granit_timestamp_query_pool_get_results(granit_renderer
       renderer, pool, first_query, std::span{nanoseconds, query_count});
 }
 
+extern "C" granit_result granit_timestamp_query_pool_get_results_async(
+    granit_renderer renderer, granit_timestamp_query_pool pool, std::uint32_t first_query,
+    std::uint32_t query_count, granit_async_operation* operation) {
+  if (operation == nullptr || query_count == 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  *operation = GRANIT_NULL_HANDLE;
+  return granit::detail::renderer_registry::instance().get_timestamp_query_results_async(
+      renderer, pool, first_query, query_count, *operation);
+}
+
+extern "C" granit_result granit_timestamp_query_pool_copy_results(
+    granit_renderer renderer, granit_timestamp_query_pool pool, granit_async_operation operation,
+    std::uint64_t* nanoseconds, std::uint32_t query_count) {
+  if (nanoseconds == nullptr || query_count == 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  return granit::detail::renderer_registry::instance().copy_timestamp_query_results(
+      renderer, pool, operation, {nanoseconds, query_count});
+}
+
 extern "C" granit_result granit_timestamp_query_pool_destroy(granit_renderer renderer,
                                                              granit_timestamp_query_pool pool) {
   if (renderer == GRANIT_NULL_HANDLE || pool == GRANIT_NULL_HANDLE)

@@ -19,6 +19,7 @@
 #include "backend/contracts/resource_management.h"
 #include "backend/contracts/retirement.h"
 #include "backend/contracts/shader.h"
+#include "backend/contracts/timestamp.h"
 #include "backend/contracts/transfer.h"
 #include "backend/webgpu/command_adapter.h"
 #include "backend/webgpu/pipeline_adapter.h"
@@ -26,6 +27,7 @@
 #include "backend/webgpu/provider_dispatch.h"
 #include "backend/webgpu/resource_adapter.h"
 #include "backend/webgpu/shader_adapter.h"
+#include "backend/webgpu/timestamp_adapter.h"
 
 namespace granit::detail {
 
@@ -41,7 +43,8 @@ class webgpu_renderer_state final : public backend_renderer,
                                     public backend_retirement_renderer,
                                     public backend_wgsl_shader_renderer,
                                     public backend_pipeline_layout_renderer,
-                                    public backend_pipeline_renderer {
+                                    public backend_pipeline_renderer,
+                                    public backend_timestamp_renderer {
 public:
   webgpu_renderer_state() = default;
   ~webgpu_renderer_state();
@@ -224,6 +227,24 @@ public:
   create_graphics_pipeline(const backend_graphics_pipeline_create_info& info,
                            backend_graphics_pipeline_resource& pipeline) noexcept override;
 
+  [[nodiscard]] granit_result create_timestamp_query_pool(
+      std::uint32_t query_count,
+      std::unique_ptr<backend_timestamp_query_pool_resource>& pool) noexcept override;
+  [[nodiscard]] granit_result
+  read_timestamp_query_results(backend_timestamp_query_pool_resource& pool, std::uint32_t first,
+                               std::span<std::uint64_t> values) noexcept override;
+  [[nodiscard]] granit_result reset_timestamp_queries(backend_command_recorder_resource& recorder,
+                                                      backend_timestamp_query_pool_resource& pool,
+                                                      std::uint32_t first,
+                                                      std::uint32_t count) noexcept override;
+  [[nodiscard]] granit_result write_timestamp(backend_command_recorder_resource& recorder,
+                                              backend_timestamp_query_pool_resource& pool,
+                                              granit_timestamp_stage stage,
+                                              std::uint32_t index) noexcept override;
+  [[nodiscard]] granit_result
+  set_timestamp_query_pool_name(backend_timestamp_query_pool_resource& pool,
+                                std::string_view name) noexcept override;
+
   [[nodiscard]] std::unique_ptr<backend_surface_resource> allocate_surface_resource() override;
   [[nodiscard]] std::unique_ptr<backend_swapchain_resource> allocate_swapchain_resource() override;
   [[nodiscard]] granit_result create_win32_surface(void*, void*,
@@ -303,6 +324,7 @@ private:
   std::unique_ptr<webgpu_shader_adapter> shaders_;
   std::unique_ptr<webgpu_pipeline_adapter> pipelines_;
   std::unique_ptr<webgpu_command_adapter> commands_;
+  std::unique_ptr<webgpu_timestamp_adapter> timestamps_;
 };
 
 } // namespace granit::detail

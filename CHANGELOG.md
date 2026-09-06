@@ -8,6 +8,32 @@
 
 ## Unreleased
 
+## 0.13.0 - 2026-09-06
+
+### 新增
+
+- Core 新增后端无关的异步操作句柄、非阻塞状态查询、取消请求、结果查询和 move-only C++20
+  RAII 包装。
+- Timestamp Query 新增异步结果入口；Vulkan 与支持 `timestamp-query` 的浏览器 WebGPU 均通过
+  相同公共契约返回 GPU 纳秒结果。
+- 浏览器 Model Viewer 增加下载、解析、CPU 资产准备、GPU 上传和 Mipmap 的真实分阶段进度、
+  取消及错误阶段报告。
+
+### 变更
+
+- 浏览器 WebGPU 仅在 Adapter 实际暴露且 Device 成功启用 `timestamp-query` 时报告对应能力；
+  不支持设备稳定返回 `GRANIT_ERROR_UNSUPPORTED`。
+- 浏览器加载阶段在 CPU/GPU 资源边界让出事件循环，加载期间页面可持续重绘并响应取消；失败或
+  取消会回滚临时资源。
+- Vulkan/WebGPU Smoke 统一验证异步状态、结果码、Timestamp 单调性、共享像素 Fixture 和关闭前
+  资源归零。
+
+### 兼容性与迁移
+
+- Core 新增 C ABI 导出及异步操作资源类型，既有持久化资产格式不变。0.x Consumer 应重新编译并
+  将 CMake 请求版本更新为 0.13。完整步骤见
+  [从 0.12 迁移到 0.13](docs/guides/migrate-0.12-to-0.13.md)。
+
 ## 0.12.0 - 2026-09-06
 
 ### 新增

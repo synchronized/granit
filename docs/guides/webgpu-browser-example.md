@@ -42,13 +42,17 @@ http://127.0.0.1:8000/granit_model_viewer_web.html?model=https%3A%2F%2Fexample.c
 远程服务器必须允许跨域访问模型及其外部 Buffer、纹理。页面必须通过 HTTP 服务打开，不能直接
 双击 HTML 文件。
 
+模型下载后，页面会按文档解析、Buffer、图片、材质、网格、节点和 GPU 资源阶段显示真实进度。
+阶段边界通过 Emscripten Asyncify 让出浏览器事件循环，因此页面仍可重绘并响应 Cancel；取消后
+返回稳定的 `GRANIT_ERROR_CANCELLED`，已经创建的临时资源会随事务回滚。
+
 若初始化失败，请确认浏览器已启用 WebGPU，并从开发者工具控制台查看
 `GRANIT_DIAGNOSTIC` 与 `GRANIT_STATUS` 日志。
 
 ## 自动验证
 
 仓库浏览器测试会启动无头 Chrome，验证 Renderer 生命周期、共享 Fixture、资源传输、Mipmap、
-键盘和鼠标输入转发：
+分阶段进度、加载取消、错误回滚以及键盘和鼠标输入转发：
 
 ```powershell
 cd web/tests

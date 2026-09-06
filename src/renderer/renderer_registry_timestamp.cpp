@@ -6,6 +6,7 @@
 
 #include "renderer/renderer_registry_helpers.h"
 
+#include <algorithm>
 #include <new>
 #include <utility>
 
@@ -73,6 +74,91 @@ granit_result renderer_registry::get_timestamp_query_results(granit_renderer ren
   }
   std::lock_guard lock{record->mutex};
   return record->timestamps->read_timestamp_query_results(*record->native, first, nanoseconds);
+}
+
+granit_result renderer_registry::get_timestamp_query_results_async(
+    granit_renderer renderer, granit_timestamp_query_pool pool, std::uint32_t first,
+    std::uint32_t count, granit_async_operation& operation) {
+  std::shared_ptr<timestamp_query_pool_record> query;
+  {
+    std::lock_guard lock{mutex_};
+    const auto owner = backend_renderers_.find(renderer);
+    if (owner == backend_renderers_.end() ||
+        handles_.find(pool, resource_type::timestamp_query_pool, owner->second->domain()) == nullptr)
+      return GRANIT_ERROR_INVALID_HANDLE;
+    const auto found = timestamp_query_pools_.find(pool);
+    if (found == timestamp_query_pools_.end() || found->second->owner != owner->second)
+      return GRANIT_ERROR_INVALID_HANDLE;
+    query = found->second;
+  }
+
+  try {
+    auto state = std::make_shared<async_operation_state_machine>();
+    auto payload = std::make_shared<timestamp_result_operation>();
+    payload->pool = query;
+    payload->first = first;
+    payload->values.resize(count);
+    const auto poll = [state, payload] {
+      auto operation_status = state->status();
+      if (operation_status.state == GRANIT_ASYNC_OPERATION_STATE_PENDING) {
+        if (!state->begin())
+          return;
+        operation_status = state->status();
+      }
+      if (operation_status.state != GRANIT_ASYNC_OPERATION_STATE_RUNNING)
+        return;
+      std::lock_guard lock{payload->mutex};
+      const auto result = payload->pool->timestamps->read_timestamp_query_results(
+          *payload->pool->native, payload->first, payload->values);
+      if (result != GRANIT_ERROR_NOT_READY)
+        state->complete(result);
+    };
+    return register_async_operation(renderer, std::move(state), operation, poll,
+                                    std::move(payload), async_operation_kind::timestamp_results);
+  } catch (const std::bad_alloc&) {
+    return GRANIT_ERROR_OUT_OF_MEMORY;
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+granit_result renderer_registry::copy_timestamp_query_results(
+    granit_renderer renderer, granit_timestamp_query_pool pool,
+    granit_async_operation operation, std::span<std::uint64_t> nanoseconds) {
+  std::shared_ptr<async_operation_record> async;
+  std::shared_ptr<timestamp_query_pool_record> query;
+  {
+    std::lock_guard lock{mutex_};
+    const auto owner = backend_renderers_.find(renderer);
+    if (owner == backend_renderers_.end())
+      return GRANIT_ERROR_INVALID_HANDLE;
+    const auto query_found = timestamp_query_pools_.find(pool);
+    const auto operation_found = async_operations_.find(operation);
+    if (query_found == timestamp_query_pools_.end() ||
+        operation_found == async_operations_.end() || query_found->second->owner != owner->second ||
+        operation_found->second->owner != owner->second)
+      return GRANIT_ERROR_INVALID_HANDLE;
+    query = query_found->second;
+    async = operation_found->second;
+  }
+  if (async->poll)
+    async->poll();
+  const auto status = async->state->status();
+  if (status.state == GRANIT_ASYNC_OPERATION_STATE_PENDING ||
+      status.state == GRANIT_ASYNC_OPERATION_STATE_RUNNING)
+    return GRANIT_ERROR_NOT_READY;
+  if (status.state == GRANIT_ASYNC_OPERATION_STATE_CANCELLED)
+    return GRANIT_ERROR_CANCELLED;
+  if (status.state == GRANIT_ASYNC_OPERATION_STATE_FAILED)
+    return status.result;
+  if (async->kind != async_operation_kind::timestamp_results)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  const auto payload = std::static_pointer_cast<timestamp_result_operation>(async->payload);
+  if (!payload || payload->pool != query || payload->values.size() != nanoseconds.size())
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  std::lock_guard lock{payload->mutex};
+  std::ranges::copy(payload->values, nanoseconds.begin());
+  return GRANIT_SUCCESS;
 }
 
 granit_result renderer_registry::destroy_timestamp_query_pool(granit_renderer renderer,
