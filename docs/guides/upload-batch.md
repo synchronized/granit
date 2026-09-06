@@ -3,10 +3,10 @@
 
 # Upload Batch
 
-Upload Batch 将多次 Buffer 和 Texture 写入合并为一次 Vulkan Queue 提交和一次同步等待。它适合
-初始化大量 GPU 资源，或在一帧中集中上传多个小数据块。
+Upload Batch 将多次 Buffer 和 Texture 写入合并为一次后端 Queue 提交。它适合初始化大量 GPU
+资源，或在一帧中集中上传多个小数据块；调用方可选择同步等待或通过异步操作轮询完成。
 
-当前实现是 P-04B 的同步批量阶段。API 和 ABI 仍处于早期开发阶段，不保证兼容性。
+API 和 ABI 仍处于 0.x 开发阶段，不保证跨次版本兼容性。
 
 ## 基本语义
 

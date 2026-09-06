@@ -165,7 +165,8 @@ D-03-graphics-pipeline.md
 - [S-28：0.13.0 异步 GPU 操作与 Web 运行时完善](S-28-0.13.0-async-gpu-and-web-runtime.md)——
   已完成；异步操作、WebGPU Timestamp、浏览器分阶段加载、跨后端一致性与发布验收均已通过。
 - [S-29：0.14.0 异步管线指标与资源流送](S-29-0.14.0-async-pipeline-metrics-and-streaming.md)——
-  已确认；优先让 Render Pipeline 内部使用异步 Timestamp，再补齐有界上传与失败回滚。
+  已完成；Render Pipeline 异步指标、有界异步 Upload Batch、Model Viewer 接入和跨后端验收均已
+  落地。
 
 ## 状态
 

@@ -56,11 +56,12 @@
 - [从 0.10 迁移到 0.11](guides/migrate-0.10-to-0.11.md)
 - [从 0.11 迁移到 0.12](guides/migrate-0.11-to-0.12.md)
 - [从 0.12 迁移到 0.13](guides/migrate-0.12-to-0.13.md)
+- [从 0.13 迁移到 0.14](guides/migrate-0.13-to-0.14.md)
 - [从 0.8 迁移到 0.9](guides/migrate-0.8-to-0.9.md)
 - [示例程序及运行方式](guides/examples.md)
 - [运行跨后端模型查看器](guides/model-viewer.md)
 - [运行浏览器 WebGPU 平台 Smoke](guides/webgpu-browser-example.md)
-- [同步批量上传](guides/upload-batch.md)
+- [批量与异步上传](guides/upload-batch.md)
 - [纹理同步回读](guides/texture-readback.md)
 - [第三方 UI 与字体适配](guides/third-party-ui-adapters.md)
 
