@@ -106,6 +106,8 @@ public:
   [[nodiscard]] granit_result end(backend_command_recorder_resource& resource) const noexcept;
   [[nodiscard]] granit_result submit(backend_command_recorder_resource& resource) const noexcept;
   [[nodiscard]] granit_result reset(backend_command_recorder_resource& resource) const noexcept;
+  [[nodiscard]] granit_webgpu_provider_command_recorder
+  native_recorder(backend_command_recorder_resource& resource) const noexcept;
 
 private:
   std::shared_ptr<webgpu_command_context> context_;

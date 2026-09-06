@@ -12,6 +12,7 @@
 #include <cstdint>
 #include <cstring>
 #include <limits>
+#include <memory>
 #include <mutex>
 #include <new>
 #include <string>
@@ -107,6 +108,24 @@ struct webgpu_instance {
     std::uint64_t index_available;
     std::uint32_t index_element_size;
     std::vector<WGPUBuffer> temporary_buffers;
+    std::vector<granit_webgpu_provider_timestamp_query_pool> timestamp_pools;
+  };
+  struct timestamp_query_record {
+    WGPUQuerySet query_set{};
+    WGPUBuffer resolve_buffer{};
+    WGPUBuffer read_buffer{};
+    std::uint32_t count{};
+    std::atomic_uint32_t map_state{};
+    std::vector<std::uint64_t> values;
+
+    ~timestamp_query_record() {
+      if (read_buffer != nullptr)
+        wgpuBufferRelease(read_buffer);
+      if (resolve_buffer != nullptr)
+        wgpuBufferRelease(resolve_buffer);
+      if (query_set != nullptr)
+        wgpuQuerySetRelease(query_set);
+    }
   };
   struct surface_record {
     void* surface;
@@ -151,6 +170,9 @@ struct webgpu_instance {
   std::unordered_map<granit_webgpu_provider_command_recorder, command_recorder_record>
       command_recorders;
   std::unordered_map<granit_webgpu_provider_command_buffer, WGPUCommandBuffer> command_buffers;
+  std::unordered_map<granit_webgpu_provider_timestamp_query_pool,
+                     std::shared_ptr<timestamp_query_record>>
+      timestamp_queries;
   std::unordered_map<granit_webgpu_provider_surface, surface_record> surfaces;
   std::unordered_map<granit_webgpu_provider_swapchain, swapchain_record> swapchains;
 
@@ -183,6 +205,10 @@ struct map_request {
   WGPUMapAsyncStatus status{};
 };
 
+struct timestamp_map_request {
+  std::shared_ptr<webgpu_instance::timestamp_query_record> query;
+};
+
 std::mutex instances_mutex;
 std::unordered_map<granit_webgpu_provider_instance, webgpu_instance*> instances;
 std::atomic_uint64_t next_instance{1};
@@ -198,6 +224,7 @@ std::atomic_uint64_t next_render_pipeline{1};
 std::atomic_uint64_t next_compute_pipeline{1};
 std::atomic_uint64_t next_command_recorder{1};
 std::atomic_uint64_t next_command_buffer{1};
+std::atomic_uint64_t next_timestamp_query_pool{1};
 std::atomic_uint64_t next_swapchain{1};
 std::atomic_uint64_t next_surface{1};
 #if defined(GRANIT_WEBGPU_DEFER_INITIALIZATION_TEST)
@@ -262,6 +289,7 @@ void release_resources(webgpu_instance& state) noexcept {
     wgpuCommandBufferRelease(command_buffer);
   }
   state.command_buffers.clear();
+  state.timestamp_queries.clear();
   for (const auto& [handle, recorder] : state.command_recorders) {
     static_cast<void>(handle);
     if (recorder.pass != nullptr)
@@ -438,6 +466,9 @@ void receive_device_async(WGPURequestDeviceStatus status, WGPUDevice device, WGP
         0,
         1 | 4,
         16.0F,
+        wgpuDeviceHasFeature(device, WGPUFeatureName_TimestampQuery)
+            ? GRANIT_WEBGPU_PROVIDER_FEATURE_TIMESTAMP_QUERY_BIT
+            : UINT64_C(0),
     };
     state.lifecycle.mark_ready();
     constexpr char diagnostic[] = "Emscripten WebGPU adapter and device are ready";
@@ -456,6 +487,11 @@ void receive_adapter_async(WGPURequestAdapterStatus status, WGPUAdapter adapter,
     }
     state.adapter = adapter;
     WGPUDeviceDescriptor descriptor = WGPU_DEVICE_DESCRIPTOR_INIT;
+    const WGPUFeatureName timestamp_feature = WGPUFeatureName_TimestampQuery;
+    if (wgpuAdapterHasFeature(adapter, timestamp_feature)) {
+      descriptor.requiredFeatureCount = 1;
+      descriptor.requiredFeatures = &timestamp_feature;
+    }
     descriptor.deviceLostCallbackInfo.mode = WGPUCallbackMode_AllowSpontaneous;
     descriptor.deviceLostCallbackInfo.callback = receive_device_lost;
     descriptor.deviceLostCallbackInfo.userdata1 = &state;
@@ -476,6 +512,24 @@ void receive_map(WGPUMapAsyncStatus status, WGPUStringView message, void* data, 
   if (status != WGPUMapAsyncStatus_Success) {
     emit_dawn_message(request.host, message);
   }
+}
+
+void receive_timestamp_map(WGPUMapAsyncStatus status, WGPUStringView, void* data, void*) noexcept {
+  std::unique_ptr<timestamp_map_request> request{static_cast<timestamp_map_request*>(data)};
+  auto& query = *request->query;
+  if (status != WGPUMapAsyncStatus_Success) {
+    query.map_state.store(3, std::memory_order_release);
+    return;
+  }
+  const auto size = static_cast<std::size_t>(query.count) * sizeof(std::uint64_t);
+  const auto* mapped = wgpuBufferGetConstMappedRange(query.read_buffer, 0, size);
+  if (mapped == nullptr) {
+    query.map_state.store(3, std::memory_order_release);
+    return;
+  }
+  std::memcpy(query.values.data(), mapped, size);
+  wgpuBufferUnmap(query.read_buffer);
+  query.map_state.store(2, std::memory_order_release);
 }
 
 #if !defined(__EMSCRIPTEN__)
@@ -614,6 +668,11 @@ granit_result create_backend(const granit_webgpu_provider_host_api* host,
 
   device_request device{host};
   WGPUDeviceDescriptor device_descriptor = WGPU_DEVICE_DESCRIPTOR_INIT;
+  const WGPUFeatureName timestamp_feature = WGPUFeatureName_TimestampQuery;
+  if (wgpuAdapterHasFeature(state->adapter, timestamp_feature)) {
+    device_descriptor.requiredFeatureCount = 1;
+    device_descriptor.requiredFeatures = &timestamp_feature;
+  }
   device_descriptor.deviceLostCallbackInfo.mode = WGPUCallbackMode_AllowSpontaneous;
   device_descriptor.deviceLostCallbackInfo.callback = receive_device_lost;
   device_descriptor.deviceLostCallbackInfo.userdata1 = state;
@@ -671,6 +730,9 @@ granit_result create_backend(const granit_webgpu_provider_host_api* host,
       0,
       1 | 4,
       16.0F,
+      wgpuDeviceHasFeature(state->device, WGPUFeatureName_TimestampQuery)
+          ? GRANIT_WEBGPU_PROVIDER_FEATURE_TIMESTAMP_QUERY_BIT
+          : UINT64_C(0),
   };
 #if defined(GRANIT_WEBGPU_DEFER_INITIALIZATION_TEST)
   const auto extended_host = host->struct_size > sizeof(granit_webgpu_provider_host_api);
@@ -2394,7 +2456,7 @@ create_command_recorder(granit_webgpu_provider_instance instance,
   const auto handle = next_handle<granit_webgpu_provider_command_recorder>(next_command_recorder);
   try {
     const auto record = webgpu_instance::command_recorder_record{
-        native, nullptr, nullptr, false, false, false, 0, 0, {}};
+        native, nullptr, nullptr, false, false, false, 0, 0, {}, {}};
     if (!found->second->command_recorders.emplace(handle, record).second) {
       wgpuCommandEncoderRelease(native);
       return GRANIT_ERROR_INTERNAL;
@@ -3540,6 +3602,17 @@ finish_command_recorder(granit_webgpu_provider_instance instance,
   if (recorder_found->second.finished || recorder_found->second.pass != nullptr ||
       recorder_found->second.compute_pass != nullptr)
     return GRANIT_ERROR_INVALID_ARGUMENT;
+  for (const auto pool : recorder_found->second.timestamp_pools) {
+    const auto query = state.timestamp_queries.find(pool);
+    if (query == state.timestamp_queries.end())
+      return GRANIT_ERROR_INVALID_HANDLE;
+    const auto size = static_cast<std::uint64_t>(query->second->count) * sizeof(std::uint64_t);
+    wgpuCommandEncoderResolveQuerySet(recorder_found->second.encoder, query->second->query_set, 0,
+                                      query->second->count, query->second->resolve_buffer, 0);
+    wgpuCommandEncoderCopyBufferToBuffer(recorder_found->second.encoder,
+                                         query->second->resolve_buffer, 0,
+                                         query->second->read_buffer, 0, size);
+  }
   WGPUCommandBufferDescriptor descriptor = WGPU_COMMAND_BUFFER_DESCRIPTOR_INIT;
   const auto native = wgpuCommandEncoderFinish(recorder_found->second.encoder, &descriptor);
   if (native == nullptr)
@@ -3562,6 +3635,190 @@ finish_command_recorder(granit_webgpu_provider_instance instance,
   }
   recorder_found->second.finished = true;
   *out_command_buffer = handle;
+  return GRANIT_SUCCESS;
+}
+
+granit_result
+create_timestamp_query_pool(granit_webgpu_provider_instance instance, std::uint32_t query_count,
+                            granit_webgpu_provider_timestamp_query_pool* out_pool) noexcept {
+  if (out_pool != nullptr)
+    *out_pool = 0;
+  if (instance == 0 || query_count == 0 || out_pool == nullptr)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  const std::scoped_lock lock{instances_mutex};
+  const auto found = instances.find(instance);
+  if (found == instances.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  auto& state = *found->second;
+  if (const auto ready = require_ready(state); ready != GRANIT_SUCCESS)
+    return ready;
+  if ((state.capabilities.renderer_features & GRANIT_WEBGPU_PROVIDER_FEATURE_TIMESTAMP_QUERY_BIT) ==
+      0)
+    return GRANIT_ERROR_UNSUPPORTED;
+
+  std::shared_ptr<webgpu_instance::timestamp_query_record> query;
+  try {
+    query = std::make_shared<webgpu_instance::timestamp_query_record>();
+    query->values.resize(query_count);
+  } catch (const std::bad_alloc&) {
+    return GRANIT_ERROR_OUT_OF_MEMORY;
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+
+  WGPUQuerySetDescriptor query_desc = WGPU_QUERY_SET_DESCRIPTOR_INIT;
+  query_desc.type = WGPUQueryType_Timestamp;
+  query_desc.count = query_count;
+  const auto query_set = wgpuDeviceCreateQuerySet(state.device, &query_desc);
+  if (query_set == nullptr)
+    return GRANIT_ERROR_OUT_OF_MEMORY;
+  const auto size = static_cast<std::uint64_t>(query_count) * sizeof(std::uint64_t);
+  WGPUBufferDescriptor resolve_desc = WGPU_BUFFER_DESCRIPTOR_INIT;
+  resolve_desc.size = size;
+  resolve_desc.usage = WGPUBufferUsage_QueryResolve | WGPUBufferUsage_CopySrc;
+  const auto resolve_buffer = wgpuDeviceCreateBuffer(state.device, &resolve_desc);
+  WGPUBufferDescriptor read_desc = WGPU_BUFFER_DESCRIPTOR_INIT;
+  read_desc.size = size;
+  read_desc.usage = WGPUBufferUsage_CopyDst | WGPUBufferUsage_MapRead;
+  const auto read_buffer = wgpuDeviceCreateBuffer(state.device, &read_desc);
+  if (resolve_buffer == nullptr || read_buffer == nullptr) {
+    if (read_buffer != nullptr)
+      wgpuBufferRelease(read_buffer);
+    if (resolve_buffer != nullptr)
+      wgpuBufferRelease(resolve_buffer);
+    wgpuQuerySetRelease(query_set);
+    return GRANIT_ERROR_OUT_OF_MEMORY;
+  }
+  query->query_set = query_set;
+  query->resolve_buffer = resolve_buffer;
+  query->read_buffer = read_buffer;
+  query->count = query_count;
+  try {
+    const auto handle =
+        next_handle<granit_webgpu_provider_timestamp_query_pool>(next_timestamp_query_pool);
+    if (!state.timestamp_queries.emplace(handle, std::move(query)).second)
+      throw std::bad_alloc{};
+    *out_pool = handle;
+    return GRANIT_SUCCESS;
+  } catch (const std::bad_alloc&) {
+    return GRANIT_ERROR_OUT_OF_MEMORY;
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+granit_result
+destroy_timestamp_query_pool(granit_webgpu_provider_instance instance,
+                             granit_webgpu_provider_timestamp_query_pool pool) noexcept {
+  if (instance == 0 || pool == 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  const std::scoped_lock lock{instances_mutex};
+  const auto found = instances.find(instance);
+  if (found == instances.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  const auto query = found->second->timestamp_queries.find(pool);
+  if (query == found->second->timestamp_queries.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  if (query->second->map_state.load(std::memory_order_acquire) == 1)
+    return GRANIT_ERROR_NOT_READY;
+  found->second->timestamp_queries.erase(query);
+  return GRANIT_SUCCESS;
+}
+
+granit_result recorder_reset_timestamp_queries(granit_webgpu_provider_instance instance,
+                                               granit_webgpu_provider_command_recorder recorder,
+                                               granit_webgpu_provider_timestamp_query_pool pool,
+                                               std::uint32_t first, std::uint32_t count) noexcept {
+  if (instance == 0 || recorder == 0 || pool == 0 || count == 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  const std::scoped_lock lock{instances_mutex};
+  const auto found = instances.find(instance);
+  if (found == instances.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  auto& state = *found->second;
+  const auto command = state.command_recorders.find(recorder);
+  const auto query = state.timestamp_queries.find(pool);
+  if (command == state.command_recorders.end() || query == state.timestamp_queries.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  if (command->second.finished || first > query->second->count ||
+      count > query->second->count - first)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  if (query->second->map_state.load(std::memory_order_acquire) == 1)
+    return GRANIT_ERROR_NOT_READY;
+  query->second->map_state.store(0, std::memory_order_release);
+  if (std::find(command->second.timestamp_pools.begin(), command->second.timestamp_pools.end(),
+                pool) == command->second.timestamp_pools.end())
+    command->second.timestamp_pools.push_back(pool);
+  return GRANIT_SUCCESS;
+}
+
+granit_result recorder_write_timestamp(granit_webgpu_provider_instance instance,
+                                       granit_webgpu_provider_command_recorder recorder,
+                                       granit_webgpu_provider_timestamp_query_pool pool,
+                                       std::uint32_t query_index) noexcept {
+  if (instance == 0 || recorder == 0 || pool == 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  const std::scoped_lock lock{instances_mutex};
+  const auto found = instances.find(instance);
+  if (found == instances.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  auto& state = *found->second;
+  const auto command = state.command_recorders.find(recorder);
+  const auto query = state.timestamp_queries.find(pool);
+  if (command == state.command_recorders.end() || query == state.timestamp_queries.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  if (command->second.finished || command->second.pass != nullptr ||
+      command->second.compute_pass != nullptr || query_index >= query->second->count)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  wgpuCommandEncoderWriteTimestamp(command->second.encoder, query->second->query_set, query_index);
+  if (std::find(command->second.timestamp_pools.begin(), command->second.timestamp_pools.end(),
+                pool) == command->second.timestamp_pools.end())
+    command->second.timestamp_pools.push_back(pool);
+  return GRANIT_SUCCESS;
+}
+
+granit_result read_timestamp_query_results(granit_webgpu_provider_instance instance,
+                                           granit_webgpu_provider_timestamp_query_pool pool,
+                                           std::uint32_t first, std::uint64_t* values,
+                                           std::uint32_t count) noexcept {
+  if (instance == 0 || pool == 0 || values == nullptr || count == 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  std::shared_ptr<webgpu_instance::timestamp_query_record> query;
+  {
+    const std::scoped_lock lock{instances_mutex};
+    const auto found = instances.find(instance);
+    if (found == instances.end())
+      return GRANIT_ERROR_INVALID_HANDLE;
+    const auto query_found = found->second->timestamp_queries.find(pool);
+    if (query_found == found->second->timestamp_queries.end())
+      return GRANIT_ERROR_INVALID_HANDLE;
+    query = query_found->second;
+  }
+  if (first > query->count || count > query->count - first)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  auto state = query->map_state.load(std::memory_order_acquire);
+  if (state == 0) {
+    auto* request = new (std::nothrow) timestamp_map_request{query};
+    if (request == nullptr)
+      return GRANIT_ERROR_OUT_OF_MEMORY;
+    query->map_state.store(1, std::memory_order_release);
+#if defined(__EMSCRIPTEN__)
+    constexpr auto callback_mode = WGPUCallbackMode_AllowSpontaneous;
+#else
+    constexpr auto callback_mode = WGPUCallbackMode_AllowProcessEvents;
+#endif
+    const WGPUBufferMapCallbackInfo callback{nullptr, callback_mode, receive_timestamp_map, request,
+                                             nullptr};
+    static_cast<void>(wgpuBufferMapAsync(
+        query->read_buffer, WGPUMapMode_Read, 0,
+        static_cast<std::size_t>(query->count) * sizeof(std::uint64_t), callback));
+    return GRANIT_ERROR_NOT_READY;
+  }
+  if (state == 1)
+    return GRANIT_ERROR_NOT_READY;
+  if (state == 3)
+    return GRANIT_ERROR_INTERNAL;
+  std::copy_n(query->values.data() + first, count, values);
   return GRANIT_SUCCESS;
 }
 
@@ -4095,7 +4352,12 @@ constexpr granit_webgpu_provider_instance_api instance_api{
     recorder_copy_texture_to_buffer_v2,
     recorder_copy_texture,
     recorder_fill_buffer,
-    recorder_generate_mipmaps};
+    recorder_generate_mipmaps,
+    create_timestamp_query_pool,
+    destroy_timestamp_query_pool,
+    recorder_reset_timestamp_queries,
+    recorder_write_timestamp,
+    read_timestamp_query_results};
 constexpr granit_webgpu_provider_api provider_api{sizeof(granit_webgpu_provider_api),
                                                   GRANIT_WEBGPU_PROVIDER_ABI_VERSION,
                                                   GRANIT_WEBGPU_PROVIDER_KIND_WEBGPU,

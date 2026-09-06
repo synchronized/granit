@@ -9,7 +9,7 @@
 #include <granit/core/diagnostic.h>
 #include <granit/core/result.h>
 
-#define GRANIT_WEBGPU_PROVIDER_ABI_VERSION UINT32_C(28)
+#define GRANIT_WEBGPU_PROVIDER_ABI_VERSION UINT32_C(29)
 #define GRANIT_WEBGPU_PROVIDER_KIND_WEBGPU UINT32_C(1)
 #define GRANIT_WEBGPU_PROVIDER_QUERY_SYMBOL "granit_webgpu_provider_query"
 #define GRANIT_WEBGPU_PROVIDER_SURFACE_TYPE_WIN32_BIT UINT32_C(0x00000001)
@@ -33,6 +33,9 @@ typedef uint64_t granit_webgpu_provider_command_recorder;
 typedef uint64_t granit_webgpu_provider_command_buffer;
 typedef uint64_t granit_webgpu_provider_surface;
 typedef uint64_t granit_webgpu_provider_swapchain;
+typedef uint64_t granit_webgpu_provider_timestamp_query_pool;
+
+#define GRANIT_WEBGPU_PROVIDER_FEATURE_TIMESTAMP_QUERY_BIT (UINT64_C(1) << 0)
 
 /** Draw 调用期间借用的顶点 Buffer 绑定。 */
 typedef struct granit_webgpu_provider_vertex_buffer_binding {
@@ -452,6 +455,7 @@ typedef struct granit_webgpu_provider_capabilities {
   uint32_t reserved_2;
   uint32_t framebuffer_sample_counts;
   float max_sampler_anisotropy;
+  uint64_t renderer_features;
 } granit_webgpu_provider_capabilities;
 
 typedef void* (*granit_webgpu_provider_allocate_fn)(uint64_t size, uint64_t alignment,
@@ -753,6 +757,20 @@ typedef granit_result (*granit_webgpu_provider_recorder_generate_mipmaps_fn)(
     granit_webgpu_provider_instance instance, granit_webgpu_provider_command_recorder recorder,
     granit_webgpu_provider_texture texture,
     const granit_webgpu_provider_texture_mipmap_range* range);
+typedef granit_result (*granit_webgpu_provider_create_timestamp_query_pool_fn)(
+    granit_webgpu_provider_instance instance, uint32_t query_count,
+    granit_webgpu_provider_timestamp_query_pool* pool);
+typedef granit_result (*granit_webgpu_provider_destroy_timestamp_query_pool_fn)(
+    granit_webgpu_provider_instance instance, granit_webgpu_provider_timestamp_query_pool pool);
+typedef granit_result (*granit_webgpu_provider_recorder_reset_timestamp_queries_fn)(
+    granit_webgpu_provider_instance instance, granit_webgpu_provider_command_recorder recorder,
+    granit_webgpu_provider_timestamp_query_pool pool, uint32_t first, uint32_t count);
+typedef granit_result (*granit_webgpu_provider_recorder_write_timestamp_fn)(
+    granit_webgpu_provider_instance instance, granit_webgpu_provider_command_recorder recorder,
+    granit_webgpu_provider_timestamp_query_pool pool, uint32_t query_index);
+typedef granit_result (*granit_webgpu_provider_read_timestamp_query_results_fn)(
+    granit_webgpu_provider_instance instance, granit_webgpu_provider_timestamp_query_pool pool,
+    uint32_t first, uint64_t* values, uint32_t count);
 
 /**
  * 实例操作表由 Provider 拥有，在Provider 销毁前保持有效。
@@ -830,6 +848,11 @@ typedef struct granit_webgpu_provider_instance_api {
   granit_webgpu_provider_recorder_copy_texture_fn recorder_copy_texture;
   granit_webgpu_provider_recorder_fill_buffer_fn recorder_fill_buffer;
   granit_webgpu_provider_recorder_generate_mipmaps_fn recorder_generate_mipmaps;
+  granit_webgpu_provider_create_timestamp_query_pool_fn create_timestamp_query_pool;
+  granit_webgpu_provider_destroy_timestamp_query_pool_fn destroy_timestamp_query_pool;
+  granit_webgpu_provider_recorder_reset_timestamp_queries_fn recorder_reset_timestamp_queries;
+  granit_webgpu_provider_recorder_write_timestamp_fn recorder_write_timestamp;
+  granit_webgpu_provider_read_timestamp_query_results_fn read_timestamp_query_results;
 } granit_webgpu_provider_instance_api;
 
 /** 静态 Provider 入口返回的只读描述；字符串在Provider 销毁前有效。 */
