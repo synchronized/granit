@@ -7,10 +7,7 @@ add_subdirectory(
   "${PROJECT_SOURCE_DIR}/examples/common/gltf"
   "${CMAKE_CURRENT_BINARY_DIR}/gltf"
 )
-add_subdirectory(
-  "${PROJECT_SOURCE_DIR}/examples/common/model_viewer"
-  "${CMAKE_CURRENT_BINARY_DIR}/core"
-)
+include("${CMAKE_CURRENT_LIST_DIR}/core.cmake")
 add_subdirectory(
   "${PROJECT_SOURCE_DIR}/examples/platform/desktop"
   "${CMAKE_CURRENT_BINARY_DIR}/desktop"
