@@ -49,6 +49,10 @@ http://127.0.0.1:8000/granit_model_viewer_web.html?model=https%3A%2F%2Fexample.c
 若初始化失败，请确认浏览器已启用 WebGPU，并从开发者工具控制台查看
 `GRANIT_DIAGNOSTIC` 与 `GRANIT_STATUS` 日志。
 
+浏览器端当前会明确关闭 Timestamp Query 能力，避免把 Adapter 的 `timestamp-query` 暴露误判为
+支持任意 `CommandEncoder` 写入。看到 `commandEncoder.writeTimestamp is not a function` 表示仍在
+运行旧构建产物；重新构建后停止并重启 HTTP 服务，再使用 `Ctrl+F5` 强制刷新页面。
+
 ## 自动验证
 
 仓库浏览器测试会启动无头 Chrome，验证 Renderer 生命周期、共享 Fixture、资源传输、Mipmap、
