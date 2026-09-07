@@ -20,9 +20,11 @@ examples/
 ├─ assets/       可再分发的示例输入资产
 ├─ framework/    多个示例复用的平台壳层和辅助代码
 ├─ samples/      示例内容、平台入口及自身目标声明
-├─ common/       尚在迁移的 Model Viewer 共享实现
-└─ platform/     尚在迁移的 Model Viewer 平台适配
+├─ common/       迁移期间由 Model Viewer 编排入口引用的共享实现
+└─ platform/     迁移期间由 Model Viewer 编排入口引用的平台适配
 ```
+
+Model Viewer 的目标声明已统一由 `samples/model_viewer` 编排；后续只移动源码，不再改变目标图。
 
 `framework` 和 `samples` 都是仓库私有实现，不安装，也不构成公共 SDK。只有至少被两个真实下游
 共同需要、所有权和线程语义稳定的能力，才应另行设计为 Granit 公共 API。
