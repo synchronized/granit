@@ -107,14 +107,14 @@ if(GRANIT_BUILD_WEB_IMGUI_EXAMPLE)
   granit_target_compile_warnings(granit_web_imgui_support)
   set_target_properties(granit_web_imgui_support PROPERTIES FOLDER "Examples/Support")
 
-  add_executable(granit_imgui_web imgui_example.cpp)
+  add_executable(granit_imgui_web "${PROJECT_SOURCE_DIR}/examples/samples/imgui/web_main.cpp")
   target_compile_features(granit_imgui_web PRIVATE cxx_std_20)
   target_link_libraries(granit_imgui_web PRIVATE granit_web_imgui_support)
   target_link_options(
     granit_imgui_web
     PRIVATE
       "--use-port=emdawnwebgpu:cpp_bindings=false"
-      "--shell-file=${CMAKE_CURRENT_SOURCE_DIR}/imgui_shell.html"
+      "--shell-file=${PROJECT_SOURCE_DIR}/examples/framework/web/imgui_shell.html"
       "-sALLOW_MEMORY_GROWTH=1"
       "-sNO_EXIT_RUNTIME=1"
       "$<$<CONFIG:Debug>:-sASSERTIONS=1>"
@@ -122,7 +122,7 @@ if(GRANIT_BUILD_WEB_IMGUI_EXAMPLE)
   set_target_properties(
     granit_imgui_web
     PROPERTIES OUTPUT_NAME granit_imgui_web SUFFIX ".html" FOLDER "Examples"
-               LINK_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/imgui_shell.html"
+               LINK_DEPENDS "${PROJECT_SOURCE_DIR}/examples/framework/web/imgui_shell.html"
   )
   granit_target_compile_warnings(granit_imgui_web)
 endif()
