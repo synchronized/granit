@@ -5,7 +5,9 @@
 
 浏览器构建同时提供正式的 `granit_model_viewer_web` 和自动化
 `granit_web_platform_smoke`。两者复用同一个 Model Viewer Core；正式目标默认从 Khronos 加载
-Flight Helmet，Smoke 使用仓库内的小型确定性 Fixture。浏览器端不会接触 WebGPU 原生句柄。
+Flight Helmet，Smoke 使用仓库内的小型确定性 Fixture。动态 Uniform、纹理传输和帧生命周期的
+测试图形只会由 Smoke 目标呈现，正式 Model Viewer 不会在模型出现前显示测试方块。浏览器端不会
+接触 WebGPU 原生句柄。
 
 ## 前置条件
 

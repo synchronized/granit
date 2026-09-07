@@ -42,6 +42,12 @@ namespace {
 #define GRANIT_WEB_MODEL_VIEWER_DEFAULT_MODEL_URL "model_viewer_fixture.gltf"
 #endif
 
+#if defined(GRANIT_WEB_MODEL_VIEWER_USER_FACING)
+constexpr bool user_facing_build = true;
+#else
+constexpr bool user_facing_build = false;
+#endif
+
 enum class startup_status : int { failed = -1, starting, provider_pending, ready, stopped };
 
 struct web_platform_state {
@@ -89,7 +95,7 @@ struct web_platform_state {
 
 web_platform_state state;
 
-bool validate_texture_asset_contract() {
+[[maybe_unused]] bool validate_texture_asset_contract() {
   granit_texture_asset_variant_info variant{};
   variant.format = GRANIT_TEXTURE_FORMAT_RGBA8_SRGB;
   variant.usage = GRANIT_TEXTURE_USAGE_SAMPLED_BIT;
@@ -186,7 +192,7 @@ void fail(const char* message, granit_result result = GRANIT_ERROR_INITIALIZATIO
   std::fprintf(stderr, "GRANIT_STATUS:failed:%s:%d\n", message, result);
 }
 
-bool load_startup_resource() noexcept {
+[[maybe_unused]] bool load_startup_resource() noexcept {
   auto* file = std::fopen("/assets/s10d_startup.txt", "rb");
   if (file == nullptr) {
     return false;
@@ -198,7 +204,7 @@ bool load_startup_resource() noexcept {
   return size >= sizeof(expected) - 1 && std::memcmp(content, expected, sizeof(expected) - 1) == 0;
 }
 
-std::string load_text_resource(const char* path) {
+[[maybe_unused]] std::string load_text_resource(const char* path) {
   auto* file = std::fopen(path, "rb");
   if (file == nullptr)
     return {};
@@ -210,7 +216,7 @@ std::string load_text_resource(const char* path) {
   return content;
 }
 
-bool validate_fixture_assets() {
+[[maybe_unused]] bool validate_fixture_assets() {
   const auto vertex = load_text_resource("/assets/dynamic_uniform.vert.wgsl");
   const auto fragment = load_text_resource("/assets/dynamic_uniform.frag.wgsl");
   return !vertex.empty() && !fragment.empty() &&
@@ -437,7 +443,7 @@ granit_result poll_public_pipeline_validation() {
   return GRANIT_SUCCESS;
 }
 
-granit_result validate_public_timestamp(const granit_renderer_limits& limits) {
+[[maybe_unused]] granit_result validate_public_timestamp(const granit_renderer_limits& limits) {
   granit_timestamp_query_pool_desc query_desc{sizeof(query_desc), 2, 0};
   granit_timestamp_query_pool pool{};
   auto result = granit_timestamp_query_pool_create(state.renderer, &query_desc, &pool);
@@ -501,7 +507,7 @@ granit_result validate_public_timestamp(const granit_renderer_limits& limits) {
   return result;
 }
 
-granit_result validate_public_transfers() {
+[[maybe_unused]] granit_result validate_public_transfers() {
   constexpr std::array<std::uint8_t, 16> pixels{1, 2,  3,  4,  5,  6,  7,  8,
                                                 9, 10, 11, 12, 13, 14, 15, 16};
   constexpr auto texture_usage =
@@ -621,9 +627,10 @@ granit_result validate_public_transfers() {
   return granit::to_native(result);
 }
 
-granit_result draw_shared_fixture(granit_frame frame, granit_texture_view target_view,
-                                  granit_texture_format native_format, std::uint32_t width,
-                                  std::uint32_t height) {
+[[maybe_unused]] granit_result
+draw_shared_fixture(granit_frame frame, granit_texture_view target_view,
+                    granit_texture_format native_format, std::uint32_t width,
+                    std::uint32_t height) {
   const auto vertex_wgsl = load_text_resource("/assets/dynamic_uniform.vert.wgsl");
   const auto fragment_wgsl = load_text_resource("/assets/dynamic_uniform.frag.wgsl");
   granit::shader vertex;
@@ -935,6 +942,10 @@ granit_result create_presentation_resources() {
   if (result != GRANIT_SUCCESS || info.width == 0 || info.height == 0 || info.image_count == 0) {
     return result == GRANIT_SUCCESS ? GRANIT_ERROR_INITIALIZATION_FAILED : result;
   }
+  if constexpr (user_facing_build)
+    return GRANIT_SUCCESS;
+
+  // Smoke 目标额外呈现共享 Fixture，正式 Model Viewer 不应向用户暴露测试图形。
   granit_frame frame{};
   std::uint32_t image_index{};
   std::uint32_t needs_recreate{};
@@ -1258,15 +1269,17 @@ void tick(void*) noexcept {
            limits_result == GRANIT_SUCCESS ? GRANIT_ERROR_INTERNAL : limits_result);
       return;
     }
-    const auto timestamp_result = validate_public_timestamp(limits);
-    if (timestamp_result != GRANIT_SUCCESS) {
-      fail("renderer-timestamp", timestamp_result);
-      return;
-    }
-    const auto transfer_result = validate_public_transfers();
-    if (transfer_result != GRANIT_SUCCESS) {
-      fail("renderer-transfers", transfer_result);
-      return;
+    if constexpr (!user_facing_build) {
+      const auto timestamp_result = validate_public_timestamp(limits);
+      if (timestamp_result != GRANIT_SUCCESS) {
+        fail("renderer-timestamp", timestamp_result);
+        return;
+      }
+      const auto transfer_result = validate_public_transfers();
+      if (transfer_result != GRANIT_SUCCESS) {
+        fail("renderer-transfers", transfer_result);
+        return;
+      }
     }
   }
   try {
@@ -1473,10 +1486,12 @@ extern "C" EMSCRIPTEN_KEEPALIVE int granit_web_renderer_failure_result() noexcep
 }
 
 int main() {
-  if (!load_startup_resource() || !validate_fixture_assets() ||
-      !validate_texture_asset_contract()) {
-    fail("preloaded-resource");
-    return 1;
+  if constexpr (!user_facing_build) {
+    if (!load_startup_resource() || !validate_fixture_assets() ||
+        !validate_texture_asset_contract()) {
+      fail("preloaded-resource");
+      return 1;
+    }
   }
 
   granit_renderer_desc desc = GRANIT_RENDERER_DESC_INIT;

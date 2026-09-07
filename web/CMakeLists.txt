@@ -157,6 +157,7 @@ target_compile_features(granit_model_viewer_web PRIVATE cxx_std_20)
 target_compile_definitions(
   granit_model_viewer_web
   PRIVATE
+    GRANIT_WEB_MODEL_VIEWER_USER_FACING=1
     GRANIT_WEB_MODEL_VIEWER_DEFAULT_MODEL_URL="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/FlightHelmet/glTF/FlightHelmet.gltf"
 )
 target_include_directories(
@@ -170,9 +171,6 @@ target_link_options(
   PRIVATE
     "--use-port=emdawnwebgpu:cpp_bindings=false"
     "--shell-file=${CMAKE_CURRENT_SOURCE_DIR}/model_viewer_shell.html"
-    "--preload-file=${CMAKE_CURRENT_SOURCE_DIR}/assets/s10d_startup.txt@/assets/s10d_startup.txt"
-    "--preload-file=${PROJECT_SOURCE_DIR}/tests/assets/dynamic_uniform.vert.wgsl@/assets/dynamic_uniform.vert.wgsl"
-    "--preload-file=${PROJECT_SOURCE_DIR}/tests/assets/dynamic_uniform.frag.wgsl@/assets/dynamic_uniform.frag.wgsl"
     "-sALLOW_MEMORY_GROWTH=1"
     "-sNO_EXIT_RUNTIME=1"
     "-sFETCH=1"
