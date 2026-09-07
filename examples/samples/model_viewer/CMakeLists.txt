@@ -9,7 +9,7 @@ add_subdirectory(
 )
 include("${CMAKE_CURRENT_LIST_DIR}/core.cmake")
 add_subdirectory(
-  "${PROJECT_SOURCE_DIR}/examples/platform/desktop"
+  "${CMAKE_CURRENT_LIST_DIR}/desktop"
   "${CMAKE_CURRENT_BINARY_DIR}/desktop"
 )
 add_subdirectory(

@@ -21,11 +21,12 @@ examples/
 ├─ framework/    多个示例复用的平台壳层和辅助代码
 ├─ samples/      示例内容、平台入口及自身目标声明
 ├─ common/       glTF 等多个示例可复用、但不属于安装 SDK 的内容
-└─ platform/     迁移期间由 Model Viewer 编排入口引用的平台适配
+└─ platform/     迁移期间保留的 Web 资源获取与输入适配
 ```
 
 Model Viewer 的内容、Core、工具、验收程序和目标声明均位于 `samples/model_viewer`；旧 Core 路径
-只为 Web 顶层迁移保留一层 CMake 转发，不再保存实现文件。
+只为 Web 顶层迁移保留一层 CMake 转发，不再保存实现文件。桌面入口与 SDL3 平台壳层也已归入
+`samples/model_viewer/desktop`。
 
 `framework` 和 `samples` 都是仓库私有实现，不安装，也不构成公共 SDK。只有至少被两个真实下游
 共同需要、所有权和线程语义稳定的能力，才应另行设计为 Granit 公共 API。

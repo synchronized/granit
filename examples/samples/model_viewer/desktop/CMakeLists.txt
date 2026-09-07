@@ -1,6 +1,8 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2026 Granit contributors
 
+# Model Viewer 的 SDL3/Vulkan 桌面平台壳层。
+
 add_library(
   granit_model_viewer_desktop_shell STATIC desktop_options.cpp desktop_options.h
                                            presentation_policy.h
@@ -12,7 +14,7 @@ if(GRANIT_BUILD_INTEGRATION_SDL3)
   if(GRANIT_BUILD_INTEGRATION_IMGUI AND GRANIT_IMGUI_FETCHED)
     add_executable(
       granit_model_viewer_example
-      model_viewer_desktop.cpp
+      main.cpp
       "${granit_imgui_SOURCE_DIR}/backends/imgui_impl_sdl3.cpp"
     )
     target_include_directories(
@@ -42,7 +44,8 @@ if(GRANIT_BUILD_INTEGRATION_SDL3)
 endif()
 target_compile_features(granit_model_viewer_desktop_shell PUBLIC cxx_std_20)
 target_include_directories(
-  granit_model_viewer_desktop_shell PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}"
+  granit_model_viewer_desktop_shell
+  PUBLIC "${PROJECT_SOURCE_DIR}/examples/samples"
 )
 target_link_libraries(granit_model_viewer_desktop_shell PUBLIC granit_model_viewer_core)
 set_target_properties(granit_model_viewer_desktop_shell PROPERTIES FOLDER "Examples")

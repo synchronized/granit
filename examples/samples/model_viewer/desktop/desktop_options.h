@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#ifndef GRANIT_EXAMPLES_PLATFORM_DESKTOP_DESKTOP_OPTIONS_H_
-#define GRANIT_EXAMPLES_PLATFORM_DESKTOP_DESKTOP_OPTIONS_H_
+#ifndef GRANIT_EXAMPLES_SAMPLES_MODEL_VIEWER_DESKTOP_DESKTOP_OPTIONS_H_
+#define GRANIT_EXAMPLES_SAMPLES_MODEL_VIEWER_DESKTOP_DESKTOP_OPTIONS_H_
 
 #include <granit/renderer/renderer.hpp>
 #include <granit/renderer/swapchain.hpp>

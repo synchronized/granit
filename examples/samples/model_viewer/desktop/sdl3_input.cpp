@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include "sdl3_input.h"
+#include "model_viewer/desktop/sdl3_input.h"
 
 #include <SDL3/SDL_keycode.h>
 #include <SDL3/SDL_mouse.h>

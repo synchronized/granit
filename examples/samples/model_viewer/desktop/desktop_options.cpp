@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include "desktop_options.h"
+#include "model_viewer/desktop/desktop_options.h"
 
 #include <new>
 #include <utility>

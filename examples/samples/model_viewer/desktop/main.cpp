@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include "desktop_options.h"
-#include "presentation_policy.h"
-#include "sdl3_input.h"
+#include "model_viewer/desktop/desktop_options.h"
+#include "model_viewer/desktop/presentation_policy.h"
+#include "model_viewer/desktop/sdl3_input.h"
 
 #include "framework/common/imgui_theme.h"
 #include "model_viewer/application_core.h"
