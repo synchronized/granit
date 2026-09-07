@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#ifndef GRANIT_EXAMPLES_COMMON_MODEL_VIEWER_APPLICATION_CORE_H_
-#define GRANIT_EXAMPLES_COMMON_MODEL_VIEWER_APPLICATION_CORE_H_
+#ifndef GRANIT_EXAMPLES_SAMPLES_MODEL_VIEWER_APPLICATION_CORE_H_
+#define GRANIT_EXAMPLES_SAMPLES_MODEL_VIEWER_APPLICATION_CORE_H_
 
 #include "gltf/loader.h"
 #include "model_viewer/frame_canvas_data.h"

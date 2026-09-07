@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include "model_viewer/application_core.h"
+#include "application_core.h"
 
 #include <catch2/catch_all.hpp>
 #include <granit/renderer/renderer.hpp>

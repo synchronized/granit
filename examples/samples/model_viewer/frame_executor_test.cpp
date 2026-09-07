@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include "model_viewer/frame_executor.h"
+#include "frame_executor.h"
 
 #include <catch2/catch_all.hpp>
 

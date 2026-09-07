@@ -74,14 +74,14 @@ add_custom_command(
 
 add_library(
   granit_model_viewer_core STATIC
-  application_core.cpp
-  application_core.h
+  "${PROJECT_SOURCE_DIR}/examples/samples/model_viewer/application_core.cpp"
+  "${PROJECT_SOURCE_DIR}/examples/samples/model_viewer/application_core.h"
   environment_ktx2.cpp
   environment_ktx2.h
   frame_canvas_data.cpp
   frame_canvas_data.h
-  frame_executor.cpp
-  frame_executor.h
+  "${PROJECT_SOURCE_DIR}/examples/samples/model_viewer/frame_executor.cpp"
+  "${PROJECT_SOURCE_DIR}/examples/samples/model_viewer/frame_executor.h"
   gpu_scene.cpp
   material_archive.cpp
   material_archive.h
@@ -154,9 +154,9 @@ endif()
 if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
   add_executable(
     granit_example_model_viewer_support_test
-    application_core_test.cpp
+    "${PROJECT_SOURCE_DIR}/examples/samples/model_viewer/application_core_test.cpp"
     environment_ktx2_test.cpp
-    frame_executor_test.cpp
+    "${PROJECT_SOURCE_DIR}/examples/samples/model_viewer/frame_executor_test.cpp"
     gpu_scene_test.cpp
     "${PROJECT_SOURCE_DIR}/examples/samples/model_viewer/orbit_camera_test.cpp"
     performance_history_test.cpp
