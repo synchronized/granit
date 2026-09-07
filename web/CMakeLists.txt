@@ -52,10 +52,18 @@ add_library(
   "${PROJECT_SOURCE_DIR}/src/core/resource_validation.cpp"
 )
 add_library(granit::granit ALIAS granit)
+set(GRANIT_WEB_GENERATED_INCLUDE_DIR "${CMAKE_CURRENT_BINARY_DIR}/generated/include")
+file(MAKE_DIRECTORY "${GRANIT_WEB_GENERATED_INCLUDE_DIR}/granit/core")
+configure_file(
+  "${PROJECT_SOURCE_DIR}/include/granit/core/version.h.in"
+  "${GRANIT_WEB_GENERATED_INCLUDE_DIR}/granit/core/version.h"
+  @ONLY
+)
 target_compile_features(granit PUBLIC cxx_std_20)
 target_include_directories(
   granit
   PUBLIC "$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>"
+         "$<BUILD_INTERFACE:${GRANIT_WEB_GENERATED_INCLUDE_DIR}>"
   PRIVATE "${PROJECT_SOURCE_DIR}/src"
 )
 target_compile_definitions(granit PUBLIC GRANIT_STATIC_DEFINE)
@@ -67,6 +75,56 @@ granit_target_compile_warnings(granit)
 granit_add_shader_asset_format()
 include(granit_modules)
 granit_add_render_pipeline_module()
+
+if(GRANIT_BUILD_WEB_IMGUI_EXAMPLE)
+  include(FetchContent)
+  set(SDL_SHARED OFF CACHE BOOL "" FORCE)
+  set(SDL_STATIC ON CACHE BOOL "" FORCE)
+  set(SDL_TEST_LIBRARY OFF CACHE BOOL "" FORCE)
+  set(SDL_TESTS OFF CACHE BOOL "" FORCE)
+  set(SDL_EXAMPLES OFF CACHE BOOL "" FORCE)
+  set(SDL_INSTALL OFF CACHE BOOL "" FORCE)
+  FetchContent_Declare(
+    granit_web_sdl3
+    GIT_REPOSITORY https://github.com/libsdl-org/SDL.git
+    GIT_TAG release-3.4.10
+    GIT_SHALLOW TRUE
+  )
+  FetchContent_Declare(
+    granit_web_imgui
+    GIT_REPOSITORY https://github.com/ocornut/imgui.git
+    GIT_TAG v1.92.9
+    GIT_SHALLOW TRUE
+  )
+  FetchContent_MakeAvailable(granit_web_sdl3 granit_web_imgui)
+
+  add_library(
+    granit_web_imgui_support STATIC
+    "${granit_web_imgui_SOURCE_DIR}/imgui.cpp"
+    "${granit_web_imgui_SOURCE_DIR}/imgui_draw.cpp"
+    "${granit_web_imgui_SOURCE_DIR}/imgui_tables.cpp"
+    "${granit_web_imgui_SOURCE_DIR}/imgui_widgets.cpp"
+    "${granit_web_imgui_SOURCE_DIR}/imgui_demo.cpp"
+    "${granit_web_imgui_SOURCE_DIR}/backends/imgui_impl_sdl3.cpp"
+    "${PROJECT_SOURCE_DIR}/src/integrations/imgui/renderer.cpp"
+    "${PROJECT_SOURCE_DIR}/examples/common/imgui_sample_resources.cpp"
+  )
+  target_compile_features(granit_web_imgui_support PUBLIC cxx_std_20)
+  target_compile_definitions(granit_web_imgui_support PUBLIC GRANIT_INTEGRATION_IMGUI_STATIC_DEFINE)
+  target_include_directories(
+    granit_web_imgui_support
+    PUBLIC "${PROJECT_SOURCE_DIR}/examples" "${granit_web_imgui_SOURCE_DIR}"
+           "${PROJECT_SOURCE_DIR}/include"
+  )
+  target_link_libraries(
+    granit_web_imgui_support PUBLIC granit::render_pipeline SDL3::SDL3
+  )
+  target_compile_options(
+    granit_web_imgui_support PRIVATE "--use-port=emdawnwebgpu:cpp_bindings=false"
+  )
+  granit_target_compile_warnings(granit_web_imgui_support)
+  set_target_properties(granit_web_imgui_support PROPERTIES FOLDER "Examples/Support")
+endif()
 
 # 浏览器模型查看器复用桌面端同一套 glTF Loader 与锁定依赖，不维护 Web 专用副本。
 add_subdirectory(

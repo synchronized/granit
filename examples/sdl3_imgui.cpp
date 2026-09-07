@@ -153,10 +153,7 @@ granit::result render_frame(granit::swapchain& swapchain, granit::frame_context&
                             granit::canvas_draw_list& canvas, const granit::swapchain_info& info,
                             bool timestamps_enabled, bool& needs_recreate, bool& submitted,
                             double& gpu_ms, frame_sample& sample) {
-  granit_canvas_draw_list_stats stats = GRANIT_CANVAS_DRAW_LIST_STATS_INIT;
-  auto result = canvas.get_stats(stats);
-  if (result.failed())
-    return result;
+  auto result = granit::result::success;
   const char* operation = "acquire";
   granit::acquired_frame frame;
   const auto acquire_begin = std::chrono::steady_clock::now();
@@ -208,28 +205,10 @@ granit::result render_frame(granit::swapchain& swapchain, granit::frame_context&
     result = recorder.write_timestamp(timestamps.native_handle(), GRANIT_TIMESTAMP_STAGE_TOP,
                                       first_query);
   }
-  if (result.ok() && stats.item_count == 0) {
-    const granit::color_attachment_desc color{.view = view};
-    const granit::rendering_desc rendering{.color_attachments = std::span{&color, 1},
-                                           .area = {0, 0, info.width, info.height}};
-    operation = "recorder.begin_rendering";
-    result = recorder.begin_rendering(rendering);
-    if (result.ok()) {
-      operation = "recorder.end_rendering";
-      result = recorder.end_rendering();
-    }
-  } else if (result.ok()) {
-    granit_canvas_record_desc record = GRANIT_CANVAS_RECORD_DESC_INIT;
-    record.color = view;
-    record.color_format = static_cast<granit_texture_format>(info.format);
-    record.width = info.width;
-    record.height = info.height;
-    record.load_operation = GRANIT_ATTACHMENT_LOAD_OPERATION_CLEAR;
-    record.encode_srgb = granit::example::imgui_target_needs_srgb_encoding(info.format) ? 1U : 0U;
-    record.frame_slot = slot_index;
+  if (result.ok()) {
     operation = "canvas.record";
     const auto canvas_begin = std::chrono::steady_clock::now();
-    result = canvas.record(recorder.native_handle(), record);
+    result = granit::example::record_imgui_sample_canvas(recorder, canvas, view, info, slot_index);
     sample.canvas_record_ms =
         std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - canvas_begin)
             .count();

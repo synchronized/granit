@@ -99,4 +99,32 @@ bool imgui_target_needs_srgb_encoding(texture_format format) noexcept {
   return format == texture_format::rgba8_unorm || format == texture_format::bgra8_unorm;
 }
 
+result record_imgui_sample_canvas(command_recorder& recorder, canvas_draw_list& canvas,
+                                  granit_texture_view target, const swapchain_info& info,
+                                  std::uint32_t frame_slot) noexcept {
+  granit_canvas_draw_list_stats stats = GRANIT_CANVAS_DRAW_LIST_STATS_INIT;
+  auto record_result = canvas.get_stats(stats);
+  if (record_result.failed())
+    return record_result;
+  if (stats.item_count == 0) {
+    const color_attachment_desc color{.view = target};
+    const rendering_desc rendering{.color_attachments = std::span{&color, 1},
+                                   .area = {0, 0, info.width, info.height}};
+    record_result = recorder.begin_rendering(rendering);
+    if (record_result.ok())
+      record_result = recorder.end_rendering();
+    return record_result;
+  }
+
+  granit_canvas_record_desc record = GRANIT_CANVAS_RECORD_DESC_INIT;
+  record.color = target;
+  record.color_format = static_cast<granit_texture_format>(info.format);
+  record.width = info.width;
+  record.height = info.height;
+  record.load_operation = GRANIT_ATTACHMENT_LOAD_OPERATION_CLEAR;
+  record.encode_srgb = imgui_target_needs_srgb_encoding(info.format) ? 1U : 0U;
+  record.frame_slot = frame_slot;
+  return canvas.record(recorder.native_handle(), record);
+}
+
 } // namespace granit::example
