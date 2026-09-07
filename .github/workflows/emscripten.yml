@@ -51,6 +51,12 @@ jobs:
             test -s "${output}.wasm"
             test -s "${output}.data"
           done
+          for name in granit_imgui_web; do
+            output="build/emscripten-release/web/${name}"
+            test -s "${output}.html"
+            test -s "${output}.js"
+            test -s "${output}.wasm"
+          done
           test -s build/emscripten-release/web/model_viewer_fixture.gltf
           test -s build/emscripten-release/web/model_viewer_fixture.bin
       - name: 安装浏览器测试驱动
@@ -66,8 +72,10 @@ jobs:
           set -o pipefail
           for attempt in 1 2 3; do
             log="$RUNNER_TEMP/granit-webgpu-attempt-${attempt}.log"
-            if xvfb-run -a env GRANIT_BROWSER_HEADLESS=0 \
-              npm test -- ../../build/emscripten-release/web 2>&1 | tee "$log"; then
+            if xvfb-run -a env GRANIT_BROWSER_HEADLESS=0 bash -c \
+              'npm test -- ../../build/emscripten-release/web && \
+               npm run test:imgui -- ../../build/emscripten-release/web' \
+              2>&1 | tee "$log"; then
               exit 0
             fi
             if ! grep -q "A valid external Instance reference no longer exists" "$log"; then
@@ -83,6 +91,7 @@ jobs:
           path: |
             build/emscripten-release/web/granit_web_platform_smoke.*
             build/emscripten-release/web/granit_model_viewer_web.*
+            build/emscripten-release/web/granit_imgui_web.*
             build/emscripten-release/web/model_viewer_fixture.gltf
             build/emscripten-release/web/model_viewer_fixture.bin
           if-no-files-found: error
