@@ -4,7 +4,7 @@
 #ifndef GRANIT_EXAMPLES_COMMON_MODEL_VIEWER_ORBIT_CAMERA_H_
 #define GRANIT_EXAMPLES_COMMON_MODEL_VIEWER_ORBIT_CAMERA_H_
 
-#include "viewer_input.h"
+#include "model_viewer/viewer_input.h"
 
 #include "math/math.h"
 
