@@ -78,18 +78,19 @@ add_library(
   "${PROJECT_SOURCE_DIR}/examples/samples/model_viewer/application_core.h"
   environment_ktx2.cpp
   environment_ktx2.h
-  frame_canvas_data.cpp
-  frame_canvas_data.h
+  "${PROJECT_SOURCE_DIR}/examples/samples/model_viewer/frame_canvas_data.cpp"
+  "${PROJECT_SOURCE_DIR}/examples/samples/model_viewer/frame_canvas_data.h"
   "${PROJECT_SOURCE_DIR}/examples/samples/model_viewer/frame_executor.cpp"
   "${PROJECT_SOURCE_DIR}/examples/samples/model_viewer/frame_executor.h"
-  gpu_scene.cpp
-  material_archive.cpp
-  material_archive.h
-  material_edit.h
+  "${PROJECT_SOURCE_DIR}/examples/samples/model_viewer/gpu_scene.cpp"
+  "${PROJECT_SOURCE_DIR}/examples/samples/model_viewer/gpu_scene.h"
+  "${PROJECT_SOURCE_DIR}/examples/samples/model_viewer/material_archive.cpp"
+  "${PROJECT_SOURCE_DIR}/examples/samples/model_viewer/material_archive.h"
+  "${PROJECT_SOURCE_DIR}/examples/samples/model_viewer/material_edit.h"
   "${PROJECT_SOURCE_DIR}/examples/samples/model_viewer/orbit_camera.cpp"
   "${PROJECT_SOURCE_DIR}/examples/samples/model_viewer/orbit_camera.h"
-  performance_history.cpp
-  performance_history.h
+  "${PROJECT_SOURCE_DIR}/examples/samples/model_viewer/performance_history.cpp"
+  "${PROJECT_SOURCE_DIR}/examples/samples/model_viewer/performance_history.h"
   screenshot_comparison.cpp
   screenshot_comparison.h
   "${PROJECT_SOURCE_DIR}/examples/samples/model_viewer/viewer_state.cpp"
@@ -157,9 +158,9 @@ if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
     "${PROJECT_SOURCE_DIR}/examples/samples/model_viewer/application_core_test.cpp"
     environment_ktx2_test.cpp
     "${PROJECT_SOURCE_DIR}/examples/samples/model_viewer/frame_executor_test.cpp"
-    gpu_scene_test.cpp
+    "${PROJECT_SOURCE_DIR}/examples/samples/model_viewer/gpu_scene_test.cpp"
     "${PROJECT_SOURCE_DIR}/examples/samples/model_viewer/orbit_camera_test.cpp"
-    performance_history_test.cpp
+    "${PROJECT_SOURCE_DIR}/examples/samples/model_viewer/performance_history_test.cpp"
     screenshot_comparison_test.cpp
     "${PROJECT_SOURCE_DIR}/examples/samples/model_viewer/viewer_state_test.cpp"
   )

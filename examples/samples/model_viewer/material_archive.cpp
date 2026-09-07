@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include "model_viewer/material_archive.h"
+#include "material_archive.h"
 #include "assets/shader_asset.h"
 
 #include <array>

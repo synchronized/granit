@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include "model_viewer/frame_canvas_data.h"
+#include "frame_canvas_data.h"
 
 namespace granit::example::model_viewer {
 

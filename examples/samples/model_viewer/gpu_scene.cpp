@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include "model_viewer/gpu_scene.h"
+#include "gpu_scene.h"
 #include "model_viewer/material_archive.h"
 #include "model_viewer/viewer_state.h"
 

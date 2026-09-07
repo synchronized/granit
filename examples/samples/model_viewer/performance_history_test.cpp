@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include "model_viewer/performance_history.h"
+#include "performance_history.h"
 
 #include <catch2/catch_all.hpp>
 
