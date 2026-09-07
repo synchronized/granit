@@ -72,6 +72,7 @@ add_library(
     headers/surface_h.c
     headers/swapchain_h.c
     headers/texture_h.c
+    headers/texture_asset_h.c
     headers/types_h.c
     headers/upload_batch_h.c
     headers/readback_batch_h.c
@@ -494,6 +495,7 @@ add_executable(
   renderer/surface_test.cpp
   renderer/swapchain_test.cpp
   renderer/texture_test.cpp
+  renderer/texture_asset_test.cpp
   renderer/upload_batch_test.cpp
   renderer/readback_batch_test.cpp
   renderer/pipeline_warmup_test.cpp
@@ -615,6 +617,7 @@ add_library(
     headers/surface_hpp.cpp
     headers/swapchain_hpp.cpp
     headers/texture_hpp.cpp
+    headers/texture_asset_hpp.cpp
     headers/types_hpp.cpp
     headers/upload_batch_hpp.cpp
     headers/readback_batch_hpp.cpp

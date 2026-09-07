@@ -26,6 +26,7 @@
 #include <granit/renderer/surface.hpp>
 #include <granit/renderer/swapchain.hpp>
 #include <granit/renderer/texture.hpp>
+#include <granit/renderer/texture_asset.hpp>
 #include <granit/renderer/timestamp_query.hpp>
 #include <granit/renderer/upload_batch.hpp>
 

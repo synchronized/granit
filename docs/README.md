@@ -94,6 +94,7 @@
 - [资源类型总览](reference/resource-types.md)
 - [Buffer](reference/buffer.md)
 - [Texture 与 Texture View](reference/texture.md)
+- [Texture Asset Manifest](reference/texture-asset.md)
 - [Sampler](reference/sampler.md)
 - [Render Target Attachment](reference/render-target.md)
 
