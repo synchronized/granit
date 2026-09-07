@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include "model_viewer/viewer_state.h"
+#include "viewer_state.h"
 
 #include <cmath>
 

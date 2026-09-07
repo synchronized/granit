@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#ifndef GRANIT_EXAMPLES_COMMON_MODEL_VIEWER_VIEWER_STATE_H_
-#define GRANIT_EXAMPLES_COMMON_MODEL_VIEWER_VIEWER_STATE_H_
+#ifndef GRANIT_EXAMPLES_SAMPLES_MODEL_VIEWER_VIEWER_STATE_H_
+#define GRANIT_EXAMPLES_SAMPLES_MODEL_VIEWER_VIEWER_STATE_H_
 
 #include "gltf/scene.h"
 #include "model_viewer/orbit_camera.h"

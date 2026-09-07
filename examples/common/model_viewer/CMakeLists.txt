@@ -86,14 +86,14 @@ add_library(
   material_archive.cpp
   material_archive.h
   material_edit.h
-  orbit_camera.cpp
-  orbit_camera.h
+  "${PROJECT_SOURCE_DIR}/examples/samples/model_viewer/orbit_camera.cpp"
+  "${PROJECT_SOURCE_DIR}/examples/samples/model_viewer/orbit_camera.h"
   performance_history.cpp
   performance_history.h
   screenshot_comparison.cpp
   screenshot_comparison.h
-  viewer_state.cpp
-  viewer_state.h
+  "${PROJECT_SOURCE_DIR}/examples/samples/model_viewer/viewer_state.cpp"
+  "${PROJECT_SOURCE_DIR}/examples/samples/model_viewer/viewer_state.h"
   "${PROJECT_SOURCE_DIR}/examples/samples/model_viewer/viewer_input.h"
   "${granit_model_viewer_material_include}"
   ${granit_model_viewer_shader_includes}
@@ -158,10 +158,10 @@ if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
     environment_ktx2_test.cpp
     frame_executor_test.cpp
     gpu_scene_test.cpp
-    orbit_camera_test.cpp
+    "${PROJECT_SOURCE_DIR}/examples/samples/model_viewer/orbit_camera_test.cpp"
     performance_history_test.cpp
     screenshot_comparison_test.cpp
-    viewer_state_test.cpp
+    "${PROJECT_SOURCE_DIR}/examples/samples/model_viewer/viewer_state_test.cpp"
   )
   target_link_libraries(
     granit_example_model_viewer_support_test

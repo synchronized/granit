@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include "model_viewer/orbit_camera.h"
+#include "orbit_camera.h"
 
 #include <algorithm>
 #include <cmath>
