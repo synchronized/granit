@@ -180,7 +180,7 @@ D-03-graphics-pipeline.md
 - [S-35：0.19.0 纹理资产变体与流式加载契约](S-35-0.19.0-texture-asset-variants.md)——已完成；
   已落地确定性纹理 Manifest、设备驱动的变体选择和逐 mip Upload Batch 契约。
 - [S-36：0.20.0 示例框架与跨平台 Model Viewer 稳定化](S-36-0.20.0-example-framework-and-model-viewer.md)——
-  已确认；修复交互与背压延迟，统一桌面/Web 示例壳层并建立可扩展示例目录。
+  实现中；已修复桌面输入背压丢失与拖动所有权，后续统一桌面/Web 示例壳层。
 
 ## 状态
 

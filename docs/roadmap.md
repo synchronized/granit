@@ -409,7 +409,7 @@
 
 ## 二十八、0.20.0 示例框架与跨平台 Model Viewer 稳定化
 
-**状态：已确认。**
+**状态：实现中；桌面输入背压保留与拖动所有权回归已完成。**
 
 - **[S-36](plans/S-36-0.20.0-example-framework-and-model-viewer.md) / P1**：修复 Model Viewer 在
   渲染背压和 ImGui 捕获下的输入丢失、旋转卡顿与高延迟，并覆盖焦点、HiDPI 和 Resize 边界。

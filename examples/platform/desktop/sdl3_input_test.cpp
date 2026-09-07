@@ -33,7 +33,7 @@ TEST_CASE("SDL3 输入累积鼠标操作并在帧边界清空增量", "[example]
   CHECK(input.orbiting);
   CHECK(input.pointer_delta_x == 0.0F);
   CHECK(input.wheel_delta == 0.0F);
-  CHECK(input.mouse_captured);
+  CHECK_FALSE(input.mouse_captured);
 }
 
 TEST_CASE("SDL3 输入处理快捷键、滚轮方向与焦点丢失", "[example][model-viewer][sdl3]") {
@@ -80,4 +80,60 @@ TEST_CASE("SDL3 输入在指针离开窗口时终止拖动", "[example][model-vi
   const auto input = adapter.finish(false, false);
   CHECK_FALSE(input.pointer_inside);
   CHECK_FALSE(input.orbiting);
+}
+
+TEST_CASE("SDL3 输入跨过帧构造背压后才被消费", "[example][model-viewer][sdl3]") {
+  using granit::example::model_viewer::desktop::sdl3_input;
+  sdl3_input adapter;
+  SDL_Event event{};
+  event.type = SDL_EVENT_MOUSE_BUTTON_DOWN;
+  event.button.button = SDL_BUTTON_RIGHT;
+  adapter.process(event);
+  event = {};
+  event.type = SDL_EVENT_MOUSE_MOTION;
+  event.motion.xrel = 7.0F;
+  event.motion.yrel = -3.0F;
+  adapter.process(event);
+
+  // begin_frame 可以在提交容量不足的循环中重复调用，但不得丢弃尚未消费的输入。
+  adapter.begin_frame();
+  adapter.begin_frame();
+  auto input = adapter.finish(false, false);
+  CHECK(input.orbiting);
+  CHECK(input.pointer_delta_x == 7.0F);
+  CHECK(input.pointer_delta_y == -3.0F);
+
+  input = adapter.finish(false, false);
+  CHECK(input.orbiting);
+  CHECK(input.pointer_delta_x == 0.0F);
+  CHECK(input.pointer_delta_y == 0.0F);
+}
+
+TEST_CASE("SDL3 输入按照按钮按下位置锁定拖动所有权", "[example][model-viewer][sdl3]") {
+  using granit::example::model_viewer::desktop::sdl3_input;
+  sdl3_input adapter;
+  SDL_Event event{};
+  event.type = SDL_EVENT_MOUSE_BUTTON_DOWN;
+  event.button.button = SDL_BUTTON_RIGHT;
+  adapter.process(event, true, false);
+  event = {};
+  event.type = SDL_EVENT_MOUSE_MOTION;
+  event.motion.xrel = 10.0F;
+  adapter.process(event, false, false);
+  auto input = adapter.finish(false, false);
+  CHECK_FALSE(input.orbiting);
+  CHECK(input.pointer_delta_x == 0.0F);
+
+  event = {};
+  event.type = SDL_EVENT_MOUSE_BUTTON_DOWN;
+  event.button.button = SDL_BUTTON_RIGHT;
+  adapter.process(event, false, false);
+  event = {};
+  event.type = SDL_EVENT_MOUSE_MOTION;
+  event.motion.xrel = 11.0F;
+  adapter.process(event, true, false);
+  input = adapter.finish(true, false);
+  CHECK(input.orbiting);
+  CHECK_FALSE(input.mouse_captured);
+  CHECK(input.pointer_delta_x == 11.0F);
 }

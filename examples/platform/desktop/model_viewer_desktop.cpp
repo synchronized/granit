@@ -1053,7 +1053,8 @@ int main(int argc, char** argv) {
     SDL_Event event{};
     while (SDL_PollEvent(&event)) {
       ImGui_ImplSDL3_ProcessEvent(&event);
-      input_adapter.process(event);
+      input_adapter.process(event, options.show_ui && ImGui::GetIO().WantCaptureMouse,
+                            options.show_ui && ImGui::GetIO().WantCaptureKeyboard);
       if (event.type == SDL_EVENT_QUIT || event.type == SDL_EVENT_WINDOW_CLOSE_REQUESTED)
         running = false;
       else if (event.type == SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED) {
@@ -1104,9 +1105,6 @@ int main(int argc, char** argv) {
 
     if (!frame_executor.can_submit_frame()) {
       frame_executor.record_skipped_frame_build();
-      static_cast<void>(
-          input_adapter.finish(options.show_ui && ImGui::GetIO().WantCaptureMouse,
-                               options.show_ui && ImGui::GetIO().WantCaptureKeyboard));
       continue;
     }
 
