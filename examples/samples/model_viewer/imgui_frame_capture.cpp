@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include "model_viewer/imgui_frame_capture.h"
+#include "imgui_frame_capture.h"
 
 #include <algorithm>
 #include <limits>

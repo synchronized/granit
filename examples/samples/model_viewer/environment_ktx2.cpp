@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include "model_viewer/environment_ktx2.h"
+#include "environment_ktx2.h"
 
 #include <algorithm>
 #include <array>

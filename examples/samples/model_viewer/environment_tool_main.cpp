@@ -2,7 +2,7 @@
 // Copyright (c) 2026 Granit contributors
 
 #include "gltf/image_decoder.h"
-#include "model_viewer/environment_ktx2.h"
+#include "environment_ktx2.h"
 #include "pipeline/environment_asset.h"
 
 #include <bit>

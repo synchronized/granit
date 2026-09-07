@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include "model_viewer/texture_registry.h"
+#include "texture_registry.h"
 
 #include <limits>
 #include <new>

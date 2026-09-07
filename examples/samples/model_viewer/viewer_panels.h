@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#ifndef GRANIT_EXAMPLES_COMMON_MODEL_VIEWER_VIEWER_PANELS_H_
-#define GRANIT_EXAMPLES_COMMON_MODEL_VIEWER_VIEWER_PANELS_H_
+#ifndef GRANIT_EXAMPLES_SAMPLES_MODEL_VIEWER_VIEWER_PANELS_H_
+#define GRANIT_EXAMPLES_SAMPLES_MODEL_VIEWER_VIEWER_PANELS_H_
 
 #include "model_viewer/material_edit.h"
 #include "model_viewer/performance_history.h"
