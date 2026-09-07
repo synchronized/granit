@@ -93,7 +93,7 @@ extern "C" granit_result granit_texture_asset_encode(const granit_texture_asset_
     const auto capacity = *manifest_size;
     *manifest_size = encoded.size();
     if (manifest_data == nullptr)
-      return capacity == 0 ? GRANIT_SUCCESS : GRANIT_ERROR_INVALID_ARGUMENT;
+      return GRANIT_SUCCESS;
     if (capacity < encoded.size())
       return GRANIT_ERROR_INVALID_ARGUMENT;
     std::memcpy(manifest_data, encoded.data(), encoded.size());

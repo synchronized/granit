@@ -3,6 +3,8 @@
 
 add_library(
   granit STATIC
+  $<TARGET_OBJECTS:granit_shader_asset_format>
+  "${PROJECT_SOURCE_DIR}/src/assets/texture_asset.cpp"
   "${PROJECT_SOURCE_DIR}/src/renderer/async_operation_api.cpp"
   "${PROJECT_SOURCE_DIR}/src/renderer/buffer_api.cpp"
   "${PROJECT_SOURCE_DIR}/src/renderer/command_recorder_api.cpp"
@@ -30,6 +32,7 @@ add_library(
   "${PROJECT_SOURCE_DIR}/src/renderer/surface_api.cpp"
   "${PROJECT_SOURCE_DIR}/src/renderer/swapchain_api.cpp"
   "${PROJECT_SOURCE_DIR}/src/renderer/texture_api.cpp"
+  "${PROJECT_SOURCE_DIR}/src/renderer/texture_asset_api.cpp"
   "${PROJECT_SOURCE_DIR}/src/renderer/timestamp_query_api.cpp"
   "${PROJECT_SOURCE_DIR}/src/renderer/upload_batch_api.cpp"
   "${PROJECT_SOURCE_DIR}/src/backend/webgpu/provider_dispatch.cpp"

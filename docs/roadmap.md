@@ -396,7 +396,7 @@
 
 ## 二十七、0.19.0 纹理资产变体与流式加载契约
 
-**状态：已确认。**
+**状态：已完成。**
 
 - **[S-35](plans/S-35-0.19.0-texture-asset-variants.md) / P1**：定义带版本、内容 ID 和严格边界
   校验的 Texture Asset Manifest，并为 BC、ETC2、ASTC 与 RGBA8 变体提供设备驱动的确定性选择。
@@ -409,11 +409,10 @@
 
 ## 近期执行顺序
 
-1. 先推进 S-35A Manifest 与 S-35B 变体选择，再接入异步逐 mip 流送；版本号留到 S-35F 收尾。
-2. 公共执行器与场景 API 继续等待 Granit 与 Gneiss 的第二个真实复用证据。
-3. S-14 只在复用条件成立后启动；不要为当前单个示例提前稳定 glTF 公共 API。
-4. S-06D 最终验收等待稳定版本与 component 范围决策；不在 0.x 阶段提前宣布稳定。
-5. H-09 的透明 PBR、CSM、Clustered Forward 与 Bindless 只在各自重新评估条件满足后独立恢复，
+1. 公共执行器与场景 API 继续等待 Granit 与 Gneiss 的第二个真实复用证据。
+2. S-14 只在复用条件成立后启动；不要为当前单个示例提前稳定 glTF 公共 API。
+3. S-06D 最终验收等待稳定版本与 component 范围决策；不在 0.x 阶段提前宣布稳定。
+4. H-09 的透明 PBR、CSM、Clustered Forward 与 Bindless 只在各自重新评估条件满足后独立恢复，
    不作为当前稳定化工作的前置项。
 
 若前置抽象不足，应先更新对应 Plan 和本路线图状态，再扩大公共 API。

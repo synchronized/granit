@@ -195,9 +195,10 @@ texture_asset_error decode_texture_asset(std::span<const std::byte> manifest,
   result.variants.resize(variant_count);
   result.subresources.resize(subresource_count);
   uint32_t expected_first = 0;
-  const auto subresource_table = header_size + uint64_t{variant_count} * variant_size;
+  const auto subresource_table =
+      static_cast<size_t>(header_size + uint64_t{variant_count} * variant_size);
   for (uint32_t index = 0; index < variant_count; ++index) {
-    const auto offset = header_size + uint64_t{index} * variant_size;
+    const auto offset = static_cast<size_t>(header_size + uint64_t{index} * variant_size);
     auto& variant = result.variants[index];
     variant.format = read_u32(manifest, offset);
     variant.usage = read_u32(manifest, offset + 4);
@@ -222,7 +223,8 @@ texture_asset_error decode_texture_asset(std::span<const std::byte> manifest,
     return texture_asset_error::invalid_layout;
 
   for (uint32_t index = 0; index < subresource_count; ++index) {
-    const auto offset = subresource_table + uint64_t{index} * subresource_size;
+    const auto offset =
+        subresource_table + static_cast<size_t>(index) * subresource_size;
     auto& subresource = result.subresources[index];
     subresource.mip_level = read_u32(manifest, offset);
     subresource.array_layer = read_u32(manifest, offset + 4);
