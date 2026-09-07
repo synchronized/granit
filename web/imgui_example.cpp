@@ -44,6 +44,8 @@ struct web_imgui_state {
   granit::example::imgui_sample_state sample;
   std::uint32_t tick_count{};
   std::uint32_t rendered_frames{};
+  std::uint32_t pointer_events{};
+  std::uint32_t resize_count{};
 };
 
 web_imgui_state state;
@@ -123,10 +125,13 @@ granit::result resize_if_needed() {
        .presentation = granit::present_mode::fifo});
   if (result.ok())
     result = state.swapchain.query_info(state.swapchain_info);
+  if (result.ok())
+    ++state.resize_count;
   return result;
 }
 
 granit::result render_frame() {
+  const char* operation = "resize";
   auto result = resize_if_needed();
   if (result == granit::result::not_ready)
     return granit::result::success;
@@ -144,32 +149,46 @@ granit::result render_frame() {
        .custom_texture = granit::example::imgui_checker_texture_id});
   ImGui::Render();
 
+  operation = "canvas-clear";
   result = state.canvas.clear();
   if (result.ok()) {
+    operation = "imgui-convert";
     result = granit::integration::imgui::append_draw_data(
         ImGui::GetDrawData(), state.canvas, granit::example::resolve_imgui_sample_texture,
         &state.bindings);
   }
 
   granit::acquired_frame frame;
-  if (result.ok())
+  if (result.ok()) {
+    operation = "acquire";
     result = state.swapchain.acquire(frame);
+  }
   granit_texture backbuffer{};
   granit_texture_view view{};
-  if (result.ok())
-    result = state.swapchain.backbuffer(frame.image_index, backbuffer, view);
-  granit::frame_recording recording;
-  if (result.ok())
-    result = state.frame_context.begin(frame, recording);
   if (result.ok()) {
+    operation = "backbuffer";
+    result = state.swapchain.backbuffer(frame.image_index, backbuffer, view);
+  }
+  granit::frame_recording recording;
+  if (result.ok()) {
+    operation = "frame-begin";
+    result = state.frame_context.begin(frame, recording);
+  }
+  if (result.ok()) {
+    operation = "canvas-record";
     result = granit::example::record_imgui_sample_canvas(
         recording.recorder(), state.canvas, view, state.swapchain_info, recording.frame_slot());
   }
-  if (result.ok())
+  if (result.ok()) {
+    operation = "submit";
     result = recording.submit();
-  if (result.ok())
+  }
+  if (result.ok()) {
+    operation = "present";
     result = state.swapchain.present(frame);
+  }
   if (result.failed()) {
+    std::fprintf(stderr, "GRANIT_DIAGNOSTIC:Web ImGui frame operation failed: %s\n", operation);
     if (recording.valid())
       static_cast<void>(recording.abort());
     if (frame.valid())
@@ -190,6 +209,10 @@ void tick(void*) noexcept {
   SDL_Event event{};
   while (SDL_PollEvent(&event)) {
     ImGui_ImplSDL3_ProcessEvent(&event);
+    if (event.type == SDL_EVENT_MOUSE_MOTION || event.type == SDL_EVENT_MOUSE_BUTTON_DOWN ||
+        event.type == SDL_EVENT_MOUSE_BUTTON_UP || event.type == SDL_EVENT_MOUSE_WHEEL) {
+      ++state.pointer_events;
+    }
     if (event.type == SDL_EVENT_QUIT || event.type == SDL_EVENT_WINDOW_CLOSE_REQUESTED) {
       state.phase = runtime_phase::stopped;
       emscripten_cancel_main_loop();
@@ -262,6 +285,14 @@ void shutdown() noexcept {
 
 extern "C" EMSCRIPTEN_KEEPALIVE unsigned granit_web_imgui_rendered_frames() noexcept {
   return state.rendered_frames;
+}
+
+extern "C" EMSCRIPTEN_KEEPALIVE unsigned granit_web_imgui_pointer_events() noexcept {
+  return state.pointer_events;
+}
+
+extern "C" EMSCRIPTEN_KEEPALIVE unsigned granit_web_imgui_resize_count() noexcept {
+  return state.resize_count;
 }
 
 extern "C" EMSCRIPTEN_KEEPALIVE int granit_web_imgui_shutdown() noexcept {

@@ -72,18 +72,46 @@ async function main() {
           `${messages.join("\n")}\n${error}`,
       );
     }
+    try {
+      await page.waitForFunction(
+        () =>
+          typeof Module._granit_web_imgui_rendered_frames === "function" &&
+          Module._granit_web_imgui_rendered_frames() >= 3,
+        undefined,
+        { timeout: 30_000 },
+      );
+    } catch (error) {
+      const frames = await page.evaluate(() => Module._granit_web_imgui_rendered_frames());
+      throw new Error(`Web ImGui 帧未推进：frames=${frames}\n${messages.join("\n")}\n${error}`);
+    }
+    const canvas = page.locator("#canvas");
+    const box = await canvas.boundingBox();
+    if (box === null) throw new Error("Web ImGui Canvas 不可见");
+    await page.mouse.move(box.x + 48, box.y + 48);
+    await page.mouse.down({ button: "left" });
+    await page.mouse.move(box.x + 96, box.y + 72);
+    await page.mouse.up({ button: "left" });
+    await page.mouse.wheel(0, -80);
     await page.waitForFunction(
       () =>
-        typeof Module._granit_web_imgui_rendered_frames === "function" &&
-        Module._granit_web_imgui_rendered_frames() >= 3,
+        typeof Module._granit_web_imgui_pointer_events === "function" &&
+        Module._granit_web_imgui_pointer_events() >= 4,
       undefined,
-      { timeout: 30_000 },
+      { timeout: 10_000 },
+    );
+    await page.setViewportSize({ width: 800, height: 600 });
+    await page.waitForFunction(
+      () =>
+        typeof Module._granit_web_imgui_resize_count === "function" &&
+        Module._granit_web_imgui_resize_count() >= 1,
+      undefined,
+      { timeout: 10_000 },
     );
     if (failures.length !== 0)
       throw new Error(`Web ImGui 控制台出现异常：\n${failures.join("\n")}`);
     const shutdown = await page.evaluate(() => Module._granit_web_imgui_shutdown());
     if (shutdown !== 0) throw new Error(`Web ImGui 关闭失败：${shutdown}`);
-    console.log("浏览器 SDL3 + ImGui 多帧渲染与资源释放验证通过");
+    console.log("浏览器 SDL3 + ImGui 多帧渲染、输入、Resize 与资源释放验证通过");
   } finally {
     await page.close();
     await browser.close();

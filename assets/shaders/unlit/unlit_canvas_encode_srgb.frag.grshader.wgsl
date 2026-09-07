@@ -3,8 +3,7 @@
 
 struct MaterialConstants {
   base_color: vec4f,
-  alpha_cutoff: f32,
-  reserved_values: vec3f,
+  alpha_cutoff: vec4f,
 }
 
 @group(1) @binding(0) var<uniform> material: MaterialConstants;
