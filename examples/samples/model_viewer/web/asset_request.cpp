@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include "asset_request.h"
+#include "model_viewer/web/asset_request.h"
 
 #include <limits>
 #include <utility>

@@ -140,19 +140,19 @@ add_library(
   granit_web_model_viewer_platform STATIC
   model_viewer_fetch.cpp
   model_viewer_fetch.h
-  "${PROJECT_SOURCE_DIR}/examples/platform/web/asset_request.cpp"
-  "${PROJECT_SOURCE_DIR}/examples/platform/web/asset_request.h"
-  "${PROJECT_SOURCE_DIR}/examples/platform/web/resource_bundle.cpp"
-  "${PROJECT_SOURCE_DIR}/examples/platform/web/resource_bundle.h"
-  "${PROJECT_SOURCE_DIR}/examples/platform/web/resource_fetch_batch.cpp"
-  "${PROJECT_SOURCE_DIR}/examples/platform/web/resource_fetch_batch.h"
-  "${PROJECT_SOURCE_DIR}/examples/platform/web/web_input.cpp"
-  "${PROJECT_SOURCE_DIR}/examples/platform/web/web_input.h"
+  "${PROJECT_SOURCE_DIR}/examples/samples/model_viewer/web/asset_request.cpp"
+  "${PROJECT_SOURCE_DIR}/examples/samples/model_viewer/web/asset_request.h"
+  "${PROJECT_SOURCE_DIR}/examples/samples/model_viewer/web/resource_bundle.cpp"
+  "${PROJECT_SOURCE_DIR}/examples/samples/model_viewer/web/resource_bundle.h"
+  "${PROJECT_SOURCE_DIR}/examples/samples/model_viewer/web/resource_fetch_batch.cpp"
+  "${PROJECT_SOURCE_DIR}/examples/samples/model_viewer/web/resource_fetch_batch.h"
+  "${PROJECT_SOURCE_DIR}/examples/samples/model_viewer/web/web_input.cpp"
+  "${PROJECT_SOURCE_DIR}/examples/samples/model_viewer/web/web_input.h"
 )
 target_compile_features(granit_web_model_viewer_platform PUBLIC cxx_std_20)
 target_include_directories(
   granit_web_model_viewer_platform
-  PUBLIC "${PROJECT_SOURCE_DIR}/examples/platform/web"
+  PUBLIC "${PROJECT_SOURCE_DIR}/examples/samples"
          "${PROJECT_SOURCE_DIR}/examples/common"
 )
 target_link_libraries(

@@ -4,7 +4,7 @@
 #ifndef GRANIT_WEB_MODEL_VIEWER_FETCH_H_
 #define GRANIT_WEB_MODEL_VIEWER_FETCH_H_
 
-#include "asset_request.h"
+#include "model_viewer/web/asset_request.h"
 
 #include <memory>
 #include <string_view>

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include "resource_fetch_batch.h"
+#include "model_viewer/web/resource_fetch_batch.h"
 
 #include "gltf/resource_uri.h"
 

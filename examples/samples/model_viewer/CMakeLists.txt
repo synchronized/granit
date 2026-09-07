@@ -13,6 +13,6 @@ add_subdirectory(
   "${CMAKE_CURRENT_BINARY_DIR}/desktop"
 )
 add_subdirectory(
-  "${PROJECT_SOURCE_DIR}/examples/platform/web"
+  "${CMAKE_CURRENT_LIST_DIR}/web"
   "${CMAKE_CURRENT_BINARY_DIR}/web-support"
 )

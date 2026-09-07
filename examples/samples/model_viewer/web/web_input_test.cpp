@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include "web_input.h"
+#include "model_viewer/web/web_input.h"
 
 #include <catch2/catch_all.hpp>
 

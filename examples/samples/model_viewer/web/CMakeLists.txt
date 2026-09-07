@@ -1,6 +1,8 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2026 Granit contributors
 
+# Model Viewer 的浏览器资源与输入支撑层。
+
 add_library(
   granit_model_viewer_web_shell STATIC
   asset_request.cpp
@@ -13,7 +15,9 @@ add_library(
   web_input.h
 )
 target_compile_features(granit_model_viewer_web_shell PUBLIC cxx_std_20)
-target_include_directories(granit_model_viewer_web_shell PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
+target_include_directories(
+  granit_model_viewer_web_shell PUBLIC "${PROJECT_SOURCE_DIR}/examples/samples"
+)
 target_link_libraries(granit_model_viewer_web_shell PUBLIC granit_model_viewer_core)
 set_target_properties(granit_model_viewer_web_shell PROPERTIES FOLDER "Examples")
 granit_target_compile_warnings(granit_model_viewer_web_shell)

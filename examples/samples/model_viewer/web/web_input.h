@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#ifndef GRANIT_EXAMPLES_PLATFORM_WEB_WEB_INPUT_H_
-#define GRANIT_EXAMPLES_PLATFORM_WEB_WEB_INPUT_H_
+#ifndef GRANIT_EXAMPLES_SAMPLES_MODEL_VIEWER_WEB_WEB_INPUT_H_
+#define GRANIT_EXAMPLES_SAMPLES_MODEL_VIEWER_WEB_WEB_INPUT_H_
 
 #include "model_viewer/viewer_input.h"
 

@@ -32,9 +32,9 @@
 #include "model_viewer/application_core.h"
 #include "model_viewer/frame_executor.h"
 #include "model_viewer_fetch.h"
-#include "resource_fetch_batch.h"
+#include "model_viewer/web/resource_fetch_batch.h"
 #include "support/renderer_fixture.h"
-#include "web_input.h"
+#include "model_viewer/web/web_input.h"
 
 namespace {
 

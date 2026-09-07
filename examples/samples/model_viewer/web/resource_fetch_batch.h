@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#ifndef GRANIT_EXAMPLES_PLATFORM_WEB_RESOURCE_FETCH_BATCH_H_
-#define GRANIT_EXAMPLES_PLATFORM_WEB_RESOURCE_FETCH_BATCH_H_
+#ifndef GRANIT_EXAMPLES_SAMPLES_MODEL_VIEWER_WEB_RESOURCE_FETCH_BATCH_H_
+#define GRANIT_EXAMPLES_SAMPLES_MODEL_VIEWER_WEB_RESOURCE_FETCH_BATCH_H_
 
-#include "asset_request.h"
-#include "resource_bundle.h"
+#include "model_viewer/web/asset_request.h"
+#include "model_viewer/web/resource_bundle.h"
 
 #include <memory>
 #include <string>
