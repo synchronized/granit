@@ -30,6 +30,19 @@ build/windows-clang-release/bin/granit_sdl3_imgui_example.exe `
 CSV 记录窗口尺寸、帧槽、Validation、Present Mode、CPU 阶段和 GPU Timestamp；退出前尚未回收
 的样本保持空值，不按零处理。
 
+同一份 ImGui 内容也可通过 SDL3 和浏览器 WebGPU 运行。先激活 Emscripten 环境，再执行：
+
+```powershell
+$env:EMSDK = "D:/sunday/programs/emsdk"
+cmake --preset emscripten-release
+cmake --build --preset emscripten-release --target granit_imgui_web
+python -m http.server 8000 --directory build/emscripten-release/web
+```
+
+随后使用支持 WebGPU 的浏览器打开
+`http://localhost:8000/granit_imgui_web.html`。页面使用 SDL3 处理浏览器事件，ImGui 仍通过 Granit
+Canvas 绘制，不是 DOM/CSS 仿制界面，因此可用于核对桌面与 Web 的字体、纹理、裁剪和输入一致性。
+
 ## Model Viewer
 
 `granit_model_viewer_example` 是跨后端的完整渲染示例。它复用同一应用核心，在桌面 Vulkan 和
