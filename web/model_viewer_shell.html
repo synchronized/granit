@@ -10,13 +10,34 @@
       main { width: 100%; height: 100%; position: relative; }
       canvas { width: 100%; height: 100%; display: block; outline: none; }
       output {
-        position: absolute; left: 50%; bottom: 24px; transform: translateX(-50%);
-        padding: 8px 14px; border-radius: 6px; background: rgb(17 24 39 / 82%);
+        box-sizing: border-box; position: absolute; left: 50%; top: 50%;
+        width: min(420px, calc(100% - 32px)); min-height: 118px;
+        transform: translate(-50%, -50%); overflow: hidden;
+        border: 1px solid #525866; border-radius: 4px;
+        background: #24272e; box-shadow: 0 12px 32px rgb(0 0 0 / 36%);
       }
       output[data-status="ready"] { display: none; }
-      progress { width: 260px; height: 7px; margin-top: 8px; display: block; }
-      #cancel-loading { margin-top: 8px; color: inherit; background: #334155;
-        border: 1px solid #64748b; border-radius: 4px; padding: 4px 10px; cursor: pointer; }
+      .loading-title {
+        display: block; padding: 6px 10px; color: #f3f4f6; background: #343841;
+        border-bottom: 1px solid #16181d; font-size: 13px; font-weight: 500;
+      }
+      .loading-content { display: block; padding: 10px; }
+      #status-text { display: block; min-height: 20px; font-size: 13px; }
+      progress {
+        width: 100%; height: 18px; margin: 3px 0 7px; display: block;
+        border: 0; border-radius: 2px; overflow: hidden; background: #17191e;
+        accent-color: #6789ad;
+      }
+      progress::-webkit-progress-bar { background: #17191e; }
+      progress::-webkit-progress-value { background: #6789ad; }
+      progress::-moz-progress-bar { background: #6789ad; }
+      .loading-footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+      .loading-hint { color: #9298a5; font-size: 12px; line-height: 1.25; }
+      #cancel-loading {
+        flex: none; color: #e5e7eb; background: #343841; border: 1px solid #59606d;
+        border-radius: 3px; padding: 4px 12px; cursor: pointer;
+      }
+      #cancel-loading:hover { background: #414650; border-color: #6d7584; }
       aside {
         position: absolute; top: 16px; right: 16px; width: 220px; padding: 14px;
         border: 1px solid rgb(148 163 184 / 28%); border-radius: 9px;
@@ -33,9 +54,15 @@
     <main>
       <canvas id="canvas" width="1280" height="720" tabindex="0"></canvas>
       <output id="granit-status" data-status="starting">
-        <span id="status-text">Loading WebGPU renderer…</span>
-        <progress id="loading-progress" max="1" value="0"></progress>
-        <button id="cancel-loading" type="button">Cancel</button>
+        <span class="loading-title">Loading Model</span>
+        <span class="loading-content">
+          <span id="status-text">Initializing WebGPU renderer…</span>
+          <progress id="loading-progress" max="1" value="0"></progress>
+          <span class="loading-footer">
+            <span class="loading-hint">The viewer remains responsive while resources are loaded.</span>
+            <button id="cancel-loading" type="button">Cancel</button>
+          </span>
+        </span>
       </output>
       <aside id="quality-panel" hidden>
         <h1>Render Quality</h1>

@@ -401,7 +401,7 @@ async function main() {
       undefined,
       { timeout: 30_000 },
     );
-    const cancelledText = await cancelPage.locator("#granit-status").textContent();
+    const cancelledText = await cancelPage.locator("#status-text").textContent();
     if (!/^failed:asset-(?:load|upload):-15/.test(cancelledText?.trim() ?? ""))
       throw new Error(`浏览器上传取消未返回稳定结果：${cancelledText}`);
     const cancelledShutdown = await cancelPage.evaluate(() => Module._granit_web_shutdown());
@@ -427,7 +427,7 @@ async function main() {
       undefined,
       { timeout: 30_000 },
     );
-    const failureText = await failurePage.locator("#granit-status").textContent();
+    const failureText = await failurePage.locator("#status-text").textContent();
     if (!failureText?.trim().startsWith("failed:asset-resource-fetch:")) {
       throw new Error(
         `外部 Buffer 缺失未进入预期失败路径：${failureText}\n${failureMessages.join("\n")}`,
