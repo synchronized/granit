@@ -34,6 +34,7 @@ include(CMakePackageConfigHelpers)
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 include(utility)
 include(granit_shader_asset_format)
+include(granit_integration_dependencies)
 
 if(GRANIT_BUILD_EMSCRIPTEN_PLATFORM)
   if(NOT EMSCRIPTEN)
@@ -116,72 +117,11 @@ set(
 )
 
 if(GRANIT_BUILD_INTEGRATION_SDL3)
-  if(NOT TARGET SDL3::SDL3)
-    find_package(SDL3 3.2 CONFIG QUIET)
-  endif()
-  if(NOT TARGET SDL3::SDL3 AND GRANIT_FETCH_INTEGRATION_DEPENDENCIES)
-    include(FetchContent)
-    set(SDL_TEST_LIBRARY OFF CACHE BOOL "" FORCE)
-    set(SDL_TESTS OFF CACHE BOOL "" FORCE)
-    set(SDL_EXAMPLES OFF CACHE BOOL "" FORCE)
-    FetchContent_Declare(
-      granit_sdl3
-      GIT_REPOSITORY https://github.com/libsdl-org/SDL.git
-      GIT_TAG release-3.4.10
-      GIT_SHALLOW TRUE
-    )
-    FetchContent_MakeAvailable(granit_sdl3)
-    set(GRANIT_SDL3_FETCHED TRUE)
-  endif()
-  if(NOT TARGET SDL3::SDL3)
-    message(FATAL_ERROR "已启用 SDL3 Integration，但未找到 SDL3::SDL3（最低版本 3.2）")
-  endif()
-  set(GRANIT_SDL3_TARGET SDL3::SDL3)
+  granit_prepare_sdl3_dependency(FALSE)
 endif()
 
 if(GRANIT_BUILD_INTEGRATION_IMGUI)
-  if(NOT GRANIT_IMGUI_FETCHED AND NOT TARGET imgui::imgui AND NOT TARGET ImGui::ImGui AND
-     NOT TARGET imgui)
-    find_package(imgui CONFIG QUIET)
-  endif()
-  if(NOT TARGET imgui::imgui AND NOT TARGET ImGui::ImGui AND NOT TARGET imgui AND
-     GRANIT_FETCH_INTEGRATION_DEPENDENCIES)
-    include(FetchContent)
-    FetchContent_Declare(
-      granit_imgui
-      GIT_REPOSITORY https://github.com/ocornut/imgui.git
-      GIT_TAG v1.92.9
-      GIT_SHALLOW TRUE
-    )
-    FetchContent_MakeAvailable(granit_imgui)
-    add_library(
-      granit_imgui_dependency STATIC
-      "${granit_imgui_SOURCE_DIR}/imgui.cpp"
-      "${granit_imgui_SOURCE_DIR}/imgui_draw.cpp"
-      "${granit_imgui_SOURCE_DIR}/imgui_tables.cpp"
-      "${granit_imgui_SOURCE_DIR}/imgui_widgets.cpp"
-    )
-    target_include_directories(granit_imgui_dependency PUBLIC "${granit_imgui_SOURCE_DIR}")
-    target_compile_features(granit_imgui_dependency PUBLIC cxx_std_20)
-    set_target_properties(
-      granit_imgui_dependency
-      PROPERTIES POSITION_INDEPENDENT_CODE YES FOLDER "Third Party"
-    )
-    set(GRANIT_IMGUI_FETCHED TRUE)
-  endif()
-  if(NOT GRANIT_IMGUI_FETCHED AND NOT TARGET imgui::imgui AND NOT TARGET ImGui::ImGui AND
-     NOT TARGET imgui)
-    message(FATAL_ERROR "已启用 ImGui Integration，但未找到 imgui::imgui、ImGui::ImGui 或 imgui")
-  endif()
-  if(GRANIT_IMGUI_FETCHED)
-    set(GRANIT_IMGUI_TARGET granit_imgui_dependency)
-  elseif(TARGET imgui::imgui)
-    set(GRANIT_IMGUI_TARGET imgui::imgui)
-  elseif(TARGET ImGui::ImGui)
-    set(GRANIT_IMGUI_TARGET ImGui::ImGui)
-  else()
-    set(GRANIT_IMGUI_TARGET imgui)
-  endif()
+  granit_prepare_imgui_dependency(FALSE)
 endif()
 
 include(CTest)

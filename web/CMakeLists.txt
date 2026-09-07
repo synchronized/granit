@@ -77,35 +77,16 @@ include(granit_modules)
 granit_add_render_pipeline_module()
 
 if(GRANIT_BUILD_WEB_IMGUI_EXAMPLE)
-  include(FetchContent)
   set(SDL_SHARED OFF CACHE BOOL "" FORCE)
   set(SDL_STATIC ON CACHE BOOL "" FORCE)
-  set(SDL_TEST_LIBRARY OFF CACHE BOOL "" FORCE)
-  set(SDL_TESTS OFF CACHE BOOL "" FORCE)
-  set(SDL_EXAMPLES OFF CACHE BOOL "" FORCE)
   set(SDL_INSTALL OFF CACHE BOOL "" FORCE)
-  FetchContent_Declare(
-    granit_web_sdl3
-    GIT_REPOSITORY https://github.com/libsdl-org/SDL.git
-    GIT_TAG release-3.4.10
-    GIT_SHALLOW TRUE
-  )
-  FetchContent_Declare(
-    granit_web_imgui
-    GIT_REPOSITORY https://github.com/ocornut/imgui.git
-    GIT_TAG v1.92.9
-    GIT_SHALLOW TRUE
-  )
-  FetchContent_MakeAvailable(granit_web_sdl3 granit_web_imgui)
+  granit_prepare_sdl3_dependency(TRUE)
+  granit_prepare_imgui_dependency(TRUE)
 
   add_library(
     granit_web_imgui_support STATIC
-    "${granit_web_imgui_SOURCE_DIR}/imgui.cpp"
-    "${granit_web_imgui_SOURCE_DIR}/imgui_draw.cpp"
-    "${granit_web_imgui_SOURCE_DIR}/imgui_tables.cpp"
-    "${granit_web_imgui_SOURCE_DIR}/imgui_widgets.cpp"
-    "${granit_web_imgui_SOURCE_DIR}/imgui_demo.cpp"
-    "${granit_web_imgui_SOURCE_DIR}/backends/imgui_impl_sdl3.cpp"
+    "${granit_imgui_SOURCE_DIR}/imgui_demo.cpp"
+    "${granit_imgui_SOURCE_DIR}/backends/imgui_impl_sdl3.cpp"
     "${PROJECT_SOURCE_DIR}/src/integrations/imgui/renderer.cpp"
     "${PROJECT_SOURCE_DIR}/examples/common/imgui_sample_resources.cpp"
   )
@@ -113,11 +94,12 @@ if(GRANIT_BUILD_WEB_IMGUI_EXAMPLE)
   target_compile_definitions(granit_web_imgui_support PUBLIC GRANIT_INTEGRATION_IMGUI_STATIC_DEFINE)
   target_include_directories(
     granit_web_imgui_support
-    PUBLIC "${PROJECT_SOURCE_DIR}/examples" "${granit_web_imgui_SOURCE_DIR}"
+    PUBLIC "${PROJECT_SOURCE_DIR}/examples" "${granit_imgui_SOURCE_DIR}"
            "${PROJECT_SOURCE_DIR}/include"
   )
   target_link_libraries(
     granit_web_imgui_support PUBLIC granit::render_pipeline SDL3::SDL3
+                                    "${GRANIT_IMGUI_TARGET}"
   )
   target_compile_options(
     granit_web_imgui_support PRIVATE "--use-port=emdawnwebgpu:cpp_bindings=false"
