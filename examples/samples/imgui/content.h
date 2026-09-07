@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#ifndef GRANIT_EXAMPLES_COMMON_IMGUI_SAMPLE_CONTENT_H_
-#define GRANIT_EXAMPLES_COMMON_IMGUI_SAMPLE_CONTENT_H_
+#ifndef GRANIT_EXAMPLES_SAMPLES_IMGUI_CONTENT_H_
+#define GRANIT_EXAMPLES_SAMPLES_IMGUI_CONTENT_H_
 
 #include <imgui.h>
 

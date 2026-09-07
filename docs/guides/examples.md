@@ -76,3 +76,6 @@ tests/fixtures/         测试与 Smoke 固定输入
 
 正式库源码不得反向依赖 `examples` 或 `tests`。公开示例不包含 Vulkan 头文件；预编译 Shader
 随仓库提供，普通构建不要求运行时 Shader 编译器。
+
+示例源码按职责分层：`examples/framework` 保存多个示例共用的平台辅助代码，
+`examples/samples` 保存各示例内容和自身目标声明。两者均为仓库私有实现，不随 SDK 安装。

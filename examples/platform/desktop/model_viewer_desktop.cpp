@@ -5,7 +5,7 @@
 #include "presentation_policy.h"
 #include "sdl3_input.h"
 
-#include "common/imgui_theme.h"
+#include "framework/common/imgui_theme.h"
 #include "model_viewer/application_core.h"
 #include "model_viewer/frame_executor.h"
 #include "model_viewer/imgui_frame_capture.h"

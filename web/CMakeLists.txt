@@ -88,7 +88,7 @@ if(GRANIT_BUILD_WEB_IMGUI_EXAMPLE)
     "${granit_imgui_SOURCE_DIR}/imgui_demo.cpp"
     "${granit_imgui_SOURCE_DIR}/backends/imgui_impl_sdl3.cpp"
     "${PROJECT_SOURCE_DIR}/src/integrations/imgui/renderer.cpp"
-    "${PROJECT_SOURCE_DIR}/examples/common/imgui_sample_resources.cpp"
+    "${PROJECT_SOURCE_DIR}/examples/samples/imgui/resources.cpp"
   )
   target_compile_features(granit_web_imgui_support PUBLIC cxx_std_20)
   target_compile_definitions(granit_web_imgui_support PUBLIC GRANIT_INTEGRATION_IMGUI_STATIC_DEFINE)

@@ -6,9 +6,9 @@
 #include <backends/imgui_impl_sdl3.h>
 #include <imgui.h>
 
-#include "common/imgui_sample_content.h"
-#include "common/imgui_sample_resources.h"
-#include "common/imgui_theme.h"
+#include "samples/imgui/content.h"
+#include "samples/imgui/resources.h"
+#include "framework/common/imgui_theme.h"
 
 #include <granit/granit.hpp>
 #include <granit/integrations/imgui/renderer.hpp>
