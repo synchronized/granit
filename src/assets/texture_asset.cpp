@@ -39,6 +39,16 @@ uint64_t read_u64(std::span<const std::byte> bytes, size_t offset) noexcept {
   return value;
 }
 
+void write_u32(std::span<std::byte> bytes, size_t offset, uint32_t value) noexcept {
+  for (uint32_t index = 0; index < 4; ++index)
+    bytes[offset + index] = static_cast<std::byte>(value >> (index * 8U));
+}
+
+void write_u64(std::span<std::byte> bytes, size_t offset, uint64_t value) noexcept {
+  for (uint32_t index = 0; index < 8; ++index)
+    bytes[offset + index] = static_cast<std::byte>(value >> (index * 8U));
+}
+
 bool checked_table_size(uint32_t variant_count, uint32_t subresource_count,
                         uint64_t& size) noexcept {
   const uint64_t variants = uint64_t{variant_count} * variant_size;
@@ -91,6 +101,63 @@ bool valid_subresource(const texture_asset_view& asset,
 }
 
 } // namespace
+
+texture_asset_error encode_texture_asset(const texture_asset_view& asset,
+                                         std::vector<std::byte>& output) {
+  if (asset.variants.empty() || asset.variants.size() > maximum_variant_count ||
+      asset.subresources.empty() || asset.subresources.size() > maximum_subresource_count)
+    return texture_asset_error::invalid_argument;
+  uint64_t encoded_size = 0;
+  if (!checked_table_size(static_cast<uint32_t>(asset.variants.size()),
+                          static_cast<uint32_t>(asset.subresources.size()), encoded_size) ||
+      encoded_size > std::numeric_limits<size_t>::max())
+    return texture_asset_error::invalid_argument;
+  std::vector<std::byte> encoded(static_cast<size_t>(encoded_size));
+  std::ranges::copy(magic, encoded.begin());
+  write_u32(encoded, 8, schema_version);
+  write_u32(encoded, 12, header_size);
+  write_u32(encoded, 16, asset.width);
+  write_u32(encoded, 20, asset.height);
+  write_u32(encoded, 24, asset.depth);
+  write_u32(encoded, 28, asset.array_layers);
+  write_u32(encoded, 32, asset.mip_levels);
+  write_u32(encoded, 36, asset.dimension);
+  write_u32(encoded, 40, static_cast<uint32_t>(asset.variants.size()));
+  write_u32(encoded, 44, static_cast<uint32_t>(asset.subresources.size()));
+  std::ranges::copy(asset.content_id, encoded.begin() + 48);
+  for (size_t index = 0; index < asset.variants.size(); ++index) {
+    const auto offset = header_size + index * variant_size;
+    const auto& variant = asset.variants[index];
+    write_u32(encoded, offset, variant.format);
+    write_u32(encoded, offset + 4, variant.usage);
+    write_u32(encoded, offset + 8, variant.first_subresource);
+    write_u32(encoded, offset + 12, variant.subresource_count);
+    write_u64(encoded, offset + 16, variant.payload_offset);
+    write_u64(encoded, offset + 24, variant.payload_size);
+    std::memcpy(encoded.data() + offset + 32, variant.payload_digest,
+                GRANIT_TEXTURE_ASSET_ID_SIZE);
+    write_u32(encoded, offset + 64, variant.reserved[0]);
+    write_u32(encoded, offset + 68, variant.reserved[1]);
+  }
+  const auto table = header_size + asset.variants.size() * variant_size;
+  for (size_t index = 0; index < asset.subresources.size(); ++index) {
+    const auto offset = table + index * subresource_size;
+    const auto& subresource = asset.subresources[index];
+    write_u32(encoded, offset, subresource.mip_level);
+    write_u32(encoded, offset + 4, subresource.array_layer);
+    write_u64(encoded, offset + 8, subresource.data_offset);
+    write_u64(encoded, offset + 16, subresource.data_size);
+    write_u32(encoded, offset + 24, subresource.bytes_per_row);
+    write_u32(encoded, offset + 28, subresource.rows_per_image);
+    write_u32(encoded, offset + 32, subresource.reserved[0]);
+    write_u32(encoded, offset + 36, subresource.reserved[1]);
+  }
+  texture_asset_view validated;
+  if (decode_texture_asset(encoded, validated) != texture_asset_error::success)
+    return texture_asset_error::invalid_layout;
+  output = std::move(encoded);
+  return texture_asset_error::success;
+}
 
 texture_asset_error decode_texture_asset(std::span<const std::byte> manifest,
                                          texture_asset_view& output) {

@@ -41,6 +41,42 @@ struct texture_asset_selection {
   std::uint64_t payload_size{};
 };
 
+[[nodiscard]] inline result encode_texture_asset(const texture_asset_info& info,
+                                                 std::vector<std::byte>& manifest) noexcept {
+  if (info.variants.size() > UINT32_MAX || info.subresources.size() > UINT32_MAX)
+    return result::invalid_argument;
+  granit_texture_asset_info native = GRANIT_TEXTURE_ASSET_INFO_INIT;
+  native.schema_version = GRANIT_TEXTURE_ASSET_SCHEMA_VERSION;
+  std::memcpy(native.content_id, info.content_id.data(), info.content_id.size());
+  native.dimension = info.dimension;
+  native.width = info.width;
+  native.height = info.height;
+  native.depth = info.depth;
+  native.array_layers = info.array_layers;
+  native.mip_levels = info.mip_levels;
+  native.variants = const_cast<granit_texture_asset_variant_info*>(info.variants.data());
+  native.variant_count = static_cast<std::uint32_t>(info.variants.size());
+  native.variant_capacity = native.variant_count;
+  native.subresources =
+      const_cast<granit_texture_asset_subresource_info*>(info.subresources.data());
+  native.subresource_count = static_cast<std::uint32_t>(info.subresources.size());
+  native.subresource_capacity = native.subresource_count;
+  std::uint64_t required_size = 0;
+  auto value = from_native(granit_texture_asset_encode(&native, nullptr, &required_size));
+  if (!value)
+    return value;
+  try {
+    std::vector<std::byte> replacement(static_cast<std::size_t>(required_size));
+    value = from_native(
+        granit_texture_asset_encode(&native, replacement.data(), &required_size));
+    if (value)
+      manifest = std::move(replacement);
+    return value;
+  } catch (...) {
+    return result::out_of_memory;
+  }
+}
+
 [[nodiscard]] inline result inspect_texture_asset(std::span<const std::byte> manifest,
                                                   texture_asset_info& info) noexcept {
   granit_texture_asset_info native = GRANIT_TEXTURE_ASSET_INFO_INIT;

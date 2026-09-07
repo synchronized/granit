@@ -64,6 +64,47 @@ extern "C" granit_result granit_texture_asset_inspect(const void* manifest_data,
   }
 }
 
+extern "C" granit_result granit_texture_asset_encode(const granit_texture_asset_info* info,
+                                                      void* manifest_data,
+                                                      uint64_t* manifest_size) {
+  if (info == nullptr || info->struct_size < GRANIT_TEXTURE_ASSET_INFO_SIZE ||
+      info->schema_version != GRANIT_TEXTURE_ASSET_SCHEMA_VERSION || info->reserved != 0 ||
+      info->reserved_2 != 0 || info->variants == nullptr || info->variant_count == 0 ||
+      info->variant_capacity < info->variant_count || info->subresources == nullptr ||
+      info->subresource_count == 0 || info->subresource_capacity < info->subresource_count ||
+      manifest_size == nullptr)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  try {
+    granit::detail::texture_asset_view asset;
+    std::memcpy(asset.content_id.data(), info->content_id, asset.content_id.size());
+    asset.dimension = info->dimension;
+    asset.width = info->width;
+    asset.height = info->height;
+    asset.depth = info->depth;
+    asset.array_layers = info->array_layers;
+    asset.mip_levels = info->mip_levels;
+    asset.variants.assign(info->variants, info->variants + info->variant_count);
+    asset.subresources.assign(info->subresources,
+                              info->subresources + info->subresource_count);
+    std::vector<std::byte> encoded;
+    const auto encoded_result = granit::detail::encode_texture_asset(asset, encoded);
+    if (encoded_result != granit::detail::texture_asset_error::success)
+      return GRANIT_ERROR_INVALID_ARGUMENT;
+    const auto capacity = *manifest_size;
+    *manifest_size = encoded.size();
+    if (manifest_data == nullptr)
+      return capacity == 0 ? GRANIT_SUCCESS : GRANIT_ERROR_INVALID_ARGUMENT;
+    if (capacity < encoded.size())
+      return GRANIT_ERROR_INVALID_ARGUMENT;
+    std::memcpy(manifest_data, encoded.data(), encoded.size());
+    return GRANIT_SUCCESS;
+  } catch (const std::bad_alloc&) {
+    return GRANIT_ERROR_OUT_OF_MEMORY;
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
 extern "C" granit_result granit_renderer_select_texture_asset_variant(
     granit_renderer renderer, const void* manifest_data, uint64_t manifest_size,
     const granit_texture_asset_selection_desc* desc, granit_texture_asset_selection* selection) {

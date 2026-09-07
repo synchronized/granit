@@ -30,6 +30,8 @@ struct texture_asset_view {
 
 texture_asset_error decode_texture_asset(std::span<const std::byte> manifest,
                                          texture_asset_view& output);
+texture_asset_error encode_texture_asset(const texture_asset_view& asset,
+                                         std::vector<std::byte>& output);
 bool validate_texture_asset_payload(const texture_asset_view& asset, uint32_t variant_index,
                                     std::span<const std::byte> payload) noexcept;
 
