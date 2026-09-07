@@ -6,6 +6,7 @@
 #include <backends/imgui_impl_sdl3.h>
 #include <imgui.h>
 
+#include "common/imgui_sample_content.h"
 #include "common/imgui_theme.h"
 
 #include <granit/granit.hpp>
@@ -504,9 +505,9 @@ int main(int argc, char** argv) {
 
   bool running = result.ok();
   bool recreate = false;
-  bool show_demo_window = demo_enabled;
-  bool validation_overlay = true;
-  float render_scale = 1;
+  granit::example::imgui_sample_state sample_state{
+      .show_demo_window = demo_enabled,
+  };
   std::uint64_t last_title_update = 0;
   std::uint32_t rendered_frames = 0;
   std::array<bool, GRANIT_MAX_FRAMES_IN_FLIGHT> timestamp_valid{};
@@ -554,31 +555,19 @@ int main(int argc, char** argv) {
     const auto imgui_begin = std::chrono::steady_clock::now();
     ImGui_ImplSDL3_NewFrame();
     ImGui::NewFrame();
-    constexpr auto panel_flags =
-        ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize;
-    ImGui::Begin("Granit Integration", nullptr, panel_flags);
-    ImGui::TextUnformatted("SDL3 owns the window and input; Granit Canvas renders ImGui.");
-    ImGui::Text("Framebuffer: %u x %u", swapchain_info.width, swapchain_info.height);
-    ImGui::Text("Presentation: %s", swapchain_info.presentation == granit::present_mode::immediate
-                                        ? "Immediate"
-                                        : "FIFO fallback");
-    ImGui::Text("CPU %.3f ms | GPU %.3f ms | Present %.3f ms | Slot wait %.3f ms", timings.cpu_ms,
-                timings.gpu_ms, timings.present_ms, timings.slot_wait_ms);
-    ImGui::Separator();
-    ImGui::Checkbox("Show ImGui demo", &show_demo_window);
-    ImGui::Checkbox("Validation overlay", &validation_overlay);
-    ImGui::SliderFloat("Render scale", &render_scale, 0.5F, 2, "%.2fx");
-    if (custom_texture_enabled) {
-      ImGui::TextUnformatted("Custom Texture ID:");
-      ImGui::Image(ImTextureRef{checker_texture_id}, {64, 64});
-    }
-    if (ImGui::Button("Reload shaders"))
-      render_scale = 1;
-    ImGui::SameLine();
-    ImGui::TextDisabled("Modern Granit dark theme");
-    ImGui::End();
-    if (show_demo_window)
-      ImGui::ShowDemoWindow(&show_demo_window);
+    granit::example::build_imgui_sample(
+        sample_state,
+        {.framebuffer_width = swapchain_info.width,
+         .framebuffer_height = swapchain_info.height,
+         .presentation = swapchain_info.presentation == granit::present_mode::immediate
+                             ? "Immediate"
+                             : "FIFO fallback",
+         .cpu_ms = timings.cpu_ms,
+         .gpu_ms = timings.gpu_ms,
+         .present_ms = timings.present_ms,
+         .slot_wait_ms = timings.slot_wait_ms,
+         .show_custom_texture = custom_texture_enabled,
+         .custom_texture = checker_texture_id});
     ImGui::Render();
     sample.imgui_ms =
         std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - imgui_begin)
