@@ -83,6 +83,7 @@ struct web_platform_state {
   bool upload_active{};
   bool upload_cancel_requested{};
   bool pipeline_validation_started{};
+  double renderer_initialization_started_ms{};
   granit::example::model_viewer::gpu_scene_upload_progress upload_progress{};
 };
 
@@ -849,9 +850,10 @@ granit_result draw_shared_fixture(granit_frame frame, granit_texture_view target
   return native_result;
 }
 
-void diagnose(granit_diagnostic_severity, granit_diagnostic_category, const char* message,
+void diagnose(granit_diagnostic_severity severity, granit_diagnostic_category, const char* message,
               std::uint32_t message_length, void*) noexcept {
-  std::fprintf(stderr, "GRANIT_DIAGNOSTIC:%.*s\n", static_cast<int>(message_length), message);
+  auto* stream = severity == GRANIT_DIAGNOSTIC_SEVERITY_INFO ? stdout : stderr;
+  std::fprintf(stream, "GRANIT_DIAGNOSTIC:%.*s\n", static_cast<int>(message_length), message);
 }
 
 EM_BOOL receive_keyboard(int event_type, const EmscriptenKeyboardEvent* event,
@@ -1138,6 +1140,12 @@ void tick(void*) noexcept {
   }
   if (state.status != startup_status::provider_pending)
     return;
+  constexpr double renderer_initialization_timeout_ms = 30000.0;
+  if (emscripten_get_now() - state.renderer_initialization_started_ms >
+      renderer_initialization_timeout_ms) {
+    fail("renderer-timeout", GRANIT_ERROR_NOT_READY);
+    return;
+  }
   const auto process_result = granit_renderer_process_events(state.renderer);
   if (process_result != GRANIT_SUCCESS) {
     fail("provider-events", process_result);
@@ -1503,6 +1511,7 @@ int main() {
                                                  receive_focus));
   state.input.focus_changed(true);
 
+  state.renderer_initialization_started_ms = emscripten_get_now();
   state.status = startup_status::provider_pending;
   emscripten_set_main_loop_arg(tick, &state, 0, EM_FALSE);
   return 0;

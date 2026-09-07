@@ -415,8 +415,8 @@
   渲染背压和 ImGui 捕获下的输入丢失、旋转卡顿与高延迟，并覆盖焦点、HiDPI 和 Resize 边界。
 - 统一桌面 Vulkan 与浏览器 WebGPU 的示例核心和输入语义，以正式 Model Viewer Fixture 完成
   浏览器加载、交互、像素容差和资源生命周期验收。
-- 将示例整理为私有 Framework、平台壳层和 Sample 内容三层；保留 `model_viewer` 与
-  `sdl3_imgui` 两个用户级示例，测试性质程序继续归入测试。
+- 将示例整理为私有 Framework、平台壳层和 Sample 内容三层；保留 `model_viewer` 与 `imgui`
+  两个用户级示例，后者使用 SDL3 验证 Vulkan/WebGPU 一致性，测试性质程序继续归入测试。
 - 公共执行器、公共 glTF SDK、Android、新后端和新渲染特性不属于本版本。
 
 ## 近期执行顺序

@@ -212,6 +212,15 @@ async function main() {
         `WebGPU 生命周期异常，state=${rendererState}, failure=${failureResult}, asset=${assetStatus}`,
       );
     }
+    for (const diagnostic of [
+      "Emscripten WebGPU initialization started",
+      "Emscripten WebGPU adapter and device are ready",
+    ]) {
+      if (!browserMessages.some((message) => message === `log: GRANIT_DIAGNOSTIC:${diagnostic}`))
+        throw new Error(`WebGPU 信息诊断未使用普通日志输出：${diagnostic}`);
+      if (browserMessages.some((message) => message === `error: GRANIT_DIAGNOSTIC:${diagnostic}`))
+        throw new Error(`WebGPU 信息诊断被错误输出为 error：${diagnostic}`);
+    }
     for (const stage of [
       "document", "buffers", "images", "materials", "meshes", "nodes",
       "planning", "geometry", "textures", "samplers",

@@ -47,7 +47,9 @@ http://127.0.0.1:8000/granit_model_viewer_web.html?model=https%3A%2F%2Fexample.c
 返回稳定的 `GRANIT_ERROR_CANCELLED`，已经创建的临时资源会随事务回滚。
 
 若初始化失败，请确认浏览器已启用 WebGPU，并从开发者工具控制台查看
-`GRANIT_DIAGNOSTIC` 与 `GRANIT_STATUS` 日志。
+`GRANIT_DIAGNOSTIC` 与 `GRANIT_STATUS` 日志。Renderer 初始化超过 30 秒会以
+`failed:renderer-timeout` 明确结束，不会永久停留在加载界面。信息级诊断使用普通 Console 日志，
+只有警告与错误进入错误输出。
 
 浏览器端当前会明确关闭 Timestamp Query 能力，避免把 Adapter 的 `timestamp-query` 暴露误判为
 支持任意 `CommandEncoder` 写入。看到 `commandEncoder.writeTimestamp is not a function` 表示仍在
