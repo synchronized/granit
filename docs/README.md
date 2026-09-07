@@ -66,6 +66,7 @@
 - [从 0.15 迁移到 0.16](guides/migrate-0.15-to-0.16.md)
 - [从 0.16 迁移到 0.17](guides/migrate-0.16-to-0.17.md)
 - [从 0.17 迁移到 0.18](guides/migrate-0.17-to-0.18.md)
+- [从 0.18 迁移到 0.19](guides/migrate-0.18-to-0.19.md)
 - [从 0.8 迁移到 0.9](guides/migrate-0.8-to-0.9.md)
 - [示例程序及运行方式](guides/examples.md)
 - [运行跨后端模型查看器](guides/model-viewer.md)
@@ -94,6 +95,7 @@
 - [资源类型总览](reference/resource-types.md)
 - [Buffer](reference/buffer.md)
 - [Texture 与 Texture View](reference/texture.md)
+- [Texture Asset Manifest](reference/texture-asset.md)
 - [Sampler](reference/sampler.md)
 - [Render Target Attachment](reference/render-target.md)
 

@@ -22,6 +22,7 @@
 - [2026-09-07 S-33 开发与发布流水线提速验收](2026-09-07-s33-ci-release-acceleration.md)
 - [2026-09-06 Granit 0.17.0 发布验收](2026-09-06-v0.17.0-release-acceptance.md)
 - [2026-09-07 Granit 0.18.0 发布验收](2026-09-07-v0.18.0-release-acceptance.md)
+- [2026-09-07 Granit 0.19.0 发布验收](2026-09-07-v0.19.0-release-acceptance.md)
 - [2026-09-06 Granit 0.16.0 发布验收](2026-09-06-v0.16.0-release-acceptance.md)
 - [2026-09-06 Granit 0.15.0 发布验收](2026-09-06-v0.15.0-release-acceptance.md)
 - [2026-09-06 Granit 0.14.0 发布验收](2026-09-06-v0.14.0-release-acceptance.md)

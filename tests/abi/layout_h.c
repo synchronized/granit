@@ -204,6 +204,15 @@ GRANIT_ABI_ASSERT(granit_abi_timestamp_query_desc_size,
                   sizeof(granit_timestamp_query_pool_desc) == 16);
 GRANIT_ABI_ASSERT(granit_abi_upload_batch_desc_size, sizeof(granit_upload_batch_desc) == 32);
 GRANIT_ABI_ASSERT(granit_abi_upload_batch_info_size, sizeof(granit_upload_batch_info) == 40);
+GRANIT_ABI_ASSERT(granit_abi_texture_asset_variant_info_size,
+                  sizeof(granit_texture_asset_variant_info) == 72);
+GRANIT_ABI_ASSERT(granit_abi_texture_asset_subresource_info_size,
+                  sizeof(granit_texture_asset_subresource_info) == 40);
+GRANIT_ABI_ASSERT(granit_abi_texture_asset_info_size, sizeof(granit_texture_asset_info) == 104);
+GRANIT_ABI_ASSERT(granit_abi_texture_asset_selection_desc_size,
+                  sizeof(granit_texture_asset_selection_desc) == 16);
+GRANIT_ABI_ASSERT(granit_abi_texture_asset_selection_size,
+                  sizeof(granit_texture_asset_selection) == 32);
 
 typedef struct granit_abi_renderer_desc_alignment_probe {
   char prefix;

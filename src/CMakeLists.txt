@@ -82,6 +82,8 @@ target_sources(
     core/resource_validation.cpp
     core/resource_validation.h
     core/texture_format.h
+    assets/texture_asset.cpp
+    assets/texture_asset.h
     core/retirement_queue.cpp
     core/retirement_queue.h
     core/device_status.h
@@ -118,6 +120,7 @@ target_sources(
     renderer/surface_api.cpp
     renderer/swapchain_api.cpp
     renderer/texture_api.cpp
+    renderer/texture_asset_api.cpp
     renderer/timestamp_query_api.cpp
     renderer/upload_batch_api.cpp
     renderer/readback_batch_api.cpp
@@ -168,6 +171,8 @@ target_sources(
       "${PROJECT_SOURCE_DIR}/include/granit/renderer/surface.hpp"
       "${PROJECT_SOURCE_DIR}/include/granit/renderer/texture.h"
       "${PROJECT_SOURCE_DIR}/include/granit/renderer/texture.hpp"
+      "${PROJECT_SOURCE_DIR}/include/granit/renderer/texture_asset.h"
+      "${PROJECT_SOURCE_DIR}/include/granit/renderer/texture_asset.hpp"
       "${PROJECT_SOURCE_DIR}/include/granit/renderer/timestamp_query.h"
       "${PROJECT_SOURCE_DIR}/include/granit/renderer/timestamp_query.hpp"
       "${PROJECT_SOURCE_DIR}/include/granit/renderer/upload_batch.h"

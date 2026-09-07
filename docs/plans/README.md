@@ -177,6 +177,8 @@ D-03-graphics-pipeline.md
   WebGPU 降级回归、统一缓存和不可变 Release Candidate 晋级。
 - [S-34：0.18.0 压缩纹理与格式能力契约](S-34-0.18.0-compressed-textures.md)——已完成；增加通用
   GPU 块压缩格式、布局计算、设备能力查询和跨后端上传契约。
+- [S-35：0.19.0 纹理资产变体与流式加载契约](S-35-0.19.0-texture-asset-variants.md)——已完成；
+  已落地确定性纹理 Manifest、设备驱动的变体选择和逐 mip Upload Batch 契约。
 
 ## 状态
 

@@ -26,6 +26,7 @@
 #include <granit/renderer/surface.h>
 #include <granit/renderer/swapchain.h>
 #include <granit/renderer/texture.hpp>
+#include <granit/renderer/texture_asset.h>
 #include <granit/renderer/timestamp_query.h>
 
 #include "model_viewer/application_core.h"
@@ -86,6 +87,42 @@ struct web_platform_state {
 };
 
 web_platform_state state;
+
+bool validate_texture_asset_contract() {
+  granit_texture_asset_variant_info variant{};
+  variant.format = GRANIT_TEXTURE_FORMAT_RGBA8_SRGB;
+  variant.usage = GRANIT_TEXTURE_USAGE_SAMPLED_BIT;
+  variant.subresource_count = 1;
+  variant.payload_size = 64;
+  granit_texture_asset_subresource_info subresource{};
+  subresource.data_size = 64;
+  subresource.bytes_per_row = 16;
+  subresource.rows_per_image = 4;
+  granit_texture_asset_info asset = GRANIT_TEXTURE_ASSET_INFO_INIT;
+  asset.schema_version = GRANIT_TEXTURE_ASSET_SCHEMA_VERSION;
+  asset.content_id[0] = 1;
+  asset.dimension = GRANIT_TEXTURE_DIMENSION_2D;
+  asset.width = 4;
+  asset.height = 4;
+  asset.depth = 1;
+  asset.array_layers = 1;
+  asset.mip_levels = 1;
+  asset.variant_count = 1;
+  asset.subresource_count = 1;
+  asset.variants = &variant;
+  asset.variant_capacity = 1;
+  asset.subresources = &subresource;
+  asset.subresource_capacity = 1;
+  std::uint64_t size = 0;
+  if (granit_texture_asset_encode(&asset, nullptr, &size) != GRANIT_SUCCESS || size != 192)
+    return false;
+  std::array<std::byte, 192> manifest{};
+  if (granit_texture_asset_encode(&asset, manifest.data(), &size) != GRANIT_SUCCESS)
+    return false;
+  granit_texture_asset_info inspected = GRANIT_TEXTURE_ASSET_INFO_INIT;
+  return granit_texture_asset_inspect(manifest.data(), size, &inspected) == GRANIT_SUCCESS &&
+         inspected.variant_count == 1 && inspected.subresource_count == 1;
+}
 
 const char*
 upload_stage_name(granit::example::model_viewer::gpu_scene_upload_stage stage) noexcept {
@@ -1428,7 +1465,8 @@ extern "C" EMSCRIPTEN_KEEPALIVE int granit_web_renderer_failure_result() noexcep
 }
 
 int main() {
-  if (!load_startup_resource() || !validate_fixture_assets()) {
+  if (!load_startup_resource() || !validate_fixture_assets() ||
+      !validate_texture_asset_contract()) {
     fail("preloaded-resource");
     return 1;
   }
