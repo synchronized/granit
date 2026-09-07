@@ -7,6 +7,7 @@
 #include <imgui.h>
 
 #include "common/imgui_sample_content.h"
+#include "common/imgui_sample_resources.h"
 #include "common/imgui_theme.h"
 
 #include <granit/granit.hpp>
@@ -35,8 +36,6 @@
 
 namespace {
 
-constexpr ImTextureID font_texture_id = 1;
-constexpr ImTextureID checker_texture_id = 2;
 constexpr std::uint32_t default_frame_slot_count = 3;
 constexpr std::size_t invalid_sample_index = std::numeric_limits<std::size_t>::max();
 
@@ -146,100 +145,6 @@ struct imgui_quit {
   }
 };
 
-struct texture_binding {
-  granit_texture_view view{GRANIT_NULL_HANDLE};
-  granit_sampler sampler{GRANIT_NULL_HANDLE};
-};
-
-struct texture_bindings {
-  texture_binding font;
-  texture_binding checker;
-};
-
-granit::result resolve_texture(ImTextureID texture, granit_canvas_draw_state& state,
-                               void* user_data) noexcept {
-  if (user_data == nullptr)
-    return granit::result::invalid_argument;
-  const auto& bindings = *static_cast<const texture_bindings*>(user_data);
-  const auto* binding = texture == font_texture_id      ? &bindings.font
-                        : texture == checker_texture_id ? &bindings.checker
-                                                        : nullptr;
-  if (binding == nullptr)
-    return granit::result::invalid_argument;
-  state.texture = binding->view;
-  state.sampler = binding->sampler;
-  return granit::result::success;
-}
-
-granit::result upload_checker_texture(granit_renderer renderer, granit::texture& texture,
-                                      granit::texture_view& view) {
-  constexpr std::array<std::uint8_t, 16> pixels{238, 194, 255, 255, 35,  31, 52,  255,
-                                                35,  31,  52,  255, 104, 87, 204, 255};
-  auto result = texture.initialize(renderer, {.format = granit::texture_format::rgba8_unorm,
-                                              .usage = granit::texture_usage::sampled |
-                                                       granit::texture_usage::transfer_destination,
-                                              .width = 2,
-                                              .height = 2});
-  if (result.ok()) {
-    result = texture.write(std::as_bytes(std::span{pixels}),
-                           {.bytes_per_row = 8, .rows_per_image = 2}, {.width = 2, .height = 2});
-  }
-  if (result.ok())
-    result = view.initialize(renderer, texture.native_handle());
-  return result;
-}
-
-granit::result upload_font_atlas(granit_renderer renderer, granit::texture& texture,
-                                 granit::texture_view& view, granit::sampler& sampler) {
-  unsigned char* pixels = nullptr;
-  int width = 0;
-  int height = 0;
-  ImGui::GetIO().Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);
-  if (pixels == nullptr || width <= 0 || height <= 0)
-    return granit::result::internal;
-
-  const auto byte_count = static_cast<std::size_t>(width) * static_cast<std::size_t>(height) * 4;
-  std::vector<std::byte> premultiplied_pixels(byte_count);
-  for (std::size_t offset = 0; offset < byte_count; offset += 4) {
-    const auto alpha = pixels[offset + 3];
-    for (std::size_t channel = 0; channel < 3; ++channel) {
-      premultiplied_pixels[offset + channel] = static_cast<std::byte>(
-          (static_cast<std::uint32_t>(pixels[offset + channel]) * alpha + 127U) / 255U);
-    }
-    premultiplied_pixels[offset + 3] = static_cast<std::byte>(alpha);
-  }
-
-  auto result = texture.initialize(renderer, {.format = granit::texture_format::rgba8_unorm,
-                                              .usage = granit::texture_usage::sampled |
-                                                       granit::texture_usage::transfer_destination,
-                                              .width = static_cast<std::uint32_t>(width),
-                                              .height = static_cast<std::uint32_t>(height)});
-  if (result.ok()) {
-    const granit::texture_data_layout layout{.bytes_per_row = static_cast<std::uint32_t>(width) * 4,
-                                             .rows_per_image = static_cast<std::uint32_t>(height)};
-    const granit::texture_write_region region{.width = static_cast<std::uint32_t>(width),
-                                              .height = static_cast<std::uint32_t>(height)};
-    result = texture.write(premultiplied_pixels, layout, region);
-  }
-  if (result.ok())
-    result = view.initialize(renderer, texture.native_handle());
-  if (result.ok()) {
-    result = sampler.initialize(renderer, {.address_u = granit::address_mode::clamp_to_edge,
-                                           .address_v = granit::address_mode::clamp_to_edge,
-                                           .address_w = granit::address_mode::clamp_to_edge});
-  }
-  if (result.ok()) {
-    ImGui::GetIO().Fonts->SetTexID(font_texture_id);
-    ImGui::GetIO().Fonts->TexRef._TexData->SetStatus(ImTextureStatus_OK);
-  }
-  return result;
-}
-
-bool needs_srgb_encoding(granit::texture_format format) {
-  return format == granit::texture_format::rgba8_unorm ||
-         format == granit::texture_format::bgra8_unorm;
-}
-
 granit::result render_frame(granit::swapchain& swapchain, granit::frame_context& frame_context,
                             std::array<bool, GRANIT_MAX_FRAMES_IN_FLIGHT>& timestamp_valid,
                             std::array<std::size_t, GRANIT_MAX_FRAMES_IN_FLIGHT>& pending_samples,
@@ -320,7 +225,7 @@ granit::result render_frame(granit::swapchain& swapchain, granit::frame_context&
     record.width = info.width;
     record.height = info.height;
     record.load_operation = GRANIT_ATTACHMENT_LOAD_OPERATION_CLEAR;
-    record.encode_srgb = needs_srgb_encoding(info.format) ? 1U : 0U;
+    record.encode_srgb = granit::example::imgui_target_needs_srgb_encoding(info.format) ? 1U : 0U;
     record.frame_slot = slot_index;
     operation = "canvas.record";
     const auto canvas_begin = std::chrono::steady_clock::now();
@@ -493,13 +398,15 @@ int main(int argc, char** argv) {
   granit::texture_view checker_view;
   granit::sampler font_sampler;
   if (result.ok()) {
-    result = upload_font_atlas(renderer.native_handle(), font_texture, font_view, font_sampler);
+    result = granit::example::upload_imgui_font_atlas(renderer.native_handle(), font_texture,
+                                                      font_view, font_sampler);
   }
   if (result.ok())
-    result = upload_checker_texture(renderer.native_handle(), checker_texture, checker_view);
+    result = granit::example::upload_imgui_checker_texture(renderer.native_handle(),
+                                                           checker_texture, checker_view);
   if (result.failed())
     std::cerr << "SDL3 + ImGui 初始化失败，Granit 结果码：" << static_cast<int>(result) << '\n';
-  texture_bindings bindings{
+  granit::example::imgui_sample_texture_bindings bindings{
       .font = {font_view.native_handle(), font_sampler.native_handle()},
       .checker = {checker_view.native_handle(), font_sampler.native_handle()}};
 
@@ -567,7 +474,7 @@ int main(int argc, char** argv) {
          .present_ms = timings.present_ms,
          .slot_wait_ms = timings.slot_wait_ms,
          .show_custom_texture = custom_texture_enabled,
-         .custom_texture = checker_texture_id});
+         .custom_texture = granit::example::imgui_checker_texture_id});
     ImGui::Render();
     sample.imgui_ms =
         std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - imgui_begin)
@@ -587,8 +494,8 @@ int main(int argc, char** argv) {
     const auto convert_begin = std::chrono::steady_clock::now();
     result = canvas.clear();
     if (result.ok()) {
-      result = granit::integration::imgui::append_draw_data(ImGui::GetDrawData(), canvas,
-                                                            resolve_texture, &bindings);
+      result = granit::integration::imgui::append_draw_data(
+          ImGui::GetDrawData(), canvas, granit::example::resolve_imgui_sample_texture, &bindings);
       if (result.failed())
         std::cerr << "ImGui Draw Data 转换失败，Granit 结果码：" << static_cast<int>(result)
                   << '\n';

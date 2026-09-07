@@ -12,6 +12,7 @@ if(GRANIT_BUILD_INTEGRATION_SDL3 AND GRANIT_BUILD_INTEGRATION_IMGUI AND GRANIT_I
   add_executable(
     granit_sdl3_imgui_example
     sdl3_imgui.cpp
+    common/imgui_sample_resources.cpp
     "${granit_imgui_SOURCE_DIR}/imgui_demo.cpp"
     "${granit_imgui_SOURCE_DIR}/backends/imgui_impl_sdl3.cpp"
   )
