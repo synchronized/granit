@@ -70,6 +70,7 @@ struct web_platform_state {
   unsigned rendered_frame_count{};
   unsigned resize_count{};
   unsigned quality_generation{};
+  unsigned lighting_generation{};
   granit_sample_count sample_count{GRANIT_SAMPLE_COUNT_1};
   unsigned enable_fxaa{1};
   unsigned enable_specular_aa{1};
@@ -1139,6 +1140,25 @@ granit_result configure_render_quality(granit_sample_count sample_count, unsigne
   return GRANIT_SUCCESS;
 }
 
+granit_result configure_lighting(float exposure_ev, float environment_intensity,
+                                 float key_light_intensity) {
+  if (state.status != startup_status::ready || !state.asset_ready)
+    return GRANIT_ERROR_NOT_READY;
+
+  granit::example::model_viewer::viewer_change change;
+  change.exposure_ev = exposure_ev;
+  change.environment_intensity = environment_intensity;
+  auto light = state.core.state().directional_light();
+  light.radiance = {key_light_intensity, key_light_intensity, key_light_intensity};
+  change.directional_light = light;
+  if (state.core.state().apply(state.core.cpu_scene(), change) !=
+      granit::example::model_viewer::viewer_state_error::none)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+
+  ++state.lighting_generation;
+  return GRANIT_SUCCESS;
+}
+
 void tick(void*) noexcept {
   if (state.status == startup_status::failed) {
     return;
@@ -1379,6 +1399,31 @@ granit_web_configure_render_quality(unsigned sample_count, unsigned enable_fxaa,
 
 extern "C" EMSCRIPTEN_KEEPALIVE unsigned granit_web_quality_generation() noexcept {
   return state.quality_generation;
+}
+
+extern "C" EMSCRIPTEN_KEEPALIVE int granit_web_configure_lighting(
+    float exposure_ev, float environment_intensity, float key_light_intensity) noexcept {
+  try {
+    return configure_lighting(exposure_ev, environment_intensity, key_light_intensity);
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+extern "C" EMSCRIPTEN_KEEPALIVE unsigned granit_web_lighting_generation() noexcept {
+  return state.lighting_generation;
+}
+
+extern "C" EMSCRIPTEN_KEEPALIVE float granit_web_exposure_ev() noexcept {
+  return state.core.state().exposure_ev();
+}
+
+extern "C" EMSCRIPTEN_KEEPALIVE float granit_web_environment_intensity() noexcept {
+  return state.core.state().environment_intensity();
+}
+
+extern "C" EMSCRIPTEN_KEEPALIVE float granit_web_key_light_intensity() noexcept {
+  return state.core.state().directional_light().radiance.x;
 }
 
 extern "C" EMSCRIPTEN_KEEPALIVE unsigned granit_web_max_sampler_anisotropy() noexcept {

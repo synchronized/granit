@@ -251,6 +251,56 @@ async function main() {
     }
     validateModelViewerPixels(await page.locator("#canvas").screenshot({ type: "png" }));
 
+    const initialLighting = await page.evaluate(() => ({
+      generation: Module._granit_web_lighting_generation(),
+      exposure: Module._granit_web_exposure_ev(),
+      environment: Module._granit_web_environment_intensity(),
+      keyLight: Module._granit_web_key_light_intensity(),
+    }));
+    const invalidLightingResult = await page.evaluate(() =>
+      Module._granit_web_configure_lighting(0, 0.5, -1),
+    );
+    if (invalidLightingResult !== -2)
+      throw new Error(`无效浏览器光照参数未被拒绝：${invalidLightingResult}`);
+    await page.evaluate(() => {
+      const values = {
+        exposure: "0.35",
+        "environment-intensity": "0.45",
+        "key-light-intensity": "1.75",
+      };
+      for (const [id, value] of Object.entries(values)) {
+        const control = document.getElementById(id);
+        control.value = value;
+      }
+      document.getElementById("exposure").dispatchEvent(new Event("input", { bubbles: true }));
+    });
+    await page.waitForFunction(
+      (previous) => Module._granit_web_lighting_generation() === previous + 1,
+      initialLighting.generation,
+      { timeout: 5_000 },
+    );
+    const lighting = await page.evaluate(() => ({
+      exposure: Module._granit_web_exposure_ev(),
+      environment: Module._granit_web_environment_intensity(),
+      keyLight: Module._granit_web_key_light_intensity(),
+    }));
+    if (
+      Math.abs(lighting.exposure - 0.35) > 0.001 ||
+      Math.abs(lighting.environment - 0.45) > 0.001 ||
+      Math.abs(lighting.keyLight - 1.75) > 0.001
+    ) {
+      throw new Error(`浏览器光照配置未进入 Viewer Core：${JSON.stringify(lighting)}`);
+    }
+    const restoreLightingResult = await page.evaluate((initial) =>
+      Module._granit_web_configure_lighting(
+        initial.exposure,
+        initial.environment,
+        initial.keyLight,
+      ), initialLighting,
+    );
+    if (restoreLightingResult !== 0)
+      throw new Error(`浏览器默认光照恢复失败：${restoreLightingResult}`);
+
     const qualityGeneration = await page.evaluate(() => Module._granit_web_quality_generation());
     const invalidQualityResult = await page.evaluate(() =>
       Module._granit_web_configure_render_quality(2, 0, 0, 1),
@@ -356,7 +406,7 @@ async function main() {
       );
     }
     console.log(
-      "浏览器 WebGPU 多帧渲染、质量切换、输入、Resize、资产 Fetch 与资源释放验证通过",
+      "浏览器 WebGPU 多帧渲染、质量与光照切换、输入、Resize、资产 Fetch 与资源释放验证通过",
     );
     const validationErrors = browserMessages.filter((message) =>
       /validation error|webgpu.*error/i.test(message),

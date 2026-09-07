@@ -39,12 +39,20 @@
       }
       #cancel-loading:hover { background: #414650; border-color: #6d7584; }
       aside {
-        position: absolute; top: 16px; right: 16px; width: 220px; padding: 14px;
+        box-sizing: border-box; position: absolute; top: 16px; right: 16px; width: 240px;
+        max-height: calc(100% - 32px); padding: 14px; overflow: auto;
         border: 1px solid rgb(148 163 184 / 28%); border-radius: 9px;
         background: rgb(15 23 42 / 88%); box-shadow: 0 12px 30px rgb(0 0 0 / 24%);
       }
       aside h1 { margin: 0 0 12px; font-size: 15px; font-weight: 600; }
+      aside h2 {
+        margin: 15px 0 8px; padding-top: 12px; border-top: 1px solid rgb(148 163 184 / 22%);
+        font-size: 14px; font-weight: 600;
+      }
       label { display: flex; align-items: center; justify-content: space-between; margin: 9px 0; }
+      label.range { display: grid; grid-template-columns: 1fr 52px; gap: 4px 8px; }
+      label.range input { grid-column: 1 / -1; width: 100%; margin: 0; }
+      label.range span { color: #cbd5e1; text-align: right; font-variant-numeric: tabular-nums; }
       select, input { accent-color: #8878f2; }
       small { display: block; margin-top: 10px; color: #94a3b8; line-height: 1.4; }
       aside[hidden] { display: none; }
@@ -70,6 +78,16 @@
         <label>FXAA <input id="fxaa" type="checkbox" checked /></label>
         <label>Specular AA <input id="specular-aa" type="checkbox" checked /></label>
         <label>Anisotropy <select id="anisotropy"><option value="1">1×</option><option value="2">2×</option><option value="4">4×</option><option value="8">8×</option></select></label>
+        <h2>Lighting</h2>
+        <label class="range">Exposure EV <span id="exposure-value">−0.50</span>
+          <input id="exposure" type="range" min="-4" max="4" step="0.05" value="-0.5" />
+        </label>
+        <label class="range">Environment <span id="environment-value">0.12</span>
+          <input id="environment-intensity" type="range" min="0" max="2" step="0.01" value="0.12" />
+        </label>
+        <label class="range">Key Light <span id="key-light-value">1.20</span>
+          <input id="key-light-intensity" type="range" min="0" max="5" step="0.05" value="1.2" />
+        </label>
         <small>Drag to orbit · Wheel to zoom</small>
       </aside>
     </main>
@@ -94,6 +112,7 @@
           const maximum = Module._granit_web_max_sampler_anisotropy();
           for (const option of document.getElementById("anisotropy").options)
             option.disabled = Number(option.value) > maximum;
+          syncLightingControls();
         }
       }
       function updateProgress(text) {
@@ -117,7 +136,35 @@
           Number(document.getElementById("anisotropy").value));
         if (result !== 0) console.error(`Render quality update failed: ${result}`);
       }
+      const lightingControls = [
+        ["exposure", "exposure-value"],
+        ["environment-intensity", "environment-value"],
+        ["key-light-intensity", "key-light-value"],
+      ];
+      function updateLightingValues() {
+        for (const [inputId, valueId] of lightingControls)
+          document.getElementById(valueId).textContent = Number(
+            document.getElementById(inputId).value).toFixed(2);
+      }
+      function syncLightingControls() {
+        document.getElementById("exposure").value = Module._granit_web_exposure_ev();
+        document.getElementById("environment-intensity").value =
+          Module._granit_web_environment_intensity();
+        document.getElementById("key-light-intensity").value =
+          Module._granit_web_key_light_intensity();
+        updateLightingValues();
+      }
+      function applyLighting() {
+        updateLightingValues();
+        const result = Module._granit_web_configure_lighting(
+          Number(document.getElementById("exposure").value),
+          Number(document.getElementById("environment-intensity").value),
+          Number(document.getElementById("key-light-intensity").value));
+        if (result !== 0) console.error(`Lighting update failed: ${result}`);
+      }
       qualityPanel.addEventListener("change", applyQuality);
+      for (const [inputId] of lightingControls)
+        document.getElementById(inputId).addEventListener("input", applyLighting);
       resizeCanvas();
       window.addEventListener("resize", resizeCanvas);
       var Module = {
