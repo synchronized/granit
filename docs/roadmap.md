@@ -407,12 +407,25 @@
 - KTX2/DDS 解析、Basis 运行时转码、压缩纹理运行时 Mipmap、公共文件 Resolver、Android、虚拟
   纹理和 Bindless 不属于本版本。
 
+## 二十八、0.20.0 示例框架与跨平台 Model Viewer 稳定化
+
+**状态：已确认。**
+
+- **[S-36](plans/S-36-0.20.0-example-framework-and-model-viewer.md) / P1**：修复 Model Viewer 在
+  渲染背压和 ImGui 捕获下的输入丢失、旋转卡顿与高延迟，并覆盖焦点、HiDPI 和 Resize 边界。
+- 统一桌面 Vulkan 与浏览器 WebGPU 的示例核心和输入语义，以正式 Model Viewer Fixture 完成
+  浏览器加载、交互、像素容差和资源生命周期验收。
+- 将示例整理为私有 Framework、平台壳层和 Sample 内容三层；保留 `model_viewer` 与
+  `sdl3_imgui` 两个用户级示例，测试性质程序继续归入测试。
+- 公共执行器、公共 glTF SDK、Android、新后端和新渲染特性不属于本版本。
+
 ## 近期执行顺序
 
-1. 公共执行器与场景 API 继续等待 Granit 与 Gneiss 的第二个真实复用证据。
-2. S-14 只在复用条件成立后启动；不要为当前单个示例提前稳定 glTF 公共 API。
-3. S-06D 最终验收等待稳定版本与 component 范围决策；不在 0.x 阶段提前宣布稳定。
-4. H-09 的透明 PBR、CSM、Clustered Forward 与 Bindless 只在各自重新评估条件满足后独立恢复，
+1. 先完成 S-36 的交互正确性和延迟收敛，再迁移目录，避免把现有缺陷复制进示例框架。
+2. 公共执行器与场景 API 继续等待 Granit 与 Gneiss 的第二个真实复用证据。
+3. S-14 只在复用条件成立后启动；不要为当前单个示例提前稳定 glTF 公共 API。
+4. S-06D 最终验收等待稳定版本与 component 范围决策；不在 0.x 阶段提前宣布稳定。
+5. H-09 的透明 PBR、CSM、Clustered Forward 与 Bindless 只在各自重新评估条件满足后独立恢复，
    不作为当前稳定化工作的前置项。
 
 若前置抽象不足，应先更新对应 Plan 和本路线图状态，再扩大公共 API。
