@@ -29,21 +29,3 @@ foreach(source_file IN LISTS source_files)
     message(FATAL_ERROR "Vulkan 原生符号越过 Renderer/Backend 边界：${source_file}")
   endif()
 endforeach()
-
-# 桌面核心目标只允许编译 Vulkan；浏览器 WebGPU 源码由 src/emscripten.cmake 独立选择。
-file(READ "${SOURCE_DIR}/src/CMakeLists.txt" desktop_sources)
-if(desktop_sources MATCHES "backend/webgpu|backend/plugin|webgpu_provider|backend_plugin")
-  message(FATAL_ERROR "桌面核心目标重新引入了 WebGPU Provider 或插件边界")
-endif()
-
-file(READ "${SOURCE_DIR}/src/emscripten.cmake" browser_sources)
-# 浏览器目标通过共享清单选择后端，检查实际清单而非要求入口重复列出源文件。
-set(PROJECT_SOURCE_DIR "${SOURCE_DIR}")
-include("${SOURCE_DIR}/cmake/granit_core_sources.cmake")
-set(webgpu_factory "${SOURCE_DIR}/src/backend/webgpu/renderer_factory.cpp")
-set(webgpu_provider "${SOURCE_DIR}/src/backend/webgpu/provider.cpp")
-if(NOT browser_sources MATCHES "GRANIT_WEBGPU_BACKEND_SOURCES" OR
-   NOT webgpu_factory IN_LIST GRANIT_WEBGPU_BACKEND_SOURCES OR
-   NOT webgpu_provider IN_LIST GRANIT_WEBGPU_BACKEND_SOURCES)
-  message(FATAL_ERROR "浏览器目标缺少 Emscripten WebGPU 静态实现")
-endif()

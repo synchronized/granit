@@ -1,6 +1,8 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2026 Granit contributors
 
+add_subdirectory(core)
+
 if(EMSCRIPTEN)
   add_subdirectory(web)
   return()
@@ -99,14 +101,6 @@ target_link_libraries(
   granit_c_header_test PRIVATE granit::granit granit::render_pipeline granit::window granit::input
 )
 granit_target_compile_warnings(granit_c_header_test)
-
-add_executable(granit_cpp_version_test core/version_cpp_test.cpp)
-target_link_libraries(
-  granit_cpp_version_test
-  PRIVATE granit::granit Catch2::Catch2WithMain
-)
-granit_target_compile_warnings(granit_cpp_version_test)
-add_test(NAME granit.cpp_version COMMAND granit_cpp_version_test)
 
 if(BUILD_SHARED_LIBS)
   add_executable(granit_abi_exports_test abi/export_symbols_test.cpp)
@@ -387,7 +381,7 @@ add_executable(
   pipeline/environment_map_api_test.cpp
   pipeline/environment_asset_test.cpp
   "${PROJECT_SOURCE_DIR}/src/pipeline/environment_asset.cpp"
-  $<TARGET_OBJECTS:granit_shader_asset_format>
+  $<TARGET_OBJECTS:granit_internal_shader_asset_format>
   pipeline/mesh_api_test.cpp
   pipeline/render_pipeline_api_test.cpp
   pipeline/scene_api_test.cpp
@@ -474,7 +468,7 @@ target_include_directories(
   granit_material_test PRIVATE "${PROJECT_SOURCE_DIR}/src" "${PROJECT_SOURCE_DIR}/tests"
 )
 target_link_libraries(granit_material_test PRIVATE granit::material Catch2::Catch2WithMain)
-target_sources(granit_material_test PRIVATE $<TARGET_OBJECTS:granit_shader_asset_format>)
+target_sources(granit_material_test PRIVATE $<TARGET_OBJECTS:granit_internal_shader_asset_format>)
 target_compile_options(
   granit_material_test
   PRIVATE $<$<COMPILE_LANG_AND_ID:CXX,MSVC>:/utf-8>
@@ -528,7 +522,7 @@ target_link_libraries(
     granit::granit
     Catch2::Catch2WithMain
     $<TARGET_OBJECTS:granit_shader_asset_storage>
-    $<TARGET_OBJECTS:granit_shader_asset_format>
+    $<TARGET_OBJECTS:granit_internal_shader_asset_format>
     $<$<PLATFORM_ID:Windows>:user32>
 )
 target_include_directories(
@@ -705,7 +699,6 @@ endif()
 set(
   granit_test_executable_targets
   granit_c_version_test
-  granit_cpp_version_test
   granit_handle_table_test
   granit_resource_validation_test
   granit_lifecycle_validation_test
@@ -724,7 +717,7 @@ foreach(target IN LISTS granit_test_executable_targets)
 endforeach()
 
 set_tests_properties(
-  granit.c_version granit.cpp_version granit.handle_table granit.resource_validation
+  granit.c_version granit.handle_table granit.resource_validation
   granit.lifecycle_validation granit.retirement_queue granit.device_status granit.renderer
   granit.vulkan_backend
   PROPERTIES ENVIRONMENT_MODIFICATION

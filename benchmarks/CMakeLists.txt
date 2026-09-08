@@ -318,7 +318,7 @@ add_dependencies(granit_render_pipeline_benchmarks granit_material_tool)
 target_sources(
   granit_render_pipeline_benchmarks
   PRIVATE "${granit_render_pipeline_benchmark_package}"
-          $<TARGET_OBJECTS:granit_shader_asset_format>
+          $<TARGET_OBJECTS:granit_internal_shader_asset_format>
 )
 granit_target_compile_warnings(granit_render_pipeline_benchmarks)
 granit_target_output_directories(granit_render_pipeline_benchmarks)

@@ -40,6 +40,17 @@ jobs:
           source "$EMSDK_DIR/emsdk_env.sh"
           cmake --preset emscripten-release
           cmake --build --preset emscripten-release
+          ctest --preset emscripten-release
+      - name: 验证浏览器静态包和独立消费端
+        shell: bash
+        run: |
+          set -euo pipefail
+          source "$EMSDK_DIR/emsdk_env.sh"
+          cmake --install build/emscripten-release --prefix "$PWD/build/emscripten-sdk"
+          emcmake cmake -S tests/web/consumer -B build/emscripten-consumer -G Ninja \
+            -Dgranit_DIR="$PWD/build/emscripten-sdk/lib/cmake/granit"
+          cmake --build build/emscripten-consumer
+          ctest --test-dir build/emscripten-consumer --output-on-failure
       - name: 审计浏览器产物
         shell: bash
         run: |

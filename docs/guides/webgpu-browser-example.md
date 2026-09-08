@@ -23,8 +23,9 @@ Windows 已安装但尚未导入 emsdk 环境时，先执行：
 
 ## 构建与运行
 
-浏览器库由 `src/emscripten.cmake` 配置，模型查看器入口与共享运行层位于
-`examples/samples/model_viewer/web/`，平台验证和浏览器测试驱动位于 `tests/web/`。
+核心库由 `src/CMakeLists.txt` 统一定义，浏览器后端由 `src/backend/webgpu/CMakeLists.txt` 配置。
+模型查看器入口与共享运行层位于 `examples/samples/model_viewer/web/`，平台验证和浏览器测试驱动
+位于 `tests/web/`。
 正式示例和测试使用独立入口，测试通过启动回调复用模型加载、输入和渲染循环。
 
 Emscripten preset 默认开启测试和示例。关闭 `GRANIT_BUILD_TESTING` 可排除平台验证目标；
@@ -68,6 +69,9 @@ http://127.0.0.1:8000/granit_model_viewer_web.html?model=https%3A%2F%2Fexample.c
 
 ## 自动验证
 
+`ctest --preset emscripten-release` 通过 Emscripten 配置的 Node.js 执行 C/C++ 核心测试，验证版本、
+结果码和包装层，并检查后端边界；不要求创建 GPU 设备。
+
 仓库浏览器测试会启动无头 Chrome，验证 Renderer 生命周期、共享 Fixture、资源传输、Mipmap、
 分阶段进度、加载取消、错误回滚以及键盘和鼠标输入转发：
 
@@ -86,3 +90,20 @@ npm test -- ../../build/emscripten-release/web granit_model_viewer_web.html `
 ```
 
 模型查看器的共享能力和桌面运行方法见[跨后端模型查看器](model-viewer.md)。
+
+## 安装静态库
+
+浏览器核心库与 RenderPipeline 使用同一套安装导出规则；当前不提供原生 Window/Input 组件。
+库输出统一放在构建目录的 `lib/`，浏览器 HTML/JS/Wasm 仍位于 `web/`。
+
+```powershell
+cmake --install build/emscripten-release --prefix build/emscripten-sdk
+emcmake cmake -S tests/web/consumer -B build/emscripten-consumer -G Ninja `
+  -Dgranit_DIR="$PWD/build/emscripten-sdk/lib/cmake/granit"
+cmake --build build/emscripten-consumer
+ctest --test-dir build/emscripten-consumer --output-on-failure
+```
+
+消费端使用相同的 Emscripten 工具链，通过 `find_package(granit CONFIG REQUIRED)` 链接
+`granit::granit`；需要参考渲染管线时请求 `RenderPipeline` 组件。显式指定 `granit_DIR` 可避免
+交叉编译工具链只在 sysroot 内搜索包。

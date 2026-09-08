@@ -96,7 +96,7 @@ add_library(
   "${PROJECT_SOURCE_DIR}/examples/samples/model_viewer/viewer_input.h"
   "${granit_model_viewer_material_include}"
   ${granit_model_viewer_shader_includes}
-  $<TARGET_OBJECTS:granit_shader_asset_format>
+  $<TARGET_OBJECTS:granit_internal_shader_asset_format>
 )
 add_library(granit_example_model_viewer_support ALIAS granit_model_viewer_core)
 target_compile_features(granit_model_viewer_core PUBLIC cxx_std_20)
@@ -118,7 +118,7 @@ if(NOT CMAKE_CROSSCOMPILING)
     granit_model_viewer_environment_tool
     "${PROJECT_SOURCE_DIR}/examples/samples/model_viewer/environment_tool_main.cpp"
     "${PROJECT_SOURCE_DIR}/src/pipeline/environment_asset.cpp"
-    $<TARGET_OBJECTS:granit_shader_asset_format>
+    $<TARGET_OBJECTS:granit_internal_shader_asset_format>
   )
   target_include_directories(
     granit_model_viewer_environment_tool PRIVATE "${PROJECT_SOURCE_DIR}/src"
