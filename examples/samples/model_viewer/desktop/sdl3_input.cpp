@@ -20,7 +20,7 @@ float add_clamped(float value, float delta, float limit) noexcept {
 
 } // namespace
 
-void sdl3_input::begin_frame() noexcept {}
+void sdl3_input::begin_frame() noexcept { ++begin_frame_count_; }
 
 void sdl3_input::clear_transient() noexcept {
   input_.pointer_delta_x = 0.0F;
@@ -98,6 +98,10 @@ viewer_input sdl3_input::finish(bool mouse_captured, bool keyboard_captured) noe
   // 已在事件入口过滤 UI 拥有的操作；这里只保留没有相机手势时的兼容状态。
   result.mouse_captured = mouse_captured && !result.orbiting && !result.panning;
   result.keyboard_captured = keyboard_captured;
+  // 跨过多次帧边界的输入被合并进同一个提交帧；只统计被合并（未独立提交）的额外帧。
+  if (begin_frame_count_ > 0)
+    merged_input_frames_ += begin_frame_count_ - 1;
+  begin_frame_count_ = 0;
   clear_transient();
   return result;
 }

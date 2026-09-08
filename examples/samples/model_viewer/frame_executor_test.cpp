@@ -133,6 +133,7 @@ TEST_CASE("线程帧执行器限制待处理队列并回报被替换帧") {
   CHECK(queue_stats.pending_high_watermark == 3);
   CHECK(queue_stats.replaced_frames == 1);
   CHECK(queue_stats.skipped_frame_builds == 1);
+  CHECK(queue_stats.render_lag_ms >= 0.0F);
   CHECK(completions.front().execution.queue_wait_ms >= 0.0F);
 
   render_command_completion command_completion;

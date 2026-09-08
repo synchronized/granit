@@ -232,6 +232,9 @@ void draw_performance_panel(const performance_panel_info& info) {
   ImGui::Text("Replaced frames: %llu", static_cast<unsigned long long>(info.replaced_frames));
   ImGui::Text("Skipped frame builds: %llu",
               static_cast<unsigned long long>(info.skipped_frame_builds));
+  ImGui::Text("Merged input frames: %llu",
+              static_cast<unsigned long long>(info.merged_input_frames));
+  ImGui::Text("Render lag (replaced): %.3f ms", info.render_lag_ms);
   const auto draw_summary = [](const char* label, const metric_summary& summary) {
     if (summary.sample_count == 0) {
       ImGui::TextDisabled("%s: unavailable", label);

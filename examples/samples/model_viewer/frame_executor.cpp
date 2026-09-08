@@ -148,6 +148,11 @@ granit::result threaded_frame_executor::submit(frame_packet packet,
                                    .execution = {},
                                    .dropped = true});
       ++state_->stats.replaced_frames;
+      // 被替换帧尚未开始执行，队列滞留时长就是它等待渲染线程的空闲时间。
+      state_->stats.render_lag_ms +=
+          std::chrono::duration<float, std::milli>(std::chrono::steady_clock::now() -
+                                                   dropped.enqueued_at)
+              .count();
     }
     state_->pending.push_back({.kind = state::task_kind::frame,
                                .sequence = sequence,

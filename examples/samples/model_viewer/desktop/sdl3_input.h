@@ -8,6 +8,8 @@
 
 #include <SDL3/SDL_events.h>
 
+#include <cstdint>
+
 namespace granit::example::model_viewer::desktop {
 
 /** 将 SDL3 事件累积为一帧后端无关的查看器输入。 */
@@ -18,6 +20,8 @@ public:
   void process(const SDL_Event& event, bool mouse_captured = false,
                bool keyboard_captured = false) noexcept;
   [[nodiscard]] viewer_input finish(bool mouse_captured, bool keyboard_captured) noexcept;
+  /** 背压期间跨过多次帧边界、被合并进单个提交帧的输入增量次数。 */
+  [[nodiscard]] std::uint32_t merged_input_frames() const noexcept { return merged_input_frames_; }
 
 private:
   void clear_transient() noexcept;
@@ -25,6 +29,8 @@ private:
   viewer_input input_;
   bool orbit_motion_pending_{};
   bool pan_motion_pending_{};
+  std::uint32_t begin_frame_count_{};
+  std::uint32_t merged_input_frames_{};
 };
 
 } // namespace granit::example::model_viewer::desktop

@@ -49,6 +49,8 @@ struct performance_panel_info {
   std::size_t queue_high_watermark{};
   std::uint64_t replaced_frames{};
   std::uint64_t skipped_frame_builds{};
+  std::uint64_t merged_input_frames{};
+  float render_lag_ms{};
   performance_summary history;
 };
 

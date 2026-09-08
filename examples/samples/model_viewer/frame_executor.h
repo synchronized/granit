@@ -44,6 +44,8 @@ struct render_task_queue_stats {
   std::size_t pending_high_watermark{};
   std::uint64_t replaced_frames{};
   std::uint64_t skipped_frame_builds{};
+  /** 被替换帧在队列中滞留的累计时长，直接度量渲染跟不上输入的滞后。 */
+  float render_lag_ms{};
 };
 
 /** 示例私有帧执行边界；实现负责完整消费传入的不可变帧包。 */

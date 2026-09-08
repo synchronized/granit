@@ -85,6 +85,8 @@ TEST_CASE("SDL3 输入在指针离开窗口时终止拖动", "[example][model-vi
 TEST_CASE("SDL3 输入跨过帧构造背压后才被消费", "[example][model-viewer][sdl3]") {
   using granit::example::model_viewer::desktop::sdl3_input;
   sdl3_input adapter;
+  // 第一帧按下并拖动。
+  adapter.begin_frame();
   SDL_Event event{};
   event.type = SDL_EVENT_MOUSE_BUTTON_DOWN;
   event.button.button = SDL_BUTTON_RIGHT;
@@ -102,11 +104,15 @@ TEST_CASE("SDL3 输入跨过帧构造背压后才被消费", "[example][model-vi
   CHECK(input.orbiting);
   CHECK(input.pointer_delta_x == 7.0F);
   CHECK(input.pointer_delta_y == -3.0F);
+  // 三个帧边界合并为一次提交，其中两个是被合并的额外帧。
+  CHECK(adapter.merged_input_frames() == 2);
 
   input = adapter.finish(false, false);
   CHECK(input.orbiting);
   CHECK(input.pointer_delta_x == 0.0F);
   CHECK(input.pointer_delta_y == 0.0F);
+  // 未经过新帧边界，没有可合并的额外增量。
+  CHECK(adapter.merged_input_frames() == 2);
 }
 
 TEST_CASE("SDL3 输入按照按钮按下位置锁定拖动所有权", "[example][model-viewer][sdl3]") {
