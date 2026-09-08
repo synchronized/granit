@@ -27,4 +27,4 @@ compile_commands.json
 test-results/
 
 # Web 浏览器测试的本地 npm 依赖。
-web/tests/node_modules/
+tests/web/node_modules/

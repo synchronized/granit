@@ -23,6 +23,15 @@ Windows 已安装但尚未导入 emsdk 环境时，先执行：
 
 ## 构建与运行
 
+浏览器库由 `src/emscripten.cmake` 配置，模型查看器入口与共享运行层位于
+`examples/samples/model_viewer/web/`，平台验证和浏览器测试驱动位于 `tests/web/`。
+正式示例和测试使用独立入口，测试通过启动回调复用模型加载、输入和渲染循环。
+
+Emscripten preset 默认开启测试和示例。关闭 `GRANIT_BUILD_TESTING` 可排除平台验证目标；
+关闭 `GRANIT_BUILD_EXAMPLES` 可排除示例可执行文件。两者均关闭时只构建库。
+模型查看器和 ImGui 示例分别受 `GRANIT_BUILD_MODEL_VIEWER_EXAMPLE`、
+`GRANIT_BUILD_WEB_IMGUI_EXAMPLE` 控制。构建产物继续统一输出到 `build/emscripten-release/web/`。
+
 ```powershell
 cmake --preset emscripten-release
 cmake --build --preset emscripten-release
@@ -63,13 +72,13 @@ http://127.0.0.1:8000/granit_model_viewer_web.html?model=https%3A%2F%2Fexample.c
 分阶段进度、加载取消、错误回滚以及键盘和鼠标输入转发：
 
 ```powershell
-cd web/tests
+cd tests/web
 npm ci
 $env:CHROME_PATH = "C:\Program Files\Google\Chrome\Application\chrome.exe"
 npm test -- ../../build/emscripten-release/web
 ```
 
-正式目标也可用本地 Fixture 做快速回归：
+启用测试构建后，共用产物目录中会部署本地 Fixture，正式目标也可使用它做快速回归：
 
 ```powershell
 npm test -- ../../build/emscripten-release/web granit_model_viewer_web.html `

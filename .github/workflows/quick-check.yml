@@ -51,7 +51,7 @@ jobs:
             if [[ "${#files[@]}" -eq 0 ]]; then
               suite=core
             elif printf '%s\n' "${files[@]}" | grep -qE \
-              '^(web/|src/backend/webgpu/|\.github/workflows/emscripten\.yml$)'; then
+              '^(tests/web/|examples/common/web/|examples/samples/imgui/(web\.cmake|web_main\.cpp)|examples/samples/model_viewer/web/|src/emscripten\.cmake$|src/backend/webgpu/|\.github/workflows/emscripten\.yml$)'; then
               suite=webgpu
             elif ! printf '%s\n' "${files[@]}" | grep -qEv \
               '^(docs/|README\.md$|DOCUMENTATION_GUIDE\.md$|CHANGELOG\.md$)'; then

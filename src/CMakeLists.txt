@@ -1,6 +1,11 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2026 Granit contributors
 
+if(EMSCRIPTEN)
+  include("${CMAKE_CURRENT_LIST_DIR}/emscripten.cmake")
+  return()
+endif()
+
 add_library(granit)
 add_library(granit::granit ALIAS granit)
 granit_target_output_directories(granit)

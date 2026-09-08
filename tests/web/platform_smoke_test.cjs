@@ -10,6 +10,7 @@ const { chromium } = require("playwright-core");
 const outputDirectory = path.resolve(process.argv[2] ?? "build/emscripten-release/web");
 const chromePath = process.env.CHROME_PATH ?? "/usr/bin/google-chrome";
 const entryName = process.argv[3] ?? "granit_web_platform_smoke.html";
+const statusTextSelector = entryName === "granit_web_platform_smoke.html" ? "#granit-status" : "#status-text";
 const modelQuery = process.argv[4] ? `?model=${encodeURIComponent(process.argv[4])}` : "";
 const usesLocalFixture = entryName === "granit_web_platform_smoke.html" || Boolean(process.argv[4]);
 const startupTimeout = usesLocalFixture ? 30_000 : 120_000;
@@ -262,18 +263,24 @@ async function main() {
     );
     if (invalidLightingResult !== -2)
       throw new Error(`无效浏览器光照参数未被拒绝：${invalidLightingResult}`);
-    await page.evaluate(() => {
-      const values = {
-        exposure: "0.35",
-        "environment-intensity": "0.45",
-        "key-light-intensity": "1.75",
-      };
-      for (const [id, value] of Object.entries(values)) {
-        const control = document.getElementById(id);
-        control.value = value;
-      }
-      document.getElementById("exposure").dispatchEvent(new Event("input", { bubbles: true }));
-    });
+    if (entryName === "granit_web_platform_smoke.html") {
+      // 平台页没有示例控制面板，通过同一运行层接口验证光照行为。
+      const result = await page.evaluate(() => Module._granit_web_configure_lighting(0.35, 0.45, 1.75));
+      if (result !== 0) throw new Error(`平台光照配置失败：${result}`);
+    } else {
+      await page.evaluate(() => {
+        const values = {
+          exposure: "0.35",
+          "environment-intensity": "0.45",
+          "key-light-intensity": "1.75",
+        };
+        for (const [id, value] of Object.entries(values)) {
+          const control = document.getElementById(id);
+          control.value = value;
+        }
+        document.getElementById("exposure").dispatchEvent(new Event("input", { bubbles: true }));
+      });
+    }
     await page.waitForFunction(
       (previous) => Module._granit_web_lighting_generation() === previous + 1,
       initialLighting.generation,
@@ -433,6 +440,17 @@ async function main() {
 
     if (!usesLocalFixture) return;
     const cancelPage = await browser.newPage();
+    // 在确定的加载进度点取消，避免轮询错过小型 Fixture 的上传阶段。
+    await cancelPage.addInitScript(() => {
+      const originalLog = console.log;
+      console.log = (...args) => {
+        originalLog.apply(console, args);
+        if (typeof args[0] === "string" && args[0].startsWith("GRANIT_PROGRESS:document:") &&
+            typeof globalThis.Module?._granit_web_cancel_loading === "function") {
+          globalThis.granitCancelResult = Module._granit_web_cancel_loading();
+        }
+      };
+    });
     await cancelPage.goto(`http://127.0.0.1:${address.port}/${entryName}${modelQuery}`, {
       waitUntil: "load",
     });
@@ -440,9 +458,7 @@ async function main() {
       timeout: 30_000,
     });
     await cancelPage.waitForFunction(
-      () =>
-        typeof Module._granit_web_cancel_loading === "function" &&
-        Module._granit_web_cancel_loading() === 0,
+      () => globalThis.granitCancelResult === 0,
       undefined,
       { timeout: 30_000 },
     );
@@ -451,7 +467,7 @@ async function main() {
       undefined,
       { timeout: 30_000 },
     );
-    const cancelledText = await cancelPage.locator("#status-text").textContent();
+    const cancelledText = await cancelPage.locator(statusTextSelector).textContent();
     if (!/^failed:asset-(?:load|upload):-15/.test(cancelledText?.trim() ?? ""))
       throw new Error(`浏览器上传取消未返回稳定结果：${cancelledText}`);
     const cancelledShutdown = await cancelPage.evaluate(() => Module._granit_web_shutdown());
@@ -477,7 +493,7 @@ async function main() {
       undefined,
       { timeout: 30_000 },
     );
-    const failureText = await failurePage.locator("#status-text").textContent();
+    const failureText = await failurePage.locator(statusTextSelector).textContent();
     if (!failureText?.trim().startsWith("failed:asset-resource-fetch:")) {
       throw new Error(
         `外部 Buffer 缺失未进入预期失败路径：${failureText}\n${failureMessages.join("\n")}`,

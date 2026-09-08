@@ -1,6 +1,13 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2026 Granit contributors
 
+if(EMSCRIPTEN)
+  if(GRANIT_BUILD_EXAMPLES AND GRANIT_BUILD_WEB_IMGUI_EXAMPLE)
+    include("${CMAKE_CURRENT_LIST_DIR}/web.cmake")
+  endif()
+  return()
+endif()
+
 if(NOT GRANIT_BUILD_INTEGRATION_SDL3 OR NOT GRANIT_BUILD_INTEGRATION_IMGUI OR
    NOT GRANIT_IMGUI_FETCHED)
   return()

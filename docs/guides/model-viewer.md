@@ -182,7 +182,7 @@ Fixture 的 glTF
 ```powershell
 cmake --preset emscripten-release
 cmake --build --preset emscripten-release
-cd web/tests
+cd tests/web
 npm ci
 $env:CHROME_PATH = "C:\Program Files\Google\Chrome\Application\chrome.exe"
 npm test -- ../../build/emscripten-release/web

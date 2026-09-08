@@ -1,6 +1,11 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2026 Granit contributors
 
+if(EMSCRIPTEN)
+  include("${CMAKE_CURRENT_LIST_DIR}/emscripten.cmake")
+  return()
+endif()
+
 # Model Viewer 的浏览器输入支撑层。浏览器资源加载已迁入 examples/common/web。
 
 add_library(granit_model_viewer_web_shell STATIC web_input.cpp web_input.h)

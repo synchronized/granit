@@ -129,8 +129,9 @@
         "BUILD_SHARED_LIBS": false,
         "GRANIT_BUILD_EMSCRIPTEN_PLATFORM": true,
         "GRANIT_FETCH_EXAMPLE_GLTF_DEPENDENCIES": true,
-        "GRANIT_BUILD_TESTING": false,
-        "GRANIT_BUILD_EXAMPLES": false,
+        "GRANIT_BUILD_TESTING": true,
+        "GRANIT_BUILD_EXAMPLES": true,
+        "GRANIT_BUILD_MODEL_VIEWER_EXAMPLE": true,
         "GRANIT_BUILD_BENCHMARKS": false,
         "GRANIT_BUILD_TOOLS": false,
         "GRANIT_BUILD_SHADER_TOOLS": false,
@@ -347,6 +348,8 @@
     {"name": "linux-gcc-debug", "inherits": "test-linux", "configurePreset": "linux-gcc-debug"},
     {"name": "linux-gcc-release", "inherits": "test-linux", "configurePreset": "linux-gcc-release"},
     {"name": "linux-gcc-static-debug", "inherits": "test-linux", "configurePreset": "linux-gcc-static-debug"},
-    {"name": "linux-gcc-static-release", "inherits": "test-linux", "configurePreset": "linux-gcc-static-release"}
+    {"name": "linux-gcc-static-release", "inherits": "test-linux", "configurePreset": "linux-gcc-static-release"},
+    {"name": "emscripten-debug", "inherits": "test-default", "configurePreset": "emscripten-debug"},
+    {"name": "emscripten-release", "inherits": "test-default", "configurePreset": "emscripten-release"}
   ]
 }

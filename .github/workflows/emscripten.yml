@@ -60,10 +60,10 @@ jobs:
           test -s build/emscripten-release/web/model_viewer_fixture.gltf
           test -s build/emscripten-release/web/model_viewer_fixture.bin
       - name: 安装浏览器测试驱动
-        working-directory: web/tests
+        working-directory: tests/web
         run: npm ci
       - name: 验证浏览器 WebGPU 共享 Fixture 与输入转发
-        working-directory: web/tests
+        working-directory: tests/web
         env:
           CHROME_PATH: /usr/bin/google-chrome
           GRANIT_EXPECT_SOFTWARE_PIPELINE_FALLBACK: "1"
@@ -74,6 +74,7 @@ jobs:
             log="$RUNNER_TEMP/granit-webgpu-attempt-${attempt}.log"
             if xvfb-run -a env GRANIT_BROWSER_HEADLESS=0 bash -c \
               'npm test -- ../../build/emscripten-release/web && \
+               npm test -- ../../build/emscripten-release/web granit_model_viewer_web.html model_viewer_fixture.gltf && \
                npm run test:imgui -- ../../build/emscripten-release/web' \
               2>&1 | tee "$log"; then
               exit 0

@@ -1,6 +1,11 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2026 Granit contributors
 
+if(EMSCRIPTEN)
+  add_subdirectory(web)
+  return()
+endif()
+
 add_subdirectory(smoke)
 
 add_test(

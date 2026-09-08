@@ -5,7 +5,7 @@ include_guard()
 
 # 桌面 Vulkan 与 Emscripten WebGPU 两个后端共享的 granit 核心源文件。
 #
-# 两个构建入口（src/CMakeLists.txt 与 web/CMakeLists.txt）各自组装同一个 `granit` 目标，
+# 两个构建入口（src/CMakeLists.txt 与 src/emscripten.cmake）各自组装同一个 `granit` 目标，
 # 后端无关的 Core、Assets 与 Renderer 公共源在此处统一维护，避免两份镜像清单漂移。
 # 后端专用源（backend/vulkan、backend/webgpu）与各自的 renderer_factory 由调用方追加。
 
@@ -73,7 +73,7 @@ set(GRANIT_VULKAN_BACKEND_SOURCES
     "${PROJECT_SOURCE_DIR}/src/backend/vulkan/renderer_factory.cpp"
 )
 
-# Emscripten WebGPU 后端专用源；由 web/CMakeLists.txt 追加。
+# Emscripten WebGPU 后端专用源；由 src/emscripten.cmake 追加。
 set(GRANIT_WEBGPU_BACKEND_SOURCES
     "${PROJECT_SOURCE_DIR}/src/backend/webgpu/provider_dispatch.cpp"
     "${PROJECT_SOURCE_DIR}/src/backend/webgpu/provider.cpp"

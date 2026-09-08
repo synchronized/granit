@@ -4,7 +4,7 @@
 const fs = require("node:fs");
 const http = require("node:http");
 const path = require("node:path");
-const { chromium } = require(path.join(process.cwd(), "node_modules/playwright-core"));
+const { chromium } = require("playwright-core");
 
 const outputDirectory = path.resolve(process.argv[2] ?? "build/emscripten-release/web");
 const chromePath = process.env.CHROME_PATH ?? "/usr/bin/google-chrome";

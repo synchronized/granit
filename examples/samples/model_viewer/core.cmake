@@ -132,7 +132,7 @@ if(NOT CMAKE_CROSSCOMPILING)
   )
   granit_target_output_directories(granit_model_viewer_environment_tool)
   granit_target_compile_warnings(granit_model_viewer_environment_tool)
-  if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
+  if(NOT EMSCRIPTEN AND GRANIT_BUILD_TESTING AND BUILD_TESTING)
     add_test(NAME granit.example.model_viewer_environment_tool.usage
              COMMAND granit_model_viewer_environment_tool)
     set_tests_properties(
@@ -155,7 +155,7 @@ if(NOT CMAKE_CROSSCOMPILING)
   granit_target_compile_warnings(granit_model_viewer_offscreen_acceptance)
 endif()
 
-if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
+if(NOT EMSCRIPTEN AND GRANIT_BUILD_TESTING AND BUILD_TESTING)
   add_executable(
     granit_example_model_viewer_support_test
     "${PROJECT_SOURCE_DIR}/examples/samples/model_viewer/application_core_test.cpp"
@@ -200,7 +200,7 @@ if(TARGET granit::integration_imgui)
   set_target_properties(granit_example_model_viewer_imgui PROPERTIES FOLDER "Examples")
   granit_target_compile_warnings(granit_example_model_viewer_imgui)
 
-  if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
+  if(NOT EMSCRIPTEN AND GRANIT_BUILD_TESTING AND BUILD_TESTING)
     add_executable(
     granit_example_model_viewer_imgui_test
     "${PROJECT_SOURCE_DIR}/examples/samples/model_viewer/viewer_panels_test.cpp"

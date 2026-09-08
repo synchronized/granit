@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2026 Granit contributors
 
-# 示例共享的浏览器资源加载基础设施。fetch.cpp 依赖 Emscripten，由 web 顶层目标单独编译，
+# 示例共享的浏览器资源加载基础设施。fetch.cpp 依赖 Emscripten，由浏览器示例运行层编译，
 # 不进入本纯 C++ 库，使桌面侧也能构建并测试资源请求与包管理。
 
 add_library(
@@ -19,7 +19,7 @@ target_link_libraries(granit_example_web PUBLIC granit_example_gltf_support)
 set_target_properties(granit_example_web PROPERTIES FOLDER "Examples")
 granit_target_compile_warnings(granit_example_web)
 
-if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
+if(NOT EMSCRIPTEN AND GRANIT_BUILD_TESTING AND BUILD_TESTING)
   add_executable(
     granit_example_web_test
     asset_request_test.cpp
