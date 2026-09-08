@@ -46,3 +46,17 @@ if(WIN32 AND GRANIT_BUILD_TESTING AND BUILD_TESTING)
   add_test(NAME granit.example.sdl3_imgui COMMAND granit_sdl3_imgui_example --smoke-test)
   set_tests_properties(granit.example.sdl3_imgui PROPERTIES TIMEOUT 30)
 endif()
+
+if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
+  add_executable(granit_imgui_visual_test
+    "${PROJECT_SOURCE_DIR}/tests/integrations/imgui/visual_test.cpp" resources.cpp)
+  target_include_directories(granit_imgui_visual_test PRIVATE
+    "${PROJECT_SOURCE_DIR}/examples" "${PROJECT_SOURCE_DIR}/examples/common")
+  target_link_libraries(granit_imgui_visual_test PRIVATE granit::integration_imgui
+    granit_example_validation Catch2::Catch2WithMain)
+  granit_target_compile_warnings(granit_imgui_visual_test)
+  granit_target_output_directories(granit_imgui_visual_test)
+  add_test(NAME granit.example.imgui_visual COMMAND granit_imgui_visual_test)
+  set_tests_properties(granit.example.imgui_visual PROPERTIES TIMEOUT 60
+    ENVIRONMENT_MODIFICATION "PATH=path_list_prepend:$<TARGET_FILE_DIR:granit::granit>")
+endif()

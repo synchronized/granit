@@ -189,11 +189,11 @@ jobs:
             -DCMAKE_C_COMPILER_LAUNCHER=ccache \
             -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
           cmake --build --preset "${{ steps.preset.outputs.name }}"
-      - name: 运行 ImGui 转换测试
+      - name: 运行 ImGui 转换与视觉测试
         shell: bash
         run: |
           ctest --test-dir "build/${{ steps.preset.outputs.name }}" \
-            --output-on-failure -R '^granit\.integration\.imgui$'
+            --output-on-failure -R '^granit\.(integration\.imgui|example\.imgui_visual)$'
       - name: 运行 X11 SDL3 与 ImGui smoke test
         shell: bash
         run: |

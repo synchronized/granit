@@ -42,6 +42,7 @@ struct canvas_draw_list_state {
   std::vector<granit::pipeline::detail::pbr_draw_bindings> bindings;
   granit::pipeline::detail::canvas_material_group_cache material_groups;
   granit_material material = GRANIT_NULL_HANDLE;
+  bool clip_y_up = false;
 };
 
 struct canvas_draw_list_slot {
@@ -101,6 +102,12 @@ granit_result ensure_material(canvas_draw_list_state& state) {
   const auto items = state.list.items();
   if (items.empty())
     return GRANIT_SUCCESS;
+  granit_renderer_shader_capabilities capabilities = GRANIT_RENDERER_SHADER_CAPABILITIES_INIT;
+  const auto capability_result =
+      granit_renderer_get_shader_capabilities(state.renderer, &capabilities);
+  if (capability_result != GRANIT_SUCCESS)
+    return capability_result;
+  state.clip_y_up = capabilities.backend == GRANIT_RENDERER_BACKEND_WEBGPU;
   const std::array<float, 4> white{1, 1, 1, 1};
   const std::array updates{
       granit_material_parameter_update{granit_material_parameter_id("base_color", 10),
@@ -122,13 +129,15 @@ granit_result ensure_material(canvas_draw_list_state& state) {
   return granit_material_create(state.renderer, &desc, &state.material);
 }
 
-granit::material::pbr_matrix4 pixel_projection(uint32_t width, uint32_t height) {
+granit::material::pbr_matrix4 pixel_projection(uint32_t width, uint32_t height, bool clip_y_up) {
+  // Canvas 使用左上原点；WebGPU 的 NDC Y 轴与 Vulkan 正高度视口相反。
+  const auto y_sign = clip_y_up ? -1.0F : 1.0F;
   return {2.0F / static_cast<float>(width),
           0,
           0,
           0,
           0,
-          2.0F / static_cast<float>(height),
+          y_sign * 2.0F / static_cast<float>(height),
           0,
           0,
           0,
@@ -136,7 +145,7 @@ granit::material::pbr_matrix4 pixel_projection(uint32_t width, uint32_t height) 
           1,
           0,
           -1,
-          -1,
+          -y_sign,
           0,
           1};
 }
@@ -322,12 +331,12 @@ extern "C" granit_result granit_canvas_draw_list_record(granit_renderer renderer
   auto result = ensure_material(*state);
   if (result == GRANIT_SUCCESS)
     result = state->geometry.upload(renderer, state->list, frame_slot);
-  const granit::material::pbr_frame_constants frame{.view_projection =
-                                                        pixel_projection(desc->width, desc->height),
-                                                    .camera_position = {},
-                                                    .direction_to_light = {},
-                                                    .light_radiance = {},
-                                                    .render_options = {}};
+  const granit::material::pbr_frame_constants frame{
+      .view_projection = pixel_projection(desc->width, desc->height, state->clip_y_up),
+      .camera_position = {},
+      .direction_to_light = {},
+      .light_radiance = {},
+      .render_options = {}};
   const granit::material::pbr_object_constants object{
       .model = identity_matrix(), .normal_matrix = identity_matrix(), .object_id = {}};
   if (result == GRANIT_SUCCESS) {

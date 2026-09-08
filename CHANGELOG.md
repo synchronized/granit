@@ -8,6 +8,11 @@
 
 ## Unreleased
 
+### 修复
+
+- 修复 WebGPU Canvas 的 Y 轴投影与左上原点裁剪不一致，以及 Canvas WGSL 未采样字体和自定义
+  纹理导致文字方块、纹理纯白的问题；新增 ImGui 固定画面的 Vulkan/WebGPU 视觉回归。
+
 ## 0.19.0 - 2026-09-07
 
 ### 新增

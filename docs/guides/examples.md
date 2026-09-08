@@ -51,6 +51,30 @@ Canvas 绘制，不是 DOM/CSS 仿制界面，因此可用于核对桌面与 Web
 
 构建、资产获取、命令行参数和排错见[跨后端模型查看器指南](model-viewer.md)。
 
+## ImGui 固定画面验收
+
+启用示例、SDL3/ImGui 集成和测试后，可运行 Vulkan 离屏视觉验收：
+
+```powershell
+cmake --build --preset windows-clang-debug --target granit_imgui_visual_test
+ctest --preset windows-clang-debug -R "^granit\.example\.imgui_visual$" --output-on-failure
+```
+
+该测试在 1×、2× 帧缓冲比例下渲染固定文字、四分区纹理、裁剪矩形和点击状态，复用截图比较器
+检查颜色区域，并将 PPM 产物写入构建目录的 `examples/samples/imgui`。它验证 Vulkan 渲染与
+ImGui 输入队列，不替代 SDL3 窗口的真实显示缩放和焦点验收。
+
+浏览器测试使用同一画面，通过真实鼠标点击验证内容状态及像素变化：
+
+```powershell
+node tests/web/imgui_test.cjs build/emscripten-release/web
+```
+
+先按[浏览器指南](webgpu-browser-example.md)安装测试驱动并设置 `CHROME_PATH`。测试分别创建
+1×、2× DPI 浏览器上下文，PNG 保存到 `build/emscripten-release/web/validation`。手动查看固定画面
+可打开 `granit_imgui_web.html?validation=1`。这些截图是诊断产物，不会自动成为基准图；目前按
+固定区域的颜色容差、字体覆盖和纹理差异验证，尚未建立跨平台整幅截图基准。
+
 ## 内部 Smoke 程序
 
 `tests/smoke` 保存最小 GPU、Render Pipeline 与平台集成程序。它们使用 `_smoke` 目标后缀和

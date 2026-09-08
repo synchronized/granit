@@ -9,9 +9,9 @@
 #include <emscripten/emscripten.h>
 #include <imgui.h>
 
+#include "imgui/imgui_theme.h"
 #include "samples/imgui/content.h"
 #include "samples/imgui/resources.h"
-#include "imgui/imgui_theme.h"
 
 #include <granit/granit.hpp>
 #include <granit/integrations/imgui/renderer.hpp>
@@ -26,6 +26,7 @@ enum class runtime_phase { renderer_pending, running, failed, stopped };
 
 struct web_imgui_state {
   SDL_Window* window{};
+  bool validation_scene{};
   bool sdl_ready{};
   bool imgui_ready{};
   runtime_phase phase{runtime_phase::renderer_pending};
@@ -81,11 +82,12 @@ granit::result initialize_gpu_resources() {
     return result;
   result = state.surface.initialize_canvas(state.renderer.native_handle());
   if (result.ok()) {
-    result = state.swapchain.initialize(state.renderer.native_handle(), state.surface.native_handle(),
-                                        {.width = width,
-                                         .height = height,
-                                         .minimum_image_count = 2,
-                                         .presentation = granit::present_mode::fifo});
+    result =
+        state.swapchain.initialize(state.renderer.native_handle(), state.surface.native_handle(),
+                                   {.width = width,
+                                    .height = height,
+                                    .minimum_image_count = 2,
+                                    .presentation = granit::present_mode::fifo});
   }
   if (result.ok())
     result = state.swapchain.query_info(state.swapchain_info);
@@ -116,13 +118,14 @@ granit::result resize_if_needed() {
   std::uint32_t width{};
   std::uint32_t height{};
   auto result = query_canvas_size(width, height);
-  if (result.failed() || (width == state.swapchain_info.width &&
-                          height == state.swapchain_info.height)) {
+  if (result.failed() ||
+      (width == state.swapchain_info.width && height == state.swapchain_info.height)) {
     return result;
   }
-  result = state.swapchain.recreate(
-      {.width = width, .height = height, .minimum_image_count = 2,
-       .presentation = granit::present_mode::fifo});
+  result = state.swapchain.recreate({.width = width,
+                                     .height = height,
+                                     .minimum_image_count = 2,
+                                     .presentation = granit::present_mode::fifo});
   if (result.ok())
     result = state.swapchain.query_info(state.swapchain_info);
   if (result.ok())
@@ -140,13 +143,16 @@ granit::result render_frame() {
 
   ImGui_ImplSDL3_NewFrame();
   ImGui::NewFrame();
-  granit::example::build_imgui_sample(
-      state.sample,
-      {.framebuffer_width = state.swapchain_info.width,
-       .framebuffer_height = state.swapchain_info.height,
-       .presentation = "FIFO",
-       .show_custom_texture = true,
-       .custom_texture = granit::example::imgui_checker_texture_id});
+  if (state.validation_scene) {
+    granit::example::build_imgui_validation_scene(state.sample,
+                                                  granit::example::imgui_checker_texture_id);
+  } else
+    granit::example::build_imgui_sample(
+        state.sample, {.framebuffer_width = state.swapchain_info.width,
+                       .framebuffer_height = state.swapchain_info.height,
+                       .presentation = "FIFO",
+                       .show_custom_texture = true,
+                       .custom_texture = granit::example::imgui_checker_texture_id});
   ImGui::Render();
 
   operation = "canvas-clear";
@@ -295,6 +301,10 @@ extern "C" EMSCRIPTEN_KEEPALIVE unsigned granit_web_imgui_resize_count() noexcep
   return state.resize_count;
 }
 
+extern "C" EMSCRIPTEN_KEEPALIVE int granit_web_imgui_validation_enabled() noexcept {
+  return state.sample.validation_overlay ? 1 : 0;
+}
+
 extern "C" EMSCRIPTEN_KEEPALIVE int granit_web_imgui_shutdown() noexcept {
   emscripten_cancel_main_loop();
   shutdown();
@@ -303,6 +313,8 @@ extern "C" EMSCRIPTEN_KEEPALIVE int granit_web_imgui_shutdown() noexcept {
 
 int main() {
   std::puts("GRANIT_DIAGNOSTIC:Web ImGui main started");
+  state.validation_scene =
+      EM_ASM_INT({ return new URLSearchParams(location.search).has('validation'); }) != 0;
   SDL_SetMainReady();
   if (!SDL_Init(SDL_INIT_VIDEO)) {
     std::fprintf(stderr, "GRANIT_STATUS:failed:sdl:%s\n", SDL_GetError());
@@ -326,14 +338,14 @@ int main() {
     shutdown();
     return 1;
   }
+  ImGui::GetIO().IniFilename = nullptr;
   state.imgui_ready = true;
   std::puts("GRANIT_DIAGNOSTIC:ImGui platform ready");
-  const auto result = state.renderer.initialize(
-      {.application_name = "Granit Web ImGui",
-       .surface_types = granit::surface_type::canvas,
-       .frames_in_flight = 2,
-       .diagnostics = diagnose,
-       .backend = granit::renderer_backend::webgpu});
+  const auto result = state.renderer.initialize({.application_name = "Granit Web ImGui",
+                                                 .surface_types = granit::surface_type::canvas,
+                                                 .frames_in_flight = 2,
+                                                 .diagnostics = diagnose,
+                                                 .backend = granit::renderer_backend::webgpu});
   if (result.failed()) {
     report_failure("renderer-create", result);
     shutdown();

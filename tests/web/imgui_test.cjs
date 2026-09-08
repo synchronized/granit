@@ -4,6 +4,7 @@
 const fs = require("node:fs");
 const http = require("node:http");
 const path = require("node:path");
+const { decodePng, pixelAt } = require("./png.cjs");
 const { chromium } = require("playwright-core");
 
 const outputDirectory = path.resolve(process.argv[2] ?? "build/emscripten-release/web");
@@ -34,6 +35,67 @@ const server = http.createServer((request, response) => {
     response.end(content);
   });
 });
+
+// 对固定区域验证语义，避免将未经确认的截图自动升级为基准。
+function validateScene(png, ratio, enabled) {
+  const image = decodePng(png);
+  if (image.width !== 640 * ratio || image.height !== 480 * ratio)
+    throw new Error(`DPI 截图尺寸异常：${image.width}×${image.height}`);
+  function color(x, y, expected) {
+    const actual = pixelAt(image, Math.floor(x * ratio), Math.floor(y * ratio));
+    if (expected.some((value, channel) => Math.abs(value - actual[channel]) > 12))
+      throw new Error(`验收像素 (${x}, ${y})：实际 ${actual}，预期 ${expected}`);
+  }
+  color(160, 90, [255, 0, 0]);
+  for (const [x, y] of [[132, 90], [212, 90], [160, 56], [160, 136]])
+    color(x, y, [0, 0, 0]);
+  color(40, 176, enabled ? [0, 255, 0] : [255, 0, 0]);
+  const bright = pixelAt(image, 36 * ratio, 76 * ratio);
+  const dark = pixelAt(image, 76 * ratio, 76 * ratio);
+  if (bright[0] - dark[0] < 80 || bright[2] - dark[2] < 60)
+    throw new Error("自定义纹理四分区未正确显示");
+  let glyphPixels = 0;
+  for (let y = 24 * ratio; y < 44 * ratio; ++y)
+    for (let x = 24 * ratio; x < 210 * ratio; ++x)
+      if (pixelAt(image, x, y)[0] > 100) ++glyphPixels;
+  if (glyphPixels < 100 * ratio * ratio || glyphPixels > 2000 * ratio * ratio)
+    throw new Error(`字体覆盖异常：${glyphPixels}`);
+}
+
+async function validateVisualScene(browser, address, ratio) {
+  const context = await browser.newContext({
+    viewport: { width: 640, height: 480 }, deviceScaleFactor: ratio,
+  });
+  const page = await context.newPage();
+  const errors = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  page.on("console", (message) => {
+    if (message.type() === "error") errors.push(message.text());
+  });
+  try {
+    await page.goto(`http://127.0.0.1:${address.port}/granit_imgui_web.html?validation=1`);
+    await page.waitForFunction(() => Module._granit_web_imgui_rendered_frames?.() >= 30);
+    const canvas = page.locator("#canvas");
+    const artifact = path.join(outputDirectory, "validation");
+    fs.mkdirSync(artifact, { recursive: true });
+    const before = await canvas.screenshot({ path: path.join(artifact, `imgui-${ratio}x-before.png`) });
+    validateScene(before, ratio, true);
+    await canvas.click({ position: { x: 40, y: 176 } });
+    await page.waitForFunction(() => Module._granit_web_imgui_validation_enabled() === 0);
+    const frame = await page.evaluate(() => Module._granit_web_imgui_rendered_frames());
+    await page.waitForFunction(
+      (previous) => Module._granit_web_imgui_rendered_frames() > previous + 2, frame,
+    );
+    const after = await canvas.screenshot({ path: path.join(artifact, `imgui-${ratio}x-after.png`) });
+    validateScene(after, ratio, false);
+    if (errors.length) throw new Error(errors.join("\n"));
+    if (await page.evaluate(() => Module._granit_web_imgui_shutdown()) !== 0)
+      throw new Error("视觉验收关闭失败");
+    console.log(`ImGui ${ratio}× DPI 字体、纹理、裁剪和点击状态视觉验收通过`);
+  } finally {
+    await context.close();
+  }
+}
 
 async function main() {
   await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
@@ -112,6 +174,8 @@ async function main() {
     const shutdown = await page.evaluate(() => Module._granit_web_imgui_shutdown());
     if (shutdown !== 0) throw new Error(`Web ImGui 关闭失败：${shutdown}`);
     console.log("浏览器 SDL3 + ImGui 多帧渲染、输入、Resize 与资源释放验证通过");
+    for (const ratio of [1, 2]) await validateVisualScene(browser, address, ratio);
+
   } finally {
     await page.close();
     await browser.close();

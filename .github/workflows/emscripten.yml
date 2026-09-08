@@ -96,6 +96,13 @@ jobs:
             echo "无头 Chrome 丢失 WebGPU 设备，重启浏览器测试（${attempt}/3）"
           done
           exit 1
+      - name: 保存 ImGui 视觉验收截图
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: granit-imgui-visual
+          path: build/emscripten-release/web/validation/*.png
+          if-no-files-found: ignore
       - name: 发布浏览器示例产物
         uses: actions/upload-artifact@v6
         with:
