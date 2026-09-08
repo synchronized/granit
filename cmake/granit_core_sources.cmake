@@ -68,10 +68,9 @@ set(GRANIT_VULKAN_BACKEND_SOURCES
     "${PROJECT_SOURCE_DIR}/src/backend/vulkan/upload_context.cpp"
     "${PROJECT_SOURCE_DIR}/src/backend/vulkan/version_check.cpp"
     "${PROJECT_SOURCE_DIR}/src/backend/vulkan/vma_implementation.cpp"
-    "${PROJECT_SOURCE_DIR}/src/backend/vulkan/renderer_factory.cpp"
     "${PROJECT_SOURCE_DIR}/src/backend/vulkan/vulkan_renderer_state.cpp"
     # 桌面默认后端工厂：create_default_renderer 选择 Vulkan 并拒绝 WebGPU。
-    "${PROJECT_SOURCE_DIR}/src/renderer/renderer_factory_vulkan.cpp"
+    "${PROJECT_SOURCE_DIR}/src/backend/vulkan/renderer_factory.cpp"
 )
 
 # Emscripten WebGPU 后端专用源；由 web/CMakeLists.txt 追加。
@@ -85,7 +84,6 @@ set(GRANIT_WEBGPU_BACKEND_SOURCES
     "${PROJECT_SOURCE_DIR}/src/backend/webgpu/renderer_state.cpp"
     "${PROJECT_SOURCE_DIR}/src/backend/webgpu/shader_adapter.cpp"
     "${PROJECT_SOURCE_DIR}/src/backend/webgpu/timestamp_adapter.cpp"
-    "${PROJECT_SOURCE_DIR}/src/backend/webgpu/renderer_factory.cpp"
     # Web 默认后端工厂：create_default_renderer 选择 WebGPU 并拒绝 Vulkan。
-    "${PROJECT_SOURCE_DIR}/src/renderer/renderer_factory_webgpu.cpp"
+    "${PROJECT_SOURCE_DIR}/src/backend/webgpu/renderer_factory.cpp"
 )

@@ -69,10 +69,6 @@ class renderer_registry {
 public:
   static renderer_registry& instance();
 
-  [[nodiscard]] granit_result create(std::string_view application_name, bool enable_validation,
-                                     std::uint32_t surface_types, std::uint32_t frames_in_flight,
-                                     granit_diagnostic_callback diagnostic_callback,
-                                     void* diagnostic_user_data, granit_renderer& renderer);
   [[nodiscard]] granit_result register_backend(std::shared_ptr<backend_renderer> backend,
                                                granit_renderer& renderer);
   [[nodiscard]] granit_result destroy(granit_renderer renderer);

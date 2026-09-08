@@ -37,7 +37,13 @@ if(desktop_sources MATCHES "backend/webgpu|backend/plugin|webgpu_provider|backen
 endif()
 
 file(READ "${SOURCE_DIR}/web/CMakeLists.txt" browser_sources)
-if(NOT browser_sources MATCHES "backend/webgpu/renderer_factory\\.cpp" OR
-   NOT browser_sources MATCHES "backend/webgpu/provider\\.cpp")
+# 浏览器目标通过共享清单选择后端，检查实际清单而非要求入口重复列出源文件。
+set(PROJECT_SOURCE_DIR "${SOURCE_DIR}")
+include("${SOURCE_DIR}/cmake/granit_core_sources.cmake")
+set(webgpu_factory "${SOURCE_DIR}/src/backend/webgpu/renderer_factory.cpp")
+set(webgpu_provider "${SOURCE_DIR}/src/backend/webgpu/provider.cpp")
+if(NOT browser_sources MATCHES "GRANIT_WEBGPU_BACKEND_SOURCES" OR
+   NOT webgpu_factory IN_LIST GRANIT_WEBGPU_BACKEND_SOURCES OR
+   NOT webgpu_provider IN_LIST GRANIT_WEBGPU_BACKEND_SOURCES)
   message(FATAL_ERROR "浏览器目标缺少 Emscripten WebGPU 静态实现")
 endif()
