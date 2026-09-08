@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include "model_viewer/web/asset_request.h"
+#include "web/asset_request.h"
 
 #include <catch2/catch_all.hpp>
 
 #include <array>
 #include <vector>
 
-namespace web = granit::example::model_viewer::web;
+namespace web = granit::example::web;
 
 TEST_CASE("浏览器资产请求只接受当前 generation", "[example][model-viewer][web]") {
   web::asset_request request;

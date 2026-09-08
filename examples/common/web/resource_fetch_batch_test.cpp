@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include "model_viewer/web/resource_fetch_batch.h"
+#include "web/resource_fetch_batch.h"
 
 #include <catch2/catch_all.hpp>
 
 #include <array>
 #include <cstddef>
 
-namespace granit::example::model_viewer {
+namespace granit::example {
 
 TEST_CASE("Web 资源请求批次只在全部完成后提交") {
   web::resource_fetch_batch batch;
@@ -50,4 +50,4 @@ TEST_CASE("Web 资源请求批次拒绝重复路径和失败请求") {
   CHECK(bundle.size() == 0);
 }
 
-} // namespace granit::example::model_viewer
+} // namespace granit::example

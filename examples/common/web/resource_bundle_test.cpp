@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include "model_viewer/web/resource_bundle.h"
+#include "web/resource_bundle.h"
 
 #include <catch2/catch_all.hpp>
 
 #include <array>
 
-namespace web = granit::example::model_viewer::web;
+namespace web = granit::example::web;
 
 TEST_CASE("浏览器资源 Bundle 规范化并解析外部资源", "[example][model-viewer][web]") {
   web::resource_bundle bundle;

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include "model_viewer_fetch.h"
+#include "fetch.h"
 
 #include <emscripten/fetch.h>
 
@@ -13,7 +13,7 @@
 #include <span>
 #include <string>
 
-namespace granit::example::model_viewer::web {
+namespace granit::example::web {
 namespace {
 
 struct fetch_context {
@@ -42,7 +42,14 @@ void fetch_succeeded(emscripten_fetch_t* fetch) noexcept {
 
 void fetch_failed(emscripten_fetch_t* fetch) noexcept {
   auto* context = static_cast<fetch_context*>(fetch->userData);
-  auto diagnostic = std::string("HTTP 请求失败：") + std::to_string(fetch->status);
+  // CORS 阻止或网络层失败时 Emscripten 通常不提供 HTTP 状态码；给出可区分的诊断，
+  // 避免上游把跨域问题误判为普通 404。
+  std::string diagnostic;
+  if (fetch->status == 0) {
+    diagnostic = "资源请求失败（状态码 0）：可能是跨域 CORS 策略阻止、网络不可达或证书错误";
+  } else {
+    diagnostic = "HTTP 请求失败：" + std::to_string(fetch->status);
+  }
   static_cast<void>(context->request->fail(context->generation, std::move(diagnostic)));
   finish_fetch(fetch);
 }
@@ -77,4 +84,4 @@ bool start_fetch(const std::shared_ptr<asset_request>& request, std::string_view
   return true;
 }
 
-} // namespace granit::example::model_viewer::web
+} // namespace granit::example::web

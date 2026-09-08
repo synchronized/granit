@@ -9,7 +9,7 @@
 #include <cstdint>
 #include <vector>
 
-namespace granit::example::model_viewer {
+namespace granit::example::imgui {
 
 /** 单帧自有的 Canvas CPU 数据，可安全移动到另一线程后再写入 GPU Canvas。 */
 struct frame_canvas_data {
@@ -22,6 +22,6 @@ struct frame_canvas_data {
   [[nodiscard]] granit::result append_to(granit::canvas_draw_list& canvas) const noexcept;
 };
 
-} // namespace granit::example::model_viewer
+} // namespace granit::example::imgui
 
 #endif

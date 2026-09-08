@@ -12,7 +12,7 @@
 #include <cstdint>
 #include <vector>
 
-namespace granit::example::model_viewer {
+namespace granit::example::imgui {
 
 /**
  * 将 ImGui 的整数 Texture ID 映射到仍存活的 Granit 资源。
@@ -44,6 +44,6 @@ private:
   std::vector<slot> slots_;
 };
 
-} // namespace granit::example::model_viewer
+} // namespace granit::example::imgui
 
 #endif

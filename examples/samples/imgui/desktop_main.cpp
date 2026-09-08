@@ -8,7 +8,8 @@
 
 #include "samples/imgui/content.h"
 #include "samples/imgui/resources.h"
-#include "framework/common/imgui_theme.h"
+#include "imgui/imgui_theme.h"
+#include "sdl/sdl3_lifecycle.h"
 
 #include <granit/granit.hpp>
 #include <granit/integrations/imgui/renderer.hpp>
@@ -129,21 +130,6 @@ bool write_profile_csv(std::string_view path, std::span<const frame_sample> samp
   }
   return output.good();
 }
-
-struct sdl_quit {
-  ~sdl_quit() { SDL_Quit(); }
-};
-
-struct window_deleter {
-  void operator()(SDL_Window* window) const noexcept { SDL_DestroyWindow(window); }
-};
-
-struct imgui_quit {
-  ~imgui_quit() {
-    ImGui_ImplSDL3_Shutdown();
-    ImGui::DestroyContext();
-  }
-};
 
 granit::result render_frame(granit::swapchain& swapchain, granit::frame_context& frame_context,
                             std::array<bool, GRANIT_MAX_FRAMES_IN_FLIGHT>& timestamp_valid,
@@ -310,9 +296,10 @@ int main(int argc, char** argv) {
     frame_limit = frame_slot_count + 1;
   if (!SDL_Init(SDL_INIT_VIDEO))
     return 1;
-  sdl_quit quit;
-  std::unique_ptr<SDL_Window, window_deleter> window(SDL_CreateWindow(
-      "Granit SDL3 + ImGui", 1280, 720, SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY));
+  granit::example::sdl::sdl_quit quit;
+  std::unique_ptr<SDL_Window, granit::example::sdl::window_deleter> window(
+      SDL_CreateWindow("Granit SDL3 + ImGui", 1280, 720,
+                       SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY));
   if (!window)
     return 1;
 
@@ -322,7 +309,7 @@ int main(int argc, char** argv) {
     ImGui::DestroyContext();
     return 1;
   }
-  imgui_quit imgui;
+  granit::example::sdl::imgui_quit imgui;
   granit::example::apply_imgui_theme();
   ImGui::GetIO().IniFilename = nullptr;
 

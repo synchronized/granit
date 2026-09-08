@@ -31,8 +31,8 @@
 
 #include "model_viewer/application_core.h"
 #include "model_viewer/frame_executor.h"
-#include "model_viewer_fetch.h"
-#include "model_viewer/web/resource_fetch_batch.h"
+#include "web/fetch.h"
+#include "web/resource_fetch_batch.h"
 #include "support/renderer_fixture.h"
 #include "model_viewer/web/web_input.h"
 
@@ -78,10 +78,10 @@ struct web_platform_state {
   std::uint64_t shutdown_live_resource_count{};
   std::uint64_t shutdown_pending_retirement_count{};
   granit::example::model_viewer::web::web_input input;
-  std::shared_ptr<granit::example::model_viewer::web::asset_request> asset_request{
-      std::make_shared<granit::example::model_viewer::web::asset_request>()};
-  granit::example::model_viewer::web::resource_fetch_batch resource_batch;
-  granit::example::model_viewer::web::resource_bundle resource_bundle;
+  std::shared_ptr<granit::example::web::asset_request> asset_request{
+      std::make_shared<granit::example::web::asset_request>()};
+  granit::example::web::resource_fetch_batch resource_batch;
+  granit::example::web::resource_bundle resource_bundle;
   std::string asset_url;
   granit::example::model_viewer::application_core core;
   bool core_renderer_ready{};
@@ -1206,12 +1206,12 @@ void tick(void*) noexcept {
     state.core_renderer_ready = true;
   }
   if (state.asset_request->status() ==
-      granit::example::model_viewer::web::asset_request_status::failed) {
+      granit::example::web::asset_request_status::failed) {
     fail("asset-fetch");
     return;
   }
   if (state.asset_request->status() !=
-      granit::example::model_viewer::web::asset_request_status::ready) {
+      granit::example::web::asset_request_status::ready) {
     return;
   }
 
@@ -1231,7 +1231,7 @@ void tick(void*) noexcept {
         }
       }
       for (const auto& entry : state.resource_batch.entries()) {
-        if (!granit::example::model_viewer::web::start_fetch(entry.request, entry.url)) {
+        if (!granit::example::web::start_fetch(entry.request, entry.url)) {
           fail("asset-resource-fetch-start");
           return;
         }
@@ -1240,11 +1240,11 @@ void tick(void*) noexcept {
     }
 
     const auto batch_status = state.resource_batch.status();
-    if (batch_status == granit::example::model_viewer::web::resource_fetch_batch_status::failed) {
+    if (batch_status == granit::example::web::resource_fetch_batch_status::failed) {
       fail("asset-resource-fetch");
       return;
     }
-    if (batch_status != granit::example::model_viewer::web::resource_fetch_batch_status::ready)
+    if (batch_status != granit::example::web::resource_fetch_batch_status::ready)
       return;
     if (!state.asset_ready) {
       if (!state.resource_batch.commit(state.resource_bundle)) {
@@ -1453,7 +1453,7 @@ extern "C" EMSCRIPTEN_KEEPALIVE int granit_web_shutdown() noexcept {
   for (const auto& entry : state.resource_batch.entries())
     entry.request->cancel();
   state.resource_batch.clear();
-  granit::example::model_viewer::web::resource_bundle empty_bundle;
+  granit::example::web::resource_bundle empty_bundle;
   state.resource_bundle.swap(empty_bundle);
   state.core.reset();
 
@@ -1553,7 +1553,7 @@ int main() {
     return 1;
   }
   state.asset_url = selected_model_url();
-  if (!granit::example::model_viewer::web::start_fetch(state.asset_request, state.asset_url)) {
+  if (!granit::example::web::start_fetch(state.asset_request, state.asset_url)) {
     fail("asset-fetch-start");
     return 1;
   }

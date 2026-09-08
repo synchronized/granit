@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include "model_viewer/web/asset_request.h"
+#include "web/asset_request.h"
 
 #include <limits>
 #include <utility>
 
-namespace granit::example::model_viewer::web {
+namespace granit::example::web {
 
 std::uint64_t asset_request::begin(std::string url) {
   if (generation_ == std::numeric_limits<std::uint64_t>::max())
@@ -54,4 +54,4 @@ void asset_request::reset() noexcept {
   diagnostic_.clear();
 }
 
-} // namespace granit::example::model_viewer::web
+} // namespace granit::example::web

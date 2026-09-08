@@ -1,18 +1,18 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#ifndef GRANIT_EXAMPLES_SAMPLES_MODEL_VIEWER_WEB_RESOURCE_FETCH_BATCH_H_
-#define GRANIT_EXAMPLES_SAMPLES_MODEL_VIEWER_WEB_RESOURCE_FETCH_BATCH_H_
+#ifndef GRANIT_EXAMPLES_COMMON_WEB_RESOURCE_FETCH_BATCH_H_
+#define GRANIT_EXAMPLES_COMMON_WEB_RESOURCE_FETCH_BATCH_H_
 
-#include "model_viewer/web/asset_request.h"
-#include "model_viewer/web/resource_bundle.h"
+#include "web/asset_request.h"
+#include "web/resource_bundle.h"
 
 #include <memory>
 #include <string>
 #include <string_view>
 #include <vector>
 
-namespace granit::example::model_viewer::web {
+namespace granit::example::web {
 
 enum class resource_fetch_batch_status { idle, pending, ready, failed };
 
@@ -38,6 +38,6 @@ private:
   std::vector<resource_fetch_entry> entries_;
 };
 
-} // namespace granit::example::model_viewer::web
+} // namespace granit::example::web
 
 #endif

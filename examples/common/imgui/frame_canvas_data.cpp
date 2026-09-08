@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include "frame_canvas_data.h"
+#include "imgui/frame_canvas_data.h"
 
-namespace granit::example::model_viewer {
+namespace granit::example::imgui {
 
 void frame_canvas_data::clear() noexcept {
   vertices.clear();
@@ -17,4 +17,4 @@ granit::result frame_canvas_data::append_to(granit::canvas_draw_list& canvas) co
   return canvas.append_batch(vertices, indices, ranges);
 }
 
-} // namespace granit::example::model_viewer
+} // namespace granit::example::imgui

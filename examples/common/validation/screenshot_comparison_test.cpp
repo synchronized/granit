@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include "screenshot_comparison.h"
+#include "validation/screenshot_comparison.h"
 
 #include <catch2/catch_all.hpp>
 
 #include <array>
 
-namespace model_viewer = granit::example::model_viewer;
+namespace validation = granit::example::validation;
 
 TEST_CASE("截图比较允许一像素轮廓偏移", "[example][model-viewer][screenshot]") {
   std::array<std::uint8_t, 8 * 8 * 4> expected{};
@@ -26,9 +26,9 @@ TEST_CASE("截图比较允许一像素轮廓偏移", "[example][model-viewer][sc
       }
     }
   }
-  model_viewer::screenshot_comparison_report report;
-  REQUIRE(model_viewer::compare_screenshots({8, 8, expected, {}}, {8, 8, actual, {}}, {}, report) ==
-          model_viewer::screenshot_comparison_error::none);
+  validation::screenshot_comparison_report report;
+  REQUIRE(validation::compare_screenshots({8, 8, expected, {}}, {8, 8, actual, {}}, {}, report) ==
+          validation::screenshot_comparison_error::none);
   INFO("silhouette=" << report.silhouette_mismatch_count
                      << ", colors=" << report.compared_color_pixel_count
                      << ", mae=" << report.color_mean_absolute_error
@@ -60,10 +60,10 @@ TEST_CASE("截图比较报告颜色和深度差异", "[example][model-viewer][sc
   expected_depth[2 * 5 + 2] = 0.25F;
   actual_depth[2 * 5 + 2] = 0.75F;
 
-  model_viewer::screenshot_comparison_report report;
-  REQUIRE(model_viewer::compare_screenshots({5, 5, expected, expected_depth},
+  validation::screenshot_comparison_report report;
+  REQUIRE(validation::compare_screenshots({5, 5, expected, expected_depth},
                                             {5, 5, actual, actual_depth}, {}, report) ==
-          model_viewer::screenshot_comparison_error::none);
+          validation::screenshot_comparison_error::none);
   CHECK_FALSE(report.passed);
   CHECK(report.color_outlier_count == 1);
   CHECK(report.depth_outlier_count == 1);
@@ -72,23 +72,23 @@ TEST_CASE("截图比较报告颜色和深度差异", "[example][model-viewer][sc
 TEST_CASE("截图比较可限制少量孤立轮廓像素", "[example][model-viewer][screenshot]") {
   constexpr std::array<std::uint8_t, 8> expected{0, 0, 0, 255, 0, 0, 0, 255};
   constexpr std::array<std::uint8_t, 8> actual{255, 255, 255, 255, 0, 0, 0, 255};
-  auto options = model_viewer::screenshot_comparison_options{};
+  auto options = validation::screenshot_comparison_options{};
   options.edge_tolerance_pixels = 0;
   options.max_silhouette_mismatch_count = 1;
-  model_viewer::screenshot_comparison_report report;
-  REQUIRE(model_viewer::compare_screenshots({2, 1, expected, {}}, {2, 1, actual, {}}, options,
+  validation::screenshot_comparison_report report;
+  REQUIRE(validation::compare_screenshots({2, 1, expected, {}}, {2, 1, actual, {}}, options,
                                             report) ==
-          model_viewer::screenshot_comparison_error::none);
+          validation::screenshot_comparison_error::none);
   CHECK(report.passed);
   CHECK(report.silhouette_mismatch_count == 1);
 }
 
 TEST_CASE("截图比较参数错误时保留旧报告", "[example][model-viewer][screenshot]") {
   constexpr std::array<std::uint8_t, 4> pixel{0, 0, 0, 255};
-  model_viewer::screenshot_comparison_report report{.passed = true};
-  auto options = model_viewer::screenshot_comparison_options{};
+  validation::screenshot_comparison_report report{.passed = true};
+  auto options = validation::screenshot_comparison_options{};
   options.max_color_outlier_ratio = 2.0;
-  CHECK(model_viewer::compare_screenshots({1, 1, pixel, {}}, {1, 1, pixel, {}}, options, report) ==
-        model_viewer::screenshot_comparison_error::invalid_options);
+  CHECK(validation::compare_screenshots({1, 1, pixel, {}}, {1, 1, pixel, {}}, options, report) ==
+        validation::screenshot_comparison_error::invalid_options);
   CHECK(report.passed);
 }

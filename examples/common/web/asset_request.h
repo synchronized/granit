@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#ifndef GRANIT_EXAMPLES_SAMPLES_MODEL_VIEWER_WEB_ASSET_REQUEST_H_
-#define GRANIT_EXAMPLES_SAMPLES_MODEL_VIEWER_WEB_ASSET_REQUEST_H_
+#ifndef GRANIT_EXAMPLES_COMMON_WEB_ASSET_REQUEST_H_
+#define GRANIT_EXAMPLES_COMMON_WEB_ASSET_REQUEST_H_
 
 #include <cstddef>
 #include <cstdint>
@@ -10,7 +10,7 @@
 #include <string>
 #include <vector>
 
-namespace granit::example::model_viewer::web {
+namespace granit::example::web {
 
 enum class asset_request_status { idle, pending, ready, failed };
 
@@ -37,6 +37,6 @@ private:
   std::string diagnostic_;
 };
 
-} // namespace granit::example::model_viewer::web
+} // namespace granit::example::web
 
 #endif

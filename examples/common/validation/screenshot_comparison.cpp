@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include "screenshot_comparison.h"
+#include "validation/screenshot_comparison.h"
 
 #include <algorithm>
 #include <cmath>
 #include <limits>
 
-namespace granit::example::model_viewer {
+namespace granit::example::validation {
 namespace {
 
 bool valid_size(screenshot_view view, std::size_t& pixel_count) noexcept {
@@ -150,4 +150,4 @@ screenshot_comparison_error compare_screenshots(screenshot_view expected, screen
   return screenshot_comparison_error::none;
 }
 
-} // namespace granit::example::model_viewer
+} // namespace granit::example::validation

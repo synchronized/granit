@@ -80,8 +80,6 @@ add_library(
   "${PROJECT_SOURCE_DIR}/examples/samples/model_viewer/application_core.h"
   "${PROJECT_SOURCE_DIR}/examples/samples/model_viewer/environment_ktx2.cpp"
   "${PROJECT_SOURCE_DIR}/examples/samples/model_viewer/environment_ktx2.h"
-  "${PROJECT_SOURCE_DIR}/examples/samples/model_viewer/frame_canvas_data.cpp"
-  "${PROJECT_SOURCE_DIR}/examples/samples/model_viewer/frame_canvas_data.h"
   "${PROJECT_SOURCE_DIR}/examples/samples/model_viewer/frame_executor.cpp"
   "${PROJECT_SOURCE_DIR}/examples/samples/model_viewer/frame_executor.h"
   "${PROJECT_SOURCE_DIR}/examples/samples/model_viewer/gpu_scene.cpp"
@@ -93,8 +91,6 @@ add_library(
   "${PROJECT_SOURCE_DIR}/examples/samples/model_viewer/orbit_camera.h"
   "${PROJECT_SOURCE_DIR}/examples/samples/model_viewer/performance_history.cpp"
   "${PROJECT_SOURCE_DIR}/examples/samples/model_viewer/performance_history.h"
-  "${PROJECT_SOURCE_DIR}/examples/samples/model_viewer/screenshot_comparison.cpp"
-  "${PROJECT_SOURCE_DIR}/examples/samples/model_viewer/screenshot_comparison.h"
   "${PROJECT_SOURCE_DIR}/examples/samples/model_viewer/viewer_state.cpp"
   "${PROJECT_SOURCE_DIR}/examples/samples/model_viewer/viewer_state.h"
   "${PROJECT_SOURCE_DIR}/examples/samples/model_viewer/viewer_input.h"
@@ -106,12 +102,13 @@ add_library(granit_example_model_viewer_support ALIAS granit_model_viewer_core)
 target_compile_features(granit_model_viewer_core PUBLIC cxx_std_20)
 target_include_directories(
   granit_model_viewer_core
-  PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/.." "${PROJECT_SOURCE_DIR}/examples/samples"
+  PUBLIC "${PROJECT_SOURCE_DIR}/examples/samples" "${PROJECT_SOURCE_DIR}/examples/common"
   PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/generated" "${PROJECT_SOURCE_DIR}/src"
 )
 target_link_libraries(
   granit_model_viewer_core
   PUBLIC granit_example_gltf_support granit::math granit::render_pipeline
+         granit_example_imgui_canvas
 )
 set_target_properties(granit_model_viewer_core PROPERTIES FOLDER "Examples")
 granit_target_compile_warnings(granit_model_viewer_core)
@@ -148,7 +145,8 @@ if(NOT CMAKE_CROSSCOMPILING)
     "${PROJECT_SOURCE_DIR}/examples/samples/model_viewer/offscreen_acceptance.cpp"
   )
   target_link_libraries(
-    granit_model_viewer_offscreen_acceptance PRIVATE granit_example_model_viewer_support
+    granit_model_viewer_offscreen_acceptance
+    PRIVATE granit_example_model_viewer_support granit_example_validation
   )
   set_target_properties(
     granit_model_viewer_offscreen_acceptance PROPERTIES FOLDER "Examples/Acceptance"
@@ -166,7 +164,6 @@ if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
     "${PROJECT_SOURCE_DIR}/examples/samples/model_viewer/gpu_scene_test.cpp"
     "${PROJECT_SOURCE_DIR}/examples/samples/model_viewer/orbit_camera_test.cpp"
     "${PROJECT_SOURCE_DIR}/examples/samples/model_viewer/performance_history_test.cpp"
-    "${PROJECT_SOURCE_DIR}/examples/samples/model_viewer/screenshot_comparison_test.cpp"
     "${PROJECT_SOURCE_DIR}/examples/samples/model_viewer/viewer_state_test.cpp"
   )
   target_link_libraries(
@@ -189,20 +186,16 @@ endif()
 if(TARGET granit::integration_imgui)
   add_library(
     granit_example_model_viewer_imgui STATIC
-    "${PROJECT_SOURCE_DIR}/examples/samples/model_viewer/imgui_frame_capture.cpp"
-    "${PROJECT_SOURCE_DIR}/examples/samples/model_viewer/imgui_frame_capture.h"
-    "${PROJECT_SOURCE_DIR}/examples/samples/model_viewer/texture_registry.cpp"
-    "${PROJECT_SOURCE_DIR}/examples/samples/model_viewer/texture_registry.h"
     "${PROJECT_SOURCE_DIR}/examples/samples/model_viewer/viewer_panels.cpp"
     "${PROJECT_SOURCE_DIR}/examples/samples/model_viewer/viewer_panels.h"
   )
   target_compile_features(granit_example_model_viewer_imgui PUBLIC cxx_std_20)
   target_include_directories(
-    granit_example_model_viewer_imgui PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/.."
+    granit_example_model_viewer_imgui PUBLIC "${PROJECT_SOURCE_DIR}/examples/samples"
   )
   target_link_libraries(
     granit_example_model_viewer_imgui
-    PUBLIC granit_example_model_viewer_support granit::integration_imgui
+    PUBLIC granit_example_model_viewer_support granit_example_imgui granit::integration_imgui
   )
   set_target_properties(granit_example_model_viewer_imgui PROPERTIES FOLDER "Examples")
   granit_target_compile_warnings(granit_example_model_viewer_imgui)
@@ -210,9 +203,7 @@ if(TARGET granit::integration_imgui)
   if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
     add_executable(
     granit_example_model_viewer_imgui_test
-    "${PROJECT_SOURCE_DIR}/examples/samples/model_viewer/texture_registry_test.cpp"
     "${PROJECT_SOURCE_DIR}/examples/samples/model_viewer/viewer_panels_test.cpp"
-    "${PROJECT_SOURCE_DIR}/examples/samples/model_viewer/imgui_frame_capture_test.cpp"
     )
     target_link_libraries(
       granit_example_model_viewer_imgui_test

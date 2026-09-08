@@ -1,55 +1,13 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2026 Granit contributors
 
+include(granit_core_sources)
+
 add_library(
   granit STATIC
   $<TARGET_OBJECTS:granit_shader_asset_format>
-  "${PROJECT_SOURCE_DIR}/src/assets/texture_asset.cpp"
-  "${PROJECT_SOURCE_DIR}/src/renderer/async_operation_api.cpp"
-  "${PROJECT_SOURCE_DIR}/src/renderer/buffer_api.cpp"
-  "${PROJECT_SOURCE_DIR}/src/renderer/command_recorder_api.cpp"
-  "${PROJECT_SOURCE_DIR}/src/renderer/frame_context_api.cpp"
-  "${PROJECT_SOURCE_DIR}/src/renderer/pipeline_api.cpp"
-  "${PROJECT_SOURCE_DIR}/src/renderer/pipeline_warmup_api.cpp"
-  "${PROJECT_SOURCE_DIR}/src/renderer/readback_batch_api.cpp"
-  "${PROJECT_SOURCE_DIR}/src/renderer/renderer_api.cpp"
-  renderer_factory.cpp
-  "${PROJECT_SOURCE_DIR}/src/renderer/renderer_registry.cpp"
-  "${PROJECT_SOURCE_DIR}/src/renderer/renderer_registry_async.cpp"
-  "${PROJECT_SOURCE_DIR}/src/backend/webgpu/renderer_factory.cpp"
-  "${PROJECT_SOURCE_DIR}/src/renderer/renderer_registry_buffer.cpp"
-  "${PROJECT_SOURCE_DIR}/src/renderer/renderer_registry_command.cpp"
-  "${PROJECT_SOURCE_DIR}/src/renderer/renderer_registry_pipeline.cpp"
-  "${PROJECT_SOURCE_DIR}/src/renderer/renderer_registry_readback.cpp"
-  "${PROJECT_SOURCE_DIR}/src/renderer/renderer_registry_presentation.cpp"
-  "${PROJECT_SOURCE_DIR}/src/renderer/renderer_registry_rendering.cpp"
-  "${PROJECT_SOURCE_DIR}/src/renderer/renderer_registry_texture.cpp"
-  "${PROJECT_SOURCE_DIR}/src/renderer/renderer_registry_timestamp.cpp"
-  "${PROJECT_SOURCE_DIR}/src/renderer/renderer_registry_transfer.cpp"
-  "${PROJECT_SOURCE_DIR}/src/renderer/renderer_registry_warmup.cpp"
-  "${PROJECT_SOURCE_DIR}/src/renderer/sampler_api.cpp"
-  "${PROJECT_SOURCE_DIR}/src/renderer/shader_api.cpp"
-  "${PROJECT_SOURCE_DIR}/src/renderer/surface_api.cpp"
-  "${PROJECT_SOURCE_DIR}/src/renderer/swapchain_api.cpp"
-  "${PROJECT_SOURCE_DIR}/src/renderer/texture_api.cpp"
-  "${PROJECT_SOURCE_DIR}/src/renderer/texture_asset_api.cpp"
-  "${PROJECT_SOURCE_DIR}/src/renderer/timestamp_query_api.cpp"
-  "${PROJECT_SOURCE_DIR}/src/renderer/upload_batch_api.cpp"
-  "${PROJECT_SOURCE_DIR}/src/backend/webgpu/provider_dispatch.cpp"
-  "${PROJECT_SOURCE_DIR}/src/backend/webgpu/provider.cpp"
-  "${PROJECT_SOURCE_DIR}/src/backend/webgpu/command_adapter.cpp"
-  "${PROJECT_SOURCE_DIR}/src/backend/webgpu/presentation_adapter.cpp"
-  "${PROJECT_SOURCE_DIR}/src/backend/webgpu/pipeline_adapter.cpp"
-  "${PROJECT_SOURCE_DIR}/src/backend/webgpu/resource_adapter.cpp"
-  "${PROJECT_SOURCE_DIR}/src/backend/webgpu/renderer_state.cpp"
-  "${PROJECT_SOURCE_DIR}/src/backend/webgpu/shader_adapter.cpp"
-  "${PROJECT_SOURCE_DIR}/src/backend/webgpu/timestamp_adapter.cpp"
-  "${PROJECT_SOURCE_DIR}/src/core/handle_table.cpp"
-  "${PROJECT_SOURCE_DIR}/src/core/async_operation_state.cpp"
-  "${PROJECT_SOURCE_DIR}/src/core/diagnostic_sink.cpp"
-  "${PROJECT_SOURCE_DIR}/src/core/lifecycle_validation.cpp"
-  "${PROJECT_SOURCE_DIR}/src/core/retirement_queue.cpp"
-  "${PROJECT_SOURCE_DIR}/src/core/resource_validation.cpp"
+  ${GRANIT_CORE_SOURCES}
+  ${GRANIT_WEBGPU_BACKEND_SOURCES}
 )
 add_library(granit::granit ALIAS granit)
 set(GRANIT_WEB_GENERATED_INCLUDE_DIR "${CMAKE_CURRENT_BINARY_DIR}/generated/include")
@@ -94,8 +52,8 @@ if(GRANIT_BUILD_WEB_IMGUI_EXAMPLE)
   target_compile_definitions(granit_web_imgui_support PUBLIC GRANIT_INTEGRATION_IMGUI_STATIC_DEFINE)
   target_include_directories(
     granit_web_imgui_support
-    PUBLIC "${PROJECT_SOURCE_DIR}/examples" "${granit_imgui_SOURCE_DIR}"
-           "${PROJECT_SOURCE_DIR}/include"
+    PUBLIC "${PROJECT_SOURCE_DIR}/examples" "${PROJECT_SOURCE_DIR}/examples/common"
+           "${granit_imgui_SOURCE_DIR}" "${PROJECT_SOURCE_DIR}/include"
   )
   target_link_libraries(
     granit_web_imgui_support PUBLIC granit::render_pipeline SDL3::SDL3
@@ -114,7 +72,7 @@ if(GRANIT_BUILD_WEB_IMGUI_EXAMPLE)
     granit_imgui_web
     PRIVATE
       "--use-port=emdawnwebgpu:cpp_bindings=false"
-      "--shell-file=${PROJECT_SOURCE_DIR}/examples/framework/web/imgui_shell.html"
+      "--shell-file=${PROJECT_SOURCE_DIR}/examples/common/web/imgui_shell.html"
       "-sALLOW_MEMORY_GROWTH=1"
       "-sNO_EXIT_RUNTIME=1"
       "$<$<CONFIG:Debug>:-sASSERTIONS=1>"
@@ -122,7 +80,7 @@ if(GRANIT_BUILD_WEB_IMGUI_EXAMPLE)
   set_target_properties(
     granit_imgui_web
     PROPERTIES OUTPUT_NAME granit_imgui_web SUFFIX ".html" FOLDER "Examples"
-               LINK_DEPENDS "${PROJECT_SOURCE_DIR}/examples/framework/web/imgui_shell.html"
+               LINK_DEPENDS "${PROJECT_SOURCE_DIR}/examples/common/web/imgui_shell.html"
   )
   granit_target_compile_warnings(granit_imgui_web)
 endif()
@@ -132,20 +90,19 @@ add_subdirectory(
   "${PROJECT_SOURCE_DIR}/examples/common/gltf" "${CMAKE_CURRENT_BINARY_DIR}/gltf"
 )
 add_subdirectory(
-  "${PROJECT_SOURCE_DIR}/examples/common/model_viewer"
-  "${CMAKE_CURRENT_BINARY_DIR}/model_viewer"
+  "${PROJECT_SOURCE_DIR}/examples/common/imgui" "${CMAKE_CURRENT_BINARY_DIR}/common-imgui"
 )
+add_subdirectory(
+  "${PROJECT_SOURCE_DIR}/examples/common/web" "${CMAKE_CURRENT_BINARY_DIR}/common-web"
+)
+# Model Viewer Core 由桌面示例的权威 core.cmake 直接构建；Web 只复用 Core 与 glTF，不包含桌面
+# 壳层与 ImGui 面板分支。
+include("${PROJECT_SOURCE_DIR}/examples/samples/model_viewer/core.cmake")
 
 add_library(
   granit_web_model_viewer_platform STATIC
-  model_viewer_fetch.cpp
-  model_viewer_fetch.h
-  "${PROJECT_SOURCE_DIR}/examples/samples/model_viewer/web/asset_request.cpp"
-  "${PROJECT_SOURCE_DIR}/examples/samples/model_viewer/web/asset_request.h"
-  "${PROJECT_SOURCE_DIR}/examples/samples/model_viewer/web/resource_bundle.cpp"
-  "${PROJECT_SOURCE_DIR}/examples/samples/model_viewer/web/resource_bundle.h"
-  "${PROJECT_SOURCE_DIR}/examples/samples/model_viewer/web/resource_fetch_batch.cpp"
-  "${PROJECT_SOURCE_DIR}/examples/samples/model_viewer/web/resource_fetch_batch.h"
+  "${PROJECT_SOURCE_DIR}/examples/common/web/fetch.cpp"
+  "${PROJECT_SOURCE_DIR}/examples/common/web/fetch.h"
   "${PROJECT_SOURCE_DIR}/examples/samples/model_viewer/web/web_input.cpp"
   "${PROJECT_SOURCE_DIR}/examples/samples/model_viewer/web/web_input.h"
 )
@@ -157,7 +114,7 @@ target_include_directories(
 )
 target_link_libraries(
   granit_web_model_viewer_platform
-  PUBLIC granit::granit granit_example_model_viewer_support
+  PUBLIC granit::granit granit_example_model_viewer_support granit_example_web
 )
 target_compile_options(
   granit_web_model_viewer_platform PRIVATE "--use-port=emdawnwebgpu:cpp_bindings=false"
@@ -229,7 +186,7 @@ target_link_options(
   granit_model_viewer_web
   PRIVATE
     "--use-port=emdawnwebgpu:cpp_bindings=false"
-    "--shell-file=${CMAKE_CURRENT_SOURCE_DIR}/model_viewer_shell.html"
+    "--shell-file=${PROJECT_SOURCE_DIR}/examples/samples/model_viewer/web/model_viewer_shell.html"
     "-sALLOW_MEMORY_GROWTH=1"
     "-sNO_EXIT_RUNTIME=1"
     "-sFETCH=1"
@@ -239,7 +196,7 @@ target_link_options(
 set_target_properties(
   granit_model_viewer_web
   PROPERTIES OUTPUT_NAME granit_model_viewer_web SUFFIX ".html" FOLDER "Examples"
-             LINK_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/model_viewer_shell.html"
+             LINK_DEPENDS "${PROJECT_SOURCE_DIR}/examples/samples/model_viewer/web/model_viewer_shell.html"
 )
 granit_target_compile_warnings(granit_model_viewer_web)
 

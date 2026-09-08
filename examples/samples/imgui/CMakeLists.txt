@@ -14,7 +14,8 @@ add_executable(
   "${granit_imgui_SOURCE_DIR}/backends/imgui_impl_sdl3.cpp"
 )
 target_include_directories(
-  granit_sdl3_imgui_example PRIVATE "${PROJECT_SOURCE_DIR}/examples"
+  granit_sdl3_imgui_example
+  PRIVATE "${PROJECT_SOURCE_DIR}/examples" "${PROJECT_SOURCE_DIR}/examples/common"
 )
 target_include_directories(
   granit_sdl3_imgui_example SYSTEM PRIVATE "${granit_imgui_SOURCE_DIR}"

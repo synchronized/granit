@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include "imgui_frame_capture.h"
+#include "imgui/imgui_frame_capture.h"
 
 #include <algorithm>
 #include <limits>
 #include <new>
 
-namespace granit::example::model_viewer {
+namespace granit::example::imgui {
 namespace {
 
 std::uint32_t premultiply_color(std::uint32_t color) noexcept {
@@ -113,4 +113,4 @@ granit::result capture_imgui_frame(const ImDrawData* draw_data,
   }
 }
 
-} // namespace granit::example::model_viewer
+} // namespace granit::example::imgui

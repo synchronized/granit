@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#ifndef GRANIT_EXAMPLES_SAMPLES_MODEL_VIEWER_SCREENSHOT_COMPARISON_H_
-#define GRANIT_EXAMPLES_SAMPLES_MODEL_VIEWER_SCREENSHOT_COMPARISON_H_
+#ifndef GRANIT_EXAMPLES_COMMON_VALIDATION_SCREENSHOT_COMPARISON_H_
+#define GRANIT_EXAMPLES_COMMON_VALIDATION_SCREENSHOT_COMPARISON_H_
 
 #include <array>
 #include <cstddef>
 #include <cstdint>
 #include <span>
 
-namespace granit::example::model_viewer {
+namespace granit::example::validation {
 
 struct screenshot_view {
   std::uint32_t width{};
@@ -59,6 +59,6 @@ compare_screenshots(screenshot_view expected, screenshot_view actual,
                     const screenshot_comparison_options& options,
                     screenshot_comparison_report& output) noexcept;
 
-} // namespace granit::example::model_viewer
+} // namespace granit::example::validation
 
 #endif

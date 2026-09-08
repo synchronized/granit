@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include "texture_registry.h"
+#include "imgui/imgui_texture_registry.h"
 
 #include <catch2/catch_all.hpp>
 
 TEST_CASE("ImGui Texture Registry 映射存活资源", "[example][model-viewer][imgui][texture]") {
-  granit::example::model_viewer::texture_registry registry;
+  granit::example::imgui::texture_registry registry;
   ImTextureID texture = ImTextureID_Invalid;
   REQUIRE(registry.register_texture(11, 22, texture) == granit::result::success);
   REQUIRE(texture != ImTextureID_Invalid);
@@ -14,15 +14,15 @@ TEST_CASE("ImGui Texture Registry 映射存活资源", "[example][model-viewer][
   REQUIRE(registry.resolve(texture, state) == granit::result::success);
   CHECK(state.texture == 11);
   CHECK(state.sampler == 22);
-  CHECK(granit::example::model_viewer::texture_registry::resolver(texture, state, &registry) ==
+  CHECK(granit::example::imgui::texture_registry::resolver(texture, state, &registry) ==
         granit::result::success);
 }
 
 TEST_CASE("ImGui Texture Registry 拒绝未知与陈旧 ID", "[example][model-viewer][imgui][texture]") {
-  granit::example::model_viewer::texture_registry registry;
+  granit::example::imgui::texture_registry registry;
   granit_canvas_draw_state state{};
   CHECK(registry.resolve(ImTextureID_Invalid, state) == granit::result::invalid_handle);
-  CHECK(granit::example::model_viewer::texture_registry::resolver(7, state, nullptr) ==
+  CHECK(granit::example::imgui::texture_registry::resolver(7, state, nullptr) ==
         granit::result::invalid_argument);
 
   ImTextureID first = ImTextureID_Invalid;

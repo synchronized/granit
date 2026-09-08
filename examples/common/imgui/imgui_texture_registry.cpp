@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include "texture_registry.h"
+#include "imgui/imgui_texture_registry.h"
 
 #include <limits>
 #include <new>
 
-namespace granit::example::model_viewer {
+namespace granit::example::imgui {
 namespace {
 
 ImTextureID encode(std::uint32_t index, std::uint32_t generation) noexcept {
@@ -99,4 +99,4 @@ granit::result texture_registry::resolver(ImTextureID texture, granit_canvas_dra
   return static_cast<const texture_registry*>(user_data)->resolve(texture, state);
 }
 
-} // namespace granit::example::model_viewer
+} // namespace granit::example::imgui

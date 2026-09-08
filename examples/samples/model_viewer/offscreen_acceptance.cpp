@@ -3,7 +3,7 @@
 
 #include "gltf/loader.h"
 #include "application_core.h"
-#include "model_viewer/screenshot_comparison.h"
+#include "validation/screenshot_comparison.h"
 
 #include <granit/granit.hpp>
 #include <granit/pipeline/render_pipeline.hpp>
@@ -235,13 +235,13 @@ bool compare_expected(const options& arguments, const granit::renderer_info& ren
                                   expected_bytes.size()};
   // 单采样基准没有 MSAA/FXAA 的轮廓稳定性，允许极少量后端光栅化边缘差异；
   // 高质量路径继续使用严格阈值，颜色和深度阈值不变。
-  const granit::example::model_viewer::screenshot_comparison_options comparison_options{
+  const granit::example::validation::screenshot_comparison_options comparison_options{
       .max_silhouette_mismatch_count = arguments.sample_count == GRANIT_SAMPLE_COUNT_1 ? 64U : 4U};
-  granit::example::model_viewer::screenshot_comparison_report report;
-  const auto error = granit::example::model_viewer::compare_screenshots(
+  granit::example::validation::screenshot_comparison_report report;
+  const auto error = granit::example::validation::compare_screenshots(
       {render_size, render_size, expected, {}}, {render_size, render_size, actual, {}},
       comparison_options, report);
-  if (error != granit::example::model_viewer::screenshot_comparison_error::none) {
+  if (error != granit::example::validation::screenshot_comparison_error::none) {
     std::cerr << "截图比较参数无效：" << static_cast<int>(error) << '\n';
     return false;
   }

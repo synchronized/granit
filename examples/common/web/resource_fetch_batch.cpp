@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include "model_viewer/web/resource_fetch_batch.h"
+#include "web/resource_fetch_batch.h"
 
 #include "gltf/resource_uri.h"
 
 #include <algorithm>
 #include <utility>
 
-namespace granit::example::model_viewer::web {
+namespace granit::example::web {
 
 bool resource_fetch_batch::add(std::string_view path, std::string url) {
   std::string normalized_path;
@@ -70,4 +70,4 @@ bool resource_fetch_batch::commit(resource_bundle& bundle) const {
 
 void resource_fetch_batch::clear() noexcept { entries_.clear(); }
 
-} // namespace granit::example::model_viewer::web
+} // namespace granit::example::web

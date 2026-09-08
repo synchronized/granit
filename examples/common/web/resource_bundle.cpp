@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include "model_viewer/web/resource_bundle.h"
+#include "web/resource_bundle.h"
 
 #include "gltf/resource_uri.h"
 
 #include <string>
 
-namespace granit::example::model_viewer::web {
+namespace granit::example::web {
 
 bool resource_bundle::insert(std::string_view path, std::span<const std::byte> bytes) {
   std::string normalized;
@@ -38,4 +38,4 @@ void resource_bundle::clear() noexcept { resources_.clear(); }
 
 void resource_bundle::swap(resource_bundle& other) noexcept { resources_.swap(other.resources_); }
 
-} // namespace granit::example::model_viewer::web
+} // namespace granit::example::web

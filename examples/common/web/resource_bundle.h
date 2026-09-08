@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#ifndef GRANIT_EXAMPLES_SAMPLES_MODEL_VIEWER_WEB_RESOURCE_BUNDLE_H_
-#define GRANIT_EXAMPLES_SAMPLES_MODEL_VIEWER_WEB_RESOURCE_BUNDLE_H_
+#ifndef GRANIT_EXAMPLES_COMMON_WEB_RESOURCE_BUNDLE_H_
+#define GRANIT_EXAMPLES_COMMON_WEB_RESOURCE_BUNDLE_H_
 
 #include "gltf/loader.h"
 
@@ -12,7 +12,7 @@
 #include <unordered_map>
 #include <vector>
 
-namespace granit::example::model_viewer::web {
+namespace granit::example::web {
 
 /** 保存浏览器预取的 glTF 外部资源，并按规范化 URI 提供只读解析。 */
 class resource_bundle final : public gltf::resource_resolver {
@@ -28,6 +28,6 @@ private:
   std::unordered_map<std::string, std::vector<std::byte>> resources_;
 };
 
-} // namespace granit::example::model_viewer::web
+} // namespace granit::example::web
 
 #endif

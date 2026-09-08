@@ -5,6 +5,8 @@ add_library(granit)
 add_library(granit::granit ALIAS granit)
 granit_target_output_directories(granit)
 
+include(granit_core_sources)
+
 set(GRANIT_GENERATED_INCLUDE_DIR "${CMAKE_CURRENT_BINARY_DIR}/generated/include")
 set(GRANIT_GENERATED_VERSION_HEADER
     "${GRANIT_GENERATED_INCLUDE_DIR}/granit/core/version.h")
@@ -39,94 +41,42 @@ target_sources(
     backend/contracts/shader.h
     backend/contracts/timestamp.h
     backend/contracts/upload.h
-    backend/vulkan/device.cpp
     backend/vulkan/device.h
-    backend/vulkan/frame_context.cpp
     backend/vulkan/frame_context.h
-    backend/vulkan/command_recorder.cpp
     backend/vulkan/command_recorder.h
-    backend/vulkan/instance.cpp
     backend/vulkan/instance.h
-    backend/vulkan/loader.cpp
     backend/vulkan/loader.h
-    backend/vulkan/memory_allocator.cpp
     backend/vulkan/memory_allocator.h
-    backend/vulkan/physical_device.cpp
     backend/vulkan/physical_device.h
-    backend/vulkan/result.cpp
     backend/vulkan/result.h
-    backend/vulkan/resources.cpp
     backend/vulkan/resources.h
-    backend/vulkan/readback_context.cpp
     backend/vulkan/readback_context.h
-    backend/vulkan/surface.cpp
     backend/vulkan/surface.h
-    backend/vulkan/swapchain.cpp
     backend/vulkan/swapchain.h
-    backend/vulkan/timestamp_query.cpp
     backend/vulkan/timestamp_query.h
-    backend/vulkan/upload_context.cpp
     backend/vulkan/upload_context.h
-    backend/vulkan/version_check.cpp
-    backend/vulkan/vma_implementation.cpp
+    backend/vulkan/vulkan_renderer_state.h
     backend/contracts/callback_lifetime.h
     backend/contracts/lifecycle.h
-    core/handle_table.cpp
     core/handle_table.h
-    core/async_operation_state.cpp
     core/async_operation_state.h
-    core/diagnostic_sink.cpp
     core/diagnostic_sink.h
-    core/lifecycle_validation.cpp
     core/lifecycle_validation.h
-    core/resource_validation.cpp
     core/resource_validation.h
     core/texture_format.h
-    assets/texture_asset.cpp
     assets/texture_asset.h
-    core/retirement_queue.cpp
     core/retirement_queue.h
     core/device_status.h
-    renderer/renderer_api.cpp
-    renderer/async_operation_api.cpp
-    renderer/renderer_factory.cpp
     renderer/renderer_factory.h
-    renderer/pipeline_api.cpp
-    renderer/buffer_api.cpp
-    renderer/command_recorder_api.cpp
-    renderer/frame_context_api.cpp
-    renderer/renderer_registry.cpp
-    renderer/renderer_registry_async.cpp
-    backend/vulkan/renderer_factory.cpp
-    renderer/renderer_registry_buffer.cpp
-    renderer/renderer_registry_command.cpp
     renderer/renderer_registry.h
     renderer/renderer_registry_helpers.h
-    renderer/renderer_registry_pipeline.cpp
-    renderer/renderer_registry_presentation.cpp
     renderer/renderer_registry_records.h
-    renderer/renderer_registry_rendering.cpp
-    renderer/renderer_registry_timestamp.cpp
-    renderer/renderer_registry_texture.cpp
-    renderer/renderer_registry_transfer.cpp
-    backend/vulkan/vulkan_renderer_state.cpp
-    backend/vulkan/vulkan_renderer_state.h
     renderer/renderer_validation.h
     renderer/surface_validation.h
     renderer/shader_validation.h
     renderer/swapchain_validation.h
-    renderer/sampler_api.cpp
-    renderer/shader_api.cpp
-    renderer/surface_api.cpp
-    renderer/swapchain_api.cpp
-    renderer/texture_api.cpp
-    renderer/texture_asset_api.cpp
-    renderer/timestamp_query_api.cpp
-    renderer/upload_batch_api.cpp
-    renderer/readback_batch_api.cpp
-    renderer/renderer_registry_readback.cpp
-    renderer/pipeline_warmup_api.cpp
-    renderer/renderer_registry_warmup.cpp
+    ${GRANIT_CORE_SOURCES}
+    ${GRANIT_VULKAN_BACKEND_SOURCES}
     result.cpp
     version.cpp
   PUBLIC

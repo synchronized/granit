@@ -5,11 +5,12 @@
 #include "model_viewer/desktop/presentation_policy.h"
 #include "model_viewer/desktop/sdl3_input.h"
 
-#include "framework/common/imgui_theme.h"
+#include "imgui/imgui_theme.h"
+#include "sdl/sdl3_lifecycle.h"
 #include "model_viewer/application_core.h"
 #include "model_viewer/frame_executor.h"
-#include "model_viewer/imgui_frame_capture.h"
-#include "model_viewer/texture_registry.h"
+#include "imgui/imgui_frame_capture.h"
+#include "imgui/imgui_texture_registry.h"
 #include "model_viewer/viewer_panels.h"
 
 #include <SDL3/SDL.h>
@@ -45,21 +46,6 @@
 #include <vector>
 
 namespace {
-
-struct sdl_quit {
-  ~sdl_quit() { SDL_Quit(); }
-};
-
-struct window_deleter {
-  void operator()(SDL_Window* window) const noexcept { SDL_DestroyWindow(window); }
-};
-
-struct imgui_quit {
-  ~imgui_quit() {
-    ImGui_ImplSDL3_Shutdown();
-    ImGui::DestroyContext();
-  }
-};
 
 constexpr std::string_view present_mode_name(granit::present_mode mode) noexcept {
   switch (mode) {
@@ -251,9 +237,9 @@ bool loading_needs_srgb_encoding(granit::texture_format format) noexcept {
 }
 
 granit::result capture_loading_frame(const granit::swapchain_info& swapchain_info,
-                                     granit::example::model_viewer::texture_registry& textures,
+                                     granit::example::imgui::texture_registry& textures,
                                      const char* stage, float progress,
-                                     granit::example::model_viewer::frame_canvas_data& output) {
+                                     granit::example::imgui::frame_canvas_data& output) {
   ImGui_ImplSDL3_NewFrame();
   ImGui::NewFrame();
   const ImVec2 panel_size{420.0F, 118.0F};
@@ -269,8 +255,8 @@ granit::result capture_loading_frame(const granit::swapchain_info& swapchain_inf
   ImGui::TextDisabled("The window remains responsive while large textures are decoded.");
   ImGui::End();
   ImGui::Render();
-  return granit::example::model_viewer::capture_imgui_frame(
-      ImGui::GetDrawData(), granit::example::model_viewer::texture_registry::resolver, &textures,
+  return granit::example::imgui::capture_imgui_frame(
+      ImGui::GetDrawData(), granit::example::imgui::texture_registry::resolver, &textures,
       output);
 }
 
@@ -278,7 +264,7 @@ granit::result
 render_loading_frame_data(granit::swapchain& swapchain,
                           const granit::swapchain_info& swapchain_info,
                           granit::frame_context& frame_context, granit::canvas_draw_list& canvas,
-                          const granit::example::model_viewer::frame_canvas_data& data) {
+                          const granit::example::imgui::frame_canvas_data& data) {
   auto result = canvas.clear();
   if (result.ok())
     result = data.append_to(canvas);
@@ -320,9 +306,9 @@ granit::result render_loading_frame(granit::swapchain& swapchain,
                                     const granit::swapchain_info& swapchain_info,
                                     granit::frame_context& frame_context,
                                     granit::canvas_draw_list& canvas,
-                                    granit::example::model_viewer::texture_registry& textures,
+                                    granit::example::imgui::texture_registry& textures,
                                     const char* stage, float progress) {
-  granit::example::model_viewer::frame_canvas_data data;
+  granit::example::imgui::frame_canvas_data data;
   auto result = capture_loading_frame(swapchain_info, textures, stage, progress, data);
   if (result.ok())
     result = render_loading_frame_data(swapchain, swapchain_info, frame_context, canvas, data);
@@ -383,7 +369,7 @@ struct gpu_upload_command_context {
   const granit::swapchain_info* swapchain_info{};
   granit::frame_context* frame_context{};
   granit::canvas_draw_list* canvas{};
-  const std::array<granit::example::model_viewer::frame_canvas_data, 101>* progress_frames{};
+  const std::array<granit::example::imgui::frame_canvas_data, 101>* progress_frames{};
   granit::result render_result{granit::result::success};
   unsigned displayed_percentage{40};
 };
@@ -655,10 +641,10 @@ int main(int argc, char** argv) {
     std::cerr << "SDL3 初始化失败：" << SDL_GetError() << '\n';
     return 1;
   }
-  sdl_quit quit;
+  granit::example::sdl::sdl_quit quit;
   const auto initial_width = options.profile_output_path.empty() ? 1280 : 1920;
   const auto initial_height = options.profile_output_path.empty() ? 720 : 1080;
-  std::unique_ptr<SDL_Window, window_deleter> window(
+  std::unique_ptr<SDL_Window, granit::example::sdl::window_deleter> window(
       SDL_CreateWindow("Granit Model Viewer", initial_width, initial_height,
                        SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY));
   if (!window) {
@@ -671,7 +657,7 @@ int main(int argc, char** argv) {
     ImGui::DestroyContext();
     return 1;
   }
-  imgui_quit imgui;
+  granit::example::sdl::imgui_quit imgui;
   ImGui::GetIO().IniFilename = nullptr;
   granit::example::apply_imgui_theme();
 
@@ -684,7 +670,7 @@ int main(int argc, char** argv) {
   granit::sampler font_sampler;
   granit::canvas_draw_list canvas;
   std::array<granit::canvas_draw_list, 3> frame_canvases;
-  texture_registry textures;
+  granit::example::imgui::texture_registry textures;
   application_core core;
   result = core.begin_renderer();
   granit::surface_type surface_type{};
@@ -858,7 +844,7 @@ int main(int argc, char** argv) {
   if (result.ok() && options.show_ui)
     result = render_loading_frame(swapchain, swapchain_info, loading_frame_context, canvas,
                                   textures, "Preparing GPU upload...", 0.40F);
-  std::array<frame_canvas_data, 101> gpu_progress_frames;
+  std::array<granit::example::imgui::frame_canvas_data, 101> gpu_progress_frames;
   if (result.ok() && options.show_ui) {
     for (std::size_t percentage = 0; percentage < gpu_progress_frames.size(); ++percentage) {
       result = capture_loading_frame(swapchain_info, textures, "Uploading GPU resources...",
@@ -1109,7 +1095,7 @@ int main(int argc, char** argv) {
     }
 
     viewer_panel_changes changes;
-    frame_canvas_data ui_frame;
+    granit::example::imgui::frame_canvas_data ui_frame;
     if (options.show_ui) {
       ImGui_ImplSDL3_NewFrame();
       ImGui::NewFrame();
@@ -1135,12 +1121,14 @@ int main(int argc, char** argv) {
           .queue_high_watermark = queue_stats.pending_high_watermark,
           .replaced_frames = queue_stats.replaced_frames,
           .skipped_frame_builds = queue_stats.skipped_frame_builds,
+          .merged_input_frames = input_adapter.merged_input_frames(),
+          .render_lag_ms = queue_stats.render_lag_ms,
           .history = core.performance().summarize()};
       changes = draw_viewer_panels(core.cpu_scene(), core.state(), panel_renderer,
                                    panel_performance, render_quality, previews);
       ImGui::Render();
-      result = capture_imgui_frame(ImGui::GetDrawData(), texture_registry::resolver, &textures,
-                                   ui_frame);
+      result = granit::example::imgui::capture_imgui_frame(ImGui::GetDrawData(), granit::example::imgui::texture_registry::resolver,
+                                          &textures, ui_frame);
     }
     if (result.failed())
       break;

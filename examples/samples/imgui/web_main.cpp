@@ -11,7 +11,7 @@
 
 #include "samples/imgui/content.h"
 #include "samples/imgui/resources.h"
-#include "framework/common/imgui_theme.h"
+#include "imgui/imgui_theme.h"
 
 #include <granit/granit.hpp>
 #include <granit/integrations/imgui/renderer.hpp>

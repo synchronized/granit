@@ -5,7 +5,7 @@
 #define GRANIT_EXAMPLES_SAMPLES_MODEL_VIEWER_APPLICATION_CORE_H_
 
 #include "gltf/loader.h"
-#include "model_viewer/frame_canvas_data.h"
+#include "imgui/frame_canvas_data.h"
 #include "model_viewer/gpu_scene.h"
 #include "model_viewer/performance_history.h"
 #include "model_viewer/viewer_state.h"
@@ -39,7 +39,7 @@ struct application_tick_input {
 
 /** Core 生成的单帧不可变提交包；其数组和环境数据不借用下一帧可变状态。 */
 struct frame_packet {
-  frame_canvas_data canvas;
+  imgui::frame_canvas_data canvas;
   granit::scene_snapshot snapshot;
   granit_render_pipeline_environment environment = GRANIT_RENDER_PIPELINE_ENVIRONMENT_INIT;
   std::vector<granit_render_pipeline_draw_binding> draw_bindings;
