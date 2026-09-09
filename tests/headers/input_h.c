@@ -24,6 +24,7 @@ _Static_assert(GRANIT_POINTER_STATE_VERSION_1_SIZE == 20, "Pointer State V1 ABI 
 
 void granit_input_h_header_test(void) {
   granit_test_input_system = GRANIT_NULL_HANDLE;
+  (void)granit_test_input_system;
   granit_test_input_system_desc.window_system = GRANIT_NULL_HANDLE;
   granit_test_input_event.type = GRANIT_INPUT_EVENT_KEY;
   granit_test_keyboard_state.modifiers = GRANIT_MODIFIER_LEFT_SHIFT_BIT;
