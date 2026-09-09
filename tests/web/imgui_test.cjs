@@ -97,7 +97,7 @@ async function validateVisualScene(browser, address, ratio) {
     if (errors.length) throw new Error(errors.join("\n"));
     console.log(`ImGui ${ratio}× DPI 字体、纹理、裁剪和点击状态视觉验收通过`);
     completed = true;
-    return context;
+    return { context, page, errors };
   } finally {
     if (!completed) await context.close();
   }
@@ -111,51 +111,12 @@ async function main() {
     headless: process.env.GRANIT_BROWSER_HEADLESS !== "0",
     args: ["--enable-unsafe-webgpu", "--enable-features=Vulkan,UseSkiaRenderer"],
   });
-  const page = await browser.newPage({ viewport: { width: 960, height: 540 } });
-  const visualContexts = [];
-  const failures = [];
-  const messages = [];
-  page.on("console", (message) => {
-    messages.push(`${message.type()}: ${message.text()}`);
-    if (message.type() === "error") failures.push(message.text());
-  });
-  page.on("pageerror", (error) => failures.push(error.message));
+  const visualSessions = [];
   try {
-    // Emscripten 的外部 WebGPU 实例在显式关闭后不可重建；先完成所有视觉页面。
+    // 软件 WebGPU 的外部实例数量有限；视觉页面同时承担输入、Resize 和关闭验收。
     for (const ratio of [1, 2])
-      visualContexts.push(await validateVisualScene(browser, address, ratio));
-    await page.goto(`http://127.0.0.1:${address.port}/granit_imgui_web.html`, {
-      waitUntil: "load",
-    });
-    try {
-      await page.waitForFunction(
-        () => document.querySelector("#granit-status")?.dataset.status === "ready",
-        undefined,
-        { timeout: 30_000 },
-      );
-    } catch (error) {
-      const status = await page.locator("#granit-status").textContent();
-      const runtime = await page.evaluate(() => ({
-        ready: Module.runtimeReady === true,
-        hasFrames: typeof Module._granit_web_imgui_rendered_frames === "function",
-      }));
-      throw new Error(
-        `Web ImGui 未进入 ready：${status}，runtime=${JSON.stringify(runtime)}\n` +
-          `${messages.join("\n")}\n${error}`,
-      );
-    }
-    try {
-      await page.waitForFunction(
-        () =>
-          typeof Module._granit_web_imgui_rendered_frames === "function" &&
-          Module._granit_web_imgui_rendered_frames() >= 3,
-        undefined,
-        { timeout: 30_000 },
-      );
-    } catch (error) {
-      const frames = await page.evaluate(() => Module._granit_web_imgui_rendered_frames());
-      throw new Error(`Web ImGui 帧未推进：frames=${frames}\n${messages.join("\n")}\n${error}`);
-    }
+      visualSessions.push(await validateVisualScene(browser, address, ratio));
+    const { page, errors } = visualSessions[0];
     const canvas = page.locator("#canvas");
     const box = await canvas.boundingBox();
     if (box === null) throw new Error("Web ImGui Canvas 不可见");
@@ -179,14 +140,13 @@ async function main() {
       undefined,
       { timeout: 10_000 },
     );
-    if (failures.length !== 0)
-      throw new Error(`Web ImGui 控制台出现异常：\n${failures.join("\n")}`);
+    if (errors.length !== 0)
+      throw new Error(`Web ImGui 控制台出现异常：\n${errors.join("\n")}`);
     const shutdown = await page.evaluate(() => Module._granit_web_imgui_shutdown());
     if (shutdown !== 0) throw new Error(`Web ImGui 关闭失败：${shutdown}`);
     console.log("浏览器 SDL3 + ImGui 多帧渲染、输入、Resize 与资源释放验证通过");
   } finally {
-    await page.close();
-    await Promise.allSettled(visualContexts.map((context) => context.close()));
+    await Promise.allSettled(visualSessions.map(({ context }) => context.close()));
     await browser.close();
     server.close();
   }
