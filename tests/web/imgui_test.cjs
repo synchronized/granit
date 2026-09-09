@@ -68,6 +68,7 @@ async function validateVisualScene(browser, address, ratio) {
   });
   const page = await context.newPage();
   const errors = [];
+  let completed = false;
   page.on("pageerror", (error) => errors.push(error.message));
   page.on("console", (message) => {
     if (message.type() === "error") errors.push(message.text());
@@ -89,11 +90,11 @@ async function validateVisualScene(browser, address, ratio) {
     const after = await canvas.screenshot({ path: path.join(artifact, `imgui-${ratio}x-after.png`) });
     validateScene(after, ratio, false);
     if (errors.length) throw new Error(errors.join("\n"));
-    if (await page.evaluate(() => Module._granit_web_imgui_shutdown()) !== 0)
-      throw new Error("视觉验收关闭失败");
     console.log(`ImGui ${ratio}× DPI 字体、纹理、裁剪和点击状态视觉验收通过`);
+    completed = true;
+    return context;
   } finally {
-    await context.close();
+    if (!completed) await context.close();
   }
 }
 
@@ -106,6 +107,7 @@ async function main() {
     args: ["--enable-unsafe-webgpu", "--enable-features=Vulkan,UseSkiaRenderer"],
   });
   const page = await browser.newPage({ viewport: { width: 960, height: 540 } });
+  const visualContexts = [];
   const failures = [];
   const messages = [];
   page.on("console", (message) => {
@@ -114,6 +116,9 @@ async function main() {
   });
   page.on("pageerror", (error) => failures.push(error.message));
   try {
+    // Emscripten 的外部 WebGPU 实例在显式关闭后不可重建；先完成所有视觉页面。
+    for (const ratio of [1, 2])
+      visualContexts.push(await validateVisualScene(browser, address, ratio));
     await page.goto(`http://127.0.0.1:${address.port}/granit_imgui_web.html`, {
       waitUntil: "load",
     });
@@ -174,10 +179,9 @@ async function main() {
     const shutdown = await page.evaluate(() => Module._granit_web_imgui_shutdown());
     if (shutdown !== 0) throw new Error(`Web ImGui 关闭失败：${shutdown}`);
     console.log("浏览器 SDL3 + ImGui 多帧渲染、输入、Resize 与资源释放验证通过");
-    for (const ratio of [1, 2]) await validateVisualScene(browser, address, ratio);
-
   } finally {
     await page.close();
+    await Promise.allSettled(visualContexts.map((context) => context.close()));
     await browser.close();
     server.close();
   }
