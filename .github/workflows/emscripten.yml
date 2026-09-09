@@ -60,8 +60,8 @@ jobs:
             test -s "${output}.html"
             test -s "${output}.js"
             test -s "${output}.wasm"
-            test -s "${output}.data"
           done
+          test -s build/emscripten-release/web/granit_web_platform_smoke.data
           for name in granit_imgui_web; do
             output="build/emscripten-release/web/${name}"
             test -s "${output}.html"
