@@ -85,7 +85,8 @@ jobs:
             log="$RUNNER_TEMP/granit-webgpu-attempt-${attempt}.log"
             if xvfb-run -a env GRANIT_BROWSER_HEADLESS=0 bash -c \
               'npm test -- ../../build/emscripten-release/web && \
-               npm test -- ../../build/emscripten-release/web granit_model_viewer_web.html model_viewer_fixture.gltf && \
+               env GRANIT_EXPECT_SOFTWARE_PIPELINE_FALLBACK=0 \
+                 npm test -- ../../build/emscripten-release/web granit_model_viewer_web.html model_viewer_fixture.gltf && \
                npm run test:imgui -- ../../build/emscripten-release/web' \
               2>&1 | tee "$log"; then
               exit 0
