@@ -3,6 +3,7 @@
 
 #include "lighting/tone_mapping_resources.h"
 #include "reference/lighting/tone_mapping_reference.h"
+#include "support/shader_asset_file.h"
 
 #include <granit/granit.hpp>
 
@@ -18,13 +19,10 @@
 
 namespace {
 
-std::vector<std::byte> load_shader(const char* name) {
-  std::ifstream stream{std::string{GRANIT_PIPELINE_SHADER_DIR} + "/" + name, std::ios::binary};
-  const std::vector<char> source{std::istreambuf_iterator<char>{stream}, {}};
-  std::vector<std::byte> result(source.size());
-  if (!source.empty())
-    std::memcpy(result.data(), source.data(), source.size());
-  return result;
+granit::tests::shader_asset_file load_shader(granit_renderer renderer, const char* name) {
+  granit::tests::shader_asset_file asset;
+  REQUIRE(asset.load(renderer, std::string{GRANIT_PIPELINE_SHADER_DIR} + "/" + name).ok());
+  return asset;
 }
 
 bool environment_unavailable(granit::result value) {
@@ -50,16 +48,14 @@ TEST_CASE("Tone Mapping GPU资源建立完整全屏Pipeline") {
           granit::result::success);
   REQUIRE(hdr_view.initialize(renderer.native_handle(), hdr_texture.native_handle()) ==
           granit::result::success);
-  const auto vertex = load_shader("tone_mapping.vert.spv");
-  const auto fragment = load_shader("tone_mapping.frag.spv");
-  REQUIRE_FALSE(vertex.empty());
-  REQUIRE_FALSE(fragment.empty());
+  const auto vertex = load_shader(renderer.native_handle(), "tone_mapping.vert.grshader");
+  const auto fragment = load_shader(renderer.native_handle(), "tone_mapping.frag.grshader");
 
   granit::lighting::tone_mapping_resources resources;
-  REQUIRE(resources.initialize(renderer.native_handle(), hdr_view.native_handle(),
-                               granit::texture_format::rgba8_unorm,
-                               {.exposure_scale = 2.0F, .encode_srgb = 1}, vertex,
-                               fragment) == GRANIT_SUCCESS);
+  REQUIRE(resources.initialize_packaged_asset(renderer.native_handle(), hdr_view.native_handle(),
+                                              granit::texture_format::rgba8_unorm,
+                                              {.exposure_scale = 2.0F, .encode_srgb = 1},
+                                              vertex.desc(), fragment.desc()) == GRANIT_SUCCESS);
   CHECK(resources.pipeline() != GRANIT_NULL_HANDLE);
   CHECK(resources.pipeline_layout() != GRANIT_NULL_HANDLE);
   CHECK(resources.group() != GRANIT_NULL_HANDLE);
@@ -88,9 +84,11 @@ TEST_CASE("Tone Mapping跨HDR View复用不变Pipeline资源") {
             granit::result::success);
   }
   granit::lighting::tone_mapping_pipeline_resources pipeline;
-  REQUIRE(pipeline.initialize(renderer.native_handle(), granit::texture_format::rgba8_unorm,
-                              load_shader("tone_mapping.vert.spv"),
-                              load_shader("tone_mapping.frag.spv")) == GRANIT_SUCCESS);
+  REQUIRE(pipeline.initialize_packaged_asset(
+              renderer.native_handle(), granit::texture_format::rgba8_unorm,
+              load_shader(renderer.native_handle(), "tone_mapping.vert.grshader").desc(),
+              load_shader(renderer.native_handle(), "tone_mapping.frag.grshader").desc()) ==
+          GRANIT_SUCCESS);
   const auto pipeline_handle = pipeline.pipeline();
   REQUIRE(pipeline_handle != GRANIT_NULL_HANDLE);
   for (auto& view : views) {
@@ -124,24 +122,24 @@ TEST_CASE("Tone Mapping GPU资源拒绝重复或缺失sRGB编码") {
           granit::result::success);
   REQUIRE(hdr_view.initialize(renderer.native_handle(), hdr_texture.native_handle()) ==
           granit::result::success);
-  const auto vertex = load_shader("tone_mapping.vert.spv");
-  const auto fragment = load_shader("tone_mapping.frag.spv");
+  const auto vertex = load_shader(renderer.native_handle(), "tone_mapping.vert.grshader");
+  const auto fragment = load_shader(renderer.native_handle(), "tone_mapping.frag.grshader");
 
   granit::lighting::tone_mapping_resources missing_encoding;
-  CHECK(missing_encoding.initialize(renderer.native_handle(), hdr_view.native_handle(),
-                                    granit::texture_format::rgba8_unorm,
-                                    {.exposure_scale = 1.0F, .encode_srgb = 0}, vertex,
-                                    fragment) == GRANIT_ERROR_INVALID_ARGUMENT);
+  CHECK(missing_encoding.initialize_packaged_asset(
+            renderer.native_handle(), hdr_view.native_handle(), granit::texture_format::rgba8_unorm,
+            {.exposure_scale = 1.0F, .encode_srgb = 0}, vertex.desc(),
+            fragment.desc()) == GRANIT_ERROR_INVALID_ARGUMENT);
   granit::lighting::tone_mapping_resources duplicate_encoding;
-  CHECK(duplicate_encoding.initialize(renderer.native_handle(), hdr_view.native_handle(),
-                                      granit::texture_format::rgba8_srgb,
-                                      {.exposure_scale = 1.0F, .encode_srgb = 1}, vertex,
-                                      fragment) == GRANIT_ERROR_INVALID_ARGUMENT);
+  CHECK(duplicate_encoding.initialize_packaged_asset(
+            renderer.native_handle(), hdr_view.native_handle(), granit::texture_format::rgba8_srgb,
+            {.exposure_scale = 1.0F, .encode_srgb = 1}, vertex.desc(),
+            fragment.desc()) == GRANIT_ERROR_INVALID_ARGUMENT);
   granit::lighting::tone_mapping_resources attachment_encoding;
-  REQUIRE(attachment_encoding.initialize(renderer.native_handle(), hdr_view.native_handle(),
-                                         granit::texture_format::rgba8_srgb,
-                                         {.exposure_scale = 1.0F, .encode_srgb = 0}, vertex,
-                                         fragment) == GRANIT_SUCCESS);
+  REQUIRE(attachment_encoding.initialize_packaged_asset(
+              renderer.native_handle(), hdr_view.native_handle(),
+              granit::texture_format::rgba8_srgb, {.exposure_scale = 1.0F, .encode_srgb = 0},
+              vertex.desc(), fragment.desc()) == GRANIT_SUCCESS);
 }
 
 TEST_CASE("Tone Mapping GPU输出与CPU参考一致") {
@@ -166,11 +164,12 @@ TEST_CASE("Tone Mapping GPU输出与CPU参考一致") {
           granit::result::success);
 
   granit::lighting::tone_mapping_resources resources;
-  REQUIRE(resources.initialize(renderer.native_handle(), hdr_view.native_handle(),
-                               granit::texture_format::rgba8_unorm,
-                               {.exposure_scale = 2.0F, .encode_srgb = 1},
-                               load_shader("tone_mapping.vert.spv"),
-                               load_shader("tone_mapping.frag.spv")) == GRANIT_SUCCESS);
+  REQUIRE(resources.initialize_packaged_asset(
+              renderer.native_handle(), hdr_view.native_handle(),
+              granit::texture_format::rgba8_unorm, {.exposure_scale = 2.0F, .encode_srgb = 1},
+              load_shader(renderer.native_handle(), "tone_mapping.vert.grshader").desc(),
+              load_shader(renderer.native_handle(), "tone_mapping.frag.grshader").desc()) ==
+          GRANIT_SUCCESS);
   granit_texture output_texture = GRANIT_NULL_HANDLE;
   granit_texture_view output_view = GRANIT_NULL_HANDLE;
   granit_texture_desc output_desc = GRANIT_TEXTURE_DESC_INIT;
@@ -241,4 +240,34 @@ TEST_CASE("Tone Mapping GPU输出与CPU参考一致") {
   REQUIRE(readback.unmap() == granit::result::success);
   REQUIRE(granit_texture_view_destroy(renderer.native_handle(), output_view) == GRANIT_SUCCESS);
   REQUIRE(granit_texture_destroy(renderer.native_handle(), output_texture) == GRANIT_SUCCESS);
+}
+
+TEST_CASE("Tone Mapping资产拒绝损坏sidecar且失败后可重新初始化") {
+  granit::renderer renderer;
+  const auto initialized =
+      renderer.initialize({.application_name = "granit-tone-asset-validation"});
+  if (environment_unavailable(initialized))
+    SKIP("当前运行环境没有满足要求的 Vulkan 设备");
+  REQUIRE(initialized.ok());
+  granit::tests::shader_asset_file missing;
+  CHECK(missing
+            .load(renderer.native_handle(),
+                  std::string{GRANIT_PIPELINE_SHADER_DIR} + "/missing.grshader")
+            .failed());
+  const auto vertex = load_shader(renderer.native_handle(), "tone_mapping.vert.grshader");
+  const auto fragment = load_shader(renderer.native_handle(), "tone_mapping.frag.grshader");
+  auto corrupted =
+      std::vector<std::byte>{fragment.desc().sidecar.begin(), fragment.desc().sidecar.end()};
+  REQUIRE_FALSE(corrupted.empty());
+  corrupted.back() ^= std::byte{1};
+  granit::lighting::tone_mapping_pipeline_resources pipeline;
+  CHECK(pipeline.initialize_packaged_asset(
+            renderer.native_handle(), granit::texture_format::rgba8_unorm, vertex.desc(),
+            {fragment.desc().manifest, corrupted}) == GRANIT_ERROR_INVALID_ARGUMENT);
+  CHECK_FALSE(pipeline.initialized());
+  REQUIRE(pipeline.initialize_packaged_asset(renderer.native_handle(),
+                                             granit::texture_format::rgba8_unorm, vertex.desc(),
+                                             fragment.desc()) == GRANIT_SUCCESS);
+  REQUIRE(pipeline.reset() == GRANIT_SUCCESS);
+  CHECK_FALSE(pipeline.initialized());
 }

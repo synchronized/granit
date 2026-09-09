@@ -53,6 +53,18 @@ enum class pbr_vertex_layout_error : std::uint8_t {
   missing_tangent,
 };
 
+/** 控制 Shader 资源布局的 PBR 纹理类别；同类的精确纹理掩码共享二进制。 */
+enum class pbr_shader_texture_class : std::uint8_t {
+  untextured,
+  textured,
+  normal_mapped,
+  invalid,
+};
+
+/** 将材质的精确纹理 feature 掩码归并为少量 Shader 结构类别。 */
+[[nodiscard]] pbr_shader_texture_class
+classify_pbr_shader_textures(pbr_texture_flags textures) noexcept;
+
 /** 按 H-03 标准 location 检查网格是否满足指定 PBR 纹理变体。 */
 [[nodiscard]] pbr_vertex_layout_error
 validate_pbr_vertex_layout(std::span<const material_vertex_buffer_layout> vertex_buffers,

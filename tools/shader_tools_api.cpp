@@ -8,6 +8,7 @@
 
 #include <algorithm>
 #include <atomic>
+#include <cctype>
 #include <cstddef>
 #include <cstring>
 #include <filesystem>
@@ -16,6 +17,7 @@
 #include <mutex>
 #include <sstream>
 #include <string>
+#include <string_view>
 #include <unordered_map>
 #include <vector>
 
@@ -42,6 +44,15 @@ std::unordered_map<uint64_t, std::shared_ptr<const stored_result>> results;
 std::atomic<uint64_t> next_result{1};
 
 bool valid_string(const char* value, uint64_t length) { return value != nullptr || length == 0; }
+
+bool valid_define_name(std::string_view name) {
+  if (name.empty() ||
+      !(std::isalpha(static_cast<unsigned char>(name.front())) || name.front() == '_'))
+    return false;
+  return std::ranges::all_of(name.substr(1), [](char value) {
+    return std::isalnum(static_cast<unsigned char>(value)) || value == '_';
+  });
+}
 
 std::string copy_string(const char* value, uint64_t length) {
   return length == 0 ? std::string{} : std::string{value, static_cast<std::size_t>(length)};
@@ -286,7 +297,7 @@ granit_result granit_shader_tools_compile_hlsl(const granit_shader_tools_hlsl_co
   if (result == nullptr)
     return GRANIT_ERROR_INVALID_ARGUMENT;
   *result = 0;
-  if (desc == nullptr || desc->struct_size < sizeof(*desc) ||
+  if (desc == nullptr || desc->struct_size < GRANIT_SHADER_TOOLS_HLSL_COMPILE_DESC_VERSION_1_SIZE ||
       !valid_string(desc->dxc_path, desc->dxc_path_length) ||
       !valid_string(desc->tint_path, desc->tint_path_length) ||
       !valid_string(desc->input_path, desc->input_path_length) ||
@@ -296,6 +307,10 @@ granit_result granit_shader_tools_compile_hlsl(const granit_shader_tools_hlsl_co
       desc->dxc_path_length == 0 || desc->tint_path_length == 0 || desc->input_path_length == 0 ||
       desc->entry_point_length == 0 || desc->spirv_output_path_length == 0 ||
       desc->wgsl_output_path_length == 0 || stage_name(desc->stage) == nullptr)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  const auto has_defines = desc->struct_size >= sizeof(*desc);
+  if (has_defines && (desc->reserved != 0 || desc->define_count > 1024 ||
+                      (desc->define_count != 0 && desc->defines == nullptr)))
     return GRANIT_ERROR_INVALID_ARGUMENT;
   try {
     auto value = std::make_shared<stored_result>();
@@ -309,7 +324,28 @@ granit_result granit_shader_tools_compile_hlsl(const granit_shader_tools_hlsl_co
         stage_name(desc->stage),
         copy_path(desc->spirv_output_path, desc->spirv_output_path_length),
         copy_path(desc->wgsl_output_path, desc->wgsl_output_path_length),
+        {},
     };
+    if (has_defines) {
+      options.definitions.reserve(desc->define_count);
+      for (uint32_t index = 0; index < desc->define_count; ++index) {
+        const auto& define = desc->defines[index];
+        if (define.struct_size < sizeof(define) || define.reserved != 0 ||
+            !valid_string(define.name, define.name_length) ||
+            !valid_string(define.value, define.value_length))
+          return GRANIT_ERROR_INVALID_ARGUMENT;
+        auto name = copy_string(define.name, define.name_length);
+        auto value = copy_string(define.value, define.value_length);
+        if (!valid_define_name(name) || value.empty() || value.find('\0') != std::string::npos)
+          return GRANIT_ERROR_INVALID_ARGUMENT;
+        options.definitions.emplace_back(std::move(name), std::move(value));
+      }
+      std::ranges::sort(options.definitions);
+      if (std::ranges::adjacent_find(options.definitions, [](const auto& left, const auto& right) {
+            return left.first == right.first;
+          }) != options.definitions.end())
+        return GRANIT_ERROR_INVALID_ARGUMENT;
+    }
     granit::tools::shader_info info;
     const auto exit_code = granit::tools::compile_hlsl_shader(options, info, output, diagnostic);
     value->status = exit_code == 0 ? GRANIT_SUCCESS : GRANIT_ERROR_INITIALIZATION_FAILED;
@@ -661,10 +697,10 @@ granit_result granit_shader_tools_result_write_asset(granit_shader_tools_result 
         {source, source_language_name(desc->source_language), value->entry_point, stage,
          tint_revision, target, options, desc->required_features});
     std::vector<std::byte> asset;
-    if (granit::tools::encode_shader_asset(
-            {wgsl, spirv, value->reflection_json, key, desc->backend_mask, desc->required_features,
-             value->stage, value->entry_point},
-            asset) != granit::tools::shader_asset_error::success)
+    if (granit::tools::encode_shader_asset({wgsl, spirv, value->reflection_json, key,
+                                            desc->backend_mask, desc->required_features,
+                                            value->stage, value->entry_point},
+                                           asset) != granit::tools::shader_asset_error::success)
       return GRANIT_ERROR_INVALID_ARGUMENT;
     bool hit = false;
     if (granit::tools::store_shader_asset(copy_path(desc->output_path, desc->output_path_length),

@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
+#include "../support/shader_asset_file.h"
+
 #include <granit/granit.hpp>
 
 #include <windows.h>
@@ -8,9 +10,7 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
-#include <fstream>
 #include <iostream>
-#include <iterator>
 #include <span>
 #include <string>
 #include <string_view>
@@ -25,15 +25,6 @@ struct vertex {
   float green;
   float blue;
 };
-
-std::vector<std::byte> load_shader(const char* name) {
-  std::ifstream stream{std::string{GRANIT_SMOKE_ASSET_DIR} + "/" + name, std::ios::binary};
-  const std::vector<char> bytes{std::istreambuf_iterator<char>{stream}, {}};
-  std::vector<std::byte> result(bytes.size());
-  for (std::size_t index = 0; index < bytes.size(); ++index)
-    result[index] = static_cast<std::byte>(bytes[index]);
-  return result;
-}
 
 LRESULT CALLBACK window_proc(HWND window, UINT message, WPARAM word, LPARAM value) {
   if (message == WM_DESTROY) {
@@ -164,20 +155,16 @@ int main(int argument_count, char** arguments) {
   if (result.ok())
     result = swapchain.query_info(swapchain_info);
 
-  const auto vertex_code = load_shader("window_triangle.vert.spv");
-  const auto fragment_code = load_shader("window_triangle.frag.spv");
-  if (result.ok() && (vertex_code.empty() || fragment_code.empty())) {
-    std::cerr << "无法读取窗口三角形 Shader\n";
-    result = granit::result::initialization_failed;
-  }
   granit::shader vertex_shader;
   granit::shader fragment_shader;
   if (result.ok())
-    result = vertex_shader.initialize(renderer.native_handle(),
-                                      {.stage = granit::shader_stage::vertex, .code = vertex_code});
+    result = granit::tests::load_shader_asset(
+        renderer.native_handle(),
+        std::string{GRANIT_SMOKE_ASSET_DIR} + "/window_triangle.vert.grshader", vertex_shader);
   if (result.ok())
-    result = fragment_shader.initialize(
-        renderer.native_handle(), {.stage = granit::shader_stage::fragment, .code = fragment_code});
+    result = granit::tests::load_shader_asset(
+        renderer.native_handle(),
+        std::string{GRANIT_SMOKE_ASSET_DIR} + "/window_triangle.frag.grshader", fragment_shader);
   granit::pipeline_layout layout;
   if (result.ok())
     result = layout.initialize(renderer.native_handle());

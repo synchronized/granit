@@ -1,0 +1,69 @@
+struct ToneMappingConstants {
+  exposure_scale: f32,
+  encode_srgb: u32,
+  inverse_width: f32,
+  inverse_height: f32,
+  enable_fxaa: u32,
+  reserved_0: u32,
+  reserved_1: u32,
+  reserved_2: u32,
+};
+
+struct VertexOutput {
+  @builtin(position) position: vec4<f32>,
+  @location(0) uv: vec2<f32>,
+};
+
+@group(0) @binding(0) var<uniform> tone: ToneMappingConstants;
+@group(0) @binding(1) var hdr_color: texture_2d<f32>;
+@group(0) @binding(2) var hdr_sampler: sampler;
+
+@vertex
+fn vertex_main(@builtin(vertex_index) vertex_id: u32) -> VertexOutput {
+  var positions = array<vec2<f32>, 3>(
+      vec2<f32>(-1.0, -1.0), vec2<f32>(3.0, -1.0), vec2<f32>(-1.0, 3.0));
+  var output: VertexOutput;
+  output.position = vec4<f32>(positions[vertex_id], 0.5, 1.0);
+  output.uv = positions[vertex_id] * vec2<f32>(0.5, -0.5) + vec2<f32>(0.5);
+  return output;
+}
+
+fn aces_fitted(input: vec3<f32>) -> vec3<f32> {
+  let color = max(input, vec3<f32>(0.0));
+  return clamp(color * (2.51 * color + vec3<f32>(0.03)) /
+                   (color * (2.43 * color + vec3<f32>(0.59)) + vec3<f32>(0.14)),
+               vec3<f32>(0.0), vec3<f32>(1.0));
+}
+
+fn linear_to_srgb(input: vec3<f32>) -> vec3<f32> {
+  let color = clamp(input, vec3<f32>(0.0), vec3<f32>(1.0));
+  let low = color * 12.92;
+  let high = 1.055 * pow(color, vec3<f32>(1.0 / 2.4)) - vec3<f32>(0.055);
+  return select(high, low, color <= vec3<f32>(0.0031308));
+}
+
+@fragment
+fn fragment_main(input: VertexOutput) -> @location(0) vec4<f32> {
+  let texel = vec2<f32>(tone.inverse_width, tone.inverse_height);
+  let center = textureSample(hdr_color, hdr_sampler, input.uv).rgb;
+  let north = textureSample(hdr_color, hdr_sampler, input.uv + vec2<f32>(0.0, -texel.y)).rgb;
+  let south = textureSample(hdr_color, hdr_sampler, input.uv + vec2<f32>(0.0, texel.y)).rgb;
+  let west = textureSample(hdr_color, hdr_sampler, input.uv + vec2<f32>(-texel.x, 0.0)).rgb;
+  let east = textureSample(hdr_color, hdr_sampler, input.uv + vec2<f32>(texel.x, 0.0)).rgb;
+  let luma = vec3<f32>(0.299, 0.587, 0.114);
+  let center_luma = dot(center, luma);
+  let minimum_luma = min(center_luma, min(min(dot(north, luma), dot(south, luma)),
+                                           min(dot(west, luma), dot(east, luma))));
+  let maximum_luma = max(center_luma, max(max(dot(north, luma), dot(south, luma)),
+                                           max(dot(west, luma), dot(east, luma))));
+  let contrast = maximum_luma - minimum_luma;
+  let filtered = (north + south + west + east) * 0.25;
+  let threshold = max(0.0312, maximum_luma * 0.125);
+  let blend = 0.5 * clamp((contrast - threshold) / max(contrast, 0.0001), 0.0, 1.0);
+  let antialiased = select(center, mix(center, filtered, blend), tone.enable_fxaa != 0u);
+  var color = aces_fitted(antialiased * tone.exposure_scale);
+  if (tone.encode_srgb != 0u) {
+    color = linear_to_srgb(color);
+  }
+  return vec4<f32>(color, 1.0);
+}

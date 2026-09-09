@@ -1,28 +1,15 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
+#include "../support/shader_asset_file.h"
+
 #include <granit/granit.hpp>
 
 #include <cstddef>
-#include <fstream>
 #include <iostream>
-#include <iterator>
 #include <span>
 #include <string>
 #include <vector>
-
-namespace {
-
-std::vector<std::byte> load_shader(const char* name) {
-  std::ifstream stream{std::string{GRANIT_SMOKE_ASSET_DIR} + "/" + name, std::ios::binary};
-  const std::vector<char> bytes{std::istreambuf_iterator<char>{stream}, {}};
-  std::vector<std::byte> result(bytes.size());
-  for (std::size_t index = 0; index < bytes.size(); ++index)
-    result[index] = static_cast<std::byte>(bytes[index]);
-  return result;
-}
-
-} // namespace
 
 int main() {
   granit::renderer renderer;
@@ -33,19 +20,16 @@ int main() {
     return 1;
   }
 
-  const auto vertex_code = load_shader("triangle.vert.spv");
-  const auto fragment_code = load_shader("triangle.frag.spv");
-  if (vertex_code.empty() || fragment_code.empty()) {
-    std::cerr << "无法读取 Smoke Shader\n";
-    return 1;
-  }
   granit::shader vertex;
   granit::shader fragment;
-  result = vertex.initialize(renderer.native_handle(),
-                             {.stage = granit::shader_stage::vertex, .code = vertex_code});
   if (result.ok())
-    result = fragment.initialize(renderer.native_handle(),
-                                 {.stage = granit::shader_stage::fragment, .code = fragment_code});
+    result = granit::tests::load_shader_asset(
+        renderer.native_handle(), std::string{GRANIT_SMOKE_ASSET_DIR} + "/triangle.vert.grshader",
+        vertex);
+  if (result.ok())
+    result = granit::tests::load_shader_asset(
+        renderer.native_handle(), std::string{GRANIT_SMOKE_ASSET_DIR} + "/triangle.frag.grshader",
+        fragment);
   granit::pipeline_layout layout;
   if (result.ok())
     result = layout.initialize(renderer.native_handle());

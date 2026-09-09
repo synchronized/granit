@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
+#include "../tests/support/shader_asset_store.h"
 #include "material/material_migration.h"
 #include "material/material_package.h"
 #include "material/material_template_gpu.h"
@@ -14,10 +15,8 @@
 #include <chrono>
 #include <cstdint>
 #include <cstring>
-#include <fstream>
 #include <iomanip>
 #include <iostream>
-#include <iterator>
 #include <memory>
 #include <numeric>
 #include <string>
@@ -120,23 +119,6 @@ bool selected(std::string_view requested, std::string_view name) {
   return requested == "all" || requested == name;
 }
 
-std::vector<std::uint32_t> load_shader(std::string_view name) {
-  const auto path = std::string{GRANIT_BENCHMARK_ASSET_DIR} + "/" + std::string{name};
-  std::ifstream stream{path, std::ios::binary};
-  const std::vector<char> bytes{std::istreambuf_iterator<char>{stream}, {}};
-  if (bytes.empty() || bytes.size() % sizeof(std::uint32_t) != 0)
-    return {};
-  std::vector<std::uint32_t> words(bytes.size() / sizeof(std::uint32_t));
-  std::memcpy(words.data(), bytes.data(), bytes.size());
-  return words;
-}
-
-std::string load_shader_text(std::string_view name) {
-  const auto path = std::string{GRANIT_BENCHMARK_ASSET_DIR} + "/" + std::string{name};
-  std::ifstream stream{path, std::ios::binary};
-  return {std::istreambuf_iterator<char>{stream}, {}};
-}
-
 bool make_metadata(granit::material::material_metadata& metadata) {
   granit::material::metadata_desc desc;
   desc.constant_buffer_size = 16;
@@ -148,30 +130,22 @@ bool make_metadata(granit::material::material_metadata& metadata) {
          granit::material::metadata_error::none;
 }
 
-bool make_package(std::uint32_t variant_count, granit::material::material_package& package) {
+bool make_package(granit::tests::shader_asset_store& assets, std::uint32_t variant_count,
+                  granit::material::material_package& package) {
   using namespace granit::material;
-  const auto vertex = load_shader("triangle.vert.spv");
-  const auto fragment = load_shader("triangle.frag.spv");
-  const auto vertex_wgsl = load_shader_text("triangle.vert.wgsl");
-  const auto fragment_wgsl = load_shader_text("triangle.frag.wgsl");
-  if (vertex.empty() || fragment.empty() || vertex_wgsl.empty() || fragment_wgsl.empty())
+  const auto vertex_path = std::string{GRANIT_BENCHMARK_ASSET_DIR} + "/triangle.vert.grshader";
+  const auto fragment_path = std::string{GRANIT_BENCHMARK_ASSET_DIR} + "/triangle.frag.grshader";
+  if (!assets.add(vertex_path) || !assets.add(fragment_path))
     return false;
+  const auto vertex = assets.reference(vertex_path);
+  const auto fragment = assets.reference(fragment_path);
   material_package_desc desc;
   desc.variants.reserve(variant_count);
   for (std::uint32_t value = 0; value < variant_count; ++value) {
-    desc.variants.push_back(
-        {.pass = make_feature_id("opaque"),
-         .features = {{make_feature_id("mode"), value}},
-         .shaders =
-             {{.stage = package_shader_stage::vertex,
-               .entry_point = "main",
-               .spirv = vertex,
-               .wgsl = vertex_wgsl},
-              {.stage = package_shader_stage::fragment,
-               .entry_point = "main",
-               .spirv = fragment,
-               .wgsl = fragment_wgsl}},
-         .pipeline = {}});
+    desc.variants.push_back({.pass = make_feature_id("opaque"),
+                             .features = {{make_feature_id("mode"), value}},
+                             .shaders = {vertex, fragment},
+                             .pipeline = {}});
   }
   return material_package::build(std::move(desc), package) == package_error::none;
 }
@@ -195,8 +169,9 @@ int main(int argc, char** argv) {
             << "schema,name,variants,iterations,samples,mean_ns,p50_ns,p95_ns,p99_ns\n";
 
   granit::material::material_metadata metadata;
+  granit::tests::shader_asset_store assets;
   granit::material::material_package package;
-  if (!make_metadata(metadata) || !make_package(config.variants, package))
+  if (!make_metadata(metadata) || !make_package(assets, config.variants, package))
     return 1;
   granit::material::material_instance_data instance{metadata};
   bool succeeded = true;
@@ -240,7 +215,8 @@ int main(int argc, char** argv) {
     if (granit_renderer_create(&renderer_desc, &renderer) != GRANIT_SUCCESS)
       return 3;
     granit::material::material_template_gpu gpu_template;
-    if (gpu_template.initialize(renderer, package) != GRANIT_SUCCESS) {
+    if (gpu_template.initialize(renderer, package, {}, granit::tests::shader_asset_store::resolve,
+                                &assets) != GRANIT_SUCCESS) {
       static_cast<void>(granit_renderer_destroy(renderer));
       return 4;
     }

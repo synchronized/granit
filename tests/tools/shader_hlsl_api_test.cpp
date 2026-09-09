@@ -52,6 +52,14 @@ int main(int argc, char** argv) {
   desc.spirv_output_path_length = spirv.size();
   desc.wgsl_output_path = wgsl.data();
   desc.wgsl_output_path_length = wgsl.size();
+  const granit_shader_tools_define definitions[]{{.struct_size = sizeof(granit_shader_tools_define),
+                                                  .reserved = 0,
+                                                  .name = "TEST_VALUE",
+                                                  .name_length = 10,
+                                                  .value = "1",
+                                                  .value_length = 1}};
+  desc.defines = definitions;
+  desc.define_count = 1;
 
   auto [status, result] = granit::shader_tools::compile_hlsl(desc);
   if (status.failed() || result.info().stage != GRANIT_SHADER_TOOLS_STAGE_FRAGMENT ||
@@ -62,7 +70,16 @@ int main(int argc, char** argv) {
       read_text(wgsl).find("@fragment") == std::string::npos)
     return 3;
 
+  const granit_shader_tools_define duplicate_definitions[]{definitions[0], definitions[0]};
+  desc.defines = duplicate_definitions;
+  desc.define_count = 2;
+  auto [duplicate_status, duplicate_result] = granit::shader_tools::compile_hlsl(desc);
+  if (duplicate_status != granit::result::invalid_argument || duplicate_result)
+    return 4;
+
+  desc.defines = definitions;
+  desc.define_count = 1;
   desc.stage = 0;
   auto [invalid_status, invalid_result] = granit::shader_tools::compile_hlsl(desc);
-  return invalid_status == granit::result::invalid_argument && !invalid_result ? 0 : 4;
+  return invalid_status == granit::result::invalid_argument && !invalid_result ? 0 : 5;
 }

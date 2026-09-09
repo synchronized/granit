@@ -52,13 +52,14 @@ target_compile_options(
 target_compile_definitions(
   granit_renderer_benchmarks
   PRIVATE
-    GRANIT_BENCHMARK_ASSET_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/smoke"
+    GRANIT_BENCHMARK_ASSET_DIR="${GRANIT_SMOKE_TEST_SHADER_DIR}"
     GRANIT_BENCHMARK_COMPILER="${CMAKE_CXX_COMPILER_ID}-${CMAKE_CXX_COMPILER_VERSION}"
     GRANIT_BENCHMARK_LINK_MODE="$<IF:$<BOOL:${BUILD_SHARED_LIBS}>,shared,static>"
     GRANIT_BENCHMARK_REVISION="${granit_benchmark_revision}"
     GRANIT_BENCHMARK_SYSTEM="${CMAKE_SYSTEM_NAME}-${CMAKE_SYSTEM_PROCESSOR}"
 )
 target_link_libraries(granit_renderer_benchmarks PRIVATE granit::granit)
+add_dependencies(granit_renderer_benchmarks granit_test_shader_assets)
 granit_target_compile_warnings(granit_renderer_benchmarks)
 granit_target_output_directories(granit_renderer_benchmarks)
 set_target_properties(granit_renderer_benchmarks PROPERTIES FOLDER "Benchmarks")
@@ -95,13 +96,14 @@ target_compile_options(
 target_compile_definitions(
   granit_material_benchmarks
   PRIVATE
-    GRANIT_BENCHMARK_ASSET_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/smoke"
+    GRANIT_BENCHMARK_ASSET_DIR="${GRANIT_SMOKE_TEST_SHADER_DIR}"
     GRANIT_BENCHMARK_COMPILER="${CMAKE_CXX_COMPILER_ID}-${CMAKE_CXX_COMPILER_VERSION}"
     GRANIT_BENCHMARK_LINK_MODE="$<IF:$<BOOL:${BUILD_SHARED_LIBS}>,shared,static>"
     GRANIT_BENCHMARK_REVISION="${granit_benchmark_revision}"
     GRANIT_BENCHMARK_SYSTEM="${CMAKE_SYSTEM_NAME}-${CMAKE_SYSTEM_PROCESSOR}"
 )
 target_link_libraries(granit_material_benchmarks PRIVATE granit::material)
+add_dependencies(granit_material_benchmarks granit_test_shader_assets)
 granit_target_compile_warnings(granit_material_benchmarks)
 granit_target_output_directories(granit_material_benchmarks)
 set_target_properties(granit_material_benchmarks PROPERTIES FOLDER "Benchmarks")
@@ -260,11 +262,12 @@ target_compile_definitions(
     GRANIT_BENCHMARK_LINK_MODE="$<IF:$<BOOL:${BUILD_SHARED_LIBS}>,shared,static>"
     GRANIT_BENCHMARK_REVISION="${granit_benchmark_revision}"
     GRANIT_BENCHMARK_SYSTEM="${CMAKE_SYSTEM_NAME}-${CMAKE_SYSTEM_PROCESSOR}"
-    GRANIT_PBR_SHADER_DIR="${PROJECT_SOURCE_DIR}/assets/shaders/pbr"
-    GRANIT_PIPELINE_SHADER_DIR="${PROJECT_SOURCE_DIR}/src/pipeline/shaders"
+    GRANIT_PBR_SHADER_DIR="${GRANIT_PBR_TEST_SHADER_DIR}"
+    GRANIT_PIPELINE_SHADER_DIR="${GRANIT_PIPELINE_TEST_SHADER_DIR}"
     GRANIT_PBR_GPU_BENCHMARK
 )
 target_link_libraries(granit_lighting_gpu_benchmarks PRIVATE granit::lighting)
+add_dependencies(granit_lighting_gpu_benchmarks granit_test_shader_assets)
 granit_target_compile_warnings(granit_lighting_gpu_benchmarks)
 granit_target_output_directories(granit_lighting_gpu_benchmarks)
 set_target_properties(granit_lighting_gpu_benchmarks PROPERTIES FOLDER "Benchmarks")

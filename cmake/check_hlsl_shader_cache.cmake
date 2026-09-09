@@ -14,7 +14,7 @@ set(asset "${OUTPUT_DIR}/hlsl-cli.granit-shader")
 set(common_arguments
     --input "${INPUT}" --entry fragment_main --stage fragment --spirv-output "${spirv}"
     --wgsl-output "${wgsl}" --asset "${asset}" --dxc-revision test-dxc --tint-revision
-    test-tint --asset-backend all)
+    test-tint --asset-backend all --define SECOND_VALUE=2 --define FIRST_VALUE=1)
 
 execute_process(
   COMMAND "${TOOL}" compile-hlsl --dxc "${DXC}" --tint "${TINT}" ${common_arguments}
@@ -35,4 +35,15 @@ execute_process(
 )
 if(NOT restore_result EQUAL 0 OR NOT EXISTS "${spirv}" OR NOT EXISTS "${wgsl}")
   message(FATAL_ERROR "HLSL 资产未在启动编译器前恢复：${restore_output}${restore_error}")
+endif()
+
+execute_process(
+  COMMAND "${TOOL}" compile-hlsl --dxc missing-dxc --tint missing-tint
+          ${common_arguments} --define THIRD_VALUE=3
+  RESULT_VARIABLE changed_result
+  OUTPUT_QUIET
+  ERROR_QUIET
+)
+if(changed_result EQUAL 0)
+  message(FATAL_ERROR "HLSL 宏定义变化后错误命中旧缓存")
 endif()

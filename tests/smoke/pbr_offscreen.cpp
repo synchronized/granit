@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
+#include "../support/shader_asset_store.h"
 #include "lighting/shadow_ibl_resources.h"
 #include "lighting/tone_mapping_resources.h"
 #include "material/material_gpu_instance.h"
@@ -114,26 +115,6 @@ bool parse_options(int argc, char** argv, run_options& options) {
          options.warmup <= 1'000;
 }
 
-std::vector<std::uint32_t> load_shader(std::string_view name) {
-  const auto directory =
-      name.starts_with("tone_mapping") ? GRANIT_PIPELINE_SHADER_DIR : GRANIT_PBR_SHADER_DIR;
-  const auto path = std::string{directory} + "/" + std::string{name};
-  std::ifstream stream{path, std::ios::binary};
-  const std::vector<char> bytes{std::istreambuf_iterator<char>{stream}, {}};
-  if (bytes.empty() || bytes.size() % sizeof(std::uint32_t) != 0)
-    return {};
-  std::vector<std::uint32_t> words(bytes.size() / sizeof(std::uint32_t));
-  std::memcpy(words.data(), bytes.data(), bytes.size());
-  return words;
-}
-
-std::string load_shader_text(std::string_view name) {
-  const auto directory =
-      name.starts_with("tone_mapping") ? GRANIT_PIPELINE_SHADER_DIR : GRANIT_PBR_SHADER_DIR;
-  std::ifstream stream{std::string{directory} + "/" + std::string{name}, std::ios::binary};
-  return {std::istreambuf_iterator<char>{stream}, {}};
-}
-
 std::uint8_t quantize_unorm(float value) {
   return static_cast<std::uint8_t>(std::lround(std::clamp(value, 0.0F, 1.0F) * 255.0F));
 }
@@ -165,27 +146,23 @@ int main(int argc, char** argv) {
   granit::material::material_package ibl_package;
   granit::material::material_package shadow_package;
   granit::material::material_package full_package;
+  granit::tests::shader_asset_store assets;
+  const auto shader_reference = [&](const char* name) {
+    const auto path = std::string{GRANIT_PBR_SHADER_DIR} + "/" + name + ".grshader";
+    if (!assets.add(path))
+      return granit::material::material_shader_code{};
+    return assets.reference(path);
+  };
   const auto packages_ready =
-      granit::test::build_pbr_package(direct_package, load_shader("pbr_lights.vert.spv"),
-                                          load_shader_text("pbr_lights.vert.wgsl"),
-                                          load_shader("pbr_lights_untextured.frag.spv"),
-                                          load_shader_text("pbr_lights_untextured.frag.wgsl")) &&
-      granit::test::build_pbr_package(ibl_package, load_shader("pbr_lights.vert.spv"),
-                                          load_shader_text("pbr_lights.vert.wgsl"),
-                                          load_shader("pbr_ibl_lights_untextured.frag.spv"),
-                                          load_shader_text("pbr_ibl_lights_untextured.frag.wgsl")) &&
+      granit::test::build_pbr_package(direct_package, shader_reference("pbr_lights.vert"),
+                                      shader_reference("pbr_lights_untextured.frag")) &&
+      granit::test::build_pbr_package(ibl_package, shader_reference("pbr_lights.vert"),
+                                      shader_reference("pbr_ibl_lights_untextured.frag")) &&
       granit::test::build_pbr_package(shadow_package,
-                                          load_shader("pbr_shadow_ibl_lights.vert.spv"),
-                                          load_shader_text("pbr_shadow_ibl_lights.vert.wgsl"),
-                                          load_shader("pbr_shadow_lights_untextured.frag.spv"),
-                                          load_shader_text(
-                                              "pbr_shadow_lights_untextured.frag.wgsl")) &&
-      granit::test::build_pbr_package(full_package,
-                                          load_shader("pbr_shadow_ibl_lights.vert.spv"),
-                                          load_shader_text("pbr_shadow_ibl_lights.vert.wgsl"),
-                                          load_shader("pbr_shadow_ibl_lights_untextured.frag.spv"),
-                                          load_shader_text(
-                                              "pbr_shadow_ibl_lights_untextured.frag.wgsl"));
+                                      shader_reference("pbr_shadow_ibl_lights.vert"),
+                                      shader_reference("pbr_shadow_lights_untextured.frag")) &&
+      granit::test::build_pbr_package(full_package, shader_reference("pbr_shadow_ibl_lights.vert"),
+                                      shader_reference("pbr_shadow_ibl_lights_untextured.frag"));
   if (result.failed() || !packages_ready) {
     std::cerr << "无法初始化 Renderer 或构建 PBR 材质包\n";
     return 1;
@@ -342,8 +319,9 @@ int main(int argc, char** argv) {
                                        granit_bind_group_layout lighting_layout,
                                        granit_graphics_pipeline& target_pipeline) {
     const std::array additional_layouts{object_layout.native_handle(), lighting_layout};
-    auto initialize_result = granit::from_native(
-        target.initialize(renderer.native_handle(), source, additional_layouts));
+    auto initialize_result =
+        granit::from_native(target.initialize(renderer.native_handle(), source, additional_layouts,
+                                              granit::tests::shader_asset_store::resolve, &assets));
     const std::array features{granit::material::material_feature_value{
         granit::material::make_feature_id(granit::material::pbr_texture_feature_name), 0}};
     if (initialize_result.ok()) {
@@ -367,9 +345,8 @@ int main(int argc, char** argv) {
   }
   if (result.ok())
     result = initialize_material(material, full_package, lighting_resources.layout(), pipeline);
-  if (result.ok() &&
-      (direct_pipeline == GRANIT_NULL_HANDLE || ibl_pipeline == GRANIT_NULL_HANDLE ||
-       shadow_pipeline == GRANIT_NULL_HANDLE || pipeline == GRANIT_NULL_HANDLE)) {
+  if (result.ok() && (direct_pipeline == GRANIT_NULL_HANDLE || ibl_pipeline == GRANIT_NULL_HANDLE ||
+                      shadow_pipeline == GRANIT_NULL_HANDLE || pipeline == GRANIT_NULL_HANDLE)) {
     result = granit::result::internal;
   }
 
@@ -382,19 +359,19 @@ int main(int argc, char** argv) {
     result = granit::from_native(defaults.initialize(renderer.native_handle()));
   if (result.ok()) {
     result = granit::test::initialize_pbr_instance(renderer.native_handle(), direct_material,
-                                                       direct_package, defaults, direct_instance);
+                                                   direct_package, defaults, direct_instance);
   }
   if (result.ok()) {
     result = granit::test::initialize_pbr_instance(renderer.native_handle(), ibl_material,
-                                                       ibl_package, defaults, ibl_instance);
+                                                   ibl_package, defaults, ibl_instance);
   }
   if (result.ok()) {
     result = granit::test::initialize_pbr_instance(renderer.native_handle(), shadow_material,
-                                                       shadow_package, defaults, shadow_instance);
+                                                   shadow_package, defaults, shadow_instance);
   }
   if (result.ok()) {
-    result = granit::test::initialize_pbr_instance(renderer.native_handle(), material,
-                                                       full_package, defaults, instance);
+    result = granit::test::initialize_pbr_instance(renderer.native_handle(), material, full_package,
+                                                   defaults, instance);
   }
 
   granit_texture hdr_texture = GRANIT_NULL_HANDLE;
@@ -443,14 +420,19 @@ int main(int argc, char** argv) {
     result = recorder.initialize(renderer.native_handle());
   if (result.ok())
     result = timestamps.initialize(renderer.native_handle(), 4);
-  const auto tone_vertex = load_shader("tone_mapping.vert.spv");
-  const auto tone_fragment = load_shader("tone_mapping.frag.spv");
+  granit::tests::shader_asset_file tone_vertex;
+  granit::tests::shader_asset_file tone_fragment;
+  if (result.ok())
+    result = tone_vertex.load(renderer.native_handle(), std::string{GRANIT_PIPELINE_SHADER_DIR} +
+                                                            "/tone_mapping.vert.grshader");
+  if (result.ok())
+    result = tone_fragment.load(renderer.native_handle(), std::string{GRANIT_PIPELINE_SHADER_DIR} +
+                                                              "/tone_mapping.frag.grshader");
   granit::lighting::tone_mapping_resources tone_mapping;
   if (result.ok()) {
-    result = granit::from_native(tone_mapping.initialize(
+    result = granit::from_native(tone_mapping.initialize_packaged_asset(
         renderer.native_handle(), hdr_view, granit::texture_format::rgba8_unorm,
-        {.exposure_scale = 1.0F, .encode_srgb = 1}, std::as_bytes(std::span{tone_vertex}),
-        std::as_bytes(std::span{tone_fragment})));
+        {.exposure_scale = 1.0F, .encode_srgb = 1}, tone_vertex.desc(), tone_fragment.desc()));
   }
   const granit::viewport viewport{0, 0, 256, 256, 0, 1};
   const granit::scissor scissor{0, 0, 256, 256};
@@ -644,8 +626,7 @@ int main(int argc, char** argv) {
       }
     }
     benchmark_samples.reserve(options.samples);
-    for (std::uint32_t sample = 0; sample < options.samples && result.ok();
-         ++sample) {
+    for (std::uint32_t sample = 0; sample < options.samples && result.ok(); ++sample) {
       gpu_sample current{};
       const auto cpu_begin = std::chrono::steady_clock::now();
       for (std::uint32_t iteration = 0; iteration < options.iterations && result.ok();

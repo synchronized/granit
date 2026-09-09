@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
+#include "../tests/support/shader_asset_file.h"
+
 #include <granit/renderer/buffer.h>
 #include <granit/renderer/command_recorder.h>
 #include <granit/renderer/pipeline.h>
@@ -18,10 +20,8 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstdlib>
-#include <fstream>
 #include <iomanip>
 #include <iostream>
-#include <iterator>
 #include <string>
 #include <string_view>
 #include <thread>
@@ -107,16 +107,6 @@ void print_help() {
                "  --uploads <数量>       每线程、每样本的同步 staging 上传数\n";
 }
 
-std::vector<std::byte> load_shader(std::string_view name) {
-  std::ifstream stream{std::string{GRANIT_BENCHMARK_ASSET_DIR} + "/" + std::string{name},
-                       std::ios::binary};
-  const std::vector<char> bytes{std::istreambuf_iterator<char>{stream}, {}};
-  std::vector<std::byte> result(bytes.size());
-  std::transform(bytes.begin(), bytes.end(), result.begin(),
-                 [](char value) { return static_cast<std::byte>(value); });
-  return result;
-}
-
 void destroy_pipeline_fixture(granit_renderer renderer, pipeline_fixture& fixture) {
   if (fixture.graphics_pipeline != GRANIT_NULL_HANDLE)
     static_cast<void>(granit_graphics_pipeline_destroy(renderer, fixture.graphics_pipeline));
@@ -136,27 +126,28 @@ void destroy_pipeline_fixture(granit_renderer renderer, pipeline_fixture& fixtur
     static_cast<void>(granit_shader_destroy(renderer, fixture.compute_shader));
 }
 
-granit_result create_shader(granit_renderer renderer, granit_shader_stage stage,
-                            std::string_view name, granit_shader& shader) {
-  const auto code = load_shader(name);
-  if (code.empty())
-    return GRANIT_ERROR_INVALID_ARGUMENT;
-  granit_shader_desc desc = GRANIT_SHADER_DESC_INIT;
-  desc.stage = stage;
-  desc.code = code.data();
-  desc.code_size = code.size();
-  return granit_shader_create(renderer, &desc, &shader);
+granit_result create_shader(granit_renderer renderer, std::string_view name,
+                            granit_shader& shader) {
+  granit::tests::shader_asset_file asset;
+  const auto status =
+      asset.load(renderer, std::string{GRANIT_BENCHMARK_ASSET_DIR} + "/" + std::string{name});
+  if (status.failed())
+    return static_cast<granit_result>(status);
+  const auto bytes = asset.desc();
+  granit_shader_asset_desc desc = GRANIT_SHADER_ASSET_DESC_INIT;
+  desc.manifest_data = bytes.manifest.data();
+  desc.manifest_size = bytes.manifest.size();
+  desc.sidecar_data = bytes.sidecar.data();
+  desc.sidecar_size = bytes.sidecar.size();
+  return granit_shader_create_from_asset(renderer, &desc, &shader);
 }
 
 granit_result create_pipeline_fixture(granit_renderer renderer, pipeline_fixture& fixture) {
-  auto result = create_shader(renderer, GRANIT_SHADER_STAGE_VERTEX, "triangle.vert.spv",
-                              fixture.vertex_shader);
+  auto result = create_shader(renderer, "triangle.vert.grshader", fixture.vertex_shader);
   if (result == GRANIT_SUCCESS)
-    result = create_shader(renderer, GRANIT_SHADER_STAGE_FRAGMENT, "triangle.frag.spv",
-                           fixture.fragment_shader);
+    result = create_shader(renderer, "triangle.frag.grshader", fixture.fragment_shader);
   if (result == GRANIT_SUCCESS)
-    result = create_shader(renderer, GRANIT_SHADER_STAGE_COMPUTE, "compute.comp.spv",
-                           fixture.compute_shader);
+    result = create_shader(renderer, "compute.comp.grshader", fixture.compute_shader);
   granit_pipeline_layout_desc graphics_layout_desc = GRANIT_PIPELINE_LAYOUT_DESC_INIT;
   if (result == GRANIT_SUCCESS)
     result =

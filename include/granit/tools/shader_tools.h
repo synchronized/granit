@@ -4,6 +4,7 @@
 #ifndef GRANIT_SHADER_TOOLS_H_
 #define GRANIT_SHADER_TOOLS_H_
 
+#include <stddef.h>
 #include <stdint.h>
 
 #include <granit/core/result.h>
@@ -77,6 +78,18 @@ typedef struct granit_shader_tools_compile_desc {
 } granit_shader_tools_compile_desc;
 
 /** HLSL portable 双后端编译描述；DXC 生成 SPIR-V，Tint 从该产物生成 WGSL。 */
+typedef struct granit_shader_tools_define {
+  uint32_t struct_size;
+  uint32_t reserved;
+  const char* name;
+  uint64_t name_length;
+  const char* value;
+  uint64_t value_length;
+} granit_shader_tools_define;
+
+#define GRANIT_SHADER_TOOLS_DEFINE_INIT                                                            \
+  {(uint32_t)sizeof(granit_shader_tools_define), UINT32_C(0), 0, UINT64_C(0), 0, UINT64_C(0)}
+
 typedef struct granit_shader_tools_hlsl_compile_desc {
   uint32_t struct_size;
   const char* dxc_path;
@@ -92,7 +105,14 @@ typedef struct granit_shader_tools_hlsl_compile_desc {
   uint64_t spirv_output_path_length;
   const char* wgsl_output_path;
   uint64_t wgsl_output_path_length;
+  /** 按名称升序传给 DXC 的预处理器定义；名称和值均在调用期间借用。 */
+  const granit_shader_tools_define* defines;
+  uint32_t define_count;
+  uint32_t reserved;
 } granit_shader_tools_hlsl_compile_desc;
+
+#define GRANIT_SHADER_TOOLS_HLSL_COMPILE_DESC_VERSION_1_SIZE                                       \
+  ((uint32_t)offsetof(granit_shader_tools_hlsl_compile_desc, defines))
 
 /** GLSL portable 双后端编译描述；glslang 生成 SPIR-V，Tint 从该产物生成 WGSL。 */
 typedef struct granit_shader_tools_glsl_compile_desc {

@@ -49,3 +49,15 @@ TEST_CASE("PBR 顶点布局拒绝未知纹理 feature 位") {
   CHECK(granit::material::validate_pbr_vertex_layout(std::span{&layout, 1}, UINT32_C(1) << 31) ==
         granit::material::pbr_vertex_layout_error::invalid_texture_flags);
 }
+
+TEST_CASE("PBR 精确纹理掩码归并为三个 Shader 结构类别") {
+  using enum granit::material::pbr_shader_texture_class;
+  using namespace granit::material;
+
+  CHECK(classify_pbr_shader_textures(0) == untextured);
+  CHECK(classify_pbr_shader_textures(pbr_texture_base_color) == textured);
+  CHECK(classify_pbr_shader_textures(pbr_texture_base_color | pbr_texture_emissive) == textured);
+  CHECK(classify_pbr_shader_textures(pbr_texture_normal) == normal_mapped);
+  CHECK(classify_pbr_shader_textures(pbr_texture_all) == normal_mapped);
+  CHECK(classify_pbr_shader_textures(UINT32_C(1) << 31) == invalid);
+}
