@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2026 Granit contributors
 
-# Model Viewer 私有 Core、工具和验收目标；由示例入口或 Web 兼容入口包含。
+# Model Viewer 私有 Core、工具和验收目标；由示例自身的目标编排包含。
 
 set(granit_model_viewer_material_package
     "${CMAKE_CURRENT_BINARY_DIR}/model_viewer_pbr.grmat")

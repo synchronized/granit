@@ -24,18 +24,16 @@ examples/
 │  ├─ sdl/       SDL3 窗口与 ImGui 生命周期 RAII
 │  ├─ validation/ 截图与视觉回归比较
 │  └─ web/       浏览器资源请求、资源包与批量 Fetch
-├─ samples/      示例内容、平台入口及自身目标声明
-└─ platform/     保留给未来跨示例平台框架的目录
+└─ samples/      示例内容、平台入口及自身目标声明
 ```
 
 `common` 与 `samples` 都是仓库私有实现，不安装、不导出，也不构成公共 SDK。`common` 只保存被至少
 一个示例复用的能力；只有被两个真实下游共同需要、所有权和线程语义稳定的能力，才应另行设计为
 Granit 公共 API。
 
-Model Viewer 的内容、Core、工具、验收程序和目标声明均位于 `samples/model_viewer`；旧 Core 路径
-只为 Web 顶层迁移保留一层 CMake 转发，不再保存实现文件。桌面入口与 SDL3 平台壳层也已归入
-`samples/model_viewer/desktop`。浏览器输入适配位于 `samples/model_viewer/web`；浏览器资源加载
-已上提到 `common/web`。
+Model Viewer 的内容、Core、工具、验收程序和目标声明均位于 `samples/model_viewer`。
+桌面入口与 SDL3 平台壳层位于 `samples/model_viewer/desktop`，浏览器入口和输入适配位于
+`samples/model_viewer/web`；两个示例共用的浏览器资源支撑位于 `common/web`。
 
 ## 新增示例
 
@@ -47,5 +45,5 @@ Model Viewer 的内容、Core、工具、验收程序和目标声明均位于 `s
 4. 第三方依赖保持私有，不进入 Granit 安装导出或使用者的传递依赖。
 5. 至少提供一个自动 Smoke；浏览器目标还需检查控制台错误、帧推进和显式资源释放。
 
-当前目录迁移按 [S-36 计划](../docs/plans/S-36-0.20.0-example-framework-and-model-viewer.md)
-渐进完成，不为匹配最终目录一次性重写 Model Viewer。
+目录分层的设计与验收边界见
+[S-36 计划](../docs/plans/S-36-0.20.0-example-framework-and-model-viewer.md)。
