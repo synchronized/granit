@@ -18,6 +18,7 @@
         "CMAKE_EXPORT_COMPILE_COMMANDS": true,
         "GRANIT_BUILD_TESTING": true,
         "GRANIT_BUILD_EXAMPLES": true,
+        "GRANIT_FETCH_EXAMPLE_GLTF_DEPENDENCIES": true,
         "GRANIT_WARNINGS_AS_ERRORS": true
       }
     },
@@ -148,6 +149,7 @@
       "cacheVariables": {
         "GRANIT_BUILD_TESTING": true,
         "GRANIT_BUILD_EXAMPLES": true,
+        "GRANIT_FETCH_EXAMPLE_GLTF_DEPENDENCIES": true,
         "GRANIT_WARNINGS_AS_ERRORS": true
       }
     },

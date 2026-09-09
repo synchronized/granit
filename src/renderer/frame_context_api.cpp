@@ -41,13 +41,6 @@ extern "C" granit_result granit_frame_get_info(granit_renderer renderer, granit_
       renderer, frame, info->frame_slot, info->frame_slot_count);
 }
 
-// 0.19.0 已导出此符号；0.20.0 公共头不再声明，仅保留转发以通过开发期导出符号检查。
-extern "C" GRANIT_API granit_result granit_frame_get_slot_info(granit_renderer renderer,
-                                                               granit_frame frame,
-                                                               granit_frame_info* info) {
-  return granit_frame_get_info(renderer, frame, info);
-}
-
 extern "C" granit_result granit_frame_context_begin(granit_renderer renderer,
                                                     granit_frame_context context,
                                                     granit_frame frame,

@@ -12,6 +12,13 @@
 
 - 修复 WebGPU Canvas 的 Y 轴投影与左上原点裁剪不一致，以及 Canvas WGSL 未采样字体和自定义
   纹理导致文字方块、纹理纯白的问题；新增 ImGui 固定画面的 Vulkan/WebGPU 视觉回归。
+- 开发 preset 现在会获取 Model Viewer 锁定的 glTF 私有依赖，修复全新构建目录无法直接配置的
+  问题。
+
+### 兼容性与迁移
+
+- Frame 信息查询统一为 `granit_frame_get_info(renderer, frame, info)`，不再要求 Swapchain 句柄；
+  删除 `granit_frame_get_slot_info` 导出。0.19 Consumer 必须改用新签名并重新编译。
 
 ## 0.19.0 - 2026-09-07
 

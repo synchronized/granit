@@ -335,10 +335,11 @@ granit_result granit_shader_tools_compile_hlsl(const granit_shader_tools_hlsl_co
             !valid_string(define.value, define.value_length))
           return GRANIT_ERROR_INVALID_ARGUMENT;
         auto name = copy_string(define.name, define.name_length);
-        auto value = copy_string(define.value, define.value_length);
-        if (!valid_define_name(name) || value.empty() || value.find('\0') != std::string::npos)
+        auto define_value = copy_string(define.value, define.value_length);
+        if (!valid_define_name(name) || define_value.empty() ||
+            define_value.find('\0') != std::string::npos)
           return GRANIT_ERROR_INVALID_ARGUMENT;
-        options.definitions.emplace_back(std::move(name), std::move(value));
+        options.definitions.emplace_back(std::move(name), std::move(define_value));
       }
       std::ranges::sort(options.definitions);
       if (std::ranges::adjacent_find(options.definitions, [](const auto& left, const auto& right) {
