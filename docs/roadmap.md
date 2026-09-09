@@ -409,7 +409,7 @@
 
 ## 二十八、0.20.0 示例框架与跨平台 Model Viewer 稳定化
 
-**状态：实现中；S-36A～S-36E 已完成，后续完成视觉与发布验收。**
+**状态：已完成。**
 
 - **[S-36](plans/S-36-0.20.0-example-framework-and-model-viewer.md) / P1**：修复 Model Viewer 在
   渲染背压和 ImGui 捕获下的输入丢失、旋转卡顿与高延迟，并覆盖焦点、HiDPI 和 Resize 边界。
@@ -421,11 +421,10 @@
 
 ## 近期执行顺序
 
-1. 完成 S-36 的跨平台视觉验收和发布矩阵，统一收尾 0.20.0。
-2. 公共执行器与场景 API 继续等待 Granit 与 Gneiss 的第二个真实复用证据。
-3. S-14 只在复用条件成立后启动；不要为当前单个示例提前稳定 glTF 公共 API。
-4. S-06D 最终验收等待稳定版本与 component 范围决策；不在 0.x 阶段提前宣布稳定。
-5. H-09 的透明 PBR、CSM、Clustered Forward 与 Bindless 只在各自重新评估条件满足后独立恢复，
+1. 公共执行器与场景 API 继续等待 Granit 与 Gneiss 的第二个真实复用证据。
+2. S-14 只在复用条件成立后启动；不要为当前单个示例提前稳定 glTF 公共 API。
+3. S-06D 最终验收等待稳定版本与 component 范围决策；不在 0.x 阶段提前宣布稳定。
+4. H-09 的透明 PBR、CSM、Clustered Forward 与 Bindless 只在各自重新评估条件满足后独立恢复，
    不作为当前稳定化工作的前置项。
 
 若前置抽象不足，应先更新对应 Plan 和本路线图状态，再扩大公共 API。

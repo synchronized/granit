@@ -8,6 +8,23 @@
 
 ## Unreleased
 
+## 0.20.0 - 2026-09-10
+
+### 新增
+
+- 新增按 `examples/common` 与 `examples/samples` 分层的示例框架；Model Viewer 和 ImGui 提供
+  Vulkan 桌面与 WebGPU 浏览器入口，并可独立构建和验收。
+- ShaderTools 的 HLSL 编译描述支持末尾追加的预处理宏定义；宏集合进入确定性缓存身份。
+
+### 变更
+
+- 仓库 Shader 统一由构建过程生成 `.grshader` 清单及目标后端 sidecar；材质特性在生成阶段选择
+  textured/untextured 等变体，运行时只加载打包结果。
+- Model Viewer 在渲染背压期间保留输入增量并消费最新状态，桌面与浏览器共享相机、状态和加载
+  语义；Web 面板补齐光照、进度、取消和诊断。
+- Emscripten 分别验证平台 Smoke、正式 Model Viewer 和 ImGui，避免软件 WebGPU 外部实例在多个
+  浏览器会话之间串扰。
+
 ### 修复
 
 - 修复 WebGPU Canvas 的 Y 轴投影与左上原点裁剪不一致，以及 Canvas WGSL 未采样字体和自定义
