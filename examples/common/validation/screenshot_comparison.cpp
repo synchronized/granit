@@ -133,11 +133,13 @@ screenshot_comparison_error compare_screenshots(screenshot_view expected, screen
     candidate.color_mean_absolute_error =
         color_error_sum / (static_cast<double>(candidate.compared_color_pixel_count) * 4.0);
     candidate.color_outlier_ratio =
-        static_cast<double>(candidate.color_outlier_count) / candidate.compared_color_pixel_count;
+        static_cast<double>(candidate.color_outlier_count) /
+        static_cast<double>(candidate.compared_color_pixel_count);
   }
   if (candidate.compared_depth_pixel_count != 0) {
     candidate.depth_outlier_ratio =
-        static_cast<double>(candidate.depth_outlier_count) / candidate.compared_depth_pixel_count;
+        static_cast<double>(candidate.depth_outlier_count) /
+        static_cast<double>(candidate.compared_depth_pixel_count);
   }
   candidate.passed =
       candidate.silhouette_mismatch_count <= options.max_silhouette_mismatch_count &&

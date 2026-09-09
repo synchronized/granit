@@ -41,7 +41,7 @@ if((NOT cgltf_target OR NOT stb_image_target) AND GRANIT_FETCH_EXAMPLE_GLTF_DEPE
     FetchContent_MakeAvailable(granit_example_cgltf)
     add_library(granit_example_cgltf_headers INTERFACE)
     target_include_directories(
-      granit_example_cgltf_headers INTERFACE "${granit_example_cgltf_SOURCE_DIR}"
+      granit_example_cgltf_headers SYSTEM INTERFACE "${granit_example_cgltf_SOURCE_DIR}"
     )
     set(cgltf_target granit_example_cgltf_headers)
   endif()
@@ -56,7 +56,7 @@ if((NOT cgltf_target OR NOT stb_image_target) AND GRANIT_FETCH_EXAMPLE_GLTF_DEPE
     FetchContent_MakeAvailable(granit_example_stb)
     add_library(granit_example_stb_image_headers INTERFACE)
     target_include_directories(
-      granit_example_stb_image_headers INTERFACE "${granit_example_stb_SOURCE_DIR}"
+      granit_example_stb_image_headers SYSTEM INTERFACE "${granit_example_stb_SOURCE_DIR}"
     )
     set(stb_image_target granit_example_stb_image_headers)
   endif()
