@@ -140,10 +140,6 @@ public:
   [[nodiscard]] granit_result
   acquire_swapchain_frame(granit_renderer renderer, granit_swapchain swapchain, granit_frame& frame,
                           std::uint32_t& image_index, bool& needs_recreate);
-  [[nodiscard]] granit_result get_frame_info(granit_renderer renderer, granit_swapchain swapchain,
-                                             granit_frame frame, std::uint32_t& frame_slot,
-                                             std::uint32_t& frame_slot_count);
-  /** 内部渲染子系统查询 Frame 槽；不形成公共 ABI。 */
   [[nodiscard]] granit_result get_frame_slot(granit_renderer renderer, granit_frame frame,
                                              std::uint32_t& frame_slot,
                                              std::uint32_t& frame_slot_count);

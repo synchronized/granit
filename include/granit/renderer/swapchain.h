@@ -10,14 +10,13 @@
 #include <granit/core/export.h>
 #include <granit/core/result.h>
 #include <granit/core/types.h>
+#include <granit/renderer/frame.h>
 #include <granit/renderer/renderer.h>
 #include <granit/renderer/surface.h>
 #include <granit/renderer/texture.h>
 
 /** 窗口交换链句柄。零值无效。 */
 typedef granit_handle granit_swapchain;
-/** 一次 acquire 到 present 的短生命周期帧令牌。 */
-typedef granit_handle granit_frame;
 
 typedef uint32_t granit_present_mode;
 #define GRANIT_PRESENT_MODE_FIFO UINT32_C(0)
@@ -47,24 +46,6 @@ typedef struct granit_swapchain_info {
   granit_present_mode present_mode;
   granit_texture_format format;
 } granit_swapchain_info;
-
-/** 成功获取的 Frame 所使用的真实在途帧槽信息。 */
-typedef struct granit_frame_info {
-  uint32_t struct_size;
-  uint32_t frame_slot;
-  uint32_t frame_slot_count;
-  uint32_t reserved[5];
-} granit_frame_info;
-
-#define GRANIT_FRAME_INFO_VERSION_1_SIZE                                                           \
-  ((uint32_t)(offsetof(granit_frame_info, reserved) + sizeof(((granit_frame_info*)0)->reserved)))
-
-#define GRANIT_FRAME_INFO_INIT                                                                     \
-  {                                                                                                \
-    (uint32_t)sizeof(granit_frame_info), UINT32_C(0), UINT32_C(0), {                               \
-      UINT32_C(0), UINT32_C(0), UINT32_C(0), UINT32_C(0), UINT32_C(0)                              \
-    }                                                                                              \
-  }
 
 #define GRANIT_SWAPCHAIN_INFO_SIZE                                                                 \
   ((uint32_t)(offsetof(granit_swapchain_info, format) + sizeof(granit_texture_format)))
@@ -101,9 +82,6 @@ GRANIT_API granit_result granit_swapchain_get_backbuffer(granit_renderer rendere
 GRANIT_API granit_result granit_swapchain_acquire(granit_renderer renderer,
                                                   granit_swapchain swapchain, granit_frame* frame,
                                                   uint32_t* image_index, uint32_t* needs_recreate);
-/** 查询存活 Frame 的真实帧槽；返回信息不延长 Frame 生命周期。 */
-GRANIT_API granit_result granit_frame_get_info(granit_renderer renderer, granit_swapchain swapchain,
-                                               granit_frame frame, granit_frame_info* info);
 GRANIT_API granit_result granit_swapchain_present(granit_renderer renderer,
                                                   granit_swapchain swapchain, granit_frame frame,
                                                   uint32_t* needs_recreate);

@@ -111,6 +111,7 @@ target_sources(
       "${PROJECT_SOURCE_DIR}/include/granit/renderer/async_operation.hpp"
       "${PROJECT_SOURCE_DIR}/include/granit/renderer/command_recorder.h"
       "${PROJECT_SOURCE_DIR}/include/granit/renderer/command_recorder.hpp"
+      "${PROJECT_SOURCE_DIR}/include/granit/renderer/frame.h"
       "${PROJECT_SOURCE_DIR}/include/granit/renderer/frame_context.h"
       "${PROJECT_SOURCE_DIR}/include/granit/renderer/frame_context.hpp"
       "${PROJECT_SOURCE_DIR}/include/granit/granit.h"

@@ -8,6 +8,7 @@
 #include <utility>
 
 #include <granit/core/result.hpp>
+#include <granit/renderer/frame_context.h>
 #include <granit/renderer/resource_types.hpp>
 #include <granit/renderer/swapchain.h>
 
@@ -69,7 +70,7 @@ struct acquired_frame {
     if (!valid())
       return result::invalid_handle;
     granit_frame_info native_info = GRANIT_FRAME_INFO_INIT;
-    const auto value = granit_frame_get_info(renderer, swapchain, handle, &native_info);
+    const auto value = granit_frame_get_info(renderer, handle, &native_info);
     if (value == GRANIT_SUCCESS) {
       info = {.frame_slot = native_info.frame_slot,
               .frame_slot_count = native_info.frame_slot_count};

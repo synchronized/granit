@@ -539,7 +539,7 @@ granit_result validate_presentation(granit_renderer renderer, granit_swapchain s
     return result == GRANIT_SUCCESS ? GRANIT_ERROR_INITIALIZATION_FAILED : result;
   }
   granit_frame_info frame_info = GRANIT_FRAME_INFO_INIT;
-  result = granit_frame_get_info(renderer, swapchain, frame, &frame_info);
+  result = granit_frame_get_info(renderer, frame, &frame_info);
   if (result != GRANIT_SUCCESS || frame_info.frame_slot_count == 0) {
     return result == GRANIT_SUCCESS ? GRANIT_ERROR_INITIALIZATION_FAILED : result;
   }
@@ -547,8 +547,7 @@ granit_result validate_presentation(granit_renderer renderer, granit_swapchain s
   if (result != GRANIT_SUCCESS) {
     return result;
   }
-  if (granit_frame_get_info(renderer, swapchain, frame, &frame_info) !=
-          GRANIT_ERROR_INVALID_HANDLE ||
+  if (granit_frame_get_info(renderer, frame, &frame_info) != GRANIT_ERROR_INVALID_HANDLE ||
       granit_swapchain_get_backbuffer(renderer, swapchain, image_index, &texture, &view) !=
           GRANIT_ERROR_INVALID_ARGUMENT) {
     return GRANIT_ERROR_INTERNAL;
@@ -566,8 +565,8 @@ granit_result validate_presentation(granit_renderer renderer, granit_swapchain s
     return result;
   }
   result = granit_swapchain_present(renderer, swapchain, frame, &needs_recreate);
-  if (result != GRANIT_SUCCESS || granit_frame_get_info(renderer, swapchain, frame, &frame_info) !=
-                                      GRANIT_ERROR_INVALID_HANDLE) {
+  if (result != GRANIT_SUCCESS ||
+      granit_frame_get_info(renderer, frame, &frame_info) != GRANIT_ERROR_INVALID_HANDLE) {
     return result == GRANIT_SUCCESS ? GRANIT_ERROR_INTERNAL : result;
   }
   return GRANIT_SUCCESS;

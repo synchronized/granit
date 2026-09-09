@@ -154,7 +154,7 @@ render_view(pipeline_state& state, const granit_render_pipeline_render_desc& des
   granit_frame_info frame_info = GRANIT_FRAME_INFO_INIT;
   const bool use_uniform_arena = frame != GRANIT_NULL_HANDLE;
   if (use_uniform_arena) {
-    const auto slot_result = granit_frame_get_slot_info(state.renderer, frame, &frame_info);
+    const auto slot_result = granit_frame_get_info(state.renderer, frame, &frame_info);
     if (slot_result != GRANIT_SUCCESS)
       return slot_result;
     const auto arena_result =

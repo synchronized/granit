@@ -9,9 +9,9 @@
 #include <granit/core/export.h>
 #include <granit/core/result.h>
 #include <granit/core/types.h>
+#include <granit/renderer/frame.h>
 #include <granit/renderer/command_recorder.h>
 #include <granit/renderer/renderer.h>
-#include <granit/renderer/swapchain.h>
 
 /** 按 Renderer 真实在途帧槽轮转 Command Recorder 的上下文句柄。 */
 typedef granit_handle granit_frame_context;
@@ -30,12 +30,12 @@ typedef struct granit_frame_context_desc {
 extern "C" {
 #endif
 
+/** 查询存活 Frame 的真实帧槽；返回信息不延长 Frame 生命周期。 */
+GRANIT_API granit_result granit_frame_get_info(granit_renderer renderer, granit_frame frame,
+                                               granit_frame_info* info);
 GRANIT_API granit_result granit_frame_context_create(granit_renderer renderer,
                                                      const granit_frame_context_desc* desc,
                                                      granit_frame_context* context);
-/** 不依赖 Swapchain 句柄查询 Frame 槽位；供拥有 Frame 但不拥有 Swapchain 的子系统使用。 */
-GRANIT_API granit_result granit_frame_get_slot_info(granit_renderer renderer, granit_frame frame,
-                                                    granit_frame_info* info);
 /** 为 Frame 的真实槽位开始录制；返回的 Recorder 由 Context 拥有，只能借用。 */
 GRANIT_API granit_result granit_frame_context_begin(granit_renderer renderer,
                                                     granit_frame_context context,

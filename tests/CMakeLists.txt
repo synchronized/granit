@@ -64,6 +64,7 @@ add_library(
     headers/diagnostic_h.c
     headers/async_operation_h.c
     headers/command_recorder_h.c
+    headers/frame_h.c
     headers/frame_context_h.c
     headers/math_types_h.c
     headers/input_h.c

@@ -28,8 +28,10 @@ extern "C" granit_result granit_frame_context_create(granit_renderer renderer,
   }
 }
 
-extern "C" granit_result granit_frame_get_slot_info(granit_renderer renderer, granit_frame frame,
-                                                    granit_frame_info* info) {
+extern "C" granit_result granit_frame_get_info(granit_renderer renderer, granit_frame frame,
+                                               granit_frame_info* info) {
+  if (renderer == GRANIT_NULL_HANDLE || frame == GRANIT_NULL_HANDLE)
+    return GRANIT_ERROR_INVALID_HANDLE;
   if (info == nullptr || info->struct_size < GRANIT_FRAME_INFO_VERSION_1_SIZE ||
       std::ranges::any_of(info->reserved, [](uint32_t value) { return value != 0; }))
     return GRANIT_ERROR_INVALID_ARGUMENT;
@@ -37,6 +39,13 @@ extern "C" granit_result granit_frame_get_slot_info(granit_renderer renderer, gr
   info->frame_slot_count = 0;
   return granit::detail::renderer_registry::instance().get_frame_slot(
       renderer, frame, info->frame_slot, info->frame_slot_count);
+}
+
+// 0.19.0 已导出此符号；0.20.0 公共头不再声明，仅保留转发以通过开发期导出符号检查。
+extern "C" GRANIT_API granit_result granit_frame_get_slot_info(granit_renderer renderer,
+                                                               granit_frame frame,
+                                                               granit_frame_info* info) {
+  return granit_frame_get_info(renderer, frame, info);
 }
 
 extern "C" granit_result granit_frame_context_begin(granit_renderer renderer,
