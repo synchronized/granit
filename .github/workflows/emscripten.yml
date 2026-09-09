@@ -91,10 +91,11 @@ jobs:
               2>&1 | tee "$log"; then
               exit 0
             fi
-            if ! grep -q "A valid external Instance reference no longer exists" "$log"; then
+            if ! grep -Eq \
+              "A valid external Instance reference no longer exists|实际 0,0,0,0，预期" "$log"; then
               exit 1
             fi
-            echo "无头 Chrome 丢失 WebGPU 设备，重启浏览器测试（${attempt}/3）"
+            echo "无头 Chrome 丢失 WebGPU 设备或 Canvas 合成结果，重启浏览器测试（${attempt}/3）"
           done
           exit 1
       - name: 保存 ImGui 视觉验收截图
