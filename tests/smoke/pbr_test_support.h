@@ -43,10 +43,8 @@ private:
 };
 
 [[nodiscard]] bool build_pbr_package(material::material_package& package,
-                                     std::span<const std::uint32_t> vertex_shader,
-                                     std::string_view vertex_wgsl,
-                                     std::span<const std::uint32_t> fragment_shader,
-                                     std::string_view fragment_wgsl);
+                                     const material::material_shader_code& vertex_shader_code,
+                                     const material::material_shader_code& fragment_shader_code);
 
 [[nodiscard]] result initialize_pbr_instance(granit_renderer renderer,
                                              material::material_template_gpu& material_template,

@@ -28,6 +28,18 @@ granit_result result = granit_shader_create_from_asset(renderer, &asset, &shader
 Vulkan 提供同名 `.grshader.spv`，浏览器 WebGPU 提供 `.grshader.wgsl`。清单损坏、缺少匹配变体、
 能力不足或摘要不一致都会明确失败。成功返回后不再引用输入字节。
 
+仓库的普通桌面 Smoke、PBR 多 View、Tone Mapping 像素测试及 Renderer/材质基准使用同一资产
+入口；测试辅助层负责读取文件，材质通过资产 ID 和 resolver 引用清单。原始
+`granit_shader_create` 继续用于直接代码输入、底层接口契约测试及内部嵌入代码；它与资产入口
+最终使用同一套后端 Shader 创建实现。
+`.grshader` 是清单，不能单独替代配套的 SPIR-V 或 WGSL 文件。
+
+仓库测试所需的清单和同名 sidecar 由 `granit_test_shader_assets` 目标生成到构建目录；源码目录只
+保存输入表示。发布资产仍可作为已验证制品提交。HLSL 变体通过可重复的 `--define NAME=VALUE`
+生成，定义会排序并进入缓存身份，避免参数顺序造成重复缓存或宏变化误命中旧产物。CMake 调用方
+可使用 `granit_add_hlsl_shader_asset` 声明源码、Stage、入口和 `DEFINES`，并把三个输出作为构建
+依赖。
+
 调用方需要建立资产索引或选择变体时，可在不创建 Renderer 和 Shader 的情况下检查清单：
 
 ```c

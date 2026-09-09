@@ -28,8 +28,10 @@ extern "C" granit_result granit_frame_context_create(granit_renderer renderer,
   }
 }
 
-extern "C" granit_result granit_frame_get_slot_info(granit_renderer renderer, granit_frame frame,
-                                                    granit_frame_info* info) {
+extern "C" granit_result granit_frame_get_info(granit_renderer renderer, granit_frame frame,
+                                               granit_frame_info* info) {
+  if (renderer == GRANIT_NULL_HANDLE || frame == GRANIT_NULL_HANDLE)
+    return GRANIT_ERROR_INVALID_HANDLE;
   if (info == nullptr || info->struct_size < GRANIT_FRAME_INFO_VERSION_1_SIZE ||
       std::ranges::any_of(info->reserved, [](uint32_t value) { return value != 0; }))
     return GRANIT_ERROR_INVALID_ARGUMENT;

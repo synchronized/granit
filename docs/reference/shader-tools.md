@@ -62,6 +62,9 @@ DXC 构建 `4973-8f559587`、glslang `15.4.0`。两者均锁定 Dawn/Tint
   一致。临时文件不会进入资产。DXC 或 Tint 拒绝源代码及其能力时，调用返回
   `initialization_failed`、保留工具诊断并删除不完整产物，不会降低 Vulkan sidecar 的目标版本，
   也不会静默降级为仅 Vulkan 资产。
+- `granit_shader_tools_hlsl_compile_desc.defines` 接收显式长度的名称和值。名称必须是合法标识符，
+  值不能为空，同名定义会被拒绝；SDK 按名称排序后传给 DXC。CLI 对应参数为可重复的
+  `--define NAME=VALUE`。排序后的完整定义集合属于编译上下文并进入缓存键。
 - GLSL portable 路径具有相同产物与失败语义，由 glslangValidator 生成最终和桥接 SPIR-V，再由
   Tint 生成 WGSL。GLSL 源码必须显式使用 Vulkan 资源布局；工具不隐式分配 Set、Binding 或
   Location。

@@ -407,6 +407,18 @@
 - KTX2/DDS 解析、Basis 运行时转码、压缩纹理运行时 Mipmap、公共文件 Resolver、Android、虚拟
   纹理和 Bindless 不属于本版本。
 
+## 二十八、0.20.0 示例框架与跨平台 Model Viewer 稳定化
+
+**状态：已完成。**
+
+- **[S-36](plans/S-36-0.20.0-example-framework-and-model-viewer.md) / P1**：修复 Model Viewer 在
+  渲染背压和 ImGui 捕获下的输入丢失、旋转卡顿与高延迟，并覆盖焦点、HiDPI 和 Resize 边界。
+- 统一桌面 Vulkan 与浏览器 WebGPU 的示例核心和输入语义，以正式 Model Viewer Fixture 完成
+  浏览器加载、交互、像素容差和资源生命周期验收。
+- 将示例整理为私有 Framework、平台壳层和 Sample 内容三层；保留 `model_viewer` 与 `imgui`
+  两个用户级示例，后者使用 SDL3 验证 Vulkan/WebGPU 一致性，测试性质程序继续归入测试。
+- 公共执行器、公共 glTF SDK、Android、新后端和新渲染特性不属于本版本。
+
 ## 近期执行顺序
 
 1. 公共执行器与场景 API 继续等待 Granit 与 Gneiss 的第二个真实复用证据。

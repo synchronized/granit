@@ -8,6 +8,7 @@
 #include <filesystem>
 #include <iosfwd>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace granit::tools {
@@ -80,6 +81,7 @@ struct hlsl_compile_options {
   std::string stage;
   std::filesystem::path spirv_output;
   std::filesystem::path wgsl_output;
+  std::vector<std::pair<std::string, std::string>> definitions;
 };
 
 struct glsl_compile_options {

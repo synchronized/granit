@@ -46,6 +46,8 @@
 11. [0.17.0 WebGPU 原生异步 Pipeline 预热计划](plans/S-32-0.17.0-webgpu-async-pipeline-warmup.md)
 12. [开发与发布流水线提速计划](plans/S-33-ci-release-acceleration.md)
 13. [0.18.0 压缩纹理与格式能力契约计划](plans/S-34-0.18.0-compressed-textures.md)
+14. [0.19.0 纹理资产变体与流式加载计划](plans/S-35-0.19.0-texture-asset-variants.md)
+15. [0.20.0 示例框架与跨平台 Model Viewer 计划](plans/S-36-0.20.0-example-framework-and-model-viewer.md)
 
 ## 操作指南
 
@@ -67,6 +69,7 @@
 - [从 0.16 迁移到 0.17](guides/migrate-0.16-to-0.17.md)
 - [从 0.17 迁移到 0.18](guides/migrate-0.17-to-0.18.md)
 - [从 0.18 迁移到 0.19](guides/migrate-0.18-to-0.19.md)
+- [从 0.19 迁移到 0.20](guides/migrate-0.19-to-0.20.md)
 - [从 0.8 迁移到 0.9](guides/migrate-0.8-to-0.9.md)
 - [示例程序及运行方式](guides/examples.md)
 - [运行跨后端模型查看器](guides/model-viewer.md)

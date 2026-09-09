@@ -44,9 +44,15 @@ uint32_t texture_compression_features(WGPUDevice device) noexcept {
 std::size_t collect_optional_features(WGPUAdapter adapter,
                                       std::array<WGPUFeatureName, 4>& features) noexcept {
   std::size_t count{};
-  constexpr std::array candidates{
-      WGPUFeatureName_TimestampQuery, WGPUFeatureName_TextureCompressionBC,
-      WGPUFeatureName_TextureCompressionETC2, WGPUFeatureName_TextureCompressionASTC};
+  // 浏览器虽可能公布 timestamp-query，但 WebGPU JS 不提供任意 CommandEncoder
+  // writeTimestamp。当前公共时间戳契约无法完整实现，必须报告不支持而不是触发 JS 异常。
+#if !defined(__EMSCRIPTEN__)
+  if (wgpuAdapterHasFeature(adapter, WGPUFeatureName_TimestampQuery))
+    features[count++] = WGPUFeatureName_TimestampQuery;
+#endif
+  constexpr std::array candidates{WGPUFeatureName_TextureCompressionBC,
+                                  WGPUFeatureName_TextureCompressionETC2,
+                                  WGPUFeatureName_TextureCompressionASTC};
   for (const auto feature : candidates) {
     if (wgpuAdapterHasFeature(adapter, feature))
       features[count++] = feature;

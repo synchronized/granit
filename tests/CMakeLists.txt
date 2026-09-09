@@ -1,6 +1,13 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2026 Granit contributors
 
+add_subdirectory(core)
+
+if(EMSCRIPTEN)
+  add_subdirectory(web)
+  return()
+endif()
+
 add_subdirectory(smoke)
 
 add_test(
@@ -57,6 +64,7 @@ add_library(
     headers/diagnostic_h.c
     headers/async_operation_h.c
     headers/command_recorder_h.c
+    headers/frame_h.c
     headers/frame_context_h.c
     headers/math_types_h.c
     headers/input_h.c
@@ -95,14 +103,6 @@ target_link_libraries(
 )
 granit_target_compile_warnings(granit_c_header_test)
 
-add_executable(granit_cpp_version_test core/version_cpp_test.cpp)
-target_link_libraries(
-  granit_cpp_version_test
-  PRIVATE granit::granit Catch2::Catch2WithMain
-)
-granit_target_compile_warnings(granit_cpp_version_test)
-add_test(NAME granit.cpp_version COMMAND granit_cpp_version_test)
-
 if(BUILD_SHARED_LIBS)
   add_executable(granit_abi_exports_test abi/export_symbols_test.cpp)
   target_compile_features(granit_abi_exports_test PRIVATE cxx_std_20)
@@ -113,7 +113,7 @@ if(BUILD_SHARED_LIBS)
       GRANIT_ABI_RENDER_PIPELINE_LIBRARY_PATH="$<TARGET_FILE:granit_render_pipeline>"
       GRANIT_ABI_WINDOW_LIBRARY_PATH="$<TARGET_FILE:granit_window>"
       GRANIT_ABI_INPUT_LIBRARY_PATH="$<TARGET_FILE:granit_input>"
-      GRANIT_ABI_CORE_SYMBOLS_PATH="${CMAKE_CURRENT_SOURCE_DIR}/abi/snapshots/0.19.0/core_symbols.txt"
+      GRANIT_ABI_CORE_SYMBOLS_PATH="${CMAKE_CURRENT_SOURCE_DIR}/abi/snapshots/0.20.0/core_symbols.txt"
       GRANIT_ABI_RENDER_PIPELINE_SYMBOLS_PATH="${CMAKE_CURRENT_SOURCE_DIR}/abi/snapshots/0.17.0/render_pipeline_symbols.txt"
       GRANIT_ABI_WINDOW_SYMBOLS_PATH="${CMAKE_CURRENT_SOURCE_DIR}/abi/snapshots/0.5.0/window_symbols.txt"
       GRANIT_ABI_INPUT_SYMBOLS_PATH="${CMAKE_CURRENT_SOURCE_DIR}/abi/snapshots/0.1.0/input_symbols.txt"
@@ -145,7 +145,7 @@ if(BUILD_SHARED_LIBS)
     function(granit_add_abi_export_snapshot_test component target snapshot)
       set(snapshot_version 0.1.0)
       if(component STREQUAL "core")
-        set(snapshot_version 0.19.0)
+        set(snapshot_version 0.20.0)
       endif()
       if(component STREQUAL "render_pipeline")
         set(snapshot_version 0.17.0)
@@ -368,9 +368,10 @@ target_compile_options(granit_lighting_test PRIVATE $<$<COMPILE_LANG_AND_ID:CXX,
 target_compile_definitions(
   granit_lighting_test
   PRIVATE
-    GRANIT_PBR_SHADER_DIR="${PROJECT_SOURCE_DIR}/assets/shaders/pbr"
-    GRANIT_PIPELINE_SHADER_DIR="${PROJECT_SOURCE_DIR}/src/pipeline/shaders"
+    GRANIT_PBR_SHADER_DIR="${GRANIT_PBR_TEST_SHADER_DIR}"
+    GRANIT_PIPELINE_SHADER_DIR="${GRANIT_PIPELINE_TEST_SHADER_DIR}"
 )
+add_dependencies(granit_lighting_test granit_test_shader_assets)
 granit_target_compile_warnings(granit_lighting_test)
 granit_target_output_directories(granit_lighting_test)
 add_test(NAME granit.lighting COMMAND granit_lighting_test)
@@ -382,7 +383,7 @@ add_executable(
   pipeline/environment_map_api_test.cpp
   pipeline/environment_asset_test.cpp
   "${PROJECT_SOURCE_DIR}/src/pipeline/environment_asset.cpp"
-  $<TARGET_OBJECTS:granit_shader_asset_format>
+  $<TARGET_OBJECTS:granit_internal_shader_asset_format>
   pipeline/mesh_api_test.cpp
   pipeline/render_pipeline_api_test.cpp
   pipeline/scene_api_test.cpp
@@ -438,10 +439,11 @@ target_compile_definitions(
   PRIVATE
     GRANIT_PIPELINE_ASSET_DIR="${PROJECT_SOURCE_DIR}/assets/shaders/pbr"
     GRANIT_TEST_ASSET_DIR="${PROJECT_SOURCE_DIR}/tests/assets"
-    GRANIT_PIPELINE_SHADER_DIR="${PROJECT_SOURCE_DIR}/src/pipeline/shaders"
+    GRANIT_PIPELINE_SHADER_DIR="${GRANIT_PIPELINE_TEST_SHADER_DIR}"
     GRANIT_UNLIT_TEST_PACKAGE="${granit_unlit_test_package}"
     GRANIT_UNLIT_SHADER_DIR="${PROJECT_SOURCE_DIR}/assets/shaders/unlit"
 )
+add_dependencies(granit_pipeline_test granit_test_shader_assets)
 granit_target_compile_warnings(granit_pipeline_test)
 granit_target_output_directories(granit_pipeline_test)
 add_test(NAME granit.pipeline COMMAND granit_pipeline_test)
@@ -469,7 +471,7 @@ target_include_directories(
   granit_material_test PRIVATE "${PROJECT_SOURCE_DIR}/src" "${PROJECT_SOURCE_DIR}/tests"
 )
 target_link_libraries(granit_material_test PRIVATE granit::material Catch2::Catch2WithMain)
-target_sources(granit_material_test PRIVATE $<TARGET_OBJECTS:granit_shader_asset_format>)
+target_sources(granit_material_test PRIVATE $<TARGET_OBJECTS:granit_internal_shader_asset_format>)
 target_compile_options(
   granit_material_test
   PRIVATE $<$<COMPILE_LANG_AND_ID:CXX,MSVC>:/utf-8>
@@ -478,9 +480,11 @@ target_compile_definitions(
   granit_material_test
   PRIVATE
     GRANIT_TEST_ASSET_DIR="${PROJECT_SOURCE_DIR}/tests/assets"
+    GRANIT_SMOKE_SHADER_DIR="${GRANIT_SMOKE_TEST_SHADER_DIR}"
     GRANIT_PBR_ASSET_DIR="${PROJECT_SOURCE_DIR}/assets/shaders/pbr"
     GRANIT_PBR_MATERIAL_ASSET="${PROJECT_SOURCE_DIR}/assets/materials/pbr_standard.grmat"
 )
+add_dependencies(granit_material_test granit_test_shader_assets)
 granit_target_compile_warnings(granit_material_test)
 add_test(NAME granit.material COMMAND granit_material_test)
 
@@ -523,7 +527,7 @@ target_link_libraries(
     granit::granit
     Catch2::Catch2WithMain
     $<TARGET_OBJECTS:granit_shader_asset_storage>
-    $<TARGET_OBJECTS:granit_shader_asset_format>
+    $<TARGET_OBJECTS:granit_internal_shader_asset_format>
     $<$<PLATFORM_ID:Windows>:user32>
 )
 target_include_directories(
@@ -700,7 +704,6 @@ endif()
 set(
   granit_test_executable_targets
   granit_c_version_test
-  granit_cpp_version_test
   granit_handle_table_test
   granit_resource_validation_test
   granit_lifecycle_validation_test
@@ -719,7 +722,7 @@ foreach(target IN LISTS granit_test_executable_targets)
 endforeach()
 
 set_tests_properties(
-  granit.c_version granit.cpp_version granit.handle_table granit.resource_validation
+  granit.c_version granit.handle_table granit.resource_validation
   granit.lifecycle_validation granit.retirement_queue granit.device_status granit.renderer
   granit.vulkan_backend
   PROPERTIES ENVIRONMENT_MODIFICATION

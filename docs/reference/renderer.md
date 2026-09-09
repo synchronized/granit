@@ -52,10 +52,11 @@ granit_result result = granit_renderer_get_limits(renderer, &limits);
 C++ `renderer_limits::supports_sample_count` 提供对应的便捷检查。
 
 `supported_features` 是可选 Renderer 能力位。Vulkan 支持
-`GRANIT_RENDERER_FEATURE_TIMESTAMP_QUERY_BIT`；浏览器 WebGPU 仅在 Adapter 实际暴露并成功启用
-`timestamp-query` 时提供该位，否则创建 Timestamp Query Pool 返回
-`GRANIT_ERROR_UNSUPPORTED`。C++ 可通过 `renderer_limits::supports_timestamp_queries()` 判断。
-浏览器应使用异步结果入口轮询完成状态；Granit 不以零值或 CPU 时间模拟 GPU Timestamp。
+`GRANIT_RENDERER_FEATURE_TIMESTAMP_QUERY_BIT`。当前浏览器 WebGPU 不提供与 Granit 任意命令位置
+写入时间戳完全一致的能力，因此不公布该位，创建 Timestamp Query Pool 返回
+`GRANIT_ERROR_UNSUPPORTED`。C++ 可通过 `renderer_limits::supports_timestamp_queries()` 判断；
+Granit 不以零值或 CPU 时间模拟 GPU Timestamp。若未来浏览器 API 可以完整表达公共契约，将在
+保持能力查询语义的前提下重新启用。
 
 ## 异步操作
 

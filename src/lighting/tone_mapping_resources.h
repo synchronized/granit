@@ -22,6 +22,10 @@ public:
                                          std::span<const std::byte> vertex_shader,
                                          std::span<const std::byte> fragment_shader,
                                          std::string_view wgsl = {}) noexcept;
+  [[nodiscard]] granit_result
+  initialize_packaged_asset(granit_renderer renderer, granit::texture_format output_format,
+                            const granit::packaged_shader_asset_desc& vertex,
+                            const granit::packaged_shader_asset_desc& fragment) noexcept;
   [[nodiscard]] granit_result reset() noexcept;
   [[nodiscard]] bool initialized() const noexcept { return pipeline_.valid(); }
   [[nodiscard]] granit_graphics_pipeline pipeline() const noexcept {
@@ -38,6 +42,11 @@ public:
   [[nodiscard]] granit::texture_format output_format() const noexcept { return output_format_; }
 
 private:
+  [[nodiscard]] granit_result
+  initialize_impl(granit_renderer renderer, granit::texture_format output_format,
+                  std::span<const std::byte> vertex_code, std::span<const std::byte> fragment_code,
+                  std::string_view wgsl, const granit::packaged_shader_asset_desc* vertex_asset,
+                  const granit::packaged_shader_asset_desc* fragment_asset) noexcept;
   granit_renderer renderer_ = GRANIT_NULL_HANDLE;
   granit::texture_format output_format_ = granit::texture_format::undefined;
   granit::sampler sampler_;
@@ -72,6 +81,10 @@ public:
                                          const tone_mapping_constants& constants,
                                          std::span<const std::byte> vertex_shader,
                                          std::span<const std::byte> fragment_shader) noexcept;
+  [[nodiscard]] granit_result initialize_packaged_asset(
+      granit_renderer renderer, granit_texture_view hdr_view, granit::texture_format output_format,
+      const tone_mapping_constants& constants, const granit::packaged_shader_asset_desc& vertex,
+      const granit::packaged_shader_asset_desc& fragment) noexcept;
   [[nodiscard]] granit_result update(const tone_mapping_constants& constants) noexcept;
   [[nodiscard]] granit_result reset() noexcept;
   [[nodiscard]] bool initialized() const noexcept { return pipeline_.initialized(); }

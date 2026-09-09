@@ -46,12 +46,16 @@ jobs:
           set -euo pipefail
           suite="$REQUESTED_SUITE"
           if [[ "$suite" == auto ]]; then
+            web_paths='^(tests/web/|examples/common/web/|examples/samples/model_viewer/web/|'
+            web_paths+='examples/samples/imgui/(web\.cmake|web_main\.cpp)|'
+            web_paths+='cmake/(granit_web|granit_platform)\.cmake$|src/backend/webgpu/|'
+            web_paths+='\.github/workflows/emscripten\.yml$)'
             git fetch --no-tags origin main
             mapfile -t files < <(git diff --name-only "$(git merge-base HEAD origin/main)" HEAD)
             if [[ "${#files[@]}" -eq 0 ]]; then
               suite=core
             elif printf '%s\n' "${files[@]}" | grep -qE \
-              '^(web/|src/backend/webgpu/|\.github/workflows/emscripten\.yml$)'; then
+              "$web_paths"; then
               suite=webgpu
             elif ! printf '%s\n' "${files[@]}" | grep -qEv \
               '^(docs/|README\.md$|DOCUMENTATION_GUIDE\.md$|CHANGELOG\.md$)'; then

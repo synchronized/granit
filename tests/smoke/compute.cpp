@@ -1,30 +1,16 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
+#include "../support/shader_asset_file.h"
+
 #include <granit/granit.hpp>
 
 #include <cstddef>
 #include <cstdint>
-#include <fstream>
 #include <iostream>
-#include <iterator>
 #include <span>
 #include <string>
 #include <vector>
-
-namespace {
-
-std::vector<std::byte> load_shader() {
-  std::ifstream stream{std::string{GRANIT_SMOKE_ASSET_DIR} + "/compute.comp.spv",
-                       std::ios::binary};
-  const std::vector<char> bytes{std::istreambuf_iterator<char>{stream}, {}};
-  std::vector<std::byte> result(bytes.size());
-  for (std::size_t index = 0; index < bytes.size(); ++index)
-    result[index] = static_cast<std::byte>(bytes[index]);
-  return result;
-}
-
-} // namespace
 
 int main() {
   constexpr std::uint32_t value_count = 16;
@@ -69,14 +55,11 @@ int main() {
                               std::span{&entry, 1});
   }
 
-  const auto code = load_shader();
   granit::shader shader;
-  if (result.ok() && code.empty())
-    result = granit::result::invalid_argument;
-  if (result.ok()) {
-    result = shader.initialize(renderer.native_handle(),
-                               {.stage = granit::shader_stage::compute, .code = code});
-  }
+  if (result.ok())
+    result = granit::tests::load_shader_asset(
+        renderer.native_handle(), std::string{GRANIT_SMOKE_ASSET_DIR} + "/compute.comp.grshader",
+        shader);
   granit::compute_pipeline pipeline;
   if (result.ok()) {
     result =

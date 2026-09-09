@@ -179,6 +179,8 @@ D-03-graphics-pipeline.md
   GPU 块压缩格式、布局计算、设备能力查询和跨后端上传契约。
 - [S-35：0.19.0 纹理资产变体与流式加载契约](S-35-0.19.0-texture-asset-variants.md)——已完成；
   已落地确定性纹理 Manifest、设备驱动的变体选择和逐 mip Upload Batch 契约。
+- [S-36：0.20.0 示例框架与跨平台 Model Viewer 稳定化](S-36-0.20.0-example-framework-and-model-viewer.md)——
+  已完成；交互、帧延迟、示例分层、目录迁移、双后端视觉与发布验收均已闭合。
 
 ## 状态
 

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
+#include "../support/shader_asset_store.h"
 #include "lighting/tone_mapping_resources.h"
 #include "material/pbr_material_schema.h"
 #include "pbr_test_support.h"
@@ -13,34 +14,13 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
-#include <fstream>
 #include <iostream>
-#include <iterator>
 #include <span>
 #include <string>
 #include <string_view>
 #include <vector>
 
 namespace {
-
-std::vector<std::uint32_t> load_shader(std::string_view name) {
-  const auto directory =
-      name.starts_with("tone_mapping") ? GRANIT_PIPELINE_SHADER_DIR : GRANIT_PBR_SHADER_DIR;
-  std::ifstream stream{std::string{directory} + "/" + std::string{name}, std::ios::binary};
-  const std::vector<char> bytes{std::istreambuf_iterator<char>{stream}, {}};
-  if (bytes.empty() || bytes.size() % sizeof(std::uint32_t) != 0)
-    return {};
-  std::vector<std::uint32_t> words(bytes.size() / sizeof(std::uint32_t));
-  std::memcpy(words.data(), bytes.data(), bytes.size());
-  return words;
-}
-
-std::string load_shader_text(std::string_view name) {
-  const auto directory =
-      name.starts_with("tone_mapping") ? GRANIT_PIPELINE_SHADER_DIR : GRANIT_PBR_SHADER_DIR;
-  std::ifstream stream{std::string{directory} + "/" + std::string{name}, std::ios::binary};
-  return {std::istreambuf_iterator<char>{stream}, {}};
-}
 
 LRESULT CALLBACK window_proc(HWND window, UINT message, WPARAM word, LPARAM value) {
   if (message == WM_DESTROY) {
@@ -64,8 +44,8 @@ struct window_hdr_resources {
 
   granit::result initialize(granit_renderer renderer, std::uint32_t width, std::uint32_t height,
                             granit::texture_format output_format,
-                            std::span<const std::uint32_t> vertex_shader,
-                            std::span<const std::uint32_t> fragment_shader) {
+                            const granit::packaged_shader_asset_desc& vertex_shader,
+                            const granit::packaged_shader_asset_desc& fragment_shader) {
     auto result = texture.initialize(renderer, {.format = granit::texture_format::rgba16_float,
                                                 .usage = granit::texture_usage::color_attachment |
                                                          granit::texture_usage::sampled,
@@ -83,10 +63,10 @@ struct window_hdr_resources {
     if (result.ok())
       result = depth_view.initialize(renderer, depth_texture.native_handle());
     if (result.ok()) {
-      result = granit::from_native(tone_mapping.initialize(
+      result = granit::from_native(tone_mapping.initialize_packaged_asset(
           renderer, view.native_handle(), output_format,
           {.exposure_scale = 1.0F, .encode_srgb = shader_encodes_srgb(output_format) ? 1U : 0U},
-          std::as_bytes(vertex_shader), std::as_bytes(fragment_shader)));
+          vertex_shader, fragment_shader));
     }
     if (result.failed())
       static_cast<void>(reset());
@@ -246,22 +226,28 @@ int main(int argument_count, char** arguments) {
   granit::swapchain_info info;
   if (result.ok())
     result = swapchain.query_info(info);
-  const auto tone_vertex = load_shader("tone_mapping.vert.spv");
-  const auto tone_fragment = load_shader("tone_mapping.frag.spv");
-  const auto pbr_vertex = load_shader("pbr_shadow_ibl_lights.vert.spv");
-  const auto pbr_fragment = load_shader("pbr_shadow_ibl_lights_untextured.frag.spv");
-  const auto pbr_vertex_wgsl = load_shader_text("pbr_shadow_ibl_lights.vert.wgsl");
-  const auto pbr_fragment_wgsl =
-      load_shader_text("pbr_shadow_ibl_lights_untextured.frag.wgsl");
-  if (result.ok() && (tone_vertex.empty() || tone_fragment.empty() ||
-                                    pbr_vertex.empty() || pbr_fragment.empty())) {
+  granit::tests::shader_asset_store assets;
+  granit::tests::shader_asset_file tone_vertex;
+  granit::tests::shader_asset_file tone_fragment;
+  if (result.ok() &&
+      (!assets.add(std::string{GRANIT_PBR_SHADER_DIR} + "/pbr_shadow_ibl_lights.vert.grshader") ||
+       !assets.add(std::string{GRANIT_PBR_SHADER_DIR} +
+                   "/pbr_shadow_ibl_lights_untextured.frag.grshader")))
     result = granit::result::initialization_failed;
-  }
+  if (result.ok())
+    result = tone_vertex.load(renderer.native_handle(), std::string{GRANIT_PIPELINE_SHADER_DIR} +
+                                                            "/tone_mapping.vert.grshader");
+  if (result.ok())
+    result = tone_fragment.load(renderer.native_handle(), std::string{GRANIT_PIPELINE_SHADER_DIR} +
+                                                              "/tone_mapping.frag.grshader");
 
   granit::material::material_package pbr_package;
-  if (result.ok() &&
-      !granit::test::build_pbr_package(pbr_package, pbr_vertex, pbr_vertex_wgsl,
-                                           pbr_fragment, pbr_fragment_wgsl)) {
+  if (result.ok() && !granit::test::build_pbr_package(
+                         pbr_package,
+                         assets.reference(std::string{GRANIT_PBR_SHADER_DIR} +
+                                          "/pbr_shadow_ibl_lights.vert.grshader"),
+                         assets.reference(std::string{GRANIT_PBR_SHADER_DIR} +
+                                          "/pbr_shadow_ibl_lights_untextured.frag.grshader"))) {
     result = granit::result::initialization_failed;
   }
   granit::test::pbr_lighting_resources pbr_lighting;
@@ -274,7 +260,8 @@ int main(int argument_count, char** arguments) {
   if (result.ok()) {
     const std::array additional_layouts{object_layout.native_handle(), pbr_lighting.layout()};
     result = granit::from_native(
-        pbr_material.initialize(renderer.native_handle(), pbr_package, additional_layouts));
+        pbr_material.initialize(renderer.native_handle(), pbr_package, additional_layouts,
+                                granit::tests::shader_asset_store::resolve, &assets));
   }
   granit_graphics_pipeline pbr_pipeline = GRANIT_NULL_HANDLE;
   if (result.ok()) {
@@ -293,12 +280,12 @@ int main(int argument_count, char** arguments) {
     result = granit::from_native(pbr_defaults.initialize(renderer.native_handle()));
   if (result.ok()) {
     result = granit::test::initialize_pbr_instance(renderer.native_handle(), pbr_material,
-                                                       pbr_package, pbr_defaults, pbr_instance);
+                                                   pbr_package, pbr_defaults, pbr_instance);
   }
   window_hdr_resources resources;
   if (result.ok()) {
     result = resources.initialize(renderer.native_handle(), info.width, info.height, info.format,
-                                  tone_vertex, tone_fragment);
+                                  tone_vertex.desc(), tone_fragment.desc());
   }
   granit::frame_context frame_context;
   if (result.ok())
@@ -341,7 +328,7 @@ int main(int argument_count, char** arguments) {
         result = resources.reset();
       if (result.ok()) {
         result = resources.initialize(renderer.native_handle(), next_info.width, next_info.height,
-                                      next_info.format, tone_vertex, tone_fragment);
+                                      next_info.format, tone_vertex.desc(), tone_fragment.desc());
       }
       if (result.failed())
         break;

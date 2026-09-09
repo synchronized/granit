@@ -5,6 +5,7 @@
 
 #include "material/pbr_material_schema.h"
 
+#include <algorithm>
 #include <array>
 #include <bit>
 #include <cmath>
@@ -18,6 +19,63 @@ bool set_parameter(material::material_gpu_instance& instance, std::string_view n
   const auto bytes = std::bit_cast<std::array<std::byte, sizeof(value)>>(value);
   return instance.set(material::make_parameter_id(name), type, bytes) ==
          material::metadata_error::none;
+}
+
+bool is_empty_asset_id(const material::material_shader_code& shader) noexcept {
+  return std::ranges::all_of(shader.asset_id, [](std::byte value) { return value == std::byte{}; });
+}
+
+bool build_pbr_package_impl(material::material_package& package,
+                            std::vector<material::material_shader_code> shaders) {
+  using namespace material;
+  material_variant_desc variant{.pass = make_feature_id("opaque"),
+                                .features = {{make_feature_id(pbr_texture_feature_name), 0}},
+                                .shaders = std::move(shaders),
+                                .pipeline = {}};
+  variant.pipeline.primitive.cull_mode = GRANIT_CULL_MODE_BACK;
+  variant.pipeline.primitive.front_face = GRANIT_FRONT_FACE_CLOCKWISE;
+  variant.pipeline.depth.test_enabled = 1;
+  variant.pipeline.depth.write_enabled = 1;
+  variant.pipeline.depth.compare = GRANIT_COMPARE_OPERATION_LESS_EQUAL;
+
+  material_package_desc desc;
+  desc.metadata.constant_buffer_size = 48;
+  desc.metadata.parameters = {
+      {.name = "base_color", .type = parameter_type::float4, .offset = 0, .default_value = {}},
+      {.name = "metallic", .type = parameter_type::float32, .offset = 16, .default_value = {}},
+      {.name = "perceptual_roughness",
+       .type = parameter_type::float32,
+       .offset = 20,
+       .default_value = {}},
+      {.name = "normal_scale", .type = parameter_type::float32, .offset = 24, .default_value = {}},
+      {.name = "occlusion_strength",
+       .type = parameter_type::float32,
+       .offset = 28,
+       .default_value = {}},
+      {.name = "emissive", .type = parameter_type::float3, .offset = 32, .default_value = {}},
+      {.name = "base_color_texture",
+       .type = parameter_type::texture_view,
+       .binding = 1,
+       .default_value = {}},
+      {.name = "metallic_roughness_texture",
+       .type = parameter_type::texture_view,
+       .binding = 2,
+       .default_value = {}},
+      {.name = "normal_texture",
+       .type = parameter_type::texture_view,
+       .binding = 3,
+       .default_value = {}},
+      {.name = "occlusion_texture",
+       .type = parameter_type::texture_view,
+       .binding = 4,
+       .default_value = {}},
+      {.name = "emissive_texture",
+       .type = parameter_type::texture_view,
+       .binding = 5,
+       .default_value = {}},
+      {.name = "pbr_sampler", .type = parameter_type::sampler, .binding = 6, .default_value = {}}};
+  desc.variants.push_back(std::move(variant));
+  return material_package::build(std::move(desc), package) == package_error::none;
 }
 
 } // namespace
@@ -121,67 +179,15 @@ result pbr_lighting_resources::reset() {
 }
 
 bool build_pbr_package(material::material_package& package,
-                       std::span<const std::uint32_t> vertex_shader,
-                       std::string_view vertex_wgsl,
-                       std::span<const std::uint32_t> fragment_shader,
-                       std::string_view fragment_wgsl) {
-  using namespace material;
-  material_variant_desc variant{
-      .pass = make_feature_id("opaque"),
-      .features = {{make_feature_id(pbr_texture_feature_name), 0}},
-      .shaders = {{.stage = package_shader_stage::vertex,
-                   .entry_point = "vertex_main",
-                   .spirv = {vertex_shader.begin(), vertex_shader.end()},
-                   .wgsl = std::string{vertex_wgsl}},
-                  {.stage = package_shader_stage::fragment,
-                   .entry_point = "fragment_main",
-                   .spirv = {fragment_shader.begin(), fragment_shader.end()},
-                   .wgsl = std::string{fragment_wgsl}}},
-      .pipeline = {}};
-  variant.pipeline.primitive.cull_mode = GRANIT_CULL_MODE_BACK;
-  variant.pipeline.primitive.front_face = GRANIT_FRONT_FACE_CLOCKWISE;
-  variant.pipeline.depth.test_enabled = 1;
-  variant.pipeline.depth.write_enabled = 1;
-  variant.pipeline.depth.compare = GRANIT_COMPARE_OPERATION_LESS_EQUAL;
-
-  material_package_desc desc;
-  desc.metadata.constant_buffer_size = 48;
-  desc.metadata.parameters = {
-      {.name = "base_color", .type = parameter_type::float4, .offset = 0, .default_value = {}},
-      {.name = "metallic", .type = parameter_type::float32, .offset = 16, .default_value = {}},
-      {.name = "perceptual_roughness",
-       .type = parameter_type::float32,
-       .offset = 20,
-       .default_value = {}},
-      {.name = "normal_scale", .type = parameter_type::float32, .offset = 24, .default_value = {}},
-      {.name = "occlusion_strength",
-       .type = parameter_type::float32,
-       .offset = 28,
-       .default_value = {}},
-      {.name = "emissive", .type = parameter_type::float3, .offset = 32, .default_value = {}},
-      {.name = "base_color_texture",
-       .type = parameter_type::texture_view,
-       .binding = 1,
-       .default_value = {}},
-      {.name = "metallic_roughness_texture",
-       .type = parameter_type::texture_view,
-       .binding = 2,
-       .default_value = {}},
-      {.name = "normal_texture",
-       .type = parameter_type::texture_view,
-       .binding = 3,
-       .default_value = {}},
-      {.name = "occlusion_texture",
-       .type = parameter_type::texture_view,
-       .binding = 4,
-       .default_value = {}},
-      {.name = "emissive_texture",
-       .type = parameter_type::texture_view,
-       .binding = 5,
-       .default_value = {}},
-      {.name = "pbr_sampler", .type = parameter_type::sampler, .binding = 6, .default_value = {}}};
-  desc.variants.push_back(std::move(variant));
-  return material_package::build(std::move(desc), package) == package_error::none;
+                       const material::material_shader_code& vertex_shader_code,
+                       const material::material_shader_code& fragment_shader_code) {
+  if (is_empty_asset_id(vertex_shader_code) || is_empty_asset_id(fragment_shader_code) ||
+      vertex_shader_code.stage != material::package_shader_stage::vertex ||
+      fragment_shader_code.stage != material::package_shader_stage::fragment) {
+    return false;
+  }
+  std::vector<material::material_shader_code> shaders{vertex_shader_code, fragment_shader_code};
+  return build_pbr_package_impl(package, std::move(shaders));
 }
 
 result initialize_pbr_instance(granit_renderer renderer,

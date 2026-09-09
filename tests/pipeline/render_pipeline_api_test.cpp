@@ -17,6 +17,7 @@
 
 #include "lighting/tone_mapping_resources.h"
 #include "material/material_package_archive.h"
+#include "support/shader_asset_file.h"
 #include "support/shader_asset_store.h"
 
 #include <catch2/catch_all.hpp>
@@ -46,8 +47,7 @@ granit::tests::shader_asset_store& shader_assets() {
   static const bool loaded =
       store.add(std::string{GRANIT_TEST_ASSET_DIR} + "/minimal.vert.grshader") &&
       store.add(std::string{GRANIT_TEST_ASSET_DIR} + "/minimal.frag.grshader") &&
-      store.add(std::string{GRANIT_PIPELINE_ASSET_DIR} +
-                "/pbr_shadow_ibl_lights.vert.grshader") &&
+      store.add(std::string{GRANIT_PIPELINE_ASSET_DIR} + "/pbr_shadow_ibl_lights.vert.grshader") &&
       store.add(std::string{GRANIT_PIPELINE_ASSET_DIR} +
                 "/pbr_shadow_ibl_lights_untextured.frag.grshader");
   REQUIRE(loaded);
@@ -57,29 +57,19 @@ granit::tests::shader_asset_store& shader_assets() {
 std::vector<std::byte> build_material_archive() {
   using namespace granit::material;
   material_package_desc desc;
-  desc.variants.push_back({.pass = make_feature_id("opaque"),
-                           .features = {},
-                           .shaders = {
-                               shader_assets().reference(std::string{GRANIT_TEST_ASSET_DIR} +
-                                                         "/minimal.vert.grshader"),
-                               shader_assets().reference(std::string{GRANIT_TEST_ASSET_DIR} +
-                                                         "/minimal.frag.grshader")},
-                           .pipeline = {}});
+  desc.variants.push_back(
+      {.pass = make_feature_id("opaque"),
+       .features = {},
+       .shaders = {shader_assets().reference(std::string{GRANIT_TEST_ASSET_DIR} +
+                                             "/minimal.vert.grshader"),
+                   shader_assets().reference(std::string{GRANIT_TEST_ASSET_DIR} +
+                                             "/minimal.frag.grshader")},
+       .pipeline = {}});
   material_package package;
   REQUIRE(material_package::build(std::move(desc), package) == package_error::none);
   std::vector<std::byte> archive;
   REQUIRE(encode_material_package_archive(package, archive) == archive_error::none);
   return archive;
-}
-
-std::vector<std::uint32_t> load_tone_mapping_shader(const char* name) {
-  std::ifstream stream{std::string{GRANIT_PIPELINE_SHADER_DIR} + "/" + name, std::ios::binary};
-  const std::vector<char> bytes{std::istreambuf_iterator<char>{stream}, {}};
-  if (bytes.empty() || bytes.size() % sizeof(std::uint32_t) != 0)
-    return {};
-  std::vector<std::uint32_t> words(bytes.size() / sizeof(std::uint32_t));
-  std::memcpy(words.data(), bytes.data(), bytes.size());
-  return words;
 }
 
 std::vector<std::byte> build_automatic_material_archive() {
@@ -102,11 +92,10 @@ std::vector<std::byte> build_automatic_material_archive() {
   material_variant_desc variant{
       .pass = make_feature_id("opaque"),
       .features = {{make_feature_id("pbr_texture_mask"), 0}},
-      .shaders = {
-          shader_assets().reference(std::string{GRANIT_PIPELINE_ASSET_DIR} +
-                                    "/pbr_shadow_ibl_lights.vert.grshader"),
-          shader_assets().reference(std::string{GRANIT_PIPELINE_ASSET_DIR} +
-                                    "/pbr_shadow_ibl_lights_untextured.frag.grshader")},
+      .shaders = {shader_assets().reference(std::string{GRANIT_PIPELINE_ASSET_DIR} +
+                                            "/pbr_shadow_ibl_lights.vert.grshader"),
+                  shader_assets().reference(std::string{GRANIT_PIPELINE_ASSET_DIR} +
+                                            "/pbr_shadow_ibl_lights_untextured.frag.grshader")},
       .pipeline = {}};
   variant.pipeline.primitive.front_face = GRANIT_FRONT_FACE_CLOCKWISE;
   variant.pipeline.primitive.cull_mode = GRANIT_CULL_MODE_BACK;
@@ -864,16 +853,21 @@ TEST_CASE("公共Render Pipeline ABI输出可回读的Tone Mapping像素") {
                            {.bytes_per_row = 8}, {}) == granit::result::success);
   REQUIRE(manual_hdr_view.initialize(renderer.native_handle(), manual_hdr.native_handle()) ==
           granit::result::success);
-  const auto tone_vertex = load_tone_mapping_shader("tone_mapping.vert.spv");
-  const auto tone_fragment = load_tone_mapping_shader("tone_mapping.frag.spv");
-  REQUIRE_FALSE(tone_vertex.empty());
-  REQUIRE_FALSE(tone_fragment.empty());
+  granit::tests::shader_asset_file tone_vertex;
+  granit::tests::shader_asset_file tone_fragment;
+  REQUIRE(tone_vertex
+              .load(renderer.native_handle(),
+                    std::string{GRANIT_PIPELINE_SHADER_DIR} + "/tone_mapping.vert.grshader")
+              .ok());
+  REQUIRE(tone_fragment
+              .load(renderer.native_handle(),
+                    std::string{GRANIT_PIPELINE_SHADER_DIR} + "/tone_mapping.frag.grshader")
+              .ok());
   granit::lighting::tone_mapping_resources manual_tone_mapping;
-  REQUIRE(manual_tone_mapping.initialize(
+  REQUIRE(manual_tone_mapping.initialize_packaged_asset(
               renderer.native_handle(), manual_hdr_view.native_handle(),
               granit::texture_format::rgba8_unorm, {.exposure_scale = 1.0F, .encode_srgb = 1},
-              std::as_bytes(std::span{tone_vertex}),
-              std::as_bytes(std::span{tone_fragment})) == GRANIT_SUCCESS);
+              tone_vertex.desc(), tone_fragment.desc()) == GRANIT_SUCCESS);
   granit::texture manual_output;
   granit::texture_view manual_output_view;
   REQUIRE(manual_output.initialize(renderer.native_handle(),

@@ -2,11 +2,13 @@
 // Copyright (c) 2026 Granit contributors
 
 #include "material/material_hot_reload.h"
+#include "support/shader_asset_store.h"
 
 #include <granit/renderer/renderer.hpp>
 
 #include <catch2/catch_all.hpp>
 
+#include <chrono>
 #include <cstring>
 #include <fstream>
 #include <iterator>
@@ -139,4 +141,97 @@ TEST_CASE("活动材质缺少变体时回退到错误材质 Pipeline") {
   CHECK(resolved.used_fallback);
   CHECK(resolved.pipeline != GRANIT_NULL_HANDLE);
   CHECK(resolved.keepalive == fallback);
+}
+
+TEST_CASE("材质资产热替换保留解析上下文并在解析失败时回退") {
+  granit::renderer renderer;
+  const auto initialized = renderer.initialize({.application_name = "granit-asset-reload"});
+  if (environment_unavailable(initialized))
+    SKIP("当前运行环境没有满足要求的 Vulkan 设备");
+  REQUIRE(initialized.ok());
+  granit::tests::shader_asset_store assets;
+  const auto directory = std::filesystem::path{GRANIT_SMOKE_SHADER_DIR};
+  const auto vertex_path = directory / "triangle.vert.grshader";
+  const auto fragment_path = directory / "triangle.frag.grshader";
+  REQUIRE(assets.add(vertex_path));
+  REQUIRE(assets.add(fragment_path));
+  const auto package = [&] {
+    using namespace granit::material;
+    material_package_desc desc;
+    desc.variants.push_back(
+        {.pass = make_feature_id("opaque"),
+         .features = {},
+         .shaders = {assets.reference(vertex_path), assets.reference(fragment_path)},
+         .pipeline = {}});
+    material_package result;
+    REQUIRE(material_package::build(std::move(desc), result) == package_error::none);
+    return result;
+  };
+  const granit::material::material_pipeline_request request{
+      .pass = granit::material::make_feature_id("opaque"),
+      .variant = granit::material::make_variant_key({}),
+      .color_format = GRANIT_TEXTURE_FORMAT_RGBA8_UNORM};
+  std::shared_ptr<granit::material::material_runtime_template> fallback;
+  REQUIRE(granit::material::material_runtime_template::create(
+              renderer.native_handle(), package(), fallback,
+              granit::tests::shader_asset_store::resolve, &assets) == GRANIT_SUCCESS);
+  granit::material::material_hot_reload_slot slot{fallback};
+  REQUIRE(slot.reload(renderer.native_handle(), package(),
+                      granit::tests::shader_asset_store::resolve, &assets)
+              .result == GRANIT_SUCCESS);
+  auto old_snapshot = slot.snapshot();
+  REQUIRE(slot.resolve_pipeline(request).result == GRANIT_SUCCESS);
+
+  // Pipeline 延迟创建时仍必须能使用模板借用的解析器。
+  REQUIRE(slot.reload(renderer.native_handle(), package()).result == GRANIT_SUCCESS);
+  const auto failed = slot.resolve_pipeline(request);
+  CHECK(failed.result == GRANIT_SUCCESS);
+  CHECK(failed.used_fallback);
+  CHECK(failed.primary_result == GRANIT_ERROR_NOT_READY);
+  REQUIRE(slot.reload(renderer.native_handle(), package(),
+                      granit::tests::shader_asset_store::resolve, &assets)
+              .result == GRANIT_SUCCESS);
+  CHECK_FALSE(slot.resolve_pipeline(request).used_fallback);
+  granit_graphics_pipeline old_pipeline = GRANIT_NULL_HANDLE;
+  REQUIRE(old_snapshot->gpu().acquire_pipeline(request, old_pipeline) == GRANIT_SUCCESS);
+  CHECK(old_pipeline != GRANIT_NULL_HANDLE);
+}
+
+TEST_CASE("测试资产存储允许仅部署当前后端并缓存清单元数据") {
+  const auto source =
+      std::filesystem::path{GRANIT_SMOKE_SHADER_DIR} / "triangle.vert.grshader";
+  const auto folder = std::filesystem::temp_directory_path() /
+                      ("granit-shader-asset-" +
+                       std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()));
+  REQUIRE(std::filesystem::create_directory(folder));
+  struct cleanup {
+    std::filesystem::path folder;
+    ~cleanup() {
+      std::error_code ignored;
+      std::filesystem::remove(folder / "vertex.grshader.spv", ignored);
+      std::filesystem::remove(folder / "vertex.grshader", ignored);
+      std::filesystem::remove(folder, ignored);
+    }
+  } guard{folder};
+  const auto path = folder / "vertex.grshader";
+  REQUIRE(std::filesystem::copy_file(source, path));
+  REQUIRE(std::filesystem::copy_file(source.string() + ".spv", path.string() + ".spv"));
+  granit::tests::shader_asset_store assets;
+  REQUIRE(assets.add(path));
+  REQUIRE(assets.add(path));
+  const auto reference = assets.reference(path);
+  // reference 使用已验证的缓存，不再次读取可能已卸载的资产文件。
+  REQUIRE(std::filesystem::remove(path));
+  CHECK(assets.reference(path).asset_id == reference.asset_id);
+  granit_shader_asset_desc resolved = GRANIT_SHADER_ASSET_DESC_INIT;
+  const auto* id = reinterpret_cast<const std::uint8_t*>(reference.asset_id.data());
+  CHECK(granit::tests::shader_asset_store::resolve(&assets, id, GRANIT_RENDERER_BACKEND_VULKAN,
+                                                   GRANIT_SHADER_PROFILE_PORTABLE,
+                                                   &resolved) == GRANIT_SUCCESS);
+  CHECK(resolved.manifest_size > 0);
+  CHECK(resolved.sidecar_size > 0);
+  CHECK(granit::tests::shader_asset_store::resolve(&assets, id, GRANIT_RENDERER_BACKEND_WEBGPU,
+                                                   GRANIT_SHADER_PROFILE_PORTABLE,
+                                                   &resolved) == GRANIT_ERROR_NOT_READY);
+  CHECK_FALSE(assets.add(folder / "missing.grshader"));
 }

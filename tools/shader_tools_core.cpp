@@ -430,7 +430,7 @@ int compile_hlsl_shader(const hlsl_compile_options& options, shader_info& info,
   }
 
   process_result vulkan_process;
-  const std::vector<std::string> vulkan_arguments{
+  std::vector<std::string> vulkan_arguments{
       options.dxc.string(),
       "-spirv",
       "-fspv-target-env=vulkan1.3",
@@ -442,6 +442,10 @@ int compile_hlsl_shader(const hlsl_compile_options& options, shader_info& info,
       options.spirv_output.string(),
       options.input.string(),
   };
+  for (const auto& [name, value] : options.definitions) {
+    vulkan_arguments.emplace_back("-D");
+    vulkan_arguments.push_back(name + "=" + value);
+  }
   if (!run_process(vulkan_arguments, vulkan_process)) {
     error << "无法启动 DXC：" << options.dxc.string() << '\n';
     return 1;

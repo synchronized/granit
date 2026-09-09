@@ -1,0 +1,13 @@
+{
+  "name": "granit-web-platform-tests",
+  "private": true,
+  "version": "0.0.0",
+  "license": "MIT",
+  "scripts": {
+    "test": "node platform_smoke_test.cjs",
+    "test:imgui": "node imgui_test.cjs"
+  },
+  "devDependencies": {
+    "playwright-core": "1.62.1"
+  }
+}

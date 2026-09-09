@@ -40,6 +40,17 @@ jobs:
           source "$EMSDK_DIR/emsdk_env.sh"
           cmake --preset emscripten-release
           cmake --build --preset emscripten-release
+          ctest --preset emscripten-release
+      - name: 验证浏览器静态包和独立消费端
+        shell: bash
+        run: |
+          set -euo pipefail
+          source "$EMSDK_DIR/emsdk_env.sh"
+          cmake --install build/emscripten-release --prefix "$PWD/build/emscripten-sdk"
+          emcmake cmake -S tests/web/consumer -B build/emscripten-consumer -G Ninja \
+            -Dgranit_DIR="$PWD/build/emscripten-sdk/lib/cmake/granit"
+          cmake --build build/emscripten-consumer
+          ctest --test-dir build/emscripten-consumer --output-on-failure
       - name: 审计浏览器产物
         shell: bash
         run: |
@@ -49,33 +60,16 @@ jobs:
             test -s "${output}.html"
             test -s "${output}.js"
             test -s "${output}.wasm"
-            test -s "${output}.data"
+          done
+          test -s build/emscripten-release/web/granit_web_platform_smoke.data
+          for name in granit_imgui_web; do
+            output="build/emscripten-release/web/${name}"
+            test -s "${output}.html"
+            test -s "${output}.js"
+            test -s "${output}.wasm"
           done
           test -s build/emscripten-release/web/model_viewer_fixture.gltf
           test -s build/emscripten-release/web/model_viewer_fixture.bin
-      - name: 安装浏览器测试驱动
-        working-directory: web/tests
-        run: npm ci
-      - name: 验证浏览器 WebGPU 共享 Fixture 与输入转发
-        working-directory: web/tests
-        env:
-          CHROME_PATH: /usr/bin/google-chrome
-          GRANIT_EXPECT_SOFTWARE_PIPELINE_FALLBACK: "1"
-        shell: bash
-        run: |
-          set -o pipefail
-          for attempt in 1 2 3; do
-            log="$RUNNER_TEMP/granit-webgpu-attempt-${attempt}.log"
-            if xvfb-run -a env GRANIT_BROWSER_HEADLESS=0 \
-              npm test -- ../../build/emscripten-release/web 2>&1 | tee "$log"; then
-              exit 0
-            fi
-            if ! grep -q "A valid external Instance reference no longer exists" "$log"; then
-              exit 1
-            fi
-            echo "无头 Chrome 丢失 WebGPU 设备，重启浏览器测试（${attempt}/3）"
-          done
-          exit 1
       - name: 发布浏览器示例产物
         uses: actions/upload-artifact@v6
         with:
@@ -83,6 +77,69 @@ jobs:
           path: |
             build/emscripten-release/web/granit_web_platform_smoke.*
             build/emscripten-release/web/granit_model_viewer_web.*
+            build/emscripten-release/web/granit_imgui_web.*
             build/emscripten-release/web/model_viewer_fixture.gltf
             build/emscripten-release/web/model_viewer_fixture.bin
           if-no-files-found: error
+
+  browser-validation:
+    name: browser-${{ matrix.name }}
+    needs: web-platform-smoke-build
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: platform-smoke
+            script: test
+            arguments: ../../build/emscripten-release/web
+            expect_software_fallback: "1"
+          - name: model-viewer
+            script: test
+            arguments: >-
+              ../../build/emscripten-release/web granit_model_viewer_web.html
+              model_viewer_fixture.gltf
+            expect_software_fallback: "0"
+          - name: imgui
+            script: test:imgui
+            arguments: ../../build/emscripten-release/web
+            expect_software_fallback: "0"
+    steps:
+      - uses: actions/checkout@v5
+      - name: 下载浏览器示例产物
+        uses: actions/download-artifact@v5
+        with:
+          name: granit-web-examples
+          path: build/emscripten-release/web
+      - name: 安装浏览器测试驱动
+        working-directory: tests/web
+        run: npm ci
+      - name: 验证浏览器 WebGPU 行为
+        working-directory: tests/web
+        env:
+          CHROME_PATH: /usr/bin/google-chrome
+          GRANIT_EXPECT_SOFTWARE_PIPELINE_FALLBACK: ${{ matrix.expect_software_fallback }}
+        shell: bash
+        run: |
+          set -o pipefail
+          for attempt in 1 2 3; do
+            log="$RUNNER_TEMP/granit-webgpu-attempt-${attempt}.log"
+            if xvfb-run -a env GRANIT_BROWSER_HEADLESS=0 \
+              npm run "${{ matrix.script }}" -- ${{ matrix.arguments }} \
+              2>&1 | tee "$log"; then
+              exit 0
+            fi
+            if ! grep -Eq \
+              "A valid external Instance reference no longer exists|实际 0,0,0,0，预期" "$log"; then
+              exit 1
+            fi
+            echo "无头 Chrome 丢失 WebGPU 设备或 Canvas 合成结果，重试（${attempt}/3）"
+          done
+          exit 1
+      - name: 保存 ImGui 视觉验收截图
+        if: always() && matrix.name == 'imgui'
+        uses: actions/upload-artifact@v6
+        with:
+          name: granit-imgui-visual
+          path: build/emscripten-release/web/validation/*.png
+          if-no-files-found: ignore

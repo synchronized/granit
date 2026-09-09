@@ -103,6 +103,18 @@ TEST_CASE("Window 组件骨架保持确定的失败与输出语义", "[window]")
   CHECK(state.framebuffer_width > 0);
   CHECK(state.framebuffer_height > 0);
 
+  while (granit_window_poll_event(system, &event) == GRANIT_SUCCESS)
+    event = GRANIT_WINDOW_EVENT_INIT;
+  SendMessageW(static_cast<HWND>(second), WM_KILLFOCUS, 0, 0);
+  SendMessageW(static_cast<HWND>(second), WM_SETFOCUS, 0, 0);
+  for (const auto focused : {UINT32_C(0), UINT32_C(1)}) {
+    event = GRANIT_WINDOW_EVENT_INIT;
+    REQUIRE(granit_window_poll_event(system, &event) == GRANIT_SUCCESS);
+    CHECK(event.type == GRANIT_WINDOW_EVENT_FOCUS_CHANGED);
+    CHECK(event.window == window);
+    CHECK(event.data.focus.focused == focused);
+  }
+
   SendMessageW(static_cast<HWND>(second), WM_CLOSE, 0, 0);
   event = GRANIT_WINDOW_EVENT_INIT;
   REQUIRE(granit_window_poll_event(system, &event) == GRANIT_SUCCESS);

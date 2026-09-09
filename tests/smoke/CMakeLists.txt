@@ -5,6 +5,7 @@ set(granit_smoke_asset_dir "${PROJECT_SOURCE_DIR}/tests/fixtures/smoke")
 
 function(granit_add_smoke_target target source)
   add_executable(${target} ${source})
+  add_dependencies(${target} granit_test_shader_assets)
   granit_target_compile_warnings(${target})
   granit_target_output_directories(${target})
 endfunction()
@@ -29,14 +30,14 @@ granit_add_smoke_target(granit_offscreen_triangle_smoke offscreen_triangle.cpp)
 target_link_libraries(granit_offscreen_triangle_smoke PRIVATE granit::granit)
 target_compile_definitions(
   granit_offscreen_triangle_smoke
-  PRIVATE GRANIT_SMOKE_ASSET_DIR="${granit_smoke_asset_dir}"
+  PRIVATE GRANIT_SMOKE_ASSET_DIR="${GRANIT_SMOKE_TEST_SHADER_DIR}"
 )
 add_test(NAME granit.smoke.offscreen_triangle COMMAND granit_offscreen_triangle_smoke)
 
 granit_add_smoke_target(granit_compute_smoke compute.cpp)
 target_link_libraries(granit_compute_smoke PRIVATE granit::granit)
 target_compile_definitions(
-  granit_compute_smoke PRIVATE GRANIT_SMOKE_ASSET_DIR="${granit_smoke_asset_dir}"
+  granit_compute_smoke PRIVATE GRANIT_SMOKE_ASSET_DIR="${GRANIT_SMOKE_TEST_SHADER_DIR}"
 )
 add_test(NAME granit.smoke.compute COMMAND granit_compute_smoke)
 
@@ -44,7 +45,7 @@ granit_add_smoke_target(granit_material_hot_reload_smoke material_hot_reload.cpp
 target_link_libraries(granit_material_hot_reload_smoke PRIVATE granit::material)
 target_compile_definitions(
   granit_material_hot_reload_smoke
-  PRIVATE GRANIT_SMOKE_ASSET_DIR="${granit_smoke_asset_dir}"
+  PRIVATE GRANIT_SMOKE_ASSET_DIR="${GRANIT_SMOKE_TEST_SHADER_DIR}"
 )
 add_test(NAME granit.smoke.material_hot_reload COMMAND granit_material_hot_reload_smoke)
 
@@ -63,8 +64,8 @@ target_link_libraries(granit_pbr_offscreen_smoke PRIVATE granit::lighting)
 target_compile_definitions(
   granit_pbr_offscreen_smoke
   PRIVATE
-    GRANIT_PBR_SHADER_DIR="${PROJECT_SOURCE_DIR}/assets/shaders/pbr"
-    GRANIT_PIPELINE_SHADER_DIR="${PROJECT_SOURCE_DIR}/src/pipeline/shaders"
+    GRANIT_PBR_SHADER_DIR="${GRANIT_PBR_TEST_SHADER_DIR}"
+    GRANIT_PIPELINE_SHADER_DIR="${GRANIT_PIPELINE_TEST_SHADER_DIR}"
 )
 add_test(NAME granit.smoke.pbr_offscreen COMMAND granit_pbr_offscreen_smoke)
 
@@ -106,7 +107,7 @@ add_dependencies(granit_render_pipeline_offscreen_smoke granit_material_tool)
 target_sources(
   granit_render_pipeline_offscreen_smoke
   PRIVATE "${granit_render_pipeline_smoke_package}"
-          $<TARGET_OBJECTS:granit_shader_asset_format>
+          $<TARGET_OBJECTS:granit_internal_shader_asset_format>
 )
 add_test(
   NAME granit.smoke.render_pipeline_offscreen
@@ -155,7 +156,7 @@ if(WIN32)
   target_sources(
     granit_render_pipeline_window_smoke
     PRIVATE "${granit_render_pipeline_smoke_package}"
-            $<TARGET_OBJECTS:granit_shader_asset_format>
+            $<TARGET_OBJECTS:granit_internal_shader_asset_format>
   )
   add_test(
     NAME granit.smoke.render_pipeline_window
@@ -174,7 +175,8 @@ if(WIN32)
   granit_add_smoke_target(granit_window_triangle_smoke window_triangle.cpp)
   target_link_libraries(granit_window_triangle_smoke PRIVATE granit::granit user32)
   target_compile_definitions(
-    granit_window_triangle_smoke PRIVATE GRANIT_SMOKE_ASSET_DIR="${granit_smoke_asset_dir}"
+    granit_window_triangle_smoke
+    PRIVATE GRANIT_SMOKE_ASSET_DIR="${GRANIT_SMOKE_TEST_SHADER_DIR}"
   )
   add_test(NAME granit.smoke.window_triangle COMMAND granit_window_triangle_smoke --smoke-test)
   set_tests_properties(granit.smoke.window_triangle PROPERTIES TIMEOUT 30)
@@ -185,8 +187,8 @@ if(WIN32)
   target_compile_definitions(
     granit_window_hdr_smoke
     PRIVATE
-      GRANIT_PBR_SHADER_DIR="${PROJECT_SOURCE_DIR}/assets/shaders/pbr"
-      GRANIT_PIPELINE_SHADER_DIR="${PROJECT_SOURCE_DIR}/src/pipeline/shaders"
+      GRANIT_PBR_SHADER_DIR="${GRANIT_PBR_TEST_SHADER_DIR}"
+      GRANIT_PIPELINE_SHADER_DIR="${GRANIT_PIPELINE_TEST_SHADER_DIR}"
   )
   add_test(NAME granit.smoke.window_hdr COMMAND granit_window_hdr_smoke --smoke-test)
   set_tests_properties(granit.smoke.window_hdr PROPERTIES TIMEOUT 30)

@@ -11,8 +11,8 @@ Granit 当前版本为 0.x，公共 API、C ABI、C++ 包装、CMake component �
 
 “已有 ABI 回归测试”只表示仓库能够检测导出符号、结构布局和常量变化，不等于这些内容已经冻结。
 发生有意的 0.x 破坏性变更时，必须同步更新测试基线、迁移说明和版本号，不能静默漂移。
-Core 当前使用 0.19.0 完整符号快照，覆盖异步操作、Upload/Readback Batch、Pipeline Warmup、
-压缩纹理、Texture Asset Manifest、能力选择与逐 mip 上传；
+已发布的 Core 0.19.0 完整符号快照保持不变；Core 0.20.0 使用新完整快照记录 Frame 查询接口
+合并后的导出集合，并删除 `granit_frame_get_slot_info`；
 RenderPipeline 使用 0.17.0 完整符号快照，覆盖 Shader Asset 检查、标准 PBR Schema 与材质
 Pipeline 预热入口。
 Window 新增接口使用 0.5.0 增量符号快照，Input 继续使用 0.1.0 快照。历史
@@ -35,10 +35,10 @@ Window 新增接口使用 0.5.0 增量符号快照，Input 继续使用 0.1.0 �
 
 ## 可安装 component 当前等级
 
-下表描述 0.19.0 的当前事实。所有项目仍处于 0.x 未冻结状态；“候选”只表示该边界已进入
+下表描述 0.20.0 的当前事实。所有项目仍处于 0.x 未冻结状态；“候选”只表示该边界已进入
 优先收敛与验证范围，不构成稳定兼容承诺。
 
-| CMake component | 导入目标 | 直接依赖 | 当前等级 | 0.19.0 方向 |
+| CMake component | 导入目标 | 直接依赖 | 当前等级 | 0.20.0 方向 |
 |---|---|---|---|---|
 | Core（默认） | `granit::granit` | 无可选 Granit component | 稳定候选 | 优先收敛 C ABI、资源与提交契约 |
 | `RenderPipeline` | `granit::render_pipeline` | Core | 稳定候选 | 收敛材质、场景提交和参考管线边界 |
@@ -49,8 +49,8 @@ Window 新增接口使用 0.5.0 增量符号快照，Input 继续使用 0.1.0 �
 | `IntegrationImGui` | `granit::integration_imgui` | Core、RenderPipeline、ImGui | 实验性 | 保持可选适配层，不承诺第三方 ABI |
 
 component 名、依赖和当前等级是安装 SDK 契约的一部分；底层 Vulkan/WebGPU 实现、示例私有代码、
-测试目标和 `src/` 内部模块不属于可安装 component。0.19.0 的实施与验收范围见
-[S-35 计划](../plans/S-35-0.19.0-texture-asset-variants.md)。
+测试目标和 `src/` 内部模块不属于可安装 component。0.20.0 的实施与验收范围见
+[S-36 计划](../plans/S-36-0.20.0-example-framework-and-model-viewer.md)。
 
 ## 版本规则
 
