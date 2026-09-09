@@ -72,8 +72,9 @@ node tests/web/imgui_test.cjs build/emscripten-release/web
 
 先按[浏览器指南](webgpu-browser-example.md)安装测试驱动并设置 `CHROME_PATH`。测试分别创建
 1×、2× DPI 浏览器上下文，PNG 保存到 `build/emscripten-release/web/validation`。手动查看固定画面
-可打开 `granit_imgui_web.html?validation=1`。这些截图是诊断产物，不会自动成为基准图；目前按
-固定区域的颜色容差、字体覆盖和纹理差异验证，尚未建立跨平台整幅截图基准。
+可打开 `granit_imgui_web.html?validation=1`。稳定基准采用固定区域的颜色容差、字体覆盖、裁剪和
+纹理差异断言，整幅截图仅作为诊断产物。整图会受字体栅格和驱动差异影响，因此不作为跨平台的
+逐像素通过条件。
 
 ## 内部 Smoke 程序
 
