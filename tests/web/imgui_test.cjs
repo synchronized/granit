@@ -103,7 +103,7 @@ async function main() {
   const address = server.address();
   const browser = await chromium.launch({
     executablePath: chromePath,
-    headless: true,
+    headless: process.env.GRANIT_BROWSER_HEADLESS !== "0",
     args: ["--enable-unsafe-webgpu", "--enable-features=Vulkan,UseSkiaRenderer"],
   });
   const page = await browser.newPage({ viewport: { width: 960, height: 540 } });
