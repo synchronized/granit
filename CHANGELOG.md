@@ -18,7 +18,8 @@
 ### 兼容性与迁移
 
 - Frame 信息查询统一为 `granit_frame_get_info(renderer, frame, info)`，不再要求 Swapchain 句柄；
-  删除 `granit_frame_get_slot_info` 导出。0.19 Consumer 必须改用新签名并重新编译。
+  删除 `granit_frame_get_slot_info` 导出。0.19 Consumer 必须改用新签名并重新编译；完整说明见
+  [从 0.19 迁移到 0.20](docs/guides/migrate-0.19-to-0.20.md)。
 
 ## 0.19.0 - 2026-09-07
 
