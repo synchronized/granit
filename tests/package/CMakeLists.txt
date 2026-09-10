@@ -25,23 +25,21 @@ else()
 endif()
 
 if(GRANIT_REQUEST_COMPONENT STREQUAL "RenderPipeline")
-  if(NOT IS_DIRECTORY "${granit_RENDER_PIPELINE_ASSET_DIR}/shaders/pbr")
-    message(FATAL_ERROR "RenderPipeline component 未提供公共 PBR 资产目录")
+  if(NOT IS_DIRECTORY "${granit_RENDER_PIPELINE_ASSET_DIR}/libraries")
+    message(FATAL_ERROR "RenderPipeline component 未提供 Shader Library 目录")
   endif()
   if(NOT EXISTS "${granit_RENDER_PIPELINE_ASSET_DIR}/materials/pbr_standard.grmat")
     message(FATAL_ERROR "RenderPipeline component 缺少标准 PBR 材质模板")
   endif()
-  foreach(asset IN ITEMS
-      pbr_standard.vert.grshader
-      pbr_standard.vert.grshader.spv
-      pbr_standard.vert.grshader.wgsl
-      pbr_standard.frag.grshader
-      pbr_standard.frag.grshader.spv
-      pbr_standard.frag.grshader.wgsl)
-    if(NOT EXISTS "${granit_RENDER_PIPELINE_ASSET_DIR}/shaders/pbr/${asset}")
-      message(FATAL_ERROR "RenderPipeline component 缺少公共 PBR 资产：${asset}")
-    endif()
-  endforeach()
+  if(NOT EXISTS "${granit_RENDER_PIPELINE_ASSET_DIR}/libraries/pbr_standard.grshlib")
+    message(FATAL_ERROR "RenderPipeline component 缺少公共 PBR Shader Library")
+  endif()
+  file(GLOB_RECURSE legacy_shader_assets
+       "${granit_RENDER_PIPELINE_ASSET_DIR}/*.grshader"
+       "${granit_RENDER_PIPELINE_ASSET_DIR}/*.grshader.*")
+  if(legacy_shader_assets)
+    message(FATAL_ERROR "RenderPipeline component 仍发布旧 Shader Asset：${legacy_shader_assets}")
+  endif()
   foreach(asset IN ITEMS studio_small_03.grenv studio_small_03.manifest.json)
     if(NOT EXISTS "${granit_RENDER_PIPELINE_ASSET_DIR}/environments/${asset}")
       message(FATAL_ERROR "RenderPipeline component 缺少公共环境资产：${asset}")

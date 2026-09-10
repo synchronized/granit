@@ -60,8 +60,11 @@ if(NOT EMSCRIPTEN AND
    (GRANIT_BUILD_TOOLS OR GRANIT_BUILD_SHADER_TOOLS OR GRANIT_BUILD_EXAMPLES OR
     GRANIT_BUILD_BENCHMARKS OR (GRANIT_BUILD_TESTING AND BUILD_TESTING)))
   add_subdirectory(tools)
+  include(granit_shader_assets)
+  if(TARGET granit_shader_tool)
+    granit_prepare_runtime_shader_libraries()
+  endif()
   if((GRANIT_BUILD_TESTING AND BUILD_TESTING) OR GRANIT_BUILD_BENCHMARKS)
-    include(granit_shader_assets)
     granit_prepare_test_shader_assets()
   endif()
 endif()

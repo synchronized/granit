@@ -56,6 +56,74 @@ function(granit_add_hlsl_shader_asset)
   set(${ARG_OUTPUT_VAR} "${asset};${asset}.spv;${asset}.wgsl" PARENT_SCOPE)
 endfunction()
 
+function(granit_add_shader_library)
+  set(options ALL)
+  set(one_value_args NAME OUTPUT REFERENCE TARGET)
+  set(multi_value_args ASSETS)
+  cmake_parse_arguments(ARG "${options}" "${one_value_args}" "${multi_value_args}" ${ARGN})
+  if(NOT ARG_NAME OR NOT ARG_OUTPUT OR NOT ARG_ASSETS OR NOT ARG_TARGET)
+    message(FATAL_ERROR "granit_add_shader_library 缺少必要参数")
+  endif()
+
+  set(asset_arguments)
+  set(dependencies granit_shader_tool)
+  foreach(asset IN LISTS ARG_ASSETS)
+    list(APPEND asset_arguments --asset "${asset}")
+    list(APPEND dependencies "${asset}" "${asset}.spv" "${asset}.wgsl")
+  endforeach()
+  get_filename_component(output_directory "${ARG_OUTPUT}" DIRECTORY)
+  set(stamp "${ARG_OUTPUT}.verified")
+  set(commands
+      COMMAND "${CMAKE_COMMAND}" -E make_directory "${output_directory}"
+      COMMAND "$<TARGET_FILE:granit_shader_tool>" library ${asset_arguments}
+              --target all --output "${ARG_OUTPUT}")
+  if(ARG_REFERENCE)
+    list(APPEND commands
+         COMMAND "${CMAKE_COMMAND}" -E compare_files "${ARG_OUTPUT}" "${ARG_REFERENCE}")
+    list(APPEND dependencies "${ARG_REFERENCE}")
+  endif()
+  list(APPEND commands COMMAND "${CMAKE_COMMAND}" -E touch "${stamp}")
+  add_custom_command(
+    OUTPUT "${stamp}"
+    BYPRODUCTS "${ARG_OUTPUT}"
+    ${commands}
+    DEPENDS ${dependencies}
+    COMMENT "链接 Shader Library ${ARG_NAME}"
+    COMMAND_EXPAND_LISTS
+    VERBATIM
+  )
+  if(ARG_ALL)
+    add_custom_target(${ARG_TARGET} ALL DEPENDS "${stamp}")
+  else()
+    add_custom_target(${ARG_TARGET} DEPENDS "${stamp}")
+  endif()
+endfunction()
+
+function(granit_prepare_runtime_shader_libraries)
+  set(output_root "${CMAKE_BINARY_DIR}/generated/runtime-libraries")
+  granit_add_shader_library(
+    ALL
+    NAME pbr_standard
+    OUTPUT "${output_root}/pbr_standard.grshlib"
+    REFERENCE "${PROJECT_SOURCE_DIR}/assets/libraries/pbr_standard.grshlib"
+    TARGET granit_pbr_shader_library
+    ASSETS
+      "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/pbr_standard.vert.grshader"
+      "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/pbr_standard.frag.grshader"
+  )
+  granit_add_shader_library(
+    ALL
+    NAME unlit_canvas
+    OUTPUT "${output_root}/unlit_canvas.grshlib"
+    REFERENCE "${PROJECT_SOURCE_DIR}/src/pipeline/assets/unlit_canvas.grshlib"
+    TARGET granit_canvas_shader_library
+    ASSETS
+      "${PROJECT_SOURCE_DIR}/assets/shaders/unlit/unlit_canvas.vert.grshader"
+      "${PROJECT_SOURCE_DIR}/assets/shaders/unlit/unlit_canvas.frag.grshader"
+      "${PROJECT_SOURCE_DIR}/assets/shaders/unlit/unlit_canvas_encode_srgb.frag.grshader"
+  )
+endfunction()
+
 function(granit_prepare_test_shader_assets)
   set(root "${CMAKE_BINARY_DIR}/generated/test-shaders")
   set(pbr_output "${root}/pbr")

@@ -44,7 +44,6 @@ struct canvas_draw_list_state {
   std::vector<granit::pipeline::detail::pbr_draw_bindings> bindings;
   granit::pipeline::detail::canvas_material_group_cache material_groups;
   granit_material material = GRANIT_NULL_HANDLE;
-  std::vector<std::byte> shader_library_bytes;
   granit_shader_library shader_library = GRANIT_NULL_HANDLE;
 };
 
@@ -118,13 +117,12 @@ granit_result ensure_material(canvas_draw_list_state& state) {
                                        items.front().state.sampler}};
   const auto archive = granit::pipeline::detail::canvas_material_package();
   if (state.shader_library == GRANIT_NULL_HANDLE) {
-    auto result = granit::pipeline::detail::build_canvas_shader_library(state.shader_library_bytes);
-    if (result != GRANIT_SUCCESS)
-      return result;
+    const auto library = granit::pipeline::detail::canvas_shader_library();
     granit_shader_library_desc library_desc = GRANIT_SHADER_LIBRARY_DESC_INIT;
-    library_desc.archive_data = state.shader_library_bytes.data();
-    library_desc.archive_size = state.shader_library_bytes.size();
-    result = granit_shader_library_create(state.renderer, &library_desc, &state.shader_library);
+    library_desc.archive_data = library.data();
+    library_desc.archive_size = library.size();
+    const auto result =
+        granit_shader_library_create(state.renderer, &library_desc, &state.shader_library);
     if (result != GRANIT_SUCCESS)
       return result;
   }

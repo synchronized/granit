@@ -196,7 +196,6 @@ private:
   std::vector<granit::mesh> meshes_;
   default_material_textures default_textures_;
   granit::sampler default_sampler_;
-  std::vector<std::byte> shader_library_bytes_;
   granit::shader_library shader_library_;
   std::vector<granit::material_instance> materials_;
   std::vector<granit_render_pipeline_draw_binding> draw_bindings_;

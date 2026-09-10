@@ -482,7 +482,7 @@ target_compile_definitions(
   PRIVATE
     GRANIT_TEST_ASSET_DIR="${PROJECT_SOURCE_DIR}/tests/assets"
     GRANIT_SMOKE_SHADER_DIR="${GRANIT_SMOKE_TEST_SHADER_DIR}"
-    GRANIT_PBR_ASSET_DIR="${PROJECT_SOURCE_DIR}/assets/shaders/pbr"
+    GRANIT_PBR_LIBRARY_ASSET="${PROJECT_SOURCE_DIR}/assets/libraries/pbr_standard.grshlib"
     GRANIT_PBR_MATERIAL_ASSET="${PROJECT_SOURCE_DIR}/assets/materials/pbr_standard.grmat"
 )
 add_dependencies(granit_material_test granit_test_shader_assets)

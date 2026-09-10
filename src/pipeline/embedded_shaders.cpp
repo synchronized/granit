@@ -2,12 +2,8 @@
 // Copyright (c) 2026 Granit contributors
 
 #include "pipeline/embedded_shaders.h"
-#include "assets/shader_asset.h"
-#include "assets/shader_library.h"
 
-#include <array>
 #include <cstdint>
-#include <vector>
 
 namespace granit::pipeline::detail {
 namespace {
@@ -132,44 +128,9 @@ alignas(std::uint32_t) constexpr std::uint8_t canvas_material_bytes[]{
 #include "granit_pipeline_canvas.grmat.inc"
 };
 
-alignas(std::uint32_t) constexpr std::uint8_t canvas_vertex_manifest[]{
-#include "unlit_canvas.vert.grshader.inc"
+alignas(std::uint32_t) constexpr std::uint8_t canvas_shader_library_bytes[]{
+#include "unlit_canvas.grshlib.inc"
 };
-alignas(std::uint32_t) constexpr std::uint8_t canvas_vertex_spirv[]{
-#include "unlit_canvas.vert.grshader.spv.inc"
-};
-alignas(std::uint32_t) constexpr std::uint8_t canvas_vertex_wgsl[]{
-#include "unlit_canvas.vert.grshader.wgsl.inc"
-};
-alignas(std::uint32_t) constexpr std::uint8_t canvas_fragment_manifest[]{
-#include "unlit_canvas.frag.grshader.inc"
-};
-alignas(std::uint32_t) constexpr std::uint8_t canvas_fragment_spirv[]{
-#include "unlit_canvas.frag.grshader.spv.inc"
-};
-alignas(std::uint32_t) constexpr std::uint8_t canvas_fragment_wgsl[]{
-#include "unlit_canvas.frag.grshader.wgsl.inc"
-};
-alignas(std::uint32_t) constexpr std::uint8_t canvas_srgb_manifest[]{
-#include "unlit_canvas_encode_srgb.frag.grshader.inc"
-};
-alignas(std::uint32_t) constexpr std::uint8_t canvas_srgb_spirv[]{
-#include "unlit_canvas_encode_srgb.frag.grshader.spv.inc"
-};
-alignas(std::uint32_t) constexpr std::uint8_t canvas_srgb_wgsl[]{
-#include "unlit_canvas_encode_srgb.frag.grshader.wgsl.inc"
-};
-
-struct embedded_shader_asset {
-  std::span<const std::uint8_t> manifest;
-  std::span<const std::uint8_t> spirv;
-  std::span<const std::uint8_t> wgsl;
-};
-
-constexpr std::array canvas_shader_assets{
-    embedded_shader_asset{canvas_vertex_manifest, canvas_vertex_spirv, canvas_vertex_wgsl},
-    embedded_shader_asset{canvas_fragment_manifest, canvas_fragment_spirv, canvas_fragment_wgsl},
-    embedded_shader_asset{canvas_srgb_manifest, canvas_srgb_spirv, canvas_srgb_wgsl}};
 
 alignas(std::uint32_t) constexpr std::uint8_t debug_world_vertex_bytes[]{
 #include "granit_pipeline_debug_world.vert.inc"
@@ -215,17 +176,9 @@ std::span<const std::byte> canvas_material_package() noexcept {
   return {reinterpret_cast<const std::byte*>(canvas_material_bytes), sizeof(canvas_material_bytes)};
 }
 
-granit_result build_canvas_shader_library(std::vector<std::byte>& output) noexcept {
-  std::array<granit::tools::shader_library_asset_source, canvas_shader_assets.size()> sources{};
-  for (std::size_t index = 0; index < canvas_shader_assets.size(); ++index) {
-    const auto& asset = canvas_shader_assets[index];
-    sources[index] = {std::as_bytes(asset.manifest), std::as_bytes(asset.wgsl),
-                      std::as_bytes(asset.spirv)};
-  }
-  const auto result = granit::tools::encode_shader_library(
-      {sources, granit::tools::shader_library_backend_all}, output);
-  return result == granit::tools::shader_library_error::success ? GRANIT_SUCCESS
-                                                                : GRANIT_ERROR_INTERNAL;
+std::span<const std::byte> canvas_shader_library() noexcept {
+  return {reinterpret_cast<const std::byte*>(canvas_shader_library_bytes),
+          sizeof(canvas_shader_library_bytes)};
 }
 
 std::span<const std::byte> debug_world_vertex_shader() noexcept {
