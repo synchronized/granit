@@ -375,7 +375,7 @@ granit_result webgpu_renderer_state::begin_rendering(
     backend_command_recorder_resource& recorder, granit_rendering_area,
     std::span<const backend_color_attachment> color_attachments,
     const backend_depth_stencil_attachment* depth_stencil_attachment, std::uint32_t layer_count) {
-  if (!command_owner_ || !presentation_ || color_attachments.size() > 1 || layer_count != 1 ||
+  if (!command_owner_ || !presentation_owner_ || color_attachments.size() > 1 || layer_count != 1 ||
       (color_attachments.empty() && depth_stencil_attachment == nullptr))
     return GRANIT_ERROR_UNSUPPORTED;
   auto load = GRANIT_WEBGPU_LOAD_OPERATION_CLEAR;
@@ -399,11 +399,11 @@ granit_result webgpu_renderer_state::begin_rendering(
     clear[3] = attachment.clear_value.alpha;
     native_view = native_texture_view(*attachment.view);
     if (native_view == 0)
-      native_view = presentation_->native_view(*attachment.view);
+      native_view = presentation_native_view(*attachment.view);
     if (attachment.resolve_view != nullptr) {
       native_resolve_view = native_texture_view(*attachment.resolve_view);
       if (native_resolve_view == 0)
-        native_resolve_view = presentation_->native_view(*attachment.resolve_view);
+        native_resolve_view = presentation_native_view(*attachment.resolve_view);
       if (native_resolve_view == 0)
         return GRANIT_ERROR_INVALID_HANDLE;
     }

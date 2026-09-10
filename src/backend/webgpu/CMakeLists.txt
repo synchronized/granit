@@ -4,13 +4,13 @@
 target_sources(
   granit PRIVATE
     context.cpp
-    presentation_adapter.cpp
     renderer_state.cpp
     renderer_state_commands.cpp
     renderer_state_commands_native.cpp
     renderer_state_pipeline.cpp
     renderer_state_pipeline_native.cpp
     renderer_state_presentation.cpp
+    renderer_state_presentation_native.cpp
     renderer_state_resources.cpp
     renderer_state_shader.cpp
     renderer_state_submission.cpp

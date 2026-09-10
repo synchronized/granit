@@ -88,7 +88,7 @@ webgpu_renderer_state::texture_format_capabilities(granit_texture_format format)
 }
 
 webgpu_renderer_state::~webgpu_renderer_state() {
-  presentation_.reset();
+  presentation_owner_.reset();
   resource_owner_.reset();
   command_owner_.reset();
   pipeline_owner_.reset();
@@ -198,7 +198,7 @@ granit_result webgpu_renderer_state::refresh_state() noexcept {
     return GRANIT_ERROR_INTERNAL;
   }
 
-  if (presentation_ == nullptr || resource_owner_ == nullptr || pipeline_owner_ == nullptr ||
+  if (presentation_owner_ == nullptr || resource_owner_ == nullptr || pipeline_owner_ == nullptr ||
       command_owner_ == nullptr) {
     webgpu_capabilities capabilities{};
     capabilities.struct_size = sizeof(capabilities);
@@ -228,14 +228,15 @@ granit_result webgpu_renderer_state::refresh_state() noexcept {
       return GRANIT_ERROR_UNSUPPORTED;
     }
     try {
-      auto presentation = std::make_unique<webgpu_presentation_adapter>(context_, instance_);
+      auto presentation_owner = std::make_shared<webgpu_presentation_owner>(
+          webgpu_presentation_owner{&context_, instance_});
       auto resource_owner =
           std::make_shared<webgpu_resource_owner>(webgpu_resource_owner{&context_, instance_});
       auto pipeline_owner =
           std::make_shared<webgpu_pipeline_owner>(webgpu_pipeline_owner{&context_, instance_});
       auto command_owner =
           std::make_shared<webgpu_command_owner>(webgpu_command_owner{&context_, instance_});
-      presentation_ = std::move(presentation);
+      presentation_owner_ = std::move(presentation_owner);
       resource_owner_ = std::move(resource_owner);
       pipeline_owner_ = std::move(pipeline_owner);
       command_owner_ = std::move(command_owner);

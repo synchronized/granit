@@ -24,7 +24,7 @@
 #include "backend/webgpu/commands.h"
 #include "backend/webgpu/context.h"
 #include "backend/webgpu/pipelines.h"
-#include "backend/webgpu/presentation_adapter.h"
+#include "backend/webgpu/presentation.h"
 #include "backend/webgpu/resources.h"
 
 namespace granit::detail {
@@ -70,7 +70,6 @@ public:
   texture_format_capabilities(granit_texture_format format) const noexcept override;
   [[nodiscard]] std::uint32_t domain() const noexcept override { return domain_; }
   void set_domain(std::uint32_t domain) noexcept override { domain_ = domain; }
-  [[nodiscard]] webgpu_presentation_adapter* presentation() noexcept { return presentation_.get(); }
 
   [[nodiscard]] std::unique_ptr<backend_buffer_resource> allocate_buffer_resource() override;
   [[nodiscard]] granit_result create_buffer(const granit_buffer_desc& desc,
@@ -324,6 +323,39 @@ private:
                        const char* message, std::uint32_t message_length, void* user_data) noexcept;
   [[nodiscard]] granit_result refresh_state() noexcept;
   [[nodiscard]] granit_result finish_initialization() noexcept;
+  [[nodiscard]] std::unique_ptr<backend_surface_resource> presentation_allocate_surface();
+  [[nodiscard]] std::unique_ptr<backend_swapchain_resource> presentation_allocate_swapchain();
+  [[nodiscard]] granit_result presentation_create_win32_surface(backend_surface_resource& resource,
+                                                                void* instance,
+                                                                void* window) noexcept;
+  [[nodiscard]] granit_result presentation_create_xcb_surface(backend_surface_resource& resource,
+                                                              void* connection,
+                                                              std::uint32_t window) noexcept;
+  [[nodiscard]] granit_result
+  presentation_create_wayland_surface(backend_surface_resource& resource, void* display,
+                                      void* surface) noexcept;
+  [[nodiscard]] granit_result
+  presentation_create_canvas_surface(backend_surface_resource& resource, const char* selector,
+                                     std::uint32_t selector_length) noexcept;
+  [[nodiscard]] granit_result
+  presentation_create_swapchain(backend_surface_resource& surface,
+                                const backend_swapchain_desc& desc,
+                                backend_swapchain_resource& swapchain) noexcept;
+  [[nodiscard]] granit_result
+  presentation_recreate_swapchain(backend_swapchain_resource& swapchain,
+                                  const backend_swapchain_desc& desc) noexcept;
+  [[nodiscard]] granit_result
+  presentation_get_swapchain_info(backend_swapchain_resource& swapchain,
+                                  backend_swapchain_info& info) noexcept;
+  [[nodiscard]] granit_result
+  presentation_acquire_swapchain(backend_swapchain_resource& swapchain,
+                                 backend_acquired_swapchain_frame& frame) noexcept;
+  [[nodiscard]] granit_result presentation_present_swapchain(backend_swapchain_resource& swapchain,
+                                                             bool& needs_recreate) noexcept;
+  [[nodiscard]] granit_result presentation_cancel_swapchain(backend_swapchain_resource& swapchain,
+                                                            bool& needs_recreate) noexcept;
+  [[nodiscard]] webgpu_texture_view
+  presentation_native_view(backend_texture_view_resource& view) noexcept;
   [[nodiscard]] std::unique_ptr<backend_command_recorder_resource> command_allocate_recorder();
   [[nodiscard]] granit_result command_begin(backend_command_recorder_resource& resource) noexcept;
   [[nodiscard]] granit_result
@@ -467,7 +499,7 @@ private:
   std::uint32_t context_surface_types_{};
   std::uint32_t domain_{};
   submission_serial next_submission_serial_{1};
-  std::unique_ptr<webgpu_presentation_adapter> presentation_;
+  std::shared_ptr<webgpu_presentation_owner> presentation_owner_;
   std::shared_ptr<webgpu_resource_owner> resource_owner_;
   std::shared_ptr<webgpu_pipeline_owner> pipeline_owner_;
   std::shared_ptr<webgpu_command_owner> command_owner_;
