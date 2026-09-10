@@ -41,7 +41,7 @@ class webgpu_renderer_state final : public backend_renderer,
                                     public backend_resource_renderer,
                                     public backend_transfer_command_renderer,
                                     public backend_retirement_renderer,
-                                    public backend_wgsl_shader_renderer,
+                                    public backend_shader_renderer,
                                     public backend_pipeline_layout_renderer,
                                     public backend_pipeline_renderer,
                                     public backend_pipeline_warmup_renderer,
@@ -228,9 +228,11 @@ public:
   [[nodiscard]] granit_result
   end_rendering(backend_command_recorder_resource& recorder) noexcept override;
   [[nodiscard]] std::unique_ptr<backend_shader_resource> allocate_shader_resource() override;
-  [[nodiscard]] granit_result create_wgsl_shader(backend_shader_resource& shader,
-                                                 granit_shader_stage stage, std::string_view source,
-                                                 std::string_view entry_point) noexcept override;
+  [[nodiscard]] granit_result create_shader(backend_shader_resource& shader,
+                                            granit_shader_stage stage,
+                                            granit_shader_code_format code_format,
+                                            std::span<const std::byte> code,
+                                            std::string_view entry_point) noexcept override;
   [[nodiscard]] std::unique_ptr<backend_pipeline_layout_resource>
   allocate_pipeline_layout_resource() override;
   [[nodiscard]] granit_result

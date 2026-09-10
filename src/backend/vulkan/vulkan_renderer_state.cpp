@@ -18,6 +18,7 @@
 #include <cstdio>
 #include <cstring>
 #include <functional>
+#include <new>
 #include <string>
 #include <thread>
 #include <type_traits>
@@ -1799,6 +1800,26 @@ vulkan_renderer_state::create_native_shader(std::span<const std::uint32_t> code,
   info.pCode = code.data();
   return observe_device_result(map_vulkan_result(
       device_.functions().vkCreateShaderModule(device_.native_handle(), &info, nullptr, &shader)));
+}
+
+granit_result vulkan_renderer_state::create_shader(backend_shader_resource& shader,
+                                                   granit_shader_stage,
+                                                   granit_shader_code_format code_format,
+                                                   std::span<const std::byte> code,
+                                                   std::string_view) noexcept {
+  if (code_format != GRANIT_SHADER_CODE_FORMAT_SPIRV)
+    return GRANIT_ERROR_UNSUPPORTED;
+  if (code.empty() || code.size() % sizeof(std::uint32_t) != 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  try {
+    std::vector<std::uint32_t> words(code.size() / sizeof(std::uint32_t));
+    std::memcpy(words.data(), code.data(), code.size());
+    return create_native_shader(words, shader);
+  } catch (const std::bad_alloc&) {
+    return GRANIT_ERROR_OUT_OF_MEMORY;
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
 }
 
 void vulkan_renderer_state::destroy_native_shader(VkShaderModule shader) noexcept {

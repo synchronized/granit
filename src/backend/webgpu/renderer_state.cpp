@@ -740,13 +740,15 @@ std::unique_ptr<backend_shader_resource> webgpu_renderer_state::allocate_shader_
   return shaders_ ? shaders_->allocate_shader() : nullptr;
 }
 
-granit_result webgpu_renderer_state::create_wgsl_shader(backend_shader_resource& shader,
-                                                        granit_shader_stage stage,
-                                                        std::string_view source,
-                                                        std::string_view entry_point) noexcept {
-  return shaders_ ? shaders_->create_wgsl_shader(shader, stage, source.data(), source.size(),
-                                                 entry_point.data(), entry_point.size())
-                  : GRANIT_ERROR_UNSUPPORTED;
+granit_result webgpu_renderer_state::create_shader(backend_shader_resource& shader,
+                                                   granit_shader_stage stage,
+                                                   granit_shader_code_format code_format,
+                                                   std::span<const std::byte> code,
+                                                   std::string_view entry_point) noexcept {
+  if (code_format != GRANIT_SHADER_CODE_FORMAT_WGSL || !shaders_)
+    return GRANIT_ERROR_UNSUPPORTED;
+  return shaders_->create_wgsl_shader(shader, stage, reinterpret_cast<const char*>(code.data()),
+                                      code.size(), entry_point.data(), entry_point.size());
 }
 
 std::unique_ptr<backend_pipeline_layout_resource>

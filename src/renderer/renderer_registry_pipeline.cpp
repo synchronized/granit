@@ -8,7 +8,6 @@
 #include "renderer/shader_validation.h"
 
 #include <algorithm>
-#include <cstring>
 #include <limits>
 #include <new>
 #include <utility>
@@ -35,13 +34,10 @@ granit_result renderer_registry::create_shader_from_code(
     const auto interfaces = acquire_backend_interfaces(renderer);
     if (!interfaces)
       return GRANIT_ERROR_INVALID_HANDLE;
-    if ((code_format == GRANIT_SHADER_CODE_FORMAT_SPIRV && !interfaces->spirv_shaders) ||
-        (code_format == GRANIT_SHADER_CODE_FORMAT_WGSL && !interfaces->wgsl_shaders) ||
-        (code_format != GRANIT_SHADER_CODE_FORMAT_SPIRV &&
-         code_format != GRANIT_SHADER_CODE_FORMAT_WGSL)) {
-      return GRANIT_ERROR_UNSUPPORTED;
-    }
     const auto& owner = interfaces->renderer;
+    const auto& shaders = interfaces->shaders;
+    if (!shaders)
+      return GRANIT_ERROR_UNSUPPORTED;
     auto record = std::make_shared<shader_record>();
     record->owner = owner;
     record->retirement = interfaces->retirement;
@@ -49,23 +45,11 @@ granit_result renderer_registry::create_shader_from_code(
     record->entry_point.assign(entry_point);
     record->content_id = granit::tools::shader_bytes_sha256(code);
 
-    granit_result result = GRANIT_ERROR_UNSUPPORTED;
-    if (code_format == GRANIT_SHADER_CODE_FORMAT_SPIRV) {
-      const auto& shaders = interfaces->spirv_shaders;
-      record->native = shaders->allocate_shader_resource();
-      if (!record->native)
-        return GRANIT_ERROR_OUT_OF_MEMORY;
-      std::vector<std::uint32_t> words(code.size() / sizeof(std::uint32_t));
-      std::memcpy(words.data(), code.data(), code.size());
-      result = shaders->create_spirv_shader(*record->native, stage, words, entry_point);
-    } else {
-      const auto& shaders = interfaces->wgsl_shaders;
-      record->native = shaders->allocate_shader_resource();
-      if (!record->native)
-        return GRANIT_ERROR_OUT_OF_MEMORY;
-      const std::string_view source{reinterpret_cast<const char*>(code.data()), code.size()};
-      result = shaders->create_wgsl_shader(*record->native, stage, source, entry_point);
-    }
+    record->native = shaders->allocate_shader_resource();
+    if (!record->native)
+      return GRANIT_ERROR_OUT_OF_MEMORY;
+    const auto result =
+        shaders->create_shader(*record->native, stage, code_format, code, entry_point);
     if (result != GRANIT_SUCCESS)
       return result;
     std::lock_guard lock{mutex_};

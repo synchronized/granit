@@ -63,7 +63,7 @@ class vulkan_renderer_state final : public backend_renderer,
                                     public backend_pipeline_renderer,
                                     public backend_pipeline_warmup_renderer,
                                     public backend_pipeline_cache_renderer,
-                                    public backend_spirv_shader_renderer,
+                                    public backend_shader_renderer,
                                     public backend_retirement_renderer,
                                     public backend_timestamp_renderer,
                                     public backend_transfer_command_renderer,
@@ -211,12 +211,10 @@ public:
   void destroy_native_sampler(VkSampler sampler) noexcept;
   [[nodiscard]] granit_result create_native_shader(std::span<const std::uint32_t> code,
                                                    backend_shader_resource& shader) noexcept;
-  [[nodiscard]] granit_result create_spirv_shader(backend_shader_resource& shader,
-                                                  granit_shader_stage,
-                                                  std::span<const std::uint32_t> code,
-                                                  std::string_view) noexcept override {
-    return create_native_shader(code, shader);
-  }
+  [[nodiscard]] granit_result create_shader(backend_shader_resource& shader, granit_shader_stage,
+                                            granit_shader_code_format code_format,
+                                            std::span<const std::byte> code,
+                                            std::string_view) noexcept override;
   void destroy_native_shader(VkShaderModule shader) noexcept;
   [[nodiscard]] granit_result
   create_native_bind_group_layout(std::span<const granit_bind_group_layout_entry> entries,
