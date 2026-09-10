@@ -23,8 +23,8 @@ public:
   webgpu_provider_dispatch(const webgpu_provider_dispatch&) = delete;
   webgpu_provider_dispatch& operator=(const webgpu_provider_dispatch&) = delete;
 
-  /** 校验并接入静态 WebGPU 实现。 */
-  [[nodiscard]] granit_result connect(const granit_webgpu_provider_api* api) noexcept;
+  /** 接入随当前后端静态编译的 WebGPU 实现。 */
+  [[nodiscard]] granit_result open() noexcept;
   [[nodiscard]] granit_result
   create_instance(const granit_webgpu_provider_host_api* host,
                   granit_webgpu_provider_instance* out_instance) noexcept;

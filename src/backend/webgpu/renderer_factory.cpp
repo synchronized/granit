@@ -4,11 +4,7 @@
 #include "renderer/renderer_registry.h"
 #include "renderer/renderer_factory.h"
 
-#include "backend/webgpu/provider_api.h"
 #include "backend/webgpu/renderer_state.h"
-
-extern "C" const granit_webgpu_provider_api*
-granit_webgpu_provider_query(uint32_t requested_abi) noexcept;
 
 #include <new>
 
@@ -16,14 +12,13 @@ namespace granit::detail {
 
 namespace {
 
-granit_result create_webgpu_renderer(const granit_webgpu_provider_api* api,
-                                            std::uint32_t surface_types,
-                                            granit_diagnostic_callback diagnostic_callback,
-                                            void* diagnostic_user_data, granit_renderer& renderer) {
+granit_result create_webgpu_renderer(std::uint32_t surface_types,
+                                     granit_diagnostic_callback diagnostic_callback,
+                                     void* diagnostic_user_data, granit_renderer& renderer) {
   try {
     auto state = std::make_shared<webgpu_renderer_state>();
     const auto initialize_result =
-        state->initialize_static(api, surface_types, diagnostic_callback, diagnostic_user_data);
+        state->initialize_static(surface_types, diagnostic_callback, diagnostic_user_data);
     if (initialize_result != GRANIT_SUCCESS)
       return initialize_result;
 
@@ -47,9 +42,7 @@ granit_result create_default_renderer(const granit_renderer_desc& desc, granit_r
     return GRANIT_ERROR_BACKEND_UNAVAILABLE;
   const auto diagnostic_callback = desc.diagnostic_callback;
   auto* diagnostic_user_data = desc.diagnostic_user_data;
-  return create_webgpu_renderer(
-      granit_webgpu_provider_query(GRANIT_WEBGPU_PROVIDER_ABI_VERSION), surface_types,
-      diagnostic_callback, diagnostic_user_data, renderer);
+  return create_webgpu_renderer(surface_types, diagnostic_callback, diagnostic_user_data, renderer);
 }
 
 } // namespace granit::detail

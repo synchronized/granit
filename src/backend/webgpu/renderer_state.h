@@ -53,8 +53,7 @@ public:
   webgpu_renderer_state(const webgpu_renderer_state&) = delete;
   webgpu_renderer_state& operator=(const webgpu_renderer_state&) = delete;
 
-  [[nodiscard]] granit_result initialize_static(const granit_webgpu_provider_api* api,
-                                                std::uint32_t surface_types,
+  [[nodiscard]] granit_result initialize_static(std::uint32_t surface_types,
                                                 granit_diagnostic_callback diagnostic_callback,
                                                 void* diagnostic_user_data) noexcept;
   [[nodiscard]] granit_result process_backend_events() noexcept override;

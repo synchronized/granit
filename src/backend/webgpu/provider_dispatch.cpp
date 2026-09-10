@@ -10,99 +10,6 @@
 namespace granit::detail {
 namespace {
 
-bool is_compatible(const granit_webgpu_provider_api* api,
-                   granit_webgpu_provider_kind expected_kind) noexcept {
-  constexpr std::size_t minimum_size = offsetof(granit_webgpu_provider_api, instance_api) +
-                                       sizeof(const granit_webgpu_provider_instance_api*);
-  constexpr std::size_t minimum_instance_api_size =
-      offsetof(granit_webgpu_provider_instance_api, destroy_pipeline_warmup) +
-      sizeof(granit_webgpu_provider_destroy_pipeline_warmup_fn);
-  return api != nullptr && api->struct_size >= minimum_size &&
-         api->abi_version == GRANIT_WEBGPU_PROVIDER_ABI_VERSION && api->kind == expected_kind &&
-         api->reserved == 0 && api->name != nullptr && api->name_length != 0 &&
-         api->create != nullptr && api->destroy != nullptr && api->instance_api != nullptr &&
-         api->instance_api->struct_size >= minimum_instance_api_size &&
-         api->instance_api->reserved == 0 && api->instance_api->get_capabilities != nullptr &&
-         api->instance_api->create_buffer != nullptr &&
-         api->instance_api->destroy_buffer != nullptr &&
-         api->instance_api->write_buffer != nullptr && api->instance_api->read_buffer != nullptr &&
-         api->instance_api->begin_readback != nullptr &&
-         api->instance_api->poll_readback != nullptr &&
-         api->instance_api->copy_readback != nullptr &&
-         api->instance_api->destroy_readback != nullptr &&
-         api->instance_api->begin_render_pipeline_warmup != nullptr &&
-         api->instance_api->begin_compute_pipeline_warmup != nullptr &&
-         api->instance_api->poll_pipeline_warmup != nullptr &&
-         api->instance_api->destroy_pipeline_warmup != nullptr &&
-         api->instance_api->write_texture != nullptr &&
-         api->instance_api->create_texture != nullptr &&
-         api->instance_api->destroy_texture != nullptr &&
-         api->instance_api->create_texture_view != nullptr &&
-         api->instance_api->destroy_texture_view != nullptr &&
-         api->instance_api->create_sampler != nullptr &&
-         api->instance_api->destroy_sampler != nullptr &&
-         api->instance_api->create_bind_group_layout != nullptr &&
-         api->instance_api->destroy_bind_group_layout != nullptr &&
-         api->instance_api->create_bind_group != nullptr &&
-         api->instance_api->destroy_bind_group != nullptr &&
-         api->instance_api->create_shader != nullptr &&
-         api->instance_api->destroy_shader != nullptr &&
-         api->instance_api->create_pipeline_layout != nullptr &&
-         api->instance_api->destroy_pipeline_layout != nullptr &&
-         api->instance_api->create_render_pipeline != nullptr &&
-         api->instance_api->destroy_render_pipeline != nullptr &&
-         api->instance_api->create_command_recorder != nullptr &&
-         api->instance_api->destroy_command_recorder != nullptr &&
-         api->instance_api->recorder_copy_buffer_to_texture != nullptr &&
-         api->instance_api->finish_command_recorder != nullptr &&
-         api->instance_api->destroy_command_buffer != nullptr &&
-         api->instance_api->submit_command_buffer != nullptr &&
-         api->instance_api->recorder_copy_texture_to_buffer != nullptr &&
-         api->instance_api->get_instance_status != nullptr &&
-         api->instance_api->process_events != nullptr &&
-         api->instance_api->create_win32_surface != nullptr &&
-         api->instance_api->create_xcb_surface != nullptr &&
-         api->instance_api->create_wayland_surface != nullptr &&
-         api->instance_api->create_canvas_surface != nullptr &&
-         api->instance_api->destroy_surface != nullptr &&
-         api->instance_api->create_swapchain != nullptr &&
-         api->instance_api->recreate_swapchain != nullptr &&
-         api->instance_api->get_swapchain_info != nullptr &&
-         api->instance_api->acquire_swapchain != nullptr &&
-         api->instance_api->present_swapchain != nullptr &&
-         api->instance_api->cancel_swapchain != nullptr &&
-         api->instance_api->destroy_swapchain != nullptr &&
-         api->instance_api->recorder_begin_rendering != nullptr &&
-         api->instance_api->recorder_bind_pipeline != nullptr &&
-         api->instance_api->recorder_bind_graphics_groups != nullptr &&
-         api->instance_api->recorder_bind_vertex_buffers != nullptr &&
-         api->instance_api->recorder_bind_index_buffer != nullptr &&
-         api->instance_api->recorder_draw_vertices != nullptr &&
-         api->instance_api->recorder_draw_indices != nullptr &&
-         api->instance_api->recorder_end_rendering != nullptr &&
-         api->instance_api->write_upload_batch != nullptr &&
-         api->instance_api->create_compute_pipeline != nullptr &&
-         api->instance_api->destroy_compute_pipeline != nullptr &&
-         api->instance_api->recorder_begin_compute != nullptr &&
-         api->instance_api->recorder_bind_compute_pipeline != nullptr &&
-         api->instance_api->recorder_bind_compute_groups != nullptr &&
-         api->instance_api->recorder_dispatch != nullptr &&
-         api->instance_api->recorder_end_compute != nullptr &&
-         api->instance_api->recorder_set_viewports != nullptr &&
-         api->instance_api->recorder_set_scissors != nullptr &&
-         api->instance_api->recorder_copy_buffer != nullptr &&
-         api->instance_api->recorder_copy_buffer_to_texture_v2 != nullptr &&
-         api->instance_api->recorder_copy_texture_to_buffer_v2 != nullptr &&
-         api->instance_api->recorder_copy_texture != nullptr &&
-         api->instance_api->recorder_fill_buffer != nullptr &&
-         api->instance_api->recorder_generate_mipmaps != nullptr &&
-         api->instance_api->create_timestamp_query_pool != nullptr &&
-         api->instance_api->destroy_timestamp_query_pool != nullptr &&
-         api->instance_api->recorder_reset_timestamp_queries != nullptr &&
-         api->instance_api->recorder_write_timestamp != nullptr &&
-         api->instance_api->read_timestamp_query_results != nullptr;
-}
-
 bool is_valid_host(const granit_webgpu_provider_host_api* host) noexcept {
   constexpr std::size_t minimum_size =
       offsetof(granit_webgpu_provider_host_api, allocator_user_data) + sizeof(void*);
@@ -114,12 +21,9 @@ bool is_valid_host(const granit_webgpu_provider_host_api* host) noexcept {
 
 webgpu_provider_dispatch::~webgpu_provider_dispatch() { close(); }
 
-granit_result webgpu_provider_dispatch::connect(const granit_webgpu_provider_api* api) noexcept {
+granit_result webgpu_provider_dispatch::open() noexcept {
   close();
-  if (!is_compatible(api, GRANIT_WEBGPU_PROVIDER_KIND_WEBGPU)) {
-    return GRANIT_ERROR_INCOMPATIBLE_DRIVER;
-  }
-  api_ = api;
+  api_ = &static_webgpu_provider_api();
   return GRANIT_SUCCESS;
 }
 

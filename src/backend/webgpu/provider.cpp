@@ -22,12 +22,6 @@
 
 #include <webgpu/webgpu.h>
 
-#if defined(_WIN32)
-#define GRANIT_WEBGPU_PROVIDER_EXPORT __declspec(dllexport)
-#else
-#define GRANIT_WEBGPU_PROVIDER_EXPORT __attribute__((visibility("default")))
-#endif
-
 namespace {
 
 uint32_t texture_compression_features(WGPUDevice device) noexcept {
@@ -4839,7 +4833,8 @@ constexpr granit_webgpu_provider_api provider_api{sizeof(granit_webgpu_provider_
 
 } // namespace
 
-extern "C" GRANIT_WEBGPU_PROVIDER_EXPORT const granit_webgpu_provider_api*
-granit_webgpu_provider_query(uint32_t requested_abi) noexcept {
-  return requested_abi == GRANIT_WEBGPU_PROVIDER_ABI_VERSION ? &provider_api : nullptr;
-}
+namespace granit::detail {
+
+const granit_webgpu_provider_api& static_webgpu_provider_api() noexcept { return provider_api; }
+
+} // namespace granit::detail

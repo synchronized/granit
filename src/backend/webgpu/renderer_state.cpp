@@ -129,7 +129,7 @@ void webgpu_renderer_state::diagnose(granit_diagnostic_severity severity,
 }
 
 granit_result webgpu_renderer_state::initialize_static(
-    const granit_webgpu_provider_api* api, std::uint32_t surface_types,
+    std::uint32_t surface_types,
     granit_diagnostic_callback diagnostic_callback, void* diagnostic_user_data) noexcept {
   if (instance_ != 0 || provider_.is_open()) {
     return GRANIT_ERROR_INVALID_ARGUMENT;
@@ -137,7 +137,7 @@ granit_result webgpu_renderer_state::initialize_static(
   diagnostic_callback_ = diagnostic_callback;
   diagnostic_user_data_ = diagnostic_user_data;
   surface_types_ = surface_types;
-  auto result = provider_.connect(api);
+  auto result = provider_.open();
   if (result != GRANIT_SUCCESS) {
     lifecycle_ = {backend_lifecycle_state::failed, result};
     return result;

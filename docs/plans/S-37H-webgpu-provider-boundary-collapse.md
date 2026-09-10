@@ -5,7 +5,7 @@
 
 ## 状态
 
-**实现中。** 设计已确认并纳入 0.21.0；当前开始迁移内部实现。
+**实现中。** 设计已确认并纳入 0.21.0；S-37H1 已完成，当前迁移资源与 Shader。
 
 ## 背景与目标
 
@@ -44,8 +44,8 @@ Renderer Registry -> 私有 HAL -> WebGPU renderer state / domain adapter
 
 ## 实施顺序
 
-1. **S-37H1 Context 与生命周期**：建立后端私有 WebGPU Context，直接承接实例创建、Adapter/Device
-   初始化、事件轮询、能力查询、诊断和销毁；Renderer factory 不再查询 Provider ABI。
+1. **S-37H1 Context 与生命周期（已完成）**：Renderer factory 已直接创建静态 WebGPU 后端，实例
+   生命周期由内部入口接入，不再查询导出符号或按 Provider ABI 版本选择实现。
 2. **S-37H2 资源与 Shader**：让 resource、shader 和 timestamp adapter 直接调用 Context，使用
    后端私有类型表达 Buffer、Texture、View、Sampler、Shader 与 Query 资源。
 3. **S-37H3 Pipeline 与命令**：迁移 Bind Group、Pipeline、Command Encoder、Render/Compute Pass、

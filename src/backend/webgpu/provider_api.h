@@ -920,4 +920,13 @@ typedef struct granit_webgpu_provider_api {
 typedef const granit_webgpu_provider_api* (*granit_webgpu_provider_query_fn)(
     uint32_t requested_abi);
 
+#if defined(__cplusplus)
+namespace granit::detail {
+
+/** 返回随 WebGPU 后端静态编译的实现表。 */
+[[nodiscard]] const granit_webgpu_provider_api& static_webgpu_provider_api() noexcept;
+
+} // namespace granit::detail
+#endif
+
 #endif
