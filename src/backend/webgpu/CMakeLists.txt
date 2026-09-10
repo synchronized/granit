@@ -16,8 +16,6 @@ target_sources(
     renderer_state_submission.cpp
     renderer_state_timestamp.cpp
     renderer_state_transfer.cpp
-    shader_adapter.cpp
-    timestamp_adapter.cpp
     renderer_factory.cpp
 )
 

@@ -26,8 +26,6 @@
 #include "backend/webgpu/pipeline_adapter.h"
 #include "backend/webgpu/presentation_adapter.h"
 #include "backend/webgpu/resource_adapter.h"
-#include "backend/webgpu/shader_adapter.h"
-#include "backend/webgpu/timestamp_adapter.h"
 
 namespace granit::detail {
 
@@ -326,6 +324,9 @@ private:
                        const char* message, std::uint32_t message_length, void* user_data) noexcept;
   [[nodiscard]] granit_result refresh_state() noexcept;
   [[nodiscard]] granit_result finish_initialization() noexcept;
+  [[nodiscard]] webgpu_shader native_shader(backend_shader_resource& resource) const noexcept;
+  [[nodiscard]] webgpu_timestamp_query_pool
+  native_timestamp_query_pool(backend_timestamp_query_pool_resource& resource) const noexcept;
 
   webgpu_context context_;
   webgpu_instance_handle instance_{};
@@ -339,10 +340,8 @@ private:
   submission_serial next_submission_serial_{1};
   std::unique_ptr<webgpu_presentation_adapter> presentation_;
   std::unique_ptr<webgpu_resource_adapter> resources_;
-  std::unique_ptr<webgpu_shader_adapter> shaders_;
   std::unique_ptr<webgpu_pipeline_adapter> pipelines_;
   std::unique_ptr<webgpu_command_adapter> commands_;
-  std::unique_ptr<webgpu_timestamp_adapter> timestamps_;
 };
 
 } // namespace granit::detail

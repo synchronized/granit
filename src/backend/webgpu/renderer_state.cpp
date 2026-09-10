@@ -89,11 +89,9 @@ webgpu_renderer_state::texture_format_capabilities(granit_texture_format format)
 
 webgpu_renderer_state::~webgpu_renderer_state() {
   presentation_.reset();
-  timestamps_.reset();
   resources_.reset();
   commands_.reset();
   pipelines_.reset();
-  shaders_.reset();
   if (instance_ != 0) {
     static_cast<void>(context_.destroy_instance(instance_));
     instance_ = 0;
@@ -200,8 +198,8 @@ granit_result webgpu_renderer_state::refresh_state() noexcept {
     return GRANIT_ERROR_INTERNAL;
   }
 
-  if (presentation_ == nullptr || resources_ == nullptr || shaders_ == nullptr ||
-      pipelines_ == nullptr || commands_ == nullptr) {
+  if (presentation_ == nullptr || resources_ == nullptr || pipelines_ == nullptr ||
+      commands_ == nullptr) {
     webgpu_capabilities capabilities{};
     capabilities.struct_size = sizeof(capabilities);
     const auto capabilities_result = context_.get_capabilities(instance_, &capabilities);
@@ -232,16 +230,12 @@ granit_result webgpu_renderer_state::refresh_state() noexcept {
     try {
       auto presentation = std::make_unique<webgpu_presentation_adapter>(context_, instance_);
       auto resources = std::make_unique<webgpu_resource_adapter>(context_, instance_);
-      auto shaders = std::make_unique<webgpu_shader_adapter>(context_, instance_);
       auto pipelines = std::make_unique<webgpu_pipeline_adapter>(context_, instance_);
       auto commands = std::make_unique<webgpu_command_adapter>(context_, instance_);
-      auto timestamps = std::make_unique<webgpu_timestamp_adapter>(context_, instance_);
       presentation_ = std::move(presentation);
       resources_ = std::move(resources);
-      shaders_ = std::move(shaders);
       pipelines_ = std::move(pipelines);
       commands_ = std::move(commands);
-      timestamps_ = std::move(timestamps);
     } catch (const std::bad_alloc&) {
       lifecycle_ = {backend_lifecycle_state::failed, GRANIT_ERROR_OUT_OF_MEMORY};
       return GRANIT_ERROR_OUT_OF_MEMORY;
