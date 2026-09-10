@@ -15,13 +15,13 @@ WebGPU 已由 [ADR-005](../decisions/ADR-005-browser-only-webgpu.md) 收敛为 E
 `provider_dispatch` 来自早期可插拔桌面 Provider 设计，在当前部署模型中不再隔离动态模块，反而让
 每次内部调用经过整数句柄、C 函数表和重复能力校验。
 
-本任务删除这层历史边界，将真实 WebGPU 实现改为后端私有的 C++ Context。HAL 契约继续隔离
-Renderer 与具体后端，资源、命令、Pipeline、呈现、Shader 和 Timestamp adapter 继续划分实现职责。
-目标调用路径为：
+本任务删除这层历史边界，并参考 Vulkan 后端收敛内部结构。HAL 契约继续隔离 Renderer 与具体后端，
+`webgpu_renderer_state` 在按领域拆分的实现文件中直接实现资源、命令、Pipeline、呈现、Shader 和
+Timestamp 契约；设备生命周期和原生资源由职责单一的后端私有对象承载。目标调用路径为：
 
 ```text
-Renderer Registry -> 私有 HAL -> WebGPU renderer state / domain adapter
-                  -> WebGPU context -> Emdawnwebgpu
+Renderer Registry -> 私有 HAL -> WebGPU renderer state 的领域实现
+                  -> WebGPU 原生设备/资源对象 -> Emdawnwebgpu
 ```
 
 ## 非目标
@@ -30,15 +30,16 @@ Renderer Registry -> 私有 HAL -> WebGPU renderer state / domain adapter
 - 不改变 Vulkan 后端行为，也不把 WebGPU 类型放入公共头文件或通用 HAL 契约。
 - 不恢复桌面 Dawn、动态 Provider、wgpu-native、Android 或新的 WebGPU 部署形式。
 - 不增加新的渲染能力，不借此改写资源状态、同步或 Pipeline 语义。
-- 不把已经拆分的 domain adapter 合并回 `webgpu_renderer_state`。
+- 不强行统一 Vulkan 与 WebGPU 的原生 API、同步模型和异步语义。
 
 ## 已确认决策
 
-- 保留 `backend/contracts`、Renderer Registry、`webgpu_renderer_state` 和按领域拆分的 adapter。
+- 保留 `backend/contracts`、Renderer Registry 和 `webgpu_renderer_state`；参考 Vulkan 后端将具体实现按
+  领域拆分到 `renderer_state_*.cpp`，不再保留一一转发的 adapter 对象。
 - 删除内部版本化 Provider ABI、查询符号、函数表与 `provider_dispatch`；私有实现无需兼容旧入口。
-- 将 `provider.cpp` 中的真实 Emdawnwebgpu 逻辑迁移为后端私有 C++ Context，不只进行文件改名。
-- Context 直接拥有 Instance、Adapter、Device、Queue、Surface 和异步回调状态；adapter 通过明确的
-  C++ 方法调用它。
+- 将 `provider.cpp` 中的真实 Emdawnwebgpu 逻辑迁移为后端私有 C++ 实现，不只进行文件改名。
+- 设备生命周期对象集中拥有 Instance、Adapter、Device、Queue、能力、诊断和异步回调状态；Surface、
+  Swapchain、资源、命令记录器等使用与 Vulkan 后端相同思路的职责单一对象。
 - Provider 整数句柄逐领域替换为后端私有强类型对象，保持 generation、所有权和延迟销毁校验。
 - 保留当前异步初始化、Device Lost、诊断、浏览器 Surface 和 Pipeline 异步创建语义。
 - 每个迁移阶段保持可构建，并运行对应单元测试；涉及呈现和异步路径后运行浏览器 WebGPU Smoke。
@@ -55,14 +56,16 @@ Renderer Registry -> 私有 HAL -> WebGPU renderer state / domain adapter
    Device Lost 路径已迁移，并通过浏览器窗口、离屏渲染、Resize 与资源释放回归。
 5. **S-37H5 删除历史边界（已完成）**：已删除 `provider_api.h`、`provider_dispatch.*`、Provider
    ABI 版本、运行时函数表、查询符号和旧类型命名；内部描述集中到 `types.h`。
-6. **S-37H6 adapter 与 Context 职责收敛**：Context 只保留 Instance、Adapter、Device、Queue、能力、
-   诊断和 Device Lost 等共享设备状态；资源、Pipeline、命令、呈现和 Timestamp 实现按领域下沉到
-   对应 adapter，不保留 `adapter -> Context` 的同名机械转发接口。
+6. **S-37H6 adapter 与 Context 职责收敛**：参考 Vulkan 后端删除 command、resource、shader、
+   pipeline、presentation 和 timestamp adapter 类及文件，将 HAL 实现移入对应
+   `renderer_state_*.cpp`。Context 不再作为覆盖全部领域的操作门面，只保留 Instance、Adapter、
+   Device、Queue、能力、诊断、Device Lost 和异步初始化等共享设备生命周期状态；Surface、Swapchain、
+   资源和命令记录器逐步拆为职责单一的原生辅助对象。
 7. **S-37H7 文档与发布验收**：更新架构概念与实现状态，完成 Emscripten、浏览器 WebGPU、Vulkan、
    Windows 共享/静态及 Documentation 回归，并并入 S-37G 发布验收。
 
-各阶段允许根据真实依赖调整 adapter 的迁移分组，但不得长期保留 Context 与 Provider 两套平行调用
-路径。过渡代码只在同一特性分支内存在，不形成兼容承诺。
+各阶段允许根据真实依赖调整迁移分组，但不得长期保留 renderer state、adapter 和 Context 的逐层
+同名转发。过渡代码只在同一特性分支内存在，不形成兼容承诺。
 
 ## 测试与验收
 
@@ -77,11 +80,11 @@ Renderer Registry -> 私有 HAL -> WebGPU renderer state / domain adapter
 
 ## 风险与未决问题
 
-- `provider.cpp` 覆盖资源、命令、Pipeline、呈现和异步回调，直接一次性替换容易破坏生命周期；按
-  领域迁移并在每阶段保持测试可运行。
-- Emdawnwebgpu 对象的引用计数和回调 user data 生命周期必须由 Context 明确拥有，不能因去掉整数
-  句柄表而放松悬空访问检查。
+- 当前 Context 覆盖资源、命令、Pipeline、呈现和异步回调，一次性拆分容易破坏生命周期；按领域迁移
+  并在每阶段保持测试可运行。
+- Emdawnwebgpu 对象的引用计数和回调 user data 生命周期必须由设备生命周期对象及对应资源对象明确
+  拥有，不能因减少转发层而放松悬空访问检查。
 - 浏览器 WebGPU 是此实现的唯一运行平台，关键行为不能只依赖主机侧 mock；呈现、异步与 Device Lost
   相关阶段必须运行真实浏览器回归。
-- 若迁移发现某项函数表确实隔离了独立生命周期或并发约束，应把该约束转为 Context 的显式 C++ 接口，
-  不恢复版本化 Provider ABI。
+- 若迁移发现某项函数确实隔离了独立生命周期或并发约束，应把该约束放入职责对应的原生辅助对象，
+  不恢复版本化 Provider ABI 或通用操作门面。
