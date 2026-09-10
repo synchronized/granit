@@ -5,8 +5,7 @@
 
 ## 状态
 
-**实现中。** 设计已确认并纳入 0.21.0；S-37H1 和历史 Provider 边界删除已完成，当前收敛资源
-句柄与生命周期类型。
+**实现中。** 设计已确认并纳入 0.21.0；S-37H1～S-37H5 已完成，当前进行文档与发布回归。
 
 ## 背景与目标
 
@@ -47,12 +46,12 @@ Renderer Registry -> 私有 HAL -> WebGPU renderer state / domain adapter
 
 1. **S-37H1 Context 与生命周期（已完成）**：Renderer factory 已直接创建静态 WebGPU 后端，实例
    生命周期由内部入口接入，不再查询导出符号或按 Provider ABI 版本选择实现。
-2. **S-37H2 资源与 Shader**：让 resource、shader 和 timestamp adapter 直接调用 Context，使用
-   后端私有类型表达 Buffer、Texture、View、Sampler、Shader 与 Query 资源。
-3. **S-37H3 Pipeline 与命令**：迁移 Bind Group、Pipeline、Command Encoder、Render/Compute Pass、
-   提交、复制和回读路径，并保持异步 Pipeline 的资源保活与完成通知。
-4. **S-37H4 呈现与帧生命周期**：迁移 Surface 配置、Backbuffer 获取、Present、帧完成和 Device Lost
-   路径，完成浏览器窗口与离屏渲染回归。
+2. **S-37H2 资源与 Shader（已完成）**：resource、shader 和 timestamp adapter 已直接调用 Context；
+   Buffer、Texture、View、Sampler、Shader 与 Query 使用互不混用的后端私有句柄类型。
+3. **S-37H3 Pipeline 与命令（已完成）**：Bind Group、Pipeline、Command Encoder、Render/Compute
+   Pass、提交、复制和回读已迁移，并通过异步 Pipeline 与上传回滚浏览器回归。
+4. **S-37H4 呈现与帧生命周期（已完成）**：Surface 配置、Backbuffer 获取、Present、帧完成和
+   Device Lost 路径已迁移，并通过浏览器窗口、离屏渲染、Resize 与资源释放回归。
 5. **S-37H5 删除历史边界（已完成）**：已删除 `provider_api.h`、`provider_dispatch.*`、Provider
    ABI 版本、运行时函数表、查询符号和旧类型命名；内部描述集中到 `types.h`。
 6. **S-37H6 文档与发布验收**：更新架构概念与实现状态，完成 Emscripten、浏览器 WebGPU、Vulkan、

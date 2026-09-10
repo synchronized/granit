@@ -4,7 +4,9 @@
 #ifndef GRANIT_WEBGPU_TYPES_H_
 #define GRANIT_WEBGPU_TYPES_H_
 
-#include <stdint.h>
+#include <cstdint>
+#include <functional>
+#include <type_traits>
 
 #include <granit/core/diagnostic.h>
 #include <granit/core/result.h>
@@ -14,24 +16,48 @@
 #define GRANIT_WEBGPU_SURFACE_TYPE_WAYLAND_BIT UINT32_C(0x00000004)
 #define GRANIT_WEBGPU_SURFACE_TYPE_CANVAS_BIT UINT32_C(0x00000008)
 
-typedef uint64_t webgpu_instance_handle;
-typedef uint64_t webgpu_buffer;
-typedef uint64_t webgpu_texture;
-typedef uint64_t webgpu_texture_view;
-typedef uint64_t webgpu_sampler;
-typedef uint64_t webgpu_bind_group_layout;
-typedef uint64_t webgpu_bind_group;
-typedef uint64_t webgpu_shader;
-typedef uint64_t webgpu_pipeline_layout;
-typedef uint64_t webgpu_render_pipeline;
-typedef uint64_t webgpu_compute_pipeline;
-typedef uint64_t webgpu_command_recorder;
-typedef uint64_t webgpu_command_buffer;
-typedef uint64_t webgpu_surface;
-typedef uint64_t webgpu_swapchain;
-typedef uint64_t webgpu_timestamp_query_pool;
-typedef uint64_t webgpu_readback;
-typedef uint64_t webgpu_pipeline_warmup;
+/** Context 内部资源句柄；Tag 阻止不同资源类型相互混用。 */
+template <typename Tag> struct webgpu_handle {
+  std::uint64_t value{};
+
+  constexpr webgpu_handle() noexcept = default;
+  constexpr webgpu_handle(std::uint64_t handle) noexcept : value(handle) {}
+
+  [[nodiscard]] explicit constexpr operator std::uint64_t() const noexcept { return value; }
+  [[nodiscard]] constexpr bool operator==(const webgpu_handle&) const noexcept = default;
+};
+
+namespace std {
+
+template <typename Tag> struct hash<webgpu_handle<Tag>> {
+  [[nodiscard]] constexpr std::size_t operator()(webgpu_handle<Tag> handle) const noexcept {
+    return std::hash<std::uint64_t>{}(handle.value);
+  }
+};
+
+} // namespace std
+
+using webgpu_instance_handle = webgpu_handle<struct webgpu_instance_tag>;
+using webgpu_buffer = webgpu_handle<struct webgpu_buffer_tag>;
+using webgpu_texture = webgpu_handle<struct webgpu_texture_tag>;
+using webgpu_texture_view = webgpu_handle<struct webgpu_texture_view_tag>;
+using webgpu_sampler = webgpu_handle<struct webgpu_sampler_tag>;
+using webgpu_bind_group_layout = webgpu_handle<struct webgpu_bind_group_layout_tag>;
+using webgpu_bind_group = webgpu_handle<struct webgpu_bind_group_tag>;
+using webgpu_shader = webgpu_handle<struct webgpu_shader_tag>;
+using webgpu_pipeline_layout = webgpu_handle<struct webgpu_pipeline_layout_tag>;
+using webgpu_render_pipeline = webgpu_handle<struct webgpu_render_pipeline_tag>;
+using webgpu_compute_pipeline = webgpu_handle<struct webgpu_compute_pipeline_tag>;
+using webgpu_command_recorder = webgpu_handle<struct webgpu_command_recorder_tag>;
+using webgpu_command_buffer = webgpu_handle<struct webgpu_command_buffer_tag>;
+using webgpu_surface = webgpu_handle<struct webgpu_surface_tag>;
+using webgpu_swapchain = webgpu_handle<struct webgpu_swapchain_tag>;
+using webgpu_timestamp_query_pool = webgpu_handle<struct webgpu_timestamp_query_pool_tag>;
+using webgpu_readback = webgpu_handle<struct webgpu_readback_tag>;
+using webgpu_pipeline_warmup = webgpu_handle<struct webgpu_pipeline_warmup_tag>;
+
+static_assert(!std::is_convertible_v<webgpu_buffer, webgpu_texture>);
+static_assert(!std::is_convertible_v<webgpu_shader, webgpu_render_pipeline>);
 
 #define GRANIT_WEBGPU_FEATURE_TIMESTAMP_QUERY_BIT (UINT64_C(1) << 0)
 
