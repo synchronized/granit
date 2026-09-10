@@ -39,6 +39,7 @@ enum class resource_type : std::uint8_t {
   async_operation = 20,
   readback_batch = 21,
   pipeline_warmup_batch = 22,
+  shader_library = 23,
 };
 
 /**

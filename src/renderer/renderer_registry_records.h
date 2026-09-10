@@ -6,9 +6,10 @@
 
 #include <future>
 
+#include "assets/shader_asset.h"
+#include "assets/shader_library.h"
 #include "core/async_operation_state.h"
 #include "renderer/renderer_registry.h"
-#include "assets/shader_asset.h"
 
 namespace granit::detail {
 
@@ -84,6 +85,12 @@ struct renderer_registry::shader_record {
   granit_shader_stage stage{};
   std::string entry_point;
   granit::tools::shader_cache_key content_id{};
+};
+struct renderer_registry::shader_library_record {
+  resource_metadata metadata;
+  std::shared_ptr<backend_renderer> owner;
+  std::span<const std::byte> archive;
+  granit::tools::shader_library_view view;
 };
 struct renderer_registry::bind_group_layout_record {
   resource_metadata metadata;

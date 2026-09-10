@@ -82,12 +82,14 @@ target_sources(
     renderer/renderer_registry_presentation.cpp
     renderer/renderer_registry_readback.cpp
     renderer/renderer_registry_rendering.cpp
+    renderer/renderer_registry_shader_library.cpp
     renderer/renderer_registry_texture.cpp
     renderer/renderer_registry_timestamp.cpp
     renderer/renderer_registry_transfer.cpp
     renderer/renderer_registry_warmup.cpp
     renderer/sampler_api.cpp
     renderer/shader_api.cpp
+    renderer/shader_library_api.cpp
     renderer/surface_api.cpp
     renderer/swapchain_api.cpp
     renderer/texture_api.cpp
@@ -135,6 +137,8 @@ target_sources(
       "${PROJECT_SOURCE_DIR}/include/granit/renderer/sampler.hpp"
       "${PROJECT_SOURCE_DIR}/include/granit/renderer/shader.h"
       "${PROJECT_SOURCE_DIR}/include/granit/renderer/shader.hpp"
+      "${PROJECT_SOURCE_DIR}/include/granit/renderer/shader_library.h"
+      "${PROJECT_SOURCE_DIR}/include/granit/renderer/shader_library.hpp"
       "${PROJECT_SOURCE_DIR}/include/granit/renderer/surface.h"
       "${PROJECT_SOURCE_DIR}/include/granit/renderer/surface.hpp"
       "${PROJECT_SOURCE_DIR}/include/granit/renderer/texture.h"

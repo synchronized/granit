@@ -76,6 +76,7 @@ add_library(
     headers/resource_types_h.c
     headers/sampler_h.c
     headers/shader_h.c
+    headers/shader_library_h.c
     headers/result_h.c
     headers/surface_h.c
     headers/swapchain_h.c
@@ -496,6 +497,7 @@ add_executable(
   renderer/renderer_test.cpp
   renderer/sampler_test.cpp
   renderer/shader_test.cpp
+  renderer/shader_library_test.cpp
   renderer/surface_test.cpp
   renderer/swapchain_test.cpp
   renderer/texture_test.cpp

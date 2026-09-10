@@ -27,6 +27,7 @@
 #include <granit/renderer/renderer.h>
 #include <granit/renderer/sampler.h>
 #include <granit/renderer/shader.h>
+#include <granit/renderer/shader_library.h>
 #include <granit/renderer/surface.h>
 #include <granit/renderer/swapchain.h>
 #include <granit/renderer/texture.h>
@@ -197,6 +198,14 @@ public:
                                                       std::string_view entry_point,
                                                       granit_shader& shader);
   [[nodiscard]] granit_result destroy_shader(granit_renderer renderer, granit_shader shader);
+  [[nodiscard]] granit_result create_shader_library(granit_renderer renderer,
+                                                    std::span<const std::byte> archive,
+                                                    granit_shader_library& library);
+  [[nodiscard]] granit_result get_shader_library_info(granit_renderer renderer,
+                                                      granit_shader_library library,
+                                                      granit_shader_library_info& info);
+  [[nodiscard]] granit_result destroy_shader_library(granit_renderer renderer,
+                                                     granit_shader_library library);
   [[nodiscard]] granit_result
   create_bind_group_layout(granit_renderer renderer,
                            std::span<const granit_bind_group_layout_entry> entries,
@@ -452,6 +461,7 @@ private:
   struct texture_view_record;
   struct sampler_record;
   struct shader_record;
+  struct shader_library_record;
   struct bind_group_layout_record;
   struct pipeline_layout_record;
   struct bind_group_record;
@@ -505,6 +515,8 @@ private:
   std::unordered_map<granit_texture_view, std::shared_ptr<texture_view_record>> texture_views_;
   std::unordered_map<granit_sampler, std::shared_ptr<sampler_record>> samplers_;
   std::unordered_map<granit_shader, std::shared_ptr<shader_record>> shaders_;
+  std::unordered_map<granit_shader_library, std::shared_ptr<shader_library_record>>
+      shader_libraries_;
   std::unordered_map<granit_pipeline_layout, std::shared_ptr<pipeline_layout_record>>
       pipeline_layouts_;
   std::unordered_map<granit_bind_group_layout, std::shared_ptr<bind_group_layout_record>>

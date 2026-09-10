@@ -110,6 +110,7 @@
 - [Command Recorder](reference/command-recorder.md)
 - [Frame Context](reference/frame-context.md)
 - [Shader Module](reference/shader.md)
+- [Shader Library](reference/shader-library.md)
 - [Graphics 与 Compute Pipeline](reference/pipeline.md)
 
 ### 高级 Render Pipeline component
