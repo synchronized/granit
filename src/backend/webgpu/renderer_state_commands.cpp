@@ -44,7 +44,7 @@ granit_result webgpu_renderer_state::bind_compute_groups(
     std::uint32_t first_group, std::span<backend_bind_group_resource* const> bind_groups,
     std::span<const std::uint32_t> dynamic_offsets, std::span<const backend_buffer_access>,
     std::span<const backend_texture_access>) {
-  if (!commands_ || !resources_ || !pipelines_ || bind_groups.empty())
+  if (!commands_ || !resource_owner_ || !pipelines_ || bind_groups.empty())
     return GRANIT_ERROR_INVALID_ARGUMENT;
   try {
     std::vector<webgpu_bind_group> native_groups;
@@ -52,7 +52,7 @@ granit_result webgpu_renderer_state::bind_compute_groups(
     for (auto* group : bind_groups) {
       if (group == nullptr)
         return GRANIT_ERROR_INVALID_ARGUMENT;
-      const auto native = resources_->native_bind_group(*group);
+      const auto native = native_bind_group(*group);
       if (native == 0)
         return GRANIT_ERROR_INVALID_ARGUMENT;
       native_groups.push_back(native);
@@ -116,7 +116,7 @@ granit_result webgpu_renderer_state::bind_graphics_groups(
     std::span<const backend_texture_access> texture_accesses) {
   static_cast<void>(buffer_accesses);
   static_cast<void>(texture_accesses);
-  if (!commands_ || !resources_ || !pipelines_ || bind_groups.empty())
+  if (!commands_ || !resource_owner_ || !pipelines_ || bind_groups.empty())
     return GRANIT_ERROR_INVALID_ARGUMENT;
   try {
     std::vector<webgpu_bind_group> native_groups;
@@ -124,7 +124,7 @@ granit_result webgpu_renderer_state::bind_graphics_groups(
     for (auto* bind_group : bind_groups) {
       if (bind_group == nullptr)
         return GRANIT_ERROR_INVALID_ARGUMENT;
-      const auto native = resources_->native_bind_group(*bind_group);
+      const auto native = native_bind_group(*bind_group);
       if (native == 0)
         return GRANIT_ERROR_INVALID_ARGUMENT;
       native_groups.push_back(native);
@@ -144,13 +144,13 @@ granit_result webgpu_renderer_state::bind_graphics_groups(
 granit_result webgpu_renderer_state::bind_vertex_buffers(
     backend_command_recorder_resource& recorder, std::uint32_t first,
     std::span<backend_buffer_resource* const> buffers, std::span<const std::uint64_t> offsets) {
-  if (!commands_ || !resources_ || buffers.empty() || buffers.size() != offsets.size())
+  if (!commands_ || !resource_owner_ || buffers.empty() || buffers.size() != offsets.size())
     return GRANIT_ERROR_INVALID_ARGUMENT;
   std::vector<webgpu_vertex_buffer_binding> bindings;
   try {
     bindings.reserve(buffers.size());
     for (std::size_t index = 0; index < buffers.size(); ++index) {
-      const auto native = resources_->native_buffer(*buffers[index]);
+      const auto native = native_buffer(*buffers[index]);
       if (native == 0)
         return GRANIT_ERROR_INVALID_ARGUMENT;
       bindings.push_back({native, offsets[index]});
@@ -167,9 +167,9 @@ granit_result webgpu_renderer_state::bind_index_buffer(backend_command_recorder_
                                                        backend_buffer_resource& buffer,
                                                        std::uint64_t offset,
                                                        granit_index_type type) {
-  if (!commands_ || !resources_)
+  if (!commands_ || !resource_owner_)
     return GRANIT_ERROR_UNSUPPORTED;
-  const auto native = resources_->native_buffer(buffer);
+  const auto native = native_buffer(buffer);
   if (native == 0)
     return GRANIT_ERROR_INVALID_ARGUMENT;
   const auto format = type == GRANIT_INDEX_TYPE_UINT16 ? GRANIT_WEBGPU_INDEX_FORMAT_UINT16
@@ -222,15 +222,15 @@ webgpu_renderer_state::set_scissors(backend_command_recorder_resource& recorder,
 granit_result webgpu_renderer_state::copy_buffer(
     backend_command_recorder_resource& recorder, backend_buffer_resource& source,
     backend_buffer_resource& destination, std::span<const granit_buffer_copy_region> regions) {
-  if (!commands_ || !resources_)
+  if (!commands_ || !resource_owner_)
     return GRANIT_ERROR_NOT_READY;
   try {
     std::vector<webgpu_buffer_copy_region> native;
     native.reserve(regions.size());
     for (const auto& region : regions)
       native.push_back({region.source_offset, region.destination_offset, region.size});
-    return commands_->copy_buffer(recorder, resources_->native_buffer(source),
-                                  resources_->native_buffer(destination), native);
+    return commands_->copy_buffer(recorder, native_buffer(source), native_buffer(destination),
+                                  native);
   } catch (const std::bad_alloc&) {
     return GRANIT_ERROR_OUT_OF_MEMORY;
   } catch (...) {
@@ -242,7 +242,7 @@ granit_result webgpu_renderer_state::copy_texture_to_buffer(
     backend_command_recorder_resource& recorder, backend_texture_resource& source,
     backend_buffer_resource& destination, granit_texture_format format,
     const granit_texture_data_layout& layout, const granit_texture_write_region& region) {
-  if (!commands_ || !resources_)
+  if (!commands_ || !resource_owner_)
     return GRANIT_ERROR_NOT_READY;
   const auto block = texture_format_block(format);
   if (block.bytes == 0)
@@ -263,15 +263,15 @@ granit_result webgpu_renderer_state::copy_texture_to_buffer(
       region.width,
       region.height,
       region.depth};
-  return commands_->copy_texture_to_buffer(recorder, resources_->native_texture(source),
-                                           resources_->native_buffer(destination), native);
+  return commands_->copy_texture_to_buffer(recorder, native_texture(source),
+                                           native_buffer(destination), native);
 }
 
 granit_result webgpu_renderer_state::copy_buffer_to_texture(
     backend_command_recorder_resource& recorder, backend_buffer_resource& source,
     backend_texture_resource& destination, granit_texture_format format,
     const granit_texture_data_layout& layout, const granit_texture_write_region& region) {
-  if (!commands_ || !resources_)
+  if (!commands_ || !resource_owner_)
     return GRANIT_ERROR_NOT_READY;
   const auto block = texture_format_block(format);
   if (block.bytes == 0)
@@ -292,15 +292,15 @@ granit_result webgpu_renderer_state::copy_buffer_to_texture(
       region.width,
       region.height,
       region.depth};
-  return commands_->copy_buffer_to_texture(recorder, resources_->native_buffer(source),
-                                           resources_->native_texture(destination), native);
+  return commands_->copy_buffer_to_texture(recorder, native_buffer(source),
+                                           native_texture(destination), native);
 }
 
 granit_result webgpu_renderer_state::copy_texture(backend_command_recorder_resource& recorder,
                                                   backend_texture_resource& source,
                                                   backend_texture_resource& destination,
                                                   const granit_texture_copy_region& region) {
-  if (!commands_ || !resources_)
+  if (!commands_ || !resource_owner_)
     return GRANIT_ERROR_NOT_READY;
   const webgpu_texture_copy_region native{
       region.source_mip_level,
@@ -318,8 +318,8 @@ granit_result webgpu_renderer_state::copy_texture(backend_command_recorder_resou
       region.width,
       region.height,
       region.depth};
-  return commands_->copy_texture(recorder, resources_->native_texture(source),
-                                 resources_->native_texture(destination), native);
+  return commands_->copy_texture(recorder, native_texture(source), native_texture(destination),
+                                 native);
 }
 
 bool webgpu_renderer_state::texture_supports_linear_blit(
@@ -335,20 +335,20 @@ granit_result webgpu_renderer_state::generate_mipmaps(backend_command_recorder_r
                                                       backend_texture_resource& texture,
                                                       const granit_texture_desc&,
                                                       const granit_texture_mipmap_range& range) {
-  if (!commands_ || !resources_)
+  if (!commands_ || !resource_owner_)
     return GRANIT_ERROR_NOT_READY;
   const webgpu_texture_mipmap_range native{range.base_mip_level, range.level_count,
                                            range.base_array_layer, range.array_layer_count};
-  return commands_->generate_mipmaps(recorder, resources_->native_texture(texture), native);
+  return commands_->generate_mipmaps(recorder, native_texture(texture), native);
 }
 
 granit_result webgpu_renderer_state::fill_buffer(backend_command_recorder_resource& recorder,
                                                  backend_buffer_resource& buffer,
                                                  std::uint64_t offset, std::uint64_t size,
                                                  std::uint32_t value) {
-  if (!commands_ || !resources_)
+  if (!commands_ || !resource_owner_)
     return GRANIT_ERROR_NOT_READY;
-  return commands_->fill_buffer(recorder, resources_->native_buffer(buffer), offset, size, value);
+  return commands_->fill_buffer(recorder, native_buffer(buffer), offset, size, value);
 }
 
 granit_result webgpu_renderer_state::draw(backend_command_recorder_resource& recorder,
@@ -398,11 +398,11 @@ granit_result webgpu_renderer_state::begin_rendering(
     clear[1] = attachment.clear_value.green;
     clear[2] = attachment.clear_value.blue;
     clear[3] = attachment.clear_value.alpha;
-    native_view = resources_->native_texture_view(*attachment.view);
+    native_view = native_texture_view(*attachment.view);
     if (native_view == 0)
       native_view = presentation_->native_view(*attachment.view);
     if (attachment.resolve_view != nullptr) {
-      native_resolve_view = resources_->native_texture_view(*attachment.resolve_view);
+      native_resolve_view = native_texture_view(*attachment.resolve_view);
       if (native_resolve_view == 0)
         native_resolve_view = presentation_->native_view(*attachment.resolve_view);
       if (native_resolve_view == 0)
@@ -421,7 +421,7 @@ granit_result webgpu_renderer_state::begin_rendering(
         depth.stencil_store_operation != GRANIT_ATTACHMENT_STORE_OPERATION_DISCARD) {
       return GRANIT_ERROR_UNSUPPORTED;
     }
-    native_depth_view = resources_->native_texture_view(*depth.view);
+    native_depth_view = native_texture_view(*depth.view);
     if (native_depth_view == 0)
       return GRANIT_ERROR_INVALID_HANDLE;
     depth_load = depth.depth_load_operation == GRANIT_ATTACHMENT_LOAD_OPERATION_LOAD

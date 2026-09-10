@@ -25,7 +25,7 @@
 #include "backend/webgpu/context.h"
 #include "backend/webgpu/pipeline_adapter.h"
 #include "backend/webgpu/presentation_adapter.h"
-#include "backend/webgpu/resource_adapter.h"
+#include "backend/webgpu/resources.h"
 
 namespace granit::detail {
 
@@ -325,6 +325,14 @@ private:
   [[nodiscard]] granit_result refresh_state() noexcept;
   [[nodiscard]] granit_result finish_initialization() noexcept;
   [[nodiscard]] webgpu_shader native_shader(backend_shader_resource& resource) const noexcept;
+  [[nodiscard]] webgpu_buffer native_buffer(backend_buffer_resource& resource) const noexcept;
+  [[nodiscard]] webgpu_texture native_texture(backend_texture_resource& resource) const noexcept;
+  [[nodiscard]] webgpu_texture_view
+  native_texture_view(backend_texture_view_resource& resource) const noexcept;
+  [[nodiscard]] webgpu_bind_group_layout
+  native_bind_group_layout(backend_bind_group_layout_resource& resource) const noexcept;
+  [[nodiscard]] webgpu_bind_group
+  native_bind_group(backend_bind_group_resource& resource) const noexcept;
   [[nodiscard]] webgpu_timestamp_query_pool
   native_timestamp_query_pool(backend_timestamp_query_pool_resource& resource) const noexcept;
 
@@ -339,7 +347,7 @@ private:
   std::uint32_t domain_{};
   submission_serial next_submission_serial_{1};
   std::unique_ptr<webgpu_presentation_adapter> presentation_;
-  std::unique_ptr<webgpu_resource_adapter> resources_;
+  std::shared_ptr<webgpu_resource_owner> resource_owner_;
   std::unique_ptr<webgpu_pipeline_adapter> pipelines_;
   std::unique_ptr<webgpu_command_adapter> commands_;
 };

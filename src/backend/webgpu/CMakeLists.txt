@@ -7,15 +7,14 @@ target_sources(
     command_adapter.cpp
     presentation_adapter.cpp
     pipeline_adapter.cpp
-    resource_adapter.cpp
     renderer_state.cpp
     renderer_state_commands.cpp
     renderer_state_pipeline.cpp
     renderer_state_presentation.cpp
     renderer_state_resources.cpp
+    renderer_state_shader.cpp
     renderer_state_submission.cpp
     renderer_state_timestamp.cpp
-    renderer_state_transfer.cpp
     renderer_factory.cpp
 )
 
