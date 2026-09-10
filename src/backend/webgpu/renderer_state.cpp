@@ -226,8 +226,8 @@ granit_result webgpu_renderer_state::refresh_state() noexcept {
       return GRANIT_ERROR_UNSUPPORTED;
     }
     try {
-      auto presentation_owner = std::make_shared<webgpu_presentation_owner>(
-          webgpu_presentation_owner{&device_, device_.instance()});
+      auto presentation_owner =
+          std::make_shared<webgpu_presentation_owner>(webgpu_presentation_owner{&device_});
       auto resource_owner = std::make_shared<webgpu_resource_owner>(
           webgpu_resource_owner{&device_, device_.instance()});
       auto pipeline_owner = std::make_shared<webgpu_pipeline_owner>(

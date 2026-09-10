@@ -29,41 +29,29 @@ public:
   [[nodiscard]] granit_result get_capabilities(webgpu_capabilities* capabilities) noexcept;
   [[nodiscard]] granit_result get_instance_status(webgpu_instance_status* status) noexcept;
   [[nodiscard]] granit_result process_events() noexcept;
-  [[nodiscard]] granit_result create_win32_surface(webgpu_instance_handle instance,
-                                                   const webgpu_win32_surface_desc* desc,
+  [[nodiscard]] granit_result create_win32_surface(const webgpu_win32_surface_desc* desc,
                                                    webgpu_surface* surface) noexcept;
-  [[nodiscard]] granit_result create_xcb_surface(webgpu_instance_handle instance,
-                                                 const webgpu_xcb_surface_desc* desc,
+  [[nodiscard]] granit_result create_xcb_surface(const webgpu_xcb_surface_desc* desc,
                                                  webgpu_surface* surface) noexcept;
-  [[nodiscard]] granit_result create_wayland_surface(webgpu_instance_handle instance,
-                                                     const webgpu_wayland_surface_desc* desc,
+  [[nodiscard]] granit_result create_wayland_surface(const webgpu_wayland_surface_desc* desc,
                                                      webgpu_surface* surface) noexcept;
-  [[nodiscard]] granit_result create_canvas_surface(webgpu_instance_handle instance,
-                                                    const webgpu_canvas_surface_desc* desc,
+  [[nodiscard]] granit_result create_canvas_surface(const webgpu_canvas_surface_desc* desc,
                                                     webgpu_surface* surface) noexcept;
-  [[nodiscard]] granit_result destroy_surface(webgpu_instance_handle instance,
-                                              webgpu_surface surface) noexcept;
-  [[nodiscard]] granit_result create_swapchain(webgpu_instance_handle instance,
-                                               webgpu_surface surface,
+  [[nodiscard]] granit_result destroy_surface(webgpu_surface surface) noexcept;
+  [[nodiscard]] granit_result create_swapchain(webgpu_surface surface,
                                                const webgpu_swapchain_desc* desc,
                                                webgpu_swapchain* swapchain) noexcept;
-  [[nodiscard]] granit_result recreate_swapchain(webgpu_instance_handle instance,
-                                                 webgpu_swapchain swapchain,
+  [[nodiscard]] granit_result recreate_swapchain(webgpu_swapchain swapchain,
                                                  const webgpu_swapchain_desc* desc) noexcept;
-  [[nodiscard]] granit_result get_swapchain_info(webgpu_instance_handle instance,
-                                                 webgpu_swapchain swapchain,
+  [[nodiscard]] granit_result get_swapchain_info(webgpu_swapchain swapchain,
                                                  webgpu_swapchain_info* info) noexcept;
-  [[nodiscard]] granit_result acquire_swapchain(webgpu_instance_handle instance,
-                                                webgpu_swapchain swapchain,
+  [[nodiscard]] granit_result acquire_swapchain(webgpu_swapchain swapchain,
                                                 webgpu_acquired_frame* frame) noexcept;
-  [[nodiscard]] granit_result present_swapchain(webgpu_instance_handle instance,
-                                                webgpu_swapchain swapchain,
+  [[nodiscard]] granit_result present_swapchain(webgpu_swapchain swapchain,
                                                 std::uint32_t* needs_recreate) noexcept;
-  [[nodiscard]] granit_result cancel_swapchain(webgpu_instance_handle instance,
-                                               webgpu_swapchain swapchain,
+  [[nodiscard]] granit_result cancel_swapchain(webgpu_swapchain swapchain,
                                                std::uint32_t* needs_recreate) noexcept;
-  [[nodiscard]] granit_result destroy_swapchain(webgpu_instance_handle instance,
-                                                webgpu_swapchain swapchain) noexcept;
+  [[nodiscard]] granit_result destroy_swapchain(webgpu_swapchain swapchain) noexcept;
   [[nodiscard]] granit_result create_buffer(webgpu_instance_handle instance,
                                             const webgpu_buffer_desc* desc,
                                             webgpu_buffer* buffer) noexcept;

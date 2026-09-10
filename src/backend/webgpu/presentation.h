@@ -11,8 +11,7 @@ namespace granit::detail {
 
 /** 供 WebGPU Surface 和 Swapchain 资源析构共享的设备所有者引用。 */
 struct webgpu_presentation_owner {
-  webgpu_device* context{};
-  webgpu_instance_handle instance{};
+  webgpu_device* device{};
 };
 
 } // namespace granit::detail

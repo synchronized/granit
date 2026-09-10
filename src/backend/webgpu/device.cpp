@@ -4757,168 +4757,132 @@ granit_result webgpu_device::process_events() noexcept {
   }
 }
 
-granit_result webgpu_device::create_win32_surface(webgpu_instance_handle instance,
-                                                  const webgpu_win32_surface_desc* desc,
+granit_result webgpu_device::create_win32_surface(const webgpu_win32_surface_desc* desc,
                                                   webgpu_surface* surface) noexcept {
-  if (!open_ || instance == 0 || desc == nullptr || surface == nullptr)
+  if (!open_ || desc == nullptr || surface == nullptr)
     return GRANIT_ERROR_INVALID_ARGUMENT;
-  if (instance != instance_)
-    return GRANIT_ERROR_INVALID_HANDLE;
   try {
-    return ::create_win32_surface(instance, desc, surface);
+    return ::create_win32_surface(instance_, desc, surface);
   } catch (...) {
     return GRANIT_ERROR_INTERNAL;
   }
 }
 
-granit_result webgpu_device::create_xcb_surface(webgpu_instance_handle instance,
-                                                const webgpu_xcb_surface_desc* desc,
+granit_result webgpu_device::create_xcb_surface(const webgpu_xcb_surface_desc* desc,
                                                 webgpu_surface* surface) noexcept {
-  if (!open_ || instance == 0 || desc == nullptr || surface == nullptr)
+  if (!open_ || desc == nullptr || surface == nullptr)
     return GRANIT_ERROR_INVALID_ARGUMENT;
-  if (instance != instance_)
-    return GRANIT_ERROR_INVALID_HANDLE;
   try {
-    return ::create_xcb_surface(instance, desc, surface);
+    return ::create_xcb_surface(instance_, desc, surface);
   } catch (...) {
     return GRANIT_ERROR_INTERNAL;
   }
 }
 
-granit_result webgpu_device::create_wayland_surface(webgpu_instance_handle instance,
-                                                    const webgpu_wayland_surface_desc* desc,
+granit_result webgpu_device::create_wayland_surface(const webgpu_wayland_surface_desc* desc,
                                                     webgpu_surface* surface) noexcept {
-  if (!open_ || instance == 0 || desc == nullptr || surface == nullptr)
+  if (!open_ || desc == nullptr || surface == nullptr)
     return GRANIT_ERROR_INVALID_ARGUMENT;
-  if (instance != instance_)
-    return GRANIT_ERROR_INVALID_HANDLE;
   try {
-    return ::create_wayland_surface(instance, desc, surface);
+    return ::create_wayland_surface(instance_, desc, surface);
   } catch (...) {
     return GRANIT_ERROR_INTERNAL;
   }
 }
 
-granit_result webgpu_device::create_canvas_surface(webgpu_instance_handle instance,
-                                                   const webgpu_canvas_surface_desc* desc,
+granit_result webgpu_device::create_canvas_surface(const webgpu_canvas_surface_desc* desc,
                                                    webgpu_surface* surface) noexcept {
-  if (!open_ || instance == 0 || desc == nullptr || surface == nullptr)
+  if (!open_ || desc == nullptr || surface == nullptr)
     return GRANIT_ERROR_INVALID_ARGUMENT;
-  if (instance != instance_)
-    return GRANIT_ERROR_INVALID_HANDLE;
   try {
-    return ::create_canvas_surface(instance, desc, surface);
+    return ::create_canvas_surface(instance_, desc, surface);
   } catch (...) {
     return GRANIT_ERROR_INTERNAL;
   }
 }
 
-granit_result webgpu_device::destroy_surface(webgpu_instance_handle instance,
-                                             webgpu_surface surface) noexcept {
-  if (!open_ || instance == 0 || surface == 0)
+granit_result webgpu_device::destroy_surface(webgpu_surface surface) noexcept {
+  if (!open_ || surface == 0)
     return GRANIT_ERROR_INVALID_ARGUMENT;
-  if (instance != instance_)
-    return GRANIT_ERROR_INVALID_HANDLE;
   try {
-    return ::destroy_surface(instance, surface);
+    return ::destroy_surface(instance_, surface);
   } catch (...) {
     return GRANIT_ERROR_INTERNAL;
   }
 }
 
-granit_result webgpu_device::create_swapchain(webgpu_instance_handle instance,
-                                              webgpu_surface surface,
+granit_result webgpu_device::create_swapchain(webgpu_surface surface,
                                               const webgpu_swapchain_desc* desc,
                                               webgpu_swapchain* swapchain) noexcept {
-  if (!open_ || instance == 0 || surface == 0 || desc == nullptr || swapchain == nullptr)
+  if (!open_ || surface == 0 || desc == nullptr || swapchain == nullptr)
     return GRANIT_ERROR_INVALID_ARGUMENT;
-  if (instance != instance_)
-    return GRANIT_ERROR_INVALID_HANDLE;
   try {
-    return ::create_swapchain(instance, surface, desc, swapchain);
+    return ::create_swapchain(instance_, surface, desc, swapchain);
   } catch (...) {
     return GRANIT_ERROR_INTERNAL;
   }
 }
 
-granit_result webgpu_device::recreate_swapchain(webgpu_instance_handle instance,
-                                                webgpu_swapchain swapchain,
+granit_result webgpu_device::recreate_swapchain(webgpu_swapchain swapchain,
                                                 const webgpu_swapchain_desc* desc) noexcept {
-  if (!open_ || instance == 0 || swapchain == 0 || desc == nullptr)
+  if (!open_ || swapchain == 0 || desc == nullptr)
     return GRANIT_ERROR_INVALID_ARGUMENT;
-  if (instance != instance_)
-    return GRANIT_ERROR_INVALID_HANDLE;
   try {
-    return ::recreate_swapchain(instance, swapchain, desc);
+    return ::recreate_swapchain(instance_, swapchain, desc);
   } catch (...) {
     return GRANIT_ERROR_INTERNAL;
   }
 }
 
-granit_result webgpu_device::get_swapchain_info(webgpu_instance_handle instance,
-                                                webgpu_swapchain swapchain,
+granit_result webgpu_device::get_swapchain_info(webgpu_swapchain swapchain,
                                                 webgpu_swapchain_info* info) noexcept {
-  if (!open_ || instance == 0 || swapchain == 0 || info == nullptr)
+  if (!open_ || swapchain == 0 || info == nullptr)
     return GRANIT_ERROR_INVALID_ARGUMENT;
-  if (instance != instance_)
-    return GRANIT_ERROR_INVALID_HANDLE;
   try {
-    return ::get_swapchain_info(instance, swapchain, info);
+    return ::get_swapchain_info(instance_, swapchain, info);
   } catch (...) {
     return GRANIT_ERROR_INTERNAL;
   }
 }
 
-granit_result webgpu_device::acquire_swapchain(webgpu_instance_handle instance,
-                                               webgpu_swapchain swapchain,
+granit_result webgpu_device::acquire_swapchain(webgpu_swapchain swapchain,
                                                webgpu_acquired_frame* frame) noexcept {
-  if (!open_ || instance == 0 || swapchain == 0 || frame == nullptr)
+  if (!open_ || swapchain == 0 || frame == nullptr)
     return GRANIT_ERROR_INVALID_ARGUMENT;
-  if (instance != instance_)
-    return GRANIT_ERROR_INVALID_HANDLE;
   try {
-    return ::acquire_swapchain(instance, swapchain, frame);
+    return ::acquire_swapchain(instance_, swapchain, frame);
   } catch (...) {
     return GRANIT_ERROR_INTERNAL;
   }
 }
 
-granit_result webgpu_device::present_swapchain(webgpu_instance_handle instance,
-                                               webgpu_swapchain swapchain,
+granit_result webgpu_device::present_swapchain(webgpu_swapchain swapchain,
                                                std::uint32_t* needs_recreate) noexcept {
-  if (!open_ || instance == 0 || swapchain == 0 || needs_recreate == nullptr)
+  if (!open_ || swapchain == 0 || needs_recreate == nullptr)
     return GRANIT_ERROR_INVALID_ARGUMENT;
-  if (instance != instance_)
-    return GRANIT_ERROR_INVALID_HANDLE;
   try {
-    return ::present_swapchain(instance, swapchain, needs_recreate);
+    return ::present_swapchain(instance_, swapchain, needs_recreate);
   } catch (...) {
     return GRANIT_ERROR_INTERNAL;
   }
 }
 
-granit_result webgpu_device::cancel_swapchain(webgpu_instance_handle instance,
-                                              webgpu_swapchain swapchain,
+granit_result webgpu_device::cancel_swapchain(webgpu_swapchain swapchain,
                                               std::uint32_t* needs_recreate) noexcept {
-  if (!open_ || instance == 0 || swapchain == 0 || needs_recreate == nullptr)
+  if (!open_ || swapchain == 0 || needs_recreate == nullptr)
     return GRANIT_ERROR_INVALID_ARGUMENT;
-  if (instance != instance_)
-    return GRANIT_ERROR_INVALID_HANDLE;
   try {
-    return ::cancel_swapchain(instance, swapchain, needs_recreate);
+    return ::cancel_swapchain(instance_, swapchain, needs_recreate);
   } catch (...) {
     return GRANIT_ERROR_INTERNAL;
   }
 }
 
-granit_result webgpu_device::destroy_swapchain(webgpu_instance_handle instance,
-                                               webgpu_swapchain swapchain) noexcept {
-  if (!open_ || instance == 0 || swapchain == 0)
+granit_result webgpu_device::destroy_swapchain(webgpu_swapchain swapchain) noexcept {
+  if (!open_ || swapchain == 0)
     return GRANIT_ERROR_INVALID_ARGUMENT;
-  if (instance != instance_)
-    return GRANIT_ERROR_INVALID_HANDLE;
   try {
-    return ::destroy_swapchain(instance, swapchain);
+    return ::destroy_swapchain(instance_, swapchain);
   } catch (...) {
     return GRANIT_ERROR_INTERNAL;
   }
