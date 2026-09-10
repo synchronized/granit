@@ -182,8 +182,8 @@ D-03-graphics-pipeline.md
 - [S-36：0.20.0 示例框架与跨平台 Model Viewer 稳定化](S-36-0.20.0-example-framework-and-model-viewer.md)——
   已完成；交互、帧延迟、示例分层、目录迁移、双后端视觉与发布验收均已闭合。
 - [S-37：0.21.0 Shader Library 与后端无关材质](S-37-0.21.0-shader-library-and-material-boundary.md)——
-  已确认；以可裁剪 Shader Library 取代公开单 Shader 运行时资产，并把载荷选择、布局和坐标差异
-  收回 Renderer、ShaderTools 与 HAL。
+  实现中；主体实现及 Windows、Vulkan、Emscripten、浏览器 WebGPU 本地验收已完成，待远端
+  Linux、SDK 和不可变 Release Candidate 验收。
 
 ## 状态
 

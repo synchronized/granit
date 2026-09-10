@@ -17,29 +17,9 @@ using granit::pipeline::detail::dynamic_uniform_arena;
 using granit::pipeline::detail::dynamic_uniform_arena_plan;
 using granit::pipeline::detail::dynamic_uniform_binding;
 using granit::pipeline::detail::dynamic_uniform_request;
-using granit::pipeline::detail::flip_frame_clip_y;
 using granit::pipeline::detail::material_draw_state;
 using granit::pipeline::detail::uniform_arena_allocation;
 using granit::pipeline::detail::uniform_arena_error;
-
-TEST_CASE("Frame 裁剪空间转换只翻转投影矩阵的 Y 行", "[pipeline][coordinates]") {
-  granit::material::pbr_frame_constants frame{};
-  for (std::size_t index = 0; index < frame.view_projection.size(); ++index)
-    frame.view_projection[index] = static_cast<float>(index + 1);
-  const auto original = frame;
-
-  flip_frame_clip_y(frame);
-
-  for (std::size_t index = 0; index < frame.view_projection.size(); ++index) {
-    const auto expected =
-        index % 4 == 1 ? -original.view_projection[index] : original.view_projection[index];
-    CHECK(frame.view_projection[index] == expected);
-  }
-  CHECK(frame.camera_position == original.camera_position);
-  CHECK(frame.direction_to_light == original.direction_to_light);
-  CHECK(frame.light_radiance == original.light_radiance);
-  CHECK(frame.render_options == original.render_options);
-}
 
 TEST_CASE("动态 Uniform Arena 按设备限制对齐并增长", "[pipeline][uniform-arena]") {
   dynamic_uniform_arena_plan arena;

@@ -64,8 +64,8 @@ Pass 和 Feature 只表达会改变 Shader、绑定布局、顶点输入或固�
 Pipeline。纹理功能发生变化时选择已有的 `pbr_texture_mask` 变体，同一功能内更换贴图只更新句柄。
 
 RenderPipeline 接收统一的深度 `0..1` 裁剪空间，Canvas 使用左上原点。删除按 Vulkan/WebGPU 翻转
-View Projection 的应用代码；RenderPipeline 会在 Frame 常量上传边界完成后端转换。纹理上传或
-外部纹理的 UV 方向仍应在对应资源路径处理。
+View Projection 的应用代码；Renderer 保持公开的正面绕序语义，Canvas 在内部转换像素投影。
+纹理上传或外部纹理的 UV 方向仍应在对应资源路径处理。
 
 ## 更新安装资产路径
 

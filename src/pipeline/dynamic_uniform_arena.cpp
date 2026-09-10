@@ -8,7 +8,6 @@
 #include <algorithm>
 #include <array>
 #include <bit>
-#include <cstring>
 #include <limits>
 #include <new>
 #include <vector>
@@ -21,12 +20,6 @@ bool add_overflows(std::uint64_t left, std::uint64_t right) noexcept {
 }
 
 } // namespace
-
-void flip_frame_clip_y(material::pbr_frame_constants& frame) noexcept {
-  // 矩阵为列主序；对第二行取反等价于对最终裁剪坐标的 Y 分量取反。
-  for (std::size_t column = 0; column < 4; ++column)
-    frame.view_projection[column * 4 + 1] = -frame.view_projection[column * 4 + 1];
-}
 
 uniform_arena_error
 dynamic_uniform_arena_plan::initialize(std::uint64_t alignment, std::uint64_t max_binding_size,
@@ -75,17 +68,12 @@ granit_result dynamic_uniform_arena::initialize(granit_renderer renderer) noexce
   const auto result = granit_renderer_get_limits(renderer, &limits);
   if (result != GRANIT_SUCCESS)
     return result;
-  granit_renderer_shader_capabilities capabilities = GRANIT_RENDERER_SHADER_CAPABILITIES_INIT;
-  const auto capability_result = granit_renderer_get_shader_capabilities(renderer, &capabilities);
-  if (capability_result != GRANIT_SUCCESS)
-    return capability_result;
   if (limits.uniform_buffer_offset_alignment == 0 || limits.max_uniform_buffer_binding_size == 0) {
     return GRANIT_ERROR_UNSUPPORTED;
   }
   renderer_ = renderer;
   alignment_ = limits.uniform_buffer_offset_alignment;
   max_binding_size_ = limits.max_uniform_buffer_binding_size;
-  flip_clip_y_ = capabilities.backend == GRANIT_RENDERER_BACKEND_WEBGPU;
   return GRANIT_SUCCESS;
 }
 
@@ -213,15 +201,8 @@ dynamic_uniform_arena::prepare_batch(std::span<const dynamic_uniform_request> re
     for (std::size_t index = 0; index < requests.size(); ++index) {
       const auto frame_offset = allocations[index * 2].offset - write_offset;
       const auto object_offset = allocations[index * 2 + 1].offset - write_offset;
-      if (flip_clip_y_) {
-        material::pbr_frame_constants frame;
-        std::memcpy(&frame, requests[index].frame.data(), sizeof(frame));
-        flip_frame_clip_y(frame);
-        std::memcpy(upload.data() + frame_offset, &frame, sizeof(frame));
-      } else {
-        std::ranges::copy(requests[index].frame,
-                          upload.begin() + static_cast<std::ptrdiff_t>(frame_offset));
-      }
+      std::ranges::copy(requests[index].frame,
+                        upload.begin() + static_cast<std::ptrdiff_t>(frame_offset));
       std::ranges::copy(requests[index].object,
                         upload.begin() + static_cast<std::ptrdiff_t>(object_offset));
     }
@@ -258,7 +239,6 @@ granit_result dynamic_uniform_arena::reset() noexcept {
   slots_.clear();
   current_slot_ = nullptr;
   renderer_ = GRANIT_NULL_HANDLE;
-  flip_clip_y_ = false;
   return GRANIT_SUCCESS;
 }
 

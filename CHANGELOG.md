@@ -8,6 +8,26 @@
 
 ## Unreleased
 
+### 新增
+
+- 新增确定性的 `.grshlib` v1、公共 Shader Library C/C++ API，以及由 Renderer 按后端和能力选择、
+  校验并缓存 Shader 载荷的路径。
+
+### 变更
+
+- Material 改为接收 Shader Library 句柄；`.grmat` v5 显式声明 Frame、Material、Object、Lighting
+  绑定组，删除按后端回调 Shader resolver 和按 Pass 名称推断布局。
+- 静态 Shader 功能由 Pass 与 Feature 选择，数值、纹理和 Sampler 更新不创建 Pipeline；
+  Canvas 在内部处理左上原点投影，材质和应用无需按后端修改坐标。
+- Canvas、Model Viewer、构建树和安装包直接消费 `.grshlib`。`.grshader` 与 sidecar 只作为离线
+  中间结果，不再作为 RenderPipeline 运行时资产发布。
+
+### 兼容性与迁移
+
+- Core 新增五个 Shader Library 相关 C ABI 导出，Material 创建描述的保留字段改为 Library 句柄。
+  0.20 Consumer 必须重新编译并重建 `.grmat` 和 Shader 资产；完整步骤见
+  [从 0.20 迁移到 0.21](docs/guides/migrate-0.20-to-0.21.md)。
+
 ## 0.20.0 - 2026-09-10
 
 ### 新增
