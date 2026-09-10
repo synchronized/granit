@@ -1,0 +1,139 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Granit contributors
+
+#include "backend/webgpu/renderer_state.h"
+
+#include "core/texture_format.h"
+
+#include <new>
+#include <string>
+#include <vector>
+
+namespace granit::detail {
+
+std::unique_ptr<backend_surface_resource> webgpu_renderer_state::allocate_surface_resource() {
+  return presentation_ != nullptr ? presentation_->allocate_surface() : nullptr;
+}
+
+std::unique_ptr<backend_swapchain_resource> webgpu_renderer_state::allocate_swapchain_resource() {
+  return presentation_ != nullptr ? presentation_->allocate_swapchain() : nullptr;
+}
+
+granit_result
+webgpu_renderer_state::create_win32_surface(void* instance, void* window,
+                                            backend_surface_resource& surface) noexcept {
+  if ((surface_types_ & GRANIT_SURFACE_TYPE_WIN32_BIT) == 0 ||
+      (provider_surface_types_ & GRANIT_WEBGPU_PROVIDER_SURFACE_TYPE_WIN32_BIT) == 0)
+    return GRANIT_ERROR_UNSUPPORTED;
+  return presentation_ != nullptr ? presentation_->create_win32_surface(surface, instance, window)
+                                  : GRANIT_ERROR_NOT_READY;
+}
+
+granit_result
+webgpu_renderer_state::create_xcb_surface(void* connection, std::uint32_t window,
+                                          backend_surface_resource& surface) noexcept {
+  if ((surface_types_ & GRANIT_SURFACE_TYPE_XCB_BIT) == 0 ||
+      (provider_surface_types_ & GRANIT_WEBGPU_PROVIDER_SURFACE_TYPE_XCB_BIT) == 0)
+    return GRANIT_ERROR_UNSUPPORTED;
+  return presentation_ != nullptr ? presentation_->create_xcb_surface(surface, connection, window)
+                                  : GRANIT_ERROR_NOT_READY;
+}
+
+granit_result
+webgpu_renderer_state::create_wayland_surface(void* display, void* native_surface,
+                                              backend_surface_resource& surface) noexcept {
+  if ((surface_types_ & GRANIT_SURFACE_TYPE_WAYLAND_BIT) == 0 ||
+      (provider_surface_types_ & GRANIT_WEBGPU_PROVIDER_SURFACE_TYPE_WAYLAND_BIT) == 0)
+    return GRANIT_ERROR_UNSUPPORTED;
+  return presentation_ != nullptr
+             ? presentation_->create_wayland_surface(surface, display, native_surface)
+             : GRANIT_ERROR_NOT_READY;
+}
+
+granit_result
+webgpu_renderer_state::create_canvas_surface(std::string_view selector,
+                                             backend_surface_resource& surface) noexcept {
+  if ((surface_types_ & GRANIT_SURFACE_TYPE_CANVAS_BIT) == 0 ||
+      (provider_surface_types_ & GRANIT_WEBGPU_PROVIDER_SURFACE_TYPE_CANVAS_BIT) == 0)
+    return GRANIT_ERROR_UNSUPPORTED;
+  if (presentation_ == nullptr)
+    return GRANIT_ERROR_NOT_READY;
+  return presentation_->create_canvas_surface(surface, selector.data(),
+                                              static_cast<std::uint32_t>(selector.size()));
+}
+
+granit_result webgpu_renderer_state::create_swapchain(backend_surface_resource& surface,
+                                                      const backend_swapchain_desc& desc,
+                                                      backend_swapchain_resource& swapchain) {
+  return presentation_ != nullptr ? presentation_->create_swapchain(surface, desc, swapchain)
+                                  : GRANIT_ERROR_NOT_READY;
+}
+
+granit_result webgpu_renderer_state::recreate_swapchain(backend_surface_resource&,
+                                                        const backend_swapchain_desc& desc,
+                                                        backend_swapchain_resource& swapchain) {
+  return presentation_ != nullptr ? presentation_->recreate_swapchain(swapchain, desc)
+                                  : GRANIT_ERROR_NOT_READY;
+}
+
+backend_swapchain_info
+webgpu_renderer_state::get_swapchain_info(backend_swapchain_resource& swapchain) noexcept {
+  backend_swapchain_info info{};
+  if (presentation_ != nullptr)
+    static_cast<void>(presentation_->get_swapchain_info(swapchain, info));
+  return info;
+}
+
+granit_result webgpu_renderer_state::get_swapchain_backbuffers(
+    backend_swapchain_resource&, std::vector<backend_swapchain_backbuffer>& backbuffers) {
+  // WebGPU 的当前纹理由 Acquire 动态提供，不存在可预先枚举的固定后备缓冲。
+  backbuffers.clear();
+  return presentation_ != nullptr ? GRANIT_SUCCESS : GRANIT_ERROR_NOT_READY;
+}
+
+granit_result
+webgpu_renderer_state::prepare_swapchain_backbuffer(backend_swapchain_backbuffer& backbuffer) {
+  return backbuffer.texture && backbuffer.view ? GRANIT_SUCCESS : GRANIT_ERROR_INTERNAL;
+}
+
+granit_result
+webgpu_renderer_state::acquire_swapchain_frame(backend_swapchain_resource& swapchain,
+                                               backend_acquired_swapchain_frame& frame) {
+  return presentation_ != nullptr ? presentation_->acquire_swapchain(swapchain, frame)
+                                  : GRANIT_ERROR_NOT_READY;
+}
+
+granit_result webgpu_renderer_state::present_swapchain_frame(backend_swapchain_resource& swapchain,
+                                                             std::uint32_t, std::size_t,
+                                                             bool& needs_recreate) {
+  return presentation_ != nullptr ? presentation_->present_swapchain(swapchain, needs_recreate)
+                                  : GRANIT_ERROR_NOT_READY;
+}
+
+granit_result webgpu_renderer_state::cancel_swapchain_frame(backend_swapchain_resource& swapchain,
+                                                            std::uint32_t, std::size_t,
+                                                            bool& needs_recreate) {
+  return presentation_ != nullptr ? presentation_->cancel_swapchain(swapchain, needs_recreate)
+                                  : GRANIT_ERROR_NOT_READY;
+}
+
+granit_result webgpu_renderer_state::wait_for_present_idle() noexcept {
+  return lifecycle_.state == backend_lifecycle_state::device_lost ? GRANIT_ERROR_DEVICE_LOST
+                                                                  : GRANIT_SUCCESS;
+}
+
+std::size_t webgpu_renderer_state::collect_present_retired() noexcept { return 0; }
+
+std::size_t webgpu_renderer_state::frame_slot_count() const noexcept {
+  // 浏览器交换链按 Acquire 返回动态纹理，当前只允许一个在途呈现帧。
+  return 1;
+}
+
+granit_result
+webgpu_renderer_state::submit_swapchain_frame(backend_command_recorder_resource& recorder,
+                                              backend_swapchain_resource&, std::uint32_t,
+                                              std::size_t, submission_serial& submitted_serial) {
+  return submit_command_recorder(recorder, submitted_serial);
+}
+
+} // namespace granit::detail
