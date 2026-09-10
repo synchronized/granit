@@ -33,7 +33,7 @@ webgpu_renderer_state::reset_timestamp_queries(backend_command_recorder_resource
   const auto command = commands_->native_recorder(recorder);
   const auto query = timestamps_->native_handle(pool);
   return command != 0 && query != 0
-             ? provider_.recorder_reset_timestamp_queries(instance_, command, query, first, count)
+             ? context_.recorder_reset_timestamp_queries(instance_, command, query, first, count)
              : GRANIT_ERROR_INVALID_ARGUMENT;
 }
 
@@ -46,7 +46,7 @@ granit_result webgpu_renderer_state::write_timestamp(backend_command_recorder_re
   const auto command = commands_->native_recorder(recorder);
   const auto query = timestamps_->native_handle(pool);
   return command != 0 && query != 0
-             ? provider_.recorder_write_timestamp(instance_, command, query, index)
+             ? context_.recorder_write_timestamp(instance_, command, query, index)
              : GRANIT_ERROR_INVALID_ARGUMENT;
 }
 

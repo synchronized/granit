@@ -16,8 +16,8 @@
 namespace granit::detail {
 
 struct webgpu_resource_context {
-  webgpu_context* provider{};
-  granit_webgpu_provider_instance instance{};
+  webgpu_context* backend{};
+  webgpu_instance_handle instance{};
 };
 
 namespace {
@@ -39,20 +39,18 @@ struct webgpu_readback_slice {
 
 class webgpu_readback_completion final : public backend_readback_completion {
 public:
-  webgpu_readback_completion(std::shared_ptr<webgpu_resource_context> context,
-                             granit_webgpu_provider_buffer buffer,
-                             granit_webgpu_provider_readback readback,
-                             std::vector<webgpu_readback_slice> slices)
+  webgpu_readback_completion(std::shared_ptr<webgpu_resource_context> context, webgpu_buffer buffer,
+                             webgpu_readback readback, std::vector<webgpu_readback_slice> slices)
       : context_(std::move(context)), buffer_(buffer), readback_(readback),
         slices_(std::move(slices)) {}
   ~webgpu_readback_completion() override {
     if (readback_ != 0)
-      static_cast<void>(context_->provider->destroy_readback(context_->instance, readback_));
+      static_cast<void>(context_->backend->destroy_readback(context_->instance, readback_));
     if (buffer_ != 0)
-      static_cast<void>(context_->provider->destroy_buffer(context_->instance, buffer_));
+      static_cast<void>(context_->backend->destroy_buffer(context_->instance, buffer_));
   }
   [[nodiscard]] granit_result poll() noexcept override {
-    return context_->provider->poll_readback(context_->instance, readback_);
+    return context_->backend->poll_readback(context_->instance, readback_);
   }
   [[nodiscard]] granit_result
   get_result_info(std::uint32_t index, granit_readback_result_info& info) const noexcept override {
@@ -67,12 +65,12 @@ public:
       return GRANIT_ERROR_INVALID_ARGUMENT;
     const auto& slice = slices_[index];
     if (slice.source_bytes_per_row == slice.result_bytes_per_row)
-      return context_->provider->copy_readback(context_->instance, readback_, slice.source_offset,
-                                               data, size);
+      return context_->backend->copy_readback(context_->instance, readback_, slice.source_offset,
+                                              data, size);
     try {
       std::vector<std::byte> padded(static_cast<std::size_t>(slice.source_bytes_per_row) *
                                     slice.rows * slice.layers);
-      auto result = context_->provider->copy_readback(
+      auto result = context_->backend->copy_readback(
           context_->instance, readback_, slice.source_offset, padded.data(), padded.size());
       if (result != GRANIT_SUCCESS)
         return result;
@@ -97,8 +95,8 @@ public:
 
 private:
   std::shared_ptr<webgpu_resource_context> context_;
-  granit_webgpu_provider_buffer buffer_{};
-  granit_webgpu_provider_readback readback_{};
+  webgpu_buffer buffer_{};
+  webgpu_readback readback_{};
   std::vector<webgpu_readback_slice> slices_;
 };
 
@@ -112,11 +110,11 @@ public:
       : context_(std::move(context)) {}
   ~webgpu_buffer_resource() override {
     if (handle_ != 0)
-      static_cast<void>(context_->provider->destroy_buffer(context_->instance, handle_));
+      static_cast<void>(context_->backend->destroy_buffer(context_->instance, handle_));
   }
 
   std::shared_ptr<webgpu_resource_context> context_;
-  granit_webgpu_provider_buffer handle_{};
+  webgpu_buffer handle_{};
   std::uint64_t size_{};
   granit_memory_location memory_location_{};
   std::vector<std::byte> host_memory_;
@@ -128,11 +126,11 @@ public:
       : context_(std::move(context)) {}
   ~webgpu_texture_resource() override {
     if (handle_ != 0)
-      static_cast<void>(context_->provider->destroy_texture(context_->instance, handle_));
+      static_cast<void>(context_->backend->destroy_texture(context_->instance, handle_));
   }
 
   std::shared_ptr<webgpu_resource_context> context_;
-  granit_webgpu_provider_texture handle_{};
+  webgpu_texture handle_{};
   granit_texture_format format_{GRANIT_TEXTURE_FORMAT_UNDEFINED};
 };
 
@@ -142,11 +140,11 @@ public:
       : context_(std::move(context)) {}
   ~webgpu_texture_view_resource() override {
     if (handle_ != 0)
-      static_cast<void>(context_->provider->destroy_texture_view(context_->instance, handle_));
+      static_cast<void>(context_->backend->destroy_texture_view(context_->instance, handle_));
   }
 
   std::shared_ptr<webgpu_resource_context> context_;
-  granit_webgpu_provider_texture_view handle_{};
+  webgpu_texture_view handle_{};
 };
 
 class webgpu_sampler_resource final : public backend_sampler_resource {
@@ -155,11 +153,11 @@ public:
       : context_(std::move(context)) {}
   ~webgpu_sampler_resource() override {
     if (handle_ != 0)
-      static_cast<void>(context_->provider->destroy_sampler(context_->instance, handle_));
+      static_cast<void>(context_->backend->destroy_sampler(context_->instance, handle_));
   }
 
   std::shared_ptr<webgpu_resource_context> context_;
-  granit_webgpu_provider_sampler handle_{};
+  webgpu_sampler handle_{};
 };
 
 class webgpu_bind_group_layout_resource final : public backend_bind_group_layout_resource {
@@ -168,11 +166,11 @@ public:
       : context_(std::move(context)) {}
   ~webgpu_bind_group_layout_resource() override {
     if (handle_ != 0)
-      static_cast<void>(context_->provider->destroy_bind_group_layout(context_->instance, handle_));
+      static_cast<void>(context_->backend->destroy_bind_group_layout(context_->instance, handle_));
   }
 
   std::shared_ptr<webgpu_resource_context> context_;
-  granit_webgpu_provider_bind_group_layout handle_{};
+  webgpu_bind_group_layout handle_{};
 };
 
 class webgpu_bind_group_resource final : public backend_bind_group_resource {
@@ -181,11 +179,11 @@ public:
       : context_(std::move(context)) {}
   ~webgpu_bind_group_resource() override {
     if (handle_ != 0)
-      static_cast<void>(context_->provider->destroy_bind_group(context_->instance, handle_));
+      static_cast<void>(context_->backend->destroy_bind_group(context_->instance, handle_));
   }
 
   std::shared_ptr<webgpu_resource_context> context_;
-  granit_webgpu_provider_bind_group handle_{};
+  webgpu_bind_group handle_{};
 };
 
 webgpu_buffer_resource* as_buffer(backend_buffer_resource& resource) noexcept {
@@ -196,91 +194,88 @@ const webgpu_buffer_resource* as_buffer(const backend_buffer_resource& resource)
   return dynamic_cast<const webgpu_buffer_resource*>(&resource);
 }
 
-granit_webgpu_provider_texture_format to_format(granit_texture_format format) noexcept {
+webgpu_texture_format to_format(granit_texture_format format) noexcept {
   switch (format) {
   case GRANIT_TEXTURE_FORMAT_R8_UNORM:
-    return GRANIT_WEBGPU_PROVIDER_TEXTURE_FORMAT_R8_UNORM;
+    return GRANIT_WEBGPU_TEXTURE_FORMAT_R8_UNORM;
   case GRANIT_TEXTURE_FORMAT_RG8_UNORM:
-    return GRANIT_WEBGPU_PROVIDER_TEXTURE_FORMAT_RG8_UNORM;
+    return GRANIT_WEBGPU_TEXTURE_FORMAT_RG8_UNORM;
   case GRANIT_TEXTURE_FORMAT_RGBA8_UNORM:
-    return GRANIT_WEBGPU_PROVIDER_TEXTURE_FORMAT_RGBA8_UNORM;
+    return GRANIT_WEBGPU_TEXTURE_FORMAT_RGBA8_UNORM;
   case GRANIT_TEXTURE_FORMAT_RGBA8_SRGB:
-    return GRANIT_WEBGPU_PROVIDER_TEXTURE_FORMAT_RGBA8_SRGB;
+    return GRANIT_WEBGPU_TEXTURE_FORMAT_RGBA8_SRGB;
   case GRANIT_TEXTURE_FORMAT_RGBA16_FLOAT:
-    return GRANIT_WEBGPU_PROVIDER_TEXTURE_FORMAT_RGBA16_FLOAT;
+    return GRANIT_WEBGPU_TEXTURE_FORMAT_RGBA16_FLOAT;
   case GRANIT_TEXTURE_FORMAT_D32_FLOAT:
-    return GRANIT_WEBGPU_PROVIDER_TEXTURE_FORMAT_D32_FLOAT;
+    return GRANIT_WEBGPU_TEXTURE_FORMAT_D32_FLOAT;
   case GRANIT_TEXTURE_FORMAT_BC1_RGBA_UNORM:
-    return GRANIT_WEBGPU_PROVIDER_TEXTURE_FORMAT_BC1_RGBA_UNORM;
+    return GRANIT_WEBGPU_TEXTURE_FORMAT_BC1_RGBA_UNORM;
   case GRANIT_TEXTURE_FORMAT_BC1_RGBA_SRGB:
-    return GRANIT_WEBGPU_PROVIDER_TEXTURE_FORMAT_BC1_RGBA_SRGB;
+    return GRANIT_WEBGPU_TEXTURE_FORMAT_BC1_RGBA_SRGB;
   case GRANIT_TEXTURE_FORMAT_BC3_RGBA_UNORM:
-    return GRANIT_WEBGPU_PROVIDER_TEXTURE_FORMAT_BC3_RGBA_UNORM;
+    return GRANIT_WEBGPU_TEXTURE_FORMAT_BC3_RGBA_UNORM;
   case GRANIT_TEXTURE_FORMAT_BC3_RGBA_SRGB:
-    return GRANIT_WEBGPU_PROVIDER_TEXTURE_FORMAT_BC3_RGBA_SRGB;
+    return GRANIT_WEBGPU_TEXTURE_FORMAT_BC3_RGBA_SRGB;
   case GRANIT_TEXTURE_FORMAT_BC5_RG_UNORM:
-    return GRANIT_WEBGPU_PROVIDER_TEXTURE_FORMAT_BC5_RG_UNORM;
+    return GRANIT_WEBGPU_TEXTURE_FORMAT_BC5_RG_UNORM;
   case GRANIT_TEXTURE_FORMAT_BC7_RGBA_UNORM:
-    return GRANIT_WEBGPU_PROVIDER_TEXTURE_FORMAT_BC7_RGBA_UNORM;
+    return GRANIT_WEBGPU_TEXTURE_FORMAT_BC7_RGBA_UNORM;
   case GRANIT_TEXTURE_FORMAT_BC7_RGBA_SRGB:
-    return GRANIT_WEBGPU_PROVIDER_TEXTURE_FORMAT_BC7_RGBA_SRGB;
+    return GRANIT_WEBGPU_TEXTURE_FORMAT_BC7_RGBA_SRGB;
   case GRANIT_TEXTURE_FORMAT_ETC2_RGBA8_UNORM:
-    return GRANIT_WEBGPU_PROVIDER_TEXTURE_FORMAT_ETC2_RGBA8_UNORM;
+    return GRANIT_WEBGPU_TEXTURE_FORMAT_ETC2_RGBA8_UNORM;
   case GRANIT_TEXTURE_FORMAT_ETC2_RGBA8_SRGB:
-    return GRANIT_WEBGPU_PROVIDER_TEXTURE_FORMAT_ETC2_RGBA8_SRGB;
+    return GRANIT_WEBGPU_TEXTURE_FORMAT_ETC2_RGBA8_SRGB;
   case GRANIT_TEXTURE_FORMAT_ASTC_4X4_UNORM:
-    return GRANIT_WEBGPU_PROVIDER_TEXTURE_FORMAT_ASTC_4X4_UNORM;
+    return GRANIT_WEBGPU_TEXTURE_FORMAT_ASTC_4X4_UNORM;
   case GRANIT_TEXTURE_FORMAT_ASTC_4X4_SRGB:
-    return GRANIT_WEBGPU_PROVIDER_TEXTURE_FORMAT_ASTC_4X4_SRGB;
+    return GRANIT_WEBGPU_TEXTURE_FORMAT_ASTC_4X4_SRGB;
   default:
     return 0;
   }
 }
 
-granit_webgpu_provider_texture_usage to_usage(granit_texture_usage usage) noexcept {
-  granit_webgpu_provider_texture_usage result{};
+webgpu_texture_usage to_usage(granit_texture_usage usage) noexcept {
+  webgpu_texture_usage result{};
   if ((usage & GRANIT_TEXTURE_USAGE_TRANSFER_SOURCE_BIT) != 0)
-    result |= GRANIT_WEBGPU_PROVIDER_TEXTURE_USAGE_COPY_SRC_BIT;
+    result |= GRANIT_WEBGPU_TEXTURE_USAGE_COPY_SRC_BIT;
   if ((usage & GRANIT_TEXTURE_USAGE_TRANSFER_DESTINATION_BIT) != 0)
-    result |= GRANIT_WEBGPU_PROVIDER_TEXTURE_USAGE_COPY_DST_BIT;
+    result |= GRANIT_WEBGPU_TEXTURE_USAGE_COPY_DST_BIT;
   if ((usage & GRANIT_TEXTURE_USAGE_SAMPLED_BIT) != 0)
-    result |= GRANIT_WEBGPU_PROVIDER_TEXTURE_USAGE_SAMPLED_BIT;
+    result |= GRANIT_WEBGPU_TEXTURE_USAGE_SAMPLED_BIT;
   if ((usage & (GRANIT_TEXTURE_USAGE_COLOR_ATTACHMENT_BIT |
                 GRANIT_TEXTURE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT)) != 0)
-    result |= GRANIT_WEBGPU_PROVIDER_TEXTURE_USAGE_RENDER_ATTACHMENT_BIT;
+    result |= GRANIT_WEBGPU_TEXTURE_USAGE_RENDER_ATTACHMENT_BIT;
   return result;
 }
 
-granit_webgpu_provider_buffer_usage to_usage(granit_buffer_usage usage,
-                                             granit_memory_location location) noexcept {
-  granit_webgpu_provider_buffer_usage result{};
+webgpu_buffer_usage to_usage(granit_buffer_usage usage, granit_memory_location location) noexcept {
+  webgpu_buffer_usage result{};
   if ((usage & GRANIT_BUFFER_USAGE_TRANSFER_SOURCE_BIT) != 0)
-    result |= GRANIT_WEBGPU_PROVIDER_BUFFER_USAGE_COPY_SRC_BIT;
+    result |= GRANIT_WEBGPU_BUFFER_USAGE_COPY_SRC_BIT;
   if ((usage & GRANIT_BUFFER_USAGE_TRANSFER_DESTINATION_BIT) != 0)
-    result |= GRANIT_WEBGPU_PROVIDER_BUFFER_USAGE_COPY_DST_BIT;
+    result |= GRANIT_WEBGPU_BUFFER_USAGE_COPY_DST_BIT;
   if ((usage & GRANIT_BUFFER_USAGE_VERTEX_BIT) != 0)
-    result |= GRANIT_WEBGPU_PROVIDER_BUFFER_USAGE_VERTEX_BIT;
+    result |= GRANIT_WEBGPU_BUFFER_USAGE_VERTEX_BIT;
   if ((usage & GRANIT_BUFFER_USAGE_INDEX_BIT) != 0)
-    result |= GRANIT_WEBGPU_PROVIDER_BUFFER_USAGE_INDEX_BIT;
+    result |= GRANIT_WEBGPU_BUFFER_USAGE_INDEX_BIT;
   if ((usage & GRANIT_BUFFER_USAGE_UNIFORM_BIT) != 0)
-    result |= GRANIT_WEBGPU_PROVIDER_BUFFER_USAGE_UNIFORM_BIT;
+    result |= GRANIT_WEBGPU_BUFFER_USAGE_UNIFORM_BIT;
   if ((usage & GRANIT_BUFFER_USAGE_STORAGE_BIT) != 0)
-    result |= GRANIT_WEBGPU_PROVIDER_BUFFER_USAGE_STORAGE_BIT;
+    result |= GRANIT_WEBGPU_BUFFER_USAGE_STORAGE_BIT;
   if (location == GRANIT_MEMORY_LOCATION_READBACK)
-    result |= GRANIT_WEBGPU_PROVIDER_BUFFER_USAGE_MAP_READ_BIT |
-              GRANIT_WEBGPU_PROVIDER_BUFFER_USAGE_COPY_DST_BIT;
+    result |= GRANIT_WEBGPU_BUFFER_USAGE_MAP_READ_BIT | GRANIT_WEBGPU_BUFFER_USAGE_COPY_DST_BIT;
   if (location == GRANIT_MEMORY_LOCATION_UPLOAD)
-    result |= GRANIT_WEBGPU_PROVIDER_BUFFER_USAGE_COPY_DST_BIT;
+    result |= GRANIT_WEBGPU_BUFFER_USAGE_COPY_DST_BIT;
   return result;
 }
 
 } // namespace
 
-webgpu_resource_adapter::webgpu_resource_adapter(webgpu_context& provider,
-                                                 granit_webgpu_provider_instance instance)
+webgpu_resource_adapter::webgpu_resource_adapter(webgpu_context& context,
+                                                 webgpu_instance_handle instance)
     : context_(
-          std::make_shared<webgpu_resource_context>(webgpu_resource_context{&provider, instance})) {
-}
+          std::make_shared<webgpu_resource_context>(webgpu_resource_context{&context, instance})) {}
 
 std::unique_ptr<backend_buffer_resource> webgpu_resource_adapter::allocate_buffer() const {
   return std::make_unique<webgpu_buffer_resource>(context_);
@@ -305,9 +300,9 @@ webgpu_resource_adapter::create_buffer(const granit_buffer_desc& desc,
     return GRANIT_ERROR_INTERNAL;
   }
   const auto native_size = (desc.size + 3) & ~UINT64_C(3);
-  granit_webgpu_provider_buffer_desc provider_desc{sizeof(provider_desc), 0, native_size, usage, 0};
+  webgpu_buffer_desc context_desc{sizeof(context_desc), 0, native_size, usage, 0};
   const auto result =
-      context_->provider->create_buffer(context_->instance, &provider_desc, &buffer->handle_);
+      context_->backend->create_buffer(context_->instance, &context_desc, &buffer->handle_);
   if (result == GRANIT_SUCCESS)
     buffer->memory_location_ = desc.memory_location;
   if (result == GRANIT_SUCCESS)
@@ -327,8 +322,8 @@ granit_result webgpu_resource_adapter::flush(backend_buffer_resource& resource,
   if (buffer == nullptr || buffer->memory_location_ != GRANIT_MEMORY_LOCATION_UPLOAD ||
       offset > buffer->host_memory_.size() || size > buffer->host_memory_.size() - offset)
     return GRANIT_ERROR_INVALID_ARGUMENT;
-  return context_->provider->write_buffer(context_->instance, buffer->handle_, offset,
-                                          buffer->host_memory_.data() + offset, size);
+  return context_->backend->write_buffer(context_->instance, buffer->handle_, offset,
+                                         buffer->host_memory_.data() + offset, size);
 }
 
 granit_result webgpu_resource_adapter::invalidate(backend_buffer_resource& resource,
@@ -338,8 +333,8 @@ granit_result webgpu_resource_adapter::invalidate(backend_buffer_resource& resou
   if (buffer == nullptr || buffer->memory_location_ != GRANIT_MEMORY_LOCATION_READBACK ||
       offset > buffer->host_memory_.size() || size > buffer->host_memory_.size() - offset)
     return GRANIT_ERROR_INVALID_ARGUMENT;
-  return context_->provider->read_buffer(context_->instance, buffer->handle_, offset,
-                                         buffer->host_memory_.data() + offset, size);
+  return context_->backend->read_buffer(context_->instance, buffer->handle_, offset,
+                                        buffer->host_memory_.data() + offset, size);
 }
 
 granit_result webgpu_resource_adapter::upload(backend_buffer_resource& resource,
@@ -347,8 +342,8 @@ granit_result webgpu_resource_adapter::upload(backend_buffer_resource& resource,
                                               std::uint64_t size) const noexcept {
   auto* buffer = as_buffer(resource);
   return buffer == nullptr ? GRANIT_ERROR_INVALID_ARGUMENT
-                           : context_->provider->write_buffer(context_->instance, buffer->handle_,
-                                                              offset, data, size);
+                           : context_->backend->write_buffer(context_->instance, buffer->handle_,
+                                                             offset, data, size);
 }
 
 granit_result webgpu_resource_adapter::upload_batch(
@@ -356,12 +351,12 @@ granit_result webgpu_resource_adapter::upload_batch(
   if (uploads.empty())
     return GRANIT_ERROR_INVALID_ARGUMENT;
   try {
-    std::vector<granit_webgpu_provider_upload_operation> operations;
+    std::vector<webgpu_upload_operation> operations;
     operations.reserve(uploads.size());
     for (const auto& upload : uploads) {
       if (upload.data == nullptr || upload.size == 0)
         return GRANIT_ERROR_INVALID_ARGUMENT;
-      granit_webgpu_provider_upload_operation operation{};
+      webgpu_upload_operation operation{};
       operation.struct_size = sizeof(operation);
       operation.data = upload.data;
       operation.size = upload.size;
@@ -369,7 +364,7 @@ granit_result webgpu_resource_adapter::upload_batch(
         const auto* buffer = upload.buffer == nullptr ? nullptr : as_buffer(*upload.buffer);
         if (buffer == nullptr)
           return GRANIT_ERROR_INVALID_ARGUMENT;
-        operation.type = GRANIT_WEBGPU_PROVIDER_UPLOAD_TYPE_BUFFER;
+        operation.type = GRANIT_WEBGPU_UPLOAD_TYPE_BUFFER;
         operation.buffer = buffer->handle_;
         operation.destination_offset = upload.destination_offset;
       } else if (upload.type == backend_upload_type::texture) {
@@ -387,10 +382,10 @@ granit_result webgpu_resource_adapter::upload_batch(
             (copy.buffer_row_length != 0 &&
              copy.buffer_row_length / block.width > UINT32_MAX / block.bytes))
           return GRANIT_ERROR_UNSUPPORTED;
-        operation.type = GRANIT_WEBGPU_PROVIDER_UPLOAD_TYPE_TEXTURE;
+        operation.type = GRANIT_WEBGPU_UPLOAD_TYPE_TEXTURE;
         operation.texture = texture->handle_;
         operation.texture_write = {
-            sizeof(granit_webgpu_provider_texture_write_desc),
+            sizeof(webgpu_texture_write_desc),
             copy.mip_level,
             static_cast<std::uint32_t>(copy.x),
             static_cast<std::uint32_t>(copy.y),
@@ -405,7 +400,7 @@ granit_result webgpu_resource_adapter::upload_batch(
       }
       operations.push_back(operation);
     }
-    return context_->provider->write_upload_batch(context_->instance, operations);
+    return context_->backend->write_upload_batch(context_->instance, operations);
   } catch (const std::bad_alloc&) {
     return GRANIT_ERROR_OUT_OF_MEMORY;
   } catch (...) {
@@ -438,19 +433,19 @@ granit_result webgpu_resource_adapter::readback_batch_async(
   completion.reset();
   if (readbacks.empty())
     return GRANIT_ERROR_INVALID_ARGUMENT;
-  granit_webgpu_provider_buffer staging{};
-  granit_webgpu_provider_command_recorder recorder{};
-  granit_webgpu_provider_command_buffer command{};
-  granit_webgpu_provider_readback operation{};
+  webgpu_buffer staging{};
+  webgpu_command_recorder recorder{};
+  webgpu_command_buffer command{};
+  webgpu_readback operation{};
   auto cleanup = [&] {
     if (operation != 0)
-      static_cast<void>(context_->provider->destroy_readback(context_->instance, operation));
+      static_cast<void>(context_->backend->destroy_readback(context_->instance, operation));
     if (command != 0)
-      static_cast<void>(context_->provider->destroy_command_buffer(context_->instance, command));
+      static_cast<void>(context_->backend->destroy_command_buffer(context_->instance, command));
     if (recorder != 0)
-      static_cast<void>(context_->provider->destroy_command_recorder(context_->instance, recorder));
+      static_cast<void>(context_->backend->destroy_command_recorder(context_->instance, recorder));
     if (staging != 0)
-      static_cast<void>(context_->provider->destroy_buffer(context_->instance, staging));
+      static_cast<void>(context_->backend->destroy_buffer(context_->instance, staging));
   };
   try {
     std::vector<webgpu_readback_slice> slices;
@@ -490,14 +485,13 @@ granit_result webgpu_resource_adapter::readback_batch_async(
     }
     if (max_result_bytes != 0 && result_bytes > max_result_bytes)
       return GRANIT_ERROR_INVALID_ARGUMENT;
-    granit_webgpu_provider_buffer_desc desc{sizeof(desc), 0, required,
-                                            GRANIT_WEBGPU_PROVIDER_BUFFER_USAGE_MAP_READ_BIT |
-                                                GRANIT_WEBGPU_PROVIDER_BUFFER_USAGE_COPY_DST_BIT,
-                                            0};
-    auto result = context_->provider->create_buffer(context_->instance, &desc, &staging);
+    webgpu_buffer_desc desc{
+        sizeof(desc), 0, required,
+        GRANIT_WEBGPU_BUFFER_USAGE_MAP_READ_BIT | GRANIT_WEBGPU_BUFFER_USAGE_COPY_DST_BIT, 0};
+    auto result = context_->backend->create_buffer(context_->instance, &desc, &staging);
     if (result != GRANIT_SUCCESS)
       return result;
-    result = context_->provider->create_command_recorder(context_->instance, &recorder);
+    result = context_->backend->create_command_recorder(context_->instance, &recorder);
     if (result != GRANIT_SUCCESS) {
       cleanup();
       return result;
@@ -513,10 +507,9 @@ granit_result webgpu_resource_adapter::readback_batch_async(
         const auto source_start = readback.source_offset & ~UINT64_C(3);
         const auto prefix = readback.source_offset - source_start;
         const auto copy_size = (prefix + readback.size + 3) & ~UINT64_C(3);
-        granit_webgpu_provider_buffer_copy_region region{source_start, slices[index].source_offset,
-                                                         copy_size};
-        result = context_->provider->recorder_copy_buffer(context_->instance, recorder,
-                                                          source->handle_, staging, {&region, 1});
+        webgpu_buffer_copy_region region{source_start, slices[index].source_offset, copy_size};
+        result = context_->backend->recorder_copy_buffer(context_->instance, recorder,
+                                                         source->handle_, staging, {&region, 1});
       } else {
         const auto* source = readback.texture == nullptr
                                  ? nullptr
@@ -526,20 +519,20 @@ granit_result webgpu_resource_adapter::readback_batch_async(
           return GRANIT_ERROR_INVALID_ARGUMENT;
         }
         const auto& region = readback.texture_region;
-        granit_webgpu_provider_texture_buffer_copy copy{slices[index].source_offset,
-                                                        slices[index].source_bytes_per_row,
-                                                        slices[index].rows,
-                                                        region.mip_level,
-                                                        region.base_array_layer,
-                                                        region.array_layer_count,
-                                                        GRANIT_WEBGPU_PROVIDER_TEXTURE_ASPECT_ALL,
-                                                        region.x,
-                                                        region.y,
-                                                        region.z,
-                                                        region.width,
-                                                        region.height,
-                                                        region.depth};
-        result = context_->provider->recorder_copy_texture_to_buffer_v2(
+        webgpu_texture_buffer_copy copy{slices[index].source_offset,
+                                        slices[index].source_bytes_per_row,
+                                        slices[index].rows,
+                                        region.mip_level,
+                                        region.base_array_layer,
+                                        region.array_layer_count,
+                                        GRANIT_WEBGPU_TEXTURE_ASPECT_ALL,
+                                        region.x,
+                                        region.y,
+                                        region.z,
+                                        region.width,
+                                        region.height,
+                                        region.depth};
+        result = context_->backend->recorder_copy_texture_to_buffer_v2(
             context_->instance, recorder, source->handle_, staging, copy);
       }
       if (result != GRANIT_SUCCESS) {
@@ -547,14 +540,14 @@ granit_result webgpu_resource_adapter::readback_batch_async(
         return result;
       }
     }
-    result = context_->provider->finish_command_recorder(context_->instance, recorder, &command);
+    result = context_->backend->finish_command_recorder(context_->instance, recorder, &command);
     recorder = 0;
     if (result == GRANIT_SUCCESS)
-      result = context_->provider->submit_command_buffer(context_->instance, command);
+      result = context_->backend->submit_command_buffer(context_->instance, command);
     command = 0;
     if (result == GRANIT_SUCCESS)
       result =
-          context_->provider->begin_readback(context_->instance, staging, 0, required, &operation);
+          context_->backend->begin_readback(context_->instance, staging, 0, required, &operation);
     if (result != GRANIT_SUCCESS) {
       cleanup();
       return result;
@@ -573,7 +566,7 @@ granit_result webgpu_resource_adapter::readback_batch_async(
   }
 }
 
-granit_webgpu_provider_buffer
+webgpu_buffer
 webgpu_resource_adapter::native_buffer(backend_buffer_resource& resource) const noexcept {
   const auto* buffer = as_buffer(resource);
   return buffer == nullptr ? 0 : buffer->handle_;
@@ -595,27 +588,26 @@ webgpu_resource_adapter::create_texture(const granit_texture_desc& desc,
       desc.depth != 1 ||
       (desc.sample_count != GRANIT_SAMPLE_COUNT_1 && desc.sample_count != GRANIT_SAMPLE_COUNT_4))
     return GRANIT_ERROR_UNSUPPORTED;
-  const granit_webgpu_provider_texture_desc provider_desc{
-      sizeof(provider_desc),
-      0,
-      desc.width,
-      desc.height,
-      usage,
-      format,
-      desc.mip_levels,
-      desc.dimension == GRANIT_TEXTURE_DIMENSION_CUBE
-          ? GRANIT_WEBGPU_PROVIDER_TEXTURE_DIMENSION_CUBE
-          : GRANIT_WEBGPU_PROVIDER_TEXTURE_DIMENSION_2D,
-      desc.array_layers,
-      desc.sample_count};
+  const webgpu_texture_desc context_desc{sizeof(context_desc),
+                                         0,
+                                         desc.width,
+                                         desc.height,
+                                         usage,
+                                         format,
+                                         desc.mip_levels,
+                                         desc.dimension == GRANIT_TEXTURE_DIMENSION_CUBE
+                                             ? GRANIT_WEBGPU_TEXTURE_DIMENSION_CUBE
+                                             : GRANIT_WEBGPU_TEXTURE_DIMENSION_2D,
+                                         desc.array_layers,
+                                         desc.sample_count};
   const auto result =
-      context_->provider->create_texture(context_->instance, &provider_desc, &texture->handle_);
+      context_->backend->create_texture(context_->instance, &context_desc, &texture->handle_);
   if (result == GRANIT_SUCCESS)
     texture->format_ = desc.format;
   return result;
 }
 
-granit_webgpu_provider_texture
+webgpu_texture
 webgpu_resource_adapter::native_texture(backend_texture_resource& resource) const noexcept {
   const auto* texture = dynamic_cast<webgpu_texture_resource*>(&resource);
   return texture == nullptr ? 0 : texture->handle_;
@@ -629,18 +621,17 @@ webgpu_resource_adapter::upload_texture(backend_texture_resource& resource, cons
   auto* texture = dynamic_cast<webgpu_texture_resource*>(&resource);
   if (texture == nullptr)
     return GRANIT_ERROR_INVALID_ARGUMENT;
-  const granit_webgpu_provider_texture_write_desc desc{
-      sizeof(granit_webgpu_provider_texture_write_desc),
-      region.mip_level,
-      region.x,
-      region.y,
-      region.width,
-      region.height,
-      layout.bytes_per_row,
-      layout.rows_per_image,
-      region.base_array_layer,
-      region.array_layer_count};
-  return context_->provider->write_texture(context_->instance, texture->handle_, &desc, data, size);
+  const webgpu_texture_write_desc desc{sizeof(webgpu_texture_write_desc),
+                                       region.mip_level,
+                                       region.x,
+                                       region.y,
+                                       region.width,
+                                       region.height,
+                                       layout.bytes_per_row,
+                                       layout.rows_per_image,
+                                       region.base_array_layer,
+                                       region.array_layer_count};
+  return context_->backend->write_texture(context_->instance, texture->handle_, &desc, data, size);
 }
 
 std::unique_ptr<backend_texture_view_resource>
@@ -662,21 +653,20 @@ granit_result webgpu_resource_adapter::create_texture_view(
       (desc.dimension != GRANIT_TEXTURE_DIMENSION_2D &&
        desc.dimension != GRANIT_TEXTURE_DIMENSION_CUBE))
     return GRANIT_ERROR_UNSUPPORTED;
-  const granit_webgpu_provider_texture_view_desc provider_desc{
-      sizeof(provider_desc),
-      format,
-      desc.range.base_mip_level,
-      mip_count,
-      desc.dimension == GRANIT_TEXTURE_DIMENSION_CUBE
-          ? GRANIT_WEBGPU_PROVIDER_TEXTURE_DIMENSION_CUBE
-          : GRANIT_WEBGPU_PROVIDER_TEXTURE_DIMENSION_2D,
-      desc.range.base_array_layer,
-      desc.range.array_layer_count};
-  return context_->provider->create_texture_view(context_->instance, native_texture->handle_,
-                                                 &provider_desc, &view->handle_);
+  const webgpu_texture_view_desc context_desc{sizeof(context_desc),
+                                              format,
+                                              desc.range.base_mip_level,
+                                              mip_count,
+                                              desc.dimension == GRANIT_TEXTURE_DIMENSION_CUBE
+                                                  ? GRANIT_WEBGPU_TEXTURE_DIMENSION_CUBE
+                                                  : GRANIT_WEBGPU_TEXTURE_DIMENSION_2D,
+                                              desc.range.base_array_layer,
+                                              desc.range.array_layer_count};
+  return context_->backend->create_texture_view(context_->instance, native_texture->handle_,
+                                                &context_desc, &view->handle_);
 }
 
-granit_webgpu_provider_texture_view webgpu_resource_adapter::native_texture_view(
+webgpu_texture_view webgpu_resource_adapter::native_texture_view(
     backend_texture_view_resource& resource) const noexcept {
   const auto* view = dynamic_cast<webgpu_texture_view_resource*>(&resource);
   return view == nullptr ? 0 : view->handle_;
@@ -698,21 +688,20 @@ webgpu_resource_adapter::create_sampler(const granit_sampler_desc& desc,
        (desc.min_filter != GRANIT_FILTER_LINEAR || desc.mag_filter != GRANIT_FILTER_LINEAR ||
         desc.mipmap_filter != GRANIT_MIPMAP_FILTER_LINEAR)))
     return GRANIT_ERROR_UNSUPPORTED;
-  const granit_webgpu_provider_sampler_desc provider_desc{
-      sizeof(granit_webgpu_provider_sampler_desc),
-      0,
-      desc.min_filter + 1,
-      desc.mag_filter + 1,
-      desc.mipmap_filter + 1,
-      desc.address_mode_u + 1,
-      desc.address_mode_v + 1,
-      desc.address_mode_w + 1,
-      desc.compare_operation,
-      static_cast<std::uint32_t>(desc.max_anisotropy),
-      desc.min_lod,
-      desc.max_lod,
-      {0, 0}};
-  return context_->provider->create_sampler(context_->instance, &provider_desc, &sampler->handle_);
+  const webgpu_sampler_desc context_desc{sizeof(webgpu_sampler_desc),
+                                         0,
+                                         desc.min_filter + 1,
+                                         desc.mag_filter + 1,
+                                         desc.mipmap_filter + 1,
+                                         desc.address_mode_u + 1,
+                                         desc.address_mode_v + 1,
+                                         desc.address_mode_w + 1,
+                                         desc.compare_operation,
+                                         static_cast<std::uint32_t>(desc.max_anisotropy),
+                                         desc.min_lod,
+                                         desc.max_lod,
+                                         {0, 0}};
+  return context_->backend->create_sampler(context_->instance, &context_desc, &sampler->handle_);
 }
 
 std::unique_ptr<backend_bind_group_layout_resource>
@@ -726,52 +715,52 @@ granit_result webgpu_resource_adapter::create_bind_group_layout(
   auto* layout = dynamic_cast<webgpu_bind_group_layout_resource*>(&resource);
   if (layout == nullptr || layout->handle_ != 0)
     return GRANIT_ERROR_INVALID_ARGUMENT;
-  std::vector<granit_webgpu_provider_bind_group_layout_entry> provider_entries;
+  std::vector<webgpu_bind_group_layout_entry> context_entries;
   try {
-    provider_entries.reserve(entries.size());
+    context_entries.reserve(entries.size());
     for (const auto& entry : entries) {
-      granit_webgpu_provider_binding_type type{};
+      webgpu_binding_type type{};
       switch (entry.type) {
       case GRANIT_BINDING_TYPE_UNIFORM_BUFFER:
-        type = GRANIT_WEBGPU_PROVIDER_BINDING_TYPE_UNIFORM_BUFFER;
+        type = GRANIT_WEBGPU_BINDING_TYPE_UNIFORM_BUFFER;
         break;
       case GRANIT_BINDING_TYPE_DYNAMIC_UNIFORM_BUFFER:
-        type = GRANIT_WEBGPU_PROVIDER_BINDING_TYPE_DYNAMIC_UNIFORM_BUFFER;
+        type = GRANIT_WEBGPU_BINDING_TYPE_DYNAMIC_UNIFORM_BUFFER;
         break;
       case GRANIT_BINDING_TYPE_STORAGE_BUFFER:
-        type = GRANIT_WEBGPU_PROVIDER_BINDING_TYPE_STORAGE_BUFFER;
+        type = GRANIT_WEBGPU_BINDING_TYPE_STORAGE_BUFFER;
         break;
       case GRANIT_BINDING_TYPE_SAMPLED_TEXTURE:
-        type = GRANIT_WEBGPU_PROVIDER_BINDING_TYPE_SAMPLED_TEXTURE;
+        type = GRANIT_WEBGPU_BINDING_TYPE_SAMPLED_TEXTURE;
         break;
       case GRANIT_BINDING_TYPE_SAMPLED_TEXTURE_CUBE:
-        type = GRANIT_WEBGPU_PROVIDER_BINDING_TYPE_SAMPLED_TEXTURE_CUBE;
+        type = GRANIT_WEBGPU_BINDING_TYPE_SAMPLED_TEXTURE_CUBE;
         break;
       case GRANIT_BINDING_TYPE_SAMPLED_DEPTH_TEXTURE:
-        type = GRANIT_WEBGPU_PROVIDER_BINDING_TYPE_SAMPLED_DEPTH_TEXTURE;
+        type = GRANIT_WEBGPU_BINDING_TYPE_SAMPLED_DEPTH_TEXTURE;
         break;
       case GRANIT_BINDING_TYPE_SAMPLER:
-        type = GRANIT_WEBGPU_PROVIDER_BINDING_TYPE_SAMPLER;
+        type = GRANIT_WEBGPU_BINDING_TYPE_SAMPLER;
         break;
       case GRANIT_BINDING_TYPE_COMPARISON_SAMPLER:
-        type = GRANIT_WEBGPU_PROVIDER_BINDING_TYPE_COMPARISON_SAMPLER;
+        type = GRANIT_WEBGPU_BINDING_TYPE_COMPARISON_SAMPLER;
         break;
       default:
         return GRANIT_ERROR_UNSUPPORTED;
       }
       if (entry.array_count != 1)
         return GRANIT_ERROR_UNSUPPORTED;
-      provider_entries.push_back({entry.binding, type, entry.visibility, entry.array_count});
+      context_entries.push_back({entry.binding, type, entry.visibility, entry.array_count});
     }
   } catch (const std::bad_alloc&) {
     return GRANIT_ERROR_OUT_OF_MEMORY;
   } catch (...) {
     return GRANIT_ERROR_INTERNAL;
   }
-  const granit_webgpu_provider_bind_group_layout_desc desc{
-      sizeof(granit_webgpu_provider_bind_group_layout_desc),
-      static_cast<std::uint32_t>(provider_entries.size()), provider_entries.data(), 0};
-  return context_->provider->create_bind_group_layout(context_->instance, &desc, &layout->handle_);
+  const webgpu_bind_group_layout_desc desc{sizeof(webgpu_bind_group_layout_desc),
+                                           static_cast<std::uint32_t>(context_entries.size()),
+                                           context_entries.data(), 0};
+  return context_->backend->create_bind_group_layout(context_->instance, &desc, &layout->handle_);
 }
 
 std::unique_ptr<backend_bind_group_resource> webgpu_resource_adapter::allocate_bind_group() const {
@@ -786,25 +775,25 @@ webgpu_resource_adapter::create_bind_group(backend_bind_group_layout_resource& l
   auto* group = dynamic_cast<webgpu_bind_group_resource*>(&resource);
   if (native_layout == nullptr || group == nullptr || group->handle_ != 0)
     return GRANIT_ERROR_INVALID_ARGUMENT;
-  std::vector<granit_webgpu_provider_bind_group_entry> entries;
+  std::vector<webgpu_bind_group_entry> entries;
   try {
     entries.reserve(writes.size());
     for (const auto& write : writes) {
-      granit_webgpu_provider_bind_group_entry entry{};
+      webgpu_bind_group_entry entry{};
       entry.binding = write.binding;
       entry.offset = write.offset;
       entry.size = write.range;
       switch (write.type) {
       case backend_binding_type::uniform_buffer:
-        entry.type = GRANIT_WEBGPU_PROVIDER_BINDING_TYPE_UNIFORM_BUFFER;
+        entry.type = GRANIT_WEBGPU_BINDING_TYPE_UNIFORM_BUFFER;
         entry.buffer = native_buffer(*write.buffer);
         break;
       case backend_binding_type::dynamic_uniform_buffer:
-        entry.type = GRANIT_WEBGPU_PROVIDER_BINDING_TYPE_DYNAMIC_UNIFORM_BUFFER;
+        entry.type = GRANIT_WEBGPU_BINDING_TYPE_DYNAMIC_UNIFORM_BUFFER;
         entry.buffer = native_buffer(*write.buffer);
         break;
       case backend_binding_type::storage_buffer:
-        entry.type = GRANIT_WEBGPU_PROVIDER_BINDING_TYPE_STORAGE_BUFFER;
+        entry.type = GRANIT_WEBGPU_BINDING_TYPE_STORAGE_BUFFER;
         entry.buffer = native_buffer(*write.buffer);
         break;
       case backend_binding_type::sampled_texture:
@@ -814,10 +803,10 @@ webgpu_resource_adapter::create_bind_group(backend_bind_group_layout_resource& l
         if (view == nullptr)
           return GRANIT_ERROR_INVALID_ARGUMENT;
         entry.type = write.type == backend_binding_type::sampled_texture_cube
-                         ? GRANIT_WEBGPU_PROVIDER_BINDING_TYPE_SAMPLED_TEXTURE_CUBE
+                         ? GRANIT_WEBGPU_BINDING_TYPE_SAMPLED_TEXTURE_CUBE
                      : write.type == backend_binding_type::sampled_depth_texture
-                         ? GRANIT_WEBGPU_PROVIDER_BINDING_TYPE_SAMPLED_DEPTH_TEXTURE
-                         : GRANIT_WEBGPU_PROVIDER_BINDING_TYPE_SAMPLED_TEXTURE;
+                         ? GRANIT_WEBGPU_BINDING_TYPE_SAMPLED_DEPTH_TEXTURE
+                         : GRANIT_WEBGPU_BINDING_TYPE_SAMPLED_TEXTURE;
         entry.texture_view = view->handle_;
         break;
       }
@@ -827,8 +816,8 @@ webgpu_resource_adapter::create_bind_group(backend_bind_group_layout_resource& l
         if (sampler == nullptr)
           return GRANIT_ERROR_INVALID_ARGUMENT;
         entry.type = write.type == backend_binding_type::comparison_sampler
-                         ? GRANIT_WEBGPU_PROVIDER_BINDING_TYPE_COMPARISON_SAMPLER
-                         : GRANIT_WEBGPU_PROVIDER_BINDING_TYPE_SAMPLER;
+                         ? GRANIT_WEBGPU_BINDING_TYPE_COMPARISON_SAMPLER
+                         : GRANIT_WEBGPU_BINDING_TYPE_SAMPLER;
         entry.sampler = sampler->handle_;
         break;
       }
@@ -842,19 +831,19 @@ webgpu_resource_adapter::create_bind_group(backend_bind_group_layout_resource& l
   } catch (...) {
     return GRANIT_ERROR_INTERNAL;
   }
-  const granit_webgpu_provider_bind_group_desc desc{sizeof(granit_webgpu_provider_bind_group_desc),
-                                                    static_cast<std::uint32_t>(entries.size()),
-                                                    native_layout->handle_, entries.data(), 0};
-  return context_->provider->create_bind_group(context_->instance, &desc, &group->handle_);
+  const webgpu_bind_group_desc desc{sizeof(webgpu_bind_group_desc),
+                                    static_cast<std::uint32_t>(entries.size()),
+                                    native_layout->handle_, entries.data(), 0};
+  return context_->backend->create_bind_group(context_->instance, &desc, &group->handle_);
 }
 
-granit_webgpu_provider_bind_group_layout webgpu_resource_adapter::native_bind_group_layout(
+webgpu_bind_group_layout webgpu_resource_adapter::native_bind_group_layout(
     backend_bind_group_layout_resource& resource) const noexcept {
   const auto* layout = dynamic_cast<webgpu_bind_group_layout_resource*>(&resource);
   return layout == nullptr ? 0 : layout->handle_;
 }
 
-granit_webgpu_provider_bind_group
+webgpu_bind_group
 webgpu_resource_adapter::native_bind_group(backend_bind_group_resource& resource) const noexcept {
   const auto* group = dynamic_cast<webgpu_bind_group_resource*>(&resource);
   return group == nullptr ? 0 : group->handle_;

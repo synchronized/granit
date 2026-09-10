@@ -22,9 +22,9 @@
 #include "backend/contracts/timestamp.h"
 #include "backend/contracts/transfer.h"
 #include "backend/webgpu/command_adapter.h"
+#include "backend/webgpu/context.h"
 #include "backend/webgpu/pipeline_adapter.h"
 #include "backend/webgpu/presentation_adapter.h"
-#include "backend/webgpu/context.h"
 #include "backend/webgpu/resource_adapter.h"
 #include "backend/webgpu/shader_adapter.h"
 #include "backend/webgpu/timestamp_adapter.h"
@@ -327,14 +327,14 @@ private:
   [[nodiscard]] granit_result refresh_state() noexcept;
   [[nodiscard]] granit_result finish_initialization() noexcept;
 
-  webgpu_context provider_;
-  granit_webgpu_provider_instance instance_{};
+  webgpu_context context_;
+  webgpu_instance_handle instance_{};
   granit_diagnostic_callback diagnostic_callback_{};
   void* diagnostic_user_data_{};
   backend_lifecycle_status lifecycle_{};
   backend_capabilities capabilities_{};
   std::uint32_t surface_types_{};
-  std::uint32_t provider_surface_types_{};
+  std::uint32_t context_surface_types_{};
   std::uint32_t domain_{};
   submission_serial next_submission_serial_{1};
   std::unique_ptr<webgpu_presentation_adapter> presentation_;

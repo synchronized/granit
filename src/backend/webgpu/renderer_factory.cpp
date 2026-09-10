@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include "renderer/renderer_registry.h"
 #include "renderer/renderer_factory.h"
+#include "renderer/renderer_registry.h"
 
 #include "backend/webgpu/renderer_state.h"
 

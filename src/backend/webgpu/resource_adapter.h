@@ -16,8 +16,7 @@ struct webgpu_resource_context;
 /** 将公共基础资源契约适配到 WebGPU Provider。 */
 class webgpu_resource_adapter {
 public:
-  webgpu_resource_adapter(webgpu_context& provider,
-                          granit_webgpu_provider_instance instance);
+  webgpu_resource_adapter(webgpu_context& context, webgpu_instance_handle instance);
 
   [[nodiscard]] std::unique_ptr<backend_buffer_resource> allocate_buffer() const;
   [[nodiscard]] granit_result create_buffer(const granit_buffer_desc& desc,
@@ -38,13 +37,11 @@ public:
   readback_batch_async(std::span<const backend_readback_operation> readbacks,
                        granit_readback_layout layout, std::uint64_t max_result_bytes,
                        std::unique_ptr<backend_readback_completion>& completion) const noexcept;
-  [[nodiscard]] granit_webgpu_provider_buffer
-  native_buffer(backend_buffer_resource& resource) const noexcept;
+  [[nodiscard]] webgpu_buffer native_buffer(backend_buffer_resource& resource) const noexcept;
   [[nodiscard]] std::unique_ptr<backend_texture_resource> allocate_texture() const;
   [[nodiscard]] granit_result create_texture(const granit_texture_desc& desc,
                                              backend_texture_resource& resource) const noexcept;
-  [[nodiscard]] granit_webgpu_provider_texture
-  native_texture(backend_texture_resource& resource) const noexcept;
+  [[nodiscard]] webgpu_texture native_texture(backend_texture_resource& resource) const noexcept;
   [[nodiscard]] granit_result
   upload_texture(backend_texture_resource& resource, const void* data, std::uint64_t size,
                  const granit_texture_data_layout& layout,
@@ -54,7 +51,7 @@ public:
   create_texture_view(backend_texture_resource& texture, const granit_texture_desc& texture_desc,
                       const granit_texture_view_desc& desc,
                       backend_texture_view_resource& resource) const noexcept;
-  [[nodiscard]] granit_webgpu_provider_texture_view
+  [[nodiscard]] webgpu_texture_view
   native_texture_view(backend_texture_view_resource& resource) const noexcept;
   [[nodiscard]] std::unique_ptr<backend_sampler_resource> allocate_sampler() const;
   [[nodiscard]] granit_result create_sampler(const granit_sampler_desc& desc,
@@ -69,9 +66,9 @@ public:
   create_bind_group(backend_bind_group_layout_resource& layout,
                     std::span<const backend_bind_group_write> writes,
                     backend_bind_group_resource& resource) const noexcept;
-  [[nodiscard]] granit_webgpu_provider_bind_group_layout
+  [[nodiscard]] webgpu_bind_group_layout
   native_bind_group_layout(backend_bind_group_layout_resource& resource) const noexcept;
-  [[nodiscard]] granit_webgpu_provider_bind_group
+  [[nodiscard]] webgpu_bind_group
   native_bind_group(backend_bind_group_resource& resource) const noexcept;
 
 private:

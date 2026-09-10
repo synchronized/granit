@@ -13,14 +13,14 @@ namespace granit::detail {
 
 namespace {
 
-granit_webgpu_provider_texture_aspect to_provider_aspect(granit_texture_aspect aspect) noexcept {
+webgpu_texture_aspect to_context_aspect(granit_texture_aspect aspect) noexcept {
   switch (aspect) {
   case GRANIT_TEXTURE_ASPECT_DEPTH_BIT:
-    return GRANIT_WEBGPU_PROVIDER_TEXTURE_ASPECT_DEPTH;
+    return GRANIT_WEBGPU_TEXTURE_ASPECT_DEPTH;
   case GRANIT_TEXTURE_ASPECT_STENCIL_BIT:
-    return GRANIT_WEBGPU_PROVIDER_TEXTURE_ASPECT_STENCIL;
+    return GRANIT_WEBGPU_TEXTURE_ASPECT_STENCIL;
   default:
-    return GRANIT_WEBGPU_PROVIDER_TEXTURE_ASPECT_ALL;
+    return GRANIT_WEBGPU_TEXTURE_ASPECT_ALL;
   }
 }
 
@@ -47,7 +47,7 @@ granit_result webgpu_renderer_state::bind_compute_groups(
   if (!commands_ || !resources_ || !pipelines_ || bind_groups.empty())
     return GRANIT_ERROR_INVALID_ARGUMENT;
   try {
-    std::vector<granit_webgpu_provider_bind_group> native_groups;
+    std::vector<webgpu_bind_group> native_groups;
     native_groups.reserve(bind_groups.size());
     for (auto* group : bind_groups) {
       if (group == nullptr)
@@ -119,7 +119,7 @@ granit_result webgpu_renderer_state::bind_graphics_groups(
   if (!commands_ || !resources_ || !pipelines_ || bind_groups.empty())
     return GRANIT_ERROR_INVALID_ARGUMENT;
   try {
-    std::vector<granit_webgpu_provider_bind_group> native_groups;
+    std::vector<webgpu_bind_group> native_groups;
     native_groups.reserve(bind_groups.size());
     for (auto* bind_group : bind_groups) {
       if (bind_group == nullptr)
@@ -146,7 +146,7 @@ granit_result webgpu_renderer_state::bind_vertex_buffers(
     std::span<backend_buffer_resource* const> buffers, std::span<const std::uint64_t> offsets) {
   if (!commands_ || !resources_ || buffers.empty() || buffers.size() != offsets.size())
     return GRANIT_ERROR_INVALID_ARGUMENT;
-  std::vector<granit_webgpu_provider_vertex_buffer_binding> bindings;
+  std::vector<webgpu_vertex_buffer_binding> bindings;
   try {
     bindings.reserve(buffers.size());
     for (std::size_t index = 0; index < buffers.size(); ++index) {
@@ -172,8 +172,8 @@ granit_result webgpu_renderer_state::bind_index_buffer(backend_command_recorder_
   const auto native = resources_->native_buffer(buffer);
   if (native == 0)
     return GRANIT_ERROR_INVALID_ARGUMENT;
-  const auto format = type == GRANIT_INDEX_TYPE_UINT16 ? GRANIT_WEBGPU_PROVIDER_INDEX_FORMAT_UINT16
-                                                       : GRANIT_WEBGPU_PROVIDER_INDEX_FORMAT_UINT32;
+  const auto format = type == GRANIT_INDEX_TYPE_UINT16 ? GRANIT_WEBGPU_INDEX_FORMAT_UINT16
+                                                       : GRANIT_WEBGPU_INDEX_FORMAT_UINT32;
   return commands_->bind_index_buffer(recorder, native, offset, format);
 }
 
@@ -184,7 +184,7 @@ webgpu_renderer_state::set_viewports(backend_command_recorder_resource& recorder
   if (!commands_ || viewports.empty())
     return GRANIT_ERROR_INVALID_ARGUMENT;
   try {
-    std::vector<granit_webgpu_provider_viewport> native;
+    std::vector<webgpu_viewport> native;
     native.reserve(viewports.size());
     for (const auto& viewport : viewports) {
       native.push_back({viewport.x, viewport.y, viewport.width, viewport.height, viewport.min_depth,
@@ -205,7 +205,7 @@ webgpu_renderer_state::set_scissors(backend_command_recorder_resource& recorder,
   if (!commands_ || scissors.empty())
     return GRANIT_ERROR_INVALID_ARGUMENT;
   try {
-    std::vector<granit_webgpu_provider_scissor> native;
+    std::vector<webgpu_scissor> native;
     native.reserve(scissors.size());
     for (const auto& scissor : scissors) {
       native.push_back({static_cast<std::uint32_t>(scissor.x),
@@ -225,7 +225,7 @@ granit_result webgpu_renderer_state::copy_buffer(
   if (!commands_ || !resources_)
     return GRANIT_ERROR_NOT_READY;
   try {
-    std::vector<granit_webgpu_provider_buffer_copy_region> native;
+    std::vector<webgpu_buffer_copy_region> native;
     native.reserve(regions.size());
     for (const auto& region : regions)
       native.push_back({region.source_offset, region.destination_offset, region.size});
@@ -247,7 +247,7 @@ granit_result webgpu_renderer_state::copy_texture_to_buffer(
   const auto block = texture_format_block(format);
   if (block.bytes == 0)
     return GRANIT_ERROR_UNSUPPORTED;
-  const granit_webgpu_provider_texture_buffer_copy native{
+  const webgpu_texture_buffer_copy native{
       layout.offset,
       layout.bytes_per_row == 0 ? ((region.width + block.width - 1) / block.width) * block.bytes
                                 : layout.bytes_per_row,
@@ -256,7 +256,7 @@ granit_result webgpu_renderer_state::copy_texture_to_buffer(
       region.mip_level,
       region.base_array_layer,
       region.array_layer_count,
-      to_provider_aspect(region.aspect),
+      to_context_aspect(region.aspect),
       region.x,
       region.y,
       region.z,
@@ -276,7 +276,7 @@ granit_result webgpu_renderer_state::copy_buffer_to_texture(
   const auto block = texture_format_block(format);
   if (block.bytes == 0)
     return GRANIT_ERROR_UNSUPPORTED;
-  const granit_webgpu_provider_texture_buffer_copy native{
+  const webgpu_texture_buffer_copy native{
       layout.offset,
       layout.bytes_per_row == 0 ? ((region.width + block.width - 1) / block.width) * block.bytes
                                 : layout.bytes_per_row,
@@ -285,7 +285,7 @@ granit_result webgpu_renderer_state::copy_buffer_to_texture(
       region.mip_level,
       region.base_array_layer,
       region.array_layer_count,
-      to_provider_aspect(region.aspect),
+      to_context_aspect(region.aspect),
       region.x,
       region.y,
       region.z,
@@ -302,13 +302,13 @@ granit_result webgpu_renderer_state::copy_texture(backend_command_recorder_resou
                                                   const granit_texture_copy_region& region) {
   if (!commands_ || !resources_)
     return GRANIT_ERROR_NOT_READY;
-  const granit_webgpu_provider_texture_copy_region native{
+  const webgpu_texture_copy_region native{
       region.source_mip_level,
       region.source_base_array_layer,
       region.destination_mip_level,
       region.destination_base_array_layer,
       region.array_layer_count,
-      to_provider_aspect(static_cast<granit_texture_aspect>(region.aspect)),
+      to_context_aspect(static_cast<granit_texture_aspect>(region.aspect)),
       region.source_x,
       region.source_y,
       region.source_z,
@@ -337,8 +337,8 @@ granit_result webgpu_renderer_state::generate_mipmaps(backend_command_recorder_r
                                                       const granit_texture_mipmap_range& range) {
   if (!commands_ || !resources_)
     return GRANIT_ERROR_NOT_READY;
-  const granit_webgpu_provider_texture_mipmap_range native{
-      range.base_mip_level, range.level_count, range.base_array_layer, range.array_layer_count};
+  const webgpu_texture_mipmap_range native{range.base_mip_level, range.level_count,
+                                           range.base_array_layer, range.array_layer_count};
   return commands_->generate_mipmaps(recorder, resources_->native_texture(texture), native);
 }
 
@@ -379,21 +379,21 @@ granit_result webgpu_renderer_state::begin_rendering(
   if (!commands_ || !presentation_ || color_attachments.size() > 1 || layer_count != 1 ||
       (color_attachments.empty() && depth_stencil_attachment == nullptr))
     return GRANIT_ERROR_UNSUPPORTED;
-  auto load = GRANIT_WEBGPU_PROVIDER_LOAD_OPERATION_CLEAR;
-  auto store = GRANIT_WEBGPU_PROVIDER_STORE_OPERATION_DISCARD;
+  auto load = GRANIT_WEBGPU_LOAD_OPERATION_CLEAR;
+  auto store = GRANIT_WEBGPU_STORE_OPERATION_DISCARD;
   float clear[]{0.0F, 0.0F, 0.0F, 0.0F};
-  granit_webgpu_provider_texture_view native_view{};
-  granit_webgpu_provider_texture_view native_resolve_view{};
+  webgpu_texture_view native_view{};
+  webgpu_texture_view native_resolve_view{};
   if (!color_attachments.empty()) {
     const auto& attachment = color_attachments.front();
     if (attachment.load_operation == GRANIT_ATTACHMENT_LOAD_OPERATION_DISCARD)
       return GRANIT_ERROR_UNSUPPORTED;
     load = attachment.load_operation == GRANIT_ATTACHMENT_LOAD_OPERATION_LOAD
-               ? GRANIT_WEBGPU_PROVIDER_LOAD_OPERATION_LOAD
-               : GRANIT_WEBGPU_PROVIDER_LOAD_OPERATION_CLEAR;
+               ? GRANIT_WEBGPU_LOAD_OPERATION_LOAD
+               : GRANIT_WEBGPU_LOAD_OPERATION_CLEAR;
     store = attachment.store_operation == GRANIT_ATTACHMENT_STORE_OPERATION_STORE
-                ? GRANIT_WEBGPU_PROVIDER_STORE_OPERATION_STORE
-                : GRANIT_WEBGPU_PROVIDER_STORE_OPERATION_DISCARD;
+                ? GRANIT_WEBGPU_STORE_OPERATION_STORE
+                : GRANIT_WEBGPU_STORE_OPERATION_DISCARD;
     clear[0] = attachment.clear_value.red;
     clear[1] = attachment.clear_value.green;
     clear[2] = attachment.clear_value.blue;
@@ -409,9 +409,9 @@ granit_result webgpu_renderer_state::begin_rendering(
         return GRANIT_ERROR_INVALID_HANDLE;
     }
   }
-  granit_webgpu_provider_texture_view native_depth_view{};
-  auto depth_load = GRANIT_WEBGPU_PROVIDER_LOAD_OPERATION_CLEAR;
-  auto depth_store = GRANIT_WEBGPU_PROVIDER_STORE_OPERATION_DISCARD;
+  webgpu_texture_view native_depth_view{};
+  auto depth_load = GRANIT_WEBGPU_LOAD_OPERATION_CLEAR;
+  auto depth_store = GRANIT_WEBGPU_STORE_OPERATION_DISCARD;
   float clear_depth = 1.0F;
   if (depth_stencil_attachment != nullptr) {
     const auto& depth = *depth_stencil_attachment;
@@ -425,11 +425,11 @@ granit_result webgpu_renderer_state::begin_rendering(
     if (native_depth_view == 0)
       return GRANIT_ERROR_INVALID_HANDLE;
     depth_load = depth.depth_load_operation == GRANIT_ATTACHMENT_LOAD_OPERATION_LOAD
-                     ? GRANIT_WEBGPU_PROVIDER_LOAD_OPERATION_LOAD
-                     : GRANIT_WEBGPU_PROVIDER_LOAD_OPERATION_CLEAR;
+                     ? GRANIT_WEBGPU_LOAD_OPERATION_LOAD
+                     : GRANIT_WEBGPU_LOAD_OPERATION_CLEAR;
     depth_store = depth.depth_store_operation == GRANIT_ATTACHMENT_STORE_OPERATION_STORE
-                      ? GRANIT_WEBGPU_PROVIDER_STORE_OPERATION_STORE
-                      : GRANIT_WEBGPU_PROVIDER_STORE_OPERATION_DISCARD;
+                      ? GRANIT_WEBGPU_STORE_OPERATION_STORE
+                      : GRANIT_WEBGPU_STORE_OPERATION_DISCARD;
     clear_depth = depth.clear_value.depth;
   }
   return commands_->begin_rendering(recorder, native_view, native_resolve_view, load, store, clear,

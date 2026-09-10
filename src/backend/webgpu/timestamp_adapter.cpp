@@ -8,32 +8,31 @@ namespace {
 
 class webgpu_timestamp_query_pool_resource final : public backend_timestamp_query_pool_resource {
 public:
-  webgpu_timestamp_query_pool_resource(webgpu_context& provider,
-                                       granit_webgpu_provider_instance instance) noexcept
-      : provider_(&provider), instance_(instance) {}
+  webgpu_timestamp_query_pool_resource(webgpu_context& context,
+                                       webgpu_instance_handle instance) noexcept
+      : context_(&context), instance_(instance) {}
   ~webgpu_timestamp_query_pool_resource() override {
     if (handle_ != 0)
-      static_cast<void>(provider_->destroy_timestamp_query_pool(instance_, handle_));
+      static_cast<void>(context_->destroy_timestamp_query_pool(instance_, handle_));
   }
 
-  webgpu_context* provider_{};
-  granit_webgpu_provider_instance instance_{};
-  granit_webgpu_provider_timestamp_query_pool handle_{};
+  webgpu_context* context_{};
+  webgpu_instance_handle instance_{};
+  webgpu_timestamp_query_pool handle_{};
 };
 
 } // namespace
 
-webgpu_timestamp_adapter::webgpu_timestamp_adapter(
-    webgpu_context& provider, granit_webgpu_provider_instance instance) noexcept
-    : provider_(&provider), instance_(instance) {}
+webgpu_timestamp_adapter::webgpu_timestamp_adapter(webgpu_context& context,
+                                                   webgpu_instance_handle instance) noexcept
+    : context_(&context), instance_(instance) {}
 
 granit_result webgpu_timestamp_adapter::create(
     std::uint32_t count,
     std::unique_ptr<backend_timestamp_query_pool_resource>& pool) const noexcept {
   try {
-    auto resource = std::make_unique<webgpu_timestamp_query_pool_resource>(*provider_, instance_);
-    const auto result =
-        provider_->create_timestamp_query_pool(instance_, count, &resource->handle_);
+    auto resource = std::make_unique<webgpu_timestamp_query_pool_resource>(*context_, instance_);
+    const auto result = context_->create_timestamp_query_pool(instance_, count, &resource->handle_);
     if (result != GRANIT_SUCCESS)
       return result;
     pool = std::move(resource);
@@ -50,12 +49,12 @@ granit_result webgpu_timestamp_adapter::read(backend_timestamp_query_pool_resour
                                              std::span<std::uint64_t> values) const noexcept {
   const auto handle = native_handle(pool);
   return handle != 0
-             ? provider_->read_timestamp_query_results(instance_, handle, first, values.data(),
-                                                       static_cast<std::uint32_t>(values.size()))
+             ? context_->read_timestamp_query_results(instance_, handle, first, values.data(),
+                                                      static_cast<std::uint32_t>(values.size()))
              : GRANIT_ERROR_INVALID_ARGUMENT;
 }
 
-granit_webgpu_provider_timestamp_query_pool webgpu_timestamp_adapter::native_handle(
+webgpu_timestamp_query_pool webgpu_timestamp_adapter::native_handle(
     backend_timestamp_query_pool_resource& pool) const noexcept {
   const auto* resource = dynamic_cast<webgpu_timestamp_query_pool_resource*>(&pool);
   return resource != nullptr ? resource->handle_ : 0;

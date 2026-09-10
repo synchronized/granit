@@ -19,8 +19,7 @@ struct webgpu_pipeline_context;
 /** 适配 WebGPU MVP 的无绑定 Pipeline Layout 与基础图形 Pipeline。 */
 class webgpu_pipeline_adapter {
 public:
-  webgpu_pipeline_adapter(webgpu_context& provider,
-                          granit_webgpu_provider_instance instance);
+  webgpu_pipeline_adapter(webgpu_context& context, webgpu_instance_handle instance);
 
   [[nodiscard]] std::unique_ptr<backend_pipeline_layout_resource> allocate_pipeline_layout() const;
   [[nodiscard]] std::unique_ptr<backend_graphics_pipeline_resource>
@@ -30,51 +29,45 @@ public:
   [[nodiscard]] granit_result
   validate_graphics_pipeline(const granit_graphics_pipeline_desc& desc) const noexcept;
   [[nodiscard]] granit_result
-  create_pipeline_layout(std::span<const granit_webgpu_provider_bind_group_layout> layouts,
+  create_pipeline_layout(std::span<const webgpu_bind_group_layout> layouts,
                          backend_pipeline_layout_resource& resource) const noexcept;
-  [[nodiscard]] granit_webgpu_provider_pipeline_layout
+  [[nodiscard]] webgpu_pipeline_layout
   native_pipeline_layout(backend_pipeline_layout_resource& resource) const noexcept;
+  [[nodiscard]] granit_result create_compute_pipeline(backend_compute_pipeline_resource& resource,
+                                                      webgpu_pipeline_layout layout,
+                                                      webgpu_shader shader) const noexcept;
   [[nodiscard]] granit_result
-  create_compute_pipeline(backend_compute_pipeline_resource& resource,
-                          granit_webgpu_provider_pipeline_layout layout,
-                          granit_webgpu_provider_shader shader) const noexcept;
-  [[nodiscard]] granit_result begin_compute_pipeline_warmup(
-      granit_webgpu_provider_pipeline_layout layout, granit_webgpu_provider_shader shader,
-      granit_webgpu_provider_pipeline_warmup& warmup) const noexcept;
-  [[nodiscard]] granit_webgpu_provider_compute_pipeline
+  begin_compute_pipeline_warmup(webgpu_pipeline_layout layout, webgpu_shader shader,
+                                webgpu_pipeline_warmup& warmup) const noexcept;
+  [[nodiscard]] webgpu_compute_pipeline
   native_compute_pipeline(backend_compute_pipeline_resource& resource) const noexcept;
   [[nodiscard]] granit_result create_graphics_pipeline(
       backend_graphics_pipeline_resource& resource, backend_pipeline_layout_resource& layout,
-      granit_webgpu_provider_shader vertex_shader, granit_webgpu_provider_shader fragment_shader,
+      webgpu_shader vertex_shader, webgpu_shader fragment_shader,
       std::span<const granit_vertex_buffer_layout> vertex_buffers,
       granit_texture_format color_format, granit_texture_format depth_stencil_format,
       granit_sample_count sample_count, const granit_primitive_state& primitive,
       const granit_depth_state& depth, const granit_depth_bias_state* depth_bias,
       const granit_color_blend_state& color_blend) const noexcept;
   [[nodiscard]] granit_result begin_graphics_pipeline_warmup(
-      backend_pipeline_layout_resource& layout,
-      granit_webgpu_provider_shader vertex_shader,
-      granit_webgpu_provider_shader fragment_shader,
-      std::span<const granit_vertex_buffer_layout> vertex_buffers,
+      backend_pipeline_layout_resource& layout, webgpu_shader vertex_shader,
+      webgpu_shader fragment_shader, std::span<const granit_vertex_buffer_layout> vertex_buffers,
       granit_texture_format color_format, granit_texture_format depth_stencil_format,
       granit_sample_count sample_count, const granit_primitive_state& primitive,
       const granit_depth_state& depth, const granit_depth_bias_state* depth_bias,
-      const granit_color_blend_state& color_blend,
-      granit_webgpu_provider_pipeline_warmup& warmup) const noexcept;
-  [[nodiscard]] granit_webgpu_provider_render_pipeline
+      const granit_color_blend_state& color_blend, webgpu_pipeline_warmup& warmup) const noexcept;
+  [[nodiscard]] webgpu_render_pipeline
   native_handle(backend_graphics_pipeline_resource& resource) const noexcept;
 
 private:
   [[nodiscard]] granit_result create_graphics_pipeline_impl(
       backend_graphics_pipeline_resource* resource, backend_pipeline_layout_resource& layout,
-      granit_webgpu_provider_shader vertex_shader,
-      granit_webgpu_provider_shader fragment_shader,
+      webgpu_shader vertex_shader, webgpu_shader fragment_shader,
       std::span<const granit_vertex_buffer_layout> vertex_buffers,
       granit_texture_format color_format, granit_texture_format depth_stencil_format,
       granit_sample_count sample_count, const granit_primitive_state& primitive,
       const granit_depth_state& depth, const granit_depth_bias_state* depth_bias,
-      const granit_color_blend_state& color_blend,
-      granit_webgpu_provider_pipeline_warmup* warmup) const noexcept;
+      const granit_color_blend_state& color_blend, webgpu_pipeline_warmup* warmup) const noexcept;
   std::shared_ptr<webgpu_pipeline_context> context_;
 };
 

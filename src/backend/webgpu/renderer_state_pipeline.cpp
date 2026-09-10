@@ -15,23 +15,22 @@ namespace {
 
 class webgpu_pipeline_warmup_completion final : public backend_pipeline_warmup_completion {
 public:
-  webgpu_pipeline_warmup_completion(webgpu_context& provider,
-                                    granit_webgpu_provider_instance instance,
-                                    granit_webgpu_provider_pipeline_warmup warmup) noexcept
-      : provider_(provider), instance_(instance), warmup_(warmup) {}
+  webgpu_pipeline_warmup_completion(webgpu_context& context, webgpu_instance_handle instance,
+                                    webgpu_pipeline_warmup warmup) noexcept
+      : context_(context), instance_(instance), warmup_(warmup) {}
   ~webgpu_pipeline_warmup_completion() override {
     if (warmup_ != 0)
-      static_cast<void>(provider_.destroy_pipeline_warmup(instance_, warmup_));
+      static_cast<void>(context_.destroy_pipeline_warmup(instance_, warmup_));
   }
 
   granit_result poll() noexcept override {
-    return provider_.poll_pipeline_warmup(instance_, warmup_);
+    return context_.poll_pipeline_warmup(instance_, warmup_);
   }
 
 private:
-  webgpu_context& provider_;
-  granit_webgpu_provider_instance instance_{};
-  granit_webgpu_provider_pipeline_warmup warmup_{};
+  webgpu_context& context_;
+  webgpu_instance_handle instance_{};
+  webgpu_pipeline_warmup warmup_{};
 };
 
 } // namespace
@@ -55,16 +54,16 @@ granit_result webgpu_renderer_state::warmup_compute_pipeline_async(
     std::unique_ptr<backend_pipeline_warmup_completion>& completion) noexcept {
   if (!pipelines_ || !shaders_)
     return GRANIT_ERROR_UNSUPPORTED;
-  granit_webgpu_provider_pipeline_warmup warmup{};
+  webgpu_pipeline_warmup warmup{};
   const auto result = pipelines_->begin_compute_pipeline_warmup(
       pipelines_->native_pipeline_layout(layout), shaders_->native_handle(shader), warmup);
   if (result != GRANIT_SUCCESS)
     return result;
   try {
-    completion = std::make_unique<webgpu_pipeline_warmup_completion>(provider_, instance_, warmup);
+    completion = std::make_unique<webgpu_pipeline_warmup_completion>(context_, instance_, warmup);
     return GRANIT_SUCCESS;
   } catch (const std::bad_alloc&) {
-    static_cast<void>(provider_.destroy_pipeline_warmup(instance_, warmup));
+    static_cast<void>(context_.destroy_pipeline_warmup(instance_, warmup));
     return GRANIT_ERROR_OUT_OF_MEMORY;
   }
 }
@@ -80,7 +79,7 @@ granit_result webgpu_renderer_state::create_pipeline_layout(
   if (!pipelines_ || !resources_)
     return GRANIT_ERROR_UNSUPPORTED;
   try {
-    std::vector<granit_webgpu_provider_bind_group_layout> native_layouts;
+    std::vector<webgpu_bind_group_layout> native_layouts;
     native_layouts.reserve(bind_group_layouts.size());
     for (auto* bind_group_layout : bind_group_layouts) {
       if (bind_group_layout == nullptr)
@@ -133,7 +132,7 @@ granit_result webgpu_renderer_state::warmup_graphics_pipeline_async(
       info.color_formats.empty() ? GRANIT_TEXTURE_FORMAT_UNDEFINED : info.color_formats.front();
   const granit_color_blend_state default_blend = GRANIT_COLOR_BLEND_STATE_INIT;
   const auto& color_blend = info.color_blends.empty() ? default_blend : info.color_blends.front();
-  granit_webgpu_provider_pipeline_warmup warmup{};
+  webgpu_pipeline_warmup warmup{};
   const auto result = pipelines_->begin_graphics_pipeline_warmup(
       info.layout, shaders_->native_handle(info.vertex_shader),
       shaders_->native_handle(info.fragment_shader), info.vertex_buffers, color_format,
@@ -142,10 +141,10 @@ granit_result webgpu_renderer_state::warmup_graphics_pipeline_async(
   if (result != GRANIT_SUCCESS)
     return result;
   try {
-    completion = std::make_unique<webgpu_pipeline_warmup_completion>(provider_, instance_, warmup);
+    completion = std::make_unique<webgpu_pipeline_warmup_completion>(context_, instance_, warmup);
     return GRANIT_SUCCESS;
   } catch (const std::bad_alloc&) {
-    static_cast<void>(provider_.destroy_pipeline_warmup(instance_, warmup));
+    static_cast<void>(context_.destroy_pipeline_warmup(instance_, warmup));
     return GRANIT_ERROR_OUT_OF_MEMORY;
   }
 }
