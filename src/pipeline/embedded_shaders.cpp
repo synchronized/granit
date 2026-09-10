@@ -3,10 +3,11 @@
 
 #include "pipeline/embedded_shaders.h"
 #include "assets/shader_asset.h"
+#include "assets/shader_library.h"
 
 #include <array>
 #include <cstdint>
-#include <cstring>
+#include <vector>
 
 namespace granit::pipeline::detail {
 namespace {
@@ -214,33 +215,17 @@ std::span<const std::byte> canvas_material_package() noexcept {
   return {reinterpret_cast<const std::byte*>(canvas_material_bytes), sizeof(canvas_material_bytes)};
 }
 
-granit_result resolve_canvas_shader(void*, const std::uint8_t asset_id[32],
-                                    granit_renderer_backend backend, std::uint32_t profile,
-                                    granit_shader_asset_desc* asset) noexcept {
-  if (asset_id == nullptr || asset == nullptr || profile != GRANIT_SHADER_PROFILE_PORTABLE)
-    return GRANIT_ERROR_INVALID_ARGUMENT;
-  for (const auto& candidate : canvas_shader_assets) {
-    granit::tools::shader_asset_view view;
-    const auto manifest = std::as_bytes(candidate.manifest);
-    if (granit::tools::decode_shader_asset(manifest, view) !=
-            granit::tools::shader_asset_error::success ||
-        std::memcmp(view.content_id.data(), asset_id, view.content_id.size()) != 0) {
-      continue;
-    }
-    const auto sidecar = backend == GRANIT_RENDERER_BACKEND_VULKAN
-                             ? candidate.spirv
-                             : backend == GRANIT_RENDERER_BACKEND_WEBGPU ? candidate.wgsl
-                                                                         : std::span<const std::uint8_t>{};
-    if (sidecar.empty())
-      return GRANIT_ERROR_UNSUPPORTED;
-    *asset = GRANIT_SHADER_ASSET_DESC_INIT;
-    asset->manifest_data = candidate.manifest.data();
-    asset->manifest_size = candidate.manifest.size();
-    asset->sidecar_data = sidecar.data();
-    asset->sidecar_size = sidecar.size();
-    return GRANIT_SUCCESS;
+granit_result build_canvas_shader_library(std::vector<std::byte>& output) noexcept {
+  std::array<granit::tools::shader_library_asset_source, canvas_shader_assets.size()> sources{};
+  for (std::size_t index = 0; index < canvas_shader_assets.size(); ++index) {
+    const auto& asset = canvas_shader_assets[index];
+    sources[index] = {std::as_bytes(asset.manifest), std::as_bytes(asset.wgsl),
+                      std::as_bytes(asset.spirv)};
   }
-  return GRANIT_ERROR_NOT_READY;
+  const auto result = granit::tools::encode_shader_library(
+      {sources, granit::tools::shader_library_backend_all}, output);
+  return result == granit::tools::shader_library_error::success ? GRANIT_SUCCESS
+                                                                : GRANIT_ERROR_INTERNAL;
 }
 
 std::span<const std::byte> debug_world_vertex_shader() noexcept {

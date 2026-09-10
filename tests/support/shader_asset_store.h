@@ -4,10 +4,11 @@
 #ifndef GRANIT_TESTS_SUPPORT_SHADER_ASSET_STORE_H_
 #define GRANIT_TESTS_SUPPORT_SHADER_ASSET_STORE_H_
 
+#include "assets/shader_library.h"
 #include "material/material_package.h"
 #include "shader_asset_file.h"
 
-#include <granit/pipeline/material.h>
+#include <granit/renderer/shader_library.hpp>
 
 #include <array>
 #include <cstddef>
@@ -32,7 +33,7 @@ public:
     granit::shader_asset_info view;
     if (granit::inspect_shader_asset(value.manifest, view).failed())
       return false;
-    // 测试资产允许只部署一个后端；缺少的变体由 resolver 明确返回失败。
+    // 测试资产允许只部署一个后端；Library 构建时由目标掩码检查缺失载荷。
     const bool spirv = read_shader_bytes(manifest_path.string() + ".spv", value.spirv);
     const bool wgsl = read_shader_bytes(manifest_path.string() + ".wgsl", value.wgsl);
     if (!spirv && !wgsl)
@@ -64,32 +65,24 @@ public:
     return {};
   }
 
-  static granit_result resolve(void* user_data, const std::uint8_t asset_id[32],
-                               granit_renderer_backend backend, std::uint32_t profile,
-                               granit_shader_asset_desc* asset) noexcept {
-    if (user_data == nullptr || asset_id == nullptr || asset == nullptr ||
-        profile != GRANIT_SHADER_PROFILE_PORTABLE) {
-      return GRANIT_ERROR_INVALID_ARGUMENT;
+  bool
+  build_library(std::vector<std::byte>& output,
+                std::uint32_t backend_flags = granit::tools::shader_library_backend_all) const {
+    std::vector<granit::tools::shader_library_asset_source> sources;
+    try {
+      sources.reserve(entries_.size());
+      for (const auto& value : entries_)
+        sources.push_back({value.manifest, value.wgsl, value.spirv});
+    } catch (...) {
+      return false;
     }
-    const auto& self = *static_cast<const shader_asset_store*>(user_data);
-    for (const auto& value : self.entries_) {
-      if (std::memcmp(value.id.data(), asset_id, value.id.size()) != 0)
-        continue;
-      const auto* sidecar = backend == GRANIT_RENDERER_BACKEND_VULKAN   ? &value.spirv
-                            : backend == GRANIT_RENDERER_BACKEND_WEBGPU ? &value.wgsl
-                                                                        : nullptr;
-      if (sidecar == nullptr)
-        return GRANIT_ERROR_UNSUPPORTED;
-      if (sidecar->empty())
-        return GRANIT_ERROR_NOT_READY;
-      *asset = GRANIT_SHADER_ASSET_DESC_INIT;
-      asset->manifest_data = value.manifest.data();
-      asset->manifest_size = value.manifest.size();
-      asset->sidecar_data = sidecar->data();
-      asset->sidecar_size = sidecar->size();
-      return GRANIT_SUCCESS;
-    }
-    return GRANIT_ERROR_NOT_READY;
+    return granit::tools::encode_shader_library({sources, backend_flags}, output) ==
+           granit::tools::shader_library_error::success;
+  }
+
+  bool initialize_library(granit_renderer renderer, std::vector<std::byte>& bytes,
+                          granit::shader_library& library) const {
+    return build_library(bytes) && library.initialize(renderer, bytes).ok();
   }
 
 private:

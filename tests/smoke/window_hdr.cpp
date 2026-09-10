@@ -234,6 +234,11 @@ int main(int argument_count, char** arguments) {
        !assets.add(std::string{GRANIT_PBR_SHADER_DIR} +
                    "/pbr_shadow_ibl_lights_untextured.frag.grshader")))
     result = granit::result::initialization_failed;
+  std::vector<std::byte> shader_library_bytes;
+  granit::shader_library shader_library;
+  if (result.ok() &&
+      !assets.initialize_library(renderer.native_handle(), shader_library_bytes, shader_library))
+    result = granit::result::initialization_failed;
   if (result.ok())
     result = tone_vertex.load(renderer.native_handle(), std::string{GRANIT_PIPELINE_SHADER_DIR} +
                                                             "/tone_mapping.vert.grshader");
@@ -259,9 +264,8 @@ int main(int argument_count, char** arguments) {
   granit::material::material_template_gpu pbr_material;
   if (result.ok()) {
     const std::array additional_layouts{object_layout.native_handle(), pbr_lighting.layout()};
-    result = granit::from_native(
-        pbr_material.initialize(renderer.native_handle(), pbr_package, additional_layouts,
-                                granit::tests::shader_asset_store::resolve, &assets));
+    result = granit::from_native(pbr_material.initialize(
+        renderer.native_handle(), pbr_package, additional_layouts, shader_library.native_handle()));
   }
   granit_graphics_pipeline pbr_pipeline = GRANIT_NULL_HANDLE;
   if (result.ok()) {

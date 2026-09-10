@@ -28,8 +28,8 @@ granit_result result = granit_shader_create_from_asset(renderer, &asset, &shader
 Vulkan 提供同名 `.grshader.spv`，浏览器 WebGPU 提供 `.grshader.wgsl`。清单损坏、缺少匹配变体、
 能力不足或摘要不一致都会明确失败。成功返回后不再引用输入字节。
 
-仓库的普通桌面 Smoke、PBR 多 View、Tone Mapping 像素测试及 Renderer/材质基准使用同一资产
-入口；测试辅助层负责读取文件，材质通过资产 ID 和 resolver 引用清单。原始
+仓库的普通桌面 Smoke、PBR 多 View、Tone Mapping 像素测试及 Renderer 基准使用同一资产入口；
+Material 通过稳定内容 ID 引用 Shader Library。原始
 `granit_shader_create` 继续用于直接代码输入、底层接口契约测试及内部嵌入代码；它与资产入口
 最终使用同一套后端 Shader 创建实现。
 `.grshader` 是清单，不能单独替代配套的 SPIR-V 或 WGSL 文件。

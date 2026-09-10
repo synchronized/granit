@@ -167,6 +167,12 @@ int main(int argc, char** argv) {
     std::cerr << "无法初始化 Renderer 或构建 PBR 材质包\n";
     return 1;
   }
+  std::vector<std::byte> shader_library_bytes;
+  granit::shader_library shader_library;
+  if (!assets.initialize_library(renderer.native_handle(), shader_library_bytes, shader_library)) {
+    std::cerr << "无法创建 Shader Library\n";
+    return 1;
+  }
 
   granit::texture shadow_texture;
   granit::texture_view shadow_view;
@@ -319,9 +325,8 @@ int main(int argc, char** argv) {
                                        granit_bind_group_layout lighting_layout,
                                        granit_graphics_pipeline& target_pipeline) {
     const std::array additional_layouts{object_layout.native_handle(), lighting_layout};
-    auto initialize_result =
-        granit::from_native(target.initialize(renderer.native_handle(), source, additional_layouts,
-                                              granit::tests::shader_asset_store::resolve, &assets));
+    auto initialize_result = granit::from_native(target.initialize(
+        renderer.native_handle(), source, additional_layouts, shader_library.native_handle()));
     const std::array features{granit::material::material_feature_value{
         granit::material::make_feature_id(granit::material::pbr_texture_feature_name), 0}};
     if (initialize_result.ok()) {

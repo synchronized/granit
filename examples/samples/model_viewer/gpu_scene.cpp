@@ -176,6 +176,7 @@ granit::result create_material(granit_renderer renderer, const gltf::material& s
                                const std::vector<granit::sampler>& samplers,
                                const default_material_textures& defaults,
                                const granit::sampler& default_sampler,
+                               granit_shader_library shader_library,
                                granit::material_instance& output) {
   const auto base_color =
       resolve_texture(source.base_color_texture, true, textures, defaults.white_srgb);
@@ -235,7 +236,7 @@ granit::result create_material(granit_renderer renderer, const gltf::material& s
   desc.archive_size = archive.size();
   desc.initial_updates = updates.data();
   desc.initial_update_count = static_cast<std::uint32_t>(updates.size());
-  desc.shader_resolver = resolve_model_viewer_shader;
+  desc.shader_library = shader_library;
   return output.initialize(renderer, desc);
 }
 
@@ -489,7 +490,9 @@ gpu_scene::gpu_scene(gpu_scene&& other) noexcept
       index_buffer_(std::move(other.index_buffer_)), textures_(std::move(other.textures_)),
       samplers_(std::move(other.samplers_)), meshes_(std::move(other.meshes_)),
       default_textures_(std::move(other.default_textures_)),
-      default_sampler_(std::move(other.default_sampler_)), materials_(std::move(other.materials_)),
+      default_sampler_(std::move(other.default_sampler_)),
+      shader_library_bytes_(std::move(other.shader_library_bytes_)),
+      shader_library_(std::move(other.shader_library_)), materials_(std::move(other.materials_)),
       draw_bindings_(std::move(other.draw_bindings_)) {}
 
 gpu_scene& gpu_scene::operator=(gpu_scene&& other) noexcept {
@@ -504,6 +507,8 @@ gpu_scene& gpu_scene::operator=(gpu_scene&& other) noexcept {
     meshes_ = std::move(other.meshes_);
     default_textures_ = std::move(other.default_textures_);
     default_sampler_ = std::move(other.default_sampler_);
+    shader_library_bytes_ = std::move(other.shader_library_bytes_);
+    shader_library_ = std::move(other.shader_library_);
     materials_ = std::move(other.materials_);
     draw_bindings_ = std::move(other.draw_bindings_);
   }
@@ -888,20 +893,27 @@ granit::result gpu_scene::create(granit_renderer renderer, const gltf::scene& so
     return granit::result::cancelled;
   if (const auto result = submit_uploads(); result.failed())
     return result;
+  if (build_model_viewer_shader_library(shader_library_bytes_) != GRANIT_SUCCESS)
+    return granit::result::internal;
+  if (const auto result = shader_library_.initialize(renderer, shader_library_bytes_);
+      result.failed())
+    return result;
   materials_.reserve(source.materials.size() + 1);
   for (std::size_t material_index = 0; material_index < source.materials.size(); ++material_index) {
     const auto& source_material = source.materials[material_index];
     materials_.emplace_back();
     if (const auto result = create_material(renderer, source_material, plan_, textures_, samplers_,
-                                            default_textures_, default_sampler_, materials_.back());
+                                            default_textures_, default_sampler_,
+                                            shader_library_.native_handle(), materials_.back());
         result.failed())
       return result;
     if (!report(gpu_scene_upload_stage::materials, material_index + 1, source.materials.size() + 1))
       return granit::result::cancelled;
   }
   materials_.emplace_back();
-  if (const auto result = create_material(renderer, {}, plan_, textures_, samplers_,
-                                          default_textures_, default_sampler_, materials_.back());
+  if (const auto result =
+          create_material(renderer, {}, plan_, textures_, samplers_, default_textures_,
+                          default_sampler_, shader_library_.native_handle(), materials_.back());
       result.failed())
     return result;
   if (!report(gpu_scene_upload_stage::materials, source.materials.size() + 1,

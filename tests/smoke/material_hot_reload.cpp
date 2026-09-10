@@ -45,6 +45,12 @@ int main() {
     std::cerr << "创建 Renderer 失败：" << granit::result_message(initialized) << '\n';
     return 1;
   }
+  std::vector<std::byte> shader_library_bytes;
+  granit::shader_library shader_library;
+  if (!assets.initialize_library(renderer.native_handle(), shader_library_bytes, shader_library)) {
+    std::cerr << "无法创建 Shader Library\n";
+    return 1;
+  }
 
   granit::material::material_package fallback_package;
   granit::material::material_package initial_package;
@@ -59,13 +65,13 @@ int main() {
   std::shared_ptr<granit::material::material_runtime_template> fallback;
   if (granit::material::material_runtime_template::create(
           renderer.native_handle(), std::move(fallback_package), fallback,
-          granit::tests::shader_asset_store::resolve, &assets) != GRANIT_SUCCESS) {
+          shader_library.native_handle()) != GRANIT_SUCCESS) {
     std::cerr << "无法创建错误材质\n";
     return 1;
   }
   granit::material::material_hot_reload_slot slot{fallback};
   if (slot.reload(renderer.native_handle(), std::move(initial_package),
-                  granit::tests::shader_asset_store::resolve, &assets)
+                  shader_library.native_handle())
           .result != GRANIT_SUCCESS) {
     std::cerr << "无法加载初始材质\n";
     return 1;
@@ -83,7 +89,7 @@ int main() {
   std::cout << "初始材质缺少 opaque 变体，已使用错误材质\n";
 
   if (slot.reload(renderer.native_handle(), std::move(replacement_package),
-                  granit::tests::shader_asset_store::resolve, &assets)
+                  shader_library.native_handle())
           .result != GRANIT_SUCCESS) {
     std::cerr << "热替换失败，继续保留旧材质\n";
     return 1;

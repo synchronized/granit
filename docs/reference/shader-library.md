@@ -9,8 +9,8 @@ Shader Library 是供运行时加载的确定性 `.grshlib` 容器。一个 Libr
 WebGPU WGSL 或两者，并按 Shader 内容 ID 组织阶段、入口、反射、能力要求和去重后的载荷。应用负责
 读取或映射整个归档，Core 负责格式与摘要校验，不执行文件 I/O 或运行时源码编译。
 
-`.grshader` 及其 sidecar 当前仍是离线链接器的输入。运行时交付将在 0.21.0 后续阶段迁移到
-`.grshlib`；现有 Material 尚未接入 Library。
+`.grshader` 及其 sidecar 当前仍是离线链接器的输入。Material 只接收 Library 句柄，不再接收
+Renderer 后端信息或 Shader resolver。
 
 ## 创建与所有权
 
@@ -64,6 +64,10 @@ Core 会在使用前再次校验所选载荷摘要。Library 内按内容 ID 缓
 Shader 句柄及由它创建的 Pipeline 会保留缓存对象。任一引用尚未释放时，
 `granit_shader_library_destroy()` 返回 `GRANIT_ERROR_RESOURCE_IN_USE`，Library 句柄仍然有效，调用方
 可在释放依赖后重试销毁。
+
+`granit_material_desc.shader_library` 把 Library 交给 Material。Material 会立即保留引用，即使尚未
+按需创建 Pipeline，也必须先销毁 Material 才能销毁 Library。Material 归档仍只保存稳定内容 ID，
+不携带后端枚举或载荷。
 
 ## C++ API
 

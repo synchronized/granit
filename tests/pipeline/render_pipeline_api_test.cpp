@@ -392,13 +392,18 @@ TEST_CASE("统一Render Pipeline按固定阶段消费Scene Snapshot") {
   REQUIRE(scene.initialize(renderer.native_handle(), scene_desc) == granit::result::success);
 
   const auto archive = build_material_archive();
+  std::vector<std::byte> shader_library_bytes;
+  REQUIRE(shader_assets().build_library(shader_library_bytes));
+  granit::shader_library shader_library;
+  REQUIRE(shader_library.initialize(renderer.native_handle(), shader_library_bytes) ==
+          granit::result::success);
   granit_material_desc material_desc = GRANIT_MATERIAL_DESC_INIT;
   material_desc.archive_data = archive.data();
   material_desc.archive_size = archive.size();
-  material_desc.shader_resolver = granit::tests::shader_asset_store::resolve;
-  material_desc.shader_resolver_user_data = &shader_assets();
+  material_desc.shader_library = shader_library.native_handle();
   granit::material_instance material;
   REQUIRE(material.initialize(renderer.native_handle(), material_desc) == granit::result::success);
+  CHECK(shader_library.reset() == granit::result::resource_in_use);
 
   granit::buffer vertex_buffer;
   granit::mesh mesh;
@@ -691,11 +696,15 @@ TEST_CASE("公共Render Pipeline ABI输出可回读的Tone Mapping像素") {
           GRANIT_SUCCESS);
 
   const auto archive = build_material_archive();
+  std::vector<std::byte> shader_library_bytes;
+  REQUIRE(shader_assets().build_library(shader_library_bytes));
+  granit::shader_library shader_library;
+  REQUIRE(shader_library.initialize(renderer.native_handle(), shader_library_bytes) ==
+          granit::result::success);
   granit_material_desc material_desc = GRANIT_MATERIAL_DESC_INIT;
   material_desc.archive_data = archive.data();
   material_desc.archive_size = archive.size();
-  material_desc.shader_resolver = granit::tests::shader_asset_store::resolve;
-  material_desc.shader_resolver_user_data = &shader_assets();
+  material_desc.shader_library = shader_library.native_handle();
   granit_material material = GRANIT_NULL_HANDLE;
   REQUIRE(granit_material_create(renderer.native_handle(), &material_desc, &material) ==
           GRANIT_SUCCESS);

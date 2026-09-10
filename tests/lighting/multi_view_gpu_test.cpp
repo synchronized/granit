@@ -87,6 +87,10 @@ TEST_CASE("两个View执行独立PBR与Tone Mapping") {
       std::string{GRANIT_PBR_SHADER_DIR} + "/pbr_lights_untextured.frag.grshader";
   REQUIRE(assets.add(vertex_path));
   REQUIRE(assets.add(fragment_path));
+  std::vector<std::byte> shader_library_bytes;
+  granit::shader_library shader_library;
+  REQUIRE(
+      assets.initialize_library(renderer.native_handle(), shader_library_bytes, shader_library));
   const auto vertex = assets.reference(vertex_path);
   const auto fragment = assets.reference(fragment_path);
   std::array<granit::material::material_package, 2> packages;
@@ -101,8 +105,7 @@ TEST_CASE("两个View执行独立PBR与Tone Mapping") {
     REQUIRE(granit::test::build_pbr_package(packages[index], vertex, fragment));
     const std::array layouts{object_layout.native_handle(), lights[index].layout()};
     REQUIRE(materials[index].initialize(renderer.native_handle(), packages[index], layouts,
-                                        granit::tests::shader_asset_store::resolve,
-                                        &assets) == GRANIT_SUCCESS);
+                                        shader_library.native_handle()) == GRANIT_SUCCESS);
     const std::array features{granit::material::material_feature_value{
         granit::material::make_feature_id(granit::material::pbr_texture_feature_name), 0}};
     REQUIRE(

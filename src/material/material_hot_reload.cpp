@@ -11,7 +11,7 @@ namespace granit::material {
 granit_result
 material_runtime_template::create(granit_renderer renderer, material_package package,
                                   std::shared_ptr<material_runtime_template>& runtime_template,
-                                  granit_material_shader_resolver resolver, void* user_data) {
+                                  granit_shader_library shader_library) {
   if (renderer == GRANIT_NULL_HANDLE) {
     return GRANIT_ERROR_INVALID_ARGUMENT;
   }
@@ -19,7 +19,7 @@ material_runtime_template::create(granit_renderer renderer, material_package pac
     auto candidate = std::shared_ptr<material_runtime_template>(
         new material_runtime_template(std::move(package)));
     const auto result =
-        candidate->gpu_.initialize(renderer, candidate->package_, {}, resolver, user_data);
+        candidate->gpu_.initialize(renderer, candidate->package_, {}, shader_library);
     if (result != GRANIT_SUCCESS) {
       return result;
     }
@@ -38,11 +38,10 @@ material_hot_reload_slot::material_hot_reload_slot(
 
 material_reload_result material_hot_reload_slot::reload(granit_renderer renderer,
                                                         material_package package,
-                                                        granit_material_shader_resolver resolver,
-                                                        void* user_data) {
+                                                        granit_shader_library shader_library) {
   std::shared_ptr<material_runtime_template> candidate;
-  const auto result = material_runtime_template::create(renderer, std::move(package), candidate,
-                                                        resolver, user_data);
+  const auto result =
+      material_runtime_template::create(renderer, std::move(package), candidate, shader_library);
   std::lock_guard lock{mutex_};
   if (result != GRANIT_SUCCESS) {
     return {.result = result,

@@ -44,6 +44,11 @@ TEST_CASE("Unlit Opaque与Alpha Cutoff产生预期像素") {
     SKIP("当前运行环境没有满足要求的 Vulkan 设备");
   }
   REQUIRE(initialized == granit::result::success);
+  std::vector<std::byte> shader_library_bytes;
+  REQUIRE(shader_assets().build_library(shader_library_bytes));
+  granit::shader_library shader_library;
+  REQUIRE(shader_library.initialize(renderer.native_handle(), shader_library_bytes) ==
+          granit::result::success);
   const auto native = renderer.native_handle();
   constexpr uint32_t size = 32;
   granit::texture color;
@@ -129,8 +134,7 @@ TEST_CASE("Unlit Opaque与Alpha Cutoff产生预期像素") {
         material_desc.archive_size = archive.size();
         material_desc.initial_updates = updates.data();
         material_desc.initial_update_count = static_cast<uint32_t>(updates.size());
-        material_desc.shader_resolver = granit::tests::shader_asset_store::resolve;
-        material_desc.shader_resolver_user_data = &shader_assets();
+        material_desc.shader_library = shader_library.native_handle();
         granit_material material = GRANIT_NULL_HANDLE;
         REQUIRE(granit_material_create(native, &material_desc, &material) == GRANIT_SUCCESS);
         granit::command_recorder recorder;

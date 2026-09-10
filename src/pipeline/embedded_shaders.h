@@ -8,6 +8,7 @@
 #include <cstdint>
 #include <span>
 #include <string_view>
+#include <vector>
 
 #include <granit/pipeline/material.h>
 
@@ -21,9 +22,7 @@ namespace granit::pipeline::detail {
 [[nodiscard]] std::string_view shadow_depth_vertex_wgsl() noexcept;
 [[nodiscard]] std::string_view shadow_depth_fragment_wgsl() noexcept;
 [[nodiscard]] std::span<const std::byte> canvas_material_package() noexcept;
-granit_result resolve_canvas_shader(void* user_data, const std::uint8_t asset_id[32],
-                                    granit_renderer_backend backend, std::uint32_t profile,
-                                    granit_shader_asset_desc* asset) noexcept;
+[[nodiscard]] granit_result build_canvas_shader_library(std::vector<std::byte>& output) noexcept;
 [[nodiscard]] std::span<const std::byte> debug_world_vertex_shader() noexcept;
 [[nodiscard]] std::span<const std::byte> debug_world_fragment_shader(bool encode_srgb) noexcept;
 

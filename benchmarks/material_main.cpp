@@ -214,9 +214,16 @@ int main(int argc, char** argv) {
     const granit_renderer_desc renderer_desc = GRANIT_RENDERER_DESC_INIT;
     if (granit_renderer_create(&renderer_desc, &renderer) != GRANIT_SUCCESS)
       return 3;
+    std::vector<std::byte> shader_library_bytes;
+    granit::shader_library shader_library;
+    if (!assets.initialize_library(renderer, shader_library_bytes, shader_library)) {
+      static_cast<void>(granit_renderer_destroy(renderer));
+      return 4;
+    }
     granit::material::material_template_gpu gpu_template;
-    if (gpu_template.initialize(renderer, package, {}, granit::tests::shader_asset_store::resolve,
-                                &assets) != GRANIT_SUCCESS) {
+    if (gpu_template.initialize(renderer, package, {}, shader_library.native_handle()) !=
+        GRANIT_SUCCESS) {
+      static_cast<void>(shader_library.reset());
       static_cast<void>(granit_renderer_destroy(renderer));
       return 4;
     }
@@ -229,6 +236,7 @@ int main(int argc, char** argv) {
     granit_graphics_pipeline pipeline = GRANIT_NULL_HANDLE;
     if (gpu_template.acquire_pipeline(request, pipeline) != GRANIT_SUCCESS) {
       static_cast<void>(gpu_template.reset());
+      static_cast<void>(shader_library.reset());
       static_cast<void>(granit_renderer_destroy(renderer));
       return 5;
     }
@@ -240,6 +248,7 @@ int main(int argc, char** argv) {
           return result == GRANIT_SUCCESS && cached == pipeline;
         });
     static_cast<void>(gpu_template.reset());
+    static_cast<void>(shader_library.reset());
     static_cast<void>(granit_renderer_destroy(renderer));
   }
   return succeeded ? 0 : 1;
