@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include "backend/vulkan/vulkan_renderer_state.h"
+#include "backend/vulkan/renderer_state.h"
 
 #include <chrono>
 #include <future>
