@@ -164,14 +164,12 @@ granit_result renderer_registry::create_shader_from_library(
     granit_result result = GRANIT_ERROR_UNSUPPORTED;
     if (backend == tools::shader_asset_backend::vulkan &&
         variant->code_format == tools::shader_asset_code_format::spirv) {
-      std::vector<std::uint32_t> code(payload.bytes.size() / sizeof(std::uint32_t));
-      std::memcpy(code.data(), payload.bytes.data(), payload.bytes.size());
-      result = create_shader_from_spirv(renderer, source->stage, code, source->entry_point, shader);
+      result = create_shader_from_code(renderer, source->stage, GRANIT_SHADER_CODE_FORMAT_SPIRV,
+                                       payload.bytes, source->entry_point, shader);
     } else if (backend == tools::shader_asset_backend::webgpu &&
                variant->code_format == tools::shader_asset_code_format::wgsl) {
-      const std::string_view code{reinterpret_cast<const char*>(payload.bytes.data()),
-                                  payload.bytes.size()};
-      result = create_shader_from_wgsl(renderer, source->stage, code, source->entry_point, shader);
+      result = create_shader_from_code(renderer, source->stage, GRANIT_SHADER_CODE_FORMAT_WGSL,
+                                       payload.bytes, source->entry_point, shader);
     }
     if (result != GRANIT_SUCCESS)
       return result;
