@@ -2,6 +2,7 @@
 // Copyright (c) 2026 Granit contributors
 
 #include "lighting/tone_mapping_resources.h"
+#include "renderer/shader_code_selection.h"
 
 #include <array>
 #include <cmath>
@@ -80,30 +81,37 @@ granit_result tone_mapping_pipeline_resources::initialize_impl(
   const std::array layouts{group_layout_.native_handle()};
   if (result.ok())
     result = pipeline_layout_.initialize(renderer, layouts);
-  if (result.ok()) {
-    result = vertex_asset != nullptr
-                 ? vertex_shader_.initialize_packaged_asset(renderer, *vertex_asset)
-             : wgsl.empty()
-                 ? vertex_shader_.initialize(renderer, {.stage = granit::shader_stage::vertex,
-                                                        .code = vertex_code,
-                                                        .entry_point = "vertex_main"})
-                 : vertex_shader_.initialize_asset(renderer, {.stage = granit::shader_stage::vertex,
-                                                              .spirv = vertex_code,
-                                                              .wgsl = wgsl,
-                                                              .entry_point = "vertex_main"});
-  }
-  if (result.ok()) {
+  granit::detail::selected_shader_code selected_vertex;
+  if (result.ok() && vertex_asset == nullptr && !wgsl.empty())
+    result = granit::from_native(
+        granit::detail::select_portable_shader_code(renderer, vertex_code, wgsl, selected_vertex));
+  if (result.ok())
     result =
-        fragment_asset != nullptr
-            ? fragment_shader_.initialize_packaged_asset(renderer, *fragment_asset)
-        : wgsl.empty()
-            ? fragment_shader_.initialize(renderer, {.stage = granit::shader_stage::fragment,
-                                                     .code = fragment_code,
-                                                     .entry_point = "fragment_main"})
-            : fragment_shader_.initialize_asset(renderer, {.stage = granit::shader_stage::fragment,
-                                                           .spirv = fragment_code,
-                                                           .wgsl = wgsl,
-                                                           .entry_point = "fragment_main"});
+        vertex_asset != nullptr
+            ? vertex_shader_.initialize_packaged_asset(renderer, *vertex_asset)
+            : vertex_shader_.initialize(
+                  renderer,
+                  {.stage = granit::shader_stage::vertex,
+                   .code_format = static_cast<granit::shader_code_format>(
+                       wgsl.empty() ? GRANIT_SHADER_CODE_FORMAT_SPIRV : selected_vertex.format),
+                   .code = wgsl.empty() ? vertex_code : selected_vertex.bytes,
+                   .entry_point = "vertex_main"});
+  if (result.ok()) {
+    granit::detail::selected_shader_code selected_fragment;
+    if (fragment_asset == nullptr && !wgsl.empty())
+      result = granit::from_native(granit::detail::select_portable_shader_code(
+          renderer, fragment_code, wgsl, selected_fragment));
+    if (result.ok())
+      result =
+          fragment_asset != nullptr
+              ? fragment_shader_.initialize_packaged_asset(renderer, *fragment_asset)
+              : fragment_shader_.initialize(
+                    renderer,
+                    {.stage = granit::shader_stage::fragment,
+                     .code_format = static_cast<granit::shader_code_format>(
+                         wgsl.empty() ? GRANIT_SHADER_CODE_FORMAT_SPIRV : selected_fragment.format),
+                     .code = wgsl.empty() ? fragment_code : selected_fragment.bytes,
+                     .entry_point = "fragment_main"});
   }
   if (result.ok()) {
     result = pipeline_.initialize(

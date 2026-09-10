@@ -28,17 +28,15 @@ enum class shader_stage : std::uint32_t {
   compute = GRANIT_SHADER_STAGE_COMPUTE,
 };
 
-struct shader_desc {
-  shader_stage stage{shader_stage::vertex};
-  std::span<const std::byte> code;
-  std::string_view entry_point{"main"};
+enum class shader_code_format : std::uint32_t {
+  wgsl = GRANIT_SHADER_CODE_FORMAT_WGSL,
+  spirv = GRANIT_SHADER_CODE_FORMAT_SPIRV,
 };
 
-/** 同时携带 Vulkan SPIR-V 与 WebGPU WGSL 的跨后端 Shader 描述。 */
-struct shader_asset_desc {
+struct shader_desc {
   shader_stage stage{shader_stage::vertex};
-  std::span<const std::byte> spirv;
-  std::string_view wgsl;
+  shader_code_format code_format{shader_code_format::spirv};
+  std::span<const std::byte> code;
   std::string_view entry_point{"main"};
 };
 
@@ -46,11 +44,6 @@ struct shader_asset_desc {
 struct packaged_shader_asset_desc {
   std::span<const std::byte> manifest;
   std::span<const std::byte> sidecar;
-};
-
-enum class shader_code_format : std::uint32_t {
-  wgsl = GRANIT_SHADER_CODE_FORMAT_WGSL,
-  spirv = GRANIT_SHADER_CODE_FORMAT_SPIRV,
 };
 
 struct shader_asset_variant_info {
@@ -137,35 +130,16 @@ public:
       return result::invalid_argument;
     if (renderer == GRANIT_NULL_HANDLE)
       return result::invalid_handle;
-    const granit_shader_desc native{.struct_size = GRANIT_SHADER_DESC_SIZE,
-                                    .stage = static_cast<granit_shader_stage>(desc.stage),
-                                    .code = desc.code.data(),
-                                    .code_size = desc.code.size(),
-                                    .entry_point = desc.entry_point.data(),
-                                    .entry_point_length =
-                                        static_cast<std::uint32_t>(desc.entry_point.size()),
-                                    .reserved = 0,
-                                    .wgsl = nullptr,
-                                    .wgsl_length = 0};
-    return initialize_native(renderer, native);
-  }
-
-  [[nodiscard]] result initialize_asset(granit_renderer renderer,
-                                        const shader_asset_desc& desc) noexcept {
-    if (valid() || desc.entry_point.size() > UINT32_MAX)
-      return result::invalid_argument;
-    if (renderer == GRANIT_NULL_HANDLE)
-      return result::invalid_handle;
-    const granit_shader_desc native{.struct_size = GRANIT_SHADER_DESC_SIZE,
-                                    .stage = static_cast<granit_shader_stage>(desc.stage),
-                                    .code = desc.spirv.data(),
-                                    .code_size = desc.spirv.size(),
-                                    .entry_point = desc.entry_point.data(),
-                                    .entry_point_length =
-                                        static_cast<std::uint32_t>(desc.entry_point.size()),
-                                    .reserved = 0,
-                                    .wgsl = desc.wgsl.data(),
-                                    .wgsl_length = desc.wgsl.size()};
+    const granit_shader_desc native{
+        .struct_size = GRANIT_SHADER_DESC_SIZE,
+        .stage = static_cast<granit_shader_stage>(desc.stage),
+        .code_format = static_cast<granit_shader_code_format>(desc.code_format),
+        .reserved = 0,
+        .code = desc.code.data(),
+        .code_size = desc.code.size(),
+        .entry_point = desc.entry_point.data(),
+        .entry_point_length = static_cast<std::uint32_t>(desc.entry_point.size()),
+        .reserved_2 = 0};
     return initialize_native(renderer, native);
   }
 

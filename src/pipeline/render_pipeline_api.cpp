@@ -22,6 +22,7 @@
 #include "pipeline/scene_access.h"
 #include "pipeline/shadow_draw_recorder.h"
 #include "pipeline/tone_mapping_recorder.h"
+#include "renderer/shader_code_selection.h"
 
 #include <granit/renderer/frame_context.h>
 #include <granit/renderer/render_target.h>
@@ -520,18 +521,28 @@ extern "C" granit_result granit_render_pipeline_create(granit_renderer renderer,
         state->shadow_view.initialize(renderer, state->shadow_texture.native_handle());
     if (resource_result.failed())
       return static_cast<granit_result>(resource_result);
-    resource_result = state->shadow_vertex_shader.initialize_asset(
-        renderer, {.stage = granit::shader_stage::vertex,
-                   .spirv = granit::pipeline::detail::shadow_depth_vertex_shader(),
-                   .wgsl = granit::pipeline::detail::shadow_depth_vertex_wgsl(),
-                   .entry_point = "vertex_main"});
+    granit::detail::selected_shader_code shadow_vertex;
+    resource_result = granit::from_native(granit::detail::select_portable_shader_code(
+        renderer, granit::pipeline::detail::shadow_depth_vertex_shader(),
+        granit::pipeline::detail::shadow_depth_vertex_wgsl(), shadow_vertex));
+    if (resource_result.ok())
+      resource_result = state->shadow_vertex_shader.initialize(
+          renderer, {.stage = granit::shader_stage::vertex,
+                     .code_format = static_cast<granit::shader_code_format>(shadow_vertex.format),
+                     .code = shadow_vertex.bytes,
+                     .entry_point = "vertex_main"});
     if (resource_result.failed())
       return static_cast<granit_result>(resource_result);
-    resource_result = state->shadow_fragment_shader.initialize_asset(
-        renderer, {.stage = granit::shader_stage::fragment,
-                   .spirv = granit::pipeline::detail::shadow_depth_fragment_shader(),
-                   .wgsl = granit::pipeline::detail::shadow_depth_fragment_wgsl(),
-                   .entry_point = "fragment_main"});
+    granit::detail::selected_shader_code shadow_fragment;
+    resource_result = granit::from_native(granit::detail::select_portable_shader_code(
+        renderer, granit::pipeline::detail::shadow_depth_fragment_shader(),
+        granit::pipeline::detail::shadow_depth_fragment_wgsl(), shadow_fragment));
+    if (resource_result.ok())
+      resource_result = state->shadow_fragment_shader.initialize(
+          renderer, {.stage = granit::shader_stage::fragment,
+                     .code_format = static_cast<granit::shader_code_format>(shadow_fragment.format),
+                     .code = shadow_fragment.bytes,
+                     .entry_point = "fragment_main"});
     if (resource_result.failed())
       return static_cast<granit_result>(resource_result);
     resource_result = state->shadow_placeholder_texture.initialize(

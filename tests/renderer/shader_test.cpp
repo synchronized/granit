@@ -18,7 +18,6 @@ namespace {
 TEST_CASE("Shader包装把空Renderer归类为无效句柄", "[shader][contract]") {
   granit::shader shader;
   CHECK(shader.initialize(GRANIT_NULL_HANDLE, {}) == granit::result::invalid_handle);
-  CHECK(shader.initialize_asset(GRANIT_NULL_HANDLE, {}) == granit::result::invalid_handle);
 }
 
 constexpr std::array vertex_spirv{
@@ -150,6 +149,9 @@ TEST_CASE("Shader 校验 SPIR-V、入口点和 Renderer domain", "[shader][valid
   desc.entry_point_length = 4;
   desc.stage = UINT32_C(99);
   CHECK(granit_shader_create(UINT64_C(1), &desc, &shader) == GRANIT_ERROR_INVALID_ARGUMENT);
+  desc.stage = GRANIT_SHADER_STAGE_VERTEX;
+  desc.code_format = UINT32_C(99);
+  CHECK(granit_shader_create(UINT64_C(1), &desc, &shader) == GRANIT_ERROR_INVALID_ARGUMENT);
 
   granit::renderer first;
   const auto result = first.initialize({.application_name = "granit-shader-first"});
@@ -165,6 +167,14 @@ TEST_CASE("Shader 校验 SPIR-V、入口点和 Renderer domain", "[shader][valid
   REQUIRE(granit_shader_create(first.native_handle(), &desc, &shader) == GRANIT_SUCCESS);
   CHECK(granit_shader_destroy(second.native_handle(), shader) == GRANIT_ERROR_INVALID_HANDLE);
   CHECK(granit_shader_destroy(first.native_handle(), shader) == GRANIT_SUCCESS);
+
+  constexpr std::string_view wgsl =
+      "@vertex fn main() -> @builtin(position) vec4f { return vec4f(); }";
+  desc = GRANIT_SHADER_DESC_INIT;
+  desc.code_format = GRANIT_SHADER_CODE_FORMAT_WGSL;
+  desc.code = wgsl.data();
+  desc.code_size = wgsl.size();
+  CHECK(granit_shader_create(first.native_handle(), &desc, &shader) == GRANIT_ERROR_UNSUPPORTED);
 }
 
 TEST_CASE("Shader Asset 按 Renderer 后端验证并创建 Shader", "[shader][asset]") {

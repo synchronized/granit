@@ -17,6 +17,8 @@
 
 - Material 改为接收 Shader Library 句柄；`.grmat` v5 显式声明 Frame、Material、Object、Lighting
   绑定组，删除按后端回调 Shader resolver 和按 Pass 名称推断布局。
+- `granit_shader_desc` 统一为 `code_format + code + code_size`，一次直接创建只接收一种代码格式；
+  跨后端选择由 Shader Library 完成。
 - 静态 Shader 功能由 Pass 与 Feature 选择，数值、纹理和 Sampler 更新不创建 Pipeline；
   Canvas 在内部处理左上原点投影，材质和应用无需按后端修改坐标。
 - Canvas、Model Viewer、构建树和安装包直接消费 `.grshlib`。`.grshader` 与 sidecar 只作为离线

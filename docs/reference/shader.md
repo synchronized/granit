@@ -11,8 +11,9 @@ Shader 是离线生成的阶段入口。跨后端资产同时保存 SPIR-V 与 W
 
 ## C API
 
-发布资产优先使用 `.grshader`：调用方负责读取清单和当前平台 sidecar，Core 根据实际 Renderer
-能力选择变体并校验内容摘要，不执行文件 I/O。
+发布资产优先使用 `.grshlib` 和 `granit_shader_create_from_library()`；调用方只提交 Library 与内容
+ID，由 Renderer 选择后端载荷。`.grshader` 加单个 sidecar 的入口保留给工具、测试和过渡代码，
+Core 会校验清单、当前 Renderer 后端与载荷摘要，但不执行文件 I/O。
 
 ```c
 granit_shader_asset_desc asset = GRANIT_SHADER_ASSET_DESC_INIT;
@@ -28,10 +29,8 @@ granit_result result = granit_shader_create_from_asset(renderer, &asset, &shader
 Vulkan 提供同名 `.grshader.spv`，浏览器 WebGPU 提供 `.grshader.wgsl`。清单损坏、缺少匹配变体、
 能力不足或摘要不一致都会明确失败。成功返回后不再引用输入字节。
 
-仓库的普通桌面 Smoke、PBR 多 View、Tone Mapping 像素测试及 Renderer 基准使用同一资产入口；
-Material 通过稳定内容 ID 引用 Shader Library。原始
-`granit_shader_create` 继续用于直接代码输入、底层接口契约测试及内部嵌入代码；它与资产入口
-最终使用同一套后端 Shader 创建实现。
+Material 通过稳定内容 ID 引用 Shader Library。`granit_shader_create` 只用于直接代码输入、底层
+接口契约测试及少量内部嵌入代码；它与 Library 和单资产入口最终使用同一套后端 Shader 创建实现。
 `.grshader` 是清单，不能单独替代配套的 SPIR-V 或 WGSL 文件。
 
 仓库测试所需的清单和同名 sidecar 由 `granit_test_shader_assets` 目标生成到构建目录；源码目录只
@@ -62,31 +61,31 @@ if (result == GRANIT_SUCCESS && info.entry_point_length > 0) {
 ```c
 granit_shader_desc desc = GRANIT_SHADER_DESC_INIT;
 desc.stage = GRANIT_SHADER_STAGE_VERTEX;
+desc.code_format = GRANIT_SHADER_CODE_FORMAT_SPIRV;
 desc.code = spirv_bytes;
 desc.code_size = spirv_size;
 desc.entry_point = "main";
 desc.entry_point_length = 4;
-desc.wgsl = wgsl_bytes;
-desc.wgsl_length = wgsl_size;
 
 granit_shader shader = GRANIT_NULL_HANDLE;
 granit_result result = granit_shader_create(renderer, &desc, &shader);
 ```
 
-`code` 是 SPIR-V 字节输入，不要求四字节对齐，但长度必须是 4 的倍数；`wgsl` 是 UTF-8 WGSL
-字节输入。调用者若只面向单个后端，可以只提供该后端所需表示；跨后端资产应同时提供二者。
-函数返回后不再引用输入内存。入口点和 WGSL 均使用显式字节长度，不包含结尾零字符。
+`code_format` 明确说明 `code` 是 SPIR-V 还是 UTF-8 WGSL。SPIR-V 不要求四字节对齐，但长度必须
+是 4 的倍数；WGSL 不能包含嵌入零字符。直接代码格式与 Renderer 不匹配时返回
+`GRANIT_ERROR_UNSUPPORTED`。函数返回后不再引用输入内存，入口点和 WGSL 均使用显式字节长度。
+需要跨后端自动选择时应使用 Shader Library，不能在直接描述中同时传入两种代码。
 
 ## C++ API
 
 ```cpp
 granit::shader shader;
-const auto result = shader.initialize_asset(
+const auto result = shader.initialize(
     renderer.native_handle(),
-    granit::shader_asset_desc{
+    granit::shader_desc{
         .stage = granit::shader_stage::vertex,
-        .spirv = std::span<const std::byte>{spirv_data, spirv_size},
-        .wgsl = wgsl_source,
+        .code_format = granit::shader_code_format::spirv,
+        .code = std::span<const std::byte>{spirv_data, spirv_size},
     });
 ```
 

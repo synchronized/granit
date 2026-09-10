@@ -2,6 +2,7 @@
 // Copyright (c) 2026 Granit contributors
 
 #include "material/material_template_gpu.h"
+#include "renderer/shader_code_selection.h"
 #include <granit/renderer/shader.h>
 
 #include <algorithm>
@@ -29,15 +30,9 @@ granit_result create_shader(granit_renderer renderer, const material_shader_code
   const auto has_asset =
       !std::ranges::all_of(source.asset_id, [](std::byte value) { return value == std::byte{}; });
   if (!has_asset) {
-    granit_shader_desc desc = GRANIT_SHADER_DESC_INIT;
-    desc.stage = native_stage(source.stage);
-    desc.code = source.spirv.data();
-    desc.code_size = source.spirv.size() * sizeof(std::uint32_t);
-    desc.wgsl = source.wgsl.data();
-    desc.wgsl_length = source.wgsl.size();
-    desc.entry_point = source.entry_point.data();
-    desc.entry_point_length = static_cast<std::uint32_t>(source.entry_point.size());
-    return granit_shader_create(renderer, &desc, &shader);
+    return granit::detail::create_shader_from_portable_code(
+        renderer, native_stage(source.stage), std::as_bytes(std::span{source.spirv}), source.wgsl,
+        source.entry_point, shader);
   }
   if (shader_library == GRANIT_NULL_HANDLE)
     return GRANIT_ERROR_NOT_READY;

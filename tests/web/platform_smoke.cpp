@@ -301,12 +301,16 @@ granit_result draw_shared_fixture(granit_renderer renderer, granit_frame frame,
   const auto fragment_wgsl = load_text_resource("/assets/dynamic_uniform.frag.wgsl");
   granit::shader vertex;
   granit::shader fragment;
-  auto result = vertex.initialize_asset(
-      renderer, {.stage = granit::shader_stage::vertex, .spirv = {}, .wgsl = vertex_wgsl});
+  auto result = vertex.initialize(
+      renderer, {.stage = granit::shader_stage::vertex,
+                 .code_format = granit::shader_code_format::wgsl,
+                 .code = std::as_bytes(std::span{vertex_wgsl.data(), vertex_wgsl.size()})});
   if (result != granit::result::success)
     return granit::to_native(result);
-  result = fragment.initialize_asset(
-      renderer, {.stage = granit::shader_stage::fragment, .spirv = {}, .wgsl = fragment_wgsl});
+  result = fragment.initialize(
+      renderer, {.stage = granit::shader_stage::fragment,
+                 .code_format = granit::shader_code_format::wgsl,
+                 .code = std::as_bytes(std::span{fragment_wgsl.data(), fragment_wgsl.size()})});
   if (result != granit::result::success)
     return granit::to_native(result);
 

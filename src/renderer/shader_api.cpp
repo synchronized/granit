@@ -68,15 +68,13 @@ extern "C" granit_result granit_shader_create_from_asset(granit_renderer rendere
       return GRANIT_ERROR_INVALID_ARGUMENT;
     granit_shader_desc shader_desc = GRANIT_SHADER_DESC_INIT;
     shader_desc.stage = asset.stage;
+    shader_desc.code_format = backend == granit::tools::shader_asset_backend::vulkan
+                                  ? GRANIT_SHADER_CODE_FORMAT_SPIRV
+                                  : GRANIT_SHADER_CODE_FORMAT_WGSL;
     shader_desc.entry_point = asset.entry_point.data();
     shader_desc.entry_point_length = static_cast<std::uint32_t>(asset.entry_point.size());
-    if (backend == granit::tools::shader_asset_backend::vulkan) {
-      shader_desc.code = sidecar.data();
-      shader_desc.code_size = sidecar.size();
-    } else {
-      shader_desc.wgsl = reinterpret_cast<const char*>(sidecar.data());
-      shader_desc.wgsl_length = sidecar.size();
-    }
+    shader_desc.code = sidecar.data();
+    shader_desc.code_size = sidecar.size();
     return granit::detail::renderer_registry::instance().create_shader_from_desc(
         renderer, shader_desc, *shader);
   } catch (const std::bad_alloc&) {

@@ -58,6 +58,7 @@ target_sources(
     renderer/renderer_validation.h
     renderer/surface_validation.h
     renderer/shader_validation.h
+    renderer/shader_code_selection.h
     renderer/swapchain_validation.h
     result.cpp
     version.cpp

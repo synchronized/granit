@@ -26,32 +26,31 @@ typedef uint32_t granit_shader_code_format;
 #define GRANIT_SHADER_ASSET_ID_SIZE UINT32_C(32)
 #define GRANIT_SHADER_ASSET_MAX_VARIANTS UINT32_C(2)
 
-/** 跨后端 Shader 创建描述。SPIR-V 与 WGSL 输入内存只需在创建调用期间有效。 */
+/** 单一格式 Shader 创建描述。代码与入口名称只需在创建调用期间有效。 */
 typedef struct granit_shader_desc {
   uint32_t struct_size;
   granit_shader_stage stage;
+  granit_shader_code_format code_format;
+  uint32_t reserved;
   const void* code;
   uint64_t code_size;
   const char* entry_point;
   uint32_t entry_point_length;
-  uint32_t reserved;
-  const char* wgsl;
-  uint64_t wgsl_length;
+  uint32_t reserved_2;
 } granit_shader_desc;
 
-#define GRANIT_SHADER_DESC_SIZE                                                                    \
-  ((uint32_t)(offsetof(granit_shader_desc, wgsl_length) + sizeof(uint64_t)))
+#define GRANIT_SHADER_DESC_SIZE ((uint32_t)sizeof(granit_shader_desc))
 
 #define GRANIT_SHADER_DESC_INIT                                                                    \
   {(uint32_t)sizeof(granit_shader_desc),                                                           \
    GRANIT_SHADER_STAGE_VERTEX,                                                                     \
+   GRANIT_SHADER_CODE_FORMAT_SPIRV,                                                                \
+   UINT32_C(0),                                                                                    \
    0,                                                                                              \
    UINT64_C(0),                                                                                    \
    "main",                                                                                         \
    UINT32_C(4),                                                                                    \
-   UINT32_C(0),                                                                                    \
-   0,                                                                                              \
-   UINT64_C(0)}
+   UINT32_C(0)}
 
 /** Shader Asset 的内存输入；只需提供当前 Renderer 后端对应的 sidecar。 */
 typedef struct granit_shader_asset_desc {
@@ -107,7 +106,10 @@ typedef struct granit_shader_asset_info {
 extern "C" {
 #endif
 
-/** 创建 Shader；Vulkan 使用 SPIR-V，WebGPU 使用 WGSL，函数返回后不再引用输入内存。 */
+/**
+ * 从一份带格式标记的代码创建 Shader；格式与 Renderer 不匹配时返回 GRANIT_ERROR_UNSUPPORTED。
+ * 函数返回后不再引用代码和入口名称内存。
+ */
 GRANIT_API granit_result granit_shader_create(granit_renderer renderer,
                                               const granit_shader_desc* desc,
                                               granit_shader* shader);

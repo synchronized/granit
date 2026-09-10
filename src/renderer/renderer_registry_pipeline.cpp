@@ -4,8 +4,8 @@
 #include "renderer/renderer_registry.h"
 #include "renderer/renderer_registry_records.h"
 
-#include "renderer/shader_validation.h"
 #include "assets/shader_asset.h"
+#include "renderer/shader_validation.h"
 
 #include <algorithm>
 #include <cstring>
@@ -21,22 +21,22 @@ granit_result renderer_registry::create_shader_from_desc(granit_renderer rendere
                                                          granit_shader& shader) {
   const auto interfaces = acquire_backend_interfaces(renderer);
   if (!interfaces) {
-    const auto validation = desc.wgsl != nullptr || desc.wgsl_length != 0
-                                ? validate_shader_wgsl(&desc)
-                                : validate_shader_spirv(&desc);
+    const auto validation = validate_shader_desc(&desc);
     return validation == GRANIT_SUCCESS ? GRANIT_ERROR_INVALID_HANDLE : validation;
   }
-  if (interfaces->wgsl_shaders) {
-    const auto validation = validate_shader_wgsl(&desc);
-    if (validation != GRANIT_SUCCESS)
-      return validation;
-    return create_shader_from_wgsl(
-        renderer, desc.stage, {desc.wgsl, static_cast<std::size_t>(desc.wgsl_length)},
-        {desc.entry_point, static_cast<std::size_t>(desc.entry_point_length)}, shader);
-  }
-  const auto validation = validate_shader_spirv(&desc);
+  const auto validation = validate_shader_desc(&desc);
   if (validation != GRANIT_SUCCESS)
     return validation;
+  if (desc.code_format == GRANIT_SHADER_CODE_FORMAT_WGSL) {
+    if (!interfaces->wgsl_shaders)
+      return GRANIT_ERROR_UNSUPPORTED;
+    return create_shader_from_wgsl(
+        renderer, desc.stage,
+        {static_cast<const char*>(desc.code), static_cast<std::size_t>(desc.code_size)},
+        {desc.entry_point, static_cast<std::size_t>(desc.entry_point_length)}, shader);
+  }
+  if (!interfaces->spirv_shaders)
+    return GRANIT_ERROR_UNSUPPORTED;
   std::vector<std::uint32_t> code(static_cast<std::size_t>(desc.code_size) / sizeof(std::uint32_t));
   std::memcpy(code.data(), desc.code, static_cast<std::size_t>(desc.code_size));
   return create_shader_from_spirv(renderer, desc.stage, code,
@@ -108,8 +108,8 @@ granit_result renderer_registry::create_shader_from_wgsl(granit_renderer rendere
     record->retirement = interfaces->retirement;
     record->stage = stage;
     record->entry_point.assign(entry_point);
-    record->content_id = granit::tools::shader_bytes_sha256(std::as_bytes(
-        std::span{source.data(), source.size()}));
+    record->content_id =
+        granit::tools::shader_bytes_sha256(std::as_bytes(std::span{source.data(), source.size()}));
     record->native = shaders->allocate_shader_resource();
     if (!record->native)
       return GRANIT_ERROR_OUT_OF_MEMORY;

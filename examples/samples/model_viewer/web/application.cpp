@@ -183,17 +183,16 @@ granit_result begin_public_pipeline_validation(granit_texture_format model_color
 @compute @workgroup_size(1) fn main() {}
 )";
   granit_shader_desc desc = GRANIT_SHADER_DESC_INIT;
-  desc.code = nullptr;
-  desc.code_size = 0;
-  desc.wgsl = vertex_wgsl;
-  desc.wgsl_length = sizeof(vertex_wgsl) - 1;
+  desc.code_format = GRANIT_SHADER_CODE_FORMAT_WGSL;
+  desc.code = vertex_wgsl;
+  desc.code_size = sizeof(vertex_wgsl) - 1;
   auto result = granit_shader_create(state.renderer, &desc, &state.warmup_vertex);
   if (result != GRANIT_SUCCESS) {
     return result;
   }
   desc.stage = GRANIT_SHADER_STAGE_FRAGMENT;
-  desc.wgsl = fragment_wgsl;
-  desc.wgsl_length = sizeof(fragment_wgsl) - 1;
+  desc.code = fragment_wgsl;
+  desc.code_size = sizeof(fragment_wgsl) - 1;
   result = granit_shader_create(state.renderer, &desc, &state.warmup_fragment);
   if (result != GRANIT_SUCCESS)
     return result;
@@ -202,8 +201,8 @@ granit_result begin_public_pipeline_validation(granit_texture_format model_color
   if (result != GRANIT_SUCCESS)
     return result;
   desc.stage = GRANIT_SHADER_STAGE_COMPUTE;
-  desc.wgsl = compute_wgsl;
-  desc.wgsl_length = sizeof(compute_wgsl) - 1;
+  desc.code = compute_wgsl;
+  desc.code_size = sizeof(compute_wgsl) - 1;
   result = granit_shader_create(state.renderer, &desc, &state.warmup_compute);
   if (result != GRANIT_SUCCESS) {
     std::fprintf(stderr, "GRANIT_DIAGNOSTIC:Compute Shader 创建失败：%d\n", result);
