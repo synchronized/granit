@@ -37,26 +37,25 @@ private:
 
 std::unique_ptr<backend_compute_pipeline_resource>
 webgpu_renderer_state::allocate_compute_pipeline_resource() {
-  return pipelines_ ? pipelines_->allocate_compute_pipeline() : nullptr;
+  return pipeline_owner_ ? allocate_compute_pipeline() : nullptr;
 }
 
 granit_result webgpu_renderer_state::create_compute_pipeline(
     backend_pipeline_layout_resource& layout, backend_shader_resource& shader, const char*,
     backend_compute_pipeline_resource& pipeline) noexcept {
-  if (!pipelines_)
+  if (!pipeline_owner_)
     return GRANIT_ERROR_UNSUPPORTED;
-  return pipelines_->create_compute_pipeline(pipeline, pipelines_->native_pipeline_layout(layout),
-                                             native_shader(shader));
+  return create_compute_pipeline(pipeline, native_pipeline_layout(layout), native_shader(shader));
 }
 
 granit_result webgpu_renderer_state::warmup_compute_pipeline_async(
     backend_pipeline_layout_resource& layout, backend_shader_resource& shader, const char*,
     std::unique_ptr<backend_pipeline_warmup_completion>& completion) noexcept {
-  if (!pipelines_)
+  if (!pipeline_owner_)
     return GRANIT_ERROR_UNSUPPORTED;
   webgpu_pipeline_warmup warmup{};
-  const auto result = pipelines_->begin_compute_pipeline_warmup(
-      pipelines_->native_pipeline_layout(layout), native_shader(shader), warmup);
+  const auto result =
+      begin_compute_pipeline_warmup(native_pipeline_layout(layout), native_shader(shader), warmup);
   if (result != GRANIT_SUCCESS)
     return result;
   try {
@@ -70,13 +69,13 @@ granit_result webgpu_renderer_state::warmup_compute_pipeline_async(
 
 std::unique_ptr<backend_pipeline_layout_resource>
 webgpu_renderer_state::allocate_pipeline_layout_resource() {
-  return pipelines_ ? pipelines_->allocate_pipeline_layout() : nullptr;
+  return pipeline_owner_ ? allocate_pipeline_layout() : nullptr;
 }
 
 granit_result webgpu_renderer_state::create_pipeline_layout(
     std::span<backend_bind_group_layout_resource* const> bind_group_layouts,
     backend_pipeline_layout_resource& layout) noexcept {
-  if (!pipelines_ || !resource_owner_)
+  if (!pipeline_owner_ || !resource_owner_)
     return GRANIT_ERROR_UNSUPPORTED;
   try {
     std::vector<webgpu_bind_group_layout> native_layouts;
@@ -89,7 +88,7 @@ granit_result webgpu_renderer_state::create_pipeline_layout(
         return GRANIT_ERROR_INVALID_ARGUMENT;
       native_layouts.push_back(native);
     }
-    return pipelines_->create_pipeline_layout(native_layouts, layout);
+    return create_pipeline_layout(native_layouts, layout);
   } catch (const std::bad_alloc&) {
     return GRANIT_ERROR_OUT_OF_MEMORY;
   } catch (...) {
@@ -99,40 +98,35 @@ granit_result webgpu_renderer_state::create_pipeline_layout(
 
 std::unique_ptr<backend_graphics_pipeline_resource>
 webgpu_renderer_state::allocate_graphics_pipeline_resource() {
-  return pipelines_ ? pipelines_->allocate_graphics_pipeline() : nullptr;
-}
-
-granit_result webgpu_renderer_state::validate_graphics_pipeline(
-    const granit_graphics_pipeline_desc& desc) const noexcept {
-  return pipelines_ ? pipelines_->validate_graphics_pipeline(desc) : GRANIT_ERROR_UNSUPPORTED;
+  return pipeline_owner_ ? allocate_graphics_pipeline() : nullptr;
 }
 
 granit_result webgpu_renderer_state::create_graphics_pipeline(
     const backend_graphics_pipeline_create_info& info,
     backend_graphics_pipeline_resource& pipeline) noexcept {
-  if (!pipelines_ || info.color_formats.size() > 1)
+  if (!pipeline_owner_ || info.color_formats.size() > 1)
     return GRANIT_ERROR_UNSUPPORTED;
   const auto color_format =
       info.color_formats.empty() ? GRANIT_TEXTURE_FORMAT_UNDEFINED : info.color_formats.front();
   const granit_color_blend_state default_blend = GRANIT_COLOR_BLEND_STATE_INIT;
   const auto& color_blend = info.color_blends.empty() ? default_blend : info.color_blends.front();
-  return pipelines_->create_graphics_pipeline(
-      pipeline, info.layout, native_shader(info.vertex_shader), native_shader(info.fragment_shader),
-      info.vertex_buffers, color_format, info.depth_stencil_format, info.sample_count,
-      info.primitive, info.depth, info.depth_bias, color_blend);
+  return create_graphics_pipeline(pipeline, info.layout, native_shader(info.vertex_shader),
+                                  native_shader(info.fragment_shader), info.vertex_buffers,
+                                  color_format, info.depth_stencil_format, info.sample_count,
+                                  info.primitive, info.depth, info.depth_bias, color_blend);
 }
 
 granit_result webgpu_renderer_state::warmup_graphics_pipeline_async(
     const backend_graphics_pipeline_create_info& info,
     std::unique_ptr<backend_pipeline_warmup_completion>& completion) noexcept {
-  if (!pipelines_ || info.color_formats.size() > 1)
+  if (!pipeline_owner_ || info.color_formats.size() > 1)
     return GRANIT_ERROR_UNSUPPORTED;
   const auto color_format =
       info.color_formats.empty() ? GRANIT_TEXTURE_FORMAT_UNDEFINED : info.color_formats.front();
   const granit_color_blend_state default_blend = GRANIT_COLOR_BLEND_STATE_INIT;
   const auto& color_blend = info.color_blends.empty() ? default_blend : info.color_blends.front();
   webgpu_pipeline_warmup warmup{};
-  const auto result = pipelines_->begin_graphics_pipeline_warmup(
+  const auto result = begin_graphics_pipeline_warmup(
       info.layout, native_shader(info.vertex_shader), native_shader(info.fragment_shader),
       info.vertex_buffers, color_format, info.depth_stencil_format, info.sample_count,
       info.primitive, info.depth, info.depth_bias, color_blend, warmup);

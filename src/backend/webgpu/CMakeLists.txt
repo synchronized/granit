@@ -6,10 +6,10 @@ target_sources(
     context.cpp
     command_adapter.cpp
     presentation_adapter.cpp
-    pipeline_adapter.cpp
     renderer_state.cpp
     renderer_state_commands.cpp
     renderer_state_pipeline.cpp
+    renderer_state_pipeline_native.cpp
     renderer_state_presentation.cpp
     renderer_state_resources.cpp
     renderer_state_shader.cpp

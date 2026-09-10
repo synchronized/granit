@@ -23,7 +23,7 @@
 #include "backend/contracts/transfer.h"
 #include "backend/webgpu/command_adapter.h"
 #include "backend/webgpu/context.h"
-#include "backend/webgpu/pipeline_adapter.h"
+#include "backend/webgpu/pipelines.h"
 #include "backend/webgpu/presentation_adapter.h"
 #include "backend/webgpu/resources.h"
 
@@ -333,6 +333,47 @@ private:
   native_bind_group_layout(backend_bind_group_layout_resource& resource) const noexcept;
   [[nodiscard]] webgpu_bind_group
   native_bind_group(backend_bind_group_resource& resource) const noexcept;
+  [[nodiscard]] std::unique_ptr<backend_pipeline_layout_resource> allocate_pipeline_layout();
+  [[nodiscard]] std::unique_ptr<backend_graphics_pipeline_resource> allocate_graphics_pipeline();
+  [[nodiscard]] std::unique_ptr<backend_compute_pipeline_resource> allocate_compute_pipeline();
+  [[nodiscard]] granit_result
+  create_pipeline_layout(std::span<const webgpu_bind_group_layout> layouts,
+                         backend_pipeline_layout_resource& resource) noexcept;
+  [[nodiscard]] webgpu_pipeline_layout
+  native_pipeline_layout(backend_pipeline_layout_resource& resource) const noexcept;
+  [[nodiscard]] granit_result create_compute_pipeline(backend_compute_pipeline_resource& resource,
+                                                      webgpu_pipeline_layout layout,
+                                                      webgpu_shader shader) noexcept;
+  [[nodiscard]] granit_result
+  begin_compute_pipeline_warmup(webgpu_pipeline_layout layout, webgpu_shader shader,
+                                webgpu_pipeline_warmup& warmup) noexcept;
+  [[nodiscard]] webgpu_compute_pipeline
+  native_compute_pipeline(backend_compute_pipeline_resource& resource) const noexcept;
+  [[nodiscard]] granit_result create_graphics_pipeline(
+      backend_graphics_pipeline_resource& resource, backend_pipeline_layout_resource& layout,
+      webgpu_shader vertex_shader, webgpu_shader fragment_shader,
+      std::span<const granit_vertex_buffer_layout> vertex_buffers,
+      granit_texture_format color_format, granit_texture_format depth_stencil_format,
+      granit_sample_count sample_count, const granit_primitive_state& primitive,
+      const granit_depth_state& depth, const granit_depth_bias_state* depth_bias,
+      const granit_color_blend_state& color_blend) noexcept;
+  [[nodiscard]] granit_result begin_graphics_pipeline_warmup(
+      backend_pipeline_layout_resource& layout, webgpu_shader vertex_shader,
+      webgpu_shader fragment_shader, std::span<const granit_vertex_buffer_layout> vertex_buffers,
+      granit_texture_format color_format, granit_texture_format depth_stencil_format,
+      granit_sample_count sample_count, const granit_primitive_state& primitive,
+      const granit_depth_state& depth, const granit_depth_bias_state* depth_bias,
+      const granit_color_blend_state& color_blend, webgpu_pipeline_warmup& warmup) noexcept;
+  [[nodiscard]] granit_result create_graphics_pipeline_impl(
+      backend_graphics_pipeline_resource* resource, backend_pipeline_layout_resource& layout,
+      webgpu_shader vertex_shader, webgpu_shader fragment_shader,
+      std::span<const granit_vertex_buffer_layout> vertex_buffers,
+      granit_texture_format color_format, granit_texture_format depth_stencil_format,
+      granit_sample_count sample_count, const granit_primitive_state& primitive,
+      const granit_depth_state& depth, const granit_depth_bias_state* depth_bias,
+      const granit_color_blend_state& color_blend, webgpu_pipeline_warmup* warmup) noexcept;
+  [[nodiscard]] webgpu_render_pipeline
+  native_graphics_pipeline(backend_graphics_pipeline_resource& resource) const noexcept;
   [[nodiscard]] webgpu_timestamp_query_pool
   native_timestamp_query_pool(backend_timestamp_query_pool_resource& resource) const noexcept;
 
@@ -348,7 +389,7 @@ private:
   submission_serial next_submission_serial_{1};
   std::unique_ptr<webgpu_presentation_adapter> presentation_;
   std::shared_ptr<webgpu_resource_owner> resource_owner_;
-  std::unique_ptr<webgpu_pipeline_adapter> pipelines_;
+  std::shared_ptr<webgpu_pipeline_owner> pipeline_owner_;
   std::unique_ptr<webgpu_command_adapter> commands_;
 };
 
