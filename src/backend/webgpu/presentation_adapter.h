@@ -9,7 +9,7 @@
 #include <granit/core/result.h>
 
 #include "backend/contracts/presentation.h"
-#include "backend/webgpu/provider_dispatch.h"
+#include "backend/webgpu/context.h"
 
 namespace granit::detail {
 
@@ -18,7 +18,7 @@ struct webgpu_presentation_context;
 /** 将 WebGPU Provider 呈现接口适配为 Renderer 使用的内部资源对象。 */
 class webgpu_presentation_adapter {
 public:
-  webgpu_presentation_adapter(webgpu_provider_dispatch& provider,
+  webgpu_presentation_adapter(webgpu_context& provider,
                               granit_webgpu_provider_instance instance);
 
   [[nodiscard]] std::unique_ptr<backend_surface_resource> allocate_surface() const;

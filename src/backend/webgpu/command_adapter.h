@@ -8,7 +8,7 @@
 #include <span>
 
 #include "backend/contracts/resources.h"
-#include "backend/webgpu/provider_dispatch.h"
+#include "backend/webgpu/context.h"
 
 namespace granit::detail {
 
@@ -17,7 +17,7 @@ struct webgpu_command_context;
 /** 将公共命令录制契约适配到 WebGPU Provider。 */
 class webgpu_command_adapter {
 public:
-  webgpu_command_adapter(webgpu_provider_dispatch& provider,
+  webgpu_command_adapter(webgpu_context& provider,
                          granit_webgpu_provider_instance instance);
 
   [[nodiscard]] std::unique_ptr<backend_command_recorder_resource> allocate_recorder() const;

@@ -7,7 +7,7 @@
 #include <memory>
 
 #include "backend/contracts/resource_management.h"
-#include "backend/webgpu/provider_dispatch.h"
+#include "backend/webgpu/context.h"
 
 namespace granit::detail {
 
@@ -16,7 +16,7 @@ struct webgpu_resource_context;
 /** 将公共基础资源契约适配到 WebGPU Provider。 */
 class webgpu_resource_adapter {
 public:
-  webgpu_resource_adapter(webgpu_provider_dispatch& provider,
+  webgpu_resource_adapter(webgpu_context& provider,
                           granit_webgpu_provider_instance instance);
 
   [[nodiscard]] std::unique_ptr<backend_buffer_resource> allocate_buffer() const;

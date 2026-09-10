@@ -7,7 +7,7 @@
 #include <memory>
 
 #include "backend/contracts/resources.h"
-#include "backend/webgpu/provider_dispatch.h"
+#include "backend/webgpu/context.h"
 
 namespace granit::detail {
 
@@ -16,7 +16,7 @@ struct webgpu_shader_context;
 /** 将 WebGPU Provider Shader 句柄适配为内部后端资源对象。 */
 class webgpu_shader_adapter {
 public:
-  webgpu_shader_adapter(webgpu_provider_dispatch& provider,
+  webgpu_shader_adapter(webgpu_context& provider,
                         granit_webgpu_provider_instance instance);
 
   [[nodiscard]] std::unique_ptr<backend_shader_resource> allocate_shader() const;

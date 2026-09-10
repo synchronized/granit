@@ -8,7 +8,7 @@
 namespace granit::detail {
 
 struct webgpu_shader_context {
-  webgpu_provider_dispatch* provider{};
+  webgpu_context* provider{};
   granit_webgpu_provider_instance instance{};
 };
 
@@ -35,7 +35,7 @@ webgpu_shader_resource* as_shader(backend_shader_resource& resource) {
 
 } // namespace
 
-webgpu_shader_adapter::webgpu_shader_adapter(webgpu_provider_dispatch& provider,
+webgpu_shader_adapter::webgpu_shader_adapter(webgpu_context& provider,
                                              granit_webgpu_provider_instance instance)
     : context_(
           std::make_shared<webgpu_shader_context>(webgpu_shader_context{&provider, instance})) {}

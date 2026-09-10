@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#ifndef GRANIT_WEBGPU_PROVIDER_LOADER_H_
-#define GRANIT_WEBGPU_PROVIDER_LOADER_H_
+#ifndef GRANIT_WEBGPU_CONTEXT_H_
+#define GRANIT_WEBGPU_CONTEXT_H_
 
 #include <cstdint>
 #include <span>
@@ -14,14 +14,14 @@
 
 namespace granit::detail {
 
-/** 连接并校验 Emscripten WebGPU 静态 Provider。 */
-class webgpu_provider_dispatch {
+/** 拥有 Emscripten WebGPU 静态实现的内部调用上下文。 */
+class webgpu_context {
 public:
-  webgpu_provider_dispatch() = default;
-  ~webgpu_provider_dispatch();
+  webgpu_context() = default;
+  ~webgpu_context();
 
-  webgpu_provider_dispatch(const webgpu_provider_dispatch&) = delete;
-  webgpu_provider_dispatch& operator=(const webgpu_provider_dispatch&) = delete;
+  webgpu_context(const webgpu_context&) = delete;
+  webgpu_context& operator=(const webgpu_context&) = delete;
 
   /** 接入随当前后端静态编译的 WebGPU 实现。 */
   [[nodiscard]] granit_result open() noexcept;
@@ -162,20 +162,20 @@ public:
   [[nodiscard]] granit_result
   destroy_compute_pipeline(granit_webgpu_provider_instance instance,
                            granit_webgpu_provider_compute_pipeline pipeline) noexcept;
-  [[nodiscard]] granit_result begin_render_pipeline_warmup(
-      granit_webgpu_provider_instance instance,
-      const granit_webgpu_provider_render_pipeline_desc* desc,
-      granit_webgpu_provider_pipeline_warmup* warmup) noexcept;
-  [[nodiscard]] granit_result begin_compute_pipeline_warmup(
-      granit_webgpu_provider_instance instance,
-      const granit_webgpu_provider_compute_pipeline_desc* desc,
-      granit_webgpu_provider_pipeline_warmup* warmup) noexcept;
-  [[nodiscard]] granit_result poll_pipeline_warmup(
-      granit_webgpu_provider_instance instance,
-      granit_webgpu_provider_pipeline_warmup warmup) noexcept;
-  [[nodiscard]] granit_result destroy_pipeline_warmup(
-      granit_webgpu_provider_instance instance,
-      granit_webgpu_provider_pipeline_warmup warmup) noexcept;
+  [[nodiscard]] granit_result
+  begin_render_pipeline_warmup(granit_webgpu_provider_instance instance,
+                               const granit_webgpu_provider_render_pipeline_desc* desc,
+                               granit_webgpu_provider_pipeline_warmup* warmup) noexcept;
+  [[nodiscard]] granit_result
+  begin_compute_pipeline_warmup(granit_webgpu_provider_instance instance,
+                                const granit_webgpu_provider_compute_pipeline_desc* desc,
+                                granit_webgpu_provider_pipeline_warmup* warmup) noexcept;
+  [[nodiscard]] granit_result
+  poll_pipeline_warmup(granit_webgpu_provider_instance instance,
+                       granit_webgpu_provider_pipeline_warmup warmup) noexcept;
+  [[nodiscard]] granit_result
+  destroy_pipeline_warmup(granit_webgpu_provider_instance instance,
+                          granit_webgpu_provider_pipeline_warmup warmup) noexcept;
   [[nodiscard]] granit_result
   recorder_begin_compute(granit_webgpu_provider_instance instance,
                          granit_webgpu_provider_command_recorder recorder) noexcept;
@@ -321,11 +321,10 @@ public:
       std::uint32_t first, std::uint64_t* values, std::uint32_t count) noexcept;
   void close() noexcept;
 
-  [[nodiscard]] bool is_open() const noexcept { return api_ != nullptr; }
-  [[nodiscard]] const granit_webgpu_provider_api* api() const noexcept { return api_; }
+  [[nodiscard]] bool is_open() const noexcept { return open_; }
 
 private:
-  const granit_webgpu_provider_api* api_{nullptr};
+  bool open_{};
   std::vector<granit_webgpu_provider_instance> instances_;
 };
 

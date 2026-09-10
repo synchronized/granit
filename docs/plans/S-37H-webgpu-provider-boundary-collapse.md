@@ -5,7 +5,8 @@
 
 ## 状态
 
-**实现中。** 设计已确认并纳入 0.21.0；S-37H1 已完成，当前迁移资源与 Shader。
+**实现中。** 设计已确认并纳入 0.21.0；S-37H1 和 Context 直接调用已完成，当前迁移资源与
+Shader 的私有类型。
 
 ## 背景与目标
 
@@ -52,8 +53,8 @@ Renderer Registry -> 私有 HAL -> WebGPU renderer state / domain adapter
    提交、复制和回读路径，并保持异步 Pipeline 的资源保活与完成通知。
 4. **S-37H4 呈现与帧生命周期**：迁移 Surface 配置、Backbuffer 获取、Present、帧完成和 Device Lost
    路径，完成浏览器窗口与离屏渲染回归。
-5. **S-37H5 删除历史边界**：删除 `provider_api.h`、`provider_dispatch.*`、Provider ABI 版本、函数表、
-   查询符号和只验证该边界的测试；清理 CMake 与命名。
+5. **S-37H5 删除历史边界（部分完成）**：运行时函数表、查询符号和 `provider_dispatch.*` 已删除；
+   后续删除 `provider_api.h`、Provider ABI 声明、旧类型命名和只验证该边界的测试。
 6. **S-37H6 文档与发布验收**：更新架构概念与实现状态，完成 Emscripten、浏览器 WebGPU、Vulkan、
    Windows 共享/静态及 Documentation 回归，并并入 S-37G 发布验收。
 

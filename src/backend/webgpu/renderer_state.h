@@ -24,7 +24,7 @@
 #include "backend/webgpu/command_adapter.h"
 #include "backend/webgpu/pipeline_adapter.h"
 #include "backend/webgpu/presentation_adapter.h"
-#include "backend/webgpu/provider_dispatch.h"
+#include "backend/webgpu/context.h"
 #include "backend/webgpu/resource_adapter.h"
 #include "backend/webgpu/shader_adapter.h"
 #include "backend/webgpu/timestamp_adapter.h"
@@ -327,7 +327,7 @@ private:
   [[nodiscard]] granit_result refresh_state() noexcept;
   [[nodiscard]] granit_result finish_initialization() noexcept;
 
-  webgpu_provider_dispatch provider_;
+  webgpu_context provider_;
   granit_webgpu_provider_instance instance_{};
   granit_diagnostic_callback diagnostic_callback_{};
   void* diagnostic_user_data_{};

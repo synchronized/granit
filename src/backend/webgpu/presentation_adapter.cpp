@@ -28,7 +28,7 @@ granit_texture_format to_texture_format(granit_webgpu_provider_texture_format fo
 } // namespace
 
 struct webgpu_presentation_context {
-  webgpu_provider_dispatch* provider{};
+  webgpu_context* provider{};
   granit_webgpu_provider_instance instance{};
 };
 
@@ -91,7 +91,7 @@ webgpu_swapchain_resource* as_swapchain(backend_swapchain_resource& resource) {
 
 } // namespace
 
-webgpu_presentation_adapter::webgpu_presentation_adapter(webgpu_provider_dispatch& provider,
+webgpu_presentation_adapter::webgpu_presentation_adapter(webgpu_context& provider,
                                                          granit_webgpu_provider_instance instance)
     : context_(std::make_shared<webgpu_presentation_context>(
           webgpu_presentation_context{&provider, instance})) {}

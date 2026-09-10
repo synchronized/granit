@@ -10,7 +10,7 @@
 #include <granit/renderer/pipeline.h>
 
 #include "backend/contracts/resources.h"
-#include "backend/webgpu/provider_dispatch.h"
+#include "backend/webgpu/context.h"
 
 namespace granit::detail {
 
@@ -19,7 +19,7 @@ struct webgpu_pipeline_context;
 /** 适配 WebGPU MVP 的无绑定 Pipeline Layout 与基础图形 Pipeline。 */
 class webgpu_pipeline_adapter {
 public:
-  webgpu_pipeline_adapter(webgpu_provider_dispatch& provider,
+  webgpu_pipeline_adapter(webgpu_context& provider,
                           granit_webgpu_provider_instance instance);
 
   [[nodiscard]] std::unique_ptr<backend_pipeline_layout_resource> allocate_pipeline_layout() const;

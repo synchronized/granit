@@ -9,7 +9,7 @@
 namespace granit::detail {
 
 struct webgpu_command_context {
-  webgpu_provider_dispatch* provider{};
+  webgpu_context* provider{};
   granit_webgpu_provider_instance instance{};
 };
 
@@ -74,7 +74,7 @@ granit_result end_compute_if_open(const webgpu_command_context& context,
 
 } // namespace
 
-webgpu_command_adapter::webgpu_command_adapter(webgpu_provider_dispatch& provider,
+webgpu_command_adapter::webgpu_command_adapter(webgpu_context& provider,
                                                granit_webgpu_provider_instance instance)
     : context_(
           std::make_shared<webgpu_command_context>(webgpu_command_context{&provider, instance})) {}

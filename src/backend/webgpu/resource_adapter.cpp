@@ -16,7 +16,7 @@
 namespace granit::detail {
 
 struct webgpu_resource_context {
-  webgpu_provider_dispatch* provider{};
+  webgpu_context* provider{};
   granit_webgpu_provider_instance instance{};
 };
 
@@ -276,7 +276,7 @@ granit_webgpu_provider_buffer_usage to_usage(granit_buffer_usage usage,
 
 } // namespace
 
-webgpu_resource_adapter::webgpu_resource_adapter(webgpu_provider_dispatch& provider,
+webgpu_resource_adapter::webgpu_resource_adapter(webgpu_context& provider,
                                                  granit_webgpu_provider_instance instance)
     : context_(
           std::make_shared<webgpu_resource_context>(webgpu_resource_context{&provider, instance})) {

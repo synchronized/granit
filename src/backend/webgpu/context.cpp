@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
+#include "backend/webgpu/context.h"
 #include "backend/contracts/callback_lifetime.h"
 #include "backend/contracts/lifecycle.h"
-#include "backend/webgpu/provider_api.h"
 
 #include <algorithm>
 #include <array>
@@ -4737,104 +4737,1106 @@ granit_result destroy_swapchain(granit_webgpu_provider_instance instance,
   return GRANIT_SUCCESS;
 }
 
-constexpr char provider_name[] = "Granit WebGPU (Dawn)";
-constexpr granit_webgpu_provider_instance_api instance_api{
-    sizeof(granit_webgpu_provider_instance_api),
-    0,
-    get_capabilities,
-    create_buffer,
-    destroy_buffer,
-    write_buffer,
-    read_buffer,
-    create_texture,
-    destroy_texture,
-    write_texture,
-    create_texture_view,
-    destroy_texture_view,
-    create_sampler,
-    destroy_sampler,
-    create_bind_group_layout,
-    destroy_bind_group_layout,
-    create_bind_group,
-    destroy_bind_group,
-    create_shader,
-    destroy_shader,
-    create_pipeline_layout,
-    destroy_pipeline_layout,
-    create_render_pipeline,
-    destroy_render_pipeline,
-    create_command_recorder,
-    destroy_command_recorder,
-    recorder_copy_buffer_to_texture,
-    finish_command_recorder,
-    destroy_command_buffer,
-    submit_command_buffer,
-    recorder_copy_texture_to_buffer,
-    get_instance_status,
-    process_events,
-    create_win32_surface,
-    create_xcb_surface,
-    create_wayland_surface,
-    create_canvas_surface,
-    destroy_surface,
-    create_swapchain,
-    recreate_swapchain,
-    get_swapchain_info,
-    acquire_swapchain,
-    present_swapchain,
-    cancel_swapchain,
-    destroy_swapchain,
-    recorder_begin_rendering,
-    recorder_bind_pipeline,
-    recorder_bind_graphics_groups,
-    recorder_bind_vertex_buffers,
-    recorder_bind_index_buffer,
-    recorder_draw_vertices,
-    recorder_draw_indices,
-    recorder_end_rendering,
-    write_upload_batch,
-    create_compute_pipeline,
-    destroy_compute_pipeline,
-    recorder_begin_compute,
-    recorder_bind_compute_pipeline,
-    recorder_bind_compute_groups,
-    recorder_dispatch,
-    recorder_end_compute,
-    recorder_set_viewports,
-    recorder_set_scissors,
-    recorder_copy_buffer,
-    recorder_copy_buffer_to_texture_v2,
-    recorder_copy_texture_to_buffer_v2,
-    recorder_copy_texture,
-    recorder_fill_buffer,
-    recorder_generate_mipmaps,
-    create_timestamp_query_pool,
-    destroy_timestamp_query_pool,
-    recorder_reset_timestamp_queries,
-    recorder_write_timestamp,
-    read_timestamp_query_results,
-    begin_readback,
-    poll_readback,
-    copy_readback,
-    destroy_readback,
-    begin_render_pipeline_warmup,
-    begin_compute_pipeline_warmup,
-    poll_pipeline_warmup,
-    destroy_pipeline_warmup};
-constexpr granit_webgpu_provider_api provider_api{sizeof(granit_webgpu_provider_api),
-                                                  GRANIT_WEBGPU_PROVIDER_ABI_VERSION,
-                                                  GRANIT_WEBGPU_PROVIDER_KIND_WEBGPU,
-                                                  0,
-                                                  provider_name,
-                                                  sizeof(provider_name) - 1,
-                                                  create_backend,
-                                                  destroy_backend,
-                                                  &instance_api};
-
 } // namespace
 
 namespace granit::detail {
+namespace {
 
-const granit_webgpu_provider_api& static_webgpu_provider_api() noexcept { return provider_api; }
+bool is_valid_host(const granit_webgpu_provider_host_api* host) noexcept {
+  constexpr std::size_t minimum_size =
+      offsetof(granit_webgpu_provider_host_api, allocator_user_data) + sizeof(void*);
+  return host != nullptr && host->struct_size >= minimum_size && host->reserved == 0 &&
+         host->allocate != nullptr && host->deallocate != nullptr;
+}
+
+} // namespace
+
+webgpu_context::~webgpu_context() { close(); }
+
+granit_result webgpu_context::open() noexcept {
+  close();
+  open_ = true;
+  return GRANIT_SUCCESS;
+}
+
+granit_result
+webgpu_context::create_instance(const granit_webgpu_provider_host_api* host,
+                                granit_webgpu_provider_instance* out_instance) noexcept {
+  if (!open_ || out_instance == nullptr || !is_valid_host(host)) {
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  }
+  *out_instance = 0;
+
+  granit_webgpu_provider_instance instance = 0;
+  granit_result result = GRANIT_ERROR_INTERNAL;
+  try {
+    result = ::create_backend(host, &instance);
+  } catch (...) {
+    if (instance != 0) {
+      try {
+        ::destroy_backend(instance);
+      } catch (...) {
+      }
+    }
+    return GRANIT_ERROR_INTERNAL;
+  }
+  if (result != GRANIT_SUCCESS) {
+    if (instance != 0) {
+      try {
+        ::destroy_backend(instance);
+      } catch (...) {
+      }
+    }
+    return result;
+  }
+  if (instance == 0) {
+    return GRANIT_ERROR_INITIALIZATION_FAILED;
+  }
+
+  try {
+    instances_.push_back(instance);
+  } catch (const std::bad_alloc&) {
+    try {
+      ::destroy_backend(instance);
+    } catch (...) {
+    }
+    return GRANIT_ERROR_OUT_OF_MEMORY;
+  } catch (...) {
+    try {
+      ::destroy_backend(instance);
+    } catch (...) {
+    }
+    return GRANIT_ERROR_INTERNAL;
+  }
+  *out_instance = instance;
+  return GRANIT_SUCCESS;
+}
+
+granit_result webgpu_context::destroy_instance(granit_webgpu_provider_instance instance) noexcept {
+  if (!open_ || instance == 0) {
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  }
+  const auto found = std::find(instances_.begin(), instances_.end(), instance);
+  if (found == instances_.end()) {
+    return GRANIT_ERROR_INVALID_HANDLE;
+  }
+  try {
+    ::destroy_backend(instance);
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+  instances_.erase(found);
+  return GRANIT_SUCCESS;
+}
+
+granit_result
+webgpu_context::get_capabilities(granit_webgpu_provider_instance instance,
+                                 granit_webgpu_provider_capabilities* capabilities) noexcept {
+  constexpr std::size_t minimum_size =
+      offsetof(granit_webgpu_provider_capabilities, reserved_2) + sizeof(std::uint32_t);
+  if (!open_ || instance == 0 || capabilities == nullptr ||
+      capabilities->struct_size < minimum_size || capabilities->reserved != 0 ||
+      capabilities->reserved_2 != 0) {
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  }
+  if (std::find(instances_.begin(), instances_.end(), instance) == instances_.end()) {
+    return GRANIT_ERROR_INVALID_HANDLE;
+  }
+  try {
+    return ::get_capabilities(instance, capabilities);
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+granit_result
+webgpu_context::get_instance_status(granit_webgpu_provider_instance instance,
+                                    granit_webgpu_provider_instance_status* status) noexcept {
+  if (!open_ || instance == 0 || status == nullptr ||
+      status->struct_size < sizeof(granit_webgpu_provider_instance_status) ||
+      status->reserved != 0) {
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  }
+  if (std::find(instances_.begin(), instances_.end(), instance) == instances_.end()) {
+    return GRANIT_ERROR_INVALID_HANDLE;
+  }
+  try {
+    return ::get_instance_status(instance, status);
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+granit_result webgpu_context::process_events(granit_webgpu_provider_instance instance) noexcept {
+  if (!open_ || instance == 0) {
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  }
+  if (std::find(instances_.begin(), instances_.end(), instance) == instances_.end()) {
+    return GRANIT_ERROR_INVALID_HANDLE;
+  }
+  try {
+    return ::process_events(instance);
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+granit_result
+webgpu_context::create_win32_surface(granit_webgpu_provider_instance instance,
+                                     const granit_webgpu_provider_win32_surface_desc* desc,
+                                     granit_webgpu_provider_surface* surface) noexcept {
+  if (!open_ || instance == 0 || desc == nullptr || surface == nullptr)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  if (std::find(instances_.begin(), instances_.end(), instance) == instances_.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  try {
+    return ::create_win32_surface(instance, desc, surface);
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+granit_result
+webgpu_context::create_xcb_surface(granit_webgpu_provider_instance instance,
+                                   const granit_webgpu_provider_xcb_surface_desc* desc,
+                                   granit_webgpu_provider_surface* surface) noexcept {
+  if (!open_ || instance == 0 || desc == nullptr || surface == nullptr)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  if (std::find(instances_.begin(), instances_.end(), instance) == instances_.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  try {
+    return ::create_xcb_surface(instance, desc, surface);
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+granit_result
+webgpu_context::create_wayland_surface(granit_webgpu_provider_instance instance,
+                                       const granit_webgpu_provider_wayland_surface_desc* desc,
+                                       granit_webgpu_provider_surface* surface) noexcept {
+  if (!open_ || instance == 0 || desc == nullptr || surface == nullptr)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  if (std::find(instances_.begin(), instances_.end(), instance) == instances_.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  try {
+    return ::create_wayland_surface(instance, desc, surface);
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+granit_result
+webgpu_context::create_canvas_surface(granit_webgpu_provider_instance instance,
+                                      const granit_webgpu_provider_canvas_surface_desc* desc,
+                                      granit_webgpu_provider_surface* surface) noexcept {
+  if (!open_ || instance == 0 || desc == nullptr || surface == nullptr)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  if (std::find(instances_.begin(), instances_.end(), instance) == instances_.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  try {
+    return ::create_canvas_surface(instance, desc, surface);
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+granit_result webgpu_context::destroy_surface(granit_webgpu_provider_instance instance,
+                                              granit_webgpu_provider_surface surface) noexcept {
+  if (!open_ || instance == 0 || surface == 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  if (std::find(instances_.begin(), instances_.end(), instance) == instances_.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  try {
+    return ::destroy_surface(instance, surface);
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+granit_result
+webgpu_context::create_swapchain(granit_webgpu_provider_instance instance,
+                                 granit_webgpu_provider_surface surface,
+                                 const granit_webgpu_provider_swapchain_desc* desc,
+                                 granit_webgpu_provider_swapchain* swapchain) noexcept {
+  if (!open_ || instance == 0 || surface == 0 || desc == nullptr || swapchain == nullptr)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  if (std::find(instances_.begin(), instances_.end(), instance) == instances_.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  try {
+    return ::create_swapchain(instance, surface, desc, swapchain);
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+granit_result
+webgpu_context::recreate_swapchain(granit_webgpu_provider_instance instance,
+                                   granit_webgpu_provider_swapchain swapchain,
+                                   const granit_webgpu_provider_swapchain_desc* desc) noexcept {
+  if (!open_ || instance == 0 || swapchain == 0 || desc == nullptr)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  if (std::find(instances_.begin(), instances_.end(), instance) == instances_.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  try {
+    return ::recreate_swapchain(instance, swapchain, desc);
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+granit_result
+webgpu_context::get_swapchain_info(granit_webgpu_provider_instance instance,
+                                   granit_webgpu_provider_swapchain swapchain,
+                                   granit_webgpu_provider_swapchain_info* info) noexcept {
+  if (!open_ || instance == 0 || swapchain == 0 || info == nullptr)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  if (std::find(instances_.begin(), instances_.end(), instance) == instances_.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  try {
+    return ::get_swapchain_info(instance, swapchain, info);
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+granit_result
+webgpu_context::acquire_swapchain(granit_webgpu_provider_instance instance,
+                                  granit_webgpu_provider_swapchain swapchain,
+                                  granit_webgpu_provider_acquired_frame* frame) noexcept {
+  if (!open_ || instance == 0 || swapchain == 0 || frame == nullptr)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  if (std::find(instances_.begin(), instances_.end(), instance) == instances_.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  try {
+    return ::acquire_swapchain(instance, swapchain, frame);
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+granit_result webgpu_context::present_swapchain(granit_webgpu_provider_instance instance,
+                                                granit_webgpu_provider_swapchain swapchain,
+                                                std::uint32_t* needs_recreate) noexcept {
+  if (!open_ || instance == 0 || swapchain == 0 || needs_recreate == nullptr)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  if (std::find(instances_.begin(), instances_.end(), instance) == instances_.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  try {
+    return ::present_swapchain(instance, swapchain, needs_recreate);
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+granit_result webgpu_context::cancel_swapchain(granit_webgpu_provider_instance instance,
+                                               granit_webgpu_provider_swapchain swapchain,
+                                               std::uint32_t* needs_recreate) noexcept {
+  if (!open_ || instance == 0 || swapchain == 0 || needs_recreate == nullptr)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  if (std::find(instances_.begin(), instances_.end(), instance) == instances_.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  try {
+    return ::cancel_swapchain(instance, swapchain, needs_recreate);
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+granit_result
+webgpu_context::destroy_swapchain(granit_webgpu_provider_instance instance,
+                                  granit_webgpu_provider_swapchain swapchain) noexcept {
+  if (!open_ || instance == 0 || swapchain == 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  if (std::find(instances_.begin(), instances_.end(), instance) == instances_.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  try {
+    return ::destroy_swapchain(instance, swapchain);
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+granit_result webgpu_context::create_buffer(granit_webgpu_provider_instance instance,
+                                            const granit_webgpu_provider_buffer_desc* desc,
+                                            granit_webgpu_provider_buffer* buffer) noexcept {
+  if (!open_ || instance == 0 || desc == nullptr || buffer == nullptr) {
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  }
+  if (std::find(instances_.begin(), instances_.end(), instance) == instances_.end()) {
+    return GRANIT_ERROR_INVALID_HANDLE;
+  }
+  try {
+    return ::create_buffer(instance, desc, buffer);
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+granit_result webgpu_context::destroy_buffer(granit_webgpu_provider_instance instance,
+                                             granit_webgpu_provider_buffer buffer) noexcept {
+  if (!open_ || instance == 0 || buffer == 0) {
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  }
+  if (std::find(instances_.begin(), instances_.end(), instance) == instances_.end()) {
+    return GRANIT_ERROR_INVALID_HANDLE;
+  }
+  try {
+    return ::destroy_buffer(instance, buffer);
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+granit_result webgpu_context::write_buffer(granit_webgpu_provider_instance instance,
+                                           granit_webgpu_provider_buffer buffer,
+                                           std::uint64_t offset, const void* data,
+                                           std::uint64_t size) noexcept {
+  if (!open_ || instance == 0 || buffer == 0 || data == nullptr || size == 0) {
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  }
+  if (std::find(instances_.begin(), instances_.end(), instance) == instances_.end()) {
+    return GRANIT_ERROR_INVALID_HANDLE;
+  }
+  try {
+    return ::write_buffer(instance, buffer, offset, data, size);
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+granit_result webgpu_context::read_buffer(granit_webgpu_provider_instance instance,
+                                          granit_webgpu_provider_buffer buffer,
+                                          std::uint64_t offset, void* data,
+                                          std::uint64_t size) noexcept {
+  if (!open_ || instance == 0 || buffer == 0 || data == nullptr || size == 0) {
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  }
+  if (std::find(instances_.begin(), instances_.end(), instance) == instances_.end()) {
+    return GRANIT_ERROR_INVALID_HANDLE;
+  }
+  try {
+    return ::read_buffer(instance, buffer, offset, data, size);
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+granit_result webgpu_context::begin_readback(granit_webgpu_provider_instance instance,
+                                             granit_webgpu_provider_buffer buffer,
+                                             std::uint64_t offset, std::uint64_t size,
+                                             granit_webgpu_provider_readback* readback) noexcept {
+  if (!open_ || instance == 0 || buffer == 0 || size == 0 || readback == nullptr)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  if (std::find(instances_.begin(), instances_.end(), instance) == instances_.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  try {
+    return ::begin_readback(instance, buffer, offset, size, readback);
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+granit_result webgpu_context::poll_readback(granit_webgpu_provider_instance instance,
+                                            granit_webgpu_provider_readback readback) noexcept {
+  if (!open_ || instance == 0 || readback == 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  if (std::find(instances_.begin(), instances_.end(), instance) == instances_.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  try {
+    return ::poll_readback(instance, readback);
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+granit_result webgpu_context::copy_readback(granit_webgpu_provider_instance instance,
+                                            granit_webgpu_provider_readback readback,
+                                            std::uint64_t offset, void* data,
+                                            std::uint64_t size) noexcept {
+  if (!open_ || instance == 0 || readback == 0 || data == nullptr || size == 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  if (std::find(instances_.begin(), instances_.end(), instance) == instances_.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  try {
+    return ::copy_readback(instance, readback, offset, data, size);
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+granit_result webgpu_context::destroy_readback(granit_webgpu_provider_instance instance,
+                                               granit_webgpu_provider_readback readback) noexcept {
+  if (!open_ || instance == 0 || readback == 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  if (std::find(instances_.begin(), instances_.end(), instance) == instances_.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  try {
+    return ::destroy_readback(instance, readback);
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+granit_result webgpu_context::create_texture(granit_webgpu_provider_instance instance,
+                                             const granit_webgpu_provider_texture_desc* desc,
+                                             granit_webgpu_provider_texture* texture) noexcept {
+  if (!open_ || instance == 0 || desc == nullptr || texture == nullptr) {
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  }
+  if (std::find(instances_.begin(), instances_.end(), instance) == instances_.end()) {
+    return GRANIT_ERROR_INVALID_HANDLE;
+  }
+  try {
+    return ::create_texture(instance, desc, texture);
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+granit_result webgpu_context::destroy_texture(granit_webgpu_provider_instance instance,
+                                              granit_webgpu_provider_texture texture) noexcept {
+  if (!open_ || instance == 0 || texture == 0) {
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  }
+  if (std::find(instances_.begin(), instances_.end(), instance) == instances_.end()) {
+    return GRANIT_ERROR_INVALID_HANDLE;
+  }
+  try {
+    return ::destroy_texture(instance, texture);
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+granit_result webgpu_context::write_texture(granit_webgpu_provider_instance instance,
+                                            granit_webgpu_provider_texture texture,
+                                            const granit_webgpu_provider_texture_write_desc* desc,
+                                            const void* data, std::uint64_t size) noexcept {
+  if (!open_ || instance == 0 || texture == 0 || desc == nullptr || data == nullptr || size == 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  if (std::find(instances_.begin(), instances_.end(), instance) == instances_.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  try {
+    return ::write_texture(instance, texture, desc, data, size);
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+granit_result webgpu_context::write_upload_batch(
+    granit_webgpu_provider_instance instance,
+    std::span<const granit_webgpu_provider_upload_operation> operations) noexcept {
+  if (!open_ || instance == 0 || operations.empty() || operations.size() > UINT32_MAX)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  if (std::find(instances_.begin(), instances_.end(), instance) == instances_.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  try {
+    return ::write_upload_batch(instance, operations.data(),
+                                static_cast<std::uint32_t>(operations.size()));
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+granit_result
+webgpu_context::create_texture_view(granit_webgpu_provider_instance instance,
+                                    granit_webgpu_provider_texture texture,
+                                    const granit_webgpu_provider_texture_view_desc* desc,
+                                    granit_webgpu_provider_texture_view* view) noexcept {
+  if (!open_ || instance == 0 || texture == 0 || desc == nullptr || view == nullptr) {
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  }
+  if (std::find(instances_.begin(), instances_.end(), instance) == instances_.end()) {
+    return GRANIT_ERROR_INVALID_HANDLE;
+  }
+  try {
+    return ::create_texture_view(instance, texture, desc, view);
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+granit_result
+webgpu_context::destroy_texture_view(granit_webgpu_provider_instance instance,
+                                     granit_webgpu_provider_texture_view view) noexcept {
+  if (!open_ || instance == 0 || view == 0) {
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  }
+  if (std::find(instances_.begin(), instances_.end(), instance) == instances_.end()) {
+    return GRANIT_ERROR_INVALID_HANDLE;
+  }
+  try {
+    return ::destroy_texture_view(instance, view);
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+granit_result webgpu_context::create_sampler(granit_webgpu_provider_instance instance,
+                                             const granit_webgpu_provider_sampler_desc* desc,
+                                             granit_webgpu_provider_sampler* sampler) noexcept {
+  if (!open_ || instance == 0 || desc == nullptr || sampler == nullptr) {
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  }
+  if (std::find(instances_.begin(), instances_.end(), instance) == instances_.end()) {
+    return GRANIT_ERROR_INVALID_HANDLE;
+  }
+  try {
+    return ::create_sampler(instance, desc, sampler);
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+granit_result webgpu_context::destroy_sampler(granit_webgpu_provider_instance instance,
+                                              granit_webgpu_provider_sampler sampler) noexcept {
+  if (!open_ || instance == 0 || sampler == 0) {
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  }
+  if (std::find(instances_.begin(), instances_.end(), instance) == instances_.end()) {
+    return GRANIT_ERROR_INVALID_HANDLE;
+  }
+  try {
+    return ::destroy_sampler(instance, sampler);
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+#define GRANIT_PROVIDER_DISPATCH_CREATE_METHOD(method, function, input_type, output_type)          \
+  granit_result webgpu_context::method(granit_webgpu_provider_instance instance, input_type input, \
+                                       output_type* output) noexcept {                             \
+    if (!open_ || instance == 0 || input == 0 || output == nullptr) {                              \
+      return GRANIT_ERROR_INVALID_ARGUMENT;                                                        \
+    }                                                                                              \
+    if (std::find(instances_.begin(), instances_.end(), instance) == instances_.end()) {           \
+      return GRANIT_ERROR_INVALID_HANDLE;                                                          \
+    }                                                                                              \
+    try {                                                                                          \
+      return ::function(instance, input, output);                                                  \
+    } catch (...) {                                                                                \
+      return GRANIT_ERROR_INTERNAL;                                                                \
+    }                                                                                              \
+  }
+
+#define GRANIT_PROVIDER_DISPATCH_DESTROY_METHOD(method, function, handle_type)                     \
+  granit_result webgpu_context::method(granit_webgpu_provider_instance instance,                   \
+                                       handle_type handle) noexcept {                              \
+    if (!open_ || instance == 0 || handle == 0) {                                                  \
+      return GRANIT_ERROR_INVALID_ARGUMENT;                                                        \
+    }                                                                                              \
+    if (std::find(instances_.begin(), instances_.end(), instance) == instances_.end()) {           \
+      return GRANIT_ERROR_INVALID_HANDLE;                                                          \
+    }                                                                                              \
+    try {                                                                                          \
+      return ::function(instance, handle);                                                         \
+    } catch (...) {                                                                                \
+      return GRANIT_ERROR_INTERNAL;                                                                \
+    }                                                                                              \
+  }
+
+granit_result webgpu_context::create_bind_group_layout(
+    granit_webgpu_provider_instance instance,
+    const granit_webgpu_provider_bind_group_layout_desc* desc,
+    granit_webgpu_provider_bind_group_layout* layout) noexcept {
+  if (!open_ || instance == 0 || desc == nullptr || layout == nullptr)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  if (std::find(instances_.begin(), instances_.end(), instance) == instances_.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  try {
+    return ::create_bind_group_layout(instance, desc, layout);
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+GRANIT_PROVIDER_DISPATCH_DESTROY_METHOD(destroy_bind_group_layout, destroy_bind_group_layout,
+                                        granit_webgpu_provider_bind_group_layout)
+
+granit_result
+webgpu_context::create_bind_group(granit_webgpu_provider_instance instance,
+                                  const granit_webgpu_provider_bind_group_desc* desc,
+                                  granit_webgpu_provider_bind_group* bind_group) noexcept {
+  if (!open_ || instance == 0 || desc == nullptr || bind_group == nullptr)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  if (std::find(instances_.begin(), instances_.end(), instance) == instances_.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  try {
+    return ::create_bind_group(instance, desc, bind_group);
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+GRANIT_PROVIDER_DISPATCH_DESTROY_METHOD(destroy_bind_group, destroy_bind_group,
+                                        granit_webgpu_provider_bind_group)
+GRANIT_PROVIDER_DISPATCH_CREATE_METHOD(create_shader, create_shader,
+                                       const granit_webgpu_provider_shader_desc*,
+                                       granit_webgpu_provider_shader)
+GRANIT_PROVIDER_DISPATCH_DESTROY_METHOD(destroy_shader, destroy_shader,
+                                        granit_webgpu_provider_shader)
+granit_result webgpu_context::create_pipeline_layout(
+    granit_webgpu_provider_instance instance,
+    const granit_webgpu_provider_pipeline_layout_desc* desc,
+    granit_webgpu_provider_pipeline_layout* pipeline_layout) noexcept {
+  if (!open_ || instance == 0 || desc == nullptr || pipeline_layout == nullptr)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  if (std::find(instances_.begin(), instances_.end(), instance) == instances_.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  try {
+    return ::create_pipeline_layout(instance, desc, pipeline_layout);
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+GRANIT_PROVIDER_DISPATCH_DESTROY_METHOD(destroy_pipeline_layout, destroy_pipeline_layout,
+                                        granit_webgpu_provider_pipeline_layout)
+GRANIT_PROVIDER_DISPATCH_CREATE_METHOD(create_compute_pipeline, create_compute_pipeline,
+                                       const granit_webgpu_provider_compute_pipeline_desc*,
+                                       granit_webgpu_provider_compute_pipeline)
+GRANIT_PROVIDER_DISPATCH_DESTROY_METHOD(destroy_compute_pipeline, destroy_compute_pipeline,
+                                        granit_webgpu_provider_compute_pipeline)
+GRANIT_PROVIDER_DISPATCH_CREATE_METHOD(begin_compute_pipeline_warmup, begin_compute_pipeline_warmup,
+                                       const granit_webgpu_provider_compute_pipeline_desc*,
+                                       granit_webgpu_provider_pipeline_warmup)
+
+granit_result
+webgpu_context::recorder_begin_compute(granit_webgpu_provider_instance instance,
+                                       granit_webgpu_provider_command_recorder recorder) noexcept {
+  if (!open_ || instance == 0 || recorder == 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  try {
+    return ::recorder_begin_compute(instance, recorder);
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+granit_result webgpu_context::recorder_bind_compute_pipeline(
+    granit_webgpu_provider_instance instance, granit_webgpu_provider_command_recorder recorder,
+    granit_webgpu_provider_compute_pipeline pipeline) noexcept {
+  if (!open_ || instance == 0 || recorder == 0 || pipeline == 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  try {
+    return ::recorder_bind_compute_pipeline(instance, recorder, pipeline);
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+granit_result webgpu_context::recorder_bind_compute_groups(
+    granit_webgpu_provider_instance instance, granit_webgpu_provider_command_recorder recorder,
+    granit_webgpu_provider_pipeline_layout layout, std::uint32_t first_group,
+    std::span<const granit_webgpu_provider_bind_group> groups,
+    std::span<const std::uint32_t> dynamic_offsets) noexcept {
+  if (!open_ || instance == 0 || recorder == 0 || layout == 0 || groups.empty() ||
+      groups.size() > UINT32_MAX || dynamic_offsets.size() > UINT32_MAX)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  try {
+    return ::recorder_bind_compute_groups(instance, recorder, layout, first_group, groups.data(),
+                                          static_cast<std::uint32_t>(groups.size()),
+                                          dynamic_offsets.data(),
+                                          static_cast<std::uint32_t>(dynamic_offsets.size()));
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+granit_result webgpu_context::recorder_dispatch(granit_webgpu_provider_instance instance,
+                                                granit_webgpu_provider_command_recorder recorder,
+                                                std::uint32_t x, std::uint32_t y,
+                                                std::uint32_t z) noexcept {
+  if (!open_ || instance == 0 || recorder == 0 || x == 0 || y == 0 || z == 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  try {
+    return ::recorder_dispatch(instance, recorder, x, y, z);
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+granit_result
+webgpu_context::recorder_end_compute(granit_webgpu_provider_instance instance,
+                                     granit_webgpu_provider_command_recorder recorder) noexcept {
+  if (!open_ || instance == 0 || recorder == 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  try {
+    return ::recorder_end_compute(instance, recorder);
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+GRANIT_PROVIDER_DISPATCH_CREATE_METHOD(create_render_pipeline, create_render_pipeline,
+                                       const granit_webgpu_provider_render_pipeline_desc*,
+                                       granit_webgpu_provider_render_pipeline)
+GRANIT_PROVIDER_DISPATCH_DESTROY_METHOD(destroy_render_pipeline, destroy_render_pipeline,
+                                        granit_webgpu_provider_render_pipeline)
+GRANIT_PROVIDER_DISPATCH_CREATE_METHOD(begin_render_pipeline_warmup, begin_render_pipeline_warmup,
+                                       const granit_webgpu_provider_render_pipeline_desc*,
+                                       granit_webgpu_provider_pipeline_warmup)
+
+granit_result
+webgpu_context::poll_pipeline_warmup(granit_webgpu_provider_instance instance,
+                                     granit_webgpu_provider_pipeline_warmup warmup) noexcept {
+  if (!open_ || instance == 0 || warmup == 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  if (std::find(instances_.begin(), instances_.end(), instance) == instances_.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  try {
+    return ::poll_pipeline_warmup(instance, warmup);
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+GRANIT_PROVIDER_DISPATCH_DESTROY_METHOD(destroy_pipeline_warmup, destroy_pipeline_warmup,
+                                        granit_webgpu_provider_pipeline_warmup)
+
+granit_result webgpu_context::create_command_recorder(
+    granit_webgpu_provider_instance instance,
+    granit_webgpu_provider_command_recorder* recorder) noexcept {
+  if (!open_ || instance == 0 || recorder == nullptr)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  if (std::find(instances_.begin(), instances_.end(), instance) == instances_.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  try {
+    return ::create_command_recorder(instance, recorder);
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+GRANIT_PROVIDER_DISPATCH_DESTROY_METHOD(destroy_command_recorder, destroy_command_recorder,
+                                        granit_webgpu_provider_command_recorder)
+
+granit_result webgpu_context::recorder_copy_buffer_to_texture(
+    granit_webgpu_provider_instance instance, granit_webgpu_provider_command_recorder recorder,
+    granit_webgpu_provider_buffer buffer, granit_webgpu_provider_texture texture,
+    std::uint32_t width, std::uint32_t height, std::uint32_t bytes_per_row) noexcept {
+  if (!open_ || instance == 0 || recorder == 0 || buffer == 0 || texture == 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  if (std::find(instances_.begin(), instances_.end(), instance) == instances_.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  try {
+    return ::recorder_copy_buffer_to_texture(instance, recorder, buffer, texture, width, height,
+                                             bytes_per_row);
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+granit_result webgpu_context::recorder_begin_rendering(
+    granit_webgpu_provider_instance instance, granit_webgpu_provider_command_recorder recorder,
+    granit_webgpu_provider_texture_view target, granit_webgpu_provider_load_operation load,
+    granit_webgpu_provider_store_operation store, const float clear[4],
+    granit_webgpu_provider_texture_view resolve_target,
+    granit_webgpu_provider_texture_view depth_target,
+    granit_webgpu_provider_load_operation depth_load,
+    granit_webgpu_provider_store_operation depth_store, float clear_depth) noexcept {
+  if (!open_ || instance == 0 || recorder == 0 || (target == 0 && depth_target == 0) ||
+      clear == nullptr)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  try {
+    return ::recorder_begin_rendering(instance, recorder, target, resolve_target, load, store,
+                                      clear[0], clear[1], clear[2], clear[3], depth_target,
+                                      depth_load, depth_store, clear_depth);
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+granit_result
+webgpu_context::recorder_bind_pipeline(granit_webgpu_provider_instance instance,
+                                       granit_webgpu_provider_command_recorder recorder,
+                                       granit_webgpu_provider_render_pipeline pipeline) noexcept {
+  if (!open_ || instance == 0 || recorder == 0 || pipeline == 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  try {
+    return ::recorder_bind_pipeline(instance, recorder, pipeline);
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+granit_result webgpu_context::recorder_bind_graphics_groups(
+    granit_webgpu_provider_instance instance, granit_webgpu_provider_command_recorder recorder,
+    granit_webgpu_provider_pipeline_layout layout, std::uint32_t first_group,
+    std::span<const granit_webgpu_provider_bind_group> groups,
+    std::span<const std::uint32_t> dynamic_offsets) noexcept {
+  if (!open_ || instance == 0 || recorder == 0 || layout == 0 || groups.empty() ||
+      groups.size() > UINT32_MAX || dynamic_offsets.size() > UINT32_MAX)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  try {
+    return ::recorder_bind_graphics_groups(instance, recorder, layout, first_group, groups.data(),
+                                           static_cast<std::uint32_t>(groups.size()),
+                                           dynamic_offsets.data(),
+                                           static_cast<std::uint32_t>(dynamic_offsets.size()));
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+granit_result webgpu_context::recorder_bind_vertex_buffers(
+    granit_webgpu_provider_instance instance, granit_webgpu_provider_command_recorder recorder,
+    std::uint32_t first,
+    std::span<const granit_webgpu_provider_vertex_buffer_binding> bindings) noexcept {
+  if (!open_ || instance == 0 || recorder == 0 || bindings.empty())
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  try {
+    return ::recorder_bind_vertex_buffers(instance, recorder, first, bindings.data(),
+                                          static_cast<std::uint32_t>(bindings.size()));
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+granit_result webgpu_context::recorder_bind_index_buffer(
+    granit_webgpu_provider_instance instance, granit_webgpu_provider_command_recorder recorder,
+    granit_webgpu_provider_buffer buffer, std::uint64_t offset,
+    granit_webgpu_provider_index_format format) noexcept {
+  if (!open_ || instance == 0 || recorder == 0 || buffer == 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  try {
+    return ::recorder_bind_index_buffer(instance, recorder, buffer, offset, format);
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+granit_result webgpu_context::recorder_set_viewports(
+    granit_webgpu_provider_instance instance, granit_webgpu_provider_command_recorder recorder,
+    std::uint32_t first, std::span<const granit_webgpu_provider_viewport> viewports) noexcept {
+  if (!open_ || instance == 0 || recorder == 0 || viewports.empty() ||
+      viewports.size() > UINT32_MAX)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  try {
+    return ::recorder_set_viewports(instance, recorder, first, viewports.data(),
+                                    static_cast<std::uint32_t>(viewports.size()));
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+granit_result webgpu_context::recorder_set_scissors(
+    granit_webgpu_provider_instance instance, granit_webgpu_provider_command_recorder recorder,
+    std::uint32_t first, std::span<const granit_webgpu_provider_scissor> scissors) noexcept {
+  if (!open_ || instance == 0 || recorder == 0 || scissors.empty() || scissors.size() > UINT32_MAX)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  try {
+    return ::recorder_set_scissors(instance, recorder, first, scissors.data(),
+                                   static_cast<std::uint32_t>(scissors.size()));
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+granit_result webgpu_context::recorder_draw_vertices(
+    granit_webgpu_provider_instance instance, granit_webgpu_provider_command_recorder recorder,
+    std::uint32_t vertex_count, std::uint32_t instance_count, std::uint32_t first_vertex,
+    std::uint32_t first_instance) noexcept {
+  if (!open_ || instance == 0 || recorder == 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  try {
+    return ::recorder_draw_vertices(instance, recorder, vertex_count, instance_count, first_vertex,
+                                    first_instance);
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+granit_result webgpu_context::recorder_draw_indices(
+    granit_webgpu_provider_instance instance, granit_webgpu_provider_command_recorder recorder,
+    std::uint32_t index_count, std::uint32_t instance_count, std::uint32_t first_index,
+    std::int32_t vertex_offset, std::uint32_t first_instance) noexcept {
+  if (!open_ || instance == 0 || recorder == 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  try {
+    return ::recorder_draw_indices(instance, recorder, index_count, instance_count, first_index,
+                                   vertex_offset, first_instance);
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+granit_result
+webgpu_context::recorder_end_rendering(granit_webgpu_provider_instance instance,
+                                       granit_webgpu_provider_command_recorder recorder) noexcept {
+  if (!open_ || instance == 0 || recorder == 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  try {
+    return ::recorder_end_rendering(instance, recorder);
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+granit_result webgpu_context::finish_command_recorder(
+    granit_webgpu_provider_instance instance, granit_webgpu_provider_command_recorder recorder,
+    granit_webgpu_provider_command_buffer* command_buffer) noexcept {
+  if (!open_ || instance == 0 || recorder == 0 || command_buffer == nullptr)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  if (std::find(instances_.begin(), instances_.end(), instance) == instances_.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  try {
+    return ::finish_command_recorder(instance, recorder, command_buffer);
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+GRANIT_PROVIDER_DISPATCH_DESTROY_METHOD(destroy_command_buffer, destroy_command_buffer,
+                                        granit_webgpu_provider_command_buffer)
+GRANIT_PROVIDER_DISPATCH_DESTROY_METHOD(submit_command_buffer, submit_command_buffer,
+                                        granit_webgpu_provider_command_buffer)
+
+granit_result webgpu_context::recorder_copy_texture_to_buffer(
+    granit_webgpu_provider_instance instance, granit_webgpu_provider_command_recorder recorder,
+    granit_webgpu_provider_texture texture, granit_webgpu_provider_buffer buffer,
+    std::uint32_t width, std::uint32_t height, std::uint32_t bytes_per_row) noexcept {
+  if (!open_ || instance == 0 || recorder == 0 || texture == 0 || buffer == 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  if (std::find(instances_.begin(), instances_.end(), instance) == instances_.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  try {
+    return ::recorder_copy_texture_to_buffer(instance, recorder, texture, buffer, width, height,
+                                             bytes_per_row);
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+granit_result webgpu_context::recorder_copy_buffer(
+    granit_webgpu_provider_instance instance, granit_webgpu_provider_command_recorder recorder,
+    granit_webgpu_provider_buffer source, granit_webgpu_provider_buffer destination,
+    std::span<const granit_webgpu_provider_buffer_copy_region> regions) noexcept {
+  if (!open_ || instance == 0 || recorder == 0 || source == 0 || destination == 0 ||
+      regions.empty() || regions.size() > UINT32_MAX)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  if (std::find(instances_.begin(), instances_.end(), instance) == instances_.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  try {
+    return ::recorder_copy_buffer(instance, recorder, source, destination, regions.data(),
+                                  static_cast<std::uint32_t>(regions.size()));
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+granit_result webgpu_context::recorder_copy_buffer_to_texture_v2(
+    granit_webgpu_provider_instance instance, granit_webgpu_provider_command_recorder recorder,
+    granit_webgpu_provider_buffer source, granit_webgpu_provider_texture destination,
+    const granit_webgpu_provider_texture_buffer_copy& region) noexcept {
+  if (!open_ || instance == 0 || recorder == 0 || source == 0 || destination == 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  try {
+    return ::recorder_copy_buffer_to_texture_v2(instance, recorder, source, destination, &region);
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+granit_result webgpu_context::recorder_copy_texture_to_buffer_v2(
+    granit_webgpu_provider_instance instance, granit_webgpu_provider_command_recorder recorder,
+    granit_webgpu_provider_texture source, granit_webgpu_provider_buffer destination,
+    const granit_webgpu_provider_texture_buffer_copy& region) noexcept {
+  if (!open_ || instance == 0 || recorder == 0 || source == 0 || destination == 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  try {
+    return ::recorder_copy_texture_to_buffer_v2(instance, recorder, source, destination, &region);
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+granit_result webgpu_context::recorder_copy_texture(
+    granit_webgpu_provider_instance instance, granit_webgpu_provider_command_recorder recorder,
+    granit_webgpu_provider_texture source, granit_webgpu_provider_texture destination,
+    const granit_webgpu_provider_texture_copy_region& region) noexcept {
+  if (!open_ || instance == 0 || recorder == 0 || source == 0 || destination == 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  try {
+    return ::recorder_copy_texture(instance, recorder, source, destination, &region);
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+granit_result webgpu_context::recorder_fill_buffer(granit_webgpu_provider_instance instance,
+                                                   granit_webgpu_provider_command_recorder recorder,
+                                                   granit_webgpu_provider_buffer buffer,
+                                                   std::uint64_t offset, std::uint64_t size,
+                                                   std::uint32_t value) noexcept {
+  if (!open_ || instance == 0 || recorder == 0 || buffer == 0 || size == 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  try {
+    return ::recorder_fill_buffer(instance, recorder, buffer, offset, size, value);
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+granit_result webgpu_context::recorder_generate_mipmaps(
+    granit_webgpu_provider_instance instance, granit_webgpu_provider_command_recorder recorder,
+    granit_webgpu_provider_texture texture,
+    const granit_webgpu_provider_texture_mipmap_range& range) noexcept {
+  if (!open_ || instance == 0 || recorder == 0 || texture == 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  try {
+    return ::recorder_generate_mipmaps(instance, recorder, texture, &range);
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+granit_result webgpu_context::create_timestamp_query_pool(
+    granit_webgpu_provider_instance instance, std::uint32_t count,
+    granit_webgpu_provider_timestamp_query_pool* pool) noexcept {
+  return open_ ? ::create_timestamp_query_pool(instance, count, pool) : GRANIT_ERROR_NOT_READY;
+}
+
+granit_result webgpu_context::destroy_timestamp_query_pool(
+    granit_webgpu_provider_instance instance,
+    granit_webgpu_provider_timestamp_query_pool pool) noexcept {
+  return open_ ? ::destroy_timestamp_query_pool(instance, pool) : GRANIT_ERROR_NOT_READY;
+}
+
+granit_result webgpu_context::recorder_reset_timestamp_queries(
+    granit_webgpu_provider_instance instance, granit_webgpu_provider_command_recorder recorder,
+    granit_webgpu_provider_timestamp_query_pool pool, std::uint32_t first,
+    std::uint32_t count) noexcept {
+  return open_ ? ::recorder_reset_timestamp_queries(instance, recorder, pool, first, count)
+               : GRANIT_ERROR_NOT_READY;
+}
+
+granit_result webgpu_context::recorder_write_timestamp(
+    granit_webgpu_provider_instance instance, granit_webgpu_provider_command_recorder recorder,
+    granit_webgpu_provider_timestamp_query_pool pool, std::uint32_t index) noexcept {
+  return open_ ? ::recorder_write_timestamp(instance, recorder, pool, index)
+               : GRANIT_ERROR_NOT_READY;
+}
+
+granit_result webgpu_context::read_timestamp_query_results(
+    granit_webgpu_provider_instance instance, granit_webgpu_provider_timestamp_query_pool pool,
+    std::uint32_t first, std::uint64_t* values, std::uint32_t count) noexcept {
+  return open_ ? ::read_timestamp_query_results(instance, pool, first, values, count)
+               : GRANIT_ERROR_NOT_READY;
+}
+
+#undef GRANIT_PROVIDER_DISPATCH_CREATE_METHOD
+#undef GRANIT_PROVIDER_DISPATCH_DESTROY_METHOD
+
+void webgpu_context::close() noexcept {
+  if (open_) {
+    for (auto iterator = instances_.rbegin(); iterator != instances_.rend(); ++iterator) {
+      try {
+        ::destroy_backend(*iterator);
+      } catch (...) {
+      }
+    }
+  }
+  instances_.clear();
+  open_ = false;
+}
 
 } // namespace granit::detail

@@ -8,13 +8,13 @@
 #include <span>
 
 #include "backend/contracts/resources.h"
-#include "backend/webgpu/provider_dispatch.h"
+#include "backend/webgpu/context.h"
 
 namespace granit::detail {
 
 class webgpu_timestamp_adapter {
 public:
-  webgpu_timestamp_adapter(webgpu_provider_dispatch& provider,
+  webgpu_timestamp_adapter(webgpu_context& provider,
                            granit_webgpu_provider_instance instance) noexcept;
 
   [[nodiscard]] granit_result
@@ -26,7 +26,7 @@ public:
   native_handle(backend_timestamp_query_pool_resource& pool) const noexcept;
 
 private:
-  webgpu_provider_dispatch* provider_{};
+  webgpu_context* provider_{};
   granit_webgpu_provider_instance instance_{};
 };
 

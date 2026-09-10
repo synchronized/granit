@@ -8,7 +8,7 @@ namespace {
 
 class webgpu_timestamp_query_pool_resource final : public backend_timestamp_query_pool_resource {
 public:
-  webgpu_timestamp_query_pool_resource(webgpu_provider_dispatch& provider,
+  webgpu_timestamp_query_pool_resource(webgpu_context& provider,
                                        granit_webgpu_provider_instance instance) noexcept
       : provider_(&provider), instance_(instance) {}
   ~webgpu_timestamp_query_pool_resource() override {
@@ -16,7 +16,7 @@ public:
       static_cast<void>(provider_->destroy_timestamp_query_pool(instance_, handle_));
   }
 
-  webgpu_provider_dispatch* provider_{};
+  webgpu_context* provider_{};
   granit_webgpu_provider_instance instance_{};
   granit_webgpu_provider_timestamp_query_pool handle_{};
 };
@@ -24,7 +24,7 @@ public:
 } // namespace
 
 webgpu_timestamp_adapter::webgpu_timestamp_adapter(
-    webgpu_provider_dispatch& provider, granit_webgpu_provider_instance instance) noexcept
+    webgpu_context& provider, granit_webgpu_provider_instance instance) noexcept
     : provider_(&provider), instance_(instance) {}
 
 granit_result webgpu_timestamp_adapter::create(

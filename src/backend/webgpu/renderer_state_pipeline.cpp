@@ -15,7 +15,7 @@ namespace {
 
 class webgpu_pipeline_warmup_completion final : public backend_pipeline_warmup_completion {
 public:
-  webgpu_pipeline_warmup_completion(webgpu_provider_dispatch& provider,
+  webgpu_pipeline_warmup_completion(webgpu_context& provider,
                                     granit_webgpu_provider_instance instance,
                                     granit_webgpu_provider_pipeline_warmup warmup) noexcept
       : provider_(provider), instance_(instance), warmup_(warmup) {}
@@ -29,7 +29,7 @@ public:
   }
 
 private:
-  webgpu_provider_dispatch& provider_;
+  webgpu_context& provider_;
   granit_webgpu_provider_instance instance_{};
   granit_webgpu_provider_pipeline_warmup warmup_{};
 };

@@ -12,7 +12,7 @@
 namespace granit::detail {
 
 struct webgpu_pipeline_context {
-  webgpu_provider_dispatch* provider{};
+  webgpu_context* provider{};
   granit_webgpu_provider_instance instance{};
 };
 
@@ -139,7 +139,7 @@ std::uint32_t to_provider_color_write_mask(granit_color_write_mask mask) noexcep
 
 } // namespace
 
-webgpu_pipeline_adapter::webgpu_pipeline_adapter(webgpu_provider_dispatch& provider,
+webgpu_pipeline_adapter::webgpu_pipeline_adapter(webgpu_context& provider,
                                                  granit_webgpu_provider_instance instance)
     : context_(
           std::make_shared<webgpu_pipeline_context>(webgpu_pipeline_context{&provider, instance})) {

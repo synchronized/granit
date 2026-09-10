@@ -3,8 +3,7 @@
 
 target_sources(
   granit PRIVATE
-    provider_dispatch.cpp
-    provider.cpp
+    context.cpp
     command_adapter.cpp
     presentation_adapter.cpp
     pipeline_adapter.cpp
