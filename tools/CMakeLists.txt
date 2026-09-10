@@ -153,6 +153,17 @@ if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
     COMMAND granit_shader_asset_test "${CMAKE_CURRENT_BINARY_DIR}/shader-asset-test-cache"
   )
 
+  add_executable(
+    granit_shader_library_test
+    "${PROJECT_SOURCE_DIR}/tests/tools/shader_library_test.cpp"
+    $<TARGET_OBJECTS:granit_internal_shader_asset_format>
+  )
+  target_compile_features(granit_shader_library_test PRIVATE cxx_std_20)
+  target_include_directories(granit_shader_library_test PRIVATE "${PROJECT_SOURCE_DIR}/src")
+  granit_target_compile_warnings(granit_shader_library_test)
+  granit_target_output_directories(granit_shader_library_test)
+  add_test(NAME granit.shader_tools.library_codec COMMAND granit_shader_library_test)
+
   if(TARGET granit_shader_tools)
     add_executable(
       granit_shader_tools_c_test "${PROJECT_SOURCE_DIR}/tests/tools/shader_tools_c_test.c"
@@ -242,6 +253,19 @@ if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
   set_tests_properties(
     granit.shader_tool.pack
     PROPERTIES PASS_REGULAR_EXPRESSION "Shader 资产"
+  )
+  add_test(
+    NAME granit.shader_tool.library
+    COMMAND
+      granit_shader_tool library
+      --asset "${PROJECT_SOURCE_DIR}/tests/assets/minimal.vert.grshader"
+      --asset "${PROJECT_SOURCE_DIR}/tests/assets/minimal.frag.grshader"
+      --target all
+      --output "${CMAKE_CURRENT_BINARY_DIR}/library-test/minimal.grshlib"
+  )
+  set_tests_properties(
+    granit.shader_tool.library
+    PROPERTIES PASS_REGULAR_EXPRESSION "Shader Library"
   )
   add_test(
     NAME granit.shader_tool.compile_diagnostic

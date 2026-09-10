@@ -57,6 +57,9 @@ DXC 构建 `4973-8f559587`、glslang `15.4.0`。两者均锁定 Dawn/Tint
   WGSL、SPIR-V 写入同名 `.wgsl`、`.spv` sidecar。只有三个文件均逐字节相同时才报告缓存命中。
 - 当前 sidecar 分别代表 WebGPU portable WGSL 和 Vulkan portable SPIR-V。资产按后端打包裁剪和
   多能力档位选择属于 [S-20](../plans/S-20-shader-asset-variants.md)。
+- 命令行 `library` 可将多个已验证 Shader Asset 确定性链接为 `.grshlib`，按 SHA-256 去重
+  载荷，并以 `--target all|vulkan|webgpu` 生成全后端或裁剪结果。该格式当前是 S-37 的离线
+  构建能力，尚未成为 Core 的公共运行时接口。
 - HLSL portable 路径让 DXC 直接生成最终 Vulkan 1.3 SPIR-V；另行生成临时 Vulkan 1.1 /
   SPIR-V 1.3 中间文件供锁定 Tint 的 SPIR-V Reader 转换 WGSL，并要求两份 SPIR-V 的反射契约
   一致。临时文件不会进入资产。DXC 或 Tint 拒绝源代码及其能力时，调用返回

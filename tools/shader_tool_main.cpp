@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
+#include "assets/shader_library.h"
 #include "shader_asset.h"
 #include <granit/tools/shader_tools.hpp>
 
@@ -52,6 +53,87 @@ std::vector<std::byte> read_bytes(const std::filesystem::path& path) {
   if (!bytes.empty())
     std::memcpy(output.data(), bytes.data(), bytes.size());
   return output;
+}
+
+int link_shader_library(int argc, char** argv) {
+  const auto asset_paths = option_values(argc, argv, "--asset");
+  const auto target = option_value(argc, argv, "--target");
+  const auto output_path = option_value(argc, argv, "--output");
+  if (asset_paths.empty() || !target || !output_path ||
+      (*target != "all" && *target != "vulkan" && *target != "webgpu")) {
+    std::cerr << "library 需要一个或多个 --asset、--target <all|vulkan|webgpu> 和 --output\n";
+    return 2;
+  }
+  const auto backend_mask = *target == "all"      ? granit::tools::shader_library_backend_all
+                            : *target == "vulkan" ? granit::tools::shader_library_backend_vulkan
+                                                  : granit::tools::shader_library_backend_webgpu;
+  struct owned_asset {
+    std::vector<std::byte> manifest;
+    std::vector<std::byte> wgsl;
+    std::vector<std::byte> spirv;
+  };
+  std::vector<owned_asset> owned;
+  owned.reserve(asset_paths.size());
+  for (const auto& asset_path : asset_paths) {
+    owned_asset asset{.manifest = read_bytes(asset_path), .wgsl = {}, .spirv = {}};
+    if ((backend_mask & granit::tools::shader_library_backend_webgpu) != 0)
+      asset.wgsl = read_bytes(asset_path + ".wgsl");
+    if ((backend_mask & granit::tools::shader_library_backend_vulkan) != 0)
+      asset.spirv = read_bytes(asset_path + ".spv");
+    if (asset.manifest.empty() ||
+        ((backend_mask & granit::tools::shader_library_backend_webgpu) != 0 &&
+         asset.wgsl.empty()) ||
+        ((backend_mask & granit::tools::shader_library_backend_vulkan) != 0 &&
+         asset.spirv.empty())) {
+      std::cerr << "无法读取 Shader 资产或目标 sidecar：" << asset_path << '\n';
+      return 1;
+    }
+    owned.push_back(std::move(asset));
+  }
+  std::vector<granit::tools::shader_library_asset_source> sources;
+  sources.reserve(owned.size());
+  for (const auto& asset : owned)
+    sources.push_back({asset.manifest, asset.wgsl, asset.spirv});
+  std::vector<std::byte> library;
+  if (granit::tools::encode_shader_library({sources, backend_mask}, library) !=
+      granit::tools::shader_library_error::success) {
+    std::cerr << "无法链接 Shader Library\n";
+    return 1;
+  }
+  const std::filesystem::path destination{*output_path};
+  std::error_code error;
+  if (std::filesystem::exists(destination, error) && !error && read_bytes(destination) == library) {
+    std::cout << "Shader Library 内容未变化：" << destination << '\n';
+    return 0;
+  }
+  if (!destination.parent_path().empty()) {
+    std::filesystem::create_directories(destination.parent_path(), error);
+    if (error) {
+      std::cerr << "无法创建 Shader Library 输出目录：" << error.message() << '\n';
+      return 1;
+    }
+  }
+  auto temporary = destination;
+  temporary += ".tmp";
+  {
+    std::ofstream stream{temporary, std::ios::binary | std::ios::trunc};
+    stream.write(reinterpret_cast<const char*>(library.data()),
+                 static_cast<std::streamsize>(library.size()));
+    if (!stream) {
+      std::cerr << "无法写入 Shader Library：" << temporary << '\n';
+      return 1;
+    }
+  }
+  std::filesystem::remove(destination, error);
+  error.clear();
+  std::filesystem::rename(temporary, destination, error);
+  if (error) {
+    std::filesystem::remove(temporary);
+    std::cerr << "无法提交 Shader Library：" << error.message() << '\n';
+    return 1;
+  }
+  std::cout << "已链接 Shader Library：" << destination << '\n';
+  return 0;
 }
 
 int pack_shader_asset(int argc, char** argv) {
@@ -700,6 +782,8 @@ void print_usage() {
                "  granit_shader_tool capabilities --target <vulkan-portable|webgpu-portable>\n"
                "  granit_shader_tool pack --spirv <shader.spv> --wgsl <shader.wgsl> "
                "--entry <name> --stage <vertex|fragment|compute> --asset <shader.grshader>\n"
+               "  granit_shader_tool library --asset <shader.grshader>... "
+               "--target <all|vulkan|webgpu> --output <shaders.grshlib>\n"
                "  granit_shader_tool compile --tint <path> --input <shader.wgsl> "
                "--entry <name> --stage <vertex|fragment|compute> --output <shader.spv> "
                "[--asset <shader.granit-shader> [--tint-revision <revision>] "
@@ -747,6 +831,8 @@ int main(int argc, char** argv) {
     return compile_shader(argc, argv);
   if (argc >= 2 && std::string_view{argv[1]} == "pack")
     return pack_shader_asset(argc, argv);
+  if (argc >= 2 && std::string_view{argv[1]} == "library")
+    return link_shader_library(argc, argv);
   if (argc >= 2 && std::string_view{argv[1]} == "compile-hlsl")
     return compile_hlsl_shader(argc, argv);
   if (argc >= 2 && std::string_view{argv[1]} == "compile-glsl")

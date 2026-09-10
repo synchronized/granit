@@ -234,6 +234,23 @@ shader_cache_key shader_bytes_sha256(std::span<const std::byte> bytes) noexcept 
   return payload_digest(bytes);
 }
 
+shader_cache_key shader_bytes_sha256_zeroed(std::span<const std::byte> bytes, std::size_t offset,
+                                            std::size_t size) noexcept {
+  if (offset > bytes.size() || size > bytes.size() - offset)
+    return {};
+  const auto suffix_offset = offset + size;
+  sha256_context context;
+  context.update(bytes.first(offset));
+  constexpr std::array<std::byte, 64> zeros{};
+  while (size != 0) {
+    const auto chunk = std::min(size, zeros.size());
+    context.update(std::span{zeros}.first(chunk));
+    size -= chunk;
+  }
+  context.update(bytes.subspan(suffix_offset));
+  return context.finish();
+}
+
 shader_asset_error encode_shader_asset(const shader_asset_source& source,
                                        std::vector<std::byte>& output) noexcept {
   if (source.wgsl.empty() || source.spirv.empty() || source.spirv.size() % 4 != 0 ||
@@ -311,8 +328,7 @@ shader_asset_error decode_shader_asset(std::span<const std::byte> bytes,
   const auto reflection_offset = static_cast<std::uint64_t>(header_size);
   const auto entry_point_offset = reflection_offset + reflection_size;
   if (variant_count == 0 || variant_count > maximum_variant_count || stage < 1 || stage > 3 ||
-      entry_point_size == 0 ||
-      !valid_section(reflection_offset, reflection_size, bytes.size()) ||
+      entry_point_size == 0 || !valid_section(reflection_offset, reflection_size, bytes.size()) ||
       !valid_section(entry_point_offset, entry_point_size, bytes.size()) ||
       entry_point_offset + entry_point_size != bytes.size())
     return shader_asset_error::invalid_layout;

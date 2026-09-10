@@ -30,6 +30,8 @@ granit_shader_tool capabilities --target vulkan-portable
 granit_shader_tool capabilities --target webgpu-portable
 granit_shader_tool pack --spirv shader.spv --wgsl shader.wgsl `
   --entry fragment_main --stage fragment --asset shader.grshader
+granit_shader_tool library --asset vertex.grshader --asset fragment.grshader `
+  --target all --output shaders.grshlib
 granit_shader_tool compile --tint path/to/tint --input shader.wgsl `
   --entry fragment_main --stage fragment --output shader.spv
 granit_shader_tool compile --tint path/to/tint --input shader.wgsl `
@@ -63,6 +65,10 @@ ShaderTools SDK 还可接收调用方从 WGSL 前端取得的预期 Group/Bindin
 所有调用都必须使用显式子命令；早期原型的单参数入口不再保留。
 `pack` 用于把已经过验证且语义一致的 SPIR-V/WGSL 产物封装为 `.grshader` 清单和 sidecar；它会
 重新检查 SPIR-V 的阶段、入口与反射信息，但不会执行源码翻译。
+`library` 将一个或多个 `.grshader` 及其 sidecar 确定性链接为 `.grshlib`。输入顺序不影响
+输出；相同载荷按 SHA-256 去重。`--target` 可取 `all`、`vulkan` 或 `webgpu`，单后端目标
+不会读取或写入另一后端载荷。当前该命令用于 0.21.0 资产管线建设，运行时公共 Library API 将在
+S-37 后续阶段接入。
 `targets` 列出工具内置的目标契约，`capabilities` 查询目标档位允许的可选特性。结果描述发布目标，
 不读取构建机 GPU；当前两个 portable 目标都只包含基线能力，因此可选特性为 `none`。
 

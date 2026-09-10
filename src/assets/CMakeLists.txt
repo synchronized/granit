@@ -2,7 +2,13 @@
 # Copyright (c) 2026 Granit contributors
 
 # 运行时与离线工具共享的内部对象库，不提供公共别名或安装导出。
-add_library(granit_internal_shader_asset_format OBJECT shader_asset.cpp shader_asset.h)
+add_library(
+  granit_internal_shader_asset_format OBJECT
+  shader_asset.cpp
+  shader_asset.h
+  shader_library.cpp
+  shader_library.h
+)
 target_compile_features(granit_internal_shader_asset_format PRIVATE cxx_std_20)
 target_include_directories(
   granit_internal_shader_asset_format PRIVATE "${PROJECT_SOURCE_DIR}/src"

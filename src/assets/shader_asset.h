@@ -81,6 +81,8 @@ struct shader_asset_view {
 
 shader_cache_key make_shader_cache_key(const shader_cache_context& context) noexcept;
 shader_cache_key shader_bytes_sha256(std::span<const std::byte> bytes) noexcept;
+shader_cache_key shader_bytes_sha256_zeroed(std::span<const std::byte> bytes, std::size_t offset,
+                                            std::size_t size) noexcept;
 shader_asset_error encode_shader_asset(const shader_asset_source& source,
                                        std::vector<std::byte>& output) noexcept;
 shader_asset_error decode_shader_asset(std::span<const std::byte> bytes,
