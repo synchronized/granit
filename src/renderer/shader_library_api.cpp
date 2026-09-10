@@ -100,6 +100,26 @@ extern "C" granit_result granit_shader_library_get_info(granit_renderer renderer
   }
 }
 
+extern "C" granit_result granit_shader_create_from_library(
+    granit_renderer renderer, granit_shader_library library,
+    const uint8_t content_id[GRANIT_SHADER_LIBRARY_CONTENT_DIGEST_SIZE], granit_shader* shader) {
+  if (shader == nullptr)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  *shader = GRANIT_NULL_HANDLE;
+  if (renderer == GRANIT_NULL_HANDLE || library == GRANIT_NULL_HANDLE)
+    return GRANIT_ERROR_INVALID_HANDLE;
+  if (content_id == nullptr)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  try {
+    std::array<std::byte, GRANIT_SHADER_LIBRARY_CONTENT_DIGEST_SIZE> id{};
+    std::memcpy(id.data(), content_id, id.size());
+    return granit::detail::renderer_registry::instance().create_shader_from_library(
+        renderer, library, id, *shader);
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
 extern "C" granit_result granit_shader_library_destroy(granit_renderer renderer,
                                                        granit_shader_library library) {
   if (renderer == GRANIT_NULL_HANDLE || library == GRANIT_NULL_HANDLE)

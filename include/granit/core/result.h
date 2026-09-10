@@ -27,6 +27,7 @@ typedef int32_t granit_result;
 #define GRANIT_ERROR_OUT_OF_DATE INT32_C(-13)
 #define GRANIT_ERROR_NOT_READY INT32_C(-14)
 #define GRANIT_ERROR_CANCELLED INT32_C(-15)
+#define GRANIT_ERROR_RESOURCE_IN_USE INT32_C(-16)
 
 #ifdef __cplusplus
 extern "C" {

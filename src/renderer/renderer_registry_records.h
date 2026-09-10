@@ -91,6 +91,8 @@ struct renderer_registry::shader_library_record {
   std::shared_ptr<backend_renderer> owner;
   std::span<const std::byte> archive;
   granit::tools::shader_library_view view;
+  std::mutex mutex;
+  std::vector<std::pair<granit::tools::shader_cache_key, std::shared_ptr<shader_record>>> shaders;
 };
 struct renderer_registry::bind_group_layout_record {
   resource_metadata metadata;

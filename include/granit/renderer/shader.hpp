@@ -18,6 +18,7 @@
 #include <granit/core/result.hpp>
 #include <granit/renderer/renderer.hpp>
 #include <granit/renderer/shader.h>
+#include <granit/renderer/shader_library.h>
 
 namespace granit {
 
@@ -181,6 +182,20 @@ public:
                                           .sidecar_data = desc.sidecar.data(),
                                           .sidecar_size = desc.sidecar.size()};
     const auto value = from_native(granit_shader_create_from_asset(renderer, &native, &handle_));
+    if (value.ok())
+      renderer_ = renderer;
+    return value;
+  }
+
+  [[nodiscard]] result initialize_library(
+      granit_renderer renderer, granit_shader_library library,
+      const std::array<std::byte, GRANIT_SHADER_LIBRARY_CONTENT_DIGEST_SIZE>& content_id) noexcept {
+    if (valid())
+      return result::invalid_argument;
+    if (renderer == GRANIT_NULL_HANDLE || library == GRANIT_NULL_HANDLE)
+      return result::invalid_handle;
+    const auto value = from_native(granit_shader_create_from_library(
+        renderer, library, reinterpret_cast<const std::uint8_t*>(content_id.data()), &handle_));
     if (value.ok())
       renderer_ = renderer;
     return value;

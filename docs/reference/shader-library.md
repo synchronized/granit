@@ -44,7 +44,26 @@ granit_result result =
 ```
 
 已创建的 Library 可通过 `granit_shader_library_get_info()` 读取相同摘要。后端位只说明归档中包含
-哪些载荷，不要求应用根据 Renderer 选择载荷；实际选择由后续 Renderer 接口完成。
+哪些载荷，不要求应用根据 Renderer 选择载荷。
+
+## Shader 选择与缓存
+
+调用方使用内容 ID 请求 Shader，Renderer 根据真实后端、Profile 和能力位选择兼容载荷：
+
+```c
+granit_shader shader = GRANIT_NULL_HANDLE;
+granit_result result =
+    granit_shader_create_from_library(renderer, library, content_id, &shader);
+```
+
+Core 会在使用前再次校验所选载荷摘要。Library 内按内容 ID 缓存后端 Shader；重复请求返回不同的
+公开 Shader 句柄，但共享同一个后端对象。每个返回句柄均由调用者通过 `granit_shader_destroy()`
+释放。找不到内容 ID 返回 `GRANIT_ERROR_NOT_READY`，没有兼容后端变体或能力不足返回
+`GRANIT_ERROR_UNSUPPORTED`。
+
+Shader 句柄及由它创建的 Pipeline 会保留缓存对象。任一引用尚未释放时，
+`granit_shader_library_destroy()` 返回 `GRANIT_ERROR_RESOURCE_IN_USE`，Library 句柄仍然有效，调用方
+可在释放依赖后重试销毁。
 
 ## C++ API
 
@@ -55,6 +74,9 @@ const auto result = library.initialize(renderer.native_handle(), archive);
 granit::shader_library_info info;
 if (result.ok())
   library.get_info(info);
+
+granit::shader shader;
+shader.initialize_library(renderer.native_handle(), library.native_handle(), content_id);
 ```
 
 `granit::shader_library` 不可复制、可以移动，析构时自动销毁。它沿用 C API 的借用规则，不复制或

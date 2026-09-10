@@ -204,6 +204,10 @@ public:
   [[nodiscard]] granit_result get_shader_library_info(granit_renderer renderer,
                                                       granit_shader_library library,
                                                       granit_shader_library_info& info);
+  [[nodiscard]] granit_result create_shader_from_library(
+      granit_renderer renderer, granit_shader_library library,
+      const std::array<std::byte, GRANIT_SHADER_LIBRARY_CONTENT_DIGEST_SIZE>& content_id,
+      granit_shader& shader);
   [[nodiscard]] granit_result destroy_shader_library(granit_renderer renderer,
                                                      granit_shader_library library);
   [[nodiscard]] granit_result

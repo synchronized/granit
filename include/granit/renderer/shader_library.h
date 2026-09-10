@@ -10,6 +10,7 @@
 #include <granit/core/result.h>
 #include <granit/core/types.h>
 #include <granit/renderer/renderer.h>
+#include <granit/renderer/shader.h>
 
 /** 属于 Renderer 的 Shader Library 句柄。零值无效。 */
 typedef granit_handle granit_shader_library;
@@ -75,6 +76,16 @@ GRANIT_API granit_result granit_shader_library_create(granit_renderer renderer,
 GRANIT_API granit_result granit_shader_library_get_info(granit_renderer renderer,
                                                         granit_shader_library library,
                                                         granit_shader_library_info* info);
+/**
+ * 按内容 ID 选择当前 Renderer 支持的变体并取得 Shader。
+ *
+ * 成功返回的 Shader 由调用者通过 granit_shader_destroy 销毁。相同 Library 与内容 ID 复用同一个
+ * 后端 Shader。Shader 或引用它的 Pipeline 存活期间，销毁 Library 返回
+ * GRANIT_ERROR_RESOURCE_IN_USE。
+ */
+GRANIT_API granit_result granit_shader_create_from_library(
+    granit_renderer renderer, granit_shader_library library,
+    const uint8_t content_id[GRANIT_SHADER_LIBRARY_CONTENT_DIGEST_SIZE], granit_shader* shader);
 /** 销毁 Shader Library 并立即使公开句柄失效。 */
 GRANIT_API granit_result granit_shader_library_destroy(granit_renderer renderer,
                                                        granit_shader_library library);

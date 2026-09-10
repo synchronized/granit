@@ -25,6 +25,8 @@ static void granit_test_result_messages(void) {
   TEST_ASSERT_NOT_NULL(granit_result_message(GRANIT_ERROR_INVALID_ARGUMENT));
   TEST_ASSERT_NOT_NULL(granit_result_message(GRANIT_ERROR_NOT_READY));
   TEST_ASSERT_EQUAL_STRING("operation cancelled", granit_result_message(GRANIT_ERROR_CANCELLED));
+  TEST_ASSERT_EQUAL_STRING("resource is still in use",
+                           granit_result_message(GRANIT_ERROR_RESOURCE_IN_USE));
 }
 
 static void granit_test_async_operation_invalid_arguments(void) {
@@ -40,12 +42,10 @@ static void granit_test_async_operation_invalid_arguments(void) {
   TEST_ASSERT_EQUAL_INT32(
       GRANIT_ERROR_INVALID_HANDLE,
       granit_async_operation_get_status(GRANIT_NULL_HANDLE, GRANIT_NULL_HANDLE, &status));
-  TEST_ASSERT_EQUAL_INT32(
-      GRANIT_ERROR_INVALID_HANDLE,
-      granit_async_operation_request_cancel(GRANIT_NULL_HANDLE, GRANIT_NULL_HANDLE));
-  TEST_ASSERT_EQUAL_INT32(
-      GRANIT_ERROR_INVALID_HANDLE,
-      granit_async_operation_destroy(GRANIT_NULL_HANDLE, GRANIT_NULL_HANDLE));
+  TEST_ASSERT_EQUAL_INT32(GRANIT_ERROR_INVALID_HANDLE, granit_async_operation_request_cancel(
+                                                           GRANIT_NULL_HANDLE, GRANIT_NULL_HANDLE));
+  TEST_ASSERT_EQUAL_INT32(GRANIT_ERROR_INVALID_HANDLE,
+                          granit_async_operation_destroy(GRANIT_NULL_HANDLE, GRANIT_NULL_HANDLE));
 }
 
 static void granit_test_renderer_rejects_invalid_arguments(void) {

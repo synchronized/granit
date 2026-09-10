@@ -110,9 +110,12 @@ public:
   [[nodiscard]] result reset() noexcept {
     if (!valid())
       return result::success;
-    const auto renderer = std::exchange(renderer_, GRANIT_NULL_HANDLE);
-    const auto handle = std::exchange(handle_, GRANIT_NULL_HANDLE);
-    return from_native(granit_shader_library_destroy(renderer, handle));
+    const auto value = from_native(granit_shader_library_destroy(renderer_, handle_));
+    if (value.ok()) {
+      renderer_ = GRANIT_NULL_HANDLE;
+      handle_ = GRANIT_NULL_HANDLE;
+    }
+    return value;
   }
 
   [[nodiscard]] bool valid() const noexcept { return handle_ != GRANIT_NULL_HANDLE; }

@@ -37,6 +37,8 @@ extern "C" const char* granit_result_message(granit_result result) {
     return "operation temporarily not ready";
   case GRANIT_ERROR_CANCELLED:
     return "operation cancelled";
+  case GRANIT_ERROR_RESOURCE_IN_USE:
+    return "resource is still in use";
   default:
     return "unrecognized result";
   }

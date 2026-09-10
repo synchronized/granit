@@ -2,13 +2,15 @@
 // Copyright (c) 2026 Granit contributors
 
 #include <granit/renderer/renderer.hpp>
-#include <granit/renderer/shader.h>
+#include <granit/renderer/shader.hpp>
 #include <granit/renderer/shader_library.hpp>
 
 #include "assets/shader_asset.h"
 #include "assets/shader_library.h"
 
 #include <array>
+#include <filesystem>
+#include <fstream>
 #include <span>
 #include <string_view>
 #include <vector>
@@ -30,6 +32,34 @@ std::vector<std::byte> make_library() {
               {wgsl, spirv, reflection, cache_key, 3, 0, GRANIT_SHADER_STAGE_COMPUTE, "main"},
               manifest) == shader_asset_error::success);
   const std::array sources{shader_library_asset_source{manifest, wgsl_bytes, spirv}};
+  std::vector<std::byte> archive;
+  REQUIRE(encode_shader_library({sources, shader_library_backend_all}, archive) ==
+          shader_library_error::success);
+  return archive;
+}
+
+std::vector<std::byte> read_binary(const std::filesystem::path& path) {
+  std::ifstream stream{path, std::ios::binary | std::ios::ate};
+  REQUIRE(stream.good());
+  const auto size = stream.tellg();
+  REQUIRE(size > 0);
+  std::vector<std::byte> bytes(static_cast<std::size_t>(size));
+  stream.seekg(0);
+  stream.read(reinterpret_cast<char*>(bytes.data()), static_cast<std::streamsize>(size));
+  REQUIRE(stream.good());
+  return bytes;
+}
+
+std::vector<std::byte> make_runtime_library(granit::tools::shader_cache_key& content_id) {
+  using namespace granit::tools;
+  const auto directory = std::filesystem::path{GRANIT_TEST_ASSET_DIR};
+  const auto manifest = read_binary(directory / "minimal.vert.grshader");
+  const auto wgsl = read_binary(directory / "minimal.vert.grshader.wgsl");
+  const auto spirv = read_binary(directory / "minimal.vert.grshader.spv");
+  shader_asset_view asset;
+  REQUIRE(decode_shader_asset(manifest, asset) == shader_asset_error::success);
+  content_id = asset.content_id;
+  const std::array sources{shader_library_asset_source{manifest, wgsl, spirv}};
   std::vector<std::byte> archive;
   REQUIRE(encode_shader_library({sources, shader_library_backend_all}, archive) ==
           shader_library_error::success);
@@ -103,6 +133,40 @@ TEST_CASE("Shader Library 句柄校验类型、domain 和 generation", "[shader_
   REQUIRE(first.reset() == granit::result::success);
   CHECK(replacement.get_info(info) == granit::result::invalid_handle);
   CHECK(replacement.reset() == granit::result::invalid_handle);
+}
+
+TEST_CASE("Shader Library 由 Renderer 选择载荷并共享后端 Shader", "[shader_library][selection]") {
+  granit::tools::shader_cache_key content_id{};
+  auto archive = make_runtime_library(content_id);
+  granit::renderer renderer;
+  const auto renderer_result = renderer.initialize({.application_name = "granit-shader-library"});
+  if (environment_unavailable(renderer_result))
+    SKIP("当前运行环境没有满足要求的 Vulkan 设备");
+  REQUIRE(renderer_result == granit::result::success);
+
+  granit::shader_library library;
+  REQUIRE(library.initialize(renderer.native_handle(), archive) == granit::result::success);
+  granit::shader first;
+  granit::shader second;
+  REQUIRE(first.initialize_library(renderer.native_handle(), library.native_handle(), content_id) ==
+          granit::result::success);
+  REQUIRE(second.initialize_library(renderer.native_handle(), library.native_handle(),
+                                    content_id) == granit::result::success);
+  CHECK(first.native_handle() != second.native_handle());
+  CHECK(library.reset() == granit::result::resource_in_use);
+  REQUIRE(first.reset() == granit::result::success);
+  CHECK(library.reset() == granit::result::resource_in_use);
+  REQUIRE(second.reset() == granit::result::success);
+  REQUIRE(library.reset() == granit::result::success);
+
+  REQUIRE(library.initialize(renderer.native_handle(), archive) == granit::result::success);
+  auto missing = content_id;
+  missing[0] ^= std::byte{1};
+  CHECK(first.initialize_library(renderer.native_handle(), library.native_handle(), missing) ==
+        granit::result::not_ready);
+  archive.back() ^= std::byte{1};
+  CHECK(first.initialize_library(renderer.native_handle(), library.native_handle(), content_id) ==
+        granit::result::invalid_argument);
 }
 
 } // namespace
