@@ -23,6 +23,8 @@
   Canvas 在内部处理左上原点投影，材质和应用无需按后端修改坐标。
 - Canvas、Model Viewer、构建树和安装包直接消费 `.grshlib`。`.grshader` 与 sidecar 只作为离线
   中间结果，不再作为 RenderPipeline 运行时资产发布。
+- 浏览器 WebGPU 内部删除历史 Provider ABI、查询符号、函数表和 dispatch；domain adapter 直接
+  调用后端私有 Context，并使用互不混用的强类型资源句柄。
 
 ### 兼容性与迁移
 

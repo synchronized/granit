@@ -5,7 +5,8 @@
 
 ## 状态
 
-**实现中。** 设计已确认并纳入 0.21.0；S-37H1～S-37H5 已完成，当前进行文档与发布回归。
+**实现中。** 设计已确认并纳入 0.21.0；S-37H1～S-37H5 已完成，当前收敛 adapter 与 Context
+之间的机械转发。
 
 ## 背景与目标
 
@@ -54,7 +55,10 @@ Renderer Registry -> 私有 HAL -> WebGPU renderer state / domain adapter
    Device Lost 路径已迁移，并通过浏览器窗口、离屏渲染、Resize 与资源释放回归。
 5. **S-37H5 删除历史边界（已完成）**：已删除 `provider_api.h`、`provider_dispatch.*`、Provider
    ABI 版本、运行时函数表、查询符号和旧类型命名；内部描述集中到 `types.h`。
-6. **S-37H6 文档与发布验收**：更新架构概念与实现状态，完成 Emscripten、浏览器 WebGPU、Vulkan、
+6. **S-37H6 adapter 与 Context 职责收敛**：Context 只保留 Instance、Adapter、Device、Queue、能力、
+   诊断和 Device Lost 等共享设备状态；资源、Pipeline、命令、呈现和 Timestamp 实现按领域下沉到
+   对应 adapter，不保留 `adapter -> Context` 的同名机械转发接口。
+7. **S-37H7 文档与发布验收**：更新架构概念与实现状态，完成 Emscripten、浏览器 WebGPU、Vulkan、
    Windows 共享/静态及 Documentation 回归，并并入 S-37G 发布验收。
 
 各阶段允许根据真实依赖调整 adapter 的迁移分组，但不得长期保留 Context 与 Provider 两套平行调用
