@@ -30,7 +30,7 @@ webgpu_shader_resource* as_shader(backend_shader_resource& resource) noexcept {
 std::unique_ptr<backend_shader_resource> webgpu_renderer_state::allocate_shader_resource() {
   if (lifecycle_.state != backend_lifecycle_state::ready)
     return nullptr;
-  return std::make_unique<webgpu_shader_resource>(device_, instance_);
+  return std::make_unique<webgpu_shader_resource>(device_, device_.instance());
 }
 
 granit_result webgpu_renderer_state::create_shader(backend_shader_resource& shader,
@@ -49,7 +49,7 @@ granit_result webgpu_renderer_state::create_shader(backend_shader_resource& shad
                                 code.size(),
                                 entry_point.data(),
                                 entry_point.size()};
-  return device_.create_shader(instance_, &desc, &resource->handle_);
+  return device_.create_shader(device_.instance(), &desc, &resource->handle_);
 }
 
 webgpu_shader

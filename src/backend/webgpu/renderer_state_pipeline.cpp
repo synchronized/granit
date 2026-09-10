@@ -59,10 +59,11 @@ granit_result webgpu_renderer_state::warmup_compute_pipeline_async(
   if (result != GRANIT_SUCCESS)
     return result;
   try {
-    completion = std::make_unique<webgpu_pipeline_warmup_completion>(device_, instance_, warmup);
+    completion =
+        std::make_unique<webgpu_pipeline_warmup_completion>(device_, device_.instance(), warmup);
     return GRANIT_SUCCESS;
   } catch (const std::bad_alloc&) {
-    static_cast<void>(device_.destroy_pipeline_warmup(instance_, warmup));
+    static_cast<void>(device_.destroy_pipeline_warmup(device_.instance(), warmup));
     return GRANIT_ERROR_OUT_OF_MEMORY;
   }
 }
@@ -133,10 +134,11 @@ granit_result webgpu_renderer_state::warmup_graphics_pipeline_async(
   if (result != GRANIT_SUCCESS)
     return result;
   try {
-    completion = std::make_unique<webgpu_pipeline_warmup_completion>(device_, instance_, warmup);
+    completion =
+        std::make_unique<webgpu_pipeline_warmup_completion>(device_, device_.instance(), warmup);
     return GRANIT_SUCCESS;
   } catch (const std::bad_alloc&) {
-    static_cast<void>(device_.destroy_pipeline_warmup(instance_, warmup));
+    static_cast<void>(device_.destroy_pipeline_warmup(device_.instance(), warmup));
     return GRANIT_ERROR_OUT_OF_MEMORY;
   }
 }

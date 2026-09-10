@@ -6,7 +6,6 @@
 
 #include <cstdint>
 #include <span>
-#include <vector>
 
 #include <granit/core/result.h>
 
@@ -25,14 +24,11 @@ public:
 
   /** 接入随当前后端静态编译的 WebGPU 实现。 */
   [[nodiscard]] granit_result open() noexcept;
-  [[nodiscard]] granit_result create_instance(const webgpu_host_api* host,
-                                              webgpu_instance_handle* out_instance) noexcept;
-  [[nodiscard]] granit_result destroy_instance(webgpu_instance_handle instance) noexcept;
-  [[nodiscard]] granit_result get_capabilities(webgpu_instance_handle instance,
-                                               webgpu_capabilities* capabilities) noexcept;
-  [[nodiscard]] granit_result get_instance_status(webgpu_instance_handle instance,
-                                                  webgpu_instance_status* status) noexcept;
-  [[nodiscard]] granit_result process_events(webgpu_instance_handle instance) noexcept;
+  [[nodiscard]] granit_result create_instance(const webgpu_host_api* host) noexcept;
+  [[nodiscard]] granit_result destroy_instance() noexcept;
+  [[nodiscard]] granit_result get_capabilities(webgpu_capabilities* capabilities) noexcept;
+  [[nodiscard]] granit_result get_instance_status(webgpu_instance_status* status) noexcept;
+  [[nodiscard]] granit_result process_events() noexcept;
   [[nodiscard]] granit_result create_win32_surface(webgpu_instance_handle instance,
                                                    const webgpu_win32_surface_desc* desc,
                                                    webgpu_surface* surface) noexcept;
@@ -274,10 +270,11 @@ public:
   void close() noexcept;
 
   [[nodiscard]] bool is_open() const noexcept { return open_; }
+  [[nodiscard]] webgpu_instance_handle instance() const noexcept { return instance_; }
 
 private:
   bool open_{};
-  std::vector<webgpu_instance_handle> instances_;
+  webgpu_instance_handle instance_{};
 };
 
 } // namespace granit::detail

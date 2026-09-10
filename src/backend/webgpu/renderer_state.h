@@ -490,7 +490,6 @@ private:
   native_timestamp_query_pool(backend_timestamp_query_pool_resource& resource) const noexcept;
 
   webgpu_device device_;
-  webgpu_instance_handle instance_{};
   granit_diagnostic_callback diagnostic_callback_{};
   void* diagnostic_user_data_{};
   backend_lifecycle_status lifecycle_{};
