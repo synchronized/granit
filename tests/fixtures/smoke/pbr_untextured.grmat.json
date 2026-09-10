@@ -1,7 +1,8 @@
 {
-  "format_version": 4,
+  "format_version": 5,
   "target_environment": "cross_backend",
   "binding_model": "bind_group",
+  "binding_groups": ["frame", "material", "object", "lighting"],
   "material": {
     "constant_buffer_size": 48,
     "parameters": [

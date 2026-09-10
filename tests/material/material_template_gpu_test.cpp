@@ -43,9 +43,13 @@ std::string load_text(const char* name) {
   return {std::istreambuf_iterator<char>{stream}, {}};
 }
 
-granit::material::material_package build_package() {
+granit::material::material_package
+build_package(granit::material::package_binding_groups binding_groups =
+                  granit::material::package_binding_group_frame |
+                  granit::material::package_binding_group_material) {
   using namespace granit::material;
   material_package_desc desc;
+  desc.binding_groups = binding_groups;
   desc.variants.push_back({.pass = make_feature_id("opaque"),
                            .features = {},
                            .shaders = {{.stage = package_shader_stage::vertex,
@@ -71,6 +75,7 @@ granit::material::material_package build_asset_package() {
   using namespace granit::material;
   const auto asset_dir = std::string{GRANIT_TEST_ASSET_DIR};
   material_package_desc desc;
+  desc.binding_groups = package_binding_group_frame | package_binding_group_material;
   granit::tests::shader_asset_store store;
   REQUIRE(store.add(asset_dir + "/minimal.vert.grshader"));
   REQUIRE(store.add(asset_dir + "/minimal.frag.grshader"));
@@ -162,7 +167,7 @@ TEST_CASE("材质模板在Group0和1后追加高层布局") {
           granit::result::success);
   const std::array additional{object_layout.native_handle(), shadow_layout.native_handle()};
 
-  const auto package = build_package();
+  const auto package = build_package(granit::material::package_binding_groups_all);
   granit::material::material_template_gpu material;
   REQUIRE(material.initialize(renderer.native_handle(), package, additional) == GRANIT_SUCCESS);
   CHECK(material.pipeline_layout() != GRANIT_NULL_HANDLE);

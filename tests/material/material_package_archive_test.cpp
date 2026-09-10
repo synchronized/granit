@@ -33,7 +33,7 @@ material_package make_package(bool reverse_parameters) {
   desc.variants.push_back({.pass = make_feature_id("opaque"),
                            .features = {{make_feature_id("normal_map"), 1}},
                            .shaders = {{.stage = package_shader_stage::fragment,
-                                       .entry_point = "fragment_main",
+                                        .entry_point = "fragment_main",
                                         .asset_id = {std::byte{2}},
                                         .spirv = {spirv_magic, UINT32_C(0x00010600), 0, 1, 0},
                                         .wgsl = "@fragment fn fragment_main() {}"},
@@ -95,6 +95,7 @@ TEST_CASE("材质包语义数据编码到独立归档区段") {
   CHECK(read_u32(section(archive_section_type::variant_records), 0) == 1);
   CHECK(read_u32(section(archive_section_type::shader_records), 0) == 2);
   CHECK(read_u32(section(archive_section_type::pipeline_states), 0) == 1);
+  CHECK(read_u32(section(archive_section_type::pipeline_states), 24) == package_binding_groups_all);
 }
 
 TEST_CASE("材质包编码不依赖参数和 Shader 输入顺序") {
@@ -214,7 +215,7 @@ TEST_CASE("材质包解码拒绝 Pipeline 状态保留字段被篡改") {
       layout.sections, static_cast<std::uint32_t>(archive_section_type::pipeline_states),
       &material_archive_section::type);
   REQUIRE(pipeline != layout.sections.end());
-  write_u32(bytes, pipeline->offset + 24 + 72, 1);
+  write_u32(bytes, pipeline->offset + 32 + 72, 1);
   refresh_hash(bytes);
 
   material_package decoded;
@@ -230,6 +231,8 @@ TEST_CASE("材质包调试 JSON 使用稳定字段与固定宽度标识") {
   CHECK(json.starts_with("{\n  \"format\""));
   CHECK(json.find("\"magic\": \"GRMAT\"") != std::string::npos);
   CHECK(json.find("\"binding_model\": \"bind_group\"") != std::string::npos);
+  CHECK(json.find("\"binding_groups\": [\"frame\", \"material\", \"object\", \"lighting\"]") !=
+        std::string::npos);
   CHECK(json.find("\"name\": \"base_color\"") != std::string::npos);
   CHECK(json.find("\"type\": \"texture_view\"") != std::string::npos);
   CHECK(json.find("\"stage\": \"vertex\"") != std::string::npos);

@@ -38,6 +38,7 @@ TEST_CASE("材质包规范化变体并按稳定键查找") {
   REQUIRE(material_package::build(std::move(desc), package) == package_error::none);
   REQUIRE(package.format_version() == material_package_format_version);
   REQUIRE(package.binding_model() == package_binding_model::bind_group);
+  REQUIRE(package.binding_groups() == package_binding_groups_all);
 
   const std::array<material_feature_value, 2> canonical{
       {{alpha_mode, UINT32_C(2)}, {normal_map, UINT32_C(1)}}};
@@ -57,6 +58,10 @@ TEST_CASE("材质包拒绝不兼容版本与未实现绑定模型") {
   desc.binding_model = package_binding_model::bindless;
   CHECK(material_package::build(std::move(desc), package) ==
         package_error::unsupported_binding_model);
+
+  desc = {};
+  desc.binding_groups = package_binding_group_frame | package_binding_group_lighting;
+  CHECK(material_package::build(std::move(desc), package) == package_error::invalid_binding_groups);
 
   desc = {};
   desc.required_renderer_features = package_feature_bindless_resource_table;

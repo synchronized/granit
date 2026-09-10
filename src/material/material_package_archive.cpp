@@ -258,7 +258,7 @@ archive_error encode_material_package_archive(const material_package& package,
       shader_records[index] = static_cast<std::byte>(shader_count >> (index * 8U));
     }
 
-    constexpr std::uint32_t pipeline_header_size = 24;
+    constexpr std::uint32_t pipeline_header_size = 32;
     constexpr std::uint32_t pipeline_state_record_size = 80;
     constexpr std::uint32_t vertex_buffer_record_size = 16;
     constexpr std::uint32_t vertex_attribute_record_size = 16;
@@ -313,6 +313,8 @@ archive_error encode_material_package_archive(const material_package& package,
     append_u32(pipeline_states, vertex_buffer_record_size);
     append_u32(pipeline_states, attribute_cursor);
     append_u32(pipeline_states, vertex_attribute_record_size);
+    append_u32(pipeline_states, package.binding_groups());
+    append_u32(pipeline_states, 0);
     append_bytes(pipeline_states, pipeline_state_records);
     append_bytes(pipeline_states, vertex_buffer_records);
     append_bytes(pipeline_states, vertex_attribute_records);
@@ -367,10 +369,9 @@ archive_error decode_material_package_archive(std::span<const std::byte> bytes,
     const auto shader_records = find_section(bytes, layout, archive_section_type::shader_records);
     const auto pipeline_states = find_section(bytes, layout, archive_section_type::pipeline_states);
 
-    if (!utf8_valid(strings) || metadata.size() < 16 ||
-        feature_definitions.size() < 8 ||
+    if (!utf8_valid(strings) || metadata.size() < 16 || feature_definitions.size() < 8 ||
         pass_definitions.size() < 8 || variant_records.size() < 16 || shader_records.size() < 8 ||
-        pipeline_states.size() < 24) {
+        pipeline_states.size() < 32) {
       return archive_error::invalid_semantic_data;
     }
 
@@ -378,6 +379,7 @@ archive_error decode_material_package_archive(std::span<const std::byte> bytes,
     desc.format_version = material_package_format_version;
     desc.target = package_target::cross_backend;
     desc.binding_model = package_binding_model::bind_group;
+    desc.binding_groups = read_u32(pipeline_states, 24);
     desc.required_renderer_features = 0;
 
     desc.metadata.constant_buffer_size = read_u32(metadata, 0);
@@ -510,11 +512,11 @@ archive_error decode_material_package_archive(std::span<const std::byte> bytes,
     if (pipeline_count != variant_count || pipeline_record_size != 80 ||
         vertex_buffer_record_size != 16 || vertex_attribute_record_size != 16 ||
         vertex_buffer_count > variant_count * 16U ||
-        vertex_attribute_count > vertex_buffer_count * 32U ||
-        !record_range_valid(pipeline_count, pipeline_record_size, 24, pipeline_states.size())) {
+        vertex_attribute_count > vertex_buffer_count * 32U || read_u32(pipeline_states, 28) != 0 ||
+        !record_range_valid(pipeline_count, pipeline_record_size, 32, pipeline_states.size())) {
       return archive_error::invalid_semantic_data;
     }
-    const auto buffer_records_offset = 24U + pipeline_count * pipeline_record_size;
+    const auto buffer_records_offset = 32U + pipeline_count * pipeline_record_size;
     if (!record_range_valid(vertex_buffer_count, vertex_buffer_record_size, buffer_records_offset,
                             pipeline_states.size())) {
       return archive_error::invalid_semantic_data;
@@ -528,7 +530,7 @@ archive_error decode_material_package_archive(std::span<const std::byte> bytes,
       return archive_error::invalid_semantic_data;
     }
     for (std::uint32_t index = 0; index < pipeline_count; ++index) {
-      const auto record = 24U + index * pipeline_record_size;
+      const auto record = 32U + index * pipeline_record_size;
       auto& state = desc.variants[index].pipeline;
       const auto buffer_start = read_u32(pipeline_states, record);
       const auto buffer_count = read_u32(pipeline_states, record + 4);

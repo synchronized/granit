@@ -36,9 +36,12 @@ RenderPipeline 资产根目录下的 `materials/pbr_standard.grmat` 是对应的
 
 - 使用 `GRANIT_MATERIAL_DESC_INIT` 初始化创建描述。
 - `archive_data` 及其长度描述材质归档；数据只需在创建调用期间有效。
-- v4 归档只保存 Shader 内容 ID。`shader_library` 指定包含这些 Shader 的 Library；Renderer 在
+- v5 归档只保存 Shader 内容 ID。`shader_library` 指定包含这些 Shader 的 Library；Renderer 在
   首次需要对应 Pipeline 时选择当前后端载荷。缺少 Library 或内容 ID 返回
   `GRANIT_ERROR_NOT_READY`。
+- 源 JSON 的 `binding_groups` 显式声明 Pipeline Layout 使用的连续绑定组。顺序固定为 `frame`、
+  `material`、`object`、`lighting`；前两组必需，使用 `lighting` 时也必须包含 `object`。Unlit 通常
+  使用前三组，标准 PBR 使用全部四组。
 - `initial_updates` 在创建时整体应用；任何一步失败都不会产生 Material 句柄。
 - `granit_material_update` 批量更新参数。整批更新具有事务性：失败时保留原状态。
 - 空更新批次合法，可用于显式刷新或保持统一调用路径。

@@ -148,6 +148,12 @@ package_error material_package::build(material_package_desc desc, material_packa
   if (desc.binding_model != package_binding_model::bind_group) {
     return package_error::unsupported_binding_model;
   }
+  const auto base_groups = package_binding_group_frame | package_binding_group_material;
+  if (desc.binding_groups != base_groups &&
+      desc.binding_groups != (base_groups | package_binding_group_object) &&
+      desc.binding_groups != package_binding_groups_all) {
+    return package_error::invalid_binding_groups;
+  }
   if (desc.required_renderer_features != 0) {
     return package_error::unsupported_renderer_features;
   }
@@ -185,7 +191,8 @@ package_error material_package::build(material_package_desc desc, material_packa
       const auto has_internal_code = is_spirv(shader.spirv) && !shader.wgsl.empty() &&
                                      shader.wgsl.find('\0') == std::string::npos;
       if (stage_index >= stages.size() || shader.entry_point.empty() ||
-          shader.entry_point.find('\0') != std::string::npos || (!has_asset && !has_internal_code)) {
+          shader.entry_point.find('\0') != std::string::npos ||
+          (!has_asset && !has_internal_code)) {
         return package_error::invalid_shader;
       }
       if (stages[stage_index]) {
@@ -230,6 +237,7 @@ package_error material_package::build(material_package_desc desc, material_packa
   built.format_version_ = desc.format_version;
   built.target_ = desc.target;
   built.binding_model_ = desc.binding_model;
+  built.binding_groups_ = desc.binding_groups;
   built.required_renderer_features_ = desc.required_renderer_features;
   built.metadata_ = std::move(metadata);
   built.variants_ = std::move(variants);

@@ -11,9 +11,10 @@
 namespace {
 
 constexpr std::string_view source = R"({
-  "format_version": 4,
+  "format_version": 5,
   "target_environment": "cross_backend",
   "binding_model": "bind_group",
+  "binding_groups": ["frame", "material", "object", "lighting"],
   "material": {
     "constant_buffer_size": 16,
     "parameters": [
@@ -51,6 +52,7 @@ TEST_CASE("材质源 JSON 构建内存包并解析相对 Shader Asset 路径") {
               source, std::filesystem::path{GRANIT_TEST_ASSET_DIR}, package) ==
           granit::material::source_json_error::none);
   CHECK(package.metadata().constant_buffer_size() == 16);
+  CHECK(package.binding_groups() == granit::material::package_binding_groups_all);
   CHECK(package.metadata().parameters().size() == 2);
   REQUIRE(package.variants().size() == 1);
   CHECK(package.variants().front().shaders.size() == 2);

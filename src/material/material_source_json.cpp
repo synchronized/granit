@@ -554,12 +554,15 @@ source_json_error parse_material_source_json(std::string_view json,
         object == nullptr ? nullptr : as<std::string>(member(*object, "target_environment"));
     const auto* binding =
         object == nullptr ? nullptr : as<std::string>(member(*object, "binding_model"));
+    const auto* binding_groups =
+        object == nullptr ? nullptr : as<json_value::array>(member(*object, "binding_groups"));
     const auto* material =
         object == nullptr ? nullptr : as<json_value::object>(member(*object, "material"));
     const auto* variants =
         object == nullptr ? nullptr : as<json_value::array>(member(*object, "variants"));
     if (object == nullptr || !u32(member(*object, "format_version"), version) ||
-        target == nullptr || binding == nullptr || material == nullptr || variants == nullptr) {
+        target == nullptr || binding == nullptr || binding_groups == nullptr ||
+        material == nullptr || variants == nullptr) {
       return source_json_error::invalid_schema;
     }
     if (version != material_package_format_version || *target != "cross_backend" ||
@@ -568,6 +571,24 @@ source_json_error parse_material_source_json(std::string_view json,
     }
     material_package_desc desc;
     desc.format_version = version;
+    desc.binding_groups = 0;
+    constexpr std::array group_names{
+        std::pair{"frame", package_binding_group_frame},
+        std::pair{"material", package_binding_group_material},
+        std::pair{"object", package_binding_group_object},
+        std::pair{"lighting", package_binding_group_lighting},
+    };
+    for (const auto& value : *binding_groups) {
+      const auto* name = as<std::string>(&value);
+      const auto found = name == nullptr
+                             ? group_names.end()
+                             : std::ranges::find_if(group_names, [&](const auto& group) {
+                                 return group.first == *name;
+                               });
+      if (found == group_names.end() || (desc.binding_groups & found->second) != 0)
+        return source_json_error::invalid_schema;
+      desc.binding_groups |= found->second;
+    }
     if (!u32(member(*material, "constant_buffer_size"), desc.metadata.constant_buffer_size)) {
       return source_json_error::invalid_schema;
     }

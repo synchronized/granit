@@ -17,7 +17,7 @@
 
 namespace granit::material {
 
-inline constexpr std::uint32_t material_package_format_version = 4;
+inline constexpr std::uint32_t material_package_format_version = 5;
 
 using material_pass_id = std::uint64_t;
 using material_feature_id = std::uint64_t;
@@ -32,6 +32,15 @@ enum class package_binding_model : std::uint8_t {
   bindless,
 };
 
+using package_binding_groups = std::uint32_t;
+inline constexpr package_binding_groups package_binding_group_frame = UINT32_C(1) << 0;
+inline constexpr package_binding_groups package_binding_group_material = UINT32_C(1) << 1;
+inline constexpr package_binding_groups package_binding_group_object = UINT32_C(1) << 2;
+inline constexpr package_binding_groups package_binding_group_lighting = UINT32_C(1) << 3;
+inline constexpr package_binding_groups package_binding_groups_all =
+    package_binding_group_frame | package_binding_group_material | package_binding_group_object |
+    package_binding_group_lighting;
+
 using package_feature_flags = std::uint64_t;
 inline constexpr package_feature_flags package_feature_bindless_resource_table = UINT64_C(1) << 0;
 
@@ -45,6 +54,7 @@ enum class package_error : std::uint8_t {
   unsupported_version,
   unsupported_target,
   unsupported_binding_model,
+  invalid_binding_groups,
   unsupported_renderer_features,
   invalid_metadata,
   missing_variant,
@@ -114,6 +124,7 @@ struct material_package_desc {
   std::uint32_t format_version = material_package_format_version;
   package_target target = package_target::cross_backend;
   package_binding_model binding_model = package_binding_model::bind_group;
+  package_binding_groups binding_groups = package_binding_groups_all;
   package_feature_flags required_renderer_features = 0;
   metadata_desc metadata;
   std::vector<material_variant_desc> variants;
@@ -138,6 +149,7 @@ public:
   [[nodiscard]] std::uint32_t format_version() const noexcept { return format_version_; }
   [[nodiscard]] package_target target() const noexcept { return target_; }
   [[nodiscard]] package_binding_model binding_model() const noexcept { return binding_model_; }
+  [[nodiscard]] package_binding_groups binding_groups() const noexcept { return binding_groups_; }
   [[nodiscard]] package_feature_flags required_renderer_features() const noexcept {
     return required_renderer_features_;
   }
@@ -150,6 +162,7 @@ private:
   std::uint32_t format_version_ = material_package_format_version;
   package_target target_ = package_target::cross_backend;
   package_binding_model binding_model_ = package_binding_model::bind_group;
+  package_binding_groups binding_groups_ = package_binding_groups_all;
   package_feature_flags required_renderer_features_ = 0;
   material_metadata metadata_;
   std::vector<material_variant> variants_;

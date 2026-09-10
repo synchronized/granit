@@ -26,18 +26,6 @@ constexpr uint64_t index_mask = UINT64_C(0xffffffff);
 constexpr uint64_t generation_mask = UINT64_C(0x00ffffff);
 constexpr uint64_t type_value = UINT64_C(0x41);
 
-bool uses_unlit_pipeline_layout(const granit::material::material_package& package) noexcept {
-  const std::array unlit_passes{granit::material::make_feature_id("unlit"),
-                                granit::material::make_feature_id("unlit_alpha_cutoff"),
-                                granit::material::make_feature_id("unlit_transparent"),
-                                granit::material::make_feature_id("unlit_canvas"),
-                                granit::material::make_feature_id("unlit_canvas_encode_srgb")};
-  const auto variants = package.variants();
-  return !variants.empty() && std::ranges::all_of(variants, [&](const auto& variant) {
-    return std::ranges::find(unlit_passes, variant.pass) != unlit_passes.end();
-  });
-}
-
 struct material_state {
   std::mutex mutex;
   granit_renderer renderer = GRANIT_NULL_HANDLE;
@@ -311,9 +299,11 @@ extern "C" granit_result granit_material_create(granit_renderer renderer,
       return static_cast<granit_result>(lighting_result);
     const std::array additional_layouts{state->object_layout.native_handle(),
                                         state->lighting_layout.native_handle()};
-    // WebGPU 要求绑定 Pipeline Layout 中声明的每一组；Unlit Shader 不声明 Group 3，因此不把
-    // 标准光照布局追加到它的 Pipeline Layout。Lighting Layout 句柄仍保留统一内部快照结构。
-    const auto layout_count = uses_unlit_pipeline_layout(state->package) ? 1U : 2U;
+    const auto binding_groups = state->package.binding_groups();
+    const auto layout_count =
+        (binding_groups & granit::material::package_binding_group_lighting) != 0 ? 2U
+        : (binding_groups & granit::material::package_binding_group_object) != 0 ? 1U
+                                                                                 : 0U;
     result = state->material_template.initialize(renderer, state->package,
                                                  std::span{additional_layouts}.first(layout_count),
                                                  desc->shader_library);
