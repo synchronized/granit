@@ -15,9 +15,9 @@ granit_result
 webgpu_renderer_state::submit_command_recorder(backend_command_recorder_resource& recorder,
                                                submission_serial& submitted_serial) {
   submitted_serial = 0;
-  if (commands_ == nullptr)
+  if (command_owner_ == nullptr)
     return GRANIT_ERROR_NOT_READY;
-  const auto result = commands_->submit(recorder);
+  const auto result = command_submit(recorder);
   if (result == GRANIT_SUCCESS)
     submitted_serial = next_submission_serial_++;
   return result;
@@ -32,7 +32,7 @@ granit_result webgpu_renderer_state::submit_command_recorders(
   for (auto* recorder : recorders) {
     if (recorder == nullptr)
       return GRANIT_ERROR_INVALID_ARGUMENT;
-    const auto result = commands_->submit(*recorder);
+    const auto result = command_submit(*recorder);
     if (result != GRANIT_SUCCESS)
       return result;
   }

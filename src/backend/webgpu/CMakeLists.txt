@@ -4,10 +4,10 @@
 target_sources(
   granit PRIVATE
     context.cpp
-    command_adapter.cpp
     presentation_adapter.cpp
     renderer_state.cpp
     renderer_state_commands.cpp
+    renderer_state_commands_native.cpp
     renderer_state_pipeline.cpp
     renderer_state_pipeline_native.cpp
     renderer_state_presentation.cpp

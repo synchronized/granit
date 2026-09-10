@@ -90,7 +90,7 @@ webgpu_renderer_state::texture_format_capabilities(granit_texture_format format)
 webgpu_renderer_state::~webgpu_renderer_state() {
   presentation_.reset();
   resource_owner_.reset();
-  commands_.reset();
+  command_owner_.reset();
   pipeline_owner_.reset();
   if (instance_ != 0) {
     static_cast<void>(context_.destroy_instance(instance_));
@@ -199,7 +199,7 @@ granit_result webgpu_renderer_state::refresh_state() noexcept {
   }
 
   if (presentation_ == nullptr || resource_owner_ == nullptr || pipeline_owner_ == nullptr ||
-      commands_ == nullptr) {
+      command_owner_ == nullptr) {
     webgpu_capabilities capabilities{};
     capabilities.struct_size = sizeof(capabilities);
     const auto capabilities_result = context_.get_capabilities(instance_, &capabilities);
@@ -233,11 +233,12 @@ granit_result webgpu_renderer_state::refresh_state() noexcept {
           std::make_shared<webgpu_resource_owner>(webgpu_resource_owner{&context_, instance_});
       auto pipeline_owner =
           std::make_shared<webgpu_pipeline_owner>(webgpu_pipeline_owner{&context_, instance_});
-      auto commands = std::make_unique<webgpu_command_adapter>(context_, instance_);
+      auto command_owner =
+          std::make_shared<webgpu_command_owner>(webgpu_command_owner{&context_, instance_});
       presentation_ = std::move(presentation);
       resource_owner_ = std::move(resource_owner);
       pipeline_owner_ = std::move(pipeline_owner);
-      commands_ = std::move(commands);
+      command_owner_ = std::move(command_owner);
     } catch (const std::bad_alloc&) {
       lifecycle_ = {backend_lifecycle_state::failed, GRANIT_ERROR_OUT_OF_MEMORY};
       return GRANIT_ERROR_OUT_OF_MEMORY;
