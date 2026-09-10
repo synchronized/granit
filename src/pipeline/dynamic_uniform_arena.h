@@ -62,6 +62,9 @@ struct dynamic_uniform_request {
   std::span<const std::byte> object;
 };
 
+/** 把统一的 Granit 裁剪空间矩阵转换为 Y 方向相反的 GPU 裁剪空间。 */
+void flip_frame_clip_y(material::pbr_frame_constants& frame) noexcept;
+
 /** 按真实 Frame Slot 复用 Buffer，并按材质布局缓存动态 Bind Group。 */
 class dynamic_uniform_arena {
 public:
@@ -99,6 +102,7 @@ private:
   granit_renderer renderer_{GRANIT_NULL_HANDLE};
   std::uint64_t alignment_{1};
   std::uint64_t max_binding_size_{};
+  bool flip_clip_y_{};
   std::vector<frame_slot_state> slots_;
   frame_slot_state* current_slot_{};
 };

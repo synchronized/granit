@@ -84,6 +84,16 @@ pbr_standard.frag.grshader.wgsl
 - 兼容扩展只能在结构末尾追加字段，不得重排、改型或重新解释已有字段。稳定前若确需破坏性
   调整，必须按[版本与兼容策略](compatibility.md)更新版本、快照和迁移说明。
 
+## 坐标约定
+
+RenderPipeline 的 View、Material 和 Canvas 使用同一逻辑裁剪空间：深度范围为 `0..1`，Canvas
+像素坐标以左上角为原点且 Y 向下。调用方提交的 View Projection 不需要根据 Renderer backend
+修改。Frame 常量进入 GPU 时由 RenderPipeline 统一转换后端的裁剪空间 Y 方向；Canvas、Material
+和示例不得查询 backend 后自行翻转矩阵。
+
+纹理 UV 与裁剪空间是两个独立契约。普通二维纹理使用左上原点的 `0..1` UV；图片解码、外部纹理
+或 Render Target 若需要方向转换，应在对应上传或采样路径处理，不能通过修改相机投影补偿。
+
 ## 线程安全
 
 不同的不可变对象可以并行读取，不同 Draw List 或 Material 可以由不同线程独立构建或更新。同一
