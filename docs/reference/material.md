@@ -49,6 +49,21 @@ RenderPipeline 资产根目录下的 `materials/pbr_standard.grmat` 是对应的
 参数 ID 必须来自同一材质布局，类型和数据尺寸必须与归档元数据一致。Texture View 和 Sampler
 必须属于同一 Renderer，并在 Material 使用期间保持有效。
 
+## 静态功能与动态参数
+
+材质归档使用 Pass 和 Feature 组成稳定变体键。只有会改变 Shader 代码、绑定布局、顶点输入或
+固定 Pipeline 状态的选择进入变体键：
+
+- `pbr_texture_mask` 决定无纹理、普通纹理或法线贴图 Shader 结构，并决定是否要求 UV0 和 Tangent；
+- Alpha 模式决定深度写入、混合和 Alpha Cutoff Shader；
+- Shadow 与 Unlit 是独立 Pass，分别选择对应 Shader 和 Pipeline 状态；
+- 阴影、IBL 和灯光等会改变 Shader 资源契约的能力属于静态功能。
+
+颜色、金属度、粗糙度、发光强度等数值，以及 Texture View 和 Sampler 句柄，都是动态参数。
+`granit_material_update` 只事务式替换常量或资源绑定，不重新选择变体，也不创建 Graphics Pipeline。
+因此，启用或禁用一种纹理功能必须选择已有的 `pbr_texture_mask` 变体；在同一纹理功能内更换贴图
+只更新资源句柄。缺少贴图时，上层资产导入器应绑定与该功能契约匹配的中性默认资源。
+
 ## 所有权与生命周期
 
 - Material 拥有自身的参数状态和 GPU 实例。

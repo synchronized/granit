@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
+#include "material/material_gpu_instance.h"
 #include "material/material_template_gpu.h"
 #include "support/shader_asset_store.h"
 
@@ -11,6 +12,7 @@
 
 #include <array>
 #include <barrier>
+#include <bit>
 #include <cstdint>
 #include <cstring>
 #include <fstream>
@@ -49,6 +51,10 @@ build_package(granit::material::package_binding_groups binding_groups =
                   granit::material::package_binding_group_material) {
   using namespace granit::material;
   material_package_desc desc;
+  desc.metadata.constant_buffer_size = 16;
+  desc.metadata.parameters = {
+      {.name = "color", .type = parameter_type::float4, .default_value = {}},
+  };
   desc.binding_groups = binding_groups;
   desc.variants.push_back({.pass = make_feature_id("opaque"),
                            .features = {},
@@ -140,6 +146,20 @@ TEST_CASE("材质模板延迟创建并复用 Graphics Pipeline") {
   REQUIRE(material.acquire_pipeline(request, reused) == GRANIT_SUCCESS);
   CHECK(reused == first);
   CHECK(material.cached_pipeline_count() == 1);
+
+  granit::material::material_gpu_instance instance;
+  REQUIRE(instance.initialize(renderer.native_handle(), material.material_layout(),
+                              package.metadata()) == GRANIT_SUCCESS);
+  const auto color = std::bit_cast<std::array<std::byte, 16>>(std::array{0.25F, 0.5F, 0.75F, 1.0F});
+  REQUIRE(instance.set(granit::material::make_parameter_id("color"),
+                       granit::material::parameter_type::float4,
+                       color) == granit::material::metadata_error::none);
+  REQUIRE(instance.flush() == GRANIT_SUCCESS);
+  CHECK(material.cached_pipeline_count() == 1);
+  REQUIRE(material.acquire_pipeline(request, reused) == GRANIT_SUCCESS);
+  CHECK(reused == first);
+  CHECK(material.cached_pipeline_count() == 1);
+  REQUIRE(instance.reset() == GRANIT_SUCCESS);
 
   auto missing = request;
   missing.variant += 1;
