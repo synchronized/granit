@@ -49,6 +49,7 @@
 14. [0.19.0 纹理资产变体与流式加载计划](plans/S-35-0.19.0-texture-asset-variants.md)
 15. [0.20.0 示例框架与跨平台 Model Viewer 计划](plans/S-36-0.20.0-example-framework-and-model-viewer.md)
 16. [0.21.0 Shader Library 与后端无关材质计划](plans/S-37-0.21.0-shader-library-and-material-boundary.md)
+17. [WebGPU Provider 边界收敛计划](plans/S-37H-webgpu-provider-boundary-collapse.md)
 
 ## 操作指南
 

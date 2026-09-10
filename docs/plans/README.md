@@ -184,6 +184,9 @@ D-03-graphics-pipeline.md
 - [S-37：0.21.0 Shader Library 与后端无关材质](S-37-0.21.0-shader-library-and-material-boundary.md)——
   实现中；主体实现及 Windows、Vulkan、Emscripten、浏览器 WebGPU 本地验收已完成，待远端
   Linux、SDK 和不可变 Release Candidate 验收。
+- [S-37H：WebGPU Provider 边界收敛](S-37H-webgpu-provider-boundary-collapse.md)——实现中；删除
+  浏览器静态后端遗留的 Provider ABI、函数表和 dispatch，改由 domain adapter 直接调用私有
+  WebGPU Context。
 
 ## 状态
 
