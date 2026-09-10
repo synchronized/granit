@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#ifndef GRANIT_WEBGPU_CONTEXT_H_
-#define GRANIT_WEBGPU_CONTEXT_H_
+#ifndef GRANIT_WEBGPU_DEVICE_H_
+#define GRANIT_WEBGPU_DEVICE_H_
 
 #include <cstdint>
 #include <span>
@@ -14,14 +14,14 @@
 
 namespace granit::detail {
 
-/** 拥有 Emscripten WebGPU 静态实现的内部调用上下文。 */
-class webgpu_context {
+/** 拥有 Emscripten WebGPU 实例、设备生命周期和原生资源操作。 */
+class webgpu_device {
 public:
-  webgpu_context() = default;
-  ~webgpu_context();
+  webgpu_device() = default;
+  ~webgpu_device();
 
-  webgpu_context(const webgpu_context&) = delete;
-  webgpu_context& operator=(const webgpu_context&) = delete;
+  webgpu_device(const webgpu_device&) = delete;
+  webgpu_device& operator=(const webgpu_device&) = delete;
 
   /** 接入随当前后端静态编译的 WebGPU 实现。 */
   [[nodiscard]] granit_result open() noexcept;

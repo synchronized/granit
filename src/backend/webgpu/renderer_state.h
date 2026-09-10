@@ -22,14 +22,14 @@
 #include "backend/contracts/timestamp.h"
 #include "backend/contracts/transfer.h"
 #include "backend/webgpu/commands.h"
-#include "backend/webgpu/context.h"
+#include "backend/webgpu/device.h"
 #include "backend/webgpu/pipelines.h"
 #include "backend/webgpu/presentation.h"
 #include "backend/webgpu/resources.h"
 
 namespace granit::detail {
 
-/** 集中管理 WebGPU Provider、异步生命周期、能力快照和呈现适配器。 */
+/** 实现 WebGPU HAL 契约并管理异步生命周期、能力快照和设备资源。 */
 class webgpu_renderer_state final : public backend_renderer,
                                     public backend_presentation_renderer,
                                     public backend_queue,
@@ -489,14 +489,14 @@ private:
   [[nodiscard]] webgpu_timestamp_query_pool
   native_timestamp_query_pool(backend_timestamp_query_pool_resource& resource) const noexcept;
 
-  webgpu_context context_;
+  webgpu_device device_;
   webgpu_instance_handle instance_{};
   granit_diagnostic_callback diagnostic_callback_{};
   void* diagnostic_user_data_{};
   backend_lifecycle_status lifecycle_{};
   backend_capabilities capabilities_{};
   std::uint32_t surface_types_{};
-  std::uint32_t context_surface_types_{};
+  std::uint32_t device_surface_types_{};
   std::uint32_t domain_{};
   submission_serial next_submission_serial_{1};
   std::shared_ptr<webgpu_presentation_owner> presentation_owner_;

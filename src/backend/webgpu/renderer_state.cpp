@@ -13,7 +13,7 @@ namespace granit::detail {
 
 namespace {
 
-std::uint32_t to_context_surface_types(std::uint32_t surface_types) noexcept {
+std::uint32_t to_device_surface_types(std::uint32_t surface_types) noexcept {
   std::uint32_t result{};
   if ((surface_types & GRANIT_SURFACE_TYPE_WIN32_BIT) != 0)
     result |= GRANIT_WEBGPU_SURFACE_TYPE_WIN32_BIT;
@@ -93,10 +93,10 @@ webgpu_renderer_state::~webgpu_renderer_state() {
   command_owner_.reset();
   pipeline_owner_.reset();
   if (instance_ != 0) {
-    static_cast<void>(context_.destroy_instance(instance_));
+    static_cast<void>(device_.destroy_instance(instance_));
     instance_ = 0;
   }
-  context_.close();
+  device_.close();
 }
 
 void* webgpu_renderer_state::allocate(std::uint64_t size, std::uint64_t alignment, void*) noexcept {
@@ -130,13 +130,13 @@ granit_result
 webgpu_renderer_state::initialize_static(std::uint32_t surface_types,
                                          granit_diagnostic_callback diagnostic_callback,
                                          void* diagnostic_user_data) noexcept {
-  if (instance_ != 0 || context_.is_open()) {
+  if (instance_ != 0 || device_.is_open()) {
     return GRANIT_ERROR_INVALID_ARGUMENT;
   }
   diagnostic_callback_ = diagnostic_callback;
   diagnostic_user_data_ = diagnostic_user_data;
   surface_types_ = surface_types;
-  auto result = context_.open();
+  auto result = device_.open();
   if (result != GRANIT_SUCCESS) {
     lifecycle_ = {backend_lifecycle_state::failed, result};
     return result;
@@ -146,10 +146,10 @@ webgpu_renderer_state::initialize_static(std::uint32_t surface_types,
 
 granit_result webgpu_renderer_state::finish_initialization() noexcept {
   webgpu_host_api host{sizeof(host), 0, diagnose, this, allocate, deallocate, nullptr};
-  auto result = context_.create_instance(&host, &instance_);
+  auto result = device_.create_instance(&host, &instance_);
   if (result != GRANIT_SUCCESS) {
     lifecycle_ = {backend_lifecycle_state::failed, result};
-    context_.close();
+    device_.close();
     return result;
   }
   const auto refresh_result = refresh_state();
@@ -160,7 +160,7 @@ granit_result webgpu_renderer_state::process_backend_events() noexcept {
   if (instance_ == 0) {
     return GRANIT_ERROR_INVALID_HANDLE;
   }
-  const auto result = context_.process_events(instance_);
+  const auto result = device_.process_events(instance_);
   if (result != GRANIT_SUCCESS && result != GRANIT_ERROR_NOT_READY &&
       result != GRANIT_ERROR_DEVICE_LOST) {
     return result;
@@ -176,7 +176,7 @@ backend_lifecycle_status webgpu_renderer_state::lifecycle_status() const noexcep
 granit_result webgpu_renderer_state::refresh_state() noexcept {
   webgpu_instance_status status{};
   status.struct_size = sizeof(status);
-  const auto status_result = context_.get_instance_status(instance_, &status);
+  const auto status_result = device_.get_instance_status(instance_, &status);
   if (status_result != GRANIT_SUCCESS) {
     lifecycle_ = {backend_lifecycle_state::failed, status_result};
     return status_result;
@@ -202,7 +202,7 @@ granit_result webgpu_renderer_state::refresh_state() noexcept {
       command_owner_ == nullptr) {
     webgpu_capabilities capabilities{};
     capabilities.struct_size = sizeof(capabilities);
-    const auto capabilities_result = context_.get_capabilities(instance_, &capabilities);
+    const auto capabilities_result = device_.get_capabilities(instance_, &capabilities);
     if (capabilities_result != GRANIT_SUCCESS) {
       lifecycle_ = {backend_lifecycle_state::failed, capabilities_result};
       return capabilities_result;
@@ -222,20 +222,20 @@ granit_result webgpu_renderer_state::refresh_state() noexcept {
             GRANIT_RENDERER_FEATURE_NON_BLOCKING_PIPELINE_WARMUP_BIT,
     };
     capabilities_.texture_compression_features = capabilities.texture_compression_features;
-    context_surface_types_ = capabilities.surface_types;
-    if ((to_context_surface_types(surface_types_) & ~context_surface_types_) != 0) {
+    device_surface_types_ = capabilities.surface_types;
+    if ((to_device_surface_types(surface_types_) & ~device_surface_types_) != 0) {
       lifecycle_ = {backend_lifecycle_state::failed, GRANIT_ERROR_UNSUPPORTED};
       return GRANIT_ERROR_UNSUPPORTED;
     }
     try {
       auto presentation_owner = std::make_shared<webgpu_presentation_owner>(
-          webgpu_presentation_owner{&context_, instance_});
+          webgpu_presentation_owner{&device_, instance_});
       auto resource_owner =
-          std::make_shared<webgpu_resource_owner>(webgpu_resource_owner{&context_, instance_});
+          std::make_shared<webgpu_resource_owner>(webgpu_resource_owner{&device_, instance_});
       auto pipeline_owner =
-          std::make_shared<webgpu_pipeline_owner>(webgpu_pipeline_owner{&context_, instance_});
+          std::make_shared<webgpu_pipeline_owner>(webgpu_pipeline_owner{&device_, instance_});
       auto command_owner =
-          std::make_shared<webgpu_command_owner>(webgpu_command_owner{&context_, instance_});
+          std::make_shared<webgpu_command_owner>(webgpu_command_owner{&device_, instance_});
       presentation_owner_ = std::move(presentation_owner);
       resource_owner_ = std::move(resource_owner);
       pipeline_owner_ = std::move(pipeline_owner);

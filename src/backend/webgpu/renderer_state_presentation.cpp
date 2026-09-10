@@ -23,7 +23,7 @@ granit_result
 webgpu_renderer_state::create_win32_surface(void* instance, void* window,
                                             backend_surface_resource& surface) noexcept {
   if ((surface_types_ & GRANIT_SURFACE_TYPE_WIN32_BIT) == 0 ||
-      (context_surface_types_ & GRANIT_WEBGPU_SURFACE_TYPE_WIN32_BIT) == 0)
+      (device_surface_types_ & GRANIT_WEBGPU_SURFACE_TYPE_WIN32_BIT) == 0)
     return GRANIT_ERROR_UNSUPPORTED;
   return presentation_owner_ != nullptr
              ? presentation_create_win32_surface(surface, instance, window)
@@ -34,7 +34,7 @@ granit_result
 webgpu_renderer_state::create_xcb_surface(void* connection, std::uint32_t window,
                                           backend_surface_resource& surface) noexcept {
   if ((surface_types_ & GRANIT_SURFACE_TYPE_XCB_BIT) == 0 ||
-      (context_surface_types_ & GRANIT_WEBGPU_SURFACE_TYPE_XCB_BIT) == 0)
+      (device_surface_types_ & GRANIT_WEBGPU_SURFACE_TYPE_XCB_BIT) == 0)
     return GRANIT_ERROR_UNSUPPORTED;
   return presentation_owner_ != nullptr
              ? presentation_create_xcb_surface(surface, connection, window)
@@ -45,7 +45,7 @@ granit_result
 webgpu_renderer_state::create_wayland_surface(void* display, void* native_surface,
                                               backend_surface_resource& surface) noexcept {
   if ((surface_types_ & GRANIT_SURFACE_TYPE_WAYLAND_BIT) == 0 ||
-      (context_surface_types_ & GRANIT_WEBGPU_SURFACE_TYPE_WAYLAND_BIT) == 0)
+      (device_surface_types_ & GRANIT_WEBGPU_SURFACE_TYPE_WAYLAND_BIT) == 0)
     return GRANIT_ERROR_UNSUPPORTED;
   return presentation_owner_ != nullptr
              ? presentation_create_wayland_surface(surface, display, native_surface)
@@ -56,7 +56,7 @@ granit_result
 webgpu_renderer_state::create_canvas_surface(std::string_view selector,
                                              backend_surface_resource& surface) noexcept {
   if ((surface_types_ & GRANIT_SURFACE_TYPE_CANVAS_BIT) == 0 ||
-      (context_surface_types_ & GRANIT_WEBGPU_SURFACE_TYPE_CANVAS_BIT) == 0)
+      (device_surface_types_ & GRANIT_WEBGPU_SURFACE_TYPE_CANVAS_BIT) == 0)
     return GRANIT_ERROR_UNSUPPORTED;
   if (presentation_owner_ == nullptr)
     return GRANIT_ERROR_NOT_READY;

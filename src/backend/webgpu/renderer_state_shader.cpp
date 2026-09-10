@@ -8,15 +8,15 @@ namespace {
 
 class webgpu_shader_resource final : public backend_shader_resource {
 public:
-  webgpu_shader_resource(webgpu_context& context, webgpu_instance_handle instance) noexcept
-      : context_(&context), instance_(instance) {}
+  webgpu_shader_resource(webgpu_device& context, webgpu_instance_handle instance) noexcept
+      : device_(&context), instance_(instance) {}
 
   ~webgpu_shader_resource() override {
     if (handle_ != 0)
-      static_cast<void>(context_->destroy_shader(instance_, handle_));
+      static_cast<void>(device_->destroy_shader(instance_, handle_));
   }
 
-  webgpu_context* context_{};
+  webgpu_device* device_{};
   webgpu_instance_handle instance_{};
   webgpu_shader handle_{};
 };
@@ -30,7 +30,7 @@ webgpu_shader_resource* as_shader(backend_shader_resource& resource) noexcept {
 std::unique_ptr<backend_shader_resource> webgpu_renderer_state::allocate_shader_resource() {
   if (lifecycle_.state != backend_lifecycle_state::ready)
     return nullptr;
-  return std::make_unique<webgpu_shader_resource>(context_, instance_);
+  return std::make_unique<webgpu_shader_resource>(device_, instance_);
 }
 
 granit_result webgpu_renderer_state::create_shader(backend_shader_resource& shader,
@@ -49,7 +49,7 @@ granit_result webgpu_renderer_state::create_shader(backend_shader_resource& shad
                                 code.size(),
                                 entry_point.data(),
                                 entry_point.size()};
-  return context_.create_shader(instance_, &desc, &resource->handle_);
+  return device_.create_shader(instance_, &desc, &resource->handle_);
 }
 
 webgpu_shader

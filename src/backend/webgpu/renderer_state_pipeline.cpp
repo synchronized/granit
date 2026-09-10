@@ -15,20 +15,20 @@ namespace {
 
 class webgpu_pipeline_warmup_completion final : public backend_pipeline_warmup_completion {
 public:
-  webgpu_pipeline_warmup_completion(webgpu_context& context, webgpu_instance_handle instance,
+  webgpu_pipeline_warmup_completion(webgpu_device& context, webgpu_instance_handle instance,
                                     webgpu_pipeline_warmup warmup) noexcept
-      : context_(context), instance_(instance), warmup_(warmup) {}
+      : device_(context), instance_(instance), warmup_(warmup) {}
   ~webgpu_pipeline_warmup_completion() override {
     if (warmup_ != 0)
-      static_cast<void>(context_.destroy_pipeline_warmup(instance_, warmup_));
+      static_cast<void>(device_.destroy_pipeline_warmup(instance_, warmup_));
   }
 
   granit_result poll() noexcept override {
-    return context_.poll_pipeline_warmup(instance_, warmup_);
+    return device_.poll_pipeline_warmup(instance_, warmup_);
   }
 
 private:
-  webgpu_context& context_;
+  webgpu_device& device_;
   webgpu_instance_handle instance_{};
   webgpu_pipeline_warmup warmup_{};
 };
@@ -59,10 +59,10 @@ granit_result webgpu_renderer_state::warmup_compute_pipeline_async(
   if (result != GRANIT_SUCCESS)
     return result;
   try {
-    completion = std::make_unique<webgpu_pipeline_warmup_completion>(context_, instance_, warmup);
+    completion = std::make_unique<webgpu_pipeline_warmup_completion>(device_, instance_, warmup);
     return GRANIT_SUCCESS;
   } catch (const std::bad_alloc&) {
-    static_cast<void>(context_.destroy_pipeline_warmup(instance_, warmup));
+    static_cast<void>(device_.destroy_pipeline_warmup(instance_, warmup));
     return GRANIT_ERROR_OUT_OF_MEMORY;
   }
 }
@@ -133,10 +133,10 @@ granit_result webgpu_renderer_state::warmup_graphics_pipeline_async(
   if (result != GRANIT_SUCCESS)
     return result;
   try {
-    completion = std::make_unique<webgpu_pipeline_warmup_completion>(context_, instance_, warmup);
+    completion = std::make_unique<webgpu_pipeline_warmup_completion>(device_, instance_, warmup);
     return GRANIT_SUCCESS;
   } catch (const std::bad_alloc&) {
-    static_cast<void>(context_.destroy_pipeline_warmup(instance_, warmup));
+    static_cast<void>(device_.destroy_pipeline_warmup(instance_, warmup));
     return GRANIT_ERROR_OUT_OF_MEMORY;
   }
 }

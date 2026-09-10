@@ -3,7 +3,7 @@
 
 target_sources(
   granit PRIVATE
-    context.cpp
+    device.cpp
     renderer_state.cpp
     renderer_state_commands.cpp
     renderer_state_commands_native.cpp

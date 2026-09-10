@@ -13,7 +13,7 @@ namespace granit::detail {
 
 namespace {
 
-webgpu_texture_aspect to_context_aspect(granit_texture_aspect aspect) noexcept {
+webgpu_texture_aspect to_device_aspect(granit_texture_aspect aspect) noexcept {
   switch (aspect) {
   case GRANIT_TEXTURE_ASPECT_DEPTH_BIT:
     return GRANIT_WEBGPU_TEXTURE_ASPECT_DEPTH;
@@ -255,7 +255,7 @@ granit_result webgpu_renderer_state::copy_texture_to_buffer(
       region.mip_level,
       region.base_array_layer,
       region.array_layer_count,
-      to_context_aspect(region.aspect),
+      to_device_aspect(region.aspect),
       region.x,
       region.y,
       region.z,
@@ -284,7 +284,7 @@ granit_result webgpu_renderer_state::copy_buffer_to_texture(
       region.mip_level,
       region.base_array_layer,
       region.array_layer_count,
-      to_context_aspect(region.aspect),
+      to_device_aspect(region.aspect),
       region.x,
       region.y,
       region.z,
@@ -307,7 +307,7 @@ granit_result webgpu_renderer_state::copy_texture(backend_command_recorder_resou
       region.destination_mip_level,
       region.destination_base_array_layer,
       region.array_layer_count,
-      to_context_aspect(static_cast<granit_texture_aspect>(region.aspect)),
+      to_device_aspect(static_cast<granit_texture_aspect>(region.aspect)),
       region.source_x,
       region.source_y,
       region.source_z,
