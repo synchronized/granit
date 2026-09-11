@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#ifndef GRANIT_ASSETS_SHADER_LIBRARY_H_
-#define GRANIT_ASSETS_SHADER_LIBRARY_H_
+#ifndef GRANIT_SHADER_FORMAT_SHADER_LIBRARY_H_
+#define GRANIT_SHADER_FORMAT_SHADER_LIBRARY_H_
 
-#include "assets/shader_asset.h"
+#include "shader_format/shader_object.h"
 
 #include <cstddef>
 #include <cstdint>
@@ -12,7 +12,7 @@
 #include <string_view>
 #include <vector>
 
-namespace granit::tools {
+namespace granit::detail::shader_format {
 
 enum class shader_library_error {
   success,
@@ -78,6 +78,6 @@ struct shader_library_view {
 find_shader_library_shader(const shader_library_view& library,
                            const shader_cache_key& content_id) noexcept;
 
-} // namespace granit::tools
+} // namespace granit::detail::shader_format
 
 #endif

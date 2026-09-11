@@ -665,19 +665,19 @@ granit_result granit_shader_tools_result_write_asset(granit_shader_tools_result 
     const auto tint_revision = copy_string(desc->tint_revision, desc->tint_revision_length);
     const auto target = copy_string(desc->target_environment, desc->target_environment_length);
     const auto options = copy_string(desc->compile_options, desc->compile_options_length);
-    const auto key = granit::tools::make_shader_cache_key(
+    const auto key = granit::detail::shader_format::make_shader_cache_key(
         {source, source_language_name(desc->source_language), value->entry_point, stage,
          tint_revision, target, options, desc->required_features});
     std::vector<std::byte> asset;
-    if (granit::tools::encode_shader_asset(
+    if (granit::detail::shader_format::encode_shader_asset(
             {wgsl, spirv, value->reflection_json, key, desc->backend_mask, desc->required_features,
              static_cast<granit::shader_stage>(value->stage), value->entry_point},
-            asset) != granit::tools::shader_asset_error::success)
+            asset) != granit::detail::shader_format::shader_asset_error::success)
       return GRANIT_ERROR_INVALID_ARGUMENT;
     bool hit = false;
     if (granit::tools::store_shader_asset(copy_path(desc->output_path, desc->output_path_length),
-                                          asset, wgsl, spirv,
-                                          hit) != granit::tools::shader_asset_error::success)
+                                          asset, wgsl, spirv, hit) !=
+        granit::detail::shader_format::shader_asset_error::success)
       return GRANIT_ERROR_INITIALIZATION_FAILED;
     *cache_hit = hit ? 1U : 0U;
     return GRANIT_SUCCESS;
@@ -722,20 +722,22 @@ granit_result granit_shader_tools_restore_asset_cache(const granit_shader_tools_
       return GRANIT_ERROR_INVALID_ARGUMENT;
     const auto asset_path = copy_path(desc->asset_path, desc->asset_path_length);
     const auto asset_bytes = read_binary_file(asset_path);
-    granit::tools::shader_asset_view asset;
-    if (granit::tools::decode_shader_asset(asset_bytes, asset) !=
-        granit::tools::shader_asset_error::success)
+    granit::detail::shader_format::shader_asset_view asset;
+    if (granit::detail::shader_format::decode_shader_asset(asset_bytes, asset) !=
+        granit::detail::shader_format::shader_asset_error::success)
       return GRANIT_SUCCESS;
     uint32_t packaged_backends = 0;
-    if (granit::tools::find_shader_asset_variant(asset, granit::tools::shader_asset_backend::vulkan,
-                                                 granit::shader_profile::portable) != nullptr)
+    if (granit::detail::shader_format::find_shader_asset_variant(
+            asset, granit::detail::shader_format::shader_asset_backend::vulkan,
+            granit::shader_profile::portable) != nullptr)
       packaged_backends |= GRANIT_SHADER_BACKEND_VULKAN_BIT;
-    if (granit::tools::find_shader_asset_variant(asset, granit::tools::shader_asset_backend::webgpu,
-                                                 granit::shader_profile::portable) != nullptr)
+    if (granit::detail::shader_format::find_shader_asset_variant(
+            asset, granit::detail::shader_format::shader_asset_backend::webgpu,
+            granit::shader_profile::portable) != nullptr)
       packaged_backends |= GRANIT_SHADER_BACKEND_WEBGPU_BIT;
     if (packaged_backends != desc->backend_mask)
       return GRANIT_SUCCESS;
-    const auto key = granit::tools::make_shader_cache_key(
+    const auto key = granit::detail::shader_format::make_shader_cache_key(
         {source, source_language_name(desc->source_language),
          copy_string(desc->entry_point, desc->entry_point_length), stage,
          copy_string(desc->tint_revision, desc->tint_revision_length),
@@ -744,8 +746,9 @@ granit_result granit_shader_tools_restore_asset_cache(const granit_shader_tools_
          desc->required_features});
     if (key != asset.cache_key)
       return GRANIT_SUCCESS;
-    const auto* variant = granit::tools::find_shader_asset_variant(
-        asset, granit::tools::shader_asset_backend::vulkan, granit::shader_profile::portable);
+    const auto* variant = granit::detail::shader_format::find_shader_asset_variant(
+        asset, granit::detail::shader_format::shader_asset_backend::vulkan,
+        granit::shader_profile::portable);
     if (variant == nullptr || variant->code_format != granit::shader_code_format::spirv ||
         variant->required_features != desc->required_features)
       return GRANIT_SUCCESS;
@@ -753,13 +756,15 @@ granit_result granit_shader_tools_restore_asset_cache(const granit_shader_tools_
     wgsl_sidecar_path += ".wgsl";
     auto spirv_sidecar_path = asset_path;
     spirv_sidecar_path += ".spv";
-    const auto* webgpu_variant = granit::tools::find_shader_asset_variant(
-        asset, granit::tools::shader_asset_backend::webgpu, granit::shader_profile::portable);
+    const auto* webgpu_variant = granit::detail::shader_format::find_shader_asset_variant(
+        asset, granit::detail::shader_format::shader_asset_backend::webgpu,
+        granit::shader_profile::portable);
     const auto packaged_wgsl =
         webgpu_variant == nullptr ? std::string{} : read_text_file(wgsl_sidecar_path);
     const auto packaged_spirv = read_binary_file(spirv_sidecar_path);
-    if (granit::tools::validate_shader_asset_payloads(asset, packaged_wgsl, packaged_spirv) !=
-            granit::tools::shader_asset_error::success ||
+    if (granit::detail::shader_format::validate_shader_asset_payloads(asset, packaged_wgsl,
+                                                                      packaged_spirv) !=
+            granit::detail::shader_format::shader_asset_error::success ||
         (desc->source_language == GRANIT_SHADER_SOURCE_LANGUAGE_WGSL && webgpu_variant != nullptr &&
          packaged_wgsl != source))
       return GRANIT_SUCCESS;

@@ -4,9 +4,9 @@
 #ifndef GRANIT_TESTS_SUPPORT_SHADER_ASSET_STORE_H_
 #define GRANIT_TESTS_SUPPORT_SHADER_ASSET_STORE_H_
 
-#include "assets/shader_library.h"
 #include "material/material_package.h"
 #include "shader_asset_file.h"
+#include "shader_format/shader_library.h"
 
 #include <granit/renderer/shader_library.hpp>
 
@@ -68,7 +68,7 @@ public:
   bool
   build_library(std::vector<std::byte>& output,
                 granit_shader_backend_flags backend_flags = GRANIT_SHADER_BACKEND_ALL_BITS) const {
-    std::vector<granit::tools::shader_library_asset_source> sources;
+    std::vector<granit::detail::shader_format::shader_library_asset_source> sources;
     try {
       sources.reserve(entries_.size());
       for (const auto& value : entries_)
@@ -76,8 +76,8 @@ public:
     } catch (...) {
       return false;
     }
-    return granit::tools::encode_shader_library({sources, backend_flags}, output) ==
-           granit::tools::shader_library_error::success;
+    return granit::detail::shader_format::encode_shader_library({sources, backend_flags}, output) ==
+           granit::detail::shader_format::shader_library_error::success;
   }
 
   bool initialize_library(granit_renderer renderer, std::vector<std::byte>& bytes,

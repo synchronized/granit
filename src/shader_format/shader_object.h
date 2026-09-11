@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#ifndef GRANIT_ASSETS_SHADER_ASSET_H_
-#define GRANIT_ASSETS_SHADER_ASSET_H_
+#ifndef GRANIT_SHADER_FORMAT_SHADER_OBJECT_H_
+#define GRANIT_SHADER_FORMAT_SHADER_OBJECT_H_
 
 #include <array>
 #include <cstddef>
@@ -11,20 +11,11 @@
 #include <string_view>
 #include <vector>
 
+#include "shader_format/digest.h"
+
 #include <granit/core/shader_types.hpp>
 
-namespace granit::tools {
-
-struct shader_cache_context {
-  std::string_view source;
-  std::string_view source_language;
-  std::string_view entry_point;
-  std::string_view stage;
-  std::string_view tint_revision;
-  std::string_view target_environment;
-  std::string_view compile_options;
-  std::uint64_t required_features = 0;
-};
+namespace granit::detail::shader_format {
 
 enum class shader_asset_error {
   success,
@@ -70,10 +61,6 @@ struct shader_asset_view {
   std::uint32_t variant_count = 0;
 };
 
-shader_cache_key make_shader_cache_key(const shader_cache_context& context) noexcept;
-shader_cache_key shader_bytes_sha256(std::span<const std::byte> bytes) noexcept;
-shader_cache_key shader_bytes_sha256_zeroed(std::span<const std::byte> bytes, std::size_t offset,
-                                            std::size_t size) noexcept;
 shader_asset_error encode_shader_asset(const shader_asset_source& source,
                                        std::vector<std::byte>& output) noexcept;
 shader_asset_error decode_shader_asset(std::span<const std::byte> bytes,
@@ -87,6 +74,6 @@ shader_asset_error validate_shader_asset_payloads(const shader_asset_view& asset
 shader_asset_error validate_shader_asset_payload(const shader_asset_view& asset,
                                                  shader_asset_backend backend,
                                                  std::span<const std::byte> payload) noexcept;
-} // namespace granit::tools
+} // namespace granit::detail::shader_format
 
 #endif

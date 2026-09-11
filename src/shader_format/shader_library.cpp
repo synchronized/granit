@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include "assets/shader_library.h"
+#include "shader_format/shader_library.h"
 
 #include <algorithm>
 #include <array>
@@ -10,7 +10,7 @@
 #include <string>
 #include <utility>
 
-namespace granit::tools {
+namespace granit::detail::shader_format {
 namespace {
 
 constexpr std::array magic{std::byte{'G'}, std::byte{'R'}, std::byte{'N'}, std::byte{'S'},
@@ -456,4 +456,4 @@ find_shader_library_shader(const shader_library_view& library,
   return found != library.shaders.end() && found->content_id == content_id ? &*found : nullptr;
 }
 
-} // namespace granit::tools
+} // namespace granit::detail::shader_format

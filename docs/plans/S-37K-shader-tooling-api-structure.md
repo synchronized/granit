@@ -16,8 +16,8 @@ Library 链接，但接口与源码组织仍保留多轮演进痕迹：
 - `shader_tools.h/.hpp` 同时公开编译、反射、缓存、资产写入、工具身份和目标能力查询。
 - WGSL 与 HLSL 使用重复描述和两个编译入口，调用方需要理解各前端的内部转换路径。
 - `shader_tools::result` 同时表示操作结果、编译产物、反射视图和资产写入器，名称和职责均不明确。
-- `src/assets/shader_asset.*`、`tools/shader_asset.*` 和 `shader_tools_core.*` 分别承担格式、文件和
-  编译职责，但目录与命名无法直接表达边界。
+- `src/shader_format`、`tools/shader_asset.*` 和 `shader_tools_core.*` 已分别承担格式、文件和
+  编译职责，但工具侧的其余源码仍未按这一边界完成拆分。
 - `shader_tool_main.cpp` 同时实现参数解析、编译编排、缓存恢复、对象写入、Library 链接和输出格式化。
 - Renderer 与 ShaderTools 重复定义 stage、code format、backend 和固定长度摘要等公共概念。
 

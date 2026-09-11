@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include "assets/shader_library.h"
 #include "shader_asset.h"
+#include "shader_format/shader_library.h"
 #include <granit/tools/shader_tools.hpp>
 
 #include <algorithm>
@@ -89,13 +89,13 @@ int link_shader_library(int argc, char** argv) {
     }
     owned.push_back(std::move(asset));
   }
-  std::vector<granit::tools::shader_library_asset_source> sources;
+  std::vector<granit::detail::shader_format::shader_library_asset_source> sources;
   sources.reserve(owned.size());
   for (const auto& asset : owned)
     sources.push_back({asset.manifest, asset.wgsl, asset.spirv});
   std::vector<std::byte> library;
-  if (granit::tools::encode_shader_library({sources, backend_mask}, library) !=
-      granit::tools::shader_library_error::success) {
+  if (granit::detail::shader_format::encode_shader_library({sources, backend_mask}, library) !=
+      granit::detail::shader_format::shader_library_error::success) {
     std::cerr << "无法链接 Shader Library\n";
     return 1;
   }
@@ -172,23 +172,24 @@ int pack_shader_asset(int argc, char** argv) {
     return 1;
   }
   const std::string_view wgsl{reinterpret_cast<const char*>(wgsl_bytes.data()), wgsl_bytes.size()};
-  granit::tools::shader_asset_source source{.wgsl = wgsl,
-                                            .spirv = spirv,
-                                            .reflection_json = reflection_json,
-                                            .cache_key = granit::tools::shader_bytes_sha256(spirv),
-                                            .backend_mask = 3,
-                                            .required_features = 0,
-                                            .stage = stage_value,
-                                            .entry_point = *entry};
+  granit::detail::shader_format::shader_asset_source source{
+      .wgsl = wgsl,
+      .spirv = spirv,
+      .reflection_json = reflection_json,
+      .cache_key = granit::detail::shader_format::shader_bytes_sha256(spirv),
+      .backend_mask = 3,
+      .required_features = 0,
+      .stage = stage_value,
+      .entry_point = *entry};
   std::vector<std::byte> manifest;
-  if (granit::tools::encode_shader_asset(source, manifest) !=
-      granit::tools::shader_asset_error::success) {
+  if (granit::detail::shader_format::encode_shader_asset(source, manifest) !=
+      granit::detail::shader_format::shader_asset_error::success) {
     std::cerr << "无法编码 Shader Asset\n";
     return 1;
   }
   bool cache_hit = false;
   if (granit::tools::store_shader_asset(*asset_path, manifest, wgsl, spirv, cache_hit) !=
-      granit::tools::shader_asset_error::success) {
+      granit::detail::shader_format::shader_asset_error::success) {
     std::cerr << "无法写入 Shader Asset\n";
     return 1;
   }
@@ -227,9 +228,9 @@ int emit_shader_asset_ids(int argc, char** argv) {
     }
     const auto asset_path = spec.substr(separator + 1);
     const auto manifest = read_bytes(asset_path);
-    granit::tools::shader_asset_view asset;
-    if (manifest.empty() || granit::tools::decode_shader_asset(manifest, asset) !=
-                                granit::tools::shader_asset_error::success) {
+    granit::detail::shader_format::shader_asset_view asset;
+    if (manifest.empty() || granit::detail::shader_format::decode_shader_asset(manifest, asset) !=
+                                granit::detail::shader_format::shader_asset_error::success) {
       std::cerr << "无法读取 Shader 资产清单：" << asset_path << '\n';
       return 1;
     }

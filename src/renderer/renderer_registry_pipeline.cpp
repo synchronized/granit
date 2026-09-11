@@ -4,8 +4,8 @@
 #include "renderer/renderer_registry.h"
 #include "renderer/renderer_registry_records.h"
 
-#include "assets/shader_asset.h"
 #include "renderer/shader_validation.h"
+#include "shader_format/digest.h"
 
 #include <algorithm>
 #include <limits>
@@ -43,7 +43,7 @@ granit_result renderer_registry::create_shader_from_code(
     record->retirement = interfaces->retirement;
     record->stage = stage;
     record->entry_point.assign(entry_point);
-    record->content_id = granit::tools::shader_bytes_sha256(code);
+    record->content_id = granit::detail::shader_format::shader_bytes_sha256(code);
 
     record->native = shaders->allocate_shader_resource();
     if (!record->native)

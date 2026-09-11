@@ -110,7 +110,7 @@ if(NOT CMAKE_CROSSCOMPILING)
     granit_model_viewer_environment_tool
     "${PROJECT_SOURCE_DIR}/examples/samples/model_viewer/environment_tool_main.cpp"
     "${PROJECT_SOURCE_DIR}/src/pipeline/environment_asset.cpp"
-    $<TARGET_OBJECTS:granit_internal_shader_asset_format>
+    $<TARGET_OBJECTS:granit_internal_shader_format>
   )
   target_include_directories(
     granit_model_viewer_environment_tool PRIVATE "${PROJECT_SOURCE_DIR}/src"

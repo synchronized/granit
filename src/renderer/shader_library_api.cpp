@@ -3,8 +3,8 @@
 
 #include <granit/renderer/shader_library.h>
 
-#include "assets/shader_library.h"
 #include "renderer/renderer_registry.h"
+#include "shader_format/shader_library.h"
 
 #include <cstring>
 #include <limits>
@@ -19,7 +19,7 @@ granit_result validate_info(granit_shader_library_info* info) noexcept {
   return GRANIT_SUCCESS;
 }
 
-granit_result fill_info(const granit::tools::shader_library_view& library,
+granit_result fill_info(const granit::detail::shader_format::shader_library_view& library,
                         std::uint64_t archive_size, granit_shader_library_info& info) noexcept {
   std::uint64_t variant_count = 0;
   for (const auto& shader : library.shaders)
@@ -47,13 +47,13 @@ extern "C" granit_result granit_shader_library_inspect(const void* archive_data,
       validate_info(info) != GRANIT_SUCCESS)
     return GRANIT_ERROR_INVALID_ARGUMENT;
   try {
-    granit::tools::shader_library_view library;
+    granit::detail::shader_format::shader_library_view library;
     const auto archive = std::span{static_cast<const std::byte*>(archive_data),
                                    static_cast<std::size_t>(archive_size)};
-    const auto result = granit::tools::decode_shader_library(archive, library);
-    if (result == granit::tools::shader_library_error::unsupported_schema)
+    const auto result = granit::detail::shader_format::decode_shader_library(archive, library);
+    if (result == granit::detail::shader_format::shader_library_error::unsupported_schema)
       return GRANIT_ERROR_UNSUPPORTED;
-    if (result != granit::tools::shader_library_error::success)
+    if (result != granit::detail::shader_format::shader_library_error::success)
       return GRANIT_ERROR_INVALID_ARGUMENT;
     return fill_info(library, archive_size, *info);
   } catch (const std::bad_alloc&) {

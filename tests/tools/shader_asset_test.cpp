@@ -12,6 +12,7 @@
 int main(int argc, char** argv) {
   if (argc != 2)
     return 10;
+  using namespace granit::detail::shader_format;
   using namespace granit::tools;
   constexpr std::string_view wgsl = "@compute @workgroup_size(1) fn main() {}\n";
   constexpr std::array spirv{std::byte{3}, std::byte{2}, std::byte{35}, std::byte{7}};

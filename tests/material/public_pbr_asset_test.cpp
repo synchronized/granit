@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include "assets/shader_library.h"
 #include "material/material_archive.h"
+#include "shader_format/shader_library.h"
 
 #include <granit/pipeline/pbr_material.h>
 
@@ -28,10 +28,11 @@ std::vector<std::byte> read_binary(const std::filesystem::path& path) {
   return result;
 }
 
-const granit::tools::shader_library_shader&
-find_shader(const granit::tools::shader_library_view& library, granit::shader_stage stage) {
-  const auto found =
-      std::ranges::find(library.shaders, stage, &granit::tools::shader_library_shader::stage);
+const granit::detail::shader_format::shader_library_shader&
+find_shader(const granit::detail::shader_format::shader_library_view& library,
+            granit::shader_stage stage) {
+  const auto found = std::ranges::find(
+      library.shaders, stage, &granit::detail::shader_format::shader_library_shader::stage);
   REQUIRE(found != library.shaders.end());
   return *found;
 }
@@ -54,9 +55,9 @@ void require_binding(std::string_view reflection, std::uint32_t group, std::uint
 
 TEST_CASE("公共 PBR 顶点资产固定 Frame Object 和顶点输入契约") {
   const auto bytes = read_binary(GRANIT_PBR_LIBRARY_ASSET);
-  granit::tools::shader_library_view library;
-  REQUIRE(granit::tools::decode_shader_library(bytes, library) ==
-          granit::tools::shader_library_error::success);
+  granit::detail::shader_format::shader_library_view library;
+  REQUIRE(granit::detail::shader_format::decode_shader_library(bytes, library) ==
+          granit::detail::shader_format::shader_library_error::success);
   const auto& shader = find_shader(library, granit::shader_stage::vertex);
   CHECK(shader.entry_point == "vertex_main");
   require_binding(shader.reflection_json, 0, 0, "uniform_buffer", 128);
@@ -68,9 +69,9 @@ TEST_CASE("公共 PBR 顶点资产固定 Frame Object 和顶点输入契约") {
 
 TEST_CASE("公共 PBR 片段资产固定材质和 IBL 契约") {
   const auto bytes = read_binary(GRANIT_PBR_LIBRARY_ASSET);
-  granit::tools::shader_library_view library;
-  REQUIRE(granit::tools::decode_shader_library(bytes, library) ==
-          granit::tools::shader_library_error::success);
+  granit::detail::shader_format::shader_library_view library;
+  REQUIRE(granit::detail::shader_format::decode_shader_library(bytes, library) ==
+          granit::detail::shader_format::shader_library_error::success);
   const auto& shader = find_shader(library, granit::shader_stage::fragment);
   CHECK(shader.entry_point == "fragment_main");
   require_binding(shader.reflection_json, 0, 0, "uniform_buffer", 128);

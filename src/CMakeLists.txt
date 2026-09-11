@@ -5,7 +5,7 @@ add_library(granit)
 add_library(granit::granit ALIAS granit)
 granit_target_output_directories(granit)
 
-add_subdirectory(assets)
+add_subdirectory(shader_format)
 
 set(GRANIT_GENERATED_INCLUDE_DIR "${CMAKE_CURRENT_BINARY_DIR}/generated/include")
 set(GRANIT_GENERATED_VERSION_HEADER
@@ -21,7 +21,7 @@ configure_file(
 target_sources(
   granit
   PRIVATE
-    $<TARGET_OBJECTS:granit_internal_shader_asset_format>
+    $<TARGET_OBJECTS:granit_internal_shader_format>
     backend/contracts/access.h
     backend/contracts/binding.h
     backend/contracts/capabilities.h

@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include "assets/shader_asset.h"
-#include "assets/shader_library.h"
+#include "shader_format/shader_library.h"
+#include "shader_format/shader_object.h"
 
 #include <algorithm>
 #include <array>
@@ -13,14 +13,14 @@
 namespace {
 
 void refresh_digest(std::vector<std::byte>& bytes) {
-  const auto digest = granit::tools::shader_bytes_sha256_zeroed(bytes, 80, 32);
+  const auto digest = granit::detail::shader_format::shader_bytes_sha256_zeroed(bytes, 80, 32);
   std::ranges::copy(digest, bytes.begin() + 80);
 }
 
 } // namespace
 
 int main() {
-  using namespace granit::tools;
+  using namespace granit::detail::shader_format;
   constexpr std::string_view wgsl = "@compute @workgroup_size(1) fn main() {}\n";
   constexpr std::array spirv{std::byte{3}, std::byte{2}, std::byte{35}, std::byte{7}};
   constexpr std::string_view reflection = "{\"schema\":1}\n";

@@ -107,7 +107,7 @@ add_dependencies(granit_render_pipeline_offscreen_smoke granit_material_tool)
 target_sources(
   granit_render_pipeline_offscreen_smoke
   PRIVATE "${granit_render_pipeline_smoke_package}"
-          $<TARGET_OBJECTS:granit_internal_shader_asset_format>
+          $<TARGET_OBJECTS:granit_internal_shader_format>
 )
 add_test(
   NAME granit.smoke.render_pipeline_offscreen
@@ -156,7 +156,7 @@ if(WIN32)
   target_sources(
     granit_render_pipeline_window_smoke
     PRIVATE "${granit_render_pipeline_smoke_package}"
-            $<TARGET_OBJECTS:granit_internal_shader_asset_format>
+            $<TARGET_OBJECTS:granit_internal_shader_format>
   )
   add_test(
     NAME granit.smoke.render_pipeline_window

@@ -3,8 +3,8 @@
 
 #include "texture_asset.h"
 
-#include "assets/shader_asset.h"
 #include "core/texture_format.h"
+#include "shader_format/digest.h"
 
 #include <algorithm>
 #include <array>
@@ -134,8 +134,7 @@ texture_asset_error encode_texture_asset(const texture_asset_view& asset,
     write_u32(encoded, offset + 12, variant.subresource_count);
     write_u64(encoded, offset + 16, variant.payload_offset);
     write_u64(encoded, offset + 24, variant.payload_size);
-    std::memcpy(encoded.data() + offset + 32, variant.payload_digest,
-                GRANIT_TEXTURE_ASSET_ID_SIZE);
+    std::memcpy(encoded.data() + offset + 32, variant.payload_digest, GRANIT_TEXTURE_ASSET_ID_SIZE);
     write_u32(encoded, offset + 64, variant.reserved[0]);
     write_u32(encoded, offset + 68, variant.reserved[1]);
   }
@@ -223,8 +222,7 @@ texture_asset_error decode_texture_asset(std::span<const std::byte> manifest,
     return texture_asset_error::invalid_layout;
 
   for (uint32_t index = 0; index < subresource_count; ++index) {
-    const auto offset =
-        subresource_table + static_cast<size_t>(index) * subresource_size;
+    const auto offset = subresource_table + static_cast<size_t>(index) * subresource_size;
     auto& subresource = result.subresources[index];
     subresource.mip_level = read_u32(manifest, offset);
     subresource.array_layer = read_u32(manifest, offset + 4);
@@ -267,7 +265,7 @@ bool validate_texture_asset_payload(const texture_asset_view& asset, uint32_t va
     return false;
   const auto bytes = payload.subspan(static_cast<size_t>(variant.payload_offset),
                                      static_cast<size_t>(variant.payload_size));
-  const auto actual = tools::shader_bytes_sha256(bytes);
+  const auto actual = shader_format::shader_bytes_sha256(bytes);
   return std::memcmp(actual.data(), variant.payload_digest, actual.size()) == 0;
 }
 

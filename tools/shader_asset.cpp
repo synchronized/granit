@@ -16,6 +16,7 @@
 #endif
 
 namespace granit::tools {
+using namespace granit::detail::shader_format;
 namespace {
 
 std::vector<std::byte> read_file(const std::filesystem::path& path) {

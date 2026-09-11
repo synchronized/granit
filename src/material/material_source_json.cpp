@@ -2,7 +2,7 @@
 // Copyright (c) 2026 Granit contributors
 
 #include "material/material_source_json.h"
-#include "assets/shader_asset.h"
+#include "shader_format/shader_object.h"
 
 #include <algorithm>
 #include <array>
@@ -253,9 +253,9 @@ bool read_shader_asset(const std::filesystem::path& path, material_shader_code& 
   stream.read(reinterpret_cast<char*>(bytes.data()), length);
   if (!stream)
     return false;
-  granit::tools::shader_asset_view asset;
-  if (granit::tools::decode_shader_asset(bytes, asset) !=
-      granit::tools::shader_asset_error::success) {
+  granit::detail::shader_format::shader_asset_view asset;
+  if (granit::detail::shader_format::decode_shader_asset(bytes, asset) !=
+      granit::detail::shader_format::shader_asset_error::success) {
     return false;
   }
   if (asset.stage == shader_stage::vertex) {

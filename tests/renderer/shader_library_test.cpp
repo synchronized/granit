@@ -5,8 +5,8 @@
 #include <granit/renderer/shader.hpp>
 #include <granit/renderer/shader_library.hpp>
 
-#include "assets/shader_asset.h"
-#include "assets/shader_library.h"
+#include "shader_format/shader_library.h"
+#include "shader_format/shader_object.h"
 
 #include <array>
 #include <filesystem>
@@ -20,7 +20,7 @@
 namespace {
 
 std::vector<std::byte> make_library() {
-  using namespace granit::tools;
+  using namespace granit::detail::shader_format;
   constexpr std::string_view wgsl = "@compute @workgroup_size(1) fn main() {}\n";
   constexpr std::array spirv{std::byte{3}, std::byte{2}, std::byte{35}, std::byte{7}};
   constexpr std::string_view reflection = "{\"schema\":1}\n";
@@ -51,7 +51,7 @@ std::vector<std::byte> read_binary(const std::filesystem::path& path) {
 }
 
 std::vector<std::byte> make_runtime_library(granit::shader_cache_key& content_id) {
-  using namespace granit::tools;
+  using namespace granit::detail::shader_format;
   const auto directory = std::filesystem::path{GRANIT_TEST_ASSET_DIR};
   const auto manifest = read_binary(directory / "minimal.vert.grshader");
   const auto wgsl = read_binary(directory / "minimal.vert.grshader.wgsl");
