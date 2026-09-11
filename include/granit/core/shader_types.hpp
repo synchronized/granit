@@ -4,10 +4,9 @@
 #ifndef GRANIT_CORE_SHADER_TYPES_HPP_
 #define GRANIT_CORE_SHADER_TYPES_HPP_
 
-#include <array>
-#include <cstddef>
 #include <cstdint>
 
+#include <granit/core/content_id.hpp>
 #include <granit/core/shader_types.h>
 
 namespace granit {
@@ -39,12 +38,10 @@ enum class shader_profile : std::uint32_t {
   portable = GRANIT_SHADER_PROFILE_PORTABLE,
 };
 
-/** Shader 资产及 Library 使用的固定长度摘要。 */
-using shader_digest = std::array<std::byte, GRANIT_SHADER_DIGEST_SIZE>;
 /** 标识一项 Shader 资产，供 Shader Library 查找。 */
-using shader_content_id = shader_digest;
+using shader_content_id = asset_content_id;
 /** 标识完整 Shader 构建输入，用于缓存失效。 */
-using shader_cache_key = shader_digest;
+using shader_cache_key = content_digest;
 
 } // namespace granit
 

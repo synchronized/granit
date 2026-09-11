@@ -4,8 +4,10 @@
 # 运行时与离线工具共享的私有 Shader 格式层，不提供公共别名或安装导出。
 add_library(
   granit_internal_shader_format OBJECT
-  digest.cpp
-  digest.h
+  ../core/sha256.cpp
+  ../core/sha256.h
+  shader_cache_key.cpp
+  shader_cache_key.h
   shader_object.cpp
   shader_object.h
   shader_library.cpp

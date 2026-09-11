@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include "shader_format/digest.h"
+#include "core/sha256.h"
 
 #include <algorithm>
 #include <array>
 #include <bit>
 
-namespace granit::detail::shader_format {
+namespace granit::detail {
 namespace {
 
 class sha256_context {
@@ -23,7 +23,7 @@ public:
     }
   }
 
-  std::array<std::byte, 32> finish() noexcept {
+  content_digest finish() noexcept {
     const auto bit_size = total_size_ * 8U;
     block_[block_size_++] = std::byte{0x80};
     if (block_size_ > 56) {
@@ -37,7 +37,7 @@ public:
     for (std::uint32_t index = 0; index < 8; ++index)
       block_[63 - index] = static_cast<std::byte>(bit_size >> (index * 8U));
     transform();
-    std::array<std::byte, 32> result{};
+    content_digest result{};
     for (std::size_t index = 0; index < state_.size(); ++index) {
       result[index * 4] = static_cast<std::byte>(state_[index] >> 24U);
       result[index * 4 + 1] = static_cast<std::byte>(state_[index] >> 16U);
@@ -115,47 +115,25 @@ private:
   std::uint64_t total_size_ = 0;
 };
 
-std::array<std::byte, 32> payload_digest(std::span<const std::byte> bytes) noexcept {
+} // namespace
+
+content_digest sha256_bytes(std::span<const std::byte> bytes) noexcept {
   sha256_context context;
   context.update(bytes);
   return context.finish();
 }
 
-void update_cache_field(sha256_context& context, std::string_view value) noexcept {
-  std::array<std::byte, 8> size{};
-  const auto field_size = static_cast<std::uint64_t>(value.size());
-  for (std::uint32_t index = 0; index < size.size(); ++index)
-    size[index] = static_cast<std::byte>(field_size >> (index * 8U));
-  context.update(size);
-  context.update({reinterpret_cast<const std::byte*>(value.data()), value.size()});
+content_digest sha256_bytes(
+    std::span<const std::span<const std::byte>> segments) noexcept {
+  sha256_context context;
+  for (const auto segment : segments)
+    context.update(segment);
+  return context.finish();
 }
 
-} // namespace
-
-shader_cache_key make_shader_cache_key(const shader_cache_context& context) noexcept {
-  sha256_context hash;
-  constexpr std::string_view domain = "granit-shader-cache-v3";
-  update_cache_field(hash, domain);
-  update_cache_field(hash, context.source_language);
-  update_cache_field(hash, context.source);
-  update_cache_field(hash, context.entry_point);
-  update_cache_field(hash, context.stage);
-  update_cache_field(hash, context.tint_revision);
-  update_cache_field(hash, context.target_environment);
-  update_cache_field(hash, context.compile_options);
-  std::array<std::byte, 8> features{};
-  for (std::uint32_t index = 0; index < features.size(); ++index)
-    features[index] = static_cast<std::byte>(context.required_features >> (index * 8U));
-  hash.update(features);
-  return hash.finish();
-}
-
-shader_cache_key shader_bytes_sha256(std::span<const std::byte> bytes) noexcept {
-  return payload_digest(bytes);
-}
-
-shader_cache_key shader_bytes_sha256_zeroed(std::span<const std::byte> bytes, std::size_t offset,
-                                            std::size_t size) noexcept {
+content_digest sha256_bytes_with_zeroed_range(std::span<const std::byte> bytes,
+                                              std::size_t offset,
+                                              std::size_t size) noexcept {
   if (offset > bytes.size() || size > bytes.size() - offset)
     return {};
   const auto suffix_offset = offset + size;
@@ -171,4 +149,4 @@ shader_cache_key shader_bytes_sha256_zeroed(std::span<const std::byte> bytes, st
   return context.finish();
 }
 
-} // namespace granit::detail::shader_format
+} // namespace granit::detail

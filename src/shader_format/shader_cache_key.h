@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#ifndef GRANIT_SHADER_FORMAT_DIGEST_H_
-#define GRANIT_SHADER_FORMAT_DIGEST_H_
+#ifndef GRANIT_SHADER_FORMAT_SHADER_CACHE_KEY_H_
+#define GRANIT_SHADER_FORMAT_SHADER_CACHE_KEY_H_
 
 #include <cstddef>
 #include <cstdint>
@@ -25,9 +25,6 @@ struct shader_cache_context {
 };
 
 shader_cache_key make_shader_cache_key(const shader_cache_context& context) noexcept;
-shader_cache_key shader_bytes_sha256(std::span<const std::byte> bytes) noexcept;
-shader_cache_key shader_bytes_sha256_zeroed(std::span<const std::byte> bytes, std::size_t offset,
-                                            std::size_t size) noexcept;
 
 } // namespace granit::detail::shader_format
 

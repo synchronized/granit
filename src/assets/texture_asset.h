@@ -4,6 +4,7 @@
 #ifndef GRANIT_ASSETS_TEXTURE_ASSET_H_
 #define GRANIT_ASSETS_TEXTURE_ASSET_H_
 
+#include <granit/core/content_id.hpp>
 #include <granit/renderer/texture_asset.h>
 
 #include <array>
@@ -17,7 +18,7 @@ namespace granit::detail {
 enum class texture_asset_error { success, invalid_argument, unsupported_schema, invalid_layout };
 
 struct texture_asset_view {
-  std::array<std::byte, GRANIT_TEXTURE_ASSET_ID_SIZE> content_id{};
+  asset_content_id content_id{};
   granit_texture_dimension dimension{};
   uint32_t width{};
   uint32_t height{};

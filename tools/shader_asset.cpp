@@ -3,6 +3,8 @@
 
 #include "shader_asset.h"
 
+#include "core/sha256.h"
+
 #include <algorithm>
 #include <atomic>
 #include <fstream>
@@ -82,12 +84,12 @@ std::filesystem::path sidecar_path(const std::filesystem::path& manifest, std::s
 
 } // namespace
 
-std::string shader_file_sha256(const std::filesystem::path& path) noexcept {
+std::string file_sha256_hex(const std::filesystem::path& path) noexcept {
   try {
     const auto bytes = read_file(path);
     if (bytes.empty())
       return {};
-    const auto hash = shader_bytes_sha256(bytes);
+    const auto hash = granit::detail::sha256_bytes(bytes);
     constexpr char digits[] = "0123456789abcdef";
     std::string result(hash.size() * 2, '0');
     for (std::size_t index = 0; index < hash.size(); ++index) {

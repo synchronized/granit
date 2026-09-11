@@ -3,6 +3,8 @@
 
 #include "shader_format/shader_object.h"
 
+#include "core/sha256.h"
+
 #include <algorithm>
 #include <array>
 #include <bit>
@@ -49,7 +51,7 @@ void write_u64(std::span<std::byte> bytes, std::size_t offset, std::uint64_t val
 }
 
 std::array<std::byte, 32> digest(std::span<const std::byte> bytes) noexcept {
-  return shader_bytes_sha256_zeroed(bytes, digest_offset, 32);
+  return sha256_bytes_with_zeroed_range(bytes, digest_offset, 32);
 }
 
 bool valid_section(std::uint64_t offset, std::uint64_t size, std::uint64_t total) noexcept {
@@ -124,7 +126,7 @@ shader_asset_error encode_shader_asset(const shader_asset_source& source,
                      .profile = shader_profile::portable,
                      .required_features = source.required_features,
                      .byte_size = source.wgsl.size(),
-                     .digest = shader_bytes_sha256(wgsl_bytes)});
+                     .digest = sha256_bytes(wgsl_bytes)});
     }
     if ((source.backend_mask & GRANIT_SHADER_BACKEND_VULKAN_BIT) != 0) {
       write_variant(output, variant_index,
@@ -133,7 +135,7 @@ shader_asset_error encode_shader_asset(const shader_asset_source& source,
                      .profile = shader_profile::portable,
                      .required_features = source.required_features,
                      .byte_size = source.spirv.size(),
-                     .digest = shader_bytes_sha256(source.spirv)});
+                     .digest = sha256_bytes(source.spirv)});
     }
     std::memcpy(output.data() + reflection_offset, source.reflection_json.data(),
                 source.reflection_json.size());
@@ -219,8 +221,8 @@ shader_asset_error validate_shader_asset_payloads(const shader_asset_view& asset
         spirv.size() != spirv_variant->byte_size || spirv.size() % 4 != 0)))
     return shader_asset_error::invalid_layout;
   const auto wgsl_bytes = std::span{reinterpret_cast<const std::byte*>(wgsl.data()), wgsl.size()};
-  return (wgsl_variant == nullptr || shader_bytes_sha256(wgsl_bytes) == wgsl_variant->digest) &&
-                 (spirv_variant == nullptr || shader_bytes_sha256(spirv) == spirv_variant->digest)
+  return (wgsl_variant == nullptr || sha256_bytes(wgsl_bytes) == wgsl_variant->digest) &&
+                 (spirv_variant == nullptr || sha256_bytes(spirv) == spirv_variant->digest)
              ? shader_asset_error::success
              : shader_asset_error::digest_mismatch;
 }
@@ -237,8 +239,8 @@ shader_asset_error validate_shader_asset_payload(const shader_asset_view& asset,
       payload.size() != variant->byte_size ||
       (expected_format == shader_code_format::spirv && payload.size() % 4 != 0))
     return shader_asset_error::invalid_layout;
-  return shader_bytes_sha256(payload) == variant->digest ? shader_asset_error::success
-                                                         : shader_asset_error::digest_mismatch;
+  return sha256_bytes(payload) == variant->digest ? shader_asset_error::success
+                                                  : shader_asset_error::digest_mismatch;
 }
 
 } // namespace granit::detail::shader_format

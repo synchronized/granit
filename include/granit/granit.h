@@ -6,6 +6,7 @@
 
 #include <stdint.h>
 
+#include <granit/core/content_id.h>
 #include <granit/core/diagnostic.h>
 #include <granit/core/export.h>
 #include <granit/core/result.h>

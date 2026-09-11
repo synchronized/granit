@@ -112,7 +112,7 @@ granit_shader_create_from_library(granit_renderer renderer, granit_shader_librar
   if (content_id == nullptr)
     return GRANIT_ERROR_INVALID_ARGUMENT;
   try {
-    std::array<std::byte, GRANIT_SHADER_DIGEST_SIZE> id{};
+    granit::shader_content_id id{};
     std::memcpy(id.data(), content_id, id.size());
     return granit::detail::renderer_registry::instance().create_shader_from_library(
         renderer, library, id, *shader);

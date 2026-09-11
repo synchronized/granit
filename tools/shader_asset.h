@@ -11,7 +11,7 @@
 
 namespace granit::tools {
 
-std::string shader_file_sha256(const std::filesystem::path& path) noexcept;
+std::string file_sha256_hex(const std::filesystem::path& path) noexcept;
 granit::detail::shader_format::shader_asset_error
 store_shader_asset(const std::filesystem::path& path, std::span<const std::byte> manifest,
                    std::string_view wgsl, std::span<const std::byte> spirv,

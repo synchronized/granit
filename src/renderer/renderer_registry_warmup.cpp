@@ -5,7 +5,7 @@
 #include "renderer/renderer_registry_records.h"
 
 #include "core/async_operation_state.h"
-#include "shader_format/digest.h"
+#include "core/sha256.h"
 
 #include <algorithm>
 #include <cstring>
@@ -271,7 +271,7 @@ granit_result renderer_registry::make_pipeline_warmup_key(
                    reinterpret_cast<const std::byte*>(compute->entry_point.data() +
                                                       compute->entry_point.size()));
     }
-    const auto digest = granit::detail::shader_format::shader_bytes_sha256(bytes);
+    const auto digest = granit::detail::sha256_bytes(bytes);
     for (std::size_t index = 0; index < digest.size(); ++index)
       key[index] = static_cast<std::uint8_t>(digest[index]);
     return GRANIT_SUCCESS;

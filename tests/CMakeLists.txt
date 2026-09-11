@@ -61,6 +61,7 @@ add_library(
   granit_c_header_test
   OBJECT
     abi/layout_h.c
+    headers/content_id_h.c
     headers/diagnostic_h.c
     headers/async_operation_h.c
     headers/command_recorder_h.c
@@ -200,6 +201,18 @@ target_link_libraries(
 )
 granit_target_compile_warnings(granit_handle_table_test)
 add_test(NAME granit.handle_table COMMAND granit_handle_table_test)
+
+add_executable(
+  granit_sha256_test
+  core/sha256_test.cpp
+  "${PROJECT_SOURCE_DIR}/src/core/sha256.cpp"
+)
+target_include_directories(
+  granit_sha256_test PRIVATE "${PROJECT_SOURCE_DIR}/src" "${PROJECT_SOURCE_DIR}/include"
+)
+target_link_libraries(granit_sha256_test PRIVATE Catch2::Catch2WithMain)
+granit_target_compile_warnings(granit_sha256_test)
+add_test(NAME granit.sha256 COMMAND granit_sha256_test)
 
 add_executable(
   granit_async_operation_state_test
@@ -607,6 +620,7 @@ add_test(NAME granit.vulkan_backend COMMAND granit_vulkan_backend_test)
 add_library(
   granit_cpp_header_test
   OBJECT
+    headers/content_id_hpp.cpp
     headers/diagnostic_hpp.cpp
     headers/async_operation_hpp.cpp
     headers/command_recorder_hpp.cpp

@@ -4,6 +4,7 @@
 #include "renderer/renderer_registry.h"
 #include "renderer/renderer_registry_records.h"
 
+#include "core/sha256.h"
 #include "shader_format/shader_library.h"
 
 #include <algorithm>
@@ -100,7 +101,7 @@ granit_result renderer_registry::get_shader_library_info(granit_renderer rendere
 
 granit_result renderer_registry::create_shader_from_library(
     granit_renderer renderer, granit_shader_library library,
-    const std::array<std::byte, GRANIT_SHADER_DIGEST_SIZE>& content_id, granit_shader& shader) {
+    const granit::shader_content_id& content_id, granit_shader& shader) {
   try {
     std::shared_ptr<shader_library_record> library_record;
     {
@@ -156,8 +157,7 @@ granit_result renderer_registry::create_shader_from_library(
     if (variant == source->variants.end())
       return GRANIT_ERROR_UNSUPPORTED;
     const auto& payload = library_record->view.payloads[variant->payload_index];
-    if (shader_format::shader_bytes_sha256(payload.bytes) != payload.digest ||
-        payload.digest != variant->payload_digest)
+    if (sha256_bytes(payload.bytes) != payload.digest || payload.digest != variant->payload_digest)
       return GRANIT_ERROR_INVALID_ARGUMENT;
 
     granit_result result = GRANIT_ERROR_UNSUPPORTED;

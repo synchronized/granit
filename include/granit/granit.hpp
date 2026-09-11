@@ -6,6 +6,7 @@
 
 #include <cstdint>
 
+#include <granit/core/content_id.hpp>
 #include <granit/core/diagnostic.hpp>
 #include <granit/core/result.hpp>
 #include <granit/core/shader_types.hpp>

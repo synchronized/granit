@@ -11,7 +11,7 @@
 #include <string_view>
 #include <vector>
 
-#include "shader_format/digest.h"
+#include "shader_format/shader_cache_key.h"
 
 #include <granit/core/shader_types.hpp>
 
@@ -37,7 +37,7 @@ struct shader_asset_variant {
   shader_profile profile{};
   std::uint64_t required_features = 0;
   std::uint64_t byte_size = 0;
-  shader_cache_key digest{};
+  content_digest digest{};
 };
 
 struct shader_asset_source {
@@ -54,7 +54,7 @@ struct shader_asset_source {
 struct shader_asset_view {
   std::string_view reflection_json;
   shader_cache_key cache_key{};
-  shader_cache_key content_id{};
+  shader_content_id content_id{};
   shader_stage stage{};
   std::string_view entry_point;
   std::array<shader_asset_variant, 2> variants{};

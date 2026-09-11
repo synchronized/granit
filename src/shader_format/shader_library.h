@@ -44,13 +44,13 @@ struct shader_library_variant {
   shader_profile profile{};
   std::uint64_t required_features = 0;
   std::uint32_t payload_index = 0;
-  shader_cache_key payload_digest{};
+  content_digest payload_digest{};
 
   friend bool operator==(const shader_library_variant&, const shader_library_variant&) = default;
 };
 
 struct shader_library_shader {
-  shader_cache_key content_id{};
+  shader_content_id content_id{};
   shader_cache_key cache_key{};
   shader_stage stage{};
   std::string_view entry_point;
@@ -59,12 +59,12 @@ struct shader_library_shader {
 };
 
 struct shader_library_payload {
-  shader_cache_key digest{};
+  content_digest digest{};
   std::span<const std::byte> bytes;
 };
 
 struct shader_library_view {
-  shader_cache_key content_digest{};
+  content_digest content_digest{};
   granit_shader_backend_flags backend_mask = 0;
   std::vector<shader_library_shader> shaders;
   std::vector<shader_library_payload> payloads;
@@ -76,7 +76,7 @@ struct shader_library_view {
                                                          shader_library_view& output) noexcept;
 [[nodiscard]] const shader_library_shader*
 find_shader_library_shader(const shader_library_view& library,
-                           const shader_cache_key& content_id) noexcept;
+                           const shader_content_id& content_id) noexcept;
 
 } // namespace granit::detail::shader_format
 

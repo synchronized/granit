@@ -65,7 +65,7 @@ typedef struct granit_shader_asset_variant_info {
   uint32_t reserved;
   granit_shader_feature_flags required_features;
   uint64_t payload_size;
-  granit_shader_digest payload_digest;
+  granit_content_digest payload_digest;
 } granit_shader_asset_variant_info;
 
 /** 已验证 Shader Asset 清单的只读摘要；entry_point 由调用方提供存储。 */

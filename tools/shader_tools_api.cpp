@@ -389,7 +389,7 @@ granit_result granit_shader_tools_get_tool_identity(const char* path, uint64_t p
   if (identity_length == nullptr || !valid_string(path, path_length) || path_length == 0)
     return GRANIT_ERROR_INVALID_ARGUMENT;
   try {
-    const auto digest = granit::tools::shader_file_sha256(copy_path(path, path_length));
+    const auto digest = granit::tools::file_sha256_hex(copy_path(path, path_length));
     if (digest.empty())
       return GRANIT_ERROR_INVALID_ARGUMENT;
     const auto required = static_cast<uint64_t>(digest.size());

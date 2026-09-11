@@ -3,6 +3,8 @@
 
 #include "shader_format/shader_library.h"
 
+#include "core/sha256.h"
+
 #include <algorithm>
 #include <array>
 #include <cstring>
@@ -95,7 +97,7 @@ bool valid_variant(const shader_library_variant& variant) noexcept {
 }
 
 struct encoded_shader {
-  shader_cache_key content_id{};
+  shader_content_id content_id{};
   shader_cache_key cache_key{};
   shader_stage stage{};
   std::string entry_point;
@@ -104,7 +106,7 @@ struct encoded_shader {
 };
 
 struct encoded_payload {
-  shader_cache_key digest{};
+  content_digest digest{};
   std::vector<std::byte> bytes;
 };
 
@@ -114,7 +116,7 @@ bool same_shader(const encoded_shader& left, const encoded_shader& right) noexce
          left.reflection_json == right.reflection_json && left.variants == right.variants;
 }
 
-shader_library_error add_payload(std::span<const std::byte> bytes, const shader_cache_key& digest,
+shader_library_error add_payload(std::span<const std::byte> bytes, const content_digest& digest,
                                  std::vector<encoded_payload>& payloads) {
   const auto found = std::ranges::find(payloads, digest, &encoded_payload::digest);
   if (found != payloads.end())
@@ -283,7 +285,7 @@ shader_library_error encode_shader_library(const shader_library_encode_desc& des
       std::ranges::copy(payload.bytes, output.begin() + static_cast<std::ptrdiff_t>(next_payload));
       next_payload += payload.bytes.size();
     }
-    const auto digest = shader_bytes_sha256_zeroed(output, digest_offset, 32);
+    const auto digest = sha256_bytes_with_zeroed_range(output, digest_offset, 32);
     std::ranges::copy(digest, output.begin() + static_cast<std::ptrdiff_t>(digest_offset));
     return shader_library_error::success;
   } catch (...) {
@@ -327,7 +329,7 @@ shader_library_error decode_shader_library(std::span<const std::byte> bytes,
       payload_data_offset > bytes.size() || payload_data_offset % 8 != 0) {
     return shader_library_error::invalid_layout;
   }
-  const auto expected_digest = shader_bytes_sha256_zeroed(bytes, digest_offset, 32);
+  const auto expected_digest = sha256_bytes_with_zeroed_range(bytes, digest_offset, 32);
   if (!std::ranges::equal(expected_digest, bytes.subspan(digest_offset, 32)))
     return shader_library_error::digest_mismatch;
   try {
@@ -338,7 +340,7 @@ shader_library_error decode_shader_library(std::span<const std::byte> bytes,
     parsed.payloads.reserve(payload_count);
     std::size_t next_variant = 0;
     std::uint64_t next_string = string_offset;
-    shader_cache_key previous_shader{};
+    shader_content_id previous_shader{};
     for (std::size_t shader_index = 0; shader_index < shader_count; ++shader_index) {
       const auto record =
           static_cast<std::size_t>(shader_offset) + shader_index * shader_record_size;
@@ -402,7 +404,7 @@ shader_library_error decode_shader_library(std::span<const std::byte> bytes,
       return shader_library_error::invalid_layout;
     }
     std::uint64_t next_payload = payload_data_offset;
-    shader_cache_key previous_payload{};
+    content_digest previous_payload{};
     // 解码器要求规范顺序和连续范围，避免同一语义存在多种可接受编码。
     for (std::size_t index = 0; index < payload_count; ++index) {
       const auto record = static_cast<std::size_t>(payload_offset) + index * payload_record_size;
@@ -421,7 +423,7 @@ shader_library_error decode_shader_library(std::span<const std::byte> bytes,
       }
       payload.bytes =
           bytes.subspan(static_cast<std::size_t>(offset), static_cast<std::size_t>(size));
-      if (shader_bytes_sha256(payload.bytes) != payload.digest)
+      if (sha256_bytes(payload.bytes) != payload.digest)
         return shader_library_error::digest_mismatch;
       next_payload = offset + size;
       previous_payload = payload.digest;
@@ -450,7 +452,7 @@ shader_library_error decode_shader_library(std::span<const std::byte> bytes,
 
 const shader_library_shader*
 find_shader_library_shader(const shader_library_view& library,
-                           const shader_cache_key& content_id) noexcept {
+                           const shader_content_id& content_id) noexcept {
   const auto found =
       std::ranges::lower_bound(library.shaders, content_id, {}, &shader_library_shader::content_id);
   return found != library.shaders.end() && found->content_id == content_id ? &*found : nullptr;

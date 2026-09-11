@@ -36,7 +36,7 @@ typedef struct granit_shader_library_desc {
 typedef struct granit_shader_library_info {
   uint32_t struct_size;
   granit_shader_backend_flags backend_flags;
-  granit_shader_digest content_digest;
+  granit_content_digest content_digest;
   uint32_t shader_count;
   uint32_t variant_count;
   uint32_t payload_count;

@@ -3,7 +3,7 @@
 
 #include "pipeline/environment_asset.h"
 
-#include "shader_format/digest.h"
+#include "core/sha256.h"
 
 #include <algorithm>
 #include <array>
@@ -127,8 +127,7 @@ environment_package_error parse_environment_package(std::span<const std::byte> b
   if (read_u64(bytes, 40) != expected_payload || expected_payload != bytes.size() - header_size) {
     return environment_package_error::invalid_layout;
   }
-  const auto digest =
-      granit::detail::shader_format::shader_bytes_sha256(bytes.subspan(header_size));
+  const auto digest = granit::detail::sha256_bytes(bytes.subspan(header_size));
   if (!std::ranges::equal(digest, bytes.subspan(64, digest.size())))
     return environment_package_error::digest_mismatch;
 
@@ -219,8 +218,8 @@ environment_package_error encode_environment_package(const environment_package& 
     for (const auto& mip : package.prefiltered_mips)
       destination = std::ranges::copy(mip.pixels, destination).out;
     std::ranges::copy(package.brdf_pixels, destination);
-    const auto digest = granit::detail::shader_format::shader_bytes_sha256(
-        std::span<const std::byte>{candidate}.subspan(header_size));
+    const auto digest =
+        granit::detail::sha256_bytes(std::span<const std::byte>{candidate}.subspan(header_size));
     std::ranges::copy(digest, candidate.begin() + 64);
     output = std::move(candidate);
     return environment_package_error::none;

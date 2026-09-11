@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
+#include "core/sha256.h"
 #include "shader_format/shader_library.h"
 #include "shader_format/shader_object.h"
 
@@ -13,7 +14,7 @@
 namespace {
 
 void refresh_digest(std::vector<std::byte>& bytes) {
-  const auto digest = granit::detail::shader_format::shader_bytes_sha256_zeroed(bytes, 80, 32);
+  const auto digest = granit::detail::sha256_bytes_with_zeroed_range(bytes, 80, 32);
   std::ranges::copy(digest, bytes.begin() + 80);
 }
 

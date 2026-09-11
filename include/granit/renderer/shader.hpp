@@ -42,7 +42,7 @@ struct shader_asset_variant_info {
   std::uint32_t profile{};
   std::uint64_t required_features{};
   std::uint64_t payload_size{};
-  shader_digest payload_digest{};
+  content_digest payload_digest{};
 };
 
 struct shader_asset_info {

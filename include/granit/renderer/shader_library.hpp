@@ -19,7 +19,7 @@ namespace granit {
 
 struct shader_library_info {
   shader_backend backends{shader_backend::none};
-  shader_digest content_digest{};
+  granit::content_digest content_digest{};
   std::uint32_t shader_count{};
   std::uint32_t variant_count{};
   std::uint32_t payload_count{};

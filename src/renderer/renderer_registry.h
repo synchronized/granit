@@ -17,6 +17,7 @@
 #include <unordered_map>
 #include <vector>
 
+#include <granit/core/shader_types.hpp>
 #include <granit/renderer/async_operation.h>
 #include <granit/renderer/buffer.h>
 #include <granit/renderer/command_recorder.h>
@@ -194,8 +195,7 @@ public:
                                                       granit_shader_library_info& info);
   [[nodiscard]] granit_result
   create_shader_from_library(granit_renderer renderer, granit_shader_library library,
-                             const std::array<std::byte, GRANIT_SHADER_DIGEST_SIZE>& content_id,
-                             granit_shader& shader);
+                             const granit::shader_content_id& content_id, granit_shader& shader);
   [[nodiscard]] granit_result destroy_shader_library(granit_renderer renderer,
                                                      granit_shader_library library);
   [[nodiscard]] granit_result

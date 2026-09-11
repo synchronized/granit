@@ -6,6 +6,7 @@
 
 #include <stdint.h>
 
+#include <granit/core/content_id.h>
 #include <granit/core/export.h>
 #include <granit/core/result.h>
 #include <granit/renderer/renderer.h>
@@ -13,8 +14,10 @@
 #include <granit/renderer/texture.h>
 #include <granit/renderer/upload_batch.h>
 
-#define GRANIT_TEXTURE_ASSET_ID_SIZE UINT32_C(32)
 #define GRANIT_TEXTURE_ASSET_SCHEMA_VERSION UINT32_C(1)
+
+/** 标识一项 Texture Asset。 */
+typedef granit_asset_content_id granit_texture_content_id;
 
 /** Texture Asset 中单个 GPU 格式变体的只读摘要。 */
 typedef struct granit_texture_asset_variant_info {
@@ -24,7 +27,7 @@ typedef struct granit_texture_asset_variant_info {
   uint32_t subresource_count;
   uint64_t payload_offset;
   uint64_t payload_size;
-  uint8_t payload_digest[GRANIT_TEXTURE_ASSET_ID_SIZE];
+  granit_content_digest payload_digest;
   uint32_t reserved[2];
 } granit_texture_asset_variant_info;
 
@@ -43,7 +46,7 @@ typedef struct granit_texture_asset_subresource_info {
 typedef struct granit_texture_asset_info {
   uint32_t struct_size;
   uint32_t schema_version;
-  uint8_t content_id[GRANIT_TEXTURE_ASSET_ID_SIZE];
+  granit_texture_content_id content_id;
   granit_texture_dimension dimension;
   uint32_t width;
   uint32_t height;
@@ -127,8 +130,7 @@ GRANIT_API granit_result granit_texture_asset_inspect(const void* manifest_data,
  * manifest_size 输入容量并始终返回所需容量。
  */
 GRANIT_API granit_result granit_texture_asset_encode(const granit_texture_asset_info* info,
-                                                     void* manifest_data,
-                                                     uint64_t* manifest_size);
+                                                     void* manifest_data, uint64_t* manifest_size);
 
 /** 按 Manifest 顺序选择首个满足当前设备能力及调用方条件的变体。 */
 GRANIT_API granit_result granit_renderer_select_texture_asset_variant(

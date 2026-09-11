@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
+#include "core/sha256.h"
 #include "shader_asset.h"
 #include "shader_format/shader_library.h"
 #include <granit/tools/shader_tools.hpp>
@@ -172,15 +173,15 @@ int pack_shader_asset(int argc, char** argv) {
     return 1;
   }
   const std::string_view wgsl{reinterpret_cast<const char*>(wgsl_bytes.data()), wgsl_bytes.size()};
-  granit::detail::shader_format::shader_asset_source source{
-      .wgsl = wgsl,
-      .spirv = spirv,
-      .reflection_json = reflection_json,
-      .cache_key = granit::detail::shader_format::shader_bytes_sha256(spirv),
-      .backend_mask = 3,
-      .required_features = 0,
-      .stage = stage_value,
-      .entry_point = *entry};
+  granit::detail::shader_format::shader_asset_source source{.wgsl = wgsl,
+                                                            .spirv = spirv,
+                                                            .reflection_json = reflection_json,
+                                                            .cache_key =
+                                                                granit::detail::sha256_bytes(spirv),
+                                                            .backend_mask = 3,
+                                                            .required_features = 0,
+                                                            .stage = stage_value,
+                                                            .entry_point = *entry};
   std::vector<std::byte> manifest;
   if (granit::detail::shader_format::encode_shader_asset(source, manifest) !=
       granit::detail::shader_format::shader_asset_error::success) {

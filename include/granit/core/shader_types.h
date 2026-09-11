@@ -6,6 +6,8 @@
 
 #include <stdint.h>
 
+#include <granit/core/content_id.h>
+
 /** Shader 阶段。 */
 typedef uint32_t granit_shader_stage;
 #define GRANIT_SHADER_STAGE_VERTEX UINT32_C(1)
@@ -33,13 +35,9 @@ typedef uint32_t granit_shader_backend_flags;
 typedef uint32_t granit_shader_profile;
 #define GRANIT_SHADER_PROFILE_PORTABLE UINT32_C(1)
 
-#define GRANIT_SHADER_DIGEST_SIZE UINT32_C(32)
-
-/** Shader 资产及 Library 使用的固定长度摘要。 */
-typedef uint8_t granit_shader_digest[GRANIT_SHADER_DIGEST_SIZE];
 /** 标识一项 Shader 资产，供 Shader Library 查找。 */
-typedef granit_shader_digest granit_shader_content_id;
+typedef granit_asset_content_id granit_shader_content_id;
 /** 标识完整 Shader 构建输入，用于缓存失效。 */
-typedef granit_shader_digest granit_shader_cache_key;
+typedef granit_content_digest granit_shader_cache_key;
 
 #endif

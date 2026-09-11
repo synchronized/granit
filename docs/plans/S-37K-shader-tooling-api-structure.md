@@ -6,7 +6,7 @@
 ## 状态
 
 **实现中。** S-37K1 已完成共享 Shader 类型收敛；S-37K2 已完成统一 Compiler 配置、编译描述和
-单一编译入口。S-37K2A 通用内容摘要收敛及 S-37K3～S-37K6 待实施。
+单一编译入口；S-37K2A 已完成通用内容摘要收敛。S-37K3～S-37K6 待实施。
 
 ## 背景与目标
 
@@ -220,9 +220,9 @@ tools/shader_cli/
    格式编码器和测试；删除重复宏、枚举和固定长度数组别名。
 2. **S-37K2 统一 Compiler API（已完成）**：引入 Compiler 配置、统一编译描述和单一 `compile()`；
    两种语言共享句柄生命周期、参数校验和结果创建，前端差异留在工具内部；同步 C11 与 C++20 API。
-3. **S-37K2A 通用内容摘要收敛**：增加 Core 内容摘要类型和私有 SHA-256 实现；迁移 Shader、
-   Texture、Environment、Material Archive、Pipeline Warmup 与离线工具；删除重复算法和领域错误的
-   `shader_bytes_sha256`，同时保留内容 ID、载荷摘要与缓存键的语义名称。
+3. **S-37K2A 通用内容摘要收敛（已完成）**：增加 Core 内容摘要类型和私有 SHA-256 实现；迁移
+   Shader、Texture、Environment、Material Archive、Pipeline Warmup 与离线工具；删除重复算法和
+   领域错误的 `shader_bytes_sha256`，同时保留内容 ID、载荷摘要与缓存键的语义名称。
 4. **S-37K3 Compilation 与 Reflection**：将模糊的 Result 句柄拆成编译结果和反射视图；统一结构化
    Binding、接口变量、Workgroup 和 Override 查询；删除旧结果查询入口。
 5. **S-37K4 Shader Object 边界**：引入 `.grshaderobj`、Object Builder 和对象检查；迁移缓存、测试
@@ -232,7 +232,7 @@ tools/shader_cli/
 7. **S-37K6 资产、安装与发布验收**：重建内建及公共 Shader Library，删除仓库中的旧中间快照，
    更新 Reference、Guide、迁移说明、安装清单和可复现 Toolchain 包。
 
-每个阶段形成一个可独立评审的本地提交；六个阶段继续位于当前特性分支，不拆分 Pull Request。
+每个阶段形成一个可独立评审的本地提交；七个阶段继续位于当前特性分支，不拆分 Pull Request。
 
 ## 测试与验收
 
