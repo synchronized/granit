@@ -105,106 +105,94 @@ public:
                                 webgpu_pipeline_warmup* warmup) noexcept;
   [[nodiscard]] granit_result poll_pipeline_warmup(webgpu_pipeline_warmup warmup) noexcept;
   [[nodiscard]] granit_result destroy_pipeline_warmup(webgpu_pipeline_warmup warmup) noexcept;
-  [[nodiscard]] granit_result recorder_begin_compute(webgpu_instance_handle instance,
-                                                     webgpu_command_recorder recorder) noexcept;
+  [[nodiscard]] granit_result recorder_begin_compute(webgpu_command_recorder recorder) noexcept;
   [[nodiscard]] granit_result
-  recorder_bind_compute_pipeline(webgpu_instance_handle instance, webgpu_command_recorder recorder,
+  recorder_bind_compute_pipeline(webgpu_command_recorder recorder,
                                  webgpu_compute_pipeline pipeline) noexcept;
   [[nodiscard]] granit_result
-  recorder_bind_compute_groups(webgpu_instance_handle instance, webgpu_command_recorder recorder,
-                               webgpu_pipeline_layout layout, std::uint32_t first_group,
-                               std::span<const webgpu_bind_group> groups,
+  recorder_bind_compute_groups(webgpu_command_recorder recorder, webgpu_pipeline_layout layout,
+                               std::uint32_t first_group, std::span<const webgpu_bind_group> groups,
                                std::span<const std::uint32_t> dynamic_offsets) noexcept;
-  [[nodiscard]] granit_result recorder_dispatch(webgpu_instance_handle instance,
-                                                webgpu_command_recorder recorder, std::uint32_t x,
+  [[nodiscard]] granit_result recorder_dispatch(webgpu_command_recorder recorder, std::uint32_t x,
                                                 std::uint32_t y, std::uint32_t z) noexcept;
-  [[nodiscard]] granit_result recorder_end_compute(webgpu_instance_handle instance,
-                                                   webgpu_command_recorder recorder) noexcept;
+  [[nodiscard]] granit_result recorder_end_compute(webgpu_command_recorder recorder) noexcept;
   [[nodiscard]] granit_result
   create_render_pipeline(const webgpu_render_pipeline_desc* desc,
                          webgpu_render_pipeline* render_pipeline) noexcept;
   [[nodiscard]] granit_result destroy_render_pipeline(webgpu_render_pipeline pipeline) noexcept;
-  [[nodiscard]] granit_result create_command_recorder(webgpu_instance_handle instance,
-                                                      webgpu_command_recorder* recorder) noexcept;
-  [[nodiscard]] granit_result destroy_command_recorder(webgpu_instance_handle instance,
-                                                       webgpu_command_recorder recorder) noexcept;
+  [[nodiscard]] granit_result create_command_recorder(webgpu_command_recorder* recorder) noexcept;
+  [[nodiscard]] granit_result destroy_command_recorder(webgpu_command_recorder recorder) noexcept;
   [[nodiscard]] granit_result
-  recorder_copy_buffer_to_texture(webgpu_instance_handle instance, webgpu_command_recorder recorder,
-                                  webgpu_buffer buffer, webgpu_texture texture, std::uint32_t width,
-                                  std::uint32_t height, std::uint32_t bytes_per_row) noexcept;
+  recorder_copy_buffer_to_texture(webgpu_command_recorder recorder, webgpu_buffer buffer,
+                                  webgpu_texture texture, std::uint32_t width, std::uint32_t height,
+                                  std::uint32_t bytes_per_row) noexcept;
   [[nodiscard]] granit_result recorder_begin_rendering(
-      webgpu_instance_handle instance, webgpu_command_recorder recorder, webgpu_texture_view target,
-      webgpu_load_operation load, webgpu_store_operation store, const float clear[4],
-      webgpu_texture_view resolve_target = 0, webgpu_texture_view depth_target = 0,
+      webgpu_command_recorder recorder, webgpu_texture_view target, webgpu_load_operation load,
+      webgpu_store_operation store, const float clear[4], webgpu_texture_view resolve_target = 0,
+      webgpu_texture_view depth_target = 0,
       webgpu_load_operation depth_load = GRANIT_WEBGPU_LOAD_OPERATION_CLEAR,
       webgpu_store_operation depth_store = GRANIT_WEBGPU_STORE_OPERATION_DISCARD,
       float clear_depth = 1.0F) noexcept;
-  [[nodiscard]] granit_result recorder_bind_pipeline(webgpu_instance_handle instance,
-                                                     webgpu_command_recorder recorder,
+  [[nodiscard]] granit_result recorder_bind_pipeline(webgpu_command_recorder recorder,
                                                      webgpu_render_pipeline pipeline) noexcept;
   [[nodiscard]] granit_result
-  recorder_bind_graphics_groups(webgpu_instance_handle instance, webgpu_command_recorder recorder,
-                                webgpu_pipeline_layout layout, std::uint32_t first_group,
+  recorder_bind_graphics_groups(webgpu_command_recorder recorder, webgpu_pipeline_layout layout,
+                                std::uint32_t first_group,
                                 std::span<const webgpu_bind_group> groups,
                                 std::span<const std::uint32_t> dynamic_offsets) noexcept;
   [[nodiscard]] granit_result
-  recorder_bind_vertex_buffers(webgpu_instance_handle instance, webgpu_command_recorder recorder,
-                               std::uint32_t first,
+  recorder_bind_vertex_buffers(webgpu_command_recorder recorder, std::uint32_t first,
                                std::span<const webgpu_vertex_buffer_binding> bindings) noexcept;
-  [[nodiscard]] granit_result recorder_bind_index_buffer(webgpu_instance_handle instance,
-                                                         webgpu_command_recorder recorder,
+  [[nodiscard]] granit_result recorder_bind_index_buffer(webgpu_command_recorder recorder,
                                                          webgpu_buffer buffer, std::uint64_t offset,
                                                          webgpu_index_format format) noexcept;
   [[nodiscard]] granit_result
-  recorder_set_viewports(webgpu_instance_handle instance, webgpu_command_recorder recorder,
-                         std::uint32_t first, std::span<const webgpu_viewport> viewports) noexcept;
+  recorder_set_viewports(webgpu_command_recorder recorder, std::uint32_t first,
+                         std::span<const webgpu_viewport> viewports) noexcept;
   [[nodiscard]] granit_result
-  recorder_set_scissors(webgpu_instance_handle instance, webgpu_command_recorder recorder,
-                        std::uint32_t first, std::span<const webgpu_scissor> scissors) noexcept;
+  recorder_set_scissors(webgpu_command_recorder recorder, std::uint32_t first,
+                        std::span<const webgpu_scissor> scissors) noexcept;
+  [[nodiscard]] granit_result recorder_draw_vertices(webgpu_command_recorder recorder,
+                                                     std::uint32_t vertex_count,
+                                                     std::uint32_t instance_count,
+                                                     std::uint32_t first_vertex,
+                                                     std::uint32_t first_instance) noexcept;
   [[nodiscard]] granit_result
-  recorder_draw_vertices(webgpu_instance_handle instance, webgpu_command_recorder recorder,
-                         std::uint32_t vertex_count, std::uint32_t instance_count,
-                         std::uint32_t first_vertex, std::uint32_t first_instance) noexcept;
+  recorder_draw_indices(webgpu_command_recorder recorder, std::uint32_t index_count,
+                        std::uint32_t instance_count, std::uint32_t first_index,
+                        std::int32_t vertex_offset, std::uint32_t first_instance) noexcept;
+  [[nodiscard]] granit_result recorder_end_rendering(webgpu_command_recorder recorder) noexcept;
   [[nodiscard]] granit_result
-  recorder_draw_indices(webgpu_instance_handle instance, webgpu_command_recorder recorder,
-                        std::uint32_t index_count, std::uint32_t instance_count,
-                        std::uint32_t first_index, std::int32_t vertex_offset,
-                        std::uint32_t first_instance) noexcept;
-  [[nodiscard]] granit_result recorder_end_rendering(webgpu_instance_handle instance,
-                                                     webgpu_command_recorder recorder) noexcept;
-  [[nodiscard]] granit_result
-  finish_command_recorder(webgpu_instance_handle instance, webgpu_command_recorder recorder,
+  finish_command_recorder(webgpu_command_recorder recorder,
                           webgpu_command_buffer* command_buffer) noexcept;
-  [[nodiscard]] granit_result destroy_command_buffer(webgpu_instance_handle instance,
-                                                     webgpu_command_buffer command_buffer) noexcept;
-  [[nodiscard]] granit_result submit_command_buffer(webgpu_instance_handle instance,
-                                                    webgpu_command_buffer command_buffer) noexcept;
+  [[nodiscard]] granit_result destroy_command_buffer(webgpu_command_buffer command_buffer) noexcept;
+  [[nodiscard]] granit_result submit_command_buffer(webgpu_command_buffer command_buffer) noexcept;
   [[nodiscard]] granit_result
-  recorder_copy_texture_to_buffer(webgpu_instance_handle instance, webgpu_command_recorder recorder,
-                                  webgpu_texture texture, webgpu_buffer buffer, std::uint32_t width,
-                                  std::uint32_t height, std::uint32_t bytes_per_row) noexcept;
+  recorder_copy_texture_to_buffer(webgpu_command_recorder recorder, webgpu_texture texture,
+                                  webgpu_buffer buffer, std::uint32_t width, std::uint32_t height,
+                                  std::uint32_t bytes_per_row) noexcept;
   [[nodiscard]] granit_result
-  recorder_copy_buffer(webgpu_instance_handle instance, webgpu_command_recorder recorder,
-                       webgpu_buffer source, webgpu_buffer destination,
+  recorder_copy_buffer(webgpu_command_recorder recorder, webgpu_buffer source,
+                       webgpu_buffer destination,
                        std::span<const webgpu_buffer_copy_region> regions) noexcept;
-  [[nodiscard]] granit_result recorder_copy_buffer_to_texture_v2(
-      webgpu_instance_handle instance, webgpu_command_recorder recorder, webgpu_buffer source,
-      webgpu_texture destination, const webgpu_texture_buffer_copy& region) noexcept;
-  [[nodiscard]] granit_result recorder_copy_texture_to_buffer_v2(
-      webgpu_instance_handle instance, webgpu_command_recorder recorder, webgpu_texture source,
-      webgpu_buffer destination, const webgpu_texture_buffer_copy& region) noexcept;
   [[nodiscard]] granit_result
-  recorder_copy_texture(webgpu_instance_handle instance, webgpu_command_recorder recorder,
-                        webgpu_texture source, webgpu_texture destination,
+  recorder_copy_buffer_to_texture_v2(webgpu_command_recorder recorder, webgpu_buffer source,
+                                     webgpu_texture destination,
+                                     const webgpu_texture_buffer_copy& region) noexcept;
+  [[nodiscard]] granit_result
+  recorder_copy_texture_to_buffer_v2(webgpu_command_recorder recorder, webgpu_texture source,
+                                     webgpu_buffer destination,
+                                     const webgpu_texture_buffer_copy& region) noexcept;
+  [[nodiscard]] granit_result
+  recorder_copy_texture(webgpu_command_recorder recorder, webgpu_texture source,
+                        webgpu_texture destination,
                         const webgpu_texture_copy_region& region) noexcept;
-  [[nodiscard]] granit_result recorder_fill_buffer(webgpu_instance_handle instance,
-                                                   webgpu_command_recorder recorder,
+  [[nodiscard]] granit_result recorder_fill_buffer(webgpu_command_recorder recorder,
                                                    webgpu_buffer buffer, std::uint64_t offset,
                                                    std::uint64_t size,
                                                    std::uint32_t value) noexcept;
   [[nodiscard]] granit_result
-  recorder_generate_mipmaps(webgpu_instance_handle instance, webgpu_command_recorder recorder,
-                            webgpu_texture texture,
+  recorder_generate_mipmaps(webgpu_command_recorder recorder, webgpu_texture texture,
                             const webgpu_texture_mipmap_range& range) noexcept;
   [[nodiscard]] granit_result
   create_timestamp_query_pool(std::uint32_t count, webgpu_timestamp_query_pool* pool) noexcept;

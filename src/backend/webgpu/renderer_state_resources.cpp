@@ -456,11 +456,9 @@ granit_result webgpu_renderer_state::readback_batch_async(
     if (operation != 0)
       static_cast<void>(resource_owner_->device->destroy_readback(operation));
     if (command != 0)
-      static_cast<void>(resource_owner_->device->destroy_command_buffer(
-          resource_owner_->device->instance(), command));
+      static_cast<void>(resource_owner_->device->destroy_command_buffer(command));
     if (recorder != 0)
-      static_cast<void>(resource_owner_->device->destroy_command_recorder(
-          resource_owner_->device->instance(), recorder));
+      static_cast<void>(resource_owner_->device->destroy_command_recorder(recorder));
     if (staging != 0)
       static_cast<void>(resource_owner_->device->destroy_buffer(staging));
   };
@@ -508,8 +506,7 @@ granit_result webgpu_renderer_state::readback_batch_async(
     auto result = resource_owner_->device->create_buffer(&desc, &staging);
     if (result != GRANIT_SUCCESS)
       return result;
-    result = resource_owner_->device->create_command_recorder(resource_owner_->device->instance(),
-                                                              &recorder);
+    result = resource_owner_->device->create_command_recorder(&recorder);
     if (result != GRANIT_SUCCESS) {
       cleanup();
       return result;
@@ -526,8 +523,8 @@ granit_result webgpu_renderer_state::readback_batch_async(
         const auto prefix = readback.source_offset - source_start;
         const auto copy_size = (prefix + readback.size + 3) & ~UINT64_C(3);
         webgpu_buffer_copy_region region{source_start, slices[index].source_offset, copy_size};
-        result = resource_owner_->device->recorder_copy_buffer(
-            resource_owner_->device->instance(), recorder, source->handle_, staging, {&region, 1});
+        result = resource_owner_->device->recorder_copy_buffer(recorder, source->handle_, staging,
+                                                               {&region, 1});
       } else {
         const auto* source = readback.texture == nullptr
                                  ? nullptr
@@ -551,19 +548,17 @@ granit_result webgpu_renderer_state::readback_batch_async(
                                         region.height,
                                         region.depth};
         result = resource_owner_->device->recorder_copy_texture_to_buffer_v2(
-            resource_owner_->device->instance(), recorder, source->handle_, staging, copy);
+            recorder, source->handle_, staging, copy);
       }
       if (result != GRANIT_SUCCESS) {
         cleanup();
         return result;
       }
     }
-    result = resource_owner_->device->finish_command_recorder(resource_owner_->device->instance(),
-                                                              recorder, &command);
+    result = resource_owner_->device->finish_command_recorder(recorder, &command);
     recorder = 0;
     if (result == GRANIT_SUCCESS)
-      result = resource_owner_->device->submit_command_buffer(resource_owner_->device->instance(),
-                                                              command);
+      result = resource_owner_->device->submit_command_buffer(command);
     command = 0;
     if (result == GRANIT_SUCCESS)
       result = resource_owner_->device->begin_readback(staging, 0, required, &operation);
