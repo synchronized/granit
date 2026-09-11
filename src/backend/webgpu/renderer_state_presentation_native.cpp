@@ -94,43 +94,12 @@ webgpu_renderer_state::presentation_allocate_swapchain() {
 }
 
 granit_result
-webgpu_renderer_state::presentation_create_win32_surface(backend_surface_resource& resource,
-                                                         void* instance, void* window) noexcept {
+webgpu_renderer_state::presentation_create_surface(const granit_surface_desc& desc,
+                                                   backend_surface_resource& resource) noexcept {
   auto* surface = as_surface(resource);
   if (surface == nullptr || surface->handle_ != 0)
     return GRANIT_ERROR_INVALID_ARGUMENT;
-  webgpu_win32_surface_desc desc{sizeof(desc), 0, instance, window};
-  return device_.create_win32_surface(&desc, &surface->handle_);
-}
-
-granit_result webgpu_renderer_state::presentation_create_xcb_surface(
-    backend_surface_resource& resource, void* connection, std::uint32_t window) noexcept {
-  auto* surface = as_surface(resource);
-  if (surface == nullptr || surface->handle_ != 0)
-    return GRANIT_ERROR_INVALID_ARGUMENT;
-  webgpu_xcb_surface_desc desc{sizeof(desc), 0, connection, window, 0};
-  return device_.create_xcb_surface(&desc, &surface->handle_);
-}
-
-granit_result webgpu_renderer_state::presentation_create_wayland_surface(
-    backend_surface_resource& resource, void* display, void* native_surface) noexcept {
-  auto* surface = as_surface(resource);
-  if (surface == nullptr || surface->handle_ != 0)
-    return GRANIT_ERROR_INVALID_ARGUMENT;
-  webgpu_wayland_surface_desc desc{sizeof(desc), 0, display, native_surface};
-  return device_.create_wayland_surface(&desc, &surface->handle_);
-}
-
-granit_result
-webgpu_renderer_state::presentation_create_canvas_surface(backend_surface_resource& resource,
-                                                          const char* selector,
-                                                          std::uint32_t selector_length) noexcept {
-  auto* surface = as_surface(resource);
-  if (surface == nullptr || surface->handle_ != 0) {
-    return GRANIT_ERROR_INVALID_ARGUMENT;
-  }
-  webgpu_canvas_surface_desc desc{sizeof(desc), 0, selector, selector_length};
-  return device_.create_canvas_surface(&desc, &surface->handle_);
+  return device_.create_surface(&desc, &surface->handle_);
 }
 
 granit_result webgpu_renderer_state::presentation_create_swapchain(

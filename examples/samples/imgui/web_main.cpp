@@ -80,7 +80,7 @@ granit::result initialize_gpu_resources() {
   auto result = query_canvas_size(width, height);
   if (result.failed())
     return result;
-  result = state.surface.initialize_canvas(state.renderer.native_handle());
+  result = state.surface.initialize(state.renderer.native_handle(), granit::surface_desc::canvas());
   if (result.ok()) {
     result =
         state.swapchain.initialize(state.renderer.native_handle(), state.surface.native_handle(),

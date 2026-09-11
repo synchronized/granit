@@ -7,10 +7,10 @@
 #include <cstddef>
 #include <cstdint>
 #include <memory>
-#include <string_view>
 #include <vector>
 
 #include <granit/renderer/resource_types.h>
+#include <granit/renderer/surface.h>
 
 #include "backend/contracts/resources.h"
 
@@ -58,16 +58,7 @@ public:
   [[nodiscard]] virtual std::unique_ptr<backend_swapchain_resource>
   allocate_swapchain_resource() = 0;
   [[nodiscard]] virtual granit_result
-  create_win32_surface(void* native_instance, void* native_window,
-                       backend_surface_resource& surface) noexcept = 0;
-  [[nodiscard]] virtual granit_result
-  create_xcb_surface(void* connection, std::uint32_t window,
-                     backend_surface_resource& surface) noexcept = 0;
-  [[nodiscard]] virtual granit_result
-  create_wayland_surface(void* display, void* native_surface,
-                         backend_surface_resource& surface) noexcept = 0;
-  [[nodiscard]] virtual granit_result
-  create_canvas_surface(std::string_view selector, backend_surface_resource& surface) noexcept = 0;
+  create_surface(const granit_surface_desc& desc, backend_surface_resource& surface) noexcept = 0;
   [[nodiscard]] virtual granit_result create_swapchain(backend_surface_resource& surface,
                                                        const backend_swapchain_desc& desc,
                                                        backend_swapchain_resource& swapchain) = 0;

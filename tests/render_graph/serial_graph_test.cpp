@@ -225,8 +225,8 @@ TEST_CASE("串行 Render Graph 提交 Swapchain Frame", "[render_graph][swapchai
   REQUIRE(initialize == granit::result::success);
 
   granit::surface surface;
-  REQUIRE(surface.initialize_win32(renderer.native_handle(),
-                                   {.instance = window.instance(), .window = window.window()}) ==
+  REQUIRE(surface.initialize(renderer.native_handle(),
+                             granit::surface_desc::win32(window.instance(), window.window())) ==
           granit::result::success);
   granit::swapchain swapchain;
   REQUIRE(swapchain.initialize(renderer.native_handle(), surface.native_handle(),

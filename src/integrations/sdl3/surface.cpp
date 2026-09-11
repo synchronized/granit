@@ -53,7 +53,7 @@ result create_surface(granit_renderer renderer, SDL_Window* window, surface& out
         SDL_GetPointerProperty(properties, SDL_PROP_WINDOW_WIN32_HWND_POINTER, nullptr);
     if (instance == nullptr || native_window == nullptr)
       return result::backend_unavailable;
-    return output.initialize_win32(renderer, {.instance = instance, .window = native_window});
+    return output.initialize(renderer, granit::surface_desc::win32(instance, native_window));
   }
   if (type == surface_type::wayland) {
     auto* display =
@@ -62,7 +62,7 @@ result create_surface(granit_renderer renderer, SDL_Window* window, surface& out
         SDL_GetPointerProperty(properties, SDL_PROP_WINDOW_WAYLAND_SURFACE_POINTER, nullptr);
     if (display == nullptr || native_surface == nullptr)
       return result::backend_unavailable;
-    return output.initialize_wayland(renderer, {.display = display, .surface = native_surface});
+    return output.initialize(renderer, granit::surface_desc::wayland(display, native_surface));
   }
 #if defined(GRANIT_INTEGRATION_SDL3_HAS_X11)
   auto* display = static_cast<Display*>(
@@ -75,8 +75,8 @@ result create_surface(granit_renderer renderer, SDL_Window* window, surface& out
   auto* connection = XGetXCBConnection(display);
   if (connection == nullptr)
     return result::backend_unavailable;
-  return output.initialize_xcb(
-      renderer, {.connection = connection, .window = static_cast<std::uint32_t>(native_window)});
+  return output.initialize(
+      renderer, surface_desc::xcb(connection, static_cast<std::uint32_t>(native_window)));
 #else
   return result::unsupported;
 #endif

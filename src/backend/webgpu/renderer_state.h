@@ -261,15 +261,8 @@ public:
 
   [[nodiscard]] std::unique_ptr<backend_surface_resource> allocate_surface_resource() override;
   [[nodiscard]] std::unique_ptr<backend_swapchain_resource> allocate_swapchain_resource() override;
-  [[nodiscard]] granit_result create_win32_surface(void*, void*,
-                                                   backend_surface_resource&) noexcept override;
-  [[nodiscard]] granit_result create_xcb_surface(void*, std::uint32_t,
-                                                 backend_surface_resource&) noexcept override;
-  [[nodiscard]] granit_result create_wayland_surface(void*, void*,
-                                                     backend_surface_resource&) noexcept override;
-  [[nodiscard]] granit_result
-  create_canvas_surface(std::string_view selector,
-                        backend_surface_resource& surface) noexcept override;
+  [[nodiscard]] granit_result create_surface(const granit_surface_desc& desc,
+                                             backend_surface_resource& surface) noexcept override;
   [[nodiscard]] granit_result create_swapchain(backend_surface_resource& surface,
                                                const backend_swapchain_desc& desc,
                                                backend_swapchain_resource& swapchain) override;
@@ -324,18 +317,9 @@ private:
   [[nodiscard]] granit_result finish_initialization() noexcept;
   [[nodiscard]] std::unique_ptr<backend_surface_resource> presentation_allocate_surface();
   [[nodiscard]] std::unique_ptr<backend_swapchain_resource> presentation_allocate_swapchain();
-  [[nodiscard]] granit_result presentation_create_win32_surface(backend_surface_resource& resource,
-                                                                void* instance,
-                                                                void* window) noexcept;
-  [[nodiscard]] granit_result presentation_create_xcb_surface(backend_surface_resource& resource,
-                                                              void* connection,
-                                                              std::uint32_t window) noexcept;
   [[nodiscard]] granit_result
-  presentation_create_wayland_surface(backend_surface_resource& resource, void* display,
-                                      void* surface) noexcept;
-  [[nodiscard]] granit_result
-  presentation_create_canvas_surface(backend_surface_resource& resource, const char* selector,
-                                     std::uint32_t selector_length) noexcept;
+  presentation_create_surface(const granit_surface_desc& desc,
+                              backend_surface_resource& resource) noexcept;
   [[nodiscard]] granit_result
   presentation_create_swapchain(backend_surface_resource& surface,
                                 const backend_swapchain_desc& desc,

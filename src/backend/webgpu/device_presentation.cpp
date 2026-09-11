@@ -60,72 +60,55 @@ granit_result create_native_surface(webgpu_instance_handle instance, NativeDesc 
   return GRANIT_SUCCESS;
 }
 
-granit_result create_win32_surface(webgpu_instance_handle instance,
-                                   const webgpu_win32_surface_desc* desc,
-                                   webgpu_surface* surface) noexcept {
-  if (surface != nullptr)
-    *surface = 0;
-  if (instance == 0 || desc == nullptr || surface == nullptr || desc->struct_size < sizeof(*desc) ||
-      desc->reserved != 0 || desc->instance == nullptr || desc->window == nullptr)
+granit_result create_win32_surface(webgpu_instance_handle instance, void* native_instance,
+                                   void* native_window, webgpu_surface* surface) noexcept {
+  if (instance == 0 || native_instance == nullptr || native_window == nullptr || surface == nullptr)
     return GRANIT_ERROR_INVALID_ARGUMENT;
 #if (defined(_WIN32) && !defined(__EMSCRIPTEN__)) || defined(GRANIT_WEBGPU_NATIVE_SURFACE_TEST)
   WGPUSurfaceSourceWindowsHWND source{};
   source.chain.sType = WGPUSType_SurfaceSourceWindowsHWND;
-  source.hinstance = desc->instance;
-  source.hwnd = desc->window;
+  source.hinstance = native_instance;
+  source.hwnd = native_window;
   return create_native_surface(instance, source, surface);
 #else
   return GRANIT_ERROR_UNSUPPORTED;
 #endif
 }
 
-granit_result create_xcb_surface(webgpu_instance_handle instance,
-                                 const webgpu_xcb_surface_desc* desc,
-                                 webgpu_surface* surface) noexcept {
-  if (surface != nullptr)
-    *surface = 0;
-  if (instance == 0 || desc == nullptr || surface == nullptr || desc->struct_size < sizeof(*desc) ||
-      desc->reserved != 0 || desc->reserved_2 != 0 || desc->connection == nullptr ||
-      desc->window == 0)
+granit_result create_xcb_surface(webgpu_instance_handle instance, void* connection,
+                                 std::uint32_t window, webgpu_surface* surface) noexcept {
+  if (instance == 0 || connection == nullptr || window == 0 || surface == nullptr)
     return GRANIT_ERROR_INVALID_ARGUMENT;
 #if (defined(__linux__) && !defined(__EMSCRIPTEN__)) || defined(GRANIT_WEBGPU_NATIVE_SURFACE_TEST)
   WGPUSurfaceSourceXCBWindow source{};
   source.chain.sType = WGPUSType_SurfaceSourceXCBWindow;
-  source.connection = desc->connection;
-  source.window = desc->window;
+  source.connection = connection;
+  source.window = window;
   return create_native_surface(instance, source, surface);
 #else
   return GRANIT_ERROR_UNSUPPORTED;
 #endif
 }
 
-granit_result create_wayland_surface(webgpu_instance_handle instance,
-                                     const webgpu_wayland_surface_desc* desc,
-                                     webgpu_surface* surface) noexcept {
-  if (surface != nullptr)
-    *surface = 0;
-  if (instance == 0 || desc == nullptr || surface == nullptr || desc->struct_size < sizeof(*desc) ||
-      desc->reserved != 0 || desc->display == nullptr || desc->surface == nullptr)
+granit_result create_wayland_surface(webgpu_instance_handle instance, void* display,
+                                     void* native_surface, webgpu_surface* surface) noexcept {
+  if (instance == 0 || display == nullptr || native_surface == nullptr || surface == nullptr)
     return GRANIT_ERROR_INVALID_ARGUMENT;
 #if (defined(__linux__) && !defined(__EMSCRIPTEN__)) || defined(GRANIT_WEBGPU_NATIVE_SURFACE_TEST)
   WGPUSurfaceSourceWaylandSurface source{};
   source.chain.sType = WGPUSType_SurfaceSourceWaylandSurface;
-  source.display = desc->display;
-  source.surface = desc->surface;
+  source.display = display;
+  source.surface = native_surface;
   return create_native_surface(instance, source, surface);
 #else
   return GRANIT_ERROR_UNSUPPORTED;
 #endif
 }
 
-granit_result create_canvas_surface(webgpu_instance_handle instance,
-                                    const webgpu_canvas_surface_desc* desc,
+granit_result create_canvas_surface(webgpu_instance_handle instance, const char* selector,
+                                    std::uint32_t selector_length,
                                     webgpu_surface* surface) noexcept {
-  if (surface != nullptr)
-    *surface = 0;
-  if (instance == 0 || desc == nullptr || surface == nullptr ||
-      desc->struct_size < sizeof(webgpu_canvas_surface_desc) || desc->reserved != 0 ||
-      desc->selector == nullptr || desc->selector_length == 0)
+  if (instance == 0 || selector == nullptr || selector_length == 0 || surface == nullptr)
     return GRANIT_ERROR_INVALID_ARGUMENT;
   const std::scoped_lock lock{instances_mutex};
   const auto found = instances.find(instance);
@@ -135,10 +118,10 @@ granit_result create_canvas_surface(webgpu_instance_handle instance,
     return ready;
 #if defined(__EMSCRIPTEN__) || defined(GRANIT_WEBGPU_CANVAS_SURFACE_TEST)
   try {
-    std::string selector{desc->selector, desc->selector_length};
+    std::string selector_copy{selector, selector_length};
     WGPUEmscriptenSurfaceSourceCanvasHTMLSelector canvas_desc{};
     canvas_desc.chain.sType = WGPUSType_EmscriptenSurfaceSourceCanvasHTMLSelector;
-    canvas_desc.selector = {selector.data(), selector.size()};
+    canvas_desc.selector = {selector_copy.data(), selector_copy.size()};
     WGPUSurfaceDescriptor native_desc{};
     native_desc.nextInChain = &canvas_desc.chain;
     const auto native_surface = wgpuInstanceCreateSurface(found->second->instance, &native_desc);
@@ -147,7 +130,7 @@ granit_result create_canvas_surface(webgpu_instance_handle instance,
     const auto handle = next_handle<webgpu_surface>(next_surface);
     try {
       found->second->surfaces.emplace(
-          handle, webgpu_device_state::surface_record{native_surface, std::move(selector)});
+          handle, webgpu_device_state::surface_record{native_surface, std::move(selector_copy)});
     } catch (...) {
       wgpuSurfaceRelease(native_surface);
       throw;
@@ -162,6 +145,36 @@ granit_result create_canvas_surface(webgpu_instance_handle instance,
 #else
   return GRANIT_ERROR_UNSUPPORTED;
 #endif
+}
+
+granit_result create_surface(webgpu_instance_handle instance, const granit_surface_desc* desc,
+                             webgpu_surface* surface) noexcept {
+  if (surface != nullptr)
+    *surface = 0;
+  if (instance == 0 || desc == nullptr || surface == nullptr ||
+      desc->struct_size < GRANIT_SURFACE_DESC_VERSION_1_SIZE || desc->flags != 0 ||
+      desc->reserved != 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  switch (desc->surface_type) {
+  case GRANIT_SURFACE_TYPE_WIN32_BIT:
+    return create_win32_surface(instance, desc->source.win32.instance, desc->source.win32.window,
+                                surface);
+  case GRANIT_SURFACE_TYPE_XCB_BIT:
+    if (desc->source.xcb.reserved != 0)
+      return GRANIT_ERROR_INVALID_ARGUMENT;
+    return create_xcb_surface(instance, desc->source.xcb.connection, desc->source.xcb.window,
+                              surface);
+  case GRANIT_SURFACE_TYPE_WAYLAND_BIT:
+    return create_wayland_surface(instance, desc->source.wayland.display,
+                                  desc->source.wayland.surface, surface);
+  case GRANIT_SURFACE_TYPE_CANVAS_BIT:
+    if (desc->source.canvas.reserved != 0)
+      return GRANIT_ERROR_INVALID_ARGUMENT;
+    return create_canvas_surface(instance, desc->source.canvas.selector,
+                                 desc->source.canvas.selector_length, surface);
+  default:
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  }
 }
 
 granit_result destroy_surface(webgpu_instance_handle instance, webgpu_surface surface) noexcept {
@@ -449,45 +462,12 @@ granit_result destroy_swapchain(webgpu_instance_handle instance,
 
 namespace granit::detail {
 
-granit_result webgpu_device::create_win32_surface(const webgpu_win32_surface_desc* desc,
-                                                  webgpu_surface* surface) noexcept {
+granit_result webgpu_device::create_surface(const granit_surface_desc* desc,
+                                            webgpu_surface* surface) noexcept {
   if (!open_ || desc == nullptr || surface == nullptr)
     return GRANIT_ERROR_INVALID_ARGUMENT;
   try {
-    return ::create_win32_surface(instance_, desc, surface);
-  } catch (...) {
-    return GRANIT_ERROR_INTERNAL;
-  }
-}
-
-granit_result webgpu_device::create_xcb_surface(const webgpu_xcb_surface_desc* desc,
-                                                webgpu_surface* surface) noexcept {
-  if (!open_ || desc == nullptr || surface == nullptr)
-    return GRANIT_ERROR_INVALID_ARGUMENT;
-  try {
-    return ::create_xcb_surface(instance_, desc, surface);
-  } catch (...) {
-    return GRANIT_ERROR_INTERNAL;
-  }
-}
-
-granit_result webgpu_device::create_wayland_surface(const webgpu_wayland_surface_desc* desc,
-                                                    webgpu_surface* surface) noexcept {
-  if (!open_ || desc == nullptr || surface == nullptr)
-    return GRANIT_ERROR_INVALID_ARGUMENT;
-  try {
-    return ::create_wayland_surface(instance_, desc, surface);
-  } catch (...) {
-    return GRANIT_ERROR_INTERNAL;
-  }
-}
-
-granit_result webgpu_device::create_canvas_surface(const webgpu_canvas_surface_desc* desc,
-                                                   webgpu_surface* surface) noexcept {
-  if (!open_ || desc == nullptr || surface == nullptr)
-    return GRANIT_ERROR_INVALID_ARGUMENT;
-  try {
-    return ::create_canvas_surface(instance_, desc, surface);
+    return ::create_surface(instance_, desc, surface);
   } catch (...) {
     return GRANIT_ERROR_INTERNAL;
   }

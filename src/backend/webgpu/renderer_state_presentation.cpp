@@ -19,47 +19,30 @@ std::unique_ptr<backend_swapchain_resource> webgpu_renderer_state::allocate_swap
   return capabilities_initialized_ ? presentation_allocate_swapchain() : nullptr;
 }
 
-granit_result
-webgpu_renderer_state::create_win32_surface(void* instance, void* window,
-                                            backend_surface_resource& surface) noexcept {
-  if ((surface_types_ & GRANIT_SURFACE_TYPE_WIN32_BIT) == 0 ||
-      (device_surface_types_ & GRANIT_WEBGPU_SURFACE_TYPE_WIN32_BIT) == 0)
-    return GRANIT_ERROR_UNSUPPORTED;
-  return capabilities_initialized_ ? presentation_create_win32_surface(surface, instance, window)
-                                   : GRANIT_ERROR_NOT_READY;
-}
-
-granit_result
-webgpu_renderer_state::create_xcb_surface(void* connection, std::uint32_t window,
-                                          backend_surface_resource& surface) noexcept {
-  if ((surface_types_ & GRANIT_SURFACE_TYPE_XCB_BIT) == 0 ||
-      (device_surface_types_ & GRANIT_WEBGPU_SURFACE_TYPE_XCB_BIT) == 0)
-    return GRANIT_ERROR_UNSUPPORTED;
-  return capabilities_initialized_ ? presentation_create_xcb_surface(surface, connection, window)
-                                   : GRANIT_ERROR_NOT_READY;
-}
-
-granit_result
-webgpu_renderer_state::create_wayland_surface(void* display, void* native_surface,
-                                              backend_surface_resource& surface) noexcept {
-  if ((surface_types_ & GRANIT_SURFACE_TYPE_WAYLAND_BIT) == 0 ||
-      (device_surface_types_ & GRANIT_WEBGPU_SURFACE_TYPE_WAYLAND_BIT) == 0)
-    return GRANIT_ERROR_UNSUPPORTED;
-  return capabilities_initialized_
-             ? presentation_create_wayland_surface(surface, display, native_surface)
-             : GRANIT_ERROR_NOT_READY;
-}
-
-granit_result
-webgpu_renderer_state::create_canvas_surface(std::string_view selector,
-                                             backend_surface_resource& surface) noexcept {
-  if ((surface_types_ & GRANIT_SURFACE_TYPE_CANVAS_BIT) == 0 ||
-      (device_surface_types_ & GRANIT_WEBGPU_SURFACE_TYPE_CANVAS_BIT) == 0)
+granit_result webgpu_renderer_state::create_surface(const granit_surface_desc& desc,
+                                                    backend_surface_resource& surface) noexcept {
+  std::uint32_t device_type{};
+  switch (desc.surface_type) {
+  case GRANIT_SURFACE_TYPE_WIN32_BIT:
+    device_type = GRANIT_WEBGPU_SURFACE_TYPE_WIN32_BIT;
+    break;
+  case GRANIT_SURFACE_TYPE_XCB_BIT:
+    device_type = GRANIT_WEBGPU_SURFACE_TYPE_XCB_BIT;
+    break;
+  case GRANIT_SURFACE_TYPE_WAYLAND_BIT:
+    device_type = GRANIT_WEBGPU_SURFACE_TYPE_WAYLAND_BIT;
+    break;
+  case GRANIT_SURFACE_TYPE_CANVAS_BIT:
+    device_type = GRANIT_WEBGPU_SURFACE_TYPE_CANVAS_BIT;
+    break;
+  default:
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  }
+  if ((surface_types_ & desc.surface_type) == 0 || (device_surface_types_ & device_type) == 0)
     return GRANIT_ERROR_UNSUPPORTED;
   if (!capabilities_initialized_)
     return GRANIT_ERROR_NOT_READY;
-  return presentation_create_canvas_surface(surface, selector.data(),
-                                            static_cast<std::uint32_t>(selector.size()));
+  return presentation_create_surface(desc, surface);
 }
 
 granit_result webgpu_renderer_state::create_swapchain(backend_surface_resource& surface,

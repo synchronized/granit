@@ -8,6 +8,7 @@
 #include <span>
 
 #include <granit/core/result.h>
+#include <granit/renderer/surface.h>
 
 #include "backend/webgpu/types.h"
 
@@ -29,14 +30,8 @@ public:
   [[nodiscard]] granit_result get_capabilities(webgpu_capabilities* capabilities) noexcept;
   [[nodiscard]] granit_result get_instance_status(webgpu_instance_status* status) noexcept;
   [[nodiscard]] granit_result process_events() noexcept;
-  [[nodiscard]] granit_result create_win32_surface(const webgpu_win32_surface_desc* desc,
-                                                   webgpu_surface* surface) noexcept;
-  [[nodiscard]] granit_result create_xcb_surface(const webgpu_xcb_surface_desc* desc,
-                                                 webgpu_surface* surface) noexcept;
-  [[nodiscard]] granit_result create_wayland_surface(const webgpu_wayland_surface_desc* desc,
-                                                     webgpu_surface* surface) noexcept;
-  [[nodiscard]] granit_result create_canvas_surface(const webgpu_canvas_surface_desc* desc,
-                                                    webgpu_surface* surface) noexcept;
+  [[nodiscard]] granit_result create_surface(const granit_surface_desc* desc,
+                                             webgpu_surface* surface) noexcept;
   [[nodiscard]] granit_result destroy_surface(webgpu_surface surface) noexcept;
   [[nodiscard]] granit_result create_swapchain(webgpu_surface surface,
                                                const webgpu_swapchain_desc* desc,

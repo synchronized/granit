@@ -113,15 +113,9 @@ public:
   [[nodiscard]] std::shared_ptr<backend_renderer> acquire_backend(granit_renderer renderer);
   [[nodiscard]] std::shared_ptr<const backend_interfaces>
   acquire_backend_interfaces(granit_renderer renderer);
-  [[nodiscard]] granit_result create_win32_surface(granit_renderer renderer, void* native_instance,
-                                                   void* native_window, granit_surface& surface);
-  [[nodiscard]] granit_result create_xcb_surface(granit_renderer renderer, void* connection,
-                                                 std::uint32_t window, granit_surface& surface);
-  [[nodiscard]] granit_result create_wayland_surface(granit_renderer renderer, void* display,
-                                                     void* native_surface, granit_surface& surface);
-  [[nodiscard]] granit_result create_canvas_surface(granit_renderer renderer,
-                                                    std::string_view selector,
-                                                    granit_surface& surface);
+  [[nodiscard]] granit_result create_surface(granit_renderer renderer,
+                                             const granit_surface_desc& desc,
+                                             granit_surface& surface);
   [[nodiscard]] granit_result destroy_surface(granit_renderer renderer, granit_surface surface);
   [[nodiscard]] granit_result create_swapchain(granit_renderer renderer, granit_surface surface,
                                                const backend_swapchain_desc& desc,

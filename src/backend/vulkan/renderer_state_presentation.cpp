@@ -36,48 +36,29 @@ std::unique_ptr<backend_swapchain_resource> vulkan_renderer_state::allocate_swap
 }
 
 granit_result
-vulkan_renderer_state::create_win32_surface(void* native_instance, void* native_window,
-                                            backend_surface_resource& surface_resource) noexcept {
+vulkan_renderer_state::create_surface(const granit_surface_desc& desc,
+                                      backend_surface_resource& surface_resource) noexcept {
   if (device_lost())
     return GRANIT_ERROR_DEVICE_LOST;
   std::lock_guard lock{resource_mutex_};
-  if ((surface_types_ & GRANIT_SURFACE_TYPE_WIN32_BIT) == 0) {
+  if ((surface_types_ & desc.surface_type) == 0)
     return GRANIT_ERROR_UNSUPPORTED;
+  auto& surface = static_cast<vulkan_surface_resource&>(surface_resource).native();
+  switch (desc.surface_type) {
+  case GRANIT_SURFACE_TYPE_WIN32_BIT:
+    return observe_device_result(detail::create_win32_surface(
+        instance_, device_, desc.source.win32.instance, desc.source.win32.window, surface));
+  case GRANIT_SURFACE_TYPE_XCB_BIT:
+    return observe_device_result(detail::create_xcb_surface(
+        instance_, device_, desc.source.xcb.connection, desc.source.xcb.window, surface));
+  case GRANIT_SURFACE_TYPE_WAYLAND_BIT:
+    return observe_device_result(detail::create_wayland_surface(
+        instance_, device_, desc.source.wayland.display, desc.source.wayland.surface, surface));
+  case GRANIT_SURFACE_TYPE_CANVAS_BIT:
+    return GRANIT_ERROR_UNSUPPORTED;
+  default:
+    return GRANIT_ERROR_INVALID_ARGUMENT;
   }
-  auto& surface = static_cast<vulkan_surface_resource&>(surface_resource).native();
-  return observe_device_result(
-      detail::create_win32_surface(instance_, device_, native_instance, native_window, surface));
-}
-
-granit_result
-vulkan_renderer_state::create_xcb_surface(void* connection, std::uint32_t window,
-                                          backend_surface_resource& surface_resource) noexcept {
-  if (device_lost())
-    return GRANIT_ERROR_DEVICE_LOST;
-  std::lock_guard lock{resource_mutex_};
-  if ((surface_types_ & GRANIT_SURFACE_TYPE_XCB_BIT) == 0)
-    return GRANIT_ERROR_UNSUPPORTED;
-  auto& surface = static_cast<vulkan_surface_resource&>(surface_resource).native();
-  return observe_device_result(
-      detail::create_xcb_surface(instance_, device_, connection, window, surface));
-}
-
-granit_result
-vulkan_renderer_state::create_wayland_surface(void* display, void* native_surface,
-                                              backend_surface_resource& surface_resource) noexcept {
-  if (device_lost())
-    return GRANIT_ERROR_DEVICE_LOST;
-  std::lock_guard lock{resource_mutex_};
-  if ((surface_types_ & GRANIT_SURFACE_TYPE_WAYLAND_BIT) == 0)
-    return GRANIT_ERROR_UNSUPPORTED;
-  auto& surface = static_cast<vulkan_surface_resource&>(surface_resource).native();
-  return observe_device_result(
-      detail::create_wayland_surface(instance_, device_, display, native_surface, surface));
-}
-
-granit_result vulkan_renderer_state::create_canvas_surface(std::string_view,
-                                                           backend_surface_resource&) noexcept {
-  return device_lost() ? GRANIT_ERROR_DEVICE_LOST : GRANIT_ERROR_UNSUPPORTED;
 }
 
 void vulkan_renderer_state::destroy_native_surface(VkSurfaceKHR surface) noexcept {

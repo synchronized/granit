@@ -36,7 +36,8 @@ TEST_CASE("Window component 可以连接 Renderer Surface 和 Swapchain", "[wind
     SKIP("当前环境不支持 Vulkan Win32 Swapchain");
   REQUIRE(renderer_result == granit::result::success);
   granit::surface surface;
-  REQUIRE(surface.initialize_win32(renderer.native_handle(), {instance, native_window}) ==
+  REQUIRE(surface.initialize(renderer.native_handle(),
+                             granit::surface_desc::win32(instance, native_window)) ==
           granit::result::success);
   granit::swapchain swapchain;
   REQUIRE(swapchain.initialize(renderer.native_handle(), surface.native_handle(),
@@ -61,8 +62,7 @@ bool wayland_environment_unavailable(granit::result result) {
 TEST_CASE("Wayland Window component 可以连接 Renderer Surface 和 Swapchain",
           "[window][renderer][wayland]") {
   granit::window_system window_system;
-  const auto system_result =
-      window_system.initialize({.backend = granit::window_backend::wayland});
+  const auto system_result = window_system.initialize({.backend = granit::window_backend::wayland});
   if (system_result == granit::result::backend_unavailable)
     SKIP("当前环境没有可用且支持 xdg-shell 的 Wayland compositor");
   REQUIRE(system_result == granit::result::success);
@@ -84,7 +84,8 @@ TEST_CASE("Wayland Window component 可以连接 Renderer Surface 和 Swapchain"
     SKIP("当前环境不支持 Vulkan Wayland Swapchain");
   REQUIRE(renderer_result == granit::result::success);
   granit::surface surface;
-  REQUIRE(surface.initialize_wayland(renderer.native_handle(), {display, native_surface}) ==
+  REQUIRE(surface.initialize(renderer.native_handle(),
+                             granit::surface_desc::wayland(display, native_surface)) ==
           granit::result::success);
   granit::swapchain swapchain;
   const auto swapchain_result = swapchain.initialize(
@@ -135,7 +136,8 @@ TEST_CASE("XCB Window component 可以连接 Renderer Surface 和 Swapchain",
     SKIP("当前环境不支持 Vulkan XCB Swapchain");
   REQUIRE(renderer_result == granit::result::success);
   granit::surface surface;
-  REQUIRE(surface.initialize_xcb(renderer.native_handle(), {connection, native_window}) ==
+  REQUIRE(surface.initialize(renderer.native_handle(),
+                             granit::surface_desc::xcb(connection, native_window)) ==
           granit::result::success);
   granit::swapchain swapchain;
   const auto swapchain_result = swapchain.initialize(

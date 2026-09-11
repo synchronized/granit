@@ -152,25 +152,18 @@ GRANIT_ABI_ASSERT(granit_abi_rendering_desc_depth,
                   offsetof(granit_rendering_desc, depth_stencil_attachment) == 16);
 GRANIT_ABI_ASSERT(granit_abi_rendering_desc_area, offsetof(granit_rendering_desc, area) == 24);
 
-GRANIT_ABI_ASSERT(granit_abi_win32_surface_desc_size, sizeof(granit_win32_surface_desc) == 24);
-GRANIT_ABI_ASSERT(granit_abi_win32_surface_desc_instance,
-                  offsetof(granit_win32_surface_desc, instance) == 8);
-GRANIT_ABI_ASSERT(granit_abi_win32_surface_desc_window,
-                  offsetof(granit_win32_surface_desc, window) == 16);
-GRANIT_ABI_ASSERT(granit_abi_win32_surface_desc_v1, GRANIT_WIN32_SURFACE_DESC_VERSION_1_SIZE == 24);
-GRANIT_ABI_ASSERT(granit_abi_xcb_surface_desc_size, sizeof(granit_xcb_surface_desc) == 24);
-GRANIT_ABI_ASSERT(granit_abi_xcb_surface_desc_connection,
-                  offsetof(granit_xcb_surface_desc, connection) == 8);
-GRANIT_ABI_ASSERT(granit_abi_xcb_surface_desc_window,
-                  offsetof(granit_xcb_surface_desc, window) == 16);
-GRANIT_ABI_ASSERT(granit_abi_xcb_surface_desc_v1, GRANIT_XCB_SURFACE_DESC_VERSION_1_SIZE == 20);
-GRANIT_ABI_ASSERT(granit_abi_wayland_surface_desc_size, sizeof(granit_wayland_surface_desc) == 24);
-GRANIT_ABI_ASSERT(granit_abi_wayland_surface_desc_display,
-                  offsetof(granit_wayland_surface_desc, display) == 8);
-GRANIT_ABI_ASSERT(granit_abi_wayland_surface_desc_surface,
-                  offsetof(granit_wayland_surface_desc, surface) == 16);
-GRANIT_ABI_ASSERT(granit_abi_wayland_surface_desc_v1,
-                  GRANIT_WAYLAND_SURFACE_DESC_VERSION_1_SIZE == 24);
+GRANIT_ABI_ASSERT(granit_abi_win32_surface_source_size, sizeof(granit_win32_surface_source) == 16);
+GRANIT_ABI_ASSERT(granit_abi_xcb_surface_source_size, sizeof(granit_xcb_surface_source) == 16);
+GRANIT_ABI_ASSERT(granit_abi_wayland_surface_source_size,
+                  sizeof(granit_wayland_surface_source) == 16);
+GRANIT_ABI_ASSERT(granit_abi_canvas_surface_source_size,
+                  sizeof(granit_canvas_surface_source) == 16);
+GRANIT_ABI_ASSERT(granit_abi_surface_source_size, sizeof(granit_surface_source) == 32);
+GRANIT_ABI_ASSERT(granit_abi_surface_desc_size, sizeof(granit_surface_desc) == 48);
+GRANIT_ABI_ASSERT(granit_abi_surface_desc_type, offsetof(granit_surface_desc, surface_type) == 4);
+GRANIT_ABI_ASSERT(granit_abi_surface_desc_flags, offsetof(granit_surface_desc, flags) == 8);
+GRANIT_ABI_ASSERT(granit_abi_surface_desc_source, offsetof(granit_surface_desc, source) == 16);
+GRANIT_ABI_ASSERT(granit_abi_surface_desc_v1, GRANIT_SURFACE_DESC_VERSION_1_SIZE == 48);
 GRANIT_ABI_ASSERT(granit_abi_swapchain_desc_size, sizeof(granit_swapchain_desc) == 20);
 GRANIT_ABI_ASSERT(granit_abi_swapchain_desc_present_mode,
                   offsetof(granit_swapchain_desc, present_mode) == 16);

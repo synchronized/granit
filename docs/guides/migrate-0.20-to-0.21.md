@@ -7,6 +7,32 @@
 直接引用 Shader Library。项目仍处于 0.x；Consumer 应重新编译、重建材质与 Shader 资产，并把
 CMake 请求版本更新为 0.21。
 
+## 迁移统一 Surface 创建
+
+0.21 删除了 `granit_surface_create_win32`、`granit_surface_create_xcb`、
+`granit_surface_create_wayland` 和 `granit_surface_create_canvas`，不提供兼容别名。所有平台改用
+`granit_surface_desc` 的带标签联合体和 `granit_surface_create`：
+
+```c
+granit_surface_desc surface_desc = GRANIT_SURFACE_DESC_INIT;
+surface_desc.surface_type = GRANIT_SURFACE_TYPE_WIN32_BIT;
+surface_desc.source.win32.instance = hinstance;
+surface_desc.source.win32.window = hwnd;
+granit_surface_create(renderer, &surface_desc, &surface);
+```
+
+C++ 将 `initialize_win32`、`initialize_xcb`、`initialize_wayland` 和 `initialize_canvas` 收敛为
+`surface::initialize`，来源通过 `surface_desc::win32`、`xcb`、`wayland` 或 `canvas` 工厂表达：
+
+```cpp
+surface.initialize(
+    renderer.native_handle(),
+    granit::surface_desc::win32(hinstance, hwnd));
+```
+
+原生窗口、display 和 connection 必须保持有效直到 Surface 销毁。Canvas selector 只在创建调用
+期间借用。
+
 ## 改用 Shader Library
 
 用 `granit_shader_tool library` 在离线构建中把材质引用的 Shader Asset 链接为 Library：

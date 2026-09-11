@@ -392,36 +392,6 @@ typedef struct webgpu_render_pipeline_desc {
   uint32_t sample_count;
 } webgpu_render_pipeline_desc;
 
-/** Canvas selector 仅在调用期间有效；Context 必须复制后续需要的内容。 */
-typedef struct webgpu_canvas_surface_desc {
-  uint32_t struct_size;
-  uint32_t reserved;
-  const char* selector;
-  uint32_t selector_length;
-} webgpu_canvas_surface_desc;
-
-typedef struct webgpu_win32_surface_desc {
-  uint32_t struct_size;
-  uint32_t reserved;
-  void* instance;
-  void* window;
-} webgpu_win32_surface_desc;
-
-typedef struct webgpu_xcb_surface_desc {
-  uint32_t struct_size;
-  uint32_t reserved;
-  void* connection;
-  uint32_t window;
-  uint32_t reserved_2;
-} webgpu_xcb_surface_desc;
-
-typedef struct webgpu_wayland_surface_desc {
-  uint32_t struct_size;
-  uint32_t reserved;
-  void* display;
-  void* surface;
-} webgpu_wayland_surface_desc;
-
 typedef uint32_t webgpu_present_mode;
 #define GRANIT_WEBGPU_PRESENT_MODE_FIFO UINT32_C(0)
 #define GRANIT_WEBGPU_PRESENT_MODE_MAILBOX UINT32_C(1)

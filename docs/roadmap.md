@@ -433,7 +433,7 @@
 
 ## 二十九、0.21.0 Shader Library 与后端无关材质
 
-**状态：进行中；S-37A～S-37H 本地实现和验证已完成，等待远端发布验收。**
+**状态：进行中；S-37A～S-37I 本地实现和验证已完成，等待远端发布验收。**
 
 - **[S-37](plans/S-37-0.21.0-shader-library-and-material-boundary.md) / P1**：引入确定性、可裁剪的
   `.grshlib`，由 Renderer 选择并校验 Vulkan/WebGPU 载荷，Material 和应用不再接收后端信息。
@@ -442,12 +442,15 @@
 - `.grshader` 退出安装与运行时资产；离线单 Shader 结果只作为工具私有增量缓存。
 - **[S-37H](plans/S-37H-webgpu-provider-boundary-collapse.md) / P1**：删除浏览器静态 WebGPU 后端中
   遗留的 Provider ABI、函数表、dispatch 和 domain adapter，按领域拆分后端私有设备实现。
+- **S-37I / P1**：以带标签的 `granit_surface_desc` 和单一创建函数统一平台 Surface 边界，删除
+  Win32、XCB、Wayland 与 Canvas 的旧公共创建入口。
 - 文件 I/O、网络、资产数据库、运行时源码编译、Android、新后端、Bindless 和材质节点图不属于
   本版本。
 
 ## 近期执行顺序
 
-1. 按 S-37A～S-37H 完成 0.21.0 Shader Library、Material v5、WebGPU 内部边界收敛和发布验收。
+1. 按 S-37A～S-37I 完成 0.21.0 Shader Library、Material v5、WebGPU 与 Surface 边界收敛和
+   发布验收。
 2. 公共执行器与场景 API 继续等待 Granit 与 Gneiss 的第二个真实复用证据。
 3. S-14 只在复用条件成立后启动；不要为当前单个示例提前稳定 glTF 公共 API。
 4. S-06D 最终验收等待稳定版本与 component 范围决策；不在 0.x 阶段提前宣布稳定。

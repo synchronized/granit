@@ -432,8 +432,9 @@ granit_result create_presentation_resources() {
     return GRANIT_ERROR_INITIALIZATION_FAILED;
   }
 
-  granit_canvas_surface_desc surface_desc = GRANIT_CANVAS_SURFACE_DESC_INIT;
-  auto result = granit_surface_create_canvas(state.renderer, &surface_desc, &state.surface);
+  granit_surface_desc surface_desc = GRANIT_SURFACE_DESC_INIT;
+  surface_desc.surface_type = GRANIT_SURFACE_TYPE_CANVAS_BIT;
+  auto result = granit_surface_create(state.renderer, &surface_desc, &state.surface);
   if (result != GRANIT_SUCCESS) {
     return result;
   }

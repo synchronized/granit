@@ -142,8 +142,8 @@ int main(int argument_count, char** arguments) {
                                      .surface_types = granit::surface_type::win32});
   granit::surface surface;
   if (result.ok())
-    result = surface.initialize_win32(renderer.native_handle(),
-                                      {.instance = instance, .window = window});
+    result =
+        surface.initialize(renderer.native_handle(), granit::surface_desc::win32(instance, window));
   RECT client{};
   GetClientRect(window, &client);
   granit::swapchain swapchain;

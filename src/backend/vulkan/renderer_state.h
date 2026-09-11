@@ -128,18 +128,8 @@ public:
   [[nodiscard]] std::unique_ptr<backend_command_recorder_resource>
   allocate_command_recorder_resource() override;
 
-  [[nodiscard]] granit_result
-  create_win32_surface(void* native_instance, void* native_window,
-                       backend_surface_resource& surface) noexcept override;
-  [[nodiscard]] granit_result
-  create_xcb_surface(void* connection, std::uint32_t window,
-                     backend_surface_resource& surface) noexcept override;
-  [[nodiscard]] granit_result
-  create_wayland_surface(void* display, void* native_surface,
-                         backend_surface_resource& surface) noexcept override;
-  [[nodiscard]] granit_result
-  create_canvas_surface(std::string_view selector,
-                        backend_surface_resource& surface) noexcept override;
+  [[nodiscard]] granit_result create_surface(const granit_surface_desc& desc,
+                                             backend_surface_resource& surface) noexcept override;
   void destroy_native_surface(VkSurfaceKHR surface) noexcept;
   [[nodiscard]] granit_result create_swapchain(backend_surface_resource& surface,
                                                const backend_swapchain_desc& desc,
