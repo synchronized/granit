@@ -7,6 +7,7 @@
 
 #include <new>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace granit::detail {
@@ -15,15 +16,16 @@ namespace {
 
 class webgpu_timestamp_query_pool_resource final : public backend_timestamp_query_pool_resource {
 public:
-  explicit webgpu_timestamp_query_pool_resource(webgpu_device& device) noexcept
-      : device_(&device) {}
+  explicit webgpu_timestamp_query_pool_resource(
+      std::shared_ptr<webgpu_renderer_state> renderer) noexcept
+      : renderer_(std::move(renderer)) {}
 
   ~webgpu_timestamp_query_pool_resource() override {
     if (handle_ != 0)
-      static_cast<void>(device_->destroy_timestamp_query_pool(handle_));
+      static_cast<void>(renderer_->native_device().destroy_timestamp_query_pool(handle_));
   }
 
-  webgpu_device* device_{};
+  std::shared_ptr<webgpu_renderer_state> renderer_;
   webgpu_timestamp_query_pool handle_{};
 };
 
@@ -40,7 +42,7 @@ granit_result webgpu_renderer_state::create_timestamp_query_pool(
   if (lifecycle_.state != backend_lifecycle_state::ready)
     return GRANIT_ERROR_NOT_READY;
   try {
-    auto resource = std::make_unique<webgpu_timestamp_query_pool_resource>(device_);
+    auto resource = std::make_unique<webgpu_timestamp_query_pool_resource>(shared_from_this());
     const auto result = device_.create_timestamp_query_pool(query_count, &resource->handle_);
     if (result != GRANIT_SUCCESS)
       return result;
@@ -67,7 +69,7 @@ granit_result
 webgpu_renderer_state::reset_timestamp_queries(backend_command_recorder_resource& recorder,
                                                backend_timestamp_query_pool_resource& pool,
                                                std::uint32_t first, std::uint32_t count) noexcept {
-  if (!command_owner_)
+  if (!capabilities_initialized_)
     return GRANIT_ERROR_UNSUPPORTED;
   const auto command = command_native_recorder(recorder);
   const auto query = native_timestamp_query_pool(pool);
@@ -80,7 +82,7 @@ granit_result webgpu_renderer_state::write_timestamp(backend_command_recorder_re
                                                      backend_timestamp_query_pool_resource& pool,
                                                      granit_timestamp_stage,
                                                      std::uint32_t index) noexcept {
-  if (!command_owner_)
+  if (!capabilities_initialized_)
     return GRANIT_ERROR_UNSUPPORTED;
   const auto command = command_native_recorder(recorder);
   const auto query = native_timestamp_query_pool(pool);

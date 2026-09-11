@@ -7,6 +7,7 @@
 
 #include <new>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace granit::detail {
@@ -15,17 +16,20 @@ namespace {
 
 class webgpu_pipeline_warmup_completion final : public backend_pipeline_warmup_completion {
 public:
-  webgpu_pipeline_warmup_completion(webgpu_device& device, webgpu_pipeline_warmup warmup) noexcept
-      : device_(device), warmup_(warmup) {}
+  webgpu_pipeline_warmup_completion(std::shared_ptr<webgpu_renderer_state> renderer,
+                                    webgpu_pipeline_warmup warmup) noexcept
+      : renderer_(std::move(renderer)), warmup_(warmup) {}
   ~webgpu_pipeline_warmup_completion() override {
     if (warmup_ != 0)
-      static_cast<void>(device_.destroy_pipeline_warmup(warmup_));
+      static_cast<void>(renderer_->native_device().destroy_pipeline_warmup(warmup_));
   }
 
-  granit_result poll() noexcept override { return device_.poll_pipeline_warmup(warmup_); }
+  granit_result poll() noexcept override {
+    return renderer_->native_device().poll_pipeline_warmup(warmup_);
+  }
 
 private:
-  webgpu_device& device_;
+  std::shared_ptr<webgpu_renderer_state> renderer_;
   webgpu_pipeline_warmup warmup_{};
 };
 
@@ -33,13 +37,13 @@ private:
 
 std::unique_ptr<backend_compute_pipeline_resource>
 webgpu_renderer_state::allocate_compute_pipeline_resource() {
-  return pipeline_owner_ ? allocate_compute_pipeline() : nullptr;
+  return capabilities_initialized_ ? allocate_compute_pipeline() : nullptr;
 }
 
 granit_result webgpu_renderer_state::create_compute_pipeline(
     backend_pipeline_layout_resource& layout, backend_shader_resource& shader, const char*,
     backend_compute_pipeline_resource& pipeline) noexcept {
-  if (!pipeline_owner_)
+  if (!capabilities_initialized_)
     return GRANIT_ERROR_UNSUPPORTED;
   return create_compute_pipeline(pipeline, native_pipeline_layout(layout), native_shader(shader));
 }
@@ -47,7 +51,7 @@ granit_result webgpu_renderer_state::create_compute_pipeline(
 granit_result webgpu_renderer_state::warmup_compute_pipeline_async(
     backend_pipeline_layout_resource& layout, backend_shader_resource& shader, const char*,
     std::unique_ptr<backend_pipeline_warmup_completion>& completion) noexcept {
-  if (!pipeline_owner_)
+  if (!capabilities_initialized_)
     return GRANIT_ERROR_UNSUPPORTED;
   webgpu_pipeline_warmup warmup{};
   const auto result =
@@ -55,7 +59,7 @@ granit_result webgpu_renderer_state::warmup_compute_pipeline_async(
   if (result != GRANIT_SUCCESS)
     return result;
   try {
-    completion = std::make_unique<webgpu_pipeline_warmup_completion>(device_, warmup);
+    completion = std::make_unique<webgpu_pipeline_warmup_completion>(shared_from_this(), warmup);
     return GRANIT_SUCCESS;
   } catch (const std::bad_alloc&) {
     static_cast<void>(device_.destroy_pipeline_warmup(warmup));
@@ -65,13 +69,13 @@ granit_result webgpu_renderer_state::warmup_compute_pipeline_async(
 
 std::unique_ptr<backend_pipeline_layout_resource>
 webgpu_renderer_state::allocate_pipeline_layout_resource() {
-  return pipeline_owner_ ? allocate_pipeline_layout() : nullptr;
+  return capabilities_initialized_ ? allocate_pipeline_layout() : nullptr;
 }
 
 granit_result webgpu_renderer_state::create_pipeline_layout(
     std::span<backend_bind_group_layout_resource* const> bind_group_layouts,
     backend_pipeline_layout_resource& layout) noexcept {
-  if (!pipeline_owner_ || !resource_owner_)
+  if (!capabilities_initialized_)
     return GRANIT_ERROR_UNSUPPORTED;
   try {
     std::vector<webgpu_bind_group_layout> native_layouts;
@@ -94,13 +98,13 @@ granit_result webgpu_renderer_state::create_pipeline_layout(
 
 std::unique_ptr<backend_graphics_pipeline_resource>
 webgpu_renderer_state::allocate_graphics_pipeline_resource() {
-  return pipeline_owner_ ? allocate_graphics_pipeline() : nullptr;
+  return capabilities_initialized_ ? allocate_graphics_pipeline() : nullptr;
 }
 
 granit_result webgpu_renderer_state::create_graphics_pipeline(
     const backend_graphics_pipeline_create_info& info,
     backend_graphics_pipeline_resource& pipeline) noexcept {
-  if (!pipeline_owner_ || info.color_formats.size() > 1)
+  if (!capabilities_initialized_ || info.color_formats.size() > 1)
     return GRANIT_ERROR_UNSUPPORTED;
   const auto color_format =
       info.color_formats.empty() ? GRANIT_TEXTURE_FORMAT_UNDEFINED : info.color_formats.front();
@@ -115,7 +119,7 @@ granit_result webgpu_renderer_state::create_graphics_pipeline(
 granit_result webgpu_renderer_state::warmup_graphics_pipeline_async(
     const backend_graphics_pipeline_create_info& info,
     std::unique_ptr<backend_pipeline_warmup_completion>& completion) noexcept {
-  if (!pipeline_owner_ || info.color_formats.size() > 1)
+  if (!capabilities_initialized_ || info.color_formats.size() > 1)
     return GRANIT_ERROR_UNSUPPORTED;
   const auto color_format =
       info.color_formats.empty() ? GRANIT_TEXTURE_FORMAT_UNDEFINED : info.color_formats.front();
@@ -129,7 +133,7 @@ granit_result webgpu_renderer_state::warmup_graphics_pipeline_async(
   if (result != GRANIT_SUCCESS)
     return result;
   try {
-    completion = std::make_unique<webgpu_pipeline_warmup_completion>(device_, warmup);
+    completion = std::make_unique<webgpu_pipeline_warmup_completion>(shared_from_this(), warmup);
     return GRANIT_SUCCESS;
   } catch (const std::bad_alloc&) {
     static_cast<void>(device_.destroy_pipeline_warmup(warmup));

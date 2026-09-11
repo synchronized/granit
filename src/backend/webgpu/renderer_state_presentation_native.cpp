@@ -9,7 +9,7 @@
 namespace granit::detail {
 namespace {
 
-webgpu_swapchain_desc to_presentation_owner_desc(const backend_swapchain_desc& desc) {
+webgpu_swapchain_desc to_webgpu_swapchain_desc(const backend_swapchain_desc& desc) {
   return {sizeof(webgpu_swapchain_desc), desc.width, desc.height, desc.minimum_image_count,
           desc.present_mode};
 }
@@ -31,31 +31,31 @@ namespace {
 
 class webgpu_surface_resource final : public backend_surface_resource {
 public:
-  explicit webgpu_surface_resource(std::shared_ptr<webgpu_presentation_owner> context)
-      : presentation_owner_(std::move(context)) {}
+  explicit webgpu_surface_resource(std::shared_ptr<webgpu_renderer_state> renderer)
+      : renderer_(std::move(renderer)) {}
 
   ~webgpu_surface_resource() override {
     if (handle_ != 0) {
-      static_cast<void>(presentation_owner_->device->destroy_surface(handle_));
+      static_cast<void>(renderer_->native_device().destroy_surface(handle_));
     }
   }
 
-  std::shared_ptr<webgpu_presentation_owner> presentation_owner_;
+  std::shared_ptr<webgpu_renderer_state> renderer_;
   webgpu_surface handle_{};
 };
 
 class webgpu_swapchain_resource final : public backend_swapchain_resource {
 public:
-  explicit webgpu_swapchain_resource(std::shared_ptr<webgpu_presentation_owner> context)
-      : presentation_owner_(std::move(context)) {}
+  explicit webgpu_swapchain_resource(std::shared_ptr<webgpu_renderer_state> renderer)
+      : renderer_(std::move(renderer)) {}
 
   ~webgpu_swapchain_resource() override {
     if (handle_ != 0) {
-      static_cast<void>(presentation_owner_->device->destroy_swapchain(handle_));
+      static_cast<void>(renderer_->native_device().destroy_swapchain(handle_));
     }
   }
 
-  std::shared_ptr<webgpu_presentation_owner> presentation_owner_;
+  std::shared_ptr<webgpu_renderer_state> renderer_;
   webgpu_swapchain handle_{};
 };
 
@@ -85,12 +85,12 @@ webgpu_swapchain_resource* as_swapchain(backend_swapchain_resource& resource) {
 } // namespace
 
 std::unique_ptr<backend_surface_resource> webgpu_renderer_state::presentation_allocate_surface() {
-  return std::make_unique<webgpu_surface_resource>(presentation_owner_);
+  return std::make_unique<webgpu_surface_resource>(shared_from_this());
 }
 
 std::unique_ptr<backend_swapchain_resource>
 webgpu_renderer_state::presentation_allocate_swapchain() {
-  return std::make_unique<webgpu_swapchain_resource>(presentation_owner_);
+  return std::make_unique<webgpu_swapchain_resource>(shared_from_this());
 }
 
 granit_result
@@ -100,7 +100,7 @@ webgpu_renderer_state::presentation_create_win32_surface(backend_surface_resourc
   if (surface == nullptr || surface->handle_ != 0)
     return GRANIT_ERROR_INVALID_ARGUMENT;
   webgpu_win32_surface_desc desc{sizeof(desc), 0, instance, window};
-  return presentation_owner_->device->create_win32_surface(&desc, &surface->handle_);
+  return device_.create_win32_surface(&desc, &surface->handle_);
 }
 
 granit_result webgpu_renderer_state::presentation_create_xcb_surface(
@@ -109,7 +109,7 @@ granit_result webgpu_renderer_state::presentation_create_xcb_surface(
   if (surface == nullptr || surface->handle_ != 0)
     return GRANIT_ERROR_INVALID_ARGUMENT;
   webgpu_xcb_surface_desc desc{sizeof(desc), 0, connection, window, 0};
-  return presentation_owner_->device->create_xcb_surface(&desc, &surface->handle_);
+  return device_.create_xcb_surface(&desc, &surface->handle_);
 }
 
 granit_result webgpu_renderer_state::presentation_create_wayland_surface(
@@ -118,7 +118,7 @@ granit_result webgpu_renderer_state::presentation_create_wayland_surface(
   if (surface == nullptr || surface->handle_ != 0)
     return GRANIT_ERROR_INVALID_ARGUMENT;
   webgpu_wayland_surface_desc desc{sizeof(desc), 0, display, native_surface};
-  return presentation_owner_->device->create_wayland_surface(&desc, &surface->handle_);
+  return device_.create_wayland_surface(&desc, &surface->handle_);
 }
 
 granit_result
@@ -130,7 +130,7 @@ webgpu_renderer_state::presentation_create_canvas_surface(backend_surface_resour
     return GRANIT_ERROR_INVALID_ARGUMENT;
   }
   webgpu_canvas_surface_desc desc{sizeof(desc), 0, selector, selector_length};
-  return presentation_owner_->device->create_canvas_surface(&desc, &surface->handle_);
+  return device_.create_canvas_surface(&desc, &surface->handle_);
 }
 
 granit_result webgpu_renderer_state::presentation_create_swapchain(
@@ -142,9 +142,8 @@ granit_result webgpu_renderer_state::presentation_create_swapchain(
       swapchain->handle_ != 0) {
     return GRANIT_ERROR_INVALID_ARGUMENT;
   }
-  const auto presentation_owner_desc = to_presentation_owner_desc(desc);
-  return presentation_owner_->device->create_swapchain(surface->handle_, &presentation_owner_desc,
-                                                       &swapchain->handle_);
+  const auto native_desc = to_webgpu_swapchain_desc(desc);
+  return device_.create_swapchain(surface->handle_, &native_desc, &swapchain->handle_);
 }
 
 granit_result webgpu_renderer_state::presentation_recreate_swapchain(
@@ -153,9 +152,8 @@ granit_result webgpu_renderer_state::presentation_recreate_swapchain(
   if (swapchain == nullptr || swapchain->handle_ == 0) {
     return GRANIT_ERROR_INVALID_ARGUMENT;
   }
-  const auto presentation_owner_desc = to_presentation_owner_desc(desc);
-  return presentation_owner_->device->recreate_swapchain(swapchain->handle_,
-                                                         &presentation_owner_desc);
+  const auto native_desc = to_webgpu_swapchain_desc(desc);
+  return device_.recreate_swapchain(swapchain->handle_, &native_desc);
 }
 
 granit_result
@@ -165,19 +163,18 @@ webgpu_renderer_state::presentation_get_swapchain_info(backend_swapchain_resourc
   if (swapchain == nullptr || swapchain->handle_ == 0) {
     return GRANIT_ERROR_INVALID_ARGUMENT;
   }
-  webgpu_swapchain_info presentation_owner_info{};
-  presentation_owner_info.struct_size = sizeof(presentation_owner_info);
-  const auto result =
-      presentation_owner_->device->get_swapchain_info(swapchain->handle_, &presentation_owner_info);
+  webgpu_swapchain_info native_info{};
+  native_info.struct_size = sizeof(native_info);
+  const auto result = device_.get_swapchain_info(swapchain->handle_, &native_info);
   if (result != GRANIT_SUCCESS) {
     return result;
   }
-  const auto format = to_texture_format(presentation_owner_info.format);
+  const auto format = to_texture_format(native_info.format);
   if (format == GRANIT_TEXTURE_FORMAT_UNDEFINED) {
     return GRANIT_ERROR_UNSUPPORTED;
   }
-  info = {presentation_owner_info.width, presentation_owner_info.height,
-          presentation_owner_info.image_count, presentation_owner_info.present_mode, format};
+  info = {native_info.width, native_info.height, native_info.image_count, native_info.present_mode,
+          format};
   return GRANIT_SUCCESS;
 }
 
@@ -187,10 +184,9 @@ granit_result webgpu_renderer_state::presentation_acquire_swapchain(
   if (swapchain == nullptr || swapchain->handle_ == 0) {
     return GRANIT_ERROR_INVALID_ARGUMENT;
   }
-  webgpu_acquired_frame presentation_owner_frame{};
-  presentation_owner_frame.struct_size = sizeof(presentation_owner_frame);
-  const auto result =
-      presentation_owner_->device->acquire_swapchain(swapchain->handle_, &presentation_owner_frame);
+  webgpu_acquired_frame native_frame{};
+  native_frame.struct_size = sizeof(native_frame);
+  const auto result = device_.acquire_swapchain(swapchain->handle_, &native_frame);
   if (result != GRANIT_SUCCESS) {
     return result;
   }
@@ -199,7 +195,7 @@ granit_result webgpu_renderer_state::presentation_acquire_swapchain(
   const auto info_result = presentation_get_swapchain_info(resource, info);
   if (info_result != GRANIT_SUCCESS) {
     std::uint32_t ignored{};
-    static_cast<void>(presentation_owner_->device->cancel_swapchain(swapchain->handle_, &ignored));
+    static_cast<void>(device_.cancel_swapchain(swapchain->handle_, &ignored));
     return info_result;
   }
 
@@ -211,18 +207,18 @@ granit_result webgpu_renderer_state::presentation_acquire_swapchain(
   texture_desc.height = info.height;
 
   auto texture = std::unique_ptr<backend_texture_resource>(
-      new (std::nothrow) webgpu_borrowed_texture_resource(presentation_owner_frame.texture));
+      new (std::nothrow) webgpu_borrowed_texture_resource(native_frame.texture));
   auto view = std::unique_ptr<backend_texture_view_resource>(
-      new (std::nothrow) webgpu_borrowed_texture_view_resource(presentation_owner_frame.view));
+      new (std::nothrow) webgpu_borrowed_texture_view_resource(native_frame.view));
   if (texture == nullptr || view == nullptr) {
     std::uint32_t ignored{};
-    static_cast<void>(presentation_owner_->device->cancel_swapchain(swapchain->handle_, &ignored));
+    static_cast<void>(device_.cancel_swapchain(swapchain->handle_, &ignored));
     return GRANIT_ERROR_OUT_OF_MEMORY;
   }
 
   frame = {};
-  frame.image_index = presentation_owner_frame.image_index;
-  frame.needs_recreate = presentation_owner_frame.needs_recreate != 0;
+  frame.image_index = native_frame.image_index;
+  frame.needs_recreate = native_frame.needs_recreate != 0;
   frame.dynamic_backbuffer.texture = std::move(texture);
   frame.dynamic_backbuffer.view = std::move(view);
   frame.dynamic_backbuffer.desc = texture_desc;
@@ -236,10 +232,9 @@ webgpu_renderer_state::presentation_present_swapchain(backend_swapchain_resource
   if (swapchain == nullptr || swapchain->handle_ == 0) {
     return GRANIT_ERROR_INVALID_ARGUMENT;
   }
-  std::uint32_t presentation_owner_needs_recreate{};
-  const auto result = presentation_owner_->device->present_swapchain(
-      swapchain->handle_, &presentation_owner_needs_recreate);
-  needs_recreate = presentation_owner_needs_recreate != 0;
+  std::uint32_t native_needs_recreate{};
+  const auto result = device_.present_swapchain(swapchain->handle_, &native_needs_recreate);
+  needs_recreate = native_needs_recreate != 0;
   return result;
 }
 
@@ -250,10 +245,9 @@ webgpu_renderer_state::presentation_cancel_swapchain(backend_swapchain_resource&
   if (swapchain == nullptr || swapchain->handle_ == 0) {
     return GRANIT_ERROR_INVALID_ARGUMENT;
   }
-  std::uint32_t presentation_owner_needs_recreate{};
-  const auto result = presentation_owner_->device->cancel_swapchain(
-      swapchain->handle_, &presentation_owner_needs_recreate);
-  needs_recreate = presentation_owner_needs_recreate != 0;
+  std::uint32_t native_needs_recreate{};
+  const auto result = device_.cancel_swapchain(swapchain->handle_, &native_needs_recreate);
+  needs_recreate = native_needs_recreate != 0;
   return result;
 }
 

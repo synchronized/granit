@@ -15,39 +15,39 @@ namespace {
 
 class webgpu_pipeline_layout_resource final : public backend_pipeline_layout_resource {
 public:
-  explicit webgpu_pipeline_layout_resource(std::shared_ptr<webgpu_pipeline_owner> owner)
-      : pipeline_owner_(std::move(owner)) {}
+  explicit webgpu_pipeline_layout_resource(std::shared_ptr<webgpu_renderer_state> owner)
+      : renderer_(std::move(owner)) {}
   ~webgpu_pipeline_layout_resource() override {
     if (handle_ != 0) {
-      static_cast<void>(pipeline_owner_->device->destroy_pipeline_layout(handle_));
+      static_cast<void>(renderer_->native_device().destroy_pipeline_layout(handle_));
     }
   }
-  std::shared_ptr<webgpu_pipeline_owner> pipeline_owner_;
+  std::shared_ptr<webgpu_renderer_state> renderer_;
   webgpu_pipeline_layout handle_{};
 };
 
 class webgpu_graphics_pipeline_resource final : public backend_graphics_pipeline_resource {
 public:
-  explicit webgpu_graphics_pipeline_resource(std::shared_ptr<webgpu_pipeline_owner> owner)
-      : pipeline_owner_(std::move(owner)) {}
+  explicit webgpu_graphics_pipeline_resource(std::shared_ptr<webgpu_renderer_state> owner)
+      : renderer_(std::move(owner)) {}
   ~webgpu_graphics_pipeline_resource() override {
     if (handle_ != 0) {
-      static_cast<void>(pipeline_owner_->device->destroy_render_pipeline(handle_));
+      static_cast<void>(renderer_->native_device().destroy_render_pipeline(handle_));
     }
   }
-  std::shared_ptr<webgpu_pipeline_owner> pipeline_owner_;
+  std::shared_ptr<webgpu_renderer_state> renderer_;
   webgpu_render_pipeline handle_{};
 };
 
 class webgpu_compute_pipeline_resource final : public backend_compute_pipeline_resource {
 public:
-  explicit webgpu_compute_pipeline_resource(std::shared_ptr<webgpu_pipeline_owner> owner)
-      : pipeline_owner_(std::move(owner)) {}
+  explicit webgpu_compute_pipeline_resource(std::shared_ptr<webgpu_renderer_state> owner)
+      : renderer_(std::move(owner)) {}
   ~webgpu_compute_pipeline_resource() override {
     if (handle_ != 0)
-      static_cast<void>(pipeline_owner_->device->destroy_compute_pipeline(handle_));
+      static_cast<void>(renderer_->native_device().destroy_compute_pipeline(handle_));
   }
-  std::shared_ptr<webgpu_pipeline_owner> pipeline_owner_;
+  std::shared_ptr<webgpu_renderer_state> renderer_;
   webgpu_compute_pipeline handle_{};
 };
 
@@ -59,7 +59,7 @@ webgpu_graphics_pipeline_resource* as_pipeline(backend_graphics_pipeline_resourc
   return dynamic_cast<webgpu_graphics_pipeline_resource*>(&resource);
 }
 
-std::uint32_t to_pipeline_owner_format(granit_texture_format format) noexcept {
+std::uint32_t to_webgpu_format(granit_texture_format format) noexcept {
   switch (format) {
   case GRANIT_TEXTURE_FORMAT_RGBA8_UNORM:
     return GRANIT_WEBGPU_TEXTURE_FORMAT_RGBA8_UNORM;
@@ -74,7 +74,7 @@ std::uint32_t to_pipeline_owner_format(granit_texture_format format) noexcept {
   }
 }
 
-webgpu_blend_factor to_pipeline_owner_blend_factor(granit_blend_factor factor) noexcept {
+webgpu_blend_factor to_webgpu_blend_factor(granit_blend_factor factor) noexcept {
   switch (factor) {
   case GRANIT_BLEND_FACTOR_ZERO:
     return GRANIT_WEBGPU_BLEND_FACTOR_ZERO;
@@ -101,8 +101,7 @@ webgpu_blend_factor to_pipeline_owner_blend_factor(granit_blend_factor factor) n
   }
 }
 
-webgpu_blend_operation
-to_pipeline_owner_blend_operation(granit_blend_operation operation) noexcept {
+webgpu_blend_operation to_webgpu_blend_operation(granit_blend_operation operation) noexcept {
   switch (operation) {
   case GRANIT_BLEND_OPERATION_ADD:
     return GRANIT_WEBGPU_BLEND_OPERATION_ADD;
@@ -119,7 +118,7 @@ to_pipeline_owner_blend_operation(granit_blend_operation operation) noexcept {
   }
 }
 
-std::uint32_t to_pipeline_owner_color_write_mask(granit_color_write_mask mask) noexcept {
+std::uint32_t to_webgpu_color_write_mask(granit_color_write_mask mask) noexcept {
   std::uint32_t result{};
   if ((mask & GRANIT_COLOR_WRITE_RED_BIT) != 0)
     result |= GRANIT_WEBGPU_COLOR_WRITE_RED_BIT;
@@ -136,17 +135,17 @@ std::uint32_t to_pipeline_owner_color_write_mask(granit_color_write_mask mask) n
 
 std::unique_ptr<backend_pipeline_layout_resource>
 webgpu_renderer_state::allocate_pipeline_layout() {
-  return std::make_unique<webgpu_pipeline_layout_resource>(pipeline_owner_);
+  return std::make_unique<webgpu_pipeline_layout_resource>(shared_from_this());
 }
 
 std::unique_ptr<backend_graphics_pipeline_resource>
 webgpu_renderer_state::allocate_graphics_pipeline() {
-  return std::make_unique<webgpu_graphics_pipeline_resource>(pipeline_owner_);
+  return std::make_unique<webgpu_graphics_pipeline_resource>(shared_from_this());
 }
 
 std::unique_ptr<backend_compute_pipeline_resource>
 webgpu_renderer_state::allocate_compute_pipeline() {
-  return std::make_unique<webgpu_compute_pipeline_resource>(pipeline_owner_);
+  return std::make_unique<webgpu_compute_pipeline_resource>(shared_from_this());
 }
 
 granit_result webgpu_renderer_state::validate_graphics_pipeline(
@@ -178,7 +177,7 @@ webgpu_renderer_state::create_pipeline_layout(std::span<const webgpu_bind_group_
   const webgpu_pipeline_layout_desc desc{sizeof(webgpu_pipeline_layout_desc),
                                          static_cast<std::uint32_t>(layouts.size()), layouts.data(),
                                          0};
-  return pipeline_owner_->device->create_pipeline_layout(&desc, &layout->handle_);
+  return device_.create_pipeline_layout(&desc, &layout->handle_);
 }
 
 webgpu_pipeline_layout webgpu_renderer_state::native_pipeline_layout(
@@ -195,7 +194,7 @@ webgpu_renderer_state::create_compute_pipeline(backend_compute_pipeline_resource
   if (pipeline == nullptr || pipeline->handle_ != 0 || layout == 0 || shader == 0)
     return GRANIT_ERROR_INVALID_ARGUMENT;
   const webgpu_compute_pipeline_desc desc{sizeof(desc), 0, layout, shader};
-  return pipeline_owner_->device->create_compute_pipeline(&desc, &pipeline->handle_);
+  return device_.create_compute_pipeline(&desc, &pipeline->handle_);
 }
 
 granit_result webgpu_renderer_state::begin_compute_pipeline_warmup(
@@ -203,7 +202,7 @@ granit_result webgpu_renderer_state::begin_compute_pipeline_warmup(
   if (layout == 0 || shader == 0)
     return GRANIT_ERROR_INVALID_ARGUMENT;
   const webgpu_compute_pipeline_desc desc{sizeof(desc), 0, layout, shader};
-  return pipeline_owner_->device->begin_compute_pipeline_warmup(&desc, &warmup);
+  return device_.begin_compute_pipeline_warmup(&desc, &warmup);
 }
 
 webgpu_compute_pipeline webgpu_renderer_state::native_compute_pipeline(
@@ -247,11 +246,11 @@ granit_result webgpu_renderer_state::create_graphics_pipeline_impl(
     webgpu_pipeline_warmup* warmup) noexcept {
   auto* pipeline = resource == nullptr ? nullptr : as_pipeline(*resource);
   auto* layout = as_layout(layout_resource);
-  const auto pipeline_owner_format = to_pipeline_owner_format(color_format);
+  const auto native_format = to_webgpu_format(color_format);
   if ((resource != nullptr && (pipeline == nullptr || pipeline->handle_ != 0)) ||
       (resource == nullptr && warmup == nullptr) || layout == nullptr || layout->handle_ == 0 ||
       vertex_shader == 0 || fragment_shader == 0 ||
-      (color_format != GRANIT_TEXTURE_FORMAT_UNDEFINED && pipeline_owner_format == 0)) {
+      (color_format != GRANIT_TEXTURE_FORMAT_UNDEFINED && native_format == 0)) {
     return GRANIT_ERROR_INVALID_ARGUMENT;
   }
   try {
@@ -287,10 +286,10 @@ granit_result webgpu_renderer_state::create_graphics_pipeline_impl(
         layout->handle_,
         vertex_shader,
         fragment_shader,
-        pipeline_owner_format,
+        native_format,
         static_cast<std::uint32_t>(layouts.size()),
         layouts.data(),
-        to_pipeline_owner_format(depth_stencil_format),
+        to_webgpu_format(depth_stencil_format),
         depth.test_enabled,
         depth.write_enabled,
         depth.compare,
@@ -298,13 +297,13 @@ granit_result webgpu_renderer_state::create_graphics_pipeline_impl(
         depth_bias == nullptr ? 0.0F : depth_bias->slope_factor,
         depth_bias == nullptr ? 0.0F : depth_bias->clamp,
         color_blend.enabled,
-        to_pipeline_owner_blend_factor(color_blend.source_color_factor),
-        to_pipeline_owner_blend_factor(color_blend.destination_color_factor),
-        to_pipeline_owner_blend_operation(color_blend.color_operation),
-        to_pipeline_owner_blend_factor(color_blend.source_alpha_factor),
-        to_pipeline_owner_blend_factor(color_blend.destination_alpha_factor),
-        to_pipeline_owner_blend_operation(color_blend.alpha_operation),
-        to_pipeline_owner_color_write_mask(color_blend.write_mask),
+        to_webgpu_blend_factor(color_blend.source_color_factor),
+        to_webgpu_blend_factor(color_blend.destination_color_factor),
+        to_webgpu_blend_operation(color_blend.color_operation),
+        to_webgpu_blend_factor(color_blend.source_alpha_factor),
+        to_webgpu_blend_factor(color_blend.destination_alpha_factor),
+        to_webgpu_blend_operation(color_blend.alpha_operation),
+        to_webgpu_color_write_mask(color_blend.write_mask),
         GRANIT_WEBGPU_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
         primitive.front_face == GRANIT_FRONT_FACE_COUNTER_CLOCKWISE
             ? GRANIT_WEBGPU_FRONT_FACE_COUNTER_CLOCKWISE
@@ -315,9 +314,8 @@ granit_result webgpu_renderer_state::create_graphics_pipeline_impl(
                                                              : GRANIT_WEBGPU_CULL_MODE_BACK),
         GRANIT_WEBGPU_POLYGON_MODE_FILL,
         sample_count};
-    return warmup != nullptr
-               ? pipeline_owner_->device->begin_render_pipeline_warmup(&desc, warmup)
-               : pipeline_owner_->device->create_render_pipeline(&desc, &pipeline->handle_);
+    return warmup != nullptr ? device_.begin_render_pipeline_warmup(&desc, warmup)
+                             : device_.create_render_pipeline(&desc, &pipeline->handle_);
   } catch (const std::bad_alloc&) {
     return GRANIT_ERROR_OUT_OF_MEMORY;
   } catch (...) {

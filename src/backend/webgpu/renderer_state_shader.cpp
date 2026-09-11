@@ -3,19 +3,22 @@
 
 #include "backend/webgpu/renderer_state.h"
 
+#include <utility>
+
 namespace granit::detail {
 namespace {
 
 class webgpu_shader_resource final : public backend_shader_resource {
 public:
-  explicit webgpu_shader_resource(webgpu_device& device) noexcept : device_(&device) {}
+  explicit webgpu_shader_resource(std::shared_ptr<webgpu_renderer_state> renderer) noexcept
+      : renderer_(std::move(renderer)) {}
 
   ~webgpu_shader_resource() override {
     if (handle_ != 0)
-      static_cast<void>(device_->destroy_shader(handle_));
+      static_cast<void>(renderer_->native_device().destroy_shader(handle_));
   }
 
-  webgpu_device* device_{};
+  std::shared_ptr<webgpu_renderer_state> renderer_;
   webgpu_shader handle_{};
 };
 
@@ -28,7 +31,7 @@ webgpu_shader_resource* as_shader(backend_shader_resource& resource) noexcept {
 std::unique_ptr<backend_shader_resource> webgpu_renderer_state::allocate_shader_resource() {
   if (lifecycle_.state != backend_lifecycle_state::ready)
     return nullptr;
-  return std::make_unique<webgpu_shader_resource>(device_);
+  return std::make_unique<webgpu_shader_resource>(shared_from_this());
 }
 
 granit_result webgpu_renderer_state::create_shader(backend_shader_resource& shader,

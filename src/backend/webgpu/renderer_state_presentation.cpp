@@ -12,11 +12,11 @@
 namespace granit::detail {
 
 std::unique_ptr<backend_surface_resource> webgpu_renderer_state::allocate_surface_resource() {
-  return presentation_owner_ != nullptr ? presentation_allocate_surface() : nullptr;
+  return capabilities_initialized_ ? presentation_allocate_surface() : nullptr;
 }
 
 std::unique_ptr<backend_swapchain_resource> webgpu_renderer_state::allocate_swapchain_resource() {
-  return presentation_owner_ != nullptr ? presentation_allocate_swapchain() : nullptr;
+  return capabilities_initialized_ ? presentation_allocate_swapchain() : nullptr;
 }
 
 granit_result
@@ -25,9 +25,8 @@ webgpu_renderer_state::create_win32_surface(void* instance, void* window,
   if ((surface_types_ & GRANIT_SURFACE_TYPE_WIN32_BIT) == 0 ||
       (device_surface_types_ & GRANIT_WEBGPU_SURFACE_TYPE_WIN32_BIT) == 0)
     return GRANIT_ERROR_UNSUPPORTED;
-  return presentation_owner_ != nullptr
-             ? presentation_create_win32_surface(surface, instance, window)
-             : GRANIT_ERROR_NOT_READY;
+  return capabilities_initialized_ ? presentation_create_win32_surface(surface, instance, window)
+                                   : GRANIT_ERROR_NOT_READY;
 }
 
 granit_result
@@ -36,9 +35,8 @@ webgpu_renderer_state::create_xcb_surface(void* connection, std::uint32_t window
   if ((surface_types_ & GRANIT_SURFACE_TYPE_XCB_BIT) == 0 ||
       (device_surface_types_ & GRANIT_WEBGPU_SURFACE_TYPE_XCB_BIT) == 0)
     return GRANIT_ERROR_UNSUPPORTED;
-  return presentation_owner_ != nullptr
-             ? presentation_create_xcb_surface(surface, connection, window)
-             : GRANIT_ERROR_NOT_READY;
+  return capabilities_initialized_ ? presentation_create_xcb_surface(surface, connection, window)
+                                   : GRANIT_ERROR_NOT_READY;
 }
 
 granit_result
@@ -47,7 +45,7 @@ webgpu_renderer_state::create_wayland_surface(void* display, void* native_surfac
   if ((surface_types_ & GRANIT_SURFACE_TYPE_WAYLAND_BIT) == 0 ||
       (device_surface_types_ & GRANIT_WEBGPU_SURFACE_TYPE_WAYLAND_BIT) == 0)
     return GRANIT_ERROR_UNSUPPORTED;
-  return presentation_owner_ != nullptr
+  return capabilities_initialized_
              ? presentation_create_wayland_surface(surface, display, native_surface)
              : GRANIT_ERROR_NOT_READY;
 }
@@ -58,7 +56,7 @@ webgpu_renderer_state::create_canvas_surface(std::string_view selector,
   if ((surface_types_ & GRANIT_SURFACE_TYPE_CANVAS_BIT) == 0 ||
       (device_surface_types_ & GRANIT_WEBGPU_SURFACE_TYPE_CANVAS_BIT) == 0)
     return GRANIT_ERROR_UNSUPPORTED;
-  if (presentation_owner_ == nullptr)
+  if (!capabilities_initialized_)
     return GRANIT_ERROR_NOT_READY;
   return presentation_create_canvas_surface(surface, selector.data(),
                                             static_cast<std::uint32_t>(selector.size()));
@@ -67,21 +65,21 @@ webgpu_renderer_state::create_canvas_surface(std::string_view selector,
 granit_result webgpu_renderer_state::create_swapchain(backend_surface_resource& surface,
                                                       const backend_swapchain_desc& desc,
                                                       backend_swapchain_resource& swapchain) {
-  return presentation_owner_ != nullptr ? presentation_create_swapchain(surface, desc, swapchain)
-                                        : GRANIT_ERROR_NOT_READY;
+  return capabilities_initialized_ ? presentation_create_swapchain(surface, desc, swapchain)
+                                   : GRANIT_ERROR_NOT_READY;
 }
 
 granit_result webgpu_renderer_state::recreate_swapchain(backend_surface_resource&,
                                                         const backend_swapchain_desc& desc,
                                                         backend_swapchain_resource& swapchain) {
-  return presentation_owner_ != nullptr ? presentation_recreate_swapchain(swapchain, desc)
-                                        : GRANIT_ERROR_NOT_READY;
+  return capabilities_initialized_ ? presentation_recreate_swapchain(swapchain, desc)
+                                   : GRANIT_ERROR_NOT_READY;
 }
 
 backend_swapchain_info
 webgpu_renderer_state::get_swapchain_info(backend_swapchain_resource& swapchain) noexcept {
   backend_swapchain_info info{};
-  if (presentation_owner_ != nullptr)
+  if (capabilities_initialized_)
     static_cast<void>(presentation_get_swapchain_info(swapchain, info));
   return info;
 }
@@ -90,7 +88,7 @@ granit_result webgpu_renderer_state::get_swapchain_backbuffers(
     backend_swapchain_resource&, std::vector<backend_swapchain_backbuffer>& backbuffers) {
   // WebGPU 的当前纹理由 Acquire 动态提供，不存在可预先枚举的固定后备缓冲。
   backbuffers.clear();
-  return presentation_owner_ != nullptr ? GRANIT_SUCCESS : GRANIT_ERROR_NOT_READY;
+  return capabilities_initialized_ ? GRANIT_SUCCESS : GRANIT_ERROR_NOT_READY;
 }
 
 granit_result
@@ -101,22 +99,22 @@ webgpu_renderer_state::prepare_swapchain_backbuffer(backend_swapchain_backbuffer
 granit_result
 webgpu_renderer_state::acquire_swapchain_frame(backend_swapchain_resource& swapchain,
                                                backend_acquired_swapchain_frame& frame) {
-  return presentation_owner_ != nullptr ? presentation_acquire_swapchain(swapchain, frame)
-                                        : GRANIT_ERROR_NOT_READY;
+  return capabilities_initialized_ ? presentation_acquire_swapchain(swapchain, frame)
+                                   : GRANIT_ERROR_NOT_READY;
 }
 
 granit_result webgpu_renderer_state::present_swapchain_frame(backend_swapchain_resource& swapchain,
                                                              std::uint32_t, std::size_t,
                                                              bool& needs_recreate) {
-  return presentation_owner_ != nullptr ? presentation_present_swapchain(swapchain, needs_recreate)
-                                        : GRANIT_ERROR_NOT_READY;
+  return capabilities_initialized_ ? presentation_present_swapchain(swapchain, needs_recreate)
+                                   : GRANIT_ERROR_NOT_READY;
 }
 
 granit_result webgpu_renderer_state::cancel_swapchain_frame(backend_swapchain_resource& swapchain,
                                                             std::uint32_t, std::size_t,
                                                             bool& needs_recreate) {
-  return presentation_owner_ != nullptr ? presentation_cancel_swapchain(swapchain, needs_recreate)
-                                        : GRANIT_ERROR_NOT_READY;
+  return capabilities_initialized_ ? presentation_cancel_swapchain(swapchain, needs_recreate)
+                                   : GRANIT_ERROR_NOT_READY;
 }
 
 granit_result webgpu_renderer_state::wait_for_present_idle() noexcept {

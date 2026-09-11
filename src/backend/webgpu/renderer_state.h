@@ -13,6 +13,7 @@
 #include "backend/contracts/compute.h"
 #include "backend/contracts/lifecycle.h"
 #include "backend/contracts/pipeline.h"
+#include "backend/contracts/presentation.h"
 #include "backend/contracts/queue.h"
 #include "backend/contracts/renderer.h"
 #include "backend/contracts/rendering.h"
@@ -21,11 +22,7 @@
 #include "backend/contracts/shader.h"
 #include "backend/contracts/timestamp.h"
 #include "backend/contracts/transfer.h"
-#include "backend/webgpu/commands.h"
 #include "backend/webgpu/device.h"
-#include "backend/webgpu/pipelines.h"
-#include "backend/webgpu/presentation.h"
-#include "backend/webgpu/resources.h"
 
 namespace granit::detail {
 
@@ -43,7 +40,8 @@ class webgpu_renderer_state final : public backend_renderer,
                                     public backend_pipeline_layout_renderer,
                                     public backend_pipeline_renderer,
                                     public backend_pipeline_warmup_renderer,
-                                    public backend_timestamp_renderer {
+                                    public backend_timestamp_renderer,
+                                    public std::enable_shared_from_this<webgpu_renderer_state> {
 public:
   webgpu_renderer_state() = default;
   ~webgpu_renderer_state();
@@ -70,6 +68,7 @@ public:
   texture_format_capabilities(granit_texture_format format) const noexcept override;
   [[nodiscard]] std::uint32_t domain() const noexcept override { return domain_; }
   void set_domain(std::uint32_t domain) noexcept override { domain_ = domain; }
+  [[nodiscard]] webgpu_device& native_device() noexcept { return device_; }
 
   [[nodiscard]] std::unique_ptr<backend_buffer_resource> allocate_buffer_resource() override;
   [[nodiscard]] granit_result create_buffer(const granit_buffer_desc& desc,
@@ -498,10 +497,7 @@ private:
   std::uint32_t device_surface_types_{};
   std::uint32_t domain_{};
   submission_serial next_submission_serial_{1};
-  std::shared_ptr<webgpu_presentation_owner> presentation_owner_;
-  std::shared_ptr<webgpu_resource_owner> resource_owner_;
-  std::shared_ptr<webgpu_pipeline_owner> pipeline_owner_;
-  std::shared_ptr<webgpu_command_owner> command_owner_;
+  bool capabilities_initialized_{};
 };
 
 } // namespace granit::detail

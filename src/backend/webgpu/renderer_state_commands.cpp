@@ -28,13 +28,13 @@ webgpu_texture_aspect to_device_aspect(granit_texture_aspect aspect) noexcept {
 
 std::unique_ptr<backend_command_recorder_resource>
 webgpu_renderer_state::allocate_command_recorder_resource() {
-  return command_owner_ ? command_allocate_recorder() : nullptr;
+  return capabilities_initialized_ ? command_allocate_recorder() : nullptr;
 }
 
 granit_result
 webgpu_renderer_state::bind_compute_pipeline(backend_command_recorder_resource& recorder,
                                              backend_compute_pipeline_resource& pipeline) noexcept {
-  return command_owner_ && pipeline_owner_
+  return capabilities_initialized_
              ? command_bind_compute_pipeline(recorder, native_compute_pipeline(pipeline))
              : GRANIT_ERROR_UNSUPPORTED;
 }
@@ -44,7 +44,7 @@ granit_result webgpu_renderer_state::bind_compute_groups(
     std::uint32_t first_group, std::span<backend_bind_group_resource* const> bind_groups,
     std::span<const std::uint32_t> dynamic_offsets, std::span<const backend_buffer_access>,
     std::span<const backend_texture_access>) {
-  if (!command_owner_ || !resource_owner_ || !pipeline_owner_ || bind_groups.empty())
+  if (!capabilities_initialized_ || bind_groups.empty())
     return GRANIT_ERROR_INVALID_ARGUMENT;
   try {
     std::vector<webgpu_bind_group> native_groups;
@@ -67,43 +67,43 @@ granit_result webgpu_renderer_state::bind_compute_groups(
 granit_result webgpu_renderer_state::dispatch(backend_command_recorder_resource& recorder,
                                               std::uint32_t x, std::uint32_t y,
                                               std::uint32_t z) noexcept {
-  return command_owner_ ? command_dispatch(recorder, x, y, z) : GRANIT_ERROR_UNSUPPORTED;
+  return capabilities_initialized_ ? command_dispatch(recorder, x, y, z) : GRANIT_ERROR_UNSUPPORTED;
 }
 
 granit_result
 webgpu_renderer_state::create_command_recorder(backend_command_recorder_resource&) noexcept {
-  return command_owner_ ? GRANIT_SUCCESS : GRANIT_ERROR_UNSUPPORTED;
+  return capabilities_initialized_ ? GRANIT_SUCCESS : GRANIT_ERROR_UNSUPPORTED;
 }
 
 granit_result webgpu_renderer_state::begin_command_recorder(
     backend_command_recorder_resource& recorder) noexcept {
-  return command_owner_ ? command_begin(recorder) : GRANIT_ERROR_UNSUPPORTED;
+  return capabilities_initialized_ ? command_begin(recorder) : GRANIT_ERROR_UNSUPPORTED;
 }
 
 granit_result
 webgpu_renderer_state::end_command_recorder(backend_command_recorder_resource& recorder) noexcept {
-  return command_owner_ ? command_end(recorder) : GRANIT_ERROR_UNSUPPORTED;
+  return capabilities_initialized_ ? command_end(recorder) : GRANIT_ERROR_UNSUPPORTED;
 }
 
 granit_result webgpu_renderer_state::reset_command_recorder(
     backend_command_recorder_resource& recorder) noexcept {
-  return command_owner_ ? command_reset(recorder) : GRANIT_ERROR_UNSUPPORTED;
+  return capabilities_initialized_ ? command_reset(recorder) : GRANIT_ERROR_UNSUPPORTED;
 }
 
 granit_result webgpu_renderer_state::discard_command_recorder(
     backend_command_recorder_resource& recorder) noexcept {
-  return command_owner_ ? command_reset(recorder) : GRANIT_ERROR_UNSUPPORTED;
+  return capabilities_initialized_ ? command_reset(recorder) : GRANIT_ERROR_UNSUPPORTED;
 }
 
 bool webgpu_renderer_state::command_recorder_is_recording(
     backend_command_recorder_resource& recorder) noexcept {
-  return command_owner_ && command_is_recording(recorder);
+  return capabilities_initialized_ && command_is_recording(recorder);
 }
 
 granit_result webgpu_renderer_state::bind_graphics_pipeline(
     backend_command_recorder_resource& recorder,
     backend_graphics_pipeline_resource& pipeline) noexcept {
-  return command_owner_ && pipeline_owner_
+  return capabilities_initialized_
              ? command_bind_pipeline(recorder, native_graphics_pipeline(pipeline))
              : GRANIT_ERROR_UNSUPPORTED;
 }
@@ -116,7 +116,7 @@ granit_result webgpu_renderer_state::bind_graphics_groups(
     std::span<const backend_texture_access> texture_accesses) {
   static_cast<void>(buffer_accesses);
   static_cast<void>(texture_accesses);
-  if (!command_owner_ || !resource_owner_ || !pipeline_owner_ || bind_groups.empty())
+  if (!capabilities_initialized_ || bind_groups.empty())
     return GRANIT_ERROR_INVALID_ARGUMENT;
   try {
     std::vector<webgpu_bind_group> native_groups;
@@ -144,7 +144,7 @@ granit_result webgpu_renderer_state::bind_graphics_groups(
 granit_result webgpu_renderer_state::bind_vertex_buffers(
     backend_command_recorder_resource& recorder, std::uint32_t first,
     std::span<backend_buffer_resource* const> buffers, std::span<const std::uint64_t> offsets) {
-  if (!command_owner_ || !resource_owner_ || buffers.empty() || buffers.size() != offsets.size())
+  if (!capabilities_initialized_ || buffers.empty() || buffers.size() != offsets.size())
     return GRANIT_ERROR_INVALID_ARGUMENT;
   std::vector<webgpu_vertex_buffer_binding> bindings;
   try {
@@ -167,7 +167,7 @@ granit_result webgpu_renderer_state::bind_index_buffer(backend_command_recorder_
                                                        backend_buffer_resource& buffer,
                                                        std::uint64_t offset,
                                                        granit_index_type type) {
-  if (!command_owner_ || !resource_owner_)
+  if (!capabilities_initialized_)
     return GRANIT_ERROR_UNSUPPORTED;
   const auto native = native_buffer(buffer);
   if (native == 0)
@@ -181,7 +181,7 @@ granit_result
 webgpu_renderer_state::set_viewports(backend_command_recorder_resource& recorder,
                                      std::uint32_t first,
                                      std::span<const granit_viewport> viewports) noexcept {
-  if (!command_owner_ || viewports.empty())
+  if (!capabilities_initialized_ || viewports.empty())
     return GRANIT_ERROR_INVALID_ARGUMENT;
   try {
     std::vector<webgpu_viewport> native;
@@ -202,7 +202,7 @@ granit_result
 webgpu_renderer_state::set_scissors(backend_command_recorder_resource& recorder,
                                     std::uint32_t first,
                                     std::span<const granit_scissor> scissors) noexcept {
-  if (!command_owner_ || scissors.empty())
+  if (!capabilities_initialized_ || scissors.empty())
     return GRANIT_ERROR_INVALID_ARGUMENT;
   try {
     std::vector<webgpu_scissor> native;
@@ -222,7 +222,7 @@ webgpu_renderer_state::set_scissors(backend_command_recorder_resource& recorder,
 granit_result webgpu_renderer_state::copy_buffer(
     backend_command_recorder_resource& recorder, backend_buffer_resource& source,
     backend_buffer_resource& destination, std::span<const granit_buffer_copy_region> regions) {
-  if (!command_owner_ || !resource_owner_)
+  if (!capabilities_initialized_)
     return GRANIT_ERROR_NOT_READY;
   try {
     std::vector<webgpu_buffer_copy_region> native;
@@ -241,7 +241,7 @@ granit_result webgpu_renderer_state::copy_texture_to_buffer(
     backend_command_recorder_resource& recorder, backend_texture_resource& source,
     backend_buffer_resource& destination, granit_texture_format format,
     const granit_texture_data_layout& layout, const granit_texture_write_region& region) {
-  if (!command_owner_ || !resource_owner_)
+  if (!capabilities_initialized_)
     return GRANIT_ERROR_NOT_READY;
   const auto block = texture_format_block(format);
   if (block.bytes == 0)
@@ -270,7 +270,7 @@ granit_result webgpu_renderer_state::copy_buffer_to_texture(
     backend_command_recorder_resource& recorder, backend_buffer_resource& source,
     backend_texture_resource& destination, granit_texture_format format,
     const granit_texture_data_layout& layout, const granit_texture_write_region& region) {
-  if (!command_owner_ || !resource_owner_)
+  if (!capabilities_initialized_)
     return GRANIT_ERROR_NOT_READY;
   const auto block = texture_format_block(format);
   if (block.bytes == 0)
@@ -299,7 +299,7 @@ granit_result webgpu_renderer_state::copy_texture(backend_command_recorder_resou
                                                   backend_texture_resource& source,
                                                   backend_texture_resource& destination,
                                                   const granit_texture_copy_region& region) {
-  if (!command_owner_ || !resource_owner_)
+  if (!capabilities_initialized_)
     return GRANIT_ERROR_NOT_READY;
   const webgpu_texture_copy_region native{
       region.source_mip_level,
@@ -334,7 +334,7 @@ granit_result webgpu_renderer_state::generate_mipmaps(backend_command_recorder_r
                                                       backend_texture_resource& texture,
                                                       const granit_texture_desc&,
                                                       const granit_texture_mipmap_range& range) {
-  if (!command_owner_ || !resource_owner_)
+  if (!capabilities_initialized_)
     return GRANIT_ERROR_NOT_READY;
   const webgpu_texture_mipmap_range native{range.base_mip_level, range.level_count,
                                            range.base_array_layer, range.array_layer_count};
@@ -345,7 +345,7 @@ granit_result webgpu_renderer_state::fill_buffer(backend_command_recorder_resour
                                                  backend_buffer_resource& buffer,
                                                  std::uint64_t offset, std::uint64_t size,
                                                  std::uint32_t value) {
-  if (!command_owner_ || !resource_owner_)
+  if (!capabilities_initialized_)
     return GRANIT_ERROR_NOT_READY;
   return command_fill_buffer(recorder, native_buffer(buffer), offset, size, value);
 }
@@ -356,7 +356,7 @@ granit_result webgpu_renderer_state::draw(backend_command_recorder_resource& rec
                                           std::uint32_t vertex_count, std::uint32_t instance_count,
                                           std::uint32_t first_vertex,
                                           std::uint32_t first_instance) noexcept {
-  if (!command_owner_)
+  if (!capabilities_initialized_)
     return GRANIT_ERROR_UNSUPPORTED;
   return command_draw(recorder, vertex_count, instance_count, first_vertex, first_instance);
 }
@@ -365,7 +365,7 @@ granit_result webgpu_renderer_state::draw_indexed(
     backend_command_recorder_resource& recorder, backend_texture_view_resource*,
     backend_graphics_pipeline_resource*, std::uint32_t index_count, std::uint32_t instance_count,
     std::uint32_t first_index, std::int32_t vertex_offset, std::uint32_t first_instance) noexcept {
-  if (!command_owner_)
+  if (!capabilities_initialized_)
     return GRANIT_ERROR_UNSUPPORTED;
   return command_draw_indexed(recorder, index_count, instance_count, first_index, vertex_offset,
                               first_instance);
@@ -375,7 +375,7 @@ granit_result webgpu_renderer_state::begin_rendering(
     backend_command_recorder_resource& recorder, granit_rendering_area,
     std::span<const backend_color_attachment> color_attachments,
     const backend_depth_stencil_attachment* depth_stencil_attachment, std::uint32_t layer_count) {
-  if (!command_owner_ || !presentation_owner_ || color_attachments.size() > 1 || layer_count != 1 ||
+  if (!capabilities_initialized_ || color_attachments.size() > 1 || layer_count != 1 ||
       (color_attachments.empty() && depth_stencil_attachment == nullptr))
     return GRANIT_ERROR_UNSUPPORTED;
   auto load = GRANIT_WEBGPU_LOAD_OPERATION_CLEAR;
@@ -437,7 +437,7 @@ granit_result webgpu_renderer_state::begin_rendering(
 
 granit_result
 webgpu_renderer_state::end_rendering(backend_command_recorder_resource& recorder) noexcept {
-  return command_owner_ ? command_end_rendering(recorder) : GRANIT_ERROR_UNSUPPORTED;
+  return capabilities_initialized_ ? command_end_rendering(recorder) : GRANIT_ERROR_UNSUPPORTED;
 }
 
 } // namespace granit::detail

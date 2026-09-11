@@ -88,10 +88,6 @@ webgpu_renderer_state::texture_format_capabilities(granit_texture_format format)
 }
 
 webgpu_renderer_state::~webgpu_renderer_state() {
-  presentation_owner_.reset();
-  resource_owner_.reset();
-  command_owner_.reset();
-  pipeline_owner_.reset();
   if (device_.instance() != 0)
     static_cast<void>(device_.destroy_instance());
   device_.close();
@@ -196,8 +192,7 @@ granit_result webgpu_renderer_state::refresh_state() noexcept {
     return GRANIT_ERROR_INTERNAL;
   }
 
-  if (presentation_owner_ == nullptr || resource_owner_ == nullptr || pipeline_owner_ == nullptr ||
-      command_owner_ == nullptr) {
+  if (!capabilities_initialized_) {
     webgpu_capabilities capabilities{};
     capabilities.struct_size = sizeof(capabilities);
     const auto capabilities_result = device_.get_capabilities(&capabilities);
@@ -225,25 +220,7 @@ granit_result webgpu_renderer_state::refresh_state() noexcept {
       lifecycle_ = {backend_lifecycle_state::failed, GRANIT_ERROR_UNSUPPORTED};
       return GRANIT_ERROR_UNSUPPORTED;
     }
-    try {
-      auto presentation_owner =
-          std::make_shared<webgpu_presentation_owner>(webgpu_presentation_owner{&device_});
-      auto resource_owner =
-          std::make_shared<webgpu_resource_owner>(webgpu_resource_owner{&device_});
-      auto pipeline_owner =
-          std::make_shared<webgpu_pipeline_owner>(webgpu_pipeline_owner{&device_});
-      auto command_owner = std::make_shared<webgpu_command_owner>(webgpu_command_owner{&device_});
-      presentation_owner_ = std::move(presentation_owner);
-      resource_owner_ = std::move(resource_owner);
-      pipeline_owner_ = std::move(pipeline_owner);
-      command_owner_ = std::move(command_owner);
-    } catch (const std::bad_alloc&) {
-      lifecycle_ = {backend_lifecycle_state::failed, GRANIT_ERROR_OUT_OF_MEMORY};
-      return GRANIT_ERROR_OUT_OF_MEMORY;
-    } catch (...) {
-      lifecycle_ = {backend_lifecycle_state::failed, GRANIT_ERROR_INTERNAL};
-      return GRANIT_ERROR_INTERNAL;
-    }
+    capabilities_initialized_ = true;
   }
   lifecycle_ = {backend_lifecycle_state::ready, GRANIT_SUCCESS};
   return GRANIT_SUCCESS;
