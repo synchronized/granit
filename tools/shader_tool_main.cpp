@@ -574,43 +574,43 @@ std::string json_string(std::string_view value) {
   return std::move(output).str();
 }
 
-const char* binding_type_name(uint32_t type) {
+const char* binding_type_name(granit::shader_tools::binding_type type) {
   switch (type) {
-  case GRANIT_SHADER_TOOLS_BINDING_UNIFORM_BUFFER:
+  case granit::shader_tools::binding_type::uniform_buffer:
     return "uniform_buffer";
-  case GRANIT_SHADER_TOOLS_BINDING_STORAGE_BUFFER:
+  case granit::shader_tools::binding_type::storage_buffer:
     return "storage_buffer";
-  case GRANIT_SHADER_TOOLS_BINDING_SAMPLED_TEXTURE:
+  case granit::shader_tools::binding_type::sampled_texture:
     return "sampled_texture";
-  case GRANIT_SHADER_TOOLS_BINDING_STORAGE_TEXTURE:
+  case granit::shader_tools::binding_type::storage_texture:
     return "storage_texture";
-  case GRANIT_SHADER_TOOLS_BINDING_SAMPLER:
+  case granit::shader_tools::binding_type::sampler:
     return "sampler";
   default:
     return "unsupported";
   }
 }
 
-const char* binding_access_name(uint32_t access) {
+const char* binding_access_name(granit::shader_tools::binding_access access) {
   switch (access) {
-  case GRANIT_SHADER_TOOLS_ACCESS_READ:
+  case granit::shader_tools::binding_access::read:
     return "read";
-  case GRANIT_SHADER_TOOLS_ACCESS_WRITE:
+  case granit::shader_tools::binding_access::write:
     return "write";
-  case GRANIT_SHADER_TOOLS_ACCESS_READ_WRITE:
+  case granit::shader_tools::binding_access::read_write:
     return "read_write";
   default:
     return "unsupported";
   }
 }
 
-const char* scalar_type_name(uint32_t type) {
+const char* scalar_type_name(granit::shader_tools::scalar_type type) {
   switch (type) {
-  case GRANIT_SHADER_TOOLS_SCALAR_FLOAT:
+  case granit::shader_tools::scalar_type::floating_point:
     return "float";
-  case GRANIT_SHADER_TOOLS_SCALAR_SINT:
+  case granit::shader_tools::scalar_type::signed_integer:
     return "sint";
-  case GRANIT_SHADER_TOOLS_SCALAR_UINT:
+  case granit::shader_tools::scalar_type::unsigned_integer:
     return "uint";
   default:
     return "unsupported";
@@ -625,8 +625,8 @@ void print_interface_variable(const granit::shader_tools::interface_variable_inf
             << ", \"name\": " << json_string(variable.name) << '}';
 }
 
-void print_json(const granit::shader_tools::result& result,
-                const granit::shader_tools::result_info& info, const char* stage) {
+void print_json(const granit::shader_tools::reflection& result,
+                const granit::shader_tools::reflection_info& info, const char* stage) {
   std::cout << "{\n  \"schema\": 1,\n  \"entry_point\": " << json_string(info.entry_point)
             << ",\n  \"stage\": " << json_string(stage) << ",\n  \"bindings\": [";
   for (uint64_t index = 0; index < result.binding_count(); ++index) {

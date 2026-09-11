@@ -46,6 +46,10 @@ if(GRANIT_BUILD_SHADER_TOOLS OR GRANIT_BUILD_TOOLS OR (GRANIT_BUILD_TESTING AND 
       BASE_DIRS "${PROJECT_SOURCE_DIR}/include"
       FILES
         "${PROJECT_SOURCE_DIR}/include/granit/tools/shader_tools_export.h"
+        "${PROJECT_SOURCE_DIR}/include/granit/tools/shader_compiler.h"
+        "${PROJECT_SOURCE_DIR}/include/granit/tools/shader_compiler.hpp"
+        "${PROJECT_SOURCE_DIR}/include/granit/tools/shader_reflection.h"
+        "${PROJECT_SOURCE_DIR}/include/granit/tools/shader_reflection.hpp"
         "${PROJECT_SOURCE_DIR}/include/granit/tools/shader_tools.h"
         "${PROJECT_SOURCE_DIR}/include/granit/tools/shader_tools.hpp"
   )

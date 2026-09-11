@@ -6,7 +6,8 @@
 ## 状态
 
 **实现中。** S-37K1 已完成共享 Shader 类型收敛；S-37K2 已完成统一 Compiler 配置、编译描述和
-单一编译入口；S-37K2A 已完成通用内容摘要收敛。S-37K3～S-37K6 待实施。
+单一编译入口；S-37K2A 已完成通用内容摘要收敛；S-37K3 已完成 Compilation 与 Reflection
+边界。S-37K4～S-37K6 待实施。
 
 ## 背景与目标
 
@@ -223,7 +224,7 @@ tools/shader_cli/
 3. **S-37K2A 通用内容摘要收敛（已完成）**：增加 Core 内容摘要类型和私有 SHA-256 实现；迁移
    Shader、Texture、Environment、Material Archive、Pipeline Warmup 与离线工具；删除重复算法和
    领域错误的 `shader_bytes_sha256`，同时保留内容 ID、载荷摘要与缓存键的语义名称。
-4. **S-37K3 Compilation 与 Reflection**：将模糊的 Result 句柄拆成编译结果和反射视图；统一结构化
+4. **S-37K3 Compilation 与 Reflection（已完成）**：将模糊的 Result 句柄拆成编译结果和反射视图；统一结构化
    Binding、接口变量、Workgroup 和 Override 查询；删除旧结果查询入口。
 5. **S-37K4 Shader Object 边界**：引入 `.grshaderobj`、Object Builder 和对象检查；迁移缓存、测试
    Fixture 与生成规则；删除 `.grshader` 名称和旧 `result_write_asset`/`restore_asset_cache` 组织。

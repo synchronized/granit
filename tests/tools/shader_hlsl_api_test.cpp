@@ -51,13 +51,18 @@ int main(int argc, char** argv) {
   desc.defines = definitions;
 
   auto [status, result] = compiler.compile(desc);
-  if (status.failed() || result.info().stage != granit::shader_stage::fragment ||
-      result.binding_count() != 3 || result.override_count() != 1 ||
+  auto [reflection_status, reflection] = result.reflection();
+  if (status.failed() || reflection_status.failed() ||
+      result.info().stage != granit::shader_stage::fragment || reflection.binding_count() != 3 ||
+      reflection.override_count() != 1 || result.spirv().empty() || result.wgsl().empty() ||
       !std::filesystem::exists(spirv) || !std::filesystem::exists(wgsl) ||
       read_spirv_version(spirv) < UINT32_C(0x00010600) ||
       std::filesystem::exists(spirv + ".tint-input.spv") ||
       read_text(wgsl).find("@fragment") == std::string::npos)
     return 3;
+  result.reset();
+  if (!reflection || reflection.binding_count() != 3)
+    return 6;
 
   const granit::shader_tools::shader_define duplicate_definitions[]{definitions[0], definitions[0]};
   desc.defines = duplicate_definitions;

@@ -26,6 +26,8 @@
 - 浏览器 WebGPU 内部删除历史 Provider ABI、查询符号、函数表和 dispatch；domain adapter 直接
   调用后端私有 Context，并使用互不混用的强类型资源句柄。
 - ShaderTools 统一 WGSL/HLSL Compiler API，并移除 GLSL/glslang 前端、工具链配置和打包内容。
+- ShaderTools 将编译结果与反射拆为独立句柄和头文件；C++ 反射字段改用强类型枚举，编译结果可直接
+  查询 SPIR-V 与 WGSL 载荷。
 - Shader、Texture、Environment、Material Archive 和 Pipeline Warmup 共用 Core 内容摘要类型与
   SHA-256 实现；领域 API 保留各自的内容 ID 和缓存键名称。
 

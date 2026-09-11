@@ -27,12 +27,14 @@ struct stored_compiler {
   std::filesystem::path dxc;
   std::filesystem::path tint;
 };
-struct stored_result {
+struct stored_shader_data {
   granit_result status = GRANIT_ERROR_INTERNAL;
   std::string entry_point;
   uint32_t stage = 0;
   std::string output;
   std::string diagnostic;
+  std::vector<std::byte> spirv;
+  std::string wgsl;
   std::string reflection_json;
   std::vector<granit::tools::shader_binding_info> bindings;
   std::vector<granit::tools::shader_interface_variable_info> vertex_inputs;
@@ -43,9 +45,10 @@ struct stored_result {
   uint32_t workgroup_size_z = 0;
 };
 
-std::mutex results_mutex;
-std::unordered_map<uint64_t, std::shared_ptr<const stored_result>> results;
-std::atomic<uint64_t> next_result{1};
+std::mutex shader_data_mutex;
+std::unordered_map<uint64_t, std::shared_ptr<const stored_shader_data>> compilations;
+std::unordered_map<uint64_t, std::shared_ptr<const stored_shader_data>> reflections;
+std::atomic<uint64_t> next_shader_data_handle{1};
 std::mutex compilers_mutex;
 std::unordered_map<uint64_t, std::shared_ptr<const stored_compiler>> compilers;
 std::atomic<uint64_t> next_compiler{1};
@@ -222,7 +225,7 @@ uint32_t scalar_type_value(granit::tools::shader_scalar_type type) {
   return 0;
 }
 
-void store_reflection(stored_result& target, granit::tools::shader_info& source) {
+void store_reflection(stored_shader_data& target, granit::tools::shader_info& source) {
   target.reflection_json = granit::tools::serialize_shader_info_json(source);
   target.bindings = std::move(source.bindings);
   target.vertex_inputs = std::move(source.vertex_inputs);
@@ -233,18 +236,39 @@ void store_reflection(stored_result& target, granit::tools::shader_info& source)
   target.workgroup_size_z = source.workgroup_size_z;
 }
 
-std::shared_ptr<const stored_result> find_result(granit_shader_tools_result result) {
-  std::lock_guard lock{results_mutex};
-  const auto iterator = results.find(result);
-  return iterator == results.end() ? nullptr : iterator->second;
+std::shared_ptr<const stored_shader_data>
+find_compilation(granit_shader_tools_compilation compilation) {
+  std::lock_guard lock{shader_data_mutex};
+  const auto iterator = compilations.find(compilation);
+  return iterator == compilations.end() ? nullptr : iterator->second;
 }
 
-granit_shader_tools_result store(std::shared_ptr<const stored_result> value) {
-  auto handle = next_result.fetch_add(1, std::memory_order_relaxed);
+std::shared_ptr<const stored_shader_data>
+find_reflection(granit_shader_tools_reflection reflection) {
+  std::lock_guard lock{shader_data_mutex};
+  const auto iterator = reflections.find(reflection);
+  return iterator == reflections.end() ? nullptr : iterator->second;
+}
+
+uint64_t allocate_shader_data_handle() {
+  auto handle = next_shader_data_handle.fetch_add(1, std::memory_order_relaxed);
   if (handle == 0)
-    handle = next_result.fetch_add(1, std::memory_order_relaxed);
-  std::lock_guard lock{results_mutex};
-  results.emplace(handle, std::move(value));
+    handle = next_shader_data_handle.fetch_add(1, std::memory_order_relaxed);
+  return handle;
+}
+
+granit_shader_tools_compilation store_compilation(std::shared_ptr<const stored_shader_data> value) {
+  const auto handle = allocate_shader_data_handle();
+  std::lock_guard lock{shader_data_mutex};
+  compilations.emplace(handle, std::move(value));
+  return handle;
+}
+
+granit_shader_tools_reflection
+store_reflection_handle(std::shared_ptr<const stored_shader_data> value) {
+  const auto handle = allocate_shader_data_handle();
+  std::lock_guard lock{shader_data_mutex};
+  reflections.emplace(handle, std::move(value));
   return handle;
 }
 
@@ -287,7 +311,7 @@ granit_result granit_shader_tools_compiler_create(const granit_shader_tools_comp
 
 granit_result granit_shader_tools_compiler_compile(granit_shader_tools_compiler compiler,
                                                    const granit_shader_tools_compile_desc* desc,
-                                                   granit_shader_tools_result* result) {
+                                                   granit_shader_tools_compilation* result) {
   if (result == nullptr)
     return GRANIT_ERROR_INVALID_ARGUMENT;
   *result = 0;
@@ -336,7 +360,7 @@ granit_result granit_shader_tools_compiler_compile(granit_shader_tools_compiler 
         }) != definitions.end())
       return GRANIT_ERROR_INVALID_ARGUMENT;
 
-    auto value = std::make_shared<stored_result>();
+    auto value = std::make_shared<stored_shader_data>();
     std::ostringstream output;
     std::ostringstream diagnostic;
     granit::tools::shader_info info;
@@ -369,8 +393,18 @@ granit_result granit_shader_tools_compiler_compile(granit_shader_tools_compiler 
     store_reflection(*value, info);
     value->output = std::move(output).str();
     value->diagnostic = std::move(diagnostic).str();
+    if (exit_code == 0) {
+      value->spirv = read_binary_file(spirv_output);
+      value->wgsl = desc->source_language == GRANIT_SHADER_SOURCE_LANGUAGE_WGSL
+                        ? read_text_file(input)
+                        : read_text_file(wgsl_output);
+      if (value->spirv.empty() || value->wgsl.empty()) {
+        value->status = GRANIT_ERROR_INITIALIZATION_FAILED;
+        value->diagnostic += "无法读取编译产物\n";
+      }
+    }
     const auto status = value->status;
-    *result = store(std::move(value));
+    *result = store_compilation(std::move(value));
     return status;
   } catch (const std::bad_alloc&) {
     return GRANIT_ERROR_OUT_OF_MEMORY;
@@ -412,17 +446,17 @@ granit_result granit_shader_tools_get_tool_identity(const char* path, uint64_t p
 }
 
 granit_result granit_shader_tools_inspect_spirv(const granit_shader_tools_inspect_desc* desc,
-                                                granit_shader_tools_result* result) {
-  if (result == nullptr)
+                                                granit_shader_tools_reflection* reflection) {
+  if (reflection == nullptr)
     return GRANIT_ERROR_INVALID_ARGUMENT;
-  *result = 0;
+  *reflection = 0;
   if (desc == nullptr ||
       desc->struct_size < offsetof(granit_shader_tools_inspect_desc, validate_binding_set) ||
       !valid_string(desc->input_path, desc->input_path_length) ||
       !valid_binding_expectations(*desc))
     return GRANIT_ERROR_INVALID_ARGUMENT;
   try {
-    auto value = std::make_shared<stored_result>();
+    auto value = std::make_shared<stored_shader_data>();
     std::ostringstream output;
     std::ostringstream diagnostic;
     granit::tools::shader_info info;
@@ -436,7 +470,7 @@ granit_result granit_shader_tools_inspect_spirv(const granit_shader_tools_inspec
     value->output = std::move(output).str();
     value->diagnostic = std::move(diagnostic).str();
     const auto status = value->status;
-    *result = store(std::move(value));
+    *reflection = store_reflection_handle(std::move(value));
     return status;
   } catch (const std::bad_alloc&) {
     return GRANIT_ERROR_OUT_OF_MEMORY;
@@ -445,11 +479,11 @@ granit_result granit_shader_tools_inspect_spirv(const granit_shader_tools_inspec
   }
 }
 
-granit_result granit_shader_tools_result_get_info(granit_shader_tools_result result,
-                                                  granit_shader_tools_result_info* info) {
+granit_result granit_shader_tools_compilation_get_info(granit_shader_tools_compilation compilation,
+                                                       granit_shader_tools_compilation_info* info) {
   if (info == nullptr || info->struct_size < sizeof(*info))
     return GRANIT_ERROR_INVALID_ARGUMENT;
-  const auto value = find_result(result);
+  const auto value = find_compilation(compilation);
   if (!value)
     return GRANIT_ERROR_INVALID_HANDLE;
   info->status = value->status;
@@ -463,23 +497,90 @@ granit_result granit_shader_tools_result_get_info(granit_shader_tools_result res
   return GRANIT_SUCCESS;
 }
 
-granit_result granit_shader_tools_result_get_binding_count(granit_shader_tools_result result,
-                                                           uint64_t* count) {
+granit_result
+granit_shader_tools_compilation_get_reflection(granit_shader_tools_compilation compilation,
+                                               granit_shader_tools_reflection* reflection) {
+  if (reflection == nullptr)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  *reflection = 0;
+  const auto value = find_compilation(compilation);
+  if (!value)
+    return GRANIT_ERROR_INVALID_HANDLE;
+  try {
+    *reflection = store_reflection_handle(value);
+    return GRANIT_SUCCESS;
+  } catch (const std::bad_alloc&) {
+    return GRANIT_ERROR_OUT_OF_MEMORY;
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+granit_result granit_shader_tools_compilation_get_spirv(granit_shader_tools_compilation compilation,
+                                                        const void** data, uint64_t* size) {
+  if (data == nullptr || size == nullptr)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  *data = nullptr;
+  *size = 0;
+  const auto value = find_compilation(compilation);
+  if (!value)
+    return GRANIT_ERROR_INVALID_HANDLE;
+  *data = value->spirv.data();
+  *size = value->spirv.size();
+  return GRANIT_SUCCESS;
+}
+
+granit_result granit_shader_tools_compilation_get_wgsl(granit_shader_tools_compilation compilation,
+                                                       const char** source, uint64_t* length) {
+  if (source == nullptr || length == nullptr)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  *source = nullptr;
+  *length = 0;
+  const auto value = find_compilation(compilation);
+  if (!value)
+    return GRANIT_ERROR_INVALID_HANDLE;
+  *source = value->wgsl.data();
+  *length = value->wgsl.size();
+  return GRANIT_SUCCESS;
+}
+
+granit_result granit_shader_tools_reflection_get_info(granit_shader_tools_reflection reflection,
+                                                      granit_shader_tools_reflection_info* info) {
+  if (info == nullptr || info->struct_size < sizeof(*info))
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  const auto value = find_reflection(reflection);
+  if (!value)
+    return GRANIT_ERROR_INVALID_HANDLE;
+  info->status = value->status;
+  info->entry_point = value->entry_point.data();
+  info->entry_point_length = value->entry_point.size();
+  info->stage = value->stage;
+  info->output = value->output.data();
+  info->output_length = value->output.size();
+  info->diagnostic = value->diagnostic.data();
+  info->diagnostic_length = value->diagnostic.size();
+  return GRANIT_SUCCESS;
+}
+
+granit_result
+granit_shader_tools_reflection_get_binding_count(granit_shader_tools_reflection reflection,
+                                                 uint64_t* count) {
   if (count == nullptr)
     return GRANIT_ERROR_INVALID_ARGUMENT;
-  const auto value = find_result(result);
+  const auto value = find_reflection(reflection);
   if (!value)
     return GRANIT_ERROR_INVALID_HANDLE;
   *count = value->bindings.size();
   return GRANIT_SUCCESS;
 }
 
-granit_result granit_shader_tools_result_get_binding(granit_shader_tools_result result,
-                                                     uint64_t index,
-                                                     granit_shader_tools_binding_info* binding) {
+granit_result
+granit_shader_tools_reflection_get_binding(granit_shader_tools_reflection reflection,
+                                           uint64_t index,
+                                           granit_shader_tools_binding_info* binding) {
   if (binding == nullptr || binding->struct_size < sizeof(*binding))
     return GRANIT_ERROR_INVALID_ARGUMENT;
-  const auto value = find_result(result);
+  const auto value = find_reflection(reflection);
   if (!value)
     return GRANIT_ERROR_INVALID_HANDLE;
   if (index >= value->bindings.size())
@@ -497,12 +598,12 @@ granit_result granit_shader_tools_result_get_binding(granit_shader_tools_result 
 }
 
 granit_result get_interface_variable_count(
-    granit_shader_tools_result result,
-    const std::vector<granit::tools::shader_interface_variable_info> stored_result::* member,
+    granit_shader_tools_reflection reflection,
+    const std::vector<granit::tools::shader_interface_variable_info> stored_shader_data::* member,
     uint64_t* count) {
   if (count == nullptr)
     return GRANIT_ERROR_INVALID_ARGUMENT;
-  const auto value = find_result(result);
+  const auto value = find_reflection(reflection);
   if (!value)
     return GRANIT_ERROR_INVALID_HANDLE;
   *count = (value.get()->*member).size();
@@ -510,12 +611,12 @@ granit_result get_interface_variable_count(
 }
 
 granit_result get_interface_variable(
-    granit_shader_tools_result result, uint64_t index,
-    const std::vector<granit::tools::shader_interface_variable_info> stored_result::* member,
+    granit_shader_tools_reflection reflection, uint64_t index,
+    const std::vector<granit::tools::shader_interface_variable_info> stored_shader_data::* member,
     granit_shader_tools_interface_variable_info* output) {
   if (output == nullptr || output->struct_size < sizeof(*output))
     return GRANIT_ERROR_INVALID_ARGUMENT;
-  const auto value = find_result(result);
+  const auto value = find_reflection(reflection);
   if (!value)
     return GRANIT_ERROR_INVALID_HANDLE;
   const auto& variables = value.get()->*member;
@@ -532,35 +633,36 @@ granit_result get_interface_variable(
   return GRANIT_SUCCESS;
 }
 
-granit_result granit_shader_tools_result_get_vertex_input_count(granit_shader_tools_result result,
-                                                                uint64_t* count) {
-  return get_interface_variable_count(result, &stored_result::vertex_inputs, count);
+granit_result
+granit_shader_tools_reflection_get_vertex_input_count(granit_shader_tools_reflection reflection,
+                                                      uint64_t* count) {
+  return get_interface_variable_count(reflection, &stored_shader_data::vertex_inputs, count);
+}
+
+granit_result granit_shader_tools_reflection_get_vertex_input(
+    granit_shader_tools_reflection reflection, uint64_t index,
+    granit_shader_tools_interface_variable_info* input) {
+  return get_interface_variable(reflection, index, &stored_shader_data::vertex_inputs, input);
 }
 
 granit_result
-granit_shader_tools_result_get_vertex_input(granit_shader_tools_result result, uint64_t index,
-                                            granit_shader_tools_interface_variable_info* input) {
-  return get_interface_variable(result, index, &stored_result::vertex_inputs, input);
+granit_shader_tools_reflection_get_fragment_output_count(granit_shader_tools_reflection reflection,
+                                                         uint64_t* count) {
+  return get_interface_variable_count(reflection, &stored_shader_data::fragment_outputs, count);
 }
 
-granit_result
-granit_shader_tools_result_get_fragment_output_count(granit_shader_tools_result result,
-                                                     uint64_t* count) {
-  return get_interface_variable_count(result, &stored_result::fragment_outputs, count);
-}
-
-granit_result granit_shader_tools_result_get_fragment_output(
-    granit_shader_tools_result result, uint64_t index,
+granit_result granit_shader_tools_reflection_get_fragment_output(
+    granit_shader_tools_reflection reflection, uint64_t index,
     granit_shader_tools_interface_variable_info* output) {
-  return get_interface_variable(result, index, &stored_result::fragment_outputs, output);
+  return get_interface_variable(reflection, index, &stored_shader_data::fragment_outputs, output);
 }
 
 granit_result
-granit_shader_tools_result_get_workgroup_size(granit_shader_tools_result result,
-                                              granit_shader_tools_workgroup_size* size) {
+granit_shader_tools_reflection_get_workgroup_size(granit_shader_tools_reflection reflection,
+                                                  granit_shader_tools_workgroup_size* size) {
   if (size == nullptr || size->struct_size < sizeof(*size))
     return GRANIT_ERROR_INVALID_ARGUMENT;
-  const auto value = find_result(result);
+  const auto value = find_reflection(reflection);
   if (!value)
     return GRANIT_ERROR_INVALID_HANDLE;
   size->x = value->workgroup_size_x;
@@ -569,11 +671,12 @@ granit_shader_tools_result_get_workgroup_size(granit_shader_tools_result result,
   return GRANIT_SUCCESS;
 }
 
-granit_result granit_shader_tools_result_get_override_count(granit_shader_tools_result result,
-                                                            uint64_t* count) {
+granit_result
+granit_shader_tools_reflection_get_override_count(granit_shader_tools_reflection reflection,
+                                                  uint64_t* count) {
   if (count == nullptr)
     return GRANIT_ERROR_INVALID_ARGUMENT;
-  const auto value = find_result(result);
+  const auto value = find_reflection(reflection);
   if (!value)
     return GRANIT_ERROR_INVALID_HANDLE;
   *count = value->overrides.size();
@@ -581,11 +684,12 @@ granit_result granit_shader_tools_result_get_override_count(granit_shader_tools_
 }
 
 granit_result
-granit_shader_tools_result_get_override(granit_shader_tools_result result, uint64_t index,
-                                        granit_shader_tools_override_info* override_info) {
+granit_shader_tools_reflection_get_override(granit_shader_tools_reflection reflection,
+                                            uint64_t index,
+                                            granit_shader_tools_override_info* override_info) {
   if (override_info == nullptr || override_info->struct_size < sizeof(*override_info))
     return GRANIT_ERROR_INVALID_ARGUMENT;
-  const auto value = find_result(result);
+  const auto value = find_reflection(reflection);
   if (!value)
     return GRANIT_ERROR_INVALID_HANDLE;
   if (index >= value->overrides.size())
@@ -601,13 +705,13 @@ granit_shader_tools_result_get_override(granit_shader_tools_result result, uint6
   return GRANIT_SUCCESS;
 }
 
-granit_result granit_shader_tools_result_get_reflection_json(granit_shader_tools_result result,
-                                                             const char** json, uint64_t* length) {
+granit_result granit_shader_tools_reflection_get_json(granit_shader_tools_reflection reflection,
+                                                      const char** json, uint64_t* length) {
   if (json == nullptr || length == nullptr)
     return GRANIT_ERROR_INVALID_ARGUMENT;
   *json = nullptr;
   *length = 0;
-  const auto value = find_result(result);
+  const auto value = find_reflection(reflection);
   if (!value)
     return GRANIT_ERROR_INVALID_HANDLE;
   *json = value->reflection_json.data();
@@ -615,13 +719,14 @@ granit_result granit_shader_tools_result_get_reflection_json(granit_shader_tools
   return GRANIT_SUCCESS;
 }
 
-granit_result granit_shader_tools_result_write_asset(granit_shader_tools_result result,
-                                                     const granit_shader_tools_asset_desc* desc,
-                                                     uint32_t* cache_hit) {
+granit_result
+granit_shader_tools_compilation_write_asset(granit_shader_tools_compilation compilation,
+                                            const granit_shader_tools_asset_desc* desc,
+                                            uint32_t* cache_hit) {
   if (cache_hit == nullptr)
     return GRANIT_ERROR_INVALID_ARGUMENT;
   *cache_hit = 0;
-  const auto value = find_result(result);
+  const auto value = find_compilation(compilation);
   if (!value)
     return GRANIT_ERROR_INVALID_HANDLE;
   if (desc == nullptr || desc->struct_size < sizeof(*desc) ||
@@ -681,6 +786,24 @@ granit_result granit_shader_tools_result_write_asset(granit_shader_tools_result 
       return GRANIT_ERROR_INITIALIZATION_FAILED;
     *cache_hit = hit ? 1U : 0U;
     return GRANIT_SUCCESS;
+  } catch (const std::bad_alloc&) {
+    return GRANIT_ERROR_OUT_OF_MEMORY;
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+granit_result granit_shader_tools_reflection_write_asset(granit_shader_tools_reflection reflection,
+                                                         const granit_shader_tools_asset_desc* desc,
+                                                         uint32_t* cache_hit) {
+  const auto value = find_reflection(reflection);
+  if (!value)
+    return GRANIT_ERROR_INVALID_HANDLE;
+  try {
+    const auto temporary = store_compilation(value);
+    const auto result = granit_shader_tools_compilation_write_asset(temporary, desc, cache_hit);
+    static_cast<void>(granit_shader_tools_compilation_destroy(temporary));
+    return result;
   } catch (const std::bad_alloc&) {
     return GRANIT_ERROR_OUT_OF_MEMORY;
   } catch (...) {
@@ -804,9 +927,14 @@ granit_shader_tools_get_target_capabilities(granit_shader_backend_flags backend,
   return GRANIT_SUCCESS;
 }
 
-granit_result granit_shader_tools_result_destroy(granit_shader_tools_result result) {
-  std::lock_guard lock{results_mutex};
-  return results.erase(result) == 1 ? GRANIT_SUCCESS : GRANIT_ERROR_INVALID_HANDLE;
+granit_result granit_shader_tools_compilation_destroy(granit_shader_tools_compilation compilation) {
+  std::lock_guard lock{shader_data_mutex};
+  return compilations.erase(compilation) == 1 ? GRANIT_SUCCESS : GRANIT_ERROR_INVALID_HANDLE;
+}
+
+granit_result granit_shader_tools_reflection_destroy(granit_shader_tools_reflection reflection) {
+  std::lock_guard lock{shader_data_mutex};
+  return reflections.erase(reflection) == 1 ? GRANIT_SUCCESS : GRANIT_ERROR_INVALID_HANDLE;
 }
 
 } // extern "C"
