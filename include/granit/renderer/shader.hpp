@@ -4,6 +4,7 @@
 #ifndef GRANIT_SHADER_HPP_
 #define GRANIT_SHADER_HPP_
 
+#include <array>
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
@@ -17,9 +18,17 @@
 #include <granit/core/result.hpp>
 #include <granit/renderer/renderer.hpp>
 #include <granit/renderer/shader.h>
-#include <granit/renderer/shader_library.hpp>
 
 namespace granit {
+
+class shader_library;
+
+/** Shader 资产及 Library 使用的固定长度摘要。 */
+using shader_digest = std::array<std::byte, GRANIT_SHADER_DIGEST_SIZE>;
+/** 标识一项 Shader 资产，供 Shader Library 查找。 */
+using shader_content_id = shader_digest;
+/** 标识完整 Shader 构建输入，用于缓存失效。 */
+using shader_cache_key = shader_digest;
 
 enum class shader_stage : std::uint32_t {
   vertex = GRANIT_SHADER_STAGE_VERTEX,
@@ -160,19 +169,6 @@ public:
     return value;
   }
 
-  [[nodiscard]] result initialize_library(granit_renderer renderer, granit_shader_library library,
-                                          const shader_content_id& content_id) noexcept {
-    if (valid())
-      return result::invalid_argument;
-    if (renderer == GRANIT_NULL_HANDLE || library == GRANIT_NULL_HANDLE)
-      return result::invalid_handle;
-    const auto value = from_native(granit_shader_create_from_library(
-        renderer, library, reinterpret_cast<const std::uint8_t*>(content_id.data()), &handle_));
-    if (value.ok())
-      renderer_ = renderer;
-    return value;
-  }
-
   [[nodiscard]] result reset() noexcept {
     if (!valid())
       return result::success;
@@ -186,6 +182,8 @@ public:
   [[nodiscard]] granit_shader native_handle() const noexcept { return handle_; }
 
 private:
+  friend class shader_library;
+
   [[nodiscard]] result initialize_native(granit_renderer renderer,
                                          const granit_shader_desc& native) noexcept {
     const auto value = granit_shader_create(renderer, &native, &handle_);

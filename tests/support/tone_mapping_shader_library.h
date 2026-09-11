@@ -29,9 +29,7 @@ public:
     return true;
   }
 
-  [[nodiscard]] granit_shader_library native_handle() const noexcept {
-    return library_.native_handle();
-  }
+  [[nodiscard]] const granit::shader_library& library() const noexcept { return library_; }
   [[nodiscard]] const granit::shader_content_id& vertex_id() const noexcept { return vertex_id_; }
   [[nodiscard]] const granit::shader_content_id& fragment_id() const noexcept {
     return fragment_id_;

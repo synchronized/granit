@@ -145,13 +145,13 @@ TEST_CASE("Shader Library 由 Renderer 选择载荷并共享后端 Shader", "[sh
   REQUIRE(renderer_result == granit::result::success);
 
   granit::shader_library library;
-  REQUIRE(library.initialize(renderer.native_handle(), archive) == granit::result::success);
   granit::shader first;
+  CHECK(library.create_shader(content_id, first) == granit::result::invalid_handle);
+  REQUIRE(library.initialize(renderer.native_handle(), archive) == granit::result::success);
   granit::shader second;
-  REQUIRE(first.initialize_library(renderer.native_handle(), library.native_handle(), content_id) ==
-          granit::result::success);
-  REQUIRE(second.initialize_library(renderer.native_handle(), library.native_handle(),
-                                    content_id) == granit::result::success);
+  REQUIRE(library.create_shader(content_id, first) == granit::result::success);
+  CHECK(library.create_shader(content_id, first) == granit::result::invalid_argument);
+  REQUIRE(library.create_shader(content_id, second) == granit::result::success);
   CHECK(first.native_handle() != second.native_handle());
   CHECK(library.reset() == granit::result::resource_in_use);
   REQUIRE(first.reset() == granit::result::success);
@@ -162,11 +162,9 @@ TEST_CASE("Shader Library 由 Renderer 选择载荷并共享后端 Shader", "[sh
   REQUIRE(library.initialize(renderer.native_handle(), archive) == granit::result::success);
   auto missing = content_id;
   missing[0] ^= std::byte{1};
-  CHECK(first.initialize_library(renderer.native_handle(), library.native_handle(), missing) ==
-        granit::result::not_ready);
+  CHECK(library.create_shader(missing, first) == granit::result::not_ready);
   archive.back() ^= std::byte{1};
-  CHECK(first.initialize_library(renderer.native_handle(), library.native_handle(), content_id) ==
-        granit::result::invalid_argument);
+  CHECK(library.create_shader(content_id, first) == granit::result::invalid_argument);
 }
 
 } // namespace

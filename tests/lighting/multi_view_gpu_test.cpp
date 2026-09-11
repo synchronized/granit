@@ -167,7 +167,7 @@ TEST_CASE("两个View执行独立PBR与Tone Mapping") {
     REQUIRE(tone_mapping[index].initialize(
                 renderer.native_handle(), color_views[index].native_handle(),
                 granit::texture_format::rgba8_unorm, {.exposure_scale = 1.0F, .encode_srgb = 1},
-                tone_shaders.native_handle(), tone_shaders.vertex_id(),
+                tone_shaders.library(), tone_shaders.vertex_id(),
                 tone_shaders.fragment_id()) == GRANIT_SUCCESS);
     CHECK(tone_mapping[index].group() != GRANIT_NULL_HANDLE);
   }

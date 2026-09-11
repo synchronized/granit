@@ -81,11 +81,12 @@ if (result.ok())
   library.get_info(info);
 
 granit::shader shader;
-shader.initialize_library(renderer.native_handle(), library.native_handle(), content_id);
+library.create_shader(content_id, shader);
 ```
 
 `granit::shader_library` 不可复制、可以移动，析构时自动销毁。它沿用 C API 的借用规则，不复制或
-拥有归档字节。需要在创建前离线检查时可使用 `granit::inspect_shader_library()`。
+拥有归档字节。`create_shader()` 创建的 Shader 仍在使用 Library，必须先销毁这些 Shader，才能销毁
+Library。需要在创建前离线检查时可使用 `granit::inspect_shader_library()`。
 
 格式和架构决策见 [S-37](../plans/S-37-0.21.0-shader-library-and-material-boundary.md) 与
 [ADR-006](../decisions/ADR-006-shader-library-runtime-asset.md)。

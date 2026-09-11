@@ -42,7 +42,7 @@ TEST_CASE("Tone Mapping GPU资源建立完整全屏Pipeline") {
   granit::lighting::tone_mapping_resources resources;
   REQUIRE(resources.initialize(renderer.native_handle(), hdr_view.native_handle(),
                                granit::texture_format::rgba8_unorm,
-                               {.exposure_scale = 2.0F, .encode_srgb = 1}, shaders.native_handle(),
+                               {.exposure_scale = 2.0F, .encode_srgb = 1}, shaders.library(),
                                shaders.vertex_id(), shaders.fragment_id()) == GRANIT_SUCCESS);
   CHECK(resources.pipeline() != GRANIT_NULL_HANDLE);
   CHECK(resources.pipeline_layout() != GRANIT_NULL_HANDLE);
@@ -75,7 +75,7 @@ TEST_CASE("Tone Mapping跨HDR View复用不变Pipeline资源") {
   REQUIRE(shaders.initialize(renderer.native_handle()));
   granit::lighting::tone_mapping_pipeline_resources pipeline;
   REQUIRE(pipeline.initialize(renderer.native_handle(), granit::texture_format::rgba8_unorm,
-                              shaders.native_handle(), shaders.vertex_id(),
+                              shaders.library(), shaders.vertex_id(),
                               shaders.fragment_id()) == GRANIT_SUCCESS);
   const auto pipeline_handle = pipeline.pipeline();
   REQUIRE(pipeline_handle != GRANIT_NULL_HANDLE);
@@ -90,8 +90,9 @@ TEST_CASE("Tone Mapping跨HDR View复用不变Pipeline资源") {
 
 TEST_CASE("Tone Mapping GPU资源拒绝不完整输入") {
   granit::lighting::tone_mapping_resources resources;
+  granit::shader_library library;
   CHECK(resources.initialize(GRANIT_NULL_HANDLE, GRANIT_NULL_HANDLE,
-                             granit::texture_format::undefined, {}, GRANIT_NULL_HANDLE, {},
+                             granit::texture_format::undefined, {}, library, {},
                              {}) == GRANIT_ERROR_INVALID_ARGUMENT);
   CHECK(resources.update({}) == GRANIT_ERROR_INVALID_ARGUMENT);
 }
@@ -116,19 +117,18 @@ TEST_CASE("Tone Mapping GPU资源拒绝重复或缺失sRGB编码") {
   granit::lighting::tone_mapping_resources missing_encoding;
   CHECK(missing_encoding.initialize(
             renderer.native_handle(), hdr_view.native_handle(), granit::texture_format::rgba8_unorm,
-            {.exposure_scale = 1.0F, .encode_srgb = 0}, shaders.native_handle(),
-            shaders.vertex_id(), shaders.fragment_id()) == GRANIT_ERROR_INVALID_ARGUMENT);
+            {.exposure_scale = 1.0F, .encode_srgb = 0}, shaders.library(), shaders.vertex_id(),
+            shaders.fragment_id()) == GRANIT_ERROR_INVALID_ARGUMENT);
   granit::lighting::tone_mapping_resources duplicate_encoding;
   CHECK(duplicate_encoding.initialize(
             renderer.native_handle(), hdr_view.native_handle(), granit::texture_format::rgba8_srgb,
-            {.exposure_scale = 1.0F, .encode_srgb = 1}, shaders.native_handle(),
-            shaders.vertex_id(), shaders.fragment_id()) == GRANIT_ERROR_INVALID_ARGUMENT);
+            {.exposure_scale = 1.0F, .encode_srgb = 1}, shaders.library(), shaders.vertex_id(),
+            shaders.fragment_id()) == GRANIT_ERROR_INVALID_ARGUMENT);
   granit::lighting::tone_mapping_resources attachment_encoding;
-  REQUIRE(attachment_encoding.initialize(renderer.native_handle(), hdr_view.native_handle(),
-                                         granit::texture_format::rgba8_srgb,
-                                         {.exposure_scale = 1.0F, .encode_srgb = 0},
-                                         shaders.native_handle(), shaders.vertex_id(),
-                                         shaders.fragment_id()) == GRANIT_SUCCESS);
+  REQUIRE(attachment_encoding.initialize(
+              renderer.native_handle(), hdr_view.native_handle(),
+              granit::texture_format::rgba8_srgb, {.exposure_scale = 1.0F, .encode_srgb = 0},
+              shaders.library(), shaders.vertex_id(), shaders.fragment_id()) == GRANIT_SUCCESS);
 }
 
 TEST_CASE("Tone Mapping GPU输出与CPU参考一致") {
@@ -157,7 +157,7 @@ TEST_CASE("Tone Mapping GPU输出与CPU参考一致") {
   granit::lighting::tone_mapping_resources resources;
   REQUIRE(resources.initialize(renderer.native_handle(), hdr_view.native_handle(),
                                granit::texture_format::rgba8_unorm,
-                               {.exposure_scale = 2.0F, .encode_srgb = 1}, shaders.native_handle(),
+                               {.exposure_scale = 2.0F, .encode_srgb = 1}, shaders.library(),
                                shaders.vertex_id(), shaders.fragment_id()) == GRANIT_SUCCESS);
   granit_texture output_texture = GRANIT_NULL_HANDLE;
   granit_texture_view output_view = GRANIT_NULL_HANDLE;
@@ -243,11 +243,11 @@ TEST_CASE("Tone Mapping资源拒绝未知内容ID且失败后可重新初始化"
   granit::shader_content_id missing_id{};
   granit::lighting::tone_mapping_pipeline_resources pipeline;
   CHECK(pipeline.initialize(renderer.native_handle(), granit::texture_format::rgba8_unorm,
-                            shaders.native_handle(), shaders.vertex_id(),
+                            shaders.library(), shaders.vertex_id(),
                             missing_id) == GRANIT_ERROR_NOT_READY);
   CHECK_FALSE(pipeline.initialized());
   REQUIRE(pipeline.initialize(renderer.native_handle(), granit::texture_format::rgba8_unorm,
-                              shaders.native_handle(), shaders.vertex_id(),
+                              shaders.library(), shaders.vertex_id(),
                               shaders.fragment_id()) == GRANIT_SUCCESS);
   REQUIRE(pipeline.reset() == GRANIT_SUCCESS);
   CHECK_FALSE(pipeline.initialized());

@@ -433,7 +433,7 @@ int main(int argc, char** argv) {
   if (result.ok()) {
     result = granit::from_native(tone_mapping.initialize(
         renderer.native_handle(), hdr_view, granit::texture_format::rgba8_unorm,
-        {.exposure_scale = 1.0F, .encode_srgb = 1}, tone_shaders.native_handle(),
+        {.exposure_scale = 1.0F, .encode_srgb = 1}, tone_shaders.library(),
         tone_shaders.vertex_id(), tone_shaders.fragment_id()));
   }
   const granit::viewport viewport{0, 0, 256, 256, 0, 1};

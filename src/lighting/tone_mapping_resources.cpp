@@ -31,10 +31,11 @@ bool compatible_output(granit::texture_format format,
 } // namespace
 
 granit_result tone_mapping_pipeline_resources::initialize(
-    granit_renderer renderer, granit::texture_format output_format, granit_shader_library library,
-    const shader_content_id& vertex_id, const shader_content_id& fragment_id) noexcept {
+    granit_renderer renderer, granit::texture_format output_format,
+    const granit::shader_library& library, const shader_content_id& vertex_id,
+    const shader_content_id& fragment_id) noexcept {
   if (renderer == GRANIT_NULL_HANDLE || initialized() ||
-      output_format == granit::texture_format::undefined || library == GRANIT_NULL_HANDLE) {
+      output_format == granit::texture_format::undefined || !library.valid()) {
     return GRANIT_ERROR_INVALID_ARGUMENT;
   }
   auto result = sampler_.initialize(renderer, {.mag_filter = granit::filter::linear,
@@ -62,9 +63,9 @@ granit_result tone_mapping_pipeline_resources::initialize(
   if (result.ok())
     result = pipeline_layout_.initialize(renderer, layouts);
   if (result.ok())
-    result = vertex_shader_.initialize_library(renderer, library, vertex_id);
+    result = library.create_shader(vertex_id, vertex_shader_);
   if (result.ok())
-    result = fragment_shader_.initialize_library(renderer, library, fragment_id);
+    result = library.create_shader(fragment_id, fragment_shader_);
   if (result.ok()) {
     result = pipeline_.initialize(
         renderer, {.layout = pipeline_layout_.native_handle(),
@@ -153,7 +154,7 @@ granit_result tone_mapping_binding_resources::reset() noexcept {
 
 granit_result tone_mapping_resources::initialize(
     granit_renderer renderer, granit_texture_view hdr_view, granit::texture_format output_format,
-    const tone_mapping_constants& values, granit_shader_library library,
+    const tone_mapping_constants& values, const granit::shader_library& library,
     const shader_content_id& vertex_id, const shader_content_id& fragment_id) noexcept {
   auto result = pipeline_.initialize(renderer, output_format, library, vertex_id, fragment_id);
   if (result == GRANIT_SUCCESS)

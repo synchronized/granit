@@ -45,7 +45,7 @@ struct window_hdr_resources {
 
   granit::result initialize(granit_renderer renderer, std::uint32_t width, std::uint32_t height,
                             granit::texture_format output_format,
-                            granit_shader_library shader_library,
+                            const granit::shader_library& shader_library,
                             const granit::shader_content_id& vertex_shader_id,
                             const granit::shader_content_id& fragment_shader_id) {
     auto result = texture.initialize(renderer, {.format = granit::texture_format::rgba16_float,
@@ -286,7 +286,7 @@ int main(int argument_count, char** arguments) {
   window_hdr_resources resources;
   if (result.ok()) {
     result = resources.initialize(renderer.native_handle(), info.width, info.height, info.format,
-                                  tone_shaders.native_handle(), tone_shaders.vertex_id(),
+                                  tone_shaders.library(), tone_shaders.vertex_id(),
                                   tone_shaders.fragment_id());
   }
   granit::frame_context frame_context;
@@ -330,7 +330,7 @@ int main(int argument_count, char** arguments) {
         result = resources.reset();
       if (result.ok()) {
         result = resources.initialize(renderer.native_handle(), next_info.width, next_info.height,
-                                      next_info.format, tone_shaders.native_handle(),
+                                      next_info.format, tone_shaders.library(),
                                       tone_shaders.vertex_id(), tone_shaders.fragment_id());
       }
       if (result.failed())

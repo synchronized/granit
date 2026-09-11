@@ -20,7 +20,7 @@ class tone_mapping_pipeline_resources {
 public:
   [[nodiscard]] granit_result initialize(granit_renderer renderer,
                                          granit::texture_format output_format,
-                                         granit_shader_library library,
+                                         const granit::shader_library& library,
                                          const shader_content_id& vertex_id,
                                          const shader_content_id& fragment_id) noexcept;
   [[nodiscard]] granit_result reset() noexcept;
@@ -71,7 +71,7 @@ public:
   [[nodiscard]] granit_result initialize(granit_renderer renderer, granit_texture_view hdr_view,
                                          granit::texture_format output_format,
                                          const tone_mapping_constants& constants,
-                                         granit_shader_library library,
+                                         const granit::shader_library& library,
                                          const shader_content_id& vertex_id,
                                          const shader_content_id& fragment_id) noexcept;
   [[nodiscard]] granit_result update(const tone_mapping_constants& constants) noexcept;

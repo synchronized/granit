@@ -12,16 +12,10 @@
 #include <utility>
 
 #include <granit/core/result.hpp>
+#include <granit/renderer/shader.hpp>
 #include <granit/renderer/shader_library.h>
 
 namespace granit {
-
-/** Shader 资产及 Library 使用的固定长度摘要。 */
-using shader_digest = std::array<std::byte, GRANIT_SHADER_DIGEST_SIZE>;
-/** 标识一项 Shader 资产，供 Shader Library 查找。 */
-using shader_content_id = shader_digest;
-/** 标识完整 Shader 构建输入，用于缓存失效。 */
-using shader_cache_key = shader_digest;
 
 enum class shader_library_backend : std::uint32_t {
   vulkan = GRANIT_SHADER_LIBRARY_BACKEND_VULKAN_BIT,
@@ -111,6 +105,21 @@ public:
     const auto value = from_native(granit_shader_library_get_info(renderer_, handle_, &native));
     if (value.ok())
       detail::copy_shader_library_info(native, info);
+    return value;
+  }
+
+  /** 按内容 ID 选择当前 Renderer 支持的变体并创建 Shader。Library 必须比 Shader 更晚销毁。 */
+  [[nodiscard]] result create_shader(const shader_content_id& content_id,
+                                     shader& destination) const noexcept {
+    if (!valid())
+      return result::invalid_handle;
+    if (destination.valid())
+      return result::invalid_argument;
+    const auto value = from_native(granit_shader_create_from_library(
+        renderer_, handle_, reinterpret_cast<const std::uint8_t*>(content_id.data()),
+        &destination.handle_));
+    if (value.ok())
+      destination.renderer_ = renderer_;
     return value;
   }
 

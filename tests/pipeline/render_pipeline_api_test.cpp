@@ -868,7 +868,7 @@ TEST_CASE("公共Render Pipeline ABI输出可回读的Tone Mapping像素") {
   REQUIRE(manual_tone_mapping.initialize(renderer.native_handle(), manual_hdr_view.native_handle(),
                                          granit::texture_format::rgba8_unorm,
                                          {.exposure_scale = 1.0F, .encode_srgb = 1},
-                                         tone_shaders.native_handle(), tone_shaders.vertex_id(),
+                                         tone_shaders.library(), tone_shaders.vertex_id(),
                                          tone_shaders.fragment_id()) == GRANIT_SUCCESS);
   granit::texture manual_output;
   granit::texture_view manual_output_view;
