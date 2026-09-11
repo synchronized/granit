@@ -147,7 +147,7 @@ D-03-graphics-pipeline.md
 - [S-19：Model Viewer 渲染线程](S-19-model-viewer-render-thread.md)——已完成；桌面使用有界渲染
   线程和异步上传，浏览器保持同步执行。
 - [S-20：Shader Asset 后端变体](S-20-shader-asset-variants.md)——已完成；后端 sidecar、能力选择和
-  WGSL/HLSL/GLSL portable 前端已形成闭环。
+  WGSL/HLSL portable 前端已形成闭环。
 - [S-21：可复现 Shader Toolchain 包](S-21-shader-toolchain-package.md)——已完成；发布带版本、许可
   和 SHA-256 清单的离线编译工具包，并让官方 CI 使用严格锁定策略。
 - [S-22：0.7.0 SDK 稳定化与上游集成](S-22-0.7.0-sdk-stabilization.md)——S-22A component 契约
@@ -187,9 +187,9 @@ D-03-graphics-pipeline.md
 - [S-37H：WebGPU Provider 边界收敛](S-37H-webgpu-provider-boundary-collapse.md)——本地实现与验证
   已完成；已删除浏览器静态后端遗留的 Provider ABI、函数表、dispatch、domain adapter 和冗余
   owner，并按领域拆分后端私有设备实现，等待远端 Linux 与发布验收。
-- [S-37K：Shader 工具接口与组织收敛](S-37K-shader-tooling-api-structure.md)——实现中；已完成共享类型，后续将
-  统一 Compiler、Compilation/Reflection、私有 Shader Object、Library Builder、CLI 和 CMake
-  适配边界分阶段收敛。
+- [S-37K：Shader 工具接口与组织收敛](S-37K-shader-tooling-api-structure.md)——实现中；已完成共享
+  类型和统一 Compiler API，后续将收敛 Compilation/Reflection、私有 Shader Object、Library
+  Builder、CLI 和 CMake 适配边界。
 
 ## 状态
 

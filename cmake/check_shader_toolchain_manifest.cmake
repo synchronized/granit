@@ -10,7 +10,6 @@ endforeach()
 file(REMOVE_RECURSE "${WORK_DIR}")
 file(MAKE_DIRECTORY "${WORK_DIR}/bin" "${WORK_DIR}/licenses")
 file(WRITE "${WORK_DIR}/bin/dxc" "dxc fixture")
-file(WRITE "${WORK_DIR}/bin/glslangValidator" "glslang fixture")
 file(WRITE "${WORK_DIR}/bin/tint" "tint fixture")
 file(WRITE "${WORK_DIR}/licenses/THIRD_PARTY.txt" "license fixture")
 set(manifest "${WORK_DIR}/shader-toolchain.json")
@@ -18,8 +17,7 @@ set(manifest "${WORK_DIR}/shader-toolchain.json")
 execute_process(
   COMMAND
     "${CMAKE_COMMAND}" -DSTAGE=${WORK_DIR} -DOUTPUT=${manifest} -DDXC_VERSION=fixture
-    -DGLSLANG_VERSION=fixture -DDAWN_VERSION=fixture -DTINT_REVISION=fixture
-    "-DTOOL_FILES=bin/dxc;bin/glslangValidator;bin/tint"
+    -DDAWN_VERSION=fixture -DTINT_REVISION=fixture "-DTOOL_FILES=bin/dxc;bin/tint"
     -DLICENSE_FILES=licenses/THIRD_PARTY.txt -P "${GENERATOR}"
   RESULT_VARIABLE generate_result
   OUTPUT_VARIABLE generate_output
@@ -32,8 +30,8 @@ endif()
 execute_process(
   COMMAND
     "${CMAKE_COMMAND}" -DSTAGE=${WORK_DIR} -DOUTPUT=${WORK_DIR}/invalid.json
-    "-DDXC_VERSION=first;second" -DGLSLANG_VERSION=fixture -DDAWN_VERSION=fixture
-    -DTINT_REVISION=fixture "-DTOOL_FILES=bin/dxc;bin/glslangValidator;bin/tint"
+    "-DDXC_VERSION=first;second" -DDAWN_VERSION=fixture -DTINT_REVISION=fixture
+    "-DTOOL_FILES=bin/dxc;bin/tint"
     -DLICENSE_FILES=licenses/THIRD_PARTY.txt -P "${GENERATOR}"
   RESULT_VARIABLE invalid_metadata_result
   OUTPUT_QUIET

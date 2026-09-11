@@ -26,7 +26,6 @@ enum class shader_code_format : std::uint32_t {
 enum class shader_source_language : std::uint32_t {
   wgsl = GRANIT_SHADER_SOURCE_LANGUAGE_WGSL,
   hlsl = GRANIT_SHADER_SOURCE_LANGUAGE_HLSL,
-  glsl = GRANIT_SHADER_SOURCE_LANGUAGE_GLSL,
 };
 
 enum class shader_backend : std::uint32_t {

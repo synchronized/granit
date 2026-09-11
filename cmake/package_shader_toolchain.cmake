@@ -1,8 +1,8 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2026 Granit contributors
 
-foreach(required STAGE GENERATOR DXC GLSLANG TINT DXC_VERSION GLSLANG_VERSION DAWN_VERSION
-                 TINT_REVISION DXC_LICENSE_FILES GLSLANG_LICENSE_FILES DAWN_LICENSE_FILES)
+foreach(required STAGE GENERATOR DXC TINT DXC_VERSION DAWN_VERSION TINT_REVISION DXC_LICENSE_FILES
+                 DAWN_LICENSE_FILES)
   if(NOT DEFINED ${required} OR "${${required}}" STREQUAL "")
     message(FATAL_ERROR "缺少 ${required}")
   endif()
@@ -12,7 +12,7 @@ cmake_path(ABSOLUTE_PATH STAGE NORMALIZE OUTPUT_VARIABLE stage_absolute)
 if(EXISTS "${stage_absolute}")
   message(FATAL_ERROR "STAGE 已存在，拒绝覆盖：${stage_absolute}")
 endif()
-foreach(tool DXC GLSLANG TINT GENERATOR)
+foreach(tool DXC TINT GENERATOR)
   if(NOT EXISTS "${${tool}}" OR IS_DIRECTORY "${${tool}}")
     message(FATAL_ERROR "${tool} 不是有效文件：${${tool}}")
   endif()
@@ -28,11 +28,9 @@ else()
 endif()
 
 set(tool_files "")
-foreach(tool_name dxc glslangValidator tint)
+foreach(tool_name dxc tint)
   if(tool_name STREQUAL "dxc")
     set(source "${DXC}")
-  elseif(tool_name STREQUAL "glslangValidator")
-    set(source "${GLSLANG}")
   else()
     set(source "${TINT}")
   endif()
@@ -67,7 +65,7 @@ foreach(runtime_file IN LISTS RUNTIME_FILES)
 endforeach()
 
 set(license_files "")
-foreach(component DXC GLSLANG DAWN)
+foreach(component DXC DAWN)
   string(TOLOWER "${component}" component_directory)
   file(MAKE_DIRECTORY "${working_stage}/licenses/${component_directory}")
   foreach(license_file IN LISTS ${component}_LICENSE_FILES)
@@ -88,7 +86,7 @@ execute_process(
   COMMAND
     "${CMAKE_COMMAND}" -DSTAGE=${working_stage}
     -DOUTPUT=${working_stage}/shader-toolchain.json -DDXC_VERSION=${DXC_VERSION}
-    -DGLSLANG_VERSION=${GLSLANG_VERSION} -DDAWN_VERSION=${DAWN_VERSION}
+    -DDAWN_VERSION=${DAWN_VERSION}
     -DTINT_REVISION=${TINT_REVISION} "-DTOOL_FILES=${tool_files}"
     "-DLICENSE_FILES=${license_files}" -P "${GENERATOR}"
   RESULT_VARIABLE manifest_result

@@ -8,9 +8,12 @@
 #include <granit/core/shader_types.hpp>
 #include <granit/tools/shader_tools.h>
 
+#include <new>
+#include <span>
 #include <string>
 #include <string_view>
 #include <utility>
+#include <vector>
 
 namespace granit::shader_tools {
 
@@ -54,6 +57,29 @@ struct override_info {
   std::string_view name;
   uint64_t default_value = 0;
   uint32_t default_value_size = 0;
+};
+
+struct compiler_config {
+  std::string_view dxc_path;
+  std::string_view tint_path;
+};
+
+struct shader_define {
+  std::string_view name;
+  std::string_view value;
+};
+
+struct compile_desc {
+  std::string_view input_path;
+  shader_source_language source_language{shader_source_language::wgsl};
+  shader_stage stage{shader_stage::vertex};
+  std::string_view entry_point{"main"};
+  shader_backend target_backends{shader_backend::all};
+  std::string_view spirv_output_path;
+  std::string_view wgsl_output_path;
+  std::span<const shader_define> defines;
+  bool validate_binding_set{};
+  std::span<const granit_shader_tools_expected_binding> expected_bindings;
 };
 
 class result {
@@ -194,26 +220,91 @@ private:
   granit_shader_tools_result handle_ = 0;
 };
 
-inline std::pair<::granit::result, result>
-compile_wgsl(const granit_shader_tools_compile_desc& desc) noexcept {
-  granit_shader_tools_result handle = 0;
-  const auto status = granit_shader_tools_compile_wgsl(&desc, &handle);
-  return {::granit::from_native(status), result{handle}};
-}
+class compiler {
+public:
+  compiler() = default;
+  ~compiler() { reset(); }
+  compiler(const compiler&) = delete;
+  compiler& operator=(const compiler&) = delete;
+  compiler(compiler&& other) noexcept : handle_(std::exchange(other.handle_, 0)) {}
+  compiler& operator=(compiler&& other) noexcept {
+    if (this != &other) {
+      reset();
+      handle_ = std::exchange(other.handle_, 0);
+    }
+    return *this;
+  }
 
-inline std::pair<::granit::result, result>
-compile_hlsl(const granit_shader_tools_hlsl_compile_desc& desc) noexcept {
-  granit_shader_tools_result handle = 0;
-  const auto status = granit_shader_tools_compile_hlsl(&desc, &handle);
-  return {::granit::from_native(status), result{handle}};
-}
+  [[nodiscard]] ::granit::result initialize(const compiler_config& config) noexcept {
+    if (handle_ != 0)
+      return ::granit::result::invalid_argument;
+    const granit_shader_tools_compiler_desc native{
+        .struct_size = sizeof(granit_shader_tools_compiler_desc),
+        .reserved = 0,
+        .dxc_path = config.dxc_path.data(),
+        .dxc_path_length = config.dxc_path.size(),
+        .tint_path = config.tint_path.data(),
+        .tint_path_length = config.tint_path.size(),
+    };
+    return ::granit::from_native(granit_shader_tools_compiler_create(&native, &handle_));
+  }
 
-inline std::pair<::granit::result, result>
-compile_glsl(const granit_shader_tools_glsl_compile_desc& desc) noexcept {
-  granit_shader_tools_result handle = 0;
-  const auto status = granit_shader_tools_compile_glsl(&desc, &handle);
-  return {::granit::from_native(status), result{handle}};
-}
+  [[nodiscard]] std::pair<::granit::result, result>
+  compile(const compile_desc& desc) const noexcept {
+    if (handle_ == 0)
+      return {::granit::result::invalid_handle, result{}};
+    try {
+      std::vector<granit_shader_tools_define> definitions;
+      definitions.reserve(desc.defines.size());
+      for (const auto& define : desc.defines) {
+        definitions.push_back({.struct_size = sizeof(granit_shader_tools_define),
+                               .reserved = 0,
+                               .name = define.name.data(),
+                               .name_length = define.name.size(),
+                               .value = define.value.data(),
+                               .value_length = define.value.size()});
+      }
+      const granit_shader_tools_compile_desc native{
+          .struct_size = sizeof(granit_shader_tools_compile_desc),
+          .source_language = static_cast<granit_shader_source_language>(desc.source_language),
+          .stage = static_cast<granit_shader_stage>(desc.stage),
+          .target_backends = static_cast<granit_shader_backend_flags>(desc.target_backends),
+          .input_path = desc.input_path.data(),
+          .input_path_length = desc.input_path.size(),
+          .entry_point = desc.entry_point.data(),
+          .entry_point_length = desc.entry_point.size(),
+          .spirv_output_path = desc.spirv_output_path.data(),
+          .spirv_output_path_length = desc.spirv_output_path.size(),
+          .wgsl_output_path = desc.wgsl_output_path.data(),
+          .wgsl_output_path_length = desc.wgsl_output_path.size(),
+          .defines = definitions.data(),
+          .define_count = static_cast<std::uint32_t>(definitions.size()),
+          .validate_binding_set = desc.validate_binding_set ? 1U : 0U,
+          .expected_bindings = desc.expected_bindings.data(),
+          .expected_binding_count = desc.expected_bindings.size(),
+      };
+      granit_shader_tools_result result_handle = 0;
+      const auto status = granit_shader_tools_compiler_compile(handle_, &native, &result_handle);
+      return {::granit::from_native(status), result{result_handle}};
+    } catch (const std::bad_alloc&) {
+      return {::granit::result::out_of_memory, result{}};
+    } catch (...) {
+      return {::granit::result::internal, result{}};
+    }
+  }
+
+  void reset() noexcept {
+    if (handle_ != 0) {
+      static_cast<void>(granit_shader_tools_compiler_destroy(handle_));
+      handle_ = 0;
+    }
+  }
+
+  [[nodiscard]] explicit operator bool() const noexcept { return handle_ != 0; }
+
+private:
+  granit_shader_tools_compiler handle_{};
+};
 
 inline std::pair<::granit::result, std::string> tool_identity(std::string_view path) noexcept {
   uint64_t size = 0;

@@ -21,13 +21,12 @@ typedef uint32_t granit_shader_code_format;
 typedef uint32_t granit_shader_source_language;
 #define GRANIT_SHADER_SOURCE_LANGUAGE_WGSL UINT32_C(1)
 #define GRANIT_SHADER_SOURCE_LANGUAGE_HLSL UINT32_C(2)
-#define GRANIT_SHADER_SOURCE_LANGUAGE_GLSL UINT32_C(3)
 
 /** Shader 构建目标后端位集合。 */
 typedef uint32_t granit_shader_backend_flags;
 #define GRANIT_SHADER_BACKEND_VULKAN_BIT (UINT32_C(1) << 0)
 #define GRANIT_SHADER_BACKEND_WEBGPU_BIT (UINT32_C(1) << 1)
-#define GRANIT_SHADER_BACKEND_ALL_BITS                                                       \
+#define GRANIT_SHADER_BACKEND_ALL_BITS                                                             \
   (GRANIT_SHADER_BACKEND_VULKAN_BIT | GRANIT_SHADER_BACKEND_WEBGPU_BIT)
 
 /** Shader 目标能力档位。 */

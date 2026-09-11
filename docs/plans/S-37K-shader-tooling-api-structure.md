@@ -5,16 +5,16 @@
 
 ## 状态
 
-**实现中。** S-37K1 已完成共享 Shader 类型收敛：Renderer、ShaderTools 与私有格式编码器统一使用
-Core 中的 stage、源语言、代码格式、目标后端、profile 和摘要类型。S-37K2～S-37K6 待实施。
+**实现中。** S-37K1 已完成共享 Shader 类型收敛；S-37K2 已完成统一 Compiler 配置、编译描述和
+单一编译入口。S-37K3～S-37K6 待实施。
 
 ## 背景与目标
 
-当前 Shader 工具能力已经覆盖 WGSL、HLSL、GLSL、SPIR-V 反射、缓存、单 Shader 中间产物和
+当前 Shader 工具能力已经覆盖 WGSL、HLSL、SPIR-V 反射、缓存、单 Shader 中间产物和
 Library 链接，但接口与源码组织仍保留多轮演进痕迹：
 
 - `shader_tools.h/.hpp` 同时公开编译、反射、缓存、资产写入、工具身份和目标能力查询。
-- WGSL、HLSL 与 GLSL 使用三套重复描述和三个编译入口，调用方需要理解各前端的内部转换路径。
+- WGSL 与 HLSL 使用重复描述和两个编译入口，调用方需要理解各前端的内部转换路径。
 - `shader_tools::result` 同时表示操作结果、编译产物、反射视图和资产写入器，名称和职责均不明确。
 - `src/assets/shader_asset.*`、`tools/shader_asset.*` 和 `shader_tools_core.*` 分别承担格式、文件和
   编译职责，但目录与命名无法直接表达边界。
@@ -24,7 +24,7 @@ Library 链接，但接口与源码组织仍保留多轮演进痕迹：
 本任务完成后，源码到运行时 Shader 的数据流固定为：
 
 ```text
-WGSL / HLSL / GLSL
+WGSL / HLSL
         │
         ▼
  shader_compiler ──► shader_compilation / reflection / diagnostic
@@ -46,7 +46,7 @@ WGSL / HLSL / GLSL
 
 - 不在 Renderer 或应用运行时引入源码编译、工具进程、文件系统或缓存策略。
 - 不改变 `.grshlib` v1 布局、内容 ID、变体选择和运行时生命周期。
-- 不把 DXC、glslang、Tint 或 SPIRV-Reflect 变成 Granit Core 的传递依赖。
+- 不把 DXC、Tint 或 SPIRV-Reflect 变成 Granit Core 的传递依赖。
 - 不新增 Shader 语言、运行时后端、材质节点图、热更新调度或远程编译服务。
 - 不把所有工具能力塞入一个持有全局状态的 Toolchain 对象。
 - 不为尚未稳定的旧 ShaderTools API 保留转发入口或兼容别名。
@@ -71,7 +71,7 @@ WGSL / HLSL / GLSL
 
 ```cpp
 granit::shader_tools::compiler compiler;
-compiler.initialize({.dxc_path = dxc, .glslang_path = glslang, .tint_path = tint});
+compiler.initialize({.dxc_path = dxc, .tint_path = tint});
 
 granit::shader_tools::compile_desc desc{
     .source_path = source,
@@ -90,10 +90,9 @@ Compiler 根据 `source_language` 选择内部前端：
 
 - WGSL 使用 Tint 生成并验证 SPIR-V，同时保留规范化 WGSL；
 - HLSL 使用 DXC 生成 SPIR-V，再由 Tint 生成 WGSL；
-- GLSL 使用 glslang 生成 SPIR-V，再由 Tint 生成 WGSL。
 
-调用方不再选择 `compile_wgsl`、`compile_hlsl` 或 `compile_glsl`。缺少所需工具时返回明确的
-`tool_unavailable`，语言或目标组合无法支持时返回 `unsupported`。
+调用方不再选择 `compile_wgsl` 或 `compile_hlsl`。缺少所需工具配置时返回
+`not_ready`，无效语言、阶段或目标位返回 `invalid_argument`。
 
 ### 编译结果、反射和序列化分开命名
 
@@ -179,7 +178,6 @@ tools/shader_compiler/
   cache.*
   frontends/wgsl.*
   frontends/hlsl.*
-  frontends/glsl.*
 
 tools/shader_library/
   builder.*
@@ -202,8 +200,8 @@ tools/shader_cli/
 
 1. **S-37K1 共享类型收敛（已完成）**：增加 Core Shader 类型头；迁移 Renderer、ShaderTools、
    格式编码器和测试；删除重复宏、枚举和固定长度数组别名。
-2. **S-37K2 统一 Compiler API**：引入 Compiler 配置、统一编译描述和单一 `compile()`；把三种
-   语言差异移入私有 frontend；同步 C11 与 C++20 API。
+2. **S-37K2 统一 Compiler API（已完成）**：引入 Compiler 配置、统一编译描述和单一 `compile()`；
+   两种语言共享句柄生命周期、参数校验和结果创建，前端差异留在工具内部；同步 C11 与 C++20 API。
 3. **S-37K3 Compilation 与 Reflection**：将模糊的 Result 句柄拆成编译结果和反射视图；统一结构化
    Binding、接口变量、Workgroup 和 Override 查询；删除旧结果查询入口。
 4. **S-37K4 Shader Object 边界**：引入 `.grshaderobj`、Object Builder 和对象检查；迁移缓存、测试
@@ -218,13 +216,13 @@ tools/shader_cli/
 ## 测试与验收
 
 - C11 与 C++20 公共头可分别独立包含，所有公开结构继续满足 ABI 布局检查。
-- WGSL、HLSL 和 GLSL 通过同一个 Compiler API 生成相同语义的 SPIR-V、WGSL 与反射结果。
+- WGSL 和 HLSL 通过同一个 Compiler API 生成相同语义的 SPIR-V、WGSL 与反射结果。
 - 缺少工具、无效源码、错误入口、阶段不匹配、无效 Define 和不支持目标均返回确定结果及诊断。
 - Compiler 实例支持并行独立编译；Compilation 的字符串和载荷视图在对象销毁前稳定有效。
 - `.grshaderobj` 覆盖截断、越界、摘要不匹配、未知版本、载荷缺失与冲突输入。
 - 相同输入、工具身份、配置和目标逐字节生成相同 `.grshaderobj` 与 `.grshlib`。
 - CLI、SDK 直接调用和 CMake 生成路径共享同一实现，并通过缓存命中与失效回归。
-- 安装结果不包含 `.grshaderobj`、DXC、glslang、Tint 或工具私有头；Runtime 只安装 `.grshlib`。
+- 安装结果不包含 `.grshaderobj`、DXC、Tint 或工具私有头；Runtime 只安装 `.grshlib`。
 - Windows 共享/静态、Linux GCC/Clang、Emscripten、浏览器 WebGPU、构建树和安装 Consumer 通过。
 - `shader_tool_main.cpp` 只保留入口分派；单个命令实现和公共头不再承担多个领域职责。
 

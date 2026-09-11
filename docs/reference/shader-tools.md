@@ -3,9 +3,9 @@
 
 # ShaderTools SDK
 
-ShaderTools 是供编辑器、资产构建器和命令行工具直接链接的可选组件。它负责调用锁定版本的 Tint
-将 WGSL 编译为 Vulkan SPIR-V，并检查 SPIR-V 的入口点、阶段和当前反射文本；它不进入核心渲染库
-的传递依赖。
+ShaderTools 是供编辑器、资产构建器和命令行工具直接链接的可选组件。它通过统一 Compiler 调用
+锁定版本的 DXC 与 Tint，将 WGSL 或 HLSL 编译为离线 Shader 产物，并检查
+SPIR-V 的入口点、阶段和反射；它不进入核心渲染库的传递依赖。
 
 ## 构建与链接
 
@@ -16,18 +16,17 @@ find_package(granit 0.3 CONFIG REQUIRED COMPONENTS ShaderTools)
 target_link_libraries(editor PRIVATE granit::shader_tools)
 ```
 
-`GRANIT_BUILD_TOOLS=ON` 也会构建该 SDK，因为 `granit_shader_tool` 是它的命令行薄适配层。Tint
-可执行文件仍是编译调用的显式输入，不会成为公共链接依赖。
+`GRANIT_BUILD_TOOLS=ON` 也会构建该 SDK，因为 `granit_shader_tool` 是它的命令行薄适配层。编译器
+可执行文件路径在创建 Compiler 时配置并复制到句柄中，不会成为公共链接依赖。
 
-HLSL/GLSL portable 路径需要资产构建机安装 DXC、glslangValidator 与 Tint，但应用运行时和
-Granit 核心 SDK 均不需要它们。配置时优先设置 `GRANIT_SHADER_TOOLCHAIN_ROOT`，其 `bin` 目录应
-包含三个工具；也可分别设置 `GRANIT_DXC_EXECUTABLE`、`GRANIT_GLSLANG_EXECUTABLE`、
-`GRANIT_TINT_EXECUTABLE`。未设置统一根目录时，DXC 与 glslang 还会从 `VULKAN_SDK` 和 PATH 查找，
-Tint 从 PATH 查找。配置阶段会检查锁定版本及 Tint 所需转换能力，不符合契约的工具不会用于
+HLSL portable 路径需要资产构建机安装 DXC 与 Tint，但应用运行时和 Granit 核心 SDK 均不需要
+它们。配置时优先设置 `GRANIT_SHADER_TOOLCHAIN_ROOT`，其 `bin` 目录应包含两个工具；也可分别
+设置 `GRANIT_DXC_EXECUTABLE` 与 `GRANIT_TINT_EXECUTABLE`。未设置统一根目录时，DXC 还会从
+`VULKAN_SDK` 和 PATH 查找，Tint 从 PATH 查找。配置阶段会检查锁定版本及 Tint 所需转换能力，不符合契约的工具不会用于
 端到端测试。
 
-当前 Windows 工具链契约锁定 DXC `1.8.0.4973`、glslang `15.3.0`；Linux 工具链契约锁定
-DXC 构建 `4973-8f559587`、glslang `15.4.0`。两者均锁定 Dawn/Tint
+当前 Windows 工具链契约锁定 DXC `1.8.0.4973`，Linux 工具链契约锁定 DXC 构建
+`4973-8f559587`。两者均锁定 Dawn/Tint
 `v20260720.160313`（修订
 `0bc38adde72b79013536f8ce354b639ae19ae195`）。资产会记录真实工具身份，使缓存身份不依赖开发机
 路径。工具链是离线依赖，不进入 `granit::granit` 的安装导出或传递依赖。
@@ -36,21 +35,27 @@ DXC 构建 `4973-8f559587`、glslang `15.4.0`。两者均锁定 Dawn/Tint
 
 - `compatible` 是默认值。锁定版本直接接受，其他可启动版本发出警告并继续执行真实编译能力探测；
   只有能力探测失败才禁用工具。
-- `locked` 用于官方 CI 和发布构建。DXC、glslang 必须匹配锁定版本，Tint 还必须通过
+- `locked` 用于官方 CI 和发布构建。DXC 必须匹配锁定版本，Tint 还必须通过
   `GRANIT_TINT_REVISION` 提供匹配的源码修订，否则配置失败。
 - `unchecked` 只用于适配新工具链，跳过版本和配置期编译能力约束；真实资产编译仍可能失败。
 
 `granit_shader_tools_get_tool_identity` 返回指定工具二进制的 SHA-256。CLI 在未提供
-`--dxc-revision`、`--glslang-revision` 或 `--tint-revision` 时自动使用该身份构造缓存键，因此路径
+`--dxc-revision` 或 `--tint-revision` 时自动使用该身份构造缓存键，因此路径
 相同但二进制升级后不会复用旧产物。显式修订号仍适用于可复现构建，以及编译器暂时不可用但需要
 从已有资产恢复 sidecar 的流程。
 
 ## 接口与生命周期
 
 - C11 入口位于 `<granit/tools/shader_tools.h>`；C++20 RAII 包装位于对应 `.hpp`。
-- `granit_shader_tools_compile_wgsl` 编译 WGSL；`granit_shader_tools_compile_hlsl` 和
-  `granit_shader_tools_compile_glsl` 分别通过调用方指定的 DXC、glslang 与 Tint 生成 portable
-  SPIR-V/WGSL 双产物；`granit_shader_tools_inspect_spirv` 检查 SPIR-V。
+- `granit_shader_tools_compiler_create` 创建可复用 Compiler，配置包含 DXC 与 Tint 路径；
+  `granit_shader_tools_compiler_compile` 通过 `source_language` 选择前端。C++ 包装对应移动独占的
+  `compiler` 和统一 `compile_desc`。旧的语言专用描述与编译入口已删除。
+- WGSL 通过 Tint 生成 portable SPIR-V；HLSL 通过 DXC 生成 SPIR-V，再由 Tint 生成 portable
+  WGSL。统一编译描述始终要求 SPIR-V 输出路径，HLSL 还要求 WGSL
+  输出路径。`target_backends` 声明后续产物面向的非零后端集合。
+- Compiler 在创建时复制工具路径，可供多个线程并发编译；销毁必须等待使用该句柄的调用结束。
+  缺少当前语言所需工具配置时，编译返回 `not_ready`，未知语言、阶段、目标位或无效路径返回
+  `invalid_argument`。`granit_shader_tools_inspect_spirv` 独立检查已有 SPIR-V。
 - `granit_shader_tools_restore_asset_cache` 在启动 Tint 前校验输入、编译上下文和资产摘要；命中时
   从 sidecar 恢复所需产物；清单或任一 sidecar 不存在、损坏及缓存键变化均作为正常未命中。
 - `granit_shader_tools_result_write_asset` 将稳定反射和载荷摘要写入 `.granit-shader` 清单，并将
@@ -65,17 +70,14 @@ DXC 构建 `4973-8f559587`、glslang `15.4.0`。两者均锁定 Dawn/Tint
   一致。临时文件不会进入资产。DXC 或 Tint 拒绝源代码及其能力时，调用返回
   `initialization_failed`、保留工具诊断并删除不完整产物，不会降低 Vulkan sidecar 的目标版本，
   也不会静默降级为仅 Vulkan 资产。
-- `granit_shader_tools_hlsl_compile_desc.defines` 接收显式长度的名称和值。名称必须是合法标识符，
+- `granit_shader_tools_compile_desc.defines` 仅用于 HLSL，接收显式长度的名称和值。名称必须是合法标识符，
   值不能为空，同名定义会被拒绝；SDK 按名称排序后传给 DXC。CLI 对应参数为可重复的
   `--define NAME=VALUE`。排序后的完整定义集合属于编译上下文并进入缓存键。
-- GLSL portable 路径具有相同产物与失败语义，由 glslangValidator 生成最终和桥接 SPIR-V，再由
-  Tint 生成 WGSL。GLSL 源码必须显式使用 Vulkan 资源布局；工具不隐式分配 Set、Binding 或
-  Location。
 - 命令行 `compile-hlsl` 暴露相同路径，并可直接写入、裁剪 `.granit-shader` 资产。写资产时必须
   显式记录 DXC 与 Tint 修订号。全后端资产缓存命中时会在启动两个编译器前直接恢复 SPIR-V 和
   WGSL；单后端裁剪目前仍执行完整编译，避免声称恢复了未被资产保存的另一后端产物。
 - 缓存键基于原始源码语言、原始源码内容、入口点、阶段、工具修订号、目标、选项和必需特性。
-  因此相同文本分别作为 WGSL、HLSL 或未来 GLSL 输入时不会错误共享缓存。
+  因此相同文本分别作为 WGSL 或 HLSL 输入时不会错误共享缓存。
 - `granit_shader_tools_asset_desc.backend_mask` 必须选择 Vulkan、WebGPU 或二者；写入时会删除同名
   的未选后端 sidecar，清单仅记录实际保留的变体。缓存描述的 `backend_mask` 表示期望的精确
   变体集合，清单集合不同也会正常未命中；两个字段均不能为零。
@@ -97,9 +99,9 @@ DXC 构建 `4973-8f559587`、glslang `15.4.0`。两者均锁定 Dawn/Tint
   上下文判断；底层 C API 继续返回 `granit_result`。
 - 参数字符串均为 UTF-8 的“指针 + 长度”，只需在调用期间有效，无需以零结尾。
 - 参数和输出结构必须初始化 `struct_size`。未来版本只在结构体尾部追加字段。
-- 编译或检查描述可设置 `validate_binding_set=1`，并传入从 WGSL 前端获得的
+- 统一编译描述或检查描述可设置 `validate_binding_set=1`，并传入从 WGSL 前端获得的
   `expected_bindings`。SDK 会按 Group/Binding 比较最终 SPIR-V；缺失、多余或重复记录都会失败，
-  编译失败时删除输出文件。零值关闭该检查，保持旧调用兼容。
+  编译失败时删除输出文件。零值关闭该检查。
 - 参数有效后，即使编译或检查失败也可能返回非零结果句柄。调用者应读取 `status` 和诊断，最后
   调用 `granit_shader_tools_result_destroy`；C++ 包装会自动销毁。
 - 查询得到的字符串视图由 SDK 持有，在结果句柄销毁前有效，调用者不得释放或修改。不得让查询

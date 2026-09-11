@@ -9,7 +9,7 @@ endforeach()
 
 file(REMOVE_RECURSE "${WORK_DIR}")
 file(MAKE_DIRECTORY "${WORK_DIR}/inputs")
-foreach(name dxc glslang tint runtime dxc-license glslang-license dawn-license)
+foreach(name dxc tint runtime dxc-license dawn-license)
   file(WRITE "${WORK_DIR}/inputs/${name}" "${name} fixture")
 endforeach()
 set(stage "${WORK_DIR}/package")
@@ -17,11 +17,9 @@ set(stage "${WORK_DIR}/package")
 execute_process(
   COMMAND
     "${CMAKE_COMMAND}" -DSTAGE=${stage} -DGENERATOR=${GENERATOR}
-    -DDXC=${WORK_DIR}/inputs/dxc -DGLSLANG=${WORK_DIR}/inputs/glslang
-    -DTINT=${WORK_DIR}/inputs/tint -DDXC_VERSION=fixture -DGLSLANG_VERSION=fixture
+    -DDXC=${WORK_DIR}/inputs/dxc -DTINT=${WORK_DIR}/inputs/tint -DDXC_VERSION=fixture
     -DDAWN_VERSION=fixture -DTINT_REVISION=fixture
     -DDXC_LICENSE_FILES=${WORK_DIR}/inputs/dxc-license
-    -DGLSLANG_LICENSE_FILES=${WORK_DIR}/inputs/glslang-license
     -DDAWN_LICENSE_FILES=${WORK_DIR}/inputs/dawn-license
     -DRUNTIME_FILES=${WORK_DIR}/inputs/runtime -P "${PACKAGER}"
   RESULT_VARIABLE package_result
@@ -45,11 +43,9 @@ endif()
 
 execute_process(
   COMMAND "${CMAKE_COMMAND}" -DSTAGE=${stage} -DGENERATOR=${GENERATOR}
-          -DDXC=${WORK_DIR}/inputs/dxc -DGLSLANG=${WORK_DIR}/inputs/glslang
-          -DTINT=${WORK_DIR}/inputs/tint -DDXC_VERSION=fixture
-          -DGLSLANG_VERSION=fixture -DDAWN_VERSION=fixture -DTINT_REVISION=fixture
+          -DDXC=${WORK_DIR}/inputs/dxc -DTINT=${WORK_DIR}/inputs/tint -DDXC_VERSION=fixture
+          -DDAWN_VERSION=fixture -DTINT_REVISION=fixture
           -DDXC_LICENSE_FILES=${WORK_DIR}/inputs/dxc-license
-          -DGLSLANG_LICENSE_FILES=${WORK_DIR}/inputs/glslang-license
           -DDAWN_LICENSE_FILES=${WORK_DIR}/inputs/dawn-license -P "${PACKAGER}"
   RESULT_VARIABLE overwrite_result
   OUTPUT_QUIET
@@ -58,4 +54,3 @@ execute_process(
 if(overwrite_result EQUAL 0)
   message(FATAL_ERROR "组包脚本意外覆盖已有目录")
 endif()
-

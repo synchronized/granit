@@ -18,7 +18,7 @@ example.wgsl
 example.spv
 ```
 
-0.5.0 的单文件内嵌格式不再读取。请使用 0.6.0 的 ShaderTools 从 WGSL、HLSL 或 GLSL 源码重新
+0.5.0 的单文件内嵌格式不再读取。请使用 ShaderTools 从 WGSL 或 HLSL 源码重新
 生成资产，不要复制或手工修改旧缓存。发布时可以只保留目标后端需要的 sidecar，但清单必须与
 实际载荷一致。
 
@@ -33,7 +33,7 @@ example.spv
 
 ## 工具链
 
-官方 Windows/Linux 离线工具链包锁定 DXC、glslang 与 Tint，并提供许可证和 SHA-256 清单。
+官方 Windows/Linux 离线工具链包锁定 DXC 与 Tint，并提供许可证和 SHA-256 清单。
 严格可复现构建应使用锁定包；本地开发可以使用满足兼容策略的工具版本，但工具身份会进入缓存键，
 因此不同版本不会误用彼此的缓存结果。
 

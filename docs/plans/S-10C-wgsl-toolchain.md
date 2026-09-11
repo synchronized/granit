@@ -29,7 +29,7 @@ S-10C 需要建立一个源码权威和可复现的双后端资产流程。
 ## 非目标
 
 - 不在 Granit 核心动态库或最终应用中链接 Tint、SPIRV-Tools 或 SPIRV-Reflect。
-- 不在本阶段支持 GLSL、HLSL、运行时源码编译、热重载监听或远程 Shader 编译服务。
+- 不在本阶段支持 HLSL、运行时源码编译、热重载监听或远程 Shader 编译服务。
 - 不承诺把任意现有 Vulkan SPIR-V 自动还原为可维护 WGSL。
 - 不在 S-10C 增加公共后端选择、浏览器 Canvas、Emscripten 主循环或 Android 接入。
 - 不以 WebGPU 自动推导 Pipeline Layout 取代 Granit 显式布局契约。

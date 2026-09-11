@@ -9,6 +9,16 @@
 int main(int argc, char** argv) {
   if (argc != 4 && argc != 5)
     return 1;
+  granit::shader_tools::compiler compiler;
+  if (compiler.initialize({}).failed() || !compiler)
+    return 15;
+  auto moved_compiler = std::move(compiler);
+  if (!moved_compiler || compiler)
+    return 16;
+  compiler.reset();
+  const auto [compile_status, compilation] = compiler.compile({});
+  if (compile_status != granit::result::invalid_handle || compilation)
+    return 17;
   granit_shader_tools_inspect_desc desc{};
   constexpr auto expected_size =
       static_cast<uint32_t>(sizeof(granit_shader_tools_expected_binding));

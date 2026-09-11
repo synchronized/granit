@@ -14,6 +14,8 @@
 
 /** ShaderTools 操作结果句柄。零值无效。 */
 typedef uint64_t granit_shader_tools_result;
+/** Shader Compiler 句柄。零值无效。 */
+typedef uint64_t granit_shader_tools_compiler;
 
 /** 用于核对 WGSL 与最终 SPIR-V 的预期 Binding 键。 */
 typedef struct granit_shader_tools_expected_binding {
@@ -49,24 +51,19 @@ typedef struct granit_shader_tools_target_capabilities {
   {(uint32_t)sizeof(granit_shader_tools_target_capabilities), UINT32_C(0),                         \
    GRANIT_SHADER_PROFILE_PORTABLE, UINT32_C(0), UINT64_C(0)}
 
-/** WGSL 编译描述。所有字符串均为 UTF-8，调用期间有效且无需以零结尾。 */
-typedef struct granit_shader_tools_compile_desc {
+/** Shader Compiler 配置。所有路径均在创建调用期间借用。 */
+typedef struct granit_shader_tools_compiler_desc {
   uint32_t struct_size;
+  uint32_t reserved;
+  const char* dxc_path;
+  uint64_t dxc_path_length;
   const char* tint_path;
   uint64_t tint_path_length;
-  const char* input_path;
-  uint64_t input_path_length;
-  const char* entry_point;
-  uint64_t entry_point_length;
-  granit_shader_stage stage;
-  const char* output_path;
-  uint64_t output_path_length;
-  uint32_t validate_binding_set;
-  const granit_shader_tools_expected_binding* expected_bindings;
-  uint64_t expected_binding_count;
-} granit_shader_tools_compile_desc;
+} granit_shader_tools_compiler_desc;
 
-/** HLSL portable 双后端编译描述；DXC 生成 SPIR-V，Tint 从该产物生成 WGSL。 */
+#define GRANIT_SHADER_TOOLS_COMPILER_DESC_INIT                                                     \
+  {(uint32_t)sizeof(granit_shader_tools_compiler_desc), UINT32_C(0), 0, UINT64_C(0), 0, UINT64_C(0)}
+
 typedef struct granit_shader_tools_define {
   uint32_t struct_size;
   uint32_t reserved;
@@ -79,47 +76,50 @@ typedef struct granit_shader_tools_define {
 #define GRANIT_SHADER_TOOLS_DEFINE_INIT                                                            \
   {(uint32_t)sizeof(granit_shader_tools_define), UINT32_C(0), 0, UINT64_C(0), 0, UINT64_C(0)}
 
-typedef struct granit_shader_tools_hlsl_compile_desc {
+/**
+ * 统一 Shader 编译描述；Compiler 根据 source_language 选择前端。
+ * spirv_output_path 始终必填；HLSL 还必须提供 wgsl_output_path。
+ */
+typedef struct granit_shader_tools_compile_desc {
   uint32_t struct_size;
-  const char* dxc_path;
-  uint64_t dxc_path_length;
-  const char* tint_path;
-  uint64_t tint_path_length;
+  granit_shader_source_language source_language;
+  granit_shader_stage stage;
+  /** 产物面向的后端非零位集合；当前编译路径会生成后续打包所需的全部中间载荷。 */
+  granit_shader_backend_flags target_backends;
   const char* input_path;
   uint64_t input_path_length;
   const char* entry_point;
   uint64_t entry_point_length;
-  granit_shader_stage stage;
   const char* spirv_output_path;
   uint64_t spirv_output_path_length;
   const char* wgsl_output_path;
   uint64_t wgsl_output_path_length;
-  /** 按名称升序传给 DXC 的预处理器定义；名称和值均在调用期间借用。 */
+  /** 仅 HLSL 使用；实现按名称排序并拒绝重复项。 */
   const granit_shader_tools_define* defines;
   uint32_t define_count;
-  uint32_t reserved;
-} granit_shader_tools_hlsl_compile_desc;
+  uint32_t validate_binding_set;
+  const granit_shader_tools_expected_binding* expected_bindings;
+  uint64_t expected_binding_count;
+} granit_shader_tools_compile_desc;
 
-#define GRANIT_SHADER_TOOLS_HLSL_COMPILE_DESC_VERSION_1_SIZE                                       \
-  ((uint32_t)offsetof(granit_shader_tools_hlsl_compile_desc, defines))
-
-/** GLSL portable 双后端编译描述；glslang 生成 SPIR-V，Tint 从该产物生成 WGSL。 */
-typedef struct granit_shader_tools_glsl_compile_desc {
-  uint32_t struct_size;
-  const char* glslang_path;
-  uint64_t glslang_path_length;
-  const char* tint_path;
-  uint64_t tint_path_length;
-  const char* input_path;
-  uint64_t input_path_length;
-  const char* entry_point;
-  uint64_t entry_point_length;
-  granit_shader_stage stage;
-  const char* spirv_output_path;
-  uint64_t spirv_output_path_length;
-  const char* wgsl_output_path;
-  uint64_t wgsl_output_path_length;
-} granit_shader_tools_glsl_compile_desc;
+#define GRANIT_SHADER_TOOLS_COMPILE_DESC_INIT                                                      \
+  {(uint32_t)sizeof(granit_shader_tools_compile_desc),                                             \
+   GRANIT_SHADER_SOURCE_LANGUAGE_WGSL,                                                             \
+   GRANIT_SHADER_STAGE_VERTEX,                                                                     \
+   GRANIT_SHADER_BACKEND_ALL_BITS,                                                                 \
+   0,                                                                                              \
+   UINT64_C(0),                                                                                    \
+   0,                                                                                              \
+   UINT64_C(0),                                                                                    \
+   0,                                                                                              \
+   UINT64_C(0),                                                                                    \
+   0,                                                                                              \
+   UINT64_C(0),                                                                                    \
+   0,                                                                                              \
+   UINT32_C(0),                                                                                    \
+   UINT32_C(0),                                                                                    \
+   0,                                                                                              \
+   UINT64_C(0)}
 
 /** SPIR-V 检查描述。路径为 UTF-8，调用期间有效且无需以零结尾。 */
 typedef struct granit_shader_tools_inspect_desc {
@@ -248,22 +248,21 @@ typedef struct granit_shader_tools_override_info {
 extern "C" {
 #endif
 
+/** 创建 Compiler；工具路径会复制到句柄中，创建返回后调用方可释放输入字符串。 */
+GRANIT_SHADER_TOOLS_API granit_result granit_shader_tools_compiler_create(
+    const granit_shader_tools_compiler_desc* desc, granit_shader_tools_compiler* compiler);
+
 /**
- * 使用 Tint 将 WGSL 编译为 SPIR-V。
- *
- * 只要参数有效就会返回非零结果句柄；即使编译失败也应读取诊断并销毁句柄。
- * 返回值同时写入结果摘要的 status 字段。该函数线程安全。
+ * 使用 Compiler 编译 WGSL 或 HLSL。只要编译已启动便返回结果句柄，诊断由结果持有。
+ * Compiler 可由多个线程并发调用，描述中的字符串和数组只需在调用期间有效。
  */
-GRANIT_SHADER_TOOLS_API granit_result granit_shader_tools_compile_wgsl(
-    const granit_shader_tools_compile_desc* desc, granit_shader_tools_result* result);
+GRANIT_SHADER_TOOLS_API granit_result granit_shader_tools_compiler_compile(
+    granit_shader_tools_compiler compiler, const granit_shader_tools_compile_desc* desc,
+    granit_shader_tools_result* result);
 
-/** 使用显式 DXC 与 Tint 生成 portable SPIR-V/WGSL，并严格检查入口点和阶段。 */
-GRANIT_SHADER_TOOLS_API granit_result granit_shader_tools_compile_hlsl(
-    const granit_shader_tools_hlsl_compile_desc* desc, granit_shader_tools_result* result);
-
-/** 使用显式 glslang 与 Tint 生成 portable SPIR-V/WGSL，并严格检查入口点和阶段。 */
-GRANIT_SHADER_TOOLS_API granit_result granit_shader_tools_compile_glsl(
-    const granit_shader_tools_glsl_compile_desc* desc, granit_shader_tools_result* result);
+/** 销毁 Compiler。零值和已经销毁的句柄返回 GRANIT_ERROR_INVALID_HANDLE。 */
+GRANIT_SHADER_TOOLS_API granit_result
+granit_shader_tools_compiler_destroy(granit_shader_tools_compiler compiler);
 
 /**
  * 查询工具二进制的稳定 SHA-256 身份。

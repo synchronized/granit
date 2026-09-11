@@ -8,6 +8,9 @@
 #include <string.h>
 
 int main(int argc, char** argv) {
+  granit_shader_tools_compiler_desc compiler_desc = GRANIT_SHADER_TOOLS_COMPILER_DESC_INIT;
+  granit_shader_tools_compile_desc compile_desc = GRANIT_SHADER_TOOLS_COMPILE_DESC_INIT;
+  granit_shader_tools_compiler compiler = 0;
   granit_shader_tools_inspect_desc desc;
   granit_shader_tools_result result = 0;
   granit_shader_tools_result_info info;
@@ -22,6 +25,21 @@ int main(int argc, char** argv) {
   char tool_identity[64];
   if (argc != 2)
     return 1;
+  if (granit_shader_tools_compiler_create(&compiler_desc, &compiler) != GRANIT_SUCCESS ||
+      compiler == 0)
+    return 15;
+  compile_desc.input_path = argv[1];
+  compile_desc.input_path_length = (uint64_t)strlen(argv[1]);
+  compile_desc.entry_point = "fragment_main";
+  compile_desc.entry_point_length = UINT64_C(13);
+  compile_desc.stage = GRANIT_SHADER_STAGE_FRAGMENT;
+  compile_desc.spirv_output_path = argv[1];
+  compile_desc.spirv_output_path_length = (uint64_t)strlen(argv[1]);
+  if (granit_shader_tools_compiler_compile(compiler, &compile_desc, &result) !=
+          GRANIT_ERROR_NOT_READY ||
+      result != 0 || granit_shader_tools_compiler_destroy(compiler) != GRANIT_SUCCESS ||
+      granit_shader_tools_compiler_destroy(compiler) != GRANIT_ERROR_INVALID_HANDLE)
+    return 15;
   if (granit_shader_tools_get_tool_identity(argv[1], (uint64_t)strlen(argv[1]), NULL,
                                             &tool_identity_length) != GRANIT_SUCCESS ||
       tool_identity_length != sizeof(tool_identity))

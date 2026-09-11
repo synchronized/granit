@@ -20,7 +20,7 @@
 调用 `granit_shader_create_from_asset` 后，输入字节即可释放。旧清单必须用 0.8.0 ShaderTools
 重新生成；运行时不会猜测旧布局。
 
-已有且经过验证的 SPIR-V/WGSL 对可用 `granit_shader_tool pack` 封装。HLSL、GLSL 或 WGSL 源码仍
+已有且经过验证的 SPIR-V/WGSL 对可用 `granit_shader_tool pack` 封装。HLSL 或 WGSL 源码仍
 建议通过对应 `compile-*` 命令生成，以保留完整工具身份和可复现缓存信息。
 
 ## Material 归档

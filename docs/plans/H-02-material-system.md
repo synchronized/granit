@@ -99,7 +99,7 @@ H-02 已完成内部原型：
 
 ## 非目标
 
-- 不在运行时解析或编译 GLSL/HLSL。
+- 不在运行时解析或编译 Shader 源码。
 - 不实现 Shader Graph、可编程材质节点或完整资产系统。
 - 不自动推导 PBR 参数、渲染队列或透明排序。
 - 首版不要求 Bindless、Descriptor Buffer、Ray Tracing 或 Mesh Shader。

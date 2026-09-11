@@ -37,9 +37,9 @@ jobs:
             -DGRANIT_SHADER_TOOLCHAIN_ROOT="$root" -DGRANIT_SHADER_TOOLCHAIN_POLICY=locked `
             -DGRANIT_TINT_REVISION=0bc38adde72b79013536f8ce354b639ae19ae195
           cmake --build build/shader-toolchain-test --target `
-            granit_shader_hlsl_api_test granit_shader_glsl_api_test
+            granit_shader_hlsl_api_test
           ctest --test-dir build/shader-toolchain-test `
-            -R 'granit\.shader_tools\.(hlsl|glsl)_api' --output-on-failure
+            -R 'granit\.shader_tools\.hlsl_api' --output-on-failure
 
   msvc-install-consumer:
     runs-on: windows-2022

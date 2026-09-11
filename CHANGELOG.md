@@ -25,6 +25,7 @@
   中间结果，不再作为 RenderPipeline 运行时资产发布。
 - 浏览器 WebGPU 内部删除历史 Provider ABI、查询符号、函数表和 dispatch；domain adapter 直接
   调用后端私有 Context，并使用互不混用的强类型资源句柄。
+- ShaderTools 统一 WGSL/HLSL Compiler API，并移除 GLSL/glslang 前端、工具链配置和打包内容。
 
 ### 兼容性与迁移
 
