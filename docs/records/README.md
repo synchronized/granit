@@ -19,6 +19,7 @@
 
 ## 稳定化与跨平台
 
+- [2026-09-11 S-37H WebGPU Provider 边界收敛验收](2026-09-11-s37h-webgpu-boundary-acceptance.md)
 - [2026-09-10 Granit 0.20.0 发布验收](2026-09-10-v0.20.0-release-acceptance.md)
 - [2026-09-10 S-36 跨平台验收](2026-09-10-s36-cross-platform-acceptance.md)
 - [2026-09-07 S-33 开发与发布流水线提速验收](2026-09-07-s33-ci-release-acceleration.md)

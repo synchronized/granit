@@ -5,8 +5,8 @@
 
 ## 状态
 
-**实现中。** 设计已确认并纳入 0.21.0；S-37H1～S-37H6 已完成，当前进入 S-37H7 文档与
-发布验收。
+**本地完成。** S-37H1～S-37H7 的实现、文档和本地验证已完成；等待随 0.21.0 执行远端 Linux、
+SDK 和不可变 Release Candidate 验收。
 
 ## 背景与目标
 
@@ -60,8 +60,8 @@ Renderer Registry -> 私有 HAL -> WebGPU renderer state 的领域实现
    presentation 和 timestamp adapter 及 `xxx_owner` 对象，HAL 实现已移入对应
    `renderer_state_*.cpp`。共享设备状态已独立；资源、Shader、Pipeline、命令、Timestamp 和呈现的
    原生实现已按领域拆分，设备主文件只处理共享设备生命周期。
-7. **S-37H7 文档与发布验收**：更新架构概念与实现状态，完成 Emscripten、浏览器 WebGPU、Vulkan、
-   Windows 共享/静态及 Documentation 回归，并并入 S-37G 发布验收。
+7. **S-37H7 文档与发布验收（本地完成）**：已更新架构概念与实现状态，并完成 Emscripten、浏览器
+   WebGPU、Vulkan、Windows 共享/静态及 Documentation 回归；远端部分并入 S-37G 发布验收。
 
 各阶段允许根据真实依赖调整迁移分组，但不得长期保留 renderer state、adapter 和 Context 的逐层
 同名转发。过渡代码只在同一特性分支内存在，不形成兼容承诺。

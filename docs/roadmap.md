@@ -211,8 +211,8 @@
   [S-10E WebGPU Renderer 阶段验收](records/2026-08-28-s10e-webgpu-renderer-acceptance.md)。
 - **[S-16](plans/S-16-browser-only-webgpu.md) / P1**：依据 ADR-005 删除桌面 Dawn、动态插件和
   SDK 工作流；保留统一私有 HAL，并让 Emscripten WebGPU 静态后端直接服务浏览器目标。
-- 0.21.0 的 S-37H 进一步删除浏览器静态后端遗留的 Provider ABI 和分发表，domain adapter 直接
-  调用后端私有 Context；S-10 与 S-16 中的 Provider 描述保留为当时的实施历史。
+- 0.21.0 的 S-37H 已删除浏览器静态后端遗留的 Provider ABI、分发表和 domain adapter，并按领域
+  拆分后端私有设备实现；S-10 与 S-16 中的 Provider 描述保留为当时的实施历史。
 
 ## 十、Android 移动平台
 
@@ -433,7 +433,7 @@
 
 ## 二十九、0.21.0 Shader Library 与后端无关材质
 
-**状态：进行中；S-37A～S-37G 本地部分已完成，S-37H 实现中。**
+**状态：进行中；S-37A～S-37H 本地实现和验证已完成，等待远端发布验收。**
 
 - **[S-37](plans/S-37-0.21.0-shader-library-and-material-boundary.md) / P1**：引入确定性、可裁剪的
   `.grshlib`，由 Renderer 选择并校验 Vulkan/WebGPU 载荷，Material 和应用不再接收后端信息。
@@ -441,7 +441,7 @@
   Canvas 按后端修正坐标的逻辑。
 - `.grshader` 退出安装与运行时资产；离线单 Shader 结果只作为工具私有增量缓存。
 - **[S-37H](plans/S-37H-webgpu-provider-boundary-collapse.md) / P1**：删除浏览器静态 WebGPU 后端中
-  遗留的 Provider ABI、函数表和 dispatch，由 domain adapter 直接调用后端私有 Context。
+  遗留的 Provider ABI、函数表、dispatch 和 domain adapter，按领域拆分后端私有设备实现。
 - 文件 I/O、网络、资产数据库、运行时源码编译、Android、新后端、Bindless 和材质节点图不属于
   本版本。
 
