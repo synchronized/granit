@@ -100,8 +100,7 @@ granit_result renderer_registry::get_shader_library_info(granit_renderer rendere
 
 granit_result renderer_registry::create_shader_from_library(
     granit_renderer renderer, granit_shader_library library,
-    const std::array<std::byte, GRANIT_SHADER_LIBRARY_CONTENT_DIGEST_SIZE>& content_id,
-    granit_shader& shader) {
+    const std::array<std::byte, GRANIT_SHADER_DIGEST_SIZE>& content_id, granit_shader& shader) {
   try {
     std::shared_ptr<shader_library_record> library_record;
     {

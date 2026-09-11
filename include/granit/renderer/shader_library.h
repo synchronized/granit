@@ -18,7 +18,6 @@ typedef granit_handle granit_shader_library;
 typedef uint32_t granit_shader_library_backend_flags;
 #define GRANIT_SHADER_LIBRARY_BACKEND_VULKAN_BIT (UINT32_C(1) << 0)
 #define GRANIT_SHADER_LIBRARY_BACKEND_WEBGPU_BIT (UINT32_C(1) << 1)
-#define GRANIT_SHADER_LIBRARY_CONTENT_DIGEST_SIZE UINT32_C(32)
 
 /**
  * Shader Library 创建描述。
@@ -41,7 +40,7 @@ typedef struct granit_shader_library_desc {
 typedef struct granit_shader_library_info {
   uint32_t struct_size;
   granit_shader_library_backend_flags backend_flags;
-  uint8_t content_digest[GRANIT_SHADER_LIBRARY_CONTENT_DIGEST_SIZE];
+  granit_shader_digest content_digest;
   uint32_t shader_count;
   uint32_t variant_count;
   uint32_t payload_count;
@@ -83,9 +82,9 @@ GRANIT_API granit_result granit_shader_library_get_info(granit_renderer renderer
  * 后端 Shader。Shader 或引用它的 Pipeline 存活期间，销毁 Library 返回
  * GRANIT_ERROR_RESOURCE_IN_USE。
  */
-GRANIT_API granit_result granit_shader_create_from_library(
-    granit_renderer renderer, granit_shader_library library,
-    const uint8_t content_id[GRANIT_SHADER_LIBRARY_CONTENT_DIGEST_SIZE], granit_shader* shader);
+GRANIT_API granit_result
+granit_shader_create_from_library(granit_renderer renderer, granit_shader_library library,
+                                  const granit_shader_content_id content_id, granit_shader* shader);
 /** 销毁 Shader Library 并立即使公开句柄失效。 */
 GRANIT_API granit_result granit_shader_library_destroy(granit_renderer renderer,
                                                        granit_shader_library library);

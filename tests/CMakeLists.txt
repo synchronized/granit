@@ -619,6 +619,7 @@ add_library(
     headers/resource_types_hpp.cpp
     headers/sampler_hpp.cpp
     headers/shader_hpp.cpp
+    headers/shader_library_hpp.cpp
     headers/result_hpp.cpp
     headers/surface_hpp.cpp
     headers/swapchain_hpp.cpp

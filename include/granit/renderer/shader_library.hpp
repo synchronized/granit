@@ -16,8 +16,12 @@
 
 namespace granit {
 
-/** Shader Library 中用于查找单个 Shader 的稳定内容标识。 */
-using shader_content_id = std::array<std::byte, GRANIT_SHADER_LIBRARY_CONTENT_DIGEST_SIZE>;
+/** Shader 资产及 Library 使用的固定长度摘要。 */
+using shader_digest = std::array<std::byte, GRANIT_SHADER_DIGEST_SIZE>;
+/** 标识一项 Shader 资产，供 Shader Library 查找。 */
+using shader_content_id = shader_digest;
+/** 标识完整 Shader 构建输入，用于缓存失效。 */
+using shader_cache_key = shader_digest;
 
 enum class shader_library_backend : std::uint32_t {
   vulkan = GRANIT_SHADER_LIBRARY_BACKEND_VULKAN_BIT,
@@ -26,7 +30,7 @@ enum class shader_library_backend : std::uint32_t {
 
 struct shader_library_info {
   std::uint32_t backend_flags{};
-  std::array<std::byte, GRANIT_SHADER_LIBRARY_CONTENT_DIGEST_SIZE> content_digest{};
+  shader_digest content_digest{};
   std::uint32_t shader_count{};
   std::uint32_t variant_count{};
   std::uint32_t payload_count{};

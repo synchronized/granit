@@ -23,8 +23,15 @@ typedef uint32_t granit_shader_stage;
 typedef uint32_t granit_shader_code_format;
 #define GRANIT_SHADER_CODE_FORMAT_WGSL UINT32_C(1)
 #define GRANIT_SHADER_CODE_FORMAT_SPIRV UINT32_C(2)
-#define GRANIT_SHADER_ASSET_ID_SIZE UINT32_C(32)
+#define GRANIT_SHADER_DIGEST_SIZE UINT32_C(32)
 #define GRANIT_SHADER_ASSET_MAX_VARIANTS UINT32_C(2)
+
+/** Shader 资产及 Library 使用的固定长度摘要。 */
+typedef uint8_t granit_shader_digest[GRANIT_SHADER_DIGEST_SIZE];
+/** 标识一项 Shader 资产，供 Shader Library 查找。 */
+typedef granit_shader_digest granit_shader_content_id;
+/** 标识完整 Shader 构建输入，用于缓存失效。 */
+typedef granit_shader_digest granit_shader_cache_key;
 
 /** 单一格式 Shader 创建描述。代码与入口名称只需在创建调用期间有效。 */
 typedef struct granit_shader_desc {
@@ -74,15 +81,15 @@ typedef struct granit_shader_asset_variant_info {
   uint32_t reserved;
   granit_shader_feature_flags required_features;
   uint64_t payload_size;
-  uint8_t payload_digest[GRANIT_SHADER_ASSET_ID_SIZE];
+  granit_shader_digest payload_digest;
 } granit_shader_asset_variant_info;
 
 /** 已验证 Shader Asset 清单的只读摘要；entry_point 由调用方提供存储。 */
 typedef struct granit_shader_asset_info {
   uint32_t struct_size;
   uint32_t reserved;
-  uint8_t content_id[GRANIT_SHADER_ASSET_ID_SIZE];
-  uint8_t cache_key[GRANIT_SHADER_ASSET_ID_SIZE];
+  granit_shader_content_id content_id;
+  granit_shader_cache_key cache_key;
   granit_shader_stage stage;
   char* entry_point;
   uint32_t entry_point_capacity;

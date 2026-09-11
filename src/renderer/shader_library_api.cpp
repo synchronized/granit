@@ -100,9 +100,10 @@ extern "C" granit_result granit_shader_library_get_info(granit_renderer renderer
   }
 }
 
-extern "C" granit_result granit_shader_create_from_library(
-    granit_renderer renderer, granit_shader_library library,
-    const uint8_t content_id[GRANIT_SHADER_LIBRARY_CONTENT_DIGEST_SIZE], granit_shader* shader) {
+extern "C" granit_result
+granit_shader_create_from_library(granit_renderer renderer, granit_shader_library library,
+                                  const granit_shader_content_id content_id,
+                                  granit_shader* shader) {
   if (shader == nullptr)
     return GRANIT_ERROR_INVALID_ARGUMENT;
   *shader = GRANIT_NULL_HANDLE;
@@ -111,7 +112,7 @@ extern "C" granit_result granit_shader_create_from_library(
   if (content_id == nullptr)
     return GRANIT_ERROR_INVALID_ARGUMENT;
   try {
-    std::array<std::byte, GRANIT_SHADER_LIBRARY_CONTENT_DIGEST_SIZE> id{};
+    std::array<std::byte, GRANIT_SHADER_DIGEST_SIZE> id{};
     std::memcpy(id.data(), content_id, id.size());
     return granit::detail::renderer_registry::instance().create_shader_from_library(
         renderer, library, id, *shader);

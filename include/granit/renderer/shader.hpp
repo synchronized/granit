@@ -4,7 +4,6 @@
 #ifndef GRANIT_SHADER_HPP_
 #define GRANIT_SHADER_HPP_
 
-#include <array>
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
@@ -21,8 +20,6 @@
 #include <granit/renderer/shader_library.hpp>
 
 namespace granit {
-
-static_assert(GRANIT_SHADER_ASSET_ID_SIZE == GRANIT_SHADER_LIBRARY_CONTENT_DIGEST_SIZE);
 
 enum class shader_stage : std::uint32_t {
   vertex = GRANIT_SHADER_STAGE_VERTEX,
@@ -54,12 +51,12 @@ struct shader_asset_variant_info {
   std::uint32_t profile{};
   std::uint64_t required_features{};
   std::uint64_t payload_size{};
-  std::array<std::byte, GRANIT_SHADER_ASSET_ID_SIZE> payload_digest{};
+  shader_digest payload_digest{};
 };
 
 struct shader_asset_info {
   shader_content_id content_id{};
-  std::array<std::byte, GRANIT_SHADER_ASSET_ID_SIZE> cache_key{};
+  shader_cache_key cache_key{};
   shader_stage stage{shader_stage::vertex};
   std::string entry_point;
   std::vector<shader_asset_variant_info> variants;
