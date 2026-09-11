@@ -8,6 +8,7 @@ target_sources(
     device_pipelines.cpp
     device_resources.cpp
     device_shader.cpp
+    device_timestamp.cpp
     device_utils.cpp
     renderer_state.cpp
     renderer_state_commands.cpp
