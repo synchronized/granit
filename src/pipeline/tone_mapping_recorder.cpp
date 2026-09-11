@@ -21,7 +21,7 @@ granit_result record_tone_mapping(lighting::tone_mapping_pipeline_resources& pip
   sampling_constants.inverse_width = 1.0F / static_cast<float>(width);
   sampling_constants.inverse_height = 1.0F / static_cast<float>(height);
   if (!pipeline.initialized()) {
-    const auto initialize = pipeline.initialize_library(
+    const auto initialize = pipeline.initialize(
         renderer, static_cast<granit::texture_format>(output_format), shader_library,
         tone_mapping_vertex_shader_id(), tone_mapping_fragment_shader_id());
     if (initialize != GRANIT_SUCCESS)

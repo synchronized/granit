@@ -17,8 +17,8 @@
 
 #include "lighting/tone_mapping_resources.h"
 #include "material/material_package_archive.h"
-#include "support/shader_asset_file.h"
 #include "support/shader_asset_store.h"
+#include "support/tone_mapping_shader_library.h"
 
 #include <catch2/catch_all.hpp>
 
@@ -862,21 +862,14 @@ TEST_CASE("公共Render Pipeline ABI输出可回读的Tone Mapping像素") {
                            {.bytes_per_row = 8}, {}) == granit::result::success);
   REQUIRE(manual_hdr_view.initialize(renderer.native_handle(), manual_hdr.native_handle()) ==
           granit::result::success);
-  granit::tests::shader_asset_file tone_vertex;
-  granit::tests::shader_asset_file tone_fragment;
-  REQUIRE(tone_vertex
-              .load(renderer.native_handle(),
-                    std::string{GRANIT_PIPELINE_SHADER_DIR} + "/tone_mapping.vert.grshader")
-              .ok());
-  REQUIRE(tone_fragment
-              .load(renderer.native_handle(),
-                    std::string{GRANIT_PIPELINE_SHADER_DIR} + "/tone_mapping.frag.grshader")
-              .ok());
+  granit::tests::tone_mapping_shader_library tone_shaders;
+  REQUIRE(tone_shaders.initialize(renderer.native_handle()));
   granit::lighting::tone_mapping_resources manual_tone_mapping;
-  REQUIRE(manual_tone_mapping.initialize_packaged_asset(
-              renderer.native_handle(), manual_hdr_view.native_handle(),
-              granit::texture_format::rgba8_unorm, {.exposure_scale = 1.0F, .encode_srgb = 1},
-              tone_vertex.desc(), tone_fragment.desc()) == GRANIT_SUCCESS);
+  REQUIRE(manual_tone_mapping.initialize(renderer.native_handle(), manual_hdr_view.native_handle(),
+                                         granit::texture_format::rgba8_unorm,
+                                         {.exposure_scale = 1.0F, .encode_srgb = 1},
+                                         tone_shaders.native_handle(), tone_shaders.vertex_id(),
+                                         tone_shaders.fragment_id()) == GRANIT_SUCCESS);
   granit::texture manual_output;
   granit::texture_view manual_output_view;
   REQUIRE(manual_output.initialize(renderer.native_handle(),

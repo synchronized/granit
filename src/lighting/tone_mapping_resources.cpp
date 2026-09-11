@@ -2,7 +2,6 @@
 // Copyright (c) 2026 Granit contributors
 
 #include "lighting/tone_mapping_resources.h"
-#include "renderer/shader_code_selection.h"
 
 #include <array>
 #include <cmath>
@@ -31,43 +30,12 @@ bool compatible_output(granit::texture_format format,
 
 } // namespace
 
-granit_result tone_mapping_pipeline_resources::initialize(granit_renderer renderer,
-                                                          granit::texture_format output_format,
-                                                          std::span<const std::byte> vertex_code,
-                                                          std::span<const std::byte> fragment_code,
-                                                          std::string_view wgsl) noexcept {
-  return initialize_impl(renderer, output_format, vertex_code, fragment_code, wgsl, nullptr,
-                         nullptr, GRANIT_NULL_HANDLE, nullptr, nullptr);
-}
-
-granit_result tone_mapping_pipeline_resources::initialize_packaged_asset(
-    granit_renderer renderer, granit::texture_format output_format,
-    const granit::packaged_shader_asset_desc& vertex,
-    const granit::packaged_shader_asset_desc& fragment) noexcept {
-  return initialize_impl(renderer, output_format, {}, {}, {}, &vertex, &fragment,
-                         GRANIT_NULL_HANDLE, nullptr, nullptr);
-}
-
-granit_result tone_mapping_pipeline_resources::initialize_library(
+granit_result tone_mapping_pipeline_resources::initialize(
     granit_renderer renderer, granit::texture_format output_format, granit_shader_library library,
     const std::array<std::byte, GRANIT_SHADER_LIBRARY_CONTENT_DIGEST_SIZE>& vertex_id,
     const std::array<std::byte, GRANIT_SHADER_LIBRARY_CONTENT_DIGEST_SIZE>& fragment_id) noexcept {
-  return initialize_impl(renderer, output_format, {}, {}, {}, nullptr, nullptr, library, &vertex_id,
-                         &fragment_id);
-}
-
-granit_result tone_mapping_pipeline_resources::initialize_impl(
-    granit_renderer renderer, granit::texture_format output_format,
-    std::span<const std::byte> vertex_code, std::span<const std::byte> fragment_code,
-    std::string_view wgsl, const granit::packaged_shader_asset_desc* vertex_asset,
-    const granit::packaged_shader_asset_desc* fragment_asset, granit_shader_library library,
-    const std::array<std::byte, GRANIT_SHADER_LIBRARY_CONTENT_DIGEST_SIZE>* vertex_id,
-    const std::array<std::byte, GRANIT_SHADER_LIBRARY_CONTENT_DIGEST_SIZE>* fragment_id) noexcept {
   if (renderer == GRANIT_NULL_HANDLE || initialized() ||
-      output_format == granit::texture_format::undefined ||
-      (library == GRANIT_NULL_HANDLE && vertex_asset == nullptr &&
-       (vertex_code.empty() || fragment_code.empty())) ||
-      (library != GRANIT_NULL_HANDLE && (vertex_id == nullptr || fragment_id == nullptr))) {
+      output_format == granit::texture_format::undefined || library == GRANIT_NULL_HANDLE) {
     return GRANIT_ERROR_INVALID_ARGUMENT;
   }
   auto result = sampler_.initialize(renderer, {.mag_filter = granit::filter::linear,
@@ -94,38 +62,10 @@ granit_result tone_mapping_pipeline_resources::initialize_impl(
   const std::array layouts{group_layout_.native_handle()};
   if (result.ok())
     result = pipeline_layout_.initialize(renderer, layouts);
-  granit::detail::selected_shader_code selected_vertex;
-  if (result.ok() && vertex_asset == nullptr && !wgsl.empty())
-    result = granit::from_native(
-        granit::detail::select_portable_shader_code(renderer, vertex_code, wgsl, selected_vertex));
-  if (result.ok() && library != GRANIT_NULL_HANDLE)
-    result = vertex_shader_.initialize_library(renderer, library, *vertex_id);
-  else if (result.ok() && vertex_asset != nullptr)
-    result = vertex_shader_.initialize_packaged_asset(renderer, *vertex_asset);
-  else if (result.ok())
-    result = vertex_shader_.initialize(
-        renderer, {.stage = granit::shader_stage::vertex,
-                   .code_format = static_cast<granit::shader_code_format>(
-                       wgsl.empty() ? GRANIT_SHADER_CODE_FORMAT_SPIRV : selected_vertex.format),
-                   .code = wgsl.empty() ? vertex_code : selected_vertex.bytes,
-                   .entry_point = "vertex_main"});
-  if (result.ok()) {
-    granit::detail::selected_shader_code selected_fragment;
-    if (fragment_asset == nullptr && !wgsl.empty())
-      result = granit::from_native(granit::detail::select_portable_shader_code(
-          renderer, fragment_code, wgsl, selected_fragment));
-    if (result.ok() && library != GRANIT_NULL_HANDLE)
-      result = fragment_shader_.initialize_library(renderer, library, *fragment_id);
-    else if (result.ok() && fragment_asset != nullptr)
-      result = fragment_shader_.initialize_packaged_asset(renderer, *fragment_asset);
-    else if (result.ok())
-      result = fragment_shader_.initialize(
-          renderer, {.stage = granit::shader_stage::fragment,
-                     .code_format = static_cast<granit::shader_code_format>(
-                         wgsl.empty() ? GRANIT_SHADER_CODE_FORMAT_SPIRV : selected_fragment.format),
-                     .code = wgsl.empty() ? fragment_code : selected_fragment.bytes,
-                     .entry_point = "fragment_main"});
-  }
+  if (result.ok())
+    result = vertex_shader_.initialize_library(renderer, library, vertex_id);
+  if (result.ok())
+    result = fragment_shader_.initialize_library(renderer, library, fragment_id);
   if (result.ok()) {
     result = pipeline_.initialize(
         renderer, {.layout = pipeline_layout_.native_handle(),
@@ -214,21 +154,10 @@ granit_result tone_mapping_binding_resources::reset() noexcept {
 
 granit_result tone_mapping_resources::initialize(
     granit_renderer renderer, granit_texture_view hdr_view, granit::texture_format output_format,
-    const tone_mapping_constants& values, std::span<const std::byte> vertex_code,
-    std::span<const std::byte> fragment_code) noexcept {
-  auto result = pipeline_.initialize(renderer, output_format, vertex_code, fragment_code);
-  if (result == GRANIT_SUCCESS)
-    result = binding_.initialize(pipeline_, hdr_view, values);
-  if (result != GRANIT_SUCCESS)
-    static_cast<void>(reset());
-  return result;
-}
-
-granit_result tone_mapping_resources::initialize_packaged_asset(
-    granit_renderer renderer, granit_texture_view hdr_view, granit::texture_format output_format,
-    const tone_mapping_constants& values, const granit::packaged_shader_asset_desc& vertex,
-    const granit::packaged_shader_asset_desc& fragment) noexcept {
-  auto result = pipeline_.initialize_packaged_asset(renderer, output_format, vertex, fragment);
+    const tone_mapping_constants& values, granit_shader_library library,
+    const std::array<std::byte, GRANIT_SHADER_LIBRARY_CONTENT_DIGEST_SIZE>& vertex_id,
+    const std::array<std::byte, GRANIT_SHADER_LIBRARY_CONTENT_DIGEST_SIZE>& fragment_id) noexcept {
+  auto result = pipeline_.initialize(renderer, output_format, library, vertex_id, fragment_id);
   if (result == GRANIT_SUCCESS)
     result = binding_.initialize(pipeline_, hdr_view, values);
   if (result != GRANIT_SUCCESS)

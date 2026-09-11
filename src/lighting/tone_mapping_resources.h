@@ -13,21 +13,15 @@
 #include <granit/renderer/shader_library.h>
 #include <granit/renderer/texture.h>
 
+#include <array>
+#include <cstddef>
+
 namespace granit::lighting {
 
 /** 可跨帧复用的 Tone Mapping Shader、布局、Sampler 和全屏 Pipeline。 */
 class tone_mapping_pipeline_resources {
 public:
-  [[nodiscard]] granit_result initialize(granit_renderer renderer,
-                                         granit::texture_format output_format,
-                                         std::span<const std::byte> vertex_shader,
-                                         std::span<const std::byte> fragment_shader,
-                                         std::string_view wgsl = {}) noexcept;
-  [[nodiscard]] granit_result
-  initialize_packaged_asset(granit_renderer renderer, granit::texture_format output_format,
-                            const granit::packaged_shader_asset_desc& vertex,
-                            const granit::packaged_shader_asset_desc& fragment) noexcept;
-  [[nodiscard]] granit_result initialize_library(
+  [[nodiscard]] granit_result initialize(
       granit_renderer renderer, granit::texture_format output_format, granit_shader_library library,
       const std::array<std::byte, GRANIT_SHADER_LIBRARY_CONTENT_DIGEST_SIZE>& vertex_id,
       const std::array<std::byte, GRANIT_SHADER_LIBRARY_CONTENT_DIGEST_SIZE>& fragment_id) noexcept;
@@ -47,13 +41,6 @@ public:
   [[nodiscard]] granit::texture_format output_format() const noexcept { return output_format_; }
 
 private:
-  [[nodiscard]] granit_result initialize_impl(
-      granit_renderer renderer, granit::texture_format output_format,
-      std::span<const std::byte> vertex_code, std::span<const std::byte> fragment_code,
-      std::string_view wgsl, const granit::packaged_shader_asset_desc* vertex_asset,
-      const granit::packaged_shader_asset_desc* fragment_asset, granit_shader_library library,
-      const std::array<std::byte, GRANIT_SHADER_LIBRARY_CONTENT_DIGEST_SIZE>* vertex_id,
-      const std::array<std::byte, GRANIT_SHADER_LIBRARY_CONTENT_DIGEST_SIZE>* fragment_id) noexcept;
   granit_renderer renderer_ = GRANIT_NULL_HANDLE;
   granit::texture_format output_format_ = granit::texture_format::undefined;
   granit::sampler sampler_;
@@ -83,15 +70,11 @@ private:
 /** 兼容单次初始化用法的组合资源；新管线应分别缓存 pipeline 并按 HDR View 创建 binding。 */
 class tone_mapping_resources {
 public:
-  [[nodiscard]] granit_result initialize(granit_renderer renderer, granit_texture_view hdr_view,
-                                         granit::texture_format output_format,
-                                         const tone_mapping_constants& constants,
-                                         std::span<const std::byte> vertex_shader,
-                                         std::span<const std::byte> fragment_shader) noexcept;
-  [[nodiscard]] granit_result initialize_packaged_asset(
+  [[nodiscard]] granit_result initialize(
       granit_renderer renderer, granit_texture_view hdr_view, granit::texture_format output_format,
-      const tone_mapping_constants& constants, const granit::packaged_shader_asset_desc& vertex,
-      const granit::packaged_shader_asset_desc& fragment) noexcept;
+      const tone_mapping_constants& constants, granit_shader_library library,
+      const std::array<std::byte, GRANIT_SHADER_LIBRARY_CONTENT_DIGEST_SIZE>& vertex_id,
+      const std::array<std::byte, GRANIT_SHADER_LIBRARY_CONTENT_DIGEST_SIZE>& fragment_id) noexcept;
   [[nodiscard]] granit_result update(const tone_mapping_constants& constants) noexcept;
   [[nodiscard]] granit_result reset() noexcept;
   [[nodiscard]] bool initialized() const noexcept { return pipeline_.initialized(); }
