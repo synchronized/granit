@@ -60,8 +60,8 @@ target_sources(
     renderer/shader_validation.h
     renderer/shader_code_selection.h
     renderer/swapchain_validation.h
-    result.cpp
-    version.cpp
+    core/result.cpp
+    core/version.cpp
     core/handle_table.cpp
     core/async_operation_state.cpp
     core/diagnostic_sink.cpp

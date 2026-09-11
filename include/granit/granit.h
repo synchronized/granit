@@ -35,16 +35,4 @@
 #include <granit/renderer/timestamp_query.h>
 #include <granit/renderer/upload_batch.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-GRANIT_API uint32_t granit_version_major(void);
-GRANIT_API uint32_t granit_version_minor(void);
-GRANIT_API uint32_t granit_version_patch(void);
-
-#ifdef __cplusplus
-}
-#endif
-
 #endif

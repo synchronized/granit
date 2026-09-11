@@ -84,6 +84,7 @@ add_library(
     headers/texture_h.c
     headers/texture_asset_h.c
     headers/types_h.c
+    headers/version_h.c
     headers/upload_batch_h.c
     headers/readback_batch_h.c
     headers/pipeline_warmup_h.c

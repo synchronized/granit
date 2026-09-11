@@ -4,9 +4,30 @@
 #ifndef GRANIT_VERSION_H_
 #define GRANIT_VERSION_H_
 
+#include <stdint.h>
+
+#include <granit/core/export.h>
+
 #define GRANIT_VERSION_MAJOR @PROJECT_VERSION_MAJOR@
 #define GRANIT_VERSION_MINOR @PROJECT_VERSION_MINOR@
 #define GRANIT_VERSION_PATCH @PROJECT_VERSION_PATCH@
 #define GRANIT_VERSION_STRING "@PROJECT_VERSION@"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/** 返回 Granit 动态库的主版本号。 */
+GRANIT_API uint32_t granit_version_major(void);
+
+/** 返回 Granit 动态库的次版本号。 */
+GRANIT_API uint32_t granit_version_minor(void);
+
+/** 返回 Granit 动态库的修订版本号。 */
+GRANIT_API uint32_t granit_version_patch(void);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include <granit/granit.h>
+#include <granit/core/version.h>
 
 extern "C" uint32_t granit_version_major(void) { return GRANIT_VERSION_MAJOR; }
 
