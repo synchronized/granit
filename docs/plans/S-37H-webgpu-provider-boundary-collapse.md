@@ -5,8 +5,8 @@
 
 ## 状态
 
-**实现中。** 设计已确认并纳入 0.21.0；S-37H1～S-37H5 已完成。S-37H6 已删除 adapter 和
-`xxx_owner` 转发对象，当前继续按领域拆分原生设备实现。
+**实现中。** 设计已确认并纳入 0.21.0；S-37H1～S-37H6 已完成，当前进入 S-37H7 文档与
+发布验收。
 
 ## 背景与目标
 
@@ -56,10 +56,10 @@ Renderer Registry -> 私有 HAL -> WebGPU renderer state 的领域实现
    Device Lost 路径已迁移，并通过浏览器窗口、离屏渲染、Resize 与资源释放回归。
 5. **S-37H5 删除历史边界（已完成）**：已删除 `provider_api.h`、`provider_dispatch.*`、Provider
    ABI 版本、运行时函数表、查询符号和旧类型命名；内部描述集中到 `types.h`。
-6. **S-37H6 adapter 与 Context 职责收敛（实现中）**：已删除 command、resource、shader、pipeline、
+6. **S-37H6 adapter 与 Context 职责收敛（已完成）**：已删除 command、resource、shader、pipeline、
    presentation 和 timestamp adapter 及 `xxx_owner` 对象，HAL 实现已移入对应
-   `renderer_state_*.cpp`。共享设备状态已独立，Buffer、异步回读、Texture、View、Sampler 和
-   Bind Group 的原生实现已迁出设备主文件；继续拆分 Shader、Pipeline、命令与呈现领域。
+   `renderer_state_*.cpp`。共享设备状态已独立；资源、Shader、Pipeline、命令、Timestamp 和呈现的
+   原生实现已按领域拆分，设备主文件只处理共享设备生命周期。
 7. **S-37H7 文档与发布验收**：更新架构概念与实现状态，完成 Emscripten、浏览器 WebGPU、Vulkan、
    Windows 共享/静态及 Documentation 回归，并并入 S-37G 发布验收。
 
@@ -79,8 +79,7 @@ Renderer Registry -> 私有 HAL -> WebGPU renderer state 的领域实现
 
 ## 风险与未决问题
 
-- 当前 Context 覆盖资源、命令、Pipeline、呈现和异步回调，一次性拆分容易破坏生命周期；按领域迁移
-  并在每阶段保持测试可运行。
+- 各领域共享同一设备状态和实例表；后续调整并发模型时必须继续保持句柄所属设备校验和销毁顺序。
 - Emdawnwebgpu 对象的引用计数和回调 user data 生命周期必须由设备生命周期对象及对应资源对象明确
   拥有，不能因减少转发层而放松悬空访问检查。
 - 浏览器 WebGPU 是此实现的唯一运行平台，关键行为不能只依赖主机侧 mock；呈现、异步与 Device Lost

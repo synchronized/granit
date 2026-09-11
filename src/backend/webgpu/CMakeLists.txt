@@ -6,6 +6,7 @@ target_sources(
     device.cpp
     device_commands.cpp
     device_pipelines.cpp
+    device_presentation.cpp
     device_resources.cpp
     device_shader.cpp
     device_timestamp.cpp
