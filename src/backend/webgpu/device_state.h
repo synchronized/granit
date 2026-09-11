@@ -8,6 +8,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <memory>
+#include <mutex>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -173,6 +174,43 @@ struct webgpu_device_state {
         deferred_initialization_for_test(false), fail_initialization_for_test(false),
         force_device_loss_for_test(false) {}
 };
+
+namespace webgpu_native {
+
+inline std::mutex instances_mutex;
+inline std::unordered_map<webgpu_instance_handle, webgpu_device_state*> instances;
+inline std::atomic_uint64_t next_instance{1};
+inline std::atomic_uint64_t next_buffer{1};
+inline std::atomic_uint64_t next_texture{1};
+inline std::atomic_uint64_t next_texture_view{1};
+inline std::atomic_uint64_t next_sampler{1};
+inline std::atomic_uint64_t next_bind_group_layout{1};
+inline std::atomic_uint64_t next_bind_group{1};
+inline std::atomic_uint64_t next_shader{1};
+inline std::atomic_uint64_t next_pipeline_layout{1};
+inline std::atomic_uint64_t next_render_pipeline{1};
+inline std::atomic_uint64_t next_compute_pipeline{1};
+inline std::atomic_uint64_t next_command_recorder{1};
+inline std::atomic_uint64_t next_command_buffer{1};
+inline std::atomic_uint64_t next_timestamp_query_pool{1};
+inline std::atomic_uint64_t next_readback{1};
+inline std::atomic_uint64_t next_pipeline_warmup{1};
+inline std::atomic_uint64_t next_swapchain{1};
+inline std::atomic_uint64_t next_surface{1};
+
+[[nodiscard]] inline granit_result require_ready(const webgpu_device_state& state) noexcept {
+  return state.lifecycle.gate();
+}
+
+template <typename Handle>
+[[nodiscard]] Handle next_handle(std::atomic_uint64_t& counter) noexcept {
+  auto handle = counter.fetch_add(1, std::memory_order_relaxed);
+  while (handle == 0)
+    handle = counter.fetch_add(1, std::memory_order_relaxed);
+  return static_cast<Handle>(handle);
+}
+
+} // namespace webgpu_native
 
 } // namespace granit::detail
 

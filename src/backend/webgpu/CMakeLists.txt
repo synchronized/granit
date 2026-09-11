@@ -4,6 +4,8 @@
 target_sources(
   granit PRIVATE
     device.cpp
+    device_resources.cpp
+    device_utils.cpp
     renderer_state.cpp
     renderer_state_commands.cpp
     renderer_state_commands_native.cpp
