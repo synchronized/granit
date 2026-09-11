@@ -5,10 +5,10 @@
 
 ## 状态
 
-**实现中。** S-37K1 已完成共享 Shader 类型收敛；S-37K2 已完成统一 Compiler 配置、编译描述和
+**本地完成。** S-37K1 已完成共享 Shader 类型收敛；S-37K2 已完成统一 Compiler 配置、编译描述和
 单一编译入口；S-37K2A 已完成通用内容摘要收敛；S-37K3 已完成 Compilation 与 Reflection
-边界；S-37K4 已完成 Shader Object 边界；S-37K5 已完成 Library Builder 与 CLI 拆分。
-S-37K6 待实施。
+边界；S-37K4 已完成 Shader Object 边界；S-37K5 已完成 Library Builder 与 CLI 拆分；S-37K6
+已完成资产、安装与本地发布验收。
 
 ## 背景与目标
 
@@ -232,7 +232,7 @@ tools/shader_cli/
    `result_write_asset`/`restore_asset_cache` 组织。
 6. **S-37K5 Library Builder 与 CLI 拆分（已完成）**：把 Library 编码、文件存储和命令实现移出
    `shader_tool_main.cpp`；CLI 成为薄适配层，CMake 只调用稳定命令接口。
-7. **S-37K6 资产、安装与发布验收**：重建内建及公共 Shader Library，删除仓库中的旧中间快照，
+7. **S-37K6 资产、安装与发布验收（本地完成）**：重建内建及公共 Shader Library，删除仓库中的旧中间快照，
    更新 Reference、Guide、迁移说明、安装清单和可复现 Toolchain 包。
 
 每个阶段形成一个可独立评审的本地提交；七个阶段继续位于当前特性分支，不拆分 Pull Request。

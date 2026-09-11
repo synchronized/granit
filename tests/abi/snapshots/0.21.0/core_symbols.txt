@@ -89,9 +89,7 @@ granit_renderer_set_object_name
 granit_result_message
 granit_sampler_create
 granit_sampler_destroy
-granit_shader_asset_inspect
 granit_shader_create
-granit_shader_create_from_asset
 granit_shader_create_from_library
 granit_shader_destroy
 granit_shader_library_create

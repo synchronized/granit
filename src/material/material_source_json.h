@@ -7,7 +7,6 @@
 #include "material/material_package.h"
 
 #include <cstddef>
-#include <filesystem>
 #include <string_view>
 
 namespace granit::material {
@@ -20,14 +19,11 @@ enum class source_json_error : std::uint8_t {
   invalid_json,
   invalid_schema,
   unsupported_value,
-  referenced_file_error,
-  invalid_spirv,
   invalid_package,
 };
 
-[[nodiscard]] source_json_error
-parse_material_source_json(std::string_view json, const std::filesystem::path& source_directory,
-                           material_package& package) noexcept;
+[[nodiscard]] source_json_error parse_material_source_json(std::string_view json,
+                                                           material_package& package) noexcept;
 
 } // namespace granit::material
 

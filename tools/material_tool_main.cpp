@@ -149,7 +149,7 @@ int build_package(int argc, char** argv) {
     return 1;
   }
   granit::material::material_package package;
-  if (granit::material::parse_material_source_json(source, source_path.parent_path(), package) !=
+  if (granit::material::parse_material_source_json(source, package) !=
       granit::material::source_json_error::none) {
     std::cerr << "材质源描述、引用文件或包语义无效\n";
     return 1;

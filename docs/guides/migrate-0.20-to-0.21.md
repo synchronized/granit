@@ -64,6 +64,10 @@ granit_result result =
 底层直接 Shader 用户可以用 `granit_shader_create_from_library` 按内容 ID 取得 Shader。Renderer
 负责选择当前后端载荷；应用不查询 backend 或自行选择 `.spv`、`.wgsl`。
 
+`granit_shader_create_from_asset`、`granit_shader_asset_inspect` 及对应 C++ 单 Object 包装已删除，
+不保留兼容入口。原来直接部署 `.grshader` 与单个 sidecar 的代码应改为创建 Library，并按内容 ID
+调用 `granit_shader_create_from_library`。
+
 `granit_shader_desc` 也已收敛为单一代码输入：删除 `wgsl` 与 `wgsl_length`，统一使用 `code`、
 `code_size` 和 `code_format`。直接创建一次只接收 SPIR-V 或 WGSL；需要跨后端自动选择时使用
 Shader Library。

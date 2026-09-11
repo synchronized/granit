@@ -2,13 +2,11 @@
 // Copyright (c) 2026 Granit contributors
 
 #include "material/material_source_json.h"
-#include "shader_format/shader_object.h"
 
 #include <algorithm>
 #include <array>
 #include <charconv>
 #include <cstddef>
-#include <fstream>
 #include <limits>
 #include <map>
 #include <string>
@@ -240,33 +238,25 @@ bool u32(const json_value* value, std::uint32_t& result) {
   return true;
 }
 
-bool read_shader_asset(const std::filesystem::path& path, material_shader_code& code) {
-  constexpr std::uint64_t maximum_size = UINT64_C(16) * 1024 * 1024;
-  std::ifstream stream(path, std::ios::binary | std::ios::ate);
-  if (!stream)
+bool parse_shader_content_id(std::string_view text, shader_content_id& content_id) {
+  if (text.size() != content_id.size() * 2)
     return false;
-  const auto length = stream.tellg();
-  if (length <= 0 || static_cast<std::uint64_t>(length) > maximum_size)
-    return false;
-  std::vector<std::byte> bytes(static_cast<std::size_t>(length));
-  stream.seekg(0);
-  stream.read(reinterpret_cast<char*>(bytes.data()), length);
-  if (!stream)
-    return false;
-  granit::detail::shader_format::shader_object_view asset;
-  if (granit::detail::shader_format::decode_shader_object(bytes, asset) !=
-      granit::detail::shader_format::shader_object_error::success) {
-    return false;
+  const auto hex_value = [](char value) -> int {
+    if (value >= '0' && value <= '9')
+      return value - '0';
+    if (value >= 'a' && value <= 'f')
+      return value - 'a' + 10;
+    if (value >= 'A' && value <= 'F')
+      return value - 'A' + 10;
+    return -1;
+  };
+  for (std::size_t index = 0; index < content_id.size(); ++index) {
+    const auto high = hex_value(text[index * 2]);
+    const auto low = hex_value(text[index * 2 + 1]);
+    if (high < 0 || low < 0)
+      return false;
+    content_id[index] = static_cast<std::byte>((high << 4) | low);
   }
-  if (asset.stage == shader_stage::vertex) {
-    code.stage = package_shader_stage::vertex;
-  } else if (asset.stage == shader_stage::fragment) {
-    code.stage = package_shader_stage::fragment;
-  } else {
-    return false;
-  }
-  code.entry_point = asset.entry_point;
-  code.asset_id = asset.content_id;
   return true;
 }
 
@@ -489,8 +479,7 @@ bool parse_pipeline(const json_value& value, material_pipeline_state& pipeline) 
   return true;
 }
 
-source_json_error parse_variant(const json_value& value, const std::filesystem::path& directory,
-                                material_variant_desc& variant) {
+source_json_error parse_variant(const json_value& value, material_variant_desc& variant) {
   const auto* object = as<json_value::object>(&value);
   const auto* pass = object == nullptr ? nullptr : as<std::string>(member(*object, "pass"));
   const auto* shaders =
@@ -521,15 +510,23 @@ source_json_error parse_variant(const json_value& value, const std::filesystem::
   }
   for (const auto& shader_value : *shaders) {
     const auto* shader = as<json_value::object>(&shader_value);
-    const auto* asset_path =
-        shader == nullptr ? nullptr : as<std::string>(member(*shader, "asset"));
-    if (asset_path == nullptr) {
+    const auto* content_id =
+        shader == nullptr ? nullptr : as<std::string>(member(*shader, "content_id"));
+    const auto* stage = shader == nullptr ? nullptr : as<std::string>(member(*shader, "stage"));
+    const auto* entry_point =
+        shader == nullptr ? nullptr : as<std::string>(member(*shader, "entry_point"));
+    material_shader_code code;
+    if (content_id == nullptr || stage == nullptr || entry_point == nullptr ||
+        entry_point->empty() || !parse_shader_content_id(*content_id, code.asset_id)) {
       return source_json_error::invalid_schema;
     }
-    material_shader_code code;
-    if (!read_shader_asset(directory / std::filesystem::path{*asset_path}, code)) {
-      return source_json_error::referenced_file_error;
-    }
+    if (*stage == "vertex")
+      code.stage = package_shader_stage::vertex;
+    else if (*stage == "fragment")
+      code.stage = package_shader_stage::fragment;
+    else
+      return source_json_error::invalid_schema;
+    code.entry_point = *entry_point;
     variant.shaders.push_back(std::move(code));
   }
   return source_json_error::none;
@@ -538,7 +535,6 @@ source_json_error parse_variant(const json_value& value, const std::filesystem::
 } // namespace
 
 source_json_error parse_material_source_json(std::string_view json,
-                                             const std::filesystem::path& source_directory,
                                              material_package& package) noexcept {
   try {
     if (json.empty() || json.size() > material_source_json_max_size) {
@@ -605,7 +601,7 @@ source_json_error parse_material_source_json(std::string_view json,
     }
     for (const auto& value : *variants) {
       material_variant_desc variant;
-      const auto result = parse_variant(value, source_directory, variant);
+      const auto result = parse_variant(value, variant);
       if (result != source_json_error::none) {
         return result;
       }

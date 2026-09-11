@@ -42,12 +42,6 @@ else()
     DEPENDS
       granit_material_tool
       "${PROJECT_SOURCE_DIR}/assets/materials/pbr_standard.grmat.json"
-      "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/pbr_standard.vert.grshaderobj"
-      "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/pbr_standard.frag.grshaderobj"
-      "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/pbr_standard.vert.grshaderobj.spv"
-      "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/pbr_standard.vert.grshaderobj.wgsl"
-      "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/pbr_standard.frag.grshaderobj.spv"
-      "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/pbr_standard.frag.grshaderobj.wgsl"
       "${PROJECT_SOURCE_DIR}/assets/materials/pbr_standard.grmat"
     COMMENT "生成模型查看器 PBR 材质归档"
     VERBATIM

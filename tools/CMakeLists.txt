@@ -151,6 +151,29 @@ granit_target_output_directories(granit_material_tool)
 set_target_properties(granit_material_tool PROPERTIES FOLDER "Tools")
 
 if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
+  set(granit_shader_tool_test_object_dir "${CMAKE_CURRENT_BINARY_DIR}/test-objects")
+  set(granit_shader_tool_test_object_outputs)
+  foreach(stage IN ITEMS vert frag)
+    if(stage STREQUAL "vert")
+      set(shader_stage vertex)
+    else()
+      set(shader_stage fragment)
+    endif()
+    granit_add_shader_object(
+      NAME "minimal.${stage}"
+      SPIRV "${PROJECT_SOURCE_DIR}/tests/assets/minimal.${stage}.spv"
+      WGSL "${PROJECT_SOURCE_DIR}/tests/assets/minimal.${stage}.wgsl"
+      ENTRY main
+      STAGE "${shader_stage}"
+      OUTPUT_DIR "${granit_shader_tool_test_object_dir}"
+      OUTPUT_VAR object_outputs
+    )
+    list(APPEND granit_shader_tool_test_object_outputs ${object_outputs})
+  endforeach()
+  add_custom_target(
+    granit_shader_tool_test_objects ALL DEPENDS ${granit_shader_tool_test_object_outputs}
+  )
+
   add_executable(
     granit_shader_object_test
     "${PROJECT_SOURCE_DIR}/tests/tools/shader_object_test.cpp"
@@ -192,14 +215,15 @@ if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
   )
   target_compile_features(granit_shader_library_builder_api_test PRIVATE cxx_std_20)
   target_link_libraries(granit_shader_library_builder_api_test PRIVATE granit::shader_tools)
+  add_dependencies(granit_shader_library_builder_api_test granit_shader_tool_test_objects)
   granit_target_compile_warnings(granit_shader_library_builder_api_test)
   granit_target_output_directories(granit_shader_library_builder_api_test)
   add_test(
     NAME granit.shader_tools.library_builder_api
     COMMAND
       granit_shader_library_builder_api_test
-      "${PROJECT_SOURCE_DIR}/tests/assets/minimal.vert.grshaderobj"
-      "${PROJECT_SOURCE_DIR}/tests/assets/minimal.frag.grshaderobj"
+      "${granit_shader_tool_test_object_dir}/minimal.vert.grshaderobj"
+      "${granit_shader_tool_test_object_dir}/minimal.frag.grshaderobj"
       "${CMAKE_CURRENT_BINARY_DIR}/shader-library-builder-api-test-cache"
   )
 
@@ -284,7 +308,7 @@ if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
     COMMAND
       granit_shader_tool object
       --spirv "${PROJECT_SOURCE_DIR}/tests/assets/minimal.vert.spv"
-      --wgsl "${PROJECT_SOURCE_DIR}/tests/assets/minimal.vert.grshaderobj.wgsl"
+      --wgsl "${PROJECT_SOURCE_DIR}/tests/assets/minimal.vert.wgsl"
       --entry main
       --stage vertex
       --output "${CMAKE_CURRENT_BINARY_DIR}/object-test/minimal.vert.grshaderobj"
@@ -298,7 +322,8 @@ if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
   add_test(
     NAME granit.shader_tool.object_ids
     COMMAND granit_shader_tool object-ids
-            --object "minimal_vertex_id=${PROJECT_SOURCE_DIR}/tests/assets/minimal.vert.grshaderobj"
+            --object
+            "minimal_vertex_id=${granit_shader_tool_test_object_dir}/minimal.vert.grshaderobj"
             --output "${granit_shader_object_id_output}"
   )
   add_test(
@@ -312,8 +337,8 @@ if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
     NAME granit.shader_tool.library
     COMMAND
       granit_shader_tool library
-      --object "${PROJECT_SOURCE_DIR}/tests/assets/minimal.vert.grshaderobj"
-      --object "${PROJECT_SOURCE_DIR}/tests/assets/minimal.frag.grshaderobj"
+      --object "${granit_shader_tool_test_object_dir}/minimal.vert.grshaderobj"
+      --object "${granit_shader_tool_test_object_dir}/minimal.frag.grshaderobj"
       --target all
       --output "${CMAKE_CURRENT_BINARY_DIR}/library-test/minimal.grshlib"
   )

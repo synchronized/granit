@@ -101,26 +101,63 @@ endfunction()
 
 function(granit_prepare_runtime_shader_libraries)
   set(output_root "${CMAKE_BINARY_DIR}/generated/runtime-libraries")
+  set(object_root "${CMAKE_BINARY_DIR}/generated/runtime-shader-objects")
+  granit_add_shader_object(
+    NAME pbr_standard.vert
+    SPIRV "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/pbr_standard.vert.spv"
+    WGSL "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/pbr_standard.vert.wgsl"
+    ENTRY vertex_main
+    STAGE vertex
+    OUTPUT_DIR "${object_root}/pbr"
+    OUTPUT_VAR pbr_vertex_outputs
+  )
+  granit_add_shader_object(
+    NAME pbr_standard.frag
+    SPIRV "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/pbr_standard.frag.spv"
+    WGSL "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/pbr_standard.frag.wgsl"
+    ENTRY fragment_main
+    STAGE fragment
+    OUTPUT_DIR "${object_root}/pbr"
+    OUTPUT_VAR pbr_fragment_outputs
+  )
+  list(GET pbr_vertex_outputs 0 pbr_vertex_object)
+  list(GET pbr_fragment_outputs 0 pbr_fragment_object)
   granit_add_shader_library(
     ALL
     NAME pbr_standard
     OUTPUT "${output_root}/pbr_standard.grshlib"
     REFERENCE "${PROJECT_SOURCE_DIR}/assets/libraries/pbr_standard.grshlib"
     TARGET granit_pbr_shader_library
-    OBJECTS
-      "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/pbr_standard.vert.grshaderobj"
-      "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/pbr_standard.frag.grshaderobj"
+    OBJECTS "${pbr_vertex_object}" "${pbr_fragment_object}"
   )
+  set(canvas_objects)
+  foreach(name IN ITEMS unlit_canvas.vert unlit_canvas.frag unlit_canvas_encode_srgb.frag)
+    if(name MATCHES "\\.vert$")
+      set(stage vertex)
+      set(entry canvas_vertex_main)
+    else()
+      set(stage fragment)
+      set(entry fragment_main)
+    endif()
+    granit_add_shader_object(
+      NAME "${name}"
+      SPIRV "${PROJECT_SOURCE_DIR}/assets/shaders/unlit/${name}.spv"
+      WGSL "${PROJECT_SOURCE_DIR}/assets/shaders/unlit/${name}.wgsl"
+      ENTRY "${entry}"
+      STAGE "${stage}"
+      OUTPUT_DIR "${object_root}/unlit"
+      OUTPUT_VAR object_outputs
+    )
+    list(GET object_outputs 0 object)
+    list(APPEND canvas_objects "${object}")
+  endforeach()
   granit_add_shader_library(
     ALL
     NAME unlit_canvas
     OUTPUT "${output_root}/unlit_canvas.grshlib"
     REFERENCE "${PROJECT_SOURCE_DIR}/src/pipeline/assets/unlit_canvas.grshlib"
     TARGET granit_canvas_shader_library
-    OBJECTS
-      "${PROJECT_SOURCE_DIR}/assets/shaders/unlit/unlit_canvas.vert.grshaderobj"
-      "${PROJECT_SOURCE_DIR}/assets/shaders/unlit/unlit_canvas.frag.grshaderobj"
-      "${PROJECT_SOURCE_DIR}/assets/shaders/unlit/unlit_canvas_encode_srgb.frag.grshaderobj"
+    OBJECTS ${canvas_objects}
   )
 endfunction()
 
@@ -129,9 +166,10 @@ function(granit_prepare_test_shader_assets)
   set(pbr_output "${root}/pbr")
   set(pipeline_output "${root}/pipeline")
   set(smoke_output "${root}/smoke")
+  set(unlit_output "${root}/unlit")
   set(outputs)
 
-  set(pbr_vertex_names pbr_lights.vert pbr_shadow_ibl_lights.vert)
+  set(pbr_vertex_names pbr_lights.vert pbr_shadow_ibl_lights.vert pbr_untextured.vert)
   foreach(name IN LISTS pbr_vertex_names)
     granit_add_shader_object(
       NAME "${name}"
@@ -144,12 +182,34 @@ function(granit_prepare_test_shader_assets)
     )
     list(APPEND outputs ${output})
   endforeach()
+
+  foreach(name IN ITEMS unlit.vert unlit.frag unlit_alpha_cutoff.frag)
+    if(name MATCHES "\\.vert$")
+      set(shader_stage vertex)
+      set(entry vertex_main)
+    else()
+      set(shader_stage fragment)
+      set(entry fragment_main)
+    endif()
+    granit_add_shader_object(
+      NAME "${name}"
+      SPIRV "${PROJECT_SOURCE_DIR}/assets/shaders/unlit/${name}.spv"
+      WGSL "${PROJECT_SOURCE_DIR}/assets/shaders/unlit/${name}.wgsl"
+      ENTRY "${entry}"
+      STAGE "${shader_stage}"
+      OUTPUT_DIR "${unlit_output}"
+      OUTPUT_VAR output
+    )
+    list(APPEND outputs ${output})
+  endforeach()
   set(
     pbr_fragment_names
     pbr_lights_untextured.frag
     pbr_ibl_lights_untextured.frag
     pbr_shadow_lights_untextured.frag
     pbr_shadow_ibl_lights_untextured.frag
+    pbr_untextured.frag
+    pbr_textured.frag
   )
   foreach(name IN LISTS pbr_fragment_names)
     granit_add_shader_object(
@@ -225,4 +285,5 @@ function(granit_prepare_test_shader_assets)
   set(GRANIT_PBR_TEST_SHADER_DIR "${pbr_output}" PARENT_SCOPE)
   set(GRANIT_PIPELINE_TEST_SHADER_DIR "${pipeline_output}" PARENT_SCOPE)
   set(GRANIT_SMOKE_TEST_SHADER_DIR "${smoke_output}" PARENT_SCOPE)
+  set(GRANIT_UNLIT_TEST_SHADER_DIR "${unlit_output}" PARENT_SCOPE)
 endfunction()

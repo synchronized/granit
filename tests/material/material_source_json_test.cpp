@@ -5,7 +5,6 @@
 
 #include <catch2/catch_all.hpp>
 
-#include <filesystem>
 #include <string_view>
 
 namespace {
@@ -38,18 +37,19 @@ constexpr std::string_view source = R"({
         "alpha_operation": "add", "write_mask": 7}
     },
     "shaders": [
-      {"asset": "minimal.vert.grshaderobj"},
-      {"asset": "minimal.frag.grshaderobj"}
+      {"content_id": "fadce2ea317ae670ada75cee24b5365d99a29180a7113948e73530ca8b30311c",
+       "stage": "vertex", "entry_point": "main"},
+      {"content_id": "8f7cfc8e65d45e5e67410d4de4bf6b20420d60506e8d04418fae81a77757b483",
+       "stage": "fragment", "entry_point": "main"}
     ]
   }]
 })";
 
 } // namespace
 
-TEST_CASE("材质源 JSON 构建内存包并解析相对 Shader Asset 路径") {
+TEST_CASE("材质源 JSON 通过内容 ID 构建内存包") {
   granit::material::material_package package;
-  REQUIRE(granit::material::parse_material_source_json(
-              source, std::filesystem::path{GRANIT_TEST_ASSET_DIR}, package) ==
+  REQUIRE(granit::material::parse_material_source_json(source, package) ==
           granit::material::source_json_error::none);
   CHECK(package.metadata().constant_buffer_size() == 16);
   CHECK(package.binding_groups() == granit::material::package_binding_groups_all);
@@ -70,8 +70,7 @@ TEST_CASE("材质源 JSON 拒绝未知的 Pipeline 枚举") {
   invalid.replace(invalid.find("triangle_list"), std::string_view{"triangle_list"}.size(),
                   "triangles");
   granit::material::material_package package;
-  CHECK(granit::material::parse_material_source_json(
-            invalid, std::filesystem::path{GRANIT_TEST_ASSET_DIR}, package) ==
+  CHECK(granit::material::parse_material_source_json(invalid, package) ==
         granit::material::source_json_error::invalid_schema);
 }
 
@@ -79,19 +78,16 @@ TEST_CASE("材质源 JSON 拒绝不支持的绑定模型") {
   std::string invalid{source};
   invalid.replace(invalid.find("bind_group"), std::string_view{"bind_group"}.size(), "bindless");
   granit::material::material_package package;
-  CHECK(granit::material::parse_material_source_json(
-            invalid, std::filesystem::path{GRANIT_TEST_ASSET_DIR}, package) ==
+  CHECK(granit::material::parse_material_source_json(invalid, package) ==
         granit::material::source_json_error::unsupported_value);
 }
 
-TEST_CASE("材质源 JSON 拒绝缺失的 Shader Asset") {
+TEST_CASE("材质源 JSON 拒绝无效 Shader 内容 ID") {
   std::string invalid{source};
-  invalid.replace(invalid.find("minimal.vert.grshaderobj"),
-                  std::string_view{"minimal.vert.grshaderobj"}.size(), "missing.grshaderobj");
+  invalid.replace(invalid.find("fadce2ea"), std::string_view{"fadce2ea"}.size(), "invalid!");
   granit::material::material_package package;
-  CHECK(granit::material::parse_material_source_json(
-            invalid, std::filesystem::path{GRANIT_TEST_ASSET_DIR}, package) ==
-        granit::material::source_json_error::referenced_file_error);
+  CHECK(granit::material::parse_material_source_json(invalid, package) ==
+        granit::material::source_json_error::invalid_schema);
 }
 
 TEST_CASE("材质源 JSON 拒绝超过限制的嵌套深度") {
@@ -99,6 +95,6 @@ TEST_CASE("材质源 JSON 拒绝超过限制的嵌套深度") {
   deeply_nested += "null";
   deeply_nested.append(granit::material::material_source_json_max_depth + 2, ']');
   granit::material::material_package package;
-  CHECK(granit::material::parse_material_source_json(deeply_nested, {}, package) ==
+  CHECK(granit::material::parse_material_source_json(deeply_nested, package) ==
         granit::material::source_json_error::invalid_json);
 }

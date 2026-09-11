@@ -9,7 +9,6 @@
 #include "core/async_operation_state.h"
 #include "renderer/renderer_registry.h"
 #include "shader_format/shader_library.h"
-#include "shader_format/shader_object.h"
 
 namespace granit::detail {
 

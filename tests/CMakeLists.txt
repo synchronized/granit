@@ -424,15 +424,6 @@ add_custom_command(
   DEPENDS
     granit_material_tool
     "${PROJECT_SOURCE_DIR}/tests/fixtures/smoke/unlit.grmat.json"
-    "${PROJECT_SOURCE_DIR}/assets/shaders/unlit/unlit.vert.grshaderobj"
-    "${PROJECT_SOURCE_DIR}/assets/shaders/unlit/unlit.frag.grshaderobj"
-    "${PROJECT_SOURCE_DIR}/assets/shaders/unlit/unlit_alpha_cutoff.frag.grshaderobj"
-    "${PROJECT_SOURCE_DIR}/assets/shaders/unlit/unlit.vert.grshaderobj.spv"
-    "${PROJECT_SOURCE_DIR}/assets/shaders/unlit/unlit.vert.grshaderobj.wgsl"
-    "${PROJECT_SOURCE_DIR}/assets/shaders/unlit/unlit.frag.grshaderobj.spv"
-    "${PROJECT_SOURCE_DIR}/assets/shaders/unlit/unlit.frag.grshaderobj.wgsl"
-    "${PROJECT_SOURCE_DIR}/assets/shaders/unlit/unlit_alpha_cutoff.frag.grshaderobj.spv"
-    "${PROJECT_SOURCE_DIR}/assets/shaders/unlit/unlit_alpha_cutoff.frag.grshaderobj.wgsl"
   VERBATIM
 )
 add_custom_target(granit_unlit_test_package DEPENDS "${granit_unlit_test_package}")
@@ -453,13 +444,16 @@ target_compile_options(granit_pipeline_test PRIVATE $<$<COMPILE_LANG_AND_ID:CXX,
 target_compile_definitions(
   granit_pipeline_test
   PRIVATE
-    GRANIT_PIPELINE_ASSET_DIR="${PROJECT_SOURCE_DIR}/assets/shaders/pbr"
+    GRANIT_PIPELINE_ASSET_DIR="${GRANIT_PBR_TEST_SHADER_DIR}"
+    GRANIT_SHADER_OBJECT_FIXTURE_DIR="${CMAKE_BINARY_DIR}/tools/test-objects"
     GRANIT_TEST_ASSET_DIR="${PROJECT_SOURCE_DIR}/tests/assets"
     GRANIT_PIPELINE_SHADER_DIR="${GRANIT_PIPELINE_TEST_SHADER_DIR}"
     GRANIT_UNLIT_TEST_PACKAGE="${granit_unlit_test_package}"
-    GRANIT_UNLIT_SHADER_DIR="${PROJECT_SOURCE_DIR}/assets/shaders/unlit"
+    GRANIT_UNLIT_SHADER_DIR="${GRANIT_UNLIT_TEST_SHADER_DIR}"
 )
-add_dependencies(granit_pipeline_test granit_test_shader_assets)
+add_dependencies(
+  granit_pipeline_test granit_shader_tool_test_objects granit_test_shader_assets
+)
 granit_target_compile_warnings(granit_pipeline_test)
 granit_target_output_directories(granit_pipeline_test)
 add_test(NAME granit.pipeline COMMAND granit_pipeline_test)
@@ -495,12 +489,15 @@ target_compile_options(
 target_compile_definitions(
   granit_material_test
   PRIVATE
+    GRANIT_SHADER_OBJECT_FIXTURE_DIR="${CMAKE_BINARY_DIR}/tools/test-objects"
     GRANIT_TEST_ASSET_DIR="${PROJECT_SOURCE_DIR}/tests/assets"
     GRANIT_SMOKE_SHADER_DIR="${GRANIT_SMOKE_TEST_SHADER_DIR}"
     GRANIT_PBR_LIBRARY_ASSET="${PROJECT_SOURCE_DIR}/assets/libraries/pbr_standard.grshlib"
     GRANIT_PBR_MATERIAL_ASSET="${PROJECT_SOURCE_DIR}/assets/materials/pbr_standard.grmat"
 )
-add_dependencies(granit_material_test granit_test_shader_assets)
+add_dependencies(
+  granit_material_test granit_shader_tool_test_objects granit_test_shader_assets
+)
 granit_target_compile_warnings(granit_material_test)
 add_test(NAME granit.material COMMAND granit_material_test)
 
@@ -557,9 +554,11 @@ target_include_directories(
 target_compile_definitions(
   granit_renderer_test
   PRIVATE
+    GRANIT_SHADER_OBJECT_FIXTURE_DIR="${CMAKE_BINARY_DIR}/tools/test-objects"
     GRANIT_TEST_ASSET_DIR="${PROJECT_SOURCE_DIR}/tests/assets"
     GRANIT_TEST_ARTIFACT_DIR="${CMAKE_BINARY_DIR}/test-artifacts"
 )
+add_dependencies(granit_renderer_test granit_shader_tool_test_objects)
 granit_target_compile_warnings(granit_renderer_test)
 add_test(NAME granit.renderer COMMAND granit_renderer_test)
 add_test(

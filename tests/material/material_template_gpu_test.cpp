@@ -79,7 +79,7 @@ build_package(granit::material::package_binding_groups binding_groups =
 
 granit::material::material_package build_asset_package() {
   using namespace granit::material;
-  const auto asset_dir = std::string{GRANIT_TEST_ASSET_DIR};
+  const auto asset_dir = std::string{GRANIT_SHADER_OBJECT_FIXTURE_DIR};
   material_package_desc desc;
   desc.binding_groups = package_binding_group_frame | package_binding_group_material;
   granit::tests::shader_asset_store store;

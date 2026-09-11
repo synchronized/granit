@@ -128,18 +128,8 @@ void destroy_pipeline_fixture(granit_renderer renderer, pipeline_fixture& fixtur
 
 granit_result create_shader(granit_renderer renderer, std::string_view name,
                             granit_shader& shader) {
-  granit::tests::shader_asset_file asset;
-  const auto status =
-      asset.load(renderer, std::string{GRANIT_BENCHMARK_ASSET_DIR} + "/" + std::string{name});
-  if (status.failed())
-    return static_cast<granit_result>(status);
-  const auto bytes = asset.desc();
-  granit_shader_asset_desc desc = GRANIT_SHADER_ASSET_DESC_INIT;
-  desc.manifest_data = bytes.manifest.data();
-  desc.manifest_size = bytes.manifest.size();
-  desc.sidecar_data = bytes.sidecar.data();
-  desc.sidecar_size = bytes.sidecar.size();
-  return granit_shader_create_from_asset(renderer, &desc, &shader);
+  return static_cast<granit_result>(granit::tests::load_shader_asset(
+      renderer, std::string{GRANIT_BENCHMARK_ASSET_DIR} + "/" + std::string{name}, shader));
 }
 
 granit_result create_pipeline_fixture(granit_renderer renderer, pipeline_fixture& fixture) {

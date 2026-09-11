@@ -15,6 +15,8 @@
 
 ### 变更
 
+- Shader Object 已退出 Core 公共接口和源码资产目录；Material 源直接记录 Shader 内容 ID、阶段与
+  入口，公共及内建 Shader Library 由构建过程生成 Object 后确定性链接。
 - Material 改为接收 Shader Library 句柄；`.grmat` v5 显式声明 Frame、Material、Object、Lighting
   绑定组，删除按后端回调 Shader resolver 和按 Pass 名称推断布局。
 - `granit_shader_desc` 统一为 `code_format + code + code_size`，一次直接创建只接收一种代码格式；

@@ -20,8 +20,10 @@
         "color_blend": {"enabled": false}
       },
       "shaders": [
-        {"asset": "../../../assets/shaders/unlit/unlit.vert.grshaderobj"},
-        {"asset": "../../../assets/shaders/unlit/unlit.frag.grshaderobj"}
+        {"content_id": "e378902d9dccf59ca6888ac5b49fd87f0d193d26bf43ed3ba61ed365d83526dd",
+         "stage": "vertex", "entry_point": "vertex_main"},
+        {"content_id": "c322404ca835f8f726ad5dc198072b61e6512a331e009b1fe13ec55827199308",
+         "stage": "fragment", "entry_point": "fragment_main"}
       ]
     },
     {
@@ -34,8 +36,10 @@
         "color_blend": {"enabled": false}
       },
       "shaders": [
-        {"asset": "../../../assets/shaders/unlit/unlit.vert.grshaderobj"},
-        {"asset": "../../../assets/shaders/unlit/unlit_alpha_cutoff.frag.grshaderobj"}
+        {"content_id": "e378902d9dccf59ca6888ac5b49fd87f0d193d26bf43ed3ba61ed365d83526dd",
+         "stage": "vertex", "entry_point": "vertex_main"},
+        {"content_id": "a591edd663f4378ed5c95bcbfcea7bdcb03974f5477d0b25a7dc768b670e5ad8",
+         "stage": "fragment", "entry_point": "fragment_main"}
       ]
     },
     {
@@ -53,8 +57,10 @@
         }
       },
       "shaders": [
-        {"asset": "../../../assets/shaders/unlit/unlit.vert.grshaderobj"},
-        {"asset": "../../../assets/shaders/unlit/unlit.frag.grshaderobj"}
+        {"content_id": "e378902d9dccf59ca6888ac5b49fd87f0d193d26bf43ed3ba61ed365d83526dd",
+         "stage": "vertex", "entry_point": "vertex_main"},
+        {"content_id": "c322404ca835f8f726ad5dc198072b61e6512a331e009b1fe13ec55827199308",
+         "stage": "fragment", "entry_point": "fragment_main"}
       ]
     }
   ]

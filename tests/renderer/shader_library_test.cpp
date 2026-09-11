@@ -52,7 +52,7 @@ std::vector<std::byte> read_binary(const std::filesystem::path& path) {
 
 std::vector<std::byte> make_runtime_library(granit::shader_cache_key& content_id) {
   using namespace granit::detail::shader_format;
-  const auto directory = std::filesystem::path{GRANIT_TEST_ASSET_DIR};
+  const auto directory = std::filesystem::path{GRANIT_SHADER_OBJECT_FIXTURE_DIR};
   const auto manifest = read_binary(directory / "minimal.vert.grshaderobj");
   const auto wgsl = read_binary(directory / "minimal.vert.grshaderobj.wgsl");
   const auto spirv = read_binary(directory / "minimal.vert.grshaderobj.spv");

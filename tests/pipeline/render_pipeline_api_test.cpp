@@ -45,8 +45,8 @@ granit_matrix4 identity() { return {{1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0
 granit::tests::shader_asset_store& shader_assets() {
   static granit::tests::shader_asset_store store;
   static const bool loaded =
-      store.add(std::string{GRANIT_TEST_ASSET_DIR} + "/minimal.vert.grshaderobj") &&
-      store.add(std::string{GRANIT_TEST_ASSET_DIR} + "/minimal.frag.grshaderobj") &&
+      store.add(std::string{GRANIT_SHADER_OBJECT_FIXTURE_DIR} + "/minimal.vert.grshaderobj") &&
+      store.add(std::string{GRANIT_SHADER_OBJECT_FIXTURE_DIR} + "/minimal.frag.grshaderobj") &&
       store.add(std::string{GRANIT_PIPELINE_ASSET_DIR} +
                 "/pbr_shadow_ibl_lights.vert.grshaderobj") &&
       store.add(std::string{GRANIT_PIPELINE_ASSET_DIR} +
@@ -61,9 +61,9 @@ std::vector<std::byte> build_material_archive() {
   desc.variants.push_back(
       {.pass = make_feature_id("opaque"),
        .features = {},
-       .shaders = {shader_assets().reference(std::string{GRANIT_TEST_ASSET_DIR} +
+       .shaders = {shader_assets().reference(std::string{GRANIT_SHADER_OBJECT_FIXTURE_DIR} +
                                              "/minimal.vert.grshaderobj"),
-                   shader_assets().reference(std::string{GRANIT_TEST_ASSET_DIR} +
+                   shader_assets().reference(std::string{GRANIT_SHADER_OBJECT_FIXTURE_DIR} +
                                              "/minimal.frag.grshaderobj")},
        .pipeline = {}});
   material_package package;

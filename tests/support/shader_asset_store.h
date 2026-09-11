@@ -30,8 +30,9 @@ public:
     entry value;
     if (!read_shader_bytes(manifest_path, value.manifest))
       return false;
-    granit::shader_asset_info view;
-    if (granit::inspect_shader_asset(value.manifest, view).failed())
+    granit::detail::shader_format::shader_object_view view;
+    if (granit::detail::shader_format::decode_shader_object(value.manifest, view) !=
+        granit::detail::shader_format::shader_object_error::success)
       return false;
     // 测试资产允许只部署一个后端；Library 构建时由目标掩码检查缺失载荷。
     const bool spirv = read_shader_bytes(manifest_path.string() + ".spv", value.spirv);

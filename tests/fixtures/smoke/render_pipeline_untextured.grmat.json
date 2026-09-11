@@ -30,8 +30,10 @@
         "color_blend": {"enabled": false}
       },
       "shaders": [
-        {"asset": "../../../assets/shaders/pbr/pbr_shadow_ibl_lights.vert.grshaderobj"},
-        {"asset": "../../../assets/shaders/pbr/pbr_shadow_ibl_lights_untextured.frag.grshaderobj"}
+        {"content_id": "ea3971dca882d7b207efe9f01f38ec2222a846991b951562b2a6d69b51113cf1",
+         "stage": "vertex", "entry_point": "vertex_main"},
+        {"content_id": "8fea6d234eaf4c06209fb124827629ed8e402e567e0b9a0cc665ce2e8d737bad",
+         "stage": "fragment", "entry_point": "fragment_main"}
       ]
     }
   ]

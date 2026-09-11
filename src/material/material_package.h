@@ -6,9 +6,9 @@
 
 #include "material/material_metadata.h"
 
+#include <granit/core/shader_types.hpp>
 #include <granit/renderer/pipeline.h>
 
-#include <array>
 #include <cstdint>
 #include <span>
 #include <string>
@@ -107,7 +107,7 @@ struct material_feature_value {
 struct material_shader_code {
   package_shader_stage stage = package_shader_stage::vertex;
   std::string entry_point;
-  std::array<std::byte, 32> asset_id{};
+  shader_content_id asset_id{};
   // 仅供内部测试与程序化模板使用；归档不会序列化这两项。
   std::vector<std::uint32_t> spirv;
   std::string wgsl;

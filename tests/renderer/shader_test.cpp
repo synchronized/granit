@@ -4,8 +4,6 @@
 #include <granit/renderer/renderer.hpp>
 #include <granit/renderer/shader.hpp>
 
-#include "shader_format/shader_object.h"
-
 #include <array>
 #include <span>
 #include <string_view>
@@ -58,57 +56,6 @@ bool shader_environment_unavailable(granit::result value) {
   return value == granit::result::backend_unavailable ||
          value == granit::result::incompatible_driver ||
          value == granit::result::no_suitable_device;
-}
-
-TEST_CASE("公共 Shader Asset 检查返回稳定元数据", "[shader][asset][inspect]") {
-  constexpr std::string_view wgsl =
-      "@vertex fn entry() -> @builtin(position) vec4f { return vec4f(); }";
-  constexpr std::string_view reflection = "{\"schema\":1}";
-  granit::shader_cache_key cache_key{};
-  cache_key[0] = std::byte{0x42};
-  std::vector<std::byte> manifest;
-  REQUIRE(granit::detail::shader_format::encode_shader_object(
-              {wgsl, std::as_bytes(std::span{vertex_spirv}), reflection, cache_key, 3,
-               GRANIT_SHADER_FEATURE_FLOAT16_BIT, granit::shader_stage::vertex, "entry"},
-              manifest) == granit::detail::shader_format::shader_object_error::success);
-
-  granit_shader_asset_info native = GRANIT_SHADER_ASSET_INFO_INIT;
-  REQUIRE(granit_shader_asset_inspect(manifest.data(), manifest.size(), &native) == GRANIT_SUCCESS);
-  CHECK(native.stage == GRANIT_SHADER_STAGE_VERTEX);
-  CHECK(native.entry_point_length == 5);
-  CHECK(native.variant_count == 2);
-  CHECK(native.cache_key[0] == 0x42);
-  CHECK(native.variants[0].backend == GRANIT_RENDERER_BACKEND_WEBGPU);
-  CHECK(native.variants[0].code_format == GRANIT_SHADER_CODE_FORMAT_WGSL);
-  CHECK(native.variants[1].backend == GRANIT_RENDERER_BACKEND_VULKAN);
-  CHECK(native.variants[1].code_format == GRANIT_SHADER_CODE_FORMAT_SPIRV);
-  CHECK(native.variants[1].required_features == GRANIT_SHADER_FEATURE_FLOAT16_BIT);
-
-  std::array<char, 6> entry_point{};
-  native.entry_point = entry_point.data();
-  native.entry_point_capacity = static_cast<std::uint32_t>(entry_point.size());
-  REQUIRE(granit_shader_asset_inspect(manifest.data(), manifest.size(), &native) == GRANIT_SUCCESS);
-  CHECK(std::string_view{entry_point.data()} == "entry");
-
-  granit::shader_asset_info info;
-  REQUIRE(granit::inspect_shader_asset(manifest, info) == granit::result::success);
-  CHECK(info.entry_point == "entry");
-  CHECK(info.stage == granit::shader_stage::vertex);
-  REQUIRE(info.variants.size() == 2);
-  CHECK(info.variants[0].backend == granit::renderer_backend::webgpu);
-  CHECK(info.variants[1].backend == granit::renderer_backend::vulkan);
-
-  native.entry_point_capacity = 5;
-  CHECK(granit_shader_asset_inspect(manifest.data(), manifest.size(), &native) ==
-        GRANIT_ERROR_INVALID_ARGUMENT);
-  auto corrupted = manifest;
-  corrupted.back() ^= std::byte{1};
-  CHECK(granit_shader_asset_inspect(corrupted.data(), corrupted.size(), &native) ==
-        GRANIT_ERROR_INVALID_ARGUMENT);
-  auto unknown_schema = manifest;
-  unknown_schema[8] = std::byte{99};
-  CHECK(granit_shader_asset_inspect(unknown_schema.data(), unknown_schema.size(), &native) ==
-        GRANIT_ERROR_UNSUPPORTED);
 }
 
 TEST_CASE("Shader 创建后不依赖 SPIR-V 输入内存", "[shader]") {
@@ -175,39 +122,6 @@ TEST_CASE("Shader 校验 SPIR-V、入口点和 Renderer domain", "[shader][valid
   desc.code = wgsl.data();
   desc.code_size = wgsl.size();
   CHECK(granit_shader_create(first.native_handle(), &desc, &shader) == GRANIT_ERROR_UNSUPPORTED);
-}
-
-TEST_CASE("Shader Asset 按 Renderer 后端验证并创建 Shader", "[shader][asset]") {
-  const auto spirv = std::as_bytes(std::span{vertex_spirv});
-  constexpr std::string_view wgsl =
-      "@vertex fn main() -> @builtin(position) vec4f { return vec4f(); }";
-  std::vector<std::byte> manifest;
-  REQUIRE(granit::detail::shader_format::encode_shader_object(
-              {wgsl, spirv, "{}", {}, 1, 0, granit::shader_stage::vertex, "main"}, manifest) ==
-          granit::detail::shader_format::shader_object_error::success);
-
-  granit::shader invalid;
-  CHECK(invalid.initialize_packaged_asset(GRANIT_NULL_HANDLE,
-                                          {.manifest = manifest, .sidecar = spirv}) ==
-        granit::result::invalid_handle);
-
-  granit::renderer renderer;
-  const auto renderer_result = renderer.initialize({.application_name = "granit-shader-asset"});
-  if (shader_environment_unavailable(renderer_result))
-    SKIP("当前运行环境没有满足要求的 Vulkan 设备");
-  REQUIRE(renderer_result == granit::result::success);
-
-  granit::shader shader;
-  REQUIRE(shader.initialize_packaged_asset(renderer.native_handle(),
-                                           {.manifest = manifest, .sidecar = spirv}) ==
-          granit::result::success);
-  REQUIRE(shader.reset() == granit::result::success);
-
-  auto damaged = std::vector<std::byte>{spirv.begin(), spirv.end()};
-  damaged.front() ^= std::byte{1};
-  CHECK(shader.initialize_packaged_asset(renderer.native_handle(),
-                                         {.manifest = manifest, .sidecar = damaged}) ==
-        granit::result::invalid_argument);
 }
 
 } // namespace
