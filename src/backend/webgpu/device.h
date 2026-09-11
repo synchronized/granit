@@ -52,59 +52,41 @@ public:
   [[nodiscard]] granit_result cancel_swapchain(webgpu_swapchain swapchain,
                                                std::uint32_t* needs_recreate) noexcept;
   [[nodiscard]] granit_result destroy_swapchain(webgpu_swapchain swapchain) noexcept;
-  [[nodiscard]] granit_result create_buffer(webgpu_instance_handle instance,
-                                            const webgpu_buffer_desc* desc,
+  [[nodiscard]] granit_result create_buffer(const webgpu_buffer_desc* desc,
                                             webgpu_buffer* buffer) noexcept;
-  [[nodiscard]] granit_result destroy_buffer(webgpu_instance_handle instance,
-                                             webgpu_buffer buffer) noexcept;
-  [[nodiscard]] granit_result write_buffer(webgpu_instance_handle instance, webgpu_buffer buffer,
-                                           std::uint64_t offset, const void* data,
-                                           std::uint64_t size) noexcept;
-  [[nodiscard]] granit_result read_buffer(webgpu_instance_handle instance, webgpu_buffer buffer,
-                                          std::uint64_t offset, void* data,
+  [[nodiscard]] granit_result destroy_buffer(webgpu_buffer buffer) noexcept;
+  [[nodiscard]] granit_result write_buffer(webgpu_buffer buffer, std::uint64_t offset,
+                                           const void* data, std::uint64_t size) noexcept;
+  [[nodiscard]] granit_result read_buffer(webgpu_buffer buffer, std::uint64_t offset, void* data,
                                           std::uint64_t size) noexcept;
-  [[nodiscard]] granit_result begin_readback(webgpu_instance_handle instance, webgpu_buffer buffer,
-                                             std::uint64_t offset, std::uint64_t size,
+  [[nodiscard]] granit_result begin_readback(webgpu_buffer buffer, std::uint64_t offset,
+                                             std::uint64_t size,
                                              webgpu_readback* readback) noexcept;
-  [[nodiscard]] granit_result poll_readback(webgpu_instance_handle instance,
-                                            webgpu_readback readback) noexcept;
-  [[nodiscard]] granit_result copy_readback(webgpu_instance_handle instance,
-                                            webgpu_readback readback, std::uint64_t offset,
+  [[nodiscard]] granit_result poll_readback(webgpu_readback readback) noexcept;
+  [[nodiscard]] granit_result copy_readback(webgpu_readback readback, std::uint64_t offset,
                                             void* data, std::uint64_t size) noexcept;
-  [[nodiscard]] granit_result destroy_readback(webgpu_instance_handle instance,
-                                               webgpu_readback readback) noexcept;
-  [[nodiscard]] granit_result create_texture(webgpu_instance_handle instance,
-                                             const webgpu_texture_desc* desc,
+  [[nodiscard]] granit_result destroy_readback(webgpu_readback readback) noexcept;
+  [[nodiscard]] granit_result create_texture(const webgpu_texture_desc* desc,
                                              webgpu_texture* texture) noexcept;
-  [[nodiscard]] granit_result destroy_texture(webgpu_instance_handle instance,
-                                              webgpu_texture texture) noexcept;
-  [[nodiscard]] granit_result write_texture(webgpu_instance_handle instance, webgpu_texture texture,
+  [[nodiscard]] granit_result destroy_texture(webgpu_texture texture) noexcept;
+  [[nodiscard]] granit_result write_texture(webgpu_texture texture,
                                             const webgpu_texture_write_desc* desc, const void* data,
                                             std::uint64_t size) noexcept;
   [[nodiscard]] granit_result
-  write_upload_batch(webgpu_instance_handle instance,
-                     std::span<const webgpu_upload_operation> operations) noexcept;
-  [[nodiscard]] granit_result create_texture_view(webgpu_instance_handle instance,
-                                                  webgpu_texture texture,
+  write_upload_batch(std::span<const webgpu_upload_operation> operations) noexcept;
+  [[nodiscard]] granit_result create_texture_view(webgpu_texture texture,
                                                   const webgpu_texture_view_desc* desc,
                                                   webgpu_texture_view* view) noexcept;
-  [[nodiscard]] granit_result destroy_texture_view(webgpu_instance_handle instance,
-                                                   webgpu_texture_view view) noexcept;
-  [[nodiscard]] granit_result create_sampler(webgpu_instance_handle instance,
-                                             const webgpu_sampler_desc* desc,
+  [[nodiscard]] granit_result destroy_texture_view(webgpu_texture_view view) noexcept;
+  [[nodiscard]] granit_result create_sampler(const webgpu_sampler_desc* desc,
                                              webgpu_sampler* sampler) noexcept;
-  [[nodiscard]] granit_result destroy_sampler(webgpu_instance_handle instance,
-                                              webgpu_sampler sampler) noexcept;
-  [[nodiscard]] granit_result create_bind_group_layout(webgpu_instance_handle instance,
-                                                       const webgpu_bind_group_layout_desc* desc,
+  [[nodiscard]] granit_result destroy_sampler(webgpu_sampler sampler) noexcept;
+  [[nodiscard]] granit_result create_bind_group_layout(const webgpu_bind_group_layout_desc* desc,
                                                        webgpu_bind_group_layout* layout) noexcept;
-  [[nodiscard]] granit_result destroy_bind_group_layout(webgpu_instance_handle instance,
-                                                        webgpu_bind_group_layout layout) noexcept;
-  [[nodiscard]] granit_result create_bind_group(webgpu_instance_handle instance,
-                                                const webgpu_bind_group_desc* desc,
+  [[nodiscard]] granit_result destroy_bind_group_layout(webgpu_bind_group_layout layout) noexcept;
+  [[nodiscard]] granit_result create_bind_group(const webgpu_bind_group_desc* desc,
                                                 webgpu_bind_group* bind_group) noexcept;
-  [[nodiscard]] granit_result destroy_bind_group(webgpu_instance_handle instance,
-                                                 webgpu_bind_group bind_group) noexcept;
+  [[nodiscard]] granit_result destroy_bind_group(webgpu_bind_group bind_group) noexcept;
   [[nodiscard]] granit_result create_shader(webgpu_instance_handle instance,
                                             const webgpu_shader_desc* desc,
                                             webgpu_shader* shader) noexcept;

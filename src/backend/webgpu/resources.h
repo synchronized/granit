@@ -10,8 +10,7 @@ namespace granit::detail {
 
 /** 供 WebGPU 资源析构和异步回读共享的设备所有者引用。 */
 struct webgpu_resource_owner {
-  webgpu_device* context{};
-  webgpu_instance_handle instance{};
+  webgpu_device* device{};
 };
 
 } // namespace granit::detail

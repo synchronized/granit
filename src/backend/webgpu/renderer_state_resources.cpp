@@ -34,20 +34,18 @@ struct webgpu_readback_slice {
 
 class webgpu_readback_completion final : public backend_readback_completion {
 public:
-  webgpu_readback_completion(std::shared_ptr<webgpu_resource_owner> context, webgpu_buffer buffer,
+  webgpu_readback_completion(std::shared_ptr<webgpu_resource_owner> owner, webgpu_buffer buffer,
                              webgpu_readback readback, std::vector<webgpu_readback_slice> slices)
-      : resource_owner_(std::move(context)), buffer_(buffer), readback_(readback),
+      : resource_owner_(std::move(owner)), buffer_(buffer), readback_(readback),
         slices_(std::move(slices)) {}
   ~webgpu_readback_completion() override {
     if (readback_ != 0)
-      static_cast<void>(
-          resource_owner_->context->destroy_readback(resource_owner_->instance, readback_));
+      static_cast<void>(resource_owner_->device->destroy_readback(readback_));
     if (buffer_ != 0)
-      static_cast<void>(
-          resource_owner_->context->destroy_buffer(resource_owner_->instance, buffer_));
+      static_cast<void>(resource_owner_->device->destroy_buffer(buffer_));
   }
   [[nodiscard]] granit_result poll() noexcept override {
-    return resource_owner_->context->poll_readback(resource_owner_->instance, readback_);
+    return resource_owner_->device->poll_readback(readback_);
   }
   [[nodiscard]] granit_result
   get_result_info(std::uint32_t index, granit_readback_result_info& info) const noexcept override {
@@ -62,13 +60,12 @@ public:
       return GRANIT_ERROR_INVALID_ARGUMENT;
     const auto& slice = slices_[index];
     if (slice.source_bytes_per_row == slice.result_bytes_per_row)
-      return resource_owner_->context->copy_readback(resource_owner_->instance, readback_,
-                                                     slice.source_offset, data, size);
+      return resource_owner_->device->copy_readback(readback_, slice.source_offset, data, size);
     try {
       std::vector<std::byte> padded(static_cast<std::size_t>(slice.source_bytes_per_row) *
                                     slice.rows * slice.layers);
-      auto result = resource_owner_->context->copy_readback(
-          resource_owner_->instance, readback_, slice.source_offset, padded.data(), padded.size());
+      auto result = resource_owner_->device->copy_readback(readback_, slice.source_offset,
+                                                           padded.data(), padded.size());
       if (result != GRANIT_SUCCESS)
         return result;
       auto* destination = static_cast<std::byte*>(data);
@@ -103,12 +100,11 @@ namespace {
 
 class webgpu_buffer_resource final : public backend_buffer_resource {
 public:
-  explicit webgpu_buffer_resource(std::shared_ptr<webgpu_resource_owner> context)
-      : resource_owner_(std::move(context)) {}
+  explicit webgpu_buffer_resource(std::shared_ptr<webgpu_resource_owner> owner)
+      : resource_owner_(std::move(owner)) {}
   ~webgpu_buffer_resource() override {
     if (handle_ != 0)
-      static_cast<void>(
-          resource_owner_->context->destroy_buffer(resource_owner_->instance, handle_));
+      static_cast<void>(resource_owner_->device->destroy_buffer(handle_));
   }
 
   std::shared_ptr<webgpu_resource_owner> resource_owner_;
@@ -120,12 +116,11 @@ public:
 
 class webgpu_texture_resource final : public backend_texture_resource {
 public:
-  explicit webgpu_texture_resource(std::shared_ptr<webgpu_resource_owner> context)
-      : resource_owner_(std::move(context)) {}
+  explicit webgpu_texture_resource(std::shared_ptr<webgpu_resource_owner> owner)
+      : resource_owner_(std::move(owner)) {}
   ~webgpu_texture_resource() override {
     if (handle_ != 0)
-      static_cast<void>(
-          resource_owner_->context->destroy_texture(resource_owner_->instance, handle_));
+      static_cast<void>(resource_owner_->device->destroy_texture(handle_));
   }
 
   std::shared_ptr<webgpu_resource_owner> resource_owner_;
@@ -135,12 +130,11 @@ public:
 
 class webgpu_texture_view_resource final : public backend_texture_view_resource {
 public:
-  explicit webgpu_texture_view_resource(std::shared_ptr<webgpu_resource_owner> context)
-      : resource_owner_(std::move(context)) {}
+  explicit webgpu_texture_view_resource(std::shared_ptr<webgpu_resource_owner> owner)
+      : resource_owner_(std::move(owner)) {}
   ~webgpu_texture_view_resource() override {
     if (handle_ != 0)
-      static_cast<void>(
-          resource_owner_->context->destroy_texture_view(resource_owner_->instance, handle_));
+      static_cast<void>(resource_owner_->device->destroy_texture_view(handle_));
   }
 
   std::shared_ptr<webgpu_resource_owner> resource_owner_;
@@ -149,12 +143,11 @@ public:
 
 class webgpu_sampler_resource final : public backend_sampler_resource {
 public:
-  explicit webgpu_sampler_resource(std::shared_ptr<webgpu_resource_owner> context)
-      : resource_owner_(std::move(context)) {}
+  explicit webgpu_sampler_resource(std::shared_ptr<webgpu_resource_owner> owner)
+      : resource_owner_(std::move(owner)) {}
   ~webgpu_sampler_resource() override {
     if (handle_ != 0)
-      static_cast<void>(
-          resource_owner_->context->destroy_sampler(resource_owner_->instance, handle_));
+      static_cast<void>(resource_owner_->device->destroy_sampler(handle_));
   }
 
   std::shared_ptr<webgpu_resource_owner> resource_owner_;
@@ -163,12 +156,11 @@ public:
 
 class webgpu_bind_group_layout_resource final : public backend_bind_group_layout_resource {
 public:
-  explicit webgpu_bind_group_layout_resource(std::shared_ptr<webgpu_resource_owner> context)
-      : resource_owner_(std::move(context)) {}
+  explicit webgpu_bind_group_layout_resource(std::shared_ptr<webgpu_resource_owner> owner)
+      : resource_owner_(std::move(owner)) {}
   ~webgpu_bind_group_layout_resource() override {
     if (handle_ != 0)
-      static_cast<void>(
-          resource_owner_->context->destroy_bind_group_layout(resource_owner_->instance, handle_));
+      static_cast<void>(resource_owner_->device->destroy_bind_group_layout(handle_));
   }
 
   std::shared_ptr<webgpu_resource_owner> resource_owner_;
@@ -177,12 +169,11 @@ public:
 
 class webgpu_bind_group_resource final : public backend_bind_group_resource {
 public:
-  explicit webgpu_bind_group_resource(std::shared_ptr<webgpu_resource_owner> context)
-      : resource_owner_(std::move(context)) {}
+  explicit webgpu_bind_group_resource(std::shared_ptr<webgpu_resource_owner> owner)
+      : resource_owner_(std::move(owner)) {}
   ~webgpu_bind_group_resource() override {
     if (handle_ != 0)
-      static_cast<void>(
-          resource_owner_->context->destroy_bind_group(resource_owner_->instance, handle_));
+      static_cast<void>(resource_owner_->device->destroy_bind_group(handle_));
   }
 
   std::shared_ptr<webgpu_resource_owner> resource_owner_;
@@ -304,8 +295,8 @@ granit_result webgpu_renderer_state::create_buffer(const granit_buffer_desc& des
   }
   const auto native_size = (desc.size + 3) & ~UINT64_C(3);
   webgpu_buffer_desc resource_owner_desc{sizeof(resource_owner_desc), 0, native_size, usage, 0};
-  const auto result = resource_owner_->context->create_buffer(
-      resource_owner_->instance, &resource_owner_desc, &buffer->handle_);
+  const auto result =
+      resource_owner_->device->create_buffer(&resource_owner_desc, &buffer->handle_);
   if (result == GRANIT_SUCCESS)
     buffer->memory_location_ = desc.memory_location;
   if (result == GRANIT_SUCCESS)
@@ -331,8 +322,8 @@ granit_result webgpu_renderer_state::flush_buffer(backend_buffer_resource& resou
   if (buffer == nullptr || buffer->memory_location_ != GRANIT_MEMORY_LOCATION_UPLOAD ||
       offset > buffer->host_memory_.size() || size > buffer->host_memory_.size() - offset)
     return GRANIT_ERROR_INVALID_ARGUMENT;
-  return resource_owner_->context->write_buffer(resource_owner_->instance, buffer->handle_, offset,
-                                                buffer->host_memory_.data() + offset, size);
+  return resource_owner_->device->write_buffer(buffer->handle_, offset,
+                                               buffer->host_memory_.data() + offset, size);
 }
 
 granit_result webgpu_renderer_state::invalidate_buffer(backend_buffer_resource& resource,
@@ -345,8 +336,8 @@ granit_result webgpu_renderer_state::invalidate_buffer(backend_buffer_resource& 
   if (buffer == nullptr || buffer->memory_location_ != GRANIT_MEMORY_LOCATION_READBACK ||
       offset > buffer->host_memory_.size() || size > buffer->host_memory_.size() - offset)
     return GRANIT_ERROR_INVALID_ARGUMENT;
-  return resource_owner_->context->read_buffer(resource_owner_->instance, buffer->handle_, offset,
-                                               buffer->host_memory_.data() + offset, size);
+  return resource_owner_->device->read_buffer(buffer->handle_, offset,
+                                              buffer->host_memory_.data() + offset, size);
 }
 
 granit_result webgpu_renderer_state::upload_buffer(backend_buffer_resource& resource,
@@ -356,9 +347,9 @@ granit_result webgpu_renderer_state::upload_buffer(backend_buffer_resource& reso
     return GRANIT_ERROR_NOT_READY;
 
   auto* buffer = as_buffer(resource);
-  return buffer == nullptr ? GRANIT_ERROR_INVALID_ARGUMENT
-                           : resource_owner_->context->write_buffer(
-                                 resource_owner_->instance, buffer->handle_, offset, data, size);
+  return buffer == nullptr
+             ? GRANIT_ERROR_INVALID_ARGUMENT
+             : resource_owner_->device->write_buffer(buffer->handle_, offset, data, size);
 }
 
 granit_result
@@ -418,7 +409,7 @@ webgpu_renderer_state::upload_batch(std::span<const backend_upload_operation> up
       }
       operations.push_back(operation);
     }
-    return resource_owner_->context->write_upload_batch(resource_owner_->instance, operations);
+    return resource_owner_->device->write_upload_batch(operations);
   } catch (const std::bad_alloc&) {
     return GRANIT_ERROR_OUT_OF_MEMORY;
   } catch (...) {
@@ -463,17 +454,15 @@ granit_result webgpu_renderer_state::readback_batch_async(
   webgpu_readback operation{};
   auto cleanup = [&] {
     if (operation != 0)
-      static_cast<void>(
-          resource_owner_->context->destroy_readback(resource_owner_->instance, operation));
+      static_cast<void>(resource_owner_->device->destroy_readback(operation));
     if (command != 0)
-      static_cast<void>(
-          resource_owner_->context->destroy_command_buffer(resource_owner_->instance, command));
+      static_cast<void>(resource_owner_->device->destroy_command_buffer(
+          resource_owner_->device->instance(), command));
     if (recorder != 0)
-      static_cast<void>(
-          resource_owner_->context->destroy_command_recorder(resource_owner_->instance, recorder));
+      static_cast<void>(resource_owner_->device->destroy_command_recorder(
+          resource_owner_->device->instance(), recorder));
     if (staging != 0)
-      static_cast<void>(
-          resource_owner_->context->destroy_buffer(resource_owner_->instance, staging));
+      static_cast<void>(resource_owner_->device->destroy_buffer(staging));
   };
   try {
     std::vector<webgpu_readback_slice> slices;
@@ -516,12 +505,11 @@ granit_result webgpu_renderer_state::readback_batch_async(
     webgpu_buffer_desc desc{
         sizeof(desc), 0, required,
         GRANIT_WEBGPU_BUFFER_USAGE_MAP_READ_BIT | GRANIT_WEBGPU_BUFFER_USAGE_COPY_DST_BIT, 0};
-    auto result =
-        resource_owner_->context->create_buffer(resource_owner_->instance, &desc, &staging);
+    auto result = resource_owner_->device->create_buffer(&desc, &staging);
     if (result != GRANIT_SUCCESS)
       return result;
-    result =
-        resource_owner_->context->create_command_recorder(resource_owner_->instance, &recorder);
+    result = resource_owner_->device->create_command_recorder(resource_owner_->device->instance(),
+                                                              &recorder);
     if (result != GRANIT_SUCCESS) {
       cleanup();
       return result;
@@ -538,8 +526,8 @@ granit_result webgpu_renderer_state::readback_batch_async(
         const auto prefix = readback.source_offset - source_start;
         const auto copy_size = (prefix + readback.size + 3) & ~UINT64_C(3);
         webgpu_buffer_copy_region region{source_start, slices[index].source_offset, copy_size};
-        result = resource_owner_->context->recorder_copy_buffer(
-            resource_owner_->instance, recorder, source->handle_, staging, {&region, 1});
+        result = resource_owner_->device->recorder_copy_buffer(
+            resource_owner_->device->instance(), recorder, source->handle_, staging, {&region, 1});
       } else {
         const auto* source = readback.texture == nullptr
                                  ? nullptr
@@ -562,23 +550,23 @@ granit_result webgpu_renderer_state::readback_batch_async(
                                         region.width,
                                         region.height,
                                         region.depth};
-        result = resource_owner_->context->recorder_copy_texture_to_buffer_v2(
-            resource_owner_->instance, recorder, source->handle_, staging, copy);
+        result = resource_owner_->device->recorder_copy_texture_to_buffer_v2(
+            resource_owner_->device->instance(), recorder, source->handle_, staging, copy);
       }
       if (result != GRANIT_SUCCESS) {
         cleanup();
         return result;
       }
     }
-    result = resource_owner_->context->finish_command_recorder(resource_owner_->instance, recorder,
-                                                               &command);
+    result = resource_owner_->device->finish_command_recorder(resource_owner_->device->instance(),
+                                                              recorder, &command);
     recorder = 0;
     if (result == GRANIT_SUCCESS)
-      result = resource_owner_->context->submit_command_buffer(resource_owner_->instance, command);
+      result = resource_owner_->device->submit_command_buffer(resource_owner_->device->instance(),
+                                                              command);
     command = 0;
     if (result == GRANIT_SUCCESS)
-      result = resource_owner_->context->begin_readback(resource_owner_->instance, staging, 0,
-                                                        required, &operation);
+      result = resource_owner_->device->begin_readback(staging, 0, required, &operation);
     if (result != GRANIT_SUCCESS) {
       cleanup();
       return result;
@@ -636,8 +624,8 @@ granit_result webgpu_renderer_state::create_texture(const granit_texture_desc& d
                                                     : GRANIT_WEBGPU_TEXTURE_DIMENSION_2D,
                                                 desc.array_layers,
                                                 desc.sample_count};
-  const auto result = resource_owner_->context->create_texture(
-      resource_owner_->instance, &resource_owner_desc, &texture->handle_);
+  const auto result =
+      resource_owner_->device->create_texture(&resource_owner_desc, &texture->handle_);
   if (result == GRANIT_SUCCESS)
     texture->format_ = desc.format;
   return result;
@@ -668,8 +656,7 @@ granit_result webgpu_renderer_state::upload_texture(
                                        layout.rows_per_image,
                                        region.base_array_layer,
                                        region.array_layer_count};
-  return resource_owner_->context->write_texture(resource_owner_->instance, texture->handle_, &desc,
-                                                 data, size);
+  return resource_owner_->device->write_texture(texture->handle_, &desc, data, size);
 }
 
 std::unique_ptr<backend_texture_view_resource>
@@ -706,8 +693,8 @@ granit_result webgpu_renderer_state::create_texture_view(
                                                          : GRANIT_WEBGPU_TEXTURE_DIMENSION_2D,
                                                      desc.range.base_array_layer,
                                                      desc.range.array_layer_count};
-  return resource_owner_->context->create_texture_view(
-      resource_owner_->instance, native_texture->handle_, &resource_owner_desc, &view->handle_);
+  return resource_owner_->device->create_texture_view(native_texture->handle_, &resource_owner_desc,
+                                                      &view->handle_);
 }
 
 webgpu_texture_view
@@ -750,8 +737,7 @@ granit_result webgpu_renderer_state::create_sampler(const granit_sampler_desc& d
                                                 desc.min_lod,
                                                 desc.max_lod,
                                                 {0, 0}};
-  return resource_owner_->context->create_sampler(resource_owner_->instance, &resource_owner_desc,
-                                                  &sampler->handle_);
+  return resource_owner_->device->create_sampler(&resource_owner_desc, &sampler->handle_);
 }
 
 std::unique_ptr<backend_bind_group_layout_resource>
@@ -816,8 +802,7 @@ granit_result webgpu_renderer_state::create_bind_group_layout(
   const webgpu_bind_group_layout_desc desc{
       sizeof(webgpu_bind_group_layout_desc),
       static_cast<std::uint32_t>(resource_owner_entries.size()), resource_owner_entries.data(), 0};
-  return resource_owner_->context->create_bind_group_layout(resource_owner_->instance, &desc,
-                                                            &layout->handle_);
+  return resource_owner_->device->create_bind_group_layout(&desc, &layout->handle_);
 }
 
 std::unique_ptr<backend_bind_group_resource> webgpu_renderer_state::allocate_bind_group_resource() {
@@ -897,8 +882,7 @@ webgpu_renderer_state::create_bind_group(backend_bind_group_layout_resource& lay
   const webgpu_bind_group_desc desc{sizeof(webgpu_bind_group_desc),
                                     static_cast<std::uint32_t>(entries.size()),
                                     native_layout->handle_, entries.data(), 0};
-  return resource_owner_->context->create_bind_group(resource_owner_->instance, &desc,
-                                                     &group->handle_);
+  return resource_owner_->device->create_bind_group(&desc, &group->handle_);
 }
 
 webgpu_bind_group_layout webgpu_renderer_state::native_bind_group_layout(

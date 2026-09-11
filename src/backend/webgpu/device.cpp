@@ -4888,241 +4888,185 @@ granit_result webgpu_device::destroy_swapchain(webgpu_swapchain swapchain) noexc
   }
 }
 
-granit_result webgpu_device::create_buffer(webgpu_instance_handle instance,
-                                           const webgpu_buffer_desc* desc,
+granit_result webgpu_device::create_buffer(const webgpu_buffer_desc* desc,
                                            webgpu_buffer* buffer) noexcept {
-  if (!open_ || instance == 0 || desc == nullptr || buffer == nullptr) {
+  if (!open_ || instance_ == 0 || desc == nullptr || buffer == nullptr) {
     return GRANIT_ERROR_INVALID_ARGUMENT;
   }
-  if (instance != instance_) {
-    return GRANIT_ERROR_INVALID_HANDLE;
-  }
   try {
-    return ::create_buffer(instance, desc, buffer);
+    return ::create_buffer(instance_, desc, buffer);
   } catch (...) {
     return GRANIT_ERROR_INTERNAL;
   }
 }
 
-granit_result webgpu_device::destroy_buffer(webgpu_instance_handle instance,
-                                            webgpu_buffer buffer) noexcept {
-  if (!open_ || instance == 0 || buffer == 0) {
+granit_result webgpu_device::destroy_buffer(webgpu_buffer buffer) noexcept {
+  if (!open_ || instance_ == 0 || buffer == 0) {
     return GRANIT_ERROR_INVALID_ARGUMENT;
   }
-  if (instance != instance_) {
-    return GRANIT_ERROR_INVALID_HANDLE;
-  }
   try {
-    return ::destroy_buffer(instance, buffer);
+    return ::destroy_buffer(instance_, buffer);
   } catch (...) {
     return GRANIT_ERROR_INTERNAL;
   }
 }
 
-granit_result webgpu_device::write_buffer(webgpu_instance_handle instance, webgpu_buffer buffer,
-                                          std::uint64_t offset, const void* data,
-                                          std::uint64_t size) noexcept {
-  if (!open_ || instance == 0 || buffer == 0 || data == nullptr || size == 0) {
+granit_result webgpu_device::write_buffer(webgpu_buffer buffer, std::uint64_t offset,
+                                          const void* data, std::uint64_t size) noexcept {
+  if (!open_ || instance_ == 0 || buffer == 0 || data == nullptr || size == 0) {
     return GRANIT_ERROR_INVALID_ARGUMENT;
   }
-  if (instance != instance_) {
-    return GRANIT_ERROR_INVALID_HANDLE;
-  }
   try {
-    return ::write_buffer(instance, buffer, offset, data, size);
+    return ::write_buffer(instance_, buffer, offset, data, size);
   } catch (...) {
     return GRANIT_ERROR_INTERNAL;
   }
 }
 
-granit_result webgpu_device::read_buffer(webgpu_instance_handle instance, webgpu_buffer buffer,
-                                         std::uint64_t offset, void* data,
+granit_result webgpu_device::read_buffer(webgpu_buffer buffer, std::uint64_t offset, void* data,
                                          std::uint64_t size) noexcept {
-  if (!open_ || instance == 0 || buffer == 0 || data == nullptr || size == 0) {
+  if (!open_ || instance_ == 0 || buffer == 0 || data == nullptr || size == 0) {
     return GRANIT_ERROR_INVALID_ARGUMENT;
   }
-  if (instance != instance_) {
-    return GRANIT_ERROR_INVALID_HANDLE;
-  }
   try {
-    return ::read_buffer(instance, buffer, offset, data, size);
+    return ::read_buffer(instance_, buffer, offset, data, size);
   } catch (...) {
     return GRANIT_ERROR_INTERNAL;
   }
 }
 
-granit_result webgpu_device::begin_readback(webgpu_instance_handle instance, webgpu_buffer buffer,
-                                            std::uint64_t offset, std::uint64_t size,
+granit_result webgpu_device::begin_readback(webgpu_buffer buffer, std::uint64_t offset,
+                                            std::uint64_t size,
                                             webgpu_readback* readback) noexcept {
-  if (!open_ || instance == 0 || buffer == 0 || size == 0 || readback == nullptr)
+  if (!open_ || instance_ == 0 || buffer == 0 || size == 0 || readback == nullptr)
     return GRANIT_ERROR_INVALID_ARGUMENT;
-  if (instance != instance_)
-    return GRANIT_ERROR_INVALID_HANDLE;
   try {
-    return ::begin_readback(instance, buffer, offset, size, readback);
+    return ::begin_readback(instance_, buffer, offset, size, readback);
   } catch (...) {
     return GRANIT_ERROR_INTERNAL;
   }
 }
 
-granit_result webgpu_device::poll_readback(webgpu_instance_handle instance,
-                                           webgpu_readback readback) noexcept {
-  if (!open_ || instance == 0 || readback == 0)
+granit_result webgpu_device::poll_readback(webgpu_readback readback) noexcept {
+  if (!open_ || instance_ == 0 || readback == 0)
     return GRANIT_ERROR_INVALID_ARGUMENT;
-  if (instance != instance_)
-    return GRANIT_ERROR_INVALID_HANDLE;
   try {
-    return ::poll_readback(instance, readback);
+    return ::poll_readback(instance_, readback);
   } catch (...) {
     return GRANIT_ERROR_INTERNAL;
   }
 }
 
-granit_result webgpu_device::copy_readback(webgpu_instance_handle instance,
-                                           webgpu_readback readback, std::uint64_t offset,
+granit_result webgpu_device::copy_readback(webgpu_readback readback, std::uint64_t offset,
                                            void* data, std::uint64_t size) noexcept {
-  if (!open_ || instance == 0 || readback == 0 || data == nullptr || size == 0)
+  if (!open_ || instance_ == 0 || readback == 0 || data == nullptr || size == 0)
     return GRANIT_ERROR_INVALID_ARGUMENT;
-  if (instance != instance_)
-    return GRANIT_ERROR_INVALID_HANDLE;
   try {
-    return ::copy_readback(instance, readback, offset, data, size);
+    return ::copy_readback(instance_, readback, offset, data, size);
   } catch (...) {
     return GRANIT_ERROR_INTERNAL;
   }
 }
 
-granit_result webgpu_device::destroy_readback(webgpu_instance_handle instance,
-                                              webgpu_readback readback) noexcept {
-  if (!open_ || instance == 0 || readback == 0)
+granit_result webgpu_device::destroy_readback(webgpu_readback readback) noexcept {
+  if (!open_ || instance_ == 0 || readback == 0)
     return GRANIT_ERROR_INVALID_ARGUMENT;
-  if (instance != instance_)
-    return GRANIT_ERROR_INVALID_HANDLE;
   try {
-    return ::destroy_readback(instance, readback);
+    return ::destroy_readback(instance_, readback);
   } catch (...) {
     return GRANIT_ERROR_INTERNAL;
   }
 }
 
-granit_result webgpu_device::create_texture(webgpu_instance_handle instance,
-                                            const webgpu_texture_desc* desc,
+granit_result webgpu_device::create_texture(const webgpu_texture_desc* desc,
                                             webgpu_texture* texture) noexcept {
-  if (!open_ || instance == 0 || desc == nullptr || texture == nullptr) {
+  if (!open_ || instance_ == 0 || desc == nullptr || texture == nullptr) {
     return GRANIT_ERROR_INVALID_ARGUMENT;
   }
-  if (instance != instance_) {
-    return GRANIT_ERROR_INVALID_HANDLE;
-  }
   try {
-    return ::create_texture(instance, desc, texture);
+    return ::create_texture(instance_, desc, texture);
   } catch (...) {
     return GRANIT_ERROR_INTERNAL;
   }
 }
 
-granit_result webgpu_device::destroy_texture(webgpu_instance_handle instance,
-                                             webgpu_texture texture) noexcept {
-  if (!open_ || instance == 0 || texture == 0) {
+granit_result webgpu_device::destroy_texture(webgpu_texture texture) noexcept {
+  if (!open_ || instance_ == 0 || texture == 0) {
     return GRANIT_ERROR_INVALID_ARGUMENT;
   }
-  if (instance != instance_) {
-    return GRANIT_ERROR_INVALID_HANDLE;
-  }
   try {
-    return ::destroy_texture(instance, texture);
+    return ::destroy_texture(instance_, texture);
   } catch (...) {
     return GRANIT_ERROR_INTERNAL;
   }
 }
 
-granit_result webgpu_device::write_texture(webgpu_instance_handle instance, webgpu_texture texture,
+granit_result webgpu_device::write_texture(webgpu_texture texture,
                                            const webgpu_texture_write_desc* desc, const void* data,
                                            std::uint64_t size) noexcept {
-  if (!open_ || instance == 0 || texture == 0 || desc == nullptr || data == nullptr || size == 0)
+  if (!open_ || instance_ == 0 || texture == 0 || desc == nullptr || data == nullptr || size == 0)
     return GRANIT_ERROR_INVALID_ARGUMENT;
-  if (instance != instance_)
-    return GRANIT_ERROR_INVALID_HANDLE;
   try {
-    return ::write_texture(instance, texture, desc, data, size);
+    return ::write_texture(instance_, texture, desc, data, size);
   } catch (...) {
     return GRANIT_ERROR_INTERNAL;
   }
 }
 
 granit_result
-webgpu_device::write_upload_batch(webgpu_instance_handle instance,
-                                  std::span<const webgpu_upload_operation> operations) noexcept {
-  if (!open_ || instance == 0 || operations.empty() || operations.size() > UINT32_MAX)
+webgpu_device::write_upload_batch(std::span<const webgpu_upload_operation> operations) noexcept {
+  if (!open_ || instance_ == 0 || operations.empty() || operations.size() > UINT32_MAX)
     return GRANIT_ERROR_INVALID_ARGUMENT;
-  if (instance != instance_)
-    return GRANIT_ERROR_INVALID_HANDLE;
   try {
-    return ::write_upload_batch(instance, operations.data(),
+    return ::write_upload_batch(instance_, operations.data(),
                                 static_cast<std::uint32_t>(operations.size()));
   } catch (...) {
     return GRANIT_ERROR_INTERNAL;
   }
 }
 
-granit_result webgpu_device::create_texture_view(webgpu_instance_handle instance,
-                                                 webgpu_texture texture,
+granit_result webgpu_device::create_texture_view(webgpu_texture texture,
                                                  const webgpu_texture_view_desc* desc,
                                                  webgpu_texture_view* view) noexcept {
-  if (!open_ || instance == 0 || texture == 0 || desc == nullptr || view == nullptr) {
+  if (!open_ || instance_ == 0 || texture == 0 || desc == nullptr || view == nullptr) {
     return GRANIT_ERROR_INVALID_ARGUMENT;
   }
-  if (instance != instance_) {
-    return GRANIT_ERROR_INVALID_HANDLE;
-  }
   try {
-    return ::create_texture_view(instance, texture, desc, view);
+    return ::create_texture_view(instance_, texture, desc, view);
   } catch (...) {
     return GRANIT_ERROR_INTERNAL;
   }
 }
 
-granit_result webgpu_device::destroy_texture_view(webgpu_instance_handle instance,
-                                                  webgpu_texture_view view) noexcept {
-  if (!open_ || instance == 0 || view == 0) {
+granit_result webgpu_device::destroy_texture_view(webgpu_texture_view view) noexcept {
+  if (!open_ || instance_ == 0 || view == 0) {
     return GRANIT_ERROR_INVALID_ARGUMENT;
   }
-  if (instance != instance_) {
-    return GRANIT_ERROR_INVALID_HANDLE;
-  }
   try {
-    return ::destroy_texture_view(instance, view);
+    return ::destroy_texture_view(instance_, view);
   } catch (...) {
     return GRANIT_ERROR_INTERNAL;
   }
 }
 
-granit_result webgpu_device::create_sampler(webgpu_instance_handle instance,
-                                            const webgpu_sampler_desc* desc,
+granit_result webgpu_device::create_sampler(const webgpu_sampler_desc* desc,
                                             webgpu_sampler* sampler) noexcept {
-  if (!open_ || instance == 0 || desc == nullptr || sampler == nullptr) {
+  if (!open_ || instance_ == 0 || desc == nullptr || sampler == nullptr) {
     return GRANIT_ERROR_INVALID_ARGUMENT;
   }
-  if (instance != instance_) {
-    return GRANIT_ERROR_INVALID_HANDLE;
-  }
   try {
-    return ::create_sampler(instance, desc, sampler);
+    return ::create_sampler(instance_, desc, sampler);
   } catch (...) {
     return GRANIT_ERROR_INTERNAL;
   }
 }
 
-granit_result webgpu_device::destroy_sampler(webgpu_instance_handle instance,
-                                             webgpu_sampler sampler) noexcept {
-  if (!open_ || instance == 0 || sampler == 0) {
+granit_result webgpu_device::destroy_sampler(webgpu_sampler sampler) noexcept {
+  if (!open_ || instance_ == 0 || sampler == 0) {
     return GRANIT_ERROR_INVALID_ARGUMENT;
   }
-  if (instance != instance_) {
-    return GRANIT_ERROR_INVALID_HANDLE;
-  }
   try {
-    return ::destroy_sampler(instance, sampler);
+    return ::destroy_sampler(instance_, sampler);
   } catch (...) {
     return GRANIT_ERROR_INTERNAL;
   }
@@ -5160,38 +5104,47 @@ granit_result webgpu_device::destroy_sampler(webgpu_instance_handle instance,
     }                                                                                              \
   }
 
-granit_result webgpu_device::create_bind_group_layout(webgpu_instance_handle instance,
-                                                      const webgpu_bind_group_layout_desc* desc,
+granit_result webgpu_device::create_bind_group_layout(const webgpu_bind_group_layout_desc* desc,
                                                       webgpu_bind_group_layout* layout) noexcept {
-  if (!open_ || instance == 0 || desc == nullptr || layout == nullptr)
+  if (!open_ || instance_ == 0 || desc == nullptr || layout == nullptr)
     return GRANIT_ERROR_INVALID_ARGUMENT;
-  if (instance != instance_)
-    return GRANIT_ERROR_INVALID_HANDLE;
   try {
-    return ::create_bind_group_layout(instance, desc, layout);
+    return ::create_bind_group_layout(instance_, desc, layout);
   } catch (...) {
     return GRANIT_ERROR_INTERNAL;
   }
 }
 
-GRANIT_CONTEXT_DISPATCH_DESTROY_METHOD(destroy_bind_group_layout, destroy_bind_group_layout,
-                                       webgpu_bind_group_layout)
+granit_result webgpu_device::destroy_bind_group_layout(webgpu_bind_group_layout handle) noexcept {
+  if (!open_ || instance_ == 0 || handle == 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  try {
+    return ::destroy_bind_group_layout(instance_, handle);
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
 
-granit_result webgpu_device::create_bind_group(webgpu_instance_handle instance,
-                                               const webgpu_bind_group_desc* desc,
+granit_result webgpu_device::create_bind_group(const webgpu_bind_group_desc* desc,
                                                webgpu_bind_group* bind_group) noexcept {
-  if (!open_ || instance == 0 || desc == nullptr || bind_group == nullptr)
+  if (!open_ || instance_ == 0 || desc == nullptr || bind_group == nullptr)
     return GRANIT_ERROR_INVALID_ARGUMENT;
-  if (instance != instance_)
-    return GRANIT_ERROR_INVALID_HANDLE;
   try {
-    return ::create_bind_group(instance, desc, bind_group);
+    return ::create_bind_group(instance_, desc, bind_group);
   } catch (...) {
     return GRANIT_ERROR_INTERNAL;
   }
 }
 
-GRANIT_CONTEXT_DISPATCH_DESTROY_METHOD(destroy_bind_group, destroy_bind_group, webgpu_bind_group)
+granit_result webgpu_device::destroy_bind_group(webgpu_bind_group handle) noexcept {
+  if (!open_ || instance_ == 0 || handle == 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  try {
+    return ::destroy_bind_group(instance_, handle);
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
 GRANIT_CONTEXT_DISPATCH_CREATE_METHOD(create_shader, create_shader, const webgpu_shader_desc*,
                                       webgpu_shader)
 GRANIT_CONTEXT_DISPATCH_DESTROY_METHOD(destroy_shader, destroy_shader, webgpu_shader)
