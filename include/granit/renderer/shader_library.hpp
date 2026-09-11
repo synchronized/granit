@@ -17,13 +17,8 @@
 
 namespace granit {
 
-enum class shader_library_backend : std::uint32_t {
-  vulkan = GRANIT_SHADER_LIBRARY_BACKEND_VULKAN_BIT,
-  webgpu = GRANIT_SHADER_LIBRARY_BACKEND_WEBGPU_BIT,
-};
-
 struct shader_library_info {
-  std::uint32_t backend_flags{};
+  shader_backend backends{shader_backend::none};
   shader_digest content_digest{};
   std::uint32_t shader_count{};
   std::uint32_t variant_count{};
@@ -35,7 +30,7 @@ namespace detail {
 
 inline void copy_shader_library_info(const granit_shader_library_info& source,
                                      shader_library_info& destination) noexcept {
-  destination.backend_flags = source.backend_flags;
+  destination.backends = static_cast<shader_backend>(source.backend_flags);
   std::memcpy(destination.content_digest.data(), source.content_digest,
               destination.content_digest.size());
   destination.shader_count = source.shader_count;

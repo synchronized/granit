@@ -11,6 +11,7 @@
 #include <granit/core/export.h>
 #include <granit/core/result.h>
 #include <granit/core/shader_features.h>
+#include <granit/core/shader_types.h>
 #include <granit/core/types.h>
 
 /** Renderer 对象句柄。零值无效。 */
@@ -76,7 +77,7 @@ typedef struct granit_renderer_limits {
 } granit_renderer_limits;
 
 #define GRANIT_RENDERER_LIMITS_VERSION_1_SIZE                                                      \
-  ((uint32_t)(offsetof(granit_renderer_limits, supported_features) +                         \
+  ((uint32_t)(offsetof(granit_renderer_limits, supported_features) +                               \
               sizeof(granit_renderer_feature_flags)))
 
 #define GRANIT_RENDERER_LIMITS_INIT                                                                \
@@ -85,14 +86,14 @@ typedef struct granit_renderer_limits {
    UINT64_C(0),                                                                                    \
    UINT64_C(0),                                                                                    \
    UINT32_C(0),                                                                                    \
-   1.0F,                                                                                         \
+   1.0F,                                                                                           \
    UINT64_C(0)}
 
 /** Renderer 对应设备可用于 Shader 变体选择的后端无关能力快照。 */
 typedef struct granit_renderer_shader_capabilities {
   uint32_t struct_size;
   granit_renderer_backend backend;
-  uint32_t profile;
+  granit_shader_profile profile;
   uint32_t reserved;
   granit_shader_feature_flags supported_features;
 } granit_renderer_shader_capabilities;
@@ -101,7 +102,7 @@ typedef struct granit_renderer_shader_capabilities {
 typedef struct granit_shader_variant_requirement {
   uint32_t struct_size;
   granit_renderer_backend backend;
-  uint32_t profile;
+  granit_shader_profile profile;
   uint32_t priority;
   granit_shader_feature_flags required_features;
 } granit_shader_variant_requirement;

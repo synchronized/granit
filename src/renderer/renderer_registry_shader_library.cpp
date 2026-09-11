@@ -149,8 +149,7 @@ granit_result renderer_registry::create_shader_from_library(
                              : tools::shader_asset_backend::webgpu;
     const auto& capabilities = library_record->owner->capabilities();
     const auto variant = std::ranges::find_if(source->variants, [&](const auto& candidate) {
-      return candidate.backend == backend &&
-             candidate.profile == tools::shader_asset_profile::portable &&
+      return candidate.backend == backend && candidate.profile == shader_profile::portable &&
              (candidate.required_features & ~capabilities.shader_features) == 0;
     });
     if (variant == source->variants.end())
@@ -162,13 +161,15 @@ granit_result renderer_registry::create_shader_from_library(
 
     granit_result result = GRANIT_ERROR_UNSUPPORTED;
     if (backend == tools::shader_asset_backend::vulkan &&
-        variant->code_format == tools::shader_asset_code_format::spirv) {
-      result = create_shader_from_code(renderer, source->stage, GRANIT_SHADER_CODE_FORMAT_SPIRV,
-                                       payload.bytes, source->entry_point, shader);
+        variant->code_format == shader_code_format::spirv) {
+      result = create_shader_from_code(renderer, static_cast<granit_shader_stage>(source->stage),
+                                       GRANIT_SHADER_CODE_FORMAT_SPIRV, payload.bytes,
+                                       source->entry_point, shader);
     } else if (backend == tools::shader_asset_backend::webgpu &&
-               variant->code_format == tools::shader_asset_code_format::wgsl) {
-      result = create_shader_from_code(renderer, source->stage, GRANIT_SHADER_CODE_FORMAT_WGSL,
-                                       payload.bytes, source->entry_point, shader);
+               variant->code_format == shader_code_format::wgsl) {
+      result = create_shader_from_code(renderer, static_cast<granit_shader_stage>(source->stage),
+                                       GRANIT_SHADER_CODE_FORMAT_WGSL, payload.bytes,
+                                       source->entry_point, shader);
     }
     if (result != GRANIT_SUCCESS)
       return result;

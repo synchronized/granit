@@ -432,7 +432,7 @@
 
 ## 二十九、0.21.0 Shader Library 与后端无关材质
 
-**状态：进行中；S-37A～S-37J 本地实现已完成，S-37K 已规划，等待实施与发布验收。**
+**状态：进行中；S-37A～S-37J 本地实现已完成，S-37K1 已完成，等待后续实施与发布验收。**
 
 - **[S-37](plans/S-37-0.21.0-shader-library-and-material-boundary.md) / P1**：引入确定性、可裁剪的
   `.grshlib`，由 Renderer 选择并校验 Vulkan/WebGPU 载荷，Material 和应用不再接收后端信息。
@@ -445,7 +445,7 @@
   Win32、XCB、Wayland 与 Canvas 的旧公共创建入口。
 - **S-37J / P1**：Tone Mapping、Shadow 和 Debug Draw 的内建 Shader 统一由 `.grshlib` 提供，
   删除运行时直接选择 SPIR-V/WGSL 的旁路。
-- **[S-37K](plans/S-37K-shader-tooling-api-structure.md) / P1**：收敛 ShaderTools 公共接口和源码组织，
+- **[S-37K](plans/S-37K-shader-tooling-api-structure.md) / P1**：K1 已完成共享类型收敛；继续收敛 ShaderTools 公共接口和源码组织，
   统一共享类型与 Compiler 入口，并明确私有 Shader Object、Library Builder、CLI 和 CMake 边界。
 - 文件 I/O、网络、资产数据库、运行时源码编译、Android、新后端、Bindless 和材质节点图不属于
   本版本。

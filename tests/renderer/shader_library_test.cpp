@@ -29,11 +29,11 @@ std::vector<std::byte> make_library() {
   const auto cache_key =
       make_shader_cache_key({wgsl, "wgsl", "main", "compute", "tint-r1", "vulkan1.3", ""});
   REQUIRE(encode_shader_asset(
-              {wgsl, spirv, reflection, cache_key, 3, 0, GRANIT_SHADER_STAGE_COMPUTE, "main"},
+              {wgsl, spirv, reflection, cache_key, 3, 0, granit::shader_stage::compute, "main"},
               manifest) == shader_asset_error::success);
   const std::array sources{shader_library_asset_source{manifest, wgsl_bytes, spirv}};
   std::vector<std::byte> archive;
-  REQUIRE(encode_shader_library({sources, shader_library_backend_all}, archive) ==
+  REQUIRE(encode_shader_library({sources, GRANIT_SHADER_BACKEND_ALL_BITS}, archive) ==
           shader_library_error::success);
   return archive;
 }
@@ -50,7 +50,7 @@ std::vector<std::byte> read_binary(const std::filesystem::path& path) {
   return bytes;
 }
 
-std::vector<std::byte> make_runtime_library(granit::tools::shader_cache_key& content_id) {
+std::vector<std::byte> make_runtime_library(granit::shader_cache_key& content_id) {
   using namespace granit::tools;
   const auto directory = std::filesystem::path{GRANIT_TEST_ASSET_DIR};
   const auto manifest = read_binary(directory / "minimal.vert.grshader");
@@ -61,7 +61,7 @@ std::vector<std::byte> make_runtime_library(granit::tools::shader_cache_key& con
   content_id = asset.content_id;
   const std::array sources{shader_library_asset_source{manifest, wgsl, spirv}};
   std::vector<std::byte> archive;
-  REQUIRE(encode_shader_library({sources, shader_library_backend_all}, archive) ==
+  REQUIRE(encode_shader_library({sources, GRANIT_SHADER_BACKEND_ALL_BITS}, archive) ==
           shader_library_error::success);
   return archive;
 }
@@ -77,7 +77,7 @@ TEST_CASE("Shader Library 检查返回稳定摘要", "[shader_library][inspect]"
   granit_shader_library_info native = GRANIT_SHADER_LIBRARY_INFO_INIT;
   REQUIRE(granit_shader_library_inspect(archive.data(), archive.size(), &native) == GRANIT_SUCCESS);
   CHECK(native.backend_flags ==
-        (GRANIT_SHADER_LIBRARY_BACKEND_VULKAN_BIT | GRANIT_SHADER_LIBRARY_BACKEND_WEBGPU_BIT));
+        (GRANIT_SHADER_BACKEND_VULKAN_BIT | GRANIT_SHADER_BACKEND_WEBGPU_BIT));
   CHECK(native.shader_count == 1);
   CHECK(native.variant_count == 2);
   CHECK(native.payload_count == 2);
@@ -136,7 +136,7 @@ TEST_CASE("Shader Library 句柄校验类型、domain 和 generation", "[shader_
 }
 
 TEST_CASE("Shader Library 由 Renderer 选择载荷并共享后端 Shader", "[shader_library][selection]") {
-  granit::tools::shader_cache_key content_id{};
+  granit::shader_cache_key content_id{};
   auto archive = make_runtime_library(content_id);
   granit::renderer renderer;
   const auto renderer_result = renderer.initialize({.application_name = "granit-shader-library"});

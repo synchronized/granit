@@ -4,7 +4,6 @@
 #ifndef GRANIT_SHADER_HPP_
 #define GRANIT_SHADER_HPP_
 
-#include <array>
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
@@ -16,30 +15,13 @@
 #include <vector>
 
 #include <granit/core/result.hpp>
+#include <granit/core/shader_types.hpp>
 #include <granit/renderer/renderer.hpp>
 #include <granit/renderer/shader.h>
 
 namespace granit {
 
 class shader_library;
-
-/** Shader 资产及 Library 使用的固定长度摘要。 */
-using shader_digest = std::array<std::byte, GRANIT_SHADER_DIGEST_SIZE>;
-/** 标识一项 Shader 资产，供 Shader Library 查找。 */
-using shader_content_id = shader_digest;
-/** 标识完整 Shader 构建输入，用于缓存失效。 */
-using shader_cache_key = shader_digest;
-
-enum class shader_stage : std::uint32_t {
-  vertex = GRANIT_SHADER_STAGE_VERTEX,
-  fragment = GRANIT_SHADER_STAGE_FRAGMENT,
-  compute = GRANIT_SHADER_STAGE_COMPUTE,
-};
-
-enum class shader_code_format : std::uint32_t {
-  wgsl = GRANIT_SHADER_CODE_FORMAT_WGSL,
-  spirv = GRANIT_SHADER_CODE_FORMAT_SPIRV,
-};
 
 struct shader_desc {
   shader_stage stage{shader_stage::vertex};

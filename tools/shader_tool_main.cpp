@@ -65,9 +65,9 @@ int link_shader_library(int argc, char** argv) {
     std::cerr << "library 需要一个或多个 --asset、--target <all|vulkan|webgpu> 和 --output\n";
     return 2;
   }
-  const auto backend_mask = *target == "all"      ? granit::tools::shader_library_backend_all
-                            : *target == "vulkan" ? granit::tools::shader_library_backend_vulkan
-                                                  : granit::tools::shader_library_backend_webgpu;
+  const auto backend_mask = *target == "all"      ? GRANIT_SHADER_BACKEND_ALL_BITS
+                            : *target == "vulkan" ? GRANIT_SHADER_BACKEND_VULKAN_BIT
+                                                  : GRANIT_SHADER_BACKEND_WEBGPU_BIT;
   struct owned_asset {
     std::vector<std::byte> manifest;
     std::vector<std::byte> wgsl;
@@ -77,15 +77,13 @@ int link_shader_library(int argc, char** argv) {
   owned.reserve(asset_paths.size());
   for (const auto& asset_path : asset_paths) {
     owned_asset asset{.manifest = read_bytes(asset_path), .wgsl = {}, .spirv = {}};
-    if ((backend_mask & granit::tools::shader_library_backend_webgpu) != 0)
+    if ((backend_mask & GRANIT_SHADER_BACKEND_WEBGPU_BIT) != 0)
       asset.wgsl = read_bytes(asset_path + ".wgsl");
-    if ((backend_mask & granit::tools::shader_library_backend_vulkan) != 0)
+    if ((backend_mask & GRANIT_SHADER_BACKEND_VULKAN_BIT) != 0)
       asset.spirv = read_bytes(asset_path + ".spv");
     if (asset.manifest.empty() ||
-        ((backend_mask & granit::tools::shader_library_backend_webgpu) != 0 &&
-         asset.wgsl.empty()) ||
-        ((backend_mask & granit::tools::shader_library_backend_vulkan) != 0 &&
-         asset.spirv.empty())) {
+        ((backend_mask & GRANIT_SHADER_BACKEND_WEBGPU_BIT) != 0 && asset.wgsl.empty()) ||
+        ((backend_mask & GRANIT_SHADER_BACKEND_VULKAN_BIT) != 0 && asset.spirv.empty())) {
       std::cerr << "无法读取 Shader 资产或目标 sidecar：" << asset_path << '\n';
       return 1;
     }
@@ -160,9 +158,9 @@ int pack_shader_asset(int argc, char** argv) {
   inspect_desc.input_path_length = spirv_path->size();
   auto [inspect_status, inspect_result] = granit::shader_tools::inspect_spirv(inspect_desc);
   const auto inspected = inspect_result.info();
-  const auto stage_value = *stage == "vertex"     ? GRANIT_SHADER_TOOLS_STAGE_VERTEX
-                           : *stage == "fragment" ? GRANIT_SHADER_TOOLS_STAGE_FRAGMENT
-                                                  : GRANIT_SHADER_TOOLS_STAGE_COMPUTE;
+  const auto stage_value = *stage == "vertex"     ? granit::shader_stage::vertex
+                           : *stage == "fragment" ? granit::shader_stage::fragment
+                                                  : granit::shader_stage::compute;
   if (inspect_status.failed() || inspected.stage != stage_value ||
       inspected.entry_point != *entry) {
     std::cerr << "SPIR-V 的阶段或入口与 pack 参数不一致\n" << inspected.diagnostic;
@@ -306,16 +304,16 @@ int compile_shader(int argc, char** argv) {
                  "--asset-backend <all|vulkan|webgpu> 和 --features <none|float16|subgroup>\n";
     return 2;
   }
-  const auto stage_value = *stage == "vertex"     ? GRANIT_SHADER_TOOLS_STAGE_VERTEX
-                           : *stage == "fragment" ? GRANIT_SHADER_TOOLS_STAGE_FRAGMENT
-                                                  : GRANIT_SHADER_TOOLS_STAGE_COMPUTE;
+  const auto stage_value = *stage == "vertex"     ? GRANIT_SHADER_STAGE_VERTEX
+                           : *stage == "fragment" ? GRANIT_SHADER_STAGE_FRAGMENT
+                                                  : GRANIT_SHADER_STAGE_COMPUTE;
   constexpr std::string_view default_target = "vulkan1.3";
   constexpr std::string_view compile_options = "format=spirv;validate=1";
   const auto target = target_environment ? std::string_view{*target_environment} : default_target;
   const auto backend_mask = !asset_backend || *asset_backend == "all"
-                                ? GRANIT_SHADER_TOOLS_ASSET_BACKEND_ALL
-                            : *asset_backend == "vulkan" ? GRANIT_SHADER_TOOLS_ASSET_BACKEND_VULKAN
-                                                         : GRANIT_SHADER_TOOLS_ASSET_BACKEND_WEBGPU;
+                                ? GRANIT_SHADER_BACKEND_ALL_BITS
+                            : *asset_backend == "vulkan" ? GRANIT_SHADER_BACKEND_VULKAN_BIT
+                                                         : GRANIT_SHADER_BACKEND_WEBGPU_BIT;
   const auto required_features = !features || *features == "none" ? UINT64_C(0)
                                  : *features == "float16" ? GRANIT_SHADER_FEATURE_FLOAT16_BIT
                                                           : GRANIT_SHADER_FEATURE_SUBGROUP_BIT;
@@ -334,7 +332,7 @@ int compile_shader(int argc, char** argv) {
     cache.struct_size = sizeof(cache);
     cache.source_path = input->data();
     cache.source_path_length = input->size();
-    cache.source_language = GRANIT_SHADER_TOOLS_SOURCE_WGSL;
+    cache.source_language = GRANIT_SHADER_SOURCE_LANGUAGE_WGSL;
     cache.spirv_output_path = output->data();
     cache.spirv_output_path_length = output->size();
     cache.asset_path = asset->data();
@@ -380,7 +378,7 @@ int compile_shader(int argc, char** argv) {
     asset_desc.struct_size = sizeof(asset_desc);
     asset_desc.source_path = input->data();
     asset_desc.source_path_length = input->size();
-    asset_desc.source_language = GRANIT_SHADER_TOOLS_SOURCE_WGSL;
+    asset_desc.source_language = GRANIT_SHADER_SOURCE_LANGUAGE_WGSL;
     asset_desc.wgsl_path = input->data();
     asset_desc.wgsl_path_length = input->size();
     asset_desc.spirv_path = output->data();
@@ -430,13 +428,13 @@ int compile_hlsl_shader(int argc, char** argv) {
     std::cerr << "可选 --dxc-revision 与 --tint-revision 可覆盖自动二进制身份\n";
     return 2;
   }
-  const auto stage_value = *stage == "vertex"     ? GRANIT_SHADER_TOOLS_STAGE_VERTEX
-                           : *stage == "fragment" ? GRANIT_SHADER_TOOLS_STAGE_FRAGMENT
-                                                  : GRANIT_SHADER_TOOLS_STAGE_COMPUTE;
+  const auto stage_value = *stage == "vertex"     ? GRANIT_SHADER_STAGE_VERTEX
+                           : *stage == "fragment" ? GRANIT_SHADER_STAGE_FRAGMENT
+                                                  : GRANIT_SHADER_STAGE_COMPUTE;
   const auto backend_mask = !asset_backend || *asset_backend == "all"
-                                ? GRANIT_SHADER_TOOLS_ASSET_BACKEND_ALL
-                            : *asset_backend == "vulkan" ? GRANIT_SHADER_TOOLS_ASSET_BACKEND_VULKAN
-                                                         : GRANIT_SHADER_TOOLS_ASSET_BACKEND_WEBGPU;
+                                ? GRANIT_SHADER_BACKEND_ALL_BITS
+                            : *asset_backend == "vulkan" ? GRANIT_SHADER_BACKEND_VULKAN_BIT
+                                                         : GRANIT_SHADER_BACKEND_WEBGPU_BIT;
   const auto dxc_identity =
       asset ? resolve_tool_identity(*dxc, dxc_revision) : std::optional<std::string>{""};
   const auto tint_identity =
@@ -452,12 +450,12 @@ int compile_hlsl_shader(int argc, char** argv) {
     options += ";define=" + std::to_string(name.size()) + ":" + name + ":" +
                std::to_string(value.size()) + ":" + value;
   }
-  if (asset && backend_mask == GRANIT_SHADER_TOOLS_ASSET_BACKEND_ALL) {
+  if (asset && backend_mask == GRANIT_SHADER_BACKEND_ALL_BITS) {
     granit_shader_tools_cache_desc cache{};
     cache.struct_size = sizeof(cache);
     cache.source_path = input->data();
     cache.source_path_length = input->size();
-    cache.source_language = GRANIT_SHADER_TOOLS_SOURCE_HLSL;
+    cache.source_language = GRANIT_SHADER_SOURCE_LANGUAGE_HLSL;
     cache.wgsl_output_path = wgsl_output->data();
     cache.wgsl_output_path_length = wgsl_output->size();
     cache.spirv_output_path = spirv_output->data();
@@ -523,7 +521,7 @@ int compile_hlsl_shader(int argc, char** argv) {
   asset_desc.struct_size = sizeof(asset_desc);
   asset_desc.source_path = input->data();
   asset_desc.source_path_length = input->size();
-  asset_desc.source_language = GRANIT_SHADER_TOOLS_SOURCE_HLSL;
+  asset_desc.source_language = GRANIT_SHADER_SOURCE_LANGUAGE_HLSL;
   asset_desc.wgsl_path = wgsl_output->data();
   asset_desc.wgsl_path_length = wgsl_output->size();
   asset_desc.spirv_path = spirv_output->data();
@@ -568,13 +566,13 @@ int compile_glsl_shader(int argc, char** argv) {
     std::cerr << "可选 --glslang-revision 与 --tint-revision 可覆盖自动二进制身份\n";
     return 2;
   }
-  const auto stage_value = *stage == "vertex"     ? GRANIT_SHADER_TOOLS_STAGE_VERTEX
-                           : *stage == "fragment" ? GRANIT_SHADER_TOOLS_STAGE_FRAGMENT
-                                                  : GRANIT_SHADER_TOOLS_STAGE_COMPUTE;
+  const auto stage_value = *stage == "vertex"     ? GRANIT_SHADER_STAGE_VERTEX
+                           : *stage == "fragment" ? GRANIT_SHADER_STAGE_FRAGMENT
+                                                  : GRANIT_SHADER_STAGE_COMPUTE;
   const auto backend_mask = !asset_backend || *asset_backend == "all"
-                                ? GRANIT_SHADER_TOOLS_ASSET_BACKEND_ALL
-                            : *asset_backend == "vulkan" ? GRANIT_SHADER_TOOLS_ASSET_BACKEND_VULKAN
-                                                         : GRANIT_SHADER_TOOLS_ASSET_BACKEND_WEBGPU;
+                                ? GRANIT_SHADER_BACKEND_ALL_BITS
+                            : *asset_backend == "vulkan" ? GRANIT_SHADER_BACKEND_VULKAN_BIT
+                                                         : GRANIT_SHADER_BACKEND_WEBGPU_BIT;
   const auto glslang_identity =
       asset ? resolve_tool_identity(*glslang, glslang_revision) : std::optional<std::string>{""};
   const auto tint_identity =
@@ -586,12 +584,12 @@ int compile_glsl_shader(int argc, char** argv) {
   const std::string revisions = "glslang=" + *glslang_identity + ";tint=" + *tint_identity;
   constexpr std::string_view target = "vulkan1.3+webgpu-portable";
   constexpr std::string_view options = "source=glsl;spirv=vulkan1.3;bridge=spirv1.3";
-  if (asset && backend_mask == GRANIT_SHADER_TOOLS_ASSET_BACKEND_ALL) {
+  if (asset && backend_mask == GRANIT_SHADER_BACKEND_ALL_BITS) {
     granit_shader_tools_cache_desc cache{};
     cache.struct_size = sizeof(cache);
     cache.source_path = input->data();
     cache.source_path_length = input->size();
-    cache.source_language = GRANIT_SHADER_TOOLS_SOURCE_GLSL;
+    cache.source_language = GRANIT_SHADER_SOURCE_LANGUAGE_GLSL;
     cache.wgsl_output_path = wgsl_output->data();
     cache.wgsl_output_path_length = wgsl_output->size();
     cache.spirv_output_path = spirv_output->data();
@@ -645,7 +643,7 @@ int compile_glsl_shader(int argc, char** argv) {
   asset_desc.struct_size = sizeof(asset_desc);
   asset_desc.source_path = input->data();
   asset_desc.source_path_length = input->size();
-  asset_desc.source_language = GRANIT_SHADER_TOOLS_SOURCE_GLSL;
+  asset_desc.source_language = GRANIT_SHADER_SOURCE_LANGUAGE_GLSL;
   asset_desc.wgsl_path = wgsl_output->data();
   asset_desc.wgsl_path_length = wgsl_output->size();
   asset_desc.spirv_path = spirv_output->data();
@@ -811,10 +809,10 @@ int inspect_shader(const char* path, bool verify, bool json = false) {
   desc.input_path_length = std::char_traits<char>::length(path);
   auto [status, result] = granit::shader_tools::inspect_spirv(desc);
   const auto info = result.info();
-  const auto stage = info.stage == GRANIT_SHADER_TOOLS_STAGE_VERTEX     ? "vertex"
-                     : info.stage == GRANIT_SHADER_TOOLS_STAGE_FRAGMENT ? "fragment"
-                     : info.stage == GRANIT_SHADER_TOOLS_STAGE_COMPUTE  ? "compute"
-                                                                        : "unsupported";
+  const auto stage = info.stage == granit::shader_stage::vertex     ? "vertex"
+                     : info.stage == granit::shader_stage::fragment ? "fragment"
+                     : info.stage == granit::shader_stage::compute  ? "compute"
+                                                                    : "unsupported";
   if (json && status.ok())
     print_json(result, info, stage);
   else if (verify && status.ok())
@@ -826,10 +824,10 @@ int inspect_shader(const char* path, bool verify, bool json = false) {
 }
 
 const char* asset_backend_name(uint32_t backend) {
-  return backend == GRANIT_SHADER_TOOLS_ASSET_BACKEND_VULKAN ? "vulkan" : "webgpu";
+  return backend == GRANIT_SHADER_BACKEND_VULKAN_BIT ? "vulkan" : "webgpu";
 }
 
-int print_target_capabilities(uint32_t backend) {
+int print_target_capabilities(granit::shader_backend backend) {
   const auto [status, capabilities] = granit::shader_tools::target_capabilities(backend);
   if (status.failed()) {
     std::cerr << "不支持请求的 Shader 目标档位\n";
@@ -884,9 +882,9 @@ int main(int argc, char** argv) {
       std::string_view{argv[2]} == "--target") {
     const std::string_view target{argv[3]};
     if (target == "vulkan-portable")
-      return print_target_capabilities(GRANIT_SHADER_TOOLS_ASSET_BACKEND_VULKAN);
+      return print_target_capabilities(granit::shader_backend::vulkan);
     if (target == "webgpu-portable")
-      return print_target_capabilities(GRANIT_SHADER_TOOLS_ASSET_BACKEND_WEBGPU);
+      return print_target_capabilities(granit::shader_backend::webgpu);
     std::cerr << "未知 Shader 目标：" << target << '\n';
     return 2;
   }

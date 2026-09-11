@@ -57,8 +57,8 @@ extern "C" granit_result granit_shader_create_from_asset(granit_renderer rendere
     const auto backend = capabilities.backend == GRANIT_RENDERER_BACKEND_VULKAN
                              ? granit::tools::shader_asset_backend::vulkan
                              : granit::tools::shader_asset_backend::webgpu;
-    const auto* variant = granit::tools::find_shader_asset_variant(
-        asset, backend, granit::tools::shader_asset_profile::portable);
+    const auto* variant =
+        granit::tools::find_shader_asset_variant(asset, backend, granit::shader_profile::portable);
     if (variant == nullptr || (variant->required_features & ~capabilities.supported_features) != 0)
       return GRANIT_ERROR_UNSUPPORTED;
     const auto sidecar = std::span{static_cast<const std::byte*>(desc->sidecar_data),
@@ -67,7 +67,7 @@ extern "C" granit_result granit_shader_create_from_asset(granit_renderer rendere
         granit::tools::shader_asset_error::success)
       return GRANIT_ERROR_INVALID_ARGUMENT;
     granit_shader_desc shader_desc = GRANIT_SHADER_DESC_INIT;
-    shader_desc.stage = asset.stage;
+    shader_desc.stage = static_cast<granit_shader_stage>(asset.stage);
     shader_desc.code_format = backend == granit::tools::shader_asset_backend::vulkan
                                   ? GRANIT_SHADER_CODE_FORMAT_SPIRV
                                   : GRANIT_SHADER_CODE_FORMAT_WGSL;
@@ -103,7 +103,7 @@ extern "C" granit_result granit_shader_asset_inspect(const void* manifest_data,
     return GRANIT_ERROR_INVALID_ARGUMENT;
 
   info->reserved = 0;
-  info->stage = asset.stage;
+  info->stage = static_cast<granit_shader_stage>(asset.stage);
   info->entry_point_length = static_cast<std::uint32_t>(asset.entry_point.size());
   info->variant_count = asset.variant_count;
   std::memcpy(info->content_id, asset.content_id.data(), asset.content_id.size());
@@ -114,7 +114,7 @@ extern "C" granit_result granit_shader_asset_inspect(const void* manifest_data,
     destination.backend = source.backend == granit::tools::shader_asset_backend::vulkan
                               ? GRANIT_RENDERER_BACKEND_VULKAN
                               : GRANIT_RENDERER_BACKEND_WEBGPU;
-    destination.code_format = source.code_format == granit::tools::shader_asset_code_format::spirv
+    destination.code_format = source.code_format == granit::shader_code_format::spirv
                                   ? GRANIT_SHADER_CODE_FORMAT_SPIRV
                                   : GRANIT_SHADER_CODE_FORMAT_WGSL;
     destination.profile = static_cast<std::uint32_t>(source.profile);

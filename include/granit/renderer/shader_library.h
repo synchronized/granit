@@ -15,10 +15,6 @@
 /** 属于 Renderer 的 Shader Library 句柄。零值无效。 */
 typedef granit_handle granit_shader_library;
 
-typedef uint32_t granit_shader_library_backend_flags;
-#define GRANIT_SHADER_LIBRARY_BACKEND_VULKAN_BIT (UINT32_C(1) << 0)
-#define GRANIT_SHADER_LIBRARY_BACKEND_WEBGPU_BIT (UINT32_C(1) << 1)
-
 /**
  * Shader Library 创建描述。
  *
@@ -39,7 +35,7 @@ typedef struct granit_shader_library_desc {
 /** 已验证 Shader Library 的稳定摘要。 */
 typedef struct granit_shader_library_info {
   uint32_t struct_size;
-  granit_shader_library_backend_flags backend_flags;
+  granit_shader_backend_flags backend_flags;
   granit_shader_digest content_digest;
   uint32_t shader_count;
   uint32_t variant_count;

@@ -81,23 +81,23 @@ bool zero_range(std::span<const std::byte> bytes) noexcept {
 }
 
 std::uint32_t backend_bit(shader_asset_backend backend) noexcept {
-  return backend == shader_asset_backend::vulkan   ? shader_library_backend_vulkan
-         : backend == shader_asset_backend::webgpu ? shader_library_backend_webgpu
+  return backend == shader_asset_backend::vulkan   ? GRANIT_SHADER_BACKEND_VULKAN_BIT
+         : backend == shader_asset_backend::webgpu ? GRANIT_SHADER_BACKEND_WEBGPU_BIT
                                                    : 0;
 }
 
 bool valid_variant(const shader_library_variant& variant) noexcept {
   const auto matching_format = (variant.backend == shader_asset_backend::vulkan &&
-                                variant.code_format == shader_asset_code_format::spirv) ||
+                                variant.code_format == shader_code_format::spirv) ||
                                (variant.backend == shader_asset_backend::webgpu &&
-                                variant.code_format == shader_asset_code_format::wgsl);
-  return matching_format && variant.profile == shader_asset_profile::portable;
+                                variant.code_format == shader_code_format::wgsl);
+  return matching_format && variant.profile == shader_profile::portable;
 }
 
 struct encoded_shader {
   shader_cache_key content_id{};
   shader_cache_key cache_key{};
-  std::uint32_t stage = 0;
+  shader_stage stage{};
   std::string entry_point;
   std::string reflection_json;
   std::vector<shader_library_variant> variants;
@@ -135,7 +135,7 @@ shader_library_error encode_shader_library(const shader_library_encode_desc& des
                                            std::vector<std::byte>& output) noexcept {
   output.clear();
   if (desc.assets.empty() || desc.backend_mask == 0 ||
-      (desc.backend_mask & ~shader_library_backend_all) != 0) {
+      (desc.backend_mask & ~GRANIT_SHADER_BACKEND_ALL_BITS) != 0) {
     return shader_library_error::invalid_argument;
   }
   try {
@@ -155,8 +155,7 @@ shader_library_error encode_shader_library(const shader_library_encode_desc& des
       for (const auto backend : {shader_asset_backend::webgpu, shader_asset_backend::vulkan}) {
         if ((desc.backend_mask & backend_bit(backend)) == 0)
           continue;
-        const auto* variant =
-            find_shader_asset_variant(asset, backend, shader_asset_profile::portable);
+        const auto* variant = find_shader_asset_variant(asset, backend, shader_profile::portable);
         const auto bytes = source_payload(source, backend);
         if (variant == nullptr || bytes.empty())
           return shader_library_error::missing_payload;
@@ -241,7 +240,7 @@ shader_library_error encode_shader_library(const shader_library_encode_desc& des
       std::ranges::copy(shader.content_id, output.begin() + static_cast<std::ptrdiff_t>(record));
       std::ranges::copy(shader.cache_key,
                         output.begin() + static_cast<std::ptrdiff_t>(record + 32));
-      write_u32(output, record + 64, shader.stage);
+      write_u32(output, record + 64, static_cast<std::uint32_t>(shader.stage));
       write_u64(output, record + 72, next_string);
       write_u64(output, record + 80, shader.reflection_json.size());
       std::memcpy(output.data() + next_string, shader.reflection_json.data(),
@@ -313,7 +312,7 @@ shader_library_error decode_shader_library(std::span<const std::byte> bytes,
   const auto payload_data_offset = read_u64(bytes, 72);
   if (read_u32(bytes, 12) != header_size || read_u64(bytes, 16) != bytes.size() ||
       shader_count == 0 || variant_count == 0 || payload_count == 0 || backend_mask == 0 ||
-      (backend_mask & ~shader_library_backend_all) != 0 || shader_offset != header_size ||
+      (backend_mask & ~GRANIT_SHADER_BACKEND_ALL_BITS) != 0 || shader_offset != header_size ||
       !zero_range(bytes.subspan(112, 16))) {
     return shader_library_error::invalid_layout;
   }
@@ -346,15 +345,17 @@ shader_library_error decode_shader_library(std::span<const std::byte> bytes,
       shader_library_shader shader;
       std::ranges::copy(bytes.subspan(record, 32), shader.content_id.begin());
       std::ranges::copy(bytes.subspan(record + 32, 32), shader.cache_key.begin());
-      shader.stage = read_u32(bytes, record + 64);
+      const auto stage = read_u32(bytes, record + 64);
+      shader.stage = static_cast<shader_stage>(stage);
       const auto reflection_offset = read_u64(bytes, record + 72);
       const auto reflection_size = read_u64(bytes, record + 80);
       const auto entry_offset = read_u64(bytes, record + 88);
       const auto entry_size = read_u64(bytes, record + 96);
       const auto first_variant = read_u32(bytes, record + 104);
       const auto shader_variant_count = read_u32(bytes, record + 108);
-      if (shader.stage < 1 || shader.stage > 3 || reflection_size == 0 || entry_size == 0 ||
-          reflection_offset != next_string ||
+      if ((shader.stage != shader_stage::vertex && shader.stage != shader_stage::fragment &&
+           shader.stage != shader_stage::compute) ||
+          reflection_size == 0 || entry_size == 0 || reflection_offset != next_string ||
           !valid_range(reflection_offset, reflection_size, string_offset, payload_data_offset) ||
           entry_offset != reflection_offset + reflection_size ||
           !valid_range(entry_offset, entry_size, string_offset, payload_data_offset) ||
@@ -376,9 +377,8 @@ shader_library_error decode_shader_library(std::span<const std::byte> bytes,
             static_cast<std::size_t>(variant_offset) + (next_variant + index) * variant_record_size;
         shader_library_variant variant{
             .backend = static_cast<shader_asset_backend>(read_u32(bytes, variant_record)),
-            .code_format =
-                static_cast<shader_asset_code_format>(read_u32(bytes, variant_record + 4)),
-            .profile = static_cast<shader_asset_profile>(read_u32(bytes, variant_record + 8)),
+            .code_format = static_cast<shader_code_format>(read_u32(bytes, variant_record + 4)),
+            .profile = static_cast<shader_profile>(read_u32(bytes, variant_record + 8)),
             .required_features = read_u64(bytes, variant_record + 16),
             .payload_index = read_u32(bytes, variant_record + 24)};
         std::ranges::copy(bytes.subspan(variant_record + 32, 32), variant.payload_digest.begin());

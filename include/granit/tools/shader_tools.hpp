@@ -5,6 +5,7 @@
 #define GRANIT_SHADER_TOOLS_HPP_
 
 #include <granit/core/result.hpp>
+#include <granit/core/shader_types.hpp>
 #include <granit/tools/shader_tools.h>
 
 #include <string>
@@ -16,7 +17,7 @@ namespace granit::shader_tools {
 struct result_info {
   ::granit::result status = ::granit::result::invalid_handle;
   std::string_view entry_point;
-  uint32_t stage = 0;
+  shader_stage stage = shader_stage::vertex;
   std::string_view output;
   std::string_view diagnostic;
 };
@@ -79,7 +80,7 @@ public:
       return {};
     return {::granit::from_native(value.status),
             {value.entry_point, static_cast<std::size_t>(value.entry_point_length)},
-            value.stage,
+            static_cast<shader_stage>(value.stage),
             {value.output, static_cast<std::size_t>(value.output_length)},
             {value.diagnostic, static_cast<std::size_t>(value.diagnostic_length)}};
   }
@@ -242,10 +243,12 @@ restore_asset_cache(const granit_shader_tools_cache_desc& desc) noexcept {
 }
 
 inline std::pair<::granit::result, granit_shader_tools_target_capabilities>
-target_capabilities(uint32_t backend, uint32_t profile = GRANIT_SHADER_PROFILE_PORTABLE) noexcept {
+target_capabilities(shader_backend backend,
+                    shader_profile profile = shader_profile::portable) noexcept {
   granit_shader_tools_target_capabilities capabilities =
       GRANIT_SHADER_TOOLS_TARGET_CAPABILITIES_INIT;
-  const auto status = granit_shader_tools_get_target_capabilities(backend, profile, &capabilities);
+  const auto status = granit_shader_tools_get_target_capabilities(
+      static_cast<std::uint32_t>(backend), static_cast<std::uint32_t>(profile), &capabilities);
   return {::granit::from_native(status), capabilities};
 }
 

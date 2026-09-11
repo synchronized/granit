@@ -24,7 +24,7 @@ int main(int argc, char** argv) {
   if (status.failed() || !result)
     return 2;
   const auto info = result.info();
-  if (info.status.failed() || info.stage != GRANIT_SHADER_TOOLS_STAGE_FRAGMENT ||
+  if (info.status.failed() || info.stage != granit::shader_stage::fragment ||
       info.entry_point.empty() || info.output.find("schema,1") == std::string_view::npos)
     return 3;
   if (result.binding_count() != 3)

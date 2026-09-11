@@ -91,7 +91,7 @@ int main() {
   granit::renderer_shader_capabilities shader_capabilities;
   if ((renderer.get_shader_capabilities(shader_capabilities)).failed() ||
       shader_capabilities.backend != granit::renderer_backend::vulkan ||
-      shader_capabilities.profile != GRANIT_SHADER_PROFILE_PORTABLE)
+      shader_capabilities.profile != granit::shader_profile::portable)
     return 11;
   const std::array shader_variants{
       granit::shader_variant_requirement{.backend = granit::renderer_backend::vulkan}};

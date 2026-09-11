@@ -13,14 +13,13 @@ int main(int argc, char** argv) {
   if (argc != 4)
     return 1;
   auto [target_status, target_capabilities] =
-      granit::shader_tools::target_capabilities(GRANIT_SHADER_TOOLS_ASSET_BACKEND_VULKAN);
-  if (target_status.failed() ||
-      target_capabilities.backend != GRANIT_SHADER_TOOLS_ASSET_BACKEND_VULKAN ||
+      granit::shader_tools::target_capabilities(granit::shader_backend::vulkan);
+  if (target_status.failed() || target_capabilities.backend != GRANIT_SHADER_BACKEND_VULKAN_BIT ||
       target_capabilities.profile != GRANIT_SHADER_PROFILE_PORTABLE ||
       target_capabilities.supported_features != 0)
     return 14;
   std::tie(target_status, target_capabilities) =
-      granit::shader_tools::target_capabilities(GRANIT_SHADER_TOOLS_ASSET_BACKEND_ALL);
+      granit::shader_tools::target_capabilities(granit::shader_backend::all);
   if (target_status != granit::result::unsupported)
     return 15;
   granit_shader_tools_inspect_desc inspect{};
@@ -42,7 +41,7 @@ int main(int argc, char** argv) {
   asset.struct_size = sizeof(asset);
   asset.source_path = argv[2];
   asset.source_path_length = std::strlen(argv[2]);
-  asset.source_language = GRANIT_SHADER_TOOLS_SOURCE_WGSL;
+  asset.source_language = GRANIT_SHADER_SOURCE_LANGUAGE_WGSL;
   asset.wgsl_path = argv[2];
   asset.wgsl_path_length = std::strlen(argv[2]);
   asset.spirv_path = argv[1];
@@ -55,7 +54,7 @@ int main(int argc, char** argv) {
   asset.target_environment_length = target.size();
   asset.compile_options = options.data();
   asset.compile_options_length = options.size();
-  asset.backend_mask = GRANIT_SHADER_TOOLS_ASSET_BACKEND_ALL;
+  asset.backend_mask = GRANIT_SHADER_BACKEND_ALL_BITS;
   asset.required_features = GRANIT_SHADER_FEATURE_FLOAT16_BIT;
   auto [unsupported_status, unsupported_hit] = result.write_asset(asset);
   if (unsupported_status != granit::result::unsupported || unsupported_hit)
@@ -74,21 +73,21 @@ int main(int argc, char** argv) {
   cache.struct_size = sizeof(cache);
   cache.source_path = argv[2];
   cache.source_path_length = std::strlen(argv[2]);
-  cache.source_language = GRANIT_SHADER_TOOLS_SOURCE_WGSL;
+  cache.source_language = GRANIT_SHADER_SOURCE_LANGUAGE_WGSL;
   cache.spirv_output_path = restored.data();
   cache.spirv_output_path_length = restored.size();
   cache.asset_path = output.data();
   cache.asset_path_length = output.size();
   cache.entry_point = "main";
   cache.entry_point_length = 4;
-  cache.stage = GRANIT_SHADER_TOOLS_STAGE_COMPUTE;
+  cache.stage = GRANIT_SHADER_STAGE_COMPUTE;
   cache.tint_revision = revision.data();
   cache.tint_revision_length = revision.size();
   cache.target_environment = target.data();
   cache.target_environment_length = target.size();
   cache.compile_options = options.data();
   cache.compile_options_length = options.size();
-  cache.backend_mask = GRANIT_SHADER_TOOLS_ASSET_BACKEND_ALL;
+  cache.backend_mask = GRANIT_SHADER_BACKEND_ALL_BITS;
   cache.required_features = 0;
   auto [restore_status, restored_hit] = granit::shader_tools::restore_asset_cache(cache);
   if (restore_status.failed())
@@ -141,8 +140,8 @@ int main(int argc, char** argv) {
     return 9;
   asset.compile_options = options.data();
   asset.compile_options_length = options.size();
-  asset.backend_mask = GRANIT_SHADER_TOOLS_ASSET_BACKEND_WEBGPU;
-  cache.backend_mask = GRANIT_SHADER_TOOLS_ASSET_BACKEND_WEBGPU;
+  asset.backend_mask = GRANIT_SHADER_BACKEND_WEBGPU_BIT;
+  cache.backend_mask = GRANIT_SHADER_BACKEND_WEBGPU_BIT;
   std::tie(status, cache_hit) = result.write_asset(asset);
   if (status.failed() || cache_hit || !std::filesystem::exists(output + ".wgsl") ||
       std::filesystem::exists(output + ".spv"))
@@ -150,8 +149,8 @@ int main(int argc, char** argv) {
   std::tie(restore_status, restored_hit) = granit::shader_tools::restore_asset_cache(cache);
   if (restore_status.failed() || restored_hit)
     return 11;
-  asset.backend_mask = GRANIT_SHADER_TOOLS_ASSET_BACKEND_VULKAN;
-  cache.backend_mask = GRANIT_SHADER_TOOLS_ASSET_BACKEND_VULKAN;
+  asset.backend_mask = GRANIT_SHADER_BACKEND_VULKAN_BIT;
+  cache.backend_mask = GRANIT_SHADER_BACKEND_VULKAN_BIT;
   std::tie(status, cache_hit) = result.write_asset(asset);
   if (status.failed() || cache_hit || std::filesystem::exists(output + ".wgsl") ||
       !std::filesystem::exists(output + ".spv"))

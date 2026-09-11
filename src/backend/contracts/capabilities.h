@@ -6,6 +6,7 @@
 
 #include <cstdint>
 
+#include <granit/core/shader_types.h>
 #include <granit/renderer/resource_types.h>
 
 namespace granit::detail {
@@ -28,7 +29,7 @@ struct backend_capabilities {
   float max_sampler_anisotropy{1.0F};
   std::uint64_t renderer_features{};
   std::uint64_t shader_features{};
-  std::uint32_t shader_profile{1};
+  granit_shader_profile shader_profile{GRANIT_SHADER_PROFILE_PORTABLE};
   std::uint32_t texture_compression_features{};
 
   [[nodiscard]] bool supports_buffer_binding(backend_buffer_binding_type type, std::uint64_t offset,

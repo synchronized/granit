@@ -134,6 +134,8 @@ target_sources(
       "${PROJECT_SOURCE_DIR}/include/granit/core/result.h"
       "${PROJECT_SOURCE_DIR}/include/granit/core/result.hpp"
       "${PROJECT_SOURCE_DIR}/include/granit/core/shader_features.h"
+      "${PROJECT_SOURCE_DIR}/include/granit/core/shader_types.h"
+      "${PROJECT_SOURCE_DIR}/include/granit/core/shader_types.hpp"
       "${PROJECT_SOURCE_DIR}/include/granit/renderer/sampler.h"
       "${PROJECT_SOURCE_DIR}/include/granit/renderer/sampler.hpp"
       "${PROJECT_SOURCE_DIR}/include/granit/renderer/shader.h"

@@ -35,7 +35,8 @@ add_library(
 )
 target_compile_features(granit_shader_asset_storage PUBLIC cxx_std_20)
 target_include_directories(
-  granit_shader_asset_storage PUBLIC "${PROJECT_SOURCE_DIR}/tools" "${PROJECT_SOURCE_DIR}/src"
+  granit_shader_asset_storage
+  PUBLIC "${PROJECT_SOURCE_DIR}/tools" "${PROJECT_SOURCE_DIR}/src" "${PROJECT_SOURCE_DIR}/include"
 )
 granit_target_compile_warnings(granit_shader_asset_storage)
 set_target_properties(

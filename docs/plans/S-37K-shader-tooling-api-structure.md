@@ -5,9 +5,8 @@
 
 ## 状态
 
-**已规划，待实施。** 本任务属于 0.21.0 的 Shader Library 收尾工作。目标是在不改变运行时
-`.grshlib` 契约的前提下，统一离线编译接口，拆开编译、格式、文件存储、CLI 和 CMake 职责，并将
-单 Shader 中间产物明确为工具私有对象。
+**实现中。** S-37K1 已完成共享 Shader 类型收敛：Renderer、ShaderTools 与私有格式编码器统一使用
+Core 中的 stage、源语言、代码格式、目标后端、profile 和摘要类型。S-37K2～S-37K6 待实施。
 
 ## 背景与目标
 
@@ -201,8 +200,8 @@ tools/shader_cli/
 
 ## 实施顺序
 
-1. **S-37K1 共享类型收敛**：增加 Core Shader 类型头；迁移 Renderer、ShaderTools、格式编码器和
-   测试；删除重复宏、枚举和固定长度数组别名。
+1. **S-37K1 共享类型收敛（已完成）**：增加 Core Shader 类型头；迁移 Renderer、ShaderTools、
+   格式编码器和测试；删除重复宏、枚举和固定长度数组别名。
 2. **S-37K2 统一 Compiler API**：引入 Compiler 配置、统一编译描述和单一 `compile()`；把三种
    语言差异移入私有 frontend；同步 C11 与 C++20 API。
 3. **S-37K3 Compilation 与 Reflection**：将模糊的 Result 句柄拆成编译结果和反射视图；统一结构化

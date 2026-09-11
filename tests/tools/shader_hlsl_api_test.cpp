@@ -47,7 +47,7 @@ int main(int argc, char** argv) {
   desc.input_path_length = input.size();
   desc.entry_point = "fragment_main";
   desc.entry_point_length = 13;
-  desc.stage = GRANIT_SHADER_TOOLS_STAGE_FRAGMENT;
+  desc.stage = GRANIT_SHADER_STAGE_FRAGMENT;
   desc.spirv_output_path = spirv.data();
   desc.spirv_output_path_length = spirv.size();
   desc.wgsl_output_path = wgsl.data();
@@ -62,7 +62,7 @@ int main(int argc, char** argv) {
   desc.define_count = 1;
 
   auto [status, result] = granit::shader_tools::compile_hlsl(desc);
-  if (status.failed() || result.info().stage != GRANIT_SHADER_TOOLS_STAGE_FRAGMENT ||
+  if (status.failed() || result.info().stage != granit::shader_stage::fragment ||
       result.binding_count() != 3 || result.override_count() != 1 ||
       !std::filesystem::exists(spirv) || !std::filesystem::exists(wgsl) ||
       read_spirv_version(spirv) < UINT32_C(0x00010600) ||

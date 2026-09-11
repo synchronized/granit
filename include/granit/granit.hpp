@@ -8,6 +8,7 @@
 
 #include <granit/core/diagnostic.hpp>
 #include <granit/core/result.hpp>
+#include <granit/core/shader_types.hpp>
 #include <granit/core/types.hpp>
 #include <granit/granit.h>
 #include <granit/math/types.hpp>

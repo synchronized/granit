@@ -9,6 +9,7 @@
 
 #include <granit/core/result.h>
 #include <granit/core/shader_features.h>
+#include <granit/core/shader_types.h>
 #include <granit/tools/shader_tools_export.h>
 
 /** ShaderTools 操作结果句柄。零值无效。 */
@@ -20,10 +21,6 @@ typedef struct granit_shader_tools_expected_binding {
   uint32_t group;
   uint32_t binding;
 } granit_shader_tools_expected_binding;
-
-#define GRANIT_SHADER_TOOLS_STAGE_VERTEX UINT32_C(1)
-#define GRANIT_SHADER_TOOLS_STAGE_FRAGMENT UINT32_C(2)
-#define GRANIT_SHADER_TOOLS_STAGE_COMPUTE UINT32_C(3)
 
 #define GRANIT_SHADER_TOOLS_BINDING_UNIFORM_BUFFER UINT32_C(1)
 #define GRANIT_SHADER_TOOLS_BINDING_STORAGE_BUFFER UINT32_C(2)
@@ -39,19 +36,11 @@ typedef struct granit_shader_tools_expected_binding {
 #define GRANIT_SHADER_TOOLS_SCALAR_SINT UINT32_C(2)
 #define GRANIT_SHADER_TOOLS_SCALAR_UINT UINT32_C(3)
 
-#define GRANIT_SHADER_TOOLS_ASSET_BACKEND_VULKAN UINT32_C(1)
-#define GRANIT_SHADER_TOOLS_ASSET_BACKEND_WEBGPU UINT32_C(2)
-#define GRANIT_SHADER_TOOLS_ASSET_BACKEND_ALL UINT32_C(3)
-
-#define GRANIT_SHADER_TOOLS_SOURCE_WGSL UINT32_C(1)
-#define GRANIT_SHADER_TOOLS_SOURCE_HLSL UINT32_C(2)
-#define GRANIT_SHADER_TOOLS_SOURCE_GLSL UINT32_C(3)
-
 /** ShaderTools 内置目标档位的静态能力；与构建机 GPU 无关。 */
 typedef struct granit_shader_tools_target_capabilities {
   uint32_t struct_size;
-  uint32_t backend;
-  uint32_t profile;
+  granit_shader_backend_flags backend;
+  granit_shader_profile profile;
   uint32_t reserved;
   granit_shader_feature_flags supported_features;
 } granit_shader_tools_target_capabilities;
@@ -69,7 +58,7 @@ typedef struct granit_shader_tools_compile_desc {
   uint64_t input_path_length;
   const char* entry_point;
   uint64_t entry_point_length;
-  uint32_t stage;
+  granit_shader_stage stage;
   const char* output_path;
   uint64_t output_path_length;
   uint32_t validate_binding_set;
@@ -100,7 +89,7 @@ typedef struct granit_shader_tools_hlsl_compile_desc {
   uint64_t input_path_length;
   const char* entry_point;
   uint64_t entry_point_length;
-  uint32_t stage;
+  granit_shader_stage stage;
   const char* spirv_output_path;
   uint64_t spirv_output_path_length;
   const char* wgsl_output_path;
@@ -125,7 +114,7 @@ typedef struct granit_shader_tools_glsl_compile_desc {
   uint64_t input_path_length;
   const char* entry_point;
   uint64_t entry_point_length;
-  uint32_t stage;
+  granit_shader_stage stage;
   const char* spirv_output_path;
   uint64_t spirv_output_path_length;
   const char* wgsl_output_path;
@@ -148,7 +137,7 @@ typedef struct granit_shader_tools_result_info {
   granit_result status;
   const char* entry_point;
   uint64_t entry_point_length;
-  uint32_t stage;
+  granit_shader_stage stage;
   const char* output;
   uint64_t output_length;
   const char* diagnostic;
@@ -161,7 +150,7 @@ typedef struct granit_shader_tools_asset_desc {
   /** 用于缓存身份的原始源码；不作为 sidecar 写入。 */
   const char* source_path;
   uint64_t source_path_length;
-  uint32_t source_language;
+  granit_shader_source_language source_language;
   /** 已生成的 WebGPU WGSL 载荷。 */
   const char* wgsl_path;
   uint64_t wgsl_path_length;
@@ -175,8 +164,8 @@ typedef struct granit_shader_tools_asset_desc {
   uint64_t target_environment_length;
   const char* compile_options;
   uint64_t compile_options_length;
-  /** 要写入清单的后端位集合；必须是 GRANIT_SHADER_TOOLS_ASSET_BACKEND_* 的非零组合。 */
-  uint32_t backend_mask;
+  /** 要写入清单的后端位集合；必须是 GRANIT_SHADER_BACKEND_*_BIT 的非零组合。 */
+  granit_shader_backend_flags backend_mask;
   /** 所有导出变体必须支持的 GRANIT_SHADER_FEATURE_* 位集合。 */
   granit_shader_feature_flags required_features;
 } granit_shader_tools_asset_desc;
@@ -187,7 +176,7 @@ typedef struct granit_shader_tools_cache_desc {
   /** 用于重新计算缓存键的原始源码。 */
   const char* source_path;
   uint64_t source_path_length;
-  uint32_t source_language;
+  granit_shader_source_language source_language;
   /** 非 WGSL 前端命中缓存时恢复 WGSL 的目标；WGSL 前端可留空。 */
   const char* wgsl_output_path;
   uint64_t wgsl_output_path_length;
@@ -197,7 +186,7 @@ typedef struct granit_shader_tools_cache_desc {
   uint64_t asset_path_length;
   const char* entry_point;
   uint64_t entry_point_length;
-  uint32_t stage;
+  granit_shader_stage stage;
   const char* tint_revision;
   uint64_t tint_revision_length;
   const char* target_environment;
@@ -205,7 +194,7 @@ typedef struct granit_shader_tools_cache_desc {
   const char* compile_options;
   uint64_t compile_options_length;
   /** 期望资产包含的精确后端位集合；语义与 granit_shader_tools_asset_desc 相同。 */
-  uint32_t backend_mask;
+  granit_shader_backend_flags backend_mask;
   /** 期望资产使用的精确特性位集合。 */
   granit_shader_feature_flags required_features;
 } granit_shader_tools_cache_desc;
@@ -354,7 +343,8 @@ GRANIT_SHADER_TOOLS_API granit_result granit_shader_tools_restore_asset_cache(
 
 /** 查询内置目标档位支持的静态特性；当前 backend 使用 ASSET_BACKEND 单值。 */
 GRANIT_SHADER_TOOLS_API granit_result granit_shader_tools_get_target_capabilities(
-    uint32_t backend, uint32_t profile, granit_shader_tools_target_capabilities* capabilities);
+    granit_shader_backend_flags backend, granit_shader_profile profile,
+    granit_shader_tools_target_capabilities* capabilities);
 
 /** 销毁结果句柄。零值和已经销毁的句柄返回 GRANIT_ERROR_INVALID_HANDLE。 */
 GRANIT_SHADER_TOOLS_API granit_result

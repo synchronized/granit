@@ -14,11 +14,6 @@
 
 namespace granit::tools {
 
-inline constexpr std::uint32_t shader_library_backend_vulkan = UINT32_C(1) << 0;
-inline constexpr std::uint32_t shader_library_backend_webgpu = UINT32_C(1) << 1;
-inline constexpr std::uint32_t shader_library_backend_all =
-    shader_library_backend_vulkan | shader_library_backend_webgpu;
-
 enum class shader_library_error {
   success,
   invalid_argument,
@@ -40,13 +35,13 @@ struct shader_library_asset_source {
 
 struct shader_library_encode_desc {
   std::span<const shader_library_asset_source> assets;
-  std::uint32_t backend_mask = shader_library_backend_all;
+  granit_shader_backend_flags backend_mask = GRANIT_SHADER_BACKEND_ALL_BITS;
 };
 
 struct shader_library_variant {
   shader_asset_backend backend{};
-  shader_asset_code_format code_format{};
-  shader_asset_profile profile{};
+  shader_code_format code_format{};
+  shader_profile profile{};
   std::uint64_t required_features = 0;
   std::uint32_t payload_index = 0;
   shader_cache_key payload_digest{};
@@ -57,7 +52,7 @@ struct shader_library_variant {
 struct shader_library_shader {
   shader_cache_key content_id{};
   shader_cache_key cache_key{};
-  std::uint32_t stage = 0;
+  shader_stage stage{};
   std::string_view entry_point;
   std::string_view reflection_json;
   std::vector<shader_library_variant> variants;
@@ -70,7 +65,7 @@ struct shader_library_payload {
 
 struct shader_library_view {
   shader_cache_key content_digest{};
-  std::uint32_t backend_mask = 0;
+  granit_shader_backend_flags backend_mask = 0;
   std::vector<shader_library_shader> shaders;
   std::vector<shader_library_payload> payloads;
 };

@@ -12,6 +12,4 @@ typedef uint64_t granit_shader_feature_flags;
 #define GRANIT_SHADER_FEATURE_ALL_BITS                                                             \
   (GRANIT_SHADER_FEATURE_FLOAT16_BIT | GRANIT_SHADER_FEATURE_SUBGROUP_BIT)
 
-#define GRANIT_SHADER_PROFILE_PORTABLE UINT32_C(1)
-
 #endif

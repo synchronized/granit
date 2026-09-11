@@ -113,9 +113,9 @@ shader_asset_error store_shader_asset(const std::filesystem::path& path,
     const auto spirv_path = sidecar_path(path, ".spv");
     const auto wgsl_bytes = std::span{reinterpret_cast<const std::byte*>(wgsl.data()), wgsl.size()};
     const auto has_wgsl = find_shader_asset_variant(view, shader_asset_backend::webgpu,
-                                                    shader_asset_profile::portable) != nullptr;
+                                                    shader_profile::portable) != nullptr;
     const auto has_spirv = find_shader_asset_variant(view, shader_asset_backend::vulkan,
-                                                     shader_asset_profile::portable) != nullptr;
+                                                     shader_profile::portable) != nullptr;
     if (std::ranges::equal(read_file(path), manifest) &&
         (!has_wgsl || std::ranges::equal(read_file(wgsl_path), wgsl_bytes)) &&
         (!has_spirv || std::ranges::equal(read_file(spirv_path), spirv)) &&

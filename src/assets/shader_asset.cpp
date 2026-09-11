@@ -197,16 +197,16 @@ bool read_variant(std::span<const std::byte> bytes, std::size_t index,
                   shader_asset_variant& variant) noexcept {
   const auto offset = variant_offset + variant_size * index;
   variant.backend = static_cast<shader_asset_backend>(read_u32(bytes, offset));
-  variant.code_format = static_cast<shader_asset_code_format>(read_u32(bytes, offset + 4));
-  variant.profile = static_cast<shader_asset_profile>(read_u32(bytes, offset + 8));
+  variant.code_format = static_cast<shader_code_format>(read_u32(bytes, offset + 4));
+  variant.profile = static_cast<shader_profile>(read_u32(bytes, offset + 8));
   variant.required_features = read_u64(bytes, offset + 16);
   variant.byte_size = read_u64(bytes, offset + 24);
   std::ranges::copy(bytes.subspan(offset + 32, variant.digest.size()), variant.digest.begin());
   const auto valid_backend = variant.backend == shader_asset_backend::webgpu ||
                              variant.backend == shader_asset_backend::vulkan;
-  const auto valid_format = variant.code_format == shader_asset_code_format::wgsl ||
-                            variant.code_format == shader_asset_code_format::spirv;
-  return valid_backend && valid_format && variant.profile == shader_asset_profile::portable &&
+  const auto valid_format = variant.code_format == shader_code_format::wgsl ||
+                            variant.code_format == shader_code_format::spirv;
+  return valid_backend && valid_format && variant.profile == shader_profile::portable &&
          variant.byte_size != 0 && read_u32(bytes, offset + 12) == 0;
 }
 
@@ -255,7 +255,9 @@ shader_asset_error encode_shader_asset(const shader_asset_source& source,
                                        std::vector<std::byte>& output) noexcept {
   if (source.wgsl.empty() || source.spirv.empty() || source.spirv.size() % 4 != 0 ||
       source.reflection_json.empty() || source.backend_mask == 0 ||
-      (source.backend_mask & ~UINT32_C(3)) != 0 || source.stage < 1 || source.stage > 3 ||
+      (source.backend_mask & ~GRANIT_SHADER_BACKEND_ALL_BITS) != 0 ||
+      (source.stage != shader_stage::vertex && source.stage != shader_stage::fragment &&
+       source.stage != shader_stage::compute) ||
       source.entry_point.empty() || source.entry_point.size() > UINT32_MAX)
     return shader_asset_error::invalid_argument;
   const auto maximum = std::numeric_limits<std::size_t>::max() - header_size;
@@ -273,26 +275,26 @@ shader_asset_error encode_shader_asset(const shader_asset_source& source,
     write_u64(output, 24, source.reflection_json.size());
     const auto variant_count = static_cast<std::uint32_t>(std::popcount(source.backend_mask));
     write_u32(output, 32, variant_count);
-    write_u32(output, 36, source.stage);
+    write_u32(output, 36, static_cast<std::uint32_t>(source.stage));
     write_u32(output, 40, static_cast<std::uint32_t>(source.entry_point.size()));
     std::ranges::copy(source.cache_key, output.begin() + cache_key_offset);
     const auto wgsl_bytes =
         std::span{reinterpret_cast<const std::byte*>(source.wgsl.data()), source.wgsl.size()};
     std::size_t variant_index = 0;
-    if ((source.backend_mask & UINT32_C(2)) != 0) {
+    if ((source.backend_mask & GRANIT_SHADER_BACKEND_WEBGPU_BIT) != 0) {
       write_variant(output, variant_index++,
                     {.backend = shader_asset_backend::webgpu,
-                     .code_format = shader_asset_code_format::wgsl,
-                     .profile = shader_asset_profile::portable,
+                     .code_format = shader_code_format::wgsl,
+                     .profile = shader_profile::portable,
                      .required_features = source.required_features,
                      .byte_size = source.wgsl.size(),
                      .digest = payload_digest(wgsl_bytes)});
     }
-    if ((source.backend_mask & UINT32_C(1)) != 0) {
+    if ((source.backend_mask & GRANIT_SHADER_BACKEND_VULKAN_BIT) != 0) {
       write_variant(output, variant_index,
                     {.backend = shader_asset_backend::vulkan,
-                     .code_format = shader_asset_code_format::spirv,
-                     .profile = shader_asset_profile::portable,
+                     .code_format = shader_code_format::spirv,
+                     .profile = shader_profile::portable,
                      .required_features = source.required_features,
                      .byte_size = source.spirv.size(),
                      .digest = payload_digest(source.spirv)});
@@ -337,7 +339,7 @@ shader_asset_error decode_shader_asset(std::span<const std::byte> bytes,
     return shader_asset_error::digest_mismatch;
   output.reflection_json = {reinterpret_cast<const char*>(bytes.data() + reflection_offset),
                             static_cast<std::size_t>(reflection_size)};
-  output.stage = stage;
+  output.stage = static_cast<shader_stage>(stage);
   output.entry_point = {reinterpret_cast<const char*>(bytes.data() + entry_point_offset),
                         entry_point_size};
   std::ranges::copy(bytes.subspan(digest_offset, output.content_id.size()),
@@ -359,7 +361,7 @@ shader_asset_error decode_shader_asset(std::span<const std::byte> bytes,
 
 const shader_asset_variant* find_shader_asset_variant(const shader_asset_view& asset,
                                                       shader_asset_backend backend,
-                                                      shader_asset_profile profile) noexcept {
+                                                      shader_profile profile) noexcept {
   for (std::uint32_t index = 0; index < asset.variant_count; ++index) {
     if (asset.variants[index].backend == backend && asset.variants[index].profile == profile)
       return &asset.variants[index];
@@ -370,14 +372,14 @@ const shader_asset_variant* find_shader_asset_variant(const shader_asset_view& a
 shader_asset_error validate_shader_asset_payloads(const shader_asset_view& asset,
                                                   std::string_view wgsl,
                                                   std::span<const std::byte> spirv) noexcept {
-  const auto* wgsl_variant = find_shader_asset_variant(asset, shader_asset_backend::webgpu,
-                                                       shader_asset_profile::portable);
-  const auto* spirv_variant = find_shader_asset_variant(asset, shader_asset_backend::vulkan,
-                                                        shader_asset_profile::portable);
-  if ((wgsl_variant != nullptr && (wgsl_variant->code_format != shader_asset_code_format::wgsl ||
+  const auto* wgsl_variant =
+      find_shader_asset_variant(asset, shader_asset_backend::webgpu, shader_profile::portable);
+  const auto* spirv_variant =
+      find_shader_asset_variant(asset, shader_asset_backend::vulkan, shader_profile::portable);
+  if ((wgsl_variant != nullptr && (wgsl_variant->code_format != shader_code_format::wgsl ||
                                    wgsl.size() != wgsl_variant->byte_size)) ||
       (spirv_variant != nullptr &&
-       (spirv_variant->code_format != shader_asset_code_format::spirv ||
+       (spirv_variant->code_format != shader_code_format::spirv ||
         spirv.size() != spirv_variant->byte_size || spirv.size() % 4 != 0)))
     return shader_asset_error::invalid_layout;
   const auto wgsl_bytes = std::span{reinterpret_cast<const std::byte*>(wgsl.data()), wgsl.size()};
@@ -390,15 +392,14 @@ shader_asset_error validate_shader_asset_payloads(const shader_asset_view& asset
 shader_asset_error validate_shader_asset_payload(const shader_asset_view& asset,
                                                  shader_asset_backend backend,
                                                  std::span<const std::byte> payload) noexcept {
-  const auto* variant = find_shader_asset_variant(asset, backend, shader_asset_profile::portable);
+  const auto* variant = find_shader_asset_variant(asset, backend, shader_profile::portable);
   if (variant == nullptr)
     return shader_asset_error::invalid_argument;
-  const auto expected_format = backend == shader_asset_backend::vulkan
-                                   ? shader_asset_code_format::spirv
-                                   : shader_asset_code_format::wgsl;
+  const auto expected_format = backend == shader_asset_backend::vulkan ? shader_code_format::spirv
+                                                                       : shader_code_format::wgsl;
   if (variant->code_format != expected_format || payload.empty() ||
       payload.size() != variant->byte_size ||
-      (expected_format == shader_asset_code_format::spirv && payload.size() % 4 != 0))
+      (expected_format == shader_code_format::spirv && payload.size() % 4 != 0))
     return shader_asset_error::invalid_layout;
   return payload_digest(payload) == variant->digest ? shader_asset_error::success
                                                     : shader_asset_error::digest_mismatch;

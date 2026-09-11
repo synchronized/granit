@@ -225,10 +225,10 @@ TEST_CASE("测试资产存储允许按目标构建单后端 Library 并缓存清
   REQUIRE(std::filesystem::remove(path));
   CHECK(assets.reference(path).asset_id == reference.asset_id);
   std::vector<std::byte> library_bytes;
-  CHECK(assets.build_library(library_bytes, granit::tools::shader_library_backend_vulkan));
+  CHECK(assets.build_library(library_bytes, GRANIT_SHADER_BACKEND_VULKAN_BIT));
   granit::shader_library_info info;
   REQUIRE(granit::inspect_shader_library(library_bytes, info) == granit::result::success);
-  CHECK(info.backend_flags == GRANIT_SHADER_LIBRARY_BACKEND_VULKAN_BIT);
-  CHECK_FALSE(assets.build_library(library_bytes, granit::tools::shader_library_backend_webgpu));
+  CHECK(info.backends == granit::shader_backend::vulkan);
+  CHECK_FALSE(assets.build_library(library_bytes, GRANIT_SHADER_BACKEND_WEBGPU_BIT));
   CHECK_FALSE(assets.add(folder / "missing.grshader"));
 }

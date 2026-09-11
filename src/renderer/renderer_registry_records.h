@@ -84,7 +84,7 @@ struct renderer_registry::shader_record {
   std::unique_ptr<backend_shader_resource> native;
   granit_shader_stage stage{};
   std::string entry_point;
-  granit::tools::shader_cache_key content_id{};
+  granit::shader_cache_key content_id{};
 };
 struct renderer_registry::shader_library_record {
   resource_metadata metadata;
@@ -92,7 +92,7 @@ struct renderer_registry::shader_library_record {
   std::span<const std::byte> archive;
   granit::tools::shader_library_view view;
   std::mutex mutex;
-  std::vector<std::pair<granit::tools::shader_cache_key, std::shared_ptr<shader_record>>> shaders;
+  std::vector<std::pair<granit::shader_cache_key, std::shared_ptr<shader_record>>> shaders;
 };
 struct renderer_registry::bind_group_layout_record {
   resource_metadata metadata;

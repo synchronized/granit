@@ -76,6 +76,7 @@ add_library(
     headers/resource_types_h.c
     headers/sampler_h.c
     headers/shader_h.c
+    headers/shader_types_h.c
     headers/shader_library_h.c
     headers/result_h.c
     headers/surface_h.c
@@ -619,6 +620,7 @@ add_library(
     headers/resource_types_hpp.cpp
     headers/sampler_hpp.cpp
     headers/shader_hpp.cpp
+    headers/shader_types_hpp.cpp
     headers/shader_library_hpp.cpp
     headers/result_hpp.cpp
     headers/surface_hpp.cpp

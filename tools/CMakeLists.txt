@@ -143,7 +143,9 @@ if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
   )
   target_compile_features(granit_shader_asset_test PRIVATE cxx_std_20)
   target_include_directories(
-    granit_shader_asset_test PRIVATE "${PROJECT_SOURCE_DIR}/tools" "${PROJECT_SOURCE_DIR}/src"
+    granit_shader_asset_test
+    PRIVATE "${PROJECT_SOURCE_DIR}/tools" "${PROJECT_SOURCE_DIR}/src"
+            "${PROJECT_SOURCE_DIR}/include"
   )
   target_link_libraries(granit_shader_asset_test PRIVATE Threads::Threads)
   granit_target_compile_warnings(granit_shader_asset_test)
@@ -159,7 +161,9 @@ if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
     $<TARGET_OBJECTS:granit_internal_shader_asset_format>
   )
   target_compile_features(granit_shader_library_test PRIVATE cxx_std_20)
-  target_include_directories(granit_shader_library_test PRIVATE "${PROJECT_SOURCE_DIR}/src")
+  target_include_directories(
+    granit_shader_library_test PRIVATE "${PROJECT_SOURCE_DIR}/src" "${PROJECT_SOURCE_DIR}/include"
+  )
   granit_target_compile_warnings(granit_shader_library_test)
   granit_target_output_directories(granit_shader_library_test)
   add_test(NAME granit.shader_tools.library_codec COMMAND granit_shader_library_test)

@@ -32,9 +32,11 @@ int main() {
       make_shader_cache_key({wgsl, "wgsl", "main", "compute", "tint-r1", "vulkan1.3", ""});
   const auto second_key =
       make_shader_cache_key({wgsl, "wgsl", "other", "compute", "tint-r1", "vulkan1.3", ""});
-  if (encode_shader_asset({wgsl, spirv, reflection, first_key, 3, 0, 3, "main"}, first_manifest) !=
-          shader_asset_error::success ||
-      encode_shader_asset({wgsl, spirv, reflection, second_key, 3, 0, 3, "other"},
+  if (encode_shader_asset({wgsl, spirv, reflection, first_key, GRANIT_SHADER_BACKEND_ALL_BITS, 0,
+                           granit::shader_stage::compute, "main"},
+                          first_manifest) != shader_asset_error::success ||
+      encode_shader_asset({wgsl, spirv, reflection, second_key, GRANIT_SHADER_BACKEND_ALL_BITS, 0,
+                           granit::shader_stage::compute, "other"},
                           second_manifest) != shader_asset_error::success) {
     return 1;
   }
@@ -45,9 +47,9 @@ int main() {
   const std::array reversed{sources[1], sources[0]};
   std::vector<std::byte> first;
   std::vector<std::byte> second;
-  if (encode_shader_library({sources, shader_library_backend_all}, first) !=
+  if (encode_shader_library({sources, GRANIT_SHADER_BACKEND_ALL_BITS}, first) !=
           shader_library_error::success ||
-      encode_shader_library({reversed, shader_library_backend_all}, second) !=
+      encode_shader_library({reversed, GRANIT_SHADER_BACKEND_ALL_BITS}, second) !=
           shader_library_error::success ||
       first != second) {
     return 2;
@@ -55,7 +57,7 @@ int main() {
 
   shader_library_view library;
   if (decode_shader_library(first, library) != shader_library_error::success ||
-      library.backend_mask != shader_library_backend_all || library.shaders.size() != 2 ||
+      library.backend_mask != GRANIT_SHADER_BACKEND_ALL_BITS || library.shaders.size() != 2 ||
       library.payloads.size() != 2 || std::ranges::any_of(library.shaders, [](const auto& shader) {
         return shader.variants.size() != 2;
       })) {
@@ -73,7 +75,7 @@ int main() {
 
   const std::array duplicates{sources[0], sources[0]};
   std::vector<std::byte> deduplicated;
-  if (encode_shader_library({duplicates, shader_library_backend_all}, deduplicated) !=
+  if (encode_shader_library({duplicates, GRANIT_SHADER_BACKEND_ALL_BITS}, deduplicated) !=
           shader_library_error::success ||
       decode_shader_library(deduplicated, library) != shader_library_error::success ||
       library.shaders.size() != 1 || library.payloads.size() != 2) {
@@ -81,10 +83,10 @@ int main() {
   }
 
   std::vector<std::byte> vulkan_only;
-  if (encode_shader_library({sources, shader_library_backend_vulkan}, vulkan_only) !=
+  if (encode_shader_library({sources, GRANIT_SHADER_BACKEND_VULKAN_BIT}, vulkan_only) !=
           shader_library_error::success ||
       decode_shader_library(vulkan_only, library) != shader_library_error::success ||
-      library.backend_mask != shader_library_backend_vulkan || library.payloads.size() != 1 ||
+      library.backend_mask != GRANIT_SHADER_BACKEND_VULKAN_BIT || library.payloads.size() != 1 ||
       std::ranges::any_of(library.shaders, [](const auto& shader) {
         return shader.variants.size() != 1 ||
                shader.variants.front().backend != shader_asset_backend::vulkan;
@@ -94,7 +96,7 @@ int main() {
 
   auto missing_payload = sources;
   missing_payload[0].spirv = {};
-  if (encode_shader_library({missing_payload, shader_library_backend_vulkan}, second) !=
+  if (encode_shader_library({missing_payload, GRANIT_SHADER_BACKEND_VULKAN_BIT}, second) !=
       shader_library_error::missing_payload) {
     return 8;
   }

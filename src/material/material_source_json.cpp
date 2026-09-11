@@ -258,9 +258,9 @@ bool read_shader_asset(const std::filesystem::path& path, material_shader_code& 
       granit::tools::shader_asset_error::success) {
     return false;
   }
-  if (asset.stage == GRANIT_SHADER_STAGE_VERTEX) {
+  if (asset.stage == shader_stage::vertex) {
     code.stage = package_shader_stage::vertex;
-  } else if (asset.stage == GRANIT_SHADER_STAGE_FRAGMENT) {
+  } else if (asset.stage == shader_stage::fragment) {
     code.stage = package_shader_stage::fragment;
   } else {
     return false;

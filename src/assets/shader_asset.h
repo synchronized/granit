@@ -11,9 +11,9 @@
 #include <string_view>
 #include <vector>
 
-namespace granit::tools {
+#include <granit/core/shader_types.hpp>
 
-using shader_cache_key = std::array<std::byte, 32>;
+namespace granit::tools {
 
 struct shader_cache_context {
   std::string_view source;
@@ -40,19 +40,10 @@ enum class shader_asset_backend : std::uint32_t {
   vulkan = 2,
 };
 
-enum class shader_asset_code_format : std::uint32_t {
-  wgsl = 1,
-  spirv = 2,
-};
-
-enum class shader_asset_profile : std::uint32_t {
-  portable = 1,
-};
-
 struct shader_asset_variant {
   shader_asset_backend backend{};
-  shader_asset_code_format code_format{};
-  shader_asset_profile profile{};
+  shader_code_format code_format{};
+  shader_profile profile{};
   std::uint64_t required_features = 0;
   std::uint64_t byte_size = 0;
   shader_cache_key digest{};
@@ -63,9 +54,9 @@ struct shader_asset_source {
   std::span<const std::byte> spirv;
   std::string_view reflection_json;
   shader_cache_key cache_key{};
-  std::uint32_t backend_mask = 3;
+  granit_shader_backend_flags backend_mask = GRANIT_SHADER_BACKEND_ALL_BITS;
   std::uint64_t required_features = 0;
-  std::uint32_t stage = 1;
+  shader_stage stage = shader_stage::vertex;
   std::string_view entry_point = "main";
 };
 
@@ -73,7 +64,7 @@ struct shader_asset_view {
   std::string_view reflection_json;
   shader_cache_key cache_key{};
   shader_cache_key content_id{};
-  std::uint32_t stage = 0;
+  shader_stage stage{};
   std::string_view entry_point;
   std::array<shader_asset_variant, 2> variants{};
   std::uint32_t variant_count = 0;
@@ -89,7 +80,7 @@ shader_asset_error decode_shader_asset(std::span<const std::byte> bytes,
                                        shader_asset_view& output) noexcept;
 const shader_asset_variant* find_shader_asset_variant(const shader_asset_view& asset,
                                                       shader_asset_backend backend,
-                                                      shader_asset_profile profile) noexcept;
+                                                      shader_profile profile) noexcept;
 shader_asset_error validate_shader_asset_payloads(const shader_asset_view& asset,
                                                   std::string_view wgsl,
                                                   std::span<const std::byte> spirv) noexcept;

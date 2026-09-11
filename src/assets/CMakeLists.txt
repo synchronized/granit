@@ -11,7 +11,8 @@ add_library(
 )
 target_compile_features(granit_internal_shader_asset_format PRIVATE cxx_std_20)
 target_include_directories(
-  granit_internal_shader_asset_format PRIVATE "${PROJECT_SOURCE_DIR}/src"
+  granit_internal_shader_asset_format
+  PRIVATE "${PROJECT_SOURCE_DIR}/src" "${PROJECT_SOURCE_DIR}/include"
 )
 granit_target_compile_warnings(granit_internal_shader_asset_format)
 set_target_properties(

@@ -9,29 +9,13 @@
 
 #include <granit/core/export.h>
 #include <granit/core/result.h>
+#include <granit/core/shader_types.h>
 #include <granit/core/types.h>
 #include <granit/renderer/renderer.h>
 
 /** 单个阶段入口对应的 Shader 句柄。零值无效。 */
 typedef granit_handle granit_shader;
-typedef uint32_t granit_shader_stage;
-
-#define GRANIT_SHADER_STAGE_VERTEX UINT32_C(1)
-#define GRANIT_SHADER_STAGE_FRAGMENT UINT32_C(2)
-#define GRANIT_SHADER_STAGE_COMPUTE UINT32_C(3)
-
-typedef uint32_t granit_shader_code_format;
-#define GRANIT_SHADER_CODE_FORMAT_WGSL UINT32_C(1)
-#define GRANIT_SHADER_CODE_FORMAT_SPIRV UINT32_C(2)
-#define GRANIT_SHADER_DIGEST_SIZE UINT32_C(32)
 #define GRANIT_SHADER_ASSET_MAX_VARIANTS UINT32_C(2)
-
-/** Shader 资产及 Library 使用的固定长度摘要。 */
-typedef uint8_t granit_shader_digest[GRANIT_SHADER_DIGEST_SIZE];
-/** 标识一项 Shader 资产，供 Shader Library 查找。 */
-typedef granit_shader_digest granit_shader_content_id;
-/** 标识完整 Shader 构建输入，用于缓存失效。 */
-typedef granit_shader_digest granit_shader_cache_key;
 
 /** 单一格式 Shader 创建描述。代码与入口名称只需在创建调用期间有效。 */
 typedef struct granit_shader_desc {

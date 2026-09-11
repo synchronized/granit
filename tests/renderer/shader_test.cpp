@@ -64,12 +64,12 @@ TEST_CASE("公共 Shader Asset 检查返回稳定元数据", "[shader][asset][in
   constexpr std::string_view wgsl =
       "@vertex fn entry() -> @builtin(position) vec4f { return vec4f(); }";
   constexpr std::string_view reflection = "{\"schema\":1}";
-  granit::tools::shader_cache_key cache_key{};
+  granit::shader_cache_key cache_key{};
   cache_key[0] = std::byte{0x42};
   std::vector<std::byte> manifest;
   REQUIRE(granit::tools::encode_shader_asset(
               {wgsl, std::as_bytes(std::span{vertex_spirv}), reflection, cache_key, 3,
-               GRANIT_SHADER_FEATURE_FLOAT16_BIT, GRANIT_SHADER_STAGE_VERTEX, "entry"},
+               GRANIT_SHADER_FEATURE_FLOAT16_BIT, granit::shader_stage::vertex, "entry"},
               manifest) == granit::tools::shader_asset_error::success);
 
   granit_shader_asset_info native = GRANIT_SHADER_ASSET_INFO_INIT;
@@ -183,7 +183,7 @@ TEST_CASE("Shader Asset 按 Renderer 后端验证并创建 Shader", "[shader][as
       "@vertex fn main() -> @builtin(position) vec4f { return vec4f(); }";
   std::vector<std::byte> manifest;
   REQUIRE(granit::tools::encode_shader_asset(
-              {wgsl, spirv, "{}", {}, 1, 0, GRANIT_SHADER_STAGE_VERTEX, "main"}, manifest) ==
+              {wgsl, spirv, "{}", {}, 1, 0, granit::shader_stage::vertex, "main"}, manifest) ==
           granit::tools::shader_asset_error::success);
 
   granit::shader invalid;
