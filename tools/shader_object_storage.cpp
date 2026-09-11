@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include "shader_asset.h"
+#include "shader_object_storage.h"
 
 #include "core/sha256.h"
 
@@ -103,48 +103,49 @@ std::string file_sha256_hex(const std::filesystem::path& path) noexcept {
   }
 }
 
-shader_asset_error store_shader_asset(const std::filesystem::path& path,
-                                      std::span<const std::byte> manifest, std::string_view wgsl,
-                                      std::span<const std::byte> spirv, bool& cache_hit) noexcept {
+shader_object_error store_shader_object(const std::filesystem::path& path,
+                                        std::span<const std::byte> manifest, std::string_view wgsl,
+                                        std::span<const std::byte> spirv,
+                                        bool& cache_hit) noexcept {
   cache_hit = false;
-  shader_asset_view view;
-  if (decode_shader_asset(manifest, view) != shader_asset_error::success ||
-      validate_shader_asset_payloads(view, wgsl, spirv) != shader_asset_error::success)
-    return shader_asset_error::invalid_argument;
+  shader_object_view view;
+  if (decode_shader_object(manifest, view) != shader_object_error::success ||
+      validate_shader_object_payloads(view, wgsl, spirv) != shader_object_error::success)
+    return shader_object_error::invalid_argument;
   try {
     const auto wgsl_path = sidecar_path(path, ".wgsl");
     const auto spirv_path = sidecar_path(path, ".spv");
     const auto wgsl_bytes = std::span{reinterpret_cast<const std::byte*>(wgsl.data()), wgsl.size()};
-    const auto has_wgsl = find_shader_asset_variant(view, shader_asset_backend::webgpu,
-                                                    shader_profile::portable) != nullptr;
-    const auto has_spirv = find_shader_asset_variant(view, shader_asset_backend::vulkan,
+    const auto has_wgsl = find_shader_object_variant(view, shader_object_backend::webgpu,
                                                      shader_profile::portable) != nullptr;
+    const auto has_spirv = find_shader_object_variant(view, shader_object_backend::vulkan,
+                                                      shader_profile::portable) != nullptr;
     if (std::ranges::equal(read_file(path), manifest) &&
         (!has_wgsl || std::ranges::equal(read_file(wgsl_path), wgsl_bytes)) &&
         (!has_spirv || std::ranges::equal(read_file(spirv_path), spirv)) &&
         (has_wgsl || !std::filesystem::exists(wgsl_path)) &&
         (has_spirv || !std::filesystem::exists(spirv_path))) {
       cache_hit = true;
-      return shader_asset_error::success;
+      return shader_object_error::success;
     }
     std::error_code error;
     if (!path.parent_path().empty())
       std::filesystem::create_directories(path.parent_path(), error);
     if (error)
-      return shader_asset_error::invalid_argument;
+      return shader_object_error::invalid_argument;
     // 清单最后替换；中途失败时旧清单不会错误匹配新旧混合载荷。
     if ((has_wgsl && !write_file_atomically(wgsl_path, wgsl_bytes)) ||
         (has_spirv && !write_file_atomically(spirv_path, spirv)))
-      return shader_asset_error::invalid_argument;
+      return shader_object_error::invalid_argument;
     if (!has_wgsl)
       std::filesystem::remove(wgsl_path, error);
     if (!has_spirv)
       std::filesystem::remove(spirv_path, error);
     if (error || !write_file_atomically(path, manifest))
-      return shader_asset_error::invalid_argument;
-    return shader_asset_error::success;
+      return shader_object_error::invalid_argument;
+    return shader_object_error::success;
   } catch (...) {
-    return shader_asset_error::invalid_argument;
+    return shader_object_error::invalid_argument;
   }
 }
 

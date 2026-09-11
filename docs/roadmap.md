@@ -438,7 +438,7 @@
   `.grshlib`，由 Renderer 选择并校验 Vulkan/WebGPU 载荷，Material 和应用不再接收后端信息。
 - `.grmat` 升级到 v5 并显式声明绑定组契约；静态功能与动态参数分离，删除按 Pass 名称猜布局和
   Canvas 按后端修正坐标的逻辑。
-- `.grshader` 退出安装与运行时资产；离线单 Shader 结果只作为工具私有增量缓存。
+- `.grshaderobj` 退出安装与运行时资产；离线单 Shader 结果只作为工具私有增量缓存。
 - **[S-37H](plans/S-37H-webgpu-provider-boundary-collapse.md) / P1**：删除浏览器静态 WebGPU 后端中
   遗留的 Provider ABI、函数表、dispatch 和 domain adapter，按领域拆分后端私有设备实现。
 - **S-37I / P1**：以带标签的 `granit_surface_desc` 和单一创建函数统一平台 Surface 边界，删除

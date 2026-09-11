@@ -133,8 +133,8 @@ bool make_metadata(granit::material::material_metadata& metadata) {
 bool make_package(granit::tests::shader_asset_store& assets, std::uint32_t variant_count,
                   granit::material::material_package& package) {
   using namespace granit::material;
-  const auto vertex_path = std::string{GRANIT_BENCHMARK_ASSET_DIR} + "/triangle.vert.grshader";
-  const auto fragment_path = std::string{GRANIT_BENCHMARK_ASSET_DIR} + "/triangle.frag.grshader";
+  const auto vertex_path = std::string{GRANIT_BENCHMARK_ASSET_DIR} + "/triangle.vert.grshaderobj";
+  const auto fragment_path = std::string{GRANIT_BENCHMARK_ASSET_DIR} + "/triangle.frag.grshaderobj";
   if (!assets.add(vertex_path) || !assets.add(fragment_path))
     return false;
   const auto vertex = assets.reference(vertex_path);

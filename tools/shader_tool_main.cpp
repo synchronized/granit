@@ -2,7 +2,6 @@
 // Copyright (c) 2026 Granit contributors
 
 #include "core/sha256.h"
-#include "shader_asset.h"
 #include "shader_format/shader_library.h"
 #include <granit/tools/shader_tools.hpp>
 
@@ -58,42 +57,42 @@ std::vector<std::byte> read_bytes(const std::filesystem::path& path) {
 }
 
 int link_shader_library(int argc, char** argv) {
-  const auto asset_paths = option_values(argc, argv, "--asset");
+  const auto object_paths = option_values(argc, argv, "--object");
   const auto target = option_value(argc, argv, "--target");
   const auto output_path = option_value(argc, argv, "--output");
-  if (asset_paths.empty() || !target || !output_path ||
+  if (object_paths.empty() || !target || !output_path ||
       (*target != "all" && *target != "vulkan" && *target != "webgpu")) {
-    std::cerr << "library 需要一个或多个 --asset、--target <all|vulkan|webgpu> 和 --output\n";
+    std::cerr << "library 需要一个或多个 --object、--target <all|vulkan|webgpu> 和 --output\n";
     return 2;
   }
   const auto backend_mask = *target == "all"      ? GRANIT_SHADER_BACKEND_ALL_BITS
                             : *target == "vulkan" ? GRANIT_SHADER_BACKEND_VULKAN_BIT
                                                   : GRANIT_SHADER_BACKEND_WEBGPU_BIT;
-  struct owned_asset {
+  struct owned_object {
     std::vector<std::byte> manifest;
     std::vector<std::byte> wgsl;
     std::vector<std::byte> spirv;
   };
-  std::vector<owned_asset> owned;
-  owned.reserve(asset_paths.size());
-  for (const auto& asset_path : asset_paths) {
-    owned_asset asset{.manifest = read_bytes(asset_path), .wgsl = {}, .spirv = {}};
+  std::vector<owned_object> owned;
+  owned.reserve(object_paths.size());
+  for (const auto& object_path : object_paths) {
+    owned_object object{.manifest = read_bytes(object_path), .wgsl = {}, .spirv = {}};
     if ((backend_mask & GRANIT_SHADER_BACKEND_WEBGPU_BIT) != 0)
-      asset.wgsl = read_bytes(asset_path + ".wgsl");
+      object.wgsl = read_bytes(object_path + ".wgsl");
     if ((backend_mask & GRANIT_SHADER_BACKEND_VULKAN_BIT) != 0)
-      asset.spirv = read_bytes(asset_path + ".spv");
-    if (asset.manifest.empty() ||
-        ((backend_mask & GRANIT_SHADER_BACKEND_WEBGPU_BIT) != 0 && asset.wgsl.empty()) ||
-        ((backend_mask & GRANIT_SHADER_BACKEND_VULKAN_BIT) != 0 && asset.spirv.empty())) {
-      std::cerr << "无法读取 Shader 资产或目标 sidecar：" << asset_path << '\n';
+      object.spirv = read_bytes(object_path + ".spv");
+    if (object.manifest.empty() ||
+        ((backend_mask & GRANIT_SHADER_BACKEND_WEBGPU_BIT) != 0 && object.wgsl.empty()) ||
+        ((backend_mask & GRANIT_SHADER_BACKEND_VULKAN_BIT) != 0 && object.spirv.empty())) {
+      std::cerr << "无法读取 Shader Object或目标 sidecar：" << object_path << '\n';
       return 1;
     }
-    owned.push_back(std::move(asset));
+    owned.push_back(std::move(object));
   }
-  std::vector<granit::detail::shader_format::shader_library_asset_source> sources;
+  std::vector<granit::detail::shader_format::shader_library_object_source> sources;
   sources.reserve(owned.size());
-  for (const auto& asset : owned)
-    sources.push_back({asset.manifest, asset.wgsl, asset.spirv});
+  for (const auto& object : owned)
+    sources.push_back({object.manifest, object.wgsl, object.spirv});
   std::vector<std::byte> library;
   if (granit::detail::shader_format::encode_shader_library({sources, backend_mask}, library) !=
       granit::detail::shader_format::shader_library_error::success) {
@@ -136,83 +135,72 @@ int link_shader_library(int argc, char** argv) {
   return 0;
 }
 
-int pack_shader_asset(int argc, char** argv) {
+int build_shader_object(int argc, char** argv) {
   const auto spirv_path = option_value(argc, argv, "--spirv");
   const auto wgsl_path = option_value(argc, argv, "--wgsl");
   const auto entry = option_value(argc, argv, "--entry");
   const auto stage = option_value(argc, argv, "--stage");
-  const auto asset_path = option_value(argc, argv, "--asset");
-  if (!spirv_path || !wgsl_path || !entry || !stage || !asset_path ||
+  const auto object_path = option_value(argc, argv, "--output");
+  if (!spirv_path || !wgsl_path || !entry || !stage || !object_path ||
       (*stage != "vertex" && *stage != "fragment" && *stage != "compute")) {
-    std::cerr << "pack 需要 --spirv、--wgsl、--entry、--stage 和 --asset\n";
+    std::cerr << "object 需要 --spirv、--wgsl、--entry、--stage 和 --output\n";
     return 2;
   }
-  const auto spirv = read_bytes(*spirv_path);
-  const auto wgsl_bytes = read_bytes(*wgsl_path);
-  if (spirv.empty() || wgsl_bytes.empty()) {
-    std::cerr << "无法读取 Shader 输入\n";
-    return 1;
-  }
-  granit_shader_tools_inspect_desc inspect_desc{};
-  inspect_desc.struct_size = sizeof(inspect_desc);
-  inspect_desc.input_path = spirv_path->data();
-  inspect_desc.input_path_length = spirv_path->size();
-  auto [inspect_status, inspect_result] = granit::shader_tools::inspect_spirv(inspect_desc);
-  const auto inspected = inspect_result.info();
   const auto stage_value = *stage == "vertex"     ? granit::shader_stage::vertex
                            : *stage == "fragment" ? granit::shader_stage::fragment
                                                   : granit::shader_stage::compute;
-  if (inspect_status.failed() || inspected.stage != stage_value ||
-      inspected.entry_point != *entry) {
-    std::cerr << "SPIR-V 的阶段或入口与 pack 参数不一致\n" << inspected.diagnostic;
+  constexpr std::string_view identity = "import-v1";
+  constexpr std::string_view target = "portable";
+  constexpr std::string_view options = "validated-pair";
+  const granit_shader_tools_object_desc desc{
+      .struct_size = sizeof(granit_shader_tools_object_desc),
+      .source_path = wgsl_path->data(),
+      .source_path_length = wgsl_path->size(),
+      .source_language = GRANIT_SHADER_SOURCE_LANGUAGE_WGSL,
+      .wgsl_path = wgsl_path->data(),
+      .wgsl_path_length = wgsl_path->size(),
+      .spirv_path = spirv_path->data(),
+      .spirv_path_length = spirv_path->size(),
+      .output_path = object_path->data(),
+      .output_path_length = object_path->size(),
+      .tint_revision = identity.data(),
+      .tint_revision_length = identity.size(),
+      .target_environment = target.data(),
+      .target_environment_length = target.size(),
+      .compile_options = options.data(),
+      .compile_options_length = options.size(),
+      .backend_mask = GRANIT_SHADER_BACKEND_ALL_BITS,
+      .required_features = 0,
+      .entry_point = entry->data(),
+      .entry_point_length = entry->size(),
+      .stage = static_cast<granit_shader_stage>(stage_value),
+      .reserved = 0,
+  };
+  const auto [status, cache_hit] = granit::shader_tools::build_object(desc);
+  if (status.failed()) {
+    std::cerr << "无法构建 Shader Object\n";
     return 1;
   }
-  const std::string reflection_json{inspect_result.reflection_json()};
-  if (reflection_json.empty()) {
-    std::cerr << "无法提取 SPIR-V 反射信息\n";
-    return 1;
-  }
-  const std::string_view wgsl{reinterpret_cast<const char*>(wgsl_bytes.data()), wgsl_bytes.size()};
-  granit::detail::shader_format::shader_asset_source source{.wgsl = wgsl,
-                                                            .spirv = spirv,
-                                                            .reflection_json = reflection_json,
-                                                            .cache_key =
-                                                                granit::detail::sha256_bytes(spirv),
-                                                            .backend_mask = 3,
-                                                            .required_features = 0,
-                                                            .stage = stage_value,
-                                                            .entry_point = *entry};
-  std::vector<std::byte> manifest;
-  if (granit::detail::shader_format::encode_shader_asset(source, manifest) !=
-      granit::detail::shader_format::shader_asset_error::success) {
-    std::cerr << "无法编码 Shader Asset\n";
-    return 1;
-  }
-  bool cache_hit = false;
-  if (granit::tools::store_shader_asset(*asset_path, manifest, wgsl, spirv, cache_hit) !=
-      granit::detail::shader_format::shader_asset_error::success) {
-    std::cerr << "无法写入 Shader Asset\n";
-    return 1;
-  }
-  std::cout << (cache_hit ? "Shader 资产未变化：" : "已打包 Shader 资产：") << *asset_path << '\n';
+  std::cout << (cache_hit ? "Shader Object 未变化：" : "已构建 Shader Object：") << *object_path
+            << '\n';
   return 0;
 }
 
-int emit_shader_asset_ids(int argc, char** argv) {
-  auto asset_specs = option_values(argc, argv, "--asset");
+int emit_shader_object_ids(int argc, char** argv) {
+  auto object_specs = option_values(argc, argv, "--object");
   const auto output_path = option_value(argc, argv, "--output");
-  if (asset_specs.empty() || !output_path) {
-    std::cerr << "asset-ids 需要一个或多个 --asset <name=path> 和 --output\n";
+  if (object_specs.empty() || !output_path) {
+    std::cerr << "object-ids 需要一个或多个 --object <name=path> 和 --output\n";
     return 2;
   }
-  std::ranges::sort(asset_specs);
+  std::ranges::sort(object_specs);
   std::ostringstream content;
   content << "// SPDX-License-Identifier: MIT\n"
              "// Copyright (c) 2026 Granit contributors\n\n"
-             "// 由 granit_shader_tool asset-ids 生成。\n\n"
+             "// 由 granit_shader_tool object-ids 生成。\n\n"
           << std::hex << std::setfill('0');
   std::string previous_name;
-  for (const auto& spec : asset_specs) {
+  for (const auto& spec : object_specs) {
     const auto separator = spec.find('=');
     const auto name = spec.substr(0, separator);
     const auto valid_name =
@@ -224,19 +212,19 @@ int emit_shader_asset_ids(int argc, char** argv) {
                  (value >= '0' && value <= '9') || value == '_';
         });
     if (!valid_name || name == previous_name) {
-      std::cerr << "asset-ids 的名称必须是唯一 C++ 标识符：" << spec << '\n';
+      std::cerr << "object-ids 的名称必须是唯一 C++ 标识符：" << spec << '\n';
       return 2;
     }
-    const auto asset_path = spec.substr(separator + 1);
-    const auto manifest = read_bytes(asset_path);
-    granit::detail::shader_format::shader_asset_view asset;
-    if (manifest.empty() || granit::detail::shader_format::decode_shader_asset(manifest, asset) !=
-                                granit::detail::shader_format::shader_asset_error::success) {
-      std::cerr << "无法读取 Shader 资产清单：" << asset_path << '\n';
+    const auto object_path = spec.substr(separator + 1);
+    const auto manifest = read_bytes(object_path);
+    granit::detail::shader_format::shader_object_view object;
+    if (manifest.empty() || granit::detail::shader_format::decode_shader_object(manifest, object) !=
+                                granit::detail::shader_format::shader_object_error::success) {
+      std::cerr << "无法读取 Shader Object清单：" << object_path << '\n';
       return 1;
     }
     content << "constexpr std::array<std::byte, 32> " << name << "{\n";
-    for (const auto value : asset.content_id)
+    for (const auto value : object.content_id)
       content << "  std::byte{0x" << std::setw(2) << std::to_integer<unsigned int>(value) << "},\n";
     content << "};\n";
     previous_name = name;
@@ -290,20 +278,20 @@ int compile_shader(int argc, char** argv) {
   const auto entry = option_value(argc, argv, "--entry");
   const auto stage = option_value(argc, argv, "--stage");
   const auto output = option_value(argc, argv, "--output");
-  const auto asset = option_value(argc, argv, "--asset");
+  const auto object = option_value(argc, argv, "--object");
   const auto tint_revision = option_value(argc, argv, "--tint-revision");
   const auto target_environment = option_value(argc, argv, "--target-environment");
-  const auto asset_backend = option_value(argc, argv, "--asset-backend");
+  const auto object_backend = option_value(argc, argv, "--object-backend");
   const auto features = option_value(argc, argv, "--features");
   if (!tint || !input || !entry || !stage || !output ||
       (*stage != "vertex" && *stage != "fragment" && *stage != "compute") ||
-      (asset_backend && !asset) || (features && !asset) ||
-      (asset_backend && *asset_backend != "all" && *asset_backend != "vulkan" &&
-       *asset_backend != "webgpu") ||
+      (object_backend && !object) || (features && !object) ||
+      (object_backend && *object_backend != "all" && *object_backend != "vulkan" &&
+       *object_backend != "webgpu") ||
       (features && *features != "none" && *features != "float16" && *features != "subgroup")) {
     std::cerr << "compile 需要 --tint、--input、--entry、--stage 和 --output\n";
     std::cerr << "可选 --tint-revision、--target-environment、"
-                 "--asset-backend <all|vulkan|webgpu> 和 --features <none|float16|subgroup>\n";
+                 "--object-backend <all|vulkan|webgpu> 和 --features <none|float16|subgroup>\n";
     return 2;
   }
   const auto stage_value = *stage == "vertex"     ? GRANIT_SHADER_STAGE_VERTEX
@@ -312,10 +300,10 @@ int compile_shader(int argc, char** argv) {
   constexpr std::string_view default_target = "vulkan1.3";
   constexpr std::string_view compile_options = "format=spirv;validate=1";
   const auto target = target_environment ? std::string_view{*target_environment} : default_target;
-  const auto backend_mask = !asset_backend || *asset_backend == "all"
+  const auto backend_mask = !object_backend || *object_backend == "all"
                                 ? GRANIT_SHADER_BACKEND_ALL_BITS
-                            : *asset_backend == "vulkan" ? GRANIT_SHADER_BACKEND_VULKAN_BIT
-                                                         : GRANIT_SHADER_BACKEND_WEBGPU_BIT;
+                            : *object_backend == "vulkan" ? GRANIT_SHADER_BACKEND_VULKAN_BIT
+                                                          : GRANIT_SHADER_BACKEND_WEBGPU_BIT;
   const auto required_features = !features || *features == "none" ? UINT64_C(0)
                                  : *features == "float16" ? GRANIT_SHADER_FEATURE_FLOAT16_BIT
                                                           : GRANIT_SHADER_FEATURE_SUBGROUP_BIT;
@@ -324,21 +312,21 @@ int compile_shader(int argc, char** argv) {
     return 1;
   }
   const auto tint_identity =
-      asset ? resolve_tool_identity(*tint, tint_revision) : std::optional<std::string>{""};
+      object ? resolve_tool_identity(*tint, tint_revision) : std::optional<std::string>{""};
   if (!tint_identity) {
     std::cerr << "无法读取 Tint 工具身份\n";
     return 1;
   }
-  if (asset) {
-    granit_shader_tools_cache_desc cache{};
+  if (object) {
+    granit_shader_tools_object_cache_desc cache{};
     cache.struct_size = sizeof(cache);
     cache.source_path = input->data();
     cache.source_path_length = input->size();
     cache.source_language = GRANIT_SHADER_SOURCE_LANGUAGE_WGSL;
     cache.spirv_output_path = output->data();
     cache.spirv_output_path_length = output->size();
-    cache.asset_path = asset->data();
-    cache.asset_path_length = asset->size();
+    cache.object_path = object->data();
+    cache.object_path_length = object->size();
     cache.entry_point = entry->data();
     cache.entry_point_length = entry->size();
     cache.stage = stage_value;
@@ -350,13 +338,13 @@ int compile_shader(int argc, char** argv) {
     cache.compile_options_length = compile_options.size();
     cache.backend_mask = backend_mask;
     cache.required_features = required_features;
-    const auto [cache_status, cache_hit] = granit::shader_tools::restore_asset_cache(cache);
+    const auto [cache_status, cache_hit] = granit::shader_tools::restore_object_cache(cache);
     if (cache_status.failed()) {
-      std::cerr << "Shader 资产缓存查询失败\n";
+      std::cerr << "Shader Object 缓存查询失败\n";
       return 1;
     }
     if (cache_hit) {
-      std::cout << "Shader 资产缓存命中：" << *asset << '\n';
+      std::cout << "Shader Object 缓存命中：" << *object << '\n';
       return 0;
     }
   }
@@ -376,32 +364,36 @@ int compile_shader(int argc, char** argv) {
   const auto info = result.info();
   std::cout << info.output;
   std::cerr << info.diagnostic;
-  if (status.ok() && asset) {
-    granit_shader_tools_asset_desc asset_desc{};
-    asset_desc.struct_size = sizeof(asset_desc);
-    asset_desc.source_path = input->data();
-    asset_desc.source_path_length = input->size();
-    asset_desc.source_language = GRANIT_SHADER_SOURCE_LANGUAGE_WGSL;
-    asset_desc.wgsl_path = input->data();
-    asset_desc.wgsl_path_length = input->size();
-    asset_desc.spirv_path = output->data();
-    asset_desc.spirv_path_length = output->size();
-    asset_desc.output_path = asset->data();
-    asset_desc.output_path_length = asset->size();
-    asset_desc.tint_revision = tint_identity->data();
-    asset_desc.tint_revision_length = tint_identity->size();
-    asset_desc.target_environment = target.data();
-    asset_desc.target_environment_length = target.size();
-    asset_desc.compile_options = compile_options.data();
-    asset_desc.compile_options_length = compile_options.size();
-    asset_desc.backend_mask = backend_mask;
-    asset_desc.required_features = required_features;
-    const auto [asset_status, cache_hit] = result.write_asset(asset_desc);
-    if (asset_status.failed()) {
-      std::cerr << "Shader 资产写入失败\n";
+  if (status.ok() && object) {
+    granit_shader_tools_object_desc object_desc{};
+    object_desc.struct_size = sizeof(object_desc);
+    object_desc.source_path = input->data();
+    object_desc.source_path_length = input->size();
+    object_desc.source_language = GRANIT_SHADER_SOURCE_LANGUAGE_WGSL;
+    object_desc.wgsl_path = input->data();
+    object_desc.wgsl_path_length = input->size();
+    object_desc.spirv_path = output->data();
+    object_desc.spirv_path_length = output->size();
+    object_desc.output_path = object->data();
+    object_desc.output_path_length = object->size();
+    object_desc.tint_revision = tint_identity->data();
+    object_desc.tint_revision_length = tint_identity->size();
+    object_desc.target_environment = target.data();
+    object_desc.target_environment_length = target.size();
+    object_desc.compile_options = compile_options.data();
+    object_desc.compile_options_length = compile_options.size();
+    object_desc.backend_mask = backend_mask;
+    object_desc.required_features = required_features;
+    object_desc.entry_point = entry->data();
+    object_desc.entry_point_length = entry->size();
+    object_desc.stage = stage_value;
+    const auto [object_status, cache_hit] = result.write_object(object_desc);
+    if (object_status.failed()) {
+      std::cerr << "Shader Object写入失败\n";
       return 1;
     }
-    std::cout << (cache_hit ? "Shader 资产缓存命中：" : "已生成 Shader 资产：") << *asset << '\n';
+    std::cout << (cache_hit ? "Shader Object 缓存命中：" : "已生成 Shader Object：") << *object
+              << '\n';
   }
   return status.ok() ? 0 : 1;
 }
@@ -414,17 +406,17 @@ int compile_hlsl_shader(int argc, char** argv) {
   const auto stage = option_value(argc, argv, "--stage");
   const auto spirv_output = option_value(argc, argv, "--spirv-output");
   const auto wgsl_output = option_value(argc, argv, "--wgsl-output");
-  const auto asset = option_value(argc, argv, "--asset");
+  const auto object = option_value(argc, argv, "--object");
   const auto dxc_revision = option_value(argc, argv, "--dxc-revision");
   const auto tint_revision = option_value(argc, argv, "--tint-revision");
-  const auto asset_backend = option_value(argc, argv, "--asset-backend");
+  const auto object_backend = option_value(argc, argv, "--object-backend");
   std::vector<std::pair<std::string, std::string>> definitions;
   const auto define_arguments = option_values(argc, argv, "--define");
   if (!dxc || !tint || !input || !entry || !stage || !spirv_output || !wgsl_output ||
       (*stage != "vertex" && *stage != "fragment" && *stage != "compute") ||
-      (asset_backend && !asset) ||
-      (asset_backend && *asset_backend != "all" && *asset_backend != "vulkan" &&
-       *asset_backend != "webgpu") ||
+      (object_backend && !object) ||
+      (object_backend && *object_backend != "all" && *object_backend != "vulkan" &&
+       *object_backend != "webgpu") ||
       !parse_defines(define_arguments, definitions)) {
     std::cerr << "compile-hlsl 需要 --dxc、--tint、--input、--entry、--stage、"
                  "--spirv-output 和 --wgsl-output\n";
@@ -434,14 +426,14 @@ int compile_hlsl_shader(int argc, char** argv) {
   const auto stage_value = *stage == "vertex"     ? GRANIT_SHADER_STAGE_VERTEX
                            : *stage == "fragment" ? GRANIT_SHADER_STAGE_FRAGMENT
                                                   : GRANIT_SHADER_STAGE_COMPUTE;
-  const auto backend_mask = !asset_backend || *asset_backend == "all"
+  const auto backend_mask = !object_backend || *object_backend == "all"
                                 ? GRANIT_SHADER_BACKEND_ALL_BITS
-                            : *asset_backend == "vulkan" ? GRANIT_SHADER_BACKEND_VULKAN_BIT
-                                                         : GRANIT_SHADER_BACKEND_WEBGPU_BIT;
+                            : *object_backend == "vulkan" ? GRANIT_SHADER_BACKEND_VULKAN_BIT
+                                                          : GRANIT_SHADER_BACKEND_WEBGPU_BIT;
   const auto dxc_identity =
-      asset ? resolve_tool_identity(*dxc, dxc_revision) : std::optional<std::string>{""};
+      object ? resolve_tool_identity(*dxc, dxc_revision) : std::optional<std::string>{""};
   const auto tint_identity =
-      asset ? resolve_tool_identity(*tint, tint_revision) : std::optional<std::string>{""};
+      object ? resolve_tool_identity(*tint, tint_revision) : std::optional<std::string>{""};
   if (!dxc_identity || !tint_identity) {
     std::cerr << "无法读取 DXC 或 Tint 工具身份\n";
     return 1;
@@ -453,8 +445,8 @@ int compile_hlsl_shader(int argc, char** argv) {
     options += ";define=" + std::to_string(name.size()) + ":" + name + ":" +
                std::to_string(value.size()) + ":" + value;
   }
-  if (asset && backend_mask == GRANIT_SHADER_BACKEND_ALL_BITS) {
-    granit_shader_tools_cache_desc cache{};
+  if (object && backend_mask == GRANIT_SHADER_BACKEND_ALL_BITS) {
+    granit_shader_tools_object_cache_desc cache{};
     cache.struct_size = sizeof(cache);
     cache.source_path = input->data();
     cache.source_path_length = input->size();
@@ -463,8 +455,8 @@ int compile_hlsl_shader(int argc, char** argv) {
     cache.wgsl_output_path_length = wgsl_output->size();
     cache.spirv_output_path = spirv_output->data();
     cache.spirv_output_path_length = spirv_output->size();
-    cache.asset_path = asset->data();
-    cache.asset_path_length = asset->size();
+    cache.object_path = object->data();
+    cache.object_path_length = object->size();
     cache.entry_point = entry->data();
     cache.entry_point_length = entry->size();
     cache.stage = stage_value;
@@ -475,13 +467,13 @@ int compile_hlsl_shader(int argc, char** argv) {
     cache.compile_options = options.data();
     cache.compile_options_length = options.size();
     cache.backend_mask = backend_mask;
-    const auto [cache_status, cache_hit] = granit::shader_tools::restore_asset_cache(cache);
+    const auto [cache_status, cache_hit] = granit::shader_tools::restore_object_cache(cache);
     if (cache_status.failed()) {
-      std::cerr << "HLSL Shader 资产缓存查询失败\n";
+      std::cerr << "HLSL Shader Object 缓存查询失败\n";
       return 1;
     }
     if (cache_hit) {
-      std::cout << "Shader 资产缓存命中：" << *asset << '\n';
+      std::cout << "Shader Object 缓存命中：" << *object << '\n';
       return 0;
     }
   }
@@ -509,33 +501,37 @@ int compile_hlsl_shader(int argc, char** argv) {
   const auto info = result.info();
   std::cout << info.output;
   std::cerr << info.diagnostic;
-  if (status.failed() || !asset)
+  if (status.failed() || !object)
     return status.ok() ? 0 : 1;
 
-  granit_shader_tools_asset_desc asset_desc{};
-  asset_desc.struct_size = sizeof(asset_desc);
-  asset_desc.source_path = input->data();
-  asset_desc.source_path_length = input->size();
-  asset_desc.source_language = GRANIT_SHADER_SOURCE_LANGUAGE_HLSL;
-  asset_desc.wgsl_path = wgsl_output->data();
-  asset_desc.wgsl_path_length = wgsl_output->size();
-  asset_desc.spirv_path = spirv_output->data();
-  asset_desc.spirv_path_length = spirv_output->size();
-  asset_desc.output_path = asset->data();
-  asset_desc.output_path_length = asset->size();
-  asset_desc.tint_revision = revisions.data();
-  asset_desc.tint_revision_length = revisions.size();
-  asset_desc.target_environment = target.data();
-  asset_desc.target_environment_length = target.size();
-  asset_desc.compile_options = options.data();
-  asset_desc.compile_options_length = options.size();
-  asset_desc.backend_mask = backend_mask;
-  const auto [asset_status, cache_hit] = result.write_asset(asset_desc);
-  if (asset_status.failed()) {
-    std::cerr << "HLSL Shader 资产写入失败\n";
+  granit_shader_tools_object_desc object_desc{};
+  object_desc.struct_size = sizeof(object_desc);
+  object_desc.source_path = input->data();
+  object_desc.source_path_length = input->size();
+  object_desc.source_language = GRANIT_SHADER_SOURCE_LANGUAGE_HLSL;
+  object_desc.wgsl_path = wgsl_output->data();
+  object_desc.wgsl_path_length = wgsl_output->size();
+  object_desc.spirv_path = spirv_output->data();
+  object_desc.spirv_path_length = spirv_output->size();
+  object_desc.output_path = object->data();
+  object_desc.output_path_length = object->size();
+  object_desc.tint_revision = revisions.data();
+  object_desc.tint_revision_length = revisions.size();
+  object_desc.target_environment = target.data();
+  object_desc.target_environment_length = target.size();
+  object_desc.compile_options = options.data();
+  object_desc.compile_options_length = options.size();
+  object_desc.backend_mask = backend_mask;
+  object_desc.entry_point = entry->data();
+  object_desc.entry_point_length = entry->size();
+  object_desc.stage = stage_value;
+  const auto [object_status, cache_hit] = result.write_object(object_desc);
+  if (object_status.failed()) {
+    std::cerr << "HLSL Shader Object写入失败\n";
     return 1;
   }
-  std::cout << (cache_hit ? "Shader 资产内容未变化：" : "已生成 Shader 资产：") << *asset << '\n';
+  std::cout << (cache_hit ? "Shader Object 内容未变化：" : "已生成 Shader Object：") << *object
+            << '\n';
   return 0;
 }
 
@@ -696,7 +692,7 @@ int inspect_shader(const char* path, bool verify, bool json = false) {
   return status.ok() ? 0 : 1;
 }
 
-const char* asset_backend_name(uint32_t backend) {
+const char* object_backend_name(uint32_t backend) {
   return backend == GRANIT_SHADER_BACKEND_VULKAN_BIT ? "vulkan" : "webgpu";
 }
 
@@ -706,8 +702,8 @@ int print_target_capabilities(granit::shader_backend backend) {
     std::cerr << "不支持请求的 Shader 目标档位\n";
     return 1;
   }
-  std::cout << "target=" << asset_backend_name(capabilities.backend) << "-portable\n"
-            << "backend=" << asset_backend_name(capabilities.backend) << '\n'
+  std::cout << "target=" << object_backend_name(capabilities.backend) << "-portable\n"
+            << "backend=" << object_backend_name(capabilities.backend) << '\n'
             << "profile=portable\n"
             << "features=none\n";
   return 0;
@@ -720,23 +716,23 @@ void print_usage() {
                "  granit_shader_tool verify <shader.spv>\n"
                "  granit_shader_tool targets\n"
                "  granit_shader_tool capabilities --target <vulkan-portable|webgpu-portable>\n"
-               "  granit_shader_tool pack --spirv <shader.spv> --wgsl <shader.wgsl> "
-               "--entry <name> --stage <vertex|fragment|compute> --asset <shader.grshader>\n"
-               "  granit_shader_tool library --asset <shader.grshader>... "
+               "  granit_shader_tool object --spirv <shader.spv> --wgsl <shader.wgsl> "
+               "--entry <name> --stage <vertex|fragment|compute> --output <shader.grshaderobj>\n"
+               "  granit_shader_tool library --object <shader.grshaderobj>... "
                "--target <all|vulkan|webgpu> --output <shaders.grshlib>\n"
-               "  granit_shader_tool asset-ids --asset <name=shader.grshader>... "
+               "  granit_shader_tool object-ids --object <name=shader.grshaderobj>... "
                "--output <shader-ids.inc>\n"
                "  granit_shader_tool compile --tint <path> --input <shader.wgsl> "
                "--entry <name> --stage <vertex|fragment|compute> --output <shader.spv> "
-               "[--asset <shader.granit-shader> [--tint-revision <revision>] "
-               "--asset-backend <all|vulkan|webgpu> "
+               "[--object <shader.grshaderobj> [--tint-revision <revision>] "
+               "--object-backend <all|vulkan|webgpu> "
                "--features <none|float16|subgroup>]\n";
   std::cerr << "  granit_shader_tool compile-hlsl --dxc <path> --tint <path> "
                "--input <shader.hlsl> --entry <name> --stage <vertex|fragment|compute> "
                "--spirv-output <shader.spv> --wgsl-output <shader.wgsl> "
                "[--define <NAME=VALUE>]... "
-               "[--asset <shader.granit-shader> [--dxc-revision <revision>] "
-               "[--tint-revision <revision>] --asset-backend <all|vulkan|webgpu>]\n";
+               "[--object <shader.grshaderobj> [--dxc-revision <revision>] "
+               "[--tint-revision <revision>] --object-backend <all|vulkan|webgpu>]\n";
 }
 
 } // namespace
@@ -766,12 +762,12 @@ int main(int argc, char** argv) {
   }
   if (argc >= 2 && std::string_view{argv[1]} == "compile")
     return compile_shader(argc, argv);
-  if (argc >= 2 && std::string_view{argv[1]} == "pack")
-    return pack_shader_asset(argc, argv);
+  if (argc >= 2 && std::string_view{argv[1]} == "object")
+    return build_shader_object(argc, argv);
   if (argc >= 2 && std::string_view{argv[1]} == "library")
     return link_shader_library(argc, argv);
-  if (argc >= 2 && std::string_view{argv[1]} == "asset-ids")
-    return emit_shader_asset_ids(argc, argv);
+  if (argc >= 2 && std::string_view{argv[1]} == "object-ids")
+    return emit_shader_object_ids(argc, argv);
   if (argc >= 2 && std::string_view{argv[1]} == "compile-hlsl")
     return compile_hlsl_shader(argc, argv);
   print_usage();

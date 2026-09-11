@@ -151,8 +151,8 @@ TEST_CASE("材质资产热替换保留解析上下文并在解析失败时回退
   REQUIRE(initialized.ok());
   granit::tests::shader_asset_store assets;
   const auto directory = std::filesystem::path{GRANIT_SMOKE_SHADER_DIR};
-  const auto vertex_path = directory / "triangle.vert.grshader";
-  const auto fragment_path = directory / "triangle.frag.grshader";
+  const auto vertex_path = directory / "triangle.vert.grshaderobj";
+  const auto fragment_path = directory / "triangle.frag.grshaderobj";
   REQUIRE(assets.add(vertex_path));
   REQUIRE(assets.add(fragment_path));
   std::vector<std::byte> library_bytes;
@@ -200,7 +200,7 @@ TEST_CASE("材质资产热替换保留解析上下文并在解析失败时回退
 }
 
 TEST_CASE("测试资产存储允许按目标构建单后端 Library 并缓存清单元数据") {
-  const auto source = std::filesystem::path{GRANIT_SMOKE_SHADER_DIR} / "triangle.vert.grshader";
+  const auto source = std::filesystem::path{GRANIT_SMOKE_SHADER_DIR} / "triangle.vert.grshaderobj";
   const auto folder = std::filesystem::temp_directory_path() /
                       ("granit-shader-asset-" +
                        std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()));
@@ -209,12 +209,12 @@ TEST_CASE("测试资产存储允许按目标构建单后端 Library 并缓存清
     std::filesystem::path folder;
     ~cleanup() {
       std::error_code ignored;
-      std::filesystem::remove(folder / "vertex.grshader.spv", ignored);
-      std::filesystem::remove(folder / "vertex.grshader", ignored);
+      std::filesystem::remove(folder / "vertex.grshaderobj.spv", ignored);
+      std::filesystem::remove(folder / "vertex.grshaderobj", ignored);
       std::filesystem::remove(folder, ignored);
     }
   } guard{folder};
-  const auto path = folder / "vertex.grshader";
+  const auto path = folder / "vertex.grshaderobj";
   REQUIRE(std::filesystem::copy_file(source, path));
   REQUIRE(std::filesystem::copy_file(source.string() + ".spv", path.string() + ".spv"));
   granit::tests::shader_asset_store assets;
@@ -230,5 +230,5 @@ TEST_CASE("测试资产存储允许按目标构建单后端 Library 并缓存清
   REQUIRE(granit::inspect_shader_library(library_bytes, info) == granit::result::success);
   CHECK(info.backends == granit::shader_backend::vulkan);
   CHECK_FALSE(assets.build_library(library_bytes, GRANIT_SHADER_BACKEND_WEBGPU_BIT));
-  CHECK_FALSE(assets.add(folder / "missing.grshader"));
+  CHECK_FALSE(assets.add(folder / "missing.grshaderobj"));
 }

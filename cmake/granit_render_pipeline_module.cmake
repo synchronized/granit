@@ -20,7 +20,7 @@ function(granit_add_render_pipeline_module)
   endif()
   if(granit_pipeline_generate_shader_libraries)
     set(granit_pipeline_shader_asset_dir "${granit_pipeline_generated_dir}/shader-assets")
-    granit_add_packed_shader_asset(
+    granit_add_shader_object(
       NAME tone_mapping.vert
       SPIRV "${PROJECT_SOURCE_DIR}/src/pipeline/shaders/tone_mapping.vert.spv"
       WGSL "${PROJECT_SOURCE_DIR}/src/pipeline/shaders/tone_mapping.wgsl"
@@ -29,7 +29,7 @@ function(granit_add_render_pipeline_module)
       OUTPUT_DIR "${granit_pipeline_shader_asset_dir}"
       OUTPUT_VAR granit_pipeline_tone_vertex_outputs)
     list(GET granit_pipeline_tone_vertex_outputs 0 granit_pipeline_tone_vertex_asset)
-    granit_add_packed_shader_asset(
+    granit_add_shader_object(
       NAME tone_mapping.frag
       SPIRV "${PROJECT_SOURCE_DIR}/src/pipeline/shaders/tone_mapping.frag.spv"
       WGSL "${PROJECT_SOURCE_DIR}/src/pipeline/shaders/tone_mapping.wgsl"
@@ -38,7 +38,7 @@ function(granit_add_render_pipeline_module)
       OUTPUT_DIR "${granit_pipeline_shader_asset_dir}"
       OUTPUT_VAR granit_pipeline_tone_fragment_outputs)
     list(GET granit_pipeline_tone_fragment_outputs 0 granit_pipeline_tone_fragment_asset)
-    granit_add_packed_shader_asset(
+    granit_add_shader_object(
       NAME shadow_depth.vert
       SPIRV "${PROJECT_SOURCE_DIR}/src/pipeline/shaders/shadow_depth.vert.spv"
       WGSL "${PROJECT_SOURCE_DIR}/src/pipeline/shaders/shadow_depth.vert.wgsl"
@@ -47,7 +47,7 @@ function(granit_add_render_pipeline_module)
       OUTPUT_DIR "${granit_pipeline_shader_asset_dir}"
       OUTPUT_VAR granit_pipeline_shadow_vertex_outputs)
     list(GET granit_pipeline_shadow_vertex_outputs 0 granit_pipeline_shadow_vertex_asset)
-    granit_add_packed_shader_asset(
+    granit_add_shader_object(
       NAME shadow_depth.frag
       SPIRV "${PROJECT_SOURCE_DIR}/src/pipeline/shaders/shadow_depth.frag.spv"
       WGSL "${PROJECT_SOURCE_DIR}/src/pipeline/shaders/shadow_depth.frag.wgsl"
@@ -66,7 +66,7 @@ function(granit_add_render_pipeline_module)
         set(stage fragment)
         set(entry fragment_main)
       endif()
-      granit_add_packed_shader_asset(
+      granit_add_shader_object(
         NAME "debug_${name}"
         SPIRV "${PROJECT_SOURCE_DIR}/assets/shaders/debug/${name}.spv"
         WGSL "${PROJECT_SOURCE_DIR}/assets/shaders/debug/${name}.wgsl"
@@ -87,7 +87,7 @@ function(granit_add_render_pipeline_module)
       OUTPUT "${granit_pipeline_builtin_archive}"
       REFERENCE "${PROJECT_SOURCE_DIR}/src/pipeline/assets/render_pipeline_builtin.grshlib"
       TARGET granit_pipeline_builtin_shader_library
-      ASSETS
+      OBJECTS
         "${granit_pipeline_tone_vertex_asset}"
         "${granit_pipeline_tone_fragment_asset}"
         "${granit_pipeline_shadow_vertex_asset}"
@@ -98,9 +98,11 @@ function(granit_add_render_pipeline_module)
       OUTPUT "${granit_pipeline_debug_archive}"
       REFERENCE "${PROJECT_SOURCE_DIR}/src/pipeline/assets/debug_draw.grshlib"
       TARGET granit_pipeline_debug_shader_library
-      ASSETS ${granit_pipeline_debug_assets})
-    set(granit_pipeline_builtin_library_dependencies granit_pipeline_builtin_shader_library)
-    set(granit_pipeline_debug_library_dependencies granit_pipeline_debug_shader_library)
+      OBJECTS ${granit_pipeline_debug_assets})
+    set(granit_pipeline_builtin_library_dependencies granit_pipeline_builtin_shader_library
+                                                     "${granit_pipeline_builtin_archive}")
+    set(granit_pipeline_debug_library_dependencies granit_pipeline_debug_shader_library
+                                                   "${granit_pipeline_debug_archive}")
   else()
     set(granit_pipeline_builtin_archive
         "${PROJECT_SOURCE_DIR}/src/pipeline/assets/render_pipeline_builtin.grshlib")
@@ -130,14 +132,14 @@ function(granit_add_render_pipeline_module)
   if(granit_pipeline_generate_shader_libraries)
     add_custom_command(
       OUTPUT "${granit_pipeline_shader_ids}"
-      COMMAND "$<TARGET_FILE:granit_shader_tool>" asset-ids
-              --asset "tone_mapping_vertex_id=${granit_pipeline_tone_vertex_asset}"
-              --asset "tone_mapping_fragment_id=${granit_pipeline_tone_fragment_asset}"
-              --asset "shadow_depth_vertex_id=${granit_pipeline_shadow_vertex_asset}"
-              --asset "shadow_depth_fragment_id=${granit_pipeline_shadow_fragment_asset}"
-              --asset "debug_world_vertex_id=${granit_pipeline_debug_world_vert_asset}"
-              --asset "debug_world_fragment_id=${granit_pipeline_debug_world_frag_asset}"
-              --asset
+      COMMAND "$<TARGET_FILE:granit_shader_tool>" object-ids
+              --object "tone_mapping_vertex_id=${granit_pipeline_tone_vertex_asset}"
+              --object "tone_mapping_fragment_id=${granit_pipeline_tone_fragment_asset}"
+              --object "shadow_depth_vertex_id=${granit_pipeline_shadow_vertex_asset}"
+              --object "shadow_depth_fragment_id=${granit_pipeline_shadow_fragment_asset}"
+              --object "debug_world_vertex_id=${granit_pipeline_debug_world_vert_asset}"
+              --object "debug_world_fragment_id=${granit_pipeline_debug_world_frag_asset}"
+              --object
               "debug_world_srgb_fragment_id=${granit_pipeline_debug_world_encode_srgb_frag_asset}"
               --output "${granit_pipeline_shader_ids}"
       COMMAND "${CMAKE_COMMAND}" -E compare_files "${granit_pipeline_shader_ids}"

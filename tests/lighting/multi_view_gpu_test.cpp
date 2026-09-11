@@ -83,9 +83,9 @@ TEST_CASE("两个View执行独立PBR与Tone Mapping") {
   CHECK(lights[0].group() != lights[1].group());
 
   granit::tests::shader_asset_store assets;
-  const auto vertex_path = std::string{GRANIT_PBR_SHADER_DIR} + "/pbr_lights.vert.grshader";
+  const auto vertex_path = std::string{GRANIT_PBR_SHADER_DIR} + "/pbr_lights.vert.grshaderobj";
   const auto fragment_path =
-      std::string{GRANIT_PBR_SHADER_DIR} + "/pbr_lights_untextured.frag.grshader";
+      std::string{GRANIT_PBR_SHADER_DIR} + "/pbr_lights_untextured.frag.grshaderobj";
   REQUIRE(assets.add(vertex_path));
   REQUIRE(assets.add(fragment_path));
   std::vector<std::byte> shader_library_bytes;

@@ -7,7 +7,7 @@
 
 **实现中。** S-37K1 已完成共享 Shader 类型收敛；S-37K2 已完成统一 Compiler 配置、编译描述和
 单一编译入口；S-37K2A 已完成通用内容摘要收敛；S-37K3 已完成 Compilation 与 Reflection
-边界。S-37K4～S-37K6 待实施。
+边界；S-37K4 已完成 Shader Object 边界。S-37K5～S-37K6 待实施。
 
 ## 背景与目标
 
@@ -127,7 +127,7 @@ scalar type，不再把所有字段暴露为无含义的 `uint32_t`。独立 SPI
 
 ### Shader Object 是工具私有中间产物
 
-`.grshader` 改名为 `.grshaderobj`，只用于编译缓存和 Library 链接。它可以包含阶段、入口、内容 ID、
+`.grshaderobj` 改名为 `.grshaderobj`，只用于编译缓存和 Library 链接。它可以包含阶段、入口、内容 ID、
 缓存键、反射和各后端载荷摘要，但不安装到 Runtime component，也不承诺跨 Granit 版本兼容。
 
 `write_object()` 负责从编译结果生成对象。已有 SPIR-V/WGSL 对的导入由独立 Object Builder 完成，
@@ -226,8 +226,9 @@ tools/shader_cli/
    领域错误的 `shader_bytes_sha256`，同时保留内容 ID、载荷摘要与缓存键的语义名称。
 4. **S-37K3 Compilation 与 Reflection（已完成）**：将模糊的 Result 句柄拆成编译结果和反射视图；统一结构化
    Binding、接口变量、Workgroup 和 Override 查询；删除旧结果查询入口。
-5. **S-37K4 Shader Object 边界**：引入 `.grshaderobj`、Object Builder 和对象检查；迁移缓存、测试
-   Fixture 与生成规则；删除 `.grshader` 名称和旧 `result_write_asset`/`restore_asset_cache` 组织。
+5. **S-37K4 Shader Object 边界（已完成）**：引入 `.grshaderobj`、Object Builder 和对象检查；
+   迁移缓存、测试 Fixture 与生成规则；删除 `.grshader` 名称和旧
+   `result_write_asset`/`restore_asset_cache` 组织。
 6. **S-37K5 Library Builder 与 CLI 拆分**：把 Library 编码、文件存储和命令实现移出
    `shader_tool_main.cpp`；CLI 成为薄适配层，CMake 只调用稳定命令接口。
 7. **S-37K6 资产、安装与发布验收**：重建内建及公共 Shader Library，删除仓库中的旧中间快照，

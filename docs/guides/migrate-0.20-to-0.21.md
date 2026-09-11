@@ -39,14 +39,14 @@ surface.initialize(
 
 ```powershell
 granit_shader_tool library `
-  --asset path/to/standard.vert.grshader `
-  --asset path/to/standard.frag.grshader `
+  --object path/to/standard.vert.grshaderobj `
+  --object path/to/standard.frag.grshaderobj `
   --target all `
   --output path/to/standard.grshlib
 ```
 
 `--target all` 同时保存 Vulkan SPIR-V 和 WebGPU WGSL；按平台发包时可改用 `vulkan` 或 `webgpu`
-裁剪。`.grshader` 与 sidecar 是工具链中间输入，不再复制到运行时或安装目录。
+裁剪。`.grshaderobj` 与 sidecar 是工具链中间输入，不再复制到运行时或安装目录。
 
 应用读取或映射完整 `.grshlib` 后创建 Library。归档内存必须保持地址和内容不变，直到 Material、
 由 Library 创建的 Shader 和 Pipeline 都释放，并成功销毁 Library：

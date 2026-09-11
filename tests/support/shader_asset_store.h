@@ -68,7 +68,7 @@ public:
   bool
   build_library(std::vector<std::byte>& output,
                 granit_shader_backend_flags backend_flags = GRANIT_SHADER_BACKEND_ALL_BITS) const {
-    std::vector<granit::detail::shader_format::shader_library_asset_source> sources;
+    std::vector<granit::detail::shader_format::shader_library_object_source> sources;
     try {
       sources.reserve(entries_.size());
       for (const auto& value : entries_)

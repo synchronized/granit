@@ -284,12 +284,12 @@ add_custom_command(
   DEPENDS
     granit_material_tool
     "${PROJECT_SOURCE_DIR}/tests/fixtures/smoke/render_pipeline_workload.grmat.json"
-    "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/pbr_shadow_ibl_lights.vert.grshader"
-    "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/pbr_shadow_ibl_lights.vert.grshader.spv"
-    "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/pbr_shadow_ibl_lights.vert.grshader.wgsl"
-    "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/pbr_shadow_ibl_lights_untextured.frag.grshader"
-    "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/pbr_shadow_ibl_lights_untextured.frag.grshader.spv"
-    "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/pbr_shadow_ibl_lights_untextured.frag.grshader.wgsl"
+    "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/pbr_shadow_ibl_lights.vert.grshaderobj"
+    "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/pbr_shadow_ibl_lights.vert.grshaderobj.spv"
+    "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/pbr_shadow_ibl_lights.vert.grshaderobj.wgsl"
+    "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/pbr_shadow_ibl_lights_untextured.frag.grshaderobj"
+    "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/pbr_shadow_ibl_lights_untextured.frag.grshaderobj.spv"
+    "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/pbr_shadow_ibl_lights_untextured.frag.grshaderobj.wgsl"
   VERBATIM
 )
 add_executable(

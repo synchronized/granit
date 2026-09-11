@@ -61,32 +61,6 @@ typedef struct granit_shader_tools_reflection_info {
   uint64_t diagnostic_length;
 } granit_shader_tools_reflection_info;
 
-/** Shader 资产写入描述。路径和字符串均为 UTF-8，调用期间有效且无需以零结尾。 */
-typedef struct granit_shader_tools_asset_desc {
-  uint32_t struct_size;
-  /** 用于缓存身份的原始源码；不作为 sidecar 写入。 */
-  const char* source_path;
-  uint64_t source_path_length;
-  granit_shader_source_language source_language;
-  /** 已生成的 WebGPU WGSL 载荷。 */
-  const char* wgsl_path;
-  uint64_t wgsl_path_length;
-  const char* spirv_path;
-  uint64_t spirv_path_length;
-  const char* output_path;
-  uint64_t output_path_length;
-  const char* tint_revision;
-  uint64_t tint_revision_length;
-  const char* target_environment;
-  uint64_t target_environment_length;
-  const char* compile_options;
-  uint64_t compile_options_length;
-  /** 要写入清单的后端位集合；必须是 GRANIT_SHADER_BACKEND_*_BIT 的非零组合。 */
-  granit_shader_backend_flags backend_mask;
-  /** 所有导出变体必须支持的 GRANIT_SHADER_FEATURE_* 位集合。 */
-  granit_shader_feature_flags required_features;
-} granit_shader_tools_asset_desc;
-
 /** 单个描述符绑定的后端无关反射记录。名称视图在反射销毁前有效。 */
 typedef struct granit_shader_tools_binding_info {
   uint32_t struct_size;
@@ -187,11 +161,6 @@ GRANIT_SHADER_TOOLS_API granit_result granit_shader_tools_reflection_get_overrid
 /** 查询稳定排序的 UTF-8 反射 JSON。视图在反射销毁前有效。 */
 GRANIT_SHADER_TOOLS_API granit_result granit_shader_tools_reflection_get_json(
     granit_shader_tools_reflection reflection, const char** json, uint64_t* length);
-
-/** 使用已检查的反射和描述中的载荷写入 Shader 资产。 */
-GRANIT_SHADER_TOOLS_API granit_result granit_shader_tools_reflection_write_asset(
-    granit_shader_tools_reflection reflection, const granit_shader_tools_asset_desc* desc,
-    uint32_t* cache_hit);
 
 /** 销毁反射句柄。零值和已经销毁的句柄返回 GRANIT_ERROR_INVALID_HANDLE。 */
 GRANIT_SHADER_TOOLS_API granit_result

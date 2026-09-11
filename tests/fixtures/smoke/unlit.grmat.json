@@ -20,8 +20,8 @@
         "color_blend": {"enabled": false}
       },
       "shaders": [
-        {"asset": "../../../assets/shaders/unlit/unlit.vert.grshader"},
-        {"asset": "../../../assets/shaders/unlit/unlit.frag.grshader"}
+        {"asset": "../../../assets/shaders/unlit/unlit.vert.grshaderobj"},
+        {"asset": "../../../assets/shaders/unlit/unlit.frag.grshaderobj"}
       ]
     },
     {
@@ -34,8 +34,8 @@
         "color_blend": {"enabled": false}
       },
       "shaders": [
-        {"asset": "../../../assets/shaders/unlit/unlit.vert.grshader"},
-        {"asset": "../../../assets/shaders/unlit/unlit_alpha_cutoff.frag.grshader"}
+        {"asset": "../../../assets/shaders/unlit/unlit.vert.grshaderobj"},
+        {"asset": "../../../assets/shaders/unlit/unlit_alpha_cutoff.frag.grshaderobj"}
       ]
     },
     {
@@ -53,8 +53,8 @@
         }
       },
       "shaders": [
-        {"asset": "../../../assets/shaders/unlit/unlit.vert.grshader"},
-        {"asset": "../../../assets/shaders/unlit/unlit.frag.grshader"}
+        {"asset": "../../../assets/shaders/unlit/unlit.vert.grshaderobj"},
+        {"asset": "../../../assets/shaders/unlit/unlit.frag.grshaderobj"}
       ]
     }
   ]

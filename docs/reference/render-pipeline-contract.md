@@ -27,7 +27,7 @@ libraries/pbr_standard.grshlib
 materials/pbr_standard.grmat
 ```
 
-Library 同时包含 Vulkan 与 WebGPU 载荷，Renderer 在运行时选择；`.grshader` 及 sidecar 只属于
+Library 同时包含 Vulkan 与 WebGPU 载荷，Renderer 在运行时选择；`.grshaderobj` 及 sidecar 只属于
 离线工具链中间结果。变量只负责定位资产，不改变 Core 的资源边界；应用仍负责读取、嵌入或通过
 自己的资产系统提供相应字节。构建树变量指向 Granit 二进制目录中的资产副本，因此上游不需要
 推导源码目录。

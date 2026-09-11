@@ -143,11 +143,11 @@ granit_result create_shader(granit_renderer renderer, std::string_view name,
 }
 
 granit_result create_pipeline_fixture(granit_renderer renderer, pipeline_fixture& fixture) {
-  auto result = create_shader(renderer, "triangle.vert.grshader", fixture.vertex_shader);
+  auto result = create_shader(renderer, "triangle.vert.grshaderobj", fixture.vertex_shader);
   if (result == GRANIT_SUCCESS)
-    result = create_shader(renderer, "triangle.frag.grshader", fixture.fragment_shader);
+    result = create_shader(renderer, "triangle.frag.grshaderobj", fixture.fragment_shader);
   if (result == GRANIT_SUCCESS)
-    result = create_shader(renderer, "compute.comp.grshader", fixture.compute_shader);
+    result = create_shader(renderer, "compute.comp.grshaderobj", fixture.compute_shader);
   granit_pipeline_layout_desc graphics_layout_desc = GRANIT_PIPELINE_LAYOUT_DESC_INIT;
   if (result == GRANIT_SUCCESS)
     result =

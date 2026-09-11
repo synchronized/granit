@@ -53,7 +53,7 @@ struct shader_asset_info {
   std::vector<shader_asset_variant_info> variants;
 };
 
-/** 校验内存中的 `.grshader` 清单，并复制其稳定元数据。 */
+/** 校验内存中的 `.grshaderobj` 清单，并复制其稳定元数据。 */
 [[nodiscard]] inline result inspect_shader_asset(std::span<const std::byte> manifest,
                                                  shader_asset_info& info) noexcept {
   if (manifest.empty())

@@ -36,8 +36,8 @@
         }
       },
       "shaders": [
-        {"asset": "../../../assets/shaders/unlit/unlit_canvas.vert.grshader"},
-        {"asset": "../../../assets/shaders/unlit/unlit_canvas.frag.grshader"}
+        {"asset": "../../../assets/shaders/unlit/unlit_canvas.vert.grshaderobj"},
+        {"asset": "../../../assets/shaders/unlit/unlit_canvas.frag.grshaderobj"}
       ]
     },
     {
@@ -64,8 +64,8 @@
         }
       },
       "shaders": [
-        {"asset": "../../../assets/shaders/unlit/unlit_canvas.vert.grshader"},
-        {"asset": "../../../assets/shaders/unlit/unlit_canvas_encode_srgb.frag.grshader"}
+        {"asset": "../../../assets/shaders/unlit/unlit_canvas.vert.grshaderobj"},
+        {"asset": "../../../assets/shaders/unlit/unlit_canvas_encode_srgb.frag.grshaderobj"}
       ]
     }
   ]

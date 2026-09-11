@@ -43,11 +43,11 @@ extern "C" granit_result granit_shader_create_from_asset(granit_renderer rendere
       desc->sidecar_size > std::numeric_limits<std::size_t>::max())
     return GRANIT_ERROR_INVALID_ARGUMENT;
   try {
-    granit::detail::shader_format::shader_asset_view asset;
+    granit::detail::shader_format::shader_object_view asset;
     const auto manifest = std::span{static_cast<const std::byte*>(desc->manifest_data),
                                     static_cast<std::size_t>(desc->manifest_size)};
-    if (granit::detail::shader_format::decode_shader_asset(manifest, asset) !=
-        granit::detail::shader_format::shader_asset_error::success)
+    if (granit::detail::shader_format::decode_shader_object(manifest, asset) !=
+        granit::detail::shader_format::shader_object_error::success)
       return GRANIT_ERROR_INVALID_ARGUMENT;
     granit_renderer_shader_capabilities capabilities = GRANIT_RENDERER_SHADER_CAPABILITIES_INIT;
     auto result = granit::detail::renderer_registry::instance().get_shader_capabilities(
@@ -55,22 +55,23 @@ extern "C" granit_result granit_shader_create_from_asset(granit_renderer rendere
     if (result != GRANIT_SUCCESS)
       return result;
     const auto backend = capabilities.backend == GRANIT_RENDERER_BACKEND_VULKAN
-                             ? granit::detail::shader_format::shader_asset_backend::vulkan
-                             : granit::detail::shader_format::shader_asset_backend::webgpu;
-    const auto* variant = granit::detail::shader_format::find_shader_asset_variant(
+                             ? granit::detail::shader_format::shader_object_backend::vulkan
+                             : granit::detail::shader_format::shader_object_backend::webgpu;
+    const auto* variant = granit::detail::shader_format::find_shader_object_variant(
         asset, backend, granit::shader_profile::portable);
     if (variant == nullptr || (variant->required_features & ~capabilities.supported_features) != 0)
       return GRANIT_ERROR_UNSUPPORTED;
     const auto sidecar = std::span{static_cast<const std::byte*>(desc->sidecar_data),
                                    static_cast<std::size_t>(desc->sidecar_size)};
-    if (granit::detail::shader_format::validate_shader_asset_payload(asset, backend, sidecar) !=
-        granit::detail::shader_format::shader_asset_error::success)
+    if (granit::detail::shader_format::validate_shader_object_payload(asset, backend, sidecar) !=
+        granit::detail::shader_format::shader_object_error::success)
       return GRANIT_ERROR_INVALID_ARGUMENT;
     granit_shader_desc shader_desc = GRANIT_SHADER_DESC_INIT;
     shader_desc.stage = static_cast<granit_shader_stage>(asset.stage);
-    shader_desc.code_format = backend == granit::detail::shader_format::shader_asset_backend::vulkan
-                                  ? GRANIT_SHADER_CODE_FORMAT_SPIRV
-                                  : GRANIT_SHADER_CODE_FORMAT_WGSL;
+    shader_desc.code_format =
+        backend == granit::detail::shader_format::shader_object_backend::vulkan
+            ? GRANIT_SHADER_CODE_FORMAT_SPIRV
+            : GRANIT_SHADER_CODE_FORMAT_WGSL;
     shader_desc.entry_point = asset.entry_point.data();
     shader_desc.entry_point_length = static_cast<std::uint32_t>(asset.entry_point.size());
     shader_desc.code = sidecar.data();
@@ -93,13 +94,13 @@ extern "C" granit_result granit_shader_asset_inspect(const void* manifest_data,
       (info->entry_point == nullptr && info->entry_point_capacity != 0))
     return GRANIT_ERROR_INVALID_ARGUMENT;
 
-  granit::detail::shader_format::shader_asset_view asset;
+  granit::detail::shader_format::shader_object_view asset;
   const auto manifest = std::span{static_cast<const std::byte*>(manifest_data),
                                   static_cast<std::size_t>(manifest_size)};
-  const auto decoded = granit::detail::shader_format::decode_shader_asset(manifest, asset);
-  if (decoded == granit::detail::shader_format::shader_asset_error::unsupported_schema)
+  const auto decoded = granit::detail::shader_format::decode_shader_object(manifest, asset);
+  if (decoded == granit::detail::shader_format::shader_object_error::unsupported_schema)
     return GRANIT_ERROR_UNSUPPORTED;
-  if (decoded != granit::detail::shader_format::shader_asset_error::success)
+  if (decoded != granit::detail::shader_format::shader_object_error::success)
     return GRANIT_ERROR_INVALID_ARGUMENT;
 
   info->reserved = 0;
@@ -112,7 +113,7 @@ extern "C" granit_result granit_shader_asset_inspect(const void* manifest_data,
     const auto& source = asset.variants[index];
     auto& destination = info->variants[index];
     destination.backend =
-        source.backend == granit::detail::shader_format::shader_asset_backend::vulkan
+        source.backend == granit::detail::shader_format::shader_object_backend::vulkan
             ? GRANIT_RENDERER_BACKEND_VULKAN
             : GRANIT_RENDERER_BACKEND_WEBGPU;
     destination.code_format = source.code_format == granit::shader_code_format::spirv

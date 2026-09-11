@@ -10,11 +10,11 @@ endforeach()
 file(MAKE_DIRECTORY "${OUTPUT_DIR}")
 set(spirv "${OUTPUT_DIR}/hlsl-cli.spv")
 set(wgsl "${OUTPUT_DIR}/hlsl-cli.wgsl")
-set(asset "${OUTPUT_DIR}/hlsl-cli.granit-shader")
+set(asset "${OUTPUT_DIR}/hlsl-cli.grshaderobj")
 set(common_arguments
     --input "${INPUT}" --entry fragment_main --stage fragment --spirv-output "${spirv}"
-    --wgsl-output "${wgsl}" --asset "${asset}" --dxc-revision test-dxc --tint-revision
-    test-tint --asset-backend all --define SECOND_VALUE=2 --define FIRST_VALUE=1)
+    --wgsl-output "${wgsl}" --object "${asset}" --dxc-revision test-dxc --tint-revision
+    test-tint --object-backend all --define SECOND_VALUE=2 --define FIRST_VALUE=1)
 
 execute_process(
   COMMAND "${TOOL}" compile-hlsl --dxc "${DXC}" --tint "${TINT}" ${common_arguments}

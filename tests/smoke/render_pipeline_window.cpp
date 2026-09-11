@@ -23,10 +23,10 @@ namespace {
 
 granit::tests::shader_asset_store& shader_assets() {
   static granit::tests::shader_asset_store store;
-  static const bool loaded =
-      store.add(std::string{GRANIT_PIPELINE_ASSET_DIR} + "/pbr_shadow_ibl_lights.vert.grshader") &&
-      store.add(std::string{GRANIT_PIPELINE_ASSET_DIR} +
-                "/pbr_shadow_ibl_lights_untextured.frag.grshader");
+  static const bool loaded = store.add(std::string{GRANIT_PIPELINE_ASSET_DIR} +
+                                       "/pbr_shadow_ibl_lights.vert.grshaderobj") &&
+                             store.add(std::string{GRANIT_PIPELINE_ASSET_DIR} +
+                                       "/pbr_shadow_ibl_lights_untextured.frag.grshaderobj");
   if (!loaded)
     std::abort();
   return store;

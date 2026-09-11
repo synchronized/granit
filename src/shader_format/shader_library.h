@@ -21,25 +21,25 @@ enum class shader_library_error {
   unsupported_schema,
   invalid_layout,
   digest_mismatch,
-  invalid_shader_asset,
+  invalid_shader_object,
   missing_payload,
   conflicting_shader,
   conflicting_payload,
 };
 
-struct shader_library_asset_source {
+struct shader_library_object_source {
   std::span<const std::byte> manifest;
   std::span<const std::byte> wgsl;
   std::span<const std::byte> spirv;
 };
 
 struct shader_library_encode_desc {
-  std::span<const shader_library_asset_source> assets;
+  std::span<const shader_library_object_source> assets;
   granit_shader_backend_flags backend_mask = GRANIT_SHADER_BACKEND_ALL_BITS;
 };
 
 struct shader_library_variant {
-  shader_asset_backend backend{};
+  shader_object_backend backend{};
   shader_code_format code_format{};
   shader_profile profile{};
   std::uint64_t required_features = 0;

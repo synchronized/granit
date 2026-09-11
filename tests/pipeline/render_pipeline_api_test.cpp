@@ -45,11 +45,12 @@ granit_matrix4 identity() { return {{1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0
 granit::tests::shader_asset_store& shader_assets() {
   static granit::tests::shader_asset_store store;
   static const bool loaded =
-      store.add(std::string{GRANIT_TEST_ASSET_DIR} + "/minimal.vert.grshader") &&
-      store.add(std::string{GRANIT_TEST_ASSET_DIR} + "/minimal.frag.grshader") &&
-      store.add(std::string{GRANIT_PIPELINE_ASSET_DIR} + "/pbr_shadow_ibl_lights.vert.grshader") &&
+      store.add(std::string{GRANIT_TEST_ASSET_DIR} + "/minimal.vert.grshaderobj") &&
+      store.add(std::string{GRANIT_TEST_ASSET_DIR} + "/minimal.frag.grshaderobj") &&
       store.add(std::string{GRANIT_PIPELINE_ASSET_DIR} +
-                "/pbr_shadow_ibl_lights_untextured.frag.grshader");
+                "/pbr_shadow_ibl_lights.vert.grshaderobj") &&
+      store.add(std::string{GRANIT_PIPELINE_ASSET_DIR} +
+                "/pbr_shadow_ibl_lights_untextured.frag.grshaderobj");
   REQUIRE(loaded);
   return store;
 }
@@ -61,9 +62,9 @@ std::vector<std::byte> build_material_archive() {
       {.pass = make_feature_id("opaque"),
        .features = {},
        .shaders = {shader_assets().reference(std::string{GRANIT_TEST_ASSET_DIR} +
-                                             "/minimal.vert.grshader"),
+                                             "/minimal.vert.grshaderobj"),
                    shader_assets().reference(std::string{GRANIT_TEST_ASSET_DIR} +
-                                             "/minimal.frag.grshader")},
+                                             "/minimal.frag.grshaderobj")},
        .pipeline = {}});
   material_package package;
   REQUIRE(material_package::build(std::move(desc), package) == package_error::none);
@@ -93,9 +94,9 @@ std::vector<std::byte> build_automatic_material_archive() {
       .pass = make_feature_id("opaque"),
       .features = {{make_feature_id("pbr_texture_mask"), 0}},
       .shaders = {shader_assets().reference(std::string{GRANIT_PIPELINE_ASSET_DIR} +
-                                            "/pbr_shadow_ibl_lights.vert.grshader"),
+                                            "/pbr_shadow_ibl_lights.vert.grshaderobj"),
                   shader_assets().reference(std::string{GRANIT_PIPELINE_ASSET_DIR} +
-                                            "/pbr_shadow_ibl_lights_untextured.frag.grshader")},
+                                            "/pbr_shadow_ibl_lights_untextured.frag.grshaderobj")},
       .pipeline = {}};
   variant.pipeline.primitive.front_face = GRANIT_FRONT_FACE_CLOCKWISE;
   variant.pipeline.primitive.cull_mode = GRANIT_CULL_MODE_BACK;

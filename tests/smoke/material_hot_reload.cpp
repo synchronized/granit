@@ -22,9 +22,9 @@ bool make_package(const granit::tests::shader_asset_store& assets, std::string_v
   desc.variants.push_back({.pass = make_feature_id(pass_name),
                            .features = {},
                            .shaders = {assets.reference(std::string{GRANIT_SMOKE_ASSET_DIR} +
-                                                        "/triangle.vert.grshader"),
+                                                        "/triangle.vert.grshaderobj"),
                                        assets.reference(std::string{GRANIT_SMOKE_ASSET_DIR} +
-                                                        "/triangle.frag.grshader")},
+                                                        "/triangle.frag.grshaderobj")},
                            .pipeline = {}});
   return material_package::build(std::move(desc), package) == package_error::none;
 }
@@ -33,8 +33,8 @@ bool make_package(const granit::tests::shader_asset_store& assets, std::string_v
 
 int main() {
   granit::tests::shader_asset_store assets;
-  if (!assets.add(std::string{GRANIT_SMOKE_ASSET_DIR} + "/triangle.vert.grshader") ||
-      !assets.add(std::string{GRANIT_SMOKE_ASSET_DIR} + "/triangle.frag.grshader")) {
+  if (!assets.add(std::string{GRANIT_SMOKE_ASSET_DIR} + "/triangle.vert.grshaderobj") ||
+      !assets.add(std::string{GRANIT_SMOKE_ASSET_DIR} + "/triangle.frag.grshaderobj")) {
     std::cerr << "无法读取 Smoke Shader Asset\n";
     return 1;
   }

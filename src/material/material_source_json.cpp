@@ -253,9 +253,9 @@ bool read_shader_asset(const std::filesystem::path& path, material_shader_code& 
   stream.read(reinterpret_cast<char*>(bytes.data()), length);
   if (!stream)
     return false;
-  granit::detail::shader_format::shader_asset_view asset;
-  if (granit::detail::shader_format::decode_shader_asset(bytes, asset) !=
-      granit::detail::shader_format::shader_asset_error::success) {
+  granit::detail::shader_format::shader_object_view asset;
+  if (granit::detail::shader_format::decode_shader_object(bytes, asset) !=
+      granit::detail::shader_format::shader_object_error::success) {
     return false;
   }
   if (asset.stage == shader_stage::vertex) {

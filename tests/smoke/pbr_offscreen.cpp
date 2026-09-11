@@ -149,7 +149,7 @@ int main(int argc, char** argv) {
   granit::material::material_package full_package;
   granit::tests::shader_asset_store assets;
   const auto shader_reference = [&](const char* name) {
-    const auto path = std::string{GRANIT_PBR_SHADER_DIR} + "/" + name + ".grshader";
+    const auto path = std::string{GRANIT_PBR_SHADER_DIR} + "/" + name + ".grshaderobj";
     if (!assets.add(path))
       return granit::material::material_shader_code{};
     return assets.reference(path);

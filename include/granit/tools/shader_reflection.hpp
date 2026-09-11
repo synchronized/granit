@@ -181,12 +181,6 @@ public:
       return {};
     return {data, static_cast<std::size_t>(size)};
   }
-  [[nodiscard]] std::pair<::granit::result, bool>
-  write_asset(const granit_shader_tools_asset_desc& desc) const noexcept {
-    uint32_t cache_hit = 0;
-    const auto status = granit_shader_tools_reflection_write_asset(handle_, &desc, &cache_hit);
-    return {::granit::from_native(status), cache_hit != 0};
-  }
   void reset() noexcept {
     if (handle_ != 0) {
       granit_shader_tools_reflection_destroy(handle_);

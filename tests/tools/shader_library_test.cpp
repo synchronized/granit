@@ -33,17 +33,17 @@ int main() {
       make_shader_cache_key({wgsl, "wgsl", "main", "compute", "tint-r1", "vulkan1.3", ""});
   const auto second_key =
       make_shader_cache_key({wgsl, "wgsl", "other", "compute", "tint-r1", "vulkan1.3", ""});
-  if (encode_shader_asset({wgsl, spirv, reflection, first_key, GRANIT_SHADER_BACKEND_ALL_BITS, 0,
-                           granit::shader_stage::compute, "main"},
-                          first_manifest) != shader_asset_error::success ||
-      encode_shader_asset({wgsl, spirv, reflection, second_key, GRANIT_SHADER_BACKEND_ALL_BITS, 0,
-                           granit::shader_stage::compute, "other"},
-                          second_manifest) != shader_asset_error::success) {
+  if (encode_shader_object({wgsl, spirv, reflection, first_key, GRANIT_SHADER_BACKEND_ALL_BITS, 0,
+                            granit::shader_stage::compute, "main"},
+                           first_manifest) != shader_object_error::success ||
+      encode_shader_object({wgsl, spirv, reflection, second_key, GRANIT_SHADER_BACKEND_ALL_BITS, 0,
+                            granit::shader_stage::compute, "other"},
+                           second_manifest) != shader_object_error::success) {
     return 1;
   }
   const std::array sources{
-      shader_library_asset_source{first_manifest, wgsl_bytes, spirv},
-      shader_library_asset_source{second_manifest, wgsl_bytes, spirv},
+      shader_library_object_source{first_manifest, wgsl_bytes, spirv},
+      shader_library_object_source{second_manifest, wgsl_bytes, spirv},
   };
   const std::array reversed{sources[1], sources[0]};
   std::vector<std::byte> first;
@@ -64,8 +64,8 @@ int main() {
       })) {
     return 3;
   }
-  shader_asset_view first_asset;
-  if (decode_shader_asset(first_manifest, first_asset) != shader_asset_error::success ||
+  shader_object_view first_asset;
+  if (decode_shader_object(first_manifest, first_asset) != shader_object_error::success ||
       find_shader_library_shader(library, first_asset.content_id) == nullptr) {
     return 4;
   }
@@ -90,7 +90,7 @@ int main() {
       library.backend_mask != GRANIT_SHADER_BACKEND_VULKAN_BIT || library.payloads.size() != 1 ||
       std::ranges::any_of(library.shaders, [](const auto& shader) {
         return shader.variants.size() != 1 ||
-               shader.variants.front().backend != shader_asset_backend::vulkan;
+               shader.variants.front().backend != shader_object_backend::vulkan;
       })) {
     return 7;
   }

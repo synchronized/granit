@@ -9,7 +9,7 @@ Shader Library 是供运行时加载的确定性 `.grshlib` 容器。一个 Libr
 WebGPU WGSL 或两者，并按 Shader 内容 ID 组织阶段、入口、反射、能力要求和去重后的载荷。应用负责
 读取或映射整个归档，Core 负责格式与摘要校验，不执行文件 I/O 或运行时源码编译。
 
-`.grshader` 及其 sidecar 只作为离线链接器的中间输入，不属于安装或运行时资产。Material 只接收
+`.grshaderobj` 及其 sidecar 只作为离线链接器的中间输入，不属于安装或运行时资产。Material 只接收
 Library 句柄，不再接收 Renderer 后端信息或 Shader resolver。RenderPipeline component 安装的
 标准 Library 位于 `${granit_RENDER_PIPELINE_ASSET_DIR}/libraries/pbr_standard.grshlib`。
 

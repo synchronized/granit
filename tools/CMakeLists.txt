@@ -48,6 +48,8 @@ if(GRANIT_BUILD_SHADER_TOOLS OR GRANIT_BUILD_TOOLS OR (GRANIT_BUILD_TESTING AND 
         "${PROJECT_SOURCE_DIR}/include/granit/tools/shader_tools_export.h"
         "${PROJECT_SOURCE_DIR}/include/granit/tools/shader_compiler.h"
         "${PROJECT_SOURCE_DIR}/include/granit/tools/shader_compiler.hpp"
+        "${PROJECT_SOURCE_DIR}/include/granit/tools/shader_object_builder.h"
+        "${PROJECT_SOURCE_DIR}/include/granit/tools/shader_object_builder.hpp"
         "${PROJECT_SOURCE_DIR}/include/granit/tools/shader_reflection.h"
         "${PROJECT_SOURCE_DIR}/include/granit/tools/shader_reflection.hpp"
         "${PROJECT_SOURCE_DIR}/include/granit/tools/shader_tools.h"
@@ -62,7 +64,7 @@ if(GRANIT_BUILD_SHADER_TOOLS OR GRANIT_BUILD_TOOLS OR (GRANIT_BUILD_TESTING AND 
   target_sources(
     granit_shader_tools
     PRIVATE
-      $<TARGET_OBJECTS:granit_shader_asset_storage>
+      $<TARGET_OBJECTS:granit_shader_object_storage>
       $<TARGET_OBJECTS:granit_internal_shader_format>
       $<TARGET_OBJECTS:granit_shader_tools_core>
       $<TARGET_OBJECTS:granit_spirv_reflect>
@@ -102,8 +104,7 @@ endif()
 if(TARGET granit_shader_tools)
   add_executable(granit_shader_tool shader_tool_main.cpp)
   target_sources(
-    granit_shader_tool PRIVATE $<TARGET_OBJECTS:granit_shader_asset_storage>
-                               $<TARGET_OBJECTS:granit_internal_shader_format>
+    granit_shader_tool PRIVATE $<TARGET_OBJECTS:granit_internal_shader_format>
   )
   target_compile_features(granit_shader_tool PRIVATE cxx_std_20)
   target_include_directories(
@@ -138,25 +139,25 @@ set_target_properties(granit_material_tool PROPERTIES FOLDER "Tools")
 
 if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
   add_executable(
-    granit_shader_asset_test
-    "${PROJECT_SOURCE_DIR}/tests/tools/shader_asset_test.cpp"
-    $<TARGET_OBJECTS:granit_shader_asset_storage>
+    granit_shader_object_test
+    "${PROJECT_SOURCE_DIR}/tests/tools/shader_object_test.cpp"
+    $<TARGET_OBJECTS:granit_shader_object_storage>
     $<TARGET_OBJECTS:granit_internal_shader_format>
     $<TARGET_OBJECTS:granit_shader_tools_core>
     $<TARGET_OBJECTS:granit_spirv_reflect>
   )
-  target_compile_features(granit_shader_asset_test PRIVATE cxx_std_20)
+  target_compile_features(granit_shader_object_test PRIVATE cxx_std_20)
   target_include_directories(
-    granit_shader_asset_test
+    granit_shader_object_test
     PRIVATE "${PROJECT_SOURCE_DIR}/tools" "${PROJECT_SOURCE_DIR}/src"
             "${PROJECT_SOURCE_DIR}/include"
   )
-  target_link_libraries(granit_shader_asset_test PRIVATE Threads::Threads)
-  granit_target_compile_warnings(granit_shader_asset_test)
-  granit_target_output_directories(granit_shader_asset_test)
+  target_link_libraries(granit_shader_object_test PRIVATE Threads::Threads)
+  granit_target_compile_warnings(granit_shader_object_test)
+  granit_target_output_directories(granit_shader_object_test)
   add_test(
-    NAME granit.shader_tools.asset_codec
-    COMMAND granit_shader_asset_test "${CMAKE_CURRENT_BINARY_DIR}/shader-asset-test-cache"
+    NAME granit.shader_tools.object_codec
+    COMMAND granit_shader_object_test "${CMAKE_CURRENT_BINARY_DIR}/shader-object-test-cache"
   )
 
   add_executable(
@@ -203,18 +204,18 @@ if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
     )
 
     add_executable(
-      granit_shader_asset_api_test "${PROJECT_SOURCE_DIR}/tests/tools/shader_asset_api_test.cpp"
+      granit_shader_object_builder_api_test "${PROJECT_SOURCE_DIR}/tests/tools/shader_object_builder_api_test.cpp"
     )
-    target_compile_features(granit_shader_asset_api_test PRIVATE cxx_std_20)
-    target_link_libraries(granit_shader_asset_api_test PRIVATE granit::shader_tools)
-    granit_target_compile_warnings(granit_shader_asset_api_test)
-    granit_target_output_directories(granit_shader_asset_api_test)
+    target_compile_features(granit_shader_object_builder_api_test PRIVATE cxx_std_20)
+    target_link_libraries(granit_shader_object_builder_api_test PRIVATE granit::shader_tools)
+    granit_target_compile_warnings(granit_shader_object_builder_api_test)
+    granit_target_output_directories(granit_shader_object_builder_api_test)
     add_test(
-      NAME granit.shader_tools.asset_api
-      COMMAND granit_shader_asset_api_test
+      NAME granit.shader_tools.object_builder_api
+      COMMAND granit_shader_object_builder_api_test
               "${PROJECT_SOURCE_DIR}/tests/assets/minimal.comp.spv"
               "${PROJECT_SOURCE_DIR}/tests/fixtures/shaders/s10c_triangle.wgsl"
-              "${CMAKE_CURRENT_BINARY_DIR}/shader-asset-api-test-cache"
+              "${CMAKE_CURRENT_BINARY_DIR}/shader-object-builder-api-test-cache"
     )
   endif()
 
@@ -249,40 +250,40 @@ if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
     PROPERTIES PASS_REGULAR_EXPRESSION "SPIR-V 结构验证通过.*fragment_main.*fragment"
   )
   add_test(
-    NAME granit.shader_tool.pack
+    NAME granit.shader_tool.object
     COMMAND
-      granit_shader_tool pack
+      granit_shader_tool object
       --spirv "${PROJECT_SOURCE_DIR}/tests/assets/minimal.vert.spv"
-      --wgsl "${PROJECT_SOURCE_DIR}/tests/assets/minimal.vert.grshader.wgsl"
+      --wgsl "${PROJECT_SOURCE_DIR}/tests/assets/minimal.vert.grshaderobj.wgsl"
       --entry main
       --stage vertex
-      --asset "${CMAKE_CURRENT_BINARY_DIR}/pack-test/minimal.vert.grshader"
+      --output "${CMAKE_CURRENT_BINARY_DIR}/object-test/minimal.vert.grshaderobj"
   )
   set_tests_properties(
-    granit.shader_tool.pack
-    PROPERTIES PASS_REGULAR_EXPRESSION "Shader 资产"
+    granit.shader_tool.object
+    PROPERTIES PASS_REGULAR_EXPRESSION "Shader Object"
   )
-  set(granit_shader_asset_id_output
-      "${CMAKE_CURRENT_BINARY_DIR}/asset-id-test/minimal_shader_ids.inc")
+  set(granit_shader_object_id_output
+      "${CMAKE_CURRENT_BINARY_DIR}/object-id-test/minimal_shader_ids.inc")
   add_test(
-    NAME granit.shader_tool.asset_ids
-    COMMAND granit_shader_tool asset-ids
-            --asset "minimal_vertex_id=${PROJECT_SOURCE_DIR}/tests/assets/minimal.vert.grshader"
-            --output "${granit_shader_asset_id_output}"
+    NAME granit.shader_tool.object_ids
+    COMMAND granit_shader_tool object-ids
+            --object "minimal_vertex_id=${PROJECT_SOURCE_DIR}/tests/assets/minimal.vert.grshaderobj"
+            --output "${granit_shader_object_id_output}"
   )
   add_test(
-    NAME granit.shader_tool.asset_ids_compare
-    COMMAND "${CMAKE_COMMAND}" -E compare_files "${granit_shader_asset_id_output}"
+    NAME granit.shader_tool.object_ids_compare
+    COMMAND "${CMAKE_COMMAND}" -E compare_files "${granit_shader_object_id_output}"
             "${PROJECT_SOURCE_DIR}/tests/assets/minimal_shader_ids.inc"
   )
-  set_tests_properties(granit.shader_tool.asset_ids_compare
-                       PROPERTIES DEPENDS granit.shader_tool.asset_ids)
+  set_tests_properties(granit.shader_tool.object_ids_compare
+                       PROPERTIES DEPENDS granit.shader_tool.object_ids)
   add_test(
     NAME granit.shader_tool.library
     COMMAND
       granit_shader_tool library
-      --asset "${PROJECT_SOURCE_DIR}/tests/assets/minimal.vert.grshader"
-      --asset "${PROJECT_SOURCE_DIR}/tests/assets/minimal.frag.grshader"
+      --object "${PROJECT_SOURCE_DIR}/tests/assets/minimal.vert.grshaderobj"
+      --object "${PROJECT_SOURCE_DIR}/tests/assets/minimal.frag.grshaderobj"
       --target all
       --output "${CMAKE_CURRENT_BINARY_DIR}/library-test/minimal.grshlib"
   )
@@ -474,7 +475,7 @@ if(GRANIT_BUILD_TESTING AND BUILD_TESTING AND GRANIT_DXC_EXECUTABLE)
         "${CMAKE_CURRENT_BINARY_DIR}/shader-hlsl-api-test"
     )
     add_test(
-      NAME granit.shader_tool.hlsl_asset
+      NAME granit.shader_tool.hlsl_object
       COMMAND
         "${CMAKE_COMMAND}" -DTOOL=$<TARGET_FILE:granit_shader_tool>
         -DDXC=${GRANIT_DXC_EXECUTABLE} -DTINT=${GRANIT_TINT_EXECUTABLE}

@@ -17,9 +17,9 @@ class tone_mapping_shader_library {
 public:
   [[nodiscard]] bool initialize(granit_renderer renderer) {
     const auto vertex_path =
-        std::string{GRANIT_PIPELINE_SHADER_DIR} + "/tone_mapping.vert.grshader";
+        std::string{GRANIT_PIPELINE_SHADER_DIR} + "/tone_mapping.vert.grshaderobj";
     const auto fragment_path =
-        std::string{GRANIT_PIPELINE_SHADER_DIR} + "/tone_mapping.frag.grshader";
+        std::string{GRANIT_PIPELINE_SHADER_DIR} + "/tone_mapping.frag.grshaderobj";
     if (!assets_.add(vertex_path) || !assets_.add(fragment_path) ||
         !assets_.initialize_library(renderer, bytes_, library_)) {
       return false;

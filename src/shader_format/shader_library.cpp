@@ -82,16 +82,16 @@ bool zero_range(std::span<const std::byte> bytes) noexcept {
   return std::ranges::all_of(bytes, [](std::byte value) { return value == std::byte{0}; });
 }
 
-std::uint32_t backend_bit(shader_asset_backend backend) noexcept {
-  return backend == shader_asset_backend::vulkan   ? GRANIT_SHADER_BACKEND_VULKAN_BIT
-         : backend == shader_asset_backend::webgpu ? GRANIT_SHADER_BACKEND_WEBGPU_BIT
-                                                   : 0;
+std::uint32_t backend_bit(shader_object_backend backend) noexcept {
+  return backend == shader_object_backend::vulkan   ? GRANIT_SHADER_BACKEND_VULKAN_BIT
+         : backend == shader_object_backend::webgpu ? GRANIT_SHADER_BACKEND_WEBGPU_BIT
+                                                    : 0;
 }
 
 bool valid_variant(const shader_library_variant& variant) noexcept {
-  const auto matching_format = (variant.backend == shader_asset_backend::vulkan &&
+  const auto matching_format = (variant.backend == shader_object_backend::vulkan &&
                                 variant.code_format == shader_code_format::spirv) ||
-                               (variant.backend == shader_asset_backend::webgpu &&
+                               (variant.backend == shader_object_backend::webgpu &&
                                 variant.code_format == shader_code_format::wgsl);
   return matching_format && variant.profile == shader_profile::portable;
 }
@@ -126,9 +126,9 @@ shader_library_error add_payload(std::span<const std::byte> bytes, const content
   return shader_library_error::success;
 }
 
-std::span<const std::byte> source_payload(const shader_library_asset_source& source,
-                                          shader_asset_backend backend) noexcept {
-  return backend == shader_asset_backend::vulkan ? source.spirv : source.wgsl;
+std::span<const std::byte> source_payload(const shader_library_object_source& source,
+                                          shader_object_backend backend) noexcept {
+  return backend == shader_object_backend::vulkan ? source.spirv : source.wgsl;
 }
 
 } // namespace
@@ -145,31 +145,31 @@ shader_library_error encode_shader_library(const shader_library_encode_desc& des
     std::vector<encoded_payload> payloads;
     shaders.reserve(desc.assets.size());
     for (const auto& source : desc.assets) {
-      shader_asset_view asset;
-      if (decode_shader_asset(source.manifest, asset) != shader_asset_error::success)
-        return shader_library_error::invalid_shader_asset;
-      encoded_shader shader{.content_id = asset.content_id,
-                            .cache_key = asset.cache_key,
-                            .stage = asset.stage,
-                            .entry_point = std::string{asset.entry_point},
-                            .reflection_json = std::string{asset.reflection_json},
+      shader_object_view object;
+      if (decode_shader_object(source.manifest, object) != shader_object_error::success)
+        return shader_library_error::invalid_shader_object;
+      encoded_shader shader{.content_id = object.content_id,
+                            .cache_key = object.cache_key,
+                            .stage = object.stage,
+                            .entry_point = std::string{object.entry_point},
+                            .reflection_json = std::string{object.reflection_json},
                             .variants = {}};
-      for (const auto backend : {shader_asset_backend::webgpu, shader_asset_backend::vulkan}) {
+      for (const auto backend : {shader_object_backend::webgpu, shader_object_backend::vulkan}) {
         if ((desc.backend_mask & backend_bit(backend)) == 0)
           continue;
-        const auto* variant = find_shader_asset_variant(asset, backend, shader_profile::portable);
+        const auto* variant = find_shader_object_variant(object, backend, shader_profile::portable);
         const auto bytes = source_payload(source, backend);
         if (variant == nullptr || bytes.empty())
           return shader_library_error::missing_payload;
-        if (validate_shader_asset_payload(asset, backend, bytes) != shader_asset_error::success)
-          return shader_library_error::invalid_shader_asset;
+        if (validate_shader_object_payload(object, backend, bytes) != shader_object_error::success)
+          return shader_library_error::invalid_shader_object;
         shader_library_variant library_variant{.backend = variant->backend,
                                                .code_format = variant->code_format,
                                                .profile = variant->profile,
                                                .required_features = variant->required_features,
                                                .payload_digest = variant->digest};
         if (!valid_variant(library_variant))
-          return shader_library_error::invalid_shader_asset;
+          return shader_library_error::invalid_shader_object;
         const auto payload_result = add_payload(bytes, variant->digest, payloads);
         if (payload_result != shader_library_error::success)
           return payload_result;
@@ -378,7 +378,7 @@ shader_library_error decode_shader_library(std::span<const std::byte> bytes,
         const auto variant_record =
             static_cast<std::size_t>(variant_offset) + (next_variant + index) * variant_record_size;
         shader_library_variant variant{
-            .backend = static_cast<shader_asset_backend>(read_u32(bytes, variant_record)),
+            .backend = static_cast<shader_object_backend>(read_u32(bytes, variant_record)),
             .code_format = static_cast<shader_code_format>(read_u32(bytes, variant_record + 4)),
             .profile = static_cast<shader_profile>(read_u32(bytes, variant_record + 8)),
             .required_features = read_u64(bytes, variant_record + 16),

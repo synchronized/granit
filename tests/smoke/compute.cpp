@@ -58,7 +58,7 @@ int main() {
   granit::shader shader;
   if (result.ok())
     result = granit::tests::load_shader_asset(
-        renderer.native_handle(), std::string{GRANIT_SMOKE_ASSET_DIR} + "/compute.comp.grshader",
+        renderer.native_handle(), std::string{GRANIT_SMOKE_ASSET_DIR} + "/compute.comp.grshaderobj",
         shader);
   granit::compute_pipeline pipeline;
   if (result.ok()) {

@@ -160,11 +160,11 @@ int main(int argument_count, char** arguments) {
   if (result.ok())
     result = granit::tests::load_shader_asset(
         renderer.native_handle(),
-        std::string{GRANIT_SMOKE_ASSET_DIR} + "/window_triangle.vert.grshader", vertex_shader);
+        std::string{GRANIT_SMOKE_ASSET_DIR} + "/window_triangle.vert.grshaderobj", vertex_shader);
   if (result.ok())
     result = granit::tests::load_shader_asset(
         renderer.native_handle(),
-        std::string{GRANIT_SMOKE_ASSET_DIR} + "/window_triangle.frag.grshader", fragment_shader);
+        std::string{GRANIT_SMOKE_ASSET_DIR} + "/window_triangle.frag.grshaderobj", fragment_shader);
   granit::pipeline_layout layout;
   if (result.ok())
     result = layout.initialize(renderer.native_handle());

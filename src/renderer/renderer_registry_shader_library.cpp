@@ -147,8 +147,8 @@ granit_result renderer_registry::create_shader_from_library(
     if (source == nullptr)
       return GRANIT_ERROR_NOT_READY;
     const auto backend = library_record->owner->backend() == GRANIT_RENDERER_BACKEND_VULKAN
-                             ? shader_format::shader_asset_backend::vulkan
-                             : shader_format::shader_asset_backend::webgpu;
+                             ? shader_format::shader_object_backend::vulkan
+                             : shader_format::shader_object_backend::webgpu;
     const auto& capabilities = library_record->owner->capabilities();
     const auto variant = std::ranges::find_if(source->variants, [&](const auto& candidate) {
       return candidate.backend == backend && candidate.profile == shader_profile::portable &&
@@ -161,12 +161,12 @@ granit_result renderer_registry::create_shader_from_library(
       return GRANIT_ERROR_INVALID_ARGUMENT;
 
     granit_result result = GRANIT_ERROR_UNSUPPORTED;
-    if (backend == shader_format::shader_asset_backend::vulkan &&
+    if (backend == shader_format::shader_object_backend::vulkan &&
         variant->code_format == shader_code_format::spirv) {
       result = create_shader_from_code(renderer, static_cast<granit_shader_stage>(source->stage),
                                        GRANIT_SHADER_CODE_FORMAT_SPIRV, payload.bytes,
                                        source->entry_point, shader);
-    } else if (backend == shader_format::shader_asset_backend::webgpu &&
+    } else if (backend == shader_format::shader_object_backend::webgpu &&
                variant->code_format == shader_code_format::wgsl) {
       result = create_shader_from_code(renderer, static_cast<granit_shader_stage>(source->stage),
                                        GRANIT_SHADER_CODE_FORMAT_WGSL, payload.bytes,

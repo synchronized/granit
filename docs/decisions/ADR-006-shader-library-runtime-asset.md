@@ -8,7 +8,7 @@
 
 ## 背景
 
-当前 `.grshader` 使用后端无关清单和 WGSL/SPIR-V sidecar，但 Material resolver 仍接收 Renderer
+0.20.0 的 `.grshader` 使用后端无关清单和 WGSL/SPIR-V sidecar，但 Material resolver 仍接收 Renderer
 后端和能力档位。应用资产层因此需要选择具体 sidecar，Material、示例和 RenderPipeline 也出现了
 后端判断。单 Shader 文件适合离线增量编译，却不是理想的游戏运行时交付单元。
 
@@ -17,7 +17,8 @@
 - 0.21.0 引入 `.grshlib` Shader Library，集中保存 Shader 记录、反射契约、变体索引和去重载荷。
 - `.grmat` 只通过稳定内容 ID 引用 Shader；Renderer 根据自身能力在 Library 内选择载荷。
 - 发布资产按 Vulkan、WebGPU 或全后端目标裁剪，同一运行时接口不因目标改变。
-- `.grshader` 不再作为安装 SDK 或应用部署资产；单 Shader 中间结果改为工具私有缓存，不承诺格式兼容。
+- `.grshader` 不再作为安装 SDK 或应用部署资产；单 Shader 中间结果改名为 `.grshaderobj`，作为
+  工具私有缓存且不承诺格式兼容。
 - Material 创建改为借用显式 Shader Library 句柄，删除带 backend/profile 的 Shader resolver。
 - Shader Library 不接管文件 I/O、网络、异步调度和资产数据库；调用方继续提供内存字节并管理
   其有效期。

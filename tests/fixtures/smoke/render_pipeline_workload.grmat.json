@@ -32,8 +32,8 @@
         "color_blend": {"enabled": false}
       },
       "shaders": [
-        {"asset": "../../../assets/shaders/pbr/pbr_shadow_ibl_lights.vert.grshader"},
-        {"asset": "../../../assets/shaders/pbr/pbr_shadow_ibl_lights_untextured.frag.grshader"}
+        {"asset": "../../../assets/shaders/pbr/pbr_shadow_ibl_lights.vert.grshaderobj"},
+        {"asset": "../../../assets/shaders/pbr/pbr_shadow_ibl_lights_untextured.frag.grshaderobj"}
       ]
     }
   ]

@@ -424,15 +424,15 @@ add_custom_command(
   DEPENDS
     granit_material_tool
     "${PROJECT_SOURCE_DIR}/tests/fixtures/smoke/unlit.grmat.json"
-    "${PROJECT_SOURCE_DIR}/assets/shaders/unlit/unlit.vert.grshader"
-    "${PROJECT_SOURCE_DIR}/assets/shaders/unlit/unlit.frag.grshader"
-    "${PROJECT_SOURCE_DIR}/assets/shaders/unlit/unlit_alpha_cutoff.frag.grshader"
-    "${PROJECT_SOURCE_DIR}/assets/shaders/unlit/unlit.vert.grshader.spv"
-    "${PROJECT_SOURCE_DIR}/assets/shaders/unlit/unlit.vert.grshader.wgsl"
-    "${PROJECT_SOURCE_DIR}/assets/shaders/unlit/unlit.frag.grshader.spv"
-    "${PROJECT_SOURCE_DIR}/assets/shaders/unlit/unlit.frag.grshader.wgsl"
-    "${PROJECT_SOURCE_DIR}/assets/shaders/unlit/unlit_alpha_cutoff.frag.grshader.spv"
-    "${PROJECT_SOURCE_DIR}/assets/shaders/unlit/unlit_alpha_cutoff.frag.grshader.wgsl"
+    "${PROJECT_SOURCE_DIR}/assets/shaders/unlit/unlit.vert.grshaderobj"
+    "${PROJECT_SOURCE_DIR}/assets/shaders/unlit/unlit.frag.grshaderobj"
+    "${PROJECT_SOURCE_DIR}/assets/shaders/unlit/unlit_alpha_cutoff.frag.grshaderobj"
+    "${PROJECT_SOURCE_DIR}/assets/shaders/unlit/unlit.vert.grshaderobj.spv"
+    "${PROJECT_SOURCE_DIR}/assets/shaders/unlit/unlit.vert.grshaderobj.wgsl"
+    "${PROJECT_SOURCE_DIR}/assets/shaders/unlit/unlit.frag.grshaderobj.spv"
+    "${PROJECT_SOURCE_DIR}/assets/shaders/unlit/unlit.frag.grshaderobj.wgsl"
+    "${PROJECT_SOURCE_DIR}/assets/shaders/unlit/unlit_alpha_cutoff.frag.grshaderobj.spv"
+    "${PROJECT_SOURCE_DIR}/assets/shaders/unlit/unlit_alpha_cutoff.frag.grshaderobj.wgsl"
   VERBATIM
 )
 add_custom_target(granit_unlit_test_package DEPENDS "${granit_unlit_test_package}")
@@ -543,7 +543,7 @@ target_link_libraries(
   PRIVATE
     granit::granit
     Catch2::Catch2WithMain
-    $<TARGET_OBJECTS:granit_shader_asset_storage>
+    $<TARGET_OBJECTS:granit_shader_object_storage>
     $<TARGET_OBJECTS:granit_internal_shader_format>
     $<$<PLATFORM_ID:Windows>:user32>
 )

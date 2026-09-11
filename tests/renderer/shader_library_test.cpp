@@ -28,10 +28,10 @@ std::vector<std::byte> make_library() {
   std::vector<std::byte> manifest;
   const auto cache_key =
       make_shader_cache_key({wgsl, "wgsl", "main", "compute", "tint-r1", "vulkan1.3", ""});
-  REQUIRE(encode_shader_asset(
+  REQUIRE(encode_shader_object(
               {wgsl, spirv, reflection, cache_key, 3, 0, granit::shader_stage::compute, "main"},
-              manifest) == shader_asset_error::success);
-  const std::array sources{shader_library_asset_source{manifest, wgsl_bytes, spirv}};
+              manifest) == shader_object_error::success);
+  const std::array sources{shader_library_object_source{manifest, wgsl_bytes, spirv}};
   std::vector<std::byte> archive;
   REQUIRE(encode_shader_library({sources, GRANIT_SHADER_BACKEND_ALL_BITS}, archive) ==
           shader_library_error::success);
@@ -53,13 +53,13 @@ std::vector<std::byte> read_binary(const std::filesystem::path& path) {
 std::vector<std::byte> make_runtime_library(granit::shader_cache_key& content_id) {
   using namespace granit::detail::shader_format;
   const auto directory = std::filesystem::path{GRANIT_TEST_ASSET_DIR};
-  const auto manifest = read_binary(directory / "minimal.vert.grshader");
-  const auto wgsl = read_binary(directory / "minimal.vert.grshader.wgsl");
-  const auto spirv = read_binary(directory / "minimal.vert.grshader.spv");
-  shader_asset_view asset;
-  REQUIRE(decode_shader_asset(manifest, asset) == shader_asset_error::success);
+  const auto manifest = read_binary(directory / "minimal.vert.grshaderobj");
+  const auto wgsl = read_binary(directory / "minimal.vert.grshaderobj.wgsl");
+  const auto spirv = read_binary(directory / "minimal.vert.grshaderobj.spv");
+  shader_object_view asset;
+  REQUIRE(decode_shader_object(manifest, asset) == shader_object_error::success);
   content_id = asset.content_id;
-  const std::array sources{shader_library_asset_source{manifest, wgsl, spirv}};
+  const std::array sources{shader_library_object_source{manifest, wgsl, spirv}};
   std::vector<std::byte> archive;
   REQUIRE(encode_shader_library({sources, GRANIT_SHADER_BACKEND_ALL_BITS}, archive) ==
           shader_library_error::success);

@@ -21,13 +21,15 @@
   跨后端选择由 Shader Library 完成。
 - 静态 Shader 功能由 Pass 与 Feature 选择，数值、纹理和 Sampler 更新不创建 Pipeline；
   Canvas 在内部处理左上原点投影，材质和应用无需按后端修改坐标。
-- Canvas、Model Viewer、构建树和安装包直接消费 `.grshlib`。`.grshader` 与 sidecar 只作为离线
+- Canvas、Model Viewer、构建树和安装包直接消费 `.grshlib`。`.grshaderobj` 与 sidecar 只作为离线
   中间结果，不再作为 RenderPipeline 运行时资产发布。
 - 浏览器 WebGPU 内部删除历史 Provider ABI、查询符号、函数表和 dispatch；domain adapter 直接
   调用后端私有 Context，并使用互不混用的强类型资源句柄。
 - ShaderTools 统一 WGSL/HLSL Compiler API，并移除 GLSL/glslang 前端、工具链配置和打包内容。
 - ShaderTools 将编译结果与反射拆为独立句柄和头文件；C++ 反射字段改用强类型枚举，编译结果可直接
   查询 SPIR-V 与 WGSL 载荷。
+- ShaderTools 将单 Shader 中间结果统一为 `.grshaderobj`，新增独立 Object Builder C/C++ API，
+  CLI 和 CMake 统一使用 `object`、`--object` 与 `--object-backend`。
 - Shader、Texture、Environment、Material Archive 和 Pipeline Warmup 共用 Core 内容摘要类型与
   SHA-256 实现；领域 API 保留各自的内容 ID 和缓存键名称。
 

@@ -1,36 +1,36 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2026 Granit contributors
 
-function(granit_add_packed_shader_asset)
+function(granit_add_shader_object)
   set(options)
   set(one_value_args NAME SPIRV WGSL ENTRY STAGE OUTPUT_DIR OUTPUT_VAR)
   cmake_parse_arguments(ARG "${options}" "${one_value_args}" "" ${ARGN})
   if(NOT ARG_NAME OR NOT ARG_SPIRV OR NOT ARG_WGSL OR NOT ARG_ENTRY OR NOT ARG_STAGE OR
      NOT ARG_OUTPUT_DIR)
-    message(FATAL_ERROR "granit_add_packed_shader_asset 缺少必要参数")
+    message(FATAL_ERROR "granit_add_shader_object 缺少必要参数")
   endif()
 
-  set(asset "${ARG_OUTPUT_DIR}/${ARG_NAME}.grshader")
+  set(object "${ARG_OUTPUT_DIR}/${ARG_NAME}.grshaderobj")
   add_custom_command(
-    OUTPUT "${asset}" "${asset}.spv" "${asset}.wgsl"
+    OUTPUT "${object}" "${object}.spv" "${object}.wgsl"
     COMMAND "${CMAKE_COMMAND}" -E make_directory "${ARG_OUTPUT_DIR}"
     COMMAND
-      "$<TARGET_FILE:granit_shader_tool>" pack --spirv "${ARG_SPIRV}" --wgsl "${ARG_WGSL}"
-      --entry "${ARG_ENTRY}" --stage "${ARG_STAGE}" --asset "${asset}"
+      "$<TARGET_FILE:granit_shader_tool>" object --spirv "${ARG_SPIRV}" --wgsl "${ARG_WGSL}"
+      --entry "${ARG_ENTRY}" --stage "${ARG_STAGE}" --output "${object}"
     DEPENDS granit_shader_tool "${ARG_SPIRV}" "${ARG_WGSL}"
-    COMMENT "生成 Shader 资产 ${ARG_NAME}.grshader"
+    COMMENT "生成 Shader Object ${ARG_NAME}.grshaderobj"
     VERBATIM
   )
-  set(${ARG_OUTPUT_VAR} "${asset};${asset}.spv;${asset}.wgsl" PARENT_SCOPE)
+  set(${ARG_OUTPUT_VAR} "${object};${object}.spv;${object}.wgsl" PARENT_SCOPE)
 endfunction()
 
-function(granit_add_hlsl_shader_asset)
+function(granit_add_hlsl_shader_object)
   set(options)
   set(one_value_args NAME SOURCE ENTRY STAGE OUTPUT_DIR OUTPUT_VAR)
   set(multi_value_args DEFINES)
   cmake_parse_arguments(ARG "${options}" "${one_value_args}" "${multi_value_args}" ${ARGN})
   if(NOT ARG_NAME OR NOT ARG_SOURCE OR NOT ARG_ENTRY OR NOT ARG_STAGE OR NOT ARG_OUTPUT_DIR)
-    message(FATAL_ERROR "granit_add_hlsl_shader_asset 缺少必要参数")
+    message(FATAL_ERROR "granit_add_hlsl_shader_object 缺少必要参数")
   endif()
   if(NOT GRANIT_DXC_EXECUTABLE OR NOT GRANIT_TINT_EXECUTABLE)
     message(FATAL_ERROR "从 HLSL 生成跨后端资产需要 DXC 和 Tint")
@@ -40,42 +40,42 @@ function(granit_add_hlsl_shader_asset)
   foreach(definition IN LISTS ARG_DEFINES)
     list(APPEND define_arguments --define "${definition}")
   endforeach()
-  set(asset "${ARG_OUTPUT_DIR}/${ARG_NAME}.grshader")
+  set(object "${ARG_OUTPUT_DIR}/${ARG_NAME}.grshaderobj")
   add_custom_command(
-    OUTPUT "${asset}" "${asset}.spv" "${asset}.wgsl"
+    OUTPUT "${object}" "${object}.spv" "${object}.wgsl"
     COMMAND "${CMAKE_COMMAND}" -E make_directory "${ARG_OUTPUT_DIR}"
     COMMAND
       "$<TARGET_FILE:granit_shader_tool>" compile-hlsl --dxc "${GRANIT_DXC_EXECUTABLE}"
       --tint "${GRANIT_TINT_EXECUTABLE}" --input "${ARG_SOURCE}" --entry "${ARG_ENTRY}"
-      --stage "${ARG_STAGE}" --spirv-output "${asset}.spv" --wgsl-output "${asset}.wgsl"
-      --asset "${asset}" --asset-backend all ${define_arguments}
+      --stage "${ARG_STAGE}" --spirv-output "${object}.spv" --wgsl-output "${object}.wgsl"
+      --object "${object}" --object-backend all ${define_arguments}
     DEPENDS granit_shader_tool "${ARG_SOURCE}"
-    COMMENT "从 HLSL 生成 Shader 资产 ${ARG_NAME}.grshader"
+    COMMENT "从 HLSL 生成 Shader Object ${ARG_NAME}.grshaderobj"
     VERBATIM
   )
-  set(${ARG_OUTPUT_VAR} "${asset};${asset}.spv;${asset}.wgsl" PARENT_SCOPE)
+  set(${ARG_OUTPUT_VAR} "${object};${object}.spv;${object}.wgsl" PARENT_SCOPE)
 endfunction()
 
 function(granit_add_shader_library)
   set(options ALL)
   set(one_value_args NAME OUTPUT REFERENCE TARGET)
-  set(multi_value_args ASSETS)
+  set(multi_value_args OBJECTS)
   cmake_parse_arguments(ARG "${options}" "${one_value_args}" "${multi_value_args}" ${ARGN})
-  if(NOT ARG_NAME OR NOT ARG_OUTPUT OR NOT ARG_ASSETS OR NOT ARG_TARGET)
+  if(NOT ARG_NAME OR NOT ARG_OUTPUT OR NOT ARG_OBJECTS OR NOT ARG_TARGET)
     message(FATAL_ERROR "granit_add_shader_library 缺少必要参数")
   endif()
 
-  set(asset_arguments)
+  set(object_arguments)
   set(dependencies granit_shader_tool)
-  foreach(asset IN LISTS ARG_ASSETS)
-    list(APPEND asset_arguments --asset "${asset}")
-    list(APPEND dependencies "${asset}" "${asset}.spv" "${asset}.wgsl")
+  foreach(object IN LISTS ARG_OBJECTS)
+    list(APPEND object_arguments --object "${object}")
+    list(APPEND dependencies "${object}" "${object}.spv" "${object}.wgsl")
   endforeach()
   get_filename_component(output_directory "${ARG_OUTPUT}" DIRECTORY)
   set(stamp "${ARG_OUTPUT}.verified")
   set(commands
       COMMAND "${CMAKE_COMMAND}" -E make_directory "${output_directory}"
-      COMMAND "$<TARGET_FILE:granit_shader_tool>" library ${asset_arguments}
+      COMMAND "$<TARGET_FILE:granit_shader_tool>" library ${object_arguments}
               --target all --output "${ARG_OUTPUT}")
   if(ARG_REFERENCE)
     list(APPEND commands
@@ -107,9 +107,9 @@ function(granit_prepare_runtime_shader_libraries)
     OUTPUT "${output_root}/pbr_standard.grshlib"
     REFERENCE "${PROJECT_SOURCE_DIR}/assets/libraries/pbr_standard.grshlib"
     TARGET granit_pbr_shader_library
-    ASSETS
-      "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/pbr_standard.vert.grshader"
-      "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/pbr_standard.frag.grshader"
+    OBJECTS
+      "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/pbr_standard.vert.grshaderobj"
+      "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/pbr_standard.frag.grshaderobj"
   )
   granit_add_shader_library(
     ALL
@@ -117,10 +117,10 @@ function(granit_prepare_runtime_shader_libraries)
     OUTPUT "${output_root}/unlit_canvas.grshlib"
     REFERENCE "${PROJECT_SOURCE_DIR}/src/pipeline/assets/unlit_canvas.grshlib"
     TARGET granit_canvas_shader_library
-    ASSETS
-      "${PROJECT_SOURCE_DIR}/assets/shaders/unlit/unlit_canvas.vert.grshader"
-      "${PROJECT_SOURCE_DIR}/assets/shaders/unlit/unlit_canvas.frag.grshader"
-      "${PROJECT_SOURCE_DIR}/assets/shaders/unlit/unlit_canvas_encode_srgb.frag.grshader"
+    OBJECTS
+      "${PROJECT_SOURCE_DIR}/assets/shaders/unlit/unlit_canvas.vert.grshaderobj"
+      "${PROJECT_SOURCE_DIR}/assets/shaders/unlit/unlit_canvas.frag.grshaderobj"
+      "${PROJECT_SOURCE_DIR}/assets/shaders/unlit/unlit_canvas_encode_srgb.frag.grshaderobj"
   )
 endfunction()
 
@@ -133,7 +133,7 @@ function(granit_prepare_test_shader_assets)
 
   set(pbr_vertex_names pbr_lights.vert pbr_shadow_ibl_lights.vert)
   foreach(name IN LISTS pbr_vertex_names)
-    granit_add_packed_shader_asset(
+    granit_add_shader_object(
       NAME "${name}"
       SPIRV "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/${name}.spv"
       WGSL "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/${name}.wgsl"
@@ -152,7 +152,7 @@ function(granit_prepare_test_shader_assets)
     pbr_shadow_ibl_lights_untextured.frag
   )
   foreach(name IN LISTS pbr_fragment_names)
-    granit_add_packed_shader_asset(
+    granit_add_shader_object(
       NAME "${name}"
       SPIRV "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/${name}.spv"
       WGSL "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/${name}.wgsl"
@@ -172,7 +172,7 @@ function(granit_prepare_test_shader_assets)
       set(shader_stage fragment)
       set(entry fragment_main)
     endif()
-    granit_add_packed_shader_asset(
+    granit_add_shader_object(
       NAME "tone_mapping.${stage}"
       SPIRV "${PROJECT_SOURCE_DIR}/src/pipeline/shaders/tone_mapping.${stage}.spv"
       WGSL "${PROJECT_SOURCE_DIR}/src/pipeline/shaders/tone_mapping.wgsl"
@@ -186,7 +186,7 @@ function(granit_prepare_test_shader_assets)
 
   set(smoke_vertex_names triangle.vert window_triangle.vert)
   foreach(name IN LISTS smoke_vertex_names)
-    granit_add_packed_shader_asset(
+    granit_add_shader_object(
       NAME "${name}"
       SPIRV "${PROJECT_SOURCE_DIR}/tests/fixtures/smoke/${name}.spv"
       WGSL "${PROJECT_SOURCE_DIR}/tests/fixtures/smoke/${name}.wgsl"
@@ -199,7 +199,7 @@ function(granit_prepare_test_shader_assets)
   endforeach()
   set(smoke_fragment_names triangle.frag window_triangle.frag)
   foreach(name IN LISTS smoke_fragment_names)
-    granit_add_packed_shader_asset(
+    granit_add_shader_object(
       NAME "${name}"
       SPIRV "${PROJECT_SOURCE_DIR}/tests/fixtures/smoke/${name}.spv"
       WGSL "${PROJECT_SOURCE_DIR}/tests/fixtures/smoke/${name}.wgsl"
@@ -210,7 +210,7 @@ function(granit_prepare_test_shader_assets)
     )
     list(APPEND outputs ${output})
   endforeach()
-  granit_add_packed_shader_asset(
+  granit_add_shader_object(
     NAME compute.comp
     SPIRV "${PROJECT_SOURCE_DIR}/tests/fixtures/smoke/compute.comp.spv"
     WGSL "${PROJECT_SOURCE_DIR}/tests/fixtures/smoke/compute.comp.wgsl"

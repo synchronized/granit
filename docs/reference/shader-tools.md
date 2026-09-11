@@ -62,15 +62,15 @@ HLSL portable 路径需要资产构建机安装 DXC 与 Tint，但应用运行�
 - `granit_shader_tools_compilation` 持有一次源码编译的状态、诊断和 SPIR-V/WGSL 载荷；
   `granit_shader_tools_compilation_get_reflection` 返回独立拥有的 Reflection，销毁 Compilation 后仍可
   查询。两种句柄由不同句柄表校验，不能混用。
-- `granit_shader_tools_restore_asset_cache` 在启动 Tint 前校验输入、编译上下文和资产摘要；命中时
+- `granit_shader_tools_restore_object_cache` 在启动 Tint 前校验输入、编译上下文和资产摘要；命中时
   从 sidecar 恢复所需产物；清单或任一 sidecar 不存在、损坏及缓存键变化均作为正常未命中。
-- `granit_shader_tools_compilation_write_asset` 将稳定反射和载荷摘要写入 `.granit-shader` 清单，并将
+- `granit_shader_tools_compilation_write_object` 将稳定反射和载荷摘要写入 `.grshaderobj` 清单，并将
   WGSL、SPIR-V 写入同名 `.wgsl`、`.spv` sidecar。只有三个文件均逐字节相同时才报告缓存命中。
 - 当前 sidecar 分别代表 WebGPU portable WGSL 和 Vulkan portable SPIR-V。资产按后端打包裁剪和
   多能力档位选择属于 [S-20](../plans/S-20-shader-asset-variants.md)。
-- 命令行 `library` 可将多个已验证 Shader Asset 确定性链接为 `.grshlib`，按 SHA-256 去重
+- 命令行 `library` 可将多个已验证 Shader Object 确定性链接为 `.grshlib`，按 SHA-256 去重
   载荷，并以 `--target all|vulkan|webgpu` 生成全后端或裁剪结果。`.grshlib` 是 Core 的公共运行时
-  资产；`.grshader` 与 sidecar 只保留在工具私有的中间产物或缓存中。
+  资产；`.grshaderobj` 与 sidecar 只保留在工具私有的中间产物或缓存中。
 - HLSL portable 路径让 DXC 直接生成最终 Vulkan 1.3 SPIR-V；另行生成临时 Vulkan 1.1 /
   SPIR-V 1.3 中间文件供锁定 Tint 的 SPIR-V Reader 转换 WGSL，并要求两份 SPIR-V 的反射契约
   一致。临时文件不会进入资产。DXC 或 Tint 拒绝源代码及其能力时，调用返回
@@ -79,12 +79,12 @@ HLSL portable 路径需要资产构建机安装 DXC 与 Tint，但应用运行�
 - `granit_shader_tools_compile_desc.defines` 仅用于 HLSL，接收显式长度的名称和值。名称必须是合法标识符，
   值不能为空，同名定义会被拒绝；SDK 按名称排序后传给 DXC。CLI 对应参数为可重复的
   `--define NAME=VALUE`。排序后的完整定义集合属于编译上下文并进入缓存键。
-- 命令行 `compile-hlsl` 暴露相同路径，并可直接写入、裁剪 `.granit-shader` 资产。写资产时必须
+- 命令行 `compile-hlsl` 暴露相同路径，并可直接写入、裁剪 `.grshaderobj` 资产。写资产时必须
   显式记录 DXC 与 Tint 修订号。全后端资产缓存命中时会在启动两个编译器前直接恢复 SPIR-V 和
   WGSL；单后端裁剪目前仍执行完整编译，避免声称恢复了未被资产保存的另一后端产物。
 - 缓存键基于原始源码语言、原始源码内容、入口点、阶段、工具修订号、目标、选项和必需特性。
   因此相同文本分别作为 WGSL 或 HLSL 输入时不会错误共享缓存。
-- `granit_shader_tools_asset_desc.backend_mask` 必须选择 Vulkan、WebGPU 或二者；写入时会删除同名
+- `granit_shader_tools_object_desc.backend_mask` 必须选择 Vulkan、WebGPU 或二者；写入时会删除同名
   的未选后端 sidecar，清单仅记录实际保留的变体。缓存描述的 `backend_mask` 表示期望的精确
   变体集合，清单集合不同也会正常未命中；两个字段均不能为零。
 - `granit_shader_tools_get_target_capabilities` 查询工具内置目标档位的静态契约，不读取构建机 GPU。

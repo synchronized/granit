@@ -29,16 +29,16 @@ set(
 )
 
 add_library(
-  granit_shader_asset_storage OBJECT
-  "${PROJECT_SOURCE_DIR}/tools/shader_asset.cpp"
-  "${PROJECT_SOURCE_DIR}/tools/shader_asset.h"
+  granit_shader_object_storage OBJECT
+  "${PROJECT_SOURCE_DIR}/tools/shader_object_storage.cpp"
+  "${PROJECT_SOURCE_DIR}/tools/shader_object_storage.h"
 )
-target_compile_features(granit_shader_asset_storage PUBLIC cxx_std_20)
+target_compile_features(granit_shader_object_storage PUBLIC cxx_std_20)
 target_include_directories(
-  granit_shader_asset_storage
+  granit_shader_object_storage
   PUBLIC "${PROJECT_SOURCE_DIR}/tools" "${PROJECT_SOURCE_DIR}/src" "${PROJECT_SOURCE_DIR}/include"
 )
-granit_target_compile_warnings(granit_shader_asset_storage)
+granit_target_compile_warnings(granit_shader_object_storage)
 set_target_properties(
-  granit_shader_asset_storage PROPERTIES FOLDER "Tools" POSITION_INDEPENDENT_CODE YES
+  granit_shader_object_storage PROPERTIES FOLDER "Tools" POSITION_INDEPENDENT_CODE YES
 )

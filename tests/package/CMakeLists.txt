@@ -35,8 +35,8 @@ if(GRANIT_REQUEST_COMPONENT STREQUAL "RenderPipeline")
     message(FATAL_ERROR "RenderPipeline component 缺少公共 PBR Shader Library")
   endif()
   file(GLOB_RECURSE legacy_shader_assets
-       "${granit_RENDER_PIPELINE_ASSET_DIR}/*.grshader"
-       "${granit_RENDER_PIPELINE_ASSET_DIR}/*.grshader.*")
+       "${granit_RENDER_PIPELINE_ASSET_DIR}/*.grshaderobj"
+       "${granit_RENDER_PIPELINE_ASSET_DIR}/*.grshaderobj.*")
   if(legacy_shader_assets)
     message(FATAL_ERROR "RenderPipeline component 仍发布旧 Shader Asset：${legacy_shader_assets}")
   endif()

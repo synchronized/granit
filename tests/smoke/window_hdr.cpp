@@ -230,10 +230,10 @@ int main(int argument_count, char** arguments) {
     result = swapchain.query_info(info);
   granit::tests::shader_asset_store assets;
   granit::tests::tone_mapping_shader_library tone_shaders;
-  if (result.ok() &&
-      (!assets.add(std::string{GRANIT_PBR_SHADER_DIR} + "/pbr_shadow_ibl_lights.vert.grshader") ||
-       !assets.add(std::string{GRANIT_PBR_SHADER_DIR} +
-                   "/pbr_shadow_ibl_lights_untextured.frag.grshader")))
+  if (result.ok() && (!assets.add(std::string{GRANIT_PBR_SHADER_DIR} +
+                                  "/pbr_shadow_ibl_lights.vert.grshaderobj") ||
+                      !assets.add(std::string{GRANIT_PBR_SHADER_DIR} +
+                                  "/pbr_shadow_ibl_lights_untextured.frag.grshaderobj")))
     result = granit::result::initialization_failed;
   std::vector<std::byte> shader_library_bytes;
   granit::shader_library shader_library;
@@ -247,9 +247,9 @@ int main(int argument_count, char** arguments) {
   if (result.ok() && !granit::test::build_pbr_package(
                          pbr_package,
                          assets.reference(std::string{GRANIT_PBR_SHADER_DIR} +
-                                          "/pbr_shadow_ibl_lights.vert.grshader"),
+                                          "/pbr_shadow_ibl_lights.vert.grshaderobj"),
                          assets.reference(std::string{GRANIT_PBR_SHADER_DIR} +
-                                          "/pbr_shadow_ibl_lights_untextured.frag.grshader"))) {
+                                          "/pbr_shadow_ibl_lights_untextured.frag.grshaderobj"))) {
     result = granit::result::initialization_failed;
   }
   granit::test::pbr_lighting_resources pbr_lighting;

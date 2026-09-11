@@ -24,12 +24,12 @@ int main() {
   granit::shader fragment;
   if (result.ok())
     result = granit::tests::load_shader_asset(
-        renderer.native_handle(), std::string{GRANIT_SMOKE_ASSET_DIR} + "/triangle.vert.grshader",
-        vertex);
+        renderer.native_handle(),
+        std::string{GRANIT_SMOKE_ASSET_DIR} + "/triangle.vert.grshaderobj", vertex);
   if (result.ok())
     result = granit::tests::load_shader_asset(
-        renderer.native_handle(), std::string{GRANIT_SMOKE_ASSET_DIR} + "/triangle.frag.grshader",
-        fragment);
+        renderer.native_handle(),
+        std::string{GRANIT_SMOKE_ASSET_DIR} + "/triangle.frag.grshaderobj", fragment);
   granit::pipeline_layout layout;
   if (result.ok())
     result = layout.initialize(renderer.native_handle());

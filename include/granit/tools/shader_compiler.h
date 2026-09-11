@@ -10,6 +10,7 @@
 #include <granit/core/result.h>
 #include <granit/core/shader_features.h>
 #include <granit/core/shader_types.h>
+#include <granit/tools/shader_object_builder.h>
 #include <granit/tools/shader_reflection.h>
 #include <granit/tools/shader_tools_export.h>
 
@@ -114,35 +115,6 @@ typedef struct granit_shader_tools_compilation_info {
   uint64_t diagnostic_length;
 } granit_shader_tools_compilation_info;
 
-/** Shader 资产缓存恢复描述。所有路径和字符串均在调用期间有效。 */
-typedef struct granit_shader_tools_cache_desc {
-  uint32_t struct_size;
-  /** 用于重新计算缓存键的原始源码。 */
-  const char* source_path;
-  uint64_t source_path_length;
-  granit_shader_source_language source_language;
-  /** 非 WGSL 前端命中缓存时恢复 WGSL 的目标；WGSL 前端可留空。 */
-  const char* wgsl_output_path;
-  uint64_t wgsl_output_path_length;
-  const char* spirv_output_path;
-  uint64_t spirv_output_path_length;
-  const char* asset_path;
-  uint64_t asset_path_length;
-  const char* entry_point;
-  uint64_t entry_point_length;
-  granit_shader_stage stage;
-  const char* tint_revision;
-  uint64_t tint_revision_length;
-  const char* target_environment;
-  uint64_t target_environment_length;
-  const char* compile_options;
-  uint64_t compile_options_length;
-  /** 期望资产包含的精确后端位集合；语义与 granit_shader_tools_asset_desc 相同。 */
-  granit_shader_backend_flags backend_mask;
-  /** 期望资产使用的精确特性位集合。 */
-  granit_shader_feature_flags required_features;
-} granit_shader_tools_cache_desc;
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -191,18 +163,9 @@ GRANIT_SHADER_TOOLS_API granit_result granit_shader_tools_compilation_get_wgsl(
  * 将稳定反射清单写入 output_path，并将 WGSL、SPIR-V 分别写入同名 .wgsl、.spv sidecar。
  * cache_hit 仅在清单和两个 sidecar 均逐字节相同时写为 1，否则写为 0。
  */
-GRANIT_SHADER_TOOLS_API granit_result granit_shader_tools_compilation_write_asset(
-    granit_shader_tools_compilation compilation, const granit_shader_tools_asset_desc* desc,
+GRANIT_SHADER_TOOLS_API granit_result granit_shader_tools_compilation_write_object(
+    granit_shader_tools_compilation compilation, const granit_shader_tools_object_desc* desc,
     uint32_t* cache_hit);
-
-/**
- * 在运行 Tint 前尝试恢复确定性 Shader 资产。
- *
- * 有效缓存命中时校验清单和 sidecar，恢复描述要求的 SPIR-V/WGSL，并把 cache_hit 写为 1；
- * 任一文件不存在、损坏或缓存键不匹配均作为正常未命中返回 GRANIT_SUCCESS 和 0。
- */
-GRANIT_SHADER_TOOLS_API granit_result granit_shader_tools_restore_asset_cache(
-    const granit_shader_tools_cache_desc* desc, uint32_t* cache_hit);
 
 /** 查询内置目标档位支持的静态特性；当前 backend 使用 ASSET_BACKEND 单值。 */
 GRANIT_SHADER_TOOLS_API granit_result granit_shader_tools_get_target_capabilities(

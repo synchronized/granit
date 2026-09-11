@@ -40,8 +40,8 @@
         "color_blend": {"enabled": false}
       },
       "shaders": [
-        {"asset": "minimal.vert.grshader"},
-        {"asset": "minimal.frag.grshader"}
+        {"asset": "minimal.vert.grshaderobj"},
+        {"asset": "minimal.frag.grshaderobj"}
       ]
     }
   ]

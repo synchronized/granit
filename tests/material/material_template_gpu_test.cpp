@@ -83,12 +83,12 @@ granit::material::material_package build_asset_package() {
   material_package_desc desc;
   desc.binding_groups = package_binding_group_frame | package_binding_group_material;
   granit::tests::shader_asset_store store;
-  REQUIRE(store.add(asset_dir + "/minimal.vert.grshader"));
-  REQUIRE(store.add(asset_dir + "/minimal.frag.grshader"));
+  REQUIRE(store.add(asset_dir + "/minimal.vert.grshaderobj"));
+  REQUIRE(store.add(asset_dir + "/minimal.frag.grshaderobj"));
   desc.variants.push_back({.pass = make_feature_id("opaque"),
                            .features = {},
-                           .shaders = {store.reference(asset_dir + "/minimal.vert.grshader"),
-                                       store.reference(asset_dir + "/minimal.frag.grshader")},
+                           .shaders = {store.reference(asset_dir + "/minimal.vert.grshaderobj"),
+                                       store.reference(asset_dir + "/minimal.frag.grshaderobj")},
                            .pipeline = {}});
   desc.variants.back().pipeline.vertex_buffers = {
       {.stride = 12,

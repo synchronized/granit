@@ -38,8 +38,8 @@ constexpr std::string_view source = R"({
         "alpha_operation": "add", "write_mask": 7}
     },
     "shaders": [
-      {"asset": "minimal.vert.grshader"},
-      {"asset": "minimal.frag.grshader"}
+      {"asset": "minimal.vert.grshaderobj"},
+      {"asset": "minimal.frag.grshaderobj"}
     ]
   }]
 })";
@@ -86,8 +86,8 @@ TEST_CASE("材质源 JSON 拒绝不支持的绑定模型") {
 
 TEST_CASE("材质源 JSON 拒绝缺失的 Shader Asset") {
   std::string invalid{source};
-  invalid.replace(invalid.find("minimal.vert.grshader"),
-                  std::string_view{"minimal.vert.grshader"}.size(), "missing.grshader");
+  invalid.replace(invalid.find("minimal.vert.grshaderobj"),
+                  std::string_view{"minimal.vert.grshaderobj"}.size(), "missing.grshaderobj");
   granit::material::material_package package;
   CHECK(granit::material::parse_material_source_json(
             invalid, std::filesystem::path{GRANIT_TEST_ASSET_DIR}, package) ==

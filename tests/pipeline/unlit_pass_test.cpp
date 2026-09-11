@@ -26,9 +26,9 @@ std::vector<char> load_package() {
 granit::tests::shader_asset_store& shader_assets() {
   static granit::tests::shader_asset_store store;
   static const bool loaded =
-      store.add(std::string{GRANIT_UNLIT_SHADER_DIR} + "/unlit.vert.grshader") &&
-      store.add(std::string{GRANIT_UNLIT_SHADER_DIR} + "/unlit.frag.grshader") &&
-      store.add(std::string{GRANIT_UNLIT_SHADER_DIR} + "/unlit_alpha_cutoff.frag.grshader");
+      store.add(std::string{GRANIT_UNLIT_SHADER_DIR} + "/unlit.vert.grshaderobj") &&
+      store.add(std::string{GRANIT_UNLIT_SHADER_DIR} + "/unlit.frag.grshaderobj") &&
+      store.add(std::string{GRANIT_UNLIT_SHADER_DIR} + "/unlit_alpha_cutoff.frag.grshaderobj");
   REQUIRE(loaded);
   return store;
 }

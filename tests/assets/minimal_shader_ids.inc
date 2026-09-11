@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-// 由 granit_shader_tool asset-ids 生成。
+// 由 granit_shader_tool object-ids 生成。
 
 constexpr std::array<std::byte, 32> minimal_vertex_id{
   std::byte{0xf9},
