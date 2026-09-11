@@ -37,7 +37,7 @@ set_target_properties(granit_shader_tools_core PROPERTIES FOLDER "Tools")
 set_target_properties(granit_shader_tools_core PROPERTIES POSITION_INDEPENDENT_CODE YES)
 
 if(GRANIT_BUILD_SHADER_TOOLS OR GRANIT_BUILD_TOOLS OR (GRANIT_BUILD_TESTING AND BUILD_TESTING))
-  add_library(granit_shader_tools shader_tools_api.cpp)
+  add_library(granit_shader_tools shader_tools_api.cpp shader_library/builder.cpp)
   add_library(granit::shader_tools ALIAS granit_shader_tools)
   target_sources(
     granit_shader_tools
@@ -48,6 +48,8 @@ if(GRANIT_BUILD_SHADER_TOOLS OR GRANIT_BUILD_TOOLS OR (GRANIT_BUILD_TESTING AND 
         "${PROJECT_SOURCE_DIR}/include/granit/tools/shader_tools_export.h"
         "${PROJECT_SOURCE_DIR}/include/granit/tools/shader_compiler.h"
         "${PROJECT_SOURCE_DIR}/include/granit/tools/shader_compiler.hpp"
+        "${PROJECT_SOURCE_DIR}/include/granit/tools/shader_library_builder.h"
+        "${PROJECT_SOURCE_DIR}/include/granit/tools/shader_library_builder.hpp"
         "${PROJECT_SOURCE_DIR}/include/granit/tools/shader_object_builder.h"
         "${PROJECT_SOURCE_DIR}/include/granit/tools/shader_object_builder.hpp"
         "${PROJECT_SOURCE_DIR}/include/granit/tools/shader_reflection.h"
@@ -102,7 +104,18 @@ if(GRANIT_BUILD_SHADER_TOOLS OR GRANIT_BUILD_TOOLS OR (GRANIT_BUILD_TESTING AND 
 endif()
 
 if(TARGET granit_shader_tools)
-  add_executable(granit_shader_tool shader_tool_main.cpp)
+  add_executable(
+    granit_shader_tool
+    shader_cli/main.cpp
+    shader_cli/arguments.cpp
+    shader_cli/arguments.h
+    shader_cli/commands.h
+    shader_cli/commands/compile.cpp
+    shader_cli/commands/inspect.cpp
+    shader_cli/commands/library.cpp
+    shader_cli/commands/object.cpp
+    shader_cli/commands/targets.cpp
+  )
   target_sources(
     granit_shader_tool PRIVATE $<TARGET_OBJECTS:granit_internal_shader_format>
   )
@@ -172,6 +185,23 @@ if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
   granit_target_compile_warnings(granit_shader_library_test)
   granit_target_output_directories(granit_shader_library_test)
   add_test(NAME granit.shader_tools.library_codec COMMAND granit_shader_library_test)
+
+  add_executable(
+    granit_shader_library_builder_api_test
+    "${PROJECT_SOURCE_DIR}/tests/tools/shader_library_builder_api_test.cpp"
+  )
+  target_compile_features(granit_shader_library_builder_api_test PRIVATE cxx_std_20)
+  target_link_libraries(granit_shader_library_builder_api_test PRIVATE granit::shader_tools)
+  granit_target_compile_warnings(granit_shader_library_builder_api_test)
+  granit_target_output_directories(granit_shader_library_builder_api_test)
+  add_test(
+    NAME granit.shader_tools.library_builder_api
+    COMMAND
+      granit_shader_library_builder_api_test
+      "${PROJECT_SOURCE_DIR}/tests/assets/minimal.vert.grshaderobj"
+      "${PROJECT_SOURCE_DIR}/tests/assets/minimal.frag.grshaderobj"
+      "${CMAKE_CURRENT_BINARY_DIR}/shader-library-builder-api-test-cache"
+  )
 
   if(TARGET granit_shader_tools)
     add_executable(

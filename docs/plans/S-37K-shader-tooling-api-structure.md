@@ -7,11 +7,12 @@
 
 **实现中。** S-37K1 已完成共享 Shader 类型收敛；S-37K2 已完成统一 Compiler 配置、编译描述和
 单一编译入口；S-37K2A 已完成通用内容摘要收敛；S-37K3 已完成 Compilation 与 Reflection
-边界；S-37K4 已完成 Shader Object 边界。S-37K5～S-37K6 待实施。
+边界；S-37K4 已完成 Shader Object 边界；S-37K5 已完成 Library Builder 与 CLI 拆分。
+S-37K6 待实施。
 
 ## 背景与目标
 
-当前 Shader 工具能力已经覆盖 WGSL、HLSL、SPIR-V 反射、缓存、单 Shader 中间产物和
+本计划开始时，Shader 工具能力已经覆盖 WGSL、HLSL、SPIR-V 反射、缓存、单 Shader 中间产物和
 Library 链接，但接口与源码组织仍保留多轮演进痕迹：
 
 - `shader_tools.h/.hpp` 同时公开编译、反射、缓存、资产写入、工具身份和目标能力查询。
@@ -127,7 +128,7 @@ scalar type，不再把所有字段暴露为无含义的 `uint32_t`。独立 SPI
 
 ### Shader Object 是工具私有中间产物
 
-`.grshaderobj` 改名为 `.grshaderobj`，只用于编译缓存和 Library 链接。它可以包含阶段、入口、内容 ID、
+`.grshader` 改名为 `.grshaderobj`，只用于编译缓存和 Library 链接。它可以包含阶段、入口、内容 ID、
 缓存键、反射和各后端载荷摘要，但不安装到 Runtime component，也不承诺跨 Granit 版本兼容。
 
 `write_object()` 负责从编译结果生成对象。已有 SPIR-V/WGSL 对的导入由独立 Object Builder 完成，
@@ -229,7 +230,7 @@ tools/shader_cli/
 5. **S-37K4 Shader Object 边界（已完成）**：引入 `.grshaderobj`、Object Builder 和对象检查；
    迁移缓存、测试 Fixture 与生成规则；删除 `.grshader` 名称和旧
    `result_write_asset`/`restore_asset_cache` 组织。
-6. **S-37K5 Library Builder 与 CLI 拆分**：把 Library 编码、文件存储和命令实现移出
+6. **S-37K5 Library Builder 与 CLI 拆分（已完成）**：把 Library 编码、文件存储和命令实现移出
    `shader_tool_main.cpp`；CLI 成为薄适配层，CMake 只调用稳定命令接口。
 7. **S-37K6 资产、安装与发布验收**：重建内建及公共 Shader Library，删除仓库中的旧中间快照，
    更新 Reference、Guide、迁移说明、安装清单和可复现 Toolchain 包。
@@ -247,7 +248,7 @@ tools/shader_cli/
 - CLI、SDK 直接调用和 CMake 生成路径共享同一实现，并通过缓存命中与失效回归。
 - 安装结果不包含 `.grshaderobj`、DXC、Tint 或工具私有头；Runtime 只安装 `.grshlib`。
 - Windows 共享/静态、Linux GCC/Clang、Emscripten、浏览器 WebGPU、构建树和安装 Consumer 通过。
-- `shader_tool_main.cpp` 只保留入口分派；单个命令实现和公共头不再承担多个领域职责。
+- `shader_cli/main.cpp` 只保留入口分派；单个命令实现和公共头不再承担多个领域职责。
 
 ## 风险与未决问题
 

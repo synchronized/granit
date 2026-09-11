@@ -30,6 +30,8 @@
   查询 SPIR-V 与 WGSL 载荷。
 - ShaderTools 将单 Shader 中间结果统一为 `.grshaderobj`，新增独立 Object Builder C/C++ API，
   CLI 和 CMake 统一使用 `object`、`--object` 与 `--object-backend`。
+- ShaderTools 新增独立 Library Builder C/C++ API；`granit_shader_tool` 按命令拆分实现，Library
+  命令只负责把参数转换为 SDK 描述并映射退出码。
 - Shader、Texture、Environment、Material Archive 和 Pipeline Warmup 共用 Core 内容摘要类型与
   SHA-256 实现；领域 API 保留各自的内容 ID 和缓存键名称。
 

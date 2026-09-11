@@ -2,6 +2,7 @@
 // Copyright (c) 2026 Granit contributors
 
 #include <granit/tools/shader_compiler.h>
+#include <granit/tools/shader_library_builder.h>
 #include <granit/tools/shader_reflection.h>
 
 #include <stddef.h>
@@ -25,8 +26,13 @@ int main(int argc, char** argv) {
   uint64_t reflection_json_length = 0;
   uint64_t tool_identity_length = 0;
   char tool_identity[64];
+  uint32_t library_cache_hit = 1;
   if (argc != 2)
     return 1;
+  if (granit_shader_tools_build_library(NULL, &library_cache_hit) !=
+          GRANIT_ERROR_INVALID_ARGUMENT ||
+      library_cache_hit != 0)
+    return 17;
   if (granit_shader_tools_compiler_create(&compiler_desc, &compiler) != GRANIT_SUCCESS ||
       compiler == 0)
     return 15;

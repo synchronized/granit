@@ -46,9 +46,8 @@ HLSL portable 路径需要资产构建机安装 DXC 与 Tint，但应用运行�
 
 ## 接口与生命周期
 
-- C11 的编译和反射入口分别位于 `<granit/tools/shader_compiler.h>` 与
-  `<granit/tools/shader_reflection.h>`；对应 `.hpp` 提供 C++20 RAII 包装。`shader_tools.h/.hpp`
-  只作为聚合入口。
+- C11 的编译、反射、Object Builder 和 Library Builder 入口分别位于对应的
+  `<granit/tools/shader_*.h>`；`.hpp` 提供 C++20 包装。`shader_tools.h/.hpp` 只作为聚合入口。
 - `granit_shader_tools_compiler_create` 创建可复用 Compiler，配置包含 DXC 与 Tint 路径；
   `granit_shader_tools_compiler_compile` 通过 `source_language` 选择前端。C++ 包装对应移动独占的
   `compiler` 和统一 `compile_desc`。旧的语言专用描述与编译入口已删除。
@@ -71,6 +70,8 @@ HLSL portable 路径需要资产构建机安装 DXC 与 Tint，但应用运行�
 - 命令行 `library` 可将多个已验证 Shader Object 确定性链接为 `.grshlib`，按 SHA-256 去重
   载荷，并以 `--target all|vulkan|webgpu` 生成全后端或裁剪结果。`.grshlib` 是 Core 的公共运行时
   资产；`.grshaderobj` 与 sidecar 只保留在工具私有的中间产物或缓存中。
+- `granit_shader_tools_build_library` 接收 Object 路径数组、目标后端集合和输出路径，执行与 CLI
+  相同的严格校验、裁剪、去重、确定性编码及原子写入；输出逐字节未变化时报告缓存命中。
 - HLSL portable 路径让 DXC 直接生成最终 Vulkan 1.3 SPIR-V；另行生成临时 Vulkan 1.1 /
   SPIR-V 1.3 中间文件供锁定 Tint 的 SPIR-V Reader 转换 WGSL，并要求两份 SPIR-V 的反射契约
   一致。临时文件不会进入资产。DXC 或 Tint 拒绝源代码及其能力时，调用返回

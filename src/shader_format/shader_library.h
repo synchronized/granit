@@ -34,7 +34,7 @@ struct shader_library_object_source {
 };
 
 struct shader_library_encode_desc {
-  std::span<const shader_library_object_source> assets;
+  std::span<const shader_library_object_source> objects;
   granit_shader_backend_flags backend_mask = GRANIT_SHADER_BACKEND_ALL_BITS;
 };
 

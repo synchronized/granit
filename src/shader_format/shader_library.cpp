@@ -136,15 +136,15 @@ std::span<const std::byte> source_payload(const shader_library_object_source& so
 shader_library_error encode_shader_library(const shader_library_encode_desc& desc,
                                            std::vector<std::byte>& output) noexcept {
   output.clear();
-  if (desc.assets.empty() || desc.backend_mask == 0 ||
+  if (desc.objects.empty() || desc.backend_mask == 0 ||
       (desc.backend_mask & ~GRANIT_SHADER_BACKEND_ALL_BITS) != 0) {
     return shader_library_error::invalid_argument;
   }
   try {
     std::vector<encoded_shader> shaders;
     std::vector<encoded_payload> payloads;
-    shaders.reserve(desc.assets.size());
-    for (const auto& source : desc.assets) {
+    shaders.reserve(desc.objects.size());
+    for (const auto& source : desc.objects) {
       shader_object_view object;
       if (decode_shader_object(source.manifest, object) != shader_object_error::success)
         return shader_library_error::invalid_shader_object;
