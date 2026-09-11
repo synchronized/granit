@@ -240,7 +240,7 @@ TEST_CASE("Tone Mapping资源拒绝未知内容ID且失败后可重新初始化"
   REQUIRE(initialized.ok());
   granit::tests::tone_mapping_shader_library shaders;
   REQUIRE(shaders.initialize(renderer.native_handle()));
-  std::array<std::byte, GRANIT_SHADER_LIBRARY_CONTENT_DIGEST_SIZE> missing_id{};
+  granit::shader_content_id missing_id{};
   granit::lighting::tone_mapping_pipeline_resources pipeline;
   CHECK(pipeline.initialize(renderer.native_handle(), granit::texture_format::rgba8_unorm,
                             shaders.native_handle(), shaders.vertex_id(),

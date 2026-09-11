@@ -6,7 +6,6 @@
 
 #include "shader_asset_store.h"
 
-#include <array>
 #include <cstddef>
 #include <string>
 #include <vector>
@@ -33,12 +32,8 @@ public:
   [[nodiscard]] granit_shader_library native_handle() const noexcept {
     return library_.native_handle();
   }
-  [[nodiscard]] const std::array<std::byte, GRANIT_SHADER_LIBRARY_CONTENT_DIGEST_SIZE>&
-  vertex_id() const noexcept {
-    return vertex_id_;
-  }
-  [[nodiscard]] const std::array<std::byte, GRANIT_SHADER_LIBRARY_CONTENT_DIGEST_SIZE>&
-  fragment_id() const noexcept {
+  [[nodiscard]] const granit::shader_content_id& vertex_id() const noexcept { return vertex_id_; }
+  [[nodiscard]] const granit::shader_content_id& fragment_id() const noexcept {
     return fragment_id_;
   }
 
@@ -46,8 +41,8 @@ private:
   shader_asset_store assets_;
   std::vector<std::byte> bytes_;
   granit::shader_library library_;
-  std::array<std::byte, GRANIT_SHADER_LIBRARY_CONTENT_DIGEST_SIZE> vertex_id_{};
-  std::array<std::byte, GRANIT_SHADER_LIBRARY_CONTENT_DIGEST_SIZE> fragment_id_{};
+  granit::shader_content_id vertex_id_{};
+  granit::shader_content_id fragment_id_{};
 };
 
 } // namespace granit::tests

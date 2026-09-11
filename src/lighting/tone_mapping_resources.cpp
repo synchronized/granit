@@ -32,8 +32,7 @@ bool compatible_output(granit::texture_format format,
 
 granit_result tone_mapping_pipeline_resources::initialize(
     granit_renderer renderer, granit::texture_format output_format, granit_shader_library library,
-    const std::array<std::byte, GRANIT_SHADER_LIBRARY_CONTENT_DIGEST_SIZE>& vertex_id,
-    const std::array<std::byte, GRANIT_SHADER_LIBRARY_CONTENT_DIGEST_SIZE>& fragment_id) noexcept {
+    const shader_content_id& vertex_id, const shader_content_id& fragment_id) noexcept {
   if (renderer == GRANIT_NULL_HANDLE || initialized() ||
       output_format == granit::texture_format::undefined || library == GRANIT_NULL_HANDLE) {
     return GRANIT_ERROR_INVALID_ARGUMENT;
@@ -155,8 +154,7 @@ granit_result tone_mapping_binding_resources::reset() noexcept {
 granit_result tone_mapping_resources::initialize(
     granit_renderer renderer, granit_texture_view hdr_view, granit::texture_format output_format,
     const tone_mapping_constants& values, granit_shader_library library,
-    const std::array<std::byte, GRANIT_SHADER_LIBRARY_CONTENT_DIGEST_SIZE>& vertex_id,
-    const std::array<std::byte, GRANIT_SHADER_LIBRARY_CONTENT_DIGEST_SIZE>& fragment_id) noexcept {
+    const shader_content_id& vertex_id, const shader_content_id& fragment_id) noexcept {
   auto result = pipeline_.initialize(renderer, output_format, library, vertex_id, fragment_id);
   if (result == GRANIT_SUCCESS)
     result = binding_.initialize(pipeline_, hdr_view, values);

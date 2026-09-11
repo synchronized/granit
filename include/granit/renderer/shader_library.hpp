@@ -16,6 +16,9 @@
 
 namespace granit {
 
+/** Shader Library 中用于查找单个 Shader 的稳定内容标识。 */
+using shader_content_id = std::array<std::byte, GRANIT_SHADER_LIBRARY_CONTENT_DIGEST_SIZE>;
+
 enum class shader_library_backend : std::uint32_t {
   vulkan = GRANIT_SHADER_LIBRARY_BACKEND_VULKAN_BIT,
   webgpu = GRANIT_SHADER_LIBRARY_BACKEND_WEBGPU_BIT,

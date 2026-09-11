@@ -18,9 +18,11 @@
 #include <granit/core/result.hpp>
 #include <granit/renderer/renderer.hpp>
 #include <granit/renderer/shader.h>
-#include <granit/renderer/shader_library.h>
+#include <granit/renderer/shader_library.hpp>
 
 namespace granit {
+
+static_assert(GRANIT_SHADER_ASSET_ID_SIZE == GRANIT_SHADER_LIBRARY_CONTENT_DIGEST_SIZE);
 
 enum class shader_stage : std::uint32_t {
   vertex = GRANIT_SHADER_STAGE_VERTEX,
@@ -56,7 +58,7 @@ struct shader_asset_variant_info {
 };
 
 struct shader_asset_info {
-  std::array<std::byte, GRANIT_SHADER_ASSET_ID_SIZE> content_id{};
+  shader_content_id content_id{};
   std::array<std::byte, GRANIT_SHADER_ASSET_ID_SIZE> cache_key{};
   shader_stage stage{shader_stage::vertex};
   std::string entry_point;
@@ -161,9 +163,8 @@ public:
     return value;
   }
 
-  [[nodiscard]] result initialize_library(
-      granit_renderer renderer, granit_shader_library library,
-      const std::array<std::byte, GRANIT_SHADER_LIBRARY_CONTENT_DIGEST_SIZE>& content_id) noexcept {
+  [[nodiscard]] result initialize_library(granit_renderer renderer, granit_shader_library library,
+                                          const shader_content_id& content_id) noexcept {
     if (valid())
       return result::invalid_argument;
     if (renderer == GRANIT_NULL_HANDLE || library == GRANIT_NULL_HANDLE)

@@ -10,21 +10,19 @@
 #include <granit/renderer/pipeline.hpp>
 #include <granit/renderer/sampler.hpp>
 #include <granit/renderer/shader.hpp>
-#include <granit/renderer/shader_library.h>
+#include <granit/renderer/shader_library.hpp>
 #include <granit/renderer/texture.h>
-
-#include <array>
-#include <cstddef>
 
 namespace granit::lighting {
 
 /** 可跨帧复用的 Tone Mapping Shader、布局、Sampler 和全屏 Pipeline。 */
 class tone_mapping_pipeline_resources {
 public:
-  [[nodiscard]] granit_result initialize(
-      granit_renderer renderer, granit::texture_format output_format, granit_shader_library library,
-      const std::array<std::byte, GRANIT_SHADER_LIBRARY_CONTENT_DIGEST_SIZE>& vertex_id,
-      const std::array<std::byte, GRANIT_SHADER_LIBRARY_CONTENT_DIGEST_SIZE>& fragment_id) noexcept;
+  [[nodiscard]] granit_result initialize(granit_renderer renderer,
+                                         granit::texture_format output_format,
+                                         granit_shader_library library,
+                                         const shader_content_id& vertex_id,
+                                         const shader_content_id& fragment_id) noexcept;
   [[nodiscard]] granit_result reset() noexcept;
   [[nodiscard]] bool initialized() const noexcept { return pipeline_.valid(); }
   [[nodiscard]] granit_graphics_pipeline pipeline() const noexcept {
@@ -70,11 +68,12 @@ private:
 /** 兼容单次初始化用法的组合资源；新管线应分别缓存 pipeline 并按 HDR View 创建 binding。 */
 class tone_mapping_resources {
 public:
-  [[nodiscard]] granit_result initialize(
-      granit_renderer renderer, granit_texture_view hdr_view, granit::texture_format output_format,
-      const tone_mapping_constants& constants, granit_shader_library library,
-      const std::array<std::byte, GRANIT_SHADER_LIBRARY_CONTENT_DIGEST_SIZE>& vertex_id,
-      const std::array<std::byte, GRANIT_SHADER_LIBRARY_CONTENT_DIGEST_SIZE>& fragment_id) noexcept;
+  [[nodiscard]] granit_result initialize(granit_renderer renderer, granit_texture_view hdr_view,
+                                         granit::texture_format output_format,
+                                         const tone_mapping_constants& constants,
+                                         granit_shader_library library,
+                                         const shader_content_id& vertex_id,
+                                         const shader_content_id& fragment_id) noexcept;
   [[nodiscard]] granit_result update(const tone_mapping_constants& constants) noexcept;
   [[nodiscard]] granit_result reset() noexcept;
   [[nodiscard]] bool initialized() const noexcept { return pipeline_.initialized(); }

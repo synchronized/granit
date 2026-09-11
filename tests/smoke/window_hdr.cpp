@@ -43,11 +43,11 @@ struct window_hdr_resources {
   granit::texture_view depth_view;
   granit::lighting::tone_mapping_resources tone_mapping;
 
-  granit::result initialize(
-      granit_renderer renderer, std::uint32_t width, std::uint32_t height,
-      granit::texture_format output_format, granit_shader_library shader_library,
-      const std::array<std::byte, GRANIT_SHADER_LIBRARY_CONTENT_DIGEST_SIZE>& vertex_shader_id,
-      const std::array<std::byte, GRANIT_SHADER_LIBRARY_CONTENT_DIGEST_SIZE>& fragment_shader_id) {
+  granit::result initialize(granit_renderer renderer, std::uint32_t width, std::uint32_t height,
+                            granit::texture_format output_format,
+                            granit_shader_library shader_library,
+                            const granit::shader_content_id& vertex_shader_id,
+                            const granit::shader_content_id& fragment_shader_id) {
     auto result = texture.initialize(renderer, {.format = granit::texture_format::rgba16_float,
                                                 .usage = granit::texture_usage::color_attachment |
                                                          granit::texture_usage::sampled,
