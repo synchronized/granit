@@ -4,6 +4,7 @@
 target_sources(
   granit PRIVATE
     device.cpp
+    device_commands.cpp
     device_pipelines.cpp
     device_resources.cpp
     device_shader.cpp
