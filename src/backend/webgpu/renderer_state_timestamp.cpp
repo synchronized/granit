@@ -15,17 +15,15 @@ namespace {
 
 class webgpu_timestamp_query_pool_resource final : public backend_timestamp_query_pool_resource {
 public:
-  webgpu_timestamp_query_pool_resource(webgpu_device& context,
-                                       webgpu_instance_handle instance) noexcept
-      : device_(&context), instance_(instance) {}
+  explicit webgpu_timestamp_query_pool_resource(webgpu_device& device) noexcept
+      : device_(&device) {}
 
   ~webgpu_timestamp_query_pool_resource() override {
     if (handle_ != 0)
-      static_cast<void>(device_->destroy_timestamp_query_pool(instance_, handle_));
+      static_cast<void>(device_->destroy_timestamp_query_pool(handle_));
   }
 
   webgpu_device* device_{};
-  webgpu_instance_handle instance_{};
   webgpu_timestamp_query_pool handle_{};
 };
 
@@ -42,10 +40,8 @@ granit_result webgpu_renderer_state::create_timestamp_query_pool(
   if (lifecycle_.state != backend_lifecycle_state::ready)
     return GRANIT_ERROR_NOT_READY;
   try {
-    auto resource =
-        std::make_unique<webgpu_timestamp_query_pool_resource>(device_, device_.instance());
-    const auto result =
-        device_.create_timestamp_query_pool(device_.instance(), query_count, &resource->handle_);
+    auto resource = std::make_unique<webgpu_timestamp_query_pool_resource>(device_);
+    const auto result = device_.create_timestamp_query_pool(query_count, &resource->handle_);
     if (result != GRANIT_SUCCESS)
       return result;
     pool = std::move(resource);
@@ -62,11 +58,9 @@ webgpu_renderer_state::read_timestamp_query_results(backend_timestamp_query_pool
                                                     std::uint32_t first,
                                                     std::span<std::uint64_t> values) noexcept {
   const auto handle = native_timestamp_query_pool(pool);
-  return handle != 0
-             ? device_.read_timestamp_query_results(device_.instance(), handle, first,
-                                                    values.data(),
-                                                    static_cast<std::uint32_t>(values.size()))
-             : GRANIT_ERROR_INVALID_ARGUMENT;
+  return handle != 0 ? device_.read_timestamp_query_results(
+                           handle, first, values.data(), static_cast<std::uint32_t>(values.size()))
+                     : GRANIT_ERROR_INVALID_ARGUMENT;
 }
 
 granit_result
@@ -77,9 +71,9 @@ webgpu_renderer_state::reset_timestamp_queries(backend_command_recorder_resource
     return GRANIT_ERROR_UNSUPPORTED;
   const auto command = command_native_recorder(recorder);
   const auto query = native_timestamp_query_pool(pool);
-  return command != 0 && query != 0 ? device_.recorder_reset_timestamp_queries(
-                                          device_.instance(), command, query, first, count)
-                                    : GRANIT_ERROR_INVALID_ARGUMENT;
+  return command != 0 && query != 0
+             ? device_.recorder_reset_timestamp_queries(command, query, first, count)
+             : GRANIT_ERROR_INVALID_ARGUMENT;
 }
 
 granit_result webgpu_renderer_state::write_timestamp(backend_command_recorder_resource& recorder,
@@ -90,9 +84,8 @@ granit_result webgpu_renderer_state::write_timestamp(backend_command_recorder_re
     return GRANIT_ERROR_UNSUPPORTED;
   const auto command = command_native_recorder(recorder);
   const auto query = native_timestamp_query_pool(pool);
-  return command != 0 && query != 0
-             ? device_.recorder_write_timestamp(device_.instance(), command, query, index)
-             : GRANIT_ERROR_INVALID_ARGUMENT;
+  return command != 0 && query != 0 ? device_.recorder_write_timestamp(command, query, index)
+                                    : GRANIT_ERROR_INVALID_ARGUMENT;
 }
 
 granit_result

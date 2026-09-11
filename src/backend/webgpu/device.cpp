@@ -5145,9 +5145,26 @@ granit_result webgpu_device::destroy_bind_group(webgpu_bind_group handle) noexce
     return GRANIT_ERROR_INTERNAL;
   }
 }
-GRANIT_CONTEXT_DISPATCH_CREATE_METHOD(create_shader, create_shader, const webgpu_shader_desc*,
-                                      webgpu_shader)
-GRANIT_CONTEXT_DISPATCH_DESTROY_METHOD(destroy_shader, destroy_shader, webgpu_shader)
+granit_result webgpu_device::create_shader(const webgpu_shader_desc* desc,
+                                           webgpu_shader* shader) noexcept {
+  if (!open_ || instance_ == 0 || desc == nullptr || shader == nullptr)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  try {
+    return ::create_shader(instance_, desc, shader);
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+granit_result webgpu_device::destroy_shader(webgpu_shader shader) noexcept {
+  if (!open_ || instance_ == 0 || shader == 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  try {
+    return ::destroy_shader(instance_, shader);
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
 granit_result
 webgpu_device::create_pipeline_layout(webgpu_instance_handle instance,
                                       const webgpu_pipeline_layout_desc* desc,
@@ -5550,40 +5567,36 @@ webgpu_device::recorder_generate_mipmaps(webgpu_instance_handle instance,
 }
 
 granit_result
-webgpu_device::create_timestamp_query_pool(webgpu_instance_handle instance, std::uint32_t count,
+webgpu_device::create_timestamp_query_pool(std::uint32_t count,
                                            webgpu_timestamp_query_pool* pool) noexcept {
-  return open_ ? ::create_timestamp_query_pool(instance, count, pool) : GRANIT_ERROR_NOT_READY;
+  return open_ ? ::create_timestamp_query_pool(instance_, count, pool) : GRANIT_ERROR_NOT_READY;
 }
 
 granit_result
-webgpu_device::destroy_timestamp_query_pool(webgpu_instance_handle instance,
-                                            webgpu_timestamp_query_pool pool) noexcept {
-  return open_ ? ::destroy_timestamp_query_pool(instance, pool) : GRANIT_ERROR_NOT_READY;
+webgpu_device::destroy_timestamp_query_pool(webgpu_timestamp_query_pool pool) noexcept {
+  return open_ ? ::destroy_timestamp_query_pool(instance_, pool) : GRANIT_ERROR_NOT_READY;
 }
 
-granit_result webgpu_device::recorder_reset_timestamp_queries(webgpu_instance_handle instance,
-                                                              webgpu_command_recorder recorder,
+granit_result webgpu_device::recorder_reset_timestamp_queries(webgpu_command_recorder recorder,
                                                               webgpu_timestamp_query_pool pool,
                                                               std::uint32_t first,
                                                               std::uint32_t count) noexcept {
-  return open_ ? ::recorder_reset_timestamp_queries(instance, recorder, pool, first, count)
+  return open_ ? ::recorder_reset_timestamp_queries(instance_, recorder, pool, first, count)
                : GRANIT_ERROR_NOT_READY;
 }
 
-granit_result webgpu_device::recorder_write_timestamp(webgpu_instance_handle instance,
-                                                      webgpu_command_recorder recorder,
+granit_result webgpu_device::recorder_write_timestamp(webgpu_command_recorder recorder,
                                                       webgpu_timestamp_query_pool pool,
                                                       std::uint32_t index) noexcept {
-  return open_ ? ::recorder_write_timestamp(instance, recorder, pool, index)
+  return open_ ? ::recorder_write_timestamp(instance_, recorder, pool, index)
                : GRANIT_ERROR_NOT_READY;
 }
 
-granit_result webgpu_device::read_timestamp_query_results(webgpu_instance_handle instance,
-                                                          webgpu_timestamp_query_pool pool,
+granit_result webgpu_device::read_timestamp_query_results(webgpu_timestamp_query_pool pool,
                                                           std::uint32_t first,
                                                           std::uint64_t* values,
                                                           std::uint32_t count) noexcept {
-  return open_ ? ::read_timestamp_query_results(instance, pool, first, values, count)
+  return open_ ? ::read_timestamp_query_results(instance_, pool, first, values, count)
                : GRANIT_ERROR_NOT_READY;
 }
 

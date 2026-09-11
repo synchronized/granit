@@ -87,11 +87,9 @@ public:
   [[nodiscard]] granit_result create_bind_group(const webgpu_bind_group_desc* desc,
                                                 webgpu_bind_group* bind_group) noexcept;
   [[nodiscard]] granit_result destroy_bind_group(webgpu_bind_group bind_group) noexcept;
-  [[nodiscard]] granit_result create_shader(webgpu_instance_handle instance,
-                                            const webgpu_shader_desc* desc,
+  [[nodiscard]] granit_result create_shader(const webgpu_shader_desc* desc,
                                             webgpu_shader* shader) noexcept;
-  [[nodiscard]] granit_result destroy_shader(webgpu_instance_handle instance,
-                                             webgpu_shader shader) noexcept;
+  [[nodiscard]] granit_result destroy_shader(webgpu_shader shader) noexcept;
   [[nodiscard]] granit_result
   create_pipeline_layout(webgpu_instance_handle instance, const webgpu_pipeline_layout_desc* desc,
                          webgpu_pipeline_layout* pipeline_layout) noexcept;
@@ -218,22 +216,17 @@ public:
                             webgpu_texture texture,
                             const webgpu_texture_mipmap_range& range) noexcept;
   [[nodiscard]] granit_result
-  create_timestamp_query_pool(webgpu_instance_handle instance, std::uint32_t count,
-                              webgpu_timestamp_query_pool* pool) noexcept;
+  create_timestamp_query_pool(std::uint32_t count, webgpu_timestamp_query_pool* pool) noexcept;
   [[nodiscard]] granit_result
-  destroy_timestamp_query_pool(webgpu_instance_handle instance,
-                               webgpu_timestamp_query_pool pool) noexcept;
-  [[nodiscard]] granit_result recorder_reset_timestamp_queries(webgpu_instance_handle instance,
-                                                               webgpu_command_recorder recorder,
+  destroy_timestamp_query_pool(webgpu_timestamp_query_pool pool) noexcept;
+  [[nodiscard]] granit_result recorder_reset_timestamp_queries(webgpu_command_recorder recorder,
                                                                webgpu_timestamp_query_pool pool,
                                                                std::uint32_t first,
                                                                std::uint32_t count) noexcept;
-  [[nodiscard]] granit_result recorder_write_timestamp(webgpu_instance_handle instance,
-                                                       webgpu_command_recorder recorder,
+  [[nodiscard]] granit_result recorder_write_timestamp(webgpu_command_recorder recorder,
                                                        webgpu_timestamp_query_pool pool,
                                                        std::uint32_t index) noexcept;
-  [[nodiscard]] granit_result read_timestamp_query_results(webgpu_instance_handle instance,
-                                                           webgpu_timestamp_query_pool pool,
+  [[nodiscard]] granit_result read_timestamp_query_results(webgpu_timestamp_query_pool pool,
                                                            std::uint32_t first,
                                                            std::uint64_t* values,
                                                            std::uint32_t count) noexcept;
