@@ -91,27 +91,20 @@ public:
                                             webgpu_shader* shader) noexcept;
   [[nodiscard]] granit_result destroy_shader(webgpu_shader shader) noexcept;
   [[nodiscard]] granit_result
-  create_pipeline_layout(webgpu_instance_handle instance, const webgpu_pipeline_layout_desc* desc,
+  create_pipeline_layout(const webgpu_pipeline_layout_desc* desc,
                          webgpu_pipeline_layout* pipeline_layout) noexcept;
   [[nodiscard]] granit_result
-  destroy_pipeline_layout(webgpu_instance_handle instance,
-                          webgpu_pipeline_layout pipeline_layout) noexcept;
-  [[nodiscard]] granit_result create_compute_pipeline(webgpu_instance_handle instance,
-                                                      const webgpu_compute_pipeline_desc* desc,
+  destroy_pipeline_layout(webgpu_pipeline_layout pipeline_layout) noexcept;
+  [[nodiscard]] granit_result create_compute_pipeline(const webgpu_compute_pipeline_desc* desc,
                                                       webgpu_compute_pipeline* pipeline) noexcept;
-  [[nodiscard]] granit_result destroy_compute_pipeline(webgpu_instance_handle instance,
-                                                       webgpu_compute_pipeline pipeline) noexcept;
-  [[nodiscard]] granit_result begin_render_pipeline_warmup(webgpu_instance_handle instance,
-                                                           const webgpu_render_pipeline_desc* desc,
+  [[nodiscard]] granit_result destroy_compute_pipeline(webgpu_compute_pipeline pipeline) noexcept;
+  [[nodiscard]] granit_result begin_render_pipeline_warmup(const webgpu_render_pipeline_desc* desc,
                                                            webgpu_pipeline_warmup* warmup) noexcept;
   [[nodiscard]] granit_result
-  begin_compute_pipeline_warmup(webgpu_instance_handle instance,
-                                const webgpu_compute_pipeline_desc* desc,
+  begin_compute_pipeline_warmup(const webgpu_compute_pipeline_desc* desc,
                                 webgpu_pipeline_warmup* warmup) noexcept;
-  [[nodiscard]] granit_result poll_pipeline_warmup(webgpu_instance_handle instance,
-                                                   webgpu_pipeline_warmup warmup) noexcept;
-  [[nodiscard]] granit_result destroy_pipeline_warmup(webgpu_instance_handle instance,
-                                                      webgpu_pipeline_warmup warmup) noexcept;
+  [[nodiscard]] granit_result poll_pipeline_warmup(webgpu_pipeline_warmup warmup) noexcept;
+  [[nodiscard]] granit_result destroy_pipeline_warmup(webgpu_pipeline_warmup warmup) noexcept;
   [[nodiscard]] granit_result recorder_begin_compute(webgpu_instance_handle instance,
                                                      webgpu_command_recorder recorder) noexcept;
   [[nodiscard]] granit_result
@@ -128,11 +121,9 @@ public:
   [[nodiscard]] granit_result recorder_end_compute(webgpu_instance_handle instance,
                                                    webgpu_command_recorder recorder) noexcept;
   [[nodiscard]] granit_result
-  create_render_pipeline(webgpu_instance_handle instance, const webgpu_render_pipeline_desc* desc,
+  create_render_pipeline(const webgpu_render_pipeline_desc* desc,
                          webgpu_render_pipeline* render_pipeline) noexcept;
-  [[nodiscard]] granit_result
-  destroy_render_pipeline(webgpu_instance_handle instance,
-                          webgpu_render_pipeline render_pipeline) noexcept;
+  [[nodiscard]] granit_result destroy_render_pipeline(webgpu_render_pipeline pipeline) noexcept;
   [[nodiscard]] granit_result create_command_recorder(webgpu_instance_handle instance,
                                                       webgpu_command_recorder* recorder) noexcept;
   [[nodiscard]] granit_result destroy_command_recorder(webgpu_instance_handle instance,

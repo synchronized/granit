@@ -230,8 +230,8 @@ granit_result webgpu_renderer_state::refresh_state() noexcept {
           std::make_shared<webgpu_presentation_owner>(webgpu_presentation_owner{&device_});
       auto resource_owner =
           std::make_shared<webgpu_resource_owner>(webgpu_resource_owner{&device_});
-      auto pipeline_owner = std::make_shared<webgpu_pipeline_owner>(
-          webgpu_pipeline_owner{&device_, device_.instance()});
+      auto pipeline_owner =
+          std::make_shared<webgpu_pipeline_owner>(webgpu_pipeline_owner{&device_});
       auto command_owner = std::make_shared<webgpu_command_owner>(
           webgpu_command_owner{&device_, device_.instance()});
       presentation_owner_ = std::move(presentation_owner);

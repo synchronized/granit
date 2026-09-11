@@ -5166,27 +5166,60 @@ granit_result webgpu_device::destroy_shader(webgpu_shader shader) noexcept {
   }
 }
 granit_result
-webgpu_device::create_pipeline_layout(webgpu_instance_handle instance,
-                                      const webgpu_pipeline_layout_desc* desc,
+webgpu_device::create_pipeline_layout(const webgpu_pipeline_layout_desc* desc,
                                       webgpu_pipeline_layout* pipeline_layout) noexcept {
-  if (!open_ || instance == 0 || desc == nullptr || pipeline_layout == nullptr)
+  if (!open_ || instance_ == 0 || desc == nullptr || pipeline_layout == nullptr)
     return GRANIT_ERROR_INVALID_ARGUMENT;
-  if (instance != instance_)
-    return GRANIT_ERROR_INVALID_HANDLE;
   try {
-    return ::create_pipeline_layout(instance, desc, pipeline_layout);
+    return ::create_pipeline_layout(instance_, desc, pipeline_layout);
   } catch (...) {
     return GRANIT_ERROR_INTERNAL;
   }
 }
-GRANIT_CONTEXT_DISPATCH_DESTROY_METHOD(destroy_pipeline_layout, destroy_pipeline_layout,
-                                       webgpu_pipeline_layout)
-GRANIT_CONTEXT_DISPATCH_CREATE_METHOD(create_compute_pipeline, create_compute_pipeline,
-                                      const webgpu_compute_pipeline_desc*, webgpu_compute_pipeline)
-GRANIT_CONTEXT_DISPATCH_DESTROY_METHOD(destroy_compute_pipeline, destroy_compute_pipeline,
-                                       webgpu_compute_pipeline)
-GRANIT_CONTEXT_DISPATCH_CREATE_METHOD(begin_compute_pipeline_warmup, begin_compute_pipeline_warmup,
-                                      const webgpu_compute_pipeline_desc*, webgpu_pipeline_warmup)
+
+granit_result
+webgpu_device::destroy_pipeline_layout(webgpu_pipeline_layout pipeline_layout) noexcept {
+  if (!open_ || instance_ == 0 || pipeline_layout == 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  try {
+    return ::destroy_pipeline_layout(instance_, pipeline_layout);
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+granit_result webgpu_device::create_compute_pipeline(const webgpu_compute_pipeline_desc* desc,
+                                                     webgpu_compute_pipeline* pipeline) noexcept {
+  if (!open_ || instance_ == 0 || desc == nullptr || pipeline == nullptr)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  try {
+    return ::create_compute_pipeline(instance_, desc, pipeline);
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+granit_result webgpu_device::destroy_compute_pipeline(webgpu_compute_pipeline pipeline) noexcept {
+  if (!open_ || instance_ == 0 || pipeline == 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  try {
+    return ::destroy_compute_pipeline(instance_, pipeline);
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+granit_result
+webgpu_device::begin_compute_pipeline_warmup(const webgpu_compute_pipeline_desc* desc,
+                                             webgpu_pipeline_warmup* warmup) noexcept {
+  if (!open_ || instance_ == 0 || desc == nullptr || warmup == nullptr)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  try {
+    return ::begin_compute_pipeline_warmup(instance_, desc, warmup);
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
 
 granit_result webgpu_device::recorder_begin_compute(webgpu_instance_handle instance,
                                                     webgpu_command_recorder recorder) noexcept {
@@ -5252,28 +5285,57 @@ granit_result webgpu_device::recorder_end_compute(webgpu_instance_handle instanc
     return GRANIT_ERROR_INTERNAL;
   }
 }
-GRANIT_CONTEXT_DISPATCH_CREATE_METHOD(create_render_pipeline, create_render_pipeline,
-                                      const webgpu_render_pipeline_desc*, webgpu_render_pipeline)
-GRANIT_CONTEXT_DISPATCH_DESTROY_METHOD(destroy_render_pipeline, destroy_render_pipeline,
-                                       webgpu_render_pipeline)
-GRANIT_CONTEXT_DISPATCH_CREATE_METHOD(begin_render_pipeline_warmup, begin_render_pipeline_warmup,
-                                      const webgpu_render_pipeline_desc*, webgpu_pipeline_warmup)
-
-granit_result webgpu_device::poll_pipeline_warmup(webgpu_instance_handle instance,
-                                                  webgpu_pipeline_warmup warmup) noexcept {
-  if (!open_ || instance == 0 || warmup == 0)
+granit_result webgpu_device::create_render_pipeline(const webgpu_render_pipeline_desc* desc,
+                                                    webgpu_render_pipeline* pipeline) noexcept {
+  if (!open_ || instance_ == 0 || desc == nullptr || pipeline == nullptr)
     return GRANIT_ERROR_INVALID_ARGUMENT;
-  if (instance != instance_)
-    return GRANIT_ERROR_INVALID_HANDLE;
   try {
-    return ::poll_pipeline_warmup(instance, warmup);
+    return ::create_render_pipeline(instance_, desc, pipeline);
   } catch (...) {
     return GRANIT_ERROR_INTERNAL;
   }
 }
 
-GRANIT_CONTEXT_DISPATCH_DESTROY_METHOD(destroy_pipeline_warmup, destroy_pipeline_warmup,
-                                       webgpu_pipeline_warmup)
+granit_result webgpu_device::destroy_render_pipeline(webgpu_render_pipeline pipeline) noexcept {
+  if (!open_ || instance_ == 0 || pipeline == 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  try {
+    return ::destroy_render_pipeline(instance_, pipeline);
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+granit_result webgpu_device::begin_render_pipeline_warmup(const webgpu_render_pipeline_desc* desc,
+                                                          webgpu_pipeline_warmup* warmup) noexcept {
+  if (!open_ || instance_ == 0 || desc == nullptr || warmup == nullptr)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  try {
+    return ::begin_render_pipeline_warmup(instance_, desc, warmup);
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+granit_result webgpu_device::poll_pipeline_warmup(webgpu_pipeline_warmup warmup) noexcept {
+  if (!open_ || instance_ == 0 || warmup == 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  try {
+    return ::poll_pipeline_warmup(instance_, warmup);
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+granit_result webgpu_device::destroy_pipeline_warmup(webgpu_pipeline_warmup warmup) noexcept {
+  if (!open_ || instance_ == 0 || warmup == 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  try {
+    return ::destroy_pipeline_warmup(instance_, warmup);
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
 
 granit_result webgpu_device::create_command_recorder(webgpu_instance_handle instance,
                                                      webgpu_command_recorder* recorder) noexcept {
