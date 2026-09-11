@@ -32,6 +32,10 @@ Library 同时包含 Vulkan 与 WebGPU 载荷，Renderer 在运行时选择；`.
 自己的资产系统提供相应字节。构建树变量指向 Granit 二进制目录中的资产副本，因此上游不需要
 推导源码目录。
 
+Render Pipeline 内部的 Tone Mapping、Shadow、Canvas 和 Debug Draw 也使用 Shader Library。
+这些私有 Library 随 component 内嵌，不属于安装资产，也不要求应用加载。普通本机构建从 Shader
+输入确定性生成归档并校验快照；无法执行宿主 Shader Tool 的交叉构建使用同一份已校验快照。
+
 `environments` 子目录同时提供 GRENV v3 环境资产。其所有权、完整性校验和逐帧借用规则见
 [Environment Map](environment-map.md)。
 
@@ -39,7 +43,7 @@ Library 同时包含 Vulkan 与 WebGPU 载荷，Renderer 在运行时选择；`.
 
 | 对象 | 自身拥有 | 借用及调用方责任 |
 |---|---|---|
-| Render Pipeline | 内建 Shader、默认 IBL、缓存和临时 GPU 资源 | Renderer、创建回调及 `user_data` |
+| Render Pipeline | 内建 Shader Library、Shader、默认 IBL、缓存和临时 GPU 资源 | Renderer、创建回调及 `user_data` |
 | Mesh | 复制后的布局与绘制范围 | Vertex/Index Buffer |
 | Material | 参数状态和 GPU 实例 | 参数引用的 Texture View 与 Sampler |
 | Scene Snapshot | View、Renderable 和光源的值数据副本 | 不借用外部场景对象；`payload` 只是应用值 |

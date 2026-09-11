@@ -11,22 +11,156 @@ function(granit_add_render_pipeline_module)
   add_library(granit_render_pipeline)
   add_library(granit::render_pipeline ALIAS granit_render_pipeline)
   set(granit_pipeline_generated_dir "${CMAKE_CURRENT_BINARY_DIR}/generated/pipeline")
-  set(
-    granit_pipeline_tone_vertex
-    "${granit_pipeline_generated_dir}/granit_pipeline_tone_mapping.vert.inc"
-  )
-  set(
-    granit_pipeline_tone_fragment
-    "${granit_pipeline_generated_dir}/granit_pipeline_tone_mapping.frag.inc"
-  )
-  set(
-    granit_pipeline_shadow_vertex
-    "${granit_pipeline_generated_dir}/granit_pipeline_shadow_depth.vert.inc"
-  )
-  set(
-    granit_pipeline_shadow_fragment
-    "${granit_pipeline_generated_dir}/granit_pipeline_shadow_depth.frag.inc"
-  )
+  # 本机构建生成并校验快照；交叉构建与轻量 Consumer 直接使用已校验快照。
+  set(granit_pipeline_generate_shader_libraries FALSE)
+  if(NOT CMAKE_CROSSCOMPILING AND
+     (GRANIT_BUILD_TOOLS OR GRANIT_BUILD_SHADER_TOOLS OR GRANIT_BUILD_EXAMPLES OR
+      GRANIT_BUILD_BENCHMARKS OR (GRANIT_BUILD_TESTING AND BUILD_TESTING)))
+    set(granit_pipeline_generate_shader_libraries TRUE)
+  endif()
+  if(granit_pipeline_generate_shader_libraries)
+    set(granit_pipeline_shader_asset_dir "${granit_pipeline_generated_dir}/shader-assets")
+    granit_add_packed_shader_asset(
+      NAME tone_mapping.vert
+      SPIRV "${PROJECT_SOURCE_DIR}/src/pipeline/shaders/tone_mapping.vert.spv"
+      WGSL "${PROJECT_SOURCE_DIR}/src/pipeline/shaders/tone_mapping.wgsl"
+      ENTRY vertex_main
+      STAGE vertex
+      OUTPUT_DIR "${granit_pipeline_shader_asset_dir}"
+      OUTPUT_VAR granit_pipeline_tone_vertex_outputs)
+    list(GET granit_pipeline_tone_vertex_outputs 0 granit_pipeline_tone_vertex_asset)
+    granit_add_packed_shader_asset(
+      NAME tone_mapping.frag
+      SPIRV "${PROJECT_SOURCE_DIR}/src/pipeline/shaders/tone_mapping.frag.spv"
+      WGSL "${PROJECT_SOURCE_DIR}/src/pipeline/shaders/tone_mapping.wgsl"
+      ENTRY fragment_main
+      STAGE fragment
+      OUTPUT_DIR "${granit_pipeline_shader_asset_dir}"
+      OUTPUT_VAR granit_pipeline_tone_fragment_outputs)
+    list(GET granit_pipeline_tone_fragment_outputs 0 granit_pipeline_tone_fragment_asset)
+    granit_add_packed_shader_asset(
+      NAME shadow_depth.vert
+      SPIRV "${PROJECT_SOURCE_DIR}/src/pipeline/shaders/shadow_depth.vert.spv"
+      WGSL "${PROJECT_SOURCE_DIR}/src/pipeline/shaders/shadow_depth.vert.wgsl"
+      ENTRY vertex_main
+      STAGE vertex
+      OUTPUT_DIR "${granit_pipeline_shader_asset_dir}"
+      OUTPUT_VAR granit_pipeline_shadow_vertex_outputs)
+    list(GET granit_pipeline_shadow_vertex_outputs 0 granit_pipeline_shadow_vertex_asset)
+    granit_add_packed_shader_asset(
+      NAME shadow_depth.frag
+      SPIRV "${PROJECT_SOURCE_DIR}/src/pipeline/shaders/shadow_depth.frag.spv"
+      WGSL "${PROJECT_SOURCE_DIR}/src/pipeline/shaders/shadow_depth.frag.wgsl"
+      ENTRY fragment_main
+      STAGE fragment
+      OUTPUT_DIR "${granit_pipeline_shader_asset_dir}"
+      OUTPUT_VAR granit_pipeline_shadow_fragment_outputs)
+    list(GET granit_pipeline_shadow_fragment_outputs 0 granit_pipeline_shadow_fragment_asset)
+
+    set(granit_pipeline_debug_assets)
+    foreach(name world.vert world.frag world_encode_srgb.frag)
+      if(name STREQUAL "world.vert")
+        set(stage vertex)
+        set(entry vertex_main)
+      else()
+        set(stage fragment)
+        set(entry fragment_main)
+      endif()
+      granit_add_packed_shader_asset(
+        NAME "debug_${name}"
+        SPIRV "${PROJECT_SOURCE_DIR}/assets/shaders/debug/${name}.spv"
+        WGSL "${PROJECT_SOURCE_DIR}/assets/shaders/debug/${name}.wgsl"
+        ENTRY "${entry}"
+        STAGE "${stage}"
+        OUTPUT_DIR "${granit_pipeline_shader_asset_dir}"
+        OUTPUT_VAR output)
+      list(GET output 0 asset)
+      list(APPEND granit_pipeline_debug_assets "${asset}")
+      string(REPLACE "." "_" id_name "debug_${name}")
+      set("granit_pipeline_${id_name}_asset" "${asset}")
+    endforeach()
+
+    set(granit_pipeline_builtin_archive
+        "${granit_pipeline_generated_dir}/render_pipeline_builtin.grshlib")
+    granit_add_shader_library(
+      NAME render_pipeline_builtin
+      OUTPUT "${granit_pipeline_builtin_archive}"
+      REFERENCE "${PROJECT_SOURCE_DIR}/src/pipeline/assets/render_pipeline_builtin.grshlib"
+      TARGET granit_pipeline_builtin_shader_library
+      ASSETS
+        "${granit_pipeline_tone_vertex_asset}"
+        "${granit_pipeline_tone_fragment_asset}"
+        "${granit_pipeline_shadow_vertex_asset}"
+        "${granit_pipeline_shadow_fragment_asset}")
+    set(granit_pipeline_debug_archive "${granit_pipeline_generated_dir}/debug_draw.grshlib")
+    granit_add_shader_library(
+      NAME debug_draw
+      OUTPUT "${granit_pipeline_debug_archive}"
+      REFERENCE "${PROJECT_SOURCE_DIR}/src/pipeline/assets/debug_draw.grshlib"
+      TARGET granit_pipeline_debug_shader_library
+      ASSETS ${granit_pipeline_debug_assets})
+    set(granit_pipeline_builtin_library_dependencies granit_pipeline_builtin_shader_library)
+    set(granit_pipeline_debug_library_dependencies granit_pipeline_debug_shader_library)
+  else()
+    set(granit_pipeline_builtin_archive
+        "${PROJECT_SOURCE_DIR}/src/pipeline/assets/render_pipeline_builtin.grshlib")
+    set(granit_pipeline_debug_archive
+        "${PROJECT_SOURCE_DIR}/src/pipeline/assets/debug_draw.grshlib")
+    set(granit_pipeline_builtin_library_dependencies "${granit_pipeline_builtin_archive}")
+    set(granit_pipeline_debug_library_dependencies "${granit_pipeline_debug_archive}")
+  endif()
+
+  set(granit_pipeline_builtin_library
+      "${granit_pipeline_generated_dir}/render_pipeline_builtin.grshlib.inc")
+  set(granit_pipeline_debug_library
+      "${granit_pipeline_generated_dir}/debug_draw.grshlib.inc")
+  foreach(kind builtin debug)
+    add_custom_command(
+      OUTPUT "${granit_pipeline_${kind}_library}"
+      COMMAND "${CMAKE_COMMAND}" -E make_directory "${granit_pipeline_generated_dir}"
+      COMMAND "${CMAKE_COMMAND}" "-DINPUT=${granit_pipeline_${kind}_archive}"
+              "-DOUTPUT=${granit_pipeline_${kind}_library}"
+              -P "${PROJECT_SOURCE_DIR}/cmake/embed_binary.cmake"
+      DEPENDS ${granit_pipeline_${kind}_library_dependencies}
+              "${PROJECT_SOURCE_DIR}/cmake/embed_binary.cmake"
+      VERBATIM)
+  endforeach()
+
+  set(granit_pipeline_shader_ids "${granit_pipeline_generated_dir}/embedded_shader_ids.inc")
+  if(granit_pipeline_generate_shader_libraries)
+    add_custom_command(
+      OUTPUT "${granit_pipeline_shader_ids}"
+      COMMAND "$<TARGET_FILE:granit_shader_tool>" asset-ids
+              --asset "tone_mapping_vertex_id=${granit_pipeline_tone_vertex_asset}"
+              --asset "tone_mapping_fragment_id=${granit_pipeline_tone_fragment_asset}"
+              --asset "shadow_depth_vertex_id=${granit_pipeline_shadow_vertex_asset}"
+              --asset "shadow_depth_fragment_id=${granit_pipeline_shadow_fragment_asset}"
+              --asset "debug_world_vertex_id=${granit_pipeline_debug_world_vert_asset}"
+              --asset "debug_world_fragment_id=${granit_pipeline_debug_world_frag_asset}"
+              --asset
+              "debug_world_srgb_fragment_id=${granit_pipeline_debug_world_encode_srgb_frag_asset}"
+              --output "${granit_pipeline_shader_ids}"
+      COMMAND "${CMAKE_COMMAND}" -E compare_files "${granit_pipeline_shader_ids}"
+              "${PROJECT_SOURCE_DIR}/src/pipeline/assets/embedded_shader_ids.inc"
+      DEPENDS
+        granit_shader_tool
+        "${granit_pipeline_tone_vertex_asset}"
+        "${granit_pipeline_tone_fragment_asset}"
+        "${granit_pipeline_shadow_vertex_asset}"
+        "${granit_pipeline_shadow_fragment_asset}"
+        ${granit_pipeline_debug_assets}
+        "${PROJECT_SOURCE_DIR}/src/pipeline/assets/embedded_shader_ids.inc"
+      VERBATIM)
+  else()
+    add_custom_command(
+      OUTPUT "${granit_pipeline_shader_ids}"
+      COMMAND "${CMAKE_COMMAND}" -E make_directory "${granit_pipeline_generated_dir}"
+      COMMAND "${CMAKE_COMMAND}" -E copy_if_different
+              "${PROJECT_SOURCE_DIR}/src/pipeline/assets/embedded_shader_ids.inc"
+              "${granit_pipeline_shader_ids}"
+      DEPENDS "${PROJECT_SOURCE_DIR}/src/pipeline/assets/embedded_shader_ids.inc"
+      VERBATIM)
+  endif()
   set(
     granit_pipeline_canvas_material
     "${granit_pipeline_generated_dir}/granit_pipeline_canvas.grmat.inc"
@@ -46,12 +180,6 @@ function(granit_add_render_pipeline_module)
       "${PROJECT_SOURCE_DIR}/cmake/embed_binary.cmake"
     VERBATIM
   )
-  set(granit_pipeline_debug_world_vertex
-      "${granit_pipeline_generated_dir}/granit_pipeline_debug_world.vert.inc")
-  set(granit_pipeline_debug_world_fragment
-      "${granit_pipeline_generated_dir}/granit_pipeline_debug_world.frag.inc")
-  set(granit_pipeline_debug_world_srgb_fragment
-      "${granit_pipeline_generated_dir}/granit_pipeline_debug_world_srgb.frag.inc")
   add_custom_command(
     OUTPUT "${granit_pipeline_canvas_material}"
     COMMAND "${CMAKE_COMMAND}" -E make_directory "${granit_pipeline_generated_dir}"
@@ -65,88 +193,14 @@ function(granit_add_render_pipeline_module)
       "${PROJECT_SOURCE_DIR}/cmake/embed_binary.cmake"
     VERBATIM
   )
-  add_custom_command(
-    OUTPUT "${granit_pipeline_tone_vertex}"
-    COMMAND "${CMAKE_COMMAND}" -E make_directory "${granit_pipeline_generated_dir}"
-    COMMAND
-      "${CMAKE_COMMAND}"
-      "-DINPUT=${PROJECT_SOURCE_DIR}/src/pipeline/shaders/tone_mapping.vert.spv"
-      "-DOUTPUT=${granit_pipeline_tone_vertex}"
-      -P "${PROJECT_SOURCE_DIR}/cmake/embed_binary.cmake"
-    DEPENDS
-      "${PROJECT_SOURCE_DIR}/src/pipeline/shaders/tone_mapping.vert.spv"
-      "${PROJECT_SOURCE_DIR}/cmake/embed_binary.cmake"
-    VERBATIM
-  )
-  foreach(granit_debug_output granit_pipeline_debug_world_vertex
-                              granit_pipeline_debug_world_fragment
-                              granit_pipeline_debug_world_srgb_fragment)
-    if(granit_debug_output STREQUAL "granit_pipeline_debug_world_vertex")
-      set(granit_debug_input "${PROJECT_SOURCE_DIR}/assets/shaders/debug/world.vert.spv")
-    elseif(granit_debug_output STREQUAL "granit_pipeline_debug_world_fragment")
-      set(granit_debug_input "${PROJECT_SOURCE_DIR}/assets/shaders/debug/world.frag.spv")
-    else()
-      set(granit_debug_input "${PROJECT_SOURCE_DIR}/assets/shaders/debug/world_encode_srgb.frag.spv")
-    endif()
-    add_custom_command(
-      OUTPUT "${${granit_debug_output}}"
-      COMMAND "${CMAKE_COMMAND}" -E make_directory "${granit_pipeline_generated_dir}"
-      COMMAND "${CMAKE_COMMAND}" "-DINPUT=${granit_debug_input}"
-              "-DOUTPUT=${${granit_debug_output}}" -P "${PROJECT_SOURCE_DIR}/cmake/embed_binary.cmake"
-      DEPENDS "${granit_debug_input}" "${PROJECT_SOURCE_DIR}/cmake/embed_binary.cmake"
-      VERBATIM)
-  endforeach()
-  add_custom_command(
-    OUTPUT "${granit_pipeline_tone_fragment}"
-    COMMAND "${CMAKE_COMMAND}" -E make_directory "${granit_pipeline_generated_dir}"
-    COMMAND
-      "${CMAKE_COMMAND}"
-      "-DINPUT=${PROJECT_SOURCE_DIR}/src/pipeline/shaders/tone_mapping.frag.spv"
-      "-DOUTPUT=${granit_pipeline_tone_fragment}"
-      -P "${PROJECT_SOURCE_DIR}/cmake/embed_binary.cmake"
-    DEPENDS
-      "${PROJECT_SOURCE_DIR}/src/pipeline/shaders/tone_mapping.frag.spv"
-      "${PROJECT_SOURCE_DIR}/cmake/embed_binary.cmake"
-    VERBATIM
-  )
-  add_custom_command(
-    OUTPUT "${granit_pipeline_shadow_vertex}"
-    COMMAND "${CMAKE_COMMAND}" -E make_directory "${granit_pipeline_generated_dir}"
-    COMMAND
-      "${CMAKE_COMMAND}"
-      "-DINPUT=${PROJECT_SOURCE_DIR}/src/pipeline/shaders/shadow_depth.vert.spv"
-      "-DOUTPUT=${granit_pipeline_shadow_vertex}"
-      -P "${PROJECT_SOURCE_DIR}/cmake/embed_binary.cmake"
-    DEPENDS
-      "${PROJECT_SOURCE_DIR}/src/pipeline/shaders/shadow_depth.vert.spv"
-      "${PROJECT_SOURCE_DIR}/cmake/embed_binary.cmake"
-    VERBATIM
-  )
-  add_custom_command(
-    OUTPUT "${granit_pipeline_shadow_fragment}"
-    COMMAND "${CMAKE_COMMAND}" -E make_directory "${granit_pipeline_generated_dir}"
-    COMMAND
-      "${CMAKE_COMMAND}"
-      "-DINPUT=${PROJECT_SOURCE_DIR}/src/pipeline/shaders/shadow_depth.frag.spv"
-      "-DOUTPUT=${granit_pipeline_shadow_fragment}"
-      -P "${PROJECT_SOURCE_DIR}/cmake/embed_binary.cmake"
-    DEPENDS
-      "${PROJECT_SOURCE_DIR}/src/pipeline/shaders/shadow_depth.frag.spv"
-      "${PROJECT_SOURCE_DIR}/cmake/embed_binary.cmake"
-    VERBATIM
-  )
   target_sources(
     granit_render_pipeline
     PRIVATE
-      "${granit_pipeline_tone_vertex}"
-      "${granit_pipeline_tone_fragment}"
-      "${granit_pipeline_shadow_vertex}"
-      "${granit_pipeline_shadow_fragment}"
+      "${granit_pipeline_builtin_library}"
+      "${granit_pipeline_debug_library}"
+      ${granit_pipeline_shader_ids}
       "${granit_pipeline_canvas_material}"
       "${granit_pipeline_canvas_shader_library}"
-      "${granit_pipeline_debug_world_vertex}"
-      "${granit_pipeline_debug_world_fragment}"
-      "${granit_pipeline_debug_world_srgb_fragment}"
       "${PROJECT_SOURCE_DIR}/src/pipeline/embedded_shaders.cpp"
       "${PROJECT_SOURCE_DIR}/src/pipeline/embedded_shaders.h"
       "${PROJECT_SOURCE_DIR}/src/pipeline/forward_draw_recorder.cpp"

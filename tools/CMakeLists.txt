@@ -254,6 +254,21 @@ if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
     granit.shader_tool.pack
     PROPERTIES PASS_REGULAR_EXPRESSION "Shader 资产"
   )
+  set(granit_shader_asset_id_output
+      "${CMAKE_CURRENT_BINARY_DIR}/asset-id-test/minimal_shader_ids.inc")
+  add_test(
+    NAME granit.shader_tool.asset_ids
+    COMMAND granit_shader_tool asset-ids
+            --asset "minimal_vertex_id=${PROJECT_SOURCE_DIR}/tests/assets/minimal.vert.grshader"
+            --output "${granit_shader_asset_id_output}"
+  )
+  add_test(
+    NAME granit.shader_tool.asset_ids_compare
+    COMMAND "${CMAKE_COMMAND}" -E compare_files "${granit_shader_asset_id_output}"
+            "${PROJECT_SOURCE_DIR}/tests/assets/minimal_shader_ids.inc"
+  )
+  set_tests_properties(granit.shader_tool.asset_ids_compare
+                       PROPERTIES DEPENDS granit.shader_tool.asset_ids)
   add_test(
     NAME granit.shader_tool.library
     COMMAND

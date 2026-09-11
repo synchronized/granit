@@ -9,6 +9,7 @@
 #include <cstring>
 #include <filesystem>
 #include <fstream>
+#include <iomanip>
 #include <iostream>
 #include <iterator>
 #include <optional>
@@ -194,6 +195,74 @@ int pack_shader_asset(int argc, char** argv) {
     return 1;
   }
   std::cout << (cache_hit ? "Shader 资产未变化：" : "已打包 Shader 资产：") << *asset_path << '\n';
+  return 0;
+}
+
+int emit_shader_asset_ids(int argc, char** argv) {
+  auto asset_specs = option_values(argc, argv, "--asset");
+  const auto output_path = option_value(argc, argv, "--output");
+  if (asset_specs.empty() || !output_path) {
+    std::cerr << "asset-ids 需要一个或多个 --asset <name=path> 和 --output\n";
+    return 2;
+  }
+  std::ranges::sort(asset_specs);
+  std::ostringstream content;
+  content << "// SPDX-License-Identifier: MIT\n"
+             "// Copyright (c) 2026 Granit contributors\n\n"
+             "// 由 granit_shader_tool asset-ids 生成。\n\n"
+          << std::hex << std::setfill('0');
+  std::string previous_name;
+  for (const auto& spec : asset_specs) {
+    const auto separator = spec.find('=');
+    const auto name = spec.substr(0, separator);
+    const auto valid_name =
+        separator != std::string::npos && separator != 0 && separator + 1 < spec.size() &&
+        ((name.front() >= 'a' && name.front() <= 'z') ||
+         (name.front() >= 'A' && name.front() <= 'Z') || name.front() == '_') &&
+        std::ranges::all_of(name, [](const unsigned char value) {
+          return (value >= 'a' && value <= 'z') || (value >= 'A' && value <= 'Z') ||
+                 (value >= '0' && value <= '9') || value == '_';
+        });
+    if (!valid_name || name == previous_name) {
+      std::cerr << "asset-ids 的名称必须是唯一 C++ 标识符：" << spec << '\n';
+      return 2;
+    }
+    const auto asset_path = spec.substr(separator + 1);
+    const auto manifest = read_bytes(asset_path);
+    granit::tools::shader_asset_view asset;
+    if (manifest.empty() || granit::tools::decode_shader_asset(manifest, asset) !=
+                                granit::tools::shader_asset_error::success) {
+      std::cerr << "无法读取 Shader 资产清单：" << asset_path << '\n';
+      return 1;
+    }
+    content << "constexpr std::array<std::byte, 32> " << name << "{\n";
+    for (const auto value : asset.content_id)
+      content << "  std::byte{0x" << std::setw(2) << std::to_integer<unsigned int>(value) << "},\n";
+    content << "};\n";
+    previous_name = name;
+  }
+  const std::filesystem::path destination{*output_path};
+  std::error_code error;
+  if (!destination.parent_path().empty()) {
+    std::filesystem::create_directories(destination.parent_path(), error);
+    if (error) {
+      std::cerr << "无法创建内容 ID 输出目录：" << error.message() << '\n';
+      return 1;
+    }
+  }
+  const auto generated = content.str();
+  if (std::filesystem::exists(destination, error) && !error) {
+    const auto current = read_bytes(destination);
+    if (current.size() == generated.size() &&
+        std::memcmp(current.data(), generated.data(), generated.size()) == 0)
+      return 0;
+  }
+  std::ofstream stream{destination, std::ios::binary | std::ios::trunc};
+  stream.write(generated.data(), static_cast<std::streamsize>(generated.size()));
+  if (!stream) {
+    std::cerr << "无法写入内容 ID：" << destination << '\n';
+    return 1;
+  }
   return 0;
 }
 
@@ -784,6 +853,8 @@ void print_usage() {
                "--entry <name> --stage <vertex|fragment|compute> --asset <shader.grshader>\n"
                "  granit_shader_tool library --asset <shader.grshader>... "
                "--target <all|vulkan|webgpu> --output <shaders.grshlib>\n"
+               "  granit_shader_tool asset-ids --asset <name=shader.grshader>... "
+               "--output <shader-ids.inc>\n"
                "  granit_shader_tool compile --tint <path> --input <shader.wgsl> "
                "--entry <name> --stage <vertex|fragment|compute> --output <shader.spv> "
                "[--asset <shader.granit-shader> [--tint-revision <revision>] "
@@ -833,6 +904,8 @@ int main(int argc, char** argv) {
     return pack_shader_asset(argc, argv);
   if (argc >= 2 && std::string_view{argv[1]} == "library")
     return link_shader_library(argc, argv);
+  if (argc >= 2 && std::string_view{argv[1]} == "asset-ids")
+    return emit_shader_asset_ids(argc, argv);
   if (argc >= 2 && std::string_view{argv[1]} == "compile-hlsl")
     return compile_hlsl_shader(argc, argv);
   if (argc >= 2 && std::string_view{argv[1]} == "compile-glsl")

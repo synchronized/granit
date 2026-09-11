@@ -10,6 +10,7 @@
 #include <granit/renderer/pipeline.hpp>
 #include <granit/renderer/sampler.hpp>
 #include <granit/renderer/shader.hpp>
+#include <granit/renderer/shader_library.h>
 #include <granit/renderer/texture.h>
 
 namespace granit::lighting {
@@ -26,6 +27,10 @@ public:
   initialize_packaged_asset(granit_renderer renderer, granit::texture_format output_format,
                             const granit::packaged_shader_asset_desc& vertex,
                             const granit::packaged_shader_asset_desc& fragment) noexcept;
+  [[nodiscard]] granit_result initialize_library(
+      granit_renderer renderer, granit::texture_format output_format, granit_shader_library library,
+      const std::array<std::byte, GRANIT_SHADER_LIBRARY_CONTENT_DIGEST_SIZE>& vertex_id,
+      const std::array<std::byte, GRANIT_SHADER_LIBRARY_CONTENT_DIGEST_SIZE>& fragment_id) noexcept;
   [[nodiscard]] granit_result reset() noexcept;
   [[nodiscard]] bool initialized() const noexcept { return pipeline_.valid(); }
   [[nodiscard]] granit_graphics_pipeline pipeline() const noexcept {
@@ -42,11 +47,13 @@ public:
   [[nodiscard]] granit::texture_format output_format() const noexcept { return output_format_; }
 
 private:
-  [[nodiscard]] granit_result
-  initialize_impl(granit_renderer renderer, granit::texture_format output_format,
-                  std::span<const std::byte> vertex_code, std::span<const std::byte> fragment_code,
-                  std::string_view wgsl, const granit::packaged_shader_asset_desc* vertex_asset,
-                  const granit::packaged_shader_asset_desc* fragment_asset) noexcept;
+  [[nodiscard]] granit_result initialize_impl(
+      granit_renderer renderer, granit::texture_format output_format,
+      std::span<const std::byte> vertex_code, std::span<const std::byte> fragment_code,
+      std::string_view wgsl, const granit::packaged_shader_asset_desc* vertex_asset,
+      const granit::packaged_shader_asset_desc* fragment_asset, granit_shader_library library,
+      const std::array<std::byte, GRANIT_SHADER_LIBRARY_CONTENT_DIGEST_SIZE>* vertex_id,
+      const std::array<std::byte, GRANIT_SHADER_LIBRARY_CONTENT_DIGEST_SIZE>* fragment_id) noexcept;
   granit_renderer renderer_ = GRANIT_NULL_HANDLE;
   granit::texture_format output_format_ = granit::texture_format::undefined;
   granit::sampler sampler_;
