@@ -46,7 +46,7 @@
 | 二十六、0.18.0 压缩纹理 | 已发布 | 压缩格式、能力查询与上传契约已完成 |
 | 二十七、0.19.0 纹理资产变体 | 已发布 | 纹理 Manifest、选择与逐 mip 上传已完成 |
 | 二十八、0.20.0 示例框架稳定化 | 已发布 | 示例分层、交互与双后端视觉验收已完成 |
-| 二十九、0.21.0 Shader Library 与后端无关材质 | 进行中 | S-37A～S-37G 本地验收完成，推进 WebGPU 内部边界收敛 |
+| 二十九、0.21.0 Shader Library 与后端无关材质 | 进行中 | S-37A～S-37J 本地完成，推进 ShaderTools 收敛与发布验收 |
 
 ## 一、工程与 ABI 基础
 
@@ -213,7 +213,6 @@
   SDK 工作流；保留统一私有 HAL，并让 Emscripten WebGPU 静态后端直接服务浏览器目标。
 - 0.21.0 的 S-37H 已删除浏览器静态后端遗留的 Provider ABI、分发表和 domain adapter，并按领域
   拆分后端私有设备实现；S-10 与 S-16 中的 Provider 描述保留为当时的实施历史。
-
 ## 十、Android 移动平台
 
 **状态：待开始；不属于已发布的 0.4.0 交付范围。**
@@ -433,7 +432,7 @@
 
 ## 二十九、0.21.0 Shader Library 与后端无关材质
 
-**状态：进行中；S-37A～S-37J 本地实现已完成，等待完整回归与远端发布验收。**
+**状态：进行中；S-37A～S-37J 本地实现已完成，S-37K 已规划，等待实施与发布验收。**
 
 - **[S-37](plans/S-37-0.21.0-shader-library-and-material-boundary.md) / P1**：引入确定性、可裁剪的
   `.grshlib`，由 Renderer 选择并校验 Vulkan/WebGPU 载荷，Material 和应用不再接收后端信息。
@@ -446,13 +445,15 @@
   Win32、XCB、Wayland 与 Canvas 的旧公共创建入口。
 - **S-37J / P1**：Tone Mapping、Shadow 和 Debug Draw 的内建 Shader 统一由 `.grshlib` 提供，
   删除运行时直接选择 SPIR-V/WGSL 的旁路。
+- **[S-37K](plans/S-37K-shader-tooling-api-structure.md) / P1**：收敛 ShaderTools 公共接口和源码组织，
+  统一共享类型与 Compiler 入口，并明确私有 Shader Object、Library Builder、CLI 和 CMake 边界。
 - 文件 I/O、网络、资产数据库、运行时源码编译、Android、新后端、Bindless 和材质节点图不属于
   本版本。
 
 ## 近期执行顺序
 
-1. 按 S-37A～S-37J 完成 0.21.0 Shader Library、Material v5、WebGPU 与 Surface 边界收敛和
-   发布验收。
+1. 按 S-37K 完成 ShaderTools 接口、私有 Shader Object、Library Builder、CLI 与 CMake 边界收敛，
+   再完成 0.21.0 发布验收。
 2. 公共执行器与场景 API 继续等待 Granit 与 Gneiss 的第二个真实复用证据。
 3. S-14 只在复用条件成立后启动；不要为当前单个示例提前稳定 glTF 公共 API。
 4. S-06D 最终验收等待稳定版本与 component 范围决策；不在 0.x 阶段提前宣布稳定。
