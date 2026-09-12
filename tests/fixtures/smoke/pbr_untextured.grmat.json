@@ -1,5 +1,5 @@
 {
-  "format_version": 5,
+  "format_version": 6,
   "target_environment": "cross_backend",
   "binding_model": "bind_group",
   "binding_groups": ["frame", "material", "object", "lighting"],
@@ -36,10 +36,8 @@
         "color_blend": {"enabled": false}
       },
       "shaders": [
-        {"content_id": "d805f6228fecfd49b4d9dbec80c6363e54acc69b8238815064bef85fcd7aefa9",
-         "stage": "vertex", "entry_point": "vertex_main"},
-        {"content_id": "656d1bfb741dde14acc3a774be6ead0bf908fdc22dabf0ec89866cf4385d03f1",
-         "stage": "fragment", "entry_point": "fragment_main"}
+        {"library": "pbr_test", "shader": "pbr.vertex"},
+        {"library": "pbr_test", "shader": "pbr.fragment", "variant": "untextured"}
       ]
     },
     {
@@ -57,10 +55,8 @@
         "color_blend": {"enabled": false}
       },
       "shaders": [
-        {"content_id": "d805f6228fecfd49b4d9dbec80c6363e54acc69b8238815064bef85fcd7aefa9",
-         "stage": "vertex", "entry_point": "vertex_main"},
-        {"content_id": "2b4ca9d1c60fc84a38ac8c508e248bd2d74e27ce3be4765b521b1a4fbd308638",
-         "stage": "fragment", "entry_point": "fragment_main"}
+        {"library": "pbr_test", "shader": "pbr.vertex"},
+        {"library": "pbr_test", "shader": "pbr.fragment", "variant": "textured"}
       ]
     }
   ]

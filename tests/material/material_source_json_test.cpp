@@ -5,12 +5,13 @@
 
 #include <catch2/catch_all.hpp>
 
+#include <array>
 #include <string_view>
 
 namespace {
 
 constexpr std::string_view source = R"({
-  "format_version": 5,
+  "format_version": 6,
   "target_environment": "cross_backend",
   "binding_model": "bind_group",
   "binding_groups": ["frame", "material", "object", "lighting"],
@@ -37,19 +38,42 @@ constexpr std::string_view source = R"({
         "alpha_operation": "add", "write_mask": 7}
     },
     "shaders": [
-      {"content_id": "fadce2ea317ae670ada75cee24b5365d99a29180a7113948e73530ca8b30311c",
-       "stage": "vertex", "entry_point": "main"},
-      {"content_id": "8f7cfc8e65d45e5e67410d4de4bf6b20420d60506e8d04418fae81a77757b483",
-       "stage": "fragment", "entry_point": "main"}
+      {"library": "fixture", "shader": "main.vertex"},
+      {"library": "fixture", "shader": "main.fragment", "variant": "textured"}
     ]
   }]
 })";
 
+const std::array references{
+    granit::material::material_shader_reference{.library = "fixture",
+                                                .name = "main.vertex",
+                                                .content_id =
+                                                    [] {
+                                                      granit::shader_content_id value{};
+                                                      value[0] = std::byte{1};
+                                                      return value;
+                                                    }(),
+                                                .stage =
+                                                    granit::material::package_shader_stage::vertex,
+                                                .entry_point = "main"},
+    granit::material::material_shader_reference{
+        .library = "fixture",
+        .name = "main.fragment/textured",
+        .content_id =
+            [] {
+              granit::shader_content_id value{};
+              value[0] = std::byte{2};
+              return value;
+            }(),
+        .stage = granit::material::package_shader_stage::fragment,
+        .entry_point = "main"},
+};
+
 } // namespace
 
-TEST_CASE("材质源 JSON 通过内容 ID 构建内存包") {
+TEST_CASE("材质源 JSON 通过 Library 逻辑名称构建内存包") {
   granit::material::material_package package;
-  REQUIRE(granit::material::parse_material_source_json(source, package) ==
+  REQUIRE(granit::material::parse_material_source_json(source, references, package) ==
           granit::material::source_json_error::none);
   CHECK(package.metadata().constant_buffer_size() == 16);
   CHECK(package.binding_groups() == granit::material::package_binding_groups_all);
@@ -70,7 +94,7 @@ TEST_CASE("材质源 JSON 拒绝未知的 Pipeline 枚举") {
   invalid.replace(invalid.find("triangle_list"), std::string_view{"triangle_list"}.size(),
                   "triangles");
   granit::material::material_package package;
-  CHECK(granit::material::parse_material_source_json(invalid, package) ==
+  CHECK(granit::material::parse_material_source_json(invalid, references, package) ==
         granit::material::source_json_error::invalid_schema);
 }
 
@@ -78,15 +102,15 @@ TEST_CASE("材质源 JSON 拒绝不支持的绑定模型") {
   std::string invalid{source};
   invalid.replace(invalid.find("bind_group"), std::string_view{"bind_group"}.size(), "bindless");
   granit::material::material_package package;
-  CHECK(granit::material::parse_material_source_json(invalid, package) ==
+  CHECK(granit::material::parse_material_source_json(invalid, references, package) ==
         granit::material::source_json_error::unsupported_value);
 }
 
-TEST_CASE("材质源 JSON 拒绝无效 Shader 内容 ID") {
+TEST_CASE("材质源 JSON 拒绝未知 Shader 逻辑名称") {
   std::string invalid{source};
-  invalid.replace(invalid.find("fadce2ea"), std::string_view{"fadce2ea"}.size(), "invalid!");
+  invalid.replace(invalid.find("main.vertex"), std::string_view{"main.vertex"}.size(), "missing");
   granit::material::material_package package;
-  CHECK(granit::material::parse_material_source_json(invalid, package) ==
+  CHECK(granit::material::parse_material_source_json(invalid, references, package) ==
         granit::material::source_json_error::invalid_schema);
 }
 
@@ -95,6 +119,6 @@ TEST_CASE("材质源 JSON 拒绝超过限制的嵌套深度") {
   deeply_nested += "null";
   deeply_nested.append(granit::material::material_source_json_max_depth + 2, ']');
   granit::material::material_package package;
-  CHECK(granit::material::parse_material_source_json(deeply_nested, package) ==
+  CHECK(granit::material::parse_material_source_json(deeply_nested, references, package) ==
         granit::material::source_json_error::invalid_json);
 }

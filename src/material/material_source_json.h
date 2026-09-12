@@ -7,6 +7,8 @@
 #include "material/material_package.h"
 
 #include <cstddef>
+#include <span>
+#include <string>
 #include <string_view>
 
 namespace granit::material {
@@ -22,8 +24,20 @@ enum class source_json_error : std::uint8_t {
   invalid_package,
 };
 
-[[nodiscard]] source_json_error parse_material_source_json(std::string_view json,
-                                                           material_package& package) noexcept;
+inline constexpr std::uint32_t material_source_format_version = 6;
+
+struct material_shader_reference {
+  std::string library;
+  std::string name;
+  shader_content_id content_id{};
+  package_shader_stage stage{package_shader_stage::vertex};
+  std::string entry_point;
+};
+
+[[nodiscard]] source_json_error
+parse_material_source_json(std::string_view json,
+                           std::span<const material_shader_reference> shader_references,
+                           material_package& package) noexcept;
 
 } // namespace granit::material
 

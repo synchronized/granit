@@ -1,5 +1,5 @@
 {
-  "format_version": 5,
+  "format_version": 6,
   "target_environment": "cross_backend",
   "binding_model": "bind_group",
   "binding_groups": ["frame", "material", "object", "lighting"],
@@ -40,16 +40,8 @@
         "color_blend": {"enabled": false}
       },
       "shaders": [
-        {
-          "content_id": "fadce2ea317ae670ada75cee24b5365d99a29180a7113948e73530ca8b30311c",
-          "stage": "vertex",
-          "entry_point": "main"
-        },
-        {
-          "content_id": "8f7cfc8e65d45e5e67410d4de4bf6b20420d60506e8d04418fae81a77757b483",
-          "stage": "fragment",
-          "entry_point": "main"
-        }
+        {"library": "fixture", "shader": "main.vertex"},
+        {"library": "fixture", "shader": "main.fragment"}
       ]
     }
   ]

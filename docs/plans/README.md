@@ -190,8 +190,8 @@ D-03-graphics-pipeline.md
 - [S-37K：Shader 工具接口与组织收敛](S-37K-shader-tooling-api-structure.md)——本地完成；已完成共享
   类型、统一 Compiler、Compilation/Reflection、私有 Shader Object、Library Builder、CLI、CMake
   适配与本地发布验收。
-- [S-37L：HLSL-first Shader 作者入口](S-37L-hlsl-first-shader-authoring.md)——实现中；L1/L2 已
-  完成源清单、逻辑名称、确定性索引与高层 Builder，后续接入 Material 逻辑引用并迁移内建资产。
+- [S-37L：HLSL-first Shader 作者入口](S-37L-hlsl-first-shader-authoring.md)——实现中；L1 至 L3 已
+  完成源清单、逻辑名称、确定性索引、高层 Builder 与 Material 逻辑引用，后续迁移内建资产。
 
 ## 状态
 

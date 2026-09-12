@@ -85,10 +85,12 @@ add_custom_command(
   COMMAND
     granit_material_tool build
     "${granit_smoke_asset_dir}/render_pipeline_untextured.grmat.json"
-    --output "${granit_render_pipeline_smoke_package}"
+    --output "${granit_render_pipeline_smoke_package}" --shader-index
+    "${granit_smoke_asset_dir}/pbr.grshidx.json"
   DEPENDS
     granit_material_tool
     "${granit_smoke_asset_dir}/render_pipeline_untextured.grmat.json"
+    "${granit_smoke_asset_dir}/pbr.grshidx.json"
   VERBATIM
 )
 

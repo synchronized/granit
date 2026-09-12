@@ -1,5 +1,5 @@
 {
-  "format_version": 5,
+  "format_version": 6,
   "target_environment": "cross_backend",
   "binding_model": "bind_group",
   "binding_groups": ["frame", "material", "object"],
@@ -36,10 +36,8 @@
         }
       },
       "shaders": [
-        {"content_id": "cd0f9653f3bfd47c651829fc4de3095bfd396dd045a3a214c7d82aac82108e60",
-         "stage": "vertex", "entry_point": "canvas_vertex_main"},
-        {"content_id": "f9b587761d6b0cdefc7ba012838f190696e4eb76a7da01fbfdc9099863ef72dc",
-         "stage": "fragment", "entry_point": "fragment_main"}
+        {"library": "canvas", "shader": "canvas.vertex"},
+        {"library": "canvas", "shader": "canvas.fragment"}
       ]
     },
     {
@@ -66,10 +64,8 @@
         }
       },
       "shaders": [
-        {"content_id": "cd0f9653f3bfd47c651829fc4de3095bfd396dd045a3a214c7d82aac82108e60",
-         "stage": "vertex", "entry_point": "canvas_vertex_main"},
-        {"content_id": "0aaaf8954fe15ceb9f16f7e67469390b382a952c5d733e1457e1e647ca7a97f2",
-         "stage": "fragment", "entry_point": "fragment_main"}
+        {"library": "canvas", "shader": "canvas.vertex"},
+        {"library": "canvas", "shader": "canvas.fragment", "variant": "encode_srgb"}
       ]
     }
   ]

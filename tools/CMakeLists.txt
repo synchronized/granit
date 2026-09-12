@@ -157,11 +157,14 @@ endif()
 add_executable(
   granit_material_tool
   material_tool_main.cpp
+  $<TARGET_OBJECTS:granit_shader_library_source>
   "${PROJECT_SOURCE_DIR}/src/material/material_debug_json.cpp"
   "${PROJECT_SOURCE_DIR}/src/material/material_source_json.cpp"
 )
 target_compile_features(granit_material_tool PRIVATE cxx_std_20)
-target_include_directories(granit_material_tool PRIVATE "${PROJECT_SOURCE_DIR}/src")
+target_include_directories(
+  granit_material_tool PRIVATE "${PROJECT_SOURCE_DIR}/src" "${PROJECT_SOURCE_DIR}/tools"
+)
 target_link_libraries(granit_material_tool PRIVATE granit::material)
 target_compile_options(
   granit_material_tool
@@ -477,7 +480,8 @@ if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
     COMMAND
       granit_material_tool build
       "${PROJECT_SOURCE_DIR}/tests/assets/material_package_fixture.grmat.json"
-      --output "${GRANIT_MATERIAL_PACKAGE_FIXTURE}" --emit-debug-json
+      --output "${GRANIT_MATERIAL_PACKAGE_FIXTURE}" --shader-index
+      "${PROJECT_SOURCE_DIR}/tests/assets/material_fixture.grshidx.json" --emit-debug-json
   )
   set_tests_properties(granit.material_tool.build PROPERTIES FIXTURES_SETUP granit_material_package)
   add_test(
@@ -496,7 +500,8 @@ if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
     NAME granit.material_tool.unlit_build
     COMMAND
       granit_material_tool build "${PROJECT_SOURCE_DIR}/tests/fixtures/smoke/unlit.grmat.json"
-      --output "${GRANIT_UNLIT_PACKAGE_FIXTURE}"
+      --output "${GRANIT_UNLIT_PACKAGE_FIXTURE}" --shader-index
+      "${PROJECT_SOURCE_DIR}/tests/fixtures/smoke/unlit.grshidx.json"
   )
   set_tests_properties(granit.material_tool.unlit_build PROPERTIES FIXTURES_SETUP granit_unlit)
   add_test(

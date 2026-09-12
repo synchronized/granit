@@ -1,0 +1,9 @@
+{
+  "format_version": 1,
+  "library": "fixture",
+  "content_digest": "0000000000000000000000000000000000000000000000000000000000000000",
+  "shaders": [
+    {"name": "main.vertex", "content_id": "fadce2ea317ae670ada75cee24b5365d99a29180a7113948e73530ca8b30311c", "stage": "vertex", "entry_point": "main"},
+    {"name": "main.fragment", "content_id": "8f7cfc8e65d45e5e67410d4de4bf6b20420d60506e8d04418fae81a77757b483", "stage": "fragment", "entry_point": "main"}
+  ]
+}

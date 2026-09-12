@@ -69,6 +69,9 @@ parse_shader_library_source_manifest(std::string_view json,
 [[nodiscard]] shader_library_source_error
 encode_shader_library_index_json(const shader_library_index& index, std::string& json) noexcept;
 
+[[nodiscard]] shader_library_source_error
+parse_shader_library_index_json(std::string_view json, shader_library_index& index) noexcept;
+
 } // namespace granit::tools
 
 #endif

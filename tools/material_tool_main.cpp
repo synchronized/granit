@@ -4,7 +4,9 @@
 #include "material/material_debug_json.h"
 #include "material/material_package_archive.h"
 #include "material/material_source_json.h"
+#include "shader_library/source_manifest.h"
 
+#include <algorithm>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -91,7 +93,7 @@ bool write_file_atomic(const std::filesystem::path& path, std::string_view value
 void print_usage() {
   std::cerr << "用法：\n"
                "  granit_material_tool build <source.grmat.json> --output <package.grmat> "
-               "[--emit-debug-json [debug.json]]\n"
+               "--shader-index <library.grshidx.json>... [--emit-debug-json [debug.json]]\n"
                "  granit_material_tool inspect <package.grmat> --json "
                "[--output <debug.json>]\n";
 }
@@ -125,21 +127,35 @@ int inspect_package(int argc, char** argv) {
 }
 
 int build_package(int argc, char** argv) {
-  if (argc < 5 || argc > 7 || std::string_view{argv[3]} != "--output") {
+  if (argc < 7 || std::string_view{argv[3]} != "--output") {
     print_usage();
     return 2;
   }
   bool emit_debug_json = false;
   std::filesystem::path debug_path;
-  if (argc >= 6) {
-    if (std::string_view{argv[5]} != "--emit-debug-json") {
+  std::vector<std::filesystem::path> index_paths;
+  for (int index = 5; index < argc;) {
+    const std::string_view option{argv[index]};
+    if (option == "--shader-index" && index + 1 < argc) {
+      index_paths.emplace_back(argv[index + 1]);
+      index += 2;
+    } else if (option == "--emit-debug-json") {
+      if (emit_debug_json) {
+        print_usage();
+        return 2;
+      }
+      emit_debug_json = true;
+      ++index;
+      if (index < argc && std::string_view{argv[index]}.find("--") != 0)
+        debug_path = argv[index++];
+    } else {
       print_usage();
       return 2;
     }
-    emit_debug_json = true;
-    if (argc == 7) {
-      debug_path = argv[6];
-    }
+  }
+  if (index_paths.empty()) {
+    print_usage();
+    return 2;
   }
   const std::filesystem::path source_path = argv[2];
   const std::filesystem::path output_path = argv[4];
@@ -149,7 +165,28 @@ int build_package(int argc, char** argv) {
     return 1;
   }
   granit::material::material_package package;
-  if (granit::material::parse_material_source_json(source, package) !=
+  std::vector<granit::material::material_shader_reference> references;
+  std::vector<std::string> libraries;
+  for (const auto& index_path : index_paths) {
+    granit::tools::shader_library_index shader_index;
+    if (granit::tools::parse_shader_library_index_json(read_text_file(index_path), shader_index) !=
+            granit::tools::shader_library_source_error::none ||
+        std::ranges::find(libraries, shader_index.library) != libraries.end()) {
+      std::cerr << "Shader Library 索引无效或 Library 名称重复\n";
+      return 1;
+    }
+    libraries.push_back(shader_index.library);
+    for (const auto& shader : shader_index.shaders) {
+      if (shader.stage == granit::shader_stage::compute)
+        continue;
+      const auto stage = shader.stage == granit::shader_stage::vertex
+                             ? granit::material::package_shader_stage::vertex
+                             : granit::material::package_shader_stage::fragment;
+      references.push_back(
+          {shader_index.library, shader.name, shader.content_id, stage, shader.entry_point});
+    }
+  }
+  if (granit::material::parse_material_source_json(source, references, package) !=
       granit::material::source_json_error::none) {
     std::cerr << "材质源描述、引用文件或包语义无效\n";
     return 1;

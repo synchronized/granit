@@ -202,10 +202,12 @@ add_custom_command(
   COMMAND
     granit_material_tool build
     "${PROJECT_SOURCE_DIR}/tests/fixtures/smoke/unlit_canvas.grmat.json"
-    --output "${granit_canvas_benchmark_package}"
+    --output "${granit_canvas_benchmark_package}" --shader-index
+    "${PROJECT_SOURCE_DIR}/tests/fixtures/smoke/canvas.grshidx.json"
   DEPENDS
     granit_material_tool
     "${PROJECT_SOURCE_DIR}/tests/fixtures/smoke/unlit_canvas.grmat.json"
+    "${PROJECT_SOURCE_DIR}/tests/fixtures/smoke/canvas.grshidx.json"
   VERBATIM
 )
 add_executable(granit_canvas_gpu_benchmarks canvas_gpu_main.cpp "${granit_canvas_benchmark_package}")
@@ -288,10 +290,12 @@ add_custom_command(
   COMMAND
     granit_material_tool build
     "${PROJECT_SOURCE_DIR}/tests/fixtures/smoke/render_pipeline_workload.grmat.json"
-    --output "${granit_render_pipeline_benchmark_package}"
+    --output "${granit_render_pipeline_benchmark_package}" --shader-index
+    "${PROJECT_SOURCE_DIR}/tests/fixtures/smoke/pbr.grshidx.json"
   DEPENDS
     granit_material_tool
     "${PROJECT_SOURCE_DIR}/tests/fixtures/smoke/render_pipeline_workload.grmat.json"
+    "${PROJECT_SOURCE_DIR}/tests/fixtures/smoke/pbr.grshidx.json"
   VERBATIM
 )
 add_executable(

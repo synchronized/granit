@@ -124,6 +124,12 @@ TEST_CASE("Shader Library 索引编码按逻辑名称确定排序") {
   CHECK(first_json == second_json);
   CHECK(first_json.find("standard.fragment/textured") < first_json.find("standard.vertex"));
   CHECK(first_json.ends_with("\n"));
+  granit::tools::shader_library_index decoded;
+  REQUIRE(granit::tools::parse_shader_library_index_json(first_json, decoded) ==
+          granit::tools::shader_library_source_error::none);
+  CHECK(decoded.library == first.library);
+  CHECK(decoded.shaders.size() == first.shaders.size());
+  CHECK(decoded.shaders.front().name == "standard.fragment/textured");
 }
 
 TEST_CASE("Shader Library 索引拒绝重复逻辑名称") {

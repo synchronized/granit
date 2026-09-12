@@ -7,7 +7,8 @@
 
 **实现中。** Granit 的离线 Shader 作者语言收敛为 HLSL；WGSL 与 SPIR-V 继续作为 ShaderTools
 生成的后端载荷。S-37L1 已完成源清单、逻辑名称与确定性索引模型；S-37L2 已完成高层 Builder、
-CLI 与 CMake 入口。其余阶段在当前 0.21 特性分支连续实施，每个阶段形成独立本地提交。
+CLI 与 CMake 入口；S-37L3 已完成 Material 逻辑引用与构建期索引解析。其余阶段在当前 0.21 特性
+分支连续实施，每个阶段形成独立本地提交。
 
 ## 背景与目标
 
@@ -147,8 +148,8 @@ CMake 对项目公开一个对应函数。CMake 只声明输入、输出和依�
 2. **S-37L2 高层 Library Builder（已完成）**：增加 C11/C++20 一次性构建接口和
    `build-library` CLI，编排
    HLSL 编译、跨后端反射检查、私有 Object 缓存、Library 链接和索引生成。
-3. **S-37L3 Material 逻辑引用**：让 Material Tool 接收 Shader 索引；将 `.grmat.json` 作者格式升级
-   到版本 6，并在打包时解析逻辑名称；二进制 `.grmat` 继续使用 v5。
+3. **S-37L3 Material 逻辑引用（已完成）**：让 Material Tool 接收 Shader 索引；将 `.grmat.json`
+   作者格式升级到版本 6，并在打包时解析逻辑名称；二进制 `.grmat` 继续使用 v5。
 4. **S-37L4 内建资产迁移**：为 PBR、Unlit、Canvas、Shadow、Tone Mapping、Debug 和 Smoke 建立
    HLSL Library 清单；通过 Define 生成纹理、阴影、IBL、灯光和颜色编码变体，重建最终资产。
 5. **S-37L5 删除多源作者入口**：删除 WGSL 编译公共入口、`shader_source_language`、成对
