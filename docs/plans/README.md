@@ -191,8 +191,8 @@ D-03-graphics-pipeline.md
   类型、统一 Compiler、Compilation/Reflection、私有 Shader Object、Library Builder、CLI、CMake
   适配与本地发布验收。
 - [S-37L：HLSL-first Shader 作者入口](S-37L-hlsl-first-shader-authoring.md)——本地部分完成；L1 至
-  L5 已完成作者入口、内建资产和旧接口收敛，L6 已通过 Windows、安装 Consumer 与 Emscripten
-  构建，等待 Linux 和浏览器真实 WebGPU 复验。
+  L5 已完成作者入口、内建资产和旧接口收敛，L6 已通过 Windows、安装 Consumer、Emscripten
+  构建与真实 Chrome WebGPU 验收，等待 Linux 复验。
 
 ## 状态
 

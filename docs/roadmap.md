@@ -432,7 +432,7 @@
 
 ## 二十九、0.21.0 Shader Library 与后端无关材质
 
-**状态：进行中；S-37A～S-37L 本地部分完成，等待 Linux、浏览器真实 WebGPU 与发布候选验收。**
+**状态：进行中；S-37A～S-37L 本地部分完成，等待 Linux 与发布候选验收。**
 
 - **[S-37](plans/S-37-0.21.0-shader-library-and-material-boundary.md) / P1**：引入确定性、可裁剪的
   `.grshlib`，由 Renderer 选择并校验 Vulkan/WebGPU 载荷，Material 和应用不再接收后端信息。
@@ -454,7 +454,7 @@
 
 ## 近期执行顺序
 
-1. 完成 S-37L 的 Linux、浏览器真实 WebGPU 与不可变 Release Candidate 验收。
+1. 完成 S-37L 的 Linux 与不可变 Release Candidate 验收。
 2. 公共执行器与场景 API 继续等待 Granit 与 Gneiss 的第二个真实复用证据。
 3. S-14 只在复用条件成立后启动；不要为当前单个示例提前稳定 glTF 公共 API。
 4. S-06D 最终验收等待稳定版本与 component 范围决策；不在 0.x 阶段提前宣布稳定。

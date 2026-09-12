@@ -14,8 +14,9 @@ Object 写入与缓存接口，低层 Library 链接入口也已内化；产品 
 无工具链测试所需的快照集中到 `tests/fixtures/generated`。S-37L6 已建立 ShaderTools 导出快照、
 C/C++ 安装 Consumer 与构建期 Shader 产物安装门禁；私有 Object 命令也已移出标准 CLI。其余
 跨平台验收在当前 0.21 特性分支连续实施。Windows 共享与静态完整测试、两种链接模式的安装
-Consumer、Emscripten 构建及其宿主测试已经通过；Linux 与浏览器真实 WebGPU 验收仍待对应环境
-执行。每个阶段形成独立本地提交。
+Consumer、Emscripten 构建及其宿主测试已经通过；真实 Chrome WebGPU 的多帧渲染、像素、质量与
+光照切换、输入、Resize、异步 Pipeline、取消回滚和资源缺失诊断也已通过。Linux 验收仍待对应
+环境执行。每个阶段形成独立本地提交。
 
 ## 背景与目标
 
