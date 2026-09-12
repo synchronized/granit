@@ -1,11 +1,11 @@
 {
   "format_version": 1,
   "library": "render_pipeline_builtin",
-  "content_digest": "24e44f8a2d0a4137999666444dc124c7fe545d005cd54c1e328392cc3278551e",
+  "content_digest": "25cad245d1d97a83de1c41bee5d609cac10a7fcbeba9e8ecc720a6ac224fba1c",
   "shaders": [
     {"name": "shadow_depth.fragment", "content_id": "d8097dc9b64b9a8bca77589303befb4c3014b28b087c5f13e0b6462d8628c1b8", "stage": "fragment", "entry_point": "fragment_main"},
     {"name": "shadow_depth.vertex", "content_id": "17b30954041f39c9492caca5e9cb1d0dfdf5ecb22e18fcc11c4534b834c612ab", "stage": "vertex", "entry_point": "vertex_main"},
-    {"name": "tone_mapping.fragment", "content_id": "dadd9818ba673994f1ab59850df569f5d4da03d3ca1384710a249a82af38fbb0", "stage": "fragment", "entry_point": "fragment_main"},
-    {"name": "tone_mapping.vertex", "content_id": "e77c229a4dc859afdb125bfe51fac7f18db36f5bd849d74ed89738934636dd6c", "stage": "vertex", "entry_point": "vertex_main"}
+    {"name": "tone_mapping.fragment", "content_id": "72a19acc1b4d664d6163d1fc75b729b735b2ac4fde3b73d062bcdb23526b6736", "stage": "fragment", "entry_point": "fragment_main"},
+    {"name": "tone_mapping.vertex", "content_id": "ec32f967a79d322a32385bad5a28a0c221fd3d9bc41a1ae0feb617b6293db055", "stage": "vertex", "entry_point": "vertex_main"}
   ]
 }
