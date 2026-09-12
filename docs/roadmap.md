@@ -46,7 +46,7 @@
 | 二十六、0.18.0 压缩纹理 | 已发布 | 压缩格式、能力查询与上传契约已完成 |
 | 二十七、0.19.0 纹理资产变体 | 已发布 | 纹理 Manifest、选择与逐 mip 上传已完成 |
 | 二十八、0.20.0 示例框架稳定化 | 已发布 | 示例分层、交互与双后端视觉验收已完成 |
-| 二十九、0.21.0 Shader Library 与后端无关材质 | 进行中 | S-37A～S-37J 本地完成，推进 ShaderTools 收敛与发布验收 |
+| 二十九、0.21.0 Shader Library 与后端无关材质 | 进行中 | S-37A～S-37L 本地部分完成，等待跨平台发布验收 |
 
 ## 一、工程与 ABI 基础
 
@@ -432,7 +432,7 @@
 
 ## 二十九、0.21.0 Shader Library 与后端无关材质
 
-**状态：进行中；S-37A～S-37J 本地实现已完成，S-37K1～S-37K2 已完成，等待后续实施与发布验收。**
+**状态：进行中；S-37A～S-37L 本地部分完成，等待 Linux、浏览器真实 WebGPU 与发布候选验收。**
 
 - **[S-37](plans/S-37-0.21.0-shader-library-and-material-boundary.md) / P1**：引入确定性、可裁剪的
   `.grshlib`，由 Renderer 选择并校验 Vulkan/WebGPU 载荷，Material 和应用不再接收后端信息。
@@ -445,16 +445,16 @@
   Win32、XCB、Wayland 与 Canvas 的旧公共创建入口。
 - **S-37J / P1**：Tone Mapping、Shadow 和 Debug Draw 的内建 Shader 统一由 `.grshlib` 提供，
   删除运行时直接选择 SPIR-V/WGSL 的旁路。
-- **[S-37K](plans/S-37K-shader-tooling-api-structure.md) / P1**：K1～K2 已完成共享类型与统一
-  Compiler API；继续收敛 Compilation/Reflection，并明确私有 Shader Object、Library Builder、
-  CLI 和 CMake 边界。
+- **[S-37K](plans/S-37K-shader-tooling-api-structure.md) / P1**：已完成 Compiler、Compilation、
+  Reflection、私有 Shader Object、Library Builder、CLI 和 CMake 边界收敛。
+- **[S-37L](plans/S-37L-hlsl-first-shader-authoring.md) / P1**：已将作者输入收敛为 HLSL 与 Library
+  源清单，完成内建资产迁移、旧入口删除和本地发布门禁，等待剩余平台复验。
 - 文件 I/O、网络、资产数据库、运行时源码编译、Android、新后端、Bindless 和材质节点图不属于
   本版本。
 
 ## 近期执行顺序
 
-1. 按 S-37K 完成 ShaderTools 接口、私有 Shader Object、Library Builder、CLI 与 CMake 边界收敛，
-   再完成 0.21.0 发布验收。
+1. 完成 S-37L 的 Linux、浏览器真实 WebGPU 与不可变 Release Candidate 验收。
 2. 公共执行器与场景 API 继续等待 Granit 与 Gneiss 的第二个真实复用证据。
 3. S-14 只在复用条件成立后启动；不要为当前单个示例提前稳定 glTF 公共 API。
 4. S-06D 最终验收等待稳定版本与 component 范围决策；不在 0.x 阶段提前宣布稳定。
