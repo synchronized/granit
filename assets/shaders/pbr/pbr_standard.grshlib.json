@@ -1,0 +1,23 @@
+{
+  "format_version": 1,
+  "name": "pbr_standard",
+  "target_profile": "portable",
+  "target_backends": ["vulkan", "webgpu"],
+  "shaders": [
+    {
+      "name": "standard.vertex",
+      "source": "pbr_standard.hlsl",
+      "stage": "vertex",
+      "entry_point": "vertex_main"
+    },
+    {
+      "name": "standard.fragment",
+      "source": "pbr_standard.hlsl",
+      "stage": "fragment",
+      "entry_point": "fragment_main",
+      "variants": [
+        {"name": "textured", "defines": {"GRANIT_PBR_TEXTURE_MASK": "31"}}
+      ]
+    }
+  ]
+}

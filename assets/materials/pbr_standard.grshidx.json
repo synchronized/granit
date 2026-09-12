@@ -1,4 +1,9 @@
-{"format_version":1,"library":"pbr_standard","content_digest":"0000000000000000000000000000000000000000000000000000000000000000","shaders":[
-  {"name":"standard.vertex","content_id":"4290773df6fe522e489da9a93fa5f7f1348c51082c84e630d2f1755c91f91540","stage":"vertex","entry_point":"vertex_main"},
-  {"name":"standard.fragment","content_id":"31a373da8b25509c6497508cad3bda1d7ecf4b3bc3e62c484ffd673e27859328","stage":"fragment","entry_point":"fragment_main"}
-]}
+{
+  "format_version": 1,
+  "library": "pbr_standard",
+  "content_digest": "29ce5a354170272b658288f2c43df447e5e51e879cc551d48ca720df974a4d35",
+  "shaders": [
+    {"name": "standard.fragment/textured", "content_id": "7d54a39ac41a9e6b19ffb59b89a79e6abd497f9b0e1c6b0ad0792d196a04a0c4", "stage": "fragment", "entry_point": "fragment_main"},
+    {"name": "standard.vertex", "content_id": "ae9cb2deb84e872e2412aae252327aaab0a958ef25572634fd661c4ab5cf31d0", "stage": "vertex", "entry_point": "vertex_main"}
+  ]
+}

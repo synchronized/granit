@@ -152,35 +152,19 @@ endfunction()
 function(granit_prepare_runtime_shader_libraries)
   set(output_root "${CMAKE_BINARY_DIR}/generated/runtime-libraries")
   set(object_root "${CMAKE_BINARY_DIR}/generated/runtime-shader-objects")
-  granit_add_shader_object(
-    NAME pbr_standard.vert
-    SPIRV "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/pbr_standard.vert.spv"
-    WGSL "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/pbr_standard.vert.wgsl"
-    ENTRY vertex_main
-    STAGE vertex
-    OUTPUT_DIR "${object_root}/pbr"
-    OUTPUT_VAR pbr_vertex_outputs
-  )
-  granit_add_shader_object(
-    NAME pbr_standard.frag
-    SPIRV "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/pbr_standard.frag.spv"
-    WGSL "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/pbr_standard.frag.wgsl"
-    ENTRY fragment_main
-    STAGE fragment
-    OUTPUT_DIR "${object_root}/pbr"
-    OUTPUT_VAR pbr_fragment_outputs
-  )
-  list(GET pbr_vertex_outputs 0 pbr_vertex_object)
-  list(GET pbr_fragment_outputs 0 pbr_fragment_object)
-  granit_add_shader_library(
-    ALL
-    NAME pbr_standard
-    OUTPUT "${output_root}/pbr_standard.grshlib"
-    REFERENCE "${PROJECT_SOURCE_DIR}/assets/libraries/pbr_standard.grshlib"
-    TARGET granit_pbr_shader_library
-    OBJECTS "${pbr_vertex_object}" "${pbr_fragment_object}"
-  )
   if(GRANIT_DXC_EXECUTABLE AND GRANIT_TINT_EXECUTABLE)
+    granit_add_hlsl_shader_library(
+      ALL
+      NAME pbr_standard
+      MANIFEST "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/pbr_standard.grshlib.json"
+      OUTPUT "${output_root}/pbr_standard.grshlib"
+      INDEX "${output_root}/pbr_standard.grshidx.json"
+      CACHE_DIR "${object_root}/pbr-standard"
+      REFERENCE "${PROJECT_SOURCE_DIR}/assets/libraries/pbr_standard.grshlib"
+      INDEX_REFERENCE "${PROJECT_SOURCE_DIR}/assets/materials/pbr_standard.grshidx.json"
+      TARGET granit_pbr_shader_library
+      SOURCES "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/pbr_standard.hlsl"
+    )
     granit_add_hlsl_shader_library(
       ALL
       NAME canvas
