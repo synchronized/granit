@@ -3,7 +3,6 @@
 
 #include <granit/tools/shader_tools.h>
 
-#include "shader_object_storage.h"
 #include "shader_tools_core.h"
 
 #include <algorithm>
@@ -95,15 +94,6 @@ std::string read_text_file(const std::filesystem::path& path) {
   if (bytes.empty())
     return {};
   return {reinterpret_cast<const char*>(bytes.data()), bytes.size()};
-}
-
-bool write_binary_file(const std::filesystem::path& path, std::span<const std::byte> bytes) {
-  std::ofstream stream(path, std::ios::binary | std::ios::trunc);
-  if (!stream)
-    return false;
-  stream.write(reinterpret_cast<const char*>(bytes.data()),
-               static_cast<std::streamsize>(bytes.size()));
-  return static_cast<bool>(stream);
 }
 
 template <typename Desc> bool valid_binding_expectations(const Desc& desc) {
@@ -392,33 +382,6 @@ granit_result granit_shader_tools_compiler_compile(granit_shader_tools_compiler 
 granit_result granit_shader_tools_compiler_destroy(granit_shader_tools_compiler compiler) {
   std::lock_guard lock{compilers_mutex};
   return compilers.erase(compiler) == 1 ? GRANIT_SUCCESS : GRANIT_ERROR_INVALID_HANDLE;
-}
-
-granit_result granit_shader_tools_get_tool_identity(const char* path, uint64_t path_length,
-                                                    char* identity, uint64_t* identity_length) {
-  if (identity_length == nullptr || !valid_string(path, path_length) || path_length == 0)
-    return GRANIT_ERROR_INVALID_ARGUMENT;
-  try {
-    const auto digest = granit::tools::file_sha256_hex(copy_path(path, path_length));
-    if (digest.empty())
-      return GRANIT_ERROR_INVALID_ARGUMENT;
-    const auto required = static_cast<uint64_t>(digest.size());
-    if (identity == nullptr) {
-      *identity_length = required;
-      return GRANIT_SUCCESS;
-    }
-    if (*identity_length < required) {
-      *identity_length = required;
-      return GRANIT_ERROR_INVALID_ARGUMENT;
-    }
-    std::memcpy(identity, digest.data(), digest.size());
-    *identity_length = required;
-    return GRANIT_SUCCESS;
-  } catch (const std::bad_alloc&) {
-    return GRANIT_ERROR_OUT_OF_MEMORY;
-  } catch (...) {
-    return GRANIT_ERROR_INTERNAL;
-  }
 }
 
 granit_result granit_shader_tools_inspect_spirv(const granit_shader_tools_inspect_desc* desc,

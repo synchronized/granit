@@ -4,6 +4,7 @@
 #include <granit/tools/shader_compiler.h>
 #include <granit/tools/shader_library_builder.h>
 
+#include "../shader_object_storage.h"
 #include "builder.h"
 #include "object_cache.h"
 #include "shader_format/shader_library.h"
@@ -107,16 +108,7 @@ granit_result source_error(granit::tools::shader_library_source_error error) {
 }
 
 std::string tool_identity(std::string_view path) {
-  std::uint64_t size = 0;
-  if (granit_shader_tools_get_tool_identity(path.data(), path.size(), nullptr, &size) !=
-      GRANIT_SUCCESS)
-    return {};
-  std::string identity(static_cast<std::size_t>(size), '\0');
-  if (granit_shader_tools_get_tool_identity(path.data(), path.size(), identity.data(), &size) !=
-      GRANIT_SUCCESS)
-    return {};
-  identity.resize(static_cast<std::size_t>(size));
-  return identity;
+  return granit::tools::file_sha256_hex(copy_path(path));
 }
 
 std::string object_stem(std::string_view name) {

@@ -193,19 +193,6 @@ private:
   granit_shader_tools_compiler handle_{};
 };
 
-inline std::pair<::granit::result, std::string> tool_identity(std::string_view path) noexcept {
-  uint64_t size = 0;
-  auto status = granit_shader_tools_get_tool_identity(path.data(), path.size(), nullptr, &size);
-  if (status != GRANIT_SUCCESS)
-    return {::granit::from_native(status), {}};
-  std::string identity(static_cast<std::size_t>(size), '\0');
-  status = granit_shader_tools_get_tool_identity(path.data(), path.size(), identity.data(), &size);
-  if (status != GRANIT_SUCCESS)
-    return {::granit::from_native(status), {}};
-  identity.resize(static_cast<std::size_t>(size));
-  return {::granit::result::success, std::move(identity)};
-}
-
 inline std::pair<::granit::result, granit_shader_tools_target_capabilities>
 target_capabilities(shader_backend backend,
                     shader_profile profile = shader_profile::portable) noexcept {

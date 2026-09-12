@@ -129,14 +129,6 @@ GRANIT_SHADER_TOOLS_API granit_result granit_shader_tools_compiler_compile(
 GRANIT_SHADER_TOOLS_API granit_result
 granit_shader_tools_compiler_destroy(granit_shader_tools_compiler compiler);
 
-/**
- * 查询工具二进制的稳定 SHA-256 身份。
- *
- * identity 为 NULL 时仅返回所需字节数；缓冲区不足时返回 GRANIT_ERROR_INVALID_ARGUMENT 并更新长度。
- */
-GRANIT_SHADER_TOOLS_API granit_result granit_shader_tools_get_tool_identity(
-    const char* path, uint64_t path_length, char* identity, uint64_t* identity_length);
-
 /** 查询结果。输出结构必须设置 struct_size。该函数线程安全。 */
 GRANIT_SHADER_TOOLS_API granit_result granit_shader_tools_compilation_get_info(
     granit_shader_tools_compilation compilation, granit_shader_tools_compilation_info* info);

@@ -39,8 +39,8 @@ HLSL portable 路径需要资产构建机安装 DXC 与 Tint，但应用运行�
   `GRANIT_TINT_REVISION` 提供匹配的源码修订，否则配置失败。
 - `unchecked` 只用于适配新工具链，跳过版本和配置期编译能力约束；真实资产编译仍可能失败。
 
-`granit_shader_tools_get_tool_identity` 返回指定工具二进制的 SHA-256。Library Builder 自动将 DXC
-与 Tint 身份纳入缓存键，因此路径相同但二进制升级后不会复用旧产物。
+Library Builder 自动将 DXC 与 Tint 二进制的 SHA-256 身份纳入缓存键，因此路径相同但二进制升级
+后不会复用旧产物。工具身份属于缓存实现，不单独暴露公共查询接口。
 
 ## 接口与生命周期
 
