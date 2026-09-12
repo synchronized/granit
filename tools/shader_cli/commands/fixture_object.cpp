@@ -2,7 +2,7 @@
 // Copyright (c) 2026 Granit contributors
 
 #include "shader_cli/arguments.h"
-#include "shader_cli/commands.h"
+#include "shader_cli/fixture_commands.h"
 #include "shader_format/shader_cache_key.h"
 #include "shader_format/shader_object.h"
 #include "shader_object_storage.h"
@@ -57,7 +57,7 @@ int build_shader_fixture_object(int argc, char** argv) {
   if (!spirv_path || !wgsl_path || !entry || !stage || !object_path ||
       (source_path && (!dxc_path || !tint_path)) ||
       (*stage != "vertex" && *stage != "fragment" && *stage != "compute")) {
-    std::cerr << "fixture-object 需要 --spirv、--wgsl、--entry、--stage 和 --output\n";
+    std::cerr << "object 需要 --spirv、--wgsl、--entry、--stage 和 --output\n";
     return 2;
   }
   const auto stage_value = *stage == "vertex"     ? granit::shader_stage::vertex

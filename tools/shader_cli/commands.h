@@ -8,10 +8,7 @@
 
 namespace granit::shader_cli {
 
-int link_shader_fixture_library(int argc, char** argv);
 int build_shader_library(int argc, char** argv);
-int build_shader_fixture_object(int argc, char** argv);
-int emit_shader_fixture_object_ids(int argc, char** argv);
 int emit_shader_index_ids(int argc, char** argv);
 int compile_shader(int argc, char** argv);
 int inspect_shader(const char* path, bool verify, bool json = false);

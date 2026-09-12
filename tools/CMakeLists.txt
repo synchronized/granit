@@ -135,16 +135,12 @@ if(TARGET granit_shader_tools)
     shader_cli/commands/compile.cpp
     shader_cli/commands/inspect.cpp
     shader_cli/commands/library.cpp
-    shader_cli/commands/object.cpp
     shader_cli/commands/targets.cpp
-    shader_library/builder.cpp
   )
   target_sources(
     granit_shader_tool
     PRIVATE
-      $<TARGET_OBJECTS:granit_internal_shader_format>
       $<TARGET_OBJECTS:granit_shader_library_source>
-      $<TARGET_OBJECTS:granit_shader_object_storage>
       $<TARGET_OBJECTS:granit_shader_tools_core>
       $<TARGET_OBJECTS:granit_spirv_reflect>
   )
@@ -182,7 +178,44 @@ granit_target_compile_warnings(granit_material_tool)
 granit_target_output_directories(granit_material_tool)
 set_target_properties(granit_material_tool PROPERTIES FOLDER "Tools")
 
+if((GRANIT_BUILD_TESTING AND BUILD_TESTING) OR GRANIT_BUILD_BENCHMARKS)
+  add_executable(
+    granit_shader_fixture_tool
+    shader_cli/fixture_main.cpp
+    shader_cli/fixture_commands.h
+    shader_cli/arguments.cpp
+    shader_cli/arguments.h
+    shader_cli/commands/fixture_library.cpp
+    shader_cli/commands/fixture_object.cpp
+    shader_library/builder.cpp
+  )
+  target_sources(
+    granit_shader_fixture_tool
+    PRIVATE
+      $<TARGET_OBJECTS:granit_internal_shader_format>
+      $<TARGET_OBJECTS:granit_shader_object_storage>
+      $<TARGET_OBJECTS:granit_shader_tools_core>
+      $<TARGET_OBJECTS:granit_spirv_reflect>
+  )
+  target_compile_features(granit_shader_fixture_tool PRIVATE cxx_std_20)
+  target_include_directories(
+    granit_shader_fixture_tool
+    PRIVATE "${PROJECT_SOURCE_DIR}/include" "${PROJECT_SOURCE_DIR}/src"
+            "${PROJECT_SOURCE_DIR}/tools"
+  )
+  target_link_libraries(granit_shader_fixture_tool PRIVATE Threads::Threads)
+  target_compile_options(
+    granit_shader_fixture_tool
+    PRIVATE $<$<COMPILE_LANG_AND_ID:CXX,MSVC>:/utf-8>
+  )
+  granit_target_compile_warnings(granit_shader_fixture_tool)
+  granit_target_output_directories(granit_shader_fixture_tool)
+  set_target_properties(granit_shader_fixture_tool PROPERTIES FOLDER "Tests/Tools")
+
+endif()
+
 if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
+
   set(granit_shader_tool_test_object_dir "${CMAKE_CURRENT_BINARY_DIR}/test-objects")
   set(granit_shader_tool_test_object_outputs)
   foreach(stage IN ITEMS vert frag)
@@ -321,22 +354,24 @@ if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
     granit.shader_tool.verify
     PROPERTIES PASS_REGULAR_EXPRESSION "SPIR-V 结构验证通过.*fragment_main.*fragment"
   )
+  add_test(NAME granit.shader_tool.reject_fixture_command COMMAND granit_shader_tool fixture-object)
+  set_tests_properties(granit.shader_tool.reject_fixture_command PROPERTIES WILL_FAIL TRUE)
   set(granit_shader_object_id_output
       "${CMAKE_CURRENT_BINARY_DIR}/object-id-test/minimal_shader_ids.inc")
   add_test(
-    NAME granit.shader_tool.object_ids
-    COMMAND granit_shader_tool fixture-object-ids
+    NAME granit.shader_fixture_tool.object_ids
+    COMMAND granit_shader_fixture_tool object-ids
             --object
             "minimal_vertex_id=${granit_shader_tool_test_object_dir}/minimal.vert.grshaderobj"
             --output "${granit_shader_object_id_output}"
   )
   add_test(
-    NAME granit.shader_tool.object_ids_compare
+    NAME granit.shader_fixture_tool.object_ids_compare
     COMMAND "${CMAKE_COMMAND}" -E compare_files "${granit_shader_object_id_output}"
             "${PROJECT_SOURCE_DIR}/tests/assets/minimal_shader_ids.inc"
   )
-  set_tests_properties(granit.shader_tool.object_ids_compare
-                       PROPERTIES DEPENDS granit.shader_tool.object_ids)
+  set_tests_properties(granit.shader_fixture_tool.object_ids_compare
+                       PROPERTIES DEPENDS granit.shader_fixture_tool.object_ids)
   set(granit_shader_index_id_output
       "${CMAKE_CURRENT_BINARY_DIR}/index-id-test/material_shader_ids.inc")
   add_test(
@@ -347,16 +382,16 @@ if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
             --output "${granit_shader_index_id_output}"
   )
   add_test(
-    NAME granit.shader_tool.library
+    NAME granit.shader_fixture_tool.library
     COMMAND
-      granit_shader_tool fixture-library
+      granit_shader_fixture_tool library
       --object "${granit_shader_tool_test_object_dir}/minimal.vert.grshaderobj"
       --object "${granit_shader_tool_test_object_dir}/minimal.frag.grshaderobj"
       --target all
       --output "${CMAKE_CURRENT_BINARY_DIR}/library-test/minimal.grshlib"
   )
   set_tests_properties(
-    granit.shader_tool.library
+    granit.shader_fixture_tool.library
     PROPERTIES PASS_REGULAR_EXPRESSION "Shader Library"
   )
   add_test(

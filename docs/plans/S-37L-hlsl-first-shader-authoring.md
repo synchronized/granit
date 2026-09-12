@@ -12,9 +12,10 @@ Unlit、Canvas、Shadow、Tone Mapping、Debug 和 Smoke 资产迁移。S-37L5 �
 Compiler 收敛为 HLSL，且已删除 `shader_source_language`、成对载荷导入接口及公开的 Shader
 Object 写入与缓存接口，低层 Library 链接入口也已内化；产品 Shader 目录中的派生载荷已删除，
 无工具链测试所需的快照集中到 `tests/fixtures/generated`。S-37L6 已建立 ShaderTools 导出快照、
-C/C++ 安装 Consumer 与构建期 Shader 产物安装门禁，其余跨平台验收在当前 0.21 特性分支连续
-实施。Windows 共享与静态完整测试、两种链接模式的安装 Consumer、Emscripten 构建及其宿主测试
-已经通过；Linux 与浏览器真实 WebGPU 验收仍待对应环境执行。每个阶段形成独立本地提交。
+C/C++ 安装 Consumer 与构建期 Shader 产物安装门禁；私有 Object 命令也已移出标准 CLI。其余
+跨平台验收在当前 0.21 特性分支连续实施。Windows 共享与静态完整测试、两种链接模式的安装
+Consumer、Emscripten 构建及其宿主测试已经通过；Linux 与浏览器真实 WebGPU 验收仍待对应环境
+执行。每个阶段形成独立本地提交。
 
 ## 背景与目标
 

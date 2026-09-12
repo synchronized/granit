@@ -50,15 +50,8 @@ int main(int argc, char** argv) {
     return inspect_shader(argv[2], true);
   if (argc >= 2 && std::string_view{argv[1]} == "compile")
     return compile_shader(argc, argv);
-  // 仅供无 HLSL 工具链的仓库测试封装已检入夹具，不作为作者入口公开。
-  if (argc >= 2 && std::string_view{argv[1]} == "fixture-object")
-    return build_shader_fixture_object(argc, argv);
-  if (argc >= 2 && std::string_view{argv[1]} == "fixture-library")
-    return link_shader_fixture_library(argc, argv);
   if (argc >= 2 && std::string_view{argv[1]} == "build-library")
     return build_shader_library(argc, argv);
-  if (argc >= 2 && std::string_view{argv[1]} == "fixture-object-ids")
-    return emit_shader_fixture_object_ids(argc, argv);
   if (argc >= 2 && std::string_view{argv[1]} == "index-ids")
     return emit_shader_index_ids(argc, argv);
   print_usage();

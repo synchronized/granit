@@ -206,12 +206,17 @@ tools/shader_library/
 tools/shader_cli/
   main.cpp
   arguments.*
+  fixture_main.cpp
+  fixture_commands.h
   commands/compile.cpp
   commands/inspect.cpp
-  commands/object.cpp
   commands/library.cpp
+  commands/fixture_object.cpp
+  commands/fixture_library.cpp
   commands/targets.cpp
 ```
+
+`fixture_*` 只编入仓库测试工具；标准 `granit_shader_tool` 不链接或分派私有 Object 命令。
 
 公共 C ABI 仍使用 `granit_shader_tools_` 前缀、整数句柄、版本化描述和结果码。C++20 包装只提供
 强类型、移动语义和 RAII，不建立另一套编译状态。

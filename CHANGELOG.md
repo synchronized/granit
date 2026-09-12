@@ -32,6 +32,8 @@
   查询 SPIR-V 与 WGSL 载荷。
 - ShaderTools 将 `.grshaderobj` 收敛为 Library Builder 私有缓存格式；公共 Compiler 只负责编译和
   诊断，标准 CLI/CMake 作者入口只接受 HLSL 与 Library 源清单。
+- Shader Object 导入、低层链接和 Object ID 命令移入仅测试构建的 fixture 工具，不再编入标准
+  `granit_shader_tool`。
 - `assets/shaders`、`src/pipeline/shaders` 和 `examples/assets` 删除已提交的 SPIR-V/WGSL 派生载荷；
   无工具链构建所需的后端快照集中到不安装的测试夹具目录。
 - ShaderTools 新增独立 Library Builder C/C++ API；`granit_shader_tool` 按命令拆分实现，Library

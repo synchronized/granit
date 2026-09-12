@@ -2,10 +2,9 @@
 // Copyright (c) 2026 Granit contributors
 
 #include "shader_cli/arguments.h"
-#include "shader_cli/commands.h"
-#include <granit/tools/shader_tools.hpp>
-
-#include "shader_library/source_manifest.h"
+#include "shader_cli/fixture_commands.h"
+#include "shader_format/shader_object.h"
+#include "shader_library/builder.h"
 
 #include <algorithm>
 #include <cstddef>
@@ -27,13 +26,6 @@ std::vector<std::byte> read_bytes(const std::filesystem::path& path) {
   if (!bytes.empty())
     std::memcpy(output.data(), bytes.data(), bytes.size());
   return output;
-}
-
-std::string read_text(const std::filesystem::path& path) {
-  const auto bytes = read_bytes(path);
-  if (bytes.empty())
-    return {};
-  return {reinterpret_cast<const char*>(bytes.data()), bytes.size()};
 }
 
 bool valid_identifier(std::string_view name) {
@@ -74,73 +66,65 @@ bool write_if_changed(const std::filesystem::path& destination, std::string_view
 
 } // namespace
 
-int build_shader_library(int argc, char** argv) {
-  const auto manifest = option_value(argc, argv, "--manifest");
-  const auto dxc = option_value(argc, argv, "--dxc");
-  const auto tint = option_value(argc, argv, "--tint");
-  const auto cache = option_value(argc, argv, "--cache");
-  const auto output = option_value(argc, argv, "--output");
-  const auto index = option_value(argc, argv, "--index");
-  if (!manifest || !dxc || !tint || !cache || !output || !index) {
-    std::cerr << "build-library 需要 --manifest、--dxc、--tint、--cache、--output 和 --index\n";
+int link_shader_fixture_library(int argc, char** argv) {
+  const auto object_paths = option_values(argc, argv, "--object");
+  const auto target = option_value(argc, argv, "--target");
+  const auto output_path = option_value(argc, argv, "--output");
+  if (object_paths.empty() || !target || !output_path ||
+      (*target != "all" && *target != "vulkan" && *target != "webgpu")) {
+    std::cerr << "library 需要一个或多个 --object、--target <all|vulkan|webgpu> 和 --output\n";
     return 2;
   }
-  const granit::shader_tools::source_library_desc desc{
-      .manifest_path = *manifest,
-      .dxc_path = *dxc,
-      .tint_path = *tint,
-      .cache_path = *cache,
-      .output_path = *output,
-      .index_path = *index,
-  };
-  const auto [status, cache_hit] = granit::shader_tools::build_library_from_manifest(desc);
-  if (status.failed()) {
-    std::cerr << "无法从源清单构建 Shader Library：" << *manifest << '\n';
+  const auto backend_mask = *target == "all"      ? GRANIT_SHADER_BACKEND_ALL_BITS
+                            : *target == "vulkan" ? GRANIT_SHADER_BACKEND_VULKAN_BIT
+                                                  : GRANIT_SHADER_BACKEND_WEBGPU_BIT;
+  std::vector<std::filesystem::path> objects;
+  objects.reserve(object_paths.size());
+  for (const auto& path : object_paths)
+    objects.emplace_back(path);
+  bool cache_hit = false;
+  if (granit::tools::link_shader_library(objects, backend_mask, *output_path, cache_hit) !=
+      GRANIT_SUCCESS) {
+    std::cerr << "无法链接 Shader Library\n";
     return 1;
   }
-  std::cout << (cache_hit ? "Shader Library 源构建缓存命中：" : "已构建 Shader Library：")
-            << *output << '\n';
+  std::cout << (cache_hit ? "Shader Library 内容未变化：" : "已链接 Shader Library：")
+            << *output_path << '\n';
   return 0;
 }
 
-int emit_shader_index_ids(int argc, char** argv) {
-  const auto index_path = option_value(argc, argv, "--index");
-  auto shader_specs = option_values(argc, argv, "--shader");
+int emit_shader_fixture_object_ids(int argc, char** argv) {
+  auto object_specs = option_values(argc, argv, "--object");
   const auto output_path = option_value(argc, argv, "--output");
-  if (!index_path || shader_specs.empty() || !output_path) {
-    std::cerr << "index-ids 需要 --index、一个或多个 --shader <name=logical-name> 和 --output\n";
+  if (object_specs.empty() || !output_path) {
+    std::cerr << "object-ids 需要一个或多个 --object <name=path> 和 --output\n";
     return 2;
   }
-  granit::tools::shader_library_index index;
-  if (granit::tools::parse_shader_library_index_json(read_text(*index_path), index) !=
-      granit::tools::shader_library_source_error::none) {
-    std::cerr << "无法读取 Shader Library 索引：" << *index_path << '\n';
-    return 1;
-  }
-  std::ranges::sort(shader_specs);
+  std::ranges::sort(object_specs);
   std::ostringstream content;
   content << "// SPDX-License-Identifier: MIT\n"
              "// Copyright (c) 2026 Granit contributors\n\n"
-             "// 由 granit_shader_tool index-ids 生成。\n\n"
+             "// 由 Granit 测试夹具工具生成。\n\n"
           << std::hex << std::setfill('0');
   std::string previous_name;
-  for (const auto& spec : shader_specs) {
+  for (const auto& spec : object_specs) {
     const auto separator = spec.find('=');
     const auto name = spec.substr(0, separator);
-    const std::string_view spec_view{spec};
-    const auto logical_name =
-        separator == std::string::npos ? std::string_view{} : spec_view.substr(separator + 1);
-    if (!valid_identifier(name) || logical_name.empty() || name == previous_name) {
-      std::cerr << "index-ids 的名称必须是唯一 C++ 标识符：" << spec << '\n';
+    const auto valid_name =
+        separator != std::string::npos && separator + 1 < spec.size() && valid_identifier(name);
+    if (!valid_name || name == previous_name) {
+      std::cerr << "object-ids 的名称必须是唯一 C++ 标识符：" << spec << '\n';
       return 2;
     }
-    const auto found = std::ranges::find(index.shaders, logical_name,
-                                         &granit::tools::shader_library_index_entry::name);
-    if (found == index.shaders.end()) {
-      std::cerr << "索引中不存在 Shader 逻辑名称：" << logical_name << '\n';
+    const auto object_path = spec.substr(separator + 1);
+    const auto manifest = read_bytes(object_path);
+    granit::detail::shader_format::shader_object_view object;
+    if (manifest.empty() || granit::detail::shader_format::decode_shader_object(manifest, object) !=
+                                granit::detail::shader_format::shader_object_error::success) {
+      std::cerr << "无法读取 Shader Object清单：" << object_path << '\n';
       return 1;
     }
-    append_content_id(content, name, found->content_id);
+    append_content_id(content, name, object.content_id);
     previous_name = name;
   }
   const auto generated = content.str();

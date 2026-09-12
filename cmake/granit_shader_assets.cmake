@@ -15,9 +15,9 @@ function(granit_add_test_shader_object_from_payloads)
     OUTPUT "${object}" "${object}.spv" "${object}.wgsl"
     COMMAND "${CMAKE_COMMAND}" -E make_directory "${ARG_OUTPUT_DIR}"
     COMMAND
-      "$<TARGET_FILE:granit_shader_tool>" fixture-object --spirv "${ARG_SPIRV}" --wgsl "${ARG_WGSL}"
+      "$<TARGET_FILE:granit_shader_fixture_tool>" object --spirv "${ARG_SPIRV}" --wgsl "${ARG_WGSL}"
       --entry "${ARG_ENTRY}" --stage "${ARG_STAGE}" --output "${object}"
-    DEPENDS granit_shader_tool "${ARG_SPIRV}" "${ARG_WGSL}"
+    DEPENDS granit_shader_fixture_tool "${ARG_SPIRV}" "${ARG_WGSL}"
     COMMENT "生成 Shader Object ${ARG_NAME}.grshaderobj"
     VERBATIM
   )
@@ -50,11 +50,11 @@ function(granit_add_test_shader_object_from_hlsl)
       --stage "${ARG_STAGE}" --spirv-output "${object}.spv" --wgsl-output "${object}.wgsl"
       ${define_arguments}
     COMMAND
-      "$<TARGET_FILE:granit_shader_tool>" fixture-object --spirv "${object}.spv"
+      "$<TARGET_FILE:granit_shader_fixture_tool>" object --spirv "${object}.spv"
       --wgsl "${object}.wgsl" --entry "${ARG_ENTRY}" --stage "${ARG_STAGE}"
       --output "${object}" --source "${ARG_SOURCE}" --dxc "${GRANIT_DXC_EXECUTABLE}"
       --tint "${GRANIT_TINT_EXECUTABLE}" ${define_arguments}
-    DEPENDS granit_shader_tool "${ARG_SOURCE}"
+    DEPENDS granit_shader_tool granit_shader_fixture_tool "${ARG_SOURCE}"
     COMMENT "从 HLSL 生成 Shader Object ${ARG_NAME}.grshaderobj"
     VERBATIM
   )
