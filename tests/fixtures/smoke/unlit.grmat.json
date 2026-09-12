@@ -21,7 +21,7 @@
       },
       "shaders": [
         {"library": "unlit", "shader": "unlit.vertex"},
-        {"library": "unlit", "shader": "unlit.fragment"}
+        {"library": "unlit", "shader": "unlit.fragment", "variant": "opaque"}
       ]
     },
     {
@@ -54,7 +54,7 @@
       },
       "shaders": [
         {"library": "unlit", "shader": "unlit.vertex"},
-        {"library": "unlit", "shader": "unlit.fragment"}
+        {"library": "unlit", "shader": "unlit.fragment", "variant": "opaque"}
       ]
     }
   ]

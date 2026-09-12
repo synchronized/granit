@@ -56,6 +56,39 @@ function(granit_add_hlsl_shader_object)
   set(${ARG_OUTPUT_VAR} "${object};${object}.spv;${object}.wgsl" PARENT_SCOPE)
 endfunction()
 
+function(granit_add_test_shader_object)
+  set(options)
+  set(one_value_args NAME SOURCE SPIRV WGSL ENTRY HLSL_ENTRY STAGE OUTPUT_DIR OUTPUT_VAR)
+  set(multi_value_args DEFINES)
+  cmake_parse_arguments(ARG "${options}" "${one_value_args}" "${multi_value_args}" ${ARGN})
+  if(GRANIT_DXC_EXECUTABLE AND GRANIT_TINT_EXECUTABLE)
+    set(hlsl_entry "${ARG_ENTRY}")
+    if(ARG_HLSL_ENTRY)
+      set(hlsl_entry "${ARG_HLSL_ENTRY}")
+    endif()
+    granit_add_hlsl_shader_object(
+      NAME "${ARG_NAME}"
+      SOURCE "${ARG_SOURCE}"
+      ENTRY "${hlsl_entry}"
+      STAGE "${ARG_STAGE}"
+      OUTPUT_DIR "${ARG_OUTPUT_DIR}"
+      OUTPUT_VAR output
+      DEFINES ${ARG_DEFINES}
+    )
+  else()
+    granit_add_shader_object(
+      NAME "${ARG_NAME}"
+      SPIRV "${ARG_SPIRV}"
+      WGSL "${ARG_WGSL}"
+      ENTRY "${ARG_ENTRY}"
+      STAGE "${ARG_STAGE}"
+      OUTPUT_DIR "${ARG_OUTPUT_DIR}"
+      OUTPUT_VAR output
+    )
+  endif()
+  set(${ARG_OUTPUT_VAR} "${output}" PARENT_SCOPE)
+endfunction()
+
 function(granit_add_shader_library)
   set(options ALL)
   set(one_value_args NAME OUTPUT REFERENCE TARGET)
@@ -188,16 +221,30 @@ function(granit_prepare_test_shader_assets)
   set(unlit_output "${root}/unlit")
   set(outputs)
 
+  set(pbr_source "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/pbr_untextured.hlsl")
   set(pbr_vertex_names pbr_lights.vert pbr_shadow_ibl_lights.vert pbr_untextured.vert)
   foreach(name IN LISTS pbr_vertex_names)
-    granit_add_shader_object(
+    set(definitions)
+    if(name STREQUAL "pbr_lights.vert")
+      set(definitions GRANIT_PBR_LIGHTS=1)
+    elseif(name STREQUAL "pbr_shadow_ibl_lights.vert")
+      set(
+        definitions
+        GRANIT_PBR_SHADOWS=1
+        GRANIT_PBR_IBL=1
+        GRANIT_PBR_LIGHTS=1
+      )
+    endif()
+    granit_add_test_shader_object(
       NAME "${name}"
+      SOURCE "${pbr_source}"
       SPIRV "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/${name}.spv"
       WGSL "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/${name}.wgsl"
       ENTRY vertex_main
       STAGE vertex
       OUTPUT_DIR "${pbr_output}"
       OUTPUT_VAR output
+      DEFINES ${definitions}
     )
     list(APPEND outputs ${output})
   endforeach()
@@ -210,14 +257,22 @@ function(granit_prepare_test_shader_assets)
       set(shader_stage fragment)
       set(entry fragment_main)
     endif()
-    granit_add_shader_object(
+    set(definitions)
+    if(name STREQUAL "unlit_alpha_cutoff.frag")
+      set(definitions GRANIT_UNLIT_ALPHA_CUTOFF=1)
+    elseif(name STREQUAL "unlit.frag")
+      set(definitions GRANIT_UNLIT_ALPHA_CUTOFF=0)
+    endif()
+    granit_add_test_shader_object(
       NAME "${name}"
+      SOURCE "${PROJECT_SOURCE_DIR}/assets/shaders/unlit/unlit.hlsl"
       SPIRV "${PROJECT_SOURCE_DIR}/assets/shaders/unlit/${name}.spv"
       WGSL "${PROJECT_SOURCE_DIR}/assets/shaders/unlit/${name}.wgsl"
       ENTRY "${entry}"
       STAGE "${shader_stage}"
       OUTPUT_DIR "${unlit_output}"
       OUTPUT_VAR output
+      DEFINES ${definitions}
     )
     list(APPEND outputs ${output})
   endforeach()
@@ -231,14 +286,36 @@ function(granit_prepare_test_shader_assets)
     pbr_textured.frag
   )
   foreach(name IN LISTS pbr_fragment_names)
-    granit_add_shader_object(
+    set(definitions)
+    if(name STREQUAL "pbr_lights_untextured.frag")
+      set(definitions GRANIT_PBR_LIGHTS=1)
+    elseif(name STREQUAL "pbr_ibl_lights_untextured.frag")
+      set(definitions GRANIT_PBR_IBL=1 GRANIT_PBR_LIGHTS=1)
+    elseif(name STREQUAL "pbr_shadow_lights_untextured.frag")
+      set(definitions GRANIT_PBR_SHADOWS=1 GRANIT_PBR_LIGHTS=1)
+    elseif(name STREQUAL "pbr_shadow_ibl_lights_untextured.frag")
+      set(
+        definitions
+        GRANIT_PBR_SHADOWS=1
+        GRANIT_PBR_IBL=1
+        GRANIT_PBR_LIGHTS=1
+        GRANIT_PBR_TEXTURE_MASK=0
+      )
+    elseif(name STREQUAL "pbr_untextured.frag")
+      set(definitions GRANIT_PBR_TEXTURE_MASK=0)
+    elseif(name STREQUAL "pbr_textured.frag")
+      set(definitions GRANIT_PBR_TEXTURE_MASK=31)
+    endif()
+    granit_add_test_shader_object(
       NAME "${name}"
+      SOURCE "${pbr_source}"
       SPIRV "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/${name}.spv"
       WGSL "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/${name}.wgsl"
       ENTRY fragment_main
       STAGE fragment
       OUTPUT_DIR "${pbr_output}"
       OUTPUT_VAR output
+      DEFINES ${definitions}
     )
     list(APPEND outputs ${output})
   endforeach()
@@ -251,8 +328,9 @@ function(granit_prepare_test_shader_assets)
       set(shader_stage fragment)
       set(entry fragment_main)
     endif()
-    granit_add_shader_object(
+    granit_add_test_shader_object(
       NAME "tone_mapping.${stage}"
+      SOURCE "${PROJECT_SOURCE_DIR}/src/pipeline/shaders/tone_mapping.hlsl"
       SPIRV "${PROJECT_SOURCE_DIR}/src/pipeline/shaders/tone_mapping.${stage}.spv"
       WGSL "${PROJECT_SOURCE_DIR}/src/pipeline/shaders/tone_mapping.wgsl"
       ENTRY "${entry}"
@@ -264,12 +342,15 @@ function(granit_prepare_test_shader_assets)
   endforeach()
 
   set(smoke_vertex_names triangle.vert window_triangle.vert)
-  foreach(name IN LISTS smoke_vertex_names)
-    granit_add_shader_object(
+  set(smoke_vertex_sources triangle.hlsl window_triangle.hlsl)
+  foreach(name source IN ZIP_LISTS smoke_vertex_names smoke_vertex_sources)
+    granit_add_test_shader_object(
       NAME "${name}"
+      SOURCE "${PROJECT_SOURCE_DIR}/tests/fixtures/smoke/${source}"
       SPIRV "${PROJECT_SOURCE_DIR}/tests/fixtures/smoke/${name}.spv"
       WGSL "${PROJECT_SOURCE_DIR}/tests/fixtures/smoke/${name}.wgsl"
       ENTRY main
+      HLSL_ENTRY vertex_main
       STAGE vertex
       OUTPUT_DIR "${smoke_output}"
       OUTPUT_VAR output
@@ -277,23 +358,28 @@ function(granit_prepare_test_shader_assets)
     list(APPEND outputs ${output})
   endforeach()
   set(smoke_fragment_names triangle.frag window_triangle.frag)
-  foreach(name IN LISTS smoke_fragment_names)
-    granit_add_shader_object(
+  set(smoke_fragment_sources triangle.hlsl window_triangle.hlsl)
+  foreach(name source IN ZIP_LISTS smoke_fragment_names smoke_fragment_sources)
+    granit_add_test_shader_object(
       NAME "${name}"
+      SOURCE "${PROJECT_SOURCE_DIR}/tests/fixtures/smoke/${source}"
       SPIRV "${PROJECT_SOURCE_DIR}/tests/fixtures/smoke/${name}.spv"
       WGSL "${PROJECT_SOURCE_DIR}/tests/fixtures/smoke/${name}.wgsl"
       ENTRY main
+      HLSL_ENTRY fragment_main
       STAGE fragment
       OUTPUT_DIR "${smoke_output}"
       OUTPUT_VAR output
     )
     list(APPEND outputs ${output})
   endforeach()
-  granit_add_shader_object(
+  granit_add_test_shader_object(
     NAME compute.comp
+    SOURCE "${PROJECT_SOURCE_DIR}/tests/fixtures/smoke/compute.hlsl"
     SPIRV "${PROJECT_SOURCE_DIR}/tests/fixtures/smoke/compute.comp.spv"
     WGSL "${PROJECT_SOURCE_DIR}/tests/fixtures/smoke/compute.comp.wgsl"
     ENTRY main
+    HLSL_ENTRY compute_main
     STAGE compute
     OUTPUT_DIR "${smoke_output}"
     OUTPUT_VAR output
@@ -301,8 +387,44 @@ function(granit_prepare_test_shader_assets)
   list(APPEND outputs ${output})
 
   add_custom_target(granit_test_shader_assets DEPENDS ${outputs})
+  if(GRANIT_DXC_EXECUTABLE AND GRANIT_TINT_EXECUTABLE)
+    set(test_library_root "${CMAKE_BINARY_DIR}/generated/test-libraries")
+    set(test_cache_root "${CMAKE_BINARY_DIR}/generated/test-library-objects")
+    set(pbr_manifest "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/pbr_runtime.grshlib.json")
+    set(pbr_test_manifest "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/pbr_test.grshlib.json")
+    set(unlit_manifest "${PROJECT_SOURCE_DIR}/assets/shaders/unlit/unlit.grshlib.json")
+    set(smoke_manifest "${PROJECT_SOURCE_DIR}/tests/fixtures/smoke/smoke.grshlib.json")
+    set(pbr_sources "${pbr_source}")
+    set(pbr_test_sources "${pbr_source}")
+    set(unlit_sources "${PROJECT_SOURCE_DIR}/assets/shaders/unlit/unlit.hlsl")
+    set(
+      smoke_sources
+      "${PROJECT_SOURCE_DIR}/tests/fixtures/smoke/triangle.hlsl"
+      "${PROJECT_SOURCE_DIR}/tests/fixtures/smoke/window_triangle.hlsl"
+      "${PROJECT_SOURCE_DIR}/tests/fixtures/smoke/compute.hlsl"
+    )
+    foreach(library IN ITEMS pbr pbr_test unlit smoke)
+      granit_add_hlsl_shader_library(
+        NAME "${library}"
+        MANIFEST "${${library}_manifest}"
+        OUTPUT "${test_library_root}/${library}.grshlib"
+        INDEX "${test_library_root}/${library}.grshidx.json"
+        CACHE_DIR "${test_cache_root}/${library}"
+        TARGET "granit_${library}_test_shader_library"
+        SOURCES ${${library}_sources}
+      )
+      add_dependencies(granit_test_shader_assets "granit_${library}_test_shader_library")
+    endforeach()
+    set(pbr_test_index "${test_library_root}/pbr.grshidx.json")
+    set(unlit_test_index "${test_library_root}/unlit.grshidx.json")
+  else()
+    set(pbr_test_index "${PROJECT_SOURCE_DIR}/tests/fixtures/smoke/pbr.grshidx.json")
+    set(unlit_test_index "${PROJECT_SOURCE_DIR}/tests/fixtures/smoke/unlit.grshidx.json")
+  endif()
   set(GRANIT_PBR_TEST_SHADER_DIR "${pbr_output}" PARENT_SCOPE)
   set(GRANIT_PIPELINE_TEST_SHADER_DIR "${pipeline_output}" PARENT_SCOPE)
   set(GRANIT_SMOKE_TEST_SHADER_DIR "${smoke_output}" PARENT_SCOPE)
   set(GRANIT_UNLIT_TEST_SHADER_DIR "${unlit_output}" PARENT_SCOPE)
+  set(GRANIT_PBR_TEST_SHADER_INDEX "${pbr_test_index}" PARENT_SCOPE)
+  set(GRANIT_UNLIT_TEST_SHADER_INDEX "${unlit_test_index}" PARENT_SCOPE)
 endfunction()

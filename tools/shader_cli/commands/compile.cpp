@@ -38,7 +38,7 @@ std::optional<std::string> resolve_tool_identity(std::string_view path,
   auto [status, digest] = granit::shader_tools::tool_identity(path);
   if (status.failed())
     return std::nullopt;
-  return "sha256=" + digest;
+  return digest;
 }
 
 } // namespace

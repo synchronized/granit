@@ -30,7 +30,7 @@
         "color_blend": {"enabled": false}
       },
       "shaders": [
-        {"library": "pbr", "shader": "pbr.vertex"},
+        {"library": "pbr", "shader": "pbr.vertex", "variant": "shadow_ibl_lights"},
         {"library": "pbr", "shader": "pbr.fragment", "variant": "untextured"}
       ]
     }

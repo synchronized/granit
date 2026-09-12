@@ -1,0 +1,41 @@
+{
+  "format_version": 1,
+  "name": "pbr",
+  "target_profile": "portable",
+  "target_backends": ["vulkan", "webgpu"],
+  "shaders": [
+    {
+      "name": "pbr.vertex",
+      "source": "pbr_untextured.hlsl",
+      "stage": "vertex",
+      "entry_point": "vertex_main",
+      "variants": [
+        {
+          "name": "shadow_ibl_lights",
+          "defines": {
+            "GRANIT_PBR_IBL": "1",
+            "GRANIT_PBR_LIGHTS": "1",
+            "GRANIT_PBR_SHADOWS": "1"
+          }
+        }
+      ]
+    },
+    {
+      "name": "pbr.fragment",
+      "source": "pbr_untextured.hlsl",
+      "stage": "fragment",
+      "entry_point": "fragment_main",
+      "variants": [
+        {
+          "name": "untextured",
+          "defines": {
+            "GRANIT_PBR_IBL": "1",
+            "GRANIT_PBR_LIGHTS": "1",
+            "GRANIT_PBR_SHADOWS": "1",
+            "GRANIT_PBR_TEXTURE_MASK": "0"
+          }
+        }
+      ]
+    }
+  ]
+}

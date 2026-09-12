@@ -3,8 +3,8 @@
   "library": "unlit",
   "content_digest": "0000000000000000000000000000000000000000000000000000000000000000",
   "shaders": [
-    {"name": "unlit.vertex", "content_id": "e378902d9dccf59ca6888ac5b49fd87f0d193d26bf43ed3ba61ed365d83526dd", "stage": "vertex", "entry_point": "vertex_main"},
-    {"name": "unlit.fragment", "content_id": "c322404ca835f8f726ad5dc198072b61e6512a331e009b1fe13ec55827199308", "stage": "fragment", "entry_point": "fragment_main"},
-    {"name": "unlit.fragment/alpha_cutoff", "content_id": "a591edd663f4378ed5c95bcbfcea7bdcb03974f5477d0b25a7dc768b670e5ad8", "stage": "fragment", "entry_point": "fragment_main"}
+    {"name": "unlit.fragment/alpha_cutoff", "content_id": "a591edd663f4378ed5c95bcbfcea7bdcb03974f5477d0b25a7dc768b670e5ad8", "stage": "fragment", "entry_point": "fragment_main"},
+    {"name": "unlit.fragment/opaque", "content_id": "c322404ca835f8f726ad5dc198072b61e6512a331e009b1fe13ec55827199308", "stage": "fragment", "entry_point": "fragment_main"},
+    {"name": "unlit.vertex", "content_id": "e378902d9dccf59ca6888ac5b49fd87f0d193d26bf43ed3ba61ed365d83526dd", "stage": "vertex", "entry_point": "vertex_main"}
   ]
 }
