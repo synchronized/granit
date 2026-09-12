@@ -24,6 +24,8 @@ void print_usage() {
                "--index <library.grshidx.json>\n"
                "  granit_shader_tool object-ids --object <name=shader.grshaderobj>... "
                "--output <shader-ids.inc>\n"
+               "  granit_shader_tool index-ids --index <library.grshidx.json> "
+               "--shader <name=logical-name>... --output <shader-ids.inc>\n"
                "  granit_shader_tool compile --tint <path> --input <shader.wgsl> "
                "--entry <name> --stage <vertex|fragment|compute> --output <shader.spv> "
                "[--object <shader.grshaderobj> [--tint-revision <revision>] "
@@ -69,6 +71,8 @@ int main(int argc, char** argv) {
     return build_shader_library(argc, argv);
   if (argc >= 2 && std::string_view{argv[1]} == "object-ids")
     return emit_shader_object_ids(argc, argv);
+  if (argc >= 2 && std::string_view{argv[1]} == "index-ids")
+    return emit_shader_index_ids(argc, argv);
   if (argc >= 2 && std::string_view{argv[1]} == "compile-hlsl")
     return compile_hlsl_shader(argc, argv);
   print_usage();

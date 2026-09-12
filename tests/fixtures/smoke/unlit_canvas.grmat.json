@@ -36,8 +36,8 @@
         }
       },
       "shaders": [
-        {"library": "canvas", "shader": "canvas.vertex"},
-        {"library": "canvas", "shader": "canvas.fragment"}
+        {"library": "canvas", "shader": "canvas.vertex", "variant": "textured_vertex_color"},
+        {"library": "canvas", "shader": "canvas.fragment", "variant": "textured_vertex_color"}
       ]
     },
     {
@@ -64,8 +64,8 @@
         }
       },
       "shaders": [
-        {"library": "canvas", "shader": "canvas.vertex"},
-        {"library": "canvas", "shader": "canvas.fragment", "variant": "encode_srgb"}
+        {"library": "canvas", "shader": "canvas.vertex", "variant": "textured_vertex_color"},
+        {"library": "canvas", "shader": "canvas.fragment", "variant": "textured_vertex_color_encode_srgb"}
       ]
     }
   ]

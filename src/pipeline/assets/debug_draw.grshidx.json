@@ -1,0 +1,10 @@
+{
+  "format_version": 1,
+  "library": "debug_draw",
+  "content_digest": "122b7bb0a410ce4ecdb7340f56b1500297a26ef8d0828a2e0b2a6ab3e54f63fc",
+  "shaders": [
+    {"name": "world.fragment/encode_srgb", "content_id": "a465902d3d903be9a4798330f7e6a81025a70aaf2f45eb89920ed303a1bf98cf", "stage": "fragment", "entry_point": "fragment_main"},
+    {"name": "world.fragment/linear", "content_id": "52d6e634b3b806b89c4de62b631d48f756ce375663351138346e01233fe00af4", "stage": "fragment", "entry_point": "fragment_main"},
+    {"name": "world.vertex", "content_id": "d339f01fe9b2dbbef34883674d8647440f0fa975f4d9b6a9cd29d07b2deb8adb", "stage": "vertex", "entry_point": "vertex_main"}
+  ]
+}

@@ -15,7 +15,8 @@ alignas(std::uint32_t) constexpr std::uint8_t debug_draw_library_bytes[]{
 #include "debug_draw.grshlib.inc"
 };
 
-#include "embedded_shader_ids.inc"
+#include "render_pipeline_shader_ids.inc"
+#include "debug_draw_shader_ids.inc"
 
 alignas(std::uint32_t) constexpr std::uint8_t canvas_material_bytes[]{
 #include "granit_pipeline_canvas.grmat.inc"

@@ -101,7 +101,7 @@ endfunction()
 
 function(granit_add_hlsl_shader_library)
   set(options ALL)
-  set(one_value_args NAME MANIFEST OUTPUT INDEX CACHE_DIR TARGET)
+  set(one_value_args NAME MANIFEST OUTPUT INDEX CACHE_DIR TARGET REFERENCE INDEX_REFERENCE)
   set(multi_value_args SOURCES)
   cmake_parse_arguments(ARG "${options}" "${one_value_args}" "${multi_value_args}" ${ARGN})
   if(NOT ARG_NAME OR NOT ARG_MANIFEST OR NOT ARG_OUTPUT OR NOT ARG_INDEX OR NOT ARG_CACHE_DIR OR
@@ -112,17 +112,33 @@ function(granit_add_hlsl_shader_library)
     message(FATAL_ERROR "从 HLSL 源清单构建 Shader Library 需要 DXC 和 Tint")
   endif()
 
+  get_filename_component(output_directory "${ARG_OUTPUT}" DIRECTORY)
+  get_filename_component(index_directory "${ARG_INDEX}" DIRECTORY)
+  set(commands
+      COMMAND "${CMAKE_COMMAND}" -E make_directory "${ARG_CACHE_DIR}" "${output_directory}"
+              "${index_directory}"
+      COMMAND
+        "$<TARGET_FILE:granit_shader_tool>" build-library --manifest "${ARG_MANIFEST}"
+        --dxc "${GRANIT_DXC_EXECUTABLE}" --tint "${GRANIT_TINT_EXECUTABLE}"
+        --cache "${ARG_CACHE_DIR}" --output "${ARG_OUTPUT}" --index "${ARG_INDEX}")
+  set(dependencies granit_shader_tool "${ARG_MANIFEST}" ${ARG_SOURCES})
+  if(ARG_REFERENCE)
+    list(APPEND commands COMMAND "${CMAKE_COMMAND}" -E compare_files "${ARG_OUTPUT}"
+                                 "${ARG_REFERENCE}")
+    list(APPEND dependencies "${ARG_REFERENCE}")
+  endif()
+  if(ARG_INDEX_REFERENCE)
+    list(APPEND commands COMMAND "${CMAKE_COMMAND}" -E compare_files "${ARG_INDEX}"
+                                 "${ARG_INDEX_REFERENCE}")
+    list(APPEND dependencies "${ARG_INDEX_REFERENCE}")
+  endif()
   set(stamp "${ARG_OUTPUT}.verified")
+  list(APPEND commands COMMAND "${CMAKE_COMMAND}" -E touch "${stamp}")
   add_custom_command(
     OUTPUT "${stamp}"
     BYPRODUCTS "${ARG_OUTPUT}" "${ARG_INDEX}"
-    COMMAND "${CMAKE_COMMAND}" -E make_directory "${ARG_CACHE_DIR}"
-    COMMAND
-      "$<TARGET_FILE:granit_shader_tool>" build-library --manifest "${ARG_MANIFEST}"
-      --dxc "${GRANIT_DXC_EXECUTABLE}" --tint "${GRANIT_TINT_EXECUTABLE}"
-      --cache "${ARG_CACHE_DIR}" --output "${ARG_OUTPUT}" --index "${ARG_INDEX}"
-    COMMAND "${CMAKE_COMMAND}" -E touch "${stamp}"
-    DEPENDS granit_shader_tool "${ARG_MANIFEST}" ${ARG_SOURCES}
+    ${commands}
+    DEPENDS ${dependencies}
     COMMENT "从 HLSL 源清单构建 Shader Library ${ARG_NAME}"
     VERBATIM
   )
@@ -164,35 +180,20 @@ function(granit_prepare_runtime_shader_libraries)
     TARGET granit_pbr_shader_library
     OBJECTS "${pbr_vertex_object}" "${pbr_fragment_object}"
   )
-  set(canvas_objects)
-  foreach(name IN ITEMS unlit_canvas.vert unlit_canvas.frag unlit_canvas_encode_srgb.frag)
-    if(name MATCHES "\\.vert$")
-      set(stage vertex)
-      set(entry canvas_vertex_main)
-    else()
-      set(stage fragment)
-      set(entry fragment_main)
-    endif()
-    granit_add_shader_object(
-      NAME "${name}"
-      SPIRV "${PROJECT_SOURCE_DIR}/assets/shaders/unlit/${name}.spv"
-      WGSL "${PROJECT_SOURCE_DIR}/assets/shaders/unlit/${name}.wgsl"
-      ENTRY "${entry}"
-      STAGE "${stage}"
-      OUTPUT_DIR "${object_root}/unlit"
-      OUTPUT_VAR object_outputs
+  if(GRANIT_DXC_EXECUTABLE AND GRANIT_TINT_EXECUTABLE)
+    granit_add_hlsl_shader_library(
+      ALL
+      NAME canvas
+      MANIFEST "${PROJECT_SOURCE_DIR}/assets/shaders/unlit/canvas.grshlib.json"
+      OUTPUT "${output_root}/unlit_canvas.grshlib"
+      INDEX "${output_root}/canvas.grshidx.json"
+      CACHE_DIR "${object_root}/unlit-canvas"
+      REFERENCE "${PROJECT_SOURCE_DIR}/src/pipeline/assets/unlit_canvas.grshlib"
+      INDEX_REFERENCE "${PROJECT_SOURCE_DIR}/src/pipeline/assets/unlit_canvas.grshidx.json"
+      TARGET granit_canvas_shader_library
+      SOURCES "${PROJECT_SOURCE_DIR}/assets/shaders/unlit/unlit.hlsl"
     )
-    list(GET object_outputs 0 object)
-    list(APPEND canvas_objects "${object}")
-  endforeach()
-  granit_add_shader_library(
-    ALL
-    NAME unlit_canvas
-    OUTPUT "${output_root}/unlit_canvas.grshlib"
-    REFERENCE "${PROJECT_SOURCE_DIR}/src/pipeline/assets/unlit_canvas.grshlib"
-    TARGET granit_canvas_shader_library
-    OBJECTS ${canvas_objects}
-  )
+  endif()
 endfunction()
 
 function(granit_prepare_test_shader_assets)

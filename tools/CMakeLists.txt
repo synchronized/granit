@@ -138,7 +138,10 @@ if(TARGET granit_shader_tools)
     shader_cli/commands/targets.cpp
   )
   target_sources(
-    granit_shader_tool PRIVATE $<TARGET_OBJECTS:granit_internal_shader_format>
+    granit_shader_tool
+    PRIVATE
+      $<TARGET_OBJECTS:granit_internal_shader_format>
+      $<TARGET_OBJECTS:granit_shader_library_source>
   )
   target_compile_features(granit_shader_tool PRIVATE cxx_std_20)
   target_include_directories(
@@ -375,6 +378,15 @@ if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
   )
   set_tests_properties(granit.shader_tool.object_ids_compare
                        PROPERTIES DEPENDS granit.shader_tool.object_ids)
+  set(granit_shader_index_id_output
+      "${CMAKE_CURRENT_BINARY_DIR}/index-id-test/material_shader_ids.inc")
+  add_test(
+    NAME granit.shader_tool.index_ids
+    COMMAND granit_shader_tool index-ids
+            --index "${PROJECT_SOURCE_DIR}/tests/assets/material_fixture.grshidx.json"
+            --shader material_fragment_id=main.fragment
+            --output "${granit_shader_index_id_output}"
+  )
   add_test(
     NAME granit.shader_tool.library
     COMMAND

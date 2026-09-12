@@ -78,7 +78,9 @@ HLSL portable 路径需要资产构建机安装 DXC 与 Tint，但应用运行�
   `cache_hit` 只在全部 Object、Library 和索引均未变化时为真。
 - CMake 的 `granit_add_hlsl_shader_library` 接收 `MANIFEST`、`SOURCES`、`OUTPUT`、`INDEX` 和
   `CACHE_DIR`。`SOURCES` 只声明构建依赖；清单解析、变体规范化、缓存身份和资产编码仍由
-  ShaderTools 处理。
+  ShaderTools 处理。可选的 `REFERENCE` 与 `INDEX_REFERENCE` 用于逐字节校验发布快照。
+- CLI 的 `index-ids` 从 `.grshidx.json` 按逻辑名称生成 C++ 内容 ID 常量，供内嵌资产代码使用；
+  它不读取或暴露私有 `.grshaderobj` 缓存路径。
 - HLSL portable 路径让 DXC 直接生成最终 Vulkan 1.3 SPIR-V；另行生成临时 Vulkan 1.1 /
   SPIR-V 1.3 中间文件供锁定 Tint 的 SPIR-V Reader 转换 WGSL，并要求两份 SPIR-V 的反射契约
   一致。临时文件不会进入资产。DXC 或 Tint 拒绝源代码及其能力时，调用返回

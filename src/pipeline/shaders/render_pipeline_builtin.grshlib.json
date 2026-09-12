@@ -1,0 +1,32 @@
+{
+  "format_version": 1,
+  "name": "render_pipeline_builtin",
+  "target_profile": "portable",
+  "target_backends": ["vulkan", "webgpu"],
+  "shaders": [
+    {
+      "name": "tone_mapping.vertex",
+      "source": "tone_mapping.hlsl",
+      "stage": "vertex",
+      "entry_point": "vertex_main"
+    },
+    {
+      "name": "tone_mapping.fragment",
+      "source": "tone_mapping.hlsl",
+      "stage": "fragment",
+      "entry_point": "fragment_main"
+    },
+    {
+      "name": "shadow_depth.vertex",
+      "source": "shadow_depth.hlsl",
+      "stage": "vertex",
+      "entry_point": "vertex_main"
+    },
+    {
+      "name": "shadow_depth.fragment",
+      "source": "shadow_depth.hlsl",
+      "stage": "fragment",
+      "entry_point": "fragment_main"
+    }
+  ]
+}
