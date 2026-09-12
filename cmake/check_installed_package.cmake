@@ -6,6 +6,10 @@ if(NOT DEFINED GRANIT_SOURCE_DIR OR NOT DEFINED GRANIT_INSTALL_PREFIX OR
   message(FATAL_ERROR "必须提供 GRANIT_SOURCE_DIR、GRANIT_INSTALL_PREFIX 和 GRANIT_TEST_BINARY_DIR")
 endif()
 
+if(NOT DEFINED GRANIT_TEST_CONFIGURATION)
+  set(GRANIT_TEST_CONFIGURATION Release)
+endif()
+
 function(granit_check_package name expected_success)
   execute_process(
     COMMAND
@@ -13,6 +17,7 @@ function(granit_check_package name expected_success)
       -S "${GRANIT_SOURCE_DIR}/tests/package"
       -B "${GRANIT_TEST_BINARY_DIR}/${name}"
       "-DCMAKE_PREFIX_PATH=${GRANIT_INSTALL_PREFIX}"
+      "-DCMAKE_BUILD_TYPE=${GRANIT_TEST_CONFIGURATION}"
       ${ARGN}
     RESULT_VARIABLE result
     OUTPUT_VARIABLE output
@@ -27,6 +32,7 @@ function(granit_check_package name expected_success)
   if(expected_success)
     execute_process(
       COMMAND "${CMAKE_COMMAND}" --build "${GRANIT_TEST_BINARY_DIR}/${name}"
+              --config "${GRANIT_TEST_CONFIGURATION}"
       RESULT_VARIABLE build_result
       OUTPUT_VARIABLE build_output
       ERROR_VARIABLE build_error
