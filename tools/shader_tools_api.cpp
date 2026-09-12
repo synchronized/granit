@@ -784,40 +784,6 @@ granit_shader_tools_compilation_write_object(granit_shader_tools_compilation com
   }
 }
 
-granit_result granit_shader_tools_build_object(const granit_shader_tools_object_desc* desc,
-                                               uint32_t* cache_hit) {
-  if (cache_hit == nullptr)
-    return GRANIT_ERROR_INVALID_ARGUMENT;
-  *cache_hit = 0;
-  if (!valid_object_desc(desc))
-    return GRANIT_ERROR_INVALID_ARGUMENT;
-  if (desc->required_features != 0)
-    return GRANIT_ERROR_UNSUPPORTED;
-  try {
-    auto value = std::make_shared<stored_shader_data>();
-    std::ostringstream output;
-    std::ostringstream diagnostic;
-    granit::tools::shader_info info;
-    const auto spirv_path = copy_path(desc->spirv_path, desc->spirv_path_length);
-    if (!granit::tools::inspect_shader(spirv_path, false, info, output, diagnostic))
-      return GRANIT_ERROR_INVALID_ARGUMENT;
-    value->status = GRANIT_SUCCESS;
-    value->entry_point = info.entry_point;
-    value->stage = stage_value(info.stage);
-    store_reflection(*value, info);
-    value->output = std::move(output).str();
-    value->diagnostic = std::move(diagnostic).str();
-    const auto temporary = store_compilation(std::move(value));
-    const auto result = granit_shader_tools_compilation_write_object(temporary, desc, cache_hit);
-    static_cast<void>(granit_shader_tools_compilation_destroy(temporary));
-    return result;
-  } catch (const std::bad_alloc&) {
-    return GRANIT_ERROR_OUT_OF_MEMORY;
-  } catch (...) {
-    return GRANIT_ERROR_INTERNAL;
-  }
-}
-
 granit_result
 granit_shader_tools_restore_object_cache(const granit_shader_tools_object_cache_desc* desc,
                                          uint32_t* cache_hit) {

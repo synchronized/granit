@@ -1,13 +1,13 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2026 Granit contributors
 
-function(granit_add_shader_object)
+function(granit_add_test_shader_object_from_payloads)
   set(options)
   set(one_value_args NAME SPIRV WGSL ENTRY STAGE OUTPUT_DIR OUTPUT_VAR)
   cmake_parse_arguments(ARG "${options}" "${one_value_args}" "" ${ARGN})
   if(NOT ARG_NAME OR NOT ARG_SPIRV OR NOT ARG_WGSL OR NOT ARG_ENTRY OR NOT ARG_STAGE OR
      NOT ARG_OUTPUT_DIR)
-    message(FATAL_ERROR "granit_add_shader_object 缺少必要参数")
+    message(FATAL_ERROR "granit_add_test_shader_object_from_payloads 缺少必要参数")
   endif()
 
   set(object "${ARG_OUTPUT_DIR}/${ARG_NAME}.grshaderobj")
@@ -15,7 +15,7 @@ function(granit_add_shader_object)
     OUTPUT "${object}" "${object}.spv" "${object}.wgsl"
     COMMAND "${CMAKE_COMMAND}" -E make_directory "${ARG_OUTPUT_DIR}"
     COMMAND
-      "$<TARGET_FILE:granit_shader_tool>" object --spirv "${ARG_SPIRV}" --wgsl "${ARG_WGSL}"
+      "$<TARGET_FILE:granit_shader_tool>" fixture-object --spirv "${ARG_SPIRV}" --wgsl "${ARG_WGSL}"
       --entry "${ARG_ENTRY}" --stage "${ARG_STAGE}" --output "${object}"
     DEPENDS granit_shader_tool "${ARG_SPIRV}" "${ARG_WGSL}"
     COMMENT "生成 Shader Object ${ARG_NAME}.grshaderobj"
@@ -76,7 +76,7 @@ function(granit_add_test_shader_object)
       DEFINES ${ARG_DEFINES}
     )
   else()
-    granit_add_shader_object(
+    granit_add_test_shader_object_from_payloads(
       NAME "${ARG_NAME}"
       SPIRV "${ARG_SPIRV}"
       WGSL "${ARG_WGSL}"

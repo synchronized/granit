@@ -142,6 +142,9 @@ if(TARGET granit_shader_tools)
     PRIVATE
       $<TARGET_OBJECTS:granit_internal_shader_format>
       $<TARGET_OBJECTS:granit_shader_library_source>
+      $<TARGET_OBJECTS:granit_shader_object_storage>
+      $<TARGET_OBJECTS:granit_shader_tools_core>
+      $<TARGET_OBJECTS:granit_spirv_reflect>
   )
   target_compile_features(granit_shader_tool PRIVATE cxx_std_20)
   target_include_directories(
@@ -186,7 +189,7 @@ if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
     else()
       set(shader_stage fragment)
     endif()
-    granit_add_shader_object(
+    granit_add_test_shader_object_from_payloads(
       NAME "minimal.${stage}"
       SPIRV "${PROJECT_SOURCE_DIR}/tests/assets/minimal.${stage}.spv"
       WGSL "${PROJECT_SOURCE_DIR}/tests/assets/minimal.${stage}.wgsl"
@@ -302,20 +305,6 @@ if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
               "${PROJECT_SOURCE_DIR}/tests/assets/minimal.comp.spv"
     )
 
-    add_executable(
-      granit_shader_object_builder_api_test "${PROJECT_SOURCE_DIR}/tests/tools/shader_object_builder_api_test.cpp"
-    )
-    target_compile_features(granit_shader_object_builder_api_test PRIVATE cxx_std_20)
-    target_link_libraries(granit_shader_object_builder_api_test PRIVATE granit::shader_tools)
-    granit_target_compile_warnings(granit_shader_object_builder_api_test)
-    granit_target_output_directories(granit_shader_object_builder_api_test)
-    add_test(
-      NAME granit.shader_tools.object_builder_api
-      COMMAND granit_shader_object_builder_api_test
-              "${PROJECT_SOURCE_DIR}/tests/assets/minimal.comp.spv"
-              "${PROJECT_SOURCE_DIR}/tests/fixtures/shaders/s10c_triangle.wgsl"
-              "${CMAKE_CURRENT_BINARY_DIR}/shader-object-builder-api-test-cache"
-    )
   endif()
 
   add_test(
@@ -347,20 +336,6 @@ if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
   set_tests_properties(
     granit.shader_tool.verify
     PROPERTIES PASS_REGULAR_EXPRESSION "SPIR-V 结构验证通过.*fragment_main.*fragment"
-  )
-  add_test(
-    NAME granit.shader_tool.object
-    COMMAND
-      granit_shader_tool object
-      --spirv "${PROJECT_SOURCE_DIR}/tests/assets/minimal.vert.spv"
-      --wgsl "${PROJECT_SOURCE_DIR}/tests/assets/minimal.vert.wgsl"
-      --entry main
-      --stage vertex
-      --output "${CMAKE_CURRENT_BINARY_DIR}/object-test/minimal.vert.grshaderobj"
-  )
-  set_tests_properties(
-    granit.shader_tool.object
-    PROPERTIES PASS_REGULAR_EXPRESSION "Shader Object"
   )
   set(granit_shader_object_id_output
       "${CMAKE_CURRENT_BINARY_DIR}/object-id-test/minimal_shader_ids.inc")

@@ -64,10 +64,6 @@ typedef struct granit_shader_tools_object_cache_desc {
 extern "C" {
 #endif
 
-/** 检查已有 SPIR-V/WGSL 并生成 `.grshaderobj`；内容未变化时将 cache_hit 写为 1。 */
-GRANIT_SHADER_TOOLS_API granit_result
-granit_shader_tools_build_object(const granit_shader_tools_object_desc* desc, uint32_t* cache_hit);
-
 /** 校验 `.grshaderobj` 及其 sidecar，并在命中时恢复编译产物。 */
 GRANIT_SHADER_TOOLS_API granit_result granit_shader_tools_restore_object_cache(
     const granit_shader_tools_object_cache_desc* desc, uint32_t* cache_hit);

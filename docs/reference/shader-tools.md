@@ -46,7 +46,7 @@ HLSL portable 路径需要资产构建机安装 DXC 与 Tint，但应用运行�
 
 ## 接口与生命周期
 
-- C11 的编译、反射、Object Builder 和 Library Builder 入口分别位于对应的
+- C11 的编译、反射和 Library Builder 入口分别位于对应的
   `<granit/tools/shader_*.h>`；`.hpp` 提供 C++20 包装。`shader_tools.h/.hpp` 只作为聚合入口。
 - `granit_shader_tools_compiler_create` 创建可复用 Compiler，配置包含 DXC 与 Tint 路径；
   `granit_shader_tools_compiler_compile` 固定接收 HLSL。C++ 包装对应移动独占的 `compiler` 和

@@ -15,8 +15,6 @@ void print_usage() {
                "  granit_shader_tool verify <shader.spv>\n"
                "  granit_shader_tool targets\n"
                "  granit_shader_tool capabilities --target <vulkan-portable|webgpu-portable>\n"
-               "  granit_shader_tool object --spirv <shader.spv> --wgsl <shader.wgsl> "
-               "--entry <name> --stage <vertex|fragment|compute> --output <shader.grshaderobj>\n"
                "  granit_shader_tool library --object <shader.grshaderobj>... "
                "--target <all|vulkan|webgpu> --output <shaders.grshlib>\n"
                "  granit_shader_tool build-library --manifest <library.grshlib.json> "
@@ -58,8 +56,9 @@ int main(int argc, char** argv) {
     return inspect_shader(argv[2], true);
   if (argc >= 2 && std::string_view{argv[1]} == "compile")
     return compile_shader(argc, argv);
-  if (argc >= 2 && std::string_view{argv[1]} == "object")
-    return build_shader_object(argc, argv);
+  // 仅供无 HLSL 工具链的仓库测试封装已检入夹具，不作为作者入口公开。
+  if (argc >= 2 && std::string_view{argv[1]} == "fixture-object")
+    return build_shader_fixture_object(argc, argv);
   if (argc >= 2 && std::string_view{argv[1]} == "library")
     return link_shader_library(argc, argv);
   if (argc >= 2 && std::string_view{argv[1]} == "build-library")
