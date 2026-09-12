@@ -11,8 +11,9 @@ CLI 与 CMake 入口；S-37L3 已完成 Material 逻辑引用与构建期索引�
 Unlit、Canvas、Shadow、Tone Mapping、Debug 和 Smoke 资产迁移。S-37L5 已将命令行和公共
 Compiler 收敛为 HLSL，且已删除 `shader_source_language`、成对载荷导入接口及公开的 Shader
 Object 写入与缓存接口，低层 Library 链接入口也已内化；产品 Shader 目录中的派生载荷已删除，
-无工具链测试所需的快照集中到 `tests/fixtures/generated`。其余工作在当前 0.21
-特性分支连续实施，每个阶段形成独立本地提交。
+无工具链测试所需的快照集中到 `tests/fixtures/generated`。S-37L6 已建立 ShaderTools 导出快照、
+C/C++ 安装 Consumer 与构建期 Shader 产物安装门禁，其余跨平台验收在当前 0.21 特性分支连续
+实施，每个阶段形成独立本地提交。
 
 ## 背景与目标
 
@@ -157,7 +158,7 @@ CMake 对项目公开一个对应函数。CMake 只声明输入、输出和依�
 4. **S-37L4 内建资产迁移（已完成）**：为 PBR、Unlit、Canvas、Shadow、Tone Mapping、Debug 和
    Smoke 建立 HLSL Library 清单；通过 Define 生成纹理、阴影、IBL、灯光和颜色编码变体，重建
    最终资产。
-5. **S-37L5 删除多源作者入口**：删除 WGSL 编译公共入口、`shader_source_language`、成对
+5. **S-37L5 删除多源作者入口（已完成）**：删除 WGSL 编译公共入口、`shader_source_language`、成对
    WGSL/SPIR-V Object 导入、旧 CLI/CMake 作者入口，以及源码树中的手写 WGSL 和预生成 SPIR-V。
 6. **S-37L6 发布边界与验收**：更新 Reference、Guide、迁移文档、ABI 快照、安装清单和 Toolchain
    包；验证 Runtime 安装只包含最终 Library/Material，ShaderTools 安装只公开 HLSL-first 入口。

@@ -49,6 +49,12 @@ granit_shader_tool build-library `
 
 目标后端在源清单中声明；`.grshaderobj` 与 sidecar 只存在于工具缓存，不复制到运行时或安装目录。
 
+ShaderTools 的离线作者入口只接受 HLSL。删除调用方的 `shader_source_language` 选择以及直接导入
+WGSL/SPIR-V 配对载荷、写入 Object、恢复 Object 缓存或链接 Object 的代码，改为一次调用
+`granit_shader_tools_build_library_from_manifest`。单 Shader 编辑器诊断仍可使用 Compiler；输入固定为
+HLSL，Compilation 可查询生成的 SPIR-V、WGSL 和 Reflection。工具二进制身份由 Library Builder
+内部写入缓存键，不再通过公共 API 查询。
+
 应用读取或映射完整 `.grshlib` 后创建 Library。归档内存必须保持地址和内容不变，直到 Material、
 由 Library 创建的 Shader 和 Pipeline 都释放，并成功销毁 Library：
 

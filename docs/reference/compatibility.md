@@ -44,7 +44,7 @@ Window 新增接口使用 0.5.0 增量符号快照，Input 继续使用 0.1.0 �
 | `RenderPipeline` | `granit::render_pipeline` | Core | 稳定候选 | 收敛材质、场景提交和参考管线边界 |
 | `Window` | `granit::window` | Core | 稳定候选 | 验证平台后端与宿主循环契约 |
 | `Input` | `granit::input` | Core、Window | 稳定候选 | 验证事件、文本输入与线程契约 |
-| `ShaderTools` | `granit::shader_tools` | Threads、离线工具链 | 实验性 | 稳定工具发现、版本与缓存身份 |
+| `ShaderTools` | `granit::shader_tools` | Threads、离线工具链 | 实验性 | 收敛 HLSL Compiler、Reflection 与 Library Builder |
 | `IntegrationSDL3` | `granit::integration_sdl3` | Core、SDL3 | 实验性 | 保持可选适配层，不进入 Core |
 | `IntegrationImGui` | `granit::integration_imgui` | Core、RenderPipeline、ImGui | 实验性 | 保持可选适配层，不承诺第三方 ABI |
 
