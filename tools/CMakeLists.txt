@@ -52,7 +52,12 @@ set_target_properties(granit_shader_tools_core PROPERTIES FOLDER "Tools")
 set_target_properties(granit_shader_tools_core PROPERTIES POSITION_INDEPENDENT_CODE YES)
 
 if(GRANIT_BUILD_SHADER_TOOLS OR GRANIT_BUILD_TOOLS OR (GRANIT_BUILD_TESTING AND BUILD_TESTING))
-  add_library(granit_shader_tools shader_tools_api.cpp shader_library/builder.cpp)
+  add_library(
+    granit_shader_tools
+    shader_tools_api.cpp
+    shader_library/builder.cpp
+    shader_library/source_builder.cpp
+  )
   add_library(granit::shader_tools ALIAS granit_shader_tools)
   target_sources(
     granit_shader_tools
@@ -631,4 +636,33 @@ if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
       -DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/shader-toolchain-license-test -P
       "${PROJECT_SOURCE_DIR}/cmake/check_collect_license_bundle.cmake"
   )
+
+  if(GRANIT_DXC_EXECUTABLE AND GRANIT_TINT_EXECUTABLE)
+    add_executable(
+      granit_shader_source_library_builder_api_test
+      "${PROJECT_SOURCE_DIR}/tests/tools/shader_source_library_builder_api_test.cpp"
+    )
+    target_compile_features(granit_shader_source_library_builder_api_test PRIVATE cxx_std_20)
+    target_link_libraries(granit_shader_source_library_builder_api_test PRIVATE granit::shader_tools)
+    granit_target_compile_warnings(granit_shader_source_library_builder_api_test)
+    granit_target_output_directories(granit_shader_source_library_builder_api_test)
+    add_test(
+      NAME granit.shader_tools.source_library_builder_api
+      COMMAND
+        granit_shader_source_library_builder_api_test "${GRANIT_DXC_EXECUTABLE}"
+        "${GRANIT_TINT_EXECUTABLE}"
+        "${PROJECT_SOURCE_DIR}/tests/assets/material_fixture.grshlib.json"
+        "${CMAKE_CURRENT_BINARY_DIR}/source-library-builder-api"
+    )
+    add_test(
+      NAME granit.shader_tool.build_library
+      COMMAND
+        granit_shader_tool build-library --manifest
+        "${PROJECT_SOURCE_DIR}/tests/assets/material_fixture.grshlib.json" --dxc
+        "${GRANIT_DXC_EXECUTABLE}" --tint "${GRANIT_TINT_EXECUTABLE}" --cache
+        "${CMAKE_CURRENT_BINARY_DIR}/source-library-cli/objects" --output
+        "${CMAKE_CURRENT_BINARY_DIR}/source-library-cli/fixture.grshlib" --index
+        "${CMAKE_CURRENT_BINARY_DIR}/source-library-cli/fixture.grshidx.json"
+    )
+  endif()
 endif()

@@ -1,0 +1,18 @@
+{
+  "format_version": 1,
+  "name": "material_fixture",
+  "target_profile": "portable",
+  "target_backends": ["vulkan", "webgpu"],
+  "shaders": [
+    {
+      "name": "material.fragment",
+      "source": "material_fixture.hlsl",
+      "stage": "fragment",
+      "entry_point": "fragment_main",
+      "variants": [
+        {"name": "default", "defines": {"GRANIT_FIXTURE_VARIANT": "0"}},
+        {"name": "alternate", "defines": {"GRANIT_FIXTURE_VARIANT": "1"}}
+      ]
+    }
+  ]
+}

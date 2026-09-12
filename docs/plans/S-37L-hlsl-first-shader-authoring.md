@@ -6,8 +6,8 @@
 ## 状态
 
 **实现中。** Granit 的离线 Shader 作者语言收敛为 HLSL；WGSL 与 SPIR-V 继续作为 ShaderTools
-生成的后端载荷。S-37L1 已完成源清单、逻辑名称与确定性索引模型；其余阶段在当前 0.21 特性分支
-连续实施，每个阶段形成独立本地提交。
+生成的后端载荷。S-37L1 已完成源清单、逻辑名称与确定性索引模型；S-37L2 已完成高层 Builder、
+CLI 与 CMake 入口。其余阶段在当前 0.21 特性分支连续实施，每个阶段形成独立本地提交。
 
 ## 背景与目标
 
@@ -144,7 +144,8 @@ CMake 对项目公开一个对应函数。CMake 只声明输入、输出和依�
 
 1. **S-37L1 源清单与逻辑名称模型（已完成）**：实现 `.grshlib.json` 数据模型、严格解析、路径
    约束、名称与 Define 规范化、确定性索引编码及失败测试；暂不改变现有构建入口。
-2. **S-37L2 高层 Library Builder**：增加 C11/C++20 一次性构建接口和 `build-library` CLI，编排
+2. **S-37L2 高层 Library Builder（已完成）**：增加 C11/C++20 一次性构建接口和
+   `build-library` CLI，编排
    HLSL 编译、跨后端反射检查、私有 Object 缓存、Library 链接和索引生成。
 3. **S-37L3 Material 逻辑引用**：让 Material Tool 接收 Shader 索引；将 `.grmat.json` 作者格式升级
    到版本 6，并在打包时解析逻辑名称；二进制 `.grmat` 继续使用 v5。

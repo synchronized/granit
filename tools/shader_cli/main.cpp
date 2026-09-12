@@ -19,6 +19,9 @@ void print_usage() {
                "--entry <name> --stage <vertex|fragment|compute> --output <shader.grshaderobj>\n"
                "  granit_shader_tool library --object <shader.grshaderobj>... "
                "--target <all|vulkan|webgpu> --output <shaders.grshlib>\n"
+               "  granit_shader_tool build-library --manifest <library.grshlib.json> "
+               "--dxc <path> --tint <path> --cache <directory> --output <library.grshlib> "
+               "--index <library.grshidx.json>\n"
                "  granit_shader_tool object-ids --object <name=shader.grshaderobj>... "
                "--output <shader-ids.inc>\n"
                "  granit_shader_tool compile --tint <path> --input <shader.wgsl> "
@@ -62,6 +65,8 @@ int main(int argc, char** argv) {
     return build_shader_object(argc, argv);
   if (argc >= 2 && std::string_view{argv[1]} == "library")
     return link_shader_library(argc, argv);
+  if (argc >= 2 && std::string_view{argv[1]} == "build-library")
+    return build_shader_library(argc, argv);
   if (argc >= 2 && std::string_view{argv[1]} == "object-ids")
     return emit_shader_object_ids(argc, argv);
   if (argc >= 2 && std::string_view{argv[1]} == "compile-hlsl")

@@ -31,6 +31,35 @@ std::vector<std::byte> read_bytes(const std::filesystem::path& path) {
 
 } // namespace
 
+int build_shader_library(int argc, char** argv) {
+  const auto manifest = option_value(argc, argv, "--manifest");
+  const auto dxc = option_value(argc, argv, "--dxc");
+  const auto tint = option_value(argc, argv, "--tint");
+  const auto cache = option_value(argc, argv, "--cache");
+  const auto output = option_value(argc, argv, "--output");
+  const auto index = option_value(argc, argv, "--index");
+  if (!manifest || !dxc || !tint || !cache || !output || !index) {
+    std::cerr << "build-library 需要 --manifest、--dxc、--tint、--cache、--output 和 --index\n";
+    return 2;
+  }
+  const granit::shader_tools::source_library_desc desc{
+      .manifest_path = *manifest,
+      .dxc_path = *dxc,
+      .tint_path = *tint,
+      .cache_path = *cache,
+      .output_path = *output,
+      .index_path = *index,
+  };
+  const auto [status, cache_hit] = granit::shader_tools::build_library_from_manifest(desc);
+  if (status.failed()) {
+    std::cerr << "无法从源清单构建 Shader Library：" << *manifest << '\n';
+    return 1;
+  }
+  std::cout << (cache_hit ? "Shader Library 源构建缓存命中：" : "已构建 Shader Library：")
+            << *output << '\n';
+  return 0;
+}
+
 int link_shader_library(int argc, char** argv) {
   const auto object_paths = option_values(argc, argv, "--object");
   const auto target = option_value(argc, argv, "--target");

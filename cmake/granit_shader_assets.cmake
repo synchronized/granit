@@ -99,6 +99,40 @@ function(granit_add_shader_library)
   endif()
 endfunction()
 
+function(granit_add_hlsl_shader_library)
+  set(options ALL)
+  set(one_value_args NAME MANIFEST OUTPUT INDEX CACHE_DIR TARGET)
+  set(multi_value_args SOURCES)
+  cmake_parse_arguments(ARG "${options}" "${one_value_args}" "${multi_value_args}" ${ARGN})
+  if(NOT ARG_NAME OR NOT ARG_MANIFEST OR NOT ARG_OUTPUT OR NOT ARG_INDEX OR NOT ARG_CACHE_DIR OR
+     NOT ARG_TARGET)
+    message(FATAL_ERROR "granit_add_hlsl_shader_library 缺少必要参数")
+  endif()
+  if(NOT GRANIT_DXC_EXECUTABLE OR NOT GRANIT_TINT_EXECUTABLE)
+    message(FATAL_ERROR "从 HLSL 源清单构建 Shader Library 需要 DXC 和 Tint")
+  endif()
+
+  set(stamp "${ARG_OUTPUT}.verified")
+  add_custom_command(
+    OUTPUT "${stamp}"
+    BYPRODUCTS "${ARG_OUTPUT}" "${ARG_INDEX}"
+    COMMAND "${CMAKE_COMMAND}" -E make_directory "${ARG_CACHE_DIR}"
+    COMMAND
+      "$<TARGET_FILE:granit_shader_tool>" build-library --manifest "${ARG_MANIFEST}"
+      --dxc "${GRANIT_DXC_EXECUTABLE}" --tint "${GRANIT_TINT_EXECUTABLE}"
+      --cache "${ARG_CACHE_DIR}" --output "${ARG_OUTPUT}" --index "${ARG_INDEX}"
+    COMMAND "${CMAKE_COMMAND}" -E touch "${stamp}"
+    DEPENDS granit_shader_tool "${ARG_MANIFEST}" ${ARG_SOURCES}
+    COMMENT "从 HLSL 源清单构建 Shader Library ${ARG_NAME}"
+    VERBATIM
+  )
+  if(ARG_ALL)
+    add_custom_target(${ARG_TARGET} ALL DEPENDS "${stamp}")
+  else()
+    add_custom_target(${ARG_TARGET} DEPENDS "${stamp}")
+  endif()
+endfunction()
+
 function(granit_prepare_runtime_shader_libraries)
   set(output_root "${CMAKE_BINARY_DIR}/generated/runtime-libraries")
   set(object_root "${CMAKE_BINARY_DIR}/generated/runtime-shader-objects")

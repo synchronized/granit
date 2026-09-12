@@ -43,6 +43,40 @@ typedef struct granit_shader_tools_library_desc {
    0,                                                                                              \
    UINT64_C(0)}
 
+/** HLSL-first Shader Library 源构建描述。所有路径只需在调用期间有效。 */
+typedef struct granit_shader_tools_source_library_desc {
+  uint32_t struct_size;
+  uint32_t reserved;
+  const char* manifest_path;
+  uint64_t manifest_path_length;
+  const char* dxc_path;
+  uint64_t dxc_path_length;
+  const char* tint_path;
+  uint64_t tint_path_length;
+  const char* cache_path;
+  uint64_t cache_path_length;
+  const char* output_path;
+  uint64_t output_path_length;
+  const char* index_path;
+  uint64_t index_path_length;
+} granit_shader_tools_source_library_desc;
+
+#define GRANIT_SHADER_TOOLS_SOURCE_LIBRARY_DESC_INIT                                               \
+  {(uint32_t)sizeof(granit_shader_tools_source_library_desc),                                      \
+   UINT32_C(0),                                                                                    \
+   0,                                                                                              \
+   UINT64_C(0),                                                                                    \
+   0,                                                                                              \
+   UINT64_C(0),                                                                                    \
+   0,                                                                                              \
+   UINT64_C(0),                                                                                    \
+   0,                                                                                              \
+   UINT64_C(0),                                                                                    \
+   0,                                                                                              \
+   UINT64_C(0),                                                                                    \
+   0,                                                                                              \
+   UINT64_C(0)}
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -54,6 +88,15 @@ extern "C" {
  */
 GRANIT_SHADER_TOOLS_API granit_result granit_shader_tools_build_library(
     const granit_shader_tools_library_desc* desc, uint32_t* cache_hit);
+
+/**
+ * 从 `.grshlib.json` 一次生成跨后端 Library、逻辑名称索引和私有 Object 缓存。
+ * cache_hit 仅在 Object、Library 与索引均未变化时写为 1。
+ * 描述中的 UTF-8 路径仅在调用期间借用；清单或路径无效返回 INVALID_ARGUMENT，缺少工具返回
+ * NOT_READY，编译或写入失败返回 INITIALIZATION_FAILED。不同输出与缓存路径可由多个线程并发构建。
+ */
+GRANIT_SHADER_TOOLS_API granit_result granit_shader_tools_build_library_from_manifest(
+    const granit_shader_tools_source_library_desc* desc, uint32_t* cache_hit);
 
 #ifdef __cplusplus
 }

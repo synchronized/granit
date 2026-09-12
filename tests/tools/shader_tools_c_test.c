@@ -27,12 +27,19 @@ int main(int argc, char** argv) {
   uint64_t tool_identity_length = 0;
   char tool_identity[64];
   uint32_t library_cache_hit = 1;
+  granit_shader_tools_source_library_desc source_library_desc =
+      GRANIT_SHADER_TOOLS_SOURCE_LIBRARY_DESC_INIT;
   if (argc != 2)
     return 1;
   if (granit_shader_tools_build_library(NULL, &library_cache_hit) !=
           GRANIT_ERROR_INVALID_ARGUMENT ||
       library_cache_hit != 0)
     return 17;
+  library_cache_hit = 1;
+  if (granit_shader_tools_build_library_from_manifest(&source_library_desc, &library_cache_hit) !=
+          GRANIT_ERROR_INVALID_ARGUMENT ||
+      library_cache_hit != 0)
+    return 18;
   if (granit_shader_tools_compiler_create(&compiler_desc, &compiler) != GRANIT_SUCCESS ||
       compiler == 0)
     return 15;
