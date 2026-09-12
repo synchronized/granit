@@ -42,9 +42,15 @@ if(GRANIT_ABI_EXPORT_TOOL_KIND STREQUAL "nm")
     endif()
   endforeach()
 else()
-  string(REGEX MATCHALL "granit_[A-Za-z0-9_]+" actual_symbols "${tool_output}")
-  # dumpbin 的标题包含 DLL 文件名，不能把文件名误判为导出符号。
-  list(REMOVE_ITEM actual_symbols granit_render_pipeline granit_window granit_input)
+  string(REPLACE "\r" "" tool_output "${tool_output}")
+  string(REPLACE "\n" ";" tool_lines "${tool_output}")
+  foreach(line IN LISTS tool_lines)
+    if(line MATCHES
+       "^[ \t]+[0-9]+[ \t]+[0-9A-Fa-f]+[ \t]+[0-9A-Fa-f]+[ \t]+(granit_[A-Za-z0-9_]+)([ \t]|$)"
+    )
+      list(APPEND actual_symbols "${CMAKE_MATCH_1}")
+    endif()
+  endforeach()
 endif()
 list(REMOVE_DUPLICATES actual_symbols)
 list(SORT actual_symbols)

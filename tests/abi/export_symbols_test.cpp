@@ -97,4 +97,6 @@ TEST_CASE("共享库导出完整的公共 C ABI", "[abi][exports]") {
                 GRANIT_ABI_WINDOW_SYMBOLS_PATH);
   check_exports(GRANIT_ABI_SNAPSHOT_INPUT_COMPONENT, GRANIT_ABI_INPUT_LIBRARY_PATH,
                 GRANIT_ABI_INPUT_SYMBOLS_PATH);
+  check_exports("ShaderTools", GRANIT_ABI_SHADER_TOOLS_LIBRARY_PATH,
+                GRANIT_ABI_SHADER_TOOLS_SYMBOLS_PATH);
 }
